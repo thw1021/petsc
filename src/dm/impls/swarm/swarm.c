@@ -541,7 +541,7 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
       PetscCall(DMPlexGetClosureIndices(dmf, fsection, globalFSection, cell, PETSC_FALSE, &numFIndices, &findices, NULL, NULL));
       PetscCall(DMSwarmSortGetPointsPerCell(dmc, cell, &numCIndices, &cindices));
       if (!quad) {
-        for (PetscInt j = 0; j < numCIndices; ++j) CoordinatesRealToRef(dim, dim, v0ref, v0, invJ, &fieldVals[cindices[j] * bs], &xi[j * dim]);
+        for (PetscInt j = 0; j < numCIndices; ++j) CoordinatesRealToRef(dim, dim, v0ref, v0, fegeom.invJ, &fieldVals[cindices[j] * bs], &xi[j * dim]);
         detJ = fegeom.detJ[0];
       } else {
         detJ = 1;                                    // delta so no detJ used

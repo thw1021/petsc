@@ -1153,11 +1153,16 @@ int main(int argc, char **argv)
       requires: kokkos_kernels !openmp
       args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi
 
-  test:
-    suffix: conserve
-    requires: !complex double defined(PETSC_USE_DMLANDAU_2D) !cuda
+  testset:
+    requires: !complex double defined(PETSC_USE_DMLANDAU_2D)
     args: -dm_landau_batch_size 4 -dm_refine 0 -dm_landau_num_species_grid 1 -dm_landau_thermal_temps 1 -petscspace_degree 3 -snes_converged_reason -ts_type beuler -ts_dt .1 \
           -ts_max_steps 1 -ksp_type preonly -ksp_error_if_not_converged -snes_rtol 1e-14 -snes_stol 1e-14 -dm_landau_device_type cpu -number_particles_per_dimension 20 \
-          -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-14 -ptof_ksp_error_if_not_converged -pc_type lu -dm_landau_simplex 1 -use_uniform_particle_grid false -dm_landau_sphere -print_entropy -number_particles_per_dimension 50 -ftop_ksp_type cg -ftop_pc_type jacobi -ftop_ksp_rtol 1e-14
+          -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-14 -ptof_ksp_error_if_not_converged -pc_type lu -use_uniform_particle_grid false -dm_landau_sphere -print_entropy -number_particles_per_dimension 50 -ftop_ksp_type cg -ftop_pc_type jacobi -ftop_ksp_rtol 1e-14
+    test:
+      suffix: conserve
+      args:  -dm_landau_simplex 1
+    test:
+      suffix: conserve_tensor
+      args:  -dm_landau_simplex 0 -dm_swarm_use_affine_mass false
 
 TEST*/
