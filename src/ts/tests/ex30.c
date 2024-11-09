@@ -1160,9 +1160,9 @@ int main(int argc, char **argv)
           -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_rtol 1e-14 -ptof_ksp_error_if_not_converged -pc_type lu -use_uniform_particle_grid false -dm_landau_sphere -print_entropy -number_particles_per_dimension 50 -ftop_ksp_type cg -ftop_pc_type jacobi -ftop_ksp_rtol 1e-14
     test:
       suffix: conserve
-      args:  -dm_landau_simplex 1
+      args: -dm_landau_simplex 1
     test:
       suffix: conserve_tensor
-      args:  -dm_landau_simplex 0 -dm_swarm_use_affine_mass false
+      args: -dm_landau_simplex 0 -dm_swarm_use_affine_mass false
 
 TEST*/
