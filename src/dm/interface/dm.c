@@ -4595,6 +4595,10 @@ PetscErrorCode DMGetGlobalSection(DM dm, PetscSection *section)
     PetscCall(PetscLayoutDestroy(&dm->map));
     PetscCall(PetscSectionGetValueLayout(PetscObjectComm((PetscObject)dm), dm->globalSection, &dm->map));
     PetscCall(PetscSectionViewFromOptions(dm->globalSection, NULL, "-global_section_view"));
+    // Natural SF previously set with respect to a different global section.
+    PetscCall(DMSetNaturalSF(dm, NULL));
+    // TODO: Probably want to destroy the SFNatural when the global section is recalcualted? Otherwise it's ambiguous as to what GlobalSection it's referring to
+    // Then I'd need to add a warning to VecLoad CGNS suggesting that the Global Section may have been deleted too early
   }
   *section = dm->globalSection;
   PetscFunctionReturn(PETSC_SUCCESS);
