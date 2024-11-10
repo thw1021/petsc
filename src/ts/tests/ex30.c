@@ -1014,6 +1014,8 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt num_vertices, const PetscInt a_Np
         PetscCall(VecViewFromOptions(f, NULL, "-resampled_weights_vec_view"));
         PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, "w_q", &f));
         PetscCall(DMSwarmViewXDMF(sw, "resampled.xmf"));
+        PetscCall(DMSwarmGetUseAffineMass(sw, &use_uniform_particle_grid)); // code coverage
+        PetscCall(DMSwarmSetUseAffineMass(sw, use_uniform_particle_grid));
       }
     } // !uniform
     // particles to grid, compute moments and entropy, for target vertex only

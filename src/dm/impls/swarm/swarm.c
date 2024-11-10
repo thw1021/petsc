@@ -546,7 +546,7 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
       } else {
         detJ = 1;                                    // delta so no detJ used
         for (PetscInt j = 0; j < numCIndices; ++j) { // copy points into array
-          for (PetscInt d = 0; d < coordDim; ++d) fieldV_cell[j * dim + d] = fieldVals[cindices[j] * bs + d];
+          for (PetscInt d = 0; d < bs; ++d) fieldV_cell[j * bs + d] = fieldVals[cindices[j] * bs + d];
         }
         PetscCall(DMPlexCoordinatesToReference(dmf, cell, numCIndices, fieldV_cell, xi)); // full non-affine map
       }
