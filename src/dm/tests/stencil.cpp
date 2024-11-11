@@ -122,6 +122,7 @@ PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global, PetscLogDo
   const PetscInt istart = xs == 0 ? xs + 1 : xs;
   const PetscInt iend   = xs + xm == Nx ? Nx - 1 : xs + xm;
 
+  *t_total = 0.0;
   for (PetscInt k = 0; k < args.n_iter + args.n_warmup; ++k) {
     PetscLogDouble t_begin = 0.0;
 
