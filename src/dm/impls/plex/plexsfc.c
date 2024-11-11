@@ -1444,10 +1444,7 @@ PetscErrorCode DMPlexCreateBoxMesh_Tensor_SFC_Internal(DM dm, PetscInt dim, cons
 @*/
 PetscErrorCode DMPlexSetIsoperiodicFaceSF(DM dm, PetscInt num_face_sfs, PetscSF *face_sfs)
 {
-  PetscBool    useNatural;
-  PetscSF      sfNatural, sfSection;
-  PetscSection orig_globalSection;
-  DM_Plex     *plex = (DM_Plex *)dm->data;
+  DM_Plex *plex = (DM_Plex *)dm->data;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1456,15 +1453,6 @@ PetscErrorCode DMPlexSetIsoperiodicFaceSF(DM dm, PetscInt num_face_sfs, PetscSF 
     PetscCall(PetscObjectComposeFunction((PetscObject)dm, "DMGetIsoperiodicPointSF_C", DMGetIsoperiodicPointSF_Plex));
   } else PetscCall(PetscObjectComposeFunction((PetscObject)dm, "DMGetIsoperiodicPointSF_C", NULL));
   if (num_face_sfs == plex->periodic.num_face_sfs && (num_face_sfs == 0 || face_sfs == plex->periodic.face_sfs)) PetscFunctionReturn(PETSC_SUCCESS);
-
-  PetscCall(DMGetUseNatural(dm, &useNatural));
-  PetscCall(DMGetNaturalSF(dm, &sfNatural));
-  if (useNatural && sfNatural && dm->globalSection) {
-    PetscCall(DMGetGlobalSection(dm, &orig_globalSection));
-    PetscCall(DMGetSectionSF(dm, &sfSection));
-    PetscCall(PetscObjectReference((PetscObject)orig_globalSection));
-    PetscCall(PetscObjectReference((PetscObject)sfSection));
-  }
   PetscCall(DMSetGlobalSection(dm, NULL));
 
   for (PetscInt i = 0; i < num_face_sfs; i++) PetscCall(PetscObjectReference((PetscObject)face_sfs[i]));
@@ -1481,12 +1469,6 @@ PetscErrorCode DMPlexSetIsoperiodicFaceSF(DM dm, PetscInt num_face_sfs, PetscSF 
   if (cdm) {
     PetscCall(DMPlexSetIsoperiodicFaceSF(cdm, num_face_sfs, face_sfs));
     if (face_sfs) cdm->periodic.setup = DMPeriodicCoordinateSetUp_Internal;
-  }
-
-  if (useNatural && sfNatural) {
-    PetscSection new_globalSection;
-
-    PetscCall(DMGetGlobalSection(dm, &new_globalSection));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
