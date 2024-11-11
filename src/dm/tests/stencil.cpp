@@ -1,4 +1,5 @@
 #include <petscdmda.h>
+#include <petscdmda_kokkos.hpp>
 
 namespace
 {
@@ -20,12 +21,14 @@ PetscErrorCode parse_args(Args *args)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode init_boundary_conditions(DM da, Vec global)
+PetscErrorCode init_boundary_conditions(DM da)
 {
+  Vec           global;
   PetscScalar **xy;
   PetscInt      xs, ys, xm, ym, Nx, Ny;
 
   PetscFunctionBeginUser;
+  PetscCall(DMGetGlobalVector(da, &global));
   PetscCall(DMDAGetCorners(da, &xs, &ys, nullptr, &xm, &ym, nullptr));
   PetscCall(DMDAGetInfo(da, nullptr, &Nx, &Ny, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
 
@@ -44,10 +47,11 @@ PetscErrorCode init_boundary_conditions(DM da, Vec global)
     }
   }
   PetscCall(DMDAVecRestoreArray(da, global, &xy));
+  PetscCall(DMRestoreGlobalVector(da, &global));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global)
+PetscErrorCode kernel(const Args &args, DM da, PetscLogDouble *t_total)
 {
   PetscInt xm, ym, xs, ys, gxm, gym, gxs, gys, Nx, Ny;
 
@@ -55,6 +59,11 @@ PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global)
   PetscCall(DMDAGetCorners(da, &xs, &ys, nullptr, &xm, &ym, nullptr));
   PetscCall(DMDAGetGhostCorners(da, &gxs, &gys, nullptr, &gxm, &gym, nullptr));
   PetscCall(DMDAGetInfo(da, nullptr, &Nx, &Ny, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
+
+  Vec local, global;
+
+  PetscCall(DMGetLocalVector(da, &local));
+  PetscCall(DMGetGlobalVector(da, &global));
 
   const PetscScalar *xy_local;
   PetscScalar       *xy_global;
@@ -70,35 +79,47 @@ PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global)
   const PetscInt istart = xs == 0 ? xs + 1 : xs;
   const PetscInt iend   = xs + xm == Nx ? xm - 1 : xm;
 
-  for (PetscInt j = jstart; j < jend; ++j) {
-    for (PetscInt i = istart; i < iend; ++i) {
-      const auto center  = IDX_LOCAL(i, j);
-      const auto north   = IDX_LOCAL(i, j - 1);
-      const auto east    = IDX_LOCAL(i + 1, j);
-      const auto west    = IDX_LOCAL(i - 1, j);
-      const auto south   = IDX_LOCAL(i, j + 1);
-      const auto average = center + north + east + west + south;
+  PetscLogDouble t_begin = 0.0, t_end = 0.0;
 
-      IDX_GLOBAL(i, j) = 0.2 * average;
+  for (PetscInt k = 0; k < args.n_iter + args.n_warmup; ++k) {
+    if (k == args.n_warmup) PetscCall(PetscTime(&t_begin));
+    for (PetscInt j = jstart; j < jend; ++j) {
+      for (PetscInt i = istart; i < iend; ++i) {
+        const auto center  = IDX_LOCAL(i, j);
+        const auto north   = IDX_LOCAL(i, j - 1);
+        const auto east    = IDX_LOCAL(i + 1, j);
+        const auto west    = IDX_LOCAL(i - 1, j);
+        const auto south   = IDX_LOCAL(i, j + 1);
+        const auto average = center + north + east + west + south;
+
+        IDX_GLOBAL(i, j) = 0.2 * average;
+      }
     }
   }
+  PetscCall(PetscTime(&t_end));
+  *t_total = t_end - t_begin;
 
   PetscCall(VecRestoreArrayRead(local, &xy_local));
   PetscCall(VecRestoreArrayWrite(global, &xy_global));
 
-  PetscCall(DMGlobalToLocalBegin(da, global, INSERT_VALUES, local));
-  PetscCall(DMGlobalToLocalEnd(da, global, INSERT_VALUES, local));
+  PetscCall(DMRestoreLocalVector(da, &local));
+  PetscCall(DMRestoreGlobalVector(da, &global));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #if PetscDefined(HAVE_KOKKOS_KERNELS)
-PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global)
+PetscErrorCode kernel(const Args &args, DM da, PetscLogDouble *t_total)
 {
   PetscInt xm, ym, xs, ys, Nx, Ny;
 
   PetscFunctionBegin;
   PetscCall(DMDAGetCorners(da, &xs, &ys, nullptr, &xm, &ym, nullptr));
   PetscCall(DMDAGetInfo(da, nullptr, &Nx, &Ny, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
+
+  Vec local, global;
+
+  PetscCall(DMGetLocalVector(da, &local));
+  PetscCall(DMGetGlobalVector(da, &global));
 
   ConstPetscScalarKokkosOffsetView2D xy_local;
   PetscScalarKokkosOffsetView2D      xy_global;
@@ -111,26 +132,44 @@ PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global)
   const PetscInt istart = xs == 0 ? xs + 1 : xs;
   const PetscInt iend   = xs + xm == Nx ? xm - 1 : xm;
 
-  Kokkos::parallel_for(
-    "stencil", MDRangePolicy<Kokkos::DefaultHostExecutionSpace, Rank<2, Iterate::Right, Iterate::Right>>({jstart, istart}, {jend, iend}), KOKKOS_LAMBDA(PetscInt j, PetscInt i) {
-      const auto center  = xy_local(i, j);
-      const auto north   = xy_local(i, j - 1);
-      const auto east    = xy_local(i + 1, j);
-      const auto west    = xy_local(i - 1, j);
-      const auto south   = xy_local(i, j + 1);
-      const auto average = center + north + east + west + south;
+  PetscLogDouble t_begin = 0.0, t_end = 0.0;
 
-      xy_global(i, j) = 0.2 * average;
-    });
+  for (PetscInt k = 0; k < args.n_iter + args.n_warmup; ++k) {
+    if (k == args.n_warmup) PetscCall(PetscTime(&t_begin));
+    Kokkos::parallel_for(
+      "stencil", Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Rank<2, Iterate::Right, Iterate::Right>>({jstart, istart}, {jend, iend}), KOKKOS_LAMBDA(PetscInt j, PetscInt i) {
+        const auto center  = xy_local(i, j);
+        const auto north   = xy_local(i, j - 1);
+        const auto east    = xy_local(i + 1, j);
+        const auto west    = xy_local(i - 1, j);
+        const auto south   = xy_local(i, j + 1);
+        const auto average = center + north + east + west + south;
+
+        xy_global(i, j) = 0.2 * average;
+      });
+  }
+  PetscCall(PetscTime(&t_end));
+  *t_total = t_end - t_begin;
 
   PetscCall(DMDAVecRestoreKokkosOffsetView(da, local, &xy_local));
   PetscCall(DMDAVecRestoreKokkosOffsetView(da, global, &xy_global));
 
-  PetscCall(DMGlobalToLocalBegin(da, global, INSERT_VALUES, local));
-  PetscCall(DMGlobalToLocalEnd(da, global, INSERT_VALUES, local));
+  PetscCall(DMRestoreLocalVector(da, &local));
+  PetscCall(DMRestoreGlobalVector(da, &global));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
+
+PetscErrorCode output_summary(const Args &args, DM da, PetscLogDouble t_total)
+{
+  PetscInt nx, ny;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMDAGetInfo(da, nullptr, &nx, &ny, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%" PetscInt_FMT "x%" PetscInt_FMT " grid, n_it = %" PetscInt_FMT ", n_warmup = %" PetscInt_FMT "\n", nx, ny, args.n_iter, args.n_warmup));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Elapsed Time: %g ms\n", t_total));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 } // namespace
 
@@ -148,20 +187,15 @@ int main(int argc, char *argv[])
   PetscCall(DMSetFromOptions(da));
   PetscCall(DMSetUp(da));
 
-  Vec local, global;
+  PetscCall(init_boundary_conditions(da));
 
-  PetscCall(DMCreateGlobalVector(da, &global));
-  PetscCall(DMCreateLocalVector(da, &local));
+  PetscLogDouble t_total = 0.0;
 
-  PetscCall(init_boundary_conditions(da, global));
+  PetscCall(kernel(args, da, &t_total));
 
-  PetscCall(DMGlobalToLocalBegin(da, global, INSERT_VALUES, local));
-  PetscCall(DMGlobalToLocalEnd(da, global, INSERT_VALUES, local));
+  PetscCall(output_summary(args, da, t_total));
 
-  PetscCall(kernel(args, da, local, global));
-
-  PetscCall(VecViewFromOptions(global, reinterpret_cast<PetscObject>(da), "-vec_view_global"));
-
+  PetscCall(DMDestroy(&da));
   PetscCall(PetscFinalize());
   return 0;
 }

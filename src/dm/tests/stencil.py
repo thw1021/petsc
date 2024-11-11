@@ -24,7 +24,6 @@ def run_stencil(N, I, warmup, timing):  # noqa: E741
     west = grid[1:-1, 0:-2]
     south = grid[2:, 1:-1]
 
-    print(grid)
     start = time.time()
     for i in range(I + warmup):
         if i == warmup:
@@ -32,7 +31,6 @@ def run_stencil(N, I, warmup, timing):  # noqa: E741
         average = center + north + east + west + south
         work = 0.2 * average
         center[:] = work
-    print(grid)
     total = time.time() - start
 
     if timing:
