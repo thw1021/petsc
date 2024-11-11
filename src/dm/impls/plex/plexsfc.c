@@ -858,13 +858,20 @@ static PetscErrorCode DMPlexCorrectOrientationForIsoperiodic(DM dm)
     //   PetscCall(PetscSFDestroy(&sectionSF));
     // }
 
+    PetscCall(PetscIntView(local_vec_length, local_vec_perm, NULL));
+
     {
+      PetscBT global_vec_check;
       PetscInt g = 0;
+      PetscCall(PetscBTCreate(global_vec_length, &global_vec_check));
       for (PetscInt l = 0; l < local_vec_length; l++) {
-        if (local_vec_perm[l] < 0) continue;
-        global_vec_perm[g++] = local_vec_perm[l];
+        PetscInt global_index = local_vec_perm[l];
+        if (global_index < 0) continue;
+        PetscCheck(!PetscBTLookupSet(global_vec_check, global_index), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Found duplicate global index %" PetscInt_FMT " in local_vec_perm", global_index);
+        global_vec_perm[g++] = global_index;
       }
       PetscCheck(g == global_vec_length, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Wrong number of non-negative local indices");
+      PetscCall(PetscBTDestroy(&global_vec_check));
 
       PetscCall(PetscFree(local_vec_perm));
     }

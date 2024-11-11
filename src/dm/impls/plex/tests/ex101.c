@@ -163,7 +163,7 @@ int main(int argc, char **argv)
       PetscSection dummy_section;
       PetscSF sfNatural;
       PetscCall(DMGetGlobalSection(dm_read_output, &dummy_section));
-      PetscCall(PetscSectionView(dummy_section, NULL));
+      // PetscCall(PetscSectionView(dummy_section, NULL));
       PetscCall(DMGetNaturalSF(dm_read_output, &sfNatural));
       PetscCall(PetscSFViewFromOptions(sfNatural, NULL, "-sfNatural_view"));
     }
@@ -223,6 +223,6 @@ int main(int argc, char **argv)
     requires: cgns
     suffix: cgns
     nsize: 3
-    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/2x2x2_Q3_wave.cgns -dm_plex_cgns_parallel -dm_view ::ascii_info_detail -dm_plex_box_label true -dm_plex_box_label_bd periodic,periodic,periodic -petscpartitioner_type simple
+    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/2x2x2_Q3_wave.cgns -dm_plex_cgns_parallel -dm_view ::ascii_info_detail -dm_plex_box_label true -dm_plex_box_label_bd periodic,periodic,periodic -petscpartitioner_type simple -test_cgns_load
 
 TEST*/
