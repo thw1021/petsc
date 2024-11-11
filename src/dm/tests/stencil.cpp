@@ -91,7 +91,7 @@ PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if PETSC_DEFINED(HAVE_KOKKOS)
+#if PetscDefined(HAVE_KOKKOS_KERNELS)
 PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global)
 {
   PetscInt xm, ym, xs, ys, Nx, Ny;
