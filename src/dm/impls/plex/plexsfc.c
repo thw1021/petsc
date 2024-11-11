@@ -422,7 +422,7 @@ static PetscErrorCode DMPlexOrientPointWithCorrections(DM dm, PetscInt point, Pe
   if (perm_section) {
     PetscInt num_fields;
     PetscCall(PetscSectionGetNumFields(perm_section, &num_fields));
-    for (PetscInt f = 0; f < num_fields; f++) { PetscCall(DMPlexOrientFieldPointIndex(dm, perm_section, f, perm_length, perm, point, ornt)); }
+    for (PetscInt f = 0; f < num_fields; f++) PetscCall(DMPlexOrientFieldPointIndex(dm, perm_section, f, perm_length, perm, point, ornt));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -538,6 +538,7 @@ static PetscErrorCode DMPlexCorrectOrientationForIsoperiodic(DM dm)
   DM_Plex        *plex = (DM_Plex *)dm->data;
   PetscInt        nroots, nleaves, coords_field_id = 0;
   PetscInt       *local_vec_perm = NULL, local_vec_length = 0;
+  PetscInt          *global_vec_perm = NULL, global_vec_length = 0;
   const PetscInt *filocal;
   DM              cdm;
   PetscSection    csection, localSection = NULL;
@@ -555,10 +556,37 @@ static PetscErrorCode DMPlexCorrectOrientationForIsoperiodic(DM dm)
   PetscCall(DMGetNaturalSF(dm, &sfNatural_old));
   // Prep data for naturalSF correction
   if (plex->periodic.num_face_sfs > 0 && sfNatural_old) {
+    PetscSection       globalSection;
+    PetscSF            pointSF, sectionSF;
+    PetscMPIInt        myrank;
+    PetscInt           nroots, nleaves; //TODO: Probably don't need nroots?
+    const PetscInt    *ilocal;
+    const PetscSFNode *iremote;
+
+    PetscCallMPI(MPI_Comm_rank(comm, &myrank));
+
     PetscCall(DMGetLocalSection(dm, &localSection));
+
+    PetscCall(DMGetPointSF(dm, &pointSF));
+    PetscCall(PetscSectionCreateGlobalSection(localSection, pointSF, PETSC_TRUE, PETSC_TRUE, PETSC_FALSE, &globalSection));
+
+    PetscCall(PetscSectionGetStorageSize(globalSection, &global_vec_length));
     PetscCall(PetscSectionGetStorageSize(localSection, &local_vec_length));
+    PetscCall(PetscMalloc1(global_vec_length, &global_vec_perm)); // TODO: Convert to Malloc2
     PetscCall(PetscMalloc1(local_vec_length, &local_vec_perm));
-    for (PetscInt i = 0; i < local_vec_length; i++) local_vec_perm[i] = i;
+    for (PetscInt i = 0; i < global_vec_length; i++) global_vec_perm[i] = i;
+    for (PetscInt i = 0; i < local_vec_length; i++) local_vec_perm[i] = -(i + 1);
+
+    PetscCall(PetscSFCreate(comm, &sectionSF));
+    PetscCall(PetscSFSetGraphSection(sectionSF, localSection, globalSection));
+
+    // 3. Loop through SectionSF remotes
+    PetscCall(PetscSFGetGraph(sectionSF, &nroots, &nleaves, &ilocal, &iremote));
+    for (PetscInt l = 0; l < nleaves; l++) {
+      if (iremote[l].rank != myrank) continue;
+      PetscInt local_index        = ilocal ? ilocal[l] : l;
+      local_vec_perm[local_index] = global_vec_perm[iremote[l].index];
+    }
   }
 
   for (PetscInt f = 0; f < plex->periodic.num_face_sfs; f++) {
@@ -798,38 +826,47 @@ static PetscErrorCode DMPlexCorrectOrientationForIsoperiodic(DM dm)
     PetscSF      newglob_to_oldglob_sf, sfNatural_old, sfNatural_new;
     PetscSFNode *remote;
     PetscMPIInt  myrank;
-    PetscInt    *global_vec_perm, global_vec_length;
 
     PetscCallMPI(MPI_Comm_rank(comm, &myrank));
+    // { // Translate permutation of local Vec into permutation of global Vec
+    //   PetscSection       globalSection;
+    //   PetscSF            pointSF, sectionSF;
+    //   PetscInt           nroots, nleaves; //TODO: Probably don't need nroots?
+    //   const PetscInt    *ilocal;
+    //   const PetscSFNode *iremote;
+    //
+    //   // 1. Create GlobalSection using just the PointSF (has to be done manually): See DMGetGlobalSection:
+    //   PetscCall(DMGetPointSF(dm, &pointSF));
+    //   PetscCall(PetscSectionCreateGlobalSection(localSection, pointSF, PETSC_TRUE, PETSC_TRUE, PETSC_FALSE, &globalSection));
+    //   PetscCall(PetscSectionGetStorageSize(globalSection, &global_vec_length));
+    //   PetscCall(PetscMalloc1(global_vec_length, &global_vec_perm));
+    //
+    //   // 2. Create SectionSF (See DMCreateSectionSF):
+    //   PetscCall(PetscSFCreate(comm, &sectionSF));
+    //   PetscCall(PetscSFSetGraphSection(sectionSF, localSection, globalSection));
+    //
+    //   // 3. Loop through SectionSF remotes
+    //   PetscCall(PetscSFGetGraph(sectionSF, &nroots, &nleaves, &ilocal, &iremote));
+    //   for (PetscInt l = 0; l < nleaves; l++) {
+    //     if (iremote[l].rank != myrank) continue;
+    //     PetscInt local_index              = ilocal ? ilocal[l] : l;
+    //     global_vec_perm[iremote[l].index] = local_vec_perm[local_index];
+    //   }
+    //
+    //   PetscCall(PetscFree(local_vec_perm));
+    //   PetscCall(PetscSectionDestroy(&globalSection));
+    //   PetscCall(PetscSFDestroy(&sectionSF));
+    // }
 
     {
-      PetscSection       globalSection;
-      PetscSF            pointSF, sectionSF;
-      PetscInt           nroots, nleaves;
-      const PetscInt    *ilocal;
-      const PetscSFNode *iremote;
-
-      // 1. Create GlobalSection using just the PointSF (has to be done manually): See DMGetGlobalSection:
-      PetscCall(DMGetPointSF(dm, &pointSF));
-      PetscCall(PetscSectionCreateGlobalSection(localSection, pointSF, PETSC_TRUE, PETSC_FALSE, PETSC_FALSE, &globalSection));
-      PetscCall(PetscSectionGetStorageSize(globalSection, &global_vec_length));
-      PetscCall(PetscMalloc1(global_vec_length, &global_vec_perm));
-
-      // 2. Create SectionSF (See DMCreateSectionSF):
-      PetscCall(PetscSFCreate(comm, &sectionSF));
-      PetscCall(PetscSFSetGraphSection(sectionSF, localSection, globalSection));
-
-      // 3. Loop through SectionSF remotes
-      PetscCall(PetscSFGetGraph(sectionSF, &nroots, &nleaves, &ilocal, &iremote));
-      for (PetscInt l = 0; l < nleaves; l++) {
-        if (iremote[l].rank != myrank) continue;
-        PetscInt local_index              = ilocal ? ilocal[l] : l;
-        global_vec_perm[iremote[l].index] = local_vec_perm[local_index];
+      PetscInt g = 0;
+      for (PetscInt l = 0; l < local_vec_length; l++) {
+        if (local_vec_perm[l] < 0) continue;
+        global_vec_perm[g++] = local_vec_perm[l];
       }
+      PetscCheck(g == global_vec_length, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Wrong number of non-negative local indices");
 
       PetscCall(PetscFree(local_vec_perm));
-      PetscCall(PetscSectionDestroy(&globalSection));
-      PetscCall(PetscSFDestroy(&sectionSF));
     }
 
     PetscCall(PetscMalloc1(global_vec_length, &remote));
@@ -1495,8 +1532,8 @@ PetscErrorCode DMPlexGetIsoperiodicFaceSF(DM dm, PetscInt *num_face_sfs, const P
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  *face_sfs     = plex->periodic.face_sfs;
-  *num_face_sfs = plex->periodic.num_face_sfs;
+  if (face_sfs) *face_sfs = plex->periodic.face_sfs;
+  if (num_face_sfs) *num_face_sfs = plex->periodic.num_face_sfs;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

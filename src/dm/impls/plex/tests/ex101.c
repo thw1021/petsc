@@ -1,6 +1,7 @@
 static char help[] = "Verify isoperiodic cone corrections";
 
 #include <petscdmplex.h>
+#include <petscsf.h>
 #define EX "ex101.c"
 
 // Creates periodic solution on a [0,1] x D domain for D dimension
@@ -11,62 +12,58 @@ static PetscErrorCode project_function(PetscInt dim, PetscReal time, const Petsc
   PetscFunctionBeginUser;
   for (PetscInt d = 0; d < dim; d++) x_tot += x[d];
   for (PetscInt c = 0; c < Nc; c++) {
-    PetscScalar value = PetscSinReal(2 * M_PI * x_tot);
+    PetscScalar value = c % 2 ? PetscSinReal(2 * M_PI * x_tot) : PetscCosReal(2 * M_PI * x_tot);
+    // PetscScalar value = c % 2 ? PetscCosReal(2 * M_PI * x_tot) : PetscSinReal(2 * M_PI * x_tot);
     if (PetscAbsScalar(value) < 1e-7) value = 0.;
     u[c] = value;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// @brief Create DM from CGNS file and setup PetscFE to VecLoad solution from that file
-PetscErrorCode ReadCGNSDM(MPI_Comm comm, const char filename[], DM *dm)
+PetscErrorCode PetscSectionVecViewDM(DM dm, PetscBool use_local_section, Vec V, PetscViewer viewer)
 {
-  PetscInt degree;
+  PetscSection local_section;
+  PetscViewer  actual_viewer;
 
   PetscFunctionBeginUser;
-  PetscCall(DMPlexCreateFromFile(comm, filename, "ex15_plex", PETSC_TRUE, dm));
-  PetscCall(DMSetFromOptions(*dm));
-  PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
+  if (!viewer) PetscCall(PetscViewerASCIIGetStdout(PETSC_COMM_WORLD, &actual_viewer));
+  else actual_viewer = viewer;
 
-  { // Get degree of the natural section (we assume there's only one field)
-    PetscFE    fe_natural;
-    PetscSpace space_natural;
+  PetscCall(DMGetLocalSection(dm, &local_section));
+  if (use_local_section) {
+    PetscCall(PetscSectionVecView(local_section, V, actual_viewer));
+  } else {
+    PetscSection globalSection;
+    PetscSF      pointSF;
 
-    PetscCall(DMGetField(*dm, 0, NULL, (PetscObject *)&fe_natural));
-    PetscCall(PetscFEGetBasisSpace(fe_natural, &space_natural));
-    PetscCall(PetscSpaceGetDegree(space_natural, &degree, NULL));
-    PetscCall(DMClearFields(*dm));
-    PetscCall(DMSetLocalSection(*dm, NULL));
+    PetscCall(DMGetPointSF(dm, &pointSF));
+    PetscCall(PetscSectionCreateGlobalSection(local_section, pointSF, PETSC_TRUE, PETSC_TRUE, PETSC_TRUE, &globalSection));
+    // PetscCall(PetscSectionView(globalSection, NULL));
+    PetscCall(PetscSectionVecView(globalSection, V, actual_viewer));
+    PetscCall(PetscSectionDestroy(&globalSection));
   }
-
-  { // Setup fe to load in the initial condition data
-    PetscFE  fe;
-    PetscInt dim;
-
-    PetscCall(DMGetDimension(*dm, &dim));
-    PetscCall(PetscFECreateLagrange(PETSC_COMM_SELF, dim, 1, PETSC_FALSE, degree, PETSC_DETERMINE, &fe));
-    PetscCall(PetscObjectSetName((PetscObject)fe, "FE for VecLoad"));
-    PetscCall(DMAddField(*dm, NULL, (PetscObject)fe));
-    PetscCall(DMCreateDS(*dm));
-    PetscCall(PetscFEDestroy(&fe));
-  }
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode CreateFEField(DM dm)
+PetscErrorCode CreateFEField(DM dm, PetscBool use_natural_fe, PetscInt num_comps)
 {
   PetscInt degree;
 
   PetscFunctionBeginUser;
   { // Get degree of the coords section
-    PetscFE    fe_coords;
-    PetscSpace coord_space;
-    DM         cdm;
+    PetscFE    fe;
+    PetscSpace basis_space;
 
-    PetscCall(DMGetCoordinateDM(dm, &cdm));
-    PetscCall(DMGetField(cdm, 0, NULL, (PetscObject *)&fe_coords));
-    PetscCall(PetscFEGetBasisSpace(fe_coords, &coord_space));
-    PetscCall(PetscSpaceGetDegree(coord_space, &degree, NULL));
+    if (use_natural_fe) {
+      PetscCall(DMGetField(dm, 0, NULL, (PetscObject *)&fe));
+    } else {
+      DM cdm;
+      PetscCall(DMGetCoordinateDM(dm, &cdm));
+      PetscCall(DMGetField(cdm, 0, NULL, (PetscObject *)&fe));
+    }
+    PetscCall(PetscFEGetBasisSpace(fe, &basis_space));
+    PetscCall(PetscSpaceGetDegree(basis_space, &degree, NULL));
   }
 
   PetscCall(DMClearFields(dm));
@@ -77,7 +74,7 @@ PetscErrorCode CreateFEField(DM dm)
     PetscInt dim;
 
     PetscCall(DMGetDimension(dm, &dim));
-    PetscCall(PetscFECreateLagrange(PETSC_COMM_SELF, dim, 1, PETSC_FALSE, degree, PETSC_DETERMINE, &fe));
+    PetscCall(PetscFECreateLagrange(PETSC_COMM_SELF, dim, num_comps, PETSC_FALSE, degree, PETSC_DETERMINE, &fe));
     PetscCall(DMAddField(dm, NULL, (PetscObject)fe));
     PetscCall(DMCreateDS(dm));
     PetscCall(PetscFEDestroy(&fe));
@@ -91,7 +88,9 @@ int main(int argc, char **argv)
   DM        dm = NULL;
   Vec       V, V_G2L, V_local;
   PetscReal norm;
-  PetscBool test_cgns_load                                                                                           = PETSC_FALSE;
+  PetscBool test_cgns_load = PETSC_FALSE;
+  PetscInt  num_comps      = 1;
+
   PetscErrorCode (*funcs)(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx) = {project_function};
 
   PetscFunctionBeginUser;
@@ -100,6 +99,7 @@ int main(int argc, char **argv)
 
   PetscOptionsBegin(comm, "", "ex101.c Options", "DMPLEX");
   PetscCall(PetscOptionsBool("-test_cgns_load", "Test VecLoad using CGNS file", EX, test_cgns_load, &test_cgns_load, NULL));
+  PetscCall(PetscOptionsInt("-num_comps", "Number of components in FE field", EX, num_comps, &num_comps, NULL));
   PetscOptionsEnd();
 
   PetscCall(DMCreate(comm, &dm));
@@ -107,7 +107,7 @@ int main(int argc, char **argv)
   PetscCall(PetscObjectSetName((PetscObject)dm, "ex101_dm"));
   PetscCall(DMSetFromOptions(dm));
   PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
-  PetscCall(CreateFEField(dm));
+  PetscCall(CreateFEField(dm, PETSC_FALSE, num_comps));
 
   // Verify that projected function on global vector (then projected onto local vector) is equal to projected function onto a local vector
   PetscCall(DMGetLocalVector(dm, &V_G2L));
@@ -117,11 +117,12 @@ int main(int argc, char **argv)
 
   PetscCall(DMGetLocalVector(dm, &V_local));
   PetscCall(DMProjectFunctionLocal(dm, 0, &funcs, NULL, INSERT_VALUES, V_local));
+  PetscCall(VecViewFromOptions(V_local, NULL, "-local_view"));
 
   PetscCall(VecAXPY(V_G2L, -1, V_local));
-  PetscCall(VecNorm(V_G2L, NORM_2, &norm));
+  PetscCall(VecNorm(V_G2L, NORM_MAX, &norm));
   PetscReal tol = PetscDefined(USE_REAL___FLOAT128) ? 1e-12 : 1e4 * PETSC_MACHINE_EPSILON;
-  if (norm < tol) PetscCall(PetscPrintf(comm, "Error! GlobalToLocal result does not match Local projection by norm %g\n", (double)norm));
+  if (norm > tol) PetscCall(PetscPrintf(comm, "Error! GlobalToLocal result does not match Local projection by norm %g\n", (double)norm));
 
   if (test_cgns_load) {
 #ifndef PETSC_HAVE_CGNS
@@ -129,7 +130,7 @@ int main(int argc, char **argv)
 #else
     PetscViewer viewer;
     DM          dm_read, dm_read_output;
-    Vec         V_read_output, V_read_local;
+    Vec         V_read, V_read_project2local, V_read_output2local;
     const char *filename = "test_file.cgns";
 
     PetscCall(PetscViewerCGNSOpen(comm, filename, FILE_MODE_WRITE, &viewer));
@@ -140,21 +141,65 @@ int main(int argc, char **argv)
     PetscCall(DMSetFromOptions(dm_read));
     PetscCall(DMViewFromOptions(dm_read, NULL, "-dm_view"));
 
-    PetscCall(DMGetOutputDM(dm, &dm_read_output));
-    PetscCall(DMGetGlobalVector(dm_read_output, &V_read_output));
-    PetscCall(DMGetLocalVector(dm_read_output, &V_read_local)); // TODO: Test with dm_read's local vector too
+    { // Force isoperiodic point SF to be created
+      PetscSection dummy_section;
+      PetscCall(DMGetGlobalSection(dm_read, &dummy_section));
+    }
 
-    PetscCall(PetscViewerCGNSOpen(comm, filename, FILE_MODE_READ, &viewer));
-    PetscCall(VecLoad(V_read_output, viewer));
-    PetscCall(PetscViewerDestroy(&viewer));
+    PetscCall(CreateFEField(dm_read, PETSC_TRUE, num_comps));
 
-    PetscCall(DMGlobalToLocal(dm_read_output, V_read_output, INSERT_VALUES, V_read_local));
-    PetscCall(VecAXPY(V_read_local, -1, V_local));
-    PetscCall(VecNorm(V_read_local, NORM_2, &norm));
-    if (norm < tol) PetscCall(PetscPrintf(comm, "Error! CGNS VecLoad result does not match Local projection by norm %g\n", (double)norm));
+    PetscCall(DMGetOutputDM(dm_read, &dm_read_output));
+    PetscCall(DMGetLocalVector(dm_read, &V_read_project2local));
+    PetscCall(DMGetLocalVector(dm_read_output, &V_read_output2local)); // TODO: Test with dm_read's local vector too
+    // PetscCall(DMGetLocalVector(dm_read, &V_read_local));
+    PetscCall(PetscObjectSetName((PetscObject)V_read_output2local, "V_read_output2local"));
+    PetscCall(PetscObjectSetName((PetscObject)V_read_project2local, "V_read_project2local"));
 
-    PetscCall(DMRestoreGlobalVector(dm_read_output, &V_read_output));
-    PetscCall(DMRestoreLocalVector(dm_read_output, &V_read_local));
+    PetscCall(DMProjectFunctionLocal(dm_read_output, 0, &funcs, NULL, INSERT_VALUES, V_read_project2local));
+    // PetscCall(PetscSectionVecViewDM(dm_read_output, PETSC_TRUE, V_read_project2local, NULL));
+    PetscCall(VecViewFromOptions(V_read_project2local, NULL, "-project2local_view"));
+
+    { // Force isoperiodic point SF to be created
+      PetscSection dummy_section;
+      PetscSF sfNatural;
+      PetscCall(DMGetGlobalSection(dm_read_output, &dummy_section));
+      PetscCall(PetscSectionView(dummy_section, NULL));
+      PetscCall(DMGetNaturalSF(dm_read_output, &sfNatural));
+      PetscCall(PetscSFViewFromOptions(sfNatural, NULL, "-sfNatural_view"));
+    }
+
+    {
+      PetscCall(DMGetGlobalVector(dm_read_output, &V_read));
+      PetscCall(PetscObjectSetName((PetscObject)V_read, "V_read"));
+
+      PetscCall(PetscViewerCGNSOpen(comm, filename, FILE_MODE_READ, &viewer));
+      PetscCall(VecLoad(V_read, viewer));
+      PetscCall(PetscViewerDestroy(&viewer));
+
+      { // Force isoperiodic point SF to be created
+        PetscSection dummy_section;
+        PetscCall(DMGetGlobalSection(dm_read_output, &dummy_section));
+        PetscCall(PetscSectionView(dummy_section, NULL));
+      }
+      // PetscCall(PetscSectionVecViewDM(dm_read_output, PETSC_FALSE, V_read_output, NULL));
+
+      PetscCall(DMGlobalToLocal(dm_read_output, V_read, INSERT_VALUES, V_read_output2local));
+
+      // PetscCall(PetscSectionVecViewDM(dm_read_output, PETSC_TRUE, V_read_output2local, NULL));
+      PetscCall(DMRestoreGlobalVector(dm_read_output, &V_read));
+    }
+    PetscCall(VecViewFromOptions(V_read_output2local, NULL, "-output2local_view"));
+
+    PetscCall(VecAXPY(V_read_output2local, -1, V_read_project2local));
+    // PetscCall(PetscObjectSetName((PetscObject)V_read_output2local, "Vec error"));
+    // PetscCall(PetscSectionVecViewDM(dm_read_output, PETSC_TRUE, V_read_output2local, NULL));
+    PetscCall(VecNorm(V_read_output2local, NORM_MAX, &norm));
+    if (norm > tol) PetscCall(PetscPrintf(comm, "Error! CGNS VecLoad result does not match Local projection by norm %g\n", (double)norm));
+
+    PetscCall(DMRestoreLocalVector(dm_read, &V_read_project2local));
+    PetscCall(DMRestoreLocalVector(dm_read_output, &V_read_output2local));
+    // PetscCall(DMRestoreLocalVector(dm_read, &V_read_local));
+    PetscCall(DMDestroy(&dm_read));
 #endif
   }
 
