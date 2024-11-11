@@ -203,7 +203,6 @@ int main(int argc, char *argv[])
   PetscLogDouble t_total = 0.0;
 
   PetscCall(kernel(args, da, local, global, &t_total));
-
   PetscCall(output_summary(args, da, t_total));
 
   PetscCall(DMRestoreLocalVector(da, &local));
