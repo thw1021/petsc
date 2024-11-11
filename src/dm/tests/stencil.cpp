@@ -51,7 +51,9 @@ PetscErrorCode init_boundary_conditions(DM da, Vec local, Vec global)
 
 PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global, PetscLogDouble *t_total)
 {
-  PetscInt xm, ym, xs, ys, gxm, gym, gxs, gys, Nx, Ny;
+  const auto n_warmup = args.n_warmup;
+  const auto n_it     = args.n_iter + n_warmup;
+  PetscInt   xm, ym, xs, ys, gxm, gym, gxs, gys, Nx, Ny;
 
   PetscFunctionBegin;
   PetscCall(DMDAGetCorners(da, &xs, &ys, nullptr, &xm, &ym, nullptr));
@@ -63,11 +65,12 @@ PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global, PetscLogDo
   const PetscInt istart = xs == 0 ? xs + 1 : xs;
   const PetscInt iend   = xs + xm == Nx ? Nx - 1 : xs + xm;
 
-  *t_total = 0.0;
-  for (PetscInt k = 0; k < args.n_iter + args.n_warmup; ++k) {
+  PetscLogDouble t_tmp = 0.0;
+
+  for (PetscInt k = 0; k < n_it; ++k) {
     PetscLogDouble t_begin = 0.0;
 
-    if (k >= args.n_warmup) PetscCall(PetscTime(&t_begin));
+    if (k >= n_warmup) PetscCall(PetscTime(&t_begin));
 
     const PetscScalar *xy_local;
     PetscScalar       *xy_global;
@@ -96,22 +99,23 @@ PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global, PetscLogDo
 
     PetscCall(DMGlobalToLocal(da, global, INSERT_VALUES, local));
 
-    if (k >= args.n_warmup) {
+    if (k >= n_warmup) {
       PetscLogDouble t_end = 0.0;
 
       PetscCall(PetscTime(&t_end));
-      *t_total += t_end - t_begin;
+      t_tmp += t_end - t_begin;
     }
   }
-
-  PetscCall(VecViewFromOptions(global, reinterpret_cast<PetscObject>(da), "-vec_view_global"));
+  *t_total = t_tmp;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #if PetscDefined(HAVE_KOKKOS_KERNELS)
 PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global, PetscLogDouble *t_total)
 {
-  PetscInt xm, ym, xs, ys, Nx, Ny;
+  const auto n_warmup = args.n_warmup;
+  const auto n_it     = args.n_iter + n_warmup;
+  PetscInt   xm, ym, xs, ys, Nx, Ny;
 
   PetscFunctionBegin;
   PetscCall(DMDAGetCorners(da, &xs, &ys, nullptr, &xm, &ym, nullptr));
@@ -122,11 +126,12 @@ PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global, PetscLogDo
   const PetscInt istart = xs == 0 ? xs + 1 : xs;
   const PetscInt iend   = xs + xm == Nx ? Nx - 1 : xs + xm;
 
-  *t_total = 0.0;
-  for (PetscInt k = 0; k < args.n_iter + args.n_warmup; ++k) {
+  PetscLogDouble t_tmp = 0.0;
+
+  for (PetscInt k = 0; k < n_it; ++k) {
     PetscLogDouble t_begin = 0.0;
 
-    if (k >= args.n_warmup) PetscCall(PetscTime(&t_begin));
+    if (k >= n_warmup) PetscCall(PetscTime(&t_begin));
 
     using PetscScalarKokkosOffsetView2D      = Kokkos::Experimental::OffsetView<PetscScalar **, Kokkos::LayoutRight, Kokkos::CudaSpace>;
     using ConstPetscScalarKokkosOffsetView2D = Kokkos::Experimental::OffsetView<const PetscScalar **, Kokkos::LayoutRight, Kokkos::CudaSpace>;
@@ -153,15 +158,15 @@ PetscErrorCode kernel(const Args &args, DM da, Vec local, Vec global, PetscLogDo
     PetscCall(DMDAVecRestoreKokkosOffsetView(da, global, &xy_global));
 
     PetscCall(DMGlobalToLocal(da, global, INSERT_VALUES, local));
-    if (k >= args.n_warmup) {
+
+    if (k >= n_warmup) {
       PetscLogDouble t_end = 0.0;
 
       PetscCall(PetscTime(&t_end));
-      *t_total += t_end - t_begin;
+      t_tmp += t_end - t_begin;
     }
   }
-
-  PetscCall(VecViewFromOptions(global, reinterpret_cast<PetscObject>(da), "-vec_view_global"));
+  *t_total = t_tmp;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
@@ -203,6 +208,7 @@ int main(int argc, char *argv[])
   PetscLogDouble t_total = 0.0;
 
   PetscCall(kernel(args, da, local, global, &t_total));
+  PetscCall(VecViewFromOptions(global, reinterpret_cast<PetscObject>(da), "-vec_view_global"));
   PetscCall(output_summary(args, da, t_total));
 
   PetscCall(DMRestoreLocalVector(da, &local));
