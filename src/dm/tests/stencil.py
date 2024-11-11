@@ -24,16 +24,19 @@ def run_stencil(N, I, warmup, timing):  # noqa: E741
     west = grid[1:-1, 0:-2]
     south = grid[2:, 1:-1]
 
+    np.set_printoptions(edgeitems=30, linewidth=120)
     start = time.time()
     for i in range(I + warmup):
         if i == warmup:
             start = time.time()
         average = center + north + east + west + south
+        print(average)
         work = 0.2 * average
         center[:] = work
     total = time.time() - start
 
     if timing:
+        print(grid.ravel())
         print(f"Elapsed Time: {total} ms")
     return total
 
