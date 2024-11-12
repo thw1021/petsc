@@ -150,23 +150,12 @@ int main(int argc, char **argv)
 
     PetscCall(DMGetOutputDM(dm_read, &dm_read_output));
     PetscCall(DMGetLocalVector(dm_read, &V_read_project2local));
-    PetscCall(DMGetLocalVector(dm_read_output, &V_read_output2local)); // TODO: Test with dm_read's local vector too
-    // PetscCall(DMGetLocalVector(dm_read, &V_read_local));
+    PetscCall(DMGetLocalVector(dm_read, &V_read_output2local));
     PetscCall(PetscObjectSetName((PetscObject)V_read_output2local, "V_read_output2local"));
     PetscCall(PetscObjectSetName((PetscObject)V_read_project2local, "V_read_project2local"));
 
     PetscCall(DMProjectFunctionLocal(dm_read_output, 0, &funcs, NULL, INSERT_VALUES, V_read_project2local));
-    // PetscCall(PetscSectionVecViewDM(dm_read_output, PETSC_TRUE, V_read_project2local, NULL));
     PetscCall(VecViewFromOptions(V_read_project2local, NULL, "-project2local_view"));
-
-    { // Force isoperiodic point SF to be created
-      PetscSection dummy_section;
-      PetscSF sfNatural;
-      PetscCall(DMGetGlobalSection(dm_read_output, &dummy_section));
-      // PetscCall(PetscSectionView(dummy_section, NULL));
-      PetscCall(DMGetNaturalSF(dm_read_output, &sfNatural));
-      PetscCall(PetscSFViewFromOptions(sfNatural, NULL, "-sfNatural_view"));
-    }
 
     {
       PetscCall(DMGetGlobalVector(dm_read_output, &V_read));
@@ -176,29 +165,18 @@ int main(int argc, char **argv)
       PetscCall(VecLoad(V_read, viewer));
       PetscCall(PetscViewerDestroy(&viewer));
 
-      { // Force isoperiodic point SF to be created
-        PetscSection dummy_section;
-        PetscCall(DMGetGlobalSection(dm_read_output, &dummy_section));
-        PetscCall(PetscSectionView(dummy_section, NULL));
-      }
-      // PetscCall(PetscSectionVecViewDM(dm_read_output, PETSC_FALSE, V_read_output, NULL));
-
       PetscCall(DMGlobalToLocal(dm_read_output, V_read, INSERT_VALUES, V_read_output2local));
 
-      // PetscCall(PetscSectionVecViewDM(dm_read_output, PETSC_TRUE, V_read_output2local, NULL));
       PetscCall(DMRestoreGlobalVector(dm_read_output, &V_read));
     }
     PetscCall(VecViewFromOptions(V_read_output2local, NULL, "-output2local_view"));
 
     PetscCall(VecAXPY(V_read_output2local, -1, V_read_project2local));
-    // PetscCall(PetscObjectSetName((PetscObject)V_read_output2local, "Vec error"));
-    // PetscCall(PetscSectionVecViewDM(dm_read_output, PETSC_TRUE, V_read_output2local, NULL));
     PetscCall(VecNorm(V_read_output2local, NORM_MAX, &norm));
     if (norm > tol) PetscCall(PetscPrintf(comm, "Error! CGNS VecLoad result does not match Local projection by norm %g\n", (double)norm));
 
     PetscCall(DMRestoreLocalVector(dm_read, &V_read_project2local));
-    PetscCall(DMRestoreLocalVector(dm_read_output, &V_read_output2local));
-    // PetscCall(DMRestoreLocalVector(dm_read, &V_read_local));
+    PetscCall(DMRestoreLocalVector(dm_read, &V_read_output2local));
     PetscCall(DMDestroy(&dm_read));
 #endif
   }
@@ -223,6 +201,6 @@ int main(int argc, char **argv)
     requires: cgns
     suffix: cgns
     nsize: 3
-    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/2x2x2_Q3_wave.cgns -dm_plex_cgns_parallel -dm_view ::ascii_info_detail -dm_plex_box_label true -dm_plex_box_label_bd periodic,periodic,periodic -petscpartitioner_type simple -test_cgns_load
+    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/2x2x2_Q3_wave.cgns -dm_plex_cgns_parallel -dm_view ::ascii_info_detail -dm_plex_box_label true -dm_plex_box_label_bd periodic,periodic,periodic -petscpartitioner_type simple -test_cgns_load -num_comps 2
 
 TEST*/

@@ -538,16 +538,18 @@ static PetscErrorCode DMPlexCorrectOrientationForIsoperiodic(DM dm)
   DM_Plex        *plex = (DM_Plex *)dm->data;
   PetscInt        nroots, nleaves, coords_field_id = 0;
   PetscInt       *local_vec_perm = NULL, local_vec_length = 0;
-  PetscInt          *global_vec_perm = NULL, global_vec_length = 0;
+  PetscInt       *global_vec_perm = NULL, global_vec_length = 0;
   const PetscInt *filocal;
   DM              cdm;
   PetscSection    csection, localSection = NULL;
   PetscSF         sfNatural_old = NULL;
   Vec             coordinates;
+  PetscMPIInt     myrank;
   PetscBool       debug_printing = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &myrank));
   PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
   PetscCheck(coordinates, comm, PETSC_ERR_ARG_WRONGSTATE, "DM must have coordinates to setup isoperiodic");
   PetscCall(DMGetCoordinateDM(dm, &cdm));
@@ -558,35 +560,33 @@ static PetscErrorCode DMPlexCorrectOrientationForIsoperiodic(DM dm)
   if (plex->periodic.num_face_sfs > 0 && sfNatural_old) {
     PetscSection       globalSection;
     PetscSF            pointSF, sectionSF;
-    PetscMPIInt        myrank;
-    PetscInt           nroots, nleaves; //TODO: Probably don't need nroots?
+    PetscInt           nleaves;
     const PetscInt    *ilocal;
     const PetscSFNode *iremote;
 
-    PetscCallMPI(MPI_Comm_rank(comm, &myrank));
-
+    // Create global section with just pointSF and including constraints
     PetscCall(DMGetLocalSection(dm, &localSection));
-
     PetscCall(DMGetPointSF(dm, &pointSF));
     PetscCall(PetscSectionCreateGlobalSection(localSection, pointSF, PETSC_TRUE, PETSC_TRUE, PETSC_FALSE, &globalSection));
 
+    // Set local_vec_perm to be negative values when that dof is not owned by the current rank
+    // Dofs that are owned are set to their corresponding global Vec index
     PetscCall(PetscSectionGetStorageSize(globalSection, &global_vec_length));
     PetscCall(PetscSectionGetStorageSize(localSection, &local_vec_length));
-    PetscCall(PetscMalloc1(global_vec_length, &global_vec_perm)); // TODO: Convert to Malloc2
-    PetscCall(PetscMalloc1(local_vec_length, &local_vec_perm));
+    PetscCall(PetscMalloc2(global_vec_length, &global_vec_perm, local_vec_length, &local_vec_perm));
     for (PetscInt i = 0; i < global_vec_length; i++) global_vec_perm[i] = i;
     for (PetscInt i = 0; i < local_vec_length; i++) local_vec_perm[i] = -(i + 1);
 
     PetscCall(PetscSFCreate(comm, &sectionSF));
     PetscCall(PetscSFSetGraphSection(sectionSF, localSection, globalSection));
-
-    // 3. Loop through SectionSF remotes
-    PetscCall(PetscSFGetGraph(sectionSF, &nroots, &nleaves, &ilocal, &iremote));
+    PetscCall(PetscSFGetGraph(sectionSF, NULL, &nleaves, &ilocal, &iremote));
     for (PetscInt l = 0; l < nleaves; l++) {
       if (iremote[l].rank != myrank) continue;
       PetscInt local_index        = ilocal ? ilocal[l] : l;
       local_vec_perm[local_index] = global_vec_perm[iremote[l].index];
     }
+    PetscCall(PetscSectionDestroy(&globalSection));
+    PetscCall(PetscSFDestroy(&sectionSF));
   }
 
   for (PetscInt f = 0; f < plex->periodic.num_face_sfs; f++) {
@@ -812,56 +812,12 @@ static PetscErrorCode DMPlexCorrectOrientationForIsoperiodic(DM dm)
     PetscCall(PetscFree2(face_vertices_size, face_cones_size));
   }
 
-  //TODO:
-  // 1. Use Local Vec instead of permutation, then I can use DMPlexOrientFieldPointVec
-  //   - Local Vec just has 0...N as the initial values
-  // 2. At the end (here), use the pointSF to zero out the values on non-owned points
-  //   - Should be as simple as looping through remotes, determine remote is at the current rank. If it isn't, then zero the value of the points (using the sections offset and dof)
-  // 3. Do a LocalToGlobal cast using ADD_VALUES
-  // 4. The resulting Vec just needs to be turned into ints and then used as a permutation array as already coded
-  //
-  // Possible issue here is the LocalToGlobal part, which will probably break. I should be able to create my own global section and then create the sectionSF manually. Or I could possibly do something much simpler (i.e. malloc the permutation array, then loop through the pointSF remotes, selectively adding those points to the permutation array).
-
   if (sfNatural_old) { // Correct SFNatural based on the permutation of the global vector
     PetscSF      newglob_to_oldglob_sf, sfNatural_old, sfNatural_new;
     PetscSFNode *remote;
-    PetscMPIInt  myrank;
 
-    PetscCallMPI(MPI_Comm_rank(comm, &myrank));
-    // { // Translate permutation of local Vec into permutation of global Vec
-    //   PetscSection       globalSection;
-    //   PetscSF            pointSF, sectionSF;
-    //   PetscInt           nroots, nleaves; //TODO: Probably don't need nroots?
-    //   const PetscInt    *ilocal;
-    //   const PetscSFNode *iremote;
-    //
-    //   // 1. Create GlobalSection using just the PointSF (has to be done manually): See DMGetGlobalSection:
-    //   PetscCall(DMGetPointSF(dm, &pointSF));
-    //   PetscCall(PetscSectionCreateGlobalSection(localSection, pointSF, PETSC_TRUE, PETSC_TRUE, PETSC_FALSE, &globalSection));
-    //   PetscCall(PetscSectionGetStorageSize(globalSection, &global_vec_length));
-    //   PetscCall(PetscMalloc1(global_vec_length, &global_vec_perm));
-    //
-    //   // 2. Create SectionSF (See DMCreateSectionSF):
-    //   PetscCall(PetscSFCreate(comm, &sectionSF));
-    //   PetscCall(PetscSFSetGraphSection(sectionSF, localSection, globalSection));
-    //
-    //   // 3. Loop through SectionSF remotes
-    //   PetscCall(PetscSFGetGraph(sectionSF, &nroots, &nleaves, &ilocal, &iremote));
-    //   for (PetscInt l = 0; l < nleaves; l++) {
-    //     if (iremote[l].rank != myrank) continue;
-    //     PetscInt local_index              = ilocal ? ilocal[l] : l;
-    //     global_vec_perm[iremote[l].index] = local_vec_perm[local_index];
-    //   }
-    //
-    //   PetscCall(PetscFree(local_vec_perm));
-    //   PetscCall(PetscSectionDestroy(&globalSection));
-    //   PetscCall(PetscSFDestroy(&sectionSF));
-    // }
-
-    PetscCall(PetscIntView(local_vec_length, local_vec_perm, NULL));
-
-    {
-      PetscBT global_vec_check;
+    { // Translate permutation of local Vec into permutation of global Vec
+      PetscBT  global_vec_check;
       PetscInt g = 0;
       PetscCall(PetscBTCreate(global_vec_length, &global_vec_check));
       for (PetscInt l = 0; l < local_vec_length; l++) {
@@ -872,8 +828,6 @@ static PetscErrorCode DMPlexCorrectOrientationForIsoperiodic(DM dm)
       }
       PetscCheck(g == global_vec_length, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Wrong number of non-negative local indices");
       PetscCall(PetscBTDestroy(&global_vec_check));
-
-      PetscCall(PetscFree(local_vec_perm));
     }
 
     PetscCall(PetscMalloc1(global_vec_length, &remote));
@@ -881,7 +835,7 @@ static PetscErrorCode DMPlexCorrectOrientationForIsoperiodic(DM dm)
       remote[i].rank  = myrank;
       remote[i].index = global_vec_perm[i];
     }
-    PetscCall(PetscFree(global_vec_perm));
+    PetscCall(PetscFree2(global_vec_perm, local_vec_perm));
     PetscCall(PetscSFCreate(comm, &newglob_to_oldglob_sf));
     PetscCall(PetscSFSetGraph(newglob_to_oldglob_sf, global_vec_length, global_vec_length, NULL, PETSC_USE_POINTER, remote, PETSC_OWN_POINTER));
     PetscCall(DMGetNaturalSF(dm, &sfNatural_old));
