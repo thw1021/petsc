@@ -568,7 +568,7 @@ static PetscErrorCode VecView_Plex_Local_VTK(Vec v, PetscViewer viewer)
 PetscErrorCode VecView_Plex_Local(Vec v, PetscViewer viewer)
 {
   DM        dm;
-  PetscBool isvtk, ishdf5, isdraw, isglvis, iscgns;
+  PetscBool isvtk, ishdf5, isdraw, isglvis, iscgns, ispython;
 
   PetscFunctionBegin;
   PetscCall(VecGetDM(v, &dm));
@@ -578,7 +578,8 @@ PetscErrorCode VecView_Plex_Local(Vec v, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &isdraw));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERGLVIS, &isglvis));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERCGNS, &iscgns));
-  if (isvtk || ishdf5 || isdraw || isglvis || iscgns) {
+  PetscCall(PetscObjectHasFunction((PetscObject)viewer, "PetscViewerPythonViewObject_C", &ispython));
+  if (isvtk || ishdf5 || isdraw || isglvis || iscgns || ispython) {
     PetscInt    i, numFields;
     PetscObject fe;
     PetscBool   fem  = PETSC_FALSE;
@@ -617,6 +618,8 @@ PetscErrorCode VecView_Plex_Local(Vec v, PetscViewer viewer)
 #endif
     } else if (isdraw) {
       PetscCall(VecView_Plex_Local_Draw(locv, viewer));
+    } else if (ispython) {
+      PetscCall(PetscViewerPythonViewObject(viewer, (PetscObject)locv));
     } else if (isglvis) {
       PetscCall(DMGetOutputSequenceNumber(dm, &step, NULL));
       PetscCall(PetscViewerGLVisSetSnapId(viewer, step));
@@ -645,7 +648,7 @@ PetscErrorCode VecView_Plex_Local(Vec v, PetscViewer viewer)
 PetscErrorCode VecView_Plex(Vec v, PetscViewer viewer)
 {
   DM        dm;
-  PetscBool isvtk, ishdf5, isdraw, isglvis, isexodusii, iscgns;
+  PetscBool isvtk, ishdf5, isdraw, isglvis, isexodusii, iscgns, ispython;
 
   PetscFunctionBegin;
   PetscCall(VecGetDM(v, &dm));
@@ -656,7 +659,8 @@ PetscErrorCode VecView_Plex(Vec v, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERGLVIS, &isglvis));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERCGNS, &iscgns));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWEREXODUSII, &isexodusii));
-  if (isvtk || isdraw || isglvis || iscgns) {
+  PetscCall(PetscObjectHasFunction((PetscObject)viewer, "PetscViewerPythonViewObject_C", &ispython));
+  if (isvtk || isdraw || isglvis || iscgns || ispython) {
     Vec         locv;
     PetscObject isZero;
     const char *name;
