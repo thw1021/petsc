@@ -17,6 +17,7 @@
 #define ScatterMode PetscEnum
 #define VecOption PetscEnum
 #define VecType character*(80)
+#define VecSignMode PetscEnum
 #define VecOperation PetscEnum
 #define VecTaggerCDFMethod PetscEnum
 #define PetscOffloadMask PetscEnum
