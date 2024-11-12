@@ -1877,6 +1877,7 @@ PetscErrorCode DMPlexDistribute(DM dm, PetscInt overlap, PetscSF *sf, DM *dmPara
     } else {
       PetscCall(DMPlexCreateGlobalToNaturalSF(*dmParallel, section, sfMigration, &(*dmParallel)->sfNatural));
     }
+    PetscCall(DMSetLocalSection(dm, NULL)); // Delete the local section to force the existing one to be rebuilt
     /* Compose with a previous sfMigration if present */
     if (dm->sfMigration) {
       PetscSF naturalPointSF;
