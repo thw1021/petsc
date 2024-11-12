@@ -1863,6 +1863,15 @@ PetscErrorCode DMPlexDistribute(DM dm, PetscInt overlap, PetscSF *sf, DM *dmPara
   PetscCall(DMPlexCopy_Internal(dm, PETSC_TRUE, PETSC_FALSE, *dmParallel));
   // Create sfNatural, need discretization information
   PetscCall(DMCopyDisc(dm, *dmParallel));
+  {
+    PetscSection section, psection;
+
+    PetscCall(DMGetLocalSection(dm, &section));
+    PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &psection));
+    PetscCall(PetscSFDistributeSection(sfMigration, section, NULL, psection));
+    PetscCall(DMSetLocalSection(*dmParallel, psection));
+    PetscCall(PetscSectionDestroy(&psection));
+  }
   if (dm->useNatural) {
     PetscSection section;
 
