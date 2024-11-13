@@ -55,7 +55,7 @@ int main(int argc, char **argv)
   SNES      snes;
   AppCtx    user;
   PetscInt  its, lits;
-  PetscReal litspit;
+  PetscReal litspit = 0; /* avoid uninitialized warning */
   DM        da;
   PetscBool use_convergence_test = PETSC_FALSE;
 
