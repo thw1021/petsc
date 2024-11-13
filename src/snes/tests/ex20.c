@@ -1641,6 +1641,7 @@ PetscErrorCode FormJacobian(SNES snes, Vec X, Mat J, Mat jac, void *ptr)
 PetscErrorCode TestConvergence(SNES snes, PETSC_UNUSED PetscInt it, PETSC_UNUSED PetscReal xnorm, PETSC_UNUSED PetscReal snorm, PETSC_UNUSED PetscReal fnorm, SNESConvergedReason *reason, void *ctx)
 {
   AppCtx *user = (AppCtx *)ctx;
+
   PetscFunctionBegin;
   if (user->converged) *reason = SNES_CONVERGED_USER;
   else *reason = SNES_DIVERGED_USER;
