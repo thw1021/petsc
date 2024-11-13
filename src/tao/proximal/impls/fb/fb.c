@@ -306,6 +306,8 @@ static PetscErrorCode TaoSetFromOptions_FB(Tao tao, PetscOptionItems *PetscOptio
   PetscCall(PetscOptionsReal("-tao_fb_ls_scale", "Scaling parameter for backtracking proximal gradient", "", fb->xi, &fb->xi, NULL));
   PetscCall(PetscOptionsBool("-tao_fb_accel", "Use Acceleration (Nesterov-type)", "", fb->use_accel, &fb->use_accel, NULL));
   PetscCall(PetscOptionsBool("-tao_fb_adaptive", "Use adaptive stepsize (adaPGM)", "", fb->use_adapt, &fb->use_adapt, NULL));
+  //TODO is this correct?
+  PetscCall(PetscOptionsReal("-tao_fb_regularizer_scale", "Scale of HALFL2SQUARED regularizer. Must be nonnegative", "", fb->reg_term.scale, &fb->reg_term.scale, NULL));
   PetscCall(TaoLineSearchSetFromOptions(tao->linesearch));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -381,6 +383,7 @@ static PetscErrorCode TaoSetUp_FB(Tao tao)
   tao->linesearch->ops->postapply  = TaoFB_LineSearch_PostApply_Private;
   tao->linesearch->ops->update     = TaoFB_LineSearch_Update_Private;
   tao->linesearch->ops->postupdate = TaoFB_LineSearch_PostUpdate_Private;
+  PetscCall(TaoPSLineSearchSetRegularizerTerm(tao->linesearch, fb->reg_term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

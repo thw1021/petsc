@@ -7,6 +7,9 @@ static PetscErrorCode TaoLineSearchDestroy_PS(TaoLineSearch ls)
   TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectComposeFunction((PetscObject)ls, "TaoPSLineSearchSetDualWorkvec_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)ls, "TaoPSLineSearchSetDualTestvec_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)ls, "TaoPSLineSearchSetRegularizerTerm_C", NULL));
   PetscCall(PetscFree(armP->memory));
   if (armP->x) PetscCall(PetscObjectDereference((PetscObject)armP->x));
   if (armP->dualvec_work) PetscCall(PetscObjectDereference((PetscObject)armP->dualvec_work));
@@ -42,6 +45,61 @@ static PetscErrorCode TaoLineSearchView_PS(TaoLineSearch ls, PetscViewer pv)
     PetscCall(PetscViewerASCIIPrintf(pv, "eta=%g ", (double)armP->eta));
     PetscCall(PetscViewerASCIIPrintf(pv, "memsize=%" PetscInt_FMT "\n", armP->memorySize));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoPSLineSearchSetRegularizerTerm(TaoLineSearch ls, TaoMappedTerm reg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
+  PetscUseMethod(ls, "TaoPSLineSearchSetRegularizerTerm_C", (TaoLineSearch, TaoMappedTerm), (ls, reg));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoPSLineSearchSetRegularizerTerm_PS(TaoLineSearch ls, TaoMappedTerm reg)
+{
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
+
+  PetscFunctionBegin;
+  armP->reg_term = reg;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoPSLineSearchSetDualWorkvec(TaoLineSearch ls, Vec work)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
+  PetscValidHeaderSpecific(work, VEC_CLASSID, 2);
+  PetscUseMethod(ls, "TaoPSLineSearchSetDualWorkvec_C", (TaoLineSearch, Vec), (ls, work));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoPSLineSearchSetDualWorkvec_PS(TaoLineSearch ls, Vec work)
+{
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
+
+  PetscFunctionBegin;
+  armP->dualvec_work = work;
+  PetscCall(PetscObjectReference((PetscObject)armP->dualvec_work));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoPSLineSearchSetDualTestvec(TaoLineSearch ls, Vec work)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
+  PetscValidHeaderSpecific(work, VEC_CLASSID, 2);
+  PetscUseMethod(ls, "TaoPSLineSearchSetDualTestvec_C", (TaoLineSearch, Vec), (ls, work));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoPSLineSearchSetDualTestvec_PS(TaoLineSearch ls, Vec test)
+{
+  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)ls->data;
+
+  PetscFunctionBegin;
+  armP->dualvec_test = test;
+  PetscCall(PetscObjectReference((PetscObject)armP->dualvec_test));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -133,9 +191,7 @@ static PetscErrorCode TaoLineSearchApply_PS(TaoLineSearch ls, Vec xold, PetscRea
     if (ls->ops->update) PetscUseTypeMethod(ls, update, xold, f, xnew, g);
     vecin  = (armP->lmap) ? armP->dualvec_work : armP->work;
     vecout = (armP->lmap) ? armP->dualvec_test : xnew;
-    //TODO prob need TaoCVGetRegularizer_Internal. use null for now...
-    //    1. here below should be reg_term.scale but ignore for now?
-    PetscCall(TaoTermProximalMap(armP->prox_term, armP->term_param, armP->term_scale * armP->test_step, NULL, vecin, 1., vecout));
+    PetscCall(TaoTermProximalMap(armP->prox_term, armP->term_param, armP->term_scale * armP->test_step, armP->reg_term.term, vecin, armP->reg_term.scale, vecout));
     ls->nproxeval++;
     if (ls->ops->postupdate) PetscUseTypeMethod(ls, postupdate, xold, f, xnew, g);
     PetscCall(TaoLineSearchMonitor(ls, its, *f, ls->step));
@@ -216,5 +272,9 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_PS(TaoLineSearch ls)
   ls->ops->view           = TaoLineSearchView_PS;
   ls->ops->destroy        = TaoLineSearchDestroy_PS;
   ls->ops->setfromoptions = TaoLineSearchSetFromOptions_PS;
+
+  PetscCall(PetscObjectComposeFunction((PetscObject)ls, "TaoPSLineSearchSetDualWorkvec_C", TaoPSLineSearchSetDualWorkvec_PS));
+  PetscCall(PetscObjectComposeFunction((PetscObject)ls, "TaoPSLineSearchSetDualTestvec_C", TaoPSLineSearchSetDualTestvec_PS));
+  PetscCall(PetscObjectComposeFunction((PetscObject)ls, "TaoPSLineSearchSetRegularizerTerm_C", TaoPSLineSearchSetRegularizerTerm_PS));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

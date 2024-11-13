@@ -1,6 +1,7 @@
 #pragma once
 #include <petscvec.h>
 #include <petsc/private/petscimpl.h>
+#include <petsc/private/taoimpl.h>
 #include <petsctaolinesearch.h>
 
 typedef struct _TaoLineSearchOps *TaoLineSearchOps;
@@ -72,3 +73,7 @@ struct _p_TaoLineSearch {
 
 PETSC_EXTERN PetscLogEvent TAOLINESEARCH_Apply;
 PETSC_EXTERN PetscLogEvent TAOLINESEARCH_Eval;
+
+PETSC_INTERN PetscErrorCode TaoPSLineSearchSetDualWorkvec(TaoLineSearch, Vec);
+PETSC_INTERN PetscErrorCode TaoPSLineSearchSetDualTestvec(TaoLineSearch, Vec);
+PETSC_INTERN PetscErrorCode TaoPSLineSearchSetRegularizerTerm(TaoLineSearch, TaoMappedTerm);

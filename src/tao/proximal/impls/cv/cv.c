@@ -130,7 +130,8 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
 {
   TAO_CV                      *cv = (TAO_CV *)tao->data;
   TaoTerm                      fterm, gterm, hterm;
-  PetscReal                    f, gnorm, lip, rho;
+  PetscBool                    issum;
+  PetscReal                    f, gnorm, rho, temp;
   PetscReal                    pri_res_norm, dual_res_norm, g_val, h_val;
   TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
 
@@ -138,30 +139,41 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
   PetscCheck(tao->step >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Stepsize cannot be negative");
   PetscCheck(cv->R <= 1, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Scale factor needs to be equal or less than 1");
   PetscCheck(cv->r > 1, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Backtracking factor needs to be greater than 1");
-  //TODO mam i actually using lip in cv.c?
-  PetscCall(TaoTermGetLipschitz(cv->f_term.term, &lip));
-  //TODO for matnorm using TaoCVsetnorm stuff
   PetscCall(PetscCitationsRegister(citation, &cited));
 
   //TODO WHAT IF objective_term.term is not TAOTERMSUM?
   //Is it 0-index or 1-index? I am assuming 1,2,3 sequential indexing here...
   //NOTE: 0 is callbacks...
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &issum));
+  PetscCheck(issum, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TAOCV Main objective term needs to be of type TAOTERMSUM");
   PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 1, NULL, &cv->f_scale, &fterm, NULL));
   PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 2, NULL, &cv->g_scale, &gterm, NULL));
+  /* Note: h_lmap is non-owning to avoid unnecessary data movement */
   PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 3, NULL, &cv->h_scale, &hterm, &cv->h_lmap));
-  //either note: h_lmap is non-owning, so no destroy, or 1) get h_lmap, ref, destroy, set to h_lmap
-  // f can be missing as in null operator but still need f obj and grad. (becomes PDHG),
-  // both g and h need to be present - (i.e., does not suppoer LV/PAPC)
-  // does not support missing lmap, that is, does not support Douglas-Rachford
-  // TODO bunch of check/assert about combinations...
-  cv->lip = lip; //TODO what if lip not present
+  /* If a user wants f = NULL, use TAOTERMZERO */
+  PetscCheck(fterm, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TAOCV f-term is NULL");
+  PetscCheck(gterm, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TAOCV g-term is NULL");
+  PetscCheck(hterm, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TAOCV h-term is NULL");
+  PetscCheck(cv->f_scale >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TAOCV f-term scale cannot be negative");
+  PetscCheck(cv->g_scale >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TAOCV g-term scale cannot be negative");
+  PetscCheck(cv->h_scale >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TAOCV h-term scale cannot be negative");
+  PetscCheck(cv->h_lmap, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Linear mapping cannot be NULL");
 
   /* If initial stepsize is zero, compute some estimate */
   if (tao->step == 0 && cv->h_lmap_norm > 0) tao->step = 1 / (2 * cv->Theta * cv->pd_ratio * cv->h_lmap_norm);
   else if (tao->step == 0 && cv->h_lmap_norm == 0) tao->step = 1 / (2 * cv->Theta * cv->pd_ratio * cv->eta);
   /* Checking whether the estimate is not too large */
-  if (cv->h_lmap_norm > 0) PetscCheck(tao->step <= 1 / (2 * cv->Theta * cv->pd_ratio * cv->h_lmap_norm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TaoCV initial Stepsize is too large");
-  else PetscCheck(tao->step <= 1 / (2 * cv->Theta * cv->pd_ratio * cv->eta), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TaoCV initial Stepsize is too large");
+  if (cv->h_lmap_norm > 0) {
+    temp      = tao->step - 1 / (2 * cv->Theta * cv->pd_ratio * cv->h_lmap_norm);
+    tao->step = (temp <= 0) ? tao->step : 1 / (2 * cv->Theta * cv->pd_ratio * cv->h_lmap_norm);
+
+    if (temp > 0) PetscCall(PetscInfo(tao, "TAOCV initial stepsize too large. Using lower acceptable value\n"));
+  } else {
+    temp      = tao->step - 1 / (2 * cv->Theta * cv->pd_ratio * cv->eta);
+    tao->step = (temp <= 0) ? tao->step : 1 / (2 * cv->Theta * cv->pd_ratio * cv->eta);
+
+    if (temp > 0) PetscCall(PetscInfo(tao, "TAOCV initial stepsize too large. Using lower acceptable value\n"));
+  }
   cv->sigma = tao->step * cv->pd_ratio * cv->pd_ratio;
 
   cv->step_old = tao->step;
@@ -259,10 +271,10 @@ static PetscErrorCode TaoSetFromOptions_CV(Tao tao, PetscOptionItems *PetscOptio
   PetscCall(PetscOptionsReal("-tao_cv_primal_dual_ratio", "Primal-dual Ratio factor for balancing solution. Must be non-negative", "", cv->pd_ratio, &cv->pd_ratio, NULL));
   PetscCall(PetscOptionsReal("-tao_cv_backtrack_parameter", "Backtracking parameter r. Must be  >1.", "", cv->r, &cv->r, NULL));
   PetscCall(PetscOptionsReal("-tao_cv_theta", "Stepsize scale parameter theta. Must be  >1+tol.", "", cv->Theta, &cv->Theta, NULL));
-  //TODO TaoCVSetInitialNormEstimate(Tao, PetscReal) ?
-  //We are  no longer supporting setting previously known norm... use this
   PetscCall(PetscOptionsReal("-tao_cv_norm_estimate", "Initial matrix norm estimate. Must be > 0.", "", cv->h_lmap_norm, &cv->h_lmap_norm, NULL));
   PetscCall(PetscOptionsReal("-tao_cv_eta", "Initial linear map norm estimate. Must be nonnegative", "", cv->eta, &cv->eta, NULL));
+  //TODO is this correct?
+  PetscCall(PetscOptionsReal("-tao_cv_regularizer_scale", "Scale of HALFL2SQUARED regularizer. Must be nonnegative", "", cv->reg_term.scale, &cv->reg_term.scale, NULL));
   PetscCall(TaoLineSearchSetFromOptions(tao->linesearch));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -282,13 +294,16 @@ static PetscErrorCode TaoView_CV(Tao tao, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "Backtracking paramter: r=%g\n", (double)cv->r));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Stepsize scale parameter: Theta=%g\n", (double)cv->Theta));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Using adaPDM-type adaptive stepsize\n"));
-    //TODO should i push for each f,g,h term?
+    PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscCall(PetscViewerASCIIPrintf(viewer, "f Term:\n"));
     PetscCall(TaoTermView(cv->f_term.term, viewer));
     PetscCall(PetscViewerASCIIPrintf(viewer, "g Term:\n"));
     PetscCall(TaoTermView(cv->g_term.term, viewer));
     PetscCall(PetscViewerASCIIPrintf(viewer, "h Term:\n"));
     PetscCall(TaoTermView(cv->h_term.term, viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Regularizer Term:\n"));
+    PetscCall(TaoTermView(cv->reg_term.term, viewer));
+    PetscCall(PetscViewerASCIIPopTab(viewer));
     //TODO should I view h_conjugate?
     PetscCall(MatView(cv->h_term.map, viewer));
     PetscCall(PetscViewerASCIIPopTab(viewer));
@@ -296,13 +311,6 @@ static PetscErrorCode TaoView_CV(Tao tao, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// TaoSetObjectiveAndGradient(tao, ...); // describe f
-//   OR
-// TaoSetObjectiveTerm(tao, f_term); // describe f
-//
-// TaoAddObjectiveTerm(tao, "l1_", 1.0, l1, NULL); // describe g
-// TaoAddObjectiveTerm(tao, "simplex_", 1.0, simplex, NULL); // describe h
-// tao->objective_term.term will be {1.0, taosum, map == NULL};
 static PetscErrorCode TaoCVSetUpTerms(Tao tao, TaoMappedTerm *f_term, TaoMappedTerm *g_term, TaoMappedTerm *h_term, TaoMappedTerm *h_conjugate_term)
 {
   TAO_CV   *cv = (TAO_CV *)tao->data;
@@ -378,13 +386,9 @@ static PetscErrorCode TaoSetUp_CV(Tao tao)
   tao->linesearch->ops->update     = TaoCV_LineSearch_Update_Private;
   tao->linesearch->ops->postupdate = TaoCV_LineSearch_PostUpdate_Private;
 
-  //TODO probably should move these to intern functions with compose. later...
-  TaoLineSearch_PS *armP = (TaoLineSearch_PS *)tao->linesearch->data;
-
-  armP->dualvec_work = cv->dualvec_work;
-  armP->dualvec_test = cv->dualvec_test;
-  PetscCall(PetscObjectReference((PetscObject)armP->dualvec_work));
-  PetscCall(PetscObjectReference((PetscObject)armP->dualvec_test));
+  PetscCall(TaoPSLineSearchSetDualWorkvec(tao->linesearch, cv->dualvec_work));
+  PetscCall(TaoPSLineSearchSetDualTestvec(tao->linesearch, cv->dualvec_test));
+  PetscCall(TaoPSLineSearchSetRegularizerTerm(tao->linesearch, cv->reg_term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -473,7 +477,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_CV(Tao tao)
     PetscCall(TaoMappedTermSetData(&cv->reg_term, "reg_", 1.0, reg, NULL));
     PetscCall(TaoTermDestroy(&reg));
   }
-  //TODO TaoPSUseAdaptive, Accleration?
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
