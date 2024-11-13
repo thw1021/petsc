@@ -1642,7 +1642,7 @@ PetscErrorCode TestConvergence(SNES snes, PETSC_UNUSED PetscInt it, PETSC_UNUSED
 {
   AppCtx *user = (AppCtx *)ctx;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   if (user->converged) *reason = SNES_CONVERGED_USER;
   else *reason = SNES_DIVERGED_USER;
   PetscFunctionReturn(PETSC_SUCCESS);
