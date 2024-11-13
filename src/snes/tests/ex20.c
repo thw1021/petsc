@@ -95,7 +95,7 @@ int main(int argc, char **argv)
   PetscCall(SNESSolve(snes, NULL, NULL));
   PetscCall(SNESGetIterationNumber(snes, &its));
   PetscCall(SNESGetLinearSolveIterations(snes, &lits));
-  litspit = ((PetscReal)lits) / ((PetscReal)its);
+  if (its) litspit = ((PetscReal)lits) / ((PetscReal)its);
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of SNES iterations = %" PetscInt_FMT "\n", its));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of Linear iterations = %" PetscInt_FMT "\n", lits));
   if (its) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Average Linear its / SNES = %e\n", (double)litspit));
