@@ -308,7 +308,7 @@ PETSC_EXTERN PetscErrorCode TaoTermCreateConjugate(TaoTerm, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermCreateConjugateVirtual(TaoTerm, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermConjugateGetOriginalType(TaoTerm, TaoTermType *);
 
-PETSC_EXTERN PetscErrorCode TaoTermCreateShell(MPI_Comm, void *, PetscErrorCode (*)(void *), TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermCreateShell(MPI_Comm, void *, PetscCtxDestroyFn *, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetContext(TaoTerm, void *);
 PETSC_EXTERN PetscErrorCode TaoTermShellGetContext(TaoTerm, void *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetContextDestroy(TaoTerm, PetscCtxDestroyFn *);
