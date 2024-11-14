@@ -312,9 +312,11 @@ int main(int argc, char **argv)
       requires: !complex double defined(PETSC_HAVE_ATTRIBUTEALIGNED)
 
    test:
+      diff_args: -j
       args: -ksp_monitor_short
 
    test:
+      diff_args: -j
       suffix: 2
       nsize: 2
       args: -petscpartitioner_type simple -ksp_converged_reason
