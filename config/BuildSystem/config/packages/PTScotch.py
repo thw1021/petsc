@@ -44,18 +44,26 @@ class Configure(config.package.Package):
     g = open(os.path.join(self.packageDir,'src','Makefile.inc'),'w')
 
     g.write('EXE      =\n')
-    g.write('LIB      = .'+self.setCompilers.AR_LIB_SUFFIX+'\n')
     g.write('OBJ      = .o\n')
     g.write('\n')
     g.write('MAKE     = make\n')
 
-    g.write('AR       = '+self.setCompilers.AR+'\n')
-    g.write('ARFLAGS  = '+self.setCompilers.AR_FLAGS+'\n')
     g.write('CAT      = cat\n')
     self.pushLanguage('C')
     g.write('CCS      = '+self.getCompiler()+'\n')
     g.write('CCP      = '+self.getCompiler()+'\n')
     g.write('CCD      = '+self.getCompiler()+'\n')
+
+    if self.checkSharedLibrariesEnabled():
+      g.write('LIB      = .'+self.setCompilers.sharedLibraryExt+'\n')
+      g.write('AR       = '+self.setCompilers.sharedLinker+'\n')
+      g.write('ARFLAGS  = '+self.setCompilers.getSharedLinkerFlags()+' -o\n')
+      libExt = self.setCompilers.sharedLibraryExt
+    else:
+      g.write('LIB      = .'+self.setCompilers.AR_LIB_SUFFIX+'\n')
+      g.write('AR       = '+self.setCompilers.AR+'\n')
+      g.write('ARFLAGS  = '+self.setCompilers.AR_FLAGS+'\n')
+      libExt = self.setCompilers.AR_LIB_SUFFIX
 
     # Building cflags/ldflags
     self.cflags = self.updatePackageCFlags(self.getCompilerFlags())+' '+self.headers.toString(self.dinclude)
@@ -118,6 +126,6 @@ class Configure(config.package.Package):
       libDir     = self.libDir
       includeDir = os.path.join(self.installDir, self.includedir)
       self.logPrintBox('Installing PTScotch; this may take several minutes')
-      output,err,ret = config.package.Package.executeShellCommand('mkdir -p '+os.path.join(self.installDir,includeDir)+' && mkdir -p '+libDir+' && cd '+self.packageDir+' && cp -f lib/*.a '+libDir+'/. && cp -f include/*.h '+includeDir+'/.', timeout=60, log = self.log)
+      output,err,ret = config.package.Package.executeShellCommand('mkdir -p '+os.path.join(self.installDir,includeDir)+' && mkdir -p '+libDir+' && cd '+self.packageDir+' && cp -f lib/*.'+libExt+' '+libDir+'/. && cp -f include/*.h '+includeDir+'/.', timeout=60, log = self.log)
       self.postInstall(output+err,os.path.join('src','Makefile.inc'))
     return self.installDir
