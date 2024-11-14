@@ -38,13 +38,13 @@ typedef struct {
   PetscInt    id;  /* node id */
   PetscScalar inj; /* current injection (A) */
   PetscBool   gr;  /* boundary node */
-} Node;
+} PETSC_ATTRIBUTEALIGNED(PetscMax(sizeof(PetscInt), sizeof(PetscScalar))) Node;
 
 typedef struct {
   PetscInt    id;  /* branch id */
   PetscScalar r;   /* resistance (ohms) */
   PetscScalar bat; /* battery (V) */
-} Branch;
+} PETSC_ATTRIBUTEALIGNED(PetscMax(sizeof(PetscInt), sizeof(PetscScalar))) Branch;
 
 /*
   read_data: this routine fills data structures with problem data.
