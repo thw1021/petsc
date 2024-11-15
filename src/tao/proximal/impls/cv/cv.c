@@ -141,9 +141,7 @@ static PetscErrorCode TaoSolve_CV(Tao tao)
   PetscCheck(cv->r > 1, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Backtracking factor needs to be greater than 1");
   PetscCall(PetscCitationsRegister(citation, &cited));
 
-  //TODO WHAT IF objective_term.term is not TAOTERMSUM?
-  //Is it 0-index or 1-index? I am assuming 1,2,3 sequential indexing here...
-  //NOTE: 0 is callbacks...
+  /* Note: Assuming 1,2,3 index orders for f, g, h term. (0 is callbacks) */
   PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &issum));
   PetscCheck(issum, PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "TAOCV Main objective term needs to be of type TAOTERMSUM");
   PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, 1, NULL, &cv->f_scale, &fterm, NULL));

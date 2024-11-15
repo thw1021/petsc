@@ -240,7 +240,7 @@ static PetscErrorCode TaoLineSearchSetUp_PS(TaoLineSearch ls)
     //TODO technically cj term is created in cv.c but doing it again. fix later? or dont bother?
     PetscCall(TaoTermCreateConjugate(armP->cj_orig_term, &armP->prox_term));
     if (tao->objective_parameters) PetscCall(VecNestGetTaoTermSumSubParameters(tao->objective_parameters, 3, &armP->term_param));
-  } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONG, "This routine applies to TAO_FB and TAO_CV.");
+  } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONG, "This routine only applies to TAOFB or TAOCV.");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

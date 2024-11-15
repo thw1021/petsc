@@ -358,7 +358,7 @@ int main(int argc, char **argv)
   case LAD: {
     // LAD's f(x) = Zero()
     PetscCall(TaoTermShellSetObjectiveAndGradient(fterm, LAD_UserObjGrad_Term));
-    PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., fterm, NULL, NULL));
+    PetscCall(TaoAddObjectiveTerm(tao, NULL, 0., fterm, NULL, NULL));
     PetscCall(TaoAddObjectiveTerm(tao, NULL, user.g_scale, gterm, NULL, NULL));
     PetscCall(TaoAddObjectiveTerm(tao, NULL, 1., hterm, user.y_translation, user.A));
     PetscCall(TaoTermSetParametersMode(hterm, TAOTERM_PARAMETERS_REQUIRED));

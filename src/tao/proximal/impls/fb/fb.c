@@ -325,7 +325,14 @@ static PetscErrorCode TaoView_FB(Tao tao, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "Backtracking linesearch scaling parameter: xi=%g\n", (double)fb->xi));
     if (fb->use_accel) PetscCall(PetscViewerASCIIPrintf(viewer, "Using Nesterov-type acceleration\n"));
     else if (fb->use_adapt) PetscCall(PetscViewerASCIIPrintf(viewer, "Using adaPGM-type adaptive stepsize\n"));
-    //TODO f g reg view
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "f Term:\n"));
+    PetscCall(TaoTermView(fb->f_term.term, viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "g Term:\n"));
+    PetscCall(TaoTermView(fb->g_term.term, viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Regularizer Term:\n"));
+    PetscCall(TaoTermView(fb->reg_term.term, viewer));
+    PetscCall(PetscViewerASCIIPopTab(viewer));
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -67,13 +67,22 @@ static PetscErrorCode TaoTermHessianMult_Conjugate(TaoTerm term, Vec x, Vec para
   PetscTryTypeMethod(cj->orig, conjugate_hessianmult, x, params, v, Hv);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-//f(x-p)
-// TaoTermType = TAOTERMTRANSLATE, or something else?
-// TaoTermParametersTranslate = TRUE -> then this,
-// I couldn't think of case where, we have f(x;p), and want f*(y;p)?
-// if paramtrans = false, then will just pass param along,
-//
-// KL?
+
+/* In this case, there are two possibilities:
+   1. Translation of Conjugate, or
+   2. Conjugate of Translation.
+   Most algorithms think about second case - therefore, we
+   only support conjugate of translation.
+   (I don't think, with current API, Translation of Conjugate is possible.TODO)
+
+   g(x) = f(x+p), \lambda = \alpha / \beta
+   Translation of conjugate:
+   prox_{\lambda, g*}(y) = y - \lambda prox_{1/\lambda, f^*} ((y+p)/\lambda)
+
+   Conjugate of Translation: (Current implementation)
+   prox_{\lambda, g*}(y) = y - \lambda prox_{1/\lambda, g}(y / \lambda)
+
+   prox_{\lambda, g}(z) = prox_{\lambda, f}(z + a) - a                        */
 static PetscErrorCode TaoTermProximalMap_Conjugate(TaoTerm term, Vec p, PetscReal alpha, TaoTerm g, Vec q, PetscReal beta, Vec x)
 {
   TaoTerm_Conjugate *cj = (TaoTerm_Conjugate *)term->data;
@@ -83,7 +92,6 @@ static PetscErrorCode TaoTermProximalMap_Conjugate(TaoTerm term, Vec p, PetscRea
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)g, TAOTERMHALFL2SQUARED, &is_hl2s));
 
-  //TODO this version assumes that p is translation vector. For else??
   if (is_hl2s || (g == NULL)) {
     lambda = alpha / beta;
 
@@ -96,13 +104,11 @@ static PetscErrorCode TaoTermProximalMap_Conjugate(TaoTerm term, Vec p, PetscRea
       }
     }
     PetscCall(VecCopy(q, cj->workvec));
-    if (p) PetscCall(VecAXPY(cj->workvec, 1., p));
     PetscCall(VecScale(cj->workvec, 1. / lambda));
-    //TODO for L1, at least, since we are pre-processing it, we dont need to pass p.
-    //but for other methods, how can we tell??
+    if (p) PetscCall(VecAXPY(cj->workvec, 1., p));
     //Doing prox_(1/step), so switch alpha and beta
-    //PetscCall(TaoTermProximalMap(cj->orig, p, alpha, g, cj->workvec, 1./beta, x));
     PetscCall(TaoTermProximalMap(cj->orig, NULL, beta, g, cj->workvec, alpha, x));
+    if (p) PetscCall(VecAXPY(x, -1., p));
     PetscCall(VecAYPX(x, -lambda, q));
   } else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_USER, "TaoTermProximalMap for conjugate currently only supports TAOTERMHALFL2SQUARED regularizer");
   PetscFunctionReturn(PETSC_SUCCESS);

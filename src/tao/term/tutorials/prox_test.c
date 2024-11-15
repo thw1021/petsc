@@ -241,7 +241,7 @@ PetscErrorCode CheckSolution(AppCtx *user)
       PetscCall(VecCopy(user->y, user->sol_conj));
       PetscCall(VecCopy(user->translation, user->sol_trans));
       PetscCall(VecScale(user->sol_trans, -1.));
-      PetscCall(VecCopy(user->y, user->sol_conj_trans));
+      PetscCall(VecWAXPY(user->sol_conj_trans, 1., user->y, user->translation));
       break;
     default:
       SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_USER, "Unsupported problem type!");
@@ -368,17 +368,8 @@ int main(int argc, char **argv)
 
   user.trans_p = (user.trans) ? user.translation : NULL;
 
-  //Conjugate case
+  /* Conjugate case */
   if (user.conj) { PetscCall(TaoTermCreateConjugate(term0, &term0_conj)); }
-
-  //Question: TODO
-  //what is I want scaling, i.e.,  f(x) = g(\lambda x) ?
-  //one way to think about it is TaoAddObjectiveTerm(tao, prefix, alpha, term, translation, map);
-  //where map = \lambda*I , MATCONSTANTDIAGONAL
-  //For internal taosolve, sure it works
-  //but what is user just wants to do TaoTermProximalMap, shown in this example?
-  //Or, I can just ignore it for now, and make future TAOTERMSCALED or something like that
-  //I dont really need it now anyway..
 
   /* Solving same problem few times to simulate iteration */
   for (i = 0; i < 5; i++) {
