@@ -68,7 +68,8 @@ static PetscErrorCode TaoTermHessianMult_Conjugate(TaoTerm term, Vec x, Vec para
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* In this case, there are two possibilities:
+/* TODO write detailed docstring
+ * In this case, there are two possibilities:
    1. Translation of Conjugate, or
    2. Conjugate of Translation.
    Most algorithms think about second case - therefore, we
@@ -105,10 +106,8 @@ static PetscErrorCode TaoTermProximalMap_Conjugate(TaoTerm term, Vec p, PetscRea
     }
     PetscCall(VecCopy(q, cj->workvec));
     PetscCall(VecScale(cj->workvec, 1. / lambda));
-    if (p) PetscCall(VecAXPY(cj->workvec, 1., p));
-    //Doing prox_(1/step), so switch alpha and beta
-    PetscCall(TaoTermProximalMap(cj->orig, NULL, beta, g, cj->workvec, alpha, x));
-    if (p) PetscCall(VecAXPY(x, -1., p));
+    //Doing prox_(1/step), so switch alpha and beta. If param vector is given, its handled internally as translation, if applicable.
+    PetscCall(TaoTermProximalMap(cj->orig, p, beta, g, cj->workvec, alpha, x));
     PetscCall(VecAYPX(x, -lambda, q));
   } else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_USER, "TaoTermProximalMap for conjugate currently only supports TAOTERMHALFL2SQUARED regularizer");
   PetscFunctionReturn(PETSC_SUCCESS);
