@@ -496,10 +496,24 @@ int main(int argc, char **argv)
       requires: !single
 
    test:
-      suffix: logreg_ada
-      nsize: {{1 2 4}}
+      suffix: logreg_ada_1
+      nsize: 1
       args: -problem prob_log_reg -scale 0.01 -tao_fb_accel 0 -tao_fb_adaptive 1 -tao_max_it 1000 -tao_converged_reason -tao_monitor -f ${DATAFILESPATH}/tao/heart-scale.dat
       output_file: output/fb_example_logreg_ada.out
+      requires: !single
+
+   test:
+      suffix: logreg_ada_2
+      nsize: 2
+      args: -problem prob_log_reg -scale 0.01 -tao_fb_accel 0 -tao_fb_adaptive 1 -tao_max_it 1000 -tao_converged_reason -tao_monitor -f ${DATAFILESPATH}/tao/heart-scale.dat
+      output_file: output/fb_example_logreg_ada_2.out
+      requires: !single
+
+   test:
+      suffix: logreg_ada_4
+      nsize: 4
+      args: -problem prob_log_reg -scale 0.01 -tao_fb_accel 0 -tao_fb_adaptive 1 -tao_max_it 1000 -tao_converged_reason -tao_monitor -f ${DATAFILESPATH}/tao/heart-scale.dat
+      output_file: output/fb_example_logreg_ada_4.out
       requires: !single
 
 TEST*/
