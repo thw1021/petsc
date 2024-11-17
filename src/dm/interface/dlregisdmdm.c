@@ -77,12 +77,14 @@ PetscErrorCode DMInitializePackage(void)
   PetscCall(PetscLogEventRegister("DMCreateMat", DM_CLASSID, &DM_CreateMatrix));
   PetscCall(PetscLogEventRegister("DMCreateMassMat", DM_CLASSID, &DM_CreateMassMatrix));
   PetscCall(PetscLogEventRegister("DMLoad", DM_CLASSID, &DM_Load));
+  PetscCall(PetscLogEventRegister("DMView", DM_CLASSID, &DM_View));
   PetscCall(PetscLogEventRegister("DMAdaptInterp", DM_CLASSID, &DM_AdaptInterpolator));
   PetscCall(PetscLogEventRegister("DMProjectFunc", DM_CLASSID, &DM_ProjectFunction));
 
   PetscCall(PetscLogEventRegister("DMPlexBuFrCeLi", DM_CLASSID, &DMPLEX_BuildFromCellList));
   PetscCall(PetscLogEventRegister("DMPlexBuCoFrCeLi", DM_CLASSID, &DMPLEX_BuildCoordinatesFromCellList));
   PetscCall(PetscLogEventRegister("DMPlexCreateGmsh", DM_CLASSID, &DMPLEX_CreateGmsh));
+  PetscCall(PetscLogEventRegister("DMPlexCrBoxSFC", DM_CLASSID, &DMPLEX_CreateBoxSFC));
   PetscCall(PetscLogEventRegister("DMPlexCrFromFile", DM_CLASSID, &DMPLEX_CreateFromFile));
   PetscCall(PetscLogEventRegister("DMPlexCrFromOpts", DM_CLASSID, &DMPLEX_CreateFromOptions));
   PetscCall(PetscLogEventRegister("Mesh Partition", DM_CLASSID, &DMPLEX_Partition));
@@ -116,14 +118,16 @@ PetscErrorCode DMInitializePackage(void)
   PetscCall(PetscLogEventRegister("DMPlexRebalance", DM_CLASSID, &DMPLEX_RebalanceSharedPoints));
   PetscCall(PetscLogEventRegister("DMPlexLocatePoints", DM_CLASSID, &DMPLEX_LocatePoints));
   PetscCall(PetscLogEventRegister("DMPlexTopologyView", DM_CLASSID, &DMPLEX_TopologyView));
-  PetscCall(PetscLogEventRegister("DMPlexDistributionView", DM_CLASSID, &DMPLEX_DistributionView));
   PetscCall(PetscLogEventRegister("DMPlexLabelsView", DM_CLASSID, &DMPLEX_LabelsView));
   PetscCall(PetscLogEventRegister("DMPlexCoordinatesView", DM_CLASSID, &DMPLEX_CoordinatesView));
   PetscCall(PetscLogEventRegister("DMPlexSectionView", DM_CLASSID, &DMPLEX_SectionView));
   PetscCall(PetscLogEventRegister("DMPlexGlobalVectorView", DM_CLASSID, &DMPLEX_GlobalVectorView));
   PetscCall(PetscLogEventRegister("DMPlexLocalVectorView", DM_CLASSID, &DMPLEX_LocalVectorView));
   PetscCall(PetscLogEventRegister("DMPlexTopologyLoad", DM_CLASSID, &DMPLEX_TopologyLoad));
+#if defined(PETSC_HAVE_HDF5)
+  PetscCall(PetscLogEventRegister("DMPlexDistributionView", DM_CLASSID, &DMPLEX_DistributionView));
   PetscCall(PetscLogEventRegister("DMPlexDistributionLoad", DM_CLASSID, &DMPLEX_DistributionLoad));
+#endif
   PetscCall(PetscLogEventRegister("DMPlexLabelsLoad", DM_CLASSID, &DMPLEX_LabelsLoad));
   PetscCall(PetscLogEventRegister("DMPlexCoordinatesLoad", DM_CLASSID, &DMPLEX_CoordinatesLoad));
   PetscCall(PetscLogEventRegister("DMPlexSectionLoad", DM_CLASSID, &DMPLEX_SectionLoad));

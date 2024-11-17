@@ -11,7 +11,7 @@
 #include <petscblaslapack.h>
 
 /* Logging support */
-PetscLogEvent DMPLEX_Interpolate, DMPLEX_Partition, DMPLEX_Distribute, DMPLEX_DistributeCones, DMPLEX_DistributeLabels, DMPLEX_DistributeSF, DMPLEX_DistributeOverlap, DMPLEX_DistributeField, DMPLEX_DistributeData, DMPLEX_Migrate, DMPLEX_InterpolateSF, DMPLEX_GlobalToNaturalBegin, DMPLEX_GlobalToNaturalEnd, DMPLEX_NaturalToGlobalBegin, DMPLEX_NaturalToGlobalEnd, DMPLEX_Stratify, DMPLEX_Symmetrize, DMPLEX_Preallocate, DMPLEX_ResidualFEM, DMPLEX_JacobianFEM, DMPLEX_InterpolatorFEM, DMPLEX_InjectorFEM, DMPLEX_IntegralFEM, DMPLEX_CreateGmsh, DMPLEX_RebalanceSharedPoints, DMPLEX_PartSelf, DMPLEX_PartLabelInvert, DMPLEX_PartLabelCreateSF, DMPLEX_PartStratSF, DMPLEX_CreatePointSF, DMPLEX_LocatePoints, DMPLEX_TopologyView, DMPLEX_LabelsView, DMPLEX_CoordinatesView, DMPLEX_SectionView, DMPLEX_GlobalVectorView, DMPLEX_LocalVectorView, DMPLEX_TopologyLoad, DMPLEX_LabelsLoad, DMPLEX_CoordinatesLoad, DMPLEX_SectionLoad, DMPLEX_GlobalVectorLoad, DMPLEX_LocalVectorLoad;
+PetscLogEvent DMPLEX_Interpolate, DMPLEX_Partition, DMPLEX_Distribute, DMPLEX_DistributeCones, DMPLEX_DistributeLabels, DMPLEX_DistributeSF, DMPLEX_DistributeOverlap, DMPLEX_DistributeField, DMPLEX_DistributeData, DMPLEX_Migrate, DMPLEX_InterpolateSF, DMPLEX_GlobalToNaturalBegin, DMPLEX_GlobalToNaturalEnd, DMPLEX_NaturalToGlobalBegin, DMPLEX_NaturalToGlobalEnd, DMPLEX_Stratify, DMPLEX_Symmetrize, DMPLEX_Preallocate, DMPLEX_ResidualFEM, DMPLEX_JacobianFEM, DMPLEX_InterpolatorFEM, DMPLEX_InjectorFEM, DMPLEX_IntegralFEM, DMPLEX_CreateGmsh, DMPLEX_CreateBoxSFC, DMPLEX_RebalanceSharedPoints, DMPLEX_PartSelf, DMPLEX_PartLabelInvert, DMPLEX_PartLabelCreateSF, DMPLEX_PartStratSF, DMPLEX_CreatePointSF, DMPLEX_LocatePoints, DMPLEX_TopologyView, DMPLEX_LabelsView, DMPLEX_CoordinatesView, DMPLEX_SectionView, DMPLEX_GlobalVectorView, DMPLEX_LocalVectorView, DMPLEX_TopologyLoad, DMPLEX_LabelsLoad, DMPLEX_CoordinatesLoad, DMPLEX_SectionLoad, DMPLEX_GlobalVectorLoad, DMPLEX_LocalVectorLoad;
 PetscLogEvent DMPLEX_RebalBuildGraph, DMPLEX_RebalRewriteSF, DMPLEX_RebalGatherGraph, DMPLEX_RebalPartition, DMPLEX_RebalScatterPart, DMPLEX_Generate, DMPLEX_Transform, DMPLEX_GetLocalOffsets, DMPLEX_Uninterpolate;
 
 PetscBool  Plexcite       = PETSC_FALSE;
@@ -121,6 +121,99 @@ PetscErrorCode DMPlexGetSimplexOrBoxCells(DM dm, PetscInt height, PetscInt *cSta
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode DMPlexGetFieldTypes_Internal(DM dm, PetscSection section, PetscInt field, PetscInt *types, PetscInt **ssStart, PetscInt **ssEnd, PetscViewerVTKFieldType **sft)
+{
+  PetscInt                 cdim, pStart, pEnd, vStart, vEnd, cStart, cEnd, c, depth, cellHeight, t;
+  PetscInt                *sStart, *sEnd;
+  PetscViewerVTKFieldType *ft;
+  PetscInt                 vcdof[DM_NUM_POLYTOPES + 1], globalvcdof[DM_NUM_POLYTOPES + 1];
+  DMLabel                  depthLabel, ctLabel;
+
+  PetscFunctionBegin;
+  /* the vcdof and globalvcdof are sized to allow every polytope type and simple vertex at DM_NUM_POLYTOPES */
+  PetscCall(PetscArrayzero(vcdof, DM_NUM_POLYTOPES + 1));
+  PetscCall(DMGetCoordinateDim(dm, &cdim));
+  PetscCall(DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd));
+  PetscCall(PetscSectionGetChart(section, &pStart, &pEnd));
+  if (field >= 0) {
+    if ((vStart >= pStart) && (vStart < pEnd)) PetscCall(PetscSectionGetFieldDof(section, vStart, field, &vcdof[DM_NUM_POLYTOPES]));
+  } else {
+    if ((vStart >= pStart) && (vStart < pEnd)) PetscCall(PetscSectionGetDof(section, vStart, &vcdof[DM_NUM_POLYTOPES]));
+  }
+
+  PetscCall(DMPlexGetVTKCellHeight(dm, &cellHeight));
+  PetscCall(DMPlexGetDepth(dm, &depth));
+  PetscCall(DMPlexGetDepthLabel(dm, &depthLabel));
+  PetscCall(DMPlexGetCellTypeLabel(dm, &ctLabel));
+  for (c = 0; c < DM_NUM_POLYTOPES; ++c) {
+    const DMPolytopeType ict = (DMPolytopeType)c;
+    PetscInt             dep;
+
+    if (ict == DM_POLYTOPE_FV_GHOST) continue;
+    PetscCall(DMLabelGetStratumBounds(ctLabel, ict, &cStart, &cEnd));
+    if (pStart >= 0) {
+      PetscCall(DMLabelGetValue(depthLabel, cStart, &dep));
+      if (dep != depth - cellHeight) continue;
+    }
+    if (field >= 0) {
+      if ((cStart >= pStart) && (cStart < pEnd)) PetscCall(PetscSectionGetFieldDof(section, cStart, field, &vcdof[c]));
+    } else {
+      if ((cStart >= pStart) && (cStart < pEnd)) PetscCall(PetscSectionGetDof(section, cStart, &vcdof[c]));
+    }
+  }
+
+  PetscCallMPI(MPIU_Allreduce(vcdof, globalvcdof, DM_NUM_POLYTOPES + 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)dm)));
+  *types = 0;
+
+  for (c = 0; c < DM_NUM_POLYTOPES + 1; ++c) {
+    if (globalvcdof[c]) ++(*types);
+  }
+
+  PetscCall(PetscMalloc3(*types, &sStart, *types, &sEnd, *types, &ft));
+  t = 0;
+  if (globalvcdof[DM_NUM_POLYTOPES]) {
+    sStart[t] = vStart;
+    sEnd[t]   = vEnd;
+    ft[t]     = (globalvcdof[t] == cdim) ? PETSC_VTK_POINT_VECTOR_FIELD : PETSC_VTK_POINT_FIELD;
+    ++t;
+  }
+
+  for (c = 0; c < DM_NUM_POLYTOPES; ++c) {
+    if (globalvcdof[c]) {
+      const DMPolytopeType ict = (DMPolytopeType)c;
+
+      PetscCall(DMLabelGetStratumBounds(ctLabel, ict, &cStart, &cEnd));
+      sStart[t] = cStart;
+      sEnd[t]   = cEnd;
+      ft[t]     = (globalvcdof[c] == cdim) ? PETSC_VTK_CELL_VECTOR_FIELD : PETSC_VTK_CELL_FIELD;
+      ++t;
+    }
+  }
+
+  if (!*types) {
+    if (field >= 0) {
+      const char *fieldname;
+
+      PetscCall(PetscSectionGetFieldName(section, field, &fieldname));
+      PetscCall(PetscInfo((PetscObject)dm, "Could not classify VTK output type of section field %" PetscInt_FMT " \"%s\"\n", field, fieldname));
+    } else {
+      PetscCall(PetscInfo((PetscObject)dm, "Could not classify VTK output type of section\n"));
+    }
+  }
+
+  *ssStart = sStart;
+  *ssEnd   = sEnd;
+  *sft     = ft;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode DMPlexRestoreFieldTypes_Internal(DM dm, PetscSection section, PetscInt field, PetscInt *types, PetscInt **sStart, PetscInt **sEnd, PetscViewerVTKFieldType **ft)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscFree3(*sStart, *sEnd, *ft));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode DMPlexGetFieldType_Internal(DM dm, PetscSection section, PetscInt field, PetscInt *sStart, PetscInt *sEnd, PetscViewerVTKFieldType *ft)
 {
   PetscInt cdim, pStart, pEnd, vStart, vEnd, cStart, cEnd;
@@ -155,9 +248,9 @@ PetscErrorCode DMPlexGetFieldType_Internal(DM dm, PetscSection section, PetscInt
       const char *fieldname;
 
       PetscCall(PetscSectionGetFieldName(section, field, &fieldname));
-      PetscCall(PetscInfo((PetscObject)dm, "Could not classify VTK output type of section field %" PetscInt_FMT " \"%s\"\n", field, fieldname));
+      PetscCall(PetscInfo(dm, "Could not classify VTK output type of section field %" PetscInt_FMT " \"%s\"\n", field, fieldname));
     } else {
-      PetscCall(PetscInfo((PetscObject)dm, "Could not classify VTK output type of section\n"));
+      PetscCall(PetscInfo(dm, "Could not classify VTK output type of section\n"));
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -578,8 +671,6 @@ PetscErrorCode VecView_Plex(Vec v, PetscViewer viewer)
     PetscCall(VecView_Plex_Local(locv, viewer));
     PetscCall(PetscObjectCompose((PetscObject)locv, "__Vec_bc_zero__", NULL));
     PetscCall(DMRestoreLocalVector(dm, &locv));
-    /* Call flush for proper logging of VecView timings */
-    if (isvtk) PetscCall(PetscViewerFlush(viewer));
   } else if (ishdf5) {
 #if defined(PETSC_HAVE_HDF5)
     PetscCall(VecView_Plex_HDF5_Internal(v, viewer));
@@ -1134,7 +1225,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
       }
       for (d = 0; d < dof; ++d) {
         if (d > 0) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, ","));
-        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%g", (double)tcoords[d]));
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%g", tcoords[d]));
       }
       if (drawHasse) color = colors[0 % numColors];
       else color = colors[rank % numColors];
@@ -1172,7 +1263,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
         PetscCall(PetscSectionGetOffset(coordSection, cone[1], &offB));
         PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "("));
         for (d = 0; d < dof; ++d) {
-          tcoords[d] = (double)(0.5 * scale * PetscRealPart(coords[offA + d] + coords[offB + d]));
+          tcoords[d] = (double)(scale * PetscRealPart(coords[offA + d] + coords[offB + d]) / 2);
           tcoords[d] = PetscAbs(tcoords[d]) < 1e-10 ? 0.0 : tcoords[d];
         }
         /* Rotate coordinates since PGF makes z point out of the page instead of up */
@@ -1183,7 +1274,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
         }
         for (d = 0; d < dof; ++d) {
           if (d > 0) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, ","));
-          PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%g", (double)tcoords[d]));
+          PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%g", tcoords[d]));
         }
         if (drawHasse) color = colors[1 % numColors];
         else color = colors[rank % numColors];
@@ -1302,7 +1393,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
       PetscCall(DMPlexRestoreCellCoordinates(dm, c, &isDG, &numCoords, &array, &cellCoords));
       for (d = 0; d < cdim; ++d) {
         if (d > 0) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, ","));
-        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%g", (double)ccoords[d]));
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "%g", ccoords[d]));
       }
       if (drawHasse) color = colors[depth % numColors];
       else color = colors[rank % numColors];
@@ -1458,16 +1549,16 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
     lm[0] = numVertices > 0 ? numVertices : PETSC_INT_MAX;
     lm[1] = -numVertices;
     PetscCallMPI(MPIU_Allreduce(lm, gm, 2, MPIU_INT64, MPI_MIN, comm));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Cell balance: %.2f (max %" PetscInt_FMT ", min %" PetscInt_FMT, -((double)gm[1]) / ((double)gm[0]), -(PetscInt)gm[1], (PetscInt)gm[0]));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Cell balance: %.2f (max %" PetscInt64_FMT ", min %" PetscInt64_FMT, -((double)gm[1]) / ((double)gm[0]), -gm[1], gm[0]));
     lm[0] = ect;                     /* edgeCut */
     lm[1] = ectn;                    /* node-aware edgeCut */
     lm[2] = numVertices > 0 ? 0 : 1; /* empty processes */
     PetscCallMPI(MPIU_Allreduce(lm, gm, 3, MPIU_INT64, MPI_SUM, comm));
-    PetscCall(PetscViewerASCIIPrintf(viewer, ", empty %" PetscInt_FMT ")\n", (PetscInt)gm[2]));
+    PetscCall(PetscViewerASCIIPrintf(viewer, ", empty %" PetscInt64_FMT ")\n", gm[2]));
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Edge Cut: %" PetscInt_FMT " (on node %.3f)\n", (PetscInt)(gm[0] / 2), gm[0] ? ((double)gm[1]) / ((double)gm[0]) : 1.));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Edge Cut: %" PetscInt64_FMT " (on node %.3f)\n", gm[0] / 2, gm[0] ? ((double)gm[1]) / ((double)gm[0]) : 1.));
 #else
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Edge Cut: %" PetscInt_FMT " (on node %.3f)\n", (PetscInt)(gm[0] / 2), 0.0));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Edge Cut: %" PetscInt64_FMT " (on node %.3f)\n", gm[0] / 2, 0.0));
 #endif
     PetscCall(ISLocalToGlobalMappingDestroy(&g2l));
     PetscCall(PetscFree(start));
@@ -1879,7 +1970,7 @@ static PetscErrorCode DMPlexCreateHighOrderSurrogate_Internal(DM dm, DM *hdm)
 
 PetscErrorCode DMView_Plex(DM dm, PetscViewer viewer)
 {
-  PetscBool iascii, ishdf5, isvtk, isdraw, flg, isglvis, isexodus, iscgns;
+  PetscBool iascii, ishdf5, isvtk, isdraw, flg, isglvis, isexodus, iscgns, ispython;
   char      name[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBegin;
@@ -1892,6 +1983,7 @@ PetscErrorCode DMView_Plex(DM dm, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERGLVIS, &isglvis));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWEREXODUSII, &isexodus));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERCGNS, &iscgns));
+  PetscCall(PetscObjectHasFunction((PetscObject)viewer, "PetscViewerPythonViewObject_C", &ispython));
   if (iascii) {
     PetscViewerFormat format;
     PetscCall(PetscViewerGetFormat(viewer, &format));
@@ -1936,6 +2028,8 @@ PetscErrorCode DMView_Plex(DM dm, PetscViewer viewer)
   } else if (iscgns) {
     PetscCall(DMView_PlexCGNS(dm, viewer));
 #endif
+  } else if (ispython) {
+    PetscCall(PetscViewerPythonViewObject(viewer, (PetscObject)dm));
   } else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMPlex writing", ((PetscObject)viewer)->type_name);
   /* Optionally view the partition */
   PetscCall(PetscOptionsHasName(((PetscObject)dm)->options, ((PetscObject)dm)->prefix, "-dm_partition_view", &flg));
@@ -8859,10 +8953,11 @@ PetscErrorCode DMPlexGetVertexNumbering(DM dm, IS *globalVertexNumbers)
 @*/
 PetscErrorCode DMPlexCreatePointNumbering(DM dm, IS *globalPointNumbers)
 {
-  IS        nums[4];
-  PetscInt  depths[4], gdepths[4], starts[4];
-  PetscInt  depth, d, shift = 0;
-  PetscBool empty = PETSC_FALSE;
+  IS          nums[4];
+  PetscInt    depths[4], gdepths[4], starts[4];
+  PetscInt    depth, d, shift = 0;
+  PetscBool   empty = PETSC_FALSE;
+  PetscMPIInt idepth;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -8883,7 +8978,8 @@ PetscErrorCode DMPlexCreatePointNumbering(DM dm, IS *globalPointNumbers)
       starts[d] = -1;
     }
   else PetscCall(PetscSortIntWithArray(depth + 1, starts, depths));
-  PetscCallMPI(MPIU_Allreduce(depths, gdepths, (PetscMPIInt)(depth + 1), MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)dm)));
+  PetscCall(PetscMPIIntCast(depth + 1, &idepth));
+  PetscCallMPI(MPIU_Allreduce(depths, gdepths, idepth, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)dm)));
   for (d = 0; d <= depth; ++d) PetscCheck(starts[d] < 0 || depths[d] == gdepths[d], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected depth %" PetscInt_FMT ", found %" PetscInt_FMT, depths[d], gdepths[d]);
   // Note here that 'shift' is collective, so that the numbering is stratified by depth
   for (d = 0; d <= depth; ++d) {
@@ -9483,7 +9579,10 @@ PetscErrorCode DMPlexCheckPointSF(DM dm, PetscSF pointSF, PetscBool allowExtraRo
 
   /* Check Point SF has no local points referenced */
   for (l = 0; l < nleaves; l++) {
-    PetscAssert(remotes[l].rank != (PetscInt)rank, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Point SF contains local point %" PetscInt_FMT " <- (%d,%" PetscInt_FMT ")", locals ? locals[l] : l, (PetscMPIInt)remotes[l].rank, remotes[l].index);
+    PetscMPIInt irank;
+
+    PetscCall(PetscMPIIntCast(remotes[l].rank, &irank));
+    PetscAssert(irank != rank, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Point SF contains local point %" PetscInt_FMT " <- (%d,%" PetscInt_FMT ")", locals ? locals[l] : l, irank, remotes[l].index);
   }
 
   /* Check there are no cells in interface */
@@ -10655,7 +10754,7 @@ PetscErrorCode DMPlexMonitorThroughput(DM dm, void *dummy)
   if (default_handler) {
     PetscLogEvent      event;
     PetscEventPerfInfo eventInfo;
-    PetscReal          cellRate, flopRate;
+    PetscLogDouble     cellRate, flopRate;
     PetscInt           cStart, cEnd, Nf, N;
     const char        *name;
 
@@ -10667,7 +10766,7 @@ PetscErrorCode DMPlexMonitorThroughput(DM dm, void *dummy)
     N        = (cEnd - cStart) * Nf * eventInfo.count;
     flopRate = eventInfo.flops / eventInfo.time;
     cellRate = N / eventInfo.time;
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "DM (%s) FE Residual Integration: %" PetscInt_FMT " integrals %d reps\n  Cell rate: %.2g/s flop rate: %.2g MF/s\n", name ? name : "unknown", N, eventInfo.count, (double)cellRate, (double)(flopRate / 1.e6)));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "DM (%s) FE Residual Integration: %" PetscInt_FMT " integrals %d reps\n  Cell rate: %.2g/s flop rate: %.2g MF/s\n", name ? name : "unknown", N, eventInfo.count, cellRate, flopRate / 1.e6));
   } else {
     SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Plex Throughput Monitor is not supported if logging is turned off or the default log handler is not running. Reconfigure using --with-log and run with -log_view.");
   }

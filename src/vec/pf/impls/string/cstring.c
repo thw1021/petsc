@@ -79,7 +79,7 @@ PetscErrorCode PFStringSetFunction(PF pf, const char string[])
     PetscCall(PetscObjectGetComm((PetscObject)pf, &comm));
   }
   PetscCall(PetscOptionsGetBool(((PetscObject)pf)->options, ((PetscObject)pf)->prefix, "-pf_string_keep_files", &keeptmpfiles, NULL));
-  PetscCall(PetscSNPrintf(task, PETSC_STATIC_ARRAY_LENGTH(task), "cd %s ; if [ ! -d ${USERNAME} ]; then mkdir ${USERNAME}; fi ; cd ${USERNAME} ; rm -f makefile petscdlib.* ; cp -f ${PETSC_DIR}/src/vec/pf/impls/string/makefile ./makefile ; ${PETSC_MAKE} NIN=%" PetscInt_FMT " NOUT=%" PetscInt_FMT " -f makefile libpetscdlib STRINGFUNCTION=\"%s\"  %s ;  sync\n", tmp, pf->dimin, pf->dimout, string, keeptmpfiles ? "; rm -f makefile petscdlib.c" : ""));
+  PetscCall(PetscSNPrintf(task, PETSC_STATIC_ARRAY_LENGTH(task), "cd %s ; if [ ! -d ${USERNAME} ]; then mkdir ${USERNAME}; fi ; cd ${USERNAME} ; rm -f makefile petscdlib.* ; cp -f ${PETSC_DIR}/src/vec/pf/impls/string/makefile ./makefile ; ${PETSC_MAKE} NIN=%" PetscInt_FMT " NOUT=%" PetscInt_FMT " -f makefile libpetscdlib STRINGFUNCTION=\"%s\"  %s ;  sync\n", tmp, pf->dimin, pf->dimout, string, !keeptmpfiles ? "; rm -f makefile petscdlib.c" : ""));
 
   PetscCall(PetscPOpen(comm, NULL, task, "r", &fd));
   PetscCall(PetscPClose(comm, fd));
@@ -91,7 +91,7 @@ PetscErrorCode PFStringSetFunction(PF pf, const char string[])
   PetscCheck(f, PetscObjectComm((PetscObject)pf), PETSC_ERR_ARG_WRONGSTATE, "Cannot find function %s", lib);
 
   PetscCall(PetscFree(pf->data));
-  PetscCall(PetscStrallocpy(string, (char **)&data));
+  PetscCall(PetscStrallocpy(string, &data));
   PetscCall(PFSet(pf, f, NULL, PFView_String, PFDestroy_String, data));
   pf->ops->setfromoptions = PFSetFromOptions_String;
   PetscFunctionReturn(PETSC_SUCCESS);

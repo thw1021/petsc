@@ -228,7 +228,7 @@ cdef class DMSwarm(DM):
         fieldname = str2bytes(fieldname, &cfieldname)
         CHKERR(DMSwarmRegisterPetscDatatypeField(self.dm, cfieldname, cblocksize, ctype))
 
-    def getField(self, fieldname: str) -> Sequence[int | float | complex]:
+    def getField(self, fieldname: str) -> tuple[Sequence[int | float | complex], int]:
         """Return arrays storing all entries associated with a field.
 
         Not collective.
@@ -248,6 +248,8 @@ cdef class DMSwarm(DM):
         `numpy.ndarray`
             The type of the entries in the array will match the type of the
             field.
+        blocksize: int
+            The number of data items per point
 
         See Also
         --------
@@ -269,7 +271,7 @@ cdef class DMSwarm(DM):
         if ctype == PETSC_COMPLEX: typenum = NPY_PETSC_COMPLEX
         assert typenum != -1
         cdef npy_intp s = <npy_intp> nlocal * blocksize
-        return <object> PyArray_SimpleNewFromData(1, &s, typenum, data)
+        return (<object> PyArray_SimpleNewFromData(1, &s, typenum, data), asInt(blocksize))
 
     def restoreField(self, fieldname: str) -> None:
         """Restore accesses associated with a registered field.
@@ -293,7 +295,7 @@ cdef class DMSwarm(DM):
         CHKERR(DMSwarmRestoreField(self.dm, cfieldname, &blocksize, &ctype, <void**> 0))
 
     def vectorDefineField(self, fieldname: str) -> None:
-        """Set the field from which to define a `Vec` object.
+        """Set the fields from which to define a `Vec` object.
 
         Collective.
 
@@ -303,7 +305,7 @@ cdef class DMSwarm(DM):
         Parameters
         ----------
         fieldname
-            The textual name given to a registered field.
+            The textual names given to a registered field.
 
         See Also
         --------

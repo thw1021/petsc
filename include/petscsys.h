@@ -71,6 +71,7 @@
    This usually happens because
       * either an unexpected mpi.h is in the default compiler path (i.e. in /usr/include) or
       * an extra include path -I/something (which contains the unexpected mpi.h) is being passed to the compiler
+   Note: with MPICH and OpenMPI, accept versions [x.y.z, x+1.0.0) as compatible
 */
 #if defined(PETSC_HAVE_MPIUNI)
   #ifndef MPIUNI_H
@@ -91,14 +92,18 @@
 #elif defined(PETSC_HAVE_MPICH)
   #if !defined(MPICH_NUMVERSION) || defined(MVAPICH2_NUMVERSION) || defined(I_MPI_NUMVERSION)
     #error "PETSc was configured with MPICH but now appears to be compiling using a non-MPICH mpi.h"
-  #elif !PETSC_PKG_MPICH_VERSION_EQ(MPICH_NUMVERSION / 10000000, MPICH_NUMVERSION / 100000 % 100, MPICH_NUMVERSION / 1000 % 100)
-    #error "PETSc was configured with one MPICH mpi.h version but now appears to be compiling using a different MPICH mpi.h version"
+  #elif PETSC_PKG_MPICH_VERSION_GT(MPICH_NUMVERSION / 10000000, MPICH_NUMVERSION / 100000 % 100, MPICH_NUMVERSION / 1000 % 100)
+    #error "PETSc was configured with one MPICH mpi.h version but now appears to be compiling using an older MPICH mpi.h version"
+  #elif PETSC_PKG_MPICH_VERSION_LT(MPICH_NUMVERSION / 10000000, 0, 0)
+    #error "PETSc was configured with one MPICH mpi.h version but now appears to be compiling using a newer major MPICH mpi.h version"
   #endif
 #elif defined(PETSC_HAVE_OPENMPI)
   #if !defined(OMPI_MAJOR_VERSION)
     #error "PETSc was configured with Open MPI but now appears to be compiling using a non-Open MPI mpi.h"
-  #elif !PETSC_PKG_OPENMPI_VERSION_EQ(OMPI_MAJOR_VERSION, OMPI_MINOR_VERSION, OMPI_RELEASE_VERSION)
-    #error "PETSc was configured with one Open MPI mpi.h version but now appears to be compiling using a different Open MPI mpi.h version"
+  #elif PETSC_PKG_OPENMPI_VERSION_GT(OMPI_MAJOR_VERSION, OMPI_MINOR_VERSION, OMPI_RELEASE_VERSION)
+    #error "PETSc was configured with one Open MPI mpi.h version but now appears to be compiling using an older Open MPI mpi.h version"
+  #elif PETSC_PKG_OPENMPI_VERSION_LT(OMPI_MAJOR_VERSION, 0, 0)
+    #error "PETSc was configured with one Open MPI mpi.h version but now appears to be compiling using a newer major Open MPI mpi.h version"
   #endif
 #elif defined(PETSC_HAVE_MSMPI_VERSION)
   #if !defined(MSMPI_VER)
@@ -411,7 +416,7 @@ PETSC_EXTERN PetscErrorCode PetscElementalFinalizePackage(void);
    Notes:
    Memory is always allocated at least double aligned
 
-   It is safe to allocate size 0 and pass the resulting pointer (which may or may not be `NULL`) to `PetscFree()`.
+   It is safe to allocate size 0 and pass the resulting pointer to `PetscFree()`.
 
 .seealso: `PetscFree()`, `PetscNew()`
 M*/
@@ -480,7 +485,7 @@ M*/
    Notes:
    Memory is always allocated at least double aligned. This macro is useful in allocating memory pointed by void pointers
 
-   It is safe to allocate size 0 and pass the resulting pointer (which may or may not be `NULL`) to `PetscFree()`.
+   It is safe to allocate size 0 and pass the resulting pointer to `PetscFree()`.
 
 .seealso: `PetscFree()`, `PetscNew()`
 M*/
@@ -504,8 +509,8 @@ M*/
    Level: beginner
 
    Note:
-   This uses the sizeof() of the memory type requested to determine the total memory to be allocated, therefore you should not
-         multiply the number of elements requested by the `sizeof()` the type. For example use
+   This uses `sizeof()` of the memory type requested to determine the total memory to be allocated; therefore, you should not
+         multiply the number of elements requested by the `sizeof()` the type. For example, use
 .vb
   PetscInt *id;
   PetscMalloc1(10,&id);
@@ -516,7 +521,26 @@ M*/
   PetscMalloc1(10*sizeof(PetscInt),&id);
 .ve
 
-        Does not zero the memory allocated, use `PetscCalloc1()` to obtain memory that has been zeroed.
+  Does not zero the memory allocated, use `PetscCalloc1()` to obtain memory that has been zeroed.
+
+  The `PetscMalloc[N]()` and `PetscCalloc[N]()` take an argument of type `size_t`! However, most codes use `value`, computed via `int` or `PetscInt` variables. This can overflow in
+  32bit `int` computation - while computation in 64bit `size_t` would not overflow!
+  It's best if any arithmetic that is done for size computations is done with `size_t` type - avoiding arithmetic overflow!
+
+  `PetscMalloc[N]()` and `PetscCalloc[N]()` attempt to work-around this by casting the first variable to `size_t`.
+  This works for most expressions, but not all, such as
+.vb
+  PetscInt *id, a, b;
+  PetscMalloc1(use_a_squared ? a * a * b : a * b, &id); // use_a_squared is cast to size_t, but a and b are still PetscInt
+  PetscMalloc1(a + b * b, &id); // a is cast to size_t, but b * b is performed at PetscInt precision first due to order-of-operations
+.ve
+
+  These expressions should either be avoided, or appropriately cast variables to `size_t`:
+.vb
+  PetscInt *id, a, b;
+  PetscMalloc1(use_a_squared ? (size_t)a * a * b : (size_t)a * b, &id); // Cast a to size_t before multiplication
+  PetscMalloc1(b * b + a, &id); // b is automatically cast to size_t and order-of-operations ensures size_t precision is maintained
+.ve
 
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`, `PetscCalloc1()`, `PetscMalloc2()`
 M*/
@@ -1179,6 +1203,56 @@ PETSC_EXTERN PetscErrorCode MPIULong_Send(void *, PetscInt, MPI_Datatype, PetscM
 PETSC_EXTERN PetscErrorCode MPIULong_Recv(void *, PetscInt, MPI_Datatype, PetscMPIInt, PetscMPIInt, MPI_Comm) PETSC_ATTRIBUTE_MPI_POINTER_WITH_TYPE(1, 3);
 
 /*
+     These are so that in extern C code we can cast function pointers to non-extern C
+   function pointers. Since the regular C++ code expects its function pointers to be C++
+*/
+
+/*S
+  PetscVoidFn - A prototype of a void (fn)(void) function
+
+  Level: developer
+
+  Notes:
+  The deprecated `PetscVoidFunction` works as a replacement for `PetscVoidFn` *.
+
+  The deprecated `PetscVoidStarFunction` works as a replacement for `PetscVoidFn` **.
+
+.seealso: `PetscObject`, `PetscObjectDestroy()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef void(PetscVoidFn)(void);
+
+PETSC_EXTERN_TYPEDEF typedef PetscVoidFn  *PetscVoidFunction;
+PETSC_EXTERN_TYPEDEF typedef PetscVoidFn **PetscVoidStarFunction;
+
+/*S
+  PetscErrorCodeFn - A prototype of a PetscErrorCode (fn)(void) function
+
+  Level: developer
+
+  Notes:
+  The deprecated `PetscErrorCodeFunction` works as a replacement for `PetscErrorCodeFn` *.
+
+.seealso: `PetscObject`, `PetscObjectDestroy()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(PetscErrorCodeFn)(void);
+
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCodeFn *PetscErrorCodeFunction;
+
+/*S
+  PetscCtxDestroyFn - A prototype of a `PetscErrorCode (*)(void *)` function that is used to free user contexts
+
+  Level: intermediate
+
+  Note:
+  Used in the prototype of functions such as `DMSetApplicationContextDestroy()`
+
+.seealso: `PetscObject`, `PetscCtxDestroyDefault()`, `PetscObjectDestroy()`, `DMSetApplicationContextDestroy()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(PetscCtxDestroyFn)(void **);
+
+PETSC_EXTERN PetscCtxDestroyFn PetscCtxDestroyDefault;
+
+/*
     Defines PETSc error handling.
 */
 #include <petscerror.h>
@@ -1188,7 +1262,7 @@ PETSC_EXTERN PetscBool   PetscCIEnabledPortableErrorOutput; /* error output is s
 PETSC_EXTERN const char *PetscCIFilename(const char *);
 PETSC_EXTERN int         PetscCILinenumber(int);
 
-#define PETSC_SMALLEST_CLASSID ((PetscClassId)1211211)
+#define PETSC_SMALLEST_CLASSID 1211211
 PETSC_EXTERN PetscClassId   PETSC_LARGEST_CLASSID;
 PETSC_EXTERN PetscClassId   PETSC_OBJECT_CLASSID;
 PETSC_EXTERN PetscErrorCode PetscClassIdRegister(const char[], PetscClassId *);
@@ -1228,43 +1302,7 @@ PETSC_EXTERN PetscErrorCode PetscPythonFinalize(void);
 PETSC_EXTERN PetscErrorCode PetscPythonPrintError(void);
 PETSC_EXTERN PetscErrorCode PetscPythonMonitorSet(PetscObject, const char[]);
 
-PETSC_EXTERN PetscErrorCode PetscMonitorCompare(PetscErrorCode (*)(void), void *, PetscErrorCode (*)(void **), PetscErrorCode (*)(void), void *, PetscErrorCode (*)(void **), PetscBool *);
-
-/*
-     These are so that in extern C code we can cast function pointers to non-extern C
-   function pointers. Since the regular C++ code expects its function pointers to be C++
-*/
-
-/*S
-  PetscVoidFn - A prototype of a void (fn)(void) function
-
-  Level: developer
-
-  Notes:
-  The deprecated `PetscVoidFunction` works as a replacement for `PetscVoidFn` *.
-
-  The deprecated `PetscVoidStarFunction` works as a replacement for `PetscVoidFn` **.
-
-.seealso: `PetscObject`, `PetscObjectDestroy()`
-S*/
-PETSC_EXTERN_TYPEDEF typedef void(PetscVoidFn)(void);
-
-PETSC_EXTERN_TYPEDEF typedef PetscVoidFn  *PetscVoidFunction;
-PETSC_EXTERN_TYPEDEF typedef PetscVoidFn **PetscVoidStarFunction;
-
-/*S
-  PetscErrorCodeFn - A prototype of a PetscErrorCode (fn)(void) function
-
-  Level: developer
-
-  Notes:
-  The deprecated `PetscErrorCodeFunction` works as a replacement for `PetscErrorCodeFn` *.
-
-.seealso: `PetscObject`, `PetscObjectDestroy()`
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(PetscErrorCodeFn)(void);
-
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCodeFn *PetscErrorCodeFunction;
+PETSC_EXTERN PetscErrorCode PetscMonitorCompare(PetscErrorCode (*)(void), void *, PetscCtxDestroyFn *, PetscErrorCode (*)(void), void *, PetscCtxDestroyFn *, PetscBool *);
 
 /*
     Functions that can act on any PETSc object.
@@ -1559,16 +1597,24 @@ PETSC_EXTERN PetscErrorCode PetscContainerGetPointer(PetscContainer, void **);
 PETSC_EXTERN PetscErrorCode PetscContainerSetPointer(PetscContainer, void *);
 PETSC_EXTERN PetscErrorCode PetscContainerDestroy(PetscContainer *);
 PETSC_EXTERN PetscErrorCode PetscContainerCreate(MPI_Comm, PetscContainer *);
-PETSC_EXTERN PetscErrorCode PetscContainerSetUserDestroy(PetscContainer, PetscErrorCode (*)(void *));
-PETSC_EXTERN PetscErrorCode PetscContainerUserDestroyDefault(void *);
-PETSC_EXTERN PetscErrorCode PetscObjectContainerCompose(PetscObject, const char *name, void *, PetscErrorCode (*)(void *));
+PETSC_EXTERN PetscErrorCode PetscContainerSetCtxDestroy(PetscContainer, PetscCtxDestroyFn *);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 23, 0, "PetscContainerSetCtxDestroy()", ) PetscErrorCode PetscContainerSetUserDestroy(PetscContainer, PetscErrorCode (*)(void *));
+PETSC_EXTERN PetscErrorCode PetscObjectContainerCompose(PetscObject, const char *name, void *, PetscCtxDestroyFn *);
 PETSC_EXTERN PetscErrorCode PetscObjectContainerQuery(PetscObject, const char *, void **);
+
+PETSC_DEPRECATED_FUNCTION(3, 23, 0, "PetscCtxDestroyDefault()", ) static inline PetscErrorCode PetscContainerCtxDestroyDefault(void **a)
+{
+  return PetscCtxDestroyDefault(a);
+}
 
 /*
    For use in debuggers
 */
 PETSC_EXTERN PetscMPIInt    PetscGlobalRank;
 PETSC_EXTERN PetscMPIInt    PetscGlobalSize;
+PETSC_EXTERN PetscErrorCode PetscIntViewNumColumns(PetscInt, PetscInt, const PetscInt[], PetscViewer);
+PETSC_EXTERN PetscErrorCode PetscRealViewNumColumns(PetscInt, PetscInt, const PetscReal[], PetscViewer);
+PETSC_EXTERN PetscErrorCode PetscScalarViewNumColumns(PetscInt, PetscInt, const PetscScalar[], PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscIntView(PetscInt, const PetscInt[], PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscRealView(PetscInt, const PetscReal[], PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscScalarView(PetscInt, const PetscScalar[], PetscViewer);
@@ -1882,7 +1928,11 @@ static inline PetscErrorCode PetscCIntCast(MPIU_Count a, int *b)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#define PetscInt64Mult(a, b) (((PetscInt64)(a)) * ((PetscInt64)(b)))
+#if defined(PETSC_USE_64BIT_INDICES)
+  #define PetscInt64Mult(a, b) ((a) * (b))
+#else
+  #define PetscInt64Mult(a, b) (((PetscInt64)(a)) * ((PetscInt64)(b)))
+#endif
 
 /*@C
   PetscRealIntMultTruncate - Computes the product of a positive `PetscReal` and a positive
@@ -1920,7 +1970,11 @@ static inline PetscInt PetscRealIntMultTruncate(PetscReal a, PetscInt b)
 {
   PetscInt64 r = (PetscInt64)(a * (PetscReal)b);
   if (r > PETSC_INT_MAX - 100) r = PETSC_INT_MAX - 100;
+#if defined(PETSC_USE_64BIT_INDICES)
+  return r;
+#else
   return (PetscInt)r;
+#endif
 }
 
 /*@C
@@ -1956,7 +2010,11 @@ static inline PetscInt PetscIntMultTruncate(PetscInt a, PetscInt b)
 {
   PetscInt64 r = PetscInt64Mult(a, b);
   if (r > PETSC_INT_MAX - 100) r = PETSC_INT_MAX - 100;
+#if defined(PETSC_USE_64BIT_INDICES)
+  return r;
+#else
   return (PetscInt)r;
+#endif
 }
 
 /*@C
@@ -1987,9 +2045,15 @@ static inline PetscInt PetscIntMultTruncate(PetscInt a, PetscInt b)
 @*/
 static inline PetscInt PetscIntSumTruncate(PetscInt a, PetscInt b)
 {
-  PetscInt64 r = ((PetscInt64)a) + ((PetscInt64)b);
+  PetscInt64 r = a;
+
+  r += b;
   if (r > PETSC_INT_MAX - 100) r = PETSC_INT_MAX - 100;
+#if defined(PETSC_USE_64BIT_INDICES)
+  return r;
+#else
   return (PetscInt)r;
+#endif
 }
 
 /*@C
@@ -2022,7 +2086,11 @@ static inline PetscErrorCode PetscIntMultError(PetscInt a, PetscInt b, PetscInt 
   PetscInt64 r = PetscInt64Mult(a, b);
 
   PetscFunctionBegin;
+#if defined(PETSC_USE_64BIT_INDICES)
+  if (result) *result = r;
+#else
   if (result) *result = (PetscInt)r;
+#endif
   if (!PetscDefined(USE_64BIT_INDICES)) {
     PetscCheck(r <= PETSC_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_SUP, "Product of two integers %" PetscInt_FMT " %" PetscInt_FMT " overflow, either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-indices for the case you are running", a, b);
   }
@@ -2053,10 +2121,15 @@ static inline PetscErrorCode PetscIntMultError(PetscInt a, PetscInt b, PetscInt 
 @*/
 static inline PetscErrorCode PetscIntSumError(PetscInt a, PetscInt b, PetscInt *result)
 {
-  PetscInt64 r = ((PetscInt64)a) + ((PetscInt64)b);
+  PetscInt64 r = a;
 
   PetscFunctionBegin;
+  r += b;
+#if defined(PETSC_USE_64BIT_INDICES)
+  if (result) *result = r;
+#else
   if (result) *result = (PetscInt)r;
+#endif
   if (!PetscDefined(USE_64BIT_INDICES)) {
     PetscCheck(r <= PETSC_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_SUP, "Sum of two integers %" PetscInt_FMT " %" PetscInt_FMT " overflow, either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-indices for the case you are running", a, b);
   }
@@ -2669,7 +2742,7 @@ typedef struct {
   PetscInt n;
   void    *addr[3];
 } PCMPIServerAddresses;
-PETSC_EXTERN PetscErrorCode PCMPIServerAddressesDestroy(void *);
+PETSC_EXTERN PetscCtxDestroyFn PCMPIServerAddressesDestroy;
 
 #define PETSC_HAVE_FORTRAN PETSC_DEPRECATED_MACRO(3, 20, 0, "PETSC_USE_FORTRAN_BINDINGS", ) PETSC_USE_FORTRAN_BINDINGS
 
