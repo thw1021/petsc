@@ -53,7 +53,7 @@ static PetscErrorCode TaoTermProximalMap_Zero(TaoTerm term, Vec p, PetscReal alp
     PetscCall(VecAXPY(x, -1., p));
     break;
   case TAOTERM_PROX_SOLVE_PARAM:
-    PetscCall(VecCopy(p, x));//TODO is this corect?
+    PetscCall(VecCopy(p, x)); //TODO is this corect?
     break;
   case TAOTERM_PROX_SOLVE_COMPOSITE_TRANS:
     PetscCall(TaoSoftThreshold(p, -alpha / beta, alpha / beta, x)); //?????

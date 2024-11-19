@@ -458,8 +458,8 @@ PETSC_EXTERN PetscErrorCode TaoCreate_FB(Tao tao)
   fb->t_fista_old = 1;
   fb->fista_beta  = 0.;
   fb->xi          = 1.;
-  fb->use_accel = PETSC_TRUE;
-  fb->use_adapt = PETSC_FALSE;
+  fb->use_accel   = PETSC_TRUE;
+  fb->use_adapt   = PETSC_FALSE;
 
   /* Non-monotonic linesearch
    *

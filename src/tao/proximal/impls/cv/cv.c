@@ -6,7 +6,7 @@
 #include <petsc/private/taolinesearchimpl.h>
 #include <../src/tao/linesearch/impls/pslinesearch/pslinesearch.h>
 
-static PetscBool  cited      = PETSC_FALSE;
+static PetscBool cited = PETSC_FALSE;
 
 static const char citation[] = "@article{latafat2024adaptive,\n"
                                "title={Adaptive proximal algorithms for convex optimization under local Lipschitz continuity of the gradient},\n"
