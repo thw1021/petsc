@@ -202,7 +202,7 @@ PetscErrorCode TaoTermCreateConjugate(TaoTerm term, TaoTerm *cc_term)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscAssertPointer(term, 2);
+  PetscAssertPointer(cc_term, 2);
   PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)term), cc_term));
   PetscCall(TaoTermSetType(*cc_term, TAOTERMCONJUGATE));
 
@@ -236,7 +236,7 @@ PetscErrorCode TaoTermCreateConjugateVirtual(TaoTerm term, TaoTerm *cc_term)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscAssertPointer(term, 2);
+  PetscAssertPointer(cc_term, 2);
   PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)term), cc_term));
   PetscCall(TaoTermSetType(*cc_term, TAOTERMCONJUGATE));
   {

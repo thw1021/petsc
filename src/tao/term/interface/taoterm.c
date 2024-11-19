@@ -754,7 +754,7 @@ PetscErrorCode TaoTermHessianMult(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv
 . alpha - scale of function $f(x; p)$
 . gterm - a `TaoTerm` representing a parametric function $g(x; p)$ - a regularizer. May be NULL for HALFL2SQUARED
 . q     - the parameters $q$ in $f(x; q)$ (may be NULL if the term is not parametric)
-. beta  - scale of function $g(x; q)$
+- beta  - scale of function $g(x; q)$
 
   Output Parameters:
 . x - a vector in the solution space
@@ -773,7 +773,7 @@ PetscErrorCode TaoTermProximalMap(TaoTerm fterm, Vec p, PetscReal alpha, TaoTerm
   //TODO no lock here. done in each solvers
   //Q: how does that work for things like conjugate?
   PetscValidHeaderSpecific(fterm, TAOTERM_CLASSID, 1);
-  if (gterm) PetscValidHeaderSpecific(gterm, TAOTERM_CLASSID, 5);
+  if (gterm) PetscValidHeaderSpecific(gterm, TAOTERM_CLASSID, 4);
   if (p) {
     PetscValidHeaderSpecific(p, VEC_CLASSID, 2);
     PetscCheckSameComm(fterm, 1, p, 2);

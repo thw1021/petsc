@@ -135,7 +135,7 @@ static PetscErrorCode TaoTermProximalMap_Box(TaoTerm term, Vec p, PetscReal alph
   Logically Collective
 
   Input Parameters:
-+ dm      - the `TaoTerm` of type `TAOTERMBOX`
++ term    - the `TaoTerm` of type `TAOTERMBOX`
 . lb_real - lowerbound, real number
 . ub_real - upperbound, real number
 . lb_vec  - lowerbound, vector
