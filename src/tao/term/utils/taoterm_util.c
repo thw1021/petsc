@@ -18,9 +18,9 @@ PETSC_INTERN PetscErrorCode TaoTermProxL2FindOps_Internal(Vec q, Vec p, PetscRea
   PetscBool a_zb, za_b, a_b;
 
   PetscFunctionBegin;
-  a_zb = (alpha != 0 && beta == 0);
-  za_b = (alpha == 0 && beta != 0);
-  a_b  = (alpha != 0 && beta != 0);
+  a_zb = (alpha != 0 && beta == 0) ? PETSC_TRUE : PETSC_FALSE;
+  za_b = (alpha == 0 && beta != 0) ? PETSC_TRUE : PETSC_FALSE;
+  a_b  = (alpha != 0 && beta != 0) ? PETSC_TRUE : PETSC_FALSE;
 
   if (alpha == 0 && beta == 0) {
     *l2ops = TAOTERM_PROX_NO_OP;
