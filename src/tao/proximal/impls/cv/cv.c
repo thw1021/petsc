@@ -442,7 +442,7 @@ static PetscErrorCode TaoDestroy_CV(Tao tao)
    Level: beginner
 
    Note:
-   See {cite}`latafat2023adaptive`.
+   See {cite}`latafat2024adaptive`.
 
 .seealso: `Tao`, `TaoType`, `TAOFB`
 M*/

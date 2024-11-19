@@ -424,7 +424,7 @@ static PetscErrorCode TaoDestroy_FB(Tao tao)
    Level: beginner
 
    Note:
-   See {cite}`goldstein2015fasta`, {cite}`latafat2024convergence`.
+   See {cite}`goldstein2015fasta`, {cite}`latafat2024adaptive`.
 
 .seealso: `Tao`, `TaoType, `TAOCV`
 M*/
