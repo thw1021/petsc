@@ -56,6 +56,7 @@ typedef enum {
 .   `TAOLINESEARCHGPCG`     - "gpcg"
 .   `TAOLINESEARCHARMIJO`   - "armijo" simple backtracking line search enforcing only the sufficient decrease condition
 .   `TAOLINESEARCHOWARMIJO` - "owarmijo"
+.   `TAOLINESEARCHPS`       - "ps"
 -   `TAOLINESEARCHIPM`      - "ipm"
 
    Options Database Key:
@@ -71,6 +72,7 @@ typedef const char *TaoLineSearchType;
 #define TAOLINESEARCHGPCG     "gpcg"
 #define TAOLINESEARCHARMIJO   "armijo"
 #define TAOLINESEARCHOWARMIJO "owarmijo"
+#define TAOLINESEARCHPS       "ps"
 #define TAOLINESEARCHIPM      "ipm"
 
 PETSC_EXTERN PetscClassId      TAOLINESEARCH_CLASSID;

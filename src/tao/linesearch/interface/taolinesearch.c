@@ -138,7 +138,7 @@ PetscErrorCode TaoLineSearchCreate(MPI_Comm comm, TaoLineSearch *newls)
 
 /*@
   TaoLineSearchSetUp - Sets up the internal data structures for the later use
-  of a `TaoLineSearch`
+  proxeval           of a `TaoLineSearch`
 
   Collective
 
@@ -304,9 +304,10 @@ PetscErrorCode TaoLineSearchApply(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, 
   ls->stepdirection = s;
 
   PetscCall(TaoLineSearchSetUp(ls));
-  ls->nfeval  = 0;
-  ls->ngeval  = 0;
-  ls->nfgeval = 0;
+  ls->nfeval    = 0;
+  ls->ngeval    = 0;
+  ls->nfgeval   = 0;
+  ls->nproxeval = 0;
   /* Check parameter values */
   if (ls->ftol < 0.0) {
     PetscCall(PetscInfo(ls, "Bad Line Search Parameter: ftol (%g) < 0\n", (double)ls->ftol));
@@ -398,6 +399,7 @@ PetscErrorCode TaoLineSearchSetType(TaoLineSearch ls, TaoLineSearchType type)
   ls->nfeval              = 0;
   ls->ngeval              = 0;
   ls->nfgeval             = 0;
+  ls->nproxeval           = 0;
   ls->ops->setup          = NULL;
   ls->ops->apply          = NULL;
   ls->ops->view           = NULL;

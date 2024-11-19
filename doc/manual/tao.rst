@@ -52,11 +52,15 @@ The following sections annotate the lines of code in
 .. _tao-example1:
 .. admonition:: Listing: ``src/tao/unconstrained/tutorials/rosenbrock1.c``
 
-   .. literalinclude:: /../src/tao/unconstrained/tutorials/rosenbrock1.c
+   .. literalinclude:: /../src/tao/unconstrained/tutorials/rosenbrock1.h
       :prepend: #include <petsctao.h>
-      :start-at: typedef struct
+      :start-at: /* User-defined application context
+      :end-at: static PetscErrorCode AppCtxCreateHessianMatrices
+
+   .. literalinclude:: /../src/tao/unconstrained/tutorials/rosenbrock1.c
+      :start-at: static PetscErrorCode FormFunctionGradient
       :end-at: PetscFinalize
-      :append: return ierr;}
+      :append: return 0;}
 
 .. _sec_tao_workflow:
 
@@ -202,6 +206,8 @@ can be retrieved from the application object by using the
 
 routine. This routine takes the address of a ``Vec`` in the second
 argument and sets it to the solution vector used in the application.
+
+.. _sec_tao_callbacks:
 
 User Defined Call-back Routines
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -527,6 +533,193 @@ Some TAO algorithms may adopt an alternative double-sided
 bounds :math:`c_l` and :math:`c_u` to be set using the
 ``TaoSetInequalityBounds(Tao,Vec,Vec)`` interface. Please refer to the
 documentation for each TAO algorithm for further details.
+
+.. _sec_tao_term:
+
+TaoTerm: object-oriented objective function terms
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In addition to the callback-based approach to specifying the optimization
+problem solved by TAO (see :any:`sec_tao_callbacks`), TAO includes an
+object-oriented interface in ``TaoTerm``, which encapsulates a term that
+can appear in the objective function of an optimization problem.
+
+Each ``TaoTerm`` represents a parameteric real-valued function :math:`f(x; p)`
+for solution variable :math:`x` and parameters :math:`p`.  The interface
+includes methods for evaluating :math:`f(x; p)` (``TaoTermObjective()``),
+:math:`\nabla_x f(x; p)` (``TaoTermGradient()`` and
+``TaoTermObjectiveAndGradient()``), and :math:`\nabla_x^2 f(x; p)`
+(``TaoTermHessian()`` and ``TaoTermHessianMult()``).
+
+Built-in TaoTerm implementations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+TAO comes with built-in implementations for ``TaoTerm``:
+
+* ``TAOTERMHALFL2SQUARED``: :math:`f(x;p) = \tfrac{1}{2} \|x - p\|_2^2` (See ``TaoTermCreateHalfL2Squared()``.)
+* ``TAOTERML1``: :math:`f(x;p) = \|x - p\|_1` (See ``TaoTermCreateL1()``.)
+* ``TAOTERMQUADRATIC``: :math:`f(x;p) = \tfrac{1}{2}(x - p)^T A (x - p)` for matrix :math:`A` (See ``TaoTermCreateQuadratic()``.)
+* ``TAOTERMSUM``: a sum of other terms implemented by ``TaoTerm``,  :math:`f(x;p) = \sum_i \alpha_i f(A_i x; p_i)`.
+* ``TAOTERMSHELL``: an interface for user-defined terms, see :any:`sec_tao_term_shell`.
+* ``TAOTERMBOX``: an indicator function of the box constraint, :math:`f(x) = \text{Ind}_S(x), S = \{x : \text{low} \leq x \leq \text{high} \}`.
+* ``TAOTERMSIMPLEX``: an indicator function of the probability simplex, :math:`f(x) = \text{Ind}_S(x), S = \{x : x \geq 0, \sum_i x_i = a \}`.
+* ``TAOTERMZERO``: an indicator function of the set containing the origin - zero cone.
+* ``TAOTERMCONJUGATE``: an convex-conjugate (Fenchel conjugate) of a given function :math:`f(x)`, :math:`f^*(x) = \text{sup}_y \{ \langle y, x, \rangle - f(y)\}`.
+
+Specifying TaoTerm Parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The parameters :math:`p` of the parameteric function :math:`f(x;p)`
+implemented by a ``TaoTerm`` are passed as arguments in the evaluation
+routines.  For some terms, however, omitting the parameters results in a
+default value of :math:`p` being used.  For ``TAOTERMHALFL2SQUARED``,
+``TAOTERML1``, and ``TAOTERMQUADRATIC`` the default is :math:`p = 0`.  In general,
+the parametric behavior of a ``TaoTerm`` is determined by ``TaoTermGetParametersMode()``:
+
+* ``TAOTERM_PARAMETERS_OPTIONAL``: default parameters are used if `NULL` is passed for the parameters argument
+* ``TAOTERM_PARAMETERS_NONE``: the term is not parametric, `NULL` is the only valid parameters argument
+* ``TAOTERM_PARAMETERS_REQUIRED``: parameters are required, it is an error to pass `NULL` for the parameters argument
+
+Proximal Algorithm with TaoTerm
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A built-in ``TaoTerm``, if availble, have built-in proximal algorithm. Euclidean Proximal algorithm is defined as,
+
+.. math::
+
+   \text{prox}_{\gamma f}(q) = \text{argmin}_y \{f(y) + \frac{1}{2\gamma} \|y - q\|_2^2\}.
+
+Here, we reparameterize the above statement as following:
+
+.. math::
+
+   x = \text{prox}_{f}(q) = \text{argmin}_y \{ \alpha f(y;p) + \beta g(y;q) \}.
+
+The above proximal algorithm can be solved with ``TaoTerm``, by using
+
+.. code::
+
+      TaoTermProximalMap(TaoTerm fterm, Vec p, PetscReal alpha, TaoTerm gterm, Vec q, PetscReal beta, Vec x);
+
+Two things should be noted here. First, currently we only support `HALFL2SQUARED` for :math:`g` term.
+Second, for built-in proximal algorithms, paremeter vector :math:`p` will be used as a translation vector, that is,
+
+.. math::
+
+   g(x) = f(x + p).
+
+Therefore, for built-in proximalble ``TaoTerm`` types, ``TaoTermProximalMap()`` becomes,
+
+.. math::
+
+   x = \text{prox}_{f}(q) = \text{argmin}_y \{ \alpha f(y + p) + \beta \frac{\beta}{2} \| y - q\|_2^2 \}.
+
+Following ``TaoTermType`` have built-in proximal maps.
+
+* ``TAOTERML1``: Soft Thresholding
+* ``TAOTERMBOX``: Projection on box constraints
+* ``TAOTERMSIMPLEX``: Projection on simplex using sorting-based algorithm.
+* ``TAOTERMZERO``: Zero-cone, i.e., vector of all zeros.
+* ``TAOTERMCONJUGATE``: Requires the original term to have a proximal map.
+
+Here, ``TAOTERMCONJUGATE`` needs an additional attention. To create a conjugate term, :math:`f^*`, one needs to
+specify the original term, :math:`f`. User can create a conjugate function by using
+
+.. code::
+
+      TaoTermCreateConjugate(TaoTerm f, TaoTerm *f_conjugate);
+
+In order to compute proximal map of a conjugate term, the original term needs to have a proximal map.
+In addition, we only support a proximal map of a conjugate of a translated term, NOT
+a translation of a conjugate term. That is, we only support following:
+
+.. math::
+
+   \begin{array}{lcl}
+   g(x) &=& f(x + p), \\
+   \text{prox}_{\alpha/\beta,g^*}(y) &=& y - \lambda \text{prox}_{\beta/\alpha,g}(\beta y / \alpha),\\
+   \text{prox}_{\alpha/\beta,g}(z) &=& \text{prox}_{\alpha/\beta, f}(z + a) - a,
+   \end{array}
+
+where :math:`a` is a translation vector, and :math:`f` is a original term used to create a conjugate term.
+We do NOT support a translation of a conjugate term, that is,
+
+.. math::
+
+   \begin{array}{lcl}
+   g^*(x) &=& f^*(x + a), \\
+   \text{prox}_{\alpha/\beta, g^*}(y) &=& y - \frac{\alpha}{\beta} \text{prox}_{\beta/\alpha, f^*} (\frac{\beta (y + p)}{\alpha}).
+   \end{array}
+
+
+Using a TaoTerm in a Tao solver
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A ``TaoTerm`` can be set as the whole objective function of a ``Tao`` solver
+with ``TaoSetObjectiveTerm()``.  A ``TaoTerm`` can also be added to the
+existing objective function of a ``Tao`` using ``TaoAddObjectiveTerm()``.
+This is compatible with the callback-based interface.  For example: if you
+have specified an objective function :math:`f(x)` using callbacks, and a
+regularizer :math:`g(x;p)` is specified by a ``TaoTerm``, you can create the
+objective function :math:`f(x) + \alpha g(Ax; p)` this way:
+
+.. code::
+
+   PetscErrorCode (*f_obj_grad)(Tao, Vec, PetscReal *, Vec, void *);
+   void            *f_ctx;
+   PetscReal        alpha;
+   Mat              A;
+   TaoTerm          g;
+   Vec              gradient, p;
+   Tao              tao;
+
+   TaoSetObjectiveAndGradient(tao, gradient, f_obj_grad, f_ctx); // f(x)
+   TaoAddObjectiveTerm(tao, "regularizer_", alpha, g, p, A);     // + alpha * g(A x ; p)
+
+the example
+`$TAO_DIR/src/unconstrained/tutorials/elastic_net_regularization.c <PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/tao/unconstrained/tutorials/elastic_net_regularization.c.html>`__.
+uses this interface to define the optimization problem :math:`\min_x \tfrac{1}{2} \|Ax - b\|_W^2 + \lambda_2 \tfrac{1}{2}\|x\|_2^2 + \lambda_1 \|D x - y\|_1`:
+
+.. _tao-example2:
+.. admonition:: Listing: ``src/tao/unconstrained/tutorials/elastic_net_regularization.c``
+
+   .. literalinclude:: /../src/tao/unconstrained/tutorials/elastic_net_regularization.c
+      :start-at: // the model term
+      :end-at: TaoSolve
+
+Regularization terms can also be added to the objective function of a ``Tao`` solver
+from the command line.  For instance, the elastic net regularizer
+:math:`\frac{0.4}{2} \|x\|_2^2 + 0.7 \|x\|_1` can be added with the following options:
+
+.. code::
+
+   -tao_add_objective_terms ridge_,lasso_
+   -ridge_taoterm_type halfl2squared
+   -lasso_taoterm_type l1
+   -objective_taoterm_sum_ridge_scale 0.4
+   -objective_taoterm_sum_lasso_scale 0.7
+
+In the above, `ridge_`, and `lasso_` could be any unique strings for each term to be added.
+
+.. _sec_tao_term_shell:
+
+User-defined TaoTerm implementations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A user-defined ``TaoTerm`` can be defined from callbacks using the
+``TAOTERMSHELL`` type.  This interface is very similar to ``MATSHELL``:
+there is a single user context that is set with ``TaoTermShellSetContext()`` and obtained ``TaoTermShellGetContext()``,
+and the evaluation routines are set by passing callbacks with the same signature as routines they implement (see for example ``TaoTermShellSetObjectiveAndGradient()``).
+As an example, `$TAO_DIR/src/unconstrained/tutorials/rosenbrock1_taoterm.c <PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/tao/unconstrained/tutorials/rosenbrock1_taoterm.c.html>`__
+in :any:`the example below <tao-example3>` demonstrates the same Rosenbrock example as :any:`the first example <tao-example1>`.
+
+.. _tao-example3:
+.. admonition:: Listing: ``src/tao/unconstrained/tutorials/rosenbrock1_taoterm.c``
+
+   .. literalinclude:: /../src/tao/unconstrained/tutorials/rosenbrock1_taoterm.c
+      :start-at: static PetscErrorCode FormFunctionGradient
+      :end-at: PetscFinalize
+      :append: return 0;}
 
 Solving
 ~~~~~~~
@@ -2831,6 +3024,132 @@ assumes the objective function is quadratic, it evaluates the function,
 gradient, and Hessian only once. This method also requires the solution
 of systems of linear equations, whose solver can be accessed and
 modified with the command ``TaoGetKSP()``.
+
+.. _sec_tao_fb:
+
+Forward-Backward Algorithm
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The FB algorithm is a forward-backward (or proximal gradient)
+method :cite:`goldstein2015fasta`, which solves optimization
+problems of the form
+
+.. math::
+
+   \begin{array}{ll}
+   \displaystyle \min_{x} f(x) + g(x)
+   \end{array}
+
+where the gradient of :math:`f(x)` is known, and a proximal map of
+:math:`g(x)` is available. FB supports regular fixed stepsize,
+FISTA, and adaptive stepsize :cite:`latafat2024adaptive`.
+To set :math:`g(x)` term, user can use ``TaoAddObjectiveTerm()``.
+Unlike other routines, FB requires :math:`f(x)` term to be
+set via ``TaoTerm`` - that is, FB does not support
+``TaoSetObjective``-like routines.
+
+Importantly, when setting ``TaoTerm`` to FB, the order does matter.
+FB assumes that 1st-indexed ``TaoTerm`` in ``Tao`` is :math:`f(x)`, and
+2nd-indexed ``TaoTerm`` is :math:`g(x)`. (Oth-indexed is ``TAOTERMCALLBACKS``)
+Below is an example:
+
+.. code::
+
+      TaoCreate(&tao);
+      TaoSetType(tao, TAOFB);
+      // first index : fterm
+      TaoAddObjectiveTerm(tao, prefix_f, f_scale, fterm, f_param, NULL);
+      // second index : gterm
+      TaoAddObjectiveTerm(tao, prefix_g, g_scale, gterm, g_param, NULL);
+
+To use FISTA-type acceleration, either use command line option
+
+   ::
+
+             -tao_fb_accel 1
+
+or set
+
+.. code-block::
+
+      TaoPSUseAcceleration(Tao, PetscBool);
+
+Likewise, for adaPGM-type adaptive stepsize, either pass
+
+   ::
+
+             -tao_fb_adaptive 1
+
+or set
+
+.. code-block::
+
+      TaoPSUseAdaptiveStep(Tao, PetscBool);
+
+If Lipschitz constant of :math:`f(x)` is previously known, one can set it via
+``TaoTermSetLipschitz(TaoTerm, PetscReal)``. If Lipschitz constant is not set,
+then FB will try to estimate it by using two random vectors. Also, one can set
+initial stepsize via command line argument ``-tao_fb_initial_step``.
+
+FB also supports various linesearch techniques. User can set backtracking
+linesearch scaling parameter via command line argument ``-tao_fb_ls_scale``,
+and can also try non-monotonic backtracking linesearch via ``-tao_ls_PS_memory_size``,
+which controls history size of non-monotonic backtracking linesearch.
+
+.. _sec_tao_cv:
+
+Condat-Vu Algorithm
+^^^^^^^^^^^^^^^^^^^
+
+The CV algorithm is a Condat-Vu algorithm, also known as
+primal-dual proximal algorithm. CV solves optimization
+problem of the form
+
+.. math::
+
+   \begin{array}{ll}
+   \displaystyle \min_{x} f(x) + g(x) + h(Ax)
+   \end{array}
+
+where the gradient of :math:`f(x)` is known, proximal maps of
+:math:`g(x), h(x)` are available, and linear map :math:`A` is
+bounded. CV supports regular fixed stepsize, and adaptive
+stepsize :cite:`latafat2024adaptive`.
+To set :math:`g(x), h(x)` terms, user can use ``TaoAddObjectiveTerm()``.
+Unlike other routines, CV requires :math:`f(x)` term to be
+set via ``TaoTerm`` - that is, CV does not support
+``TaoSetObjective``-like routines.
+
+Similar to FB, when setting ``TaoTerm`` to CV, the order does matter.
+FB assumes that 1st-indexed ``TaoTerm`` in ``Tao`` is :math:`f(x)`, and
+2nd-indexed ``TaoTerm`` is :math:`g(x)`, and 3rd-index ``TaoTerm`` is
+:math:`h(Ax)`. (Oth-indexed is ``TAOTERMCALLBACKS``)
+Below is an example:
+
+.. code::
+
+      TaoCreate(&tao);
+      TaoSetType(tao, TAOCV);
+      // first index : fterm. Need gradient of f
+      TaoAddObjectiveTerm(tao, prefix_f, f_scale, fterm, f_param, NULL);
+      // second index : gterm. Need proxmap of g
+      TaoAddObjectiveTerm(tao, prefix_g, g_scale, gterm, g_param, NULL);
+      // third index : hterm. Need proxmap of h
+      TaoAddObjectiveTerm(tao, prefix_h, h_scale, hterm, h_param, Amat);
+
+For linear mapping :math:`A`, user can provide a norm, if previously known, via
+command line option
+
+   ::
+
+             -tao_cv_norm_estimate
+
+or set
+
+.. code-block::
+
+      TaoCVSetInitialNormEstimate(Tao, PetscReal);
+
 
 Legacy and Contributed Solvers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
