@@ -77,6 +77,7 @@ Changes: Development
 - Add ``TaoComputeHessianSingle()`` convenience function for when the user's code does not compute a preconditioning matrix
 - Add ``TaoGetObjectiveTerm()``, ``TaoSetObjectiveTerm()``, and ``TaoAddObjectiveTerm()`` for manipulating the objective function of a ``Tao`` using ``TaoTerm``
 - Add ``TaoBRGNGetRegularizationType()``, ``TaoBRGNSetReguarizationType()``, ``TaoBRGNGetRegularizerTerm()`` and ``TaoBRGNSetRegularizerTerm()`` for finer control of ``TAOBRGN``
+- Add new solver of type ``TAOFB``, Forward-Backward algorithm,  and ``TAOCV``, Condat-Vu algorithm, using ``TaoTerm``, and their tutorial examples
 
 .. rubric:: TaoTerm:
 
@@ -89,6 +90,10 @@ Changes: Development
 - Add ``TAOTERMHALFL2SQUARED`` implementation of ``TaoTerm`` for a typical squared-norm penalty function
 - Add ``TAOTERML1`` implementation of ``TaoTerm`` for a typical 1-norm penalty function
 - Add ``TAOTERMQUADRATIC`` implementation of ``TaoTerm`` for a quadratic penalty function
+- Add ``TAOTERMSIMPLEX`` implementation of ``TaoTerm`` for a probability simplex function
+- Add ``TAOTERMZERO`` implementation of ``TaoTerm`` for a zero-cone.
+- Add ``TAOTERMBOX`` implementation of ``TaoTerm`` for a box constraint function
+- Add tutorials for various ``TaoTerm`` using ``TaoTermProximalMap()``
 
 .. rubric:: DM/DA:
 

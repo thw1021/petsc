@@ -7,13 +7,14 @@
 #include <../src/tao/linesearch/impls/pslinesearch/pslinesearch.h>
 
 static PetscBool  cited      = PETSC_FALSE;
-static const char citation[] = "@article{latafat2023adaptive,\n"
+
+static const char citation[] = "@article{latafat2024adaptive,\n"
                                "title={Adaptive proximal algorithms for convex optimization under local Lipschitz continuity of the gradient},\n"
                                "author={Latafat, Puya and Themelis, Andreas and Stella, Lorenzo and Patrinos, Panagiotis},\n"
-                               "journal={arXiv preprint arXiv:2301.04431},\n"
-                               "pages={4},\n"
-                               "year={2023}"
-                               "}\n";
+                               "journal={Mathematical Programming},\n"
+                               "pages={1--39},\n"
+                               "year={2024},\n"
+                               "publisher={Springer}\n";
 
 static PetscErrorCode TaoCV_LineSearch_PreApply_Private(TaoLineSearch ls, Vec in, PetscReal *f, Vec out, Vec g)
 {
@@ -301,9 +302,23 @@ static PetscErrorCode TaoView_CV(Tao tao, PetscViewer viewer)
     PetscCall(TaoTermView(cv->h_term.term, viewer));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Regularizer Term:\n"));
     PetscCall(TaoTermView(cv->reg_term.term, viewer));
-    PetscCall(PetscViewerASCIIPopTab(viewer));
     //TODO should I view h_conjugate?
-    PetscCall(MatView(cv->h_term.map, viewer));
+    {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "h Term Map:\n"));
+      {
+        PetscViewerFormat format;
+        PetscBool         pop = PETSC_FALSE;
+
+        PetscCall(PetscViewerGetFormat(viewer, &format));
+        if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
+          PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
+          pop = PETSC_TRUE;
+        }
+        PetscCall(MatView(cv->h_term.map, viewer));
+        if (pop) PetscCall(PetscViewerPopFormat(viewer));
+      }
+    }
+    PetscCall(PetscViewerASCIIPopTab(viewer));
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
