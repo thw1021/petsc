@@ -56,6 +56,7 @@ PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void)
   PetscFunctionBegin;
   if (TaoTermRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   TaoTermRegisterAllCalled = PETSC_TRUE;
+#if !defined(PETSC_USE_COMPLEX)
   PetscCall(TaoTermRegister(TAOTERMTAOCALLBACKS, TaoTermCreate_TaoCallbacks));
   PetscCall(TaoTermRegister(TAOTERMBRGNREGULARIZER, TaoTermCreate_BRGNRegularizer));
   PetscCall(TaoTermRegister(TAOTERMADMMREGULARIZER, TaoTermCreate_ADMMRegularizer));
@@ -69,5 +70,6 @@ PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void)
   PetscCall(TaoTermRegister(TAOTERMBOX, TaoTermCreate_Box));
   PetscCall(TaoTermRegister(TAOTERMSIMPLEX, TaoTermCreate_Simplex));
   PetscCall(TaoTermRegister(TAOTERMCONJUGATE, TaoTermCreate_Conjugate));
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
