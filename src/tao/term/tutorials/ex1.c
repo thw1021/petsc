@@ -25,20 +25,20 @@ int main(int argc, char **argv)
    build:
       requires: !complex
 
-  test:
-    suffix: 0
+   test:
+      suffix: 0
 
-  test:
-    suffix: 0_from_options
-    output_file: output/ex1_0.out
-    args: -taoterm_type shell
+   test:
+      suffix: 0_from_options
+      output_file: output/ex1_0.out
+      args: -taoterm_type shell
 
-  test:
-    suffix: 1
-    args: -taoterm_type taocallbacks
+   test:
+      suffix: 1
+      args: -taoterm_type taocallbacks
 
-  test:
-    suffix: 2
-    args: -taoterm_type sum -taoterm_sum_num_subterms 2 -subterm_0_taoterm_type halfl2squared -subterm_1_taoterm_type l1 -taoterm_sum_subterm_0_scale 0.5 -taoterm_sum_subterm_0_mask objective,gradient,hessian
+   test:
+      suffix: 2
+      args: -taoterm_type sum -taoterm_sum_num_subterms 2 -subterm_0_taoterm_type halfl2squared -subterm_1_taoterm_type l1 -taoterm_sum_subterm_0_scale 0.5 -taoterm_sum_subterm_0_mask objective,gradient,hessian
 
 TEST*/

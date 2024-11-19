@@ -66,7 +66,7 @@ int main(int argc, char **argv)
    build:
       requires: !complex
 
-  test:
-    suffix: 0
+   test:
+      suffix: 0
 
 TEST*/
