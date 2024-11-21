@@ -56,6 +56,7 @@ typedef enum {
 .   `TAOLINESEARCHGPCG`     - "gpcg"
 .   `TAOLINESEARCHARMIJO`   - "armijo" simple backtracking line search enforcing only the sufficient decrease condition
 .   `TAOLINESEARCHOWARMIJO` - "owarmijo"
+.   `TAOLINESEARCHPS`       - "ps"
 -   `TAOLINESEARCHIPM`      - "ipm"
 
    Options Database Key:
@@ -71,6 +72,7 @@ typedef const char *TaoLineSearchType;
 #define TAOLINESEARCHGPCG     "gpcg"
 #define TAOLINESEARCHARMIJO   "armijo"
 #define TAOLINESEARCHOWARMIJO "owarmijo"
+#define TAOLINESEARCHPS       "ps"
 #define TAOLINESEARCHIPM      "ipm"
 
 PETSC_EXTERN PetscClassId      TAOLINESEARCH_CLASSID;
@@ -96,6 +98,7 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchSetInitialStepLength(TaoLineSearch, Pet
 PETSC_EXTERN PetscErrorCode TaoLineSearchGetSolution(TaoLineSearch, Vec, PetscReal *, Vec, PetscReal *, TaoLineSearchConvergedReason *);
 PETSC_EXTERN PetscErrorCode TaoLineSearchGetFullStepObjective(TaoLineSearch, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoLineSearchGetNumberFunctionEvaluations(TaoLineSearch, PetscInt *, PetscInt *, PetscInt *);
+PETSC_EXTERN PetscErrorCode TaoLineSearchGetNumberProximalEvaluations(TaoLineSearch, PetscInt *);
 
 PETSC_EXTERN PetscErrorCode TaoLineSearchGetType(TaoLineSearch, TaoLineSearchType *);
 PETSC_EXTERN PetscErrorCode TaoLineSearchSetType(TaoLineSearch, TaoLineSearchType);

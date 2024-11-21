@@ -1,0 +1,31 @@
+TAOTERMBOX Case
+TaoTerm Object: 1 MPI process
+  type: box
+  solution vector space: N = 10 [VecType seq (taoterm_solution_vec_type)]
+  parameter vector space: (optional) K = 10 [VecType seq (taoterm_parameters_vec_type)]
+  Box lowerbound: -1.2, upperbound: 1.
+    TaoTermBox Upper bound vector
+    Ignoring upper bound double
+    Vec Object: 1 MPI process
+      type: seq
+    1.
+    1.
+    1.
+    1.
+    1.
+    1.
+    1.
+    1.
+    1.
+    1.
+TaoTerm Object: 1 MPI process
+  type: box
+  solution vector space: N = 2 [VecType seq (taoterm_solution_vec_type)]
+  parameter vector space: (optional) K = 2 [VecType seq (taoterm_parameters_vec_type)]
+  Box lowerbound: -1.2, upperbound: 1.
+    TaoTermBox Upper bound vector
+    Ignoring upper bound double
+    Vec Object: 1 MPI process
+      type: seq
+    1.
+    1.

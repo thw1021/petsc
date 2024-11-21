@@ -17,6 +17,13 @@
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_TAO_LINESEARCH
 #endif
 
+      type, extends(tPetscObject) :: tTaoTerm
+      end type tTaoTerm
+      TaoTerm, parameter :: PETSC_NULL_TAOTERM = tTaoTerm(0)
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_TAOTERM
+#endif
+
       PetscEnum, parameter ::  TAO_CONVERGED_GATOL = 3
       PetscEnum, parameter ::  TAO_CONVERGED_GRTOL = 4
       PetscEnum, parameter ::  TAO_CONVERGED_GTTOL = 5

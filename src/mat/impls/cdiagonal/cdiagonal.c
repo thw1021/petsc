@@ -128,6 +128,7 @@ static PetscErrorCode MatDestroy_ConstantDiagonal(Mat mat)
   PetscCall(PetscFree(mat->data));
   mat->structural_symmetry_eternal = PETSC_FALSE;
   mat->symmetry_eternal            = PETSC_FALSE;
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConstantDiagonalGetConstant_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -290,6 +291,37 @@ PetscErrorCode MatCreateConstantDiagonal(MPI_Comm comm, PetscInt m, PetscInt n, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  MatConstantDiagonalGetConstant - Get the scalar constant of a constant diagonal matrix
+
+  Not collective
+
+  Input Parameter:
+. mat - a `MATCONSTANTDIAGONAL`
+
+  Output Parameter:
+. value - the scalar value
+
+  Level: developer
+
+.seealso: [](ch_matrices), `Mat`, `MatDestroy()`, `MATCONSTANTDIAGONAL`
+@*/
+PetscErrorCode MatConstantDiagonalGetConstant(Mat mat, PetscScalar *value)
+{
+  PetscFunctionBegin;
+  PetscUseMethod(mat, "MatConstantDiagonalGetConstant_C", (Mat, PetscScalar *), (mat, value));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatConstantDiagonalGetConstant_ConstantDiagonal(Mat mat, PetscScalar *value)
+{
+  Mat_ConstantDiagonal *ctx = (Mat_ConstantDiagonal *)mat->data;
+
+  PetscFunctionBegin;
+  *value = ctx->diag;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
    MATCONSTANTDIAGONAL - "constant-diagonal" - A diagonal matrix type with a uniform value
    along the diagonal.
@@ -342,6 +374,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_ConstantDiagonal(Mat A)
   A->ops->axpy                      = MatAXPY_ConstantDiagonal;
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATCONSTANTDIAGONAL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConstantDiagonalGetConstant_C", MatConstantDiagonalGetConstant_ConstantDiagonal));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
