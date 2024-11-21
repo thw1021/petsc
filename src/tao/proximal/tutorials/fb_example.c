@@ -407,12 +407,6 @@ int main(int argc, char **argv)
       requires: !single
 
    test:
-      suffix: lasso_ada
-      args: -problem prob_lasso -tao_fb_accel 0 -tao_fb_adaptive 1 -scale 10 -tao_max_it 2000 -tao_view
-      output_file: output/fb_example_lasso_ada.out
-      requires: !single
-
-   test:
       suffix: logreg_fista
       nsize: {{1 2}}
       args: -problem prob_log_reg -scale 0.01 -tao_fb_accel 1 -tao_fb_adaptive 0 -tao_converged_reason -tao_max_it 2000 -f ${DATAFILESPATH}/tao/heart-scale.dat

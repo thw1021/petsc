@@ -208,8 +208,6 @@ static PetscErrorCode TaoTermConjugateGetOriginalTerm_Conjugate(TaoTerm cj_term,
 
   Level: advanced
 
-  Note: This is virtual setting - no copying
-
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermCreateConjugate()`
 @*/
 PetscErrorCode TaoTermConjugateSetOriginalTaoTerm(TaoTerm cj, TaoTerm orig)
