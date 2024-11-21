@@ -20,7 +20,8 @@ static PetscErrorCode TaoTermDestroy_Simplex(TaoTerm term)
   term->data = NULL;
   PetscCall(PetscFree(simplex));
   PetscCall(TaoTermDestroy_ElementwiseDivergence_Internal(term));
-  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSimplexSetContext_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSimplexSetSize_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSimplexSetTolerance_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -177,41 +178,66 @@ static PetscErrorCode TaoTermProximalMap_Simplex(TaoTerm term, Vec p, PetscReal 
 }
 
 /*@
-  TaoTermSimplexSetContext - sets the size and tolerance context for `TAOTERMSIMPLEX`
+  TaoTermSimplexSetTolerance - sets the tolerance for `TAOTERMSIMPLEX`
 
   Logically Collective
 
   Input Parameters:
-+ term - the `TaoTerm` containing `TAOTERMSIMPLEX`
-. size - size of simplex
++ term - the `TaoTerm` of type `TAOTERMSIMPLEX`
 - tol  - tolerance
 
-  Level: advanced
-
-  Fortran Notes:
-  The context can only be an integer or a `PetscObject`
+  Level: intermediate
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSIMPLEX`
 @*/
-PetscErrorCode TaoTermSimplexSetContext(TaoTerm term, PetscReal size, PetscReal tol)
+PetscErrorCode TaoTermSimplexSetTolerance(TaoTerm term, PetscReal tol)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscValidLogicalCollectiveReal(term, size, 2);
-  PetscValidLogicalCollectiveReal(term, tol, 3);
-  PetscTryMethod(term, "TaoTermSimplexSetContext_C", (TaoTerm, PetscReal, PetscReal), (term, size, tol));
+  PetscValidLogicalCollectiveReal(term, tol, 2);
+  PetscTryMethod(term, "TaoTermSimplexSetTolerance_C", (TaoTerm, PetscReal), (term, tol));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermSimplexSetContext_Simplex(TaoTerm term, PetscReal size, PetscReal tol)
+static PetscErrorCode TaoTermSimplexSetTolerance_Simplex(TaoTerm term, PetscReal tol)
 {
   TaoTerm_Simplex *simplex = (TaoTerm_Simplex *)term->data;
 
   PetscFunctionBegin;
-  PetscCheck(size > 0, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_OUTOFRANGE, "Simplex size (%g) cannot be < 0.0", (double)size);
-  PetscCheck(tol > 0, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_OUTOFRANGE, "Simplex tolerance (%g) cannot be < 0.0", (double)tol);
-  simplex->size = size;
+  PetscCheck(tol >= 0, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_OUTOFRANGE, "Simplex tolerance (%g) cannot be negative", (double)tol);
   simplex->tol  = tol;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermSimplexSetSize - sets the size for `TAOTERMSIMPLEX`
+
+  Logically Collective
+
+  Input Parameters:
++ term - the `TaoTerm` of type `TAOTERMSIMPLEX`
+- size - the size of simplex
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSIMPLEX`
+@*/
+PetscErrorCode TaoTermSimplexSetSize(TaoTerm term, PetscReal size)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidLogicalCollectiveReal(term, size, 2);
+  PetscTryMethod(term, "TaoTermSimplexSetSize_C", (TaoTerm, PetscReal), (term, size));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermSimplexSetSize_Simplex(TaoTerm term, PetscReal size)
+{
+  TaoTerm_Simplex *simplex = (TaoTerm_Simplex *)term->data;
+
+  PetscFunctionBegin;
+  PetscCheck(size > 0, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_OUTOFRANGE, "Simplex size (%g) must be positive", (double)size);
+  simplex->size = size;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -223,8 +249,7 @@ static PetscErrorCode TaoTermView_Simplex(TaoTerm term, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  TaoTerm Simplex"));
-    PetscCall(PetscViewerASCIIPrintf(viewer, ": tol=%g size=%g \n", (double)simplex->tol, (double)simplex->size));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Simplex tolerance: %g, size: %g \n", (double)simplex->tol, (double)simplex->size));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -235,8 +260,8 @@ static PetscErrorCode TaoTermSetFromOptions_Simplex(TaoTerm term, PetscOptionIte
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "TaoTerm simplex options");
-  PetscCall(PetscOptionsReal("-taoterm_simplex_tol", "simplex tolerance", "", simplex->tol, &simplex->tol, NULL));
-  PetscCall(PetscOptionsReal("-taoterm_simplex_size", "size of simplex", "", simplex->size, &simplex->size, NULL));
+  PetscCall(PetscOptionsBoundedReal("-taoterm_simplex_tol", "simplex tolerance", "", simplex->tol, &simplex->tol, NULL, 0.0));
+  PetscCall(PetscOptionsBoundedReal("-taoterm_simplex_size", "size of simplex", "", simplex->size, &simplex->size, NULL, 0.0));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -250,8 +275,8 @@ static PetscErrorCode TaoTermSetFromOptions_Simplex(TaoTerm term, PetscOptionIte
   Level: intermediate
 
   Options Database Keys:
-+ -taoterm_simplex_tol <real> - (default 0.0) a tolerance parameter (see `TaoTermSimplexSetContext()`)
-- -taoterm_simplex_size <real> - (default 1.0) a size parameter (see `TaoTermSimplexSetContext()`)
++ -taoterm_simplex_tol <real> - (default 0.0) a tolerance parameter (see `TaoTermSimplexSetTolerance()`)
+- -taoterm_simplex_size <real> - (default 1.0) a size parameter (see `TaoTermSimplexSetSize()`)
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMHALFL2SQUARED`
 MC*/
@@ -274,12 +299,9 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Simplex(TaoTerm term)
   simplex->tol = 1.e-6;
 #endif
 
-  term->ops->destroy        = TaoTermDestroy_Simplex;
-  term->ops->view           = TaoTermView_Simplex;
-  term->ops->setfromoptions = TaoTermSetFromOptions_Simplex;
-  //TODO does making it NULL will error out for TAOTERMSUM?
-  //For these, maybe having empty routine that doesnt do anything
-  //but merely log petscinfo saying nothing is done, is better?
+  term->ops->destroy               = TaoTermDestroy_Simplex;
+  term->ops->view                  = TaoTermView_Simplex;
+  term->ops->setfromoptions        = TaoTermSetFromOptions_Simplex;
   term->ops->objective             = NULL;
   term->ops->gradient              = NULL;
   term->ops->objectiveandgradient  = NULL;
@@ -288,6 +310,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Simplex(TaoTerm term)
   term->ops->createhessianmatrices = NULL;
   term->ops->proximalmap           = TaoTermProximalMap_Simplex;
 
-  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSimplexSetContext_C", TaoTermSimplexSetContext_Simplex));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSimplexSetSize_C", TaoTermSimplexSetSize_Simplex));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSimplexSetTolerance_C", TaoTermSimplexSetTolerance_Simplex));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

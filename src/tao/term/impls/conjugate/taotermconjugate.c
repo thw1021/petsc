@@ -4,7 +4,6 @@ typedef struct _n_TaoTerm_Conjugate TaoTerm_Conjugate;
 
 struct _n_TaoTerm_Conjugate {
   TaoTerm   orig;
-  PetscBool is_virtual;
   Vec       workvec;
 };
 
@@ -14,12 +13,12 @@ static PetscErrorCode TaoTermDestroy_Conjugate(TaoTerm term)
 
   PetscFunctionBegin;
   term->data = NULL;
-  //TODO virtual data copy etc
-  //prob need to do some ref counting etc
   PetscCall(VecDestroy(&cj->workvec));
   PetscCall(TaoTermDestroy(&cj->orig));
   PetscCall(PetscFree(cj));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermConjugateGetOriginalTerm_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermConjugateGetOriginalType_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermConjugateSetOriginalTaoTerm_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -67,6 +66,23 @@ static PetscErrorCode TaoTermHessianMult_Conjugate(TaoTerm term, Vec x, Vec para
   PetscTryTypeMethod(cj->orig, conjugate_hessianmult, x, params, v, Hv);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+static PetscErrorCode TaoTermView_Conjugate(TaoTerm term, PetscViewer viewer)
+{
+  TaoTerm_Conjugate *cj = (TaoTerm_Conjugate *)term->data;
+  PetscBool         is_ascii;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &is_ascii));
+  if (is_ascii) {
+    PetscCall(PetscViewerASCIIPrintf(viewer, "TaoTermConjugate original term:\n"));
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscCall(TaoTermView(cj->orig, viewer));
+    PetscCall(PetscViewerASCIIPopTab(viewer));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 
 /* TODO write detailed docstring
  * In this case, there are two possibilities:
@@ -131,14 +147,10 @@ static PetscErrorCode TaoTermProximalMap_Conjugate(TaoTerm term, Vec p, PetscRea
 @*/
 PetscErrorCode TaoTermConjugateGetOriginalType(TaoTerm term, TaoTermType *type)
 {
-  PetscBool is_cj;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscAssertPointer(type, 2);
-  PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMHALFL2SQUARED, &is_cj));
-  PetscCheck(is_cj, PetscObjectComm((PetscObject)term), PETSC_ERR_USER, "Input TaoTerm needs to be of TAOTERMCONJUGATE type");
-  *type = ((PetscObject)term)->type_name;
+  PetscUseMethod(term, "TaoTermConjugateGetOriginalType_C", (TaoTerm, TaoTermType *), (term, type));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -151,12 +163,84 @@ static PetscErrorCode TaoTermConjugateGetOriginalType_Conjugate(TaoTerm term, Ta
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  TaoTermConjugateGetOriginalTerm - Get the type of a original `TaoTerm`
+  of `TAOTERMCONJUGATE`
+
+  Not collective
+
+  Input Parameter:
+. cj_term - a `TaoTerm` of `TAOTERMCONJUGATE` type
+
+  Output Parameter:
+. orig_term - the original `TaoTerm`
+
+  Level: beginner
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMCONJUGATE`
+@*/
+PetscErrorCode TaoTermConjugateGetOriginalTerm(TaoTerm cj_term, TaoTerm *orig_term)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(cj_term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(orig_term, 2);
+  PetscUseMethod(cj_term, "TaoTermConjugateGetOriginalTerm_C", (TaoTerm, TaoTerm *), (cj_term, orig_term));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermConjugateGetOriginalTerm_Conjugate(TaoTerm cj_term, TaoTerm *orig_term)
+{
+  TaoTerm_Conjugate *cj = (TaoTerm_Conjugate *)cj_term->data;
+
+  PetscFunctionBegin;
+  *orig_term = cj->orig;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermConjugateSetOriginalTaoTerm - Sets a original `TaoTerm` to a
+  `TaoTerm` with `TAOTERMCONJUGATE` type.
+
+  Collective
+
+  Input Parameter:
++ cj   - the `TaoTerm` of `TAOTERMCONJUGATE` type
+- orig - the original `TaoTerm` to be set inside of conjugate term
+
+  Level: advanced
+
+  Note: This is virtual setting - no copying
+
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermCreateConjugate()`
+@*/
+PetscErrorCode TaoTermConjugateSetOriginalTaoTerm(TaoTerm cj, TaoTerm orig)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(cj, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(orig, TAOTERM_CLASSID, 2);
+  PetscTryMethod(cj, "TaoTermConjugateSetOriginalTaoTerm_C", (TaoTerm, TaoTerm), (cj, orig));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermConjugateSetOriginalTaoTerm_Conjugate(TaoTerm cj, TaoTerm orig)
+{
+  TaoTerm_Conjugate *cjctx = (TaoTerm_Conjugate *)cj->data;
+  PetscLayout        sol_layout, param_layout;
+
+  PetscFunctionBegin;
+  cjctx->orig = orig;
+  PetscCall(TaoTermGetLayouts(orig, &sol_layout, &param_layout));
+  PetscCall(TaoTermSetLayouts(cj, sol_layout, param_layout));
+  PetscCall(PetscObjectReference((PetscObject)cjctx->orig));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
-  TAOTERMCONJUGATE - A `TaoTerm` that is convex conjugate of...
+  TAOTERMCONJUGATE - A `TaoTerm` that is convex conjugate of an original term.
 
   Level: intermediate
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermCreateConjugate`
 M*/
 PETSC_INTERN PetscErrorCode TaoTermCreate_Conjugate(TaoTerm term)
 {
@@ -168,6 +252,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Conjugate(TaoTerm term)
   term->data = (void *)cj;
 
   term->ops->destroy               = TaoTermDestroy_Conjugate;
+  term->ops->view                  = TaoTermView_Conjugate;
   term->ops->objective             = TaoTermObjective_Conjugate;
   term->ops->gradient              = TaoTermGradient_Conjugate;
   term->ops->objectiveandgradient  = TaoTermObjectiveAndGradient_Conjugate;
@@ -178,11 +263,12 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Conjugate(TaoTerm term)
 
   if (!term->H_mattype) PetscCall(PetscStrallocpy(MATSHELL, &term->H_mattype));
   if (!term->Hpre_mattype) PetscCall(PetscStrallocpy(MATCONSTANTDIAGONAL, &term->Hpre_mattype));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermConjugateGetOriginalTerm_C", TaoTermConjugateGetOriginalTerm_Conjugate));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermConjugateGetOriginalType_C", TaoTermConjugateGetOriginalType_Conjugate));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermConjugateSetOriginalTaoTerm_C", TaoTermConjugateSetOriginalTaoTerm_Conjugate));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-//TODO what if cc_Term is already created? destroy and create again?
 /*@
   TaoTermCreateConjugate - Create a convex conjugate version of `TaoTerm`
 
@@ -192,11 +278,11 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Conjugate(TaoTerm term)
 . term - the original `TaoTerm`
 
   Output Parameter:
-. cc_term - a new TaoTerm, that is convex conjugate of input term
+. cc_term - a new `TaoTerm`, that is convex conjugate of input term
 
   Level: beginner
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermCreateConjugateVirtual()`
+.seealso: [](ch_tao), `Tao`, `TaoTerm`
 @*/
 PetscErrorCode TaoTermCreateConjugate(TaoTerm term, TaoTerm *cc_term)
 {
@@ -205,47 +291,6 @@ PetscErrorCode TaoTermCreateConjugate(TaoTerm term, TaoTerm *cc_term)
   PetscAssertPointer(cc_term, 2);
   PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)term), cc_term));
   PetscCall(TaoTermSetType(*cc_term, TAOTERMCONJUGATE));
-
-  {
-    TaoTerm_Conjugate *cj = (TaoTerm_Conjugate *)(*cc_term)->data;
-
-    cj->orig       = term;
-    cj->is_virtual = PETSC_FALSE;
-    //TODO actualy copying things?
-    PetscCall(PetscObjectReference((PetscObject)cj->orig));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoTermCreateConjugateVirtual - Create a convex conjugate version of `TaoTerm` virtually
-
-  Collective
-
-  Input Parameter:
-. term - the original `TaoTerm`
-
-  Output Parameter:
-. cc_term - a new TaoTerm, that is convex conjugate of input term
-
-  Level: beginner
-
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TaoTermCreateConjugate()`
-@*/
-PetscErrorCode TaoTermCreateConjugateVirtual(TaoTerm term, TaoTerm *cc_term)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscAssertPointer(cc_term, 2);
-  PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)term), cc_term));
-  PetscCall(TaoTermSetType(*cc_term, TAOTERMCONJUGATE));
-  {
-    TaoTerm_Conjugate *cj = (TaoTerm_Conjugate *)(*cc_term)->data;
-
-    cj->orig       = term;
-    cj->is_virtual = PETSC_TRUE;
-
-    PetscCall(PetscObjectReference((PetscObject)cj->orig));
-  }
+  PetscCall(TaoTermConjugateSetOriginalTaoTerm(*cc_term, term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

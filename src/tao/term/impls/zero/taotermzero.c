@@ -66,16 +66,6 @@ static PetscErrorCode TaoTermProximalMap_Zero(TaoTerm term, Vec p, PetscReal alp
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermView_Zero(TaoTerm term, PetscViewer viewer)
-{
-  PetscBool isascii;
-
-  PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
-  if (isascii) { PetscCall(PetscViewerASCIIPrintf(viewer, "  TaoTerm Zero")); }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*MC
   TAOTERMZERO - Zero TaoTerm object.
    Indicator function of the set containing the origin.
@@ -90,7 +80,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Zero(TaoTerm term)
   PetscFunctionBegin;
   PetscCall(TaoTermCreate_ElementwiseDivergence_Internal(term));
   term->ops->destroy = TaoTermDestroy_Zero;
-  term->ops->view    = TaoTermView_Zero;
+  term->ops->view    = NULL;
   term->data         = NULL;
   //TODO does making it NULL will error out for TAOTERMSUM?
   //For these, maybe having empty routine that doesnt do anything

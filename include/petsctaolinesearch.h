@@ -98,6 +98,7 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchSetInitialStepLength(TaoLineSearch, Pet
 PETSC_EXTERN PetscErrorCode TaoLineSearchGetSolution(TaoLineSearch, Vec, PetscReal *, Vec, PetscReal *, TaoLineSearchConvergedReason *);
 PETSC_EXTERN PetscErrorCode TaoLineSearchGetFullStepObjective(TaoLineSearch, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoLineSearchGetNumberFunctionEvaluations(TaoLineSearch, PetscInt *, PetscInt *, PetscInt *);
+PETSC_EXTERN PetscErrorCode TaoLineSearchGetNumberProximalEvaluations(TaoLineSearch, PetscInt *);
 
 PETSC_EXTERN PetscErrorCode TaoLineSearchGetType(TaoLineSearch, TaoLineSearchType *);
 PETSC_EXTERN PetscErrorCode TaoLineSearchSetType(TaoLineSearch, TaoLineSearchType);

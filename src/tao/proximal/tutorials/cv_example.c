@@ -39,6 +39,8 @@ typedef struct {
   char      file[PETSC_MAX_PATH_LEN];
 } AppCtx;
 
+/* Least absolute deviation
+ * f(x) = zero()              */
 PetscErrorCode LAD_UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f, Vec G)
 {
   PetscFunctionBegin;
@@ -47,21 +49,10 @@ PetscErrorCode LAD_UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Least absolute deviation
- * f(x) = zero()              */
-PetscErrorCode LAD_UserObjGrad(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
-{
-  PetscFunctionBegin;
-  *f = 0;
-  PetscCall(VecSet(G, 0.));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* Objective and Gradient
  *
  * f(x) = 0.5 x^T Q x + x^T b
  * grad f = Qx + b                */
-//PetscErrorCode SVM_UserObjGrad_Term(TaoTerm term, Vec X, PetscReal *f, Vec G, void *ptr)
 PetscErrorCode SVM_UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f, Vec G)
 {
   AppCtx   *user;
@@ -69,24 +60,6 @@ PetscErrorCode SVM_UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f
 
   PetscFunctionBegin;
   PetscCall(TaoTermShellGetContext(term, &user));
-  PetscCall(MatMult(user->Q, X, G));
-  PetscCall(VecTDot(G, X, &temp1));
-  PetscCall(VecTDot(X, user->q, &temp2));
-  PetscCall(VecAXPY(G, +1., user->q));
-  *f = 0.5 * temp1 + temp2;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/* Objective and Gradient
- *
- * f(x) = 0.5 x^T Q x + x^T b
- * grad f = Qx + b                */
-PetscErrorCode SVM_UserObjGrad(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
-{
-  AppCtx   *user = (AppCtx *)ptr;
-  PetscReal temp1, temp2;
-
-  PetscFunctionBegin;
   PetscCall(MatMult(user->Q, X, G));
   PetscCall(VecTDot(G, X, &temp1));
   PetscCall(VecTDot(X, user->q, &temp2));
@@ -405,6 +378,12 @@ int main(int argc, char **argv)
       nsize: {{1 2 4}}
       args: -problem dual_svm -g_scale 1 -tao_max_it 20 -tao_cv_primal_dual_ratio 1 -C 0.1 -tao_gttol 1.e-5 -set_norm 0 -tao_ls_max_funcs 30 -tao_monitor -f ${DATAFILESPATH}/tao/heart-scale.dat
       output_file: output/cv_example_svm_ls.out
+      requires: !single
+
+   test:
+      suffix: svm_ls_view
+      args: -problem dual_svm -g_scale 1 -tao_max_it 20 -tao_cv_primal_dual_ratio 1 -C 0.1 -tao_gttol 1.e-5 -set_norm 0 -tao_ls_max_funcs 30 -tao_monitor -f ${DATAFILESPATH}/tao/heart-scale.dat -tao_view
+      output_file: output/cv_example_svm_ls_view.out
       requires: !single
 
    test:

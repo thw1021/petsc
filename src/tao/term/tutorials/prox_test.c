@@ -21,7 +21,7 @@ typedef struct {
   PetscReal   tol;
   PetscBool   l2_null;
   PetscBool   compare; /* compare: compare against known implementation's output, for a given fixed input */
-  PetscBool   conj, trans;
+  PetscBool   conj, trans, view, test_small;
   PetscBool   lb_use_vec, ub_use_vec;
   Vec         x, x_test, y, translation, trans_p;
   Vec         lb_vec, ub_vec;
@@ -47,6 +47,8 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
   user->l2_null     = PETSC_FALSE;
   user->lb_use_vec  = PETSC_FALSE;
   user->ub_use_vec  = PETSC_FALSE;
+  user->view        = PETSC_FALSE;
+  user->test_small  = PETSC_TRUE;
   user->lb_vec      = NULL;
   user->ub_vec      = NULL;
   user->translation = NULL;
@@ -82,18 +84,22 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *user)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-compare", &user->compare, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-conjugate", &user->conj, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-trans", &user->trans, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-view", &user->view, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_small", &user->test_small, NULL));
   /* file name */
   PetscCall(PetscOptionsGetString(NULL, NULL, "-f", user->file, sizeof(user->file), NULL));
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Change problem size and solve again
 PetscErrorCode SolveSmallerProblem(AppCtx *user, TaoTerm term0, TaoTerm term1)
 {
-  PetscInt i;
-  Vec      y_small, x_small, trans_small, trans_vec;
-  Vec      lb_vec_small = NULL;
-  Vec      ub_vec_small = NULL;
+  PetscInt  i;
+  PetscBool is_cj;
+  Vec       y_small, x_small, trans_small, trans_vec;
+  Vec       lb_vec_small = NULL;
+  Vec       ub_vec_small = NULL;
 
   PetscFunctionBeginUser;
   PetscCall(VecCreate(PETSC_COMM_WORLD, &y_small));
@@ -113,9 +119,19 @@ PetscErrorCode SolveSmallerProblem(AppCtx *user, TaoTerm term0, TaoTerm term1)
   PetscCall(VecSetRandom(trans_small, NULL));
 
   trans_vec = (user->trans) ? trans_small : NULL;
+
+  /* Special inner treatment for Conjugate case */
+  PetscCall(TaoTermSetSolutionTemplate(term0, x_small));
+  PetscCall(PetscObjectTypeCompare((PetscObject)term0, TAOTERMCONJUGATE, &is_cj));
+  if (is_cj) {
+    TaoTerm subterm;
+
+    PetscCall(TaoTermConjugateGetOriginalTerm(term0, &subterm));
+    PetscCall(TaoTermSetSolutionTemplate(subterm, x_small));
+    if (user->problem == PROBLEM_BOX) PetscCall(TaoTermBoxSetContext(subterm, user->lb, user->ub, lb_vec_small, ub_vec_small));
+  } else if (user->problem ==PROBLEM_BOX) PetscCall(TaoTermBoxSetContext(term0, user->lb, user->ub, lb_vec_small, ub_vec_small));
+
   /* Using different sized input to test */
-  //TODO conj stuff
-  if (user->problem == PROBLEM_BOX) PetscCall(TaoTermBoxSetContext(term0, user->lb, user->ub, lb_vec_small, ub_vec_small));
   for (i = 0; i < 5; i++) {
     if (user->l2_null) PetscCall(TaoTermProximalMap(term0, trans_vec, 1., term1, y_small, user->stepsize, x_small));
     else PetscCall(TaoTermProximalMap(term0, trans_vec, 1., NULL, y_small, user->stepsize, x_small));
@@ -349,7 +365,8 @@ int main(int argc, char **argv)
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "TAOTERMSIMPLEX Case\n"));
     PetscCall(TaoTermSetType(term0, TAOTERMSIMPLEX));
     PetscCall(TaoTermSetType(term1, TAOTERMHALFL2SQUARED));
-    PetscCall(TaoTermSimplexSetContext(term0, user.simp, user.tol));
+    PetscCall(TaoTermSimplexSetSize(term0, user.simp));
+    PetscCall(TaoTermSimplexSetTolerance(term0, user.tol));
     break;
   case PROBLEM_BOX:
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "TAOTERMBOX Case\n"));
@@ -371,6 +388,17 @@ int main(int argc, char **argv)
   /* Conjugate case */
   if (user.conj) { PetscCall(TaoTermCreateConjugate(term0, &term0_conj)); }
 
+  if (user.conj) {
+    PetscCall(TaoTermSetSolutionTemplate(term0_conj, user.x));
+    PetscCall(TaoTermSetSolutionTemplate(term0, user.x));
+    PetscCall(TaoTermSetFromOptions(term0_conj));
+    PetscCall(TaoTermSetUp(term0_conj));
+  } else {
+    PetscCall(TaoTermSetSolutionTemplate(term0, user.x));
+    PetscCall(TaoTermSetFromOptions(term0));
+    PetscCall(TaoTermSetUp(term0));
+  }
+
   /* Solving same problem few times to simulate iteration */
   for (i = 0; i < 5; i++) {
     if (user.conj) {
@@ -388,10 +416,42 @@ int main(int argc, char **argv)
     }
   }
 
-  PetscCall(CheckSolution(&user));
+  if (!user.view) PetscCall(CheckSolution(&user));
   /* Change input size to see if this works */
-  //TODO below also takes term0_conj, and check if internal types are same for coverage test
-  PetscCall(SolveSmallerProblem(&user, term0, term1));
+  if (user.test_small) {
+    if (user.conj) {
+      if (user.view) PetscCall(TaoTermView(term0_conj, PETSC_VIEWER_STDOUT_WORLD));
+      PetscCall(SolveSmallerProblem(&user, term0_conj, term1));
+    } else {
+      if (user.view) PetscCall(TaoTermView(term0, PETSC_VIEWER_STDOUT_WORLD));
+      PetscCall(SolveSmallerProblem(&user, term0, term1));
+    }
+  }
+
+  if (user.view && user.conj) {
+    TaoTermType orig_type;
+    PetscBool   flg;
+
+    PetscCall(TaoTermView(term0_conj, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(TaoTermConjugateGetOriginalType(term0_conj, &orig_type));
+    switch (user.problem) {
+    case PROBLEM_L1:
+      PetscCall(PetscStrcmp(orig_type, "l1", &flg));
+      break;
+    case PROBLEM_BOX:
+      PetscCall(PetscStrcmp(orig_type, "box", &flg));
+      break;
+    case PROBLEM_ZERO:
+      PetscCall(PetscStrcmp(orig_type, "zero", &flg));
+      break;
+    case PROBLEM_SIMPLEX:
+      PetscCall(PetscStrcmp(orig_type, "simplex", &flg));
+      break;
+    default:
+      SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_USER, "Unsupported problem type!");
+    }
+    PetscAssert(flg, PETSC_COMM_WORLD, PETSC_ERR_ARG_NOTSAMETYPE, "Conjugate term's original type not same");
+  } else if (user.view) PetscCall(TaoTermView(term0, PETSC_VIEWER_STDOUT_WORLD));
 
   PetscCall(TaoTermDestroy(&term0));
   PetscCall(TaoTermDestroy(&term1));
@@ -422,6 +482,18 @@ int main(int argc, char **argv)
       requires: !single
 
    test:
+      suffix: soft_view
+      args: -problem l1 -l2_null 1 -view 1
+      output_file: output/prox_ex_soft_view.out
+      requires: !single
+
+   test:
+      suffix: soft_view_conjugate
+      args: -problem l1 -l2_null 1 -view 1 -conjugate 1
+      output_file: output/prox_ex_soft_view_cj.out
+      requires: !single
+
+   test:
       nsize: {{1 2 4}}
       suffix: simplex
       args: -problem simplex -l2_null {{0 1}}
@@ -433,6 +505,18 @@ int main(int argc, char **argv)
       suffix: simplex_compare
       args: -problem simplex -l2_null {{0 1}} -compare 1 -conjugate {{0 1}} -trans {{0 1}} -f ${DATAFILESPATH}/tao/prox_ex_compare.dat
       output_file: output/prox_ex_simplex_compare.out
+      requires: !single
+
+   test:
+      suffix: simplex_view
+      args: -problem simplex -l2_null 1 -view 1 -taoterm_simplex_tol 1.e-12 -taoterm_simplex_size 1.2
+      output_file: output/prox_ex_simplex_view.out
+      requires: !single
+
+   test:
+      suffix: simplex_view_conjugate
+      args: -problem simplex -l2_null 1 -view 1 -conjugate 1 -taoterm_simplex_tol 1.e-12 -taoterm_simplex_size 1.2
+      output_file: output/prox_ex_simplex_view_cj.out
       requires: !single
 
    test:
@@ -450,6 +534,54 @@ int main(int argc, char **argv)
       requires: !single
 
    test:
+      suffix: box_view_1
+      args: -problem box -l2_null 1 -view 1 -taoterm_box_lb_real -1.2 -lb 1.2 -taoterm_box_ub_real 3.3 -ub 3.3
+      output_file: output/prox_ex_box_view_1.out
+      requires: !single
+
+   test:
+      suffix: box_view_2
+      args: -problem box -l2_null 1 -view 1 -lb_use_vec 1 -taoterm_box_ub_real 3.3 -ub 3.3
+      output_file: output/prox_ex_box_view_2.out
+      requires: !single
+
+   test:
+      suffix: box_view_3
+      args: -problem box -l2_null 1 -view 1 -ub_use_vec 1 -taoterm_box_lb_real -1.2 -lb -1.2
+      output_file: output/prox_ex_box_view_3.out
+      requires: !single
+
+   test:
+      suffix: box_view_4
+      args: -problem box -l2_null 1 -view 1 -lb_use_vec 1 -ub_use_vec 1
+      output_file: output/prox_ex_box_view_4.out
+      requires: !single
+
+   test:
+      suffix: box_view_1_cj
+      args: -problem box -l2_null 1 -view 1 -conjugate 1
+      output_file: output/prox_ex_box_view_1_cj.out
+      requires: !single
+
+   test:
+      suffix: box_view_2_cj
+      args: -problem box -l2_null 1 -view 1 -lb_use_vec 1 -conjugate 1
+      output_file: output/prox_ex_box_view_2_cj.out
+      requires: !single
+
+   test:
+      suffix: box_view_3_cj
+      args: -problem box -l2_null 1 -view 1 -ub_use_vec 1 -conjugate 1
+      output_file: output/prox_ex_box_view_3_cj.out
+      requires: !single
+
+   test:
+      suffix: box_view_4_cj
+      args: -problem box -l2_null 1 -view 1 -lb_use_vec 1 -ub_use_vec 1 -conjugate 1
+      output_file: output/prox_ex_box_view_4_cj.out
+      requires: !single
+
+   test:
       nsize: {{1 2 4}}
       suffix: zero
       args: -problem zero -l2_null {{0 1}}
@@ -461,6 +593,18 @@ int main(int argc, char **argv)
       suffix: zero_compare
       args: -problem zero -l2_null {{0 1}} -compare 1 -conjugate {{0 1}} -trans {{0 1}} -f ${DATAFILESPATH}/tao/prox_ex_compare.dat
       output_file: output/prox_ex_zero_compare.out
+      requires: !single
+
+   test:
+      suffix: zero_view
+      args: -problem zero -l2_null 1 -view 1
+      output_file: output/prox_ex_zero_view.out
+      requires: !single
+
+   test:
+      suffix: zero_view_conjugate
+      args: -problem zero -l2_null 1 -view 1 -conjugate 1
+      output_file: output/prox_ex_zero_view_cj.out
       requires: !single
 
 TEST*/

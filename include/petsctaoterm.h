@@ -305,8 +305,9 @@ PETSC_EXTERN PetscErrorCode TaoTermGetLipschitz(TaoTerm, PetscReal *);
 // x <- prox_{(alpha/beta)*f(.;p),g}(q)
 PETSC_EXTERN PetscErrorCode TaoTermProximalMap(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermCreateConjugate(TaoTerm, TaoTerm *);
-PETSC_EXTERN PetscErrorCode TaoTermCreateConjugateVirtual(TaoTerm, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermConjugateGetOriginalType(TaoTerm, TaoTermType *);
+PETSC_EXTERN PetscErrorCode TaoTermConjugateGetOriginalTerm(TaoTerm, TaoTerm *);
+PETSC_EXTERN PetscErrorCode TaoTermConjugateSetOriginalTaoTerm(TaoTerm, TaoTerm);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateShell(MPI_Comm, void *, PetscCtxDestroyFn *, TaoTerm *);
 PETSC_EXTERN PetscErrorCode TaoTermShellSetContext(TaoTerm, void *);
@@ -345,10 +346,8 @@ PETSC_EXTERN PetscErrorCode TaoTermQuadraticSetMat(TaoTerm, Mat);
 
 PETSC_EXTERN PetscErrorCode TaoTermBoxSetContext(TaoTerm, PetscReal, PetscReal, Vec, Vec);
 
-PETSC_EXTERN PetscErrorCode TaoTermSimplexSetContext(TaoTerm, PetscReal, PetscReal);
-//OR TODO
 PETSC_EXTERN PetscErrorCode TaoTermSimplexSetSize(TaoTerm, PetscReal);
-PETSC_EXTERN PetscErrorCode TaoTermSimplexSetEpsilon(TaoTerm, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoTermSimplexSetTolerance(TaoTerm, PetscReal);
 
 PETSC_EXTERN PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsGradientDefined(TaoTerm, PetscBool *);

@@ -211,17 +211,18 @@ static PetscErrorCode TaoTermView_Box(TaoTerm term, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  TaoTerm Box"));
-    PetscCall(PetscViewerASCIIPrintf(viewer, ": lb=%g ub=%g\n", (double)box->lb_real, (double)box->ub_real));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Box lowerbound: %g, upperbound: %g\n", (double)box->lb_real, (double)box->ub_real));
     if (box->lb_vec) {
       PetscCall(PetscViewerASCIIPushTab(viewer));
       PetscCall(PetscViewerASCIIPrintf(viewer, "TaoTermBox Lower bound vector\n"));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Ignoring lower bound double\n"));
       PetscCall(VecView(box->lb_vec, viewer));
       PetscCall(PetscViewerASCIIPopTab(viewer));
     }
     if (box->ub_vec) {
       PetscCall(PetscViewerASCIIPushTab(viewer));
       PetscCall(PetscViewerASCIIPrintf(viewer, "TaoTermBox Upper bound vector\n"));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Ignoring upper bound double\n"));
       PetscCall(VecView(box->ub_vec, viewer));
       PetscCall(PetscViewerASCIIPopTab(viewer));
     }

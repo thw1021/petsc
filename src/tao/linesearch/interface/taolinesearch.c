@@ -81,6 +81,7 @@ PetscErrorCode TaoLineSearchView(TaoLineSearch ls, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function evaluations=%" PetscInt_FMT "\n", ls->nfeval));
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations=%" PetscInt_FMT "\n", ls->ngeval));
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function/gradient evaluations=%" PetscInt_FMT "\n", ls->nfgeval));
+    if (ls->nproxeval > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of proximal map evaluations=%" PetscInt_FMT "\n", ls->nproxeval));
 
     if (ls->bounded) PetscCall(PetscViewerASCIIPrintf(viewer, "using variable bounds\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Termination reason: %d\n", (int)ls->reason));
@@ -138,7 +139,7 @@ PetscErrorCode TaoLineSearchCreate(MPI_Comm comm, TaoLineSearch *newls)
 
 /*@
   TaoLineSearchSetUp - Sets up the internal data structures for the later use
-  proxeval           of a `TaoLineSearch`
+  of a `TaoLineSearch`
 
   Collective
 
@@ -565,6 +566,30 @@ PetscErrorCode TaoLineSearchGetNumberFunctionEvaluations(TaoLineSearch ls, Petsc
   *nfeval  = ls->nfeval;
   *ngeval  = ls->ngeval;
   *nfgeval = ls->nfgeval;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoLineSearchGetNumberProximalEvaluations - Gets the number of proximal mapevaluation
+  routines used by the line search in last application (not cumulative).
+
+  Not Collective
+
+  Input Parameter:
+. ls - the `TaoLineSearch` context
+
+  Output Parameters:
+. nproxeval - number of proximal map evaluations
+
+  Level: intermediate
+
+.seealso: `TaoLineSearch`
+@*/
+PetscErrorCode TaoLineSearchGetNumberProximalEvaluations(TaoLineSearch ls, PetscInt *nproxeval)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
+  *nproxeval = ls->nproxeval;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

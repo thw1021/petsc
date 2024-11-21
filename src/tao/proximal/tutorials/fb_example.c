@@ -86,65 +86,6 @@ PetscErrorCode Log_UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode Log_UserObjGrad(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
-{
-  AppCtx        *user  = (AppCtx *)ptr;
-  const PetscInt ix[1] = {user->n};
-  PetscReal      xlast, gradmean;
-  PetscMPIInt    size, rank;
-  MPI_Comm       comm;
-
-  PetscFunctionBegin;
-  PetscCall(PetscObjectGetComm((PetscObject)X, &comm));
-  PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCallMPI(MPI_Comm_rank(comm, &rank));
-
-  /* workvecM = A @ x[0:end-1] + x[end] */
-  PetscCall(VecGetSubVector(X, user->is_set, &user->xsub));
-  PetscCall(MatMult(user->A, user->xsub, user->workvecM));
-  PetscCall(VecRestoreSubVector(X, user->is_set, &user->xsub));
-
-  if (rank == (size - 1)) PetscCall(VecGetValues(X, 1, ix, &xlast));
-  PetscCallMPI(MPI_Bcast(&xlast, 1, MPIU_REAL, size - 1, comm));
-  PetscCall(VecShift(user->workvecM, xlast));
-
-  /* workvecM2 = 1 + exp(-workvecM) */
-  PetscCall(VecCopy(user->workvecM, user->workvecM2));
-  PetscCall(VecScale(user->workvecM2, -1));
-  PetscCall(VecExp(user->workvecM2));
-  PetscCall(VecShift(user->workvecM2, 1));
-
-  /* f = -avg((b - 1) * workvecM - log(workvecM2)) */
-  PetscCall(VecCopy(user->b, user->workvecM3));
-  PetscCall(VecShift(user->workvecM3, -1));
-  /* workvecM3 = (b-1)*workvecM */
-  PetscCall(VecPointwiseMult(user->workvecM3, user->workvecM3, user->workvecM));
-  /* overwriting workvecM wih workvecM2, as it is no longer needed */
-  PetscCall(VecCopy(user->workvecM2, user->workvecM));
-  PetscCall(VecLog(user->workvecM));
-  PetscCall(VecAXPY(user->workvecM3, -1., user->workvecM));
-  PetscCall(VecMean(user->workvecM3, f));
-  *f *= -1;
-
-  /* grad[0:end-1] = A.T @ (1/workvecM2 - y) / user->m,
-   * grad[end ]    = avg(1/workvecM2 - y) */
-  PetscCall(VecCopy(user->workvecM2, user->workvecM));
-  PetscCall(VecReciprocal(user->workvecM));
-  PetscCall(VecAXPY(user->workvecM, -1., user->b));
-  PetscCall(VecMean(user->workvecM, &gradmean));
-
-  /* grad[0:end-1] */
-  PetscCall(VecGetSubVector(G, user->is_set, &user->gsub));
-  PetscCall(MatMultTranspose(user->A, user->workvecM, user->gsub));
-  PetscCall(VecScale(user->gsub, 1. / ((double)user->m)));
-  PetscCall(VecRestoreSubVector(G, user->is_set, &user->gsub));
-  /* grad[end] = mean(1/workvcM2 - y) */
-  PetscCall(VecSetValue(G, user->n, gradmean, INSERT_VALUES));
-  PetscCall(VecAssemblyBegin(G));
-  PetscCall(VecAssemblyEnd(G));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* Objective and Gradient
  *
  * f(x) = 0.5 |Ax-b|_2^2
@@ -155,23 +96,6 @@ PetscErrorCode UserObjGrad_Term(TaoTerm term, Vec X, Vec param, PetscReal *f, Ve
 
   PetscFunctionBegin;
   PetscCall(TaoTermShellGetContext(term, &user));
-  PetscCall(MatMult(user->A, X, user->workvec));
-  PetscCall(VecAXPY(user->workvec, -1., user->b));
-  PetscCall(MatMultTranspose(user->A, user->workvec, G));
-  PetscCall(VecTDot(user->workvec, user->workvec, f));
-  *f *= 0.5;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/* Objective and Gradient
- *
- * f(x) = 0.5 |Ax-b|_2^2
- * grad f = A^T (A x - b)               */
-PetscErrorCode UserObjGrad(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
-{
-  AppCtx *user = (AppCtx *)ptr;
-
-  PetscFunctionBegin;
   PetscCall(MatMult(user->A, X, user->workvec));
   PetscCall(VecAXPY(user->workvec, -1., user->b));
   PetscCall(MatMultTranspose(user->A, user->workvec, G));
@@ -466,7 +390,7 @@ int main(int argc, char **argv)
 
    test:
       suffix: lasso_ls
-      args: -problem prob_lasso -tao_fb_accel 0 -tao_fb_adaptive 0 -scale 10 -tao_ls_max_funcs 30 -tao_fb_ls_scale 1.05 -tao_max_it 1000
+      args: -problem prob_lasso -tao_fb_accel 0 -tao_fb_adaptive 0 -scale 10 -tao_ls_max_funcs 30 -tao_fb_ls_scale 1.05 -tao_max_it 1000 -tao_view
       output_file: output/fb_example_lasso_ls.out
       requires: !single
 
@@ -478,13 +402,13 @@ int main(int argc, char **argv)
 
    test:
       suffix: lasso_fista
-      args: -problem prob_lasso -tao_fb_accel 1 -tao_fb_adaptive 0 -scale 10 -tao_max_it 1000
+      args: -problem prob_lasso -tao_fb_accel 1 -tao_fb_adaptive 0 -scale 10 -tao_max_it 1000 -tao_view
       output_file: output/fb_example_lasso_fista.out
       requires: !single
 
    test:
       suffix: lasso_ada
-      args: -problem prob_lasso -tao_fb_accel 0 -tao_fb_adaptive 1 -scale 10 -tao_max_it 2000
+      args: -problem prob_lasso -tao_fb_accel 0 -tao_fb_adaptive 1 -scale 10 -tao_max_it 2000 -tao_view
       output_file: output/fb_example_lasso_ada.out
       requires: !single
 

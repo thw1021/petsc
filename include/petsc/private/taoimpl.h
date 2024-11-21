@@ -159,6 +159,7 @@ struct _p_Tao {
   PetscInt ngrads;
   PetscInt nfuncgrads;
   PetscInt nhess;
+  PetscInt nproxs;
   PetscInt niter;
   PetscInt ntotalits;
   PetscInt nconstraints;
@@ -301,6 +302,7 @@ struct _p_TaoTerm {
   char                 *H_mattype;
   char                 *Hpre_mattype;
 
+  PetscInt   nprox;
   PetscReal  fd_delta;      // increment for TaoTermGradientFD()
   PetscInt   fd_grad_level; // push/pop using finite difference for the gradient
   PetscInt   fd_hess_level; // push/pop using finite difference for the Hessian
