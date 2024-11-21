@@ -35,7 +35,6 @@ int main(int Argc, char **Args)
   PetscCall(KSPGetPC(data_comp->kspHypre, &pcHypre));
   PetscCall(PCSetType(pcHypre, PCHYPRE));
   PetscCall(PCHYPRESetType(pcHypre, "boomeramg"));
-  // PetscCall(PCSetOptionsPrefix(pcHypre, "data_comp_")); //yaml file will have options for data compression under 'data_comp:'
   PetscCall(PCSetFromOptions(pcHypre));
   PetscCall(PCSetOperators(pcHypre, data_comp->stiff, data_comp->stiff));
   PetscCall(PCSetUp(pcHypre));
@@ -79,21 +78,21 @@ PetscErrorCode Create1dLaplacian(PetscInt n, Mat *mat)
 PetscErrorCode DataCompExportMats(DataCompression data_comp)
 {
   PetscFunctionBeginUser;
-  printf("Num levels: %d\n", data_comp->num_levels);
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Num levels: %d\n", data_comp->num_levels));
   for (int i = 0; i < (int)data_comp->num_levels - 1; i++) {
-    printf("Prolongation Operator - Level %d\n", i);
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Prolongation Operator - Level %d\n", i));
     PetscCall(PetscObjectSetName((PetscObject)data_comp->ProlongationOps[i], "P"));
     PetscCall(MatView(data_comp->ProlongationOps[i], PETSC_VIEWER_STDOUT_WORLD));
-    printf("\n");
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
   }
 
   for (int i = 0; i < (int)data_comp->num_levels - 1; i++) {
-    printf("Coarse/Fine splitting - Level %d\n", i);
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Coarse/Fine splitting - Level %d\n", i));
     PetscCall(PetscBTView(data_comp->n_per_level[i], data_comp->CFMarkers[i], PETSC_VIEWER_STDOUT_WORLD));
   }
-  printf("Stiffness matrix, sparse format:\n");
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Stiffness matrix, sparse format:\n"));
   PetscCall(MatViewFromOptions(data_comp->stiff, NULL, "-mat_view_stiff"));
-  printf("Finished calling the Viewer functions\n");
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Finished calling the Viewer functions\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
