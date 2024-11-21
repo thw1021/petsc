@@ -60,6 +60,15 @@ Tao Object: 1 MPI process
           Number of rejects: 0
           Number of resets: 0
       Counts: S x : 34, S^T x : 71, Y x : 34,  Y^T x: 34
+  Objective function:
+    Scale (tao_objective_scale): 1.
+    Function:
+      TaoTerm Object: (callbacks_) 1 MPI process
+        type: taocallbacks
+        solution vector space: N = 10 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (none)
+        attached to Tao [name omitted]
+    Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: more-thuente
     maximum function evaluations=30
@@ -68,7 +77,7 @@ Tao Object: 1 MPI process
     total number of gradient evaluations=0
     total number of function/gradient evaluations=1
     Termination reason: 1
-  convergence tolerances: gatol=0.0001,   grtol=1e-05,  steptol=0.,   gttol=0.
+  convergence tolerances: gatol=0.0001,   grtol=1e-08,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=6.98847e-05
   Objective value=3.2961e-11
   total number of iterations=38,                          (max: 2000)

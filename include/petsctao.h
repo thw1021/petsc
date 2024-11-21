@@ -1,6 +1,7 @@
 #pragma once
 
 #include <petscsnes.h>
+#include <petsctaoterm.h>
 
 /* SUBMANSEC = Tao */
 
@@ -31,15 +32,6 @@ typedef enum {
   TAO_SUBSET_MATRIXFREE
 } TaoSubsetType;
 PETSC_EXTERN const char *const TaoSubsetTypes[];
-
-/*S
-   Tao - Abstract PETSc object that manages nonlinear optimization solves
-
-   Level: advanced
-
-.seealso: [](doc_taosolve), [](ch_tao), `TaoCreate()`, `TaoDestroy()`, `TaoSetType()`, `TaoType`
-S*/
-typedef struct _p_Tao *Tao;
 
 /*E
   TaoADMMUpdateType - Determine spectral penalty update routine for Lagrange augmented term for `TAOADMM`.
@@ -236,6 +228,8 @@ typedef const char *TaoType;
 #define TAOALMM     "almm"
 #define TAOPYTHON   "python"
 #define TAOSNES     "snes"
+#define TAOFB       "fb"
+#define TAOCV       "cv"
 
 PETSC_EXTERN PetscClassId      TAO_CLASSID;
 PETSC_EXTERN PetscFunctionList TaoList;
@@ -326,6 +320,7 @@ PETSC_EXTERN PetscErrorCode TaoGetSolutionStatus(Tao, PetscInt *, PetscReal *, P
 PETSC_EXTERN PetscErrorCode TaoSetConvergedReason(Tao, TaoConvergedReason);
 PETSC_EXTERN PetscErrorCode TaoSetSolution(Tao, Vec);
 PETSC_EXTERN PetscErrorCode TaoGetSolution(Tao, Vec *);
+PETSC_EXTERN PetscErrorCode TaoGetDualSolution(Tao, Vec *);
 
 PETSC_EXTERN PetscErrorCode TaoSetObjective(Tao, PetscErrorCode (*)(Tao, Vec, PetscReal *, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoGetObjective(Tao, PetscErrorCode (**)(Tao, Vec, PetscReal *, void *), void **);
@@ -335,6 +330,8 @@ PETSC_EXTERN PetscErrorCode TaoSetObjectiveAndGradient(Tao, Vec, PetscErrorCode 
 PETSC_EXTERN PetscErrorCode TaoGetObjectiveAndGradient(Tao, Vec *, PetscErrorCode (**)(Tao, Vec, PetscReal *, Vec, void *), void **);
 PETSC_EXTERN PetscErrorCode TaoSetHessian(Tao, Mat, Mat, PetscErrorCode (*)(Tao, Vec, Mat, Mat, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoGetHessian(Tao, Mat *, Mat *, PetscErrorCode (**)(Tao, Vec, Mat, Mat, void *), void **);
+PETSC_EXTERN PetscErrorCode TaoSetHessianMatrices(Tao, Mat, Mat);
+PETSC_EXTERN PetscErrorCode TaoGetHessianMatrices(Tao, Mat *, Mat *);
 
 PETSC_EXTERN PetscErrorCode TaoSetGradientNorm(Tao, Mat);
 PETSC_EXTERN PetscErrorCode TaoGetGradientNorm(Tao, Mat *);
@@ -382,6 +379,7 @@ PETSC_EXTERN PetscErrorCode TaoIsObjectiveAndGradientDefined(Tao, PetscBool *);
 
 PETSC_EXTERN PetscErrorCode TaoTestHessian(Tao);
 PETSC_EXTERN PetscErrorCode TaoComputeHessian(Tao, Vec, Mat, Mat);
+PETSC_EXTERN PetscErrorCode TaoComputeHessianSingle(Tao, Vec, Mat, Mat, PetscErrorCode (*)(Tao, Vec, Mat, void *), MatStructure, void *);
 PETSC_EXTERN PetscErrorCode TaoComputeResidualJacobian(Tao, Vec, Mat, Mat);
 PETSC_EXTERN PetscErrorCode TaoComputeJacobian(Tao, Vec, Mat, Mat);
 PETSC_EXTERN PetscErrorCode TaoComputeJacobianState(Tao, Vec, Mat, Mat, Mat);
@@ -443,10 +441,12 @@ PETSC_EXTERN PetscErrorCode TaoMonitorGlobalization(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorDefaultShort(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorConstraintNorm(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorSolution(Tao, void *);
+PETSC_EXTERN PetscErrorCode TaoMonitorDualSolution(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorResidual(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorGradient(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorStep(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorSolutionDraw(Tao, void *);
+PETSC_EXTERN PetscErrorCode TaoMonitorDualSolutionDraw(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorStepDraw(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorGradientDraw(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoAddLineSearchCounts(Tao);
@@ -460,13 +460,55 @@ typedef struct _n_TaoMonitorDrawCtx *TaoMonitorDrawCtx;
 PETSC_EXTERN PetscErrorCode          TaoMonitorDrawCtxCreate(MPI_Comm, const char[], const char[], int, int, int, int, PetscInt, TaoMonitorDrawCtx *);
 PETSC_EXTERN PetscErrorCode          TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *);
 
+/*E
+  TaoBRGNRegularizationType - The regularization added in the `TAOBRGN` solver.
+
+  Values:
++ TAOBRGN_REGULARIZATION_USER   - A user-defined regularizer
+. TAOBRGN_REGULARIZATION_L2PROX - $\tfrac{1}{2}\|x - x_k\|_2^$, where $x_k$ is the latest solution
+. TAOBRGN_REGULARIZATION_L2PURE - $\tfrac{1}{2}\|x\|_2^2$
+. TAOBRGN_REGULARIZATION_L1DICT - $\|D x\|_1$, where $D$ is a dictionary matrix
+- TAOBRGN_REGULARIZATION_LM     - Levenberg-Marquardt, $\tfrac{1}{2} x^T \mathrm{diag}(J^T J) x$, where $J$ is the Jacobian of the least-squares residual
+
+  Options database Key:
+. -tao_brgn_regularization_type <user,l2prox,l2pure,l1dict,lm> - one of the above regularization types
+
+  Level: advanced
+
+  Notes:
+  If `TAOBRGN_REGULARIZATION_USER`, the regularizer is set either by calling
+  `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` and
+  `TaoBRGNSetRegulazerHessianRoutine()` or by calling `TaoBRGNSetRegularizerTerm()`.
+
+  If `TAOBRGN_REGULARIZATION_L1DICT`, the dictionary matrix is set with `TaoBRGNSetDictionaryMatrix()` and the smoothing parameter of the
+  approximate $\ell_1$ norm is set with `TaoBRGNSetL1SmoothEpsilon()`.
+
+  If `TAOBRGN_REGULARIZATION_LM`, the diagonal damping vector $\mathrm{diag}(J^T J)$ can be obtained with `TaoBRGNGetDampingVector()`.
+
+.seealso: [](ch_tao), `Tao`, `TAOBRGN`
+E*/
+typedef enum {
+  TAOBRGN_REGULARIZATION_USER,
+  TAOBRGN_REGULARIZATION_L2PROX,
+  TAOBRGN_REGULARIZATION_L2PURE,
+  TAOBRGN_REGULARIZATION_L1DICT,
+  TAOBRGN_REGULARIZATION_LM,
+} TaoBRGNRegularizationType;
+
+PETSC_EXTERN const char *const TaoBRGNRegularizationTypes[];
+
 PETSC_EXTERN PetscErrorCode TaoBRGNGetSubsolver(Tao, Tao *);
+PETSC_EXTERN PetscErrorCode TaoBRGNGetRegularizationType(Tao, TaoBRGNRegularizationType *);
+PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizationType(Tao, TaoBRGNRegularizationType);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine(Tao, PetscErrorCode (*)(Tao, Vec, PetscReal *, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizerHessianRoutine(Tao, Mat, PetscErrorCode (*)(Tao, Vec, Mat, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizerWeight(Tao, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoBRGNGetRegularizerTerm(Tao, PetscReal *, TaoTerm *, Vec *, Mat *);
+PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizerTerm(Tao, PetscReal, TaoTerm, Vec, Mat);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetL1SmoothEpsilon(Tao, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetDictionaryMatrix(Tao, Mat);
 PETSC_EXTERN PetscErrorCode TaoBRGNGetDampingVector(Tao, Vec *);
+
 PETSC_EXTERN PetscErrorCode TaoBNCGSetType(Tao, TaoBNCGType);
 PETSC_EXTERN PetscErrorCode TaoBNCGGetType(Tao, TaoBNCGType *);
 
@@ -502,6 +544,8 @@ PETSC_EXTERN PetscErrorCode TaoALMMSetMultipliers(Tao, Vec);
 PETSC_EXTERN PetscErrorCode TaoALMMGetPrimalIS(Tao, IS *, IS *);
 PETSC_EXTERN PetscErrorCode TaoALMMGetDualIS(Tao, IS *, IS *);
 
+PETSC_EXTERN PetscErrorCode TaoCVSetInitialNormEstimate(Tao, PetscReal);
+
 PETSC_EXTERN PetscErrorCode TaoVecGetSubVec(Vec, IS, TaoSubsetType, PetscReal, Vec *);
 PETSC_EXTERN PetscErrorCode TaoMatGetSubMat(Mat, IS, Vec, TaoSubsetType, Mat *);
 PETSC_EXTERN PetscErrorCode TaoGradientNorm(Tao, Vec, NormType, PetscReal *);
@@ -510,5 +554,9 @@ PETSC_EXTERN PetscErrorCode TaoBoundStep(Vec, Vec, Vec, IS, IS, IS, PetscReal, V
 PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt *, Vec);
 
 PETSC_EXTERN PetscErrorCode MatCreateSubMatrixFree(Mat, IS, IS, Mat *);
+
+PETSC_EXTERN PetscErrorCode TaoGetObjectiveTerm(Tao, PetscReal *, TaoTerm *, Vec *, Mat *);
+PETSC_EXTERN PetscErrorCode TaoSetObjectiveTerm(Tao, PetscReal, TaoTerm, Vec, Mat);
+PETSC_EXTERN PetscErrorCode TaoAddObjectiveTerm(Tao, const char *, PetscReal, TaoTerm, Vec, Mat);
 
 #include <petsctao_deprecations.h>
