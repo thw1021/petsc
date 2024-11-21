@@ -247,15 +247,17 @@ static PetscErrorCode SetupContext(DM dm, DM sw, AppCtx *user)
   PetscFunctionBeginUser;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   if (user->efield_monitor) {
-    PetscDrawAxis axis_ef;
-    PetscCall(PetscDrawCreate(PETSC_COMM_WORLD, NULL, "monitor_efield", 0, 300, 400, 300, &user->drawef));
-    PetscCall(PetscDrawSetSave(user->drawef, "ex9_Efield"));
-    PetscCall(PetscDrawSetFromOptions(user->drawef));
-    PetscCall(PetscDrawLGCreate(user->drawef, 1, &user->drawlg_ef));
-    PetscCall(PetscDrawLGGetAxis(user->drawlg_ef, &axis_ef));
-    PetscCall(PetscDrawAxisSetLabels(axis_ef, "Electron Electric Field", "time", "E_max"));
-    PetscCall(PetscDrawLGSetLimits(user->drawlg_ef, 0., user->steps * user->stepSize, -10., 0.));
-    PetscCall(PetscDrawAxisSetLimits(axis_ef, 0., user->steps * user->stepSize, -10., 0.));
+    PetscDraw     draw;
+    PetscDrawAxis axis;
+
+    PetscCall(PetscDrawCreate(PETSC_COMM_WORLD, NULL, "Max Electric Field", 0, 300, 400, 300, &draw));
+    PetscCall(PetscDrawSetSave(draw, "ex9_Efield"));
+    PetscCall(PetscDrawSetFromOptions(draw));
+    PetscCall(PetscDrawLGCreate(draw, 1, &user->drawlgE));
+    PetscCall(PetscDrawDestroy(&draw));
+    PetscCall(PetscDrawLGGetAxis(user->drawlgE, &axis));
+    PetscCall(PetscDrawAxisSetLabels(axis, "Electron Electric Field", "time", "E_max"));
+    PetscCall(PetscDrawLGSetLimits(user->drawlgE, 0., user->steps * user->stepSize, user->drawlgEmin, 0.));
   }
 
   if (user->initial_monitor) {
@@ -330,39 +332,40 @@ static PetscErrorCode SetupContext(DM dm, DM sw, AppCtx *user)
     PetscCall(PetscDrawSPSetDimension(user->drawspX, 1));
     PetscCall(PetscDrawSPGetAxis(user->drawspX, &axis));
     PetscCall(PetscDrawAxisSetLabels(axis, "Particles", "x", "v"));
-    PetscCall(PetscDrawSetSave(user->positionDraw, "ex9_pos"));
+    PetscCall(PetscDrawSPReset(user->drawspX));
   }
   if (user->poisson_monitor) {
     Vec           rho, rhohat, phi;
     PetscDraw     draw;
     PetscDrawAxis axis;
 
-    PetscCall(PetscDrawCreate(PETSC_COMM_WORLD, NULL, "Poisson_monitor", 0, 0, 400, 300, &user->EDraw));
-    PetscCall(PetscDrawSetFromOptions(user->EDraw));
-    PetscCall(PetscDrawSPCreate(user->EDraw, 10, &user->EDrawSP));
-    PetscCall(PetscDrawSPSetDimension(user->EDrawSP, 1));
-    PetscCall(PetscDrawSPGetAxis(user->EDrawSP, &axis_E));
-    PetscCall(PetscDrawSPReset(user->EDrawSP));
-    PetscCall(PetscDrawAxisSetLabels(axis_E, "Particles", "x", "E"));
-    PetscCall(PetscDrawSetSave(user->EDraw, "ex9_E_spatial"));
+    PetscCall(PetscDrawCreate(PETSC_COMM_WORLD, NULL, "Electric_Field", 0, 0, 400, 300, &draw));
+    PetscCall(PetscDrawSetFromOptions(draw));
+    PetscCall(PetscDrawSetSave(draw, "ex9_E_spatial"));
+    PetscCall(PetscDrawSPCreate(draw, 10, &user->drawspE));
+    PetscCall(PetscDrawDestroy(&draw));
+    PetscCall(PetscDrawSPSetDimension(user->drawspE, 1));
+    PetscCall(PetscDrawSPGetAxis(user->drawspE, &axis));
+    PetscCall(PetscDrawAxisSetLabels(axis, "Particles", "x", "E"));
+    PetscCall(PetscDrawSPReset(user->drawspE));
 
-    PetscCall(PetscDrawCreate(PETSC_COMM_WORLD, NULL, "rho_monitor", 0, 0, 400, 300, &user->RhoDraw));
-    PetscCall(PetscDrawSetFromOptions(user->RhoDraw));
-    PetscCall(PetscDrawSPCreate(user->RhoDraw, 10, &user->RhoDrawSP));
-    PetscCall(PetscDrawSPSetDimension(user->RhoDrawSP, 1));
-    PetscCall(PetscDrawSPGetAxis(user->RhoDrawSP, &axis_Rho));
-    PetscCall(PetscDrawSPReset(user->RhoDrawSP));
-    PetscCall(PetscDrawAxisSetLabels(axis_Rho, "Particles", "x", "rho"));
-    PetscCall(PetscDrawSetSave(user->RhoDraw, "ex9_rho_spatial"));
+    PetscCall(PetscViewerDrawOpen(PETSC_COMM_WORLD, NULL, "Charge Density", 0, 0, 400, 300, &user->viewerRho));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)user->viewerRho, "rho_"));
+    PetscCall(PetscViewerDrawGetDraw(user->viewerRho, 0, &draw));
+    PetscCall(PetscDrawSetSave(draw, "ex9_rho_spatial"));
+    PetscCall(PetscViewerSetFromOptions(user->viewerRho));
+    PetscCall(DMGetNamedGlobalVector(dm, "rho", &rho));
+    PetscCall(PetscObjectSetName((PetscObject)rho, "charge_density"));
+    PetscCall(DMRestoreNamedGlobalVector(dm, "rho", &rho));
 
-    PetscCall(PetscDrawCreate(PETSC_COMM_WORLD, NULL, "potential_monitor", 0, 0, 400, 300, &user->PotDraw));
-    PetscCall(PetscDrawSetFromOptions(user->PotDraw));
-    PetscCall(PetscDrawSPCreate(user->PotDraw, 10, &user->PotDrawSP));
-    PetscCall(PetscDrawSPSetDimension(user->PotDrawSP, 1));
-    PetscCall(PetscDrawSPGetAxis(user->PotDrawSP, &axis_Pot));
-    PetscCall(PetscDrawSPReset(user->PotDrawSP));
-    PetscCall(PetscDrawAxisSetLabels(axis_Pot, "Particles", "x", "potential"));
-    PetscCall(PetscDrawSetSave(user->PotDraw, "ex9_phi_spatial"));
+    PetscCall(PetscViewerDrawOpen(PETSC_COMM_WORLD, NULL, "Potential", 400, 0, 400, 300, &user->viewerPhi));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)user->viewerPhi, "phi_"));
+    PetscCall(PetscViewerDrawGetDraw(user->viewerPhi, 0, &draw));
+    PetscCall(PetscDrawSetSave(draw, "ex9_phi_spatial"));
+    PetscCall(PetscViewerSetFromOptions(user->viewerPhi));
+    PetscCall(DMGetNamedGlobalVector(dm, "phi", &phi));
+    PetscCall(PetscObjectSetName((PetscObject)phi, "potential"));
+    PetscCall(DMRestoreNamedGlobalVector(dm, "phi", &phi));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -403,69 +406,14 @@ static PetscErrorCode CheckNonNegativeWeights(DM sw, AppCtx *user)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static void f0_Dirichlet(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
-{
-  const PetscInt Nc = uOff_x[1] - uOff_x[0];
-
-  for (PetscInt c = 0; c < Nc; ++c) f0[0] += 0.5 * PetscSqr(u_x[c]);
-}
-
-static PetscErrorCode computeFieldEnergy(DM dm, Vec u, PetscReal *En)
-{
-  PetscDS        ds;
-  const PetscInt field = 0;
-  PetscInt       Nf;
-  void          *ctx;
-
-  PetscFunctionBegin;
-  PetscCall(DMGetApplicationContext(dm, &ctx));
-  PetscCall(DMGetDS(dm, &ds));
-  PetscCall(PetscDSGetNumFields(ds, &Nf));
-  PetscCheck(Nf == 1, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "We currently only support 1 field, not %" PetscInt_FMT, Nf);
-  PetscCall(PetscDSSetObjective(ds, field, &f0_Dirichlet));
-  PetscCall(DMPlexComputeIntegralFEM(dm, u, En, ctx));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode computeVelocityFEMMoments(DM sw, PetscReal moments[3], AppCtx *user)
 {
   DM          vdm;
   Vec         u[1];
-  PetscReal  *v, pvmin[3] = {0., 0., 0.}, pvmax[3] = {0., 0., 0.}, vmin[3], vmax[3], fact = 1.;
-  PetscInt    dim, Np;
   const char *fields[1] = {"w_q"};
 
   PetscFunctionBegin;
   PetscCall(PetscObjectQuery((PetscObject)sw, "__vdm__", (PetscObject *)&vdm));
-  // Check for particles outside the velocity grid
-  PetscCall(DMGetDimension(sw, &dim));
-  PetscCall(DMSwarmGetLocalSize(sw, &Np));
-  PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&v));
-  for (PetscInt p = 0; p < Np; ++p) {
-    for (PetscInt d = 0; d < dim; ++d) {
-      pvmin[d] = PetscMin(pvmax[d], v[p * dim + d]);
-      pvmax[d] = PetscMax(pvmax[d], v[p * dim + d]);
-    }
-  }
-  PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **)&v));
-  PetscCall(DMGetBoundingBox(vdm, vmin, vmax));
-  // To avoid particle loss, we enlarge the velocity grid if necessary
-  for (PetscInt d = 0; d < dim; ++d) {
-    fact = PetscMax(fact, pvmax[d] / vmax[d]);
-    fact = PetscMax(fact, pvmin[d] / vmin[d]);
-  }
-  if (fact > 1.) {
-    Vec coordinates, coordinatesLocal;
-
-    fact *= 1.1;
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Expanding velocity grid by %g\n", fact));
-    PetscCall(DMGetCoordinatesLocal(vdm, &coordinatesLocal));
-    PetscCall(DMGetCoordinates(vdm, &coordinates));
-    PetscCall(VecScale(coordinatesLocal, fact));
-    PetscCall(VecScale(coordinates, fact));
-    PetscCall(PetscGridHashDestroy(&((DM_Plex *)vdm->data)->lbox));
-  }
-
   PetscCall(DMGetGlobalVector(vdm, &u[0]));
   PetscCall(DMSwarmProjectFields(sw, vdm, 1, fields, u, SCATTER_FORWARD));
   PetscCall(DMPlexComputeMoments(vdm, u[0], moments));
@@ -537,15 +485,8 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(PetscDrawSave(draw));
 
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", pmoments));
-  pmoments[3] *= 0.5;
-  DM        dm;
-  Vec       phi;
-  PetscReal En;
-  PetscCall(DMSwarmGetCellDM(sw, &dm));
-  PetscCall(DMGetNamedGlobalVector(dm, "potential", &phi));
-  PetscCall(computeFieldEnergy(dm, phi, &En));
-  PetscCall(DMRestoreNamedGlobalVector(dm, "potential", &phi));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[3], (double)En));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim]));
+  PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -711,8 +652,6 @@ static PetscErrorCode MonitorPositions_2D(TS ts, PetscInt step, PetscReal t, Vec
 {
   AppCtx         *user = (AppCtx *)ctx;
   DM              dm, sw;
-  PetscDrawAxis   axis;
-  char            title[1024];
   PetscScalar    *x, *v, *weight;
   PetscReal       lower[3], upper[3], speed;
   const PetscInt *s;
@@ -730,12 +669,9 @@ static PetscErrorCode MonitorPositions_2D(TS ts, PetscInt step, PetscReal t, Vec
     PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
     PetscCall(DMSwarmGetField(sw, "species", NULL, NULL, (void **)&s));
     PetscCall(DMSwarmSortGetAccess(sw));
-    PetscCall(PetscDrawSPGetAxis(user->positionDrawSP, &axis));
-    PetscCall(PetscDrawSPReset(user->positionDrawSP));
-    PetscCall(PetscSNPrintf(title, 1024, "Step %" PetscInt_FMT " Time: %g", step, (double)t));
-    PetscCall(PetscDrawAxisSetLabels(axis, title, "x", "v"));
-    PetscCall(PetscDrawSPSetLimits(user->positionDrawSP, lower[0], upper[0], lower[1], upper[1]));
-    PetscCall(PetscDrawSPSetLimits(user->positionDrawSP, lower[0], upper[0], -12, 12));
+    PetscCall(PetscDrawSPReset(user->drawspX));
+    PetscCall(PetscDrawSPSetLimits(user->drawspX, lower[0], upper[0], lower[1], upper[1]));
+    PetscCall(PetscDrawSPSetLimits(user->drawspX, lower[0], upper[0], -12, 12));
     for (c = 0; c < cEnd - cStart; ++c) {
       PetscInt *pidx, Npc, q;
       PetscCall(DMSwarmSortGetPointsPerCell(sw, c, &Npc, &pidx));
@@ -2630,11 +2566,11 @@ int main(int argc, char **argv)
                -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
              -cosine_coefficients 0.0 -em_type primal -petscspace_degree 1 -em_pc_type svd
      test:
-       suffix: uniform_primal_1d
+       suffix: landau_damping_1d
        args: -em_type primal -petscspace_degree 1 -em_pc_type svd
      test:
-       suffix: uniform_primal_1d_real
-       args: -dm_plex_dim 1 -dm_plex_simplex 1 -dm_plex_box_faces 10 \
+       suffix: landau_damping_1d_real
+       args: -dm_plex_dim 1 -dm_plex_simplex 1 -fake_1D 0 -dm_plex_box_faces 10 \
                -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
              -cosine_coefficients 0.01 -em_type primal -petscspace_degree 1 -em_pc_type svd
      # NOT WORKING -ftop_pc_type bjacobi -ftop_sub_pc_type lu -ftop_sub_pc_factor_shift_type nonzero
