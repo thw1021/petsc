@@ -5,6 +5,7 @@
 
 #define Tao type(tTao)
 #define TaoLineSearch type(tTaoLineSearch)
+#define TaoTerm type(tTaoTerm)
 #define TaoConvergedReason PetscEnum
 #define TaoType character*(80)
 #define TaoLineSearchType character*(80)
@@ -13,6 +14,7 @@
 #define TaoALMMType PetscEnum
 #define TaoBNCGType PetscEnum
 #define TaoSubsetType PetscEnum
+#define TaoBRGNRegularizationType PetscEnum
 
 #define TAOLMVM     'lmvm'
 #define TAONLS      'nls'
@@ -48,5 +50,19 @@
 #define TAOALMM     'almm'
 #define TAOPYTHON   'python'
 #define TAOSNES     'snes'
+#define TAOFB       'fb'
+#define TAOCV       'cv'
 
+#define TAOTERMTAOCALLBACKS    'taocallbacks'
+#define TAOTERMBRGNREGULARIZER 'brgnregularizer'
+#define TAOTERMADMMREGULARIZER 'admmregularizer'
+#define TAOTERMADMMMISFIT      'admmmisfit'
+#define TAOTERMSHELL           'shell'
+#define TAOTERMSUM             'sum'
+#define TAOTERMHALFL2SQUARED   'halfl2squared'
+#define TAOTERML1              'l1'
+#define TAOTERMQUADRATIC       'quadratic'
+#define TAOTERMZERO            'zero'
+#define TAOTERMBOX             'box'
+#define TAOTERMSIMPLEX         'simplex'
 #endif
