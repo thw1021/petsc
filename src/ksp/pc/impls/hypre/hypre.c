@@ -2532,6 +2532,7 @@ PetscErrorCode PCHYPREGetCFMarkers(PC pc, PetscInt *n_per_level[], PetscBT *CFMa
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscAssertPointer(n_per_level, 2);
   PetscAssertPointer(CFMarkers, 3);
   PetscUseMethod(pc, "PCHYPREGetCFMarkers_C", (PC, PetscInt *[], PetscBT *[]), (pc, n_per_level, CFMarkers));
   PetscFunctionReturn(PETSC_SUCCESS);
