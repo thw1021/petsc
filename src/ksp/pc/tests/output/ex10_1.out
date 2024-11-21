@@ -1,0 +1,73 @@
+PC Object: 1 MPI process
+  type: hypre
+    HYPRE BoomerAMG preconditioning
+      Cycle type V
+      Maximum number of levels 25
+      Maximum number of iterations PER hypre call 1
+      Convergence tolerance PER hypre call 0.
+      Threshold for strong coupling 0.25
+      Interpolation truncation factor 0.
+      Interpolation: max elements per row 0
+      Number of levels of aggressive coarsening 0
+      Number of paths for aggressive coarsening 1
+      Maximum row sums 1.
+      Sweeps down         1
+      Sweeps up           1
+      Sweeps on coarse    1
+      Relax down          symmetric-SOR/Jacobi
+      Relax up            symmetric-SOR/Jacobi
+      Relax on coarse     Gaussian-elimination
+      Relax weight  (all)      1.
+      Outer relax weight (all) 1.
+      Maximum size of coarsest grid 9
+      Minimum size of coarsest grid 1
+      Using CF-relaxation
+      Not using more complex smoothers.
+      Measure type        local
+      Coarsen type        modifiedRuge-Stueben
+      Interpolation type  classical
+      SpGEMM type         hypre
+  linear system matrix = precond matrix:
+  Mat Object: Stiffness 1 MPI process
+    type: seqaij
+    rows=9, cols=9
+    total: nonzeros=25, allocated nonzeros=27
+    total number of mallocs used during MatSetValues calls=0
+      not using I-node routines
+Num levels: 2
+Prolongation Operator - Level 0
+Mat Object: P 1 MPI process
+  type: seqaij
+row 0: (0, 0.5) 
+row 1: (0, 1.) 
+row 2: (0, 0.5)  (1, 0.5) 
+row 3: (1, 1.) 
+row 4: (1, 0.5)  (2, 0.5) 
+row 5: (2, 1.) 
+row 6: (2, 0.5)  (3, 0.5) 
+row 7: (3, 1.) 
+row 8: (3, 0.5) 
+
+Coarse/Fine splitting - Level 0
+0 0
+1 2
+2 0
+3 8
+4 0
+5 32
+6 0
+7 128
+8 0
+Stiffness matrix, sparse format:
+Mat Object: Stiffness 1 MPI process
+  type: seqaij
+row 0: (0, 2.)  (1, -1.) 
+row 1: (0, -1.)  (1, 2.)  (2, -1.) 
+row 2: (1, -1.)  (2, 2.)  (3, -1.) 
+row 3: (2, -1.)  (3, 2.)  (4, -1.) 
+row 4: (3, -1.)  (4, 2.)  (5, -1.) 
+row 5: (4, -1.)  (5, 2.)  (6, -1.) 
+row 6: (5, -1.)  (6, 2.)  (7, -1.) 
+row 7: (6, -1.)  (7, 2.)  (8, -1.) 
+row 8: (7, -1.)  (8, 2.) 
+Finished calling the Viewer functions
