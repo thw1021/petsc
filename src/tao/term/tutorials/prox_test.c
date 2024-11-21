@@ -129,7 +129,7 @@ PetscErrorCode SolveSmallerProblem(AppCtx *user, TaoTerm term0, TaoTerm term1)
     PetscCall(TaoTermConjugateGetOriginalTerm(term0, &subterm));
     PetscCall(TaoTermSetSolutionTemplate(subterm, x_small));
     if (user->problem == PROBLEM_BOX) PetscCall(TaoTermBoxSetContext(subterm, user->lb, user->ub, lb_vec_small, ub_vec_small));
-  } else if (user->problem ==PROBLEM_BOX) PetscCall(TaoTermBoxSetContext(term0, user->lb, user->ub, lb_vec_small, ub_vec_small));
+  } else if (user->problem == PROBLEM_BOX) PetscCall(TaoTermBoxSetContext(term0, user->lb, user->ub, lb_vec_small, ub_vec_small));
 
   /* Using different sized input to test */
   for (i = 0; i < 5; i++) {

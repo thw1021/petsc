@@ -205,7 +205,7 @@ static PetscErrorCode TaoTermSimplexSetTolerance_Simplex(TaoTerm term, PetscReal
 
   PetscFunctionBegin;
   PetscCheck(tol >= 0, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_OUTOFRANGE, "Simplex tolerance (%g) cannot be negative", (double)tol);
-  simplex->tol  = tol;
+  simplex->tol = tol;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -248,9 +248,7 @@ static PetscErrorCode TaoTermView_Simplex(TaoTerm term, PetscViewer viewer)
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
-  if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Simplex tolerance: %g, size: %g \n", (double)simplex->tol, (double)simplex->size));
-  }
+  if (isascii) { PetscCall(PetscViewerASCIIPrintf(viewer, "Simplex tolerance: %g, size: %g \n", (double)simplex->tol, (double)simplex->size)); }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

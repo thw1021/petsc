@@ -3,8 +3,8 @@
 typedef struct _n_TaoTerm_Conjugate TaoTerm_Conjugate;
 
 struct _n_TaoTerm_Conjugate {
-  TaoTerm   orig;
-  Vec       workvec;
+  TaoTerm orig;
+  Vec     workvec;
 };
 
 static PetscErrorCode TaoTermDestroy_Conjugate(TaoTerm term)
@@ -70,7 +70,7 @@ static PetscErrorCode TaoTermHessianMult_Conjugate(TaoTerm term, Vec x, Vec para
 static PetscErrorCode TaoTermView_Conjugate(TaoTerm term, PetscViewer viewer)
 {
   TaoTerm_Conjugate *cj = (TaoTerm_Conjugate *)term->data;
-  PetscBool         is_ascii;
+  PetscBool          is_ascii;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &is_ascii));
@@ -82,7 +82,6 @@ static PetscErrorCode TaoTermView_Conjugate(TaoTerm term, PetscViewer viewer)
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 /* TODO write detailed docstring
  * In this case, there are two possibilities:
