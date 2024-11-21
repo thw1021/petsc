@@ -35,4 +35,6 @@ class Configure(config.package.CMakePackage):
     args.append('-DSCOTCH_DIR:STRING="'+self.ptscotch.directory+'"')
     args.append('-DMETIS_DIR:STRING="'+self.metis.directory+'"')
     args.append('-DMMG_DIR:STRING="'+self.mmg.directory+'"')
+    args.append('-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON')
+    args.append('-DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON')
     return args

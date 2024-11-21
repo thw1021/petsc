@@ -40,4 +40,6 @@ class Configure(config.package.CMakePackage):
         args.append('-DMMG5_INT=int64_t')
       else:
         raise RuntimeError('Cannot use --download-mmg with a PetscInt64 type different than int64_t')
+    args.append('-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON')
+    args.append('-DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON')
     return args
