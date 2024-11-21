@@ -21,7 +21,6 @@ class Configure(config.package.CMakePackage):
   def setupDependencies(self, framework):
     config.package.CMakePackage.setupDependencies(self, framework)
     self.mpi            = framework.require('config.packages.MPI',self)
-    self.mpi            = framework.require('config.packages.MPI',self)
     self.mathlib        = framework.require('config.packages.mathlib',self)
     self.bison          = framework.require('config.packages.bison',self)
     self.deps           = [self.mpi,self.mathlib,self.bison]
