@@ -27,7 +27,7 @@ int main(int Argc, char **Args)
 
   // Creating stiffness matrix
   PetscCall(Create1dLaplacian(n_nodes, &data_comp->stiff));
-  PetscCall(PetscObjectSetName((PetscObject)data_comp->stiff,"Stiffness"));
+  PetscCall(PetscObjectSetName((PetscObject)data_comp->stiff, "Stiffness"));
 
   // Set-up BoomerAMG PC to get Prolongation Operators and Coarse/Fine splittings
   PetscCall(KSPCreate(PETSC_COMM_WORLD, &data_comp->kspHypre));
@@ -80,10 +80,9 @@ PetscErrorCode DataCompExportMats(DataCompression data_comp)
 {
   PetscFunctionBeginUser;
   printf("Num levels: %d\n", data_comp->num_levels);
-
   for (int i = 0; i < (int)data_comp->num_levels - 1; i++) {
     printf("Prolongation Operator - Level %d\n", i);
-    PetscCall(PetscObjectSetName((PetscObject)data_comp->ProlongationOps[i],"P")); 
+    PetscCall(PetscObjectSetName((PetscObject)data_comp->ProlongationOps[i], "P"));
     PetscCall(MatView(data_comp->ProlongationOps[i], PETSC_VIEWER_STDOUT_WORLD));
     printf("\n");
   }
@@ -95,7 +94,6 @@ PetscErrorCode DataCompExportMats(DataCompression data_comp)
   printf("Stiffness matrix, sparse format:\n");
   PetscCall(MatViewFromOptions(data_comp->stiff, NULL, "-mat_view_stiff"));
   printf("Finished calling the Viewer functions\n");
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -103,14 +101,12 @@ PetscErrorCode DataCompDestroy(DataCompression data_comp)
 {
   PetscFunctionBeginUser;
   if (data_comp == NULL) PetscFunctionReturn(PETSC_SUCCESS);
-
   PetscCall(MatDestroy(&data_comp->stiff));
   PetscCall(KSPDestroy(&data_comp->kspHypre));
   for (PetscInt i = 0; i < data_comp->num_levels - 1; i++) {
     PetscCall(MatDestroy(&data_comp->ProlongationOps[i]));
     PetscCall(PetscBTDestroy(&data_comp->CFMarkers[i]));
   }
-
   PetscCall(PetscFree(data_comp->ProlongationOps));
   PetscCall(PetscFree(data_comp->CFMarkers));
   PetscCall(PetscFree(data_comp->n_per_level));
