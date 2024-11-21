@@ -222,12 +222,12 @@ static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level
   PetscCall(PetscMalloc1(num_levels, &markertmp));
   PetscCall(PetscMalloc1(num_levels, &n_per_temp));
   CF_marker_array = hypre_ParAMGDataCFMarkerArray((hypre_ParAMGData *)jac->hsolver);
-  for (PetscInt l = 1; l < num_levels; l++) {
-    PetscInt m        = hypre_IntArraySize(CF_marker_array[num_levels - 1 - l]);
-    n_per_temp[l - 1] = m;
-    PetscCall(PetscBTCreate(m, &markertmp[l - 1]));
+  for (PetscInt l = 0, CFMaxIndex = num_levels - 2; l < num_levels - 1; l++, CFMaxIndex--) {
+    PetscInt m    = hypre_IntArraySize(CF_marker_array[CFMaxIndex]);
+    n_per_temp[l] = m;
+    PetscCall(PetscBTCreate(m, &markertmp[l]));
     for (PetscInt k = 0; k < m; k++) {
-      if (hypre_IntArrayDataI(CF_marker_array[num_levels - 1 - l], k) > 0) PetscCall(PetscBTSet(markertmp[l - 1], k));
+      if (hypre_IntArrayDataI(CF_marker_array[CFMaxIndex], k) > 0) PetscCall(PetscBTSet(markertmp[l], k));
     }
   }
   *n_per_level = n_per_temp;
