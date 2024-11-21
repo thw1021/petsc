@@ -44,6 +44,9 @@ class Configure(config.package.CMakePackage):
     if not self.bison.haveBison3plus: raise RuntimeError('PTScotch needs Bison version 3.0 or above, use --download-bison')
     args.append('-DBISON_EXECUTABLE:STRING="'+self.bison.bison+'"')
 
+    args = self.rmArgsStartsWith(args, '-DCMAKE_C_FLAGS')
+    args.append('-DCMAKE_C_FLAGS:STRING="'+self.updatePackageCFlags(self.getCompilerFlags())+' -Drestrict=__restrict"')
+
     args.append('-DINTSIZE:STRING='+ ('64' if self.getDefaultIndexSize() == 64 else '32'))
 
     args.append('-DINSTALL_METIS_HEADERS:BOOL=OFF')
@@ -54,7 +57,7 @@ class Configure(config.package.CMakePackage):
 
     if self.pthread.found:
       if self.pthread.pthread_barrier:
-        args.append('-DCOMMON_PTHREAD_BARRIER:BOOL=ON')
+        args.append('-DCOMMON_PTHREAD:BOOL=ON')
       else:
         args.append('-DCOMMON_PTHREAD_BARRIER:BOOL=OFF')      # OSX does not have pthread_barrier_destroy
 
