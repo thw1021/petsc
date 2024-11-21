@@ -1,1 +1,78 @@
+Tao Object: 1 MPI process
+  type: fb
+    Backtracking linesearch scaling parameter: xi=1.
+    Using Nesterov-type acceleration
+      f Term:
+      TaoTerm Object: 1 MPI process
+        type: shell
+        solution vector space: N = 20 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (none)
+        User context has been set
+        The following methods have been set: objectiveandgradient,
+      g Term:
+      TaoTerm Object: 1 MPI process
+        type: l1
+        solution vector space: N = 20 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (optional) K = 20 [VecType seq (taoterm_parameters_vec_type)]
+        default Hessian MatType (taoterm_hessian_mat_type): shell
+        epsilon (taoterm_l1_epsilon): 0.
+      Regularizer Term:
+      TaoTerm Object: 1 MPI process
+        type: halfl2squared
+        solution vector space: not set up yet [VecType standard (taoterm_solution_vec_type)]
+        parameter vector space: (optional) not set up yet [VecType standard (taoterm_parameters_vec_type)]
+        default Hessian MatType (taoterm_hessian_mat_type): shell
+  Objective function:
+    Scale (tao_objective_scale): 1.
+    Function:
+      TaoTerm Object: (objective_) 1 MPI process
+        type: sum
+        solution vector space: N = 20 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (optional) K = 20 [VecType nest (taoterm_parameters_vec_type)]
+        default Hessian MatType (taoterm_hessian_mat_type): shell
+        Sum of 3 terms:
+          Summand 0:
+            Scale (taoterm_sum_callbacks_scale): 1.
+            Map: unmapped
+            Term:
+              TaoTerm Object: (callbacks_) 1 MPI process
+                type: taocallbacks
+                solution vector space: N = 20 [VecType seq (taoterm_solution_vec_type)]
+                parameter vector space: (none)
+                attached to Tao [name omitted]
+          Summand 1:
+            Scale (taoterm_sum_subterm_1_scale): 1.
+            Map: unmapped
+            Term:
+              TaoTerm Object: 1 MPI process
+                type: shell
+                solution vector space: N = 20 [VecType seq (taoterm_solution_vec_type)]
+                parameter vector space: (none)
+                User context has been set
+                The following methods have been set: objectiveandgradient,
+          Summand 2:
+            Scale (taoterm_sum_subterm_2_scale): 10.
+            Map: unmapped
+            Term:
+              TaoTerm Object: 1 MPI process
+                type: l1
+                solution vector space: N = 20 [VecType seq (taoterm_solution_vec_type)]
+                parameter vector space: (optional) K = 20 [VecType seq (taoterm_parameters_vec_type)]
+                default Hessian MatType (taoterm_hessian_mat_type): shell
+                epsilon (taoterm_l1_epsilon): 0.
+    Map: unmapped
+  TaoLineSearch Object: 1 MPI process
+    type: ps
+      PS linesearch    eta=0.5     memsize=1
+    maximum function evaluations=30
+    tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+    total number of function evaluations=0
+    total number of gradient evaluations=0
+    total number of function/gradient evaluations=0
+    Termination reason: 1
+  convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=1e-08
+  Residual in Function/Gradient:=31.3875
+  Objective value=98.9963
+  total number of iterations=1001,                          (max: 1000)
+  Solver failed:    Maximum Iterations
 relative reconstruction error: ||x-xGT||/||xGT|| = 2.5194e+00.
