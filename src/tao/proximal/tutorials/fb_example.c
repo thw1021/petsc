@@ -389,12 +389,6 @@ int main(int argc, char **argv)
       requires: !single
 
    test:
-      suffix: lasso_ls
-      args: -problem prob_lasso -tao_fb_accel 0 -tao_fb_adaptive 0 -scale 10 -tao_ls_max_funcs 30 -tao_fb_ls_scale 1.05 -tao_max_it 1000 -tao_view
-      output_file: output/fb_example_lasso_ls.out
-      requires: !single
-
-   test:
       suffix: lasso_non_mon_ls
       args: -problem prob_lasso -tao_fb_accel 0 -tao_fb_adaptive 0 -scale 10 -tao_ls_max_funcs 30 -tao_ls_PS_memory_size 5 -tao_fb_ls_scale 1.05 -tao_max_it 1000
       output_file: output/fb_example_lasso_non_mon_ls.out

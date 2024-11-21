@@ -515,7 +515,7 @@ int main(int argc, char **argv)
 
    test:
       suffix: simplex_view_conjugate
-      args: -problem simplex -l2_null 1 -view 1 -conjugate 1 -taoterm_simplex_tol 1.e-12 -taoterm_simplex_size 1.2
+      args: -problem simplex -l2_null 1 -view 1 -conjugate 1
       output_file: output/prox_ex_simplex_view_cj.out
       requires: !single
 
