@@ -2515,7 +2515,7 @@ PetscErrorCode PCHYPRESetType(PC pc, const char name[])
   PCHYPREGetCFMarkers - Gets CF marker arrays for all levels (except the finest level)
 
   Logically Collective
- 
+
   Input Parameter:
 . pc - the precondition context
 
