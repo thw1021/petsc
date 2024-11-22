@@ -2522,7 +2522,7 @@ PetscErrorCode PCHYPRESetType(PC pc, const char name[])
 - CFMarkers   - the Coarse/Fine boolean arrays (size of `num_levels`-1)
 
   Note:
-  Caller is responsible for memory management of n_per_level and CFMarkers pointers.
+  Caller is responsible for memory management of `n_per_level` and `CFMarkers` pointers. That is they should free them with `PetscFree()` when no longer needed.
 
   Level: advanced
 
