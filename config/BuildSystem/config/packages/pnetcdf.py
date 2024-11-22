@@ -4,7 +4,7 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.version          = '1.12.3'
+    self.version          = '1.14.0'
     self.versionname      = 'PNETCDF_VERSION'
     self.gitcommit        = 'checkpoint.' + self.version # 1.12.1 is first to include MPI1 deprecated fix
     self.download         = ['git://https://github.com/parallel-netcdf/pnetcdf','https://github.com/parallel-netcdf/pnetcdf/archive/'+self.gitcommit+'.tar.gz',
@@ -35,4 +35,8 @@ class Configure(config.package.GNUPackage):
 
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
     self.addToArgs(args,'LIBS',self.libraries.toStringNoDupes(self.flibs.lib))
+    if config.setCompilers.Configure.isIntel(self.getCompiler('C'), self.log):
+      args.append('--disable-cxx')
+      self.addToArgs(args,'LIBS','-lstdc++')
+
     return args
