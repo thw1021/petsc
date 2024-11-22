@@ -2518,7 +2518,7 @@ PetscErrorCode PCHYPRESetType(PC pc, const char name[])
 . pc - the precondition context
 
   Output Parameters:
-+ n_per_level - the number or nodes per level (size of num_levels -1)
++ n_per_level - the number of nodes per level (size of `num_levels` -1)
 - CFMarkers   - the Coarse/Fine boolean arrays (size of `num_levels`-1)
 
   Note:
