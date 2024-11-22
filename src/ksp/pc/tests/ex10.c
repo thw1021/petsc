@@ -79,15 +79,15 @@ PetscErrorCode DataCompExportMats(DataCompression data_comp)
 {
   PetscFunctionBeginUser;
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Num levels: %d\n", data_comp->num_levels));
-  for (int i = 0; i < (int)data_comp->num_levels - 1; i++) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Prolongation Operator - Level %d\n", i));
+  for (PetscInt i = 0; i < data_comp->num_levels - 1; i++) {
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Prolongation Operator - Level %" PetscInt_FMT "\n", i));
     PetscCall(PetscObjectSetName((PetscObject)data_comp->ProlongationOps[i], "P"));
     PetscCall(MatView(data_comp->ProlongationOps[i], PETSC_VIEWER_STDOUT_WORLD));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
   }
 
-  for (int i = 0; i < (int)data_comp->num_levels - 1; i++) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Coarse/Fine splitting - Level %d\n", i));
+  for (PetscInt i = 0; i < data_comp->num_levels - 1; i++) {
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Coarse/Fine splitting - Level %" PetscInt_FMT "\n", i));
     PetscCall(PetscBTView(data_comp->n_per_level[i], data_comp->CFMarkers[i], PETSC_VIEWER_STDOUT_WORLD));
   }
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Stiffness matrix, sparse format:\n"));
