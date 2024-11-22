@@ -116,7 +116,7 @@ PetscErrorCode DataCompDestroy(DataCompression data_comp)
 /*TEST
 
    test:
-      requires: hypre !complex
+      requires: hypre !complex !defined(PETSC_HAVE_HYPRE_DEVICE)
       args: -pc_hypre_boomeramg_coarsen_type modifiedRuge-Stueben -pc_hypre_boomeramg_interp_type classical -pc_hypre_boomeramg_strong_threshold 0.25 pc_hypre_boomeramg_numfunctions 1 -pc_hypre_boomeramg_max_row_sum 1.0 -mat_view_stiff
 
 TEST*/
