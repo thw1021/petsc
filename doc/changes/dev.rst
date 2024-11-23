@@ -65,6 +65,8 @@ Changes: Development
 
 .. rubric:: SNESLineSearch:
 
+- Add ``SNESLineSearchCreate_Bisection`` and ``SNESLineSearchApply_Bisection()`` for a bisection line search
+
 .. rubric:: TS:
 
 .. rubric:: TAO:
