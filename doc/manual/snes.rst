@@ -358,16 +358,17 @@ listed in Table :any:`tab-linesearches`.
 .. table:: PETSc Line Search Methods
    :name: tab-linesearches
 
-   ==================== ======================= ================
-   **Line Search**      **SNESLineSearchType**  **Options Name**
-   ==================== ======================= ================
-   Backtracking         ``SNESLINESEARCHBT``    ``bt``
-   (damped) step        ``SNESLINESEARCHBASIC`` ``basic``
-   identical to above   ``SNESLINESEARCHNONE``  ``none``
-   L2-norm Minimization ``SNESLINESEARCHL2``    ``l2``
-   Critical point       ``SNESLINESEARCHCP``    ``cp``
-   Shell                ``SNESLINESEARCHSHELL`` ``shell``
-   ==================== ======================= ================
+   ==================== =========================== ================
+   **Line Search**      **SNESLineSearchType**      **Options Name**
+   ==================== =========================== ================
+   Backtracking         ``SNESLINESEARCHBT``        ``bt``
+   (damped) step        ``SNESLINESEARCHBASIC``     ``basic``
+   identical to above   ``SNESLINESEARCHNONE``      ``none``
+   L2-norm Minimization ``SNESLINESEARCHL2``        ``l2``
+   Critical point       ``SNESLINESEARCHCP``        ``cp``
+   Bisecion             ``SNESLINESEARCHBISECTION`` ``bisection``
+   Shell                ``SNESLINESEARCHSHELL``     ``shell``
+   ==================== =========================== ================
 
 Every ``SNES`` has a line search context of type ``SNESLineSearch`` that
 may be retrieved using
