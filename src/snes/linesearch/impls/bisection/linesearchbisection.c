@@ -204,7 +204,7 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
    SNESLINESEARCHBISECTION - Bisection line search.
    Similar to the critical point line search, the bisection line search assumes that there exists some $G(x)$ for which the `SNESFunction` $F(x) = grad G(x)$.
    Therefore, this line search seeks to find the root of the directional derivative along the search direction $F^T Y$ through bisection.
-   
+
    Options Database Keys:
 +  -snes_linesearch_max_it <50> - maximum number of iterations for the line search
 .  -snes_linesearch_damping <1.0> - initial trial step length on entry to the line search
