@@ -235,13 +235,15 @@ PETSC_DEPRECATED_FUNCTION(3, 22, 0, "PetscOptionsPushCreateViewerOff()", ) stati
   return PetscOptionsPopCreateViewerOff();
 }
 
-typedef struct {
-  PetscViewer       viewer;
-  PetscViewerFormat format;
-  PetscDrawLG       lg;
-  PetscInt          view_interval;
-  void             *data;
-} PetscViewerAndFormat;
+typedef struct PetscViewerAndFormat_ PetscViewerAndFormat;
+struct PetscViewerAndFormat_ {
+  PetscViewer        viewer;
+  PetscViewerFormat  format;
+  PetscDrawLG        lg;
+  PetscInt           view_interval;
+  void              *data;
+  PetscCtxDestroyFn *data_destroy;
+};
 PETSC_EXTERN PetscErrorCode PetscViewerAndFormatCreate(PetscViewer, PetscViewerFormat, PetscViewerAndFormat **);
 PETSC_EXTERN PetscErrorCode PetscViewerAndFormatDestroy(PetscViewerAndFormat **);
 
@@ -269,7 +271,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerBinaryGetDescriptor(PetscViewer, int *);
 PETSC_EXTERN PetscErrorCode PetscViewerBinaryGetInfoPointer(PetscViewer, FILE **);
 PETSC_EXTERN PetscErrorCode PetscViewerBinaryRead(PetscViewer, void *, PetscInt, PetscInt *, PetscDataType);
 PETSC_EXTERN PetscErrorCode PetscViewerBinaryWrite(PetscViewer, const void *, PetscInt, PetscDataType);
-PETSC_EXTERN PetscErrorCode PetscViewerBinaryReadAll(PetscViewer, void *, PetscInt, PetscCount, PetscCount, PetscDataType);
+PETSC_EXTERN PetscErrorCode PetscViewerBinaryReadAll(PetscViewer, void *, PetscCount, PetscCount, PetscCount, PetscDataType);
 PETSC_EXTERN PetscErrorCode PetscViewerBinaryWriteAll(PetscViewer, const void *, PetscCount, PetscCount, PetscCount, PetscDataType);
 PETSC_EXTERN PetscErrorCode PetscViewerStringSPrintf(PetscViewer, const char[], ...) PETSC_ATTRIBUTE_FORMAT(2, 3);
 PETSC_EXTERN PetscErrorCode PetscViewerStringSetString(PetscViewer, char[], size_t);
