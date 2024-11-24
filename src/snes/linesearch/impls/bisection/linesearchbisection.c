@@ -23,27 +23,20 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
   /* pre-check */
   PetscCall(SNESLineSearchPreCheck(linesearch, X, Y, &changed_y));
 
-  /* compute ynorm to normalize direction vector */
+  /* compute ynorm to normalize search direction */
   PetscCall(SNESLineSearchComputeNorms(linesearch));
   PetscCall(SNESLineSearchGetNorms(linesearch, NULL, NULL, &ynorm));
 
-  /* compute residual at left end of interval */
+  /* initialize interval for bisection */
   lambda_left = 0.0;
-  PetscCall(VecWAXPY(W, -lambda_left, Y, X));
-  if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
-  PetscCall((*linesearch->ops->snesfunc)(snes, W, G));
-  if (snes->nfuncs >= snes->max_funcs && snes->max_funcs >= 0) {
-    PetscCall(PetscInfo(snes, "Exceeded maximum function evaluations during line search!\n"));
-    snes->reason = SNES_DIVERGED_FUNCTION_COUNT;
-    PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_FUNCTION));
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-  PetscCall(VecDot(G, Y, &fty_left));
+  lambda_right = lambda;
+
+  /* compute fty at left end of interval */
+  PetscCall(VecDot(F, Y, &fty_left));
   fty_left    = fty_left / ynorm;
   fty_initial = fty_left;
 
-  /* compute residual at right end of interval (initial lambda) */
-  lambda_right = lambda;
+  /* compute fty at right end of interval (initial lambda) */
   PetscCall(VecWAXPY(W, -lambda, Y, X));
   if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
   PetscCall((*linesearch->ops->snesfunc)(snes, W, G));
