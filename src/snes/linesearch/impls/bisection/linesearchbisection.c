@@ -60,6 +60,8 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
   /* check whether sign changes in interval */
   if (!PetscIsInfOrNanReal(fty) && fty_left * fty_right > 0) {
     /* no change of sign: accept full step */
+    PetscCall(VecWAXPY(W, -lambda, Y, X));
+    if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
     if (monitor) {
       PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
       PetscCall(PetscViewerASCIIPrintf(monitor, "      Line search: sign of fty does not change in step intervall, accepting full step\n"));
@@ -135,17 +137,7 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
         } else {
           lambda_left = lambda;
           /* also update fty_left for direction check in next iteration */
-          PetscCall(VecWAXPY(W, -lambda_left, Y, X));
-          if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
-          PetscCall((*linesearch->ops->snesfunc)(snes, W, G));
-          if (snes->nfuncs >= snes->max_funcs && snes->max_funcs >= 0) {
-            PetscCall(PetscInfo(snes, "Exceeded maximum function evaluations during line search!\n"));
-            snes->reason = SNES_DIVERGED_FUNCTION_COUNT;
-            PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_FUNCTION));
-            PetscFunctionReturn(PETSC_SUCCESS);
-          }
-          PetscCall(VecDot(G, Y, &fty_left));
-          fty_left = fty_left / ynorm;
+          fty_left = fty;
         }
       }
 
@@ -178,12 +170,8 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
     }
   }
 
-  /* construct solution with final step length */
-  PetscCall(VecWAXPY(W, -lambda, Y, X));
-  if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
-  PetscCall(SNESLineSearchSetLambda(linesearch, lambda));
-
   /* post-check */
+  PetscCall(SNESLineSearchSetLambda(linesearch, lambda));
   PetscCall(SNESLineSearchPostCheck(linesearch, X, Y, W, &changed_y, &changed_w));
   if (changed_y) {
     if (!changed_w) PetscCall(VecWAXPY(W, -lambda, Y, X));
