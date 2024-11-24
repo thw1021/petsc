@@ -416,6 +416,12 @@ function tolerances ``-snes_linesearch_rtol`` and
 ``-snes_linesearch_atol``, and steplength tolerance
 ``snes_linesearch_ltol``.
 
+For highly non-linear problems, the bisection line search ``SNESLINESEARCHBISECTION``
+may prove useful due to its robustness. Similar to the critical point line search
+``SNESLINESEARCHCP``, it seeks to find the root of :math:`F(x) \cdot Y`.
+While the latter does so through a secant method, the bisection line search
+does so by iteratively bisecting the step length interval.
+
 Custom line search types may either be defined using
 ``SNESLineSearchShell``, or by creating a custom user line search type
 in the model of the preexisting ones and register it using

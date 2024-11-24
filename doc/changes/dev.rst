@@ -65,7 +65,7 @@ Changes: Development
 
 .. rubric:: SNESLineSearch:
 
-- Add ``SNESLineSearchCreate_Bisection`` and ``SNESLineSearchApply_Bisection()`` for a bisection line search
+- Add ``SNESLINESEARCHBISECTION`` as new SNES line search type, performing a bisection line search on the directional derivative
 
 .. rubric:: TS:
 
