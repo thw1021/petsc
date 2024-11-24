@@ -65,7 +65,6 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
       PetscCall(PetscViewerASCIIPrintf(monitor, "      Line search: sign of fty does not change in step intervall, accepting full step\n"));
       PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
     }
-
   } else {
     /* change of sign: iteratively bisect interval */
     lambda_old = 0.0;
@@ -202,8 +201,8 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
 
 /*MC
    SNESLINESEARCHBISECTION - Bisection line search.
-   Similar to the critical point line search, the bisection line search assumes that there exists some $G(x)$ for which the `SNESFunction` $F(x) = grad G(x)$.
-   Therefore, this line search seeks to find the root of the directional derivative along the search direction $F^T Y$ through bisection.
+   Similar to the critical point line search, `SNESLINESEARCHCP`, the bisection line search assumes that there exists some $G(x)$ for which the `SNESFunction` $F(x) = grad G(x)$.
+   This line search seeks to find the root of the directional derivative along the search direction $F^T Y$ through bisection.
 
    Options Database Keys:
 +  -snes_linesearch_max_it <50> - maximum number of iterations for the line search
@@ -212,13 +211,13 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
 -  -snes_linesearch_atol <1e\-6> - absolute tolerance for the directional derivative
 .  -snes_linesearch_ltol <1e\-6> - minimum absolute change in lambda allowed
 
-   Level: advanced
+   Level: intermediate
 
    Note:
    This method does NOT use the objective function if it is provided with `SNESSetObjective()`.
    This line search will always give a step size in the interval [0, damping].
 
-.seealso: [](ch_snes), `SNESLineSearch`, `SNESLineSearchType`, `SNESLineSearchCreate()`, `SNESLineSearchSetType()`
+.seealso: [](ch_snes), `SNESLineSearch`, `SNESLineSearchType`, `SNESLineSearchCreate()`, `SNESLineSearchSetType()`, `SNESLINESEARCHCP`
 M*/
 PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_Bisection(SNESLineSearch linesearch)
 {
