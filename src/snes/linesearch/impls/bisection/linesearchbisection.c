@@ -8,7 +8,7 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
   SNES        snes;
   PetscReal   ynorm;
   PetscReal   lambda_left, lambda, lambda_right, lambda_old, dlambda;
-  PetscScalar fty_left, fty, fty_right, fty_initial, fty_rel;
+  PetscScalar fty_left, fty, fty_initial, fty_rel;
   PetscViewer monitor;
   PetscReal   rtol, atol, ltol;
   PetscInt    it, max_its;
@@ -44,7 +44,7 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
 
   /* compute residual at right end of interval (initial lambda) */
   lambda_right = lambda;
-  PetscCall(VecWAXPY(W, -lambda_right, Y, X));
+  PetscCall(VecWAXPY(W, -lambda, Y, X));
   if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
   PetscCall((*linesearch->ops->snesfunc)(snes, W, G));
   if (snes->nfuncs >= snes->max_funcs && snes->max_funcs >= 0) {
@@ -53,15 +53,12 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
     PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_FUNCTION));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscCall(VecDot(G, Y, &fty_right));
-  fty_right = fty_right / ynorm;
-  fty       = fty_right;
+  PetscCall(VecDot(G, Y, &fty));
+  fty = fty / ynorm;
 
   /* check whether sign changes in interval */
-  if (!PetscIsInfOrNanReal(fty) && fty_left * fty_right > 0) {
+  if (!PetscIsInfOrNanReal(fty) && fty_left * fty > 0) {
     /* no change of sign: accept full step */
-    PetscCall(VecWAXPY(W, -lambda, Y, X));
-    if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
     if (monitor) {
       PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
       PetscCall(PetscViewerASCIIPrintf(monitor, "      Line search: sign of fty does not change in step intervall, accepting full step\n"));
