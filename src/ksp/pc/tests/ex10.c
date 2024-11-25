@@ -65,13 +65,6 @@ PetscErrorCode Create1dLaplacian(PetscInt n, Mat *mat)
   PetscFunctionBeginUser;
   PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, n, n, 3, NULL, mat));
   idx = n - 1;
- // PetscCall(MatSetValues(*mat, 1, &idx, 1, &idx, &two, INSERT_VALUES));
- // for (i = 0; i < n - 1; i++) {
- //   PetscCall(MatSetValues(*mat, 1, &i, 1, &i, &two, INSERT_VALUES));
- //   idx = i + 1;
- //   PetscCall(MatSetValues(*mat, 1, &idx, 1, &i, &mone, INSERT_VALUES));
- //   PetscCall(MatSetValues(*mat, 1, &i, 1, &idx, &mone, INSERT_VALUES));
- // }
   PetscCall(MatSetValue(*mat, idx, idx, two, INSERT_VALUES));
   for (i = 0; i < n - 1; i++) {
     PetscCall(MatSetValue(*mat, i, i, two, INSERT_VALUES));
