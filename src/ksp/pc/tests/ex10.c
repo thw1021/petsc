@@ -17,13 +17,15 @@ PetscErrorCode DataCompDestroy(DataCompression);
 
 int main(int Argc, char **Args)
 {
-  PetscCall(PetscInitialize(&Argc, &Args, NULL, NULL));
   PetscInt        n_nodes = 9;
+  Vec             x, b;
+  PC              pcHypre;
   DataCompression data_comp;
-  PetscCall(PetscNew(&data_comp));
 
-  Vec x, b;
-  PC  pcHypre;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&Argc, &Args, NULL, NULL));
+
+  PetscCall(PetscNew(&data_comp));
 
   // Creating stiffness matrix
   PetscCall(Create1dLaplacian(n_nodes, &data_comp->stiff));
@@ -78,7 +80,7 @@ PetscErrorCode Create1dLaplacian(PetscInt n, Mat *mat)
 PetscErrorCode DataCompExportMats(DataCompression data_comp)
 {
   PetscFunctionBeginUser;
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Num levels: %d\n", data_comp->num_levels));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Num levels: %" PetscInt_FMT "\n", data_comp->num_levels));
   for (PetscInt i = 0; i < data_comp->num_levels - 1; i++) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Prolongation Operator - Level %" PetscInt_FMT "\n", i));
     PetscCall(PetscObjectSetName((PetscObject)data_comp->ProlongationOps[i], "P"));
@@ -107,8 +109,7 @@ PetscErrorCode DataCompDestroy(DataCompression data_comp)
     PetscCall(PetscBTDestroy(&data_comp->CFMarkers[i]));
   }
   PetscCall(PetscFree(data_comp->ProlongationOps));
-  PetscCall(PetscFree(data_comp->CFMarkers));
-  PetscCall(PetscFree(data_comp->n_per_level));
+  PetscCall(PetscFree2(data_comp->CFMarkers, data_comp->n_per_level));
   PetscCall(PetscFree(data_comp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

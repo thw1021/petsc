@@ -160,7 +160,7 @@ static PetscErrorCode PCGetCoarseOperators_BoomerAMG(PC pc, PetscInt *nlevels, M
 
   PetscFunctionBegin;
   PetscCall(PetscStrcmp(jac->hypre_type, "boomeramg", &same));
-  PetscCheck(same, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_NOTSAMETYPE, "Hypre type is not BoomerAMG ");
+  PetscCheck(same, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_NOTSAMETYPE, "Hypre type is not BoomerAMG");
   num_levels = hypre_ParAMGDataNumLevels((hypre_ParAMGData *)jac->hsolver);
   PetscCall(PetscMalloc1(num_levels, &mattmp));
   A_array = hypre_ParAMGDataAArray((hypre_ParAMGData *)jac->hsolver);
@@ -189,7 +189,7 @@ static PetscErrorCode PCGetInterpolations_BoomerAMG(PC pc, PetscInt *nlevels, Ma
 
   PetscFunctionBegin;
   PetscCall(PetscStrcmp(jac->hypre_type, "boomeramg", &same));
-  PetscCheck(same, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_NOTSAMETYPE, "Hypre type is not BoomerAMG ");
+  PetscCheck(same, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_NOTSAMETYPE, "Hypre type is not BoomerAMG");
   num_levels = hypre_ParAMGDataNumLevels((hypre_ParAMGData *)jac->hsolver);
   PetscCall(PetscMalloc1(num_levels, &mattmp));
   P_array = hypre_ParAMGDataPArray((hypre_ParAMGData *)jac->hsolver);
@@ -219,8 +219,9 @@ static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level
   PetscCall(PetscStrcmp(jac->hypre_type, "boomeramg", &same));
   PetscCheck(same, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_NOTSAMETYPE, "Hypre type is not BoomerAMG");
   num_levels = hypre_ParAMGDataNumLevels((hypre_ParAMGData *)jac->hsolver);
-  PetscCall(PetscMalloc1(num_levels, &markertmp));
-  PetscCall(PetscMalloc1(num_levels, &n_per_temp));
+  PetscCall(PetscMalloc2(num_levels, &markertmp, num_levels, &n_per_temp));
+  //PetscCall(PetscMalloc1(num_levels, &markertmp));
+  //PetscCall(PetscMalloc1(num_levels, &n_per_temp));
   CF_marker_array = hypre_ParAMGDataCFMarkerArray((hypre_ParAMGData *)jac->hsolver);
   for (PetscInt l = 0, CFMaxIndex = num_levels - 2; CFMaxIndex >= 0; l++, CFMaxIndex--) {
     PetscInt m    = hypre_IntArraySize(CF_marker_array[CFMaxIndex]);
