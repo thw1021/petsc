@@ -2517,7 +2517,7 @@ PetscErrorCode PCHYPRESetType(PC pc, const char name[])
   Logically Collective
 
   Input Parameter:
-. pc - the precondition context
+. pc - the preconditioner context
 
   Output Parameters:
 + n_per_level - the number of nodes per level (size of `num_levels` -1)
