@@ -24,11 +24,10 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchPreCheck(linesearch, X, Y, &changed_y));
 
   /* compute ynorm to normalize search direction */
-  PetscCall(SNESLineSearchComputeNorms(linesearch));
-  PetscCall(SNESLineSearchGetNorms(linesearch, NULL, NULL, &ynorm));
+  PetscCall(VecNorm(Y, NORM_2, &ynorm));
 
   /* initialize interval for bisection */
-  lambda_left = 0.0;
+  lambda_left  = 0.0;
   lambda_right = lambda;
 
   /* compute fty at left end of interval */
@@ -171,6 +170,7 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
   /* update solution*/
   PetscCall(VecCopy(W, X));
   PetscCall((*linesearch->ops->snesfunc)(snes, X, F));
+  PetscCall(SNESLineSearchComputeNorms(linesearch));
 
   /* finalization */
   PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_SUCCEEDED));
