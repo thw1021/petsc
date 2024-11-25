@@ -220,8 +220,6 @@ static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level
   PetscCheck(same, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_NOTSAMETYPE, "Hypre type is not BoomerAMG");
   num_levels = hypre_ParAMGDataNumLevels((hypre_ParAMGData *)jac->hsolver);
   PetscCall(PetscMalloc2(num_levels, &markertmp, num_levels, &n_per_temp));
-  //PetscCall(PetscMalloc1(num_levels, &markertmp));
-  //PetscCall(PetscMalloc1(num_levels, &n_per_temp));
   CF_marker_array = hypre_ParAMGDataCFMarkerArray((hypre_ParAMGData *)jac->hsolver);
   for (PetscInt l = 0, CFMaxIndex = num_levels - 2; CFMaxIndex >= 0; l++, CFMaxIndex--) {
     PetscInt m    = hypre_IntArraySize(CF_marker_array[CFMaxIndex]);
