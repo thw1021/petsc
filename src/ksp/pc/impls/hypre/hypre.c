@@ -152,7 +152,7 @@ typedef struct {
 */
 static PetscErrorCode PCGetCoarseOperators_BoomerAMG(PC pc, PetscInt *nlevels, Mat *operators[])
 {
-  PC_HYPRE            *jac  = (PC_HYPRE *)pc->data;
+  PC_HYPRE            *jac = (PC_HYPRE *)pc->data;
   PetscBool            same;
   PetscInt             num_levels, l;
   Mat                 *mattmp;
@@ -181,7 +181,7 @@ static PetscErrorCode PCGetCoarseOperators_BoomerAMG(PC pc, PetscInt *nlevels, M
 */
 static PetscErrorCode PCGetInterpolations_BoomerAMG(PC pc, PetscInt *nlevels, Mat *interpolations[])
 {
-  PC_HYPRE            *jac  = (PC_HYPRE *)pc->data;
+  PC_HYPRE            *jac = (PC_HYPRE *)pc->data;
   PetscBool            same;
   PetscInt             num_levels, l;
   Mat                 *mattmp;
@@ -208,7 +208,7 @@ static PetscErrorCode PCGetInterpolations_BoomerAMG(PC pc, PetscInt *nlevels, Ma
 */
 static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level[], PetscBT *CFMarkers[])
 {
-  PC_HYPRE        *jac  = (PC_HYPRE *)pc->data;
+  PC_HYPRE        *jac = (PC_HYPRE *)pc->data;
   PetscBool        same;
   PetscInt         num_levels;
   PetscInt        *n_per_temp;
