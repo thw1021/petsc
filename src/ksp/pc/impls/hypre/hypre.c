@@ -2520,8 +2520,8 @@ PetscErrorCode PCHYPRESetType(PC pc, const char name[])
 . pc - the preconditioner context
 
   Output Parameters:
-+ n_per_level - the number of nodes per level (size of `num_levels` -1)
-- CFMarkers   - the Coarse/Fine boolean arrays (size of `num_levels`-1)
++ n_per_level - the number of nodes per level (size of `num_levels` - 1)
+- CFMarkers   - the Coarse/Fine Boolean arrays (size of `num_levels` - 1)
 
   Note:
   Caller is responsible for memory management of `n_per_level` and `CFMarkers` pointers. That is they should free them with `PetscFree()` when no longer needed.
