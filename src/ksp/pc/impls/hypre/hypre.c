@@ -153,7 +153,7 @@ typedef struct {
 static PetscErrorCode PCGetCoarseOperators_BoomerAMG(PC pc, PetscInt *nlevels, Mat *operators[])
 {
   PC_HYPRE            *jac  = (PC_HYPRE *)pc->data;
-  PetscBool            same = PETSC_FALSE;
+  PetscBool            same;
   PetscInt             num_levels, l;
   Mat                 *mattmp;
   hypre_ParCSRMatrix **A_array;
@@ -182,7 +182,7 @@ static PetscErrorCode PCGetCoarseOperators_BoomerAMG(PC pc, PetscInt *nlevels, M
 static PetscErrorCode PCGetInterpolations_BoomerAMG(PC pc, PetscInt *nlevels, Mat *interpolations[])
 {
   PC_HYPRE            *jac  = (PC_HYPRE *)pc->data;
-  PetscBool            same = PETSC_FALSE;
+  PetscBool            same;
   PetscInt             num_levels, l;
   Mat                 *mattmp;
   hypre_ParCSRMatrix **P_array;
@@ -209,7 +209,7 @@ static PetscErrorCode PCGetInterpolations_BoomerAMG(PC pc, PetscInt *nlevels, Ma
 static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level[], PetscBT *CFMarkers[])
 {
   PC_HYPRE        *jac  = (PC_HYPRE *)pc->data;
-  PetscBool        same = PETSC_FALSE;
+  PetscBool        same;
   PetscInt         num_levels;
   PetscInt        *n_per_temp;
   PetscBT         *markertmp;
@@ -219,7 +219,8 @@ static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level
   PetscCall(PetscStrcmp(jac->hypre_type, "boomeramg", &same));
   PetscCheck(same, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_NOTSAMETYPE, "Hypre type is not BoomerAMG");
   num_levels = hypre_ParAMGDataNumLevels((hypre_ParAMGData *)jac->hsolver);
-  PetscCall(PetscMalloc2(num_levels, &markertmp, num_levels, &n_per_temp));
+  PetscCall(PetscMalloc1(num_levels, &n_per_temp));
+  PetscCall(PetscMalloc1(num_levels, &markertmp));
   CF_marker_array = hypre_ParAMGDataCFMarkerArray((hypre_ParAMGData *)jac->hsolver);
   for (PetscInt l = 0, CFMaxIndex = num_levels - 2; CFMaxIndex >= 0; l++, CFMaxIndex--) {
     PetscInt m    = hypre_IntArraySize(CF_marker_array[CFMaxIndex]);

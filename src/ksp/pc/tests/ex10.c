@@ -109,7 +109,8 @@ PetscErrorCode DataCompDestroy(DataCompression data_comp)
     PetscCall(PetscBTDestroy(&data_comp->CFMarkers[i]));
   }
   PetscCall(PetscFree(data_comp->ProlongationOps));
-  PetscCall(PetscFree2(data_comp->CFMarkers, data_comp->n_per_level));
+  PetscCall(PetscFree(data_comp->n_per_level));
+  PetscCall(PetscFree(data_comp->CFMarkers));
   PetscCall(PetscFree(data_comp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
