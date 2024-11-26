@@ -210,7 +210,7 @@ static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level
 {
   PC_HYPRE        *jac = (PC_HYPRE *)pc->data;
   PetscBool        same;
-  PetscInt         num_levels;
+  PetscInt         num_levels, m, coarse_nodes;
   PetscInt        *n_per_temp;
   PetscBT         *markertmp;
   hypre_IntArray **CF_marker_array;
@@ -220,18 +220,23 @@ static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level
   PetscCheck(same, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_NOTSAMETYPE, "Hypre type is not BoomerAMG");
   num_levels = hypre_ParAMGDataNumLevels((hypre_ParAMGData *)jac->hsolver);
   PetscCall(PetscMalloc1(num_levels, &n_per_temp));
-  PetscCall(PetscMalloc1(num_levels, &markertmp));
+  PetscCall(PetscMalloc1(num_levels - 1, &markertmp));
   CF_marker_array = hypre_ParAMGDataCFMarkerArray((hypre_ParAMGData *)jac->hsolver);
   for (PetscInt l = 0, CFMaxIndex = num_levels - 2; CFMaxIndex >= 0; l++, CFMaxIndex--) {
-    PetscInt m    = hypre_IntArraySize(CF_marker_array[CFMaxIndex]);
-    n_per_temp[l] = m;
+    m            = hypre_IntArraySize(CF_marker_array[CFMaxIndex]);
+    coarse_nodes = 0;
     PetscCall(PetscBTCreate(m, &markertmp[l]));
     for (PetscInt k = 0; k < m; k++) {
-      if (hypre_IntArrayDataI(CF_marker_array[CFMaxIndex], k) > 0) PetscCall(PetscBTSet(markertmp[l], k));
+      if (hypre_IntArrayDataI(CF_marker_array[CFMaxIndex], k) > 0) {
+        PetscCall(PetscBTSet(markertmp[l], k));
+        coarse_nodes++;
+      }
     }
+    n_per_temp[l] = coarse_nodes;
   }
-  *n_per_level = n_per_temp;
-  *CFMarkers   = markertmp;
+  n_per_temp[num_levels - 1] = m;
+  *n_per_level               = n_per_temp;
+  *CFMarkers                 = markertmp;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2520,7 +2525,7 @@ PetscErrorCode PCHYPRESetType(PC pc, const char name[])
 . pc - the preconditioner context
 
   Output Parameters:
-+ n_per_level - the number of nodes per level (size of `num_levels` - 1)
++ n_per_level - the number of nodes per level (size of `num_levels`)
 - CFMarkers   - the Coarse/Fine Boolean arrays (size of `num_levels` - 1)
 
   Note:

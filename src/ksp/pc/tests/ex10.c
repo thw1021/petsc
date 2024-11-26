@@ -17,7 +17,7 @@ PetscErrorCode DataCompDestroy(DataCompression);
 
 int main(int Argc, char **Args)
 {
-  PetscInt        n_nodes = 9;
+  PetscInt        n_nodes = 33;
   Vec             x, b;
   PC              pcHypre;
   DataCompression data_comp;
@@ -76,6 +76,9 @@ PetscErrorCode DataCompExportMats(DataCompression data_comp)
 {
   PetscFunctionBeginUser;
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Num levels: %" PetscInt_FMT "\n", data_comp->num_levels));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, " -- Nodes per level --\n"));
+  for (PetscInt i = 0; i < data_comp->num_levels; i++) { PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Level %" PetscInt_FMT ": %" PetscInt_FMT "\n", i, data_comp->n_per_level[i])); }
+
   for (PetscInt i = 0; i < data_comp->num_levels - 1; i++) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Prolongation Operator - Level %" PetscInt_FMT "\n", i));
     PetscCall(PetscObjectSetName((PetscObject)data_comp->ProlongationOps[i], "P"));
@@ -83,9 +86,10 @@ PetscErrorCode DataCompExportMats(DataCompression data_comp)
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
   }
 
+  //for (PetscInt i = 0; i < data_comp->num_levels - 1; i++) {
   for (PetscInt i = 0; i < data_comp->num_levels - 1; i++) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Coarse/Fine splitting - Level %" PetscInt_FMT "\n", i));
-    PetscCall(PetscBTView(data_comp->n_per_level[i], data_comp->CFMarkers[i], PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Coarse/Fine splitting - Level %" PetscInt_FMT "\n", i + 1));
+    PetscCall(PetscBTView(data_comp->n_per_level[i + 1], data_comp->CFMarkers[i], PETSC_VIEWER_STDOUT_WORLD));
   }
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Stiffness matrix, sparse format:\n"));
   PetscCall(MatViewFromOptions(data_comp->stiff, NULL, "-mat_view_stiff"));
