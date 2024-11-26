@@ -85,7 +85,7 @@ or recompiling the application code.
 Common Object Header
 --------------------
 
-All PETSc/PETSc objects have the following common header structures
+All PETSc objects (derived off the base class ``PetscObject``) have the following common header structures
 defined in
 `include/petsc/private/petscimpl.h <../../include/petsc/private/petscimpl.h.html>`__:
 
@@ -242,36 +242,34 @@ The function pointers are not called directly; rather you should call
 ``PetscObjectFunctionName()``, where ``FunctionName`` is one of the
 functions listed below with the first letter of each word capitalized.
 
-``getcomm(PetscObject,MPI_Comm*)`` obtains the MPI communicator
+``PetscObjectGetComm()`` calls the ``getcomm(PetscObject,MPI_Comm*)`` function point which obtains the MPI communicator
 associated with this object.
 
-``view(PetscObject,PetscViewer)`` allows you to store or visualize the
-data inside an object. If the Viewer is NULL, then it should cause the
-object to print information on the object to textttstdout.
+``PetscObjectGetComm()`` calls the ``view(PetscObject,PetscViewer)`` function point which allows you to store or visualize the
+data inside an object. If the ``PetscViewer`` is ``NULL``, then it should cause the
+object to print information on the object to ``stdout``.
 
-``destroy(PetscObject)`` causes the reference count of the object to be
+``PetscObjectDestroy()`` calls the  ``destroy(PetscObject)`` function pointer which causes the reference count of the object to be
 decreased by one or the object to be destroyed and all memory used by
 the object to be freed when the reference count drops to zero. If the
-object has any other objects composed with it, they are each sent a
-``destroy()``; that is, the ``destroy()`` function is called on them
-also.
+object has any other objects composed with it, the ``PetscObjectDestroy()`` function is called on them.
 
-``compose(PetscObject,const char *name,PetscObject)`` associates the
+``PetscObjectCompose()`` calls the ``compose(PetscObject,const char *name,PetscObject)`` function pointer  which associates the
 second object with the first object and increases the reference count of
 the second object. If an object with the same name was previously
 composed, that object is dereferenced and replaced with the new object.
-If the second object is NULL and an object with the same name has
-already been composed, that object is dereferenced (the ``destroy()``
+If the second object is ``NULL`` and an object with the same name has
+already been composed, that object is dereferenced (the ``PetscObjectDestroy()``
 function is called on it, and that object is removed from the first
 object). This is a way to remove, by name, an object that was previously
 composed.
 
-``query(PetscObject,const char *name,PetscObject*)`` retrieves an object
+``PetscObjectQuery()`` calls the ``query(PetscObject,const char *name,PetscObject*)`` function pointer which retrieves an object
 that was previously composed with the first object via
-``PetscObjectCompose()``. It retrieves a NULL if no object with that
+``PetscObjectCompose()``. It retrieves a ``NULL`` if no object with that
 name was previously composed.
 
-``composefunction(PetscObject,const char *name,void *func)`` associates
+``PetscObjectComposeFunction()`` calls the ``composefunction(PetscObject,const char *name,void *func)`` function pointer which associates
 a function pointer with an object. If the object already had a composed
 function with the same name, the old one is replaced. If ``func`` is
 ``NULL``, the existing function is removed from the object. The string
@@ -279,19 +277,20 @@ function with the same name, the old one is replaced. If ``func`` is
 
 For example, ``fname`` may be ``PCCreate_LU``.
 
-``queryfunction(PetscObject,const char *name,void **func)`` retrieves a
+``PetscObjectQueryFunction()`` calls the ```queryfunction(PetscObject,const char *name,void **func)`` function pointer which retrieves a
 function pointer that was associated with the object via
 ``PetscObjectComposeFunction()``. If dynamic libraries are used, the
 function is loaded into memory at this time (if it has not been
-previously loaded), not when the ``composefunction()`` routine was
+previously loaded), not when the ``PetscObjectComposeFunction()`` routine was
 called.
 
-Since the object composition allows one to compose PETSc objects *only*
-with PETSc objects rather than any arbitrary pointer, PETSc provides the
+Since the object composition allows one to compose PETSc objects
+with PETSc objects PETSc provides the
 convenience object ``PetscContainer``, created with the routine
 ``PetscContainerCreate(MPI_Comm,PetscContainer*)``, to allow wrapping any
 kind of data into a PETSc object that can then be composed with a PETSc
-object.
+object. One can also use ``PetscObjectContainerCompose()`` and ``PetscObjectContainerQuery()`` to compose
+arbitrary pointers with a PETSc object.
 
 Object Function Implementation
 ------------------------------

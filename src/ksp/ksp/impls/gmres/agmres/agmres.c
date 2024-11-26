@@ -577,13 +577,11 @@ static PetscErrorCode KSPSetFromOptions_AGMRES(KSP ksp, PetscOptionItems *PetscO
 }
 
 /*MC
-  KSPAGMRES - Newton basis GMRES implementation with adaptive augmented eigenvectors
+  KSPAGMRES - a Newton basis GMRES implementation with adaptive augmented eigenvectors.
 
   The techniques used are best described in {cite}`wakam2011parallelism`. The contribution of this work is that it combines many of the previous work to reduce the amount
   of MPI messages and improve the robustness of the global approach by using deflation techniques. Please see {cite}`wakam2011parallelism` for numerical experiments and {cite}`wakam2013memory`
-  for a description of these problems. There are  many ongoing work that aim at avoiding (or minimizing) the communication in Krylov subspace methods.
-  This code can be used as an experimental framework to combine several techniques in the particular case of GMRES.
-  For instance, the computation of the shifts can be improved with techniques described in {cite}`philippe2012generation`. The orthogonalization technique can be replaced by TSQR {cite}`demmel2012communication`.
+  for a description of these problems.
   The generation of the basis can be done using s-steps approaches{cite}`mohiyuddin2009minimizing`. See also {cite}`sidje1997alternatives` and {cite}`bai1994newton`.
 
   Options Database Keys:
@@ -598,8 +596,11 @@ static PetscErrorCode KSPSetFromOptions_AGMRES(KSP ksp, PetscOptionItems *PetscO
 
   Level: intermediate
 
-  Note:
+  Notes:
   Left and right preconditioning are supported, but not symmetric preconditioning. Complex arithmetic is not supported
+
+  This code can be used as an experimental framework to combine several techniques in the particular case of GMRES.
+  For instance, the computation of the shifts can be improved with techniques described in {cite}`philippe2012generation`. The orthogonalization technique can be replaced by TSQR {cite}`demmel2012communication`.
 
   Developer Note:
   This object is subclassed off of `KSPDGMRES`, see the source code in src/ksp/ksp/impls/gmres for comments on the structure of the code
