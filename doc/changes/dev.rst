@@ -40,7 +40,8 @@ Changes: Development
 .. rubric:: MatCoarsen:
 
 .. rubric:: PC: 
-- Added ''PCHYPREGetCFMarkers_BoomerAMG()''. Provides ability to extract Coarse/Fine splittings created by BoomerAMG preconditioners. Similar to the PCGetInterpolations_BoomerAMG and PCGetCoarseOperators_BoomerAMG functions.
+
+- Add `PCHYPREGetCFMarkers()` to extract Coarse/Fine splittings created by BoomerAMG from `PCHYPRE`, similar to the `PCGetInterpolations()` and `PCGetCoarseOperators()`
 
 .. rubric:: KSP:
 
