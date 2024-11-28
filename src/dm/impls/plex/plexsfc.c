@@ -363,6 +363,10 @@ static PetscErrorCode DMPlexOrientFieldPointIndex(DM dm, PetscSection section, P
   PetscArraycpy(copy, &array[off], dof);
 
   PetscCall(PetscSectionGetFieldPointSyms(section, field, 1, point_ornt, &perms, NULL));
+  if (!perms) { // section may not have symmetries, such as Q2 finite elements
+    PetscCall(DMRestoreWorkArray(dm, dof, MPIU_INT, &copy));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   for (PetscInt i = 0; i < dof; i++) {
     if (perms[0]) array[off + perms[0][i]] = copy[i];
   }
@@ -388,6 +392,10 @@ static PetscErrorCode DMPlexOrientFieldPointVec(DM dm, PetscSection section, Pet
   PetscArraycpy(copy, &V_arr[off], dof);
 
   PetscCall(PetscSectionGetFieldPointSyms(section, field, 1, point_ornt, &perms, &rots));
+  if (!perms) { // section may not have symmetries, such as Q2 finite elements
+    PetscCall(DMRestoreWorkArray(dm, dof, MPIU_SCALAR, &copy));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   for (PetscInt i = 0; i < dof; i++) {
     if (perms[0]) V_arr[off + perms[0][i]] = copy[i];
     if (rots[0]) V_arr[off + perms[0][i]] *= rots[0][i];
