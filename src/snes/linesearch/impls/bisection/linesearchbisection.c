@@ -7,8 +7,8 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
   Vec         X, F, Y, W, G;
   SNES        snes;
   PetscReal   ynorm;
-  PetscReal   lambda_left, lambda, lambda_right, lambda_old, dlambda;
-  PetscScalar fty_left, fty, fty_initial, fty_rel;
+  PetscReal   lambda_left, lambda, lambda_right, lambda_old;
+  PetscReal   fty_left, fty, fty_initial;
   PetscViewer monitor;
   PetscReal   rtol, atol, ltol;
   PetscInt    it, max_its;
@@ -31,8 +31,7 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
   lambda_right = lambda;
 
   /* compute fty at left end of interval */
-  PetscCall(VecDot(F, Y, &fty_left));
-  fty_left    = fty_left / ynorm;
+  PetscCall(VecDotRealPart(F, Y, &fty_left));
   fty_initial = fty_left;
 
   /* compute fty at right end of interval (initial lambda) */
@@ -45,11 +44,10 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
     PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_FUNCTION));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscCall(VecDot(G, Y, &fty));
-  fty = fty / ynorm;
+  PetscCall(VecDotRealPart(G, Y, &fty));
 
   /* check whether sign changes in interval */
-  if (!PetscIsInfOrNanScalar(fty) && PetscRealPart(fty_left * fty) > 0) {
+  if (!PetscIsInfOrNanReal(fty) && (fty_left * fty) > 0.0) {
     /* no change of sign: accept full step */
     if (monitor) {
       PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
@@ -59,12 +57,11 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
   } else {
     /* change of sign: iteratively bisect interval */
     lambda_old = 0.0;
-    dlambda    = 0.0;
     it         = 0;
 
     while (PETSC_TRUE) {
       /* check for NaN or Inf */
-      if (PetscIsInfOrNanScalar(fty)) {
+      if (PetscIsInfOrNanReal(fty)) {
         if (monitor) {
           PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
           PetscCall(PetscViewerASCIIPrintf(monitor, "      Line search fty is NaN or Inf!\n"));
@@ -76,21 +73,20 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
       }
 
       /* check absolute tolerance */
-      if (PetscAbsScalar(fty) <= atol) {
+      if (PetscAbsReal(fty) <= atol * ynorm) {
         if (monitor) {
           PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
-          PetscCall(PetscViewerASCIIPrintf(monitor, "      Line search: fty = %g <= atol = %g\n", (double)PetscAbsScalar(fty), (double)atol));
+          PetscCall(PetscViewerASCIIPrintf(monitor, "      Line search: abs(fty)/||y|| = %g <= atol = %g\n", (double)PetscAbsReal(fty / ynorm), (double)(atol)));
           PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
         }
         break;
       }
 
       /* check relative tolerance */
-      fty_rel = fty / fty_initial;
-      if (PetscAbsScalar(fty_rel) <= rtol) {
+      if (PetscAbsReal(fty / fty_initial) <= rtol) {
         if (monitor) {
           PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
-          PetscCall(PetscViewerASCIIPrintf(monitor, "      Line search: fty/fty_initial = %g <= rtol  = %g\n", (double)PetscAbsScalar(fty_rel), (double)rtol));
+          PetscCall(PetscViewerASCIIPrintf(monitor, "      Line search: abs(fty/fty_initial) = %g <= rtol  = %g\n", (double)PetscAbsReal(fty / fty_initial), (double)rtol));
           PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
         }
         break;
@@ -109,11 +105,10 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
       }
 
       /* check change of lambda tolerance */
-      dlambda = PetscAbsReal(lambda - lambda_old);
-      if (dlambda < ltol) {
+      if (PetscAbsReal(lambda - lambda_old) < ltol) {
         if (monitor) {
           PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
-          PetscCall(PetscViewerASCIIPrintf(monitor, "      Line search: dlambda = %g < ltol = %g\n", (double)dlambda, (double)ltol));
+          PetscCall(PetscViewerASCIIPrintf(monitor, "      Line search: abs(dlambda) = %g < ltol = %g\n", (double)PetscAbsReal(lambda - lambda_old), (double)ltol));
           PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
         }
         break;
@@ -121,7 +116,7 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
 
       /* determine direction of bisection (not necessary for 0th iteration) */
       if (it > 0) {
-        if (PetscRealPart(fty * fty_left) <= 0) {
+        if (fty * fty_left <= 0.0) {
           lambda_right = lambda;
         } else {
           lambda_left = lambda;
@@ -144,13 +139,12 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
         PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_FUNCTION));
         PetscFunctionReturn(PETSC_SUCCESS);
       }
-      PetscCall(VecDot(G, Y, &fty));
-      fty = fty / ynorm;
+      PetscCall(VecDotRealPart(G, Y, &fty));
 
       /* print iteration information */
       if (monitor) {
         PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
-        PetscCall(PetscViewerASCIIPrintf(monitor, "      %3" PetscInt_FMT " Line search: fty = %g, lambda = %g\n", it, (double)fty, (double)lambda));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "      %3" PetscInt_FMT " Line search: fty/||y|| = %g, lambda = %g\n", it, (double)(fty / ynorm), (double)lambda));
         PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
       }
 
