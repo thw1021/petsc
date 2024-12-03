@@ -49,7 +49,7 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
   fty = fty / ynorm;
 
   /* check whether sign changes in interval */
-  if (!PetscIsInfOrNanReal(fty) && fty_left * fty > 0) {
+  if (!PetscIsInfOrNanReal(fty) && PetscRealPart(fty_left * fty) > 0) {
     /* no change of sign: accept full step */
     if (monitor) {
       PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
@@ -121,7 +121,7 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
 
       /* determine direction of bisection (not necessary for 0th iteration) */
       if (it > 0) {
-        if (fty * fty_left <= 0) {
+        if (PetscRealPart(fty * fty_left) <= 0) {
           lambda_right = lambda;
         } else {
           lambda_left = lambda;
