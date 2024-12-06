@@ -149,8 +149,37 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Native(DM dm, PetscInt height
   }
   if (use_isoPointSF) PetscCall(DMGetPointSF(dm, &sfPoint));
   else {
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "Using Isoperiodic PointSF in %s\n", __func__));
     PetscCall(DMGetIsoperiodicPointSF_Internal(dm, &sfPoint));
+
+    // PetscSF            sfPoint_non_local;
+    // PetscInt           nroots, nleaves, nleaves_non_local = 0;
+    // const PetscInt    *locals;
+    // const PetscSFNode *remotes;
+    // PetscInt          *locals_non_local;
+    // PetscSFNode       *remotes_non_local;
+    // PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "Using Isoperiodic PointSF in %s\n", __func__));
+    // PetscCall(DMGetIsoperiodicPointSF_Internal(dm, &sfPoint));
+    // PetscCall(PetscObjectSetName((PetscObject)sfPoint, "IsoSFPoint"));
+    // PetscCall(PetscSFView(sfPoint, NULL));
+    // PetscCall(PetscSFDuplicate(sfPoint, PETSCSF_DUPLICATE_RANKS, &sfPoint_non_local));
+    // PetscCall(PetscSFGetGraph(sfPoint, &nroots, &nleaves, &locals, &remotes));
+    //
+    // PetscCall(PetscMalloc1(nleaves, &remotes_non_local));
+    // PetscCall(PetscMalloc1(nleaves, &locals_non_local));
+    // for (l = 0; l < nleaves; l++) {
+    //   PetscMPIInt irank;
+    //   PetscCall(PetscMPIIntCast(remotes[l].rank, &irank));
+    //   if (irank != rank) {
+    //     remotes_non_local[nleaves_non_local] = remotes[l];
+    //     locals_non_local[nleaves_non_local] = locals[l];
+    //     nleaves_non_local++;
+    //   }
+    // }
+    //
+    // PetscCall(PetscSFSetGraph(sfPoint_non_local, nroots, nleaves_non_local, locals_non_local, PETSC_OWN_POINTER, remotes_non_local, PETSC_OWN_POINTER));
+    // sfPoint = sfPoint_non_local;
+    // PetscCall(PetscObjectSetName((PetscObject)sfPoint, "IsoSFPoint non-local"));
+    // PetscCall(PetscSFView(sfPoint, NULL));
   }
   PetscCall(DMPlexGetHeightStratum(dm, height, &pStart, &pEnd));
   /* Build adjacency graph via a section/segbuffer */
@@ -1283,8 +1312,36 @@ PetscErrorCode DMPlexPartitionLabelInvert(DM dm, DMLabel rootLabel, PetscSF proc
   PetscCallMPI(MPI_Comm_size(comm, &size));
   if (use_isoPointSF) PetscCall(DMGetPointSF(dm, &sfPoint));
   else {
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "Using Isoperiodic PointSF in %s\n", __func__));
     PetscCall(DMGetIsoperiodicPointSF_Internal(dm, &sfPoint));
+    // PetscSF            sfPoint_non_local;
+    // PetscInt           nroots, nleaves, nleaves_non_local = 0;
+    // const PetscInt    *locals;
+    // const PetscSFNode *remotes;
+    // PetscInt          *locals_non_local;
+    // PetscSFNode       *remotes_non_local;
+    // PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "Using Isoperiodic PointSF in %s\n", __func__));
+    // PetscCall(DMGetIsoperiodicPointSF_Internal(dm, &sfPoint));
+    // PetscCall(PetscObjectSetName((PetscObject)sfPoint, "IsoSFPoint"));
+    // PetscCall(PetscSFView(sfPoint, NULL));
+    // PetscCall(PetscSFDuplicate(sfPoint, PETSCSF_DUPLICATE_RANKS, &sfPoint_non_local));
+    // PetscCall(PetscSFGetGraph(sfPoint, &nroots, &nleaves, &locals, &remotes));
+    //
+    // PetscCall(PetscMalloc1(nleaves, &remotes_non_local));
+    // PetscCall(PetscMalloc1(nleaves, &locals_non_local));
+    // for (l = 0; l < nleaves; l++) {
+    //   PetscMPIInt irank;
+    //   PetscCall(PetscMPIIntCast(remotes[l].rank, &irank));
+    //   if (irank != rank) {
+    //     remotes_non_local[nleaves_non_local] = remotes[l];
+    //     locals_non_local[nleaves_non_local] = locals[l];
+    //     nleaves_non_local++;
+    //   }
+    // }
+    //
+    // PetscCall(PetscSFSetGraph(sfPoint_non_local, nroots, nleaves_non_local, locals_non_local, PETSC_OWN_POINTER, remotes_non_local, PETSC_OWN_POINTER));
+    // sfPoint = sfPoint_non_local;
+    // PetscCall(PetscObjectSetName((PetscObject)sfPoint, "IsoSFPoint non-local"));
+    // PetscCall(PetscSFView(sfPoint, NULL));
   }
 
   /* Convert to (point, rank) and use actual owners */
