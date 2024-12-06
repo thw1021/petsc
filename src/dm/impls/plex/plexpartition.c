@@ -9,6 +9,8 @@ static inline PetscInt DMPlex_GlobalID(PetscInt point)
   return point >= 0 ? point : -(point + 1);
 }
 
+static const PetscBool use_isoPointSF = PETSC_FALSE;
+
 static PetscErrorCode DMPlexCreatePartitionerGraph_Overlap(DM dm, PetscInt height, PetscInt *numVertices, PetscInt **offsets, PetscInt **adjacency, IS *globalNumbering)
 {
   DM              ovdm;
@@ -50,7 +52,11 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Overlap(DM dm, PetscInt heigh
     PetscCall(PetscObjectReference((PetscObject)dm));
     ovdm = dm;
   }
-  PetscCall(DMGetPointSF(ovdm, &sfPoint));
+  if (use_isoPointSF) PetscCall(DMGetPointSF(ovdm, &sfPoint));
+  else {
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "Using Isoperiodic PointSF in %s\n", __func__));
+    PetscCall(DMGetIsoperiodicPointSF_Internal(ovdm, &sfPoint));
+  }
   PetscCall(DMPlexGetHeightStratum(ovdm, height, &cStart, &cEnd));
   PetscCall(DMPlexCreateNumbering_Plex(ovdm, cStart, cEnd, 0, NULL, sfPoint, &cellNumbering));
   if (globalNumbering) {
@@ -141,7 +147,11 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Native(DM dm, PetscInt height
     if (rank) PetscCheck(!*numVertices, PETSC_COMM_SELF, PETSC_ERR_SUP, "Parallel partitioning of uninterpolated meshes not supported");
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscCall(DMGetPointSF(dm, &sfPoint));
+  if (use_isoPointSF) PetscCall(DMGetPointSF(dm, &sfPoint));
+  else {
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "Using Isoperiodic PointSF in %s\n", __func__));
+    PetscCall(DMGetIsoperiodicPointSF_Internal(dm, &sfPoint));
+  }
   PetscCall(DMPlexGetHeightStratum(dm, height, &pStart, &pEnd));
   /* Build adjacency graph via a section/segbuffer */
   PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &section));
@@ -345,7 +355,11 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_ViaMat(DM dm, PetscInt height
   /* Interpolated and parallel case */
 
   /* numbering */
-  PetscCall(DMGetPointSF(dm, &sfPoint));
+  if (use_isoPointSF) PetscCall(DMGetPointSF(dm, &sfPoint));
+  else {
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "Using Isoperiodic PointSF in %s\n", __func__));
+    PetscCall(DMGetIsoperiodicPointSF_Internal(dm, &sfPoint));
+  }
   PetscCall(DMPlexGetHeightStratum(dm, height, &cStart, &cEnd));
   PetscCall(DMPlexGetHeightStratum(dm, height + 1, &fStart, &fEnd));
   PetscCall(DMPlexCreateNumbering_Plex(dm, cStart, cEnd, 0, &N, sfPoint, &cis));
@@ -1192,7 +1206,11 @@ PetscErrorCode DMPlexPartitionLabelPropagate(DM dm, DMLabel label)
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  PetscCall(DMGetPointSF(dm, &sfPoint));
+  if (use_isoPointSF) PetscCall(DMGetPointSF(dm, &sfPoint));
+  else {
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "Using Isoperiodic PointSF in %s\n", __func__));
+    PetscCall(DMGetIsoperiodicPointSF_Internal(dm, &sfPoint));
+  }
   /* Pull point contributions from remote leaves into local roots */
   PetscCall(DMLabelGather(label, sfPoint, &lblLeaves));
   PetscCall(DMLabelGetValueIS(lblLeaves, &rankIS));
@@ -1263,7 +1281,11 @@ PetscErrorCode DMPlexPartitionLabelInvert(DM dm, DMLabel rootLabel, PetscSF proc
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCall(DMGetPointSF(dm, &sfPoint));
+  if (use_isoPointSF) PetscCall(DMGetPointSF(dm, &sfPoint));
+  else {
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "Using Isoperiodic PointSF in %s\n", __func__));
+    PetscCall(DMGetIsoperiodicPointSF_Internal(dm, &sfPoint));
+  }
 
   /* Convert to (point, rank) and use actual owners */
   PetscCall(PetscSectionCreate(comm, &rootSection));
@@ -1506,7 +1528,11 @@ static PetscErrorCode DMPlexRewriteSF(DM dm, PetscInt n, PetscInt *pointsToRewri
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
 
-  PetscCall(DMGetPointSF(dm, &sf));
+  if (use_isoPointSF) PetscCall(DMGetPointSF(dm, &sf));
+  else {
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "Using Isoperiodic PointSF in %s\n", __func__));
+    PetscCall(DMGetIsoperiodicPointSF_Internal(dm, &sf));
+  }
   PetscCall(PetscSFGetGraph(sf, &nroots, &nleafs, &ilocal, &iremote));
   PetscCall(PetscMalloc1(pEnd - pStart, &isLeaf));
   for (i = 0; i < pEnd - pStart; i++) isLeaf[i] = PETSC_FALSE;
@@ -1736,7 +1762,11 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
    * nonExclusivelyOwned: points that are owned by this process but seen by at least another process
    * leaf: a point that is seen by this process but owned by a different process
    */
-  PetscCall(DMGetPointSF(dm, &sf));
+  if (use_isoPointSF) PetscCall(DMGetPointSF(dm, &sf));
+  else {
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "Using Isoperiodic PointSF in %s\n", __func__));
+    PetscCall(DMGetIsoperiodicPointSF_Internal(dm, &sf));
+  }
   PetscCall(PetscSFGetGraph(sf, &nroots, &nleafs, &ilocal, &iremote));
   PetscCall(PetscMalloc1(pEnd - pStart, &isLeaf));
   PetscCall(PetscMalloc1(pEnd - pStart, &isNonExclusivelyOwned));
