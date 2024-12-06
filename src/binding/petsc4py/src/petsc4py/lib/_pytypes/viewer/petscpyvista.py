@@ -90,10 +90,13 @@ class PetscPyVista:
         for c in range(cStart, cEnd):
             celltypes[c] = VTK_TYPES[plex.getCellType(c)]
         points = np.zeros((vEnd - vStart, 3), dtype=np.float32)
+        s = plex.getCoordinateSection()
         with plex.getCoordinatesLocal().getBuffer() as coords:
             for v in range(vEnd - vStart):
-                for d in range(cdim):
-                    points[v, d] = coords[v * cdim + d]
+                dof = s.getDof(v + vStart)
+                off = s.getOffset(v + vStart)
+                for d in range(dof):
+                    points[v, d] = coords[off + d]
         return pv.UnstructuredGrid(cells, celltypes, points)
 
     def viewPlex(self, viewer, dm, scalars = None):
