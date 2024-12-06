@@ -532,21 +532,51 @@ typedef enum {
 
     Level: beginner
 
-.seealso: [](sec_pc), `PC`, `PCGetFailedReason()`, `PCSetUp()`
+.seealso: [](sec_pc), `PC`, `PCGetFailedReason()`, `PCSetFailedReason()`, `PCReduceFailedReason()`, `PCFailedReasonPossibility`, `PCSetUp()`
 E*/
 typedef enum {
-  PC_SETUP_ERROR              = -1,
-  PC_NOERROR                  = 0,
-  PC_FACTOR_STRUCT_ZEROPIVOT  = 1,
-  PC_FACTOR_NUMERIC_ZEROPIVOT = 2,
-  PC_FACTOR_OUTMEMORY         = 3,
-  PC_FACTOR_OTHER             = 4,
-  PC_INCONSISTENT_RHS         = 5,
-  PC_SUBPC_ERROR              = 6
+  PC_NOERROR,
+  PC_SETUP_ERROR,
+  PC_FACTOR_STRUCT_ZEROPIVOT,
+  PC_FACTOR_NUMERIC_ZEROPIVOT,
+  PC_FACTOR_OUTMEMORY,
+  PC_FACTOR_OTHER,
+  PC_INCONSISTENT_RHS,
+  PC_SUBPC_ERROR
 } PCFailedReason;
 
 /*E
-    PCGAMGLayoutType - Layout for reduced grids for `PCType` `PCGAMG`
+    PCFailedReasonPossibility - indicates the type of `PC` failure that the given `PC` can produce
+
+    Level: advanced
+
+    Values:
++   `PC_FAILED_REASON_POSSIBILITY_NONE`          - `PCSetUp()` and `PCApply()` will never generate a `PCFailedReason`, for example `PCJACOBI`
+.   `PC_FAILED_REASON_POSSIBILITY_NONCOLLECTIVE` - Some MPI processes may generate a `PCFailedReason` and others may not
+-   `PC_FAILED_REASON_POSSIBILITY_COLLECTIVE`    - On any failure all MPI processes will generate the same `PCFailedReason`
+
+    Note:
+    This value allows the calling routine (such as `KSPSolve_Preonly()` to determine if it can skip the `MPI_Allreduce()` that
+    shares the failure with all MPI processes that share the `PC`.
+
+    Developer Notes:
+    Currently this functionality has limited utility since it only saves a reduction in `KSPSolve_Preonly()` with `KSPJACOBI`
+
+    Some preconditioners may fail on construction, `PCSetUp()` but never on `PCApply()`. However, to reduce unneeded reductions the error condition
+    is not propogated to all MPI processes until the first `PCApply()`. In this case, it may be possible to enhance the error handling so that the
+    flag in the `PC` is changed to `PC_FAILED_REASON_POSSIBILITY_NONE` after the first `PCApply()`, care must be taken when the preconditioner
+    is rebuilt that the flag is appropriately reset.
+
+.seealso: [](sec_pc), `PC`, `PCGetFailedReason()`, `PCSetFailedReason()`, `PCReduceFailedReason()`, `PCFailedReason`
+E*/
+typedef enum {
+  PC_FAILED_REASON_POSSIBILITY_NONE,
+  PC_FAILED_REASON_POSSIBILITY_NONCOLLECTIVE,
+  PC_FAILED_REASON_POSSIBILITY_COLLECTIVE
+} PCFailedReasonPossibility;
+
+/*E
+    PCGAMGLayoutType - Layout for reduced grids
 
     Level: intermediate
 

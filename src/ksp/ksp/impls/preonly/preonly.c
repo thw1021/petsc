@@ -1,4 +1,5 @@
 #include <petsc/private/kspimpl.h>
+#include <petsc/private/pcimpl.h>
 
 static PetscErrorCode KSPSetUp_PREONLY(KSP ksp)
 {
@@ -24,17 +25,28 @@ static PetscErrorCode KSPSolve_PREONLY(KSP ksp)
     PetscCall(VecNorm(ksp->vec_rhs, NORM_2, &norm));
     PetscCall(KSPMonitor(ksp, 0, norm));
   }
+
   PetscCall(KSP_PCApply(ksp, ksp->vec_rhs, ksp->vec_sol));
-  PetscCall(PCReduceFailedReason(ksp->pc));
+  ksp->its    = 1;
+  ksp->reason = KSP_CONVERGED_ITS;
+
   PetscCall(PCGetFailedReason(ksp->pc, &pcreason));
-  PetscCall(VecFlag(ksp->vec_sol, pcreason));
-  if (pcreason) {
-    PetscCheck(!ksp->errorifnotconverged, PetscObjectComm((PetscObject)ksp), PETSC_ERR_NOT_CONVERGED, "KSPSolve has not converged with PCFailedReason %s", PCFailedReasons[pcreason]);
-    ksp->reason = KSP_DIVERGED_PC_FAILED;
-  } else {
-    ksp->its    = 1;
-    ksp->reason = KSP_CONVERGED_ITS;
+  PetscCheck(!pcreason || !ksp->errorifnotconverged, PETSC_COMM_SELF, PETSC_ERR_NOT_CONVERGED, "KSPSolve has not converged with PCFailedReason %s", PCFailedReasons[pcreason]);
+
+  /*
+     There is no collective operation to piggy-back a local PC error condition to all the MPI processes
+
+     If the PC has registered itself as PC_FAILED_REASON_POSSIBILITY_NONE or PC_FAILED_REASON_POSSIBILITY_COLLECTIVE then we
+     can skip the reduction because either there is no error on any MPI process or there is an error on all MPI processes
+
+     Initially only PCJACOBI sets PC_FAILED_REASON_POSSIBILITY_NONE
+  */
+  if (ksp->nestlevel == 0 && ksp->pc->failedreasonpossibility == PC_FAILED_REASON_POSSIBILITY_NONCOLLECTIVE) {
+    PetscCall(PCReduceFailedReason(ksp->pc)); /* collective operation to shared possible failure */
+    PetscCall(PCGetFailedReason(ksp->pc, &pcreason));
+    if (pcreason) ksp->reason = KSP_DIVERGED_PC_FAILED; /* now all KSP processes will know the PC/KSP failed */
   }
+
   if (ksp->numbermonitors) {
     Vec v;
     Mat A;
