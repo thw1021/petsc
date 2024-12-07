@@ -9,7 +9,7 @@ if __name__ == '__main__':
   sys.path.insert(0, os.path.abspath('config'))
   import configure
   configure_options = [
-    '--package-prefix-hash='+petsc_hash_pkgs,
+    #'--package-prefix-hash='+petsc_hash_pkgs,
     '--with-make-test-np=3',
     'COPTFLAGS=-g -O0',
     'FOPTFLAGS=-g -O0',
@@ -48,6 +48,8 @@ if __name__ == '__main__':
     '--download-zfp',
     '--download-butterflypack',
     '--download-strumpack',
+    '--download-slate',
+    '--with-openmp',
     '--with-strict-petscerrorcode',
   ]
 
