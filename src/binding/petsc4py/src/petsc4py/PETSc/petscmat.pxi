@@ -222,7 +222,6 @@ cdef extern from * nogil:
     PetscErrorCode MatCreateSubMatrixVirtual(PetscMat, PetscIS, PetscIS, PetscMat*)
     PetscErrorCode MatCreateRedundantMatrix(PetscMat, PetscInt, MPI_Comm, PetscMatReuse, PetscMat*)
     PetscErrorCode MatCreateNest(MPI_Comm, PetscInt, PetscIS[], PetscInt, PetscIS[], PetscMat[], PetscMat*)
-    PetscErrorCode MatCreateShell(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, void*, PetscMat*)
     PetscErrorCode MatCreateH2OpusFromMat(PetscMat, PetscInt, const PetscReal[], PetscBool, PetscReal, PetscInt, PetscInt, PetscInt, PetscReal, PetscMat*)
     PetscErrorCode MatCreateSeqAIJWithArrays(MPI_Comm, PetscInt, PetscInt, PetscInt[], PetscInt[], PetscScalar[], PetscMat*)
     PetscErrorCode MatCreateMPIAIJWithArrays(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt[], PetscInt[], PetscScalar[], PetscMat*)
