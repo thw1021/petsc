@@ -402,4 +402,17 @@ cdef api PetscDualSpace PyPetscDualSpace_Get(object arg) except ? NULL:
     retv = ob.dualspace
     return retv
 
-# ---------------------------------------------------------------------
+# -- PetscRegressor --
+
+cdef api object PyPetscRegressor_New(PetscRegressor arg):
+    cdef Regressor retv = Regressor()
+    setref(&retv.regressor, arg)
+    return retv
+
+cdef api PetscRegressor PyPetscRegressor_Get(object arg) except ? NULL:
+    cdef PetscRegressor retv = NULL
+    cdef Regressor ob = <Regressor?> arg
+    retv = ob.regressor
+    return retv
+
+#---------------------------------------------------------------------
