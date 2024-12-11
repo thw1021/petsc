@@ -38,3 +38,5 @@
 
 #include <petscts.h>
 #include <petsctao.h>
+
+#include <petscregressor.h>
