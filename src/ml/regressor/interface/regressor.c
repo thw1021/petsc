@@ -73,8 +73,7 @@ PetscErrorCode PetscRegressorCreate(MPI_Comm comm, PetscRegressor *newregressor)
   regressor->data                      = NULL;
   regressor->training                  = NULL;
   regressor->target                    = NULL;
-  regressor->regularizer_weight        = 1.0; // We go ahead and set a default weight here, but some regressor types will have a different default!
-  regressor->regularizer_weight_is_set = PETSC_FALSE;
+  PetscObjectParameterSetDefault(regressor, regularizer_weight, 1.0); // Default to regularizer weight of 1.0, usually the default in SciKit-learn
 
   *newregressor = regressor;
   PetscFunctionReturn(0);
@@ -364,7 +363,6 @@ PetscErrorCode PetscRegressorSetRegularizerWeight(PetscRegressor regressor, Pets
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   regressor->regularizer_weight        = weight;
-  regressor->regularizer_weight_is_set = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

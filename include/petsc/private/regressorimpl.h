@@ -29,8 +29,7 @@ struct _p_PetscRegressor {
   Mat       training;    /* Matrix holding the training data set */
   Vec       target;      /* Targets for training data (response variables or labels) */
   Tao       tao;         /* Tao optimizer used by many regressor implementations */
-  PetscReal regularizer_weight;
-  PetscBool regularizer_weight_is_set; /* Indicates that the value in 'regularizer_weight' has been explicitly set by the user */
+  PetscObjectParameterDeclare(PetscReal, regularizer_weight);
 };
 
 PETSC_EXTERN PetscLogEvent PetscRegressor_SetUp;

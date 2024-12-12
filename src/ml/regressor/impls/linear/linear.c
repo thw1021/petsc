@@ -90,19 +90,12 @@ PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
     PetscCall(TaoSetJacobianResidualRoutine(tao, linear->X, linear->X, EvaluateJacobian, linear));
     // Set the regularization type and weight for the BRGN as linear->type dictates:
     PetscCall(PetscStrcmp(linear->type, PETSCREGRESSORLINEAROLS, &flg));
-    if (flg && !linear->use_ksp) PetscCall(TaoBRGNSetRegularizerWeight(tao, 0.0));
+    if (flg) regressor->regularizer_weight = 0.0; // OLS, by definition, uses a regularizer weight of 0
+    if (!linear->use_ksp) PetscCall(TaoBRGNSetRegularizerWeight(tao, regressor->regularizer_weight));
     PetscCall(PetscStrcmp(linear->type, PETSCREGRESSORLINEARLASSO, &flg));
-    if (flg) {
-      PetscCall(PetscOptionsSetValue(NULL, "-tao_brgn_regularization_type", "l1dict"));
-      if (regressor->regularizer_weight_is_set) PetscCall(TaoBRGNSetRegularizerWeight(tao, regressor->regularizer_weight));
-      else PetscCall(TaoBRGNSetRegularizerWeight(tao, 1.0)); // Set the default regularization weight to 1.0, the default for LASSO in SciKit-learn
-    }
+    if (flg) PetscCall(PetscOptionsSetValue(NULL, "-tao_brgn_regularization_type", "l1dict"));
     PetscCall(PetscStrcmp(linear->type, PETSCREGRESSORLINEARRIDGE, &flg));
-    if (flg) {
-      PetscCall(PetscOptionsSetValue(NULL, "-tao_brgn_regularization_type", "l2pure"));
-      if (regressor->regularizer_weight_is_set) PetscCall(TaoBRGNSetRegularizerWeight(tao, regressor->regularizer_weight));
-      else PetscCall(TaoBRGNSetRegularizerWeight(tao, 1.0)); // Set the default regularization weight to 1.0, the default for ridge regression in SciKit-learn
-    }
+    if (flg) PetscCall(PetscOptionsSetValue(NULL, "-tao_brgn_regularization_type", "l2pure"));
     PetscCall(TaoSetFromOptions(tao));
   }
   PetscFunctionReturn(0);
