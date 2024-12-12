@@ -26,6 +26,6 @@ typedef struct {
   KSP ksp;
   Mat XtX; /* Normal matrix formed from X */
 
-} PETSCREGRESSOR_LINEAR;
+} PetscRegressor_Linear;
 
 #endif

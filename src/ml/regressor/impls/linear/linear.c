@@ -6,7 +6,7 @@ static const char *PetscRegressor_Linear_Types_Table[PETSCREGRESSOR_LINEAR_NUM_T
 
 PetscErrorCode EvaluateResidual(Tao tao, Vec x, Vec f, void *ptr)
 {
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)ptr;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)ptr;
 
   PetscFunctionBegin;
   /* Evaluate f = A * x - b */
@@ -17,7 +17,7 @@ PetscErrorCode EvaluateResidual(Tao tao, Vec x, Vec f, void *ptr)
 
 PetscErrorCode EvaluateJacobian(Tao tao, Vec x, Mat J, Mat Jpre, void *ptr)
 {
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)ptr;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)ptr;
 
   PetscFunctionBegin;
   J    = linear->X;
@@ -30,7 +30,7 @@ PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
   //MPI_Comm comm;
   PetscInt               M, N;
   PetscBool              flg;
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)regressor->data;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
   KSP                    ksp;
   Tao                    tao;
 
@@ -110,7 +110,7 @@ PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
 
 PetscErrorCode PetscRegressorReset_Linear(PetscRegressor regressor)
 {
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)regressor->data;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
 
   PetscFunctionBegin;
   /* Destroy the PETSc objects associated with the linear regressor implementation. */
@@ -148,7 +148,7 @@ PetscErrorCode PetscRegressorDestroy_Linear(PetscRegressor regressor)
 /* TODO: Add companion PetscRegressorLinearGetFitIntercept(), and put it in the .seealso: */
 PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, PetscBool flg)
 {
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)regressor->data;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
 
   PetscFunctionBegin;
   linear->fit_intercept = flg;
@@ -170,7 +170,7 @@ PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, Pet
 /* TODO: Add companion PetscRegressorLinearGetUseKSP(), and put it in the .seealso: */
 PetscErrorCode PetscRegressorLinearSetUseKSP(PetscRegressor regressor, PetscBool flg)
 {
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)regressor->data;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
 
   PetscFunctionBegin;
   linear->use_ksp = flg;
@@ -181,7 +181,7 @@ PetscErrorCode PetscRegressorSetFromOptions_Linear(PetscOptionItems *PetscOption
 {
   PetscBool              set, flg = PETSC_FALSE;
   PetscInt               i;
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)regressor->data;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "PetscRegressor options for linear regressors");
@@ -221,7 +221,7 @@ PetscErrorCode PetscRegressorView_Linear(PetscRegressor regressor, PetscViewer v
 @*/
 PetscErrorCode PetscRegressorLinearGetKSP(PetscRegressor regressor, KSP *ksp)
 {
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)regressor->data;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
@@ -254,7 +254,7 @@ PetscErrorCode PetscRegressorLinearGetKSP(PetscRegressor regressor, KSP *ksp)
 @*/
 PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetCoefficients(PetscRegressor regressor, Vec *coefficients)
 {
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)regressor->data;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
@@ -278,7 +278,7 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetCoefficients(PetscRegressor r
 @*/
 PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetIntercept(PetscRegressor regressor, PetscScalar *intercept)
 {
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)regressor->data;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
@@ -306,7 +306,7 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetIntercept(PetscRegressor regr
 @*/
 PetscErrorCode PetscRegressorLinearSetType(PetscRegressor regressor, PetscRegressorLinearType type)
 {
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)regressor->data;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
   PetscBool              match;
 
   PetscFunctionBegin;
@@ -322,7 +322,7 @@ PetscErrorCode PetscRegressorLinearSetType(PetscRegressor regressor, PetscRegres
 
 PetscErrorCode PetscRegressorFit_Linear(PetscRegressor regressor)
 {
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)regressor->data;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
   KSP                    ksp;
   PetscScalar            target_mean, *column_means_global, *column_means_local, column_means_dot_coefficients;
   Vec                    column_means;
@@ -371,7 +371,7 @@ PetscErrorCode PetscRegressorFit_Linear(PetscRegressor regressor)
 
 PETSC_EXTERN PetscErrorCode PetscRegressorPredict_Linear(PetscRegressor regressor, Mat X, Vec y)
 {
-  PETSCREGRESSOR_LINEAR *linear = (PETSCREGRESSOR_LINEAR *)regressor->data;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
 
   PetscFunctionBegin;
   PetscCall(MatMult(X, linear->coefficients, y));
@@ -396,7 +396,7 @@ PETSC_EXTERN PetscErrorCode PetscRegressorPredict_Linear(PetscRegressor regresso
 M*/
 PETSC_EXTERN PetscErrorCode PetscRegressorCreate_Linear(PetscRegressor regressor)
 {
-  PETSCREGRESSOR_LINEAR *linear;
+  PetscRegressor_Linear *linear;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&linear));
