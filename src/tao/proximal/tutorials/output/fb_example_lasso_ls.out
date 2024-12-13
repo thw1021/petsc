@@ -70,8 +70,8 @@ Tao Object: 1 MPI process
     total number of function/gradient evaluations=0
     Termination reason: 1
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=1e-08
-  Residual in Function/Gradient:=10.9653
-  Objective value=38.3706
-  total number of iterations=1001,                          (max: 1000)
+  Residual in Function/Gradient:=38.0726
+  Objective value=159.614
+  total number of iterations=101,                          (max: 100)
   Solver failed:    Maximum Iterations
-relative reconstruction error: ||x-xGT||/||xGT|| = 8.7679e-01.
+relative reconstruction error: ||x-xGT||/||xGT|| = 3.4959e+00.
