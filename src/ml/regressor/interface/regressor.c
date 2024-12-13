@@ -208,8 +208,9 @@ PetscErrorCode PetscRegressorFit(PetscRegressor regressor, Mat X, Vec y)
    Input Parameters:
 +  regressor - the regressor context (for which PetscRegressorFit() must have been called)
 .  X - data matrix of unlabeled observations
--  y - vector of predicted labels
 
+   Output Parameter:
+.  y - vector of predicted labels
    Level: beginner
 
 .seealso: PetscRegressorFit(), PetscRegressorDestroy()
