@@ -1,0 +1,9 @@
+TAOTERMZERO Case
+TaoTerm Object: 1 MPI process
+  type: zero
+  solution vector space: N = 10 [VecType seq (taoterm_solution_vec_type)]
+  parameter vector space: (optional) K = 10 [VecType seq (taoterm_parameters_vec_type)]
+TaoTerm Object: 1 MPI process
+  type: zero
+  solution vector space: N = 2 [VecType seq (taoterm_solution_vec_type)]
+  parameter vector space: (optional) K = 2 [VecType seq (taoterm_parameters_vec_type)]

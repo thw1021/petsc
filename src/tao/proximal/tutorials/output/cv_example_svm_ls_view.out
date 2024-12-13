@@ -1,0 +1,124 @@
+  0 TAO,  Function value: -13.9683,  Residual: 583.708 
+  1 TAO,  Function value: -12.4483,  Residual: 332.726 
+  2 TAO,  Function value: -11.0043,  Residual: 207.573 
+  3 TAO,  Function value: -9.63252,  Residual: 113.503 
+  4 TAO,  Function value: -8.32931,  Residual: 55.5573 
+  5 TAO,  Function value: -7.09126,  Residual: 28.8869 
+  6 TAO,  Function value: -5.91512,  Residual: 15.7673 
+  7 TAO,  Function value: -4.79778,  Residual: 8.26063 
+  8 TAO,  Function value: -3.7363,  Residual: 11.7492 
+  9 TAO,  Function value: -2.72791,  Residual: 7.11272 
+ 10 TAO,  Function value: -1.76993,  Residual: 4.1046 
+ 11 TAO,  Function value: -0.859846,  Residual: 3.80372 
+ 12 TAO,  Function value: -16.4222,  Residual: 3.65918 
+ 13 TAO,  Function value: -14.7795,  Residual: 3.61055 
+ 14 TAO,  Function value: -13.219,  Residual: 3.44652 
+ 15 TAO,  Function value: -11.7364,  Residual: 3.11479 
+ 16 TAO,  Function value: -10.328,  Residual: 2.88375 
+ 17 TAO,  Function value: -8.99004,  Residual: 2.49274 
+ 18 TAO,  Function value: -7.71895,  Residual: 2.35623 
+ 19 TAO,  Function value: -6.51142,  Residual: 2.29071 
+ 20 TAO,  Function value: -5.36427,  Residual: 2.21575 
+Tao Object: 1 MPI process
+  type: cv
+    Norm estimate factor: R=0.95
+    Primal-dual ratio: ratio=1.
+    Backtracking paramter: r=2.
+    Stepsize scale parameter: Theta=1.2
+    Using adaPDM-type adaptive stepsize
+      f Term:
+      TaoTerm Object: 1 MPI process
+        type: shell
+        solution vector space: N = 270 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (none)
+        User context has been set
+        The following methods have been set: objectiveandgradient,
+      g Term:
+      TaoTerm Object: 1 MPI process
+        type: box
+        solution vector space: N = 270 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (optional) K = 270 [VecType seq (taoterm_parameters_vec_type)]
+        Box lowerbound: 0., upperbound: 0.1
+      h Term:
+      TaoTerm Object: 1 MPI process
+        type: zero
+        solution vector space: N = 270 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (optional) K = 270 [VecType seq (taoterm_parameters_vec_type)]
+      Regularizer Term:
+      TaoTerm Object: 1 MPI process
+        type: halfl2squared
+        solution vector space: not set up yet [VecType standard (taoterm_solution_vec_type)]
+        parameter vector space: (optional) not set up yet [VecType standard (taoterm_parameters_vec_type)]
+        default Hessian MatType (taoterm_hessian_mat_type): shell
+      h Term Map:
+      Mat Object: 1 MPI process
+        type: mpidense
+        rows=1, cols=270
+        total: nonzeros=270, allocated nonzeros=270
+        total number of mallocs used during MatSetValues calls=0
+  Objective function:
+    Scale (tao_objective_scale): 1.
+    Function:
+      TaoTerm Object: (objective_) 1 MPI process
+        type: sum
+        solution vector space: N = 270 [VecType seq (taoterm_solution_vec_type)]
+        parameter vector space: (optional) K = 540 [VecType nest (taoterm_parameters_vec_type)]
+        default Hessian MatType (taoterm_hessian_mat_type): shell
+        Sum of 4 terms:
+          Summand 0:
+            Scale (taoterm_sum_callbacks_scale): 1.
+            Map: unmapped
+            Term:
+              TaoTerm Object: (callbacks_) 1 MPI process
+                type: taocallbacks
+                solution vector space: N = 270 [VecType seq (taoterm_solution_vec_type)]
+                parameter vector space: (none)
+                attached to Tao [name omitted]
+          Summand 1:
+            Scale (taoterm_sum_subterm_1_scale): 1.
+            Map: unmapped
+            Term:
+              TaoTerm Object: 1 MPI process
+                type: shell
+                solution vector space: N = 270 [VecType seq (taoterm_solution_vec_type)]
+                parameter vector space: (none)
+                User context has been set
+                The following methods have been set: objectiveandgradient,
+          Summand 2:
+            Scale (taoterm_sum_subterm_2_scale): 1.
+            Map: unmapped
+            Term:
+              TaoTerm Object: 1 MPI process
+                type: box
+                solution vector space: N = 270 [VecType seq (taoterm_solution_vec_type)]
+                parameter vector space: (optional) K = 270 [VecType seq (taoterm_parameters_vec_type)]
+                Box lowerbound: 0., upperbound: 0.1
+          Summand 3:
+            Scale (taoterm_sum_subterm_3_scale): 1.
+            Map:
+              Mat Object: 1 MPI process
+                type: mpidense
+                rows=1, cols=270
+                total: nonzeros=270, allocated nonzeros=270
+                total number of mallocs used during MatSetValues calls=0
+            Term:
+              TaoTerm Object: 1 MPI process
+                type: zero
+                solution vector space: N = 270 [VecType seq (taoterm_solution_vec_type)]
+                parameter vector space: (optional) K = 270 [VecType seq (taoterm_parameters_vec_type)]
+    Map: unmapped
+  TaoLineSearch Object: 1 MPI process
+    type: ps
+      PS linesearch    eta=0.5     memsize=1
+    maximum function evaluations=30
+    tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+    total number of function evaluations=0
+    total number of gradient evaluations=0
+    total number of function/gradient evaluations=0
+    total number of proximal map evaluations=1
+    Termination reason: 1
+  convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=1e-05
+  Residual in Function/Gradient:=2.21575
+  Objective value=-5.36427
+  total number of iterations=21,                          (max: 20)
+  Solver failed:    Maximum Iterations

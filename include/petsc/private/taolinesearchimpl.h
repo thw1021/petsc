@@ -1,6 +1,7 @@
 #pragma once
 #include <petscvec.h>
 #include <petsc/private/petscimpl.h>
+#include <petsc/private/taoimpl.h>
 #include <petsctaolinesearch.h>
 
 typedef struct _TaoLineSearchOps *TaoLineSearchOps;
@@ -10,7 +11,11 @@ struct _TaoLineSearchOps {
   PetscErrorCode (*computeobjectiveandgradient)(TaoLineSearch, Vec, PetscReal *, Vec, void *);
   PetscErrorCode (*computeobjectiveandgts)(TaoLineSearch, Vec, Vec, PetscReal *, PetscReal *, void *);
   PetscErrorCode (*setup)(TaoLineSearch);
+  PetscErrorCode (*preapply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
   PetscErrorCode (*apply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*postapply)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*update)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
+  PetscErrorCode (*postupdate)(TaoLineSearch, Vec, PetscReal *, Vec, Vec);
   PetscErrorCode (*view)(TaoLineSearch, PetscViewer);
   PetscErrorCode (*setfromoptions)(TaoLineSearch, PetscOptionItems *);
   PetscErrorCode (*reset)(TaoLineSearch);
@@ -54,6 +59,7 @@ struct _p_TaoLineSearch {
   PetscInt                     nfeval;
   PetscInt                     ngeval;
   PetscInt                     nfgeval;
+  PetscInt                     nproxeval;
   TaoLineSearchConvergedReason reason;
 
   PetscReal rtol;    /* relative tol for acceptable step (rtol>0) */
@@ -67,3 +73,7 @@ struct _p_TaoLineSearch {
 
 PETSC_EXTERN PetscLogEvent TAOLINESEARCH_Apply;
 PETSC_EXTERN PetscLogEvent TAOLINESEARCH_Eval;
+
+PETSC_INTERN PetscErrorCode TaoPSLineSearchSetDualWorkvec(TaoLineSearch, Vec);
+PETSC_INTERN PetscErrorCode TaoPSLineSearchSetDualTestvec(TaoLineSearch, Vec);
+PETSC_INTERN PetscErrorCode TaoPSLineSearchSetRegularizerTerm(TaoLineSearch, TaoMappedTerm);
