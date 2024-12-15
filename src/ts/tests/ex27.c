@@ -542,54 +542,60 @@ $   \sum_l h^d \nabla\psi_\epsilon(v_p - v^c_l) \log\left( \sum_q w_q \psi_\epsi
   and are tabulated in ex27.h for a fixed \epsilon.
 */
 
-static PetscErrorCode ComputeGradS(PetscInt dim, PetscReal* weight, PetscInt *species, PetscInt Np, const PetscReal velocity[], PetscReal integral[], AppCtx *ctx)
+static PetscErrorCode ComputeGradS(PetscReal* weight, PetscInt *species, PetscInt Np, PetscReal velocity[], PetscReal integral[], AppCtx *ctx)
 {
-  PetscReal sum, *points, *qw, alpha, beta;
-  PetscInt  ncp, nHermite=6;
+  PetscInt  nHermite=6;
   PetscInt  debug = 1;
   
-  PetscFunctionBeginHot;
   PetscReal kHermite[6] = {-2.3506049736745, -1.3358490740137, -0.43607741192762, 0.43607741192762, 1.3358490740137, 2.3506049736745};
   PetscReal wHermite[6] = {0.0045300099055088, 0.15706732032286, 0.72462959522439, 0.72462959522439, 0.15706732032286, 0.0045300099055088};
+  
+  
+  PetscFunctionBeginHot;
   #pragma omp parallel for
   for (PetscInt p = 0; p < Np; ++p){
     PetscInt start, end;
-    PetscReal SQRT2EPSM1, PI2EPSM1;
+    PetscReal SQRT2EPSM1, PI2EPSM1, coeff;
     // Shift start and end so we only consider same species particles
     start = species[p] == 0 ? 0 : Np/2;
     end = species[p] == 0 ? Np/2 : Np;
-    SQRT2EPSM1 = 1./sqrt(2.*ctx->epsilon[species[p]]);
-    PI2EPSM1 = 1./PetscPowReal(2*PETSC_PI * ctx->epsilon[species[p]], dim/2.);
-    for (PetscInt d = 0; d < dim; ++d) integral[p*dim+d] = 0.0;
+    SQRT2EPSM1 = 1./PetscSqrtReal(2.*ctx->epsilon[species[p]]);
+    PI2EPSM1 = 1./(2*PETSC_PI * ctx->epsilon[species[p]]);
+    
+    for (PetscInt d = 0; d < 2; ++d) integral[p*2+d] = 0.0;
+    
     for (PetscInt i=0; i < nHermite; i++){
       for (PetscInt j=0; j < nHermite; j++) {
         PetscReal logsum = 0, kpx, kpy, dx, dy;
 
         for (PetscInt q = start; q < end; ++q) {
+
           if (species[p]!=species[q]) continue;
           
-          kpx = kHermite[i] + velocity[p*dim+0] * SQRT2EPSM1;
-          kpy = kHermite[j] + velocity[p*dim+1] * SQRT2EPSM1;
-          dx = kpx - velocity[q*dim+0] * SQRT2EPSM1;
-          dy = kpy - velocity[q*dim+1] * SQRT2EPSM1;
-          logsum += weight[q] * PetscExpReal(-dx*dx - dy*dy) * PI2EPSM1;
+          kpx = kHermite[i] + velocity[p*2+0] * SQRT2EPSM1;
+          kpy = kHermite[j] + velocity[p*2+1] * SQRT2EPSM1;
+          dx = kpx - velocity[q*2+0] * SQRT2EPSM1;
+          dy = kpy - velocity[q*2+1] * SQRT2EPSM1;
+          logsum += weight[q] * PetscExpReal(-PetscSqr(dx) - PetscSqr(dy)) * PI2EPSM1;
         }
         logsum = wHermite[i]*wHermite[j]*(1. + PetscLogReal(logsum));
-        integral[p*dim+0] += logsum * kHermite[i];
-        integral[p*dim+1] += logsum * kHermite[j];
+        integral[p*2+0] += logsum * kHermite[i];
+        integral[p*2+1] += logsum * kHermite[j];
       }
     }
-    integral[p*dim+0] *= -ctx->masses[0]/ctx->masses[species[p]] * PetscSqrtReal(2. * ctx->epsilon[species[p]]) / (PETSC_PI * ctx->epsilon[species[p]]);
-    integral[p*dim+1] *= -ctx->masses[0]/ctx->masses[species[p]] * PetscSqrtReal(2. * ctx->epsilon[species[p]]) / (PETSC_PI * ctx->epsilon[species[p]]);
+    coeff = -ctx->masses[0]/ctx->masses[species[p]] * PetscSqrtReal(2. * ctx->epsilon[species[p]]) / (PETSC_PI * ctx->epsilon[species[p]]);
+    integral[p*2+0] *= coeff;
+    integral[p*2+1] *= coeff;
   }
+  if (debug) for (PetscInt p = 0; p < Np; ++p ) PetscPrintf(PETSC_COMM_WORLD, "Particle %"PetscInt_FMT" integral %g %g species %"PetscInt_FMT" eps %g\n", p, integral[p*2+0], integral[p*2+1], species[p], ctx->epsilon[species[p]]);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ComputeGradS_3D(PetscInt dim, PetscReal* weight, PetscInt *species, PetscInt Np, const PetscReal velocity[], PetscReal integral[], AppCtx *ctx)
+static PetscErrorCode ComputeGradS_3D(PetscReal* weight, PetscInt *species, PetscInt Np, PetscReal velocity[], PetscReal integral[], AppCtx *ctx)
 {
-  PetscReal sum, alpha, beta, coeff;
   PetscInt  ncp, nHermite=6;
   PetscInt  debug = 1;
+  
   PetscReal kHermite[6] = {-2.3506049736745, -1.3358490740137, -0.43607741192762, 0.43607741192762, 1.3358490740137, 2.3506049736745};
   PetscReal wHermite[6] = {0.0045300099055088, 0.15706732032286, 0.72462959522439, 0.72462959522439, 0.15706732032286, 0.0045300099055088};
   
@@ -599,12 +605,13 @@ static PetscErrorCode ComputeGradS_3D(PetscInt dim, PetscReal* weight, PetscInt 
   for (PetscInt p = 0; p < Np; ++p){
     PetscInt start, end;
     PetscReal SQRT2EPSM1, PI2EPSM1;
+    PetscReal coeff;
     // Shift start and end so we only consider same species particles
     start = species[p] == 0 ? 0 : Np/2;
     end = species[p] == 0 ? Np/2 : Np;
-    SQRT2EPSM1 = 1./sqrt(2.*ctx->epsilon[species[p]]);
-    PI2EPSM1 = 1./PetscPowReal(2*PETSC_PI * ctx->epsilon[species[p]], dim/2.);
-    for (PetscInt d = 0; d < dim; ++d) integral[p*dim+d] = 0.0;
+    SQRT2EPSM1 = 1./PetscSqrtReal(2.*ctx->epsilon[species[p]]);
+    PI2EPSM1 = 1./PetscPowReal(2*PETSC_PI * ctx->epsilon[species[p]], 1.5);
+    for (PetscInt d = 0; d < 3; ++d) integral[p*3+d] = 0.0;
 
     for (PetscInt i=0; i < nHermite; i++) {
       for (PetscInt j=0; j < nHermite; j++) {
@@ -614,27 +621,27 @@ static PetscErrorCode ComputeGradS_3D(PetscInt dim, PetscReal* weight, PetscInt 
           for (PetscInt q = start; q < end; ++q) {
       
             if (species[p]!= species[q]) continue;
-            kpx = kHermite[i] + velocity[p*dim+0] * SQRT2EPSM1;
-            kpy = kHermite[j] + velocity[p*dim+1] * SQRT2EPSM1;
-            kpz = kHermite[k] + velocity[p*dim+2] * SQRT2EPSM1;
-            dx = kpx - velocity[q*dim+0] * SQRT2EPSM1;
-            dy = kpy - velocity[q*dim+1] * SQRT2EPSM1;
-            dz = kpz - velocity[q*dim+2] * SQRT2EPSM1;
+            kpx = kHermite[i] + velocity[p*3+0] * SQRT2EPSM1;
+            kpy = kHermite[j] + velocity[p*3+1] * SQRT2EPSM1;
+            kpz = kHermite[k] + velocity[p*3+2] * SQRT2EPSM1;
+            dx = kpx - velocity[q*3+0] * SQRT2EPSM1;
+            dy = kpy - velocity[q*3+1] * SQRT2EPSM1;
+            dz = kpz - velocity[q*3+2] * SQRT2EPSM1;
             logsum += weight[q] * PetscExpReal(-dx*dx - dy*dy - dz*dz) * PI2EPSM1;
           }
           logsum = wHermite[i]*wHermite[j]*wHermite[k]*(1. + PetscLogReal(logsum));
           // in 3v logsum should be whermite_ijk
-          integral[p*dim+0] += logsum * kHermite[i];
-          integral[p*dim+1] += logsum * kHermite[j];
-          integral[p*dim+2] += logsum * kHermite[k];
+          integral[p*3+0] += logsum * kHermite[i];
+          integral[p*3+1] += logsum * kHermite[j];
+          integral[p*3+2] += logsum * kHermite[k];
         }
       }
     }
     // the w_p term here is cancelled out by the \Gamma(S, p, \bar p) which has 1/mw_p
-    coeff = -ctx->masses[0]/ctx->masses[species[p]] * PetscSqrtReal(2. * ctx->epsilon[species[p]]) / (PETSC_PI*ctx->epsilon[species[p]]);
-    integral[p*dim+0] *= coeff;
-    integral[p*dim+1] *= coeff;
-    integral[p*dim+2] *= coeff;
+    coeff = -ctx->masses[0]/ctx->masses[species[p]] * PetscSqrtReal(2. * ctx->epsilon[species[p]]) / (PETSC_PI*ctx->epsilon[species[p]]);//should be to the 3/2 on the pi epsilon because of the 3rd dimension regularization
+    integral[p*3+0] *= coeff;
+    integral[p*3+1] *= coeff;
+    integral[p*3+2] *= coeff;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -682,16 +689,14 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   t0 = (8 * PETSC_PI * PetscSqr(m0) * PetscSqr(EPSILON_NOUGHT) * PetscPowReal(v_0, 3))/(PetscPowReal(user->charges[0], 4) * lnLam * user->n0[0]);
   user->t_0 = t0;
   nu_nd = t0*user->n0[0]/PetscPowReal(v_0,3.);
-  for (s = 0; s < Ns; ++s){
-    nu_alpha[s] = PetscSqr(user->charges[s]);
-    nu_beta[s] = PetscSqr(user->charges[s]/EPSILON_NOUGHT)*lnLam / (8*PETSC_PI) * nu_nd;
-  }
+  
   nu_ee = nu_nd * (PetscPowReal(user->charges[0], 4) * lnLam/(8*PETSC_PI*PetscSqr(m0) * PetscSqr(EPSILON_NOUGHT)));
   nu_ei = nu_nd * (PetscSqr(user->charges[0]) * PetscSqr(user->charges[1]) * lnLam/(8*PETSC_PI*PetscSqr(m0) * PetscSqr(EPSILON_NOUGHT)));
   nu_ii = nu_nd * (PetscPowReal(user->charges[1], 4) * lnLam/(8*PETSC_PI*PetscSqr(m0) * PetscSqr(EPSILON_NOUGHT)));
   
+  if (dbg) PetscPrintf(PETSC_COMM_WORLD, "nuee %g nuei %g nuii %g\n", nu_ee, nu_ei, nu_ii);
+  
   PetscCall(VecZeroEntries(R));
-  PetscCall(TSGetDM(ts, &sw));
   PetscCall(DMGetDimension(sw, &dim));
   PetscCall(VecGetLocalSize(U, &Np));
   PetscCall(VecGetArray(R, &r));
@@ -711,10 +716,11 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
       PetscReal residual[3] = {0., 0.,0.};
       
       if (q == p) continue;
-      nu = 1.;
+      
       if ((species[p] == 0) & (species[q] == 0)) nu = nu_ee;
       if (species[p] != species[q]) nu = nu_ei;
       if ((species[p] == 1) & (species[q] == 1)) nu = nu_ii;
+      
       DMPlex_WaxpyD_Internal(dim, -1.0, (const PetscReal*)&gradS[q*dim], (const PetscReal*)&gradS[p*dim], GammaS);
       // This has 1/mw_p applied at the computation of \nabla_v_p S in ComputeGammaS(..)
       QCompute(dim, &u[p*dim], &u[q*dim], Q);
@@ -726,13 +732,6 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
       for(d=0; d < dim; ++d) r[p*dim+d] += residual[d] * nu * weight[q] * m0/user->masses[species[p]];
     }
     if (dbg) PetscPrintf(PETSC_COMM_WORLD, "Final %4" PetscInt_FMT " %10.8lf %10.8lf\n", p, r[p*dim+0], r[p*dim+1]);
-  }
-  if (user->spitzer){
-    for (PetscInt p = 0; p < Np; ++p){
-      if (species[p] == 0){
-        r[p*dim+0] += weight[p] * user->E;
-      }
-    }
   }
   PetscCall(DMSwarmRestoreField(sw, "gradS", NULL, NULL, (void **) &gradS));
   PetscCall(DMSwarmRestoreField(sw, "species", NULL, NULL, (void **) &species));
@@ -749,6 +748,7 @@ static PetscErrorCode ComputeIntGradS(TS ts)
   PetscReal     *gradS, *velocity, *weights;
   DM             sw;
   Vec            sol;
+  PetscInt       dbg=0;
   AppCtx        *user;
 
   PetscFunctionBeginUser;
@@ -763,10 +763,11 @@ static PetscErrorCode ComputeIntGradS(TS ts)
   PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **) &weights));
   PetscCall(DMSwarmGetField(sw, "species", NULL, NULL, (void **) &species));
   switch (dim){
-    case 2: PetscCall(ComputeGradS(dim, weights, species, Np, velocity, &gradS[p*dim], user));break;
-    case 3: PetscCall(ComputeGradS_3D(dim, weights, species, Np, velocity, &gradS[p*dim], user));break;
+    case 2: PetscCall(ComputeGradS(weights, species, Np, velocity, gradS, user));break;
+    case 3: PetscCall(ComputeGradS_3D(weights, species, Np, velocity, gradS, user));break;
     default: SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Do not support dimension%" PetscInt_FMT, dim);
   }
+  if (dbg) for (PetscInt p = 0; p < Np; ++p) PetscPrintf(PETSC_COMM_WORLD, "gradient for particle %"PetscInt_FMT" %g %g\n", p, gradS[p*2+0], gradS[p*2+1]);
   PetscCall(DMSwarmRestoreField(sw, "species", NULL, NULL, (void **) &species));
   PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **) &weights));
   PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **) &velocity));
@@ -1069,13 +1070,13 @@ static PetscErrorCode Monitor_Anisotropic(TS ts)
     for (PetscInt d = 0; d < dim; ++d) Tavg[idx] += T[idx*dim + d];
     Tavg[idx] /= dim;
   }
-  for (idx = 0; idx < Ns; ++idx) user->v0[idx] = PetscSqrtReal(BOLTZMANN_K * Tavg[idx] / user->masses[idx]);
-  v_0     = PetscSqrtReal((8 * BOLTZMANN_K * Tavg[0])/(user->masses[0]*PETSC_PI));
-  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] = 5.*user->v0[idx]/v_0;
+  //for (idx = 0; idx < Ns; ++idx) user->v0[idx] = PetscSqrtReal(BOLTZMANN_K * Tavg[idx] / user->masses[idx]);
+  //v_0     = PetscSqrtReal((8 * BOLTZMANN_K * Tavg[0])/(user->masses[0]*PETSC_PI));
+  //for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] = 5.*user->v0[idx]/v_0;
 
-  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] /= user->Np;// commented out the above to use the regular configuration
-  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] *= PetscPowReal(user->epsilon[idx], 1.98);
-  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] *= 1.2;
+  //for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] /= user->Np;// commented out the above to use the regular configuration
+  //for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] *= PetscPowReal(user->epsilon[idx], 1.98);
+  //for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] *= 1.2;
   if (user->run_nrl) {
     PetscReal          dt_real, dt;
     PetscCall(TSGetTimeStep(ts, &dt)); // dt for NEXT time step
