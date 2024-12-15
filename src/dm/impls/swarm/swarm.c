@@ -383,18 +383,21 @@ static PetscErrorCode DMSwarmCreateVectorFromField_Private(DM dm, const char fie
 */
 static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass, PetscBool useDeltaFunction, void *ctx)
 {
-  const char  *name = "Mass Matrix";
-  MPI_Comm     comm;
-  PetscDS      prob;
-  PetscSection fsection, globalFSection;
-  PetscHSetIJ  ht;
-  PetscLayout  rLayout, colLayout;
-  PetscInt    *dnz, *onz;
-  PetscInt     locRows, locCols, rStart, colStart, colEnd, *rowIDXs;
-  PetscReal   *xi, *v0, *J, *invJ, detJ = 1.0, v0ref[3] = {-1.0, -1.0, -1.0};
-  PetscScalar *elemMat;
-  PetscInt     dim, Nf, field, cStart, cEnd, cell, totDim, maxC = 0, totNc = 0;
-  const char  *coordname;
+  DM_Swarm       *swarm = (DM_Swarm *)dmc->data;
+  const char     *name  = "Mass Matrix";
+  MPI_Comm        comm;
+  PetscDS         prob;
+  PetscSection    fsection, globalFSection;
+  PetscHSetIJ     ht;
+  PetscLayout     rLayout, colLayout;
+  PetscInt       *dnz, *onz;
+  PetscInt        locRows, locCols, rStart, colStart, colEnd, *rowIDXs;
+  PetscReal      *xi, *v0, v0ref[3] = {-1.0, -1.0, -1.0}, detJ = 1, *fieldV_cell;
+  PetscScalar    *elemMat;
+  PetscInt        dim, Nf, Nq, field, cStart, cEnd, cell, totDim, maxC = 0, totNc = 0, coordDim, num_missing = 0;
+  PetscQuadrature quad = NULL; // flag for non-affine and same for all fields
+  PetscFEGeom     fegeom;
+  const char     *coordname;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)mass, &comm));
@@ -402,10 +405,10 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
   PetscCall(DMGetDS(dmf, &prob));
   PetscCall(PetscDSGetNumFields(prob, &Nf));
   PetscCall(PetscDSGetTotalDimension(prob, &totDim));
-  PetscCall(PetscMalloc3(dim, &v0, dim * dim, &J, dim * dim, &invJ));
   PetscCall(DMGetLocalSection(dmf, &fsection));
   PetscCall(DMGetGlobalSection(dmf, &globalFSection));
   PetscCall(DMPlexGetHeightStratum(dmf, 0, &cStart, &cEnd));
+  PetscCall(DMGetCoordinateDim(dmf, &coordDim));
   PetscCall(MatGetLocalSize(mass, &locRows, &locCols));
 
   PetscCall(DMSwarmGetCoordinateField(dmc, &coordname));
@@ -428,6 +431,9 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
   PetscCall(PetscHSetIJCreate(&ht));
 
   PetscCall(PetscSynchronizedFlush(comm, NULL));
+  PetscOptionsBegin(PetscObjectComm((PetscObject)dmc), "", "DMSwarm Options", "DMSWARM");
+  PetscCall(PetscOptionsBool("-dm_swarm_use_affine_mass", "Use affine maps in particle mass matrix. Use with with affine (square) cells", "DMSwarmSetUseAffineMass", swarm->use_affine_mass, &swarm->use_affine_mass, NULL));
+  PetscOptionsEnd();
   for (field = 0; field < Nf; ++field) {
     PetscObject  obj;
     PetscClassId id;
@@ -435,10 +441,36 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
 
     PetscCall(PetscDSGetDiscretization(prob, field, &obj));
     PetscCall(PetscObjectGetClassId(obj, &id));
-    if (id == PETSCFE_CLASSID) PetscCall(PetscFEGetNumComponents((PetscFE)obj, &Nc));
-    else PetscCall(PetscFVGetNumComponents((PetscFV)obj, &Nc));
+    if (swarm->use_affine_mass) {
+      if (id == PETSCFE_CLASSID) PetscCall(PetscFEGetNumComponents((PetscFE)obj, &Nc));
+      else PetscCall(PetscFVGetNumComponents((PetscFV)obj, &Nc));
+      quad = NULL; // flag for non-affine
+      if (field == 0) PetscCall(PetscInfo(dmf, "Use affine mass\n"));
+    } else {
+      PetscCheck(useDeltaFunction, PetscObjectComm((PetscObject)dmf), PETSC_ERR_SUP, "Only delta functions supported for non-affine mass");
+      if (id == PETSCFE_CLASSID) {
+        PetscFE fe = (PetscFE)obj;
+        if (field == 0) { // same for all fields
+          PetscCall(PetscInfo(dmf, "Get quadrature for non-affine mass\n"));
+          PetscCall(PetscFEGetQuadrature(fe, &quad));
+        }
+        PetscCall(PetscFEGetNumComponents(fe, &Nc));
+      } else if (id == PETSCFV_CLASSID) {
+        PetscFV fv = (PetscFV)obj;
+        if (field == 0) { // same for all fields
+          PetscCall(PetscInfo(dmf, "Get FV quadrature for affine mass (not used)\n"));
+          PetscCall(PetscFVGetQuadrature(fv, &quad));
+        }
+        PetscCall(PetscFVGetNumComponents(fv, &Nc));
+      } else SETERRQ(PetscObjectComm((PetscObject)dmf), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %" PetscInt_FMT, field);
+    }
     totNc += Nc;
   }
+  if (quad) {
+    PetscInt qNc;
+    PetscCall(PetscQuadratureGetData(quad, NULL, &qNc, &Nq, NULL, NULL)); // Nq is just used to allocated dummy data
+  } else Nq = 1;
+  PetscCall(PetscMalloc4(coordDim * Nq, &v0, Nq, &fegeom.detJ, coordDim * coordDim * Nq, &fegeom.J, coordDim * coordDim * Nq, &fegeom.invJ));
   /* count non-zeros */
   PetscCall(DMSwarmSortGetAccess(dmc));
   for (field = 0; field < Nf; ++field) {
@@ -474,7 +506,7 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
                 if (missing) {
                   if ((key.j >= colStart) && (key.j < colEnd)) ++dnz[key.i - rStart];
                   else ++onz[key.i - rStart];
-                } else SETERRQ(PetscObjectComm((PetscObject)dmf), PETSC_ERR_SUP, "Set new value at %" PetscInt_FMT ",%" PetscInt_FMT, key.i, key.j);
+                } else num_missing++; // for p4est, which does not work
               }
             }
           }
@@ -485,10 +517,11 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
     }
   }
   PetscCall(PetscHSetIJDestroy(&ht));
+  PetscCheck(num_missing == 0, PetscObjectComm((PetscObject)dmf), PETSC_ERR_SUP, "seem to have hanging nodes, which is not supported (p4est)");
   PetscCall(MatXAIJSetPreallocation(mass, 1, dnz, onz, NULL, NULL));
   PetscCall(MatSetOption(mass, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_TRUE));
   PetscCall(PetscFree2(dnz, onz));
-  PetscCall(PetscMalloc3(maxC * totNc * totDim, &elemMat, maxC * totNc, &rowIDXs, maxC * dim, &xi));
+  PetscCall(PetscMalloc4(maxC * totNc * totDim, &elemMat, maxC * totNc, &rowIDXs, maxC * dim, &xi, maxC * dim, &fieldV_cell));
   for (field = 0; field < Nf; ++field) {
     PetscTabulation Tcoarse;
     PetscObject     obj;
@@ -506,11 +539,19 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
       PetscInt *findices, *cindices;
       PetscInt  numFIndices, numCIndices;
 
-      /* TODO: Use DMField instead of assuming affine */
-      PetscCall(DMPlexComputeCellGeometryFEM(dmf, cell, NULL, v0, J, invJ, &detJ));
+      PetscCall(DMPlexComputeCellGeometryFEM(dmf, cell, quad, v0, fegeom.J, fegeom.invJ, fegeom.detJ)); // quad == NULL for affine
       PetscCall(DMPlexGetClosureIndices(dmf, fsection, globalFSection, cell, PETSC_FALSE, &numFIndices, &findices, NULL, NULL));
       PetscCall(DMSwarmSortGetPointsPerCell(dmc, cell, &numCIndices, &cindices));
-      for (PetscInt j = 0; j < numCIndices; ++j) CoordinatesRealToRef(dim, dim, v0ref, v0, invJ, &fieldVals[cindices[j] * bs], &xi[j * dim]);
+      if (!quad) {
+        for (PetscInt j = 0; j < numCIndices; ++j) CoordinatesRealToRef(dim, dim, v0ref, v0, fegeom.invJ, &fieldVals[cindices[j] * bs], &xi[j * dim]);
+        detJ = fegeom.detJ[0];
+      } else {
+        detJ = 1;                                    // delta so no detJ used
+        for (PetscInt j = 0; j < numCIndices; ++j) { // copy points into array
+          for (PetscInt d = 0; d < bs; ++d) fieldV_cell[j * bs + d] = fieldVals[cindices[j] * bs + d];
+        }
+        PetscCall(DMPlexCoordinatesToReference(dmf, cell, numCIndices, fieldV_cell, xi)); // full non-affine map
+      }
       if (id == PETSCFE_CLASSID) PetscCall(PetscFECreateTabulation((PetscFE)obj, 1, numCIndices, xi, 0, &Tcoarse));
       else PetscCall(PetscFVCreateTabulation((PetscFV)obj, 1, numCIndices, xi, 0, &Tcoarse));
       /* Get elemMat entries by multiplying by weight */
@@ -535,9 +576,9 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
     }
     PetscCall(DMSwarmRestoreField(dmc, coordname, &bs, NULL, (void **)&fieldVals));
   }
-  PetscCall(PetscFree3(elemMat, rowIDXs, xi));
+  PetscCall(PetscFree4(v0, fegeom.detJ, fegeom.J, fegeom.invJ));
+  PetscCall(PetscFree4(elemMat, rowIDXs, xi, fieldV_cell));
   PetscCall(DMSwarmSortRestoreAccess(dmc));
-  PetscCall(PetscFree3(v0, J, invJ));
   PetscCall(MatAssemblyBegin(mass, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(mass, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2266,6 +2307,7 @@ PETSC_EXTERN PetscErrorCode DMCreate_Swarm(DM dm)
   swarm->cellinfo                       = NULL;
   swarm->collect_view_active            = PETSC_FALSE;
   swarm->collect_view_reset_nlocal      = -1;
+  swarm->use_affine_mass                = PETSC_TRUE;
   PetscCall(DMInitialize_Swarm(dm));
   if (SwarmDataFieldId == -1) PetscCall(PetscObjectComposedDataRegister(&SwarmDataFieldId));
   PetscFunctionReturn(PETSC_SUCCESS);
