@@ -40,3 +40,5 @@
 #include <petsctao.h>
 
 #include <petscml.h>
+#include <petscnmf.h>
+
