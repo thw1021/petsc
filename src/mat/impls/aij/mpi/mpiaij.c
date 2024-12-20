@@ -2967,21 +2967,13 @@ static PetscErrorCode MatResetPreallocation_MPIAIJ(Mat B)
   PetscValidHeaderSpecific(B, MAT_CLASSID, 1);
   PetscCall(PetscLayoutSetUp(B->rmap));
   PetscCall(PetscLayoutSetUp(B->cmap));
+  PetscCall(MatDisAssemble_MPIAIJ(B));
 
-#if defined(PETSC_USE_CTABLE)
-  PetscCall(PetscHMapIDestroy(&b->colmap));
-#else
-  PetscCall(PetscFree(b->colmap));
-#endif
-  PetscCall(PetscFree(b->garray));
-  PetscCall(VecDestroy(&b->lvec));
   PetscCall(VecScatterDestroy(&b->Mvctx));
 
   PetscCall(MatResetPreallocation(b->A));
   PetscCall(MatResetPreallocation(b->B));
-  B->preallocated  = PETSC_TRUE;
-  B->was_assembled = PETSC_FALSE;
-  B->assembled     = PETSC_FALSE;
+  B->preallocated = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
