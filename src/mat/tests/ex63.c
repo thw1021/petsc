@@ -4,12 +4,13 @@ static char help[] = "Tests resetting preallocation after filling the full spars
 
 PetscErrorCode Assemble(Mat mat)
 {
-  PetscInt    idx[4];
-  PetscScalar vals[4] = {0};
+  PetscInt    idx[4], i;
+  PetscScalar vals[16];
   int         rank;
 
   PetscFunctionBegin;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+  for (i = 0; i < 16; ++i) vals[i] = 1;
   if (rank == 0) {
     // element 0
     idx[0] = 0;
@@ -81,8 +82,10 @@ int main(int argc, char **argv)
   }
   PetscCall(MatSetUp(mat));
   PetscCall(Assemble(mat));
+  PetscCall(MatView(mat, NULL));
   PetscCall(MatResetPreallocation(mat));
   PetscCall(Assemble(mat));
+  PetscCall(MatView(mat, NULL));
   return 0;
 }
 
