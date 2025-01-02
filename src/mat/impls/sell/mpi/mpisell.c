@@ -1317,7 +1317,7 @@ static const struct _MatOps MatOps_Values = {MatSetValues_MPISELL,
   corresponding to proc0,proc1,proc2 are [BC], [DF], [GH] respectively.
   Internally, each processor stores the DIAGONAL part, and the OFF-DIAGONAL
   part as `MATSEQSELL` matrices. For example, proc1 will store [E] as a `MATSEQSELL`
-  matrix, ans [DF] as another SeqSELL matrix.
+  matrix, and [DF] as another SeqSELL matrix.
 
   When `d_nz`, `o_nz` parameters are specified, `d_nz` storage elements are
   allocated for every row of the local diagonal submatrix, and o_nz
@@ -1473,7 +1473,7 @@ M*/
   corresponding to proc0,proc1,proc2 are [BC], [DF], [GH] respectively.
   Internally, each processor stores the DIAGONAL part, and the OFF-DIAGONAL
   part as `MATSEQSELL` matrices. For example, proc1 will store [E] as a `MATSEQSELL`
-  matrix, ans [DF] as another `MATSEQSELL` matrix.
+  matrix, and [DF] as another `MATSEQSELL` matrix.
 
   When d_rlenmax, o_rlenmax parameters are specified, d_rlenmax storage elements are
   allocated for every row of the local diagonal submatrix, and o_rlenmax
