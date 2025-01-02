@@ -151,10 +151,10 @@ respectively:
 .. code-block::
 
    MatICCFactor(Mat matrix,IS permutation,const MatFactorInfo *info);
-   MatLUFactor(Mat matrix,IS rowpermutation,IS columnpermutation,const MatFactorInfo *info);
+   MatILUFactor(Mat matrix,IS rowpermutation,IS columnpermutation,const MatFactorInfo *info);
    MatCholeskyFactor(Mat matrix,IS permutation,const MatFactorInfo *info);
    MatLUFactor(Mat matrix,IS rowpermutation,IS columnpermutation,const MatFactorInfo *info);
-   MatQRFactor(Mat matatrix, IS columnpermutation, const MatFactorInfo *info);
+   MatQRFactor(Mat matrix, IS columnpermutation, const MatFactorInfo *info);
 
 The argument ``info->fill > 1`` is the predicted fill expected in the
 factored matrix, as a ratio of the original fill. For example,
@@ -193,11 +193,11 @@ or
    MatQRFactorSymbolic(Mat factor,Mat matrix,IS perm,const MatFactorInfo *info);
    MatQRFactorNumeric(Mat factor,Mat matrix,const MatFactorInfo *info);
 
-In this case, the contents of the matrix ``result`` is undefined between
+In this case, the contents of the matrix ``factor`` is undefined between
 the symbolic and numeric factorization stages. It is possible to reuse
 the symbolic factorization. For the second and succeeding
 factorizations, one simply calls the numerical factorization with a new
-input ``matrix`` and the *same* factored ``result`` matrix. It is
+input ``matrix`` and the *same* factored ``factor`` matrix. It is
 *essential* that the new input matrix have exactly the same nonzero
 structure as the original factored matrix. (The numerical factorization
 merely overwrites the numerical values in the factored matrix and does
@@ -206,10 +206,10 @@ phase.) In general, calling ``XXXFactorSymbolic`` with a dense matrix
 will do nothing except allocate the new matrix; the ``XXXFactorNumeric``
 routines will do all of the work.
 
-Why provide the plain ``XXXfactor`` routines when one could simply call
+Why provide the plain ``XXXFactor`` routines when one could simply call
 the two-stage routines? The answer is that if one desires in-place
 factorization of a sparse matrix, the intermediate stage between the
-symbolic and numeric phases cannot be stored in a ``result`` matrix, and
+symbolic and numeric phases cannot be stored in a ``factor`` matrix, and
 it does not make sense to store the intermediate values inside the
 original matrix that is being transformed. We originally made the
 combined factor routines do either in-place or out-of-place
