@@ -4084,7 +4084,7 @@ PetscErrorCode MatMPIAIJSetPreallocationCSR(Mat B, const PetscInt i[], const Pet
   When `d_nz`, `o_nz` parameters are specified, `d_nz` storage elements are
   allocated for every row of the local diagonal submatrix, and `o_nz`
   storage locations are allocated for every row of the OFF-DIAGONAL submat.
-  One way to choose `d_nz` and `o_nz` is to use the max nonzeros per local
+  One way to choose `d_nz` and `o_nz` is to use the maximum number of nonzeros per local
   rows for each of the local DIAGONAL, and the OFF-DIAGONAL submatrices.
   In this case, the values of `d_nz`, `o_nz` are
 .vb
@@ -4508,7 +4508,7 @@ PetscErrorCode MatUpdateMPIAIJWithArray(Mat mat, const PetscScalar v[])
   When `d_nz`, `o_nz` parameters are specified, `d_nz` storage elements are
   allocated for every row of the local diagonal submatrix, and `o_nz`
   storage locations are allocated for every row of the OFF-DIAGONAL submat.
-  One way to choose `d_nz` and `o_nz` is to use the max nonzeros per local
+  One way to choose `d_nz` and `o_nz` is to use the maximum number of nonzeros per local
   rows for each of the local DIAGONAL, and the OFF-DIAGONAL submatrices.
   In this case, the values of `d_nz`,`o_nz` are
 .vb

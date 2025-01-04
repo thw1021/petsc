@@ -1321,7 +1321,7 @@ static const struct _MatOps MatOps_Values = {MatSetValues_MPISELL,
   When `d_nz`, `o_nz` parameters are specified, `d_nz` storage elements are
   allocated for every row of the local diagonal submatrix, and o_nz
   storage locations are allocated for every row of the OFF-DIAGONAL submat.
-  One way to choose `d_nz` and `o_nz` is to use the max nonzeros per local
+  One way to choose `d_nz` and `o_nz` is to use the maximum number of nonzeros per local
   rows for each of the local DIAGONAL, and the OFF-DIAGONAL submatrices.
   In this case, the values of d_nz,o_nz are
 .vb
@@ -1477,7 +1477,7 @@ M*/
   When d_rlenmax, o_rlenmax parameters are specified, d_rlenmax storage elements are
   allocated for every row of the local diagonal submatrix, and o_rlenmax
   storage locations are allocated for every row of the OFF-DIAGONAL submat.
-  One way to choose d_rlenmax and o_rlenmax is to use the max nonzeros per local
+  One way to choose `d_rlenmax` and `o_rlenmax` is to use the maximum number of nonzeros per local
   rows for each of the local DIAGONAL, and the OFF-DIAGONAL submatrices.
   In this case, the values of d_rlenmax,o_rlenmax are
 .vb
