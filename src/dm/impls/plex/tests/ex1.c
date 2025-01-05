@@ -374,10 +374,16 @@ int main(int argc, char **argv)
     args: -dm_plex_simplex 0 -ref_dm_refine 1 -dist_dm_distribute -petscpartitioner_type ptscotch -petscpartitioner_view -petscpartitioner_ptscotch_imbalance 0.1
 
   # CGNS reader tests 10-11 (need to find smaller test meshes)
-  test:
-    suffix: cgns_0
-    requires: cgns
-    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/tut21.cgns -dm_view
+  testset:
+    args: -dm_view
+    test:
+      suffix: cgns_0
+      requires: cgns
+      args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/tut21.cgns
+    test:
+      suffix: cgns_1
+      requires: cgns
+      args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/box.cgns
 
   # ExodusII reader tests
   testset:

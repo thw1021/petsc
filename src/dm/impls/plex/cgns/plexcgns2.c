@@ -457,6 +457,32 @@ PetscErrorCode DMPlexCreateCGNSFromFile_Internal(MPI_Comm comm, const char filen
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PetscCGNSGetSectionOfHigherTopologicalOrder(int cgid, int zoneid, int *sectionid)
+{
+  int nsections, s;
+  CGNS_ENUMT(ElementType_t) cellType;
+  CGNS_ENUMT(ElementType_t) prevCellType;
+  cgsize_t       start, end;
+  char buffer[CGIO_MAX_NAME_LENGTH + 1];
+  int            nbndry, parentFlag;
+
+  PetscFunctionBegin;
+  PetscCallCGNS(cg_nsections(cgid, 1, zoneid, &nsections));
+  PetscCheck(nsections >= 1, PETSC_COMM_SELF, PETSC_ERR_LIB, "CGNS file must have a at least one section for the zone %d", zoneid);
+  PetscCallCGNS(cg_section_read(cgid, 1, zoneid, 1, buffer, &prevCellType, &start, &end, &nbndry, &parentFlag));
+  *sectionid = 1;
+  for( s = 2; s <= nsections; s++)
+  {
+    PetscCallCGNS(cg_section_read(cgid, 1, zoneid, s, buffer, &cellType, &start, &end, &nbndry, &parentFlag));
+    if(cellType > prevCellType)
+    {
+      *sectionid = s;
+      prevCellType = cellType;
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode DMPlexCreateCGNS_Internal_Serial(MPI_Comm comm, PetscInt cgid, PetscBool interpolate, DM *dm)
 {
   PetscMPIInt  num_proc, rank;
@@ -520,18 +546,16 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Serial(MPI_Comm comm, PetscInt cgid, Pe
     /* First set sizes */
     for (z = 1, c = 0; z <= nzones; ++z) {
       CGNS_ENUMT(ZoneType_t) zonetype;
-      int nsections;
       CGNS_ENUMT(ElementType_t) cellType;
       cgsize_t       start, end;
       int            nbndry, parentFlag;
       PetscInt       numCorners, pOrder;
       DMPolytopeType ctype;
-      const int      S = 1; // Only support single section
+      int      S = 1; // Only support single section
 
       PetscCallCGNSRead(cg_zone_type(cgid, B, z, &zonetype), *dm, 0);
       PetscCheck(zonetype != CGNS_ENUMV(Structured), PETSC_COMM_SELF, PETSC_ERR_LIB, "Can only handle Unstructured zones for CGNS");
-      PetscCallCGNSRead(cg_nsections(cgid, B, z, &nsections), *dm, 0);
-      PetscCheck(nsections <= 1, PETSC_COMM_SELF, PETSC_ERR_LIB, "CGNS file must have a single section, not %d", nsections);
+      PetscCGNSGetSectionOfHigherTopologicalOrder(cgid, z, &S);
       PetscCallCGNSRead(cg_section_read(cgid, B, z, S, buffer, &cellType, &start, &end, &nbndry, &parentFlag), *dm, 0);
       if (cellType == CGNS_ENUMV(MIXED)) {
         cgsize_t elementDataSize, *elements;
@@ -574,8 +598,9 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Serial(MPI_Comm comm, PetscInt cgid, Pe
       cgsize_t  elementDataSize, *elements, start, end;
       int       nbndry, parentFlag;
       PetscInt *cone, numc, numCorners, maxCorners = 27, pOrder;
-      const int S = 1; // Only support single section
+      int S = 1; // Only support single section
 
+      PetscCGNSGetSectionOfHigherTopologicalOrder(cgid, z, &S);
       PetscCallCGNSRead(cg_section_read(cgid, B, z, S, buffer, &cellType, &start, &end, &nbndry, &parentFlag), *dm, 0);
       numc = end - start;
       PetscCallCGNSRead(cg_ElementDataSize(cgid, B, z, S, &elementDataSize), *dm, 0);
