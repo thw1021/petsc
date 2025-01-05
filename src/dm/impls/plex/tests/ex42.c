@@ -195,7 +195,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *ctx)
   case DM_SHAPE_SPHERE:
     ctx->setupgeo      = SetupMassGeoSphere;
     ctx->setupgeofname = SetupMassGeoSphere_loc;
-    ctx->areaExact     = 4.0 * M_PI;
+    ctx->areaExact     = 4.0 * PETSC_PI;
     break;
   default:
     break;

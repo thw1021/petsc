@@ -12,7 +12,7 @@ static PetscErrorCode project_function(PetscInt dim, PetscReal time, const Petsc
   PetscFunctionBeginUser;
   for (PetscInt d = 0; d < dim; d++) x_tot += x[d];
   for (PetscInt c = 0; c < Nc; c++) {
-    PetscScalar value = c % 2 ? PetscSinReal(2 * M_PI * x_tot) : PetscCosReal(2 * M_PI * x_tot);
+    PetscScalar value = c % 2 ? PetscSinReal(2 * PETSC_PI * x_tot) : PetscCosReal(2 * PETSC_PI * x_tot);
     if (PetscAbsScalar(value) < 1e-7) value = 0.;
     u[c] = value;
   }
