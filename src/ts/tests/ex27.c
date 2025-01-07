@@ -50,6 +50,7 @@ typedef struct {
   PetscBool  run_nrl;
   PetscReal  S_init;
   PetscInt   outputNum;
+  PetscInt   dimension;
 } AppCtx;
 
  /* CalculateE - Calculate the electric field  */
@@ -211,6 +212,7 @@ static PetscErrorCode CreateSwarm(DM dm, AppCtx *user, DM *sw)
 
   PetscFunctionBeginUser;
   PetscCall(DMGetDimension(dm, &dim));
+  user->dimension = dim;
   PetscCall(DMCreate(PetscObjectComm((PetscObject) dm), sw));
   PetscCall(DMSetType(*sw, DMSWARM));
   PetscCall(DMSetDimension(*sw, dim));
@@ -864,10 +866,10 @@ static PetscErrorCode Monitor(TS ts)
   for (idx = 0; idx < Ns; ++idx) T[idx] *= 1.16045250061657e7;
   for (idx = 0; idx < Ns; ++idx) user->v0[idx] = PetscSqrtReal(BOLTZMANN_K * T[idx] / user->masses[idx]);
   v_0     = PetscSqrtReal((8 * BOLTZMANN_K * T[0])/(user->masses[0]*PETSC_PI));
-  //for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] = 5.*user->v0[idx]/v_0;
-  //for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] /= user->Np;// commented out the above to use the regular configuration
-  //for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] *= PetscPowReal(user->epsilon[idx], 1.98);
-  //for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] *= 1.2;
+  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] = 5.*user->v0[idx]/v_0;
+  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] /= user->Np;// commented out the above to use the regular configuration
+  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] = PetscPowReal(user->epsilon[idx], 1.98);
+  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] *= 1.2;
   PetscCall(PetscFree3(T, KE, mom));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -955,13 +957,15 @@ static PetscErrorCode Monitor_Anisotropic(TS ts)
     for (PetscInt d = 0; d < dim; ++d) Tavg[idx] += T[idx*dim + d];
     Tavg[idx] /= dim;
   }
-  //for (idx = 0; idx < Ns; ++idx) user->v0[idx] = PetscSqrtReal(BOLTZMANN_K * Tavg[idx] / user->masses[idx]);
-  //v_0     = PetscSqrtReal((8 * BOLTZMANN_K * Tavg[0])/(user->masses[0]*PETSC_PI));
-  //for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] = 5.*user->v0[idx]/v_0;
+  PetscReal v_0;
+  for (idx = 0; idx < Ns; ++idx) user->v0[idx] = PetscSqrtReal(BOLTZMANN_K * Tavg[idx] / user->masses[idx]);
+  v_0     = PetscSqrtReal((8 * BOLTZMANN_K * Tavg[0])/(user->masses[0]*PETSC_PI));
 
-  //for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] /= user->Np;// commented out the above to use the regular configuration
-  //for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] *= PetscPowReal(user->epsilon[idx], 1.98);
-  //for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] *= 1.2;
+  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] = 5.*user->v0[idx]/v_0;
+
+  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] /= user->Np;// commented out the above to use the regular configuration
+  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] = PetscPowReal(user->epsilon[idx], 1.98);
+  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] *= 1.2;
   if (user->run_nrl) {
     PetscReal          dt_real, dt;
     PetscCall(TSGetTimeStep(ts, &dt)); // dt for NEXT time step
