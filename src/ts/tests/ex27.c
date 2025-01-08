@@ -36,6 +36,7 @@ typedef struct {
   PetscReal v0[LANDAU_MAX_SPECIES];         /* Species mean velocity in 1D */
   PetscReal n0[LANDAU_MAX_SPECIES];
   PetscReal charges[LANDAU_MAX_SPECIES];
+  PetscReal Lamdas[LANDAU_MAX_SPECIES];
   PetscReal total_energy;                    /* Cache total energy for computation */
   PetscBool regular;
   PetscBool anisotropic;                      /* maxwellians are anisotropic*/
@@ -51,6 +52,7 @@ typedef struct {
   PetscReal  S_init;
   PetscInt   outputNum;
   PetscInt   dimension;
+  PetscReal  v_0;
 } AppCtx;
 
  /* CalculateE - Calculate the electric field  */
@@ -487,7 +489,41 @@ static void DMPlex_MultAdd3DReal_Internal(const PetscReal A[], PetscInt ldx, con
   y[ldx*2] += A[6]*z[0] + A[7]*z[1] + A[8]*z[2];
   (void)PetscLogFlops(15.0);
 }
-
+#if 0
+// make log(Lambdas) from NRL Plasma formulary
+static PetscErrorCode ComputeLambdas(AppCtx *ctx)
+{
+  PetscFunctionBegin;
+  for (PetscInt species1 = 0; species1 < Ns; species1++) {
+    PetscInt  iii   = ctx->species_offset[gridi];
+    PetscReal Ti_ev = (ctx->T[species1] / 1.1604525e7) * 1000; // convert (back) to eV
+    PetscReal ni    = ctx->n[species1] * ctx->n_0;
+    for (PetscInt species2 = species1; species2 < Ns; species2++) {
+      PetscInt  jjj = species2;
+      PetscReal Zj  = ctx->charges[jjj] / 1.6022e-19;
+      if (gridi == 0) {
+        if (gridj == 0) { // lam_ee
+          ctx->Lambda[species1][species2] = 23.5 - PetscLogReal(PetscSqrtReal(ni) * PetscPowReal(Ti_ev, -1.25)) - PetscSqrtReal(1e-5 + PetscSqr(PetscLogReal(Ti_ev) - 2) / 16);
+        } else { // lam_ei == lam_ie
+          if (10 * Zj * Zj > Ti_ev) {
+            ctx->lambdas[gridi][gridj] = ctx->lambdas[gridj][gridi] = 23 - PetscLogReal(PetscSqrtReal(ni) * Zj * PetscPowReal(Ti_ev, -1.5));
+          } else {
+            ctx->lambdas[gridi][gridj] = ctx->lambdas[gridj][gridi] = 24 - PetscLogReal(PetscSqrtReal(ni) / Ti_ev);
+          }
+        }
+      } else { // lam_ii'
+        PetscReal mui = ctx->masses[iii] / 1.6720e-27, Zi = ctx->charges[iii] / 1.6022e-19;
+        PetscReal Tj_ev            = (ctx->thermal_temps[jjj] / 1.1604525e7) * 1000; // convert (back) to eV
+        PetscReal muj              = ctx->masses[jjj] / 1.6720e-27;
+        PetscReal nj               = ctx->n[jjj] * ctx->n_0;
+        ctx->lambdas[gridi][gridj] = ctx->lambdas[gridj][gridi] = 23 - PetscLogReal(Zi * Zj * (mui + muj) / (mui * Tj_ev + muj * Ti_ev) * PetscSqrtReal(ni * Zi * Zi / Ti_ev + nj * Zj * Zj / Tj_ev));
+      }
+    }
+  }
+  //PetscReal v0 = PetscSqrtReal(ctx->k * ctx->thermal_temps[iii] / ctx->masses[iii]); /* arbitrary units for non-dimensionalization: plasma formulary def */
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif
 /*
   ComputeGradS - Compute grad_v dS_eps/df
 
@@ -642,7 +678,7 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   PetscReal         *gradS, *weight;
   PetscReal          lnLam=10., t0, nu_nd, m0=user->masses[0], v_0, nu_ee, nu_ei, nu_ii;
   PetscInt           dim, d, Np, *species, Ns;
-
+  PetscReal          nu_alpha[3], nu_beta[3];
   PetscFunctionBeginUser;
 
   PetscCall(TSGetDM(ts, &sw));
@@ -654,12 +690,12 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   t0 = (8 * PETSC_PI * PetscSqr(m0) * PetscSqr(EPSILON_NOUGHT) * PetscPowReal(v_0, 3))/(PetscPowReal(user->charges[0], 4) * lnLam * user->n0[0]);
   user->t_0 = t0;
   nu_nd = t0*user->n0[0]/PetscPowReal(v_0,3.);
+  for (PetscInt s = 0; s < Ns; ++s){
+    nu_alpha[s] =  PetscSqr(user->charges[s] / m0);// I don't know why mark has this addiitional mass ratio term* m0 / user->masses[s];
+    nu_beta[s] = PetscSqr(user->charges[s]/EPSILON_NOUGHT)*lnLam / (8*PETSC_PI) * nu_nd;
+  }
 
-  nu_ee = nu_nd * (PetscPowReal(user->charges[0], 4) * lnLam/(8*PETSC_PI*PetscSqr(m0) * PetscSqr(EPSILON_NOUGHT)));
-  nu_ei = nu_nd * (PetscSqr(user->charges[0]) * PetscSqr(user->charges[1]) * lnLam/(8*PETSC_PI*PetscSqr(m0) * PetscSqr(EPSILON_NOUGHT)));
-  nu_ii = nu_nd * (PetscPowReal(user->charges[1], 4) * lnLam/(8*PETSC_PI*PetscSqr(m0) * PetscSqr(EPSILON_NOUGHT)));
-
-  if (dbg) PetscPrintf(PETSC_COMM_WORLD, "nuee %g nuei %g nuii %g\n", nu_ee, nu_ei, nu_ii);
+  if (dbg) PetscPrintf(PETSC_COMM_WORLD, "nua[0] %g nua[1] %g nub[0] %g nub[1] %g nuee %g nuii %g nuei %g nuie %g\n", nu_alpha[0], nu_alpha[1], nu_beta[0], nu_beta[1], nu_alpha[0] * nu_beta[0], nu_alpha[1] * nu_beta[1], nu_alpha[0] * nu_beta[1], nu_alpha[1] * nu_beta[0]);
 
   PetscCall(VecZeroEntries(R));
   PetscCall(DMGetDimension(sw, &dim));
@@ -682,10 +718,6 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
 
       if (q == p) continue;
 
-      if ((species[p] == 0) & (species[q] == 0)) nu = nu_ee;
-      if (species[p] != species[q]) nu = nu_ei;
-      if ((species[p] == 1) & (species[q] == 1)) nu = nu_ii;
-
       DMPlex_WaxpyD_Internal(dim, -1.0, (const PetscReal*)&gradS[q*dim], (const PetscReal*)&gradS[p*dim], GammaS);
       // This has 1/mw_p applied at the computation of \nabla_v_p S in ComputeGammaS(..)
       QCompute(dim, &u[p*dim], &u[q*dim], Q);
@@ -694,7 +726,7 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
         case 2: DMPlex_MultAdd2DReal_Internal(Q, 1, GammaS, residual);break;
         case 3: DMPlex_MultAdd3DReal_Internal(Q, 1, GammaS, residual);break;
       }
-      for(d=0; d < dim; ++d) r[p*dim+d] += residual[d] * nu * weight[q] * m0/user->masses[species[p]];
+      for(d=0; d < dim; ++d) r[p*dim+d] += residual[d] * nu_alpha[species[p]] * nu_beta[species[q]] * weight[q] * m0/user->masses[species[p]];
     }
     if (dbg) PetscPrintf(PETSC_COMM_WORLD, "Final %4" PetscInt_FMT " %10.8lf %10.8lf\n", p, r[p*dim+0], r[p*dim+1]);
   }
@@ -959,9 +991,9 @@ static PetscErrorCode Monitor_Anisotropic(TS ts)
   }
   PetscReal v_0;
   for (idx = 0; idx < Ns; ++idx) user->v0[idx] = PetscSqrtReal(BOLTZMANN_K * Tavg[idx] / user->masses[idx]);
-  v_0     = PetscSqrtReal((8 * BOLTZMANN_K * Tavg[0])/(user->masses[0]*PETSC_PI));
+  //v_0     = PetscSqrtReal((8 * BOLTZMANN_K * Tavg[0])/(user->masses[0]*PETSC_PI));
 
-  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] = 5.*user->v0[idx]/v_0;
+  for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] = 5.*user->v0[idx]/user->v0[0];
 
   for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] /= user->Np;// commented out the above to use the regular configuration
   for (idx = 0; idx < Ns; ++idx) user->epsilon[idx] = PetscPowReal(user->epsilon[idx], 1.98);
@@ -1314,17 +1346,11 @@ int main(int argc,char **argv)
     -dm_swarm_charges -1,1\
     -dm_swarm_temperature 0.3,0.25 -regular -order 3 -npls 10 -ts_adapt_type none -ts_max_snes_failures -1
   test:
-    suffix: algoim_3v_equilibration
+    suffix: 3v_anisotropic
     requires: ks triangle algoim !single !complex
-    args: -steps 10000000 -step_size 0.001 \                                                                                                                      -ts_type theta -ts_theta_theta 0.5\
-    -dm_plex_simplex 0 -dm_plex_dim 3\
-    -dm_plex_box_lower -1,-1,-1\
-    -dm_plex_box_upper 1,1,1\
-    -dm_plex_box_faces 1,1,1\
-    -snes_mf\
-    -dm_swarm_num_species 2\
-    -dm_swarm_masses 1.,1.\
-    -dm_swarm_mass_units 0,0\
-    -dm_swarm_charges -1,1\
-    -dm_swarm_temperature 0.3,0.25 -regular -order 3 -npls 10 -ts_adapt_type none -ts_max_snes_failures -1
+    args: -steps 100000 -step_size 0.01 -ts_type theta -ts_theta_theta 0.5\
+    -dm_plex_simplex 0 -dm_plex_dim 3 -dm_plex_box_lower -1,-1,-1 -dm_plex_box_upper 1,1,1 -dm_plex_box_faces 1,1,1\
+    -snes_mf -dm_swarm_num_species 2 -dm_swarm_masses 1.,2. -dm_swarm_mass_units 0,1 -dm_swarm_charges -1,1\
+    -dm_swarm_temperature 0.35,.35,.3,0.25,.25,.2\
+    -regular -run_nrl -anisotropic -ts_adapt_type none -ts_max_snes_failures -1 -Np 10
 TEST*/
