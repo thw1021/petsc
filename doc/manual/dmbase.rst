@@ -51,7 +51,7 @@ use ``MatSetValuesStencil()`` and for ``DMSTAG`` with ``DMStagMatSetValuesStenci
 A given ``DM`` can be refined for certain ``DMType``\s with ``DMRefine()`` or coarsened with ``DMCoarsen()``.
 Mappings between ``DM``\s may be obtained with routines such as ``DMCreateInterpolation()``, ``DMCreateRestriction()`` and ``DMCreateInjection()``.
 
-One attaches a ``DM`` to a PETScsolver object, `KSP`, `SNES`, `TS`, or `Tao` with
+One attaches a ``DM`` to a PETSc solver object, `KSP`, `SNES`, `TS`, or `Tao` with
 
 .. code-block::
 
