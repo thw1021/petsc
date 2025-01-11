@@ -85,7 +85,7 @@ or recompiling the application code.
 Common Object Header
 --------------------
 
-All PETSc objects (derived off the base class ``PetscObject``) have the following common header structures
+All PETSc objects (derived from the base class ``PetscObject``) have the following common header structures
 defined in
 `include/petsc/private/petscimpl.h <../../include/petsc/private/petscimpl.h.html>`__:
 
