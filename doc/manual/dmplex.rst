@@ -883,7 +883,7 @@ preserved under adaptation, respectively.
    of the normal Euclidean basis used in linear algebra. With ``PetscLayout``, we associate a unit vector (:math:`e_i`) with every
    point in the space, and just divide up points between processes.
 
-.. [#boundary_footnote] In three dimensions, he boundary of a cell (sometimes called an element) is its faces, the boundary of a face is its edges and the boundary of an edge is the two vertices.
+.. [#boundary_footnote] In three dimensions, the boundary of a cell (sometimes called an element) is its faces, the boundary of a face is its edges and the boundary of an edge is the two vertices.
 
 .. bibliography:: /petsc.bib
     :filter: docname in docnames
