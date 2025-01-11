@@ -528,7 +528,7 @@ typedef enum {
 } PCHPDDMSchurPreType;
 
 /*E
-    PCFailedReason - indicates the type of `PC` failure. That is why the construction of the preconditioner, `PCSetUp()`, or it's use, `PCApply()`, failed
+    PCFailedReason - indicates the type of `PC` failure. That is why the construction of the preconditioner, `PCSetUp()`, or its use, `PCApply()`, failed
 
     Level: beginner
 
