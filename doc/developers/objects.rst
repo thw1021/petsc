@@ -285,7 +285,7 @@ previously loaded), not when the ``PetscObjectComposeFunction()`` routine was
 called.
 
 Since the object composition allows one to compose PETSc objects
-with PETSc objects PETSc provides the
+with PETSc objects, PETSc provides the
 convenience object ``PetscContainer``, created with the routine
 ``PetscContainerCreate(MPI_Comm,PetscContainer*)``, to allow wrapping any
 kind of data into a PETSc object that can then be composed with a PETSc
