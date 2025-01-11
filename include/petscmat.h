@@ -22,7 +22,7 @@ S*/
 typedef struct _p_Mat *Mat;
 
 /*J
-   MatType - String with the name of a PETSc matrix type.  These are all the matrix formats that PETSc provides.
+   MatType - String with the name of a PETSc matrix type. These are all the matrix formats that PETSc provides.
 
    Level: beginner
 
