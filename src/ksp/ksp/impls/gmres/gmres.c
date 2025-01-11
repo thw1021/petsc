@@ -157,7 +157,7 @@ static PetscErrorCode KSPGMRESCycle(PetscInt *itcount, KSP ksp)
     *HH(it + 1, it)  = tt;
     *HES(it + 1, it) = tt;
 
-    /* check for the happy ending */
+    /* check for the happy breakdown */
     hapbnd = PetscAbsScalar(tt / *GRS(it));
     if (hapbnd > gmres->haptol) hapbnd = gmres->haptol;
     if (tt < hapbnd) {
