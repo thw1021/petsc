@@ -3,7 +3,7 @@ PETSc Development Team
 ======================
 
 The developers of PETSc are Mark Adams, Satish Balay, Jed Brown, Lisandro Dalcin, Toby Isaac, Pierre Jolivet,
-Matthew Knepley,  Lois Curfman McInnes, Richard Tran Mills, Todd Munson, Jose E. Roman, Barry Smith, Hansol Suh,
+Matthew Knepley, Lois Curfman McInnes, Richard Tran Mills, Todd Munson, Jose E. Roman, Barry Smith, Hansol Suh,
 Stefano Zampini, Hong Zhang, and Junchao Zhang. The previous developers of PETSc are Shrirang Abhyankar,
 Steven J. Benson, Blaise Bourdin, Peter Brune, Kris Buschelman, Emil M. Constantinescu, Alp Dener,
 Victor Eijkhout, Jacob Faibussowitsch, Sean Farley, Bill Gropp, Vaclav Hapla, Dmitry Karpeev, Dinesh Kaushik,
