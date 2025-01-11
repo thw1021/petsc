@@ -467,7 +467,7 @@ matrix that defines the linear system with the options database command ``-ksp_n
 
 .. code-block::
 
-   KSPSetNormType(ksp,KSP_NORM_NATURAL);
+   KSPSetNormType(ksp, KSP_NORM_NATURAL);
 
 Convergence (or divergence) is decided
 by three quantities: the decrease of the residual norm relative to the
