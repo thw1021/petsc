@@ -159,7 +159,7 @@ automatically. Use the option ``-ksp_reuse_preconditioner true``, or call
 For many problems, if the matrix changes values only slightly, reusing the
 old preconditioner can be more efficient.
 
-If you wish to reuse the `KSP` with a different sized matrix and vectors you must
+If you wish to reuse the `KSP` with a different sized matrix and vectors, you must
 call ``KSPReset()`` before calling ``KSPSetOperators()`` with the new matrix.
 
 
