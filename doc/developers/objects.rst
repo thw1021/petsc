@@ -245,7 +245,7 @@ functions listed below with the first letter of each word capitalized.
 ``PetscObjectGetComm()`` calls the ``getcomm(PetscObject,MPI_Comm*)`` function point which obtains the MPI communicator
 associated with this object.
 
-``PetscObjectGetComm()`` calls the ``view(PetscObject,PetscViewer)`` function point which allows you to store or visualize the
+``PetscObjectView()`` calls the ``view(PetscObject,PetscViewer)`` function point which allows you to store or visualize the
 data inside an object. If the ``PetscViewer`` is ``NULL``, then it should cause the
 object to print information on the object to ``stdout``.
 
