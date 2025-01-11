@@ -460,7 +460,7 @@ can be used by the options database command
 
 .. code-block::
 
-   KSPSetNormType(ksp,KSP_NORM_UNPRECONDITIONED);
+   KSPSetNormType(ksp, KSP_NORM_UNPRECONDITIONED);
 
 ``KSPCG`` also supports using the natural norm induced by the symmetric positive-definite
 matrix that defines the linear system with the options database command ``-ksp_norm_type natural`` or by calling the routine
