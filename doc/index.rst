@@ -14,7 +14,7 @@ PETSc is now on `BlueSky <https://bsky.app/profile/petsc.bsky.social>`__.
 
 The 2025 PETSc Annual User Meeting will take place May 20-21, 2025 in Buffalo, New York, USA, with tutorials on May 19th.
 
-Mrs Hong Zhang, who has been a PETSc developer for twenty-five years and mentored many students and future PETSc developers, has retired.
+Mrs. Hong Zhang, who has been a PETSc developer for twenty-five years and mentored many students and future PETSc developers, has retired.
 
 PETSc is associated with NumFOCUS a 501(c)(3) nonprofit supporting open code and reproducible science,
 through which you can help support PETSc.
