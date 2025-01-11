@@ -46,6 +46,9 @@ Changes: Development
 
 .. rubric:: Vec:
 
+- Add ``VecNestGetSubVecsRead()`` and ``VecNestRestoreSubVecsRead()`` for read-only access to subvectors
+- Add ``VecPointwiseSign()`` and ``VecSignMode``
+
 .. rubric:: PetscSection:
 
 .. rubric:: PetscPartitioner:
@@ -54,6 +57,7 @@ Changes: Development
 
 - Add ``MatCopyHashToXAIJ()`` which allows assembling an XAIJ matrix in hash table form into another XAIJ matrix
 - Add ``MatResetHash()`` which allows resetting an XAIJ matrix to use a hash table
+- Add ``MatConstantDiagonalGetConstant()``
 
 .. rubric:: MatCoarsen:
 
@@ -72,6 +76,28 @@ Changes: Development
 .. rubric:: TS:
 
 .. rubric:: TAO:
+
+- Add new ``TaoTerm`` object to manipulate objective function terms with many methods
+- Add ``TaoComputeHessianSingle()`` convenience function for when the user's code does not compute a preconditioning matrix
+- Add ``TaoGetObjectiveTerm()``, ``TaoSetObjectiveTerm()``, and ``TaoAddObjectiveTerm()`` for manipulating the objective function of a ``Tao`` using ``TaoTerm``
+- Add ``TaoBRGNGetRegularizationType()``, ``TaoBRGNSetReguarizationType()``, ``TaoBRGNGetRegularizerTerm()`` and ``TaoBRGNSetRegularizerTerm()`` for finer control of ``TAOBRGN``
+- Add new solver of type ``TAOFB``, Forward-Backward algorithm,  and ``TAOCV``, Condat-Vu algorithm, using ``TaoTerm``, and their tutorial examples
+
+.. rubric:: TaoTerm:
+
+- Add ``TAOTERMTAOCALLBACKS`` implementation of ``TaoTerm`` for constructing a term from the callbacks passed to a ``Tao`` object
+- Add ``TAOTERMBRGNREGULARIZER`` implementation of ``TaoTerm`` for constructing a term from the callbacks passed to a ``TaoBRGNSetReguarizerObjectiveAndGradientRoutine()``
+- Add ``TAOTERMADMMREGULARIZER`` implementation of ``TaoTerm`` for constructing a term from the callbacks passed to a ``TaoADMMSetReguarizerObjectiveAndGradientRoutine()``
+- Add ``TAOTERMADMMISFIT`` implementation of ``TaoTerm`` for constructing a term from the callbacks passed to a ``TaoADMMSetMisfitObjectiveAndGradientRoutine()``
+- Add ``TAOTERMSHELL`` implementation of ``TaoTerm`` for user-defined callbacks
+- Add ``TAOTERMSUM`` implementation of ``TaoTerm`` for scaled, mapped sums of terms
+- Add ``TAOTERMHALFL2SQUARED`` implementation of ``TaoTerm`` for a typical squared-norm penalty function
+- Add ``TAOTERML1`` implementation of ``TaoTerm`` for a typical 1-norm penalty function
+- Add ``TAOTERMQUADRATIC`` implementation of ``TaoTerm`` for a quadratic penalty function
+- Add ``TAOTERMSIMPLEX`` implementation of ``TaoTerm`` for a probability simplex function
+- Add ``TAOTERMZERO`` implementation of ``TaoTerm`` for a zero-cone.
+- Add ``TAOTERMBOX`` implementation of ``TaoTerm`` for a box constraint function
+- Add tutorials for various ``TaoTerm`` using ``TaoTermProximalMap()``
 
 .. rubric:: DM/DA:
 
