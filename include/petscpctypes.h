@@ -328,7 +328,7 @@ typedef const char *PCGAMGClassicalType;
 #define PCGAMGCLASSICALSTANDARD "standard"
 
 /*E
-   PCMGType - Determines the type of multigrid method that is run  with the `PCType` of `PCMG` or `PCGAMG`
+   PCMGType - Determines the type of multigrid method that is run with the `PCType` of `PCMG` or `PCGAMG`
 
    Values:
 +  `PC_MG_MULTIPLICATIVE` (default) - traditional V or W cycle as determined by `PCMGSetCycleType()`
