@@ -400,7 +400,7 @@ PETSC_EXTERN PetscErrorCode PetscElementalFinalizePackage(void);
 #endif
 
 /*MC
-   PetscMalloc - Allocates memory for use with Petsc. One should use `PetscNew()`, `PetscMalloc1()` or `PetscCalloc1()` usually instead of `PetscMalloc()`
+   PetscMalloc - Allocates memory for use with PETSc. One should use `PetscNew()`, `PetscMalloc1()` or `PetscCalloc1()` usually instead of `PetscMalloc()`
 
    Synopsis:
     #include <petscsys.h>
@@ -423,10 +423,10 @@ PETSC_EXTERN PetscErrorCode PetscElementalFinalizePackage(void);
    However, the pointer should never be dereferenced or the program will crash.
 
    Developer Note:
-   All the PetscMallocN() routines actually call `PetscMalloc()` behind the scenes.
+   All the `PetscMallocN()` routines actually call `PetscMalloc()` behind the scenes.
 
    Except for data structures that store information about the PETSc options database all memory allocated by PETSc is
-   obtained with `PetscMalloc()` or `PetscAlloc()`
+   obtained with `PetscMalloc()` or `PetscCalloc()`
 
 .seealso: `PetscFree()`, `PetscNew()`, `PetscCalloc()`
 M*/
@@ -502,7 +502,7 @@ M*/
    However, the pointer should never be dereferenced or the program will crash.
 
    Developer Note:
-   All PetscCallocN() routines call `PetscCalloc()` behind the scenes.
+   All `PetscCallocN()` routines call `PetscCalloc()` behind the scenes.
 
 .seealso: `PetscFree()`, `PetscNew()`, `PetscMalloc()`
 M*/
@@ -948,7 +948,7 @@ M*/
    Level: beginner
 
    Developer Note:
-   Calls `PetscCalloc()` with the operate memory size obtained from `type`
+   Calls `PetscCalloc()` with the appropriate memory size obtained from `type`
 
 .seealso: `PetscFree()`, `PetscMalloc()`, `PetscCall()`, `PetscCalloc1()`, `PetscMalloc1()`
 M*/

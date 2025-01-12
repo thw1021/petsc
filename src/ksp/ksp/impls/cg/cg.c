@@ -661,7 +661,7 @@ PETSC_INTERN PetscErrorCode KSPBuildResidual_CG(KSP ksp, Vec t, Vec v, Vec *V)
    (1) Solve a left-preconditioned system $BAx = Bb $, using $ B^{-1}$ to define an inner product in the algorithm.
    (2) Solve a right-preconditioned system $ABy = b, x = By,$ using $B$ to define an inner product in the algorithm.
    (3) Solve a symmetrically-preconditioned system, $ E^TAEy = E^Tb, x = Ey, $ where $B = EE^T.$
-   (4) Solve $Ax=b$ with CG, but use the inner product defined by $B$ to define the method [2].
+   (4) Solve $Ax=b$ with CG, but use the inner product defined by $B$ to define the method.
    In all cases, the resulting algorithm only requires application of $B$ to vectors.
 .ve
 
@@ -675,7 +675,7 @@ PETSC_INTERN PetscErrorCode KSPBuildResidual_CG(KSP ksp, Vec t, Vec v, Vec *V)
    do not dominate the compute time.
 
    Developer Note:
-   KSPSolve_CG() should actually query the matrix to determine if it is Hermitian symmetric or not and NOT require the user to
+   KSPSolve_CG() should actually query the matrix to determine if it is Hermitian or symmetric and NOT require the user to
    indicate it to the `KSP` object.
 
 .seealso: [](ch_ksp), `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPSetComputeEigenvalues()`, `KSPComputeEigenvalues()`

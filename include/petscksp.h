@@ -925,7 +925,7 @@ PETSC_EXTERN PetscErrorCode PCShellSetPostSolve(PC, PetscErrorCode (*)(PC, KSP, 
    Level: intermediate
 
    Note:
-   These methods generate intial guesses based on a series of previous, related, linear solves. For example,
+   These methods generate initial guesses based on a series of previous, related, linear solves. For example,
    in implicit time-stepping with `TS`.
 
 .seealso: [](ch_ksp), `KSPCreate()`, `KSPGuessSetType()`, `KSPGuessType`

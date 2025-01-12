@@ -1027,7 +1027,7 @@ allows PETSc to extend that overlap further if desired.
 the user to specify subdomains that span multiple MPI processes. This can be
 useful for problems where small subdomains result in poor convergence.
 To be effective, the multi-processor subproblems must be solved using a
-sufficient strong subsolver, such as ``PCLU``, for which ``SuperLU_DIST`` or a
+sufficiently strong subsolver, such as ``PCLU``, for which ``SuperLU_DIST`` or a
 similar parallel direct solver could be used; other choices may include
 a multigrid solver on the subdomains.
 
@@ -1634,8 +1634,8 @@ Shell Preconditioners
 ^^^^^^^^^^^^^^^^^^^^^
 
 The shell preconditioner simply uses an application-provided routine to
-implement the preconditioner. That is it allows users to write or wrap their
-own custom preconditioners as a `PC` and use it with `KSP` etc.
+implement the preconditioner. That is, it allows users to write or wrap their
+own custom preconditioners as a `PC` and use it with `KSP`, etc.
 
 To provide a custom preconditioner application, use
 
@@ -1754,7 +1754,7 @@ For example, to set the first sub preconditioners to use ILU(1)
    PCFactorSetFill(subpc,1);
 
 One can also change the operator that is used to construct a particular
-``PC`` in the composite ``PC`` call ``PCSetOperators()`` on the obtained ``PC``.
+``PC`` in the composite ``PC`` calling ``PCSetOperators()`` on the obtained ``PC``.
 ``PCFIELDSPLIT``, :any:`sec_block_matrices`,  provides an alternative approach to defining composite preconditioners
 with a variety of pre-defined compositions.
 

@@ -17,7 +17,7 @@
    Level: beginner
 
    Note:
-   These are using with `SNESSetType()` or the options database key `-snes_type` to set the specific nonlinear solver algorithm to use with a given `SNES` object
+   Use `SNESSetType()` or the options database key `-snes_type` to set the specific nonlinear solver algorithm to use with a given `SNES` object
 
 .seealso: [](doc_nonlinsolve), [](ch_snes), `SNESSetType()`, `SNES`, `SNESCreate()`, `SNESDestroy()`, `SNESSetFromOptions()`
 J*/
@@ -276,7 +276,7 @@ PETSC_EXTERN PetscErrorCode SNESGetCheckJacobianDomainError(SNES, PetscBool *);
    (in this case we recommend
    testing with `-pc_type lu` to eliminate the linear solver as the cause of the problem).
 
-   `SNES_DIVERGED_LOCAL_MIN` can only occur when using a `SNES` solver that uses a line search (`SNESLineSearch`)
+   `SNES_DIVERGED_LOCAL_MIN` can only occur when using a `SNES` solver that uses a line search (`SNESLineSearch`).
    The line search wants to minimize Q(alpha) = 1/2 || F(x + alpha s) ||^2_2  this occurs
    at Q'(alpha) = s^T F'(x+alpha s)^T F(x+alpha s) = 0. If s is the Newton direction - F'(x)^(-1)F(x) then
    you get Q'(alpha) = -F(x)^T F'(x)^(-1)^T F'(x+alpha s)F(x+alpha s); when alpha = 0
@@ -711,14 +711,14 @@ typedef struct _p_LineSearch *SNESLineSearch;
 +  `SNESLINESEARCHBASIC`   - (or equivalently `SNESLINESEARCHNONE`) Simple damping line search, defaults to using the full Newton step
 .  `SNESLINESEARCHBT`      - Backtracking line search over the L2 norm of the function
 .  `SNESLINESEARCHL2`      - Secant line search over the L2 norm of the function
-.  `SNESLINESEARCHCP`      - Critical point secant line search assuming $F(x) = grad G(x)$ for some unknown $G(x)$
+.  `SNESLINESEARCHCP`      - Critical point secant line search assuming $F(x) = \nabla G(x)$ for some unknown $G(x)$
 .  `SNESLINESEARCHNLEQERR` - Affine-covariant error-oriented linesearch
 -  `SNESLINESEARCHSHELL`   - User provided `SNESLineSearch` implementation
 
    Level: beginner
 
    Note:
-   These are using with `SNESLineSearchSetType()` or the options database key `-snes_linesearch_type` to set
+   Use `SNESLineSearchSetType()` or the options database key `-snes_linesearch_type` to set
    the specific line search algorithm to use with a given `SNES` object. Not all `SNESType` can utilize a line search.
 
 .seealso: [](ch_snes), `SNESLineSearch`, `SNESLineSearchSetType()`, `SNES`

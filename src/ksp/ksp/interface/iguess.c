@@ -234,7 +234,7 @@ PetscErrorCode KSPGuessCreate(MPI_Comm comm, KSPGuess *guess)
 - type  - a known `KSPGuessType`
 
   Options Database Key:
-. -ksp_guess_type  <method> - Turns on generation of initial guesses and sets the method; see `KSPGuessType` a list of available types
+. -ksp_guess_type  <method> - Turns on generation of initial guesses and sets the method; see `KSPGuessType` for a list of available types
 
   Level: developer
 

@@ -746,7 +746,7 @@ PetscErrorCode KSPGMRESGetCGSRefinementType(KSP ksp, KSPGMRESCGSRefinementType *
   A larger restart parameter generally leads to faster convergence of GMRES but the memory usage is higher than with a smaller `restart` parameter,
   as is the average time to perform each iteration. For more ill-conditioned problems a larger restart value may be neccessary.
 
-  `KSPBICGS` has the advantage over `KSPGMRES` in that it does not explicitly store the Krylov space and thus does not require as much memory
+  `KSPBCGS` has the advantage over `KSPGMRES` in that it does not explicitly store the Krylov space and thus does not require as much memory
   as GMRES might need.
 
 .seealso: [](ch_ksp), `KSPGMRES`, `KSPSetTolerances()`, `KSPGMRESSetOrthogonalization()`, `KSPGMRESSetPreAllocateVectors()`, `KSPGMRESGetRestart()`,
@@ -838,9 +838,9 @@ PetscErrorCode KSPGMRESSetHapTol(KSP ksp, PetscReal tol)
   Divergence breakdown occurs when the norm of the GMRES residual increases significantly at a restart.
   This is defined to be $ | truenorm - gmresnorm | > tol * gmresnorm $ where $ gmresnorm $ is the norm computed
   by the GMRES process at a restart iteration using the standard GMRES recursion formula and $ truenorm $ is computed after
-  the restart using the definition $ || r || = || b - A x ||$.
+  the restart using the definition $ \| r \| = \| b - A x \|$.
 
-  Divergence breakdown stops the iterative solve with a `KSPConvergedReason` of `KSP_DIVERGED_BREAKDOWN` indicate the
+  Divergence breakdown stops the iterative solve with a `KSPConvergedReason` of `KSP_DIVERGED_BREAKDOWN` indicating the
   GMRES solver has not converged.
 
   Divergence breakdown can occur when there is an error (bug) in either the application of the matrix or the preconditioner,

@@ -449,7 +449,7 @@ PetscErrorCode PCHMGUseMatMAIJ(PC pc, PetscBool usematmaij)
    Options Database Keys:
 +  -pc_hmg_reuse_interpolation <true | false>      - Whether or not to reuse the interpolations for new matrix values or rebuild the interpolation. This can save compute time.
 .  -pc_hmg_use_subspace_coarsening  <true | false> - Whether or not to use subspace coarsening (that is, coarsen a submatrix, or coarsen on the full matrix).
-.  -hmg_inner_pc_type <hypre, gamg, ...>           - What method to use to use generate the hierarchy of restriction operators
+.  -hmg_inner_pc_type <hypre, gamg, ...>           - What method to use to generate the hierarchy of restriction operators
 -  -pc_hmg_use_matmaij <true | false>              - Whether or not to use `MATMAIJ` for multicomponent problems for saving memory
 
    Level: intermediate

@@ -9,7 +9,7 @@
 
   Notes:
   The most commonly used `SNESType` is `SNESNEWTONLS` which uses Newton's method with a line search. For all the Newton based `SNES` nonlinear
-  solvers `KSP`, the PETSc abstract linear solver object, is used to (approximately) solve the required linear systems.
+  solvers, `KSP`, the PETSc abstract linear solver object, is used to (approximately) solve the required linear systems.
 
   See `SNESType` for a list of all the nonlinear solver algorithms provided by PETSc.
 

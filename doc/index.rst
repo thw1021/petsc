@@ -16,7 +16,7 @@ The 2025 PETSc Annual User Meeting will take place May 20-21, 2025 in Buffalo, N
 
 Mrs. Hong Zhang, who has been a PETSc developer for twenty-five years and mentored many students and future PETSc developers, has retired.
 
-PETSc is associated with NumFOCUS a 501(c)(3) nonprofit supporting open code and reproducible science,
+PETSc is associated with NumFOCUS, a 501(c)(3) nonprofit supporting open code and reproducible science,
 through which you can help support PETSc.
 
 Book on numerical methods using PETSc

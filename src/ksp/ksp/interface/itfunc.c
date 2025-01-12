@@ -246,7 +246,7 @@ PetscErrorCode KSPSetUpOnBlocks(KSP ksp)
   Level: intermediate
 
   Note:
-  When using `SNES` one can use `SNESSetLagPreconditioner()` to determine when preconditioners are resused.
+  When using `SNES` one can use `SNESSetLagPreconditioner()` to determine when preconditioners are reused.
 
 .seealso: [](ch_ksp), `KSPCreate()`, `KSPSolve()`, `KSPDestroy()`, `KSP`, `KSPGetReusePreconditioner()`,
           `SNESSetLagPreconditioner()`, `SNES`
@@ -1041,7 +1041,7 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
   Level: beginner
 
   Notes:
-  See `KSPSetFromOptions()` for additional options database keys that effect `KSPSolve()`
+  See `KSPSetFromOptions()` for additional options database keys that affect `KSPSolve()`
 
   If one uses `KSPSetDM()` then `x` or `b` need not be passed. Use `KSPGetSolution()` to access the solution in this case.
 
@@ -1059,7 +1059,7 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
 
   $A x = b $  where $b = b_p + b_t$ where $b_t$ is not in the range of $A$ (and hence by the fundamental theorem of linear algebra is in the nullspace(A'), see `MatSetNullSpace()`).
 
-  `KSP` first removes $b_t$ producing the linear system $ A x = b_p $ (which has multiple solutions) and solves this to find the $||x||$ minimizing solution (and hence
+  `KSP` first removes $b_t$ producing the linear system $ A x = b_p $ (which has multiple solutions) and solves this to find the $\|x\|$ minimizing solution (and hence
   it finds the solution $x$ orthogonal to the nullspace(A). The algorithm is simply in each iteration of the Krylov method we remove the nullspace(A) from the search
   direction thus the solution which is a linear combination of the search directions has no component in the nullspace(A).
 
@@ -1553,7 +1553,7 @@ PetscErrorCode KSPDestroy(KSP *ksp)
   Symmetric preconditioning is currently available only for the `KSPQCG` method. However, note that
   symmetric preconditioning can be emulated by using either right or left
   preconditioning, modifying the application of the matrix (with a custom `Mat` argument to `KSPSetOperators()`,
-  and using a pre 'KSPSetPreSolve()` or post processing `KSPSetPostSolve()` step.
+  and using a pre 'KSPSetPreSolve()` or post processing `KSPSetPostSolve()` step).
 
   Setting the `PCSide` often affects the default norm type.  See `KSPSetNormType()` for details.
 
@@ -1653,7 +1653,7 @@ PetscErrorCode KSPGetTolerances(KSP ksp, PetscReal *rtol, PetscReal *abstol, Pet
   Level: intermediate
 
   Notes:
-  The tolerances are with respect to a norm of the residual of the equation $ || b - A x^n ||$, they do not directly use the error of the equation.
+  The tolerances are with respect to a norm of the residual of the equation $ \| b - A x^n \|$, they do not directly use the error of the equation.
   The norm used depends on the `KSPNormType` that has been set with `KSPSetNormType()`, the default depends on the `KSPType` used.
 
   All parameters must be non-negative.
@@ -2312,7 +2312,7 @@ PetscErrorCode KSPMonitor(KSP ksp, PetscInt it, PetscReal rnorm)
   Level: beginner
 
   Notes:
-  The options database option `-ksp_monitor` and related options are the easiest way turn on `KSP` iteration monitoring
+  The options database option `-ksp_monitor` and related options are the easiest way to turn on `KSP` iteration monitoring
 
   The default is to do no monitoring.  To print the residual, or preconditioned
   residual if `KSPSetNormType`(ksp,`KSP_NORM_PRECONDITIONED`) was called, use

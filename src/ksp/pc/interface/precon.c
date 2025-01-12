@@ -80,7 +80,7 @@ static PetscErrorCode PCLogEventsDeactivatePop(void)
 }
 
 /*@
-  PCReset - Resets a `PC` context to state it was in before `PCSetUp()` was called, and removes any allocated `Vec` and `Mat` from its data structure
+  PCReset - Resets a `PC` context to the state it was in before `PCSetUp()` was called, and removes any allocated `Vec` and `Mat` from its data structure
 
   Collective
 
@@ -973,7 +973,7 @@ PetscErrorCode PCSetFailedReason(PC pc, PCFailedReason reason)
 
   Note:
   After a call to `KSPCheckDot()` or  `KSPCheckNorm()` inside a `KSPSolve()` or a call to `PCReduceFailedReason()`
-  this is the maximum over reason over all MPI processes in the `PC` communicator and hence logically collective.
+  this is the maximum reason over all MPI processes in the `PC` communicator and hence logically collective.
   Otherwise it returns the local value.
 
 .seealso: [](ch_ksp), `PC`, `PCCreate()`, `PCApply()`, `PCDestroy()`, `PCSetFailedReason()`, `PCFailedReason`
@@ -1032,11 +1032,11 @@ PetscErrorCode PCReduceFailedReason(PC pc)
   Level: developer
 
   Notes:
-  For example, for `PCLU` this will compute the factorization
+  For example, for `PCLU` this will compute the factorization.
 
-  This is called automatically be `KSPSetUp()` or `PCApply()` so rarely needs to be called directly.
+  This is called automatically by `KSPSetUp()` or `PCApply()` so rarely needs to be called directly.
 
-  For nested preconditioners, such as `PCFIELDSPLIT` or `PCBJACOBI` this may not finish the construction of the precondition
+  For nested preconditioners, such as `PCFIELDSPLIT` or `PCBJACOBI` this may not finish the construction of the preconditioner
   on the inner levels, the routine `PCSetUpOnBlocks()` may compute more of the preconditioner in those situations.
 
 .seealso: [](ch_ksp), `PC`, `PCCreate()`, `PCApply()`, `PCDestroy()`, `KSPSetUp()`, `PCSetUpOnBlocks()`
@@ -1597,7 +1597,7 @@ PETSC_INTERN PetscErrorCode PCPreSolveChangeRHS(PC pc, PetscBool *change)
 
   `KSPSetPresolve()` and `KSPSetPostSolve()` provide an alternative way to provide such transformations.
 
-.seealso: [](ch_ksp), `PC`, `PCPostSolve()`, `KSP`, `PCSetPreSolve()`, `KSPSetPresolve()`, `KSPSetPostSolve()`
+.seealso: [](ch_ksp), `PC`, `PCPostSolve()`, `KSP`, `PCSetPreSolve()`, `KSPSetPreSolve()`, `KSPSetPostSolve()`
 @*/
 PetscErrorCode PCPreSolve(PC pc, KSP ksp)
 {
@@ -1898,7 +1898,7 @@ $     -pc_type my_solver
   Level: advanced
 
   Note:
-  A simplier alternative to using `PCRegister()` for an application specific preconditioner is to use a `PC` of `PCType` `PCSHELL` and
+  A simpler alternative to using `PCRegister()` for an application specific preconditioner is to use a `PC` of `PCType` `PCSHELL` and
   provide your customizations with `PCShellSetContext()` and `PCShellSetApply()`
 
   `PCRegister()` may be called multiple times to add several user-defined preconditioners.

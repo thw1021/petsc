@@ -26,7 +26,7 @@ typedef struct _p_TS *TS;
    Level: beginner
 
    Note:
-   These are using with `TSSetType()` or the options database key `-ts_type` to set the ODE integrator method to use with a given `TS` object
+   Use `TSSetType()` or the options database key `-ts_type` to set the ODE integrator method to use with a given `TS` object
 
 .seealso: [](integrator_table), [](ch_ts), `TSSetType()`, `TS`, `TSRegister()`
 J*/

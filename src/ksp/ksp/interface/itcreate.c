@@ -265,7 +265,7 @@ PetscErrorCode KSPViewFromOptions(KSP A, PetscObject obj, const char name[])
   Level: advanced
 
   Notes:
-  The norm is always of the equations residual $|| b - A x^n ||$  (or an approximation to that norm) they are never a norm of the error in the equation.
+  The norm is always of the equations residual $\| b - A x^n \|$  (or an approximation to that norm), they are never a norm of the error in the equation.
 
   Not all combinations of preconditioner side (see `KSPSetPCSide()`) and norm types are supported by all Krylov methods.
   If only one is set, PETSc tries to automatically change the other to find a compatible pair.  If no such combination
@@ -366,7 +366,7 @@ PetscErrorCode KSPSetLagNorm(KSP ksp, PetscBool flg)
 
   Level: developer
 
-  Note:
+  Notes:
   This function should be called from the implementation files `KSPCreate_XXX()` to declare
   which norms and preconditioner sides are supported. Users should not call this
   function.
@@ -465,7 +465,7 @@ PetscErrorCode KSPGetNormType(KSP ksp, KSPNormType *normtype)
   If you know the operator `Amat` has a null space you can use `MatSetNullSpace()` and `MatSetTransposeNullSpace()` to supply the null
   space to `Amat` and the `KSP` solvers will automatically use that null space as needed during the solution process.
 
-  All future calls to `KSPSetOperators()` must use the same size matrices, unless `KSPRest()` is called!
+  All future calls to `KSPSetOperators()` must use the same size matrices, unless `KSPReset()` is called!
 
   Passing a `NULL` for `Amat` or `Pmat` removes the matrix that is currently being used from the `KSP` context.
 
@@ -629,7 +629,7 @@ PetscErrorCode KSPSetPreSolve(KSP ksp, PetscErrorCode (*presolve)(KSP ksp, Vec r
 }
 
 /*@C
-  KSPSetPostSolve - Sets a function that is called at the end of each `KSPSolve()` (whether it converges or not). Used in conjunction with `KSPSetPostSolve()`.
+  KSPSetPostSolve - Sets a function that is called at the end of each `KSPSolve()` (whether it converges or not). Used in conjunction with `KSPSetPreSolve()`.
 
   Logically Collective
 
@@ -784,7 +784,7 @@ PetscErrorCode KSPCreate(MPI_Comm comm, KSP *inksp)
 }
 
 /*@
-  KSPSetType -  Sets the algorith/method to be used for solve the linear solver with the given `KSP`
+  KSPSetType - Sets the algorithm/method to be used to solve the linear system with the given `KSP`
 
   Logically Collective
 

@@ -113,7 +113,6 @@ After having set these routines and options, the user solves the problem
 by calling
 
 .. code-block::
-.. code-block::
 
    SNESSolve(SNES snes,Vec b,Vec x);
 
@@ -588,7 +587,7 @@ where the default linesearch is ``SNESLINESEARCHL2``. This simple solver
 is mostly useful as a nonlinear smoother, or to provide line search
 stabilization to an inner method.
 
-**Nonlinear Conjugate Gradients.** Nonlinear CG, ``SNESNCG``is equivalent to linear
+**Nonlinear Conjugate Gradients.** Nonlinear CG, ``SNESNCG``, is equivalent to linear
 CG, but with the steplength determined by line search
 (``SNESLINESEARCHCP`` by default). Five variants (Fletcher-Reed,
 Hestenes-Steifel, Polak-Ribiere-Polyak, Dai-Yuan, and Conjugate Descent)
@@ -599,7 +598,7 @@ are implemented in PETSc and may be chosen using
    SNESNCGSetType(SNES snes, SNESNCGType btype);
 
 **Anderson Mixing and Nonlinear GMRES Methods.** Nonlinear GMRES (``SNESNGMRES``), and
-Anderson Mixing ``SNESANDERSON`` methods combine the last :math:`m` iterates, plus a new
+Anderson Mixing (``SNESANDERSON``) methods combine the last :math:`m` iterates, plus a new
 fixed-point iteration iterate, into an approximate residual-minimizing new iterate.
 
 Quasi-Newton Methods

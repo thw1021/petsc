@@ -255,7 +255,7 @@ M*/
     and the constants defined in both `NormType` and `ReductionType` are used to designate the desired operation.
 
 .seealso: [](ch_vectors), `MatGetColumnReductions()`, `MatGetColumnNorms()`, `NormType`, `REDUCTION_SUM_REALPART`,
-          `REDUCTION_SUM_IMAGINARYPART`, `REDUCTION_MEAN_REALPART`, , `REDUCTION_MEAN_IMAGINARYPART`
+          `REDUCTION_SUM_IMAGINARYPART`, `REDUCTION_MEAN_REALPART`, `REDUCTION_MEAN_IMAGINARYPART`
 E*/
 typedef enum {
   REDUCTION_SUM_REALPART       = 10,
@@ -521,7 +521,7 @@ static inline PetscErrorCode VecSetValueLocal(Vec v, PetscInt i, PetscScalar va,
    Level: developer
 
    Note:
-   After calls to `VecSetValues()` and related routines one must call ``VecAssemblyBegin()` and `VecAssemblyEnd()` before using the vector
+   After calls to `VecSetValues()` and related routines one must call `VecAssemblyBegin()` and `VecAssemblyEnd()` before using the vector
 
 .seealso: [](ch_vectors), `Vec`, `VecSetValues()`, `VecAssemblyBegin()`, `VecAssemblyEnd()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`
 M*/

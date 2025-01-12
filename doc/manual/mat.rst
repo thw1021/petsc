@@ -958,9 +958,9 @@ Application Specific Custom Matrices
 Some people like to use matrix-free methods, which do
 not require explicit storage of the matrix, for the numerical solution
 of partial differential equations.
-Similar users may already have a custom matrix data structure and routines
+Similarly, users may already have a custom matrix data structure and routines
 for that data structure and would like to wrap their code up into a `Mat`;
-that is provide their own custom matrix type.
+that is, provide their own custom matrix type.
 
 To use the PETSc provided matrix-free matrix that uses finite differencing to approximate the matrix-vector product
 use ``MatCreateMFFD()``, see :any:`sec_nlmatrixfree`.

@@ -17,7 +17,7 @@ typedef struct _p_PC *PC;
    Level: beginner
 
    Notes:
-   These are using with `PCSetType()` or the options database key `-pc_type` to set the preconditioner to use with a given `PC` object
+   Use `PCSetType()` or the options database key `-pc_type` to set the preconditioner to use with a given `PC` object
 
    `PCRegister()` is used to register preconditioners that are then accessible via `PCSetType()`
 
@@ -328,7 +328,7 @@ typedef const char *PCGAMGClassicalType;
 #define PCGAMGCLASSICALSTANDARD "standard"
 
 /*E
-   PCMGType - Determines the type of multigrid method that is run with the `PCType` of `PCMG` or `PCGAMG`
+   PCMGType - Determines the type of multigrid method that is run with the `PCType` of `PCMG`
 
    Values:
 +  `PC_MG_MULTIPLICATIVE` (default) - traditional V or W cycle as determined by `PCMGSetCycleType()`
@@ -340,7 +340,7 @@ typedef const char *PCGAMGClassicalType;
                                       to the next, performs a cycle etc. This is much like the F-cycle presented in "Multigrid" by Trottenberg, Oosterlee, Schuller page 49, but that
                                       algorithm supports smoothing on before the restriction on each level in the initial restriction to the coarsest stage. In addition that algorithm
                                       calls the V-cycle only on the coarser level and has a post-smoother instead.
--  `PC_MG_KASKADE`                  - Cascadic or Kaskadic multgrid, like full multigrid except one never goes back to a coarser level from a finer
+-  `PC_MG_KASKADE`                  - Cascadic or Kaskadic multigrid, like full multigrid except one never goes back to a coarser level from a finer
 
    Level: beginner
 

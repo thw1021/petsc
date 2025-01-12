@@ -29,7 +29,7 @@ typedef struct _p_Mat *Mat;
    Notes:
    [](doc_matrix) for a table of available matrix types
 
-   These are using with `MatSetType()` or the options database keys `-mat_type` or `dm_mat_type` to set the matrix format to use for a given `Mat`
+   Use `MatSetType()` or the options database keys `-mat_type` or `dm_mat_type` to set the matrix format to use for a given `Mat`
 
 .seealso: [](doc_matrix), [](ch_matrices), `MatSetType()`, `Mat`, `MatSolverType`, `MatRegister()`
 J*/

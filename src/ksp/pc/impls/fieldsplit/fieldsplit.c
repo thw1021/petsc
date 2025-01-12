@@ -3331,7 +3331,7 @@ PetscErrorCode PCFieldSplitSetDetectSaddlePoint(PC pc, PetscBool flg)
 /*MC
   PCFIELDSPLIT - Preconditioner created by combining separate preconditioners for individual
   collections of variables (that may overlap) called fields or splits. Each field often represents a different continuum variable
-  represented on a grid, such as velocity, pressure, or tempature.
+  represented on a grid, such as velocity, pressure, or temperature.
   In the literature these are sometimes called block preconditioners; but should not be confused with `PCBJACOBI`.
   See [the users manual section on "Solving Block Matrices"](sec_block_matrices) for more details.
 

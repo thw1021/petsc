@@ -4,7 +4,7 @@ DM Basics
 ----------
 
 The previous chapters have focused on the core numerical solvers in PETSc. However, numerical solvers without efficient ways
-(in both human and machine time) of connecting the solvers to the mathematical models and discretizations, include grids (or meshes)
+(in both human and machine time) of connecting the solvers to the mathematical models and discretizations, including grids (or meshes)
 that people wish to build their simulations on,
 will not get widely used. Thus PETSc provides a set of abstractions represented by the ``DM`` object to provide a powerful, comprehensive
 mechanism for translating the problem specification of a model and its discretization to the language and API of solvers.

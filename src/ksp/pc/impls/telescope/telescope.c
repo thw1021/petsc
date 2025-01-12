@@ -999,7 +999,7 @@ PetscErrorCode PCTelescopeGetUseCoarseDM(PC pc, PetscBool *v)
   `-pc_telescope_subcomm_type` will not be used.
 
   It is required that the communicator associated with the parent (fine) and the coarse `DM` are of different sizes.
-  An error will occur of the size of the communicator associated with the coarse `DM` is the same as that of the parent `DM`.
+  An error will occur of the size if the communicator associated with the coarse `DM` is the same as that of the parent `DM`.
   Furthermore, it is required that the communicator on the coarse `DM` is a sub-communicator of the parent.
   This will be checked at the time the preconditioner is setup and an error will occur if
   the coarse `DM` does not define a sub-communicator of that used by the parent `DM`.
@@ -1173,7 +1173,7 @@ PetscErrorCode PCTelescopeGetDM(PC pc, DM *subdm)
 
 /*@
   PCTelescopeSetSubcommType - set subcommunicator type `PetscSubcommType` (interlaced or contiguous) to be used when
-                              when the subcommunicator is generated from the given `PC`
+                              the subcommunicator is generated from the given `PC`
 
   Logically Collective
 
@@ -1244,7 +1244,7 @@ PetscErrorCode PCTelescopeGetSubcommType(PC pc, PetscSubcommType *subcommtype)
 
    [1] Default setup
    The sub-communicator c' is created via `PetscSubcommCreate()`.
-   Any explicitly defined nullspace and near nullspace vectors attached to B with `MatSetNullSpace()` and `MatSetNearNullSpace()` are transfered to B'.
+   Any explicitly defined nullspace and near nullspace vectors attached to B with `MatSetNullSpace()` and `MatSetNearNullSpace()` are transferred to B'.
    Currently there is no support for nullspaces provided with `MatNullSpaceSetFunction()`).
    No support is provided for `KSPSetComputeOperators()`.
    Currently there is no support for the flag `-pc_use_amat`.
@@ -1256,7 +1256,7 @@ PetscErrorCode PCTelescopeGetSubcommType(PC pc, PetscSubcommType *subcommtype)
    Currently only support for re-partitioning a `DMDA` is provided.
    Any explicitly defined nullspace or near nullspace vectors attached to the original B with `MatSetNullSpace()`
    and `MatSetNearNullSpace()` are extracted, re-partitioned and set on B'
-   Currently there is no support for nullspaces provided with `MatNullSpaceSetFunction()`).
+   (currently there is no support for nullspaces provided with `MatNullSpaceSetFunction()`).
    Support is provided for `KSPSetComputeOperators()`. The user provided function and context is propagated to the sub `KSP`.
    This is fragile since the user must ensure that their user context is valid for use on c'.
    Currently there is no support for the flag `-pc_use_amat`.
@@ -1270,8 +1270,8 @@ PetscErrorCode PCTelescopeGetSubcommType(PC pc, PetscSubcommType *subcommtype)
    available with using multi-grid on unstructured meshes.
    This setup will not use the command line options `-pc_telescope_reduction_factor` or `-pc_telescope_subcomm_type`.
    Any explicitly defined nullspace or near nullspace vectors attached to the B are extracted, scattered into the correct ordering consistent
-   with dmcoarse and set on B'.
-   Currently there is no support for nullspaces provided with `MatNullSpaceSetFunction()`).
+   with dmcoarse and set on B'
+   (currently there is no support for nullspaces provided with `MatNullSpaceSetFunction()`).
    There is no general method to permute field orderings, hence only `KSPSetComputeOperators()` is supported.
    The user must use `PetscObjectComposeFunction()` with dmfine to define the method to scatter fields from dmfine to dmcoarse.
    Propagation of the user context for `KSPSetComputeOperators()` on the sub `KSP` is attempted by querying the `DM` contexts associated with
