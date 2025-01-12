@@ -451,7 +451,7 @@ further details.
 Convergence Tests
 ^^^^^^^^^^^^^^^^^
 
-The default convergence test, ``KSPConvergedDefault()``, is based on a norm of the residual.
+The default convergence test, ``KSPConvergedDefault()``, uses the $ l_2 $ norm of the preconditioned $ B(b - A x) $ or unconditioned residual $ b - Ax$, depending on the `KSPType` and the value of `KSPNormType` set with `KSPSetNormType`.  For $KSPCG$ and $KSPGMRES$ the default is the norm of the preconditioned residual.
 The preconditioned residual is used by default for
 convergence testing of all left-preconditioned ``KSP`` methods. For the
 conjugate gradient, Richardson, and Chebyshev methods the true residual
