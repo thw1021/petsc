@@ -526,7 +526,7 @@ PetscErrorCode PetscGetProgramName(char name[], size_t len)
 
   Output Parameters:
 + argc - count of the number of command line arguments
-- args - the the command line arguments
+- args - the command line arguments
 
   Level: intermediate
 

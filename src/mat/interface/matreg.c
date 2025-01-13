@@ -268,7 +268,7 @@ PetscErrorCode MatSetVecType(Mat mat, VecType vtype)
   Note:
   `MatRegister()` may be called multiple times to add several user-defined solvers.
 
-  A simplier alternative to using `MatRegister()` for an application specific matrix format is to use `MatCreateShell()`, which
+  A simpler alternative to using `MatRegister()` for an application specific matrix format is to use `MatCreateShell()`, which
   generates a `Mat` of `MatType` `MATSHELL`. One can then use `MatShellSetContext()` and `MatShellSetOperation()` to provide
   the data structures and routines customized for their matrix format.
 

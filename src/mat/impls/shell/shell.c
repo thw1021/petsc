@@ -1912,7 +1912,7 @@ PetscErrorCode MatCreateShell(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt M,
   Level: advanced
 
   Note:
-  This provides an easy way, along with `MatShellCreate()` and `MatShellSetOperation()` to provide a custom matrix format
+  This provides an easy way, along with `MatCreateShell()` and `MatShellSetOperation()` to provide a custom matrix format
   specifically for your application.
 
   Fortran Notes:
