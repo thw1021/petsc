@@ -4892,7 +4892,7 @@ PetscErrorCode SNESSolve(SNES snes, Vec b, Vec x)
 /* --------- Internal routines for SNES Package --------- */
 
 /*@
-  SNESSetType - Sets the algorith/method to be used for solve the nonlinear solver with the given `SNES`
+  SNESSetType - Sets the algorithm/method to be used to solve the nonlinear system with the given `SNES`
 
   Collective
 
