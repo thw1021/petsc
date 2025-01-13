@@ -4,7 +4,7 @@ PetscFunctionList TSList              = NULL;
 PetscBool         TSRegisterAllCalled = PETSC_FALSE;
 
 /*@
-  TSSetType - Sets the algorith/method to be used for integrating the ODE with the given `TS`.
+  TSSetType - Sets the algorithm/method to be used for integrating the ODE with the given `TS`.
 
   Collective
 

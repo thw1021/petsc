@@ -2148,7 +2148,7 @@ PetscErrorCode TSSetTimeStep(TS ts, PetscReal time_step)
 .vb
   TS_EXACTFINALTIME_STEPOVER    - Don't do anything if final time is exceeded, just use it
   TS_EXACTFINALTIME_INTERPOLATE - Interpolate back to final time if the final time is exceeded
-  TS_EXACTFINALTIME_MATCHSTEP   - Adapt final time step to ensure the computed final time exactly equals the requested the final time
+  TS_EXACTFINALTIME_MATCHSTEP   - Adapt final time step to ensure the computed final time exactly equals the requested final time
 .ve
 
   Options Database Key:
@@ -2551,7 +2551,7 @@ PetscErrorCode TSSetUp(TS ts)
   Level: developer
 
   Notes:
-  Any options set on the `TSS` object, including those set with `TSSetFromOptions()` remain.
+  Any options set on the `TS` object, including those set with `TSSetFromOptions()` remain.
 
   See also `TSSetResize()` to change the size of the system being integrated (for example by adaptive mesh refinement) during the time integration.
 
