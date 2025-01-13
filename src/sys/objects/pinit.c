@@ -561,7 +561,7 @@ PetscErrorCode PetscGetArgs(int *argc, char ***args)
   Level: intermediate
 
   Note:
-  This does NOT start with the program name and IS `NULL` terminated (the final argugment is void)
+  This does NOT start with the program name and IS `NULL` terminated (the final argument is void)
 
   Use `PetscFreeArguments()` to return the memory used by the arguments.
 
