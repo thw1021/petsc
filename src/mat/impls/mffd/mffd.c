@@ -643,7 +643,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MFFD(Mat A)
 
 /*@
   MatCreateMFFD - Creates a matrix-free matrix of type `MATMFFD` that uses finite differences on a provided function to
-  approximately multiple a vector by the matrix (Jacobian) . See also `MatCreateSNESMF()`
+  approximately multiply a vector by the matrix (Jacobian) . See also `MatCreateSNESMF()`
 
   Collective
 
