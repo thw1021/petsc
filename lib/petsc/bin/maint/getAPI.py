@@ -476,7 +476,7 @@ def getFunctions(mansec, functiontoinclude, filename):
           fun.includefile = functiontoinclude[name]
           args = line[line.find("(") + 1:line.find(")")]
           if args != 'void':
-            for i in ['PeCtx', 'FILE','hid_t','MPI_File','MPI_Offset','MPI_Info','PETSC_UINTPTR_T','LinkMode']:
+            for i in ['FILE','hid_t','MPI_File','MPI_Offset','MPI_Info','PETSC_UINTPTR_T','LinkMode']:
               if args.find(i) > -1:
                 fun.opaque = True
             args = args.split(",")

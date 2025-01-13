@@ -66,6 +66,7 @@ def cross(L):
 
 def crossCreate(L):
   '''Given a list of arguments to a function, generates a list of combinations of the form 'aaOOaO' indicating potential optional arguments'''
+  '''Currently not used because it takes too long to build the Fortran modules'''
   opts = []
   if len(L.arguments) == 0: return ['']
   for i in L.arguments:
@@ -99,8 +100,9 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
   file = fun.includefile + '90'
   if not file.startswith('petsc'): file = 'petsc' + file
   with open(os.path.join(petscarch,'src', mansec,'f90-mod','ftn-auto-interfaces',file),"a") as fd:
-    opts = crossCreate(fun)
-    if len(opts) > 1:
+    # Currently not used because it takes too long to build the Fortran modules
+    #opts = crossCreate(fun)
+    if False: # len(opts) > 1:
       for k in fun.arguments:
         if k.array and k.stars and not k.typename == 'char': return
         if k.stars and k.typename == 'MPI_Fint': return   # TODO add support for returning MPI_Fint
@@ -202,9 +204,10 @@ def generateCStub(petscarch,senums,classes,funname,fun):
   #      self.stringlen    - True indicates the argument is the length of the previous character string
   #      self.const        - indicates the string argument is an input, not an output
   #      self.stars        - indicates the string is (in C) returned by a pointer to a string array
-  print(fun)
+  print(funname)
   if fun.opaque:
     return
+  print(funname)
   # temporary
   for k in fun.arguments:
     # no C stub if function returns an array, except if it is a string
@@ -223,9 +226,10 @@ def generateCStub(petscarch,senums,classes,funname,fun):
     fd.write('#include <petsc' + fun.includefile.replace('petsc','') + '>\n')
 
     suffix = ''
-    for k in fun.arguments:
-      if k.optional:
-        suffix = 'raw'
+    # not used because generating the Fortran modules takes too long
+    #for k in fun.arguments:
+    #  if k.optional:
+    #    suffix = 'raw'
     if funname in ['PetscObjectQuery', 'PetscObjectCompose']:
       suffix = 'raw'
 
@@ -741,7 +745,8 @@ def main(petscdir,petscarch):
             fd.write('#endif\n')
 
   # generate all the polymorphic Fortran subroutines needed for class methods with optional arguments
-  for i in classes.keys():
+  # not used because it takes too long to build the Fortran modules
+  for i in []: #classes.keys():
     if i in ['PetscIntStack']: continue
     for j in classes[i].functions: # loop over functions in class
       # check for functions for which we cannot build intefaces
@@ -755,7 +760,8 @@ def main(petscdir,petscarch):
         generateFortranStub(senums, j, classes[i].functions[j], fd, opts)
 
   # generate all the polymorphic Fortran subroutines needed for class-less routines with optional arguments
-  for j in funcs.keys():
+  # not used because it takes too long to build the Fortran modules
+  for j in []: # funcs.keys():
     if funcs[j].opaque: continue
     opts = crossCreate(funcs[j])
     if len(opts) == 1: continue
@@ -769,13 +775,15 @@ def main(petscdir,petscarch):
 
   # convert function arguments from MPI_Comm to MPI_Fint
   for i in funcs:
+    print(i)
     for j in funcs[i].arguments:
-       j.typename = j.typename.replace('MPI_Comm','MPI_Fint')
+      j.typename = j.typename.replace('MPI_Comm','MPI_Fint')
 
   for i in classes:
-     for j in classes[i].functions:
-       for k in classes[i].functions[j].arguments:
-         k.typename = k.typename.replace('MPI_Comm','MPI_Fint')
+    for j in classes[i].functions:
+      print(j)
+      for k in classes[i].functions[j].arguments:
+        k.typename = k.typename.replace('MPI_Comm','MPI_Fint')
 
 
   # TODO: optimization, generate list of directories to delete and then delete the list
@@ -790,6 +798,7 @@ def main(petscdir,petscarch):
   for i in classes.keys():
     if i in ['PetscIntStack']: continue
     for j in classes[i].functions: # loop over functions in class
+      print(j + classes[i].functions[j].name)
       generateCStub(petscarch,senums,classes,j,classes[i].functions[j])
 
   for j in funcs.keys():

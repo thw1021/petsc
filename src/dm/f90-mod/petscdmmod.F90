@@ -42,9 +42,9 @@
 #include <../src/dm/f90-mod/petscdmda.h90>
 #include <../src/dm/f90-mod/ftn-auto-interfaces/petscdmda.h90>
 
-        contains
-
-#include <../src/dm/f90-mod/ftn-auto-interfaces/petscdmda.hf90>
+!        contains
+!
+!#include <../src/dm/f90-mod/ftn-auto-interfaces/petscdmda.hf90>
         end module petscdmda
 
 !     ----------------------------------------------
@@ -114,9 +114,9 @@
 #include <../src/dm/f90-mod/ftn-auto-interfaces/petscdmforest.h>
 #include <../src/dm/f90-mod/ftn-auto-interfaces/petscdmforest.h90>
 
-        contains
-
-#include <../src/dm/f90-mod/ftn-auto-interfaces/petscdmforest.hf90>
+!      contain
+!
+!#include <../src/dm/f90-mod/ftn-auto-interfaces/petscdmforest.hf90>
         end module petscdmforest
 
 !     ----------------------------------------------
