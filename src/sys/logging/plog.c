@@ -454,7 +454,7 @@ PETSC_INTERN PetscErrorCode PetscLogTypeBegin(PetscLogHandlerType type)
 
   This routine may be called more than once.
 
-  To provide the `-log_view` option your source code you must call  PetscCall(PetscOptionsSetValue(NULL, "-log_view", NULL));
+  To provide the `-log_view` option in your source code you must call  PetscCall(PetscOptionsSetValue(NULL, "-log_view", NULL));
   before you call `PetscInitialize()`
 
 .seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogView()`, `PetscLogTraceBegin()`
