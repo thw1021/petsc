@@ -693,7 +693,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MFFD(Mat A)
      umin = minimum iterate parameter
 .ve
 
-  To have `SNES` use the matrix-free finite difference matrix-vector product and not provide a seperate matrix
+  To have `SNES` use the matrix-free finite difference matrix-vector product and not provide a separate matrix
   from which to compute the preconditioner (the `pmat` argument `SNESSetJacobian()`), then simply call `SNESSetJacobian()`
   with `NULL` for the matrices and `MatMFFDComputeJacobian()`. Or use the options database option `-snes_mf`
 
