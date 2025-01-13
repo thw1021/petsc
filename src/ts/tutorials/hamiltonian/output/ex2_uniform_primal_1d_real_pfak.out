@@ -28,11 +28,11 @@ particle weight sum = 12.5664002939 cell weight sum = 12.5664002939
 ========== PFAK u_f ==========
 Mom 0: 12.5664
 Mom x: 78.9572
-Mom v: -7.1991e-16
+Mom v: -4.74447e-16
 Mom 2: 17.1533
 Global Np = 100
 Regular layout using 1 particles per cell
 ========== Remapped ==========
 Mom 0: 12.5664 --> 12.5273
-Mom 1: -3.41804e-16 --> -1.69632e-15
+Mom 1: -3.41804e-16 --> 1.60852e-15
 Mom 2: 17.1533 --> 17.0194

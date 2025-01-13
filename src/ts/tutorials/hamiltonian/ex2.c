@@ -369,6 +369,31 @@ static PetscErrorCode CheckNonNegativeWeights(DM sw, AppCtx *user)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static void f0_grad_phi2(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[]) {
+  PetscInt d;
+  PetscScalar E2;
+  for (d = 0, E2 = 0; d < dim; ++d)
+    E2 += PetscSqr(u_x[uOff_x[0] + d * dim + d]);
+  f0[0] = 0.5*E2;
+}
+
+static PetscErrorCode computeFieldEnergy(DM dm, Vec u, PetscReal *En)
+{
+  PetscDS        ds;
+  const PetscInt field = 0;
+  PetscInt       Nf;
+  void          *ctx;
+
+  PetscFunctionBegin;
+  PetscCall(DMGetApplicationContext(dm, &ctx));
+  PetscCall(DMGetDS(dm, &ds));
+  PetscCall(PetscDSGetNumFields(ds, &Nf));
+  PetscCheck(Nf == 1, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "We currently only support 1 field, not %" PetscInt_FMT, Nf);
+  PetscCall(PetscDSSetObjective(ds, field, &f0_grad_phi2));
+  PetscCall(DMPlexComputeIntegralFEM(dm, u, En, ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode computeVelocityFEMMoments(DM sw, PetscReal moments[], AppCtx *user)
 {
   DMSwarmCellDM celldm;
@@ -431,8 +456,19 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(PetscDrawSave(draw));
 
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", pmoments));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim]));
-  PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
+  if (user->em == EM_PRIMAL) {
+    Vec       phi;  
+    DM        dm;
+    PetscReal En;
+    PetscCall(DMSwarmGetCellDM(sw, &dm));
+    PetscCall(DMGetNamedGlobalVector(user->dmPot, "phi", &phi));
+    PetscCall(computeFieldEnergy(dm, phi, &En));
+    PetscCall(DMRestoreNamedGlobalVector(user->dmPot, "phi", &phi));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%e\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)En));
+    PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
+  } else {
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim]));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
