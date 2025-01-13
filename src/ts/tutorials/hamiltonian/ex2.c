@@ -388,7 +388,6 @@ static PetscErrorCode computeFieldEnergy(DM dm, Vec u, PetscReal *En)
   PetscCall(DMGetApplicationContext(dm, &ctx));
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(PetscDSGetNumFields(ds, &Nf));
-  PetscCheck(Nf == 1, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "We currently only support 1 field, not %" PetscInt_FMT, Nf);
   PetscCall(PetscDSSetObjective(ds, field, &f0_grad_phi2));
   PetscCall(DMPlexComputeIntegralFEM(dm, u, En, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -456,19 +455,15 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(PetscDrawSave(draw));
 
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", pmoments));
-  if (user->em == EM_PRIMAL) {
-    Vec       phi;
-    DM        dm;
-    PetscReal En;
-    PetscCall(DMSwarmGetCellDM(sw, &dm));
-    PetscCall(DMGetNamedGlobalVector(user->dmPot, "phi", &phi));
-    PetscCall(computeFieldEnergy(dm, phi, &En));
-    PetscCall(DMRestoreNamedGlobalVector(user->dmPot, "phi", &phi));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%e\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)En));
-    PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
-  } else {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim]));
-  }
+  Vec       phi;
+  DM        dm;
+  PetscReal En;
+  PetscCall(DMSwarmGetCellDM(sw, &dm));
+  PetscCall(DMGetNamedGlobalVector(user->dmPot, "phi", &phi));
+  PetscCall(computeFieldEnergy(dm, phi, &En));
+  PetscCall(DMRestoreNamedGlobalVector(user->dmPot, "phi", &phi));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%e\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)En));
+  PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
