@@ -676,7 +676,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MFFD(Mat A)
   Level: advanced
 
   Notes:
-  Use `MatMFFDSetFunction()` to provide the function that will be differenced to compute the matrix-vector multiple.
+  Use `MatMFFDSetFunction()` to provide the function that will be differenced to compute the matrix-vector product.
 
   The matrix-free matrix context contains the function pointers
   and work space for performing finite difference approximations of
