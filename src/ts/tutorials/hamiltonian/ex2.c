@@ -457,7 +457,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
 
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", pmoments));
   if (user->em == EM_PRIMAL) {
-    Vec       phi;  
+    Vec       phi;
     DM        dm;
     PetscReal En;
     PetscCall(DMSwarmGetCellDM(sw, &dm));
