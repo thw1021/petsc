@@ -460,7 +460,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscReal En;
   PetscCall(DMSwarmGetCellDM(sw, &dm));
   PetscCall(DMGetNamedGlobalVector(user->dmPot, "phi", &phi));
-  PetscCall(computeFieldEnergy(dm, phi, &En));
+  PetscCall(computeFieldEnergy(user->dmPot, phi, &En));
   PetscCall(DMRestoreNamedGlobalVector(user->dmPot, "phi", &phi));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%e\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)En));
   PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
