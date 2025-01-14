@@ -1418,6 +1418,10 @@ static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat A)
 
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_SeqAIJKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", MatSetValuesCOO_SeqAIJKokkos));
+#if defined(PETSC_HAVE_HYPRE)
+  // MatConvert queries the name MatCovert_oldtype_newtype_C() with types in lower case
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqaijkokkos_hypre_C", MatConvert_AIJ_HYPRE));
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -1719,6 +1719,10 @@ static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIAIJGetLocalMatMerge_C", MatMPIAIJGetLocalMatMerge_MPIAIJKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_MPIAIJKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetValuesCOO_C", MatSetValuesCOO_MPIAIJKokkos));
+#if defined(PETSC_HAVE_HYPRE)
+  // MatConvert queries the name MatCovert_oldtype_newtype_C() with types in lower case
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_mpiaijkokkos_hypre_C", MatConvert_AIJ_HYPRE));
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
