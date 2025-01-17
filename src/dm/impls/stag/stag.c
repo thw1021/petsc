@@ -6,6 +6,57 @@
 */
 #include <petsc/private/dmstagimpl.h> /*I  "petscdmstag.h"   I*/
 #include <petscsf.h>                  /*I  "petscdsf.h"   I*/
+#include <petsc/private/vecimpl.h>    /*I  "petscvec.h"  I*/
+
+PetscErrorCode VecView_Stag_Local(Vec v, PetscViewer viewer)
+{
+  DM        dm;
+  PetscBool iscgns = PETSC_FALSE;
+
+  PetscFunctionBegin;
+  PetscCall(VecGetDM(v, &dm));
+  PetscCheck(dm, PetscObjectComm((PetscObject)v), PETSC_ERR_ARG_WRONG, "Vector not generated from a DM");
+#if defined(PETSC_HAVE_CGNS)
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERCGNS, &iscgns));
+#endif
+
+  if (iscgns) {
+#if defined(PETSC_HAVE_CGNS)
+    PetscCall(VecView_Stag_Local_CGNS(v, viewer));
+#endif
+  } else {
+    PetscCall(VecViewNative(v, viewer));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode VecView_Stag(Vec v, PetscViewer viewer)
+{
+  DM        dm;
+  PetscBool iscgns = PETSC_FALSE;
+
+  PetscFunctionBegin;
+  PetscCall(VecGetDM(v, &dm));
+  PetscCheck(dm, PetscObjectComm((PetscObject)v), PETSC_ERR_ARG_WRONG, "Vector not generated from a DM");
+#if defined(PETSC_HAVE_CGNS)
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERCGNS, &iscgns));
+#endif
+
+  if (iscgns) {
+    Vec         locv;
+    const char *name;
+    PetscCall(DMGetLocalVector(dm, &locv));
+    PetscCall(PetscObjectGetName((PetscObject)v, &name));
+    PetscCall(PetscObjectSetName((PetscObject)locv, name));
+    PetscCall(DMGlobalToLocalBegin(dm, v, INSERT_VALUES, locv));
+    PetscCall(DMGlobalToLocalEnd(dm, v, INSERT_VALUES, locv));
+    PetscCall(VecView_Stag_Local(locv, viewer));
+    PetscCall(DMRestoreLocalVector(dm, &locv));
+  } else {
+    PetscCall(VecViewNative(v, viewer));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode DMCreateFieldDecomposition_Stag(DM dm, PetscInt *len, char ***namelist, IS **islist, DM **dmlist)
 {
@@ -358,7 +409,7 @@ static PetscErrorCode DMCreateGlobalVector_Stag(DM dm, Vec *vec)
   PetscCall(VecSetSizes(*vec, stag->entries, PETSC_DETERMINE));
   PetscCall(VecSetType(*vec, dm->vectype));
   PetscCall(VecSetDM(*vec, dm));
-  /* Could set some ops, as DMDA does */
+  PetscCall(VecSetOperation(*vec, VECOP_VIEW, (void (*)(void))VecView_Stag));
   PetscCall(VecSetLocalToGlobalMapping(*vec, dm->ltogmap));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -374,6 +425,7 @@ static PetscErrorCode DMCreateLocalVector_Stag(DM dm, Vec *vec)
   PetscCall(VecSetType(*vec, dm->vectype));
   PetscCall(VecSetBlockSize(*vec, stag->entriesPerElement));
   PetscCall(VecSetDM(*vec, dm));
+  PetscCall(VecSetOperation(*vec, VECOP_VIEW, (void (*)(void))VecView_Stag_Local));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -809,12 +861,19 @@ static PetscErrorCode DMView_Stag(DM dm, PetscViewer viewer)
   PetscBool      isascii, viewAllRanks;
   PetscMPIInt    rank, size;
   PetscInt       dim, maxRanksToView, i;
+#if defined(PETSC_HAVE_CGNS)
+  PetscBool iscgns;
+#endif
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)dm), &size));
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+#if defined(PETSC_HAVE_CGNS)
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERCGNS, &iscgns));
+#endif
+
   if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "Dimension: %" PetscInt_FMT "\n", dim));
     switch (dim) {
@@ -873,6 +932,10 @@ static PetscErrorCode DMView_Stag(DM dm, PetscViewer viewer)
     } else {
       PetscCall(PetscViewerASCIIPrintf(viewer, "(Per-rank information omitted since >%" PetscInt_FMT " ranks used)\n", maxRanksToView));
     }
+#if defined(PETSC_HAVE_CGNS)
+  } else if (iscgns) {
+    PetscCall(DMView_Stag_CGNS(dm, viewer));
+#endif
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

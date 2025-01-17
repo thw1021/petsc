@@ -6,6 +6,8 @@
 
 PETSC_EXTERN PetscLogEvent PETSC_VIEWER_CGNS_Open, PETSC_VIEWER_CGNS_Close, PETSC_VIEWER_CGNS_ReadMeta, PETSC_VIEWER_CGNS_WriteMeta, PETSC_VIEWER_CGNS_ReadData, PETSC_VIEWER_CGNS_WriteData;
 
+#define CGNS_MAX_DIM 3
+
 typedef struct {
   char           *filename_template;
   char           *filename;
@@ -14,12 +16,18 @@ typedef struct {
   const PetscInt *node_l2g;
   int             base, zone;
   CGNS_ENUMT(GridLocation_t) grid_loc;
-  PetscInt       num_local_nodes, nStart, nEnd;
-  PetscInt       eStart, eEnd;
+  PetscInt num_local_nodes;
+  // A range of indices is half-open, i.e., [Start, End). An unstructured grid uses only Start[0] and End[0] (consistent with CGNS convention).
+  PetscInt       nStart[CGNS_MAX_DIM], nEnd[CGNS_MAX_DIM]; // Range of indices of local nodes
+  PetscInt       eStart[CGNS_MAX_DIM], eEnd[CGNS_MAX_DIM]; // Range of indices of local elements
   PetscScalar   *nodal_field;
   PetscSegBuffer output_steps;
   PetscSegBuffer output_times;
+  PetscInt       last_step;
   PetscInt       batch_size;
+
+  // Solution writing information
+  int sol_vertex, sol_cell_center; // Flow solution indices in the current zone
 
   // Solution reading information
   PetscInt solution_index;              // User set solution index
