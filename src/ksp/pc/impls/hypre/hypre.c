@@ -271,15 +271,6 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
   if (pc->flag == DIFFERENT_NONZERO_PATTERN) PetscCall(MatDestroy(&jac->hpmat));
   PetscCall(PetscObjectTypeCompare((PetscObject)pc->pmat, MATHYPRE, &ishypre));
   if (!ishypre) {
-    /* Temporary fix since we do not support MAT_REUSE_MATRIX with HYPRE device */
-#if defined(PETSC_HAVE_HYPRE_DEVICE)
-    PetscBool iscuda, iship, iskokkos;
-
-    PetscCall(PetscObjectTypeCompareAny((PetscObject)pc->pmat, &iscuda, MATSEQAIJCUSPARSE, MATMPIAIJCUSPARSE, ""));
-    PetscCall(PetscObjectTypeCompareAny((PetscObject)pc->pmat, &iship, MATSEQAIJHIPSPARSE, MATMPIAIJHIPSPARSE, ""));
-    PetscCall(PetscObjectTypeCompareAny((PetscObject)pc->pmat, &iskokkos, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, ""));
-    if (iscuda || iship || iskokkos) PetscCall(MatDestroy(&jac->hpmat));
-#endif
     PetscCall(MatConvert(pc->pmat, MATHYPRE, jac->hpmat ? MAT_REUSE_MATRIX : MAT_INITIAL_MATRIX, &jac->hpmat));
   } else {
     PetscCall(PetscObjectReference((PetscObject)pc->pmat));
