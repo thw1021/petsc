@@ -322,6 +322,7 @@ PetscErrorCode PetscShmgetDeallocateArray(void **addr)
     while (next) {
       if (next->addr == *addr) {
         PetscCall(PetscInfo(NULL, "Deallocating PCMPI Server array %p shmkey %d shmid %d size %d\n", *addr, next->shmkey, next->shmid, (int)next->sz));
+        PetscCheck(!shmdt(next->addr), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to shmdt() location %s", strerror(errno));
         PetscCheck(!shmctl(next->shmid, IPC_RMID, NULL), PETSC_COMM_SELF, PETSC_ERR_SYS, "Unable to free shared memory addr %p key %d shmid %d %s", *addr, next->shmkey, next->shmid, strerror(errno));
         *addr = NULL;
         if (previous) previous->next = next->next;
