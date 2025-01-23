@@ -57,5 +57,6 @@ if __name__ == '__main__':
     '--download-parmetis',
     '--download-hdf5', # Note that NERSC does provide an HDF5 module, but using our own is generally reliable.
     '--download-hdf5-fortran-bindings',
+    '--download-kokkos-cmake-arguments=-DKokkos_ENABLE_IMPL_CUDA_MALLOC_ASYNC=OFF'
   ]
   configure.petsc_configure(configure_options)
