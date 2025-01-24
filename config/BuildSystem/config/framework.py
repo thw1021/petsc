@@ -472,6 +472,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     lines = [s for s in lines if lines != 'conftest.c:']
     # nvcc
     lines = [s for s in lines if s.find('incompatible redefinition for option \'compiler-bindir\', the last value of this option was used') < 0]
+    lines = [s for s in lines if s.find('nvcc warning : Support for offline compilation for architectures prior to ') < 0]
 
     lines = [s for s in lines if len(s)]
     if lines: output = '\n'.join(lines)
