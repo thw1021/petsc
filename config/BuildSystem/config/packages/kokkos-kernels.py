@@ -95,7 +95,7 @@ class Configure(config.package.CMakePackage):
         # rocm re-organized directory since 6.0.0
         #   Before 6.0.0: /opt/rocm-5.4.3/include/{rocblas.h, rocsparse.h, ...}, /opt/rocm-5.4.3/lib/{librocblas.so, librocsparse.so, ...}
         #   Since 6.0.0: /opt/rocm-6.0.0/include/{rocblas/rocblas.h, rocsparse/rocsparse.h, ...}, /opt/rocm-6.0.0/lib/{librocblas.so, librocsparse.so, ...}
-        # KK-4.5.1 failed with 6.0.0 and the simple -DROCBLAS_ROOT=/opt/rocm-6.0.0, so we go verbosely
+        # KK-4.5.1 failed with the simple -DROCBLAS_ROOT=/opt/rocm-6.0.0, so we go verbosely
         if self.hip.version_tuple >= (6, 0, 0):
           args.append('-DROCBLAS_LIBRARIES=rocblas')
           args.append('-DROCBLAS_LIBRARY_DIRS='+os.path.join(self.hip.hipDir, 'lib'))
