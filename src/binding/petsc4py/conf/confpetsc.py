@@ -375,6 +375,7 @@ class PetscConfig:
         PCC = self['PCC']
         PCC_FLAGS = get_flags(cc) + ' ' + self['PCC_FLAGS']
         PCC_FLAGS = PCC_FLAGS.replace('-fvisibility=hidden', '')
+        PCC_FLAGS = PCC_FLAGS.replace('-Wall', '-w')
         PCC = getenv('PCC', PCC) + ' ' + getenv('PCCFLAGS', PCC_FLAGS)
         PCC_SHARED = str.join(' ', (PCC, ccshared, cflags))
         # PETSc C++ compiler
@@ -383,6 +384,7 @@ class PetscConfig:
         PLD = self['PCC_LINKER']
         PLD_FLAGS = get_flags(ld) + ' ' + self['PCC_LINKER_FLAGS']
         PLD_FLAGS = PLD_FLAGS.replace('-fvisibility=hidden', '')
+        PLD_FLAGS = PLD_FLAGS.replace('-Wall', '-w')
         PLD = getenv('PLD', PLD) + ' ' + getenv('PLDFLAGS', PLD_FLAGS)
         PLD_SHARED = str.join(' ', (PLD, ldshared, ldflags))
         #
