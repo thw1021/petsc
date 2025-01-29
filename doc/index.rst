@@ -107,7 +107,7 @@ Toolkits/libraries that use PETSc
 -  `PetIGA <https://bitbucket.org/dalcinl/petiga/>`__ A framework
    for high performance Isogeometric Analysis
 -  `PFLOTRAN <https://pflotran.org/>`__ An open source, state-of-the-art
-   massively parallel subsurface flow and reactive transport code
+   code for massively parallel simulation of subsurface flow, reactive transport, geomechanics, and electrical resistivity tomography
 -  `PHAML <https://math.nist.gov/phaml/>`__ The Parallel
    Hierarchical Adaptive MultiLevel Project
 -  `preCICE <https://www.precice.org>`__ - A fully parallel
