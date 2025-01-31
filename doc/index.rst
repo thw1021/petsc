@@ -78,7 +78,7 @@ Toolkits/libraries that use PETSc
    finite element simulation package
 -  `Fluidity <https://fluidityproject.github.io/>`__ a finite
    element/volume fluids code
--  `FreeFEM <https://freefem.org/>`__ finite element PDE solver
+-  `FreeFEM <https://freefem.org/>`__ finite element and boundary element PDE solver
    with embedded domain specific language
 -  `GetDP <https://www.getdp.info/>`__ a General Environment for the Treatment of Discrete Problems
 -  `hIPPYlib <https://hippylib.github.io>`__ `FEniCS <https://fenicsproject.org/>`__-based toolkit
