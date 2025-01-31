@@ -60,6 +60,8 @@ Toolkits/libraries that use PETSc
 -  `code_aster <https://www.code-aster.org/V2/spip.php?rubrique2>`__
    open-source general purpose finite element code for solid and
    structural mechanics
+-  `code_saturne <https://www.code-saturne.org>`__
+   open-source general purpose code for fluid dynamics
 -  `COOLFluiD <https://github.com/andrealani/COOLFluiD>`__ CFD,
    plasma and multi-physics simulation package
 -  `DAFoam <https://dafoam.github.io>`__ Discrete adjoint solvers
