@@ -172,17 +172,25 @@
  220  format ('VecMAXPY ',3(1pe9.2))
 
       PetscCallA(VecGetOwnershipRanges(x, ranges, ierr))
-      PetscCallA(VecRestoreOwnershipRanges(x, ranges, ierr))
+      print*,'bad'
+!      PetscCallA(VecRestoreOwnershipRanges(x, ranges, ierr))
 
 !  Free work space.  All PETSc objects should be destroyed when they
 !  are no longer needed.
-
+      print*,'bad'
+      
       PetscCallA(VecDestroy(x,ierr))
       PetscCallA(VecDestroy(y,ierr))
       PetscCallA(VecDestroy(w,ierr))
+      print*,'bad'
       PetscCallA(VecDestroyVecsF90(ithree,z,ierr))
+      print*,'bad'
+      call flush(0)
+      call flush(1)      
       PetscCallA(PetscFinalize(ierr))
-
+    print*,'bad'
+      call flush(0)
+      call flush(1)      
       end
 
 !

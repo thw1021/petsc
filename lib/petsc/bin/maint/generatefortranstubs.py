@@ -675,10 +675,10 @@ def main(petscdir,petscarch):
       fd.write('    type(t' + i + '), intent(in) :: A,B\n')
       fd.write('    ' + i + 'equals = (A%v .eq. B%v)\n')
       fd.write('  end function\n')
-      fd.write('#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)\n')
-      fd.write('!DEC$ ATTRIBUTES DLLEXPORT:: ' + i + 'notequals\n')
-      fd.write('!DEC$ ATTRIBUTES DLLEXPORT:: ' + i + 'equals\n')
-      fd.write('#endif\n\n')
+      #fd.write('#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)\n')
+      #fd.write('!DEC$ ATTRIBUTES DLLEXPORT:: ' + i + 'notequals\n')
+      #fd.write('!DEC$ ATTRIBUTES DLLEXPORT:: ' + i + 'equals\n')
+      #fd.write('#endif\n\n')
 
        # generate Fortran subroutines for PetscObject methods for each PetscObject subclass (KSP etc)
       if classes[i].petscobject:

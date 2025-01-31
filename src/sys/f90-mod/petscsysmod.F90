@@ -603,11 +603,6 @@
 #include <../src/sys/f90-mod/ftn-auto-interfaces/petscdraw.hf90>
       end module
 
-#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
-!DEC$ ATTRIBUTES DLLEXPORT::petscdrawnotequal
-!DEC$ ATTRIBUTES DLLEXPORT::petscdrawequals
-#endif
-
 !     ------------------------------------------------------------------------
 
         subroutine PetscSetCOMM(c1,c2)
@@ -678,9 +673,3 @@
 
         end
 
-#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
-!DEC$ ATTRIBUTES DLLEXPORT::petscviewernotequal
-!DEC$ ATTRIBUTES DLLEXPORT::petscviewerequals
-!DEC$ ATTRIBUTES DLLEXPORT::petscrandomnotequal
-!DEC$ ATTRIBUTES DLLEXPORT::petscrandomequals
-#endif

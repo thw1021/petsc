@@ -499,8 +499,6 @@ PetscErrorCode PetscBagRegisterBool(PetscBag bag, void *addr, PetscBool mdefault
   PetscAssertPointer(addr, 2);
   PetscAssertPointer(name, 4);
   PetscAssertPointer(help, 5);
-  /* the checks here with != PETSC_FALSE and PETSC_TRUE is a special case; here we truly demand that the value be 0 or 1 */
-  PetscCheck(mdefault == PETSC_FALSE || mdefault == PETSC_TRUE, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Boolean %s %s must be boolean; integer value %d", name, help, (int)mdefault);
   nname[0] = '-';
   nname[1] = 0;
   PetscCall(PetscStrlcat(nname, name, PETSC_BAG_NAME_LENGTH));

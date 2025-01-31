@@ -254,7 +254,7 @@
 !    - Note that the Fortran interface to VecGetArray() differs from the
 !      C version.  See the users manual for details.
 
-       call VecGetArrayF90(X,lx_v,ierr)
+       call VecGetArray(X,lx_v,ierr)
       CHKERRQ(ierr)
 
 !  Compute initial guess over the locally owned part of the grid
@@ -264,7 +264,7 @@
 
 !  Restore vector
 
-      call VecRestoreArrayF90(X,lx_v,ierr)
+      call VecRestoreArray(X,lx_v,ierr)
       CHKERRQ(ierr)
 
       end

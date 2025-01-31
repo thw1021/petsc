@@ -15,7 +15,7 @@
       PetscCallA(PetscViewerASCIIOpen(PETSC_COMM_WORLD,"stdout",o1,ierr))
       PetscCallA(PetscViewerASCIIOpen(PETSC_COMM_WORLD,"stderr",o2,ierr))
       name = 'matt'
-      PetscCall(PetscObjectCompose(o1,name,o2,ierr))
+      PetscCallA(PetscObjectCompose(o1,name,o2,ierr))
       PetscCallA(PetscObjectQuery(o1,name,o3,ierr))
       PetscCheckA(o2 .eq. o3,PETSC_COMM_SELF,PETSC_ERR_PLIB,'PetscObjectQuery failed')
 
