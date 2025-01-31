@@ -107,7 +107,7 @@ Toolkits/libraries that use PETSc
    vector machines and
    `PermonQP <http://permon.vsb.cz/permonqp.htm>`__ quadratic
    programming
--  `PetIGA <https://bitbucket.org/dalcinl/petiga/>`__ A framework
+-  `PetIGA <https://github.com/dalcinl/PetIGA>`__ A framework
    for high performance Isogeometric Analysis
 -  `PFLOTRAN <https://pflotran.org/>`__ An open source, state-of-the-art
    code for massively parallel simulation of subsurface flow, reactive transport, geomechanics, and electrical resistivity tomography
