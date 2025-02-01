@@ -395,7 +395,7 @@
 !  done using the standard Fortran style of treating the local
 !  vector data as a multidimensional array over the local mesh.
 !  This routine merely handles ghost point scatters and accesses
-!  the local vector data via VecGetArrayF90() and VecRestoreArrayF90().
+!  the local vector data via VecGetArray() and VecRestoreArray().
 !
       subroutine FormInitialGuess(mysnes,Xnest,ierr)
 #include <petsc/finclude/petscsnes.h>
@@ -586,7 +586,7 @@
       hy2inv = one/(hy*hy)
 
       PetscCall(VecGetOwnershipRange(X1,low,high,ierr))
-      PetscCall(VecGetArrayReadF90(X1,lx_v,ierr))
+      PetscCall(VecGetArrayRead(X1,lx_v,ierr))
 
       ii = 0
       do 20 irow=low,high-1
@@ -621,7 +621,7 @@
          endif
  20   continue
 
-      PetscCall(VecRestoreArrayReadF90(X1,lx_v,ierr))
+      PetscCall(VecRestoreArrayRead(X1,lx_v,ierr))
 
       end subroutine FormJacobianLocal
 
@@ -707,7 +707,7 @@
       sc     = solver%lambda
       ione   = 1
 
-      PetscCall(VecGetArrayReadF90(X1,lx_v,ierr))
+      PetscCall(VecGetArrayRead(X1,lx_v,ierr))
       PetscCall(VecGetOwnershipRange(X1,low,high,ierr))
 
 !     Compute function over the locally owned part of the grid
@@ -726,7 +726,7 @@
          PetscCall(VecSetValues(F1,ione,row,v,INSERT_VALUES,ierr))
  20   continue
 
-      PetscCall(VecRestoreArrayReadF90(X1,lx_v,ierr))
+      PetscCall(VecRestoreArrayRead(X1,lx_v,ierr))
 
       PetscCall(VecAssemblyBegin(F1,ierr))
       PetscCall(VecAssemblyEnd(F1,ierr))

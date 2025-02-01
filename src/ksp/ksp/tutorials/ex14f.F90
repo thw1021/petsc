@@ -309,7 +309,7 @@
 !    - VecGetArray() returns a pointer to the data array.
 !    - You MUST call VecRestoreArray() when you no longer need access to
 !      the array.
-       PetscCall(VecGetArrayF90(X,xx,ierr))
+       PetscCall(VecGetArray(X,xx,ierr))
 
 !  Get local grid boundaries (for 2-dimensional DMDA):
 !    xs, ys   - starting grid indices (no ghost points)
@@ -333,7 +333,7 @@
 
 !     Restore vector
 
-       PetscCall(VecRestoreArrayF90(X,xx,ierr))
+       PetscCall(VecRestoreArray(X,xx,ierr))
        end
 
 ! -------------------------------------------------------------------
@@ -380,8 +380,8 @@
 
 !  Get pointers to vector data
 
-      PetscCall(VecGetArrayReadF90(localX,xx,ierr))
-      PetscCall(VecGetArrayF90(F,ff,ierr))
+      PetscCall(VecGetArrayRead(localX,xx,ierr))
+      PetscCall(VecGetArray(F,ff,ierr))
 
 !  Get local grid boundaries
 
@@ -410,8 +410,8 @@
 
 !  Restore vectors
 
-       PetscCall(VecRestoreArrayReadF90(localX,xx,ierr))
-       PetscCall(VecRestoreArrayF90(F,ff,ierr))
+       PetscCall(VecRestoreArrayRead(localX,xx,ierr))
+       PetscCall(VecRestoreArray(F,ff,ierr))
        end
 
 ! -------------------------------------------------------------------
@@ -472,7 +472,7 @@
 
 !  Get pointer to vector data
 
-      PetscCall(VecGetArrayReadF90(localX,xx,ierr))
+      PetscCall(VecGetArrayRead(localX,xx,ierr))
 
 !  Get local grid boundaries
 
@@ -482,7 +482,7 @@
 !  Get the global node numbers for all local nodes, including ghost points
 
       PetscCall(DMGetLocalToGlobalMapping(da,ltogm,ierr))
-      PetscCall(ISLocalToGlobalMappingGetIndicesF90(ltogm,ltog,ierr))
+      PetscCall(ISLocalToGlobalMappingGetIndices(ltogm,ltog,ierr))
 
 !  Compute entries for the locally owned part of the Jacobian.
 !   - Currently, all PETSc parallel matrix formats are partitioned by
@@ -518,7 +518,7 @@
  20     continue
  10   continue
 
-      PetscCall(ISLocalToGlobalMappingRestoreIndicesF90(ltogm,ltog,ierr))
+      PetscCall(ISLocalToGlobalMappingRestoreIndices(ltogm,ltog,ierr))
 
 !  Assemble matrix, using the 2-step process:
 !    MatAssemblyBegin(), MatAssemblyEnd().
@@ -526,7 +526,7 @@
 !  done while messages are in transition.
 
       PetscCall(MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr))
-      PetscCall(VecRestoreArrayReadF90(localX,xx,ierr))
+      PetscCall(VecRestoreArrayRead(localX,xx,ierr))
       PetscCall(MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr))
       end
 

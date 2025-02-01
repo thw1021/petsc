@@ -126,8 +126,8 @@
       ierr = 0
 
 !     Get pointers to vector data
-      PetscCall(VecGetArrayF90(x,x_v,ierr))
-      PetscCall(VecGetArrayF90(f,f_v,ierr))
+      PetscCall(VecGetArray(x,x_v,ierr))
+      PetscCall(VecGetArray(f,f_v,ierr))
 
 !     Compute F(X)
       do i=0,m-1
@@ -135,8 +135,8 @@
       enddo
 
 !     Restore vectors
-      PetscCall(VecRestoreArrayF90(X,x_v,ierr))
-      PetscCall(VecRestoreArrayF90(F,f_v,ierr))
+      PetscCall(VecRestoreArray(X,x_v,ierr))
+      PetscCall(VecRestoreArray(F,f_v,ierr))
 
       end
 
@@ -147,11 +147,11 @@
       PetscScalar, pointer, dimension(:)  :: x_v
       PetscErrorCode  ierr
 
-      PetscCall(VecGetArrayF90(x,x_v,ierr))
+      PetscCall(VecGetArray(x,x_v,ierr))
       x_v(1) = 0.15
       x_v(2) = 0.008
       x_v(3) = 0.01
-      PetscCall(VecRestoreArrayF90(x,x_v,ierr))
+      PetscCall(VecRestoreArray(x,x_v,ierr))
       end
 
       subroutine InitializeData()

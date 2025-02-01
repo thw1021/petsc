@@ -59,7 +59,7 @@
 !  an array of vectors, which is often more convenient than
 !  duplicating individual ones.
 
-      PetscCallA(VecDuplicateVecsF90(x,ithree,z,ierr))
+      PetscCallA(VecDuplicateVecs(x,ithree,z,ierr))
 
 !  Set the vectors to entries to a constant value.
 
@@ -172,25 +172,16 @@
  220  format ('VecMAXPY ',3(1pe9.2))
 
       PetscCallA(VecGetOwnershipRanges(x, ranges, ierr))
-      print*,'bad'
 !      PetscCallA(VecRestoreOwnershipRanges(x, ranges, ierr))
 
 !  Free work space.  All PETSc objects should be destroyed when they
 !  are no longer needed.
-      print*,'bad'
-      
+
       PetscCallA(VecDestroy(x,ierr))
       PetscCallA(VecDestroy(y,ierr))
       PetscCallA(VecDestroy(w,ierr))
-      print*,'bad'
-      PetscCallA(VecDestroyVecsF90(ithree,z,ierr))
-      print*,'bad'
-      call flush(0)
-      call flush(1)      
+      PetscCallA(VecDestroyVecs(ithree,z,ierr))
       PetscCallA(PetscFinalize(ierr))
-    print*,'bad'
-      call flush(0)
-      call flush(1)      
       end
 
 !

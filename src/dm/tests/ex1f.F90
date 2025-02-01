@@ -29,10 +29,10 @@ program main
   PetscCallA(DMSetup(da, ierr))
 
   PetscCallA(DMCreateGlobalVector(da, gVec, ierr))
-  PetscCallA(VecGetArrayF90(gVec, xv1d, ierr))
+  PetscCallA(VecGetArray(gVec, xv1d, ierr))
   xv1d(:) = real(myid, kind(xv1d))
   !print *,myid, 'xv1d', xv1d, ':', xv1d
-  PetscCallA(VecRestoreArrayF90(gVec, xv1d, ierr))
+  PetscCallA(VecRestoreArray(gVec, xv1d, ierr))
 
   PetscCallA(PetscObjectViewFromOptions(PetscObjectCast(gVec), PETSC_NULL_OBJECT, '-show_gVec', ierr))
 

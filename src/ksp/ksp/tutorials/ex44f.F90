@@ -68,12 +68,12 @@
       PetscCall(DMDAGetInfo(da,PETSC_NULL_INTEGER,mx,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMBOUNDARYTYPE,PETSC_NULL_DMDASTENCILTYPE,ierr))
       PetscCall(DMDAGetCorners(da,xs,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,xm,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,ierr))
       hx     = 1.0_PETSC_REAL_KIND/(mx-1)
-      PetscCall(DMDAVecGetArrayF90(da,x,xx,ierr))
+      PetscCall(DMDAVecGetArray(da,x,xx,ierr))
       do i=xs,xs+xm-1
         call knl_workaround(xx(i))
         xx(i) = i*hx
       enddo
-      PetscCall(DMDAVecRestoreArrayF90(da,x,xx,ierr))
+      PetscCall(DMDAVecRestoreArray(da,x,xx,ierr))
       end
 
       subroutine ComputeMatrix(da,J,ierr)

@@ -48,17 +48,17 @@ program ex47f90
         Do d = 1,dof
             val(d) = 100*p + d-1;
         End Do
-        PetscCallA(VecSetValuesSectionF90(v,section,p,val,INSERT_VALUES,ierr))
+        PetscCallA(VecSetValuesSection(v,section,p,val,INSERT_VALUES,ierr))
         DeAllocate(val)
     End Do
     PetscCallA(VecView(v,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
     Do p = pStart,pEnd-1
         PetscCallA(PetscSectionGetDof(section,p,dof,ierr))
-        PetscCallA(VecGetValuesSectionF90(v,section,p,x,ierr))
+        PetscCallA(VecGetValuesSection(v,section,p,x,ierr))
         write(IOBuffer,*) 'Point ',p,' dof ',dof,'\n'
         PetscCallA(PetscPrintf(PETSC_COMM_SELF,IOBuffer,ierr))
-        PetscCallA(VecRestoreValuesSectionF90(v,section,p,x,ierr))
+        PetscCallA(VecRestoreValuesSection(v,section,p,x,ierr))
     End Do
 
     PetscCallA(PetscSectionDestroy(section,ierr))

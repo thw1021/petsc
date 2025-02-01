@@ -134,8 +134,8 @@
       ff = 0
 
 !     Get pointers to vector data
-      PetscCall(VecGetArrayReadF90(X,x_v,ierr))
-      PetscCall(VecGetArrayF90(G,g_v,ierr))
+      PetscCall(VecGetArrayRead(X,x_v,ierr))
+      PetscCall(VecGetArray(G,g_v,ierr))
 
 !     Compute G(X)
       do i=0,nn-1
@@ -147,8 +147,8 @@
       enddo
 
 !     Restore vectors
-      PetscCall(VecRestoreArrayReadF90(X,x_v,ierr))
-      PetscCall(VecRestoreArrayF90(G,g_v,ierr))
+      PetscCall(VecRestoreArrayRead(X,x_v,ierr))
+      PetscCall(VecRestoreArray(G,g_v,ierr))
 
       f = ff
       PetscCall(PetscLogFlops(15.0d0*nn,ierr))
@@ -210,7 +210,7 @@
 
 !  Get a pointer to vector data
 
-      PetscCall(VecGetArrayReadF90(X,x_v,ierr))
+      PetscCall(VecGetArrayRead(X,x_v,ierr))
 
 !  Compute Hessian entries
 
@@ -226,7 +226,7 @@
 
 !  Restore vector
 
-      PetscCall(VecRestoreArrayReadF90(X,x_v,ierr))
+      PetscCall(VecRestoreArrayRead(X,x_v,ierr))
 
 !  Assemble matrix
 

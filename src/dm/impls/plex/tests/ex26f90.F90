@@ -214,7 +214,7 @@ program ex62f90
     ! Going through cell sets then cells, and setting up storage for the sections
     PetscCallA(DMGetLabelSize(dm, 'Cell Sets', numCS, ierr))
     PetscCallA(DMGetLabelIdIS(dm, 'Cell Sets', csIS, ierr))
-    PetscCallA(ISGetIndicesF90(csIS, csID, ierr))
+    PetscCallA(ISGetIndices(csIS, csID, ierr))
     do set = 1,numCS
         !!! This is pointless but will avoid a warning with gfortran and -Werror=maybe-uninitialized
         nullify(dofA)
@@ -235,7 +235,7 @@ program ex62f90
 
             ! Identify cell type based on closure size only. This works for Tri/Tet/Quad/Hex meshes
             ! It will not be enough to identify more exotic elements like pyramid or prisms...  */
-            PetscCallA(ISGetIndicesF90(cellIS, cellID,ierr))
+            PetscCallA(ISGetIndices(cellIS, cellID,ierr))
             nullify(closureA)
             PetscCallA(DMPlexGetTransitiveClosure(dm,cellID(1), PETSC_TRUE, PETSC_NULL_INTEGER, closureA, ierr))
             select case(size(closureA)/2)
@@ -292,11 +292,11 @@ program ex62f90
                 end do ! p
                 PetscCallA(DMPlexRestoreTransitiveClosure(dm, cellID(cell), PETSC_TRUE, PETSC_NULL_INTEGER, closure,ierr))
             end do ! cell
-            PetscCallA(ISRestoreIndicesF90(cellIS, cellID,ierr))
+            PetscCallA(ISRestoreIndices(cellIS, cellID,ierr))
             PetscCallA(ISDestroy(cellIS,ierr))
         end if ! numCells
     end do ! set
-    PetscCallA(ISRestoreIndicesF90(csIS, csID,ierr))
+    PetscCallA(ISRestoreIndices(csIS, csID,ierr))
     PetscCallA(ISDestroy(csIS,ierr))
     PetscCallA(PetscSectionSetUp(section,ierr))
     PetscCallA(DMSetLocalSection(dm, section,ierr))
@@ -348,7 +348,7 @@ program ex62f90
     ! Setting u to [x,y,z]  and alpha to x^2+y^2+z^2 by writing in UAlpha then restricting to U and Alpha */
     PetscCallA(DMGetLocalSection(dmUA, sectionUA,ierr))
     PetscCallA(DMGetLocalVector(dmUA, UALoc,ierr))
-    PetscCallA(VecGetArrayF90(UALoc, cval,ierr))
+    PetscCallA(VecGetArray(UALoc, cval,ierr))
     PetscCallA(DMGetCoordinateSection(dmUA, coordSection,ierr))
     PetscCallA(DMGetCoordinatesLocal(dmUA, coord,ierr))
     PetscCallA(DMPlexGetChart(dmUA, pStart, pEnd,ierr))
@@ -370,7 +370,7 @@ program ex62f90
         end if
     end do
 
-    PetscCallA(VecRestoreArrayF90(UALoc, cval,ierr))
+    PetscCallA(VecRestoreArray(UALoc, cval,ierr))
     PetscCallA(DMLocalToGlobalBegin(dmUA, UALoc, INSERT_VALUES, UA,ierr))
     PetscCallA(DMLocalToGlobalEnd(dmUA, UALoc, INSERT_VALUES, UA,ierr))
     PetscCallA(DMRestoreLocalVector(dmUA, UALoc,ierr))
@@ -439,11 +439,11 @@ program ex62f90
     PetscCallA(DMGetCoordinatesLocal(dmS, coord,ierr))
     PetscCallA(DMGetLabelIdIS(dmS, 'Cell Sets', csIS,ierr))
     PetscCallA(DMGetLabelSize(dmS, 'Cell Sets',numCS,ierr))
-    PetscCallA(ISGetIndicesF90(csIS, csID,ierr))
+    PetscCallA(ISGetIndices(csIS, csID,ierr))
 
     do set = 1, numCS
         PetscCallA(DMGetStratumIS(dmS, 'Cell Sets', csID(set), cellIS,ierr))
-        PetscCallA(ISGetIndicesF90(cellIS, cellID,ierr))
+        PetscCallA(ISGetIndices(cellIS, cellID,ierr))
         PetscCallA(ISGetSize(cellIS, numCells,ierr))
         do cell = 1,numCells
             PetscCallA(DMPlexVecGetClosure(dmS, PETSC_NULL_SECTION, S, cellID(cell), PETSC_NULL_INTEGER, cval,ierr))
@@ -459,10 +459,10 @@ program ex62f90
             PetscCallA(DMPlexVecRestoreClosure(dmS, PETSC_NULL_SECTION, S, cellID(cell), PETSC_NULL_INTEGER, cval,ierr))
             PetscCallA(DMPlexVecRestoreClosure(dmS, coordSection, coord, cellID(cell), PETSC_NULL_INTEGER, xyz,ierr))
         end do
-        PetscCallA(ISRestoreIndicesF90(cellIS, cellID,ierr))
+        PetscCallA(ISRestoreIndices(cellIS, cellID,ierr))
         PetscCallA(ISDestroy(cellIS,ierr))
     end do
-    PetscCallA(ISRestoreIndicesF90(csIS, csID,ierr))
+    PetscCallA(ISRestoreIndices(csIS, csID,ierr))
     PetscCallA(ISDestroy(csIS,ierr))
     PetscCallA(VecViewFromOptions(S, PETSC_NULL_OBJECT, '-s_vec_view',ierr))
 

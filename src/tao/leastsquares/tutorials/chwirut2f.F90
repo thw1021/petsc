@@ -122,8 +122,8 @@
       ierr = 0
 
 !     Get pointers to vector data
-      PetscCall(VecGetArrayReadF90(x,x_v,ierr))
-      PetscCall(VecGetArrayF90(f,f_v,ierr))
+      PetscCall(VecGetArrayRead(x,x_v,ierr))
+      PetscCall(VecGetArray(f,f_v,ierr))
 
 !     Compute F(X)
       if (size .eq. 1) then
@@ -159,8 +159,8 @@
       endif
 
 !     Restore vectors
-      PetscCall(VecRestoreArrayReadF90(x,x_v,ierr))
-      PetscCall(VecRestoreArrayF90(F,f_v,ierr))
+      PetscCall(VecRestoreArrayRead(x,x_v,ierr))
+      PetscCall(VecRestoreArray(F,f_v,ierr))
       end
 
       subroutine FormStartingPoint(x)
@@ -170,11 +170,11 @@
       PetscReal, pointer :: x_v(:)
       PetscErrorCode  ierr
 
-      PetscCall(VecGetArrayF90(x,x_v,ierr))
+      PetscCall(VecGetArray(x,x_v,ierr))
       x_v(1) = 0.15
       x_v(2) = 0.008
       x_v(3) = 0.01
-      PetscCall(VecRestoreArrayF90(x,x_v,ierr))
+      PetscCall(VecRestoreArray(x,x_v,ierr))
       end
 
       subroutine InitializeData()

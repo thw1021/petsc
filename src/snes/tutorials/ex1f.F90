@@ -190,11 +190,11 @@
       PetscScalar,pointer :: lx_v(:),lf_v(:)
 
 !  Get pointers to vector data.
-!    - VecGetArrayF90() returns a pointer to the data array.
-!    - You MUST call VecRestoreArrayF90() when you no longer need access to
+!    - VecGetArray() returns a pointer to the data array.
+!    - You MUST call VecRestoreArray() when you no longer need access to
 !      the array.
 
-      PetscCall(VecGetArrayReadF90(x,lx_v,ierr))
+      PetscCall(VecGetArrayRead(x,lx_v,ierr))
       PetscCall(VecGetArray(f,lf_v,ierr))
 
 !  Compute function
@@ -204,7 +204,7 @@
 
 !  Restore vectors
 
-      PetscCall(VecRestoreArrayReadF90(x,lx_v,ierr))
+      PetscCall(VecRestoreArrayRead(x,lx_v,ierr))
       PetscCall(VecRestoreArray(f,lf_v,ierr))
 
       end
@@ -243,7 +243,7 @@
 !  Get pointer to vector data
 
       i2 = 2
-      PetscCall(VecGetArrayReadF90(x,lx_v,ierr))
+      PetscCall(VecGetArrayRead(x,lx_v,ierr))
 
 !  Compute Jacobian entries and insert into matrix.
 !   - Since this is such a small problem, we set all entries for
@@ -261,7 +261,7 @@
 
 !  Restore vector
 
-      PetscCall(VecRestoreArrayReadF90(x,lx_v,ierr))
+      PetscCall(VecRestoreArrayRead(x,lx_v,ierr))
 
 !  Assemble matrix
 

@@ -2,6 +2,7 @@
 #include <petsc/private/sfimpl.h>
 
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
+  #define petscsfrestoregraph_     PETSCSFRESTOREGRAPH
   #define petscsfgetgraph_         PETSCSFGETGRAPH
   #define petscsfbcastbegin_       PETSCSFBCASTBEGIN
   #define petscsfbcastend_         PETSCSFBCASTEND
@@ -12,6 +13,7 @@
   #define f90array1dcreatesfnode_  F90ARRAY1DCREATESFNODE
   #define f90array1ddestroysfnode_ F90ARRAY1DDESTROYSFNODE
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
+  #define petscsfrestoregraph_ petscsfrestoregraph
   #define petscsfgetgraph_     petscsfgetgraph
   #define petscsfbcastbegin_   petscsfbcastbegin
   #define petscsfbcastend_     petscsfbcastend

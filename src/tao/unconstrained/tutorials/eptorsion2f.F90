@@ -250,7 +250,7 @@
       PetscCall(DMDAGetGhostCorners(dm,gxs,gys,PETSC_NULL_INTEGER,gxm,gym,PETSC_NULL_INTEGER,ierr))
 
 !  Get pointer to vector data.
-      PetscCall(VecGetArrayReadF90(localX,lx_v,ierr))
+      PetscCall(VecGetArrayRead(localX,lx_v,ierr))
 
 !  Set local loop dimensions
       xe = xs+xm
@@ -343,7 +343,7 @@
       end do
 
 !  Restore vector
-      PetscCall(VecRestoreArrayReadF90(localX,lx_v,ierr))
+      PetscCall(VecRestoreArrayRead(localX,lx_v,ierr))
 
 !  Assemble gradient vector
       PetscCall(VecAssemblyBegin(G,ierr))
