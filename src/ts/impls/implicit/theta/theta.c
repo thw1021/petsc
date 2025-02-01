@@ -1395,12 +1395,6 @@ static PetscErrorCode TSSetUp_BEuler(TS ts)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TSView_BEuler(TS ts, PetscViewer viewer)
-{
-  PetscFunctionBegin;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*MC
       TSBEULER - ODE solver using the implicit backward Euler method
 
@@ -1418,7 +1412,6 @@ PETSC_EXTERN PetscErrorCode TSCreate_BEuler(TS ts)
   PetscCall(TSThetaSetTheta(ts, 1.0));
   PetscCall(TSThetaSetEndpoint(ts, PETSC_FALSE));
   ts->ops->setup = TSSetUp_BEuler;
-  ts->ops->view  = TSView_BEuler;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1430,12 +1423,6 @@ static PetscErrorCode TSSetUp_CN(TS ts)
   PetscCheck(th->Theta == 0.5, PetscObjectComm((PetscObject)ts), PETSC_ERR_OPT_OVERWRITE, "Can not change the default value (0.5) of theta when using Crank-Nicolson");
   PetscCheck(th->endpoint, PetscObjectComm((PetscObject)ts), PETSC_ERR_OPT_OVERWRITE, "Can not change to the midpoint form of the Theta methods when using Crank-Nicolson");
   PetscCall(TSSetUp_Theta(ts));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TSView_CN(TS ts, PetscViewer viewer)
-{
-  PetscFunctionBegin;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1461,6 +1448,5 @@ PETSC_EXTERN PetscErrorCode TSCreate_CN(TS ts)
   PetscCall(TSThetaSetTheta(ts, 0.5));
   PetscCall(TSThetaSetEndpoint(ts, PETSC_TRUE));
   ts->ops->setup = TSSetUp_CN;
-  ts->ops->view  = TSView_CN;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
