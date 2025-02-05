@@ -41,6 +41,17 @@ static inline PetscErrorCode PetscHYPREScalarCast(PetscScalar a, HYPRE_Complex *
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// hypre-2.31.0 added HYPRE_SetGpuAwareMPI.
+// HYPRE_WITH_GPU_AWARE_MPI indicates hypre was configured with --enable-gpu-aware-mpi
+#if PETSC_PKG_HYPRE_VERSION_GE(2, 31, 0) && defined(HYPRE_WITH_GPU_AWARE_MPI)
+  #define PetscHYPRESetGpuAwareMPI() \
+    do { \
+      PetscCallExternal(HYPRE_SetGpuAwareMPI, use_gpu_aware_mpi ? 1 : 0); \
+    } while (0)
+#else
+  #define PetscHYPRESetGpuAwareMPI()
+#endif
+
 #if PETSC_PKG_HYPRE_VERSION_GT(2, 28, 0) || (PETSC_PKG_HYPRE_VERSION_EQ(2, 28, 0) && defined(HYPRE_DEVELOP_NUMBER) && HYPRE_DEVELOP_NUMBER >= 22)
 static inline PetscErrorCode PetscHYPREFinalize_Private(void)
 {
@@ -51,6 +62,7 @@ static inline PetscErrorCode PetscHYPREFinalize_Private(void)
     do { \
       if (!HYPRE_Initialized()) { \
         PetscCallExternal(HYPRE_Initialize, ); \
+        PetscHYPRESetGpuAwareMPI(); \
         PetscCall(PetscRegisterFinalize(PetscHYPREFinalize_Private)); \
       } \
     } while (0)

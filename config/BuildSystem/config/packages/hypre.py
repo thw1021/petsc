@@ -94,6 +94,7 @@ class Configure(config.package.GNUPackage):
       stdflag  = '-std=c++14'
       hipbuild = True
       args.append('ROCM_PATH="{0}"'.format(self.hip.hipDir))
+      args.append('--enable-gpu-aware-mpi') # preferred by hypre with GPU
       args.append('--with-hip')
       if not hasharch:
         if not 'with-hypre-gpu-arch' in self.framework.clArgDB:
@@ -113,6 +114,7 @@ class Configure(config.package.GNUPackage):
       stdflag   = '-std=c++11'
       cudabuild = True
       args.append('CUDA_HOME="'+self.cuda.cudaDir+'"')
+      args.append('--enable-gpu-aware-mpi')
       args.append('--with-cuda')
       if not hasharch:
         if not 'with-hypre-gpu-arch' in self.framework.clArgDB:
