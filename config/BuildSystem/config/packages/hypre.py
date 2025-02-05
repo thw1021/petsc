@@ -23,7 +23,7 @@ class Configure(config.package.GNUPackage):
     config.package.GNUPackage.setupHelp(self,help)
     import nargs
     help.addArgument('HYPRE', '-with-hypre-gpu-arch=<string>',  nargs.ArgString(None, 0, 'Value passed to hypre\'s --with-gpu-arch= configure option'))
-    help.addArgument('HYPRE', '-download-hypre-openmp', nargs.ArgBool(None, 1, 'Let hypre use OpenMP if available'))    
+    help.addArgument('HYPRE', '-download-hypre-openmp', nargs.ArgBool(None, 1, 'Let hypre use OpenMP if available'))
     return
 
   def setupDependencies(self, framework):
@@ -98,7 +98,8 @@ class Configure(config.package.GNUPackage):
       if not hasharch:
         if not 'with-hypre-gpu-arch' in self.framework.clArgDB:
           if hasattr(self.hip,'hipArch'):
-            args.append('--with-gpu-arch=' + self.hip.hipArch)
+            arch = self.hip.hipArch.split('_')[0] # hypre does not support gfx942_apu yet
+            args.append('--with-gpu-arch=' + arch)
           else:
             args.append('--with-gpu-arch=gfx908') # defaults to MI100
         else:
