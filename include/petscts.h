@@ -55,6 +55,7 @@ typedef const char *TSType;
 #define TSDISCGRAD        "discgrad"
 #define TSIRK             "irk"
 #define TSDIRK            "dirk"
+#define TSDEVICE          "device"
 
 /*E
    TSProblemType - Determines the type of problem this `TS` object is to be used to solve
@@ -1441,6 +1442,30 @@ PETSC_EXTERN PetscErrorCode TSDiscGradSetFormulation(TS, PetscErrorCode (*)(TS, 
 PETSC_EXTERN PetscErrorCode TSDiscGradGetFormulation(TS, PetscErrorCode (**)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode (**)(TS, PetscReal, Vec, PetscScalar *, void *), PetscErrorCode (**)(TS, PetscReal, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode TSDiscGradIsGonzalez(TS, PetscBool *);
 PETSC_EXTERN PetscErrorCode TSDiscGradUseGonzalez(TS, PetscBool);
+
+/*S
+  TSDeviceRHSFunctionFn - A prototype of a `TSDevice` right-hand-side evaluation function that would be passed to `TSDeviceSetRHSFunction()`
+
+  Calling Sequence:
++ ts  - timestep context
+. t   - current time
+. u   - input vector
+. F   - function vector
+- ctx - [optional] user-defined function context
+
+  Level: beginner
+
+  Note:
+  Return type must be void and the function must be declared as a device function.
+
+.seealso: [](ch_ts), `TS`, `TSSetRHSFunction()`, `DMTSSetRHSFunction()`, `TSIFunctionFn`,
+`TSIJacobianFn`, `TSRHSJacobianFn`
+S*/
+PETSC_EXTERN_TYPEDEF typedef void(TSDeviceRHSFunctionFn)(TS ts, PetscReal t, Vec u, Vec F, void *ctx);
+
+PETSC_EXTERN_TYPEDEF typedef TSDeviceRHSFunctionFn *TSDeviceRHSFunction;
+
+PETSC_EXTERN PetscErrorCode TSDeviceSetRHSFunction(TS, Vec, TSDeviceRHSFunctionFn *, void *);
 
 /*
        PETSc interface to Sundials
