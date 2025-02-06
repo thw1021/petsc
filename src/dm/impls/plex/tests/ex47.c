@@ -464,18 +464,33 @@ int main(int argc, char **argv)
       InitPartForRank[0]       = &sInitialPartitionPrismsMesh[0][0];
       InitPartForRank[1]       = &sInitialPartitionPrismsMesh[1][0];
       const PetscInt(*Conn)[6] = sConnectivityPrismsMesh;
+      const PetscInt Ncor      = 6;
+      const PetscInt dim       = 3;
 
-      const PetscInt Ncor = 6;
-      const PetscInt dim  = 3;
+      /* Create a PetscSection even if we have only one type of element: */
+      PetscSection s;
+      PetscInt     vStart = 0, vEnd = Nc;
+      PetscCall(PetscSectionCreate(PETSC_COMM_WORLD, &s));
+      PetscCall(PetscSectionSetNumFields(s, 1));
+      PetscCall(PetscSectionSetFieldComponents(s, 0, 1));
+      PetscCall(PetscSectionSetChart(s, vStart, vEnd));
 
       PetscCall(PetscMalloc1(Nc * Ncor, &cells));
+      PetscInt count = 0;
       for (c = 0; c < Nc; ++c) {
         PetscInt cell = (InitPartForRank[rank])[c], cor;
-
-        for (cor = 0; cor < Ncor; ++cor) cells[c * Ncor + cor] = Conn[cell][cor];
+        for (cor = 0; cor < Ncor; ++cor) {
+          cells[count] = Conn[cell][cor];
+          ++count;
+        }
+        PetscCall(PetscSectionSetDof(s, c, Ncor));
+        PetscCall(PetscSectionSetFieldDof(s, c, 0, Ncor));
       }
+      PetscCall(PetscSectionSetUp(s));
       PetscCall(DMSetDimension(dm, dim));
-      PetscCall(DMPlexBuildFromCellListParallel(dm, Nc, PETSC_DECIDE, Nv, Ncor, cells, &sfVert, NULL));
+      PetscCall(DMPlexBuildFromCellSectionParallel(dm, Nc, PETSC_DECIDE, Nv, s, cells, &sfVert, NULL));
+      PetscCall(PetscSectionDestroy(&s));
+      PetscCall(DMViewFromOptions(dm, NULL, "-dm_view_bug"));
     } else if (hexprismmesh) {
       Nc                       = sNLoclCellsHexPrismMesh[rank]; //Same on each rank for this example...
       PetscInt Nv              = sNGlobVertsHexPrismMesh;
@@ -661,7 +676,7 @@ int main(int argc, char **argv)
 
     test:
       suffix: 2
-      args: -prismsmesh
+      args: -prismsmesh -dm_view_bug ascii:/dev/null
       output_file: output/ex47_2.out
 
     test:
