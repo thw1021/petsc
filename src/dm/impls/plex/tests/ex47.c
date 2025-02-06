@@ -490,6 +490,7 @@ int main(int argc, char **argv)
       PetscCall(DMSetDimension(dm, dim));
       PetscCall(DMPlexBuildFromCellSectionParallel(dm, Nc, PETSC_DECIDE, Nv, s, cells, &sfVert, NULL));
       PetscCall(PetscSectionDestroy(&s));
+      PetscCall(DMViewFromOptions(dm, NULL, "-dm_view_bug"));
     } else if (hexprismmesh) {
       Nc                       = sNLoclCellsHexPrismMesh[rank]; //Same on each rank for this example...
       PetscInt Nv              = sNGlobVertsHexPrismMesh;
@@ -675,7 +676,7 @@ int main(int argc, char **argv)
 
     test:
       suffix: 2
-      args: -prismsmesh
+      args: -prismsmesh -dm_view_bug ascii:/dev/null
       output_file: output/ex47_2.out
 
     test:
