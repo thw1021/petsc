@@ -78,7 +78,7 @@ static PetscErrorCode KSPChebyshevSetEigenvalues_Chebyshev(KSP ksp, PetscReal em
 static PetscErrorCode KSPChebyshevEstEigSet_Chebyshev(KSP ksp, PetscReal a, PetscReal b, PetscReal c, PetscReal d)
 {
   KSP_Chebyshev *cheb = (KSP_Chebyshev *)ksp->data;
-  PetscInt      nestlevel;
+  PetscInt       nestlevel;
 
   PetscFunctionBegin;
   if (a != 0.0 || b != 0.0 || c != 0.0 || d != 0.0) {
@@ -618,7 +618,7 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   if (ksp->normtype != KSP_NORM_PRECONDITIONED) PetscCall(KSP_PCApply(ksp, r, Br)); /* Br = B^{-1}r */
-  PetscCall(VecAXPBY(d, 4.0 / 3.0 * scale, 0.0, Br)); /* d = 4/3 * scale B^{-1}r */
+  PetscCall(VecAXPBY(d, 4.0 / 3.0 * scale, 0.0, Br));                               /* d = 4/3 * scale B^{-1}r */
   PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
   ksp->its = 1;
   PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
@@ -855,7 +855,7 @@ static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
       cheb->pmatstate = pmatstate;
     }
   }
-  if (ksp->monitor[0] == (PetscErrorCode (*)(KSP, PetscInt, PetscReal, void *)) KSPMonitorResidual && !ksp->normtype) PetscCall(KSPSetNormType(ksp,KSP_NORM_PRECONDITIONED));
+  if (ksp->monitor[0] == (PetscErrorCode (*)(KSP, PetscInt, PetscReal, void *))KSPMonitorResidual && !ksp->normtype) PetscCall(KSPSetNormType(ksp, KSP_NORM_PRECONDITIONED));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
