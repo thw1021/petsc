@@ -531,10 +531,11 @@ PetscErrorCode PetscGetPetscDir(const char *dir[])
 
   Notes:
   Replaces
-  .vb
-    ${PETSC_ARCH},${PETSC_DIR},${PETSC_LIB_DIR},${DISPLAY},
-    ${HOMEDIRECTORY},${WORKINGDIRECTORY},${USERNAME}, ${HOSTNAME}, ${PETSC_MAKE}
-  .ve with appropriate values as well as any environmental variables.
+.vb
+    ${PETSC_ARCH}, ${PETSC_DIR}, ${PETSC_LIB_DIR}, ${DISPLAY},
+    ${HOMEDIRECTORY}, ${WORKINGDIRECTORY}, ${USERNAME}, ${HOSTNAME}, ${PETSC_MAKE}
+.ve
+  with appropriate values as well as any environmental variables.
 
   `PETSC_LIB_DIR` uses the environmental variable if it exists. `PETSC_ARCH` and `PETSC_DIR` use what
   PETSc was built with and do not use environmental variables.
