@@ -10,10 +10,14 @@
 
 typedef struct {
   Vec update; /* work vector where new solution is formed  */
+  void (*func)(TS, PetscReal, Vec, Vec, void *);
 } TS_Device;
 
 PETSC_EXTERN PetscErrorCode TSDeviceSetRHSFunction(TS ts, Vec v, TSDeviceRHSFunctionFn *func, void *ctx){
+    TS_Device *device = (TS_Device*)ts->data;
+
     PetscFunctionBegin;
+    device->func = func;
     PetscFunctionReturn(PETSC_SUCCESS);
 }
 
