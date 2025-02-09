@@ -9,6 +9,9 @@ This example is intended to test VI solvers.\n\n\n";
 /*
   This is the ball obstacle problem, taken from the MS thesis ``Adaptive Mesh Refinement for Variational Inequalities''
   by Stefano Fochesatto, University of Alaska Fairbanks, 2025
+  This is the same VI problem as in src/snes/tutorials/ex9.c, which uses DMDA.  The example
+  is also documented by Chapter 12 of E. Bueler, "PETSc for Partial Differential Equations",
+  SIAM Press 2021.
 
   To visualize the solution, configure with petsc4py, pip install pyvista, and use
 
@@ -159,6 +162,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   PetscCall(DMSetFromOptions(*dm));
   PetscCall(DMSetApplicationContext(*dm, user));
   PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
+  PetscCall(DMGetCoordinatesLocalSetUp(*dm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -170,6 +174,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   PetscWeakForm wf;
   DMLabel       label;
   PetscInt      dim, id = 1;
+  void         *ctx;
 
   PetscFunctionBeginUser;
   PetscCall(DMGetDS(dm, &ds));
@@ -194,7 +199,8 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   PetscCall(DMGetLabel(dm, "marker", &label));
   if (label) PetscCall(DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (void (*)(void))exact, NULL, user, NULL));
 
-  PetscCall(PetscDSSetExactSolution(ds, 0, exact, user));
+  PetscCall(PetscBagGetData(user->bag, (void **)&ctx));
+  PetscCall(PetscDSSetExactSolution(ds, 0, exact, ctx));
   PetscCall(DMGetLabel(dm, "marker", &label));
   /* Setup constants */
   {
@@ -302,16 +308,19 @@ int main(int argc, char **argv)
     # Check the exact solution
     test:
       suffix: ball_0
+      requires: triangle
       args: -dmsnes_check
 
     # Check refined mesh
     test:
       suffix: ball_1
+      requires: triangle
       args: -dmsnes_check -dm_refine 1
 
     # Check different size obstacle
     test:
       suffix: ball_2
+      requires: triangle
       args: -r_0 0.4
 
     # Check quadrilateral mesh
