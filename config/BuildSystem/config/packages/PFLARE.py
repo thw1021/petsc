@@ -43,6 +43,7 @@ class Configure(config.package.GNUPackage):
     args.append('LIBS='+quote(self.libraries.toString(self.dlib)))
     return args
 
+  MUST INSTALL AFTER PETSC, like BAMG
   def Install(self):
       ##### getInstallDir calls this, and it sets up self.packageDir (source download), self.confDir and self.installDir
       args = self.formGNUConfigureArgs()  # allow package to change self.packageDir
