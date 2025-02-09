@@ -1,0 +1,11 @@
+L_2 Error: 0.
+L_2 Residual: 0.
+Function appears to be linear
+  0 SNES VI Function norm 1.46003 Active lower constraints 341/385 upper constraints 0/0 Percent of total 0.224195 Percent of bounded 0.224195
+  1 SNES VI Function norm 1.01735 Active lower constraints 285/341 upper constraints 0/0 Percent of total 0.187377 Percent of bounded 0.187377
+  2 SNES VI Function norm 0.662045 Active lower constraints 249/285 upper constraints 0/0 Percent of total 0.163708 Percent of bounded 0.163708
+  3 SNES VI Function norm 0.643474 Active lower constraints 201/249 upper constraints 0/0 Percent of total 0.13215 Percent of bounded 0.13215
+  4 SNES VI Function norm 0.236164 Active lower constraints 177/201 upper constraints 0/0 Percent of total 0.116371 Percent of bounded 0.116371
+  5 SNES VI Function norm 0.0224774 Active lower constraints 161/177 upper constraints 0/0 Percent of total 0.105851 Percent of bounded 0.105851
+  6 SNES VI Function norm 2.40577e-15 Active lower constraints 161/161 upper constraints 0/0 Percent of total 0.105851 Percent of bounded 0.105851
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
