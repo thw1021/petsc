@@ -44,14 +44,75 @@ class Configure(config.package.GNUPackage):
     return args
 
   def Install(self):
-    config.package.GNUPackage.setupDependencies(self)
-    try:
-      self.logPrintBox('Running make python on '+self.PACKAGE+'; this may take several minutes')
-      if self.parallelMake: pmake = self.make.make_jnp+' '+self.makerulename+' '
-      else: pmake = self.make.make+' '+self.makerulename+' '
+      ##### getInstallDir calls this, and it sets up self.packageDir (source download), self.confDir and self.installDir
+      args = self.formGNUConfigureArgs()  # allow package to change self.packageDir
+      if self.download and self.argDB['download-'+self.downloadname.lower()+'-configure-arguments']:
+         args.append(self.argDB['download-'+self.downloadname.lower()+'-configure-arguments'])
+      args = ' '.join(args)
+      conffile = os.path.join(self.packageDir,self.package+'.petscconf')
+      fd = open(conffile, 'w')
+      fd.write(args)
+      fd.close()
+      ### Use conffile to check whether a reconfigure/rebuild is required
+      if not self.installNeeded(conffile):
+        return self.installDir
 
-      output,err,ret  = config.base.Configure.executeShellCommand(pmake+' python', cwd=self.packageDir, timeout=6000, log = self.log)
-    except RuntimeError as e:
-      self.logPrint('Error running make python on '+self.PACKAGE+': '+str(e))
-      raise RuntimeError('Error running make python on '+self.PACKAGE)
-    return
+      # Not currently used
+      # self.preInstall()
+
+      if self.builddir == 'yes':
+        folder = os.path.join(self.packageDir, 'petsc-build')
+        if os.path.isdir(folder):
+          import shutil
+          shutil.rmtree(folder)
+        os.mkdir(folder)
+        self.packageDir = folder
+        dot = '..'
+      else:
+        dot = '.'
+
+      ### Taken from formGNUConfigureArgs()
+      args = []
+      args.append('LIBDIR='+self.libDir)
+      self.pushLanguage('C')
+      if not self.installwithbatch and hasattr(self.setCompilers, 'cross_cc'):
+        args.append('CC="'+self.setCompilers.cross_cc+'"')
+      else:
+        args.append('CC="'+self.getCompiler()+'"')
+      args.append('CFLAGS="'+self.updatePackageCFlags(self.getCompilerFlags())+'"')
+      self.popLanguage()
+      if hasattr(self.compilers, 'FC'):
+        self.pushLanguage('FC')
+        fc = self.getCompiler()
+        if self.fortran.fortranIsF90:
+          try:
+            output, error, status = self.executeShellCommand(fc+' -v', log = self.log)
+            output += error
+          except:
+            output = ''
+          if output.find('IBM') >= 0:
+            fc = os.path.join(os.path.dirname(fc), 'xlf')
+            self.log.write('Using IBM f90 compiler, switching to xlf for compiling ' + self.PACKAGE + '\n')
+        args.append('FFLAGS="'+self.updatePackageFFlags(self.getCompilerFlags())+'"')
+        if not self.installwithbatch and hasattr(self.setCompilers,'cross_fc'):
+          args.append('FC="'+self.setCompilers.cross_fc+'"')
+        else:
+          args.append('FC="'+fc+'"')
+        self.popLanguage()
+
+
+      ### Build package
+      try:
+        self.logPrintBox('Running make on '+self.PACKAGE+'; this may take several minutes')
+        if self.parallelMake: pmake = self.make.make_jnp+' '+self.makerulename+' '
+        else: pmake = self.make.make+' '+self.makerulename+' '
+
+        output2,err2,ret2  = config.base.Configure.executeShellCommand(self.make.make+' clean', cwd=self.packageDir, timeout=200, log = self.log)
+        output3,err3,ret3  = config.base.Configure.executeShellCommand(pmake+' '+' '.join(args), cwd=self.packageDir, timeout=6000, log = self.log)
+        self.logPrintBox('Running make python on '+self.PACKAGE+'; this may take several minutes')
+        output4,err4,ret4  = config.base.Configure.executeShellCommand(self.make.make+' python'+' '+' '.join(args), cwd=self.packageDir, timeout=1000, log = self.log)
+      except RuntimeError as e:
+        self.logPrint('Error running make; make python on '+self.PACKAGE+': '+str(e))
+        raise RuntimeError('Error running make; make python on '+self.PACKAGE)
+      self.postInstall(output2+err2+output3+err3+output4+err4, conffile)
+      return self.installDir
