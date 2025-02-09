@@ -1,0 +1,4 @@
+  0 SNES VI Function norm 0.194961 Active lower constraints 349/357 upper constraints 0/0 Percent of total 0.966759 Percent of bounded 0.966759
+  1 SNES VI Function norm 0.0523709 Active lower constraints 345/349 upper constraints 0/0 Percent of total 0.955679 Percent of bounded 0.955679
+  2 SNES VI Function norm 6.49593e-17 Active lower constraints 345/345 upper constraints 0/0 Percent of total 0.955679 Percent of bounded 0.955679
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
