@@ -59,7 +59,7 @@ struct func{
     const PetscReal g = 9.8;
     __device__ int operator()(TS ts, PetscReal t, PetscScalar *u, PetscScalar *f, void *ctx){
     int i = hipThreadIdx_x + hipBlockIdx_x*hipBlockDim_x;
-
+    f[i] = -9.8*u[i];
     return 2;
   }
 };
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
   PetscCall(VecCreate(comm, &sol));
   PetscCall(VecSetSizes(sol, user.n_pdes, PETSC_DECIDE));
   PetscCall(VecSetFromOptions(sol));
-  PetscCall(VecSet(sol, 1.0));// 2D, set x1,y1,vx1,vy1, x2, y2.... etc.
+  PetscCall(VecSet(sol, 10.0));// 2D, set x1,y1,vx1,vy1, x2, y2.... etc.
   PetscCall(TSCreate(comm, &ts));
   PetscCall(TSSetFromOptions(ts));
   //PetscCall(TSDeviceSetRHSFunction(ts, NULL, RHSFunctionBall, NULL));

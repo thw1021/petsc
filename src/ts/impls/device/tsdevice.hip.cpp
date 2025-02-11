@@ -30,15 +30,23 @@ static PetscErrorCode TSStep_Device(TS ts)
     PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*------------------------------------------------------------*/
-static PetscErrorcode TSDeviceSetNumEquations(TS ts, numEq){
+static PetscErrorCode TSDeviceGetNumEquations(TS ts, PetscInt *numEq){
+    TS_Device *device = (TS_Device *)ts->data;
+    PetscFunctionBegin;
+    *numEq = device->n_des;
+    PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TSDeviceSetNumEquations(TS ts, PetscInt numEq){
     TS_Device *device = (TS_Device *)ts->data;
     PetscFunctionBegin;
     device->n_des = numEq;
     PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 static PetscErrorCode TSSetUp_Device(TS ts)
 {
-  PetscInt  Ne, n;
+  PetscInt  Ne;
   PetscBool flg;
 
   PetscFunctionBegin;
@@ -95,45 +103,51 @@ static PetscErrorCode TSComputeLinearStability_Device(TS ts, PetscReal xr, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-__device__ static void TSStep_DeviceFn(){
-
-}
-
 template<typename func>
-__global__ void TSSolve_DeviceFn(TS ts, PetscScalar *sol, PetscScalar *res, PetscReal dt, func rhsfunc){
-    int n = 0;
+__global__ void TSSolve_DeviceFn(TS ts, PetscInt N, PetscScalar *sol, PetscScalar *res, PetscReal dt, func rhsfunc){
     int i = hipThreadIdx_x + hipBlockIdx_x*hipBlockDim_x;
-    // pre stage
-    // computerhsfunction
-    n = rhsfunc(ts, dt, sol, res, NULL);
-    printf("return value %d\n", n);
-    // vecaypx
-    // poststage
-    // adaptcheckstage
-    // checkdiverged
-    // domainerror
-    // checkstageok
-    // adapter?
-    // copy update to solution
-    // increment ptime w/ time step
-    // time_step = nex time step
-    printf("TS_Device thread %d\n", i);
+    if (i < N){
+      // pre stage
+      // computerhsfunction
+      // TODO: Generalize to multi dimensional problems.
+      rhsfunc(ts, dt, sol, res, NULL);
+      res[i] = res[i] * dt + sol[i];
+      // copy update to solution
+      sol[i] = res[i];
+      // increment ptime w/ time step
+      // time_step = nex time step
+      printf("TS_Device thread %d\n", i);
+    }
     return;
 }
 
 template<typename func>
 PetscErrorCode TSSolve_Device(TS ts, func rhsfunc){
-  PetscScalar *sol = nullptr, *res=nullptr, dt=0.;
-  TS_Device *ts_device = (TS_Device*)ts->data;
+  Vec solution, residual;
+  PetscScalar *sol;
+  PetscScalar *res, dt;
+  PetscInt     neq;
+  //TS_Device *ts_device = (TS_Device*)ts->data;
 
   PetscFunctionBegin;
-  PetscPrintf(PETSC_COMM_WORLD, "TSSolve_Device\n");
+  dt = ts->time_step;
+  PetscCall(TSDeviceGetNumEquations(ts, &neq));
+  PetscPrintf(PETSC_COMM_WORLD, "TSSolve_Device for %" PetscInt_FMT " equations.\n", neq);
+  PetscCall(TSGetSolution(ts, &solution));
+  PetscCall(VecDuplicate(solution, &residual));
+  PetscCall(VecZeroEntries(residual));
+  PetscCall(VecGetArrayWrite(residual, &res));
+  PetscCall(VecGetArrayWrite(solution, &sol));
   //The default device configuration should be a size of the system of 1, although anyone that
   //uses it that way would be hamstringing their efficiency over the classic TS and it is highly
   //not recommended to do so
-  hipLaunchKernelGGL(HIP_KERNEL_NAME(TSSolve_DeviceFn), dim3(1), dim3(1), 0, PetscDefaultHipStream, ts, sol, res, dt, rhsfunc);
+  hipLaunchKernelGGL(HIP_KERNEL_NAME(TSSolve_DeviceFn), dim3(256), dim3(256), 0, PetscDefaultHipStream, ts, neq, sol, res, dt, rhsfunc);
   PetscCallHIP(hipPeekAtLastError());
   PetscCallHIP(hipDeviceSynchronize());
+
+  PetscCall(VecRestoreArrayWrite(residual, &res));
+  PetscCall(VecRestoreArrayWrite(solution, &sol));
+  PetscCall(VecDestroy(&residual));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
