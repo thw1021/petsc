@@ -30,10 +30,23 @@ static PetscErrorCode TSStep_Device(TS ts)
     PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*------------------------------------------------------------*/
-
+static PetscErrorcode TSDeviceSetNumEquations(TS ts, numEq){
+    TS_Device *device = (TS_Device *)ts->data;
+    PetscFunctionBegin;
+    device->n_des = numEq;
+    PetscFunctionReturn(PETSC_SUCCESS);
+}
 static PetscErrorCode TSSetUp_Device(TS ts)
 {
+  PetscInt  Ne, n;
+  PetscBool flg;
+
   PetscFunctionBegin;
+  PetscOptionsBegin(PetscObjectComm((PetscObject)ts), "", "TSDevice Options", "TSDEVICE");
+  PetscCall(PetscOptionsInt("-ts_device_num_equations", "The size of the system in terms of separable equations", "", Ne, &Ne, &flg));
+  if (!flg) Ne = 1;
+  PetscCall(TSDeviceSetNumEquations(ts, Ne));
+  PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

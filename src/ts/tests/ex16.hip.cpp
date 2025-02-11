@@ -56,8 +56,10 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
   and g = 9.8m/s^2
 */
 struct func{
+    const PetscReal g = 9.8;
     __device__ int operator()(TS ts, PetscReal t, PetscScalar *u, PetscScalar *f, void *ctx){
-    //int i = hipThreadIdx_x + hipBlockIdx_x*hipBlockDim_x;
+    int i = hipThreadIdx_x + hipBlockIdx_x*hipBlockDim_x;
+
     return 2;
   }
 };
@@ -77,10 +79,11 @@ int main(int argc, char *argv[])
   PetscCall(VecCreate(comm, &sol));
   PetscCall(VecSetSizes(sol, user.n_pdes, PETSC_DECIDE));
   PetscCall(VecSetFromOptions(sol));
-  PetscCall(VecSet(sol, 0.0));// 2D, set x1,y1,vx1,vy1, x2, y2.... etc.
+  PetscCall(VecSet(sol, 1.0));// 2D, set x1,y1,vx1,vy1, x2, y2.... etc.
   PetscCall(TSCreate(comm, &ts));
   PetscCall(TSSetFromOptions(ts));
   //PetscCall(TSDeviceSetRHSFunction(ts, NULL, RHSFunctionBall, NULL));
+  PetscCall(TSSetSolution(ts, sol));
   func rhsfunc;
   PetscCall(TSSolve_Device(ts, rhsfunc));
   PetscCall(TSDestroy(&ts));
