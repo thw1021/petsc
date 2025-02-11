@@ -278,6 +278,21 @@ PetscErrorCode SNESVIGetActiveSetIS(SNES snes, Vec X, Vec F, IS *ISact)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  SNESVIComputeInactiveSetFnorm - Computes the function norm for variational inequalities on the inactive set
+
+  Input Parameters:
++ snes - the `SNES` context
+. F    - the nonlinear function vector
+- X    - the `snes` solution vector
+
+  Output Parameter:
+. fnorm - the function norm
+
+  Level: developer
+
+.seealso: [](ch_snes), `SNES`, `SNESVINEWTONRSLS`, `SNESVINEWTONSSLS`, `SNESLineSearchSetVIFunctions()`
+@*/
 PetscErrorCode SNESVIComputeInactiveSetFnorm(SNES snes, Vec F, Vec X, PetscReal *fnorm)
 {
   const PetscScalar *x, *xl, *xu, *f;
@@ -300,6 +315,50 @@ PetscErrorCode SNESVIComputeInactiveSetFnorm(SNES snes, Vec F, Vec X, PetscReal 
   PetscCall(VecRestoreArrayRead(X, &x));
   PetscCallMPI(MPIU_Allreduce(&rnorm, fnorm, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)snes)));
   *fnorm = PetscSqrtReal(*fnorm);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESVIComputeInactiveSetFtY - Computes the directional derivative for variational inequalities on the inactive set,
+  assuming that there exists some $G(x)$ for which the `SNESFunctionFn` $F(x) = grad G(x)$ (relevant for some line search algorithms)
+
+  Input Parameters:
++ snes - the `SNES` context
+. F    - the nonlinear function vector
+. X    - the `snes` solution vector
+- Y    - the direction vector
+
+  Output Parameter:
+. fty - the directional derivative
+
+  Level: developer
+
+.seealso: [](ch_snes), `SNES`, `SNESVINEWTONRSLS`, `SNESVINEWTONSSLS`
+@*/
+PetscErrorCode SNESVIComputeInactiveSetFtY(SNES snes, Vec F, Vec X, Vec Y, PetscScalar *fty)
+{
+  const PetscScalar *x, *xl, *xu, *y, *f;
+  PetscInt           i, n;
+  PetscScalar        rty;
+  PetscReal          zerotolerance = snes->vizerotolerance;
+
+  PetscFunctionBegin;
+  PetscCall(VecGetLocalSize(X, &n));
+  PetscCall(VecGetArrayRead(F, &f));
+  PetscCall(VecGetArrayRead(X, &x));
+  PetscCall(VecGetArrayRead(snes->xl, &xl));
+  PetscCall(VecGetArrayRead(snes->xu, &xu));
+  PetscCall(VecGetArrayRead(Y, &y));
+  rty = 0.0;
+  for (i = 0; i < n; i++) {
+    if ((PetscRealPart(x[i]) > PetscRealPart(xl[i]) + zerotolerance || (PetscRealPart(f[i]) <= 0.0)) && ((PetscRealPart(x[i]) < PetscRealPart(xu[i]) - zerotolerance) || PetscRealPart(f[i]) >= 0.0)) rty += f[i] * PetscConj(y[i]);
+  }
+  PetscCall(VecRestoreArrayRead(F, &f));
+  PetscCall(VecRestoreArrayRead(X, &x));
+  PetscCall(VecRestoreArrayRead(snes->xl, &xl));
+  PetscCall(VecRestoreArrayRead(snes->xu, &xu));
+  PetscCall(VecRestoreArrayRead(Y, &y));
+  PetscCallMPI(MPIU_Allreduce(&rty, fty, 1, MPIU_SCALAR, MPIU_SUM, PetscObjectComm((PetscObject)snes)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
