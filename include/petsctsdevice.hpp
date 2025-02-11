@@ -1,6 +1,4 @@
 #pragma once
 
-#include <petscts.h>
-
-template<typename func>
-extern PetscErrorCode TSSolve_Device(TS);
+template<class func>
+PetscErrorCode TSSolve_Device(TS);

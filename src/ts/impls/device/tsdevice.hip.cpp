@@ -21,7 +21,7 @@ PETSC_EXTERN PetscErrorCode TSDeviceSetRHSFunction(TS ts, Vec v, TSDeviceRHSFunc
     PetscFunctionBegin;
     device->func = func;
     PetscFunctionReturn(PETSC_SUCCESS);
-}
+  }
 
 static PetscErrorCode TSStep_Device(TS ts)
 {
@@ -39,8 +39,10 @@ static PetscErrorCode TSSetUp_Device(TS ts)
 
 static PetscErrorCode TSReset_Device(TS ts)
 {
+  TS_Device *device = (TS_Device *)ts->data;
 
   PetscFunctionBegin;
+  PetscCall(VecDestroy(&device->update));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -85,12 +87,13 @@ __device__ static void TSStep_DeviceFn(){
 }
 
 template<typename func>
-__global__ void TSSolve_DeviceFn(TS ts, PetscScalar *sol, PetscScalar *res, PetscReal dt){
-
+__global__ void TSSolve_DeviceFn(TS ts, PetscScalar *sol, PetscScalar *res, PetscReal dt, func rhsfunc){
+    int n = 0;
     int i = hipThreadIdx_x + hipBlockIdx_x*hipBlockDim_x;
     // pre stage
     // computerhsfunction
-    func(ts, dt, sol, res, NULL);
+    n = rhsfunc(ts, dt, sol, res, NULL);
+    printf("return value %d\n", n);
     // vecaypx
     // poststage
     // adaptcheckstage
@@ -106,17 +109,21 @@ __global__ void TSSolve_DeviceFn(TS ts, PetscScalar *sol, PetscScalar *res, Pets
 }
 
 template<typename func>
-PetscErrorCode TSSolve_Device(TS ts){
-  PetscScalar *sol, *res, dt;
+PetscErrorCode TSSolve_Device(TS ts, func rhsfunc){
+  PetscScalar *sol = nullptr, *res=nullptr, dt=0.;
   TS_Device *ts_device = (TS_Device*)ts->data;
 
   PetscFunctionBegin;
   PetscPrintf(PETSC_COMM_WORLD, "TSSolve_Device\n");
-  hipLaunchKernelGGL(HIP_KERNEL_NAME(TSSolve_DeviceFn<func>), dim3(256), dim3(256), 0, PetscDefaultHipStream, ts, sol, res, dt);
+  //The default device configuration should be a size of the system of 1, although anyone that
+  //uses it that way would be hamstringing their efficiency over the classic TS and it is highly
+  //not recommended to do so
+  hipLaunchKernelGGL(HIP_KERNEL_NAME(TSSolve_DeviceFn), dim3(1), dim3(1), 0, PetscDefaultHipStream, ts, sol, res, dt, rhsfunc);
   PetscCallHIP(hipPeekAtLastError());
   PetscCallHIP(hipDeviceSynchronize());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 /* ------------------------------------------------------------ */
 
 /*MC

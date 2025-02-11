@@ -5,7 +5,6 @@ static char help[] = "Test batched TS solves\n";
 #include <petscds.h>
 #include <petscksp.h>
 #include <petscts.h>
-#include <petsctsdevice.hpp>
 #include <petscdmswarm.h>
 #include <petsc/private/petscfeimpl.h>//For computation of the field gradient.
 #include <petscdt.h>
@@ -13,8 +12,10 @@ static char help[] = "Test batched TS solves\n";
 
 // Hip inclusions should be wrapped up into petsc device calls in the TS
 #include <petscdevice_hip.h>
+#include "../impls/device/tsdevice.hip.cpp"
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_runtime.h>
+#include <petsctsdevice.hpp>
 
 /*
   Struct to store problem parameters and pass into petsc objects
@@ -55,10 +56,9 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
   and g = 9.8m/s^2
 */
 struct func{
-  __device__ void operator()(TS ts, PetscReal t, PetscScalar *u, PetscScalar *f, void *ctx){
-    int i = hipThreadIdx_x + hipBlockIdx_x*hipBlockDim_x;
-    printf("RHSFunction Device from thread %d\n", i);
-    return;
+    __device__ int operator()(TS ts, PetscReal t, PetscScalar *u, PetscScalar *f, void *ctx){
+    //int i = hipThreadIdx_x + hipBlockIdx_x*hipBlockDim_x;
+    return 2;
   }
 };
 // rocprofv2 -d output --hip-trace ./ex5 -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_lower 0.0,0.0,0.0 -dm_plex_box_upper 0.1,25.,10. -dm_plex_box_faces 1,1,16 -ts_type euler -petscfe_default_quadrature_order 3 -petscspace_degree 3 -ts_dt .01 -ts_max_steps 100 -post_step_view -dm_vec_type hip -vec_type hip
@@ -81,7 +81,10 @@ int main(int argc, char *argv[])
   PetscCall(TSCreate(comm, &ts));
   PetscCall(TSSetFromOptions(ts));
   //PetscCall(TSDeviceSetRHSFunction(ts, NULL, RHSFunctionBall, NULL));
-  PetscCall(TSSolve_Device<func>(ts));
+  func rhsfunc;
+  PetscCall(TSSolve_Device(ts, rhsfunc));
+  PetscCall(TSDestroy(&ts));
+  PetscCall(VecDestroy(&sol));
   PetscCall(PetscFinalize());
   return 0;
 }
