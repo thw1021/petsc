@@ -1461,7 +1461,7 @@ PETSC_EXTERN PetscErrorCode TSDiscGradUseGonzalez(TS, PetscBool);
 .seealso: [](ch_ts), `TS`, `TSSetRHSFunction()`, `DMTSSetRHSFunction()`, `TSIFunctionFn`,
 `TSIJacobianFn`, `TSRHSJacobianFn`
 S*/
-PETSC_EXTERN_TYPEDEF typedef void(TSDeviceRHSFunctionFn)(TS ts, PetscReal t, Vec u, Vec F, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef void(TSDeviceRHSFunctionFn)(TS ts, PetscReal t, PetscScalar *U, PetscScalar*F, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef TSDeviceRHSFunctionFn *TSDeviceRHSFunction;
 

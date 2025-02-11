@@ -5,6 +5,7 @@ static char help[] = "Test batched TS solves\n";
 #include <petscds.h>
 #include <petscksp.h>
 #include <petscts.h>
+#include <petsctsdevice.hpp>
 #include <petscdmswarm.h>
 #include <petsc/private/petscfeimpl.h>//For computation of the field gradient.
 #include <petscdt.h>
@@ -53,10 +54,13 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
   Evolve the trajectory of a group of balls given a set of initial conditions
   and g = 9.8m/s^2
 */
-__global__ static void RHSFunctionBall(TS ts, PetscReal t, Vec u, Vec f, void *ctx){
-
-}
-
+struct func{
+  __device__ void operator()(TS ts, PetscReal t, PetscScalar *u, PetscScalar *f, void *ctx){
+    int i = hipThreadIdx_x + hipBlockIdx_x*hipBlockDim_x;
+    printf("RHSFunction Device from thread %d\n", i);
+    return;
+  }
+};
 // rocprofv2 -d output --hip-trace ./ex5 -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_lower 0.0,0.0,0.0 -dm_plex_box_upper 0.1,25.,10. -dm_plex_box_faces 1,1,16 -ts_type euler -petscfe_default_quadrature_order 3 -petscspace_degree 3 -ts_dt .01 -ts_max_steps 100 -post_step_view -dm_vec_type hip -vec_type hip
 int main(int argc, char *argv[])
 {
@@ -76,8 +80,8 @@ int main(int argc, char *argv[])
   PetscCall(VecSet(sol, 0.0));// 2D, set x1,y1,vx1,vy1, x2, y2.... etc.
   PetscCall(TSCreate(comm, &ts));
   PetscCall(TSSetFromOptions(ts));
-  PetscCall(TSDeviceSetRHSFunction(ts, NULL, RHSFunctionBall, NULL));
-  //PetscCall(TSSolve(ts));
+  //PetscCall(TSDeviceSetRHSFunction(ts, NULL, RHSFunctionBall, NULL));
+  PetscCall(TSSolve_Device<func>(ts));
   PetscCall(PetscFinalize());
   return 0;
 }
