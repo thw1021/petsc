@@ -20,7 +20,7 @@
 /* Stuff related to Vec_Kokkos */
 
 struct Vec_Kokkos {
-  PetscScalarKokkosDualView v_dual;
+  PetscScalarKokkosDualView v_dual; // its extent/length could be larger than v->map->n, as the case in VecDuplicateVecs_SeqKokkos_GEMV().
 
   /* COO stuff */
   PetscCountKokkosView jmap1_d; /* [m+1]: i-th entry of the vector has jmap1[i+1]-jmap1[i] repeats in COO arrays */
@@ -54,6 +54,9 @@ struct Vec_Kokkos {
     v_dual = PetscScalarKokkosDualView(v_d, v_h);
     if (!array_d) v_dual.modify_host();
   }
+
+  // Construct Vec_Kokkos with the given DualView. Use the sync state as is. With reference counting, Kokkos manages its lifespan.
+  Vec_Kokkos(PetscScalarKokkosDualView dual) : v_dual(dual), raw_array_d_allocated(nullptr) { }
 
   ~Vec_Kokkos()
   {
