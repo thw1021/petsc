@@ -5,19 +5,23 @@ petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
 
 configure_options = [
   '--package-prefix-hash='+petsc_hash_pkgs,
-  '--download-xsdk',
-  '--download-triangle', # for TRIANGLE_HDF5 test (with trilinos chaco)
-  '--download-triangle-build-exec',
+  '--with-cudac=0',
+  '--download-netlib-lapack=1',
   '--download-mpich=1',
-  '--download-mpich-device=ch3:sock',
-  '--with-debugging=0',
-  '--download-metis=1',
-  '--download-suitesparse=1',
+  '--download-cmake=1',
+  '--with-clanguage=C++',
+  '--with-debugging=1',
+  'COPTFLAGS=-g -O',
+  'FOPTFLAGS=-g -O',
+  'CXXOPTFLAGS=-g -O',
   '--with-shared-libraries=0',
-  #'--download-boost=1', # build failure
-  '--download-eigen',
-  #'--with-coverage',
-  '--with-strict-petscerrorcode=0',
+  '--download-slepc=1',
+  '--download-bamg=1',
+  '--download-hpddm=1',
+  '--download-hdf5=1',
+  '--dowload-zlib=1',
+  '--with-strict-petscerrorcode',
+  '--with-coverage',
   ]
 
 if __name__ == '__main__':
