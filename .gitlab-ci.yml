@@ -24,28 +24,199 @@ variables:
 # The most basic template that most tests will expand upon
 #
 
-.test-basic:
+.rules-source:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE == "api"
   interruptible: true
-  only:
-    refs:
-#     Set with CI/CD Shedules - New Schedule
-      - schedules
-      - api
-#     Set with CI/CD Pipelines - Run Pipeline
-      - web
-      - merge_requests
   dependencies: []
 
-.test:
-  extends: .test-basic
-  except:
-    variables:
-      # Skip if the docs-only label is attached to a merge request
-      - $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
-      - $PETSC_CI_SCHEDULED =~ /yes/
+.rules-default:
+  rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+      when: never
+    - if: $PETSC_CI_PAGES == "yes"
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
+      when: never
+    - !reference [.rules-source, rules]
+  interruptible: true
+  dependencies: []
+
+# default-docs jobs should be run for petsc4py-only, slepc-hpddm-only, gpu-only aswell
+.rules-default-docs:
+  rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+      when: never
+    - if: $PETSC_CI_PAGES == "yes"
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
+    - !reference [.rules-source, rules]
+  interruptible: true
+  dependencies: []
+
+.rules-default-petsc4py:
+  rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+      when: never
+    - if: $PETSC_CI_PAGES == "yes"
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
+    - !reference [.rules-source, rules]
+  interruptible: true
+  dependencies: []
+
+.rules-default-slepc-hpddm:
+  rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+      when: never
+    - if: $PETSC_CI_PAGES == "yes"
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+    - !reference [.rules-source, rules]
+  interruptible: true
+  dependencies: []
+
+.rules-default-gpu:
+  rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+      when: never
+    - if: $PETSC_CI_PAGES == "yes"
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
+    - !reference [.rules-source, rules]
+  interruptible: true
+  dependencies: []
+
+.rules-default-petsc4py-slepc-hpddm:
+  rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+      when: never
+    - if: $PETSC_CI_PAGES == "yes"
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+    - !reference [.rules-source, rules]
+  interruptible: true
+  dependencies: []
+
+#.rules-default-petsc4py-gpu:  # currently no job requires this rule
+
+.rules-default-slepc-hpddm-gpu:
+  rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+      when: never
+    - if: $PETSC_CI_PAGES == "yes"
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
+      when: never
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
+    - !reference [.rules-source, rules]
+  interruptible: true
+  dependencies: []
+
+# .rules-default-petsc4py-slepc-hpddm-gpu: # currently no job requires this rule
+
+.rules-pause:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && ($CI_MERGE_REQUEST_EVENT_TYPE == "merged_result" || $CI_MERGE_REQUEST_EVENT_TYPE == "detached")
+      when: manual
+
+.rules-pages:
+  rules:
+    - if: $PETSC_CI_PAGES == "yes"
+  interruptible: true
+  dependencies: []
+
+.rules-extended:
+  rules:
+    - if: $PETSC_CI_EXTENDED == "yes"
+  interruptible: true
+  dependencies: []
+
+#########
+# add in dummy jobs to identify which rule is used for the currently running pipeline
+
+.no-op:
+  stage: .pre
+  tags:
+    - gce-stage1
+  script:
+    - echo "no script to run"
+  variables:
+    GIT_STRATEGY: none
+  allow_failure: false
+
+docs-only-jobs:
+  extends:
+    - .no-op
+  rules:
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
+
+petsc4py-only-jobs:
+  extends:
+    - .no-op
+  rules:
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)petsc4py-only($|,)/
+
+slepc-hpddm-only-jobs:
+  extends:
+    - .no-op
+  rules:
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)slepc-hpddm-only($|,)/
+
+gpu-only-jobs:
+  extends:
+    - .no-op
+  rules:
+    - if: $CI_MERGE_REQUEST_LABELS =~ /(^|,)gpu-only($|,)/
+
+pause-for-approval:
+  extends:
+    - .no-op
+    - .rules-pause
+  when: manual
+
+#########
 
 check-ci-settings:
-  extends: .test-basic
+  extends: .rules-default-docs
   stage: .pre
   tags:
     - gce-stage1
@@ -58,7 +229,7 @@ check-ci-settings:
 #
 
 .stage-1:
-  extends: .test
+  extends: .rules-default-slepc-hpddm-gpu
   stage: stage-1
   tags:
     - gce-u22-stage1
@@ -176,7 +347,9 @@ gcc-lto:
     LOAD_MODULES: gcc/12.1.0 mpich/4.1-gcc-12.1.0
 
 petsc4py-install:
-  extends: .stage-2
+  extends:
+    - .stage-2
+    - .rules-default-petsc4py
   tags:
     - gce-u22-stage1
   variables:
@@ -214,7 +387,9 @@ petsc4py-install:
     - mv arch-* hide/ && PETSC_DIR="${PWD}/${T_PREFIX}" ${T_VALIDATE_CMD} && mv hide/arch-* ./
 
 petsc4py-pip:
-  extends: .stage-2
+  extends:
+    - .stage-2
+    - .rules-default-petsc4py
   tags:
     - gce-u22-stage1
   variables:
@@ -236,7 +411,7 @@ petsc4py-pip:
     - python -m petsc4py
 
 checksource:
-  extends: .test-basic
+  extends: .rules-default-docs
   stage: .pre
   tags:
     - gce-u22-stage1
@@ -258,24 +433,6 @@ checksource:
     - arch-*/lib/petsc/conf/*.log
     expire_in: 4 days
 
-pause-for-approval:
-  extends: .test
-  stage: .pre
-  tags:
-    - gce-stage1
-  only:
-    refs:
-      - merge_requests
-    variables:
-      - $CI_MERGE_REQUEST_EVENT_TYPE == "merged_result"
-      - $CI_MERGE_REQUEST_EVENT_TYPE == "detached"
-  script:
-    - echo "pause-for-approval has no script to run"
-  variables:
-    GIT_STRATEGY: none
-  when: manual
-  allow_failure: false
-
 #
 # Basic template for code coverage generation. Tests should additionally inherit from the more
 # specialized OS-specific versions instead of this one.
@@ -296,7 +453,7 @@ pause-for-approval:
 #
 .stage-23:
   extends:
-    - .test
+    - .rules-default
     - .coverage-generate
   script:
     - if [ ! -z ${LOAD_MODULES+x} ]; then module --trace load ${LOAD_MODULES}; module list; fi
@@ -430,6 +587,7 @@ osx-arm:
   extends:
     - .stage-3
     - .osx_test
+    - .rules-default-petsc4py-slepc-hpddm
     - .coverage-disable
   tags:
     - os:macos-arm
@@ -479,13 +637,11 @@ linux-gcc-pkgs-opt:
   extends:
     - .stage-2
     - .linux_test
+    - .rules-default-docs
   tags:
     - gce-stage2
   variables:
     TEST_ARCH: arch-ci-linux-gcc-pkgs-opt
-  except:
-    variables:
-      - $PETSC_CI_SCHEDULED =~ /yes/
 
 linux-gcc-complex-opt-32bit:
   extends:
@@ -525,6 +681,7 @@ freebsd-cxx-pkgs-opt:
   extends:
     - .stage-3
     - .freebsd_test
+    - .rules-default-slepc-hpddm
   tags:
     - os:fbsd
   variables:
@@ -545,6 +702,7 @@ linux-hip-double:
   extends:
     - .stage-3
     - .linux_test_noflags
+    - .rules-default-gpu
     - .coverage-disable
   tags:
     - gpu:amd, os:linux
@@ -565,6 +723,7 @@ linux-sycl-double:
   extends:
     - .stage-3
     - .linux_test_nofflags
+    - .rules-default-gpu
     - .coverage-disable
   tags:
     - gce-u22-stage3, linux-fast
@@ -579,6 +738,7 @@ linux-cuda-pkgs:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-gpu
   tags:
     - cuda-stage3
   variables:
@@ -598,6 +758,7 @@ linux-cuda112-omp:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-gpu
     - .coverage-disable
   tags:
     - cuda-stage3
@@ -613,6 +774,7 @@ linux-cuda-cmplx:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-gpu
   tags:
     - cuda-stage3
   variables:
@@ -623,6 +785,7 @@ linux-cuda-double-64idx:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-gpu
   tags:
     - cuda12
   variables:
@@ -634,6 +797,7 @@ linux-cuda-single-cxx:
   extends:
     - .stage-3
     - .linux_test_noflags
+    - .rules-default-slepc-hpddm-gpu
     - .coverage-disable
   tags:
     - cuda-stage3
@@ -647,6 +811,7 @@ linux-cuda-uni-pkgs:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-slepc-hpddm-gpu
   tags:
     - cuda-stage3
   variables:
@@ -658,6 +823,7 @@ linux-clang-cuda:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-gpu
     - .coverage-disable
   tags:
     - cuda-stage3
@@ -672,6 +838,7 @@ linux-viennacl:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-gpu
   tags:
     - cuda-stage3
   variables:
@@ -683,6 +850,7 @@ linux-without-fc:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-slepc-hpddm
   tags:
     - gce-u22-stage3
   variables:
@@ -692,6 +860,7 @@ linux-cmplx-single-arm:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-petsc4py
     # gcovr does not work on arm/linux
     - .coverage-disable
   tags:
@@ -771,6 +940,7 @@ linux-pkgs-cxx-mlib:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-petsc4py
   tags:
     - gce-u22-stage3
   variables:
@@ -791,6 +961,7 @@ linux-pkgs-opt:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-petsc4py-slepc-hpddm
   tags:
     - gce-u22-stage3, linux-fast
   variables:
@@ -802,6 +973,7 @@ linux-pkgs-dbg:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-slepc-hpddm
   tags:
     - gce-u22-stage3, linux-gcov
   variables:
@@ -848,6 +1020,7 @@ linux-intel-cmplx:
   extends:
     - .stage-3
     - .linux_test_nofflags
+    - .rules-default-petsc4py-slepc-hpddm
     - .coverage-disable
   tags:
     - gce-u22-stage3
@@ -859,6 +1032,7 @@ linux-xsdk-dbg:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-slepc-hpddm
   tags:
     - gce-u22-stage3
   variables:
@@ -869,21 +1043,20 @@ check-each-commit:
   extends:
     - .stage-2
     - .linux_test
+    - .rules-default-docs
     - .coverage-disable
   tags:
     - gce-u22-stage2
   script:
     - export PATH=/nfs/gce/projects/petsc/soft/u22.04/spack-2024-09-18/opt/spack/linux-ubuntu22.04-x86_64/gcc-11.4.0/llvm-19.1.0-dqibzqq5utu2fba2me2bodbnaj5y7c36/bin:$PATH
     - lib/petsc/bin/maint/check-each-commit.sh
-  except:
-    variables:
-      - $PETSC_CI_SCHEDULED =~ /yes/
   allow_failure: true
 
 linux-analyzer:
   extends:
     - .stage-2
     - .linux_test
+    - .rules-default-docs
     - .coverage-disable
   tags:
     - gce-u22-stage2
@@ -909,9 +1082,6 @@ linux-analyzer:
     - arch-*/lib/petsc/conf/*.log
     - ./petscLintPatches/*.patch
     expire_in: 4 days
-  except:
-    variables:
-      - $PETSC_CI_SCHEDULED =~ /yes/
 
 linux-intel:
   extends:
@@ -950,6 +1120,7 @@ linux-pkgs-64idx:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-slepc-hpddm
   tags:
     - gce-u22-stage3, linux-mcpu
   variables:
@@ -979,6 +1150,7 @@ linux-opt-cxx-quad:
   extends:
     - .stage-3
     - .linux_test
+    - .rules-default-slepc-hpddm
   tags:
     - gce-u22-stage3
   variables:
@@ -1061,6 +1233,7 @@ osx-cxx-cmplx-pkgs-dbg:
   extends:
     - .stage-3
     - .osx_test
+    - .rules-default-petsc4py
     - .coverage-disable
   tags:
     - os:macos-x64
@@ -1072,6 +1245,7 @@ osx-cxx-pkgs-opt-arm:
   extends:
     - .stage-3
     - .osx_test
+    - .rules-default-slepc-hpddm
     - .coverage-disable
   tags:
     - os:macos-arm
@@ -1106,7 +1280,7 @@ osx-xsdk-opt:
 
 # job for analyzing the coverage results and generating the various reports
 coverage-analyze:
-  extends: .test
+  extends: .rules-default
   stage: stage-4
   tags:
     - gce-u22-short
@@ -1169,7 +1343,7 @@ coverage-analyze:
 # template for the coverage review jobs, these must be separate jobs as you cannot deploy multiple
 # environments from one job...
 .coverage-review:
-  extends: .test
+  extends: .rules-default
   stage: .post
   tags:
     - gce-u22-short
@@ -1239,7 +1413,7 @@ analyze-pipeline:
 docs-review:
   extends:
     - .docs
-    - .test-basic
+    - .rules-default-docs
   script:
     - printf "PATH:$PATH\n"
     - printf "PYTHONPATH:$PYTHONPATH\n"
@@ -1260,15 +1434,14 @@ docs-review:
     paths:
       - public
     expire_in: 4 days
-  except:
-    variables:
-      - $PETSC_CI_SCHEDULED =~ /yes/
 
 #
 # Deploy documentation using GitLab pages
 #
 pages: # this job name has special meaning to GitLab
-  extends: .docs
+  extends:
+    - .docs
+    - .rules-pages
   interruptible: true
   script:
     - mkdir -p ../public/ && cp public/* ../public/
@@ -1276,21 +1449,18 @@ pages: # this job name has special meaning to GitLab
     - cd .. && git clean -fdxq -e public -e venv-petsc-docs && cd doc && rm -rf images
     - (git checkout origin/release && pip install -r requirements.txt && make website-deploy SPHINXOPTS="-j 1" BUILDDIR="../public/release" && make latexpdf && mkdir -p ../public/release/manual && cp _build/latex/manual.pdf ../public/release/manual/) || (printf "Sphinx build failed (warnings count as errors)\n" && false)
     - rm -rf ../public/*/.doctrees
-  only:
-    variables:
-      - $PETSC_CI_SCHEDULED == "yes"
   artifacts:
     paths:
       - public
     expire_in: 4 days
 
-#
-#
-# The following tests are experimental; more tests by users at other sites may be added below this. Experimental test
-# that fail produce a warning, but do not block execution of a pipeline.
-#
-
-.test-experimental:
-  extends: .test
-  allow_failure: true
-
+ext-linux-cxx-pkgs-opt:
+  extends:
+    - .stage-3
+    - .linux_test
+    - .rules-extended
+    - .coverage-disable
+  tags:
+    - gce-u22-stage3
+  variables:
+    TEST_ARCH: arch-ci-ext-linux-cxx-pkgs-opt
