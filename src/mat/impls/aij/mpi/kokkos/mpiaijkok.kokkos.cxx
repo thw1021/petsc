@@ -1351,7 +1351,7 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos(Mat C)
 
 static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
 {
-  Mat                          A, B;
+  Mat                          A, B, Ct;
   Mat_Product                 *product;
   MatProductType               ptype;
   MatProductData_MPIAIJKokkos *pdata;
@@ -1438,7 +1438,48 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
   PetscCall(MatCreateSeqAIJKokkosWithKokkosCsrMatrix(PETSC_COMM_SELF, mm->Cd, &Cd));
   PetscCall(MatCreateSeqAIJKokkosWithKokkosCsrMatrix(PETSC_COMM_SELF, mm->Co, &Co));
   PetscCall(MatSetMPIAIJKokkosWithSplitSeqAIJKokkosMatrices(C, Cd, Co, mm->garray));
-
+  /* set block sizes */
+  switch (ptype) {
+  case MATPRODUCT_PtAP:
+    A = product->B;
+    B = product->A;
+    Ct = product->B;
+    if (A->cmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->cmap->bs));
+    if (Ct->cmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, Ct->cmap->bs));
+    break;
+  case MATPRODUCT_RARt:
+    A = product->B;
+    B = product->A;
+    Ct = product->B;
+    if (A->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->rmap->bs));
+    if (Ct->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, Ct->rmap->bs));
+    break;
+  case MATPRODUCT_ABC:
+    A = product->A;
+    B = product->B;
+    Ct = product->C;
+    PetscCall(MatSetBlockSizesFromMats(C, A, Ct));
+    break;
+  case MATPRODUCT_AB:
+    A = product->A;
+    B = product->B;
+    PetscCall(MatSetBlockSizesFromMats(C, A, B));
+    break;
+  case MATPRODUCT_AtB:
+    A = product->A;
+    B = product->B;
+    if (A->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->cmap->bs));
+    if (B->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, B->cmap->bs));
+    break;
+  case MATPRODUCT_ABt:
+    A = product->A;
+    B = product->B;
+    if (A->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->rmap->bs));
+    if (B->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, B->rmap->bs));
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Not for ProductType %s", MatProductTypes[ptype]);
+  }
   C->product->data       = pdata;
   C->product->destroy    = MatProductDataDestroy_MPIAIJKokkos;
   C->ops->productnumeric = MatProductNumeric_MPIAIJKokkos;
