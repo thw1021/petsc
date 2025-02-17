@@ -7,7 +7,7 @@
 + quad     - A `PetscQuadrature` determining the tabulation
 . numCells - The number of cells in the group
 . dimEmbed - The coordinate dimension
-- faceData - Flag to construct geometry data for the faces
+- mode     - Type of geometry data to store
 
   Output Parameter:
 . geom - The `PetscFEGeom` object, which is a struct not a `PetscObject`
@@ -16,7 +16,7 @@
 
 .seealso: `PetscFEGeom`, `PetscQuadrature`, `PetscFEGeomDestroy()`, `PetscFEGeomComplete()`
 @*/
-PetscErrorCode PetscFEGeomCreate(PetscQuadrature quad, PetscInt numCells, PetscInt dimEmbed, PetscBool faceData, PetscFEGeom **geom)
+PetscErrorCode PetscFEGeomCreate(PetscQuadrature quad, PetscInt numCells, PetscInt dimEmbed, PetscFEGeomMode mode, PetscFEGeom **geom)
 {
   PetscFEGeom     *g;
   PetscInt         dim, Nq, N;
@@ -25,15 +25,15 @@ PetscErrorCode PetscFEGeomCreate(PetscQuadrature quad, PetscInt numCells, PetscI
   PetscFunctionBegin;
   PetscCall(PetscQuadratureGetData(quad, &dim, NULL, &Nq, &p, NULL));
   PetscCall(PetscNew(&g));
-  g->xi         = p;
-  g->numCells   = numCells;
-  g->numPoints  = Nq;
-  g->dim        = dim;
-  g->dimEmbed   = dimEmbed;
-  g->isCohesive = PETSC_FALSE;
-  N             = numCells * Nq;
+  g->mode      = mode;
+  g->xi        = p;
+  g->numCells  = numCells;
+  g->numPoints = Nq;
+  g->dim       = dim;
+  g->dimEmbed  = dimEmbed;
+  N            = numCells * Nq;
   PetscCall(PetscCalloc3(N * dimEmbed, &g->v, N * dimEmbed * dimEmbed, &g->J, N, &g->detJ));
-  if (faceData) {
+  if (mode == PETSC_FEGEOM_BOUNDARY || mode == PETSC_FEGEOM_COHESIVE) {
     PetscCall(PetscCalloc2(numCells, &g->face, N * dimEmbed, &g->n));
     PetscCall(PetscCalloc6(N * dimEmbed * dimEmbed, &g->suppJ[0], N * dimEmbed * dimEmbed, &g->suppJ[1], N * dimEmbed * dimEmbed, &g->suppInvJ[0], N * dimEmbed * dimEmbed, &g->suppInvJ[1], N, &g->suppDetJ[0], N, &g->suppDetJ[1]));
   }
@@ -186,30 +186,33 @@ PetscErrorCode PetscFEGeomGetPoint(PetscFEGeom *geom, PetscInt c, PetscInt p, co
 }
 
 /*@C
-  PetscFEGeomGetCellPoint - Get the cell geometry for face `c` at point `p` as a `PetscFEGeom`
+  PetscFEGeomGetCellPoint - Get the cell geometry for cell `c` at point `p` as a `PetscFEGeom`
 
   Input Parameters:
 + geom - `PetscFEGeom` object
-. c    - The face
+. c    - The cell
 - p    - The point
 
   Output Parameter:
-. pgeom - The cell geometry of face `c` at point `p`
+. pgeom - The cell geometry of cell `c` at point `p`
 
   Level: intermediate
 
-  Note:
+  Notes:
+  For PETSC_FEGEOM_BOUNDARY mode, this gives the geometry for supporting cell 0. For PETSC_FEGEOM_COHESIVE mode,
+  this gives the bulk geometry for that internal face.
+
   For affine geometries, this only copies to pgeom at point 0. Since we copy pointers into `pgeom`,
   nothing needs to be done with it afterwards.
 
-.seealso: `PetscFEGeom()`, `PetscFEGeomRestoreChunk()`, `PetscFEGeomCreate()`
+.seealso: `PetscFEGeom`, `PetscFEGeomMode`, `PetscFEGeomRestoreChunk()`, `PetscFEGeomCreate()`
 @*/
 PetscErrorCode PetscFEGeomGetCellPoint(PetscFEGeom *geom, PetscInt c, PetscInt p, PetscFEGeom *pgeom)
 {
-  const PetscBool bd  = geom->dimEmbed > geom->dim && !geom->isCohesive ? PETSC_TRUE : PETSC_FALSE;
-  const PetscInt  dim = bd ? geom->dimEmbed : geom->dim;
-  const PetscInt  dE  = geom->dimEmbed;
-  const PetscInt  Np  = geom->numPoints;
+  // FIX: WRONG LOGIC for EMBEDDED MANIFOLD. HOW TO FIX???
+  const PetscInt dim = geom->mode == PETSC_FEGEOM_BOUNDARY ? geom->dimEmbed : geom->dim;
+  const PetscInt dE  = geom->dimEmbed;
+  const PetscInt Np  = geom->numPoints;
 
   PetscFunctionBeginHot;
   pgeom->dim      = dim;
@@ -217,7 +220,7 @@ PetscErrorCode PetscFEGeomGetCellPoint(PetscFEGeom *geom, PetscInt c, PetscInt p
   //pgeom->isAffine = geom->isAffine;
   if (geom->isAffine) {
     if (!p) {
-      if (bd) {
+      if (geom->mode == PETSC_FEGEOM_BOUNDARY) {
         pgeom->J    = &geom->suppJ[0][c * Np * dE * dE];
         pgeom->invJ = &geom->suppInvJ[0][c * Np * dE * dE];
         pgeom->detJ = &geom->suppDetJ[0][c * Np];
@@ -228,7 +231,7 @@ PetscErrorCode PetscFEGeomGetCellPoint(PetscFEGeom *geom, PetscInt c, PetscInt p
       }
     }
   } else {
-    if (bd) {
+    if (geom->mode == PETSC_FEGEOM_BOUNDARY) {
       pgeom->J    = &geom->suppJ[0][(c * Np + p) * dE * dE];
       pgeom->invJ = &geom->suppInvJ[0][(c * Np + p) * dE * dE];
       pgeom->detJ = &geom->suppDetJ[0][c * Np + p];
