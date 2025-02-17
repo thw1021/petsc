@@ -649,8 +649,6 @@ PetscErrorCode MatProductNumeric_ABC(Mat mat)
 @*/
 PetscErrorCode MatProductNumeric(Mat mat)
 {
-  Mat_Product  *product = mat->product;
-  Mat           A, B, C;
   PetscLogEvent eventtype = -1;
 
   PetscFunctionBegin;
@@ -766,7 +764,11 @@ PetscErrorCode MatProductSymbolic(Mat mat)
 {
   PetscLogEvent eventtype = -1;
   PetscBool     missing   = PETSC_FALSE;
-
+  Mat_Product  *product = mat->product;
+  Mat       A = product->A;
+  Mat       B = product->B;
+  Mat       C = product->C;
+ 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   MatCheckProduct(mat, 1);
@@ -814,9 +816,6 @@ PetscErrorCode MatProductSymbolic(Mat mat)
   }
 
 #if defined(PETSC_HAVE_DEVICE)
-  Mat       A = mat->product->A;
-  Mat       B = mat->product->B;
-  Mat       C = mat->product->C;
   PetscBool bindingpropagates;
   bindingpropagates = (PetscBool)((A->boundtocpu && A->bindingpropagates) || (B->boundtocpu && B->bindingpropagates));
   if (C) bindingpropagates = (PetscBool)(bindingpropagates || (C->boundtocpu && C->bindingpropagates));
