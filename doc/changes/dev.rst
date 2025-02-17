@@ -109,6 +109,9 @@ Changes: Development
 
 .. rubric:: FE/FV:
 
+- Add ``PetscFEGeomMode``
+- Changed ``PetscFEGeomCreate()``, ``DMFieldCreateFEGeom()`` and ``DMSNESGetFEGeom()`` to take PetscFEGeomMode
+
 .. rubric:: DMNetwork:
 
 .. rubric:: DMStag:
