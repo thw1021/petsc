@@ -1837,7 +1837,7 @@ static PetscErrorCode VecDuplicateVecs_SeqKokkos_GEMV(Vec w, PetscInt m, Vec *V[
   PetscCall(VecGetLayout(w, &map));
   VecGetLocalSizeAligned(w, 64, &lda); // get in lda the 64-bytes aligned local size
   // See comments in VecCreate_SeqKokkos() on why we use DualView to allocate the memory
-  PetscCallCXX(w_dual = PetscScalarKokkosDualView("VecDuplicateVecs", m * lda)); // Kokkos init's v_dual to zero
+  PetscCallCXX(w_dual = PetscScalarKokkosDualView("VecDuplicateVecs", m * lda)); // Kokkos init's w_dual to zero
 
   // create the m vectors with raw arrays from v_dual
   array_h = w_dual.view_host().data();
