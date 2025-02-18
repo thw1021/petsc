@@ -1,43 +1,36 @@
-        module petsctaodefdummy
-        use petsckspdef
-#include <../src/tao/f90-mod/petsctao.h>
-        end module petsctaodefdummy
-
         module petsctaodef
-        use petsctaodefdummy
-        use petscksp
+        use petsckspdef
+
+#include <../src/tao/f90-mod/ftn-auto-interfaces/petscall.h>
         end module petsctaodef
 
         module petsctao
+        use petscts
         use petsctaodef
-        use petscksp
-#include <../src/tao/f90-mod/petsctao.h90>
-        interface
-#include <../src/tao/f90-mod/ftn-auto-interfaces/petsctao.h90>
-        end interface
+
+#include <../src/tao/f90-mod/ftn-auto-interfaces/petscall.h90>
+
+        contains
+
+#include <../src/tao/f90-mod/ftn-auto-interfaces/petscall.hf90>
+
         end module petsctao
 
 ! The all encompassing petsc module
 
         module petscdef
-        use petscdmdadef
-        use petscdmplexdef
-        use petscdmnetworkdef
-        use petscdmpatchdef
-        use petscdmforestdef
-        use petscdmlabeldef
-        use petsctsdef
         use petsctaodef
         end module petscdef
 
         module petsc
-        use petscdmda
-        use petscdmplex
-        use petscdmnetwork
-        use petscdmpatch
-        use petscdmforest
-        use petscdmlabel
-        use petscdt
-        use petscts
         use petsctao
+        use petscao
+        use petscpf
+        use petscdmplex
+        use petscdmswarm
+        use petscdmnetwork
+        use petscdmda
+        use petscdmcomposite
+        use petscdmforest
+        use petsccharacteristic
         end module petsc
