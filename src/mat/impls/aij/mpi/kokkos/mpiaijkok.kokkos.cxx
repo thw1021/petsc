@@ -1343,42 +1343,6 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos(Mat C)
     PetscCall(MatProductNumeric_MPIAIJKokkos_AB(product, A, B, pdata->mmAB));
     PetscCall(MatProductNumeric_MPIAIJKokkos_AtB(product, B, pdata->Z, pdata->mmAtB));
   }
-  /* set block sizes */
-  switch (ptype) {
-  case MATPRODUCT_PtAP:
-    A = product->B;
-    B = product->A;
-    Ct = product->B;
-    if (A->cmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->cmap->bs));
-    if (Ct->cmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, Ct->cmap->bs));
-    break;
-  case MATPRODUCT_RARt:
-    A = product->B;
-    B = product->A;
-    Ct = product->B;
-    if (A->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->rmap->bs));
-    if (Ct->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, Ct->rmap->bs));
-    break;
-  case MATPRODUCT_ABC:
-    A = product->A;
-    B = product->B;
-    Ct = product->C;
-    PetscCall(MatSetBlockSizesFromMats(C, A, Ct));
-    break;
-  case MATPRODUCT_AB:
-    PetscCall(MatSetBlockSizesFromMats(C, A, B));
-    break;
-  case MATPRODUCT_AtB:
-    if (A->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->cmap->bs));
-    if (B->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, B->cmap->bs));
-    break;
-  case MATPRODUCT_ABt:
-    if (A->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->rmap->bs));
-    if (B->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, B->rmap->bs));
-    break;
-  default:
-    SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Not for ProductType %s", MatProductTypes[ptype]);
-  }
   PetscCall(MatSeqAIJKokkosModifyDevice(cmpi->A)); // mark that A, B on device are modified
   PetscCall(MatSeqAIJKokkosModifyDevice(cmpi->B));
   PetscFunctionReturn(PETSC_SUCCESS);
