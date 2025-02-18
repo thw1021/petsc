@@ -1317,7 +1317,7 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos(Mat C)
   Mat_Product                 *product;
   MatProductData_MPIAIJKokkos *pdata;
   MatProductType               ptype;
-  Mat                          A, B, Ct;
+  Mat                          A, B;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 1); // make sure C is a product
@@ -1350,7 +1350,7 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos(Mat C)
 
 static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
 {
-  Mat                          A, B, Ct;
+  Mat                          A, B;
   Mat_Product                 *product;
   MatProductType               ptype;
   MatProductData_MPIAIJKokkos *pdata;
@@ -1440,41 +1440,22 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
   /* set block sizes */
   switch (ptype) {
   case MATPRODUCT_PtAP:
-    A = product->B;
-    B = product->A;
-    Ct = product->B;
-    if (A->cmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->cmap->bs));
-    if (Ct->cmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, Ct->cmap->bs));
+    if (B->cmap->bs > 1) PetscCall(MatSetBlockSizes(C, B->cmap->bs, B->cmap->bs));
     break;
   case MATPRODUCT_RARt:
-    A = product->B;
-    B = product->A;
-    Ct = product->B;
-    if (A->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->rmap->bs));
-    if (Ct->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, Ct->rmap->bs));
+    if (B->rmap->bs > 1) PetscCall(MatSetBlockSizes(C, B->rmap->bs, B->rmap->bs));
     break;
   case MATPRODUCT_ABC:
-    A = product->A;
-    B = product->B;
-    Ct = product->C;
-    PetscCall(MatSetBlockSizesFromMats(C, A, Ct));
+    PetscCall(MatSetBlockSizesFromMats(C, A, product->C));
     break;
   case MATPRODUCT_AB:
-    A = product->A;
-    B = product->B;
     PetscCall(MatSetBlockSizesFromMats(C, A, B));
     break;
   case MATPRODUCT_AtB:
-    A = product->A;
-    B = product->B;
-    if (A->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->cmap->bs));
-    if (B->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, B->cmap->bs));
+    if (A->cmap->bs > 1 || B->cmap->bs > 1) PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
     break;
   case MATPRODUCT_ABt:
-    A = product->A;
-    B = product->B;
-    if (A->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->rmap->bs));
-    if (B->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, B->rmap->bs));
+    if (A->rmap->bs > 1 || B->rmap->bs > 1) PetscCall(MatSetBlockSizes(C, A->rmap->bs, B->rmap->bs));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Not for ProductType %s", MatProductTypes[ptype]);
