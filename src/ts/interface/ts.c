@@ -5926,7 +5926,7 @@ PetscErrorCode TSGetEvaluationTimes(TS ts, PetscInt *n, const PetscReal *time_po
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   TSGetEvaluationTimesSolutions - Get the number of solutions and the solutions at the evaluation time points specified
 
   Input Parameter:
