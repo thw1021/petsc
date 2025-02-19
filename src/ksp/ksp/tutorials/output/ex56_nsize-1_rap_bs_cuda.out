@@ -1,17 +1,27 @@
   Residual norms for rap_ solve.
-  0 KSP Residual norm 4.031634755026e+03
-  1 KSP Residual norm 3.491894848619e+02
-  2 KSP Residual norm 2.770121266406e+02
-  3 KSP Residual norm 1.075741470651e+02
-  4 KSP Residual norm 5.988848697006e+01
-  5 KSP Residual norm 2.202460856976e+01
-  Linear rap_ solve converged due to CONVERGED_RTOL iterations 5
+  0 KSP Residual norm 4.031634757983e+03
+  1 KSP Residual norm 3.491897441645e+02
+  2 KSP Residual norm 2.770125249889e+02
+  3 KSP Residual norm 1.075744016176e+02
+  4 KSP Residual norm 5.988862973479e+01
+  5 KSP Residual norm 2.202462231815e+01
+  6 KSP Residual norm 9.816893733598e+00
+  7 KSP Residual norm 4.212610109136e+00
+  8 KSP Residual norm 2.108852563745e+00
+  9 KSP Residual norm 1.354472436270e+00
+ 10 KSP Residual norm 8.624269515757e-01
+ 11 KSP Residual norm 4.280734531085e-01
+ 12 KSP Residual norm 1.981852478249e-01
+ 13 KSP Residual norm 1.175972313662e-01
+ 14 KSP Residual norm 6.208230690098e-02
+ 15 KSP Residual norm 2.616695841743e-02
+  Linear rap_ solve converged due to CONVERGED_RTOL iterations 15
 KSP Object: (rap_) 1 MPI process
   type: gmres
     restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
     happy breakdown tolerance 1e-30
   maximum iterations=10000, initial guess is zero
-  tolerances: relative=0.01, absolute=1e-50, divergence=10000.
+  tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
   left preconditioning
   using PRECONDITIONED norm type for convergence test
 PC Object: (rap_) 1 MPI process
@@ -27,8 +37,8 @@ PC Object: (rap_) 1 MPI process
       left preconditioning
       using PRECONDITIONED norm type for convergence test
     PC Object: (rap_mg_coarse_) 1 MPI process
-      type: jacobi
-        type DIAGONAL
+      type: pbjacobi
+        point-block size 6
       linear system matrix = precond matrix:
       Mat Object: 1 MPI process
         type: seqaijcusparse

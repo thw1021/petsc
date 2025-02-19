@@ -4,12 +4,19 @@
   2 KSP Residual norm 2.619288812672e+02
   3 KSP Residual norm 1.208181724194e+02
   4 KSP Residual norm 2.584550523982e+01
+  5 KSP Residual norm 6.567256411107e+00
+  6 KSP Residual norm 2.502201469715e+00
+  7 KSP Residual norm 1.464356845214e+00
+  8 KSP Residual norm 6.676062494425e-01
+  9 KSP Residual norm 2.456935591747e-01
+ 10 KSP Residual norm 9.551344577926e-02
+ 11 KSP Residual norm 2.433344954982e-02
 KSP Object: (rap_) 1 MPI process
   type: gmres
     restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
     happy breakdown tolerance 1e-30
   maximum iterations=10000, initial guess is zero
-  tolerances: relative=0.01, absolute=1e-50, divergence=10000.
+  tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
   left preconditioning
   using PRECONDITIONED norm type for convergence test
 PC Object: (rap_) 1 MPI process
