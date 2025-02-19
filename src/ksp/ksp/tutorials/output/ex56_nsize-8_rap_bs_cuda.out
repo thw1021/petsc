@@ -35,7 +35,7 @@ PC Object: (rap_) 8 MPI processes
         rows=114, cols=114, bs=6
         total: nonzeros=8892, allocated nonzeros=8892
         total number of mallocs used during MatSetValues calls=0
-          using I-node (on process 0) routines: found 11 nodes, limit used is 5
+          not using I-node routines
   Down solver (pre-smoother) on level 1 -------------------------------
     KSP Object: (rap_mg_levels_1_) 8 MPI processes
       type: chebyshev
@@ -64,7 +64,7 @@ PC Object: (rap_) 8 MPI processes
         total: nonzeros=95832, allocated nonzeros=124416
         total number of mallocs used during MatSetValues calls=0
           has attached near null space
-          using I-node (on process 0) routines: found 64 nodes, limit used is 5
+          not using I-node routines
   Up solver (post-smoother) same as down solver (pre-smoother)
   linear system matrix = precond matrix:
   Mat Object: 8 MPI processes
@@ -73,4 +73,4 @@ PC Object: (rap_) 8 MPI processes
     total: nonzeros=95832, allocated nonzeros=124416
     total number of mallocs used during MatSetValues calls=0
       has attached near null space
-      using I-node (on process 0) routines: found 64 nodes, limit used is 5
+      not using I-node routines

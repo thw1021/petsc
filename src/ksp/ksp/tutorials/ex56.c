@@ -333,7 +333,9 @@ int main(int argc, char **args)
     PetscCall(KSPSetOptionsPrefix(ksp2, "rap_"));
     PetscCall(KSPSetFromOptions(ksp2));
     PetscCall(KSPGetPC(ksp2, &pc));
+    PetscCall(PCSetType(pc, PCMG));
     PetscCall(KSPSetOperators(ksp2, Amat, Amat));
+    PetscCall(PCMGSetLevels(pc, 2, NULL));
     PetscCall(PCMGSetGalerkin(pc, PC_MG_GALERKIN_PMAT));
     PetscCall(PCMGSetInterpolation(pc, 1, P));
     PetscCall(VecSet(bb, 1.0));
@@ -341,7 +343,7 @@ int main(int argc, char **args)
     PetscCall(PCMGGetCoarseSolve(pc, &cksp));
     PetscCall(KSPGetOperators(cksp, &cmat, &cmat));
     PetscCall(MatViewFromOptions(cmat, NULL, "-rap_mat_view"));
-    /* Free work space */
+    /* Free work space and exit */
     PetscCall(KSPDestroy(&ksp));
     PetscCall(KSPDestroy(&ksp2));
     PetscCall(VecDestroy(&xx));
@@ -563,7 +565,7 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
 
    testset:
      nsize: {{1 8}separate output}
-     args: -ne 7 -pc_type gamg -rap_pc_type mg -rap_ksp_monitor -rap_mg_levels_pc_type pbjacobi -rap_mg_coarse_pc_type pbjacobi -rap_pc_mg_levels 2 -use_mat_nearnullspace -test_rap_bs -rap_ksp_rtol 1e-2 -rap_ksp_view
+     args: -ne 7 -pc_type gamg -rap_mg_levels_pc_type pbjacobi -rap_ksp_monitor -rap_mg_coarse_pc_type pbjacobi -use_mat_nearnullspace -test_rap_bs -rap_ksp_rtol 1e-2 -rap_ksp_view
      filter: grep -v "variant HERMITIAN"
      test:
        suffix: rap_bs
@@ -577,5 +579,10 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
        requires: cuda
        suffix: rap_bs_cuda
        args: -mat_type aijcusparse
+
+     test:
+       requires: hip
+       suffix: rap_bs_hip
+       args: -mat_type aijhipsparse
 
 TEST*/
