@@ -765,9 +765,7 @@ PetscErrorCode MatProductSymbolic(Mat mat)
   PetscLogEvent eventtype = -1;
   PetscBool     missing   = PETSC_FALSE;
   Mat_Product  *product   = mat->product;
-  Mat           A         = product->A;
-  Mat           B         = product->B;
-  Mat           C         = product->C;
+  Mat           A, B, C;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
@@ -801,7 +799,6 @@ PetscErrorCode MatProductSymbolic(Mat mat)
     PetscUseTypeMethod(mat, productsymbolic);
     PetscCall(PetscLogEventEnd(eventtype, mat, 0, 0, 0));
   } else missing = PETSC_TRUE;
-
   if (missing || !mat->product || !mat->ops->productnumeric) {
     char errstr[256];
 
@@ -814,7 +811,9 @@ PetscErrorCode MatProductSymbolic(Mat mat)
     PetscCheck(!missing, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Unspecified symbolic phase for product %s. The product is not supported", errstr);
     PetscCheck(mat->product, PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Missing struct after symbolic phase for product %s", errstr);
   }
-
+  A = product->A;
+  B = product->B;
+  C = product->C;
 #if defined(PETSC_HAVE_DEVICE)
   PetscBool bindingpropagates;
   bindingpropagates = (PetscBool)((A->boundtocpu && A->bindingpropagates) || (B->boundtocpu && B->bindingpropagates));
