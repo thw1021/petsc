@@ -5995,7 +5995,7 @@ PetscErrorCode TSGetEvaluationTimesSolutions(TS ts, PetscInt *nsol, const PetscR
   The intermediate solutions are saved in a vector array that can be accessed with `TSGetTimeSpanSolutions()`. Thus using time span may
   pressure the memory system when using a large number of span points.
 
-.seealso: [](ch_ts), `TS`, `TSSetEvaluationTimes()`, `TSGetTimeSpan()`, `TSGetTimeSpanSolutions()`, `TSGetEvaluationTimes()`, `TSGetEvaluationTimesSolutions()`
+.seealso: [](ch_ts), `TS`, `TSSetEvaluationTimes()`, `TSGetEvaluationTimes()`, `TSGetEvaluationTimesSolutions()`
  @*/
 PetscErrorCode TSSetTimeSpan(TS ts, PetscInt n, PetscReal *span_times)
 {
@@ -6005,61 +6005,6 @@ PetscErrorCode TSSetTimeSpan(TS ts, PetscInt n, PetscReal *span_times)
   PetscCall(TSSetEvaluationTimes(ts, n, span_times));
   PetscCall(TSSetTime(ts, span_times[0]));
   PetscCall(TSSetMaxTime(ts, span_times[n - 1]));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-  TSGetTimeSpan - gets the time span set with `TSSetTimeSpan()`
-
-  Not Collective
-
-  Input Parameter:
-. ts - the time-stepper
-
-  Output Parameters:
-+ n          - number of the time points (>=2)
-- span_times - array of the time points. The first element and the last element are the initial time and the final time respectively.
-
-  Level: beginner
-
-  Note:
-  The values obtained are valid until the `TS` object is destroyed.
-
-  Both `n` and `span_times` can be `NULL`.
-
-.seealso: [](ch_ts), `TS`, `TSGetEvaluationTimes()`, `TSSetTimeSpan()`, `TSGetTimeSpanSolutions()`, `TSSetEvaluationTimes()`, `TSGetEvaluationTimesSolutions()`
- @*/
-PetscErrorCode TSGetTimeSpan(TS ts, PetscInt *n, const PetscReal *span_times[])
-{
-  PetscFunctionBegin;
-  PetscCall(TSGetEvaluationTimes(ts, n, span_times));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TSGetTimeSpanSolutions - Get the number of solutions and the solutions at the time points specified by the time span.
-
-  Input Parameter:
-. ts - the `TS` context obtained from `TSCreate()`
-
-  Output Parameters:
-+ nsol - the number of solutions
-- Sols - the solution vectors
-
-  Level: intermediate
-
-  Notes:
-  Both `nsol` and `Sols` can be `NULL`.
-
-  Some time points in the time span may be skipped by `TS` so that `nsol` is less than the number of points specified by `TSSetTimeSpan()`.
-  For example, manipulating the step size, especially with a reduced precision, may cause `TS` to step over certain points in the span.
-
-.seealso: [](ch_ts), `TS`, `TSGetEvaluationTimesSolutions()`, `TSSetTimeSpan()`, `TSSetEvaluationTimes()`
-@*/
-PetscErrorCode TSGetTimeSpanSolutions(TS ts, PetscInt *nsol, Vec **Sols)
-{
-  PetscFunctionBegin;
-  PetscCall(TSGetEvaluationTimesSolutions(ts, nsol, NULL, Sols));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
