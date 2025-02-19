@@ -601,9 +601,12 @@ static PetscErrorCode GeometryDMLandau(DM base, PetscInt point, PetscInt dim, co
       if (PetscAbs(xyz[i]) < PETSC_SQRT_MACHINE_EPSILON) nzero++;
       else idx = i;
     }
-    if (nzero == 2) xyz[idx] *= 1.732050807568877; // sqrt(3)
-    else if (nzero == 1) {
-      for (PetscInt i = 0; i < 3; i++) xyz[i] *= 1.224744871391589; // sqrt(3/2)
+    if (nzero == 2) xyz[idx] *= 1.732050807568877; // face - sqrt(3)
+    else if (nzero == 1) {                         // edge
+      PetscReal radius = PetscSqrtReal(r * r + z * z + xyz[2] * xyz[2]);
+      if (radius < ctx->sphere_inner_radius_45degree[ctx->verbose] * ctx->radius[ctx->verbose]) radius = 1.1;
+      else radius = 1;
+      for (PetscInt i = 0; i < 3; i++) xyz[i] *= radius * 1.224744871391589; // sqrt(3/2)
     }
   } else {
     xyz[0] = r;
@@ -1027,7 +1030,10 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscInt type, Pet
     PetscCall(PetscInfo(sol, "\t%" PetscInt_FMT ") Refined %" PetscInt_FMT " cells\n", grid, nrefined));
   }
   PetscCall(DMDestroy(&plex));
+  PetscInt vb  = ctx->verbose;
+  ctx->verbose = grid;
   PetscCall(DMAdaptLabel(forest, adaptLabel, &adaptedDM));
+  ctx->verbose = vb;
   PetscCall(DMLabelDestroy(&adaptLabel));
   *newForest = adaptedDM;
   if (adaptedDM) {
