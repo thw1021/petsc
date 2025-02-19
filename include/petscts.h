@@ -415,7 +415,7 @@ PETSC_EXTERN PetscErrorCode TSSetExactFinalTime(TS, TSExactFinalTimeOption);
 PETSC_EXTERN PetscErrorCode TSGetExactFinalTime(TS, TSExactFinalTimeOption *);
 PETSC_EXTERN PetscErrorCode TSSetEvaluationTimes(TS, PetscInt, PetscReal *);
 PETSC_EXTERN PetscErrorCode TSGetEvaluationTimes(TS, PetscInt *, const PetscReal **);
-PETSC_EXTERN PetscErrorCode TSGetEvaluationTimesSolutions(TS, PetscInt *, const PetscReal **, Vec **);
+PETSC_EXTERN PetscErrorCode TSGetEvaluationSolutions(TS, PetscInt *, const PetscReal **, Vec **);
 PETSC_EXTERN PetscErrorCode TSSetTimeSpan(TS, PetscInt, PetscReal *);
 
 /*@C
@@ -423,7 +423,7 @@ PETSC_EXTERN PetscErrorCode TSSetTimeSpan(TS, PetscInt, PetscReal *);
 
   Level: deprecated
 
-.seealso: [](ch_ts), `TS`, `TSGetEvaluationTimes()`, `TSSetTimeSpan()`, `TSSetEvaluationTimes()`, `TSGetEvaluationTimesSolutions()`
+.seealso: [](ch_ts), `TS`, `TSGetEvaluationTimes()`, `TSSetTimeSpan()`, `TSSetEvaluationTimes()`, `TSGetEvaluationSolutions()`
  @*/
 PETSC_DEPRECATED_FUNCTION(3, 23, 0, "TSGetEvaluationTimes()", ) static inline PetscErrorCode TSGetTimeSpan(TS ts, PetscInt *n, const PetscReal *span_times[])
 {
@@ -435,11 +435,11 @@ PETSC_DEPRECATED_FUNCTION(3, 23, 0, "TSGetEvaluationTimes()", ) static inline Pe
 
   Level: deprecated
 
-.seealso: [](ch_ts), `TS`, `TSGetEvaluationTimesSolutions()`, `TSSetTimeSpan()`, `TSGetEvaluationTimes()`, `TSSetEvaluationTimes()`
+.seealso: [](ch_ts), `TS`, `TSGetEvaluationSolutions()`, `TSSetTimeSpan()`, `TSGetEvaluationTimes()`, `TSSetEvaluationTimes()`
  @*/
-PETSC_DEPRECATED_FUNCTION(3, 23, 0, "TSGetEvaluationTimesSolutions()", ) static inline PetscErrorCode TSGetTimeSpanSolutions(TS ts, PetscInt *nsol, Vec **Sols)
+PETSC_DEPRECATED_FUNCTION(3, 23, 0, "TSGetEvaluationSolutions()", ) static inline PetscErrorCode TSGetTimeSpanSolutions(TS ts, PetscInt *nsol, Vec **Sols)
 {
-  return TSGetEvaluationTimesSolutions(ts, nsol, NULL, Sols);
+  return TSGetEvaluationSolutions(ts, nsol, NULL, Sols);
 }
 
 PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 8, 0, "TSSetTime()", ) PetscErrorCode TSSetInitialTimeStep(TS, PetscReal, PetscReal);

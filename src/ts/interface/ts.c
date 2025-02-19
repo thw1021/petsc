@@ -5857,10 +5857,10 @@ PetscErrorCode TSSetMatStructure(TS ts, MatStructure str)
 
   `TS_EXACTFINALTIME_MATCHSTEP` must be used to make the last time step in each sub-interval match the intermediate points specified.
 
-  The intermediate solutions are saved in a vector array that can be accessed with `TSGetEvaluationTimesSolutions()`. Thus using evaluation times may
+  The intermediate solutions are saved in a vector array that can be accessed with `TSGetEvaluationSolutions()`. Thus using evaluation times may
   pressure the memory system when using a large number of time points.
 
-.seealso: [](ch_ts), `TS`, `TSGetEvaluationTimes()`, `TSGetEvaluationTimesSolutions()`, `TSSetTimeSpan()`
+.seealso: [](ch_ts), `TS`, `TSGetEvaluationTimes()`, `TSGetEvaluationSolutions()`, `TSSetTimeSpan()`
  @*/
 PetscErrorCode TSSetEvaluationTimes(TS ts, PetscInt n, PetscReal *time_points)
 {
@@ -5910,7 +5910,7 @@ PetscErrorCode TSSetEvaluationTimes(TS ts, PetscInt n, PetscReal *time_points)
 
   Also used to see time points set by `TSSetTimeSpan()`.
 
-.seealso: [](ch_ts), `TS`, `TSSetEvaluationTimes()`, `TSGetEvaluationTimesSolutions()`
+.seealso: [](ch_ts), `TS`, `TSSetEvaluationTimes()`, `TSGetEvaluationSolutions()`
  @*/
 PetscErrorCode TSGetEvaluationTimes(TS ts, PetscInt *n, const PetscReal *time_points[])
 {
@@ -5929,7 +5929,7 @@ PetscErrorCode TSGetEvaluationTimes(TS ts, PetscInt *n, const PetscReal *time_po
 }
 
 /*@C
-  TSGetEvaluationTimesSolutions - Get the number of solutions and the solutions at the evaluation time points specified
+  TSGetEvaluationSolutions - Get the number of solutions and the solutions at the evaluation time points specified
 
   Input Parameter:
 . ts - the `TS` context obtained from `TSCreate()`
@@ -5951,7 +5951,7 @@ PetscErrorCode TSGetEvaluationTimes(TS ts, PetscInt *n, const PetscReal *time_po
 
 .seealso: [](ch_ts), `TS`, `TSSetEvaluationTimes()`, `TSGetEvaluationTimes()`
 @*/
-PetscErrorCode TSGetEvaluationTimesSolutions(TS ts, PetscInt *nsol, const PetscReal *sol_times[], Vec **Sols)
+PetscErrorCode TSGetEvaluationSolutions(TS ts, PetscInt *nsol, const PetscReal *sol_times[], Vec **Sols)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
@@ -5995,7 +5995,7 @@ PetscErrorCode TSGetEvaluationTimesSolutions(TS ts, PetscInt *nsol, const PetscR
   The intermediate solutions are saved in a vector array that can be accessed with `TSGetTimeSpanSolutions()`. Thus using time span may
   pressure the memory system when using a large number of span points.
 
-.seealso: [](ch_ts), `TS`, `TSSetEvaluationTimes()`, `TSGetEvaluationTimes()`, `TSGetEvaluationTimesSolutions()`
+.seealso: [](ch_ts), `TS`, `TSSetEvaluationTimes()`, `TSGetEvaluationTimes()`, `TSGetEvaluationSolutions()`
  @*/
 PetscErrorCode TSSetTimeSpan(TS ts, PetscInt n, PetscReal *span_times)
 {

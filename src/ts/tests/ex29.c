@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_MATCHSTEP));
   PetscCall(TSSetFromOptions(ts));
   PetscCall(TSSolve(ts, X));
-  PetscCall(TSGetEvaluationTimesSolutions(ts, &n, &sol_times, &Xs));
+  PetscCall(TSGetEvaluationSolutions(ts, &n, &sol_times, &Xs));
   PetscCall(TSGetEvaluationTimes(ts, &n, &tspan2));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Time Span: "));
   for (i = 0; i < n; i++) PetscCall(PetscPrintf(PETSC_COMM_WORLD, " %g", (double)tspan2[i]));
