@@ -1,11 +1,11 @@
   Residual norms for rap_ solve.
-  0 KSP Residual norm 3.900179214095e+03
-  1 KSP Residual norm 3.071857954716e+02
-  2 KSP Residual norm 2.384750600881e+02
-  3 KSP Residual norm 1.726217350805e+02
-  4 KSP Residual norm 9.902779784152e+01
-  5 KSP Residual norm 4.034409296548e+01
-  6 KSP Residual norm 1.836396625888e+01
+  0 KSP Residual norm 4.031634755026e+03
+  1 KSP Residual norm 3.491894848619e+02
+  2 KSP Residual norm 2.770121266406e+02
+  3 KSP Residual norm 1.075741470651e+02
+  4 KSP Residual norm 5.988848697006e+01
+  5 KSP Residual norm 2.202460856976e+01
+  Linear rap_ solve converged due to CONVERGED_RTOL iterations 5
 KSP Object: (rap_) 1 MPI process
   type: gmres
     restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
@@ -21,14 +21,14 @@ PC Object: (rap_) 1 MPI process
       Using Galerkin computed coarse grid matrices for pmat
   Coarse grid solver -- level 0 -------------------------------
     KSP Object: (rap_mg_coarse_) 1 MPI process
-      type: preonly
+      type: cg
       maximum iterations=10000, initial guess is zero
       tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
       left preconditioning
-      using NONE norm type for convergence test
+      using PRECONDITIONED norm type for convergence test
     PC Object: (rap_mg_coarse_) 1 MPI process
-      type: pbjacobi
-        point-block size 6
+      type: jacobi
+        type DIAGONAL
       linear system matrix = precond matrix:
       Mat Object: 1 MPI process
         type: seqaijcusparse
@@ -38,25 +38,15 @@ PC Object: (rap_) 1 MPI process
           not using I-node routines
   Down solver (pre-smoother) on level 1 -------------------------------
     KSP Object: (rap_mg_levels_1_) 1 MPI process
-      type: chebyshev
-        Chebyshev polynomial of first kind
-        eigenvalue targets used: min 0.303327, max 3.3366
-        eigenvalues estimated via cg: min 0.030023, max 3.03327
-        eigenvalues estimated using cg with transform: [0. 0.1; 0. 1.1]
-        KSP Object: (rap_mg_levels_1_esteig_) 1 MPI process
-          type: cg
-          maximum iterations=10, initial guess is zero
-          tolerances: relative=1e-12, absolute=1e-50, divergence=10000.
-          left preconditioning
-          using PRECONDITIONED norm type for convergence test
-        estimating eigenvalues using a noisy random number generated right-hand side
+      type: richardson
+        damping factor=1.
       maximum iterations=2, nonzero initial guess
       tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
       left preconditioning
       using NONE norm type for convergence test
     PC Object: (rap_mg_levels_1_) 1 MPI process
-      type: pbjacobi
-        point-block size 3
+      type: jacobi
+        type ROWL1 (l1-norm off-diagonal scaling 5.000000e-01)
       linear system matrix = precond matrix:
       Mat Object: 1 MPI process
         type: seqaijcusparse
