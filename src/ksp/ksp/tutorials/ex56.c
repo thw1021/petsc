@@ -341,7 +341,6 @@ int main(int argc, char **args)
     PetscCall(PCMGGetCoarseSolve(pc, &cksp));
     PetscCall(KSPGetOperators(cksp, &cmat, &cmat));
     PetscCall(MatViewFromOptions(cmat, NULL, "-rap_mat_view"));
-    PetscCall(MaybeLogStagePop());
     /* Free work space */
     PetscCall(KSPDestroy(&ksp));
     PetscCall(KSPDestroy(&ksp2));
