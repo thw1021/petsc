@@ -1,11 +1,9 @@
   Residual norms for rap_ solve.
-  0 KSP Residual norm 3.900179214095e+03
-  1 KSP Residual norm 3.071857954716e+02
-  2 KSP Residual norm 2.384750600881e+02
-  3 KSP Residual norm 1.726217350805e+02
-  4 KSP Residual norm 9.902779784152e+01
-  5 KSP Residual norm 4.034409296548e+01
-  6 KSP Residual norm 1.836396625888e+01
+  0 KSP Residual norm 4.738784985695e+03
+  1 KSP Residual norm 7.408817873054e+02
+  2 KSP Residual norm 2.619288812672e+02
+  3 KSP Residual norm 1.208181724194e+02
+  4 KSP Residual norm 2.584550523982e+01
 KSP Object: (rap_) 1 MPI process
   type: gmres
     restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
@@ -21,11 +19,11 @@ PC Object: (rap_) 1 MPI process
       Using Galerkin computed coarse grid matrices for pmat
   Coarse grid solver -- level 0 -------------------------------
     KSP Object: (rap_mg_coarse_) 1 MPI process
-      type: preonly
+      type: cg
       maximum iterations=10000, initial guess is zero
       tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
       left preconditioning
-      using NONE norm type for convergence test
+      using PRECONDITIONED norm type for convergence test
     PC Object: (rap_mg_coarse_) 1 MPI process
       type: pbjacobi
         point-block size 6
