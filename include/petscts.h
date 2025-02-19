@@ -413,9 +413,34 @@ PETSC_EXTERN PetscErrorCode TSSetMaxTime(TS, PetscReal);
 PETSC_EXTERN PetscErrorCode TSGetMaxTime(TS, PetscReal *);
 PETSC_EXTERN PetscErrorCode TSSetExactFinalTime(TS, TSExactFinalTimeOption);
 PETSC_EXTERN PetscErrorCode TSGetExactFinalTime(TS, TSExactFinalTimeOption *);
+PETSC_EXTERN PetscErrorCode TSSetEvaluationTimes(TS, PetscInt, PetscReal *);
+PETSC_EXTERN PetscErrorCode TSGetEvaluationTimes(TS, PetscInt *, const PetscReal **);
+PETSC_EXTERN PetscErrorCode TSGetEvaluationSolutions(TS, PetscInt *, const PetscReal **, Vec **);
 PETSC_EXTERN PetscErrorCode TSSetTimeSpan(TS, PetscInt, PetscReal *);
-PETSC_EXTERN PetscErrorCode TSGetTimeSpan(TS, PetscInt *, const PetscReal **);
-PETSC_EXTERN PetscErrorCode TSGetTimeSpanSolutions(TS, PetscInt *, Vec **);
+
+/*@C
+  TSGetTimeSpan - deprecated
+
+  Level: deprecated
+
+.seealso: [](ch_ts), `TS`, `TSGetEvaluationTimes()`, `TSSetTimeSpan()`, `TSSetEvaluationTimes()`, `TSGetEvaluationSolutions()`
+ @*/
+PETSC_DEPRECATED_FUNCTION(3, 23, 0, "TSGetEvaluationTimes()", ) static inline PetscErrorCode TSGetTimeSpan(TS ts, PetscInt *n, const PetscReal *span_times[])
+{
+  return TSGetEvaluationTimes(ts, n, span_times);
+}
+
+/*@C
+  TSGetTimeSpanSolutions - deprecated
+
+  Level: deprecated
+
+.seealso: [](ch_ts), `TS`, `TSGetEvaluationSolutions()`, `TSSetTimeSpan()`, `TSGetEvaluationTimes()`, `TSSetEvaluationTimes()`
+ @*/
+PETSC_DEPRECATED_FUNCTION(3, 23, 0, "TSGetEvaluationSolutions()", ) static inline PetscErrorCode TSGetTimeSpanSolutions(TS ts, PetscInt *nsol, Vec **Sols)
+{
+  return TSGetEvaluationSolutions(ts, nsol, NULL, Sols);
+}
 
 PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 8, 0, "TSSetTime()", ) PetscErrorCode TSSetInitialTimeStep(TS, PetscReal, PetscReal);
 PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 8, 0, "TSSetMax()", ) PetscErrorCode TSSetDuration(TS, PetscInt, PetscReal);
