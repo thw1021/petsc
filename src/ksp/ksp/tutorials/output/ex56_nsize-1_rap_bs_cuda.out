@@ -37,8 +37,8 @@ PC Object: (rap_) 1 MPI process
       left preconditioning
       using PRECONDITIONED norm type for convergence test
     PC Object: (rap_mg_coarse_) 1 MPI process
-      type: pbjacobi
-        point-block size 6
+      type: jacobi
+        type DIAGONAL
       linear system matrix = precond matrix:
       Mat Object: 1 MPI process
         type: seqaijcusparse
