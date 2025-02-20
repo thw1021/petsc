@@ -40,8 +40,10 @@
 !
       module ex73f90tmodule
 #include <petsc/finclude/petscdmda.h>
+#include <petsc/finclude/petscdmcomposite.h>
 #include <petsc/finclude/petscmat.h>
       use petscdmda
+      use petscdmcomposite
       use petscmat
       type ex73f90tmodule_type
         DM::da
@@ -103,8 +105,6 @@
       program main
 #include <petsc/finclude/petscdmda.h>
 #include <petsc/finclude/petscsnes.h>
-      use petscdm
-      use petscdm
       use petscsnes
       use ex73f90tmodule
       use ex73f90tmodule_interfaces
@@ -125,7 +125,7 @@
       Mat::       Amat,Bmat,Cmat,Dmat,KKTMat,matArray(4)
 !      Mat::       tmat
       DM::       daphi,dalam
-      IS::        isglobal(2)
+      IS, pointer ::        isglobal(:)
       PetscErrorCode   ierr
       PetscInt         its,N1,N2,i,j,irow,row(1)
       PetscInt         col(1),low,high,lamlow,lamhigh
@@ -556,7 +556,6 @@
 !
       subroutine FormJacobianLocal(X1,jac,solver,add_nl_term,ierr)
 #include <petsc/finclude/petscmat.h>
-      use petscmat
       use ex73f90tmodule
       implicit none
 !  Input/output variables:
@@ -690,7 +689,6 @@
 !
       subroutine FormFunctionNLTerm(X1,F1,solver,ierr)
 #include <petsc/finclude/petscvec.h>
-      use petscvec
       use ex73f90tmodule
       implicit none
 !  Input/output variables:

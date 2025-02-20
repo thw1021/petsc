@@ -305,6 +305,14 @@
          end subroutine PetscSetFortranBasePointers
       end interface
 
+      interface PetscOptionsString
+      subroutine PetscOptionsString(string, text, man, default, value, flg, ierr)
+        character(*) string, text, man, default, value
+        PetscBool flg
+        PetscErrorCode ierr
+      end subroutine PetscOptionsString
+      end interface
+
         Interface petscbinaryread
         subroutine petscbinaryreadcomplex(fd,data,num,count,type,z)
           import ePetscDataType
