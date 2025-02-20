@@ -2096,7 +2096,6 @@ static PetscErrorCode MatTransposeMatMultNumeric_MPIDense_MPIDense(Mat A, Mat B,
       if (c_lda != C->rmap->N) {
         // copy c to a matrix that will have lda == the number of rows
         PetscCall(MatDuplicate(c_local, MAT_DO_NOT_COPY_VALUES, &c_alloc));
-        PetscCall(MatCopy(c_local, c_alloc, DIFFERENT_NONZERO_PATTERN));
         c_local = c_alloc;
       }
       PetscCall(MatZeroEntries(c_local));
@@ -2402,6 +2401,7 @@ static PetscErrorCode MatMatMultNumeric_MPIDense_MPIDense(Mat A, Mat B, Mat C)
 {
   Mat_MatMultDense *ab;
   Mat_MPIDense     *mdn = (Mat_MPIDense *)A->data;
+  Mat_MPIDense     *b   = (Mat_MPIDense *)B->data;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 3);
@@ -2417,20 +2417,68 @@ static PetscErrorCode MatMatMultNumeric_MPIDense_MPIDense(Mat A, Mat B, Mat C)
     SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "PETSC_HAVE_ELEMENTAL not defined");
 #endif
   } else {
+    MPI_Comm           comm;
     const PetscScalar *read;
     PetscScalar       *write;
     PetscInt           lda;
+    const PetscInt    *ranges;
+    PetscMPIInt        size;
 
-    PetscCall(MatDenseGetLDA(B, &lda));
-    PetscCall(MatDenseGetArrayRead(B, &read));
-    PetscCall(MatDenseGetArrayWrite(ab->Be, &write));
     if (!mdn->Mvctx) PetscCall(MatSetUpMultiply_MPIDense(A)); /* cannot be done during the symbolic phase because of possible calls to MatProductReplaceMats() */
-    for (PetscInt i = 0; i < C->cmap->N; ++i) {
-      PetscCall(PetscSFBcastBegin(mdn->Mvctx, MPIU_SCALAR, read + i * lda, write + i * ab->Be->rmap->n, MPI_REPLACE));
-      PetscCall(PetscSFBcastEnd(mdn->Mvctx, MPIU_SCALAR, read + i * lda, write + i * ab->Be->rmap->n, MPI_REPLACE));
+    comm = PetscObjectComm((PetscObject)B);
+    PetscCallMPI(MPI_Comm_size(comm, &size));
+    PetscCall(PetscLayoutGetRanges(B->rmap, &ranges));
+    if (ranges[1] == ranges[size]) {
+      // optimize for the case where the B matrix is broadcast from rank 0
+      PetscInt           b_lda, be_lda;
+      Mat                b_local  = b->A;
+      Mat                b_alloc  = NULL;
+      Mat                be_local = ab->Be;
+      Mat                be_alloc = NULL;
+      PetscMemType       b_memtype, be_memtype;
+      const PetscScalar *b_array = NULL;
+      MPI_Datatype       vector_type;
+      PetscScalar       *be_array = NULL;
+      PetscMPIInt        rank;
+
+      PetscCallMPI(MPI_Comm_rank(comm, &rank));
+      PetscCall(MatDenseGetLDA(be_local, &be_lda));
+      if (be_lda != B->rmap->N) {
+        PetscCall(MatDuplicate(be_local, MAT_DO_NOT_COPY_VALUES, &be_alloc));
+        be_local = be_alloc;
+      }
+
+      if (rank == 0) {
+        PetscCall(MatDenseGetLDA(b_local, &b_lda));
+        if (b_lda != B->rmap->N) {
+          PetscCall(MatDuplicate(b_local, MAT_DO_NOT_COPY_VALUES, &b_alloc));
+          PetscCall(MatCopy(b_local, b_alloc, DIFFERENT_NONZERO_PATTERN));
+          b_local = b_alloc;
+        }
+      }
+      PetscCallMPI(MPI_Type_contiguous(B->cmap->N, MPIU_SCALAR, &vector_type));
+      PetscCallMPI(MPI_Type_commit(&vector_type));
+      PetscCall(MatDenseGetArrayReadAndMemType(b_local, &b_array, &b_memtype));
+      PetscCall(MatDenseGetArrayWriteAndMemType(be_local, &be_array, &be_memtype));
+      PetscCall(PetscSFBcastWithMemTypeBegin(mdn->Mvctx, vector_type, b_memtype, b_array, be_memtype, be_array, MPI_REPLACE));
+      PetscCall(PetscSFBcastEnd(mdn->Mvctx, vector_type, b_array, be_array, MPI_REPLACE));
+      PetscCall(MatDenseRestoreArrayWriteAndMemType(be_local, &be_array));
+      PetscCall(MatDenseRestoreArrayReadAndMemType(b_local, &b_array));
+      if (be_local != ab->Be) PetscCall(MatCopy(be_local, ab->Be, DIFFERENT_NONZERO_PATTERN));
+      PetscCallMPI(MPI_Type_free(&vector_type));
+      PetscCall(MatDestroy(&be_alloc));
+      PetscCall(MatDestroy(&b_alloc));
+    } else {
+      PetscCall(MatDenseGetLDA(B, &lda));
+      PetscCall(MatDenseGetArrayRead(B, &read));
+      PetscCall(MatDenseGetArrayWrite(ab->Be, &write));
+      for (PetscInt i = 0; i < C->cmap->N; ++i) {
+        PetscCall(PetscSFBcastBegin(mdn->Mvctx, MPIU_SCALAR, read + i * lda, write + i * ab->Be->rmap->n, MPI_REPLACE));
+        PetscCall(PetscSFBcastEnd(mdn->Mvctx, MPIU_SCALAR, read + i * lda, write + i * ab->Be->rmap->n, MPI_REPLACE));
+      }
+      PetscCall(MatDenseRestoreArrayWrite(ab->Be, &write));
+      PetscCall(MatDenseRestoreArrayRead(B, &read));
     }
-    PetscCall(MatDenseRestoreArrayWrite(ab->Be, &write));
-    PetscCall(MatDenseRestoreArrayRead(B, &read));
     PetscCall(MatMatMultNumeric_SeqDense_SeqDense(((Mat_MPIDense *)A->data)->A, ab->Be, ((Mat_MPIDense *)C->data)->A));
   }
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -106,6 +106,8 @@ int main(int argc, char **argv)
 
   /* Test MatTransposeMatMult() */
   if (!Aiselemental) {
+    Mat E;
+
     PetscCall(MatTransposeMatMult(A, A, MAT_INITIAL_MATRIX, fill, &D)); /* D = A^T*A */
     PetscCall(MatTransposeMatMult(A, A, MAT_REUSE_MATRIX, fill, &D));
     PetscCall(MatTransposeMatMultEqual(A, A, D, 10, &equal));
@@ -114,6 +116,15 @@ int main(int argc, char **argv)
     /* Test MatDuplicate for matrix product */
     PetscCall(MatDuplicate(D, MAT_COPY_VALUES, &C));
     PetscCall(MatDestroy(&C));
+
+    /* Test A*D for fast path when D is on one process */
+    PetscCall(MatSetRandom(D, NULL));
+    PetscCall(MatMatMult(A, D, MAT_INITIAL_MATRIX, fill, &E));
+    PetscCall(MatMatMult(A, D, MAT_REUSE_MATRIX, fill, &E));
+    PetscCall(MatMatMultEqual(A, D, E, 10, &equal));
+    PetscCheck(equal, PETSC_COMM_SELF, PETSC_ERR_PLIB, "E*x != A*D*x");
+    PetscCall(MatDestroy(&E));
+
     PetscCall(MatDestroy(&D));
 
     /* Test D*x = A^T*C*A*x, where C is in AIJ format */
