@@ -764,7 +764,7 @@ PetscErrorCode MatProductSymbolic(Mat mat)
 {
   PetscLogEvent eventtype = -1;
   PetscBool     missing   = PETSC_FALSE;
-
+  Mat_Product  *product   = mat->product;
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   MatCheckProduct(mat, 1);
