@@ -9,6 +9,7 @@
   7 KSP Residual norm 7.845811972401e-01
   8 KSP Residual norm 1.514304018873e-01
   9 KSP Residual norm 3.061507576030e-02
+  Linear rap_ solve converged due to CONVERGED_RTOL iterations 9
 KSP Object: (rap_) 8 MPI processes
   type: gmres
     restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
