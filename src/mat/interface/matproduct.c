@@ -821,7 +821,7 @@ PetscErrorCode MatProductSymbolic(Mat mat)
     PetscCall(MatBindToCPU(mat, PETSC_TRUE));
     PetscCall(MatSetBindingPropagates(mat, PETSC_TRUE));
   }
-
+#endif
   /* set block sizes */
   switch (product->type) {
   case MATPRODUCT_PtAP:
@@ -845,7 +845,7 @@ PetscErrorCode MatProductSymbolic(Mat mat)
   default:
     SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Not for ProductType %s", MatProductTypes[product->type]);
   }
-#endif
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
