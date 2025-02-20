@@ -691,7 +691,7 @@ linux-without-fc:
 linux-flang-arm:
   extends:
     - .stage-3
-    - .linux_test
+    - .linux_test_noflags
     # gcovr does not work on arm/linux
     - .coverage-disable
   tags:
