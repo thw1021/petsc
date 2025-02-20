@@ -565,7 +565,7 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
 
    testset:
      nsize: {{1 8}separate output}
-     args: -ne 7 -pc_type gamg -rap_mg_levels_pc_type pbjacobi -rap_ksp_monitor -rap_mg_coarse_ksp_type cg -rap_mg_coarse_pc_type pbjacobi -use_mat_nearnullspace -test_rap_bs -rap_ksp_view
+     args: -ne 7 -pc_type gamg -rap_mg_levels_pc_type pbjacobi -rap_ksp_monitor -rap_mg_coarse_ksp_type cg -rap_mg_coarse_pc_type pbjacobi -use_mat_nearnullspace -test_rap_bs -rap_ksp_view -rap_mat_view ::ascii_info
      filter: grep -v "variant HERMITIAN"
      test:
        suffix: rap_bs
