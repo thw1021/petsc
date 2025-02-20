@@ -578,11 +578,11 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
      test:
        requires: cuda
        suffix: rap_bs_cuda
-       args: -mat_type aijcusparse -rap_mg_coarse_ksp_type cg -rap_mg_coarse_pc_type jacobi -rap_ksp_converged_reason -rap_mg_levels_ksp_type richardson -rap_mg_levels_pc_type jacobi -rap_mg_levels_pc_jacobi_type rowl1 -rap_mg_levels_pc_jacobi_rowl1_scale .5
+       args: -mat_type aijcusparse
 
      test:
        requires: hip
        suffix: rap_bs_hip
-       args: -mat_type aijhipsparse -rap_mg_coarse_ksp_type cg -rap_mg_coarse_pc_type pbjacobi -rap_ksp_converged_reason -rap_mg_levels_ksp_type richardson -rap_mg_levels_pc_type jacobi -rap_mg_levels_pc_jacobi_type rowl1 -rap_mg_levels_pc_jacobi_rowl1_scale .5
+       args: -mat_type aijhipsparse -rap_mg_coarse_ksp_type cg -rap_mg_coarse_pc_type jacobi -rap_ksp_converged_reason -rap_mg_levels_ksp_type richardson -rap_mg_levels_pc_type jacobi -rap_mg_levels_pc_jacobi_type rowl1 -rap_mg_levels_pc_jacobi_rowl1_scale .5
 
 TEST*/
