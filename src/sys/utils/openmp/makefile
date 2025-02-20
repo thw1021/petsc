@@ -1,5 +1,5 @@
 -include ../../../../../petscdir.mk
-#requirespackage 'PETSC_HAVE_OPENMP'
+#requirespackage 'PETSC_HAVE_OPENMP_SUPPORT'
 
 MANSEC    = Sys
 
