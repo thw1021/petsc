@@ -1,17 +1,17 @@
   Residual norms for rap_ solve.
-  0 KSP Residual norm 4.358866229543e+03
-  1 KSP Residual norm 3.956615863142e+02
-  2 KSP Residual norm 3.016438407422e+02
-  3 KSP Residual norm 8.259511762996e+01
-  4 KSP Residual norm 2.898787684366e+01
-  5 KSP Residual norm 9.440727563516e+00
-  6 KSP Residual norm 2.922826167682e+00
-  7 KSP Residual norm 1.171063512543e+00
-  8 KSP Residual norm 5.687163377501e-01
-  9 KSP Residual norm 2.903193473368e-01
- 10 KSP Residual norm 1.083627867640e-01
- 11 KSP Residual norm 4.486087830605e-02
- 12 KSP Residual norm 1.534403970282e-02
+  0 KSP Residual norm 4.358866223644e+03
+  1 KSP Residual norm 3.956615852200e+02
+  2 KSP Residual norm 3.016439583211e+02
+  3 KSP Residual norm 8.259521990333e+01
+  4 KSP Residual norm 2.898795858255e+01
+  5 KSP Residual norm 9.440758543722e+00
+  6 KSP Residual norm 2.922858017992e+00
+  7 KSP Residual norm 1.171062780297e+00
+  8 KSP Residual norm 5.687223814604e-01
+  9 KSP Residual norm 2.903217737661e-01
+ 10 KSP Residual norm 1.083633248028e-01
+ 11 KSP Residual norm 4.486038657969e-02
+ 12 KSP Residual norm 1.534420334479e-02
   Linear rap_ solve converged due to CONVERGED_RTOL iterations 12
 KSP Object: (rap_) 8 MPI processes
   type: gmres
@@ -71,3 +71,9 @@ PC Object: (rap_) 8 MPI processes
     total number of mallocs used during MatSetValues calls=0
       has attached near null space
       not using I-node (on process 0) routines
+Mat Object: 8 MPI processes
+  type: mpiaijcusparse
+  rows=114, cols=114, bs=6
+  total: nonzeros=8892, allocated nonzeros=8892
+  total number of mallocs used during MatSetValues calls=0
+    not using I-node (on process 0) routines
