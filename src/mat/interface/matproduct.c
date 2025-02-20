@@ -845,7 +845,6 @@ PetscErrorCode MatProductSymbolic(Mat mat)
   default:
     SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Not for ProductType %s", MatProductTypes[product->type]);
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
