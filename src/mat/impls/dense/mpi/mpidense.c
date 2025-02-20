@@ -2068,6 +2068,60 @@ static PetscErrorCode MatTransposeMatMultNumeric_MPIDense_MPIDense(Mat A, Mat B,
 
   PetscCall(MatGetOwnershipRanges(C, &ranges));
 
+  if (ranges[1] == C->rmap->N) {
+    /* all of the values are being reduced to rank 0: optimize this case to use MPI_Reduce and GPU aware MPI if available */
+    PetscInt           atb_lda, c_lda;
+    Mat                atb_local = atb->atb;
+    Mat                atb_alloc = NULL;
+    Mat                c_local   = c->A;
+    Mat                c_alloc   = NULL;
+    PetscMemType       atb_memtype, c_memtype;
+    const PetscScalar *atb_array = NULL;
+    MPI_Datatype       vector_type;
+    PetscScalar       *c_array = NULL;
+    PetscMPIInt        rank;
+
+    PetscCallMPI(MPI_Comm_rank(comm, &rank));
+
+    PetscCall(MatDenseGetLDA(atb_local, &atb_lda));
+    if (atb_lda != C->rmap->N) {
+      // copy atb to a matrix that will have lda == the number of rows
+      PetscCall(MatDuplicate(atb_local, MAT_DO_NOT_COPY_VALUES, &atb_alloc));
+      PetscCall(MatCopy(atb_local, atb_alloc, DIFFERENT_NONZERO_PATTERN));
+      atb_local = atb_alloc;
+    }
+
+    if (rank == 0) {
+      PetscCall(MatDenseGetLDA(c_local, &c_lda));
+      if (c_lda != C->rmap->N) {
+        // copy c to a matrix that will have lda == the number of rows
+        PetscCall(MatDuplicate(c_local, MAT_DO_NOT_COPY_VALUES, &c_alloc));
+        PetscCall(MatCopy(c_local, c_alloc, DIFFERENT_NONZERO_PATTERN));
+        c_local = c_alloc;
+      }
+      PetscCall(MatZeroEntries(c_local));
+    }
+    /* atb_local and c_local have nrows = lda = A->cmap->N and ncols =
+     * B->cmap->N: use the a->Mvctx to use the best reduction method */
+    if (!a->Mvctx) PetscCall(MatSetUpMultiply_MPIDense(A));
+    PetscCallMPI(MPI_Type_contiguous(B->cmap->N, MPIU_SCALAR, &vector_type));
+    PetscCallMPI(MPI_Type_commit(&vector_type));
+    PetscCall(MatDenseGetArrayReadAndMemType(atb_local, &atb_array, &atb_memtype));
+    PetscCall(MatDenseGetArrayWriteAndMemType(c_local, &c_array, &c_memtype));
+    PetscCall(PetscSFReduceWithMemTypeBegin(a->Mvctx, vector_type, atb_memtype, atb_array, c_memtype, c_array, MPI_SUM));
+    PetscCall(PetscSFReduceEnd(a->Mvctx, vector_type, atb_array, c_array, MPI_SUM));
+    PetscCall(MatDenseRestoreArrayWriteAndMemType(c_local, &c_array));
+    PetscCall(MatDenseRestoreArrayReadAndMemType(atb_local, &atb_array));
+    if (rank == 0 && c_local != c->A) PetscCall(MatCopy(c_local, c->A, DIFFERENT_NONZERO_PATTERN));
+    PetscCallMPI(MPI_Type_free(&vector_type));
+    PetscCall(MatDestroy(&atb_alloc));
+    PetscCall(MatDestroy(&c_alloc));
+    PetscCall(MatSetOption(C, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
+    PetscCall(MatAssemblyBegin(C, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(C, MAT_FINAL_ASSEMBLY));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
   /* arrange atbarray into sendbuf */
   PetscCall(MatDenseGetArrayRead(atb->atb, &atbarray));
   PetscCall(MatDenseGetLDA(atb->atb, &lda));
