@@ -765,6 +765,10 @@ PetscErrorCode MatProductSymbolic(Mat mat)
   PetscLogEvent eventtype = -1;
   PetscBool     missing   = PETSC_FALSE;
   Mat_Product  *product   = mat->product;
+  Mat           A         = product->A;
+  Mat           B         = product->B;
+  Mat           C         = product->C;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   MatCheckProduct(mat, 1);
@@ -811,16 +815,13 @@ PetscErrorCode MatProductSymbolic(Mat mat)
   }
 #if defined(PETSC_HAVE_DEVICE)
   PetscBool bindingpropagates;
-  Mat       A       = mat->product->A;
-  Mat       B       = mat->product->B;
-  Mat       C       = mat->product->C;
   bindingpropagates = (PetscBool)((A->boundtocpu && A->bindingpropagates) || (B->boundtocpu && B->bindingpropagates));
   if (C) bindingpropagates = (PetscBool)(bindingpropagates || (C->boundtocpu && C->bindingpropagates));
   if (bindingpropagates) {
     PetscCall(MatBindToCPU(mat, PETSC_TRUE));
     PetscCall(MatSetBindingPropagates(mat, PETSC_TRUE));
   }
-  
+
   /* set block sizes */
   switch (product->type) {
   case MATPRODUCT_PtAP:
