@@ -578,7 +578,7 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
      test:
        requires: cuda
        suffix: rap_bs_cuda
-       args: -mat_type aijcusparse -rap_mg_coarse_pc_type jacobi -rap_mg_levels_pc_type jacobi 
+       args: -mat_type aijcusparse -rap_mg_coarse_pc_type jacobi -rap_mg_levels_pc_type jacobi
 
      test:
        requires: hip
