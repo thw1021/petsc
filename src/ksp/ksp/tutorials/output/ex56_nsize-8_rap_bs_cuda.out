@@ -44,8 +44,6 @@ PC Object: (rap_) 8 MPI processes
     KSP Object: (rap_mg_levels_1_) 8 MPI processes
     type: chebyshev
       Chebyshev polynomial of first kind
-        eigenvalue targets used: min 0.323327, max 3.55659
-        eigenvalues estimated via cg: min 0.0522197, max 3.23327
       eigenvalue targets used: min 0.31712, max 3.48832
       eigenvalues estimated via cg: min 0.0323691, max 3.1712
       eigenvalues estimated using cg with transform: [0. 0.1; 0. 1.1]
