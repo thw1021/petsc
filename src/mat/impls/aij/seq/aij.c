@@ -3152,6 +3152,7 @@ static PetscErrorCode MatGetRowSumAbs_SeqAIJ(Mat A, Vec v)
   for (i = 0; i < m; i++) {
     ncols = ai[1] - ai[0];
     ai++;
+    x[i] = 0;
     for (j = 0; j < ncols; j++) {
       x[i] += PetscAbsScalar(*aa);
       aa++;
