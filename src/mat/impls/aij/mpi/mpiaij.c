@@ -2195,7 +2195,7 @@ static PetscErrorCode MatGetRowMaxAbs_MPIAIJ(Mat A, Vec v, PetscInt idx[])
       if (idx && PetscAbsScalar(va[i]) == PetscAbsScalar(vb[i]) && idxb[i] != -1 && idx[i] > a->garray[idxb[i]]) idx[i] = a->garray[idxb[i]];
     }
   }
-  PetscCall(VecRestoreArrayWrite(vA, &vv));
+  PetscCall(VecRestoreArrayWrite(v, &vv));
   PetscCall(VecRestoreArrayRead(vA, &va));
   PetscCall(VecRestoreArrayRead(vB, &vb));
   PetscCall(PetscFree(idxb));
