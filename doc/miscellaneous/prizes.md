@@ -36,7 +36,7 @@
 - [Gordon Bell Special Prize at SC1999](https://www.mcs.anl.gov/petsc/publications/petscapps.html#AGKKS-SC99)
 - Mark Adams, Best Student Paper Competition, 5th Copper Mountain Conference on Iterative
   Methods, 1998
-- Hundreds of theses prepared using PETSc: (19)
+- Hundreds of theses prepared using PETSc
 
 ## Industrial/DOE PETSc user sites over the years
 

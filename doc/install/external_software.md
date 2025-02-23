@@ -4,7 +4,7 @@
 
 PETSc interfaces with many optional external software packages. See {ref}`installing
 packages <doc_config_externalpack>` for more information on downloading and installing
-these softwares, as well as the {doc}`linear solve table
+these software, as well as the {doc}`linear solver table
 </overview/linear_solve_table>` for more
 information on the intended use-cases for each software.
 
@@ -19,7 +19,8 @@ information on the intended use-cases for each software.
 - [Git](https://git-scm.com/) Distributed version control system
 - [HDF5](http://portal.hdfgroup.org/display/support) A data model, library, and file format for storing and managing data.
 - [Hypre](https://computation.llnl.gov/projects/hypre-scalable-linear-solvers-multigrid-methods) LLNL preconditioner library.
-- [Kokkos](https://github.com/kokkos/kokkos) A programming model in C++ for writing performance portable applications targeting all major HPC platforms- [LUSOL](https://web.stanford.edu/group/SOL/software/lusol/) Sparse LU factorization and solve portion of MINOS, Michael Saunders, Systems Optimization Laboratory, Stanford University.
+- [Kokkos](https://github.com/kokkos/kokkos) A programming model in C++ for writing performance portable applications targeting all major HPC platforms
+- [LUSOL](https://web.stanford.edu/group/SOL/software/lusol/) Sparse LU factorization and solve portion of MINOS, Michael Saunders, Systems Optimization Laboratory, Stanford University.
 - [Mathematica](http://www.wolfram.com/) A general multi-paradigm computational language developed by Wolfram Research.
 - [MATLAB](https://www.mathworks.com/) A proprietary multi-paradigm programming language and numerical computing environment developed by MathWorks.
 - [MUMPS](https://mumps-solver.org/) MUltifrontal Massively Parallel sparse direct Solver.

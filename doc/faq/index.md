@@ -57,7 +57,7 @@ If you have a batch system:
 ```console
 $ cd $PETSC_DIR/src/benchmarks/streams
 $ make MPIVersion
-submit MPIVersion to the batch system a number of times with 1, 2, 3, etc MPI processes
+submit MPIVersion to the batch system a number of times with 1, 2, 3, etc. MPI processes
 collecting all of the output from the runs into the single file scaling.log. Copy
 scaling.log into the src/benchmarks/streams directory.
 $ ./process.py createfile ; process.py
@@ -245,7 +245,7 @@ Quick summary of usage with CUDA:
   `VecSetType()` or `-vec_type seqcuda`, `mpicuda`, or `cuda` when
   `VecSetFromOptions()` is used.
 - The `MatType` `MATSEQAIJCUSPARSE`, `MATMPIAIJCUSPARSE`, or `MATAIJCUSPARSE`
-  maybe used with `MatSetType()` or `-mat_type seqaijcusparse`, `mpiaijcusparse`, or
+  may be used with `MatSetType()` or `-mat_type seqaijcusparse`, `mpiaijcusparse`, or
   `aijcusparse` when `MatSetFromOptions()` is used.
 - If you are creating the vectors and matrices with a `DM`, you can use `-dm_vec_type
   cuda` and `-dm_mat_type aijcusparse`.
@@ -256,7 +256,7 @@ Quick summary of usage with OpenCL (provided by the ViennaCL library):
   with `VecSetType()` or `-vec_type seqviennacl`, `mpiviennacl`, or `viennacl`
   when `VecSetFromOptions()` is used.
 - The `MatType` `MATSEQAIJVIENNACL`, `MATMPIAIJVIENNACL`, or `MATAIJVIENNACL`
-  maybe used with `MatSetType()` or `-mat_type seqaijviennacl`, `mpiaijviennacl`, or
+  may be used with `MatSetType()` or `-mat_type seqaijviennacl`, `mpiaijviennacl`, or
   `aijviennacl` when `MatSetFromOptions()` is used.
 - If you are creating the vectors and matrices with a `DM`, you can use `-dm_vec_type
   viennacl` and `-dm_mat_type aijviennacl`.
@@ -277,7 +277,7 @@ must be built with the `configure` option `--with-precision=single`.
 ### Can I run PETSc with extended precision?
 
 Yes, with gcc and gfortran. `configure` PETSc using the
-options `--with-precision=__float128` and \`\` --download-f2cblaslapack\`\`.
+options `--with-precision=__float128` and `--download-f2cblaslapack`.
 
 :::{admonition} Warning
 :class: yellow
@@ -1875,11 +1875,11 @@ If `-malloc_debug` does not help: on NVIDIA CUDA systems you can use <https://do
 If `-malloc_debug` does not help: on GNU/Linux (not macOS machines) - you can
 use [valgrind](http://valgrind.org). Follow the below instructions:
 
-1. `configure` PETSc with `--download-mpich --with-debugging` (You can use other MPI implementations but most produce spurious Valgrind messages)
+1. `configure` PETSc with `--download-mpich --with-debugging` (you can use other MPI implementations but most produce spurious Valgrind messages)
 
 2. Compile your application code with this build of PETSc.
 
-3. Run with valgrind.
+3. Run with Valgrind.
 
    ```console
    $ $PETSC_DIR/lib/petsc/bin/petscmpiexec -valgrind -n NPROC PETSCPROGRAMNAME PROGRAMOPTIONS
