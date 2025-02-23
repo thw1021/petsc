@@ -51,3 +51,19 @@
           PetscErrorCode ierr
         End Subroutine
       End Interface
+
+      Interface DMCompositeRestoreGlobalISs
+        Subroutine DMCompositeRestoreGlobalISs(dm, iss, ierr)
+          import tDM,tIS
+          DM dm
+          IS, pointer :: iss(:)
+        End Subroutine
+      End Interface
+
+      Interface DMCompositeRestoreLocalISs
+        Subroutine DMCompositeRestoreLocalISs(dm, iss, ierr)
+          import tDM,tIS
+          DM dm
+          IS, pointer :: iss(:)
+        End Subroutine
+      End Interface

@@ -295,7 +295,9 @@
       PetscCallA(DMSetUp(solver%da,ierr))
       PetscCallA(DMCompositeGetGlobalISs(solver%da,isglobal,ierr))
       solver%isPhi = isglobal(1)
+      PetscCallA(PetscObjectReference(solver%isPhi,ierr))
       solver%isLambda = isglobal(2)
+      PetscCallA(PetscObjectReference(solver%isLambda,ierr))
 
 !     cache matrices
       solver%Amat = Amat
@@ -309,6 +311,7 @@
       matArray(4) = Dmat
 
       PetscCallA(MatCreateNest(PETSC_COMM_WORLD,itwo,isglobal,itwo,isglobal,matArray,KKTmat,ierr))
+      PetscCallA(DMCompositeRestoreGlobalISs(solver%da,isglobal,ierr))
       PetscCallA(MatSetFromOptions(KKTmat,ierr))
 
 !  Extract global and local vectors from DMDA; then duplicate for remaining
