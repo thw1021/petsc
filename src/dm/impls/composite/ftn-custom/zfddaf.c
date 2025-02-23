@@ -89,7 +89,7 @@ PETSC_EXTERN void dmcompositerestorelocalvectors4_(DM *dm, void **v1, void **p1,
 
 PETSC_EXTERN void dmcompositegetglobaliss_(DM *dm, F90Array1d *ptr, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd))
 {
-  IS       *ais;
+  IS      *ais;
   PetscInt ndm;
 
   *ierr = DMCompositeGetGlobalISs(*dm, &ais);
@@ -101,13 +101,13 @@ PETSC_EXTERN void dmcompositegetglobaliss_(DM *dm, F90Array1d *ptr, PetscErrorCo
 
 PETSC_EXTERN void dmcompositerestoreglobaliss_(DM *dm, F90Array1d *ptr, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd))
 {
-  IS       *ais;
+  IS      *ais;
   PetscInt ndm;
 
   *ierr = F90Array1dAccess(ptr, MPIU_FORTRANADDR, (void **)&ais PETSC_F90_2PTR_PARAM(ptrd));
   if (*ierr) return;
   *ierr = DMCompositeGetNumberDM(*dm, &ndm);
-  for (PetscInt i=0; i<ndm; i++) {
+  for (PetscInt i = 0; i < ndm; i++) {
     *ierr = ISDestroy(&ais[i]);
     if (*ierr) return;
   }
@@ -118,7 +118,7 @@ PETSC_EXTERN void dmcompositerestoreglobaliss_(DM *dm, F90Array1d *ptr, PetscErr
 
 PETSC_EXTERN void dmcompositegetlocaliss_(DM *dm, F90Array1d *ptr, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd))
 {
-  IS       *ais;
+  IS      *ais;
   PetscInt ndm;
 
   *ierr = DMCompositeGetLocalISs(*dm, &ais);
@@ -130,13 +130,13 @@ PETSC_EXTERN void dmcompositegetlocaliss_(DM *dm, F90Array1d *ptr, PetscErrorCod
 
 PETSC_EXTERN void dmcompositerestorelocaliss_(DM *dm, F90Array1d *ptr, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptrd))
 {
-  IS       *ais;
+  IS      *ais;
   PetscInt ndm;
 
   *ierr = F90Array1dAccess(ptr, MPIU_FORTRANADDR, (void **)&ais PETSC_F90_2PTR_PARAM(ptrd));
   if (*ierr) return;
   *ierr = DMCompositeGetNumberDM(*dm, &ndm);
-  for (PetscInt i=0; i<ndm; i++) {
+  for (PetscInt i = 0; i < ndm; i++) {
     *ierr = ISDestroy(&ais[i]);
     if (*ierr) return;
   }
