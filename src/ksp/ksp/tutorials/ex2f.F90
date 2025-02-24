@@ -301,13 +301,12 @@
       PetscCallA(KSPBuildSolution(ksp,PETSC_NULL_VEC,x,ierr))
 
 !  Write the solution vector and residual norm to stdout
-!   - Note that the parallel viewer PETSC_VIEWER_STDOUT_WORLD
-!     handles data from multiple processors so that the
-!     output is not jumbled.
+!  Since the Fortran IO may be flushed differently than C
+!  cannot reliably print both together in CI
 
       PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
       if (rank .eq. 0) write(6,100) n
-      PetscCallA(VecView(x,PETSC_VIEWER_STDOUT_WORLD,ierr))
+!      PetscCallA(VecView(x,PETSC_VIEWER_STDOUT_WORLD,ierr))
       if (rank .eq. 0) write(6,200) n,rnorm
 
  100  format('iteration ',i5,' solution vector:')
