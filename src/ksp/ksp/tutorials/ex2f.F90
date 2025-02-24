@@ -210,10 +210,11 @@
         vzero = 0
         PetscCallA(KSPMonitorSet(ksp,MyKSPMonitor,vzero,PETSC_NULL_FUNCTION,ierr))
 !
-!     Also use the default KSP monitor routine showing how it may be used from Fortran
+!     Cannot also use the default KSP monitor routine showing how it may be used from Fortran
+!     since the Fortran compiler thinks the calling arguments are different in the two cases
 !
-        PetscCallA(PetscViewerAndFormatCreate(PETSC_VIEWER_STDOUT_WORLD,PETSC_VIEWER_DEFAULT,vf,ierr))
-        PetscCallA(KSPMonitorSet(ksp,KSPMonitorResidual,vf,PetscViewerAndFormatDestroy,ierr))
+!        PetscCallA(PetscViewerAndFormatCreate(PETSC_VIEWER_STDOUT_WORLD,PETSC_VIEWER_DEFAULT,vf,ierr))
+!        PetscCallA(KSPMonitorSet(ksp,KSPMonitorResidual,vf,PetscViewerAndFormatDestroy,ierr))
       endif
 
 !  Set runtime options, e.g.,
