@@ -57,6 +57,7 @@
           import tDM,tIS
           DM dm
           IS, pointer :: iss(:)
+          PetscErrorCode ierr
         End Subroutine
       End Interface
 
@@ -65,5 +66,6 @@
           import tDM,tIS
           DM dm
           IS, pointer :: iss(:)
+          PetscErrorCode ierr
         End Subroutine
       End Interface
