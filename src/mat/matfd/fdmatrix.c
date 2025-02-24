@@ -548,21 +548,15 @@ PetscErrorCode MatFDColoringDestroy(MatFDColoring *c)
   IF the matrix type is `MATBAIJ`, then the block column indices are returned
 
   Fortran Notes:
-  This routine has a different interface for Fortran
+  This routine has a different interface for Fortran, `array` should be declared as
 .vb
-     #include <petsc/finclude/petscmat.h>
-          use petscmat
-          PetscInt, pointer :: array(:)
-          PetscErrorCode  ierr
-          MatFDColoring   i
-          call MatFDColoringGetPerturbedColumnsF90(i,array,ierr)
-      use the entries of array ...
-          call MatFDColoringRestorePerturbedColumnsF90(i,array,ierr)
+  PetscInt, pointer :: array(:)
 .ve
+  and there is no `n` argument.
 
 .seealso: `Mat`, `MatFDColoring`, `MatFDColoringCreate()`, `MatFDColoringDestroy()`, `MatFDColoringView()`, `MatFDColoringApply()`
 @*/
-PetscErrorCode MatFDColoringGetPerturbedColumns(MatFDColoring coloring, PetscInt *n, const PetscInt *cols[])
+PetscErrorCode MatFDColoringGetPerturbedColumns(MatFDColoring coloring, PetscInt *n, const PetscInt *cols[]) PeNS
 {
   PetscFunctionBegin;
   if (coloring->currentcolor >= 0) {
