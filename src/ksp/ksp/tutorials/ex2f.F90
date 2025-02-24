@@ -41,7 +41,8 @@
       Mat         A
       KSP         ksp
       PetscRandom rctx
-      PetscViewerAndFormat vf,vzero
+      PetscViewerAndFormat vzero
+!      PetscViewerAndFormat vf
 
 !  These variables are not currently used.
 !      PC          pc
@@ -210,10 +211,11 @@
         vzero = 0
         PetscCallA(KSPMonitorSet(ksp,MyKSPMonitor,vzero,PETSC_NULL_FUNCTION,ierr))
 !
-!     Also use the default KSP monitor routine showing how it may be used from Fortran
+!     Cannot also use the default KSP monitor routine showing how it may be used from Fortran
+!     since the Fortran compiler thinks the calling arguments are different in the two cases
 !
-        PetscCallA(PetscViewerAndFormatCreate(PETSC_VIEWER_STDOUT_WORLD,PETSC_VIEWER_DEFAULT,vf,ierr))
-        PetscCallA(KSPMonitorSet(ksp,KSPMonitorResidual,vf,PetscViewerAndFormatDestroy,ierr))
+!        PetscCallA(PetscViewerAndFormatCreate(PETSC_VIEWER_STDOUT_WORLD,PETSC_VIEWER_DEFAULT,vf,ierr))
+!        PetscCallA(KSPMonitorSet(ksp,KSPMonitorResidual,vf,PetscViewerAndFormatDestroy,ierr))
       endif
 
 !  Set runtime options, e.g.,
@@ -335,9 +337,9 @@
       PetscReal rnorm
 
       if (rnorm .le. .05) then
-        flag = 1
+        flag = KSP_CONVERGED_RTOL_NORMAL
       else
-        flag = 0
+        flag = KSP_CONVERGED_ITERATING
       endif
       ierr = 0
 
