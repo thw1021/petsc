@@ -25,7 +25,6 @@ class Configure(config.package.GNUPackage):
     help.addArgument('SOWING', '-download-sowing-cxx=<prog>',                    nargs.Arg(None, None, 'CXX compiler for sowing configure'))
     help.addArgument('SOWING', '-download-sowing-cpp=<prog>',                    nargs.Arg(None, None, 'CPP for sowing configure'))
     help.addArgument('SOWING', '-download-sowing-cxxpp=<prog>',                  nargs.Arg(None, None, 'CXX CPP for sowing configure'))
-    help.addArgument('SOWING', '-with-fortran-bindings-inplace=<bool>',          nargs.ArgBool(None, 0, 'Generate Fortran bindings in PETSc source tree'))
     return
 
   def setupDependencies(self, framework):
@@ -131,34 +130,6 @@ Perhaps the installation has been corrupted or changed, remove the directory '+o
 and run configure again\n')
 
       self.checkBfortVersion()
-      if (self.petscclone.isClone and hasattr(self.compilers, 'FC') and self.framework.argDB['with-fortran-bindings']):
-        self.buildFortranStubs()
-      else:
-        self.logPrintBox('Sowing: Skipping Fortran stub generation! Reason: Not a clone of PETSc or no Fortran compiler or fortran-bindings disabled')
     else:
       self.logPrint("Not a clone of PETSc or no Fortran compiler or fortran-bindings disabled, don't need Sowing\n")
-    return
-
-  def buildFortranStubs(self):
-    if hasattr(self.compilers, 'FC'):
-      if self.argDB['with-batch'] and not hasattr(self,'bfort'):
-        self.logPrintBox('Batch build that could not generate bfort, skipping generating Fortran stubs\n \
-                          you will need to copy them from some other system (src/fortran/auto)')
-      else:
-        self.logPrintBox('Running '+self.bfort+' to generate Fortran stubs')
-        try:
-          import os,sys
-          sys.path.insert(0, os.path.abspath(os.path.join('lib','petsc','bin','maint')))
-          import generatefortranstubs
-          del sys.path[0]
-          if self.framework.argDB['with-fortran-bindings-inplace']:
-            arch = ''
-          else:
-            arch = self.arch
-          generatefortranstubs.main(self.petscdir.dir, arch,self.bfort, self.petscdir.dir,0)
-          if self.fortran.fortranIsF90:
-            generatefortranstubs.processf90interfaces(self.petscdir.dir,arch,0)
-          self.framework.actions.addArgument('PETSc', 'File creation', 'Generated Fortran stubs')
-        except RuntimeError as e:
-          raise RuntimeError('*******Error generating Fortran stubs: '+str(e)+'*******\n')
     return
