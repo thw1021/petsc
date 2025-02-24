@@ -46,15 +46,7 @@ static PetscErrorCode TSDeviceSetNumEquations(TS ts, PetscInt numEq){
 
 static PetscErrorCode TSSetUp_Device(TS ts)
 {
-  PetscInt  Ne;
-  PetscBool flg;
-
   PetscFunctionBegin;
-  PetscOptionsBegin(PetscObjectComm((PetscObject)ts), "", "TSDevice Options", "TSDEVICE");
-  PetscCall(PetscOptionsInt("-ts_device_num_equations", "The size of the system in terms of separable equations", "", Ne, &Ne, &flg));
-  if (!flg) Ne = 1;
-  PetscCall(TSDeviceSetNumEquations(ts, Ne));
-  PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -78,7 +70,15 @@ static PetscErrorCode TSDestroy_Device(TS ts)
 
 static PetscErrorCode TSSetFromOptions_Device(TS ts, PetscOptionItems *PetscOptionsObject)
 {
+  PetscInt  Ne;
+  PetscBool flg = PETSC_FALSE;
+
   PetscFunctionBegin;
+  PetscOptionsBegin(PetscObjectComm((PetscObject)ts), "", "TSDevice Options", "TSDEVICE");
+  PetscCall(PetscOptionsInt("-ts_device_num_equations", "The size of the system in terms of separable equations, default is 1.", "", Ne, &Ne, &flg));
+  if (!flg) Ne = 1;
+  PetscCall(TSDeviceSetNumEquations(ts, Ne));
+  PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -103,17 +103,30 @@ static PetscErrorCode TSComputeLinearStability_Device(TS ts, PetscReal xr, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+template
+typedef struct {
+
+} TSDevice_Euler;
+
 template<typename func>
-__global__ void TSSolve_DeviceFn(TS ts, PetscInt N, PetscScalar *sol, PetscScalar *res, PetscReal dt, func rhsfunc){
+__device__ void TSStep_DeviceFn(TS *ts, PetscInt i, PetscScalar *sol, PetscScalar *res, PetscReal dt, func rhsfunc){
+    return;
+}
+
+template<typename func>
+__global__ void TSSolve_DeviceFn(TS *ts, PetscInt N, PetscScalar *sol, PetscScalar *res, PetscReal dt, func rhsfunc){
     int i = hipThreadIdx_x + hipBlockIdx_x*hipBlockDim_x;
     if (i < N){
       // pre stage
       // computerhsfunction
       // TODO: Generalize to multi dimensional problems.
-      rhsfunc(ts, dt, sol, res, NULL);
-      res[i] = res[i] * dt + sol[i];
+      while (!converged) {
+        TSStep_DeviceFn
+        rhsfunc(ts, dt, sol, res, NULL);
+        res[i] = res[i] * dt + sol[i];// come back and leave to rocblas?
+      }
       // copy update to solution
-      sol[i] = res[i];
+      for (int d = 0; d < elem; ++d ) sol[i*elem + d] = res[i*elem + d];
       // increment ptime w/ time step
       // time_step = nex time step
       printf("TS_Device thread %d\n", i);
