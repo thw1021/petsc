@@ -1797,25 +1797,34 @@ PetscErrorCode VecRestoreSubVector(Vec X, IS is, Vec *Y)
 @*/
 PetscErrorCode VecCreateLocalVector(Vec v, Vec *w)
 {
-  PetscMPIInt size;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v, VEC_CLASSID, 1);
   PetscAssertPointer(w, 2);
-  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)v), &size));
-  if (size == 1) PetscCall(VecDuplicate(v, w));
-  else if (v->ops->createlocalvector) PetscUseTypeMethod(v, createlocalvector, w);
+  if (v->ops->createlocalvector) PetscUseTypeMethod(v, createlocalvector, w);
   else {
-    VecType  type;
-    PetscInt n;
+    PetscBool   isstd, iscuda, iship, iskokkos;
+    VecType     type, seqtype;
+    PetscMPIInt size;
 
-    PetscCall(VecCreate(PETSC_COMM_SELF, w));
-    PetscCall(VecGetLocalSize(v, &n));
-    PetscCall(VecSetSizes(*w, n, n));
-    PetscCall(VecGetBlockSize(v, &n));
-    PetscCall(VecSetBlockSize(*w, n));
     PetscCall(VecGetType(v, &type));
-    PetscCall(VecSetType(*w, type));
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)v, &isstd, VECMPI, VECSTANDARD, ""));
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)v, &iscuda, VECMPICUDA, VECCUDA, ""));
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)v, &iship, VECMPIHIP, VECHIP, ""));
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)v, &iskokkos, VECMPIKOKKOS, VECKOKKOS, ""));
+    seqtype = isstd ? VECSEQ : iscuda ? VECSEQCUDA : iship ? VECSEQHIP : iskokkos ? VECSEQKOKKOS : type;
+
+    PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)v), &size));
+
+    if (seqtype == type && size == 1) PetscCall(VecDuplicate(v, w));
+    else {
+      PetscInt n;
+      PetscCall(VecCreate(PETSC_COMM_SELF, w));
+      PetscCall(VecGetLocalSize(v, &n));
+      PetscCall(VecSetSizes(*w, n, n));
+      PetscCall(VecGetBlockSize(v, &n));
+      PetscCall(VecSetBlockSize(*w, n));
+      PetscCall(VecSetType(*w, seqtype));
+    }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
