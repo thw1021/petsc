@@ -41,7 +41,8 @@
       Mat         A
       KSP         ksp
       PetscRandom rctx
-      PetscViewerAndFormat vf,vzero
+      PetscViewerAndFormat vzero
+!      PetscViewerAndFormat vf
 
 !  These variables are not currently used.
 !      PC          pc
