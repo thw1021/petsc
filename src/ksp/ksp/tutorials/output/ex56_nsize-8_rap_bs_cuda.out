@@ -1,15 +1,18 @@
   Residual norms for rap_ solve.
-  0 KSP Residual norm 4.031634755026e+03
-  1 KSP Residual norm 3.491894848619e+02
-  2 KSP Residual norm 2.770121266406e+02
-  3 KSP Residual norm 1.075741470651e+02
-  4 KSP Residual norm 5.988848697006e+01
-  5 KSP Residual norm 2.202460856976e+01
-  6 KSP Residual norm 9.816934131307e+00
-  7 KSP Residual norm 4.212695789328e+00
-  8 KSP Residual norm 2.108928837859e+00
-  9 KSP Residual norm 1.354516880530e+00
-  Linear rap_ solve converged due to CONVERGED_RTOL iterations 9
+  0 KSP Residual norm 4.358866223644e+03
+  1 KSP Residual norm 3.956615852200e+02
+  2 KSP Residual norm 3.016439583211e+02
+  3 KSP Residual norm 8.259521990333e+01
+  4 KSP Residual norm 2.898795858255e+01
+  5 KSP Residual norm 9.440758543722e+00
+  6 KSP Residual norm 2.922858017992e+00
+  7 KSP Residual norm 1.171062780297e+00
+  8 KSP Residual norm 5.687223814603e-01
+  9 KSP Residual norm 2.903217737655e-01
+ 10 KSP Residual norm 1.083633248024e-01
+ 11 KSP Residual norm 4.486038657942e-02
+ 12 KSP Residual norm 1.534420334450e-02
+  Linear rap_ solve converged due to CONVERGED_RTOL iterations 12
 KSP Object: (rap_) 8 MPI processes
   type: gmres
     restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
@@ -42,25 +45,15 @@ PC Object: (rap_) 8 MPI processes
           not using I-node (on process 0) routines
   Down solver (pre-smoother) on level 1 -------------------------------
     KSP Object: (rap_mg_levels_1_) 8 MPI processes
-    type: chebyshev
-      Chebyshev polynomial of first kind
-      eigenvalue targets used: min 0.31712, max 3.48832
-      eigenvalues estimated via cg: min 0.0323691, max 3.1712
-      eigenvalues estimated using cg with transform: [0. 0.1; 0. 1.1]
-      KSP Object: (rap_mg_levels_1_esteig_) 8 MPI processes
-        type: cg
-        maximum iterations=10, initial guess is zero
-        tolerances: relative=1e-12, absolute=1e-50, divergence=10000.
-        left preconditioning
-        using PRECONDITIONED norm type for convergence test
-      estimating eigenvalues using a noisy random number generated right-hand side
+      type: richardson
+        damping factor=1.
       maximum iterations=2, nonzero initial guess
       tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
       left preconditioning
       using NONE norm type for convergence test
     PC Object: (rap_mg_levels_1_) 8 MPI processes
       type: jacobi
-        type DIAGONAL
+        type ROWL1 (l1-norm off-diagonal scaling 5.000000e-01)
       linear system matrix = precond matrix:
       Mat Object: 8 MPI processes
         type: mpiaijcusparse
