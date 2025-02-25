@@ -53,13 +53,15 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 
 /*
   Evolve the trajectory of a group of balls given a set of initial conditions
-  and g = 9.8m/s^2
+  and g = 9.8m/s^2.
 */
 struct func{
     const PetscReal g = 9.8;
-    __device__ int operator()(TS ts, PetscReal t, PetscScalar *u, PetscScalar *f, void *ctx){
+    __device__ int operator()(TSDevice_Euler *ts, PetscReal t, PetscScalar *u, PetscScalar *f, void *ctx){
     int i = hipThreadIdx_x + hipBlockIdx_x*hipBlockDim_x;
-    f[i] = -9.8*u[i];
+    int elements = ts[i].elements;
+    f[i*elements + 0] = 0.;// No drag
+    f[i*elements + 1] = -9.8;
     return 2;
   }
 };
@@ -77,13 +79,15 @@ int main(int argc, char *argv[])
   comm = PETSC_COMM_WORLD;
   PetscCall(ProcessOptions(comm, &user));
   PetscCall(VecCreate(comm, &sol));
-  PetscCall(VecSetSizes(sol, user.n_pdes, PETSC_DECIDE));
+  PetscCall(VecSetSizes(sol, user.n_pdes*2, PETSC_DECIDE));
   PetscCall(VecSetFromOptions(sol));
   PetscCall(VecSet(sol, 10.0));// 2D, set x1,y1,vx1,vy1, x2, y2.... etc.
   PetscCall(TSCreate(comm, &ts));
   PetscCall(TSSetFromOptions(ts));
   //PetscCall(TSDeviceSetRHSFunction(ts, NULL, RHSFunctionBall, NULL));
   PetscCall(TSSetSolution(ts, sol));
+  PetscCall(TSDeviceSetNumEquations(ts, user.n_pdes));// number of pdes in the system, ie, there will be 2 worker threads.
+  PetscCall(TSDeviceSetNumElements(ts, 2));// Hard code to two for now
   func rhsfunc;
   PetscCall(TSSolve_Device(ts, rhsfunc));
   PetscCall(TSDestroy(&ts));
@@ -99,6 +103,6 @@ int main(int argc, char *argv[])
 
   test:
     suffix: ball_launch
-    args: -ts_type device -ts_batch_ts_type euler -ts_max_steps 5 -vec_type hip
+    args: -ts_type device -ts_batch_ts_type euler -ts_max_steps 5 -vec_type hip -n_pdes 2
     filter: grep -v marker | grep -v atomic | grep -v usage
 TEST*/
