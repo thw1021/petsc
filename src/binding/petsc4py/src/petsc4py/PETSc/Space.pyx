@@ -837,6 +837,7 @@ cdef class DualSpace(Object):
         cdef PetscInt ci = asInt(i)
         cdef Quad functional = Quad()
         CHKERR(PetscDualSpaceGetFunctional(self.dualspace, ci, &functional.quad))
+        CHKERR(PetscINCREF(functional.obj))
         return functional
 
     def getInteriorDimension(self) -> int:
