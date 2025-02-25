@@ -37,9 +37,9 @@ includefiles = {}
 mansecs = {}         # mansec[mansecname] = set(alls submansecnames in mansecname)
 submansecs = set()
 
-regcomment  = re.compile(r'/\* [-A-Za-z _(),<>|^\*/0-9.:=\[\]\.]* \*/')
-regcomment2  = re.compile(r'// [-A-Za-z _(),<>|^\*/0-9.:=\[\]\.]*')
-regblank    = re.compile(r' [ ]*')
+regcomment   = re.compile(r'/\* [-A-Za-z _(),<>|^\*/0-9.:=\[\]\.;]* \*/')
+regcomment2  = re.compile(r'// [-A-Za-z _(),<>|^\*/0-9.:=\[\]\.;]*')
+regblank     = re.compile(r' [ ]*')
 
 class Typedef:
     '''Represents typedef oldtype newtype'''

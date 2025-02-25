@@ -310,10 +310,9 @@ E*/
 typedef enum {                       /* converged */
   SNES_CONVERGED_FNORM_ABS      = 2, /* ||F|| < atol */
   SNES_CONVERGED_FNORM_RELATIVE = 3, /* ||F|| < rtol*||F_initial|| */
-  SNES_CONVERGED_SNORM_RELATIVE = 4, /* Newton computed step size small; || delta x || < stol || x ||*/
+  SNES_CONVERGED_SNORM_RELATIVE = 4, /* Newton computed step size small; || delta x || < stol || x || */
   SNES_CONVERGED_ITS            = 5, /* maximum iterations reached */
-  SNES_BREAKOUT_INNER_ITER      = 6, /* Flag to break out of inner loop after checking custom convergence.
-                                        It is used in multi-phase flow when state changes */
+  SNES_BREAKOUT_INNER_ITER      = 6, /* Flag to break out of inner loop after checking custom convergence, used in multi-phase flow when state changes */
   SNES_CONVERGED_USER           = 7, /* The user has indicated convergence for an arbitrary reason */
   /* diverged */
   SNES_DIVERGED_FUNCTION_DOMAIN      = -1, /* the new x location passed the function is not in the domain of F */
