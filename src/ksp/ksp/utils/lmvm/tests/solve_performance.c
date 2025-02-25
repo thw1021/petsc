@@ -3,21 +3,32 @@ const char help[] = "Profile the performance of MATLMVM MatSolve() in a loop";
 #include <petscksp.h>
 #include <petscmath.h>
 
+typedef enum {
+  PERF_SOLVE,
+  PERF_MULT
+} PerfType;
+
 int main(int argc, char **argv)
 {
+  const char   *perfTypes[2] = {"solve", "mult"};
   PetscInt      n        = 1000;
   PetscInt      n_epochs = 10;
   PetscInt      n_iters  = 10;
+  PetscInt      perf;
   Vec           x, g, dx, df, p;
   PetscRandom   rand;
-  PetscLogStage matsolve_loop, main_stage;
+  PetscLogStage mat_loop, main_stage;
   Mat           B;
+  PerfType      ptype = PERF_SOLVE;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, help, "KSP");
+  perf = ptype;
   PetscCall(PetscOptionsInt("-n", "Vector size", __FILE__, n, &n, NULL));
   PetscCall(PetscOptionsInt("-epochs", "Number of epochs", __FILE__, n_epochs, &n_epochs, NULL));
   PetscCall(PetscOptionsInt("-iters", "Number of iterations per epoch", __FILE__, n_iters, &n_iters, NULL));
+  PetscCall(PetscOptionsEList("-perf_type", "The method to analyze performance", __FILE__, perfTypes, 2, perfTypes[ptype], &perf, NULL));
+  ptype = (PerfType)perf;
   PetscOptionsEnd();
   PetscCall(VecCreateMPI(PETSC_COMM_WORLD, PETSC_DETERMINE, n, &x));
   PetscCall(VecSetFromOptions(x));
@@ -31,7 +42,8 @@ int main(int argc, char **argv)
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rand));
   PetscCall(PetscRandomSetInterval(rand, -1.0, 1.0));
   PetscCall(PetscRandomSetFromOptions(rand));
-  PetscCall(PetscLogStageRegister("LMVM MatSolve Loop", &matsolve_loop));
+  if (ptype == PERF_SOLVE) PetscCall(PetscLogStageRegister("LMVM MatSolve Loop", &mat_loop));
+  else PetscCall(PetscLogStageRegister("LMVM MatMult Loop", &mat_loop));
   PetscCall(PetscLogStageGetId("Main Stage", &main_stage));
   PetscCall(PetscLogStageSetVisible(main_stage, PETSC_FALSE));
   for (PetscInt epoch = 0; epoch < n_epochs + 1; epoch++) {
@@ -54,14 +66,16 @@ int main(int argc, char **argv)
       PetscCall(VecAXPY(x, xscale, dx));
       PetscCall(VecAXPY(g, fscale, df));
       PetscCall(MatLMVMUpdate(B, x, g));
-      PetscCall(MatSolve(B, g, p));
+      if (ptype == PERF_SOLVE) PetscCall(MatSolve(B, g, p));
+      else PetscCall(MatMult(B, g, p));
     }
-    if (epoch > 0) PetscCall(PetscLogStagePush(matsolve_loop));
+    if (epoch > 0) PetscCall(PetscLogStagePush(mat_loop));
     for (PetscInt iter = 0; iter < n_iters; iter++, xscale *= -1.0, fscale *= -1.0) {
       PetscCall(VecAXPY(x, xscale, dx));
       PetscCall(VecAXPY(g, fscale, df));
       PetscCall(MatLMVMUpdate(B, x, g));
-      PetscCall(MatSolve(B, g, p));
+      if (ptype == PERF_SOLVE) PetscCall(MatSolve(B, g, p));
+      else PetscCall(MatMult(B, g, p));
     }
     PetscCall(MatLMVMReset(B, PETSC_FALSE));
     if (epoch > 0) PetscCall(PetscLogStagePop());
