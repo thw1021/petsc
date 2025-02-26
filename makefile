@@ -80,14 +80,8 @@ matlabbin:
             echo "========================================="; \
         fi
 
-fortranstubs: deletefortranstubs
-	@${PYTHON} lib/petsc/bin/maint/generatefortranstubs.py --petsc-dir=${PETSC_DIR} --petsc-arch=${PETSC_ARCH}
-
-allfortranstubs: fortranstubs
-
-#copy of allfortranstubs with PETSC_ARCH=''
-allfortranstubsinplace: deletefortranstubs
-	@${PYTHON} lib/petsc/bin/maint/generatefortranstubs.py --petsc-dir=${PETSC_DIR} --petsc-arch='' --verbose=${V}
+fortranbindings: deletefortranbindings
+	@${PYTHON} lib/petsc/bin/maint/generatefortranbindings.py --petsc-dir=${PETSC_DIR} --petsc-arch=${PETSC_ARCH}
 
 deleteshared:
 	@for LIBNAME in ${SHLIBS}; \
@@ -104,7 +98,7 @@ deleteshared:
           ${RM} ${INSTALL_LIB_DIR}/so_locations; \
 	fi
 
-deletefortranstubs:
+deletefortranbindings:
 	-@find src -type d -name ftn-auto* | xargs rm -rf
 	-@if [ -n "${PETSC_ARCH}" ] && [ -d ${PETSC_ARCH} ] && [ -d ${PETSC_ARCH}/src ]; then \
           find ${PETSC_ARCH}/src -type d -name ftn-auto* | xargs rm -rf ;\
@@ -469,36 +463,6 @@ countcfunctions:
 	-@grep PETSC_EXTERN ${PETSC_DIR}/include/*.h  | grep "(" | tr -s ' ' | \
 	cut -d'(' -f1 | cut -d' ' -f3 | grep -v "\*" | tr -s '\012' |  \
 	tr 'A-Z' 'a-z' |  sort | uniq > /tmp/countcfunctions
-
-difffortranfunctions: countfortranfunctions countcfunctions
-	-@echo -------------- Functions missing in the fortran interface ---------------------
-	-@${DIFF} /tmp/countcfunctions /tmp/countfortranfunctions | grep "^<" | cut -d' ' -f2
-	-@echo ----------------- Functions missing in the C interface ------------------------
-	-@${DIFF} /tmp/countcfunctions /tmp/countfortranfunctions | grep "^>" | cut -d' ' -f2
-	-@${RM}  /tmp/countcfunctions /tmp/countfortranfunctions
-
-checkbadfortranstubs:
-	-@echo "========================================="
-	-@echo "Functions with MPI_Comm as an Argument"
-	-@echo "========================================="
-	-@cd ${PETSC_DIR}/src/fortran/auto; grep '^void' *.c | grep 'MPI_Comm' | \
-	tr -s ' ' | tr -s ':' ' ' |cut -d'(' -f1 | cut -d' ' -f1,3
-	-@echo "========================================="
-	-@echo "Functions with a String as an Argument"
-	-@echo "========================================="
-	-@cd ${PETSC_DIR}/src/fortran/auto; grep '^void' *.c | grep 'char \*' | \
-	tr -s ' ' | tr -s ':' ' ' |cut -d'(' -f1 | cut -d' ' -f1,3
-	-@echo "========================================="
-	-@echo "Functions with Pointers to PETSc Objects as Argument"
-	-@echo "========================================="
-	-@cd ${PETSC_DIR}/src/fortran/auto; \
-	_p_OBJ=`grep _p_ ${PETSC_DIR}/include/*.h | tr -s ' ' | \
-	cut -d' ' -f 3 | tr -s '\012' | grep -v '{' | cut -d'*' -f1 | \
-	sed "s/_p_//g" | tr -s '\012 ' ' *|' ` ; \
-	for OBJ in $$_p_OBJ; do \
-	grep "$$OBJ \*" *.c | tr -s ' ' | tr -s ':' ' ' | \
-	cut -d'(' -f1 | cut -d' ' -f1,3; \
-	done
 
 checkpackagetests:
 	-@echo "Missing package tests"
