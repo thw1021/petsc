@@ -211,7 +211,7 @@ else
     PETSC_RAJACOMPILE_SINGLE = ${CXX} -o $*.o -c ${CXX_FLAGS} ${CXXFLAGS} ${CXXCPPFLAGS}
 endif
 
-LDLIBS += $(PETSC_LIB)
+override LDLIBS += $(PETSC_LIB)
 
 % : %.F90
 	$(LINK.F) $^ $(LOADLIBES) $(LDLIBS) -o $@
