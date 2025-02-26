@@ -2177,6 +2177,7 @@ static PetscErrorCode MatSetOption_HYPRE(Mat A, MatOption op, PetscBool flg)
     hA->donotstash = flg;
     break;
   default:
+    PetscCall(PetscInfo(A, "Option %s ignored\n", MatOptions[op]));
     break;
   }
   PetscFunctionReturn(PETSC_SUCCESS);

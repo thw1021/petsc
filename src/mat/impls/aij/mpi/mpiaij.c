@@ -1712,7 +1712,8 @@ PetscErrorCode MatSetOption_MPIAIJ(Mat A, MatOption op, PetscBool flg)
     /* The option is handled directly by MatSetOption() */
     break;
   default:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "unknown option %d", op);
+    PetscCall(PetscInfo(A, "Option %s ignored\n", MatOptions[op]));
+    break;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

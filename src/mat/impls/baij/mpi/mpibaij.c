@@ -1501,7 +1501,8 @@ static PetscErrorCode MatSetOption_MPIBAIJ(Mat A, MatOption op, PetscBool flg)
     if (a->A && A->rmap->n == A->cmap->n) PetscCall(MatSetOption(a->A, op, flg));
     break;
   default:
-    SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "unknown option %d", op);
+    PetscCall(PetscInfo(A, "Option %s ignored\n", MatOptions[op]));
+    break;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
