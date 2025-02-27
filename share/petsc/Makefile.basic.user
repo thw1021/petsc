@@ -8,11 +8,16 @@
 #  This will use all the compiler flags that PETSc was compiled with, if you do not want the flags use $PETSC_DIR/share/petsc/Makefile.user
 #  and modify it as noted in the comments
 #
-#  You can set specific values below but that should be rarely needed
-CFLAGS   =
-FFLAGS   =
-CPPFLAGS =
-FPPFLAGS =
+#  You can set specific values below, or specify to 'make' via command line, but that should be rarely needed
+CPPFLAGS   = # Used by compile target for C sources
+FPPFLAGS   = # Used by compile target for Fortran sources
+CXXPPFLAGS = # Used by compile target for Cxx sources
+CFLAGS     = # Used by both compile and link targets for C sources
+FFLAGS     = # Used by both compile and link targets for Fortran sources
+CXXFLAGS   = # Used by both compile and link targets for Cxx sources
+LDFLAGS    = # Used by link targets - option occurs after the linker, before objs, libraries
+PRELIBS    = # Used by link targets - option occurs before PETSC_LIB
+LIBS       = # Used by link targets - option occurs after PETSC_LIB
 
 #  For example - a single source file (ex1.c or ex1.F90) can be compiled with:
 #
@@ -30,11 +35,6 @@ FPPFLAGS =
 #
 # app : app.o b.o c.o
 # 	$(LINK.F) -o $@ $^ $(LDLIBS)
-
-# If the file c.cxx needs to link with a C++ standard library -lstdc++ , then
-# you'll need to add it explicitly.  It can go in the rule above or be added to
-# a target-specific variable by uncommenting the line below.
-# app : LDLIBS += -lstdc++
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 
