@@ -16,8 +16,8 @@
   Note:
   This name is arbitrary and need not correspond to the physical hardware or the software running on the system.
 
-  Fortran Notes:
-  This routine has the format
+  Fortran Note:
+  Example usage
 .vb
   character*(10) str
   call PetscGetArchType(str,ierr)
