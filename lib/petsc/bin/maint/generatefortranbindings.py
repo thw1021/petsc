@@ -347,6 +347,9 @@ def generateCStub(petscarch,senums,classes,funname,fun):
       if k.typename == 'PetscViewer' and not k.stars and not k.array:
         fd.write('v_')
       fd.write(Letters[cnt])
+      if k.typename == 'PetscBool' and not k.stars and not k.array:
+        # handle bool argument fixes (-1 needs to be corrected to 1 for Intel compilers)
+        fd.write(' ? PETSC_TRUE : PETSC_FALSE')
       if k.typename == 'MPI_Fint':
         fd.write('))')
       cnt = cnt + 1
