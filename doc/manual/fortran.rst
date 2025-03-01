@@ -248,7 +248,7 @@ result. For example,
 
 The result is copied into ``str``.
 
-Similarly, for PETSc routines where the user provides a character array (to be filled) and it's length, e.g. ``char name[], size_t nlen``.
+Similarly, for PETSc routines where the user provides a character array (to be filled) followed by the array's length, e.g. ``char name[], size_t nlen``.
 In Fortran pass a string long enough to hold the result, but not the separate length argument. For example,
 
 .. code-block:: fortran
