@@ -159,16 +159,6 @@ for arrays used to receive data from a PETSc routine. For example,
 
 is invalid and will not set ``val`` with the correct value.
 
-For PETSc routine arguments that return a character string, you should pass a string long enough to hold the
-result. For example,
-
-.. code-block:: fortran
-
-   character(80)  str
-   PetscCall(KSPGetType(ksp,str,ierr))
-
-The result is copied into ``str``.
-
 .. _sec_nullptr:
 
 Passing null pointers to PETSc functions
@@ -247,6 +237,25 @@ is in Fortran,
     PetscScalar, pointer :: a(:)
     Vec,         v
     VecGetArray(v, a, ierr)
+
+For PETSc routine arguments that return a character string (array), e.g. ``const char *str[]`` pass a string long enough to hold the
+result. For example,
+
+.. code-block:: fortran
+
+   character*(80)  str
+   PetscCall(KSPGetType(ksp,str,ierr))
+
+The result is copied into ``str``.
+
+Similarly, for PETSc routines where the user provides a character array (to be filled) and it's length, e.g. ``char name[], size_t nlen``.
+In Fortran pass a string long enough to hold the result, but not the separate length argument. For example,
+
+.. code-block:: fortran
+
+   character*(80)  str
+   PetscCall(PetscGetHostName(name,ierr))
+
 
 Matrix, Vector and IS Indices
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
