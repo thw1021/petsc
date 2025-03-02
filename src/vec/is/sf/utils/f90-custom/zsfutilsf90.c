@@ -3,16 +3,16 @@
 #include <petscsection.h>
 
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
-  #define petscsfrestoreremoteoffsets_ PETSCSFRESTOREREMOTEOFFSETS
+  #define petscsfdestroyremoteoffsets_ PETSCSFDESTROYREMOTEOFFSETS
   #define petscsfdistributesection_    PETSCSFDISTRIBUTESECTION
   #define petscsfcreateremoteoffsets_  PETSCSFCREATEREMOTEOFFSETS
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
-  #define petscsfrestoreremoteoffsets_ petscsfrestoreremoteoffsets
+  #define petscsfdestroyremoteoffsets_ petscsfdestroyremoteoffsets
   #define petscsfdistributesection_    petscsfdistributesection
   #define petscsfcreateremoteoffsets_  petscsfcreateremoteoffsets
 #endif
 
-PETSC_EXTERN void petscsfrestoreremoteoffsets_(F90Array1d *ptr, int *ierr PETSC_F90_2PTR_PROTO(ptrd))
+PETSC_EXTERN void petscsfdestroyremoteoffsets_(F90Array1d *ptr, int *ierr PETSC_F90_2PTR_PROTO(ptrd))
 {
   PetscInt *fa;
   *ierr = F90Array1dAccess(ptr, MPIU_INT, (void **)&fa PETSC_F90_2PTR_PARAM(ptrd));

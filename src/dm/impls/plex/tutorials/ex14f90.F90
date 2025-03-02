@@ -2,7 +2,7 @@ program ex14f90
 
 #include <petsc/finclude/petsc.h>
 use petsc
-implicit none   
+implicit none
 
   type(tDM)                        :: dm
   type(tVec)                       :: u
@@ -25,14 +25,14 @@ implicit none
   PetscCallA(DMViewFromOptions(dm, PETSC_NuLL_OBJECT, "-dm_view", ierr))
   PetscCallA(DMGetDimension(dm, dim, ierr))
 
-  !!! Describe the solution variables that are discretized on the mesh 
-  ! Create scalar field u and a vector field v 
+  !!! Describe the solution variables that are discretized on the mesh
+  ! Create scalar field u and a vector field v
   numFields  = 2
   numComp = [1,dim]
   numDof     = 0
   !Let u be defined on cells
   numDof(0 * (dim + 1) + dim + 1) = 1;
-  !Let v be defined on vertices 
+  !Let v be defined on vertices
   numDof(1 * (dim + 1) + 1) = dim
   !No boundary conditions */
   numBC = 0
@@ -57,7 +57,7 @@ implicit none
   ! for data described by the local section
   PetscCallA(PetscSFCreateSectionSF(pointSF, section, remoteOffsets, section, sectionSF, ierr))
   if (associated(remoteOffsets)) then
-    PetscCallA(PetscSFRestoreRemoteOffsets(remoteOffsets, ierr))
+    PetscCallA(PetscSFDestroyRemoteOffsets(remoteOffsets, ierr))
   end if
 
   !!! Demo of halo exchange
@@ -80,18 +80,19 @@ implicit none
   PetscCallA(PetscSectionVecView(section, u, PETSC_VIEWER_STDOUT_WORLD, ierr))
   PetscCallA(VecDestroy(u, ierr))
 
-!   ! Cleanup 
   PetscCallA(PetscSFDestroy(sectionSF, ierr))
   PetscCallA(PetscSectionDestroy(section, ierr))
   PetscCallA(DMDestroy(dm, ierr))
   PetscCallA(PetscFinalize(ierr))
 end program ex14f90
-! TEST
-
-!   # Test on a 1D mesh with overlap
-!   test:
-!     nsize: 3
-!     requires: !complex
-!     args: -dm_plex_dim 1 -dm_plex_box_faces 3 -dm_refine_pre 1 -petscpartitioner_type simple -dm_distribute_overlap 1
-
-! TEST
+!/*TEST
+!  build:
+!    requires: defined(PETSC_USING_F90FREEFORM)
+!
+!  # Test on a 1D mesh with overlap
+!  test:
+!    nsize: 3
+!    requires: !complex
+!    args: -dm_plex_dim 1 -dm_plex_box_faces 3 -dm_refine_pre 1 -petscpartitioner_type simple -dm_distribute_overlap 1
+!
+!TEST*/
