@@ -162,7 +162,7 @@ class Petsc(object):
         pkgsrcs = dict()
         for lang in LANGS:
             pkgsrcs[lang] = []
-        for root, dirs, files in chain.from_iterable(os.walk(path) for path in [os.path.join(self.pkg_dir, 'src', pkg),os.path.join(self.pkg_dir, self.pkg_arch, 'src', pkg)]):
+        for root, dirs, files in chain.from_iterable(os.walk(path) for path in [os.path.join(self.pkg_dir, 'src', pkg),os.path.join(self.pkg_dir, self.pkg_arch, 'ftn', pkg)]):
             if SKIPDIRS.intersection(pathsplit(self.pkg_dir, root)): continue
             dirs.sort()
             dirs[:] = list(set(dirs).difference(SKIPDIRS))
