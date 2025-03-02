@@ -2,20 +2,49 @@
 #include <petsc/private/f90impl.h>
 
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
-  #define vecgetarray_         VECGETARRAY
-  #define vecrestorearray_     VECRESTOREARRAY
-  #define vecgetarrayread_     VECGETARRAYREAD
-  #define vecrestorearrayread_ VECRESTOREARRAYREAD
-  #define vecduplicatevecs_    VECDUPLICATEVECS
-  #define vecdestroyvecs_      VECDESTROYVECS
+  #define vecgetarraywrite_     VECGETARRAYWRITE
+  #define vecrestorearraywrite_ VECRESTOREARRAYWRITE
+  #define vecgetarray_          VECGETARRAY
+  #define vecrestorearray_      VECRESTOREARRAY
+  #define vecgetarrayread_      VECGETARRAYREAD
+  #define vecrestorearrayread_  VECRESTOREARRAYREAD
+  #define vecduplicatevecs_     VECDUPLICATEVECS
+  #define vecdestroyvecs_       VECDESTROYVECS
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
-  #define vecgetarray_         vecgetarray
-  #define vecrestorearray_     vecrestorearray
-  #define vecgetarrayread_     vecgetarrayread
-  #define vecrestorearrayread_ vecrestorearrayread
-  #define vecduplicatevecs_    vecduplicatevecs
-  #define vecdestroyvecs_      vecdestroyvecs
+  #define vecgetarraywrite_     vecgetarraywrite
+  #define vecrestorearraywrite_ vecrestorearraywrite
+  #define vecgetarray_          vecgetarray
+  #define vecrestorearray_      vecrestorearray
+  #define vecgetarrayread_      vecgetarrayread
+  #define vecrestorearrayread_  vecrestorearrayread
+  #define vecduplicatevecs_     vecduplicatevecs
+  #define vecdestroyvecs_       vecdestroyvecs
 #endif
+
+PETSC_EXTERN void vecgetarraywrite_(Vec *x, F90Array1d *ptr, int *ierr PETSC_F90_2PTR_PROTO(ptrd))
+{
+  PetscScalar *fa;
+  PetscInt     len;
+  if (!ptr) {
+    *ierr = PetscError(((PetscObject)*x)->comm, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_BADPTR, PETSC_ERROR_INITIAL, "ptr==NULL, maybe #include <petsc/finclude/petscvec.h> is missing?");
+    return;
+  }
+  *ierr = VecGetArrayWrite(*x, &fa);
+  if (*ierr) return;
+  *ierr = VecGetLocalSize(*x, &len);
+  if (*ierr) return;
+  *ierr = F90Array1dCreate(fa, MPIU_SCALAR, 1, len, ptr PETSC_F90_2PTR_PARAM(ptrd));
+}
+
+PETSC_EXTERN void vecrestorearraywrite_(Vec *x, F90Array1d *ptr, int *ierr PETSC_F90_2PTR_PROTO(ptrd))
+{
+  PetscScalar *fa;
+  *ierr = F90Array1dAccess(ptr, MPIU_SCALAR, (void **)&fa PETSC_F90_2PTR_PARAM(ptrd));
+  if (*ierr) return;
+  *ierr = F90Array1dDestroy(ptr, MPIU_SCALAR PETSC_F90_2PTR_PARAM(ptrd));
+  if (*ierr) return;
+  *ierr = VecRestoreArrayWrite(*x, &fa);
+}
 
 PETSC_EXTERN void vecgetarray_(Vec *x, F90Array1d *ptr, int *ierr PETSC_F90_2PTR_PROTO(ptrd))
 {
