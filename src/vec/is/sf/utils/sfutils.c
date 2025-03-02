@@ -221,7 +221,7 @@ PetscErrorCode PetscSFSetGraphSection(PetscSF sf, PetscSection localSection, Pet
   Caller must `PetscFree()` `remoteOffsets` if it was requested
 
   Fortran Note:
-  Use `PetscSFRestoreRemoteOffsets()` when `remoteOffsets` is no longer needed.
+  Use `PetscSFDestroyRemoteOffsets()` when `remoteOffsets` is no longer needed.
 
 .seealso: `PetscSF`, `PetscSFCreate()`
 @*/
@@ -360,11 +360,11 @@ PetscErrorCode PetscSFDistributeSection(PetscSF sf, PetscSection rootSection, Pe
 
   Input Parameters:
 + sf          - The `PetscSF`
-. rootSection - Data layout of remote points for outgoing data (this is layout for SF roots)
-- leafSection - Data layout of local points for incoming data  (this is layout for SF leaves)
+. rootSection - Data layout of remote points for outgoing data (this is layout for roots)
+- leafSection - Data layout of local points for incoming data  (this is layout for leaves)
 
   Output Parameter:
-. remoteOffsets - Offsets for point data on remote processes (these are offsets from the root section), or NULL
+. remoteOffsets - Offsets for point data on remote processes (these are offsets from the root section), or `NULL`
 
   Level: developer
 
@@ -372,7 +372,7 @@ PetscErrorCode PetscSFDistributeSection(PetscSF sf, PetscSection rootSection, Pe
   Caller must `PetscFree()` `remoteOffsets` if it was requested
 
   Fortran Note:
-  Use `PetscSFRestoreRemoteOffsets()` when `remoteOffsets` is no longer needed.
+  Use `PetscSFDestroyRemoteOffsets()` when `remoteOffsets` is no longer needed.
 
 .seealso: `PetscSF`, `PetscSFCreate()`
 @*/

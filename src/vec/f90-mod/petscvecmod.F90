@@ -38,13 +38,13 @@
         use petscisdef
         use petscsys
 
-      interface PetscSFRestoreRemoteOffsets
-      subroutine PetscSFRestoreRemoteOffsets(ptr, ierr)
+      interface PetscSFDestroyRemoteOffsets
+      subroutine PetscSFDestroyRemoteOffsets(ptr, ierr)
       use petscisdef
       implicit none
       PetscInt, pointer :: ptr(:)
       PetscErrorCode :: ierr
-      end subroutine PetscSFRestoreRemoteOffsets
+      end subroutine PetscSFDestroyRemoteOffsets
       end interface
 
 #include <../src/vec/f90-mod/petscis.h90>
