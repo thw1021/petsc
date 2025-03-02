@@ -312,3 +312,86 @@ using-runjobs:
     GIT_STRATEGY: none
   allow_failure: true
 
+coverage-analyze:
+  extends: .test
+  stage: stage-4
+  tags:
+    - gce-u22-short
+  dependencies:
+    - linux-64idx-i8
+  variables:
+    PYTHON: python3
+    PETSC_ARCH: arch-ci-analyze-pipeline
+  before_script:
+    - date
+    - hostname
+  script:
+    - if [ ! -z ${LOAD_MODULES+x} ]; then module --trace load ${LOAD_MODULES}; module list; fi
+    - ${PYTHON} --version
+    - gcovr --version
+    - printf "PATH:$PATH\n"
+    - printf "PYTHONPATH:$PYTHONPATH\n"
+    - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
+    - ${PYTHON} ./configure --with-mpi=0 --with-cxx=0 --download-sowing --with-fortran-bindings
+    - make mergegcov PETSC_GCOV_OPTIONS='--ci-mode --verbose'
+  coverage: /^\s*lines:\s*\d+.\d+\%/
+  artifacts:
+    name: "$CI_JOB_NAME"
+    when: always
+    paths:
+    - arch-ci-analyze-pipeline/gcovr/*
+    - arch-ci-analyze-pipeline/lib/petsc/conf/*.log
+    expire_in: 4 days
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: arch-ci-analyze-pipeline/gcovr/xml/*.xml
+
+# template for the coverage review jobs, these must be separate jobs as you cannot deploy multiple
+# environments from one job...
+.coverage-review:
+  extends: .test
+  stage: .post
+  tags:
+    - gce-u22-short
+  dependencies:
+    - coverage-analyze
+  script:
+    - date
+    - hostname
+  artifacts:
+    name: "$CI_JOB_NAME"
+    when: always
+    paths:
+    - arch-ci-analyze-pipeline/gcovr/*
+    - arch-ci-analyze-pipeline/lib/petsc/conf/*.log
+    expire_in: 4 days
+
+coverage-total-review:
+  extends: .coverage-review
+  environment:
+    name: coverage/all/$CI_COMMIT_REF_SLUG
+    url: https://$CI_PROJECT_NAMESPACE.gitlab.io/-/$CI_PROJECT_NAME/-/jobs/$CI_JOB_ID/artifacts/arch-ci-analyze-pipeline/gcovr/html/report.html
+    auto_stop_in: one week
+    deployment_tier: testing
+
+coverage-untested-review:
+  extends: .coverage-review
+  environment:
+    name: coverage/untested/$CI_COMMIT_REF_SLUG
+    url: https://$CI_PROJECT_NAMESPACE.gitlab.io/-/$CI_PROJECT_NAME/-/jobs/$CI_JOB_ID/artifacts/arch-ci-analyze-pipeline/gcovr/html_untested/report_untested.html
+    auto_stop_in: one week
+    deployment_tier: testing
+
+analyze-pipeline:
+  extends: .coverage-review
+  script:
+    - date
+    - hostname
+    # This file is created by lib/petsc/bin/maint/gcov.py. If it exists then the CI
+    # pipeline should fail
+    - if [ -f ./arch-ci-analyze-pipeline/gcovr/.CI_FAIL ]; then
+        cat ./arch-ci-analyze-pipeline/gcovr/merge_gcov_errors.log;
+        exit 1;
+      fi
+  allow_failure: true
