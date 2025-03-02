@@ -197,13 +197,19 @@ $(call soname_function,%) : $(call libname_function,%)
 $(OBJDIR)/%.o : %.sycl.cxx | $$(@D)/.DIR
 	$(PETSC_COMPILE.sycl.cxx) $(abspath $<) -o $@
 
-$(OBJDIR)/%.o : %.c | $$(@D)/.DIR
+$(OBJDIR)/src/%.o : src/%.c | $$(@D)/.DIR
+	$(PETSC_COMPILE.c) $(abspath $<) -o $@
+
+$(OBJDIR)/ftn/%.o : $(PETSC_ARCH)/ftn/%.c | $$(@D)/.DIR
 	$(PETSC_COMPILE.c) $(abspath $<) -o $@
 
 $(OBJDIR)/%.o : %.kokkos.cxx | $$(@D)/.DIR
 	$(PETSC_COMPILE.kokkos.cxx) $(abspath $<) -o $@
 
-$(OBJDIR)/%.o : %.cxx | $$(@D)/.DIR
+$(OBJDIR)/src/%.o : src/%.cxx | $$(@D)/.DIR
+	$(PETSC_COMPILE.cxx) $(abspath $<) -o $@
+
+$(OBJDIR)/ftn/%.o : $(PETSC_ARCH)/ftn/%.cxx | $$(@D)/.DIR
 	$(PETSC_COMPILE.cxx) $(abspath $<) -o $@
 
 $(OBJDIR)/%.o : %.hip.cpp | $$(@D)/.DIR
