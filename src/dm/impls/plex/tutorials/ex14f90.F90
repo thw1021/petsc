@@ -57,7 +57,7 @@ implicit none
   ! for data described by the local section
   PetscCallA(PetscSFCreateSectionSF(pointSF, section, remoteOffsets, section, sectionSF, ierr))
   if (associated(remoteOffsets)) then
-    PetscCallA(PetscSFRestoreRemoteOffsets(remoteOffsets, ierr))
+    PetscCallA(PetscSFDestroyRemoteOffsets(remoteOffsets, ierr))
   end if
 
   !!! Demo of halo exchange
