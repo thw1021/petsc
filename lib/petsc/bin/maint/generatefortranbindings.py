@@ -195,7 +195,7 @@ def deleteCStub(petscarch,funname,fun):
   for k in fun.arguments:
     if k.array and k.stars:
       return
-  dir = os.path.join(petscarch,fun.dir,'ftn-auto')
+  dir = os.path.join(petscarch,fun.dir.replace('src/','ftn/'),'ftn-auto')
   if os.path.isdir(dir): shutil.rmtree(dir)
 
 def generateCStub(petscarch,senums,classes,funname,fun):
@@ -219,7 +219,7 @@ def generateCStub(petscarch,senums,classes,funname,fun):
     if k.stars and k.typename == 'MPI_Fint': return   # TODO add support for returning MPI_Fint
     if k.stars == 2 and k.typename == 'void': return
 
-  dir = os.path.join(petscarch,fun.dir,'ftn-auto')
+  dir = os.path.join(petscarch,fun.dir.replace('src/','ftn/'),'ftn-auto')
   if not os.path.isdir(dir): os.makedirs(dir)
   with open(os.path.join(dir,fun.file.replace('.c','f.c')),'a') as fd:
     fd.write('#include "petscsys.h"\n')
@@ -779,7 +779,7 @@ def main(petscdir,petscarch):
     with open(os.path.join(petscarch,'ftn', mansec,file),'a') as fd:
       generateFortranStub(senums,funcs[j].name,funcs[j], fd, opts)
 
-##########  $PETSC_ARCH/src/MANSEC/*/ftn-auto/*f.c
+##########  $PETSC_ARCH/ftn/MANSEC/*/ftn-auto/*f.c
 
   # convert function arguments from MPI_Comm to MPI_Fint
   for i in funcs:
