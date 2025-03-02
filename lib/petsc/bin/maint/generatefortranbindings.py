@@ -9,7 +9,7 @@
 #    defined in the makefile
 #
 #    The F90 generated interface files are stored in $PETSC_ARCH/ftn/MANSEC/petsc[BFORT]SUBMANSEC.*
-#    The Fortran stub files are stored in $PETSC_ARCH/directory/ftn-auto where directory is the directory of the original source
+#    The Fortran stub files are stored in $PETSC_ARCH/ftn/MANSEC/**/ where ** is the directory under MANSEC of the original source
 #
 #    Stubs/interfaces generated from include can only involve sys files
 #
@@ -187,17 +187,6 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
       fun.arguments[0].typename = 'PetscObject'
       fun.arguments[2].typename = 'PetscObject'
 
-def deleteCStub(petscarch,funname,fun):
-  '''Deletes a directory where C stubs will be built'''
-  if fun.opaque:
-    return
-  # temporary
-  for k in fun.arguments:
-    if k.array and k.stars:
-      return
-  dir = os.path.join(petscarch,fun.dir.replace('src/','ftn/'),'ftn-auto')
-  if os.path.isdir(dir): shutil.rmtree(dir)
-
 def generateCStub(petscarch,senums,classes,funname,fun):
   '''Generates the C stub that is callable from Fortran for a function'''
 
@@ -219,7 +208,7 @@ def generateCStub(petscarch,senums,classes,funname,fun):
     if k.stars and k.typename == 'MPI_Fint': return   # TODO add support for returning MPI_Fint
     if k.stars == 2 and k.typename == 'void': return
 
-  dir = os.path.join(petscarch,fun.dir.replace('src/','ftn/'),'ftn-auto')
+  dir = os.path.join(petscarch,fun.dir.replace('src/','ftn/'))
   if not os.path.isdir(dir): os.makedirs(dir)
   with open(os.path.join(dir,fun.file.replace('.c','f.c')),'a') as fd:
     fd.write('#include "petscsys.h"\n')
@@ -526,6 +515,10 @@ def main(petscdir,petscarch):
 
 ###########  $PETSC_ARCH/ftn/MANSEC/*.h
 
+  dir = os.path.join(petscarch,'ftn')
+  if os.path.isdir(dir): shutil.rmtree(dir)
+  os.makedirs(dir)
+
   for i in mansecs.keys():
     dir = os.path.join(petscarch,'ftn', i)
     if os.path.isdir(dir): shutil.rmtree(dir)
@@ -779,7 +772,7 @@ def main(petscdir,petscarch):
     with open(os.path.join(petscarch,'ftn', mansec,file),'a') as fd:
       generateFortranStub(senums,funcs[j].name,funcs[j], fd, opts)
 
-##########  $PETSC_ARCH/ftn/MANSEC/*/ftn-auto/*f.c
+##########  $PETSC_ARCH/ftn/MANSEC/**/*f.c
 
   # convert function arguments from MPI_Comm to MPI_Fint
   for i in funcs:
@@ -790,16 +783,6 @@ def main(petscdir,petscarch):
     for j in classes[i].functions:
       for k in classes[i].functions[j].arguments:
         k.typename = k.typename.replace('MPI_Comm','MPI_Fint')
-
-
-  # TODO: optimization, generate list of directories to delete and then delete the list
-  for i in classes.keys():
-    if i in ['PetscIntStack']: continue
-    for j in classes[i].functions: # loop over functions in class
-      deleteCStub(petscarch,j,classes[i].functions[j])
-
-  for j in funcs.keys():
-    deleteCStub(petscarch,funcs[j].name,funcs[j])
 
   for i in classes.keys():
     if i in ['PetscIntStack']: continue
