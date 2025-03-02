@@ -126,7 +126,7 @@
       PetscBool PetscIsInfOrNanScalar
       PetscBool PetscIsInfOrNanReal
 
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscall.h>
+#include <../ftn/sys/petscall.h>
 
       PetscViewer, parameter :: PETSC_VIEWER_STDOUT_SELF  = tPetscViewer(9)
       PetscViewer, parameter :: PETSC_VIEWER_DRAW_WORLD   = tPetscViewer(4)
@@ -271,7 +271,7 @@
 
 #include <../src/sys/f90-mod/petscsys.h90>
 #include <../src/sys/f90-mod/petscviewer.h90>
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscall.h90>
+#include <../ftn/sys/petscall.h90>
 
         interface PetscInitialize
           module procedure PetscInitializeWithHelp, PetscInitializeNoHelp, PetscInitializeNoArguments
@@ -519,22 +519,22 @@
           CHKERRQ(ierr)
           end subroutine PetscInitializeNoArguments
 
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscall.hf90>
+#include <../ftn/sys/petscall.hf90>
         end module
 
 !      ------------------------------------------------------------------------
 !      TODO: generate the modules below by looping over
-!            src/sys/f90-mod/ftn-auto-interfaces/XXX.h90
+!            ftn/sys/XXX.h90
 !            and skiping those in petscall.h
 
         module petscbag
         use petscsys
 #include <../include/petsc/finclude/petscbag.h>
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscbag.h>
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscbag.h90>
+#include <../ftn/sys/petscbag.h>
+#include <../ftn/sys/petscbag.h90>
         contains
 
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscbag.hf90>
+#include <../ftn/sys/petscbag.hf90>
         end module
 
 !     ------------------------------------------------------------------------
@@ -542,11 +542,11 @@
         module petscbm
         use petscsys
 #include <../include/petsc/finclude/petscbm.h>
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscbm.h>
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscbm.h90>
+#include <../ftn/sys/petscbm.h>
+#include <../ftn/sys/petscbm.h90>
         contains
 
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscbm.hf90>
+#include <../ftn/sys/petscbm.hf90>
        end module
 
 !     ------------------------------------------------------------------------
@@ -554,12 +554,12 @@
         module petscmatlab
         use petscsys
 #include <../include/petsc/finclude/petscmatlab.h>
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscmatlab.h>
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscmatlab.h90>
+#include <../ftn/sys/petscmatlab.h>
+#include <../ftn/sys/petscmatlab.h90>
 
         contains
 
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscmatlab.hf90>
+#include <../ftn/sys/petscmatlab.hf90>
         end module
 
 !     ------------------------------------------------------------------------
@@ -567,8 +567,8 @@
         module petscdraw
         use petscsys
 #include <../include/petsc/finclude/petscdraw.h>
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscdraw.h>
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscdraw.h90>
+#include <../ftn/sys/petscdraw.h>
+#include <../ftn/sys/petscdraw.h90>
 
       PetscEnum, parameter :: PETSC_DRAW_BASIC_COLORS = 33
       PetscEnum, parameter :: PETSC_DRAW_ROTATE = -1
@@ -608,7 +608,7 @@
 
       contains
 
-#include <../src/sys/f90-mod/ftn-auto-interfaces/petscdraw.hf90>
+#include <../ftn/sys/petscdraw.hf90>
       end module
 
 !     ------------------------------------------------------------------------

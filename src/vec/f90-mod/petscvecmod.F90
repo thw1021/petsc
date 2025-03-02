@@ -1,11 +1,11 @@
         module petscisdef
         use petscsysdef
 #include <petsc/finclude/petscis.h>
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscis.h>
+#include <../ftn/vec/petscis.h>
 #include <petsc/finclude/petscsf.h>
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscsf.h>
+#include <../ftn/vec/petscsf.h>
 #include <petsc/finclude/petscsection.h>
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscsection.h>
+#include <../ftn/vec/petscsection.h>
 
         end module
 
@@ -48,15 +48,15 @@
       end interface
 
 #include <../src/vec/f90-mod/petscis.h90>
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscsf.h90>
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscsection.h90>
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscis.h90>
+#include <../ftn/vec/petscsf.h90>
+#include <../ftn/vec/petscsection.h90>
+#include <../ftn/vec/petscis.h90>
 
         contains
 
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscsf.hf90>
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscsection.hf90>
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscis.hf90>
+#include <../ftn/vec/petscsf.hf90>
+#include <../ftn/vec/petscsection.hf90>
+#include <../ftn/vec/petscis.hf90>
 
       end module
 
@@ -65,7 +65,7 @@
         module petscvecdef
         use petscisdef
 #include <petsc/finclude/petscvec.h>
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscvec.h>
+#include <../ftn/vec/petscvec.h>
         end module
 
 !     ----------------------------------------------
@@ -75,11 +75,11 @@
         use petscvecdef
 
 #include <../src/vec/f90-mod/petscvec.h90>
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscvec.h90>
+#include <../ftn/vec/petscvec.h90>
 
         contains
 
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscvec.hf90>
+#include <../ftn/vec/petscvec.hf90>
 
       end module
 
@@ -89,7 +89,7 @@
         use petscsys
         use petscvecdef
 #include <petsc/finclude/petscao.h>
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscao.h>
+#include <../ftn/vec/petscao.h>
         end module
 
 !     ----------------------------------------------
@@ -97,9 +97,9 @@
         module petscao
         use petscsys
         use petscaodef
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscao.h90>
+#include <../ftn/vec/petscao.h90>
         contains
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscao.hf90>
+#include <../ftn/vec/petscao.hf90>
       end module
 
 !     ----------------------------------------------
@@ -108,7 +108,7 @@
         use petscsys
         use petscvecdef
 #include <petsc/finclude/petscpf.h>
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscpf.h>
+#include <../ftn/vec/petscpf.h>
         end module
 
 !     ----------------------------------------------
@@ -116,7 +116,7 @@
         module petscpf
         use petscsys
         use petscpfdef
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscpf.h90>
+#include <../ftn/vec/petscpf.h90>
         contains
-#include <../src/vec/f90-mod/ftn-auto-interfaces/petscpf.hf90>
+#include <../ftn/vec/petscpf.hf90>
       end module

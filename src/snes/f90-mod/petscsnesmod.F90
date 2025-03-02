@@ -1,9 +1,9 @@
         module petscsnesdef
         use petsckspdef
 
-#include <../src/snes/f90-mod/ftn-auto-interfaces/petscall.h>
+#include <../ftn/snes/petscall.h>
 #include "petsc/finclude/petscconvest.h"
-#include <../src/snes/f90-mod/ftn-auto-interfaces/petscconvest.h>
+#include <../ftn/snes/petscconvest.h>
         end module petscsnesdef
 
         module petscsnes
@@ -11,8 +11,8 @@
         use petscsnesdef
 
 #include <../src/snes/f90-mod/petscsnes.h90>
-#include <../src/snes/f90-mod/ftn-auto-interfaces/petscall.h90>
-#include <../src/snes/f90-mod/ftn-auto-interfaces/petscconvest.h90>
+#include <../ftn/snes/petscall.h90>
+#include <../ftn/snes/petscconvest.h90>
 
 !  Some PETSc Fortran functions that the user might pass as arguments
 !
@@ -25,7 +25,7 @@
 
         contains
 
-#include <../src/snes/f90-mod/ftn-auto-interfaces/petscall.hf90>
-#include <../src/snes/f90-mod/ftn-auto-interfaces/petscconvest.hf90>
+#include <../ftn/snes/petscall.hf90>
+#include <../ftn/snes/petscconvest.hf90>
 
       end module

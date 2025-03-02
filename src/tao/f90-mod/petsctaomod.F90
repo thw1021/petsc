@@ -1,18 +1,18 @@
         module petsctaodef
         use petsckspdef
 
-#include <../src/tao/f90-mod/ftn-auto-interfaces/petscall.h>
+#include <../ftn/tao/petscall.h>
         end module petsctaodef
 
         module petsctao
         use petscts
         use petsctaodef
 
-#include <../src/tao/f90-mod/ftn-auto-interfaces/petscall.h90>
+#include <../ftn/tao/petscall.h90>
 
         contains
 
-#include <../src/tao/f90-mod/ftn-auto-interfaces/petscall.hf90>
+#include <../ftn/tao/petscall.hf90>
 
         end module petsctao
 

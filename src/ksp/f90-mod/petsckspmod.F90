@@ -1,7 +1,7 @@
         module petsckspdef
         use petscdmdef
 
-#include <../src/ksp/f90-mod/ftn-auto-interfaces/petscall.h>
+#include <../ftn/ksp/petscall.h>
         end module petsckspdef
 
 !     ----------------------------------------------
@@ -10,11 +10,11 @@
         use petscdm
         use petsckspdef
 
-#include <../src/ksp/f90-mod/ftn-auto-interfaces/petscall.h90>
+#include <../ftn/ksp/petscall.h90>
 
         contains
 
-#include <../src/ksp/f90-mod/ftn-auto-interfaces/petscall.hf90>
+#include <../ftn/ksp/petscall.hf90>
 
         end module petscksp
 

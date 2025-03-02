@@ -1,7 +1,7 @@
         module petsctsdef
         use petscsnesdef
 #include "petsc/finclude/petscts.h"
-#include <../src/ts/f90-mod/ftn-auto-interfaces/petscts.h>
+#include <../ftn/ts/petscts.h>
         end module petsctsdef
 
         module petscts
@@ -9,7 +9,7 @@
         use petsctsdef
 
 #include <../src/ts/f90-mod/petscts.h90>
-#include <../src/ts/f90-mod/ftn-auto-interfaces/petscts.h90>
+#include <../ftn/ts/petscts.h90>
 
 !
 !  Some PETSc Fortran functions that the user might pass as arguments
@@ -21,7 +21,7 @@
 
       contains
 
-#include <../src/ts/f90-mod/ftn-auto-interfaces/petscts.hf90>
+#include <../ftn/ts/petscts.hf90>
 
         end module
 
@@ -31,8 +31,8 @@
         use petscvecdef
         use petscsys
 #include <petsc/finclude/petsccharacteristic.h>
-#include <../src/ts/f90-mod/ftn-auto-interfaces/petsccharacteristic.h>
-#include <../src/ts/f90-mod/ftn-auto-interfaces/petsccharacteristic.h90>
+#include <../ftn/ts/petsccharacteristic.h>
+#include <../ftn/ts/petsccharacteristic.h90>
         contains
-#include <../src/ts/f90-mod/ftn-auto-interfaces/petsccharacteristic.hf90>
+#include <../ftn/ts/petsccharacteristic.hf90>
         end module

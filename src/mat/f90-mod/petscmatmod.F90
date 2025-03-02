@@ -6,9 +6,9 @@
 #include "petsc/finclude/petscmathypre.h"
 #include "petsc/finclude/petscmathtool.h"
 #include "petsc/finclude/petscmatelemental.h"
-#include <../src/mat/f90-mod/ftn-auto-interfaces/petscmat.h>
-#include <../src/mat/f90-mod/ftn-auto-interfaces/petscmatcoarsen.h>
-#include <../src/mat/f90-mod/ftn-auto-interfaces/petscpartitioner.h>
+#include <../ftn/mat/petscmat.h>
+#include <../ftn/mat/petscmatcoarsen.h>
+#include <../ftn/mat/petscpartitioner.h>
 
         end module
 
@@ -19,9 +19,9 @@
         use petscvec
 
 #include <../src/mat/f90-mod/petscmat.h90>
-#include <../src/mat/f90-mod/ftn-auto-interfaces/petscmat.h90>
-#include <../src/mat/f90-mod/ftn-auto-interfaces/petscmatcoarsen.h90>
-#include <../src/mat/f90-mod/ftn-auto-interfaces/petscpartitioner.h90>
+#include <../ftn/mat/petscmat.h90>
+#include <../ftn/mat/petscmatcoarsen.h90>
+#include <../ftn/mat/petscpartitioner.h90>
 
 !     deprecated functions
 
@@ -51,9 +51,9 @@
 
         contains
 
-#include <../src/mat/f90-mod/ftn-auto-interfaces/petscmat.hf90>
-#include <../src/mat/f90-mod/ftn-auto-interfaces/petscmatcoarsen.hf90>
-#include <../src/mat/f90-mod/ftn-auto-interfaces/petscpartitioner.hf90>
+#include <../ftn/mat/petscmat.hf90>
+#include <../ftn/mat/petscmatcoarsen.hf90>
+#include <../ftn/mat/petscpartitioner.hf90>
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT:: MatDenseGetArrayF901d

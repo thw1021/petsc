@@ -8,7 +8,7 @@
 #    This tool looks for the values MANSEC and [BFORT]SUBMANSEC (where BFORTSUBMANSEC has priority over SUBMANSEC)
 #    defined in the makefile
 #
-#    The F90 generated interface files are stored in $PETSC_ARCH/src/MANSEC/f90-mod/ftn-auto-interfaces/petsc[BFORT]SUBMANSEC.h90
+#    The F90 generated interface files are stored in $PETSC_ARCH/ftn/MANSEC/petsc[BFORT]SUBMANSEC.*
 #    The Fortran stub files are stored in $PETSC_ARCH/directory/ftn-auto where directory is the directory of the original source
 #
 #    Stubs/interfaces generated from include can only involve sys files
@@ -102,7 +102,7 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
   if not mansec: mansec = fun.submansec
   file = fun.includefile + '90'
   if not file.startswith('petsc'): file = 'petsc' + file
-  with open(os.path.join(petscarch,'src', mansec,'f90-mod','ftn-auto-interfaces',file),"a") as fd:
+  with open(os.path.join(petscarch,'ftn', mansec,file),"a") as fd:
     # Currently not used because it takes too long to build the Fortran modules
     #opts = crossCreate(fun)
     if False: # len(opts) > 1:
@@ -111,7 +111,7 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
         if k.stars and k.typename == 'MPI_Fint': return   # TODO add support for returning MPI_Fint
         if k.stars == 2 and k.typename == 'void': return
 
-      # there are multiple interfaces for the function, they are generated in $PETSC_ARCH/src/MANSEC/f90-mod/ftn-auto-interfaces/*.hf90
+      # there are multiple interfaces for the function, they are generated in $PETSC_ARCH/ftn/MANSEC/*.hf90
       fd.write('  interface ' + funname + '\n')
       fd.write('  module procedure ' + funname)
       cnt = 0
@@ -524,16 +524,16 @@ def main(petscdir,petscarch):
     with open(os.path.join(dir, i),'a') as fd:
       fd.write('\n#endif\n')
 
-###########  $PETSC_ARCH/src/MANSEC/f90-mod/ftn-auto-interfaces/*.h
+###########  $PETSC_ARCH/ftn/MANSEC/*.h
 
   for i in mansecs.keys():
-    dir = os.path.join(petscarch,'src', i, 'f90-mod','ftn-auto-interfaces')
+    dir = os.path.join(petscarch,'ftn', i)
     if os.path.isdir(dir): shutil.rmtree(dir)
     os.makedirs(dir)
 
   for i in classes.keys():
     if i in ['PetscIntStack']: continue
-    with open(os.path.join(petscarch,'src', classes[i].mansec,'f90-mod','ftn-auto-interfaces',classes[i].includefile),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', classes[i].mansec,classes[i].includefile),"a") as fd:
       if not classes[i].petscobject:
         fd.write('  type t' + i + '\n')
         fd.write('    PetscFortranAddr:: v PETSC_FORTRAN_TYPE_INITIALIZE\n')
@@ -554,7 +554,7 @@ def main(petscdir,petscarch):
 
   for i in enums.keys():
     if i in ['PetscBool', 'PetscEnum']: continue
-    with open(os.path.join(petscarch,'src', enums[i].mansec,'f90-mod','ftn-auto-interfaces',enums[i].includefile),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', enums[i].mansec,enums[i].includefile),"a") as fd:
       fd.write('  type e' + i + '\n')
       fd.write('    PetscEnum:: v PETSC_FORTRAN_TYPE_INITIALIZE\n')
       fd.write('  end type e' + i + '\n\n')
@@ -589,7 +589,7 @@ def main(petscdir,petscarch):
       fd.write('\n')
 
   for i in senums.keys():
-    with open(os.path.join(petscarch,'src', senums[i].mansec,'f90-mod','ftn-auto-interfaces',senums[i].includefile),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', senums[i].mansec,senums[i].includefile),"a") as fd:
       for j in senums[i].values:
         fd.write('  CHARACTER(LEN=*), PARAMETER :: ' + j + ' = \'' + senums[i].values[j].replace('"','') + '\'\n')
       fd.write('\n')
@@ -602,14 +602,14 @@ def main(petscdir,petscarch):
 
   for i in structs.keys():
     if structs[i].opaque: continue
-    with open(os.path.join(petscarch,'src', structs[i].mansec,'f90-mod','ftn-auto-interfaces',structs[i].includefile),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', structs[i].mansec,structs[i].includefile),"a") as fd:
       fd.write('  type s' + i + '\n')
       for j in structs[i].records:
         fd.write('    ' + j.type.replace('[','(').replace(']',')') + '\n')
       fd.write('  end type s' + i + '\n')
       fd.write('\n')
 
-###########  $PETSC_ARCH/src/MANSEC/f90-mod/ftn-auto-interfaces/*.h90
+###########  $PETSC_ARCH/ftn/MANSEC/*.h90
 
   for i in classes.keys():
     # generate interface definitions for all objects' methods
@@ -620,7 +620,7 @@ def main(petscdir,petscarch):
     if i in ['PetscObject']: continue
     file = classes[i].includefile + '90'
     if not file.startswith('petsc'): file = 'petsc' + file
-    with open(os.path.join(petscarch,'src', classes[i].mansec,'f90-mod','ftn-auto-interfaces',file),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', classes[i].mansec,file),"a") as fd:
       fd.write('  interface operator(.ne.)\n')
       fd.write('    module procedure ' + i + 'notequals\n')
       fd.write('  end interface operator (.ne.)\n')
@@ -630,7 +630,7 @@ def main(petscdir,petscarch):
 
     # generate interface definitions for PetscObject methods for each PetscObject subclass (KSP etc)
     if not classes[i].petscobject: continue
-    with open(os.path.join(petscarch,'src', classes[i].mansec,'f90-mod','ftn-auto-interfaces',file),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', classes[i].mansec,file),"a") as fd:
       ii = i.replace('Petsc','')
       fd.write('  interface PetscObjectCast\n')
       fd.write('    module procedure PetscObjectCast' + ii + '\n')
@@ -665,11 +665,11 @@ def main(petscdir,petscarch):
   for j in funcs.keys():
     generateFortranInterface(petscarch,classes,enums,structs,senums,funcs[j].name,funcs[j])
 
-##########  $PETSC_ARCH/src/MANSEC/f90-mod/ftn-auto-interfaces/*.hf90
+##########  $PETSC_ARCH/ftn/MANSEC/*.hf90
 
   for i in classes.keys():
     if i in ['PetscObject', 'PetscIntStack']: continue
-    with open(os.path.join(petscarch,'src', classes[i].mansec,'f90-mod','ftn-auto-interfaces',classes[i].includefile + 'f90'),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', classes[i].mansec,classes[i].includefile + 'f90'),"a") as fd:
 
       fd.write('#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)\n')
       fd.write('!DEC$ ATTRIBUTES DLLEXPORT:: ' + i + 'notequals\n')
@@ -764,7 +764,7 @@ def main(petscdir,petscarch):
       mansec = classes[i].mansec
       file = classes[i].functions[j].includefile + 'f90'
       if not file.startswith('petsc'): file = 'petsc' + file
-      with open(os.path.join(petscarch,'src', mansec,'f90-mod','ftn-auto-interfaces',file),'a') as fd:
+      with open(os.path.join(petscarch,'ftn', mansec,file),'a') as fd:
         generateFortranStub(senums, j, classes[i].functions[j], fd, opts)
 
   # generate all the polymorphic Fortran subroutines needed for class-less routines with optional arguments
@@ -776,7 +776,7 @@ def main(petscdir,petscarch):
     mansec = funcs[j].mansec
     file = funcs[j].includefile + 'f90'
     if not file.startswith('petsc'): file = 'petsc' + file
-    with open(os.path.join(petscarch,'src', mansec,'f90-mod','ftn-auto-interfaces',file),'a') as fd:
+    with open(os.path.join(petscarch,'ftn', mansec,file),'a') as fd:
       generateFortranStub(senums,funcs[j].name,funcs[j], fd, opts)
 
 ##########  $PETSC_ARCH/src/MANSEC/*/ftn-auto/*f.c
@@ -809,14 +809,14 @@ def main(petscdir,petscarch):
   for j in funcs.keys():
     generateCStub(petscarch,senums,classes,funcs[j].name,funcs[j])
 
-##########  $PETSC_ARCH/src/MANSEC/f90-mod/ftn-auto-interfaces/petscall.*
+##########  $PETSC_ARCH/ftn/MANSEC/petscall.*
 
   # petscall.* contains all the include files associated with C petscMANSEC.h
   # these are used by src/MANSEC/f90-mod/petscMANSECmod.F to generate the module for C petscMANSEC.h
   # src/MANSEC/f90-mod/petscMANSECmod.F may also define additional modules that use petscMANSEC
   for i in mansecs.keys():
-    d = os.path.join(petscarch,'src', i, 'f90-mod','ftn-auto-interfaces')
-    dd = os.path.join('../','src', i, 'f90-mod','ftn-auto-interfaces')
+    d = os.path.join(petscarch,'ftn', i)
+    dd = os.path.join('../','ftn', i)
     args = [os.path.join(d,i) for i in os.listdir(d) if i.endswith('.h')]
     for j in args:
       if not os.path.getsize(j): os.path.remove(j)
