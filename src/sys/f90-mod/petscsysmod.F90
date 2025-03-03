@@ -261,7 +261,12 @@
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NINFINITY
 #endif
 
-        end module
+      type tPetscReal2d
+        sequence
+        PetscReal, dimension(:), pointer :: ptr
+      end type tPetscReal2D
+
+       end module
 
 !     ------------------------------------------------------------------------
 
@@ -521,6 +526,17 @@
 
 #include <../ftn/sys/petscall.hf90>
         end module
+
+        Subroutine F90ArraySetRealPointer(array, sz, j, T)
+          use petscsysdef
+          PetscInt                j,sz
+          PetscReal, target    :: array(1:sz)
+          PetscReal2d, pointer :: T(:)
+          T(j+1)%ptr=>array
+        End Subroutine
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT:: F90ArraySetRealPointer
+#endif
 
 !      ------------------------------------------------------------------------
 !      TODO: generate the modules below by looping over

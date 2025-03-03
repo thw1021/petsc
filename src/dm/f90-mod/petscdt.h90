@@ -1,5 +1,5 @@
 
-      Interface
+     Interface
         Subroutine PetscQuadratureRestoreData(q,dim,nc,np,p,w,ierr)
           import tPetscQuadrature
           PetscInt     dim, nc, np
@@ -7,27 +7,5 @@
           PetscReal, pointer :: w(:)
           PetscErrorCode ierr
           PetscQuadrature q
-        End Subroutine
-      End Interface
-
-      Interface
-        Subroutine PetscTabulationGetData(tab,f,b,bDer,ierr)
-          import tPetscTabulation
-          PetscInt     f
-          PetscReal, pointer :: b(:)
-          PetscReal, pointer :: bDer(:)
-          PetscErrorCode ierr
-          PetscTabulation tab
-        End Subroutine
-      End Interface
-
-      Interface
-        Subroutine PetscTabulationRestoreData(tab,f,b,bDer,ierr)
-          import tPetscTabulation
-          PetscInt     f
-          PetscReal, pointer :: b(:)
-          PetscReal, pointer :: bDer(:)
-          PetscErrorCode ierr
-          PetscTabulation tab
         End Subroutine
       End Interface

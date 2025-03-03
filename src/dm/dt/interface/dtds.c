@@ -3451,13 +3451,33 @@ PetscErrorCode PetscDSGetComponentDerivativeOffsetsCohesive(PetscDS ds, PetscInt
 . prob - The `PetscDS` object
 
   Output Parameter:
-. T - The basis function and derivatives tabulation at quadrature points for each field
+. T - The basis function and derivatives tabulation at quadrature points for each field, see `PetscTabulation` for its details
 
   Level: intermediate
 
+  Note:
+  The tabulation is only valid so long as the `PetscDS` has not be destroyed. There is no `PetscDSRestoreTabulation()` in C.
+
+  Fortran Note:
+  Use the declaration
+.vb
+  PetscTabulation, pointer :: tab(:)
+.vb
+  and access the values using, for example,
+.ve
+  tab(i)%ptr%K
+  tab(i)%ptr%T(j)%ptr
+.vb
+  where $ i = 1, 2, ..., Nf $ and $ j = 1, 2, ..., tab(i)%ptr%K+1 $.
+
+  Use `PetscDSRestoreTabulation()` to restore the array
+
+  Developer Note:
+  The Fortran language syntax does not directly support arrays of pointers, the '%ptr' notation allows mimicking their use in Fortran.
+
 .seealso: `PetscDS`, `PetscTabulation`, `PetscDSCreate()`
 @*/
-PetscErrorCode PetscDSGetTabulation(PetscDS prob, PetscTabulation *T[])
+PetscErrorCode PetscDSGetTabulation(PetscDS prob, PetscTabulation *T[]) PeNS
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
@@ -3476,9 +3496,12 @@ PetscErrorCode PetscDSGetTabulation(PetscDS prob, PetscTabulation *T[])
 . prob - The `PetscDS` object
 
   Output Parameter:
-. Tf - The basis function and derivative tabulation on each local face at quadrature points for each and field
+. Tf - The basis function and derivative tabulation on each local face at quadrature points for each field
 
   Level: intermediate
+
+  Note:
+  The tabulation is only valid so long as the `PetscDS` has not be destroyed. There is no `PetscDSRestoreFaceTabulation()` in C.
 
 .seealso: `PetscTabulation`, `PetscDS`, `PetscDSGetTabulation()`, `PetscDSCreate()`
 @*/

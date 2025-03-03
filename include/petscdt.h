@@ -562,7 +562,7 @@ static inline PetscErrorCode PetscDTEnumSplit(PetscInt n, PetscInt k, PetscInt j
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-struct _p_PetscTabulation {
+struct _n_PetscTabulation {
   PetscInt    K;    /* Indicates a k-jet, namely tabulated derivatives up to order k */
   PetscInt    Nr;   /* The number of tabulation replicas (often 1) */
   PetscInt    Np;   /* The number of tabulation points in a replica */
@@ -591,7 +591,7 @@ struct _p_PetscTabulation {
 
 .seealso: `PetscTabulationDestroy()`, `PetscFECreateTabulation()`, `PetscFEGetCellTabulation()`
 S*/
-typedef struct _p_PetscTabulation *PetscTabulation;
+typedef struct _n_PetscTabulation *PetscTabulation;
 
 typedef PetscErrorCode (*PetscProbFunc)(const PetscReal[], const PetscReal[], PetscReal[]);
 

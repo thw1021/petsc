@@ -129,6 +129,8 @@
 #define PetscReal PetscFortranDouble
 #endif
 
+#define PetscReal2d type(tPetscReal2d)
+
 #define PetscObjectIsNull(obj) (obj%v == 0 .or. obj%v == -2 .or. obj%v == -3)
 !
 !     Macros for error checking

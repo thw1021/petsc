@@ -525,7 +525,7 @@ def main(petscdir,petscarch):
     os.makedirs(dir)
 
   for i in classes.keys():
-    if i in ['PetscIntStack']: continue
+    if i in ['PetscIntStack', 'PetscTabulation']: continue
     with open(os.path.join(petscarch,'ftn', classes[i].mansec,classes[i].includefile),"a") as fd:
       if not classes[i].petscobject:
         fd.write('  type t' + i + '\n')
@@ -610,7 +610,7 @@ def main(petscdir,petscarch):
     for j in classes[i].functions: # loop over functions in class
       generateFortranInterface(petscarch,classes,enums,structs,senums,j,classes[i].functions[j])
 
-    if i in ['PetscObject']: continue
+    if i in ['PetscObject', 'PetscTabulation']: continue
     file = classes[i].includefile + '90'
     if not file.startswith('petsc'): file = 'petsc' + file
     with open(os.path.join(petscarch,'ftn', classes[i].mansec,file),"a") as fd:
@@ -661,7 +661,7 @@ def main(petscdir,petscarch):
 ##########  $PETSC_ARCH/ftn/MANSEC/*.hf90
 
   for i in classes.keys():
-    if i in ['PetscObject', 'PetscIntStack']: continue
+    if i in ['PetscObject', 'PetscIntStack', 'PetscTabulation']: continue
     with open(os.path.join(petscarch,'ftn', classes[i].mansec,classes[i].includefile + 'f90'),"a") as fd:
 
       fd.write('#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)\n')

@@ -5516,6 +5516,9 @@ PetscErrorCode DMClearDS(DM dm)
 
   Level: intermediate
 
+  Note:
+  The `ds` is owned by the `dm` and should not be destroyed directly.
+
 .seealso: [](ch_dmbase), `DM`, `DMGetCellDS()`, `DMGetRegionDS()`
 @*/
 PetscErrorCode DMGetDS(DM dm, PetscDS *ds)
@@ -5863,6 +5866,9 @@ PetscErrorCode DMCreateFEDefault(DM dm, PetscInt Nc, const char prefix[], PetscI
 . -dm_petscds_view - View all the `PetscDS` objects in this `DM`
 
   Level: intermediate
+
+  Developer Note:
+  The name of this function is wrong. Create functions always return the created object as one of the arguments.
 
 .seealso: [](ch_dmbase), `DM`, `DMSetField`, `DMAddField()`, `DMGetDS()`, `DMGetCellDS()`, `DMGetRegionDS()`, `DMSetRegionDS()`
 @*/

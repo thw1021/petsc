@@ -4,8 +4,49 @@
 #include <../ftn/dm/petscall.h>
 #include <../ftn/dm/petscspace.h>
 #include <../ftn/dm/petscdualspace.h>
-        end module petscdmdef
+
+       type ttPetscTabulation
+         sequence
+         PetscInt                K
+         PetscInt                Nr
+         PetscInt                Np
+         PetscInt                Nb
+         PetscInt                Nc
+         PetscInt                cdim
+         PetscReal2d, pointer :: T(:)
+       end type ttPetscTabulation
+
+       type tPetscTabulation
+         type(ttPetscTabulation), pointer :: ptr
+       end type tPetscTabulation
+
+       end module petscdmdef
 !     ----------------------------------------------
+
+!     Needed by Fortran stub petscdsgettabulation_()
+      subroutine F90Array1dCreateTabulation(array,start,len,ptr)
+      use petscdmdef
+      implicit none
+      PetscInt                    start,len
+      PetscTabulation, target  :: array(start:start+len-1)
+      PetscTabulation, pointer :: ptr(:)
+      ptr => array
+      print*,'create tab', array(1)%ptr%K,array(1)%ptr%cdim
+      print*,ptr(1)%ptr%K,ptr(1)%ptr%cdim
+      end subroutine
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT:: F90Array1dCreateTabulation
+#endif
+
+      subroutine F90Array1dDestroyTabulation(ptr)
+      use petscdmdef
+      implicit none
+      PetscTabulation, pointer :: ptr(:)
+      nullify(ptr)
+      end subroutine
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT:: F90Array1dDestroyTabulation
+#endif
 
         module petscdm
         use petscmat
@@ -16,11 +57,73 @@
 #include <../ftn/dm/petscspace.h90>
 #include <../ftn/dm/petscdualspace.h90>
 
-        contains
+        interface PetscDSGetTabulationSetSizes
+        subroutine PetscDSGetTabulationSetSizes(ds,i, tab,ierr)
+          import tPetscDS, ttPetscTabulation
+          PetscErrorCode              ierr
+          type(ttPetscTabulation)     tab
+          PetscDS                     ds
+          PetscInt                    i
+        end subroutine
+        end interface
+
+        interface PetscDSGetTabulationSetPointers
+        subroutine PetscDSGetTabulationSetPointers(ds,i, T,ierr)
+          import tPetscDS, ttPetscTabulation,tPetscReal2d
+          PetscErrorCode              ierr
+          type(tPetscReal2d), pointer :: T(:)
+          PetscDS                     ds
+          PetscInt                    i
+        end subroutine
+        end interface
+
+        interface PetscDSGetTabulation
+          module procedure PetscDSGetTabulation
+       end interface
+
+        interface PetscDSRestoreTabulation
+          module procedure PetscDSRestoreTabulation
+       end interface
+
+       contains
 
 #include <../ftn/dm/petscall.hf90>
 #include <../ftn/dm/petscspace.hf90>
 #include <../ftn/dm/petscdualspace.hf90>
+
+        Subroutine PetscDSGetTabulation(ds,tab,ierr)
+          PetscErrorCode              ierr
+          PetscTabulation, pointer :: tab(:)
+          PetscDS                     ds
+
+          PetscInt  Nf, i
+          call PetscDSGetNumFields(ds, Nf, ierr)
+          allocate(tab(Nf))
+          do i=1,Nf
+             allocate(tab(i)%ptr)
+             CHKMEMQ
+             call PetscDSGetTabulationSetSizes(ds, i, tab(i)%ptr, ierr)
+             CHKMEMQ
+             allocate(tab(i)%ptr%T(tab(i)%ptr%K+1))
+             call PetscDSGetTabulationSetPointers(ds, i, tab(i)%ptr%T, ierr)
+             CHKMEMQ
+          enddo
+        End Subroutine PetscDSGetTabulation
+
+        Subroutine PetscDSRestoreTabulation(ds,tab,ierr)
+          PetscErrorCode              ierr
+          PetscTabulation, pointer :: tab(:)
+          PetscDS                     ds
+
+          PetscInt  Nf, i
+          call PetscDSGetNumFields(ds, Nf, ierr)
+          do i=1,Nf
+             deallocate(tab(i)%ptr%T)
+             deallocate(tab(i)%ptr)
+          enddo
+          deallocate(tab)
+        End Subroutine PetscDSRestoreTabulation
+
         end module petscdm
 
 !     ----------------------------------------------
