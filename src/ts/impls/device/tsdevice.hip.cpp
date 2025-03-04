@@ -242,9 +242,9 @@ __global__ void TSSolve_DeviceFn(TS_Device *ts, PetscInt N, PetscScalar *sol, Pe
       // Set up the on device context
       TSDevice_SetUpDevice_Euler(ts, &ldctx[i], i, dt);
       // Call main viewer, or any user provided viewers if applicable
-      TSDevice_View(ldctx[i]);
+      //TSDevice_View(ldctx[i]);
 
-      printf("Thread %d iterating to convergence.\n", i);
+      //printf("Thread %d iterating to convergence.\n", i);
       while (!ldctx[i].converged) {
         PetscReal ptime = ldctx[i].dt;
         // Perform rhs function evaluation
@@ -287,13 +287,13 @@ __global__ void TSSolve_DeviceFn(TS_Device *ts, PetscInt N, PetscScalar *sol, Pe
         ldctx[i].time += ptime;
         ldctx[i].step += 1;
 
-        TSDevice_SolutionMonitor(ldctx[i], sol, i);
+        //TSDevice_SolutionMonitor(ldctx[i], sol, i);
         if (ldctx[i].step >= ldctx[i].maxSteps) ldctx[i].converged = PETSC_TRUE;//Call device function to check convergence for solver type.
-        if (ldctx[i].converged) printf("Thread %d converged;", i);
+        //if (ldctx[i].converged) printf("Thread %d converged;", i);
       }
       // increment ptime w/ time step
       // time_step = nex time step
-      printf("TS_Device thread %d done.\n", i);
+      //printf("TS_Device thread %d done.\n", i);
     }
     return;
 }

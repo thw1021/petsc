@@ -87,7 +87,6 @@ struct func{
     __device__ void operator()(TSDevice_Euler ts, PetscReal t, PetscScalar *u, PetscScalar *f, void *ctx){
     int i = hipThreadIdx_x + hipBlockIdx_x*hipBlockDim_x;
     int elements = ts.elements;
-    printf("Thread %d rhs function for %d elements.\n", i, elements);
     f[i*elements + 0] = u[i*elements + 2];// update on x using vx
     f[i*elements + 1] = u[i*elements + 3];// update on y using vy
     f[i*elements + 2] = 0.;// No drag
@@ -143,6 +142,6 @@ int main(int argc, char *argv[])
 
   test:
     suffix: ball_launch
-    args: -ts_type device -ts_batch_ts_type euler -ts_max_steps 5 -vec_type hip -n_pdes 2
+    args: -ts_type device -ts_batch_ts_type euler -ts_max_steps 5 -vec_type hip -n_pdes 2 -ts_max_steps 1000
     filter: grep -v marker | grep -v atomic | grep -v usage
 TEST*/
