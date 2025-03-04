@@ -53,7 +53,7 @@ int main(int argc, char **argv)
   PetscClassId     cid;
   PetscEnum        e;
   PetscShort       s;
-  PetscChar        c;
+  c                c;
   PetscFloat       f;
   PetscLogDouble   ld;
   PetscObjectId    oid;

@@ -5,14 +5,15 @@
       use petsc
       implicit none
       DM :: dm
-      PetscDS :: prob
-      PetscInt :: dim = 3
+      PetscDS :: ds
+      PetscInt :: dim = 3, zero = 0
       PetscBool :: simplex = PETSC_TRUE
       PetscBool :: interpolate = PETSC_TRUE
       PetscReal :: refinementLimit = 0.0
       PetscErrorCode :: ierr
       PetscTabulation, pointer :: tab(:)
-      PetscFE fe
+      PetscFE fe,rfe
+      PetscObject disc
 
       PetscCallA(PetscInitialize(PETSC_NULL_CHARACTER, ierr))
       PetscCallA(DMPlexCreateDoublet(PETSC_COMM_WORLD, dim, simplex,interpolate, refinementLimit, dm, ierr))
@@ -23,14 +24,16 @@
 
       PetscCallA(DMSetUp(dm,ierr))
       PetscCallA(DMCreateDS(dm,ierr))
-      PetscCallA(DMGetDS(dm,prob,ierr))
-      PetscCallA(PetscDSGetTabulation(prob,tab,ierr))
+      PetscCallA(DMGetDS(dm,ds,ierr))
+      PetscCallA(PetscDSGetTabulation(ds,tab,ierr))
       print*,'Tab values 1 function',tab(1)%ptr%T(1)%ptr
       print*,'Tab values 1 derivative',tab(1)%ptr%T(2)%ptr
       print*,'Tab values 2 function',tab(2)%ptr%T(1)%ptr
       print*,'Tab values 2 derivative',tab(2)%ptr%T(2)%ptr
-      PetscCallA(PetscDSRestoreTabulation(prob,tab,ierr))
+      PetscCallA(PetscDSRestoreTabulation(ds,tab,ierr))
 
+      PetscCallA(PetscDSGetDiscretization(ds,zero,PetscObjectCast(rfe),ierr))
+      print*,rfe%v,fe%v
       PetscCallA(PetscFEDestroy(fe, ierr));
       PetscCallA(DMDestroy(dm, ierr))
       PetscCallA(PetscFinalize(ierr))

@@ -469,7 +469,7 @@ def main(petscdir,petscarch):
 
   for i in typedefs.keys():
     if not typedefs[i].name: continue
-    if i in ['PetscBool', 'PetscChar', 'PetscSizeT']: continue
+    if i in ['PetscBool', 'PetscSizeT']: continue
     value = typedefs[i].value
     if value in CToFortranTypes:
       if not CToFortranTypes[value]: continue
@@ -686,7 +686,7 @@ def main(petscdir,petscarch):
         fd.write('    ' + i + ' a\n')
         fd.write('    PetscObject PetscObjectCast' + ii + '\n')
         fd.write('    PetscObjectCast' + ii + '%v = a%v\n')
-        fd.write('    end function \n')
+        fd.write('  end function \n')
         fd.write('  subroutine PetscBarrier' + ii + '(a,z)\n')
         fd.write('    ' + i + ' a\n')
         fd.write('    PetscErrorCode z\n')

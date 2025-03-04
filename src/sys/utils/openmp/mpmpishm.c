@@ -43,8 +43,8 @@ static inline PetscErrorCode PetscOmpCtrlCreateBarrier(PetscOmpCtrl ctrl)
   pthread_barrierattr_t attr;
 
 #if defined(USE_MMAP_ALLOCATE_SHARED_MEMORY) && defined(PETSC_HAVE_MMAP)
-  int       fd;
-  PetscChar pathname[PETSC_MAX_PATH_LEN];
+  int  fd;
+  char pathname[PETSC_MAX_PATH_LEN];
 #else
   PetscMPIInt disp_unit;
 #endif

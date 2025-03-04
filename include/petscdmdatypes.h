@@ -46,13 +46,12 @@ typedef enum {
 } DMDAElementType;
 
 /*S
-  DMDALocalInfo - C struct that contains information about a structured grid and a processes logical
-                  location in it.
+  DMDALocalInfo - C struct that contains information about a structured grid and a processes logical location in it.
 
   Level: beginner
 
   Fortran Note:
-  This is a derived type
+  This is a derived type whose entries can be directly accessed
 
 .seealso: [](ch_dmbase), `DMDA`, `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `DMDestroy()`, `DM`, `DMDAGetLocalInfo()`, `DMDAGetInfo()`
 S*/

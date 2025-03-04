@@ -226,7 +226,6 @@ typedef enum {
 } PetscEnum;
 
 typedef short PetscShort;
-typedef char  PetscChar;
 typedef float PetscFloat;
 
 /*MC

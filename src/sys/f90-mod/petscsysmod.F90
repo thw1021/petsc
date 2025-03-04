@@ -213,7 +213,7 @@
       PetscErrorCode, parameter :: PETSC_ERR_MPI              = 98
       PetscErrorCode, parameter :: PETSC_ERR_RETURN           = 99
 
-        PetscChar(80) PETSC_NULL_CHARACTER = ''
+        character(len = 80) :: PETSC_NULL_CHARACTER = ''
         PetscInt PETSC_NULL_INTEGER, PETSC_NULL_INTEGER_ARRAY(1)
         PetscInt, pointer :: PETSC_NULL_INTEGER_POINTER(:)
         PetscScalar, pointer :: PETSC_NULL_SCALAR_POINTER(:)

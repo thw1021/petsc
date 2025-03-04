@@ -1,9 +1,6 @@
 !
-!  Part of the base include file for Fortran use of PETSc.
+!  Manually maintained part of the base include file for Fortran use of PETSc.
 !  Note: This file should contain only define statements
-
-! No spaces for #defines as some compilers (PGI) also adds
-! those additional spaces during preprocessing - bad for fixed format
 !
 #if !defined (PETSCSYSBASEDEF_H)
 #define PETSCSYSBASEDEF_H
@@ -16,7 +13,7 @@
 !
 ! The real*8,complex*16 notatiton is used so that the
 ! PETSc double/complex variables are not affected by
-! compiler options like -r4,-r8, sometimes invoked
+! compiler options like -r4,-r8, that are sometimes invoked
 ! by the user. NAG compiler does not like integer*4,real*8
 
 #define integer8 integer(kind=selected_int_kind(10))
@@ -74,7 +71,6 @@
 #elif defined(PETSC_USE_REAL___FLOAT128)
 #define PetscComplex complex(kind=selected_real_kind(20))
 #endif
-#define PetscChar(a) character(len = a) ::
 
 #if defined(PETSC_USE_COMPLEX)
 #define PETSC_SCALAR PETSC_COMPLEX
