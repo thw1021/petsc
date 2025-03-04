@@ -746,7 +746,7 @@ PetscErrorCode PetscObjectCompose(PetscObject obj, const char name[], PetscObjec
 }
 
 /*@
-  PetscObjectQuery  - Gets a PETSc object associated with a given object that was composed with `PetscObjectCompose()`
+  PetscObjectQuery - Gets a PETSc object associated with a given object that was composed with `PetscObjectCompose()`
 
   Not Collective
 
@@ -1182,6 +1182,46 @@ PetscErrorCode PetscObjectSetUp(PetscObject obj)
   is not allowed.
 
 .seealso: `PetscObject`, `PETSC_NULL_OBJECT`, `PETSC_NULL_VEC`, `PETSC_NULL_VEC_ARRAY`
+M*/
+
+/*MC
+  PetscObjectCast - Casts a `PetscObject` to the base `PetscObject` type in function calls
+
+  Fortran only
+
+  Synopsis:
+  use petscsys
+
+  Level: beginner
+
+  Example Usage:
+  PetscFE fe
+.vb
+  PetscCallA(DMAddField(dm, 0, PetscObjectCast(fe),ierr)
+.ve
+
+.seealso: `PetscObject`, `PetscObjectSpecificCast()`
+M*/
+
+/*MC
+  PetscObjectSpecificCast - Casts a `PetscObject` to any specific `PetscObject`
+
+  Fortran only
+
+  Synopsis:
+  use petscsys
+
+  Level: beginner
+
+  Example Usage:
+  PetscObject obj
+  PetscFE     fe
+.vb
+  PetscCallA(PetscDSGetDiscretization(ds, 0, obj, ierr)
+  PetscObjectSpecificCast(fe,obj)
+.ve
+
+.seealso: `PetscObject`, `PetscObjectCast()`
 M*/
 
 /*MC

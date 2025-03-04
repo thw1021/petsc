@@ -13,7 +13,7 @@
       PetscErrorCode :: ierr
       PetscTabulation, pointer :: tab(:)
       PetscFE fe,rfe
-      PetscObject disc
+      PetscObject obj
 
       PetscCallA(PetscInitialize(PETSC_NULL_CHARACTER, ierr))
       PetscCallA(DMPlexCreateDoublet(PETSC_COMM_WORLD, dim, simplex,interpolate, refinementLimit, dm, ierr))
@@ -32,8 +32,8 @@
       print*,'Tab values 2 derivative',tab(2)%ptr%T(2)%ptr
       PetscCallA(PetscDSRestoreTabulation(ds,tab,ierr))
 
-      PetscCallA(PetscDSGetDiscretization(ds,zero,PetscObjectCast(rfe),ierr))
-      print*,rfe%v,fe%v
+      PetscCallA(PetscDSGetDiscretization(ds,zero,obj,ierr))
+      PetscObjectSpecificCast(rfe,obj)
       PetscCallA(PetscFEDestroy(fe, ierr));
       PetscCallA(DMDestroy(dm, ierr))
       PetscCallA(PetscFinalize(ierr))

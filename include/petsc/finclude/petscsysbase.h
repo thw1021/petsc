@@ -164,4 +164,6 @@
 
 #define PetscEnumCase(e) case(e%v)
 
+#define PetscObjectSpecificCast(sp,ob) sp%v = ob%v
+
 #endif
