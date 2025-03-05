@@ -106,7 +106,8 @@ static PetscErrorCode MatSetOption_Elemental(Mat A, MatOption op, PetscBool flg)
     a->roworiented = flg;
     break;
   default:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "unknown option %s", MatOptions[op]);
+    PetscCall(PetscInfo(A, "Option %s ignored\n", MatOptions[op]));
+    break;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
