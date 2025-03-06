@@ -9,19 +9,18 @@
 . slen - length of string buffer
 
   Output Parameter:
-. str - string area to contain architecture name, should be at least
-           10 characters long. Name is truncated if string is not long enough.
+. str - string area to contain architecture name, should be at least 10 characters long. Name is truncated if string is not long enough.
 
   Level: developer
 
   Note:
   This name is arbitrary and need not correspond to the physical hardware or the software running on the system.
 
-  Fortran Notes:
-  This routine has the format
+  Fortran Note:
+  Example usage
 .vb
-       character*(10) str
-       call PetscGetArchType(str,ierr)
+  character*(10) str
+  call PetscGetArchType(str,ierr)
 .ve
 
 .seealso: `PetscGetUserName()`, `PetscGetHostName()`
