@@ -17,6 +17,7 @@ implicit none
   PetscScalar,dimension(:),pointer :: array
   PetscReal                        :: val
   PetscErrorCode                   :: ierr
+  PetscInt                         :: zero = 0, one = 1
 
   PetscCallA(PetscInitialize(PETSC_NULL_CHARACTER, ierr))
   PetscCallA(DMCreate(PETSC_COMM_WORLD, dm, ierr))
@@ -28,7 +29,7 @@ implicit none
   !!! Describe the solution variables that are discretized on the mesh
   ! Create scalar field u and a vector field v
   numFields  = 2
-  numComp = [1,dim]
+  numComp = [one,dim]
   numDof     = 0
   !Let u be defined on cells
   numDof(0 * (dim + 1) + dim + 1) = 1;
@@ -41,8 +42,8 @@ implicit none
   PetscCallA(DMSetNumFields(dm, numFields, ierr))
   PetscCallA(DMPlexCreateSection(dm,PETSC_NULL_DMLABEL_ARRAY,numComp,numDof,numBC,PETSC_NULL_INTEGER_ARRAY,PETSC_NULL_IS_ARRAY,PETSC_NULL_IS_ARRAY,PETSC_NULL_IS,section, ierr))
   ! Name the Field variables
-  PetscCallA(PetscSectionSetFieldName(section, 0, "u", ierr))
-  PetscCallA(PetscSectionSetFieldName(section, 1, "v", ierr))
+  PetscCallA(PetscSectionSetFieldName(section, zero, "u", ierr))
+  PetscCallA(PetscSectionSetFieldName(section, one, "v", ierr))
   ! Tell the DM to use this data layout
   PetscCallA(DMSetLocalSection(dm, section, ierr))
 

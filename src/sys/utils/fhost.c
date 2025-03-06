@@ -37,7 +37,6 @@
   Level: developer
 
   Fortran Note:
-  Example Fortran usage
 .vb
   character*(128) name
   call PetscGetHostName(name,ierr)

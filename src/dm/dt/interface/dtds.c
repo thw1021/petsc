@@ -3462,12 +3462,12 @@ PetscErrorCode PetscDSGetComponentDerivativeOffsetsCohesive(PetscDS ds, PetscInt
   Use the declaration
 .vb
   PetscTabulation, pointer :: tab(:)
-.vb
-  and access the values using, for example,
 .ve
+  and access the values using, for example,
+.vb
   tab(i)%ptr%K
   tab(i)%ptr%T(j)%ptr
-.vb
+.ve
   where $ i = 1, 2, ..., Nf $ and $ j = 1, 2, ..., tab(i)%ptr%K+1 $.
 
   Use `PetscDSRestoreTabulation()` to restore the array

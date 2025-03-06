@@ -29,7 +29,6 @@ PetscErrorCode PetscGetUserName(char name[], size_t nlen)
   Level: developer
 
   Fortran Note:
-  Example usage
 .vb
   character*(32) str
   call PetscGetUserName(str,ierr)

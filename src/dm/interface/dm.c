@@ -5065,7 +5065,7 @@ PetscErrorCode DMSetField(DM dm, PetscInt f, DMLabel label, PetscObject disc)
   within each cell. Thus a specific function in the space is defined by the combination of a `Vec` containing the coefficients, a `DM` defining the
   geometry entities, a `DMLabel` indicating a subset of those geometric entities, and a discretization object, such as a `PetscFE`.
 
-  Fortran:
+  Fortran Note:
   Use the argument `PetscObjectCast(disc)` as the second argument
 
 .seealso: [](ch_dmbase), `DM`, `DMSetLabel()`, `DMSetField()`, `DMGetField()`, `PetscFE`

@@ -14,13 +14,14 @@
       PetscTabulation, pointer :: tab(:)
       PetscFE fe,rfe
       PetscObject obj
+      PetscInt :: zero = 0, one = 1, mone = -1
 
       PetscCallA(PetscInitialize(PETSC_NULL_CHARACTER, ierr))
       PetscCallA(DMPlexCreateDoublet(PETSC_COMM_WORLD, dim, simplex,interpolate, refinementLimit, dm, ierr))
-      PetscCallA(PetscFECreateDefault(PETSC_COMM_WORLD, dim, 1, simplex, 'name', -1, fe, ierr));
+      PetscCallA(PetscFECreateDefault(PETSC_COMM_WORLD, dim, one, simplex, 'name', mone, fe, ierr));
       PetscCallA(PetscObjectSetName(fe, 'name', ierr));
-      PetscCallA(DMSetField(dm, 0, PETSC_NULL_DMLABEL, PetscObjectCast(fe), ierr));
-      PetscCallA(DMSetField(dm, 1, PETSC_NULL_DMLABEL, PetscObjectCast(fe), ierr));
+      PetscCallA(DMSetField(dm, zero, PETSC_NULL_DMLABEL, PetscObjectCast(fe), ierr));
+      PetscCallA(DMSetField(dm, one, PETSC_NULL_DMLABEL, PetscObjectCast(fe), ierr));
 
       PetscCallA(DMSetUp(dm,ierr))
       PetscCallA(DMCreateDS(dm,ierr))
