@@ -14,7 +14,7 @@
       PetscTabulation, pointer :: tab(:)
       PetscFE fe,rfe
       PetscObject obj
-      PetscInt :: zero = 0, one = 1, mone = -1
+      PetscInt :: one = 1, mone = -1
 
       PetscCallA(PetscInitialize(PETSC_NULL_CHARACTER, ierr))
       PetscCallA(DMPlexCreateDoublet(PETSC_COMM_WORLD, dim, simplex,interpolate, refinementLimit, dm, ierr))
