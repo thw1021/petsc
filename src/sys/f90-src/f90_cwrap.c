@@ -30,6 +30,7 @@ PetscErrorCode PetscMPIFortranDatatypeToC(MPI_Fint unit, MPI_Datatype *dtype)
   if (ftype == MPI_INTEGER || ftype == MPI_INT) *dtype = MPI_INT;
   else if (ftype == MPI_INTEGER8 || ftype == MPIU_INT64) *dtype = MPIU_INT64;
   else if (ftype == MPI_DOUBLE_PRECISION || ftype == MPI_DOUBLE) *dtype = MPI_DOUBLE;
+  else if (ftype == MPI_FLOAT) *dtype = MPI_FLOAT;
 #if defined(PETSC_HAVE_COMPLEX)
   else if (ftype == MPI_COMPLEX16 || ftype == MPI_C_DOUBLE_COMPLEX) *dtype = MPI_C_DOUBLE_COMPLEX;
 #endif
