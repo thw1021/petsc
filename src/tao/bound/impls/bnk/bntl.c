@@ -114,6 +114,7 @@ PetscErrorCode TaoSolve_BNTL(Tao tao)
   PetscReal oldTrust, prered, actred, steplen, resnorm;
   PetscBool cgTerminate, needH = PETSC_TRUE, stepAccepted, shift = PETSC_FALSE;
   PetscInt  stepType, nDiff;
+  Vec       gradient_riesz = tao->inner_product_ksp ? tao->gradient_riesz : tao->gradient;
 
   PetscFunctionBegin;
   /* Initialize the preconditioner, KSP solver and trust radius/line search */
@@ -183,7 +184,7 @@ PetscErrorCode TaoSolve_BNTL(Tao tao)
       PetscCall(TaoBNKEstimateActiveSet(tao, bnk->as_type));
       PetscCall(VecCopy(bnk->unprojected_gradient, tao->gradient));
       if (bnk->active_idx) PetscCall(VecISSet(tao->gradient, bnk->active_idx, 0.0));
-      PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &bnk->gnorm));
+      PetscCall(TaoComputeGradientNorm(tao, tao->gradient, gradient_riesz, &bnk->gnorm));
     } else {
       /* Trust-region rejected the step. Revert the solution. */
       bnk->f = bnk->fold;
@@ -208,7 +209,7 @@ PetscErrorCode TaoSolve_BNTL(Tao tao)
         PetscCall(TaoBNKEstimateActiveSet(tao, bnk->as_type));
         PetscCall(VecCopy(bnk->unprojected_gradient, tao->gradient));
         if (bnk->active_idx) PetscCall(VecISSet(tao->gradient, bnk->active_idx, 0.0));
-        PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &bnk->gnorm));
+        PetscCall(TaoComputeGradientNorm(tao, tao->gradient, gradient_riesz, &bnk->gnorm));
         /* Line search succeeded so we should update the trust radius based on the LS step length */
         tao->trust = oldTrust;
         PetscCall(TaoBNKUpdateTrustRadius(tao, prered, actred, BNK_UPDATE_STEP, stepType, &stepAccepted));

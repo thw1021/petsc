@@ -43,6 +43,7 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
   KSPConvergedReason           ksp_reason;
   PC                           pc;
   TaoLineSearchConvergedReason ls_reason;
+  Vec                          gradient_riesz = tao->inner_product_ksp ? tao->gradient_riesz : tao->gradient;
 
   PetscReal fmin, ftrial, f_full, prered, actred, kappa, sigma;
   PetscReal tau, tau_1, tau_2, tau_max, tau_min, max_radius;
@@ -94,7 +95,7 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
 
   /* Check convergence criteria */
   PetscCall(TaoComputeObjectiveAndGradient(tao, tao->solution, &f, tao->gradient));
-  PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &gnorm));
+  PetscCall(TaoComputeGradientNorm(tao, tao->gradient, gradient_riesz, &gnorm));
   PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
 
   tao->reason = TAO_CONTINUE_ITERATING;
@@ -141,7 +142,7 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
 
         for (i = 0; i < i_max; ++i) {
           PetscCall(VecCopy(tao->solution, nlsP->W));
-          PetscCall(VecAXPY(nlsP->W, -tao->trust / gnorm, tao->gradient));
+          PetscCall(VecAXPY(nlsP->W, -tao->trust / gnorm, gradient_riesz));
           PetscCall(TaoComputeObjective(tao, nlsP->W, &ftrial));
           if (PetscIsInfOrNanReal(ftrial)) {
             tau = nlsP->gamma1_i;
@@ -151,8 +152,8 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
               sigma = -tao->trust / gnorm;
             }
 
-            PetscCall(MatMult(tao->hessian, tao->gradient, nlsP->D));
-            PetscCall(VecDot(tao->gradient, nlsP->D, &prered));
+            PetscCall(MatMult(tao->hessian, gradient_riesz, nlsP->D));
+            PetscCall(VecDot(gradient_riesz, nlsP->D, &prered));
 
             prered = tao->trust * (gnorm - 0.5 * tao->trust * prered / (gnorm * gnorm));
             actred = f - ftrial;
@@ -215,10 +216,10 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
 
         if (fmin < f) {
           f = fmin;
-          PetscCall(VecAXPY(tao->solution, sigma, tao->gradient));
+          PetscCall(VecAXPY(tao->solution, sigma, gradient_riesz));
           PetscCall(TaoComputeGradient(tao, tao->solution, tao->gradient));
 
-          PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &gnorm));
+          PetscCall(TaoComputeGradientNorm(tao, tao->gradient, gradient_riesz, &gnorm));
           PetscCheck(!PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute gradient generated Inf or NaN");
           needH = 1;
 
@@ -271,10 +272,13 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
       ++bfgsUpdates;
     }
 
+    if (gradient_riesz != tao->gradient) PetscCall(KSPSetInitialGuessNonzero(tao->ksp, PETSC_TRUE));
+
     /* Solve the Newton system of equations */
     PetscCall(KSPSetOperators(tao->ksp, tao->hessian, tao->hessian_pre));
     if (is_nash || is_stcg || is_gltr) {
       PetscCall(KSPCGSetRadius(tao->ksp, nlsP->max_radius));
+      if (gradient_riesz != tao->gradient) PetscCall(VecCopy(gradient_riesz, nlsP->D));
       PetscCall(KSPSolve(tao->ksp, tao->gradient, nlsP->D));
       PetscCall(KSPGetIterationNumber(tao->ksp, &kspits));
       tao->ksp_its += kspits;
@@ -299,6 +303,7 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
           tao->trust = PetscMin(tao->trust, nlsP->max_radius);
 
           PetscCall(KSPCGSetRadius(tao->ksp, nlsP->max_radius));
+          if (gradient_riesz != tao->gradient) PetscCall(VecCopy(gradient_riesz, nlsP->D));
           PetscCall(KSPSolve(tao->ksp, tao->gradient, nlsP->D));
           PetscCall(KSPGetIterationNumber(tao->ksp, &kspits));
           tao->ksp_its += kspits;
@@ -309,6 +314,7 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
         }
       }
     } else {
+      if (gradient_riesz != tao->gradient) PetscCall(VecCopy(gradient_riesz, nlsP->D));
       PetscCall(KSPSolve(tao->ksp, tao->gradient, nlsP->D));
       PetscCall(KSPGetIterationNumber(tao->ksp, &kspits));
       tao->ksp_its += kspits;
@@ -360,7 +366,7 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
       if (!nlsP->bfgs_pre) {
         /* We don't have the bfgs matrix around and updated
            Must use gradient direction in this case */
-        PetscCall(VecCopy(tao->gradient, nlsP->D));
+        PetscCall(VecCopy(gradient_riesz, nlsP->D));
         PetscCall(VecScale(nlsP->D, -1.0));
         ++nlsP->grad;
         stepType = NLS_GRADIENT;
@@ -463,14 +469,14 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
         if (!nlsP->bfgs_pre) {
           /* We don't have the bfgs matrix around and being updated
              Must use gradient direction in this case */
-          PetscCall(VecCopy(tao->gradient, nlsP->D));
+          PetscCall(VecCopy(gradient_riesz, nlsP->D));
           ++nlsP->grad;
           stepType = NLS_GRADIENT;
         } else {
           /* Attempt to use the BFGS direction */
           PetscCall(MatSolve(nlsP->M, tao->gradient, nlsP->D));
           /* Check for success (descent direction) */
-          PetscCall(VecDot(tao->solution, nlsP->D, &gdx));
+          PetscCall(VecDot(tao->gradient, nlsP->D, &gdx));
           if ((gdx <= 0) || PetscIsInfOrNanReal(gdx)) {
             /* BFGS direction is not descent or direction produced not a number
                We can assert bfgsUpdates > 1 in this case
@@ -684,7 +690,7 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
     }
 
     /*  Check for termination */
-    PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &gnorm));
+    PetscCall(TaoComputeGradientNorm(tao, tao->gradient, gradient_riesz, &gnorm));
     PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Not-a-Number");
     needH = 1;
     PetscCall(TaoLogConvergenceHistory(tao, f, gnorm, 0.0, tao->ksp_its));

@@ -82,8 +82,7 @@ struct _p_Tao {
   Vec        DE;
   Mat        hessian;
   Mat        hessian_pre;
-  Mat        gradient_norm;
-  Vec        gradient_norm_tmp;
+  Vec        gradient_riesz;
   Vec        ls_res;
   Mat        ls_jac;
   Mat        ls_jac_pre;
@@ -177,6 +176,9 @@ struct _p_Tao {
   PetscInt      hist_len;
   PetscBool     hist_reset;
   PetscBool     hist_malloc;
+
+  KSP                 inner_product_ksp; // user-specified inner-product for norms and Riesz maps
+  TaoInnerProductMode inner_product_mode;
 };
 
 PETSC_EXTERN PetscLogEvent TAO_Solve;

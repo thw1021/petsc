@@ -58,6 +58,8 @@ static PetscErrorCode TaoSolve_NTR(Tao tao)
   PetscInt j_max = 1;
   PetscInt i, j, N, n, its;
 
+  Vec gradient_riesz = tao->inner_product_ksp ? tao->gradient_riesz : tao->gradient;
+
   PetscFunctionBegin;
   if (tao->XL || tao->XU || tao->ops->computebounds) PetscCall(PetscInfo(tao, "WARNING: Variable bounds have been set but will be ignored by ntr algorithm\n"));
 
@@ -89,7 +91,7 @@ static PetscErrorCode TaoSolve_NTR(Tao tao)
 
   /* Check convergence criteria */
   PetscCall(TaoComputeObjectiveAndGradient(tao, tao->solution, &f, tao->gradient));
-  PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &gnorm));
+  PetscCall(TaoComputeGradientNorm(tao, tao->gradient, gradient_riesz, &gnorm));
   PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
   needH = 1;
 
@@ -120,7 +122,7 @@ static PetscErrorCode TaoSolve_NTR(Tao tao)
 
       for (i = 0; i < i_max; ++i) {
         PetscCall(VecCopy(tao->solution, tr->W));
-        PetscCall(VecAXPY(tr->W, -tao->trust / gnorm, tao->gradient));
+        PetscCall(VecAXPY(tr->W, -tao->trust / gnorm, gradient_riesz));
         PetscCall(TaoComputeObjective(tao, tr->W, &ftrial));
 
         if (PetscIsInfOrNanReal(ftrial)) {
@@ -131,8 +133,8 @@ static PetscErrorCode TaoSolve_NTR(Tao tao)
             sigma = -tao->trust / gnorm;
           }
 
-          PetscCall(MatMult(tao->hessian, tao->gradient, tao->stepdirection));
-          PetscCall(VecDot(tao->gradient, tao->stepdirection, &prered));
+          PetscCall(MatMult(tao->hessian, gradient_riesz, tao->stepdirection));
+          PetscCall(VecDot(gradient_riesz, tao->stepdirection, &prered));
 
           prered = tao->trust * (gnorm - 0.5 * tao->trust * prered / (gnorm * gnorm));
           actred = f - ftrial;
@@ -191,10 +193,10 @@ static PetscErrorCode TaoSolve_NTR(Tao tao)
 
       if (fmin < f) {
         f = fmin;
-        PetscCall(VecAXPY(tao->solution, sigma, tao->gradient));
+        PetscCall(VecAXPY(tao->solution, sigma, gradient_riesz));
         PetscCall(TaoComputeGradient(tao, tao->solution, tao->gradient));
 
-        PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &gnorm));
+        PetscCall(TaoComputeGradientNorm(tao, tao->gradient, gradient_riesz, &gnorm));
         PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
         needH = 1;
 
@@ -237,11 +239,13 @@ static PetscErrorCode TaoSolve_NTR(Tao tao)
       PetscCall(MatLMVMUpdate(tr->M, tao->solution, tao->gradient));
     }
 
+    if (gradient_riesz != tao->gradient) PetscCall(KSPSetInitialGuessNonzero(tao->ksp, PETSC_TRUE));
     while (tao->reason == TAO_CONTINUE_ITERATING) {
       PetscCall(KSPSetOperators(tao->ksp, tao->hessian, tao->hessian_pre));
 
       /* Solve the trust region subproblem */
       PetscCall(KSPCGSetRadius(tao->ksp, tao->trust));
+      if (gradient_riesz != tao->gradient) PetscCall(VecCopy(gradient_riesz, tao->stepdirection));
       PetscCall(KSPSolve(tao->ksp, tao->gradient, tao->stepdirection));
       PetscCall(KSPGetIterationNumber(tao->ksp, &its));
       tao->ksp_its += its;
@@ -266,6 +270,7 @@ static PetscErrorCode TaoSolve_NTR(Tao tao)
           tao->trust = PetscMin(tao->trust, tr->max_radius);
 
           PetscCall(KSPCGSetRadius(tao->ksp, tao->trust));
+          if (gradient_riesz != tao->gradient) PetscCall(VecCopy(gradient_riesz, tao->stepdirection));
           PetscCall(KSPSolve(tao->ksp, tao->gradient, tao->stepdirection));
           PetscCall(KSPGetIterationNumber(tao->ksp, &its));
           tao->ksp_its += its;
@@ -419,7 +424,7 @@ static PetscErrorCode TaoSolve_NTR(Tao tao)
       PetscCall(VecCopy(tr->W, tao->solution));
       f = ftrial;
       PetscCall(TaoComputeGradient(tao, tao->solution, tao->gradient));
-      PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &gnorm));
+      PetscCall(TaoComputeGradientNorm(tao, tao->gradient, gradient_riesz, &gnorm));
       PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
       needH = 1;
       PetscCall(TaoLogConvergenceHistory(tao, f, gnorm, 0.0, tao->ksp_its));

@@ -84,6 +84,8 @@ Changes: Development
 - Deprecate ``TSGetTimeSpan()`` --> ``TSGetEvaluationTimes()`` and ``TSGetTimeSpanSolutions()`` --> ``TSGetEvaluationSolutions()``
 
 .. rubric:: TAO:
+- Add ``TaoSetInnerProduct()``, ``TaoGetInnerProduct()``, ``TaoComputeRieszRepresentation()``, and ``TaoComputeGradientNorm()``
+- Deprecate ``TaoSetGradientNorm()``, ``TaoGetGradientNorm()``, and ``TaoGradientNorm()``
 
 .. rubric:: DM/DA:
 

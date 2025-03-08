@@ -94,6 +94,7 @@ PetscErrorCode TaoSolve_BNLS(Tao tao)
   TaoLineSearchConvergedReason ls_reason;
   PetscReal                    steplen = 1.0, resnorm;
   PetscBool                    cgTerminate, needH = PETSC_TRUE, stepAccepted, shift = PETSC_TRUE;
+  Vec                          gradient_riesz = tao->inner_product_ksp ? tao->gradient_riesz : tao->gradient;
   PetscInt                     stepType;
 
   PetscFunctionBegin;
@@ -151,7 +152,7 @@ PetscErrorCode TaoSolve_BNLS(Tao tao)
       PetscCall(TaoBNKEstimateActiveSet(tao, bnk->as_type));
       PetscCall(VecCopy(bnk->unprojected_gradient, tao->gradient));
       if (bnk->active_idx) PetscCall(VecISSet(tao->gradient, bnk->active_idx, 0.0));
-      PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &bnk->gnorm));
+      PetscCall(TaoComputeGradientNorm(tao, tao->gradient, gradient_riesz, &bnk->gnorm));
       /* update the trust radius based on the step length */
       PetscCall(TaoBNKUpdateTrustRadius(tao, 0.0, 0.0, BNK_UPDATE_STEP, stepType, &stepAccepted));
       /* count the accepted step type */

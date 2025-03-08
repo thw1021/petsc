@@ -48,6 +48,7 @@ PetscErrorCode TaoBNKInitialize(Tao tao, PetscInt initType, PetscBool *needH)
   PetscInt  j_max = 1;
   PetscInt  i, j;
   PetscBool kspTR;
+  Vec       gradient_riesz = tao->inner_product_ksp ? tao->gradient_riesz : tao->gradient;
 
   PetscFunctionBegin;
   /* Project the current point onto the feasible set */
@@ -63,7 +64,7 @@ PetscErrorCode TaoBNKInitialize(Tao tao, PetscInt initType, PetscBool *needH)
   PetscCall(TaoBNKEstimateActiveSet(tao, bnk->as_type));
   PetscCall(VecCopy(bnk->unprojected_gradient, tao->gradient));
   if (bnk->active_idx) PetscCall(VecISSet(tao->gradient, bnk->active_idx, 0.0));
-  PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &bnk->gnorm));
+  PetscCall(TaoComputeGradientNorm(tao, tao->gradient, gradient_riesz, &bnk->gnorm));
 
   /* Test the initial point for convergence */
   PetscCall(VecFischer(tao->solution, bnk->unprojected_gradient, tao->XL, tao->XU, bnk->W));
@@ -244,7 +245,7 @@ PetscErrorCode TaoBNKInitialize(Tao tao, PetscInt initType, PetscBool *needH)
           PetscCall(VecCopy(bnk->unprojected_gradient, tao->gradient));
           if (bnk->active_idx) PetscCall(VecISSet(tao->gradient, bnk->active_idx, 0.0));
           /* Compute gradient at the new iterate and flip switch to compute the Hessian later */
-          PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &bnk->gnorm));
+          PetscCall(TaoComputeGradientNorm(tao, tao->gradient, gradient_riesz, &bnk->gnorm));
           *needH = PETSC_TRUE;
           /* Test the new step for convergence */
           PetscCall(VecFischer(tao->solution, bnk->unprojected_gradient, tao->XL, tao->XU, bnk->W));
