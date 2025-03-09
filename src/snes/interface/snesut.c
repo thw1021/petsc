@@ -145,7 +145,6 @@ PetscErrorCode KSPMonitorSNESResidual(KSP ksp, PetscInt n, PetscReal rnorm, Pets
   Vec               snes_solution, work1, work2;
   PetscReal         snorm;
   PetscInt          tablevel;
-  const char       *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -160,10 +159,16 @@ PetscErrorCode KSPMonitorSNESResidual(KSP ksp, PetscInt n, PetscReal rnorm, Pets
   PetscCall(VecDestroy(&work2));
 
   PetscCall(PetscObjectGetTabLevel((PetscObject)ksp, &tablevel));
-  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  if (n == 0) {
+    const char *prefix;
+    size_t      len;
+
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
+    PetscCall(PetscStrlen(prefix, &len));
+    if (len) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  }
   PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Residual norm %5.3e KSP Residual norm %5.3e\n", n, (double)snorm, (double)rnorm));
   PetscCall(PetscViewerASCIISubtractTab(viewer, tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
