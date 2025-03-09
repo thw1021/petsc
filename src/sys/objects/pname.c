@@ -54,6 +54,7 @@ PetscErrorCode PetscObjectPrintClassNamePrefixType(PetscObject obj, PetscViewer 
   PetscMPIInt       size;
   PetscViewerFormat format;
   PetscBool         flg;
+  size_t            len;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &flg));
@@ -66,7 +67,8 @@ PetscErrorCode PetscObjectPrintClassNamePrefixType(PetscObject obj, PetscViewer 
 
   if (format == PETSC_VIEWER_ASCII_MATLAB) PetscCall(PetscViewerASCIIPrintf(viewer, "%%"));
   PetscCallMPI(MPI_Comm_size(PetscObjectComm(obj), &size));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%s Object:%s%s%s%s%s %d MPI process%s\n", obj->class_name, obj->name ? " " : "", obj->name ? obj->name : "", obj->prefix ? " (" : "", obj->prefix ? obj->prefix : "", obj->prefix ? ")" : "", size, size > 1 ? "es" : ""));
+  PetscCall(PetscStrlen(obj->prefix, &len));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%s Object:%s%s%s%s%s %d MPI process%s\n", obj->class_name, obj->name ? " " : "", obj->name ? obj->name : "", len ? " (" : "", len ? obj->prefix : "", len ? ")" : "", size, size > 1 ? "es" : ""));
   if (format == PETSC_VIEWER_ASCII_MATLAB) PetscCall(PetscViewerASCIIPrintf(viewer, "%%"));
   if (obj->type_name) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  type: %s\n", obj->type_name));

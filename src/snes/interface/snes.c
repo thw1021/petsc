@@ -4570,6 +4570,9 @@ PetscErrorCode SNESConvergedReasonView(SNES snes, PetscViewer viewer)
   if (!viewer) viewer = PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)snes));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isAscii));
   if (isAscii) {
+    size_t len;
+
+    PetscCall(PetscStrlen(((PetscObject)snes)->prefix, &len));
     PetscCall(PetscViewerGetFormat(viewer, &format));
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel + 1));
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
@@ -4593,17 +4596,9 @@ PetscErrorCode SNESConvergedReasonView(SNES snes, PetscViewer viewer)
       else PetscCall(PetscViewerASCIIPrintf(viewer, "L_2 Error: %g\n", (double)error));
     }
     if (snes->reason > 0 && format != PETSC_VIEWER_FAILED) {
-      if (((PetscObject)snes)->prefix) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Nonlinear %s solve converged due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)snes)->prefix, SNESConvergedReasons[snes->reason], snes->iter));
-      } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Nonlinear solve converged due to %s iterations %" PetscInt_FMT "\n", SNESConvergedReasons[snes->reason], snes->iter));
-      }
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Nonlinear%s%s solve converged due to %s iterations %" PetscInt_FMT "\n", len ? " " : "", len ? ((PetscObject)snes)->prefix : "", SNESConvergedReasons[snes->reason], snes->iter));
     } else if (snes->reason <= 0) {
-      if (((PetscObject)snes)->prefix) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Nonlinear %s solve did not converge due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)snes)->prefix, SNESConvergedReasons[snes->reason], snes->iter));
-      } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Nonlinear solve did not converge due to %s iterations %" PetscInt_FMT "\n", SNESConvergedReasons[snes->reason], snes->iter));
-      }
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Nonlinear%s%s solve did not converge due to %s iterations %" PetscInt_FMT "\n", len ? " " : "", len ? ((PetscObject)snes)->prefix : "", SNESConvergedReasons[snes->reason], snes->iter));
     }
     PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)snes)->tablevel + 1));
   }
