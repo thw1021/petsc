@@ -6,7 +6,7 @@ class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
     self.minversion        = '5.6.0'
-    self.version           = '7.8.3'
+    self.version           = '7.10.1'
     self.versioninclude    = 'SuiteSparse_config.h'
     self.versionname       = 'SUITESPARSE_MAIN_VERSION.SUITESPARSE_SUB_VERSION.SUITESPARSE_SUBSUB_VERSION'
     self.gitcommit         = 'v'+self.version
@@ -51,7 +51,7 @@ class Configure(config.package.CMakePackage):
     args.append('-DBLAS_LIBRARIES:STRING="'+self.libraries.toString(self.blasLapack.dlib)+'"')
     args.append('-DLAPACK_LIBRARIES:STRING=""')
 
-    args.append('-DSUITESPARSE_USE_CUDA:BOOL='+('ON' if self.cuda.found else 'OFF'))
+    args.append('-DSUITESPARSE_USE_CUDA:BOOL='+('ON' if self.cuda.found and self.openmp.found else 'OFF'))
     args.append('-DSUITESPARSE_USE_OPENMP:BOOL='+('ON' if self.openmp.found else 'OFF'))
     args.append('-DSUITESPARSE_USE_64BIT_BLAS:BOOL='+('ON' if self.blasLapack.has64bitindices else 'OFF'))
 
