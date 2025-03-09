@@ -374,16 +374,21 @@ static PetscErrorCode KSPLSQRMonitorResidual_LSQR(KSP ksp, PetscInt n, PetscReal
   PetscViewerFormat format = vf->format;
   char              normtype[256];
   PetscInt          tablevel;
-  const char       *prefix;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetTabLevel((PetscObject)ksp, &tablevel));
-  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
   PetscCall(PetscStrncpy(normtype, KSPNormTypes[ksp->normtype], sizeof(normtype)));
   PetscCall(PetscStrtolower(normtype));
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norm, norm of normal equations, and matrix norm for %s solve.\n", prefix));
+  if (n == 0) {
+    const char *prefix;
+    size_t      len;
+
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
+    PetscCall(PetscStrlen(prefix, &len));
+    if (len) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norm, norm of normal equations, and matrix norm for %s solve.\n", prefix));
+  }
   if (!n) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " KSP resid norm %14.12e\n", n, (double)rnorm));
   } else {

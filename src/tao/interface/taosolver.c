@@ -184,11 +184,14 @@ PetscErrorCode TaoSolve(Tao tao)
 
   if (tao->printreason) {
     PetscViewer viewer = PETSC_VIEWER_STDOUT_(((PetscObject)tao)->comm);
+    size_t      len;
+
+    PetscCall(PetscStrlen(((PetscObject)tao)->prefix, &len));
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)tao)->tablevel));
     if (tao->reason > 0) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO %s solve converged due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix ? ((PetscObject)tao)->prefix : "", TaoConvergedReasons[tao->reason], tao->niter));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO%s%s solve converged due to %s iterations %" PetscInt_FMT "\n", len ? " " : "", len ? ((PetscObject)tao)->prefix : "", TaoConvergedReasons[tao->reason], tao->niter));
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO %s solve did not converge due to %s iteration %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix ? ((PetscObject)tao)->prefix : "", TaoConvergedReasons[tao->reason], tao->niter));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO%s%s solve did not converge due to %s iteration %" PetscInt_FMT "\n", len ? " " : "", len ? ((PetscObject)tao)->prefix : "", TaoConvergedReasons[tao->reason], tao->niter));
     }
     PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)tao)->tablevel));
   }
