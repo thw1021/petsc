@@ -129,15 +129,20 @@ PetscErrorCode KSPMonitorResidual(KSP ksp, PetscInt n, PetscReal rnorm, PetscVie
   PetscViewer       viewer = vf->viewer;
   PetscViewerFormat format = vf->format;
   PetscInt          tablevel;
-  const char       *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(PetscObjectGetTabLevel((PetscObject)ksp, &tablevel));
-  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  if (n == 0) {
+    const char *prefix;
+    size_t      len;
+
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
+    PetscCall(PetscStrlen(prefix, &len));
+    if (len) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  }
   PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " KSP Residual norm %14.12e\n", n, (double)rnorm));
   PetscCall(PetscViewerASCIISubtractTab(viewer, tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
@@ -274,15 +279,20 @@ PetscErrorCode KSPMonitorResidualShort(KSP ksp, PetscInt its, PetscReal fnorm, P
   PetscViewer       viewer = vf->viewer;
   PetscViewerFormat format = vf->format;
   PetscInt          tablevel;
-  const char       *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(PetscObjectGetTabLevel((PetscObject)ksp, &tablevel));
-  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (its == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  if (its == 0) {
+    const char *prefix;
+    size_t      len;
+
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
+    PetscCall(PetscStrlen(prefix, &len));
+    if (len) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  }
   if (fnorm > 1.e-9) PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " KSP Residual norm %g\n", its, (double)fnorm));
   else if (fnorm > 1.e-11) PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " KSP Residual norm %5.3e\n", its, (double)fnorm));
   else PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " KSP Residual norm < 1.e-11\n", its));
@@ -341,17 +351,22 @@ PetscErrorCode KSPMonitorResidualRange(KSP ksp, PetscInt it, PetscReal rnorm, Pe
   PetscViewer       viewer = vf->viewer;
   PetscViewerFormat format = vf->format;
   PetscInt          tablevel;
-  const char       *prefix;
   PetscReal         perc, rel;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(PetscObjectGetTabLevel((PetscObject)ksp, &tablevel));
-  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
   if (!it) prev = rnorm;
-  if (it == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  if (it == 0) {
+    const char *prefix;
+    size_t      len;
+
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
+    PetscCall(PetscStrlen(prefix, &len));
+    if (len) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  }
   PetscCall(KSPMonitorRange_Private(ksp, it, &perc));
   rel  = (prev - rnorm) / prev;
   prev = rnorm;
@@ -394,12 +409,10 @@ PetscErrorCode KSPMonitorTrueResidual(KSP ksp, PetscInt n, PetscReal rnorm, Pets
   PetscReal         truenorm, bnorm;
   char              normtype[256];
   PetscInt          tablevel;
-  const char       *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(PetscObjectGetTabLevel((PetscObject)ksp, &tablevel));
-  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
   PetscCall(PetscStrncpy(normtype, KSPNormTypes[ksp->normtype], sizeof(normtype)));
   PetscCall(PetscStrtolower(normtype));
   PetscCall(KSPBuildResidual(ksp, NULL, NULL, &r));
@@ -409,7 +422,14 @@ PetscErrorCode KSPMonitorTrueResidual(KSP ksp, PetscInt n, PetscReal rnorm, Pets
 
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  if (n == 0) {
+    const char *prefix;
+    size_t      len;
+
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
+    PetscCall(PetscStrlen(prefix, &len));
+    if (len) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  }
   if (bnorm == 0) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " KSP %s resid norm %14.12e true resid norm %14.12e ||r(i)||/||b|| inf\n", n, normtype, (double)rnorm, (double)truenorm));
   } else {
@@ -578,12 +598,10 @@ PetscErrorCode KSPMonitorTrueResidualMax(KSP ksp, PetscInt n, PetscReal rnorm, P
   PetscReal         truenorm, bnorm;
   char              normtype[256];
   PetscInt          tablevel;
-  const char       *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(PetscObjectGetTabLevel((PetscObject)ksp, &tablevel));
-  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
   PetscCall(PetscStrncpy(normtype, KSPNormTypes[ksp->normtype], sizeof(normtype)));
   PetscCall(PetscStrtolower(normtype));
   PetscCall(KSPBuildResidual(ksp, NULL, NULL, &r));
@@ -593,7 +611,14 @@ PetscErrorCode KSPMonitorTrueResidualMax(KSP ksp, PetscInt n, PetscReal rnorm, P
 
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  if (n == 0) {
+    const char *prefix;
+    size_t      len;
+
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
+    PetscCall(PetscStrlen(prefix, &len));
+    if (len) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  }
   PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " KSP %s true resid max norm %14.12e ||r(i)||/||b|| %14.12e\n", n, normtype, (double)truenorm, (double)(truenorm / bnorm)));
   PetscCall(PetscViewerASCIISubtractTab(viewer, tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
@@ -631,12 +656,10 @@ PetscErrorCode KSPMonitorError(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewer
   PetscReal        *errors;
   PetscInt          Nf, f;
   PetscInt          tablevel;
-  const char       *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(PetscObjectGetTabLevel((PetscObject)ksp, &tablevel));
-  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
   PetscCall(KSPGetDM(ksp, &dm));
   PetscCall(DMGetNumFields(dm, &Nf));
   PetscCall(DMGetGlobalVector(dm, &sol));
@@ -648,7 +671,14 @@ PetscErrorCode KSPMonitorError(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewer
 
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Error norms for %s solve.\n", prefix));
+  if (n == 0) {
+    const char *prefix;
+    size_t      len;
+
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
+    PetscCall(PetscStrlen(prefix, &len));
+    if (len) PetscCall(PetscViewerASCIIPrintf(viewer, "  Error norms for %s solve.\n", prefix));
+  }
   PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " KSP Error norm %s", n, Nf > 1 ? "[" : ""));
   PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
   for (f = 0; f < Nf; ++f) {
@@ -851,17 +881,22 @@ PetscErrorCode KSPMonitorSolution(KSP ksp, PetscInt n, PetscReal rnorm, PetscVie
   Vec               x;
   PetscReal         snorm;
   PetscInt          tablevel;
-  const char       *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(KSPBuildSolution(ksp, NULL, &x));
   PetscCall(VecNorm(x, NORM_2, &snorm));
   PetscCall(PetscObjectGetTabLevel((PetscObject)ksp, &tablevel));
-  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Solution norms for %s solve.\n", prefix));
+  if (n == 0) {
+    const char *prefix;
+    size_t      len;
+
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
+    PetscCall(PetscStrlen(prefix, &len));
+    if (len) PetscCall(PetscViewerASCIIPrintf(viewer, "  Solution norms for %s solve.\n", prefix));
+  }
   PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " KSP Solution norm %14.12e\n", n, (double)snorm));
   PetscCall(PetscViewerASCIISubtractTab(viewer, tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
@@ -1025,16 +1060,21 @@ PetscErrorCode KSPMonitorSingularValue(KSP ksp, PetscInt n, PetscReal rnorm, Pet
   PetscViewerFormat format = vf->format;
   PetscReal         emin, emax;
   PetscInt          tablevel;
-  const char       *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(PetscObjectGetTabLevel((PetscObject)ksp, &tablevel));
-  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  if (n == 0) {
+    const char *prefix;
+    size_t      len;
+
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
+    PetscCall(PetscStrlen(prefix, &len));
+    if (len) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  }
   if (!ksp->calc_sings) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " KSP Residual norm %14.12e\n", n, (double)rnorm));
   } else {
