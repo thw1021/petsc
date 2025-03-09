@@ -428,10 +428,10 @@ PetscErrorCode PetscSFSetRankOrder(PetscSF sf, PetscBool flg)
 . nroots     - number of root vertices on the current process (these are possible targets for other process to attach leaves)
 . nleaves    - number of leaf vertices on the current process, each of these references a root on any process
 . ilocal     - locations of leaves in leafdata buffers, pass `NULL` for contiguous storage (locations must be >= 0, enforced
-during setup in debug mode)
+               during setup in debug mode)
 . localmode  - copy mode for `ilocal`
-. iremote    - remote locations of root vertices for each leaf on the current process (locations must be >= 0, enforced
-during setup in debug mode)
+. iremote    - remote locations of root vertices for each leaf on the current process, length is 2 `nleaves'
+               (locations must be >= 0, enforced during setup in debug mode)
 - remotemode - copy mode for `iremote`
 
   Level: intermediate
@@ -454,7 +454,7 @@ during setup in debug mode)
 
 .seealso: `PetscSF`, `PetscSFType`, `PetscSFCreate()`, `PetscSFView()`, `PetscSFGetGraph()`
 @*/
-PetscErrorCode PetscSFSetGraph(PetscSF sf, PetscInt nroots, PetscInt nleaves, PetscInt *ilocal, PetscCopyMode localmode, PetscSFNode *iremote, PetscCopyMode remotemode)
+PetscErrorCode PetscSFSetGraph(PetscSF sf, PetscInt nroots, PetscInt nleaves, PetscInt ilocal[], PetscCopyMode localmode, PetscSFNode iremote[], PetscCopyMode remotemode)
 {
   PetscBool unique, contiguous;
 
@@ -961,7 +961,7 @@ PetscErrorCode PetscSFView(PetscSF sf, PetscViewer viewer)
 
 .seealso: `PetscSF`, `PetscSFGetLeafRanks()`
 @*/
-PetscErrorCode PetscSFGetRootRanks(PetscSF sf, PetscMPIInt *nranks, const PetscMPIInt **ranks, const PetscInt **roffset, const PetscInt **rmine, const PetscInt **rremote)
+PetscErrorCode PetscSFGetRootRanks(PetscSF sf, PetscMPIInt *nranks, const PetscMPIInt *ranks[], const PetscInt *roffset[], const PetscInt *rmine[], const PetscInt *rremote[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf, PETSCSF_CLASSID, 1);
@@ -997,7 +997,7 @@ PetscErrorCode PetscSFGetRootRanks(PetscSF sf, PetscMPIInt *nranks, const PetscM
 
 .seealso: `PetscSF`, `PetscSFGetRootRanks()`
 @*/
-PetscErrorCode PetscSFGetLeafRanks(PetscSF sf, PetscMPIInt *niranks, const PetscMPIInt **iranks, const PetscInt **ioffset, const PetscInt **irootloc)
+PetscErrorCode PetscSFGetLeafRanks(PetscSF sf, PetscMPIInt *niranks, const PetscMPIInt *iranks[], const PetscInt *ioffset[], const PetscInt *irootloc[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf, PETSCSF_CLASSID, 1);
@@ -1829,7 +1829,7 @@ PetscErrorCode PetscSFComputeDegreeBegin(PetscSF sf, const PetscInt *degree[])
 
 .seealso: `PetscSF`, `PetscSFGatherBegin()`, `PetscSFComputeDegreeBegin()`
 @*/
-PetscErrorCode PetscSFComputeDegreeEnd(PetscSF sf, const PetscInt **degree)
+PetscErrorCode PetscSFComputeDegreeEnd(PetscSF sf, const PetscInt *degree[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf, PETSCSF_CLASSID, 1);
