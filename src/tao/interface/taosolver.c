@@ -2710,6 +2710,32 @@ PetscErrorCode TaoComputeGradientNorm(Tao tao, Vec gradient, Vec riesz, PetscRea
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode TaoComputeSolutionNorm(Tao tao, Vec u, Vec riesz, PetscReal *unorm)
+{
+  Vec         riesz_alloc = NULL;
+  PetscScalar unorms;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(u, VEC_CLASSID, 2);
+  if (riesz) PetscValidHeaderSpecific(riesz, VEC_CLASSID, 3);
+  PetscAssertPointer(unorm, 4);
+  if (tao->inner_product_ksp == NULL) {
+    PetscCall(VecNorm(u, NORM_2, unorm));
+    if (riesz) PetscCall(VecCopy(u, riesz));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  if (riesz == NULL) {
+    PetscCall(VecDuplicate(u, &riesz_alloc));
+    riesz = riesz_alloc;
+  }
+  PetscCall(TaoComputeInverseRieszRepresentation(tao, u, riesz));
+  PetscCall(VecDot(u, riesz, &unorms));
+  *unorm = PetscSqrtScalar(PetscRealPart(unorms));
+  PetscCall(VecDestroy(&riesz_alloc));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   TaoSetInnerProduct - Set a matrix defining a problem-specific inner product for the vector space of solutions and the dual vector space for gradient vectors.
 
@@ -2867,6 +2893,25 @@ PetscErrorCode TaoComputeRieszRepresentation(Tao tao, Vec g, Vec r)
 
     PetscCall(KSPGetOperators(tao->inner_product_ksp, &M, NULL));
     PetscCall(MatMult(M, g, r));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoComputeInverseRieszRepresentation(Tao tao, Vec u, Vec r)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(u, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(r, VEC_CLASSID, 3);
+  if (tao->inner_product_ksp == NULL) {
+    PetscCall(VecCopy(u, r));
+  } else if (tao->inner_product_mode == TAO_INNER_PRODUCT_GRADIENT) {
+    PetscCall(KSPSolve(tao->inner_product_ksp, u, r));
+  } else {
+    Mat M;
+
+    PetscCall(KSPGetOperators(tao->inner_product_ksp, &M, NULL));
+    PetscCall(MatMult(M, u, r));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

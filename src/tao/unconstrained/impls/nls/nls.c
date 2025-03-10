@@ -136,7 +136,7 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
         sigma = 0.0;
 
         if (needH) {
-          PetscCall(TaoComputeHessian(tao, tao->solution, tao->hessian, tao->hessian_pre));
+          PetscCall(TaoComputeDampedHessian(tao, tao->solution, pert, tao->hessian, tao->hessian_pre));
           needH = 0;
         }
 
@@ -259,13 +259,7 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
     tao->ksp_its = 0;
 
     /* Compute the Hessian */
-    if (needH) PetscCall(TaoComputeHessian(tao, tao->solution, tao->hessian, tao->hessian_pre));
-
-    /* Shift the Hessian matrix */
-    if (pert > 0) {
-      PetscCall(MatShift(tao->hessian, pert));
-      if (tao->hessian != tao->hessian_pre) PetscCall(MatShift(tao->hessian_pre, pert));
-    }
+    if (needH) PetscCall(TaoComputeDampedHessian(tao, tao->solution, pert, tao->hessian, tao->hessian_pre));
 
     if (nlsP->bfgs_pre) {
       PetscCall(MatLMVMUpdate(nlsP->M, tao->solution, tao->gradient));

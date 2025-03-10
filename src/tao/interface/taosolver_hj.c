@@ -52,6 +52,70 @@ PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Ta
 }
 
 /*@C
+  TaoSetDampedHessian - Set a routine to compute a damped perturbation of the Hessian.
+
+  Logically Collective
+
+  Input Parameters:
++ tao  - the `Tao` solver context
+- func - a function for evaluating the damped Hessian
+
+  Calling sequence of `func`:
++ tao   - the `Tao`  context
+. x     - input vector
+. alpha - the damping parameter
+. H     - Hessian matrix
+. Hpre  - matrix used to construct the preconditioner, usually the same as `H`
+- ctx   - [optional] user-defined Hessian context
+
+  Level: advanced
+
+  Notes:
+  The `H`, `Hpre`, and `ctx` inputs to `func` will be the data given to `TaoSetHessian()`.
+
+  This function should compute $H + \alpha M$, where $H$ is the undamped Hessian and $M$ is an s.p.d. matrix that is
+  appropriate for damping this problem.
+
+  If the user does not call `TaoSetDampedHessian()`, `TaoComputeDampedHessian()` will simply call `TaoComputeHessian()` and use
+  $H + \alpha I$ for the damped Hessian.
+
+.seealso: [](ch_tao), `Tao`, `TaoSetHessian()`, `TaoGetDampedHessian()`, `TaoComputeDampedHessian()`
+@*/
+PetscErrorCode TaoSetDampedHessian(Tao tao, PetscErrorCode (*func)(Tao tao, Vec x, PetscScalar alpha, Mat H, Mat Hpre, void *ctx))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  if (func) tao->ops->computedampedhessian = func;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TaoGetDampedHessian - Get the routine to compute a damped perturbation of the Hessian.
+
+  Not Collective
+
+  Input Parameter:
+. tao  - the `Tao` solver context
+
+  Output Parametr:
+. func - a function for evaluating the damped Hessian
+
+  Level: advanced
+
+  Notes:
+  See `TaoSetDampedHessian()` for the calling sequence of `func`.
+
+.seealso: [](ch_tao), `Tao`, `TaoSetHessian()`, `TaoSetDampedHessian()`, `TaoComputeDampedHessian()`
+@*/
+PetscErrorCode GaoSetDampedHessian(Tao tao, PetscErrorCode (**func)(Tao tao, Vec x, PetscScalar alpha, Mat H, Mat Hpre, void *ctx))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  *func = tao->ops->computedampedhessian;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
   TaoGetHessian - Gets the function to compute the Hessian as well as the location to store the matrix.
 
   Not Collective
@@ -263,6 +327,52 @@ PetscErrorCode TaoComputeHessian(Tao tao, Vec X, Mat H, Mat Hpre)
   PetscCall(VecLockReadPop(X));
 
   PetscCall(TaoTestHessian(tao));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoComputeDampedHessian - Computes a damped perturbation of the Hessian matrix.
+
+  Collective
+
+  Input Parameters:
++ tao   - the Tao solver context
+. X     - input vector
+- alpha - the damping parameter
+
+  Output Parameters:
++ H    - Hessian matrix
+- Hpre - Preconditioning matrix
+
+  Level: developer
+
+  Notes:
+  If the user has not called `TaoSetDampedHessian()`, this will call `TaoComputeHessian()` and add $\alpha I$ to the result.
+
+.seealso: [](ch_tao), `Tao`, `TaoComputeHessian()`, `TaoSetDampedHessian()`
+@*/
+PetscErrorCode TaoComputeDampedHessian(Tao tao, Vec X, PetscReal alpha, Mat H, Mat Hpre)
+{
+  PetscFunctionBegin;
+  if (alpha <= 0.0) {
+    PetscCall(TaoComputeHessian(tao, X, H, Hpre));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
+  PetscCheckSameComm(tao, 1, X, 2);
+  if (tao->ops->computedampedhessian) {
+    ++tao->nhess;
+    PetscCall(VecLockReadPush(X));
+    PetscCall(PetscLogEventBegin(TAO_HessianEval, tao, X, H, Hpre));
+    PetscCallBack("Tao callback Hessian", (*tao->ops->computedampedhessian)(tao, X, alpha, H, Hpre, tao->user_hessP));
+    PetscCall(PetscLogEventEnd(TAO_HessianEval, tao, X, H, Hpre));
+    PetscCall(VecLockReadPop(X));
+  } else {
+    PetscCall(TaoComputeHessian(tao, X, H, Hpre));
+    if (H) { PetscCall(MatShift(H, alpha)); }
+    if (Hpre && Hpre != H) { PetscCall(MatShift(Hpre, alpha)); }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

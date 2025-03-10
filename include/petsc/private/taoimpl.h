@@ -14,6 +14,7 @@ struct _TaoOps {
   PetscErrorCode (*computeobjective)(Tao, Vec, PetscReal *, void *);
   PetscErrorCode (*computeobjectiveandgradient)(Tao, Vec, PetscReal *, Vec, void *);
   PetscErrorCode (*computegradient)(Tao, Vec, Vec, void *);
+  PetscErrorCode (*computedampedhessian)(Tao, Vec, PetscReal, Mat, Mat, void *);
   PetscErrorCode (*computehessian)(Tao, Vec, Mat, Mat, void *);
   PetscErrorCode (*computeresidual)(Tao, Vec, Vec, void *);
   PetscErrorCode (*computeresidualjacobian)(Tao, Vec, Mat, Mat, void *);
@@ -206,3 +207,6 @@ static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, Pe
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PETSC_INTERN PetscErrorCode TaoComputeInverseRieszRepresentation(Tao, Vec, Vec);
+PETSC_INTERN PetscErrorCode TaoComputeSolutionNorm(Tao, Vec, Vec, PetscReal *);
