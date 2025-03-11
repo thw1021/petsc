@@ -1243,7 +1243,7 @@ PetscErrorCode PetscDualSpaceApplyInteriorDefault(PetscDualSpace sp, const Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   PetscDualSpaceGetAllData - Get all quadrature nodes from this space, and the matrix that sends quadrature node values to degree-of-freedom values
 
   Input Parameter:
