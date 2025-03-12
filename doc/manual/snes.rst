@@ -601,10 +601,9 @@ are implemented in PETSc and may be chosen using
 Anderson Mixing (``SNESANDERSON``) methods combine the last :math:`m` iterates, plus a new
 fixed-point iteration iterate, into an approximate residual-minimizing new iterate.
 
-All of the above methods have support for using a nonlinear preconditioner to compute the preliminary update step than the default
+All of the above methods have support for using a nonlinear preconditioner to compute the preliminary update step, rather than the default
 which is the nonlinear function's residual,  $ \mathbf{F}(\mathbf{x}_k)$. The different update is obtained by solving a nonlinear preconditioner nonlinear problem, which has its own
 `SNES` object that may be obtained with ``SNESGetNPC()``.
-
 Quasi-Newton Methods
 ^^^^^^^^^^^^^^^^^^^^
 
