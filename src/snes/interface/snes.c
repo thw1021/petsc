@@ -5893,7 +5893,7 @@ PetscErrorCode SNESSetLineSearch(SNES snes, SNESLineSearch linesearch)
   Level: beginner
 
   Notes:
-  If `SNESSetLineSearch()` was called it will return that object, otherwise it creates a default line search instance which can be configured as needed.
+  It creates a default line search instance which can be configured as needed in case it has not been already set with `SNESSetLineSearch()`.
 
   You can also use the options database keys `-snes_linesearch_*` to configure the line search. See `SNESLineSearchSetFromOptions()` for the possible options.
 
