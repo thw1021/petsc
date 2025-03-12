@@ -151,8 +151,24 @@ static PetscErrorCode PetscSFReduceBegin_Allgatherv(PetscSF sf, MPI_Datatype uni
     PetscCall(PetscSFLinkSyncStreamBeforeCallMPI(sf, link));
     if (dat->bcast_pattern) {
       PetscMPIInt nleavesi;
+      PetscInt    nPetscReal, nPetscComplex = 0;
 
       PetscCall(PetscMPIIntCast(sf->nleaves, &nleavesi));
+      PetscCall(MPIPetsc_Type_compare_contig(unit, MPIU_REAL, &nPetscReal));
+#if PetscDefined(HAVE_COMPLEX)
+      PetscCall(MPIPetsc_Type_compare_contig(unit, MPIU_COMPLEX, &nPetscComplex));
+#else
+      (void)nPetscComplex;
+#endif
+      if (nPetscReal > 0) {
+        unit = MPIU_REAL;
+        nleavesi *= nPetscReal;
+#if PetscDefined(HAVE_COMPLEX)
+      } else if (nPetscComplex > 0) {
+        unit = MPIU_COMPLEX;
+        nleavesi *= nPetscComplex;
+#endif
+      }
 #if defined(PETSC_HAVE_OPENMPI) /* Workaround: cuda-aware Open MPI 4.1.3 does not support MPI_Ireduce() with device buffers */
       *req = MPI_REQUEST_NULL;  /* Set NULL so that we can safely MPI_Wait(req) */
       PetscCallMPI(MPIU_Reduce(leafbuf, rootbuf, nleavesi, unit, op, dat->bcast_root, comm));
