@@ -615,7 +615,7 @@ Table :any:`tab-qndefaults`. These all are encapsulated under
 is L-BFGS, which provides symmetric updates to an approximate Jacobian.
 This iteration is similar to the line search Newton methods.
 
-The Quasi-Newton methods support the use of a nonlinear preconditioner that can be obtained with ``SNESGetNPC()`` and then configured; or that can be configured with
+The quasi-Newton methods support the use of a nonlinear preconditioner that can be obtained with ``SNESGetNPC()`` and then configured; or that can be configured with
 ``SNES``, ``KSP``, and ``PC`` options using the options database prefix ``-npc_``.
 
 .. list-table:: PETSc quasi-Newton solvers

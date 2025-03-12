@@ -5731,7 +5731,7 @@ PetscErrorCode SNESSetNPC(SNES snes, SNES npc)
   The (preconditioner) `SNES` returned automatically inherits the same nonlinear function and Jacobian supplied to the original
   `SNES`. These may be overwritten if needed.
 
-  Use the options database prefixes `-npc_snes`, `-npc_ksp` etc to control the configuration of the nonlinear preconditioner
+  Use the options database prefixes `-npc_snes`, `-npc_ksp`, etc., to control the configuration of the nonlinear preconditioner
 
 .seealso: [](ch_snes), `SNESSetNPC()`, `SNESHasNPC()`, `SNES`, `SNESCreate()`
 @*/
@@ -5893,7 +5893,7 @@ PetscErrorCode SNESSetLineSearch(SNES snes, SNESLineSearch linesearch)
   Level: beginner
 
   Notes:
-  If `SNESSetLineSearch()` was called it will return that object, otherwise it creates a default line search instance which can be configured as needed
+  If `SNESSetLineSearch()` was called it will return that object, otherwise it creates a default line search instance which can be configured as needed.
 
   You can also use the options database keys `-snes_linesearch_*` to configure the line search. See `SNESLineSearchSetFromOptions()` for the possible options.
 

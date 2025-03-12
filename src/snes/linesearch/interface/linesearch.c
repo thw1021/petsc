@@ -793,7 +793,7 @@ PetscErrorCode SNESLineSearchMonitorSetFromOptions(SNESLineSearch ls, const char
 
   Options Database Keys:
 + -snes_linesearch_type <type>                                      - basic (or equivalently none), `bt`, `l2`, `cp`, `nleqerr`, `shell`
-. -snes_linesearch_order <order>                                    - 1, 2, 3.  Most types only support certain orders (bt supports 2 or 3)
+. -snes_linesearch_order <order>                                    - 1, 2, 3.  Most types only support certain orders (`bt` supports 2 or 3)
 . -snes_linesearch_norms                                            - Turn on/off the linesearch norms for the basic linesearch typem (`SNESLineSearchSetComputeNorms()`)
 . -snes_linesearch_minlambda                                        - The minimum step length
 . -snes_linesearch_maxstep                                          - The maximum step size

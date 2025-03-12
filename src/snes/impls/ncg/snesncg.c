@@ -378,7 +378,7 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
    Only supports left non-linear preconditioning.
 
    Default line search is `SNESLINESEARCHCP`, unless a nonlinear preconditioner is used with `-npc_snes_type` <type>, `SNESSetNPC()`, or `SNESGetNPC()` then
-   `SNESLINESEARCHL2` is used. Also supports the special purpose line search `SNESLINESEARCHNCGLINEAR`
+   `SNESLINESEARCHL2` is used. Also supports the special-purpose line search `SNESLINESEARCHNCGLINEAR`
 
 .seealso: [](ch_snes), `SNES`, `SNESNCG`, `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONLS`, `SNESNEWTONTR`, `SNESNGMRES`, `SNESQN`, `SNESLINESEARCHNCGLINEAR`, `SNESNCGSetType()`, `SNESLineSearchSetType()`
 M*/
