@@ -8,6 +8,8 @@
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <petscblaslapack.h>
 #include <petsc/private/vecimpl.h>
+#include <petscdevice.h>
+#include <petsc/private/deviceimpl.h>
 
 /*@
   MatDenseGetLocalMatrix - For a `MATMPIDENSE` or `MATSEQDENSE` matrix returns the sequential
@@ -479,10 +481,10 @@ static PetscErrorCode MatMult_MPIDense(Mat mat, Vec xx, Vec yy)
   PetscFunctionBegin;
   if (!mdn->Mvctx) PetscCall(MatSetUpMultiply_MPIDense(mat));
   PetscCall(VecGetArrayReadAndMemType(xx, &ax, &axmtype));
-  PetscCall(VecGetArrayAndMemType(mdn->lvec, &ay, &aymtype));
+  PetscCall(VecGetArrayWriteAndMemType(mdn->lvec, &ay, &aymtype));
   PetscCall(PetscSFBcastWithMemTypeBegin(mdn->Mvctx, MPIU_SCALAR, axmtype, ax, aymtype, ay, MPI_REPLACE));
   PetscCall(PetscSFBcastEnd(mdn->Mvctx, MPIU_SCALAR, ax, ay, MPI_REPLACE));
-  PetscCall(VecRestoreArrayAndMemType(mdn->lvec, &ay));
+  PetscCall(VecRestoreArrayWriteAndMemType(mdn->lvec, &ay));
   PetscCall(VecRestoreArrayReadAndMemType(xx, &ax));
   PetscCall((*mdn->A->ops->mult)(mdn->A, mdn->lvec, yy));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -532,13 +534,26 @@ static PetscErrorCode MatMultHermitianTransposeColumnRange_MPIDense(Mat A, Vec x
   const PetscScalar *ax;
   PetscScalar       *ay;
   PetscMemType       axmtype, aymtype;
+  PetscInt           r_start, r_end;
+  PetscInt           c_start_local, c_end_local;
 
   PetscFunctionBegin;
   if (!a->Mvctx) PetscCall(MatSetUpMultiply_MPIDense(A));
-  PetscCall(VecSet(yy, 0.0));
+  PetscCall(VecZeroEntries(a->lvec));
+  PetscCall(VecGetOwnershipRange(yy, &r_start, &r_end));
+  c_start_local = PetscMax(c_start, r_start);
+  c_end_local   = PetscMin(c_end, r_end);
+  PetscCall(VecGetArrayAndMemType(yy, &ay, &aymtype));
+  if (c_end_local > c_start_local) {
+    if (PetscMemTypeHost(aymtype)) {
+      PetscCall(PetscArrayzero(&ay[c_start_local], (size_t)(c_end_local - c_start_local)));
+    } else {
+      PetscCall(PetscDeviceRegisterMemory(ay, aymtype, sizeof(*ay) * ((size_t)(r_end - r_start))));
+      PetscCall(PetscDeviceArrayZero(NULL, &ay[c_start_local], (size_t)(c_end_local - c_start_local)));
+    }
+  }
   PetscUseMethod(a->A, "MatMultHermitianTransposeColumnRange_C", (Mat, Vec, Vec, PetscInt, PetscInt), (a->A, xx, a->lvec, c_start, c_end));
   PetscCall(VecGetArrayReadAndMemType(a->lvec, &ax, &axmtype));
-  PetscCall(VecGetArrayAndMemType(yy, &ay, &aymtype));
   PetscCall(PetscSFReduceWithMemTypeBegin(a->Mvctx, MPIU_SCALAR, axmtype, ax, aymtype, ay, MPIU_SUM));
   PetscCall(PetscSFReduceEnd(a->Mvctx, MPIU_SCALAR, ax, ay, MPIU_SUM));
   PetscCall(VecRestoreArrayReadAndMemType(a->lvec, &ax));
@@ -577,8 +592,7 @@ static PetscErrorCode MatMultHermitianTransposeAddColumnRange_MPIDense(Mat A, Ve
   PetscFunctionBegin;
   if (!a->Mvctx) PetscCall(MatSetUpMultiply_MPIDense(A));
   PetscCall(VecCopy(yy, zz));
-  PetscMPIInt rank;
-  PetscCallMPI(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
+  PetscCall(VecZeroEntries(a->lvec));
   PetscUseMethod(a->A, "MatMultHermitianTransposeColumnRange_C", (Mat, Vec, Vec, PetscInt, PetscInt), (a->A, xx, a->lvec, c_start, c_end));
   PetscCall(VecGetArrayReadAndMemType(a->lvec, &ax, &axmtype));
   PetscCall(VecGetArrayAndMemType(zz, &ay, &aymtype));
