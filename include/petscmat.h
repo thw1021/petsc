@@ -190,7 +190,8 @@ typedef const char *MatSolverType;
 .  `MAT_FACTOR_ILU`      - ILU factorization
 .  `MAT_FACTOR_ICC`      - incomplete Cholesky factorization
 .  `MAT_FACTOR_ILUDT`    - ILU factorization with drop tolerance
--  `MAT_FACTOR_QR`       - QR factorization
+.  `MAT_FACTOR_QR`       - QR factorization
+-  `MAT_FACTOR_LQ`       - LQ factorization
 
     Level: beginner
 
@@ -204,6 +205,7 @@ typedef enum {
   MAT_FACTOR_ICC,
   MAT_FACTOR_ILUDT,
   MAT_FACTOR_QR,
+  MAT_FACTOR_LQ,
   MAT_FACTOR_NUM_TYPES
 } MatFactorType;
 PETSC_EXTERN const char *const MatFactorTypes[];
@@ -1561,6 +1563,9 @@ PETSC_EXTERN PetscErrorCode MatLUFactorNumeric(Mat, Mat, const MatFactorInfo *);
 PETSC_EXTERN PetscErrorCode MatQRFactor(Mat, IS, const MatFactorInfo *);
 PETSC_EXTERN PetscErrorCode MatQRFactorSymbolic(Mat, Mat, IS, const MatFactorInfo *);
 PETSC_EXTERN PetscErrorCode MatQRFactorNumeric(Mat, Mat, const MatFactorInfo *);
+PETSC_EXTERN PetscErrorCode MatLQFactor(Mat, IS, const MatFactorInfo *);
+PETSC_EXTERN PetscErrorCode MatLQFactorSymbolic(Mat, Mat, IS, const MatFactorInfo *);
+PETSC_EXTERN PetscErrorCode MatLQFactorNumeric(Mat, Mat, const MatFactorInfo *);
 PETSC_EXTERN PetscErrorCode MatGetInertia(Mat, PetscInt *, PetscInt *, PetscInt *);
 PETSC_EXTERN PetscErrorCode MatSolve(Mat, Vec, Vec);
 PETSC_EXTERN PetscErrorCode MatForwardSolve(Mat, Vec, Vec);

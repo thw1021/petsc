@@ -20,6 +20,7 @@ PetscLogEvent MAT_SolveTransposeAdd, MAT_SOR, MAT_ForwardSolve, MAT_BackwardSolv
 PetscLogEvent MAT_LUFactorNumeric, MAT_CholeskyFactor, MAT_CholeskyFactorSymbolic, MAT_CholeskyFactorNumeric, MAT_ILUFactor;
 PetscLogEvent MAT_ILUFactorSymbolic, MAT_ICCFactorSymbolic, MAT_Copy, MAT_Convert, MAT_Scale, MAT_AssemblyBegin;
 PetscLogEvent MAT_QRFactorNumeric, MAT_QRFactorSymbolic, MAT_QRFactor;
+PetscLogEvent MAT_LQFactorNumeric, MAT_LQFactorSymbolic, MAT_LQFactor;
 PetscLogEvent MAT_AssemblyEnd, MAT_SetValues, MAT_GetValues, MAT_GetRow, MAT_GetRowIJ, MAT_CreateSubMats, MAT_GetOrdering, MAT_RedundantMat, MAT_GetSeqNonzeroStructure;
 PetscLogEvent MAT_IncreaseOverlap, MAT_Partitioning, MAT_PartitioningND, MAT_Coarsen, MAT_ZeroEntries, MAT_Load, MAT_View, MAT_AXPY, MAT_FDColoringCreate;
 PetscLogEvent MAT_FDColoringSetUp, MAT_FDColoringApply, MAT_Transpose, MAT_FDColoringFunction, MAT_CreateSubMat;
@@ -46,7 +47,7 @@ PetscLogEvent MAT_FactorFactS, MAT_FactorInvS;
 PetscLogEvent MATCOLORING_Apply, MATCOLORING_Comm, MATCOLORING_Local, MATCOLORING_ISCreate, MATCOLORING_SetUp, MATCOLORING_Weights;
 PetscLogEvent MAT_H2Opus_Build, MAT_H2Opus_Compress, MAT_H2Opus_Orthog, MAT_H2Opus_LR;
 
-const char *const MatFactorTypes[] = {"NONE", "LU", "CHOLESKY", "ILU", "ICC", "ILUDT", "QR", "MatFactorType", "MAT_FACTOR_", NULL};
+const char *const MatFactorTypes[] = {"NONE", "LU", "CHOLESKY", "ILU", "ICC", "ILUDT", "QR", "LQ", "MatFactorType", "MAT_FACTOR_", NULL};
 
 /*@
   MatSetRandom - Sets all components of a matrix to random numbers.
@@ -3021,7 +3022,7 @@ PetscErrorCode MatMultHermitianTransposeAdd(Mat mat, Vec v1, Vec v2, Vec v3)
 . mat - the matrix
 
   Output Parameter:
-. t - the type, one of `MAT_FACTOR_NONE`, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ILU`, `MAT_FACTOR_ICC,MAT_FACTOR_ILUDT`, `MAT_FACTOR_QR`
+. t - the type, one of `MAT_FACTOR_NONE`, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ILU`, `MAT_FACTOR_ICC,MAT_FACTOR_ILUDT`, `MAT_FACTOR_QR`, `MAT_FACTOR_LQ`
 
   Level: intermediate
 
@@ -3045,12 +3046,12 @@ PetscErrorCode MatGetFactorType(Mat mat, MatFactorType *t)
 
   Input Parameters:
 + mat - the matrix
-- t   - the type, one of `MAT_FACTOR_NONE`, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ILU`, `MAT_FACTOR_ICC,MAT_FACTOR_ILUDT`, `MAT_FACTOR_QR`
+- t   - the type, one of `MAT_FACTOR_NONE`, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ILU`, `MAT_FACTOR_ICC,MAT_FACTOR_ILUDT`, `MAT_FACTOR_QR`, `MAT_FACTOR_LQ`
 
   Level: intermediate
 
 .seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatFactorType`, `MatGetFactor()`, `MatGetFactorType()`, `MAT_FACTOR_NONE`, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ILU`,
-          `MAT_FACTOR_ICC`,`MAT_FACTOR_ILUDT`, `MAT_FACTOR_QR`
+          `MAT_FACTOR_ICC`,`MAT_FACTOR_ILUDT`, `MAT_FACTOR_QR`, `MAT_FACTOR_LQ`
 @*/
 PetscErrorCode MatSetFactorType(Mat mat, MatFactorType t)
 {
@@ -3535,6 +3536,23 @@ PetscErrorCode MatCholeskyFactorNumeric(Mat fact, Mat mat, const MatFactorInfo *
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatQRLQFactor_Internal(Mat mat, IS col, const MatFactorInfo *info, PetscLogEvent event, const char func_C[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  if (col) PetscValidHeaderSpecific(col, IS_CLASSID, 2);
+  if (info) PetscAssertPointer(info, 3);
+  PetscValidType(mat, 1);
+  PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
+  PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
+  MatCheckPreallocated(mat, 1);
+  PetscCall(PetscLogEventBegin(event, mat, col, 0, 0));
+  PetscUseMethod(mat, func_C, (Mat, IS, const MatFactorInfo *), (mat, col, info));
+  PetscCall(PetscLogEventEnd(event, mat, col, 0, 0));
+  PetscCall(PetscObjectStateIncrease((PetscObject)mat));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   MatQRFactor - Performs in-place QR factorization of matrix.
 
@@ -3570,17 +3588,33 @@ PetscErrorCode MatCholeskyFactorNumeric(Mat fact, Mat mat, const MatFactorInfo *
 PetscErrorCode MatQRFactor(Mat mat, IS col, const MatFactorInfo *info)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
-  if (col) PetscValidHeaderSpecific(col, IS_CLASSID, 2);
-  if (info) PetscAssertPointer(info, 3);
-  PetscValidType(mat, 1);
+  PetscCall(MatQRLQFactor_Internal(mat, col, info, MAT_QRFactor, "MatQRFactor_C"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatQRLQFactorSymbolic_Internal(Mat fact, Mat mat, IS col, const MatFactorInfo *info, PetscLogEvent event, const char func_C[])
+{
+  MatFactorInfo tinfo;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(fact, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 2);
+  if (col) PetscValidHeaderSpecific(col, IS_CLASSID, 3);
+  if (info) PetscAssertPointer(info, 4);
+  PetscValidType(fact, 1);
+  PetscValidType(mat, 2);
   PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
   PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
-  MatCheckPreallocated(mat, 1);
-  PetscCall(PetscLogEventBegin(MAT_QRFactor, mat, col, 0, 0));
-  PetscUseMethod(mat, "MatQRFactor_C", (Mat, IS, const MatFactorInfo *), (mat, col, info));
-  PetscCall(PetscLogEventEnd(MAT_QRFactor, mat, col, 0, 0));
-  PetscCall(PetscObjectStateIncrease((PetscObject)mat));
+  MatCheckPreallocated(mat, 2);
+  if (!info) {
+    PetscCall(MatFactorInfoInitialize(&tinfo));
+    info = &tinfo;
+  }
+
+  if (!fact->trivialsymbolic) PetscCall(PetscLogEventBegin(event, fact, mat, col, 0));
+  PetscUseMethod(fact, func_C, (Mat, Mat, IS, const MatFactorInfo *), (fact, mat, col, info));
+  if (!fact->trivialsymbolic) PetscCall(PetscLogEventEnd(event, fact, mat, col, 0));
+  PetscCall(PetscObjectStateIncrease((PetscObject)fact));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3616,26 +3650,36 @@ PetscErrorCode MatQRFactor(Mat mat, IS col, const MatFactorInfo *info)
 @*/
 PetscErrorCode MatQRFactorSymbolic(Mat fact, Mat mat, IS col, const MatFactorInfo *info)
 {
+  PetscFunctionBegin;
+  PetscCall(MatQRLQFactorSymbolic_Internal(fact, mat, col, info, MAT_QRFactorSymbolic, "MatQRFactorSymbolic_C"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatQRLQFactorNumeric_Internal(Mat fact, Mat mat, const MatFactorInfo *info, PetscLogEvent event, PetscLogEvent event_numeric, const char func_C[])
+{
   MatFactorInfo tinfo;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fact, MAT_CLASSID, 1);
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 2);
-  if (col) PetscValidHeaderSpecific(col, IS_CLASSID, 3);
-  if (info) PetscAssertPointer(info, 4);
   PetscValidType(fact, 1);
   PetscValidType(mat, 2);
   PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
-  PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
+  PetscCheck(mat->rmap->N == fact->rmap->N && mat->cmap->N == fact->cmap->N, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_SIZ, "Mat mat,Mat fact: global dimensions are different %" PetscInt_FMT " should = %" PetscInt_FMT " %" PetscInt_FMT " should = %" PetscInt_FMT,
+             mat->rmap->N, (fact)->rmap->N, mat->cmap->N, (fact)->cmap->N);
+
   MatCheckPreallocated(mat, 2);
   if (!info) {
     PetscCall(MatFactorInfoInitialize(&tinfo));
     info = &tinfo;
   }
 
-  if (!fact->trivialsymbolic) PetscCall(PetscLogEventBegin(MAT_QRFactorSymbolic, fact, mat, col, 0));
-  PetscUseMethod(fact, "MatQRFactorSymbolic_C", (Mat, Mat, IS, const MatFactorInfo *), (fact, mat, col, info));
-  if (!fact->trivialsymbolic) PetscCall(PetscLogEventEnd(MAT_QRFactorSymbolic, fact, mat, col, 0));
+  if (!fact->trivialsymbolic) PetscCall(PetscLogEventBegin(event_numeric, mat, fact, 0, 0));
+  else PetscCall(PetscLogEventBegin(event, mat, fact, 0, 0));
+  PetscUseMethod(fact, func_C, (Mat, Mat, const MatFactorInfo *), (fact, mat, info));
+  if (!fact->trivialsymbolic) PetscCall(PetscLogEventEnd(event_numeric, mat, fact, 0, 0));
+  else PetscCall(PetscLogEventEnd(event, mat, fact, 0, 0));
+  PetscCall(MatViewFromOptions(fact, NULL, "-mat_factor_view"));
   PetscCall(PetscObjectStateIncrease((PetscObject)fact));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3668,30 +3712,117 @@ PetscErrorCode MatQRFactorSymbolic(Mat fact, Mat mat, IS col, const MatFactorInf
 @*/
 PetscErrorCode MatQRFactorNumeric(Mat fact, Mat mat, const MatFactorInfo *info)
 {
-  MatFactorInfo tinfo;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(fact, MAT_CLASSID, 1);
-  PetscValidHeaderSpecific(mat, MAT_CLASSID, 2);
-  PetscValidType(fact, 1);
-  PetscValidType(mat, 2);
-  PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
-  PetscCheck(mat->rmap->N == fact->rmap->N && mat->cmap->N == fact->cmap->N, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_SIZ, "Mat mat,Mat fact: global dimensions are different %" PetscInt_FMT " should = %" PetscInt_FMT " %" PetscInt_FMT " should = %" PetscInt_FMT,
-             mat->rmap->N, (fact)->rmap->N, mat->cmap->N, (fact)->cmap->N);
+  PetscCall(MatQRLQFactorNumeric_Internal(fact, mat, info, MAT_QRFactor, MAT_QRFactorNumeric, "MatQRFactorNumeric_C"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
-  MatCheckPreallocated(mat, 2);
-  if (!info) {
-    PetscCall(MatFactorInfoInitialize(&tinfo));
-    info = &tinfo;
-  }
+/*@
+  MatLQFactor - Performs in-place LQ factorization of matrix.
 
-  if (!fact->trivialsymbolic) PetscCall(PetscLogEventBegin(MAT_QRFactorNumeric, mat, fact, 0, 0));
-  else PetscCall(PetscLogEventBegin(MAT_QRFactor, mat, fact, 0, 0));
-  PetscUseMethod(fact, "MatQRFactorNumeric_C", (Mat, Mat, const MatFactorInfo *), (fact, mat, info));
-  if (!fact->trivialsymbolic) PetscCall(PetscLogEventEnd(MAT_QRFactorNumeric, mat, fact, 0, 0));
-  else PetscCall(PetscLogEventEnd(MAT_QRFactor, mat, fact, 0, 0));
-  PetscCall(MatViewFromOptions(fact, NULL, "-mat_factor_view"));
-  PetscCall(PetscObjectStateIncrease((PetscObject)fact));
+  Collective
+
+  Input Parameters:
++ mat  - the matrix
+. col  - column permutation
+- info - options for factorization, includes
+.vb
+          fill - expected fill as ratio of original fill.
+          dtcol - pivot tolerance (0 no pivot, 1 full column pivoting)
+                   Run with the option -info to determine an optimal value to use
+.ve
+
+  Level: developer
+
+  Notes:
+  Most users should employ the `KSP` interface for linear solvers
+  instead of working directly with matrix algebra routines such as this.
+  See, e.g., `KSPCreate()`.
+
+  This changes the state of the matrix to a factored matrix; it cannot be used
+  for example with `MatSetValues()` unless one first calls `MatSetUnfactored()`.
+
+  Developer Note:
+  The Fortran interface is not autogenerated as the
+  interface definition cannot be generated correctly [due to MatFactorInfo]
+
+.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatFactorInfo`, `MatGetFactor()`, `MatLQFactorSymbolic()`, `MatLQFactorNumeric()`, `MatLUFactor()`,
+          `MatSetUnfactored()`
+@*/
+PetscErrorCode MatLQFactor(Mat mat, IS col, const MatFactorInfo *info)
+{
+  PetscFunctionBegin;
+  PetscCall(MatQRLQFactor_Internal(mat, col, info, MAT_LQFactor, "MatLQFactor_C"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatLQFactorSymbolic - Performs symbolic LQ factorization of matrix.
+  Call this routine after `MatGetFactor()` but before calling `MatLQFactorNumeric()`.
+
+  Collective
+
+  Input Parameters:
++ fact - the factor matrix obtained with `MatGetFactor()`
+. mat  - the matrix
+. col  - column permutation
+- info - options for factorization, includes
+.vb
+          fill - expected fill as ratio of original fill.
+          dtcol - pivot tolerance (0 no pivot, 1 full column pivoting)
+                   Run with the option -info to determine an optimal value to use
+.ve
+
+  Level: developer
+
+  Note:
+  Most users should employ the `KSP` interface for linear solvers
+  instead of working directly with matrix algebra routines such as this.
+  See, e.g., `KSPCreate()`.
+
+  Developer Note:
+  The Fortran interface is not autogenerated as the
+  interface definition cannot be generated correctly [due to `MatFactorInfo`]
+
+.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatGetFactor()`, `MatFactorInfo`, `MatLQFactor()`, `MatLQFactorNumeric()`, `MatLUFactor()`, `MatFactorInfoInitialize()`
+@*/
+PetscErrorCode MatLQFactorSymbolic(Mat fact, Mat mat, IS col, const MatFactorInfo *info)
+{
+  PetscFunctionBegin;
+  PetscCall(MatQRLQFactorSymbolic_Internal(fact, mat, col, info, MAT_LQFactorSymbolic, "MatLQFactorSymbolic_C"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatLQFactorNumeric - Performs numeric LQ factorization of a matrix.
+  Call this routine after first calling `MatGetFactor()`, and `MatLQFactorSymbolic()`.
+
+  Collective
+
+  Input Parameters:
++ fact - the factor matrix obtained with `MatGetFactor()`
+. mat  - the matrix
+- info - options for factorization
+
+  Level: developer
+
+  Notes:
+  See `MatLQFactor()` for in-place factorization.
+
+  Most users should employ the `KSP` interface for linear solvers
+  instead of working directly with matrix algebra routines such as this.
+  See, e.g., `KSPCreate()`.
+
+  Developer Note:
+  The Fortran interface is not autogenerated as the
+  interface definition cannot be generated correctly [due to `MatFactorInfo`]
+
+.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatFactorInfo`, `MatGetFactor()`, `MatLQFactor()`, `MatLQFactorSymbolic()`, `MatLUFactor()`
+@*/
+PetscErrorCode MatLQFactorNumeric(Mat fact, Mat mat, const MatFactorInfo *info)
+{
+  PetscFunctionBegin;
+  PetscCall(MatQRLQFactorNumeric_Internal(fact, mat, info, MAT_LQFactor, MAT_LQFactorNumeric, "MatLQFactorNumeric_C"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3860,10 +3991,12 @@ PetscErrorCode MatMatSolveTranspose(Mat A, Mat B, Mat X)
   PetscCheckSameComm(A, 1, B, 2);
   PetscCheckSameComm(A, 1, X, 3);
   PetscCheck(X != B, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_IDN, "X and B must be different matrices");
-  PetscCheck(A->cmap->N == X->rmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A,Mat X: global dim %" PetscInt_FMT " %" PetscInt_FMT, A->cmap->N, X->rmap->N);
-  PetscCheck(A->rmap->N == B->rmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A,Mat B: global dim %" PetscInt_FMT " %" PetscInt_FMT, A->rmap->N, B->rmap->N);
-  PetscCheck(A->rmap->n == B->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A,Mat B: local dim %" PetscInt_FMT " %" PetscInt_FMT, A->rmap->n, B->rmap->n);
-  PetscCheck(X->cmap->N >= B->cmap->N, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Solution matrix must have same number of columns as rhs matrix");
+  PetscCheck(A->rmap->N == X->rmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A,Mat X: global dim %" PetscInt_FMT " %" PetscInt_FMT, A->rmap->N, X->rmap->N);
+  PetscCheck(A->cmap->N == B->rmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A,Mat B: global dim %" PetscInt_FMT " %" PetscInt_FMT, A->cmap->N, B->rmap->N);
+  PetscCheck(X->cmap->N == B->cmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat X,Mat B: global dim %" PetscInt_FMT " %" PetscInt_FMT, X->cmap->N, B->cmap->N);
+  PetscCheck(A->rmap->n == X->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A,Mat X: local dim %" PetscInt_FMT " %" PetscInt_FMT, A->rmap->n, X->rmap->n);
+  PetscCheck(A->cmap->n == B->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A,Mat B: local dim %" PetscInt_FMT " %" PetscInt_FMT, A->cmap->n, B->rmap->n);
+  PetscCheck(X->cmap->n == B->cmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A,Mat B: local dim %" PetscInt_FMT " %" PetscInt_FMT, X->cmap->n, B->cmap->n);
   if (!A->rmap->N && !A->cmap->N) PetscFunctionReturn(PETSC_SUCCESS);
   MatCheckPreallocated(A, 1);
 
@@ -4853,7 +4986,7 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
 + mat   - the matrix
 . type  - name of solver type, for example, superlu, petsc (to use PETSc's solver if it is available), if this is 'NULL', then the first result that satisfies
           the other criteria is returned
-- ftype - factor type, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`
+- ftype - factor type, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`, `MAT_FACTOR_LQ`
 
   Output Parameter:
 . f - the factor matrix used with MatXXFactorSymbolic,Numeric() calls. Can be `NULL` in some cases, see notes below.
@@ -4887,7 +5020,7 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
 
 .seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `KSP`, `MatSolverType`, `MatFactorType`, `MatCopy()`, `MatDuplicate()`,
           `MatGetFactorAvailable()`, `MatFactorGetCanUseOrdering()`, `MatSolverTypeRegister()`, `MatSolverTypeGet()`
-          `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`, `MatInitializePackage()`
+          `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`, `MAT_FACTOR_LQ`, `MatInitializePackage()`
 @*/
 PetscErrorCode MatGetFactor(Mat mat, MatSolverType type, MatFactorType ftype, Mat *f)
 {
@@ -4933,7 +5066,7 @@ PetscErrorCode MatGetFactor(Mat mat, MatSolverType type, MatFactorType ftype, Ma
   Input Parameters:
 + mat   - the matrix
 . type  - name of solver type, for example, superlu, petsc (to use PETSc's default)
-- ftype - factor type, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`
+- ftype - factor type, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`, `MAT_FACTOR_LQ`
 
   Output Parameter:
 . flg - PETSC_TRUE if the factorization is available
@@ -4950,7 +5083,7 @@ PetscErrorCode MatGetFactor(Mat mat, MatSolverType type, MatFactorType ftype, Ma
   This should actually be called `MatCreateFactorAvailable()` since `MatGetFactor()` creates a new factor object
 
 .seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatSolverType`, `MatFactorType`, `MatGetFactor()`, `MatCopy()`, `MatDuplicate()`, `MatSolverTypeRegister()`,
-          `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`, `MatSolverTypeGet()`
+          `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`, `MAT_FACTOR_LQ`, `MatSolverTypeGet()`
 @*/
 PetscErrorCode MatGetFactorAvailable(Mat mat, MatSolverType type, MatFactorType ftype, PetscBool *flg)
 {

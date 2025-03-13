@@ -194,6 +194,9 @@ PetscErrorCode MatInitializePackage(void)
   PetscCall(PetscLogEventRegister("MatQRFactor", MAT_CLASSID, &MAT_QRFactor));
   PetscCall(PetscLogEventRegister("MatQRFactorSym", MAT_CLASSID, &MAT_QRFactorSymbolic));
   PetscCall(PetscLogEventRegister("MatQRFactorNum", MAT_CLASSID, &MAT_QRFactorNumeric));
+  PetscCall(PetscLogEventRegister("MatLQFactor", MAT_CLASSID, &MAT_LQFactor));
+  PetscCall(PetscLogEventRegister("MatLQFactorSym", MAT_CLASSID, &MAT_LQFactorSymbolic));
+  PetscCall(PetscLogEventRegister("MatLQFactorNum", MAT_CLASSID, &MAT_LQFactorNumeric));
   PetscCall(PetscLogEventRegister("MatCholeskyFctr", MAT_CLASSID, &MAT_CholeskyFactor));
   PetscCall(PetscLogEventRegister("MatCholFctrSym", MAT_CLASSID, &MAT_CholeskyFactorSymbolic));
   PetscCall(PetscLogEventRegister("MatCholFctrNum", MAT_CLASSID, &MAT_CholeskyFactorNumeric));
@@ -370,6 +373,7 @@ PetscErrorCode MatInitializePackage(void)
   PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSE, MAT_FACTOR_ILU, MatGetFactor_seqdense_petsc));
   PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSE, MAT_FACTOR_CHOLESKY, MatGetFactor_seqdense_petsc));
   PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSE, MAT_FACTOR_QR, MatGetFactor_seqdense_petsc));
+  PetscCall(MatSolverTypeRegister(MATSOLVERPETSC, MATSEQDENSE, MAT_FACTOR_LQ, MatGetFactor_seqdense_petsc));
 #if defined(PETSC_HAVE_CUDA)
   PetscCall(MatSolverTypeRegister_DENSECUDA());
 #endif

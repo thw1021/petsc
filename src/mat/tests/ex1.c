@@ -1,4 +1,4 @@
-static char help[] = "Tests LU, Cholesky, and QR factorization and MatMatSolve() for a sequential dense matrix. \n\
+static char help[] = "Tests LU, Cholesky, QR, and LQ factorization and MatMatSolve() for a sequential dense matrix. \n\
                       For MATSEQDENSE matrix, the factorization is just a thin wrapper to LAPACK.       \n\
                       For MATSEQDENSECUDA, it uses cusolverDn routines \n\n";
 
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
   PetscReal   norm, tol = PETSC_SMALL;
   PetscMPIInt size;
   char        solver[64];
-  PetscBool   inplace, full = PETSC_FALSE, ldl = PETSC_TRUE, qr = PETSC_TRUE;
+  PetscBool   inplace, full = PETSC_FALSE, ldl = PETSC_TRUE, qr = PETSC_TRUE, lq = PETSC_TRUE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -105,6 +105,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-nrhs", &nrhs, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-ldl", &ldl, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-qr", &qr, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-lq", &lq, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-full", &full, NULL));
   PetscCall(PetscOptionsGetString(NULL, NULL, "-solver_type", solver, sizeof(solver), NULL));
 
@@ -254,6 +255,65 @@ int main(int argc, char **argv)
     PetscCall(VecDestroy(&y));
     PetscCall(VecDestroy(&ytmp));
   }
+
+  if (lq) {
+    Mat matorig;
+    /* setup rectangular */
+    PetscCall(createMatsAndVecs(m, n, nrhs, full, &matorig, &RHS, &SOLU, &x, &y, &b));
+    PetscCall(VecDuplicate(y, &ytmp));
+
+    PetscCall(MatMult(matorig, x, b));
+    PetscCall(MatTranspose(matorig, MAT_INITIAL_MATRIX, &mat));
+
+    /* in-place LQ */
+    if (inplace) {
+      Mat SOLU2;
+
+      PetscCall(MatDuplicate(mat, MAT_COPY_VALUES, &F));
+      PetscCall(MatLQFactor(F, NULL, 0));
+      PetscCall(MatSolveTranspose(F, b, y));
+      PetscCall(VecAXPY(y, -1.0, x));
+      PetscCall(VecNorm(y, NORM_2, &norm));
+      if (norm > tol) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Norm of error for in-place LQ %g\n", (double)norm));
+      PetscCall(MatMatMult(matorig, SOLU, MAT_REUSE_MATRIX, PETSC_DETERMINE, &RHS));
+      PetscCall(MatDuplicate(SOLU, MAT_DO_NOT_COPY_VALUES, &SOLU2));
+      PetscCall(MatMatSolveTranspose(F, RHS, SOLU2));
+      PetscCall(MatAXPY(SOLU2, -1.0, SOLU, SAME_NONZERO_PATTERN));
+      PetscCall(MatNorm(SOLU2, NORM_FROBENIUS, &norm));
+      if (norm > tol) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Error: Norm of error for in-place LQ (MatMatSolveTranspose) %g\n", (double)norm));
+      PetscCall(MatDestroy(&F));
+      PetscCall(MatDestroy(&SOLU2));
+    }
+
+    /* out-of-place LQ */
+    PetscCall(MatGetFactor(mat, solver, MAT_FACTOR_LQ, &F));
+    PetscCall(MatLQFactorSymbolic(F, mat, NULL, NULL));
+    PetscCall(MatLQFactorNumeric(F, mat, NULL));
+    PetscCall(MatSolveTranspose(F, b, y));
+    PetscCall(VecAXPY(y, -1.0, x));
+    PetscCall(VecNorm(y, NORM_2, &norm));
+    if (norm > tol) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Norm of error for out-of-place LQ %g\n", (double)norm));
+
+    if (m == n) {
+      /* out-of-place MatSolveTranspose */
+      PetscCall(MatMult(mat, x, b));
+      PetscCall(MatSolve(F, b, y));
+      PetscCall(VecAXPY(y, -1.0, x));
+      PetscCall(VecNorm(y, NORM_2, &norm));
+      if (norm > tol) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Norm of error for out-of-place LQ %g\n", (double)norm));
+    }
+
+    /* free space */
+    PetscCall(MatDestroy(&F));
+    PetscCall(MatDestroy(&mat));
+    PetscCall(MatDestroy(&matorig));
+    PetscCall(MatDestroy(&RHS));
+    PetscCall(MatDestroy(&SOLU));
+    PetscCall(VecDestroy(&x));
+    PetscCall(VecDestroy(&b));
+    PetscCall(VecDestroy(&y));
+    PetscCall(VecDestroy(&ytmp));
+  }
   PetscCall(PetscFinalize());
   return 0;
 }
@@ -277,13 +337,13 @@ int main(int argc, char **argv)
    test:
      requires: cuda
      suffix: seqdensecuda_seqaijcusparse
-     args: -mat_type seqaijcusparse -rhs_mat_type seqdensecuda -qr 0
+     args: -mat_type seqaijcusparse -rhs_mat_type seqdensecuda -qr 0 -lq 0
      output_file: output/ex1_2.out
 
    test:
      requires: cuda viennacl
      suffix: seqdensecuda_seqaijviennacl
-     args: -mat_type seqaijviennacl -rhs_mat_type seqdensecuda -qr 0
+     args: -mat_type seqaijviennacl -rhs_mat_type seqdensecuda -qr 0 -lq 0
      output_file: output/ex1_2.out
 
    test:
