@@ -420,6 +420,8 @@ static PetscErrorCode MatHYPRE_CreateCOOMat(Mat mat)
     matType = MATAIJHIPSPARSE;
   #elif defined(HYPRE_USING_CUDA)
     matType = MATAIJCUSPARSE;
+  #elif defined(HYPRE_USING_SYCL)
+    matType = MATAIJKOKKOS;
   #else
     SETERRQ(comm, PETSC_ERR_SUP, "Do not know the HYPRE device");
   #endif
