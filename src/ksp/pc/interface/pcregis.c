@@ -70,6 +70,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_HPDDM(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_H2OPUS(PC);
 #endif
 PETSC_EXTERN PetscErrorCode PCCreate_MPI(PC);
+PETSC_EXTERN PetscErrorCode PCCreate_Carrier(PC);
 
 /*@C
   PCRegisterAll - Registers all of the preconditioners in the PC package.
@@ -158,5 +159,6 @@ PetscErrorCode PCRegisterAll(void)
   PetscCall(PCRegister(PCH2OPUS, PCCreate_H2OPUS));
 #endif
   PetscCall(PCRegister(PCMPI, PCCreate_MPI));
+  PetscCall(PCRegister(PCCARRIER, PCCreate_Carrier));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

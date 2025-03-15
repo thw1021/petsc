@@ -99,5 +99,6 @@
 #define PCHPDDM 'hpddm'
 #define PCH2OPUS 'h2opus'
 #define PCMPI 'mpi'
+#define PCCARRIER 'carrier'
 
 #endif

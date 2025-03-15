@@ -508,3 +508,5 @@ PETSC_EXTERN PetscErrorCode PCAmgXGetResources(PC, void *);
 
 PETSC_EXTERN PetscErrorCode PCMatSetApplyOperation(PC, MatOperation);
 PETSC_EXTERN PetscErrorCode PCMatGetApplyOperation(PC, MatOperation *);
+
+PETSC_EXTERN PetscErrorCode PCCarrierSetType(PC, PCCarrierType);
