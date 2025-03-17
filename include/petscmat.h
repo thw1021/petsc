@@ -442,6 +442,7 @@ PETSC_EXTERN PetscErrorCode MatUpdateMPIAIJWithArrays(Mat, PetscInt, PetscInt, P
 PETSC_EXTERN PetscErrorCode MatUpdateMPIAIJWithArray(Mat, const PetscScalar[]);
 PETSC_EXTERN PetscErrorCode MatCreateMPIAIJWithSplitArrays(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt[], PetscInt[], PetscScalar[], PetscInt[], PetscInt[], PetscScalar[], Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm, Mat, Mat, const PetscInt[], Mat *);
+PETSC_EXTERN PetscErrorCode MatSetMPIAIJWithSplitSeqAIJ(Mat, Mat, Mat, PetscInt[]);
 
 PETSC_EXTERN PetscErrorCode MatCreateSeqBAIJ(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateBAIJ(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], PetscInt, const PetscInt[], Mat *);

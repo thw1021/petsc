@@ -178,50 +178,6 @@ static PetscErrorCode MatProductDataDestroy_MPIAIJKokkos(void *data)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* MatSetMPIAIJKokkosWithSplitSeqAIJKokkosMatrices - Set the diag and offdiag matrices of a MATMPIAIJKOKKOS matrix.
-   It is similar to MatCreateMPIAIJWithSplitArrays.
-
-  Input Parameters:
-+  mat   - the MATMPIAIJKOKKOS matrix, which should have its type and layout set, but should not have its diag, offdiag matrices set
-.  A     - the diag matrix using local col ids
--  B     - the offdiag matrix using global col ids
-
-  Output Parameter:
-.  mat   - the updated MATMPIAIJKOKKOS matrix
-*/
-static PetscErrorCode MatSetMPIAIJKokkosWithSplitSeqAIJKokkosMatrices(Mat mat, Mat A, Mat B, PetscInt *garray)
-{
-  Mat_MPIAIJ *mpiaij = static_cast<Mat_MPIAIJ *>(mat->data);
-  PetscInt    m, n, M, N, Am, An, Bm, Bn;
-
-  PetscFunctionBegin;
-  PetscCall(MatGetSize(mat, &M, &N));
-  PetscCall(MatGetLocalSize(mat, &m, &n));
-  PetscCall(MatGetLocalSize(A, &Am, &An));
-  PetscCall(MatGetLocalSize(B, &Bm, &Bn));
-
-  PetscCheck(m == Am && m == Bm, PETSC_COMM_SELF, PETSC_ERR_PLIB, "local number of rows do not match");
-  PetscCheck(n == An, PETSC_COMM_SELF, PETSC_ERR_PLIB, "local number of columns do not match");
-  // PetscCheck(N == Bn, PETSC_COMM_SELF, PETSC_ERR_PLIB, "global number of columns do not match");
-  PetscCheck(!mpiaij->A && !mpiaij->B, PETSC_COMM_SELF, PETSC_ERR_PLIB, "A, B of the MPIAIJ matrix are not empty");
-  mpiaij->A      = A;
-  mpiaij->B      = B;
-  mpiaij->garray = garray;
-
-  mat->preallocated     = PETSC_TRUE;
-  mat->nooffprocentries = PETSC_TRUE; /* See MatAssemblyBegin_MPIAIJ. In effect, making MatAssemblyBegin a nop */
-
-  PetscCall(MatSetOption(mat, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
-  PetscCall(MatAssemblyBegin(mat, MAT_FINAL_ASSEMBLY));
-  /* MatAssemblyEnd is critical here. It sets mat->offloadmask according to A and B's, and
-    also gets mpiaij->B compacted, with its col ids and size reduced
-  */
-  PetscCall(MatAssemblyEnd(mat, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatSetOption(mat, MAT_NO_OFF_PROC_ENTRIES, PETSC_FALSE));
-  PetscCall(MatSetOption(mat, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 // Adapted from Kokkos-Kernels spmv_launch_parameters(), to get parameters in Kokkos nested loops which we used to merge or
 // split csr matrices. The rule is to have "vector_length * team_size" be around 256 on GPUs (e.g., for a CUDA thread block)
 template <class ExecutionSpace>
@@ -1426,7 +1382,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
     PetscCall(PetscLayoutSetUp(Z->rmap));
     PetscCall(PetscLayoutSetUp(Z->cmap));
     PetscCall(MatSetType(Z, MATMPIAIJKOKKOS));
-    PetscCall(MatSetMPIAIJKokkosWithSplitSeqAIJKokkosMatrices(Z, Zd, Zo, mmAB->garray));
+    PetscCall(MatSetMPIAIJWithSplitSeqAIJ(Z, Zd, Zo, mmAB->garray));
 
     auto mmAtB = new MatMatStruct_AtB();
     PetscCall(MatProductSymbolic_MPIAIJKokkos_AtB(product, B, Z, mmAtB)); // final result C stored as mmAtB->{Cd, Co}
@@ -1437,7 +1393,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
 
   PetscCall(MatCreateSeqAIJKokkosWithKokkosCsrMatrix(PETSC_COMM_SELF, mm->Cd, &Cd));
   PetscCall(MatCreateSeqAIJKokkosWithKokkosCsrMatrix(PETSC_COMM_SELF, mm->Co, &Co));
-  PetscCall(MatSetMPIAIJKokkosWithSplitSeqAIJKokkosMatrices(C, Cd, Co, mm->garray));
+  PetscCall(MatSetMPIAIJWithSplitSeqAIJ(C, Cd, Co, mm->garray));
   /* set block sizes */
   switch (ptype) {
   case MATPRODUCT_PtAP:
