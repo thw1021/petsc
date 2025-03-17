@@ -275,7 +275,8 @@ def WriteNinja(petsc):
 
 def main(petsc_dir=None, petsc_arch=None, pkg_dir=None, pkg_name=None, pkg_arch=None, pkg_pkgs=None, output=None):
     petsc = Petsc(petsc_dir=petsc_dir, petsc_arch=petsc_arch, pkg_dir=pkg_dir, pkg_name=pkg_name, pkg_arch=pkg_arch, pkg_pkgs=pkg_pkgs)
-    WriteGnuMake(petsc_arch,petsc)
+    # Use pkg_arch in case petsc_arch is empty (needed by SLEPc)
+    WriteGnuMake(petsc_arch if petsc_arch else pkg_arch,petsc)
 
 if __name__ == '__main__':
     import optparse
