@@ -2010,7 +2010,7 @@ PetscErrorCode VecRestoreLocalVector(Vec v, Vec w)
 .seealso: [](ch_vectors), `Vec`, `VecRestoreArray()`, `VecGetArrayRead()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecGetArrayReadF90()`, `VecPlaceArray()`, `VecGetArray2d()`,
           `VecGetArrayPair()`, `VecRestoreArrayPair()`, `VecGetArrayWrite()`, `VecRestoreArrayWrite()`
 @*/
-PetscErrorCode VecGetArray(Vec x, PetscScalar **a)
+PetscErrorCode VecGetArray_Default(Vec x, PetscScalar **a)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2040,7 +2040,7 @@ PetscErrorCode VecGetArray(Vec x, PetscScalar **a)
 .seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArrayRead()`, `VecRestoreArrays()`, `VecRestoreArrayF90()`, `VecRestoreArrayReadF90()`, `VecPlaceArray()`, `VecRestoreArray2d()`,
           `VecGetArrayPair()`, `VecRestoreArrayPair()`
 @*/
-PetscErrorCode VecRestoreArray(Vec x, PetscScalar **a)
+PetscErrorCode VecRestoreArray_Default(Vec x, PetscScalar **a)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
@@ -2052,6 +2052,119 @@ PetscErrorCode VecRestoreArray(Vec x, PetscScalar **a)
   PetscCall(PetscObjectStateIncrease((PetscObject)x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PetscErrorCode VecGetArray_float(Vec x, float **a)
+{
+  PetscScalar *ptr;
+  float       *ret;
+
+  PetscFunctionBegin;
+  PetscCall(VecGetArray_Default(x, &ptr));
+#if PetscDefined(USE_REAL_SINGLE) && !PetscDefined(USE_COMPLEX)
+  // PetscScalar is a float
+  ret = ptr;
+#else
+  PetscInt size;
+
+  PetscCall(VecGetLocalSize(x, &size));
+  PetscCall(PetscMalloc1(size, &ret));
+  for (PetscInt i = 0; i < size; ++i) ret[i] = (float)PetscRealPart(ptr[i]);
+#endif
+  PetscCall(VecRestoreArray_Default(x, &ptr));
+  *a = ret;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode VecRestoreArray_float(Vec x, float **a)
+{
+  PetscFunctionBegin;
+#if PetscDefined(USE_REAL_SINGLE) && !PetscDefined(USE_COMPLEX)
+  // PetscScalar is a float
+  PetscCall(VecRestoreArray_Default(x, a));
+#else
+  PetscInt     n;
+  PetscScalar *ptr;
+
+  PetscCall(VecGetLocalSize(x, &n));
+  PetscCall(VecGetArray_Default(x, &ptr));
+  for (PetscInt i = 0; i < n; ++i) ptr[i] = (PetscScalar)((*a)[i]);
+  PetscCall(VecRestoreArray_Default(x, &ptr));
+  PetscCall(PetscFree(*a));
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+#if 0
+// macros that do the same as above
+  #include <petsc/private/petscadvancedmacros.h>
+
+  #define VecGetArray_TYPE(TYPE, SAME_TYPE_CONDITION, CONVERT) \
+    PetscErrorCode PetscConcat(VecGetArray_, TYPE)(Vec x, TYPE * *a) \
+    { \
+      PetscScalar *ptr; \
+      TYPE        *ret; \
+\
+      PetscFunctionBegin; \
+      PetscCall(VecGetArray_Default(x, &ptr)); \
+      /* clang-format off */ \
+      PetscIf( \
+        SAME_TYPE_CONDITION, \
+        /* PetscScalar is TYPE */ \
+        ret = ptr, \
+        do { \
+          PetscInt n; \
+          \
+          PetscCall(VecGetLocalSize(x, &n)); \
+          PetscCall(PetscMalloc1(n, &ret)); \
+          for (PetscInt i = 0; i < n; ++i) ret[i] = (TYPE)CONVERT(ptr[i]); \
+        } while (0) \
+      ); \
+      /* clang-format on */ \
+      PetscCall(VecRestoreArray_Default(x, &ptr)); \
+      *a = ret; \
+      PetscFunctionReturn(PETSC_SUCCESS); \
+    }
+
+  #define VecRestoreArray_TYPE(TYPE, SAME_TYPE_CONDITION) \
+    PetscErrorCode PetscConcat(VecRestoreArray, TYPE)(Vec x, TYPE * *a) \
+    { \
+      PetscFunctionBegin; \
+      /* clang-format off */ \
+      PetscIf( \
+        SAME_TYPE_CONDITION, \
+        /* PetscScalar is a TYPE */ \
+        PetscCall(VecRestoreArray_Default(x, a)), \
+        do { \
+          PetscInt     n; \
+          PetscScalar *ptr; \
+          \
+          PetscCall(VecGetLocalSize(x, &n)); \
+          PetscCall(VecGetArray_Default(x, &ptr)); \
+          for (PetscInt i = 0; i < n; ++i) ptr[i] = (PetscScalar)((*a)[i]); \
+          PetscCall(VecRestoreArray_Default(x, &ptr)); \
+          PetscCall(PetscFree(*a)); \
+        } while (0) \
+      ); \
+      /* clang-format on */ \
+      PetscFunctionReturn(PETSC_SUCCESS); \
+    }
+
+  #if !PetscDefined(USE_COMPLEX)
+    #if PetscDefined(USE_REAL_SINGLE)
+      #define PETSC_USE_REAL_SINGLE_REAL 1
+    #endif
+  #endif
+
+  #ifndef PETSC_USE_REAL_SINGLE_REAL
+    #define PETSC_USE_REAL_SINGLE_REAL 0
+  #endif
+
+  #define NO_CONVERSION(...) __VA_ARGS__
+
+VecGetArray_TYPE(float, PetscDefined(USE_REAL_SINGLE_REAL), PetscRealPart);
+VecRestoreArray_TYPE(float, PetscDefined(USE_REAL_SINGLE_REAL));
+#endif
+
 /*@C
   VecGetArrayRead - Get read-only pointer to contiguous array containing this processor's portion of the vector data.
 

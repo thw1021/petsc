@@ -564,10 +564,52 @@ typedef enum {
 } VecOption;
 PETSC_EXTERN PetscErrorCode VecSetOption(Vec, VecOption, PetscBool);
 
-PETSC_EXTERN PetscErrorCode VecGetArray(Vec, PetscScalar **);
+PETSC_EXTERN PetscErrorCode VecGetArray_Default(Vec, PetscScalar **);
+PETSC_EXTERN PetscErrorCode VecGetArray_float(Vec, float **);
+#if PETSC_C_VERSION >= 11
+  #define VecGetArray(v, ptr) _Generic(**(ptr), float : VecGetArray_float, default : VecGetArray_Default)(v, ptr)
+#elif defined(__cplusplus)
+namespace
+{
+
+inline PetscErrorCode VecGetArray(Vec v, PetscScalar **ptr)
+{
+  return VecGetArray_Default(v, ptr);
+}
+
+inline PetscErrorCode VecGetArray(Vec v, float **ptr)
+{
+  return VecGetArray_float(v, ptr);
+}
+
+} // namespace
+#else
+  #define VecGetArray VecGetArray_Default
+#endif
 PETSC_EXTERN PetscErrorCode VecGetArrayWrite(Vec, PetscScalar **);
 PETSC_EXTERN PetscErrorCode VecGetArrayRead(Vec, const PetscScalar **);
-PETSC_EXTERN PetscErrorCode VecRestoreArray(Vec, PetscScalar **);
+PETSC_EXTERN PetscErrorCode VecRestoreArray_Default(Vec, PetscScalar **);
+PETSC_EXTERN PetscErrorCode VecRestoreArray_float(Vec, float **);
+#if PETSC_C_VERSION >= 11
+  #define VecRestoreArray(v, ptr) _Generic(**(ptr), float : VecRestoreArray_float, default : VecRestoreArray_Default)(v, ptr)
+#elif defined(__cplusplus)
+namespace
+{
+
+inline PetscErrorCode VecRestoreArray(Vec v, PetscScalar **ptr)
+{
+  return VecRestoreArray_Default(v, ptr);
+}
+
+inline PetscErrorCode VecRestoreArray(Vec v, float **ptr)
+{
+  return VecRestoreArray_float(v, ptr);
+}
+
+} // namespace
+#else
+  #define VecRestoreArray VecRestoreArray_Default
+#endif
 PETSC_EXTERN PetscErrorCode VecRestoreArrayWrite(Vec, PetscScalar **);
 PETSC_EXTERN PetscErrorCode VecRestoreArrayRead(Vec, const PetscScalar **);
 PETSC_EXTERN PetscErrorCode VecCreateLocalVector(Vec, Vec *);
