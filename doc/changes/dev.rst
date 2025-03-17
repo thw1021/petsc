@@ -60,6 +60,8 @@ Changes: Development
 
 - Add ``MatCopyHashToXAIJ()`` which allows assembling an XAIJ matrix in hash table form into another XAIJ matrix
 - Add ``MatResetHash()`` which allows resetting an XAIJ matrix to use a hash table
+- Add ``MatCreateSeqAIJKokkosWithKokkosCsrMatrix()`` which allows creation of a SEQAIJKOKKOS matrix from a Kokkos CSR matrix
+- Add ``MatCreateSeqAIJKokkosWithKokkosViews()`` which allows creation of a SEQAIJKOKKOS matrix from aij data held in Kokkos dual views
 
 .. rubric:: MatCoarsen:
 
