@@ -1223,7 +1223,7 @@ PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm comm, PetscInt m, P
    PetscCallCXX(akok = new Mat_SeqAIJKokkos(m, n, j.extent(0), i, j, a));
    PetscCall(MatCreate(comm, A));
    PetscCall(MatSetSeqAIJKokkosWithCSRMatrix(*A, akok));
-   PetscFunctionReturn(PETSC_SUCCESS); 
+   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* Computes Y += alpha X */

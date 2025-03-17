@@ -70,7 +70,7 @@ using KokkosTeamMemberType = Kokkos::TeamPolicy<DefaultExecutionSpace>::member_t
 -  a     - the dual Kokkos view of the values
 
    Output Parameter:
-.  A  - the `MATSEQAIJKOKKOS` matrix 
+.  A  - the `MATSEQAIJKOKKOS` matrix
 
    Level: intermediate
 
@@ -78,7 +78,7 @@ using KokkosTeamMemberType = Kokkos::TeamPolicy<DefaultExecutionSpace>::member_t
    Creates a Mat given the csr data input as Kokkos dual vectors. This routine allows a Mat
    to be built without involving the host.
 
-.seealso: `MatCreateSeqAIJKokkosWithKokkosCsrMatrix()`
+.seealso:`MatCreateSeqAIJKokkosWithKokkosCsrMatrix()`
 @*/
 PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm, PetscInt, PetscInt, MatRowMapKokkosDualView &, MatColIdxKokkosDualView &, MatScalarKokkosDualView, Mat*);
 
@@ -96,7 +96,7 @@ PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm, PetscInt, PetscInt
 -  A_csr - the Kokkos CSR matrix
 
    Output Parameter:
-.  A  - the `MATSEQAIJKOKKOS` matrix 
+.  A  - the `MATSEQAIJKOKKOS` matrix
 
    Level: intermediate
 
@@ -107,6 +107,5 @@ PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm, PetscInt, PetscInt
 .seealso: `MatCreateSeqAIJKokkosWithKokkosViews()`
 @*/
 PetscErrorCode MatCreateSeqAIJKokkosWithKokkosCsrMatrix(MPI_Comm, KokkosCsrMatrix, Mat *);
-
 
 #endif

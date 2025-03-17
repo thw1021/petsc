@@ -3554,7 +3554,7 @@ PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm comm, Mat A, Mat B, const Pets
 
 /*@C
   MatSetMPIAIJWithSplitSeqAIJ - Set the diag and offdiag matrices of a MATMPIAIJ matrix.
-   It is similar to MatCreateMPIAIJWithSplitArrays. This routine allows passing in 
+   It is similar to MatCreateMPIAIJWithSplitArrays. This routine allows passing in
    B with local indices and the correct size, along with the accompanying
    garray, hence skipping compactification
 
@@ -3582,7 +3582,7 @@ PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm comm, Mat A, Mat B, const Pets
 PETSC_EXTERN PetscErrorCode MatSetMPIAIJWithSplitSeqAIJ(Mat mat, Mat A, Mat B, PetscInt garray[])
 {
    PetscFunctionBegin;
-   Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)(mat->data);
+   Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)mat->data;
    PetscInt    m, n, M, N, Am, An, Bm, Bn;
 
    PetscCall(MatGetSize(mat, &M, &N));
@@ -3608,7 +3608,7 @@ PETSC_EXTERN PetscErrorCode MatSetMPIAIJWithSplitSeqAIJ(Mat mat, Mat A, Mat B, P
    */
    PetscCall(MatAssemblyEnd(mat, MAT_FINAL_ASSEMBLY));
    PetscCall(MatSetOption(mat, MAT_NO_OFF_PROC_ENTRIES, PETSC_FALSE));
-   PetscCall(MatSetOption(mat, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));   
+   PetscCall(MatSetOption(mat, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
    PetscFunctionReturn(PETSC_SUCCESS);
 }
 
