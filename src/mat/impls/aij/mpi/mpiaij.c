@@ -3581,35 +3581,35 @@ PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm comm, Mat A, Mat B, const Pets
 @*/
 PETSC_EXTERN PetscErrorCode MatSetMPIAIJWithSplitSeqAIJ(Mat mat, Mat A, Mat B, PetscInt garray[])
 {
-   PetscFunctionBegin;
-   Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)mat->data;
-   PetscInt    m, n, M, N, Am, An, Bm, Bn;
+  PetscFunctionBegin;
+  Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)mat->data;
+  PetscInt    m, n, M, N, Am, An, Bm, Bn;
 
-   PetscCall(MatGetSize(mat, &M, &N));
-   PetscCall(MatGetLocalSize(mat, &m, &n));
-   PetscCall(MatGetLocalSize(A, &Am, &An));
-   PetscCall(MatGetLocalSize(B, &Bm, &Bn));
+  PetscCall(MatGetSize(mat, &M, &N));
+  PetscCall(MatGetLocalSize(mat, &m, &n));
+  PetscCall(MatGetLocalSize(A, &Am, &An));
+  PetscCall(MatGetLocalSize(B, &Bm, &Bn));
 
-   PetscCheck(m == Am && m == Bm, PETSC_COMM_SELF, PETSC_ERR_PLIB, "local number of rows do not match");
-   PetscCheck(n == An, PETSC_COMM_SELF, PETSC_ERR_PLIB, "local number of columns do not match");
-   //PetscCheck(N == Bn, PETSC_COMM_SELF, PETSC_ERR_PLIB, "global number of columns do not match");
-   PetscCheck(!mpiaij->A && !mpiaij->B, PETSC_COMM_SELF, PETSC_ERR_PLIB, "A, B of the MPIAIJ matrix are not empty");
-   mpiaij->A      = A;
-   mpiaij->B      = B;
-   mpiaij->garray = garray;
+  PetscCheck(m == Am && m == Bm, PETSC_COMM_SELF, PETSC_ERR_PLIB, "local number of rows do not match");
+  PetscCheck(n == An, PETSC_COMM_SELF, PETSC_ERR_PLIB, "local number of columns do not match");
+  //PetscCheck(N == Bn, PETSC_COMM_SELF, PETSC_ERR_PLIB, "global number of columns do not match");
+  PetscCheck(!mpiaij->A && !mpiaij->B, PETSC_COMM_SELF, PETSC_ERR_PLIB, "A, B of the MPIAIJ matrix are not empty");
+  mpiaij->A      = A;
+  mpiaij->B      = B;
+  mpiaij->garray = garray;
 
-   mat->preallocated     = PETSC_TRUE;
-   mat->nooffprocentries = PETSC_TRUE; /* See MatAssemblyBegin_MPIAIJ. In effect, making MatAssemblyBegin a nop */
+  mat->preallocated     = PETSC_TRUE;
+  mat->nooffprocentries = PETSC_TRUE; /* See MatAssemblyBegin_MPIAIJ. In effect, making MatAssemblyBegin a nop */
 
-   PetscCall(MatSetOption(mat, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
-   PetscCall(MatAssemblyBegin(mat, MAT_FINAL_ASSEMBLY));
-   /* MatAssemblyEnd is critical here. It sets mat->offloadmask according to A and B's, and
+  PetscCall(MatSetOption(mat, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
+  PetscCall(MatAssemblyBegin(mat, MAT_FINAL_ASSEMBLY));
+  /* MatAssemblyEnd is critical here. It sets mat->offloadmask according to A and B's, and
    also gets mpiaij->B compacted (if garray is NULL), with its col ids and size reduced
    */
-   PetscCall(MatAssemblyEnd(mat, MAT_FINAL_ASSEMBLY));
-   PetscCall(MatSetOption(mat, MAT_NO_OFF_PROC_ENTRIES, PETSC_FALSE));
-   PetscCall(MatSetOption(mat, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
-   PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(MatAssemblyEnd(mat, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatSetOption(mat, MAT_NO_OFF_PROC_ENTRIES, PETSC_FALSE));
+  PetscCall(MatSetOption(mat, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 extern PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat, PetscInt, const IS[], const IS[], MatReuse, PetscBool, Mat *);

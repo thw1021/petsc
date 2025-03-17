@@ -1217,13 +1217,13 @@ PetscErrorCode MatSeqAIJRestoreKokkosViewWrite(Mat A, MatScalarKokkosView *kv)
 
 PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm comm, PetscInt m, PetscInt n, MatRowMapKokkosDualView &i, MatColIdxKokkosDualView &j, MatScalarKokkosDualView a, Mat *A)
 {
-   Mat_SeqAIJKokkos *akok;
+  Mat_SeqAIJKokkos *akok;
 
-   PetscFunctionBegin;
-   PetscCallCXX(akok = new Mat_SeqAIJKokkos(m, n, j.extent(0), i, j, a));
-   PetscCall(MatCreate(comm, A));
-   PetscCall(MatSetSeqAIJKokkosWithCSRMatrix(*A, akok));
-   PetscFunctionReturn(PETSC_SUCCESS);
+  PetscFunctionBegin;
+  PetscCallCXX(akok = new Mat_SeqAIJKokkos(m, n, j.extent(0), i, j, a));
+  PetscCall(MatCreate(comm, A));
+  PetscCall(MatSetSeqAIJKokkosWithCSRMatrix(*A, akok));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* Computes Y += alpha X */

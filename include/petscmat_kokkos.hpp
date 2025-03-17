@@ -6,12 +6,12 @@
 
 #if defined(PETSC_HAVE_KOKKOS)
 
-#include <petsc_kokkos.hpp>
-#include <petsc/private/kokkosimpl.hpp>
-#include <../src/mat/impls/aij/seq/aij.h>
-#include <KokkosSparse_CrsMatrix.hpp>
-#include <KokkosSparse_spiluk.hpp>
-#include <string>
+  #include <petsc_kokkos.hpp>
+  #include <petsc/private/kokkosimpl.hpp>
+  #include <../src/mat/impls/aij/seq/aij.h>
+  #include <KokkosSparse_CrsMatrix.hpp>
+  #include <KokkosSparse_spiluk.hpp>
+  #include <string>
 
 using MatRowMapType = PetscInt;
 using MatColIdxType = PetscInt;
@@ -80,7 +80,7 @@ using KokkosTeamMemberType = Kokkos::TeamPolicy<DefaultExecutionSpace>::member_t
 
 .seealso:`MatCreateSeqAIJKokkosWithKokkosCsrMatrix()`
 @*/
-PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm, PetscInt, PetscInt, MatRowMapKokkosDualView &, MatColIdxKokkosDualView &, MatScalarKokkosDualView, Mat*);
+PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm, PetscInt, PetscInt, MatRowMapKokkosDualView &, MatColIdxKokkosDualView &, MatScalarKokkosDualView, Mat *);
 
 /*@C
    MatCreateSeqAIJKokkosWithKokkosCsrMatrix - Creates a MATSEQAIJKOKKOS matrix from a Kokkos CSR matrix
