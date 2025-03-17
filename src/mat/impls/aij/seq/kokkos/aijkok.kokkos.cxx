@@ -1,5 +1,6 @@
 #include <petsc_kokkos.hpp>
 #include <petscvec_kokkos.hpp>
+#include <petscmat_kokkos.hpp>
 #include <petscpkg_version.h>
 #include <petsc/private/petscimpl.h>
 #include <petsc/private/sfimpl.h>
@@ -1214,6 +1215,17 @@ PetscErrorCode MatSeqAIJRestoreKokkosViewWrite(Mat A, MatScalarKokkosView *kv)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm comm, PetscInt m, PetscInt n, MatRowMapKokkosDualView &i, MatColIdxKokkosDualView &j, MatScalarKokkosDualView a, Mat *A)
+{
+   Mat_SeqAIJKokkos *akok;
+
+   PetscFunctionBegin;
+   PetscCallCXX(akok = new Mat_SeqAIJKokkos(m, n, j.extent(0), i, j, a));
+   PetscCall(MatCreate(comm, A));
+   PetscCall(MatSetSeqAIJKokkosWithCSRMatrix(*A, akok));
+   PetscFunctionReturn(PETSC_SUCCESS); 
+}
+
 /* Computes Y += alpha X */
 static PetscErrorCode MatAXPY_SeqAIJKokkos(Mat Y, PetscScalar alpha, Mat X, MatStructure pattern)
 {
@@ -1566,7 +1578,7 @@ PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGetKokkosCsrMatrix(Mat A, KokkosCsrMa
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode MatCreateSeqAIJKokkosWithKokkosCsrMatrix(MPI_Comm comm, KokkosCsrMatrix csr, Mat *A)
+PetscErrorCode MatCreateSeqAIJKokkosWithKokkosCsrMatrix(MPI_Comm comm, KokkosCsrMatrix csr, Mat *A)
 {
   Mat_SeqAIJKokkos *akok;
 

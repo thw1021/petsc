@@ -1,5 +1,6 @@
 #pragma once
 #include <petsc_kokkos.hpp>
+#include <petscmat_kokkos.hpp>
 #include <petsc/private/kokkosimpl.hpp>
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <KokkosSparse_CrsMatrix.hpp>
@@ -13,45 +14,6 @@ PETSC_NODISCARD inline decltype(auto) NoInit(std::string label)
   return Kokkos::view_alloc(Kokkos::WithoutInitializing, std::move(label));
 }
 } // namespace
-
-using MatRowMapType = PetscInt;
-using MatColIdxType = PetscInt;
-using MatScalarType = PetscScalar;
-
-template <class MemorySpace>
-using KokkosCsrMatrixType = typename KokkosSparse::CrsMatrix<MatScalarType, MatColIdxType, MemorySpace, void /* MemoryTraits */, MatRowMapType>;
-template <class MemorySpace>
-using KokkosCsrGraphType = typename KokkosCsrMatrixType<MemorySpace>::staticcrsgraph_type;
-
-using KokkosCsrGraph     = KokkosCsrGraphType<DefaultMemorySpace>;
-using KokkosCsrGraphHost = KokkosCsrGraphType<HostMirrorMemorySpace>;
-
-using KokkosCsrMatrix     = KokkosCsrMatrixType<DefaultMemorySpace>;
-using KokkosCsrMatrixHost = KokkosCsrMatrixType<HostMirrorMemorySpace>;
-
-using MatRowMapKokkosView = KokkosCsrGraph::row_map_type::non_const_type;
-using MatColIdxKokkosView = KokkosCsrGraph::entries_type::non_const_type;
-using MatScalarKokkosView = KokkosCsrMatrix::values_type::non_const_type;
-
-using MatRowMapKokkosViewHost = KokkosCsrGraphHost::row_map_type::non_const_type;
-using MatColIdxKokkosViewHost = KokkosCsrGraphHost::entries_type::non_const_type;
-using MatScalarKokkosViewHost = KokkosCsrMatrixHost::values_type::non_const_type;
-
-using ConstMatRowMapKokkosView = KokkosCsrGraph::row_map_type::const_type;
-using ConstMatColIdxKokkosView = KokkosCsrGraph::entries_type::const_type;
-using ConstMatScalarKokkosView = KokkosCsrMatrix::values_type::const_type;
-
-using ConstMatRowMapKokkosViewHost = KokkosCsrGraphHost::row_map_type::const_type;
-using ConstMatColIdxKokkosViewHost = KokkosCsrGraphHost::entries_type::const_type;
-using ConstMatScalarKokkosViewHost = KokkosCsrMatrixHost::values_type::const_type;
-
-using MatRowMapKokkosDualView = Kokkos::DualView<MatRowMapType *>;
-using MatColIdxKokkosDualView = Kokkos::DualView<MatColIdxType *>;
-using MatScalarKokkosDualView = Kokkos::DualView<MatScalarType *>;
-
-using KernelHandle = KokkosKernels::Experimental::KokkosKernelsHandle<MatRowMapType, MatColIdxType, MatScalarType, DefaultExecutionSpace, DefaultMemorySpace, DefaultMemorySpace>;
-
-using KokkosTeamMemberType = Kokkos::TeamPolicy<DefaultExecutionSpace>::member_type;
 
 /* For mat->spptr of a factorized matrix */
 struct Mat_SeqAIJKokkosTriFactors {
@@ -194,7 +156,6 @@ PETSC_INTERN PetscErrorCode MatCreateSeqAIJKokkosWithCSRMatrix(MPI_Comm, Mat_Seq
 PETSC_INTERN PetscErrorCode MatSeqAIJKokkosMergeMats(Mat, Mat, MatReuse, Mat *);
 PETSC_INTERN PetscErrorCode MatSeqAIJKokkosSyncDevice(Mat);
 PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGetKokkosCsrMatrix(Mat, KokkosCsrMatrix *);
-PETSC_INTERN PetscErrorCode MatCreateSeqAIJKokkosWithKokkosCsrMatrix(MPI_Comm, KokkosCsrMatrix, Mat *);
 PETSC_INTERN PetscErrorCode PrintCsrMatrix(const KokkosCsrMatrix &csrmat);
 PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJKokkos(Mat, MatType, MatReuse, Mat *);
 PETSC_INTERN PetscErrorCode MatSeqAIJKokkosModifyDevice(Mat);
