@@ -62,6 +62,7 @@ Changes: Development
 - Add ``MatResetHash()`` which allows resetting an XAIJ matrix to use a hash table
 - Add ``MatCreateSeqAIJKokkosWithKokkosViews()`` which allows creation of a ``MATSEQAIJKOKKOS`` matrix with AIJ data in Kokkos views
 - Change ``MatCreateMPIAIJWithSeqAIJ()`` so that B can be passed in with local indices and compactification skipped
+- Change option ``-mat_factor_bind_factorization <host | device>`` to ``-mat_factorize_on_host <bool>`` for MATAIJ device subclasses
 
 .. rubric:: MatCoarsen:
 
