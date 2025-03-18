@@ -1215,16 +1215,40 @@ PetscErrorCode MatSeqAIJRestoreKokkosViewWrite(Mat A, MatScalarKokkosView *kv)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm comm, PetscInt m, PetscInt n, MatRowMapKokkosDualView &i, MatColIdxKokkosDualView &j, MatScalarKokkosDualView a, Mat *A)
+template <class MemorySpace>
+PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm comm, PetscInt m, PetscInt n, Kokkos::View<PetscInt *, MemorySpace> &i, Kokkos::View<PetscInt *, MemorySpace> &j, Kokkos::View<PetscScalar *, MemorySpace> &a, Mat *A)
 {
   Mat_SeqAIJKokkos *akok;
 
   PetscFunctionBegin;
-  PetscCallCXX(akok = new Mat_SeqAIJKokkos(m, n, j.extent(0), i, j, a));
+  auto exec = PetscGetKokkosExecutionSpace();
+  // If i, j and a are already on the host this will do nothing but shallow copy
+  // the input views
+  auto i_h = Kokkos::create_mirror_view_and_copy(HostMirrorMemorySpace(), i);
+  auto j_h = Kokkos::create_mirror_view_and_copy(HostMirrorMemorySpace(), j);
+  auto a_h = Kokkos::create_mirror_view_and_copy(HostMirrorMemorySpace(), a);
+
+  // If i, j and a are already on the device this will do nothing but shallow copy
+  // the input views
+  auto i_d = Kokkos::create_mirror_view_and_copy(exec, i);
+  auto j_d = Kokkos::create_mirror_view_and_copy(exec, j);
+  auto a_d = Kokkos::create_mirror_view_and_copy(exec, a);
+
+  MatScalarKokkosDualView a_dual = MatScalarKokkosDualView(a_d, a_h);
+  MatRowMapKokkosDualView i_dual = MatRowMapKokkosDualView(i_d, i_h);
+  MatColIdxKokkosDualView j_dual = MatColIdxKokkosDualView(j_d, j_h);
+
+  PetscCallCXX(akok = new Mat_SeqAIJKokkos(m, n, j_dual.extent(0), i_dual, j_dual, a_dual));
   PetscCall(MatCreate(comm, A));
   PetscCall(MatSetSeqAIJKokkosWithCSRMatrix(*A, akok));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+// Explicitly instantiate templates for the memory spaces we use
+#if !defined(KOKKOS_ENABLE_UNIFIED_MEMORY) /* With host views if the default memory space is not host space */
+template PETSC_VISIBILITY_PUBLIC PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews<HostMirrorMemorySpace>(MPI_Comm comm, PetscInt m, PetscInt n, PetscIntKokkosViewHost &i, PetscIntKokkosViewHost &j, PetscScalarKokkosViewHost &a, Mat *A);
+#endif
+// If you're also using DefaultExecutionSpace, instantiate for that too
+template PETSC_VISIBILITY_PUBLIC PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews<Kokkos::DefaultExecutionSpace::memory_space>(MPI_Comm comm, PetscInt m, PetscInt n, PetscIntKokkosView &i, PetscIntKokkosView &j, PetscScalarKokkosView &a, Mat *A);
 
 /* Computes Y += alpha X */
 static PetscErrorCode MatAXPY_SeqAIJKokkos(Mat Y, PetscScalar alpha, Mat X, MatStructure pattern)
@@ -1578,7 +1602,7 @@ PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGetKokkosCsrMatrix(Mat A, KokkosCsrMa
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatCreateSeqAIJKokkosWithKokkosCsrMatrix(MPI_Comm comm, KokkosCsrMatrix csr, Mat *A)
+PETSC_INTERN PetscErrorCode MatCreateSeqAIJKokkosWithKokkosCsrMatrix(MPI_Comm comm, KokkosCsrMatrix csr, Mat *A)
 {
   Mat_SeqAIJKokkos *akok;
 

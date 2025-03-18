@@ -62,59 +62,45 @@ int main(int argc, char **argv)
   // Be careful about scope given the kokkos memory reference counts
   {
     // Local
-    MatScalarKokkosDualView a_local_dual;
-    MatRowMapKokkosDualView i_local_dual;
-    MatColIdxKokkosDualView j_local_dual;
-    MatScalarKokkosView     a_local_d;
-    MatRowMapKokkosView     i_local_d;
-    MatColIdxKokkosView     j_local_d;
+    PetscScalarKokkosView a_local_d;
+    PetscIntKokkosView    i_local_d;
+    PetscIntKokkosView    j_local_d;
 
     // Nonlocal
-    MatScalarKokkosDualView a_nonlocal_dual;
-    MatRowMapKokkosDualView i_nonlocal_dual;
-    MatColIdxKokkosDualView j_nonlocal_dual;
-    MatScalarKokkosView     a_nonlocal_d;
-    MatRowMapKokkosView     i_nonlocal_d;
-    MatColIdxKokkosView     j_nonlocal_d;
+    PetscScalarKokkosView a_nonlocal_d;
+    PetscIntKokkosView    i_nonlocal_d;
+    PetscIntKokkosView    j_nonlocal_d;
 
-    // Create device & host memory
-    PetscCallCXX(a_local_dual = MatScalarKokkosDualView("a_local_dual", di[5]));
-    PetscCallCXX(i_local_dual = MatRowMapKokkosDualView("i_local_dual", AA->rmap->n + 1));
-    PetscCallCXX(j_local_dual = MatColIdxKokkosDualView("j_local_dual", di[5]));
+    // Create device memory
+    PetscCallCXX(a_local_d = PetscScalarKokkosView("a_local_d", di[5]));
+    PetscCallCXX(i_local_d = PetscIntKokkosView("i_local_d", AA->rmap->n + 1));
+    PetscCallCXX(j_local_d = PetscIntKokkosView("j_local_d", di[5]));
 
-    // Get device views
-    PetscCallCXX(a_local_d = a_local_dual.view_device());
-    PetscCallCXX(i_local_d = i_local_dual.view_device());
-    PetscCallCXX(j_local_d = j_local_dual.view_device());
-
-    // Create non-local host and device memory
-    PetscCallCXX(a_nonlocal_dual = MatScalarKokkosDualView("a_nonlocal_dual", oi[5]));
-    PetscCallCXX(i_nonlocal_dual = MatRowMapKokkosDualView("i_nonlocal_dual", AB->rmap->n + 1));
-    PetscCallCXX(j_nonlocal_dual = MatColIdxKokkosDualView("j_nonlocal_dual", oi[5]));
-
-    // Get device views
-    PetscCallCXX(a_nonlocal_d = a_nonlocal_dual.view_device());
-    PetscCallCXX(i_nonlocal_d = i_nonlocal_dual.view_device());
-    PetscCallCXX(j_nonlocal_d = j_nonlocal_dual.view_device());
+    // Create non-local device memory
+    PetscCallCXX(a_nonlocal_d = PetscScalarKokkosView("a_nonlocal_d", oi[5]));
+    PetscCallCXX(i_nonlocal_d = PetscIntKokkosView("i_nonlocal_d", AB->rmap->n + 1));
+    PetscCallCXX(j_nonlocal_d = PetscIntKokkosView("j_nonlocal_d", oi[5]));
 
     // ~~~~~~~~~~~~~~~~~~~~~
     // Could fill the aij on the device - we're just going to test
     // by copying in the existing host values
     // ~~~~~~~~~~~~~~~~~~~~~
-    MatScalarKokkosViewHost a_local_h;
-    MatRowMapKokkosViewHost i_local_h;
-    MatColIdxKokkosViewHost j_local_h;
-    MatScalarKokkosViewHost a_nonlocal_h;
-    MatRowMapKokkosViewHost i_nonlocal_h;
-    MatColIdxKokkosViewHost j_nonlocal_h;
+    PetscScalarKokkosViewHost a_local_h;
+    PetscIntKokkosViewHost    i_local_h;
+    PetscIntKokkosViewHost    j_local_h;
+    PetscScalarKokkosViewHost a_nonlocal_h;
+    PetscIntKokkosViewHost    i_nonlocal_h;
+    PetscIntKokkosViewHost    j_nonlocal_h;
 
     PetscCallCXX(a_local_h = PetscScalarKokkosViewHost(da, di[5]));
-    PetscCallCXX(i_local_h = MatRowMapKokkosViewHost(di, AA->rmap->n + 1));
-    PetscCallCXX(j_local_h = MatColIdxKokkosViewHost(dj, di[5]));
+    PetscCallCXX(i_local_h = PetscIntKokkosViewHost(di, AA->rmap->n + 1));
+    PetscCallCXX(j_local_h = PetscIntKokkosViewHost(dj, di[5]));
     PetscCallCXX(a_nonlocal_h = PetscScalarKokkosViewHost(oa, oi[5]));
-    PetscCallCXX(i_nonlocal_h = MatRowMapKokkosViewHost(oi, AB->rmap->n + 1));
-    PetscCallCXX(j_nonlocal_h = MatColIdxKokkosViewHost(oj, oi[5]));
+    PetscCallCXX(i_nonlocal_h = PetscIntKokkosViewHost(oi, AB->rmap->n + 1));
+    PetscCallCXX(j_nonlocal_h = PetscIntKokkosViewHost(oj, oi[5]));
 
+    // Haven't specified an exec space so these will all be synchronous
+    // and finish without a need to call fence after
     PetscCallCXX(Kokkos::deep_copy(a_local_d, a_local_h));
     PetscCallCXX(Kokkos::deep_copy(i_local_d, i_local_h));
     PetscCallCXX(Kokkos::deep_copy(j_local_d, j_local_h));
@@ -124,23 +110,15 @@ int main(int argc, char **argv)
 
     // ~~~~~~~~~~~~~~~~~~~~~
 
-    // Have to specify that we've modified the device data
-    PetscCallCXX(a_local_dual.modify_device());
-    PetscCallCXX(i_local_dual.modify_device());
-    PetscCallCXX(j_local_dual.modify_device());
-    PetscCallCXX(a_nonlocal_dual.modify_device());
-    PetscCallCXX(i_nonlocal_dual.modify_device());
-    PetscCallCXX(j_nonlocal_dual.modify_device());
-
     // ~~~~~~~~~~~~~~~~~
     // Test MatCreateSeqAIJKokkosWithKokkosViews
     // ~~~~~~~~~~~~~~~~~
 
     // We can create our local diagonal block matrix directly on the device
-    PetscCall(MatCreateSeqAIJKokkosWithKokkosViews(PETSC_COMM_SELF, AA->rmap->n, AA->cmap->n, i_local_dual, j_local_dual, a_local_dual, &output_mat_local));
+    PetscCall(MatCreateSeqAIJKokkosWithKokkosViews(PETSC_COMM_SELF, AA->rmap->n, AA->cmap->n, i_local_d, j_local_d, a_local_d, &output_mat_local));
 
     // We can create our nonlocal diagonal block matrix directly on the device
-    PetscCall(MatCreateSeqAIJKokkosWithKokkosViews(PETSC_COMM_SELF, AA->rmap->n, AB->cmap->n, i_nonlocal_dual, j_nonlocal_dual, a_nonlocal_dual, &output_mat_nonlocal));
+    PetscCall(MatCreateSeqAIJKokkosWithKokkosViews(PETSC_COMM_SELF, AA->rmap->n, AB->cmap->n, i_nonlocal_d, j_nonlocal_d, a_nonlocal_d, &output_mat_nonlocal));
 
     // Build our mpi kokkos matrix by passing in the local and
     // nonlocal kokkos matrices and the colmap
@@ -174,16 +152,13 @@ int main(int argc, char **argv)
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // ~~~~~~~~~~~~~~~~~
-    // Also test MatCreateSeqAIJKokkosWithKokkosCsrMatrix
+    // Test MatCreateSeqAIJKokkosWithKokkosViews but giving it host views as input
     // ~~~~~~~~~~~~~~~~~
     // We can create our local diagonal block matrix directly on the device
-    KokkosCsrMatrix csrmat_local, csrmat_nonlocal;
-    PetscCallCXX(csrmat_local = KokkosCsrMatrix("csrmat_local", AA->rmap->n, AA->cmap->n, a_local_dual.extent(0), a_local_dual.view_device(), i_local_dual.view_device(), j_local_dual.view_device()));
-    PetscCall(MatCreateSeqAIJKokkosWithKokkosCsrMatrix(PETSC_COMM_SELF, csrmat_local, &output_mat_local));
+    PetscCall(MatCreateSeqAIJKokkosWithKokkosViews(PETSC_COMM_SELF, AA->rmap->n, AA->cmap->n, i_local_h, j_local_h, a_local_h, &output_mat_local));
 
     // We can create our nonlocal diagonal block matrix directly on the device
-    PetscCallCXX(csrmat_nonlocal = KokkosCsrMatrix("csrmat_nonlocal", AA->rmap->n, AB->cmap->n, a_nonlocal_dual.extent(0), a_nonlocal_dual.view_device(), i_nonlocal_dual.view_device(), j_nonlocal_dual.view_device()));
-    PetscCall(MatCreateSeqAIJKokkosWithKokkosCsrMatrix(PETSC_COMM_SELF, csrmat_nonlocal, &output_mat_nonlocal));
+    PetscCall(MatCreateSeqAIJKokkosWithKokkosViews(PETSC_COMM_SELF, AA->rmap->n, AB->cmap->n, i_nonlocal_h, j_nonlocal_h, a_nonlocal_h, &output_mat_nonlocal));
 
     // Build our mpi kokkos matrix by passing in the local and
     // nonlocal kokkos matrices and the colmap
@@ -206,7 +181,7 @@ int main(int argc, char **argv)
     PetscCall(MatSetMPIAIJWithSplitSeqAIJ(B, output_mat_local, output_mat_nonlocal, garray_host));
 
     PetscCall(MatEqual(A, B, &equal));
-    PetscCheck(equal, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Likely a bug in MatCreateSeqAIJKokkosWithKokkosCsrMatrix()");
+    PetscCheck(equal, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Likely a bug in MatCreateSeqAIJKokkosWithKokkosViews()");
     PetscCall(MatDestroy(&B));
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

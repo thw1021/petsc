@@ -13,51 +13,12 @@
   #include <KokkosSparse_spiluk.hpp>
   #include <string>
 
-using MatRowMapType = PetscInt;
-using MatColIdxType = PetscInt;
-using MatScalarType = PetscScalar;
-
-template <class MemorySpace>
-using KokkosCsrMatrixType = typename KokkosSparse::CrsMatrix<MatScalarType, MatColIdxType, MemorySpace, void /* MemoryTraits */, MatRowMapType>;
-template <class MemorySpace>
-using KokkosCsrGraphType = typename KokkosCsrMatrixType<MemorySpace>::staticcrsgraph_type;
-
-using KokkosCsrGraph     = KokkosCsrGraphType<DefaultMemorySpace>;
-using KokkosCsrGraphHost = KokkosCsrGraphType<HostMirrorMemorySpace>;
-
-using KokkosCsrMatrix     = KokkosCsrMatrixType<DefaultMemorySpace>;
-using KokkosCsrMatrixHost = KokkosCsrMatrixType<HostMirrorMemorySpace>;
-
-using MatRowMapKokkosView = KokkosCsrGraph::row_map_type::non_const_type;
-using MatColIdxKokkosView = KokkosCsrGraph::entries_type::non_const_type;
-using MatScalarKokkosView = KokkosCsrMatrix::values_type::non_const_type;
-
-using MatRowMapKokkosViewHost = KokkosCsrGraphHost::row_map_type::non_const_type;
-using MatColIdxKokkosViewHost = KokkosCsrGraphHost::entries_type::non_const_type;
-using MatScalarKokkosViewHost = KokkosCsrMatrixHost::values_type::non_const_type;
-
-using ConstMatRowMapKokkosView = KokkosCsrGraph::row_map_type::const_type;
-using ConstMatColIdxKokkosView = KokkosCsrGraph::entries_type::const_type;
-using ConstMatScalarKokkosView = KokkosCsrMatrix::values_type::const_type;
-
-using ConstMatRowMapKokkosViewHost = KokkosCsrGraphHost::row_map_type::const_type;
-using ConstMatColIdxKokkosViewHost = KokkosCsrGraphHost::entries_type::const_type;
-using ConstMatScalarKokkosViewHost = KokkosCsrMatrixHost::values_type::const_type;
-
-using MatRowMapKokkosDualView = Kokkos::DualView<MatRowMapType *>;
-using MatColIdxKokkosDualView = Kokkos::DualView<MatColIdxType *>;
-using MatScalarKokkosDualView = Kokkos::DualView<MatScalarType *>;
-
-using KernelHandle = KokkosKernels::Experimental::KokkosKernelsHandle<MatRowMapType, MatColIdxType, MatScalarType, DefaultExecutionSpace, DefaultMemorySpace, DefaultMemorySpace>;
-
-using KokkosTeamMemberType = Kokkos::TeamPolicy<DefaultExecutionSpace>::member_type;
-
 /*@C
    MatCreateSeqAIJKokkosWithKokkosViews - Creates a MATSEQAIJKOKKOS matrix with Kokkos views of the aij data
 
    Synopsis:
    #include <petscmat_kokkos.hpp>
-   PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews  (MPI_Comm comm, PetscInt m, PetscInt n, MatRowMapKokkosDualView &i, MatColIdxKokkosDualView &j, MatScalarKokkosDualView a, Mat *A);
+   PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews  (MPI_Comm comm, PetscInt m, PetscInt n, Kokkos::View<PetscInt *, MemorySpace>&, Kokkos::View<PetscInt *, MemorySpace>&, Kokkos::View<PetscScalar *, MemorySpace>&, Mat *A);
 
    Logically Collective, No Fortran Support
 
@@ -65,9 +26,9 @@ using KokkosTeamMemberType = Kokkos::TeamPolicy<DefaultExecutionSpace>::member_t
 +  comm  - the MPI communicator
 -  m     - row size
 -  n     - the column size
--  i     - the dual Kokkos view of row data
--  j     - the dual Kokkos view of the column data
--  a     - the dual Kokkos view of the values
+-  i     - the Kokkos view of row data (can be in either HostMirrorMemorySpace or Kokkos::DefaultExecutionSpace)
+-  j     - the Kokkos view of the column data (can be in either HostMirrorMemorySpace or Kokkos::DefaultExecutionSpace)
+-  a     - the Kokkos view of the values (can be in either HostMirrorMemorySpace or Kokkos::DefaultExecutionSpace)
 
    Output Parameter:
 .  A  - the `MATSEQAIJKOKKOS` matrix
@@ -75,37 +36,14 @@ using KokkosTeamMemberType = Kokkos::TeamPolicy<DefaultExecutionSpace>::member_t
    Level: intermediate
 
    Notes:
-   Creates a Mat given the csr data input as Kokkos dual vectors. This routine allows a Mat
-   to be built without involving the host.
+   Creates a Mat given the csr data input as Kokkos views. This routine allows a Mat
+   to be built without involving the host. Don't modify entries in the views after this routine.
+   There should be no outstanding asynchronous operations on the views (ie this routine does not call fence()
+   before using the views)
 
-.seealso:`MatCreateSeqAIJKokkosWithKokkosCsrMatrix()`
+.seealso:
 @*/
-PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm, PetscInt, PetscInt, MatRowMapKokkosDualView &, MatColIdxKokkosDualView &, MatScalarKokkosDualView, Mat *);
-
-/*@C
-   MatCreateSeqAIJKokkosWithKokkosCsrMatrix - Creates a MATSEQAIJKOKKOS matrix from a Kokkos CSR matrix
-
-   Synopsis:
-   #include <petscmat_kokkos.hpp>
-   PetscErrorCode MatCreateSeqAIJKokkosWithKokkosCsrMatrix  (MPI_Comm comm, KokkosCsrMatrix A_csr, Mat *A);
-
-   Logically Collective, No Fortran Support
-
-   Input Parameter:
-+  comm  - the MPI communicator
--  A_csr - the Kokkos CSR matrix
-
-   Output Parameter:
-.  A  - the `MATSEQAIJKOKKOS` matrix
-
-   Level: intermediate
-
-   Notes:
-   Creates a Mat given an existing Kokkos CSR matrix. This routine allows a Mat
-   to be built without involving the host.
-
-.seealso: `MatCreateSeqAIJKokkosWithKokkosViews()`
-@*/
-PetscErrorCode MatCreateSeqAIJKokkosWithKokkosCsrMatrix(MPI_Comm, KokkosCsrMatrix, Mat *);
+template <class MemorySpace>
+PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm, PetscInt, PetscInt, Kokkos::View<PetscInt *, MemorySpace> &, Kokkos::View<PetscInt *, MemorySpace> &, Kokkos::View<PetscScalar *, MemorySpace> &, Mat *);
 
 #endif
