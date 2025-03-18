@@ -14,6 +14,7 @@
 
         contains
 
+#include <../src/ksp/f90-mod/petscksp.h90>
 #include <../ftn/ksp/petscall.hf90>
 
         end module petscksp
