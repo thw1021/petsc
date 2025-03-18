@@ -1759,7 +1759,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
       PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
       PetscCall(PetscFree(values));
     }
-    {
+    if (numLabels) {
       char    **labelNames;
       PetscInt  Nl = numLabels;
       PetscBool flg;

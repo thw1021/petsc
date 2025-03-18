@@ -172,6 +172,13 @@ struct _p_SNES {
                                              * solution and put it in vec_func?  Used inside SNESSolve_FAS to determine
                                              * if the final residual must be computed before restricting or prolonging
                                              * it. */
+
+  SNESJacobianProjectionType jac_projection_type;
+  MatNullSpace               jac_projection;
+  PetscErrorCode (*jac_projection_update)(SNES, Vec, Vec, MatNullSpace *, void *);
+  SNESJacobianProjectionSubspaceType jac_projection_subspace_type;
+  Mat                                jac_projection_subspace_mat;
+  void                              *jac_projection_ctx;
 };
 
 typedef struct _p_DMSNES  *DMSNES;

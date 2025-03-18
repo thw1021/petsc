@@ -1,0 +1,62 @@
+MatTallSkinnySVD, iter 0: 11 x 7 matrix, rank upper bound 7
+MatTallSkinnySVD, iter 0: orthogonality error || Y'Y - I ||_F = 2.959331e+00
+MatTallSkinnySVD, iter 0: reconstruction error || YW - X ||_F = 0.000000e+00
+MatTallSkinnySVD, iter 0: scaled singular values
+  Vec Object: 1 MPI process
+    type: seq
+  2.83817
+  1.47071
+  0.66153
+  0.0295803
+  1.14728e-05
+  0.
+  0.
+MatTallSkinnySVD, iter 1: 11 x 7 matrix, rank upper bound 5
+MatTallSkinnySVD, iter 1: orthogonality error || Y'Y - I ||_F = 1.084921e-12
+MatTallSkinnySVD, iter 1: reconstruction error || YW - X ||_F = 1.642544e-15
+MatTallSkinnySVD, iter 1: scaled singular values
+  Vec Object: 1 MPI process
+    type: seq
+  1.
+  1.
+  1.
+  1.
+  1.
+  0.
+  0.
+MatTallSkinnySVD, iter 2: 11 x 7 matrix, rank upper bound 5
+MatTallSkinnySVD, iter 2: orthogonality error || Y'Y - I ||_F = 2.904626e-15
+MatTallSkinnySVD, iter 2: reconstruction error || YW - X ||_F = 1.460036e-15
+(11 x 7): ||U'U-I||_F = 3.333082e-15, ||V'V-I||_F = 1.105238e-15, ||USV'-X||_F = 2.043169e-15
+(11 x 7): ||X - UU'X||_F = 4.443876e-15 ||X - XVV'||_F = 1.004349e-15
+MatTallSkinnySVD, iter 0: 11 x 7 matrix, rank upper bound 7
+MatTallSkinnySVD, iter 0: orthogonality error || Y'Y - I ||_F = 2.959331e+00
+MatTallSkinnySVD, iter 0: reconstruction error || YW - X ||_F = 0.000000e+00
+MatTallSkinnySVD, iter 0: scaled singular values
+  Vec Object: 1 MPI process
+    type: seq
+  2.83817
+  1.47071
+  0.66153
+  0.0295803
+  1.14728e-05
+  0.
+  0.
+MatTallSkinnySVD, iter 1: 11 x 7 matrix, rank upper bound 5
+MatTallSkinnySVD, iter 1: orthogonality error || Y'Y - I ||_F = 1.084921e-12
+MatTallSkinnySVD, iter 1: reconstruction error || YW - X ||_F = 1.642544e-15
+MatTallSkinnySVD, iter 1: scaled singular values
+  Vec Object: 1 MPI process
+    type: seq
+  1.
+  1.
+  1.
+  1.
+  1.
+  0.
+  0.
+MatTallSkinnySVD, iter 2: 11 x 7 matrix, rank upper bound 5
+MatTallSkinnySVD, iter 2: orthogonality error || Y'Y - I ||_F = 2.904626e-15
+MatTallSkinnySVD, iter 2: reconstruction error || YW - X ||_F = 1.460036e-15
+(11 x 7): ||U'U-I||_F = 3.333082e-15, ||V'V-I||_F = 1.105238e-15, ||USV'-X||_F = 2.043169e-15
+(11 x 7): ||X - UU'X||_F = 4.443876e-15 ||X - XVV'||_F = 1.004349e-15

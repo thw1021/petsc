@@ -2,6 +2,7 @@
     The PC (preconditioner) interface routines, callable by users.
 */
 #include <petsc/private/pcimpl.h> /*I "petscksp.h" I*/
+#include <petsc/private/kspimpl.h>
 #include <petscdm.h>
 
 /* Logging support */
@@ -758,11 +759,19 @@ PetscErrorCode PCApplyTransposeExists(PC pc, PetscBool *flg)
 PetscErrorCode PCApplyBAorAB(PC pc, PCSide side, Vec x, Vec y, Vec work)
 {
   PetscFunctionBegin;
+  PetscCall(PCApplyBAorABWithProjection_Internal(pc, side, x, y, work, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PCApplyBAorABWithProjection_Internal(PC pc, PCSide side, Vec x, Vec y, Vec work, MatNullSpace projection)
+{
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidLogicalCollectiveEnum(pc, side, 2);
   PetscValidHeaderSpecific(x, VEC_CLASSID, 3);
   PetscValidHeaderSpecific(y, VEC_CLASSID, 4);
   PetscValidHeaderSpecific(work, VEC_CLASSID, 5);
+  if (projection) PetscValidHeaderSpecific(projection, MAT_NULLSPACE_CLASSID, 6);
   PetscCheckSameComm(pc, 1, x, 3);
   PetscCheckSameComm(pc, 1, y, 4);
   PetscCheckSameComm(pc, 1, work, 5);
@@ -773,7 +782,7 @@ PetscErrorCode PCApplyBAorAB(PC pc, PCSide side, Vec x, Vec y, Vec work)
 
   PetscCall(PCSetUp(pc));
   if (pc->diagonalscale) {
-    if (pc->ops->applyBA) {
+    if (!projection && pc->ops->applyBA) {
       Vec work2; /* this is expensive, but to fix requires a second work vector argument to PCApplyBAorAB() */
       PetscCall(VecDuplicate(x, &work2));
       PetscCall(PCDiagonalScaleRight(pc, x, work2));
@@ -783,28 +792,34 @@ PetscErrorCode PCApplyBAorAB(PC pc, PCSide side, Vec x, Vec y, Vec work)
     } else if (side == PC_RIGHT) {
       PetscCall(PCDiagonalScaleRight(pc, x, y));
       PetscCall(PCApply(pc, y, work));
+      if (projection) PetscCall(MatNullSpaceRemove(projection, work));
       PetscCall(MatMult(pc->mat, work, y));
       PetscCall(PCDiagonalScaleLeft(pc, y, y));
     } else if (side == PC_LEFT) {
       PetscCall(PCDiagonalScaleRight(pc, x, y));
       PetscCall(MatMult(pc->mat, y, work));
+      if (projection) PetscCall(MatNullSpaceRemove(projection, work));
       PetscCall(PCApply(pc, work, y));
       PetscCall(PCDiagonalScaleLeft(pc, y, y));
     } else PetscCheck(side != PC_SYMMETRIC, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Cannot provide diagonal scaling with symmetric application of preconditioner");
   } else {
-    if (pc->ops->applyBA) {
+    if (!projection && pc->ops->applyBA) {
       PetscUseTypeMethod(pc, applyBA, side, x, y, work);
     } else if (side == PC_RIGHT) {
       PetscCall(PCApply(pc, x, work));
+      if (projection) PetscCall(MatNullSpaceRemove(projection, work));
       PetscCall(MatMult(pc->mat, work, y));
     } else if (side == PC_LEFT) {
       PetscCall(MatMult(pc->mat, x, work));
+      if (projection) PetscCall(MatNullSpaceRemove(projection, work));
       PetscCall(PCApply(pc, work, y));
     } else if (side == PC_SYMMETRIC) {
       /* There's an extra copy here; maybe should provide 2 work vectors instead? */
       PetscCall(PCApplySymmetricRight(pc, x, work));
+      if (projection) PetscCall(MatNullSpaceRemove(projection, work));
       PetscCall(MatMult(pc->mat, work, y));
       PetscCall(VecCopy(y, work));
+      if (projection) PetscCall(MatNullSpaceRemove(projection, work));
       PetscCall(PCApplySymmetricLeft(pc, work, y));
     }
   }
@@ -839,13 +854,21 @@ PetscErrorCode PCApplyBAorAB(PC pc, PCSide side, Vec x, Vec y, Vec work)
 PetscErrorCode PCApplyBAorABTranspose(PC pc, PCSide side, Vec x, Vec y, Vec work)
 {
   PetscFunctionBegin;
+  PetscCall(PCApplyBAorABTransposeWithProjection_Internal(pc, side, x, y, work, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PCApplyBAorABTransposeWithProjection_Internal(PC pc, PCSide side, Vec x, Vec y, Vec work, MatNullSpace projection)
+{
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidHeaderSpecific(x, VEC_CLASSID, 3);
   PetscValidHeaderSpecific(y, VEC_CLASSID, 4);
   PetscValidHeaderSpecific(work, VEC_CLASSID, 5);
+  if (projection) PetscValidHeaderSpecific(projection, MAT_NULLSPACE_CLASSID, 6);
   PetscCheck(x != y, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_IDN, "x and y must be different vectors");
   if (pc->erroriffailure) PetscCall(VecValidValues_Internal(x, 3, PETSC_TRUE));
-  if (pc->ops->applyBAtranspose) {
+  if (!projection && pc->ops->applyBAtranspose) {
     PetscUseTypeMethod(pc, applyBAtranspose, side, x, y, work);
     if (pc->erroriffailure) PetscCall(VecValidValues_Internal(y, 4, PETSC_FALSE));
     PetscFunctionReturn(PETSC_SUCCESS);
@@ -855,9 +878,11 @@ PetscErrorCode PCApplyBAorABTranspose(PC pc, PCSide side, Vec x, Vec y, Vec work
   PetscCall(PCSetUp(pc));
   if (side == PC_RIGHT) {
     PetscCall(PCApplyTranspose(pc, x, work));
+    if (projection) PetscCall(MatNullSpaceRemove(projection, work));
     PetscCall(MatMultTranspose(pc->mat, work, y));
   } else if (side == PC_LEFT) {
     PetscCall(MatMultTranspose(pc->mat, x, work));
+    if (projection) PetscCall(MatNullSpaceRemove(projection, work));
     PetscCall(PCApplyTranspose(pc, work, y));
   }
   /* add support for PC_SYMMETRIC */
