@@ -1875,7 +1875,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijhipsparse_hipsparse(Mat A, MatFac
 
   prefix = (*B)->factorprefix ? (*B)->factorprefix : ((PetscObject)A)->prefix;
   PetscOptionsBegin(PetscObjectComm((PetscObject)*B), prefix, "MatGetFactor", "Mat");
-  factors = (Mat_SeqAIJHIPSPARSETriFactors*)((*B)->spptr);
+  factors = (Mat_SeqAIJHIPSPARSETriFactors *)((*B)->spptr);
   PetscCall(PetscOptionsBool("-mat_factorize_on_host", "Do matrix factorization on host", "MatGetFactor", factors->factorize_on_host, &factors->factorize_on_host, NULL));
   PetscOptionsEnd();
 
