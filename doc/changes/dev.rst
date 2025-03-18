@@ -60,6 +60,7 @@ Changes: Development
 
 - Add ``MatCopyHashToXAIJ()`` which allows assembling an XAIJ matrix in hash table form into another XAIJ matrix
 - Add ``MatResetHash()`` which allows resetting an XAIJ matrix to use a hash table
+- Change option ``-mat_factor_bind_factorization <host | device>`` to ``-mat_factorize_on_host <bool>`` for MATAIJ device subclasses
 
 .. rubric:: MatCoarsen:
 
