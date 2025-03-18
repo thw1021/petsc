@@ -61,7 +61,7 @@ Changes: Development
 - Add ``MatCopyHashToXAIJ()`` which allows assembling an XAIJ matrix in hash table form into another XAIJ matrix
 - Add ``MatResetHash()`` which allows resetting an XAIJ matrix to use a hash table
 - Add ``MatCreateSeqAIJKokkosWithKokkosViews()`` which allows creation of a SEQAIJKOKKOS matrix with aij data in Kokkos views
-- Add ``MatSetMPIAIJWithSplitSeqAIJ()`` which allows setting of A and B of an MPIAIJ matrix without needing compactification
+- Change ``MatCreateMPIAIJWithSeqAIJ`` so that B can be passed in with local indices and compactification skipped
 
 .. rubric:: MatCoarsen:
 

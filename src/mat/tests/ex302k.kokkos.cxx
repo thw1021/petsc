@@ -1,4 +1,4 @@
-static char help[] = "Testing MatCreateSeqAIJKokkosWithKokkosViews, MatCreateSeqAIJKokkosWithKokkosCsrMatrix and MatSetMPIAIJWithSplitSeqAIJ().\n\n";
+static char help[] = "Testing MatCreateSeqAIJKokkosWithKokkosViews() and building Mat on the device.\n\n";
 
 #include <petscvec_kokkos.hpp>
 #include <petscdevice.h>
@@ -13,14 +13,13 @@ int main(int argc, char **argv)
   PetscInt        i, j, column;
   PetscInt       *di, *dj, *oi, *oj, nd;
   const PetscInt *garray;
-  PetscInt       *garray_host;
+  PetscInt       *garray_h;
   PetscScalar    *oa, *da;
   PetscScalar     value;
   PetscRandom     rctx;
   PetscBool       equal, done;
   Mat             AA, AB;
   PetscMPIInt     size, rank;
-  MatType         mat_type;
 
   // ~~~~~~~~~~~~~~~~~~~~~
   // This test shows the routines needed to build a kokkos matrix without preallocation
@@ -108,6 +107,12 @@ int main(int argc, char **argv)
     PetscCallCXX(Kokkos::deep_copy(i_nonlocal_d, i_nonlocal_h));
     PetscCallCXX(Kokkos::deep_copy(j_nonlocal_d, j_nonlocal_h));
 
+    // The garray passed in has to be on the host, but it can be created
+    // on device and copied to the host
+    // We're just going to copy the existing host values here
+    PetscCall(PetscMalloc1(AB->cmap->n, &garray_h));
+    for (int i = 0; i < AB->cmap->n; i++) { garray_h[i] = garray[i]; }
+
     // ~~~~~~~~~~~~~~~~~~~~~
 
     // ~~~~~~~~~~~~~~~~~
@@ -120,25 +125,10 @@ int main(int argc, char **argv)
     // We can create our nonlocal diagonal block matrix directly on the device
     PetscCall(MatCreateSeqAIJKokkosWithKokkosViews(PETSC_COMM_SELF, AA->rmap->n, AB->cmap->n, i_nonlocal_d, j_nonlocal_d, a_nonlocal_d, &output_mat_nonlocal));
 
-    // Build our mpi kokkos matrix by passing in the local and
-    // nonlocal kokkos matrices and the colmap
-    // MatSetMPIAIJWithSplitSeqAIJ allows us to pass in B using local indices
-    // as long as garray has the global indices in it
-    PetscCall(MatCreate(PETSC_COMM_WORLD, &B));
-    PetscCall(MatSetSizes(B, 5, 5, PETSC_DETERMINE, PETSC_DETERMINE));
-    PetscCall(MatGetType(A, &mat_type));
-    PetscCall(MatSetType(B, mat_type));
-    PetscCall(PetscLayoutSetUp(B->rmap));
-    PetscCall(PetscLayoutSetUp(B->cmap));
-
-    // The garray passed in has to be on the host, but it can be created
-    // on device and copied to the host
-    // We're just going to copy the existing host values here
-    PetscCall(PetscMalloc1(AB->cmap->n, &garray_host));
-    for (int i = 0; i < AB->cmap->n; i++) { garray_host[i] = garray[i]; }
-
-    // Skip the compactification - this means almost nothing happens on the host
-    PetscCall(MatSetMPIAIJWithSplitSeqAIJ(B, output_mat_local, output_mat_nonlocal, garray_host));
+    // Build our MPI matrix
+    // If we provide garray and output_mat_nonlocal with local indices and the compactified size
+    // almost nothing happens on the host
+    PetscCall(MatCreateMPIAIJWithSeqAIJ(PETSC_COMM_WORLD, output_mat_local, output_mat_nonlocal, garray_h, &B));
 
     PetscCall(MatEqual(A, B, &equal));
     PetscCall(MatRestoreRowIJ(AA, 0, PETSC_FALSE, PETSC_FALSE, &nd, (const PetscInt **)&di, (const PetscInt **)&dj, &done));
