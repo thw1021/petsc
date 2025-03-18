@@ -38,6 +38,18 @@ using KokkosKernels::sort_crs_matrix;
 using KokkosKernels::Impl::transpose_matrix;
 #endif
 
+#if PETSC_PKG_KOKKOS_KERNELS_VERSION_GE(4, 6, 0)
+using KokkosSparse::spiluk_symbolic;
+using KokkosSparse::spiluk_numeric;
+using KokkosSparse::sptrsv_symbolic;
+using KokkosSparse::sptrsv_solve;
+#else
+using KokkosSparse::Experimental::spiluk_symbolic;
+using KokkosSparse::Experimental::spiluk_numeric;
+using KokkosSparse::Experimental::sptrsv_symbolic;
+using KokkosSparse::Experimental::sptrsv_solve;
+#endif
+
 static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat); /* Forward declaration */
 
 /* MatAssemblyEnd_SeqAIJKokkos() happens when we finalized nonzeros of the matrix, either after
@@ -1649,8 +1661,8 @@ static PetscErrorCode MatSeqAIJKokkosSymbolicSolveCheck(Mat A)
 
   PetscFunctionBegin;
   if (!factors->sptrsv_symbolic_completed) {
-    KokkosSparse::Experimental::sptrsv_symbolic(&factors->khU, factors->iU_d, factors->jU_d, factors->aU_d);
-    KokkosSparse::Experimental::sptrsv_symbolic(&factors->khL, factors->iL_d, factors->jL_d, factors->aL_d);
+    sptrsv_symbolic(&factors->khU, factors->iU_d, factors->jU_d, factors->aU_d);
+    sptrsv_symbolic(&factors->khL, factors->iL_d, factors->jL_d, factors->aL_d);
     factors->sptrsv_symbolic_completed = PETSC_TRUE;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1677,7 +1689,7 @@ static PetscErrorCode MatSeqAIJKokkosTransposeSolveCheck(Mat A)
     */
     sort_crs_matrix<DefaultExecutionSpace, MatRowMapKokkosView, MatColIdxKokkosView, MatScalarKokkosView>(factors->iLt_d, factors->jLt_d, factors->aLt_d);
 
-    KokkosSparse::Experimental::sptrsv_symbolic(&factors->khLt, factors->iLt_d, factors->jLt_d, factors->aLt_d);
+    sptrsv_symbolic(&factors->khLt, factors->iLt_d, factors->jLt_d, factors->aLt_d);
 
     /* Update U^T and do sptrsv symbolic */
     factors->iUt_d = MatRowMapKokkosView("factors->iUt_d", n + 1); // KK requires 0
@@ -1690,7 +1702,7 @@ static PetscErrorCode MatSeqAIJKokkosTransposeSolveCheck(Mat A)
     /* Sort indices. See comments above */
     sort_crs_matrix<DefaultExecutionSpace, MatRowMapKokkosView, MatColIdxKokkosView, MatScalarKokkosView>(factors->iUt_d, factors->jUt_d, factors->aUt_d);
 
-    KokkosSparse::Experimental::sptrsv_symbolic(&factors->khUt, factors->iUt_d, factors->jUt_d, factors->aUt_d);
+    sptrsv_symbolic(&factors->khUt, factors->iUt_d, factors->jUt_d, factors->aUt_d);
     factors->transpose_updated = PETSC_TRUE;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1709,9 +1721,9 @@ static PetscErrorCode MatSolve_SeqAIJKokkos(Mat A, Vec b, Vec x)
   PetscCall(VecGetKokkosView(b, &bv));
   PetscCall(VecGetKokkosViewWrite(x, &xv));
   /* Solve L tmpv = b */
-  PetscCallCXX(KokkosSparse::Experimental::sptrsv_solve(&factors->khL, factors->iL_d, factors->jL_d, factors->aL_d, bv, factors->workVector));
+  PetscCallCXX(sptrsv_solve(&factors->khL, factors->iL_d, factors->jL_d, factors->aL_d, bv, factors->workVector));
   /* Solve Ux = tmpv */
-  PetscCallCXX(KokkosSparse::Experimental::sptrsv_solve(&factors->khU, factors->iU_d, factors->jU_d, factors->aU_d, factors->workVector, xv));
+  PetscCallCXX(sptrsv_solve(&factors->khU, factors->iU_d, factors->jU_d, factors->aU_d, factors->workVector, xv));
   PetscCall(VecRestoreKokkosView(b, &bv));
   PetscCall(VecRestoreKokkosViewWrite(x, &xv));
   PetscCall(PetscLogGpuTimeEnd());
@@ -1731,10 +1743,10 @@ static PetscErrorCode MatSolveTranspose_SeqAIJKokkos(Mat A, Vec b, Vec x)
   PetscCall(VecGetKokkosView(b, &bv));
   PetscCall(VecGetKokkosViewWrite(x, &xv));
   /* Solve U^T tmpv = b */
-  KokkosSparse::Experimental::sptrsv_solve(&factors->khUt, factors->iUt_d, factors->jUt_d, factors->aUt_d, bv, factors->workVector);
+  sptrsv_solve(&factors->khUt, factors->iUt_d, factors->jUt_d, factors->aUt_d, bv, factors->workVector);
 
   /* Solve L^T x = tmpv */
-  KokkosSparse::Experimental::sptrsv_solve(&factors->khLt, factors->iLt_d, factors->jLt_d, factors->aLt_d, factors->workVector, xv);
+  sptrsv_solve(&factors->khLt, factors->iLt_d, factors->jLt_d, factors->aLt_d, factors->workVector, xv);
   PetscCall(VecRestoreKokkosView(b, &bv));
   PetscCall(VecRestoreKokkosViewWrite(x, &xv));
   PetscCall(PetscLogGpuTimeEnd());
@@ -1755,7 +1767,7 @@ static PetscErrorCode MatILUFactorNumeric_SeqAIJKokkos(Mat B, Mat A, const MatFa
   auto i_d = aijkok->i_dual.view_device();
   auto j_d = aijkok->j_dual.view_device();
 
-  KokkosSparse::Experimental::spiluk_numeric(&factors->kh, fill_lev, i_d, j_d, a_d, factors->iL_d, factors->jL_d, factors->aL_d, factors->iU_d, factors->jU_d, factors->aU_d);
+  spiluk_numeric(&factors->kh, fill_lev, i_d, j_d, a_d, factors->iL_d, factors->jL_d, factors->aL_d, factors->iU_d, factors->jU_d, factors->aU_d);
 
   B->assembled              = PETSC_TRUE;
   B->preallocated           = PETSC_TRUE;
@@ -1806,7 +1818,7 @@ static PetscErrorCode MatILUFactorSymbolic_SeqAIJKokkos(Mat B, Mat A, IS isrow, 
   aijkok   = (Mat_SeqAIJKokkos *)A->spptr;
   auto i_d = aijkok->i_dual.view_device();
   auto j_d = aijkok->j_dual.view_device();
-  KokkosSparse::Experimental::spiluk_symbolic(&factors->kh, fill_lev, i_d, j_d, factors->iL_d, factors->jL_d, factors->iU_d, factors->jU_d);
+  spiluk_symbolic(&factors->kh, fill_lev, i_d, j_d, factors->iL_d, factors->jL_d, factors->iU_d, factors->jU_d);
   /* TODO: if spiluk_symbolic is asynchronous, do we need to sync before calling get_nnzL()? */
 
   Kokkos::resize(factors->jL_d, spiluk_handle->get_nnzL()); /* Shrink or expand, and retain old value */
