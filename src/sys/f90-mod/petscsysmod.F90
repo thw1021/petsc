@@ -520,7 +520,7 @@
         subroutine PetscInitializeNoArguments(ierr)
           PetscErrorCode             :: ierr
 
-          call PetscInitializeF(PETSC_NULL_CHARACTER,PETSC_NULL_CHARACTER,PETSC_TRUE,ierr)
+          call PetscInitializeF(PETSC_NULL_CHARACTER,PETSC_NULL_CHARACTER,PETSC_FALSE,ierr)
           CHKERRQ(ierr)
           end subroutine PetscInitializeNoArguments
 
