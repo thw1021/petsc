@@ -62,24 +62,24 @@ int main(int argc, char **argv)
   // Be careful about scope given the kokkos memory reference counts
   {
     // Local
-    PetscScalarKokkosView a_local_d;
-    PetscIntKokkosView    i_local_d;
-    PetscIntKokkosView    j_local_d;
+    Kokkos::View<PetscScalar *> a_local_d;
+    Kokkos::View<PetscInt *>    i_local_d;
+    Kokkos::View<PetscInt *>    j_local_d;
 
     // Nonlocal
-    PetscScalarKokkosView a_nonlocal_d;
-    PetscIntKokkosView    i_nonlocal_d;
-    PetscIntKokkosView    j_nonlocal_d;
+    Kokkos::View<PetscScalar *> a_nonlocal_d;
+    Kokkos::View<PetscInt *>    i_nonlocal_d;
+    Kokkos::View<PetscInt *>    j_nonlocal_d;
 
     // Create device memory
-    PetscCallCXX(a_local_d = PetscScalarKokkosView("a_local_d", di[5]));
-    PetscCallCXX(i_local_d = PetscIntKokkosView("i_local_d", AA->rmap->n + 1));
-    PetscCallCXX(j_local_d = PetscIntKokkosView("j_local_d", di[5]));
+    PetscCallCXX(a_local_d = Kokkos::View<PetscScalar *>("a_local_d", di[5]));
+    PetscCallCXX(i_local_d = Kokkos::View<PetscInt *>("i_local_d", AA->rmap->n + 1));
+    PetscCallCXX(j_local_d = Kokkos::View<PetscInt *>("j_local_d", di[5]));
 
     // Create non-local device memory
-    PetscCallCXX(a_nonlocal_d = PetscScalarKokkosView("a_nonlocal_d", oi[5]));
-    PetscCallCXX(i_nonlocal_d = PetscIntKokkosView("i_nonlocal_d", AB->rmap->n + 1));
-    PetscCallCXX(j_nonlocal_d = PetscIntKokkosView("j_nonlocal_d", oi[5]));
+    PetscCallCXX(a_nonlocal_d = Kokkos::View<PetscScalar *>("a_nonlocal_d", oi[5]));
+    PetscCallCXX(i_nonlocal_d = Kokkos::View<PetscInt *>("i_nonlocal_d", AB->rmap->n + 1));
+    PetscCallCXX(j_nonlocal_d = Kokkos::View<PetscInt *>("j_nonlocal_d", oi[5]));
 
     // ~~~~~~~~~~~~~~~~~~~~~
     // Could fill the aij on the device - we're just going to test
@@ -146,41 +146,6 @@ int main(int argc, char **argv)
     PetscCall(MatRestoreRowIJ(AB, 0, PETSC_FALSE, PETSC_FALSE, &nd, (const PetscInt **)&oi, (const PetscInt **)&oj, &done));
     PetscCall(MatSeqAIJRestoreArray(AB, &oa));
 
-    PetscCheck(equal, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Likely a bug in MatCreateSeqAIJKokkosWithKokkosViews()");
-    PetscCall(MatDestroy(&B));
-
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    // ~~~~~~~~~~~~~~~~~
-    // Test MatCreateSeqAIJKokkosWithKokkosViews but giving it host views as input
-    // ~~~~~~~~~~~~~~~~~
-    // We can create our local diagonal block matrix directly on the device
-    PetscCall(MatCreateSeqAIJKokkosWithKokkosViews(PETSC_COMM_SELF, AA->rmap->n, AA->cmap->n, i_local_h, j_local_h, a_local_h, &output_mat_local));
-
-    // We can create our nonlocal diagonal block matrix directly on the device
-    PetscCall(MatCreateSeqAIJKokkosWithKokkosViews(PETSC_COMM_SELF, AA->rmap->n, AB->cmap->n, i_nonlocal_h, j_nonlocal_h, a_nonlocal_h, &output_mat_nonlocal));
-
-    // Build our mpi kokkos matrix by passing in the local and
-    // nonlocal kokkos matrices and the colmap
-    // MatSetMPIAIJWithSplitSeqAIJ allows us to pass in B using local indices
-    // as long as garray has the global indices in it
-    PetscCall(MatCreate(PETSC_COMM_WORLD, &B));
-    PetscCall(MatSetSizes(B, 5, 5, PETSC_DETERMINE, PETSC_DETERMINE));
-    PetscCall(MatGetType(A, &mat_type));
-    PetscCall(MatSetType(B, mat_type));
-    PetscCall(PetscLayoutSetUp(B->rmap));
-    PetscCall(PetscLayoutSetUp(B->cmap));
-
-    // The garray passed in has to be on the host, but it can be created
-    // on device and copied to the host
-    // We're just going to copy the existing host values here
-    PetscCall(PetscMalloc1(AB->cmap->n, &garray_host));
-    for (int i = 0; i < AB->cmap->n; i++) { garray_host[i] = garray[i]; }
-
-    // Skip the compactification - this means almost nothing happens on the host
-    PetscCall(MatSetMPIAIJWithSplitSeqAIJ(B, output_mat_local, output_mat_nonlocal, garray_host));
-
-    PetscCall(MatEqual(A, B, &equal));
     PetscCheck(equal, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Likely a bug in MatCreateSeqAIJKokkosWithKokkosViews()");
     PetscCall(MatDestroy(&B));
 

@@ -18,7 +18,7 @@
 
    Synopsis:
    #include <petscmat_kokkos.hpp>
-   PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews  (MPI_Comm comm, PetscInt m, PetscInt n, Kokkos::View<PetscInt *, MemorySpace>&, Kokkos::View<PetscInt *, MemorySpace>&, Kokkos::View<PetscScalar *, MemorySpace>&, Mat *A);
+   PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews  (MPI_Comm comm, PetscInt m, PetscInt n, Kokkos::View<PetscInt *>& i_d, Kokkos::View<PetscInt *>& j_d, Kokkos::View<PetscScalar *>& a_d, Mat *A);
 
    Logically Collective, No Fortran Support
 
@@ -26,9 +26,9 @@
 +  comm  - the MPI communicator
 -  m     - row size
 -  n     - the column size
--  i     - the Kokkos view of row data (can be in either HostMirrorMemorySpace or Kokkos::DefaultExecutionSpace)
--  j     - the Kokkos view of the column data (can be in either HostMirrorMemorySpace or Kokkos::DefaultExecutionSpace)
--  a     - the Kokkos view of the values (can be in either HostMirrorMemorySpace or Kokkos::DefaultExecutionSpace)
+-  i     - the Kokkos view of row data (in Kokkos::DefaultExecutionSpace)
+-  j     - the Kokkos view of the column data (in Kokkos::DefaultExecutionSpace)
+-  a     - the Kokkos view of the values (in Kokkos::DefaultExecutionSpace)
 
    Output Parameter:
 .  A  - the `MATSEQAIJKOKKOS` matrix
@@ -43,7 +43,6 @@
 
 .seealso:
 @*/
-template <class MemorySpace>
-PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm, PetscInt, PetscInt, Kokkos::View<PetscInt *, MemorySpace> &, Kokkos::View<PetscInt *, MemorySpace> &, Kokkos::View<PetscScalar *, MemorySpace> &, Mat *);
+PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm, PetscInt, PetscInt, Kokkos::View<PetscInt *> &, Kokkos::View<PetscInt *> &, Kokkos::View<PetscScalar *> &, Mat *);
 
 #endif
