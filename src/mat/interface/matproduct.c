@@ -837,10 +837,10 @@ PetscErrorCode MatProductSymbolic(Mat mat)
     PetscCall(MatSetBlockSizesFromMats(mat, A, B));
     break;
   case MATPRODUCT_AtB:
-    if (A->cmap->bs > 1 || B->cmap->bs > 1) PetscCall(MatSetBlockSizes(mat, A->cmap->bs, B->cmap->bs));
+    if (mat->rmap->n > 0 && (mat->rmap->n % A->cmap->bs) == 0 && (A->cmap->bs > 1 || B->cmap->bs > 1)) PetscCall(MatSetBlockSizes(mat, A->cmap->bs, B->cmap->bs));
     break;
   case MATPRODUCT_ABt:
-    if (A->rmap->bs > 1 || B->rmap->bs > 1) PetscCall(MatSetBlockSizes(mat, A->rmap->bs, B->rmap->bs));
+    if (mat->rmap->n > 0 && (mat->rmap->n % A->rmap->bs) == 0 && (A->rmap->bs > 1 || B->rmap->bs > 1)) PetscCall(MatSetBlockSizes(mat, A->rmap->bs, B->rmap->bs));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Not for ProductType %s", MatProductTypes[product->type]);
