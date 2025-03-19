@@ -63,6 +63,7 @@ Changes: Development
 - Add ``MatCreateSeqAIJKokkosWithKokkosViews()`` which allows creation of a ``MATSEQAIJKOKKOS`` matrix with AIJ data in Kokkos views
 - Change ``MatCreateMPIAIJWithSeqAIJ()`` so that B can be passed in with local indices and compactification skipped
 - Add ``MatDenseSkinnyQR()`` for QR factorizations of tall, skinny dense matrices
+- Add ``MatDenseSkinnyQB()`` for QB factorizations of tall, skinny dense matrices
 
 .. rubric:: MatCoarsen:
 
