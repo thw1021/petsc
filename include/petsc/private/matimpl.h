@@ -734,7 +734,9 @@ struct _p_MatNullSpace {
   PETSCHEADER(int);
   PetscBool    has_cnst;
   PetscInt     n;
-  Vec         *vecs;
+  PetscInt     n_spanning_vecs;
+  Vec         *vecs;                                   /* orthonormal basis (order is arbitrary) */
+  Vec         *spanning_vecs;                          /* vectors that span the nullspace, not orthonormal or even linearly independent */
   PetscScalar *alpha;                                  /* for projections */
   PetscErrorCode (*remove)(MatNullSpace, Vec, void *); /* for user provided removal function */
   void *rmctx;                                         /* context for remove() function */
