@@ -122,6 +122,7 @@ Changes: Development
 - Add ``PetscCallEGADS()``
 - Add ``DMPlexTransformGetTransformTypes()`` and ``DMPlexTransformSetTransformTypes()``
 - Several ``DMPLEX`` functions including ``DMPlexVecGetClosure()`` now requiring a dummy argument for the length of the returned array, for example ``PETSC_NULL_INTEGER`` that was previously missing not in the Fortran API.
+- Add ``DMPlexCreateDisplacementRigidBody()`` for rigid body modes relative to a displacement field
 
 .. rubric:: FE/FV:
 
