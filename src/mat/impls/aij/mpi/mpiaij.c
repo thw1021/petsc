@@ -3502,8 +3502,6 @@ PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm comm, PetscInt M, PetscInt N, 
   PetscCall(MatGetSize(A, &m, &n));
   PetscCheck(m == B->rmap->N, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Am %" PetscInt_FMT " != Bm %" PetscInt_FMT, m, B->rmap->N);
   PetscCheck(PetscAbs(A->rmap->bs) == PetscAbs(B->rmap->bs), PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "A row bs %" PetscInt_FMT " != B row bs %" PetscInt_FMT, A->rmap->bs, B->rmap->bs);
-  /* remove check below; When B is created using iscol_o from ISGetSeqIS_SameColDist_Private(), its bs may not be same as A */
-  /* PetscCheck(A->cmap->bs == B->cmap->bs,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"A column bs %" PetscInt_FMT " != B column bs %" PetscInt_FMT,A->cmap->bs,B->cmap->bs); */
 
   PetscCall(MatSetSizes(*mat, m, n, M, N));
   /* Determine the type of MPI matrix that should be created from the type of matrix A, which holds the "diagonal" portion. */
