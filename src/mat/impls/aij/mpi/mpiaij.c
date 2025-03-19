@@ -3312,7 +3312,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_SameRowColDist(Mat mat, IS isrow, IS is
     // Compact garray so its not of size Bn
     PetscCall(ISGetSize(iscol_o, &count));
     PetscCall(PetscMalloc1(count, &garray_compact));
-    for (int i = 0; i < count; i++) { garray_compact[i] = garray[i]; }
+    PetscCall(PetscArraycpy(garray_compact, garray, count));
 
     /* Create submatrix M */
     PetscCall(MatCreateMPIAIJWithSeqAIJ(comm, Asub, Bsub, garray_compact, &M));
