@@ -3521,7 +3521,7 @@ PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm comm, PetscInt M, PetscInt N, 
 
 /*@C
   MatSetMPIAIJWithSplitSeqAIJ - Set the diag and offdiag matrices of a `MATMPIAIJ` matrix.
-   It is similar to MatCreateMPIAIJWithSplitArrays. This routine allows passing in
+   It is similar to `MatCreateMPIAIJWithSplitArrays()`. This routine allows passing in
    B with local indices and the correct size, along with the accompanying
    garray, hence skipping compactification
 
