@@ -933,6 +933,20 @@ PetscErrorCode MatQRFactor_SeqDense(Mat A, IS col, const MatFactorInfo *minfo)
   if (!mat->tau) { PetscCall(PetscMalloc1(min, &mat->tau)); }
   if (!mat->pivots) { PetscCall(PetscMalloc1(n, &mat->pivots)); }
   if (!mat->qrrhs) PetscCall(MatCreateVecs(A, NULL, &mat->qrrhs));
+  // TODO: try to estimate rank or test for and use geqp3 for rank revealing QR.  For now just say rank is min of m and n
+  mat->rank = min;
+
+  A->ops->solve    = MatSolve_SeqDense_QR;
+  A->ops->matsolve = MatMatSolve_SeqDense_QR;
+  A->factortype    = MAT_FACTOR_QR;
+  if (m == n) {
+    A->ops->solvetranspose    = MatSolveTranspose_SeqDense_QR;
+    A->ops->matsolvetranspose = MatMatSolveTranspose_SeqDense_QR;
+  }
+
+  PetscCall(PetscFree(A->solvertype));
+  PetscCall(PetscStrallocpy(MATSOLVERPETSC, &A->solvertype));
+
   if (!A->rmap->n || !A->cmap->n) PetscFunctionReturn(PETSC_SUCCESS);
   if (!mat->fwork) {
     PetscScalar dummy;
@@ -948,19 +962,6 @@ PetscErrorCode MatQRFactor_SeqDense(Mat A, IS col, const MatFactorInfo *minfo)
   PetscCallBLAS("LAPACKgeqrf", LAPACKgeqrf_(&m, &n, mat->v, &mat->lda, mat->tau, mat->fwork, &mat->lfwork, &info));
   PetscCall(PetscFPTrapPop());
   PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "Bad argument to QR factorization %" PetscBLASInt_FMT, info);
-  // TODO: try to estimate rank or test for and use geqp3 for rank revealing QR.  For now just say rank is min of m and n
-  mat->rank = min;
-
-  A->ops->solve    = MatSolve_SeqDense_QR;
-  A->ops->matsolve = MatMatSolve_SeqDense_QR;
-  A->factortype    = MAT_FACTOR_QR;
-  if (m == n) {
-    A->ops->solvetranspose    = MatSolveTranspose_SeqDense_QR;
-    A->ops->matsolvetranspose = MatMatSolveTranspose_SeqDense_QR;
-  }
-
-  PetscCall(PetscFree(A->solvertype));
-  PetscCall(PetscStrallocpy(MATSOLVERPETSC, &A->solvertype));
 
   PetscCall(PetscLogFlops(2.0 * min * min * (max - min / 3.0)));
   PetscFunctionReturn(PETSC_SUCCESS);
