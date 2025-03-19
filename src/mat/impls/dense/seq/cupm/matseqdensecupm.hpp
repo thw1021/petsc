@@ -1500,7 +1500,7 @@ struct SubMatrixIterator : MatrixIteratorBase<Iterator, SubMatIndexFunctor<typen
   {
   }
 
-  PETSC_NODISCARD iterator end() const noexcept { return this->begin() + (this->func.nrows * this->func.ncols); }
+  PETSC_NODISCARD iterator end() const noexcept { return this->begin() + (this->func.lda * this->func.ncols); }
 };
 
 namespace
@@ -1513,7 +1513,7 @@ PETSC_NODISCARD inline SubMatrixIterator<typename thrust::device_vector<T>::iter
   const auto ncols = cend - cstart;
   const auto dptr  = thrust::device_pointer_cast(ptr);
 
-  return {dptr + (rstart * lda) + cstart, dptr + ((rstart + nrows) * lda) + cstart, nrows, ncols, lda};
+  return {dptr + rstart + cstart * lda, dptr + (rstart + nrows) + (cstart + ncols) * lda, nrows, ncols, lda};
 }
 
 } // namespace
