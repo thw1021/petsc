@@ -10,7 +10,7 @@ static char help[] = "Testing MatCreateSeqAIJKokkosWithKokkosViews() and buildin
 int main(int argc, char **argv)
 {
   Mat             A, B;
-  PetscInt        i, j, column;
+  PetscInt        i, j, column, M, N;
   PetscInt       *di, *dj, *oi, *oj, nd;
   const PetscInt *garray;
   PetscInt       *garray_h;
@@ -51,6 +51,7 @@ int main(int argc, char **argv)
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
 
+  PetscCall(MatGetSize(A, &M, &N));
   PetscCall(MatMPIAIJGetSeqAIJ(A, &AA, &AB, &garray));
   PetscCall(MatGetRowIJ(AA, 0, PETSC_FALSE, PETSC_FALSE, &nd, (const PetscInt **)&di, (const PetscInt **)&dj, &done));
   PetscCall(MatSeqAIJGetArray(AA, &da));
@@ -128,7 +129,7 @@ int main(int argc, char **argv)
     // Build our MPI matrix
     // If we provide garray and output_mat_nonlocal with local indices and the compactified size
     // almost nothing happens on the host
-    PetscCall(MatCreateMPIAIJWithSeqAIJ(PETSC_COMM_WORLD, output_mat_local, output_mat_nonlocal, garray_h, &B));
+    PetscCall(MatCreateMPIAIJWithSeqAIJ(PETSC_COMM_WORLD, M, N, output_mat_local, output_mat_nonlocal, garray_h, &B));
 
     PetscCall(MatEqual(A, B, &equal));
     PetscCall(MatRestoreRowIJ(AA, 0, PETSC_FALSE, PETSC_FALSE, &nd, (const PetscInt **)&di, (const PetscInt **)&dj, &done));

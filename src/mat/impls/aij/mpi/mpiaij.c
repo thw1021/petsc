@@ -3274,7 +3274,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_SameRowColDist(Mat mat, IS isrow, IS is
   MPI_Comm    comm;
   IS          iscol_d, isrow_d, iscol_o;
   Mat         Asub = NULL, Bsub = NULL;
-  PetscInt    n, count;
+  PetscInt    n, count, M_size, N_size;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)mat, &comm));
@@ -3315,7 +3315,9 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_SameRowColDist(Mat mat, IS isrow, IS is
     PetscCall(PetscArraycpy(garray_compact, garray, count));
 
     /* Create submatrix M */
-    PetscCall(MatCreateMPIAIJWithSeqAIJ(comm, Asub, Bsub, garray_compact, &M));
+    PetscCall(ISGetSize(isrow, &M_size));
+    PetscCall(ISGetSize(iscol, &N_size));
+    PetscCall(MatCreateMPIAIJWithSeqAIJ(comm, M_size, N_size, Asub, Bsub, garray_compact, &M));
 
     /* If Bsub has empty columns, compress iscol_o such that it will retrieve condensed Bsub from a->B during reuse */
     asub = (Mat_MPIAIJ *)M->data;
@@ -3472,6 +3474,8 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ(Mat mat, IS isrow, IS iscol, MatReuse c
 
   Input Parameters:
 + comm   - MPI communicator
+. M      - the global row size
+. N      - the global column size
 . A      - "diagonal" portion of matrix
 . B      - if garray is NULL, B should be the offdiag matrix using global col ids and of size N
 .        - if garray is not NULL, B should be the offdiag matrix using local col ids and of size garray
@@ -3489,9 +3493,9 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ(Mat mat, IS isrow, IS iscol, MatReuse c
 
 .seealso: [](ch_matrices), `Mat`, `MATMPIAIJ`, `MATSEQAIJ`, `MatCreateMPIAIJWithSplitArrays()`
 @*/
-PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm comm, Mat A, Mat B, PetscInt *garray, Mat *mat)
+PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm comm, PetscInt M, PetscInt N, Mat A, Mat B, PetscInt *garray, Mat *mat)
 {
-  PetscInt m, n, N;
+  PetscInt m, n;
   MatType  mpi_mat_type;
 
   PetscFunctionBegin;
@@ -3502,10 +3506,7 @@ PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm comm, Mat A, Mat B, PetscInt *
   /* remove check below; When B is created using iscol_o from ISGetSeqIS_SameColDist_Private(), its bs may not be same as A */
   /* PetscCheck(A->cmap->bs == B->cmap->bs,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"A column bs %" PetscInt_FMT " != B column bs %" PetscInt_FMT,A->cmap->bs,B->cmap->bs); */
 
-  /* Get global columns of mat */
-  PetscCallMPI(MPIU_Allreduce(&n, &N, 1, MPIU_INT, MPI_SUM, comm));
-
-  PetscCall(MatSetSizes(*mat, m, n, PETSC_DECIDE, N));
+  PetscCall(MatSetSizes(*mat, m, n, M, N));
   /* Determine the type of MPI matrix that should be created from the type of matrix A, which holds the "diagonal" portion. */
   PetscCall(MatGetMPIMatType_Private(A, &mpi_mat_type));
   PetscCall(MatSetType(*mat, mpi_mat_type));
@@ -3545,7 +3546,7 @@ PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm comm, Mat A, Mat B, PetscInt *
 
 .seealso: [](ch_matrices), `Mat`, `MATMPIAIJ`, `MATSEQAIJ`, `MatCreateMPIAIJWithSplitArrays()`
 @*/
-PETSC_EXTERN PetscErrorCode MatSetMPIAIJWithSplitSeqAIJ(Mat mat, Mat A, Mat B, PetscInt *garray)
+PETSC_INTERN PetscErrorCode MatSetMPIAIJWithSplitSeqAIJ(Mat mat, Mat A, Mat B, PetscInt *garray)
 {
   PetscFunctionBegin;
   Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)mat->data;

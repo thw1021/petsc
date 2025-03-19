@@ -62,7 +62,7 @@ int main(int argc, char **argv)
   // Build our MPI matrix
   // If we provide garray and output_mat_nonlocal with local indices and the compactified size
   // it doesn't compactify
-  PetscCall(MatCreateMPIAIJWithSeqAIJ(PETSC_COMM_WORLD, output_mat_local, output_mat_nonlocal, garray_h, &B));
+  PetscCall(MatCreateMPIAIJWithSeqAIJ(PETSC_COMM_WORLD, M, N, output_mat_local, output_mat_nonlocal, garray_h, &B));
 
   PetscCall(MatEqual(A, B, &equal));
   PetscCheck(equal, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Likely a bug in MatCreateMPIAIJWithSeqAIJ()");
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
   // Build our MPI matrix
   // If we don't provide garray and output_mat_local_copy with global indices and size N
   // it will do compactification
-  PetscCall(MatCreateMPIAIJWithSeqAIJ(PETSC_COMM_WORLD, output_mat_local_copy, output_mat_nonlocal_copy, garray_h, &B));
+  PetscCall(MatCreateMPIAIJWithSeqAIJ(PETSC_COMM_WORLD, M, N, output_mat_local_copy, output_mat_nonlocal_copy, garray_h, &B));
 
   PetscCall(MatEqual(A, B, &equal));
   PetscCheck(equal, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Likely a bug in MatCreateMPIAIJWithSeqAIJ()");
