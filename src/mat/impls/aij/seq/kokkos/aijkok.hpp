@@ -55,15 +55,24 @@ using KokkosTeamMemberType = Kokkos::TeamPolicy<DefaultExecutionSpace>::member_t
 
 /* For mat->spptr of a factorized matrix */
 struct Mat_SeqAIJKokkosTriFactors {
-  MatRowMapKokkosView   iL_d, iU_d, iLt_d, iUt_d;  /* rowmap for L, U, L^t, U^t of A=LU */
-  MatColIdxKokkosView   jL_d, jU_d, jLt_d, jUt_d;  /* column ids */
-  MatScalarKokkosView   aL_d, aU_d, aLt_d, aUt_d;  /* matrix values */
-  KernelHandle          kh, khL, khU, khLt, khUt;  /* Kernel handles for A, L, U, L^t, U^t */
+  MatRowMapKokkosView   iL_d, iU_d, iLt_d, iUt_d; /* rowmap for L, U, L^t, U^t of A=LU */
+  MatColIdxKokkosView   jL_d, jU_d, jLt_d, jUt_d; /* column ids */
+  MatScalarKokkosView   aL_d, aU_d, aLt_d, aUt_d; /* matrix values */
+  KernelHandle          kh, khL, khU, khLt, khUt; /* Kernel handles for ILU factorization of A, and TRSV of L, U, L^t, U^t */
+  PetscScalarKokkosView workVector;
   PetscBool             transpose_updated;         /* Are L^T, U^T updated wrt L, U*/
   PetscBool             sptrsv_symbolic_completed; /* Have we completed the symbolic solve for L and U */
-  PetscScalarKokkosView workVector;
+  PetscBool             factorize_on_host;         // Do factorization on host
+  PetscBool             solve_on_host;             // Solve on device
 
-  Mat_SeqAIJKokkosTriFactors(PetscInt n) : transpose_updated(PETSC_FALSE), sptrsv_symbolic_completed(PETSC_FALSE), workVector("workVector", n) { }
+  MatRowMapKokkosViewHost iL_h, iU_h; // temp. buffers when we do factorization with PETSc on host. We copy L, U to these buffers and then copy to device
+  MatColIdxKokkosViewHost jL_h, jU_h;
+  MatScalarKokkosViewHost aL_h, aU_h, D_h; // D is for LDLT factorization
+  MatScalarKokkosView     D_d;
+
+  PetscIntKokkosView rowperm, colperm; // row permutation and column permutation
+
+  Mat_SeqAIJKokkosTriFactors(PetscInt n) : workVector("workVector", n) { transpose_updated = sptrsv_symbolic_completed = factorize_on_host = solve_on_host = PETSC_FALSE; }
 
   ~Mat_SeqAIJKokkosTriFactors() { Destroy(); }
 
@@ -74,7 +83,7 @@ struct Mat_SeqAIJKokkosTriFactors {
     khU.destroy_sptrsv_handle();
     khLt.destroy_sptrsv_handle();
     khUt.destroy_sptrsv_handle();
-    transpose_updated = sptrsv_symbolic_completed = PETSC_FALSE;
+    transpose_updated = sptrsv_symbolic_completed = factorize_on_host = solve_on_host = PETSC_FALSE;
   }
 };
 
@@ -115,9 +124,8 @@ struct Mat_SeqAIJKokkos {
     a_dual.modify_host(); /* Since caller provided values on host */
     if (copyValues) a_dual.sync_device(exec);
 
-    csrmat            = KokkosCsrMatrix("csrmat", ncols, a_d, KokkosCsrGraph(j_d, i_d));
-    nonzerostate      = nzstate;
-    transpose_updated = hermitian_updated = PETSC_FALSE;
+    csrmat = KokkosCsrMatrix("csrmat", ncols, a_d, KokkosCsrGraph(j_d, i_d));
+    Init(nzstate);
   }
 
   /* Construct with a KokkosCsrMatrix. For performance, only i, j are copied to host, but not the matrix values. */
@@ -168,10 +176,11 @@ struct Mat_SeqAIJKokkos {
   }
 
   /* Shared init stuff */
-  void Init(void)
+  void Init(PetscObjectState nzstate = 0)
   {
-    transpose_updated = hermitian_updated = PETSC_FALSE;
-    nonzerostate                          = 0;
+    nonzerostate      = nzstate;
+    transpose_updated = PETSC_FALSE;
+    hermitian_updated = PETSC_FALSE;
   }
 
   PetscErrorCode DestroyMatTranspose(void)
