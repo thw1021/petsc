@@ -64,6 +64,7 @@ Changes: Development
 - Change ``MatCreateMPIAIJWithSeqAIJ()`` so that B can be passed in with local indices and compactification skipped
 - Add ``MatDenseSkinnyQR()`` for QR factorizations of tall, skinny dense matrices
 - Add ``MatDenseSkinnyQB()`` for QB factorizations of tall, skinny dense matrices
+- Add ``MatDenseSkinnySVD()`` for SVD factorizations of tall, skinny dense matrices
 
 .. rubric:: MatCoarsen:
 
