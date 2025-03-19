@@ -898,3 +898,159 @@ PetscErrorCode MatDenseSkinnyQB(Mat A, MatReuse reuse_Q, Mat *Q, Mat B, PetscInt
   if (B_in == NULL) PetscCall(MatDestroy(&B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+typedef enum {
+  MATDENSESKINNYSVD_SVQB,
+  MATDENSESKINNYSVD_TSQR,
+} MatDenseSkinnySVDAlgorithm;
+
+const char *const MatDenseSkinnySVDAlgorithms[] = {"SVQB", "TSQR", "MatDenseSkinnySVDAlgorithm", "MATDENSESKINNYSVD_", NULL};
+
+/*@
+  MatDenseSkinnySVD - Compute the SVD of a tall skinny dense matrix
+
+  Collective
+
+  Input Parameters:
++ A       - An $m \times n$ dense matrix
+- reuse_U - if `MAT_INPLACE_MATRIX`, `U` will overwrite `A`;
+            if `MAT_REUSE_MATRIX`, `U` should be an existing matrix;
+            if `MAT_INITIAL_MATRIX`, `U` will be a new matrix
+
+  Output Parameters:
++ U     - an $m \times n$ matrix, the first `ncols` columns of `U` are left singular vectors of `A`
+. S     - an $n$ vector holding singular values of `A`;
+          `S` is on the `PETSC_COMM_SELF` communicator and is duplicated on every process.
+. VH    - (optional) if not `NULL`, a dense $n \times n$ matrix, whose rows are the (conjugate transpose) right singular
+          vectors of `A`;
+          `VH` is on the `PETSC_COMM_SELF` communicator and is duplicated on every process.
+- ncols - only the first `ncols` columns of `U` are meaningful: the remainder are undefined and should not be used
+
+  Options Database Key:
+. -mat_dense_svd_algorithm <svqb,tsqr> - the algorithm used to compute a QB decomposition of `A` as a first step to computing the SVD
+
+  Level: intermediate
+
+  Notes:
+  `ncols` indicates how many columns of `U` are orthonormal but may be greater than the numerical rank of `A`\:
+  inspect `S` to determine the numerical rank of `A`.
+
+  In serial `MatDenseSkinnySVD()` uses LAPACK's SVD algorithm; in parallel, a QB decomposition `A = QB` is first computed using
+  either the SVQB (`-mat_dense_svd_algorithm tsqr`) or TSQR algorithm (`-mat_dense_svd_algorithm svqb`) and the SVD
+  of `A` is then computed from the SVD of `B`.
+
+.seealso: [](ch_matrices), `Mat`, `MATDENSE`, `MatDenseSkinnyQR()`, `MatDenseSkinnyQB()`
+@*/
+PetscErrorCode MatDenseSkinnySVD(Mat A, MatReuse reuse_U, Mat *U, Vec S, Mat VH, PetscInt *ncols)
+{
+  PetscInt                   M, N;
+  MPI_Comm                   comm;
+  PetscMPIInt                size;
+  MatDenseSkinnySVDAlgorithm algorithm = MATDENSESKINNYSVD_SVQB;
+  PetscOptions               options;
+  const char                *prefix;
+  Mat                        B, B_sub;
+  PetscInt                   dummy_ncols;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(S, VEC_CLASSID, 4);
+  if (VH) PetscValidHeaderSpecific(VH, MAT_CLASSID, 5);
+  PetscAssertPointer(ncols, 6);
+  PetscCall(PetscObjectGetComm((PetscObject)A, &comm));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCall(MatGetSize(A, &M, &N));
+  {
+    MPI_Comm    S_comm;
+    PetscMPIInt S_size;
+    PetscInt    S_N;
+
+    PetscCall(PetscObjectGetComm((PetscObject)S, &S_comm));
+    PetscCallMPI(MPI_Comm_size(S_comm, &S_size));
+    PetscCheck(S_size == 1, comm, PETSC_ERR_ARG_WRONG, "S should be on PETSC_COMM_SELF, not a parallel vector");
+    PetscCall(VecGetSize(S, &S_N));
+    PetscCheck(S_N == N, S_comm, PETSC_ERR_ARG_SIZ, "S should have length %" PetscInt_FMT ", not %" PetscInt_FMT, N, S_N);
+  }
+  PetscCall(MatDenseSkinnyPrepareQ(A, reuse_U, U, "U"));
+  PetscCall(MatDenseSkinnyPrepareR(A, &VH, "VH", PETSC_FALSE));
+  if (size == 1) {
+    PetscScalar *_AU;
+    PetscScalar *_VH = NULL;
+    PetscScalar *_S;
+    PetscReal   *_Sreal;
+    PetscInt     ldAU, ldV = 1;
+    PetscBLASInt lwork = -1;
+    PetscScalar *work  = NULL;
+    PetscReal   *rwork = NULL;
+
+    PetscCall(VecZeroEntries(S));
+    PetscCall(MatDenseGetLDA(*U, &ldAU));
+    PetscCall(MatDenseGetArray(*U, &_AU));
+    if (VH) {
+      PetscCall(MatDenseGetLDA(VH, &ldV));
+      PetscCall(MatDenseGetArrayWrite(VH, &_VH));
+    }
+
+    PetscCall(VecGetArray(S, &_S));
+#if !PetscDefined(USE_COMPLEX)
+    _Sreal = _S;
+#else
+    PetscCall(PetscMalloc1(N, &_Sreal));
+#endif
+
+    PetscCall(MatDenseSVD_LAPACK_Arrays(_AU, M, N, ldAU, _AU, ldAU, _Sreal, _VH, ldV, &lwork, &work, &rwork));
+    PetscCall(PetscFree(work));
+    PetscCall(PetscFree(rwork));
+
+#if PetscDefined(USE_COMPLEX)
+    for (PetscInt i = 0; i < N; i++) _S[i] = _Sreal[i];
+    PetscCall(PetscFree(_Sreal));
+#endif
+
+    if (VH) PetscCall(MatDenseRestoreArrayWrite(VH, &_VH));
+    PetscCall(MatDenseRestoreArray(*U, &_AU));
+
+    *ncols = PetscMin(M, N);
+
+    if (*ncols < N) {
+      PetscCall(VecGetArray(S, &_S));
+      for (PetscInt i = *ncols; i < N; i++) _S[i] = 0.0;
+      PetscCall(VecRestoreArray(S, &_S));
+    }
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, N, N, NULL, &B));
+  PetscCall(MatSetUp(B));
+  PetscCall(PetscObjectGetOptions((PetscObject)A, &options));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)A, &prefix));
+  PetscCall(PetscOptionsGetEnum(options, prefix, "-mat_dense_svd_algorithm", MatDenseSkinnySVDAlgorithms, (PetscEnum *)&algorithm, NULL));
+  if (algorithm == MATDENSESKINNYSVD_TSQR) PetscCall(MatDenseSkinnyQR(*U, MAT_INPLACE_MATRIX, U, B, ncols));
+  else PetscCall(MatDenseSkinnyQB(*U, MAT_INPLACE_MATRIX, U, B, ncols));
+  B_sub = B;
+  if (*ncols < N) PetscCall(MatDenseGetSubMatrix(B, 0, *ncols, 0, N, &B_sub));
+  PetscCall(MatDenseSkinnySVD(B_sub, MAT_INPLACE_MATRIX, &B_sub, S, VH, &dummy_ncols));
+  {
+    Mat U_local, U_sub, B_subsub, UB;
+
+    PetscCall(MatDenseGetLocalMatrix(*U, &U_local));
+    U_sub    = U_local;
+    B_subsub = B_sub;
+
+    if (*ncols < N) {
+      PetscCall(MatDenseGetSubMatrix(U_local, PETSC_DECIDE, PETSC_DECIDE, 0, *ncols, &U_sub));
+      PetscCall(MatDenseGetSubMatrix(B_sub, 0, *ncols, 0, *ncols, &B_subsub));
+    }
+
+    PetscCall(MatMatMult(U_sub, B_subsub, MAT_INITIAL_MATRIX, PETSC_DECIDE, &UB));
+    PetscCall(MatCopy(UB, U_sub, UNKNOWN_NONZERO_PATTERN));
+    PetscCall(MatDestroy(&UB));
+
+    if (*ncols < N) {
+      PetscCall(MatDenseRestoreSubMatrix(B_sub, &B_subsub));
+      PetscCall(MatDenseRestoreSubMatrix(U_local, &U_sub));
+    }
+  }
+  if (*ncols < N) PetscCall(MatDenseRestoreSubMatrix(B, &B_sub));
+  PetscCall(MatDestroy(&B));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
