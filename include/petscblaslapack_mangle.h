@@ -121,6 +121,7 @@
 /* Subroutine names that are the same for real/complex data: */
 /* no character-string arguments: */
 #define LAPACKgeqrf_     PETSCBLAS(geqrf, GEQRF)
+#define LAPACKgelqf_     PETSCBLAS(gelqf, GELQF)
 #define LAPACKgetrf_     PETSCBLAS(getrf, GETRF)
 #define LAPACKgetri_     PETSCBLAS(getri, GETRI)
 #define LAPACKREALgetrf_ PETSCBLASREAL(getrf, GETRF)
@@ -204,8 +205,9 @@
   #if !defined(PETSC_MISSING_LAPACK_ORMQR)
     #define LAPACKormqr_ PETSCBLAS(ormqr, ORMQR)
   #endif
-  #define BLASdot_  PETSCBLAS(dot, DOT)
-  #define BLASdotu_ PETSCBLAS(dot, DOT)
+  #define LAPACKorglq_ PETSCBLAS(orglq, ORGLQ)
+  #define BLASdot_     PETSCBLAS(dot, DOT)
+  #define BLASdotu_    PETSCBLAS(dot, DOT)
 
   #define LAPACKsyev_  PETSCBLAS(syev, SYEV)   /* eigenvalues and eigenvectors of a symm matrix */
   #define LAPACKsyevx_ PETSCBLAS(syevx, SYEVX) /* selected eigenvalues and eigenvectors of a symm matrix */
@@ -227,6 +229,7 @@
   #if !defined(PETSC_MISSING_LAPACK_ORMQR)
     #define LAPACKormqr_ PETSCBLAS(unmqr, UNMQR)
   #endif
+  #define LAPACKorglq_ PETSCBLAS(unglq, UNGLQ)
 /* note: dot and dotu are handled separately for complex data */
 
   #define LAPACKsyev_  PETSCBLAS(heev, HEEV)   /* eigenvalues and eigenvectors of a symm matrix */
