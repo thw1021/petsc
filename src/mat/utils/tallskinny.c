@@ -386,3 +386,515 @@ PetscErrorCode MatDenseSkinnyQR(Mat A, MatReuse reuse_Q, Mat *Q, Mat R, PetscInt
   if (R != R_in) PetscCall(MatDestroy(&R));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+static PetscBool  svqb_cite       = PETSC_FALSE;
+static const char svqb_citation[] = "@article{Stathopoulos2002,\n"
+                                    "  title = {A Block Orthogonalization Procedure with Constant Synchronization Requirements},\n"
+                                    "  volume = {23},\n"
+                                    "  ISSN = {1095-7197},\n"
+                                    "  url = {http://dx.doi.org/10.1137/S1064827500370883},\n"
+                                    "  DOI = {10.1137/s1064827500370883},\n"
+                                    "  number = {6},\n"
+                                    "  journal = {SIAM Journal on Scientific Computing},\n"
+                                    "  publisher = {Society for Industrial & Applied Mathematics (SIAM)},\n"
+                                    "  author = {Stathopoulos,  Andreas and Wu,  Kesheng},\n"
+                                    "  year = {2002},\n"
+                                    "  month = jan,\n"
+                                    "  pages = {2165-2182}\n"
+                                    "}\n";
+
+// overwrites A
+static PetscErrorCode MatDenseSVD_LAPACK_Arrays(PetscScalar _A[], PetscInt m, PetscInt n, PetscInt ldA, PetscScalar _U[], PetscInt ldU, PetscReal _S[], PetscScalar _VH[], PetscInt ldV, PetscBLASInt *lwork, PetscScalar **work, PetscReal **rwork)
+{
+  PetscInt      k;
+  PetscLogEvent event;
+
+  PetscFunctionBegin;
+  k = PetscMin(m, n);
+  if (k == 0) PetscFunctionReturn(PETSC_SUCCESS);
+
+  PetscCall(PetscLogEventRegister("LAPACKgesvd", MAT_CLASSID, &event));
+  {
+    PetscScalar  dummy_u = 0.0, dummy_v = 0.0;
+    PetscBLASInt bm, bn, bk, bldA, bldU, bldV;
+    PetscBLASInt lierr;
+    const char  *form_u = (_U == NULL) ? "N" : (_U == _A) ? "O" : "S";
+    const char  *form_v = (_VH == NULL) ? "N" : (_VH == _A) ? "O" : "A";
+
+    if (_U == NULL) {
+      _U  = &dummy_u;
+      ldU = 1;
+    }
+    if (_VH == NULL) {
+      _VH = &dummy_v;
+      ldV = 1;
+    }
+
+    PetscCall(PetscBLASIntCast(ldA, &bldA));
+    PetscCall(PetscBLASIntCast(ldU, &bldU));
+    PetscCall(PetscBLASIntCast(ldV, &bldV));
+    PetscCall(PetscBLASIntCast(m, &bm));
+    PetscCall(PetscBLASIntCast(n, &bn));
+    PetscCall(PetscBLASIntCast(k, &bk));
+    if (PetscDefined(USE_COMPLEX)) {
+      if (*rwork == NULL) { PetscCall(PetscMalloc1(5 * PetscMax(m, n), rwork)); }
+    }
+
+    // compute work size
+    if (*work == NULL) {
+      PetscScalar work_size;
+
+      *lwork = -1;
+#if !defined(PETSC_USE_COMPLEX)
+      PetscCallBLAS("LAPACKgesvd", LAPACKgesvd_(form_u, form_v, &bm, &bn, _A, &bldA, _S, _U, &bldU, _VH, &bldV, &work_size, lwork, &lierr));
+#else
+      PetscCallBLAS("LAPACKgesvd", LAPACKgesvd_(form_u, form_v, &bm, &bn, _A, &bldA, _S, _U, &bldU, _VH, &bldV, &work_size, lwork, *rwork, &lierr));
+#endif
+      PetscCheck(lierr == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK gesvd %d", (int)lierr);
+
+      *lwork = (PetscBLASInt)PetscRealPart(work_size);
+      PetscCall(PetscMalloc1(*lwork, work));
+    }
+
+    PetscCall(PetscLogEventBegin(event, NULL, NULL, NULL, NULL));
+#if !defined(PETSC_USE_COMPLEX)
+    PetscCallBLAS("LAPACKgesvd", LAPACKgesvd_(form_u, form_v, &bm, &bn, _A, &bldA, _S, _U, &bldU, _VH, &bldV, *work, lwork, &lierr));
+#else
+    PetscCallBLAS("LAPACKgesvd", LAPACKgesvd_(form_u, form_v, &bm, &bn, _A, &bldA, _S, _U, &bldU, _VH, &bldV, *work, lwork, *rwork, &lierr));
+#endif
+    PetscCall(PetscLogEventEnd(event, NULL, NULL, NULL, NULL));
+    PetscCheck(lierr == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK gesvd %d", (int)lierr);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// do a local MatHermitianTransposeMatMult, then all reduce the values on the given communicator
+static PetscErrorCode MatHermitianTransposeMatMultAllReduce(MPI_Comm comm, Mat A, Mat B, MatReuse reuse, PetscReal fill, Mat *C)
+{
+  PetscInt     m, n, ldC;
+  PetscScalar *_C;
+
+  PetscFunctionBegin;
+  if (PetscDefined(USE_DEBUG)) {
+    MPI_Comm    A_comm;
+    PetscMPIInt A_size;
+
+    PetscCall(PetscObjectGetComm((PetscObject)A, &A_comm));
+    PetscCallMPI(MPI_Comm_size(A_comm, &A_size));
+    PetscCheck(A_size == 1, comm, PETSC_ERR_ARG_NOTSAMECOMM, "A and B must be local (PETSC_COMM_SELF) matrices");
+  }
+  if (PetscDefined(USE_COMPLEX)) {
+    Mat conjA;
+
+    PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &conjA));
+    PetscCall(MatConjugate(conjA));
+    PetscCall(MatTransposeMatMult(conjA, B, reuse, fill, C));
+    PetscCall(MatDestroy(&conjA));
+  } else {
+    PetscCall(MatTransposeMatMult(A, B, reuse, fill, C));
+  }
+  PetscCall(MatGetSize(*C, &m, &n));
+  PetscCall(MatDenseGetLDA(*C, &ldC));
+  PetscCheck(ldC == m, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Require lda to be %" PetscInt_FMT ", not %" PetscInt_FMT, m, ldC);
+  // even if C is PETSC_OFFLOAD_GPU, we are going to do our analysis/orthogonalization work on the host, so we use the host
+  // arrays to reduce here
+  PetscCall(MatDenseGetArray(*C, &_C));
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, _C, m * n, MPIU_SCALAR, MPI_SUM, comm));
+  PetscCall(MatDenseRestoreArray(*C, &_C));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSwap(Mat *A, Mat *B)
+{
+  Mat swap = *A;
+
+  PetscFunctionBegin;
+  *A = *B;
+  *B = swap;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+typedef struct _n_MatDenseSVQBWork {
+  PetscBLASInt n;
+  PetscReal   *D;
+  PetscScalar *BBH;
+  PetscScalar *work;
+  PetscReal   *rwork;
+  PetscBLASInt lwork;
+} MatDenseSVQBWork;
+
+static PetscErrorCode MatDenseSVQBWorkInitialize(PetscInt N, MatDenseSVQBWork *w)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscBLASIntCast(N, &w->n));
+  PetscCall(PetscMalloc3(N * N, &w->BBH, N, &w->D, 5 * N, &w->rwork));
+  w->work  = NULL;
+  w->lwork = -1;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatDenseSVQBWorkReset(MatDenseSVQBWork *w)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscFree(w->work));
+  PetscCall(PetscFree3(w->BBH, w->D, w->rwork));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// YHY = Y' * Y
+// A   = Y * B
+// NB: we are trusting LAPACK algorthms to be bitwise identical on all processes
+static PetscErrorCode MatDenseComputeSVQBUpdate(Mat YHY, Mat B, Mat Y_update, PetscBool *stop, PetscInt *r, PetscInt iter, PetscViewer viewer, MatDenseSVQBWork *work)
+{
+  PetscInt     ldB, ldYup, _r, ldYHY;
+  PetscBLASInt bldW, bn, br;
+  PetscScalar *_B, *_BBH, *_Y_update;
+  PetscReal   *_D;
+  PetscScalar *_YHY;
+  PetscReal    _D_max, _S_max, _D_min, stop_tol = 0.5;
+  PetscInt     n;
+  PetscScalar  one = 1.0, zero = 0.0;
+
+  PetscFunctionBegin;
+  *stop = PETSC_TRUE;
+  PetscCall(MatGetSize(YHY, &n, NULL));
+  *r = n;
+  if (n == 0) PetscFunctionReturn(PETSC_SUCCESS);
+  // iniialize Y_update == I
+  PetscCall(MatDenseGetLDA(Y_update, &ldYup));
+  PetscAssert(ldYup == n, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Y_update should have leading dimension %" PetscInt_FMT ", has %" PetscInt_FMT, n, ldYup);
+  PetscCall(MatDenseGetArrayWrite(Y_update, &_Y_update));
+  PetscCall(PetscArrayzero(_Y_update, n * n));
+  for (PetscInt i = 0; i < n; i++) _Y_update[i * (n + 1)] = 1.0;
+
+  _D = work->D;
+  bn = work->n;
+  PetscCall(MatDenseGetLDA(B, &ldB));
+  PetscCall(PetscBLASIntCast(ldB, &bldW));
+  PetscCall(MatDenseGetArray(B, &_B));
+
+  PetscCall(MatDenseGetLDA(YHY, &ldYHY));
+  PetscAssert(ldYHY == n, PETSC_COMM_SELF, PETSC_ERR_PLIB, "A should have leading dimension %" PetscInt_FMT ", has %" PetscInt_FMT, n, ldYHY);
+  PetscCall(MatDenseGetArray(YHY, &_YHY));
+  _BBH = work->BBH;
+
+  // compute the Hadamard product BB' \otimes Y'Y
+  PetscCallBLAS("BLASgemm", BLASgemm_("N", "C", &bn, &bn, &bn, &one, _B, &bldW, _B, &bldW, &zero, _BBH, &bn));
+  for (PetscInt i = 0; i < n * n; i++) _BBH[i] *= _YHY[i];
+
+  // use _D[k] to compute \sum_{i,j \geq} (BB' \otimes Y'Y)_{ij} = || Y_{:,k:} B_{k:,:} ||_F^2.
+  for (PetscInt k = n - 1; k >= 0; k--) {
+    _D[k] = 0.0;
+    if (k < n - 1) _D[k] = _D[k + 1];
+    _D[k] += PetscAbsScalar(_BBH[k * (n + 1)]);
+    for (PetscInt j = k + 1; j < n; j++) _D[k] += PetscRealPart(_BBH[k + j * n] + _BBH[j + k * n]);
+    _D[k] = PetscAbsReal(_D[k]);
+  }
+
+  /* _D[0] = || Y B ||_F^2 = || A ||_F^2.  If _D[k] \leq \epsilon^2 || A ||_F^2, then
+
+       || A - Y_{:,:k} B_{:k,:} ||_F
+
+       = || Y_{k:,:} B_{k:,:} ||_F
+
+       \leq \epsilon || A ||_F,
+
+     which means we are making a negligible perturbation to A by dropping Y_{:,k:} B_{k:,:}
+   */
+  {
+    PetscReal frob2_est = _D[0];
+    PetscReal err_tol   = frob2_est * PETSC_MACHINE_EPSILON * PETSC_MACHINE_EPSILON;
+
+    for (PetscInt i = n - 1; i >= 0; i--) {
+      if (_D[i] <= err_tol) *r = i;
+      else break;
+    }
+  }
+  _r = *r;
+
+  if (viewer) {
+    PetscViewerFormat format;
+
+    PetscCall(PetscViewerGetFormat(viewer, &format));
+    if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "MatDenseSVQB, iter %" PetscInt_FMT ": || YW ||_F^2 components =\n", iter + 1));
+      PetscCall(PetscViewerASCIIPushTab(viewer));
+      for (PetscInt i = 0; i < n; i++) {
+        if (i == _r) PetscCall(PetscViewerASCIIPrintf(viewer, "--------\n"));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "%g\n", (double)_D[i]));
+      }
+      PetscCall(PetscViewerASCIIPopTab(viewer));
+    }
+  }
+
+  if (_r == 0) {
+    PetscCall(MatDenseRestoreArray(YHY, &_YHY));
+    PetscCall(MatDenseRestoreArray(B, &_B));
+    PetscCall(MatDenseRestoreArrayWrite(Y_update, &_Y_update));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  // get the diagonal of Y'Y
+  for (PetscInt i = 0; i < _r; i++) _D[i] = PetscAbsScalar(_YHY[i * (n + 1)]);
+
+  // get the smallest nonzero value of D
+  _D_max = 0.0;
+  for (PetscInt i = 0; i < _r; i++) _D_max = PetscMax(_D_max, _D[i]);
+
+  if (_D_max == 0.0) {
+    PetscCall(MatDenseRestoreArray(YHY, &_YHY));
+    PetscCall(MatDenseRestoreArray(B, &_B));
+    PetscCall(MatDenseRestoreArrayWrite(Y_update, &_Y_update));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  _D_min = _D_max;
+  for (PetscInt i = 0; i < _r; i++) {
+    if (_D[i] > 0.0) _D_min = PetscMin(_D_min, _D[i]);
+  }
+
+  // set _D_min as the floor
+  for (PetscInt i = 0; i < _r; i++) _D[i] = PetscMax(_D_min, _D[i]);
+
+  // D[i] = sqrt(D[i])
+  for (PetscInt i = 0; i < _r; i++) _D[i] = PetscSqrtReal(_D[i]);
+
+  // scale B on the left by D
+  for (PetscInt j = 0; j < n; j++) {
+    for (PetscInt i = 0; i < _r; i++) _B[i + j * ldB] *= _D[i];
+  }
+
+  // D[i] = 1.0 / D[i];
+  for (PetscInt i = 0; i < _r; i++) _D[i] = 1.0 / _D[i];
+
+  for (PetscInt j = 0; j < _r; j++) {
+    for (PetscInt i = 0; i < _r; i++) _YHY[i + j * n] *= _D[i] * _D[j];
+  }
+
+  // scale Y_update on the right by D
+  for (PetscInt i = 0; i < _r; i++) _Y_update[i * (n + 1)] = _D[i];
+
+  // svd of Y'Y, storing U in _YHY and S in _D;
+  PetscCall(MatDenseSVD_LAPACK_Arrays(_YHY, _r, _r, n, _YHY, n, _D, NULL, 1, &work->lwork, &work->work, &work->rwork));
+
+  if (viewer) {
+    PetscViewerFormat format;
+
+    PetscCall(PetscViewerGetFormat(viewer, &format));
+    if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "MatDenseSVQB, iter %" PetscInt_FMT ": singular values =\n", iter + 1));
+      PetscCall(PetscViewerASCIIPushTab(viewer));
+      for (PetscInt i = 0; i < _r; i++) { PetscCall(PetscViewerASCIIPrintf(viewer, "%g\n", (double)_D[i])); }
+      PetscCall(PetscViewerASCIIPopTab(viewer));
+    }
+  }
+
+  _S_max = _D[0];
+  /* compute D[i] = sqrt(max(S_max*eps, S[i]))
+
+     The theory from the SVQB paper is that if all singular values are \geq S_max * c for a constant c > 0,
+     then stopping the iteration after this update would yield
+
+       || Y'Y - I ||_2 \leq c_0(m,n) \min( \epsilon / c, 1 )
+
+   */
+  for (PetscInt i = 0; i < _r; i++) {
+    PetscReal s = _D[i];
+
+    if (s <= _S_max * stop_tol) *stop = PETSC_FALSE;
+    _D[i] = PetscMax(s, _S_max * PETSC_MACHINE_EPSILON);
+    _D[i] = PetscSqrtReal(_D[i]);
+  }
+
+  // multiply Y_update = Y_update * U (Y_update is currently diagonal, this is a scaling of U)
+  for (PetscInt i = 0; i < _r; i++) {
+    PetscScalar d = _Y_update[i * (n + 1)];
+    for (PetscInt j = 0; j < _r; j++) _Y_update[i + j * n] = _YHY[i + j * n] * d;
+  }
+
+  // multiply B = U' * B
+  PetscCall(PetscBLASIntCast(_r, &br));
+  PetscCallBLAS("BLASgemm", BLASgemm_("C", "N", &br, &bn, &br, &one, _YHY, &bn, _B, &bldW, &zero, _BBH, &bn));
+  if (_r == n) PetscCall(PetscArraycpy(_B, _BBH, n * n));
+  else {
+    for (PetscInt j = 0; j < n; j++) PetscCall(PetscArraycpy(&_B[j * ldB], &_BBH[j * n], _r));
+  }
+
+  // multiply B = D * B
+  for (PetscInt j = 0; j < n; j++) {
+    for (PetscInt i = 0; i < _r; i++) _B[i + j * ldB] *= _D[i];
+  }
+
+  // invert D
+  for (PetscInt i = 0; i < _r; i++) _D[i] = 1.0 / _D[i];
+
+  // muliply Y_update = Y_update * D
+  for (PetscInt j = 0; j < _r; j++) {
+    for (PetscInt i = 0; i < n; i++) _Y_update[i + j * n] *= _D[j];
+  }
+
+  PetscCall(MatDenseRestoreArray(YHY, &_YHY));
+  PetscCall(MatDenseRestoreArray(B, &_B));
+  PetscCall(MatDenseRestoreArrayWrite(Y_update, &_Y_update));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatDenseSVQBMonitor(Mat X, Mat Y, Mat YtY, Mat W, PetscInt r, PetscInt iter, PetscViewer viewer)
+{
+  Mat       X_local;
+  Mat       Yr;
+  Mat       Wr;
+  Mat       YWminusX;
+  Mat       YtYminusI;
+  PetscReal ortho_err, recon_err, recon_err_local;
+  PetscInt  M, N;
+  MPI_Comm  comm;
+
+  PetscFunctionBegin;
+  if (viewer == NULL) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscObjectGetComm((PetscObject)X, &comm));
+  PetscCall(MatGetSize(X, &M, &N));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "MatDenseSVQB, iter %" PetscInt_FMT ": %" PetscInt_FMT " x %" PetscInt_FMT " matrix, estimated rank %" PetscInt_FMT "\n", iter, M, N, r));
+  PetscCall(MatDenseGetSubMatrix(Y, PETSC_DECIDE, PETSC_DECIDE, 0, r, &Yr));
+  PetscCall(MatHermitianTransposeMatMultAllReduce(comm, Yr, Yr, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &YtYminusI));
+  PetscCall(MatShift(YtYminusI, -1.0));
+  PetscCall(MatNorm(YtYminusI, NORM_FROBENIUS, &ortho_err));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "MatDenseSVQB, iter %" PetscInt_FMT ": orthogonality error || Y'Y - I ||_F = %e\n", iter, (double)ortho_err));
+  PetscCall(MatDestroy(&YtYminusI));
+  PetscCall(MatDenseGetSubMatrix(W, 0, r, PETSC_DECIDE, PETSC_DECIDE, &Wr));
+  PetscCall(MatMatMult(Yr, Wr, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &YWminusX));
+  PetscCall(MatDenseGetLocalMatrix(X, &X_local));
+  PetscCall(MatAXPY(YWminusX, -1.0, X_local, SAME_NONZERO_PATTERN));
+  PetscCall(MatNorm(YWminusX, NORM_FROBENIUS, &recon_err_local));
+  recon_err_local = recon_err_local * recon_err_local;
+  PetscCallMPI(MPIU_Allreduce(&recon_err_local, &recon_err, 1, MPIU_REAL, MPI_SUM, comm));
+  recon_err = PetscSqrtReal(recon_err);
+  PetscCall(PetscViewerASCIIPrintf(viewer, "MatDenseSVQB, iter %" PetscInt_FMT ": reconstruction error || YW - X ||_F = %e\n", iter, (double)recon_err));
+  PetscCall(MatDestroy(&YWminusX));
+  PetscCall(MatDenseRestoreSubMatrix(W, &Wr));
+  PetscCall(MatDenseRestoreSubMatrix(Y, &Yr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatDenseSkinnyQB - Compute a QB factorization of a tall skinny dense matrix
+
+  Collective
+
+  Input Parameters:
++ A       - an $m \times n$ dense matrix `A`
+- reuse_Q - if `MAT_INPLACE_MATRIX`, `Q` will overwrite `A`;
+            if `MAT_REUSE_MATRIX`, `Q` should be an existing matrix;
+            if `MAT_INITIAL_MATRIX`, `Q` will be a new matrix
+
+  Output Parameters:
++ Q     - an $m \times n$ matrix, the first `ncols` columns of `Q` are orthonormal
+. B     - (optional) if not `NULL`, a dense $n \times n$ matrix such that $A = QB$;
+          only the first `ncols` rows of `B` contain nonzeros;
+          `B` is on the `PETSC_COMM_SELF` communicator and is duplicated on every process.
+- ncols - only the first `ncols` columns of `Q` are meaningful: the remainder are undefined and should not be used
+
+  Options Database Key:
+. -mat_dense_svqb_monitor [viewertype]:... - monitor the iterative SVQB algorithm used to compute `MatDenseSkinnyQB()` (for debugging, incurs additional computation and communication)
+
+  Level: intermediate
+
+  Notes:
+  `MatDenseSkinnyQB()` is not a rank-revealing decomposition: `ncols` indicates how many columns of `Q` are orthonormal
+  but may be greater than the numerical rank of `A`.
+
+  `MatDenseSkinnyQB()` uses the SVQB algorithm (Stathopoulos & Wu, 2002, "A Block Orthogonalization Procedure with
+  Constant Synchronization Requirements").
+
+.seealso: [](ch_matrices), `Mat`, `MATDENSE`, `MatQRFactor()`, `MatDenseSkinnyQR()`
+@*/
+PetscErrorCode MatDenseSkinnyQB(Mat A, MatReuse reuse_Q, Mat *Q, Mat B, PetscInt *ncols)
+{
+  PetscInt          M, N, K, r, i;
+  PetscInt          max_it = 10;
+  Mat               B_in   = B;
+  Mat               QHQ, Y, Y_orig, Y_copy, Y_update;
+  Mat               A_copy = NULL;
+  MPI_Comm          comm;
+  PetscOptions      options;
+  const char       *prefix;
+  PetscViewer       viewer;
+  PetscViewerFormat format;
+  MatDenseSVQBWork  work;
+
+  PetscFunctionBegin;
+  PetscCall(PetscCitationsRegister(svqb_citation, &svqb_cite));
+  PetscCall(MatDenseSkinnyPrepareQ(A, reuse_Q, Q, "Q"));
+  PetscCall(MatDenseSkinnyPrepareR(A, &B, "B", PETSC_TRUE));
+  PetscCall(PetscObjectGetComm((PetscObject)A, &comm));
+  PetscCall(MatGetSize(A, &M, &N));
+  K = PetscMin(M, N);
+  PetscCall(MatDenseGetLocalMatrix(*Q, &Y));
+  Y_orig = Y;
+  PetscCall(MatDuplicate(Y, MAT_SHARE_NONZERO_PATTERN, &Y_copy));
+
+  PetscCall(PetscObjectGetOptions((PetscObject)A, &options));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)A, &prefix));
+  PetscCall(PetscOptionsCreateViewer(comm, options, prefix, "-mat_dense_svqb_monitor", &viewer, &format, NULL));
+  if (viewer) {
+    PetscCall(PetscViewerPushFormat(viewer, format));
+    PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &A_copy));
+  }
+  PetscCall(MatHermitianTransposeMatMultAllReduce(comm, Y, Y, MAT_INITIAL_MATRIX, PETSC_DECIDE, &QHQ));
+  PetscCall(MatDuplicate(QHQ, MAT_SHARE_NONZERO_PATTERN, &Y_update));
+  PetscCall(MatZeroEntries(B));
+  PetscCall(MatShift(B, 1.0));
+
+  /* Invariant: A = Y * B
+     Initially: Y = A, B = I
+
+     we will transform Y into an orthonormal basis using the parallel SVQB agorithm
+     the iteration max of 10 should almost never be needed: it should use at most 3
+     iterations for most matrices */
+
+  r = N; // r is the number of leading y_i w_i^T pairs that contain all of the Frobenius norm mass of A
+  PetscCall(MatDenseSVQBWorkInitialize(N, &work));
+  for (i = 0; i < max_it; i++) {
+    PetscBool stop;
+
+    PetscCall(MatDenseSVQBMonitor(A_copy, Y, QHQ, B, r, i, viewer));
+    PetscCall(MatDenseComputeSVQBUpdate(QHQ, B, Y_update, &stop, &r, i, viewer, &work));
+    if (r > 0) {
+      PetscCall(MatMatMult(Y, Y_update, MAT_REUSE_MATRIX, PETSC_DEFAULT, &Y_copy));
+      PetscCall(MatSwap(&Y, &Y_copy));
+    }
+    if (stop || i + 1 == max_it) {
+      if (viewer) { // monitor final matrices
+        PetscCall(MatHermitianTransposeMatMultAllReduce(comm, Y, Y, MAT_REUSE_MATRIX, PETSC_DECIDE, &QHQ));
+        PetscCall(MatDenseSVQBMonitor(A_copy, Y, QHQ, B, r, i + 1, viewer));
+      }
+      break;
+    }
+    PetscCall(MatHermitianTransposeMatMultAllReduce(comm, Y, Y, MAT_REUSE_MATRIX, PETSC_DECIDE, &QHQ));
+  }
+  PetscCall(MatDenseSVQBWorkReset(&work));
+  if (Y != Y_orig) PetscCall(MatCopy(Y, Y_orig, SAME_NONZERO_PATTERN));
+  r      = PetscMin(r, K);
+  *ncols = r;
+
+  if (B_in && r < N) {
+    PetscScalar *_B;
+    PetscInt     ldB;
+
+    // zero trailing rows of B_in
+    PetscCall(MatDenseGetLDA(B_in, &ldB));
+    PetscCall(MatDenseGetArray(B_in, &_B));
+    for (PetscInt j = 0; j < N; j++) PetscCall(PetscArrayzero(&_B[r + j * ldB], (N - r)));
+    PetscCall(MatDenseRestoreArray(B_in, &_B));
+  }
+
+  PetscCall(MatDestroy(&A_copy));
+  if (viewer) PetscCall(PetscViewerPopFormat(viewer));
+  PetscCall(PetscViewerDestroy(&viewer));
+  if (Y != Y_orig) PetscCall(MatDestroy(&Y));
+  if (Y_copy != Y_orig) PetscCall(MatDestroy(&Y_copy));
+  PetscCall(MatDestroy(&Y_update));
+  PetscCall(MatDestroy(&QHQ));
+  if (B_in == NULL) PetscCall(MatDestroy(&B));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
