@@ -378,9 +378,9 @@ struct MatDense_Seq_CUPM<T>::SolveLU : SolveCommon<SolveLU> {
     PetscDeviceContext dctx;
 
     PetscFunctionBegin;
-    if (!m || !n) PetscFunctionReturn(PETSC_SUCCESS);
     PetscCall(GetHandles_(&dctx, &handle, &stream));
     PetscCall(base_type::FactorPrepare(A, stream));
+    if (!m || !n) PetscFunctionReturn(PETSC_SUCCESS);
     {
       const auto mcu = MatCUPMCast(A);
       const auto da  = DeviceArrayReadWrite(dctx, A);
@@ -462,10 +462,10 @@ struct MatDense_Seq_CUPM<T>::SolveCholesky : SolveCommon<SolveCholesky> {
     cupmStream_t       stream;
 
     PetscFunctionBegin;
-    if (!n || !A->cmap->n) PetscFunctionReturn(PETSC_SUCCESS);
-    PetscCheck(A->spd == PETSC_BOOL3_TRUE, PETSC_COMM_SELF, PETSC_ERR_SUP, "%ssytrs unavailable. Use MAT_FACTOR_LU", cupmSolverName());
     PetscCall(GetHandles_(&dctx, &handle, &stream));
     PetscCall(base_type::FactorPrepare(A, stream));
+    if (!n || !A->cmap->n) PetscFunctionReturn(PETSC_SUCCESS);
+    PetscCheck(A->spd == PETSC_BOOL3_TRUE, PETSC_COMM_SELF, PETSC_ERR_SUP, "%ssytrs unavailable. Use MAT_FACTOR_LU", cupmSolverName());
     {
       const auto mcu = MatCUPMCast(A);
       const auto da  = DeviceArrayReadWrite(dctx, A);
@@ -564,9 +564,9 @@ struct MatDense_Seq_CUPM<T>::SolveQR : SolveCommon<SolveQR> {
     PetscDeviceContext dctx;
 
     PetscFunctionBegin;
-    if (!m || !n) PetscFunctionReturn(PETSC_SUCCESS);
     PetscCall(GetHandles_(&dctx, &handle, &stream));
     PetscCall(base_type::FactorPrepare(A, stream));
+    if (!m || !n) PetscFunctionReturn(PETSC_SUCCESS);
     mimpl->rank = min;
     {
       const auto mcu = MatCUPMCast(A);
