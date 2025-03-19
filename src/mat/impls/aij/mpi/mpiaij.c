@@ -3477,9 +3477,8 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ(Mat mat, IS isrow, IS iscol, MatReuse c
 . M      - the global row size
 . N      - the global column size
 . A      - "diagonal" portion of matrix
-. B      - if garray is NULL, B should be the offdiag matrix using global col ids and of size N
-.        - if garray is not NULL, B should be the offdiag matrix using local col ids and of size garray
-- garray - either NULL or the global index of `B` columns
+. B      - if garray is `NULL`, B should be the offdiag matrix using global col ids and of size N - if garray is not `NULL`, B should be the offdiag matrix using local col ids and of size garray
+- garray - either `NULL` or the global index of `B` columns
 
   Output Parameter:
 . mat - the matrix, with input `A` as its local diagonal matrix
@@ -3530,12 +3529,11 @@ PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm comm, PetscInt M, PetscInt N, 
   Input Parameters:
 +  mat    - the MATMPIAIJ matrix, which should have its type and layout set, but should not have its diag, offdiag matrices set
 .  A      - the diag matrix using local col ids
-.  B      - if garray is NULL, B should be the offdiag matrix using global col ids and of size N
-.         - if garray is not NULL, B should be the offdiag matrix using local col ids and of size garray
--  garray - either NULL or the global index of `B` columns
+.  B      - if garray is `NULL`, B should be the offdiag matrix using global col ids and of size N - if garray is not `NULL`, B should be the offdiag matrix using local col ids and of size garray
+-  garray - either `NULL` or the global index of `B` columns
 
   Output Parameter:
-.  mat   - the updated MATMPIAIJ matrix
+.  mat   - the updated `MATMPIAIJ` matrix
 
   Level: advanced
 

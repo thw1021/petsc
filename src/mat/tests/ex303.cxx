@@ -1,20 +1,21 @@
 static char help[] = "Testing MatCreateMPIAIJWithSeqAIJ().\n\n";
 
 #include <petscmat.h>
-#include <../src/mat/impls/aij/mpi/mpiaij.h>
 
 int main(int argc, char **argv)
 {
   Mat             A, B;
-  PetscInt        i, j, column, M, N;
+  PetscInt        i, j, column, M, N, m, n;
   PetscInt       *oi, *oj, nd;
   const PetscInt *garray;
   PetscInt       *garray_h;
   PetscScalar     value;
+  PetscScalar    *oa;
   PetscRandom     rctx;
   PetscBool       equal, done;
   Mat             AA, AB;
   PetscMPIInt     size, rank;
+  MatType         mat_type;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -41,15 +42,15 @@ int main(int argc, char **argv)
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatGetSize(A, &M, &N));
+  PetscCall(MatGetLocalSize(A, &m, &n));
 
   PetscCall(MatMPIAIJGetSeqAIJ(A, &AA, &AB, &garray));
 
   Mat output_mat_local, output_mat_nonlocal, output_mat_local_copy, output_mat_nonlocal_copy;
 
-  MatConvert(AA, MATSAME, MAT_INITIAL_MATRIX, &output_mat_local);
-  MatConvert(AB, MATSAME, MAT_INITIAL_MATRIX, &output_mat_nonlocal);
-  MatConvert(AA, MATSAME, MAT_INITIAL_MATRIX, &output_mat_local_copy);
-  MatConvert(AB, MATSAME, MAT_INITIAL_MATRIX, &output_mat_nonlocal_copy);
+  PetscCall(MatConvert(AA, MATSAME, MAT_INITIAL_MATRIX, &output_mat_local));
+  PetscCall(MatConvert(AB, MATSAME, MAT_INITIAL_MATRIX, &output_mat_nonlocal));
+  PetscCall(MatConvert(AA, MATSAME, MAT_INITIAL_MATRIX, &output_mat_local_copy));
 
   // The garray passed in has to be on the host, but it can be created
   // on device and copied to the host
@@ -73,14 +74,25 @@ int main(int argc, char **argv)
   // This is just for testing - would be silly to do this in practice
   // ~~~~~~~~~~~~~~~~~
   garray_h = NULL;
-  PetscCall(MatGetRowIJ(output_mat_nonlocal_copy, 0, PETSC_FALSE, PETSC_FALSE, &nd, (const PetscInt **)&oi, (const PetscInt **)&oj, &done));
+  PetscCall(MatGetRowIJ(AB, 0, PETSC_FALSE, PETSC_FALSE, &nd, (const PetscInt **)&oi, (const PetscInt **)&oj, &done));
+  PetscCall(MatSeqAIJGetArray(AB, &oa));
 
-  // Make the nonlocal column indices global
-  for (int i = 0; i < oi[5]; i++) { oj[i] = garray[oj[i]]; }
-  PetscCall(MatRestoreRowIJ(output_mat_nonlocal_copy, 0, PETSC_FALSE, PETSC_FALSE, &nd, (const PetscInt **)&oi, (const PetscInt **)&oj, &done));
-  // Change the size of the nonlocal component to N
-  PetscCall(PetscLayoutDestroy(&output_mat_nonlocal_copy->cmap));
-  PetscCall(PetscLayoutCreateFromSizes(PetscObjectComm((PetscObject)output_mat_nonlocal_copy), N, N, 1, &output_mat_nonlocal_copy->cmap));
+  // Create a version of AB of size N with global indices
+  PetscCall(MatGetType(AB, &mat_type));
+  PetscCall(MatCreate(PETSC_COMM_SELF, &output_mat_nonlocal_copy));
+  PetscCall(MatSetSizes(output_mat_nonlocal_copy, m, N, m, N));
+  PetscCall(MatSetType(output_mat_nonlocal_copy, mat_type));
+  PetscCall(MatSeqAIJSetPreallocation(output_mat_nonlocal_copy, oi[5], NULL));
+
+  // Fill the matrix
+  for (int i = 0; i < 5; i++) {
+    for (int j = 0; j < oi[i + 1] - oi[i]; j++) { PetscCall(MatSetValue(output_mat_nonlocal_copy, i, garray[oj[oi[i] + j]], oa[oi[i] + j], INSERT_VALUES)); }
+  }
+  PetscCall(MatAssemblyBegin(output_mat_nonlocal_copy, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(output_mat_nonlocal_copy, MAT_FINAL_ASSEMBLY));
+
+  PetscCall(MatRestoreRowIJ(AB, 0, PETSC_FALSE, PETSC_FALSE, &nd, (const PetscInt **)&oi, (const PetscInt **)&oj, &done));
+  PetscCall(MatSeqAIJRestoreArray(AB, &oa));
 
   // Build our MPI matrix
   // If we don't provide garray and output_mat_local_copy with global indices and size N
