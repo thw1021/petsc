@@ -712,6 +712,7 @@ PETSC_EXTERN PetscErrorCode MatDenseGetSubMatrix(Mat, PetscInt, PetscInt, PetscI
 PETSC_EXTERN PetscErrorCode MatDenseRestoreSubMatrix(Mat, Mat *);
 PETSC_EXTERN PetscErrorCode MatDenseSkinnyQR(Mat, MatReuse, Mat *, Mat, PetscInt *);
 PETSC_EXTERN PetscErrorCode MatDenseSkinnyQB(Mat, MatReuse, Mat *, Mat, PetscInt *);
+PETSC_EXTERN PetscErrorCode MatDenseSkinnySVD(Mat, MatReuse, Mat *, Vec, Mat, PetscInt *);
 
 PETSC_EXTERN PetscErrorCode MatMult(Mat, Vec, Vec);
 PETSC_EXTERN PetscErrorCode MatMultDiagonalBlock(Mat, Vec, Vec);
