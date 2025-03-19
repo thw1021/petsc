@@ -122,3 +122,5 @@ PETSC_INTERN PetscErrorCode MatLoad_Dense_Binary(Mat, PetscViewer);
 PETSC_INTERN PetscErrorCode MatLoad_Dense_HDF5(Mat, PetscViewer);
 
 PETSC_INTERN PetscErrorCode MatDenseCreateColumnVec_Private(Mat, Vec *);
+
+PETSC_INTERN PetscErrorCode MatQRFactorConstructFactors_SeqDense(Mat, MatReuse, Mat *, Mat, PetscInt *, IS *);
