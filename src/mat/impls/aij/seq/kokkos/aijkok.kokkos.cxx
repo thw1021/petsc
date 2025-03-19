@@ -784,6 +784,28 @@ static PetscErrorCode MatProductNumeric_SeqAIJKokkos_SeqAIJKokkos(Mat C)
   PetscCheck(C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data empty");
   pdata = static_cast<MatProductData_SeqAIJKokkos *>(C->product->data);
 
+  A = product->A;
+  B = product->B;
+  switch (product->type) {
+  case MATPRODUCT_AB:
+    transA = false;
+    transB = false;
+    PetscCall(MatSetBlockSizesFromMats(C, A, B)); // these might not be needed
+    break;
+  case MATPRODUCT_AtB:
+    transA = true;
+    transB = false;
+    if (A->cmap->bs > 0 && B->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
+    break;
+  case MATPRODUCT_ABt:
+    transA = false;
+    transB = true;
+    if (A->rmap->bs > 0 && B->rmap->bs > 0) PetscCall(MatSetBlockSizes(C, A->rmap->bs, B->rmap->bs));
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Unsupported product type %s", MatProductTypes[product->type]);
+  }
+
   // See if numeric has already been done in symbolic (e.g., user calls MatMatMult(A,B,MAT_INITIAL_MATRIX,..,C)).
   // If yes, skip the numeric, but reset the flag so that next time when user calls MatMatMult(E,F,MAT_REUSE_MATRIX,..,C),
   // we still do numeric.
@@ -792,25 +814,6 @@ static PetscErrorCode MatProductNumeric_SeqAIJKokkos_SeqAIJKokkos(Mat C)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  switch (product->type) {
-  case MATPRODUCT_AB:
-    transA = false;
-    transB = false;
-    break;
-  case MATPRODUCT_AtB:
-    transA = true;
-    transB = false;
-    break;
-  case MATPRODUCT_ABt:
-    transA = false;
-    transB = true;
-    break;
-  default:
-    SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Unsupported product type %s", MatProductTypes[product->type]);
-  }
-
-  A = product->A;
-  B = product->B;
   PetscCall(MatSeqAIJKokkosSyncDevice(A));
   PetscCall(MatSeqAIJKokkosSyncDevice(B));
   akok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);

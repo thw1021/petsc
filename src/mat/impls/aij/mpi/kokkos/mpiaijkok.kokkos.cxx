@@ -1289,16 +1289,27 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos(Mat C)
   // we still do numeric.
   if (pdata->reusesym) { // numeric reuses results from symbolic
     pdata->reusesym = PETSC_FALSE;
+    /* set block sizes after mat products */
+    if (ptype == MATPRODUCT_AB) {
+      PetscCall(MatSetBlockSizesFromMats(C, A, B));
+    } else if (ptype == MATPRODUCT_AtB) {
+      if (A->cmap->bs > 0 && B->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
+    } else if (ptype == MATPRODUCT_PtAP) { // BtAB, computed by Z = AB; C= BtZ
+      if (B->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, B->cmap->bs, B->cmap->bs));
+    }
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-
+  /* set block sizes after mat products */
   if (ptype == MATPRODUCT_AB) {
     PetscCall(MatProductNumeric_MPIAIJKokkos_AB(product, A, B, pdata->mmAB));
+    PetscCall(MatSetBlockSizesFromMats(C, A, B));
   } else if (ptype == MATPRODUCT_AtB) {
     PetscCall(MatProductNumeric_MPIAIJKokkos_AtB(product, A, B, pdata->mmAtB));
+    if (A->cmap->bs > 0 && B->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
   } else if (ptype == MATPRODUCT_PtAP) { // BtAB, computed by Z = AB; C= BtZ
     PetscCall(MatProductNumeric_MPIAIJKokkos_AB(product, A, B, pdata->mmAB));
     PetscCall(MatProductNumeric_MPIAIJKokkos_AtB(product, B, pdata->Z, pdata->mmAtB));
+    if (B->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, B->cmap->bs, B->cmap->bs));
   }
   PetscCall(MatSeqAIJKokkosModifyDevice(cmpi->A)); // mark that A, B on device are modified
   PetscCall(MatSeqAIJKokkosModifyDevice(cmpi->B));
@@ -1388,7 +1399,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
 
   PetscCall(MatCreateSeqAIJKokkosWithKokkosCsrMatrix(PETSC_COMM_SELF, mm->Cd, &Cd));
   PetscCall(MatCreateSeqAIJKokkosWithKokkosCsrMatrix(PETSC_COMM_SELF, mm->Co, &Co));
-  PetscCall(MatSetMPIAIJWithSplitSeqAIJ(C, Cd, Co, mm->garray));
+  //PetscCall(MatSetMPIAIJWithSplitSeqAIJ(C, Cd, Co, mm->garray));
   /* set block sizes */
   switch (ptype) {
   case MATPRODUCT_PtAP:
@@ -1412,6 +1423,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
   default:
     SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Not for ProductType %s", MatProductTypes[ptype]);
   }
+  PetscCall(MatSetMPIAIJKokkosWithSplitSeqAIJKokkosMatrices(C, Cd, Co, mm->garray));
   C->product->data       = pdata;
   C->product->destroy    = MatProductDataDestroy_MPIAIJKokkos;
   C->ops->productnumeric = MatProductNumeric_MPIAIJKokkos;
