@@ -7,8 +7,10 @@
 #if defined(PETSC_HAVE_KOKKOS)
 
   #include <petsc_kokkos.hpp>
-  #include <petsc/private/kokkosimpl.hpp>
-  #include <../src/mat/impls/aij/seq/aij.h>
+  #include <Kokkos_Core.hpp>
+  #include <Kokkos_DualView.hpp>
+  #include <Kokkos_OffsetView.hpp>
+  #include <petscmat.h>
   #include <KokkosSparse_CrsMatrix.hpp>
   #include <KokkosSparse_spiluk.hpp>
   #include <string>

@@ -1377,7 +1377,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
     n = B->cmap->n;
     M = A->rmap->N;
     N = B->cmap->N;
-    PetscCall(MatCreateMPIAIJWithSeqAIJ(comm, Zd, Zo, mmAB->garray, &Z));
+    PetscCall(MatCreateMPIAIJWithSeqAIJ(comm, M, N, Zd, Zo, mmAB->garray, &Z));
 
     auto mmAtB = new MatMatStruct_AtB();
     PetscCall(MatProductSymbolic_MPIAIJKokkos_AtB(product, B, Z, mmAtB)); // final result C stored as mmAtB->{Cd, Co}
