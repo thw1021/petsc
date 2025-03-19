@@ -633,6 +633,114 @@ struct MatDense_Seq_CUPM<T>::SolveQR : SolveCommon<SolveQR> {
     PetscCall(PetscLogFlops(nrhs * (4.0 * m * rank - (rank * rank))));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
+
+  static PetscErrorCode ConstructFactors(Mat QR, MatReuse reuse_Q, Mat *Q, Mat R, PetscInt *ncols, IS *perm) noexcept
+  {
+    const auto         mimpl = MatIMPLCast(QR);
+    const auto         k     = static_cast<cupmBlasInt_t>(mimpl->rank);
+    const auto         m     = static_cast<cupmBlasInt_t>(QR->rmap->n);
+    const auto         n     = static_cast<cupmBlasInt_t>(QR->cmap->n);
+    PetscDeviceContext dctx;
+    cupmStream_t       stream;
+    cupmSolverHandle_t solver_handle;
+    cupmBlasHandle_t   blas_handle;
+    PetscInt           ldq;
+    PetscBool          qiscupm;
+
+    PetscFunctionBegin;
+    if (ncols) *ncols = k;
+    if (perm) *perm = NULL;
+    PetscCall(GetHandles_(&dctx, &blas_handle, &solver_handle, &stream));
+    // setup
+    if (reuse_Q == MAT_INITIAL_MATRIX) PetscCall(MatCreateSeqDenseCUPM<T>(PetscObjectComm(PetscObjectCast(QR)), m, n, nullptr, Q, dctx, /* preallocate */ false));
+
+    if (R) {
+      PetscBool riscupm;
+      PetscInt  ldr;
+
+      PetscCall(MatDenseGetLDA(R, &ldr));
+      PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(R), &riscupm, MATSEQDENSECUPM(), MATMPIDENSECUPM(), ""));
+      {
+        const auto   copy_mode = riscupm ? cupmMemcpyDeviceToDevice : cupmMemcpyDeviceToHost;
+        const auto   _QR       = DeviceArrayRead(dctx, QR).data();
+        PetscScalar *_R;
+
+        if (riscupm) {
+          _R = DeviceArrayWrite(dctx, R);
+        } else {
+          PetscCall(MatDenseGetArrayWrite(R, &_R));
+        }
+
+        PetscCall(PetscCUPMMemcpy2DAsync(_R, ldr, _QR, mimpl->lda, k, n, copy_mode, stream));
+
+        // zero the lower portion
+        if (riscupm) {
+          for (PetscInt j = 0; j < n; j++) {
+            if ((n - (j + 1)) > 0) PetscCall(PetscCUPMMemsetAsync(&_R[(j + 1) + j * ldr], 0, n - (j + 1), stream));
+          }
+        } else {
+          for (PetscInt j = 0; j < n; j++) {
+            if ((n - (j + 1)) > 0) PetscCall(PetscArrayzero(&_R[(j + 1) + j * ldr], n - (j + 1)));
+          }
+        }
+
+        if (!riscupm) PetscCall(MatDenseRestoreArrayWrite(R, &_R));
+      }
+    }
+
+    PetscCall(MatDenseGetLDA(*Q, &ldq));
+    PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(*Q), &qiscupm, MATSEQDENSECUPM(), MATMPIDENSECUPM(), ""));
+    {
+      const auto    mcu        = MatCUPMCast(QR);
+      const auto    fact_info  = mcu->d_fact_info;
+      const auto    fact_tau   = mcu->d_fact_tau;
+      const auto    fact_work  = mcu->d_fact_work;
+      const auto    fact_lwork = mcu->d_fact_lwork;
+      auto          _ldq       = static_cast<cupmBlasInt_t>(ldq);
+      cupmScalar_t *_Q;
+
+      if (qiscupm) {
+        _Q = DeviceArrayReadWrite(dctx, *Q);
+      } else {
+        _ldq = m;
+        PetscCall(PetscCUPMMallocAsync(&_Q, m * k, stream));
+      }
+
+      if (*Q != QR) {
+        const auto ldqr = mimpl->lda;
+        const auto _QR  = DeviceArrayRead(dctx, QR).cupmdata();
+
+        if (ldqr == m && _ldq == m) PetscCall(PetscCUPMMemcpyAsync(_Q, _QR, m * k, cupmMemcpyDeviceToDevice, stream));
+        else PetscCall(PetscCUPMMemcpy2DAsync(_Q, _ldq, _QR, ldqr, m, k, cupmMemcpyDeviceToDevice, stream));
+      }
+
+      PetscCall(PetscLogGpuTimeBegin());
+      // clang-format off
+      PetscCall(
+        base_type::ResizeFactLwork(
+          mcu, stream,
+          [&](cupmBlasInt_t *fact_lwork)
+          {
+            return cupmSolverXorgqr_bufferSize(solver_handle, m, k, k, _Q, _ldq, fact_tau, fact_lwork);
+          }
+        )
+      );
+      // clang-format on
+      PetscCallCUPMSOLVER(cupmSolverXorgqr(solver_handle, m, k, k, _Q, _ldq, fact_tau, fact_work, fact_lwork, fact_info));
+      PetscCall(PetscLogGpuTimeEnd());
+
+      if (!qiscupm) {
+        PetscScalar *_Qhost;
+
+        PetscCall(MatDenseGetArrayWrite(*Q, &_Qhost));
+        if (ldq == m) PetscCall(PetscCUPMMemcpyAsync(_Qhost, reinterpret_cast<PetscScalar *>(_Q), m * k, cupmMemcpyDeviceToHost, stream));
+        else PetscCall(PetscCUPMMemcpy2DAsync(_Qhost, ldq, reinterpret_cast<PetscScalar *>(_Q), _ldq, m, k, cupmMemcpyDeviceToHost, stream));
+        PetscCall(cupmFreeAsync(_Q, stream));
+      }
+    }
+    PetscCall(MatSetUnfactored(*Q));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
 };
 
 template <device::cupm::DeviceType T>
@@ -1058,6 +1166,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::BindToCPU(Mat A, PetscBool to_host) 
   MatComposeOp_CUPM(to_host, pobj, "MatDenseGetSubMatrix_C", MatDenseGetSubMatrix_SeqDense, GetSubMatrix);
   MatComposeOp_CUPM(to_host, pobj, "MatDenseRestoreSubMatrix_C", MatDenseRestoreSubMatrix_SeqDense, RestoreSubMatrix);
   MatComposeOp_CUPM(to_host, pobj, "MatQRFactor_C", MatQRFactor_SeqDense, SolveQR::Factor);
+  MatComposeOp_CUPM(to_host, pobj, "MatQRFactorConstructFactors_C", MatQRFactorConstructFactors_SeqDense, SolveQR::ConstructFactors);
   MatComposeOp_CUPM(to_host, pobj, "MatMultAddColumnRange_C", MatMultAddColumnRange_SeqDense, MatMultAddColumnRange_Dispatch_</* transpose */ false, /* hermitian */ false>);
   MatComposeOp_CUPM(to_host, pobj, "MatMultHermitianTransposeColumnRange_C", MatMultHermitianTransposeColumnRange_SeqDense, MatMultColumnRange_Dispatch_</* transpose */ true, /* hermitian */ true>);
   MatComposeOp_CUPM(to_host, pobj, "MatMultHermitianTransposeAddColumnRange_C", MatMultHermitianTransposeAddColumnRange_SeqDense, MatMultAddColumnRange_Dispatch_</* transpose */ true, /* hermitian */ true>);

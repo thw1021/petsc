@@ -988,6 +988,75 @@ PetscErrorCode MatQRFactorSymbolic_SeqDense(Mat fact, Mat A, IS row, const MatFa
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode MatQRFactorConstructFactors_SeqDense(Mat QR, MatReuse reuse_Q, Mat *Q, Mat R, PetscInt *ncols, IS *perm)
+{
+  Mat_SeqDense      *qr = (Mat_SeqDense *)QR->data;
+  PetscInt           m, n, k, ldq, ldr, ldqr;
+  const PetscScalar *_QR = NULL;
+  PetscScalar       *_Q  = NULL;
+  PetscScalar       *_R;
+  PetscBLASInt       bm, bk, bldq, info, lwork;
+  PetscScalar        dummy_work, *work = NULL;
+
+  PetscFunctionBegin;
+  bk = qr->rank;
+  PetscCall(MatGetSize(QR, &m, &n));
+  k = bk;
+
+  if (reuse_Q == MAT_INITIAL_MATRIX) PetscCall(MatCreateSeqDense(PetscObjectComm((PetscObject)QR), m, n, NULL, Q));
+  if (ncols) *ncols = k;
+  if (perm) *perm = NULL;
+
+  if (R) {
+    // copy upper trapezoid into R
+    PetscCall(MatZeroEntries(R));
+    PetscCall(MatDenseGetLDA(R, &ldr));
+    PetscCall(MatDenseGetArrayWrite(R, &_R));
+    PetscCall(MatDenseGetLDA(QR, &ldqr));
+    PetscCall(MatDenseGetArrayRead(QR, &_QR));
+    for (PetscInt j = 0; j < n; j++)
+      for (PetscInt i = 0; i < PetscMin(j + 1, k); i++) _R[i + j * ldr] = _QR[i + j * ldqr];
+    PetscCall(MatDenseRestoreArrayRead(QR, &_QR));
+    PetscCall(MatDenseRestoreArray(R, &_R));
+  }
+
+  PetscCall(MatDenseGetLDA(*Q, &ldq));
+  PetscCall(MatDenseGetArray(*Q, &_Q));
+  if (*Q != QR) { // copy into Q
+
+    PetscCall(MatDenseGetArrayRead(QR, &_QR));
+    if (ldqr == ldq) PetscCall(PetscArraycpy(_Q, _QR, ldq * k));
+    else {
+      for (PetscInt j = 0; j < k; j++) PetscCall(PetscArraycpy(&_Q[j * ldq], &_QR[j * ldqr], m));
+    }
+    PetscCall(MatDenseRestoreArrayRead(QR, &_QR));
+  }
+
+  // blas work
+  PetscCall(PetscBLASIntCast(m, &bm));
+  PetscCall(PetscBLASIntCast(ldq, &bldq));
+
+  if (bk > 0) {
+    // work query
+    lwork = -1;
+    PetscCallBLAS("LAPACKorgqr", LAPACKorgqr_(&bm, &bk, &bk, _Q, &bldq, qr->tau, &dummy_work, &lwork, &info));
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK orgqr %d", (int)info);
+    lwork = (PetscBLASInt)PetscRealPart(dummy_work);
+    PetscCall(PetscMalloc1(lwork, &work));
+
+    // build Q in A
+    PetscCallBLAS("LAPACKorgqr", LAPACKorgqr_(&bm, &bk, &bk, _Q, &bldq, qr->tau, work, &lwork, &info));
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK orgqr %d", (int)info);
+
+    PetscCall(PetscFree(work));
+  }
+
+  // tear down
+  PetscCall(MatDenseRestoreArray(*Q, &_Q));
+  PetscCall(MatSetUnfactored(*Q));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* uses LAPACK */
 PETSC_INTERN PetscErrorCode MatGetFactor_seqdense_petsc(Mat A, MatFactorType ftype, Mat *fact)
 {
@@ -1732,6 +1801,7 @@ PetscErrorCode MatDestroy_SeqDense(Mat mat)
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)mat, NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatQRFactor_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatQRFactorConstructFactors_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatQRFactorSymbolic_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatQRFactorNumeric_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseGetLDA_C", NULL));
@@ -3592,6 +3662,7 @@ PetscErrorCode MatCreate_SeqDense(Mat B)
   b->roworiented = PETSC_TRUE;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatQRFactor_C", MatQRFactor_SeqDense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatQRFactorConstructFactors_C", MatQRFactorConstructFactors_SeqDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatDenseGetLDA_C", MatDenseGetLDA_SeqDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatDenseSetLDA_C", MatDenseSetLDA_SeqDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatDenseGetArray_C", MatDenseGetArray_SeqDense));
