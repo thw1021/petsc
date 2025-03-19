@@ -4829,7 +4829,7 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
 
   Options Database Keys:
 + -pc_factor_mat_solver_type <type> - choose the type at run time. When using `KSP` solvers
-- -mat_factorize_on_host <bool>     - do matrix factorization on host for device matrix types? Default is doing on device (might consume more device memory).
+- -mat_factor_on_host <bool>        - do matrix factorization on host for device matrix types? Default is doing on device (might consume more device memory).
 
   Level: intermediate
 

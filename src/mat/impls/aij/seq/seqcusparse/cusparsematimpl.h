@@ -228,7 +228,7 @@ struct Mat_SeqAIJCUSPARSETriFactors {
   cudaDeviceProp   dev_prop;
   PetscBool        init_dev_prop;
 
-  PetscBool factorize_on_host; /* Do factorization on host or not */
+  PetscBool factor_on_host; /* Do factorization on host or not */
 #if PETSC_PKG_CUDA_VERSION_GE(11, 4, 0)
   /* csrilu0/csric0 appeared in cusparse-8.0, but we use it along with cusparseSpSV,
      which first appeared in cusparse-11.5 with cuda-11.3.

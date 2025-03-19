@@ -1785,7 +1785,7 @@ static PetscErrorCode MatILUFactorSymbolic_SeqAIJHIPSPARSE(Mat B, Mat A, IS isro
   PetscFunctionBegin;
 #if PETSC_PKG_HIP_VERSION_GE(4, 5, 0)
   PetscBool row_identity = PETSC_FALSE, col_identity = PETSC_FALSE;
-  if (!hipsparseTriFactors->factorize_on_host) {
+  if (!hipsparseTriFactors->factor_on_host) {
     PetscCall(ISIdentity(isrow, &row_identity));
     PetscCall(ISIdentity(iscol, &col_identity));
   }
@@ -1818,7 +1818,7 @@ static PetscErrorCode MatICCFactorSymbolic_SeqAIJHIPSPARSE(Mat B, Mat A, IS perm
   PetscFunctionBegin;
 #if PETSC_PKG_HIP_VERSION_GE(4, 5, 0)
   PetscBool perm_identity = PETSC_FALSE;
-  if (!hipsparseTriFactors->factorize_on_host) PetscCall(ISIdentity(perm, &perm_identity));
+  if (!hipsparseTriFactors->factor_on_host) PetscCall(ISIdentity(perm, &perm_identity));
   if (!info->levels && perm_identity) PetscCall(MatICCFactorSymbolic_SeqAIJHIPSPARSE_ICC0(B, A, perm, info));
   else
 #endif
@@ -1876,7 +1876,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijhipsparse_hipsparse(Mat A, MatFac
   prefix = (*B)->factorprefix ? (*B)->factorprefix : ((PetscObject)A)->prefix;
   PetscOptionsBegin(PetscObjectComm((PetscObject)*B), prefix, "MatGetFactor", "Mat");
   factors = (Mat_SeqAIJHIPSPARSETriFactors *)((*B)->spptr);
-  PetscCall(PetscOptionsBool("-mat_factorize_on_host", "Do matrix factorization on host", "MatGetFactor", factors->factorize_on_host, &factors->factorize_on_host, NULL));
+  PetscCall(PetscOptionsBool("-mat_factor_on_host", "Do matrix factorization on host", "MatGetFactor", factors->factor_on_host, &factors->factor_on_host, NULL));
   PetscOptionsEnd();
 
   if (A->boundtocpu && A->bindingpropagates) PetscCall(MatBindToCPU(*B, PETSC_TRUE));
