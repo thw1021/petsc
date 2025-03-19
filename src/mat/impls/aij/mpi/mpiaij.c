@@ -3559,7 +3559,6 @@ PETSC_INTERN PetscErrorCode MatSetMPIAIJWithSplitSeqAIJ(Mat mat, Mat A, Mat B, P
 
   PetscCheck(m == Am && m == Bm, PETSC_COMM_SELF, PETSC_ERR_PLIB, "local number of rows do not match");
   PetscCheck(n == An, PETSC_COMM_SELF, PETSC_ERR_PLIB, "local number of columns do not match");
-  //PetscCheck(N == Bn, PETSC_COMM_SELF, PETSC_ERR_PLIB, "global number of columns do not match");
   PetscCheck(!mpiaij->A && !mpiaij->B, PETSC_COMM_SELF, PETSC_ERR_PLIB, "A, B of the MPIAIJ matrix are not empty");
   mpiaij->A      = A;
   mpiaij->B      = B;
