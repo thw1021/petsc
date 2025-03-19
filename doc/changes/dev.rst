@@ -65,6 +65,7 @@ Changes: Development
 - Add ``MatDenseSkinnyQR()`` for QR factorizations of tall, skinny dense matrices
 - Add ``MatDenseSkinnyQB()`` for QB factorizations of tall, skinny dense matrices
 - Add ``MatDenseSkinnySVD()`` for SVD factorizations of tall, skinny dense matrices
+- Add ``MatNullSpaceSetSpanningVecs()``, ``MatNullSpaceGetSpanningVecs()``, and ``MatNullspaceCreateFromSpanningVecs()`` for describing a nullspace in terms of non-orthogonal, possibly linearly dependent vectors
 
 .. rubric:: MatCoarsen:
 
