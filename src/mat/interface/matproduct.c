@@ -831,7 +831,7 @@ PetscErrorCode MatProductSymbolic(Mat mat)
     if (mat->rmap->N > 0 && (mat->rmap->N % B->rmap->bs) == 0 && B->rmap->bs > 1) PetscCall(MatSetBlockSizes(mat, B->rmap->bs, B->rmap->bs));
     break;
   case MATPRODUCT_ABC:
-    if (mat->rmap->N > 0 && (mat->rmap->N % A->rmap->bs && (mat->cmap->N % C->cmap->bs) == 0) PetscCall(MatSetBlockSizesFromMats(mat, A, C));
+    if (mat->rmap->N > 0 && (mat->rmap->N % A->rmap->bs && (mat->cmap->N % C->cmap->bs) == 0)) PetscCall(MatSetBlockSizesFromMats(mat, A, C));
     break;
   case MATPRODUCT_AB:
     if (mat->rmap->N > 0 && (mat->rmap->N % A->rmap->bs) == 0 && (mat->cmap->N % B->cmap->bs) == 0) PetscCall(MatSetBlockSizesFromMats(mat, A, B));
