@@ -161,7 +161,7 @@ Global Sections: Constrained and Distributed Data
   TODO: This text needs additional work explaining the "constrained dof" business.
 
 A global vector is missing both the ghosted dofs, which are not owned by this process but are stored in the global vector on a different process and *constrained* dofs. These constraints usually represent essential (Dirichlet)
-boundary conditions, or algebraic constraints. They are dofs that have a given fixed value, so they are present in local vectors for assembly purposes, but absent
+boundary conditions, or algebraic constraints. They are dofs that have a given fixed value, so they are present in local vectors for finite element/volume assembly or finite difference stencil application purposes, but absent
 from global vectors since they are not unknowns in the algebraic solves.
 
 We can indicate constraints in a local section using ``PetscSectionSetConstraintDof()``, to set the number of constrained dofs for a given point, and ``PetscSectionSetConstraintIndices()`` which indicates which dofs on the given point are constrained. Once we have this information, a global section can be created using ``PetscSectionCreateGlobalSection()``. This is done automatically by the ``DM``. A global section returns :math:`-(dof+1)` for the number of dofs on an unowned (ghost) point, and :math:`-(off+1)` for its offset on the owning process. This can be used to create global vectors, just as the local section is used to create local vectors.
