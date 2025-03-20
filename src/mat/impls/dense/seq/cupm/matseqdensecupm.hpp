@@ -1372,7 +1372,10 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::MatMatMult_Numeric_Dispatch(Mat A, M
   PetscCall(PetscCUPMBlasIntCast(C->rmap->n, &m));
   PetscCall(PetscCUPMBlasIntCast(C->cmap->n, &n));
   PetscCall(PetscCUPMBlasIntCast(transpose_A ? A->rmap->n : A->cmap->n, &k));
-  if (!m || !n || !k) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!m || !n || !k) {
+    if (m > 0 && n > 0) PetscCall(MatZeroEntries(C));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
 
   // we may end up with SEQDENSE as one of the arguments
   // REVIEW ME: how? and why is it not B and C????????
