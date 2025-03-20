@@ -2505,7 +2505,7 @@ static PetscErrorCode MatMatMultNumeric_MPIDense_MPIDense(Mat A, Mat B, Mat C)
       PetscCall(MatDenseRestoreArrayWrite(ab->Be, &write));
       PetscCall(MatDenseRestoreArrayRead(B, &read));
     }
-    PetscCall(MatMatMultNumeric_SeqDense_SeqDense(((Mat_MPIDense *)A->data)->A, ab->Be, ((Mat_MPIDense *)C->data)->A));
+    PetscCall(MatMatMult(mdn->A, ab->Be, MAT_REUSE_MATRIX, PETSC_DETERMINE, &((Mat_MPIDense *)C->data)->A));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2515,7 +2515,7 @@ static PetscErrorCode MatMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B, PetscRe
   Mat_Product      *product = C->product;
   PetscInt          alg;
   Mat_MatMultDense *ab;
-  PetscBool         flg;
+  PetscBool         flg, is_dense;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 4);
@@ -2529,7 +2529,8 @@ static PetscErrorCode MatMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B, PetscRe
 
   /* setup C */
   PetscCall(MatSetSizes(C, A->rmap->n, B->cmap->n, A->rmap->N, B->cmap->N));
-  PetscCall(MatSetType(C, MATMPIDENSE));
+  PetscCall(PetscObjectBaseTypeCompare((PetscObject)C, MATMPIDENSE, &is_dense));
+  if (!is_dense) PetscCall(MatSetType(C, MATMPIDENSE));
   PetscCall(MatSetUp(C));
 
   /* create data structure for reuse Cdense */
