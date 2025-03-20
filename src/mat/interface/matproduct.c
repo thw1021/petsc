@@ -825,16 +825,16 @@ PetscErrorCode MatProductSymbolic(Mat mat)
   /* set block sizes */
   switch (product->type) {
   case MATPRODUCT_PtAP:
-    if (B->cmap->bs > 1) PetscCall(MatSetBlockSizes(mat, B->cmap->bs, B->cmap->bs));
+    if (mat->cmap->n > 0 && (mat->cmap->n % A->cmap->bs) == 0 && B->cmap->bs > 1) PetscCall(MatSetBlockSizes(mat, B->cmap->bs, B->cmap->bs));
     break;
   case MATPRODUCT_RARt:
-    if (B->rmap->bs > 1) PetscCall(MatSetBlockSizes(mat, B->rmap->bs, B->rmap->bs));
+    if (mat->rmap->n > 0 && (mat->rmap->n % A->rmap->bs) == 0 && B->rmap->bs > 1) PetscCall(MatSetBlockSizes(mat, B->rmap->bs, B->rmap->bs));
     break;
   case MATPRODUCT_ABC:
-    PetscCall(MatSetBlockSizesFromMats(mat, A, C));
+    if (mat->rmap->n > 0 && (mat->rmap->n % A->rmap->bs) == 0) PetscCall(MatSetBlockSizesFromMats(mat, A, C));
     break;
   case MATPRODUCT_AB:
-    PetscCall(MatSetBlockSizesFromMats(mat, A, B));
+    if (mat->rmap->n > 0 && (mat->rmap->n % A->rmap->bs) == 0) PetscCall(MatSetBlockSizesFromMats(mat, A, B));
     break;
   case MATPRODUCT_AtB:
     if (mat->rmap->n > 0 && (mat->rmap->n % A->cmap->bs) == 0 && (A->cmap->bs > 1 || B->cmap->bs > 1)) PetscCall(MatSetBlockSizes(mat, A->cmap->bs, B->cmap->bs));
