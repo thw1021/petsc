@@ -197,7 +197,8 @@ A description of those features will be left to :any:`ch_unstructured`.
 
 .. [#petscsection_footnote] A ``PetscSection`` can be thought of as a generalization of ``PetscLayout``, in the same way that a fiber bundle is a generalization
    of the normal Euclidean basis used in linear algebra. With ``PetscLayout``, we associate a unit vector (:math:`e_i`) with every
-   point in the space, and just divide up points between processes.
+   point in the space, and just divide up points between processes. 
+   Conversely, ``PetscSection`` associates multiple unit vectors with every mesh point (one for each dof) and divides the mesh points between processes using a ``PetscSF`` to define the distribution.
 
 .. bibliography:: /petsc.bib
     :filter: docname in docnames
