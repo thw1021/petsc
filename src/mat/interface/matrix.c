@@ -7974,7 +7974,7 @@ PetscErrorCode MatSetBlockSizes(Mat mat, PetscInt rbs, PetscInt cbs)
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   PetscValidLogicalCollectiveInt(mat, rbs, 2);
   PetscValidLogicalCollectiveInt(mat, cbs, 3);
-  PetscTryTypeMethod(mat, setblocksizes, rbs, cbs);
+  if (mat->cmap->N > 0 && (mat->rmap->N % rbs) == 0 && (mat->cmap->N % cbs) == 0) PetscTryTypeMethod(mat, setblocksizes, rbs, cbs);
   if (mat->rmap->refcnt) {
     ISLocalToGlobalMapping l2g  = NULL;
     PetscLayout            nmap = NULL;
