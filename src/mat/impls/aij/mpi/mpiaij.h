@@ -160,6 +160,7 @@ PETSC_INTERN PetscErrorCode MatSetValues_MPIAIJ(Mat, PetscInt, const PetscInt[],
 PETSC_INTERN PetscErrorCode MatSetValues_MPIAIJ_CopyFromCSRFormat(Mat, const PetscInt[], const PetscInt[], const PetscScalar[]);
 PETSC_INTERN PetscErrorCode MatSetValues_MPIAIJ_CopyFromCSRFormat_Symbolic(Mat, const PetscInt[], const PetscInt[]);
 PETSC_INTERN PetscErrorCode MatSetOption_MPIAIJ(Mat, MatOption, PetscBool);
+PETSC_INTERN PetscErrorCode MatSetMPIAIJWithSplitSeqAIJ(Mat, Mat, Mat, PetscInt *);
 
 PETSC_INTERN PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ_nonscalable(Mat, Mat, PetscReal, Mat);
 PETSC_INTERN PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ(Mat, Mat, PetscReal, Mat);
@@ -169,7 +170,7 @@ PETSC_INTERN PetscErrorCode MatTransposeMatMultNumeric_MPIAIJ_MPIAIJ_matmatmult(
 PETSC_INTERN PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIDense(Mat, Mat, PetscReal, Mat);
 PETSC_INTERN PetscErrorCode MatGetSeqNonzeroStructure_MPIAIJ(Mat, Mat *);
 
-PETSC_INTERN PetscErrorCode MatSetFromOptions_MPIAIJ(Mat, PetscOptionItems *);
+PETSC_INTERN PetscErrorCode MatSetFromOptions_MPIAIJ(Mat, PetscOptionItems);
 PETSC_INTERN PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJ(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[]);
 
 #if !defined(PETSC_USE_COMPLEX) && !defined(PETSC_USE_REAL_SINGLE) && !defined(PETSC_USE_REAL___FLOAT128) && !defined(PETSC_USE_REAL___FP16)

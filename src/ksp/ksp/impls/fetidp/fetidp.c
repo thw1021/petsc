@@ -868,7 +868,7 @@ static PetscErrorCode KSPFETIDPSetUpOperators(KSP ksp)
             PetscCall(ISLocalToGlobalMappingDestroy(&pmap));
             PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &c));
             PetscCall(PetscContainerSetPointer(c, schp_csr));
-            PetscCall(PetscContainerSetUserDestroy(c, PetscContainerUserDestroyDefault));
+            PetscCall(PetscContainerSetCtxDestroy(c, PetscCtxDestroyDefault));
             PetscCall(PetscObjectCompose((PetscObject)fetidp->innerbddc, "__KSPFETIDP_pCSR", (PetscObject)c));
             PetscCall(PetscContainerDestroy(&c));
           }
@@ -1247,7 +1247,7 @@ static PetscErrorCode KSPView_FETIDP(KSP ksp, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode KSPSetFromOptions_FETIDP(KSP ksp, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode KSPSetFromOptions_FETIDP(KSP ksp, PetscOptionItems PetscOptionsObject)
 {
   KSP_FETIDP *fetidp = (KSP_FETIDP *)ksp->data;
 

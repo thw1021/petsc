@@ -531,7 +531,7 @@ command
 
 .. code-block::
 
-   KSPMonitorSet(KSP ksp,PetscErrorCode (*mon)(KSP ksp,PetscInt it,PetscReal rnorm,void *ctx),void *ctx,PetscErrorCode (*mondestroy)(void**));
+   KSPMonitorSet(KSP ksp, PetscErrorCode (*mon)(KSP ksp, PetscInt it, PetscReal rnorm, void *ctx), void *ctx, (PetscCtxDestroyFn *)mondestroy);
 
 The final routine argument, ``ctx``, is an optional context for private
 data for the user-defined monitoring routine, ``mon``. Other ``mon``

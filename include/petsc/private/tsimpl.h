@@ -41,7 +41,7 @@ struct _TSOps {
   PetscErrorCode (*interpolate)(TS, PetscReal, Vec);
   PetscErrorCode (*evaluatewlte)(TS, NormType, PetscInt *, PetscReal *);
   PetscErrorCode (*evaluatestep)(TS, PetscInt, Vec, PetscBool *);
-  PetscErrorCode (*setfromoptions)(TS, PetscOptionItems *);
+  PetscErrorCode (*setfromoptions)(TS, PetscOptionItems);
   PetscErrorCode (*destroy)(TS);
   PetscErrorCode (*view)(TS, PetscViewer);
   PetscErrorCode (*reset)(TS);
@@ -81,7 +81,7 @@ struct _TSTrajectoryOps {
   PetscErrorCode (*destroy)(TSTrajectory);
   PetscErrorCode (*set)(TSTrajectory, TS, PetscInt, PetscReal, Vec);
   PetscErrorCode (*get)(TSTrajectory, TS, PetscInt, PetscReal *);
-  PetscErrorCode (*setfromoptions)(TSTrajectory, PetscOptionItems *);
+  PetscErrorCode (*setfromoptions)(TSTrajectory, PetscOptionItems);
   PetscErrorCode (*setup)(TSTrajectory, TS);
 };
 
@@ -144,15 +144,17 @@ struct _TS_RHSSplitLink {
   PetscLogEvent   event;
 };
 
-typedef struct _TS_TimeSpan *TSTimeSpan;
-struct _TS_TimeSpan {
-  PetscInt   num_span_times; /* number of time points */
-  PetscReal *span_times;     /* array of the time span */
-  PetscReal  reltol;         /* relative tolerance for span point detection */
-  PetscReal  abstol;         /* absolute tolerance for span point detection */
-  PetscReal  worktol;        /* the ultimate tolerance (variable), maintained within a single TS time step for consistency */
-  PetscInt   spanctr;        /* counter of the time points that have been reached */
-  Vec       *vecs_sol;       /* array of the solutions at the specified time points */
+typedef struct _TS_EvaluationTimes *TSEvaluationTimes;
+struct _TS_EvaluationTimes {
+  PetscInt   num_time_points; /* number of time points */
+  PetscReal *time_points;     /* array of the time span */
+  PetscReal  reltol;          /* relative tolerance for span point detection */
+  PetscReal  abstol;          /* absolute tolerance for span point detection */
+  PetscReal  worktol;         /* the ultimate tolerance (variable), maintained within a single TS time step for consistency */
+  PetscInt   time_point_idx;  /* index of the time_point to be reached next */
+  PetscInt   sol_ctr;         /* counter of the time points that have been reached */
+  Vec       *sol_vecs;        /* array of the solutions at the specified time points */
+  PetscReal *sol_times;       /* array of times that sol_vecs was taken at */
 };
 
 struct _p_TS {
@@ -174,14 +176,14 @@ struct _p_TS {
 
   /* ---------------- User (or PETSc) Provided stuff ---------------------*/
   PetscErrorCode (*monitor[MAXTSMONITORS])(TS, PetscInt, PetscReal, Vec, void *);
-  PetscErrorCode (*monitordestroy[MAXTSMONITORS])(void **);
-  void    *monitorcontext[MAXTSMONITORS];
-  PetscInt numbermonitors;
+  PetscCtxDestroyFn *monitordestroy[MAXTSMONITORS];
+  void              *monitorcontext[MAXTSMONITORS];
+  PetscInt           numbermonitors;
   PetscErrorCode (*adjointmonitor[MAXTSMONITORS])(TS, PetscInt, PetscReal, Vec, PetscInt, Vec *, Vec *, void *);
-  PetscErrorCode (*adjointmonitordestroy[MAXTSMONITORS])(void **);
-  void    *adjointmonitorcontext[MAXTSMONITORS];
-  PetscInt numberadjointmonitors;
-  PetscInt monitorFrequency; /* Number of timesteps between monitor output */
+  PetscCtxDestroyFn *adjointmonitordestroy[MAXTSMONITORS];
+  void              *adjointmonitorcontext[MAXTSMONITORS];
+  PetscInt           numberadjointmonitors;
+  PetscInt           monitorFrequency; /* Number of timesteps between monitor output */
 
   PetscErrorCode (*prestep)(TS);
   PetscErrorCode (*prestage)(TS, PetscReal);
@@ -288,7 +290,7 @@ struct _p_TS {
   /* --- Data that is unique to each particular solver --- */
   PetscInt setupcalled; /* true if setup has been called */
   void    *data;        /* implementationspecific data */
-  void    *user;        /* user context */
+  void    *ctx;         /* user context */
 
   PetscBool steprollback;        /* flag to indicate that the step was rolled back */
   PetscBool steprestart;         /* flag to indicate that the timestepper has to discard any history and restart */
@@ -330,7 +332,7 @@ struct _p_TS {
   TS quadraturets;
 
   /* ---------------------- Time span support ---------------------------------*/
-  TSTimeSpan tspan;
+  TSEvaluationTimes eval_times;
 };
 
 struct _TSAdaptOps {
@@ -338,7 +340,7 @@ struct _TSAdaptOps {
   PetscErrorCode (*destroy)(TSAdapt);
   PetscErrorCode (*reset)(TSAdapt);
   PetscErrorCode (*view)(TSAdapt, PetscViewer);
-  PetscErrorCode (*setfromoptions)(TSAdapt, PetscOptionItems *);
+  PetscErrorCode (*setfromoptions)(TSAdapt, PetscOptionItems);
   PetscErrorCode (*load)(TSAdapt, PetscViewer);
 };
 
@@ -368,7 +370,7 @@ struct _p_TSAdapt {
   PetscViewer monitor;
   PetscInt    timestepjustdecreased_delay; /* number of timesteps after a decrease in the timestep before the timestep can be increased */
   PetscInt    timestepjustdecreased;
-  PetscReal   dt_span_cached; /* time step before hitting a TS span time point */
+  PetscReal   dt_eval_times_cached; /* time step before hitting a TS evaluation time point */
 };
 
 typedef struct _p_DMTS  *DMTS;
@@ -534,8 +536,8 @@ struct _n_TSMonitorLGCtx {
   PetscInt   *displayvariables;
   PetscReal  *displayvalues;
   PetscErrorCode (*transform)(void *, Vec, Vec *);
-  PetscErrorCode (*transformdestroy)(void *);
-  void *transformctx;
+  PetscCtxDestroyFn *transformdestroy;
+  void              *transformctx;
 };
 
 struct _n_TSMonitorSPCtx {

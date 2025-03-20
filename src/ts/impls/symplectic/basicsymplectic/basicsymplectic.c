@@ -320,7 +320,7 @@ static PetscErrorCode TSDestroy_BasicSymplectic(TS ts)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TSSetFromOptions_BasicSymplectic(TS ts, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode TSSetFromOptions_BasicSymplectic(TS ts, PetscOptionItems PetscOptionsObject)
 {
   TS_BasicSymplectic *bsymp = (TS_BasicSymplectic *)ts->data;
 
@@ -340,12 +340,6 @@ static PetscErrorCode TSSetFromOptions_BasicSymplectic(TS ts, PetscOptionItems *
     PetscCall(PetscFree(namelist));
   }
   PetscOptionsHeadEnd();
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TSView_BasicSymplectic(TS ts, PetscViewer viewer)
-{
-  PetscFunctionBegin;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -509,7 +503,6 @@ PETSC_EXTERN PetscErrorCode TSCreate_BasicSymplectic(TS ts)
   ts->ops->reset           = TSReset_BasicSymplectic;
   ts->ops->destroy         = TSDestroy_BasicSymplectic;
   ts->ops->setfromoptions  = TSSetFromOptions_BasicSymplectic;
-  ts->ops->view            = TSView_BasicSymplectic;
   ts->ops->interpolate     = TSInterpolate_BasicSymplectic;
   ts->ops->linearstability = TSComputeLinearStability_BasicSymplectic;
 

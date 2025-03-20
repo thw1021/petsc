@@ -12,7 +12,7 @@ extern PetscErrorCode KSPDGMRESComputeDeflationData_DGMRES(KSP, PetscInt *);
 extern PetscErrorCode KSPDGMRESComputeSchurForm_DGMRES(KSP, PetscInt *);
 extern PetscErrorCode KSPDGMRESApplyDeflation_DGMRES(KSP, Vec, Vec);
 extern PetscErrorCode KSPDestroy_DGMRES(KSP);
-extern PetscErrorCode KSPSetFromOptions_DGMRES(KSP, PetscOptionItems *);
+extern PetscErrorCode KSPSetFromOptions_DGMRES(KSP, PetscOptionItems);
 extern PetscErrorCode KSPDGMRESSetEigen_DGMRES(KSP, PetscInt);
 
 PetscLogEvent KSP_AGMRESComputeDeflationData, KSP_AGMRESBuildBasis, KSP_AGMRESComputeShifts, KSP_AGMRESRoddec;
@@ -341,11 +341,12 @@ static PetscErrorCode KSPAGMRESBuildSoln(KSP ksp, PetscInt it)
   PetscBLASInt   KspSize;
   PetscBLASInt   lC;
   PetscBLASInt   N;
-  PetscBLASInt   ldH = (PetscBLASInt)(it + 1);
+  PetscBLASInt   ldH;
   PetscBLASInt   lwork;
   PetscBLASInt   info, nrhs = 1;
 
   PetscFunctionBegin;
+  PetscCall(PetscBLASIntCast(it + 1, &ldH));
   PetscCall(PetscBLASIntCast(KSPSIZE, &KspSize));
   PetscCall(PetscBLASIntCast(4 * (KspSize + 1), &lwork));
   PetscCall(PetscBLASIntCast(KspSize + 1, &lC));
@@ -551,7 +552,7 @@ static PetscErrorCode KSPView_AGMRES(KSP ksp, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode KSPSetFromOptions_AGMRES(KSP ksp, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode KSPSetFromOptions_AGMRES(KSP ksp, PetscOptionItems PetscOptionsObject)
 {
   PetscInt    neig;
   KSP_AGMRES *agmres = (KSP_AGMRES *)ksp->data;

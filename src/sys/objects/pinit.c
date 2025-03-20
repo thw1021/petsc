@@ -126,7 +126,7 @@ PetscErrorCode PetscInitializeNoPointers(int argc, char **args, const char *file
 
 .seealso: `PetscInitialize()`, `PetscInitializeFortran()`
 @*/
-PetscErrorCode PetscInitializeNoArguments(void)
+PetscErrorCode PetscInitializeNoArguments(void) PeNS
 {
   int    argc = 0;
   char **args = NULL;
@@ -776,9 +776,9 @@ PetscBool PetscCIEnabled = PETSC_FALSE, PetscCIEnabledPortableErrorOutput = PETS
   file:     optional PETSc database file name. Might be in Fortran string format when 'ftn' is true
   help:     program help message
   ftn:      is it called from Fortran initialization (petscinitializef_)?
-  readarguments,len: used when fortran is true
+  len:      length of file string, used when Fortran is true
 */
-PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char *file, const char *help, PetscBool ftn, PetscBool readarguments, PetscInt len)
+PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char *file, const char *help, PetscBool ftn, PetscInt len)
 {
   PetscMPIInt size;
   PetscBool   flg = PETSC_TRUE;
@@ -1019,7 +1019,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
   PetscCallMPI(MPI_Comm_create_keyval(MPI_COMM_NULL_COPY_FN, MPI_COMM_NULL_DELETE_FN, &Petsc_Garbage_HMap_keyval, NULL));
 
 #if defined(PETSC_USE_FORTRAN_BINDINGS)
-  if (ftn) PetscCall(PetscInitFortran_Private(readarguments, file, len));
+  if (ftn) PetscCall(PetscInitFortran_Private(file, len));
   else
 #endif
     PetscCall(PetscOptionsInsert(NULL, &PetscGlobalArgc, &PetscGlobalArgs, file));
@@ -1366,7 +1366,7 @@ PetscErrorCode PetscInitialize(int *argc, char ***args, const char file[], const
     PetscGlobalArgc = *argc;
     PetscGlobalArgs = *args;
   }
-  PetscCall(PetscInitialize_Common(prog, file, help, PETSC_FALSE, PETSC_FALSE, 0));
+  PetscCall(PetscInitialize_Common(prog, file, help, PETSC_FALSE, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1503,12 +1503,6 @@ PetscErrorCode PetscFinalize(void)
 
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
   PetscCall(PetscFPTDestroy());
-#endif
-
-#if defined(PETSC_HAVE_SAWS)
-  flg = PETSC_FALSE;
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-saw_options", &flg, NULL));
-  if (flg) PetscCall(PetscOptionsSAWsDestroy());
 #endif
 
 #if defined(PETSC_HAVE_X)
@@ -1859,18 +1853,41 @@ PetscMPIInt MPIU_Allreduce_Private(const void *inbuf, void *outbuf, MPIU_Count c
     void      *inbufd, *outbufd;
 
     if (inbuf != MPI_IN_PLACE) {
-      incnt  = *(PetscInt32 *)inbuf;
-      inbufd = &incnt;
+      incnt   = *(PetscInt32 *)inbuf;
+      inbufd  = &incnt;
+      outbufd = &outcnt;
+      err     = MPIU_Allreduce_Count(inbufd, outbufd, count, MPIU_INT64, op, comm);
     } else {
-      outcnt = *(PetscInt32 *)outbuf;
-      inbufd = (void *)MPI_IN_PLACE;
+      outcnt  = *(PetscInt32 *)outbuf;
+      outbufd = &outcnt;
+      err     = MPIU_Allreduce_Count(MPI_IN_PLACE, outbufd, count, MPIU_INT64, op, comm);
     }
-    outbufd = &outcnt;
-    err     = MPIU_Allreduce_Count(inbufd, outbufd, count, MPIU_INT64, op, comm);
     if (!err && outcnt > PETSC_INT_MAX) err = MPI_ERR_OTHER;
     *(PetscInt32 *)outbuf = (PetscInt32)outcnt;
   } else {
     err = MPIU_Allreduce_Count(inbuf, outbuf, count, dtype, op, comm);
   }
   return err;
+}
+
+/*@C
+  PetscCtxDestroyDefault - An implementation of a `PetscCtxDestroyFn` that uses `PetscFree()` to free the context
+
+  Input Parameter:
+. ctx - the context to be destroyed
+
+  Level: intermediate
+
+  Note:
+  This is not called directly, rather it is passed to `DMSetApplicationContextDestroy()`, `PetscContainerSetDestroy()`,
+  `PetscObjectContainterCreate()` and similar routines and then called by the destructor of the associated object.
+
+.seealso: `PetscObject`, `PetscCtxDestroyFn`, `PetscObjectDestroy()`, `DMSetApplicationContextDestroy()`,  `PetscContainerSetDestroy()`,
+           `PetscObjectContainterCreate()`
+@*/
+PETSC_EXTERN PetscErrorCode PetscCtxDestroyDefault(void **ctx)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscFree(*ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

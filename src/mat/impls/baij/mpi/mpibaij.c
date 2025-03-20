@@ -715,12 +715,10 @@ static PetscErrorCode MatNorm_MPIBAIJ(Mat mat, NormType type, PetscReal *nrm)
       PetscCallMPI(MPIU_Allreduce(&sum, nrm, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)mat)));
       *nrm = PetscSqrtReal(*nrm);
     } else if (type == NORM_1) { /* max column sum */
-      PetscReal  *tmp, *tmp2;
-      PetscInt   *jj, *garray = baij->garray, cstart = baij->rstartbs;
-      PetscMPIInt iN;
+      PetscReal *tmp;
+      PetscInt  *jj, *garray = baij->garray, cstart = baij->rstartbs;
 
       PetscCall(PetscCalloc1(mat->cmap->N, &tmp));
-      PetscCall(PetscMalloc1(mat->cmap->N, &tmp2));
       v  = amat->a;
       jj = amat->j;
       for (i = 0; i < amat->nz; i++) {
@@ -745,14 +743,12 @@ static PetscErrorCode MatNorm_MPIBAIJ(Mat mat, NormType type, PetscReal *nrm)
         }
         jj++;
       }
-      PetscCall(PetscMPIIntCast(mat->cmap->N, &iN));
-      PetscCallMPI(MPIU_Allreduce(tmp, tmp2, iN, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)mat)));
+      PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, tmp, mat->cmap->N, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)mat)));
       *nrm = 0.0;
       for (j = 0; j < mat->cmap->N; j++) {
-        if (tmp2[j] > *nrm) *nrm = tmp2[j];
+        if (tmp[j] > *nrm) *nrm = tmp[j];
       }
       PetscCall(PetscFree(tmp));
-      PetscCall(PetscFree(tmp2));
     } else if (type == NORM_INFINITY) { /* max row sum */
       PetscReal *sums;
       PetscCall(PetscMalloc1(bs, &sums));
@@ -876,7 +872,7 @@ static PetscErrorCode MatCreateHashTable_MPIBAIJ_Private(Mat mat, PetscReal fact
   for (i = 0, j = 0; i < ht_size; i++) {
     if (HT[i]) j++;
   }
-  PetscCall(PetscInfo(mat, "Average Search = %5.2g,max search = %" PetscInt_FMT "\n", (!j) ? (double)0.0 : (double)(((PetscReal)(ct + j)) / (double)j), max));
+  PetscCall(PetscInfo(mat, "Average Search = %5.2g,max search = %" PetscInt_FMT "\n", (!j) ? 0.0 : (double)(((PetscReal)(ct + j)) / j), max));
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1027,7 +1023,7 @@ static PetscErrorCode MatView_MPIBAIJ_ASCIIorDraworSocket(Mat mat, PetscViewer v
       PetscCall(MatGetInfo(mat, MAT_LOCAL, &info));
       PetscCall(PetscViewerASCIIPushSynchronized(viewer));
       PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d] Local rows %" PetscInt_FMT " nz %" PetscInt_FMT " nz alloced %" PetscInt_FMT " bs %" PetscInt_FMT " mem %g\n", rank, mat->rmap->n, (PetscInt)info.nz_used, (PetscInt)info.nz_allocated,
-                                                   mat->rmap->bs, (double)info.memory));
+                                                   mat->rmap->bs, info.memory));
       PetscCall(MatGetInfo(baij->A, MAT_LOCAL, &info));
       PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "[%d] on-diagonal part: nz %" PetscInt_FMT " \n", rank, (PetscInt)info.nz_used));
       PetscCall(MatGetInfo(baij->B, MAT_LOCAL, &info));
@@ -1483,11 +1479,6 @@ static PetscErrorCode MatSetOption_MPIBAIJ(Mat A, MatOption op, PetscBool flg)
     PetscCall(MatSetOption(a->A, op, flg));
     PetscCall(MatSetOption(a->B, op, flg));
     break;
-  case MAT_FORCE_DIAGONAL_ENTRIES:
-  case MAT_SORTED_FULL:
-  case MAT_SUBMAT_SINGLEIS:
-    PetscCall(PetscInfo(A, "Option %s ignored\n", MatOptions[op]));
-    break;
   case MAT_IGNORE_OFF_PROC_ENTRIES:
     a->donotstash = flg;
     break;
@@ -1505,7 +1496,7 @@ static PetscErrorCode MatSetOption_MPIBAIJ(Mat A, MatOption op, PetscBool flg)
     if (a->A && A->rmap->n == A->cmap->n) PetscCall(MatSetOption(a->A, op, flg));
     break;
   default:
-    SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "unknown option %d", op);
+    break;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1725,7 +1716,7 @@ static PetscErrorCode MatZeroRowsColumns_MPIBAIJ(Mat A, PetscInt N, const PetscI
   for (i = 0; i < len; ++i) {
     row   = lrows[i];
     count = (baij->i[row / bs + 1] - baij->i[row / bs]) * bs;
-    aa    = ((MatScalar *)baij->a) + baij->i[row / bs] * bs2 + (row % bs);
+    aa    = baij->a + baij->i[row / bs] * bs2 + (row % bs);
     for (k = 0; k < count; ++k) {
       aa[0] = 0.0;
       aa += bs;
@@ -1738,7 +1729,7 @@ static PetscErrorCode MatZeroRowsColumns_MPIBAIJ(Mat A, PetscInt N, const PetscI
       for (k = 0; k < bs; ++k) {
         col = bs * baij->j[j] + k;
         if (PetscAbsScalar(mask[col])) {
-          aa = ((MatScalar *)baij->a) + j * bs2 + (i % bs) + bs * k;
+          aa = baij->a + j * bs2 + (i % bs) + bs * k;
           if (x) bb[i] -= aa[0] * xx[col];
           aa[0] = 0.0;
         }
@@ -2257,7 +2248,6 @@ static PetscErrorCode MatGetColumnReductions_MPIBAIJ(Mat A, PetscInt type, Petsc
   Mat_SeqBAIJ *b_aij = (Mat_SeqBAIJ *)aij->B->data;
   MatScalar   *b_val = b_aij->a;
   PetscReal   *work;
-  PetscMPIInt  iN;
 
   PetscFunctionBegin;
   PetscCall(MatGetSize(A, &m, &N));
@@ -2350,11 +2340,10 @@ static PetscErrorCode MatGetColumnReductions_MPIBAIJ(Mat A, PetscInt type, Petsc
       }
     }
   } else SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Unknown reduction type");
-  PetscCall(PetscMPIIntCast(N, &iN));
   if (type == NORM_INFINITY) {
-    PetscCallMPI(MPIU_Allreduce(work, reductions, iN, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)A)));
+    PetscCallMPI(MPIU_Allreduce(work, reductions, N, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)A)));
   } else {
-    PetscCallMPI(MPIU_Allreduce(work, reductions, iN, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)A)));
+    PetscCallMPI(MPIU_Allreduce(work, reductions, N, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)A)));
   }
   PetscCall(PetscFree(work));
   if (type == NORM_2) {
@@ -2581,7 +2570,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIBAIJ,
                                        MatGetRowSumAbs_MPIBAIJ,
                                        NULL,
                                        NULL,
-                                       NULL};
+                                       /*155*/ NULL,
+                                       MatCopyHashToXAIJ_MPI_Hash};
 
 PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPISBAIJ(Mat, MatType, MatReuse, Mat *);
 PETSC_INTERN PetscErrorCode MatConvert_XAIJ_IS(Mat, MatType, MatReuse, Mat *);

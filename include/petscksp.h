@@ -164,7 +164,7 @@ PETSC_EXTERN PetscErrorCode KSPSetNestLevel(KSP, PetscInt);
 PETSC_EXTERN PetscErrorCode KSPGetNestLevel(KSP, PetscInt *);
 
 PETSC_EXTERN PetscErrorCode KSPMonitor(KSP, PetscInt, PetscReal);
-PETSC_EXTERN PetscErrorCode KSPMonitorSet(KSP, PetscErrorCode (*)(KSP, PetscInt, PetscReal, void *), void *, PetscErrorCode (*)(void **));
+PETSC_EXTERN PetscErrorCode KSPMonitorSet(KSP, PetscErrorCode (*)(KSP, PetscInt, PetscReal, void *), void *, PetscCtxDestroyFn *);
 PETSC_EXTERN PetscErrorCode KSPMonitorCancel(KSP);
 PETSC_EXTERN PetscErrorCode KSPGetMonitorContext(KSP, void *);
 PETSC_EXTERN PetscErrorCode KSPGetResidualHistory(KSP, const PetscReal *[], PetscInt *);
@@ -460,7 +460,6 @@ PETSC_EXTERN PetscErrorCode KSPSetFromOptions(KSP);
 PETSC_EXTERN PetscErrorCode KSPResetFromOptions(KSP);
 
 PETSC_EXTERN PetscErrorCode KSPMonitorSetFromOptions(KSP, const char[], const char[], void *);
-PETSC_EXTERN PetscErrorCode KSPMonitorLGCreate(MPI_Comm, const char[], const char[], const char[], PetscInt, const char *[], int, int, int, int, PetscDrawLG *);
 PETSC_EXTERN PetscErrorCode KSPMonitorResidual(KSP, PetscInt, PetscReal, PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode KSPMonitorResidualDraw(KSP, PetscInt, PetscReal, PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode KSPMonitorResidualDrawLG(KSP, PetscInt, PetscReal, PetscViewerAndFormat *);
@@ -523,7 +522,7 @@ PETSC_EXTERN PetscErrorCode KSPView(KSP, PetscViewer);
 PETSC_EXTERN PetscErrorCode KSPLoad(KSP, PetscViewer);
 PETSC_EXTERN PetscErrorCode KSPViewFromOptions(KSP, PetscObject, const char[]);
 PETSC_EXTERN PetscErrorCode KSPConvergedReasonView(KSP, PetscViewer);
-PETSC_EXTERN PetscErrorCode KSPConvergedReasonViewSet(KSP, PetscErrorCode (*)(KSP, void *), void *vctx, PetscErrorCode (*)(void **));
+PETSC_EXTERN PetscErrorCode KSPConvergedReasonViewSet(KSP, PetscErrorCode (*)(KSP, void *), void *, PetscCtxDestroyFn *);
 PETSC_EXTERN PetscErrorCode KSPConvergedReasonViewFromOptions(KSP);
 PETSC_EXTERN PetscErrorCode KSPConvergedReasonViewCancel(KSP);
 PETSC_EXTERN PetscErrorCode KSPConvergedRateView(KSP, PetscViewer);
@@ -624,7 +623,7 @@ M*/
 
 PETSC_EXTERN PetscErrorCode KSPSetNormType(KSP, KSPNormType);
 PETSC_EXTERN PetscErrorCode KSPGetNormType(KSP, KSPNormType *);
-PETSC_EXTERN PetscErrorCode KSPSetSupportedNorm(KSP ksp, KSPNormType, PCSide, PetscInt);
+PETSC_EXTERN PetscErrorCode KSPSetSupportedNorm(KSP, KSPNormType, PCSide, PetscInt);
 PETSC_EXTERN PetscErrorCode KSPSetCheckNormIteration(KSP, PetscInt);
 PETSC_EXTERN PetscErrorCode KSPSetLagNorm(KSP, PetscBool);
 
@@ -913,7 +912,6 @@ PETSC_EXTERN PetscErrorCode PCSetPreSolve(PC, PetscErrorCode (*)(PC, KSP));
 PETSC_EXTERN PetscErrorCode PCPreSolve(PC, KSP);
 PETSC_EXTERN PetscErrorCode PCPostSolve(PC, KSP);
 
-#include <petscdrawtypes.h>
 PETSC_EXTERN PetscErrorCode KSPMonitorLGRange(KSP, PetscInt, PetscReal, void *);
 
 PETSC_EXTERN PetscErrorCode PCShellSetPreSolve(PC, PetscErrorCode (*)(PC, KSP, Vec, Vec));

@@ -1,5 +1,6 @@
 #include <petsc_kokkos.hpp>
 #include <petscvec_kokkos.hpp>
+#include <petscmat_kokkos.hpp>
 #include <petscpkg_version.h>
 #include <petsc/private/petscimpl.h>
 #include <petsc/private/sfimpl.h>
@@ -9,7 +10,16 @@
 #include <Kokkos_Core.hpp>
 #include <KokkosBlas.hpp>
 #include <KokkosSparse_CrsMatrix.hpp>
+
+// To suppress compiler warnings:
+// /path/include/KokkosSparse_spmv_bsrmatrix_tpl_spec_decl.hpp:434:63:
+// warning: 'cusparseStatus_t cusparseDbsrmm(cusparseHandle_t, cusparseDirection_t, cusparseOperation_t,
+// cusparseOperation_t, int, int, int, int, const double*, cusparseMatDescr_t, const double*, const int*, const int*,
+// int, const double*, int, const double*, double*, int)' is deprecated: please use cusparseSpMM instead [-Wdeprecated-declarations]
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN("-Wdeprecated-declarations")
 #include <KokkosSparse_spmv.hpp>
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END()
+
 #include <KokkosSparse_spiluk.hpp>
 #include <KokkosSparse_sptrsv.hpp>
 #include <KokkosSparse_spgemm.hpp>
@@ -98,7 +108,7 @@ PETSC_INTERN PetscErrorCode MatSeqAIJKokkosModifyDevice(Mat A)
 static PetscErrorCode MatSeqAIJKokkosSyncHost(Mat A)
 {
   Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
-  auto             &exec   = PetscGetKokkosExecutionSpace();
+  auto              exec   = PetscGetKokkosExecutionSpace();
 
   PetscFunctionBegin;
   PetscCheckTypeName(A, MATSEQAIJKOKKOS);
@@ -121,7 +131,7 @@ static PetscErrorCode MatSeqAIJGetArray_SeqAIJKokkos(Mat A, PetscScalar *array[]
     must have been updated. The stale aijkok will be rebuilt during MatAssemblyEnd.
   */
   if (aijkok && A->nonzerostate == aijkok->nonzerostate) {
-    auto &exec = PetscGetKokkosExecutionSpace();
+    auto exec = PetscGetKokkosExecutionSpace();
     PetscCallCXX(aijkok->a_dual.sync_host(exec));
     PetscCallCXX(exec.fence());
     *array = aijkok->a_dual.view_host().data();
@@ -146,7 +156,7 @@ static PetscErrorCode MatSeqAIJGetArrayRead_SeqAIJKokkos(Mat A, const PetscScala
 
   PetscFunctionBegin;
   if (aijkok && A->nonzerostate == aijkok->nonzerostate) {
-    auto &exec = PetscGetKokkosExecutionSpace();
+    auto exec = PetscGetKokkosExecutionSpace();
     PetscCallCXX(aijkok->a_dual.sync_host(exec));
     PetscCallCXX(exec.fence());
     *array = aijkok->a_dual.view_host().data();
@@ -634,6 +644,9 @@ static PetscErrorCode MatDestroy_SeqAIJKokkos(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatFactorGetSolverType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOO_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", NULL));
+#if defined(PETSC_HAVE_HYPRE)
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqaijkokkos_hypre_C", NULL));
+#endif
   PetscCall(MatDestroy_SeqAIJ(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -880,14 +893,19 @@ static PetscErrorCode MatProductSymbolic_SeqAIJKokkos_SeqAIJKokkos(Mat C)
   case MATPRODUCT_AB:
     transA = false;
     transB = false;
+    PetscCall(MatSetBlockSizesFromMats(C, A, B));
     break;
   case MATPRODUCT_AtB:
     transA = true;
     transB = false;
+    if (A->cmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->cmap->bs));
+    if (B->cmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, B->cmap->bs));
     break;
   case MATPRODUCT_ABt:
     transA = false;
     transB = true;
+    if (A->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->rmap->bs));
+    if (B->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, B->rmap->bs));
     break;
   default:
     SETERRQ(comm, PETSC_ERR_PLIB, "Unsupported product type %s", MatProductTypes[product->type]);
@@ -1197,6 +1215,30 @@ PetscErrorCode MatSeqAIJRestoreKokkosViewWrite(Mat A, MatScalarKokkosView *kv)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode MatCreateSeqAIJKokkosWithKokkosViews(MPI_Comm comm, PetscInt m, PetscInt n, Kokkos::View<PetscInt *> &i_d, Kokkos::View<PetscInt *> &j_d, Kokkos::View<PetscScalar *> &a_d, Mat *A)
+{
+  Mat_SeqAIJKokkos *akok;
+
+  PetscFunctionBegin;
+  auto exec = PetscGetKokkosExecutionSpace();
+  // Create host copies of the input aij
+  auto i_h = Kokkos::create_mirror_view_and_copy(HostMirrorMemorySpace(), i_d);
+  auto j_h = Kokkos::create_mirror_view_and_copy(HostMirrorMemorySpace(), j_d);
+  // Don't copy the vals to the host now
+  auto a_h = Kokkos::create_mirror_view(HostMirrorMemorySpace(), a_d);
+
+  MatScalarKokkosDualView a_dual = MatScalarKokkosDualView(a_d, a_h);
+  // Note we have modified device data so it will copy lazily
+  a_dual.modify_device();
+  MatRowMapKokkosDualView i_dual = MatRowMapKokkosDualView(i_d, i_h);
+  MatColIdxKokkosDualView j_dual = MatColIdxKokkosDualView(j_d, j_h);
+
+  PetscCallCXX(akok = new Mat_SeqAIJKokkos(m, n, j_dual.extent(0), i_dual, j_dual, a_dual));
+  PetscCall(MatCreate(comm, A));
+  PetscCall(MatSetSeqAIJKokkosWithCSRMatrix(*A, akok));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* Computes Y += alpha X */
 static PetscErrorCode MatAXPY_SeqAIJKokkos(Mat Y, PetscScalar alpha, Mat X, MatStructure pattern)
 {
@@ -1204,7 +1246,7 @@ static PetscErrorCode MatAXPY_SeqAIJKokkos(Mat Y, PetscScalar alpha, Mat X, MatS
   Mat_SeqAIJKokkos        *xkok, *ykok, *zkok;
   ConstMatScalarKokkosView Xa;
   MatScalarKokkosView      Ya;
-  auto                    &exec = PetscGetKokkosExecutionSpace();
+  auto                     exec = PetscGetKokkosExecutionSpace();
 
   PetscFunctionBegin;
   PetscCheckTypeName(Y, MATSEQAIJKOKKOS);
@@ -1297,10 +1339,10 @@ struct MatCOOStruct_SeqAIJKokkos {
   }
 };
 
-static PetscErrorCode MatCOOStructDestroy_SeqAIJKokkos(void *data)
+static PetscErrorCode MatCOOStructDestroy_SeqAIJKokkos(void **data)
 {
   PetscFunctionBegin;
-  PetscCallCXX(delete static_cast<MatCOOStruct_SeqAIJKokkos *>(data));
+  PetscCallCXX(delete static_cast<MatCOOStruct_SeqAIJKokkos *>(*data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1418,6 +1460,9 @@ static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat A)
 
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_SeqAIJKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", MatSetValuesCOO_SeqAIJKokkos));
+#if defined(PETSC_HAVE_HYPRE)
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqaijkokkos_hypre_C", MatConvert_AIJ_HYPRE));
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1448,7 +1493,7 @@ PETSC_INTERN PetscErrorCode MatInvertVariableBlockDiagonal_SeqAIJKokkos(Mat A, c
   auto Aj    = akok->j_dual.view_device();
   auto Adiag = akok->diag_dual.view_device();
   // TODO: how to tune the team size?
-#if defined(KOKKOS_ENABLE_DEFAULT_DEVICE_TYPE_HOST)
+#if defined(KOKKOS_ENABLE_UNIFIED_MEMORY)
   auto ts = Kokkos::AUTO();
 #else
   auto ts = 16; // improved performance 30% over Kokkos::AUTO() with CUDA, but failed with "Kokkos::abort: Requested Team Size is too large!" on CPUs
@@ -1499,7 +1544,7 @@ PETSC_INTERN PetscErrorCode MatSetSeqAIJKokkosWithCSRMatrix(Mat A, Mat_SeqAIJKok
 {
   Mat_SeqAIJ *aseq;
   PetscInt    i, m, n;
-  auto       &exec = PetscGetKokkosExecutionSpace();
+  auto        exec = PetscGetKokkosExecutionSpace();
 
   PetscFunctionBegin;
   PetscCheck(!A->spptr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "A->spptr is supposed to be empty");
@@ -1871,9 +1916,9 @@ PETSC_INTERN PetscErrorCode MatSolverTypeRegister_KOKKOS(void)
 /* Utility to print out a KokkosCsrMatrix for debugging */
 PETSC_INTERN PetscErrorCode PrintCsrMatrix(const KokkosCsrMatrix &csrmat)
 {
-  const auto        &iv = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), csrmat.graph.row_map);
-  const auto        &jv = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), csrmat.graph.entries);
-  const auto        &av = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), csrmat.values);
+  const auto        &iv = Kokkos::create_mirror_view_and_copy(HostMirrorMemorySpace(), csrmat.graph.row_map);
+  const auto        &jv = Kokkos::create_mirror_view_and_copy(HostMirrorMemorySpace(), csrmat.graph.entries);
+  const auto        &av = Kokkos::create_mirror_view_and_copy(HostMirrorMemorySpace(), csrmat.values);
   const PetscInt    *i  = iv.data();
   const PetscInt    *j  = jv.data();
   const PetscScalar *a  = av.data();

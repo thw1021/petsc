@@ -1,5 +1,6 @@
 #pragma once
 #include <petsc_kokkos.hpp>
+#include <petscmat_kokkos.hpp>
 #include <petsc/private/kokkosimpl.hpp>
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <KokkosSparse_CrsMatrix.hpp>
@@ -24,10 +25,10 @@ template <class MemorySpace>
 using KokkosCsrGraphType = typename KokkosCsrMatrixType<MemorySpace>::staticcrsgraph_type;
 
 using KokkosCsrGraph     = KokkosCsrGraphType<DefaultMemorySpace>;
-using KokkosCsrGraphHost = KokkosCsrGraphType<Kokkos::HostSpace>;
+using KokkosCsrGraphHost = KokkosCsrGraphType<HostMirrorMemorySpace>;
 
 using KokkosCsrMatrix     = KokkosCsrMatrixType<DefaultMemorySpace>;
-using KokkosCsrMatrixHost = KokkosCsrMatrixType<Kokkos::HostSpace>;
+using KokkosCsrMatrixHost = KokkosCsrMatrixType<HostMirrorMemorySpace>;
 
 using MatRowMapKokkosView = KokkosCsrGraph::row_map_type::non_const_type;
 using MatColIdxKokkosView = KokkosCsrGraph::entries_type::non_const_type;
@@ -96,7 +97,7 @@ struct Mat_SeqAIJKokkos {
   /* Construct a nrows by ncols matrix with given aseq on host. Caller also specifies a nonzero state */
   Mat_SeqAIJKokkos(PetscInt nrows, PetscInt ncols, Mat_SeqAIJ *aseq, PetscObjectState nzstate, PetscBool copyValues = PETSC_TRUE)
   {
-    auto &exec = PetscGetKokkosExecutionSpace();
+    auto exec = PetscGetKokkosExecutionSpace();
 
     MatScalarKokkosViewHost a_h(aseq->a, aseq->nz);
     MatRowMapKokkosViewHost i_h(const_cast<MatRowMapType *>(aseq->i), nrows + 1);
@@ -127,9 +128,9 @@ struct Mat_SeqAIJKokkos {
     /* Get a non-const version since I don't want to deal with DualView<const T*>, which is not well defined */
     MatRowMapKokkosView i_d(const_cast<MatRowMapType *>(csr.graph.row_map.data()), csr.graph.row_map.extent(0));
     auto                j_d = csr.graph.entries;
-    auto                a_h = Kokkos::create_mirror_view(Kokkos::WithoutInitializing, Kokkos::HostSpace(), a_d);
-    auto                i_h = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), i_d);
-    auto                j_h = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), j_d);
+    auto                a_h = Kokkos::create_mirror_view(Kokkos::WithoutInitializing, HostMirrorMemorySpace(), a_d);
+    auto                i_h = Kokkos::create_mirror_view_and_copy(HostMirrorMemorySpace(), i_d);
+    auto                j_h = Kokkos::create_mirror_view_and_copy(HostMirrorMemorySpace(), j_d);
 
     // diag_dual is set until MatAssemblyEnd() where we copy diag from host to device
     a_dual = MatScalarKokkosDualView(a_d, a_h);

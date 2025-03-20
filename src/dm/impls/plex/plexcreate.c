@@ -17,16 +17,73 @@ PetscLogEvent DMPLEX_CreateFromFile, DMPLEX_CreateFromOptions, DMPLEX_BuildFromC
 /* External function declarations here */
 static PetscErrorCode DMInitialize_Plex(DM dm);
 
+PETSC_EXTERN PetscErrorCode DMPlexCheckEGADS_Private(DM dm)
+{
+  PetscObject modelObj;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectQuery((PetscObject)dm, "EGADS Model", &modelObj));
+  PetscCheck(modelObj, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Input DM must have attached EGADS Geometry Model");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMPlexCopyContext_Private(DM dmin, const char name[], DM dmout)
+{
+  PetscObject obj;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectQuery((PetscObject)dmin, name, &obj));
+  if (obj) PetscCall(PetscObjectCompose((PetscObject)dmout, name, obj));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMPlexSwapContext_Private(DM dmA, const char name[], DM dmB)
+{
+  PetscObject objA, objB;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectQuery((PetscObject)dmA, name, &objA));
+  PetscCall(PetscObjectQuery((PetscObject)dmB, name, &objB));
+  PetscCall(PetscObjectReference(objA));
+  PetscCall(PetscObjectReference(objB));
+  PetscCall(PetscObjectCompose((PetscObject)dmA, name, objB));
+  PetscCall(PetscObjectCompose((PetscObject)dmB, name, objA));
+  PetscCall(PetscObjectDereference(objA));
+  PetscCall(PetscObjectDereference(objB));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode DMPlexCopyEGADSInfo_Internal(DM dmin, DM dmout)
+{
+  PetscFunctionBegin;
+  PetscCall(DMPlexCopyContext_Private(dmin, "EGADS Model", dmout));
+  PetscCall(DMPlexCopyContext_Private(dmin, "EGADS Context", dmout));
+  PetscCall(DMPlexCopyContext_Private(dmin, "EGADSlite Model", dmout));
+  PetscCall(DMPlexCopyContext_Private(dmin, "EGADSlite Context", dmout));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMPlexSwapEGADSInfo_Private(DM dmA, DM dmB)
+{
+  PetscFunctionBegin;
+  PetscCall(DMPlexSwapContext_Private(dmA, "EGADS Model", dmB));
+  PetscCall(DMPlexSwapContext_Private(dmA, "EGADS Context", dmB));
+  PetscCall(DMPlexSwapContext_Private(dmA, "EGADSlite Model", dmB));
+  PetscCall(DMPlexSwapContext_Private(dmA, "EGADSlite Context", dmB));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* This copies internal things in the Plex structure that we generally want when making a new, related Plex */
 PetscErrorCode DMPlexCopy_Internal(DM dmin, PetscBool copyPeriodicity, PetscBool copyOverlap, DM dmout)
 {
   const PetscReal     *maxCell, *Lstart, *L;
   VecType              vecType;
   MatType              matType;
-  PetscBool            dist, useCeed;
+  PetscBool            dist, useCeed, balance_partition;
   DMReorderDefaultFlag reorder;
 
   PetscFunctionBegin;
+  if (dmin == dmout) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(DMGetVecType(dmin, &vecType));
   PetscCall(DMSetVecType(dmout, vecType));
   PetscCall(DMGetMatType(dmin, &matType));
@@ -42,14 +99,18 @@ PetscErrorCode DMPlexCopy_Internal(DM dmin, PetscBool copyPeriodicity, PetscBool
   PetscCall(DMPlexReorderSetDefault(dmout, reorder));
   PetscCall(DMPlexGetUseCeed(dmin, &useCeed));
   PetscCall(DMPlexSetUseCeed(dmout, useCeed));
+  PetscCall(DMPlexGetPartitionBalance(dmin, &balance_partition));
+  PetscCall(DMPlexSetPartitionBalance(dmout, balance_partition));
   ((DM_Plex *)dmout->data)->useHashLocation = ((DM_Plex *)dmin->data)->useHashLocation;
   ((DM_Plex *)dmout->data)->printSetValues  = ((DM_Plex *)dmin->data)->printSetValues;
   ((DM_Plex *)dmout->data)->printFEM        = ((DM_Plex *)dmin->data)->printFEM;
   ((DM_Plex *)dmout->data)->printFVM        = ((DM_Plex *)dmin->data)->printFVM;
   ((DM_Plex *)dmout->data)->printL2         = ((DM_Plex *)dmin->data)->printL2;
   ((DM_Plex *)dmout->data)->printLocate     = ((DM_Plex *)dmin->data)->printLocate;
+  ((DM_Plex *)dmout->data)->printProject    = ((DM_Plex *)dmin->data)->printProject;
   ((DM_Plex *)dmout->data)->printTol        = ((DM_Plex *)dmin->data)->printTol;
   if (copyOverlap) PetscCall(DMPlexSetOverlap_Plex(dmout, dmin, 0));
+  PetscCall(DMPlexCopyEGADSInfo_Internal(dmin, dmout));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -65,6 +126,7 @@ PetscErrorCode DMPlexReplace_Internal(DM dm, DM *ndm)
   Vec              coords;
   const PetscReal *maxCell, *Lstart, *L;
   PetscInt         dim, cdim;
+  PetscBool        use_natural;
 
   PetscFunctionBegin;
   if (dm == dmNew) {
@@ -98,8 +160,10 @@ PetscErrorCode DMPlexReplace_Internal(DM dm, DM *ndm)
   ((DM_Plex *)dmNew->data)->coordFunc = ((DM_Plex *)dm->data)->coordFunc;
   PetscCall(DMGetPeriodicity(dmNew, &maxCell, &Lstart, &L));
   PetscCall(DMSetPeriodicity(dm, maxCell, Lstart, L));
-  PetscCall(DMPlexGetGlobalToNaturalSF(dmNew, &sf));
-  PetscCall(DMPlexSetGlobalToNaturalSF(dm, sf));
+  PetscCall(DMGetNaturalSF(dmNew, &sf));
+  PetscCall(DMSetNaturalSF(dm, sf));
+  PetscCall(DMGetUseNatural(dmNew, &use_natural));
+  PetscCall(DMSetUseNatural(dm, use_natural));
   PetscCall(DMDestroy_Plex(dm));
   PetscCall(DMInitialize_Plex(dm));
   dm->data = dmNew->data;
@@ -114,6 +178,7 @@ PetscErrorCode DMPlexReplace_Internal(DM dm, DM *ndm)
   PetscCall(DMCopyLabels(dmNew, dm, PETSC_OWN_POINTER, PETSC_TRUE, DM_COPY_LABELS_FAIL));
   PetscCall(DMGetCoarseDM(dmNew, &coarseDM));
   PetscCall(DMSetCoarseDM(dm, coarseDM));
+  PetscCall(DMPlexCopyEGADSInfo_Internal(dmNew, dm));
   PetscCall(DMDestroy(ndm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -171,6 +236,8 @@ static PetscErrorCode DMPlexSwap_Static(DM dmA, DM dmB)
   PetscCall(DMSetCellCoordinatesLocal(dmB, coordsA));
   PetscCall(PetscObjectDereference((PetscObject)coordsA));
 
+  PetscCall(DMPlexSwapEGADSInfo_Private(dmA, dmB));
+
   fieldTmp                  = dmA->coordinates[0].field;
   dmA->coordinates[0].field = dmB->coordinates[0].field;
   dmB->coordinates[0].field = fieldTmp;
@@ -226,17 +293,85 @@ PetscErrorCode DMPlexCreateCoordinateSpace(DM dm, PetscInt degree, PetscBool pro
   DM_Plex *mesh = (DM_Plex *)dm->data;
   PetscFE  fe   = NULL;
   DM       cdm;
-  PetscInt dim, dE, qorder, height;
+  PetscInt dim, cdim, dE, qorder, height;
 
   PetscFunctionBegin;
   PetscCall(DMGetDimension(dm, &dim));
+  cdim = dim;
   PetscCall(DMGetCoordinateDim(dm, &dE));
   qorder = degree;
   PetscCall(DMGetCoordinateDM(dm, &cdm));
   PetscObjectOptionsBegin((PetscObject)cdm);
   PetscCall(PetscOptionsBoundedInt("-default_quadrature_order", "Quadrature order is one less than quadrature points per edge", "DMPlexCreateCoordinateSpace", qorder, &qorder, NULL, 0));
+  PetscCall(PetscOptionsBoundedInt("-dm_plex_coordinate_dim", "Set the coordinate dimension", "DMPlexCreateCoordinateSpace", cdim, &cdim, NULL, dim));
   PetscOptionsEnd();
   PetscCall(DMPlexGetVTKCellHeight(dm, &height));
+  if (cdim > dim) {
+    DM           cdm;
+    PetscSection cs, csNew;
+    Vec          coordinates, coordinatesNew;
+    VecType      vectype;
+    IS           idx;
+    PetscInt    *indices;
+    PetscInt     bs, n;
+
+    // Recreate coordinate section
+    {
+      const char *fieldName = NULL, *compName = NULL;
+      PetscInt    Nc, pStart, pEnd;
+
+      PetscCall(DMGetCoordinateDM(dm, &cdm));
+      PetscCall(DMGetLocalSection(cdm, &cs));
+      PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)cs), &csNew));
+      PetscCall(PetscSectionSetNumFields(csNew, 1));
+      PetscCall(PetscSectionGetFieldName(cs, 0, &fieldName));
+      PetscCall(PetscSectionSetFieldName(csNew, 0, fieldName));
+      PetscCall(PetscSectionGetFieldComponents(cs, 0, &Nc));
+      PetscCall(PetscSectionSetFieldComponents(csNew, 0, cdim));
+      for (PetscInt c = 0; c < Nc; ++c) {
+        PetscCall(PetscSectionGetComponentName(cs, 0, c, &compName));
+        PetscCall(PetscSectionSetComponentName(csNew, 0, c, compName));
+      }
+      PetscCall(PetscSectionGetChart(cs, &pStart, &pEnd));
+      PetscCall(PetscSectionSetChart(csNew, pStart, pEnd));
+      for (PetscInt p = pStart; p < pEnd; ++p) {
+        PetscCall(PetscSectionSetDof(csNew, p, cdim));
+        PetscCall(PetscSectionSetFieldDof(csNew, p, 0, cdim));
+      }
+      PetscCall(PetscSectionSetUp(csNew));
+    }
+    PetscCall(DMSetLocalSection(cdm, csNew));
+    PetscCall(PetscSectionDestroy(&csNew));
+    // Inject coordinates into higher dimension
+    PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
+    PetscCall(VecGetBlockSize(coordinates, &bs));
+    PetscCheck(bs == dim, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "We can only inject simple coordinates into a higher dimension");
+    PetscCall(VecCreate(PetscObjectComm((PetscObject)coordinates), &coordinatesNew));
+    PetscCall(VecGetType(coordinates, &vectype));
+    PetscCall(VecSetType(coordinatesNew, vectype));
+    PetscCall(VecGetLocalSize(coordinates, &n));
+    PetscCheck(!(n % bs), PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "We can only inject simple coordinates into a higher dimension");
+    n /= bs;
+    PetscCall(VecSetSizes(coordinatesNew, n * cdim, PETSC_DETERMINE));
+    PetscCall(VecSetUp(coordinatesNew));
+    PetscCall(PetscMalloc1(n * bs, &indices));
+    for (PetscInt i = 0; i < n; ++i)
+      for (PetscInt b = 0; b < bs; ++b) indices[i * bs + b] = i * cdim + b;
+    PetscCall(ISCreateGeneral(PETSC_COMM_SELF, n * bs, indices, PETSC_OWN_POINTER, &idx));
+    PetscCall(VecISCopy(coordinatesNew, idx, SCATTER_FORWARD, coordinates));
+    PetscCall(ISDestroy(&idx));
+    PetscCall(DMSetCoordinatesLocal(dm, coordinatesNew));
+    PetscCall(VecDestroy(&coordinatesNew));
+    PetscCall(DMSetCoordinateDim(dm, cdim));
+    {
+      PetscInt gn;
+
+      PetscCall(DMGetCoordinates(dm, &coordinatesNew));
+      PetscCall(VecGetLocalSize(coordinatesNew, &gn));
+      PetscCheck(gn == n * cdim, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Global coordinate size %" PetscInt_FMT " != %" PetscInt_FMT "local coordinate size", gn, n * cdim);
+    }
+    dE = cdim;
+  }
   if (degree >= 0) {
     DMPolytopeType ct = DM_POLYTOPE_UNKNOWN;
     PetscInt       cStart, cEnd, gct;
@@ -841,14 +976,14 @@ static PetscErrorCode DMPlexCreateLineMesh_Internal(DM dm, PetscInt segments, Pe
 }
 
 // Creates "Face Sets" label based on the standard box labeling conventions
-static PetscErrorCode DMPlexSetBoxLabel_Internal(DM dm)
+static PetscErrorCode DMPlexSetBoxLabel_Internal(DM dm, const DMBoundaryType periodicity[])
 {
   DM              cdm;
   PetscSection    csection;
   Vec             coordinates;
   DMLabel         label;
   IS              faces_is;
-  PetscInt        dim, num_face;
+  PetscInt        dim, num_face = 0;
   const PetscInt *faces;
   PetscInt        faceMarkerBottom, faceMarkerTop, faceMarkerFront, faceMarkerBack, faceMarkerRight, faceMarkerLeft;
 
@@ -865,7 +1000,6 @@ static PetscErrorCode DMPlexSetBoxLabel_Internal(DM dm)
   }
   PetscCall(DMPlexMarkBoundaryFaces(dm, 1, label));
   PetscCall(DMGetStratumIS(dm, "Face Sets", 1, &faces_is));
-  if (!faces_is) PetscFunctionReturn(PETSC_SUCCESS); // No faces on rank
 
   switch (dim) {
   case 2:
@@ -886,8 +1020,8 @@ static PetscErrorCode DMPlexSetBoxLabel_Internal(DM dm)
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Dimension %" PetscInt_FMT " not supported", dim);
   }
 
-  PetscCall(ISGetLocalSize(faces_is, &num_face));
-  PetscCall(ISGetIndices(faces_is, &faces));
+  if (faces_is) PetscCall(ISGetLocalSize(faces_is, &num_face));
+  if (faces_is) PetscCall(ISGetIndices(faces_is, &faces));
   PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
   PetscCall(DMGetCoordinateDM(dm, &cdm));
   PetscCall(DMGetLocalSection(cdm, &csection));
@@ -962,8 +1096,143 @@ static PetscErrorCode DMPlexSetBoxLabel_Internal(DM dm)
     PetscCall(DMSetLabelValue(dm, "Face Sets", face, label_value));
     PetscCall(DMPlexVecRestoreClosure(cdm, csection, coordinates, face, &coords_size, &coords));
   }
-  PetscCall(ISRestoreIndices(faces_is, &faces));
+  if (faces_is) PetscCall(ISRestoreIndices(faces_is, &faces));
   PetscCall(ISDestroy(&faces_is));
+
+  // Create Isoperiodic SF from newly-created face labels
+  PetscSF     periodicsfs[3];
+  PetscInt    periodic_sf_index  = 0;
+  PetscScalar transform[3][4][4] = {{{0.}}};
+  for (PetscInt d = 0; d < dim; d++) {
+    IS              donor_is, periodic_is;
+    const PetscInt *donor_faces = NULL, *periodic_faces = NULL;
+    PetscInt        num_donor = 0, num_periodic = 0;
+    PetscSF         centroidsf;
+    PetscReal       donor_to_periodic_distance;
+    const PetscInt  face_pairings[2][3][2] = {
+      // 2D face pairings, {donor, periodic}
+      {{4, 2}, {1, 3}},
+      // 3D face pairings
+      {{5, 6}, {3, 4}, {1, 2}}
+    };
+
+    if (periodicity[d] != DM_BOUNDARY_PERIODIC) continue;
+    {
+      // Compute centroidsf, which is the mapping from donor faces to periodic faces
+      // Matches the centroid of the faces together, ignoring the periodic direction component (which should not match between donor and periodic face)
+      PetscInt     coords_size, centroid_comps = dim - 1;
+      PetscScalar *coords = NULL;
+      PetscReal   *donor_centroids, *periodic_centroids;
+      PetscReal    loc_periodic[2] = {PETSC_MIN_REAL, PETSC_MIN_REAL}, loc_periodic_global[2]; // Location of donor (0) and periodic (1) faces in periodic direction
+
+      PetscCall(DMGetStratumIS(dm, "Face Sets", face_pairings[dim - 2][d][0], &donor_is));
+      PetscCall(DMGetStratumIS(dm, "Face Sets", face_pairings[dim - 2][d][1], &periodic_is));
+      if (donor_is) {
+        PetscCall(ISGetLocalSize(donor_is, &num_donor));
+        PetscCall(ISGetIndices(donor_is, &donor_faces));
+      }
+      if (periodic_is) {
+        PetscCall(ISGetLocalSize(periodic_is, &num_periodic));
+        PetscCall(ISGetIndices(periodic_is, &periodic_faces));
+      }
+      PetscCall(PetscCalloc2(num_donor * centroid_comps, &donor_centroids, num_periodic * centroid_comps, &periodic_centroids));
+      for (PetscInt f = 0; f < num_donor; f++) {
+        PetscInt face = donor_faces[f], num_coords;
+        PetscCall(DMPlexVecGetClosureAtDepth_Internal(cdm, csection, coordinates, face, 0, &coords_size, &coords));
+        num_coords = coords_size / dim;
+        for (PetscInt c = 0; c < num_coords; c++) {
+          PetscInt comp_index = 0;
+          loc_periodic[0]     = PetscRealPart(coords[c * dim + d]);
+          for (PetscInt i = 0; i < dim; i++) {
+            if (i == d) continue; // Periodic direction not used for centroid calculation
+            donor_centroids[f * centroid_comps + comp_index] += PetscRealPart(coords[c * dim + i]) / num_coords;
+            comp_index++;
+          }
+        }
+        PetscCall(DMPlexVecRestoreClosure(cdm, csection, coordinates, face, &coords_size, &coords));
+      }
+
+      for (PetscInt f = 0; f < num_periodic; f++) {
+        PetscInt face = periodic_faces[f], num_coords;
+        PetscCall(DMPlexVecGetClosureAtDepth_Internal(cdm, csection, coordinates, face, 0, &coords_size, &coords));
+        num_coords = coords_size / dim;
+        for (PetscInt c = 0; c < num_coords; c++) {
+          PetscInt comp_index = 0;
+          loc_periodic[1]     = PetscRealPart(coords[c * dim + d]);
+          for (PetscInt i = 0; i < dim; i++) {
+            if (i == d) continue; // Periodic direction not used for centroid calculation
+            periodic_centroids[f * centroid_comps + comp_index] += PetscRealPart(coords[c * dim + i]) / num_coords;
+            comp_index++;
+          }
+        }
+        PetscCall(DMPlexVecRestoreClosure(cdm, csection, coordinates, face, &coords_size, &coords));
+      }
+      PetscCallMPI(MPIU_Allreduce(loc_periodic, loc_periodic_global, 2, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)dm)));
+      donor_to_periodic_distance = loc_periodic_global[1] - loc_periodic_global[0];
+
+      PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)dm), &centroidsf));
+      PetscCall(PetscSFSetGraphFromCoordinates(centroidsf, num_donor, num_periodic, centroid_comps, 1e-10, donor_centroids, periodic_centroids));
+      PetscCall(PetscSFViewFromOptions(centroidsf, NULL, "-dm_plex_box_label_centroid_sf_view"));
+      PetscCall(PetscFree2(donor_centroids, periodic_centroids));
+    }
+
+    { // Create Isoperiodic SF using centroidsSF
+      PetscInt           pStart, pEnd;
+      PetscInt          *leaf_faces;
+      const PetscSFNode *firemote;
+      PetscSFNode       *isoperiodic_leaves;
+
+      PetscCall(PetscMalloc1(num_periodic, &leaf_faces));
+      PetscCall(PetscSFBcastBegin(centroidsf, MPIU_INT, donor_faces, leaf_faces, MPI_REPLACE));
+      PetscCall(PetscSFBcastEnd(centroidsf, MPIU_INT, donor_faces, leaf_faces, MPI_REPLACE));
+
+      PetscCall(PetscMalloc1(num_periodic, &isoperiodic_leaves));
+      PetscCall(PetscSFGetGraph(centroidsf, NULL, NULL, NULL, &firemote));
+      for (PetscInt l = 0; l < num_periodic; ++l) {
+        isoperiodic_leaves[l].index = leaf_faces[l];
+        isoperiodic_leaves[l].rank  = firemote[l].rank;
+      }
+
+      PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
+      PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)dm), &periodicsfs[periodic_sf_index]));
+      PetscCall(PetscSFSetGraph(periodicsfs[periodic_sf_index], pEnd - pStart, num_periodic, (PetscInt *)periodic_faces, PETSC_COPY_VALUES, isoperiodic_leaves, PETSC_OWN_POINTER));
+      PetscCall(PetscSFViewFromOptions(periodicsfs[periodic_sf_index], NULL, "-dm_plex_box_label_periodic_sf_view"));
+      PetscCall(PetscFree(leaf_faces));
+    }
+
+    transform[periodic_sf_index][0][0] = 1;
+    transform[periodic_sf_index][1][1] = 1;
+    transform[periodic_sf_index][2][2] = 1;
+    transform[periodic_sf_index][3][3] = 1;
+    transform[periodic_sf_index][d][3] = donor_to_periodic_distance;
+
+    periodic_sf_index++;
+    PetscCall(PetscSFDestroy(&centroidsf));
+    if (donor_is) {
+      PetscCall(ISRestoreIndices(donor_is, &donor_faces));
+      PetscCall(ISDestroy(&donor_is));
+    }
+    if (periodic_is) {
+      PetscCall(ISRestoreIndices(periodic_is, &periodic_faces));
+      PetscCall(ISDestroy(&periodic_is));
+    }
+    PetscCall(DMClearLabelStratum(dm, "Face Sets", face_pairings[dim - 2][d][0]));
+    PetscCall(DMClearLabelStratum(dm, "Face Sets", face_pairings[dim - 2][d][1]));
+  }
+  PetscCall(DMPlexSetIsoperiodicFaceSF(dm, periodic_sf_index, periodicsfs));
+  PetscCall(DMPlexSetIsoperiodicFaceTransform(dm, periodic_sf_index, (const PetscScalar *)transform));
+  for (PetscInt p = 0; p < periodic_sf_index; p++) PetscCall(PetscSFDestroy(&periodicsfs[p]));
+
+  { // Update coordinate DM with new Face Sets label
+    DM      cdm;
+    DMLabel oldFaceSets, newFaceSets;
+    PetscCall(DMGetCoordinateDM(dm, &cdm));
+    PetscCall(DMGetLabel(cdm, "Face Sets", &oldFaceSets));
+    if (oldFaceSets) PetscCall(DMRemoveLabelBySelf(cdm, &oldFaceSets, PETSC_FALSE));
+    PetscCall(DMLabelDuplicate(label, &newFaceSets));
+    PetscCall(DMAddLabel(cdm, newFaceSets));
+    PetscCall(DMLabelDestroy(&newFaceSets));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -985,7 +1254,7 @@ static PetscErrorCode DMPlexCreateBoxMesh_Simplex_Internal(DM dm, PetscInt dim, 
   PetscCall(DMPlexReplace_Internal(dm, &vol));
   if (interpolate) {
     PetscCall(DMPlexInterpolateInPlace_Internal(dm));
-    PetscCall(DMPlexSetBoxLabel_Internal(dm));
+    PetscCall(DMPlexSetBoxLabel_Internal(dm, periodicity));
   }
   PetscCall(DMDestroy(&boundary));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1667,81 +1936,171 @@ static PetscErrorCode DMPlexTensorPointLexicographic_Private(PetscInt len, const
 
 static PetscInt TupleToIndex_Private(PetscInt len, const PetscInt max[], const PetscInt tup[])
 {
-  PetscInt i, idx = tup[len - 1];
+  PetscInt idx = tup[len - 1];
 
-  for (i = len - 2; i >= 0; --i) {
+  for (PetscInt i = len - 2; i >= 0; --i) {
     idx *= max[i];
     idx += tup[i];
   }
   return idx;
 }
 
-static PetscErrorCode DestroyExtent_Private(void *extent)
+static void IndexToTuple_Private(PetscInt len, const PetscInt max[], PetscInt idx, PetscInt tup[])
 {
-  return PetscFree(extent);
+  for (PetscInt i = 0; i < len; ++i) {
+    tup[i] = idx % max[i];
+    idx    = (idx - tup[i]) / max[i];
+  }
 }
 
-static PetscErrorCode DMPlexCreateHypercubicMesh_Internal(DM dm, PetscInt dim, const PetscReal lower[], const PetscReal upper[], const PetscInt edges[], const DMBoundaryType bd[])
+static void TupleToRanks_Private(PetscInt len, const PetscInt max[], const PetscInt procs[], const PetscInt tup[], PetscInt ranks[])
 {
-  Vec          coordinates;
-  PetscSection coordSection;
-  DMLabel      cutLabel    = NULL;
-  PetscBool    cutMarker   = PETSC_FALSE;
-  PetscBool    periodic    = PETSC_FALSE;
-  PetscInt     numCells    = 1, c;
-  PetscInt     numVertices = 1, v;
-  PetscScalar *coords;
-  PetscInt    *vertices, *vert, *vtmp, *supp, cone[2];
-  PetscInt     d, e, cell = 0, coordSize;
-  PetscMPIInt  rank;
+  for (PetscInt i = 0; i < len; ++i) {
+    const PetscInt div = max[i] / procs[i];
+    const PetscInt rem = max[i] % procs[i];
+    const PetscInt idx = (tup[i] < 0 ? max[i] + tup[i] : tup[i]) % max[i];
+
+    if (idx < rem * (div + 1)) ranks[i] = idx / (div + 1);
+    else ranks[i] = rem + (idx - rem * (div + 1)) / div;
+  }
+}
+
+static void RanksToSizes_Private(PetscInt len, const PetscInt max[], const PetscInt procs[], const PetscInt ranks[], PetscInt sizes[])
+{
+  for (PetscInt i = 0; i < len; ++i) {
+    const PetscInt div = max[i] / procs[i];
+    const PetscInt rem = max[i] % procs[i];
+
+    sizes[i] = ranks[i] < rem ? div + 1 : div;
+  }
+}
+
+/*
+  In serial, the mesh is completely periodic. In parallel, we will include a layer of ghost vertices around the patch, so our edges will not wrap around in parallel. This will instead be handled by the SF.
+
+  The cone for all edges will always be complete. Even in the presence of boundaries, we will keep all support sizes constant. When an edge would not exist in the support, we will create one to wrap back periodically. This allows for uniform stencils, and that edge will not be used for computation.
+
+  All point which do not attain the vertex lower or upper bound in any dimension are owned, the rest are leaves owned by another process and present in the SF.
+
+  Parallel Layout:
+
+  We create a cubic process grid of dimension P^{1/d} on each side. The IndexToTuple_Private() function maps the global rank to the local rank in each dimension. We divide edges using the PETSc distribution rule in each dimension, and then add overlap. TupleToRanks_Private() returns the local rank in ech dimension for a tuple. RanksToSizes_Private() gives the size in each dimension for the domain with those local ranks.
+*/
+static PetscErrorCode DMPlexCreateHypercubicMesh_Internal(DM dm, PetscInt dim, const PetscReal lower[], const PetscReal upper[], const PetscInt edges[], PetscInt overlap, const DMBoundaryType bd[])
+{
+  const PetscInt debug = ((DM_Plex *)dm->data)->printAdj;
+  PetscSF        sf;
+  Vec            coordinates;
+  PetscSection   coordSection;
+  DMLabel        cutLabel    = NULL;
+  PetscBool      cutMarker   = PETSC_FALSE;
+  PetscBool      periodic    = PETSC_FALSE;
+  PetscInt       numCells    = 1;
+  PetscInt       numVertices = 1;
+  PetscSFNode   *remotes;
+  PetscScalar   *coords;
+  PetscInt      *procs;     // The number of processes along each dimension
+  PetscInt      *lrank;     // Rank in each dimension, lrank[d] \in [0, procs[d])
+  PetscInt      *ledges;    // The number of edges along each dimension for this process
+  PetscInt      *vstart;    // The first vertex along each dimension on this processes
+  PetscInt      *vertices;  // The number of vertices along each dimension on this process
+  PetscInt      *rvert;     // The global (not local) vertex number along each dimension
+  PetscInt      *rrank;     // The rank along each dimension for the process owning rvert[]
+  PetscInt      *rvertices; // The number of vertices along each dimension for the process rrank[]
+  PetscInt      *vert, *vtmp, *supp, cone[2], *leaves;
+  PetscInt       cell = 0, coordSize, Nl = 0, Nl2 = 0;
+  PetscMPIInt    rank, size;
+  MPI_Comm       comm;
 
   PetscFunctionBegin;
-  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(DMSetDimension(dm, dim));
-  PetscCall(PetscCalloc4(dim, &vertices, dim, &vert, dim, &vtmp, 2 * dim, &supp));
+  PetscCall(DMPlexDistributeSetDefault(dm, PETSC_FALSE));
+  PetscCall(PetscCalloc4(dim, &procs, dim, &lrank, dim, &rrank, 2 * dim, &supp));
+  PetscCall(PetscCalloc7(dim, &ledges, dim, &vertices, dim, &rvertices, dim, &vert, dim, &rvert, dim, &vstart, dim, &vtmp));
   PetscCall(DMCreateLabel(dm, "marker"));
   PetscCall(PetscOptionsGetBool(((PetscObject)dm)->options, ((PetscObject)dm)->prefix, "-dm_plex_periodic_cut", &cutMarker, NULL));
-  for (d = 0; d < dim; ++d) periodic = (periodic || bd[d] == DM_BOUNDARY_PERIODIC) ? PETSC_TRUE : PETSC_FALSE;
+  for (PetscInt d = 0; d < dim; ++d) periodic = (periodic || bd[d] == DM_BOUNDARY_PERIODIC) ? PETSC_TRUE : PETSC_FALSE;
   if (periodic && cutMarker) {
     PetscCall(DMCreateLabel(dm, "periodic_cut"));
     PetscCall(DMGetLabel(dm, "periodic_cut", &cutLabel));
   }
-  for (d = 0; d < dim; ++d) PetscCheck(bd[d] == DM_BOUNDARY_PERIODIC, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Hypercubic mesh must be periodic now");
-  for (d = 0; d < dim; ++d) {
-    vertices[d] = edges[d];
+  for (PetscInt d = 0; d < dim; ++d) PetscCheck(bd[d] == DM_BOUNDARY_PERIODIC, comm, PETSC_ERR_SUP, "Hypercubic mesh must be periodic now");
+  overlap = overlap == PETSC_DETERMINE ? 1 : overlap;
+  PetscCheck(overlap >= 1, comm, PETSC_ERR_SUP, "Overlap %" PetscInt_FMT " must be greater than 0", overlap);
+  if (size > 1) {
+    PetscInt Npr = 1;
+
+    // Make process grid
+    if (debug) PetscCall(PetscPrintf(comm, "Process grid:"));
+    for (PetscInt d = 0; d < dim; ++d) {
+      procs[d] = PetscRintReal(PetscPowReal(size, 1. / dim));
+      Npr *= procs[d];
+      if (debug) PetscCall(PetscPrintf(comm, " %" PetscInt_FMT, procs[d]));
+    }
+    if (debug) PetscCall(PetscPrintf(comm, "\n"));
+    PetscCheck(Npr == size, comm, PETSC_ERR_PLIB, "Process grid size %" PetscInt_FMT " != %d comm size", Npr, size);
+    IndexToTuple_Private(dim, procs, rank, lrank);
+    for (PetscInt d = 0; d < dim; ++d) {
+      ledges[d] = edges[d] / procs[d] + (edges[d] % procs[d] > lrank[d] ? 1 : 0);
+      vstart[d] = 0;
+      for (PetscInt r = 0; r < lrank[d]; ++r) vstart[d] += edges[d] / procs[d] + (edges[d] % procs[d] > r ? 1 : 0);
+      vstart[d] -= overlap; // For halo
+    }
+  } else {
+    for (PetscInt d = 0; d < dim; ++d) {
+      procs[d]  = 1;
+      ledges[d] = edges[d];
+    }
+  }
+  // Calculate local patch size
+  for (PetscInt d = 0; d < dim; ++d) {
+    vertices[d] = ledges[d] + (procs[d] > 1 ? 2 * overlap : 0);
     numVertices *= vertices[d];
   }
   numCells = numVertices * dim;
   PetscCall(DMPlexSetChart(dm, 0, numCells + numVertices));
-  for (c = 0; c < numCells; ++c) PetscCall(DMPlexSetConeSize(dm, c, 2));
-  for (v = numCells; v < numCells + numVertices; ++v) PetscCall(DMPlexSetSupportSize(dm, v, 2 * dim));
-  /* TODO Loop over boundary and reset support sizes */
+  for (PetscInt c = 0; c < numCells; ++c) PetscCall(DMPlexSetConeSize(dm, c, 2));
+  for (PetscInt v = numCells; v < numCells + numVertices; ++v) PetscCall(DMPlexSetSupportSize(dm, v, 2 * dim));
   PetscCall(DMSetUp(dm)); /* Allocate space for cones and supports */
   /* Build cell cones and vertex supports */
   PetscCall(DMCreateLabel(dm, "celltype"));
+  if (debug) PetscCall(PetscSynchronizedPrintf(comm, "Topology for rank %d:\n", rank));
   while (vert[dim - 1] < vertices[dim - 1]) {
     const PetscInt vertex = TupleToIndex_Private(dim, vertices, vert) + numCells;
     PetscInt       s      = 0;
+    PetscBool      leaf   = PETSC_FALSE;
 
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Vertex %" PetscInt_FMT ":", vertex));
-    for (d = 0; d < dim; ++d) PetscCall(PetscPrintf(PETSC_COMM_SELF, " %" PetscInt_FMT, vert[d]));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
+    if (debug) {
+      PetscCall(PetscSynchronizedPrintf(comm, "Vertex %" PetscInt_FMT ":", vertex));
+      for (PetscInt d = 0; d < dim; ++d) PetscCall(PetscSynchronizedPrintf(comm, " %" PetscInt_FMT, vert[d]));
+      PetscCall(PetscSynchronizedPrintf(comm, "\n"));
+    }
     PetscCall(DMPlexSetCellType(dm, vertex, DM_POLYTOPE_POINT));
-    for (d = 0; d < dim; ++d) {
-      for (e = 0; e < dim; ++e) vtmp[e] = vert[e];
+    // Define edge cones
+    for (PetscInt d = 0; d < dim; ++d) {
+      for (PetscInt e = 0; e < dim; ++e) vtmp[e] = vert[e];
       vtmp[d] = (vert[d] + 1) % vertices[d];
       cone[0] = vertex;
       cone[1] = TupleToIndex_Private(dim, vertices, vtmp) + numCells;
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Vertex %" PetscInt_FMT ":", cone[1]));
-      for (e = 0; e < dim; ++e) PetscCall(PetscPrintf(PETSC_COMM_SELF, " %" PetscInt_FMT, vtmp[e]));
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
+      if (debug) {
+        PetscCall(PetscSynchronizedPrintf(comm, "  Vertex %" PetscInt_FMT ":", cone[1]));
+        for (PetscInt e = 0; e < dim; ++e) PetscCall(PetscSynchronizedPrintf(comm, " %" PetscInt_FMT, vtmp[e]));
+        PetscCall(PetscSynchronizedPrintf(comm, "\n"));
+      }
       PetscCall(DMPlexSetCone(dm, cell, cone));
       PetscCall(DMPlexSetCellType(dm, cell, DM_POLYTOPE_SEGMENT));
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Edge %" PetscInt_FMT " (%" PetscInt_FMT " %" PetscInt_FMT ")\n", cell, cone[0], cone[1]));
+      if (debug) PetscCall(PetscSynchronizedPrintf(comm, "  Edge %" PetscInt_FMT " (%" PetscInt_FMT " %" PetscInt_FMT ")\n", cell, cone[0], cone[1]));
       ++cell;
+      // Shared vertices are any in the first or last overlap layers
+      if (vert[d] < overlap || vert[d] >= vertices[d] - overlap) leaf = PETSC_TRUE;
     }
-    for (d = 0; d < dim; ++d) {
-      for (e = 0; e < dim; ++e) vtmp[e] = vert[e];
+    if (size > 1 && leaf) ++Nl;
+    // Define vertex supports
+    for (PetscInt d = 0; d < dim; ++d) {
+      for (PetscInt e = 0; e < dim; ++e) vtmp[e] = vert[e];
       vtmp[d]   = (vert[d] + vertices[d] - 1) % vertices[d];
       supp[s++] = TupleToIndex_Private(dim, vertices, vtmp) * dim + d;
       supp[s++] = (vertex - numCells) * dim + d;
@@ -1749,53 +2108,107 @@ static PetscErrorCode DMPlexCreateHypercubicMesh_Internal(DM dm, PetscInt dim, c
     }
     PetscCall(DMPlexTensorPointLexicographic_Private(dim, vertices, vert));
   }
+  if (debug) PetscCall(PetscSynchronizedFlush(comm, NULL));
   PetscCall(DMPlexStratify(dm));
-  /* Build coordinates */
+  // Allocate for SF
+  PetscCall(PetscMalloc1(Nl, &leaves));
+  PetscCall(PetscMalloc1(Nl, &remotes));
+  // Build coordinates
   PetscCall(DMGetCoordinateSection(dm, &coordSection));
   PetscCall(PetscSectionSetNumFields(coordSection, 1));
   PetscCall(PetscSectionSetFieldComponents(coordSection, 0, dim));
   PetscCall(PetscSectionSetChart(coordSection, numCells, numCells + numVertices));
-  for (v = numCells; v < numCells + numVertices; ++v) {
+  for (PetscInt v = numCells; v < numCells + numVertices; ++v) {
     PetscCall(PetscSectionSetDof(coordSection, v, dim));
     PetscCall(PetscSectionSetFieldDof(coordSection, v, 0, dim));
   }
   PetscCall(PetscSectionSetUp(coordSection));
   PetscCall(PetscSectionGetStorageSize(coordSection, &coordSize));
-  PetscCall(VecCreate(PETSC_COMM_SELF, &coordinates));
+  PetscCall(VecCreate(comm, &coordinates));
   PetscCall(PetscObjectSetName((PetscObject)coordinates, "coordinates"));
   PetscCall(VecSetSizes(coordinates, coordSize, PETSC_DETERMINE));
   PetscCall(VecSetBlockSize(coordinates, dim));
   PetscCall(VecSetType(coordinates, VECSTANDARD));
   PetscCall(VecGetArray(coordinates, &coords));
-  for (d = 0; d < dim; ++d) vert[d] = 0;
+  if (debug) PetscCall(PetscSynchronizedPrintf(comm, "Geometry for rank %d:\n", rank));
+  for (PetscInt d = 0; d < dim; ++d) vert[d] = 0;
   while (vert[dim - 1] < vertices[dim - 1]) {
     const PetscInt vertex = TupleToIndex_Private(dim, vertices, vert);
+    PetscBool      leaf   = PETSC_FALSE;
 
-    for (d = 0; d < dim; ++d) coords[vertex * dim + d] = lower[d] + ((upper[d] - lower[d]) / vertices[d]) * vert[d];
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Vertex %" PetscInt_FMT ":", vertex));
-    for (d = 0; d < dim; ++d) PetscCall(PetscPrintf(PETSC_COMM_SELF, " %" PetscInt_FMT, vert[d]));
-    for (d = 0; d < dim; ++d) PetscCall(PetscPrintf(PETSC_COMM_SELF, " %g", (double)PetscRealPart(coords[vertex * dim + d])));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "\n"));
+    for (PetscInt d = 0; d < dim; ++d) {
+      coords[vertex * dim + d] = lower[d] + ((upper[d] - lower[d]) / edges[d]) * (vert[d] + vstart[d]);
+      if (vert[d] < overlap || vert[d] >= vertices[d] - overlap) leaf = PETSC_TRUE;
+    }
+    if (size > 1 && leaf) {
+      PetscInt rnumCells = 1;
+
+      for (PetscInt d = 0; d < dim; ++d) rvert[d] = vert[d] + vstart[d];
+      TupleToRanks_Private(dim, edges, procs, rvert, rrank);
+      leaves[Nl2]       = vertex + numCells;
+      remotes[Nl2].rank = TupleToIndex_Private(dim, procs, rrank);
+      RanksToSizes_Private(dim, edges, procs, rrank, rvertices);
+      for (PetscInt d = 0; d < dim; ++d) {
+        rvertices[d] += 2 * overlap; // Add halo
+        rnumCells *= rvertices[d];
+      }
+      rnumCells *= dim;
+      for (PetscInt d = 0; d < dim; ++d) {
+        const PetscInt diff = rrank[d] - lrank[d];
+
+        if (!diff) rvert[d] = vert[d];                                     // Vertex is local
+        else if (rvert[d] < 0) rvert[d] = rvertices[d] - 1 + rvert[d];     // Wrap around at the bottom
+        else if (rvert[d] >= edges[d]) rvert[d] = rvert[d] - edges[d] + 1; // Wrap around at the top
+        else if (diff == -1) rvert[d] = rvertices[d] - 1 + (vert[d] - overlap);
+        else if (diff == 1) rvert[d] = (vertices[d] - vert[d] - 1) + overlap;
+        else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Process distance %" PetscInt_FMT " in direction %" PetscInt_FMT " should not be possible", diff, d);
+      }
+      remotes[Nl2].index = TupleToIndex_Private(dim, rvertices, rvert) + rnumCells;
+      if (debug) PetscCall(PetscSynchronizedPrintf(comm, "Shared Vertex %" PetscInt_FMT " (%" PetscInt_FMT ", %" PetscInt_FMT ")\n", leaves[Nl2], remotes[Nl2].rank, remotes[Nl2].index));
+      ++Nl2;
+    }
+    if (debug) {
+      PetscCall(PetscSynchronizedPrintf(comm, "Vertex %" PetscInt_FMT ":", vertex));
+      for (PetscInt d = 0; d < dim; ++d) PetscCall(PetscSynchronizedPrintf(comm, " %" PetscInt_FMT, vert[d] + vstart[d]));
+      for (PetscInt d = 0; d < dim; ++d) PetscCall(PetscSynchronizedPrintf(comm, " %g", (double)PetscRealPart(coords[vertex * dim + d])));
+      PetscCall(PetscSynchronizedPrintf(comm, "\n"));
+    }
     PetscCall(DMPlexTensorPointLexicographic_Private(dim, vertices, vert));
   }
+  if (debug) PetscCall(PetscSynchronizedFlush(comm, NULL));
   PetscCall(VecRestoreArray(coordinates, &coords));
   PetscCall(DMSetCoordinatesLocal(dm, coordinates));
   PetscCall(VecDestroy(&coordinates));
-  PetscCall(PetscFree4(vertices, vert, vtmp, supp));
+  // Build SF
+  PetscCheck(Nl == Nl2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Initial number of leaves %" PetscInt_FMT " != %" PetscInt_FMT " final number", Nl, Nl2);
+  PetscCall(DMGetPointSF(dm, &sf));
+  PetscCall(PetscSFSetGraph(sf, numCells + numVertices, Nl, leaves, PETSC_OWN_POINTER, remotes, PETSC_OWN_POINTER));
+  if (debug) PetscCall(PetscSFView(sf, PETSC_VIEWER_STDOUT_WORLD));
   //PetscCall(DMSetPeriodicity(dm, NULL, lower, upper));
   // Attach the extent
   {
     PetscContainer c;
-    PetscInt      *extent;
+    PetscInt      *extent, *lextent;
 
     PetscCall(PetscMalloc1(dim, &extent));
-    for (PetscInt d = 0; d < dim; ++d) extent[d] = edges[d];
+    PetscCall(PetscMalloc1(dim, &lextent));
+    for (PetscInt d = 0; d < dim; ++d) {
+      extent[d]  = edges[d];
+      lextent[d] = ledges[d];
+    }
     PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &c));
-    PetscCall(PetscContainerSetUserDestroy(c, DestroyExtent_Private));
+    PetscCall(PetscContainerSetCtxDestroy(c, PetscCtxDestroyDefault));
     PetscCall(PetscContainerSetPointer(c, extent));
     PetscCall(PetscObjectCompose((PetscObject)dm, "_extent", (PetscObject)c));
     PetscCall(PetscContainerDestroy(&c));
+    PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &c));
+    PetscCall(PetscContainerSetCtxDestroy(c, PetscCtxDestroyDefault));
+    PetscCall(PetscContainerSetPointer(c, lextent));
+    PetscCall(PetscObjectCompose((PetscObject)dm, "_lextent", (PetscObject)c));
+    PetscCall(PetscContainerDestroy(&c));
   }
+  PetscCall(PetscFree4(procs, lrank, rrank, supp));
+  PetscCall(PetscFree7(ledges, vertices, rvertices, vert, rvert, vstart, vtmp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1805,11 +2218,12 @@ static PetscErrorCode DMPlexCreateHypercubicMesh_Internal(DM dm, PetscInt dim, c
   Collective
 
   Input Parameters:
-+ comm  - The communicator for the DM object
-. dim   - The spatial dimension
-. edges - Number of edges per dimension, or `NULL` for (1,) in 1D and (2, 2) in 2D and (1, 1, 1) in 3D
-. lower - The lower left corner, or `NULL` for (0, 0, 0)
-- upper - The upper right corner, or `NULL` for (1, 1, 1)
++ comm    - The communicator for the `DM` object
+. dim     - The spatial dimension
+. edges   - Number of edges per dimension, or `NULL` for (1,) in 1D and (2, 2) in 2D and (1, 1, 1) in 3D
+. lower   - The lower left corner, or `NULL` for (0, 0, 0)
+. upper   - The upper right corner, or `NULL` for (1, 1, 1)
+- overlap - The number of vertices in each direction to include in the overlap (default is 1)
 
   Output Parameter:
 . dm - The DM object
@@ -1844,7 +2258,7 @@ static PetscErrorCode DMPlexCreateHypercubicMesh_Internal(DM dm, PetscInt dim, c
 
 .seealso: `DMSetFromOptions()`, `DMPlexCreateFromFile()`, `DMPlexCreateHexCylinderMesh()`, `DMSetType()`, `DMCreate()`
 @*/
-PetscErrorCode DMPlexCreateHypercubicMesh(MPI_Comm comm, PetscInt dim, const PetscInt edges[], const PetscReal lower[], const PetscReal upper[], DM *dm)
+PetscErrorCode DMPlexCreateHypercubicMesh(MPI_Comm comm, PetscInt dim, const PetscInt edges[], const PetscReal lower[], const PetscReal upper[], PetscInt overlap, DM *dm)
 {
   PetscInt       *edg;
   PetscReal      *low, *upp;
@@ -1861,7 +2275,7 @@ PetscErrorCode DMPlexCreateHypercubicMesh(MPI_Comm comm, PetscInt dim, const Pet
     upp[d] = upper ? upper[d] : 1.;
     bdt[d] = DM_BOUNDARY_PERIODIC;
   }
-  PetscCall(DMPlexCreateHypercubicMesh_Internal(*dm, dim, low, upp, edg, bdt));
+  PetscCall(DMPlexCreateHypercubicMesh_Internal(*dm, dim, low, upp, edg, overlap, bdt));
   PetscCall(PetscFree4(edg, low, upp, bdt));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3692,7 +4106,7 @@ static PetscErrorCode DMPlexCreateTPSMesh_Internal(DM dm, DMPlexTPSType tpstype,
     // Code from DMPlexExtrude
     PetscCall(DMPlexTransformCreate(PetscObjectComm((PetscObject)dm), &tr));
     PetscCall(DMPlexTransformSetDM(tr, dm));
-    PetscCall(DMPlexTransformSetType(tr, DMPLEXEXTRUDE));
+    PetscCall(DMPlexTransformSetType(tr, DMPLEXEXTRUDETYPE));
     PetscCall(PetscObjectGetOptionsPrefix((PetscObject)dm, &prefix));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)tr, prefix));
     PetscCall(PetscObjectGetOptions((PetscObject)dm, &options));
@@ -3713,11 +4127,7 @@ static PetscErrorCode DMPlexCreateTPSMesh_Internal(DM dm, DMPlexTPSType tpstype,
     PetscCall(DMCopyDisc(cdm, ecdm));
     PetscCall(DMPlexTransformCreateDiscLabels(tr, edm));
     PetscCall(DMPlexTransformDestroy(&tr));
-    if (edm) {
-      ((DM_Plex *)edm->data)->printFEM    = ((DM_Plex *)dm->data)->printFEM;
-      ((DM_Plex *)edm->data)->printL2     = ((DM_Plex *)dm->data)->printL2;
-      ((DM_Plex *)edm->data)->printLocate = ((DM_Plex *)dm->data)->printLocate;
-    }
+    PetscCall(DMPlexCopy_Internal(dm, PETSC_FALSE, PETSC_FALSE, edm));
     PetscCall(DMPlexReplace_Internal(dm, &edm));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -4087,12 +4497,12 @@ PETSC_EXTERN PetscErrorCode PetscOptionsFindPairPrefix_Private(PetscOptions, con
 
 const char *const DMPlexShapes[] = {"box", "box_surface", "ball", "sphere", "cylinder", "schwarz_p", "gyroid", "doublet", "annulus", "hypercubic", "zbox", "unknown", "DMPlexShape", "DM_SHAPE_", NULL};
 
-static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOptionsObject, PetscBool *useCoordSpace, DM dm)
+static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems PetscOptionsObject, PetscBool *useCoordSpace, DM dm)
 {
   DMPlexShape    shape   = DM_SHAPE_BOX;
   DMPolytopeType cell    = DM_POLYTOPE_TRIANGLE;
   PetscInt       dim     = 2;
-  PetscBool      simplex = PETSC_TRUE, interpolate = PETSC_TRUE, adjCone = PETSC_FALSE, adjClosure = PETSC_TRUE, refDomain = PETSC_FALSE;
+  PetscBool      simplex = PETSC_TRUE, interpolate = PETSC_TRUE, orient = PETSC_FALSE, adjCone = PETSC_FALSE, adjClosure = PETSC_TRUE, refDomain = PETSC_FALSE;
   PetscBool      flg, flg2, fflg, strflg, bdfflg, nameflg;
   MPI_Comm       comm;
   char           filename[PETSC_MAX_PATH_LEN]   = "<unspecified>";
@@ -4114,9 +4524,11 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
   PetscCall(PetscOptionsBoundedInt("-dm_plex_dim", "Topological dimension of the mesh", "DMGetDimension", dim, &dim, &flg, 0));
   PetscCall(PetscOptionsBool("-dm_plex_simplex", "Mesh cell shape", "", simplex, &simplex, &flg));
   PetscCall(PetscOptionsBool("-dm_plex_interpolate", "Flag to create edges and faces automatically", "", interpolate, &interpolate, &flg));
+  PetscCall(PetscOptionsBool("-dm_plex_orient", "Orient the constructed mesh", "DMPlexOrient", orient, &orient, &flg));
   PetscCall(PetscOptionsBool("-dm_plex_adj_cone", "Set adjacency direction", "DMSetBasicAdjacency", adjCone, &adjCone, &flg));
   PetscCall(PetscOptionsBool("-dm_plex_adj_closure", "Set adjacency size", "DMSetBasicAdjacency", adjClosure, &adjClosure, &flg2));
   if (flg || flg2) PetscCall(DMSetBasicAdjacency(dm, adjCone, adjClosure));
+  PetscCall(PetscOptionsBoundedInt("-dm_plex_print_adj", "Debug output level all adjacency computations", "", 0, &((DM_Plex *)dm->data)->printAdj, NULL, 0));
 
   switch (cell) {
   case DM_POLYTOPE_POINT:
@@ -4319,7 +4731,7 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
       PetscCall(DMPlexReplace_Internal(dm, &dmnew));
     } break;
     case DM_SHAPE_HYPERCUBIC: {
-      PetscInt       *edges;
+      PetscInt       *edges, overlap = 1;
       PetscReal      *lower, *upper;
       DMBoundaryType *bdt;
       PetscInt        n, d;
@@ -4343,7 +4755,8 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
       n = dim;
       PetscCall(PetscOptionsEnumArray("-dm_plex_box_bd", "Boundary type for each dimension", "", DMBoundaryTypes, (PetscEnum *)bdt, &n, &flg));
       PetscCheck(!flg || n == dim, comm, PETSC_ERR_ARG_SIZ, "Box boundary types had %" PetscInt_FMT " values, should have been %" PetscInt_FMT, n, dim);
-      PetscCall(DMPlexCreateHypercubicMesh_Internal(dm, dim, lower, upper, edges, bdt));
+      PetscCall(PetscOptionsBoundedInt("-dm_distribute_overlap", "The size of the overlap halo", "DMPlexDistribute", overlap, &overlap, NULL, 0));
+      PetscCall(DMPlexCreateHypercubicMesh_Internal(dm, dim, lower, upper, edges, overlap, bdt));
       PetscCall(PetscFree4(edges, lower, upper, bdt));
     } break;
     default:
@@ -4352,6 +4765,7 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
   }
   PetscCall(DMPlexSetRefinementUniform(dm, PETSC_TRUE));
   if (!((PetscObject)dm)->name && nameflg) PetscCall(PetscObjectSetName((PetscObject)dm, plexname));
+  if (orient) PetscCall(DMPlexOrient(dm));
   // Allow label creation
   PetscCall(PetscOptionsFindPairPrefix_Private(NULL, ((PetscObject)dm)->prefix, "-dm_plex_label_", &option, NULL, &flg));
   if (flg) {
@@ -4427,7 +4841,7 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMSetFromOptions_NonRefinement_Plex(DM dm, PetscOptionItems *PetscOptionsObject)
+PetscErrorCode DMSetFromOptions_NonRefinement_Plex(DM dm, PetscOptionItems PetscOptionsObject)
 {
   DM_Plex  *mesh = (DM_Plex *)dm->data;
   PetscBool flg, flg2;
@@ -4442,8 +4856,11 @@ PetscErrorCode DMSetFromOptions_NonRefinement_Plex(DM dm, PetscOptionItems *Pets
   PetscCall(PetscOptionsReal("-dm_plex_print_tol", "Tolerance for FEM output", "DMPlexSNESComputeResidualFEM", mesh->printTol, &mesh->printTol, NULL));
   PetscCall(PetscOptionsBoundedInt("-dm_plex_print_l2", "Debug output level all L2 diff computations", "DMComputeL2Diff", 0, &mesh->printL2, NULL, 0));
   PetscCall(PetscOptionsBoundedInt("-dm_plex_print_locate", "Debug output level all point location computations", "DMLocatePoints", 0, &mesh->printLocate, NULL, 0));
+  PetscCall(PetscOptionsBoundedInt("-dm_plex_print_project", "Debug output level all projection computations", "DMPlexProject", 0, &mesh->printProject, NULL, 0));
   PetscCall(DMMonitorSetFromOptions(dm, "-dm_plex_monitor_throughput", "Monitor the simulation throughput", "DMPlexMonitorThroughput", DMPlexMonitorThroughput, NULL, &flg));
   if (flg) PetscCall(PetscLogDefaultBegin());
+  // Interpolation
+  PetscCall(PetscOptionsBool("-dm_plex_interpolate_prefer_tensor", "When different orderings exist, prefer the tensor order", "DMPlexSetInterpolationPreferTensor", mesh->interpolatePreferTensor, &mesh->interpolatePreferTensor, NULL));
   /* Labeling */
   PetscCall(PetscOptionsString("-dm_plex_boundary_label", "Label to mark the mesh boundary", "", bdLabel, bdLabel, sizeof(bdLabel), &flg));
   if (flg) PetscCall(DMPlexCreateBoundaryLabel_Private(dm, bdLabel));
@@ -4502,7 +4919,7 @@ PetscErrorCode DMSetFromOptions_NonRefinement_Plex(DM dm, PetscOptionItems *Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMSetFromOptions_Overlap_Plex(DM dm, PetscOptionItems *PetscOptionsObject, PetscInt *overlap)
+PetscErrorCode DMSetFromOptions_Overlap_Plex(DM dm, PetscOptionItems PetscOptionsObject, PetscInt *overlap)
 {
   PetscInt  numOvLabels = 16, numOvExLabels = 16;
   char     *ovLabelNames[16], *ovExLabelNames[16];
@@ -4539,7 +4956,7 @@ PetscErrorCode DMSetFromOptions_Overlap_Plex(DM dm, PetscOptionItems *PetscOptio
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptionsObject)
 {
   PetscFunctionList    ordlist;
   char                 oname[256];
@@ -4680,7 +5097,11 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems *PetscOption
     PetscCall(DMPlexGetPartitioner(dm, &part));
     PetscCall(PetscPartitionerSetFromOptions(part));
     PetscCall(DMPlexDistribute(dm, overlap, &sfMigration, &pdm));
-    if (pdm) PetscCall(DMPlexReplace_Internal(dm, &pdm));
+    if (pdm) {
+      // Delete the local section to force the existing one to be rebuilt with the distributed DM
+      PetscCall(DMSetLocalSection(dm, pdm->localSection));
+      PetscCall(DMPlexReplace_Internal(dm, &pdm));
+    }
     if (saveSF) PetscCall(DMPlexSetMigrationSF(dm, sfMigration));
     PetscCall(PetscSFDestroy(&sfMigration));
   }
@@ -4688,7 +5109,14 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems *PetscOption
   {
     PetscBool useBoxLabel = PETSC_FALSE;
     PetscCall(PetscOptionsBool("-dm_plex_box_label", "Create 'Face Sets' assuming boundary faces align with cartesian directions", "DMCreate", useBoxLabel, &useBoxLabel, NULL));
-    if (useBoxLabel) PetscCall(DMPlexSetBoxLabel_Internal(dm));
+    if (useBoxLabel) {
+      PetscInt       n      = 3;
+      DMBoundaryType bdt[3] = {DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
+
+      PetscCall(PetscOptionsEnumArray("-dm_plex_box_label_bd", "Boundary type for each dimension when using -dm_plex_box_label", "", DMBoundaryTypes, (PetscEnum *)bdt, &n, &flg));
+      PetscCheck(!flg || !(n != dim), PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "Box boundary types had %" PetscInt_FMT " values, should have been %" PetscInt_FMT, n, dim);
+      PetscCall(DMPlexSetBoxLabel_Internal(dm, bdt));
+    }
   }
   /* Must check CEED options before creating function space for coordinates */
   {
@@ -4924,7 +5352,24 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems *PetscOption
 /* Handle */
 non_refine:
   PetscCall(DMSetFromOptions_NonRefinement_Plex(dm, PetscOptionsObject));
+  char    *phases[16];
+  PetscInt Nphases = 16;
+  PetscCall(PetscOptionsStringArray("-dm_plex_option_phases", "Option phase prefixes", "DMSetFromOptions", phases, &Nphases, &flg));
   PetscOptionsHeadEnd();
+
+  // Phases
+  if (flg) {
+    const char *oldPrefix;
+
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)dm, &oldPrefix));
+    for (PetscInt ph = 0; ph < Nphases; ++ph) {
+      PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)dm, phases[ph]));
+      PetscCall(PetscInfo(dm, "Options phase %s for DM %s\n", phases[ph], dm->hdr.name));
+      PetscCall(DMSetFromOptions(dm));
+      PetscCall(PetscObjectSetOptionsPrefix((PetscObject)dm, oldPrefix));
+      PetscCall(PetscFree(phases[ph]));
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -5139,13 +5584,14 @@ PETSC_EXTERN PetscErrorCode DMCreate_Plex(DM dm)
   mesh->refct = 1;
   PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &mesh->coneSection));
   PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &mesh->supportSection));
-  mesh->refinementUniform      = PETSC_TRUE;
-  mesh->refinementLimit        = -1.0;
-  mesh->distDefault            = PETSC_TRUE;
-  mesh->reorderDefault         = DM_REORDER_DEFAULT_NOTSET;
-  mesh->distributionName       = NULL;
-  mesh->interpolated           = DMPLEX_INTERPOLATED_INVALID;
-  mesh->interpolatedCollective = DMPLEX_INTERPOLATED_INVALID;
+  mesh->refinementUniform       = PETSC_TRUE;
+  mesh->refinementLimit         = -1.0;
+  mesh->distDefault             = PETSC_TRUE;
+  mesh->reorderDefault          = DM_REORDER_DEFAULT_NOTSET;
+  mesh->distributionName        = NULL;
+  mesh->interpolated            = DMPLEX_INTERPOLATED_INVALID;
+  mesh->interpolatedCollective  = DMPLEX_INTERPOLATED_INVALID;
+  mesh->interpolatePreferTensor = PETSC_TRUE;
 
   PetscCall(PetscPartitionerCreate(PetscObjectComm((PetscObject)dm), &mesh->partitioner));
   mesh->remeshBd = PETSC_FALSE;
@@ -5248,7 +5694,7 @@ PetscErrorCode DMPlexCreate(MPI_Comm comm, DM *mesh)
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexBuildFromCellList()`, `DMPlexCreateFromCellListParallelPetsc()`, `DMPlexBuildCoordinatesFromCellListParallel()`,
           `PetscSF`
 @*/
-PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscInt numCorners, const PetscInt cells[], PetscSF *vertexSF, PetscInt **verticesAdjSaved)
+PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscInt numCorners, const PetscInt cells[], PeOp PetscSF *vertexSF, PeOp PetscInt *verticesAdjSaved[])
 {
   PetscSF     sfPoint;
   PetscLayout layout;
@@ -5393,7 +5839,7 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexBuildFromCellListParallel()`, `DMPlexCreateFromCellSectionParallel()`, `DMPlexBuildCoordinatesFromCellListParallel()`,
           `PetscSF`
 @*/
-PetscErrorCode DMPlexBuildFromCellSectionParallel(DM dm, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscSection cellSection, const PetscInt cells[], PetscSF *vertexSF, PetscInt **verticesAdjSaved)
+PetscErrorCode DMPlexBuildFromCellSectionParallel(DM dm, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscSection cellSection, const PetscInt cells[], PeOp PetscSF *vertexSF, PeOp PetscInt *verticesAdjSaved[])
 {
   PetscSF     sfPoint;
   PetscLayout layout;
@@ -5507,6 +5953,7 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM dm, PetscInt spaceD
   Vec          coordinates;
   PetscScalar *coords;
   PetscInt     numVertices, numVerticesAdj, coordSize, v, vStart, vEnd;
+  PetscMPIInt  spaceDimi;
 
   PetscFunctionBegin;
   PetscCall(PetscLogEventBegin(DMPLEX_BuildCoordinatesFromCellList, dm, 0, 0, 0));
@@ -5535,7 +5982,8 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM dm, PetscInt spaceD
     MPI_Datatype coordtype;
 
     /* Need a temp buffer for coords if we have complex/single */
-    PetscCallMPI(MPI_Type_contiguous((PetscMPIInt)spaceDim, MPIU_SCALAR, &coordtype));
+    PetscCall(PetscMPIIntCast(spaceDim, &spaceDimi));
+    PetscCallMPI(MPI_Type_contiguous(spaceDimi, MPIU_SCALAR, &coordtype));
     PetscCallMPI(MPI_Type_commit(&coordtype));
 #if defined(PETSC_USE_COMPLEX)
     {
@@ -5594,7 +6042,7 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM dm, PetscInt spaceD
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexCreateFromCellListPetsc()`, `DMPlexBuildFromCellListParallel()`, `DMPlexBuildCoordinatesFromCellListParallel()`, `DMPlexCreateFromDAG()`, `DMPlexCreate()`
 @*/
-PetscErrorCode DMPlexCreateFromCellListParallelPetsc(MPI_Comm comm, PetscInt dim, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscInt numCorners, PetscBool interpolate, const PetscInt cells[], PetscInt spaceDim, const PetscReal vertexCoords[], PetscSF *vertexSF, PetscInt **verticesAdj, DM *dm)
+PetscErrorCode DMPlexCreateFromCellListParallelPetsc(MPI_Comm comm, PetscInt dim, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscInt numCorners, PetscBool interpolate, const PetscInt cells[], PetscInt spaceDim, const PetscReal vertexCoords[], PeOp PetscSF *vertexSF, PeOp PetscInt *verticesAdj[], DM *dm)
 {
   PetscSF sfVert;
 
@@ -5652,7 +6100,7 @@ PetscErrorCode DMPlexCreateFromCellListParallelPetsc(MPI_Comm comm, PetscInt dim
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexCreateFromCellListPetsc()`, `DMPlexBuildFromCellListParallel()`, `DMPlexBuildCoordinatesFromCellListParallel()`, `DMPlexCreateFromDAG()`, `DMPlexCreate()`
 @*/
-PetscErrorCode DMPlexCreateFromCellSectionParallel(MPI_Comm comm, PetscInt dim, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscSection cellSection, PetscBool interpolate, const PetscInt cells[], PetscInt spaceDim, const PetscReal vertexCoords[], PetscSF *vertexSF, PetscInt **verticesAdj, DM *dm)
+PetscErrorCode DMPlexCreateFromCellSectionParallel(MPI_Comm comm, PetscInt dim, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscSection cellSection, PetscBool interpolate, const PetscInt cells[], PetscInt spaceDim, const PetscReal vertexCoords[], PeOp PetscSF *vertexSF, PeOp PetscInt *verticesAdj[], DM *dm)
 {
   PetscSF sfVert;
 
@@ -5826,9 +6274,9 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellList(DM dm, PetscInt spaceDim, cons
 . numVertices  - The number of vertices owned by this process, or `PETSC_DECIDE`, only on process 0
 . numCorners   - The number of vertices for each cell, only on process 0
 . interpolate  - Flag indicating that intermediate mesh entities (faces, edges) should be created automatically
-. cells        - An array of numCells*numCorners numbers, the vertices for each cell, only on process 0
+. cells        - An array of $ numCells \times numCorners$ numbers, the vertices for each cell, only on process 0
 . spaceDim     - The spatial dimension used for coordinates
-- vertexCoords - An array of numVertices*spaceDim numbers, the coordinates of each vertex, only on process 0
+- vertexCoords - An array of $ numVertices \times spaceDim$ numbers, the coordinates of each vertex, only on process 0
 
   Output Parameter:
 . dm - The `DM`, which only has points on process 0
@@ -5875,11 +6323,11 @@ PetscErrorCode DMPlexCreateFromCellListPetsc(MPI_Comm comm, PetscInt dim, PetscI
   Input Parameters:
 + dm               - The empty `DM` object, usually from `DMCreate()` and `DMSetDimension()`
 . depth            - The depth of the DAG
-. numPoints        - Array of size depth + 1 containing the number of points at each `depth`
+. numPoints        - Array of size $ depth + 1 $ containing the number of points at each `depth`
 . coneSize         - The cone size of each point
 . cones            - The concatenation of the cone points for each point, the cone list must be oriented correctly for each point
 . coneOrientations - The orientation of each cone point
-- vertexCoords     - An array of `numPoints`[0]*spacedim numbers representing the coordinates of each vertex, with spacedim the value set via `DMSetCoordinateDim()`
+- vertexCoords     - An array of $ numPoints[0] \times spacedim $ numbers representing the coordinates of each vertex, with `spacedim` the value set via `DMSetCoordinateDim()`
 
   Output Parameter:
 . dm - The `DM`
@@ -5906,6 +6354,9 @@ PetscErrorCode DMPlexCreateFromCellListPetsc(MPI_Comm comm, PetscInt dim, PetscI
         3
 .ve
   Notice that all points are numbered consecutively, unlike `DMPlexCreateFromCellListPetsc()`
+
+  Developer Note:
+  This does not create anything so should not have create in the name.
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexCreateFromCellListPetsc()`, `DMPlexCreate()`
 @*/
@@ -6019,11 +6470,11 @@ static PetscErrorCode DMPlexCreateCellVertexFromFile(MPI_Comm comm, const char f
     Nc = Nv = Ncn = Nl = 0;
   }
   PetscCallMPI(MPI_Bcast(&dim, 1, MPI_INT, 0, comm));
-  cdim = (PetscInt)dim;
+  cdim = dim;
   PetscCall(DMCreate(comm, dm));
   PetscCall(DMSetType(*dm, DMPLEX));
   PetscCall(DMPlexSetChart(*dm, 0, Nc + Nv));
-  PetscCall(DMSetDimension(*dm, (PetscInt)dim));
+  PetscCall(DMSetDimension(*dm, dim));
   PetscCall(DMSetCoordinateDim(*dm, cdim));
   /* Read topology */
   if (rank == 0) {
@@ -6196,13 +6647,16 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
   const char  extHDF5[]      = ".h5";
   const char  extXDMFHDF5[]  = ".xdmf.h5";
   const char  extPLY[]       = ".ply";
-  const char  extEGADSLite[] = ".egadslite";
+  const char  extEGADSlite[] = ".egadslite";
   const char  extEGADS[]     = ".egads";
   const char  extIGES[]      = ".igs";
+  const char  extIGES2[]     = ".iges";
   const char  extSTEP[]      = ".stp";
+  const char  extSTEP2[]     = ".step";
+  const char  extBREP[]      = ".brep";
   const char  extCV[]        = ".dat";
   size_t      len;
-  PetscBool   isGmsh, isGmsh2, isGmsh4, isCGNS, isExodus, isGenesis, isFluent, isHDF5, isPLY, isEGADSLite, isEGADS, isIGES, isSTEP, isCV, isXDMFHDF5;
+  PetscBool   isGmsh, isGmsh2, isGmsh4, isCGNS, isExodus, isGenesis, isFluent, isHDF5, isPLY, isEGADSlite, isEGADS, isIGES, isIGES2, isSTEP, isSTEP2, isBREP, isCV, isXDMFHDF5;
   PetscMPIInt rank;
 
   PetscFunctionBegin;
@@ -6237,10 +6691,13 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
   CheckExtension(extFluent, isFluent);
   CheckExtension(extHDF5, isHDF5);
   CheckExtension(extPLY, isPLY);
-  CheckExtension(extEGADSLite, isEGADSLite);
+  CheckExtension(extEGADSlite, isEGADSlite);
   CheckExtension(extEGADS, isEGADS);
   CheckExtension(extIGES, isIGES);
+  CheckExtension(extIGES2, isIGES2);
   CheckExtension(extSTEP, isSTEP);
+  CheckExtension(extSTEP2, isSTEP2);
+  CheckExtension(extBREP, isBREP);
   CheckExtension(extCV, isCV);
   CheckExtension(extXDMFHDF5, isXDMFHDF5);
 
@@ -6283,9 +6740,9 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
     }
   } else if (isPLY) {
     PetscCall(DMPlexCreatePLYFromFile(comm, filename, interpolate, dm));
-  } else if (isEGADSLite || isEGADS || isIGES || isSTEP) {
-    if (isEGADSLite) PetscCall(DMPlexCreateEGADSLiteFromFile(comm, filename, dm));
-    else PetscCall(DMPlexCreateEGADSFromFile(comm, filename, dm));
+  } else if (isEGADSlite || isEGADS || isIGES || isIGES2 || isSTEP || isSTEP2 || isBREP) {
+    PetscCall(DMPlexCreateGeomFromFile(comm, filename, dm, isEGADSlite));
+
     if (!interpolate) {
       DM udm;
 

@@ -78,6 +78,7 @@ PETSC_INTERN PetscErrorCode VecMDot_MPI_GEMV(Vec, PetscInt, const Vec[], PetscSc
 PETSC_INTERN PetscErrorCode VecMTDot_MPI_GEMV(Vec, PetscInt, const Vec[], PetscScalar *);
 
 PETSC_INTERN PetscErrorCode VecDuplicate_MPI(Vec, Vec *);
+PETSC_INTERN PetscErrorCode VecDuplicateWithArray_MPI(Vec, const PetscScalar *, Vec *);
 PETSC_INTERN PetscErrorCode VecSetPreallocationCOO_MPI(Vec, PetscCount, const PetscInt[]);
 PETSC_INTERN PetscErrorCode VecSetValuesCOO_MPI(Vec, const PetscScalar[], InsertMode);
 
@@ -96,7 +97,7 @@ static inline PetscErrorCode VecMXDot_MPI_Default(Vec xin, PetscInt nv, const Ve
 {
   PetscFunctionBegin;
   PetscCall(VecMXDot_SeqFn(xin, nv, y, z));
-  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, z, (PetscMPIInt)nv, MPIU_SCALAR, MPIU_SUM, PetscObjectComm((PetscObject)xin)));
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, z, nv, MPIU_SCALAR, MPIU_SUM, PetscObjectComm((PetscObject)xin)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

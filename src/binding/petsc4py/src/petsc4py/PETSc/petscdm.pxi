@@ -129,6 +129,8 @@ cdef extern from * nogil:
     PetscErrorCode DMSetCellCoordinatesLocal(PetscDM, PetscVec)
     PetscErrorCode DMGetCellCoordinatesLocal(PetscDM, PetscVec*)
     PetscErrorCode DMGetCoordinatesLocalized(PetscDM, PetscBool*)
+    PetscErrorCode DMGetPeriodicity(PetscDM, const PetscReal *[], const PetscReal *[], const PetscReal *[])
+    PetscErrorCode DMSetPeriodicity(PetscDM, const PetscReal[], const PetscReal[], const PetscReal[])
 
     PetscErrorCode DMCreateInterpolation(PetscDM, PetscDM, PetscMat*, PetscVec*)
     PetscErrorCode DMCreateInjection(PetscDM, PetscDM, PetscMat*)
@@ -157,8 +159,6 @@ cdef extern from * nogil:
 
     PetscErrorCode DMGetLocalToGlobalMapping(PetscDM, PetscLGMap*)
 
-    PetscErrorCode DMSetSection(PetscDM, PetscSection)
-    PetscErrorCode DMGetSection(PetscDM, PetscSection*)
     PetscErrorCode DMSetLocalSection(PetscDM, PetscSection)
     PetscErrorCode DMGetLocalSection(PetscDM, PetscSection*)
     PetscErrorCode DMSetGlobalSection(PetscDM, PetscSection)

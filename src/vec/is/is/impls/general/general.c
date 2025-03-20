@@ -134,7 +134,7 @@ static PetscErrorCode ISRestoreIndices_General(IS in, const PetscInt *idx[])
   IS_General *sub = (IS_General *)in->data;
 
   PetscFunctionBegin;
-  /* F90Array1dCreate() inside ISRestoreArrayF90() does not keep array when zero length array */
+  /* F90Array1dCreate() inside ISRestoreArray() does not keep array when zero length array */
   PetscCheck(in->map->n <= 0 || *idx == sub->idx, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Must restore with value from ISGetIndices()");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -221,14 +221,13 @@ static PetscErrorCode ISFindRun_Private(const PetscInt indices[], PetscInt len, 
 static PetscErrorCode ISGeneralCheckCompress(IS is, PetscBool *compress)
 {
   const PetscInt  minRun    = 8;
-  PetscBool       lcompress = PETSC_TRUE, test = PETSC_FALSE;
+  PetscBool       lcompress = PETSC_TRUE;
   const PetscInt *idx;
   PetscInt        n, off = 0;
 
   PetscFunctionBegin;
   *compress = PETSC_FALSE;
-  PetscCall(PetscOptionsGetBool(NULL, is->hdr.prefix, "-is_view_compress", &test, NULL));
-  if (!test) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!is->compressOutput) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(ISGetIndices(is, &idx));
   PetscCall(ISGetLocalSize(is, &n));
   while (off < n) {

@@ -184,11 +184,20 @@ PetscErrorCode TaoSolve(Tao tao)
 
   if (tao->printreason) {
     PetscViewer viewer = PETSC_VIEWER_STDOUT_(((PetscObject)tao)->comm);
+
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)tao)->tablevel));
     if (tao->reason > 0) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO %s solve converged due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix ? ((PetscObject)tao)->prefix : "", TaoConvergedReasons[tao->reason], tao->niter));
+      if (((PetscObject)tao)->prefix) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO %s solve converged due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix, TaoConvergedReasons[tao->reason], tao->niter));
+      } else {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO solve converged due to %s iterations %" PetscInt_FMT "\n", TaoConvergedReasons[tao->reason], tao->niter));
+      }
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO %s solve did not converge due to %s iteration %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix ? ((PetscObject)tao)->prefix : "", TaoConvergedReasons[tao->reason], tao->niter));
+      if (((PetscObject)tao)->prefix) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO %s solve did not converge due to %s iteration %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix, TaoConvergedReasons[tao->reason], tao->niter));
+      } else {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO solve did not converge due to %s iteration %" PetscInt_FMT "\n", TaoConvergedReasons[tao->reason], tao->niter));
+      }
     }
     PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)tao)->tablevel));
   }
@@ -446,50 +455,50 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   PetscCall(PetscOptionsString("-tao_monitor_solution", "View solution vector after each iteration", "TaoMonitorSet", "stdout", monfilename, sizeof(monfilename), &flg));
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(comm, monfilename, &monviewer));
-    PetscCall(TaoMonitorSet(tao, TaoMonitorSolution, monviewer, (PetscErrorCode (*)(void **))PetscViewerDestroy));
+    PetscCall(TaoMonitorSet(tao, TaoMonitorSolution, monviewer, (PetscCtxDestroyFn *)PetscViewerDestroy));
   }
 
   PetscCall(PetscOptionsBool("-tao_converged_reason", "Print reason for Tao converged", "TaoSolve", tao->printreason, &tao->printreason, NULL));
   PetscCall(PetscOptionsString("-tao_monitor_gradient", "View gradient vector for each iteration", "TaoMonitorSet", "stdout", monfilename, sizeof(monfilename), &flg));
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(comm, monfilename, &monviewer));
-    PetscCall(TaoMonitorSet(tao, TaoMonitorGradient, monviewer, (PetscErrorCode (*)(void **))PetscViewerDestroy));
+    PetscCall(TaoMonitorSet(tao, TaoMonitorGradient, monviewer, (PetscCtxDestroyFn *)PetscViewerDestroy));
   }
 
   PetscCall(PetscOptionsString("-tao_monitor_step", "View step vector after each iteration", "TaoMonitorSet", "stdout", monfilename, sizeof(monfilename), &flg));
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(comm, monfilename, &monviewer));
-    PetscCall(TaoMonitorSet(tao, TaoMonitorStep, monviewer, (PetscErrorCode (*)(void **))PetscViewerDestroy));
+    PetscCall(TaoMonitorSet(tao, TaoMonitorStep, monviewer, (PetscCtxDestroyFn *)PetscViewerDestroy));
   }
 
   PetscCall(PetscOptionsString("-tao_monitor_residual", "View least-squares residual vector after each iteration", "TaoMonitorSet", "stdout", monfilename, sizeof(monfilename), &flg));
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(comm, monfilename, &monviewer));
-    PetscCall(TaoMonitorSet(tao, TaoMonitorResidual, monviewer, (PetscErrorCode (*)(void **))PetscViewerDestroy));
+    PetscCall(TaoMonitorSet(tao, TaoMonitorResidual, monviewer, (PetscCtxDestroyFn *)PetscViewerDestroy));
   }
 
   PetscCall(PetscOptionsString("-tao_monitor", "Use the default convergence monitor", "TaoMonitorSet", "stdout", monfilename, sizeof(monfilename), &flg));
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(comm, monfilename, &monviewer));
-    PetscCall(TaoMonitorSet(tao, TaoMonitorDefault, monviewer, (PetscErrorCode (*)(void **))PetscViewerDestroy));
+    PetscCall(TaoMonitorSet(tao, TaoMonitorDefault, monviewer, (PetscCtxDestroyFn *)PetscViewerDestroy));
   }
 
   PetscCall(PetscOptionsString("-tao_monitor_globalization", "Use the convergence monitor with extra globalization info", "TaoMonitorSet", "stdout", monfilename, sizeof(monfilename), &flg));
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(comm, monfilename, &monviewer));
-    PetscCall(TaoMonitorSet(tao, TaoMonitorGlobalization, monviewer, (PetscErrorCode (*)(void **))PetscViewerDestroy));
+    PetscCall(TaoMonitorSet(tao, TaoMonitorGlobalization, monviewer, (PetscCtxDestroyFn *)PetscViewerDestroy));
   }
 
   PetscCall(PetscOptionsString("-tao_monitor_short", "Use the short convergence monitor", "TaoMonitorSet", "stdout", monfilename, sizeof(monfilename), &flg));
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(comm, monfilename, &monviewer));
-    PetscCall(TaoMonitorSet(tao, TaoMonitorDefaultShort, monviewer, (PetscErrorCode (*)(void **))PetscViewerDestroy));
+    PetscCall(TaoMonitorSet(tao, TaoMonitorDefaultShort, monviewer, (PetscCtxDestroyFn *)PetscViewerDestroy));
   }
 
   PetscCall(PetscOptionsString("-tao_monitor_constraint_norm", "Use the default convergence monitor with constraint norm", "TaoMonitorSet", "stdout", monfilename, sizeof(monfilename), &flg));
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(comm, monfilename, &monviewer));
-    PetscCall(TaoMonitorSet(tao, TaoMonitorConstraintNorm, monviewer, (PetscErrorCode (*)(void **))PetscViewerDestroy));
+    PetscCall(TaoMonitorSet(tao, TaoMonitorConstraintNorm, monviewer, (PetscCtxDestroyFn *)PetscViewerDestroy));
   }
 
   flg = PETSC_FALSE;
@@ -503,7 +512,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     TaoMonitorDrawCtx drawctx;
     PetscInt          howoften = 1;
     PetscCall(TaoMonitorDrawCtxCreate(PetscObjectComm((PetscObject)tao), NULL, NULL, PETSC_DECIDE, PETSC_DECIDE, 300, 300, howoften, &drawctx));
-    PetscCall(TaoMonitorSet(tao, TaoMonitorSolutionDraw, drawctx, (PetscErrorCode (*)(void **))TaoMonitorDrawCtxDestroy));
+    PetscCall(TaoMonitorSet(tao, TaoMonitorSolutionDraw, drawctx, (PetscCtxDestroyFn *)TaoMonitorDrawCtxDestroy));
   }
 
   flg = PETSC_FALSE;
@@ -516,7 +525,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     TaoMonitorDrawCtx drawctx;
     PetscInt          howoften = 1;
     PetscCall(TaoMonitorDrawCtxCreate(PetscObjectComm((PetscObject)tao), NULL, NULL, PETSC_DECIDE, PETSC_DECIDE, 300, 300, howoften, &drawctx));
-    PetscCall(TaoMonitorSet(tao, TaoMonitorGradientDraw, drawctx, (PetscErrorCode (*)(void **))TaoMonitorDrawCtxDestroy));
+    PetscCall(TaoMonitorSet(tao, TaoMonitorGradientDraw, drawctx, (PetscCtxDestroyFn *)TaoMonitorDrawCtxDestroy));
   }
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-tao_fd_gradient", "compute gradient using finite differences", "TaoDefaultComputeGradient", flg, &flg, NULL));
@@ -1499,14 +1508,11 @@ PetscErrorCode TaoSetConvergenceTest(Tao tao, PetscErrorCode (*conv)(Tao, void *
 + tao  - the `Tao` solver context
 . func - monitoring routine
 . ctx  - [optional] user-defined context for private data for the monitor routine (may be `NULL`)
-- dest - [optional] function to destroy the context when the `Tao` is destroyed
+- dest - [optional] function to destroy the context when the `Tao` is destroyed, see `PetscCtxDestroyFn` for the calling sequence
 
   Calling sequence of `func`:
 + tao - the `Tao` solver context
 - ctx - [optional] monitoring context
-
-  Calling sequence of `dest`:
-. ctx - monitoring context
 
   Level: intermediate
 
@@ -1520,9 +1526,9 @@ PetscErrorCode TaoSetConvergenceTest(Tao tao, PetscErrorCode (*conv)(Tao, void *
   Fortran Notes:
   Only one monitor function may be set
 
-.seealso: [](ch_tao), `Tao`, `TaoSolve()`, `TaoMonitorDefault()`, `TaoMonitorCancel()`, `TaoSetDestroyRoutine()`, `TaoView()`
+.seealso: [](ch_tao), `Tao`, `TaoSolve()`, `TaoMonitorDefault()`, `TaoMonitorCancel()`, `TaoSetDestroyRoutine()`, `TaoView()`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode TaoMonitorSet(Tao tao, PetscErrorCode (*func)(Tao, void *), void *ctx, PetscErrorCode (*dest)(void **))
+PetscErrorCode TaoMonitorSet(Tao tao, PetscErrorCode (*func)(Tao, void *), void *ctx, PetscCtxDestroyFn *dest)
 {
   PetscInt  i;
   PetscBool identical;
@@ -1536,7 +1542,7 @@ PetscErrorCode TaoMonitorSet(Tao tao, PetscErrorCode (*func)(Tao, void *), void 
     if (identical) PetscFunctionReturn(PETSC_SUCCESS);
   }
   tao->monitor[tao->numbermonitors]        = func;
-  tao->monitorcontext[tao->numbermonitors] = (void *)ctx;
+  tao->monitorcontext[tao->numbermonitors] = ctx;
   tao->monitordestroy[tao->numbermonitors] = dest;
   ++tao->numbermonitors;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2154,7 +2160,7 @@ PetscErrorCode TaoSetType(Tao tao, TaoType type)
   PetscCall(PetscObjectTypeCompare((PetscObject)tao, type, &issame));
   if (issame) PetscFunctionReturn(PETSC_SUCCESS);
 
-  PetscCall(PetscFunctionListFind(TaoList, type, (void (**)(void))&create_xxx));
+  PetscCall(PetscFunctionListFind(TaoList, type, &create_xxx));
   PetscCheck(create_xxx, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unable to find requested Tao type %s", type);
 
   /* Destroy the existing solver information */
@@ -2204,7 +2210,7 @@ PetscErrorCode TaoRegister(const char sname[], PetscErrorCode (*func)(Tao))
 {
   PetscFunctionBegin;
   PetscCall(TaoInitializePackage());
-  PetscCall(PetscFunctionListAdd(&TaoList, sname, (void (*)(void))func));
+  PetscCall(PetscFunctionListAdd(&TaoList, sname, func));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2615,28 +2621,34 @@ PetscErrorCode TaoGetConvergenceHistory(Tao tao, PetscReal **obj, PetscReal **re
 }
 
 /*@
-  TaoSetApplicationContext - Sets the optional user-defined context for a `Tao` solver.
+  TaoSetApplicationContext - Sets the optional user-defined context for a `Tao` solver that can be accessed later, for example in the
+  `Tao` callback functions with `TaoGetApplicationContext()`
 
   Logically Collective
 
   Input Parameters:
-+ tao  - the `Tao` context
-- usrP - optional user context
++ tao - the `Tao` context
+- ctx - the user context
 
   Level: intermediate
 
+  Fortran Note:
+  This only works when `ctx` is a Fortran derived type (it cannot be a `PetscObject`), we recommend writing a Fortran interface definition for this
+  function that tells the Fortran compiler the derived data type that is passed in as the `ctx` argument. See `TaoGetApplicationContext()` for
+  an example.
+
 .seealso: [](ch_tao), `Tao`, `TaoGetApplicationContext()`
 @*/
-PetscErrorCode TaoSetApplicationContext(Tao tao, void *usrP)
+PetscErrorCode TaoSetApplicationContext(Tao tao, void *ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  tao->user = usrP;
+  tao->ctx = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  TaoGetApplicationContext - Gets the user-defined context for a `Tao` solver
+  TaoGetApplicationContext - Gets the user-defined context for a `Tao` solver provided with `TaoSetApplicationContext()`
 
   Not Collective
 
@@ -2644,18 +2656,38 @@ PetscErrorCode TaoSetApplicationContext(Tao tao, void *usrP)
 . tao - the `Tao` context
 
   Output Parameter:
-. usrP - user context
+. ctx - a pointer to the user context
 
   Level: intermediate
 
+  Fortran Notes:
+  This only works when the context is a Fortran derived type (it cannot be a `PetscObject`) and you **must** write a Fortran interface definition for this
+  function that tells the Fortran compiler the derived data type that is returned as the `ctx` argument. For example,
+.vb
+  Interface TaoGetApplicationContext
+    Subroutine TaoGetApplicationContext(tao,ctx,ierr)
+  #include <petsc/finclude/petsctao.h>
+      use petsctao
+      Tao tao
+      type(tUsertype), pointer :: ctx
+      PetscErrorCode ierr
+    End Subroutine
+  End Interface TaoGetApplicationContext
+.ve
+
+  The prototpye for `ctx` must be
+.vb
+  type(tUsertype), pointer :: ctx
+.ve
+
 .seealso: [](ch_tao), `Tao`, `TaoSetApplicationContext()`
 @*/
-PetscErrorCode TaoGetApplicationContext(Tao tao, void *usrP)
+PetscErrorCode TaoGetApplicationContext(Tao tao, PeCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscAssertPointer(usrP, 2);
-  *(void **)usrP = tao->user;
+  PetscAssertPointer(ctx, 2);
+  *(void **)ctx = tao->ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -126,7 +126,7 @@ struct _MatOps {
   /*74*/
   PetscErrorCode (*setvaluesadifor)(Mat, PetscInt, void *);
   PetscErrorCode (*fdcoloringapply)(Mat, MatFDColoring, Vec, void *);
-  PetscErrorCode (*setfromoptions)(Mat, PetscOptionItems *);
+  PetscErrorCode (*setfromoptions)(Mat, PetscOptionItems);
   PetscErrorCode (*placeholder_77)(void);
   PetscErrorCode (*placeholder_78)(void);
   /*79*/
@@ -219,8 +219,10 @@ struct _MatOps {
   PetscErrorCode (*eliminatezeros)(Mat, PetscBool);
   PetscErrorCode (*getrowsumabs)(Mat, Vec);
   PetscErrorCode (*getfactor)(Mat, MatSolverType, MatFactorType, Mat *);
-  PetscErrorCode (*getblockdiagonal)(Mat, Mat *);  // NOTE: the caller of get{block, vblock}diagonal owns the returned matrix;
+  PetscErrorCode (*getblockdiagonal)(Mat, Mat *); // NOTE: the caller of get{block, vblock}diagonal owns the returned matrix;
+  /*155*/
   PetscErrorCode (*getvblockdiagonal)(Mat, Mat *); // they must destroy it after use
+  PetscErrorCode (*copyhashtoxaij)(Mat, Mat);
 };
 /*
     If you add MatOps entries above also add them to the MATOP enum
@@ -251,9 +253,9 @@ PETSC_EXTERN PetscErrorCode                MatShellGetScalingShifts(Mat, PetscSc
 PETSC_INTERN PetscErrorCode MatConvert_Basic(Mat, MatType, MatReuse, Mat *);
 PETSC_INTERN PetscErrorCode MatConvert_Shell(Mat, MatType, MatReuse, Mat *);
 PETSC_INTERN PetscErrorCode MatConvertFrom_Shell(Mat, MatType, MatReuse, Mat *);
-PETSC_INTERN PetscErrorCode MatShellSetContext_Immutable(Mat X, void *ctx);
-PETSC_INTERN PetscErrorCode MatShellSetContextDestroy_Immutable(Mat X, PetscErrorCode (*f)(void *));
-PETSC_INTERN PetscErrorCode MatShellSetManageScalingShifts_Immutable(Mat X);
+PETSC_INTERN PetscErrorCode MatShellSetContext_Immutable(Mat, void *);
+PETSC_INTERN PetscErrorCode MatShellSetContextDestroy_Immutable(Mat, PetscCtxDestroyFn *);
+PETSC_INTERN PetscErrorCode MatShellSetManageScalingShifts_Immutable(Mat);
 PETSC_INTERN PetscErrorCode MatCopy_Basic(Mat, Mat, MatStructure);
 PETSC_INTERN PetscErrorCode MatDiagonalSet_Default(Mat, Vec, InsertMode);
 #if defined(PETSC_HAVE_SCALAPACK)
@@ -548,7 +550,7 @@ typedef struct _MatPartitioningOps *MatPartitioningOps;
 struct _MatPartitioningOps {
   PetscErrorCode (*apply)(MatPartitioning, IS *);
   PetscErrorCode (*applynd)(MatPartitioning, IS *);
-  PetscErrorCode (*setfromoptions)(MatPartitioning, PetscOptionItems *);
+  PetscErrorCode (*setfromoptions)(MatPartitioning, PetscOptionItems);
   PetscErrorCode (*destroy)(MatPartitioning);
   PetscErrorCode (*view)(MatPartitioning, PetscViewer);
   PetscErrorCode (*improve)(MatPartitioning, IS *);
@@ -575,7 +577,7 @@ PETSC_INTERN PetscErrorCode MatPartitioningSizesToSep_Private(PetscInt, PetscInt
 typedef struct _MatCoarsenOps *MatCoarsenOps;
 struct _MatCoarsenOps {
   PetscErrorCode (*apply)(MatCoarsen);
-  PetscErrorCode (*setfromoptions)(MatCoarsen, PetscOptionItems *);
+  PetscErrorCode (*setfromoptions)(MatCoarsen, PetscOptionItems);
   PetscErrorCode (*destroy)(MatCoarsen);
   PetscErrorCode (*view)(MatCoarsen, PetscViewer);
 };
@@ -688,7 +690,7 @@ struct _p_MatFDColoring {
 typedef struct _MatColoringOps *MatColoringOps;
 struct _MatColoringOps {
   PetscErrorCode (*destroy)(MatColoring);
-  PetscErrorCode (*setfromoptions)(MatColoring, PetscOptionItems *);
+  PetscErrorCode (*setfromoptions)(MatColoring, PetscOptionItems);
   PetscErrorCode (*view)(MatColoring, PetscViewer);
   PetscErrorCode (*apply)(MatColoring, ISColoring *);
   PetscErrorCode (*weights)(MatColoring, PetscReal **, PetscInt **);
@@ -1298,7 +1300,6 @@ extern void MatCheckSameSize(Tm, int, Tm, int);
                (M)->rmap->N); \
   } while (0)
 
-/* -------------------------------------------------------------------------------------------------------*/
 /*
   Create and initialize a condensed linked list -
     same as PetscLLCreate(), but uses a scalable array 'lnk' with size of max number of entries, not O(N).
@@ -1427,7 +1428,6 @@ static inline PetscErrorCode PetscLLCondensedDestroy(PetscInt *lnk, PetscBT bt)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* -------------------------------------------------------------------------------------------------------*/
 /*
  Same as PetscLLCondensedCreate(), but does not use non-scalable O(lnk_max) bitarray
   Input Parameters:
@@ -1507,7 +1507,6 @@ static inline PetscErrorCode PetscLLCondensedDestroy_Scalable(PetscInt *lnk)
   return PetscFree(lnk);
 }
 
-/* -------------------------------------------------------------------------------------------------------*/
 /*
       lnk[0]   number of links
       lnk[1]   number of entries

@@ -1115,7 +1115,7 @@ static PetscErrorCode PetscViewerBinaryWriteReadAll(PetscViewer viewer, PetscBoo
 
 .seealso: [](sec_viewers), `PETSCVIEWERBINARY`, `PetscViewerBinaryOpen()`, `PetscViewerBinarySetUseMPIIO()`, `PetscViewerBinaryRead()`, `PetscViewerBinaryWriteAll()`
 @*/
-PetscErrorCode PetscViewerBinaryReadAll(PetscViewer viewer, void *data, PetscInt count, PetscCount start, PetscCount total, PetscDataType dtype)
+PetscErrorCode PetscViewerBinaryReadAll(PetscViewer viewer, void *data, PetscCount count, PetscCount start, PetscCount total, PetscDataType dtype)
 {
   PetscFunctionBegin;
   PetscCall(PetscViewerBinaryWriteReadAll(viewer, PETSC_FALSE, data, count, start, total, dtype));
@@ -1484,7 +1484,7 @@ static PetscErrorCode PetscViewerView_Binary(PetscViewer v, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscViewerSetFromOptions_Binary(PetscViewer viewer, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode PetscViewerSetFromOptions_Binary(PetscViewer viewer, PetscOptionItems PetscOptionsObject)
 {
   PetscViewer_Binary *binary = (PetscViewer_Binary *)viewer->data;
   char                defaultname[PETSC_MAX_PATH_LEN];
