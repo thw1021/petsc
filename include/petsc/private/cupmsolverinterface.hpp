@@ -160,6 +160,9 @@ struct PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL SolverInterfaceImpl<DeviceType::
   PETSC_CUPMSOLVER_ALIAS_BLAS_FUNCTION(cupmSolverXormqr_bufferSize, cusolverDn, PetscConcat(PETSC_CUPMBLAS_FP_TYPE_U, PETSC_CUPMSOLVER_FP_TYPE_SPECIAL), mqr_bufferSize)
   PETSC_CUPMSOLVER_ALIAS_BLAS_FUNCTION(cupmSolverXormqr, cusolverDn, PetscConcat(PETSC_CUPMBLAS_FP_TYPE_U, PETSC_CUPMSOLVER_FP_TYPE_SPECIAL), mqr)
 
+  PETSC_CUPMSOLVER_ALIAS_BLAS_FUNCTION(cupmSolverXorgqr_bufferSize, cusolverDn, PetscConcat(PETSC_CUPMBLAS_FP_TYPE_U, PETSC_CUPMSOLVER_FP_TYPE_SPECIAL), gqr_bufferSize)
+  PETSC_CUPMSOLVER_ALIAS_BLAS_FUNCTION(cupmSolverXorgqr, cusolverDn, PetscConcat(PETSC_CUPMBLAS_FP_TYPE_U, PETSC_CUPMSOLVER_FP_TYPE_SPECIAL), gqr)
+
   PETSC_NODISCARD static const char *cupmSolverGetErrorName(cupmSolverError_t status) noexcept { return PetscCUSolverGetErrorName(status); }
 };
 #endif
@@ -217,6 +220,9 @@ struct PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL SolverInterfaceImpl<DeviceType::
   PETSC_CUPMSOLVER_ALIAS_BLAS_FUNCTION(cupmSolverXormqr_bufferSize, hipsolver, PetscConcat(PETSC_CUPMBLAS_FP_TYPE_U, PETSC_CUPMSOLVER_FP_TYPE_SPECIAL), mqr_bufferSize)
   PETSC_CUPMSOLVER_ALIAS_BLAS_FUNCTION(cupmSolverXormqr, hipsolver, PetscConcat(PETSC_CUPMBLAS_FP_TYPE_U, PETSC_CUPMSOLVER_FP_TYPE_SPECIAL), mqr)
 
+  PETSC_CUPMSOLVER_ALIAS_BLAS_FUNCTION(cupmSolverXorgqr_bufferSize, hipsolver, PetscConcat(PETSC_CUPMBLAS_FP_TYPE_U, PETSC_CUPMSOLVER_FP_TYPE_SPECIAL), gqr_bufferSize)
+  PETSC_CUPMSOLVER_ALIAS_BLAS_FUNCTION(cupmSolverXorgqr, hipsolver, PetscConcat(PETSC_CUPMBLAS_FP_TYPE_U, PETSC_CUPMSOLVER_FP_TYPE_SPECIAL), gqr)
+
   PETSC_NODISCARD static const char *cupmSolverGetErrorName(cupmSolverError_t status) noexcept { return PetscHIPSolverGetErrorName(status); }
 };
 #endif
@@ -264,7 +270,9 @@ struct PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL SolverInterfaceImpl<DeviceType::
   using ::Petsc::device::cupm::impl::SolverInterfaceImpl<T>::cupmSolverXgeqrf_bufferSize; \
   using ::Petsc::device::cupm::impl::SolverInterfaceImpl<T>::cupmSolverXgeqrf; \
   using ::Petsc::device::cupm::impl::SolverInterfaceImpl<T>::cupmSolverXormqr_bufferSize; \
-  using ::Petsc::device::cupm::impl::SolverInterfaceImpl<T>::cupmSolverXormqr
+  using ::Petsc::device::cupm::impl::SolverInterfaceImpl<T>::cupmSolverXormqr; \
+  using ::Petsc::device::cupm::impl::SolverInterfaceImpl<T>::cupmSolverXorgqr_bufferSize; \
+  using ::Petsc::device::cupm::impl::SolverInterfaceImpl<T>::cupmSolverXorgqr
 
 template <DeviceType T>
 struct SolverInterface : SolverInterfaceImpl<T> {
