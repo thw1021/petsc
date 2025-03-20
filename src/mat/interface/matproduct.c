@@ -825,22 +825,28 @@ PetscErrorCode MatProductSymbolic(Mat mat)
   /* set block sizes */
   switch (product->type) {
   case MATPRODUCT_PtAP:
-    if (B->cmap->bs > 1) PetscCall(MatSetBlockSizes(mat, B->cmap->bs, B->cmap->bs));
+    if (B->cmap->bs > mat->cmap->N) break;
+    if (mat->cmap->N > 0 && (mat->cmap->N % B->cmap->bs) == 0 && B->cmap->bs > 1) PetscCall(MatSetBlockSizes(mat, B->cmap->bs, B->cmap->bs));
     break;
   case MATPRODUCT_RARt:
-    if (B->rmap->bs > 1) PetscCall(MatSetBlockSizes(mat, B->rmap->bs, B->rmap->bs));
+    if (B->rmap->bs > mat->rmap->N) break;
+    if (mat->rmap->N > 0 && (mat->rmap->N % B->rmap->bs) == 0 && B->rmap->bs > 1) PetscCall(MatSetBlockSizes(mat, B->rmap->bs, B->rmap->bs));
     break;
   case MATPRODUCT_ABC:
-    PetscCall(MatSetBlockSizesFromMats(mat, A, C));
+    if (A->rmap->bs > mat->rmap->N || C->cmap->bs > mat->cmap->N) break;
+    if (mat->rmap->N > 0 && (mat->rmap->N % A->rmap->bs && (mat->cmap->N % C->cmap->bs) == 0)) PetscCall(MatSetBlockSizesFromMats(mat, A, C));
     break;
   case MATPRODUCT_AB:
-    PetscCall(MatSetBlockSizesFromMats(mat, A, B));
+    if (A->rmap->bs > mat->rmap->N || B->cmap->bs > mat->cmap->N) break;
+    if (mat->rmap->N > 0 && (mat->rmap->N % A->rmap->bs) == 0 && (mat->cmap->N % B->cmap->bs) == 0) PetscCall(MatSetBlockSizesFromMats(mat, A, B));
     break;
   case MATPRODUCT_AtB:
-    if (A->cmap->bs > 1 || B->cmap->bs > 1) PetscCall(MatSetBlockSizes(mat, A->cmap->bs, B->cmap->bs));
+    if (A->cmap->bs > mat->rmap->N || B->cmap->bs > mat->cmap->N) break;
+    if (mat->rmap->N > 0 && (A->cmap->bs > 1 || B->cmap->bs > 1)) PetscCall(MatSetBlockSizes(mat, A->cmap->bs, B->cmap->bs));
     break;
   case MATPRODUCT_ABt:
-    if (A->rmap->bs > 1 || B->rmap->bs > 1) PetscCall(MatSetBlockSizes(mat, A->rmap->bs, B->rmap->bs));
+    if (A->rmap->bs > mat->rmap->N || B->rmap->bs > mat->cmap->N) break;
+    if (mat->rmap->N > 0 && (A->rmap->bs > 1 || B->rmap->bs > 1)) PetscCall(MatSetBlockSizes(mat, A->rmap->bs, B->rmap->bs));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Not for ProductType %s", MatProductTypes[product->type]);
