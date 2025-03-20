@@ -12,10 +12,10 @@ The strongest links between solvers and discretizations are
 -  ordering of data (unknowns).
 
 To enable modularity, we encode the operations above in simple data
-structures that can be understood by the linear algebra (``Vec``, ``Mat``, ``KSP``, ``PC``, ``SNES``), time integrator (``TS``), and optimization (``Tao``) engines in PETSc
+structures that can be understood by the linear algebraic and solver (``Vec``, ``Mat``, ``KSP``, ``PC``, ``SNES``, ``TS``, ``Tao``) components of PETSc
 without explicit reference to the mesh (topology) or discretization (analysis).
 
-While ``PetscSection`` is currently only employed for ``DMPlex``, ``DMForest`` and ``DMNetwork`` mesh descriptions, much of it's operation is general enough to be utilized for other types of discretizations.
+While ``PetscSection`` is currently only employed for ``DMPlex``, ``DMForest`` and ``DMNetwork`` mesh descriptions, much of its operation is general enough to be utilized for other types of discretizations.
 This section will explain the basic concepts of a ``PetscSection`` that are generalizable to other mesh descriptions.
 
 .. _sec_petscsection_concept:
@@ -98,12 +98,12 @@ Point Major or Field Major
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 A ``PetscSection`` with one field and and offsets set in ``PetscSectionSetUp()`` may be thought of as defining a two dimensional array indexed by point in the outer dimension with a variable length inner dimension indexed by the dof at that point, :math:`v[\mathrm{pStart} <= point < \mathrm{pEnd}][0 <= dof < \mathrm{ndof}]` [#petscsection_footnote]_.
 
-With multiple fields, this array is now three dimensional, with the outer dimenions being both indexed by mesh points and field points.
+With multiple fields, this array is now three dimensional, with the outer dimensions being both indexed by mesh points and field points.
 Thus, there is a choice on whether to index by points first, or by fields.
 In other words, will the array be laid out in a point-major fashion, or field-major.
 
 Point-major ordering corresponds to :math:`v[\mathrm{pStart} <= point < \mathrm{pEnd}][0 <= field < \mathrm{num\_fields}][0 <= dof < \mathrm{ndof}]`.
-The all the dofs for each mesh point are stored contiguously, meaning the fields are **interlaced**.
+All the dofs for each mesh point are stored contiguously, meaning the fields are **interlaced**.
 Field-major ordering corresponds to :math:`v[0 <= field < \mathrm{num\_fields}][\mathrm{pStart} <= point < \mathrm{pEnd}][0 <= dof < \mathrm{ndof}]`.
 The all the dofs for each field are stored contiguously, meaning the points are **interlaced**.
 

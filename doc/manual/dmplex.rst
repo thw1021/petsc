@@ -216,7 +216,7 @@ Generally the setup and usage of this information is handled automatically by PE
 
 Closure Permutation:
 """"""""""""""""""""
-A permutation of the dof closure of a k-cell may be specified. This allows data to be returned in am order which might be more efficiently processed. For example, for tensor cells such as quadrilaterals, closure data can be permuted to lexicographic order.
+A permutation of the dof closure of a k-cell may be specified. This allows data to be returned in an order that might be more efficiently processed than the default (breadth-first search) ordering. For example, for tensor cells such as quadrilaterals, closure data can be permuted to lexicographic order.
 
 Data Layout using DMPLEX and PetscFE
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
