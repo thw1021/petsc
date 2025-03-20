@@ -710,6 +710,9 @@ PETSC_EXTERN PetscErrorCode MatDenseGetColumnVecWrite(Mat, PetscInt, Vec *);
 PETSC_EXTERN PetscErrorCode MatDenseRestoreColumnVecWrite(Mat, PetscInt, Vec *);
 PETSC_EXTERN PetscErrorCode MatDenseGetSubMatrix(Mat, PetscInt, PetscInt, PetscInt, PetscInt, Mat *);
 PETSC_EXTERN PetscErrorCode MatDenseRestoreSubMatrix(Mat, Mat *);
+PETSC_EXTERN PetscErrorCode MatDenseSkinnyQR(Mat, MatReuse, Mat *, Mat, PetscInt *);
+PETSC_EXTERN PetscErrorCode MatDenseSkinnyQB(Mat, MatReuse, Mat *, Mat, PetscInt *);
+PETSC_EXTERN PetscErrorCode MatDenseSkinnySVD(Mat, MatReuse, Mat *, Vec, Mat, PetscInt *);
 
 PETSC_EXTERN PetscErrorCode MatMult(Mat, Vec, Vec);
 PETSC_EXTERN PetscErrorCode MatMultDiagonalBlock(Mat, Vec, Vec);
@@ -2086,6 +2089,7 @@ S*/
 typedef struct _p_MatNullSpace *MatNullSpace;
 
 PETSC_EXTERN PetscErrorCode MatNullSpaceCreate(MPI_Comm, PetscBool, PetscInt, const Vec[], MatNullSpace *);
+PETSC_EXTERN PetscErrorCode MatNullSpaceCreateFromSpanningVecs(MPI_Comm, PetscInt, const Vec[], MatNullSpace *);
 PETSC_EXTERN PetscErrorCode MatNullSpaceSetFunction(MatNullSpace, PetscErrorCode (*)(MatNullSpace, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode MatNullSpaceDestroy(MatNullSpace *);
 PETSC_EXTERN PetscErrorCode MatNullSpaceRemove(MatNullSpace, Vec);
@@ -2100,6 +2104,8 @@ PETSC_EXTERN PetscErrorCode MatRestoreNullSpaces(PetscInt, Mat[], MatNullSpace *
 PETSC_EXTERN PetscErrorCode MatNullSpaceTest(MatNullSpace, Mat, PetscBool *);
 PETSC_EXTERN PetscErrorCode MatNullSpaceView(MatNullSpace, PetscViewer);
 PETSC_EXTERN PetscErrorCode MatNullSpaceGetVecs(MatNullSpace, PetscBool *, PetscInt *, const Vec **);
+PETSC_EXTERN PetscErrorCode MatNullSpaceSetSpanningVecs(MatNullSpace, PetscInt, const Vec[]);
+PETSC_EXTERN PetscErrorCode MatNullSpaceGetSpanningVecs(MatNullSpace, PetscInt *, const Vec **);
 PETSC_EXTERN PetscErrorCode MatNullSpaceCreateRigidBody(Vec, MatNullSpace *);
 
 PETSC_EXTERN PetscErrorCode MatReorderingSeqSBAIJ(Mat, IS);
