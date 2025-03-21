@@ -288,7 +288,6 @@ static PetscErrorCode MatProductNumeric_X_Dense(Mat C)
   char        *Btype = NULL, *Ctype = NULL;
 
   PetscFunctionBegin;
-
   switch (product->type) {
   case MATPRODUCT_AB:
     t = PETSC_FALSE;
