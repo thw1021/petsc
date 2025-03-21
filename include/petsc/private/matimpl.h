@@ -767,6 +767,8 @@ typedef struct {
 PETSC_EXTERN PetscErrorCode MatFactorDumpMatrix(Mat);
 PETSC_INTERN PetscErrorCode MatSetBlockSizes_Default(Mat, PetscInt, PetscInt);
 
+PETSC_INTERN PetscErrorCode VecTypeGetMatDenseType_Private(VecType, VecType *, MatType *);
+
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatShift_Basic(Mat, PetscScalar);
 
 static inline PetscErrorCode MatPivotCheck_nz(PETSC_UNUSED Mat mat, const MatFactorInfo *info, FactorShiftCtx *sctx, PETSC_UNUSED PetscInt row)

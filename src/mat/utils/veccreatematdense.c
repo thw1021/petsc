@@ -1,5 +1,32 @@
 #include <petscmat.h> /*I    "petscmat.h"   I*/
 
+PETSC_INTERN PetscErrorCode VecTypeGetMatDenseType_Private(VecType vtype, VecType *rtype, MatType *mtype)
+{
+  VecType   root_type = VECSTANDARD;
+  PetscBool isstd, iscuda, iship, iskokkos;
+
+  PetscFunctionBegin;
+  PetscCall(PetscStrcmpAny(vtype, &isstd, VECSTANDARD, VECMPI, VECSEQ, ""));
+  PetscCall(PetscStrcmpAny(vtype, &iscuda, VECCUDA, VECMPICUDA, VECSEQCUDA, ""));
+  PetscCall(PetscStrcmpAny(vtype, &iship, VECHIP, VECMPIHIP, VECSEQHIP, ""));
+  PetscCall(PetscStrcmpAny(vtype, &iskokkos, VECKOKKOS, VECMPIKOKKOS, VECSEQKOKKOS, ""));
+  if (iscuda) root_type = VECCUDA;
+  else if (iship) root_type = VECHIP;
+  else if (iskokkos) {
+    /* We support only one type of kokkos device */
+    if (PetscDefined(HAVE_MACRO_KOKKOS_ENABLE_CUDA)) iscuda = PETSC_TRUE;
+    else if (PetscDefined(HAVE_MACRO_KOKKOS_ENABLE_HIP)) iship = PETSC_TRUE;
+    else isstd = PETSC_TRUE;
+    root_type = VECKOKKOS;
+  }
+  *rtype = root_type;
+  *mtype = NULL;
+  if (isstd) *mtype = MATDENSE;
+  if (iscuda) *mtype = MATDENSECUDA;
+  if (iship) *mtype = MATDENSEHIP;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   MatCreateDenseFromVecType - Create a matrix that matches the type of a Vec.
 
@@ -24,25 +51,23 @@
 @*/
 PetscErrorCode MatCreateDenseFromVecType(MPI_Comm comm, VecType vtype, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscInt lda, PetscScalar *data, Mat *A)
 {
-  VecType   root_type = VECSTANDARD;
-  PetscBool isstd, iscuda, iship, iskokkos;
+  VecType   root_type, mat_type;
+  PetscBool isstd, iscuda, iship;
 
   PetscFunctionBegin;
-  PetscCall(PetscStrcmpAny(vtype, &isstd, VECSTANDARD, VECMPI, VECSEQ, ""));
-  PetscCall(PetscStrcmpAny(vtype, &iscuda, VECCUDA, VECMPICUDA, VECSEQCUDA, ""));
-  PetscCall(PetscStrcmpAny(vtype, &iship, VECHIP, VECMPIHIP, VECSEQHIP, ""));
-  PetscCall(PetscStrcmpAny(vtype, &iskokkos, VECKOKKOS, VECMPIKOKKOS, VECSEQKOKKOS, ""));
-  PetscCheck(isstd || iscuda || iship || iskokkos, comm, PETSC_ERR_SUP, "Not for type %s", vtype);
-  if (iscuda) root_type = VECCUDA;
-  else if (iship) root_type = VECHIP;
-  else if (iskokkos) {
-    /* We support only one type of kokkos device */
-    PetscCheck(!PetscDefined(HAVE_MACRO_KOKKOS_ENABLE_SYCL), comm, PETSC_ERR_SUP, "Not for sycl backend");
-    if (PetscDefined(HAVE_MACRO_KOKKOS_ENABLE_CUDA)) iscuda = PETSC_TRUE;
-    else if (PetscDefined(HAVE_MACRO_KOKKOS_ENABLE_HIP)) iship = PETSC_TRUE;
-    else isstd = PETSC_TRUE;
-    root_type = VECKOKKOS;
+  PetscCall(VecTypeGetMatDenseType_Private(vtype, &root_type, &mat_type));
+  if (!mat_type) {
+    PetscBool iskokkos;
+
+    // special warning message for sycl
+    PetscCall(PetscStrcmpAny(vtype, &iskokkos, VECKOKKOS, VECMPIKOKKOS, VECSEQKOKKOS, ""));
+    if (iskokkos) PetscCheck(!PetscDefined(HAVE_MACRO_KOKKOS_ENABLE_SYCL), comm, PETSC_ERR_SUP, "Not for sycl backend");
+
+    PetscCheck(mat_type, comm, PETSC_ERR_SUP, "Not for type %s", vtype);
   }
+  PetscCall(PetscStrcmp(mat_type, MATDENSE, &isstd));
+  PetscCall(PetscStrcmp(mat_type, MATDENSECUDA, &iscuda));
+  PetscCall(PetscStrcmp(mat_type, MATDENSEHIP, &iship));
   PetscCall(MatCreate(comm, A));
   PetscCall(MatSetSizes(*A, m, n, M, N));
   if (isstd) {
