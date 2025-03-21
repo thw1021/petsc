@@ -62,6 +62,10 @@ Changes: Development
 - Add ``MatResetHash()`` which allows resetting an XAIJ matrix to use a hash table
 - Add ``MatCreateSeqAIJKokkosWithKokkosViews()`` which allows creation of a ``MATSEQAIJKOKKOS`` matrix with AIJ data in Kokkos views
 - Change ``MatCreateMPIAIJWithSeqAIJ()`` so that B can be passed in with local indices and compactification skipped
+- Add ``MatDenseSkinnyQR()`` for QR factorizations of tall, skinny dense matrices
+- Add ``MatDenseSkinnyQB()`` for QB factorizations of tall, skinny dense matrices
+- Add ``MatDenseSkinnySVD()`` for SVD factorizations of tall, skinny dense matrices
+- Add ``MatNullSpaceSetSpanningVecs()``, ``MatNullSpaceGetSpanningVecs()``, and ``MatNullspaceCreateFromSpanningVecs()`` for describing a nullspace in terms of non-orthogonal, possibly linearly dependent vectors
 
 .. rubric:: MatCoarsen:
 
@@ -118,6 +122,7 @@ Changes: Development
 - Add ``PetscCallEGADS()``
 - Add ``DMPlexTransformGetTransformTypes()`` and ``DMPlexTransformSetTransformTypes()``
 - Several ``DMPLEX`` functions including ``DMPlexVecGetClosure()`` now requiring a dummy argument for the length of the returned array, for example ``PETSC_NULL_INTEGER`` that was previously missing not in the Fortran API.
+- Add ``DMPlexCreateDisplacementRigidBody()`` for rigid body modes relative to a displacement field
 
 .. rubric:: FE/FV:
 
