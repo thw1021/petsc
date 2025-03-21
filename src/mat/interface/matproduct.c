@@ -822,12 +822,12 @@ PetscErrorCode MatProductSymbolic(Mat mat)
     PetscCheck(mat->product, PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Missing struct after symbolic phase for product %s", errstr);
   }
 #if defined(PETSC_HAVE_DEVICE)
-  PetscBool bindingpropagates;
-  Mat_Product  *product   = mat->product;
-  Mat           A         = product->A;
-  Mat           B         = product->B;
-  Mat           C         = product->C;
-  bindingpropagates = (PetscBool)((A->boundtocpu && A->bindingpropagates) || (B->boundtocpu && B->bindingpropagates));
+  PetscBool    bindingpropagates;
+  Mat_Product *product = mat->product;
+  Mat          A       = product->A;
+  Mat          B       = product->B;
+  Mat          C       = product->C;
+  bindingpropagates    = (PetscBool)((A->boundtocpu && A->bindingpropagates) || (B->boundtocpu && B->bindingpropagates));
   if (C) bindingpropagates = (PetscBool)(bindingpropagates || (C->boundtocpu && C->bindingpropagates));
   if (bindingpropagates) {
     PetscCall(MatBindToCPU(mat, PETSC_TRUE));
