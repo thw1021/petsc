@@ -53,6 +53,7 @@ static PetscErrorCode MatProductNumeric_PtAP_Unsafe(Mat C)
   PetscCall(MatProductNumeric(AP));
   /* C = P^T*AP */
   PetscCall((*C->ops->transposematmultnumeric)(P, AP, C));
+  if (P->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, P->cmap->bs, P->cmap->bs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -99,6 +100,7 @@ static PetscErrorCode MatProductNumeric_RARt_Unsafe(Mat C)
   PetscCall(MatProductNumeric(RA));
   /* C = RA*R^T */
   PetscCall((*C->ops->mattransposemultnumeric)(RA, R, C));
+  if (R->rmap->bs > 0) PetscCall(MatSetBlockSizes(C, R->rmap->bs, R->rmap->bs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -142,6 +144,7 @@ static PetscErrorCode MatProductNumeric_ABC_Unsafe(Mat mat)
   PetscCall(MatProductNumeric(BC));
   /* Numeric mat = A*BC */
   PetscCall((*mat->ops->matmultnumeric)(A, BC, mat));
+  if (A->rmap->bs > 0 && BC->cmap->bs > 0) PetscCall(MatSetBlockSizesFromMats(mat, A, BC));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -285,10 +288,13 @@ static PetscErrorCode MatProductNumeric_X_Dense(Mat C)
   char        *Btype = NULL, *Ctype = NULL;
 
   PetscFunctionBegin;
+
   switch (product->type) {
   case MATPRODUCT_AB:
     t = PETSC_FALSE;
+    PetscCall(MatSetBlockSizesFromMats(C, A, B));
   case MATPRODUCT_AtB:
+    if (A->cmap->bs > 0 && B->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_SUP, "MatProductNumeric type %s not supported for %s and %s matrices", MatProductTypes[product->type], ((PetscObject)A)->type_name, ((PetscObject)B)->type_name);
@@ -579,6 +585,7 @@ PetscErrorCode MatProductNumeric_AB(Mat mat)
 
   PetscFunctionBegin;
   PetscCall((*mat->ops->matmultnumeric)(A, B, mat));
+  PetscCall(MatSetBlockSizesFromMats(mat, A, B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -589,6 +596,7 @@ PetscErrorCode MatProductNumeric_AtB(Mat mat)
 
   PetscFunctionBegin;
   PetscCall((*mat->ops->transposematmultnumeric)(A, B, mat));
+  if (A->cmap->bs > 0 && B->cmap->bs > 0) PetscCall(MatSetBlockSizes(mat, A->cmap->bs, B->cmap->bs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -599,6 +607,7 @@ PetscErrorCode MatProductNumeric_ABt(Mat mat)
 
   PetscFunctionBegin;
   PetscCall((*mat->ops->mattransposemultnumeric)(A, B, mat));
+  if (A->rmap->bs > 0 && B->rmap->bs > 0) PetscCall(MatSetBlockSizes(mat, A->rmap->bs, B->rmap->bs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -609,6 +618,7 @@ PetscErrorCode MatProductNumeric_PtAP(Mat mat)
 
   PetscFunctionBegin;
   PetscCall((*mat->ops->ptapnumeric)(A, B, mat));
+  if (B->cmap->bs > 0) PetscCall(MatSetBlockSizes(mat, B->cmap->bs, B->cmap->bs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -619,6 +629,7 @@ PetscErrorCode MatProductNumeric_RARt(Mat mat)
 
   PetscFunctionBegin;
   PetscCall((*mat->ops->rartnumeric)(A, B, mat));
+  if (B->rmap->bs > 0) PetscCall(MatSetBlockSizes(mat, B->rmap->bs, B->rmap->bs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -629,6 +640,7 @@ PetscErrorCode MatProductNumeric_ABC(Mat mat)
 
   PetscFunctionBegin;
   PetscCall((*mat->ops->matmatmultnumeric)(A, B, C, mat));
+  PetscCall(MatSetBlockSizesFromMats(mat, A, C));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -764,10 +776,6 @@ PetscErrorCode MatProductSymbolic(Mat mat)
 {
   PetscLogEvent eventtype = -1;
   PetscBool     missing   = PETSC_FALSE;
-  /* Mat_Product  *product   = mat->product; */
-  /* Mat           A         = product->A; */
-  /* Mat           B         = product->B; */
-  /* Mat           C         = product->C; */
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
@@ -815,6 +823,10 @@ PetscErrorCode MatProductSymbolic(Mat mat)
   }
 #if defined(PETSC_HAVE_DEVICE)
   PetscBool bindingpropagates;
+  Mat_Product  *product   = mat->product;
+  Mat           A         = product->A;
+  Mat           B         = product->B;
+  Mat           C         = product->C;
   bindingpropagates = (PetscBool)((A->boundtocpu && A->bindingpropagates) || (B->boundtocpu && B->bindingpropagates));
   if (C) bindingpropagates = (PetscBool)(bindingpropagates || (C->boundtocpu && C->bindingpropagates));
   if (bindingpropagates) {
@@ -1193,6 +1205,7 @@ static PetscErrorCode MatProductNumeric_ABC_Basic(Mat mat)
   PetscUseTypeMethod(mat, productnumeric);
   mat->ops->productnumeric = MatProductNumeric_ABC_Basic;
   mat->product             = product;
+  if (mat->product->A->rmap->bs > 0 && mmabc->BC->cmap->bs > 0) PetscCall(MatSetBlockSizesFromMats(mat, mat->product->A, mmabc->BC)); // not tested
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
