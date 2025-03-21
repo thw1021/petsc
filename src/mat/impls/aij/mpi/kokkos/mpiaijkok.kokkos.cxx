@@ -1392,10 +1392,10 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
   /* set block sizes */
   switch (ptype) {
   case MATPRODUCT_PtAP:
-    if (B->cmap->bs > 1) PetscCall(MatSetBlockSizes(C, B->cmap->bs, B->cmap->bs));
+    PetscCall(MatSetBlockSizes(C, B->cmap->bs, B->cmap->bs));
     break;
   case MATPRODUCT_RARt:
-    if (B->rmap->bs > 1) PetscCall(MatSetBlockSizes(C, B->rmap->bs, B->rmap->bs));
+    PetscCall(MatSetBlockSizes(C, B->rmap->bs, B->rmap->bs));
     break;
   case MATPRODUCT_ABC:
     PetscCall(MatSetBlockSizesFromMats(C, A, product->C));
@@ -1404,10 +1404,10 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
     PetscCall(MatSetBlockSizesFromMats(C, A, B));
     break;
   case MATPRODUCT_AtB:
-    if (A->cmap->bs > 1 || B->cmap->bs > 1) PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
+    PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
     break;
   case MATPRODUCT_ABt:
-    if (A->rmap->bs > 1 || B->rmap->bs > 1) PetscCall(MatSetBlockSizes(C, A->rmap->bs, B->rmap->bs));
+    PetscCall(MatSetBlockSizes(C, A->rmap->bs, B->rmap->bs));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Not for ProductType %s", MatProductTypes[ptype]);
