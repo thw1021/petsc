@@ -10,8 +10,7 @@ int main(int argc, char **args)
 
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
-
-  if (size > 1) { SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "This example is for sequential runs only."); }
+  PetscAssert(size == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "This example is for sequential runs only.");
 
   // Create dense matrix P (n x m)
   PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, n, m, NULL, &P));
