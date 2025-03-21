@@ -823,28 +823,28 @@ PetscErrorCode MatProductSymbolic(Mat mat)
   }
 #endif
   /* set block sizes */
-  switch (product->type) {
-  case MATPRODUCT_PtAP:
-    if (B->cmap->bs > 0) PetscCall(MatSetBlockSizes(mat, B->cmap->bs, B->cmap->bs));
-    break;
-  case MATPRODUCT_RARt:
-    if (B->rmap->bs > 0) PetscCall(MatSetBlockSizes(mat, B->rmap->bs, B->rmap->bs));
-    break;
-  case MATPRODUCT_ABC:
-    if (A->rmap->bs > 0 && C->cmap->bs > 0) PetscCall(MatSetBlockSizesFromMats(mat, A, C));
-    break;
-  case MATPRODUCT_AB:
-    if (A->rmap->bs > 0 && B->cmap->bs > 0) PetscCall(MatSetBlockSizesFromMats(mat, A, B));
-    break;
-  case MATPRODUCT_AtB:
-    if (A->cmap->bs > 0 && B->cmap->bs > 0) PetscCall(MatSetBlockSizes(mat, A->cmap->bs, B->cmap->bs));
-    break;
-  case MATPRODUCT_ABt:
-    if (A->rmap->bs > 0 && B->rmap->bs > 0) PetscCall(MatSetBlockSizes(mat, A->rmap->bs, B->rmap->bs));
-    break;
-  default:
-    SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Not for ProductType %s", MatProductTypes[product->type]);
-  }
+  /* switch (product->type) { */
+  /* case MATPRODUCT_PtAP: */
+  /*   if (B->cmap->bs > 0) PetscCall(MatSetBlockSizes(mat, B->cmap->bs, B->cmap->bs)); */
+  /*   break; */
+  /* case MATPRODUCT_RARt: */
+  /*   if (B->rmap->bs > 0) PetscCall(MatSetBlockSizes(mat, B->rmap->bs, B->rmap->bs)); */
+  /*   break; */
+  /* case MATPRODUCT_ABC: */
+  /*   if (A->rmap->bs > 0 && C->cmap->bs > 0) PetscCall(MatSetBlockSizesFromMats(mat, A, C)); */
+  /*   break; */
+  /* case MATPRODUCT_AB: */
+  /*   if (A->rmap->bs > 0 && B->cmap->bs > 0) PetscCall(MatSetBlockSizesFromMats(mat, A, B)); */
+  /*   break; */
+  /* case MATPRODUCT_AtB: */
+  /*   if (A->cmap->bs > 0 && B->cmap->bs > 0) PetscCall(MatSetBlockSizes(mat, A->cmap->bs, B->cmap->bs)); */
+  /*   break; */
+  /* case MATPRODUCT_ABt: */
+  /*   if (A->rmap->bs > 0 && B->rmap->bs > 0) PetscCall(MatSetBlockSizes(mat, A->rmap->bs, B->rmap->bs)); */
+  /*   break; */
+  /* default: */
+  /*   SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Not for ProductType %s", MatProductTypes[product->type]); */
+  /* } */
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
