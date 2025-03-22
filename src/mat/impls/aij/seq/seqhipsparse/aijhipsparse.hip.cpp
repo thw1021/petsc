@@ -2426,7 +2426,7 @@ static PetscErrorCode MatProductNumeric_SeqAIJHIPSPARSE_SeqAIJHIPSPARSE(Mat C)
   Mat_SeqAIJHIPSPARSEMultStruct *Amat, *Bmat, *Cmat;
   CsrMatrix                     *Acsr, *Bcsr, *Ccsr;
   PetscBool                      flg;
-  MatProductType                 ptype;
+  MatProductType                 ptype = product->type;
   MatMatHipsparse               *mmdata;
   hipsparseSpMatDescr_t          BmatSpDescr;
   hipsparseOperation_t           opA = HIPSPARSE_OPERATION_NON_TRANSPOSE, opB = HIPSPARSE_OPERATION_NON_TRANSPOSE; /* hipSPARSE spgemm doesn't support transpose yet */
@@ -2465,7 +2465,6 @@ static PetscErrorCode MatProductNumeric_SeqAIJHIPSPARSE_SeqAIJHIPSPARSE(Mat C)
   PetscCall(MatSeqAIJHIPSPARSECopyToGPU(A));
   PetscCall(MatSeqAIJHIPSPARSECopyToGPU(B));
 
-  ptype = product->type;
   if (A->symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_AtB) {
     ptype = MATPRODUCT_AB;
     PetscCheck(product->symbolic_used_the_fact_A_is_symmetric, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Symbolic should have been built using the fact that A is symmetric");
@@ -2529,6 +2528,20 @@ finalize:
   C->info.nz_unneeded = 0;
   C->assembled = C->was_assembled = PETSC_TRUE;
   C->num_ass++;
+  // set block sizes
+  switch (ptype) {
+  case MATPRODUCT_AB:
+    PetscCall(MatSetBlockSizesFromMats(C, A, B));
+    break;
+  case MATPRODUCT_AtB:
+    PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
+    break;
+  case MATPRODUCT_ABt:
+    PetscCall(MatSetBlockSizes(C, A->rmap->bs, B->rmap->bs));
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_GPU, "Unsupported product type %s", MatProductTypes[product->type]);
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

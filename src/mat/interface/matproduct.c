@@ -86,6 +86,9 @@ static PetscErrorCode MatProductSymbolic_PtAP_Unsafe(Mat C)
   product->Dwork = AP;
 
   C->ops->productnumeric = MatProductNumeric_PtAP_Unsafe;
+
+  // set block sizes
+  PetscCall(MatSetBlockSizes(C, P->cmap->bs, P->cmap->bs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -129,6 +132,9 @@ static PetscErrorCode MatProductSymbolic_RARt_Unsafe(Mat C)
   product->A             = A;
   product->Dwork         = RA; /* save here so it will be destroyed with product C */
   C->ops->productnumeric = MatProductNumeric_RARt_Unsafe;
+
+  // set block sizes
+  PetscCall(MatSetBlockSizes(C, R->rmap->bs, R->rmap->bs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -172,6 +178,8 @@ static PetscErrorCode MatProductSymbolic_ABC_Unsafe(Mat mat)
   /* resume user's original input matrix setting for B */
   product->B               = B;
   mat->ops->productnumeric = MatProductNumeric_ABC_Unsafe;
+
+  PetscCall(MatSetBlockSizesFromMats(mat, product->A, C));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -288,7 +296,9 @@ static PetscErrorCode MatProductNumeric_X_Dense(Mat C)
   switch (product->type) {
   case MATPRODUCT_AB:
     t = PETSC_FALSE;
+    PetscCall(MatSetBlockSizesFromMats(C, A, B));
   case MATPRODUCT_AtB:
+    PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_SUP, "MatProductNumeric type %s not supported for %s and %s matrices", MatProductTypes[product->type], ((PetscObject)A)->type_name, ((PetscObject)B)->type_name);
@@ -579,6 +589,7 @@ PetscErrorCode MatProductNumeric_AB(Mat mat)
 
   PetscFunctionBegin;
   PetscCall((*mat->ops->matmultnumeric)(A, B, mat));
+  PetscCall(MatSetBlockSizesFromMats(mat, A, B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -589,6 +600,7 @@ PetscErrorCode MatProductNumeric_AtB(Mat mat)
 
   PetscFunctionBegin;
   PetscCall((*mat->ops->transposematmultnumeric)(A, B, mat));
+  PetscCall(MatSetBlockSizes(mat, A->cmap->bs, B->cmap->bs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -599,6 +611,7 @@ PetscErrorCode MatProductNumeric_ABt(Mat mat)
 
   PetscFunctionBegin;
   PetscCall((*mat->ops->mattransposemultnumeric)(A, B, mat));
+  PetscCall(MatSetBlockSizes(mat, A->rmap->bs, B->rmap->bs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -609,6 +622,7 @@ PetscErrorCode MatProductNumeric_PtAP(Mat mat)
 
   PetscFunctionBegin;
   PetscCall((*mat->ops->ptapnumeric)(A, B, mat));
+  PetscCall(MatSetBlockSizes(mat, B->cmap->bs, B->cmap->bs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -619,6 +633,7 @@ PetscErrorCode MatProductNumeric_RARt(Mat mat)
 
   PetscFunctionBegin;
   PetscCall((*mat->ops->rartnumeric)(A, B, mat));
+  PetscCall(MatSetBlockSizes(mat, B->rmap->bs, B->rmap->bs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -629,6 +644,7 @@ PetscErrorCode MatProductNumeric_ABC(Mat mat)
 
   PetscFunctionBegin;
   PetscCall((*mat->ops->matmatmultnumeric)(A, B, C, mat));
+  PetscCall(MatSetBlockSizesFromMats(mat, A, C));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -764,10 +780,6 @@ PetscErrorCode MatProductSymbolic(Mat mat)
 {
   PetscLogEvent eventtype = -1;
   PetscBool     missing   = PETSC_FALSE;
-  Mat_Product  *product   = mat->product;
-  Mat           A         = product->A;
-  Mat           B         = product->B;
-  Mat           C         = product->C;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
@@ -814,37 +826,18 @@ PetscErrorCode MatProductSymbolic(Mat mat)
     PetscCheck(mat->product, PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Missing struct after symbolic phase for product %s", errstr);
   }
 #if defined(PETSC_HAVE_DEVICE)
-  PetscBool bindingpropagates;
-  bindingpropagates = (PetscBool)((A->boundtocpu && A->bindingpropagates) || (B->boundtocpu && B->bindingpropagates));
+  PetscBool    bindingpropagates;
+  Mat_Product *product = mat->product;
+  Mat          A       = product->A;
+  Mat          B       = product->B;
+  Mat          C       = product->C;
+  bindingpropagates    = (PetscBool)((A->boundtocpu && A->bindingpropagates) || (B->boundtocpu && B->bindingpropagates));
   if (C) bindingpropagates = (PetscBool)(bindingpropagates || (C->boundtocpu && C->bindingpropagates));
   if (bindingpropagates) {
     PetscCall(MatBindToCPU(mat, PETSC_TRUE));
     PetscCall(MatSetBindingPropagates(mat, PETSC_TRUE));
   }
 #endif
-  /* set block sizes */
-  switch (product->type) {
-  case MATPRODUCT_PtAP:
-    if (B->cmap->bs > 1) PetscCall(MatSetBlockSizes(mat, B->cmap->bs, B->cmap->bs));
-    break;
-  case MATPRODUCT_RARt:
-    if (B->rmap->bs > 1) PetscCall(MatSetBlockSizes(mat, B->rmap->bs, B->rmap->bs));
-    break;
-  case MATPRODUCT_ABC:
-    PetscCall(MatSetBlockSizesFromMats(mat, A, C));
-    break;
-  case MATPRODUCT_AB:
-    PetscCall(MatSetBlockSizesFromMats(mat, A, B));
-    break;
-  case MATPRODUCT_AtB:
-    if (A->cmap->bs > 1 || B->cmap->bs > 1) PetscCall(MatSetBlockSizes(mat, A->cmap->bs, B->cmap->bs));
-    break;
-  case MATPRODUCT_ABt:
-    if (A->rmap->bs > 1 || B->rmap->bs > 1) PetscCall(MatSetBlockSizes(mat, A->rmap->bs, B->rmap->bs));
-    break;
-  default:
-    SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Not for ProductType %s", MatProductTypes[product->type]);
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1218,7 +1211,6 @@ PetscErrorCode MatProductSymbolic_ABC_Basic(Mat mat)
     A  = product->B;
     B  = product->A;
     C  = product->B;
-    if (A->cmap->bs > 0 && C->cmap->bs > 0) PetscCall(MatSetBlockSizes(mat, A->cmap->bs, C->cmap->bs));
     break;
   case MATPRODUCT_RARt:
     p1 = MATPRODUCT_ABt;
@@ -1226,7 +1218,6 @@ PetscErrorCode MatProductSymbolic_ABC_Basic(Mat mat)
     A  = product->B;
     B  = product->A;
     C  = product->B;
-    if (A->rmap->bs > 0 && C->rmap->bs > 0) PetscCall(MatSetBlockSizes(mat, A->rmap->bs, C->rmap->bs));
     break;
   case MATPRODUCT_ABC:
     p1 = MATPRODUCT_AB;
@@ -1234,7 +1225,6 @@ PetscErrorCode MatProductSymbolic_ABC_Basic(Mat mat)
     A  = product->A;
     B  = product->B;
     C  = product->C;
-    PetscCall(MatSetBlockSizesFromMats(mat, A, C));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Not for ProductType %s", MatProductTypes[product->type]);
