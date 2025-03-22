@@ -1293,9 +1293,9 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos(Mat C)
     if (ptype == MATPRODUCT_AB) {
       PetscCall(MatSetBlockSizesFromMats(C, A, B));
     } else if (ptype == MATPRODUCT_AtB) {
-      if (A->cmap->bs > 0 && B->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
+      PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
     } else if (ptype == MATPRODUCT_PtAP) { // BtAB, computed by Z = AB; C= BtZ
-      if (B->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, B->cmap->bs, B->cmap->bs));
+      PetscCall(MatSetBlockSizes(C, B->cmap->bs, B->cmap->bs));
     }
     PetscFunctionReturn(PETSC_SUCCESS);
   }
@@ -1305,11 +1305,11 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos(Mat C)
     PetscCall(MatSetBlockSizesFromMats(C, A, B));
   } else if (ptype == MATPRODUCT_AtB) {
     PetscCall(MatProductNumeric_MPIAIJKokkos_AtB(product, A, B, pdata->mmAtB));
-    if (A->cmap->bs > 0 && B->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
+    PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
   } else if (ptype == MATPRODUCT_PtAP) { // BtAB, computed by Z = AB; C= BtZ
     PetscCall(MatProductNumeric_MPIAIJKokkos_AB(product, A, B, pdata->mmAB));
     PetscCall(MatProductNumeric_MPIAIJKokkos_AtB(product, B, pdata->Z, pdata->mmAtB));
-    if (B->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, B->cmap->bs, B->cmap->bs));
+    PetscCall(MatSetBlockSizes(C, B->cmap->bs, B->cmap->bs));
   }
   PetscCall(MatSeqAIJKokkosModifyDevice(cmpi->A)); // mark that A, B on device are modified
   PetscCall(MatSeqAIJKokkosModifyDevice(cmpi->B));
