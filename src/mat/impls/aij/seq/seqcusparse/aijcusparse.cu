@@ -2840,31 +2840,22 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
   case MATPRODUCT_AB:
     m = A->rmap->n;
     n = B->cmap->n;
-    PetscCall(MatSetBlockSizesFromMats(C, A, B));
     break;
   case MATPRODUCT_AtB:
     m = A->cmap->n;
     n = B->cmap->n;
-    if (A->cmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->cmap->bs));
-    if (B->cmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, B->cmap->bs));
     break;
   case MATPRODUCT_ABt:
     m = A->rmap->n;
     n = B->rmap->n;
-    if (A->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, A->rmap->bs));
-    if (B->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, B->rmap->bs));
     break;
   case MATPRODUCT_PtAP:
     m = B->cmap->n;
     n = B->cmap->n;
-    if (B->cmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, B->cmap->bs));
-    if (B->cmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, B->cmap->bs));
     break;
   case MATPRODUCT_RARt:
     m = B->rmap->n;
     n = B->rmap->n;
-    if (B->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->rmap, B->rmap->bs));
-    if (B->rmap->bs > 0) PetscCall(PetscLayoutSetBlockSize(C->cmap, B->rmap->bs));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)C), PETSC_ERR_GPU, "Unsupported product type %s", MatProductTypes[product->type]);
@@ -2908,7 +2899,7 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   CsrMatrix                    *Acsr, *Bcsr, *Ccsr;
   PetscBool                     flg;
   cusparseStatus_t              stat;
-  MatProductType                ptype;
+  MatProductType                ptype = product->type;
   MatMatCusparse               *mmdata;
 #if PETSC_PKG_CUDA_VERSION_GE(11, 0, 0)
   cusparseSpMatDescr_t BmatSpDescr;
@@ -2949,7 +2940,6 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   PetscCall(MatSeqAIJCUSPARSECopyToGPU(A));
   PetscCall(MatSeqAIJCUSPARSECopyToGPU(B));
 
-  ptype = product->type;
   if (A->symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_AtB) {
     ptype = MATPRODUCT_AB;
     PetscCheck(product->symbolic_used_the_fact_A_is_symmetric, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Symbolic should have been built using the fact that A is symmetric");
@@ -3017,7 +3007,17 @@ finalize:
   C->assembled = C->was_assembled = PETSC_TRUE;
   C->num_ass++;
   // set block sizes
-  PetscCall(MatSetBlockSizesFromMats(C, A, B));
+  switch (ptype) {
+  case MATPRODUCT_AB:
+    PetscCall(MatSetBlockSizesFromMats(C, A, B));
+    break;
+  case MATPRODUCT_AtB:
+    PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
+    break;
+  case MATPRODUCT_ABt:
+    PetscCall(MatSetBlockSizes(C, A->rmap->bs, B->rmap->bs));
+    break;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
