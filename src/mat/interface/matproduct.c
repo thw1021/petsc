@@ -92,7 +92,6 @@ static PetscErrorCode MatProductSymbolic_PtAP_Unsafe(Mat C)
   // set block sizes
   if (P->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, P->cmap->bs, P->cmap->bs));
   PetscCall(MatProductSetType(C, MATPRODUCT_PtAP)); // maybe not needed
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -141,7 +140,6 @@ static PetscErrorCode MatProductSymbolic_RARt_Unsafe(Mat C)
   // set block sizes
   if (R->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, R->rmap->bs, R->rmap->bs));
   PetscCall(MatProductSetType(C, MATPRODUCT_RARt)); // maybe not needed
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -189,7 +187,6 @@ static PetscErrorCode MatProductSymbolic_ABC_Unsafe(Mat mat)
 
   if (A->rmap->bs > 0 && C->cmap->bs > 0) PetscCall(MatSetBlockSizesFromMats(mat, A, C));
   PetscCall(MatProductSetType(C, MATPRODUCT_RARt)); // maybe not needed
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
