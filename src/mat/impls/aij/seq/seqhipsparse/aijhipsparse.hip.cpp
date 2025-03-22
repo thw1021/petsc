@@ -2529,6 +2529,8 @@ finalize:
   C->info.nz_unneeded = 0;
   C->assembled = C->was_assembled = PETSC_TRUE;
   C->num_ass++;
+  // set block sizes
+  PetscCall(MatSetBlockSizesFromMats(C, A, B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
