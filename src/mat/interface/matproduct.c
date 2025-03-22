@@ -53,7 +53,8 @@ static PetscErrorCode MatProductNumeric_PtAP_Unsafe(Mat C)
   PetscCall(MatProductNumeric(AP));
   /* C = P^T*AP */
   PetscCall((*C->ops->transposematmultnumeric)(P, AP, C));
-  if (P->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, P->cmap->bs, P->cmap->bs));
+
+  /* if (P->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, P->cmap->bs, P->cmap->bs)); // maybe not needed */
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -87,6 +88,11 @@ static PetscErrorCode MatProductSymbolic_PtAP_Unsafe(Mat C)
   product->Dwork = AP;
 
   C->ops->productnumeric = MatProductNumeric_PtAP_Unsafe;
+
+  // set block sizes
+  if (P->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, P->cmap->bs, P->cmap->bs));
+  PetscCall(MatProductSetType(C, MATPRODUCT_PtAP)); // maybe not needed
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -100,7 +106,7 @@ static PetscErrorCode MatProductNumeric_RARt_Unsafe(Mat C)
   PetscCall(MatProductNumeric(RA));
   /* C = RA*R^T */
   PetscCall((*C->ops->mattransposemultnumeric)(RA, R, C));
-  if (R->rmap->bs > 0) PetscCall(MatSetBlockSizes(C, R->rmap->bs, R->rmap->bs));
+  /* if (R->rmap->bs > 0) PetscCall(MatSetBlockSizes(C, R->rmap->bs, R->rmap->bs)); */
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -131,6 +137,11 @@ static PetscErrorCode MatProductSymbolic_RARt_Unsafe(Mat C)
   product->A             = A;
   product->Dwork         = RA; /* save here so it will be destroyed with product C */
   C->ops->productnumeric = MatProductNumeric_RARt_Unsafe;
+
+  // set block sizes
+  if (R->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, R->rmap->bs, R->rmap->bs));
+  PetscCall(MatProductSetType(C, MATPRODUCT_RARt)); // maybe not needed
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -144,7 +155,7 @@ static PetscErrorCode MatProductNumeric_ABC_Unsafe(Mat mat)
   PetscCall(MatProductNumeric(BC));
   /* Numeric mat = A*BC */
   PetscCall((*mat->ops->matmultnumeric)(A, BC, mat));
-  if (A->rmap->bs > 0 && BC->cmap->bs > 0) PetscCall(MatSetBlockSizesFromMats(mat, A, BC));
+  /* if (A->rmap->bs > 0 && BC->cmap->bs > 0) PetscCall(MatSetBlockSizesFromMats(mat, A, BC)); */
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -175,6 +186,10 @@ static PetscErrorCode MatProductSymbolic_ABC_Unsafe(Mat mat)
   /* resume user's original input matrix setting for B */
   product->B               = B;
   mat->ops->productnumeric = MatProductNumeric_ABC_Unsafe;
+
+  if (A->rmap->bs > 0 && C->cmap->bs > 0) PetscCall(MatSetBlockSizesFromMats(mat, A, C));
+  PetscCall(MatProductSetType(C, MATPRODUCT_RARt)); // maybe not needed
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
