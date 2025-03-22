@@ -138,7 +138,7 @@ static PetscErrorCode MatProductSymbolic_RARt_Unsafe(Mat C)
   C->ops->productnumeric = MatProductNumeric_RARt_Unsafe;
 
   // set block sizes
-  if (R->cmap->bs > 0) PetscCall(MatSetBlockSizes(C, R->rmap->bs, R->rmap->bs));
+  if (R->rmap->bs > 0) PetscCall(MatSetBlockSizes(C, R->rmap->bs, R->rmap->bs));
   PetscCall(MatProductSetType(C, MATPRODUCT_RARt)); // maybe not needed
   PetscFunctionReturn(PETSC_SUCCESS);
 }
