@@ -185,8 +185,8 @@ static PetscErrorCode MatProductSymbolic_ABC_Unsafe(Mat mat)
   product->B               = B;
   mat->ops->productnumeric = MatProductNumeric_ABC_Unsafe;
 
-  if (A->rmap->bs > 0 && C->cmap->bs > 0) PetscCall(MatSetBlockSizesFromMats(mat, A, C));
-  PetscCall(MatProductSetType(C, MATPRODUCT_RARt)); // maybe not needed
+  if (product->A->rmap->bs > 0 && C->cmap->bs > 0) PetscCall(MatSetBlockSizesFromMats(mat, product->A, C));
+  PetscCall(MatProductSetType(C, MATPRODUCT_ABC)); // maybe not needed
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
