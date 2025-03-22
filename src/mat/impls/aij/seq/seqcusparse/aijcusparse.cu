@@ -3012,7 +3012,7 @@ finalize:
     PetscCall(MatSetBlockSizesFromMats(C, A, B));
     break;
   case MATPRODUCT_AtB:
-    PetscCall(3MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
+    PetscCall(MatSetBlockSizes(C, A->cmap->bs, B->cmap->bs));
     break;
   case MATPRODUCT_ABt:
     PetscCall(MatSetBlockSizes(C, A->rmap->bs, B->rmap->bs));
