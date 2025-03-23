@@ -136,7 +136,7 @@ The Fortran routine ``cpu_time()`` can sometimes produce misleading results when
 to cores, one expects the CPU time for the process to be roughly the number of threads times the wall clock time. However, for a loop that is not parallelized (like the second
 loop in the Fortran example), the CPU time one would expect would match the wall clock time. However, this may not be the case; for example, we have run the Fortran example
 on an Intel system with the Intel ifort compiler and observed the recorded CPU for the second loop to be roughly the number of threads times the wall clock time even
-though only a single thread is computing the loop. Thus,, comparing the CPU time to the wall clock time of a computation with OpenMP does not give you
+though only a single thread is computing the loop. Thus, comparing the CPU time to the wall clock time of a computation with OpenMP does not give you
 a good measure of the speedup produced by OpenMP.
 
 Detailed STREAMS study for large arrays
@@ -299,11 +299,11 @@ vector mapping to a sub-cube of the domain. This would require, of course, a far
 
 ``PCMPI`` has two approaches for distributing the linear system. The first uses ``MPI_Scatterv()`` to communicate the matrix and vector entries from the initial compute process to all of the
 server processes. Unfortunately, ``MPI_Scatterv()`` does not scale with more MPI processes; hence, the solution time is limited by the ``MPI_Scatterv()``. To remove this limitation,
-the second communication mechanism is Unix shared memory ``shmget()``. Here ``PCMPI`` allocates shared memory
+the second communication mechanism is Unix shared memory ``shmget()``. Here, ``PCMPI`` allocates shared memory
 from which all the MPI processes in the server
 can access their portion of the matrices and vectors that they need.
 There is still a (now much smaller) server processing overhead since the initial data storage of the sequential matrix (in ``MATSEQAIJ`` storage)
-still must be converted to ``MATMPIAIJ`` storage.  ``VecPlaceArray()`` is used to convert the sequential vector to an MPI vector, so there is
+still must be converted to ``MATMPIAIJ`` storage. ``VecPlaceArray()`` is used to convert the sequential vector to an MPI vector, so there is
 no overhead, not even a copy, for this operation. 
 
 .. figure:: /images/manual/gamg_server.svg
@@ -328,7 +328,7 @@ In  :any:`fig_gamg_server_pe_streams`, we plot the parallel efficiency of the li
 This example demonstrates the **utility of the STREAMS benchmark to predict the speedup (parallel efficiency) of a memory bandwidth limited application** on a shared memory Linux system.
 
 
-For the Apple M2, we present the results using Unix-shared memory communication of the matrix and vectors to the server processes
+For the Apple M2, we present the results using Unix shared-memory communication of the matrix and vectors to the server processes
 in :any:`fig_m2_gamg_server_shared_speedup`.
 To run this one must first set up the machine to use shared memory as described in ``PetscShmgetAllocateArray()``
 
