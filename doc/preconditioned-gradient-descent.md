@@ -34,6 +34,17 @@ or in defect-correction form
 $$
 x^{n+1} = x^n - A^{-1}(Ax^n + Bx^n - b).
 $$
+It is useful to recognize the error propagation in preconditioned Richardson.
+
+$$
+e^{n+1} = (I - A^{-1}(A + B))e^n.
+$$
+
+$$
+||e^{n+1}||^2 = \rho(I - A^{-1}(A + B)) ||e^n|| = \rho(A^{-1}B) ||e^n||^2
+$$
+so the convergence (or lack there of) is determined by the eigenvalues of $ \rho(A^{-1}B).$
+
 
 ## Linearly preconditioned nonlinear Richardson
 
@@ -56,6 +67,9 @@ $$
 It is also possible to use a nonlinear solver to nonlinearly precondition a nonlinear system, {cite}`bruneknepleysmithtu15`, but that is not needed for this discussion.
 `SNES` provides access to this general nonlinear preconditioner with `SNESGetNPC(SNES,SNES*)`.
 
+It is not possible to write an equation for the error propagation but one can see if $A$ dominates $\alpha(x)$ one might expect good convergence otherwise
+there is no reason to even expect convergence.
+
 ## Preconditioning gradient descent
 
 The solution to
@@ -75,7 +89,7 @@ x^{n+1} = x^n - A^{-1}(Ax^n + \beta'(x^n) - b) = x^n - A^{-1}f'(x^n).
 $$
 
 Of course, to expect the iteration to converge at all, or fast, the operator $A$ has to **dominate**
-$B$, $\alpha(x^n)$, or $\beta(x^n)$.
+ $\beta'(x^n)$.
 
 
 :::{admonition} Finite element example
@@ -156,6 +170,22 @@ TaoGetOPC(tao, &ksp);
 KSPSetOperators(ksp,K,Kp);
 ```
 
+Since applications of both $K$ and $K^-1$ may be needed in the preconditioned Tao algorithms perhaps $K $ and $K_p$ should be provided directly, with for example,
+
+```
+TaoSetLinearPreconditioner(Tao, K, Kp)
+```
+
+or
+
+```
+TaoSetLinearPreconditionerOperators(Tao, K, Kp)
+```
+
+
+but I'm not sure if the language usage is clear.
+
+
 Note that Matt has only requested the concept of "linear" preconditioning in Tao so I do not, nor could, discuss how to extend to nonlinear preconditioning in Tao.
 I leave that for another decade.
 
@@ -196,7 +226,7 @@ to be a good optimization preconditioner.
 :::{admonition} Biharmonic example
 
 $$
-\min \int_{\Omega} u''(x),u''(x) dx + \beta(u) - \int_{\Omega} b(x) u(x) dx.
+\min \int_{\Omega} u''(x)u''(x) dx + \beta(u) - \int_{\Omega} b(x) u(x) dx.
 $$
 
 $$
@@ -222,8 +252,28 @@ precondition with the "mass matrix" $K^-1_V$. $K^-1_V$ is the discrete realizati
 
 It is really **the dominant part of the minimization function that tells you what preconditioner you should use**.
 The function space tells you the form (what derivatives it contains)
-of the dominant part of the minimization function which then tells you the preconditioner you should use. Because of this I think the use of Norm, inner product
-or Reisz map does not belong in the Tao for indicating the Tao preconditioner.
+of the dominant part of the minimization function which then tells you the preconditioner you should use. Because of this I think the use of norm, inner product
+or Reisz map does not belong in the Tao API for indicating the Tao preconditioner.
+
+## More details
+
+Let $ u, v $ be in a Hilbert space, $V$ with the inner product $ (,)_M$.
+Define the directional derivative of $ f(u)$ as the linear (on $v$) operator
+
+$$
+\delta f(u) v = \lim_{\epsilon \rightarrow 0} \frac{f(u + \epsilon v) - f(u)}{\epsilon}.
+$$
+
+
+$ \delta f(u) v $ measures the infinitesimal change in the function value at $u$ in each direction $v$.
+
+Recall, by definition, the duel space of $V$, denoted by $V'$, is the Hilbert space of linear functionals on elements of $V$. Hence $ \delta f(u) \in V'$.
+
+The Reisz representation theorem states that for every $w' \in V'$ there exists a unique $w \in V$ such that $ (w,v)_M = w' v$. $w \in V$ can be called the
+Reisz representation of $w' \in V'$.
+
+
+
 
 
 
