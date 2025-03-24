@@ -1298,7 +1298,7 @@ PetscErrorCode VecResetArray_SeqKokkos(Vec vin)
 }
 
 /*@C
-  VecKokkosPlaceArray - Allows one to replace the device array in a VecKokkos vector with an
+  VecKokkosPlaceArray - Allows one to replace the device array in a VecKokkos vector with a
   device array provided by the user. This is useful to avoid copying an array into a vector.
 
   Logically Collective; No Fortran Support
