@@ -493,7 +493,7 @@ PetscErrorCode MatMFFDSetOptionsPrefix(Mat mat, const char prefix[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatSetFromOptions_MFFD(Mat mat, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode MatSetFromOptions_MFFD(Mat mat, PetscOptionItems PetscOptionsObject)
 {
   MatMFFD   mfctx;
   PetscBool flg;
@@ -1057,9 +1057,10 @@ PetscErrorCode MatMFFDCheckPositivity(void *dummy, Vec U, Vec a, PetscScalar *h)
   PetscCall(VecRestoreArray(a, &a_vec));
   PetscCallMPI(MPIU_Allreduce(&minval, &val, 1, MPIU_REAL, MPIU_MIN, comm));
   if (val <= PetscAbsScalar(*h)) {
-    PetscCall(PetscInfo(U, "Scaling back h from %g to %g\n", (double)PetscRealPart(*h), (double)(.99 * val)));
-    if (PetscRealPart(*h) > 0.0) *h = 0.99 * val;
-    else *h = -0.99 * val;
+    val = 0.99 * val;
+    PetscCall(PetscInfo(U, "Scaling back h from %g to %g\n", (double)PetscRealPart(*h), (double)val));
+    if (PetscRealPart(*h) > 0.0) *h = val;
+    else *h = -val;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -334,7 +334,7 @@ static PetscErrorCode PCView_Telescope(PC pc, PetscViewer viewer)
 
         PetscCall(PetscViewerASCIIPushTab(viewer));
         PetscCall(PetscViewerASCIIPrintf(viewer, "petsc subcomm: parent comm size reduction factor = %" PetscInt_FMT "\n", sred->redfactor));
-        PetscCall(PetscViewerASCIIPrintf(viewer, "petsc subcomm: parent_size = %d , subcomm_size = %d\n", (int)comm_size, (int)subcomm_size));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "petsc subcomm: parent_size = %d , subcomm_size = %d\n", comm_size, subcomm_size));
         switch (sred->subcommtype) {
         case PETSC_SUBCOMM_INTERLACED:
           PetscCall(PetscViewerASCIIPrintf(viewer, "petsc subcomm: type = %s\n", PetscSubcommTypes[sred->subcommtype]));
@@ -704,7 +704,7 @@ static PetscErrorCode PCDestroy_Telescope(PC pc)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCSetFromOptions_Telescope(PC pc, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode PCSetFromOptions_Telescope(PC pc, PetscOptionItems PetscOptionsObject)
 {
   PC_Telescope     sred = (PC_Telescope)pc->data;
   MPI_Comm         comm;

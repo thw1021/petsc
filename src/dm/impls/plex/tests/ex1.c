@@ -376,8 +376,8 @@ int main(int argc, char **argv)
   # CGNS reader tests 10-11 (need to find smaller test meshes)
   test:
     suffix: cgns_0
-    requires: cgns
-    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/tut21.cgns -dm_view
+    requires: datafilespath cgns
+    args: -dm_plex_filename ${DATAFILESPATH}/meshes/tut21.cgns -dm_view
 
   # ExodusII reader tests
   testset:
@@ -495,9 +495,6 @@ int main(int argc, char **argv)
     suffix: gmsh_15_hyb3d
     args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/hybrid_tetwedge.msh -dm_view -dm_plex_check_all
   test:
-    suffix: gmsh_15_hyb3d_vtk
-    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/hybrid_tetwedge.msh -dm_view vtk: -dm_plex_gmsh_hybrid -dm_plex_check_all
-  test:
     suffix: gmsh_15_hyb3d_s2t
     args: -dm_coord_space 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/hybrid_tetwedge.msh -dm_view -dm_plex_check_all -ref_dm_refine 1 -ref_dm_plex_transform_type refine_tobox
   test:
@@ -609,25 +606,28 @@ int main(int argc, char **argv)
       args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/gmsh-3d-binary-64.msh -viewer_binary_mpiio
 
   # Fluent mesh reader tests
-  # TODO: Geometry checks fail
   test:
     suffix: fluent_0
     requires: !complex
-    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/square.cas -dm_view -final_diagnostics 0
+    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/square.cas -dm_view
   test:
     suffix: fluent_1
     nsize: 3
     requires: !complex
-    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/square.cas -dist_dm_distribute -petscpartitioner_type simple -dm_view -final_diagnostics 0
+    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/square.cas -dist_dm_distribute -petscpartitioner_type simple -dm_view
   test:
     suffix: fluent_2
     requires: !complex
-    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/cube_5tets_ascii.cas -dm_view -final_diagnostics 0
+    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/cube_5tets_ascii.cas -dm_view
   test:
     suffix: fluent_3
     requires: !complex
     TODO: Fails on non-linux: fseek(), fileno() ? https://gitlab.com/petsc/petsc/merge_requests/2206#note_238166382
     args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/cube_5tets.cas -dm_view -final_diagnostics 0
+  test:
+    suffix: fluent_4
+    requires: !complex defined(PETSC_USE_INFO)
+    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/testcase3D.cas -info :viewer -dm_view
 
   # Test shape quality
   test:
@@ -655,13 +655,6 @@ int main(int argc, char **argv)
     test:
       suffix: cylinder_per
       args: -dm_plex_cylinder_bd periodic -ref_dm_refine 1 -ref_dm_refine_remap 0
-    test:
-      suffix: cylinder_wedge
-      args: -dm_coord_space 0 -dm_plex_interpolate 0 -dm_plex_cell tensor_triangular_prism -dm_view vtk:
-    test:
-      suffix: cylinder_wedge_int
-      output_file: output/ex1_cylinder_wedge.out
-      args: -dm_coord_space 0 -dm_plex_cell tensor_triangular_prism -dm_view vtk:
 
   test:
     suffix: box_2d
@@ -956,24 +949,53 @@ int main(int argc, char **argv)
 
   test:
     suffix: hypercubic_0
-    args: -dm_plex_dim 2 -dm_plex_shape hypercubic -dm_plex_box_faces 3,3 -dm_plex_check_all -dm_view
+    args: -dm_plex_dim 2 -dm_plex_shape hypercubic -dm_plex_box_faces 3,3 -dm_plex_check_all \
+          -dm_view -dm_plex_print_adj 3
+
+  test:
+    suffix: hypercubic_0_par
+    nsize: 4
+    args: -dm_plex_dim 2 -dm_plex_shape hypercubic -dm_plex_box_faces 4,4 -dm_view -dm_plex_print_adj 3 -final_diagnostics 0 \
+          -dm_plex_check_symmetry -dm_plex_check_skeleton -dm_plex_check_faces -dm_plex_check_pointsf
 
   test:
     suffix: hypercubic_1
-    args: -dm_plex_dim 3 -dm_plex_shape hypercubic -dm_plex_box_faces 3,3,3 -dm_plex_check_all -dm_view
+    args: -dm_plex_dim 3 -dm_plex_shape hypercubic -dm_plex_box_faces 3,3,3 -dm_plex_check_all \
+          -dm_view -dm_plex_print_adj 3
+
+  test:
+    suffix: hypercubic_1_par
+    requires: !quad
+    nsize: 8
+    args: -dm_plex_dim 3 -dm_plex_shape hypercubic -dm_plex_box_faces 4,4,4 -dm_view -dm_plex_print_adj 3 -final_diagnostics 0 \
+          -dm_plex_check_symmetry -dm_plex_check_skeleton -dm_plex_check_faces -dm_plex_check_pointsf
+
+  test:
+    suffix: hypercubic_1_par_ov_3
+    requires: !quad
+    nsize: 8
+    args: -dm_plex_dim 3 -dm_plex_shape hypercubic -dm_plex_box_faces 6,6,6 -dm_distribute_overlap 3 -dm_view -dm_plex_print_adj 3 -final_diagnostics 0 \
+          -dm_plex_check_symmetry -dm_plex_check_skeleton -dm_plex_check_faces -dm_plex_check_pointsf
 
   test:
     suffix: hypercubic_2
-    args: -dm_plex_dim 4 -dm_plex_shape hypercubic -dm_plex_box_faces 3,3,3,3 -dm_view \
+    args: -dm_plex_dim 4 -dm_plex_shape hypercubic -dm_plex_box_faces 3,3,3,3 -dm_view -dm_plex_print_adj 3 \
           -dm_plex_check_symmetry -dm_plex_check_skeleton -dm_plex_check_faces -dm_plex_check_pointsf -final_diagnostics 0
 
   test:
+    suffix: hypercubic_2_par
+    requires: !quad
+    nsize: 16
+    args: -dm_plex_dim 4 -dm_plex_shape hypercubic -dm_plex_box_faces 4,4,4,4 -dm_view -dm_plex_print_adj 3 -final_diagnostics 0 \
+          -dm_plex_check_symmetry -dm_plex_check_skeleton -dm_plex_check_faces -dm_plex_check_pointsf
+
+  test:
     suffix: hypercubic_3
-    args: -dm_plex_dim 5 -dm_plex_shape hypercubic -dm_plex_box_faces 3,3,3,3,3 -dm_view \
+    args: -dm_plex_dim 5 -dm_plex_shape hypercubic -dm_plex_box_faces 3,3,3,3,3 -dm_view -dm_plex_print_adj 3 \
           -dm_plex_check_symmetry -dm_plex_check_skeleton -dm_plex_check_faces -dm_plex_check_pointsf -final_diagnostics 0
 
   test:
     suffix: hypercubic_4
-    args: -dm_plex_dim 6 -dm_plex_shape hypercubic -dm_plex_box_faces 3,3,3,3,3,3 -dm_view \
+    args: -dm_plex_dim 6 -dm_plex_shape hypercubic -dm_plex_box_faces 3,3,3,3,3,3 -dm_view -dm_plex_print_adj 3 \
           -dm_plex_check_symmetry -dm_plex_check_skeleton -dm_plex_check_faces -dm_plex_check_pointsf -final_diagnostics 0
 TEST*/

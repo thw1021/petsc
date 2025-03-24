@@ -425,6 +425,7 @@ int main(int argc, char **argv)
       PetscCall(KSPGetPC(ksp, &pc));
       PetscCall(PetscTime(&time_start));
       PetscCall(PCSetUp(pc));
+      PetscCall(PCSetUpOnBlocks(pc));
       PetscCall(PetscTime(&time_mid1));
       PetscCall(PetscLogStagePop());
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step2b - running KSPSolve()...\n"));
@@ -530,6 +531,11 @@ int main(int argc, char **argv)
       suffix: kok_ksp
       requires: kokkos_kernels
       args: -mat_type aijkokkos
+
+    test:
+      suffix: kok_hypre
+      requires: kokkos_kernels defined(PETSC_HAVE_HYPRE_DEVICE)
+      args: -mat_type aijkokkos -pc_type hypre
 
     test:
       suffix: kok_nbr

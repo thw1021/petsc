@@ -105,6 +105,38 @@ PetscErrorCode MatSetRandom(Mat x, PetscRandom rctx)
 }
 
 /*@
+  MatCopyHashToXAIJ - copy hash table entries into an XAIJ matrix type
+
+  Logically Collective
+
+  Input Parameter:
+. A - A matrix in unassembled, hash table form
+
+  Output Parameter:
+. B - The XAIJ matrix. This can either be `A` or some matrix of equivalent size, e.g. obtained from `A` via `MatDuplicate()`
+
+  Example:
+.vb
+     PetscCall(MatDuplicate(A, MAT_DO_NOT_COPY_VALUES, &B));
+     PetscCall(MatCopyHashToXAIJ(A, B));
+.ve
+
+  Level: advanced
+
+  Notes:
+  If `B` is `A`, then the hash table data structure will be destroyed. `B` is assembled
+
+.seealso: [](ch_matrices), `Mat`, `MAT_USE_HASH_TABLE`
+@*/
+PetscErrorCode MatCopyHashToXAIJ(Mat A, Mat B)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscUseTypeMethod(A, copyhashtoxaij, B);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   MatFactorGetErrorZeroPivot - returns the pivot value that was determined to be zero and the row it occurred in
 
   Logically Collective
@@ -638,8 +670,7 @@ PetscErrorCode MatRestoreRow(Mat mat, PetscInt row, PetscInt *ncols, const Petsc
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   if (ncols) PetscAssertPointer(ncols, 3);
   PetscCheck(mat->assembled, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
-  if (!mat->ops->restorerow) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscUseTypeMethod(mat, restorerow, row, ncols, (PetscInt **)cols, (PetscScalar **)vals);
+  PetscTryTypeMethod(mat, restorerow, row, ncols, (PetscInt **)cols, (PetscScalar **)vals);
   if (ncols) *ncols = 0;
   if (cols) *cols = NULL;
   if (vals) *vals = NULL;
@@ -670,8 +701,7 @@ PetscErrorCode MatGetRowUpperTriangular(Mat mat)
   PetscCheck(mat->assembled, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
   PetscCheck(!mat->factortype, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
   MatCheckPreallocated(mat, 1);
-  if (!mat->ops->getrowuppertriangular) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscUseTypeMethod(mat, getrowuppertriangular);
+  PetscTryTypeMethod(mat, getrowuppertriangular);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -698,8 +728,7 @@ PetscErrorCode MatRestoreRowUpperTriangular(Mat mat)
   PetscCheck(mat->assembled, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
   PetscCheck(!mat->factortype, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
   MatCheckPreallocated(mat, 1);
-  if (!mat->ops->restorerowuppertriangular) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscUseTypeMethod(mat, restorerowuppertriangular);
+  PetscTryTypeMethod(mat, restorerowuppertriangular);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -928,6 +957,39 @@ PetscErrorCode MatResetPreallocation(Mat A)
   PetscCheck(A->insertmode == NOT_SET_VALUES, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot reset preallocation after setting some values but not yet calling MatAssemblyBegin()/MatAssemblyEnd()");
   if (A->num_ass == 0) PetscFunctionReturn(PETSC_SUCCESS);
   PetscUseMethod(A, "MatResetPreallocation_C", (Mat), (A));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatResetHash - Reset the matrix so that it will use a hash table for the next round of `MatSetValues()` and `MatAssemblyBegin()`/`MatAssemblyEnd()`.
+
+  Collective
+
+  Input Parameter:
+. A - the matrix
+
+  Level: intermediate
+
+  Notes:
+  The matrix will again delete the hash table data structures after following calls to `MatAssemblyBegin()`/`MatAssemblyEnd()` with `MAT_FINAL_ASSEMBLY`.
+
+  Currently only supported for `MATAIJ` matrices.
+
+.seealso: [](ch_matrices), `Mat`, `MatResetPreallocation()`
+@*/
+PetscErrorCode MatResetHash(Mat A)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  PetscCheck(A->insertmode == NOT_SET_VALUES, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot reset to hash state after setting some values but not yet calling MatAssemblyBegin()/MatAssemblyEnd()");
+  if (A->num_ass == 0) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscUseMethod(A, "MatResetHash_C", (Mat), (A));
+  /* These flags are used to determine whether certain setups occur */
+  A->was_assembled = PETSC_FALSE;
+  A->assembled     = PETSC_FALSE;
+  /* Log that the state of this object has changed; this will help guarantee that preconditioners get re-setup */
+  PetscCall(PetscObjectStateIncrease((PetscObject)A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1740,18 +1802,6 @@ PetscErrorCode MatSetValuesRow(Mat mat, PetscInt row, const PetscScalar v[])
   Efficiency Alert:
   The routine `MatSetValuesBlockedStencil()` may offer much better efficiency
   for users of block sparse formats (`MATSEQBAIJ` and `MATMPIBAIJ`).
-
-  Fortran Note:
-  `idxm` and `idxn` should be declared as
-$     MatStencil idxm(4,m),idxn(4,n)
-  and the values inserted using
-.vb
-    idxm(MatStencil_i,1) = i
-    idxm(MatStencil_j,1) = j
-    idxm(MatStencil_k,1) = k
-    idxm(MatStencil_c,1) = c
-    etc
-.ve
 
 .seealso: [](ch_matrices), `Mat`, `DMDA`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`
           `MatSetValues()`, `MatSetValuesBlockedStencil()`, `MatSetStencil()`, `DMCreateMatrix()`, `DMDAVecGetArray()`, `MatStencil`
@@ -3035,21 +3085,6 @@ PetscErrorCode MatSetFactorType(Mat mat, MatFactorType t)
       MatGetInfo(A, MAT_LOCAL, &info);
       mal  = info.mallocs;
       nz_a = info.nz_allocated;
-.ve
-
-  Fortran Note:
-  Declare info as a `MatInfo` array of dimension `MAT_INFO_SIZE`, and then extract the parameters
-  of interest.  See the file ${PETSC_DIR}/include/petsc/finclude/petscmat.h
-  a complete list of parameter names.
-.vb
-      MatInfo info(MAT_INFO_SIZE)
-      double  precision mal, nz_a
-      Mat     A
-      integer ierr
-
-      call MatGetInfo(A, MAT_LOCAL, info, ierr)
-      mal = info(MAT_INFO_MALLOCS)
-      nz_a = info(MAT_INFO_NZ_ALLOCATED)
 .ve
 
 .seealso: [](ch_matrices), `Mat`, `MatInfo`, `MatStashGetInfo()`
@@ -4953,7 +4988,6 @@ PetscErrorCode MatDuplicate(Mat mat, MatDuplicateOption op, Mat *M)
   PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
   MatCheckPreallocated(mat, 1);
 
-  *M = NULL;
   PetscCall(PetscLogEventBegin(MAT_Convert, mat, 0, 0, 0));
   PetscUseTypeMethod(mat, duplicate, op, M);
   PetscCall(PetscLogEventEnd(MAT_Convert, mat, 0, 0, 0));
@@ -5312,7 +5346,7 @@ PetscErrorCode MatTransposeSetPrecursor(Mat mat, Mat B)
   rb->id    = ((PetscObject)mat)->id;
   rb->state = 0;
   PetscCall(MatGetNonzeroState(mat, &rb->nonzerostate));
-  PetscCall(PetscObjectContainerCompose((PetscObject)B, "MatTransposeParent", rb, PetscContainerUserDestroyDefault));
+  PetscCall(PetscObjectContainerCompose((PetscObject)B, "MatTransposeParent", rb, PetscCtxDestroyDefault));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -6072,21 +6106,21 @@ PetscErrorCode MatSetOption(Mat mat, MatOption op, PetscBool flg)
     }
     break;
   case MAT_SYMMETRIC:
-    mat->symmetric = flg ? PETSC_BOOL3_TRUE : PETSC_BOOL3_FALSE;
+    mat->symmetric = PetscBoolToBool3(flg);
     if (flg) mat->structurally_symmetric = PETSC_BOOL3_TRUE;
 #if !defined(PETSC_USE_COMPLEX)
-    mat->hermitian = flg ? PETSC_BOOL3_TRUE : PETSC_BOOL3_FALSE;
+    mat->hermitian = PetscBoolToBool3(flg);
 #endif
     break;
   case MAT_HERMITIAN:
-    mat->hermitian = flg ? PETSC_BOOL3_TRUE : PETSC_BOOL3_FALSE;
+    mat->hermitian = PetscBoolToBool3(flg);
     if (flg) mat->structurally_symmetric = PETSC_BOOL3_TRUE;
 #if !defined(PETSC_USE_COMPLEX)
-    mat->symmetric = flg ? PETSC_BOOL3_TRUE : PETSC_BOOL3_FALSE;
+    mat->symmetric = PetscBoolToBool3(flg);
 #endif
     break;
   case MAT_STRUCTURALLY_SYMMETRIC:
-    mat->structurally_symmetric = flg ? PETSC_BOOL3_TRUE : PETSC_BOOL3_FALSE;
+    mat->structurally_symmetric = PetscBoolToBool3(flg);
     break;
   case MAT_SYMMETRY_ETERNAL:
     PetscCheck(mat->symmetric != PETSC_BOOL3_UNKNOWN, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Cannot set MAT_SYMMETRY_ETERNAL without first setting MAT_SYMMETRIC to true or false");
@@ -7200,7 +7234,9 @@ PetscErrorCode MatICCFactorSymbolic(Mat fact, Mat mat, IS perm, const MatFactorI
   column 0.
 
   Fortran Note:
-  One must pass in as `submat` a `Mat` array of size at least `n`+1.
+.vb
+  Mat, pointer :: submat(:)
+.ve
 
 .seealso: [](ch_matrices), `Mat`, `MatDestroySubMatrices()`, `MatCreateSubMatrix()`, `MatGetRow()`, `MatGetDiagonal()`, `MatReuse`
 @*/
@@ -7244,7 +7280,7 @@ PetscErrorCode MatCreateSubMatrices(Mat mat, PetscInt n, const IS irow[], const 
 }
 
 /*@C
-  MatCreateSubMatricesMPI - Extracts MPI submatrices across a sub communicator of mat (by pairs of `IS` that may live on subcomms).
+  MatCreateSubMatricesMPI - Extracts MPI submatrices across a sub communicator of `mat` (by pairs of `IS` that may live on subcomms).
 
   Collective
 
@@ -7299,7 +7335,7 @@ PetscErrorCode MatCreateSubMatricesMPI(Mat mat, PetscInt n, const IS irow[], con
 }
 
 /*@C
-  MatDestroyMatrices - Destroys an array of matrices.
+  MatDestroyMatrices - Destroys an array of matrices
 
   Collective
 
@@ -7342,16 +7378,12 @@ PetscErrorCode MatDestroyMatrices(PetscInt n, Mat *mat[])
 
   Input Parameters:
 + n   - the number of local matrices
-- mat - the matrices (this is a pointer to the array of matrices, just to match the calling
-                       sequence of `MatCreateSubMatrices()`)
+- mat - the matrices (this is a pointer to the array of matrices, to match the calling sequence of `MatCreateSubMatrices()`)
 
   Level: advanced
 
   Note:
   Frees not only the matrices, but also the array that contains the matrices
-
-  Fortran Note:
-  Does not free the `mat` array.
 
 .seealso: [](ch_matrices), `Mat`, `MatCreateSubMatrices()`, `MatDestroyMatrices()`
 @*/
@@ -7624,9 +7656,9 @@ typedef struct {
   Mat              C;
 } EnvelopeData;
 
-static PetscErrorCode EnvelopeDataDestroy(void *ptr)
+static PetscErrorCode EnvelopeDataDestroy(void **ptr)
 {
-  EnvelopeData *edata = (EnvelopeData *)ptr;
+  EnvelopeData *edata = (EnvelopeData *)*ptr;
 
   PetscFunctionBegin;
   for (PetscInt i = 0; i < edata->n; i++) PetscCall(ISDestroy(&edata->is[i]));
@@ -7788,7 +7820,7 @@ PetscErrorCode MatComputeVariableBlockEnvelope(Mat mat)
 
   PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &container));
   PetscCall(PetscContainerSetPointer(container, edata));
-  PetscCall(PetscContainerSetUserDestroy(container, (PetscErrorCode (*)(void *))EnvelopeDataDestroy));
+  PetscCall(PetscContainerSetCtxDestroy(container, EnvelopeDataDestroy));
   PetscCall(PetscObjectCompose((PetscObject)mat, "EnvelopeData", (PetscObject)container));
   PetscCall(PetscObjectDereference((PetscObject)container));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -8030,63 +8062,6 @@ PetscErrorCode MatResidual(Mat mat, Vec b, Vec x, Vec r)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*MC
-    MatGetRowIJF90 - Obtains the compressed row storage i and j indices for the local rows of a sparse matrix
-
-    Synopsis:
-    MatGetRowIJF90(Mat A, PetscInt shift, PetscBool symmetric, PetscBool inodecompressed, PetscInt n, {PetscInt, pointer :: ia(:)}, {PetscInt, pointer :: ja(:)}, PetscBool done,integer ierr)
-
-    Not Collective
-
-    Input Parameters:
-+   A - the matrix
-.   shift -  0 or 1 indicating we want the indices starting at 0 or 1
-.   symmetric - `PETSC_TRUE` or `PETSC_FALSE` indicating the matrix data structure should be symmetrized
--   inodecompressed - `PETSC_TRUE` or `PETSC_FALSE`  indicating if the nonzero structure of the
-                 inodes or the nonzero elements is wanted. For `MATBAIJ` matrices the compressed version is
-                 always used.
-
-    Output Parameters:
-+   n - number of local rows in the (possibly compressed) matrix
-.   ia - the row pointers; that is ia[0] = 0, ia[row] = ia[row-1] + number of elements in that row of the matrix
-.   ja - the column indices
--   done - indicates if the routine actually worked and returned appropriate ia[] and ja[] arrays; callers
-           are responsible for handling the case when done == `PETSC_FALSE` and ia and ja are not set
-
-    Level: developer
-
-    Note:
-    Use  `MatRestoreRowIJF90()` when you no longer need access to the data
-
-.seealso: [](ch_matrices), [](sec_fortranarrays), `Mat`, `MATMPIAIJ`, `MatGetRowIJ()`, `MatRestoreRowIJ()`, `MatRestoreRowIJF90()`
-M*/
-
-/*MC
-    MatRestoreRowIJF90 - restores the compressed row storage i and j indices for the local rows of a sparse matrix obtained with `MatGetRowIJF90()`
-
-    Synopsis:
-    MatRestoreRowIJF90(Mat A, PetscInt shift, PetscBool symmetric, PetscBool inodecompressed, PetscInt n, {PetscInt, pointer :: ia(:)}, {PetscInt, pointer :: ja(:)}, PetscBool done,integer ierr)
-
-    Not Collective
-
-    Input Parameters:
-+   A - the  matrix
-.   shift -  0 or 1 indicating we want the indices starting at 0 or 1
-.   symmetric - `PETSC_TRUE` or `PETSC_FALSE` indicating the matrix data structure should be symmetrized
-    inodecompressed - `PETSC_TRUE` or `PETSC_FALSE`  indicating if the nonzero structure of the
-                 inodes or the nonzero elements is wanted. For `MATBAIJ` matrices the compressed version is
-                 always used.
-.   n - number of local rows in the (possibly compressed) matrix
-.   ia - the row pointers; that is ia[0] = 0, ia[row] = ia[row-1] + number of elements in that row of the matrix
-.   ja - the column indices
--   done - indicates if the routine actually worked and returned appropriate ia[] and ja[] arrays; callers
-           are responsible for handling the case when done == `PETSC_FALSE` and ia and ja are not set
-
-    Level: developer
-
-.seealso: [](ch_matrices), [](sec_fortranarrays), `Mat`, `MATMPIAIJ`, `MatGetRowIJ()`, `MatRestoreRowIJ()`, `MatGetRowIJF90()`
-M*/
-
 /*@C
   MatGetRowIJ - Returns the compressed row storage i and j indices for the local rows of a sparse matrix
 
@@ -8118,13 +8093,11 @@ M*/
   Use
 .vb
     PetscInt, pointer :: ia(:),ja(:)
-    call MatGetRowIJF90(mat,shift,symmetric,inodecompressed,n,ia,ja,done,ierr)
+    call MatGetRowIJ(mat,shift,symmetric,inodecompressed,n,ia,ja,done,ierr)
     ! Access the ith and jth entries via ia(i) and ja(j)
 .ve
 
-  `MatGetRowIJ()` Fortran binding is deprecated (since PETSc 3.19), use `MatGetRowIJF90()`
-
-.seealso: [](ch_matrices), `Mat`, `MATAIJ`, `MatGetRowIJF90()`, `MatGetColumnIJ()`, `MatRestoreRowIJ()`, `MatSeqAIJGetArray()`
+.seealso: [](ch_matrices), `Mat`, `MATAIJ`, `MatGetColumnIJ()`, `MatRestoreRowIJ()`, `MatSeqAIJGetArray()`
 @*/
 PetscErrorCode MatGetRowIJ(Mat mat, PetscInt shift, PetscBool symmetric, PetscBool inodecompressed, PetscInt *n, const PetscInt *ia[], const PetscInt *ja[], PetscBool *done)
 {
@@ -8214,10 +8187,7 @@ PetscErrorCode MatGetColumnIJ(Mat mat, PetscInt shift, PetscBool symmetric, Pets
   us of the array after it has been restored. If you pass `NULL`, it will
   not zero the pointers.  Use of ia or ja after `MatRestoreRowIJ()` is invalid.
 
-  Fortran Note:
-  `MatRestoreRowIJ()` Fortran binding is deprecated (since PETSc 3.19), use `MatRestoreRowIJF90()`
-
-.seealso: [](ch_matrices), `Mat`, `MatGetRowIJ()`, `MatRestoreRowIJF90()`, `MatRestoreColumnIJ()`
+.seealso: [](ch_matrices), `Mat`, `MatGetRowIJ()`, `MatRestoreColumnIJ()`
 @*/
 PetscErrorCode MatRestoreRowIJ(Mat mat, PetscInt shift, PetscBool symmetric, PetscBool inodecompressed, PetscInt *n, const PetscInt *ia[], const PetscInt *ja[], PetscBool *done)
 {
@@ -8366,124 +8336,6 @@ PetscErrorCode MatSetUnfactored(Mat mat)
   PetscUseTypeMethod(mat, setunfactored);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/*MC
-    MatDenseGetArrayF90 - Accesses a matrix array from Fortran
-
-    Synopsis:
-    MatDenseGetArrayF90(Mat x,{Scalar, pointer :: xx_v(:,:)},integer ierr)
-
-    Not Collective
-
-    Input Parameter:
-.   x - matrix
-
-    Output Parameters:
-+   xx_v - the Fortran pointer to the array
--   ierr - error code
-
-    Example of Usage:
-.vb
-      PetscScalar, pointer xx_v(:,:)
-      ....
-      call MatDenseGetArrayF90(x,xx_v,ierr)
-      a = xx_v(3)
-      call MatDenseRestoreArrayF90(x,xx_v,ierr)
-.ve
-
-    Level: advanced
-
-.seealso: [](ch_matrices), `Mat`, `MatDenseRestoreArrayF90()`, `MatDenseGetArray()`, `MatDenseRestoreArray()`, `MatSeqAIJGetArrayF90()`
-M*/
-
-/*MC
-    MatDenseRestoreArrayF90 - Restores a matrix array that has been
-    accessed with `MatDenseGetArrayF90()`.
-
-    Synopsis:
-    MatDenseRestoreArrayF90(Mat x,{Scalar, pointer :: xx_v(:,:)},integer ierr)
-
-    Not Collective
-
-    Input Parameters:
-+   x - matrix
--   xx_v - the Fortran90 pointer to the array
-
-    Output Parameter:
-.   ierr - error code
-
-    Example of Usage:
-.vb
-       PetscScalar, pointer xx_v(:,:)
-       ....
-       call MatDenseGetArrayF90(x,xx_v,ierr)
-       a = xx_v(3)
-       call MatDenseRestoreArrayF90(x,xx_v,ierr)
-.ve
-
-    Level: advanced
-
-.seealso: [](ch_matrices), `Mat`, `MatDenseGetArrayF90()`, `MatDenseGetArray()`, `MatDenseRestoreArray()`, `MatSeqAIJRestoreArrayF90()`
-M*/
-
-/*MC
-    MatSeqAIJGetArrayF90 - Accesses a matrix array from Fortran.
-
-    Synopsis:
-    MatSeqAIJGetArrayF90(Mat x,{Scalar, pointer :: xx_v(:)},integer ierr)
-
-    Not Collective
-
-    Input Parameter:
-.   x - matrix
-
-    Output Parameters:
-+   xx_v - the Fortran pointer to the array
--   ierr - error code
-
-    Example of Usage:
-.vb
-      PetscScalar, pointer xx_v(:)
-      ....
-      call MatSeqAIJGetArrayF90(x,xx_v,ierr)
-      a = xx_v(3)
-      call MatSeqAIJRestoreArrayF90(x,xx_v,ierr)
-.ve
-
-    Level: advanced
-
-.seealso: [](ch_matrices), `Mat`, `MatSeqAIJRestoreArrayF90()`, `MatSeqAIJGetArray()`, `MatSeqAIJRestoreArray()`, `MatDenseGetArrayF90()`
-M*/
-
-/*MC
-    MatSeqAIJRestoreArrayF90 - Restores a matrix array that has been
-    accessed with `MatSeqAIJGetArrayF90()`.
-
-    Synopsis:
-    MatSeqAIJRestoreArrayF90(Mat x,{Scalar, pointer :: xx_v(:)},integer ierr)
-
-    Not Collective
-
-    Input Parameters:
-+   x - matrix
--   xx_v - the Fortran90 pointer to the array
-
-    Output Parameter:
-.   ierr - error code
-
-    Example of Usage:
-.vb
-       PetscScalar, pointer xx_v(:)
-       ....
-       call MatSeqAIJGetArrayF90(x,xx_v,ierr)
-       a = xx_v(3)
-       call MatSeqAIJRestoreArrayF90(x,xx_v,ierr)
-.ve
-
-    Level: advanced
-
-.seealso: [](ch_matrices), `Mat`, `MatSeqAIJGetArrayF90()`, `MatSeqAIJGetArray()`, `MatSeqAIJRestoreArray()`, `MatDenseRestoreArrayF90()`
-M*/
 
 /*@
   MatCreateSubMatrix - Gets a single submatrix on the same number of processors
@@ -10906,6 +10758,7 @@ PetscErrorCode MatInvertBlockDiagonalMat(Mat A, Mat C)
   PetscCall(MatGetBlockSize(A, &bs));
   PetscCall(MatGetLocalSize(A, &m, NULL));
   PetscCall(MatSetLayouts(C, A->rmap, A->cmap));
+  if (A->rmap->bs > 1) PetscCall(MatSetBlockSizes(C, A->rmap->bs, A->cmap->bs)); // mpiaij to A and B
   PetscCall(PetscMalloc1(m / bs, &dnnz));
   for (j = 0; j < m / bs; j++) dnnz[j] = 1;
   PetscCall(MatXAIJSetPreallocation(C, bs, dnnz, NULL, NULL, NULL));
@@ -11162,9 +11015,9 @@ PetscErrorCode MatSubdomainsCreateCoalesce(Mat A, PetscInt N, PetscInt *n, IS *i
   PetscCall(PetscObjectGetComm((PetscObject)A, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  PetscCheck(N >= 1 && N < (PetscInt)size, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "number of subdomains must be > 0 and < %d, got N = %" PetscInt_FMT, size, N);
+  PetscCheck(N >= 1 && N < size, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "number of subdomains must be > 0 and < %d, got N = %" PetscInt_FMT, size, N);
   *n    = 1;
-  k     = ((PetscInt)size) / N + ((PetscInt)size % N > 0); /* There are up to k ranks to a color */
+  k     = size / N + (size % N > 0); /* There are up to k ranks to a color */
   color = rank / k;
   PetscCallMPI(MPI_Comm_split(comm, color, rank, &subcomm));
   PetscCall(PetscMalloc1(1, iss));

@@ -15,7 +15,7 @@ PetscErrorCode PCMGMCycle_Private(PC pc, PC_MG_Levels **mglevelsin, PetscBool tr
 {
   PC_MG        *mg = (PC_MG *)pc->data;
   PC_MG_Levels *mgc, *mglevels = *mglevelsin;
-  PetscInt      cycles = (mglevels->level == 1) ? 1 : (PetscInt)mglevels->cycles;
+  PetscInt      cycles = (mglevels->level == 1) ? 1 : mglevels->cycles;
 
   PetscFunctionBegin;
   if (mglevels->eventsmoothsolve) PetscCall(PetscLogEventBegin(mglevels->eventsmoothsolve, 0, 0, 0, 0));
@@ -422,11 +422,11 @@ PetscErrorCode PCMGSetLevels_MG(PC pc, PetscInt levels, MPI_Comm *comms)
             else PetscCall(PetscSNPrintf(tprefix, 128, "mg_fine_"));
             PetscCall(KSPSetOptionsPrefix(mglevels[i]->smoothd, tprefix));
           } else {
-            PetscCall(PetscSNPrintf(tprefix, 128, "mg_levels_%d_", (int)i));
+            PetscCall(PetscSNPrintf(tprefix, 128, "mg_levels_%" PetscInt_FMT "_", i));
             PetscCall(KSPAppendOptionsPrefix(mglevels[i]->smoothd, tprefix));
           }
         } else {
-          PetscCall(PetscSNPrintf(tprefix, 128, "mg_levels_%d_", (int)i));
+          PetscCall(PetscSNPrintf(tprefix, 128, "mg_levels_%" PetscInt_FMT "_", i));
           PetscCall(KSPAppendOptionsPrefix(mglevels[i]->smoothd, tprefix));
         }
       }
@@ -663,7 +663,7 @@ static PetscErrorCode PCMatApply_MG(PC pc, Mat b, Mat x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCSetFromOptions_MG(PC pc, PetscOptionItems *PetscOptionsObject)
+PetscErrorCode PCSetFromOptions_MG(PC pc, PetscOptionItems PetscOptionsObject)
 {
   PetscInt            levels, cycles;
   PetscBool           flg, flg2;
@@ -689,9 +689,6 @@ PetscErrorCode PCSetFromOptions_MG(PC pc, PetscOptionItems *PetscOptionsObject)
   mgctype = (PCMGCycleType)mglevels[0]->cycles;
   PetscCall(PetscOptionsEnum("-pc_mg_cycle_type", "V cycle or for W-cycle", "PCMGSetCycleType", PCMGCycleTypes, (PetscEnum)mgctype, (PetscEnum *)&mgctype, &flg));
   if (flg) PetscCall(PCMGSetCycleType(pc, mgctype));
-  gtype = mg->galerkin;
-  PetscCall(PetscOptionsEnum("-pc_mg_galerkin", "Use Galerkin process to compute coarser operators", "PCMGSetGalerkin", PCMGGalerkinTypes, (PetscEnum)gtype, (PetscEnum *)&gtype, &flg));
-  if (flg) PetscCall(PCMGSetGalerkin(pc, gtype));
   coarseSpaceType = mg->coarseSpaceType;
   PetscCall(PetscOptionsEnum("-pc_mg_adapt_interp_coarse_space", "Type of adaptive coarse space: none, polynomial, harmonic, eigenvector, generalized_eigenvector, gdsw", "PCMGSetAdaptCoarseSpaceType", PCMGCoarseSpaceTypes, (PetscEnum)coarseSpaceType, (PetscEnum *)&coarseSpaceType, &flg));
   if (flg) PetscCall(PCMGSetAdaptCoarseSpaceType(pc, coarseSpaceType));
@@ -703,6 +700,8 @@ PetscErrorCode PCSetFromOptions_MG(PC pc, PetscOptionItems *PetscOptionsObject)
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-pc_mg_distinct_smoothup", "Create separate smoothup KSP and append the prefix _up", "PCMGSetDistinctSmoothUp", PETSC_FALSE, &flg, NULL));
   if (flg) PetscCall(PCMGSetDistinctSmoothUp(pc));
+  PetscCall(PetscOptionsEnum("-pc_mg_galerkin", "Use Galerkin process to compute coarser operators", "PCMGSetGalerkin", PCMGGalerkinTypes, (PetscEnum)mg->galerkin, (PetscEnum *)&gtype, &flg));
+  if (flg) PetscCall(PCMGSetGalerkin(pc, gtype));
   mgtype = mg->am;
   PetscCall(PetscOptionsEnum("-pc_mg_type", "Multigrid type", "PCMGSetType", PCMGTypes, (PetscEnum)mgtype, (PetscEnum *)&mgtype, &flg));
   if (flg) PetscCall(PCMGSetType(pc, mgtype));
@@ -718,14 +717,14 @@ PetscErrorCode PCSetFromOptions_MG(PC pc, PetscOptionItems *PetscOptionsObject)
 
     levels = mglevels[0]->levels;
     for (i = 0; i < levels; i++) {
-      PetscCall(PetscSNPrintf(eventname, PETSC_STATIC_ARRAY_LENGTH(eventname), "MGSetup Level %d", (int)i));
+      PetscCall(PetscSNPrintf(eventname, PETSC_STATIC_ARRAY_LENGTH(eventname), "MGSetup Level %" PetscInt_FMT, i));
       PetscCall(PetscLogEventRegister(eventname, ((PetscObject)pc)->classid, &mglevels[i]->eventsmoothsetup));
-      PetscCall(PetscSNPrintf(eventname, PETSC_STATIC_ARRAY_LENGTH(eventname), "MGSmooth Level %d", (int)i));
+      PetscCall(PetscSNPrintf(eventname, PETSC_STATIC_ARRAY_LENGTH(eventname), "MGSmooth Level %" PetscInt_FMT, i));
       PetscCall(PetscLogEventRegister(eventname, ((PetscObject)pc)->classid, &mglevels[i]->eventsmoothsolve));
       if (i) {
-        PetscCall(PetscSNPrintf(eventname, PETSC_STATIC_ARRAY_LENGTH(eventname), "MGResid Level %d", (int)i));
+        PetscCall(PetscSNPrintf(eventname, PETSC_STATIC_ARRAY_LENGTH(eventname), "MGResid Level %" PetscInt_FMT, i));
         PetscCall(PetscLogEventRegister(eventname, ((PetscObject)pc)->classid, &mglevels[i]->eventresidual));
-        PetscCall(PetscSNPrintf(eventname, PETSC_STATIC_ARRAY_LENGTH(eventname), "MGInterp Level %d", (int)i));
+        PetscCall(PetscSNPrintf(eventname, PETSC_STATIC_ARRAY_LENGTH(eventname), "MGInterp Level %" PetscInt_FMT, i));
         PetscCall(PetscLogEventRegister(eventname, ((PetscObject)pc)->classid, &mglevels[i]->eventinterprestrict));
       }
     }
@@ -911,7 +910,7 @@ PetscErrorCode PCSetUp_MG(PC pc)
 
       PetscCall(KSPSetTolerances(mglevels[i]->cr, PETSC_CURRENT, PETSC_CURRENT, PETSC_CURRENT, mg->default_smoothd));
       PetscCall(KSPSetInitialGuessNonzero(mglevels[i]->cr, PETSC_TRUE));
-      PetscCall(PetscSNPrintf(crprefix, 128, "mg_levels_%d_cr_", (int)i));
+      PetscCall(PetscSNPrintf(crprefix, 128, "mg_levels_%" PetscInt_FMT "_cr_", i));
       PetscCall(KSPAppendOptionsPrefix(mglevels[i]->cr, crprefix));
     }
   }

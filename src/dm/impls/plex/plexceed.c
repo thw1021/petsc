@@ -55,7 +55,7 @@ PetscErrorCode DMGetPoints_Internal(DM dm, DMLabel domainLabel, PetscInt labelVa
 
 .seealso: [](ch_unstructured), `DMPlexGetLocalOffsetsSupport()`, `DM`, `DMPLEX`, `DMLabel`, `DMPlexGetClosureIndices()`, `DMPlexSetClosurePermutationTensor()`, `DMPlexGetCeedRestriction()`
 @*/
-PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label_value, PetscInt height, PetscInt dm_field, PetscInt *num_cells, PetscInt *cell_size, PetscInt *num_comp, PetscInt *l_size, PetscInt **offsets)
+PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label_value, PetscInt height, PetscInt dm_field, PetscInt *num_cells, PetscInt *cell_size, PetscInt *num_comp, PetscInt *l_size, PetscInt *offsets[])
 {
   PetscDS         ds = NULL;
   PetscFE         fe;
@@ -77,6 +77,7 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
     PetscInt        num_fields;
 
     PetscCall(DMGetRegionDS(dm, domain_label, &field_is, &ds, NULL));
+    PetscCheck(field_is, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Domain label does not have any fields associated with it");
     // Translate dm_field to ds_field
     PetscCall(ISGetIndices(field_is, &fields));
     PetscCall(ISGetSize(field_is, &num_fields));

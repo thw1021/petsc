@@ -253,13 +253,6 @@ static PetscErrorCode MatSetOption_SeqSBAIJ(Mat A, MatOption op, PetscBool flg)
   case MAT_UNUSED_NONZERO_LOCATION_ERR:
     a->nounused = (flg ? -1 : 0);
     break;
-  case MAT_FORCE_DIAGONAL_ENTRIES:
-  case MAT_IGNORE_OFF_PROC_ENTRIES:
-  case MAT_USE_HASH_TABLE:
-  case MAT_SORTED_FULL:
-  case MAT_SUBMAT_SINGLEIS:
-    PetscCall(PetscInfo(A, "Option %s ignored\n", MatOptions[op]));
-    break;
   case MAT_HERMITIAN:
 #if defined(PETSC_USE_COMPLEX)
     if (flg) { /* disable transpose ops */
@@ -279,14 +272,6 @@ static PetscErrorCode MatSetOption_SeqSBAIJ(Mat A, MatOption op, PetscBool flg)
     }
 #endif
     break;
-    /* These options are handled directly by MatSetOption() */
-  case MAT_STRUCTURALLY_SYMMETRIC:
-  case MAT_SYMMETRY_ETERNAL:
-  case MAT_STRUCTURAL_SYMMETRY_ETERNAL:
-  case MAT_STRUCTURE_ONLY:
-  case MAT_SPD_ETERNAL:
-    /* These options are handled directly by MatSetOption() */
-    break;
   case MAT_IGNORE_LOWER_TRIANGULAR:
     a->ignore_ltriangular = flg;
     break;
@@ -297,7 +282,7 @@ static PetscErrorCode MatSetOption_SeqSBAIJ(Mat A, MatOption op, PetscBool flg)
     a->getrow_utriangular = flg;
     break;
   default:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "unknown option %d", op);
+    break;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -404,7 +389,7 @@ static PetscErrorCode MatView_SeqSBAIJ_ASCII(Mat A, PetscViewer viewer)
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[diag[i]], (double)PetscRealPart(1.0 / a->a[diag[i]])));
         }
 #else
-        PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[diag[i]], (double)(1.0 / a->a[diag[i]])));
+        PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g) ", a->j[diag[i]], (double)(1 / a->a[diag[i]])));
 #endif
         /* off-diagonal entries */
         for (k = a->i[i]; k < a->i[i + 1] - 1; k++) {
@@ -1163,7 +1148,7 @@ static PetscErrorCode MatZeroRowsColumns_SeqSBAIJ(Mat A, PetscInt is_n, const Pe
         for (k = 0; k < bs; k++) {
           col = bs * baij->j[j] + k;
           if (col <= i) continue;
-          aa = ((MatScalar *)baij->a) + j * bs2 + (i % bs) + bs * k;
+          aa = baij->a + j * bs2 + (i % bs) + bs * k;
           if (!zeroed[i] && zeroed[col]) bb[i] -= aa[0] * xx[col];
           if (zeroed[i] && !zeroed[col]) bb[col] -= aa[0] * xx[i];
         }
@@ -1179,7 +1164,7 @@ static PetscErrorCode MatZeroRowsColumns_SeqSBAIJ(Mat A, PetscInt is_n, const Pe
         for (k = 0; k < bs; k++) {
           col = bs * baij->j[j] + k;
           if (zeroed[col]) {
-            aa    = ((MatScalar *)baij->a) + j * bs2 + (i % bs) + bs * k;
+            aa    = baij->a + j * bs2 + (i % bs) + bs * k;
             aa[0] = 0.0;
           }
         }
@@ -1196,7 +1181,7 @@ static PetscErrorCode MatZeroRowsColumns_SeqSBAIJ(Mat A, PetscInt is_n, const Pe
   for (i = 0; i < is_n; i++) {
     row   = is_idx[i];
     count = (baij->i[row / bs + 1] - baij->i[row / bs]) * bs;
-    aa    = ((MatScalar *)baij->a) + baij->i[row / bs] * bs2 + (row % bs);
+    aa    = baij->a + baij->i[row / bs] * bs2 + (row % bs);
     for (k = 0; k < count; k++) {
       aa[0] = zero;
       aa += bs;
@@ -1419,7 +1404,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqSBAIJ,
                                        NULL,
                                        NULL,
                                        NULL,
-                                       NULL};
+                                       /*155*/ NULL,
+                                       MatCopyHashToXAIJ_Seq_Hash};
 
 static PetscErrorCode MatStoreValues_SeqSBAIJ(Mat mat)
 {

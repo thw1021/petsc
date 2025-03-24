@@ -22,6 +22,7 @@ class Configure(config.package.Package):
     self.buildLanguages   = ['HIP']
     self.devicePackage    = 1
     self.fullPathHIPC     = ''
+    self.unifiedMemory    = False
     return
 
   def setupHelp(self, help):
@@ -39,7 +40,9 @@ class Configure(config.package.Package):
   def __str__(self):
     output  = config.package.Package.__str__(self)
     if hasattr(self,'hipArch'):
-      output += '  HIP arch: '+ self.hipArch +'\n'
+      if self.unifiedMemory: uminfo = ' with unified memory'
+      else: uminfo = ''
+      output += '  HIP arch: '+ self.hipArch + uminfo + '\n'
     return output
 
   def checkSizeofVoidP(self):
@@ -127,28 +130,35 @@ class Configure(config.package.Package):
       self.framework.addDefine('__HIP_PLATFORM_HCC__',1) # deprecated from 4.3.0
       self.framework.addDefine('__HIP_PLATFORM_AMD__',1)
       if 'with-hip-arch' in self.framework.clArgDB:
-        self.hipArch = self.argDB['with-hip-arch']
+        if self.argDB['with-hip-arch'].split('_')[-1].lower() == 'apu': # take care of user input gfx942_apu and the like
+          self.unifiedMemory = True
+        self.hipArch = self.argDB['with-hip-arch'].split('_')[0]
       else:
         self.getExecutable('rocminfo',getFullPath=1)
         if hasattr(self,'rocminfo'):
           try:
-            (out, err, ret) = Configure.executeShellCommand(self.rocminfo + ' | grep " gfx" ',timeout = 60, log = self.log, threads = 1)
+            (out, err, ret) = Configure.executeShellCommand(self.rocminfo + ' | grep -e "AMD Instinct MI300A " -e " gfx" ',timeout = 60, log = self.log, threads = 1)
           except Exception as e:
             self.log.write('ROCM utility ' + self.rocminfo + ' failed: '+str(e)+'\n')
           else:
             try:
               s = set([i for i in out.split() if 'gfx' in i])
               self.hipArch = list(s)[0]
-              self.log.write('ROCM utility ' + self.rocminfo + ' said the HIP arch is ' + self.hipArch + '\n')
+              uminfo = ''
+              if 'AMD Instinct MI300A' in out:
+                self.unifiedMemory = True
+                uminfo = ' with unified memory'
+              self.log.write('ROCM utility ' + self.rocminfo + ' said the HIP arch is ' + self.hipArch + uminfo + '\n')
             except:
               self.log.write('Unable to parse the ROCM utility ' + self.rocminfo + '\n')
       if hasattr(self,'hipArch'):
         self.hipArch.lower() # to have a uniform format even if user set hip arch in weird cases
         if not self.hipArch.startswith('gfx'):
-          raise RuntimeError('HIP arch name ' + self.hipArch + ' is not in the supported gfxnnn format')
+          raise RuntimeError('HIP arch name ' + self.hipArch + ' is not in the supported gfxnnn or gfxnnn_apu format')
+        # See https://rocm.docs.amd.com/en/latest/reference/gpu-arch-specs.html, even for MI300A, the LLVM target name is still gfx942
         self.setCompilers.HIPFLAGS += ' --offload-arch=' + self.hipArch +' '
       else:
-        raise RuntimeError('You must set --with-hip-arch=gfx900, gfx906, gfx908, gfx90a etc or make ROCM utility "rocminfo" available on your PATH')
+        raise RuntimeError('You must set --with-hip-arch=gfx942_apu, gfx942, gfx900, gfx906, gfx908, gfx90a etc or make ROCM utility "rocminfo" available on your PATH')
 
       # Record rocBlas and rocSparse directories as they are needed by Kokkos-Kernels HIP TPL, so that we can handle
       # a weird (but valid) case --with-hipcc=/opt/rocm-4.5.2/hip/bin/hipcc --with-hip-dir=/opt/rocm-4.5.2 (which

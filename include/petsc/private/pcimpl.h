@@ -16,7 +16,7 @@ struct _PCOps {
   PetscErrorCode (*applyBA)(PC, PCSide, Vec, Vec, Vec);
   PetscErrorCode (*applytranspose)(PC, Vec, Vec);
   PetscErrorCode (*applyBAtranspose)(PC, PetscInt, Vec, Vec, Vec);
-  PetscErrorCode (*setfromoptions)(PC, PetscOptionItems *);
+  PetscErrorCode (*setfromoptions)(PC, PetscOptionItems);
   PetscErrorCode (*presolve)(PC, KSP, Vec, Vec);
   PetscErrorCode (*postsolve)(PC, KSP, Vec, Vec);
   PetscErrorCode (*getfactoredmatrix)(PC, Mat *);
@@ -50,7 +50,7 @@ struct _p_PC {
   void          *modifysubmatricesP;                                                        /* context for user routine */
   void          *data;
   PetscInt       presolvedone;     /* has PCPreSolve() already been run */
-  void          *user;             /* optional user-defined context */
+  void          *ctx;              /* optional user-defined context */
   PCFailedReason failedreason;     /* after VecNorm or VecDot contains maximum of all rank failed reasons */
   PCFailedReason failedreasonrank; /* failed reason on this rank */
 

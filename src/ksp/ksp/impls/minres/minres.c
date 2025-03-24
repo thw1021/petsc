@@ -422,7 +422,7 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
     if (minres->monitor) { /* Mimics MATLAB code with extra flag */
       PetscCall(PetscViewerPushFormat(minres->viewer, minres->viewer_fmt));
       if (ksp->its == 1) PetscCall(PetscViewerASCIIPrintf(minres->viewer, "        flag      rnorm     Arnorm   Compatible         LS      Anorm      Acond      xnorm\n"));
-      PetscCall(PetscViewerASCIIPrintf(minres->viewer, "%s %5d   %2d %10.2e %10.2e   %10.2e %10.2e %10.2e %10.2e %10.2e\n", QLPiter == 1 ? "P" : " ", (int)ksp->its - 1, (int)flag, (double)rnorml, (double)Arnorml, (double)relresl, (double)relAresl, (double)Anorml, (double)Acondl, (double)xnorml));
+      PetscCall(PetscViewerASCIIPrintf(minres->viewer, "%s %5" PetscInt_FMT "   %2" PetscInt_FMT " %10.2e %10.2e   %10.2e %10.2e %10.2e %10.2e %10.2e\n", QLPiter == 1 ? "P" : " ", ksp->its - 1, flag, (double)rnorml, (double)Arnorml, (double)relresl, (double)relAresl, (double)Anorml, (double)Acondl, (double)xnorml));
       PetscCall(PetscViewerPopFormat(minres->viewer));
     }
 
@@ -461,7 +461,7 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
     relresl  = rnorml / (Anorm * xnorm + beta1);
     relAresl = rnorml > realmin ? Arnorml / (Anorm * rnorml) : 0.0;
     PetscCall(PetscViewerPushFormat(minres->viewer, minres->viewer_fmt));
-    PetscCall(PetscViewerASCIIPrintf(minres->viewer, "%s %5d   %2d %10.2e %10.2e   %10.2e %10.2e %10.2e %10.2e %10.2e\n", QLPiter == 1 ? "P" : " ", (int)ksp->its, (int)flag, (double)rnorml, (double)Arnorml, (double)relresl, (double)relAresl, (double)Anorml, (double)Acondl, (double)xnorml));
+    PetscCall(PetscViewerASCIIPrintf(minres->viewer, "%s %5" PetscInt_FMT "   %2" PetscInt_FMT " %10.2e %10.2e   %10.2e %10.2e %10.2e %10.2e %10.2e\n", QLPiter == 1 ? "P" : " ", ksp->its, flag, (double)rnorml, (double)Arnorml, (double)relresl, (double)relAresl, (double)Anorml, (double)Acondl, (double)xnorml));
     PetscCall(PetscViewerPopFormat(minres->viewer));
   }
   if (!ksp->reason) ksp->reason = KSP_DIVERGED_ITS;
@@ -703,7 +703,7 @@ static PetscErrorCode KSPMINRESGetUseQLP_MINRES(KSP ksp, PetscBool *qlp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode KSPSetFromOptions_MINRES(KSP ksp, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode KSPSetFromOptions_MINRES(KSP ksp, PetscOptionItems PetscOptionsObject)
 {
   KSP_MINRES *minres = (KSP_MINRES *)ksp->data;
 

@@ -490,7 +490,7 @@ PetscErrorCode KSPConvergedReasonView(KSP ksp, PetscViewer viewer)
       if (ksp->reason == KSP_DIVERGED_PC_FAILED) {
         PCFailedReason reason;
         PetscCall(PCGetFailedReason(ksp->pc, &reason));
-        PetscCall(PetscViewerASCIIPrintf(viewer, "               PC failed due to %s \n", PCFailedReasons[reason]));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "               PC failed due to %s\n", PCFailedReasons[reason]));
       }
     }
     PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)ksp)->tablevel + 1));
@@ -509,7 +509,7 @@ PetscErrorCode KSPConvergedReasonView(KSP ksp, PetscViewer viewer)
 . f                 - the ksp converged reason view function
 . vctx              - [optional] user-defined context for private data for the
                       `KSPConvergedReason` view routine (use `NULL` if no context is desired)
-- reasonviewdestroy - [optional] routine that frees `vctx` (may be `NULL`)
+- reasonviewdestroy - [optional] routine that frees `vctx` (may be `NULL`), see `PetscCtxDestroyFn` for the calling sequence
 
   Options Database Keys:
 + -ksp_converged_reason             - sets a default `KSPConvergedReasonView()`
@@ -526,9 +526,9 @@ PetscErrorCode KSPConvergedReasonView(KSP ksp, PetscViewer viewer)
   Developer Note:
   Should be named KSPConvergedReasonViewAdd().
 
-.seealso: [](ch_ksp), `KSPConvergedReasonView()`, `KSPConvergedReasonViewCancel()`
+.seealso: [](ch_ksp), `KSPConvergedReasonView()`, `KSPConvergedReasonViewCancel()`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode KSPConvergedReasonViewSet(KSP ksp, PetscErrorCode (*f)(KSP, void *), void *vctx, PetscErrorCode (*reasonviewdestroy)(void **))
+PetscErrorCode KSPConvergedReasonViewSet(KSP ksp, PetscErrorCode (*f)(KSP, void *), void *vctx, PetscCtxDestroyFn *reasonviewdestroy)
 {
   PetscInt  i;
   PetscBool identical;
@@ -542,7 +542,7 @@ PetscErrorCode KSPConvergedReasonViewSet(KSP ksp, PetscErrorCode (*f)(KSP, void 
   PetscCheck(ksp->numberreasonviews < MAXKSPREASONVIEWS, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Too many KSP reasonview set");
   ksp->reasonview[ksp->numberreasonviews]          = f;
   ksp->reasonviewdestroy[ksp->numberreasonviews]   = reasonviewdestroy;
-  ksp->reasonviewcontext[ksp->numberreasonviews++] = (void *)vctx;
+  ksp->reasonviewcontext[ksp->numberreasonviews++] = vctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -634,12 +634,12 @@ PetscErrorCode KSPConvergedRateView(KSP ksp, PetscViewer viewer)
   const char       *prefix, *reason = KSPConvergedReasons[ksp->reason];
 
   PetscFunctionBegin;
-  PetscCall(KSPGetOptionsPrefix(ksp, &prefix));
   PetscCall(KSPGetIterationNumber(ksp, &its));
   PetscCall(KSPComputeConvergenceRate(ksp, &rrate, &rRsq, &erate, &eRsq));
   if (!viewer) viewer = PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)ksp));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isAscii));
   if (isAscii) {
+    PetscCall(KSPGetOptionsPrefix(ksp, &prefix));
     PetscCall(PetscViewerGetFormat(viewer, &format));
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)ksp)->tablevel));
     if (ksp->reason > 0) {
@@ -661,7 +661,7 @@ PetscErrorCode KSPConvergedRateView(KSP ksp, PetscViewer viewer)
       if (ksp->reason == KSP_DIVERGED_PC_FAILED) {
         PCFailedReason reason;
         PetscCall(PCGetFailedReason(ksp->pc, &reason));
-        PetscCall(PetscViewerASCIIPrintf(viewer, "               PC failed due to %s \n", PCFailedReasons[reason]));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "               PC failed due to %s\n", PCFailedReasons[reason]));
       }
     }
     PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)ksp)->tablevel));
@@ -767,40 +767,35 @@ static PetscErrorCode KSPViewFinalResidual_Internal(KSP ksp, PetscViewer viewer,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode KSPMonitorPauseFinal_Internal(KSP ksp)
+PETSC_EXTERN PetscErrorCode PetscMonitorPauseFinal_Internal(PetscInt n, void *ctx[])
 {
-  PetscInt i;
-
   PetscFunctionBegin;
-  if (!ksp->pauseFinal) PetscFunctionReturn(PETSC_SUCCESS);
-  for (i = 0; i < ksp->numbermonitors; ++i) {
-    PetscViewerAndFormat *vf = (PetscViewerAndFormat *)ksp->monitorcontext[i];
+  for (PetscInt i = 0; i < n; ++i) {
+    PetscViewerAndFormat *vf = (PetscViewerAndFormat *)ctx[i];
     PetscDraw             draw;
     PetscReal             lpause;
+    PetscBool             isdraw;
 
     if (!vf) continue;
-    if (vf->lg) {
-      if (!PetscCheckPointer(vf->lg, PETSC_OBJECT)) continue;
-      if (((PetscObject)vf->lg)->classid != PETSC_DRAWLG_CLASSID) continue;
-      PetscCall(PetscDrawLGGetDraw(vf->lg, &draw));
-      PetscCall(PetscDrawGetPause(draw, &lpause));
-      PetscCall(PetscDrawSetPause(draw, -1.0));
-      PetscCall(PetscDrawPause(draw));
-      PetscCall(PetscDrawSetPause(draw, lpause));
-    } else {
-      PetscBool isdraw;
+    if (!PetscCheckPointer(vf->viewer, PETSC_OBJECT)) continue;
+    if (((PetscObject)vf->viewer)->classid != PETSC_VIEWER_CLASSID) continue;
+    PetscCall(PetscObjectTypeCompare((PetscObject)vf->viewer, PETSCVIEWERDRAW, &isdraw));
+    if (!isdraw) continue;
 
-      if (!PetscCheckPointer(vf->viewer, PETSC_OBJECT)) continue;
-      if (((PetscObject)vf->viewer)->classid != PETSC_VIEWER_CLASSID) continue;
-      PetscCall(PetscObjectTypeCompare((PetscObject)vf->viewer, PETSCVIEWERDRAW, &isdraw));
-      if (!isdraw) continue;
-      PetscCall(PetscViewerDrawGetDraw(vf->viewer, 0, &draw));
-      PetscCall(PetscDrawGetPause(draw, &lpause));
-      PetscCall(PetscDrawSetPause(draw, -1.0));
-      PetscCall(PetscDrawPause(draw));
-      PetscCall(PetscDrawSetPause(draw, lpause));
-    }
+    PetscCall(PetscViewerDrawGetDraw(vf->viewer, 0, &draw));
+    PetscCall(PetscDrawGetPause(draw, &lpause));
+    PetscCall(PetscDrawSetPause(draw, -1.0));
+    PetscCall(PetscDrawPause(draw));
+    PetscCall(PetscDrawSetPause(draw, lpause));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode KSPMonitorPauseFinal_Internal(KSP ksp)
+{
+  PetscFunctionBegin;
+  if (!ksp->pauseFinal) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscMonitorPauseFinal_Internal(ksp->numbermonitors, ksp->monitorcontext));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1615,7 +1610,7 @@ PetscErrorCode KSPGetPCSide(KSP ksp, PCSide *side)
 
 .seealso: [](ch_ksp), `KSPSetTolerances()`, `KSP`, `KSPSetMinimumIterations()`, `KSPGetMinimumIterations()`
 @*/
-PetscErrorCode KSPGetTolerances(KSP ksp, PetscReal *rtol, PetscReal *abstol, PetscReal *dtol, PetscInt *maxits)
+PetscErrorCode KSPGetTolerances(KSP ksp, PeOp PetscReal *rtol, PeOp PetscReal *abstol, PeOp PetscReal *dtol, PeOp PetscInt *maxits)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -1696,11 +1691,11 @@ PetscErrorCode KSPSetTolerances(KSP ksp, PetscReal rtol, PetscReal abstol, Petsc
     PetscCheck(dtol >= 0.0, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Divergence tolerance %g must be larger than 1.0", (double)dtol);
     ksp->divtol = dtol;
   }
-  if (maxits == (PetscInt)PETSC_DETERMINE) {
+  if (maxits == PETSC_DETERMINE) {
     ksp->max_it = ksp->default_max_it;
-  } else if (maxits == (PetscInt)PETSC_UNLIMITED) {
+  } else if (maxits == PETSC_UNLIMITED) {
     ksp->max_it = PETSC_INT_MAX;
-  } else if (maxits != (PetscInt)PETSC_CURRENT) {
+  } else if (maxits != PETSC_CURRENT) {
     PetscCheck(maxits >= 0, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Maximum number of iterations %" PetscInt_FMT " must be non-negative", maxits);
     ksp->max_it = maxits;
   }
@@ -2278,16 +2273,13 @@ PetscErrorCode KSPMonitor(KSP ksp, PetscInt it, PetscReal rnorm)
 + ksp            - iterative solver obtained from `KSPCreate()`
 . monitor        - pointer to function (if this is `NULL`, it turns off monitoring
 . ctx            - [optional] context for private data for the monitor routine (use `NULL` if no context is needed)
-- monitordestroy - [optional] routine that frees monitor context (may be `NULL`)
+- monitordestroy - [optional] routine that frees monitor context (may be `NULL`), see `PetscCtxDestroyFn` for the calling sequence
 
   Calling sequence of `monitor`:
 + ksp   - iterative solver obtained from `KSPCreate()`
 . it    - iteration number
 . rnorm - (estimated) 2-norm of (preconditioned) residual
 - ctx   - optional monitoring context, as set by `KSPMonitorSet()`
-
-  Calling sequence of `monitordestroy`:
-. ctx - optional monitoring context, as set by `KSPMonitorSet()`
 
   Options Database Keys:
 + -ksp_monitor                             - sets `KSPMonitorResidual()`
@@ -2318,9 +2310,9 @@ PetscErrorCode KSPMonitor(KSP ksp, PetscInt it, PetscReal rnorm)
   Fortran Note:
   Only a single monitor function can be set for each `KSP` object
 
-.seealso: [](ch_ksp), `KSPMonitorResidual()`, `KSPMonitorCancel()`, `KSP`
+.seealso: [](ch_ksp), `KSPMonitorResidual()`, `KSPMonitorCancel()`, `KSP`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode KSPMonitorSet(KSP ksp, PetscErrorCode (*monitor)(KSP ksp, PetscInt it, PetscReal rnorm, void *ctx), void *ctx, PetscErrorCode (*monitordestroy)(void **ctx))
+PetscErrorCode KSPMonitorSet(KSP ksp, PetscErrorCode (*monitor)(KSP ksp, PetscInt it, PetscReal rnorm, void *ctx), void *ctx, PetscCtxDestroyFn *monitordestroy)
 {
   PetscInt  i;
   PetscBool identical;
@@ -2334,7 +2326,7 @@ PetscErrorCode KSPMonitorSet(KSP ksp, PetscErrorCode (*monitor)(KSP ksp, PetscIn
   PetscCheck(ksp->numbermonitors < MAXKSPMONITORS, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Too many KSP monitors set");
   ksp->monitor[ksp->numbermonitors]          = monitor;
   ksp->monitordestroy[ksp->numbermonitors]   = monitordestroy;
-  ksp->monitorcontext[ksp->numbermonitors++] = (void *)ctx;
+  ksp->monitorcontext[ksp->numbermonitors++] = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2466,13 +2458,7 @@ PetscErrorCode KSPSetResidualHistory(KSP ksp, PetscReal a[], PetscCount na, Pets
   `KSPBCGSL` does not record the residual norms for the "subiterations" hence the results from `KSPGetResidualHistory()` and `KSPGetIterationNumber()` will be different
 
   Fortran Note:
-  The Fortran version of this routine has a calling sequence
-.vb
-  call KSPGetResidualHistory(KSP ksp, integer na, integer ierr)
-.ve
-  note that you have passed a Fortran array into `KSPSetResidualHistory()` and you need
-  to access the residual values from this Fortran array you provided. Only the `na` (number of
-  residual norms currently held) is set.
+  Call `KSPRestoreResidualHistory()` when access to the history is no longer needed.
 
 .seealso: [](ch_ksp), `KSPSetResidualHistory()`, `KSP`, `KSPGetIterationNumber()`, `KSPSTCG`, `KSPBCGSL`
 @*/
@@ -2688,7 +2674,7 @@ PetscErrorCode KSPSetConvergenceTest(KSP ksp, PetscErrorCode (*converge)(KSP ksp
   if (ksp->convergeddestroy) PetscCall((*ksp->convergeddestroy)(ksp->cnvP));
   ksp->converged        = converge;
   ksp->convergeddestroy = destroy;
-  ksp->cnvP             = (void *)ctx;
+  ksp->cnvP             = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

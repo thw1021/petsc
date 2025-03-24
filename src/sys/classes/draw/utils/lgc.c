@@ -161,15 +161,14 @@ PetscErrorCode PetscDrawLGCreate(PetscDraw draw, PetscInt dim, PetscDrawLG *outl
   lg->view    = NULL;
   lg->destroy = NULL;
   lg->nopts   = 0;
-  lg->dim     = (int)dim;
   lg->xmin    = 1.e20;
   lg->ymin    = 1.e20;
   lg->xmax    = -1.e20;
   lg->ymax    = -1.e20;
-
+  PetscCall(PetscCIntCast(dim, &lg->dim));
   PetscCall(PetscMalloc2(dim * PETSC_DRAW_LG_CHUNK_SIZE, &lg->x, dim * PETSC_DRAW_LG_CHUNK_SIZE, &lg->y));
 
-  lg->len         = (int)(dim * PETSC_DRAW_LG_CHUNK_SIZE);
+  lg->len         = lg->dim * PETSC_DRAW_LG_CHUNK_SIZE;
   lg->loc         = 0;
   lg->use_markers = PETSC_FALSE;
 
@@ -186,11 +185,11 @@ PetscErrorCode PetscDrawLGCreate(PetscDraw draw, PetscInt dim, PetscDrawLG *outl
 
   Input Parameters:
 + lg     - the line graph context.
-- colors - the colors
+- colors - the colors, an array of length the value set with `PetscDrawLGSetDimension()`
 
   Level: intermediate
 
-.seealso: `PetscDrawLG`, `PetscDrawLGCreate()`
+.seealso: `PetscDrawLG`, `PetscDrawLGCreate()`, `PetscDrawLGSetDimension()`, `PetscDrawLGGetDimension()`
 @*/
 PetscErrorCode PetscDrawLGSetColors(PetscDrawLG lg, const int colors[])
 {
@@ -291,9 +290,9 @@ PetscErrorCode PetscDrawLGSetDimension(PetscDrawLG lg, PetscInt dim)
     PetscCall(PetscFree(lg->legend));
   }
   PetscCall(PetscFree(lg->colors));
-  lg->dim = (int)dim;
+  PetscCall(PetscCIntCast(dim, &lg->dim));
   PetscCall(PetscMalloc2(dim * PETSC_DRAW_LG_CHUNK_SIZE, &lg->x, dim * PETSC_DRAW_LG_CHUNK_SIZE, &lg->y));
-  lg->len = (int)(dim * PETSC_DRAW_LG_CHUNK_SIZE);
+  lg->len = lg->dim * PETSC_DRAW_LG_CHUNK_SIZE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -445,6 +444,11 @@ PetscErrorCode PetscDrawLGDraw(PetscDrawLG lg)
   xmax = lg->xmax;
   ymin = lg->ymin;
   ymax = lg->ymax;
+  // Try not to freak out the axis
+  if (ymax - ymin < PETSC_SMALL) {
+    ymin -= 0.1 * ymax;
+    ymax += 0.1 * ymax;
+  }
   PetscCall(PetscDrawAxisSetLimits(lg->axis, xmin, xmax, ymin, ymax));
   PetscCall(PetscDrawAxisDraw(lg->axis));
 

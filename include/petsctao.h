@@ -4,9 +4,6 @@
 
 /* SUBMANSEC = Tao */
 
-PETSC_EXTERN PetscErrorCode VecFischer(Vec, Vec, Vec, Vec, Vec);
-PETSC_EXTERN PetscErrorCode VecSFischer(Vec, Vec, Vec, Vec, PetscReal, Vec);
-PETSC_EXTERN PetscErrorCode MatDFischer(Mat, Vec, Vec, Vec, Vec, Vec, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode MatDSFischer(Mat, Vec, Vec, Vec, Vec, PetscReal, Vec, Vec, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode TaoSoftThreshold(Vec, PetscReal, PetscReal, Vec);
 
@@ -439,7 +436,7 @@ PETSC_EXTERN PetscErrorCode TaoGetLineSearch(Tao, TaoLineSearch *);
 
 PETSC_EXTERN PetscErrorCode TaoSetConvergenceHistory(Tao, PetscReal *, PetscReal *, PetscReal *, PetscInt *, PetscInt, PetscBool);
 PETSC_EXTERN PetscErrorCode TaoGetConvergenceHistory(Tao, PetscReal **, PetscReal **, PetscReal **, PetscInt **, PetscInt *);
-PETSC_EXTERN PetscErrorCode TaoMonitorSet(Tao, PetscErrorCode (*)(Tao, void *), void *, PetscErrorCode (*)(void **));
+PETSC_EXTERN PetscErrorCode TaoMonitorSet(Tao, PetscErrorCode (*)(Tao, void *), void *, PetscCtxDestroyFn *);
 PETSC_EXTERN PetscErrorCode TaoMonitorCancel(Tao);
 PETSC_EXTERN PetscErrorCode TaoMonitorDefault(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoMonitorGlobalization(Tao, void *);

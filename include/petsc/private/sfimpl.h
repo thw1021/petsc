@@ -22,30 +22,11 @@ PETSC_EXTERN PetscLogEvent PETSCSF_RemoteOff;
 PETSC_EXTERN PetscLogEvent PETSCSF_Pack;
 PETSC_EXTERN PetscLogEvent PETSCSF_Unpack;
 
-typedef enum {
-  PETSCSF_ROOT2LEAF = 0,
-  PETSCSF_LEAF2ROOT
-} PetscSFDirection;
-typedef enum {
-  PETSCSF_BCAST = 0,
-  PETSCSF_REDUCE,
-  PETSCSF_FETCH
-} PetscSFOperation;
-/* When doing device-aware MPI, a backend refers to the SF/device interface */
-typedef enum {
-  PETSCSF_BACKEND_INVALID = 0,
-  PETSCSF_BACKEND_CUDA,
-  PETSCSF_BACKEND_HIP,
-  PETSCSF_BACKEND_KOKKOS
-} PetscSFBackend;
-
-typedef struct _n_PetscSFLink *PetscSFLink;
-
 struct _PetscSFOps {
   PetscErrorCode (*Reset)(PetscSF);
   PetscErrorCode (*Destroy)(PetscSF);
   PetscErrorCode (*SetUp)(PetscSF);
-  PetscErrorCode (*SetFromOptions)(PetscSF, PetscOptionItems *);
+  PetscErrorCode (*SetFromOptions)(PetscSF, PetscOptionItems);
   PetscErrorCode (*View)(PetscSF, PetscViewer);
   PetscErrorCode (*Duplicate)(PetscSF, PetscSFDuplicateOption, PetscSF);
   PetscErrorCode (*BcastBegin)(PetscSF, MPI_Datatype, PetscMemType, const void *, PetscMemType, void *, MPI_Op);
@@ -96,6 +77,7 @@ struct _p_PetscSF {
   PetscInt    *roffset;    /* Array of length nranks+1, offset in rmine/rremote for each rank */
   PetscInt    *rmine;      /* Concatenated array holding local indices referencing each remote rank */
   PetscInt    *rmine_d[2]; /* A copy of rmine[local/remote] in device memory if needed */
+  PetscBool    monitor;    /* monitor the sf communication */
 
   /* Some results useful in packing by analyzing rmine[] */
   PetscInt       leafbuflen[2];    /* Length (in unit) of leaf buffers, in layout of [PETSCSF_LOCAL/REMOTE] */
@@ -170,7 +152,7 @@ PETSC_INTERN PetscErrorCode MPIPetsc_Type_get_contents(MPI_Datatype, MPIU_Count,
 
 #if defined(PETSC_HAVE_MPI_NONBLOCKING_COLLECTIVES)
   #define MPIU_Ibcast(a, b, c, d, e, req)                MPI_Ibcast(a, b, c, d, e, req)
-  #define MPIU_Ireduce(a, b, c, d, e, f, g, req)         MPI_Ireduce(a, b, (PetscMPIInt)c, d, e, f, g, req)
+  #define MPIU_Ireduce(a, b, c, d, e, f, g, req)         MPI_Ireduce(a, b, c, d, e, f, g, req)
   #define MPIU_Iscatter(a, b, c, d, e, f, g, h, req)     MPI_Iscatter(a, b, c, d, e, f, g, h, req)
   #define MPIU_Iscatterv(a, b, c, d, e, f, g, h, i, req) MPI_Iscatterv(a, b, c, d, e, f, g, h, i, req)
   #define MPIU_Igather(a, b, c, d, e, f, g, h, req)      MPI_Igather(a, b, c, d, e, f, g, h, req)
@@ -183,7 +165,7 @@ PETSC_INTERN PetscErrorCode MPIPetsc_Type_get_contents(MPI_Datatype, MPIU_Count,
    to MPI_REQUEST_NULL so that one can do MPI_Wait(req,status) no matter the call is blocking or not.
  */
   #define MPIU_Ibcast(a, b, c, d, e, req)                MPI_Bcast(a, b, c, d, e)
-  #define MPIU_Ireduce(a, b, c, d, e, f, g, req)         MPI_Reduce(a, b, (PetscMPIInt)c, d, e, f, g)
+  #define MPIU_Ireduce(a, b, c, d, e, f, g, req)         MPI_Reduce(a, b, c, d, e, f, g)
   #define MPIU_Iscatter(a, b, c, d, e, f, g, h, req)     MPI_Scatter(a, b, c, d, e, f, g, h)
   #define MPIU_Iscatterv(a, b, c, d, e, f, g, h, i, req) MPI_Scatterv(a, b, c, d, e, f, g, h, i)
   #define MPIU_Igather(a, b, c, d, e, f, g, h, req)      MPI_Gather(a, b, c, d, e, f, g, h)

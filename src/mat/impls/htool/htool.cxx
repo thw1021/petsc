@@ -363,7 +363,7 @@ static PetscErrorCode MatRestoreRow_Htool(Mat, PetscInt, PetscInt *, PetscInt **
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatSetFromOptions_Htool(Mat A, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode MatSetFromOptions_Htool(Mat A, PetscOptionItems PetscOptionsObject)
 {
   Mat_Htool *a;
   PetscInt   n;
@@ -807,7 +807,7 @@ static PetscErrorCode MatTranspose_Htool(Mat A, MatReuse reuse, Mat *B)
     PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
     PetscCall(MatSetUp(C));
     PetscCall(PetscNew(&kernelt));
-    PetscCall(PetscObjectContainerCompose((PetscObject)C, "KernelTranspose", kernelt, PetscContainerUserDestroyDefault));
+    PetscCall(PetscObjectContainerCompose((PetscObject)C, "KernelTranspose", kernelt, PetscCtxDestroyDefault));
   } else {
     C = *B;
     PetscCall(PetscObjectQuery((PetscObject)C, "KernelTranspose", (PetscObject *)&container));

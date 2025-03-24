@@ -805,40 +805,13 @@ PetscErrorCode SNESSetUpMatrices(SNES snes)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_EXTERN PetscErrorCode PetscMonitorPauseFinal_Internal(PetscInt, void *);
+
 static PetscErrorCode SNESMonitorPauseFinal_Internal(SNES snes)
 {
-  PetscInt i;
-
   PetscFunctionBegin;
   if (!snes->pauseFinal) PetscFunctionReturn(PETSC_SUCCESS);
-  for (i = 0; i < snes->numbermonitors; ++i) {
-    PetscViewerAndFormat *vf = (PetscViewerAndFormat *)snes->monitorcontext[i];
-    PetscDraw             draw;
-    PetscReal             lpause;
-
-    if (!vf) continue;
-    if (vf->lg) {
-      if (!PetscCheckPointer(vf->lg, PETSC_OBJECT)) continue;
-      if (((PetscObject)vf->lg)->classid != PETSC_DRAWLG_CLASSID) continue;
-      PetscCall(PetscDrawLGGetDraw(vf->lg, &draw));
-      PetscCall(PetscDrawGetPause(draw, &lpause));
-      PetscCall(PetscDrawSetPause(draw, -1.0));
-      PetscCall(PetscDrawPause(draw));
-      PetscCall(PetscDrawSetPause(draw, lpause));
-    } else {
-      PetscBool isdraw;
-
-      if (!PetscCheckPointer(vf->viewer, PETSC_OBJECT)) continue;
-      if (((PetscObject)vf->viewer)->classid != PETSC_VIEWER_CLASSID) continue;
-      PetscCall(PetscObjectTypeCompare((PetscObject)vf->viewer, PETSCVIEWERDRAW, &isdraw));
-      if (!isdraw) continue;
-      PetscCall(PetscViewerDrawGetDraw(vf->viewer, 0, &draw));
-      PetscCall(PetscDrawGetPause(draw, &lpause));
-      PetscCall(PetscDrawSetPause(draw, -1.0));
-      PetscCall(PetscDrawPause(draw));
-      PetscCall(PetscDrawSetPause(draw, lpause));
-    }
-  }
+  PetscCall(PetscMonitorPauseFinal_Internal(snes->numbermonitors, snes->monitorcontext));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -852,7 +825,7 @@ static PetscErrorCode SNESMonitorPauseFinal_Internal(SNES snes)
 . name         - the monitor type one is seeking
 . help         - message indicating what monitoring is done
 . manual       - manual page for the monitor
-. monitor      - the monitor function
+. monitor      - the monitor function, this must use a `PetscViewerFormat` as its context
 - monitorsetup - a function that is called once ONLY if the user selected this monitor that may set additional features of the `SNES` or `PetscViewer` objects
 
   Calling sequence of `monitor`:
@@ -891,7 +864,7 @@ PetscErrorCode SNESMonitorSetFromOptions(SNES snes, const char name[], const cha
     PetscCall(PetscViewerAndFormatCreate(viewer, format, &vf));
     PetscCall(PetscViewerDestroy(&viewer));
     if (monitorsetup) PetscCall((*monitorsetup)(snes, vf));
-    PetscCall(SNESMonitorSet(snes, (PetscErrorCode (*)(SNES, PetscInt, PetscReal, void *))monitor, vf, (PetscErrorCode (*)(void **))PetscViewerAndFormatDestroy));
+    PetscCall(SNESMonitorSet(snes, (PetscErrorCode (*)(SNES, PetscInt, PetscReal, void *))monitor, vf, (PetscCtxDestroyFn *)PetscViewerAndFormatDestroy));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1103,7 +1076,7 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
     PetscViewer ctx;
 
     PetscCall(PetscViewerDrawOpen(PetscObjectComm((PetscObject)snes), NULL, NULL, PETSC_DECIDE, PETSC_DECIDE, 400, 300, &ctx));
-    PetscCall(SNESMonitorSet(snes, SNESMonitorLGRange, ctx, (PetscErrorCode (*)(void **))PetscViewerDestroy));
+    PetscCall(SNESMonitorSet(snes, SNESMonitorLGRange, ctx, (PetscCtxDestroyFn *)PetscViewerDestroy));
   }
 
   PetscCall(PetscViewerDestroy(&snes->convergedreasonviewer));
@@ -1231,14 +1204,11 @@ PetscErrorCode SNESResetFromOptions(SNES snes)
   Input Parameters:
 + snes    - the `SNES` context
 . compute - function to compute the context
-- destroy - function to destroy the context
+- destroy - function to destroy the context, see `PetscCtxDestroyFn` for the calling sequence
 
   Calling sequence of `compute`:
 + snes - the `SNES` context
 - ctx  - context to be computed
-
-  Calling sequence of `destroy`:
-. ctx - context to be computed by `compute()`
 
   Level: intermediate
 
@@ -1247,14 +1217,14 @@ PetscErrorCode SNESResetFromOptions(SNES snes)
 
   Use `SNESSetApplicationContext()` to see the context immediately
 
-.seealso: [](ch_snes), `SNESGetApplicationContext()`, `SNESSetApplicationContext()`
+.seealso: [](ch_snes), `SNESGetApplicationContext()`, `SNESSetApplicationContext()`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode SNESSetComputeApplicationContext(SNES snes, PetscErrorCode (*compute)(SNES snes, void **ctx), PetscErrorCode (*destroy)(void **ctx))
+PetscErrorCode SNESSetComputeApplicationContext(SNES snes, PetscErrorCode (*compute)(SNES snes, void **ctx), PetscCtxDestroyFn *destroy)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   snes->ops->usercompute = compute;
-  snes->ops->userdestroy = destroy;
+  snes->ops->ctxdestroy  = destroy;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1265,31 +1235,32 @@ PetscErrorCode SNESSetComputeApplicationContext(SNES snes, PetscErrorCode (*comp
 
   Input Parameters:
 + snes - the `SNES` context
-- usrP - optional user context
+- ctx  - the user context
 
   Level: intermediate
 
   Notes:
-  Users can provide a context when constructing the `SNES` options and then access it inside their function, Jacobian, or other evaluation function
+  Users can provide a context when constructing the `SNES` options and then access it inside their function, Jacobian computation, or other evaluation function
   with `SNESGetApplicationContext()`
 
   To provide a function that computes the context for you use `SNESSetComputeApplicationContext()`
 
   Fortran Note:
-  You must write a Fortran interface definition for this
-  function that tells Fortran the Fortran derived data type that you are passing in as the `usrP` argument.
+  This only works when `ctx` is a Fortran derived type (it cannot be a `PetscObject`), we recommend writing a Fortran interface definition for this
+  function that tells the Fortran compiler the derived data type that is passed in as the `ctx` argument. See `SNESGetApplicationContext()` for
+  an example.
 
 .seealso: [](ch_snes), `SNES`, `SNESSetComputeApplicationContext()`, `SNESGetApplicationContext()`
 @*/
-PetscErrorCode SNESSetApplicationContext(SNES snes, void *usrP)
+PetscErrorCode SNESSetApplicationContext(SNES snes, void *ctx)
 {
   KSP ksp;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscCall(SNESGetKSP(snes, &ksp));
-  PetscCall(KSPSetApplicationContext(ksp, usrP));
-  snes->user = usrP;
+  PetscCall(KSPSetApplicationContext(ksp, ctx));
+  snes->ctx = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1303,21 +1274,37 @@ PetscErrorCode SNESSetApplicationContext(SNES snes, void *usrP)
 . snes - `SNES` context
 
   Output Parameter:
-. usrP - user context
+. ctx - user context
 
   Level: intermediate
 
-  Fortran Note:
-  You must write a Fortran interface definition for this
-  function that tells Fortran the Fortran derived data type that you are passing in as the `usrP` argument.
+  Fortran Notes:
+  This only works when the context is a Fortran derived type (it cannot be a `PetscObject`) and you **must** write a Fortran interface definition for this
+  function that tells the Fortran compiler the derived data type that is returned as the `ctx` argument. For example,
+.vb
+  Interface SNESGetApplicationContext
+    Subroutine SNESGetApplicationContext(snes,ctx,ierr)
+  #include <petsc/finclude/petscsnes.h>
+      use petscsnes
+      SNES snes
+      type(tUsertype), pointer :: ctx
+      PetscErrorCode ierr
+    End Subroutine
+  End Interface SNESGetApplicationContext
+.ve
+
+  The prototpye for `ctx` must be
+.vb
+  type(tUsertype), pointer :: ctx
+.ve
 
 .seealso: [](ch_snes), `SNESSetApplicationContext()`, `SNESSetComputeApplicationContext()`
 @*/
-PetscErrorCode SNESGetApplicationContext(SNES snes, void *usrP)
+PetscErrorCode SNESGetApplicationContext(SNES snes, PeCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  *(void **)usrP = snes->user;
+  *(void **)ctx = snes->ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1904,7 +1891,7 @@ PetscErrorCode SNESCreate(MPI_Comm comm, SNES *outsnes)
   /* Create context to compute Eisenstat-Walker relative tolerance for KSP */
   PetscCall(PetscNew(&kctx));
 
-  snes->kspconvctx  = (void *)kctx;
+  snes->kspconvctx  = kctx;
   kctx->version     = 2;
   kctx->rtol_0      = 0.3; /* Eisenstat and Walker suggest rtol_0=.5, but
                              this was too large for some test cases */
@@ -2306,7 +2293,7 @@ PetscErrorCode SNESPicardComputeJacobian(SNES snes, Vec x1, Mat J, Mat B, void *
 + snes - the `SNES` context
 . r    - vector to store function values, may be `NULL`
 . bp   - function evaluation routine, may be `NULL`, for the calling sequence see `SNESFunctionFn`
-. Amat - matrix with which A(x) x - bp(x) - b is to be computed
+. Amat - matrix with which $A(x) x - bp(x) - b$ is to be computed
 . Pmat - matrix from which preconditioner is computed (usually the same as `Amat`)
 . J    - function to compute matrix values, for the calling sequence see `SNESJacobianFn`
 - ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
@@ -2314,7 +2301,7 @@ PetscErrorCode SNESPicardComputeJacobian(SNES snes, Vec x1, Mat J, Mat B, void *
   Level: intermediate
 
   Notes:
-  It is often better to provide the nonlinear function F() and some approximation to its Jacobian directly and use
+  It is often better to provide the nonlinear function $F()$ and some approximation to its Jacobian directly and use
   an approximate Newton solver. This interface is provided to allow porting/testing a previous Picard based code in PETSc before converting it to approximate Newton.
 
   One can call `SNESSetPicard()` or `SNESSetFunction()` (and possibly `SNESSetJacobian()`) but cannot call both
@@ -2322,7 +2309,7 @@ PetscErrorCode SNESPicardComputeJacobian(SNES snes, Vec x1, Mat J, Mat B, void *
   Solves the equation $A(x) x = bp(x) - b$ via the defect correction algorithm $A(x^{n}) (x^{n+1} - x^{n}) = bp(x^{n}) + b - A(x^{n})x^{n}$.
   When an exact solver is used this corresponds to the "classic" Picard $A(x^{n}) x^{n+1} = bp(x^{n}) + b$ iteration.
 
-  Run with `-snes_mf_operator` to solve the system with Newton's method using A(x^{n}) to construct the preconditioner.
+  Run with `-snes_mf_operator` to solve the system with Newton's method using $A(x^{n})$ to construct the preconditioner.
 
   We implement the defect correction form of the Picard iteration because it converges much more generally when inexact linear solvers are used then
   the direct Picard iteration $A(x^n) x^{n+1} = bp(x^n) + b$
@@ -2332,13 +2319,13 @@ PetscErrorCode SNESPicardComputeJacobian(SNES snes, Vec x1, Mat J, Mat B, void *
   different please contact us at petsc-dev@mcs.anl.gov and we'll have an entirely new argument \:-).
 
   When used with `-snes_mf_operator` this will run matrix-free Newton's method where the matrix-vector product is of the true Jacobian of $A(x)x - bp(x) - b$ and
-  A(x^{n}) is used to build the preconditioner
+  $A(x^{n})$ is used to build the preconditioner
 
   When used with `-snes_fd` this will compute the true Jacobian (very slowly one column at a time) and thus represent Newton's method.
 
   When used with `-snes_fd_coloring` this will compute the Jacobian via coloring and thus represent a faster implementation of Newton's method. But the
-  the nonzero structure of the Jacobian is, in general larger than that of the Picard matrix A so you must provide in A the needed nonzero structure for the correct
-  coloring. When using `DMDA` this may mean creating the matrix A with `DMCreateMatrix()` using a wider stencil than strictly needed for A or with a `DMDA_STENCIL_BOX`.
+  the nonzero structure of the Jacobian is, in general larger than that of the Picard matrix $A$ so you must provide in $A$ the needed nonzero structure for the correct
+  coloring. When using `DMDA` this may mean creating the matrix $A$ with `DMCreateMatrix()` using a wider stencil than strictly needed for $A$ or with a `DMDA_STENCIL_BOX`.
   See the comment in src/snes/tutorials/ex15.c.
 
 .seealso: [](ch_snes), `SNES`, `SNESGetFunction()`, `SNESSetFunction()`, `SNESComputeFunction()`, `SNESSetJacobian()`, `SNESGetPicard()`, `SNESLineSearchPreCheckPicard()`,
@@ -3388,7 +3375,7 @@ PetscErrorCode SNESSetUp(SNES snes)
     }
   }
   if (snes->mf) PetscCall(SNESSetUpMatrixFree_Private(snes, snes->mf_operator, snes->mf_version));
-  if (snes->ops->usercompute && !snes->user) PetscCallBack("SNES callback compute application context", (*snes->ops->usercompute)(snes, (void **)&snes->user));
+  if (snes->ops->usercompute && !snes->ctx) PetscCallBack("SNES callback compute application context", (*snes->ops->usercompute)(snes, &snes->ctx));
 
   snes->jac_iter = 0;
   snes->pre_iter = 0;
@@ -3433,9 +3420,9 @@ PetscErrorCode SNESReset(SNES snes)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  if (snes->ops->userdestroy && snes->user) {
-    PetscCallBack("SNES callback destroy application context", (*snes->ops->userdestroy)((void **)&snes->user));
-    snes->user = NULL;
+  if (snes->ops->ctxdestroy && snes->ctx) {
+    PetscCallBack("SNES callback destroy application context", (*snes->ops->ctxdestroy)(&snes->ctx));
+    snes->ctx = NULL;
   }
   if (snes->npc) PetscCall(SNESReset(snes->npc));
 
@@ -3912,18 +3899,18 @@ PetscErrorCode SNESSetTolerances(SNES snes, PetscReal abstol, PetscReal rtol, Pe
     snes->stol = stol;
   }
 
-  if (maxit == (PetscInt)PETSC_DETERMINE) {
+  if (maxit == PETSC_DETERMINE) {
     snes->max_its = snes->default_max_its;
-  } else if (maxit == (PetscInt)PETSC_UNLIMITED) {
+  } else if (maxit == PETSC_UNLIMITED) {
     snes->max_its = PETSC_INT_MAX;
   } else if (maxit != PETSC_CURRENT) {
     PetscCheck(maxit >= 0, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_OUTOFRANGE, "Maximum number of iterations %" PetscInt_FMT " must be non-negative", maxit);
     snes->max_its = maxit;
   }
 
-  if (maxf == (PetscInt)PETSC_DETERMINE) {
+  if (maxf == PETSC_DETERMINE) {
     snes->max_funcs = snes->default_max_funcs;
-  } else if (maxf == (PetscInt)PETSC_UNLIMITED || maxf == -1) {
+  } else if (maxf == PETSC_UNLIMITED || maxf == -1) {
     snes->max_funcs = PETSC_UNLIMITED;
   } else if (maxf != PETSC_CURRENT) {
     PetscCheck(maxf >= 0, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_OUTOFRANGE, "Maximum number of function evaluations %" PetscInt_FMT " must be nonnegative", maxf);
@@ -4197,7 +4184,7 @@ M*/
 + snes           - the `SNES` context
 . f              - the monitor function,  for the calling sequence see `SNESMonitorFunction`
 . mctx           - [optional] user-defined context for private data for the monitor routine (use `NULL` if no context is desired)
-- monitordestroy - [optional] routine that frees monitor context (may be `NULL`)
+- monitordestroy - [optional] routine that frees monitor context (may be `NULL`), see `PetscCtxDestroyFn` for the calling sequence
 
   Options Database Keys:
 + -snes_monitor               - sets `SNESMonitorDefault()`
@@ -4215,9 +4202,9 @@ M*/
   Fortran Note:
   Only a single monitor function can be set for each `SNES` object
 
-.seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESMonitorDefault()`, `SNESMonitorCancel()`, `SNESMonitorFunction`
+.seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESMonitorDefault()`, `SNESMonitorCancel()`, `SNESMonitorFunction`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode SNESMonitorSet(SNES snes, PetscErrorCode (*f)(SNES, PetscInt, PetscReal, void *), void *mctx, PetscErrorCode (*monitordestroy)(void **))
+PetscErrorCode SNESMonitorSet(SNES snes, PetscErrorCode (*f)(SNES, PetscInt, PetscReal, void *), void *mctx, PetscCtxDestroyFn *monitordestroy)
 {
   PetscInt  i;
   PetscBool identical;
@@ -4231,7 +4218,7 @@ PetscErrorCode SNESMonitorSet(SNES snes, PetscErrorCode (*f)(SNES, PetscInt, Pet
   PetscCheck(snes->numbermonitors < MAXSNESMONITORS, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Too many monitors set");
   snes->monitor[snes->numbermonitors]          = f;
   snes->monitordestroy[snes->numbermonitors]   = monitordestroy;
-  snes->monitorcontext[snes->numbermonitors++] = (void *)mctx;
+  snes->monitorcontext[snes->numbermonitors++] = mctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4417,7 +4404,7 @@ PetscErrorCode SNESSetConvergedReason(SNES snes, SNESConvergedReason reason)
   Level: intermediate
 
   Notes:
-  If 'a' and 'its' are `NULL` then space is allocated for the history. If 'na' is `PETSC_DECIDE` then a
+  If 'a' and 'its' are `NULL` then space is allocated for the history. If 'na' is `PETSC_DECIDE` (or, deprecated, `PETSC_DEFAULT`) then a
   default array of length 1,000 is allocated.
 
   This routine is useful, e.g., when running a code for purposes
@@ -4485,10 +4472,13 @@ PETSC_EXTERN mxArray *SNESGetConvergenceHistoryMatlab(SNES snes)
   of accurate performance monitoring, when no I/O should be done
   during the section of code that is being timed.
 
-  Fortran Note:
-  The calling sequence for this routine in Fortran is
+  Fortran Notes:
+  Return the arrays with ``SNESRestoreConvergenceHistory()`
+
+  Use the arguments
 .vb
-    call SNESGetConvergenceHistory(SNES snes, integer na, integer ierr)
+  PetscReal, pointer :: a(:)
+  PetscInt, pointer :: its(:)
 .ve
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESSetConvergenceHistory()`
@@ -4522,10 +4512,25 @@ PetscErrorCode SNESGetConvergenceHistory(SNES snes, PetscReal *a[], PetscInt *it
   to `SNESSetFunction()`, or `SNESSetPicard()`
   This is not used by most users, and it is intended to provide a general hook that is run
   right before the direction step is computed.
+
   Users are free to modify the current residual vector,
   the current linearization point, or any other vector associated to the specific solver used.
   If such modifications take place, it is the user responsibility to update all the relevant
-  vectors.
+  vectors. For example, if one is adjusting the model parameters at each Newton step their code may look like
+.vb
+  PetscErrorCode update(SNES snes, PetscInt iteration)
+  {
+    PetscFunctionBeginUser;
+    if (iteration > 0) {
+      // update the model parameters here
+      Vec x,f;
+      PetscCall(SNESGetSolution(snes,&x));
+      PetcCall(SNESGetFunction(snes,&f,NULL,NULL));
+      PetscCall(SNESComputeFunction(snes,x,f));
+    }
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+.ve
 
   There are a variety of function hooks one many set that are called at different stages of the nonlinear solution process, see the functions listed below.
 
@@ -4623,14 +4628,11 @@ PetscErrorCode SNESConvergedReasonView(SNES snes, PetscViewer viewer)
 + snes              - the `SNES` context
 . f                 - the `SNESConvergedReason` view function
 . vctx              - [optional] user-defined context for private data for the `SNESConvergedReason` view function (use `NULL` if no context is desired)
-- reasonviewdestroy - [optional] routine that frees the context (may be `NULL`)
+- reasonviewdestroy - [optional] routine that frees the context (may be `NULL`), see `PetscCtxDestroyFn` for the calling sequence
 
   Calling sequence of `f`:
 + snes - the `SNES` context
-- vctx - [optional] user-defined context for private data for the function
-
-  Calling sequence of `reasonviewerdestroy`:
-. vctx - [optional] user-defined context for private data for the function
+- vctx - [optional] context for private data for the function
 
   Options Database Keys:
 + -snes_converged_reason             - sets a default `SNESConvergedReasonView()`
@@ -4644,9 +4646,10 @@ PetscErrorCode SNESConvergedReasonView(SNES snes, PetscViewer viewer)
   `SNESConvergedReasonViewSet()` multiple times; all will be called in the
   order in which they were set.
 
-.seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESConvergedReason`, `SNESGetConvergedReason()`, `SNESConvergedReasonView()`, `SNESConvergedReasonViewCancel()`
+.seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESConvergedReason`, `SNESGetConvergedReason()`, `SNESConvergedReasonView()`, `SNESConvergedReasonViewCancel()`,
+          `PetscCtxDestroyFn`
 @*/
-PetscErrorCode SNESConvergedReasonViewSet(SNES snes, PetscErrorCode (*f)(SNES snes, void *vctx), void *vctx, PetscErrorCode (*reasonviewdestroy)(void **vctx))
+PetscErrorCode SNESConvergedReasonViewSet(SNES snes, PetscErrorCode (*f)(SNES snes, void *vctx), void *vctx, PetscCtxDestroyFn *reasonviewdestroy)
 {
   PetscInt  i;
   PetscBool identical;
@@ -4660,7 +4663,7 @@ PetscErrorCode SNESConvergedReasonViewSet(SNES snes, PetscErrorCode (*f)(SNES sn
   PetscCheck(snes->numberreasonviews < MAXSNESREASONVIEWS, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Too many SNES reasonview set");
   snes->reasonview[snes->numberreasonviews]          = f;
   snes->reasonviewdestroy[snes->numberreasonviews]   = reasonviewdestroy;
-  snes->reasonviewcontext[snes->numberreasonviews++] = (void *)vctx;
+  snes->reasonviewcontext[snes->numberreasonviews++] = vctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4863,6 +4866,7 @@ PetscErrorCode SNESSolve(SNES snes, Vec b, Vec x)
 
       PetscCall(DMRefine(snes->dm, PetscObjectComm((PetscObject)snes), &fine));
       PetscCheck(fine, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_INCOMP, "DMRefine() did not perform any refinement, cannot continue grid sequencing");
+      PetscCall(DMGetCoordinatesLocalSetUp(fine));
       PetscCall(DMCreateInterpolation(snes->dm, fine, &interp, NULL));
       PetscCall(DMCreateGlobalVector(fine, &xnew));
       PetscCall(MatInterpolate(interp, x, xnew));
@@ -5751,7 +5755,7 @@ PetscErrorCode SNESGetNPC(SNES snes, SNES *pc)
     PetscCall(SNESSetOptionsPrefix(snes->npc, optionsprefix));
     PetscCall(SNESAppendOptionsPrefix(snes->npc, "npc_"));
     if (snes->ops->usercompute) {
-      PetscCall(SNESSetComputeApplicationContext(snes, snes->ops->usercompute, snes->ops->userdestroy));
+      PetscCall(SNESSetComputeApplicationContext(snes, snes->ops->usercompute, snes->ops->ctxdestroy));
     } else {
       PetscCall(SNESGetApplicationContext(snes, &ctx));
       PetscCall(SNESSetApplicationContext(snes->npc, ctx));
@@ -5781,7 +5785,8 @@ PetscErrorCode SNESHasNPC(SNES snes, PetscBool *has_npc)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  *has_npc = (PetscBool)(snes->npc ? PETSC_TRUE : PETSC_FALSE);
+  PetscAssertPointer(has_npc, 2);
+  *has_npc = snes->npc ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

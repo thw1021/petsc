@@ -583,22 +583,15 @@ static PetscErrorCode SNESSetUp_NEWTONTRDC(SNES snes)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode SNESReset_NEWTONTRDC(SNES snes)
-{
-  PetscFunctionBegin;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode SNESDestroy_NEWTONTRDC(SNES snes)
 {
   PetscFunctionBegin;
-  PetscCall(SNESReset_NEWTONTRDC(snes));
   PetscCall(PetscObjectComposeFunction((PetscObject)snes, "SNESNewtonTRSetTolerances_C", NULL));
   PetscCall(PetscFree(snes->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode SNESSetFromOptions_NEWTONTRDC(SNES snes, PetscOptionItems *PetscOptionsObject)
+static PetscErrorCode SNESSetFromOptions_NEWTONTRDC(SNES snes, PetscOptionItems PetscOptionsObject)
 {
   SNES_NEWTONTRDC *ctx = (SNES_NEWTONTRDC *)snes->data;
 
@@ -673,7 +666,6 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONTRDC(SNES snes)
   snes->ops->destroy        = SNESDestroy_NEWTONTRDC;
   snes->ops->setfromoptions = SNESSetFromOptions_NEWTONTRDC;
   snes->ops->view           = SNESView_NEWTONTRDC;
-  snes->ops->reset          = SNESReset_NEWTONTRDC;
 
   snes->usesksp = PETSC_TRUE;
   snes->usesnpc = PETSC_FALSE;

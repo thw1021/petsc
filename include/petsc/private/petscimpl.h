@@ -117,7 +117,7 @@ typedef struct _p_PetscObject {
   PetscErrorCode (*python_destroy)(void *);
 
   PetscInt noptionhandler;
-  PetscErrorCode (*optionhandler[PETSC_MAX_OPTIONS_HANDLER])(PetscObject, PetscOptionItems *, void *);
+  PetscErrorCode (*optionhandler[PETSC_MAX_OPTIONS_HANDLER])(PetscObject, PetscOptionItems, void *);
   PetscErrorCode (*optiondestroy[PETSC_MAX_OPTIONS_HANDLER])(PetscObject, void *);
   void *optionctx[PETSC_MAX_OPTIONS_HANDLER];
 #if defined(PETSC_HAVE_SAWS)
@@ -376,7 +376,7 @@ PETSC_INTERN PetscErrorCode PetscFreeMPIResources(void);
 PETSC_INTERN PetscErrorCode PetscOptionsHasHelpIntro_Internal(PetscOptions, PetscBool *);
 
 /* Code shared between C and Fortran */
-PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *, const char *, const char *, PetscBool, PetscBool, PetscInt);
+PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *, const char *, const char *, PetscBool, PetscInt);
 
 #if PetscDefined(HAVE_SETJMP_H)
 PETSC_EXTERN PetscBool PetscCheckPointer(const void *, PetscDataType);
@@ -692,14 +692,14 @@ PETSC_ASSERT_POINTER_IMPL_SPECIALIZATION(PetscComplex, PETSC_COMPLEX);
       do { \
         PetscBool _7_match; \
         PetscCall(PetscObjectTypeCompare(((PetscObject)(a)), (type), &_7_match)); \
-        PetscCheck(_7_match, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Object (%s) is not %s", (char *)(((PetscObject)(a))->type_name), type); \
+        PetscCheck(_7_match, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Object (%s) is not %s", ((PetscObject)(a))->type_name, type); \
       } while (0)
 
     #define PetscCheckTypeNames(a, type1, type2) \
       do { \
         PetscBool _7_match; \
         PetscCall(PetscObjectTypeCompareAny(((PetscObject)(a)), &_7_match, (type1), (type2), "")); \
-        PetscCheck(_7_match, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Object (%s) is not %s or %s", (char *)(((PetscObject)(a))->type_name), type1, type2); \
+        PetscCheck(_7_match, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Object (%s) is not %s or %s", ((PetscObject)(a))->type_name, type1, type2); \
       } while (0)
 
     /*
@@ -1206,7 +1206,7 @@ M*/
           `PetscObjectComposedDataSetIntstar()`, `PetscObjectComposedDataGetInt()`, `PetscObject`,
           `PetscObjectCompose()`, `PetscObjectQuery()`
 M*/
-#define PetscObjectComposedDataGetReal(obj, id, data, flag) ((PetscErrorCode)(((obj)->realcomposedstate ? (data = (obj)->realcomposeddata[id], flag = (PetscBool)((obj)->realcomposedstate[id] == (obj)->state)) : (flag = PETSC_FALSE)), PETSC_SUCCESS))
+#define PetscObjectComposedDataGetReal(obj, id, data, flag) (((obj)->realcomposedstate ? (data = (obj)->realcomposeddata[id], flag = (PetscBool)((obj)->realcomposedstate[id] == (obj)->state)) : (flag = PETSC_FALSE)), PETSC_SUCCESS)
 
 /*MC
    PetscObjectComposedDataSetRealstar - attach `PetscReal` array data to a `PetscObject` that may be retrieved with `PetscObjectComposedDataGetRealstar()`
@@ -1605,3 +1605,42 @@ struct _n_PetscObjectList {
   PetscObject     obj;
   PetscObjectList next;
 };
+
+/*MC
+   PeOP - indicates an argument to a PETSc function is optional and one can pass `NULL` instead. This is used by the Fortran API generator
+
+   Level: developer
+
+   Example:
+.vb
+   PetscErrorCode XXXX(Vec v, PeOp PetscObject obj, PeOp PetscInt *idx, PeOp PetscInt *array[])
+.ve
+
+   Notes:
+   This is not part of the PETSc public API and should only be used in PETSc source code.
+
+   Put this in the function declaration in front of each variable that is optional
+
+   Developer Note:
+   Shortened form of PETSc optional
+
+.seealso: `PeNS`, `PeCtx`, `PetscInitialize()`
+M*/
+#define PeOp
+
+/*MC
+   PeNS - indicates a function that does not use the PETSc standard arguments which make it easy to generate automatic language stubs for other languages
+
+   Level: developer
+
+   Notes:
+   This is not part of the PETSc public API and should only be used in PETSc source code.
+
+   Put this at the end of the function declaration closing parenthesis
+
+   Developer Note:
+   Shortened form of PETSc non-standard
+
+.seealso: `PeOp`, `PeCtx`, `PetscInitialize()`
+M*/
+#define PeNS

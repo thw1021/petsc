@@ -493,6 +493,7 @@ static PetscErrorCode MatHYPRE_AttachCOOMat(Mat mat)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Build COO's coordinate list i[], j[] based on CSR's i[], j[] arrays and the number of local rows 'n'
 static PetscErrorCode CSRtoCOO_Private(PetscInt n, const PetscInt ii[], const PetscInt jj[], PetscCount *ncoo, PetscInt **coo_i, PetscInt **coo_j)
 {
   PetscInt *cooi, *cooj;
@@ -509,6 +510,7 @@ static PetscErrorCode CSRtoCOO_Private(PetscInt n, const PetscInt ii[], const Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Similar to CSRtoCOO_Private, but the CSR's i[], j[] are of type HYPRE_Int
 static PetscErrorCode CSRtoCOO_HYPRE_Int_Private(PetscInt n, const HYPRE_Int ii[], const HYPRE_Int jj[], PetscCount *ncoo, PetscInt **coo_i, PetscInt **coo_j)
 {
   PetscInt *cooi, *cooj;
@@ -525,6 +527,7 @@ static PetscErrorCode CSRtoCOO_HYPRE_Int_Private(PetscInt n, const HYPRE_Int ii[
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Build a COO data structure for the seqaij matrix, as if the nonzeros are laid out in the same order as in the CSR
 static PetscErrorCode MatSeqAIJGetCOO_Private(Mat A, PetscCount *ncoo, PetscInt **coo_i, PetscInt **coo_j)
 {
   PetscInt        n;
@@ -540,6 +543,7 @@ static PetscErrorCode MatSeqAIJGetCOO_Private(Mat A, PetscCount *ncoo, PetscInt 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Build a COO data structure for the hypreCSRMatrix, as if the nonzeros are laid out in the same order as in the hypreCSRMatrix
 static PetscErrorCode hypreCSRMatrixGetCOO_Private(hypre_CSRMatrix *A, PetscCount *ncoo, PetscInt **coo_i, PetscInt **coo_j)
 {
   PetscInt             n = hypre_CSRMatrixNumRows(A);
@@ -618,6 +622,18 @@ PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse r
     }
     PetscFunctionReturn(PETSC_SUCCESS);
   }
+
+#if defined(PETSC_HAVE_HYPRE_DEVICE)
+  {
+    PetscBool isaij;
+    // Hypre defaults to GPU when configured with GPU. We make it default to the memory location associated with the petsc matrix,
+    // i.e., when A is a host matrix, Hypre will be on the host; otherwise, when A is of type aijcusparse, aijhipsarse, aijkokkos etc,
+    // Hypre will be on the device.
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &isaij, MATSEQAIJ, MATMPIAIJ, ""));
+    PetscHYPREInitialize();
+    PetscCallExternal(HYPRE_SetMemoryLocation, isaij ? HYPRE_MEMORY_HOST : HYPRE_MEMORY_DEVICE);
+  }
+#endif
 
   dA = A;
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &ismpiaij));

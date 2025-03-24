@@ -3,7 +3,7 @@
 
 static char help[] = "Solves a saddle-point linear system using PCHPDDM.\n\n";
 
-static PetscErrorCode MatAndISLoad(const char *prefix, const char *identifier, Mat A, IS is, Mat N, PetscMPIInt rank, PetscMPIInt size);
+static PetscErrorCode MatAndISLoad(const char *prefix, const char *identifier, Mat A, IS is, Mat N, PetscMPIInt size);
 
 int main(int argc, char **args)
 {
@@ -12,10 +12,10 @@ int main(int argc, char **args)
   KSP               ksp, *subksp;    /* linear solver context */
   PC                pc;
   IS                is[2];
-  PetscMPIInt       rank, size;
+  PetscMPIInt       size;
   PetscInt          m, M, n, N, id = 0;
   PetscViewer       viewer;
-  const char *const system[] = {"elasticity", "stokes"};
+  const char *const system[] = {"elasticity", "stokes", "diffusion"};
   /* "elasticity":
    *    2D linear elasticity with rubber-like and steel-like material coefficients, i.e., Poisson's ratio \in {0.4999, 0.35} and Young's modulus \in {0.01 GPa, 200.0 GPa}
    *      discretized by order 2 (resp. 0) Lagrange finite elements in displacements (resp. pressure) on a triangle mesh
@@ -23,6 +23,9 @@ int main(int argc, char **args)
    *    2D lid-driven cavity with constant viscosity
    *      discretized by order 2 (resp. 1) Lagrange finite elements, i.e., lowest-order Taylor--Hood finite elements, in velocities (resp. pressure) on a triangle mesh
    *      if the option -empty_A11 is not set (or set to false), a pressure with a zero mean-value is computed
+   * "diffusion":
+   *    2D primal-dual nonsymmetric diffusion equation
+   *      discretized by order 2 (resp. 1) Lagrange finite elements in primal (resp. dual) unknowns on a triangle mesh
    */
   char      dir[PETSC_MAX_PATH_LEN], prefix[PETSC_MAX_PATH_LEN];
   PetscBool flg[4] = {PETSC_FALSE, PETSC_FALSE, PETSC_FALSE, PETSC_FALSE};
@@ -33,18 +36,22 @@ int main(int argc, char **args)
   PetscCheck(size == 4, PETSC_COMM_WORLD, PETSC_ERR_USER, "This example requires 4 processes");
   PetscCall(PetscOptionsGetEList(NULL, NULL, "-system", system, PETSC_STATIC_ARRAY_LENGTH(system), &id, NULL));
   if (id == 1) PetscCall(PetscOptionsGetBool(NULL, NULL, "-empty_A11", flg, NULL));
-  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
   for (PetscInt i = 0; i < 2; ++i) {
     PetscCall(MatCreate(PETSC_COMM_WORLD, A + (i ? 3 : 0)));
-    PetscCall(ISCreate(PETSC_COMM_SELF, is + i));
-    PetscCall(MatCreate(PETSC_COMM_SELF, aux + i));
+    if (id < 2) {
+      PetscCall(ISCreate(PETSC_COMM_SELF, is + i));
+      PetscCall(MatCreate(PETSC_COMM_SELF, aux + i));
+    } else {
+      is[i]  = NULL;
+      aux[i] = NULL;
+    }
   }
   PetscCall(PetscStrncpy(dir, ".", sizeof(dir)));
   PetscCall(PetscOptionsGetString(NULL, NULL, "-load_dir", dir, sizeof(dir), NULL));
   /* loading matrices and auxiliary data for the diagonal blocks */
-  PetscCall(PetscSNPrintf(prefix, sizeof(prefix), "%s/%s", dir, id == 1 ? "B" : "A"));
-  PetscCall(MatAndISLoad(prefix, "00", A[0], is[0], aux[0], rank, size));
-  PetscCall(MatAndISLoad(prefix, "11", A[3], is[1], aux[1], rank, size));
+  PetscCall(PetscSNPrintf(prefix, sizeof(prefix), "%s/%s", dir, id == 2 ? "C" : (id == 1 ? "B" : "A")));
+  PetscCall(MatAndISLoad(prefix, "00", A[0], is[0], aux[0], size));
+  PetscCall(MatAndISLoad(prefix, "11", A[3], is[1], aux[1], size));
   /* loading the off-diagonal block with a coherent row/column layout */
   PetscCall(MatCreate(PETSC_COMM_WORLD, A + 2));
   PetscCall(MatGetLocalSize(A[0], &n, NULL));
@@ -52,29 +59,37 @@ int main(int argc, char **args)
   PetscCall(MatGetLocalSize(A[3], &m, NULL));
   PetscCall(MatGetSize(A[3], &M, NULL));
   PetscCall(MatSetSizes(A[2], m, n, M, N));
-  PetscCall(MatSetUp(A[2]));
-  PetscCall(PetscSNPrintf(prefix, sizeof(prefix), "%s/%s10.dat", dir, id == 1 ? "B" : "A"));
+  PetscCall(PetscSNPrintf(prefix, sizeof(prefix), "%s/%s10.dat", dir, id == 2 ? "C" : (id == 1 ? "B" : "A")));
   PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, prefix, FILE_MODE_READ, &viewer));
   PetscCall(MatLoad(A[2], viewer));
   PetscCall(PetscViewerDestroy(&viewer));
-  /* transposing the off-diagonal block */
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-transpose", flg + 1, NULL));
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-permute", flg + 2, NULL));
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-explicit", flg + 3, NULL));
-  if (flg[1]) {
-    if (flg[2]) {
-      PetscCall(MatTranspose(A[2], MAT_INITIAL_MATRIX, A + 1));
-      PetscCall(MatDestroy(A + 2));
+  if (id < 2) {
+    /* transposing the off-diagonal block */
+    PetscCall(PetscOptionsGetBool(NULL, NULL, "-transpose", flg + 1, NULL));
+    PetscCall(PetscOptionsGetBool(NULL, NULL, "-permute", flg + 2, NULL));
+    PetscCall(PetscOptionsGetBool(NULL, NULL, "-explicit", flg + 3, NULL));
+    if (flg[1]) {
+      if (flg[2]) {
+        PetscCall(MatTranspose(A[2], MAT_INITIAL_MATRIX, A + 1));
+        PetscCall(MatDestroy(A + 2));
+      }
+      if (!flg[3]) PetscCall(MatCreateTranspose(A[2 - flg[2]], A + 1 + flg[2]));
+      else PetscCall(MatTranspose(A[2 - flg[2]], MAT_INITIAL_MATRIX, A + 1 + flg[2]));
+    } else {
+      if (flg[2]) {
+        PetscCall(MatHermitianTranspose(A[2], MAT_INITIAL_MATRIX, A + 1));
+        PetscCall(MatDestroy(A + 2));
+      }
+      if (!flg[3]) PetscCall(MatCreateHermitianTranspose(A[2 - flg[2]], A + 1 + flg[2]));
+      else PetscCall(MatHermitianTranspose(A[2 - flg[2]], MAT_INITIAL_MATRIX, A + 1 + flg[2]));
     }
-    if (!flg[3]) PetscCall(MatCreateTranspose(A[2 - flg[2]], A + 1 + flg[2]));
-    else PetscCall(MatTranspose(A[2 - flg[2]], MAT_INITIAL_MATRIX, A + 1 + flg[2]));
   } else {
-    if (flg[2]) {
-      PetscCall(MatHermitianTranspose(A[2], MAT_INITIAL_MATRIX, A + 1));
-      PetscCall(MatDestroy(A + 2));
-    }
-    if (!flg[3]) PetscCall(MatCreateHermitianTranspose(A[2 - flg[2]], A + 1 + flg[2]));
-    else PetscCall(MatHermitianTranspose(A[2 - flg[2]], MAT_INITIAL_MATRIX, A + 1 + flg[2]));
+    PetscCall(MatCreate(PETSC_COMM_WORLD, A + 1));
+    PetscCall(MatSetSizes(A[1], n, m, N, M));
+    PetscCall(PetscSNPrintf(prefix, sizeof(prefix), "%s/C01.dat", dir));
+    PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, prefix, FILE_MODE_READ, &viewer));
+    PetscCall(MatLoad(A[1], viewer));
+    PetscCall(PetscViewerDestroy(&viewer));
   }
   if (flg[0]) PetscCall(MatDestroy(A + 3));
   else {
@@ -121,7 +136,7 @@ int main(int argc, char **args)
   PetscCall(PetscFree(subksp));
   PetscCall(KSPSetFromOptions(ksp));
   PetscCall(MatCreateVecs(S, &b, &x));
-  PetscCall(PetscSNPrintf(prefix, sizeof(prefix), "%s/rhs_%s.dat", dir, id == 1 ? "B" : "A"));
+  PetscCall(PetscSNPrintf(prefix, sizeof(prefix), "%s/rhs_%s.dat", dir, id == 2 ? "C" : (id == 1 ? "B" : "A")));
   PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, prefix, FILE_MODE_READ, &viewer));
   PetscCall(VecLoad(b, viewer));
   PetscCall(PetscViewerDestroy(&viewer));
@@ -174,21 +189,28 @@ int main(int argc, char **args)
   return 0;
 }
 
-PetscErrorCode MatAndISLoad(const char *prefix, const char *identifier, Mat A, IS is, Mat aux, PetscMPIInt rank, PetscMPIInt size)
+PetscErrorCode MatAndISLoad(const char *prefix, const char *identifier, Mat A, IS is, Mat aux, PetscMPIInt size)
 {
+  Mat             tmp[3];
   IS              sizes;
   const PetscInt *idx;
+  PetscInt        m;
+  PetscLayout     map;
   PetscViewer     viewer;
   char            name[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBeginUser;
-  PetscCall(PetscSNPrintf(name, sizeof(name), "%s%s_sizes_%d_%d.dat", prefix, identifier, rank, size));
-  PetscCall(PetscViewerBinaryOpen(PETSC_COMM_SELF, name, FILE_MODE_READ, &viewer));
-  PetscCall(ISCreate(PETSC_COMM_SELF, &sizes));
+  PetscCall(PetscSNPrintf(name, sizeof(name), "%s%s_sizes_%d.dat", prefix, identifier, size));
+  PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, name, FILE_MODE_READ, &viewer));
+  PetscCall(ISCreate(PETSC_COMM_WORLD, &sizes));
   PetscCall(ISLoad(sizes, viewer));
   PetscCall(ISGetIndices(sizes, &idx));
   PetscCall(MatSetSizes(A, idx[0], idx[1], idx[2], idx[3]));
-  PetscCall(MatSetUp(A));
+  if (is && aux) {
+    PetscCall(MatCreate(PETSC_COMM_WORLD, tmp));
+    PetscCall(MatSetSizes(tmp[0], idx[4], idx[4], PETSC_DETERMINE, PETSC_DETERMINE));
+    PetscCall(MatSetUp(tmp[0]));
+  }
   PetscCall(ISRestoreIndices(sizes, &idx));
   PetscCall(ISDestroy(&sizes));
   PetscCall(PetscViewerDestroy(&viewer));
@@ -196,14 +218,29 @@ PetscErrorCode MatAndISLoad(const char *prefix, const char *identifier, Mat A, I
   PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, name, FILE_MODE_READ, &viewer));
   PetscCall(MatLoad(A, viewer));
   PetscCall(PetscViewerDestroy(&viewer));
-  PetscCall(PetscSNPrintf(name, sizeof(name), "%s%s_is_%d_%d.dat", prefix, identifier, rank, size));
-  PetscCall(PetscViewerBinaryOpen(PETSC_COMM_SELF, name, FILE_MODE_READ, &viewer));
-  PetscCall(ISLoad(is, viewer));
-  PetscCall(PetscViewerDestroy(&viewer));
-  PetscCall(PetscSNPrintf(name, sizeof(name), "%s%s_aux_%d_%d.dat", prefix, identifier, rank, size));
-  PetscCall(PetscViewerBinaryOpen(PETSC_COMM_SELF, name, FILE_MODE_READ, &viewer));
-  PetscCall(MatLoad(aux, viewer));
-  PetscCall(PetscViewerDestroy(&viewer));
+  if (is && aux) {
+    PetscCall(ISCreate(PETSC_COMM_WORLD, &sizes));
+    PetscCall(MatGetLayouts(tmp[0], &map, NULL));
+    PetscCall(ISSetLayout(sizes, map));
+    PetscCall(PetscSNPrintf(name, sizeof(name), "%s%s_is_%d.dat", prefix, identifier, size));
+    PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, name, FILE_MODE_READ, &viewer));
+    PetscCall(ISLoad(sizes, viewer));
+    PetscCall(ISGetLocalSize(sizes, &m));
+    PetscCall(ISGetIndices(sizes, &idx));
+    PetscCall(ISSetType(is, ISGENERAL));
+    PetscCall(ISGeneralSetIndices(is, m, idx, PETSC_COPY_VALUES));
+    PetscCall(ISRestoreIndices(sizes, &idx));
+    PetscCall(ISDestroy(&sizes));
+    PetscCall(PetscViewerDestroy(&viewer));
+    PetscCall(PetscSNPrintf(name, sizeof(name), "%s%s_aux_%d.dat", prefix, identifier, size));
+    PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, name, FILE_MODE_READ, &viewer));
+    PetscCall(MatLoad(tmp[0], viewer));
+    PetscCall(PetscViewerDestroy(&viewer));
+    PetscCall(MatGetDiagonalBlock(tmp[0], tmp + 1));
+    PetscCall(MatDuplicate(tmp[1], MAT_COPY_VALUES, tmp + 2));
+    PetscCall(MatHeaderReplace(aux, tmp + 2));
+    PetscCall(MatDestroy(tmp));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -257,5 +294,13 @@ PetscErrorCode MatAndISLoad(const char *prefix, const char *identifier, Mat A, I
       output_file: output/ex41_1.out
       filter: grep -v "CONVERGED_RTOL iterations"
       args: -load_dir ${DATAFILESPATH}/matrices/hpddm/GENEO -system stokes -ksp_rtol 1e-4 -ksp_converged_reason -ksp_max_it 30 -pc_type fieldsplit -pc_fieldsplit_type schur -fieldsplit_ksp_type preonly -pc_fieldsplit_schur_precondition selfp -fieldsplit_pc_type bjacobi -fieldsplit_sub_pc_type lu -transpose {{false true}shared output} -fieldsplit_1_mat_schur_complement_ainv_type lump
+
+   test:
+      requires: datafilespath hpddm slepc double !complex !defined(PETSC_USE_64BIT_INDICES) defined(PETSC_HAVE_DYNAMIC_LIBRARIES) defined(PETSC_USE_SHARED_LIBRARIES)
+      nsize: 4
+      suffix: nonsymmetric_least_squares
+      output_file: output/ex41_1.out
+      filter: grep -v "CONVERGED_RTOL iterations"
+      args: -load_dir ${DATAFILESPATH}/matrices/hpddm/GENEO -system diffusion -ksp_rtol 1e-4 -ksp_converged_reason -ksp_max_it 20 -pc_type fieldsplit -pc_fieldsplit_type schur -fieldsplit_ksp_type preonly -fieldsplit_0_pc_type jacobi -prefix_push fieldsplit_1_ -pc_hpddm_schur_precondition least_squares -pc_hpddm_define_subdomains -prefix_push pc_hpddm_levels_1_ -sub_pc_type lu -sub_pc_factor_shift_type nonzero -eps_nev 5 -st_share_sub_ksp -prefix_pop -prefix_pop
 
 TEST*/

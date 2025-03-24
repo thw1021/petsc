@@ -3,15 +3,17 @@
 #include <petscdmplex.h>
 #include <petscdmplextransformtypes.h>
 
+/* SUBMANSEC = DM */
+
 PETSC_EXTERN PetscClassId DMPLEXTRANSFORM_CLASSID;
 
 /*J
-   DMPlexTransformType - String with the name of a PETSc DMPlexTransform type
+   DMPlexTransformType - String with the name of a PETSc `DMPlexTransformType`
 
    Level: beginner
 
    Note:
-   [](plex_transform_table) for a table of available matrix types
+   [](plex_transform_table) for a table of available transformation types
 
 .seealso: [](plex_transform_table), [](ch_unstructured), `DMPlexTransformCreate()`, `DMPlexTransform`, `DMPlexTransformRegister()`
 J*/
@@ -24,7 +26,7 @@ typedef const char *DMPlexTransformType;
 #define DMPLEXREFINETOBOX         "refine_tobox"
 #define DMPLEXREFINETOSIMPLEX     "refine_tosimplex"
 #define DMPLEXREFINE1D            "refine_1d"
-#define DMPLEXEXTRUDE             "extrude"
+#define DMPLEXEXTRUDETYPE         "extrude"
 #define DMPLEXCOHESIVEEXTRUDE     "cohesive_extrude"
 #define DMPLEXTRANSFORMFILTER     "transform_filter"
 
@@ -53,6 +55,11 @@ PETSC_EXTERN PetscErrorCode DMPlexTransformGetDepth(DMPlexTransform, PetscInt *)
 PETSC_EXTERN PetscErrorCode DMPlexTransformGetDepthStratum(DMPlexTransform, PetscInt, PetscInt *, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMPlexTransformGetActive(DMPlexTransform, DMLabel *);
 PETSC_EXTERN PetscErrorCode DMPlexTransformSetActive(DMPlexTransform, DMLabel);
+PETSC_EXTERN PetscErrorCode DMPlexTransformGetTransformTypes(DMPlexTransform, DMLabel *);
+PETSC_EXTERN PetscErrorCode DMPlexTransformSetTransformTypes(DMPlexTransform, DMLabel);
+PETSC_EXTERN PetscErrorCode DMPlexTransformGetMatchStrata(DMPlexTransform, PetscBool *);
+PETSC_EXTERN PetscErrorCode DMPlexTransformSetMatchStrata(DMPlexTransform, PetscBool);
+
 PETSC_EXTERN PetscErrorCode DMPlexTransformGetTargetPoint(DMPlexTransform, DMPolytopeType, DMPolytopeType, PetscInt, PetscInt, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMPlexTransformGetSourcePoint(DMPlexTransform, PetscInt, DMPolytopeType *, DMPolytopeType *, PetscInt *, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCellTransform(DMPlexTransform, DMPolytopeType, PetscInt, PetscInt *, PetscInt *, DMPolytopeType *[], PetscInt *[], PetscInt *[], PetscInt *[]);

@@ -83,9 +83,8 @@ One can create vectors whose entries are stored on GPUs using the convenience ro
 There are convenience creation routines for almost all vector types; we recommend using the more verbose form because it allows
 selecting CPU or GPU simulations at runtime.
 
-For applications running in parallel that involve multi-dimensional structured grids, unstructured grids, networks, etc, it is cumbersome
-for users to explicitly manage the needed local and global sizes of the vectors. Hence, PETSc provides a powerful abstract
-object called the ``DM`` to help manage the vectors and matrices needed for such applications. Parallel vectors can be created easily with
+For applications running in parallel that involve multi-dimensional structured grids, unstructured grids, networks, etc, it is cumbersome for users to explicitly manage the needed local and global sizes of the vectors. 
+Hence, PETSc provides two powerful abstract objects (lower level) ``PetscSection`` (see :any:`ch_petscsection`)  and (higher level) ``DM`` (see :any:`ch_dmbase`) to help manage the vectors and matrices needed for such applications. Using ``DM``, parallel vectors can be created easily with
 
 .. code-block::
 
@@ -273,9 +272,7 @@ This routine creates an array of pointers to vectors. The two routines
 are useful because they allow one to write library code that does
 not depend on the particular format of the vectors being used. Instead,
 the subroutines can automatically create work vectors based on
-the specified existing vector. As discussed in
-:any:`sec_fortvecd`, the Fortran interface for
-``VecDuplicateVecs()`` differs slightly.
+the specified existing vector. 
 
 When a vector is no longer needed, it should be destroyed with the
 command
@@ -289,9 +286,6 @@ To destroy an array of vectors, use the command
 .. code-block::
 
    VecDestroyVecs(PetscInt n,Vec **vecs);
-
-Note that the Fortran interface for ``VecDestroyVecs()`` differs
-slightly, as described in :any:`sec_fortvecd`.
 
 It is also possible to create vectors that use an array the user provides rather than having PETSc internally allocate the array space. Such
 vectors can be created with the routines such as

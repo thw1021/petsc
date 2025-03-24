@@ -53,8 +53,8 @@ PetscErrorCode VecDestroy_MPI(Vec v)
 
 static PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
 {
-  PetscInt           i, work = xin->map->n, cnt, len, nLen;
-  PetscMPIInt        j, n = 0, size, rank, tag = ((PetscObject)viewer)->tag;
+  PetscInt           i, work = xin->map->n, cnt, nLen;
+  PetscMPIInt        j, n = 0, size, rank, tag = ((PetscObject)viewer)->tag, len;
   MPI_Status         status;
   PetscScalar       *values;
   const PetscScalar *xarray;
@@ -66,7 +66,7 @@ static PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
   PetscCall(PetscViewerGetFormat(viewer, &format));
   if (format == PETSC_VIEWER_LOAD_BALANCE) {
     PetscInt nmax = 0, nmin = xin->map->n, navg;
-    for (i = 0; i < (PetscInt)size; i++) {
+    for (PetscMPIInt i = 0; i < size; i++) {
       nmax = PetscMax(nmax, xin->map->range[i + 1] - xin->map->range[i]);
       nmin = PetscMin(nmin, xin->map->range[i + 1] - xin->map->range[i]);
     }
@@ -78,7 +78,8 @@ static PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
   PetscCall(VecGetArrayRead(xin, &xarray));
   /* determine maximum message to arrive */
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)xin), &rank));
-  PetscCallMPI(MPI_Reduce(&work, &len, 1, MPIU_INT, MPI_MAX, 0, PetscObjectComm((PetscObject)xin)));
+  PetscCallMPI(MPI_Reduce(rank ? &work : MPI_IN_PLACE, &work, 1, MPIU_INT, MPI_MAX, 0, PetscObjectComm((PetscObject)xin)));
+  PetscCall(PetscMPIIntCast(work, &len));
   if (format == PETSC_VIEWER_ASCII_GLVIS) rank = 0, len = 0; /* no parallel distributed write support from GLVis */
   if (rank == 0) {
     PetscCall(PetscMalloc1(len, &values));
@@ -104,7 +105,7 @@ static PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
       }
       /* receive and print messages */
       for (j = 1; j < size; j++) {
-        PetscCallMPI(MPI_Recv(values, (PetscMPIInt)len, MPIU_SCALAR, j, tag, PetscObjectComm((PetscObject)xin), &status));
+        PetscCallMPI(MPI_Recv(values, len, MPIU_SCALAR, j, tag, PetscObjectComm((PetscObject)xin), &status));
         PetscCallMPI(MPI_Get_count(&status, MPIU_SCALAR, &n));
         for (i = 0; i < n; i++) {
 #if defined(PETSC_USE_COMPLEX)
@@ -132,7 +133,7 @@ static PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
       }
       /* receive and print messages */
       for (j = 1; j < size; j++) {
-        PetscCallMPI(MPI_Recv(values, (PetscMPIInt)len, MPIU_SCALAR, j, tag, PetscObjectComm((PetscObject)xin), &status));
+        PetscCallMPI(MPI_Recv(values, len, MPIU_SCALAR, j, tag, PetscObjectComm((PetscObject)xin), &status));
         PetscCallMPI(MPI_Get_count(&status, MPIU_SCALAR, &n));
         for (i = 0; i < n; i++) {
 #if defined(PETSC_USE_COMPLEX)
@@ -140,113 +141,6 @@ static PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
 #else
           PetscCall(PetscViewerASCIIPrintf(viewer, "%18.16e\n", (double)values[i]));
 #endif
-        }
-      }
-    } else if (format == PETSC_VIEWER_ASCII_VTK_DEPRECATED || format == PETSC_VIEWER_ASCII_VTK_CELL_DEPRECATED) {
-      /*
-        state 0: No header has been output
-        state 1: Only POINT_DATA has been output
-        state 2: Only CELL_DATA has been output
-        state 3: Output both, POINT_DATA last
-        state 4: Output both, CELL_DATA last
-      */
-      static PetscInt stateId     = -1;
-      PetscInt        outputState = 0;
-      int             doOutput    = 0;
-      PetscBool       hasState;
-      PetscInt        bs, b;
-
-      if (stateId < 0) PetscCall(PetscObjectComposedDataRegister(&stateId));
-      PetscCall(PetscObjectComposedDataGetInt((PetscObject)viewer, stateId, outputState, hasState));
-      if (!hasState) outputState = 0;
-
-      PetscCall(PetscObjectGetName((PetscObject)xin, &name));
-      PetscCall(VecGetLocalSize(xin, &nLen));
-      PetscCall(PetscMPIIntCast(nLen, &n));
-      PetscCall(VecGetBlockSize(xin, &bs));
-      if (format == PETSC_VIEWER_ASCII_VTK_DEPRECATED) {
-        if (outputState == 0) {
-          outputState = 1;
-          doOutput    = 1;
-        } else if (outputState == 1) doOutput = 0;
-        else if (outputState == 2) {
-          outputState = 3;
-          doOutput    = 1;
-        } else if (outputState == 3) doOutput = 0;
-        else PetscCheck(outputState != 4, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Tried to output POINT_DATA again after intervening CELL_DATA");
-
-        if (doOutput) PetscCall(PetscViewerASCIIPrintf(viewer, "POINT_DATA %" PetscInt_FMT "\n", xin->map->N / bs));
-      } else {
-        if (outputState == 0) {
-          outputState = 2;
-          doOutput    = 1;
-        } else if (outputState == 1) {
-          outputState = 4;
-          doOutput    = 1;
-        } else if (outputState == 2) {
-          doOutput = 0;
-        } else {
-          PetscCheck(outputState != 3, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Tried to output CELL_DATA again after intervening POINT_DATA");
-          if (outputState == 4) doOutput = 0;
-        }
-
-        if (doOutput) PetscCall(PetscViewerASCIIPrintf(viewer, "CELL_DATA %" PetscInt_FMT "\n", xin->map->N / bs));
-      }
-      PetscCall(PetscObjectComposedDataSetInt((PetscObject)viewer, stateId, outputState));
-      if (name) {
-        if (bs == 3) {
-          PetscCall(PetscViewerASCIIPrintf(viewer, "VECTORS %s double\n", name));
-        } else {
-          PetscCall(PetscViewerASCIIPrintf(viewer, "SCALARS %s double %" PetscInt_FMT "\n", name, bs));
-        }
-      } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "SCALARS scalars double %" PetscInt_FMT "\n", bs));
-      }
-      if (bs != 3) PetscCall(PetscViewerASCIIPrintf(viewer, "LOOKUP_TABLE default\n"));
-      for (i = 0; i < n / bs; i++) {
-        for (b = 0; b < bs; b++) {
-          if (b > 0) PetscCall(PetscViewerASCIIPrintf(viewer, " "));
-          PetscCall(PetscViewerASCIIPrintf(viewer, "%g", (double)PetscRealPart(xarray[i * bs + b])));
-        }
-        PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
-      }
-      for (j = 1; j < size; j++) {
-        PetscCallMPI(MPI_Recv(values, (PetscMPIInt)len, MPIU_SCALAR, j, tag, PetscObjectComm((PetscObject)xin), &status));
-        PetscCallMPI(MPI_Get_count(&status, MPIU_SCALAR, &n));
-        for (i = 0; i < n / bs; i++) {
-          for (b = 0; b < bs; b++) {
-            if (b > 0) PetscCall(PetscViewerASCIIPrintf(viewer, " "));
-            PetscCall(PetscViewerASCIIPrintf(viewer, "%g", (double)PetscRealPart(values[i * bs + b])));
-          }
-          PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
-        }
-      }
-    } else if (format == PETSC_VIEWER_ASCII_VTK_COORDS_DEPRECATED) {
-      PetscInt bs, b;
-
-      PetscCall(VecGetLocalSize(xin, &nLen));
-      PetscCall(PetscMPIIntCast(nLen, &n));
-      PetscCall(VecGetBlockSize(xin, &bs));
-      PetscCheck(bs >= 1 && bs <= 3, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "VTK can only handle 3D objects, but vector dimension is %" PetscInt_FMT, bs);
-
-      for (i = 0; i < n / bs; i++) {
-        for (b = 0; b < bs; b++) {
-          if (b > 0) PetscCall(PetscViewerASCIIPrintf(viewer, " "));
-          PetscCall(PetscViewerASCIIPrintf(viewer, "%g", (double)PetscRealPart(xarray[i * bs + b])));
-        }
-        for (b = bs; b < 3; b++) PetscCall(PetscViewerASCIIPrintf(viewer, " 0.0"));
-        PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
-      }
-      for (j = 1; j < size; j++) {
-        PetscCallMPI(MPI_Recv(values, (PetscMPIInt)len, MPIU_SCALAR, j, tag, PetscObjectComm((PetscObject)xin), &status));
-        PetscCallMPI(MPI_Get_count(&status, MPIU_SCALAR, &n));
-        for (i = 0; i < n / bs; i++) {
-          for (b = 0; b < bs; b++) {
-            if (b > 0) PetscCall(PetscViewerASCIIPrintf(viewer, " "));
-            PetscCall(PetscViewerASCIIPrintf(viewer, "%g", (double)PetscRealPart(values[i * bs + b])));
-          }
-          for (b = bs; b < 3; b++) PetscCall(PetscViewerASCIIPrintf(viewer, " 0.0"));
-          PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
         }
       }
     } else if (format == PETSC_VIEWER_ASCII_PCICE) {
@@ -269,7 +163,7 @@ static PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
         PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
       }
       for (j = 1; j < size; j++) {
-        PetscCallMPI(MPI_Recv(values, (PetscMPIInt)len, MPIU_SCALAR, j, tag, PetscObjectComm((PetscObject)xin), &status));
+        PetscCallMPI(MPI_Recv(values, len, MPIU_SCALAR, j, tag, PetscObjectComm((PetscObject)xin), &status));
         PetscCallMPI(MPI_Get_count(&status, MPIU_SCALAR, &n));
         for (i = 0; i < n / bs; i++) {
           PetscCall(PetscViewerASCIIPrintf(viewer, "%7" PetscInt_FMT "   ", vertexCount++));
@@ -334,7 +228,7 @@ static PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
       }
       /* receive and print messages */
       for (j = 1; j < size; j++) {
-        PetscCallMPI(MPI_Recv(values, (PetscMPIInt)len, MPIU_SCALAR, j, tag, PetscObjectComm((PetscObject)xin), &status));
+        PetscCallMPI(MPI_Recv(values, len, MPIU_SCALAR, j, tag, PetscObjectComm((PetscObject)xin), &status));
         PetscCallMPI(MPI_Get_count(&status, MPIU_SCALAR, &n));
         if (format != PETSC_VIEWER_ASCII_COMMON) PetscCall(PetscViewerASCIIPrintf(viewer, "Process [%d]\n", j));
         for (i = 0; i < n; i++) {
@@ -358,7 +252,7 @@ static PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
     if (format == PETSC_VIEWER_ASCII_INFO || format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
       /* Rank 0 is not trying to receive anything, so don't send anything */
     } else {
-      if (format == PETSC_VIEWER_ASCII_MATLAB || format == PETSC_VIEWER_ASCII_VTK_DEPRECATED || format == PETSC_VIEWER_ASCII_VTK_CELL_DEPRECATED) {
+      if (format == PETSC_VIEWER_ASCII_MATLAB) {
         /* this may be a collective operation so make sure everyone calls it */
         PetscCall(PetscObjectGetName((PetscObject)xin, &name));
       }
@@ -406,8 +300,8 @@ PetscErrorCode VecView_MPI_Draw_LG(Vec xin, PetscViewer viewer)
     PetscCall(PetscMalloc2(N, &xx, N, &yy));
     for (i = 0; i < N; i++) xx[i] = (PetscReal)i;
     PetscCall(PetscMalloc2(size, &lens, size, &disp));
-    for (i = 0; i < size; i++) lens[i] = (PetscMPIInt)xin->map->range[i + 1] - (PetscMPIInt)xin->map->range[i];
-    for (i = 0; i < size; i++) disp[i] = (PetscMPIInt)xin->map->range[i];
+    for (i = 0; i < size; i++) PetscCall(PetscMPIIntCast(xin->map->range[i + 1] - xin->map->range[i], &lens[i]));
+    for (i = 0; i < size; i++) PetscCall(PetscMPIIntCast(xin->map->range[i], &disp[i]));
   }
   PetscCallMPI(MPI_Gatherv(values, n, MPIU_REAL, yy, lens, disp, MPIU_REAL, 0, PetscObjectComm((PetscObject)xin)));
   PetscCall(PetscFree2(lens, disp));
