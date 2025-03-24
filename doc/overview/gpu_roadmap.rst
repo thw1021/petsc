@@ -39,7 +39,7 @@ other select operations) using each of:
    * - HIP
      - Rocm
      - SUPPORTED
-     - IN DEVELOPMENT
+     - SUPPORTED
      - AMD GPUs
    * - SYCL
      - MKL
