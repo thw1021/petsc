@@ -208,7 +208,7 @@ However, their usage and purpose is best understood through ``DMPLEX``.
 Closure:
 """"""""
 Closure information can be attached to a ``PetscSection`` to allow for more efficient closure information queries.
-This information can either be set directly with ``DMPlexCreateClosureIndex()`` or generated automatically for a DMPlex via ``DMPlexCreateClosureIndex()``.
+This information can either be set directly with ``DMPlexCreateClosureIndex()`` or generated automatically for a ``DMPLEX`` via ``DMPlexCreateClosureIndex()``.
 
 Symmetries: Accessing data from different orientations
 """"""""""""""""""""""""""""""""""""""""""""""""""""""
