@@ -4178,7 +4178,6 @@ PetscErrorCode TSSolve(TS ts, Vec u)
       PetscCall(TSMonitor(ts, ts->steps, ts->ptime, ts->vec_sol));
       if (!ts->steprollback || (ts->stepresize && ts->resizerollback)) PetscCall(TSPreStep(ts));
       PetscCall(TSStep(ts));
-      if ((ts->steps - ts->start_step) == ts->run_steps) ts->reason = TS_CONVERGED_ITS;
       if (ts->testjacobian) PetscCall(TSRHSJacobianTest(ts, NULL));
       if (ts->testjacobiantranspose) PetscCall(TSRHSJacobianTestTranspose(ts, NULL));
       if (ts->quadraturets && ts->costintegralfwd) { /* Must evaluate the cost integral before event is handled. The cost integral value can also be rolled back. */
@@ -4197,7 +4196,7 @@ PetscErrorCode TSSolve(TS ts, Vec u)
       if (!ts->steprollback && ts->resizerollback) PetscCall(TSResize(ts));
       /* check convergence */
       if (!ts->reason) {
-        if ((ts->steps - ts->start_step) == ts->run_steps) ts->reason = TS_CONVERGED_ITS;
+        if ((ts->steps - ts->start_step) >= ts->run_steps) ts->reason = TS_CONVERGED_ITS;
         else if (ts->steps >= ts->max_steps) ts->reason = TS_CONVERGED_ITS;
         else if (ts->ptime >= ts->max_time) ts->reason = TS_CONVERGED_TIME;
       }
