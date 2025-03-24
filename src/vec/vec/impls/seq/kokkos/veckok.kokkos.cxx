@@ -1347,6 +1347,12 @@ PetscErrorCode VecKokkosPlaceArray(Vec v, PetscScalar *a)
 
   Level: developer
 
+  Notes:
+
+  After the call, the original array placed in with `VecKokkosPlaceArray()` will contain the latest value of the vector.
+  Note that device kernels are asynchronous. Users are responsible to sync the device if they wish to have immediate access
+  to the data in the array. Also, after the call, `v` will contain whatever data before `VecKokkosPlaceArray()`.
+
 .seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecReplaceArray()`, `VecKokkosPlaceArray()`
 @*/
 PetscErrorCode VecKokkosResetArray(Vec v)
