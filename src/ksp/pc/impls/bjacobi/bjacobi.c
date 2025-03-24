@@ -630,7 +630,7 @@ static PetscErrorCode PCApplySymmetricLeft_BJacobi_Singleblock(PC pc, Vec x, Vec
   */
   PetscCall(VecGetArrayRead(x, &x_array));
   PetscCall(VecGetArray(y, &y_array));
-  PetscCall(VecPlaceArray(bjac->x, x_array));
+  PetscCall(VecPlaceArray(bjac->x, (PetscScalar *)x_array));
   PetscCall(VecPlaceArray(bjac->y, y_array));
   /* apply the symmetric left portion of the inner PC operator */
   /* note this bypasses the inner KSP and its options completely */
@@ -660,7 +660,7 @@ static PetscErrorCode PCApplySymmetricRight_BJacobi_Singleblock(PC pc, Vec x, Ve
   */
   PetscCall(VecGetArrayRead(x, &x_array));
   PetscCall(VecGetArray(y, &y_array));
-  PetscCall(VecPlaceArray(bjac->x, x_array));
+  PetscCall(VecPlaceArray(bjac->x, (PetscScalar *)x_array));
   PetscCall(VecPlaceArray(bjac->y, y_array));
 
   /* apply the symmetric right portion of the inner PC operator */
@@ -692,7 +692,7 @@ static PetscErrorCode PCApplyTranspose_BJacobi_Singleblock(PC pc, Vec x, Vec y)
   */
   PetscCall(VecGetArrayRead(x, &x_array));
   PetscCall(VecGetArray(y, &y_array));
-  PetscCall(VecPlaceArray(bjac->x, x_array));
+  PetscCall(VecPlaceArray(bjac->x, (PetscScalar *)x_array));
   PetscCall(VecPlaceArray(bjac->y, y_array));
   PetscCall(KSPSolveTranspose(jac->ksp[0], bjac->x, bjac->y));
   PetscCall(KSPCheckSolve(jac->ksp[0], pc, bjac->y));
@@ -858,7 +858,7 @@ static PetscErrorCode PCApply_BJacobi_Multiblock(PC pc, Vec x, Vec y)
        make the workspace vector array point to the subpart of the array of
        the global vector.
     */
-    PetscCall(VecPlaceArray(bjac->x[i], xin + bjac->starts[i]));
+    PetscCall(VecPlaceArray(bjac->x[i], (PetscScalar *)xin + bjac->starts[i]));
     PetscCall(VecPlaceArray(bjac->y[i], yin + bjac->starts[i]));
 
     PetscCall(PetscLogEventBegin(PC_ApplyOnBlocks, jac->ksp[i], bjac->x[i], bjac->y[i], 0));
@@ -892,7 +892,7 @@ static PetscErrorCode PCApplySymmetricLeft_BJacobi_Multiblock(PC pc, Vec x, Vec 
        make the workspace vector array point to the subpart of the array of
        the global vector.
     */
-    PetscCall(VecPlaceArray(bjac->x[i], xin + bjac->starts[i]));
+    PetscCall(VecPlaceArray(bjac->x[i], (PetscScalar *)xin + bjac->starts[i]));
     PetscCall(VecPlaceArray(bjac->y[i], yin + bjac->starts[i]));
 
     PetscCall(PetscLogEventBegin(PC_ApplyOnBlocks, jac->ksp[i], bjac->x[i], bjac->y[i], 0));
@@ -928,7 +928,7 @@ static PetscErrorCode PCApplySymmetricRight_BJacobi_Multiblock(PC pc, Vec x, Vec
        make the workspace vector array point to the subpart of the array of
        the global vector.
     */
-    PetscCall(VecPlaceArray(bjac->x[i], xin + bjac->starts[i]));
+    PetscCall(VecPlaceArray(bjac->x[i], (PetscScalar *)xin + bjac->starts[i]));
     PetscCall(VecPlaceArray(bjac->y[i], yin + bjac->starts[i]));
 
     PetscCall(PetscLogEventBegin(PC_ApplyOnBlocks, jac->ksp[i], bjac->x[i], bjac->y[i], 0));
@@ -963,7 +963,7 @@ static PetscErrorCode PCApplyTranspose_BJacobi_Multiblock(PC pc, Vec x, Vec y)
        make the workspace vector array point to the subpart of the array of
        the global vector.
     */
-    PetscCall(VecPlaceArray(bjac->x[i], xin + bjac->starts[i]));
+    PetscCall(VecPlaceArray(bjac->x[i], (PetscScalar *)xin + bjac->starts[i]));
     PetscCall(VecPlaceArray(bjac->y[i], yin + bjac->starts[i]));
 
     PetscCall(PetscLogEventBegin(PC_ApplyTransposeOnBlocks, jac->ksp[i], bjac->x[i], bjac->y[i], 0));
@@ -1168,7 +1168,7 @@ static PetscErrorCode PCApply_BJacobi_Multiproc(PC pc, Vec x, Vec y)
   /* place x's and y's local arrays into xsub and ysub */
   PetscCall(VecGetArrayRead(x, &xarray));
   PetscCall(VecGetArray(y, &yarray));
-  PetscCall(VecPlaceArray(mpjac->xsub, xarray));
+  PetscCall(VecPlaceArray(mpjac->xsub, (PetscScalar *)xarray));
   PetscCall(VecPlaceArray(mpjac->ysub, yarray));
 
   /* apply preconditioner on each matrix block */

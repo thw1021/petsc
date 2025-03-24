@@ -104,7 +104,7 @@ static PetscErrorCode MatTMatTMultNumeric_SeqAIJ_SeqDense(Mat A, Mat B, Mat C)
     PetscScalar       *ctarray;
 
     if (blda == B->rmap->n) {
-      PetscCall(VecPlaceArray(ct, Barray));
+      PetscCall(VecPlaceArray(ct, (PetscScalar *)Barray));
     } else {
       PetscInt bn = B->cmap->n;
       PetscInt bm = B->rmap->n;

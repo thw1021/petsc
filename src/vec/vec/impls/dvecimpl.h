@@ -20,7 +20,7 @@ typedef struct {
 } Vec_Seq;
 
 PETSC_INTERN PetscErrorCode VecMaxPointwiseDivide_Seq(Vec, Vec, PetscReal *);
-PETSC_INTERN PetscErrorCode VecReplaceArray_Seq(Vec, const PetscScalar *);
+PETSC_INTERN PetscErrorCode VecReplaceArray_Seq(Vec, PetscScalar *);
 PETSC_INTERN PetscErrorCode VecDuplicate_Seq(Vec, Vec *);
 PETSC_INTERN PetscErrorCode VecSetOption_Seq(Vec, VecOption, PetscBool);
 PETSC_INTERN PetscErrorCode VecGetValues_Seq(Vec, PetscInt, const PetscInt *, PetscScalar *);
@@ -43,7 +43,7 @@ PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecMAXPY_Seq(Vec, PetscInt, const Pet
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecAYPX_Seq(Vec, PetscScalar, Vec);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecWAXPY_Seq(Vec, PetscScalar, Vec, Vec);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecAXPBYPCZ_Seq(Vec, PetscScalar, PetscScalar, PetscScalar, Vec, Vec);
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecPlaceArray_Seq(Vec, const PetscScalar *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecPlaceArray_Seq(Vec, PetscScalar *);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecResetArray_Seq(Vec);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecDot_Seq(Vec, Vec, PetscScalar *);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecTDot_Seq(Vec, Vec, PetscScalar *);
@@ -60,7 +60,7 @@ PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecSetRandom_Seq(Vec, PetscRandom);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecPointwiseMult_Seq(Vec, Vec, Vec);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecPointwiseDivide_Seq(Vec, Vec, Vec);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecAXPY_Seq(Vec, PetscScalar, Vec);
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecReplaceArray_Default_GEMV_Error(Vec, const PetscScalar *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecReplaceArray_Default_GEMV_Error(Vec, PetscScalar *);
 
 PETSC_INTERN PetscErrorCode VecMDot_Seq_GEMV(Vec, PetscInt, const Vec[], PetscScalar *);
 PETSC_INTERN PetscErrorCode VecMTDot_Seq_GEMV(Vec, PetscInt, const Vec[], PetscScalar *);

@@ -193,7 +193,7 @@ PetscErrorCode DMCompositeGetAccess(DM dm, Vec gvec, ...)
       if (readonly) {
         const PetscScalar *array;
         PetscCall(VecGetArrayRead(gvec, &array));
-        PetscCall(VecPlaceArray(*vec, array + next->rstart));
+        PetscCall(VecPlaceArray(*vec, (PetscScalar *)array + next->rstart));
         PetscCall(VecLockReadPush(*vec));
         PetscCall(VecRestoreArrayRead(gvec, &array));
       } else {
@@ -254,7 +254,7 @@ PetscErrorCode DMCompositeGetAccessArray(DM dm, Vec pvec, PetscInt nwanted, cons
       if (readonly) {
         const PetscScalar *array;
         PetscCall(VecGetArrayRead(pvec, &array));
-        PetscCall(VecPlaceArray(v, array + link->rstart));
+        PetscCall(VecPlaceArray(v, (PetscScalar *)array + link->rstart));
         PetscCall(VecLockReadPush(v));
         PetscCall(VecRestoreArrayRead(pvec, &array));
       } else {
@@ -317,7 +317,7 @@ PetscErrorCode DMCompositeGetLocalAccessArray(DM dm, Vec pvec, PetscInt nwanted,
       if (readonly) {
         const PetscScalar *array;
         PetscCall(VecGetArrayRead(pvec, &array));
-        PetscCall(VecPlaceArray(v, array + nlocal));
+        PetscCall(VecPlaceArray(v, (PetscScalar *)array + nlocal));
         // this method does not make sense. The local vectors are not updated with a global-to-local and the user can not do it because it is locked
         PetscCall(VecLockReadPush(v));
         PetscCall(VecRestoreArrayRead(pvec, &array));
@@ -524,7 +524,7 @@ PetscErrorCode DMCompositeScatter(DM dm, Vec gvec, ...)
       PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(PetscValidHeaderSpecific(local, VEC_CLASSID, (int)cnt));
       PetscCall(DMGetGlobalVector(next->dm, &global));
       PetscCall(VecGetArrayRead(gvec, &array));
-      PetscCall(VecPlaceArray(global, array + next->rstart));
+      PetscCall(VecPlaceArray(global, (PetscScalar *)array + next->rstart));
       PetscCall(DMGlobalToLocalBegin(next->dm, global, INSERT_VALUES, local));
       PetscCall(DMGlobalToLocalEnd(next->dm, global, INSERT_VALUES, local));
       PetscCall(VecRestoreArrayRead(gvec, &array));

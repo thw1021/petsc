@@ -1199,7 +1199,7 @@ PetscErrorCode PetscDualSpaceApplyAllDefault(PetscDualSpace sp, const PetscScala
   pointValues = sp->allNodeValues;
   if (!sp->allDofValues) PetscCall(MatCreateVecs(allMat, NULL, &sp->allDofValues));
   dofValues = sp->allDofValues;
-  PetscCall(VecPlaceArray(pointValues, pointEval));
+  PetscCall(VecPlaceArray(pointValues, (PetscScalar *)pointEval));
   PetscCall(VecPlaceArray(dofValues, spValue));
   PetscCall(MatMult(allMat, pointValues, dofValues));
   PetscCall(VecResetArray(dofValues));
@@ -1235,7 +1235,7 @@ PetscErrorCode PetscDualSpaceApplyInteriorDefault(PetscDualSpace sp, const Petsc
   pointValues = sp->intNodeValues;
   if (!sp->intDofValues) PetscCall(MatCreateVecs(intMat, NULL, &sp->intDofValues));
   dofValues = sp->intDofValues;
-  PetscCall(VecPlaceArray(pointValues, pointEval));
+  PetscCall(VecPlaceArray(pointValues, (PetscScalar *)pointEval));
   PetscCall(VecPlaceArray(dofValues, spValue));
   PetscCall(MatMult(intMat, pointValues, dofValues));
   PetscCall(VecResetArray(dofValues));

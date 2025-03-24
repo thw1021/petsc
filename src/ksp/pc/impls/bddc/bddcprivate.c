@@ -4492,7 +4492,7 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, Mat *coarse_submat)
       PetscCall(MatDenseGetArrayRead(Brhs, &barr));
       PetscCall(MatDenseGetArray(local_auxmat2_R, &marr));
       for (i = 0; i < n_eff_constraints; i++) {
-        PetscCall(VecPlaceArray(pcbddc->vec1_R, barr + i * lda_rhs));
+        PetscCall(VecPlaceArray(pcbddc->vec1_R, (PetscScalar *)barr + i * lda_rhs));
         PetscCall(VecPlaceArray(pcbddc->vec2_R, marr + i * lda_rhs));
         PetscCall(KSPSolve(pcbddc->ksp_R, pcbddc->vec1_R, pcbddc->vec2_R));
         PetscCall(KSPCheckSolve(pcbddc->ksp_R, pc, pcbddc->vec2_R));
@@ -4804,7 +4804,7 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, Mat *coarse_submat)
         PetscCall(MatDenseGetArrayRead(Brhs, &barr));
         PetscCall(MatDenseGetArray(A_RRmA_RV, &marr));
         for (i = 0; i < n_eff_vertices; i++) {
-          PetscCall(VecPlaceArray(pcbddc->vec1_R, barr + i * lda_rhs));
+          PetscCall(VecPlaceArray(pcbddc->vec1_R, (PetscScalar *)barr + i * lda_rhs));
           PetscCall(VecPlaceArray(pcbddc->vec2_R, marr + i * lda_rhs));
           PetscCall(KSPSolve(pcbddc->ksp_R, pcbddc->vec1_R, pcbddc->vec2_R));
           PetscCall(KSPCheckSolve(pcbddc->ksp_R, pc, pcbddc->vec2_R));
@@ -6355,7 +6355,7 @@ PetscErrorCode PCBDDCScatterCoarseDataBegin(PC pc, InsertMode imode, ScatterMode
       PetscCall(VecResetArray(tvec));
       PetscCall(KSPGetSolution(pcbddc->coarse_ksp, &tvec));
       PetscCall(VecGetArrayRead(tvec, &array));
-      PetscCall(VecPlaceArray(from, array));
+      PetscCall(VecPlaceArray(from, (PetscScalar *)array));
       PetscCall(VecRestoreArrayRead(tvec, &array));
     }
   } else { /* from local to global -> put data in coarse right-hand side */
@@ -6387,7 +6387,7 @@ PetscErrorCode PCBDDCScatterCoarseDataEnd(PC pc, InsertMode imode, ScatterMode s
 
       PetscCall(KSPGetRhs(pcbddc->coarse_ksp, &tvec));
       PetscCall(VecGetArrayRead(to, &array));
-      PetscCall(VecPlaceArray(tvec, array));
+      PetscCall(VecPlaceArray(tvec, (PetscScalar *)array));
       PetscCall(VecRestoreArrayRead(to, &array));
     }
   } else {

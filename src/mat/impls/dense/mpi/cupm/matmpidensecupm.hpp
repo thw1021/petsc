@@ -332,7 +332,7 @@ inline PetscErrorCode MatDense_MPI_CUPM<T>::GetColumnVec(Mat A, PetscInt col, Ve
 
   PetscCall(MatDenseGetLDA(mimpl_A, &lda));
   PetscCall(MatDenseCUPMGetArray_Private<T, access>(mimpl_A, const_cast<PetscScalar **>(&mimpl->ptrinuse)));
-  PetscCall(VecCUPMPlaceArrayAsync<T>(mimpl->cvec, mimpl->ptrinuse + static_cast<std::size_t>(col) * static_cast<std::size_t>(lda)));
+  PetscCall(VecCUPMPlaceArrayAsync<T>(mimpl->cvec, const_cast<PetscScalar *>(mimpl->ptrinuse) + static_cast<std::size_t>(col) * static_cast<std::size_t>(lda)));
 
   if (access == PETSC_MEMORY_ACCESS_READ) PetscCall(VecLockReadPush(mimpl->cvec));
   *v = mimpl->cvec;

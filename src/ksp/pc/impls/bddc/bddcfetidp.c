@@ -893,7 +893,7 @@ static PetscErrorCode FETIDPMatMult_Kernel(Mat fetimat, Vec x, Vec y, PetscBool 
     /* pressure ordered first in the local part of x and y */
     PetscCall(VecGetArrayRead(x, &lx));
     PetscCall(VecGetArray(y, &ly));
-    PetscCall(VecPlaceArray(mat_ctx->xPg, lx));
+    PetscCall(VecPlaceArray(mat_ctx->xPg, (PetscScalar *)lx));
     PetscCall(VecPlaceArray(mat_ctx->yPg, ly));
     if (trans) {
       PetscCall(MatMultTranspose(mat_ctx->C, mat_ctx->xPg, mat_ctx->yPg));

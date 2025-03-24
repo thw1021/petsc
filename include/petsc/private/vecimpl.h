@@ -50,8 +50,8 @@ struct _VecOps {
   PetscErrorCode (*setvaluesblocked)(Vec, PetscInt, const PetscInt[], const PetscScalar[], InsertMode);
   PetscErrorCode (*destroy)(Vec);
   PetscErrorCode (*view)(Vec, PetscViewer);
-  PetscErrorCode (*placearray)(Vec, const PetscScalar *);   /* place data array */
-  PetscErrorCode (*replacearray)(Vec, const PetscScalar *); /* replace data array */
+  PetscErrorCode (*placearray)(Vec, PetscScalar *);   /* place data array */
+  PetscErrorCode (*replacearray)(Vec, PetscScalar *); /* replace data array */
   PetscErrorCode (*dot_local)(Vec, Vec, PetscScalar *);
   PetscErrorCode (*tdot_local)(Vec, Vec, PetscScalar *);
   PetscErrorCode (*norm_local)(Vec, NormType, PetscReal *);
