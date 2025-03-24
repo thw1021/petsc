@@ -1672,7 +1672,7 @@ PetscErrorCode DMPlexGlobalVectorView_HDF5_Internal(DM dm, PetscViewer viewer, D
     PetscCall(VecSetLayout(temp, map));
     PetscCall(VecSetUp(temp));
     PetscCall(VecGetArrayRead(vec, &array));
-    PetscCall(VecPlaceArray(temp, array));
+    PetscCall(VecPlaceArray(temp, (PetscScalar *)array));
     PetscCall(VecView(temp, viewer));
     PetscCall(VecResetArray(temp));
     PetscCall(VecRestoreArrayRead(vec, &array));
