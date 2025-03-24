@@ -5,17 +5,17 @@ PetscSection: Connecting Grids to Data
 
 The strongest links between solvers and discretizations are
 
--  the relationship between the layout of data (unknowns) over a mesh (or similar structure) and the data layout in arrays and ``Vec`` used for computation,
+-  the relationship between the layout of data over a mesh (or similar structure) and the data layout in arrays and ``Vec`` used for computation,
 
--  data (unknowns) partitioning, and
+-  data partitioning, and
 
--  ordering of data (unknowns).
+-  ordering of data.
 
 To enable modularity, we encode the operations above in simple data
-structures that can be understood by the linear algebraic and solver (``Vec``, ``Mat``, ``KSP``, ``PC``, ``SNES``, ``TS``, ``Tao``) components of PETSc
+structures that can be understood by the linear algebraic and solver  components of PETSc (``Vec``, ``Mat``, ``KSP``, ``PC``, ``SNES``, ``TS``, ``Tao``)
 without explicit reference to the mesh (topology) or discretization (analysis).
 
-While ``PetscSection`` is currently only employed for ``DMPlex``, ``DMForest`` and ``DMNetwork`` mesh descriptions, much of its operation is general enough to be utilized for other types of discretizations.
+While ``PetscSection`` is currently only employed for ``DMPlex``, ``DMForest``, and ``DMNetwork`` mesh descriptions, much of its operation is general enough to be utilized for other types of discretizations.
 This section will explain the basic concepts of a ``PetscSection`` that are generalizable to other mesh descriptions.
 
 .. _sec_petscsection_concept:
@@ -35,14 +35,14 @@ Charts: Defining mesh points
 
 The mesh points for a ``PetscSection`` must be contiguously numbered and are defined to be in some range :math:`[\mathrm{pStart}, \mathrm{pEnd})`, which is called a **chart**.
 The chart of a ``PetscSection`` is set via ``PetscSectionSetChart()``.
-Note that even though the mesh points must be contiguously numbered, the indexes into the array (defined by the ``(ndof, offset)`` tuple) associated with the ``PetscSection`` need not be.
+Note that even though the mesh points must be contiguously numbered, the indexes into the array (defined by each ``(ndof, offset)`` tuple) associated with the ``PetscSection`` need not be.
 In other words, there may be elements in the array that are not associated with any mesh points, though this is not often the case.
 
 Defining the (ndof, offset) tuple
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Defining the ``(ndof, offset)`` tuple for each mesh point generally first starts with setting the ``ndof`` for each point, which is done using ``PetscSectionSetDof()``.
-.. This associates a set of degrees of freedom (dof), (a small space :math:`\{e_k\} 0 < k < ndof`), with every point. 
+This associates a set of degrees of freedom (dof), (a small space :math:`\{e_k\}\ 0 < k < ndof`), with every point.
 If ``ndof`` is not set for a mesh point, it is assumed to be 0.
 
 The offset for each mesh point is usually set automatically by ``PetscSectionSetUp()``.
@@ -59,7 +59,7 @@ To summarize, the sequence for constructing a basic ``PetscSection`` is the foll
 
 #. Specify the range of points, or chart, with ``PetscSectionSetChart()``.
 
-#. Specify the number of dofs per point, with ``PetscSectionSetDof()``. Any values not set will be zero.
+#. Specify the number of dofs per point with ``PetscSectionSetDof()``. Any values not set will be zero.
 
 #. Set up the ``PetscSection`` with ``PetscSectionSetUp()``.
 
@@ -87,7 +87,7 @@ The sequence for constructing such a ``PetscSection`` is the following:
 
 #. Specify the number of fields with ``PetscSectionSetNumFields()``.
 
-#. Set the number of dof for each point on each field with ``PetscSectionSetFieldDof()``. Again, values not set will be zero.
+#. Set the number of dof for each point on each field with ``PetscSectionSetFieldDof()``. Any values not set will be zero.
 
 #. Set the **total** number of dof for each point with ``PetscSectionSetDof()``. Thus value must be greater than or equal to the sum of the values set with
    ``PetscSectionSetFieldDof()`` at that point. Again, values not set will be zero.
@@ -96,11 +96,11 @@ The sequence for constructing such a ``PetscSection`` is the following:
 
 Point Major or Field Major
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-A ``PetscSection`` with one field and and offsets set in ``PetscSectionSetUp()`` may be thought of as defining a two dimensional array indexed by point in the outer dimension with a variable length inner dimension indexed by the dof at that point, :math:`v[\mathrm{pStart} <= point < \mathrm{pEnd}][0 <= dof < \mathrm{ndof}]` [#petscsection_footnote]_.
+A ``PetscSection`` with one field and and offsets set in ``PetscSectionSetUp()`` may be thought of as defining a two dimensional array indexed by point in the outer dimension with a variable length inner dimension indexed by the dof at that point: :math:`v[\mathrm{pStart} <= point < \mathrm{pEnd}][0 <= dof < \mathrm{ndof}]` [#petscsection_footnote]_.
 
 With multiple fields, this array is now three dimensional, with the outer dimensions being both indexed by mesh points and field points.
-Thus, there is a choice on whether to index by points first, or by fields.
-In other words, will the array be laid out in a point-major fashion, or field-major.
+Thus, there is a choice on whether to index by points first, or by fields first.
+In other words, will the array be laid out in a point-major or field-major fashion.
 
 Point-major ordering corresponds to :math:`v[\mathrm{pStart} <= point < \mathrm{pEnd}][0 <= field < \mathrm{num\_fields}][0 <= dof < \mathrm{ndof}]`.
 All the dofs for each mesh point are stored contiguously, meaning the fields are **interlaced**.
@@ -122,7 +122,8 @@ Conversely, field-major ordering would result in:
 Note that dofs are always contiguous, regardless of the outer dimensional ordering.
 
 Setting the which ordering is done with ``PetscSectionSetPointMajor()``, where ``PETSC_TRUE`` sets point-major and ``PETSC_FALSE`` sets field major.
-The current default is for point-major, and many operations on ``DMPlex`` will only work with this ordering. Field-major ordering is provided mainly for compatibility with external packages, such as LibMesh.
+
+**NOTE:** The current default is for point-major, and many operations on ``DMPlex`` will only work with this ordering. Field-major ordering is provided mainly for compatibility with external packages, such as LibMesh.
 
 
 Working with data
@@ -160,7 +161,7 @@ Global Sections: Constrained and Distributed Data
 ..
   TODO: This text needs additional work explaining the "constrained dof" business.
 
-A global vector is missing both the ghosted dofs, which are not owned by this process but are stored in the global vector on a different process and *constrained* dofs. These constraints usually represent essential (Dirichlet)
+A global vector is missing both the ghosted dofs, which are not owned by this process but are stored in the global vector on a different process, and *constrained* dofs. These constraints usually represent essential (Dirichlet)
 boundary conditions, or algebraic constraints. They are dofs that have a given fixed value, so they are present in local vectors for finite element/volume assembly or finite difference stencil application purposes, but absent
 from global vectors since they are not unknowns in the algebraic solves.
 
@@ -185,11 +186,14 @@ To change the indices of the grid points, call ``PetscSectionPermute()`` to gene
 To just change the array layout without changing the grid point indexing, call ``PetscSectionSetPermutation()``.
 This must be called before ``PetscSectionSetUp()`` and will only affect the calculation of the offsets for each grid point.
 
+..
+  TODO: Add example to demonstrate the difference between the two permutation methods
+
 DMPlex Specific Functionality: Obtaining data from the array
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A vanilla ``PetscSection`` gives a relatively naive perspective on the underlying data; it doesn't describe how DoFs attached to a single grid point are ordered or how different grid points relate to each other.
-This is where **closures**, **symmetries**, and **closure permutations** come into play.
+A vanilla ``PetscSection`` (what's been described up till now) gives a relatively naive perspective on the underlying data; it doesn't describe how DoFs attached to a single grid point are ordered or how different grid points relate to each other.
+A ``PetscSection`` can store and use this extra information in the form of **closures**, **symmetries**, and **closure permutations**.
 These features currently target ``DMPlex`` and other unstructured grid descriptions.
 A description of those features will be left to :any:`ch_unstructured`.
 
