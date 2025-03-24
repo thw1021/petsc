@@ -1304,8 +1304,8 @@ PetscErrorCode VecResetArray_SeqKokkos(Vec vin)
   Logically Collective; No Fortran Support
 
   Input Parameters:
-+ vec   - the VecKokkos vector
-- array - the device array
++ v - the VecKokkos vector
+- a - the device array
 
   Level: developer
 
@@ -1343,7 +1343,7 @@ PetscErrorCode VecKokkosPlaceArray(Vec v, PetscScalar *a)
   Not Collective
 
   Input Parameter:
-. vec - the vector
+. v - the vector
 
   Level: developer
 
