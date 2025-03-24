@@ -850,23 +850,23 @@ PetscErrorCode VecMaxPointwiseDivide_Seq(Vec xin, Vec yin, PetscReal *max)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode VecPlaceArray_Seq(Vec vin, const PetscScalar *a)
+PetscErrorCode VecPlaceArray_Seq(Vec vin, PetscScalar *a)
 {
   Vec_Seq *v = (Vec_Seq *)vin->data;
 
   PetscFunctionBegin;
   PetscCheck(!v->unplacedarray, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
   v->unplacedarray = v->array; /* save previous array so reset can bring it back */
-  v->array         = (PetscScalar *)a;
+  v->array         = a;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode VecReplaceArray_Seq(Vec vin, const PetscScalar *a)
+PetscErrorCode VecReplaceArray_Seq(Vec vin, PetscScalar *a)
 {
   Vec_Seq *v = (Vec_Seq *)vin->data;
 
   PetscFunctionBegin;
   PetscCall(PetscFree(v->array_allocated));
-  v->array_allocated = v->array = (PetscScalar *)a;
+  v->array_allocated = v->array = a;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

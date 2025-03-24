@@ -1273,7 +1273,7 @@ PetscErrorCode VecConjugate_SeqKokkos(Vec xin)
 }
 
 /* Temporarily replace the array in vin with a[]. Return to the original array with a call to VecResetArray() */
-PetscErrorCode VecPlaceArray_SeqKokkos(Vec vin, const PetscScalar *a)
+PetscErrorCode VecPlaceArray_SeqKokkos(Vec vin, PetscScalar *a)
 {
   Vec_Seq    *vecseq = (Vec_Seq *)vin->data;
   Vec_Kokkos *veckok = static_cast<Vec_Kokkos *>(vin->spptr);
@@ -1298,7 +1298,7 @@ PetscErrorCode VecResetArray_SeqKokkos(Vec vin)
 }
 
 /* Replace the array in vin with a[] that must be allocated by PetscMalloc. a[] is owned by vin afterwards. */
-PetscErrorCode VecReplaceArray_SeqKokkos(Vec vin, const PetscScalar *a)
+PetscErrorCode VecReplaceArray_SeqKokkos(Vec vin, PetscScalar *a)
 {
   Vec_Seq    *vecseq = (Vec_Seq *)vin->data;
   Vec_Kokkos *veckok = static_cast<Vec_Kokkos *>(vin->spptr);

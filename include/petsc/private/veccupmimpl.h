@@ -188,7 +188,7 @@ public:
   // Call the host reset function, i.e. VecResetArray_Seq()
   static PetscErrorCode VecResetArray_IMPL(Vec) noexcept;
   // ... you get the idea
-  static PetscErrorCode VecPlaceArray_IMPL(Vec, const PetscScalar *) noexcept;
+  static PetscErrorCode VecPlaceArray_IMPL(Vec, PetscScalar *) noexcept;
   // Call the host creation function, i.e. VecCreate_Seq(), and also initialize the CUPM part
   // along with it if needed
   static PetscErrorCode VecCreate_IMPL_Private(Vec, PetscBool *, PetscInt = 0, PetscScalar * = nullptr) noexcept;
@@ -222,11 +222,11 @@ public:
   template <PetscMemoryAccessMode>
   static PetscErrorCode RestoreArrayAndMemtype(Vec, PetscScalar **) noexcept;
   template <PetscMemType>
-  static PetscErrorCode ReplaceArray(Vec, const PetscScalar *) noexcept;
+  static PetscErrorCode ReplaceArray(Vec, PetscScalar *) noexcept;
   template <PetscMemType>
   static PetscErrorCode ResetArray(Vec) noexcept;
   template <PetscMemType>
-  static PetscErrorCode PlaceArray(Vec, const PetscScalar *) noexcept;
+  static PetscErrorCode PlaceArray(Vec, PetscScalar *) noexcept;
 
   // common ops shared between Seq and MPI
   static PetscErrorCode Create_CUPM(Vec) noexcept;
@@ -511,7 +511,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::VecResetArray_IMPL(Vec v) noexcept
 }
 
 template <device::cupm::DeviceType T, typename D>
-inline PetscErrorCode Vec_CUPMBase<T, D>::VecPlaceArray_IMPL(Vec v, const PetscScalar *a) noexcept
+inline PetscErrorCode Vec_CUPMBase<T, D>::VecPlaceArray_IMPL(Vec v, PetscScalar *a) noexcept
 {
   return D::VecPlaceArray_IMPL_(v, a);
 }
@@ -712,7 +712,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::RestoreArrayAndMemtype(Vec v, PetscSca
 // v->ops->placearray or VecCUPMPlaceArray()
 template <device::cupm::DeviceType T, typename D>
 template <PetscMemType mtype>
-inline PetscErrorCode Vec_CUPMBase<T, D>::PlaceArray(Vec v, const PetscScalar *a) noexcept
+inline PetscErrorCode Vec_CUPMBase<T, D>::PlaceArray(Vec v, PetscScalar *a) noexcept
 {
   PetscDeviceContext dctx;
 
@@ -733,7 +733,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::PlaceArray(Vec v, const PetscScalar *a
       PetscCheck(!backup_array, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
       PetscCall(CopyToDevice_(dctx, v));
       PetscCall(PetscObjectStateIncrease(PetscObjectCast(v)));
-      backup_array = util::exchange(VecCUPMCast(v)->array_d, const_cast<PetscScalar *>(a));
+      backup_array = util::exchange(VecCUPMCast(v)->array_d, a);
       // only update the offload mask if we actually assign a pointer
       if (a) v->offloadmask = PETSC_OFFLOAD_GPU;
     }
@@ -744,7 +744,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::PlaceArray(Vec v, const PetscScalar *a
 // v->ops->replacearray or VecCUPMReplaceArray()
 template <device::cupm::DeviceType T, typename D>
 template <PetscMemType mtype>
-inline PetscErrorCode Vec_CUPMBase<T, D>::ReplaceArray(Vec v, const PetscScalar *a) noexcept
+inline PetscErrorCode Vec_CUPMBase<T, D>::ReplaceArray(Vec v, PetscScalar *a) noexcept
 {
   const auto         aptr = const_cast<PetscScalar *>(a);
   PetscDeviceContext dctx;

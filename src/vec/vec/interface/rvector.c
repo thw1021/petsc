@@ -1651,7 +1651,7 @@ PetscErrorCode VecGetSubVector(Vec X, IS is, Vec *Y)
         PetscCall(VecSetType(Z, ((PetscObject)X)->type_name));
         PetscCall(VecSetSizes(Z, n, N));
         PetscCall(VecSetBlockSize(Z, bs));
-        PetscCall(VecPlaceArray(Z, PetscSafePointerPlusOffset(x, start)));
+        PetscCall(VecPlaceArray(Z, PetscSafePointerPlusOffset((PetscScalar *)x, start)));
         PetscCall(VecRestoreArrayRead(X, &x));
       }
 
@@ -2530,7 +2530,7 @@ PetscErrorCode VecRestoreArrayWriteAndMemType(Vec x, PetscScalar *a[])
 
 .seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecReplaceArray()`, `VecResetArray()`
 @*/
-PetscErrorCode VecPlaceArray(Vec vec, const PetscScalar array[])
+PetscErrorCode VecPlaceArray(Vec vec, PetscScalar array[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec, VEC_CLASSID, 1);
@@ -2563,7 +2563,7 @@ PetscErrorCode VecPlaceArray(Vec vec, const PetscScalar array[])
 
 .seealso: [](ch_vectors), `Vec`, `VecGetArray()`, `VecRestoreArray()`, `VecPlaceArray()`, `VecResetArray()`
 @*/
-PetscErrorCode VecReplaceArray(Vec vec, const PetscScalar array[])
+PetscErrorCode VecReplaceArray(Vec vec, PetscScalar array[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec, VEC_CLASSID, 1);

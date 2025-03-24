@@ -368,7 +368,7 @@ PetscErrorCode VecCUDARestoreArrayWrite(Vec v, PetscScalar **a)
 .seealso: [](ch_vectors), `VecPlaceArray()`, `VecGetArray()`, `VecRestoreArray()`, `VecReplaceArray()`,
           `VecResetArray()`, `VecCUDAResetArray()`, `VecCUDAReplaceArray()`
 @*/
-PetscErrorCode VecCUDAPlaceArray(Vec vin, const PetscScalar a[])
+PetscErrorCode VecCUDAPlaceArray(Vec vin, PetscScalar a[])
 {
   PetscFunctionBegin;
   PetscCall(VecCUPMPlaceArrayAsync<DeviceType::CUDA>(vin, a));
@@ -398,7 +398,7 @@ PetscErrorCode VecCUDAPlaceArray(Vec vin, const PetscScalar a[])
 .seealso: [](ch_vectors), `VecGetArray()`, `VecRestoreArray()`, `VecPlaceArray()`, `VecResetArray()`,
           `VecCUDAResetArray()`, `VecCUDAPlaceArray()`, `VecReplaceArray()`
 @*/
-PetscErrorCode VecCUDAReplaceArray(Vec vin, const PetscScalar a[])
+PetscErrorCode VecCUDAReplaceArray(Vec vin, PetscScalar a[])
 {
   PetscFunctionBegin;
   PetscCall(VecCUPMReplaceArrayAsync<DeviceType::CUDA>(vin, a));

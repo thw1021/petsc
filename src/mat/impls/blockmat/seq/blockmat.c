@@ -68,7 +68,7 @@ static PetscErrorCode MatSOR_BlockMat_Symmetric(Mat A, Vec bb, PetscReal omega, 
           PetscCall(MatMultAdd(v[j], right, left, left));
           PetscCall(VecResetArray(right));
         }
-        PetscCall(VecPlaceArray(right, b + i * bs));
+        PetscCall(VecPlaceArray(right, (PetscScalar *)b + i * bs));
         PetscCall(VecAYPX(left, -1.0, right));
         PetscCall(VecResetArray(right));
 
@@ -78,7 +78,7 @@ static PetscErrorCode MatSOR_BlockMat_Symmetric(Mat A, Vec bb, PetscReal omega, 
         /* now adjust right-hand side, see MatSOR_SeqSBAIJ */
         for (j = 0; j < n; j++) {
           PetscCall(MatMultTranspose(v[j], right, left));
-          PetscCall(VecPlaceArray(middle, b + idx[j] * bs));
+          PetscCall(VecPlaceArray(middle, (PetscScalar *)b + idx[j] * bs));
           PetscCall(VecAXPY(middle, -1.0, left));
           PetscCall(VecResetArray(middle));
         }
@@ -97,7 +97,7 @@ static PetscErrorCode MatSOR_BlockMat_Symmetric(Mat A, Vec bb, PetscReal omega, 
           PetscCall(MatMultAdd(v[j], right, left, left));
           PetscCall(VecResetArray(right));
         }
-        PetscCall(VecPlaceArray(right, b + i * bs));
+        PetscCall(VecPlaceArray(right, (PetscScalar *)b + i * bs));
         PetscCall(VecAYPX(left, -1.0, right));
         PetscCall(VecResetArray(right));
 
@@ -165,7 +165,7 @@ static PetscErrorCode MatSOR_BlockMat(Mat A, Vec bb, PetscReal omega, MatSORType
             PetscCall(VecResetArray(right));
           }
         }
-        PetscCall(VecPlaceArray(right, b + i * bs));
+        PetscCall(VecPlaceArray(right, (PetscScalar *)b + i * bs));
         PetscCall(VecAYPX(left, -1.0, right));
         PetscCall(VecResetArray(right));
 
@@ -188,7 +188,7 @@ static PetscErrorCode MatSOR_BlockMat(Mat A, Vec bb, PetscReal omega, MatSORType
             PetscCall(VecResetArray(right));
           }
         }
-        PetscCall(VecPlaceArray(right, b + i * bs));
+        PetscCall(VecPlaceArray(right, (PetscScalar *)b + i * bs));
         PetscCall(VecAYPX(left, -1.0, right));
         PetscCall(VecResetArray(right));
 

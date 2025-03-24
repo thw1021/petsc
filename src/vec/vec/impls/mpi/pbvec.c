@@ -6,14 +6,14 @@
 
 PETSC_INTERN PetscErrorCode VecView_MPI_Draw(Vec, PetscViewer);
 
-PetscErrorCode VecPlaceArray_MPI(Vec vin, const PetscScalar *a)
+PetscErrorCode VecPlaceArray_MPI(Vec vin, PetscScalar *a)
 {
   Vec_MPI *v = (Vec_MPI *)vin->data;
 
   PetscFunctionBegin;
   PetscCheck(!v->unplacedarray, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
   v->unplacedarray = v->array; /* save previous array so reset can bring it back */
-  v->array         = (PetscScalar *)a;
+  v->array         = a;
   if (v->localrep) PetscCall(VecPlaceArray(v->localrep, a));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

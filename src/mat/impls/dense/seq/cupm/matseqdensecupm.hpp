@@ -1609,7 +1609,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::GetColumnVec(Mat A, PetscInt col, Ve
   if (!mimpl->cvec) PetscCall(MatDenseCreateColumnVec_Private(A, &mimpl->cvec));
   PetscCall(GetHandles_(&dctx));
   PetscCall(GetArray<PETSC_MEMTYPE_DEVICE, access>(A, const_cast<PetscScalar **>(&mimpl->ptrinuse), dctx));
-  PetscCall(VecCUPMPlaceArrayAsync<T>(mimpl->cvec, mimpl->ptrinuse + static_cast<std::size_t>(col) * static_cast<std::size_t>(mimpl->lda)));
+  PetscCall(VecCUPMPlaceArrayAsync<T>(mimpl->cvec, const_cast<PetscScalar *>(mimpl->ptrinuse) + static_cast<std::size_t>(col) * static_cast<std::size_t>(mimpl->lda)));
   if (access == PETSC_MEMORY_ACCESS_READ) PetscCall(VecLockReadPush(mimpl->cvec));
   *v = mimpl->cvec;
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -365,7 +365,7 @@ static PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes, Vec X, Mat J, Mat Jpre, v
     PetscCall(MatTranspose(tao->jacobian_inequality, MAT_REUSE_MATRIX, &pdipm->jac_inequality_trans));
   }
 
-  PetscCall(VecPlaceArray(pdipm->x, Xarr));
+  PetscCall(VecPlaceArray(pdipm->x, (PetscScalar *)Xarr));
   PetscCall(TaoComputeHessian(tao, pdipm->x, tao->hessian, tao->hessian_pre));
   PetscCall(VecResetArray(pdipm->x));
 
@@ -459,7 +459,7 @@ static PetscErrorCode TaoSNESFunction_PDIPM(SNES snes, Vec X, Vec F, void *ctx)
 
   /* (0) Evaluate f, fx, gradG, gradH at X.x Note: pdipm->x is not changed below */
   x = pdipm->x;
-  PetscCall(VecPlaceArray(x, Xarr));
+  PetscCall(VecPlaceArray(x, (PetscScalar *)Xarr));
   PetscCall(TaoPDIPMEvaluateFunctionsAndJacobians(tao, x));
 
   /* Update ce, ci, and Jci at X.x */
@@ -472,13 +472,13 @@ static PetscErrorCode TaoSNESFunction_PDIPM(SNES snes, Vec X, Vec F, void *ctx)
   if (pdipm->Nci) {
     if (pdipm->Nh) {
       /* L1 += gradH'*DI. Note: tao->DI is not changed below */
-      PetscCall(VecPlaceArray(tao->DI, Xarr + pdipm->off_lambdai));
+      PetscCall(VecPlaceArray(tao->DI, (PetscScalar *)Xarr + pdipm->off_lambdai));
       PetscCall(MatMultTransposeAdd(tao->jacobian_inequality, tao->DI, L1, L1));
       PetscCall(VecResetArray(tao->DI));
     }
 
     /* L1 += Jci_xb'*lambdai_xb */
-    PetscCall(VecPlaceArray(pdipm->lambdai_xb, Xarr + pdipm->off_lambdai + pdipm->nh));
+    PetscCall(VecPlaceArray(pdipm->lambdai_xb, (PetscScalar *)Xarr + pdipm->off_lambdai + pdipm->nh));
     PetscCall(MatMultTransposeAdd(pdipm->Jci_xb, pdipm->lambdai_xb, L1, L1));
     PetscCall(VecResetArray(pdipm->lambdai_xb));
 
@@ -492,13 +492,13 @@ static PetscErrorCode TaoSNESFunction_PDIPM(SNES snes, Vec X, Vec F, void *ctx)
   if (pdipm->Nce) {
     if (pdipm->Ng) {
       /* L1 += gradG'*DE. Note: tao->DE is not changed below */
-      PetscCall(VecPlaceArray(tao->DE, Xarr + pdipm->off_lambdae));
+      PetscCall(VecPlaceArray(tao->DE, (PetscScalar *)Xarr + pdipm->off_lambdae));
       PetscCall(MatMultTransposeAdd(tao->jacobian_equality, tao->DE, L1, L1));
       PetscCall(VecResetArray(tao->DE));
     }
     if (pdipm->Nxfixed) {
       /* L1 += Jce_xfixed'*lambdae_xfixed */
-      PetscCall(VecPlaceArray(pdipm->lambdae_xfixed, Xarr + pdipm->off_lambdae + pdipm->ng));
+      PetscCall(VecPlaceArray(pdipm->lambdae_xfixed, (PetscScalar *)Xarr + pdipm->off_lambdae + pdipm->ng));
       PetscCall(MatMultTransposeAdd(pdipm->Jce_xfixed, pdipm->lambdae_xfixed, L1, L1));
       PetscCall(VecResetArray(pdipm->lambdae_xfixed));
     }
