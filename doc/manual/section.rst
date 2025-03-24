@@ -158,14 +158,52 @@ The value in the array is then accessed with ``array[offset + d]``, where ``d`` 
 Global Sections: Constrained and Distributed Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-..
-  TODO: This text needs additional work explaining the "constrained dof" business.
+To handle distributed data and data with constraints, we use a pair of ``PetscSections`` called the ``localSection`` and ``globalSection``.
+Their use for each is described below.
 
-A global vector is missing both the ghosted dofs, which are not owned by this process but are stored in the global vector on a different process, and *constrained* dofs. These constraints usually represent essential (Dirichlet)
-boundary conditions, or algebraic constraints. They are dofs that have a given fixed value, so they are present in local vectors for finite element/volume assembly or finite difference stencil application purposes, but absent
-from global vectors since they are not unknowns in the algebraic solves.
 
-We can indicate constraints in a local section using ``PetscSectionSetConstraintDof()``, to set the number of constrained dofs for a given point, and ``PetscSectionSetConstraintIndices()`` which indicates which dofs on the given point are constrained. Once we have this information, a global section can be created using ``PetscSectionCreateGlobalSection()``. This is done automatically by the ``DM``. A global section returns :math:`-(dof+1)` for the number of dofs on an unowned (ghost) point, and :math:`-(off+1)` for its offset on the owning process. This can be used to create global vectors, just as the local section is used to create local vectors.
+Distributed Data
+^^^^^^^^^^^^^^^^
+
+``PetscSection`` can also be applied to distributed problems as well.
+This is done using the same local/global system described in :any:`sec_localglobal`.
+To do this, we introduce three new concepts; a ``localSection``, ``globalSection``, ``pointSF``, and ``sectionSF``.
+
+Assume the mesh points of the "global" mesh are partitioned amongst processes and that some mesh points are shared between multiple processes (i.e there is an overlap in the partitions).
+The shared mesh points define the ghost/halo points needed in many PDE problems.
+For each shared mesh point, appoint one process to be the owner of that mesh point.
+To describe this parallel mesh point layout, we use a ``PetscSF`` and call it the ``pointSF``.
+The ``pointSF`` describes which processes "own" which mesh points and which process is the owner of each shared mesh point.
+
+Next, for each process define a ``PetscSection`` that describes the mapping between that process's partition (including shared mesh points) and the data stored on it and call it the ``localSection``.
+The ``localSection`` describes the layout of the local vector.
+To generate the ``globalSection`` we use ``PetscSectionCreateGlobalSection()``, which takes the ``localSection`` and ``pointSF`` as inputs.
+The global section returns :math:`-(dof+1)` for the number of dofs on an unowned (ghost) point, and traditionally :math:`-(off+1)` for its offset on the owning process.
+This behavior of the offsets is controlled via an argument to ``PetscSectionCreateGlobalSection()``.
+The ``globalSection`` can be used to create global vectors, just as the local section is used to create local vectors.
+
+To perform the global-to-local and local-to-global communication, we define ``sectionSF`` to be the ``PetscSF`` describing the mapping between the local and global vectors.
+This is generated via ``PetscSFSetGraphSection()``.
+Using ``PetscSFBcastBegin()`` will send data from the global vector to the local vector, while ``PetscSFReduceBegin()`` will send data from the local vector to the global vector.
+
+If using ``DM``, this entire process is done automatically.
+The ``localSection``, ``globalSection``, ``pointSF``, and ``sectionSF`` on a ``DM`` can be obtained via ``DMGetLocalSection()``, ``DMGetGlobalSection()``, ``DMGetPointSF()``, and ``DMGetSectionSF()``, respectively.
+Additionally, communication from global to local vectors and vice versa can be done via ``DMGlobalToLocal()`` and ``DMLocalToGlobal()`` as described in :any:`sec_localglobal`.
+Note that not all ``DM`` types use this system, such as ``DMDA`` (see :any:`sec_struct`).
+
+Constrained Data
+^^^^^^^^^^^^^^^^
+In addition to describing parallel data, the ``localSection``/``globalSection`` pair can be used to describe *constrained* dofs
+These constraints usually represent essential (Dirichlet) boundary conditions, or algebraic constraints. 
+They are dofs that have a given fixed value, so they are present in local vectors for finite element/volume assembly or finite difference stencil application purposes, but generally absent from global vectors since they are not unknowns in the algebraic solves.
+
+Constraints should be indicated in the ``localSection``.
+Use ``PetscSectionSetConstraintDof()`` to set the number of constrained dofs for a given point, and ``PetscSectionSetConstraintIndices()`` to indicate which dofs on the given point are constrained.
+This must be done before ``PetscSectionCreateGlobalSection()`` is called to create the ``globalSection``.
+
+Note that it is possible to have constraints set in a ``localSection``, but have the ``globalSection`` be generated to include those constraints.
+This is useful when doing some form of post-processing of a solution where you want to access all data (see ``DMGetOutputDM()`` for example).
+See ``PetscSectionCreateGlobalSection()`` for more details on this.
 
 .. _sec_petscsection_permutation:
 
