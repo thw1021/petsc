@@ -51,6 +51,7 @@ Changes: Development
 .. rubric:: Vec:
 
 - Add ``PetscKDTree``, an implementation of K-d trees for efficient nearest-neighbor point searches. Includes ``PetscKDTreeCreate()``, ``PetscKDTreeDestroy()``, ``PetscKDTreeView()``, and then ``PetscKDTreeQueryPointsNearestNeighbor()`` for actually doing the nearest-neighbor query
+- Remove the const specifier of the array argument in ``VecPlaceArray()``, ``VecCUDAPlaceArray()``, ``VecHIPPlaceArray()``, ``VecReplaceArray()``, ``VecCUDAReplaceArray()`` and ``VecHIPReplaceArray()``
 
 .. rubric:: PetscSection:
 

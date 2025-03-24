@@ -201,7 +201,7 @@ static PetscErrorCode PCApply_Redundant(PC pc, Vec x, Vec y)
 
   /* place xdup's local array into xsub */
   PetscCall(VecGetArray(red->xdup, &array));
-  PetscCall(VecPlaceArray(red->xsub, (const PetscScalar *)array));
+  PetscCall(VecPlaceArray(red->xsub, array));
 
   /* apply preconditioner on each processor */
   PetscCall(KSPSolve(red->ksp, red->xsub, red->ysub));
@@ -211,7 +211,7 @@ static PetscErrorCode PCApply_Redundant(PC pc, Vec x, Vec y)
 
   /* place ysub's local array into ydup */
   PetscCall(VecGetArray(red->ysub, &array));
-  PetscCall(VecPlaceArray(red->ydup, (const PetscScalar *)array));
+  PetscCall(VecPlaceArray(red->ydup, array));
 
   /* scatter ydup to y */
   PetscCall(VecScatterBegin(red->scatterout, red->ydup, y, INSERT_VALUES, SCATTER_FORWARD));
@@ -239,7 +239,7 @@ static PetscErrorCode PCApplyTranspose_Redundant(PC pc, Vec x, Vec y)
 
   /* place xdup's local array into xsub */
   PetscCall(VecGetArray(red->xdup, &array));
-  PetscCall(VecPlaceArray(red->xsub, (const PetscScalar *)array));
+  PetscCall(VecPlaceArray(red->xsub, array));
 
   /* apply preconditioner on each processor */
   PetscCall(KSPSolveTranspose(red->ksp, red->xsub, red->ysub));
@@ -249,7 +249,7 @@ static PetscErrorCode PCApplyTranspose_Redundant(PC pc, Vec x, Vec y)
 
   /* place ysub's local array into ydup */
   PetscCall(VecGetArray(red->ysub, &array));
-  PetscCall(VecPlaceArray(red->ydup, (const PetscScalar *)array));
+  PetscCall(VecPlaceArray(red->ydup, array));
 
   /* scatter ydup to y */
   PetscCall(VecScatterBegin(red->scatterout, red->ydup, y, INSERT_VALUES, SCATTER_FORWARD));

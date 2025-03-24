@@ -348,8 +348,8 @@ PetscErrorCode VecHIPRestoreArrayWrite(Vec v, PetscScalar **a)
   Logically Collective; Asynchronous; No Fortran Support
 
   Input Parameters:
-+ vec - the vector
-- array - the GPU array
++ vin - the vector
+- a   - the GPU array
 
   Level: advanced
 
@@ -368,7 +368,7 @@ PetscErrorCode VecHIPRestoreArrayWrite(Vec v, PetscScalar **a)
 .seealso: [](ch_vectors), `VecPlaceArray()`, `VecGetArray()`, `VecRestoreArray()`, `VecReplaceArray()`,
           `VecResetArray()`, `VecHIPResetArray()`, `VecHIPReplaceArray()`
 @*/
-PetscErrorCode VecHIPPlaceArray(Vec vin, const PetscScalar a[])
+PetscErrorCode VecHIPPlaceArray(Vec vin, PetscScalar a[])
 {
   PetscFunctionBegin;
   PetscCall(VecCUPMPlaceArrayAsync<DeviceType::HIP>(vin, a));
@@ -383,8 +383,8 @@ PetscErrorCode VecHIPPlaceArray(Vec vin, const PetscScalar a[])
   Logically Collective; No Fortran Support
 
   Input Parameters:
-+ vec   - the vector
-- array - the GPU array
++ vin - the vector
+- a   - the GPU array
 
   Level: advanced
 
@@ -398,7 +398,7 @@ PetscErrorCode VecHIPPlaceArray(Vec vin, const PetscScalar a[])
 .seealso: [](ch_vectors), `VecGetArray()`, `VecRestoreArray()`, `VecPlaceArray()`, `VecResetArray()`,
           `VecHIPResetArray()`, `VecHIPPlaceArray()`, `VecReplaceArray()`
 @*/
-PetscErrorCode VecHIPReplaceArray(Vec vin, const PetscScalar a[])
+PetscErrorCode VecHIPReplaceArray(Vec vin, PetscScalar a[])
 {
   PetscFunctionBegin;
   PetscCall(VecCUPMReplaceArrayAsync<DeviceType::HIP>(vin, a));
@@ -412,7 +412,7 @@ PetscErrorCode VecHIPReplaceArray(Vec vin, const PetscScalar a[])
   Logically Collective; No Fortran Support
 
   Input Parameters:
-. vec - the vector
+. vin - the vector
 
   Level: advanced
 

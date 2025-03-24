@@ -34,7 +34,7 @@ private:
 
   static PetscErrorCode VecDestroy_IMPL_(Vec) noexcept;
   static PetscErrorCode VecResetArray_IMPL_(Vec) noexcept;
-  static PetscErrorCode VecPlaceArray_IMPL_(Vec, const PetscScalar *) noexcept;
+  static PetscErrorCode VecPlaceArray_IMPL_(Vec, PetscScalar *) noexcept;
   static PetscErrorCode VecCreate_IMPL_Private_(Vec, PetscBool *, PetscInt, PetscScalar *) noexcept;
 
   static PetscErrorCode MaybeIncrementEmptyLocalVec(Vec) noexcept;
@@ -266,7 +266,7 @@ inline PetscErrorCode VecCUPMRestoreArrayWriteAsync(Vec v, PetscScalar **a, Pets
 }
 
 template <device::cupm::DeviceType T>
-inline PetscErrorCode VecCUPMPlaceArrayAsync(Vec vin, const PetscScalar a[]) noexcept
+inline PetscErrorCode VecCUPMPlaceArrayAsync(Vec vin, PetscScalar a[]) noexcept
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vin, VEC_CLASSID, 1);
@@ -275,7 +275,7 @@ inline PetscErrorCode VecCUPMPlaceArrayAsync(Vec vin, const PetscScalar a[]) noe
 }
 
 template <device::cupm::DeviceType T>
-inline PetscErrorCode VecCUPMReplaceArrayAsync(Vec vin, const PetscScalar a[]) noexcept
+inline PetscErrorCode VecCUPMReplaceArrayAsync(Vec vin, PetscScalar a[]) noexcept
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vin, VEC_CLASSID, 1);

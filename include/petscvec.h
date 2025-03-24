@@ -446,9 +446,9 @@ PETSC_EXTERN PetscErrorCode VecRestoreArray2dRead(Vec, PetscInt, PetscInt, Petsc
 PETSC_EXTERN PetscErrorCode VecGetArray1dRead(Vec, PetscInt, PetscInt, PetscScalar *[]);
 PETSC_EXTERN PetscErrorCode VecRestoreArray1dRead(Vec, PetscInt, PetscInt, PetscScalar *[]);
 
-PETSC_EXTERN PetscErrorCode VecPlaceArray(Vec, const PetscScalar[]);
+PETSC_EXTERN PetscErrorCode VecPlaceArray(Vec, PetscScalar[]);
 PETSC_EXTERN PetscErrorCode VecResetArray(Vec);
-PETSC_EXTERN PetscErrorCode VecReplaceArray(Vec, const PetscScalar[]);
+PETSC_EXTERN PetscErrorCode VecReplaceArray(Vec, PetscScalar[]);
 
 PETSC_EXTERN PetscErrorCode VecGetArrays(const Vec[], PetscInt, PetscScalar **[]);
 PETSC_EXTERN PetscErrorCode VecRestoreArrays(const Vec[], PetscInt, PetscScalar **[]);
@@ -993,11 +993,11 @@ VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPGetArrayWrite(Vec a, PetscScalar **b)
 VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDARestoreArrayWrite(Vec a, PetscScalar **b), (void)a, (void)b)
 VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPRestoreArrayWrite(Vec a, PetscScalar **b), (void)a, (void)b)
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDAPlaceArray(Vec a, const PetscScalar b[]), (void)a, (void)b)
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPPlaceArray(Vec a, const PetscScalar b[]), (void)a, (void)b)
+VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDAPlaceArray(Vec a, PetscScalar b[]), (void)a, (void)b)
+VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPPlaceArray(Vec a, PetscScalar b[]), (void)a, (void)b)
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDAReplaceArray(Vec a, const PetscScalar b[]), (void)a, (void)b)
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPReplaceArray(Vec a, const PetscScalar b[]), (void)a, (void)b)
+VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDAReplaceArray(Vec a, PetscScalar b[]), (void)a, (void)b)
+VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPReplaceArray(Vec a, PetscScalar b[]), (void)a, (void)b)
 
 VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDAResetArray(Vec a), (void)a)
 VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPResetArray(Vec a), (void)a)

@@ -52,7 +52,7 @@ inline PetscErrorCode VecMPI_CUPM<T>::VecResetArray_IMPL_(Vec v) noexcept
 }
 
 template <device::cupm::DeviceType T>
-inline PetscErrorCode VecMPI_CUPM<T>::VecPlaceArray_IMPL_(Vec v, const PetscScalar *a) noexcept
+inline PetscErrorCode VecMPI_CUPM<T>::VecPlaceArray_IMPL_(Vec v, PetscScalar *a) noexcept
 {
   return VecPlaceArray_MPI(v, a);
 }

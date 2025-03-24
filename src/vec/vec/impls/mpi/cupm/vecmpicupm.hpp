@@ -29,7 +29,7 @@ private:
 
   static PetscErrorCode VecDestroy_IMPL_(Vec) noexcept;
   static PetscErrorCode VecResetArray_IMPL_(Vec) noexcept;
-  static PetscErrorCode VecPlaceArray_IMPL_(Vec, const PetscScalar *) noexcept;
+  static PetscErrorCode VecPlaceArray_IMPL_(Vec, PetscScalar *) noexcept;
   static PetscErrorCode VecCreate_IMPL_Private_(Vec, PetscBool *, PetscInt, PetscScalar *) noexcept;
 
   static PetscErrorCode CreateMPICUPM_(Vec, PetscDeviceContext, PetscBool /*allocate_missing*/ = PETSC_TRUE, PetscInt /*nghost*/ = 0, PetscScalar * /*host_array*/ = nullptr, PetscScalar * /*device_array*/ = nullptr) noexcept;

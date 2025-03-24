@@ -1523,7 +1523,7 @@ PetscErrorCode MatDenseGetColumnVec_MPIDense(Mat A, PetscInt col, Vec *v)
   a->vecinuse = col + 1;
   PetscCall(MatDenseGetLDA(a->A, &lda));
   PetscCall(MatDenseGetArray(a->A, (PetscScalar **)&a->ptrinuse));
-  PetscCall(VecPlaceArray(a->cvec, PetscSafePointerPlusOffset(a->ptrinuse, (size_t)col * (size_t)lda)));
+  PetscCall(VecPlaceArray(a->cvec, PetscSafePointerPlusOffset((PetscScalar *)a->ptrinuse, (size_t)col * (size_t)lda)));
   *v = a->cvec;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1555,7 +1555,7 @@ PetscErrorCode MatDenseGetColumnVecRead_MPIDense(Mat A, PetscInt col, Vec *v)
   a->vecinuse = col + 1;
   PetscCall(MatDenseGetLDA(a->A, &lda));
   PetscCall(MatDenseGetArrayRead(a->A, &a->ptrinuse));
-  PetscCall(VecPlaceArray(a->cvec, PetscSafePointerPlusOffset(a->ptrinuse, (size_t)col * (size_t)lda)));
+  PetscCall(VecPlaceArray(a->cvec, PetscSafePointerPlusOffset((PetscScalar *)a->ptrinuse, (size_t)col * (size_t)lda)));
   PetscCall(VecLockReadPush(a->cvec));
   *v = a->cvec;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1589,7 +1589,7 @@ PetscErrorCode MatDenseGetColumnVecWrite_MPIDense(Mat A, PetscInt col, Vec *v)
   a->vecinuse = col + 1;
   PetscCall(MatDenseGetLDA(a->A, &lda));
   PetscCall(MatDenseGetArrayWrite(a->A, (PetscScalar **)&a->ptrinuse));
-  PetscCall(VecPlaceArray(a->cvec, PetscSafePointerPlusOffset(a->ptrinuse, (size_t)col * (size_t)lda)));
+  PetscCall(VecPlaceArray(a->cvec, PetscSafePointerPlusOffset((PetscScalar *)a->ptrinuse, (size_t)col * (size_t)lda)));
   *v = a->cvec;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -128,7 +128,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::VecResetArray_IMPL_(Vec v) noexcept
 }
 
 template <device::cupm::DeviceType T>
-inline PetscErrorCode VecSeq_CUPM<T>::VecPlaceArray_IMPL_(Vec v, const PetscScalar *a) noexcept
+inline PetscErrorCode VecSeq_CUPM<T>::VecPlaceArray_IMPL_(Vec v, PetscScalar *a) noexcept
 {
   return VecPlaceArray_Seq(v, a);
 }
