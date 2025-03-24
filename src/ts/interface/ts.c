@@ -2864,7 +2864,11 @@ PetscErrorCode TSGetMaxSteps(TS ts, PetscInt *maxsteps)
 }
 
 /*@
-  TSSetRunSteps - Sets the maximum number of steps to take in each call to `TSSolve`.
+  TSSetRunSteps - Sets the maximum number of steps to take in each call to `TSSolve()`.
+
+  If the step count when `TSSolve()` is `start_step`, this will stop the simulation once `current_step - start_step >= run_steps`.
+  Comparatively, `TSSetMaxSteps()` will stop if `current_step >= max_steps`.
+  The simulation will stop when either condition is reached.
 
   Logically Collective
 
