@@ -2949,7 +2949,7 @@ static PetscErrorCode MatResetPreallocation_MPIAIJ(Mat B, PetscBool *memoryreset
   PetscValidHeaderSpecific(B, MAT_CLASSID, 1);
   PetscCall(MatResetPreallocation(b->A, &ondiagreset));
   PetscCall(MatResetPreallocation(b->B, &offdiagreset));
-  *memoryreset = ondiagreset || offdiagreset;
+  *memoryreset = (ondiagreset || offdiagreset) ? PETSC_TRUE : PETSC_FALSE;
   PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, memoryreset, 1, MPIU_BOOL, MPI_MAX, PetscObjectComm((PetscObject)B)));
   if (!memoryreset) PetscFunctionReturn(PETSC_SUCCESS);
 
