@@ -1542,14 +1542,10 @@ PetscErrorCode MatDestroy(Mat *A)
   Fortran Notes:
   If any of `idxm`, `idxn`, and `v` are scalars pass them using, for example,
 .vb
-  MatSetValues(mat, one, [idxm], one, [idxn], [v], INSERT_VALUES)
+  MatSetValues(mat, one, [idxm], one, [idxn], [v], INSERT_VALUES, ierr)
 .ve
 
   If `v` is a two-dimensional array use `reshape()` to pass it as a one dimensional array
-
-  Developer Note:
-  This is labeled with C so does not automatically generate Fortran stubs and interfaces
-  because it requires multiple Fortran interfaces depending on which arguments are scalar or arrays.
 
 .seealso: [](ch_matrices), `Mat`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`,
           `InsertMode`, `INSERT_VALUES`, `ADD_VALUES`
@@ -2072,7 +2068,7 @@ PetscErrorCode MatSetStencil(Mat mat, PetscInt dim, const PetscInt dims[], const
   Fortran Notes:
   If any of `idmx`, `idxn`, and `v` are scalars pass them using, for example,
 .vb
-  MatSetValuesBlocked(mat, one, [idxm], one, [idxn], [v], INSERT_VALUES)
+  MatSetValuesBlocked(mat, one, [idxm], one, [idxn], [v], INSERT_VALUES, ierr)
 .ve
 
   If `v` is a two-dimensional array use `reshape()` to pass it as a one dimensional array
@@ -2458,14 +2454,10 @@ PetscErrorCode MatGetLayouts(Mat A, PetscLayout *rmap, PetscLayout *cmap)
   Fortran Notes:
   If any of `irow`, `icol`, and `y` are scalars pass them using, for example,
 .vb
-  MatSetValuesLocal(mat, one, [irow], one, [icol], [y], INSERT_VALUES)
+  MatSetValuesLocal(mat, one, [irow], one, [icol], [y], INSERT_VALUES, ierr)
 .ve
 
   If `y` is a two-dimensional array use `reshape()` to pass it as a one dimensional array
-
-  Developer Note:
-  This is labeled with C so does not automatically generate Fortran stubs and interfaces
-  because it requires multiple Fortran interfaces depending on which arguments are scalar or arrays.
 
 .seealso: [](ch_matrices), `Mat`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValues()`, `MatSetLocalToGlobalMapping()`,
           `MatGetValuesLocal()`
@@ -2551,7 +2543,7 @@ PetscErrorCode MatSetValuesLocal(Mat mat, PetscInt nrow, const PetscInt irow[], 
   Fortran Notes:
   If any of `irow`, `icol`, and `y` are scalars pass them using, for example,
 .vb
-  MatSetValuesBlockedLocal(mat, one, [irow], one, [icol], [y], INSERT_VALUES)
+  MatSetValuesBlockedLocal(mat, one, [irow], one, [icol], [y], INSERT_VALUES, ierr)
 .ve
 
   If `y` is a two-dimensional array use `reshape()` to pass it as a one dimensional array
