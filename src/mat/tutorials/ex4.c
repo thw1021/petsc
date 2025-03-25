@@ -8,9 +8,10 @@ static char help[] = "Illustrate the use of MatResetPreallocation.\n";
 
 int main(int argc, char **argv)
 {
-  Mat      A;
-  MPI_Comm comm;
-  PetscInt n = 5, m = 5, *dnnz, *onnz, i, rstart, rend, M, N;
+  Mat       A;
+  MPI_Comm  comm;
+  PetscInt  n = 5, m = 5, *dnnz, *onnz, i, rstart, rend, M, N;
+  PetscBool memoryreset;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, 0, help));
@@ -26,14 +27,17 @@ int main(int argc, char **argv)
   PetscCall(PetscFree2(dnnz, onnz));
 
   /* since the matrix has never been assembled this reset should do nothing */
-  PetscCall(MatResetPreallocation(A));
+  PetscCall(MatResetPreallocation(A, &memoryreset));
+  PetscCheck(!memoryreset, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Matrix should not have been reset because it's never been assembled");
 
   /* This assembly shrinks memory because we do not insert enough number of values */
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
 
   /* MatResetPreallocation() restores the memory required by users */
-  PetscCall(MatResetPreallocation(A));
+  PetscCall(MatResetPreallocation(A, &memoryreset));
+  PetscCheck(memoryreset, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Matrix should have been reset because it was assembled");
+
   PetscCall(MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_TRUE));
   PetscCall(MatGetOwnershipRange(A, &rstart, &rend));
   PetscCall(MatGetSize(A, &M, &N));
