@@ -4047,7 +4047,7 @@ PetscErrorCode MatSeqAIJSetPreallocation_SeqAIJ(Mat B, PetscInt nz, const PetscI
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatResetPreallocation_SeqAIJ(Mat A)
+static PetscErrorCode MatResetPreallocation_SeqAIJ(Mat A, PetscBool *memoryreset)
 {
   Mat_SeqAIJ *a;
   PetscInt    i;
@@ -4081,6 +4081,7 @@ static PetscErrorCode MatResetPreallocation_SeqAIJ(Mat A)
     /* Log that the state of this object has changed; this will help guarantee that preconditioners get re-setup */
     PetscCall(PetscObjectStateIncrease((PetscObject)A));
   }
+  *memoryreset = !skipreset;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
