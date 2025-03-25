@@ -530,7 +530,7 @@ int main(int argc, char **argv)
     test:
       suffix: kok_ksp
       requires: kokkos_kernels
-      args: -mat_type aijkokkos
+      args: -mat_type aijkokkos -pc_type bjacobi -sub_pc_type {{ilu icc}} -sub_mat_factor_on_host -sub_mat_solve_on_host {{0 1}}
 
     test:
       suffix: kok_hypre
