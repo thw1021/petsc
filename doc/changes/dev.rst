@@ -143,6 +143,7 @@ Changes: Development
   provided by the user.
 - Add ``PETSC_NULL_INTEGER_POINTER`` for arguments that return as arrays, for example, ``PetscInt, pointer :: idx(:)`` but not needed by the user.
 - Add automatically generated interface definitions for most PETSc functions to detect illegal usage at compile time
-- Add ``PetscObjectIsNull()`` for users to check if a PETSc object is ``NULL``
+- Add ``PetscObjectIsNull()`` for users to check if a PETSc object is ``NULL``. All PETSc objects are now null when they are declared
 - Change the PETSc Fortran API so that non-array values, ``v``, passed to PETSc routines expecting arrays must be cast with ``[v]`` in the calling sequence. For example, with ``VecSetValues()``
 - Use of ``case(e)`` where ``e`` is any PETSc enum variable or value must be changed to ``PetscEnumCase(e)`` or ``case(e%v)``
+- `MatInfo` and similar are now derived data types instead of arrays, use e.g. `matinfo%nz_allocated` to access their components
