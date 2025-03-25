@@ -148,8 +148,9 @@ For the default scheme, a call to ``DMLocalizeCoordinates()`` (which usually hap
 Connecting Grids to Data Using PetscSection:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A ``PetscSection`` is used to describe the connection between the grid and it's data.
-The basic usage of ``PetscSection`` is described in :any:`ch_petscsection`.
+A ``PetscSection`` is used to describe the connection between the grid and data associated with the grid.
+Specifically, it assigns a number of dofs to each mesh entity on the DAG.
+See :any:`ch_petscsection` for more details.
 Using the mesh from :numref:`fig_doubletMesh`, we provide an example of creating a ``PetscSection`` for a single field.
 We can lay out data for a continuous Galerkin :math:`P_3` finite element method,
 
