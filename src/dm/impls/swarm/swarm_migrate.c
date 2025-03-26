@@ -295,7 +295,7 @@ PetscErrorCode DMSwarmMigrate_CellDMScatter(DM dm, PetscBool remove_sent_points)
       PetscCall(DMLocatePoints(dmcell, npos, DM_POINTLOCATION_NONE, &sfcell));
       PetscCall(VecRestoreSubVector(pos, nis, &npos));
     } else {
-      VecCreate(PETSC_COMM_SELF, &npos);
+      PetscCall(VecCreate(PETSC_COMM_SELF, &npos));
       PetscCall(VecSetSizes(npos, 0, PETSC_DETERMINE));
       PetscCall(VecSetBlockSize(npos, bs));
       PetscCall(VecSetType(npos, dm->vectype));
