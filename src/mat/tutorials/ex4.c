@@ -48,6 +48,8 @@ int main(int argc, char **argv)
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatView(A, PETSC_VIEWER_STDOUT_WORLD));
+  /* Make sure we can call with a NULL argument for memoryreset */
+  PetscCall(MatResetPreallocation(A, NULL));
   PetscCall(MatDestroy(&A));
   PetscCall(PetscFinalize());
   return 0;

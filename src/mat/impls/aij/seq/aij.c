@@ -4086,7 +4086,7 @@ static PetscErrorCode MatResetPreallocation_SeqAIJ(Mat A, PetscBool *memoryreset
     /* Log that the state of this object has changed; this will help guarantee that preconditioners get re-setup */
     PetscCall(PetscObjectStateIncrease((PetscObject)A));
   }
-  *memoryreset = (PetscBool)!skipreset;
+  if (memoryreset) *memoryreset = (PetscBool)!skipreset;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
