@@ -907,10 +907,6 @@ PetscErrorCode MatGetState(Mat A, PetscObjectState *state)
   Input Parameter:
 . A - the matrix
 
-  Output Parameter:
-. memoryreset - Whether the matrix memory was reset. This may be false if the calls to `MatSetValues()` matched the original preallocation. Knowing
-  whether the memory was reset can be valuable in reuse cases to determine whether to perform a follow-on `MatZeroEntries()` or not
-
   Level: beginner
 
   Notes:
@@ -918,23 +914,18 @@ PetscErrorCode MatGetState(Mat A, PetscObjectState *state)
   matrix. If that space is less than the preallocated space that extra preallocated space is no longer available to take on new values. `MatResetPreallocation()`
   makes all of the preallocation space available
 
-  Current values in the matrix are lost in this call if the memory is reset
+  Current values in the matrix are lost in this call
 
   Currently only supported for  `MATAIJ` matrices.
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJSetPreallocation()`, `MatMPIAIJSetPreallocation()`, `MatXAIJSetPreallocation()`
 @*/
-PetscErrorCode MatResetPreallocation(Mat A, PetscBool *memoryreset)
+PetscErrorCode MatResetPreallocation(Mat A)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidType(A, 1);
-  PetscCheck(A->insertmode == NOT_SET_VALUES, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot reset preallocation after setting some values but not yet calling MatAssemblyBegin()/MatAssemblyEnd()");
-  if (A->num_ass == 0) {
-    if (memoryreset) *memoryreset = PETSC_FALSE;
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-  PetscUseMethod(A, "MatResetPreallocation_C", (Mat, PetscBool *), (A, memoryreset));
+  PetscUseMethod(A, "MatResetPreallocation_C", (Mat), (A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
