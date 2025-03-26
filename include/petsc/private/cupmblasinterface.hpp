@@ -275,6 +275,9 @@ struct PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL BlasInterfaceImpl<DeviceType::CU
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD, gemv)
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD, trmv)
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD, trsv)
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(STANDARD, hbmv, PetscIfPetscDefined(USE_COMPLEX, hbmv, sbmv))
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD, tbsv)
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(STANDARD, hemv, PetscIfPetscDefined(USE_COMPLEX, hemv, symv))
 
   // level 3 BLAS
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD, gemm)
@@ -343,6 +346,9 @@ struct PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL BlasInterfaceImpl<DeviceType::HI
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD, gemv)
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD, trmv)
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD, trsv)
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(STANDARD, hbmv, PetscIfPetscDefined(USE_COMPLEX, hbmv, sbmv))
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD, tbsv)
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(STANDARD, hemv, PetscIfPetscDefined(USE_COMPLEX, hemv, symv))
 
   // level 3 BLAS
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD, gemm)
@@ -403,6 +409,9 @@ struct PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL BlasInterfaceImpl<DeviceType::HI
   using ::Petsc::device::cupm::impl::BlasInterfaceImpl<T>::cupmBlasXgemv; \
   using ::Petsc::device::cupm::impl::BlasInterfaceImpl<T>::cupmBlasXtrmv; \
   using ::Petsc::device::cupm::impl::BlasInterfaceImpl<T>::cupmBlasXtrsv; \
+  using ::Petsc::device::cupm::impl::BlasInterfaceImpl<T>::cupmBlasXhbmv; \
+  using ::Petsc::device::cupm::impl::BlasInterfaceImpl<T>::cupmBlasXtbsv; \
+  using ::Petsc::device::cupm::impl::BlasInterfaceImpl<T>::cupmBlasXhemv; \
   /* level 3 BLAS */ \
   using ::Petsc::device::cupm::impl::BlasInterfaceImpl<T>::cupmBlasXgemm; \
   using ::Petsc::device::cupm::impl::BlasInterfaceImpl<T>::cupmBlasXtrsm; \
