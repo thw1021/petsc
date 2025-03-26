@@ -64,7 +64,7 @@ Root PetscDeviceContext Options:
   -root_device_context_stream_type: <now default : formerly default> PetscDeviceContext PetscStreamType (choose one of) default nonblocking default_with_barrier nonblocking_with_barrier (PetscDeviceContextSetStreamType)
 Matrix (Mat) options:
   -mat_block_size: <now -1 : formerly -1>: Set the blocksize used to store the matrix (MatSetBlockSize)
-  -mat_type <now aij : formerly aij>: Matrix type (one of) mpiaijcrl mpiadj seqaij mpibaij composite preallocator mpiaijperm seqsbaij seqmaij seqkaij mffd seqaijsell nest constantdiagonal mpimaij mpiaij mpikaij lrc seqdense dummy is mpisbaij mpiaijsell shell seqsell seqaijperm blockmat maij diagonal kaij mpisell mpidense seqaijcrl scatter seqbaij (MatSetType)
+  -mat_type <now aij : formerly aij>: Matrix type (one of) mpiaijcrl mpiadj seqaij mpibaij composite preallocator mpiaijperm seqsbaij seqmaij seqkaij mffd seqaijsell nest constantdiagonal mpimaij mpiaij mpikaij lrc seqdense densefromvectype dummy is mpisbaij mpiaijsell shell seqsell seqaijperm blockmat maij diagonal kaij mpisell mpidense seqaijcrl scatter seqbaij (MatSetType)
 Options for SEQAIJ matrix:
   -mat_no_unroll: <now FALSE : formerly FALSE> Do not optimize for inodes (slower) (None)
   -mat_no_inode: <now FALSE : formerly FALSE> Do not optimize for inodes -slower- (None)
