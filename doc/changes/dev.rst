@@ -46,6 +46,11 @@ Changes: Development
 
 .. rubric:: KSP:
 
+- Add ``MatLMVMGetLastUpdate()``
+- Add ``MatLMVMMultAlgorithm``, ``MatLMVMSetMultAlgorithm()``, and ``MatLMVMGetMultAlgorithm()``
+- Add ``MatLMVMSymBroydenGetPhi()`` and ``MatLMVMSymBroydenSetPhi()``
+- Add ``MatLMVMSymBadBroydenGetPsi()`` and ``MatLMVMSymBadBroydenSetPsi()``
+
 .. rubric:: SNES:
 
 .. rubric:: SNESLineSearch:

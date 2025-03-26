@@ -14,6 +14,7 @@ struct _SymBroydenRescale {
   PetscReal                  delta, delta_min, delta_max, sigma, tol;
   PetscInt                   sigma_hist; /* length of update history to be used for scaling */
   PetscBool                  allocated;
+  PetscBool                  initialized;
   PetscBool                  forward;
   MatLMVMSymBroydenScaleType scale_type;
 };
@@ -21,14 +22,13 @@ struct _SymBroydenRescale {
 PETSC_INTERN PetscErrorCode SymBroydenRescaleSetDiagonalMode(SymBroydenRescale, PetscBool);
 PETSC_INTERN PetscErrorCode SymBroydenRescaleGetType(SymBroydenRescale, MatLMVMSymBroydenScaleType *);
 PETSC_INTERN PetscErrorCode SymBroydenRescaleSetType(SymBroydenRescale, MatLMVMSymBroydenScaleType);
-PETSC_INTERN PetscErrorCode SymBroydenRescaleSetDelta(SymBroydenRescale, PetscReal);
+PETSC_INTERN PetscErrorCode SymBroydenRescaleSetDelta(Mat, SymBroydenRescale, PetscReal);
 PETSC_INTERN PetscErrorCode SymBroydenRescaleSetUp(Mat, SymBroydenRescale);
 PETSC_INTERN PetscErrorCode SymBroydenRescaleInitializeJ0(Mat, SymBroydenRescale);
-PETSC_INTERN PetscErrorCode SymBroydenRescaleUpdateJ0(Mat, SymBroydenRescale);
 PETSC_INTERN PetscErrorCode SymBroydenRescaleUpdate(Mat, SymBroydenRescale);
 PETSC_INTERN PetscErrorCode SymBroydenRescaleCopy(SymBroydenRescale, SymBroydenRescale);
 PETSC_INTERN PetscErrorCode SymBroydenRescaleView(SymBroydenRescale, PetscViewer);
 PETSC_INTERN PetscErrorCode SymBroydenRescaleSetFromOptions(Mat, SymBroydenRescale, PetscOptionItems PetscOptionsObject);
-PETSC_INTERN PetscErrorCode SymBroydenRescaleReset(Mat, SymBroydenRescale, PetscBool);
+PETSC_INTERN PetscErrorCode SymBroydenRescaleReset(Mat, SymBroydenRescale, MatLMVMResetMode);
 PETSC_INTERN PetscErrorCode SymBroydenRescaleDestroy(SymBroydenRescale *);
 PETSC_INTERN PetscErrorCode SymBroydenRescaleCreate(SymBroydenRescale *);
