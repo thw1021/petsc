@@ -156,6 +156,7 @@ public:
   static PetscErrorCode MatMatMult_Numeric_Dispatch(Mat, Mat, Mat) noexcept;
   static PetscErrorCode Copy(Mat, Mat, MatStructure) noexcept;
   static PetscErrorCode ZeroEntries(Mat) noexcept;
+  static PetscErrorCode Conjugate(Mat) noexcept;
   static PetscErrorCode Scale(Mat, PetscScalar) noexcept;
   static PetscErrorCode AXPY(Mat, PetscScalar, Mat, MatStructure) noexcept;
   static PetscErrorCode Duplicate(Mat, MatDuplicateOption, Mat *) noexcept;
@@ -1081,6 +1082,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::BindToCPU(Mat A, PetscBool to_host) 
   MatSetOp_CUPM(to_host, A, choleskyfactor, MatCholeskyFactor_SeqDense, SolveCholesky::Factor);
   MatSetOp_CUPM(to_host, A, lufactor, MatLUFactor_SeqDense, SolveLU::Factor);
   MatSetOp_CUPM(to_host, A, getcolumnvector, MatGetColumnVector_SeqDense, GetColumnVector);
+  MatSetOp_CUPM(to_host, A, conjugate, MatConjugate_SeqDense, Conjugate);
   MatSetOp_CUPM(to_host, A, scale, MatScale_SeqDense, Scale);
   MatSetOp_CUPM(to_host, A, shift, MatShift_SeqDense, Shift);
   MatSetOp_CUPM(to_host, A, copy, MatCopy_SeqDense, Copy);
@@ -1409,7 +1411,63 @@ PETSC_NODISCARD inline SubMatrixIterator<typename thrust::device_vector<T>::iter
 
 } // namespace
 
+struct conjugate {
+  PETSC_NODISCARD PETSC_HOSTDEVICE_INLINE_DECL PetscScalar operator()(const PetscScalar &x) const noexcept { return PetscConj(x); }
+};
+
 } // namespace detail
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode MatDense_Seq_CUPM<T>::Conjugate(Mat A) noexcept
+{
+  const auto         m = A->rmap->n;
+  const auto         n = A->cmap->n;
+  const auto         N = m * n;
+  PetscDeviceContext dctx;
+  cupmStream_t       stream;
+
+  PetscFunctionBegin;
+  if (PetscDefined(USE_COMPLEX)) {
+    PetscCall(GetHandles_(&dctx, &stream));
+    PetscCall(PetscLogGpuTimeBegin());
+    {
+      const auto   da  = DeviceArrayReadWrite(dctx, A);
+      const auto   lda = MatIMPLCast(A)->lda;
+      cupmStream_t stream;
+      PetscCall(GetHandlesFrom_(dctx, &stream));
+
+      if (lda > m) {
+        // clang-format off
+        PetscCallThrust(
+          const auto sub_mat = detail::make_submat_iterator(0, m, 0, n, lda, da.data());
+
+          THRUST_CALL(
+            thrust::transform,
+            stream,
+            sub_mat.begin(), sub_mat.end(), sub_mat.begin(),
+            detail::conjugate{}
+          )
+        );
+        // clang-format on
+      } else {
+        // clang-format off
+        PetscCallThrust(
+          const auto aptr = thrust::device_pointer_cast(da.data());
+
+          THRUST_CALL(
+            thrust::transform,
+            stream,
+            aptr, aptr + N, aptr,
+            detail::conjugate{}
+          )
+        );
+        // clang-format on
+      }
+    }
+    PetscCall(PetscLogGpuTimeEnd());
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 template <device::cupm::DeviceType T>
 inline PetscErrorCode MatDense_Seq_CUPM<T>::Scale(Mat A, PetscScalar alpha) noexcept
