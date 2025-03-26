@@ -2950,10 +2950,10 @@ static PetscErrorCode MatResetPreallocation_MPIAIJ(Mat B, PetscBool *memoryreset
   PetscCall(MatResetPreallocation(b->A, &ondiagreset));
   PetscCall(MatResetPreallocation(b->B, &offdiagreset));
   *memoryreset = (ondiagreset || offdiagreset) ? PETSC_TRUE : PETSC_FALSE;
-  PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, memoryreset, 1, MPIU_BOOL, MPI_MAX, PetscObjectComm((PetscObject)B)));
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, memoryreset, 1, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject)B)));
   if (!memoryreset) PetscFunctionReturn(PETSC_SUCCESS);
 
-  /* If the memory wasn't reset for one of the sequential matrices we must zero it or else users will be in for a surprise after their next assembly */
+  /* If the memory wasn't reset for one of the sequential matrices, we must zero it or else users will be in for a surprise after their next assembly */
   if (!ondiagreset) PetscCall(MatZeroEntries(b->A));
   if (!offdiagreset) PetscCall(MatZeroEntries(b->B));
 
