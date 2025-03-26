@@ -4052,7 +4052,7 @@ PetscErrorCode MatSeqAIJSetPreallocation_SeqAIJ(Mat B, PetscInt nz, const PetscI
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatResetPreallocation_SeqAIJ(Mat A, PetscBool *memoryreset)
+PetscErrorCode MatResetPreallocation_SeqAIJImpl(Mat A, PetscBool *memoryreset)
 {
   Mat_SeqAIJ *a;
   PetscInt    i;
@@ -4061,6 +4061,9 @@ static PetscErrorCode MatResetPreallocation_SeqAIJ(Mat A, PetscBool *memoryreset
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
 
+  PetscCheck(A->insertmode == NOT_SET_VALUES, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot reset preallocation after setting some values but not yet calling MatAssemblyBegin()/MatAssemblyEnd()");
+  if (A->num_ass == 0) PetscFunctionReturn(PETSC_SUCCESS);
+
   /* Check local size. If zero, then return */
   if (!A->rmap->n) PetscFunctionReturn(PETSC_SUCCESS);
 
@@ -4068,10 +4071,11 @@ static PetscErrorCode MatResetPreallocation_SeqAIJ(Mat A, PetscBool *memoryreset
   /* if no saved info, we error out */
   PetscCheck(a->ipre, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "No saved preallocation info ");
 
-  PetscCheck(a->i && a->imax && a->ilen, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "Memory info is incomplete, and can not reset preallocation ");
+  PetscCheck(a->i && a->imax && a->ilen, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "Memory info is incomplete, and cannot reset preallocation ");
 
   PetscCall(PetscArraycmp(a->ipre, a->ilen, A->rmap->n, &skipreset));
-  if (!skipreset) {
+  if (skipreset) PetscCall(MatZeroEntries(A));
+  else {
     PetscCall(PetscArraycpy(a->imax, a->ipre, A->rmap->n));
     PetscCall(PetscArrayzero(a->ilen, A->rmap->n));
     a->i[0] = 0;
@@ -4087,6 +4091,13 @@ static PetscErrorCode MatResetPreallocation_SeqAIJ(Mat A, PetscBool *memoryreset
     PetscCall(PetscObjectStateIncrease((PetscObject)A));
   }
   if (memoryreset) *memoryreset = (PetscBool)!skipreset;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatResetPreallocation_SeqAIJ(Mat A)
+{
+  PetscFunctionBegin;
+  PetscCall(MatResetPreallocation_SeqAIJImpl(A, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

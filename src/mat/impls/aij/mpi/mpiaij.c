@@ -2947,23 +2947,21 @@ PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJ(Mat B, PetscInt d_nz, const Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatResetPreallocation_MPIAIJ(Mat B, PetscBool *memoryresetuser)
+static PetscErrorCode MatResetPreallocation_MPIAIJ(Mat B)
 {
   Mat_MPIAIJ *b = (Mat_MPIAIJ *)B->data;
   PetscBool   ondiagreset, offdiagreset, memoryreset;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(B, MAT_CLASSID, 1);
-  PetscCall(MatResetPreallocation(b->A, &ondiagreset));
-  PetscCall(MatResetPreallocation(b->B, &offdiagreset));
+  PetscCheck(B->insertmode == NOT_SET_VALUES, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot reset preallocation after setting some values but not yet calling MatAssemblyBegin()/MatAssemblyEnd()");
+  if (B->num_ass == 0) PetscFunctionReturn(PETSC_SUCCESS);
+
+  PetscCall(MatResetPreallocation_SeqAIJImpl(b->A, &ondiagreset));
+  PetscCall(MatResetPreallocation_SeqAIJImpl(b->B, &offdiagreset));
   memoryreset = (ondiagreset || offdiagreset) ? PETSC_TRUE : PETSC_FALSE;
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &memoryreset, 1, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject)B)));
-  if (memoryresetuser) *memoryresetuser = memoryreset;
   if (!memoryreset) PetscFunctionReturn(PETSC_SUCCESS);
-
-  /* If the memory wasn't reset for one of the sequential matrices, we must zero it or else users will be in for a surprise after their next assembly */
-  if (!ondiagreset) PetscCall(MatZeroEntries(b->A));
-  if (!offdiagreset) PetscCall(MatZeroEntries(b->B));
 
   PetscCall(PetscLayoutSetUp(B->rmap));
   PetscCall(PetscLayoutSetUp(B->cmap));
