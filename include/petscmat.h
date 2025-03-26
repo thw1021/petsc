@@ -83,6 +83,7 @@ typedef const char *MatType;
 #define MATMPIDENSE                  "mpidense"
 #define MATMPIDENSECUDA              "mpidensecuda"
 #define MATMPIDENSEHIP               "mpidensehip"
+#define MATDENSEFROMVECTYPE          "densefromvectype"
 #define MATELEMENTAL                 "elemental"
 #define MATSCALAPACK                 "scalapack"
 #define MATBAIJ                      "baij"
