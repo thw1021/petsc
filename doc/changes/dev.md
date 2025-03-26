@@ -49,6 +49,7 @@
 ```
 
 - Add `MatConstantDiagonalGetConstant()`
+- Add `MATDENSEFROMVECTYPE` constructor to simplify specifying the right dense format from the command line
 
 ```{rubric} MatCoarsen:
 ```
