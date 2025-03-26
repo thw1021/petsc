@@ -66,6 +66,7 @@ Changes: Development
 - Change option ``-mat_factor_bind_factorization <host | device>`` to ``-pc_factor_mat_factor_on_host <bool>`` for MATAIJ device matrices
 - Add option ``-pc_factor_mat_solve_on_host <bool>`` for MATSEQAIJKOKKOS matrices
 - Add ``MatConstantDiagonalGetConstant()``
+- Add ``MATDENSEFROMVECTYPE`` constructor to simplify specifying the right dense format from the command line
 
 .. rubric:: MatCoarsen:
 
