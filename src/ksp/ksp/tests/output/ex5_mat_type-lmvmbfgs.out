@@ -36,6 +36,12 @@ Mat Object: 1 MPI process
   Number of updates: 0
   Number of rejects: 0
   Number of resets: 0
+  J0 Matrix:
+  Mat Object: (lmvm_J0_) 1 MPI process
+    type: constantdiagonal
+    rows=4, cols=4
+    total: nonzeros=1, allocated nonzeros=1
+    total number of mallocs used during MatSetValues calls=0
   Mat Object: (J0_) 1 MPI process
     type: lmvmdiagbroyden
     Scale history: 1
@@ -46,6 +52,12 @@ Mat Object: 1 MPI process
     Number of updates: 0
     Number of rejects: 0
     Number of resets: 0
+    J0 Matrix:
+    Mat Object: (lmvm_J0_) 1 MPI process
+      type: constantdiagonal
+      rows=4, cols=4
+      total: nonzeros=1, allocated nonzeros=1
+      total number of mallocs used during MatSetValues calls=0
 Mat Object: 1 MPI process
   type: lmvmbfgs
   Scale type: DIAGONAL
@@ -57,6 +69,12 @@ Mat Object: 1 MPI process
   Number of updates: 1
   Number of rejects: 0
   Number of resets: 0
+  J0 Matrix:
+  Mat Object: (lmvm_J0_) 1 MPI process
+    type: constantdiagonal
+    rows=4, cols=4
+    total: nonzeros=1, allocated nonzeros=1
+    total number of mallocs used during MatSetValues calls=0
   Mat Object: (J0_) 1 MPI process
     type: lmvmdiagbroyden
     Scale history: 1
@@ -67,6 +85,12 @@ Mat Object: 1 MPI process
     Number of updates: 1
     Number of rejects: 0
     Number of resets: 0
+    J0 Matrix:
+    Mat Object: (lmvm_J0_) 1 MPI process
+      type: constantdiagonal
+      rows=4, cols=4
+      total: nonzeros=1, allocated nonzeros=1
+      total number of mallocs used during MatSetValues calls=0
 Mat Object: 1 MPI process
   type: lmvmbfgs
   Scale type: DIAGONAL
@@ -78,6 +102,12 @@ Mat Object: 1 MPI process
   Number of updates: 1
   Number of rejects: 1
   Number of resets: 0
+  J0 Matrix:
+  Mat Object: (lmvm_J0_) 1 MPI process
+    type: constantdiagonal
+    rows=4, cols=4
+    total: nonzeros=1, allocated nonzeros=1
+    total number of mallocs used during MatSetValues calls=0
   Mat Object: (J0_) 1 MPI process
     type: lmvmdiagbroyden
     Scale history: 1
@@ -88,6 +118,12 @@ Mat Object: 1 MPI process
     Number of updates: 1
     Number of rejects: 0
     Number of resets: 1
+    J0 Matrix:
+    Mat Object: (lmvm_J0_) 1 MPI process
+      type: constantdiagonal
+      rows=4, cols=4
+      total: nonzeros=1, allocated nonzeros=1
+      total number of mallocs used during MatSetValues calls=0
 Mat Object: 1 MPI process
   type: lmvmbfgs
   Scale type: DIAGONAL
@@ -99,6 +135,12 @@ Mat Object: 1 MPI process
   Number of updates: 1
   Number of rejects: 2
   Number of resets: 0
+  J0 Matrix:
+  Mat Object: (lmvm_J0_) 1 MPI process
+    type: constantdiagonal
+    rows=4, cols=4
+    total: nonzeros=1, allocated nonzeros=1
+    total number of mallocs used during MatSetValues calls=0
   Mat Object: (J0_) 1 MPI process
     type: lmvmdiagbroyden
     Scale history: 1
@@ -109,6 +151,12 @@ Mat Object: 1 MPI process
     Number of updates: 1
     Number of rejects: 0
     Number of resets: 2
+    J0 Matrix:
+    Mat Object: (lmvm_J0_) 1 MPI process
+      type: constantdiagonal
+      rows=4, cols=4
+      total: nonzeros=1, allocated nonzeros=1
+      total number of mallocs used during MatSetValues calls=0
 Mat Object: 1 MPI process
   type: lmvmbfgs
   Scale type: DIAGONAL
@@ -120,6 +168,12 @@ Mat Object: 1 MPI process
   Number of updates: 1
   Number of rejects: 3
   Number of resets: 1
+  J0 Matrix:
+  Mat Object: (lmvm_J0_) 1 MPI process
+    type: constantdiagonal
+    rows=4, cols=4
+    total: nonzeros=1, allocated nonzeros=1
+    total number of mallocs used during MatSetValues calls=0
   Mat Object: (J0_) 1 MPI process
     type: lmvmdiagbroyden
     Scale history: 1
@@ -130,6 +184,12 @@ Mat Object: 1 MPI process
     Number of updates: 1
     Number of rejects: 0
     Number of resets: 5
+    J0 Matrix:
+    Mat Object: (lmvm_J0_) 1 MPI process
+      type: constantdiagonal
+      rows=4, cols=4
+      total: nonzeros=1, allocated nonzeros=1
+      total number of mallocs used during MatSetValues calls=0
 Mat Object: 1 MPI process
   type: lmvmbfgs
   Scale type: DIAGONAL
@@ -141,6 +201,12 @@ Mat Object: 1 MPI process
   Number of updates: 2
   Number of rejects: 3
   Number of resets: 1
+  J0 Matrix:
+  Mat Object: (lmvm_J0_) 1 MPI process
+    type: constantdiagonal
+    rows=4, cols=4
+    total: nonzeros=1, allocated nonzeros=1
+    total number of mallocs used during MatSetValues calls=0
   Mat Object: (J0_) 1 MPI process
     type: lmvmdiagbroyden
     Scale history: 1
@@ -151,6 +217,12 @@ Mat Object: 1 MPI process
     Number of updates: 1
     Number of rejects: 0
     Number of resets: 5
+    J0 Matrix:
+    Mat Object: (lmvm_J0_) 1 MPI process
+      type: constantdiagonal
+      rows=4, cols=4
+      total: nonzeros=1, allocated nonzeros=1
+      total number of mallocs used during MatSetValues calls=0
 Mat Object: 1 MPI process
   type: lmvmbfgs
   Scale type: DIAGONAL
@@ -162,6 +234,12 @@ Mat Object: 1 MPI process
   Number of updates: 2
   Number of rejects: 4
   Number of resets: 1
+  J0 Matrix:
+  Mat Object: (lmvm_J0_) 1 MPI process
+    type: constantdiagonal
+    rows=4, cols=4
+    total: nonzeros=1, allocated nonzeros=1
+    total number of mallocs used during MatSetValues calls=0
   Mat Object: (J0_) 1 MPI process
     type: lmvmdiagbroyden
     Scale history: 1
@@ -172,6 +250,12 @@ Mat Object: 1 MPI process
     Number of updates: 1
     Number of rejects: 0
     Number of resets: 6
+    J0 Matrix:
+    Mat Object: (lmvm_J0_) 1 MPI process
+      type: constantdiagonal
+      rows=4, cols=4
+      total: nonzeros=1, allocated nonzeros=1
+      total number of mallocs used during MatSetValues calls=0
 Mat Object: 1 MPI process
   type: lmvmbfgs
   Scale type: DIAGONAL
@@ -183,6 +267,12 @@ Mat Object: 1 MPI process
   Number of updates: 2
   Number of rejects: 5
   Number of resets: 1
+  J0 Matrix:
+  Mat Object: (lmvm_J0_) 1 MPI process
+    type: constantdiagonal
+    rows=4, cols=4
+    total: nonzeros=1, allocated nonzeros=1
+    total number of mallocs used during MatSetValues calls=0
   Mat Object: (J0_) 1 MPI process
     type: lmvmdiagbroyden
     Scale history: 1
@@ -193,6 +283,12 @@ Mat Object: 1 MPI process
     Number of updates: 1
     Number of rejects: 0
     Number of resets: 7
+    J0 Matrix:
+    Mat Object: (lmvm_J0_) 1 MPI process
+      type: constantdiagonal
+      rows=4, cols=4
+      total: nonzeros=1, allocated nonzeros=1
+      total number of mallocs used during MatSetValues calls=0
 Mat Object: 1 MPI process
   type: lmvmbfgs
   Scale type: DIAGONAL
@@ -204,6 +300,12 @@ Mat Object: 1 MPI process
   Number of updates: 3
   Number of rejects: 5
   Number of resets: 1
+  J0 Matrix:
+  Mat Object: (lmvm_J0_) 1 MPI process
+    type: constantdiagonal
+    rows=4, cols=4
+    total: nonzeros=1, allocated nonzeros=1
+    total number of mallocs used during MatSetValues calls=0
   Mat Object: (J0_) 1 MPI process
     type: lmvmdiagbroyden
     Scale history: 1
@@ -214,6 +316,12 @@ Mat Object: 1 MPI process
     Number of updates: 2
     Number of rejects: 0
     Number of resets: 7
+    J0 Matrix:
+    Mat Object: (lmvm_J0_) 1 MPI process
+      type: constantdiagonal
+      rows=4, cols=4
+      total: nonzeros=1, allocated nonzeros=1
+      total number of mallocs used during MatSetValues calls=0
 Mat Object: 1 MPI process
   type: lmvmbfgs
   Scale type: DIAGONAL
@@ -225,6 +333,12 @@ Mat Object: 1 MPI process
   Number of updates: 4
   Number of rejects: 5
   Number of resets: 1
+  J0 Matrix:
+  Mat Object: (lmvm_J0_) 1 MPI process
+    type: constantdiagonal
+    rows=4, cols=4
+    total: nonzeros=1, allocated nonzeros=1
+    total number of mallocs used during MatSetValues calls=0
   Mat Object: (J0_) 1 MPI process
     type: lmvmdiagbroyden
     Scale history: 1
@@ -235,3 +349,9 @@ Mat Object: 1 MPI process
     Number of updates: 3
     Number of rejects: 0
     Number of resets: 7
+    J0 Matrix:
+    Mat Object: (lmvm_J0_) 1 MPI process
+      type: constantdiagonal
+      rows=4, cols=4
+      total: nonzeros=1, allocated nonzeros=1
+      total number of mallocs used during MatSetValues calls=0
