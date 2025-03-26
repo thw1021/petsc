@@ -709,7 +709,7 @@ int main(int argc, char *argv[])
     suffix: proj_quad_hip_serial
     requires: triangle hip
     nsize: 1
-    args: -dm_plex_simplex 0 -dm_plex_box_faces 8,8 -dm_view -sw_view -petscspace_degree 2 -petscfe_default_quadrature_order {{2 3}} -dm_vec_type hip -mat_type aijhipsparse -ptof_ksp_type cg -ptof_pc_type ilu -ptof_ksp_rtol 1e-15  -ftop_ksp_rtol 1e-15 -ftop_ksp_type lsqr -ftop_pc_type none
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 8,8 -dm_view -sw_view -petscspace_degree 2 -petscfe_default_quadrature_order {{2 3}} -dm_vec_type hip -mat_type aijhipsparse -ptof_ksp_type cg -ptof_pc_type ilu -ptof_ksp_rtol 1e-15 -ftop_ksp_rtol 1e-15 -ftop_ksp_type lsqr -ftop_pc_type none
     filter: grep -v marker | grep -v atomic | grep -v usage
   test:
     suffix: proj_quad_hip_parallel
