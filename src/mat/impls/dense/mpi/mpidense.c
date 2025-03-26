@@ -1614,48 +1614,63 @@ static PetscErrorCode MatDenseGetSubMatrix_MPIDense(Mat A, PetscInt rbegin, Pets
   Mat_MPIDense *a = (Mat_MPIDense *)A->data;
   Mat_MPIDense *c;
   MPI_Comm      comm;
-  PetscInt      pbegin, pend;
+  PetscInt      prbegin, prend, pcbegin, pcend;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)A, &comm));
   PetscCheck(!a->vecinuse, comm, PETSC_ERR_ORDER, "Need to call MatDenseRestoreColumnVec() first");
   PetscCheck(!a->matinuse, comm, PETSC_ERR_ORDER, "Need to call MatDenseRestoreSubMatrix() first");
-  pbegin = PetscMax(0, PetscMin(A->rmap->rend, rbegin) - A->rmap->rstart);
-  pend   = PetscMin(A->rmap->n, PetscMax(0, rend - A->rmap->rstart));
+  prbegin = PetscMax(0, PetscMin(A->rmap->rend, rbegin) - A->rmap->rstart);
+  prend   = PetscMin(A->rmap->n, PetscMax(0, rend - A->rmap->rstart));
+  pcbegin = PetscMax(0, PetscMin(A->cmap->rend, cbegin) - A->cmap->rstart);
+  pcend   = PetscMin(A->cmap->n, PetscMax(0, cend - A->cmap->rstart));
   if (!a->cmat) {
     PetscCall(MatCreate(comm, &a->cmat));
     PetscCall(MatSetType(a->cmat, ((PetscObject)A)->type_name));
     if (rend - rbegin == A->rmap->N) PetscCall(PetscLayoutReference(A->rmap, &a->cmat->rmap));
     else {
-      PetscCall(PetscLayoutSetLocalSize(a->cmat->rmap, pend - pbegin));
+      PetscCall(PetscLayoutSetLocalSize(a->cmat->rmap, prend - prbegin));
       PetscCall(PetscLayoutSetSize(a->cmat->rmap, rend - rbegin));
       PetscCall(PetscLayoutSetUp(a->cmat->rmap));
     }
-    PetscCall(PetscLayoutSetSize(a->cmat->cmap, cend - cbegin));
-    PetscCall(PetscLayoutSetUp(a->cmat->cmap));
-  } else {
-    PetscBool same = (PetscBool)(rend - rbegin == a->cmat->rmap->N);
-    if (same && a->cmat->rmap->N != A->rmap->N) {
-      same = (PetscBool)(pend - pbegin == a->cmat->rmap->n);
-      PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &same, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject)A)));
-    }
-    if (!same) {
-      PetscCall(PetscLayoutDestroy(&a->cmat->rmap));
-      PetscCall(PetscLayoutCreate(comm, &a->cmat->rmap));
-      PetscCall(PetscLayoutSetLocalSize(a->cmat->rmap, pend - pbegin));
-      PetscCall(PetscLayoutSetSize(a->cmat->rmap, rend - rbegin));
-      PetscCall(PetscLayoutSetUp(a->cmat->rmap));
-    }
-    if (cend - cbegin != a->cmat->cmap->N) {
-      PetscCall(PetscLayoutDestroy(&a->cmat->cmap));
-      PetscCall(PetscLayoutCreate(comm, &a->cmat->cmap));
+    if (cend - cbegin == A->cmap->N) PetscCall(PetscLayoutReference(A->cmap, &a->cmat->cmap));
+    else {
+      PetscCall(PetscLayoutSetLocalSize(a->cmat->cmap, pcend - pcbegin));
       PetscCall(PetscLayoutSetSize(a->cmat->cmap, cend - cbegin));
       PetscCall(PetscLayoutSetUp(a->cmat->cmap));
     }
+    c             = (Mat_MPIDense *)a->cmat->data;
+    c->sub_rbegin = rbegin;
+    c->sub_rend   = rend;
+    c->sub_cbegin = cbegin;
+    c->sub_cend   = cend;
   }
   c = (Mat_MPIDense *)a->cmat->data;
+  if (c->sub_rbegin != rbegin || c->sub_rend != rend) {
+    PetscCall(PetscLayoutDestroy(&a->cmat->rmap));
+    PetscCall(PetscLayoutCreate(comm, &a->cmat->rmap));
+    PetscCall(PetscLayoutSetLocalSize(a->cmat->rmap, prend - prbegin));
+    PetscCall(PetscLayoutSetSize(a->cmat->rmap, rend - rbegin));
+    PetscCall(PetscLayoutSetUp(a->cmat->rmap));
+    c->sub_rbegin = rbegin;
+    c->sub_rend   = rend;
+  }
+  if (c->sub_cbegin != cbegin || c->sub_cend != cend) {
+    // special optimization: check if all columns are owned by rank 0, in which case no communication is necessary
+    if ((cend - cbegin != a->cmat->cmap->N) || (A->cmap->range[1] != A->cmap->N)) {
+      PetscCall(PetscLayoutDestroy(&a->cmat->cmap));
+      PetscCall(PetscLayoutCreate(comm, &a->cmat->cmap));
+      PetscCall(PetscLayoutSetLocalSize(a->cmat->cmap, pcend - pcbegin));
+      PetscCall(PetscLayoutSetSize(a->cmat->cmap, cend - cbegin));
+      PetscCall(PetscLayoutSetUp(a->cmat->cmap));
+      PetscCall(VecDestroy(&c->lvec));
+      PetscCall(PetscSFDestroy(&c->Mvctx));
+    }
+    c->sub_cbegin = cbegin;
+    c->sub_cend   = cend;
+  }
   PetscCheck(!c->A, comm, PETSC_ERR_ORDER, "Need to call MatDenseRestoreSubMatrix() first");
-  PetscCall(MatDenseGetSubMatrix(a->A, pbegin, pend, cbegin, cend, &c->A));
+  PetscCall(MatDenseGetSubMatrix(a->A, prbegin, prend, cbegin, cend, &c->A));
 
   a->cmat->preallocated = PETSC_TRUE;
   a->cmat->assembled    = PETSC_TRUE;
