@@ -78,7 +78,6 @@
 #define PCGALERKIN 'galerkin'
 #define PCEXOTIC 'exotic'
 #define PCCP 'cp'
-#define PCBFBT 'bfbt'
 #define PCLSC 'lsc'
 #define PCPYTHON 'python'
 #define PCPFMG 'pfmg'
