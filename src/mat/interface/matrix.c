@@ -943,7 +943,7 @@ PetscErrorCode MatGetState(Mat A, PetscObjectState *state)
   matrix. If that space is less than the preallocated space that extra preallocated space is no longer available to take on new values. `MatResetPreallocation()`
   makes all of the preallocation space available
 
-  Current values in the matrix are lost in this call.
+  Current values in the matrix are lost in this call if the memory is reset
 
   Currently only supported for  `MATAIJ` matrices.
 

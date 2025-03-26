@@ -62,6 +62,9 @@ Changes: Development
 - Add ``MatResetHash()`` which allows resetting an XAIJ matrix to use a hash table
 - Add ``MatCreateSeqAIJKokkosWithKokkosViews()`` which allows creation of a ``MATSEQAIJKOKKOS`` matrix with AIJ data in Kokkos views
 - Change ``MatCreateMPIAIJWithSeqAIJ()`` so that B can be passed in with local indices and compactification skipped
+- Change ``MatResetPreallocation()`` to take an optional output argument ``memoryreset`` which describes whether the function call actually reset memory.
+  If it did not, then the user generally will want to do a follow-on call to ``MatZeroEntries()`` in order to achieve the same state as if the memory
+  was reset
 
 .. rubric:: MatCoarsen:
 
