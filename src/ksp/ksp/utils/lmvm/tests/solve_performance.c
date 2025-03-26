@@ -66,7 +66,9 @@ int main(int argc, char **argv)
     PetscCall(MatLMVMReset(B, PETSC_FALSE));
     if (epoch > 0) PetscCall(PetscLogStagePop());
   }
+  PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_(PETSC_COMM_WORLD), PETSC_VIEWER_ASCII_INFO_DETAIL));
   PetscCall(MatView(B, PETSC_VIEWER_STDOUT_(PETSC_COMM_WORLD)));
+  PetscCall(PetscViewerPopFormat(PETSC_VIEWER_STDOUT_(PETSC_COMM_WORLD)));
   PetscCall(PetscRandomDestroy(&rand));
   PetscCall(MatDestroy(&B));
   PetscCall(VecDestroy(&p));
