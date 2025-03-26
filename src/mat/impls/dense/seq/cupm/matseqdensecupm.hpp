@@ -807,14 +807,45 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::MatMultAddColumnRange_Dispatch_(Mat 
   const auto         m   = static_cast<cupmBlasInt_t>(A->rmap->n);
   const auto         n   = static_cast<cupmBlasInt_t>(c_end - c_start);
   const auto         lda = static_cast<cupmBlasInt_t>(MatIMPLCast(A)->lda);
+  PetscBool          xiscupm, yiscupm, ziscupm;
   cupmBlasHandle_t   handle;
+  Vec                _xx = xx, _yy = yy, _zz = zz;
   PetscDeviceContext dctx;
 
   PetscFunctionBegin;
-  if (yy && yy != zz) PetscCall(VecSeq_CUPM::Copy(yy, zz)); // mult add
+  PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(xx), &xiscupm, VecSeq_CUPM::VECSEQCUPM(), VecSeq_CUPM::VECMPICUPM(), VecSeq_CUPM::VECCUPM(), ""));
+  if (!xiscupm || xx->boundtocpu) {
+    PetscCall(VecCreate(PetscObjectComm(PetscObjectCast(xx)), &_xx));
+    PetscCall(VecSetLayout(_xx, xx->map));
+    PetscCall(VecSetType(_xx, VecSeq_CUPM::VECCUPM()));
+    PetscCall(VecCopy(xx, _xx));
+  }
+
+  if (yy) {
+    PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(yy), &yiscupm, VecSeq_CUPM::VECSEQCUPM(), VecSeq_CUPM::VECMPICUPM(), VecSeq_CUPM::VECCUPM(), ""));
+    if (!yiscupm || yy->boundtocpu) {
+      PetscCall(VecCreate(PetscObjectComm(PetscObjectCast(yy)), &_yy));
+      PetscCall(VecSetLayout(_yy, yy->map));
+      PetscCall(VecSetType(_yy, VecSeq_CUPM::VECCUPM()));
+      PetscCall(VecCopy(yy, _yy));
+    }
+  }
+
+  if (zz != yy) {
+    PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(zz), &ziscupm, VecSeq_CUPM::VECSEQCUPM(), VecSeq_CUPM::VECMPICUPM(), VecSeq_CUPM::VECCUPM(), ""));
+    if (!ziscupm || zz->boundtocpu) {
+      PetscCall(VecCreate(PetscObjectComm(PetscObjectCast(zz)), &_zz));
+      PetscCall(VecSetLayout(_zz, zz->map));
+      PetscCall(VecSetType(_zz, VecSeq_CUPM::VECCUPM()));
+    }
+  } else {
+    _zz = _yy;
+  }
+
+  if (_yy && _yy != _zz) PetscCall(VecSeq_CUPM::Copy(_yy, _zz)); // mult add
   if (!m || !n) {
     // mult only
-    if (!yy) PetscCall(VecSeq_CUPM::Set(zz, 0.0));
+    if (!_yy) PetscCall(VecSeq_CUPM::Set(_zz, 0.0));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(PetscInfo(A, "Matrix-vector product %" PetscBLASInt_FMT " x %" PetscBLASInt_FMT " on backend\n", m, n));
@@ -824,14 +855,20 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::MatMultAddColumnRange_Dispatch_(Mat 
     const auto     one  = cupmScalarCast(1.0);
     const auto     zero = cupmScalarCast(0.0);
     const auto     da   = DeviceArrayRead(dctx, A);
-    const auto     dxx  = VecSeq_CUPM::DeviceArrayRead(dctx, xx);
-    const auto     dzz  = VecSeq_CUPM::DeviceArrayReadWrite(dctx, zz);
+    const auto     dxx  = VecSeq_CUPM::DeviceArrayRead(dctx, _xx);
+    const auto     dzz  = VecSeq_CUPM::DeviceArrayReadWrite(dctx, _zz);
 
     PetscCall(PetscLogGpuTimeBegin());
-    PetscCallCUPMBLAS(cupmBlasXgemv(handle, op, m, n, &one, da.cupmdata() + c_start * lda, lda, dxx.cupmdata() + (transpose ? 0 : c_start), 1, yy ? &one : &zero, dzz.cupmdata() + (transpose ? c_start : 0), 1));
+    PetscCallCUPMBLAS(cupmBlasXgemv(handle, op, m, n, &one, da.cupmdata() + c_start * lda, lda, dxx.cupmdata() + (transpose ? 0 : c_start), 1, _yy ? &one : &zero, dzz.cupmdata() + (transpose ? c_start : 0), 1));
     PetscCall(PetscLogGpuTimeEnd());
   }
-  PetscCall(PetscLogGpuFlops(2.0 * m * n - (yy ? 0 : m)));
+  PetscCall(PetscLogGpuFlops(2.0 * m * n - (_yy ? 0 : m)));
+  if (_zz != zz) {
+    PetscCall(VecCopy(_zz, zz));
+    if (_zz != _yy) PetscCall(VecDestroy(&_zz));
+  }
+  if (_yy != yy) PetscCall(VecDestroy(&_yy));
+  if (_xx != xx) PetscCall(VecDestroy(&_xx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
