@@ -290,7 +290,7 @@ PetscErrorCode DMSwarmMigrate_CellDMScatter(DM dm, PetscBool remove_sent_points)
   DMLocatePoints to avoid deadlock
 */
 #if defined(PETSC_HAVE_DEVICE)
-    if (npoints_from_neighbours > 0){
+    if (npoints_from_neighbours > 0) {
       PetscCall(VecGetSubVector(pos, nis, &npos));
       PetscCall(DMLocatePoints(dmcell, npos, DM_POINTLOCATION_NONE, &sfcell));
       PetscCall(VecRestoreSubVector(pos, nis, &npos));
