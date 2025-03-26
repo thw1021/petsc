@@ -1,4 +1,56 @@
 #include <petscmat.h> /*I    "petscmat.h"   I*/
+#include "veccreatematdense.h"
+
+PETSC_INTERN PetscErrorCode VecTypeGetRootTypeForMatDense_Private(MPI_Comm comm, VecType vec_type, VecType *root_type, PetscBool *is_cuda, PetscBool *is_hip)
+{
+  PetscBool is_std, is_kokkos;
+
+  PetscFunctionBegin;
+  *root_type = VECSTANDARD;
+  PetscCall(PetscStrcmpAny(vec_type, &is_std, VECSTANDARD, VECMPI, VECSEQ, ""));
+  PetscCall(PetscStrcmpAny(vec_type, is_cuda, VECCUDA, VECMPICUDA, VECSEQCUDA, ""));
+  PetscCall(PetscStrcmpAny(vec_type, is_hip, VECHIP, VECMPIHIP, VECSEQHIP, ""));
+  PetscCall(PetscStrcmpAny(vec_type, &is_kokkos, VECKOKKOS, VECMPIKOKKOS, VECSEQKOKKOS, ""));
+  PetscCheck(is_std || *is_cuda || *is_hip || is_kokkos, comm, PETSC_ERR_SUP, "Not for type %s", vec_type);
+  if (*is_cuda) *root_type = VECCUDA;
+  else if (*is_hip) *root_type = VECHIP;
+  else if (is_kokkos) {
+    /* We support only one type of kokkos device */
+    PetscCheck(!PetscDefined(HAVE_MACRO_KOKKOS_ENABLE_SYCL), comm, PETSC_ERR_SUP, "Not for sycl backend");
+    if (PetscDefined(HAVE_MACRO_KOKKOS_ENABLE_CUDA)) *is_cuda = PETSC_TRUE;
+    else if (PetscDefined(HAVE_MACRO_KOKKOS_ENABLE_HIP)) *is_hip = PETSC_TRUE;
+    else is_std = PETSC_TRUE;
+    *root_type = VECKOKKOS;
+  }
+  // early exit errors before matrix is created
+  if (*is_cuda) PetscCheck(PetscDefined(HAVE_CUDA), comm, PETSC_ERR_SUP, "PETSc not compiled with CUDA support");
+  if (*is_hip) PetscCheck(PetscDefined(HAVE_HIP), comm, PETSC_ERR_SUP, "PETSc not compiled with HIP support");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode MatCreate_DenseFromVecType_Private(Mat B, PetscBool is_cuda, PetscBool is_hip, PetscInt lda, PetscScalar *data)
+{
+  PetscFunctionBegin;
+  if (is_cuda) {
+#if defined(PETSC_HAVE_CUDA)
+    PetscCall(MatSetType(B, MATDENSECUDA));
+    if (lda > 0) PetscCall(MatDenseSetLDA(B, lda));
+    PetscCall(MatDenseCUDASetPreallocation(B, data));
+#endif
+  } else if (is_hip) {
+#if defined(PETSC_HAVE_HIP)
+    PetscCall(MatSetType(B, MATDENSEHIP));
+    if (lda > 0) PetscCall(MatDenseSetLDA(B, lda));
+    PetscCall(MatDenseHIPSetPreallocation(B, data));
+#endif
+  } else {
+    PetscCall(MatSetType(B, MATDENSE));
+    if (lda > 0) PetscCall(MatDenseSetLDA(B, lda));
+    PetscCall(MatSeqDenseSetPreallocation(B, data));
+    PetscCall(MatMPIDenseSetPreallocation(B, data));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 /*@
   MatCreateDenseFromVecType - Create a matrix that matches the type of a Vec.
@@ -25,46 +77,13 @@
 PetscErrorCode MatCreateDenseFromVecType(MPI_Comm comm, VecType vtype, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscInt lda, PetscScalar *data, Mat *A)
 {
   VecType   root_type = VECSTANDARD;
-  PetscBool isstd, iscuda, iship, iskokkos;
+  PetscBool iscuda, iship;
 
   PetscFunctionBegin;
-  PetscCall(PetscStrcmpAny(vtype, &isstd, VECSTANDARD, VECMPI, VECSEQ, ""));
-  PetscCall(PetscStrcmpAny(vtype, &iscuda, VECCUDA, VECMPICUDA, VECSEQCUDA, ""));
-  PetscCall(PetscStrcmpAny(vtype, &iship, VECHIP, VECMPIHIP, VECSEQHIP, ""));
-  PetscCall(PetscStrcmpAny(vtype, &iskokkos, VECKOKKOS, VECMPIKOKKOS, VECSEQKOKKOS, ""));
-  PetscCheck(isstd || iscuda || iship || iskokkos, comm, PETSC_ERR_SUP, "Not for type %s", vtype);
-  if (iscuda) root_type = VECCUDA;
-  else if (iship) root_type = VECHIP;
-  else if (iskokkos) {
-    /* We support only one type of kokkos device */
-    PetscCheck(!PetscDefined(HAVE_MACRO_KOKKOS_ENABLE_SYCL), comm, PETSC_ERR_SUP, "Not for sycl backend");
-    if (PetscDefined(HAVE_MACRO_KOKKOS_ENABLE_CUDA)) iscuda = PETSC_TRUE;
-    else if (PetscDefined(HAVE_MACRO_KOKKOS_ENABLE_HIP)) iship = PETSC_TRUE;
-    else isstd = PETSC_TRUE;
-    root_type = VECKOKKOS;
-  }
+  PetscCall(VecTypeGetRootTypeForMatDense_Private(comm, vtype, &root_type, &iscuda, &iship));
   PetscCall(MatCreate(comm, A));
   PetscCall(MatSetSizes(*A, m, n, M, N));
-  if (isstd) {
-    PetscCall(MatSetType(*A, MATDENSE));
-    if (lda > 0) PetscCall(MatDenseSetLDA(*A, lda));
-    PetscCall(MatSeqDenseSetPreallocation(*A, data));
-    PetscCall(MatMPIDenseSetPreallocation(*A, data));
-  } else if (iscuda) {
-    PetscCheck(PetscDefined(HAVE_CUDA), comm, PETSC_ERR_SUP, "PETSc not compiled with CUDA support");
-#if defined(PETSC_HAVE_CUDA)
-    PetscCall(MatSetType(*A, MATDENSECUDA));
-    if (lda > 0) PetscCall(MatDenseSetLDA(*A, lda));
-    PetscCall(MatDenseCUDASetPreallocation(*A, data));
-#endif
-  } else if (iship) {
-    PetscCheck(PetscDefined(HAVE_HIP), comm, PETSC_ERR_SUP, "PETSc not compiled with HIP support");
-#if defined(PETSC_HAVE_HIP)
-    PetscCall(MatSetType(*A, MATDENSEHIP));
-    if (lda > 0) PetscCall(MatDenseSetLDA(*A, lda));
-    PetscCall(MatDenseHIPSetPreallocation(*A, data));
-#endif
-  }
   PetscCall(MatSetVecType(*A, root_type));
+  PetscCall(MatCreate_DenseFromVecType_Private(*A, iscuda, iship, lda, data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

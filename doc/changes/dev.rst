@@ -63,6 +63,7 @@ Changes: Development
 - Add ``MatCreateSeqAIJKokkosWithKokkosViews()`` which allows creation of a ``MATSEQAIJKOKKOS`` matrix with AIJ data in Kokkos views
 - Change ``MatCreateMPIAIJWithSeqAIJ()`` so that B can be passed in with local indices and compactification skipped
 - Add ``MatConstantDiagonalGetConstant()``
+- Add ``MATDENSEFROMVECTYPE`` constructor to simplify specifying the right dense format from the command line
 
 .. rubric:: MatCoarsen:
 
