@@ -138,9 +138,9 @@ PetscErrorCode PetscRegressorDestroy_Linear(PetscRegressor regressor)
 
    Level: intermediate
 @*/
-/* TODO: Add companion PetscRegressorLinearGetFitIntercept(), and put it in the .seealso: */
 PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, PetscBool flg)
 {
+  /* TODO: Add companion PetscRegressorLinearGetFitIntercept(), and put it in the .seealso: */
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
 
   PetscFunctionBegin;
@@ -160,9 +160,9 @@ PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, Pet
 
    Level: intermediate
 @*/
-/* TODO: Add companion PetscRegressorLinearGetUseKSP(), and put it in the .seealso: */
 PetscErrorCode PetscRegressorLinearSetUseKSP(PetscRegressor regressor, PetscBool flg)
 {
+  /* TODO: Add companion PetscRegressorLinearGetUseKSP(), and put it in the .seealso: */
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
 
   PetscFunctionBegin;
