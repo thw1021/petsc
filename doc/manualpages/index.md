@@ -1,6 +1,6 @@
 # C/Fortran API
 
-> [MPI Documentation](https://www.open-mpi.org/doc/current/)
+> [MPI Documentation](https://docs.open-mpi.org/)
 
 The manual pages are split into four categories; we recommend
 beginning with basic functionality and then gradually exploring more
