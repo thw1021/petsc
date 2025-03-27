@@ -2950,8 +2950,8 @@ static PetscErrorCode MatResetPreallocation_MPIAIJ(Mat B)
   PetscCheck(B->insertmode == NOT_SET_VALUES, PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot reset preallocation after setting some values but not yet calling MatAssemblyBegin()/MatAssemblyEnd()");
   if (B->num_ass == 0) PetscFunctionReturn(PETSC_SUCCESS);
 
-  PetscCall(MatResetPreallocation_SeqAIJImpl(b->A, &ondiagreset));
-  PetscCall(MatResetPreallocation_SeqAIJImpl(b->B, &offdiagreset));
+  PetscCall(MatResetPreallocation_SeqAIJ_Private(b->A, &ondiagreset));
+  PetscCall(MatResetPreallocation_SeqAIJ_Private(b->B, &offdiagreset));
   memoryreset = (PetscBool)(ondiagreset || offdiagreset);
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &memoryreset, 1, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject)B)));
   if (!memoryreset) PetscFunctionReturn(PETSC_SUCCESS);

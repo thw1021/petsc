@@ -475,7 +475,7 @@ PETSC_INTERN PetscErrorCode MatCreateSubMatrix_SeqAIJ(Mat, IS, IS, PetscInt, Mat
 
 PETSC_INTERN PetscErrorCode MatSetSeqAIJWithArrays_private(MPI_Comm, PetscInt, PetscInt, PetscInt[], PetscInt[], PetscScalar[], MatType, Mat);
 
-PETSC_INTERN PetscErrorCode MatResetPreallocation_SeqAIJImpl(Mat A, PetscBool *memoryreset);
+PETSC_INTERN PetscErrorCode MatResetPreallocation_SeqAIJ_Private(Mat A, PetscBool *memoryreset);
 
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatSeqAIJCompactOutExtraColumns_SeqAIJ(Mat, ISLocalToGlobalMapping *);
 

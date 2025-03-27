@@ -4047,7 +4047,7 @@ PetscErrorCode MatSeqAIJSetPreallocation_SeqAIJ(Mat B, PetscInt nz, const PetscI
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatResetPreallocation_SeqAIJImpl(Mat A, PetscBool *memoryreset)
+PetscErrorCode MatResetPreallocation_SeqAIJ_Private(Mat A, PetscBool *memoryreset)
 {
   Mat_SeqAIJ *a;
   PetscInt    i;
@@ -4092,7 +4092,7 @@ PetscErrorCode MatResetPreallocation_SeqAIJImpl(Mat A, PetscBool *memoryreset)
 static PetscErrorCode MatResetPreallocation_SeqAIJ(Mat A)
 {
   PetscFunctionBegin;
-  PetscCall(MatResetPreallocation_SeqAIJImpl(A, NULL));
+  PetscCall(MatResetPreallocation_SeqAIJ_Private(A, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
