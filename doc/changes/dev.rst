@@ -63,6 +63,8 @@ Changes: Development
 - Add ``MatResetHash()`` which allows resetting an XAIJ matrix to use a hash table
 - Add ``MatCreateSeqAIJKokkosWithKokkosViews()`` which allows creation of a ``MATSEQAIJKOKKOS`` matrix with AIJ data in Kokkos views
 - Change ``MatCreateMPIAIJWithSeqAIJ()`` so that B can be passed in with local indices and compactification skipped
+- Add ``MatConstantDiagonalGetConstant()``
+- Add ``MATDENSEFROMVECTYPE`` constructor to simplify specifying the right dense format from the command line
 
 .. rubric:: MatCoarsen:
 
@@ -71,6 +73,11 @@ Changes: Development
 - Add `PCHYPREGetCFMarkers()` to extract Coarse/Fine splittings created by BoomerAMG from `PCHYPRE`, similar to `PCGetInterpolations()` and `PCGetCoarseOperators()`
 
 .. rubric:: KSP:
+
+- Add ``MatLMVMGetLastUpdate()``
+- Add ``MatLMVMMultAlgorithm``, ``MatLMVMSetMultAlgorithm()``, and ``MatLMVMGetMultAlgorithm()``
+- Add ``MatLMVMSymBroydenGetPhi()`` and ``MatLMVMSymBroydenSetPhi()``
+- Add ``MatLMVMSymBadBroydenGetPsi()`` and ``MatLMVMSymBadBroydenSetPsi()``
 
 .. rubric:: SNES:
 
