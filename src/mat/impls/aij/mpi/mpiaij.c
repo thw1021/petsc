@@ -2952,7 +2952,7 @@ static PetscErrorCode MatResetPreallocation_MPIAIJ(Mat B)
 
   PetscCall(MatResetPreallocation_SeqAIJImpl(b->A, &ondiagreset));
   PetscCall(MatResetPreallocation_SeqAIJImpl(b->B, &offdiagreset));
-  memoryreset = (ondiagreset || offdiagreset) ? PETSC_TRUE : PETSC_FALSE;
+  memoryreset = (PetscBool)(ondiagreset || offdiagreset);
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &memoryreset, 1, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject)B)));
   if (!memoryreset) PetscFunctionReturn(PETSC_SUCCESS);
 
