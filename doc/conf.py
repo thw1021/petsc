@@ -203,7 +203,7 @@ def build_finished_handler(app, exception):
     print("============================================")
     if app.builder.name.endswith('html'):
         _build_manpages_c2html(app, 'post')
-        build_petsc4py_docs(app)
+        #build_petsc4py_docs(app)
         _fix_links(app, exception)
         _fix_man_page_edit_links(app, exception)
         fix_pydata_margins.fix_pydata_margins(app.outdir)
