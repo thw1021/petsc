@@ -1,8 +1,7 @@
 #include <../src/ml/regressor/impls/linear/linearimpl.h> /*I "petscregressor.h" I*/
 
 // Note: If the list of PetscRegressorLinearTypes changes, it must also be updated in petscregressor.h
-#define PETSCREGRESSOR_LINEAR_NUM_TYPES 3
-static const char *PetscRegressor_Linear_Types_Table[PETSCREGRESSOR_LINEAR_NUM_TYPES] = {PETSCREGRESSORLINEAROLS, PETSCREGRESSORLINEARLASSO, PETSCREGRESSORLINEARRIDGE};
+static const char *PetscRegressor_Linear_Types_Table[] = {PETSCREGRESSORLINEAROLS, PETSCREGRESSORLINEARLASSO, PETSCREGRESSORLINEARRIDGE};
 
 PetscErrorCode EvaluateResidual(Tao tao, Vec x, Vec f, void *ptr)
 {
@@ -182,7 +181,7 @@ PetscErrorCode PetscRegressorSetFromOptions_Linear(PetscOptionItems *PetscOption
   if (set) PetscCall(PetscRegressorLinearSetFitIntercept(regressor, flg));
   PetscCall(PetscOptionsBool("-regressor_linear_use_ksp", "Use KSP instead of TAO for linear model fitting problem", "PetscRegressorLinearSetFitIntercept", flg, &flg, &set));
   if (set) PetscCall(PetscRegressorLinearSetUseKSP(regressor, flg));
-  PetscCall(PetscOptionsEList("-regressor_linear_type", "Linear regression method", "", PetscRegressor_Linear_Types_Table, PETSCREGRESSOR_LINEAR_NUM_TYPES, linear->type, &i, &set));
+  PetscCall(PetscOptionsEList("-regressor_linear_type", "Linear regression method", "", PetscRegressor_Linear_Types_Table, PETSC_STATIC_ARRAY_LENGTH(PetscRegressor_Linear_Types_Table), linear->type, &i, &set));
   if (set) PetscCall(PetscRegressorLinearSetType(regressor, PetscRegressor_Linear_Types_Table[i]));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
