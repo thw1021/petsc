@@ -279,7 +279,7 @@ PetscErrorCode PetscRegressorDestroy(PetscRegressor *regressor)
     PetscFunctionReturn(0);
   }
 
-  PetscCall(PetscRegressorReset((*regressor)));
+  PetscCall(PetscRegressorReset(*regressor));
   if ((*regressor)->ops->destroy) PetscCall((*(*regressor)->ops->destroy)(*regressor));
 
   PetscCall(PetscHeaderDestroy(regressor));
