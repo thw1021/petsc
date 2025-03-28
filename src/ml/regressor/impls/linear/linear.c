@@ -267,7 +267,7 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetCoefficients(PetscRegressor r
    Output Parameter
 .  intercept - the intercept
 
-.seealso: `PetscRegressorLinearGetCoefficients()`, `PETSCREGRESSORLINEAR`
+.seealso: `PetscRegressor`, `PetscRegressorLinearSetFitIntercept()`, `PetscRegressorLinearGetCoefficients()`, `PETSCREGRESSORLINEAR`
 @*/
 PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetIntercept(PetscRegressor regressor, PetscScalar *intercept)
 {
