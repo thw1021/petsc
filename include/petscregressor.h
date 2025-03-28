@@ -20,7 +20,7 @@ typedef struct _p_PetscRegressor *PetscRegressor;
 
    Level: beginner
 
-.seealso: PetscRegressorSetType(), PetscRegressor, PetscRegressorRegister(), PetscRegressorCreate(), PetscRegressorSetFromOptions()
+.seealso: `PetscRegressorSetType()`, `PetscRegressor`, `PetscRegressorRegister()`, `PetscRegressorCreate()`, `PetscRegressorSetFromOptions()`
 J*/
 typedef const char *PetscRegressorType;
 #define PETSCREGRESSORLINEAR "linear"
