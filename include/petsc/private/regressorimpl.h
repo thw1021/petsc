@@ -1,8 +1,7 @@
-#if !defined(REGRESSORIMPL_H)
-  #define REGRESSORIMPL_H
+#pragma once
 
-  #include <petscregressor.h>
-  #include <petsc/private/petscimpl.h>
+#include <petscregressor.h>
+#include <petsc/private/petscimpl.h>
 
 PETSC_EXTERN PetscBool      PetscRegressorRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode PetscRegressorRegisterAll(void);

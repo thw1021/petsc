@@ -1,5 +1,4 @@
-#ifndef PETSCREGRESSOR_H
-#define PETSCREGRESSOR_H
+#pragma once
 
 #include <petsctao.h>
 
