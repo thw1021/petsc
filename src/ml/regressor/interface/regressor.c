@@ -391,7 +391,6 @@ PetscErrorCode PetscRegressorView(PetscRegressor regressor, PetscViewer viewer)
 .  tao - the `Tao` context
 
    Notes:
-
    The `Tao` object will be created if it does not yet exist.
 
    The user can directly manipulate the `TAO` context to set various
