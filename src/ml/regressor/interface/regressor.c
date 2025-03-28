@@ -299,7 +299,7 @@ PetscErrorCode PetscRegressorDestroy(PetscRegressor *regressor)
 
    Notes:
    See "include/petscregressor.h" for available methods (for instance)
-.    PETSCREGRESSORLINEAR - Linear regression models (ordinary least squares as well as regularized variants)
+.    PETSCREGRESSORLINEAR - Regression model that is linear in its coefficients; supports ordinary least squares as well as regularized variants
 
    Normally, it is best to use the PetscRegressorSetFromOptions() command and then
    set the PetscRegressor type from the options database rather than by using
