@@ -26,7 +26,6 @@ PetscErrorCode EvaluateJacobian(Tao tao, Vec x, Mat J, Mat Jpre, void *ptr)
 
 PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
 {
-  //MPI_Comm comm;
   PetscInt               M, N;
   PetscBool              flg;
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
