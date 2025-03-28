@@ -35,5 +35,3 @@ struct _p_PetscRegressor {
 PETSC_EXTERN PetscLogEvent PetscRegressor_SetUp;
 PETSC_EXTERN PetscLogEvent PetscRegressor_Fit;
 PETSC_EXTERN PetscLogEvent PetscRegressor_Predict;
-
-#endif

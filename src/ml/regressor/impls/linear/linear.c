@@ -62,7 +62,8 @@ PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
 
   if (linear->use_ksp) {
     PetscCall(PetscStrcmp(linear->type, PETSCREGRESSORLINEAROLS, &flg));
-    if (!flg) PetscError(((PetscObject)regressor)->comm, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_WRONGSTATE, PETSC_ERROR_INITIAL, "KSP can be used to fit a linear regressor only when its type is OLS");
+    PetscCheck(!flg, ((PetscObject)regressor)->comm, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_WRONGSTATE, PETSC_ERROR_INITIAL, "KSP can be used to fit a linear regressor only when its type is OLS");
+    // if (!flg) PetscError(((PetscObject)regressor)->comm, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_WRONGSTATE, PETSC_ERROR_INITIAL, "KSP can be used to fit a linear regressor only when its type is OLS");
 
     if (!linear->ksp) {
       PetscCall(PetscRegressorLinearGetKSP(regressor, &linear->ksp));
