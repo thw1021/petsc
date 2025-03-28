@@ -1,3 +1,9 @@
+# Simple linear regression test
+# =============================
+#
+# Use the petsc4py interface to PetscRegressor to solve the same quadratic
+# polynomial data-fitting problem that is solved in src/ml/regressor/tests/ex1.c.
+
 import petsc4py, sys
 petsc4py.init(sys.argv)
 

@@ -1,3 +1,9 @@
+# Linear regression with synthetic data generation
+# ================================================
+#
+# Generate a synthetic data set using sklearn.datasets.make_regression() and
+# then solve it using the petsc4py interface to PetscRegressor.
+
 import numpy as np
 # Needed for plotting
 import matplotlib.colors
