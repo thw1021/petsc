@@ -131,8 +131,8 @@ PetscErrorCode PetscRegressorDestroy_Linear(PetscRegressor regressor)
    Logically Collective
 
    Input Parameters:
-+  regressor - the regressor context
--  flg       - PETSC_TRUE to calculate the intercept, PETSC_FALSE to assume centered data (default is true)
++  regressor - the `PetscRegressor` context
+-  flg       - `PETSC_TRUE` to calculate the intercept, `PETSC_FALSE` to assume centered data (default is true)
 
    Level: intermediate
 @*/
@@ -147,14 +147,14 @@ PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, Pet
 }
 
 /*@
-   PetscRegressorLinearSetUseKSP - Set a flag to indicate that a KSP object, instead of a Tao one, should be used
+   PetscRegressorLinearSetUseKSP - Set a flag to indicate that a `KSP` object, instead of a `Tao` one, should be used
    to fit the regressor
 
    Logically Collective on PetscRegressor
 
    Input Parameters:
-+  regressor - the regressor context
--  flg       - PETSC_TRUE to use a KSP, PETSC_FALSE to use a Tao object (default is false)
++  regressor - the `PetscRegressor` context
+-  flg       - `PETSC_TRUE` to use a `KSP`, `PETSC_FALSE` to use a `Tao` object (default is false)
 
    Level: intermediate
 @*/
@@ -194,20 +194,20 @@ PetscErrorCode PetscRegressorView_Linear(PetscRegressor regressor, PetscViewer v
 }
 
 /*@
-   PetscRegressorLinearGetKSP - Returns the KSP context for a PETSCREGRESSORLINEAR object.
+   PetscRegressorLinearGetKSP - Returns the `KSP` context for a `PETSCREGRESSORLINEAR` object.
 
-   Not Collective, but if the PetscRegressor is parallel, then the KSP object is parallel
+   Not Collective, but if the `PetscRegressor` is parallel, then the `KSP` object is parallel
 
    Input Parameter:
-.  regressor - the regressor context
+.  regressor - the `PetscRegressor` context
 
    Output Parameter:
-.  ksp - the KSP context
+.  ksp - the `KSP` context
 
    Level: beginner
 
    Note:
-   This routine will always return a KSP, but, depending on the type of the linear regressor and the options that are set, the regressor may actually use a Tao object instead of this KSP.
+   This routine will always return a `KSP`, but, depending on the type of the linear regressor and the options that are set, the regressor may actually use a `Tao` object instead of this `KSP`.
 
 .seealso: `PetscRegressorGetTao()`
 @*/
@@ -235,7 +235,7 @@ PetscErrorCode PetscRegressorLinearGetKSP(PetscRegressor regressor, KSP *ksp)
    Not Collective but the vector is parallel
 
    Input Parameter:
-.  regressor - the regressor context
+.  regressor - the `PetscRegressor` context
 
    Output Parameter:
 .  coefficients - the vector of the coefficients
@@ -261,7 +261,7 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetCoefficients(PetscRegressor r
    Not Collective
 
    Input Parameter:
-.  regressor - the regressor context
+.  regressor - the `PetscRegressor` context
 
    Output Parameter
 .  intercept - the intercept
@@ -374,10 +374,10 @@ PETSC_EXTERN PetscErrorCode PetscRegressorPredict_Linear(PetscRegressor regresso
 
    Options Database:
 +  -regressor_linear_fit_intercept - Calculate the intercept for the linear model
--  -regressor_linear_use_ksp       - Use KSP instead of TAO for linear model fitting (non-regularized variants only)
+-  -regressor_linear_use_ksp       - Use `KSP` instead of `Tao` for linear model fitting (non-regularized variants only)
 
    Note:
-   This is the default regressor in PetscRegressor
+   This is the default regressor in `PetscRegressor`
 
    Level: beginner
 

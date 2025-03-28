@@ -9,7 +9,7 @@ PetscClassId PETSCREGRESSOR_CLASSID;
 PetscLogEvent PetscRegressor_SetUp, PetscRegressor_Fit, PetscRegressor_Predict;
 
 /*@C
-   PetscRegressorRegister - Adds a method to the PetscRegressor package.
+   PetscRegressorRegister - Adds a method to the `PetscRegressor` package.
 
    Not collective
 
@@ -18,7 +18,7 @@ PetscLogEvent PetscRegressor_SetUp, PetscRegressor_Fit, PetscRegressor_Predict;
 -  function - routine to create method context
 
    Notes:
-   PetscRegressorRegister() may be called multiple times to add several user-defined regressors.
+   `PetscRegressorRegister()` may be called multiple times to add several user-defined regressors.
 
    Sample usage:
 .vb
@@ -32,7 +32,7 @@ $     -regressor_type my_regressor
 
    Level: advanced
 
-.seealso: PetscRegressorRegisterAll()
+.seealso: `PetscRegressorRegisterAll()`
 @*/
 PetscErrorCode PetscRegressorRegister(const char sname[], PetscErrorCode (*function)(PetscRegressor))
 {
@@ -43,7 +43,7 @@ PetscErrorCode PetscRegressorRegister(const char sname[], PetscErrorCode (*funct
 }
 
 /*@
-   PetscRegressorCreate - Creates a regressor object.
+   PetscRegressorCreate - Creates a `PetscRegressor` object.
 
    Collective
 
@@ -51,11 +51,11 @@ PetscErrorCode PetscRegressorRegister(const char sname[], PetscErrorCode (*funct
 .  comm - the MPI communicator that will share the `PetscRegressor` object
 
    Output Parameter:
-.  newregressor - the new regressor object
+.  newregressor - the new `PetscRegressor` object
 
    Level: beginner
 
-.seealso: PetscRegressorFit(), PetscRegressorPredict(), PetscRegressor
+.seealso: `PetscRegressorFit()`, `PetscRegressorPredict()`, `PetscRegressor`
 @*/
 PetscErrorCode PetscRegressorCreate(MPI_Comm comm, PetscRegressor *newregressor)
 {
@@ -81,23 +81,23 @@ PetscErrorCode PetscRegressorCreate(MPI_Comm comm, PetscRegressor *newregressor)
 }
 
 /*@
-   PetscRegressorSetFromOptions - Sets PetscRegressor options from the options database.
+   PetscRegressorSetFromOptions - Sets `PetscRegressor` options from the options database.
 
-   Collective on PetscRegressor
+   Collective
 
    Input Parameter:
-.  regressor - the PetscRegressor context
+.  regressor - the `PetscRegressor` context
 
    Options Database Keys:
-.  -regressor_type <type> - the particular type of regressor to be used; see PetscRegressorType for complete list
+.  -regressor_type <type> - the particular type of regressor to be used; see `PetscRegressorType` for complete list
 
    Level: beginner
 
    Note:
-   This routine must be called before PetscRegressorSetUp() (or PetscRegressorFit(), which calls
+   This routine must be called before `PetscRegressorSetUp()` (or `PetscRegressorFit()`, which calls
    the former) if the user is to be allowed to set the regressor type.
 
-.seealso: PetscRegressor, PetscRegressorCreate()
+.seealso: `PetscRegressor`, `PetscRegressorCreate()`
 @*/
 PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor regressor)
 {
@@ -128,22 +128,22 @@ PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor regressor)
 /*@
    PetscRegressorSetUp - Sets up the internal data structures for the later use of a regressor.
 
-   Collective on PetscRegressor
+   Collective
 
    Input Parameters:
-.  regressor - the PetscRegressor context
+.  regressor - the `PetscRegressor` context
 
    Notes:
-   For basic use of the PetscRegressor solvers the user need not to explicitly call
-   PetscRegressorSetUp(), since these actions will automatically occur during
-   the call to PetscRegressorFit().  However, if one wishes to control this
-   phase separately, PetscRegressorSetUp() should be called after PetscRegressorCreate(),
-   PetscRegressorSetUp(), and optional routines of the form PetscRegressorSetXXX(),
-   but before PetscRegressorFit().
+   For basic use of the `PetscRegressor` solvers the user need not to explicitly call
+   `PetscRegressorSetUp()`, since these actions will automatically occur during
+   the call to `PetscRegressorFit()`.  However, if one wishes to control this
+   phase separately, `PetscRegressorSetUp()` should be called after `PetscRegressorCreate()`,
+   `PetscRegressorSetUp()`, and optional routines of the form `PetscRegressorSetXXX()`,
+   but before `PetscRegressorFit()`.
 
    Level: advanced
 
-.seealso: PetscRegressorCreate(), PetscRegressorFit(), PetscRegressorDestroy()
+.seealso: `PetscRegressorCreate()`, `PetscRegressorFit()`, `PetscRegressorDestroy()`
 @*/
 PetscErrorCode PetscRegressorSetUp(PetscRegressor regressor)
 {
@@ -166,16 +166,16 @@ PetscErrorCode PetscRegressorSetUp(PetscRegressor regressor)
 /*@
    PetscRegressorFit - Fit, or train, a regressor from a training dataset
 
-   Collective on PetscRegressor
+   Collective
 
    Input Parameters:
-+  regressor - the regressor context
++  regressor - the `PetscRegressor` context
 .  X - matrix of training data (of dimension [number of samples] x [number of features])
 -  y - vector of target values from the training dataset
 
    Level: beginner
 
-.seealso: PetscRegressorCreate(), PetscRegressorSetUp(), PetscRegressorDestroy(), PetscRegressorPredict()
+.seealso: `PetscRegressorCreate()`, `PetscRegressorSetUp()`, `PetscRegressorDestroy()`, `PetscRegressorPredict()`
 @*/
 PetscErrorCode PetscRegressorFit(PetscRegressor regressor, Mat X, Vec y)
 {
@@ -206,10 +206,10 @@ PetscErrorCode PetscRegressorFit(PetscRegressor regressor, Mat X, Vec y)
 /*@
    PetscRegressorPredict - Compute predictions (that is, perform inference) using a fitted regression model.
 
-   Collective on PetscRegressorPredict
+   Collective
 
    Input Parameters:
-+  regressor - the regressor context (for which PetscRegressorFit() must have been called)
++  regressor - the `PetscRegressor` context (for which `PetscRegressorFit()` must have been called)
 .  X - data matrix of unlabeled observations
 
    Output Parameter:
@@ -217,7 +217,7 @@ PetscErrorCode PetscRegressorFit(PetscRegressor regressor, Mat X, Vec y)
 
    Level: beginner
 
-.seealso: PetscRegressorFit(), PetscRegressorDestroy()
+.seealso: `PetscRegressorFit()`, `PetscRegressorDestroy()`
 @*/
 PetscErrorCode PetscRegressorPredict(PetscRegressor regressor, Mat X, Vec y)
 {
@@ -233,16 +233,16 @@ PetscErrorCode PetscRegressorPredict(PetscRegressor regressor, Mat X, Vec y)
 }
 
 /*@
-   PetscRegressorReset - Resets a PetscRegressor context by removing any allocated `Vec` and `Mat`. Any options set in the object remain.
+   PetscRegressorReset - Resets a `PetscRegressor` context by removing any allocated `Vec` and `Mat`. Any options set in the object remain.
 
-   Collective on PetscRegressor
+   Collective
 
    Input Parameter:
-.  regressor - context obtained from PetscRegressorCreate()
+.  regressor - context obtained from `PetscRegressorCreate()`
 
    Level: intermediate
 
-.seealso: PetscRegressorCreate(), PetscRegressorSetUp(), PetscRegressorFit(), PetscRegressorPredict(), PetscRegressorDestroy()
+.seealso: `PetscRegressorCreate()`, `PetscRegressorSetUp()`, `PetscRegressorFit()`, `PetscRegressorPredict()`, `PetscRegressorDestroy()`
 @*/
 PetscErrorCode PetscRegressorReset(PetscRegressor regressor)
 {
@@ -258,16 +258,16 @@ PetscErrorCode PetscRegressorReset(PetscRegressor regressor)
 }
 
 /*@C
-   PetscRegressorDestroy - Destroys the regressor context that was created with PetscRegressorCreate().
+   PetscRegressorDestroy - Destroys the regressor context that was created with `PetscRegressorCreate()`.
 
    Collective
 
    Input Parameter:
-.  regressor - the PetscRegressor context
+.  regressor - the `PetscRegressor` context
 
    Level: beginner
 
-.seealso: PetscRegressorCreate(), PetscRegressorSetUp(), PetscRegressorReset(), PetscRegressor
+.seealso: `PetscRegressorCreate()`, `PetscRegressorSetUp()`, `PetscRegressorReset()`, `PetscRegressor`
 @*/
 PetscErrorCode PetscRegressorDestroy(PetscRegressor *regressor)
 {
@@ -289,10 +289,10 @@ PetscErrorCode PetscRegressorDestroy(PetscRegressor *regressor)
 /*@C
    PetscRegressorSetType - Sets the type for the regressor.
 
-   Collective on PetscRegressor
+   Collective
 
    Input Parameters:
-+  regressor - the PetscRegressor context
++  regressor - the `PetscRegressor` context
 -  type - a known regression method
 
    Options Database Key:
@@ -300,18 +300,18 @@ PetscErrorCode PetscRegressorDestroy(PetscRegressor *regressor)
 
    Notes:
    See "include/petscregressor.h" for available methods (for instance)
-.    PETSCREGRESSORLINEAR - Regression model that is linear in its coefficients; supports ordinary least squares as well as regularized variants
+.    `PETSCREGRESSORLINEAR` - Regression model that is linear in its coefficients; supports ordinary least squares as well as regularized variants
 
-   Normally, it is best to use the PetscRegressorSetFromOptions() command and then
-   set the PetscRegressor type from the options database rather than by using
+   Normally, it is best to use the `PetscRegressorSetFromOptions()` command and then
+   set the `PetscRegressor` type from the options database rather than by using
    this routine, as this provides maximum flexibility.
-   The PetscRegressorSetType() routine is provided for those situations where it
+   The `PetscRegressorSetType()` routine is provided for those situations where it
    is necessary to set the nonlinear solver independently of the command
    line or options database.
 
    Level: intermediate
 
-.seealso: PetscRegressorType
+.seealso: `PetscRegressorType`
 @*/
 PetscErrorCode PetscRegressorSetType(PetscRegressor regressor, PetscRegressorType type)
 {
@@ -352,7 +352,7 @@ PetscErrorCode PetscRegressorSetType(PetscRegressor regressor, PetscRegressorTyp
 }
 
 /*@
-   PetscRegressorSetRegularizerWeight - Sets the weight to be used for the regularizer for a PetscRegressor context
+   PetscRegressorSetRegularizerWeight - Sets the weight to be used for the regularizer for a `PetscRegressor` context
 
    Logically Collective
 
@@ -380,9 +380,9 @@ PetscErrorCode PetscRegressorView(PetscRegressor regressor, PetscViewer viewer)
 }
 
 /*@
-   PetscRegressorGetTao - Returns the Tao context for a PetscRegressor object.
+   PetscRegressorGetTao - Returns the `Tao` context for a `PetscRegressor` object.
 
-   Not Collective, but if the PetscRegressor is parallel, then the Tao object is parallel
+   Not Collective, but if the `PetscRegressor` is parallel, then the `Tao` object is parallel
 
    Input Parameter:
 .  regressor - the regressor context
@@ -393,23 +393,22 @@ PetscErrorCode PetscRegressorView(PetscRegressor regressor, PetscViewer viewer)
    Notes:
    The `Tao` object will be created if it does not yet exist.
 
-   The user can directly manipulate the `TAO` context to set various
+   The user can directly manipulate the `Tao` context to set various
    options, etc.  Likewise, the user can then extract and manipulate the
    child contexts such as `KSP` or `TaoLineSearch`as well.
 
-   Depending on the type of the regressor and the options that are set, the regressor may use not use a Tao object.
+   Depending on the type of the regressor and the options that are set, the regressor may use not use a `Tao` object.
 
    Level: beginner
 
-.seealso: PetscRegressorLinearGetKSP()
+.seealso: `PetscRegressorLinearGetKSP()`
 @*/
 PetscErrorCode PetscRegressorGetTao(PetscRegressor regressor, Tao *tao)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   PetscAssertPointer(tao, 2);
-  /* Analogous to how SNESGetKSP() operates, this routine should create the TAO if it doesn't exist.
-   * TODO: Follow what SNESGetKSP() does when setting this up. */
+  // Analogous to how SNESGetKSP() operates, this routine should create the Tao if it doesn't exist.
   if (!regressor->tao) {
     PetscCall(TaoCreate(PetscObjectComm((PetscObject)regressor), &regressor->tao));
     PetscCall(PetscObjectIncrementTabLevel((PetscObject)regressor->tao, (PetscObject)regressor, 1));
