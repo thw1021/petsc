@@ -48,7 +48,7 @@ PetscErrorCode PetscRegressorRegister(const char sname[], PetscErrorCode (*funct
    Collective
 
    Input Parameter:
-.  comm - MPI communicator
+.  comm - the MPI communicator that will share the `PetscRegressor` object
 
    Output Parameter:
 .  newregressor - the new regressor object
@@ -213,6 +213,7 @@ PetscErrorCode PetscRegressorFit(PetscRegressor regressor, Mat X, Vec y)
 
    Output Parameter:
 .  y - vector of predicted labels
+
    Level: beginner
 
 .seealso: PetscRegressorFit(), PetscRegressorDestroy()
@@ -231,7 +232,7 @@ PetscErrorCode PetscRegressorPredict(PetscRegressor regressor, Mat X, Vec y)
 }
 
 /*@
-   PetscRegressorReset - Resets a PetscRegressor context to the setupcalled = 0 state and removes any allocated Vecs and Mats
+   PetscRegressorReset - Resets a PetscRegressor context by removing any allocated `Vec` and `Mat`. Any options set in the object remain.
 
    Collective on PetscRegressor
 
@@ -258,7 +259,7 @@ PetscErrorCode PetscRegressorReset(PetscRegressor regressor)
 /*@C
    PetscRegressorDestroy - Destroys the regressor context that was created with PetscRegressorCreate().
 
-   Collective on PetscRegressor
+   Collective
 
    Input Parameter:
 .  regressor - the PetscRegressor context

@@ -130,7 +130,7 @@ PetscErrorCode PetscRegressorDestroy_Linear(PetscRegressor regressor)
    PetscRegressorLinearSetFitIntercept - Set a flag to indicate that the intercept (also known as the "bias" or "offset") should
    be calculated; data are assumed to be mean-centered if false.
 
-   Logically Collective on PetscRegressor
+   Logically Collective
 
    Input Parameters:
 +  regressor - the regressor context
@@ -205,7 +205,7 @@ PetscErrorCode PetscRegressorView_Linear(PetscRegressor regressor, PetscViewer v
    Output Parameter:
 .  ksp - the KSP context
 
-   Notes:
+   Note:
    This routine will always return a KSP, but, depending on the type of the linear regressor and the options that are set, the regressor may actually use a Tao object instead of this KSP.
 
    Level: beginner
@@ -243,7 +243,7 @@ PetscErrorCode PetscRegressorLinearGetKSP(PetscRegressor regressor, KSP *ksp)
 
    Level: beginner
 
-.seealso: PetscRegressorLinearGetIntercept(), PETSCREGRESSORLINEAR
+.seealso: `PetscRegressor`, `PetscRegressorLinearGetIntercept()`, `PETSCREGRESSORLINEAR`, `Vec`
 @*/
 PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetCoefficients(PetscRegressor regressor, Vec *coefficients)
 {
@@ -372,7 +372,6 @@ PETSC_EXTERN PetscErrorCode PetscRegressorPredict_Linear(PetscRegressor regresso
   PetscFunctionReturn(0);
 }
 
-/* -------------------------------------------------------------------------- */
 /*MC
      PETSCREGRESSORLINEAR - Linear regression model (ordinary least squares or regularized variants)
 

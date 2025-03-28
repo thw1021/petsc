@@ -10,7 +10,7 @@
 
    Level: beginner
 
-.seealso: `PetscRegressorCreate()`, `PetscRegressorSetType()`, `PetscRegressorType()`, `PetscRegressorDestroy()`
+.seealso: `PetscRegressorCreate()`, `PetscRegressorSetType()`, `PetscRegressorType`, `PetscRegressorDestroy()`
 S*/
 
 typedef struct _p_PetscRegressor *PetscRegressor;
