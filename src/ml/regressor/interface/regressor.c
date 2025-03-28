@@ -70,6 +70,7 @@ PetscErrorCode PetscRegressorCreate(MPI_Comm comm, PetscRegressor *newregressor)
 
   // TODO: Finish setting the various fields of the PetscRegressor private data structure to defaults, etc.
   regressor->setupcalled               = PETSC_FALSE;
+  regressor->fitcalled                 = PETSC_FALSE;
   regressor->data                      = NULL;
   regressor->training                  = NULL;
   regressor->target                    = NULL;
@@ -197,6 +198,7 @@ PetscErrorCode PetscRegressorFit(PetscRegressor regressor, Mat X, Vec y)
   PetscCall(PetscLogEventBegin(PetscRegressor_Fit, regressor, X, y, 0));
   PetscCall((*regressor->ops->fit)(regressor));
   PetscCall(PetscLogEventEnd(PetscRegressor_Fit, regressor, X, y, 0));
+  regressor->fitcalled = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -221,7 +223,7 @@ PetscErrorCode PetscRegressorPredict(PetscRegressor regressor, Mat X, Vec y)
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   if (X) PetscValidHeaderSpecific(X, MAT_CLASSID, 2);
   if (y) PetscValidHeaderSpecific(y, VEC_CLASSID, 3);
-  // TODO: Add code to check that the Fit step has been completed!
+  if (regressor->fitcalled == PETSC_FALSE) PetscError(((PetscObject)regressor)->comm, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_WRONGSTATE, PETSC_ERROR_INITIAL, "PetscRegressorFit() must be called before PetscRegressorPredict()");
   PetscCall(PetscLogEventBegin(PetscRegressor_Predict, regressor, X, y, 0));
   PetscCall((*regressor->ops->predict)(regressor, X, y));
   PetscCall(PetscLogEventEnd(PetscRegressor_Predict, regressor, X, y, 0));
@@ -249,6 +251,7 @@ PetscErrorCode PetscRegressorReset(PetscRegressor regressor)
   PetscCall(VecDestroy(&regressor->target));
   PetscCall(TaoDestroy(&regressor->tao));
   regressor->setupcalled = PETSC_FALSE;
+  regressor->fitcalled   = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 

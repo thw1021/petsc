@@ -25,6 +25,7 @@ struct _p_PetscRegressor {
   PETSCHEADER(struct _PetscRegressorOps);
 
   PetscBool setupcalled; /* True if setup has been called */
+  PetscBool fitcalled;   /* True if the Fit() method has been called. */
   void     *data;        /* Implementation-specific data */
   Mat       training;    /* Matrix holding the training data set */
   Vec       target;      /* Targets for training data (response variables or labels) */
