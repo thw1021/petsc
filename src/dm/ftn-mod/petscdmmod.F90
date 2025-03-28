@@ -1,6 +1,8 @@
         module petscdmdef
         use petscvecdef
         use petscmatdef
+
+        implicit none
 #include <../ftn/dm/petscall.h>
 #include <../ftn/dm/petscspace.h>
 #include <../ftn/dm/petscdualspace.h>
@@ -51,6 +53,7 @@
         module petscdm
         use petscmat
         use petscdmdef
+        implicit none
 #include <../src/dm/ftn-mod/petscdm.h90>
 #include <../src/dm/ftn-mod/petscdt.h90>
 #include <../ftn/dm/petscall.h90>
@@ -60,6 +63,7 @@
         interface PetscDSGetTabulationSetSizes
         subroutine PetscDSGetTabulationSetSizes(ds,i, tab,ierr)
           import tPetscDS, ttPetscTabulation
+          implicit none
           PetscErrorCode              ierr
           type(ttPetscTabulation)     tab
           PetscDS                     ds
@@ -70,6 +74,7 @@
         interface PetscDSGetTabulationSetPointers
         subroutine PetscDSGetTabulationSetPointers(ds,i, T,ierr)
           import tPetscDS, ttPetscTabulation,tPetscReal2d
+          implicit none
           PetscErrorCode              ierr
           type(tPetscReal2d), pointer :: T(:)
           PetscDS                     ds
@@ -132,6 +137,8 @@
         use petscdmdef
         use petscaodef
         use petscpfdef
+
+        implicit none
 #include <petsc/finclude/petscao.h>
 #include <petsc/finclude/petscdmda.h>
 #include <../ftn/dm/petscdmda.h>
@@ -141,6 +148,7 @@
         use petscdm
         use petscdmdadef
 
+        implicit none
 #include <../src/dm/ftn-mod/petscdmda.h90>
 #include <../ftn/dm/petscdmda.h90>
 
@@ -154,6 +162,8 @@
         module petscdmplex
         use petscdm
         use petscdmdef
+
+        implicit none
 #include <petsc/finclude/petscfv.h>
 #include <petsc/finclude/petscdmplex.h>
 #include <petsc/finclude/petscdmplextransform.h>
@@ -177,6 +187,8 @@
 
         module petscdmstag
         use petscdmdef
+
+        implicit none
 #include <petsc/finclude/petscdmstag.h>
 #include <../ftn/dm/petscdmstag.h>
 
@@ -192,6 +204,8 @@
         module petscdmswarm
         use petscdm
         use petscdmdef
+
+        implicit none
 #include <petsc/finclude/petscdmswarm.h>
 #include <../ftn/dm/petscdmswarm.h>
 
@@ -207,6 +221,7 @@
 
         module petscdmcomposite
         use petscdm
+        implicit none
 #include <petsc/finclude/petscdmcomposite.h>
 
 #include <../src/dm/ftn-mod/petscdmcomposite.h90>
@@ -217,6 +232,7 @@
 
         module petscdmforest
         use petscdm
+        implicit none
 #include <petsc/finclude/petscdmforest.h>
 #include <../ftn/dm/petscdmforest.h>
 #include <../ftn/dm/petscdmforest.h90>
@@ -226,6 +242,7 @@
 
         module petscdmnetwork
         use petscdm
+        implicit none
 #include <petsc/finclude/petscdmnetwork.h>
 #include <../ftn/dm/petscdmnetwork.h>
 
@@ -242,6 +259,7 @@
         use petscdm
         use petscdmdef
 !        use petscsnes
+        implicit none
 #include <petsc/finclude/petscdmadaptor.h>
 #include <../ftn/dm/petscdmadaptor.h>
 
