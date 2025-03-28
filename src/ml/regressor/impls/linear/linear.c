@@ -134,7 +134,7 @@ PetscErrorCode PetscRegressorDestroy_Linear(PetscRegressor regressor)
 
    Input Parameters:
 +  regressor - the regressor context
--  flg - PETSC_TRUE to calculate the intercept, PETSC_FALSE to assume centered data (default is true)
+-  flg       - PETSC_TRUE to calculate the intercept, PETSC_FALSE to assume centered data (default is true)
 
    Level: intermediate
 @*/
@@ -156,7 +156,7 @@ PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, Pet
 
    Input Parameters:
 +  regressor - the regressor context
--  flg - PETSC_TRUE to use a KSP, PETSC_FALSE to use a Tao object (default is false)
+-  flg       - PETSC_TRUE to use a KSP, PETSC_FALSE to use a Tao object (default is false)
 
    Level: intermediate
 @*/
@@ -205,12 +205,12 @@ PetscErrorCode PetscRegressorView_Linear(PetscRegressor regressor, PetscViewer v
    Output Parameter:
 .  ksp - the KSP context
 
+   Level: beginner
+
    Note:
    This routine will always return a KSP, but, depending on the type of the linear regressor and the options that are set, the regressor may actually use a Tao object instead of this KSP.
 
-   Level: beginner
-
-.seealso: PetscRegressorGetTao()
+.seealso: `PetscRegressorGetTao()`
 @*/
 PetscErrorCode PetscRegressorLinearGetKSP(PetscRegressor regressor, KSP *ksp)
 {
@@ -233,7 +233,7 @@ PetscErrorCode PetscRegressorLinearGetKSP(PetscRegressor regressor, KSP *ksp)
 /*@
    PetscRegressorLinearGetCoefficients - Get a vector of the fitted coefficients from a linear regression model
 
-   Not Collective
+   Not Collective but the vector is parallel
 
    Input Parameter:
 .  regressor - the regressor context
@@ -267,7 +267,7 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetCoefficients(PetscRegressor r
    Output Parameter
 .  intercept - the intercept
 
-.seealso: PetscRegressorLinearGetCoefficients(), PETSCREGRESSORLINEAR
+.seealso: `PetscRegressorLinearGetCoefficients()`, `PETSCREGRESSORLINEAR`
 @*/
 PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetIntercept(PetscRegressor regressor, PetscScalar *intercept)
 {
@@ -287,7 +287,7 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetIntercept(PetscRegressor regr
 
    Input Parameters:
 +  regressor - the `PetscRegressor` context (should be of type `PETSCREGRESSORLINEAR`)
--  type - a known linear regression method
+-  type      - a known linear regression method
 
    Options Database Key:
 .  -regressor_linear_type - Sets the linear regression method; use -help for a list of available methods
@@ -377,14 +377,14 @@ PETSC_EXTERN PetscErrorCode PetscRegressorPredict_Linear(PetscRegressor regresso
 
    Options Database:
 +  -regressor_linear_fit_intercept - Calculate the intercept for the linear model
--  -regressor_linear_use_ksp - Use KSP instead of TAO for linear model fitting (non-regularized variants only)
+-  -regressor_linear_use_ksp       - Use KSP instead of TAO for linear model fitting (non-regularized variants only)
 
-   Notes:
+   Note:
    This is the default regressor in PetscRegressor
 
    Level: beginner
 
-.seealso: PetscRegressorCreate(), PetscRegressor, PetscRegressorSetType()
+.seealso: `PetscRegressorCreate()`, `PetscRegressor`, `PetscRegressorSetType()`
 M*/
 PETSC_EXTERN PetscErrorCode PetscRegressorCreate_Linear(PetscRegressor regressor)
 {
