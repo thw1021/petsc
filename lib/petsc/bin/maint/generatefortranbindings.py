@@ -99,7 +99,6 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
       return
 
   mansec = fun.mansec
-  if not mansec: mansec = fun.submansec
   file = fun.includefile + '90'
   if not file.startswith('petsc'): file = 'petsc' + file
   if not os.path.isdir(os.path.join(petscarch,'ftn', mansec)): os.makedirs(os.path.join(petscarch,'ftn', mansec))
