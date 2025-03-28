@@ -225,7 +225,7 @@ PetscErrorCode PetscRegressorPredict(PetscRegressor regressor, Mat X, Vec y)
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   if (X) PetscValidHeaderSpecific(X, MAT_CLASSID, 2);
   if (y) PetscValidHeaderSpecific(y, VEC_CLASSID, 3);
-  if (regressor->fitcalled == PETSC_FALSE) PetscError(((PetscObject)regressor)->comm, __LINE__, PETSC_FUNCTION_NAME, __FILE__, PETSC_ERR_ARG_WRONGSTATE, PETSC_ERROR_INITIAL, "PetscRegressorFit() must be called before PetscRegressorPredict()");
+  PetscCheck(regressor->fitcalled == PETSC_TRUE, ((PetscObject)regressor)->comm, PETSC_ERR_ARG_WRONGSTATE, "PetscRegressorFit() must be called before PetscRegressorPredict()");
   PetscCall(PetscLogEventBegin(PetscRegressor_Predict, regressor, X, y, 0));
   PetscCall((*regressor->ops->predict)(regressor, X, y));
   PetscCall(PetscLogEventEnd(PetscRegressor_Predict, regressor, X, y, 0));
@@ -326,7 +326,7 @@ PetscErrorCode PetscRegressorSetType(PetscRegressor regressor, PetscRegressorTyp
   if (match) PetscFunctionReturn(0);
 
   PetscCall(PetscFunctionListFind(PetscRegressorList, type, &r));
-  if (!r) SETERRQ(PetscObjectComm((PetscObject)regressor), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unable to find requested PetscRegressor type %s", type);
+  PetscCheck(r, PetscObjectComm((PetscObject)regressor), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unable to find requested PetscRegressor type %s", type);
 
   /* Destroy the previous private PetscRegressor context */
   if (regressor->ops->destroy) {
