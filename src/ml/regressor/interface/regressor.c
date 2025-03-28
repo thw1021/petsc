@@ -120,7 +120,7 @@ PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor regressor)
   if (flg) PetscCall(PetscRegressorSetRegularizerWeight(regressor, regressor->regularizer_weight));
   // The above is a little superfluous, because we have already set regressor->regularizer_weight above, but we also need to set the flag indicating that the user has set the weight!
   /* TODO: Is there code that must be added to handle other options that apply to all PetscRegressor types? */
-  if (regressor->ops->setfromoptions) { PetscCall((*regressor->ops->setfromoptions)(regressor, PetscOptionsObject)); }
+  if (regressor->ops->setfromoptions) PetscCall((*regressor->ops->setfromoptions)(regressor, PetscOptionsObject));
   PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
@@ -152,9 +152,9 @@ PetscErrorCode PetscRegressorSetUp(PetscRegressor regressor)
   if (regressor->setupcalled) PetscFunctionReturn(0);
   PetscCall(PetscLogEventBegin(PetscRegressor_SetUp, regressor, 0, 0, 0));
 
-  if (!((PetscObject)regressor)->type_name) { PetscCall(PetscRegressorSetType(regressor, PETSCREGRESSORLINEAR)); }
+  if (!((PetscObject)regressor)->type_name) PetscCall(PetscRegressorSetType(regressor, PETSCREGRESSORLINEAR));
 
-  if (regressor->ops->setup) { PetscCall((*regressor->ops->setup)(regressor)); }
+  if (regressor->ops->setup) PetscCall((*regressor->ops->setup)(regressor));
 
   PetscCall(PetscLogEventEnd(PetscRegressor_SetUp, regressor, 0, 0, 0));
   regressor->setupcalled = PETSC_TRUE;
@@ -248,7 +248,7 @@ PetscErrorCode PetscRegressorReset(PetscRegressor regressor)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
-  if (regressor->ops->reset) { PetscCall((*regressor->ops->reset)(regressor)); }
+  if (regressor->ops->reset) PetscCall((*regressor->ops->reset)(regressor));
   PetscCall(MatDestroy(&regressor->training));
   PetscCall(VecDestroy(&regressor->target));
   PetscCall(TaoDestroy(&regressor->tao));
