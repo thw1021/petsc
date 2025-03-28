@@ -65,6 +65,8 @@ Changes: Development
 - Change ``MatCreateMPIAIJWithSeqAIJ()`` so that B can be passed in with local indices and compactification skipped
 - Change option ``-mat_factor_bind_factorization <host | device>`` to ``-pc_factor_mat_factor_on_host <bool>`` for MATAIJ device matrices
 - Add option ``-pc_factor_mat_solve_on_host <bool>`` for MATSEQAIJKOKKOS matrices
+- Add ``MatConstantDiagonalGetConstant()``
+- Add ``MATDENSEFROMVECTYPE`` constructor to simplify specifying the right dense format from the command line
 
 .. rubric:: MatCoarsen:
 
@@ -73,6 +75,11 @@ Changes: Development
 - Add `PCHYPREGetCFMarkers()` to extract Coarse/Fine splittings created by BoomerAMG from `PCHYPRE`, similar to `PCGetInterpolations()` and `PCGetCoarseOperators()`
 
 .. rubric:: KSP:
+
+- Add ``MatLMVMGetLastUpdate()``
+- Add ``MatLMVMMultAlgorithm``, ``MatLMVMSetMultAlgorithm()``, and ``MatLMVMGetMultAlgorithm()``
+- Add ``MatLMVMSymBroydenGetPhi()`` and ``MatLMVMSymBroydenSetPhi()``
+- Add ``MatLMVMSymBadBroydenGetPsi()`` and ``MatLMVMSymBadBroydenSetPsi()``
 
 .. rubric:: SNES:
 
