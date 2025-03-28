@@ -91,10 +91,11 @@ PetscErrorCode PetscRegressorCreate(MPI_Comm comm, PetscRegressor *newregressor)
    Options Database Keys:
 .  -regressor_type <type> - the particular type of regressor to be used; see PetscRegressorType for complete list
 
+   Level: beginner
+
+   Note:
    This routine must be called before PetscRegressorSetUp() (or PetscRegressorFit(), which calls
    the former) if the user is to be allowed to set the regressor type.
-
-   Level: beginner
 
 .seealso: PetscRegressor, PetscRegressorCreate()
 @*/
