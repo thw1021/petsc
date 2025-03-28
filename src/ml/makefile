@@ -1,11 +1,6 @@
 -include ../../petscdir.mk
-ALL: lib
 
-SOURCEH  =
-DIRS     = regressor
-LOCDIR   = src/ml/
-MANSEC   = ML
+MANSEC   = Regressor
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
-include ${PETSC_DIR}/lib/petsc/conf/rules
-include ${PETSC_DIR}/lib/petsc/conf/test
+include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk
