@@ -1,5 +1,7 @@
         module petscmatdef
         use petscvecdef
+
+        implicit none
 #include "petsc/finclude/petscmat.h"
 #include "petsc/finclude/petscmatcoarsen.h"
 #include "petsc/finclude/petscpartitioner.h"
@@ -10,7 +12,7 @@
 #include <../ftn/mat/petscmatcoarsen.h>
 #include <../ftn/mat/petscpartitioner.h>
 
-        end module
+        end module petscmatdef
 
 !     ----------------------------------------------
 
@@ -18,6 +20,7 @@
         use petscmatdef
         use petscvec
 
+        implicit none
 #include <../src/mat/ftn-mod/petscmat.h90>
 #include <../ftn/mat/petscmat.h90>
 #include <../ftn/mat/petscmatcoarsen.h90>
@@ -175,4 +178,4 @@
           call MatDenseRestoreArrayWrite(v,array,ierr)
         End Subroutine
 
-        end module
+        end module petscmat
