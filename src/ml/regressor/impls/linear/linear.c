@@ -189,6 +189,7 @@ PetscErrorCode PetscRegressorSetFromOptions_Linear(PetscRegressor regressor, Pet
 PetscErrorCode PetscRegressorView_Linear(PetscRegressor regressor, PetscViewer viewer)
 {
   PetscFunctionBegin;
+  // TODO: Implement a useful View() method!
   PetscFunctionReturn(0);
 }
 
