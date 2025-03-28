@@ -79,7 +79,7 @@ PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
     PetscCall(KSPSetOperators(ksp, linear->X, linear->XtX));
     PetscCall(KSPSetFromOptions(ksp)); // TODO: Does this have the right option prefixes set?
   } else {                             /* Use TAO */
-    if (!regressor->tao) { PetscCall(PetscRegressorGetTao(regressor, &tao)); }
+    if (!regressor->tao) PetscCall(PetscRegressorGetTao(regressor, &tao));
 
     PetscCall(MatCreateVecs(linear->X, &linear->coefficients, &linear->residual));
     /* Set up the TAO object to solve the (regularized) least squares problem (without solving for intercept, which is done separately) using TAOBRGN. */
@@ -121,7 +121,6 @@ PetscErrorCode PetscRegressorDestroy_Linear(PetscRegressor regressor)
   PetscFunctionBegin;
   PetscCall(PetscRegressorReset_Linear(regressor));
   PetscCall(PetscFree(regressor->data));
-
   PetscFunctionReturn(0);
 }
 
@@ -303,8 +302,6 @@ PetscErrorCode PetscRegressorLinearSetType(PetscRegressor regressor, PetscRegres
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
-  PetscAssertPointer(type, 2);
-
   PetscCall(PetscObjectTypeCompare((PetscObject)regressor, PETSCREGRESSORLINEAR, &match));
   PetscCheck(match, PetscObjectComm((PetscObject)regressor), PETSC_ERR_ARG_WRONG, "regressor is not of type PETSCREGRESSORLINEAR");
   PetscCall(PetscFree(linear->type));
@@ -349,7 +346,7 @@ PetscErrorCode PetscRegressorFit_Linear(PetscRegressor regressor)
     PetscCall(VecGetLocalSize(column_means, &m));
     PetscCall(VecGetOwnershipRange(column_means, &istart, NULL));
     PetscCall(VecGetArrayWrite(column_means, &column_means_local));
-    for (i = 0; i < m; i++) { column_means_local[i] = column_means_global[istart + i]; }
+    for (i = 0; i < m; i++) column_means_local[i] = column_means_global[istart + i];
     PetscCall(VecRestoreArrayWrite(column_means, &column_means_local));
     PetscCall(VecDot(column_means, linear->coefficients, &column_means_dot_coefficients));
     PetscCall(VecDestroy(&column_means));

@@ -108,7 +108,7 @@ PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor regressor)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   PetscObjectOptionsBegin((PetscObject)regressor);
-  if (((PetscObject)regressor)->type_name) { default_type = ((PetscObject)regressor)->type_name; }
+  if (((PetscObject)regressor)->type_name) default_type = ((PetscObject)regressor)->type_name;
   /* Check for type from options */
   PetscCall(PetscOptionsFList("-regressor_type", "PetscRegressor type", "PetscRegressorSetType", PetscRegressorList, default_type, type, 256, &flg));
   if (flg) {
