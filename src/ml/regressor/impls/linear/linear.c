@@ -170,7 +170,7 @@ PetscErrorCode PetscRegressorLinearSetUseKSP(PetscRegressor regressor, PetscBool
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscRegressorSetFromOptions_Linear(PetscOptionItems *PetscOptionsObject, PetscRegressor regressor)
+PetscErrorCode PetscRegressorSetFromOptions_Linear(PetscRegressor regressor, PetscOptionItems PetscOptionsObject)
 {
   PetscBool              set, flg = PETSC_FALSE;
   PetscInt               i;

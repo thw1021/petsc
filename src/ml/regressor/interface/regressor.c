@@ -120,7 +120,7 @@ PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor regressor)
   if (flg) PetscCall(PetscRegressorSetRegularizerWeight(regressor, regressor->regularizer_weight));
   // The above is a little superfluous, because we have already set regressor->regularizer_weight above, but we also need to set the flag indicating that the user has set the weight!
   /* TODO: Is there code that must be added to handle other options that apply to all PetscRegressor types? */
-  if (regressor->ops->setfromoptions) { PetscCall((*regressor->ops->setfromoptions)(PetscOptionsObject, regressor)); }
+  if (regressor->ops->setfromoptions) { PetscCall((*regressor->ops->setfromoptions)(regressor, PetscOptionsObject)); }
   PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
