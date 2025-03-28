@@ -10,10 +10,10 @@ typedef struct _PetscRegressorOps *PetscRegressorOps;
 
 struct _PetscRegressorOps {
   PetscErrorCode (*setup)(PetscRegressor);
-  PetscErrorCode (*setfromoptions)(PetscRegressor, PetscOptionItems);   /* sets options from database */
-  PetscErrorCode (*settraining)(PetscRegressor, Mat, Vec);              /* set the training data matrix and targets */
-  PetscErrorCode (*fit)(PetscRegressor);                                /* compute the transformation to be applied */
-  PetscErrorCode (*predict)(PetscRegressor, Mat, Vec);                  /* predict using fitted model */
+  PetscErrorCode (*setfromoptions)(PetscRegressor, PetscOptionItems); /* sets options from database */
+  PetscErrorCode (*settraining)(PetscRegressor, Mat, Vec);            /* set the training data matrix and targets */
+  PetscErrorCode (*fit)(PetscRegressor);                              /* compute the transformation to be applied */
+  PetscErrorCode (*predict)(PetscRegressor, Mat, Vec);                /* predict using fitted model */
   PetscErrorCode (*destroy)(PetscRegressor);
   PetscErrorCode (*reset)(PetscRegressor);
   PetscErrorCode (*view)(PetscRegressor, PetscViewer);

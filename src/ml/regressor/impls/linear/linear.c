@@ -33,7 +33,6 @@ PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
   Tao                    tao;
 
   PetscFunctionBegin;
-
   PetscCall(MatGetSize(regressor->training, &M, &N));
 
   if (linear->fit_intercept) {
@@ -132,7 +131,7 @@ PetscErrorCode PetscRegressorDestroy_Linear(PetscRegressor regressor)
 
    Input Parameters:
 +  regressor - the `PetscRegressor` context
--  flg       - `PETSC_TRUE` to calculate the intercept, `PETSC_FALSE` to assume centered data (default is true)
+-  flg       - `PETSC_TRUE` to calculate the intercept, `PETSC_FALSE` to assume mean-centered data (default is `PETSC_TRUE`)
 
    Level: intermediate
 @*/
@@ -266,6 +265,8 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetCoefficients(PetscRegressor r
    Output Parameter
 .  intercept - the intercept
 
+   Level: beginner
+
 .seealso: `PetscRegressor`, `PetscRegressorLinearSetFitIntercept()`, `PetscRegressorLinearGetCoefficients()`, `PETSCREGRESSORLINEAR`
 @*/
 PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetIntercept(PetscRegressor regressor, PetscScalar *intercept)
@@ -355,7 +356,6 @@ PetscErrorCode PetscRegressorFit_Linear(PetscRegressor regressor)
   } else {
     linear->intercept = 0.0;
   }
-
   PetscFunctionReturn(0);
 }
 

@@ -69,11 +69,11 @@ PetscErrorCode PetscRegressorCreate(MPI_Comm comm, PetscRegressor *newregressor)
   PetscCall(PetscHeaderCreate(regressor, PETSCREGRESSOR_CLASSID, "PetscRegressor", "Regressor", "PetscRegressor", comm, PetscRegressorDestroy, PetscRegressorView));
 
   // TODO: Finish setting the various fields of the PetscRegressor private data structure to defaults, etc.
-  regressor->setupcalled               = PETSC_FALSE;
-  regressor->fitcalled                 = PETSC_FALSE;
-  regressor->data                      = NULL;
-  regressor->training                  = NULL;
-  regressor->target                    = NULL;
+  regressor->setupcalled = PETSC_FALSE;
+  regressor->fitcalled   = PETSC_FALSE;
+  regressor->data        = NULL;
+  regressor->training    = NULL;
+  regressor->target      = NULL;
   PetscObjectParameterSetDefault(regressor, regularizer_weight, 1.0); // Default to regularizer weight of 1.0, usually the default in SciKit-learn
 
   *newregressor = regressor;
@@ -116,7 +116,7 @@ PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor regressor)
   } else if (!((PetscObject)regressor)->type_name) {
     PetscCall(PetscRegressorSetType(regressor, default_type));
   }
-  PetscCall(PetscOptionsReal("-regressor_regularizer_weight", "Weight for the regularizer", "PetscRegressorSetRegularizerWeight", regressor->regularizer_weight, &(regressor->regularizer_weight), &flg));
+  PetscCall(PetscOptionsReal("-regressor_regularizer_weight", "Weight for the regularizer", "PetscRegressorSetRegularizerWeight", regressor->regularizer_weight, &regressor->regularizer_weight, &flg));
   if (flg) PetscCall(PetscRegressorSetRegularizerWeight(regressor, regressor->regularizer_weight));
   // The above is a little superfluous, because we have already set regressor->regularizer_weight above, but we also need to set the flag indicating that the user has set the weight!
   /* TODO: Is there code that must be added to handle other options that apply to all PetscRegressor types? */
@@ -368,7 +368,7 @@ PetscErrorCode PetscRegressorSetRegularizerWeight(PetscRegressor regressor, Pets
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
-  regressor->regularizer_weight        = weight;
+  regressor->regularizer_weight = weight;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
