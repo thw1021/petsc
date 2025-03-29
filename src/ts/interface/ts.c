@@ -2061,7 +2061,7 @@ PetscErrorCode TSSetApplicationContext(TS ts, PeCtx ctx)
   End Interface TSGetApplicationContext
 .ve
 
-  The prototpye for `ctx` must be
+  The prototype for `ctx` must be
 .vb
   type(tUsertype), pointer :: ctx
 .ve
