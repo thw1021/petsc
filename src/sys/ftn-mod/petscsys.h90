@@ -1,6 +1,5 @@
       Interface
        Subroutine PetscPrintf(m,c,ierr)
-          implicit none
           MPI_Comm :: m
           character(len=*) :: c
           PetscErrorCode :: ierr
@@ -8,50 +7,42 @@
 
 #if defined(PETSC_HAVE_FORTRAN_FREE_LINE_LENGTH_NONE)
       subroutine PetscErrorf(ierr,line,file)
-       implicit none
        PetscErrorCode, intent(in) :: ierr
        integer, intent(in) ::  line
        character(*) file
       end Subroutine PetscErrorf
 
       subroutine PetscErrorMPI(ierr,line,file)
-       implicit none
        PetscErrorCode, intent(inout) :: ierr
        integer, intent(in) ::  line
        character(*) file
       end Subroutine PetscErrorMPI
 #else
       subroutine PetscErrorf(ierr)
-       implicit none
        PetscErrorCode, intent(in) :: ierr
       end Subroutine PetscErrorf
 
       subroutine PetscErrorMPI(ierr)
-       implicit none
        PetscErrorCode, intent(inout) :: ierr
       end Subroutine PetscErrorMPI
 #endif
 
       subroutine MPIU_abort(comm,ierr)
-        implicit none
-        MPI_Comm,intent(in) ::  comm
-        PetscErrorCode,intent(in) ::  ierr
+      MPI_Comm,intent(in) ::  comm
+      PetscErrorCode,intent(in) ::  ierr
       end subroutine
 
       subroutine PetscViewerASCIIStdoutSetFileUnit(unit,z)
-        implicit none
         integer4 unit
         PetscErrorCode,intent(out) :: z
       end subroutine
 
       subroutine PetscLogEventBegin(event,ierr)
-        implicit none
         PetscLogEvent, intent(in) :: event
         PetscErrorCode, intent(out) :: ierr
       end subroutine PetscLogEventBegin
 
       subroutine PetscLogEventEnd(event,ierr)
-        implicit none
         PetscLogEvent, intent(in) :: event
         PetscErrorCode, intent(out) :: ierr
       end subroutine PetscLogEventEnd
@@ -82,8 +73,7 @@
       end Interface
 
       Interface
-        Subroutine PetscIntArray1dDestroy(a,ierr)
-          implicit none
+        Subroutine PetscIntArray1dDestroy(F90a,ierr)
           PetscInt, Pointer :: a(:)
           PetscErrorCode    :: ierr
         End Subroutine
@@ -91,7 +81,6 @@
 
       Interface PetscShmgetAllocateArrayScalar
         Subroutine PetscShmgetAllocateArrayScalar(start, len, d1, ierr)
-          implicit none
           PetscInt :: start, len
           PetscScalar, pointer :: d1(:)
           PetscErrorCode ierr
@@ -100,7 +89,6 @@
 
       Interface PetscShmgetDeallocateArrayScalar
         Subroutine PetscShmgetDeallocateArrayScalar(d1, ierr)
-          implicit none
           PetscScalar, pointer :: d1(:)
           PetscErrorCode ierr
         End Subroutine
@@ -108,7 +96,6 @@
 
       Interface PetscShmgetAllocateArrayInt
         Subroutine PetscShmgetAllocateArrayInt(start, len, d1, ierr)
-          implicit none
           PetscInt :: start, len
           PetscInt, pointer :: d1(:)
           PetscErrorCode ierr
@@ -117,7 +104,6 @@
 
       Interface PetscShmgetDeallocateArrayInt
         Subroutine PetscShmgetDeallocateArrayInt(d1, ierr)
-          implicit none
           PetscInt, pointer :: d1(:)
           PetscErrorCode ierr
         End Subroutine

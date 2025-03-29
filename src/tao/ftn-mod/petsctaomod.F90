@@ -1,7 +1,6 @@
         module petsctaodef
         use petsckspdef
 
-        implicit none
 #include <../ftn/tao/petscall.h>
         end module petsctaodef
 
@@ -9,7 +8,6 @@
         use petscts
         use petsctaodef
 
-        implicit none
 #include <../ftn/tao/petscall.h90>
 
         contains

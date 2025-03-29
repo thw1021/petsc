@@ -2,7 +2,6 @@
       Interface
        subroutine PetscSFBcastBegin(sf,unit,rarray,larray,op,ierr)
           import tPetscSF
-          implicit none
           PetscSF :: sf
           PetscMPIInt :: unit,op
           type(*) :: rarray(:)
@@ -12,7 +11,6 @@
 
       subroutine PetscSFBcastEnd(sf,unit,rarray,larray,op,ierr)
           import tPetscSF
-          implicit none
           PetscSF :: sf
           PetscMPIInt :: unit,op
           type(*) :: rarray(:)
@@ -22,7 +20,6 @@
 
       subroutine PetscSFReduceBegin(sf,unit,larray,rarray,op,ierr)
           import tPetscSF
-          implicit none
           PetscSF :: sf
           PetscMPIInt :: unit,op
           type(*) :: larray(:)
@@ -32,7 +29,6 @@
 
       subroutine PetscSFReduceEnd(sf,unit,larray,rarray,op,ierr)
           import tPetscSF
-          implicit none
           PetscSF :: sf
           PetscMPIInt :: unit,op
           type(*) :: larray(:)
@@ -44,16 +40,12 @@
 
       interface
       subroutine VecRestoreOwnershipRanges(v, ptr, ierr)
-        import tVec
-        implicit none
-        Vec :: v
-        PetscInt, pointer :: ptr(:)
-        PetscErrorCode, intent(out) :: ierr
+      import tVec
+      PetscInt, pointer :: ptr(:)
       end subroutine VecRestoreOwnershipRanges
 
       subroutine PetscSFRestoreGraph(sf,nroots,nleaves,ilocal,iremote,ierr)
           import tPetscSF,sPetscSFNode
-          implicit none
           PetscSF :: sf
           PetscInt :: nroots,nleaves
           PetscInt, pointer :: ilocal(:)
@@ -63,7 +55,6 @@
 
         Subroutine VecRestoreValuesSection(v,s,p,va,ierr)
           import tVec,tPetscSection
-          implicit none
           PetscScalar, pointer :: va(:)
           PetscErrorCode ierr
           Vec     v

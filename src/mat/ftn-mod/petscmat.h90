@@ -1,7 +1,8 @@
+
+
       Interface
         Subroutine MatFDColoringRestorePerturbedColumns(i,len,array,ierr)
           import tMatFDColoring
-          implicit none
           PetscInt, pointer :: array(:)
           PetscInt len
           PetscErrorCode ierr
@@ -12,7 +13,6 @@
       interface
         subroutine MatSetValue(myMat,i,j,va,mode,ierr)
           import tMat, eInsertMode
-          implicit none
           Mat :: myMat
           PetscInt :: i,j
           PetscScalar :: va
@@ -22,7 +22,6 @@
 
         subroutine MatSetValueLocal(myMat,i,j,va,mode,ierr)
           import tMat, eInsertMode
-          implicit none
           Mat :: myMat
           PetscInt :: i,j
           PetscScalar :: va
@@ -33,15 +32,13 @@
 
         interface MatDenseGetArray
         Subroutine MatDenseGetArray1d(v,array,ierr)
-          import tMat
-          implicit none
+        import tMat
           PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
           Mat     v
         End Subroutine
         Subroutine MatDenseGetArray2d(v,array,ierr)
-          import tMat
-          implicit none
+         import tMat
           PetscScalar, pointer :: array(:,:)
           PetscErrorCode ierr
           Mat     v
@@ -50,16 +47,14 @@
 
         interface MatDenseRestoreArray
         Subroutine MatDenseRestoreArray1d(v,array,ierr)
-          import tMat
-          implicit none
-          PetscScalar, pointer :: array(:)
+         import tMat
+         PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
           Mat     v
         End Subroutine
         Subroutine MatDenseRestoreArray2d(v,array,ierr)
-          import tMat
-          implicit none
-          PetscScalar, pointer :: array(:,:)
+         import tMat
+         PetscScalar, pointer :: array(:,:)
           PetscErrorCode ierr
           Mat     v
         End Subroutine
@@ -67,16 +62,14 @@
 
         interface MatDenseGetArrayRead
         Subroutine MatDenseGetArrayRead1d(v,array,ierr)
-          import tMat
-          implicit none
-          PetscScalar, pointer :: array(:)
+         import tMat
+         PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
           Mat     v
         End Subroutine
         Subroutine MatDenseGetArrayRead2d(v,array,ierr)
-          import tMat
-          implicit none
-          PetscScalar, pointer :: array(:,:)
+         import tMat
+         PetscScalar, pointer :: array(:,:)
           PetscErrorCode ierr
           Mat     v
         End Subroutine
@@ -84,16 +77,14 @@
 
         interface MatDenseRestoreArrayRead
         Subroutine MatDenseRestoreArrayRead1d(v,array,ierr)
-          import tMat
-          implicit none
-          PetscScalar, pointer :: array(:)
+         import tMat
+         PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
           Mat     v
         End Subroutine
         Subroutine MatDenseRestoreArrayRead2d(v,array,ierr)
-          import tMat
-          implicit none
-          PetscScalar, pointer :: array(:,:)
+         import tMat
+         PetscScalar, pointer :: array(:,:)
           PetscErrorCode ierr
           Mat     v
         End Subroutine
@@ -101,16 +92,14 @@
 
         interface MatDenseGetArrayWrite
         Subroutine MatDenseGetArrayWrite1d(v,array,ierr)
-          import tMat
-          implicit none
-          PetscScalar, pointer :: array(:)
+         import tMat
+         PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
           Mat     v
         End Subroutine
         Subroutine MatDenseGetArrayWrite2d(v,array,ierr)
-          import tMat
-          implicit none
-          PetscScalar, pointer :: array(:,:)
+         import tMat
+         PetscScalar, pointer :: array(:,:)
           PetscErrorCode ierr
           Mat     v
         End Subroutine
@@ -118,16 +107,14 @@
 
         interface MatDenseRestoreArrayWrite
         Subroutine MatDenseRestoreArrayWrite1d(v,array,ierr)
-          import tMat
-          implicit none
-          PetscScalar, pointer :: array(:)
+         import tMat
+         PetscScalar, pointer :: array(:)
           PetscErrorCode ierr
           Mat     v
         End Subroutine
         Subroutine MatDenseRestoreArrayWrite2d(v,array,ierr)
-          import tMat
-          implicit none
-           PetscScalar, pointer :: array(:,:)
+         import tMat
+         PetscScalar, pointer :: array(:,:)
           PetscErrorCode ierr
           Mat     v
         End Subroutine
