@@ -10,5 +10,5 @@ cdef extern from * nogil:
     PetscErrorCode PetscRegressorSetUp(PetscRegressor)
     PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor)
     PetscErrorCode PetscRegressorView(PetscRegressor, PetscViewer)
-    PetscErrorCode PetscRegressorFit(PetscRegressor, PetscMat,PetscVec)
+    PetscErrorCode PetscRegressorFit(PetscRegressor, PetscMat, PetscVec)
     PetscErrorCode PetscRegressorPredict(PetscRegressor, PetscMat, PetscVec)
