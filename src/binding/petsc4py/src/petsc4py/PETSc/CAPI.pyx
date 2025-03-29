@@ -428,4 +428,4 @@ cdef api PetscRegressor PyPetscRegressor_Get(object arg) except ? NULL:
     retv = ob.regressor
     return retv
 
-#---------------------------------------------------------------------
+# ---------------------------------------------------------------------

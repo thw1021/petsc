@@ -37,7 +37,7 @@ cdef class Regressor(Object):
         CHKERR( PetscRegressorDestroy(&self.regressor) )
         return self
 
-    def setType(self, regressor_type) -> None:
+    def setType(self, regressor_type: Type | str) -> None:
         cdef PetscRegressorType cval = NULL
         regressor_type = str2bytes(regressor_type, &cval)
         CHKERR( PetscRegressorSetType(self.regressor, cval) )
