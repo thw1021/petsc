@@ -1,0 +1,16 @@
+Main Stage 5244
+Main Stage;KSPSolve 61855
+Main Stage;KSPSolve;KSPGMRESOrthog 86421
+Main Stage;KSPSolve;KSPGMRESOrthog;VecMDot 153476
+Main Stage;KSPSolve;KSPGMRESOrthog;VecMAXPY 145944
+Main Stage;KSPSolve;MatMult 101635
+Main Stage;KSPSolve;VecNormalize 35525
+Main Stage;KSPSolve;VecNormalize;VecNorm 19515
+Main Stage;KSPSolve;VecNormalize;VecScale 11892
+Main Stage;KSPSolve;PCApply 20638
+Main Stage;KSPSolve;PCApply;VecPointwiseMult 33076
+Main Stage;KSPSolve;VecMAXPY 9005
+Main Stage;KSPSolve;VecAXPY 900
+Main Stage;KSPSolve;VecCopy 461
+Main Stage;KSPSolve;VecSet 397
+Main Stage;MatAssemblyEnd 364
