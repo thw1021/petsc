@@ -9,35 +9,35 @@ cdef class Regressor(Object):
         self.obj = <PetscObject*> &self.regressor
         self.regressor = NULL
 
-    def view(self, Viewer viewer=None):
+    def view(self, Viewer viewer=None) -> None:
         cdef PetscViewer cviewer = NULL
         if viewer is not None: cviewer = viewer.vwr
         CHKERR( PetscRegressorView(self.regressor, cviewer) )
 
-    def create(self, comm=None):
+    def create(self, comm=None) -> Self:
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscRegressor newregressor = NULL
         CHKERR( PetscRegressorCreate(ccomm, &newregressor) )
         PetscCLEAR(self.obj); self.regressor = newregressor
         return self
 
-    def setUp(self):
+    def setUp(self) -> None:
         CHKERR( PetscRegressorSetUp(self.regressor) )
 
-    def fit(self, Mat X, Vec y):
+    def fit(self, Mat X, Vec y) -> None:
         CHKERR( PetscRegressorFit(self.regressor, X.mat, y.vec) )
 
-    def predict(self, Mat X, Vec y):
+    def predict(self, Mat X, Vec y) -> None:
         CHKERR( PetscRegressorPredict(self.regressor, X.mat, y.vec) )
 
-    def reset(self):
+    def reset(self) -> None:
         CHKERR( PetscRegressorReset(self.regressor) )
 
-    def destory(self):
+    def destroy(self) -> Self:
         CHKERR( PetscRegressorDestroy(&self.regressor) )
         return self
 
-    def setType(self, regressor_type):
+    def setType(self, regressor_type) -> None:
         cdef PetscRegressorType cval = NULL
         regressor_type = str2bytes(regressor_type, &cval)
         CHKERR( PetscRegressorSetType(self.regressor, cval) )

@@ -3,12 +3,12 @@ cdef extern from * nogil:
     ctypedef const char* PetscRegressorType "PetscRegressorType"
     PetscRegressorType PETSCREGRESSORLINEAR
 
-    int PetscRegressorCreate(MPI_Comm,PetscRegressor*)
-    int PetscRegressorReset(PetscRegressor)
-    int PetscRegressorDestroy(PetscRegressor*)
-    int PetscRegressorSetType(PetscRegressor,PetscRegressorType)
-    int PetscRegressorSetUp(PetscRegressor)
-    int PetscRegressorSetFromOptions(PetscRegressor)
-    int PetscRegressorView(PetscRegressor,PetscViewer)
-    int PetscRegressorFit(PetscRegressor,PetscMat,PetscVec)
-    int PetscRegressorPredict(PetscRegressor,PetscMat,PetscVec)
+    PetscErrorCode PetscRegressorCreate(MPI_Comm,PetscRegressor*)
+    PetscErrorCode PetscRegressorReset(PetscRegressor)
+    PetscErrorCode PetscRegressorDestroy(PetscRegressor*)
+    PetscErrorCode PetscRegressorSetType(PetscRegressor,PetscRegressorType)
+    PetscErrorCode PetscRegressorSetUp(PetscRegressor)
+    PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor)
+    PetscErrorCode PetscRegressorView(PetscRegressor,PetscViewer)
+    PetscErrorCode PetscRegressorFit(PetscRegressor,PetscMat,PetscVec)
+    PetscErrorCode PetscRegressorPredict(PetscRegressor,PetscMat,PetscVec)
