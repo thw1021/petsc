@@ -176,13 +176,13 @@ files that are unnecessary for most PETSc usages and thus are not stored in the 
 
 - [Images](https://gitlab.com/petsc/images) contains images that are used in the PETSc documentation or have other uses. See {any}`docs_images`
   for details on its use.
-- [Annual-Meetings](https://gitlab.com/petsc/annual-meetings) contains the slides etc. from the {any}`meetings`. See {any}`docs_meetings`.
+- [Annual-Meetings](https://gitlab.com/petsc/annual-meetings) contains various documents from the {any}`meetings`. See {any}`docs_meetings`.
 - [Datafiles](https://gitlab.com/petsc/datafiles) contains large matrices, meshes, and various other data files that
   are used in the {any}`PETSc CI<test_harness_data>`.
 
 Other repositories containing software PETSc uses are located at [GitLab](https://gitlab.com/petsc/)
 and [BitBucket](https://bitbucket.org/petsc/workspace/repositories). The BitBucket location is used for historical reasons,
-there are many links on the web to these locations thus the repositories have not be migrated to GitLab.
+there are many links on the web to these locations thus the repositories have not been migrated to GitLab.
 
 (docs_images)=
 
@@ -208,7 +208,7 @@ Any new images required must be added to the currently-used branch of this repos
 
 - Decide where in `doc/images` a new image should go. Use the structure of the `doc/` tree as a guide.
 - Create a Merge Request to the currently-used branch of the upstream images repository, adding this image [^maintainer-fast-image-footnote].
-- Once this Merge Request is merged, you may make a MR on the main PETSc git repository relying on the new image(s).
+- Once this Merge Request is merged, you may make a MR on the main PETSc Git repository relying on the new image(s).
 
 It may be helpful to place working copies of the new image(s) in your local `doc/images`
 while iterating on documentation; don't forget to update the upstream images repository.
@@ -237,11 +237,11 @@ If the size of the image repository grows too large,
 
 ## Annual meetings website
 
-Like {any}`docs_images` the material (slides etc) for the PETSc annual meetings is too large to store in the primary PETSc Git repository.
+Like {any}`docs_images` the material (slides, etc.) for the PETSc annual meetings is too large to store in the primary PETSc Git repository.
 It is stored in [Annual-Meetings](https://gitlab.com/petsc/annual-meetings) repository and linked from {any}`meetings`.
 
-The files are all in the public directory of the repository so that the .gitlab-ci.yml file for the repository
-automatically displays all the files at https://petsc.gitlab.io/annual-meetings. Thus all one needs to do is add files into
+The files are all in the public directory of the repository so that the `.gitlab-ci.yml` file for the repository
+automatically displays all the files at https://petsc.gitlab.io/annual-meetings. Thus, all one needs to do is add files into
 [Annual-Meetings](https://gitlab.com/petsc/annual-meetings) and provide appropriate links within that repository or from {any}`meetings`
 in the primary PETSc Git repository.
 
