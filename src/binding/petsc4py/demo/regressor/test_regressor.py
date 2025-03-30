@@ -4,11 +4,12 @@
 # Use the petsc4py interface to PetscRegressor to solve the same quadratic
 # polynomial data-fitting problem that is solved in src/ml/regressor/tests/ex1.c.
 
-import petsc4py, sys
+import sys
+import petsc4py
+
 petsc4py.init(sys.argv)
 
 from petsc4py import PETSc
-import numpy as np
 
 comm = PETSc.COMM_WORLD
 size = comm.getSize()

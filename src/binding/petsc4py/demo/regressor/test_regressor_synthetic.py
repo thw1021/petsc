@@ -8,14 +8,11 @@ import numpy as np
 # Needed for plotting
 import matplotlib.colors
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 # Needed for generating classification, regression and clustering datasets
 import sklearn.datasets as dt
 
-# Needed for generating data from an existing dataset
-from sklearn.neighbors import KernelDensity
-from sklearn.model_selection import GridSearchCV
+# Needed for evaluating the quality of the regression for the test data set
 from sklearn.metrics import mean_squared_error
 
 import argparse
@@ -25,7 +22,8 @@ parser.add_argument('--nfeature', type=int, default=10)
 parser.add_argument('--add_noise', action='store_true')
 args, unknown = parser.parse_known_args()
 
-import petsc4py, sys
+import sys
+import petsc4py
 sys.argv = [sys.argv[0]] + unknown
 petsc4py.init(sys.argv)
 from petsc4py import PETSc
@@ -48,9 +46,7 @@ def petsc_regression_test(nsample, nfeature, noise=0, rand_state=11):
   x_train, y_train = x[:ntr,], y[:ntr]
   xte, yte = x[ntr:,], y[ntr:]
   comm = PETSc.COMM_WORLD
-  size = comm.getSize()
   rank = comm.getRank()
-  OptDB = PETSc.Options()
   regressor = PETSc.Regressor().create(comm=comm)
   regressor.setType(PETSc.Regressor.Type.LINEAR)
   rows_ix = np.arange(ntr,dtype=np.int32)
@@ -88,7 +84,7 @@ def petsc_regression_test(nsample, nfeature, noise=0, rand_state=11):
   regressor.predict(X,y)
   ypr = y.getArray()
   error = mean_squared_error(ypr,yte)
-  print('Test MSE: {:f}'.format(error))
+  print(f"Test MSE: {error:f}")
   return xte,ypr
 
 xte,ypr = petsc_regression_test(args.nsample, args.nfeature, 0)
