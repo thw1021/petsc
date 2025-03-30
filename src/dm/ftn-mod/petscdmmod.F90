@@ -292,3 +292,12 @@
 
 !#include <../ftn/dm/petscdmadaptor.hf90>
         end module petscdmadaptor
+
+!     ----------------------------------------------
+
+        module petscdmshell
+        use petscdm
+#include <petsc/finclude/petscdmshell.h>
+#include <../src/dm/ftn-mod/petscdmshell.h90>
+#include <../ftn/dm/petscdmshell.h90>
+        end module petscdmshell
