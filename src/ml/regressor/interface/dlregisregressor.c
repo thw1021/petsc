@@ -14,7 +14,7 @@ static PetscBool PetscRegressorPackageInitialized = PETSC_FALSE;
 PetscErrorCode PetscRegressorInitializePackage(void)
 {
   PetscFunctionBegin;
-  if (PetscRegressorPackageInitialized) PetscFunctionReturn(0);
+  if (PetscRegressorPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   PetscRegressorPackageInitialized = PETSC_TRUE;
   /* Register Class */
   PetscCall(PetscClassIdRegister("Regressor", &PETSCREGRESSOR_CLASSID));
@@ -33,7 +33,7 @@ PetscErrorCode PetscRegressorInitializePackage(void)
   }
   /* Register package finalizer */
   PetscCall(PetscRegisterFinalize(PetscRegressorFinalizePackage));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
@@ -51,5 +51,5 @@ PetscErrorCode PetscRegressorFinalizePackage(void)
   PetscCall(PetscFunctionListDestroy(&PetscRegressorList));
   PetscRegressorPackageInitialized = PETSC_FALSE;
   PetscRegressorRegisterAllCalled  = PETSC_FALSE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -5,9 +5,9 @@ PETSC_EXTERN PetscErrorCode PetscRegressorCreate_Linear(PetscRegressor);
 PetscErrorCode PetscRegressorRegisterAll(void)
 {
   PetscFunctionBegin;
-  if (PetscRegressorRegisterAllCalled) PetscFunctionReturn(0);
+  if (PetscRegressorRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscRegressorRegisterAllCalled = PETSC_TRUE;
   // Register all of the types of PetscRegressor
   PetscCall(PetscRegressorRegister(PETSCREGRESSORLINEAR, PetscRegressorCreate_Linear));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
