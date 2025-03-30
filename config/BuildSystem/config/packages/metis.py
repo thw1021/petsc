@@ -44,6 +44,7 @@ class Configure(config.package.CMakePackage):
     if self.framework.argDB['download-metis-use-doubleprecision']:
       args.append('-DMETIS_USE_DOUBLEPRECISION=1')
     args.append('-DMATH_LIB="'+self.libraries.toStringNoDupes(self.mathlib.lib)+'"')
+    args.append('-DCMAKE_POLICY_VERSION_MINIMUM=3.5')
     return args
 
   def configureLibrary(self):

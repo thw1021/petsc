@@ -37,6 +37,7 @@ class Configure(config.package.CMakePackage):
       args.append('-DMSVC=1')
     if self.getDefaultIndexSize() == 64:
       args.append('-DMETIS_USE_LONGINDEX=1')
+    args.append('-DCMAKE_POLICY_VERSION_MINIMUM=3.5')
     return args
 
   def configureLibrary(self):
@@ -46,5 +47,3 @@ class Configure(config.package.CMakePackage):
     else:
       self.ComputeVertexSeparator = 0
     return
-
-
