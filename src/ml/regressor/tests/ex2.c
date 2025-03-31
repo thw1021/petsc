@@ -58,6 +58,9 @@ int main(int argc, char **args)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Predicted values are\n"));
   PetscCall(VecView(y_predicted, PETSC_VIEWER_STDOUT_WORLD));
 
+  PetscCall(MatDestroy(&X));
+  PetscCall(VecDestroy(&y));
+  PetscCall(VecDestroy(&y_predicted));
   PetscCall(PetscRegressorDestroy(&regressor));
 
   PetscCall(PetscFinalize());

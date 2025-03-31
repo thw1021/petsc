@@ -68,6 +68,9 @@ int main(int argc, char **args)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Coefficients are\n"));
   PetscCall(VecView(coefficients, PETSC_VIEWER_STDOUT_WORLD));
 
+  PetscCall(MatDestroy(&X));
+  PetscCall(VecDestroy(&y));
+  PetscCall(VecDestroy(&y_predicted));
   PetscCall(PetscRegressorDestroy(&regressor));
 
   PetscCall(PetscFinalize());

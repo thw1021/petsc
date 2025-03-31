@@ -53,6 +53,9 @@ PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
      * TODO: Perhaps revisit exactly what options should exist around this. */
     linear->X   = regressor->training;
     linear->rhs = regressor->target;
+
+    PetscCall(PetscObjectReference((PetscObject)linear->X));
+    PetscCall(PetscObjectReference((PetscObject)linear->rhs));
   }
 
   if (linear->coefficients) PetscCall(VecDestroy(&linear->coefficients));
@@ -397,6 +400,7 @@ PetscErrorCode PetscRegressorFit_Linear(PetscRegressor regressor)
     PetscCall(VecRestoreArrayWrite(column_means, &column_means_local));
     PetscCall(VecDot(column_means, linear->coefficients, &column_means_dot_coefficients));
     PetscCall(VecDestroy(&column_means));
+    PetscCall(PetscFree(column_means_global));
     linear->intercept = target_mean - column_means_dot_coefficients;
   } else {
     linear->intercept = 0.0;
