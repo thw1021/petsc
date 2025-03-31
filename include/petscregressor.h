@@ -25,15 +25,12 @@ J*/
 typedef const char *PetscRegressorType;
 #define PETSCREGRESSORLINEAR "linear"
 
-/* Note that PetscRegressorLinearType is not a proper "type" in PETSc; it is more analogous to something like MatProductAlgorithm.
-   PetscOptionsEList() should be used to ensure that the user picks a valid linear regression type from the possible options here.
-
-   If the list of PetscRegressorLinearTypes changes, be sure to update the list at the top of linear.c as well! */
-typedef const char *PetscRegressorLinearType;
-#define PETSCREGRESSORLINEARDEFAULT "ols"
-#define PETSCREGRESSORLINEAROLS     "ols"
-#define PETSCREGRESSORLINEARLASSO   "lasso"
-#define PETSCREGRESSORLINEARRIDGE   "ridge"
+typedef enum {
+  REGRESSOR_LINEAR_OLS,
+  REGRESSOR_LINEAR_LASSO,
+  REGRESSOR_LINEAR_RIDGE
+} PetscRegressorLinearType;
+PETSC_EXTERN const char *const PetscRegressorLinearTypes[];
 
 PETSC_EXTERN PetscFunctionList PetscRegressorList;
 PETSC_EXTERN PetscClassId      PETSCREGRESSOR_CLASSID;
@@ -45,6 +42,7 @@ PETSC_EXTERN PetscErrorCode PetscRegressorCreate(MPI_Comm, PetscRegressor *);
 PETSC_EXTERN PetscErrorCode PetscRegressorReset(PetscRegressor);
 PETSC_EXTERN PetscErrorCode PetscRegressorDestroy(PetscRegressor *);
 PETSC_EXTERN PetscErrorCode PetscRegressorSetType(PetscRegressor, PetscRegressorType);
+PETSC_EXTERN PetscErrorCode PetscRegressorGetType(PetscRegressor, PetscRegressorType *);
 PETSC_EXTERN PetscErrorCode PetscRegressorSetRegularizerWeight(PetscRegressor, PetscReal);
 PETSC_EXTERN PetscErrorCode PetscRegressorSetUp(PetscRegressor);
 PETSC_EXTERN PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor);

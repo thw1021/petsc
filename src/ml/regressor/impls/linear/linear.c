@@ -1,7 +1,6 @@
 #include <../src/ml/regressor/impls/linear/linearimpl.h> /*I "petscregressor.h" I*/
 
-// Note: If the list of PetscRegressorLinearTypes changes, it must also be updated in petscregressor.h
-static const char *PetscRegressor_Linear_Types_Table[] = {PETSCREGRESSORLINEAROLS, PETSCREGRESSORLINEARLASSO, PETSCREGRESSORLINEARRIDGE};
+const char *const PetscRegressorLinearTypes[] = {"ols", "lasso", "ridge", "REGRESSORLINEARType", "REGRESSOR_LINEAR_", NULL};
 
 PetscErrorCode EvaluateResidual(Tao tao, Vec x, Vec f, void *ptr)
 {
@@ -27,7 +26,6 @@ PetscErrorCode EvaluateJacobian(Tao tao, Vec x, Mat J, Mat Jpre, void *ptr)
 PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
 {
   PetscInt               M, N;
-  PetscBool              flg;
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
   KSP                    ksp;
   Tao                    tao;
@@ -60,8 +58,7 @@ PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
   if (linear->coefficients) PetscCall(VecDestroy(&linear->coefficients));
 
   if (linear->use_ksp) {
-    PetscCall(PetscStrcmp(linear->type, PETSCREGRESSORLINEAROLS, &flg));
-    PetscCheck(flg, ((PetscObject)regressor)->comm, PETSC_ERR_ARG_WRONGSTATE, "KSP can be used to fit a linear regressor only when its type is OLS");
+    PetscCheck(linear->type == REGRESSOR_LINEAR_OLS, PetscObjectComm((PetscObject)regressor), PETSC_ERR_ARG_WRONGSTATE, "KSP can be used to fit a linear regressor only when its type is OLS");
 
     if (!linear->ksp) {
       PetscCall(PetscRegressorLinearGetKSP(regressor, &linear->ksp));
@@ -86,14 +83,21 @@ PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
     PetscCall(TaoSetSolution(tao, linear->coefficients));
     PetscCall(TaoSetResidualRoutine(tao, linear->residual, EvaluateResidual, linear));
     PetscCall(TaoSetJacobianResidualRoutine(tao, linear->X, linear->X, EvaluateJacobian, linear));
-    // Set the regularization type and weight for the BRGN as linear->type dictates:
-    PetscCall(PetscStrcmp(linear->type, PETSCREGRESSORLINEAROLS, &flg));
-    if (flg) regressor->regularizer_weight = 0.0; // OLS, by definition, uses a regularizer weight of 0
     if (!linear->use_ksp) PetscCall(TaoBRGNSetRegularizerWeight(tao, regressor->regularizer_weight));
-    PetscCall(PetscStrcmp(linear->type, PETSCREGRESSORLINEARLASSO, &flg));
-    if (flg) PetscCall(PetscOptionsSetValue(NULL, "-tao_brgn_regularization_type", "l1dict"));
-    PetscCall(PetscStrcmp(linear->type, PETSCREGRESSORLINEARRIDGE, &flg));
-    if (flg) PetscCall(PetscOptionsSetValue(NULL, "-tao_brgn_regularization_type", "l2pure"));
+    // Set the regularization type and weight for the BRGN as linear->type dictates:
+    switch (linear->type) {
+    case REGRESSOR_LINEAR_OLS:
+      regressor->regularizer_weight = 0.0; // OLS, by definition, uses a regularizer weight of 0
+      break;
+    case REGRESSOR_LINEAR_LASSO:
+      PetscCall(PetscOptionsSetValue(NULL, "-tao_brgn_regularization_type", "l1dict"));
+      break;
+    case REGRESSOR_LINEAR_RIDGE:
+      PetscCall(PetscOptionsSetValue(NULL, "-tao_brgn_regularization_type", "l2pure"));
+      break;
+    default:
+      break;
+    }
     PetscCall(TaoSetFromOptions(tao));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -105,6 +109,9 @@ PetscErrorCode PetscRegressorReset_Linear(PetscRegressor regressor)
 
   PetscFunctionBegin;
   /* Destroy the PETSc objects associated with the linear regressor implementation. */
+  linear->ksp_its     = 0;
+  linear->ksp_tot_its = 0;
+
   PetscCall(MatDestroy(&linear->X));
   PetscCall(MatDestroy(&linear->XtX));
   PetscCall(MatDestroy(&linear->C));
@@ -170,7 +177,6 @@ PetscErrorCode PetscRegressorLinearSetUseKSP(PetscRegressor regressor, PetscBool
 PetscErrorCode PetscRegressorSetFromOptions_Linear(PetscRegressor regressor, PetscOptionItems PetscOptionsObject)
 {
   PetscBool              set, flg = PETSC_FALSE;
-  PetscInt               i;
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
 
   PetscFunctionBegin;
@@ -179,16 +185,28 @@ PetscErrorCode PetscRegressorSetFromOptions_Linear(PetscRegressor regressor, Pet
   if (set) PetscCall(PetscRegressorLinearSetFitIntercept(regressor, flg));
   PetscCall(PetscOptionsBool("-regressor_linear_use_ksp", "Use KSP instead of TAO for linear model fitting problem", "PetscRegressorLinearSetFitIntercept", flg, &flg, &set));
   if (set) PetscCall(PetscRegressorLinearSetUseKSP(regressor, flg));
-  PetscCall(PetscOptionsEList("-regressor_linear_type", "Linear regression method", "", PetscRegressor_Linear_Types_Table, PETSC_STATIC_ARRAY_LENGTH(PetscRegressor_Linear_Types_Table), linear->type, &i, &set));
-  if (set) PetscCall(PetscRegressorLinearSetType(regressor, PetscRegressor_Linear_Types_Table[i]));
+  PetscCall(PetscOptionsEnum("-regressor_linear_type", "Linear regression method", "PetscRegressorLinearTypes", PetscRegressorLinearTypes, (PetscEnum)linear->type, (PetscEnum *)&linear->type, NULL));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscRegressorView_Linear(PetscRegressor regressor, PetscViewer viewer)
+static PetscErrorCode PetscRegressorView_Linear(PetscRegressor regressor, PetscViewer viewer)
 {
+  PetscBool              isascii;
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
+
   PetscFunctionBegin;
-  // TODO: Implement a useful View() method!
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) {
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "PetscRegressor Linear Type: %s\n", PetscRegressorLinearTypes[linear->type]));
+    if (linear->ksp) {
+      PetscCall(KSPView(linear->ksp, viewer));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "total KSP iterations: %" PetscInt_FMT "\n", linear->ksp_tot_its));
+    }
+    if (linear->fit_intercept) PetscCall(PetscViewerASCIIPrintf(viewer, "Intercept=%g\n", (double)linear->intercept));
+    PetscCall(PetscViewerASCIIPopTab(viewer));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -305,9 +323,33 @@ PetscErrorCode PetscRegressorLinearSetType(PetscRegressor regressor, PetscRegres
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   PetscCall(PetscObjectTypeCompare((PetscObject)regressor, PETSCREGRESSORLINEAR, &match));
-  PetscCheck(match, PetscObjectComm((PetscObject)regressor), PETSC_ERR_ARG_WRONG, "regressor is not of type PETSCREGRESSORLINEAR");
-  PetscCall(PetscFree(linear->type));
-  PetscCall(PetscStrallocpy(type, (char **)&linear->type));
+  PetscCheck(match, PetscObjectComm((PetscObject)regressor), PETSC_ERR_ARG_WRONG, "Regressor is not of type PETSCREGRESSORLINEAR");
+  linear->type = type;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscRegressorLinearGetType - Return the type for the `PETSCREGRESSORLINEAR` solver
+
+  Input Parameter:
+. regressor - the `PetscRegressor` solver context
+
+  Output Parameter:
+. type - `PETSCREGRESSORLINEAR` type
+
+  Level: advanced
+
+.seealso: `PetscRegressor`, `PETSCREGRESSORLINEAR`, `PetscRegressorLinearSetType()`, `PetscRegressorLinearType`
+@*/
+PetscErrorCode PetscRegressorLinearGetType(PetscRegressor regressor, PetscRegressorLinearType *type)
+{
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
+  PetscBool              same;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)regressor, PETSCREGRESSORLINEAR, &same));
+  PetscCheck(same, PetscObjectComm((PetscObject)regressor), PETSC_ERR_ARG_INCOMP, "Regressor is not PETSCREGRESSORLINEAR type");
+  *type = linear->type;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -317,7 +359,7 @@ PetscErrorCode PetscRegressorFit_Linear(PetscRegressor regressor)
   KSP                    ksp;
   PetscScalar            target_mean, *column_means_global, *column_means_local, column_means_dot_coefficients;
   Vec                    column_means;
-  PetscInt               m, N, istart, i;
+  PetscInt               m, N, istart, i, kspits;
 
   PetscFunctionBegin;
   if (linear->use_ksp && !linear->ksp) PetscCall(PetscRegressorLinearGetKSP(regressor, &linear->ksp));
@@ -326,6 +368,9 @@ PetscErrorCode PetscRegressorFit_Linear(PetscRegressor regressor)
   /* Solve the least-squares problem (previously set up in PetscRegressorSetUp_Linear()) without finding the intercept. */
   if (linear->use_ksp) {
     PetscCall(KSPSolve(ksp, linear->rhs, linear->coefficients));
+    PetscCall(KSPGetIterationNumber(ksp, &kspits));
+    linear->ksp_its += kspits;
+    linear->ksp_tot_its += kspits;
   } else {
     PetscCall(TaoSolve(regressor->tao));
   }
@@ -402,7 +447,7 @@ PETSC_EXTERN PetscErrorCode PetscRegressorCreate_Linear(PetscRegressor regressor
   linear->intercept     = 0.0;
   linear->fit_intercept = PETSC_TRUE;  /* Default to calculating the intercept. */
   linear->use_ksp       = PETSC_FALSE; /* Do not default to using KSP for solving the model-fitting problem (use TAO instead). */
-  PetscCall(PetscStrallocpy(PETSCREGRESSORLINEARDEFAULT, (char **)&linear->type));
+  linear->type          = REGRESSOR_LINEAR_OLS;
   /* Above, manually set the default linear regressor type.
        We don't use PetscRegressorLinearSetType() here, because that expects the SetUp event to already have happened. */
   PetscFunctionReturn(PETSC_SUCCESS);

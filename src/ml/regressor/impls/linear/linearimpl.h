@@ -23,8 +23,9 @@
 typedef struct {
   REGRESSOR_LINEAR_HEADER;
 
-  KSP ksp;
-  Mat XtX; /* Normal matrix formed from X */
+  PetscInt ksp_its, ksp_tot_its;
+  KSP      ksp;
+  Mat      XtX; /* Normal matrix formed from X */
 
 } PetscRegressor_Linear;
 

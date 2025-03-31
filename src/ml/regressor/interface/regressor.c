@@ -81,6 +81,80 @@ PetscErrorCode PetscRegressorCreate(MPI_Comm comm, PetscRegressor *newregressor)
 }
 
 /*@
+  PetscRegressorView - Prints information about the `PetscRegressor` object
+
+  Collective
+
+  Input Parameters:
++ regressor - the `PetscRegressor` context
+- viewer    - visualization context
+
+  Options Database Key:
+. -regressor_view - Calls `PetscRegressorView()` at the end of `PetscRegressorFit()` (or predict?TODO)
+
+  Level: beginner
+
+  Notes:
+  The available visualization contexts include
++     `PETSC_VIEWER_STDOUT_SELF` - standard output (default)
+-     `PETSC_VIEWER_STDOUT_WORLD` - synchronized standard
+  output where only the first processor opens
+  the file.  All other processors send their
+  data to the first processor to print.
+
+.seealso: [](ch_regressor), `PetscRegressor`, `PetscViewerASCIIOpen()`
+@*/
+PetscErrorCode PetscRegressorView(PetscRegressor regressor, PetscViewer viewer)
+{
+  PetscBool          isascii, isstring;
+  PetscRegressorType type;
+
+  PetscFunctionBegin;
+  // TODO: Complete this when I have a good idea of what bits of the PetscRegressor should be shown!
+  PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
+  if (!viewer) PetscCall(PetscViewerASCIIGetStdout(((PetscObject)regressor)->comm, &viewer));
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  PetscCheckSameComm(regressor, 1, viewer, 2);
+
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSTRING, &isstring));
+  if (isascii) {
+    PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)regressor, viewer));
+
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscTryTypeMethod(regressor, view, viewer);
+    if (regressor->tao) PetscCall(TaoView(regressor->tao, viewer));
+    PetscCall(PetscViewerASCIIPopTab(viewer));
+  } else if (isstring) {
+    PetscCall(PetscRegressorGetType(regressor, &type));
+    PetscCall(PetscViewerStringSPrintf(viewer, " %-3.3s", type));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscRegressorViewFromOptions - View a `PetscRegressor` object based on values in the options database
+
+  Collective
+
+  Input Parameters:
++ A    - the  `PetscRegressor` context
+. obj  - Optional object that provides the prefix for the options database
+- name - command line option
+
+  Level: intermediate
+
+.seealso: [](ch_regressor), `PetscRegressor`, `PetscRegressorView`, `PetscObjectViewFromOptions()`, `PetscRegressorCreate()`
+@*/
+PetscErrorCode PetscRegressorViewFromOptions(PetscRegressor A, PetscObject obj, const char name[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, PETSCREGRESSOR_CLASSID, 1);
+  PetscCall(PetscObjectViewFromOptions((PetscObject)A, obj, name));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
    PetscRegressorSetFromOptions - Sets `PetscRegressor` options from the options database.
 
    Collective
@@ -199,6 +273,8 @@ PetscErrorCode PetscRegressorFit(PetscRegressor regressor, Mat X, Vec y)
   PetscCall(PetscLogEventBegin(PetscRegressor_Fit, regressor, X, y, 0));
   PetscCall((*regressor->ops->fit)(regressor));
   PetscCall(PetscLogEventEnd(PetscRegressor_Fit, regressor, X, y, 0));
+  //TODO print convergence data
+  PetscCall(PetscRegressorViewFromOptions(regressor, NULL, "-regressor_view"));
   regressor->fitcalled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -352,6 +428,30 @@ PetscErrorCode PetscRegressorSetType(PetscRegressor regressor, PetscRegressorTyp
 }
 
 /*@
+  PetscRegressorGetType - Gets the current `PetscRegressorType` being used in the `PetscRegressor` object
+
+  Not Collective
+
+  Input Parameter:
+. regressor - the `PetscRegressor` solver context
+
+  Output Parameter:
+. type - the `PetscRegressorType`
+
+  Level: intermediate
+
+.seealso: [](ch_regressor), `PetscRegressor`, `PetscRegressorType`, `PetscRegressorSetType()`
+@*/
+PetscErrorCode PetscRegressorGetType(PetscRegressor regressor, PetscRegressorType *type)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
+  PetscAssertPointer(type, 2);
+  *type = ((PetscObject)regressor)->type_name;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
    PetscRegressorSetRegularizerWeight - Sets the weight to be used for the regularizer for a `PetscRegressor` context
 
    Logically Collective
@@ -369,13 +469,6 @@ PetscErrorCode PetscRegressorSetRegularizerWeight(PetscRegressor regressor, Pets
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   regressor->regularizer_weight = weight;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode PetscRegressorView(PetscRegressor regressor, PetscViewer viewer)
-{
-  PetscFunctionBegin;
-  // TODO: Complete this when I have a good idea of what bits of the PetscRegressor should be shown!
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
