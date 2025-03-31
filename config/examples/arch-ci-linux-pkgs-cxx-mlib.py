@@ -36,7 +36,7 @@ configure_options = [
   '--download-zstd=1',
   '--download-moab=1',
   '--with-petsc4py=1',
-  '--download-mpi4py=1',
+  #'--download-mpi4py=1', breaks with python3.6 CI setup
   '--download-saws',
   '--download-adolc',
   '--download-colpack',
