@@ -7,6 +7,7 @@ cdef extern from * nogil:
     PetscErrorCode PetscRegressorReset(PetscRegressor)
     PetscErrorCode PetscRegressorDestroy(PetscRegressor*)
     PetscErrorCode PetscRegressorSetType(PetscRegressor, PetscRegressorType)
+    PetscErrorCode PetscRegressorGetType(PetscRegressor, PetscRegressorType*)
     PetscErrorCode PetscRegressorSetUp(PetscRegressor)
     PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor)
     PetscErrorCode PetscRegressorView(PetscRegressor, PetscViewer)
