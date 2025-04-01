@@ -57,6 +57,8 @@ Changes: Development
 
 .. rubric:: DMPlex:
 
+- Add ``DMPlexGetTransform()``, ``DMPlexSetTransform()``, ``DMPlexGetSaveTransform()``, ``DMPlexSetSaveTransform()``
+
 .. rubric:: FE/FV:
 
 .. rubric:: DMNetwork:
