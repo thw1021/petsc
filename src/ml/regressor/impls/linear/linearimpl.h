@@ -1,9 +1,7 @@
-#if !defined(__PETSCREGRESSORLINEAR)
-  #define __PETSCREGRESSORLINEAR
-
-  #include <petsc/private/regressorimpl.h>
-  #include <petscksp.h>
-  #include <petsctao.h>
+#pragma once
+#include <petsc/private/regressorimpl.h>
+#include <petscksp.h>
+#include <petsctao.h>
 
   /* We define this header, since it serves as a "base" for all linear models. */
   #define REGRESSOR_LINEAR_HEADER \
@@ -26,7 +24,4 @@ typedef struct {
   PetscInt ksp_its, ksp_tot_its;
   KSP      ksp;
   Mat      XtX; /* Normal matrix formed from X */
-
 } PetscRegressor_Linear;
-
-#endif

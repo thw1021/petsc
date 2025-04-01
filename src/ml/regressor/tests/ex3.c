@@ -79,6 +79,9 @@ int main(int argc, char **args)
 
 /*TEST
 
+   build:
+      requires: !complex
+
    test:
       suffix: lasso_1
       nsize: 1

@@ -14,7 +14,7 @@ PetscLogEvent PetscRegressor_SetUp, PetscRegressor_Fit, PetscRegressor_Predict;
    Not collective
 
    Input Parameters:
-+  sname - name of a new user-defined regressor
++  sname    - name of a new user-defined regressor
 -  function - routine to create method context
 
    Notes:
@@ -87,7 +87,7 @@ PetscErrorCode PetscRegressorCreate(MPI_Comm comm, PetscRegressor *newregressor)
 
   Input Parameters:
 + regressor - the `PetscRegressor` context
-- viewer    - visualization context
+- viewer    - a `PetscViewer` context
 
   Options Database Key:
 . -regressor_view - Calls `PetscRegressorView()` at the end of `PetscRegressorFit()` (or predict?TODO)
@@ -286,7 +286,7 @@ PetscErrorCode PetscRegressorFit(PetscRegressor regressor, Mat X, Vec y)
 
    Input Parameters:
 +  regressor - the `PetscRegressor` context (for which `PetscRegressorFit()` must have been called)
-.  X - data matrix of unlabeled observations
+.  X         - data matrix of unlabeled observations
 
    Output Parameter:
 .  y - vector of predicted labels
@@ -369,10 +369,12 @@ PetscErrorCode PetscRegressorDestroy(PetscRegressor *regressor)
 
    Input Parameters:
 +  regressor - the `PetscRegressor` context
--  type - a known regression method
+-  type      - a known regression method
 
    Options Database Key:
 .  -regressor_type <type> - Sets the type of regressor; use -help for a list of available types
+
+   Level: intermediate
 
    Notes:
    See "include/petscregressor.h" for available methods (for instance)
@@ -384,8 +386,6 @@ PetscErrorCode PetscRegressorDestroy(PetscRegressor *regressor)
    The `PetscRegressorSetType()` routine is provided for those situations where it
    is necessary to set the nonlinear solver independently of the command
    line or options database.
-
-   Level: intermediate
 
 .seealso: `PetscRegressorType`
 @*/
@@ -458,7 +458,7 @@ PetscErrorCode PetscRegressorGetType(PetscRegressor regressor, PetscRegressorTyp
 
    Input Parameters:
 +  regressor - the `PetscRegressor` context
--  weight - the regularizer weight
+-  weight    - the regularizer weight
 
    Level: beginner
 
@@ -483,6 +483,8 @@ PetscErrorCode PetscRegressorSetRegularizerWeight(PetscRegressor regressor, Pets
    Output Parameter:
 .  tao - the `Tao` context
 
+   Level: beginner
+
    Notes:
    The `Tao` object will be created if it does not yet exist.
 
@@ -491,8 +493,6 @@ PetscErrorCode PetscRegressorSetRegularizerWeight(PetscRegressor regressor, Pets
    child contexts such as `KSP` or `TaoLineSearch`as well.
 
    Depending on the type of the regressor and the options that are set, the regressor may use not use a `Tao` object.
-
-   Level: beginner
 
 .seealso: `PetscRegressorLinearGetKSP()`
 @*/

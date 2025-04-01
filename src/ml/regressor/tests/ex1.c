@@ -1,7 +1,7 @@
 static char help[] = "Tests basic creation and destruction of PetscRegressor objects.\n\n";
 
 /*
-    This very simple example uses PetscRegressor to train a linear model (that is, linear in its coefficients)
+    Uses PetscRegressor to train a linear model (that is, linear in its coefficients)
     for a quadratic polynomial data-fitting problem. This is example 3.2 in the first (1977) edition of Michael
     T. Heath's "Scientific Computing: An Introductory Survey" textbook.
     This example and ex2.c are essentially the same, except the input arrays are mean-centered in ex1.c

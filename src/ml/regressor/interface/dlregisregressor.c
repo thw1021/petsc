@@ -3,13 +3,13 @@
 static PetscBool PetscRegressorPackageInitialized = PETSC_FALSE;
 
 /*@C
-   PetscRegressorInitializePackage - Initialize PetscRegressor package
+   PetscRegressorInitializePackage - Initialize `PetscRegressor` package
 
    Logically Collective
 
    Level: developer
 
-.seealso: PetscRegressorFinalizePackage()
+.seealso: `PetscRegressorFinalizePackage()`
 @*/
 PetscErrorCode PetscRegressorInitializePackage(void)
 {
@@ -37,7 +37,7 @@ PetscErrorCode PetscRegressorInitializePackage(void)
 }
 
 /*@C
-   PetscRegressorFinalizePackage - Finalize PetscRegressor package; it is called from PetscFinalize()
+   PetscRegressorFinalizePackage - Finalize `PetscRegressor` package; it is called from `PetscFinalize()`
 
    Logically Collective
 

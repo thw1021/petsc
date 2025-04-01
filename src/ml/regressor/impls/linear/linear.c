@@ -2,7 +2,7 @@
 
 const char *const PetscRegressorLinearTypes[] = {"ols", "lasso", "ridge", "REGRESSORLINEARType", "REGRESSOR_LINEAR_", NULL};
 
-PetscErrorCode EvaluateResidual(Tao tao, Vec x, Vec f, void *ptr)
+static PetscErrorCode EvaluateResidual(Tao tao, Vec x, Vec f, void *ptr)
 {
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)ptr;
 
@@ -13,7 +13,7 @@ PetscErrorCode EvaluateResidual(Tao tao, Vec x, Vec f, void *ptr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode EvaluateJacobian(Tao tao, Vec x, Mat J, Mat Jpre, void *ptr)
+static PetscErrorCode EvaluateJacobian(Tao tao, Vec x, Mat J, Mat Jpre, void *ptr)
 {
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)ptr;
 
@@ -23,7 +23,7 @@ PetscErrorCode EvaluateJacobian(Tao tao, Vec x, Mat J, Mat Jpre, void *ptr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
+static PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
 {
   PetscInt               M, N;
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
@@ -106,7 +106,7 @@ PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscRegressorReset_Linear(PetscRegressor regressor)
+static PetscErrorCode PetscRegressorReset_Linear(PetscRegressor regressor)
 {
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
 
@@ -125,7 +125,7 @@ PetscErrorCode PetscRegressorReset_Linear(PetscRegressor regressor)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscRegressorDestroy_Linear(PetscRegressor regressor)
+static PetscErrorCode PetscRegressorDestroy_Linear(PetscRegressor regressor)
 {
   PetscFunctionBegin;
   PetscCall(PetscRegressorReset_Linear(regressor));
@@ -159,7 +159,7 @@ PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, Pet
    PetscRegressorLinearSetUseKSP - Set a flag to indicate that a `KSP` object, instead of a `Tao` one, should be used
    to fit the regressor
 
-   Logically Collective on PetscRegressor
+   Logically Collective
 
    Input Parameters:
 +  regressor - the `PetscRegressor` context
@@ -177,7 +177,7 @@ PetscErrorCode PetscRegressorLinearSetUseKSP(PetscRegressor regressor, PetscBool
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscRegressorSetFromOptions_Linear(PetscRegressor regressor, PetscOptionItems PetscOptionsObject)
+static PetscErrorCode PetscRegressorSetFromOptions_Linear(PetscRegressor regressor, PetscOptionItems PetscOptionsObject)
 {
   PetscBool              set, flg = PETSC_FALSE;
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
@@ -356,7 +356,7 @@ PetscErrorCode PetscRegressorLinearGetType(PetscRegressor regressor, PetscRegres
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscRegressorFit_Linear(PetscRegressor regressor)
+static PetscErrorCode PetscRegressorFit_Linear(PetscRegressor regressor)
 {
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
   KSP                    ksp;
@@ -408,7 +408,7 @@ PetscErrorCode PetscRegressorFit_Linear(PetscRegressor regressor)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode PetscRegressorPredict_Linear(PetscRegressor regressor, Mat X, Vec y)
+static PetscErrorCode PetscRegressorPredict_Linear(PetscRegressor regressor, Mat X, Vec y)
 {
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
 
