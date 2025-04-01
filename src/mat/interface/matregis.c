@@ -112,6 +112,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_H2OPUS(Mat);
 PETSC_EXTERN PetscErrorCode MatCreate_Htool(Mat);
 #endif
 
+PETSC_INTERN PetscErrorCode MatCreate_DenseFromVecType(Mat);
+
 /*@C
   MatRegisterAll - Registers all of the matrix types in PETSc
 
@@ -259,5 +261,7 @@ PetscErrorCode MatRegisterAll(void)
 #if defined(PETSC_HAVE_HTOOL)
   PetscCall(MatRegister(MATHTOOL, MatCreate_Htool));
 #endif
+
+  PetscCall(MatRegister(MATDENSEFROMVECTYPE, MatCreate_DenseFromVecType));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

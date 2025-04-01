@@ -83,6 +83,7 @@ typedef const char *MatType;
 #define MATMPIDENSE                  "mpidense"
 #define MATMPIDENSECUDA              "mpidensecuda"
 #define MATMPIDENSEHIP               "mpidensehip"
+#define MATDENSEFROMVECTYPE          "densefromvectype"
 #define MATELEMENTAL                 "elemental"
 #define MATSCALAPACK                 "scalapack"
 #define MATBAIJ                      "baij"
@@ -524,6 +525,7 @@ PETSC_EXTERN PetscErrorCode MatDiagonalGetDiagonal(Mat, Vec *);
 PETSC_EXTERN PetscErrorCode MatDiagonalRestoreDiagonal(Mat, Vec *);
 PETSC_EXTERN PetscErrorCode MatDiagonalGetInverseDiagonal(Mat, Vec *);
 PETSC_EXTERN PetscErrorCode MatDiagonalRestoreInverseDiagonal(Mat, Vec *);
+PETSC_EXTERN PetscErrorCode MatConstantDiagonalGetConstant(Mat, PetscScalar *);
 
 #if defined(PETSC_HAVE_HYPRE)
 PETSC_EXTERN PetscErrorCode MatHYPRESetPreallocation(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[]);
