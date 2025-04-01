@@ -206,37 +206,83 @@ static PetscErrorCode PCGetInterpolations_BoomerAMG(PC pc, PetscInt *nlevels, Ma
 /*
   Boolean Vecs are created IN PLACE with using data from BoomerAMG.
 */
-static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level[], PetscBT *CFMarkers[])
+static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level[], PetscBT *CFMarkers[], Vec *CFMarkers_Vec[])
 {
-  PC_HYPRE        *jac = (PC_HYPRE *)pc->data;
+  PC_HYPRE *jac = (PC_HYPRE *)pc->data;
+  hypre_IntArray  *h_array;
+  hypre_int       *data;
   PetscBool        same;
-  PetscInt         num_levels, fine_nodes = 0, coarse_nodes;
+  PetscInt         num_levels, iStart, iEnd, fine_nodes = 0;
+  PetscScalar coarse_nodes, one = 1;
   PetscInt        *n_per_temp;
-  PetscBT         *markertmp;
+  //PetscBT         *markertmp;
+  Vec        *markertmp_Vec;
   hypre_IntArray **CF_marker_array;
+  HYPRE_MemoryLocation  memory_location;
 
   PetscFunctionBegin;
   PetscCall(PetscStrcmp(jac->hypre_type, "boomeramg", &same));
   PetscCheck(same, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_NOTSAMETYPE, "Hypre type is not BoomerAMG");
+
   num_levels = hypre_ParAMGDataNumLevels((hypre_ParAMGData *)jac->hsolver);
-  PetscCall(PetscMalloc1(num_levels, &n_per_temp));
-  PetscCall(PetscMalloc1(num_levels - 1, &markertmp));
+  PetscCall(PetscCalloc1(num_levels, &n_per_temp));
+  //PetscCall(PetscMalloc1(num_levels - 1, &markertmp));
+  PetscCall(PetscMalloc1(num_levels - 1, &markertmp_Vec));
+
   CF_marker_array = hypre_ParAMGDataCFMarkerArray((hypre_ParAMGData *)jac->hsolver);
+
   for (PetscInt l = 0, CFMaxIndex = num_levels - 2; CFMaxIndex >= 0; l++, CFMaxIndex--) {
-    fine_nodes   = hypre_IntArraySize(CF_marker_array[CFMaxIndex]);
+    memory_location = hypre_IntArrayMemoryLocation(CF_marker_array[CFMaxIndex]);
+
+    /* Move data to host if needed*/
+   h_array = (hypre_GetActualMemLocation(memory_location) == hypre_MEMORY_DEVICE) ? hypre_IntArrayCloneDeep_v2(CF_marker_array[CFMaxIndex], HYPRE_MEMORY_HOST) : CF_marker_array[CFMaxIndex];
+    data = hypre_IntArrayData(h_array);
+
+    //fine_nodes = hypre_IntArraySize(CF_marker_array[CFMaxIndex]);
+    fine_nodes = hypre_IntArraySize(h_array); // On this processor for some reason.
+    //printf("fine_nodes = %" PetscInt_FMT "\n", fine_nodes);
+    // Print Debugging
+    //for (PetscInt i = 0; i < fine_nodes; i++) { printf("%d\n", data[i]); }
     coarse_nodes = 0;
-    PetscCall(PetscBTCreate(fine_nodes, &markertmp[l]));
-    for (PetscInt k = 0; k < fine_nodes; k++) {
-      if (hypre_IntArrayDataI(CF_marker_array[CFMaxIndex], k) > 0) {
-        PetscCall(PetscBTSet(markertmp[l], k));
+
+    //PetscCall(PetscBTCreate(fine_nodes, &markertmp[l]));
+
+    //Trying to create a Vec object and put the correct values in.
+    PetscCall(VecCreate(PetscObjectComm((PetscObject)pc), &markertmp_Vec[l]));
+    PetscCall(VecSetType(markertmp_Vec[l], VECSTANDARD));
+    PetscCall(VecSetSizes(markertmp_Vec[l], fine_nodes, PETSC_DETERMINE));
+    PetscCall(VecSet(markertmp_Vec[l], -1)); //Value is coarse grid index number as it relates to fine grid index number(current index for this array). Try it for now.. if doesn't work then just use 1 as the value for true
+    //PetscCall(VecView(markertmp_Vec[l], 0));
+    PetscCall(VecGetOwnershipRange(markertmp_Vec[l], &iStart, &iEnd)); 
+    for (PetscInt k = iStart; k < iEnd; k++) {
+      //if (hypre_IntArrayDataI(CF_marker_array[CFMaxIndex], k) > 0) {
+      if (data[k-iStart] > 0) {
+        //PetscCall(PetscBTSet(markertmp[l], k));
+        //printf("k = %" PetscInt_FMT " , n_fine = %" PetscInt_FMT "\n", k, fine_nodes);
+        PetscCall(VecSetValues(markertmp_Vec[l], 1, &k, &coarse_nodes, INSERT_VALUES));
+        //PetscCall(VecSetValues(markertmp_Vec[l], 1, &k, &one, INSERT_VALUES));
         coarse_nodes++;
       }
     }
-    n_per_temp[l] = coarse_nodes;
+
+    PetscCall(VecAssemblyBegin(markertmp_Vec[l]));
+    PetscCall(VecAssemblyEnd(markertmp_Vec[l]));
+    //printf("CF Vec after inserting node value:\n");
+    //PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_INDEX));
+    //PetscCall(VecView(markertmp_Vec[l], PETSC_VIEWER_STDOUT_WORLD));
+    n_per_temp[l] = n_per_temp[l] + coarse_nodes;
+
+    /* Free memory */
+   if (h_array != CF_marker_array[CFMaxIndex])
+   {
+      hypre_IntArrayDestroy(h_array);
+   }
   }
+
   n_per_temp[num_levels - 1] = fine_nodes;
   *n_per_level               = n_per_temp;
-  *CFMarkers                 = markertmp;
+  //*CFMarkers                 = markertmp;
+  *CFMarkers_Vec = markertmp_Vec;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2532,13 +2578,13 @@ PetscErrorCode PCHYPRESetType(PC pc, const char name[])
 
 .seealso: [](ch_ksp), `PC`, `PCMG`, `PCMGGetRestriction()`, `PCMGSetInterpolation()`, `PCMGGetRScale()`, `PCMGGetInterpolation()`, `PCGetInterpolations()`
 @*/
-PetscErrorCode PCHYPREGetCFMarkers(PC pc, PetscInt *n_per_level[], PetscBT *CFMarkers[])
+PetscErrorCode PCHYPREGetCFMarkers(PC pc, PetscInt *n_per_level[], PetscBT *CFMarkers[], Vec *CFMarkers_Vec[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscAssertPointer(n_per_level, 2);
   PetscAssertPointer(CFMarkers, 3);
-  PetscUseMethod(pc, "PCHYPREGetCFMarkers_C", (PC, PetscInt *[], PetscBT *[]), (pc, n_per_level, CFMarkers));
+  PetscUseMethod(pc, "PCHYPREGetCFMarkers_C", (PC, PetscInt *[], PetscBT *[], Vec *[]), (pc, n_per_level, CFMarkers, CFMarkers_Vec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
