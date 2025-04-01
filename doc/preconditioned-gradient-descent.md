@@ -273,6 +273,57 @@ The Reisz representation theorem states that for every $w' \in V'$ there exists 
 Reisz representation of $w' \in V'$.
 
 
+## Revisiting elementary functional analysis
+Many discussions of functional analysis focus on three examples $R^n$, $l_2$, and the Sobolev function spaces $W^{k,p}(\Omega)$.
+The overly simple to the seriously complex. It is useful to consider another collection of spaces to provide insight to the Sobolev spaces.
+
+Recall $l_2$ is the Hilbert space consisting of all sequences, $x_i$, such that
+
+$$
+\sum_i x_i^2 < \inf,
+$$
+with the inner product $ (x,y) = \sum_i x_i y_i$.
+
+Define $h_j$ as the vector space consisting of all sequences, $x_i$, such that
+
+$$
+\sum_i x_i^2 i^{2j}< \inf.
+$$
+with inner product $ (x,y) = \sum_i x_i y_i i^{2j}$, It is trivial to demonstrate $h_j$ is a Hilbert space. It is also trivial to see that
+
+$$
+... \, \supset  h_{-2} \supset h_{-1} \supset l_2  \supset  h_{1} \supset  h_{2} \supset  \, ...
+$$
+
+One can consider the inner product to be defined by a diagonal matrix with entries $ i^{2j}$.
+
+By the Reisz representation theorem a linear functional on $h_j$ can be represented as $ l(x) = (x,y) = \sum x_i y_i i^{2j} $ for some
+$ y \in h_j$.
+
+One can construct less trivial collections of Hilbert spaces by considering inner products defined by non-diagonal matrices. For example, the
+tri-diagonal matrix $ (i-1)^{2j}, i^{2j}, (i+1)^{2j}.$
+
+### Gradient descent in $ h_j$
+
+
+stuff here
+
+
+Consider diagonal linear operators, $L:h_j \rightarrow h_l$ with entries $L_{ii} = i^k $. Which generates
+
+
+$$
+y = L x = {x_1, x_2 2^k, x_2 3^k, ...}
+$$
+
+$$
+|| y ||^2_{h_l} = \sum x_i^2 i^j i^{-j} i^k i^l \le \inf
+$$
+if
+
+$$
+l = j - k.
+$$
 
 
 
