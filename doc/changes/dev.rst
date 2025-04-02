@@ -37,11 +37,19 @@ Changes: Development
 
 .. rubric:: Mat:
 
+- Add ``MatConstantDiagonalGetConstant()``
+- Add ``MATDENSEFROMVECTYPE`` constructor to simplify specifying the right dense format from the command line
+
 .. rubric:: MatCoarsen:
 
 .. rubric:: PC:
 
 .. rubric:: KSP:
+
+- Add ``MatLMVMGetLastUpdate()``
+- Add ``MatLMVMMultAlgorithm``, ``MatLMVMSetMultAlgorithm()``, and ``MatLMVMGetMultAlgorithm()``
+- Add ``MatLMVMSymBroydenGetPhi()`` and ``MatLMVMSymBroydenSetPhi()``
+- Add ``MatLMVMSymBadBroydenGetPsi()`` and ``MatLMVMSymBadBroydenSetPsi()``
 
 .. rubric:: SNES:
 
