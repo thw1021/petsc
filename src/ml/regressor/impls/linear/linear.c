@@ -134,16 +134,18 @@ static PetscErrorCode PetscRegressorDestroy_Linear(PetscRegressor regressor)
 }
 
 /*@
-   PetscRegressorLinearSetFitIntercept - Set a flag to indicate that the intercept (also known as the "bias" or "offset") should
-   be calculated; data are assumed to be mean-centered if false.
+  PetscRegressorLinearSetFitIntercept - Set a flag to indicate that the intercept (also known as the "bias" or "offset") should
+  be calculated; data are assumed to be mean-centered if false.
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  regressor - the `PetscRegressor` context
--  flg       - `PETSC_TRUE` to calculate the intercept, `PETSC_FALSE` to assume mean-centered data (default is `PETSC_TRUE`)
+  Input Parameters:
++ regressor - the `PetscRegressor` context
+- flg       - `PETSC_TRUE` to calculate the intercept, `PETSC_FALSE` to assume mean-centered data (default is `PETSC_TRUE`)
 
-   Level: intermediate
+  Level: intermediate
+
+.seealso: `PetscRegressor`, `PetscRegressorFit()`
 @*/
 PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, PetscBool flg)
 {
@@ -156,16 +158,18 @@ PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, Pet
 }
 
 /*@
-   PetscRegressorLinearSetUseKSP - Set a flag to indicate that a `KSP` object, instead of a `Tao` one, should be used
-   to fit the regressor
+  PetscRegressorLinearSetUseKSP - Set a flag to indicate that a `KSP` object, instead of a `Tao` one, should be used
+  to fit the regressor
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  regressor - the `PetscRegressor` context
--  flg       - `PETSC_TRUE` to use a `KSP`, `PETSC_FALSE` to use a `Tao` object (default is false)
+  Input Parameters:
++ regressor - the `PetscRegressor` context
+- flg       - `PETSC_TRUE` to use a `KSP`, `PETSC_FALSE` to use a `Tao` object (default is false)
 
-   Level: intermediate
+  Level: intermediate
+
+.seealso: `PetscRegressor`, `PetscRegressorLinearGetKSP()`
 @*/
 PetscErrorCode PetscRegressorLinearSetUseKSP(PetscRegressor regressor, PetscBool flg)
 {
@@ -214,20 +218,20 @@ static PetscErrorCode PetscRegressorView_Linear(PetscRegressor regressor, PetscV
 }
 
 /*@
-   PetscRegressorLinearGetKSP - Returns the `KSP` context for a `PETSCREGRESSORLINEAR` object.
+  PetscRegressorLinearGetKSP - Returns the `KSP` context for a `PETSCREGRESSORLINEAR` object.
 
-   Not Collective, but if the `PetscRegressor` is parallel, then the `KSP` object is parallel
+  Not Collective, but if the `PetscRegressor` is parallel, then the `KSP` object is parallel
 
-   Input Parameter:
-.  regressor - the `PetscRegressor` context
+  Input Parameter:
+. regressor - the `PetscRegressor` context
 
-   Output Parameter:
-.  ksp - the `KSP` context
+  Output Parameter:
+. ksp - the `KSP` context
 
-   Level: beginner
+  Level: beginner
 
-   Note:
-   This routine will always return a `KSP`, but, depending on the type of the linear regressor and the options that are set, the regressor may actually use a `Tao` object instead of this `KSP`.
+  Note:
+  This routine will always return a `KSP`, but, depending on the type of the linear regressor and the options that are set, the regressor may actually use a `Tao` object instead of this `KSP`.
 
 .seealso: `PetscRegressorGetTao()`
 @*/
@@ -250,17 +254,17 @@ PetscErrorCode PetscRegressorLinearGetKSP(PetscRegressor regressor, KSP *ksp)
 }
 
 /*@
-   PetscRegressorLinearGetCoefficients - Get a vector of the fitted coefficients from a linear regression model
+  PetscRegressorLinearGetCoefficients - Get a vector of the fitted coefficients from a linear regression model
 
-   Not Collective but the vector is parallel
+  Not Collective but the vector is parallel
 
-   Input Parameter:
-.  regressor - the `PetscRegressor` context
+  Input Parameter:
+. regressor - the `PetscRegressor` context
 
-   Output Parameter:
-.  coefficients - the vector of the coefficients
+  Output Parameter:
+. coefficients - the vector of the coefficients
 
-   Level: beginner
+  Level: beginner
 
 .seealso: `PetscRegressor`, `PetscRegressorLinearGetIntercept()`, `PETSCREGRESSORLINEAR`, `Vec`
 @*/
@@ -276,17 +280,17 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetCoefficients(PetscRegressor r
 }
 
 /*@
-   PetscRegressorLinearGetIntercept - Get the intercept from a linear regression model
+  PetscRegressorLinearGetIntercept - Get the intercept from a linear regression model
 
-   Not Collective
+  Not Collective
 
-   Input Parameter:
-.  regressor - the `PetscRegressor` context
+  Input Parameter:
+. regressor - the `PetscRegressor` context
 
-   Output Parameter
-.  intercept - the intercept
+  Output Parameter:
+. intercept - the intercept
 
-   Level: beginner
+  Level: beginner
 
 .seealso: `PetscRegressor`, `PetscRegressorLinearSetFitIntercept()`, `PetscRegressorLinearGetCoefficients()`, `PETSCREGRESSORLINEAR`
 @*/
@@ -302,19 +306,19 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetIntercept(PetscRegressor regr
 }
 
 /*@C
-   PetscRegressorLinearSetType - Sets the type of linear regression to be performed
+  PetscRegressorLinearSetType - Sets the type of linear regression to be performed
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  regressor - the `PetscRegressor` context (should be of type `PETSCREGRESSORLINEAR`)
--  type      - a known linear regression method
+  Input Parameters:
++ regressor - the `PetscRegressor` context (should be of type `PETSCREGRESSORLINEAR`)
+- type      - a known linear regression method
 
-   Options Database Key:
-.  -regressor_linear_type - Sets the linear regression method; use -help for a list of available methods
+  Options Database Key:
+. -regressor_linear_type - Sets the linear regression method; use -help for a list of available methods
    (for instance "-regressor_linear_type ols" or "-regressor_linear_type lasso")
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: `PetscRegressorLinearGetType()`, `PetscRegressorLinearType`, `PetscRegressorSetType()`
 @*/

@@ -47,6 +47,7 @@ PETSC_EXTERN PetscErrorCode PetscRegressorSetRegularizerWeight(PetscRegressor, P
 PETSC_EXTERN PetscErrorCode PetscRegressorSetUp(PetscRegressor);
 PETSC_EXTERN PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor);
 PETSC_EXTERN PetscErrorCode PetscRegressorView(PetscRegressor, PetscViewer);
+PETSC_EXTERN PetscErrorCode PetscRegressorViewFromOptions(PetscRegressor, PetscObject, const char[]);
 PETSC_EXTERN PetscErrorCode PetscRegressorFit(PetscRegressor, Mat, Vec);
 PETSC_EXTERN PetscErrorCode PetscRegressorPredict(PetscRegressor, Mat, Vec);
 PETSC_EXTERN PetscErrorCode PetscRegressorGetTao(PetscRegressor, Tao *);
@@ -56,3 +57,4 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetKSP(PetscRegressor, KSP *);
 PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetCoefficients(PetscRegressor, Vec *);
 PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetIntercept(PetscRegressor, PetscScalar *);
 PETSC_EXTERN PetscErrorCode PetscRegressorLinearSetType(PetscRegressor, PetscRegressorLinearType);
+PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetType(PetscRegressor, PetscRegressorLinearType *);
