@@ -58,6 +58,8 @@ class Configure(config.package.CMakePackage):
     if self.argDB['with-64-bit-indices']:
       args.append('-DEL_USE_64BIT_INTS=ON')
 
+    args.append('-DCMAKE_POLICY_VERSION_MINIMUM=3.5')
+
     self.pushLanguage('Cxx')
     if config.setCompilers.Configure.isSolaris(self.log):
        raise RuntimeError('Elemental does not compile with Oracle/Solaris/Sun compilers')

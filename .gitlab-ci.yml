@@ -875,6 +875,8 @@ linux-analyzer:
   tags:
     - gce-u22-stage2
   script:
+    - module use /nfs/gce/projects/petsc/soft/u22.04/spack-2024-09-18/modules/linux-ubuntu22.04-x86_64/Core
+    - module --trace load cmake/3.30.2
     - printf "PATH:$PATH\n"
     - printf "PYTHONPATH:$PYTHONPATH\n"
     - python3 --version
