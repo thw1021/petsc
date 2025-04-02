@@ -92,6 +92,11 @@ PETSc Python ode-integrator type (TODO)
 PETSc Python optimization solver type (TODO)
 --------------------------------------------
 
+.. _petsc_python_regressor:
+
+PETSc Python regressor solver type (TODO)
+--------------------------------------------
+
 .. _petsc_python_viewer:
 
 PETSc Python viewer
