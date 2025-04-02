@@ -24,7 +24,7 @@ LinearSolvers
 NonlinearSolvers
 Timestepping
 Optimization
-PetscRegressor
+MachineLearning
 Visualization
 System
 ../changes/index.rst

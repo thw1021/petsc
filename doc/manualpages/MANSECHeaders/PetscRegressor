@@ -6,4 +6,4 @@ of discrete labels or categories) tasks.
 
 `PetscRegressor` internally employs `Tao` (or `KSP` for a few, specialized cases) to solve the underlying numerical
 optimization problems. `PetscRegressor` users can set `Tao` options or otherwise directly manipulate the underlying
-`Tao` context, which can be accessed via `PetscRegressorGetTao()`.
+`Tao` context, which can be accessed via `PetscRegressorGetTao()`. User guide chapter: [](ch_regressor).

@@ -117,7 +117,7 @@ cdef class Regressor(Object):
         CHKERR(PetscRegressorPredict(self.regressor, X.mat, y.vec))
 
     def reset(self) -> None:
-        """Destroy internal data structures of REGRESSOR
+        """Destroy internal data structures of the solver.
 
         Collective.
 
