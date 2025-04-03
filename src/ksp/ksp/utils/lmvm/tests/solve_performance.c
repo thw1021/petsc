@@ -8,10 +8,13 @@ int main(int argc, char **argv)
   PetscInt      n        = 1000;
   PetscInt      n_epochs = 10;
   PetscInt      n_iters  = 10;
+  PetscInt      x_n, x_N;
   Vec           x, g, dx, df, p;
+  VecType       vec_type;
   PetscRandom   rand;
   PetscLogStage matsolve_loop, main_stage;
-  Mat           B;
+  PetscBool     is_cdiag, is_diag;
+  Mat           B, J0;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, help, "KSP");
@@ -25,7 +28,28 @@ int main(int argc, char **argv)
   PetscCall(VecDuplicate(x, &dx));
   PetscCall(VecDuplicate(x, &df));
   PetscCall(VecDuplicate(x, &p));
+  PetscCall(VecGetSize(x, &x_N));
+  PetscCall(VecGetLocalSize(x, &x_n));
+  PetscCall(VecGetType(x, &vec_type));
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &J0));
+  PetscCall(MatSetSizes(J0, x_n, x_n, x_N, x_N));
+  PetscCall(MatSetVecType(J0, vec_type));
+  PetscCall(MatSetType(J0, MATCONSTANTDIAGONAL));
+  PetscCall(MatSetOptionsPrefix(J0, "mat_lmvm_J0_"));
+  PetscCall(MatSetFromOptions(J0));
+  PetscCall(MatZeroEntries(J0));
+  PetscCall(MatShift(J0, 1.0));
   PetscCall(MatCreateLMVMBFGS(PETSC_COMM_WORLD, PETSC_DETERMINE, n, &B));
+  PetscCall(PetscObjectTypeCompare((PetscObject)J0, MATCONSTANTDIAGONAL, &is_cdiag));
+  PetscCall(PetscObjectTypeCompare((PetscObject)J0, MATDIAGONAL, &is_diag));
+  if (is_cdiag) {
+    PetscCall(MatLMVMSetJ0Scale(B, 1.0));
+  } else if (is_diag) {
+    Vec d;
+    PetscCall(MatDiagonalGetDiagonal(J0, &d));
+    PetscCall(MatLMVMSetJ0Diag(B, d));
+    PetscCall(MatDiagonalRestoreDiagonal(J0, &d));
+  }
   PetscCall(MatSetFromOptions(B));
   PetscCall(MatLMVMAllocate(B, x, g));
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rand));
@@ -69,6 +93,7 @@ int main(int argc, char **argv)
   PetscCall(MatView(B, PETSC_VIEWER_STDOUT_(PETSC_COMM_WORLD)));
   PetscCall(PetscRandomDestroy(&rand));
   PetscCall(MatDestroy(&B));
+  PetscCall(MatDestroy(&J0));
   PetscCall(VecDestroy(&p));
   PetscCall(VecDestroy(&df));
   PetscCall(VecDestroy(&dx));
