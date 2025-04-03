@@ -12,3 +12,4 @@ The Solvers in PETSc/TAO
    snes
    ts
    tao
+   regressor
