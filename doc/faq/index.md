@@ -320,7 +320,7 @@ architecture and level of optimization, a new user must merely:
 See the {ref}`quick-start tutorial <tut_install>` for a step-by-step guide on
 installing PETSc, in case you have missed a step.
 
-See the users manual section on {ref}`getting started <sec-getting-started>`.
+See the users manual section on {ref}`getting started <sec_getting_started>`.
 :::
 
 ### The PETSc distribution is SO Large. How can I reduce my disk space usage?
