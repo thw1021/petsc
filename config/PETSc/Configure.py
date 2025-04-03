@@ -489,7 +489,7 @@ prepend-path PATH "%s"
       self.addMakeMacro('PETSC_TS_LIB',  liblist(pkgs[-7:]))
       self.addMakeMacro('PETSC_TAO_LIB', liblist(pkgs[-8:]))
       self.addMakeMacro('PETSC_ML_LIB', liblist(pkgs[-9:]))
-    self.addMakeMacro('PETSC_LIB','${PETSC_TAO_LIB}')
+    self.addMakeMacro('PETSC_LIB','${PETSC_ML_LIB}')
     self.addMakeMacro('PETSC_LIB_BASIC',self.petsclib)
 
     if not os.path.exists(os.path.join(self.petscdir.dir,self.arch.arch,'lib')):
