@@ -31,6 +31,7 @@ PetscErrorCode MatLMVMUpdate(Mat B, Vec X, Vec F)
   PetscValidHeaderSpecific(F, VEC_CLASSID, 3);
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)B, MATLMVM, &same));
   if (!same) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscLogEventBegin(MATLMVM_Update, NULL, NULL, NULL, NULL));
   lmvm = (Mat_LMVM *)B->data;
   if (!lmvm->allocated) {
     PetscCall(MatLMVMAllocate(B, X, F));
@@ -43,6 +44,7 @@ PetscErrorCode MatLMVMUpdate(Mat B, Vec X, Vec F)
     if (same) PetscCall(MatLMVMUpdate(lmvm->J0, X, F));
   }
   PetscCall((*lmvm->ops->update)(B, X, F));
+  PetscCall(PetscLogEventEnd(MATLMVM_Update, NULL, NULL, NULL, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

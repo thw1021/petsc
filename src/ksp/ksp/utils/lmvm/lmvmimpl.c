@@ -2,6 +2,8 @@
 #include <../src/ksp/ksp/utils/lmvm/lmvm.h> /*I "petscksp.h" I*/
 #include <petsc/private/deviceimpl.h>
 
+PetscLogEvent MATLMVM_Update = 0;
+
 PetscErrorCode MatReset_LMVM(Mat B, PetscBool destructive)
 {
   Mat_LMVM *lmvm = (Mat_LMVM *)B->data;
@@ -359,6 +361,8 @@ PetscErrorCode MatCreate_LMVM(Mat B)
   lmvm->ops->update   = MatUpdate_LMVM;
   lmvm->ops->allocate = MatAllocate_LMVM;
   lmvm->ops->reset    = MatReset_LMVM;
+
+  if (MATLMVM_Update == 0) PetscCall(PetscLogEventRegister("MatLMVMUpdate", MAT_CLASSID, &MATLMVM_Update));
 
   PetscCall(KSPCreate(PetscObjectComm((PetscObject)B), &lmvm->J0ksp));
   PetscCall(PetscObjectIncrementTabLevel((PetscObject)lmvm->J0ksp, (PetscObject)B, 1));

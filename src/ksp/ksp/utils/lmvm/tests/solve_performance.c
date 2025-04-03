@@ -15,6 +15,8 @@ int main(int argc, char **argv)
   PetscLogStage matsolve_loop, main_stage;
   PetscBool     is_cdiag, is_diag;
   Mat           B, J0;
+  MatLMVMSymBroydenScaleType scale_type = MAT_LMVM_SYMBROYDEN_SCALE_USER;
+  PetscBool     set;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, help, "KSP");
@@ -42,16 +44,19 @@ int main(int argc, char **argv)
   PetscCall(MatCreateLMVMBFGS(PETSC_COMM_WORLD, PETSC_DETERMINE, n, &B));
   PetscCall(PetscObjectTypeCompare((PetscObject)J0, MATCONSTANTDIAGONAL, &is_cdiag));
   PetscCall(PetscObjectTypeCompare((PetscObject)J0, MATDIAGONAL, &is_diag));
-  if (is_cdiag) {
-    PetscCall(MatLMVMSetJ0Scale(B, 1.0));
-  } else if (is_diag) {
-    Vec d;
-    PetscCall(MatDiagonalGetDiagonal(J0, &d));
-    PetscCall(MatLMVMSetJ0Diag(B, d));
-    PetscCall(MatDiagonalRestoreDiagonal(J0, &d));
-  }
   PetscCall(MatSetFromOptions(B));
   PetscCall(MatLMVMAllocate(B, x, g));
+  PetscCall(PetscOptionsGetEnum(NULL, NULL, "-mat_lmvm_scale_type", MatLMVMSymBroydenScaleTypes, (PetscEnum *)&scale_type, NULL));
+  if (scale_type == MAT_LMVM_SYMBROYDEN_SCALE_USER) {
+    if (is_cdiag) {
+      PetscCall(MatLMVMSetJ0Scale(B, 1.0));
+    } else if (is_diag) {
+      Vec d;
+      PetscCall(MatDiagonalGetDiagonal(J0, &d));
+      PetscCall(MatLMVMSetJ0Diag(B, d));
+      PetscCall(MatDiagonalRestoreDiagonal(J0, &d));
+    }
+  }
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rand));
   PetscCall(PetscRandomSetInterval(rand, -1.0, 1.0));
   PetscCall(PetscRandomSetFromOptions(rand));
