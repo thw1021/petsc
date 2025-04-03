@@ -3,7 +3,7 @@ class RegressorType(object):
 
     See Also
     --------
-    petsc.RegressorType
+    petsc.PetscRegressorType
 
     """
     LINEAR = S_(PETSCREGRESSORLINEAR)
@@ -16,7 +16,7 @@ cdef class Regressor(Object):
 
     See Also
     --------
-    petsc.Regressor
+    petsc.PetscRegressor
 
     """
 
@@ -38,7 +38,7 @@ cdef class Regressor(Object):
 
         See Also
         --------
-        petsc.RegressorView
+        petsc.PetscRegressorView
 
         """
         cdef PetscViewer cviewer = NULL
@@ -57,7 +57,7 @@ cdef class Regressor(Object):
 
         See Also
         --------
-        Sys.getDefaultComm, petsc.RegressorCreate
+        Sys.getDefaultComm, petsc.PetscRegressorCreate
 
         """
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
@@ -73,7 +73,7 @@ cdef class Regressor(Object):
 
         See Also
         --------
-        petsc.RegressorSetUp
+        petsc.PetscRegressorSetUp
 
         """
         CHKERR(PetscRegressorSetUp(self.regressor))
@@ -92,7 +92,7 @@ cdef class Regressor(Object):
 
         See Also
         --------
-        petsc.RegressorPredict
+        petsc.PetscRegressorPredict
 
         """
         CHKERR(PetscRegressorFit(self.regressor, X.mat, y.vec))
@@ -111,7 +111,7 @@ cdef class Regressor(Object):
 
         See Also
         --------
-        petsc.RegressorFit
+        petsc.PetscRegressorFit
 
         """
         CHKERR(PetscRegressorPredict(self.regressor, X.mat, y.vec))
@@ -123,7 +123,7 @@ cdef class Regressor(Object):
 
         See Also
         --------
-        petsc.RegressorDestroy
+        petsc.PetscRegressorDestroy
 
         """
         CHKERR(PetscRegressorReset(self.regressor))
@@ -135,7 +135,7 @@ cdef class Regressor(Object):
 
         See Also
         --------
-        petsc.RegressorDestroy
+        petsc.PetscRegressorDestroy
 
         """
         CHKERR(PetscRegressorDestroy(&self.regressor))
@@ -153,7 +153,7 @@ cdef class Regressor(Object):
 
         See Also
         --------
-        getType, petsc.RegressorSetType
+        getType, petsc.PetscRegressorSetType
 
         """
         cdef PetscRegressorType cval = NULL
@@ -167,7 +167,7 @@ cdef class Regressor(Object):
 
         See Also
         --------
-        setType, petsc.RegressorGetType
+        setType, petsc.PetscRegressorGetType
 
         """
         cdef PetscRegressorType ctype = NULL

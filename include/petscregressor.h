@@ -6,24 +6,36 @@
 /* SUBMANSEC = PetscRegressor */
 
 /*S
-     PetscRegressor - Abstract PETSc object that manages regression and classification problems
+   PetscRegressor - Abstract PETSc object that manages regression and classification problems
 
    Level: beginner
 
 .seealso: `PetscRegressorCreate()`, `PetscRegressorSetType()`, `PetscRegressorType`, `PetscRegressorDestroy()`
 S*/
-
 typedef struct _p_PetscRegressor *PetscRegressor;
 
 /*J
-     PetscRegressorType - String with the name of a PETSc regression method.
+  PetscRegressorType - String with the name of a PETSc regression method.
 
-   Level: beginner
+  Level: beginner
 
-.seealso: `PetscRegressorSetType()`, `PetscRegressor`, `PetscRegressorRegister()`, `PetscRegressorCreate()`, `PetscRegressorSetFromOptions()`
+.seealso: [](ch_regressor), `PetscRegressorSetType()`, `PetscRegressor`, `PetscRegressorRegister()`, `PetscRegressorCreate()`, `PetscRegressorSetFromOptions()`
 J*/
 typedef const char *PetscRegressorType;
 #define PETSCREGRESSORLINEAR "linear"
+
+/*E
+  PetscRegressorLinearType - Type of linear regression
+
+  Values:
++  `REGRESSOR_LINEAR_OLS`    - ordinary least square
+.  `REGRESSOR_LINEAR_LASSO`  - lasso
+-  `REGRESSOR_LINEAR_RIDGE`  - ridge
+
+  Level: advanced
+
+.seealso: `PetscRegressor`, `PETSCREGRESSORLINEAR`
+E*/
 
 typedef enum {
   REGRESSOR_LINEAR_OLS,
