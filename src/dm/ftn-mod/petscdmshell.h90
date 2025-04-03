@@ -1,8 +1,9 @@
-Interface DMShellSetCreateFieldDecomposition
-	Subroutine DMShellSetCreateFieldDecomposition(dm, decomp, ierr)
-		import tDM
-		DM dm
-		External decomp
-		PetscErrorCode ierr
-	End Subroutine
-End Interface
+
+      Interface DMShellSetCreateFieldDecomposition
+        Subroutine DMShellSetCreateFieldDecomposition(dm, decomp, ierr)
+          import tDM
+          DM dm
+          External decomp
+          PetscErrorCode, intent(out) :: ierr
+        End Subroutine
+      End Interface

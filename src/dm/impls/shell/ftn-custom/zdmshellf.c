@@ -8,7 +8,7 @@
   #define dmshellsetglobaltolocal_            DMSHELLSETGLOBALTOLOCAL
   #define dmshellsetlocaltoglobal_            DMSHELLSETLOCALTOGLOBAL
   #define dmshellsetlocaltolocal_             DMSHELLSETLOCALTOLOCAL
-  #define dmshellsetcreatefielddecomposition_ DMSHELLSETCREATEFIELDDECOMPOSITION /* NEW: to store the field decomp callback */
+  #define dmshellsetcreatefielddecomposition_ DMSHELLSETCREATEFIELDDECOMPOSITION
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
   #define dmshellsetcreatematrix_             dmshellsetcreatematrix
   #define dmshellsetcreateglobalvector_       dmshellsetcreateglobalvector
@@ -16,7 +16,7 @@
   #define dmshellsetglobaltolocal_            dmshellsetglobaltolocal
   #define dmshellsetlocaltoglobal_            dmshellsetlocaltoglobal
   #define dmshellsetlocaltolocal_             dmshellsetlocaltolocal
-  #define dmshellsetcreatefielddecomposition_ dmshellsetcreatefielddecomposition /* NEW: to store the field decomp callback */
+  #define dmshellsetcreatefielddecomposition_ dmshellsetcreatefielddecomposition
 #endif
 
 /*
