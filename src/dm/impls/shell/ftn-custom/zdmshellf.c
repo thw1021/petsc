@@ -34,7 +34,7 @@ static struct {
   PetscFortranCallbackId localtoglobalend;
   PetscFortranCallbackId localtolocalbegin;
   PetscFortranCallbackId localtolocalend;
-  PetscFortranCallbackId createfielddecomposition; /* NEW: to store the field decomp callback */
+  PetscFortranCallbackId createfielddecomposition;
 } _cb;
 
 static PetscErrorCode ourcreatematrix(DM dm, Mat *A)
