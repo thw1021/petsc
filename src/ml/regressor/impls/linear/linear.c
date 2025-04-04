@@ -145,6 +145,9 @@ static PetscErrorCode PetscRegressorDestroy_Linear(PetscRegressor regressor)
 
   Level: intermediate
 
+  Note:
+  If the user indicates that the intercept should not be calculated, the intercept will be set to zero.
+
 .seealso: `PetscRegressor`, `PetscRegressorFit()`
 @*/
 PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, PetscBool flg)
@@ -429,10 +432,10 @@ static PetscErrorCode PetscRegressorPredict_Linear(PetscRegressor regressor, Mat
 +  -regressor_linear_fit_intercept - Calculate the intercept for the linear model
 -  -regressor_linear_use_ksp       - Use `KSP` instead of `Tao` for linear model fitting (non-regularized variants only)
 
-   Note:
-   This is the default regressor in `PetscRegressor`
-
    Level: beginner
+
+   Note:
+   This is the default regressor in `PetscRegressor`.
 
 .seealso: `PetscRegressorCreate()`, `PetscRegressor`, `PetscRegressorSetType()`
 M*/
