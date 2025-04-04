@@ -49,8 +49,7 @@ static PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
     PetscCall(VecDuplicate(regressor->target, &linear->rhs));
     PetscCall(MatMult(linear->C, regressor->target, linear->rhs));
   } else {
-    /* When not fitting intercept, we assume that the input data are already centered.
-     * TODO: Perhaps revisit exactly what options should exist around this. */
+    // When not fitting intercept, we assume that the input data are already centered.
     linear->X   = regressor->training;
     linear->rhs = regressor->target;
 
@@ -65,8 +64,6 @@ static PetscErrorCode PetscRegressorSetUp_Linear(PetscRegressor regressor)
 
     if (!linear->ksp) {
       PetscCall(PetscRegressorLinearGetKSP(regressor, &linear->ksp));
-      // TODO: Figure out if I need to set operators for the KSP here or set the operator X.
-      // I think maybe I can just do this stuff in the Fit() routine.
     }
     ksp = linear->ksp;
 

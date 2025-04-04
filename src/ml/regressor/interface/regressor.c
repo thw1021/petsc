@@ -68,7 +68,6 @@ PetscErrorCode PetscRegressorCreate(MPI_Comm comm, PetscRegressor *newregressor)
 
   PetscCall(PetscHeaderCreate(regressor, PETSCREGRESSOR_CLASSID, "PetscRegressor", "Regressor", "PetscRegressor", comm, PetscRegressorDestroy, PetscRegressorView));
 
-  // TODO: Finish setting the various fields of the PetscRegressor private data structure to defaults, etc.
   regressor->setupcalled = PETSC_FALSE;
   regressor->fitcalled   = PETSC_FALSE;
   regressor->data        = NULL;
@@ -110,7 +109,6 @@ PetscErrorCode PetscRegressorView(PetscRegressor regressor, PetscViewer viewer)
   PetscRegressorType type;
 
   PetscFunctionBegin;
-  // TODO: Complete this when I have a good idea of what bits of the PetscRegressor should be shown!
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   if (!viewer) PetscCall(PetscViewerASCIIGetStdout(((PetscObject)regressor)->comm, &viewer));
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
