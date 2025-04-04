@@ -357,6 +357,7 @@ PetscErrorCode PetscRegressorLinearGetType(PetscRegressor regressor, PetscRegres
   PetscBool              same;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   PetscCall(PetscObjectTypeCompare((PetscObject)regressor, PETSCREGRESSORLINEAR, &same));
   PetscCheck(same, PetscObjectComm((PetscObject)regressor), PETSC_ERR_ARG_INCOMP, "Regressor is not PETSCREGRESSORLINEAR type");
   *type = linear->type;
