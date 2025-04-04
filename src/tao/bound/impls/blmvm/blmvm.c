@@ -8,7 +8,9 @@ static PetscErrorCode TaoSolve_BLMVM(Tao tao)
   TAO_BLMVM                   *blmP      = (TAO_BLMVM *)tao->data;
   TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
   PetscReal                    f, fold, gdx, gnorm, gnorm2;
-  PetscReal                    stepsize = 1.0, delta;
+  PetscReal                    stepsize                   = 1.0, delta;
+  Vec                          unprojected_gradient_riesz = tao->inner_product_ksp ? blmP->unprojected_gradient_riesz : blmP->unprojected_gradient;
+  Vec                          gradient_riesz             = tao->inner_product_ksp ? tao->gradient_riesz : tao->gradient;
 
   PetscFunctionBegin;
   /*  Project initial point onto bounds */
@@ -18,9 +20,13 @@ static PetscErrorCode TaoSolve_BLMVM(Tao tao)
 
   /* Check convergence criteria */
   PetscCall(TaoComputeObjectiveAndGradient(tao, tao->solution, &f, blmP->unprojected_gradient));
-  PetscCall(VecBoundGradientProjection(blmP->unprojected_gradient, tao->solution, tao->XL, tao->XU, tao->gradient));
-
-  PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &gnorm));
+  PetscCall(TaoComputeRieszRepresentation(tao, blmP->unprojected_gradient, unprojected_gradient_riesz));
+  PetscCall(VecBoundGradientProjection(unprojected_gradient_riesz, tao->solution, tao->XL, tao->XU, gradient_riesz));
+  /* gradient_riesz is in the solution space: gradient is g = M * g_r;
+     the solution norm of g_r is sqrt(g_r' * M * g_r) = sqrt(g_r' * M * M^-1 * M * g_r) = sqrt(g' * M^-1 * g),
+     which is the gradient norm of g.
+     so computing the solution norm of g_r at the same time that we compute g computes the correct norm */
+  PetscCall(TaoComputeSolutionNorm(tao, gradient_riesz, tao->gradient, &gnorm));
   PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
 
   tao->reason = TAO_CONTINUE_ITERATING;
@@ -54,13 +60,16 @@ static PetscErrorCode TaoSolve_BLMVM(Tao tao)
     PetscCall(MatLMVMSymBroydenSetDelta(blmP->M, delta));
     PetscCall(MatLMVMUpdate(blmP->M, tao->solution, tao->gradient));
     PetscCall(MatSolve(blmP->M, blmP->unprojected_gradient, tao->stepdirection));
+    /* here tao->gradient is being used as a work vector to store the projection of the step direction,
+       it does not actually store a gradient quantity */
     PetscCall(VecBoundGradientProjection(tao->stepdirection, tao->solution, tao->XL, tao->XU, tao->gradient));
 
     /* Check for success (descent direction) */
     PetscCall(VecDot(blmP->unprojected_gradient, tao->gradient, &gdx));
     if (gdx <= 0) {
       /* Step is not descent or solve was not successful
-         Use steepest descent direction (scaled) */
+         Use steepest descent direction (that is, stepdirection = - H0 * unprojected_gradient, where H0 is the BFGS base
+         inverse Hessian) */
       ++blmP->grad;
 
       PetscCall(MatLMVMReset(blmP->M, PETSC_FALSE));
@@ -104,8 +113,9 @@ static PetscErrorCode TaoSolve_BLMVM(Tao tao)
     }
 
     /* Check for converged */
-    PetscCall(VecBoundGradientProjection(blmP->unprojected_gradient, tao->solution, tao->XL, tao->XU, tao->gradient));
-    PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &gnorm));
+    PetscCall(TaoComputeRieszRepresentation(tao, blmP->unprojected_gradient, unprojected_gradient_riesz));
+    PetscCall(VecBoundGradientProjection(unprojected_gradient_riesz, tao->solution, tao->XL, tao->XU, gradient_riesz));
+    PetscCall(TaoComputeSolutionNorm(tao, gradient_riesz, tao->gradient, &gnorm));
     PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Not-a-Number");
     tao->niter++;
     PetscCall(TaoLogConvergenceHistory(tao, f, gnorm, 0.0, tao->ksp_its));
@@ -124,6 +134,7 @@ static PetscErrorCode TaoSetup_BLMVM(Tao tao)
   PetscCall(VecDuplicate(tao->solution, &blmP->Xold));
   PetscCall(VecDuplicate(tao->solution, &blmP->Gold));
   PetscCall(VecDuplicate(tao->solution, &blmP->unprojected_gradient));
+  if (tao->inner_product_ksp != NULL && !blmP->unprojected_gradient_riesz) PetscCall(VecDuplicate(tao->solution, &blmP->unprojected_gradient_riesz));
   if (!tao->stepdirection) PetscCall(VecDuplicate(tao->solution, &tao->stepdirection));
   if (!tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
   /* Allocate matrix for the limited memory approximation */
@@ -140,13 +151,12 @@ static PetscErrorCode TaoDestroy_BLMVM(Tao tao)
   TAO_BLMVM *blmP = (TAO_BLMVM *)tao->data;
 
   PetscFunctionBegin;
-  if (tao->setupcalled) {
-    PetscCall(VecDestroy(&blmP->unprojected_gradient));
-    PetscCall(VecDestroy(&blmP->Xold));
-    PetscCall(VecDestroy(&blmP->Gold));
-  }
+  PetscCall(VecDestroy(&blmP->unprojected_gradient_riesz));
+  PetscCall(VecDestroy(&blmP->unprojected_gradient));
+  PetscCall(VecDestroy(&blmP->Xold));
+  PetscCall(VecDestroy(&blmP->Gold));
   PetscCall(MatDestroy(&blmP->M));
-  if (blmP->H0) PetscCall(PetscObjectDereference((PetscObject)blmP->H0));
+  PetscCall(MatDestroy(&blmP->H0));
   PetscCall(PetscFree(tao->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

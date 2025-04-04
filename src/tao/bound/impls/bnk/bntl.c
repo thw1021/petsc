@@ -114,6 +114,8 @@ PetscErrorCode TaoSolve_BNTL(Tao tao)
   PetscReal oldTrust, prered, actred, steplen, resnorm;
   PetscBool cgTerminate, needH = PETSC_TRUE, stepAccepted, shift = PETSC_FALSE;
   PetscInt  stepType, nDiff;
+  Vec       unprojected_gradient_riesz = tao->inner_product_ksp ? bnk->unprojected_gradient_riesz : bnk->unprojected_gradient;
+  Vec       gradient_riesz             = tao->inner_product_ksp ? tao->gradient_riesz : tao->gradient;
 
   PetscFunctionBegin;
   /* Initialize the preconditioner, KSP solver and trust radius/line search */
@@ -180,10 +182,11 @@ PetscErrorCode TaoSolve_BNTL(Tao tao)
       needH   = PETSC_TRUE;
       ++bnk->newt;
       PetscCall(TaoComputeGradient(tao, tao->solution, bnk->unprojected_gradient));
+      PetscCall(TaoComputeRieszRepresentation(tao, bnk->unprojected_gradient, unprojected_gradient_riesz));
       PetscCall(TaoBNKEstimateActiveSet(tao, bnk->as_type));
-      PetscCall(VecCopy(bnk->unprojected_gradient, tao->gradient));
-      if (bnk->active_idx) PetscCall(VecISSet(tao->gradient, bnk->active_idx, 0.0));
-      PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &bnk->gnorm));
+      PetscCall(VecCopy(unprojected_gradient_riesz, gradient_riesz));
+      if (bnk->active_idx) PetscCall(VecISSet(gradient_riesz, bnk->active_idx, 0.0));
+      PetscCall(TaoComputeSolutionNorm(tao, gradient_riesz, tao->gradient, &bnk->gnorm));
     } else {
       /* Trust-region rejected the step. Revert the solution. */
       bnk->f = bnk->fold;
@@ -206,9 +209,9 @@ PetscErrorCode TaoSolve_BNTL(Tao tao)
         needH = PETSC_TRUE;
         /* compute the projected gradient */
         PetscCall(TaoBNKEstimateActiveSet(tao, bnk->as_type));
-        PetscCall(VecCopy(bnk->unprojected_gradient, tao->gradient));
-        if (bnk->active_idx) PetscCall(VecISSet(tao->gradient, bnk->active_idx, 0.0));
-        PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &bnk->gnorm));
+        PetscCall(VecCopy(unprojected_gradient_riesz, gradient_riesz));
+        if (bnk->active_idx) PetscCall(VecISSet(gradient_riesz, bnk->active_idx, 0.0));
+        PetscCall(TaoComputeSolutionNorm(tao, gradient_riesz, tao->gradient, &bnk->gnorm));
         /* Line search succeeded so we should update the trust radius based on the LS step length */
         tao->trust = oldTrust;
         PetscCall(TaoBNKUpdateTrustRadius(tao, prered, actred, BNK_UPDATE_STEP, stepType, &stepAccepted));
@@ -218,8 +221,8 @@ PetscErrorCode TaoSolve_BNTL(Tao tao)
     }
 
     /*  Check for termination */
-    PetscCall(VecFischer(tao->solution, bnk->unprojected_gradient, tao->XL, tao->XU, bnk->W));
-    PetscCall(VecNorm(bnk->W, NORM_2, &resnorm));
+    PetscCall(VecFischer(tao->solution, unprojected_gradient_riesz, tao->XL, tao->XU, bnk->W));
+    PetscCall(TaoComputeSolutionNorm(tao, bnk->W, NULL, &resnorm));
     PetscCheck(!PetscIsInfOrNanReal(resnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
     ++tao->niter;
     PetscCall(TaoLogConvergenceHistory(tao, bnk->f, resnorm, 0.0, tao->ksp_its));

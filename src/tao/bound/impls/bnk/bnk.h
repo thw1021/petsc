@@ -23,6 +23,7 @@ typedef struct {
   /* Allocated vectors */
   Vec W, Xwork, Gwork, Xold, Gold;
   Vec unprojected_gradient, unprojected_gradient_old;
+  Vec unprojected_gradient_riesz;
 
   /* Unallocated matrices and vectors */
   Mat H_inactive, Hpre_inactive;

@@ -13,6 +13,7 @@ typedef struct {
   Vec g_work, y_work, d_work;
   Vec sk, yk;
   Vec unprojected_gradient, unprojected_gradient_old;
+  Vec unprojected_gradient_riesz;
   Vec inactive_grad, inactive_step;
 
   IS active_lower, active_upper, active_fixed, active_idx, inactive_idx, inactive_old, new_inactives;

@@ -48,6 +48,8 @@ PetscErrorCode TaoBNKInitialize(Tao tao, PetscInt initType, PetscBool *needH)
   PetscInt  j_max = 1;
   PetscInt  i, j;
   PetscBool kspTR;
+  Vec       unprojected_gradient_riesz = tao->inner_product_ksp ? bnk->unprojected_gradient_riesz : bnk->unprojected_gradient;
+  Vec       gradient_riesz             = tao->inner_product_ksp ? tao->gradient_riesz : tao->gradient;
 
   PetscFunctionBegin;
   /* Project the current point onto the feasible set */
@@ -60,14 +62,15 @@ PetscErrorCode TaoBNKInitialize(Tao tao, PetscInt initType, PetscBool *needH)
 
   /* Check convergence criteria */
   PetscCall(TaoComputeObjectiveAndGradient(tao, tao->solution, &bnk->f, bnk->unprojected_gradient));
+  PetscCall(TaoComputeRieszRepresentation(tao, bnk->unprojected_gradient, unprojected_gradient_riesz));
   PetscCall(TaoBNKEstimateActiveSet(tao, bnk->as_type));
-  PetscCall(VecCopy(bnk->unprojected_gradient, tao->gradient));
-  if (bnk->active_idx) PetscCall(VecISSet(tao->gradient, bnk->active_idx, 0.0));
-  PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &bnk->gnorm));
+  PetscCall(VecCopy(unprojected_gradient_riesz, gradient_riesz));
+  if (bnk->active_idx) PetscCall(VecISSet(gradient_riesz, bnk->active_idx, 0.0));
+  PetscCall(TaoComputeSolutionNorm(tao, gradient_riesz, tao->gradient, &bnk->gnorm));
 
   /* Test the initial point for convergence */
-  PetscCall(VecFischer(tao->solution, bnk->unprojected_gradient, tao->XL, tao->XU, bnk->W));
-  PetscCall(VecNorm(bnk->W, NORM_2, &resnorm));
+  PetscCall(VecFischer(tao->solution, unprojected_gradient_riesz, tao->XL, tao->XU, bnk->W));
+  PetscCall(TaoComputeSolutionNorm(tao, bnk->W, NULL, &resnorm));
   PetscCheck(!PetscIsInfOrNanReal(bnk->f) && !PetscIsInfOrNanReal(resnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
   PetscCall(TaoLogConvergenceHistory(tao, bnk->f, resnorm, 0.0, tao->ksp_its));
   PetscCall(TaoMonitor(tao, tao->niter, bnk->f, resnorm, 0.0, 1.0));
@@ -145,7 +148,7 @@ PetscErrorCode TaoBNKInitialize(Tao tao, PetscInt initType, PetscBool *needH)
         for (i = 0; i < i_max; ++i) {
           /* Take a steepest descent step and snap it to bounds */
           PetscCall(VecCopy(tao->solution, bnk->Xold));
-          PetscCall(VecAXPY(tao->solution, -tao->trust / bnk->gnorm, tao->gradient));
+          PetscCall(VecAXPY(tao->solution, -tao->trust / bnk->gnorm, gradient_riesz));
           PetscCall(TaoBoundSolution(tao->solution, tao->XL, tao->XU, 0.0, &nDiff, tao->solution));
           /* Compute the step we actually accepted */
           PetscCall(VecCopy(tao->solution, bnk->W));
@@ -235,20 +238,21 @@ PetscErrorCode TaoBNKInitialize(Tao tao, PetscInt initType, PetscBool *needH)
           /* We accidentally found a solution better than the initial, so accept it */
           bnk->f = f_min;
           PetscCall(VecCopy(tao->solution, bnk->Xold));
-          PetscCall(VecAXPY(tao->solution, sigma, tao->gradient));
+          PetscCall(VecAXPY(tao->solution, sigma, gradient_riesz));
           PetscCall(TaoBoundSolution(tao->solution, tao->XL, tao->XU, 0.0, &nDiff, tao->solution));
           PetscCall(VecCopy(tao->solution, tao->stepdirection));
           PetscCall(VecAXPY(tao->stepdirection, -1.0, bnk->Xold));
           PetscCall(TaoComputeGradient(tao, tao->solution, bnk->unprojected_gradient));
+          PetscCall(TaoComputeRieszRepresentation(tao, bnk->unprojected_gradient, unprojected_gradient_riesz));
           PetscCall(TaoBNKEstimateActiveSet(tao, bnk->as_type));
-          PetscCall(VecCopy(bnk->unprojected_gradient, tao->gradient));
-          if (bnk->active_idx) PetscCall(VecISSet(tao->gradient, bnk->active_idx, 0.0));
+          PetscCall(VecCopy(unprojected_gradient_riesz, gradient_riesz));
+          if (bnk->active_idx) PetscCall(VecISSet(gradient_riesz, bnk->active_idx, 0.0));
           /* Compute gradient at the new iterate and flip switch to compute the Hessian later */
-          PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &bnk->gnorm));
+          PetscCall(TaoComputeSolutionNorm(tao, gradient_riesz, tao->gradient, &bnk->gnorm));
           *needH = PETSC_TRUE;
           /* Test the new step for convergence */
-          PetscCall(VecFischer(tao->solution, bnk->unprojected_gradient, tao->XL, tao->XU, bnk->W));
-          PetscCall(VecNorm(bnk->W, NORM_2, &resnorm));
+          PetscCall(VecFischer(tao->solution, unprojected_gradient_riesz, tao->XL, tao->XU, bnk->W));
+          PetscCall(TaoComputeSolutionNorm(tao, bnk->W, NULL, &resnorm));
           PetscCheck(!PetscIsInfOrNanReal(resnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
           PetscCall(TaoLogConvergenceHistory(tao, bnk->f, resnorm, 0.0, tao->ksp_its));
           PetscCall(TaoMonitor(tao, tao->niter, bnk->f, resnorm, 0.0, 1.0));
@@ -300,13 +304,14 @@ PetscErrorCode TaoBNKEstimateActiveSet(Tao tao, PetscInt asType)
 {
   TAO_BNK  *bnk = (TAO_BNK *)tao->data;
   PetscBool hessComputed, diagExists, hadactive;
+  Vec       unprojected_gradient_riesz = tao->inner_product_ksp ? bnk->unprojected_gradient_riesz : bnk->unprojected_gradient;
 
   PetscFunctionBegin;
   hadactive = bnk->active_idx ? PETSC_TRUE : PETSC_FALSE;
   switch (asType) {
   case BNK_AS_NONE:
     PetscCall(ISDestroy(&bnk->inactive_idx));
-    PetscCall(VecWhichInactive(tao->XL, tao->solution, bnk->unprojected_gradient, tao->XU, PETSC_TRUE, &bnk->inactive_idx));
+    PetscCall(VecWhichInactive(tao->XL, tao->solution, unprojected_gradient_riesz, tao->XU, PETSC_TRUE, &bnk->inactive_idx));
     PetscCall(ISDestroy(&bnk->active_idx));
     PetscCall(ISComplementVec(bnk->inactive_idx, tao->solution, &bnk->active_idx));
     break;
@@ -329,11 +334,11 @@ PetscErrorCode TaoBNKEstimateActiveSet(Tao tao, PetscInt asType)
         PetscCall(VecPointwiseMult(bnk->W, bnk->Xwork, bnk->unprojected_gradient));
       } else {
         /* If the Hessian or its diagonal does not exist, we will simply use gradient step */
-        PetscCall(VecCopy(bnk->unprojected_gradient, bnk->W));
+        PetscCall(VecCopy(unprojected_gradient_riesz, bnk->W));
       }
     }
     PetscCall(VecScale(bnk->W, -1.0));
-    PetscCall(TaoEstimateActiveBounds(tao->solution, tao->XL, tao->XU, bnk->unprojected_gradient, bnk->W, bnk->Xwork, bnk->as_step, &bnk->as_tol, &bnk->active_lower, &bnk->active_upper, &bnk->active_fixed, &bnk->active_idx, &bnk->inactive_idx));
+    PetscCall(TaoEstimateActiveBounds(tao->solution, tao->XL, tao->XU, unprojected_gradient_riesz, bnk->W, bnk->Xwork, bnk->as_step, &bnk->as_tol, &bnk->active_lower, &bnk->active_upper, &bnk->active_fixed, &bnk->active_idx, &bnk->inactive_idx));
     break;
 
   default:
@@ -443,6 +448,7 @@ PetscErrorCode TaoBNKComputeStep(Tao tao, PetscBool shift, KSPConvergedReason *k
     bnk->resetksp = PETSC_FALSE;
   }
   PetscCall(KSPSetOperators(tao->ksp, bnk->H_inactive, bnk->Hpre_inactive));
+  // TODO: Riesz representation usage in this operation?
   PetscCall(VecCopy(bnk->unprojected_gradient, bnk->Gwork));
   if (bnk->active_idx) {
     PetscCall(VecGetSubVector(bnk->Gwork, bnk->inactive_idx, &bnk->G_inactive));
@@ -573,6 +579,7 @@ PetscErrorCode TaoBNKSafeguardStep(Tao tao, KSPConvergedReason ksp_reason, Petsc
   TAO_BNK  *bnk = (TAO_BNK *)tao->data;
   PetscReal gdx, e_min;
   PetscInt  bfgsUpdates;
+  Vec       gradient_riesz = tao->inner_product_ksp ? tao->gradient_riesz : tao->gradient;
 
   PetscFunctionBegin;
   switch (*stepType) {
@@ -599,7 +606,7 @@ PetscErrorCode TaoBNKSafeguardStep(Tao tao, KSPConvergedReason ksp_reason, Petsc
       if (!bnk->M) {
         /* We don't have the bfgs matrix around and updated
           Must use gradient direction in this case */
-        PetscCall(VecCopy(tao->gradient, tao->stepdirection));
+        PetscCall(VecCopy(gradient_riesz, tao->stepdirection));
         *stepType = BNK_GRADIENT;
       } else {
         /* Attempt to use the BFGS direction */
@@ -709,6 +716,8 @@ PetscErrorCode TaoBNKPerformLineSearch(Tao tao, PetscInt *stepType, PetscReal *s
   TaoLineSearchConvergedReason ls_reason;
   PetscReal                    e_min, gdx;
   PetscInt                     bfgsUpdates;
+  Vec                          unprojected_gradient_riesz = tao->inner_product_ksp ? bnk->unprojected_gradient_riesz : bnk->unprojected_gradient;
+  Vec                          gradient_riesz             = tao->inner_product_ksp ? tao->gradient_riesz : tao->gradient;
 
   PetscFunctionBegin;
   /* Perform the linesearch */
@@ -743,7 +752,7 @@ PetscErrorCode TaoBNKPerformLineSearch(Tao tao, PetscInt *stepType, PetscReal *s
       if (!bnk->M) {
         /* We don't have the bfgs matrix around and being updated
            Must use gradient direction in this case */
-        PetscCall(VecCopy(bnk->unprojected_gradient, tao->stepdirection));
+        PetscCall(VecCopy(unprojected_gradient_riesz, tao->stepdirection));
         *stepType = BNK_GRADIENT;
       } else {
         /* Attempt to use the BFGS direction */
@@ -1013,6 +1022,7 @@ PetscErrorCode TaoSetUp_BNK(Tao tao)
   if (!bnk->Xwork) PetscCall(VecDuplicate(tao->solution, &bnk->Xwork));
   if (!bnk->Gwork) PetscCall(VecDuplicate(tao->solution, &bnk->Gwork));
   if (!bnk->unprojected_gradient) PetscCall(VecDuplicate(tao->solution, &bnk->unprojected_gradient));
+  if (tao->inner_product_ksp != NULL && !bnk->unprojected_gradient) PetscCall(VecDuplicate(tao->solution, &bnk->unprojected_gradient_riesz));
   if (!bnk->unprojected_gradient_old) PetscCall(VecDuplicate(tao->solution, &bnk->unprojected_gradient_old));
   if (!bnk->Diag_min) PetscCall(VecDuplicate(tao->solution, &bnk->Diag_min));
   if (!bnk->Diag_max) PetscCall(VecDuplicate(tao->solution, &bnk->Diag_max));
@@ -1077,6 +1087,7 @@ PetscErrorCode TaoDestroy_BNK(Tao tao)
   PetscCall(VecDestroy(&bnk->Xwork));
   PetscCall(VecDestroy(&bnk->Gwork));
   PetscCall(VecDestroy(&bnk->unprojected_gradient));
+  PetscCall(VecDestroy(&bnk->unprojected_gradient_riesz));
   PetscCall(VecDestroy(&bnk->unprojected_gradient_old));
   PetscCall(VecDestroy(&bnk->Diag_min));
   PetscCall(VecDestroy(&bnk->Diag_max));

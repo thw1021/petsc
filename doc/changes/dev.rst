@@ -50,6 +50,8 @@ Changes: Development
 .. rubric:: TS:
 
 .. rubric:: TAO:
+- Add ``TaoSetInnerProduct()``, ``TaoGetInnerProduct()``, ``TaoComputeRieszRepresentation()``, and ``TaoComputeGradientNorm()``
+- Deprecate ``TaoSetGradientNorm()``, ``TaoGetGradientNorm()``, and ``TaoGradientNorm()``
 
 .. rubric:: DM/DA:
 

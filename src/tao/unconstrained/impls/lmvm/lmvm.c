@@ -8,16 +8,17 @@ static PetscErrorCode TaoSolve_LMVM(Tao tao)
 {
   TAO_LMVM                    *lmP = (TAO_LMVM *)tao->data;
   PetscReal                    f, fold, gdx, gnorm;
-  PetscReal                    step      = 1.0;
-  PetscInt                     stepType  = LMVM_STEP_GRAD, nupdates;
-  TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
+  PetscReal                    step           = 1.0;
+  PetscInt                     stepType       = LMVM_STEP_GRAD, nupdates;
+  TaoLineSearchConvergedReason ls_status      = TAOLINESEARCH_CONTINUE_ITERATING;
+  Vec                          gradient_riesz = tao->inner_product_ksp ? tao->gradient_riesz : tao->gradient;
 
   PetscFunctionBegin;
   if (tao->XL || tao->XU || tao->ops->computebounds) PetscCall(PetscInfo(tao, "WARNING: Variable bounds have been set but will be ignored by lmvm algorithm\n"));
 
   /*  Check convergence criteria */
   PetscCall(TaoComputeObjectiveAndGradient(tao, tao->solution, &f, tao->gradient));
-  PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &gnorm));
+  PetscCall(TaoComputeGradientNorm(tao, tao->gradient, gradient_riesz, &gnorm));
 
   PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
 
@@ -126,7 +127,7 @@ static PetscErrorCode TaoSolve_LMVM(Tao tao)
         break;
       }
       /*  Compute new gradient norm */
-      PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &gnorm));
+      PetscCall(TaoComputeGradientNorm(tao, tao->gradient, gradient_riesz, &gnorm));
     }
 
     /* Check convergence */

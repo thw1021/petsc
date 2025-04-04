@@ -231,6 +231,8 @@ PetscErrorCode TaoSetUp(Tao tao)
   if (tao->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(TaoSetUpEW_Private(tao));
   PetscCheck(tao->solution, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoSetSolution");
+  if (tao->inner_product_ksp)
+    if (!tao->gradient_riesz) PetscCall(VecDuplicate(tao->solution, &tao->gradient_riesz));
   PetscTryTypeMethod(tao, setup);
   tao->setupcalled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -271,10 +273,7 @@ PetscErrorCode TaoDestroy(Tao *tao)
   PetscCall(VecDestroy(&(*tao)->gradient));
   PetscCall(VecDestroy(&(*tao)->ls_res));
 
-  if ((*tao)->gradient_norm) {
-    PetscCall(PetscObjectDereference((PetscObject)(*tao)->gradient_norm));
-    PetscCall(VecDestroy(&(*tao)->gradient_norm_tmp));
-  }
+  PetscCall(VecDestroy(&(*tao)->gradient_riesz));
 
   PetscCall(VecDestroy(&(*tao)->XL));
   PetscCall(VecDestroy(&(*tao)->XU));
@@ -310,6 +309,7 @@ PetscErrorCode TaoDestroy(Tao *tao)
     PetscCall(PetscFree((*tao)->res_weights_cols));
     PetscCall(PetscFree((*tao)->res_weights_w));
   }
+  PetscCall(KSPDestroy(&(*tao)->inner_product_ksp));
   PetscCall(PetscHeaderDestroy(tao));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2689,97 +2689,261 @@ PetscErrorCode TaoGetApplicationContext(Tao tao, PeCtx ctx)
 }
 
 /*@
-  TaoSetGradientNorm - Sets the matrix used to define the norm that measures the size of the gradient in some of the `Tao` algorithms
+  TaoComputeGradientNorm - Compute the norm of the gradient using the problem-specific inner product
 
   Collective
 
   Input Parameters:
-+ tao - the `Tao` context
-- M   - matrix that defines the norm
++ tao      - the `Tao` context
+- gradient - the gradient
 
-  Level: beginner
+  Output Parameter:
++ riesz - if not NULL, this will be set to the Riesz representation of `gradient` (`TaoComputeRieszRepresentation()`), which is computed as part of computing the norm
+- gnorm - the gradient norm
 
-.seealso: [](ch_tao), `Tao`, `TaoGetGradientNorm()`, `TaoGradientNorm()`
+  Level: advanced
+
+  Note:
+  The behavior depends on whether an inner product was specified with `TaoSetInnerProduct()`\:
+
+  If `TaoSetInnerProduct()` has not been called, the standard $\ell_2$-norm $\|g\|_2$ is returned and `riesz` is a copy of `gradient`.
+
+  If `TaoSetInnerProduct()` specifies a matrix $M$ in `TAO_INNER_PRODUCT_GRADIENT` mode, then the returned norm will be
+  $\|g\|_M = \sqrt{g^T M g}$ and the Riesz represenation is $r = M g$.
+
+  If `TaoSetInnerProduct()` specifies a matrix $M$ in `TAO_INNER_PRODUCT_SOLUTION` mode, then the returned norm will be
+  $\|g\|_{M^{-1}} = \sqrt{g^T M^{-1} g}$ and $r = M^{-1} g$.
+
+.seealso: [](ch_tao), `Tao`, `TaoSetSolutionNorm()`, `TaoGetSolutionNorm()`
 @*/
-PetscErrorCode TaoSetGradientNorm(Tao tao, Mat M)
+PetscErrorCode TaoComputeGradientNorm(Tao tao, Vec gradient, Vec riesz, PetscReal *gnorm)
 {
+  Vec         riesz_alloc = NULL;
+  PetscScalar gnorms;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscValidHeaderSpecific(M, MAT_CLASSID, 2);
-  PetscCall(PetscObjectReference((PetscObject)M));
-  PetscCall(MatDestroy(&tao->gradient_norm));
-  PetscCall(VecDestroy(&tao->gradient_norm_tmp));
-  tao->gradient_norm = M;
-  PetscCall(MatCreateVecs(M, NULL, &tao->gradient_norm_tmp));
+  PetscValidHeaderSpecific(gradient, VEC_CLASSID, 2);
+  if (riesz) PetscValidHeaderSpecific(riesz, VEC_CLASSID, 3);
+  PetscAssertPointer(gnorm, 4);
+  if (tao->inner_product_ksp == NULL) {
+    PetscCall(VecNorm(gradient, NORM_2, gnorm));
+    if (riesz) PetscCall(VecCopy(gradient, riesz));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  if (riesz == NULL) {
+    PetscCall(VecDuplicate(gradient, &riesz_alloc));
+    riesz = riesz_alloc;
+  }
+  PetscCall(TaoComputeRieszRepresentation(tao, gradient, riesz));
+  PetscCall(VecDot(gradient, riesz, &gnorms));
+  *gnorm = PetscSqrtScalar(PetscRealPart(gnorms));
+  PetscCall(VecDestroy(&riesz_alloc));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoComputeSolutionNorm(Tao tao, Vec u, Vec riesz, PetscReal *unorm)
+{
+  Vec         riesz_alloc = NULL;
+  PetscScalar unorms;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(u, VEC_CLASSID, 2);
+  if (riesz) PetscValidHeaderSpecific(riesz, VEC_CLASSID, 3);
+  PetscAssertPointer(unorm, 4);
+  if (tao->inner_product_ksp == NULL) {
+    PetscCall(VecNorm(u, NORM_2, unorm));
+    if (riesz) PetscCall(VecCopy(u, riesz));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  if (riesz == NULL) {
+    PetscCall(VecDuplicate(u, &riesz_alloc));
+    riesz = riesz_alloc;
+  }
+  PetscCall(TaoComputeInverseRieszRepresentation(tao, u, riesz));
+  PetscCall(VecDot(u, riesz, &unorms));
+  *unorm = PetscSqrtScalar(PetscRealPart(unorms));
+  PetscCall(VecDestroy(&riesz_alloc));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  TaoGetGradientNorm - Returns the matrix used to define the norm used for measuring the size of the gradient in some of the `Tao` algorithms
+  TaoSetInnerProduct - Set a matrix defining a problem-specific inner product for the vector space of solutions and the dual vector space for gradient vectors.
+
+  Collective
+
+  Input Parameters:
++ tao      - the `Tao` context
+. mode     - whether the matrix `M` defines the inner product for the original vector space containing solution vectors
+             (`TAO_INNER_PRODUCT_SOLUTION`) or for the dual space containing gradient vectors (`TAO_INNER_PRODUCT_GRADIENT`)
+. M        - a symmetric positive definite matrix defining an inner product (NULL to unset a previously set inner
+             product, restoring the default $\ell_2$ inner product)
+. M_pre    - (optional) a preconditioning matrix for `M`
+- M_solver - (optional) a linear solver context for solving systems with `M` (if this is not provided, one will be created)
+
+  Level: advanced
+
+  Notes:
+  The space $X$ containing solution vectors is dual to the space $X'$ containing gradient vectors.  Because of duality,
+  specifying the inner product for solution vectors to be $\langle u, v \range_X = u^T M v$ forces the inner product on
+  the dual space to be $\langl g, h \rangle_{H'} = g^T M^{-1} h$, and vice versa.
+
+  Setting an inner product affects the behavior of `TaoSolve()` in a few ways (for those implementations that support
+  it).  The tolerances in `TaoSetTolerances()` that measure the gradient $g_k$ will use the norm $\|g_k\|_{X'}$.
+  A step between iterates $p_k = x_k - x_{k-1}$ will be measured with the norm $\|p_k\|_{X}$.
+  When a steepest descent direction is required, the Riesz representation $-M^{-1} g_k$ (`TAO_INNER_PRODUCT_SOLUTION`)
+  or $-M g_k$ (`TAO_INNER_PRODUCT_GRADIENT`) will be used instead of $-g_k$.  If the user does not specify `M_solver`,
+  the one that Tao creates will have the options prefix `XXX_tao_solution_norm_`, where `XXX` is the options prefix of
+  `tao`.
+
+.seealso: [](ch_tao), `Tao`, `TaoGetInnerProduct()`, `TaoComputeRieszRepresentation()`
+@*/
+PetscErrorCode TaoSetInnerProduct(Tao tao, TaoInnerProductMode mode, Mat M, Mat M_pre, KSP M_solver)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(M, MAT_CLASSID, 2);
+  if (M_pre) PetscValidHeaderSpecific(M_pre, MAT_CLASSID, 3);
+  if (M_solver) PetscValidHeaderSpecific(M_solver, KSP_CLASSID, 4);
+  if (!M_solver) {
+    PetscBool   has_solve;
+    const char *prefix;
+
+    PetscCall(KSPCreate(PetscObjectComm((PetscObject)M), &M_solver));
+
+    /* Just because MatGetOperation(M, MATOP_SOLVE, &func) returns a function pointer doesn't mean the matrix has a
+     direct solve method (sometimes MatSolve() is taken to mean a Gauss-Seidel sweep), so we just have to maintain
+     a list of acceptable matrix types */
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)M, &has_solve, MATCONSTANTDIAGONAL, MATDIAGONAL, MATLMVMBFGS, MATLMVMDFP, MATLMVMSYMBROYDEN, MATLMVMSYMBADBROYDEN, MATLMVMDIAGBROYDEN, MATLMVMDBFGS, MATLMVMDDFP, ""));
+    PetscCall(TaoGetOptionsPrefix(tao, &prefix));
+    PetscCall(KSPSetOptionsPrefix(M_solver, prefix));
+    PetscCall(KSPAppendOptionsPrefix(M_solver, "tao_solution_norm_"));
+    PetscCall(PetscObjectIncrementTabLevel((PetscObject)tao, (PetscObject)M_solver, 1));
+    if (has_solve) { // create an exact inverse KSP
+      PC pc;
+
+      PetscCall(KSPSetType(M_solver, KSPPREONLY));
+      PetscCall(KSPGetPC(M_solver, &pc));
+      PetscCall(PCSetType(pc, PCMAT));
+      PetscCall(PCMatSetApplyOperation(pc, MATOP_SOLVE));
+    }
+  }
+  PetscCall(KSPSetOperators(M_solver, M, M_pre));
+  PetscCall(PetscObjectReference((PetscObject)M_solver));
+  PetscCall(KSPDestroy(&tao->inner_product_ksp));
+  tao->inner_product_ksp  = M_solver;
+  tao->inner_product_mode = mode;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoGetInnerProduct - Get the matrix defining a problem-specific inner product
 
   Not Collective
 
   Input Parameter:
 . tao - the `Tao` context
 
-  Output Parameter:
-. M - gradient norm
+  Output Parameters:
++ mode     - whether `M` specifies the inner product on solution vectors (`TAO_INNER_PRODUCT_SOLUTION`) or gradient vectors (`TAO_INNER_PRODUCT_GRADIENT`)
++ M        - the symmetric positive definite matrix defining the inner product, or `NULL` if an inner product has not been specified (in which case the standard $\ell_2$ inner product is used by `tao`)
+. M_pre    - the preconditioner for `M`, may be NULL
+- M_solver - the linear solver context for `M`, or NULL if `M` has not been-specified
 
-  Level: beginner
+  Level: advanced
 
-.seealso: [](ch_tao), `Tao`, `TaoSetGradientNorm()`, `TaoGradientNorm()`
+.seealso: [](ch_tao), `Tao`, `TaoSetInnerProduct()`, `TaoComputeRieszRepresentation()`
 @*/
-PetscErrorCode TaoGetGradientNorm(Tao tao, Mat *M)
+PetscErrorCode TaoGetInnerProduct(Tao tao, TaoInnerProductMode *mode, Mat *M, Mat *M_pre, KSP *M_solver)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscAssertPointer(M, 2);
-  *M = tao->gradient_norm;
+  if (mode) {
+    PetscAssertPointer(mode, 2);
+    *mode = tao->inner_product_mode;
+  }
+  if (M) PetscAssertPointer(M, 3);
+  if (M_pre) PetscAssertPointer(M_pre, 4);
+  if (M_solver) PetscAssertPointer(M_solver, 5);
+  if (!tao->inner_product_ksp) {
+    if (M) *M = NULL;
+    if (M_pre) *M_pre = NULL;
+    if (M_solver) *M_solver = NULL;
+  } else {
+    PetscCall(KSPGetOperators(tao->inner_product_ksp, M, M_pre));
+    if (M_solver) *M_solver = tao->inner_product_ksp;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  TaoGradientNorm - Compute the norm using the `NormType`, the user has selected
+  TaoComputeRieszRepresentation - Compute the Riesz representation, with respect to a problem-specific inner product, of a gradient vector.
 
   Collective
 
   Input Parameters:
-+ tao      - the `Tao` context
-. gradient - the gradient
-- type     - the norm type
++ tao - a `Tao` solver context
+- g   - a gradient vector
 
   Output Parameter:
-. gnorm - the gradient norm
+. r   - the Riesz representation of `g` with respect to the inner product specified with `TaoSetInnerProduct()`.
 
   Level: advanced
 
-  Note:
-  If `TaoSetGradientNorm()` has been set and `type` is `NORM_2` then the norm provided with `TaoSetGradientNorm()` is used.
+  Notes:
+  If $f$ is the objective function of `tao`, the derivative of $f$ at $x$, $\mathrm{d}f(x)$, is a linear functional on
+  the vector space $X$ of solution variations, $\mathrm{d}f(x): X \to \mathbb{R}^n$.  The gradient `g` returned by
+  `TaoComputeGradient()` is a vector such that `VecDot(v, g)` is equal to `\mathrm{d}f(x)[v]` for every $v$ in $X$.
 
-  Developer Notes:
-  Should be named `TaoComputeGradientNorm()`.
+  When an inner product $\langle \cdot, \cdot \rangle_X$ other than `VecDot()` has been set for `tao` using
+  `TaoSetInnerProduct()`, algorithms may need the _Riesz representation_ of $\mathrm{d}f(x)$ with respect to this inner
+  product: the vector $r$ such that $\langle v, f \rangle_X = \mathrm{d}f(x)[v]$ for every $v$ in $X$.
 
-  The usage is a bit confusing, with `TaoSetGradientNorm()` plus `NORM_2` resulting in the computation of the user provided
-  norm, perhaps a refactorization is in order.
+  If an inner product has not been specified, `r` is a copy of `g`.
 
-.seealso: [](ch_tao), `Tao`, `TaoSetGradientNorm()`, `TaoGetGradientNorm()`
+  If the inner product was defined as $\langle u, v \rangle_X = u^T M v$ using `TaoSetInnerProduct()` with
+  mode `TAO_INNER_PRODUCT_SOLUTION`, then $r = M^{-1} g$.
+
+  If the inner product was defined as $\langle u, v \rangle_X = u^T M^{-1} v$ using `TaoSetInnerProduct()` with
+  mode `TAO_INNER_PRODUCT_GRADIENT`, then $r = M g$.
+
+.seealso: [](ch_tao), `Tao`, `TaoSetInnerProduct()`, `TaoGetInnerProduct()`, `TaoComputeGradientNorm()`
 @*/
-PetscErrorCode TaoGradientNorm(Tao tao, Vec gradient, NormType type, PetscReal *gnorm)
+PetscErrorCode TaoComputeRieszRepresentation(Tao tao, Vec g, Vec r)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscValidHeaderSpecific(gradient, VEC_CLASSID, 2);
-  PetscValidLogicalCollectiveEnum(tao, type, 3);
-  PetscAssertPointer(gnorm, 4);
-  if (tao->gradient_norm) {
-    PetscScalar gnorms;
-
-    PetscCheck(type == NORM_2, PetscObjectComm((PetscObject)gradient), PETSC_ERR_ARG_WRONG, "Norm type must be NORM_2 if an inner product for the gradient norm is set.");
-    PetscCall(MatMult(tao->gradient_norm, gradient, tao->gradient_norm_tmp));
-    PetscCall(VecDot(gradient, tao->gradient_norm_tmp, &gnorms));
-    *gnorm = PetscRealPart(PetscSqrtScalar(gnorms));
+  PetscValidHeaderSpecific(g, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(r, VEC_CLASSID, 3);
+  if (tao->inner_product_ksp == NULL) {
+    PetscCall(VecCopy(g, r));
+  } else if (tao->inner_product_mode == TAO_INNER_PRODUCT_SOLUTION) {
+    PetscCall(KSPSolve(tao->inner_product_ksp, g, r));
   } else {
-    PetscCall(VecNorm(gradient, type, gnorm));
+    Mat M;
+
+    PetscCall(KSPGetOperators(tao->inner_product_ksp, &M, NULL));
+    PetscCall(MatMult(M, g, r));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoComputeInverseRieszRepresentation(Tao tao, Vec u, Vec r)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(u, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(r, VEC_CLASSID, 3);
+  if (tao->inner_product_ksp == NULL) {
+    PetscCall(VecCopy(u, r));
+  } else if (tao->inner_product_mode == TAO_INNER_PRODUCT_GRADIENT) {
+    PetscCall(KSPSolve(tao->inner_product_ksp, u, r));
+  } else {
+    Mat M;
+
+    PetscCall(KSPGetOperators(tao->inner_product_ksp, &M, NULL));
+    PetscCall(MatMult(M, u, r));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

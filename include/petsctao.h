@@ -335,9 +335,9 @@ PETSC_EXTERN PetscErrorCode TaoSetObjectiveAndGradient(Tao, Vec, PetscErrorCode 
 PETSC_EXTERN PetscErrorCode TaoGetObjectiveAndGradient(Tao, Vec *, PetscErrorCode (**)(Tao, Vec, PetscReal *, Vec, void *), void **);
 PETSC_EXTERN PetscErrorCode TaoSetHessian(Tao, Mat, Mat, PetscErrorCode (*)(Tao, Vec, Mat, Mat, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoGetHessian(Tao, Mat *, Mat *, PetscErrorCode (**)(Tao, Vec, Mat, Mat, void *), void **);
+PETSC_EXTERN PetscErrorCode TaoSetDampedHessian(Tao, PetscErrorCode (*)(Tao, Vec, PetscReal, Mat, Mat, void *));
+PETSC_EXTERN PetscErrorCode TaoGetDampedHessian(Tao, PetscErrorCode (**)(Tao, Vec, PetscReal, Mat, Mat, void *));
 
-PETSC_EXTERN PetscErrorCode TaoSetGradientNorm(Tao, Mat);
-PETSC_EXTERN PetscErrorCode TaoGetGradientNorm(Tao, Mat *);
 PETSC_EXTERN PetscErrorCode TaoSetLMVMMatrix(Tao, Mat);
 PETSC_EXTERN PetscErrorCode TaoGetLMVMMatrix(Tao, Mat *);
 PETSC_EXTERN PetscErrorCode TaoSetRecycleHistory(Tao, PetscBool);
@@ -382,6 +382,7 @@ PETSC_EXTERN PetscErrorCode TaoIsObjectiveAndGradientDefined(Tao, PetscBool *);
 
 PETSC_EXTERN PetscErrorCode TaoTestHessian(Tao);
 PETSC_EXTERN PetscErrorCode TaoComputeHessian(Tao, Vec, Mat, Mat);
+PETSC_EXTERN PetscErrorCode TaoComputeDampedHessian(Tao, Vec, PetscReal, Mat, Mat);
 PETSC_EXTERN PetscErrorCode TaoComputeResidualJacobian(Tao, Vec, Mat, Mat);
 PETSC_EXTERN PetscErrorCode TaoComputeJacobian(Tao, Vec, Mat, Mat);
 PETSC_EXTERN PetscErrorCode TaoComputeJacobianState(Tao, Vec, Mat, Mat, Mat);
@@ -504,11 +505,64 @@ PETSC_EXTERN PetscErrorCode TaoALMMGetDualIS(Tao, IS *, IS *);
 
 PETSC_EXTERN PetscErrorCode TaoVecGetSubVec(Vec, IS, TaoSubsetType, PetscReal, Vec *);
 PETSC_EXTERN PetscErrorCode TaoMatGetSubMat(Mat, IS, Vec, TaoSubsetType, Mat *);
-PETSC_EXTERN PetscErrorCode TaoGradientNorm(Tao, Vec, NormType, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoEstimateActiveBounds(Vec, Vec, Vec, Vec, Vec, Vec, PetscReal, PetscReal *, IS *, IS *, IS *, IS *, IS *);
 PETSC_EXTERN PetscErrorCode TaoBoundStep(Vec, Vec, Vec, IS, IS, IS, PetscReal, Vec);
 PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt *, Vec);
 
 PETSC_EXTERN PetscErrorCode MatCreateSubMatrixFree(Mat, IS, IS, Mat *);
+
+/*E
+  TaoInnerProductMode - How the inner product for a `Tao` is specified in `TaoSetInnerProduct()`.
+
+  Values:
++ `TAO_INNER_PRODUCT_SOLUTION` - The matrix in `TaoSetInnerProduct()` defines the inner product for solution vectors.
+- `TAO_INNER_PRODUCT_GRADIENT` - The matrix in `TaoSetInnerProduct()` defines the inner product for gradient vectors.
+
+  Level: advanced
+
+  Notes:
+  Because of the duality between solution vectors in an inner product space $X$ and gradient vectors in the dual space
+  $X'$, only one inner product can be set directly, with the other defined implicitly\:
+
+  If the inner product for solution vectors is specified by $\langle u, v \rangle_X = u^T M v$, then the inner product
+  for gradient vectors must be $\langle g, h \rangle_{X'} = g^T M^{-1} h$.
+
+  If the inner product for solution vectors is specified by $\langle g, h \rangle_{X'} = g^T M h$, then the inner product
+  for solution vectors must be $\langle u, v \rangle_{X} = u^T M^{-1} v$.
+
+  `TaoSetInnerProduct()` lets either product be set directly.
+
+.seealso: [](ch_tao), `TaoSetInnerProduct()`, `TaoGetInnerProduct()`
+E*/
+typedef enum {
+  TAO_INNER_PRODUCT_SOLUTION,
+  TAO_INNER_PRODUCT_GRADIENT,
+} TaoInnerProductMode;
+PETSC_EXTERN PetscErrorCode TaoSetInnerProduct(Tao, TaoInnerProductMode, Mat, Mat, KSP);
+PETSC_EXTERN PetscErrorCode TaoGetInnerProduct(Tao, TaoInnerProductMode *, Mat *, Mat *, KSP *);
+PETSC_EXTERN PetscErrorCode TaoComputeRieszRepresentation(Tao, Vec, Vec);
+PETSC_EXTERN PetscErrorCode TaoComputeGradientNorm(Tao, Vec, Vec, PetscReal *);
+
+PETSC_DEPRECATED_FUNCTION(3, 23, 0, "TaoSetInnerProduct()", ) static inline PetscErrorCode TaoSetGradientNorm(Tao tao, Mat M)
+{
+  return TaoSetInnerProduct(tao, TAO_INNER_PRODUCT_GRADIENT, M, NULL, NULL);
+}
+PETSC_DEPRECATED_FUNCTION(3, 23, 0, "TaoGetInnerProduct()", ) static inline PetscErrorCode TaoGetGradientNorm(Tao tao, Mat *M)
+{
+  TaoInnerProductMode inner_product_mode;
+
+  PetscFunctionBegin;
+  PetscCall(TaoGetInnerProduct(tao, &inner_product_mode, M, NULL, NULL));
+  PetscCheck(*M == NULL || inner_product_mode == TAO_INNER_PRODUCT_GRADIENT, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Cannot return gradient inner product matrix when solution inner product matrix was specified");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+PETSC_DEPRECATED_FUNCTION(3, 23, 0, "TaoGetInnerProduct()", ) static inline PetscErrorCode TaoGradientNorm(Tao tao, Vec gradient, NormType type, PetscReal *gnorm)
+{
+  if (type == NORM_2) {
+    return TaoComputeGradientNorm(tao, gradient, NULL, gnorm);
+  } else {
+    return VecNorm(gradient, type, gnorm);
+  }
+}
 
 #include <petsctao_deprecations.h>

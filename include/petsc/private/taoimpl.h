@@ -14,6 +14,7 @@ struct _TaoOps {
   PetscErrorCode (*computeobjective)(Tao, Vec, PetscReal *, void *);
   PetscErrorCode (*computeobjectiveandgradient)(Tao, Vec, PetscReal *, Vec, void *);
   PetscErrorCode (*computegradient)(Tao, Vec, Vec, void *);
+  PetscErrorCode (*computedampedhessian)(Tao, Vec, PetscReal, Mat, Mat, void *);
   PetscErrorCode (*computehessian)(Tao, Vec, Mat, Mat, void *);
   PetscErrorCode (*computeresidual)(Tao, Vec, Vec, void *);
   PetscErrorCode (*computeresidualjacobian)(Tao, Vec, Mat, Mat, void *);
@@ -82,8 +83,7 @@ struct _p_Tao {
   Vec        DE;
   Mat        hessian;
   Mat        hessian_pre;
-  Mat        gradient_norm;
-  Vec        gradient_norm_tmp;
+  Vec        gradient_riesz;
   Vec        ls_res;
   Mat        ls_jac;
   Mat        ls_jac_pre;
@@ -177,6 +177,9 @@ struct _p_Tao {
   PetscInt      hist_len;
   PetscBool     hist_reset;
   PetscBool     hist_malloc;
+
+  KSP                 inner_product_ksp; // user-specified inner-product for norms and Riesz maps
+  TaoInnerProductMode inner_product_mode;
 };
 
 PETSC_EXTERN PetscLogEvent TAO_Solve;
@@ -204,3 +207,6 @@ static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, Pe
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PETSC_INTERN PetscErrorCode TaoComputeInverseRieszRepresentation(Tao, Vec, Vec);
+PETSC_INTERN PetscErrorCode TaoComputeSolutionNorm(Tao, Vec, Vec, PetscReal *);
