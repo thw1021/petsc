@@ -4,18 +4,26 @@ static char help[] = "Tests some linear PetscRegressor types with different regu
 
 int main(int argc, char **args)
 {
-  PetscRegressor regressor;
-  PetscMPIInt    rank;
-  PetscInt       i, N = 10;
-  Mat            X;
-  Vec            y, y_predicted, coefficients;
-  PetscScalar    intercept, mean;
+  PetscRegressor     regressor;
+  PetscMPIInt        rank;
+  PetscInt           i, N = 10;
+  Mat                X;
+  Vec                y, y_predicted, coefficients;
+  PetscScalar        intercept, mean;
+  PetscBool          flg_string, flg_ascii, flg_view_sol, match;
+  PetscRegressorType check_type;
 
   PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
 
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Options for PetscRegressor ex3:", "");
   PetscCall(PetscOptionsInt("-N", "Dimension of the N x N data matrix", NULL, N, &N, NULL));
+  flg_string   = PETSC_FALSE;
+  flg_ascii    = PETSC_FALSE;
+  flg_view_sol = PETSC_FALSE;
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_string_viewer", &flg_string, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_ascii_viewer", &flg_ascii, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-view_sols", &flg_view_sol, NULL));
   PetscOptionsEnd();
 
   PetscCall(VecCreate(PETSC_COMM_WORLD, &y));
@@ -54,6 +62,7 @@ int main(int argc, char **args)
 
   PetscCall(PetscRegressorCreate(PETSC_COMM_WORLD, &regressor));
   PetscCall(PetscRegressorSetType(regressor, PETSCREGRESSORLINEAR));
+  PetscCall(PetscRegressorLinearSetType(regressor, REGRESSOR_LINEAR_OLS));
   PetscCall(PetscRegressorLinearSetFitIntercept(regressor, PETSC_FALSE));
   PetscCall(PetscRegressorSetFromOptions(regressor));
   PetscCall(PetscRegressorFit(regressor, X, y));
@@ -61,18 +70,36 @@ int main(int argc, char **args)
   PetscCall(PetscRegressorLinearGetIntercept(regressor, &intercept));
   PetscCall(PetscRegressorLinearGetCoefficients(regressor, &coefficients));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Training target vector is\n"));
-  PetscCall(VecView(y, PETSC_VIEWER_STDOUT_WORLD));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Predicted values are\n"));
-  PetscCall(VecView(y_predicted, PETSC_VIEWER_STDOUT_WORLD));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Coefficients are\n"));
-  PetscCall(VecView(coefficients, PETSC_VIEWER_STDOUT_WORLD));
+  if (flg_view_sol) {
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Training target vector is\n"));
+    PetscCall(VecView(y, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Predicted values are\n"));
+    PetscCall(VecView(y_predicted, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Coefficients are\n"));
+    PetscCall(VecView(coefficients, PETSC_VIEWER_STDOUT_WORLD));
+  }
+
+  if (flg_string) {
+    PetscViewer stringviewer;
+    char        string[512];
+    const char *outstring;
+
+    PetscCall(PetscViewerStringOpen(PETSC_COMM_WORLD, string, sizeof(string), &stringviewer));
+    PetscCall(PetscRegressorView(regressor, stringviewer));
+    PetscCall(PetscViewerStringGetStringRead(stringviewer, &outstring, NULL));
+    PetscCheck((char *)outstring == (char *)string, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "String returned from viewer does not equal original string");
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Output from string viewer:%s\n", outstring));
+    PetscCall(PetscViewerDestroy(&stringviewer));
+  } else if (flg_ascii) PetscCall(PetscRegressorView(regressor, PETSC_VIEWER_STDOUT_WORLD));
+
+  PetscCall(PetscRegressorGetType(regressor, &check_type));
+  PetscCall(PetscStrcmp(check_type, PETSCREGRESSORLINEAR, &match));
+  PetscCheck(match, PETSC_COMM_WORLD, PETSC_ERR_ARG_NOTSAMETYPE, "Regressor type is not Linear");
 
   PetscCall(MatDestroy(&X));
   PetscCall(VecDestroy(&y));
   PetscCall(VecDestroy(&y_predicted));
   PetscCall(PetscRegressorDestroy(&regressor));
-
   PetscCall(PetscFinalize());
   return 0;
 }
@@ -83,33 +110,49 @@ int main(int argc, char **args)
       requires: !complex !single !__float128 !defined(PETSC_USE_64BIT_INDICES)
 
    test:
+      suffix: asciiview
+      args: -test_ascii_viewer
+
+   test:
+       suffix: stringview
+       args: -test_string_viewer
+
+   test:
+      suffix: ksp_intercept
+      args: -regressor_linear_use_ksp -regressor_linear_fit_intercept -regressor_view
+
+   test:
+      suffix: ksp_no_intercept
+      args: -regressor_linear_use_ksp -regressor_view
+
+   test:
       suffix: lasso_1
       nsize: 1
-      args: -regressor_type linear -regressor_linear_type lasso -regressor_regularizer_weight 2 -regressor_linear_fit_intercept
+      args: -regressor_type linear -regressor_linear_type lasso -regressor_regularizer_weight 2 -regressor_linear_fit_intercept -view_sols
 
    test:
       suffix: lasso_2
       nsize: 2
-      args: -regressor_type linear -regressor_linear_type lasso -regressor_regularizer_weight 2 -regressor_linear_fit_intercept
+      args: -regressor_type linear -regressor_linear_type lasso -regressor_regularizer_weight 2 -regressor_linear_fit_intercept -view_sols
 
    test:
       suffix: ridge_1
       nsize: 1
-      args: -regressor_type linear -regressor_linear_type ridge -regressor_regularizer_weight 2 -regressor_linear_fit_intercept
+      args: -regressor_type linear -regressor_linear_type ridge -regressor_regularizer_weight 2 -regressor_linear_fit_intercept -view_sols
 
    test:
       suffix: ridge_2
       nsize: 2
-      args: -regressor_type linear -regressor_linear_type ridge -regressor_regularizer_weight 2 -regressor_linear_fit_intercept
+      args: -regressor_type linear -regressor_linear_type ridge -regressor_regularizer_weight 2 -regressor_linear_fit_intercept -view_sols
 
    test:
       suffix: ols_1
       nsize: 1
-      args: -regressor_type linear -regressor_linear_type ols -regressor_linear_fit_intercept
+      args: -regressor_type linear -regressor_linear_type ols -regressor_linear_fit_intercept -view_sols
 
    test:
       suffix: ols_2
       nsize: 2
-      args: -regressor_type linear -regressor_linear_type ols -regressor_linear_fit_intercept
+      args: -regressor_type linear -regressor_linear_type ols -regressor_linear_fit_intercept -view_sols
 
 TEST*/

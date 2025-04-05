@@ -3,7 +3,7 @@
 #include <petsc/finclude/petscregressor.h>
 #include <../ftn/ml/petscregressor.h>
 
-        end module
+        end module petscregressordef
 
         module petscregressor
         use petscregressordef

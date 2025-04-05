@@ -125,7 +125,7 @@ PetscErrorCode PetscRegressorView(PetscRegressor regressor, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPopTab(viewer));
   } else if (isstring) {
     PetscCall(PetscRegressorGetType(regressor, &type));
-    PetscCall(PetscViewerStringSPrintf(viewer, " %-3.3s", type));
+    PetscCall(PetscViewerStringSPrintf(viewer, " PetscRegressorType: %-7.7s", type));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -179,8 +179,8 @@ PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor regressor)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
-  PetscObjectOptionsBegin((PetscObject)regressor);
   if (((PetscObject)regressor)->type_name) default_type = ((PetscObject)regressor)->type_name;
+  PetscObjectOptionsBegin((PetscObject)regressor);
   /* Check for type from options */
   PetscCall(PetscOptionsFList("-regressor_type", "PetscRegressor type", "PetscRegressorSetType", PetscRegressorList, default_type, type, 256, &flg));
   if (flg) {
@@ -223,13 +223,10 @@ PetscErrorCode PetscRegressorSetUp(PetscRegressor regressor)
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   if (regressor->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogEventBegin(PetscRegressor_SetUp, regressor, 0, 0, 0));
-
-  if (!((PetscObject)regressor)->type_name) PetscCall(PetscRegressorSetType(regressor, PETSCREGRESSORLINEAR));
-
-  if (regressor->ops->setup) PetscCall((*regressor->ops->setup)(regressor));
-
-  PetscCall(PetscLogEventEnd(PetscRegressor_SetUp, regressor, 0, 0, 0));
+  //TODO is there some mat vec etc that must be set, like TaoSolution?
+  PetscTryTypeMethod(regressor, setup);
   regressor->setupcalled = PETSC_TRUE;
+  PetscCall(PetscLogEventEnd(PetscRegressor_SetUp, regressor, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -402,13 +399,9 @@ PetscErrorCode PetscRegressorSetType(PetscRegressor regressor, PetscRegressorTyp
   PetscCall(PetscFunctionListFind(PetscRegressorList, type, &r));
   PetscCheck(r, PetscObjectComm((PetscObject)regressor), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unable to find requested PetscRegressor type %s", type);
 
-  /* Destroy the previous private PetscRegressor context */
-  if (regressor->ops->destroy) {
-    PetscCall((*(regressor)->ops->destroy)(regressor));
-    regressor->ops->destroy = NULL;
-  }
-
-  /* Reinitialize function pointers in PetscRegressorOps structure */
+  /* Destroy the existing solver information */
+  PetscTryTypeMethod(regressor, destroy);
+  PetscCall(TaoDestroy(&regressor->tao));
   regressor->ops->setup          = NULL;
   regressor->ops->setfromoptions = NULL;
   regressor->ops->settraining    = NULL;

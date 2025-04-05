@@ -1,6 +1,6 @@
 #include <../src/ml/regressor/impls/linear/linearimpl.h> /*I "petscregressor.h" I*/
 
-const char *const PetscRegressorLinearTypes[] = {"ols", "lasso", "ridge", "REGRESSORLINEARType", "REGRESSOR_LINEAR_", NULL};
+const char *const PetscRegressorLinearTypes[] = {"ols", "lasso", "ridge", "RegressorLinearType", "REGRESSOR_LINEAR_", NULL};
 
 static PetscErrorCode EvaluateResidual(Tao tao, Vec x, Vec f, void *ptr)
 {
@@ -370,7 +370,7 @@ static PetscErrorCode PetscRegressorFit_Linear(PetscRegressor regressor)
   PetscInt               m, N, istart, i, kspits;
 
   PetscFunctionBegin;
-  if (linear->use_ksp && !linear->ksp) PetscCall(PetscRegressorLinearGetKSP(regressor, &linear->ksp));
+  if (linear->use_ksp) PetscCall(PetscRegressorLinearGetKSP(regressor, &linear->ksp));
   ksp = linear->ksp;
 
   /* Solve the least-squares problem (previously set up in PetscRegressorSetUp_Linear()) without finding the intercept. */
