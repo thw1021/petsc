@@ -487,6 +487,13 @@ PetscErrorCode MatSchurComplementComputeExplicitOperator(Mat A, Mat *S)
   char      prefix[256], type[256];
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  PetscAssertPointer(S, 2);
+  if (*S) {
+    PetscValidHeaderSpecific(*S, MAT_CLASSID, 2);
+    PetscValidType(*S, 2);
+  }
   PetscCall(PetscObjectQuery((PetscObject)A, "AinvB", (PetscObject *)&AinvBd));
   set = (PetscBool)(AinvBd != NULL);
   if (set && AinvBd->cmap->N == -1) PetscFunctionReturn(PETSC_SUCCESS); // early bail out if composed Mat is uninitialized
@@ -551,12 +558,12 @@ PetscErrorCode MatSchurComplementComputeExplicitOperator(Mat A, Mat *S)
   }
   PetscCall(MatDestroy(&Bd));
   if (!set) PetscCall(MatFilter(AinvBd, PETSC_SMALL, PETSC_FALSE, PETSC_FALSE));
-  if (D) {
+  if (D && !*S) {
     PetscCall(MatGetLocalSize(D, &m, &n));
     PetscCall(MatGetSize(D, &M, &N));
     PetscCall(MatCreateDenseFromVecType(PetscObjectComm((PetscObject)A), vtype, m, n, M, N, -1, NULL, S));
   }
-  PetscCall(MatMatMult(C, AinvBd, D ? MAT_REUSE_MATRIX : MAT_INITIAL_MATRIX, PETSC_DETERMINE, S));
+  PetscCall(MatMatMult(C, AinvBd, *S ? MAT_REUSE_MATRIX : MAT_INITIAL_MATRIX, PETSC_DETERMINE, S));
   if (!set) PetscCall(MatDestroy(&AinvBd));
   else {
     PetscCall(MatScale(AinvBd, -1.0));
