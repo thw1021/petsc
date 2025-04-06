@@ -965,9 +965,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       if self.file_create_pause: time.sleep(1)
       f = open(name, 'w')
       filename = os.path.basename(name)
-    guard = 'INCLUDED_'+filename.upper().replace('.', '_')
-    f.write('#if !defined('+guard+')\n')
-    f.write('#define '+guard+'\n\n')
+    f.write('#pragma once\n\n')
     if hasattr(self, 'headerTop'):
       f.write(str(self.headerTop)+'\n')
     defineDict = {}
@@ -988,15 +986,10 @@ class Framework(config.base.Configure, script.LanguageProcessor):
         else:
           # at least 1 of the languages/compilers didn't like poison
           poisonFileName = os.path.basename(self.poisonheader,)
-          poisonGuard = 'INCLUDED_'+poisonFileName.upper().replace('.', '_')
-          lines = [''.join(['#if !defined(',poisonGuard,')\n']),
-                   ''.join(['#define ',poisonGuard,'\n']),
-                   '#endif\n']
-          fpoison.writelines(lines)
+          fpoison.write('#pragma once\n\n')
     self.outputDefines(defineDict, f,petscconf)
     if hasattr(self, 'headerBottom'):
       f.write(str(self.headerBottom)+'\n')
-    f.write('#endif\n')
     if not hasattr(name, 'close'):
       f.close()
     return
