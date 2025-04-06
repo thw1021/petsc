@@ -89,7 +89,7 @@ PetscErrorCode PetscRegressorCreate(MPI_Comm comm, PetscRegressor *newregressor)
 - viewer    - a `PetscViewer` context
 
   Options Database Key:
-. -regressor_view - Calls `PetscRegressorView()` at the end of `PetscRegressorFit()` (or predict?TODO)
+. -regressor_view - Calls `PetscRegressorView()` at the end of `PetscRegressorFit()`
 
   Level: beginner
 
@@ -192,7 +192,7 @@ PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor regressor)
   if (flg) PetscCall(PetscRegressorSetRegularizerWeight(regressor, regressor->regularizer_weight));
   // The above is a little superfluous, because we have already set regressor->regularizer_weight above, but we also need to set the flag indicating that the user has set the weight!
   /* TODO: Is there code that must be added to handle other options that apply to all PetscRegressor types? */
-  if (regressor->ops->setfromoptions) PetscCall((*regressor->ops->setfromoptions)(regressor, PetscOptionsObject));
+  if (regressor->ops->setfromoptions) PetscTryTypeMethod(regressor, setfromoptions, PetscOptionsObject);
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -202,7 +202,7 @@ PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor regressor)
 
   Collective
 
-  Input Parameters:
+  Input Parameter:
 . regressor - the `PetscRegressor` context
 
   Notes:
@@ -319,7 +319,7 @@ PetscErrorCode PetscRegressorReset(PetscRegressor regressor)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
-  if (regressor->ops->reset) PetscCall((*regressor->ops->reset)(regressor));
+  if (regressor->ops->reset) PetscTryTypeMethod(regressor, reset);
   PetscCall(MatDestroy(&regressor->training));
   PetscCall(VecDestroy(&regressor->target));
   PetscCall(TaoDestroy(&regressor->tao));
@@ -351,7 +351,7 @@ PetscErrorCode PetscRegressorDestroy(PetscRegressor *regressor)
   }
 
   PetscCall(PetscRegressorReset(*regressor));
-  if ((*regressor)->ops->destroy) PetscCall((*(*regressor)->ops->destroy)(*regressor));
+  PetscTryTypeMethod(*regressor, destroy);
 
   PetscCall(PetscHeaderDestroy(regressor));
   PetscFunctionReturn(PETSC_SUCCESS);

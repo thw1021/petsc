@@ -105,7 +105,7 @@ cdef class Regressor(Object):
         Parameters
         ----------
         X
-            The matrix of unlabled observations
+            The matrix of unlabeled observations
         y
             The vector of predicted labels
 
