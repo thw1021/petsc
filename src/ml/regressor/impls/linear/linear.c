@@ -2,6 +2,76 @@
 
 const char *const PetscRegressorLinearTypes[] = {"ols", "lasso", "ridge", "RegressorLinearType", "REGRESSOR_LINEAR_", NULL};
 
+static PetscErrorCode PetscRegressorLinearSetFitIntercept_Linear(PetscRegressor regressor, PetscBool flg)
+{
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
+
+  PetscFunctionBegin;
+  linear->fit_intercept = flg;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscRegressorLinearSetType_Linear(PetscRegressor regressor, PetscRegressorLinearType type)
+{
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
+
+  PetscFunctionBegin;
+  linear->type = type;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscRegressorLinearGetType_Linear(PetscRegressor regressor, PetscRegressorLinearType *type)
+{
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
+
+  PetscFunctionBegin;
+  *type = linear->type;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscRegressorLinearGetIntercept_Linear(PetscRegressor regressor, PetscScalar *intercept)
+{
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
+
+  PetscFunctionBegin;
+  *intercept = linear->intercept;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscRegressorLinearGetCoefficients_Linear(PetscRegressor regressor, Vec *coefficients)
+{
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
+
+  PetscFunctionBegin;
+  *coefficients = linear->coefficients;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscRegressorLinearGetKSP_Linear(PetscRegressor regressor, KSP *ksp)
+{
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
+
+  PetscFunctionBegin;
+  /* Analogous to how SNESGetKSP() operates, this routine should create the KSP if it doesn't exist.
+   * TODO: Follow what SNESGetKSP() does when setting this up. */
+  if (!linear->ksp) {
+    PetscCall(KSPCreate(PetscObjectComm((PetscObject)regressor), &linear->ksp));
+    PetscCall(PetscObjectIncrementTabLevel((PetscObject)linear->ksp, (PetscObject)regressor, 1));
+    PetscCall(PetscObjectSetOptions((PetscObject)linear->ksp, ((PetscObject)regressor)->options));
+  }
+  *ksp = linear->ksp;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscRegressorLinearSetUseKSP_Linear(PetscRegressor regressor, PetscBool flg)
+{
+  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
+
+  PetscFunctionBegin;
+  linear->use_ksp = flg;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode EvaluateResidual(Tao tao, Vec x, Vec f, void *ptr)
 {
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)ptr;
@@ -123,6 +193,12 @@ static PetscErrorCode PetscRegressorReset_Linear(PetscRegressor regressor)
 static PetscErrorCode PetscRegressorDestroy_Linear(PetscRegressor regressor)
 {
   PetscFunctionBegin;
+  PetscCall(PetscObjectComposeFunction((PetscObject)regressor, "PetscRegressorLinearSetFitIntercept_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)regressor, "PetscRegressorLinearSetUseKSP_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)regressor, "PetscRegressorLinearGetKSP_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)regressor, "PetscRegressorLinearGetCoefficients_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)regressor, "PetscRegressorLinearSetType_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)regressor, "PetscRegressorLinearGetType_C", NULL));
   PetscCall(PetscRegressorReset_Linear(regressor));
   PetscCall(PetscFree(regressor->data));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -147,11 +223,11 @@ static PetscErrorCode PetscRegressorDestroy_Linear(PetscRegressor regressor)
 @*/
 PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, PetscBool flg)
 {
-  /* TODO: Add companion PetscRegressorLinearGetFitIntercept(), and put it in the .seealso: */
-  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
-
   PetscFunctionBegin;
-  linear->fit_intercept = flg;
+  /* TODO: Add companion PetscRegressorLinearGetFitIntercept(), and put it in the .seealso: */
+  PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(regressor, flg, 2);
+  PetscTryMethod(regressor, "PetscRegressorLinearSetFitIntercept_C", (PetscRegressor, PetscBool), (regressor, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -171,11 +247,11 @@ PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, Pet
 @*/
 PetscErrorCode PetscRegressorLinearSetUseKSP(PetscRegressor regressor, PetscBool flg)
 {
-  /* TODO: Add companion PetscRegressorLinearGetUseKSP(), and put it in the .seealso: */
-  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
-
   PetscFunctionBegin;
-  linear->use_ksp = flg;
+  /* TODO: Add companion PetscRegressorLinearGetUseKSP(), and put it in the .seealso: */
+  PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(regressor, flg, 2);
+  PetscTryMethod(regressor, "PetscRegressorLinearSetUseKSP_C", (PetscRegressor, PetscBool), (regressor, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -235,19 +311,10 @@ static PetscErrorCode PetscRegressorView_Linear(PetscRegressor regressor, PetscV
 @*/
 PetscErrorCode PetscRegressorLinearGetKSP(PetscRegressor regressor, KSP *ksp)
 {
-  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   PetscAssertPointer(ksp, 2);
-  /* Analogous to how SNESGetKSP() operates, this routine should create the KSP if it doesn't exist.
-   * TODO: Follow what SNESGetKSP() does when setting this up. */
-  if (!linear->ksp) {
-    PetscCall(KSPCreate(PetscObjectComm((PetscObject)regressor), &linear->ksp));
-    PetscCall(PetscObjectIncrementTabLevel((PetscObject)linear->ksp, (PetscObject)regressor, 1));
-    PetscCall(PetscObjectSetOptions((PetscObject)linear->ksp, ((PetscObject)regressor)->options));
-  }
-  *ksp = linear->ksp;
+  PetscUseMethod(regressor, "PetscRegressorLinearGetKSP_C", (PetscRegressor, KSP *), (regressor, ksp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -268,12 +335,10 @@ PetscErrorCode PetscRegressorLinearGetKSP(PetscRegressor regressor, KSP *ksp)
 @*/
 PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetCoefficients(PetscRegressor regressor, Vec *coefficients)
 {
-  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   PetscAssertPointer(coefficients, 2);
-  *coefficients = linear->coefficients;
+  PetscUseMethod(regressor, "PetscRegressorLinearGetCoefficients_C", (PetscRegressor, Vec *), (regressor, coefficients));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -294,12 +359,10 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetCoefficients(PetscRegressor r
 @*/
 PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetIntercept(PetscRegressor regressor, PetscScalar *intercept)
 {
-  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   PetscAssertPointer(intercept, 2);
-  *intercept = linear->intercept;
+  PetscUseMethod(regressor, "PetscRegressorLinearGetIntercept_C", (PetscRegressor, PetscScalar *), (regressor, intercept));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -322,14 +385,10 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetIntercept(PetscRegressor regr
 @*/
 PetscErrorCode PetscRegressorLinearSetType(PetscRegressor regressor, PetscRegressorLinearType type)
 {
-  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
-  PetscBool              match;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
-  PetscCall(PetscObjectTypeCompare((PetscObject)regressor, PETSCREGRESSORLINEAR, &match));
-  PetscCheck(match, PetscObjectComm((PetscObject)regressor), PETSC_ERR_ARG_WRONG, "Regressor is not of type PETSCREGRESSORLINEAR");
-  linear->type = type;
+  PetscValidLogicalCollectiveEnum(regressor, type, 2);
+  PetscTryMethod(regressor, "PetscRegressorLinearSetType_C", (PetscRegressor, PetscRegressorLinearType), (regressor, type));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -348,14 +407,10 @@ PetscErrorCode PetscRegressorLinearSetType(PetscRegressor regressor, PetscRegres
 @*/
 PetscErrorCode PetscRegressorLinearGetType(PetscRegressor regressor, PetscRegressorLinearType *type)
 {
-  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)regressor->data;
-  PetscBool              same;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
-  PetscCall(PetscObjectTypeCompare((PetscObject)regressor, PETSCREGRESSORLINEAR, &same));
-  PetscCheck(same, PetscObjectComm((PetscObject)regressor), PETSC_ERR_ARG_INCOMP, "Regressor is not PETSCREGRESSORLINEAR type");
-  *type = linear->type;
+  PetscAssertPointer(type, 2);
+  PetscTryMethod(regressor, "PetscRegressorLinearGetType_C", (PetscRegressor, PetscRegressorLinearType *), (regressor, type));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -457,5 +512,13 @@ PETSC_EXTERN PetscErrorCode PetscRegressorCreate_Linear(PetscRegressor regressor
   linear->type          = REGRESSOR_LINEAR_OLS;
   /* Above, manually set the default linear regressor type.
        We don't use PetscRegressorLinearSetType() here, because that expects the SetUp event to already have happened. */
+
+  PetscCall(PetscObjectComposeFunction((PetscObject)regressor, "PetscRegressorLinearSetFitIntercept_C", PetscRegressorLinearSetFitIntercept_Linear));
+  PetscCall(PetscObjectComposeFunction((PetscObject)regressor, "PetscRegressorLinearSetUseKSP_C", PetscRegressorLinearSetUseKSP_Linear));
+  PetscCall(PetscObjectComposeFunction((PetscObject)regressor, "PetscRegressorLinearGetKSP_C", PetscRegressorLinearGetKSP_Linear));
+  PetscCall(PetscObjectComposeFunction((PetscObject)regressor, "PetscRegressorLinearGetCoefficients_C", PetscRegressorLinearGetCoefficients_Linear));
+  PetscCall(PetscObjectComposeFunction((PetscObject)regressor, "PetscRegressorLinearGetIntercept_C", PetscRegressorLinearGetIntercept_Linear));
+  PetscCall(PetscObjectComposeFunction((PetscObject)regressor, "PetscRegressorLinearSetType_C", PetscRegressorLinearSetType_Linear));
+  PetscCall(PetscObjectComposeFunction((PetscObject)regressor, "PetscRegressorLinearGetType_C", PetscRegressorLinearGetType_Linear));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

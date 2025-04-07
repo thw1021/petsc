@@ -191,8 +191,7 @@ PetscErrorCode PetscRegressorSetFromOptions(PetscRegressor regressor)
   PetscCall(PetscOptionsReal("-regressor_regularizer_weight", "Weight for the regularizer", "PetscRegressorSetRegularizerWeight", regressor->regularizer_weight, &regressor->regularizer_weight, &flg));
   if (flg) PetscCall(PetscRegressorSetRegularizerWeight(regressor, regressor->regularizer_weight));
   // The above is a little superfluous, because we have already set regressor->regularizer_weight above, but we also need to set the flag indicating that the user has set the weight!
-  /* TODO: Is there code that must be added to handle other options that apply to all PetscRegressor types? */
-  if (regressor->ops->setfromoptions) PetscTryTypeMethod(regressor, setfromoptions, PetscOptionsObject);
+  PetscTryTypeMethod(regressor, setfromoptions, PetscOptionsObject);
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -266,7 +265,7 @@ PetscErrorCode PetscRegressorFit(PetscRegressor regressor, Mat X, Vec y)
   PetscCall(PetscRegressorSetUp(regressor));
 
   PetscCall(PetscLogEventBegin(PetscRegressor_Fit, regressor, X, y, 0));
-  PetscCall((*regressor->ops->fit)(regressor));
+  PetscUseTypeMethod(regressor, fit);
   PetscCall(PetscLogEventEnd(PetscRegressor_Fit, regressor, X, y, 0));
   //TODO print convergence data
   PetscCall(PetscRegressorViewFromOptions(regressor, NULL, "-regressor_view"));
@@ -298,7 +297,7 @@ PetscErrorCode PetscRegressorPredict(PetscRegressor regressor, Mat X, Vec y)
   if (y) PetscValidHeaderSpecific(y, VEC_CLASSID, 3);
   PetscCheck(regressor->fitcalled == PETSC_TRUE, ((PetscObject)regressor)->comm, PETSC_ERR_ARG_WRONGSTATE, "PetscRegressorFit() must be called before PetscRegressorPredict()");
   PetscCall(PetscLogEventBegin(PetscRegressor_Predict, regressor, X, y, 0));
-  PetscCall((*regressor->ops->predict)(regressor, X, y));
+  PetscTryTypeMethod(regressor, predict, X, y);
   PetscCall(PetscLogEventEnd(PetscRegressor_Predict, regressor, X, y, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -459,6 +458,7 @@ PetscErrorCode PetscRegressorSetRegularizerWeight(PetscRegressor regressor, Pets
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
+  PetscValidLogicalCollectiveReal(regressor, weight, 2);
   regressor->regularizer_weight = weight;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
