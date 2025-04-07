@@ -410,7 +410,7 @@ PetscErrorCode PetscRegressorLinearGetType(PetscRegressor regressor, PetscRegres
   PetscFunctionBegin;
   PetscValidHeaderSpecific(regressor, PETSCREGRESSOR_CLASSID, 1);
   PetscAssertPointer(type, 2);
-  PetscTryMethod(regressor, "PetscRegressorLinearGetType_C", (PetscRegressor, PetscRegressorLinearType *), (regressor, type));
+  PetscUseMethod(regressor, "PetscRegressorLinearGetType_C", (PetscRegressor, PetscRegressorLinearType *), (regressor, type));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
