@@ -57,11 +57,6 @@ subroutine myFieldDecomp(dm, nfields, fieldNames, isFields, subDms, ierr)
 end subroutine myFieldDecomp
 !/*TEST
 !
-! build:
-! requires: fortran
-!
-! test:
-! suffix: shell_fielddecomp
-! args: -dm_view
-!
+!   test:
+!      args: -dm_view
 !TEST*/
