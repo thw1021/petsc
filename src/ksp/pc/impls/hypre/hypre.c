@@ -208,17 +208,17 @@ static PetscErrorCode PCGetInterpolations_BoomerAMG(PC pc, PetscInt *nlevels, Ma
 */
 static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level[], PetscBT *CFMarkers[], Vec *CFMarkers_Vec[])
 {
-  PC_HYPRE *jac = (PC_HYPRE *)pc->data;
-  hypre_IntArray  *h_array;
-  hypre_int       *data;
-  PetscBool        same;
-  PetscInt         num_levels, iStart, iEnd, fine_nodes = 0;
-  PetscScalar coarse_nodes, one = 1;
-  PetscInt        *n_per_temp;
+  PC_HYPRE       *jac = (PC_HYPRE *)pc->data;
+  hypre_IntArray *h_array;
+  hypre_int      *data;
+  PetscBool       same;
+  PetscInt        num_levels, iStart, iEnd, fine_nodes = 0;
+  PetscScalar     coarse_nodes, one = 1;
+  PetscInt       *n_per_temp;
   //PetscBT         *markertmp;
-  Vec        *markertmp_Vec;
-  hypre_IntArray **CF_marker_array;
-  HYPRE_MemoryLocation  memory_location;
+  Vec                 *markertmp_Vec;
+  hypre_IntArray     **CF_marker_array;
+  HYPRE_MemoryLocation memory_location;
 
   PetscFunctionBegin;
   PetscCall(PetscStrcmp(jac->hypre_type, "boomeramg", &same));
@@ -235,8 +235,8 @@ static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level
     memory_location = hypre_IntArrayMemoryLocation(CF_marker_array[CFMaxIndex]);
 
     /* Move data to host if needed*/
-   h_array = (hypre_GetActualMemLocation(memory_location) == hypre_MEMORY_DEVICE) ? hypre_IntArrayCloneDeep_v2(CF_marker_array[CFMaxIndex], HYPRE_MEMORY_HOST) : CF_marker_array[CFMaxIndex];
-    data = hypre_IntArrayData(h_array);
+    h_array = (hypre_GetActualMemLocation(memory_location) == hypre_MEMORY_DEVICE) ? hypre_IntArrayCloneDeep_v2(CF_marker_array[CFMaxIndex], HYPRE_MEMORY_HOST) : CF_marker_array[CFMaxIndex];
+    data    = hypre_IntArrayData(h_array);
 
     //fine_nodes = hypre_IntArraySize(CF_marker_array[CFMaxIndex]);
     fine_nodes = hypre_IntArraySize(h_array); // On this processor for some reason.
@@ -253,10 +253,10 @@ static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level
     PetscCall(VecSetSizes(markertmp_Vec[l], fine_nodes, PETSC_DETERMINE));
     PetscCall(VecSet(markertmp_Vec[l], -1)); //Value is coarse grid index number as it relates to fine grid index number(current index for this array). Try it for now.. if doesn't work then just use 1 as the value for true
     //PetscCall(VecView(markertmp_Vec[l], 0));
-    PetscCall(VecGetOwnershipRange(markertmp_Vec[l], &iStart, &iEnd)); 
+    PetscCall(VecGetOwnershipRange(markertmp_Vec[l], &iStart, &iEnd));
     for (PetscInt k = iStart; k < iEnd; k++) {
       //if (hypre_IntArrayDataI(CF_marker_array[CFMaxIndex], k) > 0) {
-      if (data[k-iStart] > 0) {
+      if (data[k - iStart] > 0) {
         //PetscCall(PetscBTSet(markertmp[l], k));
         //printf("k = %" PetscInt_FMT " , n_fine = %" PetscInt_FMT "\n", k, fine_nodes);
         PetscCall(VecSetValues(markertmp_Vec[l], 1, &k, &coarse_nodes, INSERT_VALUES));
@@ -273,10 +273,7 @@ static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level
     n_per_temp[l] = n_per_temp[l] + coarse_nodes;
 
     /* Free memory */
-   if (h_array != CF_marker_array[CFMaxIndex])
-   {
-      hypre_IntArrayDestroy(h_array);
-   }
+    if (h_array != CF_marker_array[CFMaxIndex]) { hypre_IntArrayDestroy(h_array); }
   }
 
   n_per_temp[num_levels - 1] = fine_nodes;
