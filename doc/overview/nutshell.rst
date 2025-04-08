@@ -42,6 +42,8 @@ Solvers
 
 * :any:`Optimization <ch_tao>` with equality and inequality constraints, first and second order (Newton) methods (``Tao``).
 
+* :any:`Regressor <ch_regressor>` (``PetscRegressor``).
+
 * Eigenvalue/Eigenvectors and related algorithms in the package `SLEPc <https://slepc.upv.es>`__.
 
 Model/Discretization Interfaces to Solvers
