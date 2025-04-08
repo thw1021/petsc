@@ -466,7 +466,7 @@ This usually occurs when network settings are misconfigured (perhaps due to VPN)
 - If you have a VPN enabled on your machine, try turning it off and then running `make check` to
   verify that it is not the VPN playing poorly with MPI.
 
-- If  ``ping `hostname` ( /sbin/ping )`` on macOS) fails or hangs do:
+- If  ``ping `hostname` `` (`/sbin/ping` on macOS) fails or hangs do:
 
   ```none
   echo 127.0.0.1 `hostname` | sudo tee -a /etc/hosts
