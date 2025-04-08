@@ -553,10 +553,6 @@ PetscErrorCode DMAppendOptionsPrefix(DM dm, const char prefix[])
 
   Level: advanced
 
-  Fortran Note:
-  Pass in a string 'prefix' of
-  sufficient length to hold the prefix.
-
 .seealso: [](ch_dmbase), `DM`, `DMSetOptionsPrefix()`, `DMAppendOptionsPrefix()`, `DMSetFromOptions()`
 @*/
 PetscErrorCode DMGetOptionsPrefix(DM dm, const char *prefix[])
@@ -862,6 +858,7 @@ PetscErrorCode DMSetUp(DM dm)
 . -dm_refine_volume_limit_pre <v>                    - The maximum cell volume after refinement before distribution
 . -dm_refine <n>                                     - The number of refinements after distribution
 . -dm_extrude <l>                                    - Activate extrusion and specify the number of layers to extrude
+. -dm_plex_save_transform <bool>                     - Save the `DMPlexTransform` that produced this mesh
 . -dm_plex_transform_extrude_thickness <t>           - The total thickness of extruded layers
 . -dm_plex_transform_extrude_use_tensor <bool>       - Use tensor cells when extruding
 . -dm_plex_transform_extrude_symmetric <bool>        - Extrude layers symmetrically about the surface
@@ -3782,7 +3779,7 @@ PetscErrorCode DMSetApplicationContext(DM dm, void *ctx)
   End Interface DMGetApplicationContext
 .ve
 
-  The prototpye for `ctx` must be
+  The prototype for `ctx` must be
 .vb
   type(tUsertype), pointer :: ctx
 .ve

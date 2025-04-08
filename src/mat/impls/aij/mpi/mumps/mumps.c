@@ -54,11 +54,11 @@ typedef MUMPS_INT PetscMUMPSInt;
 
 #if PETSC_PKG_MUMPS_VERSION_GE(5, 3, 0)
   #if defined(MUMPS_INTSIZE64) /* MUMPS_INTSIZE64 is in MUMPS headers if it is built in full 64-bit mode, therefore the macro is more reliable */
-    #error "Petsc has not been tested with full 64-bit MUMPS and we choose to error out"
+    #error "PETSc has not been tested with full 64-bit MUMPS and we choose to error out"
   #endif
 #else
   #if defined(INTSIZE64) /* INTSIZE64 is a command line macro one used to build MUMPS in full 64-bit mode */
-    #error "Petsc has not been tested with full 64-bit MUMPS and we choose to error out"
+    #error "PETSc has not been tested with full 64-bit MUMPS and we choose to error out"
   #endif
 #endif
 
@@ -199,7 +199,7 @@ struct Mat_MUMPS {
   /* stuff used by petsc/mumps OpenMP support*/
   PetscBool    use_petsc_omp_support;
   PetscOmpCtrl omp_ctrl;             /* an OpenMP controller that blocked processes will release their CPU (MPI_Barrier does not have this guarantee) */
-  MPI_Comm     petsc_comm, omp_comm; /* petsc_comm is petsc matrix's comm */
+  MPI_Comm     petsc_comm, omp_comm; /* petsc_comm is PETSc matrix's comm */
   PetscCount  *recvcount;            /* a collection of nnz on omp_master */
   PetscMPIInt  tag, omp_comm_size;
   PetscBool    is_omp_master; /* is this rank the master of omp_comm */
@@ -350,7 +350,7 @@ static PetscErrorCode MatMumpsHandleSchur_Private(Mat F, PetscBool expansion)
 }
 
 /*
-  MatConvertToTriples_A_B - convert Petsc matrix to triples: row[nz], col[nz], val[nz]
+  MatConvertToTriples_A_B - convert PETSc matrix to triples: row[nz], col[nz], val[nz]
 
   input:
     A       - matrix in aij,baij or sbaij format
@@ -1510,7 +1510,7 @@ static PetscErrorCode MatSolve_MUMPS(Mat A, Vec b, Vec x)
     }
   }
 
-  if (mumps->petsc_size > 1) { /* convert mumps distributed solution to petsc mpi x */
+  if (mumps->petsc_size > 1) { /* convert mumps distributed solution to PETSc mpi x */
     if (mumps->scat_sol && mumps->ICNTL9_pre != mumps->id.ICNTL(9)) {
       /* when id.ICNTL(9) changes, the contents of lsol_loc may change (not its size, lsol_loc), recreates scat_sol */
       PetscCall(VecScatterDestroy(&mumps->scat_sol));
@@ -1754,13 +1754,13 @@ static PetscErrorCode MatMatSolve_MUMPS(Mat A, Mat B, Mat X)
   PetscMUMPS_c(mumps);
   PetscCheck(mumps->id.INFOG(1) >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error in solve: INFOG(1)=%d " MUMPS_MANUALS, mumps->id.INFOG(1));
 
-  /* scatter mumps distributed solution to petsc vector v_mpi, which shares local arrays with solution matrix X */
+  /* scatter mumps distributed solution to PETSc vector v_mpi, which shares local arrays with solution matrix X */
   PetscCall(MatDenseGetArray(X, &array));
   PetscCall(VecPlaceArray(v_mpi, array));
 
   /* create scatter scat_sol */
   PetscCall(MatGetOwnershipRanges(X, &rstart));
-  /* iidx: index for scatter mumps solution to petsc X */
+  /* iidx: index for scatter mumps solution to PETSc X */
 
   PetscCall(ISCreateStride(PETSC_COMM_SELF, nlsol_loc, 0, 1, &is_from));
   PetscCall(PetscMalloc1(nlsol_loc, &idxx));
@@ -1770,8 +1770,8 @@ static PetscErrorCode MatMatSolve_MUMPS(Mat A, Mat B, Mat X)
     for (proc = 0; proc < mumps->petsc_size; proc++) {
       if (isol_loc[i] >= rstart[proc] && isol_loc[i] < rstart[proc + 1]) {
         myrstart = rstart[proc];
-        k        = isol_loc[i] - myrstart;          /* local index on 1st column of petsc vector X */
-        iidx     = k + myrstart * nrhs;             /* maps mumps isol_loc[i] to petsc index in X */
+        k        = isol_loc[i] - myrstart;          /* local index on 1st column of PETSc vector X */
+        iidx     = k + myrstart * nrhs;             /* maps mumps isol_loc[i] to PETSc index in X */
         m        = rstart[proc + 1] - rstart[proc]; /* rows of X for this proc */
         break;
       }
@@ -2258,6 +2258,7 @@ static PetscErrorCode MatSetFromOptions_MUMPS(Mat F, Mat A)
   PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_33", "ICNTL(33): compute determinant", "None", mumps->id.ICNTL(33), &mumps->id.ICNTL(33), NULL));
   PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_35", "ICNTL(35): activates Block Low Rank (BLR) based factorization", "None", mumps->id.ICNTL(35), &mumps->id.ICNTL(35), NULL));
   PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_36", "ICNTL(36): choice of BLR factorization variant", "None", mumps->id.ICNTL(36), &mumps->id.ICNTL(36), NULL));
+  PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_37", "ICNTL(37): compression of the contribution blocks (CB)", "None", mumps->id.ICNTL(37), &mumps->id.ICNTL(37), NULL));
   PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_38", "ICNTL(38): estimated compression rate of LU factors with BLR", "None", mumps->id.ICNTL(38), &mumps->id.ICNTL(38), NULL));
   PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_48", "ICNTL(48): multithreading with tree parallelism", "None", mumps->id.ICNTL(48), &mumps->id.ICNTL(48), NULL));
   PetscCall(PetscOptionsMUMPSInt("-mat_mumps_icntl_58", "ICNTL(58): defines options for symbolic factorization", "None", mumps->id.ICNTL(58), &mumps->id.ICNTL(58), NULL));
@@ -2375,7 +2376,7 @@ static PetscErrorCode MatLUFactorSymbolic_AIJMUMPS(Mat F, Mat A, IS r, PETSC_UNU
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Note the Petsc r and c permutations are ignored */
+/* Note the PETSc r and c permutations are ignored */
 static PetscErrorCode MatLUFactorSymbolic_BAIJMUMPS(Mat F, Mat A, PETSC_UNUSED IS r, PETSC_UNUSED IS c, const MatFactorInfo *info)
 {
   Mat_MUMPS     *mumps = (Mat_MUMPS *)F->data;
@@ -2430,7 +2431,7 @@ static PetscErrorCode MatLUFactorSymbolic_BAIJMUMPS(Mat F, Mat A, PETSC_UNUSED I
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Note the Petsc r permutation and factor info are ignored */
+/* Note the PETSc r permutation and factor info are ignored */
 static PetscErrorCode MatCholeskyFactorSymbolic_MUMPS(Mat F, Mat A, PETSC_UNUSED IS r, const MatFactorInfo *info)
 {
   Mat_MUMPS     *mumps = (Mat_MUMPS *)F->data;
@@ -2552,6 +2553,7 @@ static PetscErrorCode MatView_MUMPS(Mat A, PetscViewer viewer)
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(33) (compute determinant):                        %d\n", mumps->id.ICNTL(33)));
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(35) (activate BLR based factorization):           %d\n", mumps->id.ICNTL(35)));
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(36) (choice of BLR factorization variant):        %d\n", mumps->id.ICNTL(36)));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(37) (compression of the contribution blocks):     %d\n", mumps->id.ICNTL(37)));
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(38) (estimated compression rate of LU factors):   %d\n", mumps->id.ICNTL(38)));
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(48) (multithreading with tree parallelism):       %d\n", mumps->id.ICNTL(48)));
         PetscCall(PetscViewerASCIIPrintf(viewer, "  ICNTL(58) (options for symbolic factorization):         %d\n", mumps->id.ICNTL(58)));
@@ -3286,6 +3288,7 @@ PetscErrorCode MatMumpsGetNullPivots(Mat F, PetscInt *size, PetscInt **array)
 .  -mat_mumps_icntl_33 - ICNTL(33): compute determinant
 .  -mat_mumps_icntl_35 - ICNTL(35): level of activation of BLR (Block Low-Rank) feature
 .  -mat_mumps_icntl_36 - ICNTL(36): controls the choice of BLR factorization variant
+.  -mat_mumps_icntl_37 - ICNTL(37): compression of the contribution blocks (CB)
 .  -mat_mumps_icntl_38 - ICNTL(38): sets the estimated compression rate of LU factors with BLR
 .  -mat_mumps_icntl_48 - ICNTL(48): multithreading with tree parallelism
 .  -mat_mumps_icntl_58 - ICNTL(58): options for symbolic factorization
