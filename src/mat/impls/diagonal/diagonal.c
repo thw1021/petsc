@@ -329,8 +329,6 @@ static PetscErrorCode MatDestroy_Diagonal(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDiagonalRestoreDiagonal_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDiagonalGetInverseDiagonal_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDiagonalRestoreInverseDiagonal_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_diagonal_seqdense_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_diagonal_mpidense_C", NULL));
   PetscCall(PetscFree(mat->data));
   mat->structural_symmetry_eternal = PETSC_FALSE;
   mat->symmetry_eternal            = PETSC_FALSE;
@@ -551,72 +549,100 @@ PetscErrorCode MatCreateDiagonal(Vec diag, Mat *J)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatProductNumeric_Diagonal_Dense(Mat C)
+static PetscErrorCode MatProductNumeric_Diagonal(Mat D)
 {
-  Mat                A, B;
-  Mat_Diagonal      *a;
-  PetscScalar       *c;
-  const PetscScalar *b, *alpha;
-  PetscInt           ldb, ldc;
+  Mat       A, B;
+  PetscBool Aisdiag, Bisdiag;
+  Mat       diag_mat, other_mat;
+  PetscBool other_trans, diag_left;
+  Vec       diag;
 
   PetscFunctionBegin;
-  MatCheckProduct(C, 1);
-  A = C->product->A;
-  B = C->product->B;
-  a = (Mat_Diagonal *)A->data;
-  PetscCall(VecGetArrayRead(a->diag, &alpha));
-  PetscCall(MatDenseGetLDA(B, &ldb));
-  PetscCall(MatDenseGetLDA(C, &ldc));
-  PetscCall(MatDenseGetArrayRead(B, &b));
-  PetscCall(MatDenseGetArrayWrite(C, &c));
-  for (PetscInt j = 0; j < B->cmap->N; j++)
-    for (PetscInt i = 0; i < B->rmap->n; i++) c[i + j * ldc] = alpha[i] * b[i + j * ldb];
-  PetscCall(MatDenseRestoreArrayWrite(C, &c));
-  PetscCall(MatDenseRestoreArrayRead(B, &b));
-  PetscCall(VecRestoreArrayRead(a->diag, &alpha));
-  PetscCall(PetscLogFlops(B->cmap->N * B->rmap->n));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatProductSymbolic_Diagonal_Dense(Mat C)
-{
-  Mat      A, B;
-  PetscInt n, N, m, M;
-
-  PetscFunctionBegin;
-  MatCheckProduct(C, 1);
-  PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
-  A = C->product->A;
-  B = C->product->B;
-  PetscCall(MatDiagonalSetUpDiagonal(A));
-  PetscCall(MatGetLocalSize(C, &m, &n));
-  PetscCall(MatGetSize(C, &M, &N));
-  if (m == PETSC_DECIDE || n == PETSC_DECIDE || M == PETSC_DECIDE || N == PETSC_DECIDE) {
-    PetscCall(MatGetLocalSize(B, NULL, &n));
-    PetscCall(MatGetSize(B, NULL, &N));
-    PetscCall(MatGetLocalSize(A, &m, NULL));
-    PetscCall(MatGetSize(A, &M, NULL));
-    PetscCall(MatSetSizes(C, m, n, M, N));
+  MatCheckProduct(D, 1);
+  A = D->product->A;
+  B = D->product->B;
+  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATDIAGONAL, &Aisdiag));
+  PetscCall(PetscObjectTypeCompare((PetscObject)B, MATDIAGONAL, &Bisdiag));
+  PetscCheck(Aisdiag || Bisdiag, PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "This should not happen");
+  if (Aisdiag) {
+    diag_mat    = A;
+    other_mat   = B;
+    diag_left   = PETSC_TRUE;
+    other_trans = D->product->type == MATPRODUCT_ABt ? PETSC_TRUE : PETSC_FALSE;
+  } else {
+    diag_mat    = B;
+    other_mat   = A;
+    diag_left   = PETSC_FALSE;
+    other_trans = D->product->type == MATPRODUCT_AtB ? PETSC_TRUE : PETSC_FALSE;
   }
-  PetscCall(MatSetType(C, ((PetscObject)B)->type_name));
-  PetscCall(MatSetUp(C));
-  C->ops->productnumeric = MatProductNumeric_Diagonal_Dense;
+  if (!other_trans) {
+    PetscCall(MatCopy(other_mat, D, UNKNOWN_NONZERO_PATTERN));
+  } else {
+    Mat other_t;
+
+    PetscCall(MatTranspose(other_mat, MAT_INITIAL_MATRIX, &other_t));
+    PetscCall(MatCopy(other_t, D, UNKNOWN_NONZERO_PATTERN));
+    PetscCall(MatDestroy(&other_t));
+  }
+  PetscCall(MatDiagonalGetDiagonal(diag_mat, &diag));
+  PetscCall(MatDiagonalScale(D, diag_left ? diag : NULL, diag_left ? NULL : diag));
+  PetscCall(MatDiagonalRestoreDiagonal(diag_mat, &diag));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatProductSetFromOptions_Diagonal_Dense_AB(Mat C)
+static PetscErrorCode MatProductSymbolic_Diagonal(Mat D)
 {
+  Mat A, B;
+
   PetscFunctionBegin;
-  C->ops->productsymbolic = MatProductSymbolic_Diagonal_Dense;
+  MatCheckProduct(D, 1);
+  A = D->product->A;
+  B = D->product->B;
+  switch (D->product->type) {
+  case MATPRODUCT_AB:
+    PetscCall(MatSetSizes(D, A->rmap->n, B->cmap->n, A->rmap->N, B->cmap->N));
+    break;
+  case MATPRODUCT_AtB:
+    PetscCall(MatSetSizes(D, A->cmap->n, B->cmap->n, A->cmap->N, B->cmap->N));
+    break;
+  case MATPRODUCT_ABt:
+    PetscCall(MatSetSizes(D, A->rmap->n, B->rmap->n, A->rmap->N, B->rmap->N));
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)D), PETSC_ERR_SUP, "unsupported product %s", MatProductTypes[D->product->type]);
+    break;
+  }
+  D->ops->productnumeric = MatProductNumeric_Diagonal;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatProductSetFromOptions_Diagonal_Dense(Mat C)
+static PetscErrorCode MatProductSetFromOptions_Diagonal(Mat D)
 {
-  Mat_Product *product = C->product;
+  Mat       A, B, C;
+  PetscBool Aisdiag, Bisdiag, Cisdiag;
+  Mat       other_mat;
+  PetscBool has_diag_scale;
 
   PetscFunctionBegin;
-  if (product->type == MATPRODUCT_AB || product->type == MATPRODUCT_AtB) PetscCall(MatProductSetFromOptions_Diagonal_Dense_AB(C));
+  MatCheckProduct(D, 1);
+  A = D->product->A;
+  B = D->product->B;
+  C = D->product->C;
+  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATDIAGONAL, &Aisdiag));
+  PetscCall(PetscObjectTypeCompare((PetscObject)B, MATDIAGONAL, &Bisdiag));
+  PetscCall(PetscObjectTypeCompare((PetscObject)C, MATDIAGONAL, &Cisdiag));
+  PetscCheck(Aisdiag || Bisdiag || Cisdiag, PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "This should not happen");
+  switch (D->product->type) {
+  case MATPRODUCT_AB:
+  case MATPRODUCT_AtB:
+  case MATPRODUCT_ABt:
+    other_mat = Aisdiag ? B : A;
+    PetscCall(MatHasOperation(other_mat, MATOP_DIAGONAL_SCALE, &has_diag_scale));
+    if (has_diag_scale) D->ops->productsymbolic = MatProductSymbolic_Diagonal;
+    break;
+  default:
+    break;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -642,34 +668,33 @@ PETSC_INTERN PetscErrorCode MatCreate_Diagonal(Mat A)
   A->symmetric                   = PETSC_BOOL3_TRUE;
   if (!PetscDefined(USE_COMPLEX)) A->hermitian = PETSC_BOOL3_TRUE;
 
-  A->ops->getrow           = MatGetRow_Diagonal;
-  A->ops->mult             = MatMult_Diagonal;
-  A->ops->multadd          = MatMultAdd_Diagonal;
-  A->ops->multtranspose    = MatMult_Diagonal;
-  A->ops->multtransposeadd = MatMultAdd_Diagonal;
-  A->ops->norm             = MatNorm_Diagonal;
-  A->ops->duplicate        = MatDuplicate_Diagonal;
-  A->ops->solve            = MatSolve_Diagonal;
-  A->ops->solvetranspose   = MatSolve_Diagonal;
-  A->ops->shift            = MatShift_Diagonal;
-  A->ops->scale            = MatScale_Diagonal;
-  A->ops->diagonalscale    = MatDiagonalScale_Diagonal;
-  A->ops->getdiagonal      = MatGetDiagonal_Diagonal;
-  A->ops->diagonalset      = MatDiagonalSet_Diagonal;
-  A->ops->view             = MatView_Diagonal;
-  A->ops->zeroentries      = MatZeroEntries_Diagonal;
-  A->ops->destroy          = MatDestroy_Diagonal;
-  A->ops->getinfo          = MatGetInfo_Diagonal;
-  A->ops->axpy             = MatAXPY_Diagonal;
-  A->ops->setup            = MatSetUp_Diagonal;
-  A->ops->permute          = MatPermute_Diagonal;
+  A->ops->getrow                = MatGetRow_Diagonal;
+  A->ops->mult                  = MatMult_Diagonal;
+  A->ops->multadd               = MatMultAdd_Diagonal;
+  A->ops->multtranspose         = MatMult_Diagonal;
+  A->ops->multtransposeadd      = MatMultAdd_Diagonal;
+  A->ops->norm                  = MatNorm_Diagonal;
+  A->ops->duplicate             = MatDuplicate_Diagonal;
+  A->ops->solve                 = MatSolve_Diagonal;
+  A->ops->solvetranspose        = MatSolve_Diagonal;
+  A->ops->shift                 = MatShift_Diagonal;
+  A->ops->scale                 = MatScale_Diagonal;
+  A->ops->diagonalscale         = MatDiagonalScale_Diagonal;
+  A->ops->getdiagonal           = MatGetDiagonal_Diagonal;
+  A->ops->diagonalset           = MatDiagonalSet_Diagonal;
+  A->ops->view                  = MatView_Diagonal;
+  A->ops->zeroentries           = MatZeroEntries_Diagonal;
+  A->ops->destroy               = MatDestroy_Diagonal;
+  A->ops->getinfo               = MatGetInfo_Diagonal;
+  A->ops->axpy                  = MatAXPY_Diagonal;
+  A->ops->setup                 = MatSetUp_Diagonal;
+  A->ops->permute               = MatPermute_Diagonal;
+  A->ops->productsetfromoptions = MatProductSetFromOptions_Diagonal;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDiagonalGetDiagonal_C", MatDiagonalGetDiagonal_Diagonal));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDiagonalRestoreDiagonal_C", MatDiagonalRestoreDiagonal_Diagonal));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDiagonalGetInverseDiagonal_C", MatDiagonalGetInverseDiagonal_Diagonal));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDiagonalRestoreInverseDiagonal_C", MatDiagonalRestoreInverseDiagonal_Diagonal));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_diagonal_seqdense_C", MatProductSetFromOptions_Diagonal_Dense));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_diagonal_mpidense_C", MatProductSetFromOptions_Diagonal_Dense));
   PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATDIAGONAL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
