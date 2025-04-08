@@ -252,7 +252,6 @@ static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level
         coarse_nodes++;
       }
     }
-
     PetscCall(VecAssemblyBegin(markertmp_Vec[l]));
     PetscCall(VecAssemblyEnd(markertmp_Vec[l]));
     n_per_temp[l] = n_per_temp[l] + coarse_nodes;
