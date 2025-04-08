@@ -10,8 +10,8 @@ May 20-21, 2025, Davis Hall, University of Buffalo, NY, USA ([105 White Rd, Amhe
 
 ## Meeting times
 
-- Monday, May 19 - Tutorial
-- Tuesday, May 20 - Meeting
+- Monday, May 19 - Tutorial (Coffee at 8am, tutorials begin at 9am)
+- Tuesday, May 20 - Meeting (begin at 9am)
 - Wednesday, May 21 - Meeting (ends around 5pm)
 
 ## Registration
