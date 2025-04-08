@@ -7,7 +7,6 @@ typedef struct {
   PetscInt *n_per_level;
   Mat       stiff;
   Mat      *ProlongationOps;
-  //PetscBT  *CFMarkers;
   Vec *CFMarkers;
   KSP  kspHypre;
 } *DataCompression;
