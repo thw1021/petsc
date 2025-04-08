@@ -340,6 +340,7 @@ static PetscErrorCode MatDestroy_Diagonal(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDiagonalRestoreDiagonal_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDiagonalGetInverseDiagonal_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDiagonalRestoreInverseDiagonal_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_anytype_C", NULL));
   PetscCall(PetscFree(mat->data));
   mat->structural_symmetry_eternal = PETSC_FALSE;
   mat->symmetry_eternal            = PETSC_FALSE;
@@ -704,6 +705,18 @@ static PetscErrorCode MatProductSetFromOptions_Diagonal(Mat D)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatMatSolve_Diagonal(Mat A, Mat B, Mat C)
+{
+  Vec inv_diag;
+
+  PetscFunctionBegin;
+  if (C != B) PetscCall(MatCopy(B, C, UNKNOWN_NONZERO_PATTERN));
+  PetscCall(MatDiagonalGetInverseDiagonal(A, &inv_diag));
+  PetscCall(MatDiagonalScale(C, inv_diag, NULL));
+  PetscCall(MatDiagonalRestoreInverseDiagonal(A, &inv_diag));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
    MATDIAGONAL - MATDIAGONAL = "diagonal" - A diagonal matrix type with the diagonal implemented as a `Vec`.  Useful for
    cases where `VecPointwiseMult()` or `VecPointwiseDivide()` should be thought of as the actions of a linear operator.
@@ -750,12 +763,13 @@ PETSC_INTERN PetscErrorCode MatCreate_Diagonal(Mat A)
   A->ops->setrandom             = MatSetRandom_Diagonal;
   A->ops->conjugate             = MatConjugate_Diagonal;
   A->ops->transpose             = MatTranspose_Diagonal;
-  A->ops->productsetfromoptions = MatProductSetFromOptions_Diagonal;
+  A->ops->matsolve              = MatMatSolve_Diagonal;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDiagonalGetDiagonal_C", MatDiagonalGetDiagonal_Diagonal));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDiagonalRestoreDiagonal_C", MatDiagonalRestoreDiagonal_Diagonal));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDiagonalGetInverseDiagonal_C", MatDiagonalGetInverseDiagonal_Diagonal));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDiagonalRestoreInverseDiagonal_C", MatDiagonalRestoreInverseDiagonal_Diagonal));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_anytype_C", MatProductSetFromOptions_Diagonal));
   PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATDIAGONAL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

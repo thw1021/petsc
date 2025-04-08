@@ -1,5 +1,5 @@
 #pragma once
-#include <petscmat.h>
+#include <petscksp.h>
 
 PETSC_INTERN PetscLogEvent LMBASIS_GEMM;
 PETSC_INTERN PetscLogEvent LMBASIS_GEMV;
@@ -48,3 +48,5 @@ PETSC_INTERN PetscErrorCode LMBasisGEMV(LMBasis, PetscInt, PetscInt, PetscScalar
 PETSC_INTERN PetscErrorCode LMBasisGEMVH(LMBasis, PetscInt, PetscInt, PetscScalar, Vec, PetscScalar, Vec);
 PETSC_INTERN PetscErrorCode LMBasisGEMMH(LMBasis, PetscInt, PetscInt, LMBasis, PetscInt, PetscInt, PetscScalar, PetscScalar, Mat);
 PETSC_INTERN PetscErrorCode LMBasisSetCachedProduct(LMBasis, Vec, Vec);
+PETSC_INTERN PetscErrorCode MatLMBasisMult(Mat, LMBasis, PetscInt, PetscInt, LMBasis);
+PETSC_INTERN PetscErrorCode KSPLMBasisSolve(KSP, LMBasis, PetscInt, PetscInt, LMBasis);

@@ -501,3 +501,119 @@ PETSC_INTERN PetscErrorCode LMBasisSetCachedProduct(LMBasis A, Vec x, Vec Ax)
   A->cached_product = Ax;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PETSC_INTERN PetscErrorCode MatLMBasisMult(Mat A, LMBasis B, PetscInt oldest, PetscInt next, LMBasis C)
+{
+  PetscInt diff;
+  PetscInt i_oldest, i_next;
+  PetscInt B_oldest, B_next;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscCheck(B->m == C->m, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_SIZ, "basis sizes do not match, (%" PetscInt_FMT " !+ %" PetscInt_FMT ")", B->m, C->m);
+  diff = next - oldest;
+  if (!B->m || diff <= 0) PetscFunctionReturn(PETSC_SUCCESS);
+  B_next = B->k;
+  B_oldest = PetscMax(0, B_next - B->m);
+  PetscCheck(oldest >= B_oldest && next <= B_next, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_OUTOFRANGE, "requested range of vecs [%" PetscInt_FMT ", %" PetscInt_FMT ") is outside of input basis range [%" PetscInt_FMT ", %" PetscInt_FMT ")", oldest, next, B_oldest, B_next);
+  PetscCheck(oldest == C->k, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_OUTOFRANGE, "first new index %" PetscInt_FMT " is not next index of output basis %" PetscInt_FMT, oldest, C->k);
+
+  if (diff == 1) {
+    Vec b_i, c_i;
+
+    PetscCall(LMBasisGetVecRead(B, oldest, &b_i));
+    PetscCall(LMBasisGetNextVec(C, &c_i));
+    PetscCall(MatMult(A, b_i, c_i));
+    PetscCall(LMBasisRestoreNextVec(C, &c_i));
+    PetscCall(LMBasisRestoreVecRead(B, oldest, &b_i));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  i_oldest = oldest % B->m;
+  i_next   = (next - 1) % B->m + 1;
+  if (diff == B->m) {
+    PetscCall(MatMatMult(A, B->vecs, MAT_REUSE_MATRIX, PETSC_DEFAULT, &C->vecs));
+  } else if (i_next > i_oldest) {
+    Mat B_sub, C_sub;
+
+    PetscCall(MatDenseGetSubMatrix(B->vecs, PETSC_DECIDE, PETSC_DECIDE, i_oldest, i_next, &B_sub));
+    PetscCall(MatDenseGetSubMatrix(C->vecs, PETSC_DECIDE, PETSC_DECIDE, i_oldest, i_next, &C_sub));
+    PetscCall(MatMatMult(A, B_sub, MAT_REUSE_MATRIX, PETSC_DEFAULT, &C_sub));
+    PetscCall(MatDenseRestoreSubMatrix(C->vecs, &C_sub));
+    PetscCall(MatDenseRestoreSubMatrix(B->vecs, &B_sub));
+  } else {
+    Mat B_sub, C_sub;
+
+    PetscCall(MatDenseGetSubMatrix(B->vecs, PETSC_DECIDE, PETSC_DECIDE, 0, i_next, &B_sub));
+    PetscCall(MatDenseGetSubMatrix(C->vecs, PETSC_DECIDE, PETSC_DECIDE, 0, i_next, &C_sub));
+    PetscCall(MatMatMult(A, B_sub, MAT_REUSE_MATRIX, PETSC_DEFAULT, &C_sub));
+    PetscCall(MatDenseRestoreSubMatrix(C->vecs, &C_sub));
+    PetscCall(MatDenseRestoreSubMatrix(B->vecs, &B_sub));
+
+    PetscCall(MatDenseGetSubMatrix(B->vecs, PETSC_DECIDE, PETSC_DECIDE, i_oldest, B->m, &B_sub));
+    PetscCall(MatDenseGetSubMatrix(C->vecs, PETSC_DECIDE, PETSC_DECIDE, i_oldest, B->m, &C_sub));
+    PetscCall(MatMatMult(A, B_sub, MAT_REUSE_MATRIX, PETSC_DEFAULT, &C_sub));
+    PetscCall(MatDenseRestoreSubMatrix(C->vecs, &C_sub));
+    PetscCall(MatDenseRestoreSubMatrix(B->vecs, &B_sub));
+  }
+  C->k = next;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode KSPLMBasisSolve(KSP ksp, LMBasis B, PetscInt oldest, PetscInt next, LMBasis C)
+{
+  PetscInt  diff;
+  PetscInt  B_oldest, B_next;
+  PetscInt  i_oldest, i_next;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscCheck(B->m == C->m, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_SIZ, "basis sizes do not match, (%" PetscInt_FMT " !+ %" PetscInt_FMT ")", B->m, C->m);
+  diff = next - oldest;
+  if (!B->m || diff <= 0) PetscFunctionReturn(PETSC_SUCCESS);
+  B_next = B->k;
+  B_oldest = PetscMax(0, B_next - B->m);
+  PetscCheck(oldest >= B_oldest && next <= B_next, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_OUTOFRANGE, "requested range of vecs [%" PetscInt_FMT ", %" PetscInt_FMT ") is outside of input basis range [%" PetscInt_FMT ", %" PetscInt_FMT ")", oldest, next, B_oldest, B_next);
+  PetscCheck(oldest == C->k, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_OUTOFRANGE, "first new index %" PetscInt_FMT " is not next index of output basis %" PetscInt_FMT, oldest, C->k);
+
+  if (diff == 1) {
+    Vec b_i, c_i;
+
+    PetscCall(LMBasisGetVecRead(B, oldest, &b_i));
+    PetscCall(LMBasisGetNextVec(C, &c_i));
+    PetscCall(KSPSolve(ksp, b_i, c_i));
+    PetscCall(LMBasisRestoreNextVec(C, &c_i));
+    PetscCall(LMBasisRestoreVecRead(B, oldest, &b_i));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  i_oldest = oldest % B->m;
+  i_next   = (next - 1) % B->m + 1;
+  if (diff == B->m) {
+    PetscCall(KSPMatSolve(ksp, B->vecs, C->vecs));
+  } else if (i_next > i_oldest) {
+    Mat B_sub, C_sub;
+
+    PetscCall(MatDenseGetSubMatrix(B->vecs, PETSC_DECIDE, PETSC_DECIDE, i_oldest, i_next, &B_sub));
+    PetscCall(MatDenseGetSubMatrix(C->vecs, PETSC_DECIDE, PETSC_DECIDE, i_oldest, i_next, &C_sub));
+    PetscCall(KSPMatSolve(ksp, B_sub, C_sub));
+    PetscCall(MatDenseRestoreSubMatrix(C->vecs, &C_sub));
+    PetscCall(MatDenseRestoreSubMatrix(B->vecs, &B_sub));
+  } else {
+    Mat B_sub, C_sub;
+
+    PetscCall(MatDenseGetSubMatrix(B->vecs, PETSC_DECIDE, PETSC_DECIDE, 0, i_next, &B_sub));
+    PetscCall(MatDenseGetSubMatrix(C->vecs, PETSC_DECIDE, PETSC_DECIDE, 0, i_next, &C_sub));
+    PetscCall(KSPMatSolve(ksp, B_sub, C_sub));
+    PetscCall(MatDenseRestoreSubMatrix(C->vecs, &C_sub));
+    PetscCall(MatDenseRestoreSubMatrix(B->vecs, &B_sub));
+
+    PetscCall(MatDenseGetSubMatrix(B->vecs, PETSC_DECIDE, PETSC_DECIDE, i_oldest, B->m, &B_sub));
+    PetscCall(MatDenseGetSubMatrix(C->vecs, PETSC_DECIDE, PETSC_DECIDE, i_oldest, B->m, &C_sub));
+    PetscCall(KSPMatSolve(ksp, B_sub, C_sub));
+    PetscCall(MatDenseRestoreSubMatrix(C->vecs, &C_sub));
+    PetscCall(MatDenseRestoreSubMatrix(B->vecs, &B_sub));
+  }
+  C->k = next;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}

@@ -927,7 +927,7 @@ PETSC_INTERN PetscErrorCode MatLMVMGetJ0Scalar(Mat B, PetscBool *is_scalar, Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatLMVMUpdateOpVecs(Mat B, LMBasis X, LMBasis OpX, PetscErrorCode (*op)(Mat, Vec, Vec))
+static PetscErrorCode MatLMVMUpdateOpVecs(Mat B, LMBasis X, LMBasis OpX, PetscBool fwd)
 {
   Mat_LMVM        *lmvm = (Mat_LMVM *)B->data;
   PetscObjectId    J0_id;
@@ -946,15 +946,8 @@ static PetscErrorCode MatLMVMUpdateOpVecs(Mat B, LMBasis X, LMBasis OpX, PetscEr
     PetscCall(LMBasisSetCachedProduct(OpX, NULL, NULL));
   }
   OpX->k = PetscMax(OpX->k, oldest);
-  for (PetscInt i = OpX->k; i < next; i++) {
-    Vec x_i, op_x_i;
-
-    PetscCall(LMBasisGetVecRead(X, i, &x_i));
-    PetscCall(LMBasisGetNextVec(OpX, &op_x_i));
-    PetscCall(op(B, x_i, op_x_i));
-    PetscCall(LMBasisRestoreNextVec(OpX, &op_x_i));
-    PetscCall(LMBasisRestoreVecRead(X, i, &x_i));
-  }
+  if (fwd) PetscCall(MatLMBasisMult(lmvm->J0, X, OpX->k, next, OpX));
+  else PetscCall(KSPLMBasisSolve(lmvm->J0ksp, X, OpX->k, next, OpX));
   PetscAssert(OpX->k == X->k && OpX->operator_id == J0_id && OpX->operator_state == J0_state, PetscObjectComm((PetscObject)B), PETSC_ERR_PLIB, "Invalid state for operator-updated LMBasis");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1035,7 +1028,7 @@ PETSC_INTERN PetscErrorCode MatLMVMGetUpdatedBasis(Mat B, MatLMVMBasisType type,
       *scale         = 1.0;
       if (!lmvm->basis[type]) PetscCall(LMBasisCreate(MatLMVMBasisSizeOf(type) == LMBASIS_S ? lmvm->Xprev : lmvm->Fprev, lmvm->m, &lmvm->basis[type]));
       basis = lmvm->basis[type];
-      PetscCall(MatLMVMUpdateOpVecs(B, orig_basis, basis, (type == LMBASIS_B0S) ? MatLMVMApplyJ0Fwd : MatLMVMApplyJ0Inv));
+      PetscCall(MatLMVMUpdateOpVecs(B, orig_basis, basis, (type == LMBASIS_B0S) ? PETSC_TRUE : PETSC_FALSE));
       *basis_p = basis;
     }
     break;
