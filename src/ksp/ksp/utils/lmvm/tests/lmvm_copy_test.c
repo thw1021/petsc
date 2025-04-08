@@ -191,8 +191,30 @@ int main(int argc, char **argv)
 
 /*TEST
 
+  # dense != compact_dense
   test:
     suffix: 0
-    args: -mat_type {{lmvmbfgs lmvmdfp lmvmsr1 lmvmbroyden lmvmbadbroyden lmvmsymbroyden lmvmsymbadbroyden lmvmdiagbroyden lmvmdbfgs lmvmddfp lmvmdqn}}
+    args: -mat_lmvm_mult_algorithm {{recursive dense compact_dense}} -mat_type {{lmvmbfgs lmvmdfp lmvmbroyden lmvmbadbroyden}}
+
+  # dense == compact_dense
+  test:
+    suffix: 1
+    output_file: output/lmvm_copy_test_0.out
+    args: -mat_lmvm_mult_algorithm {{recursive dense}} -mat_type {{lmvmsr1 lmvmsymbroyden lmvmsymbadbroyden}}
+
+  test:
+    suffix: 2
+    output_file: output/lmvm_copy_test_0.out
+    args: -mat_type {{lmvmdiagbroyden lmvmdqn}}
+
+  test:
+    suffix: 3
+    output_file: output/lmvm_copy_test_0.out
+    args: -mat_type lmvmdbfgs -mat_lbfgs_recursive {{0 1}}
+
+  test:
+    suffix: 4
+    output_file: output/lmvm_copy_test_0.out
+    args: -mat_type lmvmddfp -mat_ldfp_recursive {{0 1}}
 
 TEST*/
