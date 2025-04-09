@@ -2046,7 +2046,7 @@ PetscErrorCode DMCreateFieldIS(DM dm, PetscInt *numFields, char ***fieldNames, I
 
   `namelist` must be provided, `islist` may be `PETSC_NULL_IS_POINTER` and `dmlist` may be `PETSC_NULL_DM_POINTER`
 
-  Use `DMCreateFieldDecomposition()` to free the return objects
+  Use `DMDestroyFieldDecomposition()` to free the returned objects
 
   Developer Notes:
   It is not clear why this function and `DMCreateFieldIS()` exist. Having two seems redundant and confusing.
