@@ -59,14 +59,14 @@ int main(int argc, char **argv)
       PetscCall(VecAXPY(x, xscale, dx));
       PetscCall(VecAXPY(g, fscale, df));
       PetscCall(MatLMVMUpdate(B, x, g));
-      PetscCall(MatMult(B, g, p));
+      PetscCall(MatSolve(B, g, p));
     }
     if (epoch > 0) PetscCall(PetscLogStagePush(matsolve_loop));
     for (PetscInt iter = 0; iter < n_iters; iter++, xscale *= -1.0, fscale *= -1.0) {
       PetscCall(VecAXPY(x, xscale, dx));
       PetscCall(VecAXPY(g, fscale, df));
       PetscCall(MatLMVMUpdate(B, x, g));
-      PetscCall(MatMult(B, g, p));
+      PetscCall(MatSolve(B, g, p));
     }
     PetscCall(MatLMVMReset(B, PETSC_FALSE));
     if (epoch > 0) PetscCall(PetscLogStagePop());
