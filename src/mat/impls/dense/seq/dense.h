@@ -96,6 +96,7 @@ PETSC_INTERN PetscErrorCode MatZeroEntries_SeqDense(Mat);
 PETSC_INTERN PetscErrorCode MatSetUp_SeqDense(Mat);
 PETSC_INTERN PetscErrorCode MatSetRandom_SeqDense(Mat, PetscRandom);
 PETSC_INTERN PetscErrorCode MatGetDiagonal_SeqDense(Mat, Vec);
+PETSC_INTERN PetscErrorCode MatDiagonalScale_SeqDense(Mat, Vec, Vec);
 
 PETSC_INTERN PetscErrorCode MatMultAddColumnRangeKernel_SeqDense(Mat, Vec, Vec, Vec, PetscInt, PetscInt, PetscBool, PetscBool);
 PETSC_INTERN PetscErrorCode MatMultColumnRangeKernel_SeqDense(Mat, Vec, Vec, PetscInt, PetscInt, PetscBool, PetscBool);

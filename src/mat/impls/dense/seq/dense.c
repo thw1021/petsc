@@ -1911,7 +1911,7 @@ PetscErrorCode MatGetDiagonal_SeqDense(Mat A, Vec v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDiagonalScale_SeqDense(Mat A, Vec ll, Vec rr)
+PetscErrorCode MatDiagonalScale_SeqDense(Mat A, Vec ll, Vec rr)
 {
   Mat_SeqDense      *mat = (Mat_SeqDense *)A->data;
   const PetscScalar *l, *r;

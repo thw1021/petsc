@@ -14,6 +14,8 @@
 
 #include <../src/vec/vec/impls/seq/cupm/vecseqcupm.hpp> // for VecSeq_CUPM
 
+#include <thrust/functional.h> // thrust::multiplies
+
 namespace Petsc
 {
 
@@ -161,6 +163,7 @@ public:
   static PetscErrorCode AXPY(Mat, PetscScalar, Mat, MatStructure) noexcept;
   static PetscErrorCode Duplicate(Mat, MatDuplicateOption, Mat *) noexcept;
   static PetscErrorCode SetRandom(Mat, PetscRandom) noexcept;
+  static PetscErrorCode DiagonalScale(Mat, Vec, Vec) noexcept;
 
   static PetscErrorCode GetColumnVector(Mat, Vec, PetscInt) noexcept;
   template <PetscMemoryAccessMode>
@@ -1128,6 +1131,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::BindToCPU(Mat A, PetscBool to_host) 
   MatSetOp_CUPM(to_host, A, setup, MatSetUp_SeqDense, SetUp);
   MatSetOp_CUPM(to_host, A, setrandom, MatSetRandom_SeqDense, SetRandom);
   MatSetOp_CUPM(to_host, A, getdiagonal, MatGetDiagonal_SeqDense, GetDiagonal);
+  MatSetOp_CUPM(to_host, A, diagonalscale, MatDiagonalScale_SeqDense, DiagonalScale);
   // seemingly always the same
   A->ops->productsetfromoptions = MatProductSetFromOptions_SeqDense;
 
@@ -1411,11 +1415,12 @@ namespace detail
 // ==========================================================================================
 template <typename T>
 struct SubMatIndexFunctor {
-  PETSC_HOSTDEVICE_INLINE_DECL T operator()(T x) const noexcept { return ((x / nrows) * lda) + (x % nrows); }
+  PETSC_HOSTDEVICE_INLINE_DECL T operator()(T x) const noexcept { return (x % nrows) * stride + ((x / nrows) * lda); }
 
   PetscInt nrows;
   PetscInt ncols;
   PetscInt lda;
+  PetscInt stride;
 };
 
 template <typename Iterator>
@@ -1424,27 +1429,31 @@ struct SubMatrixIterator : MatrixIteratorBase<Iterator, SubMatIndexFunctor<typen
 
   using iterator = typename base_type::iterator;
 
-  constexpr SubMatrixIterator(Iterator first, Iterator last, PetscInt nrows, PetscInt ncols, PetscInt lda) noexcept :
+  constexpr SubMatrixIterator(Iterator first, Iterator last, PetscInt nrows, PetscInt ncols, PetscInt lda, PetscInt end) noexcept :
     base_type{
-      std::move(first), std::move(last), {nrows, ncols, lda}
-  }
+      std::move(first), std::move(last), {nrows, ncols, lda, stride}
+  },
+    _end(end)
   {
   }
 
-  PETSC_NODISCARD iterator end() const noexcept { return this->begin() + (this->func.nrows * this->func.ncols); }
+  PETSC_NODISCARD iterator end() const noexcept { return this->begin() + ; }
+private:
+  PetscInt _end;
 };
 
 namespace
 {
 
 template <typename T>
-PETSC_NODISCARD inline SubMatrixIterator<typename thrust::device_vector<T>::iterator> make_submat_iterator(PetscInt rstart, PetscInt rend, PetscInt cstart, PetscInt cend, PetscInt lda, T *ptr) noexcept
+PETSC_NODISCARD inline SubMatrixIterator<typename thrust::device_vector<T>::iterator> make_submat_iterator(PetscInt rstart, PetscInt rend, PetscInt cstart, PetscInt cend, PetscInt lda, PetscInt stride, T *ptr, PetscInt end = -1) noexcept
 {
   const auto nrows = rend - rstart;
   const auto ncols = cend - cstart;
   const auto dptr  = thrust::device_pointer_cast(ptr);
 
-  return {dptr + (rstart * lda) + cstart, dptr + ((rstart + nrows) * lda) + cstart, nrows, ncols, lda};
+  end = end < 0 ? lda * ncols : end;
+  return {dptr + (rstart * lda) + cstart, dptr + ((rstart + nrows) * lda) + cstart, nrows, ncols, lda, stride, end};
 }
 
 } // namespace
@@ -1477,7 +1486,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::Conjugate(Mat A) noexcept
       if (lda > m) {
         // clang-format off
         PetscCallThrust(
-          const auto sub_mat = detail::make_submat_iterator(0, m, 0, n, lda, da.data());
+          const auto sub_mat = detail::make_submat_iterator(0, m, 0, n, lda, 1, da.data());
 
           THRUST_CALL(
             thrust::transform,
@@ -1528,7 +1537,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::Scale(Mat A, PetscScalar alpha) noex
       PetscCall(GetHandlesFrom_(dctx, &stream));
       // clang-format off
       PetscCallThrust(
-        const auto sub_mat = detail::make_submat_iterator(0, m, 0, n, lda, da.data());
+        const auto sub_mat = detail::make_submat_iterator(0, m, 0, n, lda, 1, da.data());
 
         THRUST_CALL(
           thrust::transform,
@@ -1576,8 +1585,8 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::AXPY(Mat Y, PetscScalar alpha, Mat X
       PetscCall(GetHandlesFrom_(dctx, &stream));
       // clang-format off
       PetscCallThrust(
-        const auto sub_mat_y = detail::make_submat_iterator(0, m_y, 0, n_y, lda_y, dy.data());
-        const auto sub_mat_x = detail::make_submat_iterator(0, m_x, 0, n_x, lda_x, dx.data());
+        const auto sub_mat_y = detail::make_submat_iterator(0, m_y, 0, n_y, lda_y, 1, dy.data());
+        const auto sub_mat_x = detail::make_submat_iterator(0, m_x, 0, n_x, lda_x, 1, dx.data());
 
         THRUST_CALL(
           thrust::transform,
@@ -1650,6 +1659,77 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::SetRandom(Mat A, PetscRandom rng) no
     }
   } else {
     PetscCall(MatSetRandom_SeqDense(A, rng));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode MatDense_Seq_CUPM<T>::DiagonalScale(Mat A, Vec l, Vec r) noexcept
+{
+  const auto m   = static_cast<cupmBlasInt_t>(A->rmap->n);
+  const auto n   = static_cast<cupmBlasInt_t>(A->cmap->n);
+  auto      &lda = MatIMPLCast(m)->lda;
+
+  PetscFunctionBegin;
+  if (l) {
+    PetscBool liscupm;
+    Vec       _l = l;
+
+    PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(l), &liscupm, VecSeq_CUPM::VECSEQCUPM(), VecSeq_CUPM::VECMPICUPM(), VecSeq_CUPM::VECCUPM(), ""));
+    if (!liscupm || l->boundtocpu) {
+      PetscCall(VecCreate(PetscObjectComm(PetscObjectCast(l)), &_l));
+      PetscCall(VecSetLayout(_l, l->map));
+      PetscCall(VecSetType(_l, VecSeq_CUPM::VECCUPM()));
+      PetscCall(VecCopy(l, _l));
+    }
+
+    // clang-format off
+    PetscCallThrust(
+      const auto da        = DeviceArrayReadWrite(dctx, A);
+      const auto dl        = DeviceArrayRead(dctx, _l);
+      const auto A_sub_mat = detail::make_submat_iterator(0, m, 0, n, lda, 1, da.data());
+      const auto l_sub_vec = detail::make_submat_iterator(0, m, 0, n, /* lda */ 0, /* stride */ 1, dl.data(), /* end */ m); // lda = 0, stride = 1: go through _l, with stride 1, over and over again
+
+      THRUST_CALL(
+        thrust::transform,
+        stream,
+        A_sub_mat.begin(), A_sub_mat.end(), l_sub_vec.begin(), A_sub_mat.begin(),
+        thrust::multiplies<PetscScalar>{}
+      )
+    );
+    // clang-format on
+
+    if (_l != l) PetscCall(VecDestroy(&_l));
+  }
+  if (r) {
+    PetscBool riscupm;
+    Vec       _r = r;
+
+    PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(r), &riscupm, VecSeq_CUPM::VECSEQCUPM(), VecSeq_CUPM::VECMPICUPM(), VecSeq_CUPM::VECCUPM(), ""));
+    if (!riscupm || r->boundtocpu) {
+      PetscCall(VecCreate(PetscObjectComm(PetscObjectCast(r)), &_r));
+      PetscCall(VecSetLayout(_r, r->map));
+      PetscCall(VecSetType(_r, VecSeq_CUPM::VECCUPM()));
+      PetscCall(VecCopy(r, _r));
+    }
+
+    // clang-format off
+    PetscCallThrust(
+      const auto da        = DeviceArrayReadWrite(dctx, A);
+      const auto dr        = DeviceArrayRead(dctx, _r);
+      const auto A_sub_mat = detail::make_submat_iterator(0, m, 0, n, lda, 1, da.data());
+      const auto r_sub_vec = detail::make_submat_iterator(0, m, 0, n, /* lda */ 1, /* stride */ 0, dr.data(), /* end */ n); // lda = 1, stride = 0: go through _r once, repeating each element n times
+
+      THRUST_CALL(
+        thrust::transform,
+        stream,
+        A_sub_mat.begin(), A_sub_mat.end(), r_sub_vec.begin(), A_sub_mat.begin(),
+        thrust::multiplies<PetscScalar>{}
+      )
+    );
+    // clang-format on
+
+    if (_r != r) PetscCall(VecDestroy(&_r));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
