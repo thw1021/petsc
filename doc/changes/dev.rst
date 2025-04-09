@@ -51,6 +51,8 @@ Changes: Development
 
 .. rubric:: TAO:
 
+- Add ``TaoBRGNSetRegularizationType()``, ``TaoBRGNGetRegularizationType()``
+
 .. rubric:: DM/DA:
 
 .. rubric:: DMSwarm:
