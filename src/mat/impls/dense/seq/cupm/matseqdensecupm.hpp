@@ -1429,7 +1429,7 @@ struct SubMatrixIterator : MatrixIteratorBase<Iterator, SubMatIndexFunctor<typen
 
   using iterator = typename base_type::iterator;
 
-  constexpr SubMatrixIterator(Iterator first, Iterator last, PetscInt nrows, PetscInt ncols, PetscInt lda, PetscInt end) noexcept :
+  constexpr SubMatrixIterator(Iterator first, Iterator last, PetscInt nrows, PetscInt ncols, PetscInt lda, PetscInt stride, PetscInt end) noexcept :
     base_type{
       std::move(first), std::move(last), {nrows, ncols, lda, stride}
   },
@@ -1437,7 +1437,7 @@ struct SubMatrixIterator : MatrixIteratorBase<Iterator, SubMatIndexFunctor<typen
   {
   }
 
-  PETSC_NODISCARD iterator end() const noexcept { return this->begin() + ; }
+  PETSC_NODISCARD iterator end() const noexcept { return this->begin() + _end; }
 private:
   PetscInt _end;
 };
@@ -1668,9 +1668,12 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::DiagonalScale(Mat A, Vec l, Vec r) n
 {
   const auto m   = static_cast<cupmBlasInt_t>(A->rmap->n);
   const auto n   = static_cast<cupmBlasInt_t>(A->cmap->n);
-  auto      &lda = MatIMPLCast(m)->lda;
+  auto      &lda = MatIMPLCast(A)->lda;
+  PetscDeviceContext dctx;
+  cupmStream_t       stream;
 
   PetscFunctionBegin;
+  PetscCall(GetHandles_(&dctx, &stream));
   if (l) {
     PetscBool liscupm;
     Vec       _l = l;
@@ -1686,7 +1689,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::DiagonalScale(Mat A, Vec l, Vec r) n
     // clang-format off
     PetscCallThrust(
       const auto da        = DeviceArrayReadWrite(dctx, A);
-      const auto dl        = DeviceArrayRead(dctx, _l);
+      const auto dl        = VecSeq_CUPM::DeviceArrayRead(dctx, _l);
       const auto A_sub_mat = detail::make_submat_iterator(0, m, 0, n, lda, 1, da.data());
       const auto l_sub_vec = detail::make_submat_iterator(0, m, 0, n, /* lda */ 0, /* stride */ 1, dl.data(), /* end */ m); // lda = 0, stride = 1: go through _l, with stride 1, over and over again
 
@@ -1716,7 +1719,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::DiagonalScale(Mat A, Vec l, Vec r) n
     // clang-format off
     PetscCallThrust(
       const auto da        = DeviceArrayReadWrite(dctx, A);
-      const auto dr        = DeviceArrayRead(dctx, _r);
+      const auto dr        = VecSeq_CUPM::DeviceArrayRead(dctx, _r);
       const auto A_sub_mat = detail::make_submat_iterator(0, m, 0, n, lda, 1, da.data());
       const auto r_sub_vec = detail::make_submat_iterator(0, m, 0, n, /* lda */ 1, /* stride */ 0, dr.data(), /* end */ n); // lda = 1, stride = 0: go through _r once, repeating each element n times
 

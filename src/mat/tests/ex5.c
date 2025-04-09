@@ -338,4 +338,18 @@ int main(int argc, char **args)
       filter: sed -e "s/hip/cuda/g"
       output_file: output/ex5_57.out
       requires: hip !complex !single
+
+   test:
+      suffix: dense
+      args: -m 32 -mat_type dense -test_diagonalscale
+      nsize: {{1 2}}
+      filter: sed -e "s/mpi/seq/g" -e "s/2 MPI processes/1 MPI process/g"
+      requires: !complex
+
+   test:
+      suffix: densecuda
+      args: -m 32 -mat_type densecuda -vec_type cuda -test_diagonalscale
+      output_file: output/ex5_dense.out
+      filter: sed -e "s/cuda//g"
+      requires: cuda !complex
 TEST*/
