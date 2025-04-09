@@ -2214,6 +2214,7 @@ static PetscErrorCode MatMatTransposeMultSymbolic_MPIDense_MPIDense(Mat A, Mat B
   Mat_MatTransMultDense *abt;
   Mat_Product           *product = C->product;
   PetscBool              flg;
+  PetscBool              cisdense = PETSC_FALSE;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 4);
@@ -2226,7 +2227,13 @@ static PetscErrorCode MatMatTransposeMultSymbolic_MPIDense_MPIDense(Mat A, Mat B
 
   /* setup matrix product C */
   PetscCall(MatSetSizes(C, A->rmap->n, B->rmap->n, A->rmap->N, B->rmap->N));
-  PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
+#if defined(PETSC_HAVE_CUDA)
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSECUDA, ""));
+#endif
+#if defined(PETSC_HAVE_HIP)
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSEHIP, ""));
+#endif
+  if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
   PetscCall(MatSetUp(C));
   PetscCall(PetscObjectGetNewTag((PetscObject)C, &tag));
 
@@ -2513,6 +2520,7 @@ static PetscErrorCode MatMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B, PetscRe
   PetscInt          alg;
   Mat_MatMultDense *ab;
   PetscBool         flg;
+  PetscBool         cisdense = PETSC_FALSE;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 4);
@@ -2526,7 +2534,13 @@ static PetscErrorCode MatMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B, PetscRe
 
   /* setup C */
   PetscCall(MatSetSizes(C, A->rmap->n, B->cmap->n, A->rmap->N, B->cmap->N));
-  PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
+#if defined(PETSC_HAVE_CUDA)
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSECUDA, ""));
+#endif
+#if defined(PETSC_HAVE_HIP)
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSEHIP, ""));
+#endif
+  if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
   PetscCall(MatSetUp(C));
 
   /* create data structure for reuse Cdense */
