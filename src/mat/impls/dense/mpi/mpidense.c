@@ -975,49 +975,23 @@ static PetscErrorCode MatSetOption_MPIDense(Mat A, MatOption op, PetscBool flg)
 static PetscErrorCode MatDiagonalScale_MPIDense(Mat A, Vec ll, Vec rr)
 {
   Mat_MPIDense      *mdn = (Mat_MPIDense *)A->data;
-  const PetscScalar *l;
-  PetscScalar        x, *v, *vv, *r;
-  PetscInt           i, j, s2a, s3a, s2, s3, m = mdn->A->rmap->n, n = mdn->A->cmap->n, lda;
+  Vec                rr_gathered = NULL;
 
   PetscFunctionBegin;
-  PetscCall(MatDenseGetArray(mdn->A, &vv));
-  PetscCall(MatDenseGetLDA(mdn->A, &lda));
-  PetscCall(MatGetLocalSize(A, &s2, &s3));
-  if (ll) {
-    PetscCall(VecGetLocalSize(ll, &s2a));
-    PetscCheck(s2a == s2, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Left scaling vector non-conforming local size, %" PetscInt_FMT " != %" PetscInt_FMT, s2a, s2);
-    PetscCall(VecGetArrayRead(ll, &l));
-    for (i = 0; i < m; i++) {
-      x = l[i];
-      v = vv + i;
-      for (j = 0; j < n; j++) {
-        (*v) *= x;
-        v += lda;
-      }
-    }
-    PetscCall(VecRestoreArrayRead(ll, &l));
-    PetscCall(PetscLogFlops(1.0 * n * m));
-  }
   if (rr) {
     const PetscScalar *ar;
-
-    PetscCall(VecGetLocalSize(rr, &s3a));
-    PetscCheck(s3a == s3, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Right scaling vec non-conforming local size, %" PetscInt_FMT " != %" PetscInt_FMT ".", s3a, s3);
-    PetscCall(VecGetArrayRead(rr, &ar));
+    PetscScalar       *ay;
+    PetscMemType       armtype, aymtype;
     if (!mdn->Mvctx) PetscCall(MatSetUpMultiply_MPIDense(A));
-    PetscCall(VecGetArray(mdn->lvec, &r));
-    PetscCall(PetscSFBcastBegin(mdn->Mvctx, MPIU_SCALAR, ar, r, MPI_REPLACE));
-    PetscCall(PetscSFBcastEnd(mdn->Mvctx, MPIU_SCALAR, ar, r, MPI_REPLACE));
-    PetscCall(VecRestoreArrayRead(rr, &ar));
-    for (i = 0; i < n; i++) {
-      x = r[i];
-      v = vv + i * lda;
-      for (j = 0; j < m; j++) (*v++) *= x;
-    }
-    PetscCall(VecRestoreArray(mdn->lvec, &r));
-    PetscCall(PetscLogFlops(1.0 * n * m));
+    PetscCall(VecGetArrayReadAndMemType(rr, &ar, &armtype));
+    PetscCall(VecGetArrayWriteAndMemType(mdn->lvec, &ay, &aymtype));
+    PetscCall(PetscSFBcastWithMemTypeBegin(mdn->Mvctx, MPIU_SCALAR, armtype, ar, aymtype, ay, MPI_REPLACE));
+    PetscCall(PetscSFBcastEnd(mdn->Mvctx, MPIU_SCALAR, ar, ay, MPI_REPLACE));
+    PetscCall(VecRestoreArrayAndMemType(mdn->lvec, &ay));
+    PetscCall(VecRestoreArrayReadAndMemType(rr, &ar));
+    rr_gathered = mdn->lvec;
   }
-  PetscCall(MatDenseRestoreArray(mdn->A, &vv));
+  PetscCall((*mdn->A->ops->diagonalscale)(mdn->A, ll, rr_gathered));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

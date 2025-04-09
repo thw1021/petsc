@@ -350,6 +350,7 @@ int main(int argc, char **args)
       suffix: densecuda
       args: -m 32 -mat_type densecuda -vec_type cuda -test_diagonalscale
       output_file: output/ex5_dense.out
-      filter: sed -e "s/cuda//g"
+      nsize: {{1 2}}
+      filter: sed -e "s/mpi/seq/g" -e "s/2 MPI processes/1 MPI process/g" -e "s/cuda//g"
       requires: cuda !complex
 TEST*/
