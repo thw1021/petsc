@@ -2226,7 +2226,7 @@ static PetscErrorCode MatMatTransposeMultSymbolic_MPIDense_MPIDense(Mat A, Mat B
 
   /* setup matrix product C */
   PetscCall(MatSetSizes(C, A->rmap->n, B->rmap->n, A->rmap->N, B->rmap->N));
-  PetscCall(MatSetType(C, MATMPIDENSE));
+  PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
   PetscCall(MatSetUp(C));
   PetscCall(PetscObjectGetNewTag((PetscObject)C, &tag));
 
@@ -2526,7 +2526,7 @@ static PetscErrorCode MatMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B, PetscRe
 
   /* setup C */
   PetscCall(MatSetSizes(C, A->rmap->n, B->cmap->n, A->rmap->N, B->cmap->N));
-  PetscCall(MatSetType(C, MATMPIDENSE));
+  PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
   PetscCall(MatSetUp(C));
 
   /* create data structure for reuse Cdense */
