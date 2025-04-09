@@ -58,10 +58,11 @@ int main(int argc, char **argv)
   PetscReal hist[100], resid[100];
   PetscInt  lits[100];
   AppCtx    user; /* user-defined work context */
+  PetscBool flg, view_sol = PETSC_TRUE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-view_sol", &view_sol, &flg));
   /* Allocate solution and vector function vectors */
   PetscCall(VecCreateSeq(PETSC_COMM_SELF, N, &x));
   PetscCall(VecCreateSeq(PETSC_COMM_SELF, M, &f));
@@ -105,11 +106,13 @@ int main(int argc, char **argv)
   PetscCall(TaoSolve(tao));
 
   /* XH: Debug: View the result, function and Jacobian.  */
-  PetscCall(PetscPrintf(PETSC_COMM_SELF, "-------- result x, residual f=A*x-b, and Jacobian=A. -------- \n"));
-  PetscCall(VecView(x, PETSC_VIEWER_STDOUT_SELF));
-  PetscCall(VecView(f, PETSC_VIEWER_STDOUT_SELF));
-  PetscCall(MatView(J, PETSC_VIEWER_STDOUT_SELF));
-  PetscCall(MatView(D, PETSC_VIEWER_STDOUT_SELF));
+  if (view_sol) {
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "-------- result x, residual f=A*x-b, and Jacobian=A. -------- \n"));
+    PetscCall(VecView(x, PETSC_VIEWER_STDOUT_SELF));
+    PetscCall(VecView(f, PETSC_VIEWER_STDOUT_SELF));
+    PetscCall(MatView(J, PETSC_VIEWER_STDOUT_SELF));
+    PetscCall(MatView(D, PETSC_VIEWER_STDOUT_SELF));
+  }
 
   /* Free TAO data structures */
   PetscCall(TaoDestroy(&tao));
@@ -250,7 +253,7 @@ PetscErrorCode InitializeUserData(AppCtx *user)
 /*TEST
 
    build:
-      requires: !complex !single !quad !defined(PETSC_USE_64BIT_INDICES)
+      requires: !complex !single !quad !defined(PETSC_USE_64BIT_INDICES) !__float128
 
    test:
       localrunfiles: cs1Data_A_b_xGT
@@ -275,5 +278,15 @@ PetscErrorCode InitializeUserData(AppCtx *user)
       suffix: 5
       localrunfiles: cs1Data_A_b_xGT
       args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type lm -tao_gatol 1.e-6 -tao_brgn_subsolver_tao_type bnls
+
+   test:
+      suffix: view_lm
+      localrunfiles: cs1Data_A_b_xGT
+      args: -tao_type brgn -tao_brgn_regularization_type lm -tao_gatol 1.e-6 -view_sol 0 -tao_view
+
+   test:
+      suffix: view_l1dict
+      localrunfiles: cs1Data_A_b_xGT
+      args: -tao_type brgn -tao_brgn_regularization_type l1dict -tao_gatol 1.e-6 -view_sol 0 -tao_view
 
 TEST*/
