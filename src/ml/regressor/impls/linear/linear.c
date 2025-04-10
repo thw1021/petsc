@@ -84,11 +84,7 @@ static PetscErrorCode EvaluateResidual(Tao tao, Vec x, Vec f, void *ptr)
 
 static PetscErrorCode EvaluateJacobian(Tao tao, Vec x, Mat J, Mat Jpre, void *ptr)
 {
-  PetscRegressor_Linear *linear = (PetscRegressor_Linear *)ptr;
-
   PetscFunctionBegin;
-  J    = linear->X;
-  Jpre = linear->X;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
