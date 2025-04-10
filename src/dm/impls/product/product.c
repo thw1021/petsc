@@ -16,7 +16,7 @@ static PetscErrorCode DMView_Product(DM dm, PetscViewer viewer)
   DM_Product *product = (DM_Product *)dm->data;
   PetscInt    d;
 
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   for (d = 0; d < DMPRODUCT_MAX_DIM; ++d) {
     if (product->dm[d]) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "  DM that defines dimension %" PetscInt_FMT "\n", d));
@@ -36,9 +36,9 @@ static PetscErrorCode DMView_Product(DM dm, PetscViewer viewer)
   Level: advanced
 
   Notes:
-  The `DM` is usually used for managing coordiates of other `DM` via `DMGetCoordinateDM()` and `DMSetCoordinateDM()`
+  The `DM` is usually used for managing coordinates of other `DM` via `DMGetCoordinateDM()` and `DMSetCoordinateDM()`
 
-  For each of `dim` dimensions, the `DMPRODUCT` contains a `DM` and a dimension index. The dimensional index, set with, `DMProductSetDimensionIndex()`
+  For each of `dim` dimensions, the `DMPRODUCT` contains a `DM` and a dimension index. The dimensional index, set with `DMProductSetDimensionIndex()`
   specifies  which dimension of the sub-`DM` coordinates corresponds to a particular dimension of the `DMPRODUCT`. For example,
 .vb
   DM da1, da2;

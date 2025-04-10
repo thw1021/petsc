@@ -67,7 +67,7 @@ PetscErrorCode DMProductSetDM(DM dm, PetscInt slot, DM subdm)
 }
 
 /*@
-  DMProductSetDimensionIndex - Set which dimension, `idx` of the sub-`DM` coordinates will be used associated with the `DMPRODUCT` dimension `slot`
+  DMProductSetDimensionIndex - Set which dimension `idx` of the sub-`DM` coordinates will be used associated with the `DMPRODUCT` dimension `slot`
 
   Not Collective
 
@@ -94,7 +94,7 @@ PetscErrorCode DMProductSetDimensionIndex(DM dm, PetscInt slot, PetscInt idx)
 }
 
 /*@
-  DMProductGetDimensionIndex - Get which dimension, `idx` of the sub-`DM` coordinates will be used associated with the `DMPRODUCT` dimension `slot`
+  DMProductGetDimensionIndex - Get which dimension `idx` of the sub-`DM` coordinates will be used associated with the `DMPRODUCT` dimension `slot`
 
   Not Collective
 
@@ -117,6 +117,7 @@ PetscErrorCode DMProductGetDimensionIndex(DM dm, PetscInt slot, PetscInt *idx)
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMPRODUCT);
   PetscCall(DMGetDimension(dm, &dim));
+  PetscAssertPointer(idx, 3);
   PetscCheck(slot < dim && slot >= 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "slot number must be in range 0-%" PetscInt_FMT, dim - 1);
   *idx = product->dim[slot];
   PetscFunctionReturn(PETSC_SUCCESS);

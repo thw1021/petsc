@@ -410,7 +410,7 @@ PetscErrorCode DMSetCellCoordinateSection(DM dm, PetscInt dim, PetscSection sect
   This is a borrowed reference, so the user should NOT destroy this vector. When the `DM` is
   destroyed `c` will no longer be valid.
 
-  Each process has only the locally-owned portion of the global coordinates (does NOT have the ghost coordinates) see `DMGetCoordinatesLocal()`.
+  Each process has only the locally-owned portion of the global coordinates (does NOT have the ghost coordinates), see `DMGetCoordinatesLocal()`.
 
   For `DMDA`, in two and three dimensions coordinates are interlaced (x_0,y_0,x_1,y_1,...)
   and (x_0,y_0,z_0,x_1,y_1,z_1...)
