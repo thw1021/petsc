@@ -87,8 +87,8 @@ static PetscErrorCode EvaluateJacobian(Tao tao, Vec x, Mat J, Mat Jpre, void *pt
   PetscRegressor_Linear *linear = (PetscRegressor_Linear *)ptr;
 
   PetscFunctionBegin;
-  J    = linear->X;
-  Jpre = linear->X;
+  if (J != linear->X) PetscCall(MatCopy(linear->X, J, SAME_NONZERO_PATTERN));
+  if (Jpre != linear->X) PetscCall(MatCopy(linear->X, Jpre, SAME_NONZERO_PATTERN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
