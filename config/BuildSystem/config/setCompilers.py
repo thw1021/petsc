@@ -737,7 +737,7 @@ class Configure(config.base.Configure):
       return 0
     if ('with-fc' in self.argDB and self.argDB['with-fc'] != '0') or 'FC' in self.argDB:
       return 0
-    if self.argDB['download-mpich'] or self.argDB['download-openmpi']:
+    if self.argDB['download-mpich'] or self.argDB['download-openmpi'] or self.argDB['download-mpitrampoline']:
       return 0
     if 'with-mpi-include' in self.argDB and self.argDB['with-mpi-include']:
       return 0;
@@ -1386,6 +1386,7 @@ class Configure(config.base.Configure):
       yield self.CC
       if self.argDB['download-mpich']: mesg ='with downloaded MPICH'
       elif self.argDB['download-openmpi']: mesg ='with downloaded Open MPI'
+      elif self.argDB['download-mpitrampoline']: mesg ='with downloaded mpitrampoline'
       else: mesg = ''
       raise RuntimeError('Error '+mesg+': '+self.mesg)
     elif 'with-cc' in self.argDB:
@@ -1707,6 +1708,7 @@ class Configure(config.base.Configure):
       yield self.CXX
       if self.argDB['download-mpich']: mesg ='with downloaded MPICH'
       elif self.argDB['download-openmpi']: mesg ='with downloaded Open MPI'
+      elif self.argDB['download-mpitrampoline']: mesg ='with downloaded mpitrampoline'
       else: mesg = ''
       raise RuntimeError('Error '+mesg+': '+self.mesg)
     elif 'with-c++' in self.argDB:
@@ -1846,6 +1848,7 @@ class Configure(config.base.Configure):
       yield self.FC
       if self.argDB['download-mpich']: mesg ='with downloaded MPICH'
       elif self.argDB['download-openmpi']: mesg ='with downloaded Open MPI'
+      elif self.argDB['download-mpitrampoline']: mesg ='with downloaded mpitrampoline'
       else: mesg = ''
       raise RuntimeError('Error '+mesg+': '+self.mesg)
     elif 'with-fc' in self.argDB:

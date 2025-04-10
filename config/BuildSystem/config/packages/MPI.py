@@ -74,12 +74,13 @@ class Configure(config.package.Package):
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
-    self.mpich   = framework.require('config.packages.MPICH', self)
-    self.openmpi = framework.require('config.packages.OpenMPI', self)
-    self.cuda    = framework.require('config.packages.cuda',self)
-    self.hip     = framework.require('config.packages.hip',self)
-    self.sycl    = framework.require('config.packages.sycl',self)
-    self.odeps   = [self.cuda,self.hip,self.sycl]
+    self.mpich         = framework.require('config.packages.MPICH', self)
+    self.openmpi       = framework.require('config.packages.OpenMPI', self)
+    self.mpitrampoline = framework.require('config.packages.mpitrampoline', self)
+    self.cuda          = framework.require('config.packages.cuda',self)
+    self.hip           = framework.require('config.packages.hip',self)
+    self.sycl          = framework.require('config.packages.sycl',self)
+    self.odeps         = [self.cuda,self.hip,self.sycl]
     return
 
   def __str__(self):
@@ -107,6 +108,9 @@ class Configure(config.package.Package):
     if self.openmpi.found:
       yield (self.openmpi.installDir)
       raise RuntimeError('--download-openmpi libraries cannot be used')
+    if self.mpitrampoline.found:
+      yield (self.mpitrampoline.installDir)
+      raise RuntimeError('--download-mpitrampoline libraries cannot be used')
 
     yield ''
     # Try configure package directories
@@ -748,7 +752,7 @@ Unable to run hostname to check the network')
       buf = self.outputPreprocess(mpich_test)
       try:
         mpich_numversion = re.compile('\nconst char *mpich_ver ='+HASHLINESPACE+r'"([\.0-9]+)"'+HASHLINESPACE+';').search(buf).group(1)
-        self.addDefine('HAVE_'+MPICHPKG+'_VERSION',mpich_numversion)
+        self.addDefine('HAVE_'+MPICHPKG+'_VERSION',mpich_numversio)
         MPI_VER  = '  '+MPICHPKG+'_VERSION: '+mpich_numversion
       except:
         self.logPrint('Unable to parse '+MPICHPKG+' version from header. Probably a buggy preprocessor')

@@ -20,6 +20,10 @@ PetscErrorCode PetscSysFinalizePackage(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_EXTERN PetscMPIInt PETSC_MPI_THREAD_REQUIRED;
+PETSC_EXTERN MPI_Comm    petsc_yaml_comm;
+PETSC_EXTERN PetscMPIInt Petsc_Reduction_keyval;
+
 /*@C
   PetscSysInitializePackage - This function initializes everything in the system library portion of PETSc. It is called
   from `PetscDLLibraryRegister_petsc()` when using dynamic libraries, and in the call to `PetscInitialize()`
@@ -39,6 +43,34 @@ PetscErrorCode PetscSysInitializePackage(void)
 
   PetscFunctionBegin;
   if (PetscSysPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
+  petsc_yaml_comm       = MPI_COMM_NULL;
+  PETSC_MPI_ERROR_CLASS = MPI_ERR_LASTCODE;
+#if PetscDefined(HAVE_MPI_INIT_THREAD)
+  PETSC_MPI_THREAD_REQUIRED = MPI_THREAD_FUNNELED;
+#else
+  PETSC_MPI_THREAD_REQUIRED = 0;
+#endif
+  Petsc_Counter_keyval       = MPI_KEYVAL_INVALID;
+  Petsc_InnerComm_keyval     = MPI_KEYVAL_INVALID;
+  Petsc_OuterComm_keyval     = MPI_KEYVAL_INVALID;
+  Petsc_ShmComm_keyval       = MPI_KEYVAL_INVALID;
+  Petsc_CreationIdx_keyval   = MPI_KEYVAL_INVALID;
+  Petsc_Garbage_HMap_keyval  = MPI_KEYVAL_INVALID;
+  Petsc_SharedWD_keyval      = MPI_KEYVAL_INVALID;
+  Petsc_SharedTmp_keyval     = MPI_KEYVAL_INVALID;
+  Petsc_Reduction_keyval     = MPI_KEYVAL_INVALID;
+  Petsc_Seq_keyval           = MPI_KEYVAL_INVALID;
+  Petsc_Viewer_Stdout_keyval = MPI_KEYVAL_INVALID;
+  Petsc_Viewer_keyval        = MPI_KEYVAL_INVALID;
+  Petsc_Viewer_Stderr_keyval = MPI_KEYVAL_INVALID;
+  Petsc_Viewer_Binary_keyval = MPI_KEYVAL_INVALID;
+  Petsc_Viewer_Draw_keyval   = MPI_KEYVAL_INVALID;
+#if defined(PETSC_HAVE_HDF5)
+  Petsc_Viewer_HDF5_keyval = MPI_KEYVAL_INVALID;
+#endif
+#if defined(PETSC_USE_SOCKETVIEWER)
+  Petsc_Viewer_Socket_keyval MPI_KEYVAL_INVALID;
+#endif
   PetscSysPackageInitialized = PETSC_TRUE;
   /* Register Classes */
   PetscCall(PetscClassIdRegister("Object", &PETSC_OBJECT_CLASSID));

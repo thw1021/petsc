@@ -540,7 +540,7 @@ PetscErrorCode PetscViewerDrawGetHold(PetscViewer viewer, PetscBool *hold)
     The variable Petsc_Viewer_Draw_keyval is used to indicate an MPI attribute that
   is attached to a communicator, in this case the attribute is a PetscViewer.
 */
-PetscMPIInt Petsc_Viewer_Draw_keyval = MPI_KEYVAL_INVALID;
+PetscMPIInt Petsc_Viewer_Draw_keyval;
 
 /*@C
    PETSC_VIEWER_DRAW_ - Creates a window `PETSCVIEWERDRAW` `PetscViewer` shared by all processors

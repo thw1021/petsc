@@ -275,7 +275,7 @@ static PetscErrorCode PetscSplitReductionDestroy(PetscSplitReduction *sr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscMPIInt Petsc_Reduction_keyval = MPI_KEYVAL_INVALID;
+PetscMPIInt Petsc_Reduction_keyval;
 
 /*
    Private routine to delete internal storage when a communicator is freed.

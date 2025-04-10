@@ -106,7 +106,7 @@ class Package(config.base.Configure):
     self.defaultInstallDir      = ''
     self.PrefixWriteCheck       = 1 # check if specified prefix location is writable for 'make install'
 
-    self.isMPI                  = 0 # Is an MPI implementation, needed to check for compiler wrappers
+    self.isMPIImplementation    = 0 # Is an MPI implementation, needed to check for compiler wrappers
     self.hastests               = 0 # indicates that PETSc make alltests has tests for this package
     self.hastestsdatafiles      = 0 # indicates that PETSc make alltests has tests for this package that require DATAFILESPATH to be set
     self.makerulename           = '' # some packages do too many things with the make stage; this allows a package to limit to, for example, just building the libraries
@@ -161,7 +161,7 @@ class Package(config.base.Configure):
       self.petscdir        = FakePETScDir()
     # All packages depend on make
     self.make          = framework.require('config.packages.make',self)
-    if not self.isMPI and not self.package in ['make','cuda','hip','sycl','thrust','hwloc','x','bison','python']:
+    if not self.isMPIImplementation and not self.package in ['make','cmake','cuda','hip','sycl','thrust','hwloc','x','bison','python']:
       # force MPI to be the first package (except for those listed above) configured since all other packages
       # may depend on its compilers defined here
       self.mpi         = framework.require('config.packages.MPI',self)
@@ -1412,7 +1412,7 @@ const char *ver = "petscpkgver(" PetscXstr_({y}) ")";
     self.compilers.saveLog()
     self.compilers.configure()
     self.logWrite(self.compilers.restoreLog())
-    if self.cuda.found:
+    if hasattr(self,'cuda') and self.cuda.found:
       self.cuda.configureLibrary()
     return
 

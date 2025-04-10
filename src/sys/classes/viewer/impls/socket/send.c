@@ -462,7 +462,7 @@ PetscErrorCode PetscViewerSocketSetConnection(PetscViewer v, const char machine[
     The variable Petsc_Viewer_Socket_keyval is used to indicate an MPI attribute that
   is attached to a communicator, in this case the attribute is a PetscViewer.
 */
-PetscMPIInt Petsc_Viewer_Socket_keyval = MPI_KEYVAL_INVALID;
+PetscMPIInt Petsc_Viewer_Socket_keyval;
 
 /*@C
    PETSC_VIEWER_SOCKET_ - Creates a socket viewer shared by all processors in a communicator.

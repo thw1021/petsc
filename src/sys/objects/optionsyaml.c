@@ -10,7 +10,7 @@
 PETSC_INTERN PetscErrorCode PetscOptionsSetValue_Private(PetscOptions, const char[], const char[], int *, PetscOptionSource);
 PETSC_INTERN PetscErrorCode PetscOptionsInsertStringYAML_Private(PetscOptions, const char[], PetscOptionSource);
 
-static MPI_Comm petsc_yaml_comm = MPI_COMM_NULL; /* only used for parallel error handling */
+MPI_Comm petsc_yaml_comm; /* only used for parallel error handling */
 
 static inline MPI_Comm PetscYAMLGetComm(void)
 {

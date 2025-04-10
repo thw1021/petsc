@@ -42,22 +42,24 @@ PETSC_INTERN PetscErrorCode PetscSequentialPhaseEnd_Private(MPI_Comm, int);
 PETSC_INTERN PetscErrorCode PetscCloseHistoryFile(FILE **);
 
 /* user may set these BEFORE calling PetscInitialize() */
-MPI_Comm PETSC_COMM_WORLD = MPI_COMM_NULL;
+MPI_Comm    PETSC_COMM_WORLD;
+PetscMPIInt PETSC_MPI_THREAD_REQUIRED;
+
+PetscMPIInt Petsc_Counter_keyval;
+PetscMPIInt Petsc_InnerComm_keyval;
+PetscMPIInt Petsc_OuterComm_keyval;
+PetscMPIInt Petsc_ShmComm_keyval;
+PetscMPIInt Petsc_CreationIdx_keyval;
+PetscMPIInt Petsc_Garbage_HMap_keyval;
+
+PetscMPIInt Petsc_SharedWD_keyval;
+PetscMPIInt Petsc_SharedTmp_keyval;
+
 #if PetscDefined(HAVE_MPI_INIT_THREAD)
 PetscMPIInt PETSC_MPI_THREAD_REQUIRED = PETSC_DECIDE;
 #else
 PetscMPIInt PETSC_MPI_THREAD_REQUIRED = MPI_THREAD_SINGLE;
 #endif
-
-PetscMPIInt Petsc_Counter_keyval      = MPI_KEYVAL_INVALID;
-PetscMPIInt Petsc_InnerComm_keyval    = MPI_KEYVAL_INVALID;
-PetscMPIInt Petsc_OuterComm_keyval    = MPI_KEYVAL_INVALID;
-PetscMPIInt Petsc_ShmComm_keyval      = MPI_KEYVAL_INVALID;
-PetscMPIInt Petsc_CreationIdx_keyval  = MPI_KEYVAL_INVALID;
-PetscMPIInt Petsc_Garbage_HMap_keyval = MPI_KEYVAL_INVALID;
-
-PetscMPIInt Petsc_SharedWD_keyval  = MPI_KEYVAL_INVALID;
-PetscMPIInt Petsc_SharedTmp_keyval = MPI_KEYVAL_INVALID;
 
 /*
      Declare and set all the string names of the PETSc enums
@@ -446,7 +448,7 @@ PETSC_EXTERN PetscMPIInt PetscDataRep_read_conv_fn(void *, MPI_Datatype, PetscMP
 PETSC_EXTERN PetscMPIInt PetscDataRep_write_conv_fn(void *, MPI_Datatype, PetscMPIInt, void *, MPI_Offset, void *);
 #endif
 
-PetscMPIInt PETSC_MPI_ERROR_CLASS = MPI_ERR_LASTCODE, PETSC_MPI_ERROR_CODE;
+PetscMPIInt PETSC_MPI_ERROR_CLASS, PETSC_MPI_ERROR_CODE;
 
 PETSC_INTERN int    PetscGlobalArgc;
 PETSC_INTERN char **PetscGlobalArgs, **PetscGlobalArgsFortran;
@@ -891,7 +893,9 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
   PetscCall(PetscSpinlockCreate(&PetscViewerASCIISpinLockStderr));
   PetscCall(PetscSpinlockCreate(&PetscCommSpinLock));
 
-  if (PETSC_COMM_WORLD == MPI_COMM_NULL) PETSC_COMM_WORLD = MPI_COMM_WORLD;
+  /* this introduces a bug, cannot set PETSC_COMM_WORLD before PetscInitialize() */
+  /* if (PETSC_COMM_WORLD == MPI_COMM_NULL) */
+  PETSC_COMM_WORLD = MPI_COMM_WORLD;
   PetscCallMPI(MPI_Comm_set_errhandler(PETSC_COMM_WORLD, MPI_ERRORS_RETURN));
 
   if (PETSC_MPI_ERROR_CLASS == MPI_ERR_LASTCODE) {
