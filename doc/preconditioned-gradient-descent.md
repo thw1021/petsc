@@ -294,6 +294,9 @@ with the inner product $ (x,y)_{h^2} = \sum_i x_i y_i i^{2j}$. It is trivial to 
 $$
 ... \, \supset  h^{-2} \supset h^{-1} \supset l_2  \supset  h^{1} \supset  h^{2} \supset  \, ...
 $$
+Consider $x_i = i^{-1}$ which satisfies $ (x,x)_{l_2} = \sum i^{-2} < \infty $ but not
+$ (x,x)_{h^1} = \sum i^{-2}i^2 <  \infty. $
+
 
 One can consider the inner product to be defined by a (infinite) diagonal matrix with entries $ M_{ii} = i^{2j}$. Then
 
@@ -319,7 +322,7 @@ By the Reisz representation theorem any continuous linear functional on $h^j$ ca
 $$
 l(x) = (y,x)_{h^j}
 $$
-for q unique $ y \in h^j$. But
+for a unique $ y \in h^j$. But
 
 $$
 (y,x)_{h^j} = (M^jy,x)_{l_2}.
@@ -335,8 +338,7 @@ $h^j$ is isomorphic to $h^{-j}$. Hence $h^{j}$ and $h^{-j}$ are said to be dual.
 
 Note that directly by the Reisz representation theorem the continuous dual space of $h^j$ is also isomorphic to $h^j$. But see the
 comments at https://math.stackexchange.com/questions/246735/dual-space-of-the-sobolev-spaces by
-Paul Garrett that are way over my head.
-
+Paul Garrett that are way over my head.  
 
 Note in all the construction above $j$ need not be an integer, leading to fractional $h^j$ spaces.
 
