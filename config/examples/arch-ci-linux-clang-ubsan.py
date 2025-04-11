@@ -13,6 +13,7 @@ if __name__ == '__main__':
     '--with-cudac=0',
     '--with-hipc=0',
     '--download-mpich',
+    '--download-mpich-configure-arguments=--enable-g=ubsan',
     '--with-cc=clang',
     '--with-cxx=clang++',
     '--with-fc=0',
