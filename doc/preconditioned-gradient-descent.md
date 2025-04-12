@@ -45,6 +45,7 @@ $$
 $$
 so the convergence (or lack there of) is determined by the eigenvalues of $ \rho(A^{-1}B).$
 
+`KSP` provides access to its preconditioner with `KSPGetPC(KSP,PC*)`. To use an iterative solver, `KSP`, to approximate $A^{-1}$ use a `PCType` of `PCKSP`.
 
 ## Linearly preconditioned nonlinear Richardson
 
@@ -58,17 +59,23 @@ can be solved with the iteration
 $$
 A x^{n+1} + \alpha(x^n) - b = 0.
 $$
-Which can be rewritten in  in defect-correction form as
+Which can be rewritten in defect-correction form as
 
 $$
 x^{n+1} = x^n - A^{-1}(Ax^n + \alpha(x^n) - b) = x^n - A^{-1}F(x^n).
 $$
 
-It is also possible to use a nonlinear solver to nonlinearly precondition a nonlinear system, {cite}`bruneknepleysmithtu15`, but that is not needed for this discussion.
-`SNES` provides access to this general nonlinear preconditioner with `SNESGetNPC(SNES,SNES*)`.
-
-It is not possible to write an equation for the error propagation but one can see if $A$ dominates $\alpha(x)$ one might expect good convergence otherwise
+It is not possible to write an equation for the error propagation, but one can see if $A$ dominates $\alpha(x)$ one might expect good convergence, otherwise
 there is no reason to even expect convergence.
+
+It is also possible to **nonlinearly precondition** a nonlinear system, by introducing an iteration that repeatedly (approximately) solves a related nonlinear problem
+to obtain improved solutions to the original problem. `SNES` provides access to its nonlinear preconditioner with `SNESGetNPC(SNES,SNES*)`.
+
+
+To linearly precondition nonlinear Richardson one can just use Newton's method, `SNESNEWTONLS`, but pass in as the Jacobian the matrix $A$.
+To linearly precondition `SNESQN` one can use a `SNESType` of `SNESKSP` within the nonlinear preconditioned (the `SNES` obtained with `SNESGetNPC()`)
+and provide $A$ to the inner `SNES` preconditioner.
+
 
 ## Preconditioning gradient descent
 
@@ -90,6 +97,22 @@ $$
 
 Of course, to expect the iteration to converge at all, or fast, the operator $A$ has to **dominate**
  $\beta'(x^n)$.
+
+An alternative derivation can be obtained by noting that $ \min f(x) $ could be obtained by solving
+
+$$
+x - x^n = \arg \min_{\delta} f(x^n,\delta) = \arg \min_{\delta} (x^n + \delta)^T A (x^n + \delta) + \beta(x^n + \delta) - b^T(x^n + \delta).
+$$
+But since this solve is impractical instead one can introduce an iteration that solves
+
+$$
+x^{n+1} - x^n  = \arg \min_{\delta} g(x^n,\delta) = \arg \min_{\delta} (x^n + \delta)^T A (x^n + \delta) + \beta(x^n)  + \beta'(x^n) \delta - b^T(x^n + \delta).
+$$
+The solution to the subproblem involving $g()$ is again preconditioned gradient descent. This introduces the general idea of **optimization preconditioning** where
+an optimization problem is solved iteratively by using the (approximate) solutions a related optimization problems that are easier to solve.
+
+To linearly precondition gradient descent one can just use Newton's method, `TAONLS`, but pass in as the Hessian the matrix $A$. Why is this not enough?
+
 
 
 :::{admonition} Finite element example
