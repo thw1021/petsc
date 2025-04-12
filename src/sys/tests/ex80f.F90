@@ -25,7 +25,6 @@ program main
   PetscCallA(PetscFinalize(ierr))
 end program main
 !/*TEST
-!
-!   test:
-!
+!  build:
+!    requires: hdf5
 !TEST*/
