@@ -800,6 +800,7 @@ linux-pkgs-valgrind:
   variables:
     TEST_ARCH: arch-ci-linux-pkgs-valgrind
     TIMEOUT: 7200
+    UCX_SYSV_HUGETLB_MODE: n
 
 linux-pkgs-opt:
   extends:
