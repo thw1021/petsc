@@ -51,7 +51,7 @@ static PetscErrorCode MatCreateSubMatrices_MPIDense_Local(Mat C, PetscInt ismax,
 {
   Mat_MPIDense    *c = (Mat_MPIDense *)C->data;
   Mat              A = c->A;
-  Mat_SeqDense    *a = (Mat_SeqDense *)A->data, *mat;
+  Mat_SeqDense    *a = (Mat_SeqDense *)A->data;
   PetscMPIInt      rank, size, tag0, tag1, idex, end, i, proc, nrqs, *rtable, *pa, nrqr;
   PetscInt         N = C->cmap->N, rstart = C->rmap->rstart, count;
   const PetscInt **irow, **icol, *irow_i;
@@ -63,7 +63,7 @@ static PetscErrorCode MatCreateSubMatrices_MPIDense_Local(Mat C, PetscInt ismax,
   MPI_Request     *s_waits1, *r_waits1, *s_waits2, *r_waits2;
   MPI_Status      *r_status1, *r_status2, *s_status1, *s_status2;
   MPI_Comm         comm;
-  PetscScalar    **rbuf2, **sbuf2;
+  PetscScalar    **rbuf2, **sbuf2, **submat_v;
   PetscBool        sorted;
 
   PetscFunctionBegin;
@@ -270,12 +270,14 @@ static PetscErrorCode MatCreateSubMatrices_MPIDense_Local(Mat C, PetscInt ismax,
   PetscCall(PetscFree(s_status1));
   PetscCall(PetscFree(s_waits1));
 
-  /* Create the submatrices */
+  /* Create the submatrices; hold a write access on each one until all the values have been filled in,
+     so that device matrix types learn that their host arrays were changed */
+  PetscCall(PetscMalloc1(ismax, &submat_v));
   if (scall == MAT_REUSE_MATRIX) {
     for (PetscInt i = 0; i < ismax; i++) {
-      mat = (Mat_SeqDense *)submats[i]->data;
       PetscCheck(!(submats[i]->rmap->n != nrow[i]) && !(submats[i]->cmap->n != ncol[i]), PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Cannot reuse matrix. wrong size");
-      PetscCall(PetscArrayzero(mat->v, submats[i]->rmap->n * submats[i]->cmap->n));
+      PetscCall(MatDenseGetArrayWrite(submats[i], &submat_v[i]));
+      PetscCall(PetscArrayzero(submat_v[i], submats[i]->rmap->n * submats[i]->cmap->n));
 
       submats[i]->factortype = C->factortype;
     }
@@ -285,18 +287,19 @@ static PetscErrorCode MatCreateSubMatrices_MPIDense_Local(Mat C, PetscInt ismax,
       PetscCall(MatSetSizes(submats[i], nrow[i], ncol[i], nrow[i], ncol[i]));
       PetscCall(MatSetType(submats[i], ((PetscObject)A)->type_name));
       PetscCall(MatSeqDenseSetPreallocation(submats[i], NULL));
+      PetscCall(MatDenseGetArrayWrite(submats[i], &submat_v[i]));
     }
   }
 
   /* Assemble the matrices */
   {
-    PetscInt     col;
-    PetscScalar *imat_v, *mat_v, *imat_vi, *mat_vi;
+    PetscInt           col;
+    PetscScalar       *imat_v, *imat_vi;
+    const PetscScalar *mat_v, *mat_vi;
 
+    PetscCall(MatDenseGetArrayRead(A, &mat_v));
     for (PetscInt i = 0; i < ismax; i++) {
-      mat    = (Mat_SeqDense *)submats[i]->data;
-      mat_v  = a->v;
-      imat_v = mat->v;
+      imat_v = submat_v[i];
       irow_i = irow[i];
       m      = nrow[i];
       for (PetscInt j = 0; j < m; j++) {
@@ -313,6 +316,7 @@ static PetscErrorCode MatCreateSubMatrices_MPIDense_Local(Mat C, PetscInt ismax,
         }
       }
     }
+    PetscCall(MatDenseRestoreArrayRead(A, &mat_v));
   }
 
   /* Create row map-> This maps c->row to submat->row for each submat*/
@@ -343,8 +347,7 @@ static PetscErrorCode MatCreateSubMatrices_MPIDense_Local(Mat C, PetscInt ismax,
       for (PetscInt j = 1; j <= is_max; j++) { /* For each IS belonging to the message */
         is_no  = sbuf1_i[2 * j - 1];
         is_sz  = sbuf1_i[2 * j];
-        mat    = (Mat_SeqDense *)submats[is_no]->data;
-        imat_v = mat->v;
+        imat_v = submat_v[is_no];
         rmap_i = rmap[is_no];
         m      = nrow[is_no];
         for (PetscInt k = 0; k < is_sz; k++, rbuf2_i += N) { /* For each row */
@@ -361,6 +364,8 @@ static PetscErrorCode MatCreateSubMatrices_MPIDense_Local(Mat C, PetscInt ismax,
     }
   }
   /* End Send-Recv of row_values */
+  for (PetscInt i = 0; i < ismax; i++) PetscCall(MatDenseRestoreArrayWrite(submats[i], &submat_v[i]));
+  PetscCall(PetscFree(submat_v));
   PetscCall(PetscFree(r_status2));
   PetscCall(PetscFree(r_waits2));
   PetscCall(PetscMalloc1(nrqr + 1, &s_status2));
@@ -389,11 +394,6 @@ static PetscErrorCode MatCreateSubMatrices_MPIDense_Local(Mat C, PetscInt ismax,
   PetscCall(PetscFree(sbuf2));
   PetscCall(PetscFree(rmap[0]));
   PetscCall(PetscFree(rmap));
-
-  for (PetscInt i = 0; i < ismax; i++) {
-    PetscCall(MatAssemblyBegin(submats[i], MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(submats[i], MAT_FINAL_ASSEMBLY));
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -989,7 +989,7 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqdense_petsc(Mat A, MatFactorType fty
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatSOR_SeqDense(Mat A, Vec bb, PetscReal omega, MatSORType flag, PetscReal shift, PetscInt its, PetscInt lits, Vec xx)
+PetscErrorCode MatSOR_SeqDense(Mat A, Vec bb, PetscReal omega, MatSORType flag, PetscReal shift, PetscInt its, PetscInt lits, Vec xx)
 {
   Mat_SeqDense      *mat = (Mat_SeqDense *)A->data;
   PetscScalar       *x, *v = mat->v, zero = 0.0, xt;
@@ -1035,17 +1035,21 @@ PETSC_INTERN PetscErrorCode MatMultColumnRangeKernel_SeqDense(Mat A, Vec xx, Vec
   Mat_SeqDense      *mat = (Mat_SeqDense *)A->data;
   PetscScalar       *y, _DOne = 1.0, _DZero = 0.0;
   PetscBLASInt       m, n, _One             = 1;
-  const PetscScalar *v = mat->v, *x;
+  const PetscScalar *v       = mat->v, *x;
+  PetscBool          partial = (PetscBool)(trans && (c_start > 0 || c_end < A->cmap->n));
 
   PetscFunctionBegin;
   PetscCall(PetscBLASIntCast(A->rmap->n, &m));
   PetscCall(PetscBLASIntCast(c_end - c_start, &n));
   PetscCall(VecGetArrayRead(xx, &x));
-  PetscCall(VecGetArrayWrite(yy, &y));
+  /* a transpose product over a column subrange writes only y[c_start..c_end); the remaining entries must
+     survive, so a write-only access (which may skip a device-to-host copy) cannot be used */
+  if (partial) PetscCall(VecGetArray(yy, &y));
+  else PetscCall(VecGetArrayWrite(yy, &y));
   if (!m || !n) {
     PetscBLASInt i;
     if (trans)
-      for (i = 0; i < n; i++) y[i] = 0.0;
+      for (i = 0; i < n; i++) y[c_start + i] = 0.0;
     else
       for (i = 0; i < m; i++) y[i] = 0.0;
   } else {
@@ -1058,7 +1062,8 @@ PETSC_INTERN PetscErrorCode MatMultColumnRangeKernel_SeqDense(Mat A, Vec xx, Vec
     PetscCall(PetscLogFlops(2.0 * m * n - n));
   }
   PetscCall(VecRestoreArrayRead(xx, &x));
-  PetscCall(VecRestoreArrayWrite(yy, &y));
+  if (partial) PetscCall(VecRestoreArray(yy, &y));
+  else PetscCall(VecRestoreArrayWrite(yy, &y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1643,7 +1648,7 @@ PetscErrorCode MatView_SeqDense(Mat A, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDensePlaceArray_SeqDense(Mat A, const PetscScalar *array)
+PetscErrorCode MatDensePlaceArray_SeqDense(Mat A, const PetscScalar *array)
 {
   Mat_SeqDense *a = (Mat_SeqDense *)A->data;
 
@@ -1661,7 +1666,7 @@ static PetscErrorCode MatDensePlaceArray_SeqDense(Mat A, const PetscScalar *arra
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDenseResetArray_SeqDense(Mat A)
+PetscErrorCode MatDenseResetArray_SeqDense(Mat A)
 {
   Mat_SeqDense *a = (Mat_SeqDense *)A->data;
 
@@ -1677,7 +1682,7 @@ static PetscErrorCode MatDenseResetArray_SeqDense(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDenseReplaceArray_SeqDense(Mat A, const PetscScalar *array)
+PetscErrorCode MatDenseReplaceArray_SeqDense(Mat A, const PetscScalar *array)
 {
   Mat_SeqDense *a = (Mat_SeqDense *)A->data;
 
@@ -1744,6 +1749,12 @@ PetscErrorCode MatDestroy_SeqDense(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqdensehip_seqdensehip_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqdensehip_seqdense_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqdense_seqdensehip_C", NULL));
+#endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_seqdense_seqdensekokkos_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqdensekokkos_seqdensekokkos_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqdensekokkos_seqdense_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqdense_seqdensekokkos_C", NULL));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatSeqDenseSetPreallocation_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqaij_seqdense_C", NULL));
@@ -2537,7 +2548,7 @@ PetscErrorCode MatDenseRestoreArrayWriteAndMemType(Mat A, PetscScalar *array[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatCreateSubMatrix_SeqDense(Mat A, IS isrow, IS iscol, MatReuse scall, Mat *B)
+PetscErrorCode MatCreateSubMatrix_SeqDense(Mat A, IS isrow, IS iscol, MatReuse scall, Mat *B)
 {
   Mat_SeqDense   *mat = (Mat_SeqDense *)A->data;
   PetscInt        i, j, nrows, ncols, ldb;
@@ -2589,7 +2600,7 @@ static PetscErrorCode MatCreateSubMatrix_SeqDense(Mat A, IS isrow, IS iscol, Mat
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatCreateSubMatrices_SeqDense(Mat A, PetscInt n, const IS irow[], const IS icol[], MatReuse scall, Mat *B[])
+PetscErrorCode MatCreateSubMatrices_SeqDense(Mat A, PetscInt n, const IS irow[], const IS icol[], MatReuse scall, Mat *B[])
 {
   PetscInt i;
 
@@ -2697,6 +2708,9 @@ PetscErrorCode MatMatMultSymbolic_SeqDense_SeqDense(Mat A, Mat B, PetscReal fill
 #if defined(PETSC_HAVE_HIP)
   PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATSEQDENSE, MATSEQDENSEHIP, ""));
 #endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  if (!cisdense) PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATSEQDENSE, MATSEQDENSEKOKKOS, ""));
+#endif
   if (!cisdense) {
     PetscBool flg;
 
@@ -2747,6 +2761,9 @@ PetscErrorCode MatMatTransposeMultSymbolic_SeqDense_SeqDense(Mat A, Mat B, Petsc
 #if defined(PETSC_HAVE_HIP)
   PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATSEQDENSE, MATSEQDENSEHIP, ""));
 #endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  if (!cisdense) PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATSEQDENSE, MATSEQDENSEKOKKOS, ""));
+#endif
   if (!cisdense) {
     PetscBool flg;
 
@@ -2796,6 +2813,9 @@ PetscErrorCode MatTransposeMatMultSymbolic_SeqDense_SeqDense(Mat A, Mat B, Petsc
 #endif
 #if defined(PETSC_HAVE_HIP)
   PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATSEQDENSE, MATSEQDENSEHIP, ""));
+#endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  if (!cisdense) PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATSEQDENSE, MATSEQDENSEKOKKOS, ""));
 #endif
   if (!cisdense) {
     PetscBool flg;
@@ -3590,6 +3610,12 @@ PetscErrorCode MatCreate_SeqDense(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqdensehip_seqdensehip_C", MatProductSetFromOptions_SeqDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqdensehip_seqdense_C", MatProductSetFromOptions_SeqDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqdense_seqdensehip_C", MatProductSetFromOptions_SeqDense));
+#endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_seqdense_seqdensekokkos_C", MatConvert_SeqDense_SeqDenseKokkos));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqdensekokkos_seqdensekokkos_C", MatProductSetFromOptions_SeqDense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqdensekokkos_seqdense_C", MatProductSetFromOptions_SeqDense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqdense_seqdensekokkos_C", MatProductSetFromOptions_SeqDense));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSeqDenseSetPreallocation_C", MatSeqDenseSetPreallocation_SeqDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqaij_seqdense_C", MatProductSetFromOptions_SeqAIJ_SeqDense));

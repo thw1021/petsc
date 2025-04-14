@@ -60,6 +60,7 @@
 ## Mat
 
 - Add `MATPRODUCT_PtAP` support for `MATDIAGONAL` and `MATCONSTANTDIAGONAL`
+- Add the Kokkos dense matrix types `MATDENSEKOKKOS`, `MATSEQDENSEKOKKOS` and `MATMPIDENSEKOKKOS`, with the constructors `MatCreateDenseKokkos()` and `MatCreateSeqDenseKokkos()`
 - Add `MatSeqAIJGetKokkosView()`, `MatSeqAIJRestoreKokkosView()`, `MatSeqAIJGetKokkosViewWrite()` and `MatSeqAIJRestoreKokkosViewWrite()` to the public API
 - Change `MatSeqAIJCUSPARSEGetIJ()`, `MatSeqAIJCUSPARSERestoreIJ()`, `MatSeqAIJHIPSPARSEGetIJ()` and `MatSeqAIJHIPSPARSERestoreIJ()` to return `PetscInt` indices instead of `int`
 

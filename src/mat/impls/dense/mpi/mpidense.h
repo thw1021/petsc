@@ -54,3 +54,7 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIDense_MPIDenseCUDA(Mat, MatType, MatRe
 #if PetscDefined(HAVE_HIP)
 PETSC_INTERN PetscErrorCode MatConvert_MPIDense_MPIDenseHIP(Mat, MatType, MatReuse, Mat *);
 #endif
+
+#if PetscDefined(HAVE_KOKKOS_KERNELS)
+PETSC_INTERN PetscErrorCode MatConvert_MPIDense_MPIDenseKokkos(Mat, MatType, MatReuse, Mat *);
+#endif

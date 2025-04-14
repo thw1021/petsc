@@ -213,6 +213,11 @@ static PetscErrorCode MatDenseSetLDA_MPIDense(Mat A, PetscInt lda)
     PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPIDENSEHIP, &iship));
     if (iship) mtype = MATSEQDENSEHIP;
 #endif
+#if PetscDefined(HAVE_KOKKOS_KERNELS)
+    PetscBool iskokkos;
+    PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPIDENSEKOKKOS, &iskokkos));
+    if (iskokkos) mtype = MATSEQDENSEKOKKOS;
+#endif
     PetscCall(MatSetType(a->A, mtype));
   }
   PetscCall(MatDenseSetLDA(a->A, lda));
@@ -772,6 +777,14 @@ static PetscErrorCode MatDestroy_MPIDense(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseHIPResetArray_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseHIPReplaceArray_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseHIPSetPreallocation_C", NULL));
+#endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpidense_mpidensekokkos_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpidensekokkos_mpidense_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpiaij_mpidensekokkos_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpidensekokkos_mpiaij_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpiaijkokkos_mpidensekokkos_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpidensekokkos_mpiaijkokkos_C", NULL));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseGetColumn_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseRestoreColumn_C", NULL));
@@ -1390,6 +1403,11 @@ static PetscErrorCode MatMPIDenseSetPreallocation_MPIDense(Mat mat, PetscScalar 
   PetscCall(PetscObjectTypeCompare((PetscObject)mat, MATMPIDENSEHIP, &iship));
   if (iship) mtype = MATSEQDENSEHIP;
 #endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  PetscBool iskokkos;
+  PetscCall(PetscObjectTypeCompare((PetscObject)mat, MATMPIDENSEKOKKOS, &iskokkos));
+  if (iskokkos) mtype = MATSEQDENSEKOKKOS;
+#endif
   PetscCall(MatSetType(a->A, mtype));
   PetscCall(MatSeqDenseSetPreallocation(a->A, data));
 #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
@@ -1786,6 +1804,9 @@ PetscErrorCode MatCreate_MPIDense(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpidense_mpidensehip_C", MatConvert_MPIDense_MPIDenseHIP));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpiaijhipsparse_mpidense_C", MatProductSetFromOptions_MPIAIJ_MPIDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpidense_mpiaijhipsparse_C", MatProductSetFromOptions_MPIDense_MPIAIJ));
+#endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpidense_mpidensekokkos_C", MatConvert_MPIDense_MPIDenseKokkos));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseGetColumn_C", MatDenseGetColumn_MPIDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseRestoreColumn_C", MatDenseRestoreColumn_MPIDense));
@@ -2196,6 +2217,9 @@ static PetscErrorCode MatTransposeMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B
 #if defined(PETSC_HAVE_HIP)
   PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSEHIP, ""));
 #endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  if (!cisdense) PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSEKOKKOS, ""));
+#endif
   if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
   PetscCall(MatSetUp(C));
 
@@ -2220,7 +2244,7 @@ static PetscErrorCode MatMatTransposeMultSymbolic_MPIDense_MPIDense(Mat A, Mat B
   PetscInt                         alg;
   MatProductCtx_MatTransMultDense *abt;
   Mat_Product                     *product = C->product;
-  PetscBool                        flg;
+  PetscBool                        flg, cisdense = PETSC_FALSE;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 4);
@@ -2233,7 +2257,16 @@ static PetscErrorCode MatMatTransposeMultSymbolic_MPIDense_MPIDense(Mat A, Mat B
 
   /* setup matrix product C */
   PetscCall(MatSetSizes(C, A->rmap->n, B->rmap->n, A->rmap->N, B->rmap->N));
-  PetscCall(MatSetType(C, MATMPIDENSE));
+#if defined(PETSC_HAVE_CUDA)
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSECUDA, ""));
+#endif
+#if defined(PETSC_HAVE_HIP)
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSEHIP, ""));
+#endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  if (!cisdense) PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSEKOKKOS, ""));
+#endif
+  if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
   PetscCall(MatSetUp(C));
   PetscCall(PetscObjectGetNewTag((PetscObject)C, &tag));
 
@@ -2525,7 +2558,7 @@ static PetscErrorCode MatMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B, PetscRe
   Mat_Product                *product = C->product;
   PetscInt                    alg;
   MatProductCtx_MatMultDense *ab;
-  PetscBool                   flg;
+  PetscBool                   flg, cisdense = PETSC_FALSE;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 4);
@@ -2539,7 +2572,16 @@ static PetscErrorCode MatMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B, PetscRe
 
   /* setup C */
   PetscCall(MatSetSizes(C, A->rmap->n, B->cmap->n, A->rmap->N, B->cmap->N));
-  PetscCall(MatSetType(C, MATMPIDENSE));
+#if defined(PETSC_HAVE_CUDA)
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSECUDA, ""));
+#endif
+#if defined(PETSC_HAVE_HIP)
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSEHIP, ""));
+#endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  if (!cisdense) PetscCall(PetscObjectTypeCompareAny((PetscObject)C, &cisdense, MATMPIDENSE, MATMPIDENSEKOKKOS, ""));
+#endif
+  if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)A)->type_name));
   PetscCall(MatSetUp(C));
 
   /* create data structure for reuse Cdense */

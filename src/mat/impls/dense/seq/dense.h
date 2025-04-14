@@ -97,6 +97,12 @@ PETSC_INTERN PetscErrorCode MatZeroEntries_SeqDense(Mat);
 PETSC_INTERN PetscErrorCode MatSetUp_SeqDense(Mat);
 PETSC_INTERN PetscErrorCode MatSetRandom_SeqDense(Mat, PetscRandom);
 PETSC_INTERN PetscErrorCode MatGetDiagonal_SeqDense(Mat, Vec);
+PETSC_INTERN PetscErrorCode MatSOR_SeqDense(Mat, Vec, PetscReal, MatSORType, PetscReal, PetscInt, PetscInt, Vec);
+PETSC_INTERN PetscErrorCode MatCreateSubMatrix_SeqDense(Mat, IS, IS, MatReuse, Mat *);
+PETSC_INTERN PetscErrorCode MatCreateSubMatrices_SeqDense(Mat, PetscInt, const IS[], const IS[], MatReuse, Mat *[]);
+PETSC_INTERN PetscErrorCode MatDensePlaceArray_SeqDense(Mat, const PetscScalar *);
+PETSC_INTERN PetscErrorCode MatDenseResetArray_SeqDense(Mat);
+PETSC_INTERN PetscErrorCode MatDenseReplaceArray_SeqDense(Mat, const PetscScalar *);
 
 PETSC_INTERN PetscErrorCode MatMultAddColumnRangeKernel_SeqDense(Mat, Vec, Vec, Vec, PetscInt, PetscInt, PetscBool, PetscBool);
 PETSC_INTERN PetscErrorCode MatMultColumnRangeKernel_SeqDense(Mat, Vec, Vec, PetscInt, PetscInt, PetscBool, PetscBool);
@@ -115,6 +121,10 @@ PETSC_INTERN PetscErrorCode                MatConvert_SeqDense_SeqDenseCUDA(Mat,
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatSeqDenseHIPInvertFactors_Internal(Mat);
 PETSC_INTERN PetscErrorCode                MatMatMultNumeric_SeqDenseHIP_SeqDenseHIP_Internal(Mat, Mat, Mat, PetscBool, PetscBool);
 PETSC_INTERN PetscErrorCode                MatConvert_SeqDense_SeqDenseHIP(Mat, MatType, MatReuse, Mat *);
+#endif
+
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+PETSC_INTERN PetscErrorCode MatConvert_SeqDense_SeqDenseKokkos(Mat, MatType, MatReuse, Mat *);
 #endif
 
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatSeqDenseInvertFactors_Private(Mat);

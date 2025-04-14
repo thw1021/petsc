@@ -30,6 +30,11 @@ PETSC_INTERN PetscErrorCode MatCreate_SeqDenseHIP(Mat);
 PETSC_INTERN PetscErrorCode MatCreate_MPIDenseHIP(Mat);
 #endif
 
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+PETSC_EXTERN PetscErrorCode MatCreate_SeqDenseKokkos(Mat);
+PETSC_EXTERN PetscErrorCode MatCreate_MPIDenseKokkos(Mat);
+#endif
+
 PETSC_EXTERN PetscErrorCode MatCreate_MPIAdj(Mat);
 PETSC_EXTERN PetscErrorCode MatCreate_Shell(Mat);
 PETSC_EXTERN PetscErrorCode MatCreate_Composite(Mat);
@@ -191,6 +196,12 @@ PetscErrorCode MatRegisterAll(void)
   PetscCall(MatRegisterRootName(MATDENSEHIP, MATSEQDENSEHIP, MATMPIDENSEHIP));
   PetscCall(MatRegister(MATSEQDENSEHIP, MatCreate_SeqDenseHIP));
   PetscCall(MatRegister(MATMPIDENSEHIP, MatCreate_MPIDenseHIP));
+#endif
+
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  PetscCall(MatRegisterRootName(MATDENSEKOKKOS, MATSEQDENSEKOKKOS, MATMPIDENSEKOKKOS));
+  PetscCall(MatRegister(MATSEQDENSEKOKKOS, MatCreate_SeqDenseKokkos));
+  PetscCall(MatRegister(MATMPIDENSEKOKKOS, MatCreate_MPIDenseKokkos));
 #endif
 
   PetscCall(MatRegister(MATMPIADJ, MatCreate_MPIAdj));

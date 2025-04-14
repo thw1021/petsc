@@ -93,6 +93,11 @@
      - ``MatCreateDenseCUDA()``
      -
      - NVIDIA GPU Acceleration
+   * -
+     - ``MATDENSEKOKKOS``
+     - ``MatCreateDenseKokkos()``
+     - Kokkos
+     - GPU acceleration through Kokkos
    * - ``MatMult()`` via finite differencing of a function
      - ``MATMFFD``, see :any:`sec_nlmatrixfree`
      - ``MatCreateMFFD()``, see also ``MatCreateSNESMF()``

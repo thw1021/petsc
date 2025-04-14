@@ -77,12 +77,15 @@ typedef const char *MatType;
 #define MATDENSE                     "dense"
 #define MATDENSECUDA                 "densecuda"
 #define MATDENSEHIP                  "densehip"
+#define MATDENSEKOKKOS               "densekokkos"
 #define MATSEQDENSE                  "seqdense"
 #define MATSEQDENSECUDA              "seqdensecuda"
 #define MATSEQDENSEHIP               "seqdensehip"
+#define MATSEQDENSEKOKKOS            "seqdensekokkos"
 #define MATMPIDENSE                  "mpidense"
 #define MATMPIDENSECUDA              "mpidensecuda"
 #define MATMPIDENSEHIP               "mpidensehip"
+#define MATMPIDENSEKOKKOS            "mpidensekokkos"
 #define MATELEMENTAL                 "elemental"
 #define MATSCALAPACK                 "scalapack"
 #define MATBAIJ                      "baij"
@@ -2790,6 +2793,8 @@ PETSC_EXTERN PetscErrorCode MatCreateAIJViennaCL(MPI_Comm, PetscInt, PetscInt, P
 #if PetscDefined(HAVE_KOKKOS)
 PETSC_EXTERN PetscErrorCode MatCreateAIJKokkos(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], PetscInt, const PetscInt[], Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateSeqAIJKokkos(MPI_Comm, PetscInt, PetscInt, PetscInt, const PetscInt[], Mat *);
+PETSC_EXTERN PetscErrorCode MatCreateDenseKokkos(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscScalar[], Mat *);
+PETSC_EXTERN PetscErrorCode MatCreateSeqDenseKokkos(MPI_Comm, PetscInt, PetscInt, PetscScalar[], Mat *);
 #endif
 
 #if defined(PETSC_HAVE_FFTW)
