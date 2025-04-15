@@ -277,7 +277,9 @@ PetscErrorCode TaoBRGNSetRegularizationType(Tao tao, TaoBRGNRegularizationType t
 
 static PetscErrorCode TaoBRGNCreateRegularizerTerm(Tao tao, TaoTerm *term, Mat *map, Mat *H)
 {
-  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
+  char        name[256];
+  const char *prefix;
+  TAO_BRGN   *gn = (TAO_BRGN *)tao->data;
 
   PetscFunctionBegin;
   *H = NULL;
@@ -293,14 +295,14 @@ static PetscErrorCode TaoBRGNCreateRegularizerTerm(Tao tao, TaoTerm *term, Mat *
       PetscCall(TaoTermSetSolutionTemplate(*term, output));
       PetscCall(VecDestroy(&output));
     } else {
-      PetscCall(TaoTermDuplicate(gn->orig_callbacks, TAOTERM_DUPLICATE_SIZEONLY, term));
+      PetscCall(TaoTermDuplicate(tao->orig_callbacks, TAOTERM_DUPLICATE_SIZEONLY, term));
     }
     PetscCall(TaoTermSetType(*term, TAOTERML1));
     PetscCall(TaoTermL1SetEpsilon(*term, gn->epsilon));
     break;
   case TAOBRGN_REGULARIZATION_L2PURE:
   case TAOBRGN_REGULARIZATION_L2PROX:
-    PetscCall(TaoTermDuplicate(gn->orig_callbacks, TAOTERM_DUPLICATE_SIZEONLY, term));
+    PetscCall(TaoTermDuplicate(tao->orig_callbacks, TAOTERM_DUPLICATE_SIZEONLY, term));
     PetscCall(TaoTermSetType(*term, TAOTERMHALFL2SQUARED));
     *map = NULL;
     break;
@@ -315,24 +317,14 @@ static PetscErrorCode TaoBRGNCreateRegularizerTerm(Tao tao, TaoTerm *term, Mat *
     *H   = mat_diag;
     *map = NULL;
   } break;
-  case TAOBRGN_REGULARIZATION_USER:
-    PetscCall(PetscObjectReference((PetscObject)gn->orig_callbacks));
-    *term = gn->orig_callbacks;
-    *map  = NULL;
-    PetscCall(PetscObjectReference((PetscObject)gn->Hreg));
-    *H = gn->Hreg;
+  default:
     break;
   }
-  if (gn->reg_type != TAOBRGN_REGULARIZATION_USER) {
-    char        name[256];
-    const char *prefix;
-
-    PetscCall(PetscSNPrintf(name, PETSC_STATIC_ARRAY_LENGTH(name), "BRGN regularizer %s", TaoBRGNRegularizationTypes[gn->reg_type]));
-    PetscCall(PetscObjectSetName((PetscObject)*term, name));
-    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)tao, &prefix));
-    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*term, prefix));
-    PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)*term, "brgn_regularizer_"));
-  }
+  PetscCall(PetscSNPrintf(name, PETSC_STATIC_ARRAY_LENGTH(name), "BRGN regularizer %s", TaoBRGNRegularizationTypes[gn->reg_type]));
+  PetscCall(PetscObjectSetName((PetscObject)*term, name));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)tao, &prefix));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*term, prefix));
+  PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)*term, "brgn_regularizer_"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -341,7 +333,7 @@ static PetscErrorCode TaoBRGNSetRegularizationType_BRGN(Tao tao, TaoBRGNRegulari
   TAO_BRGN *gn = (TAO_BRGN *)tao->data;
 
   PetscFunctionBegin;
-  if (type != gn->reg_type) {
+  if (type != gn->reg_type && type != TAOBRGN_REGULARIZATION_USER) {
     const char *name;
     TaoTerm     reg_term;
     Mat         reg_map, Hreg;
@@ -639,121 +631,6 @@ static PetscErrorCode TaoBRGNSetDictionaryMatrix_BRGN(Tao tao, Mat dict)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  TaoBRGNSetRegularizerObjectiveAndGradientRoutine - Sets the user-defined regularizer call-back
-  function into the algorithm.
-
-  Input Parameters:
-+ tao  - the Tao context
-. func - function pointer for the regularizer value and gradient evaluation
-- ctx  - user context for the regularizer
-
-  Calling sequence:
-+ tao - the `Tao` context
-. u   - the location at which to compute the objective and gradient
-. val - location to store objective function value
-. g   - location to store gradient
-- ctx - user context for the regularizer Hessian
-
-  Level: advanced
-
-.seealso: `Tao`, `Mat`, `TAOBRGN`
-@*/
-PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine(Tao tao, PetscErrorCode (*func)(Tao tao, Vec u, PetscReal *val, Vec g, void *ctx), void *ctx)
-{
-  PetscFunctionBegin;
-  PetscTryMethod((PetscObject)tao, "TaoBRGNSetRegularizerObjectiveAndGradientRoutine_C", (Tao, PetscErrorCode (*)(Tao, Vec, PetscReal *, Vec, void *), void *), (tao, func, ctx));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine_BRGN(Tao tao, PetscErrorCode (*func)(Tao tao, Vec u, PetscReal *val, Vec g, void *ctx), void *ctx)
-{
-  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoTermTaoCallbacksSetObjAndGrad(gn->orig_callbacks, func, ctx));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-typedef struct _n_BRGNHessianCtx {
-  PetscErrorCode (*orig_func)(Tao, Vec, Mat, void *);
-  void *orig_ctx;
-} BRGNHessianCtx;
-
-static PetscErrorCode TaoBRGNRegularizerHessianRoutine_Internal(Tao tao, Vec u, Mat H, Mat Hpre, void *ctx)
-{
-  BRGNHessianCtx *wrapper_ctx = (BRGNHessianCtx *)ctx;
-
-  PetscFunctionBegin;
-  PetscCall((*wrapper_ctx->orig_func)(tao, u, H, wrapper_ctx->orig_ctx));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode BRGNHessianCtxDestroy(void **ctx)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscFree(*ctx));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-  TaoBRGNSetRegularizerHessianRoutine - Sets the user-defined regularizer call-back
-  function into the algorithm.
-
-  Input Parameters:
-+ tao  - the `Tao` context
-. Hreg - user-created matrix for the Hessian of the regularization term
-. func - function pointer for the regularizer Hessian evaluation
-- ctx  - user context for the regularizer Hessian
-
-  Calling sequence:
-+ tao  - the `Tao` context
-. u    - the location at which to compute the Hessian
-. Hreg - user-created matrix for the Hessian of the regularization term
-- ctx  - user context for the regularizer Hessian
-
-  Level: advanced
-
-.seealso: `Tao`, `Mat`, `TAOBRGN`
-@*/
-PetscErrorCode TaoBRGNSetRegularizerHessianRoutine(Tao tao, Mat Hreg, PetscErrorCode (*func)(Tao tao, Vec u, Mat Hreg, void *ctx), void *ctx)
-{
-  PetscFunctionBegin;
-  PetscTryMethod((PetscObject)tao, "TaoBRGNSetRegularizerHessianRoutine_C", (Tao, Mat, PetscErrorCode (*)(Tao, Vec, Mat, void *), void *), (tao, Hreg, func, ctx));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoBRGNSetRegularizerHessianRoutine_BRGN(Tao tao, Mat Hreg, PetscErrorCode (*func)(Tao tao, Vec u, Mat Hreg, void *ctx), void *ctx)
-{
-  TAO_BRGN *gn = (TAO_BRGN *)tao->data;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (Hreg) {
-    PetscValidHeaderSpecific(Hreg, MAT_CLASSID, 2);
-    PetscCheckSameComm(tao, 1, Hreg, 2);
-  } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONG, "NULL Hessian detected! User must provide valid Hessian for the regularizer.");
-  if (func || ctx) {
-    BRGNHessianCtx *wrapper_ctx;
-    PetscContainer  ctx_container;
-
-    PetscCall(PetscNew(&wrapper_ctx));
-    wrapper_ctx->orig_func = func;
-    wrapper_ctx->orig_ctx  = ctx;
-    PetscCall(PetscContainerCreate(PetscObjectComm((PetscObject)tao), &ctx_container));
-    PetscCall(PetscContainerSetPointer(ctx_container, wrapper_ctx));
-    PetscCall(PetscContainerSetCtxDestroy(ctx_container, BRGNHessianCtxDestroy));
-    PetscCall(TaoTermTaoCallbacksSetHessian(gn->orig_callbacks, TaoBRGNRegularizerHessianRoutine_Internal, (void *)wrapper_ctx));
-    PetscCall(PetscObjectCompose((PetscObject)gn->orig_callbacks, "__TaoBRGNSetRegularizerHessianRoutine", (PetscObject)ctx_container));
-    PetscCall(PetscContainerDestroy(&ctx_container));
-  }
-  PetscCall(PetscObjectReference((PetscObject)Hreg));
-  PetscCall(MatDestroy(&gn->Hreg));
-  gn->Hreg = Hreg;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode TaoDestroy_BRGN(Tao tao)
 {
   TAO_BRGN *gn = (TAO_BRGN *)tao->data;
@@ -766,7 +643,6 @@ static PetscErrorCode TaoDestroy_BRGN(Tao tao)
   PetscCall(MatDestroy(&gn->Hreg));
   PetscCall(TaoDestroy(&gn->subsolver));
   gn->parent = NULL;
-  PetscCall(TaoTermDestroy(&gn->orig_callbacks));
   PetscCall(PetscFree(tao->data));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetRegularizerTerm_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizerTerm_C", NULL));
@@ -777,8 +653,6 @@ static PetscErrorCode TaoDestroy_BRGN(Tao tao)
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizerWeight_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetL1SmoothEpsilon_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetDictionaryMatrix_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizerObjectiveAndGradientRoutine_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizerHessianRoutine_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1008,8 +882,7 @@ static PetscErrorCode TaoSetUp_BRGN(Tao tao)
 
   Level: beginner
 
-.seealso: `Tao`, `TaoBRGNGetSubsolver()`, `TaoBRGNSetRegularizerWeight()`, `TaoBRGNSetL1SmoothEpsilon()`, `TaoBRGNSetDictionaryMatrix()`,
-          `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()`, `TaoBRGNSetRegularizerHessianRoutine()`
+.seealso: `Tao`, `TaoBRGNGetSubsolver()`, `TaoBRGNSetRegularizerWeight()`, `TaoBRGNSetL1SmoothEpsilon()`, `TaoBRGNSetDictionaryMatrix()`, `TaoBRGNSetRegularizerTerm()`
 M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
 {
@@ -1043,8 +916,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
   PetscCall(TaoSetOptionsPrefix(gn->subsolver, prefix));
   PetscCall(TaoAppendOptionsPrefix(gn->subsolver, "tao_brgn_subsolver_"));
 
-  PetscCall(TaoTermCreateBRGNRegularizer(tao, &gn->orig_callbacks));
-
   PetscCall(TaoTermCreateGaussNewton(tao, &gauss_newton_term));
   PetscCall(PetscObjectSetName((PetscObject)gauss_newton_term, "BRGN Gauss-Newton term"));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)gauss_newton_term, prefix));
@@ -1068,7 +939,5 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizerWeight_C", TaoBRGNSetRegularizerWeight_BRGN));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetL1SmoothEpsilon_C", TaoBRGNSetL1SmoothEpsilon_BRGN));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetDictionaryMatrix_C", TaoBRGNSetDictionaryMatrix_BRGN));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizerObjectiveAndGradientRoutine_C", TaoBRGNSetRegularizerObjectiveAndGradientRoutine_BRGN));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizerHessianRoutine_C", TaoBRGNSetRegularizerHessianRoutine_BRGN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
