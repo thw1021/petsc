@@ -312,7 +312,7 @@ static PetscErrorCode DMProjectPoint_Field_Private(DM dm, PetscDS ds, DM dmIn, D
         fegeom.detJ = &cgeom->detJ[tp];
       }
       if (coefficients) {
-        if (isCohesiveIn) PetscCall(PetscFEEvaluateFieldJets_Hybrid_Internal(dsIn, NfIn, 0, tp, T, face, qpt, T, &fegeom, coefficients, coefficients_t, u, u_x, u_t));
+        if (isCohesiveIn) PetscCall(PetscFEEvaluateFieldJets_Hybrid_Internal(dsIn, NfIn, 0, tp, T, face, qpt, T, &fegeom, NULL, coefficients, coefficients_t, u, u_x, u_t));
         else PetscCall(PetscFEEvaluateFieldJets_Internal(dsIn, NfIn, 0, tp, T, &fegeom, coefficients, coefficients_t, u, u_x, u_t));
       }
       if (dsAux) PetscCall(PetscFEEvaluateFieldJets_Internal(dsAux, NfAux, 0, tp, TAux, &fegeom, coefficientsAux, coefficientsAux_t, a, a_x, a_t));
@@ -463,7 +463,7 @@ static PetscErrorCode DMProjectPoint_BdField_Private(DM dm, PetscDS ds, DM dmIn,
       }
       /* TODO We should use cgeom here, instead of fegeom, however the geometry coming in through fgeom does not have the support cell geometry */
       if (coefficients) {
-        if (isCohesiveIn) PetscCall(PetscFEEvaluateFieldJets_Hybrid_Internal(dsIn, NfIn, 0, tp, T, face, qpt, T, &cgeom, coefficients, coefficients_t, u, u_x, u_t));
+        if (isCohesiveIn) PetscCall(PetscFEEvaluateFieldJets_Hybrid_Internal(dsIn, NfIn, 0, tp, T, face, qpt, T, &fegeom, &cgeom, coefficients, coefficients_t, u, u_x, u_t));
         else PetscCall(PetscFEEvaluateFieldJets_Internal(dsIn, NfIn, 0, tp, T, &cgeom, coefficients, coefficients_t, u, u_x, u_t));
       }
       if (dsAux) PetscCall(PetscFEEvaluateFieldJets_Internal(dsAux, NfAux, 0, tp, TAux, &cgeom, coefficientsAux, coefficientsAux_t, a, a_x, a_t));
@@ -675,7 +675,7 @@ static PetscErrorCode DMProjectLocal_Generic_Plex(DM dm, PetscReal time, Vec loc
   PetscDualSpace  *sp, *cellsp, *spIn, *cellspIn;
   PetscTabulation *T = NULL, *TAux = NULL;
   PetscInt        *Nc;
-  PetscInt         dim, dimEmbed, depth, htInc = 0, htIncIn = 0, htIncAux = 0, minHeight, maxHeight, minHeightIn, minHeightAux, h, regionNum, Nf, NfIn, NfAux = 0, NfTot, f;
+  PetscInt         dim, dimEmbed, depth, pStart, pEnd, lStart = PETSC_DETERMINE, htInc = 0, htIncIn = 0, htIncAux = 0, minHeight, maxHeight, minHeightIn, minHeightAux, h, regionNum, Nf, NfIn, NfAux = 0, NfTot, f;
   PetscBool       *isFE, hasFE = PETSC_FALSE, hasFV = PETSC_FALSE, isCohesive = PETSC_FALSE, isCohesiveIn = PETSC_FALSE, transform;
   DMField          coordField;
   DMLabel          depthLabel;
@@ -708,7 +708,7 @@ static PetscErrorCode DMProjectLocal_Generic_Plex(DM dm, PetscReal time, Vec loc
   /* Determine height for iteration of all meshes */
   {
     DMPolytopeType ct, ctIn, ctAux;
-    PetscInt       lStart, pStart, pEnd, p, pStartIn, pStartAux, pEndAux;
+    PetscInt       p, pStartIn, pStartAux, pEndAux;
     PetscInt       dim = -1, dimIn = -1, dimAux = -1;
 
     PetscCall(DMPlexGetSimplexOrBoxCells(plex, minHeight, &pStart, &pEnd));
@@ -766,6 +766,17 @@ static PetscErrorCode DMProjectLocal_Generic_Plex(DM dm, PetscReal time, Vec loc
   if (!ds) PetscCall(DMGetDS(dm, &ds));
   PetscCall(DMGetFirstLabeledPoint(dmIn, dm, label, numIds, ids, minHeight, NULL, &dsIn));
   if (!dsIn) PetscCall(DMGetDS(dmIn, &dsIn));
+  if (!dsIn) {
+    if (encIn == DM_ENC_SUPERMESH) {
+      PetscInt p = pStart, pIn;
+
+      PetscCall(DMGetEnclosurePoint(dmIn, dm, encIn, lStart < 0 ? p : lStart, &pIn));
+      // If the input mesh is higher dimensional than the output mesh, get a cell from the output mesh
+      if (htIncIn) PetscCall(DMPlexGetSimplexOrBoxCells(plex, 0, &p, NULL));
+      PetscCall(DMGetEnclosurePoint(dmIn, dm, encIn, lStart < 0 ? p : lStart, &pIn));
+      PetscCall(DMGetCellDS(dmIn, pIn, &dsIn, NULL));
+    } else PetscCall(DMGetDS(dmIn, &dsIn));
+  }
   PetscCall(PetscDSGetNumFields(ds, &Nf));
   PetscCall(PetscDSGetNumFields(dsIn, &NfIn));
   PetscCall(PetscDSIsCohesive(dsIn, &isCohesiveIn));
@@ -777,7 +788,14 @@ static PetscErrorCode DMProjectLocal_Generic_Plex(DM dm, PetscReal time, Vec loc
   PetscCall(DMGetCoordinateDim(dm, &dimEmbed));
   PetscCall(DMGetLocalSection(dm, &section));
   if (dmAux) {
-    PetscCall(DMGetDS(dmAux, &dsAux));
+    if (encAux == DM_ENC_SUPERMESH) {
+      PetscInt p = pStart, pAux;
+
+      // If the auxiliary mesh is higher dimensional than the output mesh, get a cell from the output mesh
+      if (htIncAux) PetscCall(DMPlexGetSimplexOrBoxCells(plex, 0, &p, NULL));
+      PetscCall(DMGetEnclosurePoint(dmAux, dm, encAux, lStart < 0 ? p : lStart, &pAux));
+      PetscCall(DMGetCellDS(dmAux, pAux, &dsAux, NULL));
+    } else PetscCall(DMGetDS(dmAux, &dsAux));
     PetscCall(PetscDSGetNumFields(dsAux, &NfAux));
   }
   PetscCall(PetscDSGetComponents(ds, &Nc));
@@ -880,7 +898,7 @@ static PetscErrorCode DMProjectLocal_Generic_Plex(DM dm, PetscReal time, Vec loc
     PetscScalar *values;
     PetscBool   *fieldActive;
     PetscInt     maxDegree;
-    PetscInt     pStart, pEnd, p, lStart, spDim, totDim, numValues;
+    PetscInt     p, spDim, totDim, numValues;
     IS           heightIS;
 
     if (h > minHeight) {
