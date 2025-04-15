@@ -4,7 +4,6 @@ PetscBool         TaoTermRegisterAllCalled = PETSC_FALSE;
 PetscFunctionList TaoTermList              = NULL;
 
 PETSC_INTERN PetscErrorCode TaoTermCreate_TaoCallbacks(TaoTerm);
-PETSC_INTERN PetscErrorCode TaoTermCreate_BRGNRegularizer(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_ADMMRegularizer(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_ADMMMisfit(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm);
@@ -53,7 +52,6 @@ PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void)
   if (TaoTermRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   TaoTermRegisterAllCalled = PETSC_TRUE;
   PetscCall(TaoTermRegister(TAOTERMTAOCALLBACKS, TaoTermCreate_TaoCallbacks));
-  PetscCall(TaoTermRegister(TAOTERMBRGNREGULARIZER, TaoTermCreate_BRGNRegularizer));
   PetscCall(TaoTermRegister(TAOTERMADMMREGULARIZER, TaoTermCreate_ADMMRegularizer));
   PetscCall(TaoTermRegister(TAOTERMADMMMISFIT, TaoTermCreate_ADMMMisfit));
   PetscCall(TaoTermRegister(TAOTERMSHELL, TaoTermCreate_Shell));
