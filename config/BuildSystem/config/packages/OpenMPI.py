@@ -20,8 +20,10 @@ class Configure(config.package.GNUPackage):
   def setupDependencies(self, framework):
     config.package.GNUPackage.setupDependencies(self, framework)
     self.cuda           = framework.require('config.packages.cuda',self)
+    self.hip            = framework.require('config.packages.hip',self)
+    self.ucx            = framework.require('config.packages.ucx',self)
     self.hwloc          = framework.require('config.packages.hwloc',self)
-    self.odeps          = [self.hwloc]
+    self.odeps          = [self.hwloc, self.cuda, self.hip, self.ucx]
     return
 
   def formGNUConfigureArgs(self):
@@ -48,6 +50,12 @@ class Configure(config.package.GNUPackage):
     args.append('--disable-vt')
     if self.cuda.found:
       args.append('--with-cuda='+self.cuda.cudaDir)
+    elif self.hip.found and self.ucx.found:
+      # see https://docs.open-mpi.org/en/main/tuning-apps/networking/rocm.html#building-open-mpi-with-rocm-support
+      # One may need either mpirun -n 2 --mca pml ucx ./myapp or export OMPI_MCA_pml="ucx" to use UCX
+      args.append('--with-rocm='+self.hip.hipDir)
+      args.append('--with-ucx='+self.ucx.directory)
+
     if self.hwloc.found:
       args.append('--with-hwloc="'+self.hwloc.directory+'"')
     else:
