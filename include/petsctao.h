@@ -472,9 +472,7 @@ PETSC_EXTERN PetscErrorCode          TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx 
   Level: advanced
 
   Notes:
-  If `TAOBRGN_REGULARIZATION_USER`, the regularizer is set either by calling
-  `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` and
-  `TaoBRGNSetRegulazerHessianRoutine()` or by calling `TaoBRGNSetRegularizerTerm()`.
+  If `TAOBRGN_REGULARIZATION_USER`, the regularizer can be set by calling `TaoBRGNSetRegularizerTerm()`.
 
   If `TAOBRGN_REGULARIZATION_L1DICT`, the dictionary matrix is set with `TaoBRGNSetDictionaryMatrix()` and the smoothing parameter of the
   approximate $\ell_1$ norm is set with `TaoBRGNSetL1SmoothEpsilon()`.
@@ -498,8 +496,6 @@ PETSC_EXTERN const char *const TaoBRGNRegularizationTypes[];
 PETSC_EXTERN PetscErrorCode TaoBRGNGetSubsolver(Tao, Tao *);
 PETSC_EXTERN PetscErrorCode TaoBRGNGetRegularizationType(Tao, TaoBRGNRegularizationType *);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizationType(Tao, TaoBRGNRegularizationType);
-PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine(Tao, PetscErrorCode (*)(Tao, Vec, PetscReal *, Vec, void *), void *);
-PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizerHessianRoutine(Tao, Mat, PetscErrorCode (*)(Tao, Vec, Mat, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizerWeight(Tao, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoBRGNGetRegularizerTerm(Tao, PetscReal *, TaoTerm *, Vec *, Mat *);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizerTerm(Tao, PetscReal, TaoTerm, Vec, Mat);

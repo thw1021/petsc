@@ -20,5 +20,4 @@ typedef struct {
                                                                  lambda = uphill_lambda_change * lambda on steps that increase the objective. */
   TaoBRGNRegularizationType reg_type;
   PetscBool                 mat_explicit;
-  TaoTerm                   orig_callbacks;
 } TAO_BRGN;

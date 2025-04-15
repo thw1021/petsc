@@ -443,50 +443,6 @@ PETSC_INTERN PetscErrorCode TaoTermCreateTaoCallbacks(Tao tao, TaoTerm *term)
 }
 
 /*MC
-  TAOTERMBRGNREGULARIZER - A `TaoTerm` implementation that accesses the callbacks that have been set in
-  `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` and
-  `TaoBRGNSetRegularizerHessianRoutine()`.
-
-  Level: developer
-
-  Note:
-  This implementation has the same restrictions os `TAOTERMTAOCALLBACKS`.
-
-.seealso: [](sec_tao_term),
-          `TaoTerm`,
-          `TaoTermType`,
-          `TAOBRGN`,
-          `TAOTERMTAOCALLBACKS`,
-          `TAOTERMADMMREGULARIZER`,
-          `TAOTERMADMMMISFIT`,
-M*/
-PETSC_INTERN PetscErrorCode TaoTermCreate_BRGNRegularizer(TaoTerm term)
-{
-  PetscFunctionBegin;
-  // clang-format off
-  PetscCall(TaoTermCreate_TaoCallbacks_Internal(term,
-        NULL, "TaoBRGNSetRegularizerObjectiveAndGradientRoutine()",
-        NULL, "TaoBRGNSetRegularizerObjectiveAndGradientRoutine()",
-        "BRGN regularizer objective/gradient", "TaoBRGNSetRegularizerObjectiveAndGradientRoutine()",
-        "BRGN regularizer hessian",            "TaoBRGNSetRegularizerHessianRoutine()"));
-  // clang-format on
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode TaoTermCreateBRGNRegularizer(Tao tao, TaoTerm *term)
-{
-  PetscFunctionBegin;
-  PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)tao), term));
-  PetscCall(TaoTermSetType(*term, TAOTERMBRGNREGULARIZER));
-  {
-    TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)((*term)->data);
-
-    tt->tao = tao; // weak reference, do not increment reference count
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*MC
   TAOTERMADMMREGULARIZER - A `TaoTerm` implementation that accesses the callbacks that have been set in
   `TaoADMMSetRegularizerObjectiveAndGradientRoutine()` and
   `TaoADMMSetRegularizerHessianRoutine()`.

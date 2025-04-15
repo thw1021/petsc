@@ -2556,13 +2556,7 @@ The regularization selection can be made using the command line option
 `-tao_brgn_regularization_type <l2pure, l2prox, l1dict, user>` where the `user` option allows
 the user to define a custom $\mathcal{C}2$-continuous
 regularization term. This custom term can be defined by using the
-interface functions:
-
-- `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` - Provide
-  user-call back for evaluating the function value and gradient
-  evaluation for the regularization term.
-- `TaoBRGNSetRegularizerHessianRoutine()` - Provide user callback
-  for evaluating the Hessian of the regularization term.
+`TaoBRGNSetRegularizerTerm()` functions.
 
 #### POUNDERS
 
