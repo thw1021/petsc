@@ -193,6 +193,12 @@ PetscErrorCode MatRegisterAll(void)
   PetscCall(MatRegister(MATMPIDENSEHIP, MatCreate_MPIDenseHIP));
 #endif
 
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  PetscCall(MatRegisterRootName(MATDENSEKOKKOS, MATSEQDENSEKOKKOS, MATMPIDENSEKOKKOS));
+  PetscCall(MatRegister(MATSEQDENSEKOKKOS, MatCreate_SeqDenseokkos));
+  PetscCall(MatRegister(MATMPIDENSEKOKKOS, MatCreate_MPIDenseokkos));
+#endif
+
   PetscCall(MatRegister(MATMPIADJ, MatCreate_MPIAdj));
   PetscCall(MatRegister(MATSCATTER, MatCreate_Scatter));
   PetscCall(MatRegister(MATBLOCKMAT, MatCreate_BlockMat));
