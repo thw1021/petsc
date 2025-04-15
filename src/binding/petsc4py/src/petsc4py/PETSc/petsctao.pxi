@@ -200,8 +200,6 @@ cdef extern from * nogil:
     PetscErrorCode TaoALMMSetType(PetscTAO, PetscTAOALMMType)
 
     PetscErrorCode TaoBRGNGetSubsolver(PetscTAO, PetscTAO*)
-    PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine(PetscTAO, PetscTaoRegularizerObjGrad*, void*)
-    PetscErrorCode TaoBRGNSetRegularizerHessianRoutine(PetscTAO, PetscMat, PetscTaoRegularizerHessian*, void*)
     PetscErrorCode TaoBRGNSetRegularizerWeight(PetscTAO, PetscReal)
     PetscErrorCode TaoBRGNSetL1SmoothEpsilon(PetscTAO, PetscReal)
     PetscErrorCode TaoBRGNSetDictionaryMatrix(PetscTAO, PetscMat)

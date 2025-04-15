@@ -30,7 +30,6 @@ typedef struct _p_TaoTerm *TaoTerm;
 
   Values:
 + `TAOTERMTAOCALLBACKS`    - uses the callback functions set in `TaoSetObjective()`, `TaoSetGradient()`, etc.
-. `TAOTERMBRGNREGULARIZER` - uses the callback functions set in `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()`, etc.
 . `TAOTERMADMMREGULARIZER` - uses the callback functions set in `TaoADMMSetRegularizerObjectiveAndGradientRoutine()`, etc.
 . `TAOTERMADMMMISFIT`      - uses the callback functions set in `TaoADMMSetMisfitObjectiveAndGradientRoutine()`, etc.
 . `TAOTERMSHELL`           - a container for arbitrary user-defined callbacks
@@ -45,7 +44,6 @@ typedef struct _p_TaoTerm *TaoTerm;
 J*/
 typedef const char *TaoTermType;
 #define TAOTERMTAOCALLBACKS    "taocallbacks"
-#define TAOTERMBRGNREGULARIZER "brgnregularizer"
 #define TAOTERMADMMREGULARIZER "admmregularizer"
 #define TAOTERMADMMMISFIT      "admmmisfit"
 #define TAOTERMSHELL           "shell"
