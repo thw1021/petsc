@@ -1791,40 +1791,6 @@ cdef class TAO(Object):
         CHKERR(PetscINCREF(subsolver.obj))
         return subsolver
 
-    def setBRGNRegularizerObjectiveGradient(self, objgrad, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
-        """Set the callback to compute the regularizer objective and gradient.
-
-        Logically collective.
-
-        See Also
-        --------
-        petsc.TaoBRGNSetRegularizerObjectiveAndGradientRoutine
-
-        """
-        if args is None: args = ()
-        if kargs is None: kargs = {}
-        context = (objgrad, args, kargs)
-        self.set_attr("__brgnregobjgrad__", context)
-        CHKERR(TaoBRGNSetRegularizerObjectiveAndGradientRoutine(self.tao, TAO_BRGNRegObjGrad, <void*>context))
-
-    def setBRGNRegularizerHessian(self, hessian, Mat H=None, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
-        """Set the callback to compute the regularizer Hessian.
-
-        Logically collective.
-
-        See Also
-        --------
-        petsc.TaoBRGNSetRegularizerHessianRoutine
-
-        """
-        cdef PetscMat Hmat = NULL
-        if H is not None: Hmat = H.mat
-        if args is None: args = ()
-        if kargs is None: kargs = {}
-        context = (hessian, args, kargs)
-        self.set_attr("__brgnreghessian__", context)
-        CHKERR(TaoBRGNSetRegularizerHessianRoutine(self.tao, Hmat, TAO_BRGNRegHessian, <void*>context))
-
     def setBRGNRegularizerWeight(self, weight: float) -> None:
         """Set the regularizer weight.
 
