@@ -154,6 +154,139 @@ static PetscErrorCode MatSeqDenseRestoreArrayReadAndMemType_SeqDenseKokkos(Mat A
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatSeqDenseGetArrayWriteAndMemType_SeqDenseKokkos(Mat A, PetscScalar **a, PetscMemType *mtype)
+{
+  Mat_SeqDenseKokkos *densekok = static_cast<Mat_SeqDenseKokkos *>(A->spptr);
+
+  PetscFunctionBegin;
+  PetscCallCXX(densekok->m_dual.clear_sync_state());
+  PetscCall(KokkosDualViewSync<DefaultMemorySpace>(densekok->m_dual, PetscGetKokkosExecutionSpace()));
+  *a = densekok->m_dual.view_device().data();
+  if (mtype) *mtype = PETSC_MEMTYPE_KOKKOS;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+//TODO VECKOKKOS doesnt have RestoreArrayWrite...
+
+// CUPM dont have these..
+#if 0
+static PetscErrorCode MatSeqDenseGetColumn_SeqDenseKokkos(Mat A, PetscInt col, PetscScalar *vals[])
+{
+  Mat_SeqDenseKokkos *densekok = static_cast<Mat_SeqDenseKokkos *>(A->spptr);
+
+  PetscFunctionBegin;
+  PetscCallCXX(densekok->m_dual.clear_sync_state());
+  PetscCall(KokkosDualViewSync<DefaultMemorySpace>(densekok->m_dual, PetscGetKokkosExecutionSpace()));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSeqDenseRestoreColumn_SeqDenseKokkos(Mat A, PetscScalar *vals[])
+{
+  Mat_SeqDenseKokkos *densekok = static_cast<Mat_SeqDenseKokkos *>(A->spptr);
+
+  PetscFunctionBegin;
+  PetscCallCXX(densekok->m_dual.clear_sync_state());
+  PetscCall(KokkosDualViewSync<DefaultMemorySpace>(densekok->m_dual, PetscGetKokkosExecutionSpace()));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif
+
+static PetscErrorCode MatSeqDenseGetColumnVec_SeqDenseKokkos(Mat A, PetscInt col, Vec *x)
+{
+  Mat_SeqDenseKokkos *densekok = static_cast<Mat_SeqDenseKokkos *>(A->spptr);
+
+  PetscFunctionBegin;
+  PetscCallCXX(densekok->m_dual.clear_sync_state());
+  PetscCall(KokkosDualViewSync<DefaultMemorySpace>(densekok->m_dual, PetscGetKokkosExecutionSpace()));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSeqDenseRestoreColumnVec_SeqDenseKokkos(Mat A, PetscInt col, Vec *x)
+{
+  Mat_SeqDenseKokkos *densekok = static_cast<Mat_SeqDenseKokkos *>(A->spptr);
+
+  PetscFunctionBegin;
+  PetscCallCXX(densekok->m_dual.clear_sync_state());
+  PetscCall(KokkosDualViewSync<DefaultMemorySpace>(densekok->m_dual, PetscGetKokkosExecutionSpace()));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSeqDenseGetColumnVecRead_SeqDenseKokkos(Mat A, PetscInt col, Vec *x)
+{
+  Mat_SeqDenseKokkos *densekok = static_cast<Mat_SeqDenseKokkos *>(A->spptr);
+
+  PetscFunctionBegin;
+  PetscCallCXX(densekok->m_dual.clear_sync_state());
+  PetscCall(KokkosDualViewSync<DefaultMemorySpace>(densekok->m_dual, PetscGetKokkosExecutionSpace()));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSeqDenseRestoreColumnVecRead_SeqDenseKokkos(Mat A, PetscInt col, Vec *x)
+{
+  Mat_SeqDenseKokkos *densekok = static_cast<Mat_SeqDenseKokkos *>(A->spptr);
+
+  PetscFunctionBegin;
+  PetscCallCXX(densekok->m_dual.clear_sync_state());
+  PetscCall(KokkosDualViewSync<DefaultMemorySpace>(densekok->m_dual, PetscGetKokkosExecutionSpace()));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSeqDenseGetColumnVecWrite_SeqDenseKokkos(Mat A, PetscInt col, Vec *x)
+{
+  Mat_SeqDenseKokkos *densekok = static_cast<Mat_SeqDenseKokkos *>(A->spptr);
+
+  PetscFunctionBegin;
+  PetscCallCXX(densekok->m_dual.clear_sync_state());
+  PetscCall(KokkosDualViewSync<DefaultMemorySpace>(densekok->m_dual, PetscGetKokkosExecutionSpace()));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSeqDenseRestoreColumnVecWrite_SeqDenseKokkos(Mat A, PetscInt col, Vec *x)
+{
+  Mat_SeqDenseKokkos *densekok = static_cast<Mat_SeqDenseKokkos *>(A->spptr);
+
+  PetscFunctionBegin;
+  PetscCallCXX(densekok->m_dual.clear_sync_state());
+  PetscCall(KokkosDualViewSync<DefaultMemorySpace>(densekok->m_dual, PetscGetKokkosExecutionSpace()));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatDenseSetLDA_SeqDenseKokkos(Mat A, PetscInt lda)
+{
+  PetscFunctionBegin;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatDenseGetSubMatrix_SeqDenseKokkos(Mat A, PetscInt rbegin, PetscInt rend, PetscInt cbegin, PetscInt cend, Mat *v)
+{
+  PetscFunctionBegin;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatDenseRestoreSubMatrix_SeqDenseKokkos(Mat A, Mat *v)
+{
+  PetscFunctionBegin;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatDensePlaceArray_SeqDenseKokkos(Mat A, const PetscScalar *array)
+{
+  PetscFunctionBegin;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatDenseReplaceArray_SeqDenseKokkos(Mat A, const PetscScalar *array)
+{
+  PetscFunctionBegin;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatDenseResetArray_SeqDenseKokkos(Mat A)
+{
+  PetscFunctionBegin;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* y = A x */
 static PetscErrorCode MatMult_SeqDenseKokkos(Mat A, Vec xx, Vec yy)
 {
@@ -547,8 +680,7 @@ PetscErrorCode MatCreateSeqDenseKokkosWithKokkosViews(MPI_Comm comm, PetscInt m,
 /* Computes Y += alpha X */
 static PetscErrorCode MatAXPY_SeqDenseKokkos(Mat Y, PetscScalar alpha, Mat X, MatStructure pattern)
 {
-  Mat_SeqDense                 *x = (Mat_SeqDense *)X->data, *y = (Mat_SeqDense *)Y->data;
-  Mat_SeqDenseKokkos           *xkok, *ykok, *zkok;
+  Mat_SeqDenseKokkos           *xkok, *ykok;
   ConstMatScalarKokkosDenseView Xa;
   MatScalarKokkosDenseView      Ya;
   auto                          exec = PetscGetKokkosExecutionSpace();
@@ -575,8 +707,6 @@ static PetscErrorCode MatAXPY_SeqDenseKokkos(Mat Y, PetscScalar alpha, Mat X, Ma
 
 static PetscErrorCode MatSetOps_SeqDenseKokkos(Mat A)
 {
-  Mat_SeqDense *a = (Mat_SeqDense *)A->data;
-
   PetscFunctionBegin;
   A->offloadmask = PETSC_OFFLOAD_KOKKOS; /* We do not really use this flag */
   A->boundtocpu  = PETSC_FALSE;
@@ -608,17 +738,20 @@ static PetscErrorCode MatSetOps_SeqDenseKokkos(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseRestoreArrayWrite_C", MatSeqDenseRestoreArrayWrite_SeqDenseKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseRestoreArrayAndMemType_C", MatSeqDenseRestoreArrayAndMemType_SeqDenseKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseRestoreArrayReadAndMemType_C", MatSeqDenseRestoreArrayReadAndMemType_SeqDenseKokkos));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseRestoreArrayWriteAndMemType_C", MatSeqDenseRestoreArrayWriteAndMemType_SeqDenseKokkos));
+  //PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseRestoreArrayWriteAndMemType_C", MatSeqDenseRestoreArrayWriteAndMemType_SeqDenseKokkos));
 
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseGetColumn_C", MatDenseGetColumn_SeqDenseKokkos));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseGetColumnVec_C", MatDenseGetColumnVec_SeqDenseKokkos));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseGetColumnVecRead_C", MatDenseGetColumnVecRead_SeqDenseKokkos));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseGetColumnVecWrite_C", MatDenseGetColumnVecWrite_SeqDenseKokkos));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseRestoreColumn_C", MatDenseRestoreColumn_SeqDenseKokkos));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseRestoreColumnVec_C", MatDenseRestoreColumnVec_SeqDenseKokkos));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseRestoreColumnVecRead_C", MatDenseRestoreColumnVecRead_SeqDenseKokkos));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseRestoreColumnVecWrite_C", MatDenseRestoreColumnVecWrite_SeqDenseKokkos));
+  //CUPM dont have them...
+  //PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseGetColumn_C", MatDenseGetColumn_SeqDenseKokkos));
+  //PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseRestoreColumn_C", MatDenseRestoreColumn_SeqDenseKokkos));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseGetColumnVec_C", MatSeqDenseGetColumnVec_SeqDenseKokkos));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseGetColumnVecRead_C", MatSeqDenseGetColumnVecRead_SeqDenseKokkos));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseGetColumnVecWrite_C", MatSeqDenseGetColumnVecWrite_SeqDenseKokkos));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseRestoreColumnVec_C", MatSeqDenseRestoreColumnVec_SeqDenseKokkos));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseRestoreColumnVecRead_C", MatSeqDenseRestoreColumnVecRead_SeqDenseKokkos));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseRestoreColumnVecWrite_C", MatSeqDenseRestoreColumnVecWrite_SeqDenseKokkos));
 
+  //somehow this is in ops, but the above are not?
+  A->ops->getcolumnvector = NULL;
   //TODO lda?
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDenseSetLDA_C", MatDenseSetLDA_SeqDenseKokkos));
 
@@ -638,7 +771,8 @@ PETSC_INTERN PetscErrorCode MatCreateSeqDenseKokkosWithView2D(MPI_Comm comm, Mat
 {
   PetscFunctionBegin;
   PetscCall(MatCreate(comm, A));
-  PetscCall(MatSetSeqDenseKokkosWithView2D(*A, akok));
+  //TODO ??
+//  PetscCall(MatSetSeqDenseKokkosWithView2D(*A, akok));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -790,6 +924,7 @@ static PetscErrorCode MatSeqAIJKokkosTransposeSolveCheck(Mat A)
 #endif
 //TODO above maybe i need the above? maybe not?
 
+#if 0
 // Solve Ax = b, with RAR = U^T D U, where R is the row (and col) permutation matrix on A.
 // R is represented by rowperm in factors. If R is identity (i.e, no reordering), then rowperm is empty.
 static PetscErrorCode MatSolve_SeqDenseKokkos_Cholesky(Mat A, Vec bb, Vec xx)
@@ -821,13 +956,14 @@ static PetscErrorCode MatSolve_SeqDenseKokkos_Cholesky(Mat A, Vec bb, Vec xx)
   //PetscCallCXX(KokkosBlas::gemv(PetscGetKokkosExecutionSpace(), "N", 1.0 /*alpha*/, densekok->densemat, xv, 0.0 /*beta*/, yv)); /* y = alpha A x + beta y */
   //TODO no potrf on Kokkos... just getrf...
   PetscCallCXX(KokkosBlas::Impl:potrf(PetscGetKokkosExecutionSpace(), "L", ));
-
   PetscCall(VecRestoreKokkosView(bb, &b));
   PetscCall(VecRestoreKokkosViewWrite(xx, &x));
   PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
 
+#if 0
 // Solve Ax = b, with RAC = LU, where R and C are row and col permutation matrices on A respectively.
 // R and C are represented by rowperm and colperm in factors.
 // If R or C is identity (i.e, no reordering), then rowperm or colperm is empty.
@@ -841,7 +977,7 @@ static PetscErrorCode MatSolve_SeqDenseKokkos_LU(Mat A, Vec bb, Vec xx)
 
   PetscFunctionBegin;
   PetscCall(PetscLogGpuTimeBegin());
-//  PetscCall(MatSeqDenseKokkosSolveCheck(A));
+  PetscCall(MatSeqDenseKokkosSolveCheck(A));
   PetscCall(VecGetKokkosView(bb, &b));
   PetscCall(VecGetKokkosViewWrite(xx, &x));
 
@@ -862,7 +998,9 @@ static PetscErrorCode MatSolve_SeqDenseKokkos_LU(Mat A, Vec bb, Vec xx)
   PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
 
+#if 0
 // Solve A^T x = b, with RAC = LU, where R and C are row and col permutation matrices on A respectively.
 // R and C are represented by rowperm and colperm in factors.
 // If R or C is identity (i.e, no reordering), then rowperm or colperm is empty.
@@ -877,15 +1015,15 @@ static PetscErrorCode MatSolveTranspose_SeqDenseKokkos_LU(Mat A, Vec bb, Vec xx)
 
   PetscFunctionBegin;
   PetscCall(PetscLogGpuTimeBegin());
-  //PetscCall(MatSeqDenseKokkosTransposeSolveCheck(A)); // Update L^T, U^T if needed, and do sptrsv symbolic for L^T, U^T
+  PetscCall(MatSeqDenseKokkosTransposeSolveCheck(A)); // Update L^T, U^T if needed, and do sptrsv symbolic for L^T, U^T
   PetscCall(VecGetKokkosView(bb, &b));
   PetscCall(VecGetKokkosViewWrite(xx, &x));
 
   // Solve U^T Y = B (i.e., U^T (L^T R x) = C^- b).  Note C^- b = C^T b, which means applying the column permutation on b.
-  //PetscCallCXX(sptrsv_solve(exec, &factors->khUt, factors->iUt_d, factors->jUt_d, factors->aUt_d, B, Y));
+  PetscCallCXX(sptrsv_solve(exec, &factors->khUt, factors->iUt_d, factors->jUt_d, factors->aUt_d, B, Y));
 
   // Solve L^T X = Y
-  //PetscCallCXX(sptrsv_solve(exec, &factors->khLt, factors->iLt_d, factors->jLt_d, factors->aLt_d, Y, X));
+  PetscCallCXX(sptrsv_solve(exec, &factors->khLt, factors->iLt_d, factors->jLt_d, factors->aLt_d, Y, X));
 
   // x = R^- X = R^T X; Reorder X with the inverse row permutation
 
@@ -894,12 +1032,13 @@ static PetscErrorCode MatSolveTranspose_SeqDenseKokkos_LU(Mat A, Vec bb, Vec xx)
   PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
 
 static PetscErrorCode MatLUFactorNumeric_SeqDenseKokkos(Mat B, Mat A, const MatFactorInfo *info)
 {
   PetscFunctionBegin;
   PetscCall(MatSeqDenseKokkosSyncHost(A));
-  PetscCall(MatLUFactorNumeric_SeqDense(B, A, info));
+  //PetscCall(MatLUFactorNumeric_SeqDense(B, A, info));
 
 #if 0
   if (!info->solveonhost) { // if solve on host, then we don't need to copy L, U to device
@@ -1017,6 +1156,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqDenseKokkos(Mat B, Mat A, const MatF
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if 0
 static PetscErrorCode MatILUFactorNumeric_SeqDenseKokkos_ILU0(Mat B, Mat A, const MatFactorInfo *info)
 {
   Mat_SeqDenseKokkos *densekok = (Mat_SeqDenseKokkos *)A->spptr;
@@ -1039,23 +1179,24 @@ static PetscErrorCode MatILUFactorNumeric_SeqDenseKokkos_ILU0(Mat B, Mat A, cons
   B->ops->matsolvetranspose = NULL;
 
   /* Once the factors' value changed, we need to update their transpose and sptrsv handle */
-  factors->transpose_updated         = PETSC_FALSE;
-  factors->sptrsv_symbolic_completed = PETSC_FALSE;
+  //factors->transpose_updated         = PETSC_FALSE;
+  //factors->sptrsv_symbolic_completed = PETSC_FALSE;
   /* TODO: log flops, but how to know that? */
   PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
+#endif
 // Use KK's spiluk_symbolic() to do ILU0 symbolic factorization, with no row/col reordering
 static PetscErrorCode MatILUFactorSymbolic_SeqDenseKokkos_ILU0(Mat B, Mat A, IS, IS, const MatFactorInfo *info)
 {
-  Mat_SeqDenseKokkos *densekok;
-  Mat_SeqDense       *b;
-  PetscInt           fill_lev = info->levels;
-  PetscInt           nnzA     = ((Mat_SeqDense*)A->data)->nz, nnzL, nnzU;
-  PetscInt           n        = A->rmap->n;
+  //Mat_SeqDenseKokkos *densekok;
+  //Mat_SeqDense       *b;
+  //PetscInt           fill_lev = info->levels;
+  //PetscInt           nnzA     = ((Mat_SeqDense*)A->data)->nz, nnzL, nnzU;
+  //PetscInt           n        = A->rmap->n;
 
   PetscFunctionBegin;
+#if 0
   PetscCheck(!info->factoronhost, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "MatFactorInfo's factoronhost should be false as we are doing it on device right now");
   PetscCall(MatSeqDenseKokkosSyncDevice(A));
 
@@ -1070,15 +1211,16 @@ static PetscErrorCode MatILUFactorSymbolic_SeqDenseKokkos_ILU0(Mat B, Mat A, IS,
   auto sptrsv_alg = SPTRSVAlgorithm::SEQLVLSCHD_TP1;
 #endif
 
- // /* Fill fields of the factor matrix B */
- // PetscCall(MatSeqDenseSetPreallocation_SeqDense(B, MAT_SKIP_ALLOCATION, NULL));
- // b     = (Mat_SeqDense *)B->data;
- // b->nz = b->maxnz          = spiluk_handle->get_nnzL() + spiluk_handle->get_nnzU();
- // B->info.fill_ratio_given  = info->fill;
- // B->info.fill_ratio_needed = nnzA > 0 ? ((PetscReal)b->nz) / ((PetscReal)nnzA) : 1.0;
+  /* Fill fields of the factor matrix B */
+  PetscCall(MatSeqDenseSetPreallocation_SeqDense(B, MAT_SKIP_ALLOCATION, NULL));
+  b     = (Mat_SeqDense *)B->data;
+  b->nz = b->maxnz          = spiluk_handle->get_nnzL() + spiluk_handle->get_nnzU();
+  B->info.fill_ratio_given  = info->fill;
+  B->info.fill_ratio_needed = nnzA > 0 ? ((PetscReal)b->nz) / ((PetscReal)nnzA) : 1.0;
 
- // B->ops->lufactornumeric = MatILUFactorNumeric_SeqDenseKokkos_ILU0;
- // PetscFunctionReturn(PETSC_SUCCESS);
+  B->ops->lufactornumeric = MatILUFactorNumeric_SeqDenseKokkos_ILU0;
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatLUFactorSymbolic_SeqDenseKokkos(Mat B, Mat A, IS isrow, IS iscol, const MatFactorInfo *info)
@@ -1102,24 +1244,24 @@ static PetscErrorCode MatILUFactorSymbolic_SeqDenseKokkos(Mat B, Mat A, IS isrow
   }
 
   PetscCheck(!B->spptr, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Expected a NULL spptr");
-  PetscCallCXX(B->spptr = new Mat_SeqDenseKokkosTriFactors(B->rmap->n));
+  //PetscCallCXX(B->spptr = new Mat_SeqDenseKokkosTriFactors(B->rmap->n));
 
   if (!info->factoronhost && !info->levels && row_identity && col_identity) { // if level 0 and no reordering
     PetscCall(MatILUFactorSymbolic_SeqDenseKokkos_ILU0(B, A, isrow, iscol, info));
   } else {
-    PetscCall(MatILUFactorSymbolic_SeqDense(B, A, isrow, iscol, info)); // otherwise, use PETSc's ILU on host
+  //  PetscCall(MatILUFactorSymbolic_SeqDense(B, A, isrow, iscol, info)); // otherwise, use PETSc's ILU on host
     B->ops->lufactornumeric = MatLUFactorNumeric_SeqDenseKokkos;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if 0
 static PetscErrorCode MatCholeskyFactorNumeric_SeqDenseKokkos(Mat B, Mat A, const MatFactorInfo *info)
 {
   PetscFunctionBegin;
   PetscCall(MatSeqDenseKokkosSyncHost(A));
   PetscCall(MatCholeskyFactorNumeric_SeqDense(B, A, info));
 
-#if 0
   if (!info->solveonhost) { // if solve on host, then we don't need to copy L, U to device
     Mat_SeqAIJKokkosTriFactors *factors = (Mat_SeqAIJKokkosTriFactors *)B->spptr;
     Mat_SeqAIJ                 *b       = static_cast<Mat_SeqAIJ *>(B->data);
@@ -1189,12 +1331,12 @@ static PetscErrorCode MatCholeskyFactorNumeric_SeqDenseKokkos(Mat B, Mat A, cons
     factors->sptrsv_symbolic_completed = PETSC_FALSE; // When numeric value changed, we must do these again
     factors->transpose_updated         = PETSC_FALSE;
   }
-#endif
 
   B->ops->matsolve          = NULL;
   B->ops->matsolvetranspose = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
 
 static PetscErrorCode MatICCFactorSymbolic_SeqDenseKokkos(Mat B, Mat A, IS perm, const MatFactorInfo *info)
 {
@@ -1267,8 +1409,8 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_SeqDenseKokkos_Kokkos(Mat A, MatFactorT
   PetscCall(MatSetSizes(*B, n, n, n, n));
   PetscCall(MatSetBlockSizesFromMats(*B, A, A));
   (*B)->factortype = ftype;
-  PetscCall(MatSetType(*B, MATSEQDenseKOKKOS));
-  PetscCall(MatSeqDenseSetPreallocation(*B, MAT_SKIP_ALLOCATION, NULL));
+  PetscCall(MatSetType(*B, MATSEQDENSEKOKKOS));
+//  PetscCall(MatSeqDenseSetPreallocation(*B, MAT_SKIP_ALLOCATION, NULL));
   PetscCheck(!(*B)->spptr, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Expected a NULL spptr");
 
   if (ftype == MAT_FACTOR_LU || ftype == MAT_FACTOR_ILU || ftype == MAT_FACTOR_ILUDT) {
