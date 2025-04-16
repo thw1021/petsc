@@ -32,6 +32,7 @@ class Configure(config.package.Package):
     self.functionsDefine   = ['cusolverDnDpotri']
     self.isnvhpc           = 0
     self.devicePackage     = 1
+    self.requireMPI        = 0
     return
 
   def setupHelp(self, help):
