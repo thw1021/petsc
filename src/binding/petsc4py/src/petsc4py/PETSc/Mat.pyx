@@ -2393,7 +2393,7 @@ cdef class Mat(Object):
 
         """
         cdef PetscBool flag = PETSC_FALSE
-        CHKERR(MatIsLinear(self.mat, n ,&flag))
+        CHKERR(MatIsLinear(self.mat, n, &flag))
         return toBool(flag)
 
     def zeroEntries(self) -> None:
