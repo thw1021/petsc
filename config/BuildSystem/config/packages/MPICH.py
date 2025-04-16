@@ -14,7 +14,7 @@ class Configure(config.package.GNUPackage):
     self.gitsubmodules    = ['.']
     self.downloaddirnames = ['mpich']
     self.skippackagewithoptions = 1
-    self.isMPI = 1
+    self.requireMPI       = 0
     return
 
   def setupDependencies(self, framework):
