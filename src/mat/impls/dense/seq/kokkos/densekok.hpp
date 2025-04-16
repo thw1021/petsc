@@ -19,29 +19,29 @@ PETSC_NODISCARD inline decltype(auto) NoInit(std::string label)
 using MatScalarType = PetscScalar;
 
 template <class MemorySpace>
-using KokkosDenseMatrixType = typename Kokkos::View<PetscScalar **, Kokkos::LayoutRight, MemorySpace>;
+using KokkosDenseMatrixType = typename Kokkos::View<MatScalarType**, Kokkos::LayoutRight, MemorySpace>;
 
 using KokkosDenseMatrix     = KokkosDenseMatrixType<DefaultMemorySpace>;
 using KokkosDenseMatrixHost = KokkosDenseMatrixType<HostMirrorMemorySpace>;
 
-using KokkosDenseMatrixView = KokkosDenseMatrix::non_const_type;
+using MatScalarKokkosDenseView = KokkosDenseMatrix::non_const_type;
 
-using KokkosDenseMatrixViewHost = KokkosDenseMatrixHost::non_const_type;
+using MatScalarKokkosDenseViewHost = KokkosDenseMatrixHost::non_const_type;
 
-using ConstKokkosDenseMatrixView = KokkosDenseMatrix::const_type;
+using ConstMatScalarKokkosDenseView = KokkosDenseMatrix::const_type;
 
-using ConstKokkosDenseMatrixViewHost = KokkosDenseMatrixHost::const_type;
+using ConstMatScalarKokkosDenseViewHost = KokkosDenseMatrixHost::const_type;
 
-using KokkosDenseMatrixDualView = Kokkos::DualView<MatScalarType *>;
+using MatScalarKokkosDenseDualView = Kokkos::DualView<MatScalarType **>;
 
 //?
-using KernelHandle = KokkosKernels::Experimental::KokkosKernelsHandle<MatRowMapType, MatColIdxType, MatScalarType, DefaultExecutionSpace, DefaultMemorySpace, DefaultMemorySpace>;
+//using KernelHandle = KokkosKernels::Experimental::KokkosKernelsHandle<MatRowMapType, MatColIdxType, MatScalarType, DefaultExecutionSpace, DefaultMemorySpace, DefaultMemorySpace>;
 
 using KokkosTeamMemberType = Kokkos::TeamPolicy<DefaultExecutionSpace>::member_type;
 
 /* For mat->spptr of a regular matrix */
 struct Mat_SeqDenseKokkos {
-  KokkosDenseMatrixDualView m_dual;
+  MatScalarKokkosDenseDualView m_dual;
 
   KokkosDenseMatrix densemat; /* The Dense matrix, used to call KK functions */
 
@@ -49,45 +49,62 @@ struct Mat_SeqDenseKokkos {
   Mat_SeqDenseKokkos(PetscInt nrows, PetscInt ncols)
   {
     densemat = KokkosDenseMatrix("densemat", nrows, ncols);
-    Init();
+  }
+
+  /* Construct a nrows by ncols matrix with given aseq on host. */
+  Mat_SeqDenseKokkos(PetscInt nrows, PetscInt ncols, Mat_SeqDense *aseq, PetscBool copyValues = PETSC_TRUE)
+  {
+    auto exec = PetscGetKokkosExecutionSpace();
+
+    MatScalarKokkosDenseViewHost a_h(aseq->v);
+
+    auto a_d = Kokkos::create_mirror_view(Kokkos::WithoutInitializing, exec, a_h);
+    m_dual   = MatScalarKokkosDenseDualView(a_d, a_h);
+
+    m_dual.modify_host();
+    if (copyValues) m_dual.sync_device(exec);
+
+   //TODO not copying values from aseq...
+    densemat = KokkosDenseMatrix("densemat", nrows, ncols);
+    //TODO something like this?
+    //I dont understand memory pattern.. is the array on host or device?
+    //Kokkos::parallel_for("FillMatrixFromFlat", rows * cols, KOKKOS_LAMBDA(int idx) {
+    //int i = idx / cols;
+    //int j = idx % cols;
+    //matrix(i, j) = data[idx];
+    // });
   }
 
   //TODO can we even create View2D with dual view?
-  Mat_SeqDenseKokkos(PetscInt nrows, PetscInt ncols, MatScalarKokkosDualView &m) : m_dual(m)
+  Mat_SeqDenseKokkos(PetscInt nrows, PetscInt ncols, MatScalarKokkosDenseDualView &m) : m_dual(m)
   {
-    densemat = KokkosDenseMatrix("densemat", nrows, ncols, a.view_device(), i.view_device(), j.view_device());
-    Init();
+    densemat = KokkosDenseMatrix("densemat", nrows, ncols);
+    //TODO fill densemet with dualview?
   }
 
-  MatScalarType *a_host_data() { return a_dual.view_host().data(); }
+  MatScalarType *m_host_data() { return m_dual.view_host().data(); }
 
-  MatScalarType *a_device_data() { return a_dual.view_device().data(); }
+  MatScalarType *m_device_data() { return m_dual.view_device().data(); }
 
   PetscInt nrows() { return densemat.extent(0); }
   PetscInt ncols() { return densemat.extent(1); }
 
-  void SetDiagonal(const MatRowMapType *diag)
-  {
-    MatRowMapKokkosViewHost diag_h(const_cast<MatRowMapType *>(diag), nrows());
-    auto                    diag_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), diag_h);
-    diag_dual                      = MatRowMapKokkosDualView(diag_d, diag_h);
-  }
+//  void SetDiagonal(const MatRowMapType *diag)
+//  {
+//    MatRowMapKokkosViewHost diag_h(const_cast<MatRowMapType *>(diag), nrows());
+//    auto                    diag_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), diag_h);
+//    diag_dual                      = MatRowMapKokkosDualView(diag_d, diag_h);
+//  }
 
-  /* Shared init stuff */
-  void Init(PetscObjectState nzstate = 0)
-  {
-    nonzerostate      = nzstate;
-    transpose_updated = PETSC_FALSE;
-    hermitian_updated = PETSC_FALSE;
-  }
 };
 
-//tODO KokkosDenseMatrixView or MatScalarDenseKokkosView ?
+PETSC_INTERN PetscErrorCode MatSetSeqDenseKokkosWithDenseMatrix(Mat, Mat_SeqDenseKokkos *);
+
 PETSC_INTERN PetscErrorCode MatSeqDenseKokkosSyncDevice(Mat);
 PETSC_INTERN PetscErrorCode MatConvert_SeqDense_SeqDenseKokkos(Mat, MatType, MatReuse, Mat *);
 PETSC_INTERN PetscErrorCode MatSeqDenseKokkosModifyDevice(Mat);
 
-PETSC_INTERN PetscErrorCode MatSeqDenseGetKokkosView(Mat, MatScalarKokkosView *);
-PETSC_INTERN PetscErrorCode MatSeqDenseRestoreKokkosView(Mat, MatScalarKokkosView *);
-PETSC_INTERN PetscErrorCode MatSeqDenseGetKokkosViewWrite(Mat, MatScalarKokkosView *);
-PETSC_INTERN PetscErrorCode MatSeqDenseRestoreKokkosViewWrite(Mat, MatScalarKokkosView *);
+PETSC_INTERN PetscErrorCode MatSeqDenseGetKokkosView(Mat, MatScalarKokkosDenseView *);
+PETSC_INTERN PetscErrorCode MatSeqDenseRestoreKokkosView(Mat, MatScalarKokkosDenseView *);
+PETSC_INTERN PetscErrorCode MatSeqDenseGetKokkosViewWrite(Mat, MatScalarKokkosDenseView *);
+PETSC_INTERN PetscErrorCode MatSeqDenseRestoreKokkosViewWrite(Mat, MatScalarKokkosDenseView *);
