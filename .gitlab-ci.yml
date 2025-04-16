@@ -20,6 +20,7 @@ variables:
   TIMEOUT: 450
   EXTRA_OPTIONS: -nox -nox_warning -malloc_dump
   UCX_LOG_LEVEL: error
+  FI_PROVIDER: ^psm3
 
 #
 # The most basic template that most tests will expand upon
