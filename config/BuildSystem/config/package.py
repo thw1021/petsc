@@ -106,7 +106,7 @@ class Package(config.base.Configure):
     self.defaultInstallDir      = ''
     self.PrefixWriteCheck       = 1 # check if specified prefix location is writable for 'make install'
 
-    self.requireMPI             = 1 # Does this package require MPI? Most packages do
+    self.requireMPI             = 1 # Does this package require MPI? This default is true for most packages, so use this flag to automatically add in MPI dependency for them
     self.hastests               = 0 # indicates that PETSc make alltests has tests for this package
     self.hastestsdatafiles      = 0 # indicates that PETSc make alltests has tests for this package that require DATAFILESPATH to be set
     self.makerulename           = '' # some packages do too many things with the make stage; this allows a package to limit to, for example, just building the libraries
