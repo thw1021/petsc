@@ -61,7 +61,7 @@ class Configure(config.package.GNUPackage):
       try:
         (out, err, ret) = Configure.executeShellCommand(self.ucx_info + ' -v | grep "Configured with"',timeout = 60, log = self.log, threads = 1)
       except Exception as e:
-        self.log.write('NVIDIA utility deviceQuery failed '+str(e)+'\n')
+        self.log.write('ucx utility ucx_info failed '+str(e)+'\n')
       else:
         if '--with-cuda' in out:
           self.enabled_cuda = 1
