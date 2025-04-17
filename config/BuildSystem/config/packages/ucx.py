@@ -26,9 +26,9 @@ class Configure(config.package.GNUPackage):
     return
 
   def versionToStandardForm(self,ver):
-    '''Reverse the formula: UCP_API_VERSION = major << 24 | minor << 16'''
+    # Reverse the formula: UCP_API_VERSION = major << 24 | minor << 16
     # See https://github.com/openucx/ucx/blob/master/src/ucp/api/ucp_version.h.in#L10
-    return ".".join(map(str,[int(ver)>>24, (int(ver)>>16) & 0xFF]))
+    return ".".join(map(str,[int(ver)>>24, (int(ver)>>16) & 0xFF, 0])) # the API version does not have a patch version
 
   def formGNUConfigureArgs(self):
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
