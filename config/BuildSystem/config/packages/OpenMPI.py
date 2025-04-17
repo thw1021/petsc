@@ -49,13 +49,17 @@ class Configure(config.package.GNUPackage):
       args.append('--enable-static=yes')
     args.append('--disable-vt')
     if self.cuda.found:
-      args.append('--with-cuda='+self.cuda.cudaDir)
-    elif self.hip.found and self.ucx.found:
-      # see https://docs.open-mpi.org/en/main/tuning-apps/networking/rocm.html#building-open-mpi-with-rocm-support
-      # One may need either mpirun -n 2 --mca pml ucx ./myapp or export OMPI_MCA_pml="ucx" to use UCX
-      args.append('--with-rocm='+self.hip.hipDir)
-      args.append('--with-ucx='+self.ucx.directory)
-
+      args.append('--with-cuda='+self.cuda.cudaDir) # use openmpi's cuda support until it switches to ucx
+    elif self.hip.found:
+      if self.ucx.found:
+        self.logPrintWarning('Found rocm but not ucx, so OpenMPI will be configured without rocm support. Consider having ucx by simiply adding --download-ucx')
+      elif not self.ucx.enabled_rocm:
+        self.logPrintWarning('Found rocm and ucx, but the ucx was not configured rocm, so OpenMPI will be configured without rocm support. Consider using a rocm-enabled ucx, or letting petsc build it for you with --download-ucx')
+      else:
+        # see https://docs.open-mpi.org/en/main/tuning-apps/networking/rocm.html#building-open-mpi-with-rocm-support
+        # One may need either mpirun -n 2 --mca pml ucx ./myapp or export OMPI_MCA_pml="ucx" to use UCX
+        args.append('--with-rocm='+self.hip.hipDir)
+        args.append('--with-ucx='+self.ucx.directory)
     if self.hwloc.found:
       args.append('--with-hwloc="'+self.hwloc.directory+'"')
     else:

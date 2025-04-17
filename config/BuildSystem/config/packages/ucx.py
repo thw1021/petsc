@@ -9,9 +9,10 @@ class Configure(config.package.GNUPackage):
     self.download         = ['https://github.com/openucx/ucx/releases/download/v'+self.version+'/ucx-'+self.version+'.tar.gz']
     self.download_git     = ['git://https://github.com/openucx/ucx.git']
     self.includes         = ['ucp/api/ucp.h']
-    self.functions        = ['ucp_get_version_string']
-    self.liblist          = [['libucp.a'],['ucp.lib']]
     self.requireMPI       = 0
+    self.enabled_cuda     = 0
+    self.enabled_rocm     = 0
+    self.enabled_ze       = 0
     return
 
   def setupDependencies(self, framework):
@@ -48,3 +49,20 @@ class Configure(config.package.GNUPackage):
 
   def configure(self):
     return config.package.Package.configure(self)
+
+  def configureLibrary(self):
+    import os
+    config.package.Package.configureLibrary(self)
+    self.getExecutable('ucx_info', path = os.path.join(self.directory, 'bin'))
+    if hasattr(self,'ucx_info'):
+      try:
+        (out, err, ret) = Configure.executeShellCommand(self.ucx_info + ' -v | grep "Configured with"',timeout = 60, log = self.log, threads = 1)
+      except Exception as e:
+        self.log.write('NVIDIA utility deviceQuery failed '+str(e)+'\n')
+      else:
+        if '--with-cuda' in out:
+          self.enabled_cuda = 1
+        elif '--with-rocm' in out:
+          self.enabled_rocm = 1
+        elif '--with-ze' in out:
+          self.enabled_ze = 1
