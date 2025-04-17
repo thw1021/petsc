@@ -14,7 +14,7 @@ class Configure(config.package.GNUPackage):
     self.gitsubmodules    = ['.']
     self.downloaddirnames = ['mpich']
     self.skippackagewithoptions = 1
-    self.isMPI = 1
+    self.skipMPIDependency      = 1
     return
 
   def setupDependencies(self, framework):
@@ -84,6 +84,7 @@ class Configure(config.package.GNUPackage):
       mpich_device = 'ch4:ucx'
     elif self.hip.found:
       args.append('--with-hip='+self.hip.hipDir)
+      # One can use --download-mpich-device=ch4:ucx to override this default
       mpich_device = 'ch4:ofi' # per https://github.com/pmodels/mpich/wiki/Using-MPICH-on-Crusher@OLCF
 
     if 'download-mpich-device' in self.argDB:

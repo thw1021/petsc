@@ -13,15 +13,17 @@ class Configure(config.package.GNUPackage):
     self.gitsubmodules          = ['.']
     self.downloaddirnames       = ['openmpi','ompi']
     self.skippackagewithoptions = 1
-    self.isMPI                  = 1
+    self.skipMPIDependency      = 1
     self.buildLanguages         = ['C','Cxx']
     return
 
   def setupDependencies(self, framework):
     config.package.GNUPackage.setupDependencies(self, framework)
     self.cuda           = framework.require('config.packages.cuda',self)
+    self.hip            = framework.require('config.packages.hip',self)
+    self.ucx            = framework.require('config.packages.ucx',self)
     self.hwloc          = framework.require('config.packages.hwloc',self)
-    self.odeps          = [self.hwloc]
+    self.odeps          = [self.hwloc, self.cuda, self.hip, self.ucx]
     return
 
   def formGNUConfigureArgs(self):
@@ -47,7 +49,17 @@ class Configure(config.package.GNUPackage):
       args.append('--enable-static=yes')
     args.append('--disable-vt')
     if self.cuda.found:
-      args.append('--with-cuda='+self.cuda.cudaDir)
+      args.append('--with-cuda='+self.cuda.cudaDir) # use openmpi's cuda support until it switches to ucx
+    elif self.hip.found:
+      if not self.ucx.found:
+        self.logPrintWarning('Found rocm but not ucx, so OpenMPI will NOT be configured with rocm support. Consider having ucx by simply adding --download-ucx')
+      elif not self.ucx.enabled_rocm:
+        self.logPrintWarning('Found rocm and ucx, but the ucx was not configured with rocm, so OpenMPI will NOT be configured with rocm support. Consider using a rocm-enabled ucx, or letting PETSc build one for you with --download-ucx')
+      else:
+        # see https://docs.open-mpi.org/en/main/tuning-apps/networking/rocm.html#building-open-mpi-with-rocm-support
+        # One may need either mpirun -n 2 --mca pml ucx ./myapp or export OMPI_MCA_pml="ucx" to use UCX
+        args.append('--with-rocm='+self.hip.hipDir)
+        args.append('--with-ucx='+self.ucx.directory)
     if self.hwloc.found:
       args.append('--with-hwloc="'+self.hwloc.directory+'"')
     else:
