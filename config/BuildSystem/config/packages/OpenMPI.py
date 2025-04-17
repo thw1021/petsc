@@ -51,7 +51,7 @@ class Configure(config.package.GNUPackage):
     if self.cuda.found:
       args.append('--with-cuda='+self.cuda.cudaDir) # use openmpi's cuda support until it switches to ucx
     elif self.hip.found:
-      if self.ucx.found:
+      if not self.ucx.found:
         self.logPrintWarning('Found rocm but not ucx, so OpenMPI will be configured without rocm support. Consider having ucx by simiply adding --download-ucx')
       elif not self.ucx.enabled_rocm:
         self.logPrintWarning('Found rocm and ucx, but the ucx was not configured rocm, so OpenMPI will be configured without rocm support. Consider using a rocm-enabled ucx, or letting petsc build it for you with --download-ucx')
