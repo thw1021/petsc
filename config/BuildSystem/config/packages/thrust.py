@@ -15,7 +15,7 @@ class Configure(config.package.GNUPackage):
     self.includes         = ['thrust/version.h']
     self.precisions       = ['single','double']
     self.buildLanguages   = ['Cxx']
-    self.requireMPI       = 0
+    self.skipMPIDependency= 1
     return
 
   def versionToStandardForm(self,ver):

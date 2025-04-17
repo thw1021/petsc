@@ -13,7 +13,7 @@ class Configure(config.package.GNUPackage):
     self.versioninclude    = 'hwloc/autogen/config.h'
     self.versionname       = 'HWLOC_VERSION'
     self.downloadonWindows = 1
-    self.requireMPI        = 0
+    self.skipMPIDependency = 1
     return
 
   def setupDependencies(self, framework):

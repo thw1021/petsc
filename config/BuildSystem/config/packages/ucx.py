@@ -3,16 +3,19 @@ import config.package
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.version          = '1.18.0'
-    self.versionname      = 'UCP_API_VERSION'
-    self.versioninclude   = ['ucp/api/ucp_version.h']
-    self.download         = ['https://github.com/openucx/ucx/releases/download/v'+self.version+'/ucx-'+self.version+'.tar.gz']
-    self.download_git     = ['git://https://github.com/openucx/ucx.git']
-    self.includes         = ['ucp/api/ucp.h']
-    self.requireMPI       = 0
-    self.enabled_cuda     = 0
-    self.enabled_rocm     = 0
-    self.enabled_ze       = 0
+    self.version           = '1.18.0'
+    self.versionname       = 'UCP_API_VERSION'
+    self.versioninclude    = ['ucp/api/ucp_version.h']
+    self.download          = ['https://github.com/openucx/ucx/releases/download/v'+self.version+'/ucx-'+self.version+'.tar.gz']
+    self.download_git      = ['git://https://github.com/openucx/ucx.git']
+    self.includes          = ['ucp/api/ucp.h']
+    self.functions         = ['ucp_get_version_string']
+    self.liblist           = [['libucp.a'],['ucp.lib']]
+    self.linkedbypetsc     = 0
+    self.skipMPIDependency = 1
+    self.enabled_cuda      = 0
+    self.enabled_rocm      = 0
+    self.enabled_ze        = 0
     return
 
   def setupDependencies(self, framework):
@@ -34,7 +37,7 @@ class Configure(config.package.GNUPackage):
 
     if self.cuda.found:
       args.append('--with-cuda='+self.cuda.cudaDir)
-    elif self.hip.found:
+    if self.hip.found:
       args.append('--with-rocm='+self.hip.hipDir)
     #TODO --with-ze=(DIR)
     return args
@@ -62,7 +65,7 @@ class Configure(config.package.GNUPackage):
       else:
         if '--with-cuda' in out:
           self.enabled_cuda = 1
-        elif '--with-rocm' in out:
+        if '--with-rocm' in out:
           self.enabled_rocm = 1
-        elif '--with-ze' in out:
+        if '--with-ze' in out:
           self.enabled_ze = 1

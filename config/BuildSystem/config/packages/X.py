@@ -10,7 +10,7 @@ class Configure(config.package.Package):
     self.lookforbydefault         = 1
     self.pkgname                  = 'x11'
     self.testoptions_whennotfound = '-nox_warning'
-    self.requireMPI               = 0
+    self.skipMPIDependency        = 1
     return
 
   def getSearchDirectories(self):
