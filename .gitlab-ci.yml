@@ -868,7 +868,7 @@ check-each-commit:
     - .linux_test
     - .coverage-disable
   tags:
-    - gce-u22-stage2
+    - gce-u24-stage2
   script:
     - export PATH=/nfs/gce/projects/petsc/soft/u22.04/spack-2025-03-07-llvm/opt/spack/linux-ubuntu22.04-x86_64/gcc-11.4.0/llvm-20.1.0-c5x4oa5ucvupe7j7zyqgiotsfhpvcl4k/bin:$PATH
     - lib/petsc/bin/maint/check-each-commit.sh
@@ -883,7 +883,7 @@ linux-analyzer:
     - .linux_test
     - .coverage-disable
   tags:
-    - gce-u22-stage2
+    - gce-u24-stage2
   script:
     - printf "PATH:$PATH\n"
     - printf "PYTHONPATH:$PYTHONPATH\n"
@@ -900,7 +900,7 @@ linux-analyzer:
     - make V=3 LINTER_OPTIONS="${LINTER_OPTIONS} -- ./src" lint
   variables:
     TEST_ARCH: arch-ci-linux-analyzer
-    LINTER_OPTIONS: "--PETSC_ARCH=${TEST_ARCH} --clang_lib=`llvm-config-14 --libdir`/libclang.so.1 --werror 1"
+    LINTER_OPTIONS: "--PETSC_ARCH=${TEST_ARCH} --clang_lib=`llvm-config-18 --libdir`/libclang.so.1 --werror 1"
   artifacts:
     paths:
     - arch-*/lib/petsc/conf/*.log
@@ -927,10 +927,9 @@ linux-clang-ubsan:
     - .linux_test
     - .coverage-disable
   tags:
-    - gce-u22-stage2
+    - gce-u24-stage2
   variables:
     TEST_ARCH: arch-ci-linux-clang-ubsan
-    LOAD_MODULES: llvm/17.0.4
 
 linux-opt-arm:
   extends:
