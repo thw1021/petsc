@@ -349,16 +349,10 @@ static PetscErrorCode MatRestoreColumnIJ_SeqAIJ_Inode(Mat A, PetscInt oshift, Pe
 PetscErrorCode MatMult_SeqAIJ_Inode(Mat A, Vec xx, Vec yy)
 {
   Mat_SeqAIJ        *a = (Mat_SeqAIJ *)A->data;
-  PetscScalar        sum1, sum2, sum3, sum4, sum5, tmp0, tmp1;
   PetscScalar       *y;
   const PetscScalar *x;
-  const MatScalar   *v1, *v2, *v3, *v4, *v5;
-  PetscInt           i1, i2, n, i, row, node_max, nsz, sz, nonzerorow = 0;
-  const PetscInt    *idx, *ns, *ii;
-
-#if defined(PETSC_HAVE_PRAGMA_DISJOINT)
-  #pragma disjoint(*x, *y, *v1, *v2, *v3, *v4, *v5)
-#endif
+  PetscInt           row, node_max, nonzerorow = 0;
+  PetscInt          *ns;
 
   PetscFunctionBegin;
   PetscCheck(a->inode.size, PETSC_COMM_SELF, PETSC_ERR_COR, "Missing Inode Structure");
@@ -366,15 +360,46 @@ PetscErrorCode MatMult_SeqAIJ_Inode(Mat A, Vec xx, Vec yy)
   ns       = a->inode.size; /* Node Size array */
   PetscCall(VecGetArrayRead(xx, &x));
   PetscCall(VecGetArray(yy, &y));
-  idx = a->j;
-  v1  = a->a;
-  ii  = a->i;
 
-  for (i = 0, row = 0; i < node_max; ++i) {
+#if defined(PETSC_USE_OPENMP_KERNELS)
+  // Without allocating extra memory for OpenMP, we manunipate a->inode.size to make it CSR like, but without
+  // the leading zero. ns[] is then used to facilitate mapping inode indices to starting row indices in inodes.
+  PetscCheck(ns[0] >= 1 && ns[0] <= 5, PETSC_COMM_SELF, PETSC_ERR_COR, "Node size not supported, node row 0 size %" PetscInt_FMT, ns[0]);
+  for (PetscInt i = 1; i < node_max; ++i) {
+    if (ns[i] >= 1 && ns[i] <= 5) ns[i] += ns[i - 1];
+    else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_COR, "Node size not supported, node row %" PetscInt_FMT " size %" PetscInt_FMT, ns[i - 1], ns[i]);
+  }
+#endif
+
+  row = 0; // increased in sequential, but looked up in OpenMP
+  PetscPragmaUseOMPKernels(parallel for private(row) reduction(+:nonzerorow))
+  for (PetscInt i = 0; i < node_max; ++i) {
+    PetscInt         i1, i2, nsz, n, sz;
+    const MatScalar *v1, *v2, *v3, *v4, *v5;
+    PetscScalar      sum1, sum2, sum3, sum4, sum5, tmp0, tmp1;
+    const PetscInt  *idx;
+
+#if defined(PETSC_HAVE_PRAGMA_DISJOINT)
+  #pragma disjoint(*x, *y, *v1, *v2, *v3, *v4, *v5)
+#endif
+
+#if defined(PETSC_USE_OPENMP_KERNELS)
+    if (i == 0) {
+      row = 0;
+      nsz = ns[i];
+    } else {
+      row = ns[i - 1];
+      nsz = ns[i] - ns[i - 1];
+    }
+#else
     nsz = ns[i];
-    n   = ii[1] - ii[0];
+#endif
+
+    n = a->i[row + 1] - a->i[row];
     nonzerorow += (n > 0) * nsz;
-    ii += nsz;
+
+    idx = &a->j[a->i[row]];
+    v1  = &a->a[a->i[row]];
     PetscPrefetchBlock(idx + nsz * n, n, 0, PETSC_PREFETCH_HINT_NTA);      /* Prefetch the indices for the block row after the current one */
     PetscPrefetchBlock(v1 + nsz * n, nsz * n, 0, PETSC_PREFETCH_HINT_NTA); /* Prefetch the values for the block row after the current one  */
     sz = n;                                                                /* No of non zeros in this row */
@@ -540,12 +565,18 @@ PetscErrorCode MatMult_SeqAIJ_Inode(Mat A, Vec xx, Vec yy)
       idx += 4 * sz;
       break;
     default:
+#if !defined(PETSC_USE_OPENMP_KERNELS) // Otherwise compile error: invalid branch to/from OpenMP structured block.
       SETERRQ(PETSC_COMM_SELF, PETSC_ERR_COR, "Node size not supported, node row %" PetscInt_FMT " size %" PetscInt_FMT, row, nsz);
+#endif
     }
   }
   PetscCall(VecRestoreArrayRead(xx, &x));
   PetscCall(VecRestoreArray(yy, &y));
   PetscCall(PetscLogFlops(2.0 * a->nz - nonzerorow));
+#if defined(PETSC_USE_OPENMP_KERNELS)
+  // revert the CSR manupulation
+  for (PetscInt i = node_max - 1; i > 0; i--) ns[i] -= ns[i - 1];
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
