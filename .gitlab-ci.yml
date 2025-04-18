@@ -452,16 +452,6 @@ freebsd-c-single-opt:
   variables:
     TEST_ARCH: arch-ci-freebsd-c-single-opt
 
-mswin-opt-impi:
-  extends:
-    - .stage-3
-    - .mswin_test
-  tags:
-    - mswin-stage3
-  variables:
-    TEST_ARCH: arch-ci-mswin-opt-impi
-    TEST_OPTS: search='ksp_ksp_tests*'
-
 linux-gcc-quad-64idx-dbg:
   extends:
     - .stage-2
@@ -798,17 +788,6 @@ linux-pkgs-cxx-mlib:
     MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/spack-2025-03-07-python36/modules/linux-ubuntu22.04-x86_64/Core
     LOAD_MODULES: python/3.6.15 py-cython/3.0.11 py-numpy/1.19.2
 
-linux-pkgs-valgrind:
-  extends:
-    - .stage-3
-    - .linux_test
-  tags:
-    - gce-valgrind
-  variables:
-    TEST_ARCH: arch-ci-linux-pkgs-valgrind
-    TIMEOUT: 1200
-    UCX_SYSV_HUGETLB_MODE: n
-
 linux-pkgs-opt:
   extends:
     - .stage-3
@@ -1011,39 +990,6 @@ linux-misc-32bit:
   variables:
     TEST_ARCH: arch-ci-linux-misc-32bit
 
-mswin-intel-cxx-cmplx:
-  extends:
-    - .stage-3
-    - .mswin_test
-  tags:
-    - mswin-stage3
-  variables:
-    TEST_ARCH: arch-ci-mswin-intel-cxx-cmplx
-    TIMEOUT: 150
-
-mswin-uni:
-  extends:
-    - .stage-3
-    - .mswin_test
-  tags:
-    - mswin-stage3
-  variables:
-    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout
-    TEST_ARCH: arch-ci-mswin-uni
-
-mswin-gnu:
-  extends:
-    - .stage-3
-    - .mswin_test
-  tags:
-    - mswin-stage3
-  variables:
-    TEST_ARCH: arch-ci-mswin-gnu
-    MAKE_CFLAGS: -Werror
-    MAKE_CXXFLAGS: -Werror
-    MAKE_FFLAGS: -Werror
-    DISABLE_TESTS: 1
-
 #mswin-intel:
 #  extends:
 #    - .stage-3
@@ -1124,7 +1070,6 @@ coverage-analyze:
     - linux-gcc-cxx-avx2
     - linux-clang-avx
     - linux-pkgs-cxx-mlib
-    - linux-pkgs-valgrind
     - linux-misc-dbg
     - linux-pkgs-64idx
     - linux-pkgs-opt
