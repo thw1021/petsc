@@ -1046,7 +1046,7 @@ coverage-analyze:
   extends: .test
   stage: stage-4
   tags:
-    - gce-u22-short
+    - gce-u24-short
   dependencies:
     # stage-2
     - linux-gcc-quad-64idx-dbg
@@ -1107,7 +1107,7 @@ coverage-analyze:
   extends: .test
   stage: .post
   tags:
-    - gce-u22-short
+    - gce-u24-short
   dependencies:
     - coverage-analyze
   script:
