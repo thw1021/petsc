@@ -434,10 +434,13 @@ PetscErrorCode TSPseudoSetMaxTimeStep(TS ts, PetscReal maxdt)
 /*@
   TSPseudoIncrementDtFromInitialDt - Indicates that a new timestep
   is computed via the formula
-$         dt = initial_dt*initial_fnorm/current_fnorm
+.vb
+  dt = initial_dt*initial_fnorm/current_fnorm
+.ve
   rather than the default update,
-$         dt = current_dt*previous_fnorm/current_fnorm.
-
+.vb
+  dt = current_dt*previous_fnorm/current_fnorm.
+.ve
   Logically Collective
 
   Input Parameter:

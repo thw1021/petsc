@@ -3,9 +3,11 @@
 /*E
   WellFormedEnum - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
 
-$ LOREM - A lorem
-$ IPSUM - An ipsum
-$ DOLOR - A dolor
+.vb
+  LOREM - A lorem
+  IPSUM - An ipsum
+  DOLOR - A dolor
+.ve
 
   Level: advanced
 
