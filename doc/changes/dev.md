@@ -66,6 +66,7 @@
 - Add `MatLMVMMultAlgorithm`, `MatLMVMSetMultAlgorithm()`, and `MatLMVMGetMultAlgorithm()`
 - Add `MatLMVMSymBroydenGetPhi()` and `MatLMVMSymBroydenSetPhi()`
 - Add `MatLMVMSymBadBroydenGetPsi()` and `MatLMVMSymBadBroydenSetPsi()`
+- Change `KSP_CONVERGED_RTOL_NORMAL` to `KSP_CONVERGED_RTOL_NORMAL_EQUATIONS` and `KSP_CONVERGED_ATOL_NORMAL` to `KSP_CONVERGED_ATOL_NORMAL_EQUATIONS`
 
 ```{rubric} SNES:
 ```
