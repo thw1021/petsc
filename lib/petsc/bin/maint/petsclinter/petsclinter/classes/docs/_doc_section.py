@@ -351,7 +351,7 @@ class EnumSynopsis(Synopsis):
 
     def get_items(self, ds: PetscDocStringImpl) -> EnumSynopsis.ItemsType:
       params = ParameterList(name='enum params', prefixes=('$',))
-      assert self.enum_params, 'No parameter lines in enum description!'
+      # assert self.enum_params, 'No parameter lines in enum description!'
       params.consume(self.enum_params)
       params.setup(ds, parameter_list_prefix_check=self._check_enum_starts_with_dollar)
       return {
