@@ -256,7 +256,11 @@ PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, Pet
 
   Level: intermediate
 
-.seealso: `PetscRegressor`, `PetscRegressorLinearGetKSP()`
+  Note:
+  `KSPLSQR` is used to solve the normal equations. Richard, why not additional support other methods for the normal equations? For small systems
+  presumably LU is better, etc.
+
+.seealso: `PetscRegressor`, `PetscRegressorLinearGetKSP()`, `KSPLSQR`
 @*/
 PetscErrorCode PetscRegressorLinearSetUseKSP(PetscRegressor regressor, PetscBool flg)
 {
@@ -394,7 +398,8 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetIntercept(PetscRegressor regr
 
   Level: intermediate
 
-.seealso: `PetscRegressorLinearGetType()`, `PetscRegressorLinearType`, `PetscRegressorSetType()`
+.seealso: `PetscRegressorLinearGetType()`, `PetscRegressorLinearType`, `PetscRegressorSetType()`, `REGRESSOR_LINEAR_OLS`,
+          `REGRESSOR_LINEAR_LASSO`, `REGRESSOR_LINEAR_RIDGE`
 @*/
 PetscErrorCode PetscRegressorLinearSetType(PetscRegressor regressor, PetscRegressorLinearType type)
 {
