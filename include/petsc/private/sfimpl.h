@@ -175,11 +175,11 @@ PETSC_INTERN PetscErrorCode MPIPetsc_Type_get_contents(MPI_Datatype, MPIU_Count,
   #define MPIU_Ialltoall(a, b, c, d, e, f, g, req)       MPI_Alltoall(a, b, c, d, e, f, g)
 #endif
 
-PETSC_EXTERN PetscErrorCode VecScatterGetRemoteCount_Private(VecScatter, PetscBool, PetscInt *, PetscInt *);
-PETSC_EXTERN PetscErrorCode VecScatterGetRemote_Private(VecScatter, PetscBool, PetscMPIInt *, const PetscInt **, const PetscInt **, const PetscMPIInt **, PetscInt *);
-PETSC_EXTERN PetscErrorCode VecScatterGetRemoteOrdered_Private(VecScatter, PetscBool, PetscMPIInt *, const PetscInt **, const PetscInt **, const PetscMPIInt **, PetscInt *);
-PETSC_EXTERN PetscErrorCode VecScatterRestoreRemote_Private(VecScatter, PetscBool, PetscMPIInt *, const PetscInt **, const PetscInt **, const PetscMPIInt **, PetscInt *);
-PETSC_EXTERN PetscErrorCode VecScatterRestoreRemoteOrdered_Private(VecScatter, PetscBool, PetscMPIInt *, const PetscInt **, const PetscInt **, const PetscMPIInt **, PetscInt *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecScatterGetRemoteCount_Private(VecScatter, PetscBool, PetscInt *, PetscInt *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecScatterGetRemote_Private(VecScatter, PetscBool, PetscMPIInt *, const PetscInt **, const PetscInt **, const PetscMPIInt **, PetscInt *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecScatterGetRemoteOrdered_Private(VecScatter, PetscBool, PetscMPIInt *, const PetscInt **, const PetscInt **, const PetscMPIInt **, PetscInt *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecScatterRestoreRemote_Private(VecScatter, PetscBool, PetscMPIInt *, const PetscInt **, const PetscInt **, const PetscMPIInt **, PetscInt *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecScatterRestoreRemoteOrdered_Private(VecScatter, PetscBool, PetscMPIInt *, const PetscInt **, const PetscInt **, const PetscMPIInt **, PetscInt *);
 
 #if defined(PETSC_HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode PetscSFMalloc_CUDA(PetscMemType, size_t, void **);

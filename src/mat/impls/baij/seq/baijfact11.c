@@ -1071,7 +1071,6 @@ PetscErrorCode MatLUFactorNumeric_SeqBAIJ_4_NaturalOrdering_SSE(Mat B, Mat A, co
     } else {
       PetscCall(PetscKernel_A_gets_inverse_A_4_nopivot(w));
     }
-    /*      PetscCall(PetscKernel_A_gets_inverse_A_4_SSE(w)); */
     /* Note: Using Kramer's rule, flop count below might be infairly high or low? */
   }
 
@@ -1957,7 +1956,6 @@ PetscErrorCode MatLUFactorNumeric_SeqBAIJ_4_NaturalOrdering_SSE_usj(Mat C, Mat A
     } else {
       PetscCall(PetscKernel_A_gets_inverse_A_4_nopivot(w));
     }
-    /*      PetscCall(PetscKernel_A_gets_inverse_A_4_SSE(w)); */
     /* Note: Using Kramer's rule, flop count below might be infairly high or low? */
   }
 

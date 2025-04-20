@@ -1396,16 +1396,16 @@ M*/
   #define PetscObjectComposedDataGetScalarstar(obj, id, data, flag) PetscObjectComposedDataGetRealstar(obj, id, data, flag)
 #endif
 
-PETSC_EXTERN PetscMPIInt Petsc_Counter_keyval;
-PETSC_EXTERN PetscMPIInt Petsc_InnerComm_keyval;
-PETSC_EXTERN PetscMPIInt Petsc_OuterComm_keyval;
-PETSC_EXTERN PetscMPIInt Petsc_Seq_keyval;
-PETSC_EXTERN PetscMPIInt Petsc_ShmComm_keyval;
+PETSC_INTERN PetscMPIInt Petsc_Counter_keyval;
+PETSC_INTERN PetscMPIInt Petsc_InnerComm_keyval;
+PETSC_INTERN PetscMPIInt Petsc_OuterComm_keyval;
+PETSC_INTERN PetscMPIInt Petsc_Seq_keyval;
+PETSC_INTERN PetscMPIInt Petsc_ShmComm_keyval;
 PETSC_EXTERN PetscMPIInt Petsc_CreationIdx_keyval;
-PETSC_EXTERN PetscMPIInt Petsc_Garbage_HMap_keyval;
+PETSC_INTERN PetscMPIInt Petsc_Garbage_HMap_keyval;
 
-PETSC_EXTERN PetscMPIInt Petsc_SharedWD_keyval;
-PETSC_EXTERN PetscMPIInt Petsc_SharedTmp_keyval;
+PETSC_INTERN PetscMPIInt Petsc_SharedWD_keyval;
+PETSC_INTERN PetscMPIInt Petsc_SharedTmp_keyval;
 
 struct PetscCommStash {
   struct PetscCommStash *next;
@@ -1581,7 +1581,7 @@ PETSC_INTERN PetscSpinlock PetscCommSpinLock;
 PETSC_EXTERN PetscLogEvent PETSC_Barrier;
 PETSC_EXTERN PetscLogEvent PETSC_BuildTwoSided;
 PETSC_EXTERN PetscLogEvent PETSC_BuildTwoSidedF;
-PETSC_EXTERN PetscBool     use_gpu_aware_mpi;
+PETSC_INTERN PetscBool     use_gpu_aware_mpi;
 PETSC_EXTERN PetscBool     PetscPrintFunctionList;
 
 #if defined(PETSC_HAVE_ADIOS)
