@@ -256,7 +256,26 @@ PetscErrorCode PetscRegressorLinearSetFitIntercept(PetscRegressor regressor, Pet
 
   Level: intermediate
 
-.seealso: `PetscRegressor`, `PetscRegressorLinearGetKSP()`
+  Notes:
+  `KSPLSQR` is used to solve the normal equations by default.
+
+  For sequential `MATSEQAIJ` sparse matrices QR factorization using a `PCType` of `PCQR` can be used to solve the least-squares system with a `MatSolverType` of
+  `MATSOLVERSPQR`, using, for example,
+.vb
+  -ksp_type none -pc_type qr -pc_factor_mat_solver_type sp
+.ve
+  For sequential dense `MATSEQDENSE` matrices use `-pc_factor_mat_solver_type petsc` instead of `sq`.
+
+  For any matrix type one can use
+.vb
+  -ksp_type none -pc_type svd
+.ve
+  but this is slow and so only useful for testing with smallish matrices. This uses `PCSVD`.
+
+  Richard, why not add support for other methods for the normal equations? For small systems
+  presumably LU is possible?
+
+.seealso: `PetscRegressor`, `PetscRegressorLinearGetKSP()`, `KSPLSQR`, `PCQR`, `MATSOLVERSPQR`, `MatSolverType`, `MATSEQDENSE`, `PCSVD`
 @*/
 PetscErrorCode PetscRegressorLinearSetUseKSP(PetscRegressor regressor, PetscBool flg)
 {
@@ -394,7 +413,8 @@ PETSC_EXTERN PetscErrorCode PetscRegressorLinearGetIntercept(PetscRegressor regr
 
   Level: intermediate
 
-.seealso: `PetscRegressorLinearGetType()`, `PetscRegressorLinearType`, `PetscRegressorSetType()`
+.seealso: `PetscRegressorLinearGetType()`, `PetscRegressorLinearType`, `PetscRegressorSetType()`, `REGRESSOR_LINEAR_OLS`,
+          `REGRESSOR_LINEAR_LASSO`, `REGRESSOR_LINEAR_RIDGE`
 @*/
 PetscErrorCode PetscRegressorLinearSetType(PetscRegressor regressor, PetscRegressorLinearType type)
 {
