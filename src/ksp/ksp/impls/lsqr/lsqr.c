@@ -610,7 +610,7 @@ PetscErrorCode KSPLSQRConvergedDefault(KSP ksp, PetscInt n, PetscReal rnorm, KSP
    Level: beginner
 
    Notes:
-   Supports non-square (rectangular) matrices.
+   Supports non-square (rectangular) matrices.  See `PETSCREGRESSORLINEAR` for the PETSc toolkit for solving linear regression problems, including least squares.
 
    This variant, when applied with no preconditioning is identical to the original algorithm in exact arithmetic; however, in practice, with no preconditioning
    due to inexact arithmetic, it can converge differently. Hence when no preconditioner is used (`PCType` `PCNONE`) it automatically reverts to the original algorithm.
@@ -630,7 +630,7 @@ PetscErrorCode KSPLSQRConvergedDefault(KSP ksp, PetscInt n, PetscReal rnorm, KSP
    How is this related to the `KSPCGNE` implementation? One difference is that `KSPCGNE` applies
    the preconditioner transpose times the preconditioner,  so one does not need to pass $A^T*A$ as the third argument to `KSPSetOperators()`.
 
-.seealso: [](ch_ksp), `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPSolve()`, `KSPLSQRConvergedDefault()`, `KSPLSQRSetComputeStandardErrorVec()`, `KSPLSQRGetStandardErrorVec()`, `KSPLSQRSetExactMatNorm()`, `KSPLSQRMonitorResidualDrawLGCreate()`, `KSPLSQRMonitorResidualDrawLG()`, `KSPLSQRMonitorResidual()`
+.seealso: [](ch_ksp), `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPSolve()`, `KSPLSQRConvergedDefault()`, `KSPLSQRSetComputeStandardErrorVec()`, `KSPLSQRGetStandardErrorVec()`, `KSPLSQRSetExactMatNorm()`, `KSPLSQRMonitorResidualDrawLGCreate()`, `KSPLSQRMonitorResidualDrawLG()`, `KSPLSQRMonitorResidual()`, `PETSCREGRESSORLINEAR`
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_LSQR(KSP ksp)
 {
