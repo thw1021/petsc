@@ -1250,12 +1250,13 @@ PetscErrorCode MatLUFactorNumeric_SeqAIJ_Inode(Mat B, Mat A, const MatFactorInfo
   /* also map the inode sizes according to the ordering */
   PetscCall(PetscMalloc1(n + 1, &tmp_vec1));
   for (i = 0, j = 0; i < node_max; ++i, ++j) {
-    if (ns[i + 1] - ns[i] > 4) {
+    nodesz = ns[i + 1] - ns[i];
+    if (nodesz > 4) {
       tmp_vec1[j] = 4;
       ++j;
-      tmp_vec1[j] = ns[i + 1] - ns[i] - tmp_vec1[j - 1];
+      tmp_vec1[j] = nodesz - tmp_vec1[j - 1];
     } else {
-      tmp_vec1[j] = ns[i + 1] - ns[i];
+      tmp_vec1[j] = nodesz;
     }
   }
   /* Use the correct node_max */
@@ -1265,14 +1266,15 @@ PetscErrorCode MatLUFactorNumeric_SeqAIJ_Inode(Mat B, Mat A, const MatFactorInfo
   /* First create a row -> inode_size_array_index map */
   PetscCall(PetscMalloc1(n + 1, &nsmap));
   PetscCall(PetscMalloc1(node_max + 1, &tmp_vec2));
+  tmp_vec2[0] = 0;
   for (i = 0, row = 0; i < node_max; i++) {
     nodesz = tmp_vec1[i];
     for (j = 0; j < nodesz; j++, row++) nsmap[row] = i;
   }
   /* Using nsmap, create a reordered ns structure */
   for (i = 0, j = 0; i < node_max; i++) {
-    nodesz      = tmp_vec1[nsmap[r[j]]]; /* here the reordered row_no is in r[] */
-    tmp_vec2[i] = nodesz;
+    nodesz          = tmp_vec1[nsmap[r[j]]]; /* here the reordered row_no is in r[] */
+    tmp_vec2[i + 1] = tmp_vec2[i] + nodesz;
     j += nodesz;
   }
   PetscCall(PetscFree(nsmap));
@@ -1285,7 +1287,7 @@ PetscErrorCode MatLUFactorNumeric_SeqAIJ_Inode(Mat B, Mat A, const MatFactorInfo
     sctx.newshift = PETSC_FALSE;
     /* Now loop over each block-row, and do the factorization */
     for (inod = 0, i = 0; inod < node_max; inod++) { /* i: row index; inod: inode index */
-      nodesz = ns[inod];
+      nodesz = ns[inod + 1] - ns[inod];
 
       switch (nodesz) {
       case 1:
