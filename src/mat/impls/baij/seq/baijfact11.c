@@ -644,8 +644,6 @@ PetscErrorCode MatLUFactorNumeric_SeqBAIJ_4_NaturalOrdering(Mat B, Mat A, const 
 
 #if defined(PETSC_HAVE_SSE)
 
-  #include PETSC_HAVE_SSE
-
 /* SSE Version for when blocks are 4 by 4 Using natural ordering */
 PetscErrorCode MatLUFactorNumeric_SeqBAIJ_4_NaturalOrdering_SSE(Mat B, Mat A, const MatFactorInfo *info)
 {
@@ -1071,7 +1069,6 @@ PetscErrorCode MatLUFactorNumeric_SeqBAIJ_4_NaturalOrdering_SSE(Mat B, Mat A, co
     } else {
       PetscCall(PetscKernel_A_gets_inverse_A_4_nopivot(w));
     }
-    /*      PetscCall(PetscKernel_A_gets_inverse_A_4_SSE(w)); */
     /* Note: Using Kramer's rule, flop count below might be infairly high or low? */
   }
 
@@ -1957,7 +1954,6 @@ PetscErrorCode MatLUFactorNumeric_SeqBAIJ_4_NaturalOrdering_SSE_usj(Mat C, Mat A
     } else {
       PetscCall(PetscKernel_A_gets_inverse_A_4_nopivot(w));
     }
-    /*      PetscCall(PetscKernel_A_gets_inverse_A_4_SSE(w)); */
     /* Note: Using Kramer's rule, flop count below might be infairly high or low? */
   }
 

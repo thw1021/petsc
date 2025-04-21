@@ -2,7 +2,6 @@
 
 #if defined(PETSC_HAVE_SSE)
 
-  #include PETSC_HAVE_SSE
   #define SSE_FEATURE_FLAG 0x2000000 /* Mask for bit 25 (from bit 0) */
 
 PetscErrorCode PetscSSEHardwareTest(PetscBool *flag)

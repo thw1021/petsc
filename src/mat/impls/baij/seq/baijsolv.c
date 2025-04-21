@@ -904,8 +904,6 @@ PetscErrorCode MatSolve_SeqBAIJ_4(Mat A, Vec bb, Vec xx)
 
 #if defined(PETSC_HAVE_SSE)
 
-  #include PETSC_HAVE_SSE
-
 PetscErrorCode MatSolve_SeqBAIJ_4_SSE_Demotion(Mat A, Vec bb, Vec xx)
 {
   /*

@@ -192,7 +192,6 @@ PetscErrorCode MatSolve_SeqBAIJ_4_NaturalOrdering(Mat A, Vec bb, Vec xx)
 
 #if defined(PETSC_HAVE_SSE)
 
-  #include PETSC_HAVE_SSE
 PetscErrorCode MatSolve_SeqBAIJ_4_NaturalOrdering_SSE_Demotion_usj(Mat A, Vec bb, Vec xx)
 {
   Mat_SeqBAIJ    *a  = (Mat_SeqBAIJ *)A->data;
