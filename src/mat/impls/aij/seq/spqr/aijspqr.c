@@ -287,13 +287,10 @@ PETSC_INTERN PetscErrorCode MatQRFactorSymbolic_SPQR(Mat F, Mat A, IS perm, cons
 /*MC
   MATSOLVERSPQR
 
-  A matrix type providing direct solvers, QR factorizations, for sequential matrices
+  A matrix type providing direct solvers, QR factorizations, for sequential `MATSEQAIJ` matrices
   via the external package SPQR.
 
   Use `./configure --download-suitesparse` to install PETSc to use SPQR
-
-  Consult SPQR documentation for more information about the common parameters
-  which correspond to the options database keys below.
 
    Level: beginner
 
