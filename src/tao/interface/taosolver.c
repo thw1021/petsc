@@ -189,15 +189,15 @@ PetscErrorCode TaoSolve(Tao tao)
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)tao)->tablevel));
     if (tao->reason > 0) {
       if (((PetscObject)tao)->prefix) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO %s solve converged due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix, TaoConvergedReasons[tao->reason], tao->niter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO %s solve converged due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix, TaoConvergedReasons[tao->reason], tao->niter));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO solve converged due to %s iterations %" PetscInt_FMT "\n", TaoConvergedReasons[tao->reason], tao->niter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO solve converged due to %s iterations %" PetscInt_FMT "\n", TaoConvergedReasons[tao->reason], tao->niter));
       }
     } else {
       if (((PetscObject)tao)->prefix) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO %s solve did not converge due to %s iteration %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix, TaoConvergedReasons[tao->reason], tao->niter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO %s solve did not converge due to %s iteration %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix, TaoConvergedReasons[tao->reason], tao->niter));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO solve did not converge due to %s iteration %" PetscInt_FMT "\n", TaoConvergedReasons[tao->reason], tao->niter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO solve did not converge due to %s iteration %" PetscInt_FMT "\n", TaoConvergedReasons[tao->reason], tao->niter));
       }
     }
     PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)tao)->tablevel));
@@ -274,6 +274,7 @@ PetscErrorCode TaoDestroy(Tao *tao)
   PetscTryTypeMethod(*tao, destroy);
   PetscCall(TaoMappedTermReset(&(*tao)->objective_term));
   PetscCall(VecDestroy(&(*tao)->objective_parameters));
+  PetscCall(PetscFree((*tao)->objective_values));
   PetscCall(TaoTermDestroy(&(*tao)->orig_callbacks));
   PetscCall(KSPDestroy(&(*tao)->ksp));
   PetscCall(SNESDestroy(&(*tao)->snes_ewdummy));
@@ -673,139 +674,159 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSTRING, &isstring));
   if (isascii) {
+    PetscViewerFormat format;
+
+    PetscCall(PetscViewerGetFormat(viewer, &format));
     PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)tao, viewer));
 
     PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscTryTypeMethod(tao, view, viewer);
     PetscCall(PetscViewerASCIIPrintf(viewer, "Objective function:\n"));
     PetscCall(PetscViewerASCIIPushTab(viewer));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Scale (tao_objective_scale): %g\n", (double)tao->objective_term.scale));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Function:\n"));
-    PetscCall(PetscViewerASCIIPushTab(viewer));
-    PetscCall(TaoTermView(tao->objective_term.term, viewer));
-    PetscCall(PetscViewerASCIIPopTab(viewer));
-    if (tao->objective_term.map) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Map:\n"));
+    if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Scale (tao_objective_scale): %g\n", (double)tao->objective_term.scale));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Function:\n"));
       PetscCall(PetscViewerASCIIPushTab(viewer));
-      {
-        PetscViewerFormat format;
-        PetscBool         pop = PETSC_FALSE;
-
-        PetscCall(PetscViewerGetFormat(viewer, &format));
-        if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
-          PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
-          pop = PETSC_TRUE;
-        }
-        PetscCall(MatView(tao->objective_term.map, viewer));
-        if (pop) PetscCall(PetscViewerPopFormat(viewer));
-      }
+      PetscCall(TaoTermView(tao->objective_term.term, viewer));
       PetscCall(PetscViewerASCIIPopTab(viewer));
+      if (tao->objective_term.map) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Map:\n"));
+        PetscCall(PetscViewerASCIIPushTab(viewer));
+        {
+          PetscBool pop = PETSC_FALSE;
+
+          if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
+            PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
+            pop = PETSC_TRUE;
+          }
+          PetscCall(MatView(tao->objective_term.map, viewer));
+          if (pop) PetscCall(PetscViewerPopFormat(viewer));
+        }
+        PetscCall(PetscViewerASCIIPopTab(viewer));
+      } else if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Map: unmapped\n"));
+      }
+    } else if (tao->objective_term.scale == 1.0 && tao->objective_term.map == NULL) {
+      PetscCall(TaoTermView(tao->objective_term.term, viewer));
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Map: unmapped\n"));
+      if (tao->objective_term.scale != 1.0) PetscCall(PetscViewerASCIIPrintf(viewer, "Scale: %g\n", (double)tao->objective_term.scale));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Function:\n"));
+      PetscCall(PetscViewerASCIIPushTab(viewer));
+      PetscCall(PetscViewerASCIIPopTab(viewer));
+      if (tao->objective_term.map) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Map:\n"));
+        PetscCall(PetscViewerASCIIPushTab(viewer));
+        {
+          PetscBool pop = PETSC_FALSE;
+
+          if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
+            PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
+            pop = PETSC_TRUE;
+          }
+          PetscCall(MatView(tao->objective_term.map, viewer));
+          if (pop) PetscCall(PetscViewerPopFormat(viewer));
+        }
+        PetscCall(PetscViewerASCIIPopTab(viewer));
+      }
     }
     PetscCall(PetscViewerASCIIPopTab(viewer));
     if (tao->linesearch) PetscCall(TaoLineSearchView(tao->linesearch, viewer));
     if (tao->ksp) {
       PetscCall(KSPView(tao->ksp, viewer));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "total KSP iterations: %" PetscInt_FMT "\n", tao->ksp_tot_its));
+      if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) PetscCall(PetscViewerASCIIPrintf(viewer, "total KSP iterations: %" PetscInt_FMT "\n", tao->ksp_tot_its));
     }
 
     if (tao->XL || tao->XU) PetscCall(PetscViewerASCIIPrintf(viewer, "Active Set subset type: %s\n", TaoSubSetTypes[tao->subset_type]));
 
-    PetscCall(PetscViewerASCIIPrintf(viewer, "convergence tolerances: gatol=%g,", (double)tao->gatol));
-    PetscCall(PetscViewerASCIIPrintf(viewer, " grtol=%g,", (double)tao->grtol));
-    PetscCall(PetscViewerASCIIPrintf(viewer, " steptol=%g,", (double)tao->steptol));
-    PetscCall(PetscViewerASCIIPrintf(viewer, " gttol=%g\n", (double)tao->gttol));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Residual in Function/Gradient:=%g\n", (double)tao->residual));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "convergence tolerances: maxit=%" PetscInt_FMT " gatol=%g grtol=%g steptol=%g gttol=%g", tao->max_it, (double)tao->gatol, (double)tao->grtol, (double)tao->steptol, (double)tao->gttol));
+    PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
+    if (tao->constrained) PetscCall(PetscViewerASCIIPrintf(viewer, " catol=%g crtol=%g", (double)tao->catol, (double)tao->crtol));
+    if (tao->fmin > -1.e25) PetscCall(PetscViewerASCIIPrintf(viewer, " fmin=%g", (double)tao->fmin));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
+    PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
 
-    if (tao->constrained) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "convergence tolerances:"));
-      PetscCall(PetscViewerASCIIPrintf(viewer, " catol=%g,", (double)tao->catol));
-      PetscCall(PetscViewerASCIIPrintf(viewer, " crtol=%g\n", (double)tao->crtol));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Residual in Constraints:=%g\n", (double)tao->cnorm));
-    }
+    if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Residual in Function/Gradient:=%g\n", (double)tao->residual));
 
-    if (tao->trust < tao->steptol) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "convergence tolerances: steptol=%g\n", (double)tao->steptol));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Final trust region radius:=%g\n", (double)tao->trust));
-    }
+      if (tao->constrained) { PetscCall(PetscViewerASCIIPrintf(viewer, "Residual in Constraints:=%g\n", (double)tao->cnorm)); }
 
-    if (tao->fmin > -1.e25) PetscCall(PetscViewerASCIIPrintf(viewer, "convergence tolerances: function minimum=%g\n", (double)tao->fmin));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Objective value=%g\n", (double)tao->fc));
+      if (tao->trust < tao->steptol) { PetscCall(PetscViewerASCIIPrintf(viewer, "Final trust region radius:=%g\n", (double)tao->trust)); }
 
-    PetscCall(PetscViewerASCIIPrintf(viewer, "total number of iterations=%" PetscInt_FMT ",          ", tao->niter));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "              (max: %" PetscInt_FMT ")\n", tao->max_it));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Objective value=%g\n", (double)tao->fc));
 
-    if (tao->nfuncs > 0) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function evaluations=%" PetscInt_FMT ",", tao->nfuncs));
-      if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: unlimited)\n"));
-      else PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: %" PetscInt_FMT ")\n", tao->max_funcs));
-    }
-    if (tao->ngrads > 0) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations=%" PetscInt_FMT ",", tao->ngrads));
-      if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: unlimited)\n"));
-      else PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: %" PetscInt_FMT ")\n", tao->max_funcs));
-    }
-    if (tao->nfuncgrads > 0) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function/gradient evaluations=%" PetscInt_FMT ",", tao->nfuncgrads));
-      if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "    (max: unlimited)\n"));
-      else PetscCall(PetscViewerASCIIPrintf(viewer, "    (max: %" PetscInt_FMT ")\n", tao->max_funcs));
-    }
-    if (tao->nhess > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of Hessian evaluations=%" PetscInt_FMT "\n", tao->nhess));
-    if (tao->nconstraints > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of constraint function evaluations=%" PetscInt_FMT "\n", tao->nconstraints));
-    if (tao->njac > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of Jacobian evaluations=%" PetscInt_FMT "\n", tao->njac));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "total number of iterations=%" PetscInt_FMT ",          ", tao->niter));
 
-    if (tao->reason > 0) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Solution converged: "));
-      switch (tao->reason) {
-      case TAO_CONVERGED_GATOL:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " ||g(X)|| <= gatol\n"));
-        break;
-      case TAO_CONVERGED_GRTOL:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " ||g(X)||/|f(X)| <= grtol\n"));
-        break;
-      case TAO_CONVERGED_GTTOL:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " ||g(X)||/||g(X0)|| <= gttol\n"));
-        break;
-      case TAO_CONVERGED_STEPTOL:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " Steptol -- step size small\n"));
-        break;
-      case TAO_CONVERGED_MINF:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " Minf --  f < fmin\n"));
-        break;
-      case TAO_CONVERGED_USER:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " User Terminated\n"));
-        break;
-      default:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " %d\n", tao->reason));
-        break;
+      if (tao->nfuncs > 0) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function evaluations=%" PetscInt_FMT ",", tao->nfuncs));
+        if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: unlimited)\n"));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: %" PetscInt_FMT ")\n", tao->max_funcs));
       }
-    } else if (tao->reason == TAO_CONTINUE_ITERATING) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Solver never run\n"));
-    } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Solver failed: "));
-      switch (tao->reason) {
-      case TAO_DIVERGED_MAXITS:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " Maximum Iterations\n"));
-        break;
-      case TAO_DIVERGED_NAN:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " NAN or Inf encountered\n"));
-        break;
-      case TAO_DIVERGED_MAXFCN:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " Maximum Function Evaluations\n"));
-        break;
-      case TAO_DIVERGED_LS_FAILURE:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " Line Search Failure\n"));
-        break;
-      case TAO_DIVERGED_TR_REDUCTION:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " Trust Region too small\n"));
-        break;
-      case TAO_DIVERGED_USER:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " User Terminated\n"));
-        break;
-      default:
-        PetscCall(PetscViewerASCIIPrintf(viewer, " %d\n", tao->reason));
-        break;
+      if (tao->ngrads > 0) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations=%" PetscInt_FMT ",", tao->ngrads));
+        if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: unlimited)\n"));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: %" PetscInt_FMT ")\n", tao->max_funcs));
+      }
+      if (tao->nfuncgrads > 0) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function/gradient evaluations=%" PetscInt_FMT ",", tao->nfuncgrads));
+        if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "    (max: unlimited)\n"));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "    (max: %" PetscInt_FMT ")\n", tao->max_funcs));
+      }
+      if (tao->nhess > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of Hessian evaluations=%" PetscInt_FMT "\n", tao->nhess));
+      if (tao->nconstraints > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of constraint function evaluations=%" PetscInt_FMT "\n", tao->nconstraints));
+      if (tao->njac > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of Jacobian evaluations=%" PetscInt_FMT "\n", tao->njac));
+
+      if (tao->reason > 0) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Solution converged: "));
+        switch (tao->reason) {
+        case TAO_CONVERGED_GATOL:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " ||g(X)|| <= gatol\n"));
+          break;
+        case TAO_CONVERGED_GRTOL:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " ||g(X)||/|f(X)| <= grtol\n"));
+          break;
+        case TAO_CONVERGED_GTTOL:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " ||g(X)||/||g(X0)|| <= gttol\n"));
+          break;
+        case TAO_CONVERGED_STEPTOL:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " Steptol -- step size small\n"));
+          break;
+        case TAO_CONVERGED_MINF:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " Minf --  f < fmin\n"));
+          break;
+        case TAO_CONVERGED_USER:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " User Terminated\n"));
+          break;
+        default:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " %d\n", tao->reason));
+          break;
+        }
+      } else if (tao->reason == TAO_CONTINUE_ITERATING) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Solver never run\n"));
+      } else {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Solver failed: "));
+        switch (tao->reason) {
+        case TAO_DIVERGED_MAXITS:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " Maximum Iterations\n"));
+          break;
+        case TAO_DIVERGED_NAN:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " NAN or Inf encountered\n"));
+          break;
+        case TAO_DIVERGED_MAXFCN:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " Maximum Function Evaluations\n"));
+          break;
+        case TAO_DIVERGED_LS_FAILURE:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " Line Search Failure\n"));
+          break;
+        case TAO_DIVERGED_TR_REDUCTION:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " Trust Region too small\n"));
+          break;
+        case TAO_DIVERGED_USER:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " User Terminated\n"));
+          break;
+        default:
+          PetscCall(PetscViewerASCIIPrintf(viewer, " %d\n", tao->reason));
+          break;
+        }
       }
     }
     PetscCall(PetscViewerASCIIPopTab(viewer));
@@ -1688,7 +1709,7 @@ PetscErrorCode TaoMonitorDefault(Tao tao, void *ctx)
   PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
   PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)tao)->tablevel));
   if (its == 0 && ((PetscObject)tao)->prefix && !tao->header_printed) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Iteration information for %s solve.\n", ((PetscObject)tao)->prefix));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Iteration information for %s solve.\n", ((PetscObject)tao)->prefix));
     tao->header_printed = PETSC_TRUE;
   }
   PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " TAO,", its));
@@ -1838,9 +1859,17 @@ PetscErrorCode TaoMonitorConstraintNorm(Tao tao, void *ctx)
   gnorm = tao->residual;
   PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
   PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)tao)->tablevel));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "iter = %" PetscInt_FMT ",", its));
-  PetscCall(PetscViewerASCIIPrintf(viewer, " Function value: %g,", (double)fct));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual: %g ", (double)gnorm));
+  if (its == 0 && ((PetscObject)tao)->prefix && !tao->header_printed) {
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Iteration information for %s solve.\n", ((PetscObject)tao)->prefix));
+    tao->header_printed = PETSC_TRUE;
+  }
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT, its));
+  PetscCall(PetscViewerASCIIPrintf(viewer, " TAO Function value: %g,", (double)fct));
+  if (gnorm == PETSC_DEFAULT) {
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual: (not computed) "));
+  } else {
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual: %g ", (double)gnorm));
+  }
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Constraint: %g \n", (double)tao->cnorm));
   PetscCall(PetscViewerASCIISetTab(viewer, tabs));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2249,12 +2278,13 @@ PetscErrorCode TaoSetType(Tao tao, TaoType type)
   PetscCall(TaoLineSearchDestroy(&tao->linesearch));
 
   /* Reinitialize type-specific function pointers in TaoOps structure */
-  tao->ops->setup          = NULL;
-  tao->ops->computedual    = NULL;
-  tao->ops->solve          = NULL;
-  tao->ops->view           = NULL;
-  tao->ops->setfromoptions = NULL;
-  tao->ops->destroy        = NULL;
+  tao->ops->setup           = NULL;
+  tao->ops->computedual     = NULL;
+  tao->ops->solve           = NULL;
+  tao->ops->view            = NULL;
+  tao->ops->setfromoptions  = NULL;
+  tao->ops->destroy         = NULL;
+  tao->ops->convergencetest = TaoDefaultConvergenceTest;
 
   tao->setupcalled           = PETSC_FALSE;
   tao->uses_gradient         = PETSC_FALSE;
@@ -3004,8 +3034,13 @@ PetscErrorCode TaoSetTerm(Tao tao, PetscReal scale, TaoTerm term, Vec params, Ma
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (term) {
+    PetscBool is_sum;
+
     PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 3);
     PetscCheckSameComm(tao, 1, term, 3);
+
+    PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSUM, &is_sum));
+    if (is_sum) PetscCall(TaoTermSumGetNumSubterms(term, &tao->num_terms));
   }
   PetscCall(TaoMappedTermSetData(&tao->objective_term, "objective_", scale, term, map));
   if (params) {
@@ -3090,6 +3125,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
       PetscCall(VecDestroy(&subvecs[0]));
     }
     PetscCall(TaoTermDestroy(&old_sum));
+    tao->num_terms = 1;
   }
   if (tao->objective_term.scale != 1.0 || tao->objective_term.map != NULL) {
     PetscInt num_terms;
@@ -3128,6 +3164,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     vec_list[num_old_terms] = params;
   }
   PetscCall(TaoTermSumAddSubterm(tao->objective_term.term, prefix, scale, term, map, NULL));
+  tao->num_terms++;
   if (vec_list) {
     PetscInt num_terms = num_old_terms + 1;
     PetscCall(TaoTermSumParametersPack(tao->objective_term.term, vec_list, &tao->objective_parameters));
