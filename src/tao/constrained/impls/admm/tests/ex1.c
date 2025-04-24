@@ -14,9 +14,9 @@ static PetscErrorCode Test1(MPI_Comm comm, PetscRandom rand)
   Tao         tao;
 
   PetscFunctionBegin;
-  N     = 13;
-  M_C   = 4;
-  M_D   = 17;
+  N     = 130;
+  M_C   = 40;
+  M_D   = 170;
   alpha = 0.3;
   beta  = 0.4;
   PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, M_C, N, NULL, &C));
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     args: -tao_view -tao_converged_reason -tao_monitor_constraint_norm
-    args: -admm_sub_0_tao_monitor_short -admm_sub_0_tao_converged_reason -admm_sub_0_tao_nls_ksp_monitor -admm_sub_0_tao_nls_ksp_converged_reason
-    args: -admm_sub_1_tao_monitor_short -admm_sub_1_tao_converged_reason -admm_sub_1_tao_nls_ksp_monitor -admm_sub_1_tao_nls_ksp_converged_reason
+    args: -admm_sub_0_tao_monitor -admm_sub_0_tao_converged_reason -admm_sub_0_tao_nls_ksp_monitor -admm_sub_0_tao_nls_ksp_converged_reason -admm_sub_0_tao_nls_ksp_max_it 10
+    args: -admm_sub_1_tao_monitor -admm_sub_1_tao_converged_reason -admm_sub_1_tao_nls_ksp_monitor -admm_sub_1_tao_nls_ksp_converged_reason
 
 TEST*/

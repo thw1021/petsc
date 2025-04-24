@@ -669,6 +669,16 @@ PetscErrorCode PetscViewerASCIIGetStdout(MPI_Comm comm, PetscViewer *viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static const char *PetscASCIIPrintfColorDefault = "\033[39m";
+static const char *const PetscASCIIPrintfColorCycle[] = {
+  "\033[39m", /* default */
+  "\033[32m", /* green */
+  "\033[34m", /* blue */
+  "\033[35m", /* magenta */
+};
+
+static PetscBool PetscColorTabs = PETSC_TRUE;
+
 /*@C
   PetscViewerASCIIPrintf - Prints to a file, only from the first
   processor in the `PetscViewer` of type `PETSCVIEWERASCII`
@@ -726,11 +736,19 @@ PetscErrorCode PetscViewerASCIIPrintf(PetscViewer viewer, const char format[], .
       if (!ascii->fileunit) PetscCall(PetscFPrintf(PETSC_COMM_SELF, fd, "  "));
       else PetscCall(PetscFPrintfFortran(ascii->fileunit, "   "));
     }
+    if (PetscColorTabs && fd == stdout) {
+      const PetscInt num_colors = PETSC_STATIC_ARRAY_LENGTH(PetscASCIIPrintfColorCycle);
+      const char    *code       = PetscASCIIPrintfColorCycle[intab % num_colors];
+
+      PetscCall(PetscFPrintf(PetscObjectComm((PetscObject)viewer), fd, "%s", code));
+    }
 
     va_start(Argp, format);
     if (!ascii->fileunit) PetscCall((*PetscVFPrintf)(fd, format, Argp));
     else PetscCall(PetscVFPrintfFortran(ascii->fileunit, format, Argp));
     va_end(Argp);
+
+    if (PetscColorTabs && fd == stdout) PetscCall(PetscFPrintf(PetscObjectComm((PetscObject)viewer), fd, "%s", PetscASCIIPrintfColorDefault));
     PetscCall(PetscFFlush(fd));
   }
   PetscFunctionReturn(PETSC_SUCCESS);

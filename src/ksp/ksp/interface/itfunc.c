@@ -476,7 +476,7 @@ PetscErrorCode KSPConvergedReasonView(KSP ksp, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isAscii));
   if (isAscii) {
     PetscCall(PetscViewerGetFormat(viewer, &format));
-    PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)ksp)->tablevel + 1));
+    PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)ksp)->tablevel));
     if (ksp->reason > 0 && format != PETSC_VIEWER_FAILED) {
       if (((PetscObject)ksp)->prefix) {
         PetscCall(PetscViewerASCIIPrintf(viewer, "Linear %s solve converged due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)ksp)->prefix, KSPConvergedReasons[ksp->reason], ksp->its));
@@ -495,7 +495,7 @@ PetscErrorCode KSPConvergedReasonView(KSP ksp, PetscViewer viewer)
         PetscCall(PetscViewerASCIIPrintf(viewer, "               PC failed due to %s\n", PCFailedReasons[reason]));
       }
     }
-    PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)ksp)->tablevel + 1));
+    PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)ksp)->tablevel));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

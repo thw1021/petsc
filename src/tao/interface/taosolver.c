@@ -189,15 +189,15 @@ PetscErrorCode TaoSolve(Tao tao)
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)tao)->tablevel));
     if (tao->reason > 0) {
       if (((PetscObject)tao)->prefix) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO %s solve converged due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix, TaoConvergedReasons[tao->reason], tao->niter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO %s solve converged due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix, TaoConvergedReasons[tao->reason], tao->niter));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO solve converged due to %s iterations %" PetscInt_FMT "\n", TaoConvergedReasons[tao->reason], tao->niter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO solve converged due to %s iterations %" PetscInt_FMT "\n", TaoConvergedReasons[tao->reason], tao->niter));
       }
     } else {
       if (((PetscObject)tao)->prefix) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO %s solve did not converge due to %s iteration %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix, TaoConvergedReasons[tao->reason], tao->niter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO %s solve did not converge due to %s iteration %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix, TaoConvergedReasons[tao->reason], tao->niter));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "  TAO solve did not converge due to %s iteration %" PetscInt_FMT "\n", TaoConvergedReasons[tao->reason], tao->niter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO solve did not converge due to %s iteration %" PetscInt_FMT "\n", TaoConvergedReasons[tao->reason], tao->niter));
       }
     }
     PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)tao)->tablevel));
@@ -1689,10 +1689,10 @@ PetscErrorCode TaoMonitorDefault(Tao tao, void *ctx)
   PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
   PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)tao)->tablevel));
   if (its == 0 && ((PetscObject)tao)->prefix && !tao->header_printed) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Iteration information for %s solve.\n", ((PetscObject)tao)->prefix));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Iteration information for %s solve.\n", ((PetscObject)tao)->prefix));
     tao->header_printed = PETSC_TRUE;
   }
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " TAO,", its));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " TAO,", its));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Function value: %g,", (double)fct));
   if (gnorm >= PETSC_INFINITY) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual: Inf \n"));
@@ -1839,7 +1839,11 @@ PetscErrorCode TaoMonitorConstraintNorm(Tao tao, void *ctx)
   gnorm = tao->residual;
   PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
   PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)tao)->tablevel));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "iter = %" PetscInt_FMT ",", its));
+  if (its == 0 && ((PetscObject)tao)->prefix && !tao->header_printed) {
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Iteration information for %s solve.\n", ((PetscObject)tao)->prefix));
+    tao->header_printed = PETSC_TRUE;
+  }
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT, its));
   PetscCall(PetscViewerASCIIPrintf(viewer, " Function value: %g,", (double)fct));
   if (gnorm == PETSC_DEFAULT) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual: (not computed) "));
