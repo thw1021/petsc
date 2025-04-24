@@ -160,6 +160,13 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscCall(TaoMappedTermObjective(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, f));
+  if (tao->num_terms) {
+    const PetscReal *sum_values;
+
+    PetscCall(TaoTermSumGetLastSubtermObjectives(tao->objective_term.term, &sum_values));
+    if (!tao->objective_values) PetscCall(PetscMalloc(tao->num_terms, &tao->objective_values));
+    PetscCall(PetscArraycpy(tao->objective_values, sum_values, tao->num_terms));
+  }
   tao->nfuncs++;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -190,6 +197,13 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscCall(TaoMappedTermObjectiveAndGradient(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, f, G));
+  if (tao->num_terms) {
+    const PetscReal *sum_values;
+
+    PetscCall(TaoTermSumGetLastSubtermObjectives(tao->objective_term.term, &sum_values));
+    if (!tao->objective_values) PetscCall(PetscMalloc(tao->num_terms, &tao->objective_values));
+    PetscCall(PetscArraycpy(tao->objective_values, sum_values, tao->num_terms));
+  }
   tao->nfuncgrads++;
   PetscCall(TaoTestGradient(tao, X, G));
   PetscFunctionReturn(PETSC_SUCCESS);

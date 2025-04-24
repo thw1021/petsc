@@ -40,7 +40,6 @@ E*/
 typedef enum {
   TAO_ADMM_UPDATE_BASIC,
   TAO_ADMM_UPDATE_ADAPTIVE,
-  TAO_ADMM_UPDATE_ADAPTIVE_RELAXED
 } TaoADMMUpdateType;
 PETSC_EXTERN const char *const TaoADMMUpdateTypes[];
 
@@ -52,7 +51,7 @@ PETSC_EXTERN const char *const TaoADMMUpdateTypes[];
   Note:
   Most basic implementation of `TAOADMM`. Generally slower than adaptive or adaptive relaxed version.
 
-.seealso: [](ch_tao), `Tao`, `TAOADMM`, `TaoADMMSetUpdateType()`, `TAO_ADMM_UPDATE_ADAPTIVE`, `TAO_ADMM_UPDATE_ADAPTIVE_RELAXED`
+.seealso: [](ch_tao), `Tao`, `TAOADMM`, `TaoADMMSetUpdateType()`, `TAO_ADMM_UPDATE_ADAPTIVE`
 M*/
 
 /*MC
@@ -63,54 +62,7 @@ M*/
   Note:
   Adaptively updates spectral penalty of `TAOADMM` by using both steepest descent and minimum gradient.
 
-.seealso: [](ch_tao), `Tao`, `TAOADMM`, `TaoADMMSetUpdateType()`, `TAO_ADMM_UPDATE_BASIC`, `TAO_ADMM_UPDATE_ADAPTIVE_RELAXED`
-M*/
-
-/*MC
-  ADMM_UPDATE_ADAPTIVE_RELAXED - Adaptively update spectral penalty, and relaxes parameter update
-
-  Level: advanced
-
-  Note:
-  With adaptive spectral penalty update, it also relaxes the `x` vector update by a factor.
-
-.seealso: [](ch_tao), `Tao`, `TaoADMMSetUpdateType()`, `TAO_ADMM_UPDATE_BASIC`, `TAO_ADMM_UPDATE_ADAPTIVE`
-M*/
-
-/*E
-  TaoADMMRegularizerType - Determine regularizer routine - either user provided or soft threshold for `TAOADMM`
-
-  Level: advanced
-
-.seealso: [](ch_tao), `Tao`, `TAOADMM`, `TaoADMMSetRegularizerType()`
-E*/
-typedef enum {
-  TAO_ADMM_REGULARIZER_USER,
-  TAO_ADMM_REGULARIZER_SOFT_THRESH
-} TaoADMMRegularizerType;
-PETSC_EXTERN const char *const TaoADMMRegularizerTypes[];
-
-/*MC
-  TAO_ADMM_REGULARIZER_USER - User provided routines for regularizer part of `TAOADMM`
-
-  Level: advanced
-
-  Note:
-  User needs to provided appropriate routines and type for regularizer solver
-
-.seealso: [](ch_tao), `Tao`, `TAOADMM`, `TaoADMMSetRegularizerType()`, `TAO_ADMM_REGULARIZER_SOFT_THRESH`
-M*/
-
-/*MC
-  TAO_ADMM_REGULARIZER_SOFT_THRESH - Soft threshold to solve regularizer part of `TAOADMM`
-
-  Level: advanced
-
-  Note:
-  Utilizes built-in SoftThreshold routines
-
-.seealso: [](ch_tao), `Tao`, `TAOADMM`, `TaoSoftThreshold()`, `TaoADMMSetRegularizerObjectiveAndGradientRoutine()`,
-          `TaoADMMSetRegularizerHessianRoutine()`, `TaoADMMSetRegularizerType()`, `TAO_ADMM_REGULARIZER_USER`
+.seealso: [](ch_tao), `Tao`, `TAOADMM`, `TaoADMMSetUpdateType()`, `TAO_ADMM_UPDATE_BASIC`
 M*/
 
 /*E
@@ -507,23 +459,11 @@ PETSC_EXTERN PetscErrorCode TaoADMMGetRegularizationSubsolver(Tao, Tao *);
 PETSC_EXTERN PetscErrorCode TaoADMMGetDualVector(Tao, Vec *);
 PETSC_EXTERN PetscErrorCode TaoADMMGetSpectralPenalty(Tao, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoADMMSetSpectralPenalty(Tao, PetscReal);
-PETSC_EXTERN PetscErrorCode TaoGetADMMParentTao(Tao, Tao *);
-PETSC_EXTERN PetscErrorCode TaoADMMSetConstraintVectorRHS(Tao, Vec);
-PETSC_EXTERN PetscErrorCode TaoADMMSetRegularizerCoefficient(Tao, PetscReal);
-PETSC_EXTERN PetscErrorCode TaoADMMGetRegularizerCoefficient(Tao, PetscReal *);
-PETSC_EXTERN PetscErrorCode TaoADMMSetMisfitConstraintJacobian(Tao, Mat, Mat, PetscErrorCode (*)(Tao, Vec, Mat, Mat, void *), void *);
-PETSC_EXTERN PetscErrorCode TaoADMMSetRegularizerConstraintJacobian(Tao, Mat, Mat, PetscErrorCode (*)(Tao, Vec, Mat, Mat, void *), void *);
-PETSC_EXTERN PetscErrorCode TaoADMMSetRegularizerHessianRoutine(Tao, Mat, Mat, PetscErrorCode (*)(Tao, Vec, Mat, Mat, void *), void *);
-PETSC_EXTERN PetscErrorCode TaoADMMSetRegularizerObjectiveAndGradientRoutine(Tao, PetscErrorCode (*)(Tao, Vec, PetscReal *, Vec, void *), void *);
-PETSC_EXTERN PetscErrorCode TaoADMMSetMisfitHessianRoutine(Tao, Mat, Mat, PetscErrorCode (*)(Tao, Vec, Mat, Mat, void *), void *);
-PETSC_EXTERN PetscErrorCode TaoADMMSetMisfitObjectiveAndGradientRoutine(Tao, PetscErrorCode (*)(Tao, Vec, PetscReal *, Vec, void *), void *);
-PETSC_EXTERN PetscErrorCode TaoADMMSetMisfitHessianChangeStatus(Tao, PetscBool);
-PETSC_EXTERN PetscErrorCode TaoADMMSetRegHessianChangeStatus(Tao, PetscBool);
 PETSC_EXTERN PetscErrorCode TaoADMMSetMinimumSpectralPenalty(Tao, PetscReal);
-PETSC_EXTERN PetscErrorCode TaoADMMSetRegularizerType(Tao, TaoADMMRegularizerType);
-PETSC_EXTERN PetscErrorCode TaoADMMGetRegularizerType(Tao, TaoADMMRegularizerType *);
 PETSC_EXTERN PetscErrorCode TaoADMMSetUpdateType(Tao, TaoADMMUpdateType);
 PETSC_EXTERN PetscErrorCode TaoADMMGetUpdateType(Tao, TaoADMMUpdateType *);
+PETSC_EXTERN PetscErrorCode TaoADMMSetTermGroups(Tao, PetscInt, const PetscInt[], PetscBool, PetscInt, const PetscInt[], PetscBool);
+PETSC_EXTERN PetscErrorCode TaoADMMGetTermGroups(Tao, PetscInt *, const PetscInt *[], PetscBool *, PetscInt *, const PetscInt *[], PetscBool *);
 
 PETSC_EXTERN PetscErrorCode TaoALMMGetType(Tao, TaoALMMType *);
 PETSC_EXTERN PetscErrorCode TaoALMMSetType(Tao, TaoALMMType);

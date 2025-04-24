@@ -1,672 +1,717 @@
 #include <../src/tao/constrained/impls/admm/admm.h> /*I "petsctao.h" I*/
 #include <petsctao.h>
 #include <petsc/private/petscimpl.h>
+#include <../src/tao/term/impls/sum/taotermsum.h> // TaoTermSumVecNestGetSubVecsRead(), TaoTermSumVecSetRestoreSubVecsRead()
+#include <petscsf.h>
 
-/* Updates terminating criteria
- *
- * 1  ||r_k|| = ||Ax+Bz-c|| =< catol_admm* max{||Ax||,||Bz||,||c||}
- *
- * 2. Updates dual residual, d_k
- *
- * 3. ||d_k|| = ||mu*A^T*B(z_k-z_{k-1})|| =< gatol_admm * ||A^Ty||   */
+const char *const TaoADMMUpdateTypes[]      = {"basic", "adaptive", "TaoADMMUpdateType", "TAO_ADMM_UPDATE", NULL};
 
-static PetscBool  cited      = PETSC_FALSE;
-static const char citation[] = "@misc{xu2017adaptive,\n"
-                               "   title={Adaptive Relaxed ADMM: Convergence Theory and Practical Implementation},\n"
-                               "   author={Zheng Xu and Mario A. T. Figueiredo and Xiaoming Yuan and Christoph Studer and Tom Goldstein},\n"
-                               "   year={2017},\n"
-                               "   eprint={1704.02712},\n"
-                               "   archivePrefix={arXiv},\n"
-                               "   primaryClass={cs.CV}\n"
-                               "}  \n";
-
-const char *const TaoADMMRegularizerTypes[] = {"REGULARIZER_USER", "REGULARIZER_SOFT_THRESH", "TaoADMMRegularizerType", "TAO_ADMM_", NULL};
-const char *const TaoADMMUpdateTypes[]      = {"UPDATE_BASIC", "UPDATE_ADAPTIVE", "UPDATE_ADAPTIVE_RELAXED", "TaoADMMUpdateType", "TAO_ADMM_", NULL};
-const char *const TaoALMMTypes[]            = {"CLASSIC", "PHR", "TaoALMMType", "TAO_ALMM_", NULL};
-
-static PetscErrorCode TaoADMMToleranceUpdate(Tao tao)
+static PetscErrorCode TaoADMMInitializeSubproblemSolutions(Tao tao)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-  PetscReal Axnorm, Bznorm, ATynorm, temp;
-  Vec       tempJR, tempL;
-  Tao       mis;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
+  Vec       x, z;
 
   PetscFunctionBegin;
-  mis    = am->subsolverX;
-  tempJR = am->workJacobianRight;
-  tempL  = am->workLeft;
-  /* ATy */
-  PetscCall(TaoComputeJacobianEquality(mis, am->y, mis->jacobian_equality, mis->jacobian_equality_pre));
-  PetscCall(MatMultTranspose(mis->jacobian_equality, am->y, tempJR));
-  PetscCall(VecNorm(tempJR, NORM_2, &ATynorm));
-  /* dualres = mu * ||AT(Bz-Bzold)||_2 */
-  PetscCall(VecWAXPY(tempJR, -1., am->Bzold, am->Bz));
-  PetscCall(MatMultTranspose(mis->jacobian_equality, tempJR, tempL));
-  PetscCall(VecNorm(tempL, NORM_2, &am->dualres));
-  am->dualres *= am->mu;
-
-  /* ||Ax||_2, ||Bz||_2 */
-  PetscCall(VecNorm(am->Ax, NORM_2, &Axnorm));
-  PetscCall(VecNorm(am->Bz, NORM_2, &Bznorm));
-
-  /* Set catol to be catol_admm *  max{||Ax||,||Bz||,||c||} *
-   * Set gatol to be gatol_admm *  ||A^Ty|| *
-   * while cnorm is ||r_k||_2, and gnorm is ||d_k||_2 */
-  temp = am->catol_admm * PetscMax(Axnorm, (!am->const_norm) ? Bznorm : PetscMax(Bznorm, am->const_norm));
-  PetscCall(TaoSetConstraintTolerances(tao, temp, PETSC_CURRENT));
-  PetscCall(TaoSetTolerances(tao, am->gatol_admm * ATynorm, PETSC_CURRENT, PETSC_CURRENT));
+  switch(am->initialize_type) {
+  case ADMM_INITIALIZE_SCATTER:
+    PetscCall(TaoGetSolution(am->x_subsolver, &x));
+    PetscCall(TaoGetSolution(am->z_subsolver, &z));
+    PetscCall(VecScatterBegin(am->x_scatter, tao->solution, x, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(am->x_scatter, tao->solution, x, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterBegin(am->z_scatter, tao->solution, z, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(am->z_scatter, tao->solution, z, INSERT_VALUES, SCATTER_FORWARD));
+    break;
+  case ADMM_INITIALIZE_Z_AX:
+    PetscCall(TaoGetSolution(am->z_subsolver, &z));
+    PetscCall(TaoSetSolution(am->x_subsolver, tao->solution));
+    PetscCall(MatMult(am->A, tao->solution, z));
+    break;
+  case ADMM_INITIALIZE_X_BZ:
+    PetscCall(TaoGetSolution(am->x_subsolver, &x));
+    PetscCall(TaoSetSolution(am->z_subsolver, tao->solution));
+    PetscCall(MatMult(am->B, tao->solution, x));
+    break;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Penalty Update for Adaptive ADMM. */
-static PetscErrorCode AdaptiveADMMPenaltyUpdate(Tao tao)
+static PetscErrorCode TaoADMMComputeOuterSolution(Tao tao)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-  PetscReal ydiff_norm, yhatdiff_norm, Axdiff_norm, Bzdiff_norm, Axyhat, Bzy, a_sd, a_mg, a_k, b_sd, b_mg, b_k;
-  PetscBool hflag, gflag;
-  Vec       tempJR, tempJR2;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
+  Vec       x, z;
 
   PetscFunctionBegin;
-  tempJR  = am->workJacobianRight;
-  tempJR2 = am->workJacobianRight2;
-  hflag   = PETSC_FALSE;
-  gflag   = PETSC_FALSE;
-  a_k     = -1;
-  b_k     = -1;
-
-  PetscCall(VecWAXPY(tempJR, -1., am->Axold, am->Ax));
-  PetscCall(VecWAXPY(tempJR2, -1., am->yhatold, am->yhat));
-  PetscCall(VecNorm(tempJR, NORM_2, &Axdiff_norm));
-  PetscCall(VecNorm(tempJR2, NORM_2, &yhatdiff_norm));
-  PetscCall(VecDot(tempJR, tempJR2, &Axyhat));
-
-  PetscCall(VecWAXPY(tempJR, -1., am->Bz0, am->Bz));
-  PetscCall(VecWAXPY(tempJR2, -1., am->y, am->y0));
-  PetscCall(VecNorm(tempJR, NORM_2, &Bzdiff_norm));
-  PetscCall(VecNorm(tempJR2, NORM_2, &ydiff_norm));
-  PetscCall(VecDot(tempJR, tempJR2, &Bzy));
-
-  if (Axyhat > am->orthval * Axdiff_norm * yhatdiff_norm + am->mueps) {
-    hflag = PETSC_TRUE;
-    a_sd  = PetscSqr(yhatdiff_norm) / Axyhat; /* alphaSD */
-    a_mg  = Axyhat / PetscSqr(Axdiff_norm);   /* alphaMG */
-    a_k   = (a_mg / a_sd) > 0.5 ? a_mg : a_sd - 0.5 * a_mg;
+  switch(am->initialize_type) {
+  case ADMM_INITIALIZE_SCATTER:
+    PetscCall(TaoGetSolution(am->x_subsolver, &x));
+    PetscCall(TaoGetSolution(am->z_subsolver, &z));
+    PetscCall(VecScatterBegin(am->x_scatter, x, tao->solution, INSERT_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterEnd(am->x_scatter, x, tao->solution, INSERT_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterBegin(am->z_scatter, z, tao->solution, INSERT_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterEnd(am->z_scatter, z, tao->solution, INSERT_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterBegin(am->x_scatter, am->d_x, tao->gradient, INSERT_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterEnd(am->x_scatter, am->d_x, tao->gradient, INSERT_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterBegin(am->z_scatter, am->d_z, tao->gradient, INSERT_VALUES, SCATTER_REVERSE));
+    PetscCall(VecScatterEnd(am->z_scatter, am->d_z, tao->gradient, INSERT_VALUES, SCATTER_REVERSE));
+    break;
+  case ADMM_INITIALIZE_Z_AX:
+    PetscCall(TaoGetSolution(am->x_subsolver, &x));
+    PetscCall(VecCopy(x, tao->solution));
+    break;
+  case ADMM_INITIALIZE_X_BZ:
+    PetscCall(TaoGetSolution(am->z_subsolver, &z));
+    PetscCall(VecCopy(z, tao->solution));
+    break;
   }
-  if (Bzy > am->orthval * Bzdiff_norm * ydiff_norm + am->mueps) {
-    gflag = PETSC_TRUE;
-    b_sd  = PetscSqr(ydiff_norm) / Bzy;  /* betaSD */
-    b_mg  = Bzy / PetscSqr(Bzdiff_norm); /* betaMG */
-    b_k   = (b_mg / b_sd) > 0.5 ? b_mg : b_sd - 0.5 * b_mg;
-  }
-  am->muold = am->mu;
-  if (gflag && hflag) {
-    am->mu = PetscSqrtReal(a_k * b_k);
-  } else if (hflag) {
-    am->mu = a_k;
-  } else if (gflag) {
-    am->mu = b_k;
-  }
-  if (am->mu > am->muold) am->mu = am->muold;
-  if (am->mu < am->mumin) am->mu = am->mumin;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoADMMSetRegularizerType_ADMM(Tao tao, TaoADMMRegularizerType type)
+PETSC_INTERN PetscErrorCode TaoADMMVecDuplicateAndCopy(Vec x, Vec *y)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-
   PetscFunctionBegin;
-  am->regswitch = type;
+  if (!*y) PetscCall(VecDuplicate(x, y));
+  PetscCall(VecCopy(x, *y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoADMMGetRegularizerType_ADMM(Tao tao, TaoADMMRegularizerType *type)
+static PetscErrorCode TaoADMMUpdateXSubproblem(Tao tao)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
 
   PetscFunctionBegin;
-  *type = am->regswitch;
+  PetscCall((*am->updatexsubproblem)(tao));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoADMMUpdateZSubproblem(Tao tao)
+{
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
+
+  PetscFunctionBegin;
+  PetscCall((*am->updatezsubproblem)(tao));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoADMMSolveSubproblem(Tao tao, Tao subsolver, PetscReal *fx)
+{
+  PetscReal fc;
+
+  PetscFunctionBegin;
+  PetscCall(TaoSolve(subsolver)); // computes indivudal components of the objective and puts them in subsolver->objective_values;
+  PetscCall(TaoGetSolutionStatus(subsolver, NULL, &fc, NULL, NULL, NULL, NULL));
+  *fx = fc - subsolver->objective_values[subsolver->num_terms - 1]; // subtract the metric penalty from the objective value
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoADMMUpdateY(Tao tao, Vec r, Vec r_halfstep, Vec y)
+{
+  Tao_ADMM *am    = (Tao_ADMM *)tao->data;
+  PetscReal mu    = am->mu;
+  PetscReal gamma = am->relaxation_gamma;
+
+  PetscFunctionBegin;
+  PetscCall(VecAXPY(y, mu, r));
+  if (gamma != 1.0) PetscCall(VecAXPY(y, mu * (gamma - 1.0), r_halfstep));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoADMMPrimalResidual(Vec Ax, Vec Bz, Vec c, Vec r)
+{
+  PetscFunctionBegin;
+  PetscCall(VecCopy(Ax, r));
+  PetscCall(VecAXPY(r, 1.0, Bz));
+  if (c) PetscCall(VecAXPY(r, 1.0, c));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoADMMDualResidual(Tao tao)
+{
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
+
+  PetscFunctionBegin;
+  if (am->x_inexact && am->x_subsolver->gradient) {
+    PetscCall(VecCopy(am->x_subsolver->gradient, am->d_x));
+  } else {
+    PetscCall(VecZeroEntries(am->d_x));
+  }
+  if (am->z_inexact && am->z_subsolver->gradient) {
+    PetscCall(VecCopy(am->z_subsolver->gradient, am->d_z));
+  } else {
+    PetscCall(VecZeroEntries(am->d_z));
+  }
+  if (am->dualresidual) PetscCall((*am->dualresidual)(tao));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TaoADMMSetUpdateType_ADMM(Tao tao, TaoADMMUpdateType type)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
 
   PetscFunctionBegin;
-  am->update = type;
+  am->mu_update = type;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TaoADMMGetUpdateType_ADMM(Tao tao, TaoADMMUpdateType *type)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
 
   PetscFunctionBegin;
-  *type = am->update;
+  *type = am->mu_update;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* This routine updates Jacobians with new x,z vectors,
- * and then updates Ax and Bz vectors, then computes updated residual vector*/
-static PetscErrorCode ADMMUpdateConstraintResidualVector(Tao tao, Vec x, Vec z, Vec Ax, Vec Bz, Vec residual)
+static PetscErrorCode TaoConvergenceTest_ADMM(Tao tao, PETSC_UNUSED void *ctx)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-  Tao       mis, reg;
+  Tao_ADMM          *am = (Tao_ADMM *) tao->data;
+  PetscInt           niter = tao->niter, nfuncs = PetscMax(tao->nfuncs, tao->nfuncgrads);
+  PetscInt           max_funcs = tao->max_funcs;
+  PetscReal          gnorm = tao->residual;
+  PetscReal          f = tao->fc;
+  PetscReal          gatol = tao->gatol, grtol = tao->grtol;
+  PetscReal          catol = tao->catol, crtol = tao->crtol;
+  PetscReal          cnorm  = tao->cnorm;
+  TaoConvergedReason reason = tao->reason;
+  PetscInt           n, n_y;
+  PetscReal          primal_scale, primal_abs_tol, primal_rel_tol, primal_tol;
+  PetscReal          dual_scale, dual_abs_tol, dual_rel_tol, dual_tol;
 
   PetscFunctionBegin;
-  mis = am->subsolverX;
-  reg = am->subsolverZ;
-  PetscCall(TaoComputeJacobianEquality(mis, x, mis->jacobian_equality, mis->jacobian_equality_pre));
-  PetscCall(MatMult(mis->jacobian_equality, x, Ax));
-  PetscCall(TaoComputeJacobianEquality(reg, z, reg->jacobian_equality, reg->jacobian_equality_pre));
-  PetscCall(MatMult(reg->jacobian_equality, z, Bz));
+  if (reason != TAO_CONTINUE_ITERATING) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(VecGetSize(tao->solution, &n));
+  PetscCall(VecGetSize(am->y, &n_y));
 
-  PetscCall(VecWAXPY(residual, 1., Bz, Ax));
-  if (am->constraint != NULL) PetscCall(VecAXPY(residual, -1., am->constraint));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
+  primal_scale = PetscMax(am->c_norm, am->Ax_norm);
+  primal_scale = PetscMax(primal_scale, am->Bz_norm);
+  primal_abs_tol = PetscSqrtReal((PetscReal)n_y) * catol;
+  primal_rel_tol = primal_scale * crtol;
+  primal_tol   = PetscMax(primal_abs_tol, primal_rel_tol);
 
-/* Updates Augmented Lagrangians to given routines *
- * For subsolverX, routine needs to be ComputeObjectiveAndGraidnet
- * Separate Objective and Gradient routines are not supported.  */
-static PetscErrorCode SubObjGradUpdate(Tao tao, Vec x, PetscReal *f, Vec g, void *ptr)
-{
-  Tao       parent = (Tao)ptr;
-  TAO_ADMM *am     = (TAO_ADMM *)parent->data;
-  PetscReal temp, temp2;
-  Vec       tempJR;
+  dual_scale = PetscSqrtReal(am->Aty_norm * am->Aty_norm + am->Bty_norm * am->Bty_norm);
+  dual_abs_tol = PetscSqrtReal((PetscReal)n) * gatol;
+  dual_rel_tol = dual_scale * grtol;
+  dual_tol = PetscMax(dual_abs_tol, dual_rel_tol);
 
-  PetscFunctionBegin;
-  tempJR = am->workJacobianRight;
-  PetscCall(ADMMUpdateConstraintResidualVector(parent, x, am->subsolverZ->solution, am->Ax, am->Bz, am->residual));
-  PetscCall(TaoMappedTermObjectiveAndGradient(&am->mis_term, x, NULL, INSERT_VALUES, f, g));
+  if (PetscIsInfOrNanReal(f)) {
+    PetscCall(PetscInfo(tao, "Failed to converged, Lagrangian value is Inf or NaN\n"));
+    reason = TAO_DIVERGED_NAN;
+  } else if (gnorm <= dual_tol && cnorm <= primal_tol) {
 
-  am->last_misfit_val = *f;
-  /* Objective  Add + yT(Ax+Bz-c) + mu/2*||Ax+Bz-c||_2^2 */
-  PetscCall(VecTDot(am->residual, am->y, &temp));
-  PetscCall(VecTDot(am->residual, am->residual, &temp2));
-  *f += temp + (am->mu / 2) * temp2;
+    if (cnorm == 0.0) PetscCall(PetscInfo(tao, "Converged due to: primal residual ||Ax + Bz + c|| = 0\n"));
+    else if (cnorm <= primal_rel_tol) PetscCall(PetscInfo(tao, "Converged due to: primal residual ||Ax + Bz + c|| / max(||Ax||,||Bz||,||c||) = %g < %g\n", (double)(cnorm / primal_scale), (double)crtol));
+    else PetscCall(PetscInfo(tao, "Converged due to: primal residual ||Ax + Bz + c|| = %g < %g\n", (double)primal_scale, (double)primal_abs_tol));
 
-  /* Gradient. Add + mu*AT(Ax+Bz-c) + yTA*/
-  PetscCall(MatMultTranspose(tao->jacobian_equality, am->residual, tempJR));
-  PetscCall(VecAXPY(g, am->mu, tempJR));
-  PetscCall(MatMultTranspose(tao->jacobian_equality, am->y, tempJR));
-  PetscCall(VecAXPY(g, 1., tempJR));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
+    if (gnorm == 0.0) PetscCall(PetscInfo(tao, "                  dual residual ||(grad f(x) + A^T y, grad g(z) + A^T y)|| = 0\n"));
+    else if (gnorm <= dual_rel_tol) PetscCall(PetscInfo(tao, "                  dual residual ||(grad f(x) + A^T y, grad g(z) + A^T y)|| / ||(A^T y, B^T y)|| = %g < %g\n", (double)(gnorm / dual_scale), (double)grtol));
+    else PetscCall(PetscInfo(tao, "                  dual residual ||(grad f(x) + A^T y, grad g(z) + A^T y)|| = %g < %g\n", (double)dual_scale, (double)dual_abs_tol));
 
-/* Updates Augmented Lagrangians to given routines
- * For subsolverZ, routine needs to be ComputeObjectiveAndGraidnet
- * Separate Objective and Gradient routines are not supported.  */
-static PetscErrorCode RegObjGradUpdate(Tao tao, Vec z, PetscReal *f, Vec g, void *ptr)
-{
-  Tao       parent = (Tao)ptr;
-  TAO_ADMM *am     = (TAO_ADMM *)parent->data;
-  PetscReal temp, temp2;
-  Vec       tempJR;
-
-  PetscFunctionBegin;
-  tempJR = am->workJacobianRight;
-  PetscCall(ADMMUpdateConstraintResidualVector(parent, am->subsolverX->solution, z, am->Ax, am->Bz, am->residual));
-  PetscCall(TaoMappedTermObjectiveAndGradient(&am->reg_term, z, NULL, INSERT_VALUES, f, g));
-  am->last_reg_val = *f;
-  /* Objective  Add  + yT(Ax+Bz-c) + mu/2*||Ax+Bz-c||_2^2 */
-  PetscCall(VecTDot(am->residual, am->y, &temp));
-  PetscCall(VecTDot(am->residual, am->residual, &temp2));
-  *f += temp + (am->mu / 2) * temp2;
-
-  /* Gradient. Add + mu*BT(Ax+Bz-c) + yTB*/
-  PetscCall(MatMultTranspose(am->subsolverZ->jacobian_equality, am->residual, tempJR));
-  PetscCall(VecAXPY(g, am->mu, tempJR));
-  PetscCall(MatMultTranspose(am->subsolverZ->jacobian_equality, am->y, tempJR));
-  PetscCall(VecAXPY(g, 1., tempJR));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/* Computes epsilon padded L1 norm lambda*sum(sqrt(x^2+eps^2)-eps */
-static PetscErrorCode ADMML1EpsilonNorm(Tao tao, Vec x, PetscReal eps, PetscReal *norm)
-{
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-  PetscInt  N;
-
-  PetscFunctionBegin;
-  PetscCall(VecGetSize(am->workLeft, &N));
-  PetscCall(VecPointwiseMult(am->workLeft, x, x));
-  PetscCall(VecShift(am->workLeft, am->l1epsilon * am->l1epsilon));
-  PetscCall(VecSqrtAbs(am->workLeft));
-  PetscCall(VecSum(am->workLeft, norm));
-  *norm += N * am->l1epsilon;
-  *norm *= am->lambda;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode ADMMInternalHessianUpdate(Mat H, Mat Constraint, PetscBool Identity, void *ptr)
-{
-  TAO_ADMM *am = (TAO_ADMM *)ptr;
-
-  PetscFunctionBegin;
-  switch (am->update) {
-  case (TAO_ADMM_UPDATE_BASIC):
-    break;
-  case (TAO_ADMM_UPDATE_ADAPTIVE):
-  case (TAO_ADMM_UPDATE_ADAPTIVE_RELAXED):
-    if (H && (am->muold != am->mu)) {
-      if (!Identity) {
-        PetscCall(MatAXPY(H, am->mu - am->muold, Constraint, DIFFERENT_NONZERO_PATTERN));
-      } else {
-        PetscCall(MatShift(H, am->mu - am->muold));
-      }
-    }
-    break;
+    reason = gnorm <= dual_rel_tol ? TAO_CONVERGED_GRTOL : TAO_CONVERGED_GATOL;
+  } else if (max_funcs != PETSC_UNLIMITED && nfuncs > max_funcs) {
+    PetscCall(PetscInfo(tao, "Exceeded maximum number of function evaluations: %" PetscInt_FMT " > %" PetscInt_FMT "\n", nfuncs, max_funcs));
+    reason = TAO_DIVERGED_MAXFCN;
+  } else if (niter >= tao->max_it) {
+    PetscCall(PetscInfo(tao, "Exceeded maximum number of iterations: %" PetscInt_FMT " > %" PetscInt_FMT "\n", niter, tao->max_it));
+    reason = TAO_DIVERGED_MAXITS;
+  } else {
+    reason = TAO_CONTINUE_ITERATING;
   }
+  tao->reason = reason;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Updates Hessian - adds second derivative of augmented Lagrangian
- * H \gets H + \rho*ATA
-  Here, \rho does not change in TAO_ADMM_UPDATE_BASIC - thus no-op
-  For ADAPTAIVE,ADAPTIVE_RELAXED,
-  H \gets H + (\rho-\rhoold)*ATA
-  Here, we assume that A is linear constraint i.e., does not change.
-  Thus, for both ADAPTIVE, and RELAXED, ATA matrix is pre-set (except for A=I (null case)) see TaoSetUp_ADMM */
-static PetscErrorCode SubHessianUpdate(Tao tao, Vec x, Mat H, Mat Hpre, void *ptr)
-{
-  Tao       parent = (Tao)ptr;
-  TAO_ADMM *am     = (TAO_ADMM *)parent->data;
-
-  PetscFunctionBegin;
-  if (am->Hxchange) {
-    /* Case where Hessian gets updated with respect to x vector input. */
-    PetscCall(TaoMappedTermHessian(&am->mis_term, x, NULL, INSERT_VALUES, H, Hpre));
-    PetscCall(ADMMInternalHessianUpdate(am->subsolverX->hessian, am->ATA, am->xJI, am));
-  } else if (am->Hxbool) {
-    /* Hessian doesn't get updated. H(x) = c */
-    /* Update Lagrangian only once per TAO call */
-    PetscCall(ADMMInternalHessianUpdate(am->subsolverX->hessian, am->ATA, am->xJI, am));
-    am->Hxbool = PETSC_FALSE;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/* Same as SubHessianUpdate, except for B matrix instead of A matrix */
-static PetscErrorCode RegHessianUpdate(Tao tao, Vec z, Mat H, Mat Hpre, void *ptr)
-{
-  Tao       parent = (Tao)ptr;
-  TAO_ADMM *am     = (TAO_ADMM *)parent->data;
-
-  PetscFunctionBegin;
-  if (am->Hzchange) {
-    /* Case where Hessian gets updated with respect to x vector input. */
-    PetscCall(TaoMappedTermHessian(&am->reg_term, z, NULL, INSERT_VALUES, H, Hpre));
-    PetscCall(ADMMInternalHessianUpdate(am->subsolverZ->hessian, am->BTB, am->zJI, am));
-  } else if (am->Hzbool) {
-    /* Hessian doesn't get updated. H(x) = c */
-    /* Update Lagrangian only once per TAO call */
-    PetscCall(ADMMInternalHessianUpdate(am->subsolverZ->hessian, am->BTB, am->zJI, am));
-    am->Hzbool = PETSC_FALSE;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/* Shell Matrix routine for A matrix.
- * This gets used when user puts NULL for
- * TaoSetJacobianEqualityRoutine(tao, NULL,NULL, ...)
- * Essentially sets A=I*/
-static PetscErrorCode JacobianIdentity(Mat mat, Vec in, Vec out)
-{
-  PetscFunctionBegin;
-  PetscCall(VecCopy(in, out));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/* Shell Matrix routine for B matrix.
- * This gets used when user puts NULL for
- * TaoADMMSetRegularizerConstraintJacobian(tao, NULL,NULL, ...)
- * Sets B=-I */
-static PetscErrorCode JacobianIdentityB(Mat mat, Vec in, Vec out)
-{
-  PetscFunctionBegin;
-  PetscCall(VecCopy(in, out));
-  PetscCall(VecScale(out, -1.));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/* Solve f(x) + g(z) s.t. Ax + Bz = c */
+/* Solve f(x) + g(z) s.t. Ax + Bz + c = 0 */
 static PetscErrorCode TaoSolve_ADMM(Tao tao)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-  PetscInt  N;
-  PetscReal reg_func;
-  Vec       tempL;
-  PetscBool is_reg_shell;
+  Tao_ADMM   *am = (Tao_ADMM *)tao->data;
+  Vec         x, z;
+  PetscScalar y_dot_r;
+  PetscReal   fg, fx, gz, c_norm, c_norm2, d_norm, d_x_norm, d_z_norm, lagrangian;
 
   PetscFunctionBegin;
-  if (am->regswitch != TAO_ADMM_REGULARIZER_SOFT_THRESH) {
-    PetscCheck(am->subsolverX->ops->computejacobianequality, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoADMMSetMisfitConstraintJacobian() first");
-    PetscCheck(am->subsolverZ->ops->computejacobianequality, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoADMMSetRegularizerConstraintJacobian() first");
-    if (am->constraint != NULL) PetscCall(VecNorm(am->constraint, NORM_2, &am->const_norm));
-  }
-  tempL = am->workLeft;
-  PetscCall(VecGetSize(tempL, &N));
+  PetscCall(TaoADMMInitializeSubproblemSolutions(tao));
+  PetscCall(TaoGetSolution(am->x_subsolver, &x));
+  PetscCall(TaoGetSolution(am->z_subsolver, &z));
+  if (!tao->recycle) PetscCall(VecZeroEntries(am->y));
+  PetscCall(MatMult(am->A, x, am->Ax));
+  PetscCall(MatMult(am->B, z, am->Bz));
+  PetscCall(TaoComputeObjective(tao, tao->solution, &fg));
+  PetscCall(TaoADMMPrimalResidual(am->Ax, am->Bz, am->c, am->r));
+  PetscCall(VecDotNorm2(am->y, am->r, &y_dot_r, &c_norm2));
+  c_norm     = PetscSqrtReal(c_norm2);
+  lagrangian = fg + PetscRealPart(y_dot_r);
+  PetscCall(TaoMonitor(tao, tao->niter, lagrangian, PETSC_DEFAULT, c_norm, 1.0 / am->mu));
 
-  if (!am->zJI) {
-    /* Currently, B is assumed to be a linear system, i.e., not getting updated*/
-    PetscCall(MatTransposeMatMult(am->JB, am->JB, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &am->BTB));
-  }
-  if (!am->xJI) {
-    /* Currently, A is assumed to be a linear system, i.e., not getting updated*/
-    PetscCall(MatTransposeMatMult(am->subsolverX->jacobian_equality, am->subsolverX->jacobian_equality, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &am->ATA));
-  }
-
-  is_reg_shell = PETSC_FALSE;
-
-  PetscCall(PetscObjectTypeCompare((PetscObject)am->subsolverZ, TAOSHELL, &is_reg_shell));
-
-  switch (am->update) {
-  case TAO_ADMM_UPDATE_BASIC:
-    if (am->subsolverX->hessian) {
-      /* In basic case, Hessian does not get updated w.r.t. to spectral penalty
-       * Here, when A is set, i.e., am->xJI, add mu*ATA to Hessian*/
-      if (!am->xJI) {
-        PetscCall(MatAXPY(am->subsolverX->hessian, am->mu, am->ATA, DIFFERENT_NONZERO_PATTERN));
-      } else {
-        PetscCall(MatShift(am->subsolverX->hessian, am->mu));
-      }
-    }
-    if (am->subsolverZ->hessian && am->regswitch == TAO_ADMM_REGULARIZER_USER) {
-      if (am->regswitch == TAO_ADMM_REGULARIZER_USER && !am->zJI) {
-        PetscCall(MatAXPY(am->subsolverZ->hessian, am->mu, am->BTB, DIFFERENT_NONZERO_PATTERN));
-      } else {
-        PetscCall(MatShift(am->subsolverZ->hessian, am->mu));
-      }
-    }
-    break;
-  case TAO_ADMM_UPDATE_ADAPTIVE:
-  case TAO_ADMM_UPDATE_ADAPTIVE_RELAXED:
-    break;
-  }
-
-  PetscCall(PetscCitationsRegister(citation, &cited));
   tao->reason = TAO_CONTINUE_ITERATING;
-
   while (tao->reason == TAO_CONTINUE_ITERATING) {
     PetscTryTypeMethod(tao, update, tao->niter, tao->user_update);
-    PetscCall(VecCopy(am->Bz, am->Bzold));
-
-    /* x update */
-    PetscCall(TaoSolve(am->subsolverX));
-    PetscCall(TaoComputeJacobianEquality(am->subsolverX, am->subsolverX->solution, am->subsolverX->jacobian_equality, am->subsolverX->jacobian_equality_pre));
-    PetscCall(MatMult(am->subsolverX->jacobian_equality, am->subsolverX->solution, am->Ax));
-
-    am->Hxbool = PETSC_TRUE;
-
-    /* z update */
-    switch (am->regswitch) {
-    case TAO_ADMM_REGULARIZER_USER:
-      PetscCall(TaoSolve(am->subsolverZ));
-      break;
-    case TAO_ADMM_REGULARIZER_SOFT_THRESH:
-      /* L1 assumes A,B jacobians are identity nxn matrix */
-      PetscCall(VecWAXPY(am->workJacobianRight, 1 / am->mu, am->y, am->Ax));
-      PetscCall(TaoSoftThreshold(am->workJacobianRight, -am->lambda / am->mu, am->lambda / am->mu, am->subsolverZ->solution));
-      break;
-    }
-    am->Hzbool = PETSC_TRUE;
-    /* Returns Ax + Bz - c with updated Ax,Bz vectors */
-    PetscCall(ADMMUpdateConstraintResidualVector(tao, am->subsolverX->solution, am->subsolverZ->solution, am->Ax, am->Bz, am->residual));
-    /* Dual variable, y += y + mu*(Ax+Bz-c) */
-    PetscCall(VecWAXPY(am->y, am->mu, am->residual, am->yold));
-
-    /* stopping tolerance update */
-    PetscCall(TaoADMMToleranceUpdate(tao));
-
-    /* Updating Spectral Penalty */
-    switch (am->update) {
-    case TAO_ADMM_UPDATE_BASIC:
-      am->muold = am->mu;
-      break;
-    case TAO_ADMM_UPDATE_ADAPTIVE:
-    case TAO_ADMM_UPDATE_ADAPTIVE_RELAXED:
-      if (tao->niter == 0) {
-        PetscCall(VecCopy(am->y, am->y0));
-        PetscCall(VecWAXPY(am->residual, 1., am->Ax, am->Bzold));
-        if (am->constraint) PetscCall(VecAXPY(am->residual, -1., am->constraint));
-        PetscCall(VecWAXPY(am->yhatold, -am->mu, am->residual, am->yold));
-        PetscCall(VecCopy(am->Ax, am->Axold));
-        PetscCall(VecCopy(am->Bz, am->Bz0));
-        am->muold = am->mu;
-      } else if (tao->niter % am->T == 1) {
-        /* we have compute Bzold in a previous iteration, and we computed Ax above */
-        PetscCall(VecWAXPY(am->residual, 1., am->Ax, am->Bzold));
-        if (am->constraint) PetscCall(VecAXPY(am->residual, -1., am->constraint));
-        PetscCall(VecWAXPY(am->yhat, -am->mu, am->residual, am->yold));
-        PetscCall(AdaptiveADMMPenaltyUpdate(tao));
-        PetscCall(VecCopy(am->Ax, am->Axold));
-        PetscCall(VecCopy(am->Bz, am->Bz0));
-        PetscCall(VecCopy(am->yhat, am->yhatold));
-        PetscCall(VecCopy(am->y, am->y0));
-      } else {
-        am->muold = am->mu;
-      }
-      break;
-    default:
-      break;
-    }
+    PetscCall(TaoADMMUpdateXSubproblem(tao));
+    PetscCall(TaoADMMSolveSubproblem(tao, am->x_subsolver, &fx));
+    PetscCall(MatMult(am->A, x, am->Ax));
+    PetscCall(TaoADMMPrimalResidual(am->Ax, am->Bz, am->c, am->r_halfstep));
+    PetscCall(TaoADMMUpdateZSubproblem(tao));
+    PetscCall(TaoADMMSolveSubproblem(tao, am->z_subsolver, &gz));
+    PetscCall(MatMult(am->B, z, am->Bz));
+    PetscCall(TaoADMMPrimalResidual(am->Ax, am->Bz, am->c, am->r));
+    PetscCall(TaoADMMUpdateY(tao, am->r, am->r_halfstep, am->y));
+    PetscCall(TaoADMMDualResidual(tao));
+    PetscCall(VecNorm(am->d_x, NORM_2, &d_x_norm));
+    PetscCall(VecNorm(am->d_z, NORM_2, &d_z_norm));
+    d_norm = PetscSqrtReal(d_x_norm * d_x_norm + d_z_norm * d_z_norm);
+    PetscCall(VecDotNorm2(am->y, am->r, &y_dot_r, &c_norm2));
+    c_norm     = PetscSqrtReal(c_norm2);
+    lagrangian = fx + gz + PetscRealPart(y_dot_r);
     tao->niter++;
-
-    /* Calculate original function values. misfit part was done in TaoADMMToleranceUpdate*/
-    switch (am->regswitch) {
-    case TAO_ADMM_REGULARIZER_USER:
-      if (is_reg_shell) {
-        PetscCall(ADMML1EpsilonNorm(tao, am->subsolverZ->solution, am->l1epsilon, &reg_func));
-      } else {
-        PetscCall(TaoMappedTermObjectiveAndGradient(&am->reg_term, am->subsolverX->solution, NULL, INSERT_VALUES, &reg_func, tempL));
-      }
-      break;
-    case TAO_ADMM_REGULARIZER_SOFT_THRESH:
-      PetscCall(ADMML1EpsilonNorm(tao, am->subsolverZ->solution, am->l1epsilon, &reg_func));
-      break;
-    }
-    PetscCall(VecCopy(am->y, am->yold));
-    PetscCall(ADMMUpdateConstraintResidualVector(tao, am->subsolverX->solution, am->subsolverZ->solution, am->Ax, am->Bz, am->residual));
-    PetscCall(VecNorm(am->residual, NORM_2, &am->resnorm));
-    PetscCall(TaoLogConvergenceHistory(tao, am->last_misfit_val + reg_func, am->dualres, am->resnorm, tao->ksp_its));
-
-    PetscCall(TaoMonitor(tao, tao->niter, am->last_misfit_val + reg_func, am->dualres, am->resnorm, 1.0));
+    PetscCall(TaoMonitor(tao, tao->niter, lagrangian, d_norm, c_norm, 1.0 / am->mu));
     PetscUseTypeMethod(tao, convergencetest, tao->cnvP);
   }
-  /* Update vectors */
-  PetscCall(VecCopy(am->subsolverX->solution, tao->solution));
-  PetscCall(VecCopy(am->subsolverX->gradient, tao->gradient));
-  PetscCall(PetscObjectCompose((PetscObject)am->subsolverX, "TaoGetADMMParentTao_ADMM", NULL));
-  PetscCall(PetscObjectCompose((PetscObject)am->subsolverZ, "TaoGetADMMParentTao_ADMM", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMSetRegularizerType_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMGetRegularizerType_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMSetUpdateType_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMGetUpdateType_C", NULL));
+  PetscCall(TaoADMMComputeOuterSolution(tao));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TaoSetFromOptions_ADMM(Tao tao, PetscOptionItems PetscOptionsObject)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
 
   PetscFunctionBegin;
-  PetscOptionsHeadBegin(PetscOptionsObject, "ADMM problem that solves f(x) in a form of f(x) + g(z) subject to x - z = 0. Norm 1 and 2 are supported. Different subsolver routines can be selected. ");
-  PetscCall(PetscOptionsReal("-tao_admm_regularizer_coefficient", "regularizer constant", "", am->lambda, &am->lambda, NULL));
-  PetscCall(PetscOptionsReal("-tao_admm_spectral_penalty", "Constant for Augmented Lagrangian term.", "", am->mu, &am->mu, NULL));
-  PetscCall(PetscOptionsReal("-tao_admm_relaxation_parameter", "x relaxation parameter for Z update.", "", am->gamma, &am->gamma, NULL));
-  PetscCall(PetscOptionsReal("-tao_admm_tolerance_update_factor", "ADMM dynamic tolerance update factor.", "", am->tol, &am->tol, NULL));
-  PetscCall(PetscOptionsReal("-tao_admm_spectral_penalty_update_factor", "ADMM spectral penalty update curvature safeguard value.", "", am->orthval, &am->orthval, NULL));
-  PetscCall(PetscOptionsReal("-tao_admm_minimum_spectral_penalty", "Set ADMM minimum spectral penalty.", "", am->mumin, &am->mumin, NULL));
-  PetscCall(PetscOptionsEnum("-tao_admm_dual_update", "Lagrangian dual update policy", "TaoADMMUpdateType", TaoADMMUpdateTypes, (PetscEnum)am->update, (PetscEnum *)&am->update, NULL));
-  PetscCall(PetscOptionsEnum("-tao_admm_regularizer_type", "ADMM regularizer update rule", "TaoADMMRegularizerType", TaoADMMRegularizerTypes, (PetscEnum)am->regswitch, (PetscEnum *)&am->regswitch, NULL));
+  PetscOptionsHeadBegin(PetscOptionsObject, "ADMM solves f(x) + g(z) subject to Ax + Bz + c = 0");
+  PetscCall(PetscOptionsReal("-tao_admm_spectral_penalty", "Constant for Augmented Lagrangian term", "", am->mu, &am->mu, NULL));
+  PetscCall(PetscOptionsReal("-tao_admm_relaxation_parameter", "relaxation parameter for z update", "", am->relaxation_gamma, &am->relaxation_gamma, NULL));
+  PetscCall(PetscOptionsEnum("-tao_admm_update_type", "Lagrangian spectral penalty update policy", "TaoADMMUpdateType", TaoADMMUpdateTypes, (PetscEnum)am->mu_update, (PetscEnum *)&am->mu_update, NULL));
   PetscOptionsHeadEnd();
-  PetscCall(TaoSetFromOptions(am->subsolverX));
-  if (am->regswitch != TAO_ADMM_REGULARIZER_SOFT_THRESH) PetscCall(TaoSetFromOptions(am->subsolverZ));
+  am->setfromoptionscalled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TaoView_ADMM(Tao tao, PetscViewer viewer)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
 
   PetscFunctionBegin;
   PetscCall(PetscViewerASCIIPushTab(viewer));
-  PetscCall(TaoView(am->subsolverX, viewer));
-  PetscCall(TaoView(am->subsolverZ, viewer));
+  PetscCall(TaoView(am->x_subsolver, viewer));
+  PetscCall(TaoView(am->z_subsolver, viewer));
   PetscCall(PetscViewerASCIIPopTab(viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoSetUpADMMComputeIndicesFromComplement(Tao tao, PetscInt n_terms, PetscInt f_num_terms, PetscInt g_num_terms, const PetscInt *g_terms, PetscInt **f_terms)
+{
+  PetscInt term;
+
+  PetscFunctionBegin;
+  PetscCall(PetscMalloc1(f_num_terms, f_terms));
+  term = 0;
+  for (PetscInt i = 0; i < f_num_terms; i++) {
+    for (PetscInt t = term; t < n_terms; t++) {
+      PetscBool t_in_g = PETSC_FALSE;
+      for (PetscInt j = 0; j < g_num_terms; j++) {
+        if (g_terms[j] == t) {
+          t_in_g = PETSC_TRUE;
+          break;
+        }
+      }
+      if (!t_in_g) {
+        term = t;
+        break;
+      } else {
+        term++;
+      }
+    }
+    PetscAssert(term < n_terms, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "Couldn't find index in the complement of g_terms");
+    (*f_terms)[i] = term;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermSumGetSubsetMap(TaoTerm objective, PetscBool3 f_mapped, PetscInt f_num_terms, const PetscInt *f_terms, Mat *f_map)
+{
+  PetscFunctionBegin;
+  if (!f_num_terms) {
+    *f_map = NULL;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(TaoTermSumGetSubterm(objective, f_terms[0], NULL, NULL, NULL, f_map));
+  for (PetscInt i = 1; i < f_num_terms; i++) {
+    Mat map_i;
+
+    PetscCall(TaoTermSumGetSubterm(objective, f_terms[i], NULL, NULL, NULL, &map_i));
+    if (map_i != *f_map) {
+      PetscCheck(f_mapped == PETSC_BOOL3_UNKNOWN, PetscObjectComm((PetscObject)objective), PETSC_ERR_ARG_INCOMP, "subterm %" PetscInt_FMT " = %" PetscInt_FMT " does not have the same map as subterm 0 = %" PetscInt_FMT ", cannot separate the map", i, f_terms[i], f_terms[0]);
+      *f_map = NULL;
+      break;
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermSumCreateSubset_ADMM(TaoTerm objective, Mat f_map, const char tao_prefix[], const char sub_prefix[], PetscInt f_num_terms, const PetscInt f_terms[], TaoTerm *f)
+{
+  PetscFunctionBegin;
+  if (f_map == NULL) {
+    PetscCall(TaoTermDuplicate(objective, TAOTERM_DUPLICATE_TYPE, f));
+  } else {
+    Vec f_map_output;
+
+    PetscCall(MatCreateVecs(f_map, NULL, &f_map_output));
+    PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)objective), f));
+    PetscCall(TaoTermSetSolutionTemplate(*f, f_map_output));
+    PetscCall(VecDestroy(&f_map_output));
+    PetscCall(TaoTermSetType(*f, TAOTERMSUM));
+  }
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*f, tao_prefix));
+  PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)*f, sub_prefix));
+  PetscCall(TaoTermSumSetNumSubterms(*f, f_num_terms));
+  for (PetscInt i = 0; i < f_num_terms; i++) {
+    PetscReal   scale;
+    TaoTerm     term;
+    Mat         map;
+    TaoTermMask mask;
+    Mat         uH, uHpre, mH, mHpre;
+
+    PetscCall(TaoTermSumGetSubterm(objective, f_terms[i], NULL, &scale, &term, &map));
+    PetscCall(TaoTermSumSetSubterm(*f, i, NULL, scale, term, (f_map == NULL) ? map : NULL)); // only use the map if it is not being separated out as f_map
+    PetscCall(TaoTermSumGetSubtermMask(objective, f_terms[i], &mask));
+    PetscCall(TaoTermSumSetSubtermMask(*f, i, mask));
+    PetscCall(TaoTermSumGetSubtermHessianMatrices(objective, f_terms[i], &uH, &uHpre, &mH, &mHpre));
+    if (f_map == NULL) {
+      PetscCall(TaoTermSumSetSubtermHessianMatrices(*f, i, uH, uHpre, mH, mHpre));
+    } else {
+      // because the input space has changed, the mapped Hessians in objective are the unmapped Hessians in am->f
+      PetscCall(TaoTermSumSetSubtermHessianMatrices(*f, i, mH, mHpre, NULL, NULL));
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoSetUpADMMCreateSubParams(Vec params, PetscInt f_num_terms, const PetscInt f_terms[], TaoTerm f, Vec *f_params)
+{
+  Vec       *sub_params;
+  Vec       *f_sub_params;
+  PetscBool *is_dummy, any_f = PETSC_FALSE;
+
+  PetscFunctionBegin;
+  PetscCall(TaoTermSumVecNestGetSubVecsRead(params, NULL, &sub_params, &is_dummy));
+
+  PetscCall(PetscCalloc1(f_num_terms, &f_sub_params));
+  for (PetscInt i = 0; i < f_num_terms; i++) f_sub_params[i] = TaoTermSumGetSubVec(params, sub_params, is_dummy, f_terms[i]);
+  for (PetscInt i = 0; i < f_num_terms; i++) any_f = f_sub_params[i] ? PETSC_TRUE : any_f;
+  if (any_f) {
+    PetscCall(TaoTermSumParametersPack(f, f_sub_params, f_params));
+    PetscCall(TaoTermSetParametersTemplate(f, *f_params));
+  }
+  PetscCall(PetscFree(f_sub_params));
+  PetscCall(TaoTermSumVecNestRestoreSubVecsRead(params, NULL, &sub_params, &is_dummy));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatCreateSubMatrixColumnScatter(Mat J, Mat matscatter, Mat *J_sub)
+{
+  PetscSF            sf;
+  PetscInt           m, rstart, n_roots, n_leaves;
+  const PetscInt    *leaves;
+  const PetscSFNode *remotes;
+  PetscInt          *sorted_perm;
+  PetscLayout        col_map;
+  const PetscInt    *ranges;
+  PetscInt          *is_indices;
+  IS                 col_is;
+  IS                 row_is;
+
+  PetscFunctionBegin;
+  PetscCall(MatScatterGetVecScatter(matscatter, &sf));
+  PetscCall(PetscSFGetGraph(sf, &n_roots, &n_leaves, &leaves, &remotes));
+
+  PetscCall(PetscMalloc1(n_leaves, &sorted_perm));
+  PetscCall(PetscMalloc1(n_leaves, &is_indices));
+  if (leaves == NULL) {
+    for (PetscInt i = 0; i < n_leaves; i++) sorted_perm[i] = i;
+  } else {
+    PetscCall(PetscSortIntWithPermutation(n_leaves, leaves, sorted_perm));
+  }
+  PetscCall(MatGetLayouts(J, NULL, &col_map));
+  PetscCall(PetscLayoutGetRanges(col_map, &ranges));
+  for (PetscInt i = 0; i < n_leaves; i++) {
+    PetscSFNode remote = remotes[sorted_perm[i]];
+
+    is_indices[i] = ranges[remote.rank] + remote.index;
+  }
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)J), n_leaves, is_indices, PETSC_OWN_POINTER, &col_is));
+  PetscCall(MatGetLocalSize(J, &m, NULL));
+  PetscCall(MatGetOwnershipRange(J, &rstart, NULL));
+  PetscCall(ISCreateStride(PetscObjectComm((PetscObject)J), m, rstart, 1, &row_is));
+  PetscCall(MatCreateSubMatrix(J, row_is, col_is, MAT_INITIAL_MATRIX, J_sub));
+  PetscCall(ISDestroy(&row_is));
+  PetscCall(ISDestroy(&col_is));
+  PetscCall(PetscFree(sorted_perm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TaoSetUp_ADMM(Tao tao)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-  PetscInt  n, N, M;
+  Tao_ADMM   *am = (Tao_ADMM *)tao->data;
+  VecType     vec_type;
+  PetscLayout layout;
+  PetscInt    n_terms;
+  PetscBool   objective_is_sum;
+  TaoTerm     objective = tao->objective_term.term;
+  Vec         params    = tao->objective_parameters;
+  Mat         f_map     = NULL;
+  Mat         g_map     = NULL;
+  Vec         f_params  = NULL;
+  Vec         g_params  = NULL;
+  MPI_Comm    comm;
+  const char *tao_prefix;
 
   PetscFunctionBegin;
-  PetscCall(VecGetLocalSize(tao->solution, &n));
-  PetscCall(VecGetSize(tao->solution, &N));
-  /* If Jacobian is given as NULL, it means Jacobian is identity matrix with size of solution vector */
-  if (!am->JB) {
-    am->zJI = PETSC_TRUE;
-    PetscCall(MatCreateShell(PetscObjectComm((PetscObject)tao), n, n, PETSC_DETERMINE, PETSC_DETERMINE, NULL, &am->JB));
-    PetscCall(MatShellSetOperation(am->JB, MATOP_MULT, (void (*)(void))JacobianIdentityB));
-    PetscCall(MatShellSetOperation(am->JB, MATOP_MULT_TRANSPOSE, (void (*)(void))JacobianIdentityB));
-    am->JBpre = am->JB;
+  PetscCall(PetscObjectGetComm((PetscObject)tao, &comm));
+  PetscCall(PetscObjectTypeCompare((PetscObject)objective, TAOTERMSUM, &objective_is_sum));
+  PetscCheck(objective_is_sum, comm, PETSC_ERR_SUP, "Objective function must be TAOTERMSUM to use TAOADMM");
+
+  // Get the sizes of the groups
+  PetscCall(TaoTermSumGetNumSubterms(objective, &n_terms));
+  if (am->f_num_terms == PETSC_DECIDE && am->g_num_terms == PETSC_DECIDE) am->f_num_terms = n_terms / 2;
+  if (am->f_num_terms == PETSC_DECIDE) am->f_num_terms = n_terms - am->g_num_terms;
+  if (am->g_num_terms == PETSC_DECIDE) am->g_num_terms = n_terms - am->f_num_terms;
+  PetscCheck(am->f_num_terms >= 0 && am->g_num_terms >= 0 && am->f_num_terms + am->g_num_terms == n_terms, comm, PETSC_ERR_ARG_SIZ, "Term group sizes %" PetscInt_FMT " + %" PetscInt_FMT " are not a valid split of % " PetscInt_FMT " objective terms", am->f_num_terms, am->g_num_terms, n_terms);
+
+  // Get the indices in the groups
+  if (!am->f_terms && !am->g_terms) {
+    PetscInt term;
+
+    PetscCall(PetscMalloc1(am->f_num_terms, &am->f_terms));
+    PetscCall(PetscMalloc1(am->g_num_terms, &am->g_terms));
+
+    term = 0;
+    for (PetscInt i = 0; i < am->f_num_terms; i++) am->f_terms[i] = term++;
+    for (PetscInt i = 0; i < am->g_num_terms; i++) am->g_terms[i] = term++;
+  } else if (!am->f_terms) {
+    PetscCall(TaoSetUpADMMComputeIndicesFromComplement(tao, n_terms, am->f_num_terms, am->g_num_terms, am->g_terms, &am->f_terms));
+  } else if (!am->g_terms) {
+    PetscCall(TaoSetUpADMMComputeIndicesFromComplement(tao, n_terms, am->g_num_terms, am->f_num_terms, am->f_terms, &am->g_terms));
   }
-  if (!am->JA) {
-    am->xJI = PETSC_TRUE;
-    PetscCall(MatCreateShell(PetscObjectComm((PetscObject)tao), n, n, PETSC_DETERMINE, PETSC_DETERMINE, NULL, &am->JA));
-    PetscCall(MatShellSetOperation(am->JA, MATOP_MULT, (void (*)(void))JacobianIdentity));
-    PetscCall(MatShellSetOperation(am->JA, MATOP_MULT_TRANSPOSE, (void (*)(void))JacobianIdentity));
-    am->JApre = am->JA;
-  }
-  PetscCall(MatCreateVecs(am->JA, NULL, &am->Ax));
-  if (!tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
-  PetscCall(TaoSetSolution(am->subsolverX, tao->solution));
-  if (!am->z) {
-    PetscCall(VecDuplicate(tao->solution, &am->z));
-    PetscCall(VecSet(am->z, 0.0));
-  }
-  PetscCall(TaoSetSolution(am->subsolverZ, am->z));
-  if (!am->workLeft) PetscCall(VecDuplicate(tao->solution, &am->workLeft));
-  if (!am->Axold) PetscCall(VecDuplicate(am->Ax, &am->Axold));
-  if (!am->workJacobianRight) PetscCall(VecDuplicate(am->Ax, &am->workJacobianRight));
-  if (!am->workJacobianRight2) PetscCall(VecDuplicate(am->Ax, &am->workJacobianRight2));
-  if (!am->Bz) PetscCall(VecDuplicate(am->Ax, &am->Bz));
-  if (!am->Bzold) PetscCall(VecDuplicate(am->Ax, &am->Bzold));
-  if (!am->Bz0) PetscCall(VecDuplicate(am->Ax, &am->Bz0));
-  if (!am->y) {
-    PetscCall(VecDuplicate(am->Ax, &am->y));
-    PetscCall(VecSet(am->y, 0.0));
-  }
-  if (!am->yold) {
-    PetscCall(VecDuplicate(am->Ax, &am->yold));
-    PetscCall(VecSet(am->yold, 0.0));
-  }
-  if (!am->y0) {
-    PetscCall(VecDuplicate(am->Ax, &am->y0));
-    PetscCall(VecSet(am->y0, 0.0));
-  }
-  if (!am->yhat) {
-    PetscCall(VecDuplicate(am->Ax, &am->yhat));
-    PetscCall(VecSet(am->yhat, 0.0));
-  }
-  if (!am->yhatold) {
-    PetscCall(VecDuplicate(am->Ax, &am->yhatold));
-    PetscCall(VecSet(am->yhatold, 0.0));
-  }
-  if (!am->residual) {
-    PetscCall(VecDuplicate(am->Ax, &am->residual));
-    PetscCall(VecSet(am->residual, 0.0));
-  }
-  if (!am->constraint) {
-    am->constraint = NULL;
+  for (PetscInt i = 0; i < am->f_num_terms; i++) PetscCheck(am->f_terms[i] >= 0 && am->f_terms[i] < n_terms, comm, PETSC_ERR_ARG_OUTOFRANGE, "f term %" PetscInt_FMT " = %" PetscInt_FMT " is not in [0, %" PetscInt_FMT")", i, am->f_terms[i], n_terms);
+  for (PetscInt i = 0; i < am->g_num_terms; i++) PetscCheck(am->g_terms[i] >= 0 && am->g_terms[i] < n_terms, comm, PETSC_ERR_ARG_OUTOFRANGE, "g term %" PetscInt_FMT " = %" PetscInt_FMT " is not in [0, %" PetscInt_FMT")", i, am->g_terms[i], n_terms);
+
+  PetscCall(VecGetLayout(tao->solution, &layout));
+  PetscCall(VecGetType(tao->solution, &vec_type));
+
+  //// determine the initialization_type and the constraints
+  // first find the maps for the f and g terms, and then decide whether to use them or not
+  if (am->f_mapped != PETSC_BOOL3_FALSE && am->f_num_terms > 0) PetscCall(TaoTermSumGetSubsetMap(objective, am->f_mapped, am->f_num_terms, am->f_terms, &f_map));
+  if (am->g_mapped != PETSC_BOOL3_FALSE && am->g_num_terms > 0) PetscCall(TaoTermSumGetSubsetMap(objective, am->g_mapped, am->g_num_terms, am->g_terms, &g_map));
+
+  if (tao->eq_constrained) {
+    // if the user provides equality constraints, it can only mean that the initalization type is ADMM_INITIALIZE_SCATTER
+    PetscBool          f_map_is_scatter = PETSC_FALSE;
+    PetscBool          g_map_is_scatter = PETSC_FALSE;
+    Vec                zero_solution;
+    PetscReal          c_norm;
+
+    if (f_map) PetscCall(PetscObjectTypeCompare((PetscObject)f_map, MATSCATTER, &f_map_is_scatter));
+    if (g_map) PetscCall(PetscObjectTypeCompare((PetscObject)g_map, MATSCATTER, &g_map_is_scatter));
+    PetscCheck(f_map_is_scatter && g_map_is_scatter, comm, PETSC_ERR_ARG_INCOMP, "ADMM can only be used with equality constraints if the maps are scatters");
+    am->initialize_type = ADMM_INITIALIZE_SCATTER;
+
+    PetscCall(VecDuplicate(tao->constraints_equality, &am->c));
+    PetscCall(VecDuplicate(tao->solution, &zero_solution));
+    PetscCall(VecZeroEntries(zero_solution));
+    PetscCall(TaoComputeEqualityConstraints(tao, zero_solution, am->c));
+    PetscCall(VecNorm(am->c, NORM_2, &c_norm));
+    if (c_norm == 0.0) PetscCall(VecDestroy(&am->c));
+    PetscCall(TaoComputeJacobianEquality(tao, zero_solution, tao->jacobian_equality, tao->jacobian_equality_pre));
+    PetscCall(VecDestroy(&zero_solution));
+    PetscCall(MatCreateSubMatrixColumnScatter(tao->jacobian_equality, f_map, &am->A));
+    PetscCall(MatCreateSubMatrixColumnScatter(tao->jacobian_equality, g_map, &am->B));
+    PetscCall(PetscObjectReference((PetscObject)tao->constraints_equality));
+    am->r = tao->constraints_equality;
   } else {
-    PetscCall(VecGetSize(am->constraint, &M));
-    PetscCheck(M == N, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Solution vector and constraint vector must be of same size!");
+    am->c_norm = 0.0;
+    if (f_map && g_map) {
+      PetscCheck(!(am->f_mapped == PETSC_BOOL3_TRUE && am->g_mapped == PETSC_BOOL3_TRUE), comm, PETSC_ERR_ARG_INCOMP, "ADMM algorithm cannot separate the map from both terms");
+      if (am->f_mapped == PETSC_BOOL3_TRUE) g_map = NULL; // if the user specifically requested f_map to be separated, do not separate g_map
+      else if (am->g_mapped == PETSC_BOOL3_TRUE) f_map = NULL; // and vice versa
+      else {
+        // an f_map and a g_map have been found, but the user has provided no guidance about whether to separate either, default to using neither
+        PetscCall(PetscInfo(tao, "Maps found for both ADMM terms, using neither: call TaoADMMSetTermGroups() to specify whether either map should be used"));
+        f_map = NULL;
+        g_map = NULL;
+      }
+    }
+    if (!f_map && g_map) {
+      // the user specified f(u) + g(A(u)), so they want Ax = z
+      // A = g_map, B = -I
+      am->initialize_type = ADMM_INITIALIZE_Z_AX;
+      PetscCall(PetscObjectReference((PetscObject)g_map));
+      PetscCall(MatDestroy(&am->A));
+      am->A = g_map;
+      PetscCall(MatDestroy(&am->B));
+      PetscCall(MatCreate(comm, &am->B));
+      PetscCall(MatSetLayouts(am->B, layout, layout));
+      PetscCall(MatSetVecType(am->B, vec_type));
+      PetscCall(MatSetType(am->B, MATCONSTANTDIAGONAL));
+      PetscCall(MatZeroEntries(am->B));
+      PetscCall(MatShift(am->B, -1.0));
+    } else if (f_map && !g_map) {
+      // the user specified f(B(u)) + g(u), so they want x = Bz
+      // A = -I, B = f_map
+      am->initialize_type = ADMM_INITIALIZE_X_BZ;
+      PetscCall(PetscObjectReference((PetscObject)f_map));
+      PetscCall(MatDestroy(&am->B));
+      am->B = f_map;
+      PetscCall(MatDestroy(&am->A));
+      PetscCall(MatCreate(comm, &am->A));
+      PetscCall(MatSetLayouts(am->A, layout, layout));
+      PetscCall(MatSetVecType(am->A, vec_type));
+      PetscCall(MatSetType(am->A, MATCONSTANTDIAGONAL));
+      PetscCall(MatZeroEntries(am->A));
+      PetscCall(MatShift(am->A, -1.0));
+    } else {
+      PetscAssert(f_map == NULL && g_map == NULL, comm, PETSC_ERR_PLIB, "Invalid map state");
+      // the user specified f(x) + g(x), so they want x = z
+      // A = -I, B = I
+      am->initialize_type = ADMM_INITIALIZE_X_BZ;
+      PetscCall(MatDestroy(&am->A));
+      PetscCall(MatCreate(comm, &am->A));
+      PetscCall(MatSetLayouts(am->A, layout, layout));
+      PetscCall(MatSetVecType(am->A, vec_type));
+      PetscCall(MatSetType(am->A, MATCONSTANTDIAGONAL));
+      PetscCall(MatZeroEntries(am->A));
+      PetscCall(MatShift(am->A, -1.0));
+      PetscCall(MatDestroy(&am->B));
+      PetscCall(MatCreate(comm, &am->B));
+      PetscCall(MatSetLayouts(am->B, layout, layout));
+      PetscCall(MatSetVecType(am->B, vec_type));
+      PetscCall(MatSetType(am->B, MATCONSTANTDIAGONAL));
+      PetscCall(MatZeroEntries(am->B));
+      PetscCall(MatShift(am->B, 1.0));
+    }
+    PetscCall(VecDestroy(&am->r));
+    PetscCall(MatCreateVecs(am->A, NULL, &am->r));
   }
 
-  /* Save changed tao tolerance for adaptive tolerance */
-  if (tao->gatol != tao->default_gatol) am->gatol_admm = tao->gatol;
-  if (tao->catol != tao->default_catol) am->catol_admm = tao->catol;
+  PetscCall(VecDestroy(&am->r_halfstep));
+  PetscCall(VecDuplicate(am->r, &am->r_halfstep));
+  PetscCall(VecDestroy(&am->y));
+  PetscCall(VecDuplicate(am->r, &am->y));
+  PetscCall(VecDestroy(&am->Ax));
+  PetscCall(VecDuplicate(am->r, &am->Ax));
+  PetscCall(VecDestroy(&am->Bz));
+  PetscCall(VecDuplicate(am->r, &am->Bz));
 
-  /*Update spectral and dual elements to X subsolver */
-  PetscCall(TaoSetObjectiveAndGradient(am->subsolverX, NULL, SubObjGradUpdate, tao));
-  PetscCall(TaoSetJacobianEqualityRoutine(am->subsolverX, am->JA, am->JApre, am->ops->misfitjac, am->misfitjacobianP));
-  PetscCall(TaoSetJacobianEqualityRoutine(am->subsolverZ, am->JB, am->JBpre, am->ops->regjac, am->regjacobianP));
-  if (am->Hx) {
-    PetscBool is_defined;
+  PetscCall(TaoGetOptionsPrefix(tao, &tao_prefix));
 
-    PetscCall(TaoTermIsHessianDefined(am->mis_term.term, &is_defined));
-    if (is_defined) PetscCall(TaoSetHessian(am->subsolverX, am->Hx, am->Hx, SubHessianUpdate, tao));
+  // construct the f and g terms
+  PetscCall(TaoTermSumCreateSubset_ADMM(objective, f_map, tao_prefix, "admm_sub_0_", am->f_num_terms, am->f_terms, &am->f));
+  PetscCall(TaoTermSumCreateSubset_ADMM(objective, g_map, tao_prefix, "admm_sub_1_", am->g_num_terms, am->g_terms, &am->g));
+
+  // get the parameter vectors
+  if (params) {
+    PetscCall(TaoSetUpADMMCreateSubParams(params, am->f_num_terms, am->f_terms, am->f, &f_params));
+    PetscCall(TaoSetUpADMMCreateSubParams(params, am->g_num_terms, am->g_terms, am->g, &g_params));
   }
-  {
-    PetscBool is_defined;
 
-    PetscCall(TaoTermIsObjectiveAndGradientDefined(am->reg_term.term, &is_defined));
-    if (is_defined) PetscCall(TaoSetObjectiveAndGradient(am->subsolverZ, NULL, RegObjGradUpdate, tao));
+  if (!am->x_subsolver) {
+    PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &am->x_subsolver));
+    PetscCall(TaoSetOptionsPrefix(am->x_subsolver, tao_prefix));
+    PetscCall(TaoAppendOptionsPrefix(am->x_subsolver, "admm_sub_0_"));
+    PetscCall(PetscObjectIncrementTabLevel((PetscObject)am->x_subsolver, (PetscObject)tao, 1));
+    PetscCall(TaoSetType(am->x_subsolver, TAONLS));
+    if (am->initialize_type == ADMM_INITIALIZE_Z_AX) PetscCall(TaoSetSolution(am->x_subsolver, tao->solution)); // x subproblem can share a solution with the outer tao
   }
-  if (am->Hz) {
-    PetscBool is_defined;
+  PetscCall(TaoSetTerm(am->x_subsolver, 1.0, am->f, f_params, NULL));
+  PetscCall(VecDestroy(&f_params));
 
-    PetscCall(TaoTermIsHessianDefined(am->reg_term.term, &is_defined));
-    if (is_defined) PetscCall(TaoSetHessian(am->subsolverZ, am->Hz, am->Hzpre, RegHessianUpdate, tao));
+  if (!am->z_subsolver) {
+    PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &am->z_subsolver));
+    PetscCall(TaoSetOptionsPrefix(am->z_subsolver, tao_prefix));
+    PetscCall(TaoAppendOptionsPrefix(am->z_subsolver, "admm_sub_1_"));
+    PetscCall(PetscObjectIncrementTabLevel((PetscObject)am->z_subsolver, (PetscObject)tao, 1));
+    PetscCall(TaoSetType(am->z_subsolver, TAONLS));
+    if (am->initialize_type == ADMM_INITIALIZE_X_BZ) PetscCall(TaoSetSolution(am->z_subsolver, tao->solution)); // z subproblem can share a solution with the outer tao
   }
-  PetscCall(TaoSetUp(am->subsolverX));
-  PetscCall(TaoSetUp(am->subsolverZ));
+  PetscCall(TaoSetTerm(am->z_subsolver, 1.0, am->g, g_params, NULL));
+  PetscCall(VecDestroy(&g_params));
+
+  /* we have constructed the constraints (Ax + Bz + c == 0) and initialized x_subsolver with f(x) and z_subsolver with g(z):
+     it is now the implementation's job to set up the metric terms */
+  if (am->mu_update == TAO_ADMM_UPDATE_ADAPTIVE) {
+    if (am->linearized) PetscCall(TaoADMMSetUp_Linearized_ARADMM(tao));
+    else PetscCall(TaoADMMSetUp_ARADMM(tao));
+  } else {
+    if (am->linearized) PetscCall(TaoADMMSetUp_Linearized(tao));
+    PetscCall(TaoADMMSetUp_Basic(tao));
+  }
+
+  if (am->setfromoptionscalled) {
+    PetscCall(TaoSetFromOptions(am->x_subsolver));
+    PetscCall(TaoSetFromOptions(am->z_subsolver));
+  }
+  PetscCall(TaoSetUp(am->x_subsolver));
+  PetscCall(TaoSetUp(am->z_subsolver));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TaoDestroy_ADMM(Tao tao)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
 
   PetscFunctionBegin;
-  PetscCall(TaoMappedTermReset(&am->mis_term));
-  PetscCall(TaoMappedTermReset(&am->reg_term));
-  PetscCall(TaoTermDestroy(&am->mis_callbacks));
-  PetscCall(TaoTermDestroy(&am->reg_callbacks));
-  PetscCall(VecDestroy(&am->z));
   PetscCall(VecDestroy(&am->Ax));
-  PetscCall(VecDestroy(&am->Axold));
   PetscCall(VecDestroy(&am->Bz));
-  PetscCall(VecDestroy(&am->Bzold));
-  PetscCall(VecDestroy(&am->Bz0));
-  PetscCall(VecDestroy(&am->residual));
+  PetscCall(VecDestroy(&am->Bz_0));
   PetscCall(VecDestroy(&am->y));
-  PetscCall(VecDestroy(&am->yold));
-  PetscCall(VecDestroy(&am->y0));
-  PetscCall(VecDestroy(&am->yhat));
-  PetscCall(VecDestroy(&am->yhatold));
-  PetscCall(VecDestroy(&am->workLeft));
-  PetscCall(VecDestroy(&am->workJacobianRight));
-  PetscCall(VecDestroy(&am->workJacobianRight2));
+  PetscCall(VecDestroy(&am->y_0));
+  PetscCall(VecDestroy(&am->y_halfstep));
+  PetscCall(VecDestroy(&am->y_halfstep_0));
 
-  PetscCall(MatDestroy(&am->JA));
-  PetscCall(MatDestroy(&am->JB));
-  if (!am->xJI) PetscCall(MatDestroy(&am->JApre));
-  if (!am->zJI) PetscCall(MatDestroy(&am->JBpre));
-  if (am->Hx) {
-    PetscCall(MatDestroy(&am->Hx));
-    PetscCall(MatDestroy(&am->Hxpre));
-  }
-  if (am->Hz) {
-    PetscCall(MatDestroy(&am->Hz));
-    PetscCall(MatDestroy(&am->Hzpre));
-  }
-  PetscCall(MatDestroy(&am->ATA));
-  PetscCall(MatDestroy(&am->BTB));
-  PetscCall(TaoDestroy(&am->subsolverX));
-  PetscCall(TaoDestroy(&am->subsolverZ));
-  am->parent = NULL;
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMSetRegularizerType_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMGetRegularizerType_C", NULL));
+  PetscCall(MatDestroy(&am->A));
+  PetscCall(MatDestroy(&am->B));
+  PetscCall(TaoDestroy(&am->x_subsolver));
+  PetscCall(TaoDestroy(&am->z_subsolver));
+  PetscCall(TaoTermDestroy(&am->f));
+  PetscCall(TaoTermDestroy(&am->g));
+  PetscCall(PetscFree(am->f_terms));
+  PetscCall(PetscFree(am->g_terms));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMSetUpdateType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMGetUpdateType_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMSetTermGroups_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMGetTermGroups_C", NULL));
   PetscCall(PetscFree(tao->data));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoADMMSetTermGroups_ADMM(Tao tao, PetscInt f_num_terms, const PetscInt f_terms[], PetscBool f_mapped, PetscInt g_num_terms, const PetscInt g_terms[], PetscBool g_mapped)
+{
+  Tao_ADMM *admm = (Tao_ADMM *)tao->data;
+  PetscInt *f_terms_new, *g_terms_new;
+
+  PetscFunctionBegin;
+  PetscCall(PetscMalloc1(f_num_terms, &f_terms_new));
+  PetscCall(PetscArraycpy(f_terms_new, f_terms, f_num_terms));
+  PetscCall(PetscFree(admm->f_terms));
+  admm->f_num_terms = f_num_terms;
+  admm->f_terms     = f_terms_new;
+  admm->f_mapped    = PetscBoolToBool3(f_mapped);
+  PetscCall(PetscMalloc1(g_num_terms, &g_terms_new));
+  PetscCall(PetscArraycpy(g_terms_new, g_terms, g_num_terms));
+  PetscCall(PetscFree(admm->g_terms));
+  admm->g_num_terms = g_num_terms;
+  admm->g_terms     = g_terms_new;
+  admm->g_mapped    = PetscBoolToBool3(g_mapped);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoADMMGetTermGroups_ADMM(Tao tao, PetscInt *f_num_terms, const PetscInt *f_terms[], PetscBool *f_mapped, PetscInt *g_num_terms, const PetscInt *g_terms[], PetscBool *g_mapped)
+{
+  Tao_ADMM *admm = (Tao_ADMM *)tao->data;
+
+  PetscFunctionBegin;
+  if (f_num_terms) *f_num_terms = admm->f_num_terms;
+  if (f_terms) *f_terms = admm->f_terms;
+  if (f_mapped) *f_mapped = PetscBool3ToBool(admm->f_mapped);
+  if (g_num_terms) *g_num_terms = admm->g_num_terms;
+  if (g_terms) *g_terms = admm->g_terms;
+  if (g_mapped) *g_mapped = PetscBool3ToBool(admm->g_mapped);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -696,121 +741,54 @@ static PetscErrorCode TaoDestroy_ADMM(Tao tao)
 
   Level: beginner
 
-.seealso: `TaoADMMSetMisfitHessianChangeStatus()`, `TaoADMMSetRegHessianChangeStatus()`, `TaoADMMGetSpectralPenalty()`,
-          `TaoADMMGetMisfitSubsolver()`, `TaoADMMGetRegularizationSubsolver()`, `TaoADMMSetConstraintVectorRHS()`,
+.seealso: `TaoADMMGetSpectralPenalty()`, `TaoADMMGetMisfitSubsolver()`, `TaoADMMGetRegularizationSubsolver()`, `TaoADMMSetConstraintVectorRHS()`,
           `TaoADMMSetMinimumSpectralPenalty()`, `TaoADMMSetRegularizerCoefficient()`, `TaoADMMGetRegularizerCoefficient()`,
-          `TaoADMMSetRegularizerConstraintJacobian()`, `TaoADMMSetMisfitConstraintJacobian()`,
-          `TaoADMMSetMisfitObjectiveAndGradientRoutine()`, `TaoADMMSetMisfitHessianRoutine()`,
-          `TaoADMMSetRegularizerObjectiveAndGradientRoutine()`, `TaoADMMSetRegularizerHessianRoutine()`,
-          `TaoGetADMMParentTao()`, `TaoADMMGetDualVector()`, `TaoADMMSetRegularizerType()`,
+          `TaoADMMGetDualVector()`, `TaoADMMSetRegularizerType()`,
           `TaoADMMGetRegularizerType()`, `TaoADMMSetUpdateType()`, `TaoADMMGetUpdateType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode TaoCreate_ADMM(Tao tao)
 {
-  TAO_ADMM *am;
+  Tao_ADMM *am;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&am));
 
-  tao->ops->destroy        = TaoDestroy_ADMM;
-  tao->ops->setup          = TaoSetUp_ADMM;
-  tao->ops->setfromoptions = TaoSetFromOptions_ADMM;
-  tao->ops->view           = TaoView_ADMM;
-  tao->ops->solve          = TaoSolve_ADMM;
+  tao->ops->destroy         = TaoDestroy_ADMM;
+  tao->ops->setup           = TaoSetUp_ADMM;
+  tao->ops->setfromoptions  = TaoSetFromOptions_ADMM;
+  tao->ops->view            = TaoView_ADMM;
+  tao->ops->solve           = TaoSolve_ADMM;
+  tao->ops->convergencetest = TaoConvergenceTest_ADMM;
 
   PetscCall(TaoParametersInitialize(tao));
+  PetscCall(TaoSetConvergenceTest(tao, TaoConvergenceTest_ADMM, NULL));
 
-  tao->data       = (void *)am;
-  am->l1epsilon   = 1e-6;
-  am->lambda      = 1e-4;
-  am->mu          = 1.;
-  am->muold       = 0.;
-  am->mueps       = PETSC_MACHINE_EPSILON;
-  am->mumin       = 0.;
-  am->orthval     = 0.2;
-  am->T           = 2;
-  am->parent      = tao;
-  am->update      = TAO_ADMM_UPDATE_BASIC;
-  am->regswitch   = TAO_ADMM_REGULARIZER_SOFT_THRESH;
-  am->tol         = PETSC_SMALL;
-  am->const_norm  = 0;
-  am->resnorm     = 0;
-  am->dualres     = 0;
-  am->gamma       = 1;
-  am->regobjgradP = NULL;
-  am->reghessP    = NULL;
-  am->gatol_admm  = 1e-8;
-  am->catol_admm  = 0;
-  am->Hxchange    = PETSC_TRUE;
-  am->Hzchange    = PETSC_TRUE;
-  am->Hzbool      = PETSC_TRUE;
-  am->Hxbool      = PETSC_TRUE;
+  tao->data             = (void *)am;
+  am->mu                = 1.;
+  am->adaptivity_period = 2;
+  am->mu_update         = TAO_ADMM_UPDATE_BASIC;
+  am->relaxation_gamma  = 1;
+  am->f_num_terms       = PETSC_DECIDE;
+  am->f_mapped          = PETSC_BOOL3_UNKNOWN;
+  am->g_num_terms       = PETSC_DECIDE;
+  am->g_mapped          = PETSC_BOOL3_UNKNOWN;
+  am->x_inexact         = PETSC_TRUE;
+  am->z_inexact         = PETSC_TRUE;
 
-  PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &am->subsolverX));
-  PetscCall(TaoSetOptionsPrefix(am->subsolverX, "misfit_"));
-  PetscCall(PetscObjectIncrementTabLevel((PetscObject)am->subsolverX, (PetscObject)tao, 1));
-  PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &am->subsolverZ));
-  PetscCall(TaoSetOptionsPrefix(am->subsolverZ, "reg_"));
-  PetscCall(PetscObjectIncrementTabLevel((PetscObject)am->subsolverZ, (PetscObject)tao, 1));
+  PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &am->x_subsolver));
+  PetscCall(TaoSetOptionsPrefix(am->x_subsolver, "admm_sub_0_"));
+  PetscCall(PetscObjectIncrementTabLevel((PetscObject)am->x_subsolver, (PetscObject)tao, 1));
+  PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &am->z_subsolver));
+  PetscCall(TaoSetOptionsPrefix(am->z_subsolver, "admm_sub_1_"));
+  PetscCall(PetscObjectIncrementTabLevel((PetscObject)am->z_subsolver, (PetscObject)tao, 1));
 
-  PetscCall(TaoTermCreateADMMMisfit(am->subsolverX, &am->mis_callbacks));
-  PetscCall(TaoTermCreateADMMRegularizer(am->subsolverZ, &am->reg_callbacks));
-  PetscCall(TaoMappedTermSetData(&am->mis_term, NULL, 1.0, am->mis_callbacks, NULL));
-  PetscCall(TaoMappedTermSetData(&am->reg_term, NULL, 1.0, am->reg_callbacks, NULL));
-
-  PetscCall(TaoSetType(am->subsolverX, TAONLS));
-  PetscCall(TaoSetType(am->subsolverZ, TAONLS));
-  PetscCall(PetscObjectCompose((PetscObject)am->subsolverX, "TaoGetADMMParentTao_ADMM", (PetscObject)tao));
-  PetscCall(PetscObjectCompose((PetscObject)am->subsolverZ, "TaoGetADMMParentTao_ADMM", (PetscObject)tao));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMSetRegularizerType_C", TaoADMMSetRegularizerType_ADMM));
-  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMGetRegularizerType_C", TaoADMMGetRegularizerType_ADMM));
+  PetscCall(TaoSetType(am->x_subsolver, TAONLS));
+  PetscCall(TaoSetType(am->z_subsolver, TAONLS));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMSetUpdateType_C", TaoADMMSetUpdateType_ADMM));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMGetUpdateType_C", TaoADMMGetUpdateType_ADMM));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoADMMSetMisfitHessianChangeStatus - Set boolean that determines  whether Hessian matrix of misfit subsolver changes with respect to input vector.
-
-  Collective
-
-  Input Parameters:
-+ tao - the Tao solver context.
-- b   - the Hessian matrix change status boolean, `PETSC_FALSE`  when the Hessian matrix does not change, `PETSC_TRUE` otherwise.
-
-  Level: advanced
-
-.seealso: `TAOADMM`
-@*/
-PetscErrorCode TaoADMMSetMisfitHessianChangeStatus(Tao tao, PetscBool b)
-{
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-
-  PetscFunctionBegin;
-  am->Hxchange = b;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoADMMSetRegHessianChangeStatus - Set boolean that determines whether Hessian matrix of regularization subsolver changes with respect to input vector.
-
-  Collective
-
-  Input Parameters:
-+ tao - the `Tao` solver context
-- b   - the Hessian matrix change status boolean, `PETSC_FALSE` when the Hessian matrix does not change, `PETSC_TRUE` otherwise.
-
-  Level: advanced
-
-.seealso: `TAOADMM`
-@*/
-PetscErrorCode TaoADMMSetRegHessianChangeStatus(Tao tao, PetscBool b)
-{
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-
-  PetscFunctionBegin;
-  am->Hzchange = b;
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMSetTermGroups_C", TaoADMMSetTermGroups_ADMM));
+  PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoADMMGetTermGroups_C", TaoADMMGetTermGroups_ADMM));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -829,7 +807,7 @@ PetscErrorCode TaoADMMSetRegHessianChangeStatus(Tao tao, PetscBool b)
 @*/
 PetscErrorCode TaoADMMSetSpectralPenalty(Tao tao, PetscReal mu)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
 
   PetscFunctionBegin;
   am->mu = mu;
@@ -853,7 +831,7 @@ PetscErrorCode TaoADMMSetSpectralPenalty(Tao tao, PetscReal mu)
 @*/
 PetscErrorCode TaoADMMGetSpectralPenalty(Tao tao, PetscReal *mu)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -879,10 +857,10 @@ PetscErrorCode TaoADMMGetSpectralPenalty(Tao tao, PetscReal *mu)
 @*/
 PetscErrorCode TaoADMMGetMisfitSubsolver(Tao tao, Tao *misfit)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
 
   PetscFunctionBegin;
-  *misfit = am->subsolverX;
+  *misfit = am->x_subsolver;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -903,32 +881,10 @@ PetscErrorCode TaoADMMGetMisfitSubsolver(Tao tao, Tao *misfit)
 @*/
 PetscErrorCode TaoADMMGetRegularizationSubsolver(Tao tao, Tao *reg)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
 
   PetscFunctionBegin;
-  *reg = am->subsolverZ;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoADMMSetConstraintVectorRHS - Set the RHS constraint vector for `TAOADMM`
-
-  Collective
-
-  Input Parameters:
-+ tao - the `Tao` solver context
-- c   - RHS vector
-
-  Level: advanced
-
-.seealso: `TAOADMM`
-@*/
-PetscErrorCode TaoADMMSetConstraintVectorRHS(Tao tao, Vec c)
-{
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-
-  PetscFunctionBegin;
-  am->constraint = c;
+  *reg = am->z_subsolver;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -947,309 +903,10 @@ PetscErrorCode TaoADMMSetConstraintVectorRHS(Tao tao, Vec c)
 @*/
 PetscErrorCode TaoADMMSetMinimumSpectralPenalty(Tao tao, PetscReal mu)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
 
   PetscFunctionBegin;
-  am->mumin = mu;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoADMMSetRegularizerCoefficient - Set the regularization coefficient lambda for L1 norm regularization case
-
-  Collective
-
-  Input Parameters:
-+ tao    - the `Tao` solver context
-- lambda - L1-norm regularizer coefficient
-
-  Level: advanced
-
-.seealso: `TaoADMMSetMisfitConstraintJacobian()`, `TaoADMMSetRegularizerConstraintJacobian()`, `TAOADMM`
-@*/
-PetscErrorCode TaoADMMSetRegularizerCoefficient(Tao tao, PetscReal lambda)
-{
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-
-  PetscFunctionBegin;
-  am->lambda = lambda;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoADMMGetRegularizerCoefficient - Get the regularization coefficient lambda for L1 norm regularization case
-
-  Collective
-
-  Input Parameter:
-. tao - the `Tao` solver context
-
-  Output Parameter:
-. lambda - L1-norm regularizer coefficient
-
-  Level: advanced
-
-.seealso: `TaoADMMSetMisfitConstraintJacobian()`, `TaoADMMSetRegularizerConstraintJacobian()`, `TAOADMM`
-@*/
-PetscErrorCode TaoADMMGetRegularizerCoefficient(Tao tao, PetscReal *lambda)
-{
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-
-  PetscFunctionBegin;
-  *lambda = am->lambda;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-  TaoADMMSetMisfitConstraintJacobian - Set the constraint matrix B for the `TAOADMM` algorithm. Matrix B constrains the z variable.
-
-  Collective
-
-  Input Parameters:
-+ tao  - the Tao solver context
-. J    - user-created regularizer constraint Jacobian matrix
-. Jpre - user-created regularizer Jacobian constraint matrix for constructing the preconditioner, often this is `J`
-. func - function pointer for the regularizer constraint Jacobian update function
-- ctx  - user context for the regularizer Hessian
-
-  Level: advanced
-
-.seealso: `TaoADMMSetRegularizerCoefficient()`, `TaoADMMSetRegularizerConstraintJacobian()`, `TAOADMM`
-@*/
-PetscErrorCode TaoADMMSetMisfitConstraintJacobian(Tao tao, Mat J, Mat Jpre, PetscErrorCode (*func)(Tao, Vec, Mat, Mat, void *), void *ctx)
-{
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (J) {
-    PetscValidHeaderSpecific(J, MAT_CLASSID, 2);
-    PetscCheckSameComm(tao, 1, J, 2);
-  }
-  if (Jpre) {
-    PetscValidHeaderSpecific(Jpre, MAT_CLASSID, 3);
-    PetscCheckSameComm(tao, 1, Jpre, 3);
-  }
-  if (ctx) am->misfitjacobianP = ctx;
-  if (func) am->ops->misfitjac = func;
-
-  if (J) {
-    PetscCall(PetscObjectReference((PetscObject)J));
-    PetscCall(MatDestroy(&am->JA));
-    am->JA = J;
-  }
-  if (Jpre) {
-    PetscCall(PetscObjectReference((PetscObject)Jpre));
-    PetscCall(MatDestroy(&am->JApre));
-    am->JApre = Jpre;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-  TaoADMMSetRegularizerConstraintJacobian - Set the constraint matrix B for `TAOADMM` algorithm. Matrix B constraints z variable.
-
-  Collective
-
-  Input Parameters:
-+ tao  - the `Tao` solver context
-. J    - user-created regularizer constraint Jacobian matrix
-. Jpre - user-created regularizer Jacobian constraint matrix for constructing the preconditioner, often this is `J`
-. func - function pointer for the regularizer constraint Jacobian update function
-- ctx  - user context for the regularizer Hessian
-
-  Level: advanced
-
-.seealso: `TaoADMMSetRegularizerCoefficient()`, `TaoADMMSetMisfitConstraintJacobian()`, `TAOADMM`
-@*/
-PetscErrorCode TaoADMMSetRegularizerConstraintJacobian(Tao tao, Mat J, Mat Jpre, PetscErrorCode (*func)(Tao, Vec, Mat, Mat, void *), void *ctx)
-{
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (J) {
-    PetscValidHeaderSpecific(J, MAT_CLASSID, 2);
-    PetscCheckSameComm(tao, 1, J, 2);
-  }
-  if (Jpre) {
-    PetscValidHeaderSpecific(Jpre, MAT_CLASSID, 3);
-    PetscCheckSameComm(tao, 1, Jpre, 3);
-  }
-  if (ctx) am->regjacobianP = ctx;
-  if (func) am->ops->regjac = func;
-
-  if (J) {
-    PetscCall(PetscObjectReference((PetscObject)J));
-    PetscCall(MatDestroy(&am->JB));
-    am->JB = J;
-  }
-  if (Jpre) {
-    PetscCall(PetscObjectReference((PetscObject)Jpre));
-    PetscCall(MatDestroy(&am->JBpre));
-    am->JBpre = Jpre;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-  TaoADMMSetMisfitObjectiveAndGradientRoutine - Sets the user-defined misfit call-back function
-
-  Collective
-
-  Input Parameters:
-+ tao  - the `Tao` context
-. func - function pointer for the misfit value and gradient evaluation
-- ctx  - user context for the misfit
-
-  Level: advanced
-
-.seealso: `TAOADMM`
-@*/
-PetscErrorCode TaoADMMSetMisfitObjectiveAndGradientRoutine(Tao tao, PetscErrorCode (*func)(Tao, Vec, PetscReal *, Vec, void *), void *ctx)
-{
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoTermTaoCallbacksSetObjAndGrad(am->mis_callbacks, func, ctx));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-  TaoADMMSetMisfitHessianRoutine - Sets the user-defined misfit Hessian call-back
-  function into the algorithm, to be used for subsolverX.
-
-  Collective
-
-  Input Parameters:
-+ tao  - the `Tao` context
-. H    - user-created matrix for the Hessian of the misfit term
-. Hpre - user-created matrix for the preconditioner of Hessian of the misfit term
-. func - function pointer for the misfit Hessian evaluation
-- ctx  - user context for the misfit Hessian
-
-  Level: advanced
-
-.seealso: `TAOADMM`
-@*/
-PetscErrorCode TaoADMMSetMisfitHessianRoutine(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Tao, Vec, Mat, Mat, void *), void *ctx)
-{
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (H) {
-    PetscValidHeaderSpecific(H, MAT_CLASSID, 2);
-    PetscCheckSameComm(tao, 1, H, 2);
-  }
-  if (Hpre) {
-    PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 3);
-    PetscCheckSameComm(tao, 1, Hpre, 3);
-  }
-  if (func || ctx) PetscCall(TaoTermTaoCallbacksSetHessian(am->mis_callbacks, func, ctx));
-  if (H) {
-    PetscCall(PetscObjectReference((PetscObject)H));
-    PetscCall(MatDestroy(&am->Hx));
-    am->Hx = H;
-  }
-  if (Hpre) {
-    PetscCall(PetscObjectReference((PetscObject)Hpre));
-    PetscCall(MatDestroy(&am->Hxpre));
-    am->Hxpre = Hpre;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-  TaoADMMSetRegularizerObjectiveAndGradientRoutine - Sets the user-defined regularizer call-back function
-
-  Collective
-
-  Input Parameters:
-+ tao  - the Tao context
-. func - function pointer for the regularizer value and gradient evaluation
-- ctx  - user context for the regularizer
-
-  Level: advanced
-
-.seealso: `TAOADMM`
-@*/
-PetscErrorCode TaoADMMSetRegularizerObjectiveAndGradientRoutine(Tao tao, PetscErrorCode (*func)(Tao, Vec, PetscReal *, Vec, void *), void *ctx)
-{
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoTermTaoCallbacksSetObjAndGrad(am->reg_callbacks, func, ctx));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-  TaoADMMSetRegularizerHessianRoutine - Sets the user-defined regularizer Hessian call-back
-  function, to be used for subsolverZ.
-
-  Collective
-
-  Input Parameters:
-+ tao  - the `Tao` context
-. H    - user-created matrix for the Hessian of the regularization term
-. Hpre - user-created matrix for the preconditioner of Hessian of the regularization term
-. func - function pointer for the regularizer Hessian evaluation
-- ctx  - user context for the regularizer Hessian
-
-  Level: advanced
-
-.seealso: `TAOADMM`
-@*/
-PetscErrorCode TaoADMMSetRegularizerHessianRoutine(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Tao, Vec, Mat, Mat, void *), void *ctx)
-{
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (H) {
-    PetscValidHeaderSpecific(H, MAT_CLASSID, 2);
-    PetscCheckSameComm(tao, 1, H, 2);
-  }
-  if (Hpre) {
-    PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 3);
-    PetscCheckSameComm(tao, 1, Hpre, 3);
-  }
-  if (func || ctx) PetscCall(TaoTermTaoCallbacksSetHessian(am->reg_callbacks, func, ctx));
-  if (H) {
-    PetscCall(PetscObjectReference((PetscObject)H));
-    PetscCall(MatDestroy(&am->Hz));
-    am->Hz = H;
-  }
-  if (Hpre) {
-    PetscCall(PetscObjectReference((PetscObject)Hpre));
-    PetscCall(MatDestroy(&am->Hzpre));
-    am->Hzpre = Hpre;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoGetADMMParentTao - Gets pointer to parent `TAOADMM`, used by inner subsolver.
-
-  Collective
-
-  Input Parameter:
-. tao - the `Tao` context
-
-  Output Parameter:
-. admm_tao - the parent `Tao` context
-
-  Level: advanced
-
-.seealso: `TAOADMM`
-@*/
-PetscErrorCode TaoGetADMMParentTao(Tao tao, Tao *admm_tao)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(PetscObjectQuery((PetscObject)tao, "TaoGetADMMParentTao_ADMM", (PetscObject *)admm_tao));
+  am->mu_min = mu;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1270,59 +927,11 @@ PetscErrorCode TaoGetADMMParentTao(Tao tao, Tao *admm_tao)
 @*/
 PetscErrorCode TaoADMMGetDualVector(Tao tao, Vec *Y)
 {
-  TAO_ADMM *am = (TAO_ADMM *)tao->data;
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   *Y = am->y;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoADMMSetRegularizerType - Set regularizer type for `TAOADMM` routine
-
-  Not Collective
-
-  Input Parameters:
-+ tao  - the `Tao` context
-- type - regularizer type
-
-  Options Database Key:
-. -tao_admm_regularizer_type <admm_regularizer_user,admm_regularizer_soft_thresh> - select the regularizer
-
-  Level: intermediate
-
-.seealso: `TaoADMMGetRegularizerType()`, `TaoADMMRegularizerType`, `TAOADMM`
-@*/
-PetscErrorCode TaoADMMSetRegularizerType(Tao tao, TaoADMMRegularizerType type)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscValidLogicalCollectiveEnum(tao, type, 2);
-  PetscTryMethod(tao, "TaoADMMSetRegularizerType_C", (Tao, TaoADMMRegularizerType), (tao, type));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoADMMGetRegularizerType - Gets the type of regularizer routine for `TAOADMM`
-
-  Not Collective
-
-  Input Parameter:
-. tao - the `Tao` context
-
-  Output Parameter:
-. type - the type of regularizer
-
-  Level: intermediate
-
-.seealso: `TaoADMMSetRegularizerType()`, `TaoADMMRegularizerType`, `TAOADMM`
-@*/
-PetscErrorCode TaoADMMGetRegularizerType(Tao tao, TaoADMMRegularizerType *type)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscUseMethod(tao, "TaoADMMGetRegularizerType_C", (Tao, TaoADMMRegularizerType *), (tao, type));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1368,5 +977,112 @@ PetscErrorCode TaoADMMGetUpdateType(Tao tao, TaoADMMUpdateType *type)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscUseMethod(tao, "TaoADMMGetUpdateType_C", (Tao, TaoADMMUpdateType *), (tao, type));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoADMMSetTermGroups - Split the terms in the objective function of a `Tao` into groups for the ADMM subsolvers
+
+  Logically collective
+
+  Input Parameters:
++ tao         - the `Tao` context
+. f_num_terms - the size of `f_terms`
+. f_terms     - (optional) the indices of the terms that will be grouped into the $f$ ADMM term (if `NULL`, this will be taken to be the first `f_num_terms` terms)
+. f_mapped    - whether the linear map should be separated from the $f$ terms (see Note)
+. g_num_terms - the size of `g_terms`
+. g_terms     - (optional) the indices of the terms that will be grouped into the $g$ ADMM term (if `NULL`, this will be taken ot be the first `g_num_terms` terms that are not in `f_terms`)
+- g_mapped    - whether the linear map should be separated from the $f$ terms (see Note)
+
+  Level: intermediate
+
+  Notes:
+  The ADMM algorithm operates on an optimization problem with the form
+
+  ```{math}
+  \begin{aligned}
+    &\min_{x,z} f(x) + g(z) \\
+    &\text{such that} A x + B z = c.
+  \end{aligned}
+  ```
+
+  This function controls how a problem of this form is constructed from `tao`.
+
+  When the objective function of `tao` is $f(x) + g(x)$, there is no need to call `TaoADMMSetTermGroups()`: this will automatically be transformed into
+
+  ```{math}
+  \min_{x,z} f(x) + g(z) \quad \text{such that} x = z.
+  ```
+
+  When the objective function of `tao` is $f(x) + g(Ax)$, where $A$ is a linear map, there is also no need to call `TaoADMMSetTermGroups()`: $A$ is separated from $g$ by default, so ADMM will solve
+
+  ```{math}
+  \min_{x,z} f(x) + g(z) \quad \text{such that} A x = z.
+  ```
+
+  If you would like to keep $g$ and $A$ together, you should call `TaoADMMSetTermGroups()` with `g_mapped = PETSC_FALSE`, so that ADMM will solve
+
+  ```{math}
+  \min_{x,z} f(x) + g(A z) \quad \text{such that} x = z.
+  ```
+
+  Similarly if the objective function of `tao` is $f(Ax) + g(x)$, by default this will become
+
+  ```{math}
+  \min_{x,z} f(x) + g(z) \quad \text{such that} x = A z,
+  ```
+
+  and you should call `TaoADMMSetTermGroups()` with `f_mapped = PETSC_FALSE` to keep $f$ and $A$ together.
+
+  If you have an objective function with more than two terms, like $f(x) + g(x) + h(x)$, and you want to group $f(x) + h(x)$ into one function for the ADMM algorithm, you should call
+
+.vb
+  PetscInt f_terms[2] = {0, 2};
+
+  TaoADMMSetTermGroups(tao, 2, f_terms, PETSC_FALSE, 1, NULL, PETSC_FALSE);
+.ve
+
+  and ADMM will solve
+
+  ```{math}
+  \min_{x,z} \{f(x) + h(x)\} + g(z) \quad \text{such that} x = z.
+  ```
+
+.seealso: [](ch_tao), `TAOADMM`
+@*/
+PetscErrorCode TaoADMMSetTermGroups(Tao tao, PetscInt f_num_terms, const PetscInt f_terms[], PetscBool f_mapped, PetscInt g_num_terms, const PetscInt g_terms[], PetscBool g_mapped)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscCheck(f_num_terms >= 0 && g_num_terms >= 0, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_OUTOFRANGE, "f_num_terms = %" PetscInt_FMT ", g_num_terms = %" PetscInt_FMT ", both should be nonnegative", f_num_terms, g_num_terms);
+  PetscTryMethod(tao, "TaoADMMSetTermGroups_C", (Tao, PetscInt, const PetscInt[], PetscBool, PetscInt, const PetscInt[], PetscBool), (tao, f_num_terms, f_terms, f_mapped, g_num_terms, g_terms, g_mapped));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoADMMGetTermGroups - Get the splits set with `TaoADMMSetTermGroups`
+
+  Logically collective
+
+  Input Parameter:
+. tao         - the `Tao` context
+
+  Output Parameters:
++ f_num_terms - the size of `f_terms`
+. f_terms     - the indices of the terms that will be grouped into the $f$ ADMM term
+. f_mapped    - whether the linear map should be separated from the $f$ terms
+. g_num_terms - the size of `g_terms`
+. g_terms     - the indices of the terms that will be grouped into the $g$ ADMM term
+- g_mapped    - wheter the linear map should be separated from the $g$ terms
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `TAOADMM`
+@*/
+PetscErrorCode TaoADMMGetTermGroups(Tao tao, PetscInt *f_num_terms, const PetscInt *f_terms[], PetscBool *f_mapped, PetscInt *g_num_terms, const PetscInt *g_terms[], PetscBool *g_mapped)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscTryMethod(tao, "TaoADMMGetTermGroups_C", (Tao, PetscInt *, const PetscInt *[], PetscInt *, const PetscInt *[]), (tao, f_num_terms, f_terms, g_num_terms, g_terms));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
