@@ -3,6 +3,8 @@
 #include <petsc/private/petscimpl.h>
 #include <petsc/private/vecimpl.h>
 
+const char *const TaoALMMTypes[] = {"CLASSIC", "PHR", "TaoALMMType", "TAO_ALMM_", NULL};
+
 static PetscErrorCode TaoALMMCombinePrimal_Private(Tao, Vec, Vec, Vec);
 static PetscErrorCode TaoALMMCombineDual_Private(Tao, Vec, Vec, Vec);
 static PetscErrorCode TaoALMMSplitPrimal_Private(Tao, Vec, Vec, Vec);
