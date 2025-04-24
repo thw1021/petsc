@@ -1,0 +1,25 @@
+TaoADMM, x dual residual test:
+    ||Gfd|| 0.000126508, ||G|| = 0.000126508, angle cosine = (Gfd'G)/||Gfd||||G|| = 1.
+    2-norm ||G - Gfd||/||G|| = 8.37682e-07, ||G - Gfd|| = 1.05974e-10
+    max-norm ||G - Gfd||/||G|| = 9.1513e-07, ||G - Gfd|| = 7.39516e-12
+TaoADMM, z dual residual test:
+    ||Gfd|| 5e-07, ||G|| = 5e-07, angle cosine = (Gfd'G)/||Gfd||||G|| = 1.
+    2-norm ||G - Gfd||/||G|| = 5.2629e-10, ||G - Gfd|| = 2.63145e-16
+    max-norm ||G - Gfd||/||G|| = 5.31259e-10, ||G - Gfd|| = 5.31259e-18
+TaoADMM, x dual residual test:
+    ||Gfd|| 0.000123375, ||G|| = 0.000123375, angle cosine = (Gfd'G)/||Gfd||||G|| = 1.
+    2-norm ||G - Gfd||/||G|| = 8.59198e-07, ||G - Gfd|| = 1.06003e-10
+    max-norm ||G - Gfd||/||G|| = 1.06365e-06, ||G - Gfd|| = 8.35652e-12
+TaoADMM, z dual residual test:
+    ||Gfd|| 5e-07, ||G|| = 5e-07, angle cosine = (Gfd'G)/||Gfd||||G|| = 1.
+    2-norm ||G - Gfd||/||G|| = 5.27281e-10, ||G - Gfd|| = 2.63641e-16
+    max-norm ||G - Gfd||/||G|| = 5.39391e-10, ||G - Gfd|| = 5.39391e-18
+TaoADMM, x dual residual test:
+    ||Gfd|| 0.000122381, ||G|| = 0.000122381, angle cosine = (Gfd'G)/||Gfd||||G|| = 1.
+    2-norm ||G - Gfd||/||G|| = 1.05588e-06, ||G - Gfd|| = 1.29219e-10
+    max-norm ||G - Gfd||/||G|| = 9.93084e-07, ||G - Gfd|| = 8.02305e-12
+TaoADMM, z dual residual test:
+    ||Gfd|| 4.99802e-07, ||G|| = 4.99929e-07, angle cosine = (Gfd'G)/||Gfd||||G|| = 0.99979
+    2-norm ||G - Gfd||/||G|| = 0.0205116, ||G - Gfd|| = 1.02543e-08
+    max-norm ||G - Gfd||/||G|| = 0.873049, ||G - Gfd|| = 8.73049e-09
+relative reconstruction error: ||x-xGT||/||xGT|| = 8.1025e-01.
