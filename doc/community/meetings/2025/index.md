@@ -39,6 +39,10 @@ We have funding to provide travel support for students attending the meeting wit
 For questions about the meeting contact <mailto:petsc2025@lists.mcs.anl.gov>.
 Join the discussion about the meeting at [PETSc on Discord](https://discord.gg/Fqm8r6Gcyb), [2025 PETSc Annual Users Meeting channel](https://discord.com/channels/1119324534303109172/1298348560600924200).
 
+## Code of Conduct
+
+All meeting attendees are expected to follow the PETSc/NumFocus Code of Conduct. The local committee will serve as the code of conduct response team, https://numfocus.org/code-of-conduct#response-team. Should any concerns arise during the meeting, please contact any response team member.
+
 ## Organizing Committees
 
 ### Local Committee
