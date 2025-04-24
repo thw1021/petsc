@@ -247,7 +247,7 @@ static PetscErrorCode TaoTermHessianMult_L1(TaoTerm term, Vec x, Vec params, Vec
 
   Note:
   If $\epsilon = 0$ (the default), then `term` computes $\|x - p\|_1$, but if $\epsilon > 0$, then it computes
-  $\sum_{i=0}^n | \sqrt{(x_i-p_i)^2 + \epsilon^2} - \epsilon|$.
+  $\sum_{i=0}^n \sqrt{(x_i-p_i)^2 + \epsilon^2} - \epsilon$.
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,

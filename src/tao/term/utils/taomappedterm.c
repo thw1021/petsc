@@ -19,7 +19,7 @@ PETSC_INTERN PetscErrorCode TaoMappedTermSetData(TaoMappedTerm *mt, const char *
   PetscCall(TaoTermDestroy(&mt->term));
   mt->term  = term;
   mt->scale = scale;
-  if (map != mt->map) { PetscCall(VecDestroy(&mt->_map_output)); }
+  if (map != mt->map) PetscCall(VecDestroy(&mt->_map_output));
   PetscCall(PetscObjectReference((PetscObject)map));
   PetscCall(MatDestroy(&mt->map));
   mt->map = map;
@@ -236,8 +236,8 @@ static PetscErrorCode TaoMappedTermGetHessians(TaoMappedTerm *mt, InsertMode mod
   *unmapped_H    = *mapped_H;
   *unmapped_Hpre = *mapped_Hpre;
   if (mt->map) {
-    if (H) { *unmapped_H = mt->_unmapped_H; }
-    if (Hpre) { *unmapped_H = mt->_unmapped_Hpre; }
+    if (H) *unmapped_H = mt->_unmapped_H;
+    if (Hpre) *unmapped_Hpre = mt->_unmapped_Hpre;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
