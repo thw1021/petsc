@@ -210,7 +210,7 @@ static PetscErrorCode PCHYPREGetCFMarkers_BoomerAMG(PC pc, PetscInt *n_per_level
 {
   PC_HYPRE            *jac = (PC_HYPRE *)pc->data;
   hypre_IntArray      *h_array;
-  hypre_int           *data;
+  HYPRE_Int           *data;
   PetscBool            same;
   PetscInt             num_levels, iStart, iEnd, fine_nodes = 0;
   PetscScalar          coarse_nodes, one = 1;
