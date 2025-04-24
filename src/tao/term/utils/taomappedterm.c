@@ -237,7 +237,7 @@ static PetscErrorCode TaoMappedTermGetHessians(TaoMappedTerm *mt, InsertMode mod
   *unmapped_Hpre = *mapped_Hpre;
   if (mt->map) {
     if (H) { *unmapped_H = mt->_unmapped_H; }
-    if (Hpre) { *unmapped_H = mt->_unmapped_Hpre; }
+    if (Hpre) { *unmapped_Hpre = mt->_unmapped_Hpre; }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
