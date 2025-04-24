@@ -797,6 +797,9 @@ static PetscErrorCode TaoView_NLS(Tao tao, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
+    PetscViewerFormat format;
+    PetscCall(PetscViewerGetFormat(viewer, &format));
+    if (format != PETSC_VIEWER_ASCII_INFO && format != PETSC_VIEWER_ASCII_INFO_DETAIL) PetscFunctionReturn(PETSC_SUCCESS);
     PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Newton steps: %" PetscInt_FMT "\n", nlsP->newt));
     PetscCall(PetscViewerASCIIPrintf(viewer, "BFGS steps: %" PetscInt_FMT "\n", nlsP->bfgs));

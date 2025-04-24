@@ -25,12 +25,48 @@ PetscErrorCode TaoSetSolution(Tao tao, Vec x0)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode TaoTestGradient_Internal(Tao tao, Vec x, Vec g1, PetscViewer viewer, PetscViewer mviewer)
+{
+  Vec         g2, g3;
+  PetscReal   hcnorm, fdnorm, hcmax, fdmax, diffmax, diffnorm;
+  PetscScalar dot;
+
+  PetscFunctionBegin;
+  PetscCall(VecDuplicate(x, &g2));
+  PetscCall(VecDuplicate(x, &g3));
+
+  /* Compute finite difference gradient, assume the gradient is already computed by TaoComputeGradient() and put into g1 */
+  PetscCall(TaoDefaultComputeGradient(tao, x, g2, NULL));
+
+  PetscCall(VecNorm(g2, NORM_2, &fdnorm));
+  PetscCall(VecNorm(g1, NORM_2, &hcnorm));
+  PetscCall(VecNorm(g2, NORM_INFINITY, &fdmax));
+  PetscCall(VecNorm(g1, NORM_INFINITY, &hcmax));
+  PetscCall(VecDot(g1, g2, &dot));
+  PetscCall(VecCopy(g1, g3));
+  PetscCall(VecAXPY(g3, -1.0, g2));
+  PetscCall(VecNorm(g3, NORM_2, &diffnorm));
+  PetscCall(VecNorm(g3, NORM_INFINITY, &diffmax));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  ||Gfd|| %g, ||G|| = %g, angle cosine = (Gfd'G)/||Gfd||||G|| = %g\n", (double)fdnorm, (double)hcnorm, (double)(PetscRealPart(dot) / (fdnorm * hcnorm))));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  2-norm ||G - Gfd||/||G|| = %g, ||G - Gfd|| = %g\n", (double)(diffnorm / PetscMax(hcnorm, fdnorm)), (double)diffnorm));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  max-norm ||G - Gfd||/||G|| = %g, ||G - Gfd|| = %g\n", (double)(diffmax / PetscMax(hcmax, fdmax)), (double)diffmax));
+
+  if (mviewer) {
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Hand-coded gradient ----------\n"));
+    PetscCall(VecView(g1, mviewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Finite difference gradient ----------\n"));
+    PetscCall(VecView(g2, mviewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Hand-coded minus finite-difference gradient ----------\n"));
+    PetscCall(VecView(g3, mviewer));
+  }
+  PetscCall(VecDestroy(&g2));
+  PetscCall(VecDestroy(&g3));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode TaoTestGradient(Tao tao, Vec x, Vec g1)
 {
-  Vec               g2, g3;
   PetscBool         complete_print = PETSC_FALSE, test = PETSC_FALSE;
-  PetscReal         hcnorm, fdnorm, hcmax, fdmax, diffmax, diffnorm;
-  PetscScalar       dot;
   MPI_Comm          comm;
   PetscViewer       viewer, mviewer;
   PetscViewerFormat format;
@@ -62,37 +98,7 @@ PetscErrorCode TaoTestGradient(Tao tao, Vec x, Vec g1)
     directionsprinted = PETSC_TRUE;
   }
   if (complete_print) PetscCall(PetscViewerPushFormat(mviewer, format));
-
-  PetscCall(VecDuplicate(x, &g2));
-  PetscCall(VecDuplicate(x, &g3));
-
-  /* Compute finite difference gradient, assume the gradient is already computed by TaoComputeGradient() and put into g1 */
-  PetscCall(TaoDefaultComputeGradient(tao, x, g2, NULL));
-
-  PetscCall(VecNorm(g2, NORM_2, &fdnorm));
-  PetscCall(VecNorm(g1, NORM_2, &hcnorm));
-  PetscCall(VecNorm(g2, NORM_INFINITY, &fdmax));
-  PetscCall(VecNorm(g1, NORM_INFINITY, &hcmax));
-  PetscCall(VecDot(g1, g2, &dot));
-  PetscCall(VecCopy(g1, g3));
-  PetscCall(VecAXPY(g3, -1.0, g2));
-  PetscCall(VecNorm(g3, NORM_2, &diffnorm));
-  PetscCall(VecNorm(g3, NORM_INFINITY, &diffmax));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  ||Gfd|| %g, ||G|| = %g, angle cosine = (Gfd'G)/||Gfd||||G|| = %g\n", (double)fdnorm, (double)hcnorm, (double)(PetscRealPart(dot) / (fdnorm * hcnorm))));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  2-norm ||G - Gfd||/||G|| = %g, ||G - Gfd|| = %g\n", (double)(diffnorm / PetscMax(hcnorm, fdnorm)), (double)diffnorm));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  max-norm ||G - Gfd||/||G|| = %g, ||G - Gfd|| = %g\n", (double)(diffmax / PetscMax(hcmax, fdmax)), (double)diffmax));
-
-  if (complete_print) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Hand-coded gradient ----------\n"));
-    PetscCall(VecView(g1, mviewer));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Finite difference gradient ----------\n"));
-    PetscCall(VecView(g2, mviewer));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Hand-coded minus finite-difference gradient ----------\n"));
-    PetscCall(VecView(g3, mviewer));
-  }
-  PetscCall(VecDestroy(&g2));
-  PetscCall(VecDestroy(&g3));
-
+  PetscCall(TaoTestGradient_Internal(tao, x, g1, viewer, complete_print ? mviewer : NULL));
   if (complete_print) {
     PetscCall(PetscViewerPopFormat(mviewer));
     PetscCall(PetscViewerDestroy(&mviewer));
@@ -160,6 +166,13 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscCall(TaoMappedTermObjective(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, f));
+  if (tao->num_terms) {
+    const PetscReal *sum_values;
+
+    PetscCall(TaoTermSumGetLastSubtermObjectives(tao->objective_term.term, &sum_values));
+    if (!tao->objective_values) PetscCall(PetscMalloc1(tao->num_terms, &tao->objective_values));
+    PetscCall(PetscArraycpy(tao->objective_values, sum_values, tao->num_terms));
+  }
   tao->nfuncs++;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -190,6 +203,13 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscCall(TaoMappedTermObjectiveAndGradient(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, f, G));
+  if (tao->num_terms) {
+    const PetscReal *sum_values;
+
+    PetscCall(TaoTermSumGetLastSubtermObjectives(tao->objective_term.term, &sum_values));
+    if (!tao->objective_values) PetscCall(PetscMalloc1(tao->num_terms, &tao->objective_values));
+    PetscCall(PetscArraycpy(tao->objective_values, sum_values, tao->num_terms));
+  }
   tao->nfuncgrads++;
   PetscCall(TaoTestGradient(tao, X, G));
   PetscFunctionReturn(PETSC_SUCCESS);

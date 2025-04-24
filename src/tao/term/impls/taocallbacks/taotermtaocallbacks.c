@@ -413,8 +413,6 @@ static PetscErrorCode TaoTermCreate_TaoCallbacks_Internal(TaoTerm term, const ch
           `TaoTerm`,
           `TaoTermType`,
           `TAOTERMBRGNREGULARIZER`,
-          `TAOTERMADMMREGULARIZER`,
-          `TAOTERMADMMMISFIT`,
 M*/
 PETSC_INTERN PetscErrorCode TaoTermCreate_TaoCallbacks(TaoTerm term)
 {
@@ -434,94 +432,6 @@ PETSC_INTERN PetscErrorCode TaoTermCreateTaoCallbacks(Tao tao, TaoTerm *term)
   PetscFunctionBegin;
   PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)tao), term));
   PetscCall(TaoTermSetType(*term, TAOTERMTAOCALLBACKS));
-  {
-    TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)((*term)->data);
-
-    tt->tao = tao; // weak reference, do not increment reference count
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*MC
-  TAOTERMADMMREGULARIZER - A `TaoTerm` implementation that accesses the callbacks that have been set in
-  `TaoADMMSetRegularizerObjectiveAndGradientRoutine()` and
-  `TaoADMMSetRegularizerHessianRoutine()`.
-
-  Level: developer
-
-  Note:
-  This implementation has the same restrictions os `TAOTERMTAOCALLBACKS`.
-
-.seealso: [](sec_tao_term),
-          `TaoTerm`,
-          `TaoTermType`,
-          `TAOADMM`,
-          `TAOTERMTAOCALLBACKS`
-          `TAOTERMBRGNREGULARIZER`,
-          `TAOTERMADMMMISFIT`,
-M*/
-PETSC_INTERN PetscErrorCode TaoTermCreate_ADMMRegularizer(TaoTerm term)
-{
-  PetscFunctionBegin;
-  // clang-format off
-  PetscCall(TaoTermCreate_TaoCallbacks_Internal(term,
-        NULL, "TaoADMMSetRegularizerObjectiveAndGradientRoutine()",
-        NULL, "TaoADMMSetRegularizerObjectiveAndGradientRoutine()",
-        "ADMM regularizer objective/gradient", "TaoADMMSetRegularizerObjectiveAndGradientRoutine()",
-        "ADMM regularizer hessian",            "TaoADMMSetRegularizerHessianRoutine()"));
-  // clang-format on
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode TaoTermCreateADMMRegularizer(Tao tao, TaoTerm *term)
-{
-  PetscFunctionBegin;
-  PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)tao), term));
-  PetscCall(TaoTermSetType(*term, TAOTERMADMMREGULARIZER));
-  {
-    TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)((*term)->data);
-
-    tt->tao = tao; // weak reference, do not increment reference count
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*MC
-  TAOTERMADMMMISFIT - A `TaoTerm` implementation that accesses the callbacks that have been set in
-  `TaoADMMSetMisfitObjectiveAndGradientRoutine()` and
-  `TaoADMMSetMisfitHessianRoutine()`.
-
-  Level: developer
-
-  Note:
-  This implementation has the same restrictions os `TAOTERMTAOCALLBACKS`.
-
-.seealso: [](sec_tao_term),
-          `TaoTerm`,
-          `TaoTermType`,
-          `TAOADMM`,
-          `TAOTERMTAOCALLBACKS`
-          `TAOTERMBRGNREGULARIZER`,
-          `TAOTERMADMMREGULARIZER`,
-M*/
-PETSC_INTERN PetscErrorCode TaoTermCreate_ADMMMisfit(TaoTerm term)
-{
-  PetscFunctionBegin;
-  // clang-format off
-  PetscCall(TaoTermCreate_TaoCallbacks_Internal(term,
-        NULL, "TaoADMMSetMisfitObjectiveAndGradientRoutine()",
-        NULL, "TaoADMMSetMisfitObjectiveAndGradientRoutine()",
-        "ADMM misfit objective/gradient", "TaoADMMSetMisfitObjectiveAndGradientRoutine()",
-        "ADMM misfit hessian",            "TaoADMMSetMisfitHessianRoutine()"));
-  // clang-format on
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode TaoTermCreateADMMMisfit(Tao tao, TaoTerm *term)
-{
-  PetscFunctionBegin;
-  PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)tao), term));
-  PetscCall(TaoTermSetType(*term, TAOTERMADMMMISFIT));
   {
     TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)((*term)->data);
 
