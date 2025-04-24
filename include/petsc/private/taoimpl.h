@@ -198,6 +198,8 @@ struct _p_Tao {
 
   TaoMappedTerm objective_term; /* TaoTerm in use */
   Vec           objective_parameters;
+  PetscInt      num_terms;
+  PetscReal    *objective_values;
 
   TaoTerm   orig_callbacks; /* TAOTERMTAOCALLBACKS for the original callbacks */
   PetscBool uses_hessian_matrices;
@@ -232,6 +234,8 @@ static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, Pe
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PETSC_INTERN PetscErrorCode TaoTestGradient_Internal(Tao, Vec, Vec, PetscViewer, PetscViewer);
 
 typedef struct _TaoTermOps *TaoTermOps;
 
