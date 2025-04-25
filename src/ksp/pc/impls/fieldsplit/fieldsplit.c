@@ -2798,8 +2798,8 @@ static PetscErrorCode PCFieldSplitGetSchurPre_FieldSplit(PC pc, PCFieldSplitSchu
   \end{array}\right) = L D U.
   ```
 
-  where $ S = E - C A^{-1}*B $. In practice, the full factorization is applied via block triangular solves with the grouping $L(DU)$. `upper` uses $DU$, `lower` uses $LD$,
-  and `diag` is the diagonal part with the sign of $ $ flipped (because this makes the preconditioner positive definite for many formulations,
+  where $ S = E - C A^{-1} B $. In practice, the full factorization is applied via block triangular solves with the grouping $L(DU)$. `upper` uses $DU$, `lower` uses $LD$,
+  and `diag` is the diagonal part with the sign of $S$ flipped (because this makes the preconditioner positive definite for many formulations,
   thus allowing the use of `KSPMINRES)`. Sign flipping of $S$ can be turned off with `PCFieldSplitSetSchurScale()`.
 
   If $A$ and $S$ are solved exactly
