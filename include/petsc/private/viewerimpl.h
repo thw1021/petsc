@@ -43,3 +43,5 @@ PETSC_INTERN PetscMPIInt Petsc_Viewer_HDF5_keyval;
 #if defined(PETSC_USE_SOCKETVIEWER)
 PETSC_INTERN PetscMPIInt Petsc_Viewer_Socket_keyval;
 #endif
+
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscViewerASCIIPrintfDoubleShort_Internal(PetscViewer, double, PetscBool, PetscBool, PetscBool);

@@ -1,4 +1,5 @@
 #include <../src/sys/classes/viewer/impls/ascii/asciiimpl.h> /*I "petscviewer.h" I*/
+#include <petsc/private/viewerimpl.h>
 
 #define QUEUESTRINGSIZE 8192
 
@@ -1243,3 +1244,46 @@ PetscErrorCode PetscViewerASCIIRead(PetscViewer viewer, void *data, PetscInt num
   else PetscCheck(ret >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Insufficient data, read only %" PetscInt_FMT " < %" PetscInt_FMT " items", i, num);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PetscErrorCode PetscViewerASCIIPrintfDoubleShort_Internal(PetscViewer viewer, double f, PetscBool space_for_sign, PetscBool inf_cutoff, PetscBool small_cutoff)
+{
+  PetscFunctionBegin;
+  if (inf_cutoff && fabs(f) >= PETSC_INFINITY) {
+    if (space_for_sign) PetscCall(PetscViewerASCIIPrintf(viewer, " "));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%s", f > 0 ? "     Inf" : "    -Inf"));
+  } else if (small_cutoff && f < 1.e-11) {
+    if (space_for_sign) PetscCall(PetscViewerASCIIPrintf(viewer, " "));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "< 1.e-11"));
+  } else if (fabs(f) >= 9.9999995e6) {
+    if (space_for_sign) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "%#- .2e", f));
+    } else {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "%#-.2e", f));
+    }
+  }
+  else {
+    int precision;
+
+    for (precision = 7; precision > 2; precision--) {
+      char test_string[20];
+
+      PetscCall(PetscArrayzero(test_string, PETSC_STATIC_ARRAY_LENGTH(test_string)));
+      PetscCall(PetscSNPrintf(test_string, PETSC_STATIC_ARRAY_LENGTH(test_string), "%-# .*g,", precision, f));
+      if (test_string[9] == ',') break;
+      if (test_string[0] == '\0') {
+        /* this is a number like 0.9999995 prints like '0.9999995,' with precision 7 (which is too long) but '1.00000, ' with
+             precision 6 (which is too short).  Just round it and use the higher precision to get '1.000000,' */
+        f = pow(10, precision - 6) * ((f > 0) ? 1.0 : -1.0);
+        precision++;
+        break;
+      }
+    }
+    if (space_for_sign) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "%#- .*g", precision, f));
+    } else {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "%#-.*g", precision, f));
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+

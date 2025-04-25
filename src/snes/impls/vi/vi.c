@@ -137,7 +137,7 @@ static PetscErrorCode SNESMonitorVI(SNES snes, PetscInt its, PetscReal fgnorm, v
   PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
   if (snes->ntruebounds) tmp = ((double)(fact[0] + fact[1])) / ((double)snes->ntruebounds);
   else tmp = 0.0;
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES VI Function norm %g Active lower constraints %" PetscInt_FMT "/%" PetscInt_FMT " upper constraints %" PetscInt_FMT "/%" PetscInt_FMT " Percent of total %g Percent of bounded %g\n", its, (double)fnorm, fact[0], fact_bound[0], fact[1], fact_bound[1], ((double)(fact[0] + fact[1])) / ((double)N), tmp));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " SNES VI Function norm %g Active lower constraints %" PetscInt_FMT "/%" PetscInt_FMT " upper constraints %" PetscInt_FMT "/%" PetscInt_FMT " Percent of total %g Percent of bounded %g\n", its, (double)fnorm, fact[0], fact_bound[0], fact[1], fact_bound[1], ((double)(fact[0] + fact[1])) / ((double)N), tmp));
 
   PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)snes)->tablevel));
   PetscFunctionReturn(PETSC_SUCCESS);

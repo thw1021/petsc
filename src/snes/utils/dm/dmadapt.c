@@ -1070,8 +1070,8 @@ PetscErrorCode DMAdaptorMonitorSize(DMAdaptor adaptor, PetscInt n, DM odm, DM ad
 
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Sizes for %s adaptation.\n", prefix));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " DMAdaptor rank %d N_orig: %" PetscInt_FMT " N_adapt: %" PetscInt_FMT "\n", n, rank, cEnd - cStart, acEnd - acStart));
+  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "Sizes for %s adaptation.\n", prefix));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " DMAdaptor rank %d N_orig: %" PetscInt_FMT " N_adapt: %" PetscInt_FMT "\n", n, rank, cEnd - cStart, acEnd - acStart));
   PetscCall(PetscViewerASCIISubtractTab(viewer, tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1117,8 +1117,8 @@ PetscErrorCode DMAdaptorMonitorError(DMAdaptor adaptor, PetscInt n, DM odm, DM a
 
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Error norms for %s adaptation.\n", prefix));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " DMAdaptor Error norm %s", n, Nf > 1 ? "[" : ""));
+  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "Error norms for %s adaptation.\n", prefix));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " DMAdaptor Error norm %s", n, Nf > 1 ? "[" : ""));
   PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
   for (PetscInt f = 0; f < Nf; ++f) {
     if (f > 0) PetscCall(PetscViewerASCIIPrintf(viewer, ", "));

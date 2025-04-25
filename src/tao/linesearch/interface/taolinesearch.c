@@ -436,7 +436,7 @@ PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f,
   if (ls->usemonitor) {
     PetscCall(PetscViewerASCIIGetTab(ls->viewer, &tabs));
     PetscCall(PetscViewerASCIISetTab(ls->viewer, ((PetscObject)ls)->tablevel));
-    PetscCall(PetscViewerASCIIPrintf(ls->viewer, "%3" PetscInt_FMT " LS", its));
+    PetscCall(PetscViewerASCIIPrintf(ls->viewer, "%-3" PetscInt_FMT " LS", its));
     PetscCall(PetscViewerASCIIPrintf(ls->viewer, "  Function value: %g,", (double)f));
     PetscCall(PetscViewerASCIIPrintf(ls->viewer, "  Step length: %g\n", (double)step));
     if (ls->ops->monitor && its > 0) {

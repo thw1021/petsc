@@ -190,6 +190,7 @@ PetscErrorCode SNESMonitorFields(SNES snes, PetscInt its, PetscReal fgnorm, Pets
   const PetscScalar *r;
   PetscReal         *lnorms, *norms;
   PetscInt           numFields, f, pStart, pEnd, p;
+  const char *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -213,7 +214,9 @@ PetscErrorCode SNESMonitorFields(SNES snes, PetscInt its, PetscReal fgnorm, Pets
   PetscCallMPI(MPIU_Allreduce(lnorms, norms, numFields, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)dm)));
   PetscCall(PetscViewerPushFormat(viewer, vf->format));
   PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e [", its, (double)fgnorm));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
+  if (its == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "Residual norms for %s solve.\n", prefix));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " SNES Function norm %14.12e [", its, (double)fgnorm));
   for (f = 0; f < numFields; ++f) {
     if (f > 0) PetscCall(PetscViewerASCIIPrintf(viewer, ", "));
     PetscCall(PetscViewerASCIIPrintf(viewer, "%14.12e", (double)PetscSqrtReal(norms[f])));

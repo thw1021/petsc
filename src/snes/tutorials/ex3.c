@@ -521,7 +521,7 @@ PetscErrorCode Monitor(SNES snes, PetscInt its, PetscReal fnorm, void *ctx)
   Vec         x;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "iter = %" PetscInt_FMT ",SNES Function norm %g\n", its, (double)fnorm));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%-3" PetscInt_FMT " SNES Function norm %g\n", its, (double)fnorm));
   PetscCall(SNESGetSolution(snes, &x));
   PetscCall(VecView(x, monP->viewer));
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -1663,7 +1663,7 @@ static PetscErrorCode PCApply_FieldSplit_GKB(PC pc, Vec x, Vec y)
 
   iterGKB = 1;
   lowbnd  = 2 * jac->gkbtol;
-  if (jac->gkbmonitor) PetscCall(PetscViewerASCIIPrintf(jac->gkbviewer, "%3" PetscInt_FMT " GKB Lower bound estimate %14.12e\n", iterGKB, (double)lowbnd));
+  if (jac->gkbmonitor) PetscCall(PetscViewerASCIIPrintf(jac->gkbviewer, "%-3" PetscInt_FMT " GKB Lower bound estimate %14.12e\n", iterGKB, (double)lowbnd));
 
   while (iterGKB < jac->gkbmaxit && lowbnd > jac->gkbtol) {
     iterGKB += 1;
@@ -1704,7 +1704,7 @@ static PetscErrorCode PCApply_FieldSplit_GKB(PC pc, Vec x, Vec y)
     }
 
     for (j = 0; j < jac->gkbdelay - 1; j++) vecz[jac->gkbdelay - j - 1] = vecz[jac->gkbdelay - j - 2];
-    if (jac->gkbmonitor) PetscCall(PetscViewerASCIIPrintf(jac->gkbviewer, "%3" PetscInt_FMT " GKB Lower bound estimate %14.12e\n", iterGKB, (double)lowbnd));
+    if (jac->gkbmonitor) PetscCall(PetscViewerASCIIPrintf(jac->gkbviewer, "%-3" PetscInt_FMT " GKB Lower bound estimate %14.12e\n", iterGKB, (double)lowbnd));
   }
 
   PetscCall(VecScatterBegin(ilinkA->sctx, ilinkA->y, y, INSERT_VALUES, SCATTER_REVERSE));

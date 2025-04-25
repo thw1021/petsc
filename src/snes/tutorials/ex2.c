@@ -345,7 +345,7 @@ PetscErrorCode Monitor(SNES snes, PetscInt its, PetscReal fnorm, void *ctx)
   SNESConvergedReason reason;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "iter = %" PetscInt_FMT ", SNES Function norm %g\n", its, (double)fnorm));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%-3" PetscInt_FMT " SNES Function norm %g\n", its, (double)fnorm));
   PetscCall(SNESGetConvergedReason(snes, &reason));
   PetscCall(SNESGetSolution(snes, &x));
   PetscCall(VecView(x, monP->viewer));

@@ -2,6 +2,7 @@
 #include <petscdm.h>
 #include <petscsection.h>
 #include <petscblaslapack.h>
+#include <petsc/private/viewerimpl.h>
 
 /*@C
   SNESMonitorSolution - Monitors progress of a `SNES` `SNESSolve()` by calling
@@ -163,8 +164,8 @@ PetscErrorCode KSPMonitorSNESResidual(KSP ksp, PetscInt n, PetscReal rnorm, Pets
   PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Residual norm %5.3e KSP Residual norm %5.3e\n", n, (double)snorm, (double)rnorm));
+  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "Residual norms for %s solve.\n", prefix));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " SNES Residual norm %5.3e KSP Residual norm %5.3e\n", n, (double)snorm, (double)rnorm));
   PetscCall(PetscViewerASCIISubtractTab(viewer, tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -300,6 +301,7 @@ PetscErrorCode SNESMonitorDefault(SNES snes, PetscInt its, PetscReal fgnorm, Pet
   PetscViewer       viewer = vf->viewer;
   PetscViewerFormat format = vf->format;
   PetscBool         isascii, isdraw;
+  const char       *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -308,6 +310,8 @@ PetscErrorCode SNESMonitorDefault(SNES snes, PetscInt its, PetscReal fgnorm, Pet
   PetscCall(PetscViewerPushFormat(viewer, format));
   if (isascii) {
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
+    if (its == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "Residual norms for %s solve.\n", prefix));
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
       Vec              dx;
       PetscReal        upnorm;
@@ -322,12 +326,12 @@ PetscErrorCode SNESMonitorDefault(SNES snes, PetscInt its, PetscReal fgnorm, Pet
 
         PetscCall(SNESGetSolution(snes, &x));
         PetscCall(SNESComputeObjective(snes, x, &obj));
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e, Update norm %14.12e, Objective %14.12e\n", its, (double)fgnorm, (double)upnorm, (double)obj));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " SNES Function norm %14.12e, Update norm %14.12e, Objective value % 14.12e\n", its, (double)fgnorm, (double)upnorm, (double)obj));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e, Update norm %14.12e\n", its, (double)fgnorm, (double)upnorm));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " SNES Function norm %14.12e, Update norm %14.12e\n", its, (double)fgnorm, (double)upnorm));
       }
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e\n", its, (double)fgnorm));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " SNES Function norm %14.12e\n", its, (double)fgnorm));
     }
     PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)snes)->tablevel));
   } else if (isdraw) {
@@ -523,6 +527,7 @@ PetscErrorCode SNESMonitorRange(SNES snes, PetscInt it, PetscReal rnorm, PetscVi
   PetscViewer viewer = vf->viewer;
   /* should be in a MonitorRangeContext */
   static PetscReal prev;
+  const char *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -531,9 +536,11 @@ PetscErrorCode SNESMonitorRange(SNES snes, PetscInt it, PetscReal rnorm, PetscVi
 
   rel  = (prev - rnorm) / prev;
   prev = rnorm;
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
   PetscCall(PetscViewerPushFormat(viewer, vf->format));
   PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES preconditioned resid norm %14.12e Percent values above 20 percent of maximum %5.2g relative decrease %5.2e ratio %5.2e\n", it, (double)rnorm, (double)(100 * perc), (double)rel, (double)(rel / perc)));
+  if (it == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "Residual norms for %s solve.\n", prefix));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " SNES preconditioned resid norm %14.12e Percent values above 20 percent of maximum %5.2g relative decrease %5.2e ratio %5.2e\n", it, (double)rnorm, (double)(100 * perc), (double)rel, (double)(rel / perc)));
   PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)snes)->tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -568,16 +575,19 @@ PetscErrorCode SNESMonitorRatio(SNES snes, PetscInt its, PetscReal fgnorm, Petsc
   PetscInt    len;
   PetscReal  *history;
   PetscViewer viewer = vf->viewer;
+  const char *prefix;
 
   PetscFunctionBegin;
   PetscCall(SNESGetConvergenceHistory(snes, &history, NULL, &len));
   PetscCall(PetscViewerPushFormat(viewer, vf->format));
   PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
+  if (its == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "Residual norms for %s solve.\n", prefix));
   if (!its || !history || its > len) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e\n", its, (double)fgnorm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " SNES Function norm %14.12e\n", its, (double)fgnorm));
   } else {
     PetscReal ratio = fgnorm / history[its - 1];
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e %14.12e\n", its, (double)fgnorm, (double)ratio));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " SNES Function norm %14.12e %14.12e\n", its, (double)fgnorm, (double)ratio));
   }
   PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)snes)->tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
@@ -619,18 +629,17 @@ PetscErrorCode SNESMonitorRatioSetUp(SNES snes, PetscViewerAndFormat *vf)
 PetscErrorCode SNESMonitorDefaultShort(SNES snes, PetscInt its, PetscReal fgnorm, PetscViewerAndFormat *vf)
 {
   PetscViewer viewer = vf->viewer;
+  const char *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(PetscViewerPushFormat(viewer, vf->format));
   PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
-  if (fgnorm > 1.e-9) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %g\n", its, (double)fgnorm));
-  } else if (fgnorm > 1.e-11) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %5.3e\n", its, (double)fgnorm));
-  } else {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm < 1.e-11\n", its));
-  }
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
+  if (its == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "Residual norms for %s solve.\n", prefix));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " SNES Function norm ", its));
+  PetscCall(PetscViewerASCIIPrintfDoubleShort_Internal(viewer, (double)fgnorm, /* space for sign */ PETSC_FALSE, /* Inf cutoff */ PETSC_FALSE, /* small cutoff */ PETSC_TRUE));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
   PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)snes)->tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -667,6 +676,7 @@ PetscErrorCode SNESMonitorDefaultField(SNES snes, PetscInt its, PetscReal fgnorm
   DM          dm;
   PetscReal   res[256];
   PetscInt    tablevel;
+  const char *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -686,7 +696,9 @@ PetscErrorCode SNESMonitorDefaultField(SNES snes, PetscInt its, PetscReal fgnorm
     PetscCall(PetscObjectGetTabLevel((PetscObject)snes, &tablevel));
     PetscCall(PetscViewerPushFormat(viewer, vf->format));
     PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e [", its, (double)fgnorm));
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
+    if (its == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "Residual norms for %s solve.\n", prefix));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " SNES Function norm %14.12e [", its, (double)fgnorm));
     for (f = 0; f < Nf; ++f) {
       if (f) PetscCall(PetscViewerASCIIPrintf(viewer, ", "));
       PetscCall(PetscViewerASCIIPrintf(viewer, "%14.12e", (double)res[f]));
