@@ -2795,7 +2795,7 @@ static PetscErrorCode PCFieldSplitGetSchurPre_FieldSplit(PC pc, PCFieldSplitSchu
   \end{array}\right)
   \left(\begin{array}{cc} I & A^{-1}B \\
   0 & I \\
-  \end{array}\right) = L D U.
+  \end{array}\right) = L D U,
   ```
 
   where $ S = E - C A^{-1} B $. In practice, the full factorization is applied via block triangular solves with the grouping $L(DU)$. `upper` uses $DU$, `lower` uses $LD$,
