@@ -53,6 +53,7 @@ class Installer(script.Script):
     self.setCompilers  = self.framework.require('config.setCompilers',         None)
     self.arch          = self.framework.require('PETSc.options.arch',          None)
     self.petscdir      = self.framework.require('PETSc.options.petscdir',      None)
+    self.installdir    = self.framework.require('PETSc.options.installDir',    None)
     self.compilers     = self.framework.require('config.compilers',            None)
     self.mpi           = self.framework.require('config.packages.MPI',         None)
     return
@@ -77,12 +78,12 @@ class Installer(script.Script):
     self.archBinDir        = os.path.join(self.rootDir, self.arch, 'bin')
     self.archLibDir        = os.path.join(self.rootDir, self.arch, 'lib')
     self.destIncludeDir    = os.path.join(self.destDir, 'include')
-    self.destConfDir       = os.path.join(self.destDir, 'lib','petsc','conf')
-    self.destLibDir        = os.path.join(self.destDir, 'lib')
-    self.destBinDir        = os.path.join(self.destDir, 'lib','petsc','bin')
+    self.destConfDir       = os.path.join(self.destDir, self.installdir.petscLibDir,'petsc','conf')
+    self.destLibDir        = os.path.join(self.destDir, self.installdir.petscLibDir)
+    self.destBinDir        = os.path.join(self.destDir, self.installdir.petscLibDir,'petsc','bin')
     self.installIncludeDir = os.path.join(self.installDir, 'include')
-    self.installLibDir     = os.path.join(self.installDir, 'lib')
-    self.installBinDir     = os.path.join(self.installDir, 'lib','petsc','bin')
+    self.installLibDir     = os.path.join(self.installDir, self.installdir.petscLibDir)
+    self.installBinDir     = os.path.join(self.installDir, self.installdir.petscLibDir,'petsc','bin')
     self.rootShareDir      = os.path.join(self.rootDir, 'share')
     self.destShareDir      = os.path.join(self.destDir, 'share')
     self.rootSrcDir        = os.path.join(self.rootDir, 'src')
@@ -344,7 +345,7 @@ class Installer(script.Script):
       return glob.glob(os.path.join(dirname, *patterns))
     def shell(*args):
       return self.executeShellCommand(' '.join(args))[0]
-    libdir = os.path.join(self.installDir, 'lib')
+    libdir = os.path.join(self.installDir, self.installdir.petscLibDir)
     if sys.platform == 'linux':
       libraries = [
         lib for lib in lsdir(self.destLibDir, 'lib*.so*')
