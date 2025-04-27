@@ -74,7 +74,7 @@ All meeting attendees are expected to follow the PETSc/NumFocus Code of Conduct.
 
 [comment]: # (Intro: Python, Linear/Nonlinear Solver, GPU)
 
-[comment]: # (Adv: Meshing, SNESVI, Optimization)
+[comment2]: # (Adv: Meshing, SNESVI, Optimization)
 
 ### Monday, May 19
 
