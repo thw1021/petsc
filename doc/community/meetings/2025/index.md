@@ -54,21 +54,21 @@ All meeting attendees are expected to follow the PETSc/NumFocus Code of Conduct.
 ## Organizing Committees
 
 ### Local Committee
-[Margarete Jadamec](https://geovizlab.geology.buffalo.edu/)
-[Matt Jones](https://www.buffalo.edu/ccr/about-us/people/staff/jones.html)
-[Matt Knepley](https://cse.buffalo.edu/~knepley/)
-[Joseph Pusztay](https://www.linkedin.com/in/joseph-pusztay-174183129/)
-[David Salac](https://engineering.buffalo.edu/mechanical-aerospace/people/faculty/d-salac.html)
+- [Margarete Jadamec](https://geovizlab.geology.buffalo.edu/)
+- [Matt Jones](https://www.buffalo.edu/ccr/about-us/people/staff/jones.html)
+- [Matt Knepley](https://cse.buffalo.edu/~knepley/)
+- [Joseph Pusztay](https://www.linkedin.com/in/joseph-pusztay-174183129/)
+- [David Salac](https://engineering.buffalo.edu/mechanical-aerospace/people/faculty/d-salac.html)
 
 ### Remote Committee
-[Blaise Bourdin](https://math.mcmaster.ca/~bourdinb/)
-[Danny Finn](https://scholar.google.com/citations?user=l09jI6wAAAAJ&hl=en)
-[Toby Isaac](https://tisaac.gitlab.io/triquadtethex/)
-[Lois McInnes](https://wordpress.cels.anl.gov/curfman/)
-[Louis Moresi](https://www.moresi.info/)
-[Darsh Nathawani](https://darshnathawani.com/)
-[Barry Smith](https://barrysmith.github.io/)
-[Junchao Zhang](https://www.anl.gov/profile/junchao-zhang)
+- [Blaise Bourdin](https://math.mcmaster.ca/~bourdinb/)
+- [Danny Finn](https://scholar.google.com/citations?user=l09jI6wAAAAJ&hl=en)
+- [Toby Isaac](https://tisaac.gitlab.io/triquadtethex/)
+- [Lois McInnes](https://wordpress.cels.anl.gov/curfman/)
+- [Louis Moresi](https://www.moresi.info/)
+- [Darsh Nathawani](https://darshnathawani.com/)
+- [Barry Smith](https://barrysmith.github.io/)
+- [Junchao Zhang](https://www.anl.gov/profile/junchao-zhang)
 
 ## Tentative Agenda
 
