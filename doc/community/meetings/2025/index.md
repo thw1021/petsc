@@ -16,10 +16,10 @@ May 20-21, 2025, Davis Hall, University of Buffalo, NY, USA ([105 White Rd, Amhe
 
 ## Sponsors
 ```{image} https://petsc.gitlab.io/annual-meetings/2025/Center-for-Computational-Research.png
-:width: 800
+:width: 400
 ```
 ```{image} https://petsc.gitlab.io/annual-meetings/2025/Institute-for-Artificial-Intelligence-and-Data-Science-color.png
-:width: 800
+:width: 400
 ```
 
 ## Registration
