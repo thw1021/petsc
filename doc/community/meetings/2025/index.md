@@ -61,3 +61,11 @@ All meeting attendees are expected to follow the PETSc/NumFocus Code of Conduct.
 [Darsh Nathawani](https://darshnathawani.com/)
 [Barry Smith](https://barrysmith.github.io/)
 [Junchao Zhang](https://www.anl.gov/profile/junchao-zhang)
+
+## Sponsors
+```{image} https://petsc.gitlab.io/annual-meetings/2025/Center-for-Computational-Research.png
+:width: 800
+```
+```{image} https://petsc.gitlab.io/annual-meetings/2025/Institute-for-Artificial-Intelligence-and-Data-Science-color.png
+:width: 800
+```
