@@ -20,8 +20,8 @@ class Configure(config.base.Configure):
 
   def setupHelp(self, help):
     import nargs
-    help.addArgument('PETSc',  '-prefix-install-libdir=<dir>',               nargs.Arg(None, 'auto', 'Specifiy relative path to install library (one of ["lib", "lib32", "lib64", or "auto"])'))
-    help.addArgument('PETSc', '-with-clean=<bool>',         nargs.ArgBool(None, 0, 'Delete prior build files including externalpackages'))
+    help.addArgument('PETSc', '-prefix-install-libdir=<dir>', nargs.Arg(None, 'auto', 'Specifiy relative path to install library (one of ["lib", "lib32", "lib64", or "auto"])'))
+    help.addArgument('PETSc', '-with-clean=<bool>',           nargs.ArgBool(None, 0, 'Delete prior build files including externalpackages'))
     return
 
   def setupDependencies(self, framework):

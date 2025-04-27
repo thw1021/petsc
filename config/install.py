@@ -273,6 +273,9 @@ class Installer(script.Script):
         continue
       line = line.replace('PETSC_CC_INCLUDES_INSTALL', 'PETSC_CC_INCLUDES')
       line = line.replace('PETSC_FC_INCLUDES_INSTALL', 'PETSC_FC_INCLUDES')
+      # replace '${PETSC_DIR}/${PETSC_ARCH}/lib' and '${PETSC_DIR}/lib' occurences with installLibDir
+      line = line.replace('${PETSC_DIR}/${PETSC_ARCH}/lib', self.installLibDir)
+      line = line.replace('${PETSC_DIR}/lib', self.installLibDir)
       # remove PETSC_DIR/PETSC_ARCH variables from conf-makefiles. They are no longer necessary
       line = line.replace('${PETSC_DIR}/${PETSC_ARCH}', self.installDir)
       line = line.replace('PETSC_ARCH=${PETSC_ARCH}', '')
