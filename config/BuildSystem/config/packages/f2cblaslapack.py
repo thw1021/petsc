@@ -54,6 +54,10 @@ class Configure(config.package.Package):
     libdir = self.libDir
     confdir = self.confDir
 
+    CSTD = ''
+    if self.setCompilers.isGcc150plus(self.getCompiler(), self.log):
+      CSTD = ' -std=gnu17'
+
     with open(os.path.join(self.packageDir,'tmpmakefile'),'w') as g:
       with open(os.path.join(self.packageDir,'makefile'),'r') as f:
         for line in f:
@@ -62,12 +66,12 @@ class Configure(config.package.Package):
             line = 'CC = '+cc+'\n'
           if line.startswith('COPTFLAGS '):
             self.pushLanguage('C')
-            line = 'COPTFLAGS  = '+self.updatePackageCFlags(self.getCompilerFlags())+'\n'
+            line = 'COPTFLAGS  = '+self.updatePackageCFlags(self.getCompilerFlags())+CSTD+'\n'
             self.popLanguage()
           if line.startswith('CNOOPT'):
             self.pushLanguage('C')
             noopt = self.checkNoOptFlag()
-            line = 'CNOOPT = '+noopt+ ' '+self.getSharedFlag(self.getCompilerFlags())+' '+self.getPointerSizeFlag(self.getCompilerFlags())+' '+self.getWindowsNonOptFlags(self.getCompilerFlags())+'\n'
+            line = 'CNOOPT = '+noopt+ ' '+self.getSharedFlag(self.getCompilerFlags())+' '+self.getPointerSizeFlag(self.getCompilerFlags())+' '+self.getWindowsNonOptFlags(self.getCompilerFlags())+CSTD+'\n'
             self.popLanguage()
           if line.startswith('AR  '):
             line = 'AR      = '+self.setCompilers.AR+'\n'

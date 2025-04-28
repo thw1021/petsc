@@ -40,7 +40,10 @@ class Configure(config.package.CMakePackage):
     args.append('-DBISON_EXECUTABLE:STRING="'+self.bison.bison+'"')
 
     args = self.rmArgsStartsWith(args, '-DCMAKE_C_FLAGS')
-    args.append('-DCMAKE_C_FLAGS:STRING="'+self.updatePackageCFlags(self.getCompilerFlags())+' -USCOTCH_PTHREAD"')
+    if self.setCompilers.isGcc150plus(self.getCompiler(), self.log):
+      args.append('-DCMAKE_C_FLAGS:STRING="'+self.updatePackageCFlags(self.getCompilerFlags())+' -std=gnu17 -USCOTCH_PTHREAD"')
+    else:
+      args.append('-DCMAKE_C_FLAGS:STRING="'+self.updatePackageCFlags(self.getCompilerFlags())+' -USCOTCH_PTHREAD"')
 
     args.append('-DINTSIZE:STRING='+ ('64' if self.getDefaultIndexSize() == 64 else '32'))
 
