@@ -2033,7 +2033,7 @@ PetscErrorCode VecGetArray(Vec x, PetscScalar *a[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscCall(VecSetErrorIfLocked(x, 1));
-  if (x->ops->getarray) { /* The if-else order matters! VECNEST, VECCUDA etc should have ops->getarray while VECCUDA etc are petscnative */
+  if (x->ops->getarray) { /* The if-else order matters! VECNEST, VECCUDA etc should have ops->getarray while VECSTANDARD etc are petscnative */
     PetscUseTypeMethod(x, getarray, a);
   } else if (x->petscnative) { /* VECSTANDARD */
     *a = *((PetscScalar **)x->data);
