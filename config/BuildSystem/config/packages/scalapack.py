@@ -34,6 +34,9 @@ class Configure(config.package.CMakePackage):
 
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
+    if self.setCompilers.isGcc150plus(self.getCompiler(), self.log):
+      args = self.rmArgsStartsWith(args, '-DCMAKE_C_FLAGS')
+      args.append('-DCMAKE_C_FLAGS:STRING="'+self.updatePackageCFlags(self.getCompilerFlags())+' -std=gnu17"')
     args.append('-DLAPACK_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
     args.append('-DSCALAPACK_BUILD_TESTS=OFF')
     return args

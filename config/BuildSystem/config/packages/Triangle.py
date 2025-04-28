@@ -64,7 +64,10 @@ class Configure(config.package.Package):
     cflags += ' -DNO_TIMER'
 
     g.write('CC             = '+self.getCompiler()+'\n')
-    g.write('CFLAGS         = '+cflags+'\n')
+    if self.setCompilers.isGcc150plus(self.getCompiler(), self.log):
+      g.write('CFLAGS         = '+cflags+' -std=gnu17\n')
+    else:
+      g.write('CFLAGS         = '+cflags+'\n')
     self.popLanguage()
 
     if self.checkSharedLibrariesEnabled():
