@@ -2132,11 +2132,11 @@ PetscErrorCode VecRestoreArrayRead(Vec x, const PetscScalar *a[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   if (a) PetscAssertPointer(a, 2);
-  if (x->petscnative) { /* VECSTANDARD, VECCUDA, VECKOKKOS etc */
-    /* nothing */
-  } else if (x->ops->restorearrayread) { /* VECNEST */
+  if (x->ops->restorearrayread) { // VECNEST
     PetscUseTypeMethod(x, restorearrayread, a);
-  } else { /* No one? */
+  } else if (x->petscnative) { // VECSTANDARD, VECCUDA, VECKOKKOS etc.
+    // nothing
+  } else {
     PetscObjectState state;
 
     // x->ops->restorearray may bump the object state, but since we know this is a read-restore
