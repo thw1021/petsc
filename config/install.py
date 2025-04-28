@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import print_function
 import os, re, shutil, sys
+import sysconfig
 
 if 'PETSC_DIR' in os.environ:
   PETSC_DIR = os.environ['PETSC_DIR']
@@ -316,6 +317,14 @@ class Installer(script.Script):
         elif os.path.exists(pathname):
           os.remove(pathname)
     #
+    relocate_py_env = os.environ.get('CIBUILDWHEEL') # XXX
+    if relocate_py_env:
+        # relocation assumes petsc is installed in site-packages
+        pydir = sys.prefix
+        pylibdir = os.path.join(pydir, 'lib')
+        pysitedir = sysconfig.get_paths()["platlib"]
+        petscdir = os.path.join(pysitedir, 'petsc')
+        petsclibdir = os.path.join(petscdir, 'lib')
     for filename in (
       self.destIncludeDir + '/petscconf.h',
       self.destIncludeDir + '/petscconfiginfo.h',
@@ -332,6 +341,9 @@ class Installer(script.Script):
         contents = oldFile.read()
       contents = contents.replace(self.installDir, '${PETSC_DIR}')
       contents = contents.replace(self.rootDir, '${PETSC_DIR}')
+      if relocate_py_env:
+        c = os.path.relpath(pydir, petscdir)
+        contents = contents.replace(pydir, os.path.join('${PETSC_DIR}', c))
       contents = re.sub(
         r'^(PYTHON(_EXE)?) = (.*)$',
         r'\1 = python%d' % sys.version_info[0],
@@ -358,6 +370,14 @@ class Installer(script.Script):
           rpath.insert(0, '$ORIGIN')
           while libdir in rpath:
             rpath.remove(libdir)
+        if relocate_py_env:
+          for r in rpath:
+            if pysitedir in r:
+              c = os.path.relpath(r, petsclibdir)
+              rpath.insert(0, os.path.join('$ORIGIN',c))
+            rpath.remove(r)
+          c = os.path.relpath(pylibdir, petsclibdir)
+          rpath.insert(0, os.path.join('$ORIGIN',c))
         if rpath:
           rpath = os.path.pathsep.join(rpath)
           shell('patchelf', '--set-rpath', "'%s'" % rpath, shlib)
