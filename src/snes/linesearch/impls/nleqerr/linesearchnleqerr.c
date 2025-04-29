@@ -46,6 +46,7 @@ static PetscErrorCode SNESLineSearchMonitor_NLEQERR(SNESLineSearch linesearch, P
     char         lambda_fmt[PETSC_MONITOR_REAL_LENGTH];
 
     PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
+    PetscCall(PetscViewerASCIIGetColor(monitor, PETSC_COLOR_DATA, &data));
     PetscCall(PetscViewerASCIIFormatMonitorReal(monitor, lambda, PETSC_REAL_FMT_SHORT, lambda_fmt));
     PetscCall(PetscViewerASCIIFormatMonitorReal(monitor, wnorm, PETSC_REAL_FMT_SHORT, wnorm_fmt));
     PetscCall(PetscViewerASCIIPrintf(monitor, "SNESLineSearch " PetscColorFmt("%3" PetscInt_FMT) " Jacobian-preconditioned function norm " PetscColorFmt("%s") " lambda " PetscColorFmt("%s") "\n", PetscColorArg(data, it), PetscColorArg(data, wnorm_fmt), PetscColorArg(data, lambda_fmt)));

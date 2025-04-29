@@ -25,8 +25,8 @@ static PetscErrorCode TaoLineSearchMonitor_MT(TaoLineSearch ls)
   TaoLineSearch_MT *mt = (TaoLineSearch_MT *)ls->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscViewerASCIIPrintf(ls->viewer, "stx: %g, fx: %g, dgx: %g\n", (double)mt->stx, (double)mt->fx, (double)mt->dgx));
-  PetscCall(PetscViewerASCIIPrintf(ls->viewer, "sty: %g, fy: %g, dgy: %g\n", (double)mt->sty, (double)mt->fy, (double)mt->dgy));
+  PetscCall(PetscViewerASCIIPrintf(ls->viewer, "TaoLineSearchMT stx: %g, fx: %g, dgx: %g\n", (double)mt->stx, (double)mt->fx, (double)mt->dgx));
+  PetscCall(PetscViewerASCIIPrintf(ls->viewer, "TaoLineSearchMT sty: %g, fy: %g, dgy: %g\n", (double)mt->sty, (double)mt->fy, (double)mt->dgy));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
