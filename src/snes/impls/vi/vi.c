@@ -1,5 +1,6 @@
 #include <petsc/private/snesimpl.h> /*I "petscsnes.h" I*/
 #include <petscdm.h>
+#include <petsc/private/viewerimpl.h>
 
 /*@C
   SNESVISetComputeVariableBounds - Sets a function that is called to compute the bounds on variable for
@@ -103,6 +104,11 @@ static PetscErrorCode SNESMonitorVI(SNES snes, PetscInt its, PetscReal fgnorm, v
   PetscInt  act_bound[2] = {0, 0}, fact_bound[2];
   PetscReal rnorm, fnorm, zerotolerance = snes->vizerotolerance;
   double    tmp;
+  const char **data;
+  const char **info;
+  char fnorm_fmt[PETSC_MONITOR_REAL_LENGTH];
+  char pct_fmt[PETSC_MONITOR_REAL_LENGTH];
+  char tmp_fmt[PETSC_MONITOR_REAL_LENGTH];
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -137,7 +143,13 @@ static PetscErrorCode SNESMonitorVI(SNES snes, PetscInt its, PetscReal fgnorm, v
   PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
   if (snes->ntruebounds) tmp = ((double)(fact[0] + fact[1])) / ((double)snes->ntruebounds);
   else tmp = 0.0;
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " SNES VI Function norm %g Active lower constraints %" PetscInt_FMT "/%" PetscInt_FMT " upper constraints %" PetscInt_FMT "/%" PetscInt_FMT " Percent of total %g Percent of bounded %g\n", its, (double)fnorm, fact[0], fact_bound[0], fact[1], fact_bound[1], ((double)(fact[0] + fact[1])) / ((double)N), tmp));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
+  if (its == 0 && ((PetscObject)viewer)->prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "SNES VI " PetscColorFmt("%s") " variational inequality solve information:\n", PetscColorArg(info, ((PetscObject)viewer)->prefix)));
+  PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, fnorm, PETSC_REAL_FMT_SHORT, fnorm_fmt));
+  PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, ((PetscReal)(fact[0] + fact[1])) / ((PetscReal)N), PETSC_REAL_FMT_SHORT, pct_fmt));
+  PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, tmp, PETSC_REAL_FMT_SHORT, tmp_fmt));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%3" PetscInt_FMT) " VI Function norm " PetscColorFmt("%s") " Active lower constraints " PetscColorFmt("%" PetscInt_FMT "/%" PetscInt_FMT) " upper constraints " PetscColorFmt("%" PetscInt_FMT "/%" PetscInt_FMT) " Fraction of total " PetscColorFmt("%s") " Fraction of bounded " PetscColorFmt("%s") "\n", PetscColorArg(data, its), PetscColorArg(data, fnorm_fmt), PetscColorArg(data, fact[0], fact_bound[0]), PetscColorArg(data, fact[1], fact_bound[1]), PetscColorArg(data, pct_fmt), PetscColorArg(data, tmp_fmt)));
 
   PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)snes)->tablevel));
   PetscFunctionReturn(PETSC_SUCCESS);

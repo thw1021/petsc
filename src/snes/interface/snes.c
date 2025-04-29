@@ -4,6 +4,7 @@
 #include <petscds.h>
 #include <petscdmadaptor.h>
 #include <petscconvest.h>
+#include <petsc/private/viewerimpl.h>
 
 PetscBool         SNESRegisterAllCalled = PETSC_FALSE;
 PetscFunctionList SNESList              = NULL;
@@ -4578,8 +4579,17 @@ PetscErrorCode SNESConvergedReasonView(SNES snes, PetscViewer viewer)
   if (!viewer) viewer = PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)snes));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isAscii));
   if (isAscii) {
+    const char **info;
+    const char **data;
+    const char **success;
+    const char **warning;
+
     PetscCall(PetscViewerGetFormat(viewer, &format));
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_SUCCESS, &success));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_WARNING, &warning));
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
       DM       dm;
       Vec      u;
@@ -4588,6 +4598,7 @@ PetscErrorCode SNESConvergedReasonView(SNES snes, PetscViewer viewer)
       PetscErrorCode (**exactSol)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *);
       void    **exactCtx;
       PetscReal error;
+      char      error_fmt[PETSC_MONITOR_REAL_LENGTH];
 
       PetscCall(SNESGetDM(snes, &dm));
       PetscCall(SNESGetSolution(snes, &u));
@@ -4597,20 +4608,21 @@ PetscErrorCode SNESConvergedReasonView(SNES snes, PetscViewer viewer)
       for (f = 0; f < Nf; ++f) PetscCall(PetscDSGetExactSolution(prob, f, &exactSol[f], &exactCtx[f]));
       PetscCall(DMComputeL2Diff(dm, 0.0, exactSol, exactCtx, u, &error));
       PetscCall(PetscFree2(exactSol, exactCtx));
-      if (error < 1.0e-11) PetscCall(PetscViewerASCIIPrintf(viewer, "L_2 Error: < 1.0e-11\n"));
-      else PetscCall(PetscViewerASCIIPrintf(viewer, "L_2 Error: %g\n", (double)error));
+      PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, error, PETSC_REAL_FMT_SHORT | PETSC_REAL_FMT_INF_CUTOFF, error_fmt));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "SNES L_2 Error: " PetscColorFmt("%s") "\n", PetscColorArg(data, error_fmt)));
     }
     if (snes->reason > 0 && format != PETSC_VIEWER_FAILED) {
+      const char **code = snes->reason == SNES_CONVERGED_ITS ? data : success;
       if (((PetscObject)snes)->prefix) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Nonlinear %s solve converged due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)snes)->prefix, SNESConvergedReasons[snes->reason], snes->iter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%s") " nonlinear solve converged due to " PetscColorFmt("%s") " iterations " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(info,((PetscObject)snes)->prefix), PetscColorArg(code,SNESConvergedReasons[snes->reason]), PetscColorArg(data,snes->iter)));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Nonlinear solve converged due to %s iterations %" PetscInt_FMT "\n", SNESConvergedReasons[snes->reason], snes->iter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "SNES nonlinear solve converged due to " PetscColorFmt("%s") " iterations " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(code,SNESConvergedReasons[snes->reason]), PetscColorArg(data,snes->iter)));
       }
     } else if (snes->reason <= 0) {
       if (((PetscObject)snes)->prefix) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Nonlinear %s solve did not converge due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)snes)->prefix, SNESConvergedReasons[snes->reason], snes->iter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%s") " nonlinear solve did not converge due to " PetscColorFmt("%s") " iterations " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(info,((PetscObject)snes)->prefix), PetscColorArg(warning,SNESConvergedReasons[snes->reason]), PetscColorArg(data,snes->iter)));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Nonlinear solve did not converge due to %s iterations %" PetscInt_FMT "\n", SNESConvergedReasons[snes->reason], snes->iter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "SNES nonlinear solve did not converge due to " PetscColorFmt("%s") " iterations " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(warning,SNESConvergedReasons[snes->reason]), PetscColorArg(data,snes->iter)));
       }
     }
     PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)snes)->tablevel));

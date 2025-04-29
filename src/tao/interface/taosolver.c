@@ -185,19 +185,27 @@ PetscErrorCode TaoSolve(Tao tao)
 
   if (tao->printreason) {
     PetscViewer viewer = PETSC_VIEWER_STDOUT_(((PetscObject)tao)->comm);
+    const char **data;
+    const char **info;
+    const char **success;
+    const char **warning;
 
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)tao)->tablevel));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_SUCCESS, &success));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_WARNING, &warning));
     if (tao->reason > 0) {
       if (((PetscObject)tao)->prefix) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO %s solve converged due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix, TaoConvergedReasons[tao->reason], tao->niter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO " PetscColorFmt("%s") " optimization solve converged due to " PetscColorFmt("%s") " iterations " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(info, ((PetscObject)tao)->prefix), PetscColorArg(success, TaoConvergedReasons[tao->reason]), PetscColorArg(data, tao->niter)));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO solve converged due to %s iterations %" PetscInt_FMT "\n", TaoConvergedReasons[tao->reason], tao->niter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO optimization solve converged due to " PetscColorFmt("%s") " iterations " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(success, TaoConvergedReasons[tao->reason]), PetscColorArg(data, tao->niter)));
       }
     } else {
       if (((PetscObject)tao)->prefix) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO %s solve did not converge due to %s iteration %" PetscInt_FMT "\n", ((PetscObject)tao)->prefix, TaoConvergedReasons[tao->reason], tao->niter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO " PetscColorFmt("%s") " optimization solve did not converge due to " PetscColorFmt("%s") " iteration " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(info, ((PetscObject)tao)->prefix), PetscColorArg(warning, TaoConvergedReasons[tao->reason]), PetscColorArg(data, tao->niter)));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO solve did not converge due to %s iteration %" PetscInt_FMT "\n", TaoConvergedReasons[tao->reason], tao->niter));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "TAO optimization solve did not converge due to " PetscColorFmt("%s") " iteration " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(warning, TaoConvergedReasons[tao->reason]), PetscColorArg(data, tao->niter)));
       }
     }
     PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)tao)->tablevel));
@@ -1607,6 +1615,9 @@ PetscErrorCode TaoMonitorDefault(Tao tao, void *ctx)
   PetscInt    its, tabs;
   PetscReal   fct, gnorm;
   PetscViewer viewer = (PetscViewer)ctx;
+  const char **data;
+  const char **info;
+  char gnorm_fmt[PETSC_MONITOR_REAL_LENGTH];
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -1616,16 +1627,14 @@ PetscErrorCode TaoMonitorDefault(Tao tao, void *ctx)
   gnorm = tao->residual;
   PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
   PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)tao)->tablevel));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
   if (its == 0 && ((PetscObject)tao)->prefix && !tao->header_printed) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Iteration information for %s solve.\n", ((PetscObject)tao)->prefix));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "TAO " PetscColorFmt("%s") " optimization solve information:\n", PetscColorArg(info, ((PetscObject)tao)->prefix)));
     tao->header_printed = PETSC_TRUE;
   }
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " TAO Objective value %19.12e,", its, (double)fct));
-  if (gnorm >= PETSC_INFINITY) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, " Residual norm Inf\n"));
-  } else {
-    PetscCall(PetscViewerASCIIPrintf(viewer, " Residual norm %18.12e\n", (double)gnorm));
-  }
+  PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, gnorm, PETSC_REAL_FMT_INF_CUTOFF, gnorm_fmt));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "TAO " PetscColorFmt("%3" PetscInt_FMT) " Objective value " PetscColorFmt("% 18.12e") ", Residual norm " PetscColorFmt("%s") "\n", PetscColorArg(data, its), PetscColorArg(data, (double)fct), PetscColorArg(data, gnorm_fmt)));
   PetscCall(PetscViewerASCIISetTab(viewer, tabs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1656,6 +1665,11 @@ PetscErrorCode TaoMonitorGlobalization(Tao tao, void *ctx)
   PetscInt    its, tabs;
   PetscReal   fct, gnorm, stp, tr;
   PetscViewer viewer = (PetscViewer)ctx;
+  const char **data;
+  const char **info;
+  char gnorm_fmt[PETSC_MONITOR_REAL_LENGTH];
+  char stp_fmt[PETSC_MONITOR_REAL_LENGTH];
+  char tr_fmt[PETSC_MONITOR_REAL_LENGTH];
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -1667,17 +1681,16 @@ PetscErrorCode TaoMonitorGlobalization(Tao tao, void *ctx)
   tr    = tao->trust;
   PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
   PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)tao)->tablevel));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
   if (its == 0 && ((PetscObject)tao)->prefix && !tao->header_printed) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Iteration information for %s solve.\n", ((PetscObject)tao)->prefix));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "TAO " PetscColorFmt("%s") " optimization solve information:\n", PetscColorArg(info, ((PetscObject)tao)->prefix)));
     tao->header_printed = PETSC_TRUE;
   }
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " TAO Objective value %19.12e,", its, (double)fct));
-  if (gnorm >= PETSC_INFINITY) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, " Residual norm Inf,"));
-  } else {
-    PetscCall(PetscViewerASCIIPrintf(viewer, " Residual norm %18.12e,", (double)gnorm));
-  }
-  PetscCall(PetscViewerASCIIPrintf(viewer, " Step %g, Trust %g\n", (double)stp, (double)tr));
+  PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, gnorm, PETSC_REAL_FMT_INF_CUTOFF, gnorm_fmt));
+  PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, stp, PETSC_REAL_FMT_SHORT, stp_fmt));
+  PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, tr, PETSC_REAL_FMT_SHORT, tr_fmt));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "TAO " PetscColorFmt("%3" PetscInt_FMT) " Objective value " PetscColorFmt("% 18.12e") ", Residual norm " PetscColorFmt("%s") ", Step " PetscColorFmt("%s") ", Trust " PetscColorFmt("%s") "\n", PetscColorArg(data, its), PetscColorArg(data, (double)fct), PetscColorArg(data, gnorm_fmt), PetscColorArg(data, stp_fmt), PetscColorArg(data, tr_fmt)));
   PetscCall(PetscViewerASCIISetTab(viewer, tabs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1707,9 +1720,13 @@ PetscErrorCode TaoMonitorGlobalization(Tao tao, void *ctx)
 @*/
 PetscErrorCode TaoMonitorDefaultShort(Tao tao, void *ctx)
 {
-  PetscInt    its, tabs;
-  PetscReal   fct, gnorm;
-  PetscViewer viewer = (PetscViewer)ctx;
+  PetscInt     its, tabs;
+  PetscReal    fct, gnorm;
+  PetscViewer  viewer = (PetscViewer)ctx;
+  char         fct_fmt[PETSC_MONITOR_REAL_LENGTH];
+  char         gnorm_fmt[PETSC_MONITOR_REAL_LENGTH];
+  const char **data;
+  const char **info;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -1719,15 +1736,16 @@ PetscErrorCode TaoMonitorDefaultShort(Tao tao, void *ctx)
   gnorm = tao->residual;
   PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
   PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)tao)->tablevel));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
   if (its == 0 && ((PetscObject)tao)->prefix && !tao->header_printed) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Iteration information for %s solve.\n", ((PetscObject)tao)->prefix));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "TAO " PetscColorFmt("%s") " optimization solve information:\n", PetscColorArg(info, ((PetscObject)tao)->prefix)));
     tao->header_printed = PETSC_TRUE;
   }
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " TAO Objective value ", its));
-  PetscCall(PetscViewerASCIIPrintfDoubleShort_Internal(viewer, (double) fct, /* space for sign */ PETSC_TRUE, /* Inf cutoff */ PETSC_TRUE, /* small cutoff */ PETSC_FALSE));
-  PetscCall(PetscViewerASCIIPrintf(viewer, ", Residual norm "));
-  PetscCall(PetscViewerASCIIPrintfDoubleShort_Internal(viewer, (double) gnorm, /* space for sign */ PETSC_FALSE, /* Inf cutoff */ PETSC_TRUE, /* small cutoff */ PETSC_TRUE));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
+  PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, fct, PETSC_REAL_FMT_SHORT | PETSC_REAL_FMT_SIGNED | PETSC_REAL_FMT_INF_CUTOFF, fct_fmt));
+  PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, gnorm, PETSC_REAL_FMT_SHORT | PETSC_REAL_FMT_INF_CUTOFF | PETSC_REAL_FMT_SMALL_CUTOFF, gnorm_fmt));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "TAO " PetscColorFmt("%3" PetscInt_FMT) " Objective value " PetscColorFmt("%s") ", Residual norm " PetscColorFmt("%s") "\n", PetscColorArg(data, its), PetscColorArg(data, fct_fmt), PetscColorArg(data, gnorm_fmt)));
   PetscCall(PetscViewerASCIISetTab(viewer, tabs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1754,6 +1772,8 @@ PetscErrorCode TaoMonitorConstraintNorm(Tao tao, void *ctx)
   PetscInt    its, tabs;
   PetscReal   fct, gnorm;
   PetscViewer viewer = (PetscViewer)ctx;
+  const char **data;
+  const char **info;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -1763,11 +1783,13 @@ PetscErrorCode TaoMonitorConstraintNorm(Tao tao, void *ctx)
   gnorm = tao->residual;
   PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
   PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)tao)->tablevel));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
   if (its == 0 && ((PetscObject)tao)->prefix && !tao->header_printed) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Iteration information for %s solve.\n", ((PetscObject)tao)->prefix));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "TAO " PetscColorFmt("%s") " optimization solve information:\n", PetscColorArg(info, ((PetscObject)tao)->prefix)));
     tao->header_printed = PETSC_TRUE;
   }
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " Tao Objective value %19.12e, Residual norm %18.12e, Constraint norm %18.12e\n", its, (double)fct, (double)gnorm, (double)tao->cnorm));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "TAO " PetscColorFmt("%3" PetscInt_FMT) " Objective value " PetscColorFmt("% 18.12e") ", Residual norm " PetscColorFmt("%18.12e") ", Constraint norm " PetscColorFmt("%18.12e") "\n", PetscColorArg(data, its), PetscColorArg(data, (double)fct), PetscColorArg(data, (double)gnorm), PetscColorArg(data, (double)tao->cnorm)));
   PetscCall(PetscViewerASCIISetTab(viewer, tabs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

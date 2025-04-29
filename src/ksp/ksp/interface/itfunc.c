@@ -5,6 +5,7 @@
 #include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
 #include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
 #include <petscdm.h>
+#include <petsc/private/viewerimpl.h>
 
 /* number of nested levels of KSPSetUp/Solve(). This is used to determine if KSP_DIVERGED_ITS should be fatal. */
 static PetscInt level = 0;
@@ -473,25 +474,35 @@ PetscErrorCode KSPConvergedReasonView(KSP ksp, PetscViewer viewer)
   if (!viewer) viewer = PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)ksp));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isAscii));
   if (isAscii) {
+    const char **info;
+    const char **success;
+    const char **warning;
+    const char **data;
+
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_SUCCESS, &success));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_WARNING, &warning));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
     PetscCall(PetscViewerGetFormat(viewer, &format));
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)ksp)->tablevel));
     if (ksp->reason > 0 && format != PETSC_VIEWER_FAILED) {
+      const char **code = ksp->reason == KSP_CONVERGED_ITS ? data : success;
       if (((PetscObject)ksp)->prefix) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Linear %s solve converged due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)ksp)->prefix, KSPConvergedReasons[ksp->reason], ksp->its));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "KSP " PetscColorFmt("%s") " linear solve converged due to " PetscColorFmt("%s") " iterations " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(info,((PetscObject)ksp)->prefix), PetscColorArg(code,KSPConvergedReasons[ksp->reason]), PetscColorArg(data,ksp->its)));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Linear solve converged due to %s iterations %" PetscInt_FMT "\n", KSPConvergedReasons[ksp->reason], ksp->its));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "KSP linear solve converged due to " PetscColorFmt("%s") " iterations " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(code,KSPConvergedReasons[ksp->reason]), PetscColorArg(data,ksp->its)));
       }
     } else if (ksp->reason <= 0) {
       if (((PetscObject)ksp)->prefix) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Linear %s solve did not converge due to %s iterations %" PetscInt_FMT "\n", ((PetscObject)ksp)->prefix, KSPConvergedReasons[ksp->reason], ksp->its));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "KSP " PetscColorFmt("%s") " linear solve did not converge due to " PetscColorFmt("%s") " iterations " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(info,((PetscObject)ksp)->prefix), PetscColorArg(warning,KSPConvergedReasons[ksp->reason]), PetscColorArg(data,ksp->its)));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Linear solve did not converge due to %s iterations %" PetscInt_FMT "\n", KSPConvergedReasons[ksp->reason], ksp->its));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "KSP linear solve did not converge due to " PetscColorFmt("%s") " iterations " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(warning,KSPConvergedReasons[ksp->reason]), PetscColorArg(data,ksp->its)));
       }
       if (ksp->reason == KSP_DIVERGED_PC_FAILED) {
         PCFailedReason reason;
         PetscCall(PCGetFailedReason(ksp->pc, &reason));
         PetscCall(PetscViewerASCIIAddTab(viewer, 1));
-        PetscCall(PetscViewerASCIIPrintf(viewer, "PC failed due to %s\n", PCFailedReasons[reason]));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "PC failed due to " PetscColorFmt("%s") "\n", PetscColorArg(warning,PCFailedReasons[reason])));
         PetscCall(PetscViewerASCIISubtractTab(viewer, 1));
       }
     }

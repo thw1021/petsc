@@ -3,6 +3,7 @@
 #include <petscds.h>
 #include <petscdmswarm.h>
 #include <petscdraw.h>
+#include <petsc/private/viewerimpl.h>
 
 /*@C
   TSMonitor - Runs all user-provided monitor routines set using `TSMonitorSet()`
@@ -200,11 +201,19 @@ PetscErrorCode TSMonitorDefault(TS ts, PetscInt step, PetscReal ptime, Vec v, Pe
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERBINARY, &ibinary));
   PetscCall(PetscViewerPushFormat(viewer, vf->format));
   if (iascii) {
+    const char **data;
+
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)ts)->tablevel));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
     if (step == -1) { /* this indicates it is an interpolated solution */
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Interpolated solution at time %g between steps %" PetscInt_FMT " and %" PetscInt_FMT "\n", (double)ptime, ts->steps - 1, ts->steps));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "TS Interpolated solution at time " PetscColorFmt("%g") " between steps " PetscColorFmt("%" PetscInt_FMT) " and " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(data, (double)ptime), PetscColorArg(data, ts->steps - 1), PetscColorArg(data, ts->steps)));
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " TS dt %g time %g%s", step, (double)ts->time_step, (double)ptime, ts->steprollback ? " (r)\n" : "\n"));
+      char ts_fmt[PETSC_MONITOR_REAL_LENGTH];
+      char ptime_fmt[PETSC_MONITOR_REAL_LENGTH];
+
+      PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, ts->time_step, PETSC_REAL_FMT_SHORT, ts_fmt));
+      PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, ptime, PETSC_REAL_FMT_SHORT, ptime_fmt));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "TS " PetscColorFmt("%" PetscInt_FMT ) " dt " PetscColorFmt("%s") " time " PetscColorFmt("%s") "%s\n", PetscColorArg(data, step), PetscColorArg(data, ts_fmt), PetscColorArg(data, ptime_fmt), ts->steprollback ? " (r)" : ""));
     }
     PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)ts)->tablevel));
   } else if (ibinary) {
@@ -254,10 +263,21 @@ PetscErrorCode TSMonitorExtreme(TS ts, PetscInt step, PetscReal ptime, Vec v, Pe
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   PetscCall(PetscViewerPushFormat(viewer, vf->format));
   if (iascii) {
+    const char **data;
+    char ts_fmt[PETSC_MONITOR_REAL_LENGTH];
+    char ptime_fmt[PETSC_MONITOR_REAL_LENGTH];
+    char max_fmt[PETSC_MONITOR_REAL_LENGTH];
+    char min_fmt[PETSC_MONITOR_REAL_LENGTH];
+
     PetscCall(VecMax(v, NULL, &max));
     PetscCall(VecMin(v, NULL, &min));
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)ts)->tablevel));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " TS dt %g time %g%s max %g min %g\n", step, (double)ts->time_step, (double)ptime, ts->steprollback ? " (r)" : "", (double)max, (double)min));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
+    PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, ts->time_step, PETSC_REAL_FMT_SHORT, ts_fmt));
+    PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, ptime, PETSC_REAL_FMT_SHORT, ptime_fmt));
+    PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, max, PETSC_REAL_FMT_SHORT | PETSC_REAL_FMT_SIGNED, max_fmt));
+    PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, min, PETSC_REAL_FMT_SHORT | PETSC_REAL_FMT_SIGNED, min_fmt));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "TS " PetscColorFmt("%" PetscInt_FMT) " dt " PetscColorFmt("%s") " time " PetscColorFmt("%s") "%s max " PetscColorFmt("%s") " min " PetscColorFmt("%s") "\n", PetscColorArg(data, step), PetscColorArg(data, ts_fmt), PetscColorArg(data, ptime_fmt), ts->steprollback ? " (r)" : "", PetscColorArg(data, max_fmt), PetscColorArg(data, min_fmt)));
     PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)ts)->tablevel));
   }
   PetscCall(PetscViewerPopFormat(viewer));

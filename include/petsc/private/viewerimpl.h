@@ -44,4 +44,34 @@ PETSC_INTERN PetscMPIInt Petsc_Viewer_HDF5_keyval;
 PETSC_INTERN PetscMPIInt Petsc_Viewer_Socket_keyval;
 #endif
 
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscViewerASCIIPrintfDoubleShort_Internal(PetscViewer, double, PetscBool, PetscBool, PetscBool);
+typedef enum {
+  PETSC_COLOR_DATA,
+  PETSC_COLOR_ERROR,
+  PETSC_COLOR_INFO,
+  PETSC_COLOR_SUCCESS,
+  PETSC_COLOR_WARNING,
+} PetscColorType;
+
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscViewerASCIIGetColor(PetscViewer, PetscColorType, const char ***);
+
+#define PetscIntColor_FMT "s%" PetscInt_FMT "%s"
+
+#define PetscColorFmt(f) "%s" f "%s"
+#define PetscColorArg(color,...) (color) ? (color[0]) : "", __VA_ARGS__, (color) ? (color[1]) : ""
+
+enum {
+  PETSC_REAL_FMT_DEFAULT      = 0,
+  PETSC_REAL_FMT_SHORT        = 1,
+  PETSC_REAL_FMT_SIGNED       = 2,
+  PETSC_REAL_FMT_INF_CUTOFF   = 4,
+  PETSC_REAL_FMT_SMALL_CUTOFF = 8
+};
+
+#define PetscRealFmtShort(v)       ((v) & PETSC_REAL_FMT_SHORT)
+#define PetscRealFmtSigned(v)      ((v) & PETSC_REAL_FMT_SIGNED)
+#define PetscRealFmtInfCutoff(v)   ((v) & PETSC_REAL_FMT_INF_CUTOFF)
+#define PetscRealFmtSmallCutoff(v) ((v) & PETSC_REAL_FMT_SMALL_CUTOFF)
+
+#define PETSC_MONITOR_REAL_LENGTH 128
+
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscViewerASCIIFormatMonitorReal(PetscViewer, PetscReal, PetscInt, char[]);
