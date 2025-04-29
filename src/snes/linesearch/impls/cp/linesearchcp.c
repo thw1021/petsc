@@ -1,6 +1,7 @@
 #include <petsc/private/linesearchimpl.h>
 #include <petscsnes.h>
 #include <petsc/private/viewerimpl.h>
+#include <petsc/private/snesimpl.h>
 
 static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
 {
@@ -10,26 +11,20 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
   PetscReal   xnorm, ynorm, gnorm, steptol, atol, rtol, ltol, maxstep;
   PetscReal   lambda, lambda_old, lambda_update, delLambda;
   PetscScalar fty, fty_init, fty_old, fty_mid1, fty_mid2, s;
-  PetscInt    count, max_its;
-  PetscViewer monitor, converged_monitor;
-  const char **data = NULL;
+  PetscInt    it, max_its;
+  PetscViewer converged_monitor;
   const char **cdata = NULL;
   const char **csuccess = NULL;
   const char **cwarning = NULL;
-  char         ratio_fmt[PETSC_MONITOR_REAL_LENGTH];
-  char         lambda_fmt[PETSC_MONITOR_REAL_LENGTH];
+  PetscBool    keep_going;
+  SNESLineSearchReason reason;
 
   PetscFunctionBegin;
   PetscCall(SNESLineSearchGetVecs(linesearch, &X, &F, &Y, &W, NULL));
-  PetscCall(SNESLineSearchGetNorms(linesearch, &xnorm, &gnorm, &ynorm));
-  PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
   PetscCall(SNESLineSearchGetLambda(linesearch, &lambda));
+  PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
   PetscCall(SNESLineSearchGetTolerances(linesearch, &steptol, &maxstep, &rtol, &atol, &ltol, &max_its));
-  PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_SUCCEEDED));
-  PetscCall(SNESLineSearchGetDefaultMonitor(linesearch, &monitor));
-  if (monitor) {
-    PetscCall(PetscViewerASCIIGetColor(monitor, PETSC_COLOR_DATA, &data));
-  }
+  PetscCall(SNESLineSearchGetNorms(linesearch, &xnorm, &gnorm, &ynorm));
   converged_monitor = linesearch->converged_monitor;
   if (converged_monitor) {
     PetscCall(PetscViewerASCIIGetColor(converged_monitor, PETSC_COLOR_DATA, &cdata));
@@ -39,111 +34,82 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
 
   /* precheck */
   PetscCall(SNESLineSearchPreCheck(linesearch, X, Y, &changed_y));
-  lambda_old = 0.0;
 
-  if (linesearch->ops->vidirderiv) {
-    PetscCall((*linesearch->ops->vidirderiv)(snes, F, X, Y, &fty));
-  } else {
-    PetscCall(VecDot(F, Y, &fty));
+  it = 0;
+  PetscCall(SNESLineSearchComputeObjectiveDefault_Internal(linesearch, it, PETSC_TRUE, ynorm, 0.0, &fty_init, &keep_going));
+  if (!keep_going) PetscFunctionReturn(PETSC_SUCCESS);
+  fty = fty_old = fty_init;
+
+  // at it == 0, this should just check atol convergence
+  PetscCall(SNESLineSearchCheckConvergenceDefault_Internal(linesearch, it, ynorm, fty, 0.0, 0.0, fty_init, &keep_going));
+  if (!keep_going) {
+    PetscCall(SNESLineSearchGetReason(linesearch, &reason));
+    if (reason == SNES_LINESEARCH_SUCCEEDED) goto postcheck;
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
-  fty_init = fty_old = fty;
 
-  for (count = 0; count < max_its; count++) {
-      /* check for NaN or Inf */
-      if (PetscIsInfOrNanScalar(fty)) {
-        if (converged_monitor) {
-          PetscCall(PetscViewerASCIIAddTab(converged_monitor, ((PetscObject)linesearch)->tablevel));
-          if (PetscIsNanScalar(fty)) PetscCall(PetscViewerASCIIPrintf(converged_monitor, "SNESLineSearch failed because fty is " PetscColorFmt("%s") " iterations " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(cwarning, "NaN"), PetscColorArg(cdata, count)));
-          else PetscCall(PetscViewerASCIIPrintf(converged_monitor, "SNESLineSearch failed because fty is " PetscColorFmt("%s") " iterations " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(cwarning, "Inf"), PetscColorArg(cdata, count)));
-          PetscCall(PetscViewerASCIISubtractTab(converged_monitor, ((PetscObject)linesearch)->tablevel));
-        }
-        PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_NANORINF));
-        PetscFunctionReturn(PETSC_SUCCESS);
-        break;
-      }
-    if (monitor) {
-      PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
-      PetscCall(PetscViewerASCIIFormatMonitorReal(monitor, PetscRealPart(fty)/ ynorm, PETSC_REAL_FMT_SHORT | PETSC_REAL_FMT_SIGNED, ratio_fmt));
-      PetscCall(PetscViewerASCIIFormatMonitorReal(monitor, lambda, PETSC_REAL_FMT_SHORT, lambda_fmt));
-      PetscCall(PetscViewerASCIIPrintf(monitor, "SNESLineSearch " PetscColorFmt("%3" PetscInt_FMT) " fty/||y|| " PetscColorFmt("%s") ", lambda " PetscColorFmt("%s") "\n", PetscColorArg(data, 0), PetscColorArg(data, ratio_fmt), PetscColorArg(data, lambda_fmt)));
-      PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
-    }
+  lambda_old = 0.0;
+  for (it = 1; it <= max_its; it++) {
+    PetscCall(SNESLineSearchComputeObjectiveDefault_Internal(linesearch, it, PETSC_TRUE, ynorm, lambda, &fty, &keep_going));
+    if (!keep_going) PetscFunctionReturn(PETSC_SUCCESS);
 
-    if (PetscAbsScalar(fty) < atol * ynorm) {
-      if (converged_monitor) {
-        PetscCall(PetscViewerASCIIAddTab(converged_monitor, ((PetscObject)linesearch)->tablevel));
-        PetscCall(PetscViewerASCIIPrintf(converged_monitor, "SNESLineSearch succeeded due to " PetscColorFmt("%s") " iterations " PetscColorFmt("%" PetscInt_FMT) "\n", PetscColorArg(csuccess, "atol"), PetscColorArg(cdata, count)));
-        PetscCall(PetscViewerASCIISubtractTab(converged_monitor, ((PetscObject)linesearch)->tablevel));
-      }
-      PetscCall(SNESSetConvergedReason(linesearch->snes, SNES_CONVERGED_FNORM_ABS));
+    PetscCall(SNESLineSearchCheckConvergenceDefault_Internal(linesearch, it, ynorm, fty, lambda, lambda_old, fty_init, &keep_going));
+    if (!keep_going) {
+
+      PetscCall(SNESLineSearchGetReason(linesearch, &reason));
+      if (reason == SNES_LINESEARCH_SUCCEEDED) goto postcheck;
       PetscFunctionReturn(PETSC_SUCCESS);
     }
-    /* compute the norm at lambda */
-    PetscCall(VecWAXPY(W, -lambda, Y, X));
-    if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
-    PetscCall((*linesearch->ops->snesfunc)(snes, W, F));
-    if (linesearch->ops->vidirderiv) {
-      PetscCall((*linesearch->ops->vidirderiv)(snes, F, W, Y, &fty));
-    } else {
-      PetscCall(VecDot(F, Y, &fty));
-    }
-
-    delLambda = lambda - lambda_old;
-
-    /* check for convergence */
-    if (PetscAbsReal(delLambda) < steptol * lambda) break;
-    if (PetscAbsScalar(fty) / PetscAbsScalar(fty_init) < rtol) break;
-    if (PetscAbsScalar(fty) < atol * ynorm && count > 0) break;
-    PetscCall(PetscInfo(linesearch, "lambdas = [%g, %g], ftys = [%g, %g]\n", (double)lambda, (double)lambda_old, (double)PetscRealPart(fty), (double)PetscRealPart(fty_old)));
 
     /* compute the search direction */
+    delLambda = lambda - lambda_old;
     if (linesearch->order == SNES_LINESEARCH_ORDER_LINEAR) {
       s = (fty - fty_old) / delLambda;
     } else if (linesearch->order == SNES_LINESEARCH_ORDER_QUADRATIC) {
-      PetscCall(VecWAXPY(W, -0.5 * (lambda + lambda_old), Y, X));
-      if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
-      PetscCall((*linesearch->ops->snesfunc)(snes, W, F));
-      if (linesearch->ops->vidirderiv) {
-        PetscCall((*linesearch->ops->vidirderiv)(snes, F, W, Y, &fty_mid1));
-      } else {
-        PetscCall(VecDot(F, Y, &fty_mid1));
-      }
+      PetscCall(SNESLineSearchComputeObjectiveDefault_Internal(linesearch, it, PETSC_FALSE, ynorm, 0.5 * (lambda + lambda_old), &fty_mid1, &keep_going));
+      if (!keep_going) PetscFunctionReturn(PETSC_SUCCESS);
       s = (3. * fty - 4. * fty_mid1 + fty_old) / delLambda;
     } else {
-      PetscCall(VecWAXPY(W, -0.5 * (lambda + lambda_old), Y, X));
-      if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
-      PetscCall((*linesearch->ops->snesfunc)(snes, W, F));
-      if (linesearch->ops->vidirderiv) {
-        PetscCall((*linesearch->ops->vidirderiv)(snes, F, W, Y, &fty_mid1));
-      } else {
-        PetscCall(VecDot(F, Y, &fty_mid1));
-      }
-      PetscCall(VecWAXPY(W, -(lambda + 0.5 * (lambda - lambda_old)), Y, X));
-      if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
-      PetscCall((*linesearch->ops->snesfunc)(snes, W, F));
-      if (linesearch->ops->vidirderiv) {
-        PetscCall((*linesearch->ops->vidirderiv)(snes, F, W, Y, &fty_mid2));
-      } else {
-        PetscCall(VecDot(F, Y, &fty_mid2));
-      }
+      PetscCall(SNESLineSearchComputeObjectiveDefault_Internal(linesearch, it, PETSC_FALSE, ynorm, 0.5 * (lambda + lambda_old), &fty_mid1, &keep_going));
+      if (!keep_going) PetscFunctionReturn(PETSC_SUCCESS);
+      PetscCall(SNESLineSearchComputeObjectiveDefault_Internal(linesearch, it, PETSC_FALSE, ynorm, (lambda + 0.5 * (lambda - lambda_old)), &fty_mid2, &keep_going));
+      if (!keep_going) PetscFunctionReturn(PETSC_SUCCESS);
       s = (2. * fty_mid2 + 3. * fty - 6. * fty_mid1 + fty_old) / (3. * delLambda);
     }
     /* if the solve is going in the wrong direction, fix it */
     if (PetscRealPart(s) > 0.) s = -s;
-    if (s == 0.0) break;
+    if (s == 0.0) {
+      PetscCall(SNESLineSearchSetConvergenceReasonDefault_Internal(linesearch, it, lambda, SNES_LINESEARCH_SUCCEEDED, "critical point breakdown"));
+      goto postcheck;
+    }
     lambda_update = lambda - PetscRealPart(fty / s);
 
     /* switch directions if we stepped out of bounds */
     if (lambda_update < steptol) lambda_update = lambda + PetscRealPart(fty / s);
 
-    if (PetscIsInfOrNanReal(lambda_update)) break;
-    if (lambda_update > maxstep) break;
+    if (PetscIsInfOrNanReal(lambda_update)) {
+      PetscCall(SNESLineSearchSetConvergenceReasonDefault_Internal(linesearch, it, lambda, SNES_LINESEARCH_SUCCEEDED, "critical point breakdown"));
+      goto postcheck;
+    }
+    if (lambda_update > maxstep) {
+      PetscCall(SNESLineSearchSetConvergenceReasonDefault_Internal(linesearch, it, lambda, SNES_LINESEARCH_SUCCEEDED, "maximum step length"));
+      goto postcheck;
+    }
 
     /* compute the new state of the line search */
     lambda_old = lambda;
     lambda     = lambda_update;
     fty_old    = fty;
   }
+
+  if (lambda <= steptol) {
+    PetscCall(SNESLineSearchSetConvergenceReasonDefault_Internal(linesearch, it - 1, lambda, SNES_LINESEARCH_FAILED_REDUCT, "minimum step length"));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  } else {
+    PetscCall(SNESLineSearchSetConvergenceReasonDefault_Internal(linesearch, it - 1, lambda, SNES_LINESEARCH_SUCCEEDED, "maximum iterations"));
+  }
+
+postcheck:
   /* construct the solution */
   PetscCall(VecWAXPY(W, -lambda, Y, X));
   if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
@@ -160,12 +126,6 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchComputeNorms(linesearch));
   PetscCall(SNESLineSearchGetNorms(linesearch, &xnorm, &gnorm, &ynorm));
 
-  if (monitor) {
-    PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
-    PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search terminated: lambda = %g, fnorms = %g\n", (double)lambda, (double)gnorm));
-    PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
-  }
-  if (lambda <= steptol) PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_REDUCT));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
