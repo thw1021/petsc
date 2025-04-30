@@ -188,6 +188,8 @@ cdef extern from * nogil:
     PetscErrorCode TaoGetKSP(PetscTAO, PetscKSP*)
     PetscErrorCode TaoGetLineSearch(PetscTAO, PetscTAOLineSearch*)
 
+    PetscErrorCode TaoALMMGetSubsolver(PetscTAO, PetscTAO*)
+
     PetscErrorCode TaoBRGNGetSubsolver(PetscTAO, PetscTAO*)
     PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine(PetscTAO, PetscTaoRegularizerObjGrad*, void*)
     PetscErrorCode TaoBRGNSetRegularizerHessianRoutine(PetscTAO, PetscMat, PetscTaoRegularizerHessian*, void*)
