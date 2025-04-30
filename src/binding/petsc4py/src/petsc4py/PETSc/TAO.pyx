@@ -1603,7 +1603,22 @@ cdef class TAO(Object):
     # TODO: TaoALMMGetDualIS
     # TODO: TaoALMMGetMultipliers
     # TODO: TaoALMMGetPrimalIS
-    # TODO: TaoALMMGetSubSolver
+    
+    def getALMMSubsolver(self) -> TAO:
+        """Return the subsolver inside the ALMM solver.
+
+        Not collective.
+
+        See Also
+        --------
+        petsc.TaoALMMGetSubsolver
+
+        """
+        cdef TAO subsolver = TAO()
+        CHKERR(TaoALMMGetSubsolver(self.tao, &subsolver.tao))
+        CHKERR(PetscINCREF(subsolver.obj))
+        return subsolver
+
     # TODO: TaoALMMGetType
     # TODO: TaoALMMSetMultipliers
     # TODO: TaoALMMSetSubsolver
