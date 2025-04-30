@@ -1548,15 +1548,16 @@ PetscErrorCode DMPlexCreateGmshFromFile(MPI_Comm comm, const char filename[], Pe
 . dm - The `DM` object representing the mesh
 
   Options Database Keys:
-+ -dm_plex_gmsh_hybrid        - Force triangular prisms to use tensor order
-. -dm_plex_gmsh_periodic      - Read Gmsh periodic section and construct a periodic Plex
-. -dm_plex_gmsh_highorder     - Generate high-order coordinates
-. -dm_plex_gmsh_project       - Project high-order coordinates to a different space, use the prefix dm_plex_gmsh_project_ to define the space
-. -dm_plex_gmsh_use_generic   - Generate generic labels, i.e. Cell Sets, Face Sets, etc.
-. -dm_plex_gmsh_use_regions   - Generate labels with region names
-. -dm_plex_gmsh_mark_vertices - Add vertices to generated labels
-. -dm_plex_gmsh_multiple_tags - Allow multiple tags for default labels
-- -dm_plex_gmsh_spacedim <d>  - Embedding space dimension, if different from topological dimension
++ -dm_plex_gmsh_hybrid                 - Force triangular prisms to use tensor order
+. -dm_plex_gmsh_periodic               - Read Gmsh periodic section and construct a periodic Plex
+. -dm_plex_gmsh_highorder              - Generate high-order coordinates
+. -dm_plex_gmsh_project                - Project high-order coordinates to a different space, use the prefix dm_plex_gmsh_project_ to define the space
+. -dm_plex_gmsh_use_generic            - Generate generic labels, i.e. Cell Sets, Face Sets, etc.
+. -dm_plex_gmsh_use_regions            - Generate labels with region names
+. -dm_plex_gmsh_mark_vertices          - Add vertices to generated labels
+. -dm_plex_gmsh_mark_included_vertices - Add vertices included in a region to generated labels
+. -dm_plex_gmsh_multiple_tags          - Allow multiple tags for default labels
+- -dm_plex_gmsh_spacedim <d>           - Embedding space dimension, if different from topological dimension
 
   Level: beginner
 
@@ -1580,7 +1581,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
   PetscInt     dim = 0, coordDim = -1, order = 0, maxHeight = 0;
   PetscInt     numNodes = 0, numElems = 0, numVerts = 0, numCells = 0, vStart, vEnd;
   PetscInt     cell, cone[8], e, n, v, d;
-  PetscBool    usegeneric = PETSC_TRUE, useregions = PETSC_FALSE, markvertices = PETSC_FALSE, multipleTags = PETSC_FALSE;
+  PetscBool    usegeneric = PETSC_TRUE, useregions = PETSC_FALSE, markvertices = PETSC_FALSE, markincludedvertices = PETSC_FALSE, multipleTags = PETSC_FALSE;
   PetscBool    flg, binary, hybrid = interpolate, periodic = PETSC_TRUE;
   PetscBool    highOrder = PETSC_TRUE, highOrderSet, project = PETSC_FALSE;
   PetscBool    isSimplex = PETSC_FALSE, isHybrid = PETSC_FALSE, hasTetra = PETSC_FALSE;
@@ -1598,6 +1599,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
   PetscCall(PetscOptionsBool("-dm_plex_gmsh_use_generic", "Generate generic labels, i.e. Cell Sets, Face Sets, etc", "DMPlexCreateGmsh", usegeneric, &usegeneric, &flg));
   if (!flg && useregions) usegeneric = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-dm_plex_gmsh_mark_vertices", "Add vertices to generated labels", "DMPlexCreateGmsh", markvertices, &markvertices, NULL));
+  PetscCall(PetscOptionsBool("-dm_plex_gmsh_mark_included_vertices", "Add vertices included in a region to generated labels", "DMPlexCreateGmsh", markincludedvertices, &markincludedvertices, NULL));
   PetscCall(PetscOptionsBool("-dm_plex_gmsh_multiple_tags", "Allow multiple tags for default labels", "DMPlexCreateGmsh", multipleTags, &multipleTags, NULL));
   PetscCall(PetscOptionsBoundedInt("-dm_plex_gmsh_spacedim", "Embedding space dimension", "DMPlexCreateGmsh", coordDim, &coordDim, NULL, PETSC_DECIDE));
   PetscCall(PetscOptionsBoundedInt("-dm_localize_height", "Localize edges and faces in addition to cells", "", maxHeight, &maxHeight, NULL, 0));
@@ -1883,7 +1885,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
         }
       }
     }
-    if (markvertices) {
+    if (markincludedvertices) {
       for (v = 0; v < numNodes; ++v) {
         const PetscInt  vv   = mesh->vertexMap[v];
         const PetscInt *tags = &mesh->nodelist->tag[v * GMSH_MAX_TAGS];
