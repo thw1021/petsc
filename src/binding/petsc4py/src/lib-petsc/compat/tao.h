@@ -21,6 +21,9 @@ PetscErrorCode TaoBRGNGetDampingVector(PETSC_UNUSED Tao tao,PETSC_UNUSED Vec *d)
 
 PetscErrorCode TaoBNCGSetType(PETSC_UNUSED Tao tao, PETSC_UNUSED TaoBNCGType type) {PetscTaoError;}
 PetscErrorCode TaoBNCGGetType(PETSC_UNUSED Tao tao, PETSC_UNUSED TaoBNCGType *type) {PetscTaoError;}
+
+PetscErrorCode TaoALMMGetSubsolver(PETSC_UNUSED Tao tao, PETSC_UNUSED Tao *subsolver) {PetscTaoError;}
+
 #undef PetscTaoError
 
 #endif/*PETSC_USE_COMPLEX*/
