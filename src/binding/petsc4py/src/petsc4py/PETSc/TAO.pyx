@@ -1599,6 +1599,17 @@ cdef class TAO(Object):
         CHKERR(PetscINCREF(ksp.obj))
         return ksp
 
+    # ALMM routines
+    # TODO: TaoALMMGetDualIS
+    # TODO: TaoALMMGetMultipliers
+    # TODO: TaoALMMGetPrimalIS
+    # TODO: TaoALMMGetSubSolver
+    # TODO: TaoALMMGetType
+    # TODO: TaoALMMSetMultipliers
+    # TODO: TaoALMMSetSubsolver
+    # TODO: TaoALMMSetType
+    # TODO: TaoALMMType
+
     # BRGN routines
 
     def getBRGNSubsolver(self) -> TAO:
