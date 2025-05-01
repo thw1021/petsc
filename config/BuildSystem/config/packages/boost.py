@@ -1,5 +1,6 @@
 from __future__ import generators
 import config.package
+from pathlib import Path
 
 class Configure(config.package.Package):
   def __init__(self, framework):
@@ -12,42 +13,63 @@ class Configure(config.package.Package):
     self.buildLanguages    = ['Cxx']
     self.downloadonWindows = 1
     self.useddirectly      = 0
-    return
 
   def setupHelp(self, help):
     import nargs
     config.package.Package.setupHelp(self, help)
     help.addArgument('BOOST', '-boost-headers-only=<bool>', nargs.ArgBool(None, 0, 'When true, do not build boost libraries, only install headers'))
+    help.addArgument('BOOST', '-boost-libs=<string>',
+                    nargs.ArgString(None, '', 'Comma-separated list of Boost binary libraries to build'))
+
+  def getCompilerToolset(self):
+      cxx = self.getCompiler().lower()
+      if 'mpiicpx' in cxx or 'icpx' in cxx or 'intel' in cxx:
+          return 'intel-linux'
+      elif 'clang' in cxx:
+          return 'clang'
+      return 'gcc'
 
   def Install(self):
-    import shutil
-    import os
+    conffile = Path(self.packageDir) / (self.package + '.petscconf')
+    conffile.write_text(self.installDir)
 
-    conffile = os.path.join(self.packageDir,self.package+'.petscconf')
-    fd = open(conffile, 'w')
-    fd.write(self.installDir)
-    fd.close()
-    if not self.installNeeded(conffile): return self.installDir
+    if not self.installNeeded(str(conffile)):
+      return self.installDir
 
     if self.framework.argDB['boost-headers-only']:
-       boostIncludeDir = os.path.join(os.path.join(self.installDir, self.includedir), 'boost')
-       self.logPrintBox('Configure option --boost-headers-only is ENABLED ... boost libraries will not be built')
-       self.logPrintBox('Installing boost headers, this should not take long')
-       try:
-         if os.path.lexists(boostIncludeDir): os.remove(boostIncludeDir)
-         output,err,ret  = config.base.Configure.executeShellCommand('cd '+self.packageDir+';' + 'ln -s $PWD/boost/ ' + boostIncludeDir, timeout=6000, log = self.log)
-       except RuntimeError as e:
-         raise RuntimeError('Error linking '+self.packageDir+' to '+ boostIncludeDir)
-       return self.installDir
+      boostIncludeDir = Path(self.installDir) / self.includedir / 'boost'
+      self.logPrintBox('Configure option --boost-headers-only is ENABLED ... boost libraries will not be built')
+      self.logPrintBox('Installing boost headers, this should not take long')
+      try:
+        if boostIncludeDir.exists() or boostIncludeDir.is_symlink():
+          boostIncludeDir.unlink()
+        cmd = f'cd {self.packageDir} && ln -s $PWD/boost {boostIncludeDir}'
+        config.base.Configure.executeShellCommand(cmd, timeout=6000, log=self.log)
+      except RuntimeError as e:
+        raise RuntimeError('Error linking Boost headers:\n'+str(e))
     else:
-       if not self.checkCompile('#include <bzlib.h>', ''):
-         raise RuntimeError('Boost requires bzlib.h. Please install it in default compiler search location.')
+      if not self.checkCompile('#include <bzlib.h>', ''):
+        raise RuntimeError('Boost requires bzlib.h. Please install it in default compiler search location.')
 
-       self.log.write('boostDir = '+self.packageDir+' installDir '+self.installDir+'\n')
-       self.logPrintBox('Building and installing boost; this may take many minutes')
-       try:
-         output,err,ret  = config.base.Configure.executeShellCommand('cd '+self.packageDir+'; ./bootstrap.sh --prefix='+self.installDir+'; ./b2 -j'+str(self.make.make_np)+'; ./b2 install', timeout=6000, log = self.log)
-       except RuntimeError as e:
-         raise RuntimeError('Error building/install Boost files from '+os.path.join(self.packageDir, 'Boost')+' to '+self.packageDir)
-       self.postInstall(output+err,conffile)
+      self.pushLanguage('Cxx')
+      cxx      = self.getCompiler()
+      toolset  = self.framework.argDB.get(
+                    'boost-toolset',
+                    self.getCompilerToolset())
+      self.popLanguage()
+
+      self.logPrintBox(f'Building Boost with toolset "{toolset}", compiler "{cxx}"')
+
+      jamfile = Path(self.packageDir) / 'user-config.jam'
+      jamfile.write_text(f'using {toolset} : : {cxx} : <cxxflags>"-ftemplate-depth=1024" ;\n')
+      boost_libs = self.framework.argDB.get('boost-libs','')
+      boost_libs_flag = ' '.join(f'--with-{lib.strip()}' for lib in boost_libs.split(',') if lib)
+      cmd = (
+          f'cd {self.packageDir} && '
+          f'./bootstrap.sh --with-toolset={toolset} --prefix={self.installDir} && '
+          f'./b2 toolset={toolset} pch=off cxxstd=20 {boost_libs_flag} -j$(nproc) && '
+          f'./b2 toolset={toolset} pch=off cxxstd=20 {boost_libs_flag} -j$(nproc) install'
+      )
+      out, err, ret = config.base.Configure.executeShellCommand(cmd, timeout=6000, log=self.log)
+      self.postInstall(out + err, str(conffile))
     return self.installDir
