@@ -86,6 +86,11 @@ class TAOBNCGType:
     SSML_BFGS  = TAO_BNCG_SSML_BFGS
     SSML_DFP   = TAO_BNCG_SSML_DFP
     SSML_BRDN  = TAO_BNCG_SSML_BRDN
+
+class TAOALMMType:
+    """TAO Augmented Lagrangian Multiplier method (ALMM) Type."""
+    CLASSIC = TAO_ALMM_CLASSIC
+    PHR     = TAO_ALMM_PHR
 # --------------------------------------------------------------------
 
 
@@ -103,6 +108,7 @@ cdef class TAO(Object):
     Type = TAOType
     ConvergedReason = TAOConvergedReason
     BNCGType = TAOBNCGType
+    ALMMType = TAOALMMType
     # FIXME backward compatibility
     Reason = TAOConvergedReason
 
@@ -1618,11 +1624,39 @@ cdef class TAO(Object):
         CHKERR(PetscINCREF(subsolver.obj))
         return subsolver
 
-    # TODO: TaoALMMGetType
+    def getALMMType(self) -> ALMMType:
+        """Return the type of the ALMM solver.
+
+        Not collective.
+
+        See Also
+        --------
+        setALMMType, petsc.TaoALMMGetType
+
+        """
+        cdef PetscTAOALMMType almm_type = TAO_ALMM_PHR
+        CHKERR(TaoALMMGetType(self.tao, &almm_type))
+        return almm_type
+
     # TODO: TaoALMMSetMultipliers
     # TODO: TaoALMMSetSubsolver
-    # TODO: TaoALMMSetType
-    # TODO: TaoALMMType
+    def setALMMType(self, tao_almm_type: ALMMType) -> None:
+        """Set the ALMM type of the solver.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        tao_almm_type
+            The type of the solver.
+
+        See Also
+        --------
+        getALMMType, petsc.TaoALMMSetType
+
+        """
+        cdef PetscTAOALMMType ctype = tao_almm_type
+        CHKERR(TaoALMMSetType(self.tao, ctype))
 
     # BRGN routines
 
@@ -1948,6 +1982,7 @@ cdef class TAO(Object):
 del TAOType
 del TAOConvergedReason
 del TAOBNCGType
+del TAOALMMType
 
 # --------------------------------------------------------------------
 
