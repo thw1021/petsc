@@ -50,10 +50,13 @@ class Configure(config.package.Package):
       with self.Language('Cxx'):
           cxx = self.getCompiler().lower()
           cxxflags = self.getCompilerFlags()
-      if 'mpiicpx' in cxx or 'icpx' in cxx or 'intel' in cxx:
-          toolset = 'intel-linux'
+
+      if config.setCompilers.Configure.isGNU(cxx, self.log):
+        toolset = 'gcc'
+      elif config.setCompilers.Configure.isOneAPI(cxx, self.log) or config.setCompilers.Configure.isIntel(cxx, self.log):
+        toolset = 'intel-linux'
       else:
-          toolset = 'gcc'
+        raise RuntimeError(f'Invalid CXX compiler specifield for boost: {cxx}')
 
       self.logPrintBox(f'Building Boost with toolset "{toolset}", compiler "{cxx}"')
 
