@@ -18,8 +18,8 @@ class Configure(config.package.Package):
   def setupHelp(self, help):
     import nargs
     config.package.Package.setupHelp(self, help)
-    help.addArgument('BOOST', '-boost-headers-only=<bool>', nargs.ArgBool(None, 0, 'When true, do not build boost libraries, only install headers'))
-    help.addArgument('BOOST', '-boost-libs=<string>',
+    help.addArgument('BOOST', '-download-boost-headers-only=<bool>', nargs.ArgBool(None, 0, 'When true, do not build boost libraries, only install headers'))
+    help.addArgument('BOOST', '-download-boost-libs=<string>',
                     nargs.ArgString(None, '', 'Comma-separated list of Boost binary libraries to build'))
 
   def Install(self):
