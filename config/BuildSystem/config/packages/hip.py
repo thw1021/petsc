@@ -15,6 +15,7 @@ class Configure(config.package.Package):
     self.requiresversion  = 1
     self.functionsCxx     = [1,'', 'rocblas_create']
     self.includes         = ['hip/hip_runtime.h']
+    self.includedir       = ['include']
     # PETSc does not use hipsparse or hipblas, but dependencies can (e.g., magma)
     self.liblist          = [['libhipsparse.a','libhipblas.a','libhipsolver.a','librocsparse.a','librocsolver.a','librocblas.a','librocrand.a','libamdhip64.a'],
                              ['hipsparse.lib','hipblas.lib','hipsolver.lib','rocsparse.lib','rocsolver.lib','rocblas.lib','rocrand.lib','amdhip64.lib'],]
@@ -22,6 +23,7 @@ class Configure(config.package.Package):
     self.buildLanguages   = ['HIP']
     self.devicePackage    = 1
     self.fullPathHIPC     = ''
+    self.hasROCTX         = False
     self.unifiedMemory    = False
     self.skipMPIDependency= 1
     return
@@ -37,6 +39,68 @@ class Configure(config.package.Package):
     self.setCompilers = framework.require('config.setCompilers',self)
     self.headers      = framework.require('config.headers',self)
     return
+
+  def getIncludeDirs(self, prefix, includeDir):
+    # Handle the platform issues
+    if not hasattr(self,'platform'):
+      if 'HIP_PLATFORM' in os.environ:
+        self.platform = os.environ['HIP_PLATFORM']
+      elif hasattr(self,'systemNvcc'):
+        self.platform = 'nvidia'
+      else:
+        self.platform = 'amd'
+
+    incDirs = includeDir
+
+    if not isinstance(incDirs, list):
+      incDirs = [incDirs]
+
+    if self.platform == 'amd' and not self.hasROCTX:
+      if not self.version_tuple:
+        self.checkVersion() # set version_tuple
+      # Set roctx related info
+      if self.version_tuple[0] >= 6 and self.version_tuple[1] >= 4:
+        self.includes = ['hip/hip_runtime.h', 'rocprofiler-sdk-roctx/roctx.h']
+        self.hasROCTX = True
+      elif self.version_tuple[0] >= 6:
+        if os.path.exists(os.path.join(prefix, 'include', 'roctracer')):
+          self.includes = ['hip/hip_runtime.h', 'roctracer/roctx.h']
+          self.hasROCTX = True
+      else:
+        if os.path.exists(os.path.join(prefix, 'roctracer')):
+          self.includes = ['hip/hip_runtime.h', 'roctx.h']
+          self.includedir = ['include', os.path.join('roctracer', 'include')]
+          self.hasROCTX = True
+          incDirs = self.includedir.copy()
+
+    return config.package.Package.getIncludeDirs(self, prefix, incDirs)
+
+  def generateLibList(self, directory):
+    liblist = [self.liblist[0].copy(), self.liblist[1].copy()]
+    # Handle the platform issues
+    if not hasattr(self,'platform'):
+      if 'HIP_PLATFORM' in os.environ:
+        self.platform = os.environ['HIP_PLATFORM']
+      elif hasattr(self,'systemNvcc'):
+        self.platform = 'nvidia'
+      else:
+        self.platform = 'amd'
+
+    if self.platform == 'amd':
+      if not self.version_tuple:
+        self.checkVersion() # set version_tuple
+      # Set roctx related info
+      if self.version_tuple[0] >= 6 and self.version_tuple[1] >= 4:
+        liblist[0] += ['librocprofiler-sdk-roctx.a']
+        liblist[1] += ['rocprofiler-sdk-roctx.lib']
+      elif self.version_tuple[0] >= 6:
+        liblist[0] += ['libroctx64.a']
+        liblist[1] += ['roctx64.lib']
+      else:
+        liblist[0] += ['libroctx64.a']
+        liblist[1] += ['roctx64.lib']
+    return config.package.Package.generateLibList(self, directory, liblist)
+
 
   def __str__(self):
     output  = config.package.Package.__str__(self)
@@ -128,6 +192,8 @@ class Configure(config.package.Package):
       self.framework.addDefine('__HIP_PLATFORM_NVIDIA__',1)
     else:
       self.addDefine('HAVE_HIPROCM',1)
+      if self.hasROCTX:
+        self.framework.addDefine('HAVE_ROCTX',1)
       self.framework.addDefine('__HIP_PLATFORM_HCC__',1) # deprecated from 4.3.0
       self.framework.addDefine('__HIP_PLATFORM_AMD__',1)
       if 'with-hip-arch' in self.framework.clArgDB:
