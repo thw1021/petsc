@@ -21,14 +21,6 @@ class Configure(config.package.Package):
     help.addArgument('BOOST', '-boost-libs=<string>',
                     nargs.ArgString(None, '', 'Comma-separated list of Boost binary libraries to build'))
 
-  def getCompilerToolset(self):
-      cxx = self.getCompiler().lower()
-      if 'mpiicpx' in cxx or 'icpx' in cxx or 'intel' in cxx:
-          return 'intel-linux'
-      elif 'clang' in cxx:
-          return 'clang'
-      return 'gcc'
-
   def Install(self):
     conffile = Path(self.packageDir) / (self.package + '.petscconf')
     conffile.write_text(self.installDir)
@@ -51,12 +43,12 @@ class Configure(config.package.Package):
       if not self.checkCompile('#include <bzlib.h>', ''):
         raise RuntimeError('Boost requires bzlib.h. Please install it in default compiler search location.')
 
-      self.pushLanguage('Cxx')
-      cxx      = self.getCompiler()
-      toolset  = self.framework.argDB.get(
-                    'boost-toolset',
-                    self.getCompilerToolset())
-      self.popLanguage()
+      with self.Language('Cxx'):
+          cxx = self.getCompiler().lower()
+      if 'mpiicpx' in cxx or 'icpx' in cxx or 'intel' in cxx:
+          toolset = 'intel-linux'
+      else:
+          toolset = 'gcc'
 
       self.logPrintBox(f'Building Boost with toolset "{toolset}", compiler "{cxx}"')
 
@@ -65,7 +57,7 @@ class Configure(config.package.Package):
       boost_libs = self.framework.argDB.get('boost-libs','')
       boost_libs_flag = ' '.join(f'--with-{lib.strip()}' for lib in boost_libs.split(',') if lib)
       cmd = (
-          f'cd {self.packageDir} && '
+          f'cd {self.packageDir} && export CXX={cxx} && '
           f'./bootstrap.sh --with-toolset={toolset} --prefix={self.installDir} && '
           f'./b2 toolset={toolset} pch=off cxxstd=20 {boost_libs_flag} -j$(nproc) && '
           f'./b2 toolset={toolset} pch=off cxxstd=20 {boost_libs_flag} -j$(nproc) install'
