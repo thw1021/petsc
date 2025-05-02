@@ -15,6 +15,7 @@ class Configure(config.package.Package):
     self.requiresversion  = 1
     self.functionsCxx     = [1,'', 'rocblas_create']
     self.includes         = ['hip/hip_runtime.h']
+    self.includedir       = ['include', 'roctracer/include']
     # PETSc does not use hipsparse or hipblas, but dependencies can (e.g., magma)
     self.liblist          = [['libhipsparse.a','libhipblas.a','libhipsolver.a','librocsparse.a','librocsolver.a','librocblas.a','librocrand.a','libamdhip64.a'],
                              ['hipsparse.lib','hipblas.lib','hipsolver.lib','rocsparse.lib','rocsolver.lib','rocblas.lib','rocrand.lib','amdhip64.lib'],]
@@ -37,6 +38,61 @@ class Configure(config.package.Package):
     self.setCompilers = framework.require('config.setCompilers',self)
     self.headers      = framework.require('config.headers',self)
     return
+
+  def getIncludeDirs(self, prefix, includeDir):
+    # Handle the platform issues
+    if not hasattr(self,'platform'):
+      if 'HIP_PLATFORM' in os.environ:
+        self.platform = os.environ['HIP_PLATFORM']
+      elif hasattr(self,'systemNvcc'):
+        self.platform = 'nvidia'
+      else:
+        self.platform = 'amd'
+
+    incDirs = includeDir
+
+    if not isinstance(incDirs, list):
+      incDirs = [incDirs]
+
+    if self.platform == 'amd':
+      if not self.version_tuple:
+        self.checkVersion() # set version_tuple
+      # Set roctx related info
+      if self.version_tuple[0] >= 6 and self.version_tuple[1] >= 4:
+        self.includes += ['rocprofiler-sdk-roctx/roctx.h']
+      elif self.version_tuple[0] >= 6:
+        self.includes += ['roctracer/roctx.h']
+      else:
+        self.includes += ['roctx.h']
+
+    return config.package.Package.getIncludeDirs(self, prefix, incDirs)
+
+  def generateLibList(self, directory):
+    liblist = [self.liblist[0].copy(), self.liblist[1].copy()]
+    # Handle the platform issues
+    if not hasattr(self,'platform'):
+      if 'HIP_PLATFORM' in os.environ:
+        self.platform = os.environ['HIP_PLATFORM']
+      elif hasattr(self,'systemNvcc'):
+        self.platform = 'nvidia'
+      else:
+        self.platform = 'amd'
+
+    if self.platform == 'amd':
+      if not self.version_tuple:
+        self.checkVersion() # set version_tuple
+      # Set roctx related info
+      if self.version_tuple[0] >= 6 and self.version_tuple[1] >= 4:
+        liblist[0] += ['librocprofiler-sdk-roctx.a']
+        liblist[1] += ['rocprofiler-sdk-roctx.lib']
+      elif self.version_tuple[0] >= 6:
+        liblist[0] += ['libroctx64.a']
+        liblist[1] += ['roctx64.lib']
+      else:
+        liblist[0] += ['libroctx64.a']
+        liblist[1] += ['roctx64.lib']
+    return config.package.Package.generateLibList(self, directory, liblist)
+
 
   def __str__(self):
     output  = config.package.Package.__str__(self)
