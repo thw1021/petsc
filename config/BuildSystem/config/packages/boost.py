@@ -49,6 +49,7 @@ class Configure(config.package.Package):
 
       with self.Language('Cxx'):
           cxx = self.getCompiler().lower()
+          cxxflags = self.getCompilerFlags()
       if 'mpiicpx' in cxx or 'icpx' in cxx or 'intel' in cxx:
           toolset = 'intel-linux'
       else:
@@ -57,7 +58,7 @@ class Configure(config.package.Package):
       self.logPrintBox(f'Building Boost with toolset "{toolset}", compiler "{cxx}"')
 
       jamfile = Path(self.packageDir) / 'user-config.jam'
-      jamfile.write_text(f'using {toolset} : : {cxx} : <cxxflags>"-ftemplate-depth=1024" ;\n')
+      jamfile.write_text(f'using {toolset} : : {cxx} : <cxxflags>"{cxxflags}" ;\n')
       boost_libs = self.framework.argDB.get('boost-libs','')
       boost_libs_flag = ' '.join(f'--with-{lib.strip()}' for lib in boost_libs.split(',') if lib)
       cmd = (
