@@ -1,5 +1,6 @@
 from __future__ import generators
 import config.package
+import sysconfig
 from pathlib import Path
 
 class Configure(config.package.Package):
@@ -42,6 +43,9 @@ class Configure(config.package.Package):
     else:
       if not self.checkCompile('#include <bzlib.h>', ''):
         raise RuntimeError('Boost requires bzlib.h. Please install it in default compiler search location.')
+
+      if not (Path(sysconfig.get_paths()['include']) / 'pyconfig.h').is_file():
+        raise RuntimeError('pyconfig.h missing: Boost requires python development version to be installed. (pythonX.x-dev)')
 
       with self.Language('Cxx'):
           cxx = self.getCompiler().lower()
