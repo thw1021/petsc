@@ -29,7 +29,7 @@ class Configure(config.package.Package):
     if not self.installNeeded(str(conffile)):
       return self.installDir
 
-    if self.framework.argDB['boost-headers-only']:
+    if self.argDB['download-boost-headers-only']:
       boostIncludeDir = Path(self.installDir) / self.includedir / 'boost'
       self.logPrintBox('Configure option --boost-headers-only is ENABLED ... boost libraries will not be built')
       self.logPrintBox('Installing boost headers, this should not take long')
@@ -62,7 +62,7 @@ class Configure(config.package.Package):
 
       jamfile = Path(self.packageDir) / 'user-config.jam'
       jamfile.write_text(f'using {toolset} : : {cxx} : <cxxflags>"{cxxflags}" ;\n')
-      boost_libs = self.framework.argDB.get('boost-libs','')
+      boost_libs = self.argDB.get('download-boost-libs','')
       boost_libs_flag = ' '.join(f'--with-{lib.strip()}' for lib in boost_libs.split(',') if lib)
       cmd = (
           f'cd {self.packageDir} && export CXX={cxx} && '
