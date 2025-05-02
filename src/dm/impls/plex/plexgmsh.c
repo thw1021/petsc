@@ -1548,16 +1548,16 @@ PetscErrorCode DMPlexCreateGmshFromFile(MPI_Comm comm, const char filename[], Pe
 . dm - The `DM` object representing the mesh
 
   Options Database Keys:
-+ -dm_plex_gmsh_hybrid                 - Force triangular prisms to use tensor order
-. -dm_plex_gmsh_periodic               - Read Gmsh periodic section and construct a periodic Plex
-. -dm_plex_gmsh_highorder              - Generate high-order coordinates
-. -dm_plex_gmsh_project                - Project high-order coordinates to a different space, use the prefix dm_plex_gmsh_project_ to define the space
-. -dm_plex_gmsh_use_generic            - Generate generic labels, i.e. Cell Sets, Face Sets, etc.
-. -dm_plex_gmsh_use_regions            - Generate labels with region names
-. -dm_plex_gmsh_mark_vertices          - Add vertices to generated labels
-. -dm_plex_gmsh_mark_vertices_strict   - Add vertices included in a region to generated labels
-. -dm_plex_gmsh_multiple_tags          - Allow multiple tags for default labels
-- -dm_plex_gmsh_spacedim <d>           - Embedding space dimension, if different from topological dimension
++ -dm_plex_gmsh_hybrid               - Force triangular prisms to use tensor order
+. -dm_plex_gmsh_periodic             - Read Gmsh periodic section and construct a periodic Plex
+. -dm_plex_gmsh_highorder            - Generate high-order coordinates
+. -dm_plex_gmsh_project              - Project high-order coordinates to a different space, use the prefix dm_plex_gmsh_project_ to define the space
+. -dm_plex_gmsh_use_generic          - Generate generic labels, i.e. Cell Sets, Face Sets, etc.
+. -dm_plex_gmsh_use_regions          - Generate labels with region names
+. -dm_plex_gmsh_mark_vertices        - Add vertices to generated labels
+. -dm_plex_gmsh_mark_vertices_strict - Add vertices included in a region to generated labels
+. -dm_plex_gmsh_multiple_tags        - Allow multiple tags for default labels
+- -dm_plex_gmsh_spacedim <d>         - Embedding space dimension, if different from topological dimension
 
   Level: beginner
 
@@ -1872,16 +1872,19 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
 
       /* Create vertex sets */
       if (elem->numTags && elem->dim == 0 && (markverticesstrict || markvertices)) {
-        const PetscInt nn  = elem->nodes[0];
-        const PetscInt vv  = mesh->vertexMap[nn];
-        const PetscInt tag = elem->tags[0];
-        PetscInt       r;
+        const PetscInt nn = elem->nodes[0];
+        const PetscInt vv = mesh->vertexMap[nn];
+        PetscInt       Nt = elem->numTags;
 
-        if (vv < 0) continue;
-        if (usegeneric) PetscCall(DMSetLabelValue_Fast(*dm, &vertSets, "Vertex Sets", vStart + vv, tag));
-        for (r = 0; r < Nr; ++r) {
-          if (mesh->regionDims[r] != 0) continue;
-          if (mesh->regionTags[r] == tag) PetscCall(DMSetLabelValue_Fast(*dm, &regionSets[r], mesh->regionNames[r], vStart + vv, tag));
+        for (PetscInt t = 0; t < Nt; ++t) {
+          const PetscInt tag = elem->tags[t];
+
+          if (vv < 0) continue;
+          if (usegeneric) PetscCall(DMSetLabelValue_Fast(*dm, &vertSets, "Vertex Sets", vStart + vv, tag));
+          for (PetscInt r = 0; r < Nr; ++r) {
+            if (mesh->regionDims[r] != 0) continue;
+            if (mesh->regionTags[r] == tag) PetscCall(DMSetLabelValue_Fast(*dm, &regionSets[r], mesh->regionNames[r], vStart + vv, tag));
+          }
         }
       }
     }
