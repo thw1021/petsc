@@ -193,8 +193,8 @@ cdef extern from * nogil:
     PetscErrorCode TaoGetLineSearch(PetscTAO, PetscTAOLineSearch*)
 
     PetscErrorCode TaoALMMGetSubsolver(PetscTAO, PetscTAO*)
-    PetscErrorCode TaoALMMGetType(PetscTAO, PetscTAOALMMType*);
-    PetscErrorCode TaoALMMSetType(PetscTAO, PetscTAOALMMType);
+    PetscErrorCode TaoALMMGetType(PetscTAO, PetscTAOALMMType*)
+    PetscErrorCode TaoALMMSetType(PetscTAO, PetscTAOALMMType)
 
     PetscErrorCode TaoBRGNGetSubsolver(PetscTAO, PetscTAO*)
     PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine(PetscTAO, PetscTaoRegularizerObjGrad*, void*)

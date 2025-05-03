@@ -87,6 +87,7 @@ class TAOBNCGType:
     SSML_DFP   = TAO_BNCG_SSML_DFP
     SSML_BRDN  = TAO_BNCG_SSML_BRDN
 
+
 class TAOALMMType:
     """TAO Augmented Lagrangian Multiplier method (ALMM) Type."""
     CLASSIC = TAO_ALMM_CLASSIC
