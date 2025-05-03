@@ -200,6 +200,11 @@ class Configure(config.base.Configure):
             fd.write('cuda_cxx='+self.setCompilers.CUDA_CXX+'\n')
             fd.write('cuda_cxxflags='+self.setCompilers.CUDA_CXXFLAGS+'\n')
       fd.write('mpiexec='+self.mpi.mpiexec+'\n')
+      if self.python.path:
+        if 'PYTHONPATH' in os.environ:
+          fd.write('PYTHONPATH='+':'.join(self.python.path)+':'+os.environ['PYTHONPATH']+'\n')
+        else:
+          fd.write('PYTHONPATH='+':'.join(self.python.path)+'\n')
 
       fd.write('\n')
       fd.write('Name: PETSc\n')
@@ -497,7 +502,7 @@ prepend-path PATH "%s"
     if not os.path.exists(os.path.join(self.petscdir.dir,self.arch.arch,'lib')):
       os.makedirs(os.path.join(self.petscdir.dir,self.arch.arch,'lib'))
 
-# add a makefile endtry for display
+    # add a makefile entry for display
     if self.framework.argDB['with-display']:
       self.addMakeMacro('DISPLAY',self.framework.argDB['with-display'])
 
@@ -506,7 +511,9 @@ prepend-path PATH "%s"
 
     if self.framework.argDB['with-tau-perfstubs']:
       self.addDefine('HAVE_TAU_PERFSTUBS',1)
-    return
+
+    if self.python.path:
+      self.addMakeMacro('PYTHONPATH',':'.join(self.python.path))
 
   def dumpConfigInfo(self):
     import time
