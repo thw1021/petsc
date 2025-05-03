@@ -4,7 +4,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.version           = '1.87.0'
+    self.version           = '1.88.0'
     self.download          = ['https://archives.boost.io/release/'+self.version+'/source/boost_'+self.version.replace('.','_')+'.tar.bz2',
                               'https://web.cels.anl.gov/projects/petsc/download/externalpackages/boost_'+self.version.replace('.','_')+'.tar.bz2']
     self.includes          = ['boost/multi_index_container.hpp']
@@ -46,7 +46,18 @@ class Configure(config.package.Package):
        self.log.write('boostDir = '+self.packageDir+' installDir '+self.installDir+'\n')
        self.logPrintBox('Building and installing boost; this may take many minutes')
        try:
-         output,err,ret  = config.base.Configure.executeShellCommand('cd '+self.packageDir+'; ./bootstrap.sh --prefix='+self.installDir+'; ./b2 -j'+str(self.make.make_np)+'; ./b2 install', timeout=6000, log = self.log)
+         if config.setCompilers.Configure.isGNU(self.setCompilers.CCX, self.log):
+           toolset='gcc'
+           pch='on'
+         elif config.setCompilers.Configure.isOneAPI(self.setCompilers.CCX, self.log):
+           toolset='intel'
+           pch='off'
+         elif config.setCompilers.Configure.isClang(self.setCompilers.CCX, self.log):
+           toolset='clang'
+           pch='on'
+         else:
+           raise RuntimeError('Unknown compiler for boost.')
+         output,err,ret  = config.base.Configure.executeShellCommand('cd '+self.packageDir+'; ./bootstrap.sh; b2 install --prefix='+self.installDir+' --toolset='+toolset+' pch='+pch, timeout=6000, log = self.log)
        except RuntimeError as e:
          raise RuntimeError('Error building/install Boost files from '+os.path.join(self.packageDir, 'Boost')+' to '+self.packageDir)
        self.postInstall(output+err,conffile)
