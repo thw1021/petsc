@@ -1640,7 +1640,19 @@ cdef class TAO(Object):
         return almm_type
 
     # TODO: TaoALMMSetMultipliers
-    # TODO: TaoALMMSetSubsolver
+    def setALMMSubsolver(self, subsolver: TAO) -> None:
+        """Set the subsolver inside the ALMM solver.
+
+        Not collective.
+
+        See Also
+        --------
+        petsc.TaoALMMSetSubsolver
+
+        """
+        cdef TAO ctype = subsolver
+        CHKERR(TaoALMMSetSubsolver(self.tao, ctype.tao))
+
     def setALMMType(self, tao_almm_type: ALMMType) -> None:
         """Set the ALMM type of the solver.
 

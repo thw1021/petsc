@@ -193,6 +193,7 @@ cdef extern from * nogil:
     PetscErrorCode TaoGetLineSearch(PetscTAO, PetscTAOLineSearch*)
 
     PetscErrorCode TaoALMMGetSubsolver(PetscTAO, PetscTAO*)
+    PetscErrorCode TaoALMMSetSubsolver(PetscTAO, PetscTAO)
     PetscErrorCode TaoALMMGetType(PetscTAO, PetscTAOALMMType*)
     PetscErrorCode TaoALMMSetType(PetscTAO, PetscTAOALMMType)
 
