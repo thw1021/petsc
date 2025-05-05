@@ -57,7 +57,7 @@ class Configure(config.package.Package):
       elif config.setCompilers.Configure.isOneAPI(cxx, self.log) or config.setCompilers.Configure.isIntel(cxx, self.log):
         toolset = 'intel-linux'
         pch = 'off' # https://github.com/bfgroup/b2/issues/413
-      elif config.setCompilers.Configure.isClang(self.setCompilers.CXX, self.log):
+      elif config.setCompilers.Configure.isClang(cxx, self.log):
         toolset='clang'
         pch='on'
       else:
