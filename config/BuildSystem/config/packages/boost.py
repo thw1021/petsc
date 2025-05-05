@@ -67,14 +67,17 @@ class Configure(config.package.Package):
 
       jamfile = Path(self.packageDir) / 'user-config.jam'
       jamfile.write_text(f'using {toolset} : : {cxx} : <cxxflags>"{cxxflags}" ;\n')
-      boost_libs = self.argDB.get('download-boost-libs','')
+
       configure_arguments = self.argDB.get('download-boost-configure-arguments')
-      cmd = (
-          f'cd {self.packageDir} && export CXX={cxx} && '
-          f'./bootstrap.sh --with-toolset={toolset} --prefix={self.installDir} && '
-          f'./b2 toolset={toolset} {configure_arguments} pch={pch} -j{self.make.make_np} && '
-          f'./b2 toolset={toolset} {configure_arguments} pch={pch} -j{self.make.make_np} install'
-      )
-      out, err, ret = config.base.Configure.executeShellCommand(cmd, timeout=6000, log=self.log)
+
+      bootstrap_cmd = f'cd {self.packageDir} && ./bootstrap.sh --with-toolset={toolset} --prefix={self.installDir}'
+      out, err, ret = config.base.Configure.executeShellCommand(bootstrap_cmd, timeout=6000, log=self.log)
+
+      build_cmd = f'cd {self.packageDir} && ./b2 toolset={toolset} {configure_arguments} pch={pch} -j{self.make.make_np}'
+      out, err, ret = config.base.Configure.executeShellCommand(build_cmd, timeout=6000, log=self.log)
+
+      install_cmd = f'cd {self.packageDir} && ./b2 toolset={toolset} {configure_arguments} pch={pch} -j{self.make.make_np} install'
+      out, err, ret = config.base.Configure.executeShellCommand(install_cmd, timeout=6000, log=self.log)
+
       self.postInstall(out + err, str(conffile))
     return self.installDir
