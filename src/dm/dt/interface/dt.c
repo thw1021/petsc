@@ -3415,6 +3415,10 @@ PetscErrorCode PetscDTCreateDefaultQuadrature(DMPolytopeType ct, PetscInt qorder
 
   PetscFunctionBegin;
   switch (ct) {
+  case DM_POLYTOPE_POINT:
+    PetscCall(PetscDTGaussTensorQuadrature(dim, 1, quadPointsPerEdge, -1.0, 1.0, q));
+    *fq = NULL;
+    break;
   case DM_POLYTOPE_SEGMENT:
   case DM_POLYTOPE_POINT_PRISM_TENSOR:
   case DM_POLYTOPE_QUADRILATERAL:

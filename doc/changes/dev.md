@@ -110,7 +110,7 @@
 - Rename `DMPlexComputeJacobian_Action_Internal()` to `DMPlexComputeJacobianActionByKey()`
 - Rename `DMPlexComputeResidual_Hybrid_Internal()` to `DMPlexComputeResidualHybridByKey()`
 - Rename `DMPlexComputeJacobian_Hybrid_Internal()` to `DMPlexComputeJacobianHybridByKey()`
-
+- Add `DMPlexCreateSlabGeneratorFromFile()`
 
 ```{rubric} FE/FV:
 ```
