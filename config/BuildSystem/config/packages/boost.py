@@ -53,8 +53,13 @@ class Configure(config.package.Package):
 
       if config.setCompilers.Configure.isGNU(cxx, self.log):
         toolset = 'gcc'
+        pch = 'on'
       elif config.setCompilers.Configure.isOneAPI(cxx, self.log) or config.setCompilers.Configure.isIntel(cxx, self.log):
         toolset = 'intel-linux'
+        pch = 'off' # https://github.com/bfgroup/b2/issues/413
+      elif config.setCompilers.Configure.isClang(self.setCompilers.CXX, self.log):
+        toolset='clang'
+        pch='on'
       else:
         raise RuntimeError(f'Invalid CXX compiler specifield for boost: {cxx}')
 
@@ -63,12 +68,12 @@ class Configure(config.package.Package):
       jamfile = Path(self.packageDir) / 'user-config.jam'
       jamfile.write_text(f'using {toolset} : : {cxx} : <cxxflags>"{cxxflags}" ;\n')
       boost_libs = self.argDB.get('download-boost-libs','')
-      boost_libs_flag = ' '.join(f'--with-{lib.strip()}' for lib in boost_libs.split(',') if lib)
+      configure_arguments = self.argDB.get('download-boost-configure-arguments')
       cmd = (
           f'cd {self.packageDir} && export CXX={cxx} && '
           f'./bootstrap.sh --with-toolset={toolset} --prefix={self.installDir} && '
-          f'./b2 toolset={toolset} pch=off {boost_libs_flag} -j{self.make.make_np} && '
-          f'./b2 toolset={toolset} pch=off {boost_libs_flag} -j{self.make.make_np} install'
+          f'./b2 toolset={toolset} {configure_arguments} pch={pch} -j{self.make.make_np} && '
+          f'./b2 toolset={toolset} {configure_arguments} pch={pch} -j{self.make.make_np} install'
       )
       out, err, ret = config.base.Configure.executeShellCommand(cmd, timeout=6000, log=self.log)
       self.postInstall(out + err, str(conffile))
