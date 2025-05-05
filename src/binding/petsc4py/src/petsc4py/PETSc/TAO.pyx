@@ -1607,9 +1607,7 @@ cdef class TAO(Object):
         return ksp
 
     # ALMM routines
-    # TODO: TaoALMMGetDualIS
-    # TODO: TaoALMMGetMultipliers
-    # TODO: TaoALMMGetPrimalIS
+
     def getALMMSubsolver(self) -> TAO:
         """Return the subsolver inside the ALMM solver.
 
@@ -1617,7 +1615,7 @@ cdef class TAO(Object):
 
         See Also
         --------
-        petsc.TaoALMMGetSubsolver
+        setALMMSubsolver, petsc.TaoALMMGetSubsolver
 
         """
         cdef TAO subsolver = TAO()
@@ -1639,15 +1637,14 @@ cdef class TAO(Object):
         CHKERR(TaoALMMGetType(self.tao, &almm_type))
         return almm_type
 
-    # TODO: TaoALMMSetMultipliers
     def setALMMSubsolver(self, subsolver: TAO) -> None:
         """Set the subsolver inside the ALMM solver.
 
-        Not collective.
+        Logically collective.
 
         See Also
         --------
-        petsc.TaoALMMSetSubsolver
+        getALMMSubsolver, petsc.TaoALMMSetSubsolver
 
         """
         cdef TAO ctype = subsolver
