@@ -1723,7 +1723,7 @@ PETSC_INTERN PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDua
     for (c = 1, nNodesf = 1; c < ncols; c++) {
       if ((cols[c] / Nc) != (cols[c - 1] / Nc)) nNodesf++;
     }
-    PetscCall(PetscMalloc1(dim * nNodesf, &nodesf));
+    PetscCall(PetscMalloc1(PetscMax(1, dim) * nNodesf, &nodesf));
     PetscCall(PetscMalloc1(Nc * nNodesf, &weightsf));
     for (c = 0, countNodes = 0; c < ncols; c++) {
       if (!c || ((cols[c] / Nc) != (cols[c - 1] / Nc))) {
