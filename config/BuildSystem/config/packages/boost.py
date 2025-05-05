@@ -67,8 +67,8 @@ class Configure(config.package.Package):
       cmd = (
           f'cd {self.packageDir} && export CXX={cxx} && '
           f'./bootstrap.sh --with-toolset={toolset} --prefix={self.installDir} && '
-          f'./b2 toolset={toolset} pch=off {boost_libs_flag} -j$(nproc) && '
-          f'./b2 toolset={toolset} pch=off {boost_libs_flag} -j$(nproc) install'
+          f'./b2 toolset={toolset} pch=off {boost_libs_flag} -j{self.make.make_np} && '
+          f'./b2 toolset={toolset} pch=off {boost_libs_flag} -j{self.make.make_np} install'
       )
       out, err, ret = config.base.Configure.executeShellCommand(cmd, timeout=6000, log=self.log)
       self.postInstall(out + err, str(conffile))
