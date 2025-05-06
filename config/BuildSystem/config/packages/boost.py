@@ -68,7 +68,11 @@ class Configure(config.package.Package):
       jamfile = Path(self.packageDir) / 'user-config.jam'
       jamfile.write_text(f'using {toolset} : : {cxx} : <cxxflags>"{cxxflags}" ;\n')
 
-      configure_arguments = self.argDB.get('download-boost-configure-arguments')
+      if 'download-boost-configure-arguments' in self.argDB and self.argDB['download-boost-configure-arguments']:
+        configure_arguments = self.argDB['download-slepc-configure-arguments']
+      else:
+        configure_arguments = ''
+
 
       bootstrap_cmd = f'cd {self.packageDir} && ./bootstrap.sh --with-toolset={toolset} --prefix={self.installDir}'
       out, err, ret = config.base.Configure.executeShellCommand(bootstrap_cmd, timeout=6000, log=self.log)
