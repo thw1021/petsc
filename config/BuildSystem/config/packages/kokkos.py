@@ -168,7 +168,7 @@ class Configure(config.package.CMakePackage):
             foundName = name
             break
         if foundName:
-          # Kokkos uses names like VOLTA75, AMPERE86
+          # Kokkos uses names like VOLTA70, AMPERE86
           deviceArchName = foundName + self.cuda.cudaArchSingle()
         else:
           raise RuntimeError('Could not find a Kokkos arch name for CUDA gen number '+ self.cuda.cudaArchSingle())
