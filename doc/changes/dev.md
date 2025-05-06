@@ -85,6 +85,7 @@
 ```
 
 - Add ``TaoBRGNSetRegularizationType()``, ``TaoBRGNGetRegularizationType()``
+- Fixed bugs in `TAO_ALMM_CLASSIC`, where bounds on slack variable was not set, if the master problem had no bound constraints.
 
 ```{rubric} PetscRegressor:
 ```
