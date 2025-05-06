@@ -84,7 +84,7 @@ We have funding to provide travel support for students attending the meeting wit
 | 10:00 am | IBAMR: Immersed-Boundary Adaptive Mesh Refinement                                                                           | [David Wells]           |
 | 10:30 am | TaoTerm                                                                                                                     | [Toby Isaac]            |
 | 10:45 am | **Coffee Break**                                                                                                          |                         |
-| 11:00 am | TBA                                                                                                                         | [Peter Boyle]           |
+| 11:00 am | Multiple RHS multigrid for the lattice Dirac equation                                                                        | [Peter Boyle]           |
 | 11:30 am | DMSwarmRT: Ray tracing with PETSc's particle management library DMSwarm                                                      | [Joseph Pusztay]        |
 | 12:00 pm | Empire AI                                                                                                                   | [Matt Jones]            |
 | 12:15 pm | **Lunch**                                                                                           |                         |
