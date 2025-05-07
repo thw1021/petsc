@@ -61,7 +61,7 @@ class Configure(config.base.Configure):
     self.petscLibDir = LIB
 
   def configureInstallDir(self):
-    '''Makes  installDir subdirectories if it does not exist for both prefix install location and PETSc work install location'''
+    '''Makes installDir subdirectories if it does not exist for both prefix install location and PETSc work install location'''
     dir = os.path.abspath(os.path.join(self.petscdir.dir, self.arch.arch))
     if not os.path.exists(dir):
       os.makedirs(dir)

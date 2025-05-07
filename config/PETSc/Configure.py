@@ -2,7 +2,6 @@ import config.base
 
 import os
 import sys
-import sysconfig
 import re
 import pickle
 
