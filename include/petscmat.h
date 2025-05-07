@@ -1952,7 +1952,7 @@ typedef enum {
   MATOP_CONVERT                 = 71,
   MATOP_HAS_OPERATION           = 72,
   /* MATOP_PLACEHOLDER_73=73, */
-  MATOP_SET_VALUES_ADIFOR = 74,
+  /* MATOP_PLACEHOLDER_74=74, */
   MATOP_FD_COLORING_APPLY = 75,
   MATOP_SET_FROM_OPTIONS  = 76,
   /* MATOP_PLACEHOLDER_77=77, */
@@ -1971,8 +1971,8 @@ typedef enum {
   MATOP_MAT_MULT_SYMBOLIC = 90,
   MATOP_MAT_MULT_NUMERIC  = 91,
   /* MATOP_PLACEHOLDER_92=92, */
-  MATOP_PTAP_SYMBOLIC = 93,
-  MATOP_PTAP_NUMERIC  = 94,
+  /* MATOP_PLACEHOLDER_93=93, */
+  MATOP_PTAP_NUMERIC = 94,
   /* MATOP_PLACEHOLDER_95=95, */
   MATOP_MAT_TRANSPOSE_MULT_SYMBO = 96,
   MATOP_MAT_TRANSPOSE_MULT_NUMER = 97,
@@ -2015,7 +2015,7 @@ typedef enum {
   MATOP_TRANS_COLORING_APPLY_SPT = 134,
   MATOP_TRANS_COLORING_APPLY_DEN = 135,
   /* MATOP_PLACEHOLDER_136=136, */
-  MATOP_RART_SYMBOLIC         = 137,
+  /* MATOP_PLACEHOLDER_137=137, */
   MATOP_RART_NUMERIC          = 138,
   MATOP_SET_BLOCK_SIZES       = 139,
   MATOP_AYPX                  = 140,
@@ -2033,7 +2033,8 @@ typedef enum {
   MATOP_GET_ROW_SUM_ABS     = 152,
   MATOP_GET_FACTOR          = 153,
   MATOP_GET_BLOCK_DIAGONAL  = 154, /* NOTE: caller of the two op functions owns the returned matrix */
-  MATOP_GET_VBLOCK_DIAGONAL = 155  /* and need to destroy it after use. */
+  MATOP_GET_VBLOCK_DIAGONAL = 155, /* and need to destroy it after use. */
+  MATOP_COPY_HASH_TO_XAIJ   = 156
 } MatOperation;
 PETSC_EXTERN PetscErrorCode MatSetOperation(Mat, MatOperation, void (*)(void));
 PETSC_EXTERN PetscErrorCode MatGetOperation(Mat, MatOperation, void (**)(void));

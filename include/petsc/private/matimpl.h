@@ -30,7 +30,7 @@ PETSC_INTERN PetscErrorCode MatGetMPIMatType_Private(Mat, MatType *);
 
 /*
     If you add entries here also add them to the MATOP enum
-    in include/petscmat.h and src/mat/ftn-mod/petscmat.h
+    in include/petscmat.h
 */
 typedef struct _MatOps *MatOps;
 struct _MatOps {
@@ -124,7 +124,7 @@ struct _MatOps {
   PetscErrorCode (*hasoperation)(Mat, MatOperation, PetscBool *);
   PetscErrorCode (*placeholder_73)(void);
   /*74*/
-  PetscErrorCode (*setvaluesadifor)(Mat, PetscInt, void *);
+  PetscErrorCode (*placeholder_74)(void);
   PetscErrorCode (*fdcoloringapply)(Mat, MatFDColoring, Vec, void *);
   PetscErrorCode (*setfromoptions)(Mat, PetscOptionItems);
   PetscErrorCode (*placeholder_77)(void);
@@ -146,7 +146,7 @@ struct _MatOps {
   PetscErrorCode (*matmultsymbolic)(Mat, Mat, PetscReal, Mat);
   PetscErrorCode (*matmultnumeric)(Mat, Mat, Mat);
   PetscErrorCode (*placeholder_92)(void);
-  PetscErrorCode (*ptapsymbolic)(Mat, Mat, PetscReal, Mat); /* double dispatch wrapper routine */
+  PetscErrorCode (*placeholder_93)(void);
   /*94*/
   PetscErrorCode (*ptapnumeric)(Mat, Mat, Mat); /* double dispatch wrapper routine */
   PetscErrorCode (*placeholder_95)(void);
@@ -199,8 +199,8 @@ struct _MatOps {
   PetscErrorCode (*transcoloringapplysptoden)(MatTransposeColoring, Mat, Mat);
   PetscErrorCode (*transcoloringapplydentosp)(MatTransposeColoring, Mat, Mat);
   PetscErrorCode (*placeholder_136)(void);
-  PetscErrorCode (*rartsymbolic)(Mat, Mat, PetscReal, Mat); /* double dispatch wrapper routine */
-  PetscErrorCode (*rartnumeric)(Mat, Mat, Mat);             /* double dispatch wrapper routine */
+  PetscErrorCode (*placeholder_137)(void);
+  PetscErrorCode (*rartnumeric)(Mat, Mat, Mat); /* double dispatch wrapper routine */
   /*139*/
   PetscErrorCode (*setblocksizes)(Mat, PetscInt, PetscInt);
   PetscErrorCode (*aypx)(Mat, PetscScalar, Mat, MatStructure);
@@ -213,7 +213,7 @@ struct _MatOps {
   PetscErrorCode (*mattransposesolve)(Mat, Mat, Mat);
   PetscErrorCode (*getvalueslocal)(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[], PetscScalar[]);
   PetscErrorCode (*creategraph)(Mat, PetscBool, PetscBool, PetscReal, PetscInt, PetscInt[], Mat *);
-  PetscErrorCode (*dummy)(Mat);
+  PetscErrorCode (*placeholder_149)(void);
   /*150*/
   PetscErrorCode (*transposesymbolic)(Mat, Mat *);
   PetscErrorCode (*eliminatezeros)(Mat, PetscBool);
@@ -226,7 +226,7 @@ struct _MatOps {
 };
 /*
     If you add MatOps entries above also add them to the MATOP enum
-    in include/petscmat.h and src/mat/ftn-mod/petscmat.h
+    in include/petscmat.h
 */
 
 #include <petscsys.h>

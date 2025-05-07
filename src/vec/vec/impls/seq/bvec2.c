@@ -759,7 +759,7 @@ static struct _VecOps DvOps = {
   PetscDesignatedInitializer(conjugate, VecConjugate_Seq),
   PetscDesignatedInitializer(setlocaltoglobalmapping, NULL),
   PetscDesignatedInitializer(getlocaltoglobalmapping, NULL),
-  PetscDesignatedInitializer(setvalueslocal, NULL),
+  PetscDesignatedInitializer(placeholder_47, NULL),
   PetscDesignatedInitializer(resetarray, VecResetArray_Seq),
   PetscDesignatedInitializer(setfromoptions, NULL),
   PetscDesignatedInitializer(maxpointwisedivide, VecMaxPointwiseDivide_Seq),
