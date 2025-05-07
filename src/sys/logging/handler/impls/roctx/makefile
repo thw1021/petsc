@@ -1,4 +1,5 @@
 -include ../../../../../../petscdir.mk
+#requirespackage 'PETSC_HAVE_ROCTX'
 
 MANSEC    = Sys
 SUBMANSEC = Log
