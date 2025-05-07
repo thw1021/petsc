@@ -36,7 +36,7 @@ class Configure(config.package.Package):
       try:
         if boostIncludeDir.exists() or boostIncludeDir.is_symlink():
           boostIncludeDir.unlink()
-        cmd = f'cd {self.packageDir} && ln -s $PWD/boost {boostIncludeDir}'
+        cmd = 'cd {} && ln -s $PWD/boost {}'.format(self.packageDir, boostIncludeDir)
         config.base.Configure.executeShellCommand(cmd, timeout=6000, log=self.log)
       except RuntimeError as e:
         raise RuntimeError('Error linking Boost headers:\n'+str(e))
@@ -61,12 +61,12 @@ class Configure(config.package.Package):
         toolset='clang'
         pch='on'
       else:
-        raise RuntimeError(f'Invalid CXX compiler specifield for boost: {cxx}')
+        raise RuntimeError('Invalid CXX compiler specifield for boost: {}'.format(cxx))
 
-      self.logPrintBox(f'Building Boost with toolset "{toolset}", compiler "{cxx}"')
+      self.logPrintBox('Building Boost with toolset "{}", compiler "{}"'.format(toolset, cxx))
 
       jamfile = Path(self.packageDir) / 'user-config.jam'
-      jamfile.write_text(f'using {toolset} : : {cxx} : <cxxflags>"{cxxflags}" ;\n')
+      jamfile.write_text('using {} : : {} : <cxxflags>"{}" ;\n'.format(toolset, cxx, cxxflags))
 
       if 'download-boost-configure-arguments' in self.argDB and self.argDB['download-boost-configure-arguments']:
         configure_arguments = self.argDB['download-slepc-configure-arguments']
@@ -74,13 +74,13 @@ class Configure(config.package.Package):
         configure_arguments = ''
 
 
-      bootstrap_cmd = f'cd {self.packageDir} && ./bootstrap.sh --with-toolset={toolset} --prefix={self.installDir}'
+      bootstrap_cmd = 'cd {} && ./bootstrap.sh --with-toolset={} --prefix={}'.format(self.packageDir, toolset, self.installDir)
       out, err, ret = config.base.Configure.executeShellCommand(bootstrap_cmd, timeout=6000, log=self.log)
 
-      build_cmd = f'cd {self.packageDir} && ./b2 toolset={toolset} {configure_arguments} pch={pch} -j{self.make.make_np}'
+      build_cmd = 'cd {} && ./b2 toolset={} {} pch={} -j{}'.format(self.packageDir, toolset, configure_arguments, pch, self.make.make_np)
       out, err, ret = config.base.Configure.executeShellCommand(build_cmd, timeout=6000, log=self.log)
 
-      install_cmd = f'cd {self.packageDir} && ./b2 toolset={toolset} {configure_arguments} pch={pch} -j{self.make.make_np} install'
+      install_cmd = 'cd {} && ./b2 toolset={} {} pch={} -j{} install'.format(self.packageDir, toolset, configure_arguments, pch, self.make.make_np)
       out, err, ret = config.base.Configure.executeShellCommand(install_cmd, timeout=6000, log=self.log)
 
       self.postInstall(out + err, str(conffile))
