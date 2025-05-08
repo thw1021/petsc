@@ -1025,7 +1025,7 @@ M*/
 
 .seealso: `PetscObjectStateGet()`, `PetscObject`
 M*/
-#define PetscObjectStateIncrease(obj) ((obj)->state++, PETSC_SUCCESS)
+#define PetscObjectStateIncrease(obj) ((PetscErrorCode)((obj)->state++, PETSC_SUCCESS))
 
 PETSC_EXTERN PetscErrorCode PetscObjectStateGet(PetscObject, PetscObjectState *);
 PETSC_EXTERN PetscErrorCode PetscObjectStateSet(PetscObject, PetscObjectState);
@@ -1206,7 +1206,7 @@ M*/
           `PetscObjectComposedDataSetIntstar()`, `PetscObjectComposedDataGetInt()`, `PetscObject`,
           `PetscObjectCompose()`, `PetscObjectQuery()`
 M*/
-#define PetscObjectComposedDataGetReal(obj, id, data, flag) (((obj)->realcomposedstate ? (data = (obj)->realcomposeddata[id], flag = (PetscBool)((obj)->realcomposedstate[id] == (obj)->state)) : (flag = PETSC_FALSE)), PETSC_SUCCESS)
+#define PetscObjectComposedDataGetReal(obj, id, data, flag) ((PetscErrorCode)(((obj)->realcomposedstate ? (data = (obj)->realcomposeddata[id], flag = (PetscBool)((obj)->realcomposedstate[id] == (obj)->state)) : (flag = PETSC_FALSE)), PETSC_SUCCESS))
 
 /*MC
    PetscObjectComposedDataSetRealstar - attach `PetscReal` array data to a `PetscObject` that may be retrieved with `PetscObjectComposedDataGetRealstar()`
