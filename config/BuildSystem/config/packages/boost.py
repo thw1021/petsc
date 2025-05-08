@@ -31,13 +31,13 @@ class Configure(config.package.Package):
 
     if self.argDB['download-boost-headers-only']:
       boostIncludeDir = Path(self.installDir) / self.includedir / 'boost'
-      self.logPrintBox('Configure option --download-boost-headers-only is ENABLED ... boost libraries will not be built')
+      self.logPrintBox('Configure option --boost-headers-only is ENABLED ... boost libraries will not be built')
       self.logPrintBox('Installing boost headers, this should not take long')
       try:
         if boostIncludeDir.exists() or boostIncludeDir.is_symlink():
           boostIncludeDir.unlink()
         cmd = 'cd {} && ln -s $PWD/boost {}'.format(self.packageDir, boostIncludeDir)
-        config.base.Configure.executeShellCommand(cmd, timeout=60, log=self.log)
+        config.base.Configure.executeShellCommand(cmd, timeout=6000, log=self.log)
       except RuntimeError as e:
         raise RuntimeError('Error linking Boost headers:\n'+str(e))
     else:
@@ -68,19 +68,18 @@ class Configure(config.package.Package):
       jamfile = Path(self.packageDir) / 'user-config.jam'
       jamfile.write_text('using {} : : {} : <cxxflags>"{}" ;\n'.format(toolset, cxx, cxxflags))
 
-      if 'download-boost-configure-arguments' in self.argDB and self.argDB['download-boost-configure-arguments']:
-        configure_arguments = self.argDB['download-boost-configure-arguments']
+      if 'download-boost-bootstrap-arguments' in self.argDB and self.argDB['download-boost-configure-arguments']:
+        bootstrap_arguments = self.argDB['download-boost-bootstrap-arguments']
       else:
-        configure_arguments = ''
-
+        bootstrap_arguments = ''
 
       bootstrap_cmd = 'cd {} && ./bootstrap.sh --with-toolset={} --prefix={}'.format(self.packageDir, toolset, self.installDir)
       out, err, ret = config.base.Configure.executeShellCommand(bootstrap_cmd, timeout=6000, log=self.log)
 
-      build_cmd = 'cd {} && ./b2 toolset={} {} pch={} -j{}'.format(self.packageDir, toolset, configure_arguments, pch, self.make.make_np)
+      build_cmd = 'cd {} && ./b2 toolset={} {} pch={} -j{}'.format(self.packageDir, toolset, bootstrap_arguments, pch, self.make.make_np)
       out, err, ret = config.base.Configure.executeShellCommand(build_cmd, timeout=6000, log=self.log)
 
-      install_cmd = 'cd {} && ./b2 toolset={} {} pch={} -j{} install'.format(self.packageDir, toolset, configure_arguments, pch, self.make.make_np)
+      install_cmd = 'cd {} && ./b2 toolset={} {} pch={} -j{} install'.format(self.packageDir, toolset, bootstrap_arguments, pch, self.make.make_np)
       out, err, ret = config.base.Configure.executeShellCommand(install_cmd, timeout=6000, log=self.log)
 
       self.postInstall(out + err, str(conffile))
