@@ -18,9 +18,9 @@ class Configure(config.package.Package):
   def setupHelp(self, help):
     import nargs
     config.package.Package.setupHelp(self, help)
-    help.addArgument('BOOST', '-download-boost-headers-only=<bool>', nargs.ArgBool(None, 0, 'When true, do not build boost libraries, only install headers'))
-    help.addArgument('BOOST', '-download-boost-libs=<string>',
-                    nargs.ArgString(None, '', 'Comma-separated list of Boost binary libraries to build'))
+    help.addArgument('BOOST', '-download-boost-headers-only=<bool>', nargs.ArgBool(None, 0, 'When true, do not build Boost libraries, only install headers'))
+    help.addArgument('BOOST', '-download-boost-libs=<string>', nargs.ArgString(None, '', 'Comma-separated list of Boost binary libraries to build'))
+    help.addArgument('BOOST', '-download-boost-bootstrap-arguments=<string>', nargs.ArgString(None, 0, 'Additional arguments for bootstrap of Boost build'))
 
   def Install(self):
     conffile = Path(self.packageDir) / (self.package + '.petscconf')
@@ -68,7 +68,7 @@ class Configure(config.package.Package):
       jamfile = Path(self.packageDir) / 'user-config.jam'
       jamfile.write_text('using {} : : {} : <cxxflags>"{}" ;\n'.format(toolset, cxx, cxxflags))
 
-      if 'download-boost-bootstrap-arguments' in self.argDB and self.argDB['download-boost-configure-arguments']:
+      if 'download-boost-bootstrap-arguments' in self.argDB and self.argDB['download-boost-bootstrap-arguments']:
         bootstrap_arguments = self.argDB['download-boost-bootstrap-arguments']
       else:
         bootstrap_arguments = ''
