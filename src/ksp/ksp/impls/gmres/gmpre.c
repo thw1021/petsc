@@ -21,7 +21,7 @@
   and can improve the performance of `VecMDot()` and `VecMAXPY()` which may utilize BLAS 2 operations that benefit from
   the larger allocations.
 
-  Using this function with vectors in GPU memory may waste GPU memory if all the restart directions are never used in solving the system,
+  Using this function with vectors in GPU memory may waste GPU memory if not all the restart directions are used in solving the system,
   that is the solver converges before the number of iterations reaches the restart value.
 
 .seealso: [](ch_ksp), `KSPGMRESSetRestart()`, `KSPGMRESSetOrthogonalization()`, `KSPGMRESGetOrthogonalization()`,
