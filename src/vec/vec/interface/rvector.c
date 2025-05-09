@@ -1324,10 +1324,9 @@ PetscErrorCode VecMAXPYAsync_Private(Vec y, PetscInt nv, const PetscScalar alpha
 
   Level: intermediate
 
-  Note:
+  Notes:
   `y` cannot be any of the `x` vectors
 
-  Note:
   The implementation may use BLAS 2 operations when the vectors `y` have been obtained with `VecDuplicateVecs()`
 
 .seealso: [](ch_vectors), `Vec`, `VecMAXPBY()`,`VecAYPX()`, `VecWAXPY()`, `VecAXPY()`, `VecAXPBYPCZ()`, `VecAXPBY()`, `VecDuplicateVecs()`
