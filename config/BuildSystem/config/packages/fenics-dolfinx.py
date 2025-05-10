@@ -48,7 +48,7 @@ class Configure(config.package.CMakePackage):
     if self.ptscotch.found:
       args.append('-DDOLFINX_ENABLE_SCOTCH=ON')
     if not self.parmetis.found and not self.ptscotch.found:
-      raise RuntimeError('PETSc must provide either Parmetis or PTSCOTCH, suggest --download-parmetis --download-metis')
+      raise RuntimeError('PETSc must provide either ParMETIS or PTSCOTCH, suggest --download-parmetis --download-metis')
 
     found_hdf5_cpp_binding = False
     for l in self.hdf5.lib:
