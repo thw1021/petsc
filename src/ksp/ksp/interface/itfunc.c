@@ -549,7 +549,7 @@ PetscErrorCode KSPConvergedReasonViewSet(KSP ksp, PetscErrorCode (*f)(KSP, void 
 }
 
 /*@
-  KSPConvergedReasonViewCancel - Clears all the `KSPReason` view functions for a `KSP` object set with `KSPConvergedReasonViewSet()`
+  KSPConvergedReasonViewCancel - Clears all the `KSPConvergedReason` view functions for a `KSP` object set with `KSPConvergedReasonViewSet()`
   as well as the default viewer.
 
   Collective
@@ -1058,11 +1058,11 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
 
   We recommend always using `KSPGMRES` for such singular systems.
   If $ nullspace(A) = nullspace(A^T)$ (note symmetric matrices always satisfy this property) then both left and right preconditioning will work
-  If $nullspace(A) != nullspace(A^)$ then left preconditioning will work but right preconditioning may not work (or it may).
+  If $nullspace(A) \neq nullspace(A^T)$ then left preconditioning will work but right preconditioning may not work (or it may).
 
   Developer Notes:
-  The reason we cannot always solve  $nullspace(A) != nullspace(A^T)$ systems with right preconditioning is because we need to remove at each iteration
-  $ nullspace(AB) $ from the search direction. While we know the $nullspace(A)$, $nullspace(AB)$ equals $B^-1$ times $nullspace(A)$ but except for trivial preconditioners
+  The reason we cannot always solve  $nullspace(A) \neq nullspace(A^T)$ systems with right preconditioning is because we need to remove at each iteration
+  $ nullspace(AB) $ from the search direction. While we know the $nullspace(A)$, $nullspace(AB)$ equals $B^{-1}$ times $nullspace(A)$ but except for trivial preconditioners
   such as diagonal scaling we cannot apply the inverse of the preconditioner to a vector and thus cannot compute $nullspace(AB)$.
 
   If using a direct method (e.g., via the `KSP` solver
@@ -1729,7 +1729,7 @@ PetscErrorCode KSPSetTolerances(KSP ksp, PetscReal rtol, PetscReal abstol, Petsc
 
   If the initial residual norm is small enough solvers may return immediately without computing any improvement to the solution. Using this routine
   prevents that which usually ensures the solution is changed (often minimally) from the previous solution. This option may be used with ODE integrators
-  to ensure the integrator does not full into a false steady-state solution of the ODE.
+  to ensure the integrator does not fall into a false steady-state solution of the ODE.
 
 .seealso: [](ch_ksp), `KSPGetTolerances()`, `KSPConvergedDefault()`, `KSPSetConvergenceTest()`, `KSP`, `KSPSetTolerances()`, `KSPGetMinimumIterations()`
 @*/
@@ -2310,7 +2310,7 @@ PetscErrorCode KSPMonitor(KSP ksp, PetscInt it, PetscReal rnorm)
   Notes:
   The options database option `-ksp_monitor` and related options are the easiest way to turn on `KSP` iteration monitoring
 
-  `KSPMonitorRegister()` provides a way to associate and options database key with `KSP` monitor function.
+  `KSPMonitorRegister()` provides a way to associate an options database key with `KSP` monitor function.
 
   The default is to do no monitoring.  To print the residual, or preconditioned
   residual if `KSPSetNormType`(ksp,`KSP_NORM_PRECONDITIONED`) was called, use
