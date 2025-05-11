@@ -41,6 +41,7 @@ if __name__ == '__main__':
     '--download-kblas',
     '--download-h2opus',
     '--download-kokkos',
+    '--with-kokkos-rdc',
     '--download-kokkos-kernels',
     '--download-hwloc',
     '--download-hypre',
