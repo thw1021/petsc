@@ -118,7 +118,7 @@ class Configure(config.package.CMakePackage):
       lang = 'cuda'
       args.append('-DKokkos_ENABLE_CUDA=ON')
       args.append('-DKokkos_ENABLE_CUDA_LAMBDA:BOOL=ON')
-      if self.argDB['with-kokkos-rdc']: args.append('-Kokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE:BOOL=ON')
+      if self.argDB['with-kokkos-rdc']: args.append('-DKokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE:BOOL=ON')
       # Use of cudaMallocAsync() is turned off by default since Kokkos-4.5.0, see https://github.com/kokkos/kokkos/pull/7353,
       # since it interferes with the CUDA aware MPI. We also turn it off for older versions.
       args.append('-DKokkos_ENABLE_IMPL_CUDA_MALLOC_ASYNC:BOOL=OFF')
@@ -180,7 +180,7 @@ class Configure(config.package.CMakePackage):
       lang = 'hip'
       self.system = 'HIP'
       args.append('-DKokkos_ENABLE_HIP=ON')
-      if self.argDB['with-kokkos-rdc']: args.append('-Kokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE:BOOL=ON')
+      if self.argDB['with-kokkos-rdc']: args.append('-DKokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE:BOOL=ON')
       with self.Language('HIP'):
         petscHipc = self.getCompiler()
         hipFlags = self.updatePackageCxxFlags(self.getCompilerFlags())
@@ -202,7 +202,7 @@ class Configure(config.package.CMakePackage):
       lang = 'sycl'
       self.system = 'SYCL'
       args.append('-DKokkos_ENABLE_SYCL=ON')
-      if self.argDB['with-kokkos-rdc']: args.append('-Kokkos_ENABLE_SYCL_RELOCATABLE_DEVICE_CODE:BOOL=ON')
+      if self.argDB['with-kokkos-rdc']: args.append('-DKokkos_ENABLE_SYCL_RELOCATABLE_DEVICE_CODE:BOOL=ON')
       with self.Language('SYCL'):
         petscSyclc = self.getCompiler()
       self.getExecutable(petscSyclc,getFullPath=1,resultName='systemSyclc')
