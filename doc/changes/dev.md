@@ -9,6 +9,11 @@
 ```{rubric} General:
 ```
 
+- Add `PYTHONPATH` to the generated `$PETSC_DIR/$PETSC_ARCH/lib/petsc/conf/petscvariables` file so it is available to users through the makefile system
+- Add `PYTHONPATH` to the generated `$PETSC_DIR/$PETSC_ARCH/lib/pkgconfig/PETSc.pc` file so it is available to users with
+  `PKG_CONFIG_PATH=$PETSC_DIR/$PETSC_ARCH/lib/pkgconfig pkg-config --variable=PYTHONPATH PETSc.pc`
+
+
 ```{rubric} Configure/Build:
 ```
 
