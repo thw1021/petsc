@@ -4108,9 +4108,7 @@ PetscErrorCode DMConvert(DM dm, DMType newtype, DM *M)
     if (conv) goto foundconv;
 
     /* 4) See if a good general converter is known for the current matrix */
-    if (dm->ops->convert) {
-      conv = dm->ops->convert;
-    }
+    if (dm->ops->convert) conv = dm->ops->convert;
     if (conv) goto foundconv;
 #endif
 

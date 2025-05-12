@@ -86,7 +86,7 @@ int main(int argc, char **argv)
 
   // Fill the matrix
   for (int i = 0; i < 5; i++) {
-    for (int j = 0; j < oi[i + 1] - oi[i]; j++) { PetscCall(MatSetValue(output_mat_nonlocal_copy, i, garray[oj[oi[i] + j]], oa[oi[i] + j], INSERT_VALUES)); }
+    for (int j = 0; j < oi[i + 1] - oi[i]; j++) PetscCall(MatSetValue(output_mat_nonlocal_copy, i, garray[oj[oi[i] + j]], oa[oi[i] + j], INSERT_VALUES));
   }
   PetscCall(MatAssemblyBegin(output_mat_nonlocal_copy, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(output_mat_nonlocal_copy, MAT_FINAL_ASSEMBLY));

@@ -1816,9 +1816,7 @@ static PetscErrorCode MatSolve_SeqAIJKokkos_Cholesky(Mat A, Vec bb, Vec xx)
   PetscCallCXX(sptrsv_solve(exec, &factors->khU, factors->iU_d, factors->jU_d, factors->aU_d, Y, X));
 
   // Reorder X with the inverse column (row) permutation
-  if (!identity) {
-    PetscCallCXX(Kokkos::parallel_for(Kokkos::RangePolicy<>(exec, 0, m), KOKKOS_LAMBDA(const PetscInt i) { x(rowperm(i)) = X(i); }));
-  }
+  if (!identity) PetscCallCXX(Kokkos::parallel_for(Kokkos::RangePolicy<>(exec, 0, m), KOKKOS_LAMBDA(const PetscInt i) { x(rowperm(i)) = X(i); }));
 
   PetscCall(VecRestoreKokkosView(bb, &b));
   PetscCall(VecRestoreKokkosViewWrite(xx, &x));
@@ -1868,9 +1866,7 @@ static PetscErrorCode MatSolve_SeqAIJKokkos_LU(Mat A, Vec bb, Vec xx)
   PetscCallCXX(sptrsv_solve(exec, &factors->khU, factors->iU_d, factors->jU_d, factors->aU_d, Y, X));
 
   // x = C X; Reorder X with the inverse col permutation
-  if (!col_identity) {
-    PetscCallCXX(Kokkos::parallel_for(Kokkos::RangePolicy<>(exec, 0, m), KOKKOS_LAMBDA(const PetscInt i) { x(colperm(i)) = X(i); }));
-  }
+  if (!col_identity) PetscCallCXX(Kokkos::parallel_for(Kokkos::RangePolicy<>(exec, 0, m), KOKKOS_LAMBDA(const PetscInt i) { x(colperm(i)) = X(i); }));
 
   PetscCall(VecRestoreKokkosView(bb, &b));
   PetscCall(VecRestoreKokkosViewWrite(xx, &x));
@@ -1921,9 +1917,7 @@ static PetscErrorCode MatSolveTranspose_SeqAIJKokkos_LU(Mat A, Vec bb, Vec xx)
   PetscCallCXX(sptrsv_solve(exec, &factors->khLt, factors->iLt_d, factors->jLt_d, factors->aLt_d, Y, X));
 
   // x = R^- X = R^T X; Reorder X with the inverse row permutation
-  if (!row_identity) {
-    PetscCallCXX(Kokkos::parallel_for(Kokkos::RangePolicy<>(exec, 0, m), KOKKOS_LAMBDA(const PetscInt i) { x(rowperm(i)) = X(i); }));
-  }
+  if (!row_identity) PetscCallCXX(Kokkos::parallel_for(Kokkos::RangePolicy<>(exec, 0, m), KOKKOS_LAMBDA(const PetscInt i) { x(rowperm(i)) = X(i); }));
 
   PetscCall(VecRestoreKokkosView(bb, &b));
   PetscCall(VecRestoreKokkosViewWrite(xx, &x));

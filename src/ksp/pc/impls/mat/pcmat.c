@@ -236,7 +236,7 @@ static PetscErrorCode PCView_Mat(PC pc, PetscViewer viewer)
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
-  if (iascii) { PetscCall(PetscViewerASCIIPrintf(viewer, "PCApply() == Mat%s()\n", PCMatOpTypes[pcmat->apply])); }
+  if (iascii) PetscCall(PetscViewerASCIIPrintf(viewer, "PCApply() == Mat%s()\n", PCMatOpTypes[pcmat->apply]));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
