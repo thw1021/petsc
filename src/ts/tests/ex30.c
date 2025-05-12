@@ -251,9 +251,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, const Vec rhs, Vec work_ferhs
   }
   PetscCall(DMSwarmCreateGlobalVectorFromField(sw, "w_q", &ff)); // this grabs access
   if (!is_lsqr) {
-    PetscErrorCode ierr;
-    ierr = KSPSolve(ksp, work_ferhs, matshellctx->uu);
-    if (!ierr) {
+    if (KSPSolve(ksp, work_ferhs, matshellctx->uu) == PETSC_SUCCESS) {
       // 3) with Moore-Penrose apply Mp: M_p (Mp' Mp)^-1 M
       PetscCall(MatMult(M_p, matshellctx->uu, ff));
     } else { // failed
@@ -273,8 +271,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, const Vec rhs, Vec work_ferhs
       } else {
         PetscCall(KSPSetOperators(ksp, M_p, M_p));
       }
-      ierr = KSPSolveTranspose(ksp, work_ferhs, ff);
-      if (ierr) { PetscCheck(!ierr, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "backup LSQR solver failed - need to add N_v > N_p Moore-Penrose pseudo-inverse"); }
+      PetscCheck(KSPSolveTranspose(ksp, work_ferhs, ff) == PETSC_SUCCESS, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "backup LSQR solver failed - need to add N_v > N_p Moore-Penrose pseudo-inverse");
     }
     if (D) PetscCall(MatDestroy(&D));
     PetscCall(MatDestroy(&MtM));
@@ -283,10 +280,8 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, const Vec rhs, Vec work_ferhs
     PetscCall(VecDestroy(&matshellctx->uu));
     PetscCall(PetscFree(matshellctx));
   } else {
-    PetscErrorCode ierr;
     // finally with LSQR apply M_p^\dagger
-    ierr = KSPSolveTranspose(ksp, work_ferhs, ff);
-    if (ierr) { PetscCheck(!ierr, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "backup LSQR solver failed - need to add N_v > N_p Moore-Penrose pseudo-inverse"); }
+    PetscCheck(KSPSolveTranspose(ksp, work_ferhs, ff) == PETSC_SUCCESS, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "backup LSQR solver failed - need to add N_v > N_p Moore-Penrose pseudo-inverse");
   }
   PetscCall(KSPDestroy(&ksp));
   PetscCall(MatDestroy(&PM_p));
