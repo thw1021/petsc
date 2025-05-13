@@ -129,7 +129,6 @@ PetscErrorCode KSPMonitorResidual(KSP ksp, PetscInt n, PetscReal rnorm, PetscVie
   PetscViewer       viewer = vf->viewer;
   PetscViewerFormat format = vf->format;
   PetscInt          tablevel;
-  int               maxwidth;
   const char       *prefix;
 
   PetscFunctionBegin;
@@ -138,9 +137,8 @@ PetscErrorCode KSPMonitorResidual(KSP ksp, PetscInt n, PetscReal rnorm, PetscVie
   PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "Residual norms for %s solve.\n", prefix));
-  maxwidth = PetscMax(3,((int) PetscLog10Real(PetscMax((PetscReal)ksp->max_it,1))) + 1);
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%-*" PetscInt_FMT " KSP Residual norm %14.12e\n", maxwidth, n, (double)rnorm));
+  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " KSP Residual norm %14.12e\n", n, (double)rnorm));
   PetscCall(PetscViewerASCIISubtractTab(viewer, tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);

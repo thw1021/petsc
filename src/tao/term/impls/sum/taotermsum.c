@@ -1,5 +1,6 @@
 #include <petsc/private/taoimpl.h> /*I "petsctao.h" I*/
 #include <../src/tao/term/impls/sum/taotermsum.h>
+#include <ctype.h>
 
 static const char *const TaoTermMasks[] = {"none", "objective", "gradient", "hessian", "TaoTermMask", "TAOTERM_MASK_", NULL};
 
@@ -317,6 +318,171 @@ static PetscErrorCode TaoTermDestroy_Sum(TaoTerm term)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermView_Sum_NameHasSpaces(const char name[], PetscBool *has_spaces)
+{
+  size_t n;
+
+  PetscFunctionBegin;
+  PetscCall(PetscStrlen(name, &n));
+  for (size_t i = 0; i < n; i++) {
+    if (isspace(name[i])) {
+      *has_spaces = PETSC_TRUE;
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
+  *has_spaces = PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermViewSumPrintSubtermName(PetscViewer viewer, TaoTerm subterm, PetscInt i, const char f[], PetscBool colon_newline)
+{
+  const char *subterm_prefix;
+  const char *subterm_name = NULL;
+
+  PetscFunctionBegin;
+  if (((PetscObject)subterm)->name) PetscCall(PetscObjectGetName((PetscObject)subterm, &subterm_name));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)subterm, &subterm_prefix));
+  if (subterm_name) {
+    PetscBool same;
+
+    PetscCall(PetscStrncmp(subterm_name, "TaoTerm_", 8, &same));
+    if (!same) {
+      PetscBool has_spaces;
+
+      PetscCall(TaoTermView_Sum_NameHasSpaces(subterm_name, &has_spaces));
+      if (has_spaces) PetscCall(PetscViewerASCIIPrintf(viewer, "%s_{%s}%s", f, subterm_name, colon_newline ? ":\n" : ""));
+      else PetscCall(PetscViewerASCIIPrintf(viewer, "%s%s", subterm_name, colon_newline ? ":\n" : ""));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
+  if (subterm_prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "%s_{%s}%s", f, subterm_prefix, colon_newline ? ":\n" : ""));
+  else PetscCall(PetscViewerASCIIPrintf(viewer, "%s_%" PetscInt_FMT "%s", f, i, colon_newline ? ":\n" : ""));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermViewSumPrintParametersName(PetscViewer viewer, Vec params, PetscInt i, const char f[], PetscBool colon_newline)
+{
+  const char *params_prefix;
+  const char *params_name = NULL;
+
+  PetscFunctionBegin;
+  if (((PetscObject)params)->name) PetscCall(PetscObjectGetName((PetscObject)params, &params_name));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)params, &params_prefix));
+  if (params_name) {
+    PetscBool same;
+
+    PetscCall(PetscStrncmp(params_name, "Vec_", 4, &same));
+    if (!same) {
+      PetscBool has_spaces;
+
+      PetscCall(TaoTermView_Sum_NameHasSpaces(params_name, &has_spaces));
+      if (has_spaces) PetscCall(PetscViewerASCIIPrintf(viewer, "%s_{%s}%s", f, params_name, colon_newline ? ":\n" : ""));
+      else PetscCall(PetscViewerASCIIPrintf(viewer, "%s%s", params_name, colon_newline ? ":\n" : ""));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
+  if (params_prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "%s_{%s}%s", f, params_prefix, colon_newline ? ":\n" : ""));
+  else PetscCall(PetscViewerASCIIPrintf(viewer, "%s_%" PetscInt_FMT "%s", f, i, colon_newline ? ":\n" : ""));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoTermViewSumPrintMapName(PetscViewer viewer, Mat map, PetscInt i, const char A[], PetscBool colon_newline)
+{
+  const char *map_prefix;
+  const char *map_name = NULL;
+
+  PetscFunctionBegin;
+  if (((PetscObject)map)->name) PetscCall(PetscObjectGetName((PetscObject)map, &map_name));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)map, &map_prefix));
+  if (map_name) {
+    PetscBool same;
+
+    PetscCall(PetscStrncmp(map_name, "Mat_", 4, &same));
+    if (!same) {
+      PetscBool has_spaces;
+
+      PetscCall(TaoTermView_Sum_NameHasSpaces(map_name, &has_spaces));
+      if (has_spaces) PetscCall(PetscViewerASCIIPrintf(viewer, "%s_{%s}%s", A, map_name, colon_newline ? ":\n" : ""));
+      else PetscCall(PetscViewerASCIIPrintf(viewer, "%s%s", map_name, colon_newline ? ":\n" : ""));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
+  if (map_prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "%s_{%s}%s", A, map_prefix, colon_newline ? ":\n" : ""));
+  else PetscCall(PetscViewerASCIIPrintf(viewer, "%s_%" PetscInt_FMT "%s", A, i, colon_newline ? ":\n" : ""));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoTermViewSumPrintSubterm(TaoTerm term, PetscViewer viewer, PetscBool use_params, Vec params, PetscInt i, PetscBool initial, PetscBool print_map, const char f[], const char A[], const char x[], const char p[])
+{
+  PetscReal   scale;
+  TaoTerm     subterm;
+  Mat         map;
+  TaoTermParametersMode pmode;
+
+  PetscFunctionBegin;
+  PetscCall(TaoTermSumGetSubterm(term, i, NULL, &scale, &subterm, &map));
+  if (scale == 1.0) PetscCall(PetscViewerASCIIPrintf(viewer, "%s", initial ? "" : " + "));
+  else if (initial) PetscCall(PetscViewerASCIIPrintf(viewer, "%g ", scale));
+  else PetscCall(PetscViewerASCIIPrintf(viewer, " %s %g ", scale >= 0.0 ? "+" : "-", PetscAbsReal(scale)));
+  PetscCall(TaoTermViewSumPrintSubtermName(viewer, subterm, i, f, PETSC_FALSE));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "("));
+  if (print_map && map) {
+    PetscCall(TaoTermViewSumPrintMapName(viewer, map, i, A, PETSC_FALSE));
+    PetscCall(PetscViewerASCIIPrintf(viewer, " "));
+  }
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%s", x));
+  if (use_params) {
+    if (params) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "; "));
+      PetscCall(TaoTermViewSumPrintParametersName(viewer, params, i, p, PETSC_FALSE));
+    }
+  } else {
+    PetscCall(TaoTermGetParametersMode(subterm, &pmode));
+    switch (pmode) {
+    case TAOTERM_PARAMETERS_NONE:
+      break;
+    case TAOTERM_PARAMETERS_OPTIONAL:
+      PetscCall(PetscViewerASCIIPrintf(viewer, "; [p_%" PetscInt_FMT "]", i));
+      break;
+    case TAOTERM_PARAMETERS_REQUIRED:
+      PetscCall(PetscViewerASCIIPrintf(viewer, "; p_%" PetscInt_FMT, i));
+      break;
+    }
+  }
+  PetscCall(PetscViewerASCIIPrintf(viewer, ")"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermView_Sum_ASCII_INFO(TaoTerm term, PetscViewer viewer)
+{
+  TaoTerm_Sum *sum = (TaoTerm_Sum *)term->data;
+
+  PetscFunctionBegin;
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Sum of %" PetscInt_FMT " terms:%s", sum->n_terms, sum->n_terms > 0 ? " " :""));
+  PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
+  for (PetscInt i = 0; i < sum->n_terms; i++) PetscCall(TaoTermViewSumPrintSubterm(term, viewer, PETSC_FALSE, NULL, i, (i == 0) ? PETSC_TRUE : PETSC_FALSE, PETSC_TRUE, "f", "A", "x", "p"));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
+  PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
+  for (PetscInt i = 0; i < sum->n_terms; i++) {
+    Mat         map;
+    TaoTerm     subterm;
+
+    PetscCall(TaoTermSumGetSubterm(term, i, NULL, NULL, &subterm, &map));
+    PetscCall(TaoTermViewSumPrintSubtermName(viewer, subterm, i, "f", PETSC_TRUE));
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscCall(TaoTermView(subterm, viewer));
+    PetscCall(PetscViewerASCIIPopTab(viewer));
+    if (map == NULL) continue;
+    PetscCall(TaoTermViewSumPrintMapName(viewer, map, i, "A", PETSC_TRUE));
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
+    PetscCall(MatView(map, viewer));
+    PetscCall(PetscViewerPopFormat(viewer));
+    PetscCall(PetscViewerASCIIPopTab(viewer));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermView_Sum(TaoTerm term, PetscViewer viewer)
 {
   TaoTerm_Sum *sum = (TaoTerm_Sum *)term->data;
@@ -325,6 +491,13 @@ static PetscErrorCode TaoTermView_Sum(TaoTerm term, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
+    PetscViewerFormat format;
+
+    PetscCall(PetscViewerGetFormat(viewer, &format));
+    if (sum->n_terms <= 3 && format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
+      PetscCall(TaoTermView_Sum_ASCII_INFO(term, viewer));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
     PetscCall(PetscViewerASCIIPrintf(viewer, "Sum of %" PetscInt_FMT " terms:\n", sum->n_terms));
     PetscCall(PetscViewerASCIIPushTab(viewer));
     for (PetscInt i = 0; i < sum->n_terms; i++) {
@@ -339,9 +512,14 @@ static PetscErrorCode TaoTermView_Sum(TaoTerm term, PetscViewer viewer)
       PetscCall(PetscViewerASCIIPrintf(viewer, "Summand %" PetscInt_FMT ":\n", i));
       PetscCall(PetscViewerASCIIPushTab(viewer));
 
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Scale (taoterm_sum_%sscale): %g\n", subprefix, (double)scale));
-      if (map == NULL) PetscCall(PetscViewerASCIIPrintf(viewer, "Map: unmapped\n"));
-      else {
+      if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) PetscCall(PetscViewerASCIIPrintf(viewer, "Scale (taoterm_sum_%sscale): %g\n", subprefix, (double)scale));
+      else PetscCall(PetscViewerASCIIPrintf(viewer, "Scale: %g\n", (double)scale));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Term:\n"));
+      PetscCall(PetscViewerASCIIPushTab(viewer));
+      PetscCall(TaoTermView(subterm, viewer));
+      PetscCall(PetscViewerASCIIPopTab(viewer));
+      if (format == PETSC_VIEWER_ASCII_INFO_DETAIL && map == NULL) PetscCall(PetscViewerASCIIPrintf(viewer, "Map: unmapped\n"));
+      else if (map != NULL) {
         PetscCall(PetscViewerASCIIPrintf(viewer, "Map:\n"));
         PetscCall(PetscViewerASCIIPushTab(viewer));
         {
@@ -358,12 +536,8 @@ static PetscErrorCode TaoTermView_Sum(TaoTerm term, PetscViewer viewer)
         }
         PetscCall(PetscViewerASCIIPopTab(viewer));
       }
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Term:\n"));
-      PetscCall(PetscViewerASCIIPushTab(viewer));
-      PetscCall(TaoTermView(subterm, viewer));
-      PetscCall(PetscViewerASCIIPopTab(viewer));
       PetscCall(TaoTermSumGetSubtermMask(term, i, &mask));
-      if (mask != TAOTERM_MASK_NONE) {
+      if (format == PETSC_VIEWER_ASCII_INFO_DETAIL && mask != TAOTERM_MASK_NONE) {
         PetscBool preceding = PETSC_FALSE;
 
         PetscCall(PetscViewerASCIIPrintf(viewer, "Mask (taoterm_sum_%smask): ", subprefix));

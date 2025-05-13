@@ -83,25 +83,37 @@ PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
   if (iascii) {
     const char *solution_vec_type;
     PetscInt    N;
+    PetscViewerFormat format;
 
     PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)term, viewer));
+    PetscCall(PetscViewerGetFormat(viewer, &format));
     PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscCall(MatGetVecType(term->solution_factory, &solution_vec_type));
     PetscCall(MatGetSize(term->solution_factory, &N, NULL));
-    if (N < 0) PetscCall(PetscViewerASCIIPrintf(viewer, "solution vector space: not set up yet [VecType %s (taoterm_solution_vec_type)]\n", solution_vec_type));
-    else PetscCall(PetscViewerASCIIPrintf(viewer, "solution vector space: N = %" PetscInt_FMT " [VecType %s (taoterm_solution_vec_type)]\n", N, solution_vec_type));
-    if (term->parameters_mode == TAOTERM_PARAMETERS_NONE) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space: (none)\n"));
+    if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
+      if (N < 0) PetscCall(PetscViewerASCIIPrintf(viewer, "solution vector space: not set up yet [VecType %s (taoterm_solution_vec_type)]\n", solution_vec_type));
+      else PetscCall(PetscViewerASCIIPrintf(viewer, "solution vector space: N = %" PetscInt_FMT " [VecType %s (taoterm_solution_vec_type)]\n", N, solution_vec_type));
     } else {
+      if (N < 0) PetscCall(PetscViewerASCIIPrintf(viewer, "solution vector space: not set up yet\n"));
+      else PetscCall(PetscViewerASCIIPrintf(viewer, "solution vector space: N = %" PetscInt_FMT "\n", N));
+    }
+    if (format == PETSC_VIEWER_ASCII_INFO_DETAIL && term->parameters_mode == TAOTERM_PARAMETERS_NONE) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space: (none)\n"));
+    } else if (term->parameters_mode != TAOTERM_PARAMETERS_NONE) {
       const char *parameters_vec_type;
       PetscInt    K;
 
       PetscCall(MatGetVecType(term->parameters_factory, &parameters_vec_type));
       PetscCall(MatGetSize(term->parameters_factory, &K, NULL));
-      if (K < 0) PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space: (%s) not set up yet [VecType %s (taoterm_parameters_vec_type)]\n", TaoTermParametersModes[term->parameters_mode], parameters_vec_type));
-      else PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space: (%s) K = %" PetscInt_FMT " [VecType %s (taoterm_parameters_vec_type)]\n", TaoTermParametersModes[term->parameters_mode], K, parameters_vec_type));
+      if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
+        if (K < 0) PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space: (%s) not set up yet [VecType %s (taoterm_parameters_vec_type)]\n", TaoTermParametersModes[term->parameters_mode], parameters_vec_type));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space: (%s) K = %" PetscInt_FMT " [VecType %s (taoterm_parameters_vec_type)]\n", TaoTermParametersModes[term->parameters_mode], K, parameters_vec_type));
+      } else {
+        if (K < 0) PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space:%s not set up yet\n", term->parameters_mode == TAOTERM_PARAMETERS_OPTIONAL ? " (optional)" : ""));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space:%s K = %" PetscInt_FMT "\n", term->parameters_mode == TAOTERM_PARAMETERS_OPTIONAL ? " (optional)" : "", K));
+      }
     }
-    if (term->ops->createhessianmatrices == TaoTermCreateHessianMatricesDefault) {
+    if (format == PETSC_VIEWER_ASCII_INFO_DETAIL && term->ops->createhessianmatrices == TaoTermCreateHessianMatricesDefault) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian MatType (taoterm_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
       if (!term->Hpre_is_H) { PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian preconditioning MatType (taoterm_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)")); }
     }

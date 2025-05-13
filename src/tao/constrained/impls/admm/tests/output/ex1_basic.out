@@ -1,0 +1,468 @@
+TestADMMUnconstrained, test 0:
+  TAO solve converged due to CONVERGED_GATOL iterations 158
+  Tao Object: 1 MPI process
+    type: admm
+    ADMM type: min_{x,z} [f(C x; u)] + [0.4 g(D z)]
+               such that x = z
+    x subsolver:
+      Tao Object: (admm_sub_0_) 1 MPI process
+        type: nls
+        Objective function:
+          TaoTerm Object: (admm_sub_0_) 1 MPI process
+            type: sum
+            solution vector space: N = 13
+            parameter vector space: K = 17
+            Sum of 2 terms: f(C x; p_0) + f_{admm_sub_0_metric_}(x; p_1)
+            f:
+              TaoTerm Object: f (f_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 4
+                parameter vector space: K = 4
+            C:
+              Mat Object: C (C_) 1 MPI process
+                type: seqdense
+                rows=4, cols=13
+                total: nonzeros=52, allocated nonzeros=52
+                total number of mallocs used during MatSetValues calls=0
+            f_{admm_sub_0_metric_}:
+              TaoTerm Object: (admm_sub_0_metric_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 13
+                parameter vector space: K = 13
+        TaoLineSearch Object: (admm_sub_0_) 1 MPI process
+          type: more-thuente
+          maximum function evaluations=30
+          tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+        KSP Object: (admm_sub_0_tao_nls_) 1 MPI process
+          type: stcg
+          maximum iterations=10000, initial guess is zero
+          tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+          left preconditioning
+          using UNPRECONDITIONED norm type for convergence test
+        PC Object: (admm_sub_0_tao_nls_) 1 MPI process
+          type: none
+          linear system matrix = precond matrix:
+          Mat Object: 1 MPI process
+            type: shell
+            rows=13, cols=13
+        convergence tolerances: maxit=50 gatol=1e-08 grtol=1e-08 steptol=0. gttol=0.
+    z subsolver:
+      Tao Object: (admm_sub_1_) 1 MPI process
+        type: nls
+        Objective function:
+          TaoTerm Object: (admm_sub_1_) 1 MPI process
+            type: sum
+            solution vector space: N = 13
+            parameter vector space: K = 13
+            Sum of 2 terms: 0.4 g(D x) + f_{admm_sub_1_metric_}(x; p_1)
+            g:
+              TaoTerm Object: g (g_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 17
+            D:
+              Mat Object: D (D_) 1 MPI process
+                type: seqdense
+                rows=17, cols=13
+                total: nonzeros=221, allocated nonzeros=221
+                total number of mallocs used during MatSetValues calls=0
+            f_{admm_sub_1_metric_}:
+              TaoTerm Object: (admm_sub_1_metric_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 13
+                parameter vector space: K = 13
+        TaoLineSearch Object: (admm_sub_1_) 1 MPI process
+          type: more-thuente
+          maximum function evaluations=30
+          tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+        KSP Object: (admm_sub_1_tao_nls_) 1 MPI process
+          type: stcg
+          maximum iterations=10000, initial guess is zero
+          tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+          left preconditioning
+          using UNPRECONDITIONED norm type for convergence test
+        PC Object: (admm_sub_1_tao_nls_) 1 MPI process
+          type: none
+          linear system matrix = precond matrix:
+          Mat Object: 1 MPI process
+            type: shell
+            rows=13, cols=13
+        convergence tolerances: maxit=50 gatol=1e-08 grtol=1e-08 steptol=0. gttol=0.
+    Objective function:
+      TaoTerm Object: (objective_) 1 MPI process
+        type: sum
+        solution vector space: N = 13
+        parameter vector space: K = 4
+        Sum of 2 terms: f(C x; p_0) + 0.4 g(D x)
+        f:
+          TaoTerm Object: f (f_) 1 MPI process
+            type: halfl2squared
+            solution vector space: N = 4
+            parameter vector space: K = 4
+        C:
+          Mat Object: C (C_) 1 MPI process
+            type: seqdense
+            rows=4, cols=13
+            total: nonzeros=52, allocated nonzeros=52
+            total number of mallocs used during MatSetValues calls=0
+        g:
+          TaoTerm Object: g (g_) 1 MPI process
+            type: halfl2squared
+            solution vector space: N = 17
+        D:
+          Mat Object: D (D_) 1 MPI process
+            type: seqdense
+            rows=17, cols=13
+            total: nonzeros=221, allocated nonzeros=221
+            total number of mallocs used during MatSetValues calls=0
+    convergence tolerances: maxit=10000 gatol=1e-08 grtol=1e-08 steptol=0. gttol=0.
+TestADMMUnconstrained, test 1:
+  TAO solve converged due to CONVERGED_GATOL iterations 242
+  Tao Object: 1 MPI process
+    type: admm
+    ADMM type: min_{x,z} [f(C x; u)] + [0.4 g(D z)]
+               such that x = z
+    x subsolver:
+      Tao Object: (admm_sub_0_) 1 MPI process
+        type: nls
+        Objective function:
+          TaoTerm Object: (admm_sub_0_) 1 MPI process
+            type: sum
+            solution vector space: N = 13
+            parameter vector space: K = 17
+            Sum of 2 terms: f(C x; p_0) + f_{admm_sub_0_metric_}(x; p_1)
+            f:
+              TaoTerm Object: f (f_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 4
+                parameter vector space: K = 4
+            C:
+              Mat Object: C (C_) 1 MPI process
+                type: seqdense
+                rows=4, cols=13
+                total: nonzeros=52, allocated nonzeros=52
+                total number of mallocs used during MatSetValues calls=0
+            f_{admm_sub_0_metric_}:
+              TaoTerm Object: (admm_sub_0_metric_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 13
+                parameter vector space: K = 13
+        TaoLineSearch Object: (admm_sub_0_) 1 MPI process
+          type: more-thuente
+          maximum function evaluations=30
+          tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+        KSP Object: (admm_sub_0_tao_nls_) 1 MPI process
+          type: stcg
+          maximum iterations=10000, initial guess is zero
+          tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+          left preconditioning
+          using UNPRECONDITIONED norm type for convergence test
+        PC Object: (admm_sub_0_tao_nls_) 1 MPI process
+          type: none
+          linear system matrix = precond matrix:
+          Mat Object: 1 MPI process
+            type: shell
+            rows=13, cols=13
+        convergence tolerances: maxit=50 gatol=1e-08 grtol=1e-08 steptol=0. gttol=0.
+    z subsolver:
+      Tao Object: (admm_sub_1_) 1 MPI process
+        type: nls
+        Objective function:
+          TaoTerm Object: (admm_sub_1_) 1 MPI process
+            type: sum
+            solution vector space: N = 13
+            parameter vector space: K = 13
+            Sum of 2 terms: 0.4 g(D x) + f_{admm_sub_1_metric_}(x; p_1)
+            g:
+              TaoTerm Object: g (g_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 17
+            D:
+              Mat Object: D (D_) 1 MPI process
+                type: seqdense
+                rows=17, cols=13
+                total: nonzeros=221, allocated nonzeros=221
+                total number of mallocs used during MatSetValues calls=0
+            f_{admm_sub_1_metric_}:
+              TaoTerm Object: (admm_sub_1_metric_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 13
+                parameter vector space: K = 13
+        TaoLineSearch Object: (admm_sub_1_) 1 MPI process
+          type: more-thuente
+          maximum function evaluations=30
+          tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+        KSP Object: (admm_sub_1_tao_nls_) 1 MPI process
+          type: stcg
+          maximum iterations=10000, initial guess is zero
+          tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+          left preconditioning
+          using UNPRECONDITIONED norm type for convergence test
+        PC Object: (admm_sub_1_tao_nls_) 1 MPI process
+          type: none
+          linear system matrix = precond matrix:
+          Mat Object: 1 MPI process
+            type: shell
+            rows=13, cols=13
+        convergence tolerances: maxit=50 gatol=1e-08 grtol=1e-08 steptol=0. gttol=0.
+    Objective function:
+      TaoTerm Object: (objective_) 1 MPI process
+        type: sum
+        solution vector space: N = 13
+        parameter vector space: K = 4
+        Sum of 2 terms: f(C x; p_0) + 0.4 g(D x)
+        f:
+          TaoTerm Object: f (f_) 1 MPI process
+            type: halfl2squared
+            solution vector space: N = 4
+            parameter vector space: K = 4
+        C:
+          Mat Object: C (C_) 1 MPI process
+            type: seqdense
+            rows=4, cols=13
+            total: nonzeros=52, allocated nonzeros=52
+            total number of mallocs used during MatSetValues calls=0
+        g:
+          TaoTerm Object: g (g_) 1 MPI process
+            type: halfl2squared
+            solution vector space: N = 17
+        D:
+          Mat Object: D (D_) 1 MPI process
+            type: seqdense
+            rows=17, cols=13
+            total: nonzeros=221, allocated nonzeros=221
+            total number of mallocs used during MatSetValues calls=0
+    convergence tolerances: maxit=10000 gatol=1e-08 grtol=1e-08 steptol=0. gttol=0.
+TestADMMUnconstrained, test 2:
+  TAO solve converged due to CONVERGED_GATOL iterations 28
+  Tao Object: 1 MPI process
+    type: admm
+    ADMM type: min_{x,z} [f(x; u)] + [0.4 g(D z)]
+               such that x = C z
+    x subsolver:
+      Tao Object: (admm_sub_0_) 1 MPI process
+        type: nls
+        Objective function:
+          TaoTerm Object: (admm_sub_0_) 1 MPI process
+            type: sum
+            solution vector space: N = 4
+            parameter vector space: K = 8
+            Sum of 2 terms: f(x; p_0) + f_{admm_sub_0_metric_}(x; p_1)
+            f:
+              TaoTerm Object: f (f_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 4
+                parameter vector space: K = 4
+            f_{admm_sub_0_metric_}:
+              TaoTerm Object: (admm_sub_0_metric_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 4
+                parameter vector space: K = 4
+        TaoLineSearch Object: (admm_sub_0_) 1 MPI process
+          type: more-thuente
+          maximum function evaluations=30
+          tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+        KSP Object: (admm_sub_0_tao_nls_) 1 MPI process
+          type: stcg
+          maximum iterations=10000, initial guess is zero
+          tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+          left preconditioning
+          using UNPRECONDITIONED norm type for convergence test
+        PC Object: (admm_sub_0_tao_nls_) 1 MPI process
+          type: none
+          linear system matrix = precond matrix:
+          Mat Object: 1 MPI process
+            type: shell
+            rows=4, cols=4
+        convergence tolerances: maxit=50 gatol=1e-08 grtol=1e-08 steptol=0. gttol=0.
+    z subsolver:
+      Tao Object: (admm_sub_1_) 1 MPI process
+        type: nls
+        Objective function:
+          TaoTerm Object: (admm_sub_1_) 1 MPI process
+            type: sum
+            solution vector space: N = 13
+            parameter vector space: K = 4
+            Sum of 2 terms: 0.4 g(D x) + f_{admm_sub_1_metric_}(C x; p_1)
+            g:
+              TaoTerm Object: g (g_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 17
+            D:
+              Mat Object: D (D_) 1 MPI process
+                type: seqdense
+                rows=17, cols=13
+                total: nonzeros=221, allocated nonzeros=221
+                total number of mallocs used during MatSetValues calls=0
+            f_{admm_sub_1_metric_}:
+              TaoTerm Object: (admm_sub_1_metric_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 4
+                parameter vector space: K = 4
+            C:
+              Mat Object: C (C_) 1 MPI process
+                type: seqdense
+                rows=4, cols=13
+                total: nonzeros=52, allocated nonzeros=52
+                total number of mallocs used during MatSetValues calls=0
+        TaoLineSearch Object: (admm_sub_1_) 1 MPI process
+          type: more-thuente
+          maximum function evaluations=30
+          tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+        KSP Object: (admm_sub_1_tao_nls_) 1 MPI process
+          type: stcg
+          maximum iterations=10000, initial guess is zero
+          tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+          left preconditioning
+          using UNPRECONDITIONED norm type for convergence test
+        PC Object: (admm_sub_1_tao_nls_) 1 MPI process
+          type: none
+          linear system matrix = precond matrix:
+          Mat Object: 1 MPI process
+            type: shell
+            rows=13, cols=13
+        convergence tolerances: maxit=50 gatol=1e-08 grtol=1e-08 steptol=0. gttol=0.
+    Objective function:
+      TaoTerm Object: (objective_) 1 MPI process
+        type: sum
+        solution vector space: N = 13
+        parameter vector space: K = 4
+        Sum of 2 terms: f(C x; p_0) + 0.4 g(D x)
+        f:
+          TaoTerm Object: f (f_) 1 MPI process
+            type: halfl2squared
+            solution vector space: N = 4
+            parameter vector space: K = 4
+        C:
+          Mat Object: C (C_) 1 MPI process
+            type: seqdense
+            rows=4, cols=13
+            total: nonzeros=52, allocated nonzeros=52
+            total number of mallocs used during MatSetValues calls=0
+        g:
+          TaoTerm Object: g (g_) 1 MPI process
+            type: halfl2squared
+            solution vector space: N = 17
+        D:
+          Mat Object: D (D_) 1 MPI process
+            type: seqdense
+            rows=17, cols=13
+            total: nonzeros=221, allocated nonzeros=221
+            total number of mallocs used during MatSetValues calls=0
+    convergence tolerances: maxit=10000 gatol=1e-08 grtol=1e-08 steptol=0. gttol=0.
+TestADMMUnconstrained, test 3:
+  TAO solve converged due to CONVERGED_GATOL iterations 61
+  Tao Object: 1 MPI process
+    type: admm
+    ADMM type: min_{x,z} [f(C x; u)] + [0.4 g(z)]
+               such that D x = z
+    x subsolver:
+      Tao Object: (admm_sub_0_) 1 MPI process
+        type: nls
+        Objective function:
+          TaoTerm Object: (admm_sub_0_) 1 MPI process
+            type: sum
+            solution vector space: N = 13
+            parameter vector space: K = 21
+            Sum of 2 terms: f(C x; p_0) + f_{admm_sub_0_metric_}(D x; p_1)
+            f:
+              TaoTerm Object: f (f_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 4
+                parameter vector space: K = 4
+            C:
+              Mat Object: C (C_) 1 MPI process
+                type: seqdense
+                rows=4, cols=13
+                total: nonzeros=52, allocated nonzeros=52
+                total number of mallocs used during MatSetValues calls=0
+            f_{admm_sub_0_metric_}:
+              TaoTerm Object: (admm_sub_0_metric_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 17
+                parameter vector space: K = 17
+            D:
+              Mat Object: D (D_) 1 MPI process
+                type: seqdense
+                rows=17, cols=13
+                total: nonzeros=221, allocated nonzeros=221
+                total number of mallocs used during MatSetValues calls=0
+        TaoLineSearch Object: (admm_sub_0_) 1 MPI process
+          type: more-thuente
+          maximum function evaluations=30
+          tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+        KSP Object: (admm_sub_0_tao_nls_) 1 MPI process
+          type: stcg
+          maximum iterations=10000, initial guess is zero
+          tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+          left preconditioning
+          using UNPRECONDITIONED norm type for convergence test
+        PC Object: (admm_sub_0_tao_nls_) 1 MPI process
+          type: none
+          linear system matrix = precond matrix:
+          Mat Object: 1 MPI process
+            type: shell
+            rows=13, cols=13
+        convergence tolerances: maxit=50 gatol=1e-08 grtol=1e-08 steptol=0. gttol=0.
+    z subsolver:
+      Tao Object: (admm_sub_1_) 1 MPI process
+        type: nls
+        Objective function:
+          TaoTerm Object: (admm_sub_1_) 1 MPI process
+            type: sum
+            solution vector space: N = 17
+            parameter vector space: K = 17
+            Sum of 2 terms: 0.4 g(x) + f_{admm_sub_1_metric_}(x; p_1)
+            g:
+              TaoTerm Object: g (g_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 17
+            f_{admm_sub_1_metric_}:
+              TaoTerm Object: (admm_sub_1_metric_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 17
+                parameter vector space: K = 17
+        TaoLineSearch Object: (admm_sub_1_) 1 MPI process
+          type: more-thuente
+          maximum function evaluations=30
+          tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+        KSP Object: (admm_sub_1_tao_nls_) 1 MPI process
+          type: stcg
+          maximum iterations=10000, initial guess is zero
+          tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+          left preconditioning
+          using UNPRECONDITIONED norm type for convergence test
+        PC Object: (admm_sub_1_tao_nls_) 1 MPI process
+          type: none
+          linear system matrix = precond matrix:
+          Mat Object: 1 MPI process
+            type: shell
+            rows=17, cols=17
+        convergence tolerances: maxit=50 gatol=1e-08 grtol=1e-08 steptol=0. gttol=0.
+    Objective function:
+      TaoTerm Object: (objective_) 1 MPI process
+        type: sum
+        solution vector space: N = 13
+        parameter vector space: K = 4
+        Sum of 2 terms: f(C x; p_0) + 0.4 g(D x)
+        f:
+          TaoTerm Object: f (f_) 1 MPI process
+            type: halfl2squared
+            solution vector space: N = 4
+            parameter vector space: K = 4
+        C:
+          Mat Object: C (C_) 1 MPI process
+            type: seqdense
+            rows=4, cols=13
+            total: nonzeros=52, allocated nonzeros=52
+            total number of mallocs used during MatSetValues calls=0
+        g:
+          TaoTerm Object: g (g_) 1 MPI process
+            type: halfl2squared
+            solution vector space: N = 17
+        D:
+          Mat Object: D (D_) 1 MPI process
+            type: seqdense
+            rows=17, cols=13
+            total: nonzeros=221, allocated nonzeros=221
+            total number of mallocs used during MatSetValues calls=0
+    convergence tolerances: maxit=10000 gatol=1e-08 grtol=1e-08 steptol=0. gttol=0.

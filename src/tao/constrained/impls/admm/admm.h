@@ -20,25 +20,24 @@ typedef struct {
   VecScatter         x_scatter;
   VecScatter         z_scatter;
 
-  // the primal residual is   r_k       = A x_k     + B z_k + c
-  // the halfstep residual is r_{k+1/2} = A x_{k+1} + B z_k + c
-  Mat       A;
-  Mat       B;
-  Vec       c;
-  Vec       r;
-  Vec       r_halfstep;
+  /* the primal residual is   r_k       = A x_k     + B z_k + c
+     the halfstep residual is r_{k+1/2} = A x_{k+1} + B z_k + c */
+  Mat A;
+  Vec Ax;
+  Mat B;
+  Vec Bz;
+  Vec c;
+  Vec r;
+  Vec r_halfstep;
+
+  // the algorithm needs primal variables x and z and multipiliers y: x and z are stored as the solution vectors in the subsolvers
+  Vec y;
 
   /* the dual residuals are
      d_x \in \partial f(x) + A' y
-     d_z \in \partial g(z) + B' y
-   */
+     d_z \in \partial g(z) + B' y */
   Vec d_x;
   Vec d_z;
-
-  Vec y; // the Lagrange multipliers
-
-  Vec Ax;
-  Vec Bz;
 
   Vec y_old;
   Vec Ax_old;
@@ -78,11 +77,6 @@ typedef struct {
   // ARADMM parameters
   PetscInt  adaptivity_period;
   PetscReal correlation_epsilon;
-  Vec       y_halfstep;
-  Vec       y_halfstep_0;
-  Vec       y_0;
-  Vec       Ax_0;
-  Vec       Bz_0;
 
   // convergence metrics
   PetscReal c_norm;
@@ -92,6 +86,9 @@ typedef struct {
   PetscReal Bty_norm;
 
   PetscBool setfromoptionscalled;
+
+  PetscViewer       debug_viewer;
+  PetscViewerFormat debug_viewer_format;
 } Tao_ADMM;
 
 PETSC_INTERN PetscErrorCode TaoADMMVecDuplicateAndCopy(Vec, Vec *);

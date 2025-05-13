@@ -66,6 +66,7 @@ static PetscErrorCode TaoADMMComputeOuterSolution(Tao tao)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// TODO: remove
 PETSC_INTERN PetscErrorCode TaoADMMVecDuplicateAndCopy(Vec x, Vec *y)
 {
   PetscFunctionBegin;
@@ -124,6 +125,62 @@ static PetscErrorCode TaoADMMPrimalResidual(Vec Ax, Vec Bz, Vec c, Vec r)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoADMMDualResidualDebug(Tao tao)
+{
+  Tao_ADMM *am = (Tao_ADMM *)tao->data;
+  TaoTerm   f, g;
+  Vec       f_params, g_params;
+  PetscInt  f_n_terms, g_n_terms;
+  Vec       df_x, dg_z;
+  Vec       Aty, Bty;
+  Vec       x, z;
+  PetscInt  tabs;
+  PetscViewer viewer = am->debug_viewer;
+
+  PetscFunctionBegin;
+  PetscCall(TaoGetTerm(am->x_subsolver, NULL, &f, &f_params, NULL));
+  PetscCall(TaoGetTerm(am->z_subsolver, NULL, &g, &g_params, NULL));
+  PetscCall(TaoGetSolution(am->x_subsolver, &x));
+  PetscCall(TaoGetSolution(am->z_subsolver, &z));
+
+  PetscCall(TaoTermSumGetNumSubterms(f, &f_n_terms));
+  PetscCall(TaoTermSumSetSubtermMask(f, f_n_terms - 1, TAOTERM_MASK_OBJECTIVE));
+  PetscCall(TaoTermSumGetNumSubterms(g, &g_n_terms));
+  PetscCall(TaoTermSumSetSubtermMask(g, g_n_terms - 1, TAOTERM_MASK_OBJECTIVE));
+
+  PetscCall(VecDuplicate(am->d_x, &df_x));
+  PetscCall(VecDuplicate(am->d_x, &Aty));
+  PetscCall(VecCopy(am->d_x, df_x));
+  PetscCall(MatMultTranspose(am->A, am->y, Aty));
+  PetscCall(VecAXPY(df_x, -1.0, Aty));
+  PetscCall(VecDestroy(&Aty));
+
+  PetscCall(VecDuplicate(am->d_z, &dg_z));
+  PetscCall(VecDuplicate(am->d_z, &Bty));
+  PetscCall(VecCopy(am->d_z, dg_z));
+  PetscCall(MatMultTranspose(am->B, am->y, Bty));
+  PetscCall(VecAXPY(dg_z, -1.0, Bty));
+  PetscCall(VecDestroy(&Bty));
+
+  PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
+  PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)tao)->tablevel));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "TaoADMM, x dual residual test:\n"));
+  PetscCall(PetscViewerASCIIPushTab(viewer));
+  PetscCall(TaoTestGradient_Internal(am->x_subsolver, x, df_x, am->debug_viewer, NULL));
+  PetscCall(PetscViewerASCIIPopTab(viewer));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "TaoADMM, z dual residual test:\n"));
+  PetscCall(PetscViewerASCIIPushTab(viewer));
+  PetscCall(TaoTestGradient_Internal(am->z_subsolver, z, dg_z, am->debug_viewer, NULL));
+  PetscCall(PetscViewerASCIIPopTab(viewer));
+  PetscCall(PetscViewerASCIISetTab(viewer, tabs));
+
+  PetscCall(VecDestroy(&dg_z));
+  PetscCall(VecDestroy(&df_x));
+  PetscCall(TaoTermSumSetSubtermMask(f, f_n_terms - 1, TAOTERM_MASK_NONE));
+  PetscCall(TaoTermSumSetSubtermMask(g, g_n_terms - 1, TAOTERM_MASK_NONE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoADMMDualResidual(Tao tao)
 {
   Tao_ADMM *am = (Tao_ADMM *)tao->data;
@@ -140,6 +197,16 @@ static PetscErrorCode TaoADMMDualResidual(Tao tao)
     PetscCall(VecZeroEntries(am->d_z));
   }
   if (am->dualresidual) PetscCall((*am->dualresidual)(tao));
+  if (am->debug_viewer) {
+    PetscBool is_ascii;
+
+    PetscCall(PetscObjectTypeCompare((PetscObject)am->debug_viewer, PETSCVIEWERASCII, &is_ascii));
+    if (is_ascii) {
+      PetscCall(PetscViewerPushFormat(am->debug_viewer, am->debug_viewer_format));
+      PetscCall(TaoADMMDualResidualDebug(tao));
+      PetscCall(PetscViewerPopFormat(am->debug_viewer));
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -201,8 +268,8 @@ static PetscErrorCode TaoConvergenceTest_ADMM(Tao tao, PETSC_UNUSED void *ctx)
     else if (cnorm <= primal_rel_tol) PetscCall(PetscInfo(tao, "Converged due to: primal residual ||Ax + Bz + c|| / max(||Ax||,||Bz||,||c||) = %g < %g\n", (double)(cnorm / primal_scale), (double)crtol));
     else PetscCall(PetscInfo(tao, "Converged due to: primal residual ||Ax + Bz + c|| = %g < %g\n", (double)primal_scale, (double)primal_abs_tol));
 
-    if (gnorm == 0.0) PetscCall(PetscInfo(tao, "                  dual residual ||(grad f(x) + A^T y, grad g(z) + A^T y)|| = 0\n"));
-    else if (gnorm <= dual_rel_tol) PetscCall(PetscInfo(tao, "                  dual residual ||(grad f(x) + A^T y, grad g(z) + A^T y)|| / ||(A^T y, B^T y)|| = %g < %g\n", (double)(gnorm / dual_scale), (double)grtol));
+    if (gnorm == 0.0) PetscCall(PetscInfo(tao, "                  dual residual ||(grad f(x) + A^T y, grad g(z) + B^T y)|| = 0\n"));
+    else if (gnorm <= dual_rel_tol) PetscCall(PetscInfo(tao, "                  dual residual ||(grad f(x) + A^T y, grad g(z) + B^T y)|| / ||(A^T y, B^T y)|| = %g < %g\n", (double)(gnorm / dual_scale), (double)grtol));
     else PetscCall(PetscInfo(tao, "                  dual residual ||(grad f(x) + A^T y, grad g(z) + A^T y)|| = %g < %g\n", (double)dual_scale, (double)dual_abs_tol));
 
     reason = gnorm <= dual_rel_tol ? TAO_CONVERGED_GRTOL : TAO_CONVERGED_GATOL;
@@ -256,6 +323,7 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
     PetscCall(TaoADMMDualResidual(tao));
     PetscCall(VecNorm(am->d_x, NORM_2, &d_x_norm));
     PetscCall(VecNorm(am->d_z, NORM_2, &d_z_norm));
+    PetscCall(PetscInfo(tao, "x component of dual residual: %8.2e, z component of dual residual: %8.2e\n", d_x_norm, d_z_norm));
     d_norm = PetscSqrtReal(d_x_norm * d_x_norm + d_z_norm * d_z_norm);
     PetscCall(VecDotNorm2(am->y, am->r, &y_dot_r, &c_norm2));
     c_norm     = PetscSqrtReal(c_norm2);
@@ -276,8 +344,10 @@ static PetscErrorCode TaoSetFromOptions_ADMM(Tao tao, PetscOptionItems PetscOpti
   PetscOptionsHeadBegin(PetscOptionsObject, "ADMM solves f(x) + g(z) subject to Ax + Bz + c = 0");
   PetscCall(PetscOptionsReal("-tao_admm_spectral_penalty", "Constant for Augmented Lagrangian term", "", am->mu, &am->mu, NULL));
   PetscCall(PetscOptionsReal("-tao_admm_relaxation_parameter", "relaxation parameter for z update", "", am->relaxation_gamma, &am->relaxation_gamma, NULL));
+  PetscCall(PetscOptionsInt("-tao_admm_adptivity_period", "iterations per parameter update", "", am->adaptivity_period, &am->adaptivity_period, NULL));
   PetscCall(PetscOptionsEnum("-tao_admm_update_type", "Lagrangian spectral penalty update policy", "TaoADMMUpdateType", TaoADMMUpdateTypes, (PetscEnum)am->mu_update, (PetscEnum *)&am->mu_update, NULL));
   PetscOptionsHeadEnd();
+  PetscCall(PetscOptionsCreateViewer(PetscObjectComm((PetscObject)tao), ((PetscObject)tao)->options, ((PetscObject)tao)->prefix, "-tao_admm_debug", &am->debug_viewer, &am->debug_viewer_format, NULL));
   am->setfromoptionscalled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -285,10 +355,86 @@ static PetscErrorCode TaoSetFromOptions_ADMM(Tao tao, PetscOptionItems PetscOpti
 static PetscErrorCode TaoView_ADMM(Tao tao, PetscViewer viewer)
 {
   Tao_ADMM *am = (Tao_ADMM *)tao->data;
+  PetscBool is_ascii;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &is_ascii));
+  if (is_ascii) {
+    Vec *sub_params = NULL;
+    PetscBool *is_dummy = NULL;
+    PetscInt n;
+
+    if (!tao->setupcalled) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "ADMM type: unknown [setup not called yet]\n"));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+    if (tao->objective_parameters) PetscCall(TaoTermSumVecNestGetSubVecsRead(tao->objective_parameters, &n, &sub_params, &is_dummy));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "ADMM type: min_{x,z} "));
+    PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
+    if (am->f_num_terms > 0) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "["));
+      for (PetscInt i = 0; i < am->f_num_terms; i++) PetscCall(TaoTermViewSumPrintSubterm(tao->objective_term.term, viewer, PETSC_TRUE, TaoTermSumGetSubVec(tao->objective_parameters, sub_params, is_dummy, am->f_terms[i]), am->f_terms[i], i == 0 ? PETSC_TRUE : PETSC_FALSE, am->f_mapped == PETSC_BOOL3_TRUE ? PETSC_FALSE : PETSC_TRUE, "f", "A", "x", "p"));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "]"));
+      if (am->g_num_terms > 0) PetscCall(PetscViewerASCIIPrintf(viewer, " + "));
+    }
+    if (am->g_num_terms > 0) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "["));
+      for (PetscInt i = 0; i < am->g_num_terms; i++) PetscCall(TaoTermViewSumPrintSubterm(tao->objective_term.term, viewer, PETSC_TRUE, TaoTermSumGetSubVec(tao->objective_parameters, sub_params, is_dummy, am->g_terms[i]), am->g_terms[i], i == 0 ? PETSC_TRUE : PETSC_FALSE, am->g_mapped == PETSC_BOOL3_TRUE ? PETSC_FALSE : PETSC_TRUE, "f", "A", "z", "p"));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "]"));
+    }
+    if (tao->objective_parameters) PetscCall(TaoTermSumVecNestRestoreSubVecsRead(tao->objective_parameters, &n, &sub_params, &is_dummy));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
+    PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "           such that "));
+    PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
+    switch (am->initialize_type) {
+    case ADMM_INITIALIZE_SCATTER:
+      PetscCall(PetscViewerASCIIPrintf(viewer, "A x + B z = %s", am->c ? "c" : "0"));
+      break;
+    case ADMM_INITIALIZE_Z_AX: {
+      PetscBool is_constdiag;
+      PetscCall(PetscObjectTypeCompare((PetscObject)am->A, MATCONSTANTDIAGONAL, &is_constdiag));
+      if (is_constdiag) {
+        PetscScalar scale;
+
+        PetscCall(MatConstantDiagonalGetConstant(am->A, &scale));
+        if (scale == 1.0) PetscCall(PetscViewerASCIIPrintf(viewer, "x = z"));
+        else if (PetscImaginaryPart(scale) == 0.0) PetscCall(PetscViewerASCIIPrintf(viewer, "%g x = z", (double)PetscRealPart(scale)));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "(%g + i %g) x = z", (double)PetscRealPart(scale), (double)PetscImaginaryPart(scale)));
+      } else {
+        PetscCall(TaoTermViewSumPrintMapName(viewer, am->A, am->g_terms[0], "A", PETSC_FALSE));
+        PetscCall(PetscViewerASCIIPrintf(viewer, " x = z"));
+      }
+      break;
+    }
+    case ADMM_INITIALIZE_X_BZ: {
+      PetscBool is_constdiag;
+      PetscCall(PetscObjectTypeCompare((PetscObject)am->B, MATCONSTANTDIAGONAL, &is_constdiag));
+      if (is_constdiag) {
+        PetscScalar scale;
+
+        PetscCall(MatConstantDiagonalGetConstant(am->B, &scale));
+        if (scale == 1.0) PetscCall(PetscViewerASCIIPrintf(viewer, "x = z"));
+        else if (PetscImaginaryPart(scale) == 0.0) PetscCall(PetscViewerASCIIPrintf(viewer, "x = %g z", (double)PetscRealPart(scale)));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "x = (%g + i %g)", (double)PetscRealPart(scale), (double)PetscImaginaryPart(scale)));
+      } else {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "x = "));
+        PetscCall(TaoTermViewSumPrintMapName(viewer, am->B, am->f_terms[0], "A", PETSC_FALSE));
+        PetscCall(PetscViewerASCIIPrintf(viewer, " z"));
+      }
+      break;
+    }
+    }
+    PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
+    PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
+  }
+  PetscCall(PetscViewerASCIIPrintf(viewer, "x subsolver:\n"));
   PetscCall(PetscViewerASCIIPushTab(viewer));
   PetscCall(TaoView(am->x_subsolver, viewer));
+  PetscCall(PetscViewerASCIIPopTab(viewer));
+
+  PetscCall(PetscViewerASCIIPrintf(viewer, "z subsolver:\n"));
+  PetscCall(PetscViewerASCIIPushTab(viewer));
   PetscCall(TaoView(am->z_subsolver, viewer));
   PetscCall(PetscViewerASCIIPopTab(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -532,35 +678,41 @@ static PetscErrorCode TaoSetUp_ADMM(Tao tao)
       else if (am->g_mapped == PETSC_BOOL3_TRUE) f_map = NULL; // and vice versa
       else {
         // an f_map and a g_map have been found, but the user has provided no guidance about whether to separate either, default to using neither
-        PetscCall(PetscInfo(tao, "Maps found for both ADMM terms, using neither: call TaoADMMSetTermGroups() to specify whether either map should be used"));
+        PetscCall(PetscInfo(tao, "Maps found for both ADMM terms, using neither: call TaoADMMSetTermGroups() to specify whether either map should be used\n"));
         f_map = NULL;
         g_map = NULL;
       }
     }
     if (!f_map && g_map) {
+      PetscLayout A_row_layout;
+
       // the user specified f(u) + g(A(u)), so they want Ax = z
       // A = g_map, B = -I
       am->initialize_type = ADMM_INITIALIZE_Z_AX;
       PetscCall(PetscObjectReference((PetscObject)g_map));
       PetscCall(MatDestroy(&am->A));
       am->A = g_map;
+      PetscCall(MatGetLayouts(am->A, &A_row_layout, NULL));
       PetscCall(MatDestroy(&am->B));
       PetscCall(MatCreate(comm, &am->B));
-      PetscCall(MatSetLayouts(am->B, layout, layout));
+      PetscCall(MatSetLayouts(am->B, A_row_layout, A_row_layout));
       PetscCall(MatSetVecType(am->B, vec_type));
       PetscCall(MatSetType(am->B, MATCONSTANTDIAGONAL));
       PetscCall(MatZeroEntries(am->B));
       PetscCall(MatShift(am->B, -1.0));
     } else if (f_map && !g_map) {
+      PetscLayout B_row_layout;
+
       // the user specified f(B(u)) + g(u), so they want x = Bz
       // A = -I, B = f_map
       am->initialize_type = ADMM_INITIALIZE_X_BZ;
       PetscCall(PetscObjectReference((PetscObject)f_map));
       PetscCall(MatDestroy(&am->B));
       am->B = f_map;
+      PetscCall(MatGetLayouts(am->B, &B_row_layout, NULL));
       PetscCall(MatDestroy(&am->A));
       PetscCall(MatCreate(comm, &am->A));
-      PetscCall(MatSetLayouts(am->A, layout, layout));
+      PetscCall(MatSetLayouts(am->A, B_row_layout, B_row_layout));
       PetscCall(MatSetVecType(am->A, vec_type));
       PetscCall(MatSetType(am->A, MATCONSTANTDIAGONAL));
       PetscCall(MatZeroEntries(am->A));
@@ -597,6 +749,8 @@ static PetscErrorCode TaoSetUp_ADMM(Tao tao)
   PetscCall(VecDuplicate(am->r, &am->Ax));
   PetscCall(VecDestroy(&am->Bz));
   PetscCall(VecDuplicate(am->r, &am->Bz));
+  PetscCall(MatCreateVecs(am->A, &am->d_x, NULL));
+  PetscCall(MatCreateVecs(am->B, &am->d_z, NULL));
 
   PetscCall(TaoGetOptionsPrefix(tao, &tao_prefix));
 
@@ -656,13 +810,16 @@ static PetscErrorCode TaoDestroy_ADMM(Tao tao)
   Tao_ADMM *am = (Tao_ADMM *)tao->data;
 
   PetscFunctionBegin;
+  if (am->destroy) PetscCall((*am->destroy)(tao));
   PetscCall(VecDestroy(&am->Ax));
   PetscCall(VecDestroy(&am->Bz));
-  PetscCall(VecDestroy(&am->Bz_0));
   PetscCall(VecDestroy(&am->y));
-  PetscCall(VecDestroy(&am->y_0));
-  PetscCall(VecDestroy(&am->y_halfstep));
-  PetscCall(VecDestroy(&am->y_halfstep_0));
+  PetscCall(VecDestroy(&am->d_x));
+  PetscCall(VecDestroy(&am->d_z));
+  PetscCall(VecDestroy(&am->r));
+  PetscCall(VecDestroy(&am->r_halfstep));
+  PetscCall(VecDestroy(&am->c));
+  PetscCall(VecDestroy(&am->y));
 
   PetscCall(MatDestroy(&am->A));
   PetscCall(MatDestroy(&am->B));
@@ -683,17 +840,21 @@ static PetscErrorCode TaoDestroy_ADMM(Tao tao)
 static PetscErrorCode TaoADMMSetTermGroups_ADMM(Tao tao, PetscInt f_num_terms, const PetscInt f_terms[], PetscBool f_mapped, PetscInt g_num_terms, const PetscInt g_terms[], PetscBool g_mapped)
 {
   Tao_ADMM *admm = (Tao_ADMM *)tao->data;
-  PetscInt *f_terms_new, *g_terms_new;
+  PetscInt *f_terms_new = NULL, *g_terms_new = NULL;
 
   PetscFunctionBegin;
-  PetscCall(PetscMalloc1(f_num_terms, &f_terms_new));
-  PetscCall(PetscArraycpy(f_terms_new, f_terms, f_num_terms));
+  if (f_terms) {
+    PetscCall(PetscMalloc1(f_num_terms, &f_terms_new));
+    PetscCall(PetscArraycpy(f_terms_new, f_terms, f_num_terms));
+  }
   PetscCall(PetscFree(admm->f_terms));
   admm->f_num_terms = f_num_terms;
   admm->f_terms     = f_terms_new;
   admm->f_mapped    = PetscBoolToBool3(f_mapped);
-  PetscCall(PetscMalloc1(g_num_terms, &g_terms_new));
-  PetscCall(PetscArraycpy(g_terms_new, g_terms, g_num_terms));
+  if (g_terms) {
+    PetscCall(PetscMalloc1(g_num_terms, &g_terms_new));
+    PetscCall(PetscArraycpy(g_terms_new, g_terms, g_num_terms));
+  }
   PetscCall(PetscFree(admm->g_terms));
   admm->g_num_terms = g_num_terms;
   admm->g_terms     = g_terms_new;
@@ -764,17 +925,18 @@ PETSC_EXTERN PetscErrorCode TaoCreate_ADMM(Tao tao)
   PetscCall(TaoParametersInitialize(tao));
   PetscCall(TaoSetConvergenceTest(tao, TaoConvergenceTest_ADMM, NULL));
 
-  tao->data             = (void *)am;
-  am->mu                = 1.;
-  am->adaptivity_period = 2;
-  am->mu_update         = TAO_ADMM_UPDATE_BASIC;
-  am->relaxation_gamma  = 1;
-  am->f_num_terms       = PETSC_DECIDE;
-  am->f_mapped          = PETSC_BOOL3_UNKNOWN;
-  am->g_num_terms       = PETSC_DECIDE;
-  am->g_mapped          = PETSC_BOOL3_UNKNOWN;
-  am->x_inexact         = PETSC_TRUE;
-  am->z_inexact         = PETSC_TRUE;
+  tao->data               = (void *)am;
+  am->mu                  = 1.;
+  am->mu_update           = TAO_ADMM_UPDATE_BASIC;
+  am->relaxation_gamma    = 1.5;
+  am->f_num_terms         = PETSC_DECIDE;
+  am->f_mapped            = PETSC_BOOL3_UNKNOWN;
+  am->g_num_terms         = PETSC_DECIDE;
+  am->g_mapped            = PETSC_BOOL3_UNKNOWN;
+  am->x_inexact           = PETSC_TRUE;
+  am->z_inexact           = PETSC_TRUE;
+  am->adaptivity_period   = 2;
+  am->correlation_epsilon = 0.2;
 
   PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &am->x_subsolver));
   PetscCall(TaoSetOptionsPrefix(am->x_subsolver, "admm_sub_0_"));
@@ -1065,7 +1227,7 @@ PetscErrorCode TaoADMMSetTermGroups(Tao tao, PetscInt f_num_terms, const PetscIn
   Logically collective
 
   Input Parameter:
-. tao         - the `Tao` context
+. tao - the `Tao` context
 
   Output Parameters:
 + f_num_terms - the size of `f_terms`
