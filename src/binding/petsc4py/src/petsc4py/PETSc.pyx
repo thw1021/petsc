@@ -9,7 +9,6 @@
 # cython: autotestdict=False
 # cython: warn.multiple_declarators=False
 # cython: optimize.use_switch=False
-# cython: binding=False
 
 # from __future__ import annotations
 

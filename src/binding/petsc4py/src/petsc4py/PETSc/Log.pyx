@@ -1,5 +1,9 @@
 # --------------------------------------------------------------------
 
+cdef object functools = None
+import functools
+
+# --------------------------------------------------------------------
 
 cdef class Log:
     """Logging support."""
@@ -175,6 +179,7 @@ cdef class Log:
     def EventDecorator(cls, name=None, klass=None) -> Any:
         """Decorate a function with a `PETSc` event."""
         def decorator(func):
+            @functools.wraps(func)
             def wrapped_func(*args, **kwargs):
                 if name:
                     name_ = name
