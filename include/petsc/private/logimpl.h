@@ -207,8 +207,6 @@ PETSC_INTERN PetscInt PetscLogGetTid(void);
 #endif
 
 PETSC_EXTERN PetscBool PetscLogGpuTimeFlag;
-PETSC_INTERN PetscInt  PetscLogNumViewersCreated;
-PETSC_INTERN PetscInt  PetscLogNumViewersDestroyed;
 
 #if PetscDefined(USE_LOG)
 PETSC_INTERN PetscErrorCode PetscLogTypeBegin(PetscLogHandlerType type);
