@@ -593,7 +593,10 @@ struct _n_PetscTabulation {
 S*/
 typedef struct _n_PetscTabulation *PetscTabulation;
 
-typedef PetscErrorCode (*PetscProbFunc)(const PetscReal[], const PetscReal[], PetscReal[]);
+typedef PetscErrorCode(PetscProbFn)(const PetscReal[], const PetscReal[], PetscReal[]);
+
+// deprecation
+PETSC_EXTERN_TYPEDEF typedef PetscProbFn *PetscProbFunc;
 
 typedef enum {
   DTPROB_DENSITY_CONSTANT,
@@ -625,10 +628,10 @@ PETSC_EXTERN PetscErrorCode PetscPDFSampleConstant2D(const PetscReal[], const Pe
 PETSC_EXTERN PetscErrorCode PetscPDFConstant3D(const PetscReal[], const PetscReal[], PetscReal[]);
 PETSC_EXTERN PetscErrorCode PetscCDFConstant3D(const PetscReal[], const PetscReal[], PetscReal[]);
 PETSC_EXTERN PetscErrorCode PetscPDFSampleConstant3D(const PetscReal[], const PetscReal[], PetscReal[]);
-PETSC_EXTERN PetscErrorCode PetscProbCreateFromOptions(PetscInt, const char[], const char[], PetscProbFunc *, PetscProbFunc *, PetscProbFunc *);
+PETSC_EXTERN PetscErrorCode PetscProbCreateFromOptions(PetscInt, const char[], const char[], PetscProbFn **, PetscProbFn **, PetscProbFn **);
 
 #include <petscvec.h>
 
-PETSC_EXTERN PetscErrorCode PetscProbComputeKSStatistic(Vec, PetscProbFunc, PetscReal *);
-PETSC_EXTERN PetscErrorCode PetscProbComputeKSStatisticWeighted(Vec, Vec, PetscProbFunc, PetscReal *);
-PETSC_EXTERN PetscErrorCode PetscProbComputeKSStatisticMagnitude(Vec, PetscProbFunc, PetscReal *);
+PETSC_EXTERN PetscErrorCode PetscProbComputeKSStatistic(Vec, PetscProbFn *, PetscReal *);
+PETSC_EXTERN PetscErrorCode PetscProbComputeKSStatisticWeighted(Vec, Vec, PetscProbFn *, PetscReal *);
+PETSC_EXTERN PetscErrorCode PetscProbComputeKSStatisticMagnitude(Vec, PetscProbFn *, PetscReal *);
