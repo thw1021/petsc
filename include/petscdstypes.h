@@ -96,11 +96,11 @@ typedef enum {
 } PetscWeakFormKind;
 PETSC_EXTERN const char *const PetscWeakFormKinds[];
 
-typedef void (*PetscPointFunc)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
-typedef void (*PetscPointJac)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
-typedef void (*PetscBdPointFunc)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
-typedef void (*PetscBdPointJac)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
-typedef void (*PetscRiemannFunc)(PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscScalar[], const PetscScalar[], PetscInt, const PetscScalar[], PetscScalar[], void *);
+typedef void(PetscPointFn)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
+typedef void(PetscPointJacFn)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
+typedef void(PetscBdPointFn)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
+typedef void(PetscBdPointJacFn)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
+typedef void(PetscRiemannFn)(PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscScalar[], const PetscScalar[], PetscInt, const PetscScalar[], PetscScalar[], void *);
 
 /*S
   PetscSimplePointFn - A prototype of a simple pointwise function that can be passed to, for example, `DMPlexTransformExtrudeSetNormalFunction()`
@@ -122,4 +122,10 @@ typedef void (*PetscRiemannFunc)(PetscInt, PetscInt, const PetscReal[], const Pe
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(PetscSimplePointFn)(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt r, PetscScalar u[], void *ctx);
 
+// Deprecated versions
 PETSC_EXTERN_TYPEDEF typedef PetscSimplePointFn *PetscSimplePointFunc;
+PETSC_EXTERN_TYPEDEF typedef PetscPointFn       *PetscPointFunc;
+PETSC_EXTERN_TYPEDEF typedef PetscPointJacFn    *PetscPointJac;
+PETSC_EXTERN_TYPEDEF typedef PetscBdPointFn     *PetscBdPointFunc;
+PETSC_EXTERN_TYPEDEF typedef PetscBdPointJacFn  *PetscBdPointJac;
+PETSC_EXTERN_TYPEDEF typedef PetscRiemannFn     *PetscRiemannFunc;

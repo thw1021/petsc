@@ -3164,7 +3164,7 @@ PetscErrorCode DMPlexSetMinRadius(DM dm, PetscReal minradius)
 
 .seealso: `DMPLEX`, `DMGetCoordinates()`, `DMPlexSetCoordinateMap()`
 @*/
-PetscErrorCode DMPlexGetCoordinateMap(DM dm, PetscPointFunc *coordFunc)
+PetscErrorCode DMPlexGetCoordinateMap(DM dm, PetscPointFn **coordFunc)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -3189,7 +3189,7 @@ PetscErrorCode DMPlexGetCoordinateMap(DM dm, PetscPointFunc *coordFunc)
 
 .seealso: `DMPLEX`, `DMSetCoordinates()`, `DMPlexGetCoordinateMap()`
 @*/
-PetscErrorCode DMPlexSetCoordinateMap(DM dm, PetscPointFunc coordFunc)
+PetscErrorCode DMPlexSetCoordinateMap(DM dm, PetscPointFn *coordFunc)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
