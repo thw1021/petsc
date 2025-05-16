@@ -1709,7 +1709,7 @@ PETSC_EXTERN PetscErrorCode MatISColoringTest(Mat, ISColoring);
 .  -snes_fd_coloring - cause the Jacobian needed by `SNES` to be computed via a use of this object
 
    Note:
-   This object is creating utilizing a coloring provided by the `MatColoring` object or `DMCreateColoring()`
+   This object is created utilizing a coloring provided by the `MatColoring` object or `DMCreateColoring()`
 
 .seealso: [](ch_matrices), `Mat`, `MatFDColoringCreate()`, `MatFDColoringSetFunction()`, `MatColoring`, `DMCreateColoring()`
 S*/
@@ -2205,7 +2205,7 @@ S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(MatMFFDiBaseFn)(void *ctx, Vec x);
 
 /*S
-  MatMFFDCheckhFn - Function provided to `MatMFFDSetCheckh()` that checks and possible adjusts the value of `h` to ensure some property.
+  MatMFFDCheckhFn - Function provided to `MatMFFDSetCheckh()` that checks and possibly adjusts the value of `h` to ensure some property.
   that will be used for differencing
 
   Level: advanced
