@@ -55,6 +55,7 @@
 - Add `MatConstantDiagonalGetConstant()`
 - Add `MatNullSpaceRemoveFn` typedef
 - Add `MatMFFDFn`, `MatMFFDiFn`, `MatMFFDiBaseFn`, and `MatMFFDCheckhFn` typdefs
+- Add `MatFDColoringFn` typedef
 
 ```{rubric} MatCoarsen:
 ```
