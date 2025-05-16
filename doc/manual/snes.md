@@ -1201,7 +1201,7 @@ MatColoringDestroy(&coloring);
 */
 MatFDColoringCreate(J,iscoloring, &fdcoloring);
 ISColoringDestroy(&iscoloring);
-MatFDColoringSetFunction(fdcoloring,(PetscErrorCode (*)(void))FormFunction, &user);
+MatFDColoringSetFunction(fdcoloring,(MatFDColoringFn)FormFunction, &user);
 MatFDColoringSetFromOptions(fdcoloring);
 
 /*
