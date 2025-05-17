@@ -5376,6 +5376,18 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
       PetscDS      cds;
       PetscObject  obj;
       PetscClassId id;
+#if 0
+    if (cdm->Nds > 0) {
+      PetscCall(DMGetDS(cdm, &cds));
+      if (cds) {
+        PetscCall(PetscDSGetDiscretization(cds, 0, &obj));
+        if (obj) {
+          PetscCall(PetscObjectGetClassId(obj, &id));
+          if (id == PETSCFE_CLASSID) alreadyCreated = PETSC_TRUE;
+        }
+      }
+    }
+#endif
 
       PetscCall(DMGetDS(cdm, &cds));
       PetscCall(PetscDSGetDiscretization(cds, 0, &obj));
