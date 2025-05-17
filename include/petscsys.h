@@ -1235,7 +1235,7 @@ PETSC_EXTERN MPI_Op MPIU_SUM___FP16___FLOAT128;
 
 .seealso: `PetscObject`, `PetscObjectDestroy()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef void(PetscVoidFn)(void);
+PETSC_EXTERN_TYPEDEF typedef void PetscVoidFn(void);
 
 PETSC_EXTERN_TYPEDEF typedef PetscVoidFn  *PetscVoidFunction;
 PETSC_EXTERN_TYPEDEF typedef PetscVoidFn **PetscVoidStarFunction;
@@ -1250,7 +1250,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscVoidFn **PetscVoidStarFunction;
 
 .seealso: `PetscObject`, `PetscObjectDestroy()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(PetscErrorCodeFn)(void);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscErrorCodeFn(void);
 
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCodeFn *PetscErrorCodeFunction;
 
@@ -1264,7 +1264,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCodeFn *PetscErrorCodeFunction;
 
 .seealso: `PetscObject`, `PetscCtxDestroyDefault()`, `PetscObjectDestroy()`, `DMSetApplicationContextDestroy()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(PetscCtxDestroyFn)(void **);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscCtxDestroyFn(void **);
 
 PETSC_EXTERN PetscCtxDestroyFn PetscCtxDestroyDefault;
 

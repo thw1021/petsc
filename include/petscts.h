@@ -550,7 +550,7 @@ PETSC_EXTERN PetscErrorCode TSSetStepNumber(TS, PetscInt);
 .seealso: [](ch_ts), `TS`, `TSSetRHSFunction()`, `DMTSSetRHSFunction()`, `TSIFunctionFn`,
 `TSIJacobianFn`, `TSRHSJacobianFn`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSRHSFunctionFn)(TS ts, PetscReal t, Vec u, Vec F, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSRHSFunctionFn(TS ts, PetscReal t, Vec u, Vec F, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef TSRHSFunctionFn *TSRHSFunction;
 
@@ -573,7 +573,7 @@ PETSC_EXTERN_TYPEDEF typedef TSRHSFunctionFn *TSRHSFunction;
 .seealso: [](ch_ts), `TS`, `TSSetRHSJacobian()`, `DMTSSetRHSJacobian()`, `TSRHSFunctionFn`,
 `TSIFunctionFn`, `TSIJacobianFn`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSRHSJacobianFn)(TS ts, PetscReal t, Vec u, Mat Amat, Mat Pmat, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSRHSJacobianFn(TS ts, PetscReal t, Vec u, Mat Amat, Mat Pmat, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef TSRHSJacobianFn *TSRHSJacobian;
 
@@ -595,7 +595,7 @@ PETSC_EXTERN_TYPEDEF typedef TSRHSJacobianFn *TSRHSJacobian;
 
 .seealso: [](ch_ts), `TS`, `TSSetRHSJacobianP()`, `TSGetRHSJacobianP()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSRHSJacobianPFn)(TS ts, PetscReal t, Vec U, Mat A, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSRHSJacobianPFn(TS ts, PetscReal t, Vec U, Mat A, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef TSRHSJacobianPFn *TSRHSJacobianP;
 
@@ -621,7 +621,7 @@ PETSC_EXTERN PetscErrorCode TSRHSJacobianSetReuse(TS, PetscBool);
 
 .seealso: [](ch_ts), `TS`, `TSSetSolutionFunction()`, `DMTSSetSolutionFunction()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSSolutionFn)(TS ts, PetscReal t, Vec u, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSSolutionFn(TS ts, PetscReal t, Vec u, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef TSSolutionFn *TSSolutionFunction;
 
@@ -643,7 +643,7 @@ PETSC_EXTERN PetscErrorCode TSSetSolutionFunction(TS, TSSolutionFn *, void *);
 
 .seealso: [](ch_ts), `TS`, `TSSetForcingFunction()`, `DMTSSetForcingFunction()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSForcingFn)(TS ts, PetscReal t, Vec f, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSForcingFn(TS ts, PetscReal t, Vec f, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef TSForcingFn *TSForcingFunction;
 
@@ -667,7 +667,7 @@ PETSC_EXTERN PetscErrorCode TSSetForcingFunction(TS, TSForcingFn *, void *);
 
 .seealso: [](ch_ts), `TS`, `TSSetIFunction()`, `DMTSSetIFunction()`, `TSIJacobianFn`, `TSRHSFunctionFn`, `TSRHSJacobianFn`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSIFunctionFn)(TS ts, PetscReal t, Vec U, Vec U_t, Vec F, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSIFunctionFn(TS ts, PetscReal t, Vec U, Vec U_t, Vec F, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef TSIFunctionFn *TSIFunction;
 
@@ -691,7 +691,7 @@ PETSC_EXTERN_TYPEDEF typedef TSIFunctionFn *TSIFunction;
 
 .seealso: [](ch_ts), `TSSetIJacobian()`, `DMTSSetIJacobian()`, `TSIFunctionFn`, `TSRHSFunctionFn`, `TSRHSJacobianFn`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSIJacobianFn)(TS ts, PetscReal t, Vec U, Vec U_t, PetscReal a, Mat Amat, Mat Pmat, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSIJacobianFn(TS ts, PetscReal t, Vec U, Vec U_t, PetscReal a, Mat Amat, Mat Pmat, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef TSIJacobianFn *TSIJacobian;
 
@@ -719,7 +719,7 @@ PETSC_EXTERN PetscErrorCode TSGetIJacobian(TS, Mat *, Mat *, TSIJacobianFn **, v
 
 .seealso: [](ch_ts), `TS`, `TSSetI2Function()`, `DMTSSetI2Function()`, `TSIFunctionFn`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSI2FunctionFn)(TS ts, PetscReal t, Vec U, Vec U_t, Vec U_tt, Vec F, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSI2FunctionFn(TS ts, PetscReal t, Vec U, Vec U_t, Vec U_tt, Vec F, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef TSI2FunctionFn *TSI2Function;
 
@@ -745,7 +745,7 @@ PETSC_EXTERN_TYPEDEF typedef TSI2FunctionFn *TSI2Function;
 
 .seealso: [](ch_ts), `TS`, `TSSetI2Jacobian()`, `DMTSSetI2Jacobian()`, `TSIFunctionFn`, `TSIJacobianFn`, `TSRHSFunctionFn`, `TSRHSJacobianFn`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSI2JacobianFn)(TS ts, PetscReal t, Vec U, Vec U_t, Vec U_tt, PetscReal v, PetscReal a, Mat J, Mat Jac, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSI2JacobianFn(TS ts, PetscReal t, Vec U, Vec U_t, Vec U_tt, PetscReal v, PetscReal a, Mat J, Mat Jac, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef TSI2JacobianFn *TSI2Jacobian;
 
@@ -860,7 +860,7 @@ PETSC_EXTERN PetscErrorCode DMTSSetI2JacobianContextDestroy(DM, PetscCtxDestroyF
 
 .seealso: [](ch_ts), `TS`, `TSSetTransientVariable()`, `DMTSSetTransientVariable()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSTransientVariableFn)(TS ts, Vec p, Vec c, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSTransientVariableFn(TS ts, Vec p, Vec c, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef TSTransientVariableFn *TSTransientVariable;
 
@@ -908,7 +908,7 @@ PETSC_EXTERN PetscErrorCode DMTSSetIJacobianSerialize(DM, PetscErrorCode (*)(voi
 
 .seealso: `DMDA`, `DMDATSSetRHSFunctionLocal()`, `TSRHSFunctionFn`, `DMDATSRHSJacobianLocalFn`, `DMDATSIJacobianLocalFn`, `DMDATSIFunctionLocalFn`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(DMDATSRHSFunctionLocalFn)(DMDALocalInfo *info, PetscReal t, void *x, void *f, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode DMDATSRHSFunctionLocalFn(DMDALocalInfo *info, PetscReal t, void *x, void *f, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef DMDATSRHSFunctionLocalFn *DMDATSRHSFunctionLocal;
 
@@ -930,7 +930,7 @@ PETSC_EXTERN_TYPEDEF typedef DMDATSRHSFunctionLocalFn *DMDATSRHSFunctionLocal;
 
 .seealso: `DMDA`, `DMDATSSetRHSJacobianLocal()`, `TSRHSJacobianFn`, `DMDATSRHSFunctionLocalFn`, `DMDATSIJacobianLocalFn`, `DMDATSIFunctionLocalFn`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(DMDATSRHSJacobianLocalFn)(DMDALocalInfo *info, PetscReal t, void *x, Mat J, Mat B, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode DMDATSRHSJacobianLocalFn(DMDALocalInfo *info, PetscReal t, void *x, Mat J, Mat B, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef DMDATSRHSJacobianLocalFn *DMDATSRHSJacobianLocal;
 
@@ -952,7 +952,7 @@ PETSC_EXTERN_TYPEDEF typedef DMDATSRHSJacobianLocalFn *DMDATSRHSJacobianLocal;
 
 .seealso: `DMDA`, `DMDATSSetIFunctionLocal()`, `DMDATSIJacobianLocalFn`, `TSIFunctionFn`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(DMDATSIFunctionLocalFn)(DMDALocalInfo *info, PetscReal t, void *x, void *xdot, void *imode, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode DMDATSIFunctionLocalFn(DMDALocalInfo *info, PetscReal t, void *x, void *xdot, void *imode, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef DMDATSIFunctionLocalFn *DMDATSIFunctionLocal;
 
@@ -976,7 +976,7 @@ PETSC_EXTERN_TYPEDEF typedef DMDATSIFunctionLocalFn *DMDATSIFunctionLocal;
 
 .seealso: `DMDA` `DMDATSSetIJacobianLocal()`, `TSIJacobianFn`, `DMDATSIFunctionLocalFn`, `DMDATSRHSFunctionLocalFn`,  `DMDATSRHSJacobianlocal()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(DMDATSIJacobianLocalFn)(DMDALocalInfo *info, PetscReal t, void *x, void *xdot, PetscReal shift, Mat J, Mat B, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode DMDATSIJacobianLocalFn(DMDALocalInfo *info, PetscReal t, void *x, void *xdot, PetscReal shift, Mat J, Mat B, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef DMDATSIJacobianLocalFn *DMDATSIJacobianLocal;
 
@@ -1565,7 +1565,7 @@ PETSC_EXTERN PetscErrorCode TSAlpha2GetParams(TS, PetscReal *, PetscReal *, Pets
 
 .seealso: [](ch_ts), `TS`, `TSAlpha2SetPredictor()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSAlpha2PredictorFn)(TS ts, Vec X0, Vec V0, Vec A0, Vec X1, void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSAlpha2PredictorFn(TS ts, Vec X0, Vec V0, Vec A0, Vec X1, void *ctx);
 
 PETSC_EXTERN_TYPEDEF typedef TSAlpha2PredictorFn *TSAlpha2Predictor;
 
