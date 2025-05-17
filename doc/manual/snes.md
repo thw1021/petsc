@@ -1201,7 +1201,7 @@ MatColoringDestroy(&coloring);
 */
 MatFDColoringCreate(J, iscoloring, &fdcoloring);
 ISColoringDestroy(&iscoloring);
-MatFDColoringSetFunction(fdcoloring, (MatFDColoringFn*)FormFunction, &user);
+MatFDColoringSetFunction(fdcoloring, (MatFDColoringFn *)FormFunction, &user);
 MatFDColoringSetFromOptions(fdcoloring);
 
 /*

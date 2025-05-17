@@ -984,7 +984,7 @@ PetscErrorCode MatMFFDSetBase(Mat J, Vec U, Vec F)
 - ctx - any context needed by the function
 
   Options Database Keys:
-. -mat_mffd_check_positivity <bool> - Insure that $U + h*a $ is non-negative
+. -mat_mffd_check_positivity <bool> - Ensure that $U + h*a $ is non-negative
 
   Level: advanced
 

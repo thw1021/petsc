@@ -163,7 +163,7 @@ PetscErrorCode SNESPruneJacobianColor(SNES snes, Mat J, Mat B)
   PetscCall(DMGetDMSNES(dm, &dms));
   // Comment out the following branch to bypass the coverage test. You can uncomment it when needed.
   //if (dms->ops->computemffunction) {
-  //  PetscCall(MatFDColoringSetFunction(matfdcoloring, (MatFDColoringFn*)SNESComputeMFFunctionCtx, NULL));
+  //  PetscCall(MatFDColoringSetFunction(matfdcoloring, (MatFDColoringFn *)SNESComputeMFFunctionCtx, NULL));
   //} else {
   PetscCall(MatFDColoringSetFunction(matfdcoloring, (MatFDColoringFn *)SNESComputeFunctionCtx, NULL));
   //}
