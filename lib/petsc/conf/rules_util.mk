@@ -110,7 +110,7 @@ checkbadSource:
 	-@echo "----- DOS file (with DOS newlines) ---------------------------------" >> checkbadSource.out
 	-@git --no-pager grep -n -P '\r' -- ${GITSRC} >> checkbadSource.out;true
 	-@echo "----- { before SETERRQ ---------------------------------------------" >> checkbadSource.out
-	-@git --no-pager grep -n -P '{SETERRQ' -- ${GITSRC} >> checkbadSource.out;true
+	-@git --no-pager grep -n -P '\{SETERRQ' -- ${GITSRC} >> checkbadSource.out;true
 	-@echo "----- PetscCall following SETERRQ ----------------------------------" >> checkbadSource.out
 	-@git --no-pager grep -n -P 'SETERRQ' -- ${GITSRC} | grep ";PetscCall" >> checkbadSource.out;true
 	-@echo "----- SETERRQ() without defined error code -------------------------" >> checkbadSource.out
