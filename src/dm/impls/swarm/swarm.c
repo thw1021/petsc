@@ -1,5 +1,4 @@
-#include "petscsys.h"
-#include "petscsystypes.h"
+#include "petscdmswarm.h"
 #define PETSCDM_DLL
 #include <petsc/private/dmswarmimpl.h> /*I   "petscdmswarm.h"   I*/
 #include <petsc/private/hashsetij.h>
@@ -212,14 +211,6 @@ PetscErrorCode DMSwarmVectorDefineFields(DM sw, PetscInt Nf, const char *fieldna
     PetscCall(DMSwarmGetFieldInfo(sw, fieldnames[f], NULL, &type));
     PetscCheck(type == PETSC_REAL, PetscObjectComm((PetscObject)sw), PETSC_ERR_SUP, "Only valid for PETSC_REAL");
     PetscCall(PetscStrallocpy(fieldnames[f], (char **)&celldm->dmFields[f]));
-  }
-
-  // Fixup to support new interface DMSwarmPush/PopCellDM()
-  if (!sw->cellinfo->Nf) {
-    PetscCheck(!sw->cellinfo->dmFields, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Inconsistent object state");
-    sw->cellinfo->Nf = Nf;
-    PetscCall(PetscMalloc1(Nf, &sw->cellinfo->dmFields));
-    for (PetscInt f = 0; f < Nf; ++f) PetscCall(PetscStrallocpy(fieldnames[f], (char **)&sw->cellinfo->dmFields[f]));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1251,36 +1242,14 @@ PetscErrorCode DMSwarmSetCellDM(DM sw, DM dm)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
-  PetscValidHeaderSpecific(dmcell, DM_CLASSID, 2);
-  if (Nf) PetscAssertPointer(dmFields, 4);
-  PetscAssertPointer(coordField, 5);
-  PetscCall(PetscNew(&info));
-  PetscCall(PetscObjectReference((PetscObject)dmcell));
-  info->dm        = dmcell;
-  info->Nf        = Nf;
-  info->next      = swarm->cellinfo;
-  swarm->cellinfo = info;
-  PetscCall(DMSwarmSortDestroy(&swarm->sort_context));
-  // Define the DM fields
-  PetscCall(PetscMalloc1(info->Nf, &info->dmFields));
-  for (PetscInt f = 0; f < info->Nf; ++f) PetscCall(PetscStrallocpy(dmFields[f], &info->dmFields[f]));
-  if (info->Nf) PetscCall(DMSwarmVectorDefineFields(sw, info->Nf, (const char **)info->dmFields));
-  // Set the coordinate field
-  PetscCall(PetscStrallocpy(coordField, &info->coordField));
-  if (info->coordField) PetscCall(DMSwarmSetCoordinateField(sw, info->coordField));
-  // Rebin the cells and set cell_id field
-  if (rebin) {
-    PetscInt *cellid, Np, gNp, gNpOld;
-
-    PetscCall(DMSwarmGetLocalSize(sw, &Np));
-    PetscCall(DMSwarmGetSize(sw, &gNpOld));
-    PetscCall(DMSwarmGetField(sw, DMSwarmPICField_cellid, NULL, NULL, (void **)&cellid));
-    for (PetscInt p = 0; p < Np; ++p) cellid[p] = DMLOCATEPOINT_POINT_NOT_FOUND;
-    PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_cellid, NULL, NULL, (void **)&cellid));
-    PetscCall(DMSwarmMigrate(sw, PETSC_FALSE));
-    PetscCall(DMSwarmGetSize(sw, &gNp));
-    PetscCheck(gNp == gNpOld, PetscObjectComm((PetscObject)sw), PETSC_ERR_PLIB, "No particles should be lost in rebinning: %" PetscInt_FMT " != %" PetscInt_FMT, gNp, gNpOld);
-  }
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
+  PetscCall(PetscStrallocpy(DMSwarmPICField_coor, &coordName));
+  PetscCall(DMSwarmCellDMCreate(dm, 0, NULL, 1, (const char **)&coordName, &celldm));
+  PetscCall(PetscFree(coordName));
+  PetscCall(PetscObjectGetName((PetscObject)celldm, &name));
+  PetscCall(DMSwarmAddCellDM(sw, celldm));
+  PetscCall(DMSwarmCellDMDestroy(&celldm));
+  PetscCall(DMSwarmSetCellDMActive(sw, name));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1312,23 +1281,35 @@ PetscErrorCode DMSwarmGetCellDM(DM sw, DM *dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-    swarm->cellinfo = info->next;
-    PetscCall(DMSwarmSortDestroy(&swarm->sort_context));
-    // Define the DM fields
-    PetscCall(DMSwarmVectorDefineFields(sw, newinfo->Nf, (const char **)newinfo->dmFields));
-    // Set the coordinate field
-    PetscCall(DMSwarmSetCoordinateField(sw, newinfo->coordField));
-    // Rebin the cells and set cell_id field
-    PetscInt *cellid, Np, gNp, gNpOld;
+/*@C
+  DMSwarmGetCellDMNames - Get the list of cell `DM` names
 
-    PetscCall(DMSwarmGetLocalSize(sw, &Np));
-    PetscCall(DMSwarmGetSize(sw, &gNpOld));
-    PetscCall(DMSwarmGetField(sw, DMSwarmPICField_cellid, NULL, NULL, (void **)&cellid));
-    for (PetscInt p = 0; p < Np; ++p) cellid[p] = DMLOCATEPOINT_POINT_NOT_FOUND;
-    PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_cellid, NULL, NULL, (void **)&cellid));
-    PetscCall(DMSwarmMigrate(sw, PETSC_FALSE));
-    PetscCall(DMSwarmGetSize(sw, &gNp));
-    PetscCheck(gNp == gNpOld, PetscObjectComm((PetscObject)sw), PETSC_ERR_PLIB, "No particles should be lost in rebinning: %" PetscInt_FMT " != %" PetscInt_FMT, gNp, gNpOld);
+  Not collective
+
+  Input Parameter:
+. sw - a `DMSWARM`
+
+  Output Parameters:
++ Ndm     - the number of `DMSwarmCellDM` in the `DMSWARM`
+- celldms - the name of each `DMSwarmCellDM`
+
+  Level: beginner
+
+.seealso: `DM`, `DMSWARM`, `DMSwarmSetCellDM()`, `DMSwarmGetCellDMByName()`
+@*/
+PetscErrorCode DMSwarmGetCellDMNames(DM sw, PetscInt *Ndm, const char **celldms[])
+{
+  DM_Swarm       *swarm = (DM_Swarm *)sw->data;
+  PetscObjectList next  = swarm->cellDMs;
+  PetscInt        n     = 0;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sw, DM_CLASSID, 1);
+  PetscAssertPointer(Ndm, 2);
+  PetscAssertPointer(celldms, 3);
+  while (next) {
+    next = next->next;
+    ++n;
   }
   PetscCall(PetscMalloc1(n, celldms));
   next = swarm->cellDMs;
@@ -2226,16 +2207,6 @@ static PetscErrorCode DMDestroy_Swarm(DM dm)
   PetscCall(PetscObjectListDestroy(&swarm->cellDMs));
   PetscCall(PetscFree(swarm->activeCellDM));
   PetscCall(DMSwarmDataBucketDestroy(&swarm->db));
-  for (PetscInt f = 0; f < swarm->vec_field_num; ++f) PetscCall(PetscFree(swarm->vec_field_names[f]));
-  PetscCall(PetscFree(swarm->vec_field_names));
-  PetscCall(PetscFree(swarm->coord_name));
-  PetscCall(DMSwarmSortDestroy(&swarm->sort_context));
-  while (info) {
-    CellDMInfo tmp = info;
-
-    info = info->next;
-    PetscCall(CellDMInfoDestroy(&tmp));
-  }
   PetscCall(PetscFree(swarm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -406,6 +406,22 @@ static PetscErrorCode CheckNonNegativeWeights(DM sw, AppCtx *user)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// static PetscErrorCode computeEntropy(DM sw, PetscReal entropy, AppCtx *user)
+// {
+//   DM          vdm;
+//   Vec         u[1];
+//   const char *fields[1] = {"w_q"};
+
+//   PetscFunctionBegin;
+//   PetscCall(PetscObjectQuery((PetscObject)sw, "__vdm__", (PetscObject *)&vdm));
+//   PetscCall(DMGetGlobalVector(vdm, &u[0]));
+//   PetscCall(DMSwarmProjectFields(sw, vdm, 1, fields, u, SCATTER_FORWARD));
+//   PetscCall(DMPlexComputeMoments(vdm, u[0], moments));
+//   PetscCall(DMRestoreGlobalVector(vdm, &u[0]));
+//   PetscCall(DMSwarmSetCellDMActive(sw, "space"));
+//   PetscFunctionReturn(PETSC_SUCCESS);
+// }
+
 static PetscErrorCode computeVelocityFEMMoments(DM sw, PetscReal moments[3], AppCtx *user)
 {
   DM          vdm;
@@ -434,7 +450,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   DM          sw;
   PetscScalar intESq;
   PetscReal  *E, *x, *weight;
-  PetscReal   Enorm = 0., lgEnorm, lgEmax, sum = 0., Emax = 0., chargesum = 0.;
+  PetscReal   Enorm = 0., lgEnorm, lgEmax, sum = 0., Emax = 0., chargesum = 0., entropy=0;
   PetscReal   pmoments[4]; /* \int f, \int v f, \int v^2 f */
   PetscInt   *species, dim, Np, gNp;
   MPI_Comm    comm;
@@ -459,8 +475,11 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
     }
     Enorm += PetscSqrtReal(E[p * dim] * E[p * dim]);
     sum += E[p * dim];
-    chargesum += user->charges[0] * weight[p];
+    chargesum += weight[p];
   }
+  entropy += -chargesum * PetscLogReal(chargesum);
+  chargesum *= user->charges[0];
+  
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &Emax, 1, MPIU_REAL, MPIU_MAX, comm));
   lgEnorm = Enorm != 0 ? PetscLog10Real(Enorm) : -16.;
   lgEmax  = Emax != 0 ? PetscLog10Real(Emax) : user->drawlgEmin;
@@ -485,7 +504,8 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(PetscDrawSave(draw));
 
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", pmoments));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim]));
+  // PetscCall(ComputeEntropy(sw));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%2.16f\t%2.16f\t%1.16e\t%2.16f\t%2.16f\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)entropy));
   PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1663,20 +1683,20 @@ static PetscErrorCode ComputeFieldAtParticles_Mixed(SNES snes, DM sw, Mat M_p, P
   PetscCall(DMRestoreGlobalVector(user->dmPot, &rhoRhs));
   PetscCall(KSPDestroy(&ksp));
 
-  PetscCall(DMGetNamedGlobalVector(dm, "potential", &phi));
-  PetscCall(PetscObjectSetName((PetscObject)phi, "potential"));
-  PetscCall(VecSet(phi, 0.0));
-  PetscCall(SNESSolve(snes, rhoRhs, phi));
-  PetscCall(DMRestoreGlobalVector(dm, &rhoRhs));
+  PetscCall(DMGetGlobalVector(dm, &phiFull));
+  PetscCall(DMGetNamedGlobalVector(user->dmPot, "phi", &phi));
+  PetscCall(VecSet(phiFull, 0.0));
+  PetscCall(SNESSolve(snes, rhoRhsFull, phiFull));
+  PetscCall(DMRestoreGlobalVector(dm, &rhoRhsFull));
   PetscCall(VecViewFromOptions(phi, NULL, "-phi_view"));
 
   PetscCall(VecISCopy(phiFull, user->isPot, SCATTER_REVERSE, phi));
   PetscCall(DMRestoreNamedGlobalVector(user->dmPot, "phi", &phi));
 
   PetscCall(DMGetLocalVector(dm, &locPhi));
-  PetscCall(DMGlobalToLocalBegin(dm, phi, INSERT_VALUES, locPhi));
-  PetscCall(DMGlobalToLocalEnd(dm, phi, INSERT_VALUES, locPhi));
-  PetscCall(DMRestoreNamedGlobalVector(dm, "potential", &phi));
+  PetscCall(DMGlobalToLocalBegin(dm, phiFull, INSERT_VALUES, locPhi));
+  PetscCall(DMGlobalToLocalEnd(dm, phiFull, INSERT_VALUES, locPhi));
+  PetscCall(DMRestoreGlobalVector(dm, &phiFull));
   PetscCall(PetscLogEventEnd(user->ESolveEvent, snes, sw, 0, 0));
 
   PetscCall(DMGetDS(dm, &ds));
@@ -1697,107 +1717,9 @@ static PetscErrorCode ComputeFieldAtParticles_Mixed(SNES snes, DM sw, Mat M_p, P
     PetscCall(DMSwarmSortGetNumberOfPointsPerCell(sw, c, &Ncp));
     maxNcp = PetscMax(maxNcp, Ncp);
   }
-  PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
-  PetscCall(DMSwarmSortRestoreAccess(sw));
-  PetscCall(DMRestoreLocalVector(dm, &locPhi));
-  PetscCall(PetscFEGeomRestoreChunk(user->fegeom, 0, 1, &chunkgeom));
-  PetscCall(PetscLogEventEnd(user->ETabEvent, snes, sw, 0, 0));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode ComputeFieldAtParticles_Mixed(SNES snes, DM sw, PetscReal E[])
-{
-  AppCtx         *user;
-  DM              dm, potential_dm;
-  KSP             ksp;
-  IS              potential_IS;
-  PetscDS         ds;
-  PetscFE         fe;
-  Mat             M_p, M;
-  Vec             phi, locPhi, rho, f, temp_rho, rho0;
-  PetscQuadrature q;
-  PetscReal      *coords;
-  PetscInt        dim, cStart, cEnd, Np, pot_field = 1;
-  const char    **oldFields;
-  PetscInt        Nf;
-  const char    **tmp;
-
-  PetscFunctionBegin;
-  PetscCall(DMGetApplicationContext(sw, &user));
-  PetscCall(PetscLogEventBegin(user->ESolveEvent, snes, sw, 0, 0));
-  PetscCall(DMGetDimension(sw, &dim));
-  PetscCall(DMSwarmGetLocalSize(sw, &Np));
-  PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(DMGetGlobalVector(dm, &rho));
-  PetscCall(PetscObjectSetName((PetscObject)rho, "rho"));
-
-  PetscCall(DMCreateSubDM(dm, 1, &pot_field, &potential_IS, &potential_dm));
-
-  PetscCall(DMSwarmVectorGetField(sw, &Nf, &tmp));
-  PetscCall(PetscMalloc1(Nf, &oldFields));
-  for (PetscInt f = 0; f < Nf; ++f) PetscCall(PetscStrallocpy(tmp[f], (char **)&oldFields[f]));
-  PetscCall(DMSwarmVectorDefineField(sw, "w_q"));
-  PetscCall(DMCreateMassMatrix(sw, potential_dm, &M_p));
-  PetscCall(DMSwarmVectorDefineFields(sw, Nf, oldFields));
-  for (PetscInt f = 0; f < Nf; ++f) PetscCall(PetscFree(oldFields[f]));
-  PetscCall(PetscFree(oldFields));
-
-  PetscCall(DMCreateMassMatrix(potential_dm, potential_dm, &M));
-  PetscCall(MatViewFromOptions(M_p, NULL, "-mp_view"));
-  PetscCall(MatViewFromOptions(M, NULL, "-m_view"));
-  PetscCall(DMGetGlobalVector(potential_dm, &temp_rho));
-  PetscCall(PetscObjectSetName((PetscObject)temp_rho, "Mf"));
-  PetscCall(DMSwarmCreateGlobalVectorFromField(sw, "w_q", &f));
-  PetscCall(PetscObjectSetName((PetscObject)f, "particle weight"));
-  PetscCall(VecViewFromOptions(f, NULL, "-weights_view"));
-  PetscCall(MatMultTranspose(M_p, f, temp_rho));
-  PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, "w_q", &f));
-  PetscCall(DMGetGlobalVector(potential_dm, &rho0));
-  PetscCall(PetscObjectSetName((PetscObject)rho0, "Charge density (rho0) from Mixed Compute"));
-
-  PetscCall(KSPCreate(PetscObjectComm((PetscObject)dm), &ksp));
-  PetscCall(KSPSetOptionsPrefix(ksp, "em_proj"));
-  PetscCall(KSPSetOperators(ksp, M, M));
-  PetscCall(KSPSetFromOptions(ksp));
-  PetscCall(KSPSolve(ksp, temp_rho, rho0));
-  PetscCall(VecViewFromOptions(rho0, NULL, "-rho0_view"));
-
-  PetscCall(VecISCopy(rho, potential_IS, SCATTER_FORWARD, temp_rho));
-  PetscCall(VecScale(rho, 0.25));
-  PetscCall(VecViewFromOptions(rho0, NULL, "-rho0_view"));
-  PetscCall(VecViewFromOptions(temp_rho, NULL, "-temprho_view"));
-  PetscCall(VecViewFromOptions(rho, NULL, "-rho_view"));
-  PetscCall(DMRestoreGlobalVector(potential_dm, &temp_rho));
-  PetscCall(DMRestoreGlobalVector(potential_dm, &rho0));
-
-  PetscCall(MatDestroy(&M_p));
-  PetscCall(MatDestroy(&M));
-  PetscCall(KSPDestroy(&ksp));
-  PetscCall(DMDestroy(&potential_dm));
-  PetscCall(ISDestroy(&potential_IS));
-
-  PetscCall(DMGetGlobalVector(dm, &phi));
-  PetscCall(PetscObjectSetName((PetscObject)phi, "potential"));
-  PetscCall(VecSet(phi, 0.0));
-  PetscCall(SNESSolve(snes, rho, phi));
-  PetscCall(DMRestoreGlobalVector(dm, &rho));
-
-  PetscCall(VecViewFromOptions(phi, NULL, "-phi_view"));
-
-  PetscCall(DMGetLocalVector(dm, &locPhi));
-  PetscCall(DMGlobalToLocalBegin(dm, phi, INSERT_VALUES, locPhi));
-  PetscCall(DMGlobalToLocalEnd(dm, phi, INSERT_VALUES, locPhi));
-  PetscCall(DMRestoreGlobalVector(dm, &phi));
-  PetscCall(PetscLogEventEnd(user->ESolveEvent, snes, sw, 0, 0));
-
-  PetscCall(PetscLogEventBegin(user->ETabEvent, snes, sw, 0, 0));
-  PetscCall(DMGetDS(dm, &ds));
-  PetscCall(PetscDSGetDiscretization(ds, 0, (PetscObject *)&fe));
-  PetscCall(DMSwarmSortGetAccess(sw));
-  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
-  PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
-  PetscCall(PetscFEGetQuadrature(fe, &q));
-  PetscFEGeom *chunkgeom = NULL;
+  PetscCall(DMGetWorkArray(dm, maxNcp * dim, MPIU_REAL, &refcoord));
+  PetscCall(DMGetWorkArray(dm, maxNcp * dim, MPIU_REAL, &pcoord));
+  PetscCall(PetscFECreateTabulation(fe, 1, maxNcp, refcoord, 1, &tab));
   for (PetscInt c = cStart; c < cEnd; ++c) {
     PetscScalar *clPhi = NULL;
     PetscInt    *points;
@@ -2070,7 +1992,7 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ct
   PetscInt phi_size;
   PetscCall(VecGetSize(phi, &phi_size));
   PetscCall(VecGetArrayRead(phi, &phi_vals));
-  PetscCall(DMSwarmGetField(sw, "initCoordinates", NULL, NULL, (void **)&coords));
+  PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
   PetscCall(DMSwarmGetField(sw, "initVelocity", NULL, NULL, (void **)&vel));
 
   PetscCall(DMSwarmSortGetAccess(sw));
@@ -2095,7 +2017,7 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ct
     PetscCall(DMSwarmSortRestorePointsPerCell(sw, c, &Ncp, &points));
   }
   PetscCall(DMSwarmSortRestoreAccess(sw));
-  PetscCall(DMSwarmRestoreField(sw, "initCoordinates", NULL, NULL, (void **)&coords));
+  PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
   PetscCall(DMSwarmRestoreField(sw, "initVelocity", NULL, NULL, (void **)&vel));
   PetscCall(VecRestoreArrayRead(phi, &phi_vals));
   PetscCall(DMRestoreGlobalVector(dm, &phi));
@@ -2118,9 +2040,9 @@ PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &sw));
   PetscCall(DMGetDimension(sw, &dim));
-  PetscCall(DMSwarmGetField(sw, "initCoordinates", NULL, NULL, (void **)&coords));
-  PetscCall(DMSwarmGetField(sw, "initVelocity", NULL, NULL, (void **)&vel));
-  PetscCall(DMSwarmGetField(sw, "E_field", NULL, NULL, (void **)&E));
+  // PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
+  // PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&vel));
+  
   PetscCall(DMSwarmGetLocalSize(sw, &Np));
   PetscCall(VecGetArrayRead(U, &u));
   PetscCall(VecGetArray(G, &g));
@@ -2128,18 +2050,22 @@ PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
   int COMPUTEFIELD;
   PetscCall(PetscLogEventRegister("COMPFIELDATPART", TS_CLASSID, &COMPUTEFIELD));
   PetscCall(PetscLogEventBegin(COMPUTEFIELD, 0, 0, 0, 0));
-  PetscCall(ComputeFieldAtParticles(snes, sw, E));
+  PetscCall(ComputeFieldAtParticles(snes, sw));
   PetscCall(PetscLogEventEnd(COMPUTEFIELD, 0, 0, 0, 0));
-  for (p = 0; p < Np; ++p) {
-    const PetscReal x0    = coords[p * dim + 0];
-    const PetscReal vy0   = vel[p * dim + 1];
+  PetscCall(DMSwarmGetField(sw, "E_field", NULL, NULL, (void **)&E));
+  for (p = 0; p < Np-1; ++p) {
+    // const PetscReal x0    = coords[p * dim + 0];
+    // const PetscReal vy0   = vel[p * dim + 1];
+    const PetscReal x0    = u[(p * 2 + 0) * dim + d];
+    const PetscReal vy0   = u[(p * 2 + 1) * dim + d];
     for (d = 0; d < dim; ++d) {
+      // PetscCall(PetscPrintf(PETSC_COMM_WORLD,"E[p * dim + d=%d*%d+%d=%d]= %f\n",p,dim,d,p*dim+d,E[p * dim + d]));
       g[(p * 2 + 0) * dim + d] = -(q_p) * E[p * dim + d];
       g[(p * 2 + 1) * dim + d] = u[(p * 2 + 1) * dim + d];
     }
   }
-  PetscCall(DMSwarmRestoreField(sw, "initCoordinates", NULL, NULL, (void **)&coords));
-  PetscCall(DMSwarmRestoreField(sw, "initVelocity", NULL, NULL, (void **)&vel));
+  // PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&coords));
+  // PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **)&vel));
   PetscCall(DMSwarmRestoreField(sw, "E_field", NULL, NULL, (void **)&E));
   PetscCall(VecRestoreArrayRead(U, &u));
   PetscCall(VecRestoreArray(G, &g));
