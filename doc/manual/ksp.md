@@ -1531,7 +1531,7 @@ Poisson problem with constant coefficients. The user can switch on and
 off the usage of vertices, edges or face constraints by using the
 command line switches `-pc_bddc_use_vertices`, `-pc_bddc_use_edges`,
 `-pc_bddc_use_faces`. A customization of the constraints is available
-by attaching a `MatNullSpace` object to the  matrix used to compute the preconditioner via
+by attaching a `MatNullSpace` object to the matrix used to compute the preconditioner via
 `MatSetNearNullSpace()`. The vectors of the `MatNullSpace` object
 should represent the constraints in the form of quadrature rules;
 quadrature rules for different classes of the interface can be listed in

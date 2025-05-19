@@ -1803,7 +1803,7 @@ PetscErrorCode PetscDSHasJacobianPreconditioner(PetscDS ds, PetscBool *hasJacPre
 }
 
 /*@C
-  PetscDSGetJacobianPreconditioner - Get the pointwise Jacobian matrx function for constructing a preconditioner for given test and basis field.
+  PetscDSGetJacobianPreconditioner - Get the pointwise Jacobian matrix function for constructing a preconditioner for given test and basis field.
   If this is missing, the system matrix is used to build the preconditioner.
 
   Not Collective
