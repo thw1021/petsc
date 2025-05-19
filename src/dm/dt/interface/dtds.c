@@ -1774,7 +1774,7 @@ PetscErrorCode PetscDSUseJacobianPreconditioner(PetscDS prob, PetscBool useJacPr
 }
 
 /*@
-  PetscDSHasJacobianPreconditioner - Checks if a Jacobian preconditioner matrix has been set
+  PetscDSHasJacobianPreconditioner - Checks if a Jacobian matrix for constructing a preconditioner has been set
 
   Not Collective
 
@@ -1782,9 +1782,13 @@ PetscErrorCode PetscDSUseJacobianPreconditioner(PetscDS prob, PetscBool useJacPr
 . ds - The `PetscDS`
 
   Output Parameter:
-. hasJacPre - flag that pointwise function for Jacobian preconditioner matrix has been set
+. hasJacPre - the flag
 
   Level: intermediate
+
+  Developer Note:
+  The function name is confusing because it is not that a preconditioner has been set, only that a matrix from which
+  the preconditioner will be computed has been set.
 
 .seealso: `PetscDS`, `PetscDSGetJacobianPreconditioner()`, `PetscDSSetJacobianPreconditioner()`, `PetscDSGetJacobian()`
 @*/
@@ -1799,8 +1803,8 @@ PetscErrorCode PetscDSHasJacobianPreconditioner(PetscDS ds, PetscBool *hasJacPre
 }
 
 /*@C
-  PetscDSGetJacobianPreconditioner - Get the pointwise Jacobian preconditioner function for given test and basis field. If this is missing,
-  the system matrix is used to build the preconditioner.
+  PetscDSGetJacobianPreconditioner - Get the pointwise Jacobian matrix function for constructing a preconditioner for given test and basis field.
+  If this is missing, the system matrix is used to build the preconditioner.
 
   Not Collective
 
