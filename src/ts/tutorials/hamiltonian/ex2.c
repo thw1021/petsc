@@ -242,22 +242,24 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode SetupContext(DM dm, DM sw, AppCtx *user)
 {
-  MPI_Comm comm;
+  MPI_Comm    comm;
+  PetscMPIInt rank;
 
   PetscFunctionBeginUser;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  MPI_Comm_rank(comm,&rank);
   if (user->efield_monitor) {
     PetscDraw     draw;
     PetscDrawAxis axis;
-
-    PetscCall(PetscDrawCreate(PETSC_COMM_WORLD, NULL, "Max Electric Field", 0, 300, 400, 300, &draw));
-    PetscCall(PetscDrawSetSave(draw, "ex9_Efield"));
+    PetscCall(PetscDrawCreate(PETSC_COMM_SELF, NULL, "Max Electric Field", 0, 300, 400, 300, &draw));
+    PetscCall(PetscDrawSetSave(draw, "ex2_Efield"));
     PetscCall(PetscDrawSetFromOptions(draw));
     PetscCall(PetscDrawLGCreate(draw, 1, &user->drawlgE));
     PetscCall(PetscDrawDestroy(&draw));
     PetscCall(PetscDrawLGGetAxis(user->drawlgE, &axis));
     PetscCall(PetscDrawAxisSetLabels(axis, "Electron Electric Field", "time", "E_max"));
     PetscCall(PetscDrawLGSetLimits(user->drawlgE, 0., user->steps * user->stepSize, user->drawlgEmin, 0.));
+
   }
 
   if (user->initial_monitor) {
@@ -424,16 +426,21 @@ static PetscErrorCode CheckNonNegativeWeights(DM sw, AppCtx *user)
 
 static PetscErrorCode computeVelocityFEMMoments(DM sw, PetscReal moments[3], AppCtx *user)
 {
+  DMSwarmCellDM celldm;
   DM          vdm;
   Vec         u[1];
   const char *fields[1] = {"w_q"};
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectQuery((PetscObject)sw, "__vdm__", (PetscObject *)&vdm));
+  // PetscCall(PetscObjectQuery((PetscObject)sw, "__vdm__", (PetscObject *)&vdm));
+  PetscCall(DMSwarmGetCellDMByName(sw, "velocity", &celldm));
+  PetscCall(DMSwarmCellDMGetDM(celldm, &vdm));
   PetscCall(DMGetGlobalVector(vdm, &u[0]));
+  // PetscCall(DMGetGlobalVector(vdm, &u));
   PetscCall(DMSwarmProjectFields(sw, vdm, 1, fields, u, SCATTER_FORWARD));
   PetscCall(DMPlexComputeMoments(vdm, u[0], moments));
   PetscCall(DMRestoreGlobalVector(vdm, &u[0]));
+  // PetscCall(DMRestoreGlobalVector(vdm, &u));
   PetscCall(DMSwarmSetCellDMActive(sw, "space"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -451,13 +458,15 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscScalar intESq;
   PetscReal  *E, *x, *weight;
   PetscReal   Enorm = 0., lgEnorm, lgEmax, sum = 0., Emax = 0., chargesum = 0., entropy=0;
-  PetscReal   pmoments[4]; /* \int f, \int v f, \int v^2 f */
+  PetscReal   pmoments[4], fmoments[4]; /* \int f, \int v f, \int v^2 f */
   PetscInt   *species, dim, Np, gNp;
   MPI_Comm    comm;
+  PetscMPIInt rank;
 
   PetscFunctionBeginUser;
   if (step < 0 || !user->validE) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscObjectGetComm((PetscObject)ts, &comm));
+  MPI_Comm_rank(comm, &rank);
   PetscCall(TSGetDM(ts, &sw));
   PetscCall(DMGetDimension(sw, &dim));
   PetscCall(DMSwarmGetLocalSize(sw, &Np));
@@ -497,6 +506,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&weight));
   PetscCall(DMSwarmRestoreField(sw, "E_field", NULL, NULL, (void **)&E));
   PetscCall(DMSwarmRestoreField(sw, "species", NULL, NULL, (void **)&species));
+
   PetscCall(PetscDrawLGAddPoint(user->drawlgE, &t, &lgEmax));
   PetscCall(PetscDrawLGDraw(user->drawlgE));
   PetscDraw draw;
@@ -504,8 +514,10 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(PetscDrawSave(draw));
 
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", pmoments));
-  // PetscCall(ComputeEntropy(sw));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%2.16f\t%2.16f\t%1.16e\t%2.16f\t%2.16f\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)entropy));
+  PetscCall(computeVelocityFEMMoments(sw, fmoments, user));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "%d\t%f\t%+e\t%e\t%f\t%f\t%f\t%2.16f\t%2.16f\t%1.16e\t%2.16f\t%2.16f\t%1.16e\t%2.16f\t%2.16f\n", rank,(double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)fmoments[0], (double)fmoments[1], (double)fmoments[2],(double)entropy));
+  // if (rank == 0 && user->drawlgE) PetscCall(PetscPrintf(PETSC_COMM_SELF, "%d\t%f\t%+e\t%e\t%f\t%f\t%f\t%2.16f\t%2.16f\t%1.16e\t%2.16f\t%2.16f\t%1.16e\t%2.16f\t%2.16f\n", rank,(double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)fmoments[0], (double)fmoments[1], (double)fmoments[1+dim], (double)entropy));
+  // PetscCall(PetscPrintf(PETSC_COMM_SELF, "%d\t%f\t%+e\t%e\t%f\t%f\t%f\t%2.16f\t%2.16f\t%1.16e\t%2.16f\t%2.16f\n", rank,(double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)entropy));
   PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2329,8 +2341,8 @@ static PetscErrorCode MigrateParticles(TS ts)
 
     PetscCall(TSGetStepNumber(ts, &step));
     PetscCall(TSGetTime(ts, &ptime));
-    if (ctx->efield_monitor) PetscCall(MonitorEField(ts, step, ptime, NULL, ctx));
-    if (ctx->poisson_monitor) PetscCall(MonitorPoisson(ts, step, ptime, NULL, ctx));
+    // if (ctx->efield_monitor) PetscCall(MonitorEField(ts, step, ptime, NULL, ctx));
+    // if (ctx->poisson_monitor) PetscCall(MonitorPoisson(ts, step, ptime, NULL, ctx));
     PetscCall(DMSwarmRemap(sw));
     ctx->validE = PETSC_FALSE;
   }
@@ -2346,12 +2358,14 @@ static PetscErrorCode MigrateParticles(TS ts)
 
 int main(int argc, char **argv)
 {
-  DM        dm, sw;
-  TS        ts;
-  Vec       u;
-  PetscReal dt;
-  PetscInt  maxn;
-  AppCtx    user;
+  DM          dm, sw;
+  TS          ts;
+  Vec         u;
+  PetscReal   dt;
+  PetscInt    maxn;
+  AppCtx      user;
+  // MPI_Comm    comm;
+  // PetscMPIInt rank;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(ProcessOptions(PETSC_COMM_WORLD, &user));
@@ -2371,6 +2385,8 @@ int main(int argc, char **argv)
   PetscCall(TSSetMaxSteps(ts, 100));
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_MATCHSTEP));
 
+  // PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  // MPI_Comm_rank(comm,&rank);
   if (user.efield_monitor) PetscCall(TSMonitorSet(ts, MonitorEField, &user, NULL));
   if (user.moment_monitor) PetscCall(TSMonitorSet(ts, MonitorMoments, &user, NULL));
   if (user.initial_monitor) PetscCall(TSMonitorSet(ts, MonitorInitialConditions, &user, NULL));
