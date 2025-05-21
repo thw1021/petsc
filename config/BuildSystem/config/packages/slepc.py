@@ -71,38 +71,10 @@ class Configure(config.package.Package):
       self.lib = [os.path.join(prefix,'lib','libslepclme'),'-lslepcmfn -lslepcnep -lslepcpep -lslepcsvd -lslepceps -lslepcsys']
     self.addDefine('HAVE_SLEPC',1)
     self.addMakeMacro('SLEPC','yes')
-    self.addMakeRule('slepcbuild','', \
-                       ['@echo "*** Building SLEPc ***"',\
-                        '@${RM} '+os.path.join(self.petscdir.dir,self.arch,'lib','petsc','conf','slepc.errorflg'),\
-                        '+@(cd '+self.packageDir+' && \\\n\
-            '+carg+' '+self.python.pyexe+' ./configure --prefix='+prefix+' '+configargs+' && \\\n\
-            '+barg+' ${OMAKE} '+barg+') || \\\n\
-            (echo "**************************ERROR*************************************" && \\\n\
-            echo "Error building SLEPc." && \\\n\
-            echo "********************************************************************" && \\\n\
-            touch '+os.path.join(self.petscdir.dir,self.arch,'lib','petsc','conf','slepc.errorflg')+' && \\\n\
-            exit 1)'])
-    self.addMakeRule('slepcinstall','', \
-                       ['@echo "*** Installing SLEPc ***"',\
-                        '@$(eval PETSC_INSTALL ?= install)',\
-                        '@(cd '+self.packageDir+' && \\\n\
-            '+barg+' ${OMAKE} ${PETSC_INSTALL} '+barg+') || \\\n\
-            (echo "**************************ERROR*************************************" && \\\n\
-            echo "Error installing SLEPc." && \\\n\
-            echo "********************************************************************" && \\\n\
-            exit 1)'])
-    self.addMakeRule('slepc-check', '', ['@cd '+self.packageDir+' ; SLEPC_DIR=`pwd` ${OMAKE} check'])
-    if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
-      self.addMakeRule('slepc-build','')
-      # the build must be done at install time because PETSc shared libraries must be in final location before building slepc
-      self.addMakeRule('slepc-install','slepcbuild slepcinstall')
-    else:
-      self.addMakeRule('slepc-build','slepcbuild slepcinstall')
-      self.addMakeRule('slepc-install','')
-
-    self.logPrintBox('SLEPc examples are available at '+self.packageDir)
+    self.addPost(self.packageDir,[carg + ' ' + self.python.pyexe + ' ./configure --prefix=' + prefix + ' ' + configargs,
+                                  barg + ' ${OMAKE} ' + barg,
+                                  barg + ' ${OMAKE} ' + barg + ' install'])
+    # this checks SLEPc using the pre-installed libraries, I think that is wrong and it should use the post-installed prefix location
+    self.addMakeCheck(self.packageDir, 'SLEPC_DIR=`pwd`' + ' ' + barg + ' ${OMAKE} ' + barg + ' check')
+    self.logPrintBox('SLEPc examples are available at '+os.path.join(self.packageDir,'src','*','tutorials'))
     return self.installDir
-
-  def alternateConfigureLibrary(self):
-    self.addMakeRule('slepc-build','')
-    self.addMakeRule('slepc-install','')
