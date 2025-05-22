@@ -459,7 +459,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscScalar intESq;
   PetscReal  *E, *x, *weight;
   PetscReal   Enorm = 0., lgEnorm, lgEmax, sum = 0., Emax = 0., chargesum = 0., entropy=0.;
-  PetscReal   pmoments[4]; /* \int f, \int v f, \int v^2 f */
+  PetscReal   pmoments[4], fmoments[4]; /* \int f, \int v f, \int v^2 f */
   PetscInt   *species, dim, Np, gNp;
   MPI_Comm    comm;
 
@@ -511,7 +511,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(PetscDrawSave(draw));
 
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", pmoments));
-  PetscCall(PetscPrintf(comm, "E: %f\t%+e\t%e\t%f\t%20.15e\t%f\t%f\t%f\t%20.15e\t%20.15e\t%20.15e\t%" PetscInt_FMT "\t(%" PetscInt_FMT ")\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)PetscSqrtReal(intESq), gNp, step));
+  PetscCall(PetscPrintf(comm, "E: %f\t%+e\t%e\t%f\t%20.15e\t%f\t%2.15f\t%2.15f\t%20.15e\t%2.15f\t%20.15e\t%20.15e\t%" PetscInt_FMT "\t(%" PetscInt_FMT ")\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double) entropy, (double)PetscSqrtReal(intESq), gNp, step));
   PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2428,33 +2428,33 @@ int main(int argc, char **argv)
      nsize: {{1 2}}
      requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT)
      args: -dm_plex_dim 1 -dm_plex_simplex 0 -dm_plex_box_faces 36 \
-             -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
+           -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
            -vdm_plex_dim 1 -vdm_plex_simplex 0 -vdm_plex_box_faces 10 \
-             -vdm_plex_box_lower -3 -vdm_plex_box_upper 3 \
+           -vdm_plex_box_lower -3 -vdm_plex_box_upper 3 \
            -dm_swarm_num_species 1 -twostream -charges -1.,1. -sigma 1.0e-8 \
-             -cosine_coefficients 0.01,0.5 -perturbed_weights -total_weight 1. \
+           -cosine_coefficients 0.01,0.5 -perturbed_weights -total_weight 1. \
            -ts_type basicsymplectic -ts_basicsymplectic_type 2 \
-             -ts_dt 0.01 -ts_max_time 5 -ts_max_steps 10 \
+           -ts_dt 0.01 -ts_max_time 5 -ts_max_steps 10 \
            -em_snes_atol 1.e-15 -em_snes_error_if_not_converged -em_ksp_error_if_not_converged \
            -output_step 1 -check_vel_res -dm_swarm_print_coords 1 -dm_swarm_print_weights 1
      test:
        suffix: two_stream_c0
-       args: -em_type primal -petscfe_default_quadrature_order 2 -petscspace_degree 2 -em_pc_type svd
+       args:  -em_type primal -petscfe_default_quadrature_order 2 -petscspace_degree 2 -em_pc_type svd
      test:
        suffix: two_stream_rt
        requires: superlu_dist
        args: -em_type mixed \
-               -potential_petscspace_degree 0 \
-               -potential_petscdualspace_lagrange_use_moments \
-               -potential_petscdualspace_lagrange_moment_order 2 \
-               -field_petscspace_degree 1 -field_petscfe_default_quadrature_order 1 \
+             -potential_petscspace_degree 0 \
+             -potential_petscdualspace_lagrange_use_moments \
+             -potential_petscdualspace_lagrange_moment_order 2 \
+             -field_petscspace_degree 1 -field_petscfe_default_quadrature_order 1 \
              -em_snes_error_if_not_converged \
              -em_ksp_type preonly -em_ksp_error_if_not_converged \
              -em_pc_type fieldsplit -em_pc_fieldsplit_type schur \
-               -em_pc_fieldsplit_schur_fact_type full -em_pc_fieldsplit_schur_precondition full \
-               -em_fieldsplit_field_pc_type lu \
-                 -em_fieldsplit_field_pc_factor_mat_solver_type superlu_dist \
-               -em_fieldsplit_potential_pc_type svd
+             -em_pc_fieldsplit_schur_fact_type full -em_pc_fieldsplit_schur_precondition full \
+             -em_fieldsplit_field_pc_type lu \
+             -em_fieldsplit_field_pc_factor_mat_solver_type superlu_dist \
+             -em_fieldsplit_potential_pc_type svd
 
    # For an eyeball check, we use
    # -ts_max_steps 1000 -dm_plex_box_faces 10,1 -vdm_plex_box_faces 2000 -efield_monitor
@@ -2465,14 +2465,14 @@ int main(int argc, char **argv)
      nsize: {{1 2}}
      requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT)
      args: -dm_plex_dim 1 -dm_plex_simplex 0 -dm_plex_box_faces 20 \
-             -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
+           -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
            -vdm_plex_dim 1 -vdm_plex_simplex 0 -vdm_plex_box_faces 1000 \
-             -vdm_plex_box_lower -10 -vdm_plex_box_upper 10 \
-             -vpetscspace_degree 2 -vdm_plex_hash_location \
+           -vdm_plex_box_lower -10 -vdm_plex_box_upper 10 \
+           -vpetscspace_degree 2 -vdm_plex_hash_location \
            -dm_swarm_num_species 1 -charges -1.,1. \
-             -cosine_coefficients 0.01,0.5 -perturbed_weights -total_weight 1. \
+           -cosine_coefficients 0.01,0.5 -perturbed_weights -total_weight 1. \
            -ts_type basicsymplectic -ts_basicsymplectic_type 1 \
-             -ts_dt 0.03 -ts_max_time 500 -ts_max_steps 1 \
+           -ts_dt 0.01 -ts_max_time 500 -ts_max_steps 1 \
            -em_snes_atol 1.e-12 -em_snes_error_if_not_converged -em_ksp_error_if_not_converged \
            -output_step 1 -check_vel_res -dm_swarm_print_coords 1 -dm_swarm_print_weights 1
 

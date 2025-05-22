@@ -109,72 +109,35 @@ c:47 [x_a,x_b] = 11.812415999999999,12.063744000000000 -> cell weight = 0.253716
 c:48 [x_a,x_b] = 12.063744000000000,12.315071999999999 -> cell weight = 0.253795145540859
 c:49 [x_a,x_b] = 12.315071999999999,12.566400000000000 -> cell weight = 0.253834672818958
 particle weight sum = 12.5664002939 cell weight sum = 12.5664002939
-0.000000	12.566400	0.000000	0.000000	12.566403	-0.000027	12.566720
-    0 SNES Function norm 2.236052189245e+03
-    1 SNES Function norm 2.733218276234e-02
-    2 SNES Function norm 3.340924932532e-07
-SNES Object: 1 MPI process
-  type: qn
-    type is LBFGS, restart type is POWELL, scale type is SCALAR
-    Stored subspace size: 10
-  Mat Object: (qn_) 1 MPI process
-    type: lmvmbfgs
-    Max. storage: 10
-    Used storage: 1
-    Number of updates: 1
-    Number of rejects: 0
-    Number of resets: 1
-    J0:
-      Mat Object: (qn_mat_lmvm_J0_) 1 MPI process
-        type: constantdiagonal
-        Diagonal value: 200.
-    Rescale type: scalar
-    Rescale history: 1
-    Rescale params: alpha=1., beta=0.5, rho=1.
-  maximum iterations=10000, maximum function evaluations=30000
-  tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
-  total number of function evaluations=5
-  norm schedule ALWAYS
-  SNESLineSearch Object: 1 MPI process
-    type: cp
-    maxstep=1.000000e+08, minlambda=1.000000e-12
-    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
-    maximum iterations=1
-E: 0.010000	+8.588694e-10	1.907352e+03	3.280431	1.996060784767948e-02	-1.699826	-12.566400	12.566400	7.081800786129749e-15	1.256644708641849e+01	5.003387432720761e-02	150000	(1)
-0.010000	12.566400	0.000000	0.000000	12.566401	-0.000005	12.566501
-    0 SNES Function norm 2.236052189189e+03
-    1 SNES Function norm 2.733081615063e-02
-    2 SNES Function norm 3.340592171932e-07
-SNES Object: 1 MPI process
-  type: qn
-    type is LBFGS, restart type is POWELL, scale type is SCALAR
-    Stored subspace size: 10
-  Mat Object: (qn_) 1 MPI process
-    type: lmvmbfgs
-    Max. storage: 10
-    Used storage: 1
-    Number of updates: 1
-    Number of rejects: 0
-    Number of resets: 1
-    J0:
-      Mat Object: (qn_mat_lmvm_J0_) 1 MPI process
-        type: constantdiagonal
-        Diagonal value: 200.
-    Rescale type: scalar
-    Rescale history: 1
-    Rescale params: alpha=1., beta=0.5, rho=1.
-  maximum iterations=10000, maximum function evaluations=30000
-  tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
-  total number of function evaluations=5
-  norm schedule ALWAYS
-  SNESLineSearch Object: 1 MPI process
-    type: cp
-    maxstep=1.000000e+08, minlambda=1.000000e-12
-    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
-    maximum iterations=1
-E: 0.020000	-9.672931e-11	1.907257e+03	3.280409	1.995960981731483e-02	-1.699848	-12.566400	12.566400	8.140263622752704e-15	1.256644783738506e+01	5.003137263341081e-02	150000	(2)
-0.020000	12.566400	0.000000	0.000000	12.566402	-0.000018	12.566629
+    0 SNES Function norm 2.236029843201e+03
+    1 SNES Function norm 2.733218204448e-02
+    2 SNES Function norm 3.340958440077e-07
+    3 SNES Function norm 5.876793177091e-11
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+    0 SNES Function norm 2.236029843200e+03
+    1 SNES Function norm 2.733081543222e-02
+    2 SNES Function norm 3.340625740951e-07
+    3 SNES Function norm 6.034281383978e-11
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+    0 SNES Function norm 2.236029843217e+03
+    1 SNES Function norm 2.732674988113e-02
+    2 SNES Function norm 3.339630185946e-07
+    3 SNES Function norm 5.951266079365e-11
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+    0 SNES Function norm 2.236066683633e+03
+    1 SNES Function norm 2.731987132624e-02
+    2 SNES Function norm 3.337894755555e-07
+    3 SNES Function norm 5.955636576207e-11
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+    0 SNES Function norm 2.236029902635e+03
+    1 SNES Function norm 2.731025341357e-02
+    2 SNES Function norm 3.335600650444e-07
+    3 SNES Function norm 6.015557858701e-11
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 WARNING! There are options you set that were not used!
 WARNING! could be spelling mistake, etc!
-There is one unused database option. It is:
+There are 4 unused database options. They are:
+Option left: name:-efield_monitor_no (no value) source: command line
+Option left: name:-moments_monitor_no (no value) source: command line
+Option left: name:-start_in_debugger_no (no value) source: command line
 Option left: name:-ts_basicsymplectic_type value: 1 source: command line
