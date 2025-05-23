@@ -1,143 +1,415 @@
-Global Np = 150000
-Global X-cells = 50
+Global Np = 120000
+Global X-cells = 40
 Global V-cells = 3000
-c:0 [x_a,x_b] = 0.000000000000000,0.251328000000000 -> cell weight = 0.253834670502071
-c:1 [x_a,x_b] = 0.251328000000000,0.502656000000000 -> cell weight = 0.253795138626200
-c:2 [x_a,x_b] = 0.502656000000000,0.753984000000000 -> cell weight = 0.253716698318666
-c:3 [x_a,x_b] = 0.753984000000000,1.005312000000000 -> cell weight = 0.253600586635757
-c:4 [x_a,x_b] = 1.005312000000000,1.256640000000000 -> cell weight = 0.253448634736625
-c:5 [x_a,x_b] = 1.256640000000000,1.507968000000000 -> cell weight = 0.253263239004685
-c:6 [x_a,x_b] = 1.507968000000000,1.759296000000000 -> cell weight = 0.253047323255036
-c:7 [x_a,x_b] = 1.759296000000000,2.010624000000000 -> cell weight = 0.252804292623935
-c:8 [x_a,x_b] = 2.010624000000000,2.261952000000000 -> cell weight = 0.252537979867517
-c:9 [x_a,x_b] = 2.261952000000000,2.513280000000000 -> cell weight = 0.252252584916653
-c:10 [x_a,x_b] = 2.513280000000000,2.764608000000000 -> cell weight = 0.251952608641229
-c:11 [x_a,x_b] = 2.764608000000000,3.015936000000000 -> cell weight = 0.251642781868401
-c:12 [x_a,x_b] = 3.015936000000000,3.267264000000000 -> cell weight = 0.251327990774280
-c:13 [x_a,x_b] = 3.267264000000000,3.518592000000000 -> cell weight = 0.251013199825655
-c:14 [x_a,x_b] = 3.518592000000000,3.769920000000000 -> cell weight = 0.250703373487019
-c:15 [x_a,x_b] = 3.769920000000000,4.021248000000000 -> cell weight = 0.250403397927638
-c:16 [x_a,x_b] = 4.021248000000000,4.272576000000000 -> cell weight = 0.250118003963374
-c:17 [x_a,x_b] = 4.272576000000000,4.523904000000000 -> cell weight = 0.249851692448553
-c:18 [x_a,x_b] = 4.523904000000000,4.775232000000000 -> cell weight = 0.249608663294466
-c:19 [x_a,x_b] = 4.775232000000000,5.026560000000000 -> cell weight = 0.249392749233954
-c:20 [x_a,x_b] = 5.026560000000000,5.277888000000000 -> cell weight = 0.249207355376636
-c:21 [x_a,x_b] = 5.277888000000000,5.529216000000000 -> cell weight = 0.249055405508046
-c:22 [x_a,x_b] = 5.529216000000000,5.780544000000000 -> cell weight = 0.248939295979577
-c:23 [x_a,x_b] = 5.780544000000000,6.031872000000000 -> cell weight = 0.248860857916404
-c:24 [x_a,x_b] = 6.031872000000000,6.283200000000000 -> cell weight = 0.248821328339418
-c:25 [x_a,x_b] = 6.283200000000000,6.534528000000000 -> cell weight = 0.248821330656575
-c:26 [x_a,x_b] = 6.534528000000000,6.785856000000001 -> cell weight = 0.248860864831331
-c:27 [x_a,x_b] = 6.785856000000001,7.037184000000001 -> cell weight = 0.248939307383219
-c:28 [x_a,x_b] = 7.037184000000001,7.288511999999999 -> cell weight = 0.249055421220561
-c:29 [x_a,x_b] = 7.288511999999999,7.539840000000000 -> cell weight = 0.249207375150229
-c:30 [x_a,x_b] = 7.539840000000000,7.791168000000000 -> cell weight = 0.249392772756780
-c:31 [x_a,x_b] = 7.791168000000000,8.042496000000000 -> cell weight = 0.249608690195555
-c:32 [x_a,x_b] = 8.042496000000000,8.293824000000001 -> cell weight = 0.249851722303658
-c:33 [x_a,x_b] = 8.293824000000001,8.545152000000000 -> cell weight = 0.250118036301657
-c:34 [x_a,x_b] = 8.545152000000000,8.796479999999999 -> cell weight = 0.250403432239104
-c:35 [x_a,x_b] = 8.796479999999999,9.047808000000000 -> cell weight = 0.250703409230556
-c:36 [x_a,x_b] = 9.047808000000000,9.299135999999999 -> cell weight = 0.251013236437559
-c:37 [x_a,x_b] = 9.299135999999999,9.550464000000000 -> cell weight = 0.251328027677160
-c:38 [x_a,x_b] = 9.550464000000000,9.801792000000001 -> cell weight = 0.251642818480273
-c:39 [x_a,x_b] = 9.801792000000001,10.053120000000000 -> cell weight = 0.251952644384697
-c:40 [x_a,x_b] = 10.053120000000000,10.304447999999999 -> cell weight = 0.252252619228020
-c:41 [x_a,x_b] = 10.304447999999999,10.555776000000000 -> cell weight = 0.252538012205671
-c:42 [x_a,x_b] = 10.555776000000000,10.807103999999999 -> cell weight = 0.252804322478879
-c:43 [x_a,x_b] = 10.807103999999999,11.058432000000000 -> cell weight = 0.253047350155941
-c:44 [x_a,x_b] = 11.058432000000000,11.309760000000001 -> cell weight = 0.253263262527304
-c:45 [x_a,x_b] = 11.309760000000001,11.561088000000000 -> cell weight = 0.253448654509988
-c:46 [x_a,x_b] = 11.561088000000000,11.812415999999999 -> cell weight = 0.253600602348027
-c:47 [x_a,x_b] = 11.812415999999999,12.063744000000000 -> cell weight = 0.253716709722052
-c:48 [x_a,x_b] = 12.063744000000000,12.315071999999999 -> cell weight = 0.253795145540859
-c:49 [x_a,x_b] = 12.315071999999999,12.566400000000000 -> cell weight = 0.253834672818958
+c:0 [x_a,x_b] = 0.000000000000000,0.314160000000000 -> cell weight = 0.317288696556768
+c:1 [x_a,x_b] = 0.314160000000000,0.628320000000000 -> cell weight = 0.317211657304432
+c:2 [x_a,x_b] = 0.628320000000000,0.942480000000000 -> cell weight = 0.317059475770684
+c:3 [x_a,x_b] = 0.942480000000000,1.256640000000000 -> cell weight = 0.316835899187436
+c:4 [x_a,x_b] = 1.256640000000000,1.570800000000000 -> cell weight = 0.316546432777870
+c:5 [x_a,x_b] = 1.570800000000000,1.884960000000000 -> cell weight = 0.316198204198940
+c:6 [x_a,x_b] = 1.884960000000000,2.199120000000000 -> cell weight = 0.315799788033982
+c:7 [x_a,x_b] = 2.199120000000000,2.513280000000000 -> cell weight = 0.315360994657034
+c:8 [x_a,x_b] = 2.513280000000000,2.827440000000000 -> cell weight = 0.314892628667735
+c:9 [x_a,x_b] = 2.827440000000000,3.141600000000000 -> cell weight = 0.314406222844984
+c:10 [x_a,x_b] = 3.141600000000000,3.455760000000000 -> cell weight = 0.313913754170327
+c:11 [x_a,x_b] = 3.455760000000000,3.769920000000000 -> cell weight = 0.313427348913539
+c:12 [x_a,x_b] = 3.769920000000000,4.084080000000000 -> cell weight = 0.312958984042228
+c:13 [x_a,x_b] = 4.084080000000000,4.398239999999999 -> cell weight = 0.312520192307764
+c:14 [x_a,x_b] = 4.398239999999999,4.712400000000000 -> cell weight = 0.312121778269346
+c:15 [x_a,x_b] = 4.712400000000000,5.026560000000000 -> cell weight = 0.311773552248646
+c:16 [x_a,x_b] = 5.026560000000000,5.340720000000000 -> cell weight = 0.311484088766009
+c:17 [x_a,x_b] = 5.340720000000000,5.654880000000000 -> cell weight = 0.311260515406317
+c:18 [x_a,x_b] = 5.654880000000000,5.969040000000000 -> cell weight = 0.311108337313377
+c:19 [x_a,x_b] = 5.969040000000000,6.283200000000000 -> cell weight = 0.311031301634378
+c:20 [x_a,x_b] = 6.283200000000000,6.597360000000000 -> cell weight = 0.311031305252255
+c:21 [x_a,x_b] = 6.597360000000000,6.911520000000000 -> cell weight = 0.311108348077924
+c:22 [x_a,x_b] = 6.911520000000000,7.225680000000000 -> cell weight = 0.311260533052471
+c:23 [x_a,x_b] = 7.225680000000000,7.539840000000000 -> cell weight = 0.311484112859264
+c:24 [x_a,x_b] = 7.539840000000000,7.854000000000000 -> cell weight = 0.311773582195743
+c:25 [x_a,x_b] = 7.854000000000000,8.168160000000000 -> cell weight = 0.312121813332885
+c:26 [x_a,x_b] = 8.168160000000000,8.482320000000000 -> cell weight = 0.312520231624358
+c:27 [x_a,x_b] = 8.482320000000000,8.796479999999999 -> cell weight = 0.312959026643768
+c:28 [x_a,x_b] = 8.796479999999999,9.110640000000000 -> cell weight = 0.313427393751032
+c:29 [x_a,x_b] = 9.110640000000000,9.424799999999999 -> cell weight = 0.313913800139716
+c:30 [x_a,x_b] = 9.424799999999999,9.738960000000001 -> cell weight = 0.314406268814349
+c:31 [x_a,x_b] = 9.738960000000001,10.053120000000000 -> cell weight = 0.314892673505147
+c:32 [x_a,x_b] = 10.053120000000000,10.367279999999999 -> cell weight = 0.315361037258445
+c:33 [x_a,x_b] = 10.367279999999999,10.681440000000000 -> cell weight = 0.315799827350401
+c:34 [x_a,x_b] = 10.681440000000000,10.995600000000000 -> cell weight = 0.316198239262257
+c:35 [x_a,x_b] = 10.995600000000000,11.309760000000001 -> cell weight = 0.316546462724710
+c:36 [x_a,x_b] = 11.309760000000001,11.623920000000000 -> cell weight = 0.316835923280402
+c:37 [x_a,x_b] = 11.623920000000000,11.938079999999999 -> cell weight = 0.317059493416525
+c:38 [x_a,x_b] = 11.938079999999999,12.252239999999999 -> cell weight = 0.317211668068648
+c:39 [x_a,x_b] = 12.252239999999999,12.566400000000000 -> cell weight = 0.317288700174308
 particle weight sum = 12.5664002939 cell weight sum = 12.5664002939
 dim = 1	totalWeight = 12.566400, user->charges[species[0]] = -1.000000	totalCharge = -12.566400, Total Area = 12.566400
 sigma: 1.
 (x0,v0,t0,m0,q0,phi0): (1.000000e+00, 1.000000e+00, 1.000000e+00, 1.000000e+00, 1.000000e+00, 0.000000e+00) - (P, V) = (1.000000e+00, 1.000000e+00)
-Global Np = 150000
-Global X-cells = 50
+Global Np = 120000
+Global X-cells = 40
 Global V-cells = 3000
-c:0 [x_a,x_b] = 0.000000000000000,0.251328000000000 -> cell weight = 0.253834670502071
-c:1 [x_a,x_b] = 0.251328000000000,0.502656000000000 -> cell weight = 0.253795138626200
-c:2 [x_a,x_b] = 0.502656000000000,0.753984000000000 -> cell weight = 0.253716698318666
-c:3 [x_a,x_b] = 0.753984000000000,1.005312000000000 -> cell weight = 0.253600586635757
-c:4 [x_a,x_b] = 1.005312000000000,1.256640000000000 -> cell weight = 0.253448634736625
-c:5 [x_a,x_b] = 1.256640000000000,1.507968000000000 -> cell weight = 0.253263239004685
-c:6 [x_a,x_b] = 1.507968000000000,1.759296000000000 -> cell weight = 0.253047323255036
-c:7 [x_a,x_b] = 1.759296000000000,2.010624000000000 -> cell weight = 0.252804292623935
-c:8 [x_a,x_b] = 2.010624000000000,2.261952000000000 -> cell weight = 0.252537979867517
-c:9 [x_a,x_b] = 2.261952000000000,2.513280000000000 -> cell weight = 0.252252584916653
-c:10 [x_a,x_b] = 2.513280000000000,2.764608000000000 -> cell weight = 0.251952608641229
-c:11 [x_a,x_b] = 2.764608000000000,3.015936000000000 -> cell weight = 0.251642781868401
-c:12 [x_a,x_b] = 3.015936000000000,3.267264000000000 -> cell weight = 0.251327990774280
-c:13 [x_a,x_b] = 3.267264000000000,3.518592000000000 -> cell weight = 0.251013199825655
-c:14 [x_a,x_b] = 3.518592000000000,3.769920000000000 -> cell weight = 0.250703373487019
-c:15 [x_a,x_b] = 3.769920000000000,4.021248000000000 -> cell weight = 0.250403397927638
-c:16 [x_a,x_b] = 4.021248000000000,4.272576000000000 -> cell weight = 0.250118003963374
-c:17 [x_a,x_b] = 4.272576000000000,4.523904000000000 -> cell weight = 0.249851692448553
-c:18 [x_a,x_b] = 4.523904000000000,4.775232000000000 -> cell weight = 0.249608663294466
-c:19 [x_a,x_b] = 4.775232000000000,5.026560000000000 -> cell weight = 0.249392749233954
-c:20 [x_a,x_b] = 5.026560000000000,5.277888000000000 -> cell weight = 0.249207355376636
-c:21 [x_a,x_b] = 5.277888000000000,5.529216000000000 -> cell weight = 0.249055405508046
-c:22 [x_a,x_b] = 5.529216000000000,5.780544000000000 -> cell weight = 0.248939295979577
-c:23 [x_a,x_b] = 5.780544000000000,6.031872000000000 -> cell weight = 0.248860857916404
-c:24 [x_a,x_b] = 6.031872000000000,6.283200000000000 -> cell weight = 0.248821328339418
-c:25 [x_a,x_b] = 6.283200000000000,6.534528000000000 -> cell weight = 0.248821330656575
-c:26 [x_a,x_b] = 6.534528000000000,6.785856000000001 -> cell weight = 0.248860864831331
-c:27 [x_a,x_b] = 6.785856000000001,7.037184000000001 -> cell weight = 0.248939307383219
-c:28 [x_a,x_b] = 7.037184000000001,7.288511999999999 -> cell weight = 0.249055421220561
-c:29 [x_a,x_b] = 7.288511999999999,7.539840000000000 -> cell weight = 0.249207375150229
-c:30 [x_a,x_b] = 7.539840000000000,7.791168000000000 -> cell weight = 0.249392772756780
-c:31 [x_a,x_b] = 7.791168000000000,8.042496000000000 -> cell weight = 0.249608690195555
-c:32 [x_a,x_b] = 8.042496000000000,8.293824000000001 -> cell weight = 0.249851722303658
-c:33 [x_a,x_b] = 8.293824000000001,8.545152000000000 -> cell weight = 0.250118036301657
-c:34 [x_a,x_b] = 8.545152000000000,8.796479999999999 -> cell weight = 0.250403432239104
-c:35 [x_a,x_b] = 8.796479999999999,9.047808000000000 -> cell weight = 0.250703409230556
-c:36 [x_a,x_b] = 9.047808000000000,9.299135999999999 -> cell weight = 0.251013236437559
-c:37 [x_a,x_b] = 9.299135999999999,9.550464000000000 -> cell weight = 0.251328027677160
-c:38 [x_a,x_b] = 9.550464000000000,9.801792000000001 -> cell weight = 0.251642818480273
-c:39 [x_a,x_b] = 9.801792000000001,10.053120000000000 -> cell weight = 0.251952644384697
-c:40 [x_a,x_b] = 10.053120000000000,10.304447999999999 -> cell weight = 0.252252619228020
-c:41 [x_a,x_b] = 10.304447999999999,10.555776000000000 -> cell weight = 0.252538012205671
-c:42 [x_a,x_b] = 10.555776000000000,10.807103999999999 -> cell weight = 0.252804322478879
-c:43 [x_a,x_b] = 10.807103999999999,11.058432000000000 -> cell weight = 0.253047350155941
-c:44 [x_a,x_b] = 11.058432000000000,11.309760000000001 -> cell weight = 0.253263262527304
-c:45 [x_a,x_b] = 11.309760000000001,11.561088000000000 -> cell weight = 0.253448654509988
-c:46 [x_a,x_b] = 11.561088000000000,11.812415999999999 -> cell weight = 0.253600602348027
-c:47 [x_a,x_b] = 11.812415999999999,12.063744000000000 -> cell weight = 0.253716709722052
-c:48 [x_a,x_b] = 12.063744000000000,12.315071999999999 -> cell weight = 0.253795145540859
-c:49 [x_a,x_b] = 12.315071999999999,12.566400000000000 -> cell weight = 0.253834672818958
+c:0 [x_a,x_b] = 0.000000000000000,0.314160000000000 -> cell weight = 0.317288696556768
+c:1 [x_a,x_b] = 0.314160000000000,0.628320000000000 -> cell weight = 0.317211657304432
+c:2 [x_a,x_b] = 0.628320000000000,0.942480000000000 -> cell weight = 0.317059475770684
+c:3 [x_a,x_b] = 0.942480000000000,1.256640000000000 -> cell weight = 0.316835899187436
+c:4 [x_a,x_b] = 1.256640000000000,1.570800000000000 -> cell weight = 0.316546432777870
+c:5 [x_a,x_b] = 1.570800000000000,1.884960000000000 -> cell weight = 0.316198204198940
+c:6 [x_a,x_b] = 1.884960000000000,2.199120000000000 -> cell weight = 0.315799788033982
+c:7 [x_a,x_b] = 2.199120000000000,2.513280000000000 -> cell weight = 0.315360994657034
+c:8 [x_a,x_b] = 2.513280000000000,2.827440000000000 -> cell weight = 0.314892628667735
+c:9 [x_a,x_b] = 2.827440000000000,3.141600000000000 -> cell weight = 0.314406222844984
+c:10 [x_a,x_b] = 3.141600000000000,3.455760000000000 -> cell weight = 0.313913754170327
+c:11 [x_a,x_b] = 3.455760000000000,3.769920000000000 -> cell weight = 0.313427348913539
+c:12 [x_a,x_b] = 3.769920000000000,4.084080000000000 -> cell weight = 0.312958984042228
+c:13 [x_a,x_b] = 4.084080000000000,4.398239999999999 -> cell weight = 0.312520192307764
+c:14 [x_a,x_b] = 4.398239999999999,4.712400000000000 -> cell weight = 0.312121778269346
+c:15 [x_a,x_b] = 4.712400000000000,5.026560000000000 -> cell weight = 0.311773552248646
+c:16 [x_a,x_b] = 5.026560000000000,5.340720000000000 -> cell weight = 0.311484088766009
+c:17 [x_a,x_b] = 5.340720000000000,5.654880000000000 -> cell weight = 0.311260515406317
+c:18 [x_a,x_b] = 5.654880000000000,5.969040000000000 -> cell weight = 0.311108337313377
+c:19 [x_a,x_b] = 5.969040000000000,6.283200000000000 -> cell weight = 0.311031301634378
+c:20 [x_a,x_b] = 6.283200000000000,6.597360000000000 -> cell weight = 0.311031305252255
+c:21 [x_a,x_b] = 6.597360000000000,6.911520000000000 -> cell weight = 0.311108348077924
+c:22 [x_a,x_b] = 6.911520000000000,7.225680000000000 -> cell weight = 0.311260533052471
+c:23 [x_a,x_b] = 7.225680000000000,7.539840000000000 -> cell weight = 0.311484112859264
+c:24 [x_a,x_b] = 7.539840000000000,7.854000000000000 -> cell weight = 0.311773582195743
+c:25 [x_a,x_b] = 7.854000000000000,8.168160000000000 -> cell weight = 0.312121813332885
+c:26 [x_a,x_b] = 8.168160000000000,8.482320000000000 -> cell weight = 0.312520231624358
+c:27 [x_a,x_b] = 8.482320000000000,8.796479999999999 -> cell weight = 0.312959026643768
+c:28 [x_a,x_b] = 8.796479999999999,9.110640000000000 -> cell weight = 0.313427393751032
+c:29 [x_a,x_b] = 9.110640000000000,9.424799999999999 -> cell weight = 0.313913800139716
+c:30 [x_a,x_b] = 9.424799999999999,9.738960000000001 -> cell weight = 0.314406268814349
+c:31 [x_a,x_b] = 9.738960000000001,10.053120000000000 -> cell weight = 0.314892673505147
+c:32 [x_a,x_b] = 10.053120000000000,10.367279999999999 -> cell weight = 0.315361037258445
+c:33 [x_a,x_b] = 10.367279999999999,10.681440000000000 -> cell weight = 0.315799827350401
+c:34 [x_a,x_b] = 10.681440000000000,10.995600000000000 -> cell weight = 0.316198239262257
+c:35 [x_a,x_b] = 10.995600000000000,11.309760000000001 -> cell weight = 0.316546462724710
+c:36 [x_a,x_b] = 11.309760000000001,11.623920000000000 -> cell weight = 0.316835923280402
+c:37 [x_a,x_b] = 11.623920000000000,11.938079999999999 -> cell weight = 0.317059493416525
+c:38 [x_a,x_b] = 11.938079999999999,12.252239999999999 -> cell weight = 0.317211668068648
+c:39 [x_a,x_b] = 12.252239999999999,12.566400000000000 -> cell weight = 0.317288700174308
 particle weight sum = 12.5664002939 cell weight sum = 12.5664002939
-    0 SNES Function norm 2.236029843201e+03
-    1 SNES Function norm 2.733218204448e-02
-    2 SNES Function norm 3.340958440077e-07
-    3 SNES Function norm 5.876793177091e-11
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-    0 SNES Function norm 2.236029843200e+03
-    1 SNES Function norm 2.733081543222e-02
-    2 SNES Function norm 3.340625740951e-07
-    3 SNES Function norm 6.034281383978e-11
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-    0 SNES Function norm 2.236029843217e+03
-    1 SNES Function norm 2.732674988113e-02
-    2 SNES Function norm 3.339630185946e-07
-    3 SNES Function norm 5.951266079365e-11
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-    0 SNES Function norm 2.236066683633e+03
-    1 SNES Function norm 2.731987132624e-02
-    2 SNES Function norm 3.337894755555e-07
-    3 SNES Function norm 5.955636576207e-11
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-    0 SNES Function norm 2.236029902635e+03
-    1 SNES Function norm 2.731025341357e-02
-    2 SNES Function norm 3.335600650444e-07
-    3 SNES Function norm 6.015557858701e-11
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+    0 SNES Function norm 1.999955884836e+03
+    1 SNES Function norm 2.441947098415e-02
+    2 SNES Function norm 2.981618886857e-07
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+SNES Object: 2 MPI processes
+  type: qn
+    type is LBFGS, restart type is POWELL, scale type is SCALAR
+    Stored subspace size: 10
+  Mat Object: (qn_) 2 MPI processes
+    type: lmvmbfgs
+    Max. storage: 10
+    Used storage: 1
+    Number of updates: 1
+    Number of rejects: 0
+    Number of resets: 1
+    J0:
+      Mat Object: (qn_mat_lmvm_J0_) 2 MPI processes
+        type: constantdiagonal
+        Diagonal value: 200.
+    Rescale type: scalar
+    Rescale history: 1
+    Rescale params: alpha=1., beta=0.5, rho=1.
+  maximum iterations=10000, maximum function evaluations=30000
+  tolerances: relative=1e-08, absolute=1e-22, solution=1e-08
+  total number of function evaluations=5
+  norm schedule ALWAYS
+  SNESLineSearch Object: 2 MPI processes
+    type: cp
+    maxstep=1.000000e+08, minlambda=1.000000e-12
+    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+    maximum iterations=1
+E: 0.010000	-7.623749e+02	7.623749e+02	2.882169	1.987696985988327e-02	-1.701650	-6.283199853071580	12.566400293856075	7.856454202481711e-15	12.566447085862237	-1.154776345953566e+01	1.248913099634225e-03	120000	(1)
+    0 SNES Function norm 1.999955884836e+03
+    1 SNES Function norm 2.441825001000e-02
+    2 SNES Function norm 2.981319038831e-07
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+SNES Object: 2 MPI processes
+  type: qn
+    type is LBFGS, restart type is POWELL, scale type is SCALAR
+    Stored subspace size: 10
+  Mat Object: (qn_) 2 MPI processes
+    type: lmvmbfgs
+    Max. storage: 10
+    Used storage: 1
+    Number of updates: 1
+    Number of rejects: 0
+    Number of resets: 1
+    J0:
+      Mat Object: (qn_mat_lmvm_J0_) 2 MPI processes
+        type: constantdiagonal
+        Diagonal value: 200.
+    Rescale type: scalar
+    Rescale history: 1
+    Rescale params: alpha=1., beta=0.5, rho=1.
+  maximum iterations=10000, maximum function evaluations=30000
+  tolerances: relative=1e-08, absolute=1e-22, solution=1e-08
+  total number of function evaluations=5
+  norm schedule ALWAYS
+  SNESLineSearch Object: 2 MPI processes
+    type: cp
+    maxstep=1.000000e+08, minlambda=1.000000e-12
+    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+    maximum iterations=1
+E: 0.020000	-7.603220e+02	7.623368e+02	2.882147	1.987597679024752e-02	-1.701672	-6.283199853071582	12.566400293856082	8.284822480830734e-15	12.566447835160226	-1.154776345953566e+01	1.248788211443829e-03	120000	(2)
+    0 SNES Function norm 1.999955951450e+03
+    1 SNES Function norm 2.441456746585e-02
+    2 SNES Function norm 2.980422561952e-07
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+SNES Object: 2 MPI processes
+  type: qn
+    type is LBFGS, restart type is POWELL, scale type is SCALAR
+    Stored subspace size: 10
+  Mat Object: (qn_) 2 MPI processes
+    type: lmvmbfgs
+    Max. storage: 10
+    Used storage: 1
+    Number of updates: 1
+    Number of rejects: 0
+    Number of resets: 1
+    J0:
+      Mat Object: (qn_mat_lmvm_J0_) 2 MPI processes
+        type: constantdiagonal
+        Diagonal value: 200.
+    Rescale type: scalar
+    Rescale history: 1
+    Rescale params: alpha=1., beta=0.5, rho=1.
+  maximum iterations=10000, maximum function evaluations=30000
+  tolerances: relative=1e-08, absolute=1e-22, solution=1e-08
+  total number of function evaluations=5
+  norm schedule ALWAYS
+  SNESLineSearch Object: 2 MPI processes
+    type: cp
+    maxstep=1.000000e+08, minlambda=1.000000e-12
+    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+    maximum iterations=1
+E: 0.030000	-7.597607e+02	7.622193e+02	2.882080	1.987299763095154e-02	-1.701737	-6.283199853071577	12.566400293856073	7.910772731323235e-15	12.566449083748607	-1.154776345953565e+01	1.248413590584086e-03	120000	(3)
+    0 SNES Function norm 1.999989587946e+03
+    1 SNES Function norm 2.440846293852e-02
+    2 SNES Function norm 2.978878076603e-07
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+SNES Object: 2 MPI processes
+  type: qn
+    type is LBFGS, restart type is POWELL, scale type is SCALAR
+    Stored subspace size: 10
+  Mat Object: (qn_) 2 MPI processes
+    type: lmvmbfgs
+    Max. storage: 10
+    Used storage: 1
+    Number of updates: 1
+    Number of rejects: 0
+    Number of resets: 1
+    J0:
+      Mat Object: (qn_mat_lmvm_J0_) 2 MPI processes
+        type: constantdiagonal
+        Diagonal value: 200.
+    Rescale type: scalar
+    Rescale history: 1
+    Rescale params: alpha=1., beta=0.5, rho=1.
+  maximum iterations=10000, maximum function evaluations=30000
+  tolerances: relative=1e-08, absolute=1e-22, solution=1e-08
+  total number of function evaluations=5
+  norm schedule ALWAYS
+  SNESLineSearch Object: 2 MPI processes
+    type: cp
+    maxstep=1.000000e+08, minlambda=1.000000e-12
+    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+    maximum iterations=1
+E: 0.040000	-7.608029e+02	7.620288e+02	2.881971	1.986803257909034e-02	-1.701845	-6.283199853071876	12.566400293856066	7.296246939958451e-15	12.566450831206522	-1.154776345953650e+01	1.247789374251857e-03	120000	(4)
+    0 SNES Function norm 1.999994539025e+03
+    1 SNES Function norm 2.439993541895e-02
+    2 SNES Function norm 2.976792811096e-07
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+SNES Object: 2 MPI processes
+  type: qn
+    type is LBFGS, restart type is POWELL, scale type is SCALAR
+    Stored subspace size: 10
+  Mat Object: (qn_) 2 MPI processes
+    type: lmvmbfgs
+    Max. storage: 10
+    Used storage: 1
+    Number of updates: 1
+    Number of rejects: 0
+    Number of resets: 1
+    J0:
+      Mat Object: (qn_mat_lmvm_J0_) 2 MPI processes
+        type: constantdiagonal
+        Diagonal value: 200.
+    Rescale type: scalar
+    Rescale history: 1
+    Rescale params: alpha=1., beta=0.5, rho=1.
+  maximum iterations=10000, maximum function evaluations=30000
+  tolerances: relative=1e-08, absolute=1e-22, solution=1e-08
+  total number of function evaluations=5
+  norm schedule ALWAYS
+  SNESLineSearch Object: 2 MPI processes
+    type: cp
+    maxstep=1.000000e+08, minlambda=1.000000e-12
+    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+    maximum iterations=1
+E: 0.050000	-7.604895e+02	7.617650e+02	2.881821	1.986108082524262e-02	-1.701997	-6.283199853077682	12.566400293856066	4.904063266586434e-15	12.566453078300750	-1.154776345955298e+01	1.246915648124022e-03	120000	(5)
+    0 SNES Function norm 1.999998155625e+03
+    1 SNES Function norm 2.438885041599e-02
+    2 SNES Function norm 2.974082446216e-07
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+SNES Object: 2 MPI processes
+  type: qn
+    type is LBFGS, restart type is POWELL, scale type is SCALAR
+    Stored subspace size: 10
+  Mat Object: (qn_) 2 MPI processes
+    type: lmvmbfgs
+    Max. storage: 10
+    Used storage: 1
+    Number of updates: 1
+    Number of rejects: 0
+    Number of resets: 1
+    J0:
+      Mat Object: (qn_mat_lmvm_J0_) 2 MPI processes
+        type: constantdiagonal
+        Diagonal value: 200.
+    Rescale type: scalar
+    Rescale history: 1
+    Rescale params: alpha=1., beta=0.5, rho=1.
+  maximum iterations=10000, maximum function evaluations=30000
+  tolerances: relative=1e-08, absolute=1e-22, solution=1e-08
+  total number of function evaluations=5
+  norm schedule ALWAYS
+  SNESLineSearch Object: 2 MPI processes
+    type: cp
+    maxstep=1.000000e+08, minlambda=1.000000e-12
+    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+    maximum iterations=1
+E: 0.060000	-7.594523e+02	7.614147e+02	2.881621	1.985211139642225e-02	-1.702193	-6.283199853103389	12.566400293856070	-1.119391038195694e-13	12.566455843910589	-1.154776345962593e+01	1.245788778020286e-03	120000	(6)
+    0 SNES Function norm 2.000000932400e+03
+    1 SNES Function norm 2.437517511579e-02
+    2 SNES Function norm 2.970744483150e-07
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+SNES Object: 2 MPI processes
+  type: qn
+    type is LBFGS, restart type is POWELL, scale type is SCALAR
+    Stored subspace size: 10
+  Mat Object: (qn_) 2 MPI processes
+    type: lmvmbfgs
+    Max. storage: 10
+    Used storage: 1
+    Number of updates: 1
+    Number of rejects: 0
+    Number of resets: 1
+    J0:
+      Mat Object: (qn_mat_lmvm_J0_) 2 MPI processes
+        type: constantdiagonal
+        Diagonal value: 200.
+    Rescale type: scalar
+    Rescale history: 1
+    Rescale params: alpha=1., beta=0.5, rho=1.
+  maximum iterations=10000, maximum function evaluations=30000
+  tolerances: relative=1e-08, absolute=1e-22, solution=1e-08
+  total number of function evaluations=5
+  norm schedule ALWAYS
+  SNESLineSearch Object: 2 MPI processes
+    type: cp
+    maxstep=1.000000e+08, minlambda=1.000000e-12
+    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+    maximum iterations=1
+E: 0.070000	-7.595911e+02	7.609902e+02	2.881379	1.984097493311128e-02	-1.702437	-6.283199853160788	12.566400293856056	-1.981508707116220e-12	12.566459183826368	-1.154776345978882e+01	1.244390095892572e-03	120000	(7)
+    0 SNES Function norm 2.000002427801e+03
+    1 SNES Function norm 2.435848759025e-02
+    2 SNES Function norm 2.966678294893e-07
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+SNES Object: 2 MPI processes
+  type: qn
+    type is LBFGS, restart type is POWELL, scale type is SCALAR
+    Stored subspace size: 10
+  Mat Object: (qn_) 2 MPI processes
+    type: lmvmbfgs
+    Max. storage: 10
+    Used storage: 1
+    Number of updates: 1
+    Number of rejects: 0
+    Number of resets: 1
+    J0:
+      Mat Object: (qn_mat_lmvm_J0_) 2 MPI processes
+        type: constantdiagonal
+        Diagonal value: 200.
+    Rescale type: scalar
+    Rescale history: 1
+    Rescale params: alpha=1., beta=0.5, rho=1.
+  maximum iterations=10000, maximum function evaluations=30000
+  tolerances: relative=1e-08, absolute=1e-22, solution=1e-08
+  total number of function evaluations=5
+  norm schedule ALWAYS
+  SNESLineSearch Object: 2 MPI processes
+    type: cp
+    maxstep=1.000000e+08, minlambda=1.000000e-12
+    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+    maximum iterations=1
+E: 0.080000	-7.592541e+02	7.604710e+02	2.881083	1.982743214738587e-02	-1.702734	-6.283199853249651	12.566400293856073	-1.047906639933815e-11	12.566463161258964	-1.154776346004100e+01	1.242686838891240e-03	120000	(8)
+    0 SNES Function norm 2.000003333977e+03
+    1 SNES Function norm 2.433831017601e-02
+    2 SNES Function norm 2.961760456235e-07
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+SNES Object: 2 MPI processes
+  type: qn
+    type is LBFGS, restart type is POWELL, scale type is SCALAR
+    Stored subspace size: 10
+  Mat Object: (qn_) 2 MPI processes
+    type: lmvmbfgs
+    Max. storage: 10
+    Used storage: 1
+    Number of updates: 1
+    Number of rejects: 0
+    Number of resets: 1
+    J0:
+      Mat Object: (qn_mat_lmvm_J0_) 2 MPI processes
+        type: constantdiagonal
+        Diagonal value: 200.
+    Rescale type: scalar
+    Rescale history: 1
+    Rescale params: alpha=1., beta=0.5, rho=1.
+  maximum iterations=10000, maximum function evaluations=30000
+  tolerances: relative=1e-08, absolute=1e-22, solution=1e-08
+  total number of function evaluations=5
+  norm schedule ALWAYS
+  SNESLineSearch Object: 2 MPI processes
+    type: cp
+    maxstep=1.000000e+08, minlambda=1.000000e-12
+    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+    maximum iterations=1
+E: 0.090000	-7.579888e+02	7.598333e+02	2.880718	1.981129127002223e-02	-1.703087	-6.283199853363518	12.566400293856066	-3.051407737597600e-11	12.566467809982367	-1.154776346036414e+01	1.240648788040187e-03	120000	(9)
+    0 SNES Function norm 2.000003921272e+03
+    1 SNES Function norm 2.431513788659e-02
+    2 SNES Function norm 2.956123628300e-07
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+SNES Object: 2 MPI processes
+  type: qn
+    type is LBFGS, restart type is POWELL, scale type is SCALAR
+    Stored subspace size: 10
+  Mat Object: (qn_) 2 MPI processes
+    type: lmvmbfgs
+    Max. storage: 10
+    Used storage: 1
+    Number of updates: 1
+    Number of rejects: 0
+    Number of resets: 1
+    J0:
+      Mat Object: (qn_mat_lmvm_J0_) 2 MPI processes
+        type: constantdiagonal
+        Diagonal value: 200.
+    Rescale type: scalar
+    Rescale history: 1
+    Rescale params: alpha=1., beta=0.5, rho=1.
+  maximum iterations=10000, maximum function evaluations=30000
+  tolerances: relative=1e-08, absolute=1e-22, solution=1e-08
+  total number of function evaluations=5
+  norm schedule ALWAYS
+  SNESLineSearch Object: 2 MPI processes
+    type: cp
+    maxstep=1.000000e+08, minlambda=1.000000e-12
+    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+    maximum iterations=1
+E: 0.100000	-7.576501e+02	7.591111e+02	2.880305	1.979245144448499e-02	-1.703500	-6.283199853489966	12.566400293856068	-8.118002450818729e-11	12.566473201886350	-1.154776346072299e+01	1.238258510842056e-03	120000	(10)
 WARNING! There are options you set that were not used!
 WARNING! could be spelling mistake, etc!
-There are 4 unused database options. They are:
-Option left: name:-efield_monitor_no (no value) source: command line
-Option left: name:-moments_monitor_no (no value) source: command line
-Option left: name:-start_in_debugger_no (no value) source: command line
+There is one unused database option. It is:
 Option left: name:-ts_basicsymplectic_type value: 1 source: command line
