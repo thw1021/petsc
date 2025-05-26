@@ -821,6 +821,7 @@ linux-pkgs-dbg:
   tags:
     - gce-u22-stage3, linux-gcov
   variables:
+    KOKKOS_NUM_THREADS: 2
     TEST_ARCH: arch-ci-linux-pkgs-dbg
     PETSC_OPTIONS: -fp_trap
 
