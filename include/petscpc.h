@@ -87,7 +87,7 @@ PETSC_EXTERN PetscErrorCode PCSetFromOptions(PC);
 PETSC_EXTERN PetscErrorCode PCFactorGetMatrix(PC, Mat *);
 
 /*S
-  PCModifySubMatricesFn - A prototype of a function used to modify submatrices generated with `PCASM`, `PCBJACOBI`, etc
+  PCModifySubMatricesFn - A prototype of a function used to modify submatrices generated with `PCASM`, `PCBJACOBI`, etc.
 
   Calling Sequence:
 + pc     - the `PC` preconditioner context

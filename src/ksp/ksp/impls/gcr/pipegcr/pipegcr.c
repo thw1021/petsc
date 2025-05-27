@@ -127,7 +127,7 @@ static PetscErrorCode KSPSolve_PIPEGCR_cycle(KSP ksp)
     /* Computations of current iteration done */
     i++;
 
-    if (pipegcr->modifypc) PetscCall((*pipegcr->modifypc)(ksp, ksp->its, 0 /*unused argument */, ksp->rnorm, pipegcr->modifypc_ctx));
+    if (pipegcr->modifypc) PetscCall((*pipegcr->modifypc)(ksp, ksp->its, 0 /* unused argument */, ksp->rnorm, pipegcr->modifypc_ctx));
 
     /* If needbe, allocate a new chunk of vectors */
     PetscCall(KSPAllocateVectors_PIPEGCR(ksp, i + 1, pipegcr->vecb));

@@ -372,7 +372,7 @@ PETSC_EXTERN PetscErrorCode KSPPIPEGCRGetUnrollW(KSP, PetscBool *);
   KSPFlexibleModifyPCFn - A prototype of a function used to modify the preconditioner during the use of flexible `KSP` methods, such as `KSPFGMRES`
 
   Calling Sequence:
-+ ksp       - the ksp context being used.
++ ksp       - the `KSP` context being used.
 . total_its - the total number of iterations that have occurred.
 . local_its - the number of iterations since last restart if applicable
 . res_norm  - the current residual norm
