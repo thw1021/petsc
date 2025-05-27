@@ -7,11 +7,7 @@ program main
   use petscdmshell
   implicit none
   type(tDM)          :: dm
-  PetscInt           :: nfields
   PetscErrorCode     :: ierr
-  character(len=30), allocatable :: fieldNames(:)
-  type(tIS), allocatable        :: isFields(:)
-  type(tDM), allocatable        :: subDms(:)
   external :: myFieldDecomp
   ! initializing PETSc
   PetscCallA(PetscInitialize(PETSC_NULL_CHARACTER, ierr))
