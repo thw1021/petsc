@@ -2159,6 +2159,7 @@ class PythonPackage(Package):
 
   def Install(self):
     env = os.environ.copy()
+    env["CC"]      = self.compilers.CC    
     if 'Cxx' in self.buildLanguages:
       self.pushLanguage('C++')
       env["CXX"]      = self.compilers.CXX
