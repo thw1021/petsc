@@ -2129,7 +2129,8 @@ class PythonPackage(Package):
       dir = self.argDB['with-' + self.name + '-dir']
       sys.path.insert(0, dir)
       try:
-        importlib.import_module(self.name)
+        self.logPrint('Trying to import ' + self.pkgname + ' which was indicated with the --with-' + self.name + '-dir option')
+        importlib.import_module(self.pkgname)
         self.python.path.add(dir)
         self.pythonpath = dir
       except:
@@ -2138,16 +2139,18 @@ class PythonPackage(Package):
       dir = os.path.join(self.installDir,'lib')
       sys.path.insert(0, dir)
       try:
-        importlib.import_module(self.name)
+        self.logPrint('Trying to import ' + self.pkgname + ' which was just installed with the --download-' + self.name + ' option')
+        importlib.import_module(self.pkgname)
         self.python.path.add(dir)
         self.pythonpath = dir
       except:
         raise RuntimeError('--download-' + self.name + ' was not successful, send configure.log to petsc-maint@mcs.anl.gov')
     elif self.argDB.get('with-' + self.name):
       try:
-        importlib.import_module(self.name)
+        self.logPrint('Trying to import ' + self.pkgname + ' which was just included with the --with-' + self.name + ' option')
+        importlib.import_module(self.pkgname)
       except:
-        raise RuntimeError(self.name + ' not found in default Python PATH! Suggest --download-' + self.name + ' or --with-' + self.name + '-path!')
+        raise RuntimeError(self.name + ' not found in default Python PATH! Suggest --download-' + self.name + ' or --with-' + self.name + '-dir')
     self.found = 1
 
   def downLoad(self):
