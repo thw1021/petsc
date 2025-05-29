@@ -412,7 +412,7 @@ allgtags:
 # ********* Rules for building "classic" documentation; uses rules also in lib/petsc/conf/rules_doc.mk **************************************************
 
 docs:
-	cd doc; time ${OMAKE_SELF} sphinxhtml
+	cd doc; make docs
 
 chk_in_petscdir:
 	@if [ ! -f include/petscversion.h ]; then \
