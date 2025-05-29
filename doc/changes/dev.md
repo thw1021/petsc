@@ -13,9 +13,10 @@
 - Add `PETSCPYTHONPATH` to the generated `$PETSC_DIR/$PETSC_ARCH/lib/pkgconfig/PETSc.pc` file so it is available to users with
   `PKG_CONFIG_PATH=$PETSC_DIR/$PETSC_ARCH/lib/pkgconfig pkg-config --variable=PETSCPYTHONPATH PETSc.pc`
 
-
 ```{rubric} Configure/Build:
 ```
+
+- Add support for `--download-xxx`, `--with-xxx`, and `-with-xxx-dir` for Python packages that install with pip. See packages.py
 
 ```{rubric} Sys:
 ```
