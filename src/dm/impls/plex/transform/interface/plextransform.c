@@ -97,6 +97,7 @@ PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_BL(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_1D(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Extrude(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Cohesive(DMPlexTransform);
+PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Interpolate(DMPlexTransform);
 
 /*@C
   DMPlexTransformRegisterAll - Registers all of the transform components in the `DM` package.
@@ -122,6 +123,7 @@ PetscErrorCode DMPlexTransformRegisterAll(void)
   PetscCall(DMPlexTransformRegister(DMPLEXREFINE1D, DMPlexTransformCreate_1D));
   PetscCall(DMPlexTransformRegister(DMPLEXEXTRUDETYPE, DMPlexTransformCreate_Extrude));
   PetscCall(DMPlexTransformRegister(DMPLEXCOHESIVEEXTRUDE, DMPlexTransformCreate_Cohesive));
+  PetscCall(DMPlexTransformRegister(DMPLEXTRANSFORMINTERPOLATE, DMPlexTransformCreate_Interpolate));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
