@@ -76,7 +76,6 @@ class Configure(config.package.Package):
     self.addPost(self.packageDir,[carg + ' ' + self.python.pyexe + ' ./configure --prefix=' + prefix + ' ' + configargs,
                                   barg + ' ${OMAKE} ' + barg,
                                   barg + ' ${OMAKE} ' + barg + ' install'])
-    # this checks SLEPc using the pre-installed libraries, I think that is wrong and it should use the post-installed prefix location
     self.addMakeCheck(self.packageDir, '${OMAKE} ' + checkarg + ' check')
     self.addTest(self.packageDir, barg + ' ${OMAKE} ' + barg + ' test')
     if 'download-slepc-configure-arguments' in self.argDB and self.argDB['download-slepc-configure-arguments'].find('--with-slepc4py')>-1:
