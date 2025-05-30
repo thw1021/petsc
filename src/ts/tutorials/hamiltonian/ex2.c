@@ -166,7 +166,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscInt d                      = 2;
   PetscInt maxSpecies             = 2;
   options->error                  = PETSC_FALSE;
-  options->remapFreq              = 1;
+  options->remapFreq              = 0;
   options->efield_monitor         = PETSC_FALSE;
   options->moment_monitor         = PETSC_FALSE;
   options->initial_monitor        = PETSC_FALSE;
@@ -458,7 +458,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   DM          sw;
   PetscScalar intESq;
   PetscReal  *E, *x, *weight;
-  PetscReal   Enorm = 0., lgEnorm, lgEmax, sum = 0., Emax = 0., chargesum = 0., entropy=0.;
+  PetscReal   Enorm = 0., lgEnorm, lgEmax, sum = 0., Emax = 0., chargesum = 0., entropy=0., weightsum = 0.;
   PetscReal   pmoments[4], fmoments[4]; /* \int f, \int v f, \int v^2 f */
   PetscInt   *species, dim, Np, gNp;
   MPI_Comm    comm;
@@ -475,8 +475,9 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(DMSwarmGetField(sw, "E_field", NULL, NULL, (void **)&E));
   PetscCall(DMSwarmGetField(sw, "species", NULL, NULL, (void **)&species));
   PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
-
+  // PetscCall(PetscPrintf(PETSC_COMM_WORLD,"t = %f - weights\n",t));
   for (PetscInt p = 0; p < Np; ++p) {
+    // PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%1.16e\n",weight[p]));
     for (PetscInt d = 0; d < 1; ++d) {
       PetscReal temp = PetscAbsReal(E[p * dim + d]);
       if (temp > Emax) Emax = temp;
@@ -484,6 +485,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
     Enorm += PetscSqrtReal(E[p * dim] * E[p * dim]);
     sum += E[p * dim];
     chargesum += weight[p];
+    weightsum += weight[p];
   }
   entropy += -chargesum * PetscLogReal(chargesum);
   chargesum *= user->charges[0];
@@ -512,7 +514,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
 
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", pmoments));
   // PetscCall(PetscPrintf(comm, "E: %f\t%+e\t%e\t%f\t%20.15e\t%f\t%2.15f\t%2.15f\t%20.15e\t%2.15f\t%20.15e\t%20.15e\t%" PetscInt_FMT "\t(%" PetscInt_FMT ")\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double) entropy, (double)PetscSqrtReal(intESq), gNp, step));
-  PetscCall(PetscPrintf(comm, "E: %f\t%+e\t%e\t%f\t%20.15e\t%f\t%2.15f\t%2.15f\t%20.15e\t%2.15f\t%20.15e\t%20.15e\t%" PetscInt_FMT "\t(%" PetscInt_FMT ")\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double) entropy, (double)0.5*intESq, gNp, step));
+  PetscCall(PetscPrintf(comm, "E: %f\t%+e\t%e\t%f\t%20.15e\t%f\t%2.15f\t%2.15f\t%2.15f\t%20.15e\t%2.15f\t%20.15e\t%20.15e\t%" PetscInt_FMT "\t(%" PetscInt_FMT ")\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double) weightsum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double) entropy, (double)0.5*intESq, gNp, step));
   PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2487,7 +2489,7 @@ int main(int argc, char **argv)
              -cosine_coefficients 0.0 -em_type primal -petscspace_degree 1 -em_pc_type svd
      test:
        suffix: landau_damping_1d
-       args: -em_type primal -petscspace_degree 1 -em_pc_type svd
+       args: -em_type primal -petscspace_degree 1 -em_pc_type svd -remap_freq 0
      test:
        suffix: landau_damping_1d_real
        args: -dm_plex_dim 1 -dm_plex_simplex 1 -dm_plex_box_faces 10 \
@@ -2523,6 +2525,7 @@ int main(int argc, char **argv)
                -em_fieldsplit_potential_pc_type svd
      test:
        suffix: landau_damping_1d_dg
-       args: -em_type primal -petscspace_degree 1 -em_pc_type svd -ts_type discgrad -ts_discgrad_type average -snes_fd -snes_type qn
+       args: -em_type primal -petscspace_degree 1 -em_pc_type svd -ts_type discgrad -ts_discgrad_type average \
+             -snes_fd -snes_type qn -remap_freq 0
 
 TEST*/

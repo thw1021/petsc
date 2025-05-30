@@ -2481,7 +2481,7 @@ PetscErrorCode DMSwarmComputeMoments(DM sw, const char coordinate[], const char 
     mom[0] += wp;
     for (PetscInt d = 0; d < bsc; ++d) {
       mom[d + 1] += wp * c[d];
-      mom[d + bsc + 1] += wp * PetscSqr(c[d]);
+      mom[d + bsc + 1] += 0.5 * wp * PetscSqr(c[d]);
     }
   }
   PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **)&coords));
