@@ -123,6 +123,13 @@ check: check_body ${PETSC_POST_CHECKS}
 check_install: check
 
 check_body:
+        # Incomplete test that make install has already been run
+	@if [ ! -z ${PREFIXDIR} ] ; then\
+          if [ ! -d ${PREFIXDIR}/lib ]; then\
+            echo "When using ./configure --prefix you must run make install before make check";\
+            exit 1;\
+           fi;\
+        fi;
 	-@echo "Running PETSc check examples to verify correct installation"
 	-@echo "Using PETSC_DIR=${PETSC_DIR} and PETSC_ARCH=${PETSC_ARCH}"
 	@if [ "${PETSC_WITH_BATCH}" != "" ]; then \
