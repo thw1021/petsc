@@ -502,7 +502,7 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_ViaMat(DM dm, PetscInt height
 @*/
 PetscErrorCode DMPlexCreatePartitionerGraph(DM dm, PetscInt height, PetscInt *numVertices, PetscInt **offsets, PetscInt **adjacency, IS *globalNumbering)
 {
-  DMPlexCSRAlgorithm alg = DM_PLEX_CSR_GRAPH;
+  DMPlexCSRAlgorithm alg = DM_PLEX_CSR_MAT;
 
   PetscFunctionBegin;
   PetscCall(PetscOptionsGetEnum(((PetscObject)dm)->options, ((PetscObject)dm)->prefix, "-dm_plex_csr_alg", DMPlexCSRAlgorithms, (PetscEnum *)&alg, NULL));

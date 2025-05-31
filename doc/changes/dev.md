@@ -122,6 +122,7 @@
 - Rename `DMPlexComputeResidual_Hybrid_Internal()` to `DMPlexComputeResidualHybridByKey()`
 - Rename `DMPlexComputeJacobian_Hybrid_Internal()` to `DMPlexComputeJacobianHybridByKey()`
 - Add `DMPlexInsertBounds()`
+- Change default `-dm_plex_csr_alg` from `graph` to `mat` for better isoperiodicity handling
 
 ```{rubric} FE/FV:
 ```
