@@ -244,6 +244,7 @@ cdef extern from * nogil:
     ctypedef PetscErrorCode PetscTaoLineSearchGradient(PetscTAOLineSearch, PetscVec, PetscVec, void*) except PETSC_ERR_PYTHON
     ctypedef PetscErrorCode PetscTaoLineSearchObjGrad(PetscTAOLineSearch, PetscVec, PetscReal*, PetscVec, void*) except PETSC_ERR_PYTHON
     ctypedef PetscErrorCode PetscTaoLineSearchObjGTS(PetscTaoLineSearch, PetscVec, PetscVec, PetscReal*, PetscReal*, void*) except PETSC_ERR_PYTHON
+    ctypedef PetscErrorCode PetscTaoLineSearchMonitor(PetscTAOLineSearch, PetscInt, PetscReal, PetscReal) except PETSC_ERR_PYTHON
 
     PetscErrorCode TaoLineSearchCreate(MPI_Comm, PetscTAOLineSearch*)
     PetscErrorCode TaoLineSearchDestroy(PetscTAOLineSearch*)
@@ -259,6 +260,7 @@ cdef extern from * nogil:
     PetscErrorCode TaoLineSearchSetGradientRoutine(PetscTAOLineSearch, PetscTaoLineSearchGradient, void*)
     PetscErrorCode TaoLineSearchSetObjectiveAndGradientRoutine(PetscTAOLineSearch, PetscTaoLineSearchObjGrad, void*)
     PetscErrorCode TaoLineSearchApply(PetscTAOLineSearch, PetscVec, PetscReal*, PetscVec, PetscVec, PetscReal*, PetscTAOLineSearchConvergedReason*)
+    PetscErrorCode TaoLineSearchMonitorSet(PetscTAOLineSearch, PetscTaoLineSearchMonitor)
 
 # --------------------------------------------------------------------
 
@@ -613,4 +615,14 @@ cdef PetscErrorCode TAOLS_ObjGrad(PetscTAOLineSearch _ls,
     (objgrad, args, kargs) = ls.get_attr("__objgrad__")
     retv = objgrad(ls, x, g, *args, **kargs)
     _f[0] = asReal(retv)
+    return PETSC_SUCCESS
+
+cdef PetscErrorCode TAOLS_Monitor(PetscTAOLineSearch _ls,
+                                  PetscInt its,
+                                  PetscReal f,
+                                  PetscReal step) except PETSC_ERR_PYTHON with gil:
+
+    cdef TAOLineSearch ls = ref_TAOLS(_ls)
+    monitor = ls.get_attr("__monitor__")
+    monitor(ls, asInt(its), asReal(f), asReal(step))
     return PETSC_SUCCESS

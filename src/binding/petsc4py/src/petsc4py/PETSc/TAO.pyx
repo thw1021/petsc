@@ -2390,6 +2390,18 @@ cdef class TAOLineSearch(Object):
         CHKERR(TaoLineSearchApply(self.taols, x.vec, &f, g.vec, s.vec, &steplen, &reason))
         return (toReal(f), toReal(steplen), reason)
 
+    def setMonitor(self, monitor: TAOLSMonitorFunction) -> None:
+        """Set the line search monitor.
+
+        Logically collective.
+
+        See Also
+        --------
+        petsc.TaoLineSearchMonitorSet
+        """
+        CHKERR(TaoLineSearchMonitorSet(self.taols, TAOLS_Monitor))
+        self.set_attr("__monitor__", (monitor))
+
 # --------------------------------------------------------------------
 
 del TAOLineSearchType

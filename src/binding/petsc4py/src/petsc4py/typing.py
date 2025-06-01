@@ -425,3 +425,6 @@ TAOLSGradientFunction = Callable[[TAOLineSearch, Vec, Vec], None]
 
 TAOLSObjectiveGradientFunction = Callable[[TAOLineSearch, Vec, Vec], float]
 """`TAOLineSearch` objective function and gradient callback."""
+
+TAOLSMonitorFunction = Callable[[TAOLineSearch, int, float, float], None]
+"""`TAOLineSearch` monitor callback."""
