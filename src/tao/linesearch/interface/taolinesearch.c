@@ -501,7 +501,7 @@ PetscErrorCode TaoLineSearchSetFromOptions(TaoLineSearch ls)
   PetscCall(PetscOptionsReal("-tao_ls_stepmin", "lower bound for step", "", ls->stepmin, &ls->stepmin, NULL));
   PetscCall(PetscOptionsReal("-tao_ls_stepmax", "upper bound for step", "", ls->stepmax, &ls->stepmax, NULL));
   PetscCall(PetscOptionsReal("-tao_ls_stepinit", "initial step", "", ls->initstep, &ls->initstep, NULL));
-  PetscCall(PetscOptionsString("-tao_ls_monitor", "enable the basic monitor", "TaoLineSearchSetMonitor", "stdout", monfilename, sizeof(monfilename), &flg));
+  PetscCall(PetscOptionsString("-tao_ls_monitor", "enable the basic monitor", "TaoLineSearchMonitor", "stdout", monfilename, sizeof(monfilename), &flg));
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(PetscObjectComm((PetscObject)ls), monfilename, &monviewer));
     ls->viewer     = monviewer;
