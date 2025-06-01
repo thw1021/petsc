@@ -701,7 +701,7 @@ PetscErrorCode SNESLineSearchDestroy(SNESLineSearch *linesearch)
   `SNESLineSearchMonitorSet()` since it is called in many locations of the line search routines to display aspects of the
   line search that are not visible to the other monitors.
 
-.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `PETSCVIEWERASCII`, `SNESGetLineSearch()`, `SNESLineSearchGetDefaultMonitor()`, `PetscViewer`, `SNESLineSearchSetMonitor()`,
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `PETSCVIEWERASCII`, `SNESGetLineSearch()`, `SNESLineSearchGetDefaultMonitor()`, `PetscViewer`, `SNESLineSearchMonitorSet()`,
           `SNESLineSearchMonitorSetFromOptions()`
 @*/
 PetscErrorCode SNESLineSearchSetDefaultMonitor(SNESLineSearch linesearch, PetscViewer viewer)
@@ -758,7 +758,7 @@ PetscErrorCode SNESLineSearchGetDefaultMonitor(SNESLineSearch linesearch, PetscV
 
   Level: advanced
 
-.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchSetMonitor()`, `PetscOptionsCreateViewer()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,
+.seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchMonitorSet()`, `PetscOptionsCreateViewer()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,
           `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`
           `PetscOptionsInt()`, `PetscOptionsString()`, `PetscOptionsReal()`,
           `PetscOptionsName()`, `PetscOptionsBegin()`, `PetscOptionsEnd()`, `PetscOptionsHeadBegin()`,
