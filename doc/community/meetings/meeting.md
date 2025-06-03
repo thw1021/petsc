@@ -25,7 +25,7 @@ simulations by scientists and engineers.
 
 ## Upcoming Meetings
 
-- The `2026 PETSc annual user meeting` will be held at Imperial College London, UK, during the week of June 1~5, 2026. Please check back later for further details.  
+- The `2026 PETSc annual user meeting` will be held at Imperial College London, UK, during the week of June 1~5, 2026 (tentative). Please check back later for further details.  
 
 ## Previous Meetings
 
