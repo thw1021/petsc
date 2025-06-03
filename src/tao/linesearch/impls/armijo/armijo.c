@@ -284,7 +284,7 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_Armijo(TaoLineSearch ls)
   ls->data                = (void *)armP;
   ls->initstep            = 1.0;
   ls->ops->setup          = NULL;
-  ls->ops->monitor        = NULL;
+  ls->monitor             = NULL;
   ls->ops->apply          = TaoLineSearchApply_Armijo;
   ls->ops->view           = TaoLineSearchView_Armijo;
   ls->ops->destroy        = TaoLineSearchDestroy_Armijo;

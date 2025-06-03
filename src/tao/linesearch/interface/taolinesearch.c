@@ -192,7 +192,7 @@ PetscErrorCode TaoLineSearchSetUp(TaoLineSearch ls)
       ls->hasobjectiveandgradient = PETSC_FALSE;
     }
   }
-  if (ls->usemonitor && !ls->ops->monitor) { ls->ops->monitor = TaoLineSearchMonitorDefault; }
+  if (ls->usemonitor && !ls->monitor) { ls->monitor = TaoLineSearchMonitorDefault; }
 
   ls->setupcalled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -248,7 +248,7 @@ PetscErrorCode TaoLineSearchDestroy(TaoLineSearch *ls)
   PetscCall(VecDestroy(&(*ls)->lower));
   PetscTryTypeMethod(*ls, destroy);
   if ((*ls)->usemonitor) PetscCall(PetscViewerDestroy(&(*ls)->viewer));
-  if ((*ls)->ops->monitordestroy) PetscCall(((*ls)->ops->monitordestroy)((*ls)->monitorcontext));
+  if ((*ls)->monitordestroy) PetscCall(((*ls)->monitordestroy)((*ls)->monitorcontext));
   PetscCall(PetscHeaderDestroy(ls));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -436,7 +436,7 @@ PetscErrorCode TaoLineSearchSetType(TaoLineSearch ls, TaoLineSearchType type)
 PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step)
 {
   PetscFunctionBegin;
-  if (ls->usemonitor && ls->ops->monitor) { PetscUseTypeMethod(ls, monitor, its, f, step, ls->monitorcontext); }
+  if (ls->usemonitor && ls->monitor) { ls->monitor(ls, its, f, step, ls->monitorcontext); }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -449,11 +449,11 @@ PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f,
 
 .seealso: `TaoLineSearchMonitor`
 */
-PETSC_EXTERN PetscErrorCode TaoLineSearchMonitorSet(TaoLineSearch ls, PetscErrorCode (*monitor)(TaoLineSearch, PetscInt, PetscReal, PetscReal, void*), void * mctx, PetscCtxDestroyFn* monitordestroy)
+PETSC_EXTERN PetscErrorCode TaoLineSearchMonitorSet(TaoLineSearch ls, PetscErrorCode (*monitor)(TaoLineSearch, PetscInt, PetscReal, PetscReal, void *), void *mctx, PetscCtxDestroyFn *monitordestroy)
 {
   PetscFunctionBegin;
-  ls->ops->monitor = monitor;
-  ls->ops->monitordestroy = monitordestroy;
+  ls->monitor        = monitor;
+  ls->monitordestroy = monitordestroy;
   ls->monitorcontext = mctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -473,7 +473,7 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchMonitorSet(TaoLineSearch ls, PetscError
 .seealso: `TaoLineSearchMonitor`
 */
 
-PetscErrorCode TaoLineSearchMonitorDefault(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step, void* mctx)
+PetscErrorCode TaoLineSearchMonitorDefault(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step, void *mctx)
 {
   PetscInt tabs;
 
