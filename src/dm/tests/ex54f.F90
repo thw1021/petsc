@@ -11,13 +11,10 @@ program main
   external :: myFieldDecomp
   ! initializing PETSc
   PetscCallA(PetscInitialize(PETSC_NULL_CHARACTER, ierr))
-  if (ierr /= 0) stop 'Error in PetscInitialize'
   ! creating a DMShell object
   PetscCallA(DMShellCreate(PETSC_COMM_WORLD, dm, ierr))
-  if (ierr /= 0) stop 'Error in DMShellCreate'
   ! registering the Fortran field decomposition callback
   PetscCallA(DMShellSetCreateFieldDecomposition(dm, myFieldDecomp, ierr))
-  if (ierr /= 0) stop 'Error in DMShellSetCreateFieldDecomposition'
   ! for this minimal test, we simply print a success message to the console
   print *, 'DMShellSetCreateFieldDecomposition set successfully.'
   ! cleanup
@@ -54,5 +51,4 @@ end subroutine myFieldDecomp
 !/*TEST
 !
 !   test:
-!      args: -dm_view
 !TEST*/
