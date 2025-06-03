@@ -248,6 +248,7 @@ PetscErrorCode TaoLineSearchDestroy(TaoLineSearch *ls)
   PetscCall(VecDestroy(&(*ls)->lower));
   PetscTryTypeMethod(*ls, destroy);
   if ((*ls)->usemonitor) PetscCall(PetscViewerDestroy(&(*ls)->viewer));
+  if ((*ls)->ops->monitordestroy) PetscCall(((*ls)->ops->monitordestroy)((*ls)->monitorcontext));
   PetscCall(PetscHeaderDestroy(ls));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -435,7 +436,7 @@ PetscErrorCode TaoLineSearchSetType(TaoLineSearch ls, TaoLineSearchType type)
 PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step)
 {
   PetscFunctionBegin;
-  if (ls->usemonitor && ls->ops->monitor) { PetscUseTypeMethod(ls, monitor, its, f, step); }
+  if (ls->usemonitor && ls->ops->monitor) { PetscUseTypeMethod(ls, monitor, its, f, step, ls->monitorcontext); }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -448,10 +449,12 @@ PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f,
 
 .seealso: `TaoLineSearchMonitor`
 */
-PETSC_EXTERN PetscErrorCode TaoLineSearchMonitorSet(TaoLineSearch ls, PetscErrorCode (*monitor)(TaoLineSearch, PetscInt, PetscReal, PetscReal))
+PETSC_EXTERN PetscErrorCode TaoLineSearchMonitorSet(TaoLineSearch ls, PetscErrorCode (*monitor)(TaoLineSearch, PetscInt, PetscReal, PetscReal, void*), void * mctx, PetscCtxDestroyFn* monitordestroy)
 {
   PetscFunctionBegin;
   ls->ops->monitor = monitor;
+  ls->ops->monitordestroy = monitordestroy;
+  ls->monitorcontext = mctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -462,13 +465,15 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchMonitorSet(TaoLineSearch ls, PetscError
 + ls   - the `TaoLineSearch` context
 . its  - the current iterate number (>=0)
 . f    - the current objective function value
-- step - the step length
+. step - the step length
+- context - the monitor context
 
   Level: developer
 
 .seealso: `TaoLineSearchMonitor`
 */
-PetscErrorCode TaoLineSearchMonitorDefault(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step)
+
+PetscErrorCode TaoLineSearchMonitorDefault(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step, void* mctx)
 {
   PetscInt tabs;
 

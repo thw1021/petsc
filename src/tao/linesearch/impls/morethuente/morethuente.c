@@ -20,7 +20,7 @@ static PetscErrorCode TaoLineSearchDestroy_MT(TaoLineSearch ls)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoLineSearchMonitor_MT(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step)
+static PetscErrorCode TaoLineSearchMonitor_MT(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step, void* mctx)
 {
   PetscInt          tabs;
   TaoLineSearch_MT *mt = (TaoLineSearch_MT *)ls->data;
@@ -305,7 +305,7 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_MT(TaoLineSearch ls)
   ls->ops->reset   = NULL;
   ls->ops->apply   = TaoLineSearchApply_MT;
   ls->ops->destroy = TaoLineSearchDestroy_MT;
-  PetscCall(TaoLineSearchMonitorSet(ls, TaoLineSearchMonitor_MT));
+  PetscCall(TaoLineSearchMonitorSet(ls, TaoLineSearchMonitor_MT, NULL, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
