@@ -58,7 +58,7 @@ int main(int argc, char **argv)
   PetscInt nonlocalCols;
   PetscCall(MatGetLocalSize(AB, NULL, &nonlocalCols));
   PetscCall(PetscMalloc1(nonlocalCols, &garray_h));
-  for (int i = 0; i < nonlocalCols; i++) { garray_h[i] = garray[i]; }
+  for (int i = 0; i < nonlocalCols; i++) garray_h[i] = garray[i];
 
   // Build our MPI matrix
   // If we provide garray and output_mat_nonlocal with local indices and the compactified size

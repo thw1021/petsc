@@ -20,5 +20,5 @@ PETSC_EXTERN void pcbjacobigetsubksp_(PC *pc, PetscInt *n_local, PetscInt *first
   if (first_local) *first_local = flocal;
   *ierr = F90Array1dAccess(ksp, MPIU_FORTRANADDR, (void **)&iksp PETSC_F90_2PTR_PARAM(ptrd));
   if (*ierr) return;
-  if (!iksp || *iksp == 0) { *ierr = F90Array1dCreate(tksp, MPIU_FORTRANADDR, 1, nloc, ksp PETSC_F90_2PTR_PARAM(ptrd)); }
+  if (!iksp || *iksp == 0) *ierr = F90Array1dCreate(tksp, MPIU_FORTRANADDR, 1, nloc, ksp PETSC_F90_2PTR_PARAM(ptrd));
 }
