@@ -20,9 +20,9 @@ PETSC_EXTERN void matnullspacegetvecs_(MatNullSpace *sp, PetscBool *HAS_CNST, Pe
 
   *ierr = MatNullSpaceGetVecs(*sp, &has_cnst, &n, &vecs);
 
-  if (HAS_CNST) { *HAS_CNST = has_cnst; }
-  if (N) { *N = n; }
+  if (HAS_CNST) *HAS_CNST = has_cnst;
+  if (N) *N = n;
   if (VECS) {
-    for (i = 0; i < n; i++) { VECS[i] = vecs[i]; }
+    for (i = 0; i < n; i++) VECS[i] = vecs[i];
   }
 }

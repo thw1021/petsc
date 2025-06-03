@@ -2506,9 +2506,8 @@ PetscErrorCode MatSetValuesLocal(Mat mat, PetscInt nrow, const PetscInt irow[], 
     if (mat->rmap->mapping) PetscCall(ISLocalToGlobalMappingApply(mat->rmap->mapping, nrow, irow, bufr));
     else irowm = irow;
     if (mat->cmap->mapping) {
-      if (mat->cmap->mapping != mat->rmap->mapping || ncol != nrow || icol != irow) {
-        PetscCall(ISLocalToGlobalMappingApply(mat->cmap->mapping, ncol, icol, bufc));
-      } else icolm = irowm;
+      if (mat->cmap->mapping != mat->rmap->mapping || ncol != nrow || icol != irow) PetscCall(ISLocalToGlobalMappingApply(mat->cmap->mapping, ncol, icol, bufc));
+      else icolm = irowm;
     } else icolm = icol;
     PetscCall(MatSetValues(mat, nrow, irowm, ncol, icolm, y, addv));
     if (bufr != buf) PetscCall(PetscFree2(bufr, bufc));
@@ -2607,9 +2606,8 @@ PetscErrorCode MatSetValuesBlockedLocal(Mat mat, PetscInt nrow, const PetscInt i
     if (mat->rmap->mapping) PetscCall(ISLocalToGlobalMappingApplyBlock(mat->rmap->mapping, nrow, irow, bufr));
     else irowm = irow;
     if (mat->cmap->mapping) {
-      if (mat->cmap->mapping != mat->rmap->mapping || ncol != nrow || icol != irow) {
-        PetscCall(ISLocalToGlobalMappingApplyBlock(mat->cmap->mapping, ncol, icol, bufc));
-      } else icolm = irowm;
+      if (mat->cmap->mapping != mat->rmap->mapping || ncol != nrow || icol != irow) PetscCall(ISLocalToGlobalMappingApplyBlock(mat->cmap->mapping, ncol, icol, bufc));
+      else icolm = irowm;
     } else icolm = icol;
     PetscCall(MatSetValuesBlocked(mat, nrow, irowm, ncol, icolm, y, addv));
     if (bufr != buf) PetscCall(PetscFree2(bufr, bufc));
@@ -3689,9 +3687,8 @@ PetscErrorCode MatSolve(Mat mat, Vec b, Vec x)
 
   PetscCall(PetscLogEventBegin(MAT_Solve, mat, b, x, 0));
   PetscCall(VecFlag(x, mat->factorerrortype));
-  if (mat->factorerrortype) {
-    PetscCall(PetscInfo(mat, "MatFactorError %d\n", mat->factorerrortype));
-  } else PetscUseTypeMethod(mat, solve, b, x);
+  if (mat->factorerrortype) PetscCall(PetscInfo(mat, "MatFactorError %d\n", mat->factorerrortype));
+  else PetscUseTypeMethod(mat, solve, b, x);
   PetscCall(PetscLogEventEnd(MAT_Solve, mat, b, x, 0));
   PetscCall(PetscObjectStateIncrease((PetscObject)x));
   PetscFunctionReturn(PETSC_SUCCESS);
