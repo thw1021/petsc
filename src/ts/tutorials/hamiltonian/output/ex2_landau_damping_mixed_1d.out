@@ -49,7 +49,3 @@ c:17 [x_a,x_b] = 10.681440000000000,11.309760000000001 -> cell weight = 0.632744
 c:18 [x_a,x_b] = 11.309760000000001,11.938079999999999 -> cell weight = 0.633895416696927
 c:19 [x_a,x_b] = 11.938079999999999,12.566400000000000 -> cell weight = 0.634500368242956
 particle weight sum = 12.5664002939 cell weight sum = 12.5664002939
-WARNING! There are options you set that were not used!
-WARNING! could be spelling mistake, etc!
-There is one unused database option. It is:
-Option left: name:-ts_basicsymplectic_type value: 1 source: command line

@@ -20,7 +20,7 @@ typedef struct {
   PetscReal stage_time;
   Vec       X0, X, Xdot;
   void     *funcCtx;
-  TSDGType  discgrad; /* Type of electrostatic model */
+  TSDGType  discgrad;
   PetscErrorCode (*Sfunc)(TS, PetscReal, Vec, Mat, void *);
   PetscErrorCode (*Ffunc)(TS, PetscReal, Vec, PetscScalar *, void *);
   PetscErrorCode (*Gfunc)(TS, PetscReal, Vec, Vec, void *);
@@ -303,9 +303,6 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   PetscCall(VecDuplicate(y, &SgF));
   PetscCall(VecDuplicate(y, &G));
 
-  PetscCall(PetscObjectSetName((PetscObject)x, "x"));
-  PetscCall(VecViewFromOptions(x, NULL, "-x_view"));
-
   PetscCall(VecGetLocalSize(y, &n));
   PetscCall(MatCreate(PETSC_COMM_WORLD, &S));
   PetscCall(MatSetSizes(S, n, n, PETSC_DECIDE, PETSC_DECIDE));
@@ -317,18 +314,11 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   PetscCall(MatSetUp(S));
   PetscCall((*dg->Sfunc)(ts, dg->stage_time, x, S, dg->funcCtx));
   PetscCall(PetscFree(S_prealloc_arr));
-  PetscCall(PetscObjectSetName((PetscObject)S, "S"));
-  PetscCall(MatViewFromOptions(S, NULL, "-S_view"));
   PetscCall(TSDiscGradGetX0AndXdot(ts, dm, &X0, &Xdot));
   PetscCall(VecAXPBYPCZ(Xdot, -shift, shift, 0, X0, x)); /* Xdot = shift (x - X0) */
 
   PetscCall(VecAXPBYPCZ(Xp, -1, 2, 0, X0, x));     /* Xp = 2*x - X0 + (0)*Xp */
   PetscCall(VecAXPBYPCZ(Xdiff, -1, 1, 0, X0, Xp)); /* Xdiff = xp - X0 + (0)*Xdiff */
-
-  PetscCall(PetscObjectSetName((PetscObject)X0, "X0"));
-  PetscCall(PetscObjectSetName((PetscObject)Xp, "Xp"));
-  PetscCall(VecViewFromOptions(X0, NULL, "-X0_view"));
-  PetscCall(VecViewFromOptions(Xp, NULL, "-Xp_view"));
 
   if (dg->discgrad == TS_DG_AVERAGE) {
     /* Average Value DG:
@@ -380,10 +370,6 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   }
   PetscCall(MatMult(S, G, SgF)); /* Xdot = S*gradF */
 
-  PetscCall(PetscObjectSetName((PetscObject)G, "G"));
-  PetscCall(VecViewFromOptions(G, NULL, "-G_view"));
-  PetscCall(PetscObjectSetName((PetscObject)SgF, "SgF"));
-  PetscCall(VecViewFromOptions(SgF, NULL, "-SgF_view"));
   /* DM monkey-business allows user code to call TSGetDM() inside of functions evaluated on levels of FAS */
   dmsave = ts->dm;
   ts->dm = dm;
@@ -588,7 +574,7 @@ PetscErrorCode TSDiscGradSetFormulation(TS ts, PetscErrorCode (*Sfunc)(TS ts, Pe
 }
 
 /*@
-  TSDiscGradGetType - Checks for which discrete gradient to use in formulation for `TSDISCGRAD`
+  TSDiscGradGetType - Get the discrete gradient type used
 
   Not Collective
 
