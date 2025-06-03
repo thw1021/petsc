@@ -22,38 +22,38 @@ PETSC_EXTERN void petscviewerhdf5opengroup_(PetscViewer *viewer, char path[], hi
   FREECHAR(path, c1);
 }
 
-PETSC_EXTERN void petscviewerhdf5writeattributeint_(PetscViewer *viewer, const char parent[], const char name[], PetscInt value, int *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
+PETSC_EXTERN void petscviewerhdf5writeattributeint_(PetscViewer *viewer, const char parent[], const char name[], PetscInt *value, int *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
 {
   char *c1;
   char *c2;
 
   FIXCHAR(parent, len1, c1);
   FIXCHAR(name, len2, c2);
-  *ierr = PetscViewerHDF5WriteAttribute(*viewer, c1, c2, PETSC_INT, &value);
+  *ierr = PetscViewerHDF5WriteAttribute(*viewer, c1, c2, PETSC_INT, value);
   FREECHAR(parent, c1);
   FREECHAR(name, c2);
 }
 
-PETSC_EXTERN void petscviewerhdf5writeattributescalar_(PetscViewer *viewer, const char parent[], const char name[], PetscScalar value, int *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
+PETSC_EXTERN void petscviewerhdf5writeattributescalar_(PetscViewer *viewer, const char parent[], const char name[], PetscScalar *value, int *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
 {
   char *c1;
   char *c2;
 
   FIXCHAR(parent, len1, c1);
   FIXCHAR(name, len2, c2);
-  *ierr = PetscViewerHDF5WriteAttribute(*viewer, c1, c2, PETSC_SCALAR, &value);
+  *ierr = PetscViewerHDF5WriteAttribute(*viewer, c1, c2, PETSC_SCALAR, value);
   FREECHAR(parent, c1);
   FREECHAR(name, c2);
 }
 
-PETSC_EXTERN void petscviewerhdf5writeattributereal_(PetscViewer *viewer, const char parent[], const char name[], PetscReal value, int *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
+PETSC_EXTERN void petscviewerhdf5writeattributereal_(PetscViewer *viewer,  const char parent[], const char name[], PetscReal *value, int *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
 {
   char *c1;
   char *c2;
 
   FIXCHAR(parent, len1, c1);
   FIXCHAR(name, len2, c2);
-  *ierr = PetscViewerHDF5WriteAttribute(*viewer, c1, c2, PETSC_REAL, &value);
+  *ierr = PetscViewerHDF5WriteAttribute(*viewer, c1, c2, PETSC_REAL, value);
   FREECHAR(parent, c1);
   FREECHAR(name, c2);
 }
