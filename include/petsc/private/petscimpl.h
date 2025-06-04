@@ -1663,3 +1663,41 @@ M*/
 .seealso: `PeOp`, `PeNS`, `PeCtx`, `PetscInitialize()`
 M*/
 #define PeNSS
+
+PETSC_INTERN PetscBool PetscPairRun;
+PETSC_INTERN MPI_Comm  PetscPairComm;
+
+#define PetscCheckPairRunReal(b) \
+  do { \
+    if (PetscPairRun) { \
+      PetscReal b0 = (b), b1[3], b2[3]; \
+      if (PetscIsNanReal(b0)) { \
+        b1[2] = 1; \
+      } else { \
+        b1[2] = 0; \
+      }; \
+      b1[0] = -b0; \
+      b1[1] = b0; \
+      PetscCallMPI(MPIU_Allreduce(b1, b2, 3, MPIU_REAL, MPIU_MAX, PetscPairComm)); \
+      PetscCheck(b2[2] > 0 || PetscEqualReal(-b2[0], b2[1]), PetscPairComm, PETSC_ERR_ARG_WRONG, "Real value must be same in pair run"); \
+    } \
+  } while (0)
+
+#define PetscCheckPairRunScalar(b) \
+  do { \
+    if (PetscPairRun) { \
+      PetscScalar b0 = (b); \
+      PetscReal   b1[5], b2[5]; \
+      if (PetscIsNanScalar(b0)) { \
+        b1[4] = 1; \
+      } else { \
+        b1[4] = 0; \
+      }; \
+      b1[0] = -PetscRealPart(b0); \
+      b1[1] = PetscRealPart(b0); \
+      b1[2] = -PetscImaginaryPart(b0); \
+      b1[3] = PetscImaginaryPart(b0); \
+      PetscCallMPI(MPIU_Allreduce(b1, b2, 5, MPIU_REAL, MPIU_MAX, PetscPairComm)); \
+      PetscCheck(b2[4] > 0 || (PetscEqualReal(-b2[0], b2[1]) && PetscEqualReal(-b2[2], b2[3])), PetscPairComm, PETSC_ERR_ARG_WRONG, "Scalar value must be same in pair run"); \
+    } \
+  } while (0)
