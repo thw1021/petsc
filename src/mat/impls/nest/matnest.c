@@ -2107,6 +2107,7 @@ static PetscErrorCode MatConvert_Nest_AIJ(Mat A, MatType newtype, MatReuse reuse
     PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &C));
     PetscCall(MatSetType(C, newtype));
     PetscCall(MatSetSizes(C, m, n, M, N));
+    PetscCall(MatSetOption(C, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
   }
   PetscCall(PetscMalloc1(2 * m, &dnnz));
   if (m) {
@@ -2206,9 +2207,9 @@ static PetscErrorCode MatConvert_Nest_AIJ(Mat A, MatType newtype, MatReuse reuse
   PetscCall(MatMPIAIJSetPreallocation(C, 0, dnnz, 0, onnz));
   PetscCall(PetscFree(dnnz));
   PetscCall(MatAXPY_Dense_Nest(C, 1.0, A));
-  if (reuse == MAT_INPLACE_MATRIX) {
-    PetscCall(MatHeaderReplace(A, &C));
-  } else *newmat = C;
+  if (reuse == MAT_INPLACE_MATRIX) PetscCall(MatHeaderReplace(A, &C));
+  else *newmat = C;
+  if (reuse != MAT_REUSE_MATRIX) PetscCall(MatSetOption(C, MAT_NO_OFF_PROC_ENTRIES, PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2225,11 +2226,14 @@ static PetscErrorCode MatConvert_Nest_Dense(Mat A, MatType newtype, MatReuse reu
     PetscCall(MatZeroEntries(B));
   } else {
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)A), m, PETSC_DECIDE, M, N, NULL, &B));
+    PetscCall(MatSetOption(B, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
   }
   PetscCall(MatAXPY_Dense_Nest(B, 1.0, A));
-  if (reuse == MAT_INPLACE_MATRIX) {
-    PetscCall(MatHeaderReplace(A, &B));
-  } else if (reuse == MAT_INITIAL_MATRIX) *newmat = B;
+  if (reuse != MAT_REUSE_MATRIX) {
+    if (reuse == MAT_INPLACE_MATRIX) PetscCall(MatHeaderReplace(A, &B));
+    else *newmat = B;
+    PetscCall(MatSetOption(B, MAT_NO_OFF_PROC_ENTRIES, PETSC_FALSE));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
