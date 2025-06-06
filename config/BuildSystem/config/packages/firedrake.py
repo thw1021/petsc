@@ -26,16 +26,16 @@ class Configure(config.package.PythonPackage):
     self.metis           = framework.require('config.packages.metis',self)
     self.pnetcdf         = framework.require('config.packages.pnetcdf',self)
     self.scalapack       = framework.require('config.packages.scalapack',self)
-    self.suitesparse     = framework.require('config.packages.suitesparse',self)
+    self.suitesparse     = framework.require('config.packages.SuiteSparse',self)
     self.zlib            = framework.require('config.packages.zlib',self)
     self.bison           = framework.require('config.packages.bison',self)
-    self.ptscotch        = framework.require('config.packages.ptscotch',self)
-    self.mumps           = framework.require('config.packages.mumps',self)
+    self.ptscotch        = framework.require('config.packages.PTScotch',self)
+    self.mumps           = framework.require('config.packages.MUMPS',self)
     self.netcdf          = framework.require('config.packages.netcdf',self)
-    self.superlu_dist    = framework.require('config.packages.superlu_dist',self)
+    self.superlu_dist    = framework.require('config.packages.SuperLU_DIST',self)
     self.hypre           = framework.require('config.packages.hypre',self)
-    self.deps            = [self.mpi,self.blasLapack] # ,self.petsc4py,self.slepc]
+    self.deps            = [self.mpi,self.blasLapack,self.petsc4py,self.slepc,self.fftw,self.hwloc,self.hdf5,self.metis,self.pnetcdf,self.scalapack,self.suitesparse,self.zlib,self.bison,self.ptscotch,self.mumps,self.netcdf,self.superlu_dist,self.hypre]
 
 
-need to be passed to pip install also slepc
-PETSC_DIR=/Users/barrysmith/Src/petsc/petsc PETSC_ARCH=arch-firedrake-default HDF5_MPI=ON HDF5_DIR=/opt/homebrew
+#need to be passed to pip install also slepc
+# PETSC_DIR=/Users/barrysmith/Src/petsc/petsc PETSC_ARCH=arch-firedrake-default HDF5_MPI=ON HDF5_DIR=/opt/homebrew
