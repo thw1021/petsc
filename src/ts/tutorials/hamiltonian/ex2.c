@@ -118,6 +118,7 @@ typedef struct {
   PetscBool    positions_monitor; // Flag to show particle positins at each time step
   PetscBool    poisson_monitor;   // Flag to display charge, E field, and potential at each solve
   PetscBool    initial_monitor;   // Flag to monitor the initial conditions
+  PetscBool    regularized_entropy_monitor;
   PetscInt     velocity_monitor;  // Cell to monitor the velocity distribution for
   PetscBool    perturbed_weights; // Uniformly sample x,v space with gaussian weights
   PetscInt     ostep;             // Print the energy at each ostep time steps
@@ -146,6 +147,7 @@ typedef struct {
   PetscBool    validE;       // Flag to indicate E-field in swarm is valid
   PetscReal    drawlgEmin;   // The minimum lg(E) to plot
   PetscDrawLG  drawlgE;      // Logarithm of maximum electric field
+  PetscDrawLG  drawlgregS;
   PetscDrawSP  drawspE;      // Electric field at particle positions
   PetscDrawSP  drawspX;      // Particle positions
   PetscViewer  viewerRho;    // Charge density viewer
@@ -163,16 +165,17 @@ typedef struct {
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscFunctionBeginUser;
-  PetscInt d                      = 2;
-  PetscInt maxSpecies             = 2;
-  options->error                  = PETSC_FALSE;
-  options->remapFreq              = 0;
-  options->efield_monitor         = PETSC_FALSE;
-  options->moment_monitor         = PETSC_FALSE;
-  options->initial_monitor        = PETSC_FALSE;
-  options->perturbed_weights      = PETSC_FALSE;
-  options->poisson_monitor        = PETSC_FALSE;
-  options->positions_monitor      = PETSC_FALSE;
+  PetscInt d                           = 2;
+  PetscInt maxSpecies                  = 2;
+  options->error                       = PETSC_FALSE;
+  options->remapFreq                   = 0;
+  options->efield_monitor              = PETSC_FALSE;
+  options->moment_monitor              = PETSC_FALSE;
+  options->initial_monitor             = PETSC_FALSE;
+  options->perturbed_weights           = PETSC_FALSE;
+  options->poisson_monitor             = PETSC_FALSE;
+  options->positions_monitor           = PETSC_FALSE;
+  options->regularized_entropy_monitor = PETSC_FALSE;
   options->velocity_monitor       = -1;
   options->ostep                  = 100;
   options->timeScale              = 2.0e-14;
@@ -191,6 +194,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->drawhgcell_v           = NULL;
   options->drawlgEmin             = -6;
   options->drawlgE                = NULL;
+  options->drawlgregS             = NULL;
   options->drawspE                = NULL;
   options->drawspX                = NULL;
   options->viewerRho              = NULL;
@@ -219,6 +223,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsBool("-ics_monitor", "Flag to show initial condition histograms", "ex2.c", options->initial_monitor, &options->initial_monitor, NULL));
   PetscCall(PetscOptionsBool("-positions_monitor", "The flag to show particle positions", "ex2.c", options->positions_monitor, &options->positions_monitor, NULL));
   PetscCall(PetscOptionsBool("-poisson_monitor", "The flag to show charges, Efield and potential solve", "ex2.c", options->poisson_monitor, &options->poisson_monitor, NULL));
+  PetscCall(PetscOptionsBool("-regularized_entropy_monitor", "The flag to show the regularized entropy", "ex2.c", options->regularized_entropy_monitor, &options->regularized_entropy_monitor, NULL));
   PetscCall(PetscOptionsInt("-velocity_monitor", "Cell to show velocity histograms", "ex2.c", options->velocity_monitor, &options->velocity_monitor, NULL));
   PetscCall(PetscOptionsBool("-twostream", "Run two stream instability", "ex2.c", options->twostream, &options->twostream, NULL));
   PetscCall(PetscOptionsBool("-perturbed_weights", "Flag to run uniform sampling with perturbed weights", "ex2.c", options->perturbed_weights, &options->perturbed_weights, NULL));
@@ -334,6 +339,19 @@ static PetscErrorCode SetupContext(DM dm, DM sw, AppCtx *user)
     PetscCall(PetscDrawAxisSetLabels(axis, "Particles", "x", "v"));
     PetscCall(PetscDrawSPReset(user->drawspX));
   }
+  if (user->regularized_entropy_monitor) {
+    PetscDraw     draw;
+    PetscDrawAxis axis;
+
+    PetscCall(PetscDrawCreate(comm, NULL, "Regularized Entropy", 0, 300, 400, 300, &draw));
+    PetscCall(PetscDrawSetSave(draw, "ex2_REnt"));
+    PetscCall(PetscDrawSetFromOptions(draw));
+    PetscCall(PetscDrawLGCreate(draw, 1, &user->drawlgregS));
+    PetscCall(PetscDrawDestroy(&draw));
+    PetscCall(PetscDrawLGGetAxis(user->drawlgregS, &axis));
+    PetscCall(PetscDrawAxisSetLabels(axis, "Entropy", "time", "S"));
+    PetscCall(PetscDrawLGSetLimits(user->drawlgregS, 0., user->steps * user->stepSize, -35., 0.));
+  }
   if (user->poisson_monitor) {
     Vec           rho, rhohat, phi;
     PetscDraw     draw;
@@ -399,6 +417,7 @@ static PetscErrorCode DestroyContext(AppCtx *user)
   PetscCall(PetscDrawHGDestroy(&user->drawhgcell_v));
 
   PetscCall(PetscDrawLGDestroy(&user->drawlgE));
+  PetscCall(PetscDrawLGDestroy(&user->drawlgregS));
   PetscCall(PetscDrawSPDestroy(&user->drawspE));
   PetscCall(PetscDrawSPDestroy(&user->drawspX));
   PetscCall(PetscViewerDestroy(&user->viewerRho));
@@ -674,6 +693,60 @@ PetscErrorCode MonitorVelocity(TS ts, PetscInt step, PetscReal t, Vec U, void *c
 
   PetscCall(PetscDrawHGDraw(user->drawhgcell_v));
   PetscCall(PetscDrawHGSave(user->drawhgcell_v));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+ * Computes regularized entropy of the particle distribution in velocity space.
+ * Note: I use a fixed choice of epsilon here, and do not compute it from the
+ * distribution like in the collision operator, because it depends on the spacing
+ * of the particle grid, where here we have many particles occupying the same
+ * points velocity space in the initial conditions.
+ * TODO: Figure out how we want to compute epsilon from the distribution
+ */
+static PetscErrorCode MonitorRegularizedEntropy(TS ts, PetscInt step, PetscReal t, Vec U, void *ctx)
+{
+  DM                 sw;
+  PetscReal         *weight, *ent;//, *velocity;
+  Vec                V;
+  IS                 isv;
+  const PetscScalar *velocity;
+  PetscInt          *species, Np, dim;
+  PetscReal          kHermite[6] = {-2.3506049736745, -1.3358490740137, -0.43607741192762, 0.43607741192762, 1.3358490740137, 2.3506049736745};
+  PetscReal          wHermite[6] = {0.0045300099055088, 0.15706732032286, 0.72462959522439, 0.72462959522439, 0.15706732032286, 0.0045300099055088};
+  PetscReal          S = 0.0, epsilon = 0.1;//Fixed epsilon until we compute it from the distribution
+  AppCtx            *user = (AppCtx*)ctx;
+
+  PetscFunctionBeginUser;
+  PetscCall(TSGetDM(ts, &sw));
+  PetscCall(DMGetDimension(sw, &dim));
+  PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void**)&weight));
+  PetscCall(TSRHSSplitGetIS(ts, "momentum", &isv));
+  PetscCall(VecGetSubVector(U, isv, &V));
+  PetscCall(VecGetArrayRead(V, &velocity));
+  PetscCall(DMSwarmGetLocalSize(sw, &Np));
+  for (PetscInt p = 0; p < Np; ++p){
+    for (PetscInt i=0; i < 6; i++){
+      PetscReal logsum = 0, kpx, dx, SQRT2EPSM1, PI2EPSM1;
+      for (PetscInt q = 0; q < Np; ++q) {
+        SQRT2EPSM1 = 1./PetscSqrtReal(2.*epsilon);
+        PI2EPSM1 = 1./PetscSqrtReal(2*PETSC_PI * epsilon);
+        kpx = kHermite[i] + velocity[p*dim + 0]*SQRT2EPSM1;
+        dx = kpx - velocity[q*dim+0] * SQRT2EPSM1;
+        logsum += weight[q] * PetscExpReal(-dx*dx)*PI2EPSM1;
+      }
+      S -= 1./PetscSqrtReal(PETSC_PI) * weight[p] * wHermite[i] * (PetscLogReal(logsum));
+    }
+  }
+  PetscCall(PetscDrawLGAddPoint(user->drawlgregS, &t, &S));
+  PetscCall(PetscDrawLGDraw(user->drawlgregS));
+  PetscDraw draw;
+  PetscCall(PetscDrawLGGetDraw(user->drawlgregS, &draw));
+  PetscCall(PetscDrawSave(draw));
+  PetscCall(VecRestoreArrayRead(V, &velocity));
+  PetscCall(VecRestoreSubVector(U, isv, &V));
+  PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void**)&weight));
+  //PetscPrintf(PETSC_COMM_WORLD, "Entropy: :%g\n", S);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2322,7 +2395,7 @@ static PetscErrorCode MigrateParticles(TS ts)
   PetscInt step;
 
   PetscCall(TSGetStepNumber(ts, &step));
-  if (!(step % ctx->remapFreq)) {
+  if (0) {
     // Monitor electric field before we destroy it
     PetscReal ptime;
     PetscInt  step;
@@ -2373,6 +2446,7 @@ int main(int argc, char **argv)
   if (user.positions_monitor) PetscCall(TSMonitorSet(ts, MonitorPositions_2D, &user, NULL));
   if (user.poisson_monitor) PetscCall(TSMonitorSet(ts, MonitorPoisson, &user, NULL));
   if (user.velocity_monitor >= 0) PetscCall(TSMonitorSet(ts, MonitorVelocity, &user, NULL));
+  if (user.regularized_entropy_monitor) PetscCall(TSMonitorSet(ts, MonitorRegularizedEntropy, &user, NULL));
 
   PetscCall(TSSetFromOptions(ts));
   PetscCall(TSGetTimeStep(ts, &dt));
