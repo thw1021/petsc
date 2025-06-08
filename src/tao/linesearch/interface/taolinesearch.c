@@ -434,7 +434,7 @@ PetscErrorCode TaoLineSearchSetType(TaoLineSearch ls, TaoLineSearchType type)
 PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step)
 {
   PetscFunctionBegin;
-  if (ls->monitor) { ls->monitor(ls, its, f, step, ls->monitorcontext); }
+  if (ls->monitor) PetscCall(ls->monitor(ls, its, f, step, ls->monitorcontext));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -442,7 +442,7 @@ PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f,
   TaoLineSearchMonitorSet - Set the monitor used for logging the line search steps.
 
   Input Parameters:
-+ ls - the `TaoLineSearch` context
++ ls        - the `TaoLineSearch` context
 . monitor - the monitor to set
 
 .seealso: `TaoLineSearchMonitor`
@@ -460,10 +460,10 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchMonitorSet(TaoLineSearch ls, PetscError
   TaoLineSearchMonitorDefault - The default tao line search monitor.
 
   Input Parameters:
-+ ls   - the `TaoLineSearch` context
-. its  - the current iterate number (>=0)
-. f    - the current objective function value
-. step - the step length
++ ls      - the `TaoLineSearch` context
+. its     - the current iterate number (>=0)
+. f       - the current objective function value
+. step    - the step length
 - context - `PetscViewer` context
 
   Level: developer
