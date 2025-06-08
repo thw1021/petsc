@@ -246,7 +246,6 @@ PetscErrorCode TaoLineSearchDestroy(TaoLineSearch *ls)
   PetscCall(VecDestroy(&(*ls)->upper));
   PetscCall(VecDestroy(&(*ls)->lower));
   PetscTryTypeMethod(*ls, destroy);
-  if ((*ls)->usemonitor) PetscCall(PetscViewerDestroy(&(*ls)->viewer));
   if ((*ls)->monitordestroy) PetscCall(((*ls)->monitordestroy)(&((*ls)->monitorcontext)));
   PetscCall(PetscHeaderDestroy(ls));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -435,7 +434,7 @@ PetscErrorCode TaoLineSearchSetType(TaoLineSearch ls, TaoLineSearchType type)
 PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step)
 {
   PetscFunctionBegin;
-  if (ls->usemonitor && ls->monitor) { ls->monitor(ls, its, f, step, ls->monitorcontext); }
+  if (ls->monitor) { ls->monitor(ls, its, f, step, ls->monitorcontext); }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -542,7 +541,6 @@ PetscErrorCode TaoLineSearchSetFromOptions(TaoLineSearch ls)
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(PetscObjectComm((PetscObject)ls), monfilename, &monviewer));
     PetscCall(TaoLineSearchMonitorSet(ls, TaoLineSearchMonitorDefault, monviewer, (PetscCtxDestroyFn *)PetscViewerDestroy));
-    ls->usemonitor = PETSC_TRUE;
   }
   PetscTryTypeMethod(ls, setfromoptions, PetscOptionsObject);
   PetscOptionsEnd();
