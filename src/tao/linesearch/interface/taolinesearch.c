@@ -473,7 +473,7 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchMonitorSet(TaoLineSearch ls, PetscError
 
 PetscErrorCode TaoLineSearchMonitorDefault(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step, void *mctx)
 {
-  PetscInt tabs;
+  PetscInt    tabs;
   PetscViewer viewer = (PetscViewer)mctx;
 
   PetscFunctionBegin;

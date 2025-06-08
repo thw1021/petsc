@@ -20,27 +20,39 @@ static PetscErrorCode TaoLineSearchDestroy_MT(TaoLineSearch ls)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// static PetscErrorCode TaoLineSearchMonitor_MT(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step, void *mctx)
-// {
-//   PetscInt          tabs;
-//   TaoLineSearch_MT *mt     = (TaoLineSearch_MT *)ls->data;
-//   PetscViewer       viewer = (PetscViewer)mctx;
+static PetscErrorCode TaoLineSearchMonitor_MT(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step, void *mctx)
+{
+  PetscInt          tabs;
+  TaoLineSearch_MT *mt     = (TaoLineSearch_MT *)ls->data;
+  PetscViewer       viewer = (PetscViewer)mctx;
 
-//   PetscFunctionBegin;
-//   PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
-//   PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
-//   PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)ls)->tablevel));
-//   PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " LS", its));
-//   PetscCall(PetscViewerASCIIPrintf(viewer, "  Function value: %g,", (double)f));
-//   PetscCall(PetscViewerASCIIPrintf(viewer, "  Step length: %g\n", (double)step));
-//   if (its > 0) {
-//     PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)ls)->tablevel + 3));
-//     PetscCall(PetscViewerASCIIPrintf(viewer, "stx: %g, fx: %g, dgx: %g\n", (double)mt->stx, (double)mt->fx, (double)mt->dgx));
-//     PetscCall(PetscViewerASCIIPrintf(viewer, "sty: %g, fy: %g, dgy: %g\n", (double)mt->sty, (double)mt->fy, (double)mt->dgy));
-//   }
-//   PetscCall(PetscViewerASCIISetTab(viewer, tabs));
-//   PetscFunctionReturn(PETSC_SUCCESS);
-// }
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
+  PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
+  PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)ls)->tablevel));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " LS", its));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  Function value: %g,", (double)f));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  Step length: %g\n", (double)step));
+  if (its > 0) {
+    PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)ls)->tablevel + 3));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "stx: %g, fx: %g, dgx: %g\n", (double)mt->stx, (double)mt->fx, (double)mt->dgx));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "sty: %g, fy: %g, dgy: %g\n", (double)mt->sty, (double)mt->fy, (double)mt->dgy));
+  }
+  PetscCall(PetscViewerASCIISetTab(viewer, tabs));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoLineSearchSetFromOptions_MT(TaoLineSearch ls, PetscOptionItems PetscOptionsObject)
+{
+  char      monfilename[PETSC_MAX_PATH_LEN];
+  PetscBool flg;
+
+  PetscFunctionBegin;
+  PetscCall(PetscOptionsString("-tao_ls_monitor", "enable the basic monitor", "TaoLineSearchMonitor", "stdout", monfilename, sizeof(monfilename), &flg));
+  // viewer and destroy already set up from taolinesearch
+  if (flg) ls->monitor = TaoLineSearchMonitor_MT;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 static PetscErrorCode TaoLineSearchApply_MT(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, Vec s)
 {
@@ -298,14 +310,15 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_MT(TaoLineSearch ls)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ls, TAOLINESEARCH_CLASSID, 1);
   PetscCall(PetscNew(&ctx));
-  ctx->bracket     = 0;
-  ctx->infoc       = 1;
-  ls->data         = (void *)ctx;
-  ls->initstep     = 1.0;
-  ls->ops->setup   = NULL;
-  ls->ops->reset   = NULL;
-  ls->ops->apply   = TaoLineSearchApply_MT;
-  ls->ops->destroy = TaoLineSearchDestroy_MT;
+  ctx->bracket            = 0;
+  ctx->infoc              = 1;
+  ls->data                = (void *)ctx;
+  ls->initstep            = 1.0;
+  ls->ops->setup          = NULL;
+  ls->ops->reset          = NULL;
+  ls->ops->apply          = TaoLineSearchApply_MT;
+  ls->ops->destroy        = TaoLineSearchDestroy_MT;
+  ls->ops->setfromoptions = TaoLineSearchSetFromOptions_MT;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
