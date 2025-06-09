@@ -304,6 +304,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
   snes->numFailures            = 0;
   snes->numLinearSolveFailures = 0;
   snes->reason                 = SNES_CONVERGED_ITERATING;
+  snes->iter                   = 0;
 
   maxits   = snes->max_its;                /* maximum number of iterations */
   maxincs  = data->max_continuation_steps; /* maximum number of increments */
