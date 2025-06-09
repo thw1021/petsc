@@ -324,7 +324,7 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
     /* Average Value DG:
     \overline{\nabla} F (x_{n+1},x_{n}) = \int_0^1 \nabla F ((1-\xi)*x_{n+1} + \xi*x_{n}) d \xi */
     PetscQuadrature  quad;
-    PetscInt         Nq, d, q;
+    PetscInt         Nq, q;
     const PetscReal *wq, *xq;
     Vec              Xquad, den;
 
