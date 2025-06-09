@@ -85,16 +85,16 @@ class BaseTestObject:
             if not self.obj.getType() or not 'da' == str(self.obj.getType()):
                 self.obj.setFromOptions()
                 missing = [
-                           'AO',
-                           'DMLabel',
-                           'PetscDualSpace',
-                           'IS',
-                           'ISLocalToGlobalMapping',
-                           'MatPartitioning',
-                           'MatNullSpace',
-                           'PetscRandom',
-                           'PetscViewer',
-                          ]
+                    'AO',
+                    'DMLabel',
+                    'PetscDualSpace',
+                    'IS',
+                    'ISLocalToGlobalMapping',
+                    'MatPartitioning',
+                    'MatNullSpace',
+                    'PetscRandom',
+                    'PetscViewer',
+                ]
                 if self.obj.klass not in missing:
                     self.assertTrue(self.obj.getAttr('opts_handler_called') == 1)
 
