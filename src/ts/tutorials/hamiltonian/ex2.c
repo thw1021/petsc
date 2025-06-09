@@ -1937,8 +1937,6 @@ static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U, Mat J, Mat P, void 
   PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&vel));
   Np /= 2 * dim;
   for (p = 0; p < Np; ++p) {
-    const PetscReal x0      = coords[p * dim + 0];
-    const PetscReal vy0     = vel[p * dim + 1];
     PetscScalar     vals[4] = {0., 1., -1, 0.};
 
     for (d = 0; d < dim; ++d) {
