@@ -119,6 +119,7 @@ typedef struct {
   PetscBool    poisson_monitor;   // Flag to display charge, E field, and potential at each solve
   PetscBool    initial_monitor;   // Flag to monitor the initial conditions
   PetscBool    regularized_entropy_monitor;
+  PetscInt     rentropty_ostep;
   PetscInt     velocity_monitor;  // Cell to monitor the velocity distribution for
   PetscBool    perturbed_weights; // Uniformly sample x,v space with gaussian weights
   PetscInt     ostep;             // Print the energy at each ostep time steps
@@ -176,43 +177,44 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->poisson_monitor             = PETSC_FALSE;
   options->positions_monitor           = PETSC_FALSE;
   options->regularized_entropy_monitor = PETSC_FALSE;
-  options->velocity_monitor       = -1;
-  options->ostep                  = 100;
-  options->timeScale              = 2.0e-14;
-  options->charges[0]             = -1.0;
-  options->charges[1]             = 1.0;
-  options->masses[0]              = 1.0;
-  options->masses[1]              = 1000.0;
-  options->thermal_energy[0]      = 1.0;
-  options->thermal_energy[1]      = 1.0;
-  options->cosine_coefficients[0] = 0.01;
-  options->cosine_coefficients[1] = 0.5;
-  options->initVel                = 1;
-  options->totalWeight            = 1.0;
-  options->drawhgic_x             = NULL;
-  options->drawhgic_v             = NULL;
-  options->drawhgcell_v           = NULL;
-  options->drawlgEmin             = -6;
-  options->drawlgE                = NULL;
-  options->drawlgregS             = NULL;
-  options->drawspE                = NULL;
-  options->drawspX                = NULL;
-  options->viewerRho              = NULL;
-  options->viewerRhoHat           = NULL;
-  options->viewerPhi              = NULL;
-  options->em                     = EM_COULOMB;
-  options->snes                   = NULL;
-  options->dmPot                  = NULL;
-  options->fftPot                 = NULL;
-  options->fftX                   = NULL;
-  options->fftY                   = NULL;
-  options->fftReal                = NULL;
-  options->isPot                  = NULL;
-  options->M                      = NULL;
-  options->numParticles           = 32768;
-  options->twostream              = PETSC_FALSE;
-  options->checkweights           = PETSC_FALSE;
-  options->checkVRes              = 0;
+  options->rentropty_ostep             = 100;
+  options->velocity_monitor            = -1;
+  options->ostep                       = 100;
+  options->timeScale                   = 2.0e-14;
+  options->charges[0]                  = -1.0;
+  options->charges[1]                  = 1.0;
+  options->masses[0]                   = 1.0;
+  options->masses[1]                   = 1000.0;
+  options->thermal_energy[0]           = 1.0;
+  options->thermal_energy[1]           = 1.0;
+  options->cosine_coefficients[0]      = 0.01;
+  options->cosine_coefficients[1]      = 0.5;
+  options->initVel                     = 1;
+  options->totalWeight                 = 1.0;
+  options->drawhgic_x                  = NULL;
+  options->drawhgic_v                  = NULL;
+  options->drawhgcell_v                = NULL;
+  options->drawlgEmin                  = -6;
+  options->drawlgE                     = NULL;
+  options->drawlgregS                  = NULL;
+  options->drawspE                     = NULL;
+  options->drawspX                     = NULL;
+  options->viewerRho                   = NULL;
+  options->viewerRhoHat                = NULL;
+  options->viewerPhi                   = NULL;
+  options->em                          = EM_COULOMB;
+  options->snes                        = NULL;
+  options->dmPot                       = NULL;
+  options->fftPot                      = NULL;
+  options->fftX                        = NULL;
+  options->fftY                        = NULL;
+  options->fftReal                     = NULL;
+  options->isPot                       = NULL;
+  options->M                           = NULL;
+  options->numParticles                = 32768;
+  options->twostream                   = PETSC_FALSE;
+  options->checkweights                = PETSC_FALSE;
+  options->checkVRes                   = 0;
 
   PetscOptionsBegin(comm, "", "Landau Damping and Two Stream options", "DMSWARM");
   PetscCall(PetscOptionsBool("-error", "Flag to print the error", "ex2.c", options->error, &options->error, NULL));
@@ -224,6 +226,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsBool("-positions_monitor", "The flag to show particle positions", "ex2.c", options->positions_monitor, &options->positions_monitor, NULL));
   PetscCall(PetscOptionsBool("-poisson_monitor", "The flag to show charges, Efield and potential solve", "ex2.c", options->poisson_monitor, &options->poisson_monitor, NULL));
   PetscCall(PetscOptionsBool("-regularized_entropy_monitor", "The flag to show the regularized entropy", "ex2.c", options->regularized_entropy_monitor, &options->regularized_entropy_monitor, NULL));
+  PetscCall(PetscOptionsInt("-rentropy_output_step", "Number of time steps between regularized entropy output", "ex2.c", options->rentropty_ostep, &options->rentropty_ostep, NULL));
   PetscCall(PetscOptionsInt("-velocity_monitor", "Cell to show velocity histograms", "ex2.c", options->velocity_monitor, &options->velocity_monitor, NULL));
   PetscCall(PetscOptionsBool("-twostream", "Run two stream instability", "ex2.c", options->twostream, &options->twostream, NULL));
   PetscCall(PetscOptionsBool("-perturbed_weights", "Flag to run uniform sampling with perturbed weights", "ex2.c", options->perturbed_weights, &options->perturbed_weights, NULL));
@@ -532,7 +535,6 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(PetscDrawSave(draw));
 
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", pmoments));
-  // PetscCall(PetscPrintf(comm, "E: %f\t%+e\t%e\t%f\t%20.15e\t%f\t%2.15f\t%2.15f\t%20.15e\t%2.15f\t%20.15e\t%20.15e\t%" PetscInt_FMT "\t(%" PetscInt_FMT ")\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double) entropy, (double)PetscSqrtReal(intESq), gNp, step));
   PetscCall(PetscPrintf(comm, "E: %f\t%+e\t%e\t%f\t%20.15e\t%f\t%2.15f\t%2.15f\t%2.15f\t%20.15e\t%2.15f\t%20.15e\t%20.15e\t%" PetscInt_FMT "\t(%" PetscInt_FMT ")\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double) weightsum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double) entropy, (double)0.5*intESq, gNp, step));
   PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -718,35 +720,37 @@ static PetscErrorCode MonitorRegularizedEntropy(TS ts, PetscInt step, PetscReal 
   AppCtx            *user = (AppCtx*)ctx;
 
   PetscFunctionBeginUser;
-  PetscCall(TSGetDM(ts, &sw));
-  PetscCall(DMGetDimension(sw, &dim));
-  PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void**)&weight));
-  PetscCall(TSRHSSplitGetIS(ts, "momentum", &isv));
-  PetscCall(VecGetSubVector(U, isv, &V));
-  PetscCall(VecGetArrayRead(V, &velocity));
-  PetscCall(DMSwarmGetLocalSize(sw, &Np));
-  for (PetscInt p = 0; p < Np; ++p){
-    for (PetscInt i=0; i < 6; i++){
-      PetscReal logsum = 0, kpx, dx, SQRT2EPSM1, PI2EPSM1;
-      for (PetscInt q = 0; q < Np; ++q) {
-        SQRT2EPSM1 = 1./PetscSqrtReal(2.*epsilon);
-        PI2EPSM1 = 1./PetscSqrtReal(2*PETSC_PI * epsilon);
-        kpx = kHermite[i] + velocity[p*dim + 0]*SQRT2EPSM1;
-        dx = kpx - velocity[q*dim+0] * SQRT2EPSM1;
-        logsum += weight[q] * PetscExpReal(-dx*dx)*PI2EPSM1;
+  if (step % user->rentropty_ostep == 0) {
+    PetscCall(TSGetDM(ts, &sw));
+    PetscCall(DMGetDimension(sw, &dim));
+    PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void**)&weight));
+    PetscCall(TSRHSSplitGetIS(ts, "momentum", &isv));
+    PetscCall(VecGetSubVector(U, isv, &V));
+    PetscCall(VecGetArrayRead(V, &velocity));
+    PetscCall(DMSwarmGetLocalSize(sw, &Np));
+    for (PetscInt p = 0; p < Np; ++p){
+      for (PetscInt i=0; i < 6; i++){
+        PetscReal logsum = 0, kpx, dx, SQRT2EPSM1, PI2EPSM1;
+        for (PetscInt q = 0; q < Np; ++q) {
+          SQRT2EPSM1 = 1./PetscSqrtReal(2.*epsilon);
+          PI2EPSM1 = 1./PetscSqrtReal(2*PETSC_PI * epsilon);
+          kpx = kHermite[i] + velocity[p*dim + 0]*SQRT2EPSM1;
+          dx = kpx - velocity[q*dim+0] * SQRT2EPSM1;
+          logsum += weight[q] * PetscExpReal(-dx*dx)*PI2EPSM1;
+        }
+        S -= 1./PetscSqrtReal(PETSC_PI) * weight[p] * wHermite[i] * (PetscLogReal(logsum));
       }
-      S -= 1./PetscSqrtReal(PETSC_PI) * weight[p] * wHermite[i] * (PetscLogReal(logsum));
     }
+    PetscCall(PetscDrawLGAddPoint(user->drawlgregS, &t, &S));
+    PetscCall(PetscDrawLGDraw(user->drawlgregS));
+    PetscDraw draw;
+    PetscCall(PetscDrawLGGetDraw(user->drawlgregS, &draw));
+    PetscCall(PetscDrawSave(draw));
+    PetscCall(VecRestoreArrayRead(V, &velocity));
+    PetscCall(VecRestoreSubVector(U, isv, &V));
+    PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void**)&weight));
+    PetscPrintf(PETSC_COMM_WORLD, "Regularized Entropy: :%2.12g\n", S);
   }
-  PetscCall(PetscDrawLGAddPoint(user->drawlgregS, &t, &S));
-  PetscCall(PetscDrawLGDraw(user->drawlgregS));
-  PetscDraw draw;
-  PetscCall(PetscDrawLGGetDraw(user->drawlgregS, &draw));
-  PetscCall(PetscDrawSave(draw));
-  PetscCall(VecRestoreArrayRead(V, &velocity));
-  PetscCall(VecRestoreSubVector(U, isv, &V));
-  PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void**)&weight));
-  //PetscPrintf(PETSC_COMM_WORLD, "Entropy: :%g\n", S);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2395,7 +2399,8 @@ static PetscErrorCode MigrateParticles(TS ts)
   PetscInt step;
 
   PetscCall(TSGetStepNumber(ts, &step));
-  if (0) {
+  // if (0) {
+  if (!(step % ctx->remapFreq)) {
     // Monitor electric field before we destroy it
     PetscReal ptime;
     PetscInt  step;
@@ -2602,4 +2607,4 @@ int main(int argc, char **argv)
        args: -em_type primal -petscspace_degree 1 -em_pc_type svd -ts_type discgrad -ts_discgrad_type average \
              -snes_fd -snes_type qn -remap_freq 0
 
-TEST*/
+TEST*/     
