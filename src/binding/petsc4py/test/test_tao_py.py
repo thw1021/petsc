@@ -98,9 +98,10 @@ class TestTaoPython(unittest.TestCase):
         tao.setMaximumIterations(3)
 
         def _update(tao, it, cnt):
-             cnt += 1
+            cnt += 1
+
         cnt_up = numpy.array(0)
-        tao.setUpdate(_update, (cnt_up,) )
+        tao.setUpdate(_update, (cnt_up,))
         tao.setSolution(x)
 
         # Call the solve method of MyTAO

@@ -26,7 +26,6 @@ class Jacobian:
             J.assemble()
 
 
-
 # --------------------------------------------------------------------
 
 
@@ -222,9 +221,10 @@ class BaseTestSNES:
         self.snes.setJacobian(Jacobian(), J)
 
         def _update(snes, it, cnt):
-             cnt += 1
+            cnt += 1
+
         cnt_up = np.array(0)
-        self.snes.setUpdate(_update, (cnt_up,) )
+        self.snes.setUpdate(_update, (cnt_up,))
 
         x.setArray([2, 3])
         b.set(0)
@@ -389,8 +389,8 @@ class BaseTestSNES:
         self.assertEqual(npc.appctx, (1, 2, 3))
 
     def testTRAPI(self):
-        newreg = (1,2,3)
-        newup = (1,2,3,4,5)
+        newreg = (1, 2, 3)
+        newup = (1, 2, 3, 4, 5)
         if self.snes.getType() == PETSc.SNES.Type.NEWTONTR:
             defreg = self.snes.getTRTolerances()
             defup = self.snes.getTRUpdateParameters()
@@ -404,11 +404,12 @@ class BaseTestSNES:
         if self.snes.getType() == PETSc.SNES.Type.NEWTONTR:
             self.assertEqual(newreg, self.snes.getTRTolerances())
             self.assertEqual(newup, self.snes.getTRUpdateParameters())
-        self.snes.setTRTolerances(*(PETSc.DETERMINE,)*3)
-        self.snes.setTRUpdateParameters(*(PETSc.DETERMINE,)*5)
+        self.snes.setTRTolerances(*(PETSc.DETERMINE,) * 3)
+        self.snes.setTRUpdateParameters(*(PETSc.DETERMINE,) * 5)
         if self.snes.getType() == PETSc.SNES.Type.NEWTONTR:
             self.assertEqual(defreg, self.snes.getTRTolerances())
             self.assertEqual(defup, self.snes.getTRUpdateParameters())
+
 
 # --------------------------------------------------------------------
 
