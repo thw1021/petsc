@@ -70,6 +70,7 @@ def get_config():
 
     from io import StringIO
     from configparser import ConfigParser
+
     pgkdir = os.path.dirname(__file__)
     filename = os.path.join(pgkdir, 'lib', 'petsc.cfg')
     with open(filename) as fp:
