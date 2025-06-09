@@ -421,6 +421,66 @@ class TestSNESTR(BaseTestSNES, unittest.TestCase):
     SNES_TYPE = PETSc.SNES.Type.NEWTONTR
 
 
+class TestSNESAL(BaseTestSNES, unittest.TestCase):
+    SNES_TYPE = PETSc.SNES.Type.NEWTONAL
+
+
+# --------------------------------------------------------------------
+
+
+class TestSNESLineSearchAPI(unittest.TestCase):
+    def test_create_destroy(self):
+        ls = PETSc.SNESLineSearch()
+        ls.create()
+        ls.destroy()
+
+    def test_type_set_get(self):
+        ls = PETSc.SNESLineSearch()
+        ls.create()
+        ls.setType('basic')
+        typ = ls.getType()
+        self.assertEqual(typ, 'basic')
+        ls.destroy()
+
+    def test_tolerances_set_get(self):
+        ls = PETSc.SNESLineSearch()
+        ls.create()
+        ls.setTolerances(
+            rtol=1e-2, atol=1e-3, stol=1e-4, ltol=1e-5, etol=1e-6, max_its=7
+        )
+        rtol, atol, stol, ltol, etol, max_its = ls.getTolerances()
+        self.assertAlmostEqual(rtol, 1e-2, places=12)
+        self.assertAlmostEqual(atol, 1e-3, places=12)
+        self.assertAlmostEqual(stol, 1e-4, places=12)
+        self.assertAlmostEqual(ltol, 1e-5, places=12)
+        self.assertAlmostEqual(etol, 1e-6, places=12)
+        self.assertEqual(max_its, 7)
+        ls.destroy()
+
+    def test_order_set_get(self):
+        ls = PETSc.SNESLineSearch()
+        ls.create()
+        ls.setOrder(2)
+        order = ls.getOrder()
+        self.assertEqual(order, 2)
+        ls.destroy()
+
+    def test_set_from_options(self):
+        ls = PETSc.SNESLineSearch()
+        ls.create()
+        ls.setFromOptions()
+        # ls.view()
+        ls.destroy()
+
+    def test_snes_linesearch_property(self):
+        snes = PETSc.SNES().create()
+        ls = snes.getLineSearch()
+        self.assertTrue(isinstance(ls, PETSc.SNESLineSearch))
+        # Set/get via property
+        snes.linesearch = ls
+        self.assertEqual(snes.linesearch, ls)
+
+
 # --------------------------------------------------------------------
 
 if __name__ == '__main__':
