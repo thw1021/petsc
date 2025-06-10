@@ -33,7 +33,8 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscOptionsBegin(comm, "", "Parallel Mesh Adaptation Options", "DMPLEX");
   PetscCall(PetscOptionsString("-label", "The boundary label name", "ex44.c", options->bdLabel, options->bdLabel, sizeof(options->bdLabel), NULL));
   PetscCall(PetscOptionsIntArray("-bd", "The boundaries to be extruded", "ex44.c", options->bd, &n, &flg));
-  options->Nbd = flg ? n : 0;
+  options->Nbd        = flg ? n : 0;
+  options->testForest = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-test_forest", "Create a DMForest and then convert to DMPlex before testing", "ex44.c", PETSC_FALSE, &options->testForest, NULL));
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);

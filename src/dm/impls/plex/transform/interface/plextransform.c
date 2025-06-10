@@ -19,7 +19,7 @@ static PetscErrorCode DMPlexCreateCellTypeOrder_Internal(DM dm, PetscInt dim, Pe
   PetscCall(PetscCalloc2(DM_NUM_POLYTOPES + 1, &ctO, DM_NUM_POLYTOPES + 1, &ctOInv));
   if (dm) { // Order the dimensions by their starting location
     PetscInt hStart[4] = {-1, -1, -1, -1};
-    for (d = 0; d <= dim; ++d) { PetscCall(DMPlexGetDepthStratum(dm, dim - d, &hStart[d], NULL)); }
+    for (d = 0; d <= dim; ++d) PetscCall(DMPlexGetDepthStratum(dm, dim - d, &hStart[d], NULL));
     PetscCall(PetscSortIntWithArray(dim + 1, hStart, &dimOrder[3 - dim]));
   } else if (dim > 1) { // Standard plex ordering. dimOrder is in correct order if dim > 1
     off             = 4 - dim;
