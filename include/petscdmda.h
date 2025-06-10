@@ -120,6 +120,8 @@ PETSC_EXTERN PetscErrorCode DMDAGetStencilWidth(DM, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMDAMapMatStencilToGlobal(DM, PetscInt, const MatStencil[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode DMDASetOwnershipRanges(DM, const PetscInt[], const PetscInt[], const PetscInt[]);
 PETSC_EXTERN PetscErrorCode DMDAGetOwnershipRanges(DM, const PetscInt *[], const PetscInt *[], const PetscInt *[]);
+PETSC_EXTERN PetscErrorCode DMDAGetGhostOwnershipRanges(DM, const PetscInt *[], const PetscInt *[], const PetscInt *[], const PetscInt *[], const PetscInt *[], const PetscInt *[]);
+PETSC_EXTERN PetscErrorCode DMDARestoreGhostOwnershipRanges(DM, const PetscInt *[], const PetscInt *[], const PetscInt *[], const PetscInt *[], const PetscInt *[], const PetscInt *[]);
 PETSC_EXTERN PetscErrorCode DMDASetNumProcs(DM, PetscInt, PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode DMDASetStencilType(DM, DMDAStencilType);
 PETSC_EXTERN PetscErrorCode DMDAGetStencilType(DM, DMDAStencilType *);
