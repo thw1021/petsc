@@ -1296,9 +1296,9 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos(Mat C)
     PetscCall(MatProductNumeric_MPIAIJKokkos_AB(product, A, B, pdata->mmAB));
   } else if (ptype == MATPRODUCT_AtB) {
     PetscCall(MatProductNumeric_MPIAIJKokkos_AtB(product, A, B, pdata->mmAtB));
-  } else if (ptype == MATPRODUCT_PtAP) { // BtAB, computed by Z = AB; C= BtZ
-    PetscCall(MatProductNumeric_MPIAIJKokkos_AB(product, A, B, pdata->mmAB));
-    PetscCall(MatProductNumeric_MPIAIJKokkos_AtB(product, B, pdata->Z, pdata->mmAtB));
+  } else if (ptype == MATPRODUCT_PtAP) { // BtAB, computed by Z = AtB; C= ZtB
+    PetscCall(MatProductNumeric_MPIAIJKokkos_AtB(product, A, B, pdata->mmAB));
+    PetscCall(MatProductNumeric_MPIAIJKokkos_AtB(product, pdata->Z, B, pdata->mmAtB));
   }
   PetscCall(MatSeqAIJKokkosModifyDevice(cmpi->A)); // mark that A, B on device are modified
   PetscCall(MatSeqAIJKokkosModifyDevice(cmpi->B));
