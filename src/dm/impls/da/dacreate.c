@@ -82,6 +82,7 @@ static PetscErrorCode DMSetFromOptions_DA(DM da, PetscOptionItems PetscOptionsOb
   }
 
   PetscCall(PetscOptionsBoundedInt("-da_refine", "Uniformly refine DA one or more times", "None", refine, &refine, NULL, 0));
+  PetscCall(PetscOptionsBool("-da_use_section", "Create a PetscSection for the data layout", "None", dd->useSection, &dd->useSection, NULL));
   PetscOptionsHeadEnd();
 
   while (refine--) {
@@ -312,6 +313,128 @@ static PetscErrorCode DMGetNeighbors_DA(DM dm, PetscInt *nranks, const PetscMPII
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#include <petscsf.h>
+
+static PetscErrorCode PetscSFAddFace_2D_Private(DM dm, PetscMPIInt nrank, PetscInt xmin, PetscInt xmax, PetscInt ymin, PetscInt ymax, const PetscInt bases[], const PetscInt glxs[], const PetscInt glys[], PetscInt *l, PetscInt local[], PetscSFNode remote[])
+{
+  const PetscInt *glx;
+  //PetscInt        xmin, xmax, ymin, ymax;
+  PetscInt        pm, dof, x, y, gx, gy, gm;
+
+  PetscFunctionBegin;
+  PetscCall(DMDAGetInfo(dm, NULL, NULL, NULL, NULL, &pm, NULL, NULL, &dof, NULL, NULL, NULL, NULL, NULL));
+  PetscCall(DMDAGetCorners(dm, &x, &y, NULL, NULL, NULL, NULL));
+  PetscCall(DMDAGetGhostCorners(dm, &gx, &gy, NULL, &gm, NULL, NULL));
+  PetscCall(DMDAGetGhostOwnershipRanges(dm, &glx, NULL, NULL, NULL, NULL, NULL));
+  const PetscInt nrm = nrank % pm; // The x-component of the neighbor rank, in [0, m)
+  const PetscInt nrn = nrank / pm; // The y-component of the neighbor rank, in [0, n)
+
+  for (PetscInt j = ymin; j < ymax; ++j) {
+    for (PetscInt i = xmin; i < xmax; ++i) {
+      local[*l]        = (j - gy) * gm + (i - gx);
+      remote[*l].rank  = nrank;
+      remote[*l].index = (j - glys[nrn] * dof) * glx[nrm] * dof + (i - glxs[nrm] * dof);
+      ++(*l);
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMCreateLocalSection_DA(DM dm)
+{
+  MPI_Comm     comm;
+  PetscMPIInt  size, rank;
+  PetscSection s;
+  PetscSF      sf;
+  PetscInt     x, y = 0, z = 0, m, n = 1, p = 1;
+  PetscInt     gx, gy = 0, gz = 0, gm, gn = 1, gp = 1;
+  PetscInt     dim, dof, M, N = 1, P = 1, pm, pn = 1, pp = 1, Nv, gNv;
+
+  PetscFunctionBegin;
+  if (!((DM_DA *)dm->data)->useSection) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+
+  PetscCall(DMDAGetInfo(dm, &dim, &M, &N, &P, &pm, &pn, &pp, &dof, NULL, NULL, NULL, NULL, NULL));
+  PetscCall(DMDAGetCorners(dm, &x, &y, &z, &m, &n, &p));
+  PetscCall(DMDAGetGhostCorners(dm, &gx, &gy, &gz, &gm, &gn, &gp));
+  Nv  = m * n * p;
+  gNv = gm * gn * gp;
+  //vStart = (x * M + y) * N + z;
+  //vEnd   = ((x + m - 1) * M + (y + n - 1)) * N + z + p;
+  PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &s));
+  PetscCall(PetscSectionSetChart(s, 0, gNv));
+  for (PetscInt v = 0; v < gNv; ++v) PetscCall(PetscSectionSetDof(s, v, dof));
+  // Set BC Dofs
+  PetscCall(PetscSectionSetFromOptions(s));
+  PetscCall(PetscSectionSetUp(s));
+  // Set BC indices
+  //PetscCall(DMSetLocalSection(dm, s));
+  DMView(dm,  NULL);
+  PetscSectionView(s, NULL);
+  PetscCall(PetscSectionDestroy(&s));
+
+  // Create point SF
+  const PetscMPIInt *neigh;   // Neighbor ranks
+  PetscInt          *local;   // Local indices of shared vertices
+  PetscSFNode       *remote;  // Remote indices of shared vertices
+  PetscInt          *bases;   // First vertex on each rank
+  PetscInt          *ldims;   // Number of vertices on each rank
+  const PetscInt    *glx;     // The number of ghosted vertices along x in each of the m procs
+  const PetscInt    *gly;     // The number of ghosted vertices along y in each of the n procs
+  const PetscInt    *glz;     // The number of ghosted vertices along z in each of the p procs
+  const PetscInt    *glxs;    // The first ghosted vertex along x in each of the m procs
+  const PetscInt    *glys;    // The first ghosted vertex along y in each of the n procs
+  const PetscInt    *glzs;    // The first ghosted vertex along z in each of the p procs
+  PetscInt           Nl, l = 0;
+  PetscCall(PetscSFCreate(comm, &sf));
+  PetscCall(DMDAGetNeighbors(dm, &neigh));
+  Nl = gNv - Nv;
+  // Compute starting point of each process
+  PetscCall(PetscMalloc2(size + 1, &bases, size, &ldims));
+  PetscCallMPI(MPI_Allgather(&Nv, 1, MPIU_INT, ldims, 1, MPIU_INT, comm));
+  bases[0] = 0;
+  for (PetscInt i = 1; i <= size; i++) bases[i] = ldims[i - 1];
+  for (PetscInt i = 1; i <= size; i++) bases[i] += bases[i - 1];
+  // Compute local and remote points for each leaf
+  //   NEED DMDAGetOwnershipRanges
+  PetscCall(DMDAGetGhostOwnershipRanges(dm, &glx, &glxs, &gly, &glys, &glz, &glzs));
+  PetscCall(PetscMalloc2(Nl, &local, Nl, &remote));
+  for (PetscInt i = 0; i < pm; ++i) PetscSynchronizedPrintf(comm, "[%d]glx %d\n", rank, glx[i]);
+  for (PetscInt i = 0; i < pn; ++i) PetscSynchronizedPrintf(comm, "[%d]gly %d\n", rank, gly[i]);
+  switch (dim) {
+  case 2:
+    // Lower left
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[0], gx, x, gy, y, bases, glxs, glys, &l, local, remote));
+    // Lower middle
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[1], x, x + m, gy, y, bases, glxs, glys, &l, local, remote));
+    // Lower right
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[2], x + m, gx + gm, gy, y, bases, glxs, glys, &l, local, remote));
+    // Middle left
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[3], gx, x, y, y + n, bases, glxs, glys, &l, local, remote));
+    // Middle right
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[5], x + m, gx + gm, y, y + n, bases, glxs, glys, &l, local, remote));
+    // Upper left
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[6], gx, x, y + n, gy + gn, bases, glxs, glys, &l, local, remote));
+    // Upper middle
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[7], x, x + m, y + n, gy + gn, bases, glxs, glys, &l, local, remote));
+    // Upper right
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[8], x + m, gx + gm, y + n, gy + gn, bases, glxs, glys, &l, local, remote));
+    break;
+  default: PetscCheck(0, comm, PETSC_ERR_SUP, "No support for dimension %" PetscInt_FMT, dim);
+  }
+  PetscCall(PetscFree2(bases, ldims));
+  PetscCall(DMDARestoreGhostOwnershipRanges(dm, &glx, &glxs, &gly, &glys, &glz, &glzs));
+  for (PetscInt l = 0; l < Nl; ++l) PetscSynchronizedPrintf(comm, "[%d]local: %d remote %d %d\n", rank, local[l], remote[l].rank, remote[l].index);
+  PetscSynchronizedFlush(comm, NULL);
+  PetscCall(PetscSFSetGraph(sf, Nv, Nl, local, PETSC_OWN_POINTER, remote, PETSC_OWN_POINTER));
+  PetscCall(DMSetPointSF(dm, sf));
+  PetscSFView(sf, NULL);
+  PetscCall(PetscSFDestroy(&sf));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
    DMDA = "da" - A `DM` object that is used to help solve PDEs on a structured grid (or mesh) in 1, 2, or 3 dimensions.
 
@@ -421,6 +544,7 @@ PETSC_EXTERN PetscErrorCode DMCreate_DA(DM da)
   da->ops->view                      = NULL;
   da->ops->setfromoptions            = DMSetFromOptions_DA;
   da->ops->setup                     = DMSetUp_DA;
+  da->ops->createlocalsection        = DMCreateLocalSection_DA;
   da->ops->clone                     = DMClone_DA;
   da->ops->load                      = DMLoad_DA;
   da->ops->createcoordinatedm        = DMCreateCoordinateDM_DA;
