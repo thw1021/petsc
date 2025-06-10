@@ -46,7 +46,7 @@ PETSC_EXTERN void petscviewerhdf5writeattributescalar_(PetscViewer *viewer, cons
   FREECHAR(name, c2);
 }
 
-PETSC_EXTERN void petscviewerhdf5writeattributereal_(PetscViewer *viewer,  const char parent[], const char name[], PetscReal *value, int *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
+PETSC_EXTERN void petscviewerhdf5writeattributereal_(PetscViewer *viewer, const char parent[], const char name[], PetscReal *value, int *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2)
 {
   char *c1;
   char *c2;
