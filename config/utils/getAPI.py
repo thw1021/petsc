@@ -476,7 +476,8 @@ def getFunctions(mansec, functiontoinclude, filename):
       if  line[0:line.find('(')].find('_') > -1:
         line = f.readline()
         continue
-      line = line.replace('PETSC_UNUSED','')
+      line = line.replace('PETSC_UNUSED ','')
+      line = line.replace('PETSC_RESTRICT ','')
       line = line.strip()
       if line.endswith(' PeNS'):
         opaque = True
