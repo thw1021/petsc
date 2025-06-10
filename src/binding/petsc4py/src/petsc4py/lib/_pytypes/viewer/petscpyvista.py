@@ -25,7 +25,7 @@ def _convertCell(ctype, cells, nc, off):
         cells[off + 4] = cells[off + 5]
         cells[off + 5] = tmp
     elif ctype == PETSc.DM.PolytopeType.PYRAMID:
-        tmp            = cells[off + 1]
+        tmp = cells[off + 1]
         cells[off + 1] = cells[off + 3]
         cells[off + 3] = tmp
     return
@@ -50,10 +50,10 @@ class PetscPyVista:
 
     def setFromOptions(self, viewer):
         OptDB = PETSc.Options(viewer.prefix)
-        self.swarmField     = OptDB.getString('view_pyvista_swarm_field', 'w_q')
+        self.swarmField = OptDB.getString('view_pyvista_swarm_field', 'w_q')
         self.swarmPointSize = OptDB.getInt('view_pyvista_swarm_point_size', 5)
-        self.warpFactor     = OptDB.getReal('view_pyvista_warp', 0.0)
-        self.clipBounds     = OptDB.getRealArray('view_pyvista_clip', [])
+        self.warpFactor = OptDB.getReal('view_pyvista_warp', 0.0)
+        self.clipBounds = OptDB.getRealArray('view_pyvista_clip', [])
 
     def view(self, viewer, outviewer):
         pass
@@ -98,9 +98,9 @@ class PetscPyVista:
                     points[v, d] = coords[v * cdim + d]
         return pv.UnstructuredGrid(cells, celltypes, points)
 
-    def viewPlex(self, viewer, dm, scalars = None):
-        grid  = self.convertDMToPV(dm)
-        name  = viewer.getFileName()
+    def viewPlex(self, viewer, dm, scalars=None):
+        grid = self.convertDMToPV(dm)
+        name = viewer.getFileName()
         sname = None
         if scalars is not None:
             if scalars[1].shape[0] == grid.n_cells:
@@ -108,33 +108,37 @@ class PetscPyVista:
             elif scalars[1].shape[0] == grid.n_points:
                 grid.point_data[scalars[0]] = scalars[1]
             else:
-                raise RuntimeError('Scalars \'%s\' size %d did not match sizes for cells (%d) or vertices (%d)' % (scalars[0], scalars[1].shape[0], grid.n_cells, grid.n_points))
-            if self.warpFactor > 0.:
-                grid = grid.warp_by_scalar(factor = self.warpFactor)
+                raise RuntimeError(
+                    "Scalars '%s' size %d did not match sizes for cells (%d) or vertices (%d)"
+                    % (scalars[0], scalars[1].shape[0], grid.n_cells, grid.n_points)
+                )
+            if self.warpFactor > 0.0:
+                grid = grid.warp_by_scalar(factor=self.warpFactor)
             if len(self.clipBounds) > 0:
                 grid = grid.clip_box(self.clipBounds)
         if name is None:
             pl = pv.Plotter()
-            pl.add_mesh(grid, show_edges=True, scalars = sname)
+            pl.add_mesh(grid, show_edges=True, scalars=sname)
             pl.show()
         else:
-            grid.plot(show_edges=True,scalar=sname,off_screen=True,screenshot=name)
+            grid.plot(show_edges=True, scalar=sname, off_screen=True, screenshot=name)
         return
 
     def viewSwarm(self, viewer, sw):
         import math
+
         name = viewer.getFileName()
         spoints = sw.getField('DMSwarmPIC_coor')
-        n       = spoints.shape[0]
-        bs      = spoints.shape[1]
-        points  = np.zeros((n, 3))
+        n = spoints.shape[0]
+        bs = spoints.shape[1]
+        points = np.zeros((n, 3))
         for i in range(n):
-            points[i,:bs] = spoints[i,:]
+            points[i, :bs] = spoints[i, :]
         vpoints = sw.getField('velocity')
-        nv      = vpoints.shape[0]
-        vbs     = vpoints.shape[1]
+        nv = vpoints.shape[0]
+        vbs = vpoints.shape[1]
         vpoints = vpoints.reshape((nv, vbs))
-        wgt   = sw.getField(self.swarmField)
+        wgt = sw.getField(self.swarmField)
         field = np.zeros((n,))
         for i in range(n):
             field[i] = wgt[i, 0]
@@ -142,21 +146,35 @@ class PetscPyVista:
             pl = pv.Plotter()
         else:
             pl = pv.Plotter(off_screen=True)
-        pl.add_points(points, scalars=field, render_points_as_spheres=False, point_size=self.swarmPointSize, name="swarm")
+        pl.add_points(
+            points,
+            scalars=field,
+            render_points_as_spheres=False,
+            point_size=self.swarmPointSize,
+            name='swarm',
+        )
         maxF = field.max()
         for i in range(n):
-            if maxF <= 0.:
-              continue
+            if maxF <= 0.0:
+                continue
             if math.fabs(field[i]) < 0.1 * maxF:
-              continue
-            if math.fabs(vpoints[i,0]) > 0.001:
-              continue
-            val = 2. * math.fabs(field[i]) / maxF
-            pl.add_mesh(pv.Disc(center = points[i,:], normal = (1., 0., 0.), inner = 0.25 * val, outer = val), opacity = 0.2)
+                continue
+            if math.fabs(vpoints[i, 0]) > 0.001:
+                continue
+            val = 2.0 * math.fabs(field[i]) / maxF
+            pl.add_mesh(
+                pv.Disc(
+                    center=points[i, :],
+                    normal=(1.0, 0.0, 0.0),
+                    inner=0.25 * val,
+                    outer=val,
+                ),
+                opacity=0.2,
+            )
         if name is None:
             pl.show()
         else:
-            pl.show(interactive=False,screenshot=name)
+            pl.show(interactive=False, screenshot=name)
         sw.restoreField(self.swarmField)
         sw.restoreField('velocity')
         sw.restoreField('DMSwarmPIC_coor')
@@ -164,9 +182,9 @@ class PetscPyVista:
 
     def viewObject(self, viewer, pobj):
         if pobj.klass == 'Vec':
-          dm = pobj.getDM()
-          a = pobj.getArray(readonly=1)
-          self.viewPlex(viewer, dm, scalars = (pobj.name, a))
+            dm = pobj.getDM()
+            a = pobj.getArray(readonly=1)
+            self.viewPlex(viewer, dm, scalars=(pobj.name, a))
         elif pobj.klass == 'DM':
             if pobj.type == 'plex':
                 self.viewPlex(viewer, pobj)
