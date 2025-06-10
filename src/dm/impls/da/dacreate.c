@@ -317,7 +317,6 @@ static PetscErrorCode DMGetNeighbors_DA(DM dm, PetscInt *nranks, const PetscMPII
 static PetscErrorCode PetscSFAddFace_2D_Private(DM dm, PetscMPIInt nrank, PetscInt xmin, PetscInt xmax, PetscInt ymin, PetscInt ymax, const PetscInt bases[], const PetscInt glxs[], const PetscInt glys[], PetscInt *l, PetscInt local[], PetscSFNode remote[])
 {
   const PetscInt *glx;
-  //PetscInt        xmin, xmax, ymin, ymax;
   PetscInt        pm, dof, x, y, gx, gy, gm;
 
   PetscFunctionBegin;
@@ -360,8 +359,6 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   PetscCall(DMDAGetGhostCorners(dm, &gx, &gy, &gz, &gm, &gn, &gp));
   Nv  = m * n * p;
   gNv = gm * gn * gp;
-  //vStart = (x * M + y) * N + z;
-  //vEnd   = ((x + m - 1) * M + (y + n - 1)) * N + z + p;
   PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &s));
   PetscCall(PetscSectionSetChart(s, 0, gNv));
   for (PetscInt v = 0; v < gNv; ++v) PetscCall(PetscSectionSetDof(s, v, dof));
@@ -370,22 +367,22 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   PetscCall(PetscSectionSetUp(s));
   // Set BC indices
   //PetscCall(DMSetLocalSection(dm, s));
-  DMView(dm,  NULL);
+  DMView(dm, NULL);
   PetscSectionView(s, NULL);
   PetscCall(PetscSectionDestroy(&s));
 
   // Create point SF
-  const PetscMPIInt *neigh;   // Neighbor ranks
-  PetscInt          *local;   // Local indices of shared vertices
-  PetscSFNode       *remote;  // Remote indices of shared vertices
-  PetscInt          *bases;   // First vertex on each rank
-  PetscInt          *ldims;   // Number of vertices on each rank
-  const PetscInt    *glx;     // The number of ghosted vertices along x in each of the m procs
-  const PetscInt    *gly;     // The number of ghosted vertices along y in each of the n procs
-  const PetscInt    *glz;     // The number of ghosted vertices along z in each of the p procs
-  const PetscInt    *glxs;    // The first ghosted vertex along x in each of the m procs
-  const PetscInt    *glys;    // The first ghosted vertex along y in each of the n procs
-  const PetscInt    *glzs;    // The first ghosted vertex along z in each of the p procs
+  const PetscMPIInt *neigh;  // Neighbor ranks
+  PetscInt          *local;  // Local indices of shared vertices
+  PetscSFNode       *remote; // Remote indices of shared vertices
+  PetscInt          *bases;  // First vertex on each rank
+  PetscInt          *ldims;  // Number of vertices on each rank
+  const PetscInt    *glx;    // The number of ghosted vertices along x in each of the m procs
+  const PetscInt    *gly;    // The number of ghosted vertices along y in each of the n procs
+  const PetscInt    *glz;    // The number of ghosted vertices along z in each of the p procs
+  const PetscInt    *glxs;   // The first ghosted vertex along x in each of the m procs
+  const PetscInt    *glys;   // The first ghosted vertex along y in each of the n procs
+  const PetscInt    *glzs;   // The first ghosted vertex along z in each of the p procs
   PetscInt           Nl, l = 0;
   PetscCall(PetscSFCreate(comm, &sf));
   PetscCall(DMDAGetNeighbors(dm, &neigh));
@@ -421,7 +418,8 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
     // Upper right
     PetscCall(PetscSFAddFace_2D_Private(dm, neigh[8], x + m, gx + gm, y + n, gy + gn, bases, glxs, glys, &l, local, remote));
     break;
-  default: PetscCheck(0, comm, PETSC_ERR_SUP, "No support for dimension %" PetscInt_FMT, dim);
+  default:
+    PetscCheck(0, comm, PETSC_ERR_SUP, "No support for dimension %" PetscInt_FMT, dim);
   }
   PetscCall(PetscFree2(bases, ldims));
   PetscCall(DMDARestoreGhostOwnershipRanges(dm, &glx, &glxs, &gly, &glys, &glz, &glzs));
