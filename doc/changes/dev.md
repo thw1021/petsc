@@ -24,6 +24,7 @@
 ```
 
 - Deprecate `PetscSSEIsEnabled()`
+- Add `PetscBTCopy()`
 
 ```{rubric} Event Logging:
 ```
@@ -64,6 +65,7 @@
 - Add `MatNullSpaceRemoveFn` type definition
 - Add `MatMFFDFn`, `MatMFFDiFn`, `MatMFFDiBaseFn`, and `MatMFFDCheckhFn` type definitions
 - Add `MatFDColoringFn` type definition
+- Add `MatSelectVariableBlockSizes()`
 
 ```{rubric} MatCoarsen:
 ```
@@ -92,6 +94,8 @@
 
 ```{rubric} SNES:
 ```
+
+- Change `SNESTestJacobian()` to report the norms
 
 ```{rubric} SNESLineSearch:
 ```
@@ -132,6 +136,8 @@
 - Rename `DMPlexComputeResidual_Hybrid_Internal()` to `DMPlexComputeResidualHybridByKey()`
 - Rename `DMPlexComputeJacobian_Hybrid_Internal()` to `DMPlexComputeJacobianHybridByKey()`
 - Add `DMPlexInsertBounds()`
+- Change argument order for `DMPlexComputeBdResidualSingle()` and `DMPlexComputeBdJacobianSingle()` to match domain functions
+- Add `DMPlexComputeBdResidualSingleByKey()` and `DMPlexComputeBdJacobianSingleByLabel()`
 
 ```{rubric} FE/FV:
 ```
