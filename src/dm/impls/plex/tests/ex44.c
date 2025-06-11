@@ -131,22 +131,46 @@ int main(int argc, char **argv)
   test:
     suffix: quad_tensor_0
     args: -dm_plex_simplex 0 -dm_plex_transform_extrude_use_tensor {{0 1}separate output} \
-          -dm_view -adapt_dm_view -dm_plex_check_all -test_forest {{0 1}separate output}
+          -dm_view -adapt_dm_view -dm_plex_check_all
+
+  test:
+    suffix: quad_tensor_0_forest
+    requires: p4est
+    args: -dm_plex_simplex 0 -dm_plex_transform_extrude_use_tensor {{0 1}separate output} \
+          -dm_view -adapt_dm_view -dm_plex_check_all -test_forest 1
 
   test:
     suffix: quad_normal_0
     args: -dm_plex_simplex 0 -dm_plex_transform_extrude_normal 0,1,1 \
-          -dm_view -adapt_dm_view -dm_plex_check_all -test_forest {{0 1}separate output}
+          -dm_view -adapt_dm_view -dm_plex_check_all
+
+  test:
+    suffix: quad_normal_0_forest
+    requires: p4est
+    args: -dm_plex_simplex 0 -dm_plex_transform_extrude_normal 0,1,1 \
+          -dm_view -adapt_dm_view -dm_plex_check_all -test_forest 1
 
   test:
     suffix: quad_normal_1
     args: -dm_plex_simplex 0 -dm_plex_transform_extrude_normal_function pyramidNormal \
-          -dm_view -adapt_dm_view -dm_plex_check_all -test_forest {{0 1}separate output}
+          -dm_view -adapt_dm_view -dm_plex_check_all
+
+  test:
+    suffix: quad_normal_1_forest
+    requires: p4est
+    args: -dm_plex_simplex 0 -dm_plex_transform_extrude_normal_function pyramidNormal \
+          -dm_view -adapt_dm_view -dm_plex_check_all -test_forest 1
 
   test:
     suffix: quad_symmetric_0
     args: -dm_plex_simplex 0 -dm_plex_transform_extrude_symmetric \
-          -dm_view -adapt_dm_view -dm_plex_check_all -test_forest {{0 1}separate output}
+          -dm_view -adapt_dm_view -dm_plex_check_all
+
+  test:
+    suffix: quad_symmetric_0_forest
+    requires: p4est
+    args: -dm_plex_simplex 0 -dm_plex_transform_extrude_symmetric \
+          -dm_view -adapt_dm_view -dm_plex_check_all -test_forest 1
 
   test:
     suffix: quad_label
@@ -184,8 +208,15 @@ int main(int argc, char **argv)
       suffix: quad_adapt_1
       nsize: 2
       args: -dm_plex_simplex 0 -dm_plex_box_faces 2,2 -bd 1 \
+            -dm_plex_transform_extrude_thickness 0.5 -petscpartitioner_type simple
+
+    test:
+      suffix: quad_adapt_1_forest
+      requires: p4est
+      nsize: 2
+      args: -dm_plex_simplex 0 -dm_plex_box_faces 2,2 -bd 1 \
             -dm_plex_transform_extrude_thickness 0.5 -petscpartitioner_type simple \
-            -test_forest {{0 1}separate output}
+            -test_forest 1
 
     test:
       suffix: tet_adapt_0
