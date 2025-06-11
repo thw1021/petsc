@@ -1,6 +1,6 @@
-DM Object: 2 MPI processes
+DM Object: forest 2 MPI processes
   type: plex
-DM_0x84000004_1 in 2 dimensions:
+forest in 2 dimensions:
   Number of 0-cells per rank: 6 6
   Number of 1-cells per rank: 7 7
   Number of 2-cells per rank: 2 2

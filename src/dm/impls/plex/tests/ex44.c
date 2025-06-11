@@ -57,6 +57,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *ctx, DM *dm)
     PetscCall(DMDestroy(dm));
     PetscCall(DMConvert(dmForest, DMPLEX, dm));
     PetscCall(DMDestroy(&dmForest));
+    PetscCall(PetscObjectSetName((PetscObject)*dm, "forest"));
   }
   PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
