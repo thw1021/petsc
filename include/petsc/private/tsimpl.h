@@ -603,3 +603,7 @@ struct _n_TSMonitorVTKCtx {
   char    *filenametemplate;
   PetscInt interval; /* when > 0 uses step % interval, when negative only final solution plotted */
 };
+
+struct _n_TSMonitorSolutionCtx {
+  PetscBool skip_initial; // Skip the viewer the first time TSMonitorSolution is run (within a single call to `TSSolve()`)
+};

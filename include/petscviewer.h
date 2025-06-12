@@ -223,7 +223,6 @@ typedef struct {
   PetscViewer        viewer;
   PetscViewerFormat  format;
   PetscInt           view_interval;
-  PetscBool          view_skip_initial;
   void              *data;
   PetscCtxDestroyFn *data_destroy;
 } PetscViewerAndFormat;
