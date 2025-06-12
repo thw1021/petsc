@@ -146,6 +146,7 @@ class BaseTestKSP:
                 reshist[its] = {'r': rnorm, 'o': ksp.getCGObjectiveValue()}
             else:
                 reshist[its] = rnorm
+
         refcnt = getrefcount(monitor)
         self.ksp.setMonitor(monitor)
         self.assertEqual(getrefcount(monitor), refcnt + 1)
