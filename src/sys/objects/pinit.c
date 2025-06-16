@@ -59,6 +59,9 @@ PetscMPIInt Petsc_Garbage_HMap_keyval = MPI_KEYVAL_INVALID;
 PetscMPIInt Petsc_SharedWD_keyval  = MPI_KEYVAL_INVALID;
 PetscMPIInt Petsc_SharedTmp_keyval = MPI_KEYVAL_INVALID;
 
+PetscBool PetscPairRun  = PETSC_FALSE;
+MPI_Comm  PetscPairComm = MPI_COMM_NULL;
+
 /*
      Declare and set all the string names of the PETSc enums
 */
@@ -891,6 +894,39 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
   PetscCall(PetscSpinlockCreate(&PetscViewerASCIISpinLockStderr));
   PetscCall(PetscSpinlockCreate(&PetscCommSpinLock));
 
+  for (PetscInt i = 1; i < PetscGlobalArgc; ++i) {
+    PetscBool flg = PETSC_FALSE;
+    PetscCall(PetscStrncmp(PetscGlobalArgs[i], "-pair_run", 9, &flg));
+    if (flg) {                                  // if -pair_run is in the command line
+      if (i < PetscGlobalArgc - 1) {            // if it is not the last arg
+        if (PetscGlobalArgs[i + 1][0] != '-') { // if -pair_run <value>
+          PetscCall(PetscOptionsStringToBool(PetscGlobalArgs[i + 1], &PetscPairRun));
+        } else {
+          PetscPairRun = PETSC_TRUE; // default to true if no value is provided
+        }
+      } else { // if -pair_run is the last arg
+        PetscPairRun = PETSC_TRUE;
+      }
+    }
+  }
+
+  PetscCallMPI(MPI_Comm_rank(MPI_COMM_WORLD, &PetscGlobalRank));
+  PetscCallMPI(MPI_Comm_size(MPI_COMM_WORLD, &PetscGlobalSize));
+
+  if (PetscPairRun) {
+    PetscMPIInt halfsize;
+    MPI_Comm    halfworld;
+
+    PetscCheck(PETSC_COMM_WORLD == MPI_COMM_NULL, MPI_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot use -pair_run with a preset PETSC_COMM_WORLD");
+    PetscCheck(PetscGlobalSize % 2 == 0, MPI_COMM_SELF, PETSC_ERR_WRONG_MPI_SIZE, "Cannot use -pair_run with odd number of processes");
+    halfsize = PetscGlobalSize / 2;
+
+    PetscCallMPI(MPI_Comm_split(MPI_COMM_WORLD, (PetscGlobalRank < halfsize) ? 0 : 1, PetscGlobalRank, &halfworld));
+    PetscCallMPI(MPI_Comm_split(MPI_COMM_WORLD, (PetscGlobalRank < halfsize) ? PetscGlobalRank : PetscGlobalRank - halfsize, PetscGlobalRank, &PetscPairComm));
+
+    PETSC_COMM_WORLD = halfworld; // TODO: destroy halfworld and PetscPairComm at PetscFinalize()
+  }
+
   if (PETSC_COMM_WORLD == MPI_COMM_NULL) PETSC_COMM_WORLD = MPI_COMM_WORLD;
   PetscCallMPI(MPI_Comm_set_errhandler(PETSC_COMM_WORLD, MPI_ERRORS_RETURN));
 
@@ -901,9 +937,6 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 
   /* Done after init due to a bug in MPICH-GM? */
   PetscCall(PetscErrorPrintfInitialize());
-
-  PetscCallMPI(MPI_Comm_rank(MPI_COMM_WORLD, &PetscGlobalRank));
-  PetscCallMPI(MPI_Comm_size(MPI_COMM_WORLD, &PetscGlobalSize));
 
   MPIU_BOOL        = MPI_INT;
   MPIU_ENUM        = MPI_INT;
@@ -1039,6 +1072,14 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 
   /* call a second time so it can look in the options database */
   PetscCall(PetscErrorPrintfInitialize());
+
+  // parse the -pair_run option again after the default options database has been set up,
+  //  to 1) consume the option and avoid unused options warnings, and 2) double-check that it was parsed correctly
+  {
+    PetscBool PetscPairRun2 = PETSC_FALSE;
+    PetscCall(PetscOptionsGetBool(NULL, NULL, "-pair_run", &PetscPairRun2, NULL));
+    PetscCheck(PetscPairRun == PetscPairRun2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Error in parsing the -pair_run option");
+  }
 
   /*
      Check system options and print help
