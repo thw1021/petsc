@@ -154,12 +154,10 @@ def extensions():
         depends += glob_join(pth, '*.h')
         depends += glob_join(pth, '*.c')
     for pkg in map(str.lower, reversed(PLIST)):
-        if (pkg.upper() + '_DIR') in os.environ:
-            pd = os.environ[pkg.upper() + '_DIR']
-            pa = os.environ.get('PETSC_ARCH', '')
-            depends += glob_join(pd, 'include', '*.h')
-            depends += glob_join(pd, 'include', pkg, 'private', '*.h')
-            depends += glob_join(pd, pa, 'include', '%sconf.h' % pkg)
+        pa = os.environ.get('PETSC_ARCH', '')
+        depends += glob_join('include', '*.h')
+        depends += glob_join('include', pkg, 'private', '*.h')
+        depends += glob_join(pa, 'include', '%sconf.h' % pkg)
     #
     include_dirs = []
     numpy_include = os.environ.get('NUMPY_INCLUDE')
