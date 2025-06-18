@@ -1,4 +1,5 @@
         module petscmatdef
+use, intrinsic :: ISO_C_BINDING
         use petscvecdef
 #include "petsc/finclude/petscmat.h"
 #include "petsc/finclude/petscmatcoarsen.h"
