@@ -1,4 +1,5 @@
         module petsctaodef
+use, intrinsic :: ISO_C_BINDING
         use petsckspdef
 
 #include <../ftn/tao/petscall.h>
