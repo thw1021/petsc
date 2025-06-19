@@ -1263,6 +1263,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 . -shared_tmp                                         - indicates `/tmp` directory is known to be shared by all processors
 . -not_shared_tmp                                     - indicates each processor has own `/tmp`
 . -tmp                                                - alternative directory to use instead of `/tmp`
+. -python <exe>                                       - Initializes Python, and optionally takes a Python executable name
 - -mpiuni-allow-multiprocess-launch                   - allow `mpiexec` to launch multiple independent MPI-Uni jobs, otherwise a sanity check error is invoked to prevent misuse of MPI-Uni
 
   Options Database Keys for Option Database:
@@ -1314,7 +1315,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 .   `PETSC_VIEWER_SOCKET_PORT`    - socket number to use for socket viewer
 -   `PETSC_VIEWER_SOCKET_MACHINE` - machine to use for socket viewer to connect to
 
-  Level: beginner
+Level: beginner
 
   Note:
   If for some reason you must call `MPI_Init()` separately from `PetscInitialize()`, call
