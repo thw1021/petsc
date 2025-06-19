@@ -1315,7 +1315,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 .   `PETSC_VIEWER_SOCKET_PORT`    - socket number to use for socket viewer
 -   `PETSC_VIEWER_SOCKET_MACHINE` - machine to use for socket viewer to connect to
 
-Level: beginner
+  Level: beginner
 
   Note:
   If for some reason you must call `MPI_Init()` separately from `PetscInitialize()`, call
