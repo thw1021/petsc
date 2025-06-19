@@ -13,6 +13,7 @@
 /* SUBMANSEC = Sys */
 
 #include <limits.h> // INT_MIN, INT_MAX, CHAR_BIT
+#include <stdbool.h>
 
 #if defined(__clang__) || (PETSC_CPP_VERSION >= 17)
   // clang allows both [[nodiscard]] and __attribute__((warn_unused_result)) on type
@@ -450,10 +451,9 @@ typedef float PetscExodusIIFloat;
 
 .seealso: `PETSC_TRUE`, `PETSC_FALSE`, `PetscNot()`, `PetscBool3`
 E*/
-typedef enum {
-  PETSC_FALSE,
-  PETSC_TRUE
-} PetscBool;
+#define PetscBool   bool
+#define PETSC_FALSE false
+#define PETSC_TRUE  true
 PETSC_EXTERN const char *const PetscBools[];
 
 /*E
