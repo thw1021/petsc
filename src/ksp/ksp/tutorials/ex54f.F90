@@ -251,15 +251,13 @@
       PetscCallA(KSPDestroy(ksp,ierr))
       PetscCallA(PetscFinalize(ierr))
 
-      end
-
+      contains
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !     thfx2d - compute material tensor
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !     Compute thermal gradient and flux
 
       subroutine thfx2d(ev,xl,shp,dd,ndm,ndf,nel,dir)
-      implicit  none
 
       PetscInt   ndm,ndf,nel,i
       PetscReal ev(2),xl(ndm,nel),shp(3,*),dir
@@ -308,7 +306,6 @@
 !                     shp(3,i) = N_i
 !         xsj       - Jacobian determinant at point
 !-----[--.----+----.----+----.-----------------------------------------]
-      implicit  none
       PetscInt  ndm
       PetscReal xo,xs,xt, yo,ys,yt, xsm,xsp,xtm
       PetscReal xtp, ysm,ysp,ytm,ytp
@@ -394,7 +391,6 @@
 !     Outputs:
 !     sg(3,*) - Array of points and weights
 !-----[--.----+----.----+----.-----------------------------------------]
-      implicit  none
       PetscInt   l,i,lr(9),lz(9)
       PetscReal    g,third,sg(3,*)
       data      lr/-1,1,1,-1,0,1,0,-1,0/,lz/-1,-1,1,1,-1,0,1,0,0/
@@ -414,7 +410,6 @@
 !     ex54_psi - anusotropic material direction
 !     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       PetscReal function ex54_psi(x,y)
-      implicit  none
       PetscReal x,y,theta
       common /ex54_theta/ theta
       ex54_psi = theta
@@ -425,6 +420,7 @@
             ex54_psi = atan(-x/y)
          endif
       endif
+      end
       end
 
 !
