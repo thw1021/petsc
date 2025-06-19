@@ -298,33 +298,33 @@ PetscErrorCode PetscCommDestroy(MPI_Comm *comm)
   if (*comm == MPI_COMM_NULL) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscSpinlockLock(&PetscCommSpinLock));
   PetscCallMPI(MPI_Comm_get_attr(icomm, Petsc_Counter_keyval, &counter, &flg));
-  if (!flg) { /* not a PETSc comm, check if it has an inner comm */
+  if (flg == 0) { /* not a PETSc comm, check if it has an inner comm */
     PetscCallMPI(MPI_Comm_get_attr(icomm, Petsc_InnerComm_keyval, &ucomm, &flg));
-    PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "MPI_Comm does not have tag/name counter nor does it have inner MPI_Comm");
+    PetscCheck(flg == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "MPI_Comm does not have tag/name counter nor does it have inner MPI_Comm");
     icomm = ucomm.comm;
     PetscCallMPI(MPI_Comm_get_attr(icomm, Petsc_Counter_keyval, &counter, &flg));
-    PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "Inner MPI_Comm does not have expected tag/name counter, problem with corrupted memory");
+    PetscCheck(flg == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "Inner MPI_Comm does not have expected tag/name counter, problem with corrupted memory");
   }
   counter->refcount--;
   if (!counter->refcount) {
     /* if MPI_Comm has outer comm then remove reference to inner MPI_Comm from outer MPI_Comm */
     PetscCallMPI(MPI_Comm_get_attr(icomm, Petsc_OuterComm_keyval, &ucomm, &flg));
-    if (flg) {
+    if (flg == 1) {
       ocomm = ucomm.comm;
       PetscCallMPI(MPI_Comm_get_attr(ocomm, Petsc_InnerComm_keyval, &ucomm, &flg));
-      PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "Outer MPI_Comm %ld does not have expected reference to inner comm %ld, problem with corrupted memory", (long int)ocomm, (long int)icomm);
+      PetscCheck(flg == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "Outer MPI_Comm %ld does not have expected reference to inner comm %ld, problem with corrupted memory", (long int)ocomm, (long int)icomm);
       PetscCallMPI(MPI_Comm_delete_attr(ocomm, Petsc_InnerComm_keyval));
     }
 
     /* Remove the object creation index on the communicator */
     PetscCallMPI(MPI_Comm_get_attr(icomm, Petsc_CreationIdx_keyval, &cidx, &flg));
-    if (flg) {
+    if (flg == 1) {
       PetscCall(PetscFree(cidx));
     } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "MPI_Comm does not have object creation index");
 
     /* Remove garbage hashmap set up by garbage collection */
     PetscCallMPI(MPI_Comm_get_attr(icomm, Petsc_Garbage_HMap_keyval, &garbage, &flg));
-    if (flg) {
+    if (flg == 1) {
       PetscInt entries = 0;
       PetscCall(PetscHMapObjGetSize(garbage.map, &entries));
       if (entries > 0) PetscCall(PetscGarbageCleanup(icomm));
