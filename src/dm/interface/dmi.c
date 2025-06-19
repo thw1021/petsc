@@ -256,7 +256,7 @@ static PetscErrorCode DMSelectFields_Private(DM dm, PetscSection section, PetscI
     PetscCall(PetscSectionCreateComponentSubsection(section, numComps[field], comps, &subsection));
     PetscCall(DMSetLocalSection(*subdm, subsection));
     PetscCall(PetscSectionDestroy(&subsection));
-    (*subdm)->nullspaceConstructors[field] = dm->nullspaceConstructors[field];
+    if (dm->nullspaceConstructors) (*subdm)->nullspaceConstructors[field] = dm->nullspaceConstructors[field];
     if (dm->probs) {
       PetscFV  fv, fvNew;
       PetscInt fnum[1] = {field};
@@ -283,7 +283,7 @@ static PetscErrorCode DMSelectFields_Private(DM dm, PetscSection section, PetscI
       PetscCall(PetscDSCopyBoundary(dm->probs[field].ds, 1, fnum, (*subdm)->probs[0].ds));
       PetscCall(PetscDSSelectEquations(dm->probs[field].ds, 1, fnum, (*subdm)->probs[0].ds));
     }
-    if ((*subdm)->nullspaceConstructors[0] && is) {
+    if ((*subdm)->nullspaceConstructors && (*subdm)->nullspaceConstructors[0] && is) {
       MatNullSpace nullSpace;
 
       PetscCall((*(*subdm)->nullspaceConstructors[0])(*subdm, 0, 0, &nullSpace));
@@ -297,11 +297,13 @@ static PetscErrorCode DMSelectFields_Private(DM dm, PetscSection section, PetscI
   PetscCall(DMSetLocalSection(*subdm, subsection));
   PetscCall(PetscSectionDestroy(&subsection));
   for (PetscInt f = 0; f < numFields; ++f) {
-    (*subdm)->nullspaceConstructors[f] = dm->nullspaceConstructors[fields[f]];
-    if ((*subdm)->nullspaceConstructors[f]) {
-      haveNull = PETSC_TRUE;
-      nf       = f;
-      of       = fields[f];
+    if (dm->nullspaceConstructors) {
+      (*subdm)->nullspaceConstructors[f] = dm->nullspaceConstructors[fields[f]];
+      if ((*subdm)->nullspaceConstructors[f]) {
+        haveNull = PETSC_TRUE;
+        nf       = f;
+        of       = fields[f];
+      }
     }
   }
   if (dm->probs) {
@@ -536,11 +538,13 @@ PetscErrorCode DMCreateSectionSuperDM(DM dms[], PetscInt len, IS *is[], DM *supe
   /* Preserve nullspaces */
   for (i = 0, supf = 0; i < len; ++i) {
     for (f = 0; f < Nfs[i]; ++f, ++supf) {
-      (*superdm)->nullspaceConstructors[supf] = dms[i]->nullspaceConstructors[f];
-      if ((*superdm)->nullspaceConstructors[supf]) {
-        haveNull = PETSC_TRUE;
-        nullf    = supf;
-        oldf     = f;
+      if (dms[i]->nullspaceConstructors) {
+        (*superdm)->nullspaceConstructors[supf] = dms[i]->nullspaceConstructors[f];
+        if ((*superdm)->nullspaceConstructors[supf]) {
+          haveNull = PETSC_TRUE;
+          nullf    = supf;
+          oldf     = f;
+        }
       }
     }
   }
