@@ -899,6 +899,76 @@ cdef class Mat(Object):
         Mat_AllocAIJ_NNZ(self.mat, nnz)
         return self
 
+    def setPreallocationCOO(self, coo_i: Sequence[int], coo_j: Sequence[int]) -> Self:
+        """Set preallocation for matrices using a coordinate format of the entries with global indices.
+
+        Collective.
+
+        Parameters
+        ----------
+        coo_i
+            Row indices in COO format.
+        coo_j
+            Column indices in COO format.
+
+        See Also
+        --------
+        setValuesCOO, setPreallocationNNZ, setPreallocationCSR
+        petsc.MatSetPreallocationCOO
+
+        """
+        cdef PetscBool done = PETSC_FALSE
+        CHKERR(MatIsPreallocated(self.mat, &done))
+        
+        cdef PetscInt ncoo_i = 0, ncoo_j = 0
+        cdef PetscInt *ccoo_i = NULL, *ccoo_j = NULL
+        cdef PetscInt ncoo = 0
+        
+        iarray_i(coo_i, &ncoo_i, &ccoo_i)
+        iarray_i(coo_j, &ncoo_j, &ccoo_j)
+
+        if ncoo_i != ncoo_j:
+            raise ValueError("coo_i and coo_j must have the same length")
+        
+        ncoo = ncoo_i
+        CHKERR(MatSetPreallocationCOO(self.mat, ncoo, ccoo_i, ccoo_j))  
+        return self
+    
+    def setPreallocationCOOLocal(self, coo_i: Sequence[int], coo_j: Sequence[int]) -> Self:
+        """Set preallocation for matrices using a coordinate format of the entries with local indices.
+
+        Collective.
+
+        Parameters
+        ----------
+        coo_i
+            Row indices in COO format.
+        coo_j
+            Column indices in COO format.
+
+        See Also
+        --------
+        setPreallocationCOO, setValuesCOO,
+        petsc.MatSetPreallocationCOOLocal, petsc.MatSetPreallocationCOOLocal
+
+        """
+        cdef PetscBool done = PETSC_FALSE
+        CHKERR(MatIsPreallocated(self.mat, &done))
+        
+        cdef PetscInt ncoo_i = 0, ncoo_j = 0
+        cdef PetscInt *ccoo_i = NULL, *ccoo_j = NULL
+        cdef PetscInt ncoo = 0
+        
+        iarray_i(coo_i, &ncoo_i, &ccoo_i)
+        iarray_i(coo_j, &ncoo_j, &ccoo_j)
+
+        if ncoo_i != ncoo_j:
+            raise ValueError("coo_i and coo_j must have the same length")
+        
+        ncoo = ncoo_i
+        CHKERR(MatSetPreallocationCOOLocal(self.mat, ncoo, ccoo_i, ccoo_j))        
+        return self
+
     def setPreallocationCSR(self, csr: CSRIndicesSpec) -> Self:
         """Preallocate memory for the matrix with a CSR layout.
 
@@ -2681,6 +2751,29 @@ cdef class Mat(Object):
 
         """
         matsetvalues_ijv(self.mat, I, J, V, addv, rowmap, 0, 0)
+
+    def setValuesCOO(
+        self,
+        coo_v: Sequence[Scalar],
+        addv: InsertModeSpec = None) -> None:
+        """
+        Set values at once in a matrix preallocated using setPreallocationCOO
+
+        Not collective.
+
+        Parameters
+        ----------
+        coo_v
+            The matrix values (can be NULL)
+            
+        addv
+            Insertion mode.
+
+        See Also
+        --------
+        setPreallocationCOO, petsc.MatSetValuesCOO
+        """
+        matsetvalues_coo(self.mat, coo_v, addv)
 
     def setValuesCSR(
         self,
