@@ -18,7 +18,7 @@ class Matrix:
         pass
 
     def setUp(self, mat):
-        self.setupcalled += 1
+        self.setupcalled = 1
 
 
 class ScaledIdentity(Matrix):
@@ -341,7 +341,8 @@ class TestMatrix(unittest.TestCase):
         self.assertEqual(setupcalled, ctx.setupcalled)
         self.A.setPythonContext(ctx)
         self.A.setUp()
-        self.assertEqual(setupcalled + 1, ctx.setupcalled)
+        self.assertEqual(0, setupcalled)
+        self.assertEqual(1, ctx.setupcalled)
 
     def testZeroEntries(self):
         f = lambda: self.A.zeroEntries()
