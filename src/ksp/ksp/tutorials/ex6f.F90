@@ -58,7 +58,7 @@
 !     appropriate processor during matrix assembly).
 !   - Always specify global rows and columns of matrix entries.
 
-      do 10, II=Istart,Iend-1
+      do II=Istart,Iend-1
         v = -1.0
         i = II/n
         j = II - i*n
@@ -80,7 +80,7 @@
         endif
         v = 4.0
         PetscCallA(MatSetValues(A,one,[II],one,[II],[v],ADD_VALUES,ierr))
- 10   continue
+      end do
 
 !  Assemble matrix, using the 2-step process:
 !       MatAssemblyBegin(), MatAssemblyEnd()
@@ -111,9 +111,9 @@
 
 !  Solve several linear systems in succession
 
-      do 100 i=1,nsteps
+      do i=1,nsteps
          PetscCallA(solve1(ksp,A,x,b,u,i,nsteps,A2,ierr))
- 100  continue
+      end do
 
 !  Free work space.  All PETSc objects should be destroyed when they
 !  are no longer needed.
@@ -153,7 +153,7 @@
       Mat              A2
       PetscMPIInt      rank
       PetscBool        pflag
-      common /my_data/ pflag,rank
+      common /my_data/ rank,pflag
 
       one = 1
 ! First time thorough: Create new matrix to define the linear system
@@ -173,10 +173,10 @@
 
 ! Alter the matrix A a bit
       PetscCallA(MatGetOwnershipRange(A,Istart,Iend,ierr))
-      do 20, II=Istart,Iend-1
+      do II=Istart,Iend-1
         v = 2.0
         PetscCallA(MatSetValues(A,one,[II],one,[II],[v],ADD_VALUES,ierr))
- 20   continue
+      end do
       PetscCallA(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr))
       if (pflag) then
         if (rank .eq. 0) write(6,110)
