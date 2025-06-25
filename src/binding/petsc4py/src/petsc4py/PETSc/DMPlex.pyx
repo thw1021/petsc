@@ -3448,20 +3448,15 @@ cdef class DMPlex(DM):
         """
         CHKERR(DMPlexLocalVectorLoad(self.dm, viewer.vwr, sectiondm.dm, sf.sf, vec.vec))
 
-    def getRedundantDM(self) -> tuple[DM, SF]:
+    def getRedundantDM(self) -> tuple[DMPlex, SF]:
         """
-        Get a copy of the DMPLEX that is completely copied on each process.
+        Get a copy of the `DMPlex` on each process.
 
         Collective.
 
-        Parameters
-        ----------
-        comm
-            MPI communicator, defaults to `Sys.getDefaultComm`.
-
         See Also
         --------
-        DMPlex, distribute, getGatherDM
+        distribute, getGatherDM
         petsc.DMPlexGetRedundantDM
         """
         cdef DMPlex newdm = DMPlex()
@@ -3469,16 +3464,15 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexGetRedundantDM(self.dm, &sf.sf, &newdm.dm))
         return newdm, sf
 
-    def getGatherDM(self) -> tuple[DM, SF]:
+    def getGatherDM(self) -> tuple[DMPlex, SF]:
         """
-        Get a copy of the DMPLEX that gathers all points on the root process
-        of the original’s communicator.
+        Gather the `DMPlex` on the original communicator's root process.
 
         Collective.
 
         See Also
         --------
-        DM, DMPlex, distribute, getRedundantDM
+        distribute, getRedundantDM
         petsc.DMPlexGetGatherDM
         """
         cdef DMPlex newdm = DMPlex()
