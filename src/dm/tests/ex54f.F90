@@ -8,7 +8,18 @@ program main
   implicit none
   type(tDM)          :: dm
   PetscErrorCode     :: ierr
-  external :: myFieldDecomp
+  interface
+    subroutine myFieldDecomp(dm, nfields, fieldNames, isFields, subDms, ierr)
+      use petsc
+      implicit none
+      type(tDM), intent(in) :: dm
+      PetscInt, intent(out) :: nfields
+      character(len=30), allocatable, intent(out) :: fieldNames(:)
+      type(tIS), allocatable, intent(out) :: isFields(:)
+      type(tDM), allocatable, intent(out) :: subDms(:)
+      PetscErrorCode, intent(out) :: ierr
+    end subroutine myFieldDecomp
+  end interface
   ! initializing PETSc
   PetscCallA(PetscInitialize(PETSC_NULL_CHARACTER, ierr))
   ! creating a DMShell object
