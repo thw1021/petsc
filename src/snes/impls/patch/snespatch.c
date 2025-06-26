@@ -74,7 +74,7 @@ static PetscErrorCode PCSetUp_PATCH_Nonlinear(PC pc)
   PetscInt    i, pStart, dof, maxDof = -1;
 
   PetscFunctionBegin;
-  if (pc->ctSetupcalled == 0) {
+  if (!pc->setupcalled) {
     PetscCall(PetscMalloc1(patch->npatch, &patch->solver));
     PetscCall(PCGetOptionsPrefix(pc, &prefix));
     PetscCall(PetscSectionGetChart(patch->gtolCounts, &pStart, NULL));
@@ -103,7 +103,7 @@ static PetscErrorCode PCSetUp_PATCH_Nonlinear(PC pc)
     PetscCall(SNESSetFunction(snes, patch->patchResidual, SNESPatchComputeResidual_Private, pc));
     PetscCall(SNESSetJacobian(snes, patch->mat[i], patch->mat[i], SNESPatchComputeJacobian_Private, pc));
   }
-  if (pc->ctSetupcalled == 0 && patch->optionsSet)
+  if (!pc->setupcalled && patch->optionsSet)
     for (i = 0; i < patch->npatch; ++i) PetscCall(SNESSetFromOptions((SNES)patch->solver[i]));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

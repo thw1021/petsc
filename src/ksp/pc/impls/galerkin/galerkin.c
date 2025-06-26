@@ -41,7 +41,7 @@ static PetscErrorCode PCSetUp_Galerkin(PC pc)
   PetscFunctionBegin;
   if (jac->computeasub) {
     Mat Ap;
-    if (pc->ctSetupcalled == 0) {
+    if (!pc->setupcalled) {
       PetscCall((*jac->computeasub)(pc, pc->pmat, NULL, &Ap, jac->computeasub_ctx));
       PetscCall(KSPSetOperators(jac->ksp, Ap, Ap));
       PetscCall(MatDestroy(&Ap));

@@ -188,7 +188,7 @@ static PetscErrorCode PCSetUp_Eisenstat(PC pc)
   PC_Eisenstat *eis = (PC_Eisenstat *)pc->data;
 
   PetscFunctionBegin;
-  if (pc->ctSetupcalled == 0) {
+  if (!pc->setupcalled) {
     PetscCall(MatGetSize(pc->mat, &M, &N));
     PetscCall(MatGetLocalSize(pc->mat, &m, &n));
     PetscCall(MatIsSymmetricKnown(pc->mat, &set, &sym));
@@ -202,7 +202,7 @@ static PetscErrorCode PCSetUp_Eisenstat(PC pc)
     PetscCall(MatShellSetOperation(eis->shell, MATOP_NORM, (void (*)(void))PCNorm_Eisenstat));
   }
   if (!eis->usediag) PetscFunctionReturn(PETSC_SUCCESS);
-  if (pc->ctSetupcalled == 0) { PetscCall(MatCreateVecs(pc->pmat, &eis->diag, NULL)); }
+  if (!pc->setupcalled) { PetscCall(MatCreateVecs(pc->pmat, &eis->diag, NULL)); }
   PetscCall(MatGetDiagonal(pc->pmat, eis->diag));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

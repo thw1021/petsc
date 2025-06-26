@@ -42,7 +42,7 @@ static PetscErrorCode PCISSetSubdomainDiagonalScaling_IS(PC pc, Vec scaling_fact
   PetscCall(PetscObjectReference((PetscObject)scaling_factors));
   PetscCall(VecDestroy(&pcis->D));
   pcis->D = scaling_factors;
-  if (pc->ctSetupcalled > 0) {
+  if (pc->setupcalled) {
     PetscInt sn;
 
     PetscCall(VecGetSize(pcis->D, &sn));
@@ -151,7 +151,7 @@ PetscErrorCode PCISSetUp(PC pc, PetscBool computematrices, PetscBool computesolv
   }
 
   /* first time creation, get info on substructuring */
-  if (pc->ctSetupcalled == 0) {
+  if (!pc->setupcalled) {
     PetscInt  n_I;
     PetscInt *idx_I_local, *idx_B_local, *idx_I_global, *idx_B_global, *count;
     PetscInt  i;
@@ -252,7 +252,7 @@ PetscErrorCode PCISSetUp(PC pc, PetscBool computematrices, PetscBool computesolv
     PetscInt  bs, ibs;
 
     reuse = MAT_INITIAL_MATRIX;
-    if (pcis->reusesubmatrices && pc->ctSetupcalled > 0) {
+    if (pcis->reusesubmatrices && pc->setupcalled) {
       if (pc->flag == SAME_NONZERO_PATTERN) {
         reuse = MAT_REUSE_MATRIX;
       } else {

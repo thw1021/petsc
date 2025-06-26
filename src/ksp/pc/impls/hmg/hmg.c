@@ -102,19 +102,19 @@ static PetscErrorCode PCSetUp_HMG(PC pc)
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)pc, &comm));
-  if (pc->ctSetupcalled > 0) {
+  if (pc->setupcalled) {
     if (hmg->reuseinterp) {
       /* If we did not use Galerkin in the last call or we have a different sparsity pattern now,
       * we have to build from scratch
       * */
       PetscCall(PCMGGetGalerkin(pc, &galerkin));
-      if (galerkin == PC_MG_GALERKIN_NONE || pc->flag != SAME_NONZERO_PATTERN) pc->ctSetupcalled = 0;
+      if (galerkin == PC_MG_GALERKIN_NONE || pc->flag != SAME_NONZERO_PATTERN) pc->setupcalled = PETSC_FALSE;
       PetscCall(PCMGSetGalerkin(pc, PC_MG_GALERKIN_PMAT));
       PetscCall(PCSetUp_MG(pc));
       PetscFunctionReturn(PETSC_SUCCESS);
     } else {
       PetscCall(PCReset_MG(pc));
-      pc->ctSetupcalled = 0;
+      pc->setupcalled = PETSC_FALSE;
     }
   }
 
