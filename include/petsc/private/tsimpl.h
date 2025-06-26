@@ -245,7 +245,7 @@ struct _p_TS {
   PetscInt  num_parameters;
   PetscInt  num_initialvalues;
   void     *vecsrhsjacobianpctx;
-  PetscInt  forwardsetupcalled;
+  PetscBool forwardsetupcalled;
   PetscBool forward_solve;
   PetscErrorCode (*vecsrhsjacobianp)(TS, PetscReal, Vec, Vec *, void *);
 
