@@ -49,7 +49,7 @@ PetscErrorCode PCFactorSetDropTolerance_Factor(PC pc, PetscReal dt, PetscReal dt
   PC_Factor *ilu = (PC_Factor *)pc->data;
 
   PetscFunctionBegin;
-  PetscCheck(pc->setupcalled && (!ilu->info.usedt || ilu->info.dt != dt || ilu->info.dtcol != dtcol || ilu->info.dtcount != dtcount), PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Cannot change tolerance after use");
+  PetscCheck(pc->ctSetupcalled > 0 && (!ilu->info.usedt || ilu->info.dt != dt || ilu->info.dtcol != dtcol || ilu->info.dtcount != dtcount), PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Cannot change tolerance after use");
   ilu->info.usedt   = PETSC_TRUE;
   ilu->info.dt      = dt;
   ilu->info.dtcol   = dtcol;
@@ -73,7 +73,7 @@ PetscErrorCode PCFactorSetMatOrderingType_Factor(PC pc, MatOrderingType ordering
   PetscBool  flg;
 
   PetscFunctionBegin;
-  if (!pc->setupcalled) {
+  if (pc->ctSetupcalled == 0) {
     PetscCall(PetscFree(dir->ordering));
     PetscCall(PetscStrallocpy(ordering, (char **)&dir->ordering));
   } else {
@@ -124,11 +124,11 @@ PetscErrorCode PCFactorSetLevels_Factor(PC pc, PetscInt levels)
   PC_Factor *ilu = (PC_Factor *)pc->data;
 
   PetscFunctionBegin;
-  if (!pc->setupcalled) ilu->info.levels = levels;
+  if (pc->ctSetupcalled == 0) ilu->info.levels = levels;
   else if (ilu->info.levels != levels) {
     PetscUseTypeMethod(pc, reset); /* remove previous factored matrices */
-    pc->setupcalled  = 0;          /* force a complete rebuild of preconditioner factored matrices */
-    ilu->info.levels = levels;
+    pc->ctSetupcalled = 0;         /* force a complete rebuild of preconditioner factored matrices */
+    ilu->info.levels  = levels;
   } else PetscCheck(!ilu->info.usedt, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Cannot change levels after use with ILUdt");
   PetscFunctionReturn(PETSC_SUCCESS);
 }

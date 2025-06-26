@@ -16,7 +16,7 @@ static PetscErrorCode PCSetUp_QR(PC pc)
   PetscCall(PCGetOptionsPrefix(pc, &prefix));
   PetscCall(MatSetOptionsPrefix(pc->pmat, prefix));
   pc->failedreason = PC_NOERROR;
-  if (dir->hdr.reusefill && pc->setupcalled) ((PC_Factor *)dir)->info.fill = dir->hdr.actualfill;
+  if (dir->hdr.reusefill && pc->ctSetupcalled > 0) ((PC_Factor *)dir)->info.fill = dir->hdr.actualfill;
 
   PetscCall(MatSetErrorIfFailure(pc->pmat, pc->erroriffailure));
   if (dir->hdr.inplace) {
@@ -35,7 +35,7 @@ static PetscErrorCode PCSetUp_QR(PC pc)
   } else {
     MatInfo info;
 
-    if (!pc->setupcalled) {
+    if (pc->ctSetupcalled == 0) {
       if (!((PC_Factor *)dir)->fact) { PetscCall(MatGetFactor(pc->pmat, ((PC_Factor *)dir)->solvertype, MAT_FACTOR_QR, &((PC_Factor *)dir)->fact)); }
       PetscCall(MatQRFactorSymbolic(((PC_Factor *)dir)->fact, pc->pmat, dir->col, &((PC_Factor *)dir)->info));
       PetscCall(MatGetInfo(((PC_Factor *)dir)->fact, MAT_LOCAL, &info));
