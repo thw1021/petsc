@@ -321,8 +321,8 @@ static PetscErrorCode PCPARMSSetGlobal_PARMS(PC pc, PCPARMSGlobalType type)
 
   PetscFunctionBegin;
   if (type != parms->global) {
-    parms->global   = type;
-    pc->setupcalled = 0;
+    parms->global     = type;
+    pc->ctSetupcalled = 0;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -366,8 +366,8 @@ static PetscErrorCode PCPARMSSetLocal_PARMS(PC pc, PCPARMSLocalType type)
 
   PetscFunctionBegin;
   if (type != parms->local) {
-    parms->local    = type;
-    pc->setupcalled = 0;
+    parms->local      = type;
+    pc->ctSetupcalled = 0;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -416,12 +416,12 @@ static PetscErrorCode PCPARMSSetSolveTolerances_PARMS(PC pc, PetscReal tol, Pets
 
   PetscFunctionBegin;
   if (tol != parms->solvetol) {
-    parms->solvetol = tol;
-    pc->setupcalled = 0;
+    parms->solvetol   = tol;
+    pc->ctSetupcalled = 0;
   }
   if (maxits != parms->maxits) {
-    parms->maxits   = maxits;
-    pc->setupcalled = 0;
+    parms->maxits     = maxits;
+    pc->ctSetupcalled = 0;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -462,8 +462,8 @@ static PetscErrorCode PCPARMSSetSolveRestart_PARMS(PC pc, PetscInt restart)
 
   PetscFunctionBegin;
   if (restart != parms->maxdim) {
-    parms->maxdim   = restart;
-    pc->setupcalled = 0;
+    parms->maxdim     = restart;
+    pc->ctSetupcalled = 0;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -503,7 +503,7 @@ static PetscErrorCode PCPARMSSetNonsymPerm_PARMS(PC pc, PetscBool nonsym)
   PetscFunctionBegin;
   if ((nonsym && !parms->nonsymperm) || (!nonsym && parms->nonsymperm)) {
     parms->nonsymperm = nonsym;
-    pc->setupcalled   = 0;
+    pc->ctSetupcalled = 0;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -544,15 +544,15 @@ static PetscErrorCode PCPARMSSetFill_PARMS(PC pc, PetscInt lfil0, PetscInt lfil1
   PetscFunctionBegin;
   if (lfil0 != parms->lfil[0] || lfil0 != parms->lfil[1] || lfil0 != parms->lfil[2] || lfil0 != parms->lfil[3]) {
     parms->lfil[1] = parms->lfil[2] = parms->lfil[3] = parms->lfil[0] = lfil0;
-    pc->setupcalled                                                   = 0;
+    pc->ctSetupcalled                                                 = 0;
   }
   if (lfil1 != parms->lfil[4]) {
-    parms->lfil[4]  = lfil1;
-    pc->setupcalled = 0;
+    parms->lfil[4]    = lfil1;
+    pc->ctSetupcalled = 0;
   }
   if (lfil2 != parms->lfil[5] || lfil2 != parms->lfil[6]) {
     parms->lfil[5] = parms->lfil[6] = lfil2;
-    pc->setupcalled                 = 0;
+    pc->ctSetupcalled               = 0;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

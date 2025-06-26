@@ -16,7 +16,7 @@
 static PetscErrorCode PCSetUp_NN(PC pc)
 {
   PetscFunctionBegin;
-  if (!pc->setupcalled) {
+  if (pc->ctSetupcalled == 0) {
     /* Set up all the "iterative substructuring" common block */
     PetscCall(PCISSetUp(pc, PETSC_TRUE, PETSC_TRUE));
     /* Create the coarse matrix. */

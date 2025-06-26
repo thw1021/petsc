@@ -5826,7 +5826,7 @@ PetscErrorCode PCBDDCSetUpLocalSolvers(PC pc, PetscBool dirichlet, PetscBool neu
   PetscFunctionBegin;
   PetscCall(PetscLogEventBegin(PC_BDDC_LocalSolvers[pcbddc->current_level], pc, 0, 0, 0));
   /* approximate solver, propagate NearNullSpace if needed */
-  if (!pc->setupcalled && (pcbddc->NullSpace_corr[0] || pcbddc->NullSpace_corr[2])) {
+  if (pc->ctSetupcalled == 0 && (pcbddc->NullSpace_corr[0] || pcbddc->NullSpace_corr[2])) {
     MatNullSpace gnnsp1, gnnsp2;
     PetscBool    lhas, ghas;
 
