@@ -5,7 +5,7 @@
       program main
 #include <petsc/finclude/petscvec.h>
       use petscvec
-      implicit none
+      implicit none (type, external)
 
       PetscErrorCode ierr
       PetscInt  nlocal, n, row, i1

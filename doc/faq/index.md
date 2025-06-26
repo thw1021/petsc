@@ -1620,7 +1620,7 @@ Use the following code-snippet:
 module context_module
 #include petsc/finclude/petsc.h
 use petsc
-implicit none
+implicit none (type, external)
 private
 type, public ::  context_type
   private
@@ -1642,7 +1642,7 @@ program test_snes
 use,intrinsic :: iso_c_binding
 use petsc
 use context_module
-implicit none
+implicit none (type, external)
 
 SNES :: snes
 type(context_type),target :: context

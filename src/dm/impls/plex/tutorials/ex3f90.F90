@@ -5,7 +5,7 @@
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscdmplex.h>
       use petscdmplex
-      implicit none
+      implicit none (type, external)
       DM :: dm, dmi
       PetscFV :: fvm
       PetscInt, parameter :: dim = 3

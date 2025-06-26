@@ -52,6 +52,7 @@
       PetscSizeT sizeofbag
       Character(len=99) list(6)
       PetscInt three,int56
+      PetscInt :: one = 1
       PetscReal value
       PetscScalar svalue
 
@@ -92,7 +93,7 @@
       PetscCallA(PetscBagRegisterReal(bag,data%pos%x1 ,value,'pos_x1','tuple value 1 help message',ierr))
       value = 2.00
       PetscCallA(PetscBagRegisterReal(bag,data%pos%x2 ,value,'pos_x2','tuple value 2 help message',ierr))
-      PetscCallA(PetscBagRegisterEnum(bag,data%enum ,list,1,'enum','tuple value 2 help message',ierr))
+      PetscCallA(PetscBagRegisterEnum(bag,data%enum ,list,one,'enum','tuple value 2 help message',ierr))
       PetscCallA(PetscBagView(bag,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
       data%nxc = 23

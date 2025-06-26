@@ -2,7 +2,7 @@ program newnonzero
 #include <petsc/finclude/petscis.h>
 #include <petsc/finclude/petscmat.h>
  use petscmat
- implicit none
+ implicit none (type, external)
 
  Mat :: A
  PetscInt :: n,m,idxm(1),idxn(1),nl1,nl2,zero,one,i

@@ -1,8 +1,68 @@
       Interface
+       Subroutine PetscError(comm,ierr,pierr,message)
+      use, intrinsic :: ISO_C_binding
+      import ePetscErrorType
+          MPI_Comm :: comm
+          character(len=*) :: message
+          PetscErrorCode :: ierr
+          PetscErrorType :: pierr
+       End Subroutine
+
        Subroutine PetscPrintf(m,c,ierr)
       use, intrinsic :: ISO_C_binding
           MPI_Comm :: m
           character(len=*) :: c
+          PetscErrorCode :: ierr
+       End Subroutine
+
+      Subroutine PetscFPrintf(m,file,c,ierr)
+      use, intrinsic :: ISO_C_binding
+      MPI_Comm :: m
+          PetscFortranAddr file
+          character(len=*) :: c
+          PetscErrorCode :: ierr
+       End Subroutine
+
+      Subroutine PetscSynchronizedPrintf(m,c,ierr)
+      use, intrinsic :: ISO_C_binding
+      MPI_Comm :: m
+          character(len=*) :: c
+          PetscErrorCode :: ierr
+       End Subroutine
+
+      Subroutine PetscSynchronizedFPrintf(m,file,c,ierr)
+      use, intrinsic :: ISO_C_binding
+      MPI_Comm :: m
+          PetscFortranAddr file
+          character(len=*) :: c
+          PetscErrorCode :: ierr
+       End Subroutine
+
+      Subroutine PetscFOpen(m,filename,rw, file,ierr)
+      use, intrinsic :: ISO_C_binding
+      MPI_Comm :: m
+          PetscFortranAddr file
+          character(len=*) :: filename,rw
+          PetscErrorCode :: ierr
+       End Subroutine
+
+      Subroutine PetscFClose(m,file,ierr)
+      use, intrinsic :: ISO_C_binding
+      MPI_Comm :: m
+          PetscFortranAddr file
+          PetscErrorCode :: ierr
+       End Subroutine
+
+       Subroutine PetscSynchronizedFlush(m,file,ierr)
+      use, intrinsic :: ISO_C_binding
+      MPI_Comm :: m
+          PetscFortranAddr file
+          PetscErrorCode :: ierr
+       End Subroutine
+
+       Subroutine PetscInfo(c,ierr)
+      use, intrinsic :: ISO_C_binding
+      character(len=*) :: c
           PetscErrorCode :: ierr
        End Subroutine
 
@@ -38,6 +98,13 @@
       PetscErrorCode,intent(in) ::  ierr
       end subroutine
 
+      subroutine PetscViewerASCIIPrintf(viewer, string, z)
+        use petscsysdef
+        PetscViewer viewer
+        character(len=*) :: string
+        PetscErrorCode,intent(out) :: z
+      end subroutine
+
       subroutine PetscViewerASCIIStdoutSetFileUnit(unit,z)
       use, intrinsic :: ISO_C_binding
         integer4 unit
@@ -60,7 +127,7 @@
       Interface
       function PetscASend(c, d) bind(c,name='PetscASend') result(i)
           use,intrinsic :: iso_c_binding
-          implicit none
+          implicit none (type, external)
           integer(c_int), value :: c
           integer(c_int), value :: d
           integer(c_int)        :: i
@@ -68,7 +135,7 @@
 
       function PetscARecv(c, d) bind(c,name='PetscARecv') result(i)
           use,intrinsic :: iso_c_binding
-          implicit none
+          implicit none (type, external)
           integer(c_int), value :: c
           integer(c_int), value :: d
           integer(c_int)        :: i
@@ -76,7 +143,7 @@
 
       function PetscAReduce() bind(c,name='PetscAReduce') result(i)
           use,intrinsic :: iso_c_binding
-          implicit none
+          implicit none (type, external)
           integer(c_int) :: i
       end function PetscAReduce
       end Interface

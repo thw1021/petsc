@@ -6,7 +6,7 @@
       use petscdmplex
       use petscdmswarm
       use petscksp
-      implicit none
+      implicit none (type, external)
 
       DM ::          dm, sw
       PetscFE ::     fe

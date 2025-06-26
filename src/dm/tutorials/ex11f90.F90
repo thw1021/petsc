@@ -5,7 +5,7 @@
 #include <petsc/finclude/petscdmda.h>
       use petscdmda
       use petsc
-      implicit none
+      implicit none (type, external)
 
       Type(tVec)  g
       Type(tDM)   ada

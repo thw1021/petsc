@@ -3,7 +3,7 @@
 program main
 #include <petsc/finclude/petscmat.h>
 use petscmat
-implicit none
+implicit none (type, external)
 
   Mat                   :: A,D,Id,Acopy
   Mat,dimension(4)      :: mats

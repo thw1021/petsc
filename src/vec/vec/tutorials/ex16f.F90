@@ -1,7 +1,7 @@
 program main
 #include <petsc/finclude/petscvec.h>
 use petscvec
-implicit none
+implicit none (type, external)
 
   Vec ::           v,s,r
   Vec,pointer,dimension(:) ::  vecs

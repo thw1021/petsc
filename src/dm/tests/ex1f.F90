@@ -8,7 +8,7 @@ program main
   use petscvec
   use petscdm
   use petscdmda
-  implicit none
+  implicit none (type, external)
 
   PetscInt, parameter :: Ndof=1, stencil_size=1
   PetscInt, parameter :: Nx=3, Ny=3

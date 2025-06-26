@@ -33,7 +33,7 @@
 !
 #include <petsc/finclude/petscsys.h>
     use petsc
-    implicit none
+    implicit none (type, external)
 
     PetscErrorCode ierr
     double precision cputime_start,cputime_end,wtime_start,wtime_end,omp_get_wtime
