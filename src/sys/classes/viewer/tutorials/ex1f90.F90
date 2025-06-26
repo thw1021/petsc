@@ -3,7 +3,7 @@
 #include <petsc/finclude/petscsys.h>
       use petscsys
       use,intrinsic :: iso_c_binding
-      implicit none
+      implicit none (type, external)
 
       PetscViewer viewer
       PetscErrorCode ierr

@@ -1,7 +1,7 @@
       program main
 #include <petsc/finclude/petsc.h>
       use petsc
-      implicit none
+      implicit none (type, external)
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                   Variable declarations
@@ -119,7 +119,7 @@
       subroutine FormFunction(snes,x,f,dummy,ierr)
 #include <petsc/finclude/petscsnes.h>
       use petscsnes
-      implicit none
+      implicit none (type, external)
       SNES     snes
       Vec      x,f
       PetscErrorCode ierr
@@ -161,7 +161,7 @@
       subroutine FormJacobian(snes,X,jac,B,dummy,ierr)
 #include <petsc/finclude/petscsnes.h>
       use petscsnes
-      implicit none
+      implicit none (type, external)
       SNES         snes
       Vec          X
       Mat          jac,B
@@ -188,7 +188,7 @@
 
             subroutine ShashiLowerBound(an_r)
 !        implicit PetscScalar (a-h,o-z)
-        implicit none
+        implicit none (type, external)
         PetscScalar an_r(26)
         PetscInt i
 
@@ -199,7 +199,7 @@
 
             subroutine ShashiInitialGuess(an_r)
 !        implicit PetscScalar (a-h,o-z)
-        implicit none
+        implicit none (type, external)
         PetscScalar an_c_additive
         PetscScalar       an_h_additive
         PetscScalar an_o_additive
@@ -294,7 +294,7 @@
 
       subroutine ShashiFormFunction(an_r,f_eq)
 !       implicit PetscScalar (a-h,o-z)
-        implicit none
+        implicit none (type, external)
         PetscScalar an_c_additive
         PetscScalar       an_h_additive
         PetscScalar an_o_additive
@@ -492,7 +492,7 @@
 
       subroutine ShashiFormJacobian(an_r,d_eq)
 !        implicit PetscScalar (a-h,o-z)
-        implicit none
+        implicit none (type, external)
         PetscScalar an_c_additive
         PetscScalar       an_h_additive
         PetscScalar an_o_additive
@@ -1010,7 +1010,7 @@
       subroutine ShashiPostCheck(ls,X,Y,W,c_Y,c_W,dummy)
 #include <petsc/finclude/petscsnes.h>
       use petscsnes
-      implicit none
+      implicit none (type, external)
       SNESLineSearch ls
       PetscErrorCode ierr
       Vec X,Y,W

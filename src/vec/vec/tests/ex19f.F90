@@ -3,7 +3,7 @@
       program main
 #include <petsc/finclude/petscvec.h>
       use petscvec
-      implicit none
+      implicit none (type, external)
 !
 !  This example demonstrates basic use of the PETSc Fortran interface
 !  to vectors.

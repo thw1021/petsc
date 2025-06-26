@@ -2,9 +2,6 @@
 !   Solves a linear system in parallel with KSP.  Also indicates
 !   use of a user-provided preconditioner.  Input parameters include:
 !
-!
-
-!
 !  -------------------------------------------------------------------------
       module ex62fmodule
 #include <petsc/finclude/petscksp.h>

@@ -14,7 +14,7 @@
       module chwirut1fmodule
 #include <petsc/finclude/petsctao.h>
       use petsctao
-      implicit none
+      implicit none (type, external)
 
       PetscReal t(0:213)
       PetscReal y(0:213)

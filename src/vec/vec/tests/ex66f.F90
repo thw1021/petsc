@@ -3,7 +3,7 @@
 !
 #include <petsc/finclude/petscvec.h>
       use petscvec
-      implicit none
+      implicit none (type, external)
 
       PetscErrorCode ierr
       Vec x,y

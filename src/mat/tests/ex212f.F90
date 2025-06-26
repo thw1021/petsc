@@ -4,8 +4,8 @@
       program main
 
 #include <petsc/finclude/petscmat.h>
-       use petscmat
-       implicit none
+       use petscksp
+       implicit none (type, external)
 
       PetscErrorCode  ierr
       Mat A,B

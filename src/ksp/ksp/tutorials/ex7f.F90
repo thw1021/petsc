@@ -12,7 +12,7 @@ program main
 #include <petsc/finclude/petscksp.h>
       use petscksp
 
-      implicit none
+      implicit none (type, external)
       Vec             :: x,b,u      ! approx solution, RHS, exact solution
       Mat             :: A            ! linear system matrix
       KSP             :: ksp         ! KSP context

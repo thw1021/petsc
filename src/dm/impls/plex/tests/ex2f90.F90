@@ -2,7 +2,7 @@
 #include <petsc/finclude/petscdmplex.h>
       use petscdm
       use petscdmplex
-      implicit none
+      implicit none (type, external)
 
       DM dm
       PetscInt, target, dimension(3) :: EC
