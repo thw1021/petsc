@@ -931,8 +931,8 @@ static PetscErrorCode PCSetUp_ML(PC pc)
     }
   }
 
-  /* setupcalled is set to 0 so that MG is setup from scratch */
-  pc->setupcalled = 0;
+  /* do MG setup from scratch */
+  pc->setupcalled = PETSC_FALSE;
   PetscCall(PCSetUp_MG(pc));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

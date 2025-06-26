@@ -1609,7 +1609,7 @@ cdef class KSP(Object):
 
         Collective.
 
-        Resets a KSP context to the ``kspsetupcalled = 0`` state and
+        Resets a KSP context to the ``kspsetupcalled = False`` state and
         removes any allocated Vecs and Mats.
 
         See Also
