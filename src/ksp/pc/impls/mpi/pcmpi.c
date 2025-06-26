@@ -822,7 +822,7 @@ static PetscErrorCode PCSetUp_MPI(PC pc)
   PetscCheck(rank == 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "PCMPI can only be used from 0th rank of MPI_COMM_WORLD. Perhaps a missing -mpi_linear_solver_server?");
   PetscCallMPI(MPI_Comm_size(MPI_COMM_WORLD, &size));
 
-  if (!pc->setupcalled) {
+  if (pc->ctSetupcalled == 0) {
     if (!km->alwaysuseserver) {
       PetscInt n;
       Mat      sA;
@@ -959,7 +959,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_MPI(PC pc)
   PetscCall(PetscMemzero(pc->ops, sizeof(struct _PCOps)));
   pc->modifysubmatrices  = NULL;
   pc->modifysubmatricesP = NULL;
-  pc->setupcalled        = 0;
+  pc->ctSetupcalled      = 0;
 
   PetscCall(PetscNew(&km));
   pc->data = (void *)km;

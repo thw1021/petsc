@@ -422,7 +422,7 @@ static PetscErrorCode PCSetUp_Telescope(PC pc)
   PetscCall(PetscObjectGetComm((PetscObject)pc, &comm));
 
   /* Determine type of setup/update */
-  if (!pc->setupcalled) {
+  if (pc->ctSetupcalled == 0) {
     PetscBool has_dm, same;
     DM        dm;
 
@@ -490,7 +490,7 @@ static PetscErrorCode PCSetUp_Telescope(PC pc)
   }
 
   /* subcomm definition */
-  if (!pc->setupcalled) {
+  if (pc->ctSetupcalled == 0) {
     if ((sr_type == TELESCOPE_DEFAULT) || (sr_type == TELESCOPE_DMDA)) {
       if (!sred->psubcomm) {
         PetscCall(PetscSubcommCreate(comm, &sred->psubcomm));
@@ -530,7 +530,7 @@ static PetscErrorCode PCSetUp_Telescope(PC pc)
   subcomm = sred->subcomm;
 
   /* internal KSP */
-  if (!pc->setupcalled) {
+  if (pc->ctSetupcalled == 0) {
     const char *prefix;
 
     if (PCTelescope_isActiveRank(sred)) {
@@ -546,9 +546,9 @@ static PetscErrorCode PCSetUp_Telescope(PC pc)
   }
 
   /* setup */
-  if (!pc->setupcalled && sred->pctelescope_setup_type) PetscCall(sred->pctelescope_setup_type(pc, sred));
+  if (pc->ctSetupcalled == 0 && sred->pctelescope_setup_type) PetscCall(sred->pctelescope_setup_type(pc, sred));
   /* update */
-  if (!pc->setupcalled) {
+  if (pc->ctSetupcalled == 0) {
     if (sred->pctelescope_matcreate_type) PetscCall(sred->pctelescope_matcreate_type(pc, sred, MAT_INITIAL_MATRIX, &sred->Bred));
     if (sred->pctelescope_matnullspacecreate_type) PetscCall(sred->pctelescope_matnullspacecreate_type(pc, sred, sred->Bred));
   } else {
@@ -558,7 +558,7 @@ static PetscErrorCode PCSetUp_Telescope(PC pc)
   /* common - no construction */
   if (PCTelescope_isActiveRank(sred)) {
     PetscCall(KSPSetOperators(sred->ksp, sred->Bred, sred->Bred));
-    if (pc->setfromoptionscalled && !pc->setupcalled) PetscCall(KSPSetFromOptions(sred->ksp));
+    if (pc->setfromoptionscalled && pc->ctSetupcalled == 0) PetscCall(KSPSetFromOptions(sred->ksp));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -752,7 +752,7 @@ static PetscErrorCode PCTelescopeSetSubcommType_Telescope(PC pc, PetscSubcommTyp
   PC_Telescope red = (PC_Telescope)pc->data;
 
   PetscFunctionBegin;
-  PetscCheck(!pc->setupcalled, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "You cannot change the subcommunicator type for PCTelescope after it has been set up.");
+  PetscCheck(pc->ctSetupcalled == 0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "You cannot change the subcommunicator type for PCTelescope after it has been set up.");
   red->subcommtype = subcommtype;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

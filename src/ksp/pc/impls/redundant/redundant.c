@@ -78,7 +78,7 @@ static PetscErrorCode PCSetUp_Redundant(PC pc)
   PetscCallMPI(MPI_Comm_size(comm, &size));
   if (size == 1) red->useparallelmat = PETSC_FALSE;
 
-  if (!pc->setupcalled) {
+  if (pc->ctSetupcalled == 0) {
     PetscInt mloc_sub;
     if (!red->psubcomm) { /* create red->psubcomm, new ksp and pc over subcomm */
       KSP ksp;
@@ -155,7 +155,7 @@ static PetscErrorCode PCSetUp_Redundant(PC pc)
     } else { /* !red->useparallelmat */
       PetscCall(KSPSetOperators(red->ksp, pc->mat, pc->pmat));
     }
-  } else { /* pc->setupcalled */
+  } else { /* pc->ctSetupcalled > 0 */
     if (red->useparallelmat) {
       MatReuse reuse;
       /* grab the parallel matrix and put it into the processes of a subcommunicator */

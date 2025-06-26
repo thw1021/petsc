@@ -224,7 +224,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
   // At the present time, an AmgX matrix is a sequential matrix
   // Non-sequential/MPI matrices must be adapted to extract the local matrix
-  bool partial_setup_allowed = (pc->setupcalled && pc->flag != DIFFERENT_NONZERO_PATTERN);
+  bool partial_setup_allowed = (pc->ctSetupcalled > 0 && pc->flag != DIFFERENT_NONZERO_PATTERN);
   if (amgx->nranks > 1) {
     if (partial_setup_allowed) {
       PetscCall(MatMPIAIJGetLocalMat(Pmat, MAT_REUSE_MATRIX, &amgx->localA));
