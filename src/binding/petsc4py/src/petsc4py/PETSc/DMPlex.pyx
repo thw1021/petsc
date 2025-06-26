@@ -3453,6 +3453,13 @@ cdef class DMPlex(DM):
         Get a copy of the `DMPlex` on each process.
 
         Collective.
+        
+        Returns
+        -------
+        newdm : DMPlex
+            The migrated redundant `DMPlex`.
+        sf : SF
+            The `SF` to be used to migrate data.
 
         See Also
         --------
