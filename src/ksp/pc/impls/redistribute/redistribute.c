@@ -90,7 +90,7 @@ static PetscErrorCode PCSetUp_Redistribute(PC pc)
   PC_FieldSplitLink       *next = &red->splitlinks;
 
   PetscFunctionBegin;
-  if (pc->setupcalled) {
+  if (pc->ctSetupcalled > 0) {
     PetscCheck(pc->flag == SAME_NONZERO_PATTERN, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "PC is not supported for a change in the nonzero structure of the matrix");
     PetscCall(KSPGetOperators(red->ksp, NULL, &tmat));
     PetscCall(MatCreateSubMatrix(pc->pmat, red->is, red->is, MAT_REUSE_MATRIX, &tmat));

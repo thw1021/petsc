@@ -46,7 +46,7 @@ static PetscErrorCode PCSetUp_LU(PC pc)
 
   PetscFunctionBegin;
   pc->failedreason = PC_NOERROR;
-  if (dir->hdr.reusefill && pc->setupcalled) ((PC_Factor *)dir)->info.fill = dir->hdr.actualfill;
+  if (dir->hdr.reusefill && pc->ctSetupcalled > 0) ((PC_Factor *)dir)->info.fill = dir->hdr.actualfill;
 
   PetscCall(PCGetOptionsPrefix(pc, &prefix));
   PetscCall(MatSetOptionsPrefixFactor(pc->pmat, prefix));
@@ -74,7 +74,7 @@ static PetscErrorCode PCSetUp_LU(PC pc)
   } else {
     MatInfo info;
 
-    if (!pc->setupcalled) {
+    if (pc->ctSetupcalled == 0) {
       PetscBool canuseordering;
 
       PetscCall(PCFactorSetUpMatSolverType(pc));
