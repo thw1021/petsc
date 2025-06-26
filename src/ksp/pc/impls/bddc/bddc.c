@@ -136,7 +136,7 @@ static PetscErrorCode PCView_BDDC(PC pc, PetscViewer viewer)
     PetscReal   ratio1 = 0., ratio2 = 0.;
     Vec         counter;
 
-    if (!pc->setupcalled) PetscCall(PetscViewerASCIIPrintf(viewer, "  Partial information available: preconditioner has not been setup yet\n"));
+    if (pc->ctSetupcalled == 0) PetscCall(PetscViewerASCIIPrintf(viewer, "  Partial information available: preconditioner has not been setup yet\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Use verbose output: %" PetscInt_FMT "\n", pcbddc->dbg_flag));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Use user-defined CSR: %d\n", !!pcbddc->mat_graph->nvtxs_csr));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Use local mat graph: %d\n", pcbddc->use_local_adj && !pcbddc->mat_graph->nvtxs_csr));
@@ -184,7 +184,7 @@ static PetscErrorCode PCView_BDDC(PC pc, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Benign subspace trick: %d (change explicit %d)\n", pcbddc->benign_saddle_point, pcbddc->benign_change_explicit));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Benign subspace trick is active: %d\n", pcbddc->benign_have_null));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Algebraic computation of no-net-flux: %d\n", pcbddc->compute_nonetflux));
-    if (!pc->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
+    if (pc->ctSetupcalled == 0) PetscFunctionReturn(PETSC_SUCCESS);
 
     /* compute interface size */
     PetscCall(VecSet(pcis->vec1_B, 1.0));
@@ -1430,7 +1430,7 @@ static PetscErrorCode PCSetUp_BDDC(PC pc)
   /* For BDDC we need to define a local "Neumann" problem different to that defined in PCISSetup
      Also, BDDC builds its own KSP for the Dirichlet problem */
   rl = pcbddc->recompute_topography;
-  if (!pc->setupcalled || pc->flag == DIFFERENT_NONZERO_PATTERN) rl = PETSC_TRUE;
+  if (pc->ctSetupcalled == 0 || pc->flag == DIFFERENT_NONZERO_PATTERN) rl = PETSC_TRUE;
   PetscCallMPI(MPIU_Allreduce(&rl, &pcbddc->recompute_topography, 1, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject)pc)));
   if (pcbddc->recompute_topography) {
     pcbddc->graphanalyzed    = PETSC_FALSE;
@@ -2725,7 +2725,7 @@ PetscErrorCode PCBDDCCreateFETIDPOperators(PC pc, PetscBool fully_redundant, con
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  PetscCheck(pc->setupcalled, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "You must call PCSetup_BDDC() first");
+  PetscCheck(pc->ctSetupcalled > 0, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "You must call PCSetup_BDDC() first");
   PetscUseMethod(pc, "PCBDDCCreateFETIDPOperators_C", (PC, PetscBool, const char *, Mat *, PC *), (pc, fully_redundant, prefix, fetidp_mat, fetidp_pc));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

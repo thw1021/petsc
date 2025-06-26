@@ -556,11 +556,11 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[GAMG_SETUP], 0, 0, 0, 0));
-  if (pc->setupcalled) {
+  if (pc->ctSetupcalled > 0) {
     if (!pc_gamg->reuse_prol || pc->flag == DIFFERENT_NONZERO_PATTERN) {
       /* reset everything */
       PetscCall(PCReset_MG(pc));
-      pc->setupcalled = 0;
+      pc->ctSetupcalled = 0;
     } else {
       PC_MG_Levels **mglevels = mg->levels;
       /* just do Galerkin grids */
