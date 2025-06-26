@@ -165,7 +165,7 @@ static PetscErrorCode PCSetUp_ASM(PC pc)
   MatNullSpace *nullsp    = NULL;
 
   PetscFunctionBegin;
-  if (pc->ctSetupcalled == 0) {
+  if (!pc->setupcalled) {
     PetscInt m;
 
     /* Note: if subdomains have been set either via PCASMSetTotalSubdomains() or via PCASMSetLocalSubdomains(), osm->n_local_true will not be PETSC_DECIDE */
@@ -305,7 +305,7 @@ static PetscErrorCode PCSetUp_ASM(PC pc)
     for (i = 0; i < osm->n_local_true; i++) PetscCall(MatConvert(osm->pmat[i], osm->sub_mat_type, MAT_INPLACE_MATRIX, &osm->pmat[i]));
   }
 
-  if (pc->ctSetupcalled == 0) {
+  if (!pc->setupcalled) {
     VecType vtype;
 
     /* Create the local work vectors (from the local matrices) and scatter contexts */
@@ -405,7 +405,7 @@ static PetscErrorCode PCSetUp_ASM(PC pc)
   for (i = 0; i < osm->n_local_true; i++) {
     PetscCall(KSPSetOperators(osm->ksp[i], osm->pmat[i], osm->pmat[i]));
     PetscCall(MatSetOptionsPrefix(osm->pmat[i], prefix));
-    if (pc->ctSetupcalled == 0) PetscCall(KSPSetFromOptions(osm->ksp[i]));
+    if (!pc->setupcalled) PetscCall(KSPSetFromOptions(osm->ksp[i]));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -756,9 +756,9 @@ static PetscErrorCode PCASMSetLocalSubdomains_ASM(PC pc, PetscInt n, IS is[], IS
 
   PetscFunctionBegin;
   PetscCheck(n >= 1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Each process must have 1 or more blocks, n = %" PetscInt_FMT, n);
-  PetscCheck(pc->ctSetupcalled == 0 || (n == osm->n_local_true && !is), PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "PCASMSetLocalSubdomains() should be called before calling PCSetUp().");
+  PetscCheck(!pc->setupcalled || (n == osm->n_local_true && !is), PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "PCASMSetLocalSubdomains() should be called before calling PCSetUp().");
 
-  if (pc->ctSetupcalled == 0) {
+  if (!pc->setupcalled) {
     if (is) {
       for (i = 0; i < n; i++) PetscCall(PetscObjectReference((PetscObject)is[i]));
     }
@@ -818,8 +818,8 @@ static PetscErrorCode PCASMSetTotalSubdomains_ASM(PC pc, PetscInt N, IS *is, IS 
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)pc), &size));
   n = N / size + ((N % size) > rank);
   PetscCheck(n, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Process %d must have at least one block: total processors %d total blocks %" PetscInt_FMT, rank, size, N);
-  PetscCheck(pc->ctSetupcalled == 0 || n == osm->n_local_true, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "PCASMSetTotalSubdomains() should be called before PCSetUp().");
-  if (pc->ctSetupcalled == 0) {
+  PetscCheck(!pc->setupcalled || n == osm->n_local_true, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "PCASMSetTotalSubdomains() should be called before PCSetUp().");
+  if (!pc->setupcalled) {
     PetscCall(PCASMDestroySubdomains(osm->n_local_true, &osm->is, &osm->is_local));
 
     osm->n_local_true = n;
@@ -835,8 +835,8 @@ static PetscErrorCode PCASMSetOverlap_ASM(PC pc, PetscInt ovl)
 
   PetscFunctionBegin;
   PetscCheck(ovl >= 0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Negative overlap value requested");
-  PetscCheck(pc->ctSetupcalled == 0 || ovl == osm->overlap, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "PCASMSetOverlap() should be called before PCSetUp().");
-  if (pc->ctSetupcalled == 0) osm->overlap = ovl;
+  PetscCheck(!pc->setupcalled || ovl == osm->overlap, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "PCASMSetOverlap() should be called before PCSetUp().");
+  if (!pc->setupcalled) osm->overlap = ovl;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1694,7 +1694,7 @@ PetscErrorCode PCASMGetLocalSubmatrices(PC pc, PetscInt *n, Mat *mat[])
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   if (n) PetscAssertPointer(n, 2);
   if (mat) PetscAssertPointer(mat, 3);
-  PetscCheck(pc->ctSetupcalled > 0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Must call after KSPSetUp() or PCSetUp().");
+  PetscCheck(pc->setupcalled, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Must call after KSPSetUp() or PCSetUp().");
   PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCASM, &match));
   if (!match) {
     if (n) *n = 0;
@@ -1739,7 +1739,7 @@ PetscErrorCode PCASMSetDMSubdomains(PC pc, PetscBool flg)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidLogicalCollectiveBool(pc, flg, 2);
-  PetscCheck(pc->ctSetupcalled == 0, ((PetscObject)pc)->comm, PETSC_ERR_ARG_WRONGSTATE, "Not for a setup PC.");
+  PetscCheck(!pc->setupcalled, ((PetscObject)pc)->comm, PETSC_ERR_ARG_WRONGSTATE, "Not for a setup PC.");
   PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCASM, &match));
   if (match) osm->dm_subdomains = flg;
   PetscFunctionReturn(PETSC_SUCCESS);

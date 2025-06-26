@@ -393,7 +393,7 @@ PetscErrorCode PCPatchGetSubKSP(PC pc, PetscInt *npatch, KSP **ksp)
   PC_PATCH *patch = (PC_PATCH *)pc->data;
 
   PetscFunctionBegin;
-  PetscCheck(pc->ctSetupcalled > 0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ORDER, "Need to call PCSetUp() on PC (or KSPSetUp() on the outer KSP object) before calling here");
+  PetscCheck(pc->setupcalled, PetscObjectComm((PetscObject)pc), PETSC_ERR_ORDER, "Need to call PCSetUp() on PC (or KSPSetUp() on the outer KSP object) before calling here");
   PetscCall(PetscMalloc1(patch->npatch, ksp));
   for (PetscInt i = 0; i < patch->npatch; ++i) (*ksp)[i] = (KSP)patch->solver[i];
   if (npatch) *npatch = patch->npatch;
@@ -2388,7 +2388,7 @@ static PetscErrorCode PCSetUp_PATCH_Linear(PC pc)
   PetscInt    i;
 
   PetscFunctionBegin;
-  if (pc->ctSetupcalled == 0) {
+  if (!pc->setupcalled) {
     PetscCheck(patch->save_operators || !patch->denseinverse, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Can't have dense inverse without save operators");
     if (!patch->denseinverse) {
       PetscCall(PetscMalloc1(patch->npatch, &patch->solver));
@@ -2443,7 +2443,7 @@ static PetscErrorCode PCSetUp_PATCH_Linear(PC pc)
 
       PetscCall(MatGetSize(matSquare, &dof, NULL));
       PetscCall(ISCreateStride(PETSC_COMM_SELF, dof, 0, 1, &rowis));
-      if (pc->ctSetupcalled > 0) {
+      if (pc->setupcalled) {
         PetscCall(MatCreateSubMatrix(matSquare, rowis, patch->dofMappingWithoutToWithArtificial[i], MAT_REUSE_MATRIX, &patch->matWithArtificial[i]));
       } else {
         PetscCall(MatCreateSubMatrix(matSquare, rowis, patch->dofMappingWithoutToWithArtificial[i], MAT_INITIAL_MATRIX, &patch->matWithArtificial[i]));
@@ -2463,7 +2463,7 @@ static PetscErrorCode PCSetUp_PATCH(PC pc)
   PetscInt  maxDof = -1, maxDofWithArtificial = -1;
 
   PetscFunctionBegin;
-  if (pc->ctSetupcalled == 0) {
+  if (!pc->setupcalled) {
     PetscInt pStart, pEnd, p;
     PetscInt localSize;
 

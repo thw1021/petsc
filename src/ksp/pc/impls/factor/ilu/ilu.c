@@ -30,7 +30,7 @@ static PetscErrorCode PCFactorSetDropTolerance_ILU(PC pc, PetscReal dt, PetscRea
   PC_ILU *ilu = (PC_ILU *)pc->data;
 
   PetscFunctionBegin;
-  if (pc->ctSetupcalled > 0 && (((PC_Factor *)ilu)->info.dt != dt || ((PC_Factor *)ilu)->info.dtcol != dtcol || ((PC_Factor *)ilu)->info.dtcount != dtcount)) {
+  if (pc->setupcalled && (((PC_Factor *)ilu)->info.dt != dt || ((PC_Factor *)ilu)->info.dtcol != dtcol || ((PC_Factor *)ilu)->info.dtcount != dtcount)) {
     SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Cannot change drop tolerance after using PC");
   }
   ((PC_Factor *)ilu)->info.dt      = dt;
@@ -95,7 +95,7 @@ static PetscErrorCode PCSetUp_ILU(PC pc)
 
   PetscCall(MatSetErrorIfFailure(pc->pmat, pc->erroriffailure));
   if (ilu->hdr.inplace) {
-    if (pc->ctSetupcalled == 0) {
+    if (!pc->setupcalled) {
       /* In-place factorization only makes sense with the natural ordering,
          so we only need to get the ordering once, even if nonzero structure changes */
       /* Should not get the ordering if the factorization routine does not use it, but do not yet have access to the factor matrix */
@@ -120,7 +120,7 @@ static PetscErrorCode PCSetUp_ILU(PC pc)
     /* must update the pc record of the matrix state or the PC will attempt to run PCSetUp() yet again */
     PetscCall(PetscObjectStateGet((PetscObject)pc->pmat, &pc->matstate));
   } else {
-    if (pc->ctSetupcalled == 0) {
+    if (!pc->setupcalled) {
       /* first time in so compute reordering and symbolic factorization */
       PetscBool canuseordering;
 

@@ -465,7 +465,7 @@ static PetscErrorCode PCSetUp_Deflation(PC pc)
   char             prefix[128] = "";
 
   PetscFunctionBegin;
-  if (pc->ctSetupcalled > 0) PetscFunctionReturn(PETSC_SUCCESS);
+  if (pc->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscObjectGetComm((PetscObject)pc, &comm));
   PetscCall(PCGetOperators(pc, NULL, &Amat));
   if (!def->lvl && !def->prefix) PetscCall(PCGetOptionsPrefix(pc, &def->prefix));
@@ -715,7 +715,7 @@ static PetscErrorCode PCView_Deflation(PC pc, PetscViewer viewer)
   PetscBool     iascii;
 
   PetscFunctionBegin;
-  if (pc->ctSetupcalled == 0) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!pc->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
     if (def->correct) PetscCall(PetscViewerASCIIPrintf(viewer, "using CP correction, factor = %g+%gi\n", (double)PetscRealPart(def->correctfact), (double)PetscImaginaryPart(def->correctfact)));

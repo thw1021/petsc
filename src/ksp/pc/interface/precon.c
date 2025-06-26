@@ -106,7 +106,7 @@ PetscErrorCode PCReset(PC pc)
   PetscCall(MatDestroy(&pc->pmat));
   PetscCall(MatDestroy(&pc->mat));
 
-  pc->ctSetupcalled = 0;
+  pc->setupcalled = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -473,7 +473,7 @@ PetscErrorCode PCCreate(MPI_Comm comm, PC *newpc)
   PetscCall(PetscHeaderCreate(pc, PC_CLASSID, "PC", "Preconditioner", "PC", comm, PCDestroy, PCView));
   pc->mat                  = NULL;
   pc->pmat                 = NULL;
-  pc->ctSetupcalled        = 0;
+  pc->setupcalled          = PETSC_FALSE;
   pc->setfromoptionscalled = 0;
   pc->data                 = NULL;
   pc->diagonalscale        = PETSC_FALSE;
@@ -1017,8 +1017,8 @@ PetscErrorCode PCGetFailedReason(PC pc, PCFailedReason *reason)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  if (pc->ctSetupcalled < 0) *reason = (PCFailedReason)pc->ctSetupcalled; /* unreachable */
-  else *reason = pc->failedreason;
+  /* if (pc->setupcalled < 0) *reason = (PCFailedReason)pc->setupcalled; unreachable */
+  *reason = pc->failedreason;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1085,14 +1085,14 @@ PetscErrorCode PCSetUp(PC pc)
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscCheck(pc->mat, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Matrix must be set first");
 
-  if (pc->ctSetupcalled > 0 && pc->reusepreconditioner) {
+  if (pc->setupcalled && pc->reusepreconditioner) {
     PetscCall(PetscInfo(pc, "Leaving PC with identical preconditioner since reuse preconditioner is set\n"));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
   PetscCall(PetscObjectStateGet((PetscObject)pc->pmat, &matstate));
   PetscCall(MatGetNonzeroState(pc->pmat, &matnonzerostate));
-  if (pc->ctSetupcalled == 0) {
+  if (!pc->setupcalled) {
     //PetscCall(PetscInfo(pc, "Setting up PC for first time\n"));
     pc->flag = DIFFERENT_NONZERO_PATTERN;
   } else if (matstate == pc->matstate) PetscFunctionReturn(PETSC_SUCCESS);
@@ -1123,7 +1123,7 @@ PetscErrorCode PCSetUp(PC pc)
   }
   PetscCall(PetscLogEventEnd(PC_SetUp, pc, 0, 0, 0));
   if (pc->postsetup) PetscCall((*pc->postsetup)(pc));
-  if (pc->ctSetupcalled == 0) pc->ctSetupcalled = 1;
+  if (!pc->setupcalled) pc->setupcalled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1150,7 +1150,7 @@ PetscErrorCode PCSetUpOnBlocks(PC pc)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  if (pc->ctSetupcalled == 0) PetscCall(PCSetUp(pc)); /* "if" to prevent -info extra prints */
+  if (!pc->setupcalled) PetscCall(PCSetUp(pc)); /* "if" to prevent -info extra prints */
   if (!pc->ops->setuponblocks) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(MatSetErrorIfFailure(pc->pmat, pc->erroriffailure));
   PetscCall(PetscLogEventBegin(PC_SetUpOnBlocks, pc, 0, 0, 0));
@@ -1275,7 +1275,7 @@ PetscErrorCode PCSetOperators(PC pc, Mat Amat, Mat Pmat)
   if (Pmat) PetscValidHeaderSpecific(Pmat, MAT_CLASSID, 3);
   if (Amat) PetscCheckSameComm(pc, 1, Amat, 2);
   if (Pmat) PetscCheckSameComm(pc, 1, Pmat, 3);
-  if (pc->ctSetupcalled > 0 && pc->mat && pc->pmat && Amat && Pmat) {
+  if (pc->setupcalled && pc->mat && pc->pmat && Amat && Pmat) {
     PetscCall(MatGetLocalSize(Amat, &m1, &n1));
     PetscCall(MatGetLocalSize(pc->mat, &m2, &n2));
     PetscCheck(m1 == m2 && n1 == n2, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Cannot change local size of Amat after use old sizes %" PetscInt_FMT " %" PetscInt_FMT " new sizes %" PetscInt_FMT " %" PetscInt_FMT, m2, n2, m1, n1);
@@ -1812,7 +1812,7 @@ PetscErrorCode PCView(PC pc, PetscViewer viewer)
 
   if (iascii) {
     PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)pc, viewer));
-    if (pc->ctSetupcalled == 0) PetscCall(PetscViewerASCIIPrintf(viewer, "  PC has not been set up so information may be incomplete\n"));
+    if (!pc->setupcalled) PetscCall(PetscViewerASCIIPrintf(viewer, "  PC has not been set up so information may be incomplete\n"));
     PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscTryTypeMethod(pc, view, viewer);
     PetscCall(PetscViewerASCIIPopTab(viewer));

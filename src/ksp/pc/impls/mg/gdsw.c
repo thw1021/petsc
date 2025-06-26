@@ -238,7 +238,7 @@ PetscErrorCode PCMGGDSWCreateCoarseSpace_Private(PC pc, PetscInt l, DM dm, KSP s
   }
 
   /* Setup (also setup smoother here) */
-  if (pc->ctSetupcalled == 0) PetscCall(KSPSetFromOptions(smooth));
+  if (!pc->setupcalled) PetscCall(KSPSetFromOptions(smooth));
   PetscCall(KSPSetUp(smooth));
   PetscCall(KSPSetUpOnBlocks(smooth));
   PetscCall(PCMGGDSWSetUp(pc, l, dm, smooth, Nc, A, &ns, &sA_IG, &sksp, &sI, &sG, &sGf, &sGi, &sGiM));
