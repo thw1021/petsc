@@ -260,8 +260,8 @@ cdef extern from * nogil:
     PetscErrorCode MatSeqDenseSetPreallocation(PetscMat, PetscScalar[])
     PetscErrorCode MatMPIDenseSetPreallocation(PetscMat, PetscScalar[])
     PetscErrorCode MatISSetPreallocation(PetscMat, PetscInt, PetscInt[], PetscInt, PetscInt[])
-    PetscErrorCode MatSetPreallocationCOO(PetscMat, PetscInt, PetscInt[], PetscInt[])
-    PetscErrorCode MatSetPreallocationCOOLocal(PetscMat, PetscInt, PetscInt[], PetscInt[])
+    PetscErrorCode MatSetPreallocationCOO(PetscMat, PetscCount, PetscInt[], PetscInt[])
+    PetscErrorCode MatSetPreallocationCOOLocal(PetscMat, PetscCount, PetscInt[], PetscInt[])
 
     PetscErrorCode MatSetOptionsPrefix(PetscMat, char[])
     PetscErrorCode MatAppendOptionsPrefix(PetscMat, char[])

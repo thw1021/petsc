@@ -922,7 +922,7 @@ cdef class Mat(Object):
         
         cdef PetscInt ncoo_i = 0, ncoo_j = 0
         cdef PetscInt *ccoo_i = NULL, *ccoo_j = NULL
-        cdef PetscInt ncoo = 0
+        cdef PetscCount ncoo = 0
         
         iarray_i(coo_i, &ncoo_i, &ccoo_i)
         iarray_i(coo_j, &ncoo_j, &ccoo_j)
@@ -930,7 +930,7 @@ cdef class Mat(Object):
         if ncoo_i != ncoo_j:
             raise ValueError("coo_i and coo_j must have the same length")
         
-        ncoo = ncoo_i
+        ncoo = <uint64_t> ncoo_i
         CHKERR(MatSetPreallocationCOO(self.mat, ncoo, ccoo_i, ccoo_j))  
         return self
     
@@ -957,7 +957,7 @@ cdef class Mat(Object):
         
         cdef PetscInt ncoo_i = 0, ncoo_j = 0
         cdef PetscInt *ccoo_i = NULL, *ccoo_j = NULL
-        cdef PetscInt ncoo = 0
+        cdef PetscCount ncoo = 0
         
         iarray_i(coo_i, &ncoo_i, &ccoo_i)
         iarray_i(coo_j, &ncoo_j, &ccoo_j)
@@ -965,7 +965,7 @@ cdef class Mat(Object):
         if ncoo_i != ncoo_j:
             raise ValueError("coo_i and coo_j must have the same length")
         
-        ncoo = ncoo_i
+        ncoo = <uint64_t> ncoo_i
         CHKERR(MatSetPreallocationCOOLocal(self.mat, ncoo, ccoo_i, ccoo_j))        
         return self
 
