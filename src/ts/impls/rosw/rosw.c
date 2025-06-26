@@ -1677,9 +1677,9 @@ static PetscErrorCode TSRosWSetType_RosW(TS ts, TSRosWType rostype)
   for (link = RosWTableauList; link; link = link->next) {
     PetscCall(PetscStrcmp(link->tab.name, rostype, &match));
     if (match) {
-      if (ts->setupcalled) PetscCall(TSRosWTableauReset(ts));
+      if (ts->ctSetupcalled2 > 0) PetscCall(TSRosWTableauReset(ts));
       ros->tableau = &link->tab;
-      if (ts->setupcalled) PetscCall(TSRosWTableauSetUp(ts));
+      if (ts->ctSetupcalled2 > 0) PetscCall(TSRosWTableauSetUp(ts));
       ts->default_adapt_type = ros->tableau->bembed ? TSADAPTBASIC : TSADAPTNONE;
       PetscFunctionReturn(PETSC_SUCCESS);
     }
