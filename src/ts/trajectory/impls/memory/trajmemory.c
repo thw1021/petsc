@@ -1849,7 +1849,7 @@ static PetscErrorCode TSTrajectoryMemorySetType_Memory(TSTrajectory tj, TSTrajec
   TJScheduler *tjsch = (TJScheduler *)tj->data;
 
   PetscFunctionBegin;
-  PetscCheck(!tj->setupcalled, PetscObjectComm((PetscObject)tj), PETSC_ERR_ARG_WRONGSTATE, "Cannot change schedule software after TSTrajectory has been setup or used");
+  PetscCheck(tj->ctSetupcalled3 == 0, PetscObjectComm((PetscObject)tj), PETSC_ERR_ARG_WRONGSTATE, "Cannot change schedule software after TSTrajectory has been setup or used");
   tjsch->tj_memory_type = tj_memory_type;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
