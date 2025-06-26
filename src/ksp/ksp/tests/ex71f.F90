@@ -5,7 +5,7 @@
 #include <petsc/finclude/petscpc.h>
 #include <petsc/finclude/petscksp.h>
       USE petscksp
-      implicit none
+      implicit none (type, external)
 
       Mat :: A
       PetscInt :: M, M2, NSubx, dof, overlap, NSub,i1

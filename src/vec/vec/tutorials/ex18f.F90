@@ -7,7 +7,7 @@
 program main
 #include <petsc/finclude/petscvec.h>
   use petscvec
-  implicit none
+  implicit none (type, external)
 
   PetscErrorCode :: ierr
   PetscMPIInt :: rank,size
@@ -96,12 +96,10 @@ program main
 #include <petsc/finclude/petscvec.h>
       use petscvec
 
-      implicit none
       PetscScalar :: func
       PetscScalar,INTENT(IN) :: a
 
       func = 2.0*a/(1.0+a*a)
-
     end function func
 
 end program

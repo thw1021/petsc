@@ -5,15 +5,25 @@
 !
 ! -----------------------------------------------------------------------
 
-      module ex21f90module
+      module ex21f90moduledef
+     use, intrinsic :: ISO_C_binding
 #include <petsc/finclude/petscsys.h>
-      use petscsys
-      type MyStruct
-        sequence
-        PetscScalar :: a,b,c
-      end type MyStruct
+        type MyStruct
+          sequence
+          PetscScalar :: a,b,c
+        end type MyStruct
       end module
 
+      module ex21f90module
+        use ex21f90moduledef
+        interface
+          subroutine F90Array1dGetAddrMyStruct(ptr,address)
+            use ex21f90moduledef
+            PetscFortranAddr address
+            type(MyStruct) ptr
+          end subroutine
+        end interface
+      end module
 !
 !  These routines are used internally by the C functions VecGetArrayMyStruct() and VecRestoreArrayMyStruct()
 !  Because Fortran requires "knowing" exactly what derived types the pointers to point too, these have to be
@@ -21,7 +31,7 @@
 !
       subroutine F90Array1dCreateMyStruct(array,start,len,ptr)
       use ex21f90module
-      implicit none
+      implicit none (type, external)
       PetscInt start,len
       type(MyStruct), target :: array(start:start+len-1)
       type(MyStruct), pointer :: ptr(:)
@@ -31,7 +41,7 @@
 
       subroutine F90Array1dAccessMyStruct(ptr,address)
       use ex21f90module
-      implicit none
+      implicit none (type, external)
       type(MyStruct), pointer :: ptr(:)
       PetscFortranAddr address
       PetscInt start
@@ -42,7 +52,7 @@
 
       subroutine F90Array1dDestroyMyStruct(ptr)
       use ex21f90module
-      implicit none
+      implicit none (type, external)
       type(MyStruct), pointer :: ptr(:)
 
       nullify(ptr)
@@ -52,7 +62,7 @@
 #include <petsc/finclude/petscvec.h>
           use petscvec
       use ex21f90module
-      implicit none
+      implicit none (type, external)
 
 !
 !

@@ -3,7 +3,7 @@
       program main
 #include <petsc/finclude/petsc.h>
       use petsc
-      implicit none
+      implicit none (type, external)
       DM :: dm
       PetscDS :: ds
       PetscInt :: dim = 3, zero = 0

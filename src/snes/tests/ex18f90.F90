@@ -3,11 +3,9 @@
 ! user-defined contexts in PETSc. Example contributed by Glenn Hammond.
 !
 module ex18f90base_module
-#include <petsc/finclude/petscsys.h>
-#include "petsc/finclude/petscsnes.h"
-  use PetscSys
-  use PetscSnes
-  implicit none
+#include <petsc/finclude/petscsnes.h>
+  use, intrinsic :: ISO_C_binding
+  implicit none (type, external)
   private
 
   type, public :: base_type
@@ -18,7 +16,7 @@ module ex18f90base_module
   end type base_type
 contains
 subroutine BasePrint(this)
-  implicit none
+  implicit none (type, external)
   class(base_type) :: this
   print *
   print *, 'Base printout'
@@ -28,9 +26,8 @@ end module ex18f90base_module
 
 module ex18f90extended_module
   use ex18f90base_module
-#include <petsc/finclude/petscsys.h>
-  use PetscSys
-  implicit none
+  use, intrinsic :: ISO_C_binding
+  implicit none (type, external)
   private
   type, public, extends(base_type) :: extended_type
     PetscInt :: B  ! junk
@@ -40,7 +37,7 @@ module ex18f90extended_module
   end type extended_type
 contains
 subroutine ExtendedPrint(this)
-  implicit none
+  implicit none (type, external)
   class(extended_type) :: this
   print *
   print *, 'Extended printout'
@@ -50,12 +47,12 @@ end module ex18f90extended_module
 
 module ex18f90function_module
   use petscsnes
-  implicit none
+  implicit none (type, external)
   public :: TestFunction
   contains
 subroutine TestFunction(snes,xx,r,ctx,ierr)
   use ex18f90base_module
-  implicit none
+  implicit none (type, external)
   SNES :: snes
   Vec :: xx
   Vec :: r
@@ -70,7 +67,7 @@ program ex18f90
   use ex18f90base_module
   use ex18f90extended_module
   use ex18f90function_module
-  implicit none
+  implicit none (type, external)
 
 !
 ! Since class(base_type) has a bound function (method), Print, one must

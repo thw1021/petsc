@@ -3,7 +3,7 @@ program ex14f90
 #include <petsc/finclude/petsc.h>
       use petsc
       use mpi     ! needed when PETSC_HAVE_MPI_F90MODULE is not true to define MPI_REPLACE
-implicit none
+implicit none (type, external)
 
   type(tDM)                        :: dm
   type(tVec)                       :: u

@@ -5,7 +5,7 @@
 
 #include <petsc/finclude/petscsys.h>
       use petscsys
-      implicit none
+      implicit none (type, external)
 
       PetscErrorCode  ierr
       PetscRandom     r,q,r2

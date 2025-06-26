@@ -8,7 +8,7 @@
       program main
 #include "petsc/finclude/petsc.h"
       use petsc
-      implicit none
+      implicit none (type, external)
 
       PetscInt:: IR(1),IC(1),I,J,DMS=4 ! Set DMS=3 for a 3x3 squared system
       PetscErrorCode ierr

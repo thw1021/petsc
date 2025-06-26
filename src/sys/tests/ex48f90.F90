@@ -2,7 +2,7 @@
 
 #include "petsc/finclude/petsc.h"
       use petsc
-      implicit none
+      implicit none (type, external)
 
       PetscErrorCode                            :: ierr
       Character(len=256)                        :: filename

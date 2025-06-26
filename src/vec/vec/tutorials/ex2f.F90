@@ -9,7 +9,7 @@
       program main
 #include <petsc/finclude/petscvec.h>
       use petscvec
-      implicit none
+      implicit none (type, external)
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                 Beginning of program
