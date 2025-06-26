@@ -6,7 +6,7 @@ program DMPlexTestLandauInterface
 #include <petsc/finclude/petscdmplex.h>
   use petscts
   use petscdmplex
-  implicit none
+  implicit none (type, external)
 
   external DMPlexLandauIFunction
   external DMPlexLandauIJacobian
