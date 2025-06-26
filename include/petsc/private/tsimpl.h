@@ -200,7 +200,7 @@ struct _p_TS {
   Vec         *vecs_sensip;
   PetscInt     numcost; /* number of cost functions */
   Vec          vec_costintegral;
-  PetscInt     adjointsetupcalled;
+  PetscBool    adjointsetupcalled;
   PetscInt     adjoint_steps;
   PetscInt     adjoint_max_steps;
   PetscBool    adjoint_solve;     /* immediately call TSAdjointSolve() after TSSolve() is complete */
