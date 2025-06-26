@@ -1,7 +1,7 @@
 program ex95f90
 #include "petsc/finclude/petsc.h"
     use petsc
-    implicit none
+    implicit none (type, external)
 #include "exodusII.inc"
 
     ! Get the Fortran kind associated with PetscInt and PetscReal so that we can use literal constants.

@@ -4,7 +4,8 @@
       program main
 #include <petsc/finclude/petscao.h>
       use petscao
-      implicit none
+      use petscis
+      implicit none (type, external)
 
       PetscErrorCode ierr
       AO             ao

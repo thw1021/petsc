@@ -5,7 +5,7 @@ program main
       use petscmpi  ! or mpi or mpi_f08
       use petscsys
 
-      implicit none
+      implicit none (type, external)
       PetscErrorCode :: ierr
       PetscViewer    :: viewer
       integer :: unit

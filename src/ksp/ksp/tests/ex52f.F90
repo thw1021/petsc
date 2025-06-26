@@ -2,7 +2,7 @@
       program main
 #include <petsc/finclude/petscksp.h>
       use petscksp
-      implicit none
+      implicit none (type, external)
 !
 !  Demonstrates using MatFactorGetError() and MatFactorGetErrorZeroPivot()
 !

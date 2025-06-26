@@ -1,7 +1,7 @@
       program main
 #include <petsc/finclude/petscmat.h>
       use petscmat
-      implicit none
+      implicit none (type, external)
 
       Mat      A,B
       PetscErrorCode ierr

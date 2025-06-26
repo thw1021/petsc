@@ -9,10 +9,10 @@
 !        ./configure --with-threadsafety --with-openmp
 !
          module ex61fmodule
-         implicit none
+         implicit none (type, external)
          contains
          subroutine split_indices(total,num_pieces,ibeg,iend)
-           implicit none
+           implicit none (type, external)
 
            integer :: total
            integer :: num_pieces
@@ -45,7 +45,7 @@
 #include <petsc/finclude/petsc.h>
       use ex61fmodule
       use petsc
-      implicit none
+      implicit none (type, external)
 !     ----------------------------
 !     test concurrent PETSc solver
 !     ----------------------------
