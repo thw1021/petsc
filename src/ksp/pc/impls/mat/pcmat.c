@@ -209,7 +209,7 @@ static PetscErrorCode PCMatGetApplyOperation_Mat(PC pc, MatOperation *matop_p)
   MatOperation matop = MATOP_MULT;
 
   PetscFunctionBegin;
-  if (!pc->setupcalled) PetscCall(PCSetUp(pc));
+  if (pc->ctSetupcalled == 0) PetscCall(PCSetUp(pc));
 
   // clang-format off
 #define PCMATOP_TO_MATOP_CASE(var, OP) case PCMATOP_##OP: (var) = MATOP_##OP; break

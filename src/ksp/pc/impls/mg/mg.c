@@ -949,7 +949,7 @@ PetscErrorCode PCSetUp_MG(PC pc)
     needRestricts = PETSC_TRUE; /* user must compute either mat, pmat, or both so must restrict x to coarser levels */
   }
 
-  if (pc->dm && !pc->setupcalled) {
+  if (pc->dm && pc->ctSetupcalled == 0) {
     /* finest smoother also gets DM but it is not active, independent of whether galerkin==PC_MG_GALERKIN_EXTERNAL */
     PetscCall(KSPSetDM(mglevels[n - 1]->smoothd, pc->dm));
     PetscCall(KSPSetDMActive(mglevels[n - 1]->smoothd, PETSC_FALSE));
@@ -967,7 +967,7 @@ PetscErrorCode PCSetUp_MG(PC pc)
    Skipping if user has provided all interpolation/restriction needed (since DM might not be able to produce them (when coming from SNES/TS)
    Skipping for externally managed hierarchy (such as ML and GAMG). Cleaner logic here would be great. Wrap ML/GAMG as DMs?
   */
-  if (missinginterpolate && mg->galerkin != PC_MG_GALERKIN_EXTERNAL && !pc->setupcalled) {
+  if (missinginterpolate && mg->galerkin != PC_MG_GALERKIN_EXTERNAL && pc->ctSetupcalled == 0) {
     /* first see if we can compute a coarse space */
     if (mg->coarseSpaceType == PCMG_ADAPT_GDSW) {
       for (i = n - 2; i > -1; i--) {
@@ -1034,7 +1034,7 @@ PetscErrorCode PCSetUp_MG(PC pc)
 
     if (mg->galerkin == PC_MG_GALERKIN_PMAT || mg->galerkin == PC_MG_GALERKIN_BOTH) doB = PETSC_TRUE;
     if (mg->galerkin == PC_MG_GALERKIN_MAT || (mg->galerkin == PC_MG_GALERKIN_BOTH && dA != dB)) doA = PETSC_TRUE;
-    if (pc->setupcalled) reuse = MAT_REUSE_MATRIX;
+    if (pc->ctSetupcalled > 0) reuse = MAT_REUSE_MATRIX;
     for (i = n - 2; i > -1; i--) {
       PetscCheck(mglevels[i + 1]->restrct || mglevels[i + 1]->interpolate, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Must provide interpolation or restriction for each MG level except level 0");
       if (!mglevels[i + 1]->interpolate) PetscCall(PCMGSetInterpolation(pc, i + 1, mglevels[i + 1]->restrct));
@@ -1090,7 +1090,7 @@ PetscErrorCode PCSetUp_MG(PC pc)
     }
   }
 
-  if (!pc->setupcalled) {
+  if (pc->ctSetupcalled == 0) {
     for (i = 0; i < n; i++) PetscCall(KSPSetFromOptions(mglevels[i]->smoothd));
     for (i = 1; i < n; i++) {
       if (mglevels[i]->smoothu && (mglevels[i]->smoothu != mglevels[i]->smoothd)) PetscCall(KSPSetFromOptions(mglevels[i]->smoothu));
@@ -1299,7 +1299,7 @@ PetscErrorCode PCMGGetGridComplexity(PC pc, PetscReal *gc, PetscReal *oc)
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   if (gc) PetscAssertPointer(gc, 2);
   if (oc) PetscAssertPointer(oc, 3);
-  if (!pc->setupcalled) {
+  if (pc->ctSetupcalled == 0) {
     if (gc) *gc = 0;
     if (oc) *oc = 0;
     PetscFunctionReturn(PETSC_SUCCESS);

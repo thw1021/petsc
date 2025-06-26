@@ -17,7 +17,7 @@ static PetscErrorCode PCSetUp_ICC(PC pc)
   PetscCall(MatSetOptionsPrefixFactor(pc->pmat, prefix));
 
   PetscCall(MatSetErrorIfFailure(pc->pmat, pc->erroriffailure));
-  if (!pc->setupcalled) {
+  if (pc->ctSetupcalled == 0) {
     PetscCall(PCFactorSetUpMatSolverType(pc));
     PetscCall(MatFactorGetCanUseOrdering(((PC_Factor *)icc)->fact, &canuseordering));
     if (canuseordering) {
