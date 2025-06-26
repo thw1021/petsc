@@ -528,7 +528,7 @@ static PetscErrorCode PCSetUp_ML(PC pc)
   A = pc->pmat;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A), &size));
 
-  if (pc->setupcalled) {
+  if (pc->ctSetupcalled > 0) {
     if (pc->flag == SAME_NONZERO_PATTERN && pc_ml->reuse_interpolation) {
       /*
        Reuse interpolaton instead of recomputing aggregates and updating the whole hierarchy. This is less expensive for
@@ -932,7 +932,7 @@ static PetscErrorCode PCSetUp_ML(PC pc)
   }
 
   /* setupcalled is set to 0 so that MG is setup from scratch */
-  pc->setupcalled = 0;
+  pc->ctSetupcalled = 0;
   PetscCall(PCSetUp_MG(pc));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

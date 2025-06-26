@@ -84,7 +84,7 @@ static inline PetscErrorCode PCHPDDMSetAuxiliaryMat_Private(PC pc, IS is, Mat A,
     if (data->is) { /* new overlap definition resets the PC */
       PetscCall(PCReset_HPDDM(pc));
       pc->setfromoptionscalled = 0;
-      pc->setupcalled          = 0;
+      pc->ctSetupcalled        = 0;
       data->correction         = type;
     }
     PetscCall(ISDestroy(&data->is));
@@ -1625,7 +1625,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
     PetscCall(PetscSNPrintf(prefix, sizeof(prefix), "%spc_hpddm_%s_", pcpre ? pcpre : "", data->N > 1 ? "levels_1" : "coarse"));
     PetscCall(KSPSetOptionsPrefix(data->levels[0]->ksp, prefix));
     PetscCall(KSPSetType(data->levels[0]->ksp, KSPPREONLY));
-  } else if (data->levels[0]->ksp->pc && data->levels[0]->ksp->pc->setupcalled == 1 && data->levels[0]->ksp->pc->reusepreconditioner) {
+  } else if (data->levels[0]->ksp->pc && data->levels[0]->ksp->pc->ctSetupcalled == 1 && data->levels[0]->ksp->pc->reusepreconditioner) {
     /* if the fine-level PCSHELL exists, its setup has succeeded, and one wants to reuse it, */
     /* then just propagate the appropriate flag to the coarser levels                        */
     for (n = 0; n < PETSC_PCHPDDM_MAXLEVELS && data->levels[n]; ++n) {
@@ -1638,7 +1638,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
   } else {
     /* reset coarser levels */
     for (n = 1; n < PETSC_PCHPDDM_MAXLEVELS && data->levels[n]; ++n) {
-      if (data->levels[n]->ksp && data->levels[n]->ksp->pc && data->levels[n]->ksp->pc->setupcalled == 1 && data->levels[n]->ksp->pc->reusepreconditioner && n < data->N) {
+      if (data->levels[n]->ksp && data->levels[n]->ksp->pc && data->levels[n]->ksp->pc->ctSetupcalled == 1 && data->levels[n]->ksp->pc->reusepreconditioner && n < data->N) {
         reused = data->N - n;
         break;
       }
@@ -2215,7 +2215,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
                   PetscCall(PCSetOperators(data->levels[0]->pc, A, P));
                 }
                 PetscCall(PCSetType(data->levels[0]->pc, PCASM));
-                if (!data->levels[0]->pc->setupcalled) PetscCall(PCASMSetLocalSubdomains(data->levels[0]->pc, 1, ov + !flg, &loc));
+                if (data->levels[0]->pc->ctSetupcalled == 0) PetscCall(PCASMSetLocalSubdomains(data->levels[0]->pc, 1, ov + !flg, &loc));
                 PetscCall(PCHPDDMCommunicationAvoidingPCASM_Private(data->levels[0]->pc, flg ? A0 : a[0], PETSC_TRUE));
                 if (!flg) ++overlap;
                 if (data->share) {
@@ -2333,7 +2333,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
         }
         PetscCall(PCSetType(data->levels[0]->pc, PCASM));
         if (!ctx) {
-          if (!data->levels[0]->pc->setupcalled) {
+          if (data->levels[0]->pc->ctSetupcalled == 0) {
             IS sorted; /* PCASM will sort the input IS, duplicate it to return an unmodified (PCHPDDM) input IS */
             PetscCall(ISDuplicate(is[0], &sorted));
             PetscCall(PCASMSetLocalSubdomains(data->levels[0]->pc, 1, &sorted, &loc));
@@ -2531,7 +2531,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       }
       if (data->levels[0]->P) {
         /* if the pattern is the same and PCSetUp() has previously succeeded, reuse HPDDM buffers and connectivity */
-        PetscCall(HPDDM::Schwarz<PetscScalar>::destroy(data->levels[0], pc->setupcalled < 1 || pc->flag == DIFFERENT_NONZERO_PATTERN ? PETSC_TRUE : PETSC_FALSE));
+        PetscCall(HPDDM::Schwarz<PetscScalar>::destroy(data->levels[0], pc->ctSetupcalled == 0 || pc->flag == DIFFERENT_NONZERO_PATTERN ? PETSC_TRUE : PETSC_FALSE));
       }
       if (!data->levels[0]->P) data->levels[0]->P = new HPDDM::Schwarz<PetscScalar>();
       if (data->log_separate) PetscCall(PetscLogEventBegin(PC_HPDDM_SetUp[0], data->levels[0]->ksp, nullptr, nullptr, nullptr));
@@ -2634,12 +2634,12 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       if (flg) PetscCall(KSPGetPC(data->levels[0]->ksp, &inner));
       else inner = data->levels[0]->pc;
       if (inner) {
-        if (!inner->setupcalled) PetscCall(PCSetType(inner, PCASM));
+        if (inner->ctSetupcalled == 0) PetscCall(PCSetType(inner, PCASM));
         PetscCall(PCSetFromOptions(inner));
         PetscCall(PetscStrcmp(((PetscObject)inner)->type_name, PCASM, &flg));
         if (flg) {
-          if (!inner->setupcalled) { /* evaluates to PETSC_FALSE when -pc_hpddm_block_splitting */
-            IS sorted;               /* PCASM will sort the input IS, duplicate it to return an unmodified (PCHPDDM) input IS */
+          if (inner->ctSetupcalled == 0) { /* evaluates to PETSC_FALSE when -pc_hpddm_block_splitting */
+            IS sorted;                     /* PCASM will sort the input IS, duplicate it to return an unmodified (PCHPDDM) input IS */
 
             PetscCall(ISDuplicate(is[0], &sorted));
             PetscCall(PCASMSetLocalSubdomains(inner, 1, &sorted, &loc));
