@@ -261,7 +261,7 @@ static PetscErrorCode PCBJacobiGetSubKSP_BJacobi(PC pc, PetscInt *n_local, Petsc
   PC_BJacobi *jac = (PC_BJacobi *)pc->data;
 
   PetscFunctionBegin;
-  PetscCheck(pc->ctSetupcalled > 0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Must call KSPSetUp() or PCSetUp() first");
+  PetscCheck(pc->setupcalled, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Must call KSPSetUp() or PCSetUp() first");
 
   if (n_local) *n_local = jac->n_local;
   if (first_local) *first_local = jac->first_local;
@@ -274,7 +274,7 @@ static PetscErrorCode PCBJacobiSetTotalBlocks_BJacobi(PC pc, PetscInt blocks, co
   PC_BJacobi *jac = (PC_BJacobi *)pc->data;
 
   PetscFunctionBegin;
-  PetscCheck(pc->ctSetupcalled == 0 || jac->n == blocks, PetscObjectComm((PetscObject)pc), PETSC_ERR_ORDER, "Cannot alter number of blocks after PCSetUp()/KSPSetUp() has been called");
+  PetscCheck(!pc->setupcalled || jac->n == blocks, PetscObjectComm((PetscObject)pc), PETSC_ERR_ORDER, "Cannot alter number of blocks after PCSetUp()/KSPSetUp() has been called");
   jac->n = blocks;
   if (!lens) jac->g_lens = NULL;
   else {
@@ -741,7 +741,7 @@ static PetscErrorCode PCSetUp_BJacobi_Singleblock(PC pc, Mat mat, Mat pmat)
   const char             *prefix;
 
   PetscFunctionBegin;
-  if (pc->ctSetupcalled == 0) {
+  if (!pc->setupcalled) {
     if (!jac->ksp) {
       PetscInt nestlevel;
 
@@ -1032,7 +1032,7 @@ static PetscErrorCode PCSetUp_BJacobi_Multiblock(PC pc, Mat mat, Mat pmat)
     PetscCheck(same, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "Matrices not of same type");
   }
 
-  if (pc->ctSetupcalled == 0) {
+  if (!pc->setupcalled) {
     PetscInt nestlevel;
 
     scall = MAT_INITIAL_MATRIX;
@@ -1263,7 +1263,7 @@ static PetscErrorCode PCSetUp_BJacobi_Multiproc(PC pc)
   PetscCall(PetscObjectGetComm((PetscObject)pc, &comm));
   PetscCheck(jac->n_local <= 1, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Only a single block in a subcommunicator is supported");
   jac->n_local = 1; /* currently only a single block is supported for a subcommunicator */
-  if (pc->ctSetupcalled == 0) {
+  if (!pc->setupcalled) {
     PetscInt nestlevel;
 
     wasSetup = PETSC_FALSE;
@@ -1312,7 +1312,7 @@ static PetscErrorCode PCSetUp_BJacobi_Multiproc(PC pc)
     pc->ops->destroy       = PCDestroy_BJacobi_Multiproc;
     pc->ops->apply         = PCApply_BJacobi_Multiproc;
     pc->ops->matapply      = PCMatApply_BJacobi_Multiproc;
-  } else { /* pc->ctSetupcalled > 0 */
+  } else { /* pc->setupcalled */
     subcomm = PetscSubcommChild(mpjac->psubcomm);
     if (pc->flag == DIFFERENT_NONZERO_PATTERN) {
       /* destroy old matrix blocks, then get new matrix blocks */
