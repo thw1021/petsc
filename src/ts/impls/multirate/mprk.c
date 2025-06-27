@@ -1210,9 +1210,9 @@ static PetscErrorCode TSMPRKSetType_MPRK(TS ts, TSMPRKType mprktype)
   for (link = MPRKTableauList; link; link = link->next) {
     PetscCall(PetscStrcmp(link->tab.name, mprktype, &match));
     if (match) {
-      if (ts->ctSetupcalled2 > 0) PetscCall(TSMPRKTableauReset(ts));
+      if (ts->setupcalled) PetscCall(TSMPRKTableauReset(ts));
       mprk->tableau = &link->tab;
-      if (ts->ctSetupcalled2 > 0) PetscCall(TSMPRKTableauSetUp(ts));
+      if (ts->setupcalled) PetscCall(TSMPRKTableauSetUp(ts));
       PetscFunctionReturn(PETSC_SUCCESS);
     }
   }

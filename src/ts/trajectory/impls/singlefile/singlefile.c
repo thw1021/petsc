@@ -50,6 +50,6 @@ PETSC_EXTERN PetscErrorCode TSTrajectoryCreate_Singlefile(TSTrajectory tj, TS ts
   tj->ops->set       = TSTrajectorySet_Singlefile;
   tj->ops->get       = NULL;
   tj->ops->destroy   = TSTrajectoryDestroy_Singlefile;
-  ts->ctSetupcalled2 = 1;
+  ts->setupcalled    = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
