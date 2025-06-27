@@ -1334,9 +1334,9 @@ static PetscErrorCode TSRKSetType_RK(TS ts, TSRKType rktype)
   for (link = RKTableauList; link; link = link->next) {
     PetscCall(PetscStrcmp(link->tab.name, rktype, &match));
     if (match) {
-      if (ts->ctSetupcalled2 > 0) PetscCall(TSRKTableauReset(ts));
+      if (ts->setupcalled) PetscCall(TSRKTableauReset(ts));
       rk->tableau = &link->tab;
-      if (ts->ctSetupcalled2 > 0) PetscCall(TSRKTableauSetUp(ts));
+      if (ts->setupcalled) PetscCall(TSRKTableauSetUp(ts));
       ts->default_adapt_type = rk->tableau->bembed ? TSADAPTBASIC : TSADAPTNONE;
       PetscFunctionReturn(PETSC_SUCCESS);
     }
