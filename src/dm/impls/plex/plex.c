@@ -2024,7 +2024,7 @@ static PetscErrorCode DMPlexCreateHighOrderSurrogate_Internal(DM dm, DM *hdm)
     Vec cl, rcl;
 
     PetscCall(DMRefine(odm, PetscObjectComm((PetscObject)odm), &rdm));
-    PetscCall(DMPlexCreateCoordinateSpace(rdm, rd, PETSC_FALSE, NULL));
+    PetscCall(DMPlexCreateCoordinateSpace(rdm, rd, PETSC_FALSE, PETSC_FALSE));
     PetscCall(PetscObjectSetName((PetscObject)rdm, "Refined Mesh with Linear Coordinates"));
     PetscCall(DMGetCoordinateDM(odm, &cdm));
     PetscCall(DMGetCoordinateDM(rdm, &rcdm));
@@ -5747,6 +5747,28 @@ PetscErrorCode DMCreateCoordinateDM_Plex(DM dm, DM *cdm)
   PetscCall(DMSetLocalSection(*cdm, section));
   PetscCall(PetscSectionDestroy(&section));
 
+  PetscCall(DMSetNumFields(*cdm, 1));
+  PetscCall(DMCreateDS(*cdm));
+  (*cdm)->cloneOpts = PETSC_TRUE;
+  if (dm->setfromoptionscalled) PetscCall(DMSetFromOptions(*cdm));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode DMCreateCellCoordinateDM_Plex(DM dm, DM *cdm)
+{
+  DM           cgcdm;
+  PetscSection section;
+  const char  *prefix;
+
+  PetscFunctionBegin;
+  PetscCall(DMGetCoordinateDM(dm, &cgcdm));
+  PetscCall(DMClone(cgcdm, cdm));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)dm, &prefix));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*cdm, prefix));
+  PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)*cdm, "cellcdm_"));
+  PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &section));
+  PetscCall(DMSetLocalSection(*cdm, section));
+  PetscCall(PetscSectionDestroy(&section));
   PetscCall(DMSetNumFields(*cdm, 1));
   PetscCall(DMCreateDS(*cdm));
   (*cdm)->cloneOpts = PETSC_TRUE;
@@ -10778,17 +10800,19 @@ PetscErrorCode DMCreateSubDomainDM_Plex(DM dm, DMLabel label, PetscInt value, IS
       }
       if (set) PetscCall(ISSetBlockSize(*is, bs));
     }
-    /* Attach nullspace */
-    for (f = 0; f < Nf; ++f) {
-      (*subdm)->nullspaceConstructors[f] = dm->nullspaceConstructors[f];
-      if ((*subdm)->nullspaceConstructors[f]) break;
-    }
-    if (f < Nf) {
-      MatNullSpace nullSpace;
-      PetscCall((*(*subdm)->nullspaceConstructors[f])(*subdm, f, f, &nullSpace));
+    // Attach nullspace
+    if (dm->nullspaceConstructors) {
+      for (f = 0; f < Nf; ++f) {
+        (*subdm)->nullspaceConstructors[f] = dm->nullspaceConstructors[f];
+        if ((*subdm)->nullspaceConstructors[f]) break;
+      }
+      if (f < Nf) {
+        MatNullSpace nullSpace;
+        PetscCall((*(*subdm)->nullspaceConstructors[f])(*subdm, f, f, &nullSpace));
 
-      PetscCall(PetscObjectCompose((PetscObject)*is, "nullspace", (PetscObject)nullSpace));
-      PetscCall(MatNullSpaceDestroy(&nullSpace));
+        PetscCall(PetscObjectCompose((PetscObject)*is, "nullspace", (PetscObject)nullSpace));
+        PetscCall(MatNullSpaceDestroy(&nullSpace));
+      }
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);

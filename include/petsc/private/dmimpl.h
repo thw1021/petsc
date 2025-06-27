@@ -47,6 +47,7 @@ struct _DMOps {
   PetscErrorCode (*getlocaltoglobalmapping)(DM);
   PetscErrorCode (*createfieldis)(DM, PetscInt *, char ***, IS **);
   PetscErrorCode (*createcoordinatedm)(DM, DM *);
+  PetscErrorCode (*createcellcoordinatedm)(DM, DM *);
   PetscErrorCode (*createcoordinatefield)(DM, DMField *);
 
   PetscErrorCode (*getcoloring)(DM, ISColoringType, ISColoring *);
@@ -301,9 +302,9 @@ struct _p_DM {
   /* Periodicity */
   PetscReal *Lstart, *L, *maxCell; /* Size of periodic box and max cell size for determining periodicity */
   PetscBool  sparseLocalize;       /* Localize coordinates only for cells near periodic boundary */
-  /* Null spaces -- of course I should make this have a variable number of fields */
-  NullSpaceFn nullspaceConstructors[10];
-  NullSpaceFn nearnullspaceConstructors[10];
+  /* Null spaces */
+  NullSpaceFn *nullspaceConstructors;
+  NullSpaceFn *nearnullspaceConstructors;
   /* Fields are represented by objects */
   PetscInt     Nf;       /* Number of fields defined on the total domain */
   RegionField *fields;   /* Array of discretization fields with regions of validity */
