@@ -55,7 +55,7 @@ PetscErrorCode TSSetType(TS ts, TSType type)
   ts->usessnes           = PETSC_FALSE;
   ts->default_adapt_type = TSADAPTNONE;
 
-  ts->ctSetupcalled2 = 0;
+  ts->setupcalled = PETSC_FALSE;
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)ts, type));
   PetscCall((*r)(ts));

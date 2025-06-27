@@ -287,9 +287,9 @@ struct _p_TS {
   PetscInt ifuncs, rhsfuncs, ijacs, rhsjacs;
 
   /* --- Data that is unique to each particular solver --- */
-  PetscInt ctSetupcalled2; /* true if setup has been called */
-  void    *data;           /* implementationspecific data */
-  void    *ctx;            /* user context */
+  PetscBool setupcalled; /* true if setup has been called */
+  void     *data;        /* implementationspecific data */
+  void     *ctx;         /* user context */
 
   PetscBool steprollback;        /* flag to indicate that the step was rolled back */
   PetscBool steprestart;         /* flag to indicate that the timestepper has to discard any history and restart */

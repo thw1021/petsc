@@ -2376,7 +2376,7 @@ PetscErrorCode TSSetTimeError(TS ts, Vec v)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
-  PetscCheck(ts->ctSetupcalled2 > 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call TSSetUp() first");
+  PetscCheck(ts->setupcalled, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call TSSetUp() first");
   PetscTryTypeMethod(ts, settimeerror, v);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2490,7 +2490,7 @@ PetscErrorCode TSSetUp(TS ts)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
-  if (ts->ctSetupcalled2 > 0) PetscFunctionReturn(PETSC_SUCCESS);
+  if (ts->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
 
   if (!((PetscObject)ts)->type_name) {
     PetscCall(TSGetIFunction(ts, NULL, &ifun, NULL));
@@ -2564,7 +2564,7 @@ PetscErrorCode TSSetUp(TS ts)
   /* if time integration scheme has a starting method, call it */
   PetscTryTypeMethod(ts, startingmethod);
 
-  ts->ctSetupcalled2 = 1;
+  ts->setupcalled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2632,7 +2632,7 @@ PetscErrorCode TSReset(TS ts)
   ts->rhsjacobian.time  = PETSC_MIN_REAL;
   ts->rhsjacobian.scale = 1.0;
   ts->ijacobian.shift   = 1.0;
-  ts->ctSetupcalled2    = 0;
+  ts->setupcalled       = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -5709,7 +5709,7 @@ PetscErrorCode TSClone(TS tsin, TS *tsout)
 
   /* General TS description */
   t->numbermonitors    = 0;
-  t->ctSetupcalled2    = 0;
+  t->setupcalled       = PETSC_FALSE;
   t->ksp_its           = 0;
   t->snes_its          = 0;
   t->nwork             = 0;
