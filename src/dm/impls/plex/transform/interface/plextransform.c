@@ -165,7 +165,7 @@ PetscErrorCode DMPlexTransformCreate(MPI_Comm comm, DMPlexTransform *tr)
   PetscCall(DMInitializePackage());
 
   PetscCall(PetscHeaderCreate(t, DMPLEXTRANSFORM_CLASSID, "DMPlexTransform", "Mesh Transform", "DMPlexTransform", comm, DMPlexTransformDestroy, DMPlexTransformView));
-  t->ctSetupcalled = 0;
+  t->setupcalled = PETSC_FALSE;
   PetscCall(PetscCalloc2(DM_NUM_POLYTOPES, &t->coordFE, DM_NUM_POLYTOPES, &t->refGeom));
   *tr = t;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -569,7 +569,7 @@ PetscErrorCode DMPlexTransformSetUp(DMPlexTransform tr)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
-  if (tr->ctSetupcalled > 0) PetscFunctionReturn(PETSC_SUCCESS);
+  if (tr->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscTryTypeMethod(tr, setup);
   PetscCall(DMPlexTransformGetDM(tr, &dm));
   PetscCall(DMSetSnapToGeomModel(dm, NULL));
@@ -663,7 +663,7 @@ PetscErrorCode DMPlexTransformSetUp(DMPlexTransform tr)
     tr->depthStart[dep] = PetscMin(tr->depthStart[dep], tr->ctStartNew[tr->ctOrderNew[c]]);
     tr->depthEnd[dep]   = PetscMax(tr->depthEnd[dep], tr->ctStartNew[tr->ctOrderNew[c + 1]]);
   }
-  tr->ctSetupcalled = 1;
+  tr->setupcalled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
