@@ -122,7 +122,7 @@ struct _p_TSTrajectory {
   PetscBool   solution_only;      /* whether we dump just the solution or also the stages */
   PetscBool   adjoint_solve_mode; /* whether we will use the Trajectory inside a TSAdjointSolve() or not */
   PetscViewer monitor;
-  PetscInt    ctSetupcalled3;         /* true if setup has been called */
+  PetscBool   setupcalled;            /* true if setup has been called */
   PetscInt    recomps;                /* counter for recomputations in the adjoint run */
   PetscInt    diskreads, diskwrites;  /* counters for disk checkpoint reads and writes */
   char      **names;                  /* the name of each variable; each process has only the local names */
