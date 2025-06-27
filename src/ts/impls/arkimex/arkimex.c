@@ -2293,9 +2293,9 @@ static PetscErrorCode TSARKIMEXSetType_ARKIMEX(TS ts, TSARKIMEXType arktype)
   for (link = ARKTableauList; link; link = link->next) {
     PetscCall(PetscStrcmp(link->tab.name, arktype, &match));
     if (match) {
-      if (ts->setupcalled) PetscCall(TSARKIMEXTableauReset(ts));
+      if (ts->ctSetupcalled2 > 0) PetscCall(TSARKIMEXTableauReset(ts));
       ark->tableau = &link->tab;
-      if (ts->setupcalled) PetscCall(TSARKIMEXTableauSetUp(ts));
+      if (ts->ctSetupcalled2 > 0) PetscCall(TSARKIMEXTableauSetUp(ts));
       ts->default_adapt_type = ark->tableau->bembed ? TSADAPTBASIC : TSADAPTNONE;
       PetscFunctionReturn(PETSC_SUCCESS);
     }

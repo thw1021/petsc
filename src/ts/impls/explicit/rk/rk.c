@@ -851,7 +851,8 @@ static PetscErrorCode TSAdjointSetUp_RK(TS ts)
   PetscInt  s   = tab->s;
 
   PetscFunctionBegin;
-  if (ts->adjointsetupcalled++) PetscFunctionReturn(PETSC_SUCCESS);
+  if (ts->adjointsetupcalled) PetscFunctionReturn(PETSC_SUCCESS);
+  ts->adjointsetupcalled = PETSC_TRUE;
   PetscCall(VecDuplicateVecs(ts->vecs_sensi[0], s * ts->numcost, &rk->VecsDeltaLam));
   PetscCall(VecDuplicateVecs(ts->vecs_sensi[0], ts->numcost, &rk->VecsSensiTemp));
   if (ts->vecs_sensip) PetscCall(VecDuplicate(ts->vecs_sensip[0], &rk->VecDeltaMu));
@@ -1333,9 +1334,9 @@ static PetscErrorCode TSRKSetType_RK(TS ts, TSRKType rktype)
   for (link = RKTableauList; link; link = link->next) {
     PetscCall(PetscStrcmp(link->tab.name, rktype, &match));
     if (match) {
-      if (ts->setupcalled) PetscCall(TSRKTableauReset(ts));
+      if (ts->ctSetupcalled2 > 0) PetscCall(TSRKTableauReset(ts));
       rk->tableau = &link->tab;
-      if (ts->setupcalled) PetscCall(TSRKTableauSetUp(ts));
+      if (ts->ctSetupcalled2 > 0) PetscCall(TSRKTableauSetUp(ts));
       ts->default_adapt_type = rk->tableau->bembed ? TSADAPTBASIC : TSADAPTNONE;
       PetscFunctionReturn(PETSC_SUCCESS);
     }

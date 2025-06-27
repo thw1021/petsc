@@ -58,7 +58,7 @@ PetscErrorCode TSTrajectorySet(TSTrajectory tj, TS ts, PetscInt stepnum, PetscRe
   PetscValidLogicalCollectiveInt(tj, stepnum, 3);
   PetscValidLogicalCollectiveReal(tj, time, 4);
   PetscValidHeaderSpecific(X, VEC_CLASSID, 5);
-  PetscCheck(tj->setupcalled, PetscObjectComm((PetscObject)tj), PETSC_ERR_ORDER, "TSTrajectorySetUp should be called first");
+  PetscCheck(tj->ctSetupcalled3 > 0, PetscObjectComm((PetscObject)tj), PETSC_ERR_ORDER, "TSTrajectorySetUp should be called first");
   if (tj->monitor) PetscCall(PetscViewerASCIIPrintf(tj->monitor, "TSTrajectorySet: stepnum %" PetscInt_FMT ", time %g (stages %" PetscInt_FMT ")\n", stepnum, (double)time, (PetscInt)!tj->solution_only));
   PetscCall(PetscLogEventBegin(TSTrajectory_Set, tj, ts, 0, 0));
   PetscUseTypeMethod(tj, set, ts, stepnum, time, X);
@@ -120,7 +120,7 @@ PetscErrorCode TSTrajectoryGet(TSTrajectory tj, TS ts, PetscInt stepnum, PetscRe
   PetscValidHeaderSpecific(ts, TS_CLASSID, 2);
   PetscValidLogicalCollectiveInt(tj, stepnum, 3);
   PetscAssertPointer(time, 4);
-  PetscCheck(tj->setupcalled, PetscObjectComm((PetscObject)tj), PETSC_ERR_ORDER, "TSTrajectorySetUp should be called first");
+  PetscCheck(tj->ctSetupcalled3, PetscObjectComm((PetscObject)tj), PETSC_ERR_ORDER, "TSTrajectorySetUp should be called first");
   PetscCheck(stepnum >= 0, PetscObjectComm((PetscObject)tj), PETSC_ERR_PLIB, "Requesting negative step number");
   if (tj->monitor) {
     PetscCall(PetscViewerASCIIPrintf(tj->monitor, "TSTrajectoryGet: stepnum %" PetscInt_FMT ", stages %" PetscInt_FMT "\n", stepnum, (PetscInt)!tj->solution_only));
@@ -166,7 +166,7 @@ PetscErrorCode TSTrajectoryGetVecs(TSTrajectory tj, TS ts, PetscInt stepnum, Pet
   if (U) PetscValidHeaderSpecific(U, VEC_CLASSID, 5);
   if (Udot) PetscValidHeaderSpecific(Udot, VEC_CLASSID, 6);
   if (!U && !Udot) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCheck(tj->setupcalled, PetscObjectComm((PetscObject)tj), PETSC_ERR_ORDER, "TSTrajectorySetUp should be called first");
+  PetscCheck(tj->ctSetupcalled3 > 0, PetscObjectComm((PetscObject)tj), PETSC_ERR_ORDER, "TSTrajectorySetUp should be called first");
   PetscCall(PetscLogEventBegin(TSTrajectory_GetVecs, tj, ts, 0, 0));
   if (tj->monitor) {
     PetscInt pU, pUdot;
@@ -402,7 +402,7 @@ PetscErrorCode TSTrajectoryCreate(MPI_Comm comm, TSTrajectory *tj)
   PetscCall(TSInitializePackage());
 
   PetscCall(PetscHeaderCreate(t, TSTRAJECTORY_CLASSID, "TSTrajectory", "Time stepping", "TS", comm, TSTrajectoryDestroy, TSTrajectoryView));
-  t->setupcalled = PETSC_FALSE;
+  t->ctSetupcalled3 = 0;
   PetscCall(TSHistoryCreate(comm, &t->tsh));
   t->lag.order            = 1;
   t->lag.L                = NULL;
@@ -542,7 +542,7 @@ PetscErrorCode TSTrajectoryReset(TSTrajectory tj)
   PetscCall(PetscFree(tj->dirfiletemplate));
   PetscCall(TSHistoryDestroy(&tj->tsh));
   PetscCall(TSHistoryCreate(PetscObjectComm((PetscObject)tj), &tj->tsh));
-  tj->setupcalled = PETSC_FALSE;
+  tj->ctSetupcalled3 = 0;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -863,13 +863,13 @@ PetscErrorCode TSTrajectorySetUp(TSTrajectory tj, TS ts)
   if (!tj) PetscFunctionReturn(PETSC_SUCCESS);
   PetscValidHeaderSpecific(tj, TSTRAJECTORY_CLASSID, 1);
   if (ts) PetscValidHeaderSpecific(ts, TS_CLASSID, 2);
-  if (tj->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
+  if (tj->ctSetupcalled3 > 0) PetscFunctionReturn(PETSC_SUCCESS);
 
   PetscCall(PetscLogEventBegin(TSTrajectory_SetUp, tj, ts, 0, 0));
   if (!((PetscObject)tj)->type_name) PetscCall(TSTrajectorySetType(tj, ts, TSTRAJECTORYBASIC));
   PetscTryTypeMethod(tj, setup, ts);
 
-  tj->setupcalled = PETSC_TRUE;
+  tj->ctSetupcalled3 = 1;
 
   /* Set the counters to zero */
   tj->recomps    = 0;
