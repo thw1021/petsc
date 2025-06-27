@@ -2376,7 +2376,7 @@ PetscErrorCode TSSetTimeError(TS ts, Vec v)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
-  PetscCheck(ts->setupcalled, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call TSSetUp() first");
+  PetscCheck(!ts->setupcalled, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call TSSetUp() first");
   PetscTryTypeMethod(ts, settimeerror, v);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -5709,7 +5709,7 @@ PetscErrorCode TSClone(TS tsin, TS *tsout)
 
   /* General TS description */
   t->numbermonitors    = 0;
-  t->setupcalled       = 0;
+  t->setupcalled       = PETSC_FALSE;
   t->ksp_its           = 0;
   t->snes_its          = 0;
   t->nwork             = 0;
