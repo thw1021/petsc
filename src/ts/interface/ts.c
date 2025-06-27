@@ -1890,7 +1890,7 @@ PetscErrorCode TSViewFromOptions(TS ts, PetscObject obj, const char name[])
 PetscErrorCode TSView(TS ts, PetscViewer viewer)
 {
   TSType    type;
-  PetscBool iascii, isstring, isundials, isbinary, isdraw;
+  PetscBool isascii, isstring, isundials, isbinary, isdraw;
   DMTS      sdm;
 #if defined(PETSC_HAVE_SAWS)
   PetscBool issaws;
@@ -1902,14 +1902,14 @@ PetscErrorCode TSView(TS ts, PetscViewer viewer)
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
   PetscCheckSameComm(ts, 1, viewer, 2);
 
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSTRING, &isstring));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERBINARY, &isbinary));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &isdraw));
 #if defined(PETSC_HAVE_SAWS)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSAWS, &issaws));
 #endif
-  if (iascii) {
+  if (isascii) {
     PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)ts, viewer));
     if (ts->ops->view) {
       PetscCall(PetscViewerASCIIPushTab(viewer));
@@ -5709,7 +5709,7 @@ PetscErrorCode TSClone(TS tsin, TS *tsout)
 
   /* General TS description */
   t->numbermonitors    = 0;
-  t->setupcalled       = 0;
+  t->setupcalled       = PETSC_FALSE;
   t->ksp_its           = 0;
   t->snes_its          = 0;
   t->nwork             = 0;
