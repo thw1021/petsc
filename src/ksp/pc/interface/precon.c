@@ -1017,7 +1017,6 @@ PetscErrorCode PCGetFailedReason(PC pc, PCFailedReason *reason)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  /* if (pc->setupcalled < 0) *reason = (PCFailedReason)pc->setupcalled; unreachable */
   *reason = pc->failedreason;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
