@@ -1605,9 +1605,9 @@ PetscErrorCode MatSetValues(Mat mat, PetscInt m, const PetscInt idxm[], PetscInt
 
   Input Parameters:
 + mat  - the matrix
-. v    - a logically two-dimensional array of values
 . ism  - the rows to provide
 . isn  - the columns to provide
+. v    - a logically two-dimensional array of values
 - addv - either `ADD_VALUES` to add values to any existing entries, or `INSERT_VALUES` to replace existing entries with new values
 
   Level: beginner
@@ -2005,11 +2005,11 @@ PetscErrorCode MatSetStencil(Mat mat, PetscInt dim, const PetscInt dims[], const
 
   Input Parameters:
 + mat  - the matrix
-. v    - a logically two-dimensional array of values
 . m    - the number of block rows
 . idxm - the global block indices
 . n    - the number of block columns
 . idxn - the global block indices
+. v    - a logically two-dimensional array of values
 - addv - either `ADD_VALUES` to add values to any existing entries, or `INSERT_VALUES` replaces existing entries with new values
 
   Level: intermediate
