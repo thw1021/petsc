@@ -1509,11 +1509,11 @@ PetscErrorCode MatDestroy(Mat *A)
 
   Input Parameters:
 + mat  - the matrix
-. v    - a logically two-dimensional array of values
 . m    - the number of rows
 . idxm - the global indices of the rows
 . n    - the number of columns
 . idxn - the global indices of the columns
+. v    - a logically two-dimensional array of values
 - addv - either `ADD_VALUES` to add values to any existing entries, or `INSERT_VALUES` to replace existing entries with new values
 
   Level: beginner
