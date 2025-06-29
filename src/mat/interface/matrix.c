@@ -1519,7 +1519,7 @@ PetscErrorCode MatDestroy(Mat *A)
   Level: beginner
 
   Notes:
-  By default the values, `v`, are stored row-oriented. See `MatSetOption()` for other options.
+  By default, the values, `v`, are stored in row-major order. See `MAT_ROW_ORIENTED` in `MatSetOption()` for how to use column-major order.
 
   Calls to `MatSetValues()` with the `INSERT_VALUES` and `ADD_VALUES`
   options cannot be mixed without intervening calls to the assembly
@@ -1613,7 +1613,7 @@ PetscErrorCode MatSetValues(Mat mat, PetscInt m, const PetscInt idxm[], PetscInt
   Level: beginner
 
   Notes:
-  By default the values, `v`, are stored row-oriented. See `MatSetOption()` for other options.
+  By default, the values, `v`, are stored in row-major order. See `MAT_ROW_ORIENTED` in `MatSetOption()` for how to use column-major order.
 
   Calls to `MatSetValues()` with the `INSERT_VALUES` and `ADD_VALUES`
   options cannot be mixed without intervening calls to the assembly
@@ -2027,8 +2027,7 @@ PetscErrorCode MatSetStencil(Mat mat, PetscInt dim, const PetscInt dims[], const
   You must call `MatSetBlockSize()` when constructing this matrix (before
   preallocating it).
 
-  By default the values, `v`, are row-oriented, so the layout of
-  `v` is the same as for `MatSetValues()`. See `MatSetOption()` for other options.
+  By default, the values, `v`, are stored in row-major order. See `MAT_ROW_ORIENTED` in `MatSetOption()` for how to use column-major order.
 
   Calls to `MatSetValuesBlocked()` with the `INSERT_VALUES` and `ADD_VALUES`
   options cannot be mixed without intervening calls to the assembly
