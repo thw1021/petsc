@@ -917,9 +917,6 @@ cdef class Mat(Object):
         petsc.MatSetPreallocationCOO
 
         """
-        cdef PetscBool done = PETSC_FALSE
-        CHKERR(MatIsPreallocated(self.mat, &done))
-        
         cdef PetscInt ncoo_i = 0, ncoo_j = 0
         cdef PetscInt *ccoo_i = NULL, *ccoo_j = NULL
         cdef PetscCount ncoo = 0
@@ -930,7 +927,7 @@ cdef class Mat(Object):
         if ncoo_i != ncoo_j:
             raise ValueError("coo_i and coo_j must have the same length")
         
-        ncoo = <uint64_t> ncoo_i
+        ncoo = <PetscCount> ncoo_i
         CHKERR(MatSetPreallocationCOO(self.mat, ncoo, ccoo_i, ccoo_j))  
         return self
     
@@ -948,13 +945,10 @@ cdef class Mat(Object):
 
         See Also
         --------
-        setPreallocationCOO, setValuesCOO,
+        setPreallocationCOO, setValuesCOO, setLGMap
         petsc.MatSetPreallocationCOOLocal, petsc.MatSetPreallocationCOOLocal
 
         """
-        cdef PetscBool done = PETSC_FALSE
-        CHKERR(MatIsPreallocated(self.mat, &done))
-        
         cdef PetscInt ncoo_i = 0, ncoo_j = 0
         cdef PetscInt *ccoo_i = NULL, *ccoo_j = NULL
         cdef PetscCount ncoo = 0
@@ -965,7 +959,7 @@ cdef class Mat(Object):
         if ncoo_i != ncoo_j:
             raise ValueError("coo_i and coo_j must have the same length")
         
-        ncoo = <uint64_t> ncoo_i
+        ncoo = <PetscCount> ncoo_i
         CHKERR(MatSetPreallocationCOOLocal(self.mat, ncoo, ccoo_i, ccoo_j))        
         return self
 
@@ -2757,15 +2751,14 @@ cdef class Mat(Object):
         coo_v: Sequence[Scalar],
         addv: InsertModeSpec = None) -> None:
         """
-        Set values at once in a matrix preallocated using setPreallocationCOO
+        Set values at once in a matrix preallocated using `setPreallocationCOO`
 
-        Not collective.
+        Collective.
 
         Parameters
         ----------
         coo_v
-            The matrix values (can be NULL)
-            
+            The matrix values
         addv
             Insertion mode.
 

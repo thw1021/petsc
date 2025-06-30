@@ -1061,7 +1061,6 @@ cdef inline PetscErrorCode matsetvalues_coo(PetscMat A,
     addv = insertmode(oaddv)
 
     CHKERR(MatSetValuesCOO(A, v, addv))
-
     return PETSC_SUCCESS
 
 cdef inline PetscErrorCode matsetvalues_csr(PetscMat A,
