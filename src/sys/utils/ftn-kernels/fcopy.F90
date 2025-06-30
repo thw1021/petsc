@@ -4,10 +4,12 @@
 !
 #include <petsc/finclude/petscsys.h>
 !
-subroutine FortranCopy(n,x,y)
-  implicit none
-  PetscScalar  x(*),y(*)
-  PetscInt n
+pure subroutine FortranCopy(n,x,y)
+  implicit none (type, external)
+  PetscScalar, intent(in) :: x(*)
+  PetscScalar, intent(inout) :: y(*)
+  PetscInt, intent(in) :: n
+
   PetscInt i
 
   PETSC_AssertAlignx(16,x(1))
@@ -19,10 +21,11 @@ subroutine FortranCopy(n,x,y)
 
 end subroutine FortranCopy
 
-subroutine FortranZero(n,x)
-  implicit none
-  PetscScalar  x(*)
-  PetscInt n
+pure subroutine FortranZero(n,x)
+  implicit none (type, external)
+  PetscScalar, intent(inout) :: x(*)
+  PetscInt :: n
+
   PetscInt i
 
   PETSC_AssertAlignx(16,x(1))

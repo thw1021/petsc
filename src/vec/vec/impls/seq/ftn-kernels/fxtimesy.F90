@@ -1,10 +1,11 @@
 #include <petsc/finclude/petscsys.h>
 !
 
-subroutine Fortranxtimesy(x,y,z,n)
-  implicit none
-  PetscScalar  x(*),y(*),z(*)
-  PetscInt n
+pure subroutine Fortranxtimesy(x,y,z,n)
+  implicit none (type, external)
+  PetscScalar, intent(in) :: x(*),y(*)
+  PetscScalar, intent(inout) :: z(*)
+  PetscInt, intent(in) :: n
 
   PetscInt i
 

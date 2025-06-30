@@ -4,11 +4,12 @@
 !
 #include <petsc/finclude/petscsys.h>
 !
-subroutine FortranAYPX(n,a,x,y)
-  implicit none
-  PetscScalar  a
-  PetscScalar  x(*),y(*)
-  PetscInt n
+pure subroutine FortranAYPX(n,a,x,y)
+  implicit none (type, external)
+  PetscScalar, intent(in) :: a
+  PetscScalar, intent(in) :: x(*)
+  PetscScalar, intent(inout) :: y(*)
+  PetscInt, intent(in) :: n
 
   PetscInt i
 

@@ -4,11 +4,12 @@
 !
 #include <petsc/finclude/petscsys.h>
 
-subroutine MSGemv(bs,ncols,A,x,y)
-  implicit none
-  PetscInt          bs,ncols
-  MatScalar        A(bs,ncols)
-  PetscScalar      x(ncols),y(bs)
+pure subroutine MSGemv(bs,ncols,A,x,y)
+  implicit none (type, external)
+  PetscInt, intent(in) :: bs,ncols
+  MatScalar, intent(in) :: A(bs,ncols)
+  PetscScalar, intent(in) :: x(ncols)
+  PetscScalar, intent(out) :: y(bs)
 
   PetscInt         i,j
 
@@ -24,11 +25,12 @@ subroutine MSGemv(bs,ncols,A,x,y)
 
 end subroutine MSGemv
 
-subroutine MSGemvp(bs,ncols,A,x,y)
-  implicit none
-  PetscInt          bs,ncols
-  MatScalar        A(bs,ncols)
-  PetscScalar      x(ncols),y(bs)
+pure subroutine MSGemvp(bs,ncols,A,x,y)
+  implicit none (type, external)
+  PetscInt, intent(in) :: bs,ncols
+  MatScalar, intent(in) :: A(bs,ncols)
+  PetscScalar, intent(in) :: x(ncols)
+  PetscScalar, intent(inout) :: y(bs)
 
   PetscInt         i, j
 
@@ -40,11 +42,12 @@ subroutine MSGemvp(bs,ncols,A,x,y)
 
 end subroutine MSGemvp
 
-subroutine MSGemvm(bs,ncols,A,x,y)
-  implicit none
-  PetscInt          bs,ncols
-  MatScalar        A(bs,ncols)
-  PetscScalar      x(ncols),y(bs)
+pure subroutine MSGemvm(bs,ncols,A,x,y)
+  implicit none (type, external)
+  PetscInt, intent(in) :: bs,ncols
+  MatScalar, intent(in) :: A(bs,ncols)
+  PetscScalar, intent(in) :: x(ncols)
+  PetscScalar, intent(inout) :: y(bs)
 
   PetscInt         i, j
 
@@ -56,14 +59,16 @@ subroutine MSGemvm(bs,ncols,A,x,y)
 
 end subroutine MSGemvm
 
-subroutine MSGemvt(bs,ncols,A,x,y)
-  implicit none
-  PetscInt          bs,ncols
-  MatScalar        A(bs,ncols)
-  PetscScalar      x(bs),y(ncols)
+pure subroutine MSGemvt(bs,ncols,A,x,y)
+  implicit none (type, external)
+  PetscInt, intent(in) :: bs,ncols
+  MatScalar, intent(in) :: A(bs,ncols)
+  PetscScalar, intent(in) :: x(bs)
+  PetscScalar, intent(inout) :: y(ncols)
 
   PetscInt          i,j
   PetscScalar      sum
+
   do  i=1,ncols
     sum = y(i)
     do  j=1,bs
@@ -74,10 +79,12 @@ subroutine MSGemvt(bs,ncols,A,x,y)
 
 end subroutine MSGemvt
 
-subroutine MSGemm(bs,A,B,C)
-  implicit none
-  PetscInt    bs
-  MatScalar   A(bs,bs),B(bs,bs),C(bs,bs)
+pure subroutine MSGemm(bs,A,B,C)
+  implicit none (type, external)
+  PetscInt, intent(in) :: bs
+  MatScalar, intent(in) :: B(bs,bs),C(bs,bs)
+  MatScalar, intent(inout) :: A(bs,bs)
+
   PetscScalar sum
   PetscInt    i,j,k
 
@@ -93,12 +100,13 @@ subroutine MSGemm(bs,A,B,C)
 
 end subroutine MSGemm
 
-subroutine MSGemmi(bs,A,C,B)
-  implicit none
-  PetscInt    bs
-  MatScalar   A(bs,bs),B(bs,bs),C(bs,bs)
-  PetscScalar sum
+pure subroutine MSGemmi(bs,A,C,B)
+  implicit none (type, external)
+  PetscInt, intent(in) :: bs
+  MatScalar, intent(in) :: B(bs,bs),C(bs,bs)
+  MatScalar, intent(out) :: A(bs,bs)
 
+  PetscScalar sum
   PetscInt    i,j,k
 
   do i=1,bs
