@@ -528,6 +528,9 @@ PETSC_EXTERN PetscErrorCode MatConstantDiagonalGetConstant(Mat, PetscScalar *);
 
 #if defined(PETSC_HAVE_HYPRE)
 PETSC_EXTERN PetscErrorCode MatHYPRESetPreallocation(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[]);
+  #if defined(PETSC_HAVE_HYPRE_DEVICE)
+PETSC_EXTERN PetscErrorCode MatHYPRESetMemoryLocation(Mat);
+  #endif
 #endif
 
 PETSC_EXTERN PetscErrorCode MatPythonSetType(Mat, const char[]);
