@@ -1191,8 +1191,13 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems P
   // global parameter but is closely associated with BoomerAMG
   PetscCall(PetscOptionsEList("-pc_mg_galerkin_mat_product_algorithm", "Type of SpGEMM to use in hypre (only for now)", "PCMGGalerkinSetMatProductAlgorithm", PCHYPRESpgemmTypes, PETSC_STATIC_ARRAY_LENGTH(PCHYPRESpgemmTypes), PCHYPRESpgemmTypes[0], &indx, &flg));
   #if defined(PETSC_HAVE_HYPRE_DEVICE)
-  if (!flg) indx = 0;
-  PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, PCHYPRESpgemmTypes[indx]));
+  if (flg) PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, PCHYPRESpgemmTypes[indx]));
+  else {
+    HYPRE_MemoryLocation memloc;
+    PetscCallExternal(HYPRE_GetMemoryLocation, &memloc);
+    if (memloc == HYPRE_MEMORY_DEVICE) PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, PCHYPRESpgemmTypes[0]));
+    else PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, "hypre"));
+  }
   #else
   PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, "hypre"));
   #endif
@@ -2303,18 +2308,23 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
          from https://hypre.readthedocs.io/en/latest/solvers-boomeramg.html#gpu-supported-options
          and /src/parcsr_ls/par_amg.c */
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
-    jac->keeptranspose  = PETSC_TRUE;
-    jac->mod_rap2       = 1;
-    jac->coarsentype    = 8;
-    jac->relaxorder     = 0;
-    jac->interptype     = 6;
-    jac->relaxtype[0]   = 18;
-    jac->relaxtype[1]   = 18;
-    jac->agg_interptype = 7;
-#else
-    jac->keeptranspose = PETSC_FALSE;
-    jac->mod_rap2      = 0;
+    HYPRE_MemoryLocation memloc;
+    PetscCallExternal(HYPRE_GetMemoryLocation, &memloc);
+    if (memloc == HYPRE_MEMORY_DEVICE) {
+      jac->keeptranspose  = PETSC_TRUE;
+      jac->mod_rap2       = 1;
+      jac->coarsentype    = 8;
+      jac->relaxorder     = 0;
+      jac->interptype     = 6;
+      jac->relaxtype[0]   = 18;
+      jac->relaxtype[1]   = 18;
+      jac->agg_interptype = 7;
+    } else
 #endif
+    {
+      jac->keeptranspose = PETSC_FALSE;
+      jac->mod_rap2      = 0;
+    }
     PetscCallExternal(HYPRE_BoomerAMGSetCycleType, jac->hsolver, jac->cycletype);
     PetscCallExternal(HYPRE_BoomerAMGSetMaxLevels, jac->hsolver, jac->maxlevels);
     PetscCallExternal(HYPRE_BoomerAMGSetMaxIter, jac->hsolver, jac->maxiter);
@@ -2478,6 +2488,10 @@ static PetscErrorCode PCSetFromOptions_HYPRE(PC pc, PetscOptionItems PetscOption
   PetscBool   flg;
 
   PetscFunctionBegin;
+#if defined(PETSC_HAVE_HYPRE_DEVICE)
+  /* Set the memory location based off the preconditioning matrix type. This memory location will help inform PC option choices */
+  if (pc->pmat) PetscCall(MatHYPRESetMemoryLocation(pc->pmat));
+#endif
   PetscOptionsHeadBegin(PetscOptionsObject, "HYPRE preconditioner options");
   PetscCall(PetscOptionsEList("-pc_hypre_type", "HYPRE preconditioner type", "PCHYPRESetType", type, PETSC_STATIC_ARRAY_LENGTH(type), "boomeramg", &indx, &flg));
   if (flg) {
