@@ -51,12 +51,14 @@ int main(int argc, char **args)
   PetscCall(KSPSetOperators(ksp, A, A));
   PetscCall(KSPSetFromOptions(ksp));
   PetscCall(KSPGetPC(ksp, &pc));
+#if defined(PETSC_HAVE_HYPRE_DEVICE)
   PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCHYPRE, &flg));
-  if (flg && PetscDefined(HAVE_HYPRE_DEVICE)) {
+  if (flg) {
     HYPRE_MemoryLocation hmem;
     PetscCallExternal(HYPRE_GetMemoryLocation, &hmem);
     if (hmem == HYPRE_MEMORY_DEVICE) hypre_mat_on_device = PETSC_TRUE;
   }
+#endif
   if (!hypre_mat_on_device) PetscCall(PCShellSetMatApply(pc, MatApply));
   PetscCall(KSPMatSolve(ksp, B, X));
   PetscCall(PCMatApply(pc, B, X));
