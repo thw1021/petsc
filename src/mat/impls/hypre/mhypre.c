@@ -593,6 +593,36 @@ static PetscErrorCode MatSetValuesCOOFromCSRMatrix_Private(Mat A, hypre_CSRMatri
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  MatHYPRESetMemoryLocation - Set the hypre memory location based off the type of the provided matrix. Without calls to this function hypre defaults to GPU when configured with GPU. We make it default to the memory location associated with the PETSc matrix, e.g. seqaij or mpiaij matrices will lead to host memory selection otherwise when A is of type aijcusparse, aijhipsarse, aijkokkos (or already of type hypre) hypre will be on the device. Note that if hypre is not configured with device support this function is a no-op
+
+  Not Collective
+
+  Input Parameters:
++ A - the matrix whose type we are checking
+
+  Level: developer
+
+.seealso: [](ch_matrices), `Mat`, `MATHYPRE`
+@*/
+#if defined(PETSC_HAVE_HYPRE_DEVICE)
+PETSC_EXTERN PetscErrorCode MatHYPRESetMemoryLocation(Mat A)
+{
+  PetscBool isaij;
+#else
+PETSC_EXTERN PetscErrorCode MatHYPRESetMemoryLocation(PETSC_UNUSED Mat A)
+{
+#endif
+
+  PetscFunctionBegin;
+#if defined(PETSC_HAVE_HYPRE_DEVICE)
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &isaij, MATSEQAIJ, MATMPIAIJ, ""));
+  PetscHYPREInitialize();
+  PetscCallExternal(HYPRE_SetMemoryLocation, isaij ? HYPRE_MEMORY_HOST : HYPRE_MEMORY_DEVICE);
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse reuse, Mat *B)
 {
   MPI_Comm   comm = PetscObjectComm((PetscObject)A);
@@ -624,15 +654,7 @@ PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse r
   }
 
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
-  {
-    PetscBool isaij;
-    // Hypre defaults to GPU when configured with GPU. We make it default to the memory location associated with the PETSc matrix,
-    // i.e., when A is a host matrix, Hypre will be on the host; otherwise, when A is of type aijcusparse, aijhipsarse, aijkokkos etc,
-    // Hypre will be on the device.
-    PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &isaij, MATSEQAIJ, MATMPIAIJ, ""));
-    PetscHYPREInitialize();
-    PetscCallExternal(HYPRE_SetMemoryLocation, isaij ? HYPRE_MEMORY_HOST : HYPRE_MEMORY_DEVICE);
-  }
+  PetscCall(MatHYPRESetMemoryLocation(A));
 #endif
 
   dA = A;
