@@ -38,6 +38,8 @@ class Configure(config.package.CMakePackage):
     import nargs
     config.package.CMakePackage.setupHelp(self, help)
     help.addArgument('KOKKOS', '-download-kokkos-cxx-std-threads=<bool>',  nargs.ArgBool(None, False, 'Build kokkos for C++ threads'))
+    # Since one can achieve that via Kokkos env var KOKKOS_DISABLE_WARNINGS=1
+    # help.addArgument('KOKKOS', '-with-kokkos-init-warnings=<bool>',  nargs.ArgBool(None, True, 'Enable/disable warnings in Kokkos initialization'))
     return
 
   def setupDependencies(self, framework):
