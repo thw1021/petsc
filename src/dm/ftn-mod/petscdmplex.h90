@@ -1,31 +1,31 @@
-  interface DMPlexRestoreCone
-  subroutine DMPlexRestoreCone(a,b,c, z)
-  import tDM
-  DM :: a
-  PetscInt :: b
-  PetscInt, pointer :: c(:)
-  PetscErrorCode z
+interface DMPlexRestoreCone
+  subroutine DMPlexRestoreCone(a, b, c, z)
+    import tDM
+    DM :: a
+    PetscInt :: b
+    PetscInt, pointer :: c(:)
+    PetscErrorCode z
   end subroutine
-  end interface
+end interface
 
-  interface DMPlexRestoreSupport
-  subroutine DMPlexRestoreSupport(a,b,c, z)
-  import tDM
-  DM :: a
-  PetscInt :: b
-  PetscInt, pointer :: c(:)
-  PetscErrorCode z
+interface DMPlexRestoreSupport
+  subroutine DMPlexRestoreSupport(a, b, c, z)
+    import tDM
+    DM :: a
+    PetscInt :: b
+    PetscInt, pointer :: c(:)
+    PetscErrorCode z
   end subroutine
-  end interface
+end interface
 
-  interface DMPlexRestoreFullMeet
-  subroutine DMPlexRestoreFullMeet(a,b,c,d,e, z)
-  import tDM
-  DM :: a
-  PetscInt :: b
-  PetscInt :: c(*)
-  PetscInt :: d
-  PetscInt, pointer :: e(:)
-  PetscErrorCode z
+interface DMPlexRestoreFullMeet
+  subroutine DMPlexRestoreFullMeet(a, b, c, d, e, z)
+    import tDM
+    DM :: a
+    PetscInt :: b
+    PetscInt :: c(*)
+    PetscInt :: d
+    PetscInt, pointer :: e(:)
+    PetscErrorCode z
   end subroutine
-  end interface
+end interface

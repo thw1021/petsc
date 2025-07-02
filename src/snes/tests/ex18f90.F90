@@ -4,23 +4,23 @@
 !
 module ex18f90base_module
 #include "petsc/finclude/petscsnes.h"
-      implicit none
+  implicit none
   private
 
   type, public :: base_type
     PetscInt :: A  ! junk
     PetscReal :: I ! junk
-  contains
+    contains
     procedure, public :: Print => BasePrint
   end type base_type
-contains
-subroutine BasePrint(this)
-  implicit none
-  class(base_type) :: this
-  print *
-  print *, 'Base printout'
-  print *
-end subroutine BasePrint
+  contains
+  subroutine BasePrint(this)
+    implicit none
+    class(base_type) :: this
+    print *
+    print *, 'Base printout'
+    print *
+  end subroutine BasePrint
 end module ex18f90base_module
 
 module ex18f90extended_module
@@ -30,17 +30,17 @@ module ex18f90extended_module
   type, public, extends(base_type) :: extended_type
     PetscInt :: B  ! junk
     PetscReal :: J ! junk
-  contains
-    procedure, public :: Print =>  ExtendedPrint
+    contains
+    procedure, public :: Print => ExtendedPrint
   end type extended_type
-contains
-subroutine ExtendedPrint(this)
-  implicit none
-  class(extended_type) :: this
-  print *
-  print *, 'Extended printout'
-  print *
-end subroutine ExtendedPrint
+  contains
+  subroutine ExtendedPrint(this)
+    implicit none
+    class(extended_type) :: this
+    print *
+    print *, 'Extended printout'
+    print *
+  end subroutine ExtendedPrint
 end module ex18f90extended_module
 
 module ex18f90function_module
@@ -48,16 +48,16 @@ module ex18f90function_module
   implicit none
   public :: TestFunction
   contains
-subroutine TestFunction(snes,xx,r,ctx,ierr)
-  use ex18f90base_module
-  implicit none
-  SNES :: snes
-  Vec :: xx
-  Vec :: r
-  class(base_type) :: ctx ! yes, this should be base_type in order to handle all
-  PetscErrorCode :: ierr  ! polymorphic extensions
-  call ctx%Print()
-end subroutine TestFunction
+  subroutine TestFunction(snes, xx, r, ctx, ierr)
+    use ex18f90base_module
+    implicit none
+    SNES :: snes
+    Vec :: xx
+    Vec :: r
+    class(base_type) :: ctx ! yes, this should be base_type in order to handle all
+    PetscErrorCode :: ierr  ! polymorphic extensions
+    call ctx%Print()
+  end subroutine TestFunction
 end module ex18f90function_module
 
 program ex18f90
@@ -67,21 +67,21 @@ program ex18f90
   use ex18f90function_module
   implicit none
 
-!
-! Since class(base_type) has a bound function (method), Print, one must
-! provide an interface definition as below and use SNESSetFunctionNoInterface()
-! instead of SNESSetFunction()
-!
+  !
+  ! Since class(base_type) has a bound function (method), Print, one must
+  ! provide an interface definition as below and use SNESSetFunctionNoInterface()
+  ! instead of SNESSetFunction()
+  !
   interface
-  subroutine SNESSetFunctionNoInterface(snes_base,x,TestFunction,base,ierr)
-    use ex18f90base_module
-    use petscsnes
-    SNES snes_base
-    Vec x
-    external TestFunction
-    class(base_type) :: base
-    PetscErrorCode ierr
-  end subroutine
+    subroutine SNESSetFunctionNoInterface(snes_base, x, TestFunction, base, ierr)
+      use ex18f90base_module
+      use petscsnes
+      SNES snes_base
+      Vec x
+      external TestFunction
+      class(base_type) :: base
+      PetscErrorCode ierr
+    end subroutine
   end interface
 
   PetscMPIInt :: size
@@ -100,26 +100,26 @@ program ex18f90
   allocate(base)
   allocate(extended)
   PetscCallA(PetscInitialize(ierr))
-  PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
-  PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
+  PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD, size, ierr))
+  PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD, rank, ierr))
 
-  PetscCallA(VecCreate(PETSC_COMM_WORLD,x,ierr))
+  PetscCallA(VecCreate(PETSC_COMM_WORLD, x, ierr))
 
   ! use the base class as the context
   print *
   print *, 'the base class will succeed by printing out Base printout below'
-  PetscCallA(SNESCreate(PETSC_COMM_WORLD,snes_base,ierr))
-  PetscCallA(SNESSetFunctionNoInterface(snes_base,x,TestFunction,base,ierr))
-  PetscCallA(SNESComputeFunction(snes_base,x,x,ierr))
-  PetscCallA(SNESDestroy(snes_base,ierr))
+  PetscCallA(SNESCreate(PETSC_COMM_WORLD, snes_base, ierr))
+  PetscCallA(SNESSetFunctionNoInterface(snes_base, x, TestFunction, base, ierr))
+  PetscCallA(SNESComputeFunction(snes_base, x, x, ierr))
+  PetscCallA(SNESDestroy(snes_base, ierr))
 
   ! use the extended class as the context
   print *, 'the extended class will succeed by printing out Extended printout below'
-  PetscCallA(SNESCreate(PETSC_COMM_WORLD,snes_extended,ierr))
-  PetscCallA(SNESSetFunctionNoInterface(snes_extended,x,TestFunction,extended,ierr))
-  PetscCallA(SNESComputeFunction(snes_extended,x,x,ierr))
-  PetscCallA(VecDestroy(x,ierr))
-  PetscCallA(SNESDestroy(snes_extended,ierr))
+  PetscCallA(SNESCreate(PETSC_COMM_WORLD, snes_extended, ierr))
+  PetscCallA(SNESSetFunctionNoInterface(snes_extended, x, TestFunction, extended, ierr))
+  PetscCallA(SNESComputeFunction(snes_extended, x, x, ierr))
+  PetscCallA(VecDestroy(x, ierr))
+  PetscCallA(SNESDestroy(snes_extended, ierr))
   if (associated(base)) deallocate(base)
   if (associated(extended)) deallocate(extended)
   PetscCallA(PetscFinalize(ierr))

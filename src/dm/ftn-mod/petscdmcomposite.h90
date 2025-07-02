@@ -1,49 +1,49 @@
 
-        Interface DMCompositeGetEntries
-        Subroutine DMCompositeGetEntries1(dm1, d1,ierr)
-          import tDM
-          DM dm1
-          DM d1
-          PetscErrorCode ierr
-        End Subroutine
+Interface DMCompositeGetEntries
+  Subroutine DMCompositeGetEntries1(dm1, d1, ierr)
+    import tDM
+    DM dm1
+    DM d1
+    PetscErrorCode ierr
+  End Subroutine
 
-        Subroutine DMCompositeGetEntries2(dm1, d1,d2,ierr)
-          import tDM
-          DM dm1
-          DM d1,d2
-          PetscErrorCode ierr
-        End Subroutine
+  Subroutine DMCompositeGetEntries2(dm1, d1, d2, ierr)
+    import tDM
+    DM dm1
+    DM d1, d2
+    PetscErrorCode ierr
+  End Subroutine
 
-        Subroutine DMCompositeGetEntries3(dm1, d1,d2,d3,ierr)
-          import tDM
-          DM dm1
-          DM d1,d2,d3
-          PetscErrorCode ierr
-        End Subroutine
+  Subroutine DMCompositeGetEntries3(dm1, d1, d2, d3, ierr)
+    import tDM
+    DM dm1
+    DM d1, d2, d3
+    PetscErrorCode ierr
+  End Subroutine
 
-        Subroutine DMCompositeGetEntries4(dm1, d1,d2,d3,d4,ierr)
-          import tDM
-          DM dm1
-          PetscInt d2,d4
-          DM d1,d3
-          PetscErrorCode ierr
-        End Subroutine
-      End Interface
+  Subroutine DMCompositeGetEntries4(dm1, d1, d2, d3, d4, ierr)
+    import tDM
+    DM dm1
+    PetscInt d2, d4
+    DM d1, d3
+    PetscErrorCode ierr
+  End Subroutine
+End Interface
 
-      Interface DMCompositeRestoreGlobalISs
-        Subroutine DMCompositeRestoreGlobalISs(dm, iss, ierr)
-          import tDM,tIS
-          DM dm
-          IS, pointer :: iss(:)
-          PetscErrorCode ierr
-        End Subroutine
-      End Interface
+Interface DMCompositeRestoreGlobalISs
+  Subroutine DMCompositeRestoreGlobalISs(dm, iss, ierr)
+    import tDM, tIS
+    DM dm
+    IS, pointer :: iss(:)
+    PetscErrorCode ierr
+  End Subroutine
+End Interface
 
-      Interface DMCompositeRestoreLocalISs
-        Subroutine DMCompositeRestoreLocalISs(dm, iss, ierr)
-          import tDM,tIS
-          DM dm
-          IS, pointer :: iss(:)
-          PetscErrorCode ierr
-        End Subroutine
-      End Interface
+Interface DMCompositeRestoreLocalISs
+  Subroutine DMCompositeRestoreLocalISs(dm, iss, ierr)
+    import tDM, tIS
+    DM dm
+    IS, pointer :: iss(:)
+    PetscErrorCode ierr
+  End Subroutine
+End Interface

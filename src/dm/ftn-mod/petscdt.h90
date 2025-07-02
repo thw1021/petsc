@@ -1,11 +1,11 @@
 
-     Interface
-        Subroutine PetscQuadratureRestoreData(q,dim,nc,np,p,w,ierr)
-          import tPetscQuadrature
-          PetscInt     dim, nc, np
-          PetscReal, pointer :: p(:)
-          PetscReal, pointer :: w(:)
-          PetscErrorCode ierr
-          PetscQuadrature q
-        End Subroutine
-      End Interface
+Interface
+  Subroutine PetscQuadratureRestoreData(q, dim, nc, np, p, w, ierr)
+    import tPetscQuadrature
+    PetscInt dim, nc, np
+    PetscReal, pointer :: p(:)
+    PetscReal, pointer :: w(:)
+    PetscErrorCode ierr
+    PetscQuadrature q
+  End Subroutine
+End Interface

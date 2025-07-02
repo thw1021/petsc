@@ -1,24 +1,24 @@
 program ex14f90
 
 #include <petsc/finclude/petsc.h>
-      use petsc
-      use mpi     ! needed when PETSC_HAVE_MPI_F90MODULE is not true to define MPI_REPLACE
-implicit none
+  use petsc
+  use mpi     ! needed when PETSC_HAVE_MPI_F90MODULE is not true to define MPI_REPLACE
+  implicit none
 
-  type(tDM)                        :: dm
-  type(tVec)                       :: u
-  type(tPetscSection)              :: section
-  PetscInt                         :: dim, numFields, numBC
-  PetscMPIInt                      :: rank
-  PetscInt,dimension(2)            :: numComp
-  PetscInt,dimension(12)           :: numDof
-  PetscInt,dimension(:),pointer    :: remoteOffsets
-  type(tPetscSF)                   :: pointSF
-  type(tPetscSF)                   :: sectionSF
-  PetscScalar,dimension(:),pointer :: array
-  PetscReal                        :: val
-  PetscErrorCode                   :: ierr
-  PetscInt                         :: zero = 0, one = 1
+  type(tDM) :: dm
+  type(tVec) :: u
+  type(tPetscSection) :: section
+  PetscInt :: dim, numFields, numBC
+  PetscMPIInt :: rank
+  PetscInt, dimension(2) :: numComp
+  PetscInt, dimension(12) :: numDof
+  PetscInt, dimension(:), pointer :: remoteOffsets
+  type(tPetscSF) :: pointSF
+  type(tPetscSF) :: sectionSF
+  PetscScalar, dimension(:), pointer :: array
+  PetscReal :: val
+  PetscErrorCode :: ierr
+  PetscInt :: zero = 0, one = 1
 
   PetscCallA(PetscInitialize(PETSC_NULL_CHARACTER, ierr))
   PetscCallA(DMCreate(PETSC_COMM_WORLD, dm, ierr))
@@ -29,9 +29,9 @@ implicit none
 
   !!! Describe the solution variables that are discretized on the mesh
   ! Create scalar field u and a vector field v
-  numFields  = 2
-  numComp = [one,dim]
-  numDof     = 0
+  numFields = 2
+  numComp = [one, dim]
+  numDof = 0
   !Let u be defined on cells
   numDof(0 * (dim + 1) + dim + 1) = 1;
   !Let v be defined on vertices
@@ -41,7 +41,7 @@ implicit none
 
   !!! Create a PetscSection to handle the layout of the discretized variables
   PetscCallA(DMSetNumFields(dm, numFields, ierr))
-  PetscCallA(DMPlexCreateSection(dm,PETSC_NULL_DMLABEL_ARRAY,numComp,numDof,numBC,PETSC_NULL_INTEGER_ARRAY,PETSC_NULL_IS_ARRAY,PETSC_NULL_IS_ARRAY,PETSC_NULL_IS,section, ierr))
+  PetscCallA(DMPlexCreateSection(dm, PETSC_NULL_DMLABEL_ARRAY, numComp, numDof, numBC, PETSC_NULL_INTEGER_ARRAY, PETSC_NULL_IS_ARRAY, PETSC_NULL_IS_ARRAY, PETSC_NULL_IS, section, ierr))
   ! Name the Field variables
   PetscCallA(PetscSectionSetFieldName(section, zero, "u", ierr))
   PetscCallA(PetscSectionSetFieldName(section, one, "v", ierr))

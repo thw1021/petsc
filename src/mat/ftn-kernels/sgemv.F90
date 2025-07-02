@@ -4,111 +4,111 @@
 !
 #include <petsc/finclude/petscsys.h>
 !
-      subroutine MSGemv(bs,ncols,A,x,y)
-      implicit none
-      PetscInt          bs,ncols
-      MatScalar        A(bs,ncols)
-      PetscScalar      x(ncols),y(bs)
+subroutine MSGemv(bs, ncols, A, x, y)
+  implicit none
+  PetscInt bs, ncols
+  MatScalar A(bs, ncols)
+  PetscScalar x(ncols), y(bs)
 
-      PetscInt         i,j
+  PetscInt i, j
 
-      do 5, j=1,bs
-        y(j) = 0.0d0
- 5    continue
+  do 5, j = 1, bs
+    y(j) = 0.0d0
+  5 continue
 
-      do 10, i=1,ncols
-        do 20, j=1,bs
-          y(j) = y(j) + A(j,i)*x(i)
- 20     continue
- 10   continue
+  do 10, i = 1, ncols
+    do 20, j = 1, bs
+      y(j) = y(j) + A(j, i) * x(i)
+    20 continue
+  10 continue
 
-      end
+end
 
-      subroutine MSGemvp(bs,ncols,A,x,y)
-      implicit none
-      PetscInt          bs,ncols
-      MatScalar        A(bs,ncols)
-      PetscScalar      x(ncols),y(bs)
+subroutine MSGemvp(bs, ncols, A, x, y)
+  implicit none
+  PetscInt bs, ncols
+  MatScalar A(bs, ncols)
+  PetscScalar x(ncols), y(bs)
 
-      PetscInt         i, j
+  PetscInt i, j
 
-      do 10, i=1,ncols
-        do 20, j=1,bs
-          y(j) = y(j) + A(j,i)*x(i)
- 20     continue
- 10   continue
+  do 10, i = 1, ncols
+    do 20, j = 1, bs
+      y(j) = y(j) + A(j, i) * x(i)
+    20 continue
+  10 continue
 
-      end
+end
 
-      subroutine MSGemvm(bs,ncols,A,x,y)
-      implicit none
-      PetscInt          bs,ncols
-      MatScalar        A(bs,ncols)
-      PetscScalar      x(ncols),y(bs)
+subroutine MSGemvm(bs, ncols, A, x, y)
+  implicit none
+  PetscInt bs, ncols
+  MatScalar A(bs, ncols)
+  PetscScalar x(ncols), y(bs)
 
-      PetscInt         i, j
+  PetscInt i, j
 
-      do 10, i=1,ncols
-        do 20, j=1,bs
-          y(j) = y(j) - A(j,i)*x(i)
- 20     continue
- 10   continue
+  do 10, i = 1, ncols
+    do 20, j = 1, bs
+      y(j) = y(j) - A(j, i) * x(i)
+    20 continue
+  10 continue
 
-      end
+end
 
-      subroutine MSGemvt(bs,ncols,A,x,y)
-      implicit none
-      PetscInt          bs,ncols
-      MatScalar        A(bs,ncols)
-      PetscScalar      x(bs),y(ncols)
+subroutine MSGemvt(bs, ncols, A, x, y)
+  implicit none
+  PetscInt bs, ncols
+  MatScalar A(bs, ncols)
+  PetscScalar x(bs), y(ncols)
 
-      PetscInt          i,j
-      PetscScalar      sum
-      do 10, i=1,ncols
-        sum = y(i)
-        do 20, j=1,bs
-          sum = sum + A(j,i)*x(j)
- 20     continue
-        y(i) = sum
- 10   continue
+  PetscInt i, j
+  PetscScalar sum
+  do 10, i = 1, ncols
+    sum = y(i)
+    do 20, j = 1, bs
+      sum = sum + A(j, i) * x(j)
+    20 continue
+    y(i) = sum
+  10 continue
 
-      end
+end
 
-      subroutine MSGemm(bs,A,B,C)
-      implicit none
-      PetscInt    bs
-      MatScalar   A(bs,bs),B(bs,bs),C(bs,bs)
-      PetscScalar sum
-      PetscInt    i,j,k
+subroutine MSGemm(bs, A, B, C)
+  implicit none
+  PetscInt bs
+  MatScalar A(bs, bs), B(bs, bs), C(bs, bs)
+  PetscScalar sum
+  PetscInt i, j, k
 
-      do 10, i=1,bs
-        do 20, j=1,bs
-          sum = A(i,j)
-          do 30, k=1,bs
-            sum = sum - B(i,k)*C(k,j)
- 30       continue
-          A(i,j) = sum
- 20     continue
- 10   continue
+  do 10, i = 1, bs
+    do 20, j = 1, bs
+      sum = A(i, j)
+      do 30, k = 1, bs
+        sum = sum - B(i, k) * C(k, j)
+      30 continue
+      A(i, j) = sum
+    20 continue
+  10 continue
 
-      end
+end
 
-      subroutine MSGemmi(bs,A,C,B)
-      implicit none
-      PetscInt    bs
-      MatScalar   A(bs,bs),B(bs,bs),C(bs,bs)
-      PetscScalar sum
+subroutine MSGemmi(bs, A, C, B)
+  implicit none
+  PetscInt bs
+  MatScalar A(bs, bs), B(bs, bs), C(bs, bs)
+  PetscScalar sum
 
-      PetscInt    i,j,k
+  PetscInt i, j, k
 
-      do 10, i=1,bs
-        do 20, j=1,bs
-          sum = 0.0d0
-          do 30, k=1,bs
-            sum = sum + B(i,k)*C(k,j)
- 30       continue
-          A(i,j) = sum
- 20     continue
- 10   continue
+  do 10, i = 1, bs
+    do 20, j = 1, bs
+      sum = 0.0d0
+      do 30, k = 1, bs
+        sum = sum + B(i, k) * C(k, j)
+      30 continue
+      A(i, j) = sum
+    20 continue
+  10 continue
 
-      end
+end
