@@ -228,7 +228,7 @@
             write (1,*) 'r = PetscBinaryRead(''Rvec'');'
             write (1,*) 'bb = reshape(b,mm,mm);'
             write (1,*) 'xx = reshape(x,mm,mm);'
-            write (1,*) 'rr = reshape(r,mm,mm);n'
+            write (1,*) 'rr = reshape(r,mm,mm)'
 !            write (1,*) 'imagesc(bb')'
 !            write (1,*) 'title('RHS'),'
             write (1,*) 'figure,'
