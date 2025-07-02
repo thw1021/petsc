@@ -308,6 +308,12 @@ check_usermakefile:
 	@cd src/snes/tutorials; ${RUN_TEST} clean-legacy
 	-@echo "Completed compile with user makefile"
 
+#********* Rule for formating Fortran source **********************************************************************************************
+
+# git clone https://github.com/louoberto/fortify.git && cd fortify && export PATH=$PATH:$(pwd)/source
+fortify:
+	@files=`git ls-files | grep -F -e ".F90" -e ".h90"`; for i in $${files}; do fortify --tab_length 2 --lowercasing F $${i}; done
+
 #********* Rules for running clangformat ************************************************************************************************************
 
 checkgitclean:
