@@ -28,4 +28,4 @@
 #include <../ftn/snes/petscall.hf90>
 #include <../ftn/snes/petscconvest.hf90>
 
-      end module
+      end module petscsnes
