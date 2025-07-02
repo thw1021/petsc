@@ -920,17 +920,17 @@ cdef class Mat(Object):
         cdef PetscInt ncoo_i = 0, ncoo_j = 0
         cdef PetscInt *ccoo_i = NULL, *ccoo_j = NULL
         cdef PetscCount ncoo = 0
-        
+
         coo_i = iarray_i(coo_i, &ncoo_i, &ccoo_i)
         coo_j = iarray_i(coo_j, &ncoo_j, &ccoo_j)
 
         if ncoo_i != ncoo_j:
             raise ValueError("coo_i and coo_j must have the same length")
-        
+
         ncoo = <PetscCount> ncoo_i
-        CHKERR(MatSetPreallocationCOO(self.mat, ncoo, ccoo_i, ccoo_j))  
+        CHKERR(MatSetPreallocationCOO(self.mat, ncoo, ccoo_i, ccoo_j))
         return self
-    
+
     def setPreallocationCOOLocal(self, coo_i: Sequence[int], coo_j: Sequence[int]) -> Self:
         """Set preallocation for matrices using a coordinate format of the entries with local indices.
 
@@ -952,15 +952,15 @@ cdef class Mat(Object):
         cdef PetscInt ncoo_i = 0, ncoo_j = 0
         cdef PetscInt *ccoo_i = NULL, *ccoo_j = NULL
         cdef PetscCount ncoo = 0
-        
+
         coo_i = iarray_i(coo_i, &ncoo_i, &ccoo_i)
         coo_j = iarray_i(coo_j, &ncoo_j, &ccoo_j)
 
         if ncoo_i != ncoo_j:
             raise ValueError("coo_i and coo_j must have the same length")
-        
+
         ncoo = <PetscCount> ncoo_i
-        CHKERR(MatSetPreallocationCOOLocal(self.mat, ncoo, ccoo_i, ccoo_j))        
+        CHKERR(MatSetPreallocationCOOLocal(self.mat, ncoo, ccoo_i, ccoo_j))
         return self
 
     def setPreallocationCSR(self, csr: CSRIndicesSpec) -> Self:
