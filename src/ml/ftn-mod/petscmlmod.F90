@@ -15,18 +15,18 @@
 
 #include <../ftn/ml/petscregressor.hf90>
 
-      end module
+      end module petscregressor
 
 !     ----------------------------------------------
 
         module petscmldef
         use petscregressordef
 #include <petsc/finclude/petscml.h>
-        end module
+        end module petscmldef
 
 !     ----------------------------------------------
 
         module petscml
         use petscregressor
         use petscmldef
-      end module
+      end module petscml
