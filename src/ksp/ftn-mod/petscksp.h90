@@ -10,3 +10,45 @@
       end subroutine
       end Interface
 
+  interface PCBJacobiRestoreSubKSP
+  subroutine PCBJacobiRestoreSubKSP(a,b,c,d, z)
+  import tPC,tKSP
+  PC :: a
+  PetscInt :: b
+  PetscInt :: c
+  KSP, pointer :: d(:)
+  PetscErrorCode z
+  end subroutine
+  end interface
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT::PCBJacobiRestoreSubKSP
+#endif
+
+  interface PCASMRestoreSubKSP
+  subroutine PCASMRestoreSubKSP(a,b,c,d, z)
+  import tPC,tKSP
+  PC :: a
+  PetscInt :: b
+  PetscInt :: c
+  KSP, pointer :: d(:)
+  PetscErrorCode z
+  end subroutine
+  end interface
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT::PCASMRestoreSubKSP
+#endif
+
+  interface PCGASMRestoreSubKSP
+  subroutine PCGASMRestoreSubKSP(a,b,c,d, z)
+  import tPC,tKSP
+  PC :: a
+  PetscInt :: b
+  PetscInt :: c
+  KSP, pointer :: d(:)
+  PetscErrorCode z
+  end subroutine
+  end interface
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT::PCGASMRestoreSubKSP
+#endif
+
