@@ -1057,7 +1057,7 @@ cdef inline PetscErrorCode matsetvalues_coo(PetscMat A,
     cdef PetscScalar *v = NULL
     cdef PetscInsertMode addv
 
-    iarray_s(ocoo_v, NULL, &v)
+    ocoo_v = iarray_s(ocoo_v, NULL, &v)
     addv = insertmode(oaddv)
 
     CHKERR(MatSetValuesCOO(A, v, addv))

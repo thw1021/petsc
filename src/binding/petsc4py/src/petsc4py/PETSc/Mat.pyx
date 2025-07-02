@@ -921,8 +921,8 @@ cdef class Mat(Object):
         cdef PetscInt *ccoo_i = NULL, *ccoo_j = NULL
         cdef PetscCount ncoo = 0
         
-        iarray_i(coo_i, &ncoo_i, &ccoo_i)
-        iarray_i(coo_j, &ncoo_j, &ccoo_j)
+        coo_i = iarray_i(coo_i, &ncoo_i, &ccoo_i)
+        coo_j = iarray_i(coo_j, &ncoo_j, &ccoo_j)
 
         if ncoo_i != ncoo_j:
             raise ValueError("coo_i and coo_j must have the same length")
@@ -953,8 +953,8 @@ cdef class Mat(Object):
         cdef PetscInt *ccoo_i = NULL, *ccoo_j = NULL
         cdef PetscCount ncoo = 0
         
-        iarray_i(coo_i, &ncoo_i, &ccoo_i)
-        iarray_i(coo_j, &ncoo_j, &ccoo_j)
+        coo_i = iarray_i(coo_i, &ncoo_i, &ccoo_i)
+        coo_j = iarray_i(coo_j, &ncoo_j, &ccoo_j)
 
         if ncoo_i != ncoo_j:
             raise ValueError("coo_i and coo_j must have the same length")
