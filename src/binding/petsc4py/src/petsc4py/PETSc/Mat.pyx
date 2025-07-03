@@ -900,7 +900,7 @@ cdef class Mat(Object):
         return self
 
     def setPreallocationCOO(self, coo_i: Sequence[int], coo_j: Sequence[int]) -> Self:
-        """Set preallocation for matrices using a coordinate format of the entries with global indices.
+        """Set preallocation using coordinate format with global indices.
 
         Collective.
 
@@ -932,7 +932,7 @@ cdef class Mat(Object):
         return self
 
     def setPreallocationCOOLocal(self, coo_i: Sequence[int], coo_j: Sequence[int]) -> Self:
-        """Set preallocation for matrices using a coordinate format of the entries with local indices.
+        """Set preallocation using coordinate format with local indices.
 
         Collective.
 
@@ -2751,14 +2751,14 @@ cdef class Mat(Object):
         coo_v: Sequence[Scalar],
         addv: InsertModeSpec = None) -> None:
         """
-        Set values at once in a matrix preallocated using `setPreallocationCOO`
+        Set values after preallocation with coordinate format.
 
         Collective.
 
         Parameters
         ----------
         coo_v
-            The matrix values
+            The matrix values.
         addv
             Insertion mode.
 
