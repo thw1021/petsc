@@ -61,6 +61,7 @@ static PetscErrorCode PCDestroy_HPDDM(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMSetSTShareSubKSP_C", nullptr));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMGetSTShareSubKSP_C", nullptr));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMSetDeflationMat_C", nullptr));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMCreateDeflationMat_C", nullptr));
   PetscCall(PetscObjectCompose((PetscObject)pc, "_PCHPDDM_Schur", nullptr));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2860,7 +2861,7 @@ static PetscErrorCode PCHPDDMGetSTShareSubKSP_HPDDM(PC pc, PetscBool *share)
 }
 
 /*@
-  PCHPDDMSetDeflationMat - Sets the deflation space used to assemble a coarser operator.
+  PCHPDDMSetDeflationMat - Sets the finest-level deflation space used to assemble a coarser operator.
 
   Input Parameters:
 + pc - preconditioner context
@@ -2869,7 +2870,7 @@ static PetscErrorCode PCHPDDMGetSTShareSubKSP_HPDDM(PC pc, PetscBool *share)
 
   Level: advanced
 
-.seealso: [](ch_ksp), `PCHPDDM`, `PCDeflationSetSpace()`, `PCMGSetRestriction()`
+.seealso: [](ch_ksp), `PCHPDDM`, `PCDeflationSetSpace()`, `PCMGSetRestriction()`, `PCHPDDMCreateDeflationMat()`
 @*/
 PetscErrorCode PCHPDDMSetDeflationMat(PC pc, IS is, Mat U)
 {
@@ -2885,6 +2886,66 @@ static PetscErrorCode PCHPDDMSetDeflationMat_HPDDM(PC pc, IS is, Mat U)
 {
   PetscFunctionBegin;
   PetscCall(PCHPDDMSetAuxiliaryMat_Private(pc, is, U, PETSC_TRUE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PCHPDDMCreateDeflationMat - Creates the finest-level deflation `Mat` used to assemble a coarser operator.
+
+  Collective
+
+  Input Parameter:
+. pc - preconditioner context
+
+  Output Parameter:
+. P  - deflation matrix stored as a `MATAIJ`
+
+  Level: intermediate
+
+  Note:
+  For debugging purposes only, the returned `Mat` is not used internally by `PCHPDDM`
+  (in this particular representation), so it is created using a deep copy (and
+  should be avoided when possible).
+
+.seealso: [](ch_ksp), `PCHPDDM`, `PCDeflationSetSpace()`, `PCMGSetRestriction()`, `PCHPDDMSetDeflationMat()`
+@*/
+PetscErrorCode PCHPDDMCreateDeflationMat(PC pc, Mat *P)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscTryMethod(pc, "PCHPDDMCreateDeflationMat_C", (PC, Mat *), (pc, P));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCHPDDMCreateDeflationMat_HPDDM(PC pc, Mat *P)
+{
+  PC_HPDDM                 *data = (PC_HPDDM *)pc->data;
+  const PetscScalar *const *v;
+  PetscScalar              *scaled;
+  const PetscInt           *i;
+  PetscInt                 *j;
+
+  PetscFunctionBegin;
+  PetscCheck(data->is, PETSC_COMM_SELF, PETSC_ERR_ORDER, "No IS attached yet to PCHPDDM");
+  PetscCheck(data->N > 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Just a single level in PCHPDDM so cannot create Mat");
+  PetscCheck(data->levels[0] && data->levels[0]->P, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "More than one level but no HPDDM object");
+  v = data->levels[0]->P->getVectors();
+  PetscCall(MatCreate(PetscObjectComm((PetscObject)pc), P));
+  PetscCall(MatSetType(*P, MATAIJ));
+  PetscCall(MatSetSizes(*P, pc->mat->rmap->n, data->levels[0]->P->getLocal(), pc->mat->rmap->N, PETSC_DECIDE));
+  PetscCall(MatSetUp(*P));
+  if (v) {
+    PetscCall(PetscMalloc2(data->levels[0]->P->getDof() * (*P)->cmap->n, &scaled, (*P)->cmap->n, &j));
+    HPDDM::Wrapper<PetscScalar>::diag(data->levels[0]->P->getDof(), data->levels[0]->P->getScaling(), *v, scaled, (*P)->cmap->n);
+    PetscCall(MatSetOption(*P, MAT_ROW_ORIENTED, PETSC_FALSE));
+    PetscCall(ISGetIndices(data->is, &i));
+    std::iota(j, j + (*P)->cmap->n, (*P)->cmap->rstart);
+    PetscCall(MatSetValues(*P, data->levels[0]->P->getDof(), i, (*P)->cmap->n, j, scaled, INSERT_VALUES));
+    PetscCall(ISRestoreIndices(data->is, &i));
+    PetscCall(PetscFree2(scaled, j));
+  }
+  PetscCall(MatAssemblyBegin(*P, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(*P, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3021,6 +3082,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_HPDDM(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMSetSTShareSubKSP_C", PCHPDDMSetSTShareSubKSP_HPDDM));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMGetSTShareSubKSP_C", PCHPDDMGetSTShareSubKSP_HPDDM));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMSetDeflationMat_C", PCHPDDMSetDeflationMat_HPDDM));
+  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMCreateDeflationMat_C", PCHPDDMCreateDeflationMat_HPDDM));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
