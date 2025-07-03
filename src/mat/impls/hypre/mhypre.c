@@ -594,7 +594,7 @@ static PetscErrorCode MatSetValuesCOOFromCSRMatrix_Private(Mat A, hypre_CSRMatri
 }
 
 /*@C
-  MatHYPRESetMemoryLocation - Set the hypre memory location based off the type of the provided matrix. Without calls to this function hypre defaults to GPU when configured with GPU. We make it default to the memory location associated with the PETSc matrix, e.g. seqaij or mpiaij matrices will lead to host memory selection otherwise when A is of type aijcusparse, aijhipsarse, aijkokkos (or already of type hypre) hypre will be on the device. Note that if hypre is not configured with device support this function is a no-op
+  MatHYPRESetMemoryLocation - Set the hypre memory location based off the memory type of the provided matrix. Without calls to this function hypre defaults to GPU when configured with GPU. We make it default to the memory location associated with the PETSc matrix, e.g. seqaij or mpiaij matrices will lead to host memory selection while types like aijcusparse, aijhipsarse, aijkokkos will lead to devie memory selection. Note that if hypre is not configured with device support this function is a no-op
 
   Not Collective
 
@@ -608,7 +608,7 @@ static PetscErrorCode MatSetValuesCOOFromCSRMatrix_Private(Mat A, hypre_CSRMatri
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
 PETSC_EXTERN PetscErrorCode MatHYPRESetMemoryLocation(Mat A)
 {
-  PetscBool isaij;
+  PetscMemType memtype;
 #else
 PETSC_EXTERN PetscErrorCode MatHYPRESetMemoryLocation(PETSC_UNUSED Mat A)
 {
@@ -616,9 +616,9 @@ PETSC_EXTERN PetscErrorCode MatHYPRESetMemoryLocation(PETSC_UNUSED Mat A)
 
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
-  PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &isaij, MATSEQAIJ, MATMPIAIJ, ""));
+  PetscCall(MatGetCurrentMemType(A, &memtype));
   PetscHYPREInitialize();
-  PetscCallExternal(HYPRE_SetMemoryLocation, isaij ? HYPRE_MEMORY_HOST : HYPRE_MEMORY_DEVICE);
+  PetscCallExternal(HYPRE_SetMemoryLocation, PetscMemTypeHost(memtype) ? HYPRE_MEMORY_HOST : HYPRE_MEMORY_DEVICE);
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
