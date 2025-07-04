@@ -2750,8 +2750,7 @@ cdef class Mat(Object):
         self,
         coo_v: Sequence[Scalar],
         addv: InsertModeSpec = None) -> None:
-        """
-        Set values after preallocation with coordinate format.
+        """Set values after preallocation with coordinate format.
 
         Collective.
 
