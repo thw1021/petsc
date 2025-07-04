@@ -4887,8 +4887,7 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJ(Mat A, const PetscScalar v[], Inser
   /* setup for block assembly */
   if (A->coo_blocked_assembly) {
     PetscScalar *sum;
-    PetscInt     ki, *ii, rbs = 1, cbs = 1, row, nz_row;
-    PetscCount   joff, offset;
+    PetscInt     ki, *ii, rbs = 1, cbs = 1, row, nz_row, joff, offset;
     ii = aseq->i;
     PetscCheck(!aseq->compressedrow.use, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatCOOStruct does not support compressed row");
     PetscCall(MatGetBlockSizes(A, &rbs, &cbs));
@@ -4905,11 +4904,11 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJ(Mat A, const PetscScalar v[], Inser
       offset = k * rbs * cbs; // top corner of BAIJ data, in row block of AIJ
       while (offset >= ii[row + rbs]) row += rbs;
       joff = (offset - ii[row]) / rbs; // real column j
-      PetscCheck(joff >= 0, PETSC_COMM_SELF, PETSC_ERR_FILE_UNEXPECTED, "joff < 0 : %ld", joff);
+      PetscCheck(joff >= 0, PETSC_COMM_SELF, PETSC_ERR_FILE_UNEXPECTED, "joff < 0 : %d", (int)joff);
       nz_row = ii[row + 1] - ii[row];
       for (ki = 0; ki < rbs; ki++) {
         for (PetscInt jj = 0; jj < cbs; jj++) {
-          PetscInt idx = ii[row /* + ki */] + ki * nz_row + joff + jj;
+          PetscInt idx = ii[row] + ki * nz_row + joff + jj;
           Aa[idx]      = (imode == INSERT_VALUES ? 0.0 : Aa[idx]) + sum[ki * cbs + jj];
         }
       }
