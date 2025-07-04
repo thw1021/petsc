@@ -505,6 +505,7 @@ struct _p_Mat {
   PetscBool            transupdated;            /* whether or not the explicitly generated transpose is up-to-date */
   char                *factorprefix;            /* the prefix to use with factored matrix that is created */
   PetscBool            hash_active;             /* indicates MatSetValues() is being handled by hashing */
+  PetscBool            coo_blocked_assembly;    /* use block size of matrix in blocked version of COO assembly */
 };
 
 PETSC_INTERN PetscErrorCode MatAXPY_Basic(Mat, PetscScalar, Mat, MatStructure);
