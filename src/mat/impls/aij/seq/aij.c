@@ -4839,11 +4839,7 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
         }
       }
     }
-    PetscCheck(p == Ai_bs[M], PETSC_COMM_SELF, PETSC_ERR_PLIB, "p %ld != (coo_n - nneg) * rbs * cbs %ld", p, (coo_n - nneg) * rbs * cbs);
-    /* PetscCall(PetscIntView(M/rbs + 1, Ai, 0)); */
-    /* PetscCall(PetscIntView(Ai[M/rbs], Aj, 0)); */
-    /* PetscCall(PetscIntView(M + 1, Ai_bs, 0)); */
-    /* PetscCall(PetscIntView(Ai_bs[M], Aj_bs, 0)); */
+    PetscCheck(p == Ai_bs[M], PETSC_COMM_SELF, PETSC_ERR_PLIB, "p %d != (coo_n - nneg) * rbs * cbs %d", (int)p, (int)((coo_n - nneg) * rbs * cbs));
     PetscCall(PetscShmgetDeallocateArray((void **)&Ai));
     PetscCall(PetscShmgetDeallocateArray((void **)&Aj));
     Aj = Aj_bs;

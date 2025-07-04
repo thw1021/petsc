@@ -263,6 +263,7 @@ int main(int argc, char **args)
      args: -mat_type {{seqaij mpiaij}} -localapi {{0 1}} -neg {{0 1}}
 
    test:
+     requires: !single
      suffix: 1_blocked
      filter: grep -v type | grep -v "Mat Object"
      diff_args: -j
