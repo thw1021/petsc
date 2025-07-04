@@ -4871,7 +4871,7 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
 static PetscErrorCode MatSetValuesCOO_SeqAIJ(Mat A, const PetscScalar v[], InsertMode imode)
 {
   Mat_SeqAIJ          *aseq = (Mat_SeqAIJ *)A->data;
-  PetscCount           i, j, k, Annz = aseq->nz;
+  PetscCount           i, j, Annz = aseq->nz;
   PetscCount          *perm, *jmap;
   PetscScalar         *Aa;
   PetscContainer       container;
@@ -4887,7 +4887,7 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJ(Mat A, const PetscScalar v[], Inser
   /* setup for block assembly */
   if (A->coo_blocked_assembly) {
     PetscScalar *sum;
-    PetscInt     ki, *ii, rbs = 1, cbs = 1, row, nz_row, joff, offset;
+    PetscInt     k, ki, *ii, rbs = 1, cbs = 1, row, nz_row, joff, offset;
     ii = aseq->i;
     PetscCheck(!aseq->compressedrow.use, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatCOOStruct does not support compressed row");
     PetscCall(MatGetBlockSizes(A, &rbs, &cbs));
