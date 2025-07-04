@@ -647,7 +647,8 @@ typedef enum {
   MAT_FORM_EXPLICIT_TRANSPOSE     = 24,
   MAT_STRUCTURAL_SYMMETRY_ETERNAL = 25,
   MAT_SPD_ETERNAL                 = 26,
-  MAT_OPTION_MAX                  = 27
+  MAT_COO_BLOCKED_ASSEMBLY        = 27,
+  MAT_OPTION_MAX                  = 28
 } MatOption;
 
 PETSC_EXTERN const char *const *MatOptions;
