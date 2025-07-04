@@ -18,7 +18,9 @@ int main(int argc, char **args)
   PetscScalar            v1[] = {-1., 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., PETSC_MAX_REAL, PETSC_MAX_REAL}, *v1_p = v1;
   PetscScalar v1_bs2[] = {-1.1, -1.2, -1.3, -1.4, 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4, 6.1, 6.2, 6.3, 6.4, 7.1, 7.2, 7.3, 7.4, 8.1, 8.2, 8.3, 8.4, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 10.3, 10.4, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL};
   PetscScalar v2[] = {1., -1., -2., -3., -4., -5., -6., -7., -8., -9., -10., PETSC_MAX_REAL, PETSC_MAX_REAL}, *v2_p = v2;
-  PetscScalar v2_bs2[] = {1.1, 1.2, 1.3, 1.4, -1.1, -1.2, -1.3, -1.4, -2.1, -2.2, -2.3, -2.4, -3.1, -3.2, -3.3, -3.4, -4.1, -4.2, -4.3, -4.4, -5.1, -5.2, -5.3, -5.4, -6.1, -6.2, -6.3, -6.4, -7.1, -7.2, -7.3, -7.4, -8.1, -8.2, -8.3, -8.4, -9.1, -9.2, -9.3, -9.4, -10.1, -10.2, -10.3, -10.4, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL};
+  PetscScalar v2_bs2[] = {1.1,  1.2,  1.3,  1.4,  -1.1,  -1.2,  -1.3,  -1.4,  -2.1,           -2.2,           -2.3,           -2.4,           -3.1,           -3.2,           -3.3,           -3.4,          -4.1, -4.2,
+                          -4.3, -4.4, -5.1, -5.2, -5.3,  -5.4,  -6.1,  -6.2,  -6.3,           -6.4,           -7.1,           -7.2,           -7.3,           -7.4,           -8.1,           -8.2,          -8.3, -8.4,
+                          -9.1, -9.2, -9.3, -9.4, -10.1, -10.2, -10.3, -10.4, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL};
   PetscInt    N = 6, m = 8, M, rstart, cstart, i, bs = 1;
   PetscMPIInt size;
   PetscBool   loc      = PETSC_FALSE;
