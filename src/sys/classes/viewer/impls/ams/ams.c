@@ -42,7 +42,7 @@ PetscViewer PETSC_VIEWER_SAWS_(MPI_Comm comm)
     ierr = PetscError(ncomm, __LINE__, "PETSC_VIEWER_SAWS_", __FILE__, PETSC_ERR_MPI, PETSC_ERROR_INITIAL, " ");
     PetscFunctionReturn(NULL);
   }
-  if (!flag) { /* PetscViewer not yet created */
+  if (0 == flag) { /* PetscViewer not yet created */
     PetscCallNull(PetscViewerSAWsOpen(comm, &viewer));
     PetscCallNull(PetscObjectRegisterDestroy((PetscObject)viewer));
     ierr = (PetscErrorCode)MPI_Comm_set_attr(ncomm, Petsc_Viewer_SAWs_keyval, (void *)viewer);
