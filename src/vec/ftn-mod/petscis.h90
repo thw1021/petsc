@@ -10,19 +10,15 @@
           PetscInt, pointer :: b(:)
           PetscErrorCode  z
         End Subroutine
-      End Interface
 
-      Interface
-      Subroutine PetscSectionRestoreConstraintIndices(s,p,a,ierr)
+        Subroutine PetscSectionRestoreConstraintIndices(s,p,a,ierr)
           import tPetscSection
           PetscInt p
           PetscInt, pointer :: a(:)
           PetscErrorCode  ierr
           PetscSection       s
         End Subroutine
-      End Interface
-
-      Interface
+        
         Subroutine PetscSectionRestoreFieldConstraintIndices(s,p,f,a,ierr)
           import tPetscSection
           PetscSection      :: s

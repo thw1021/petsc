@@ -1,6 +1,6 @@
 
 
-     Interface
+     interface
       subroutine KSPRestoreConvergenceHistory(ksp,r,na,ierr)
       import tKSP
        KSP ksp
@@ -8,5 +8,5 @@
        PetscReal, pointer :: r(:)
        PetscErrorCode, intent(out) :: ierr
       end subroutine
-      end Interface
+     end interface
 

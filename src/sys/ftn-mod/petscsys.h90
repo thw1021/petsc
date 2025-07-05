@@ -1,9 +1,9 @@
-      Interface
-       Subroutine PetscPrintf(m,c,ierr)
-          MPI_Comm :: m
-          character(len=*) :: c
-          PetscErrorCode :: ierr
-       End Subroutine
+    interface
+      Subroutine PetscPrintf(m,c,ierr)
+        MPI_Comm :: m
+        character(len=*) :: c
+        PetscErrorCode :: ierr
+      End Subroutine
 
 #if defined(PETSC_HAVE_FORTRAN_FREE_LINE_LENGTH_NONE)
       subroutine PetscErrorf(ierr,line,file)
@@ -46,11 +46,9 @@
         PetscLogEvent, intent(in) :: event
         PetscErrorCode, intent(out) :: ierr
       end subroutine PetscLogEventEnd
-      end Interface
 
-      Interface
       function PetscASend(c, d) bind(c,name='PetscASend') result(i)
-          use,intrinsic :: iso_c_binding
+          use, intrinsic :: ISO_C_binding
           implicit none
           integer(c_int), value :: c
           integer(c_int), value :: d
@@ -58,7 +56,7 @@
       end function PetscASend
 
       function PetscARecv(c, d) bind(c,name='PetscARecv') result(i)
-          use,intrinsic :: iso_c_binding
+          use, intrinsic :: ISO_C_binding
           implicit none
           integer(c_int), value :: c
           integer(c_int), value :: d
@@ -66,45 +64,35 @@
       end function PetscARecv
 
       function PetscAReduce() bind(c,name='PetscAReduce') result(i)
-          use,intrinsic :: iso_c_binding
+          use, intrinsic :: ISO_C_binding
           implicit none
           integer(c_int) :: i
       end function PetscAReduce
-      end Interface
 
-      Interface
-        Subroutine PetscIntArray1dDestroy(a,ierr)
+      Subroutine PetscIntArray1dDestroy(a,ierr)
           PetscInt, Pointer :: a(:)
           PetscErrorCode    :: ierr
-        End Subroutine
-      End Interface
+      End Subroutine
 
-      Interface PetscShmgetAllocateArrayScalar
-        Subroutine PetscShmgetAllocateArrayScalar(start, len, d1, ierr)
-          PetscInt :: start, len
-          PetscScalar, pointer :: d1(:)
-          PetscErrorCode ierr
-        End Subroutine
-      End Interface
+      Subroutine PetscShmgetAllocateArrayScalar(start, len, d1, ierr)
+        PetscInt :: start, len
+        PetscScalar, pointer :: d1(:)
+        PetscErrorCode ierr
+      End Subroutine
 
-      Interface PetscShmgetDeallocateArrayScalar
-        Subroutine PetscShmgetDeallocateArrayScalar(d1, ierr)
-          PetscScalar, pointer :: d1(:)
-          PetscErrorCode ierr
-        End Subroutine
-      End Interface
+      Subroutine PetscShmgetDeallocateArrayScalar(d1, ierr)
+        PetscScalar, pointer :: d1(:)
+        PetscErrorCode ierr
+      End Subroutine
 
-      Interface PetscShmgetAllocateArrayInt
-        Subroutine PetscShmgetAllocateArrayInt(start, len, d1, ierr)
-          PetscInt :: start, len
-          PetscInt, pointer :: d1(:)
-          PetscErrorCode ierr
-        End Subroutine
-      End Interface
+      Subroutine PetscShmgetAllocateArrayInt(start, len, d1, ierr)
+        PetscInt :: start, len
+        PetscInt, pointer :: d1(:)
+        PetscErrorCode ierr
+      End Subroutine
 
-      Interface PetscShmgetDeallocateArrayInt
-        Subroutine PetscShmgetDeallocateArrayInt(d1, ierr)
-          PetscInt, pointer :: d1(:)
-          PetscErrorCode ierr
-        End Subroutine
-      End Interface
+      Subroutine PetscShmgetDeallocateArrayInt(d1, ierr)
+        PetscInt, pointer :: d1(:)
+        PetscErrorCode ierr
+      End Subroutine
+    end interface
