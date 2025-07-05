@@ -119,7 +119,8 @@ PetscErrorCode PetscGetTmp(MPI_Comm comm, char dir[], size_t len)
 PetscErrorCode PetscSharedTmp(MPI_Comm comm, PetscBool *shared)
 {
   PetscMPIInt size, rank, *tagvalp, sum, cnt, i;
-  PetscBool   flg, iflg;
+  PetscBool   flg_bool;
+  PetscMPIInt flg_int;
   FILE       *fd;
   int         err;
 
@@ -130,30 +131,30 @@ PetscErrorCode PetscSharedTmp(MPI_Comm comm, PetscBool *shared)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscCall(PetscOptionsGetenv(comm, "PETSC_SHARED_TMP", NULL, 0, &flg));
-  if (flg) {
+  PetscCall(PetscOptionsGetenv(comm, "PETSC_SHARED_TMP", NULL, 0, &flg_bool));
+  if (flg_bool) {
     *shared = PETSC_TRUE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscCall(PetscOptionsGetenv(comm, "PETSC_NOT_SHARED_TMP", NULL, 0, &flg));
-  if (flg) {
+  PetscCall(PetscOptionsGetenv(comm, "PETSC_NOT_SHARED_TMP", NULL, 0, &flg_bool));
+  if (flg_bool) {
     *shared = PETSC_FALSE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
   if (Petsc_SharedTmp_keyval == MPI_KEYVAL_INVALID) PetscCallMPI(MPI_Comm_create_keyval(MPI_COMM_NULL_COPY_FN, Petsc_DelTmpShared, &Petsc_SharedTmp_keyval, NULL));
 
-  PetscCallMPI(MPI_Comm_get_attr(comm, Petsc_SharedTmp_keyval, (void **)&tagvalp, (int *)&iflg));
-  if (!iflg) {
+  PetscCallMPI(MPI_Comm_get_attr(comm, Petsc_SharedTmp_keyval, (void **)&tagvalp, &flg_int));
+  if (0 == flg_int) {
     char filename[PETSC_MAX_PATH_LEN], tmpname[PETSC_MAX_PATH_LEN];
 
     /* This communicator does not yet have a shared tmp attribute */
     PetscCall(PetscMalloc1(1, &tagvalp));
     PetscCallMPI(MPI_Comm_set_attr(comm, Petsc_SharedTmp_keyval, tagvalp));
 
-    PetscCall(PetscOptionsGetenv(comm, "PETSC_TMP", tmpname, 238, &iflg));
-    if (!iflg) {
+    PetscCall(PetscOptionsGetenv(comm, "PETSC_TMP", tmpname, 238, &flg_bool));
+    if (!flg_bool) {
       PetscCall(PetscStrncpy(filename, "/tmp", sizeof(filename)));
     } else {
       PetscCall(PetscStrncpy(filename, tmpname, sizeof(filename)));
@@ -192,7 +193,7 @@ PetscErrorCode PetscSharedTmp(MPI_Comm comm, PetscBool *shared)
       } else PetscCheck(sum == 1, PETSC_COMM_SELF, PETSC_ERR_SUP_SYS, "Subset of processes share /tmp ");
     }
     *tagvalp = (int)*shared;
-    PetscCall(PetscInfo(NULL, "processors %s %s\n", *shared ? "share" : "do NOT share", iflg ? tmpname : "/tmp"));
+    PetscCall(PetscInfo(NULL, "processors %s %s\n", *shared ? "share" : "do NOT share", flg_bool ? tmpname : "/tmp"));
   } else *shared = (PetscBool)*tagvalp;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -237,7 +238,8 @@ PetscErrorCode PetscSharedTmp(MPI_Comm comm, PetscBool *shared)
 PetscErrorCode PetscSharedWorkingDirectory(MPI_Comm comm, PetscBool *shared)
 {
   PetscMPIInt size, rank, *tagvalp, sum, cnt, i;
-  PetscBool   flg, iflg;
+  PetscBool   flg_bool;
+  PetscMPIInt flg_int;
   FILE       *fd;
   int         err;
 
@@ -248,22 +250,22 @@ PetscErrorCode PetscSharedWorkingDirectory(MPI_Comm comm, PetscBool *shared)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscCall(PetscOptionsGetenv(comm, "PETSC_SHARED_WORKING_DIRECTORY", NULL, 0, &flg));
-  if (flg) {
+  PetscCall(PetscOptionsGetenv(comm, "PETSC_SHARED_WORKING_DIRECTORY", NULL, 0, &flg_bool));
+  if (flg_bool) {
     *shared = PETSC_TRUE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscCall(PetscOptionsGetenv(comm, "PETSC_NOT_SHARED_WORKING_DIRECTORY", NULL, 0, &flg));
-  if (flg) {
+  PetscCall(PetscOptionsGetenv(comm, "PETSC_NOT_SHARED_WORKING_DIRECTORY", NULL, 0, &flg_bool));
+  if (flg_bool) {
     *shared = PETSC_FALSE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
   if (Petsc_SharedWD_keyval == MPI_KEYVAL_INVALID) PetscCallMPI(MPI_Comm_create_keyval(MPI_COMM_NULL_COPY_FN, Petsc_DelTmpShared, &Petsc_SharedWD_keyval, NULL));
 
-  PetscCallMPI(MPI_Comm_get_attr(comm, Petsc_SharedWD_keyval, (void **)&tagvalp, (int *)&iflg));
-  if (!iflg) {
+  PetscCallMPI(MPI_Comm_get_attr(comm, Petsc_SharedWD_keyval, (void **)&tagvalp, &flg_int));
+  if (0 == flg_int) {
     char filename[PETSC_MAX_PATH_LEN];
 
     /* This communicator does not yet have a shared  attribute */
