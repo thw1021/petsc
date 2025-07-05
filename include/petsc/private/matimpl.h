@@ -246,7 +246,6 @@ PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat, MatType, MatReuse, M
 #endif
 PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_Basic(Mat, PetscCount, PetscInt[], PetscInt[]);
 PETSC_INTERN PetscErrorCode MatSetValuesCOO_Basic(Mat, const PetscScalar[], InsertMode);
-PETSC_INTERN PetscErrorCode MatGetCurrentMemType(Mat A, PetscMemType *m);
 #if defined(PETSC_HAVE_HYPRE)
 PETSC_INTERN PetscErrorCode MatHYPRESetMemoryLocation(Mat);
 #endif
@@ -863,6 +862,36 @@ static inline PetscErrorCode MatPivotCheck(Mat fact, Mat mat, const MatFactorInf
   else if (info->shifttype == (PetscReal)MAT_SHIFT_POSITIVE_DEFINITE) PetscCall(MatPivotCheck_pd(mat, info, sctx, row));
   else if (info->shifttype == (PetscReal)MAT_SHIFT_INBLOCKS) PetscCall(MatPivotCheck_inblocks(mat, info, sctx, row));
   else PetscCall(MatPivotCheck_none(fact, mat, info, sctx, row));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static inline PetscErrorCode MatGetCurrentMemType(Mat A, PetscMemType *m)
+{
+  PetscBool bound, ishypre = PETSC_FALSE;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscAssertPointer(m, 2);
+  *m = PETSC_MEMTYPE_HOST;
+  PetscCall(MatBoundToCPU(A, &bound));
+  if (!bound) {
+    MatType rtype;
+    char   *iscuda = NULL, *iship = NULL, *iskok = NULL;
+
+    PetscCall(MatGetRootType_Private(A, &rtype));
+    PetscCall(PetscStrstr(rtype, "cusparse", &iscuda));
+    if (!iscuda) PetscCall(PetscStrstr(rtype, "cuda", &iscuda));
+    PetscCall(PetscStrstr(rtype, "hip", &iship));
+    PetscCall(PetscStrstr(rtype, "kokkos", &iskok));
+    if (iscuda) *m = PETSC_MEMTYPE_CUDA;
+    else if (iship) *m = PETSC_MEMTYPE_HIP;
+    else if (iskok) *m = PETSC_MEMTYPE_KOKKOS;
+    else {
+      PetscCall(PetscObjectTypeCompare((PetscObject)A, MATHYPRE, &ishypre));
+      /* If it's not bound to the CPU, then we default it to the device as hypre would */
+      if (ishypre) *m = PETSC_MEMTYPE_DEVICE;
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
