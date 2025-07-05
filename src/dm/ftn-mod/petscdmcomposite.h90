@@ -1,5 +1,5 @@
 
-        Interface DMCompositeGetEntries
+      Interface DMCompositeGetEntries
         Subroutine DMCompositeGetEntries1(dm1, d1,ierr)
           import tDM
           DM dm1
@@ -28,22 +28,20 @@
           DM d1,d3
           PetscErrorCode ierr
         End Subroutine
-      End Interface
+      End Interface DMCompositeGetEntries
 
-      Interface DMCompositeRestoreGlobalISs
+      interface
         Subroutine DMCompositeRestoreGlobalISs(dm, iss, ierr)
           import tDM,tIS
           DM dm
           IS, pointer :: iss(:)
           PetscErrorCode ierr
         End Subroutine
-      End Interface
 
-      Interface DMCompositeRestoreLocalISs
         Subroutine DMCompositeRestoreLocalISs(dm, iss, ierr)
           import tDM,tIS
           DM dm
           IS, pointer :: iss(:)
           PetscErrorCode ierr
         End Subroutine
-      End Interface
+      end interface

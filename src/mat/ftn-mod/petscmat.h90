@@ -10,7 +10,7 @@
         End Subroutine
       End Interface
 
-        interface MatDenseGetArray
+      interface MatDenseGetArray
         Subroutine MatDenseGetArray1d(v,array,ierr)
         import tMat
           PetscScalar, pointer :: array(:)
@@ -23,9 +23,9 @@
           PetscErrorCode ierr
           Mat     v
         End Subroutine
-        end interface
+      end interface
 
-        interface MatDenseRestoreArray
+      interface MatDenseRestoreArray
         Subroutine MatDenseRestoreArray1d(v,array,ierr)
          import tMat
          PetscScalar, pointer :: array(:)
@@ -38,9 +38,9 @@
           PetscErrorCode ierr
           Mat     v
         End Subroutine
-        end interface
+      end interface
 
-        interface MatDenseGetArrayRead
+      interface MatDenseGetArrayRead
         Subroutine MatDenseGetArrayRead1d(v,array,ierr)
          import tMat
          PetscScalar, pointer :: array(:)
@@ -53,9 +53,9 @@
           PetscErrorCode ierr
           Mat     v
         End Subroutine
-        end interface
+      end interface
 
-        interface MatDenseRestoreArrayRead
+      interface MatDenseRestoreArrayRead
         Subroutine MatDenseRestoreArrayRead1d(v,array,ierr)
          import tMat
          PetscScalar, pointer :: array(:)
@@ -68,9 +68,9 @@
           PetscErrorCode ierr
           Mat     v
         End Subroutine
-        end interface
+      end interface
 
-        interface MatDenseGetArrayWrite
+      interface MatDenseGetArrayWrite
         Subroutine MatDenseGetArrayWrite1d(v,array,ierr)
          import tMat
          PetscScalar, pointer :: array(:)
@@ -83,9 +83,9 @@
           PetscErrorCode ierr
           Mat     v
         End Subroutine
-        end interface
+      end interface
 
-        interface MatDenseRestoreArrayWrite
+      interface MatDenseRestoreArrayWrite
         Subroutine MatDenseRestoreArrayWrite1d(v,array,ierr)
          import tMat
          PetscScalar, pointer :: array(:)
@@ -98,4 +98,4 @@
           PetscErrorCode ierr
           Mat     v
         End Subroutine
-        end interface
+      end interface
