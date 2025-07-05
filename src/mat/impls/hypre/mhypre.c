@@ -593,24 +593,12 @@ static PetscErrorCode MatSetValuesCOOFromCSRMatrix_Private(Mat A, hypre_CSRMatri
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  MatHYPRESetMemoryLocation - Set the hypre memory location based off the memory type of the provided matrix. Without calls to this function hypre defaults to GPU when configured with GPU. We make it default to the memory location associated with the PETSc matrix, e.g. seqaij or mpiaij matrices will lead to host memory selection while types like aijcusparse, aijhipsarse, aijkokkos will lead to devie memory selection. Note that if hypre is not configured with device support this function is a no-op
-
-  Not Collective
-
-  Input Parameters:
-+ A - the matrix whose type we are checking
-
-  Level: developer
-
-.seealso: [](ch_matrices), `Mat`, `MATHYPRE`
-@*/
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
-PETSC_EXTERN PetscErrorCode MatHYPRESetMemoryLocation(Mat A)
+PETSC_INTERN PetscErrorCode MatHYPRESetMemoryLocation(Mat A)
 {
   PetscMemType memtype;
 #else
-PETSC_EXTERN PetscErrorCode MatHYPRESetMemoryLocation(PETSC_UNUSED Mat A)
+PETSC_INTERN PetscErrorCode MatHYPRESetMemoryLocation(PETSC_UNUSED Mat A)
 {
 #endif
 
