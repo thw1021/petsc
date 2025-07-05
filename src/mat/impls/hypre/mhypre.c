@@ -593,6 +593,24 @@ static PetscErrorCode MatSetValuesCOOFromCSRMatrix_Private(Mat A, hypre_CSRMatri
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(PETSC_HAVE_HYPRE_DEVICE)
+PETSC_INTERN PetscErrorCode MatHYPRESetMemoryLocation(Mat A)
+{
+  PetscMemType memtype;
+#else
+PETSC_INTERN PetscErrorCode MatHYPRESetMemoryLocation(PETSC_UNUSED Mat A)
+{
+#endif
+
+  PetscFunctionBegin;
+#if defined(PETSC_HAVE_HYPRE_DEVICE)
+  PetscCall(MatGetCurrentMemType(A, &memtype));
+  PetscHYPREInitialize();
+  PetscCallExternal(HYPRE_SetMemoryLocation, PetscMemTypeHost(memtype) ? HYPRE_MEMORY_HOST : HYPRE_MEMORY_DEVICE);
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse reuse, Mat *B)
 {
   MPI_Comm   comm = PetscObjectComm((PetscObject)A);
@@ -624,15 +642,7 @@ PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse r
   }
 
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
-  {
-    PetscBool isaij;
-    // Hypre defaults to GPU when configured with GPU. We make it default to the memory location associated with the PETSc matrix,
-    // i.e., when A is a host matrix, Hypre will be on the host; otherwise, when A is of type aijcusparse, aijhipsarse, aijkokkos etc,
-    // Hypre will be on the device.
-    PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &isaij, MATSEQAIJ, MATMPIAIJ, ""));
-    PetscHYPREInitialize();
-    PetscCallExternal(HYPRE_SetMemoryLocation, isaij ? HYPRE_MEMORY_HOST : HYPRE_MEMORY_DEVICE);
-  }
+  PetscCall(MatHYPRESetMemoryLocation(A));
 #endif
 
   dA = A;
