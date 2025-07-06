@@ -270,7 +270,8 @@ static PetscMPIInt Petsc_Viewer_Matlab_keyval = MPI_KEYVAL_INVALID;
 @*/
 PetscViewer PETSC_VIEWER_MATLAB_(MPI_Comm comm)
 {
-  PetscBool   flg;
+  PetscMPIInt flg_int;
+  PetscBool   flg_bool;
   PetscViewer viewer;
   char        fname[PETSC_MAX_PATH_LEN];
   MPI_Comm    ncomm;
@@ -278,10 +279,10 @@ PetscViewer PETSC_VIEWER_MATLAB_(MPI_Comm comm)
   PetscFunctionBegin;
   PetscCallNull(PetscCommDuplicate(comm, &ncomm, NULL));
   if (Petsc_Viewer_Matlab_keyval == MPI_KEYVAL_INVALID) { PetscCallMPINull(MPI_Comm_create_keyval(MPI_COMM_NULL_COPY_FN, MPI_COMM_NULL_DELETE_FN, &Petsc_Viewer_Matlab_keyval, 0)); }
-  PetscCallMPINull(MPI_Comm_get_attr(ncomm, Petsc_Viewer_Matlab_keyval, (void **)&viewer, (int *)&flg));
-  if (!flg) { /* PetscViewer not yet created */
-    PetscCallNull(PetscOptionsGetenv(ncomm, "PETSC_VIEWER_MATLAB_FILENAME", fname, PETSC_MAX_PATH_LEN, &flg));
-    if (!flg) { PetscCallNull(PetscStrncpy(fname, "matlaboutput.mat", sizeof(fname))); }
+  PetscCallMPINull(MPI_Comm_get_attr(ncomm, Petsc_Viewer_Matlab_keyval, (void **)&viewer, &flg_int));
+  if (0 == flg_int) { /* PetscViewer not yet created */
+    PetscCallNull(PetscOptionsGetenv(ncomm, "PETSC_VIEWER_MATLAB_FILENAME", fname, PETSC_MAX_PATH_LEN, &flg_bool));
+    if (flg_bool) { PetscCallNull(PetscStrncpy(fname, "matlaboutput.mat", sizeof(fname))); }
     PetscCallNull(PetscViewerMatlabOpen(ncomm, fname, FILE_MODE_WRITE, &viewer));
     PetscCallNull(PetscObjectRegisterDestroy((PetscObject)viewer));
     PetscCallMPINull(MPI_Comm_set_attr(ncomm, Petsc_Viewer_Matlab_keyval, (void *)viewer));

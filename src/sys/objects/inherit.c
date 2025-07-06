@@ -52,7 +52,7 @@ PetscErrorCode PetscHeaderCreate_Private(PetscObject h, PetscClassId classid, co
 
   /* Increment and store current object creation index */
   PetscCallMPI(MPI_Comm_get_attr(h->comm, Petsc_CreationIdx_keyval, &get_tmp, &flg));
-  PetscCheck(flg, h->comm, PETSC_ERR_ARG_CORRUPT, "MPI_Comm does not have an object creation index");
+  PetscCheck(0 != flg, h->comm, PETSC_ERR_ARG_CORRUPT, "MPI_Comm does not have an object creation index");
   cidx    = (PetscInt64 *)get_tmp;
   h->cidx = (*cidx)++;
 

@@ -256,7 +256,7 @@ static PetscErrorCode MatDestroy_SuperLU_DIST(Mat A)
 
     PetscCall(PetscObjectGetComm((PetscObject)A, &comm));
     PetscCallMPI(MPI_Comm_get_attr(comm, Petsc_Superlu_dist_keyval, &context, &flg));
-    if (flg) context->busy = PETSC_FALSE;
+    if (flg > 0) context->busy = PETSC_FALSE;
   }
 
   PetscCall(PetscFree(A->data));
