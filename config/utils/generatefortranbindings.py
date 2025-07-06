@@ -157,6 +157,7 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
           cnt = cnt + 1
         if cnt: fd.write(',')
         fd.write(' z)\n')
+        fd.write('  use, intrinsic :: ISO_C_binding\n')
         if simport: fd.write('  import ' + simport + '\n')
 
         cnt = 0
@@ -482,9 +483,6 @@ def main(petscdir,petscarch):
   classes, enums, senums, typedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI()
 
   typedefs['PetscBool'] = getAPI.Typedef('PetscBool','sys','petscsys.h','PetscBool')
-  typedefs['PetscBool'].mansec = enums['PetscBool'].mansec
-  #typedefs['PetscBool'].submansec = enums['PetscBool'].submansec
-  del enums['PetscBool']
 
   classes['PetscNull'] = getAPI.Class('PetscNull')
   classes['PetscNull'].includefile = 'petscsys.h'

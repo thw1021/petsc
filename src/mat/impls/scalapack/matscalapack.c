@@ -1256,7 +1256,7 @@ static PetscErrorCode MatDestroy_ScaLAPACK(Mat A)
 {
   Mat_ScaLAPACK      *a = (Mat_ScaLAPACK *)A->data;
   Mat_ScaLAPACK_Grid *grid;
-  PetscBool           flg;
+  PetscMPIInt         flg;
   MPI_Comm            icomm;
 
   PetscFunctionBegin;
@@ -1264,7 +1264,7 @@ static PetscErrorCode MatDestroy_ScaLAPACK(Mat A)
   PetscCall(PetscFree(a->loc));
   PetscCall(PetscFree(a->pivots));
   PetscCall(PetscCommDuplicate(PetscObjectComm((PetscObject)A), &icomm, NULL));
-  PetscCallMPI(MPI_Comm_get_attr(icomm, Petsc_ScaLAPACK_keyval, (void **)&grid, (int *)&flg));
+  PetscCallMPI(MPI_Comm_get_attr(icomm, Petsc_ScaLAPACK_keyval, (void **)&grid, &flg));
   if (--grid->grid_refct == 0) {
     Cblacs_gridexit(grid->ictxt);
     Cblacs_gridexit(grid->ictxrow);
@@ -1781,7 +1781,8 @@ M*/
 PETSC_EXTERN PetscErrorCode MatCreate_ScaLAPACK(Mat A)
 {
   Mat_ScaLAPACK      *a;
-  PetscBool           flg, flg1;
+  PetscBool           flg_bool;
+  PetscMPIInt         flg_int;
   Mat_ScaLAPACK_Grid *grid;
   MPI_Comm            icomm;
   PetscBLASInt        nprow, npcol, myrow, mycol;
@@ -1808,16 +1809,16 @@ PETSC_EXTERN PetscErrorCode MatCreate_ScaLAPACK(Mat A)
     PetscCall(PetscCitationsRegister(ScaLAPACKCitation, &ScaLAPACKCite));
   }
   PetscCall(PetscCommDuplicate(PetscObjectComm((PetscObject)A), &icomm, NULL));
-  PetscCallMPI(MPI_Comm_get_attr(icomm, Petsc_ScaLAPACK_keyval, (void **)&grid, (int *)&flg));
-  if (!flg) {
+  PetscCallMPI(MPI_Comm_get_attr(icomm, Petsc_ScaLAPACK_keyval, (void **)&grid, &flg_int));
+  if (0 == flg_int) {
     PetscCall(PetscNew(&grid));
 
     PetscCallMPI(MPI_Comm_size(icomm, &size));
     PetscCall(PetscBLASIntCast(PetscSqrtReal((PetscReal)size) + 0.001, &grid->nprow));
 
     PetscOptionsBegin(PetscObjectComm((PetscObject)A), ((PetscObject)A)->prefix, "ScaLAPACK Grid Options", "Mat");
-    PetscCall(PetscOptionsInt("-mat_scalapack_grid_height", "Grid Height", "None", grid->nprow, &optv1, &flg1));
-    if (flg1) {
+    PetscCall(PetscOptionsInt("-mat_scalapack_grid_height", "Grid Height", "None", grid->nprow, &optv1, &flg_bool));
+    if (flg_bool) {
       PetscCheck(size % optv1 == 0, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_INCOMP, "Grid Height %" PetscInt_FMT " must evenly divide CommSize %d", optv1, size);
       PetscCall(PetscBLASIntCast(optv1, &grid->nprow));
     }
@@ -1849,8 +1850,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_ScaLAPACK(Mat A)
   a->nb   = DEFAULT_BLOCKSIZE;
 
   PetscOptionsBegin(PetscObjectComm((PetscObject)A), NULL, "ScaLAPACK Options", "Mat");
-  PetscCall(PetscOptionsIntArray("-mat_scalapack_block_sizes", "Size of the blocks to use (one or two comma-separated integers)", "MatCreateScaLAPACK", array, &k, &flg));
-  if (flg) {
+  PetscCall(PetscOptionsIntArray("-mat_scalapack_block_sizes", "Size of the blocks to use (one or two comma-separated integers)", "MatCreateScaLAPACK", array, &k, &flg_bool));
+  if (flg_bool) {
     a->mb = (PetscMPIInt)array[0];
     a->nb = (k > 1) ? (PetscMPIInt)array[1] : a->mb;
   }

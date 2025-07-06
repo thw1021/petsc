@@ -642,7 +642,7 @@ static PetscErrorCode CreateQuadMesh1(MPI_Comm comm, AppCtx *user, DM *dm)
   PetscCall(PetscCommDestroy(&(*dm)->hdr.comm));
   PetscCall(PetscCommDuplicate(comm, &(*dm)->hdr.comm, &(*dm)->hdr.tag));
   PetscCallMPI(MPI_Comm_get_attr((*dm)->hdr.comm, Petsc_CreationIdx_keyval, &get_tmp, &flg));
-  PetscCheck(flg, (*dm)->hdr.comm, PETSC_ERR_ARG_CORRUPT, "MPI_Comm does not have an object creation index");
+  PetscCheck(flg > 0, (*dm)->hdr.comm, PETSC_ERR_ARG_CORRUPT, "MPI_Comm does not have an object creation index");
   cidx            = (PetscInt64 *)get_tmp;
   (*dm)->hdr.cidx = (*cidx)++;
   // Create new pointSF

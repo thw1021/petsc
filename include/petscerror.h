@@ -163,7 +163,7 @@ M*/
 
   Synopsis:
   #include <petscsys.h>
-  void PetscCheck(bool cond, MPI_Comm comm, PetscErrorCode ierr, const char *message, ...)
+  void PetscCheck(PetscBool cond, MPI_Comm comm, PetscErrorCode ierr, const char *message, ...)
 
   Collective; No Fortran Support
 
