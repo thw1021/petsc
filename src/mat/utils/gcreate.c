@@ -315,6 +315,9 @@ PetscErrorCode MatSetFromOptions(Mat B)
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-mat_ignore_zero_entries", "For AIJ/IS matrices this will stop zero values from creating a zero location in the matrix", "MatSetOption", flg, &flg, &set));
   if (set) PetscCall(MatSetOption(B, MAT_IGNORE_ZERO_ENTRIES, flg));
+  flg = PETSC_FALSE;
+  PetscCall(PetscOptionsBool("-mat_coo_blocked_assembly", "Use blocked interface in COO assembly", "MatSetOption", flg, &flg, &set));
+  if (set) PetscCall(MatSetOption(B, MAT_COO_BLOCKED_ASSEMBLY, flg));
 
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-mat_form_explicit_transpose", "Hint to form an explicit transpose for operations like MatMultTranspose", "MatSetOption", flg, &flg, &set));
