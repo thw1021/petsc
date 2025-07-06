@@ -31,11 +31,13 @@ int main(int argc, char **args)
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
+  PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_MATLAB));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-neg", &neg, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-loc", &loc, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-locdiag", &locdiag, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-localapi", &localapi, NULL));
   PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
+  PetscCall(PetscObjectSetName((PetscObject)A, "A"));
   if (loc) {
     if (locdiag) {
       PetscCall(MatSetSizes(A, m, N, PETSC_DECIDE, PETSC_DECIDE));
@@ -77,7 +79,10 @@ int main(int argc, char **args)
   PetscCall(ISLocalToGlobalMappingDestroy(&cl2g));
 
   PetscCall(MatCreateVecs(A, &x, &y));
+  PetscCall(PetscObjectSetName((PetscObject)x, "x"));
+  PetscCall(PetscObjectSetName((PetscObject)y, "y"));
   PetscCall(MatCreateVecs(A, NULL, &z));
+  PetscCall(PetscObjectSetName((PetscObject)z, "z"));
   PetscCall(VecSet(x, 1.));
   PetscCall(VecSet(z, 2.));
   if (!localapi)
@@ -110,11 +115,11 @@ int main(int argc, char **args)
   PetscCall(MatSetValuesCOO(A, v1_p, ADD_VALUES));
   PetscCall(MatView(A, NULL));
   PetscCall(MatMult(A, x, y));
-  PetscCall(VecView(y, NULL));
+  PetscCall(VecView(y, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(MatSetValuesCOO(A, v2_p, ADD_VALUES));
   PetscCall(MatMultAdd(A, x, y, y));
   PetscCall(MatView(A, NULL));
-  PetscCall(VecView(y, NULL));
+  PetscCall(VecView(y, PETSC_VIEWER_STDOUT_WORLD));
   T = A;
   if (ishypre) PetscCall(MatConvert(A, MATAIJ, MAT_INITIAL_MATRIX, &T));
   PetscCall(MatTranspose(T, MAT_INITIAL_MATRIX, &At));
@@ -145,11 +150,11 @@ int main(int argc, char **args)
   PetscCall(MatSetValuesCOO(A, v1_p, ADD_VALUES));
   PetscCall(MatMult(A, x, y));
   PetscCall(MatView(A, NULL));
-  PetscCall(VecView(y, NULL));
+  PetscCall(VecView(y, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(MatSetValuesCOO(A, v2_p, ADD_VALUES));
   PetscCall(MatMultAdd(A, x, y, z));
   PetscCall(MatView(A, NULL));
-  PetscCall(VecView(z, NULL));
+  PetscCall(VecView(z, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(PetscArraycpy(it, i2, n2));
   PetscCall(PetscArraycpy(jt, j2, n2));
   if (!localapi) {
@@ -160,11 +165,11 @@ int main(int argc, char **args)
   PetscCall(MatSetValuesCOO(A, v1_p, INSERT_VALUES));
   PetscCall(MatMult(A, x, y));
   PetscCall(MatView(A, NULL));
-  PetscCall(VecView(y, NULL));
+  PetscCall(VecView(y, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(MatSetValuesCOO(A, v2_p, INSERT_VALUES));
   PetscCall(MatMultAdd(A, x, y, z));
   PetscCall(MatView(A, NULL));
-  PetscCall(VecView(z, NULL));
+  PetscCall(VecView(z, PETSC_VIEWER_STDOUT_WORLD));
   T = A;
   if (ishypre) PetscCall(MatConvert(A, MATAIJ, MAT_INITIAL_MATRIX, &T));
   PetscCall(MatTranspose(T, MAT_INITIAL_MATRIX, &At));
@@ -225,11 +230,11 @@ int main(int argc, char **args)
     PetscCall(MatSetValuesCOO(A, coo_v, ADD_VALUES));
     PetscCall(MatMult(A, x, y));
     PetscCall(MatView(A, NULL));
-    PetscCall(VecView(y, NULL));
+    PetscCall(VecView(y, PETSC_VIEWER_STDOUT_WORLD));
     PetscCall(MatSetValuesCOO(A, coo_v, INSERT_VALUES));
     PetscCall(MatMult(A, x, y));
     PetscCall(MatView(A, NULL));
-    PetscCall(VecView(y, NULL));
+    PetscCall(VecView(y, PETSC_VIEWER_STDOUT_WORLD));
 
     T = A;
     if (ishypre) PetscCall(MatConvert(A, MATAIJ, MAT_INITIAL_MATRIX, &T));
@@ -258,147 +263,152 @@ int main(int argc, char **args)
 
    test:
      suffix: 1
-     filter: grep -v type | grep -v "Mat Object"
+     requires: !complex
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type {{seqaij mpiaij}} -localapi {{0 1}} -neg {{0 1}}
 
    test:
-     requires: !single
+     requires: !single !complex
      suffix: 1_blocked
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_block_size 2 -mat_type seqaij -localapi 0 -neg {{0 1}}
 
    test:
-     requires: hypre
+     requires: hypre !complex
      suffix: 1_hypre
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type hypre -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_1.out
 
    test:
-     requires: cuda
+     requires: cuda !complex
      suffix: 1_cuda
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type {{seqaijcusparse mpiaijcusparse}} -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_1.out
 
    test:
-     requires: kokkos_kernels
+     requires: kokkos_kernels !complex
      suffix: 1_kokkos
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type {{seqaijkokkos mpiaijkokkos}} -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_1.out
 
    test:
      suffix: 2
+     requires: !complex
      nsize: 7
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type mpiaij -localapi {{0 1}} -neg {{0 1}}
 
    test:
-     requires: hypre
+     requires: hypre !complex
      suffix: 2_hypre
      nsize: 7
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type hypre -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_2.out
 
    test:
-     requires: cuda
+     requires: cuda !complex
      suffix: 2_cuda
      nsize: 7
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type mpiaijcusparse -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_2.out
 
    test:
-     requires: kokkos_kernels
+     requires: kokkos_kernels !complex
      suffix: 2_kokkos
      nsize: 7
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type mpiaijkokkos -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_2.out
 
    test:
      suffix: 3
+     requires: !complex
      nsize: 3
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type mpiaij -loc -localapi {{0 1}} -neg {{0 1}}
 
    test:
-     requires: hypre
+     requires: hypre !complex
      suffix: 3_hypre
      nsize: 3
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type hypre -loc -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_3.out
 
    test:
-     requires: cuda
+     requires: cuda !complex
      suffix: 3_cuda
      nsize: 3
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type mpiaijcusparse -loc -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_3.out
 
    test:
-     requires: kokkos_kernels
+     requires: kokkos_kernels !complex
      suffix: 3_kokkos
      nsize: 3
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type aijkokkos -loc -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_3.out
 
    test:
      suffix: 4
+     requires: !complex
      nsize: 4
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type mpiaij -loc -locdiag 0 -localapi {{0 1}} -neg {{0 1}}
 
    test:
-     requires: hypre
+     requires: hypre !complex
      suffix: 4_hypre
      nsize: 4
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type hypre -loc -locdiag 0 -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_4.out
 
    test:
-     requires: cuda
+     requires: cuda !complex
      suffix: 4_cuda
      nsize: 4
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type mpiaijcusparse -loc -locdiag 0 -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_4.out
 
    test:
-     requires: kokkos_kernels
+     requires: kokkos_kernels !complex
      suffix: 4_kokkos
      nsize: 4
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type aijkokkos -loc -locdiag 0 -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_4.out
 
    test:
      suffix: matis
+     requires: !complex
      nsize: 3
-     filter: grep -v type | grep -v "Mat Object"
+     filter: grep -v type | grep -v "Mat_0x"
      diff_args: -j
      args: -mat_type is -localapi {{0 1}} -neg {{0 1}}
 
