@@ -945,7 +945,7 @@ static PetscErrorCode PetscDualSpaceSetFromOptions_Lagrange(PetscDualSpace sp, P
   PetscCall(PetscOptionsBool("-petscdualspace_lagrange_trimmed", "Flag for trimmed dual space", "PetscDualSpaceLagrangeSetTrimmed", trimmed, &trimmed, &flg));
   if (flg) PetscCall(PetscDualSpaceLagrangeSetTrimmed(sp, trimmed));
   if (nodeType == PETSCDTNODES_DEFAULT) {
-    PetscInt        formDegree;
+    PetscInt formDegree;
  
     PetscCall(PetscDualSpaceGetFormDegree(sp, &formDegree));
     nodeType      = PETSCDTNODES_GAUSSJACOBI;
