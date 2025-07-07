@@ -247,7 +247,7 @@ PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat, MatType, MatReuse, M
 PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_Basic(Mat, PetscCount, PetscInt[], PetscInt[]);
 PETSC_INTERN PetscErrorCode MatSetValuesCOO_Basic(Mat, const PetscScalar[], InsertMode);
 #if defined(PETSC_HAVE_HYPRE)
-PETSC_INTERN PetscErrorCode MatHYPRESetMemoryLocation(Mat);
+PETSC_INTERN PetscErrorCode MatSetMemoryLocation_HYPRE(Mat);
 #endif
 
 /* This can be moved to the public header after implementing some missing MatProducts */

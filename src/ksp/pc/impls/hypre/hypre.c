@@ -2489,7 +2489,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE(PC pc, PetscOptionItems PetscOption
 
   PetscFunctionBegin;
   /* Set the memory location based off the preconditioning matrix type. This memory location will help inform PC option choices */
-  if (pc->pmat) PetscCall(MatHYPRESetMemoryLocation(pc->pmat));
+  if (pc->pmat) PetscCall(MatSetMemoryLocation_HYPRE(pc->pmat));
   PetscOptionsHeadBegin(PetscOptionsObject, "HYPRE preconditioner options");
   PetscCall(PetscOptionsEList("-pc_hypre_type", "HYPRE preconditioner type", "PCHYPRESetType", type, PETSC_STATIC_ARRAY_LENGTH(type), "boomeramg", &indx, &flg));
   if (flg) {
