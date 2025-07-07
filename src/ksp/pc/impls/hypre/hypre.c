@@ -2341,6 +2341,9 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
     PetscCallExternal(HYPRE_BoomerAMGSetRAP2, jac->hsolver, jac->rap2);
     PetscCallExternal(HYPRE_BoomerAMGSetModuleRAP2, jac->hsolver, jac->mod_rap2);
 #endif
+#if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
+    PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, HYPRESpgemmTypes[PetscDefined(HAVE_HYPRE_DEVICE) ? 0 : 1]));
+#endif
 
     /* AIR */
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 18, 0)
