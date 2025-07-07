@@ -641,9 +641,7 @@ PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse r
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-#if defined(PETSC_HAVE_HYPRE_DEVICE)
   PetscCall(MatHYPRESetMemoryLocation(A));
-#endif
 
   dA = A;
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &ismpiaij));
