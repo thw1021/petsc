@@ -3283,7 +3283,7 @@ static PetscErrorCode MatSetOption_IS(Mat A, MatOption op, PetscBool flg)
   Mat_IS *a = (Mat_IS *)A->data;
 
   PetscFunctionBegin;
-  PetscCall(MatSetOption(a->A, op, flg));
+  if (a->A) PetscCall(MatSetOption(a->A, op, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
