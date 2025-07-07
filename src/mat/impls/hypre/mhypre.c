@@ -594,11 +594,11 @@ static PetscErrorCode MatSetValuesCOOFromCSRMatrix_Private(Mat A, hypre_CSRMatri
 }
 
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
-PETSC_INTERN PetscErrorCode MatHYPRESetMemoryLocation(Mat A)
+PETSC_INTERN PetscErrorCode MatSetMemoryLocation_HYPRE(Mat A)
 {
   PetscMemType memtype;
 #else
-PETSC_INTERN PetscErrorCode MatHYPRESetMemoryLocation(PETSC_UNUSED Mat A)
+PETSC_INTERN PetscErrorCode MatSetMemoryLocation_HYPRE(PETSC_UNUSED Mat A)
 {
 #endif
 
@@ -641,7 +641,7 @@ PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse r
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscCall(MatHYPRESetMemoryLocation(A));
+  PetscCall(MatSetMemoryLocation_HYPRE(A));
 
   dA = A;
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &ismpiaij));
