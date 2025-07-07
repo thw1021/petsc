@@ -1191,10 +1191,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems P
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
   // global parameter but is closely associated with BoomerAMG
   PetscCall(PetscOptionsEList("-pc_mg_galerkin_mat_product_algorithm", "Type of SpGEMM to use in hypre (only for now)", "PCMGGalerkinSetMatProductAlgorithm", HYPRESpgemmTypes, PETSC_STATIC_ARRAY_LENGTH(HYPRESpgemmTypes), HYPRESpgemmTypes[0], &indx, &flg));
-  if (flg) {
-    if (!PetscDefined(HAVE_HYPRE_DEVICE)) PetscCheck(indx == 1, PetscObjectComm((PetscObject)jac), PETSC_ERR_ARG_OUTOFRANGE, "Cannot ask for cusparse Galerin matrix product algorith unless hypre is configured with device access");
-    PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, HYPRESpgemmTypes[indx]));
-  }
+  if (flg) PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, HYPRESpgemmTypes[indx]));
 #endif
   /* AIR */
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 18, 0)
