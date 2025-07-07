@@ -2158,11 +2158,12 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
   PetscFunctionBegin;
   if (jac->hypre_type) {
     PetscCall(PetscStrcmp(jac->hypre_type, name, &flag));
-    PetscCheck(flag, PetscObjectComm((PetscObject)pc), PETSC_ERR_ORDER, "Cannot reset the HYPRE preconditioner type once it has been set");
-    PetscFunctionReturn(PETSC_SUCCESS);
-  } else {
-    PetscCall(PetscStrallocpy(name, &jac->hypre_type));
+    if (flag) PetscFunctionReturn(PETSC_SUCCESS);
   }
+
+  PetscCall(PCReset_HYPRE(pc));
+  PetscCall(PetscFree(jac->hypre_type));
+  PetscCall(PetscStrallocpy(name, &jac->hypre_type));
 
   jac->maxiter         = PETSC_DEFAULT;
   jac->tol             = PETSC_DEFAULT;
@@ -2480,17 +2481,18 @@ static PetscErrorCode PCSetFromOptions_HYPRE(PC pc, PetscOptionItems PetscOption
   PetscInt    indx;
   const char *type[] = {"ilu", "euclid", "pilut", "parasails", "boomeramg", "ams", "ads"};
   PetscBool   flg;
+  PC_HYPRE   *jac = (PC_HYPRE *)pc->data;
 
   PetscFunctionBegin;
   /* Set the memory location based off the preconditioning matrix type. This memory location will help inform PC option choices */
   if (pc->pmat) PetscCall(MatSetMemoryLocation_HYPRE(pc->pmat));
   PetscOptionsHeadBegin(PetscOptionsObject, "HYPRE preconditioner options");
   PetscCall(PetscOptionsEList("-pc_hypre_type", "HYPRE preconditioner type", "PCHYPRESetType", type, PETSC_STATIC_ARRAY_LENGTH(type), "boomeramg", &indx, &flg));
-  if (flg) {
-    PetscCall(PCHYPRESetType_HYPRE(pc, type[indx]));
-  } else {
-    PetscCall(PCHYPRESetType_HYPRE(pc, "boomeramg"));
-  }
+  if (flg) PetscCall(PCHYPRESetType_HYPRE(pc, type[indx]));
+  /*
+    Set the type if it was never set.
+  */
+  if (!jac->hypre_type) PetscCall(PCHYPRESetType_HYPRE(pc, "boomeramg"));
   PetscTryTypeMethod(pc, setfromoptions, PetscOptionsObject);
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2688,6 +2690,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_HYPRE(PC pc)
   pc->ops->setfromoptions = PCSetFromOptions_HYPRE;
   pc->ops->setup          = PCSetUp_HYPRE;
   pc->ops->apply          = PCApply_HYPRE;
+  jac->hypre_type         = NULL;
   jac->comm_hypre         = MPI_COMM_NULL;
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCHYPRESetType_C", PCHYPRESetType_HYPRE));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCHYPREGetType_C", PCHYPREGetType_HYPRE));
