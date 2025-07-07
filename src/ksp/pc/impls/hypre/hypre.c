@@ -919,15 +919,16 @@ static const char *HYPREBoomerAMGMeasureType[] = {"local", "global"};
 /* The following corresponds to HYPRE_BoomerAMGSetRelaxType which has many missing numbers in the enum */
 static const char *HYPREBoomerAMGSmoothType[] = {"ILU", "Schwarz-smoothers", "Pilut", "ParaSails", "Euclid"};
 static const char *HYPREBoomerAMGRelaxType[] = {"Jacobi", "sequential-Gauss-Seidel", "seqboundary-Gauss-Seidel", "SOR/Jacobi", "backward-SOR/Jacobi", "" /* [5] hybrid chaotic Gauss-Seidel (works only with OpenMP) */, "symmetric-SOR/Jacobi", "" /* 7 */, "l1scaled-SOR/Jacobi", "Gaussian-elimination", "" /* 10 */, "" /* 11 */, "" /* 12 */, "l1-Gauss-Seidel" /* nonsymmetric */, "backward-l1-Gauss-Seidel" /* nonsymmetric */, "CG" /* non-stationary */, "Chebyshev", "FCF-Jacobi", "l1scaled-Jacobi"};
-static const char    *HYPREBoomerAMGInterpType[] = {"classical", "", "", "direct", "multipass", "multipass-wts", "ext+i", "ext+i-cc", "standard", "standard-wts", "block", "block-wtd", "FF", "FF1", "ext", "ad-wts", "ext-mm", "ext+i-mm", "ext+e-mm"};
+static const char *HYPREBoomerAMGInterpType[] = {"classical", "", "", "direct", "multipass", "multipass-wts", "ext+i", "ext+i-cc", "standard", "standard-wts", "block", "block-wtd", "FF", "FF1", "ext", "ad-wts", "ext-mm", "ext+i-mm", "ext+e-mm"};
+static const char *HYPRESpgemmTypes[]         = {"cusparse", "hypre"};
+
 static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems PetscOptionsObject)
 {
   PC_HYPRE   *jac = (PC_HYPRE *)pc->data;
   PetscInt    bs, n, indx, level;
   PetscBool   flg, tmp_truth;
   PetscReal   tmpdbl, twodbl[2];
-  const char *symtlist[]           = {"nonsymmetric", "SPD", "nonsymmetric,SPD"};
-  const char *PCHYPRESpgemmTypes[] = {"cusparse", "hypre"};
+  const char *symtlist[] = {"nonsymmetric", "SPD", "nonsymmetric,SPD"};
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "HYPRE BoomerAMG Options");
@@ -1189,18 +1190,11 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems P
   if (flg) PetscCallExternal(HYPRE_BoomerAMGSetMinCoarseSize, jac->hsolver, jac->minc);
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
   // global parameter but is closely associated with BoomerAMG
-  PetscCall(PetscOptionsEList("-pc_mg_galerkin_mat_product_algorithm", "Type of SpGEMM to use in hypre (only for now)", "PCMGGalerkinSetMatProductAlgorithm", PCHYPRESpgemmTypes, PETSC_STATIC_ARRAY_LENGTH(PCHYPRESpgemmTypes), PCHYPRESpgemmTypes[0], &indx, &flg));
-  #if defined(PETSC_HAVE_HYPRE_DEVICE)
-  if (flg) PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, PCHYPRESpgemmTypes[indx]));
-  else {
-    HYPRE_MemoryLocation memloc;
-    PetscCallExternal(HYPRE_GetMemoryLocation, &memloc);
-    if (memloc == HYPRE_MEMORY_DEVICE) PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, PCHYPRESpgemmTypes[0]));
-    else PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, "hypre"));
+  PetscCall(PetscOptionsEList("-pc_mg_galerkin_mat_product_algorithm", "Type of SpGEMM to use in hypre (only for now)", "PCMGGalerkinSetMatProductAlgorithm", HYPRESpgemmTypes, PETSC_STATIC_ARRAY_LENGTH(HYPRESpgemmTypes), HYPRESpgemmTypes[0], &indx, &flg));
+  if (flg) {
+    if (!PetscDefined(HAVE_HYPRE_DEVICE)) PetscCheck(indx == 1, PetscObjectComm((PetscObject)jac), PETSC_ERR_ARG_OUTOFRANGE, "Cannot ask for cusparse Galerin matrix product algorith unless hypre is configured with device access");
+    PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, HYPRESpgemmTypes[indx]));
   }
-  #else
-  PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, "hypre"));
-  #endif
 #endif
   /* AIR */
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 18, 0)
