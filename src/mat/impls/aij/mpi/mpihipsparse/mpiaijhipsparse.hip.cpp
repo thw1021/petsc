@@ -432,12 +432,8 @@ static PetscErrorCode MatDestroy_MPIAIJHIPSPARSE(Mat A)
 
 static PetscErrorCode MatGetCurrentMemType_MPIAIJHIPSPARSE(Mat A, PetscMemType *m)
 {
-  PetscBool bound;
-
   PetscFunctionBegin;
-  PetscCall(MatBoundToCPU(A, &bound));
-  if (bound) *m = PETSC_MEMTYPE_HOST;
-  else *m = PETSC_MEMTYPE_HIP;
+  *m = PETSC_MEMTYPE_HIP;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
