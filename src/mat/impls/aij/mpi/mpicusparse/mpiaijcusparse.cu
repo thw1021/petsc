@@ -454,12 +454,8 @@ static PetscErrorCode MatSetUp_MPI_HASH_CUSPARSE(Mat A)
 
 static PetscErrorCode MatGetCurrentMemType_MPIAIJCUSPARSE(Mat A, PetscMemType *m)
 {
-  PetscBool bound;
-
   PetscFunctionBegin;
-  PetscCall(MatBoundToCPU(A, &bound));
-  if (bound) *m = PETSC_MEMTYPE_HOST;
-  else *m = PETSC_MEMTYPE_CUDA;
+  *m = PETSC_MEMTYPE_CUDA;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

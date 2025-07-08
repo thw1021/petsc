@@ -3976,6 +3976,13 @@ static PetscErrorCode MatZeroEntries_SeqAIJCUSPARSE(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatGetCurrentMemType_SeqAIJCUSPARSE(Mat A, PetscMemType *m)
+{
+  PetscFunctionBegin;
+  *m = PETSC_MEMTYPE_CUDA;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A, PetscBool flg)
 {
   Mat_SeqAIJ *a = (Mat_SeqAIJ *)A->data;
@@ -3998,6 +4005,7 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A, PetscBool flg)
     A->ops->multhermitiantranspose    = NULL;
     A->ops->multhermitiantransposeadd = NULL;
     A->ops->productsetfromoptions     = MatProductSetFromOptions_SeqAIJ;
+    A->ops->getcurrentmemtype         = NULL;
     PetscCall(PetscMemzero(a->ops, sizeof(Mat_SeqAIJOps)));
     PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSeqAIJCopySubArray_C", NULL));
     PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C", NULL));
@@ -4016,6 +4024,7 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A, PetscBool flg)
     A->ops->multhermitiantranspose    = MatMultHermitianTranspose_SeqAIJCUSPARSE;
     A->ops->multhermitiantransposeadd = MatMultHermitianTransposeAdd_SeqAIJCUSPARSE;
     A->ops->productsetfromoptions     = MatProductSetFromOptions_SeqAIJCUSPARSE;
+    A->ops->getcurrentmemtype         = MatGetCurrentMemType_SeqAIJCUSPARSE;
     a->ops->getarray                  = MatSeqAIJGetArray_SeqAIJCUSPARSE;
     a->ops->restorearray              = MatSeqAIJRestoreArray_SeqAIJCUSPARSE;
     a->ops->getarrayread              = MatSeqAIJGetArrayRead_SeqAIJCUSPARSE;
@@ -4037,17 +4046,6 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A, PetscBool flg)
   } else {
     a->inode.use = PETSC_FALSE;
   }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatGetCurrentMemType_SeqAIJCUSPARSE(Mat A, PetscMemType *m)
-{
-  PetscBool bound;
-
-  PetscFunctionBegin;
-  PetscCall(MatBoundToCPU(A, &bound));
-  if (bound) *m = PETSC_MEMTYPE_HOST;
-  else *m = PETSC_MEMTYPE_CUDA;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
