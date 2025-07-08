@@ -3389,6 +3389,13 @@ static PetscErrorCode MatZeroEntries_SeqAIJHIPSPARSE(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatGetCurrentMemType_SeqAIJHIPSPARSE(Mat A, PetscMemType *m)
+{
+  PetscFunctionBegin;
+  *m = PETSC_MEMTYPE_HIP;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatBindToCPU_SeqAIJHIPSPARSE(Mat A, PetscBool flg)
 {
   Mat_SeqAIJ *a = (Mat_SeqAIJ *)A->data;
@@ -3411,6 +3418,7 @@ static PetscErrorCode MatBindToCPU_SeqAIJHIPSPARSE(Mat A, PetscBool flg)
     A->ops->multhermitiantranspose    = NULL;
     A->ops->multhermitiantransposeadd = NULL;
     A->ops->productsetfromoptions     = MatProductSetFromOptions_SeqAIJ;
+    A->ops->getcurrentmemtype         = NULL;
     PetscCall(PetscMemzero(a->ops, sizeof(Mat_SeqAIJOps)));
     PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSeqAIJCopySubArray_C", NULL));
     PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_seqaijhipsparse_seqdensehip_C", NULL));
@@ -3429,6 +3437,7 @@ static PetscErrorCode MatBindToCPU_SeqAIJHIPSPARSE(Mat A, PetscBool flg)
     A->ops->multhermitiantranspose    = MatMultHermitianTranspose_SeqAIJHIPSPARSE;
     A->ops->multhermitiantransposeadd = MatMultHermitianTransposeAdd_SeqAIJHIPSPARSE;
     A->ops->productsetfromoptions     = MatProductSetFromOptions_SeqAIJHIPSPARSE;
+    A->ops->getcurrentmemtype         = MatGetCurrentMemType_SeqAIJHIPSPARSE;
     a->ops->getarray                  = MatSeqAIJGetArray_SeqAIJHIPSPARSE;
     a->ops->restorearray              = MatSeqAIJRestoreArray_SeqAIJHIPSPARSE;
     a->ops->getarrayread              = MatSeqAIJGetArrayRead_SeqAIJHIPSPARSE;
@@ -3446,17 +3455,6 @@ static PetscErrorCode MatBindToCPU_SeqAIJHIPSPARSE(Mat A, PetscBool flg)
   A->boundtocpu = flg;
   if (flg && a->inode.size_csr) a->inode.use = PETSC_TRUE;
   else a->inode.use = PETSC_FALSE;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatGetCurrentMemType_SeqAIJHIPSPARSE(Mat A, PetscMemType *m)
-{
-  PetscBool bound;
-
-  PetscFunctionBegin;
-  PetscCall(MatBoundToCPU(A, &bound));
-  if (bound) *m = PETSC_MEMTYPE_HOST;
-  else *m = PETSC_MEMTYPE_HIP;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
