@@ -593,21 +593,14 @@ static PetscErrorCode MatSetValuesCOOFromCSRMatrix_Private(Mat A, hypre_CSRMatri
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_HAVE_HYPRE_DEVICE)
 PETSC_INTERN PetscErrorCode MatSetMemoryLocation_HYPRE(Mat A)
 {
   PetscMemType memtype;
-#else
-PETSC_INTERN PetscErrorCode MatSetMemoryLocation_HYPRE(PETSC_UNUSED Mat A)
-{
-#endif
 
   PetscFunctionBegin;
-#if defined(PETSC_HAVE_HYPRE_DEVICE)
   PetscCall(MatGetCurrentMemType(A, &memtype));
   PetscHYPREInitialize();
   PetscCallExternal(HYPRE_SetMemoryLocation, PetscMemTypeHost(memtype) ? HYPRE_MEMORY_HOST : HYPRE_MEMORY_DEVICE);
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
