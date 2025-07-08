@@ -331,14 +331,14 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
 
   /* special case for BoomerAMG */
   if (jac->setup == HYPRE_BoomerAMGSetup) {
-    MatNullSpace         mnull;
-    PetscBool            has_const;
-    PetscInt             bs, nvec, i;
-    HYPRE_MemoryLocation hypre_memloc;
-    const Vec           *vecs;
+    MatNullSpace mnull;
+    PetscBool    has_const;
+    PetscInt     bs, nvec, i;
+    PetscMemType memtype;
+    const Vec   *vecs;
 
-    PetscCallExternal(HYPRE_GetMemoryLocation, &hypre_memloc);
-    if (hypre_memloc == HYPRE_MEMORY_DEVICE) {
+    PetscCall(MatGetCurrentMemType(jac->hpmat, &memtype));
+    if (PetscMemTypeDevice(memtype)) {
       /* GPU defaults
          From https://hypre.readthedocs.io/en/latest/solvers-boomeramg.html#gpu-supported-options
          and /src/parcsr_ls/par_amg.c
