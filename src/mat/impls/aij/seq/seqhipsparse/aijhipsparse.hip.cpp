@@ -3449,6 +3449,17 @@ static PetscErrorCode MatBindToCPU_SeqAIJHIPSPARSE(Mat A, PetscBool flg)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatGetCurrentMemType_SeqAIJHIPSPARSE(Mat A, PetscMemType *m)
+{
+  PetscBool bound;
+
+  PetscFunctionBegin;
+  PetscCall(MatBoundToCPU(A, &bound));
+  if (bound) *m = PETSC_MEMTYPE_HOST;
+  else *m = PETSC_MEMTYPE_HIP;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJHIPSPARSE(Mat A, MatType mtype, MatReuse reuse, Mat *newmat)
 {
   Mat B;
@@ -3489,12 +3500,13 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJHIPSPARSE(Mat A, MatType mty
     }
     B->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
   }
-  B->ops->assemblyend    = MatAssemblyEnd_SeqAIJHIPSPARSE;
-  B->ops->destroy        = MatDestroy_SeqAIJHIPSPARSE;
-  B->ops->setoption      = MatSetOption_SeqAIJHIPSPARSE;
-  B->ops->setfromoptions = MatSetFromOptions_SeqAIJHIPSPARSE;
-  B->ops->bindtocpu      = MatBindToCPU_SeqAIJHIPSPARSE;
-  B->ops->duplicate      = MatDuplicate_SeqAIJHIPSPARSE;
+  B->ops->assemblyend       = MatAssemblyEnd_SeqAIJHIPSPARSE;
+  B->ops->destroy           = MatDestroy_SeqAIJHIPSPARSE;
+  B->ops->setoption         = MatSetOption_SeqAIJHIPSPARSE;
+  B->ops->setfromoptions    = MatSetFromOptions_SeqAIJHIPSPARSE;
+  B->ops->bindtocpu         = MatBindToCPU_SeqAIJHIPSPARSE;
+  B->ops->duplicate         = MatDuplicate_SeqAIJHIPSPARSE;
+  B->ops->getcurrentmemtype = MatGetCurrentMemType_SeqAIJHIPSPARSE;
 
   PetscCall(MatBindToCPU_SeqAIJHIPSPARSE(B, PETSC_FALSE));
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATSEQAIJHIPSPARSE));
