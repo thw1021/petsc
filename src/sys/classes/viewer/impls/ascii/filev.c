@@ -1,4 +1,5 @@
 #include <../src/sys/classes/viewer/impls/ascii/asciiimpl.h> /*I "petscviewer.h" I*/
+#include <petsc/private/viewerimpl.h>
 
 #define QUEUESTRINGSIZE 8192
 
@@ -1241,5 +1242,106 @@ PetscErrorCode PetscViewerASCIIRead(PetscViewer viewer, void *data, PetscInt num
   }
   if (count) *count = i;
   else PetscCheck(ret >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Insufficient data, read only %" PetscInt_FMT " < %" PetscInt_FMT " items", i, num);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PetscViewerASCIIFormatMonitorReal(PetscViewer viewer, PetscReal f_real, PetscInt options, char buf[])
+{
+  double f       = (double)f_real;
+  size_t buf_len = PETSC_MONITOR_REAL_LENGTH;
+
+  PetscFunctionBegin;
+  if (!PetscRealFmtShort(options)) {
+    // print 18 characters wide (+1 for sign) in %e style
+    if (PetscRealFmtInfCutoff(options) && fabs(f) >= PETSC_INFINITY) {
+      if (PetscRealFmtSigned(options)) {
+        PetscCall(PetscSNPrintf(buf, buf_len, "%s", f > 0 ? " Inf               " : "-Inf               "));
+      } else {
+        PetscCall(PetscSNPrintf(buf, buf_len, "%s", f > 0 ? "Inf               " : "-Inf              "));
+      }
+    } else if (PetscRealFmtSmallCutoff(options) && f < 1.e-11) {
+      if (PetscRealFmtSigned(options)) PetscCall(PetscSNPrintf(buf++, buf_len--, " "));
+      PetscCall(PetscSNPrintf(buf, buf_len, "< 1.e-11          "));
+    } else {
+      if (PetscRealFmtSigned(options)) PetscCall(PetscSNPrintf(buf, buf_len, "%#- .12e", f));
+      else PetscCall(PetscSNPrintf(buf, buf_len, "%#-.12e", f));
+    }
+  } else {
+    // print 8 characters wide (+1 for sign) in %g style
+    if (PetscRealFmtInfCutoff(options) && fabs(f) >= PETSC_INFINITY) {
+      if (PetscRealFmtSigned(options)) {
+        PetscCall(PetscSNPrintf(buf, buf_len, "%s", f > 0 ? " Inf     " : "-Inf     "));
+      } else {
+        PetscCall(PetscSNPrintf(buf, buf_len, "%s", f > 0 ? "Inf     " : "-Inf    "));
+      }
+    } else if (PetscRealFmtSmallCutoff(options) && f < 1.e-11) {
+      if (PetscRealFmtSigned(options)) PetscCall(PetscSNPrintf(buf++, buf_len--,  " "));
+      PetscCall(PetscSNPrintf(buf, buf_len, "< 1.e-11"));
+    } else if (fabs(f) >= 9.9999995e6) {
+      if (PetscRealFmtSigned(options)) PetscCall(PetscSNPrintf(buf, buf_len, "%#- .2e", f));
+      else PetscCall(PetscSNPrintf(buf, buf_len, "%#-.2e", f));
+    }
+    else {
+      int precision;
+
+      for (precision = 7; precision > 2; precision--) {
+        char test_buf[20];
+
+        PetscCall(PetscArrayzero(test_buf, PETSC_STATIC_ARRAY_LENGTH(test_buf)));
+        PetscCall(PetscSNPrintf(test_buf, PETSC_STATIC_ARRAY_LENGTH(test_buf), "%-# .*g,", precision, f));
+        if (test_buf[9] == ',') break;
+        if (test_buf[0] == '\0') {
+          /* this is a number like 0.9999995 prints like '0.9999995,' with precision 7 (which is too long) but '1.00000, ' with
+               precision 6 (which is too short).  Just round it and use the higher precision to get '1.000000,' */
+          f = pow(10, precision - 6) * ((f > 0) ? 1.0 : -1.0);
+          precision++;
+          break;
+        }
+      }
+      if (PetscRealFmtSigned(options)) PetscCall(PetscSNPrintf(buf, buf_len, "%#- .*g", precision, f));
+      else PetscCall(PetscSNPrintf(buf, buf_len, "%#-.*g", precision, f));
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+#if defined(PETSC_HAVE_UNISTD_H)
+  #include <unistd.h>
+#endif
+
+static const char *PetscPrintfColorError[]   = {"\033[1;31m", "\033[0;39m"};       // bold, red
+static const char *PetscPrintfColorInfo[]    = {"\033[1;94m", "\033[0;39m"};       // bold, bright blue
+static const char *PetscPrintfColorSuccess[] = {"\033[1;32m", "\033[0;39m"};       // bold, green
+static const char *PetscPrintfColorValue[]   = {"\033[1m", "\033[0m"};           // bold
+static const char *PetscPrintfColorWarning[] = {"\033[1;38;5;166m", "\033[0;39m"}; // bold, orange
+
+PetscErrorCode PetscViewerASCIIGetColor(PetscViewer viewer, PetscColorType type, const char ***color)
+{
+  PetscViewer_ASCII *vascii = (PetscViewer_ASCII *)viewer->data;
+
+  PetscFunctionBegin;
+#if defined(PETSC_HAVE_UNISTD_H) && defined(PETSC_USE_ISATTY)
+  if (isatty(fileno(vascii->fd))) {
+    switch (type) {
+    case PETSC_COLOR_ERROR:
+      *color = PetscPrintfColorError;
+      break;
+    case PETSC_COLOR_INFO:
+      *color = PetscPrintfColorInfo;
+      break;
+    case PETSC_COLOR_SUCCESS:
+      *color = PetscPrintfColorSuccess;
+      break;
+    case PETSC_COLOR_DATA:
+      *color = PetscPrintfColorValue;
+      break;
+    case PETSC_COLOR_WARNING:
+      *color = PetscPrintfColorWarning;
+      break;
+    }
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+#endif
+  *color = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

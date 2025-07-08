@@ -68,6 +68,7 @@ struct _p_LineSearch {
   void *postcheckctx;
 
   PetscViewer monitor;
+  PetscViewer converged_monitor;
   PetscErrorCode (*monitorftns[MAXSNESLSMONITORS])(SNESLineSearch, void *); /* monitor routine */
   PetscCtxDestroyFn *monitordestroy[MAXSNESLSMONITORS];                     /* monitor context destroy routine */
   void              *monitorcontext[MAXSNESLSMONITORS];                     /* monitor context */

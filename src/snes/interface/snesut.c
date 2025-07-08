@@ -2,6 +2,7 @@
 #include <petscdm.h>
 #include <petscsection.h>
 #include <petscblaslapack.h>
+#include <petsc/private/viewerimpl.h>
 
 /*@C
   SNESMonitorSolution - Monitors progress of a `SNES` `SNESSolve()` by calling
@@ -146,6 +147,10 @@ PetscErrorCode KSPMonitorSNESResidual(KSP ksp, PetscInt n, PetscReal rnorm, Pets
   PetscReal         snorm;
   PetscInt          tablevel;
   const char       *prefix;
+  const char      **data;
+  const char      **info;
+  char              snorm_fmt[PETSC_MONITOR_REAL_LENGTH];
+  char              rnorm_fmt[PETSC_MONITOR_REAL_LENGTH];
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -163,8 +168,12 @@ PetscErrorCode KSPMonitorSNESResidual(KSP ksp, PetscInt n, PetscReal rnorm, Pets
   PetscCall(PetscObjectGetOptionsPrefix((PetscObject)ksp, &prefix));
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Residual norm %5.3e KSP Residual norm %5.3e\n", n, (double)snorm, (double)rnorm));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
+  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "KSP " PetscColorFmt("%s") " linear solve residual norms:\n", PetscColorArg(info, prefix)));
+  PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, snorm, PETSC_REAL_FMT_SHORT, snorm_fmt));
+  PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, rnorm, PETSC_REAL_FMT_SHORT, rnorm_fmt));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "KSP " PetscColorFmt("%3" PetscInt_FMT) " SNES Residual norm " PetscColorFmt("%s") " KSP Residual norm " PetscColorFmt("%s") "\n", PetscColorArg(data, n), PetscColorArg(data, snorm_fmt), PetscColorArg(data, rnorm_fmt)));
   PetscCall(PetscViewerASCIISubtractTab(viewer, tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -300,6 +309,7 @@ PetscErrorCode SNESMonitorDefault(SNES snes, PetscInt its, PetscReal fgnorm, Pet
   PetscViewer       viewer = vf->viewer;
   PetscViewerFormat format = vf->format;
   PetscBool         isascii, isdraw;
+  const char       *prefix;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -307,7 +317,14 @@ PetscErrorCode SNESMonitorDefault(SNES snes, PetscInt its, PetscReal fgnorm, Pet
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &isdraw));
   PetscCall(PetscViewerPushFormat(viewer, format));
   if (isascii) {
+    const char      **data;
+    const char      **info;
+
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
+    if (its == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%s") " nonlinear solver residual norms:\n", PetscColorArg(info, prefix)));
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
       Vec              dx;
       PetscReal        upnorm;
@@ -322,12 +339,12 @@ PetscErrorCode SNESMonitorDefault(SNES snes, PetscInt its, PetscReal fgnorm, Pet
 
         PetscCall(SNESGetSolution(snes, &x));
         PetscCall(SNESComputeObjective(snes, x, &obj));
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e, Update norm %14.12e, Objective %14.12e\n", its, (double)fgnorm, (double)upnorm, (double)obj));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%3" PetscInt_FMT) " Function norm " PetscColorFmt("%14.12e") ", Update norm " PetscColorFmt("%14.12e") ", Objective value " PetscColorFmt("% 14.12e") "\n", PetscColorArg(data, its), PetscColorArg(data, (double)fgnorm), PetscColorArg(data, (double)upnorm), PetscColorArg(data, (double)obj)));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e, Update norm %14.12e\n", its, (double)fgnorm, (double)upnorm));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%3" PetscInt_FMT) " Function norm " PetscColorFmt("%14.12e") ", Update norm " PetscColorFmt("%14.12e") "\n", PetscColorArg(data, its), PetscColorArg(data, (double)fgnorm), PetscColorArg(data, (double)upnorm)));
       }
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e\n", its, (double)fgnorm));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%3" PetscInt_FMT) " Function norm " PetscColorFmt("%14.12e") "\n", PetscColorArg(data, its), PetscColorArg(data, (double)fgnorm)));
     }
     PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)snes)->tablevel));
   } else if (isdraw) {
@@ -523,6 +540,9 @@ PetscErrorCode SNESMonitorRange(SNES snes, PetscInt it, PetscReal rnorm, PetscVi
   PetscViewer viewer = vf->viewer;
   /* should be in a MonitorRangeContext */
   static PetscReal prev;
+  const char *prefix;
+  const char **data;
+  const char **info;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -531,9 +551,13 @@ PetscErrorCode SNESMonitorRange(SNES snes, PetscInt it, PetscReal rnorm, PetscVi
 
   rel  = (prev - rnorm) / prev;
   prev = rnorm;
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
   PetscCall(PetscViewerPushFormat(viewer, vf->format));
   PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES preconditioned resid norm %14.12e Percent values above 20 percent of maximum %5.2g relative decrease %5.2e ratio %5.2e\n", it, (double)rnorm, (double)(100 * perc), (double)rel, (double)(rel / perc)));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
+  if (it == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%s") " nonlinear solve residual norms:\n", PetscColorArg(info, prefix)));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%3" PetscInt_FMT) " preconditioned resid norm " PetscColorFmt("%14.12e") " Percent values above 20 percent of maximum " PetscColorFmt("%6.2f") " relative decrease " PetscColorFmt("% 5.2e") " ratio " PetscColorFmt("% 5.2e") "\n", PetscColorArg(data, it), PetscColorArg(data, (double)rnorm), PetscColorArg(data, (double)(100 * perc)), PetscColorArg(data, (double)rel), PetscColorArg(data, (double)(rel / perc))));
   PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)snes)->tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -568,16 +592,23 @@ PetscErrorCode SNESMonitorRatio(SNES snes, PetscInt its, PetscReal fgnorm, Petsc
   PetscInt    len;
   PetscReal  *history;
   PetscViewer viewer = vf->viewer;
+  const char *prefix;
+  const char **data;
+  const char **info;
 
   PetscFunctionBegin;
   PetscCall(SNESGetConvergenceHistory(snes, &history, NULL, &len));
   PetscCall(PetscViewerPushFormat(viewer, vf->format));
   PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
+  if (its == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%s") " nonlinear solve residual norms:\n", PetscColorArg(info, prefix)));
   if (!its || !history || its > len) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e\n", its, (double)fgnorm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%3" PetscInt_FMT) " Function norm " PetscColorFmt("%14.12e") "\n", PetscColorArg(data, its), PetscColorArg(data, (double)fgnorm)));
   } else {
     PetscReal ratio = fgnorm / history[its - 1];
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e %14.12e\n", its, (double)fgnorm, (double)ratio));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%3" PetscInt_FMT) " Function norm " PetscColorFmt("%14.12e %14.12e") "\n", PetscColorArg(data, its), PetscColorArg(data, (double)fgnorm, (double)ratio)));
   }
   PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)snes)->tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
@@ -618,19 +649,22 @@ PetscErrorCode SNESMonitorRatioSetUp(SNES snes, PetscViewerAndFormat *vf)
 */
 PetscErrorCode SNESMonitorDefaultShort(SNES snes, PetscInt its, PetscReal fgnorm, PetscViewerAndFormat *vf)
 {
-  PetscViewer viewer = vf->viewer;
+  PetscViewer  viewer = vf->viewer;
+  const char  *prefix;
+  const char **info;
+  const char **data;
+  char         fgnorm_fmt[PETSC_MONITOR_REAL_LENGTH];
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(PetscViewerPushFormat(viewer, vf->format));
   PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
-  if (fgnorm > 1.e-9) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %g\n", its, (double)fgnorm));
-  } else if (fgnorm > 1.e-11) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %5.3e\n", its, (double)fgnorm));
-  } else {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm < 1.e-11\n", its));
-  }
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
+  if (its == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%s") " nonlinear solve residual norms:\n", PetscColorArg(info, prefix)));
+  PetscCall(PetscViewerASCIIFormatMonitorReal(viewer, fgnorm, PETSC_REAL_FMT_SHORT, fgnorm_fmt));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%3" PetscInt_FMT) " Function norm " PetscColorFmt("%s") "\n", PetscColorArg(data,its), PetscColorArg(data, fgnorm_fmt)));
   PetscCall(PetscViewerASCIISubtractTab(viewer, ((PetscObject)snes)->tablevel));
   PetscCall(PetscViewerPopFormat(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -667,6 +701,9 @@ PetscErrorCode SNESMonitorDefaultField(SNES snes, PetscInt its, PetscReal fgnorm
   DM          dm;
   PetscReal   res[256];
   PetscInt    tablevel;
+  const char *prefix;
+  const char **data;
+  const char **info;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -686,12 +723,18 @@ PetscErrorCode SNESMonitorDefaultField(SNES snes, PetscInt its, PetscReal fgnorm
     PetscCall(PetscObjectGetTabLevel((PetscObject)snes, &tablevel));
     PetscCall(PetscViewerPushFormat(viewer, vf->format));
     PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e [", its, (double)fgnorm));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
+    PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
+    if (its == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%s") " nonliner solve residual norms:\n", PetscColorArg(info, prefix)));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "SNES " PetscColorFmt("%3" PetscInt_FMT) " Function norm " PetscColorFmt("%14.12e") " [", PetscColorArg(data, its), PetscColorArg(data, (double)fgnorm)));
+    PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
     for (f = 0; f < Nf; ++f) {
       if (f) PetscCall(PetscViewerASCIIPrintf(viewer, ", "));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "%14.12e", (double)res[f]));
+      PetscCall(PetscViewerASCIIPrintf(viewer, PetscColorFmt("%14.12e"), PetscColorArg(data, (double)res[f])));
     }
     PetscCall(PetscViewerASCIIPrintf(viewer, "] \n"));
+    PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
     PetscCall(PetscViewerASCIISubtractTab(viewer, tablevel));
     PetscCall(PetscViewerPopFormat(viewer));
   }

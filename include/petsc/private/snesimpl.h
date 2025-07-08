@@ -309,6 +309,11 @@ PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL PetscErrorCode KSPPostSolve_SNESEW(KSP,
 PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL PetscErrorCode KSPPreSolve_SNESEW(KSP, Vec, Vec, void *);
 PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL PetscErrorCode SNESEWSetFromOptions_Private(SNESKSPEW *, PetscBool, MPI_Comm, const char *);
 
+PETSC_INTERN PetscErrorCode SNESLineSearchSetConvergenceReasonDefault_Internal(SNESLineSearch, PetscInt, PetscReal, SNESLineSearchReason, const char[]);
+PETSC_INTERN PetscErrorCode SNESLineSearchComputeObjectiveDefault_Internal(SNESLineSearch, PetscInt, PetscBool, PetscReal, PetscReal, PetscReal *, PetscBool *);
+PETSC_INTERN PetscErrorCode SNESLineSearchMonitorDefault_Internal(SNESLineSearch, PetscInt, PetscScalar, PetscScalar, PetscScalar);
+PETSC_INTERN PetscErrorCode SNESLineSearchCheckConvergenceDefault_Internal(SNESLineSearch, PetscInt, PetscScalar, PetscScalar, PetscScalar, PetscScalar, PetscScalar, PetscBool *);
+
 /*
     Either generate an error or mark as diverged when a real from a SNES function norm is Nan or Inf.
     domainerror is reset here, once reason is set, to allow subsequent iterations to be feasible (e.g. line search).

@@ -1,5 +1,6 @@
 #include <petsc/private/petscimpl.h> /*I    "petscsys.h"   I*/
 #include <petscviewer.h>
+#include <petsc/private/viewerimpl.h>
 
 /*@
   PetscObjectSetName - Sets a string name for a PETSc object.
@@ -54,21 +55,25 @@ PetscErrorCode PetscObjectPrintClassNamePrefixType(PetscObject obj, PetscViewer 
   PetscMPIInt       size;
   PetscViewerFormat format;
   PetscBool         flg;
+  const char **info;
+  const char **data;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &flg));
   if (obj->donotPetscObjectPrintClassNamePrefixType) PetscFunctionReturn(PETSC_SUCCESS);
   if (!flg) PetscFunctionReturn(PETSC_SUCCESS);
 
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_INFO, &info));
+  PetscCall(PetscViewerASCIIGetColor(viewer, PETSC_COLOR_DATA, &data));
   PetscCall(PetscViewerGetFormat(viewer, &format));
   if (format == PETSC_VIEWER_ASCII_MATRIXMARKET || format == PETSC_VIEWER_ASCII_LATEX || format == PETSC_VIEWER_ASCII_GLVIS) PetscFunctionReturn(PETSC_SUCCESS);
 
   if (format == PETSC_VIEWER_ASCII_MATLAB) PetscCall(PetscViewerASCIIPrintf(viewer, "%%"));
   PetscCallMPI(MPI_Comm_size(PetscObjectComm(obj), &size));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%s Object:%s%s%s%s%s %d MPI process%s\n", obj->class_name, obj->name ? " " : "", obj->name ? obj->name : "", obj->prefix ? " (" : "", obj->prefix ? obj->prefix : "", obj->prefix ? ")" : "", size, size > 1 ? "es" : ""));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%s Object:%s" PetscColorFmt("%s%s%s%s") " %d MPI process%s\n", obj->class_name, obj->name ? " " : "", PetscColorArg(info, obj->name ? obj->name : "", obj->prefix ? " (" : "", obj->prefix ? obj->prefix : "", obj->prefix ? ")" : ""), size, size > 1 ? "es" : ""));
   if (format == PETSC_VIEWER_ASCII_MATLAB) PetscCall(PetscViewerASCIIPrintf(viewer, "%%"));
   if (obj->type_name) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  type: %s\n", obj->type_name));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  type: " PetscColorFmt("%s") "\n", PetscColorArg(data,obj->type_name)));
   } else {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  type not yet set\n"));
   }

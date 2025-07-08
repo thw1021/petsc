@@ -673,6 +673,7 @@ PetscErrorCode SNESLineSearchDestroy(SNESLineSearch *linesearch)
   PetscCall(SNESLineSearchReset(*linesearch));
   PetscTryTypeMethod(*linesearch, destroy);
   PetscCall(PetscViewerDestroy(&(*linesearch)->monitor));
+  PetscCall(PetscViewerDestroy(&(*linesearch)->converged_monitor));
   PetscCall(SNESLineSearchMonitorCancel(*linesearch));
   PetscCall(PetscHeaderDestroy(linesearch));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -800,6 +801,7 @@ PetscErrorCode SNESLineSearchMonitorSetFromOptions(SNESLineSearch ls, const char
 . -snes_linesearch_max_it                                           - The number of iterations for iterative line searches
 . -snes_linesearch_monitor [:filename]                              - Print progress of line searches
 . -snes_linesearch_monitor_solution_update [viewer:filename:format] - view each update tried by line search routine
+. -snes_linesearch_converged_reason                                 - view the convergence state at the end of the line search
 . -snes_linesearch_damping                                          - The linesearch damping parameter
 . -snes_linesearch_keeplambda                                       - Keep the previous search length as the initial guess.
 . -snes_linesearch_precheck_picard                                  - Use precheck that speeds up convergence of picard method
@@ -831,6 +833,10 @@ PetscErrorCode SNESLineSearchSetFromOptions(SNESLineSearch linesearch)
 
   PetscCall(PetscOptionsCreateViewer(PetscObjectComm((PetscObject)linesearch), ((PetscObject)linesearch)->options, ((PetscObject)linesearch)->prefix, "-snes_linesearch_monitor", &viewer, NULL, &set));
   if (set) PetscCall(SNESLineSearchSetDefaultMonitor(linesearch, viewer));
+  PetscCall(PetscOptionsCreateViewer(PetscObjectComm((PetscObject)linesearch), ((PetscObject)linesearch)->options, ((PetscObject)linesearch)->prefix, "-snes_linesearch_converged_reason", &viewer, NULL, &set));
+  if (set) {
+    linesearch->converged_monitor = viewer;
+  }
   PetscCall(SNESLineSearchMonitorSetFromOptions(linesearch, "-snes_linesearch_monitor_solution_update", "View correction at each iteration", "SNESLineSearchMonitorSolutionUpdate", SNESLineSearchMonitorSolutionUpdate, NULL));
 
   /* tolerances */

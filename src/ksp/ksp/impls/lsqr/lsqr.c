@@ -391,11 +391,11 @@ static PetscErrorCode KSPLSQRMonitorResidual_LSQR(KSP ksp, PetscInt n, PetscReal
   PetscCall(PetscStrtolower(normtype));
   PetscCall(PetscViewerPushFormat(viewer, format));
   PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
-  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norm, norm of normal equations, and matrix norm for %s solve.\n", prefix));
+  if (n == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "Residual norm, norm of normal equations, and matrix norm for %s solve.\n", prefix));
   if (!n) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " KSP resid norm %14.12e\n", n, (double)rnorm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " KSP resid norm %14.12e\n", n, (double)rnorm));
   } else {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " KSP resid norm %14.12e normal eq resid norm %14.12e matrix norm %14.12e\n", n, (double)rnorm, (double)lsqr->arnorm, (double)lsqr->anorm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%-3" PetscInt_FMT " KSP resid norm %14.12e normal eq resid norm %14.12e matrix norm %14.12e\n", n, (double)rnorm, (double)lsqr->arnorm, (double)lsqr->anorm));
   }
   PetscCall(PetscViewerASCIISubtractTab(viewer, tablevel));
   PetscCall(PetscViewerPopFormat(viewer));

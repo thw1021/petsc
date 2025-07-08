@@ -431,6 +431,7 @@ PetscErrorCode SNESFASCycleCreateSmoother_Private(SNES snes, SNES *smooth)
   PetscCall(SNESGetOptionsPrefix(fas->fine, &optionsprefix));
   /* create the default smoother */
   PetscCall(SNESCreate(PetscObjectComm((PetscObject)snes), &nsmooth));
+  PetscCall(PetscObjectIncrementTabLevel((PetscObject)nsmooth, (PetscObject)snes, 1));
   if (fas->level == 0) {
     PetscCall(PetscStrncpy(tprefix, "fas_coarse_", sizeof(tprefix)));
     PetscCall(SNESAppendOptionsPrefix(nsmooth, optionsprefix));
@@ -444,7 +445,6 @@ PetscErrorCode SNESFASCycleCreateSmoother_Private(SNES snes, SNES *smooth)
     PetscCall(SNESSetType(nsmooth, SNESNRICHARDSON));
     PetscCall(SNESSetTolerances(nsmooth, 0.0, 0.0, 0.0, fas->max_down_it, nsmooth->max_funcs));
   }
-  PetscCall(PetscObjectIncrementTabLevel((PetscObject)nsmooth, (PetscObject)snes, 1));
   PetscCall(PetscObjectCopyFortranFunctionPointers((PetscObject)snes, (PetscObject)nsmooth));
   PetscCall(PetscObjectComposedDataSetInt((PetscObject)nsmooth, PetscMGLevelId, fas->level));
   *smooth = nsmooth;
