@@ -651,17 +651,9 @@ static PetscErrorCode PCReset_HYPRE(PC pc)
   PetscCall(VecHYPRE_IJVectorDestroy(&jac->constants[2]));
   PetscCall(VecHYPRE_IJVectorDestroy(&jac->interior));
   PetscCall(PCHYPREResetNearNullSpace_Private(pc));
-  jac->ams_beta_is_zero        = PETSC_FALSE;
-  jac->ams_beta_is_zero_part   = PETSC_FALSE;
-  jac->dim                     = 0;
-  jac->coarsentype_setbyuser   = PETSC_FALSE;
-  jac->relaxtype_setbyuser     = PETSC_FALSE;
-  jac->relaxorder_setbyuser    = PETSC_FALSE;
-  jac->interptype_setbyuser    = PETSC_FALSE;
-  jac->keeptranspose_setbyuser = PETSC_FALSE;
-#if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
-  jac->spgemm_type_setbyuser = PETSC_FALSE;
-#endif
+  jac->ams_beta_is_zero      = PETSC_FALSE;
+  jac->ams_beta_is_zero_part = PETSC_FALSE;
+  jac->dim                   = 0;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
