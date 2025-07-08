@@ -430,6 +430,17 @@ static PetscErrorCode MatDestroy_MPIAIJHIPSPARSE(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatGetCurrentMemType_MPIAIJHIPSPARSE(Mat A, PetscMemType *m)
+{
+  PetscBool bound;
+
+  PetscFunctionBegin;
+  PetscCall(MatBoundToCPU(A, &bound));
+  if (bound) *m = PETSC_MEMTYPE_HOST;
+  else *m = PETSC_MEMTYPE_HIP;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJHIPSPARSE(Mat B, MatType mtype, MatReuse reuse, Mat *newmat)
 {
   Mat_MPIAIJ *a;
@@ -459,6 +470,7 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJHIPSPARSE(Mat B, MatType mty
   A->ops->destroy               = MatDestroy_MPIAIJHIPSPARSE;
   A->ops->zeroentries           = MatZeroEntries_MPIAIJHIPSPARSE;
   A->ops->productsetfromoptions = MatProductSetFromOptions_MPIAIJBACKEND;
+  A->ops->getcurrentmemtype     = MatGetCurrentMemType_MPIAIJHIPSPARSE;
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATMPIAIJHIPSPARSE));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJGetLocalMatMerge_C", MatMPIAIJGetLocalMatMerge_MPIAIJHIPSPARSE));

@@ -206,6 +206,7 @@ struct _MatOps {
   PetscErrorCode (*getblockdiagonal)(Mat, Mat *);  // NOTE: the caller of get{block, vblock}diagonal owns the returned matrix;
   PetscErrorCode (*getvblockdiagonal)(Mat, Mat *); // they must destroy it after use
   PetscErrorCode (*copyhashtoxaij)(Mat, Mat);
+  PetscErrorCode (*getcurrentmemtype)(Mat, PetscMemType *);
 };
 /*
     If you add MatOps entries above also add them to the MATOP enum
@@ -246,6 +247,9 @@ PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat, MatType, MatReuse, M
 #endif
 PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_Basic(Mat, PetscCount, PetscInt[], PetscInt[]);
 PETSC_INTERN PetscErrorCode MatSetValuesCOO_Basic(Mat, const PetscScalar[], InsertMode);
+#if defined(PETSC_HAVE_HYPRE)
+PETSC_INTERN PetscErrorCode MatSetMemoryLocation_HYPRE(Mat);
+#endif
 
 /* This can be moved to the public header after implementing some missing MatProducts */
 PETSC_INTERN PetscErrorCode MatCreateFromISLocalToGlobalMapping(ISLocalToGlobalMapping, Mat, PetscBool, PetscBool, MatType, Mat *);
@@ -859,6 +863,16 @@ static inline PetscErrorCode MatPivotCheck(Mat fact, Mat mat, const MatFactorInf
   else if (info->shifttype == (PetscReal)MAT_SHIFT_POSITIVE_DEFINITE) PetscCall(MatPivotCheck_pd(mat, info, sctx, row));
   else if (info->shifttype == (PetscReal)MAT_SHIFT_INBLOCKS) PetscCall(MatPivotCheck_inblocks(mat, info, sctx, row));
   else PetscCall(MatPivotCheck_none(fact, mat, info, sctx, row));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static inline PetscErrorCode MatGetCurrentMemType(Mat A, PetscMemType *m)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscAssertPointer(m, 2);
+  if (A->ops->getcurrentmemtype) PetscUseTypeMethod(A, getcurrentmemtype, m);
+  else *m = PETSC_MEMTYPE_HOST;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
