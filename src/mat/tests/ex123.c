@@ -259,10 +259,10 @@ int main(int argc, char **args)
    test:
      suffix: 1
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type {{seqaij mpiaij}} -localapi {{0 1}} -neg {{0 1}}
 
    test:
-     requires: !single
      suffix: 1_blocked
      filter: grep -v type | grep -v "Mat Object"
      args: -mat_block_size 2 -mat_type seqaij -localapi 0 -neg {{0 1}}
@@ -271,6 +271,7 @@ int main(int argc, char **args)
      requires: hypre
      suffix: 1_hypre
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type hypre -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_1.out
 
@@ -278,6 +279,7 @@ int main(int argc, char **args)
      requires: cuda
      suffix: 1_cuda
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type {{seqaijcusparse mpiaijcusparse}} -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_1.out
 
@@ -285,6 +287,7 @@ int main(int argc, char **args)
      requires: kokkos_kernels
      suffix: 1_kokkos
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type {{seqaijkokkos mpiaijkokkos}} -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_1.out
 
@@ -292,6 +295,7 @@ int main(int argc, char **args)
      suffix: 2
      nsize: 7
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type mpiaij -localapi {{0 1}} -neg {{0 1}}
 
    test:
@@ -299,6 +303,7 @@ int main(int argc, char **args)
      suffix: 2_hypre
      nsize: 7
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type hypre -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_2.out
 
@@ -307,6 +312,7 @@ int main(int argc, char **args)
      suffix: 2_cuda
      nsize: 7
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type mpiaijcusparse -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_2.out
 
@@ -315,6 +321,7 @@ int main(int argc, char **args)
      suffix: 2_kokkos
      nsize: 7
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type mpiaijkokkos -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_2.out
 
@@ -322,6 +329,7 @@ int main(int argc, char **args)
      suffix: 3
      nsize: 3
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type mpiaij -loc -localapi {{0 1}} -neg {{0 1}}
 
    test:
@@ -329,6 +337,7 @@ int main(int argc, char **args)
      suffix: 3_hypre
      nsize: 3
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type hypre -loc -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_3.out
 
@@ -337,6 +346,7 @@ int main(int argc, char **args)
      suffix: 3_cuda
      nsize: 3
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type mpiaijcusparse -loc -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_3.out
 
@@ -345,6 +355,7 @@ int main(int argc, char **args)
      suffix: 3_kokkos
      nsize: 3
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type aijkokkos -loc -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_3.out
 
@@ -352,6 +363,7 @@ int main(int argc, char **args)
      suffix: 4
      nsize: 4
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type mpiaij -loc -locdiag 0 -localapi {{0 1}} -neg {{0 1}}
 
    test:
@@ -359,6 +371,7 @@ int main(int argc, char **args)
      suffix: 4_hypre
      nsize: 4
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type hypre -loc -locdiag 0 -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_4.out
 
@@ -367,6 +380,7 @@ int main(int argc, char **args)
      suffix: 4_cuda
      nsize: 4
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type mpiaijcusparse -loc -locdiag 0 -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_4.out
 
@@ -375,6 +389,7 @@ int main(int argc, char **args)
      suffix: 4_kokkos
      nsize: 4
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type aijkokkos -loc -locdiag 0 -localapi {{0 1}} -neg {{0 1}}
      output_file: output/ex123_4.out
 
@@ -382,6 +397,7 @@ int main(int argc, char **args)
      suffix: matis
      nsize: 3
      filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
      args: -mat_type is -localapi {{0 1}} -neg {{0 1}}
 
 TEST*/
