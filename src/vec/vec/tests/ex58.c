@@ -47,7 +47,7 @@ int main(int argc, char **argv)
     requires: cuda
 
   testset:
-    output_file: output/empty.out
+    output_file: /dev/null
     nsize: {{1 2}}
 
     test:

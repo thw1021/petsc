@@ -53,6 +53,6 @@
 !/*TEST
 !
 !   test:
-!     output_file: output/ex1_1.out
+!     output_file: /dev/null
 !
 !TEST*/

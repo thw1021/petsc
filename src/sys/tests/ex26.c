@@ -54,11 +54,12 @@ int main(int argc, char **argv)
 
    test:
       requires: !saws
+      output_file: /dev/null
 
    test:
       requires: !saws
       suffix: 2
       nsize: 2
-      output_file: output/ex26_1.out
+      output_file: /dev/null
 
 TEST*/
