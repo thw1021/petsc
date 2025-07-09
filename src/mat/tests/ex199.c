@@ -52,6 +52,6 @@ int main(int argc, char **args)
       nsize: {{1 2}}
       requires: datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
       args: -f ${DATAFILESPATH}/matrices/arco1 -mat_coloring_type {{sl lf id}} -mat_coloring_distance 2
-      output_file: output/ex199_1.out
+      output_file: output/empty.out
 
 TEST*/

@@ -106,6 +106,6 @@ int main(int argc, char **argv)
          nsize: 4
          suffix: 2
          args: -ndof 2
-         output_file: output/ex9_1.out
+         output_file: output/empty.out
 
 TEST*/

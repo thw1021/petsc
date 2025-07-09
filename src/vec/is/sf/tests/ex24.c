@@ -107,7 +107,7 @@ int main(int argc, char **argv)
     TODO: frequent timeout with the CI job linux-hip-cmplx
     nsize: 4
     suffix: 0_window
-    output_file: output/ex24_0.out
+    output_file: output/empty.out
     args: -sf_type window -sf_window_sync {{fence active lock}} -sf_window_flavor {{create dynamic allocate}}
     requires: defined(PETSC_HAVE_MPI_ONE_SIDED) defined(PETSC_HAVE_MPI_FEATURE_DYNAMIC_WINDOW)
 

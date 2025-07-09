@@ -319,6 +319,6 @@ int main(int argc, char **args)
    test:
       suffix: 3
       args: -testaij
-      output_file: output/ex76_1.out
+      output_file: output/empty.out
 
 TEST*/

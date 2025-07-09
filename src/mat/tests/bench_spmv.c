@@ -387,13 +387,13 @@ int main(int argc, char **args)
    test:
       suffix: 2
       args:-AMTX ${wPETSC_DIR}/share/petsc/datafiles/matrices/amesos2_test_mat0.mtx -use_gpu
-      output_file: output/bench_spmv_1.out
+      output_file: output/empty.out
       requires: cuda
 
    test:
       suffix: 3
       args:-AMTX ${wPETSC_DIR}/share/petsc/datafiles/matrices/amesos2_test_mat0.mtx -use_gpu
-      output_file: output/bench_spmv_1.out
+      output_file: output/empty.out
       requires: hip
 
 TEST*/

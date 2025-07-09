@@ -139,6 +139,6 @@ int main(int argc, char **args)
       suffix: 2
       nsize: 2
       requires: mumps
-      output_file: output/ex53.out
+      output_file: output/empty.out
 
 TEST*/

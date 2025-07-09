@@ -158,13 +158,13 @@ int main(int argc, char **args)
       nsize: {{1 4}}
       suffix: superlu_dist
       requires: superlu_dist
-      output_file: output/ex49_cholmod.out
+      output_file: output/empty.out
       args: -mat_type mpiaij -bs 3 -pc_type cholesky -pc_factor_mat_solver_type superlu_dist -herm {{0 1}} -conv {{0 1}}
 
    test:
       suffix: mkl_pardiso
       requires: mkl_pardiso
-      output_file: output/ex49_1.out
+      output_file: output/empty.out
       args: -bs {{1 3}} -pc_type cholesky -pc_factor_mat_solver_type mkl_pardiso
 
    test:

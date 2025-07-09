@@ -170,6 +170,6 @@ int main(int argc, char **args)
       nsize: 1
       args: -m 2 -n 3
       requires: elemental
-      output_file: output/ex39_1.out
+      output_file: output/empty.out
 
 TEST*/

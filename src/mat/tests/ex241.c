@@ -250,6 +250,6 @@ int main(int argc, char **argv)
       suffix: 2
       nsize: 4
       args: -m_local 120 -mat_htool_epsilon 1.0e-2 -mat_htool_compressor {{sympartialACA fullACA SVD}shared output} -mat_htool_clustering {{PCARegular PCAGeometric BoundingBox1Regular BoundingBox1Geometric}shared output}
-      output_file: output/ex241_1.out
+      output_file: output/empty.out
 
 TEST*/

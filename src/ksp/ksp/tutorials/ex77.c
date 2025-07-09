@@ -167,7 +167,7 @@ int main(int argc, char **args)
       args: -N 3 -f ${DATAFILESPATH}/matrices/hpddm/GCRODR/A_400.dat -ksp_type hpddm -breakdown
       test:
          suffix: breakdown_wo_deflation
-         output_file: output/ex77_preonly.out
+         output_file: output/empty.out
          args: -pc_type none -ksp_hpddm_type {{bcg bgmres bgcrodr bfbcg}shared output}
       test:
          suffix: breakdown_w_deflation

@@ -240,7 +240,7 @@ int main(int argc, char **args)
 
    testset:
       requires: parmetis
-      output_file: output/ex55_1.out
+      output_file: output/empty.out
       nsize: 3
       args: -mat_is_disassemble_l2g_type nd -mat_partitioning_type parmetis
       test:
@@ -255,7 +255,7 @@ int main(int argc, char **args)
 
    testset:
       requires: ptscotch defined(PETSC_HAVE_SCOTCH_PARMETIS_V3_NODEND)
-      output_file: output/ex55_1.out
+      output_file: output/empty.out
       nsize: 4
       args: -mat_is_disassemble_l2g_type nd -mat_partitioning_type ptscotch
       test:

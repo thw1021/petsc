@@ -157,7 +157,7 @@ int main(int argc, char **argv)
 
    testset:
      nsize: 3
-     output_file: output/ex28_1.out
+     output_file: output/empty.out
 
      test:
         suffix: 2

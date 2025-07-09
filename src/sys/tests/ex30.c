@@ -236,7 +236,7 @@ int main(int argc, char **argv)
   test:
     suffix: 11
     requires: defined(PETSC_USE_LOG)
-    output_file: output/ex30_0.out
+    output_file: output/empty.out
     temporaries: default.log flamegraph.log
     args: -log_view :default.log,:flamegraph.log:ascii_flamegraph
 
@@ -244,7 +244,7 @@ int main(int argc, char **argv)
   test:
     suffix: 12
     requires: defined(PETSC_USE_LOG)
-    output_file: output/ex30_0.out
+    output_file: output/empty.out
     temporaries: default.log flamegraph.log
     args: -log_view :flamegraph.log:ascii_flamegraph,:default.log
 

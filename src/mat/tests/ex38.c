@@ -142,6 +142,6 @@ int main(int argc, char **args)
       nsize: 6
       requires: elemental
       args: -mat_type elemental -m 2 -n 2 -test_matmatmult
-      output_file: output/ex38_2.out
+      output_file: output/empty.out
 
 TEST*/
