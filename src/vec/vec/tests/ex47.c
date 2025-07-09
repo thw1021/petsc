@@ -71,7 +71,6 @@ int main(int argc, char **args)
 
    test:
      requires: hdf5
-     output_file: output/empty.out
 
    test:
      suffix: 2
