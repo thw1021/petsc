@@ -178,10 +178,12 @@ int main(int argc, char **argv)
       args: -nox
       filter: grep -v -i Object
       requires: x
+      output_file: output/empty.out
 
    test:
       suffix: 2
       args: -testorder -nox
       requires: x
+      output_file: output/empty.out
 
 TEST*/

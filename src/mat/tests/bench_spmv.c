@@ -383,6 +383,7 @@ int main(int argc, char **args)
    test:
       suffix: 1
       args: -AMTX ${wPETSC_DIR}/share/petsc/datafiles/matrices/amesos2_test_mat0.mtx
+      output_file: output/empty.out
 
    test:
       suffix: 2

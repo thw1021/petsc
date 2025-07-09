@@ -213,6 +213,7 @@ PetscErrorCode InitialConditions(DM da, Vec U)
       suffix: 3
       nsize: 2
       args: -ts_max_steps 10 -ts_dt 10 -ts_adjoint_monitor_draw_sensi
+      output_file: output/empty.out
 
    test:
       suffix: 4

@@ -784,6 +784,7 @@ int main(int argc, char **args)
 /*TEST
 
   test:
+    output_file: output/empty.out
     suffix: 1
     args: -local {{0 1}} -testshellops
 

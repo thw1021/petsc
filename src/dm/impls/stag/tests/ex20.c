@@ -69,6 +69,7 @@ int main(int argc, char **argv)
       suffix: 1d
       nsize: 1
       args: -dim 1
+      output_file: output/empty.out
 
    test:
       suffix: 1d_ratio

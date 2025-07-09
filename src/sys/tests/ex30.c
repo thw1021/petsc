@@ -152,6 +152,7 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     nsize: {{1 2}}
+    output_file: output/empty.out
 
   # flamegraph: times of PetscSleep() are designed so the flamegraph should have reproducible entries
   test:

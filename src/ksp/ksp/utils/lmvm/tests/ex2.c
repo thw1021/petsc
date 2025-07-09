@@ -110,6 +110,7 @@ int main(int argc, char **argv)
 
   test:
     suffix: 0
+    output_file: output/empty.out
     args: -diag_mat_lmvm_theta 0.618 -diag_mat_lmvm_sigma_hist 0 -diag_mat_lmvm_forward
 
   test:

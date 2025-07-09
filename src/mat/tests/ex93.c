@@ -180,6 +180,7 @@ PetscErrorCode testPTAPRectangular(void)
 /*TEST
 
    test:
+      output_file: output/empty.out
 
    test:
       suffix: 2

@@ -167,6 +167,7 @@ int main(int argc, char **args)
       suffix: scalapack
       requires: datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
       args: -fA ${DATAFILESPATH}/matrices/EigenProblems/Eigdftb/dftb_bin/graphene_xxs_A_aij -fB ${DATAFILESPATH}/matrices/EigenProblems/Eigdftb/dftb_bin/graphene_xxs_B_aij -orig_mat_type scalapack
+      output_file: output/empty.out
 
    test:
       suffix: sbaij

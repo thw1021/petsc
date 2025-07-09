@@ -220,6 +220,7 @@ int main(int argc, char **args)
       requires: !single # garbage prints in single precision from sgemr2d
       nsize: 2
       args: -mb 5 -nb 5 -M 12 -N 10
+      output_file: output/empty.out
 
    test:
       requires: !single # garbage prints in single precision from sgemr2d

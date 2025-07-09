@@ -102,6 +102,7 @@ int main(int argc, char **argv)
   test:
     nsize: 4
     suffix: 0
+    output_file: output/empty.out
 
   test:
     TODO: frequent timeout with the CI job linux-hip-cmplx

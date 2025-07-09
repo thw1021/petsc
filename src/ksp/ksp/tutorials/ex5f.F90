@@ -414,6 +414,7 @@ end program main
 !      nsize: 15
 !      requires: superlu_dist
 !      args: -pc_type lu -pc_factor_mat_solver_type superlu_dist -mat_superlu_dist_equil false -m 150 -mat_superlu_dist_r 3 -mat_superlu_dist_c 5 -test_scaledMat
+!      output_file: output/empty.out
 !
 !   test:
 !      suffix: superlu_dist_2

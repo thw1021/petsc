@@ -193,6 +193,7 @@ int main(int argc, char **args)
       requires: datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
       nsize: 3
       args: -matload_block_size 1 -f ${DATAFILESPATH}/matrices/small
+      output_file: output/empty.out
 
    test:
       suffix: 2

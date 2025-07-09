@@ -134,6 +134,7 @@ int main(int argc, char **args)
 
    test:
       requires: mumps
+      output_file: output/empty.out
 
    test:
       suffix: 2
