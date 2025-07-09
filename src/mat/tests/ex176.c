@@ -74,7 +74,7 @@ int main(int argc, char **argv)
 /*TEST
    testset:
      nsize: {{1 3}}
-     output_file: output/empty.out
+     output_file: /dev/null
 
      test:
        suffix: aij

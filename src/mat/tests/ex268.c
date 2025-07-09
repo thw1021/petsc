@@ -141,6 +141,6 @@ int main(int argc, char **argv)
       suffix: 1
       nsize: 1
       args: -mat_htool_epsilon 1.0e-11
-      output_file: output/empty.out
+      output_file: /dev/null
 
 TEST*/

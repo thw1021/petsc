@@ -66,6 +66,6 @@ int main(int argc, char **argv)
 /*TEST
 
   test:
-    output_file: output/empty.out
+    output_file: /dev/null
 
 TEST*/

@@ -92,5 +92,5 @@ int main(int argc, char **args)
   test:
     requires: kokkos_kernels
     args: -mat_type aijkokkos
-    output_file: output/empty.out
+    output_file: /dev/null
 TEST*/

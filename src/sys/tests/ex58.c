@@ -45,11 +45,11 @@ int main(int argc, char **argv)
 /*TEST
 
    test:
-     output_file: output/ex58_1.out
+     output_file: /dev/null
 
    test:
      suffix: 2
-     output_file: output/ex58_1.out
+     output_file: /dev/null
      nsize: 2
 
 TEST*/

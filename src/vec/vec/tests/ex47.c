@@ -75,15 +75,18 @@ int main(int argc, char **args)
    test:
      suffix: 2
      nsize: 4
+     output_file: /dev/null
 
    test:
      suffix: 3
      nsize: 4
      args: -viewer_hdf5_base_dimension2
+     output_file: /dev/null
 
    test:
      suffix: 4
      nsize: 4
      args: -viewer_hdf5_sp_output
+     output_file: /dev/null
 
 TEST*/
