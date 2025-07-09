@@ -95,6 +95,7 @@ int main(int argc, char **argv)
    test:
       requires: !single # garbage prints in single precision from sgemr2d
       nsize: 6
+      output_file: output/empty.out
 
    test:
       requires: !single # garbage prints in single precision from sgemr2d

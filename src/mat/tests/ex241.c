@@ -244,6 +244,7 @@ int main(int argc, char **argv)
       suffix: 1
       nsize: 4
       args: -m_local 80 -n_local 25 -mat_htool_epsilon 1.0e-11 -symmetric {{false true}shared output}
+      output_file: output/empty.out
 
    test:
       requires: htool

@@ -101,6 +101,7 @@ int main(int argc, char **argv)
 
       test:
          nsize: 4
+         output_file: output/empty.out
 
       test:
          nsize: 4

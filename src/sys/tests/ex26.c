@@ -54,6 +54,7 @@ int main(int argc, char **argv)
 
    test:
       requires: !saws
+      output_file: output/empty.out
 
    test:
       requires: !saws

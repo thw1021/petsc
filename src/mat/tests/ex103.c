@@ -99,6 +99,7 @@ int main(int argc, char **argv)
 
    test:
       nsize: 6
+      output_file: output/empty.out
 
    test:
       suffix: 2

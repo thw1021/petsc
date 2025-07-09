@@ -197,6 +197,7 @@ int main(int argc, char **args)
       nsize: 3
       requires: parmetis datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
       args: -nox -f ${DATAFILESPATH}/matrices/arco1 -mat_partitioning_type parmetis -viewer_binary_skip_info -novec_load
+      output_file: output/empty.out
 
    test:
       requires: parmetis !complex double !defined(PETSC_USE_64BIT_INDICES)

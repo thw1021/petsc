@@ -46,6 +46,7 @@ int main(int argc, char **args)
       nsize: {{3}}
       requires: datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
       args: -f ${DATAFILESPATH}/matrices/arco1 -mat_coloring_type {{ jp power natural greedy}} -mat_coloring_distance {{ 1 2}}
+      output_file: output/empty.out
 
    test:
       suffix: 2

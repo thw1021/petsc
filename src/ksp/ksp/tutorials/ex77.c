@@ -160,6 +160,7 @@ int main(int argc, char **args)
       requires: hpddm datafilespath double !complex !defined(PETSC_USE_64BIT_INDICES)
       suffix: preonly
       args: -N 6 -f ${DATAFILESPATH}/matrices/hpddm/GCRODR/A_400.dat -pc_type lu -ksp_type hpddm -ksp_hpddm_type preonly
+      output_file: output/empty.out
 
    testset:
       nsize: 1

@@ -130,12 +130,14 @@ int main(int argc, char **args)
       nsize: 2
       requires: elemental
       args: -mat_type elemental -m 2 -n 3
+      output_file: output/empty.out
 
    test:
       suffix: 2
       nsize: 6
       requires: elemental
       args: -mat_type elemental -m 2 -n 2
+      output_file: output/empty.out
 
    test:
       suffix: 3

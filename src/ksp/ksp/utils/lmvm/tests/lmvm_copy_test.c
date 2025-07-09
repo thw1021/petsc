@@ -194,6 +194,7 @@ int main(int argc, char **argv)
   # dense != compact_dense
   test:
     suffix: 0
+    output_file: output/empty.out
     args: -mat_lmvm_mult_algorithm {{recursive dense compact_dense}} -mat_type {{lmvmbfgs lmvmdfp lmvmbroyden lmvmbadbroyden}}
 
   # dense == compact_dense
