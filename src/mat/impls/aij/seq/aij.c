@@ -4911,7 +4911,6 @@ static PetscErrorCode MatSetValuesCOOBlocked_SeqAIJ(Mat A, const PetscScalar v[]
   PetscScalar         *Aa;
   PetscContainer       container;
   MatCOOStruct_SeqAIJ *coo;
-  PetscBool            usecprow = aseq->compressedrow.use;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectQuery((PetscObject)A, "__PETSc_MatCOOStruct_Host", (PetscObject *)&container));
