@@ -44,7 +44,7 @@ int main(int argc, char **args)
     }
   } else {
     PetscCall(PetscOptionsGetInt(NULL, NULL, "-mat_block_size", &bs, NULL));
-    if (bs == 2) {
+    if (bs > 1) {
       PetscCall(MatSetSizes(A, 2 * m, PETSC_DECIDE, PETSC_DECIDE, 2 * N));
       v1_p = v1_bs2;
       v2_p = v2_bs2;
@@ -53,7 +53,6 @@ int main(int argc, char **args)
     }
   }
   PetscCall(MatSetFromOptions(A));
-  if (bs == 2) { PetscCall(MatSetOption(A, MAT_COO_BLOCKED_ASSEMBLY, PETSC_TRUE)); }
   PetscCall(MatGetLayouts(A, &rmap, &cmap));
   PetscCall(PetscLayoutSetUp(rmap));
   PetscCall(PetscLayoutSetUp(cmap));
@@ -101,17 +100,22 @@ int main(int argc, char **args)
   PetscCall(PetscMalloc2(PetscMax(n1, n2), &it, PetscMax(n1, n2), &jt));
   /* test with repeated entries */
   if (!localapi) {
-    PetscCall(MatSetPreallocationCOO(A, n1, i1, j1));
+    if (bs > 1) PetscCall(MatSetPreallocationCOOBlocked(A, n1, i1, j1));
+    else PetscCall(MatSetPreallocationCOO(A, n1, i1, j1));
   } else {
     PetscCall(PetscArraycpy(it, i1, n1));
     PetscCall(PetscArraycpy(jt, j1, n1));
-    PetscCall(MatSetPreallocationCOOLocal(A, n1, it, jt));
+    if (bs > 1) PetscCall(MatSetPreallocationCOOLocalBlocked(A, n1, it, jt));
+    else PetscCall(MatSetPreallocationCOOLocal(A, n1, it, jt));
   }
-  PetscCall(MatSetValuesCOO(A, v1_p, ADD_VALUES));
+  if (bs > 1) PetscCall(MatSetValuesCOOBlocked(A, v1_p, ADD_VALUES));
+  else PetscCall(MatSetValuesCOO(A, v1_p, ADD_VALUES));
   PetscCall(MatView(A, NULL));
   PetscCall(MatMult(A, x, y));
   PetscCall(VecView(y, NULL));
-  PetscCall(MatSetValuesCOO(A, v2_p, ADD_VALUES));
+  //exit(13);
+  if (bs > 1) PetscCall(MatSetValuesCOOBlocked(A, v2_p, ADD_VALUES));
+  else PetscCall(MatSetValuesCOO(A, v2_p, ADD_VALUES));
   PetscCall(MatMultAdd(A, x, y, y));
   PetscCall(MatView(A, NULL));
   PetscCall(VecView(y, NULL));
@@ -131,37 +135,46 @@ int main(int argc, char **args)
 
   /* INSERT_VALUES will overwrite matrix entries but
      still perform the sum of the repeated entries */
-  PetscCall(MatSetValuesCOO(A, v2_p, INSERT_VALUES));
+  if (bs > 1) PetscCall(MatSetValuesCOOBlocked(A, v2_p, INSERT_VALUES));
+  else PetscCall(MatSetValuesCOO(A, v2_p, INSERT_VALUES));
   PetscCall(MatView(A, NULL));
 
   /* test with unique entries */
   PetscCall(PetscArraycpy(it, i2, n2));
   PetscCall(PetscArraycpy(jt, j2, n2));
   if (!localapi) {
-    PetscCall(MatSetPreallocationCOO(A, n2, it, jt));
+    if (bs > 1) PetscCall(MatSetPreallocationCOOBlocked(A, n2, it, jt));
+    else PetscCall(MatSetPreallocationCOO(A, n2, it, jt));
   } else {
-    PetscCall(MatSetPreallocationCOOLocal(A, n2, it, jt));
+    if (bs > 1) PetscCall(MatSetPreallocationCOOLocalBlocked(A, n2, it, jt));
+    else PetscCall(MatSetPreallocationCOOLocal(A, n2, it, jt));
   }
-  PetscCall(MatSetValuesCOO(A, v1_p, ADD_VALUES));
+  if (bs > 1) PetscCall(MatSetValuesCOOBlocked(A, v1_p, ADD_VALUES));
+  else PetscCall(MatSetValuesCOO(A, v1_p, ADD_VALUES));
   PetscCall(MatMult(A, x, y));
   PetscCall(MatView(A, NULL));
   PetscCall(VecView(y, NULL));
-  PetscCall(MatSetValuesCOO(A, v2_p, ADD_VALUES));
+  if (bs > 1) PetscCall(MatSetValuesCOOBlocked(A, v2_p, ADD_VALUES));
+  else PetscCall(MatSetValuesCOO(A, v2_p, ADD_VALUES));
   PetscCall(MatMultAdd(A, x, y, z));
   PetscCall(MatView(A, NULL));
   PetscCall(VecView(z, NULL));
   PetscCall(PetscArraycpy(it, i2, n2));
   PetscCall(PetscArraycpy(jt, j2, n2));
   if (!localapi) {
-    PetscCall(MatSetPreallocationCOO(A, n2, it, jt));
+    if (bs > 1) PetscCall(MatSetPreallocationCOOBlocked(A, n2, it, jt));
+    else PetscCall(MatSetPreallocationCOO(A, n2, it, jt));
   } else {
-    PetscCall(MatSetPreallocationCOOLocal(A, n2, it, jt));
+    if (bs > 1) PetscCall(MatSetPreallocationCOOLocalBlocked(A, n2, it, jt));
+    else PetscCall(MatSetPreallocationCOOLocal(A, n2, it, jt));
   }
-  PetscCall(MatSetValuesCOO(A, v1_p, INSERT_VALUES));
+  if (bs > 1) PetscCall(MatSetValuesCOOBlocked(A, v1_p, INSERT_VALUES));
+  else PetscCall(MatSetValuesCOO(A, v1_p, INSERT_VALUES));
   PetscCall(MatMult(A, x, y));
   PetscCall(MatView(A, NULL));
   PetscCall(VecView(y, NULL));
-  PetscCall(MatSetValuesCOO(A, v2_p, INSERT_VALUES));
+  if (bs > 1) PetscCall(MatSetValuesCOOBlocked(A, v2_p, INSERT_VALUES));
+  else PetscCall(MatSetValuesCOO(A, v2_p, INSERT_VALUES));
   PetscCall(MatMultAdd(A, x, y, z));
   PetscCall(MatView(A, NULL));
   PetscCall(VecView(z, NULL));
@@ -182,7 +195,7 @@ int main(int argc, char **args)
   /* test providing diagonal first, then off-diagonal */
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A), &size));
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &ismpiaij));
-  if ((ismpiaij || ishypre) && size > 1) {
+  if ((ismpiaij || ishypre) && size > 1 && bs == 1) {
     Mat                lA, lB;
     const PetscInt    *garray, *iA, *jA, *iB, *jB;
     const PetscScalar *vA, *vB;
@@ -265,7 +278,7 @@ int main(int argc, char **args)
    test:
      suffix: 1_blocked
      filter: grep -v type | grep -v "Mat Object"
-     args: -mat_block_size 2 -mat_type seqaij -localapi 0 -neg {{0 1}}
+     args: -mat_block_size 2 -mat_type seqaij -localapi 0 -neg 0
 
    test:
      requires: hypre

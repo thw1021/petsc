@@ -246,6 +246,8 @@ PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat, MatType, MatReuse, M
 #endif
 PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_Basic(Mat, PetscCount, PetscInt[], PetscInt[]);
 PETSC_INTERN PetscErrorCode MatSetValuesCOO_Basic(Mat, const PetscScalar[], InsertMode);
+PETSC_INTERN PetscErrorCode MatSetPreallocationCOOBlocked_Basic(Mat, PetscCount, PetscInt[], PetscInt[]);
+PETSC_INTERN PetscErrorCode MatSetValuesCOOBlocked_Basic(Mat, const PetscScalar[], InsertMode);
 
 /* This can be moved to the public header after implementing some missing MatProducts */
 PETSC_INTERN PetscErrorCode MatCreateFromISLocalToGlobalMapping(ISLocalToGlobalMapping, Mat, PetscBool, PetscBool, MatType, Mat *);
@@ -505,7 +507,6 @@ struct _p_Mat {
   PetscBool            transupdated;            /* whether or not the explicitly generated transpose is up-to-date */
   char                *factorprefix;            /* the prefix to use with factored matrix that is created */
   PetscBool            hash_active;             /* indicates MatSetValues() is being handled by hashing */
-  PetscBool            coo_blocked_assembly;    /* use block size of matrix in blocked version of COO assembly */
 };
 
 PETSC_INTERN PetscErrorCode MatAXPY_Basic(Mat, PetscScalar, Mat, MatStructure);

@@ -450,6 +450,9 @@ PETSC_EXTERN PetscErrorCode MatCreateMPIBAIJWithArrays(MPI_Comm, PetscInt, Petsc
 PETSC_EXTERN PetscErrorCode MatSetPreallocationCOO(Mat, PetscCount, PetscInt[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode MatSetPreallocationCOOLocal(Mat, PetscCount, PetscInt[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode MatSetValuesCOO(Mat, const PetscScalar[], InsertMode);
+PETSC_EXTERN PetscErrorCode MatSetPreallocationCOOBlocked(Mat, PetscCount, PetscInt[], PetscInt[]);
+PETSC_EXTERN PetscErrorCode MatSetPreallocationCOOLocalBlocked(Mat, PetscCount, PetscInt[], PetscInt[]);
+PETSC_EXTERN PetscErrorCode MatSetValuesCOOBlocked(Mat, const PetscScalar[], InsertMode);
 
 PETSC_EXTERN PetscErrorCode MatCreateMPIAdj(MPI_Comm, PetscInt, PetscInt, PetscInt[], PetscInt[], PetscInt[], Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateSeqSBAIJ(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], Mat *);
@@ -647,8 +650,7 @@ typedef enum {
   MAT_FORM_EXPLICIT_TRANSPOSE     = 24,
   MAT_STRUCTURAL_SYMMETRY_ETERNAL = 25,
   MAT_SPD_ETERNAL                 = 26,
-  MAT_COO_BLOCKED_ASSEMBLY        = 27,
-  MAT_OPTION_MAX                  = 28
+  MAT_OPTION_MAX                  = 27
 } MatOption;
 
 PETSC_EXTERN const char *const *MatOptions;

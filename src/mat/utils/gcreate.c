@@ -315,9 +315,6 @@ PetscErrorCode MatSetFromOptions(Mat B)
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-mat_ignore_zero_entries", "For AIJ/IS matrices this will stop zero values from creating a zero location in the matrix", "MatSetOption", flg, &flg, &set));
   if (set) PetscCall(MatSetOption(B, MAT_IGNORE_ZERO_ENTRIES, flg));
-  flg = PETSC_FALSE;
-  PetscCall(PetscOptionsBool("-mat_coo_blocked_assembly", "Use blocked interface in COO assembly", "MatSetOption", flg, &flg, &set));
-  if (set) PetscCall(MatSetOption(B, MAT_COO_BLOCKED_ASSEMBLY, flg));
 
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-mat_form_explicit_transpose", "Hint to form an explicit transpose for operations like MatMultTranspose", "MatSetOption", flg, &flg, &set));
@@ -668,6 +665,72 @@ PetscErrorCode MatSetPreallocationCOO_Basic(Mat A, PetscCount ncoo, PetscInt coo
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode MatSetValuesCOOBlocked_Basic(Mat A, const PetscScalar coo_v[], InsertMode imode)
+{
+  IS              is_coo_i, is_coo_j;
+  const PetscInt *coo_i, *coo_j;
+  PetscInt        n, n_i, n_j, rbs = 1, cbs = 1, bs2;
+  PetscScalar     zero = 0.;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectQuery((PetscObject)A, "__PETSc_coo_blocked_i", (PetscObject *)&is_coo_i));
+  PetscCall(PetscObjectQuery((PetscObject)A, "__PETSc_coo_blocked_j", (PetscObject *)&is_coo_j));
+  PetscCheck(is_coo_i, PetscObjectComm((PetscObject)A), PETSC_ERR_COR, "Missing coo_blocked_i IS");
+  PetscCheck(is_coo_j, PetscObjectComm((PetscObject)A), PETSC_ERR_COR, "Missing coo_blocked_j IS");
+  PetscCall(ISGetLocalSize(is_coo_i, &n_i));
+  PetscCall(ISGetLocalSize(is_coo_j, &n_j));
+  PetscCheck(n_i == n_j, PETSC_COMM_SELF, PETSC_ERR_COR, "Wrong local size %" PetscInt_FMT " != %" PetscInt_FMT, n_i, n_j);
+  PetscCall(ISGetIndices(is_coo_i, &coo_i));
+  PetscCall(ISGetIndices(is_coo_j, &coo_j));
+  if (imode != ADD_VALUES) PetscCall(MatZeroEntries(A));
+  PetscCall(MatGetBlockSizes(A, &rbs, &cbs));
+  bs2 = rbs * cbs;
+  for (n = 0; n < n_i; n++) {
+    for (PetscInt ki = 0, idx = 0; ki < rbs; ki++) {
+      for (PetscInt jj = 0; jj < cbs; jj++, idx++) { PetscCall(MatSetValue(A, rbs * coo_i[n] + ki, cbs * coo_j[n] + jj, coo_v ? coo_v[bs2 * n + idx] : zero, ADD_VALUES)); }
+    }
+  }
+  PetscCall(ISRestoreIndices(is_coo_i, &coo_i));
+  PetscCall(ISRestoreIndices(is_coo_j, &coo_j));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode MatSetPreallocationCOOBlocked_Basic(Mat A, PetscCount ncoo, PetscInt coo_i[], PetscInt coo_j[])
+{
+  Mat         preallocator;
+  IS          is_coo_i, is_coo_j;
+  PetscInt    ncoo_i, rbs = 1, cbs = 1;
+  PetscScalar zero = 0.0;
+
+  PetscFunctionBegin;
+  PetscCall(PetscIntCast(ncoo, &ncoo_i));
+  PetscCall(PetscLayoutSetUp(A->rmap));
+  PetscCall(PetscLayoutSetUp(A->cmap));
+  PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &preallocator));
+  PetscCall(MatSetType(preallocator, MATPREALLOCATOR));
+  PetscCall(MatSetSizes(preallocator, A->rmap->n, A->cmap->n, A->rmap->N, A->cmap->N));
+  PetscCall(MatSetLayouts(preallocator, A->rmap, A->cmap));
+  PetscCall(MatSetUp(preallocator));
+  PetscCall(MatGetBlockSizes(A, &rbs, &cbs));
+  for (PetscCount n = 0; n < ncoo; n++) {
+    // PetscCall(MatSetValue(preallocator, coo_i[n], coo_j[n], zero, INSERT_VALUES));
+    for (PetscInt ki = 0, idx = 0; ki < rbs; ki++) {
+      for (PetscInt jj = 0; jj < cbs; jj++, idx++) { PetscCall(MatSetValue(preallocator, rbs * coo_i[n] + ki, cbs * coo_j[n] + jj, zero, INSERT_VALUES)); }
+    }
+  }
+  PetscCall(MatAssemblyBegin(preallocator, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(preallocator, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatPreallocatorPreallocate(preallocator, PETSC_TRUE, A));
+  PetscCall(MatDestroy(&preallocator));
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ncoo_i, coo_i, PETSC_COPY_VALUES, &is_coo_i));
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ncoo_i, coo_j, PETSC_COPY_VALUES, &is_coo_j));
+  PetscCall(PetscObjectCompose((PetscObject)A, "__PETSc_coo_blocked_i", (PetscObject)is_coo_i));
+  PetscCall(PetscObjectCompose((PetscObject)A, "__PETSc_coo_blocked_j", (PetscObject)is_coo_j));
+  PetscCall(ISDestroy(&is_coo_i));
+  PetscCall(ISDestroy(&is_coo_j));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   MatSetPreallocationCOO - set preallocation for matrices using a coordinate format of the entries with global indices
 
@@ -827,6 +890,148 @@ PetscErrorCode MatSetValuesCOO(Mat A, const PetscScalar coo_v[], InsertMode imod
     PetscCall(MatSetOption(A, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE)); // set A->nooffprocentries to avoid costly MatStash scatter in MatAssembly
   } else {
     PetscCall(MatSetValuesCOO_Basic(A, coo_v, imode)); // fall back to MatSetValues, which might use MatStash
+  }
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+  if (f) PetscCall(MatSetOption(A, MAT_NO_OFF_PROC_ENTRIES, oldFlg));
+  PetscCall(PetscLogEventEnd(MAT_SetVCOO, A, 0, 0, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  MatSetPreallocationCOOBlocked - set preallocation for matrices using a blocked coordinate format of the entries with global indices
+
+  Collective
+
+  Input Parameters:
++ A     - matrix being preallocated
+. ncoo  - number of entries
+. coo_i - row indices
+- coo_j - column indices
+
+  Level: beginner
+
+  Notes:
+  Blocked versions of COO methods are almost identical to non-blocked counterparts -- the values are in-lined arrays sized with the matrix block sizes instead of scalars and the indices are block indices.
+  See non-blocked versions of documentations.
+
+.seealso: [](ch_matrices), `Mat`, `MatSetPreallocationCOO`, `MatSetValuesCOOBlocked()`
+@*/
+PetscErrorCode MatSetPreallocationCOOBlocked(Mat A, PetscCount ncoo, PetscInt coo_i[], PetscInt coo_j[])
+{
+  PetscErrorCode (*f)(Mat, PetscCount, PetscInt[], PetscInt[]) = NULL;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  if (ncoo) PetscAssertPointer(coo_i, 3);
+  if (ncoo) PetscAssertPointer(coo_j, 4);
+  PetscCall(PetscLayoutSetUp(A->rmap));
+  PetscCall(PetscLayoutSetUp(A->cmap));
+  PetscCall(PetscObjectQueryFunction((PetscObject)A, "MatSetPreallocationCOOBlocked_C", &f));
+
+  PetscCall(PetscLogEventBegin(MAT_PreallCOO, A, 0, 0, 0));
+  if (f) {
+    PetscCall((*f)(A, ncoo, coo_i, coo_j));
+  } else { /* allow fallback, very slow */
+    PetscCall(MatSetPreallocationCOOBlocked_Basic(A, ncoo, coo_i, coo_j));
+  }
+  PetscCall(PetscLogEventEnd(MAT_PreallCOO, A, 0, 0, 0));
+  A->preallocated = PETSC_TRUE;
+  A->nonzerostate++;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  MatSetPreallocationCOOLocalBlocked - set preallocation for matrices using a blocked coordinate format of the entries with local indices
+
+  Collective
+
+  Input Parameters:
++ A     - matrix being preallocated
+. ncoo  - number of entries
+. coo_i - row indices (local numbering; may be modified)
+- coo_j - column indices (local numbering; may be modified)
+
+  Level: beginner
+
+.seealso: [](ch_matrices), `Mat`, `MatSetPreallocationCOOLocal`, `MatSetValuesCOOBlocked()`
+@*/
+PetscErrorCode MatSetPreallocationCOOLocalBlocked(Mat A, PetscCount ncoo, PetscInt coo_i[], PetscInt coo_j[])
+{
+  PetscErrorCode (*f)(Mat, PetscCount, PetscInt[], PetscInt[]) = NULL;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  if (ncoo) PetscAssertPointer(coo_i, 3);
+  if (ncoo) PetscAssertPointer(coo_j, 4);
+  PetscCall(PetscLayoutSetUp(A->rmap));
+  PetscCall(PetscLayoutSetUp(A->cmap));
+
+  PetscCall(PetscObjectQueryFunction((PetscObject)A, "MatSetPreallocationCOOLocalBlocked_C", &f));
+  if (f) {
+    PetscCall((*f)(A, ncoo, coo_i, coo_j));
+    A->nonzerostate++;
+  } else {
+    PetscInt               ncoo_i;
+    ISLocalToGlobalMapping ltog_row, ltog_col;
+
+    PetscCall(MatGetLocalToGlobalMapping(A, &ltog_row, &ltog_col));
+    if (ltog_row) {
+      PetscCall(PetscIntCast(ncoo, &ncoo_i));
+      PetscCall(ISLocalToGlobalMappingApply(ltog_row, ncoo_i, coo_i, coo_i));
+    }
+    if (ltog_col) {
+      PetscCall(PetscIntCast(ncoo, &ncoo_i));
+      PetscCall(ISLocalToGlobalMappingApply(ltog_col, ncoo_i, coo_j, coo_j));
+    }
+    PetscCall(MatSetPreallocationCOOBlocked(A, ncoo, coo_i, coo_j));
+  }
+  A->preallocated = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatSetValuesCOOBlocked - set values at once in a matrix preallocated using `MatSetPreallocationCOOBlocked()`
+
+  Collective
+
+  Input Parameters:
++ A     - matrix being preallocated
+. coo_v - the matrix values (can be `NULL`)
+- imode - the insert mode
+
+  Level: beginner
+
+  Notes:
+  The values must follow the order of the indices prescribed with `MatSetPreallocationCOOBlocked()` or `MatSetPreallocationCOOLocalBlocked()`.
+
+  When repeated entries are specified in the COO indices the `coo_v` values are first properly summed, regardless of the value of imode.
+  The imode flag indicates if coo_v must be added to the current values of the matrix (`ADD_VALUES`) or overwritten (`INSERT_VALUES`).
+
+  `MatAssemblyBegin()` and `MatAssemblyEnd()` do not need to be called after this routine. It automatically handles the assembly process.
+
+.seealso: [](ch_matrices), `Mat`, `MatSetValuesCOO`, `MatSetPreallocationCOOBlocked()`, `MatSetPreallocationCOOLocalBlocked()`, `InsertMode`, `INSERT_VALUES`, `ADD_VALUES`
+@*/
+PetscErrorCode MatSetValuesCOOBlocked(Mat A, const PetscScalar coo_v[], InsertMode imode)
+{
+  PetscErrorCode (*f)(Mat, const PetscScalar[], InsertMode) = NULL;
+  PetscBool oldFlg;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+  MatCheckPreallocated(A, 1);
+  PetscValidLogicalCollectiveEnum(A, imode, 3);
+  PetscCall(PetscObjectQueryFunction((PetscObject)A, "MatSetValuesCOOBlocked_C", &f));
+  PetscCall(PetscLogEventBegin(MAT_SetVCOO, A, 0, 0, 0));
+  if (f) {
+    PetscCall((*f)(A, coo_v, imode)); // all known COO implementations do not use MatStash. They do their own off-proc communication
+    PetscCall(MatGetOption(A, MAT_NO_OFF_PROC_ENTRIES, &oldFlg));
+    PetscCall(MatSetOption(A, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE)); // set A->nooffprocentries to avoid costly MatStash scatter in MatAssembly
+  } else {
+    PetscCall(MatSetValuesCOOBlocked_Basic(A, coo_v, imode)); // fall back to MatSetValues, which might use MatStash
   }
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));

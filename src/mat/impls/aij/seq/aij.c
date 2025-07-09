@@ -1309,6 +1309,8 @@ PetscErrorCode MatDestroy_SeqAIJ(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSeqAIJKron_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOO_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOOBlocked_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOOBlocked_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatFactorGetSolverType_C", NULL));
   /* these calls do not belong here: the subclasses Duplicate/Destroy are wrong */
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqaijsell_seqaij_C", NULL));
@@ -1358,9 +1360,6 @@ PetscErrorCode MatSetOption_SeqAIJ(Mat A, MatOption op, PetscBool flg)
     break;
   case MAT_FORM_EXPLICIT_TRANSPOSE:
     A->form_explicit_transpose = flg;
-    break;
-  case MAT_COO_BLOCKED_ASSEMBLY:
-    A->coo_blocked_assembly = flg;
     break;
   default:
     break;
@@ -4638,12 +4637,12 @@ static PetscErrorCode MatCOOStructDestroy_SeqAIJ(void **data)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* coo_i/j are block indices if 'coo_blocked_assembly', coo_n = NNZ/rbs*cbs. work in block indices until Mat allocate */
-PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[])
+/* coo_i/j are block indices, coo_n = NNZ/rbs*cbs. work in block indices until Mat allocate */
+static PetscErrorCode MatSetPreallocationCOO_SeqAIJ_Private(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[], PetscInt rbs, PetscInt cbs)
 {
   MPI_Comm             comm;
   PetscInt            *i, *j;
-  PetscInt             M, N, row, iprev, rbs = 1, cbs = 1;
+  PetscInt             M, N, row, iprev;
   PetscCount           k, p, q, nneg, nnz, start, end; /* Index the coo array, so use PetscCount as their type */
   PetscInt            *Ai;                             /* Change to PetscCount once we use it for row pointers - blocked */
   PetscInt            *Aj;
@@ -4689,10 +4688,7 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
   jmap++;                                           /* Inc jmap by 1 for convenience */
 
   /* setup for block assembly */
-  if (mat->coo_blocked_assembly) {
-    PetscCall(MatGetBlockSizes(mat, &rbs, &cbs));
-    PetscCheck(seqaij->nz % (rbs * cbs) == 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Blocked COO assembly needs dense blocks, nz=%" PetscInt_FMT ", bs=(%" PetscInt_FMT ", %" PetscInt_FMT ")", seqaij->nz, rbs, cbs);
-  }
+  PetscCheck(seqaij->nz % (rbs * cbs) == 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Blocked COO assembly needs dense blocks, nz=%" PetscInt_FMT ", bs=(%" PetscInt_FMT ", %" PetscInt_FMT ")", seqaij->nz, rbs, cbs);
   PetscCall(PetscShmgetAllocateArray(M / rbs + 1, sizeof(PetscInt), (void **)&Ai)); /* CSR of A -- working in blocked indices */
   PetscCall(PetscArrayzero(Ai, M / rbs + 1));
   PetscCall(PetscShmgetAllocateArray(coo_n - nneg, sizeof(PetscInt), (void **)&Aj)); /* We have at most coo_n-nneg unique nonzeros */
@@ -4817,7 +4813,7 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
   }
 
   /* expand Ai & Aj for blocked */
-  if (mat->coo_blocked_assembly) {
+  if (rbs * cbs > 1) {
     PetscInt *Aj_bs, *Ai_bs;
     PetscCall(PetscShmgetAllocateArray(M + 1, sizeof(PetscInt), (void **)&Ai_bs)); /* CSR of A */
     Ai_bs++;                                                                       /* Inc by 1 for convenience */
@@ -4864,6 +4860,24 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[])
+{
+  PetscFunctionBegin;
+  PetscCall(MatSetPreallocationCOO_SeqAIJ_Private(mat, coo_n, coo_i, coo_j, 1, 1));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* coo_i/j are block indices, coo_n = NNZ/rbs*cbs. work in block indices until Mat allocate */
+PetscErrorCode MatSetPreallocationCOOBlocked_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[])
+{
+  PetscInt rbs = 1, cbs = 1;
+
+  PetscFunctionBegin;
+  PetscCall(MatGetBlockSizes(mat, &rbs, &cbs));
+  PetscCall(MatSetPreallocationCOO_SeqAIJ_Private(mat, coo_n, coo_i, coo_j, rbs, cbs));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatSetValuesCOO_SeqAIJ(Mat A, const PetscScalar v[], InsertMode imode)
 {
   Mat_SeqAIJ          *aseq = (Mat_SeqAIJ *)A->data;
@@ -4880,16 +4894,41 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJ(Mat A, const PetscScalar v[], Inser
   perm = coo->perm;
   jmap = coo->jmap;
   PetscCall(MatSeqAIJGetArray(A, &Aa));
+  for (i = 0; i < Annz; i++) {
+    PetscScalar sum = 0.0;
+    for (j = jmap[i]; j < jmap[i + 1]; j++) sum += v[perm[j]];
+    Aa[i] = (imode == INSERT_VALUES ? 0.0 : Aa[i]) + sum;
+  }
+  PetscCall(MatSeqAIJRestoreArray(A, &Aa));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSetValuesCOOBlocked_SeqAIJ(Mat A, const PetscScalar v[], InsertMode imode)
+{
+  Mat_SeqAIJ          *aseq = (Mat_SeqAIJ *)A->data;
+  PetscCount           j, Annz = aseq->nz;
+  PetscCount          *perm, *jmap;
+  PetscScalar         *Aa;
+  PetscContainer       container;
+  MatCOOStruct_SeqAIJ *coo;
+  PetscBool            usecprow = aseq->compressedrow.use;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectQuery((PetscObject)A, "__PETSc_MatCOOStruct_Host", (PetscObject *)&container));
+  PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Not found MatCOOStruct on this matrix");
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo));
+  perm = coo->perm;
+  jmap = coo->jmap;
+  PetscCall(MatSeqAIJGetArray(A, &Aa));
   /* setup for block assembly */
-  if (A->coo_blocked_assembly) {
+  {
     PetscScalar *sum;
     PetscInt     k, ki, *ii, rbs = 1, cbs = 1, row, nz_row, joff, offset;
     ii = aseq->i;
-    PetscCheck(!aseq->compressedrow.use, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatCOOStruct does not support compressed row");
     PetscCall(MatGetBlockSizes(A, &rbs, &cbs));
     PetscCall(PetscMalloc1(rbs * cbs, &sum));
-    Annz = Annz / (rbs * cbs); // blocked iteration
-    for (k = 0, row = 0; k < Annz; k++) {
+    Annz = Annz / (rbs * cbs);            // blocked iteration
+    for (k = 0, row = 0; k < Annz; k++) { // need to do blocks of rows in parallel to get 'row' to work or have longer search
       PetscCall(PetscArrayzero(sum, rbs * cbs));
       for (j = jmap[k]; j < jmap[k + 1]; j++) {
         const PetscScalar *tmp = &v[perm[j] * rbs * cbs]; // jump into v
@@ -4897,9 +4936,9 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJ(Mat A, const PetscScalar v[], Inser
           for (PetscInt jj = 0; jj < cbs; jj++) { sum[ki * cbs + jj] += *tmp++; }
         }
       }
-      offset = k * rbs * cbs; // top corner of BAIJ data, in row block of AIJ
-      while (offset >= ii[row + rbs]) row += rbs;
-      joff = (offset - ii[row]) / rbs; // real column j
+      offset = k * rbs * cbs;                     // top corner of BAIJ data, in row block of AIJ
+      while (offset >= ii[row + rbs]) row += rbs; // search: get to correct block row (TODO parallel)
+      joff = (offset - ii[row]) / rbs;            // real (cbs * block-col) column j, offset is row_start + rbs * cbs * block-col
       PetscCheck(joff >= 0, PETSC_COMM_SELF, PETSC_ERR_FILE_UNEXPECTED, "joff < 0 : %d", (int)joff);
       nz_row = ii[row + 1] - ii[row];
       for (ki = 0; ki < rbs; ki++) {
@@ -4910,12 +4949,6 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJ(Mat A, const PetscScalar v[], Inser
       }
     }
     PetscCall(PetscFree(sum));
-  } else {
-    for (i = 0; i < Annz; i++) {
-      PetscScalar sum = 0.0;
-      for (j = jmap[i]; j < jmap[i + 1]; j++) sum += v[perm[j]];
-      Aa[i] = (imode == INSERT_VALUES ? 0.0 : Aa[i]) + sum;
-    }
   }
   PetscCall(MatSeqAIJRestoreArray(A, &Aa));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -5021,6 +5054,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJ(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSeqAIJKron_C", MatSeqAIJKron_SeqAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_SeqAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetValuesCOO_C", MatSetValuesCOO_SeqAIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetPreallocationCOOBlocked_C", MatSetPreallocationCOOBlocked_SeqAIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetValuesCOOBlocked_C", MatSetValuesCOOBlocked_SeqAIJ));
   PetscCall(MatCreate_SeqAIJ_Inode(B));
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATSEQAIJ));
   PetscCall(MatSeqAIJSetTypeFromOptions(B)); /* this allows changing the matrix subtype to say MATSEQAIJPERM */
