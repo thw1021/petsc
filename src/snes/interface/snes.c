@@ -2864,9 +2864,7 @@ PetscErrorCode SNESTestJacobian(SNES snes, PetscReal *Jnorm, PetscReal *diffNorm
     if (Jsave) jacobian = Jsave;
     if (jacobian != snes->jacobian_pre) {
       jacobian = snes->jacobian_pre;
-      if (!silent) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  ---------- Testing Jacobian for preconditioner -------------\n"));
-      }
+      if (!silent) PetscCall(PetscViewerASCIIPrintf(viewer, "  ---------- Testing Jacobian for preconditioner -------------\n"));
     } else jacobian = NULL;
   }
   PetscCall(VecDestroy(&x));
