@@ -2755,9 +2755,7 @@ PetscErrorCode SNESTestJacobian(SNES snes, PetscReal *Jnorm, PetscReal *diffNorm
   PetscCall(PetscViewerASCIIGetStdout(comm, &viewer));
   PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
   PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)snes)->tablevel));
-  if (!silent) {
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  ---------- Testing Jacobian -------------\n"));
-  }
+  if (!silent) PetscCall(PetscViewerASCIIPrintf(viewer, "  ---------- Testing Jacobian -------------\n"));
   if (!complete_print && !silent && !directionsprinted) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Run with -snes_test_jacobian_view and optionally -snes_test_jacobian <threshold> to show difference\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    of hand-coded and finite difference Jacobian entries greater than <threshold>.\n"));
