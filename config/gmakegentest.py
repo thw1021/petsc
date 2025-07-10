@@ -202,14 +202,15 @@ class generateExamples(Petsc):
        src/snes/tutorials/output/ex22*.out
     '''
     altlist=[output_file]
-    basefile = getlangsplit(output_file)
-    for i in range(1,9):
-      altroot=basefile+"_alt"
-      if i > 1: altroot=altroot+"_"+str(i)
-      af=altroot+".out"
-      srcaf=os.path.join(srcdir,af)
-      fullaf=os.path.join(self.petsc_dir,srcaf)
-      if os.path.isfile(fullaf): altlist.append(srcaf)
+    if output_file != '/dev/null':
+      basefile = getlangsplit(output_file)
+      for i in range(1,9):
+        altroot=basefile+"_alt"
+        if i > 1: altroot=altroot+"_"+str(i)
+        af=altroot+".out"
+        srcaf=os.path.join(srcdir,af)
+        fullaf=os.path.join(self.petsc_dir,srcaf)
+        if os.path.isfile(fullaf): altlist.append(srcaf)
 
     return altlist
 
@@ -460,7 +461,7 @@ class generateExamples(Petsc):
 
     # Do some checks on existence of output_file and alt files
     if not os.path.isfile(os.path.join(self.petsc_dir,subst['output_file'])):
-      if not subst['TODO']:
+      if not subst['TODO'] and not subst['output_file'].endswith('/dev/null'):
         print("Warning: "+subst['output_file']+" not found.")
     altlist=self._getAltList(subst['output_file'], subst['srcdir'])
 
