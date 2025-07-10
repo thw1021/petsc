@@ -2814,9 +2814,7 @@ PetscErrorCode SNESTestJacobian(SNES snes, PetscReal *Jnorm, PetscReal *diffNorm
     PetscCall(MatNorm(A, NORM_FROBENIUS, &gnorm));
     PetscCall(MatDestroy(&D));
     if (!gnorm) gnorm = 1; /* just in case */
-    if (!silent) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  ||J - Jfd||_F/||J||_F = %g, ||J - Jfd||_F = %g\n", (double)(nrm / gnorm), (double)nrm));
-    }
+    if (!silent) PetscCall(PetscViewerASCIIPrintf(viewer, "  ||J - Jfd||_F/||J||_F = %g, ||J - Jfd||_F = %g\n", (double)(nrm / gnorm), (double)nrm));
     if (complete_print) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Hand-coded Jacobian ----------\n"));
       PetscCall(MatView(A, mviewer));
