@@ -40,6 +40,7 @@ filter=false          # File2
 filter_output=false   # File1
 keep_files=false
 diffargs=""
+empty=false
 while getopts "f:F:hjJ:kmM" opt
 do
   case $opt in
@@ -91,8 +92,13 @@ else
     fi
     exit 0
   else
-    echo Error! file1 check failed: "${1}"
-    exit 1
+    case "${1}" in
+      *output/empty.out) empty=true; file1=${1};;
+    esac
+    if ! ${empty}; then
+      echo Error! file1 check failed: "${1}"
+      exit 1
+    fi
   fi
   if ${mvfile_ifalt}; then
     echo "mvfile_ifalt"
@@ -130,7 +136,11 @@ if ! ${justdiff}; then
     tmpA=`mktemp -t petscdiffA.XXXXXX`
     tmpB=`mktemp -t petscdiffB.XXXXXX`
 
-    ${SED} "s/< [-+ ]*[ 0-9][0-9]*\.*[0-9]*[eE][-+][0-9][0-9]*/XXX/g" ${file1} | ${SED} "s/E+000//g" | ${SED} "s/[-+ ]*[-]*[ 0-9][0-9]*\.*[0-9]*[eE][-+][0-9][0-9]*/XXX/g" | ${SED} "s/[-+ ]*[-]*[ 0-9][0-9]*\.[0-9]*/XXX/g" | ${SED} "s/ \*\*\*\*\*\*\*\*\* /XXX/g" > ${tmpA}
+    if ! ${empty}; then
+      ${SED} "s/< [-+ ]*[ 0-9][0-9]*\.*[0-9]*[eE][-+][0-9][0-9]*/XXX/g" ${file1} | ${SED} "s/E+000//g" | ${SED} "s/[-+ ]*[-]*[ 0-9][0-9]*\.*[0-9]*[eE][-+][0-9][0-9]*/XXX/g" | ${SED} "s/[-+ ]*[-]*[ 0-9][0-9]*\.[0-9]*/XXX/g" | ${SED} "s/ \*\*\*\*\*\*\*\*\* /XXX/g" > ${tmpA}
+    else
+      touch ${tmpA}
+    fi
 
     ${SED} "s/< [-+ ]*[ 0-9][0-9]*\.*[0-9]*[eE][-+][0-9][0-9]*/XXX/g" ${file2} | ${SED} "s/E+000//g" | ${SED} "s/[-+ ]*[-]*[ 0-9][0-9]*\.*[0-9]*[eE][-+][0-9][0-9]*/XXX/g" | ${SED} "s/[-+ ]*[-]*[ 0-9][0-9]*\.[0-9]*/XXX/g" | ${SED} "s/ \*\*\*\*\*\*\*\*\* /XXX/g" > ${tmpB}
     ${DIFF} ${tmpA} ${tmpB} > /dev/null
@@ -142,8 +152,17 @@ if ! ${justdiff}; then
     fi
     ${RM} -f ${tmpA} ${tmpB}
 else
-    ${DIFF} ${diffargs} ${file1} ${file2}
+    if ${empty}; then
+      tmpA=`mktemp -t petscdiffA.XXXXXX`
+      touch ${tmpA}
+    else
+      tmpA=${file1}
+    fi
+    ${DIFF} ${diffargs} ${tmpA} ${file2}
     err=$?
+    if ${empty}; then
+      ${RM} -f ${tmpA}
+    fi
 fi
 
 if [ "x${1}" = "x-" ]; then
