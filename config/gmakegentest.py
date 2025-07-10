@@ -460,7 +460,7 @@ class generateExamples(Petsc):
 
     # Do some checks on existence of output_file and alt files
     if not os.path.isfile(os.path.join(self.petsc_dir,subst['output_file'])):
-      if not subst['TODO']:
+      if not subst['TODO'] and not subst['output_file'].endswith("output/empty.out"):
         print("Warning: "+subst['output_file']+" not found.")
     altlist=self._getAltList(subst['output_file'], subst['srcdir'])
 
@@ -851,7 +851,7 @@ class generateExamples(Petsc):
 
       fullout=os.path.join(root,output_file)
       if debug: print("---> ",fullout)
-      if not os.path.exists(fullout):
+      if not os.path.exists(fullout) and not fullout.endswith("output/empty.out"):
         self.missing_files.append(fullout)
 
     return

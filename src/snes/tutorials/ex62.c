@@ -699,6 +699,7 @@ int main(int argc, char **argv)
   #   Vanka
   test:
     suffix: 2d_q1_p0_vanka
+    output_file: output/empty.out
     requires: double !complex
     args: -sol quadratic -dm_plex_simplex 0 -dm_refine 2 -vel_petscspace_degree 1 -pres_petscspace_degree 0 -petscds_jac_pre 0 \
       -snes_rtol 1.0e-4 \
@@ -707,6 +708,7 @@ int main(int argc, char **argv)
         -sub_ksp_type preonly -sub_pc_type lu
   test:
     suffix: 2d_q1_p0_vanka_denseinv
+    output_file: output/empty.out
     requires: double !complex
     args: -sol quadratic -dm_plex_simplex 0 -dm_refine 2 -vel_petscspace_degree 1 -pres_petscspace_degree 0 -petscds_jac_pre 0 \
       -snes_rtol 1.0e-4 \
@@ -716,6 +718,7 @@ int main(int argc, char **argv)
   #   Vanka smoother
   test:
     suffix: 2d_q1_p0_gmg_vanka
+    output_file: output/empty.out
     requires: double !complex
     args: -sol quadratic -dm_plex_simplex 0 -dm_refine_hierarchy 2 -vel_petscspace_degree 1 -pres_petscspace_degree 0 -petscds_jac_pre 0 \
       -snes_rtol 1.0e-4 \
