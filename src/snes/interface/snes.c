@@ -1122,6 +1122,9 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
   if (!flg && snes->mf_operator) snes->mf = PETSC_TRUE;
   PetscCall(PetscOptionsInt("-snes_mf_version", "Matrix-Free routines version 1 or 2", "None", snes->mf_version, &snes->mf_version, NULL));
 
+  PetscCall(PetscOptionsName("-snes_test_function", "Compare hand-coded and finite difference functions", "None", &snes->testFunc));
+  PetscCall(PetscOptionsName("-snes_test_jacobian", "Compare hand-coded and finite difference Jacobians", "None", &snes->testJac));
+
   flg = PETSC_FALSE;
   PetscCall(SNESGetNPCSide(snes, &pcside));
   PetscCall(PetscOptionsEnum("-snes_npc_side", "SNES nonlinear preconditioner side", "SNESSetNPCSide", PCSides, (PetscEnum)pcside, (PetscEnum *)&pcside, &flg));
@@ -2626,6 +2629,22 @@ static PetscErrorCode SNESComputeFunction_FD(SNES snes, Vec Xin, Vec G)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  SNESTestFunction - Computes the difference between the computed and finite-difference functions
+
+  Collective
+
+  Input Parameters:
+. snes - the `SNES` context
+
+  Options Database Keys:
++ -snes_test_function      - compare the user provided function with one compute via finite differences to check for errors.
+- -snes_test_function_view - display the user provided function, the finite difference function and the difference
+
+  Level: developer
+
+.seealso: [](ch_snes), `SNESTestJacobian()`, `SNESSetFunction()`, `SNESComputeFunction()`
+@*/
 PetscErrorCode SNESTestFunction(SNES snes)
 {
   Vec               x, g1, g2, g3;
@@ -2712,8 +2731,8 @@ PetscErrorCode SNESTestFunction(SNES snes)
 . snes - the `SNES` context
 
   Output Parameters:
-+ Jnorm    - the Frobenius norm of the computed Jacobian, or NULL
-- diffNorm - the Frobenius norm of the difference of the computed and finite-difference Jacobians, or NULL
++ Jnorm    - the Frobenius norm of the computed Jacobian, or `NULL`
+- diffNorm - the Frobenius norm of the difference of the computed and finite-difference Jacobians, or `NULL`
 
   Options Database Keys:
 + -snes_test_jacobian <optional threshold> - compare the user provided Jacobian with one compute via finite differences to check for errors.  If a threshold is given, display only those entries whose difference is greater than the threshold.
@@ -2721,7 +2740,10 @@ PetscErrorCode SNESTestFunction(SNES snes)
 
   Level: developer
 
-.seealso: [](ch_snes), `SNESSetJacobian()`, `SNESComputeJacobian()`
+  Note:
+  Directions and norms are printed to stdout if `diffNorm` is `NULL`.
+
+.seealso: [](ch_snes), `SNESTestFunction()`, `SNESSetJacobian()`, `SNESComputeJacobian()`
 @*/
 PetscErrorCode SNESTestJacobian(SNES snes, PetscReal *Jnorm, PetscReal *diffNorm)
 {
@@ -2733,6 +2755,7 @@ PetscErrorCode SNESTestJacobian(SNES snes, PetscReal *Jnorm, PetscReal *diffNorm
   PetscInt          m, n, M, N;
   void             *functx;
   PetscBool         complete_print = PETSC_FALSE, threshold_print = PETSC_FALSE, flg, istranspose;
+  PetscBool         silent = diffNorm != PETSC_NULLPTR ? PETSC_TRUE : PETSC_FALSE;
   PetscViewer       viewer, mviewer;
   MPI_Comm          comm;
   PetscInt          tabs;
@@ -2752,12 +2775,12 @@ PetscErrorCode SNESTestJacobian(SNES snes, PetscReal *Jnorm, PetscReal *diffNorm
   PetscCall(PetscViewerASCIIGetStdout(comm, &viewer));
   PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
   PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)snes)->tablevel));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  ---------- Testing Jacobian -------------\n"));
-  if (!complete_print && !directionsprinted) {
+  if (!silent) PetscCall(PetscViewerASCIIPrintf(viewer, "  ---------- Testing Jacobian -------------\n"));
+  if (!complete_print && !silent && !directionsprinted) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Run with -snes_test_jacobian_view and optionally -snes_test_jacobian <threshold> to show difference\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    of hand-coded and finite difference Jacobian entries greater than <threshold>.\n"));
   }
-  if (!directionsprinted) {
+  if (!directionsprinted && !silent) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Testing hand-coded Jacobian, if (for double precision runs) ||J - Jfd||_F/||J||_F is\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    O(1.e-8), the hand-coded Jacobian is probably correct.\n"));
     directionsprinted = PETSC_TRUE;
@@ -2811,8 +2834,7 @@ PetscErrorCode SNESTestJacobian(SNES snes, PetscReal *Jnorm, PetscReal *diffNorm
     PetscCall(MatNorm(A, NORM_FROBENIUS, &gnorm));
     PetscCall(MatDestroy(&D));
     if (!gnorm) gnorm = 1; /* just in case */
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  ||J - Jfd||_F/||J||_F = %g, ||J - Jfd||_F = %g\n", (double)(nrm / gnorm), (double)nrm));
-
+    if (!silent) PetscCall(PetscViewerASCIIPrintf(viewer, "  ||J - Jfd||_F/||J||_F = %g, ||J - Jfd||_F = %g\n", (double)(nrm / gnorm), (double)nrm));
     if (complete_print) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Hand-coded Jacobian ----------\n"));
       PetscCall(MatView(A, mviewer));
@@ -2862,7 +2884,7 @@ PetscErrorCode SNESTestJacobian(SNES snes, PetscReal *Jnorm, PetscReal *diffNorm
     if (Jsave) jacobian = Jsave;
     if (jacobian != snes->jacobian_pre) {
       jacobian = snes->jacobian_pre;
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  ---------- Testing Jacobian for preconditioner -------------\n"));
+      if (!silent) PetscCall(PetscViewerASCIIPrintf(viewer, "  ---------- Testing Jacobian for preconditioner -------------\n"));
     } else jacobian = NULL;
   }
   PetscCall(VecDestroy(&x));
@@ -2919,7 +2941,7 @@ PetscErrorCode SNESTestJacobian(SNES snes, PetscReal *Jnorm, PetscReal *diffNorm
 @*/
 PetscErrorCode SNESComputeJacobian(SNES snes, Vec X, Mat A, Mat B)
 {
-  PetscBool flag, testFunc, testJac;
+  PetscBool flag;
   DM        dm;
   DMSNES    sdm;
   KSP       ksp;
@@ -2931,11 +2953,6 @@ PetscErrorCode SNESComputeJacobian(SNES snes, Vec X, Mat A, Mat B)
   PetscCall(VecValidValues_Internal(X, 2, PETSC_TRUE));
   PetscCall(SNESGetDM(snes, &dm));
   PetscCall(DMGetDMSNES(dm, &sdm));
-
-  PetscObjectOptionsBegin((PetscObject)snes);
-  PetscCall(PetscOptionsName("-snes_test_function", "Compare hand-coded and finite difference functions", "None", &testFunc));
-  PetscCall(PetscOptionsName("-snes_test_jacobian", "Compare hand-coded and finite difference Jacobians", "None", &testJac));
-  PetscOptionsEnd();
 
   /* make sure that MatAssemblyBegin/End() is called on A matrix if it is matrix-free */
   if (snes->lagjacobian == -2) {
@@ -3006,8 +3023,8 @@ PetscErrorCode SNESComputeJacobian(SNES snes, Vec X, Mat A, Mat B)
     snes->vec_sol      = X;
     snes->jacobian     = A;
     snes->jacobian_pre = B;
-    if (testFunc) PetscCall(SNESTestFunction(snes));
-    if (testJac) PetscCall(SNESTestJacobian(snes, NULL, NULL));
+    if (snes->testFunc) PetscCall(SNESTestFunction(snes));
+    if (snes->testJac) PetscCall(SNESTestJacobian(snes, NULL, NULL));
 
     snes->vec_sol      = xsave;
     snes->jacobian     = jacobiansave;
