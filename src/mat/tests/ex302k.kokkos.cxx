@@ -162,6 +162,6 @@ int main(int argc, char **argv)
     nsize: 2
     args: -mat_type aijkokkos
     requires: kokkos_kernels
-    output_file: output/empty.out
+    output_file: /dev/null
 
 TEST*/

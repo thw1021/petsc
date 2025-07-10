@@ -140,5 +140,6 @@ int main(int argc, char **args)
 
    test:
       nsize: 4
+      output_file: /dev/null
 
 TEST*/

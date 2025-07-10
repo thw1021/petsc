@@ -180,33 +180,34 @@ PetscErrorCode testPTAPRectangular(void)
 /*TEST
 
    test:
+      output_file: /dev/null
 
    test:
       suffix: 2
       nsize: 2
       args: -matmatmult_via nonscalable
-      output_file: output/ex93_1.out
+      output_file: /dev/null
 
    test:
       suffix: 3
       nsize: 2
-      output_file: output/ex93_1.out
+      output_file: /dev/null
 
    test:
       suffix: 4
       nsize: 2
       args: -matptap_via scalable
-      output_file: output/ex93_1.out
+      output_file: /dev/null
 
    test:
       suffix: btheap
       args: -matmatmult_via btheap -matmattransmult_via color
-      output_file: output/ex93_1.out
+      output_file: /dev/null
 
    test:
       suffix: heap
       args: -matmatmult_via heap
-      output_file: output/ex93_1.out
+      output_file: /dev/null
 
    #HYPRE PtAP is broken for complex numbers
    test:
@@ -214,21 +215,21 @@ PetscErrorCode testPTAPRectangular(void)
       nsize: 3
       requires: hypre !complex
       args: -matmatmult_via hypre -matptap_via hypre -test_hypre
-      output_file: output/ex93_hypre.out
+      output_file: /dev/null
 
    test:
       suffix: llcondensed
       args: -matmatmult_via llcondensed
-      output_file: output/ex93_1.out
+      output_file: /dev/null
 
    test:
       suffix: scalable
       args: -matmatmult_via scalable
-      output_file: output/ex93_1.out
+      output_file: /dev/null
 
    test:
       suffix: scalable_fast
       args: -matmatmult_via scalable_fast
-      output_file: output/ex93_1.out
+      output_file: /dev/null
 
 TEST*/

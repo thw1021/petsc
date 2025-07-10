@@ -169,7 +169,7 @@ int main(int argc, char **argv)
     # use small numbers to make the test cheap
     args: -maxn 4 -skipSmall 1 -loopSmall 1
     filter: grep "DOES_NOT_EXIST"
-    output_file: output/empty.out
+    output_file: /dev/null
     nsize: 2
 
     test:

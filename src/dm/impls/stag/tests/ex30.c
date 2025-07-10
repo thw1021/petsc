@@ -3193,9 +3193,11 @@ static PetscErrorCode CheckMat(DM dmSol, Mat A)
    test:
       suffix: 1
       nsize: 1
+      output_file: /dev/null
 
    test:
       suffix: 2
       nsize: 4
+      output_file: /dev/null
 
 TEST*/

@@ -88,7 +88,7 @@ int main(int argc, char **argv)
 
   test:
     args: -n 2 -m 2 -vec_type kokkos
-    output_file: output/empty.out
+    output_file: /dev/null
     filter: grep "DOES_NOT_EXIST"
 
 TEST*/

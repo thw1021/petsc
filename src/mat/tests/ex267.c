@@ -189,6 +189,6 @@ int main(int argc, char **args)
    test:
       suffix: 1
       args: -inplace {{0 1}} -mat_type {{aij dense}}
-      output_file: output/empty.out
+      output_file: /dev/null
 
 TEST*/

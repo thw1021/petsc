@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 /**TEST
    test:
      nsize: 2
-     output_file: output/empty.out
+     output_file: /dev/null
      args: -sf_type {{basic neighbor}}
 
 TEST**/
