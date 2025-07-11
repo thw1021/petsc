@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 
    testset:
       nsize: 1
-      output_file: output/empty.out
+      output_file: /dev/null
       test:
         args: -vec_type {{seq mpi standard}}
         suffix: standard
@@ -74,7 +74,7 @@ int main(int argc, char **argv)
 
    testset:
       nsize: 2
-      output_file: output/empty.out
+      output_file: /dev/null
       test:
         args: -vec_type {{mpi standard}}
         suffix: standard_2

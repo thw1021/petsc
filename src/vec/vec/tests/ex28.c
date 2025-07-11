@@ -154,10 +154,11 @@ int main(int argc, char **argv)
 
    test:
       nsize: 3
+      output_file: /dev/null
 
    testset:
      nsize: 3
-     output_file: output/ex28_1.out
+     output_file: /dev/null
 
      test:
         suffix: 2

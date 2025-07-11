@@ -117,6 +117,6 @@ int main(int argc, char **argv)
   test:
     nsize: 2
     args: -mat_type aij
-    output_file: output/empty.out
+    output_file: /dev/null
 
 TEST*/

@@ -54,7 +54,7 @@ int main(int argc, char **argv)
   test:
     requires: cuda
     args: -n 2
-    output_file: output/empty.out
+    output_file: /dev/null
     filter: grep "DOES_NOT_EXIST"
 
 TEST*/

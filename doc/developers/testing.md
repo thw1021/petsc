@@ -111,8 +111,8 @@ With this background, these keywords are as follows.
   - The output of the test is to be compared with an *expected result*
     whose name is given by `output_file`.
   - This file is described relative to the source directory of the
-    source file and should be in the output subdirectory (for example,
-    `output/ex1.out`)
+    source file and should be in the `output` subdirectory (for example,
+    `output/ex1.out`), unless no output is expected, in which case it can be `/dev/null`
 
 - **nsize**: (*Optional*; *Default:* `nsize=1`)
 

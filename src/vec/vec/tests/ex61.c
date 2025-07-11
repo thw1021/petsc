@@ -74,7 +74,7 @@ int main(int argc, char **args)
 /*TEST
 
   testset:
-    output_file: output/empty.out
+    output_file: /dev/null
     nsize: {{1 2 3}}
     args: -ignore_remote {{0 1}}
 

@@ -200,7 +200,7 @@ int main(int argc, char **args)
     args: -n 2 -A ${DATAFILESPATH}/matrices/small
     nsize: 1
     filter: grep "DOES_NOT_EXIST"
-    output_file: output/empty.out
+    output_file: /dev/null
     requires: datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES) kokkos_kernels
 
     test:

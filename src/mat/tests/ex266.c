@@ -83,6 +83,6 @@ int main(int argc, char **args)
 
   test:
     nsize: 3
-    output_file: output/empty.out
+    output_file: /dev/null
 
 TEST*/
