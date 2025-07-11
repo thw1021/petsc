@@ -191,7 +191,7 @@ PetscInt divWork(PetscMPIInt id, PetscInt num, PetscMPIInt size)
 
    test:
       nsize: 2
-      output_file: output/ex1_1.out
+      output_file: /dev/null
       localrunfiles: ex2_stock.txt
 
 TEST*/

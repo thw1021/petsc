@@ -32,5 +32,6 @@ int main(int argc, char **argv)
 
   test:
     suffix: 0
+    output_file: /dev/null
 
 TEST*/

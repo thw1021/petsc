@@ -36,6 +36,6 @@ int main(int argc, char **args)
    test:
      requires: datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
      args: -mat_type aij -matload_block_size {{1 2}} -f ${DATAFILESPATH}/matrices/smallbs2
-     output_file: output/empty.out
+     output_file: /dev/null
 
 TEST*/

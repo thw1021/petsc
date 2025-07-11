@@ -305,7 +305,7 @@ int main(int argc, char **args)
       requires: kokkos_kernels
       args: -ne 29 -ksp_type cg -pc_type pbjacobi -mat_type aijkokkos -ksp_converged_reason
       filter: grep -v CONVERGED_RTOL
-      output_file: output/empty.out
+      output_file: /dev/null
 
    # command line options match GPU defaults
    test:

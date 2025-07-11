@@ -53,5 +53,6 @@ int main(int argc, char **argv)
 
    test:
     nsize: 3
+    output_file: /dev/null
 
 TEST*/
