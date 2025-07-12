@@ -633,31 +633,6 @@ static PetscErrorCode MatDQNApplyJ0Inv(Mat B, Vec F, Vec dX)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* This is not Bunch-Kaufman LDLT: here L is strictly lower triangular part of STY */
-static PetscErrorCode MatGetLDLT(Mat B, Mat result)
-{
-  Mat_LMVM *lmvm  = (Mat_LMVM *)B->data;
-  Mat_DQN  *lbfgs = (Mat_DQN *)lmvm->ctx;
-  PetscInt  m_local;
-
-  PetscFunctionBegin;
-  if (!lbfgs->temp_mat) PetscCall(MatDuplicate(lbfgs->YtS_triu_strict, MAT_SHARE_NONZERO_PATTERN, &lbfgs->temp_mat));
-  PetscCall(MatCopy(lbfgs->YtS_triu_strict, lbfgs->temp_mat, SAME_NONZERO_PATTERN));
-  PetscCall(MatDiagonalScale(lbfgs->temp_mat, lbfgs->inv_diag_vec, NULL));
-  PetscCall(MatGetLocalSize(result, &m_local, NULL));
-  // need to conjugate and conjugate again because we have MatTransposeMatMult but not MatHermitianTransposeMatMult()
-  PetscCall(MatConjugate(lbfgs->temp_mat));
-  if (m_local) {
-    Mat temp_local, YtS_local, result_local;
-    PetscCall(MatDenseGetLocalMatrix(lbfgs->YtS_triu_strict, &YtS_local));
-    PetscCall(MatDenseGetLocalMatrix(lbfgs->temp_mat, &temp_local));
-    PetscCall(MatDenseGetLocalMatrix(result, &result_local));
-    PetscCall(MatTransposeMatMult(YtS_local, temp_local, MAT_REUSE_MATRIX, PETSC_DETERMINE, &result_local));
-  }
-  PetscCall(MatConjugate(result));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
 {
   Mat_LMVM *lmvm  = (Mat_LMVM *)B->data;
@@ -735,13 +710,27 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
       PetscCall(MatDenseRestoreSubMatrix(YtS_local, &YtS_row));
     }
   }
+  PetscCall(MatDenseGetLocalMatrix(lbfgs->J, &J_local));
+  PetscCall(MatSetFactorType(J_local, MAT_FACTOR_NONE));
   if (!lbfgs->inv_diag_vec) PetscCall(VecDuplicate(lbfgs->diag_vec, &lbfgs->inv_diag_vec));
   PetscCall(VecCopy(lbfgs->diag_vec, lbfgs->inv_diag_vec));
   PetscCall(VecReciprocal(lbfgs->inv_diag_vec));
-  PetscCall(MatDenseGetLocalMatrix(lbfgs->J, &J_local));
-  PetscCall(MatSetFactorType(J_local, MAT_FACTOR_NONE));
-  PetscCall(MatGetLDLT(B, lbfgs->J));
-  PetscCall(MatAXPY(lbfgs->J, 1.0, lbfgs->StBS, SAME_NONZERO_PATTERN));
+
+  if (!lbfgs->temp_mat) PetscCall(MatTranspose(lbfgs->YtS_triu_strict, MAT_INITIAL_MATRIX, &lbfgs->temp_mat));
+  else PetscCall(MatTranspose(lbfgs->YtS_triu_strict, MAT_REUSE_MATRIX, &lbfgs->temp_mat));
+  if (PetscDefined(USE_COMPLEX)) PetscCall(MatConjugate(lbfgs->temp_mat));
+
+  PetscCall(MatDiagonalScale(lbfgs->temp_mat, NULL, lbfgs->inv_diag_vec));
+  PetscCall(MatGetLocalSize(lbfgs->J, &m_local, NULL));
+  if (m_local) {
+    Mat temp_local, YtS_local, result_local;
+    PetscCall(MatDenseGetLocalMatrix(lbfgs->YtS_triu_strict, &YtS_local));
+    PetscCall(MatDenseGetLocalMatrix(lbfgs->temp_mat, &temp_local));
+    PetscCall(MatDenseGetLocalMatrix(lbfgs->J, &result_local));
+    PetscCall(MatMatMult(temp_local, YtS_local, MAT_REUSE_MATRIX, PETSC_DETERMINE, &result_local));
+  }
+  //TODO StBS local
+  PetscCall(MatAXPY(lbfgs->J, 1.0, lbfgs->StBS, UNKNOWN_NONZERO_PATTERN));
   if (m_local) {
     PetscCall(MatSetOption(J_local, MAT_SPD, PETSC_TRUE));
     PetscCall(MatCholeskyFactor(J_local, NULL, NULL));
