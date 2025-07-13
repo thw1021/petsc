@@ -25,7 +25,6 @@
   #define petscsubcommgetchild_            PETSCSUBCOMMGETCHILD
   #define petscoptionsallused_             PETSCOPTIONSALLUSED
   #define petscoptionsgetenumprivate_      PETSCOPTIONSGETENUMPRIVATE
-  #define petscoptionsgetstring_           PETSCOPTIONSGETSTRING
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
   #define petscoptionsbegin_               petscoptionsbegin
   #define petscoptionsend_                 petscoptionsend
@@ -44,7 +43,6 @@
   #define petscsubcommgetchild_            petscsubcommgetchild
   #define petscoptionsallused_             petscoptionsallused
   #define petscoptionsgetenumprivate_      petscoptionsgetenumprivate
-  #define petscoptionsgetstring_           petscoptionsgetstring
 #endif
 
 static struct _n_PetscOptionItems PetscOptionsObjectBase;
@@ -299,24 +297,6 @@ PETSC_EXTERN void petscoptionsgetenumprivate_(PetscOptions *opt, char *pre, char
   FREECHAR(name, c2);
 }
 
-PETSC_EXTERN void petscoptionsgetstring_(PetscOptions *options, char *pre, char *name, char *string, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2, PETSC_FORTRAN_CHARLEN_T len)
-{
-  char     *c1, *c2, *c3;
-  size_t    len3;
-  PetscBool flag;
-
-  FIXCHAR(pre, len1, c1);
-  FIXCHAR(name, len2, c2);
-  c3   = string;
-  len3 = len - 1;
-
-  *ierr = PetscOptionsGetString(*options, c1, c2, c3, len3, &flag);
-  if (*ierr) return;
-  if (!FORTRANNULLBOOL(flg)) *flg = flag;
-  FREECHAR(pre, c1);
-  FREECHAR(name, c2);
-  FIXRETURNCHAR(flag, string, len);
-}
 PETSC_EXTERN void petscsubcommgetparent_(PetscSubcomm *scomm, MPI_Fint *pcomm, int *ierr)
 {
   MPI_Comm tcomm;
