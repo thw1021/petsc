@@ -247,6 +247,9 @@ clang-tidy: $(srcs.tidy)
 # Hack: manual dependencies on object files
 ifeq ($(MPI_IS_MPIUNI),1)
   MPIUNI_MOD := $(MODDIR)/mpiuni.mod
+  $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpi_sizeofs.o : $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpi_constants.o
+  $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpi_base.o : $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpi_sizeofs.o
+  $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpiunimod.o : $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpi_base.o
   $(OBJDIR)/src/sys/mpiuni/ftn-src/somempifort.o : $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpiunimod.o
 endif
 $(OBJDIR)/src/sys/ftn-mod/petscsysmod.o   : $(if $(MPIUNI_MOD),$(OBJDIR)/src/sys/mpiuni/ftn-mod/mpiunimod.o)
