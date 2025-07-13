@@ -25,7 +25,7 @@ typedef struct {
   Vec               diag_vec_recycle_order;
   Vec               inv_diag_vec;
   Vec               column_work, column_work2, rwork1, rwork2, rwork3;
-  Vec               rwork2_local, rwork3_local;
+  Vec               rwork2_local, rwork3_local, invD_local;
   Vec               local_work_vec, local_work_vec_copy;
   Vec               cyclic_work_vec;
   MatType           dense_type;
