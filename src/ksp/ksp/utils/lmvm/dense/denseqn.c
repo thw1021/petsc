@@ -706,13 +706,7 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
     // StBS_1
     PetscCall(MatDenseGetSubMatrix(lbfgs->StBS, PETSC_DECIDE, PETSC_DECIDE, 0, ii, &StBS_sub));
     // Second GEMM
-    //PetscCall(MatTransposeMatMult(Sfull, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
-    PetscCall(MatProductClear(StBS_sub));
-    PetscCall(MatProductCreateWithMat(Sfull, BS_sub, NULL, StBS_sub));
-    PetscCall(MatProductSetType(StBS_sub, MATPRODUCT_AtB));
-    PetscCall(MatProductSetFromOptions(StBS_sub));
-    PetscCall(MatProductSymbolic(StBS_sub));
-    PetscCall(MatProductNumeric(StBS_sub));
+    PetscCall(MatTransposeMatMult(Sfull, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
     PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
     PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
 
@@ -723,13 +717,7 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
     PetscCall(MatDenseGetSubMatrix(lbfgs->BS, PETSC_DECIDE, PETSC_DECIDE, ii, h, &BS_sub));
     // StBS_1
     PetscCall(MatDenseGetSubMatrix(lbfgs->StBS, ii, h, ii, h, &StBS_sub));
-    //PetscCall(MatTransposeMatMult(Sfull_sub, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
-    PetscCall(MatProductClear(StBS_sub));
-    PetscCall(MatProductCreateWithMat(Sfull, BS_sub, NULL, StBS_sub));
-    PetscCall(MatProductSetType(StBS_sub, MATPRODUCT_AtB));
-    PetscCall(MatProductSetFromOptions(StBS_sub));
-    PetscCall(MatProductSymbolic(StBS_sub));
-    PetscCall(MatProductNumeric(StBS_sub));
+    PetscCall(MatTransposeMatMult(Sfull_sub, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
     PetscCall(MatDenseRestoreSubMatrix(Sfull, &Sfull_sub));
     PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
     PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
@@ -742,13 +730,7 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
     PetscCall(MatDenseGetSubMatrix(lbfgs->BS, PETSC_DECIDE, PETSC_DECIDE, ii, h, &BS_sub));
     // StBS_2
     PetscCall(MatDenseGetSubMatrix(lbfgs->StBS, 0, ii, ii, h, &StBS_sub));
-    //PetscCall(MatTransposeMatMult(Sfull_sub, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
-    PetscCall(MatProductClear(StBS_sub));
-    PetscCall(MatProductCreateWithMat(Sfull, BS_sub, NULL, StBS_sub));
-    PetscCall(MatProductSetType(StBS_sub, MATPRODUCT_AtB));
-    PetscCall(MatProductSetFromOptions(StBS_sub));
-    PetscCall(MatProductSymbolic(StBS_sub));
-    PetscCall(MatProductNumeric(StBS_sub));
+    PetscCall(MatTransposeMatMult(Sfull_sub, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
     PetscCall(MatDenseRestoreSubMatrix(Sfull, &Sfull_sub));
     PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
     PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
