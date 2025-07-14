@@ -7,6 +7,8 @@
   dense representation for the limited-memory BFGS/DFP method.
 */
 
+PETSC_INTERN PetscLogEvent STBS_Comp, YTS_Comp, DMult_Update;
+
 typedef struct {
   PetscInt          num_updates;
   PetscInt          num_mult_updates;
