@@ -480,7 +480,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   DM          sw;
   PetscScalar intESq;
   PetscReal  *E, *x, *weight;
-  PetscReal   Enorm = 0., lgEnorm, lgEmax, sum = 0., Emax = 0., chargesum = 0., entropy=0., weightsum = 0.;
+  PetscReal   Enorm = 0., lgEnorm, lgEmax, sum = 0., Emax = 0., chargesum = 0., entropy = 0., weightsum = 0.;
   PetscReal   pmoments[4]; /* \int f, \int v f, \int v^2 f */
   PetscInt   *species, dim, Np, gNp;
   MPI_Comm    comm;
@@ -533,7 +533,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(PetscDrawSave(draw));
 
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", pmoments));
-  PetscCall(PetscPrintf(comm, "E: %f\t%+e\t%e\t%f\t%20.15e\t%f\t%2.15f\t%2.15f\t%2.15f\t%20.15e\t%2.15f\t%20.15e\t%20.15e\t%" PetscInt_FMT "\t(%" PetscInt_FMT ")\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double) weightsum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double) entropy, (double)0.5*intESq, gNp, step));
+  PetscCall(PetscPrintf(comm, "E: %f\t%+e\t%e\t%f\t%20.15e\t%f\t%2.15f\t%2.15f\t%2.15f\t%20.15e\t%2.15f\t%20.15e\t%20.15e\t%" PetscInt_FMT "\t(%" PetscInt_FMT ")\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)weightsum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)entropy, (double)0.5 * intESq, gNp, step));
   PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -602,15 +602,15 @@ PetscErrorCode MonitorInitialConditions(TS ts, PetscInt step, PetscReal t, Vec U
 /* Right now, make the complete velocity histogram */
 PetscErrorCode MonitorVelocity(TS ts, PetscInt step, PetscReal t, Vec U, void *ctx)
 {
-  AppCtx        *user = (AppCtx *)ctx;
-  DM             sw, dm;
-  Vec            ks;
-  PetscProbFn   *cdf;
-  PetscDraw      drawcell_v;
-  PetscScalar   *ksa;
-  PetscReal     *weight, *vel;
-  PetscInt      *pidx;
-  PetscInt       dim, Npc, cStart, cEnd, cell = user->velocity_monitor;
+  AppCtx      *user = (AppCtx *)ctx;
+  DM           sw, dm;
+  Vec          ks;
+  PetscProbFn *cdf;
+  PetscDraw    drawcell_v;
+  PetscScalar *ksa;
+  PetscReal   *weight, *vel;
+  PetscInt    *pidx;
+  PetscInt     dim, Npc, cStart, cEnd, cell = user->velocity_monitor;
 
   PetscFunctionBegin;
   PetscCall(TSGetDM(ts, &sw));
@@ -707,36 +707,36 @@ PetscErrorCode MonitorVelocity(TS ts, PetscInt step, PetscReal t, Vec U, void *c
 static PetscErrorCode MonitorRegularizedEntropy(TS ts, PetscInt step, PetscReal t, Vec U, void *ctx)
 {
   DM                 sw;
-  PetscReal         *weight;//, *velocity;
+  PetscReal         *weight; //, *velocity;
   Vec                V;
   IS                 isv;
   const PetscScalar *velocity;
   PetscInt           Np, dim;
   PetscReal          kHermite[6] = {-2.3506049736745, -1.3358490740137, -0.43607741192762, 0.43607741192762, 1.3358490740137, 2.3506049736745};
   PetscReal          wHermite[6] = {0.0045300099055088, 0.15706732032286, 0.72462959522439, 0.72462959522439, 0.15706732032286, 0.0045300099055088};
-  PetscReal          S = 0.0, epsilon = 0.1;/* Fixed epsilon until we compute it from the distribution */
-  AppCtx            *user = (AppCtx*)ctx;
+  PetscReal          S = 0.0, epsilon = 0.1; /* Fixed epsilon until we compute it from the distribution */
+  AppCtx            *user = (AppCtx *)ctx;
 
   PetscFunctionBeginUser;
   if (step % user->rentropty_ostep == 0) {
     PetscCall(TSGetDM(ts, &sw));
     PetscCall(DMGetDimension(sw, &dim));
-    PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void**)&weight));
+    PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
     PetscCall(TSRHSSplitGetIS(ts, "momentum", &isv));
     PetscCall(VecGetSubVector(U, isv, &V));
     PetscCall(VecGetArrayRead(V, &velocity));
     PetscCall(DMSwarmGetLocalSize(sw, &Np));
-    for (PetscInt p = 0; p < Np; ++p){
-      for (PetscInt i=0; i < 6; i++){
+    for (PetscInt p = 0; p < Np; ++p) {
+      for (PetscInt i = 0; i < 6; i++) {
         PetscReal logsum = 0, kpx, dx, SQRT2EPSM1, PI2EPSM1;
         for (PetscInt q = 0; q < Np; ++q) {
-          SQRT2EPSM1 = 1./PetscSqrtReal(2.*epsilon);
-          PI2EPSM1 = 1./PetscSqrtReal(2*PETSC_PI * epsilon);
-          kpx = kHermite[i] + velocity[p*dim + 0]*SQRT2EPSM1;
-          dx = kpx - velocity[q*dim+0] * SQRT2EPSM1;
-          logsum += weight[q] * PetscExpReal(-dx*dx)*PI2EPSM1;
+          SQRT2EPSM1 = 1. / PetscSqrtReal(2. * epsilon);
+          PI2EPSM1   = 1. / PetscSqrtReal(2 * PETSC_PI * epsilon);
+          kpx        = kHermite[i] + velocity[p * dim + 0] * SQRT2EPSM1;
+          dx         = kpx - velocity[q * dim + 0] * SQRT2EPSM1;
+          logsum += weight[q] * PetscExpReal(-dx * dx) * PI2EPSM1;
         }
-        S -= 1./PetscSqrtReal(PETSC_PI) * weight[p] * wHermite[i] * (PetscLogReal(logsum));
+        S -= 1. / PetscSqrtReal(PETSC_PI) * weight[p] * wHermite[i] * (PetscLogReal(logsum));
       }
     }
     PetscCall(PetscDrawLGAddPoint(user->drawlgregS, &t, &S));
@@ -746,7 +746,7 @@ static PetscErrorCode MonitorRegularizedEntropy(TS ts, PetscInt step, PetscReal 
     PetscCall(PetscDrawSave(draw));
     PetscCall(VecRestoreArrayRead(V, &velocity));
     PetscCall(VecRestoreSubVector(U, isv, &V));
-    PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void**)&weight));
+    PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&weight));
     PetscPrintf(PETSC_COMM_WORLD, "Regularized Entropy: :%2.12g\n", S);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1937,7 +1937,7 @@ static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U, Mat J, Mat P, void 
   PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&vel));
   Np /= 2 * dim;
   for (p = 0; p < Np; ++p) {
-    PetscScalar     vals[4] = {0., 1., -1, 0.};
+    PetscScalar vals[4] = {0., 1., -1, 0.};
 
     for (d = 0; d < dim; ++d) {
       const PetscInt rows[2] = {(p * 2 + 0) * dim + d + rStart, (p * 2 + 1) * dim + d + rStart};
@@ -2079,12 +2079,12 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ct
   for (PetscInt c = cStart; c < cEnd; ++c) {
     PetscInt *points;
     PetscInt  Ncp;
-    PetscReal E = 0.5*phi_vals[c];
+    PetscReal E = 0.5 * phi_vals[c];
 
     PetscCall(DMSwarmSortGetPointsPerCell(sw, c, &Ncp, &points));
     for (PetscInt cp = 0; cp < Ncp; ++cp) {
-      const PetscInt  p     = points[cp];
-      const PetscReal v2    = DMPlex_DotRealD_Internal(dim, &u[(p * 2 + 1) * dim], &u[(p * 2 + 1) * dim]);
+      const PetscInt  p  = points[cp];
+      const PetscReal v2 = DMPlex_DotRealD_Internal(dim, &u[(p * 2 + 1) * dim], &u[(p * 2 + 1) * dim]);
       E += 0.5 * m_p * (v2);
 
       *F += E;
@@ -2122,9 +2122,9 @@ PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
   PetscCall(ComputeFieldAtParticles(snes, sw));
   PetscCall(PetscLogEventEnd(COMPUTEFIELD, 0, 0, 0, 0));
   PetscCall(DMSwarmGetField(sw, "E_field", NULL, NULL, (void **)&E));
-  for (p = 0; p < Np-1; ++p) {
+  for (p = 0; p < Np - 1; ++p) {
     for (d = 0; d < dim; ++d) {
-      g[(p * 2 + 0) * dim + d] = -(q_p) * E[p * dim + d];
+      g[(p * 2 + 0) * dim + d] = -(q_p)*E[p * dim + d];
       g[(p * 2 + 1) * dim + d] = u[(p * 2 + 1) * dim + d];
     }
   }
