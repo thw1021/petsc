@@ -686,8 +686,8 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ct
   SNES               snes = ((AppCtx *)ctx)->snes;
   DM                 dm, sw;
   const PetscScalar *u, *phi_vals;
-  PetscInt           dim, Np, p, c, cStart, cEnd;
-  PetscReal         *vel, *coords, m_p = 1., q_p = -1.;
+  PetscInt           dim, Np, cStart, cEnd;
+  PetscReal         *vel, *coords, m_p = 1.;
   Vec                phi;
 
   PetscFunctionBeginUser;
