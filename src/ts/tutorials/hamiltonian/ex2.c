@@ -2590,6 +2590,6 @@ int main(int argc, char **argv)
      test:
        suffix: landau_damping_1d_dg
        args: -em_type primal -petscspace_degree 1 -em_pc_type svd -ts_type discgrad -ts_discgrad_type average \
-             -snes_fd -snes_type qn -remap_freq 0
+             -snes_fd -snes_type qn  -snes_qn_type lbfgs -remap_freq 0
 
 TEST*/
