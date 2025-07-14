@@ -9,6 +9,8 @@
 #include <petscdevice.h>
 #include <petsc/private/deviceimpl.h>
 
+PetscLogEvent STBS_Comp, YTS_Comp, DMult_Update;
+
 static PetscErrorCode MatMult_LMVMDQN(Mat, Vec, Vec);
 static PetscErrorCode MatMult_LMVMDBFGS(Mat, Vec, Vec);
 static PetscErrorCode MatMult_LMVMDDFP(Mat, Vec, Vec);
@@ -643,11 +645,13 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
   Mat_DQN  *lbfgs = (Mat_DQN *)lmvm->ctx;
   PetscInt  m     = lmvm->m, m_local;
   PetscInt  k     = lmvm->k;
+  PetscInt  idx0  = oldest_update(m, k);
   PetscInt  h     = k - oldest_update(m, k);
-  PetscInt  j_0;
+  PetscInt  j_0, ii;
   PetscInt  prev_oldest;
   Mat       Sfull = lmvm->basis[LMBASIS_S]->vecs;
   Mat       Yfull = lmvm->basis[LMBASIS_Y]->vecs;
+  Mat       Sfull_sub, BS_sub, StBS_sub;
 
   PetscFunctionBegin;
   if (!lbfgs->YtS_triu_strict) {
@@ -663,25 +667,88 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
   }
   if (lbfgs->num_mult_updates == k) PetscFunctionReturn(PETSC_SUCCESS);
 
+  PetscCall(PetscLogEventBegin(STBS_Comp, NULL, NULL, NULL, NULL));
   /* B_0 may have been updated, we must recompute B_0 S and S^T B_0 S */
-  for (PetscInt j = oldest_update(m, k); j < k; j++) {
-    Vec      s_j;
-    Vec      Bs_j;
-    Vec      StBs_j;
-    PetscInt S_idx    = recycle_index(m, j);
-    PetscInt StBS_idx = lbfgs->strategy == MAT_LMVM_DENSE_INPLACE ? S_idx : history_index(m, k, j);
+  //TODO be smart about B_0... see lmvmutils.c:1024
+  //TODO Main bottle neck...
+
+  // BS compute. TODO B_0 scalar better..
+  // Better memory access pattern by having separate forloop
+  for (PetscInt j = idx0; j < k; j++) {
+    Vec      s_j, Bs_j;
+    PetscInt S_idx = recycle_index(m, j);
 
     PetscCall(MatDenseGetColumnVecWrite(lbfgs->BS, S_idx, &Bs_j));
     PetscCall(MatDenseGetColumnVecRead(Sfull, S_idx, &s_j));
     PetscCall(MatDQNApplyJ0Fwd(B, s_j, Bs_j));
     PetscCall(MatDenseRestoreColumnVecRead(Sfull, S_idx, &s_j));
-    PetscCall(MatDenseGetColumnVecWrite(lbfgs->StBS, StBS_idx, &StBs_j));
-    PetscCall(MatMultHermitianTransposeColumnRange(Sfull, Bs_j, StBs_j, 0, h));
-    lbfgs->St_count++;
-    if (lbfgs->strategy == MAT_LMVM_DENSE_REORDER) PetscCall(VecRecycleOrderToHistoryOrder(B, StBs_j, lbfgs->num_updates, lbfgs->cyclic_work_vec));
-    PetscCall(MatDenseRestoreColumnVecWrite(lbfgs->StBS, StBS_idx, &StBs_j));
     PetscCall(MatDenseRestoreColumnVecWrite(lbfgs->BS, S_idx, &Bs_j));
   }
+  // StB0
+  // Two GEMM:
+  // 1. Sfull[:,ii:]^T @ BS[:,ii:]
+  // 2. Sfull @ BS[:, 0:ii]
+  //
+  // Need to Symmetrize
+  // TODO Complex conjugate?
+  ii = recycle_index(m, idx0);
+  if (ii == 0) {
+    PetscCall(MatDenseGetSubMatrix(Sfull, PETSC_DECIDE, PETSC_DECIDE, 0, h, &Sfull_sub));
+    PetscCall(MatDenseGetSubMatrix(lbfgs->BS, PETSC_DECIDE, PETSC_DECIDE, 0, h, &BS_sub));
+    PetscCall(MatDenseGetSubMatrix(lbfgs->StBS, 0, h, 0, h, &StBS_sub));
+    PetscCall(MatTransposeMatMult(Sfull_sub, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(Sfull, &Sfull_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
+  } else {
+    // BS_1
+    PetscCall(MatDenseGetSubMatrix(lbfgs->BS, PETSC_DECIDE, PETSC_DECIDE, 0, ii, &BS_sub));
+    // StBS_1
+    PetscCall(MatDenseGetSubMatrix(lbfgs->StBS, PETSC_DECIDE, PETSC_DECIDE, 0, ii, &StBS_sub));
+    // Second GEMM
+    PetscCall(MatTransposeMatMult(Sfull, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
+
+    // First GEMM
+    // S_0
+    PetscCall(MatDenseGetSubMatrix(Sfull, PETSC_DECIDE, PETSC_DECIDE, ii, h, &Sfull_sub));
+    // BS_0
+    PetscCall(MatDenseGetSubMatrix(lbfgs->BS, PETSC_DECIDE, PETSC_DECIDE, ii, h, &BS_sub));
+    // StBS_1
+    PetscCall(MatDenseGetSubMatrix(lbfgs->StBS, ii, h, ii, h, &StBS_sub));
+    PetscCall(MatTransposeMatMult(Sfull_sub, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(Sfull, &Sfull_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
+
+    //TODO one more GEMM or memcpy to symmetrize?
+    // Third GEMM?
+    // S_1
+    PetscCall(MatDenseGetSubMatrix(Sfull, PETSC_DECIDE, PETSC_DECIDE, 0, ii, &Sfull_sub));
+    // BS_0
+    PetscCall(MatDenseGetSubMatrix(lbfgs->BS, PETSC_DECIDE, PETSC_DECIDE, ii, h, &BS_sub));
+    // StBS_2
+    PetscCall(MatDenseGetSubMatrix(lbfgs->StBS, 0, ii, ii, h, &StBS_sub));
+    PetscCall(MatTransposeMatMult(Sfull_sub, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(Sfull, &Sfull_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
+  }
+
+  if (lbfgs->strategy == MAT_LMVM_DENSE_REORDER) {
+    Vec StBs_j;
+
+    for (PetscInt j = idx0; j < k; j++) {
+      PetscInt S_idx    = recycle_index(m, j);
+      PetscInt StBS_idx = lbfgs->strategy == MAT_LMVM_DENSE_INPLACE ? S_idx : history_index(m, k, j);
+
+      PetscCall(MatDenseGetColumnVecWrite(lbfgs->StBS, StBS_idx, &StBs_j));
+      PetscCall(VecRecycleOrderToHistoryOrder(B, StBs_j, lbfgs->num_updates, lbfgs->cyclic_work_vec));
+      PetscCall(MatDenseRestoreColumnVecWrite(lbfgs->StBS, StBS_idx, &StBs_j));
+    }
+  }
+  PetscCall(PetscLogEventEnd(STBS_Comp, NULL, NULL, NULL, NULL));
   prev_oldest = oldest_update(m, lbfgs->num_mult_updates);
   if (lbfgs->strategy == MAT_LMVM_DENSE_REORDER && prev_oldest < oldest_update(m, k)) {
     /* move the YtS entries that have been computed and need to be kept back up */
@@ -691,6 +758,7 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
   }
   PetscCall(MatGetLocalSize(lbfgs->YtS_triu_strict, &m_local, NULL));
   j_0 = PetscMax(lbfgs->num_mult_updates, oldest_update(m, k));
+  PetscCall(PetscLogEventBegin(YTS_Comp, NULL, NULL, NULL, NULL));
   for (PetscInt j = j_0; j < k; j++) {
     PetscInt S_idx   = recycle_index(m, j);
     PetscInt YtS_idx = lbfgs->strategy == MAT_LMVM_DENSE_INPLACE ? S_idx : history_index(m, k, j);
@@ -713,6 +781,7 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
       PetscCall(MatDenseRestoreSubMatrix(YtS_local, &YtS_row));
     }
   }
+  PetscCall(PetscLogEventEnd(YTS_Comp, NULL, NULL, NULL, NULL));
   PetscCall(VecCopy(lbfgs->diag_vec, lbfgs->inv_diag_vec));
   PetscCall(VecReciprocal(lbfgs->inv_diag_vec));
   if (m_local) {
@@ -925,7 +994,9 @@ static PetscErrorCode MatMult_LMVMDBFGS(Mat B, Vec X, Vec Z)
     }
     PetscCall(VecRestoreArrayAndMemType(lbfgs->rwork1, &workscalar));
   } else {
+    PetscCall(PetscLogEventBegin(DMult_Update, NULL, NULL, NULL, NULL));
     PetscCall(MatLMVMDBFGSUpdateMultData(B));
+    PetscCall(PetscLogEventEnd(DMult_Update, NULL, NULL, NULL, NULL));
     PetscCall(MatMultHermitianTransposeColumnRange(Yfull, X, lbfgs->rwork1, 0, h));
     lbfgs->Yt_count++;
     PetscCall(MatMultHermitianTransposeColumnRange(Sfull, Z, lbfgs->rwork2, 0, h));
