@@ -866,16 +866,6 @@ static inline PetscErrorCode MatPivotCheck(Mat fact, Mat mat, const MatFactorInf
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static inline PetscErrorCode MatGetCurrentMemType(Mat A, PetscMemType *m)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscAssertPointer(m, 2);
-  if (A->ops->getcurrentmemtype) PetscUseTypeMethod(A, getcurrentmemtype, m);
-  else *m = PETSC_MEMTYPE_HOST;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 #include <petscbt.h>
 /*
   Create and initialize a linked list

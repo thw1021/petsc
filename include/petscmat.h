@@ -525,6 +525,7 @@ PETSC_EXTERN PetscErrorCode MatDiagonalRestoreDiagonal(Mat, Vec *);
 PETSC_EXTERN PetscErrorCode MatDiagonalGetInverseDiagonal(Mat, Vec *);
 PETSC_EXTERN PetscErrorCode MatDiagonalRestoreInverseDiagonal(Mat, Vec *);
 PETSC_EXTERN PetscErrorCode MatConstantDiagonalGetConstant(Mat, PetscScalar *);
+PETSC_EXTERN PetscErrorCode MatGetCurrentMemType(Mat, PetscMemType *);
 
 #if defined(PETSC_HAVE_HYPRE)
 PETSC_EXTERN PetscErrorCode MatHYPRESetPreallocation(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[]);
