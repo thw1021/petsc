@@ -1,5 +1,6 @@
 #include <../src/ksp/ksp/utils/lmvm/dense/denseqn.h> /*I "petscksp.h" I*/
 #include <../src/ksp/ksp/utils/lmvm/blas_cyclic/blas_cyclic.h>
+#include <../src/ksp/ksp/utils/lmvm/lmproducts.h>
 #include <petscblaslapack.h>
 #include <petscmat.h>
 #include <petscsys.h>
@@ -8,6 +9,8 @@
 #include <petscoptions.h>
 #include <petscdevice.h>
 #include <petsc/private/deviceimpl.h>
+
+PetscLogEvent STBS_Comp, YTS_Comp, DMult_Update;
 
 static PetscErrorCode MatMult_LMVMDQN(Mat, Vec, Vec);
 static PetscErrorCode MatMult_LMVMDBFGS(Mat, Vec, Vec);
@@ -75,6 +78,7 @@ static PetscErrorCode MatLMVMDQNResetDestructive(Mat B)
   PetscCall(VecDestroy(&lqn->rwork3));
   PetscCall(VecDestroy(&lqn->rwork2_local));
   PetscCall(VecDestroy(&lqn->rwork3_local));
+  PetscCall(VecDestroy(&lqn->invD_local));
   PetscCall(VecDestroy(&lqn->cyclic_work_vec));
   PetscCall(VecDestroyVecs(lmvm->m, &lqn->PQ));
   PetscCall(PetscFree(lqn->stp));
@@ -168,16 +172,19 @@ static PetscErrorCode MatAllocate_LMVMDQN_Internal(Mat B)
         PetscCall(MatCreateDenseFromVecType(comm, vec_type, m, m, M, M, -1, NULL, &lqn->YtS_triu));
         PetscCall(MatCreateVecs(lqn->StY_triu, &lqn->diag_vec, &lqn->rwork1));
         PetscCall(MatCreateVecs(lqn->StY_triu, &lqn->rwork2, &lqn->rwork3));
+        PetscCall(VecDuplicate(lqn->diag_vec, &lqn->inv_diag_vec));
       } else if (is_ddfp) {
         PetscCall(MatCreateDenseFromVecType(comm, vec_type, m, m, M, M, -1, NULL, &lqn->YtS_triu));
         PetscCall(MatDuplicate(Sfull, MAT_SHARE_NONZERO_PATTERN, &lqn->HY));
         PetscCall(MatCreateVecs(lqn->YtS_triu, &lqn->diag_vec, &lqn->rwork1));
         PetscCall(MatCreateVecs(lqn->YtS_triu, &lqn->rwork2, &lqn->rwork3));
+        PetscCall(VecDuplicate(lqn->diag_vec, &lqn->inv_diag_vec));
       } else if (is_dbfgs) {
         PetscCall(MatCreateDenseFromVecType(comm, vec_type, m, m, M, M, -1, NULL, &lqn->StY_triu));
         PetscCall(MatDuplicate(Sfull, MAT_SHARE_NONZERO_PATTERN, &lqn->BS));
         PetscCall(MatCreateVecs(lqn->StY_triu, &lqn->diag_vec, &lqn->rwork1));
         PetscCall(MatCreateVecs(lqn->StY_triu, &lqn->rwork2, &lqn->rwork3));
+        PetscCall(VecDuplicate(lqn->diag_vec, &lqn->inv_diag_vec));
       } else {
         SETERRQ(PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_INCOMP, "MatAllocate_LMVMDQN is only available for dense derived types. (DBFGS, DDFP, DQN");
       }
@@ -246,6 +253,11 @@ static PetscErrorCode MatSetFromOptions_LMVMDQN(Mat B, PetscOptionItems PetscOpt
     PetscCall(PetscOptionsEnum("-mat_ldfp_type", "Implementation options for L-DFP", "MatLMVMDenseType", MatLMVMDenseTypes, (PetscEnum)lqn->strategy, (PetscEnum *)&lqn->strategy, NULL));
   } else {
     SETERRQ(PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_INCOMP, "MatSetFromOptions_LMVMDQN is only available for dense derived types. (DBFGS, DDFP, DQN");
+  }
+  //For DBFGS, if REORDER, then non-recursive Mult is not supported
+  if (is_dbfgs && (lqn->strategy == MAT_LMVM_DENSE_REORDER)) {
+    PetscCall(PetscInfo(B, "MATLMVMDBFGS with MAT_LMVM_DENSE_REORDER does not support dense MatMult. Using Recursive.\n"));
+    lqn->use_recursive = PETSC_TRUE;
   }
   PetscCall(SymBroydenRescaleSetFromOptions(B, lqn->rescale, PetscOptionsObject));
   PetscOptionsHeadEnd();
@@ -633,43 +645,19 @@ static PetscErrorCode MatDQNApplyJ0Inv(Mat B, Vec F, Vec dX)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* This is not Bunch-Kaufman LDLT: here L is strictly lower triangular part of STY */
-static PetscErrorCode MatGetLDLT(Mat B, Mat result)
-{
-  Mat_LMVM *lmvm  = (Mat_LMVM *)B->data;
-  Mat_DQN  *lbfgs = (Mat_DQN *)lmvm->ctx;
-  PetscInt  m_local;
-
-  PetscFunctionBegin;
-  if (!lbfgs->temp_mat) PetscCall(MatDuplicate(lbfgs->YtS_triu_strict, MAT_SHARE_NONZERO_PATTERN, &lbfgs->temp_mat));
-  PetscCall(MatCopy(lbfgs->YtS_triu_strict, lbfgs->temp_mat, SAME_NONZERO_PATTERN));
-  PetscCall(MatDiagonalScale(lbfgs->temp_mat, lbfgs->inv_diag_vec, NULL));
-  PetscCall(MatGetLocalSize(result, &m_local, NULL));
-  // need to conjugate and conjugate again because we have MatTransposeMatMult but not MatHermitianTransposeMatMult()
-  PetscCall(MatConjugate(lbfgs->temp_mat));
-  if (m_local) {
-    Mat temp_local, YtS_local, result_local;
-    PetscCall(MatDenseGetLocalMatrix(lbfgs->YtS_triu_strict, &YtS_local));
-    PetscCall(MatDenseGetLocalMatrix(lbfgs->temp_mat, &temp_local));
-    PetscCall(MatDenseGetLocalMatrix(result, &result_local));
-    PetscCall(MatTransposeMatMult(YtS_local, temp_local, MAT_REUSE_MATRIX, PETSC_DETERMINE, &result_local));
-  }
-  PetscCall(MatConjugate(result));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
 {
   Mat_LMVM *lmvm  = (Mat_LMVM *)B->data;
   Mat_DQN  *lbfgs = (Mat_DQN *)lmvm->ctx;
   PetscInt  m     = lmvm->m, m_local;
   PetscInt  k     = lmvm->k;
+  PetscInt  idx0  = oldest_update(m, k);
   PetscInt  h     = k - oldest_update(m, k);
-  PetscInt  j_0;
+  PetscInt  j_0, ii;
   PetscInt  prev_oldest;
-  Mat       J_local;
   Mat       Sfull = lmvm->basis[LMBASIS_S]->vecs;
   Mat       Yfull = lmvm->basis[LMBASIS_Y]->vecs;
+  Mat       Sfull_sub, BS_sub, StBS_sub;
 
   PetscFunctionBegin;
   if (!lbfgs->YtS_triu_strict) {
@@ -685,25 +673,76 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
   }
   if (lbfgs->num_mult_updates == k) PetscFunctionReturn(PETSC_SUCCESS);
 
+  PetscCall(PetscLogEventBegin(STBS_Comp, NULL, NULL, NULL, NULL));
   /* B_0 may have been updated, we must recompute B_0 S and S^T B_0 S */
-  for (PetscInt j = oldest_update(m, k); j < k; j++) {
-    Vec      s_j;
-    Vec      Bs_j;
-    Vec      StBs_j;
-    PetscInt S_idx    = recycle_index(m, j);
-    PetscInt StBS_idx = lbfgs->strategy == MAT_LMVM_DENSE_INPLACE ? S_idx : history_index(m, k, j);
+  // BS compute. TODO B_0 scalar better..
+  // Better memory access pattern by having separate forloop
+  for (PetscInt j = idx0; j < k; j++) {
+    Vec      s_j, Bs_j;
+    PetscInt S_idx = recycle_index(m, j);
 
     PetscCall(MatDenseGetColumnVecWrite(lbfgs->BS, S_idx, &Bs_j));
     PetscCall(MatDenseGetColumnVecRead(Sfull, S_idx, &s_j));
     PetscCall(MatDQNApplyJ0Fwd(B, s_j, Bs_j));
     PetscCall(MatDenseRestoreColumnVecRead(Sfull, S_idx, &s_j));
-    PetscCall(MatDenseGetColumnVecWrite(lbfgs->StBS, StBS_idx, &StBs_j));
-    PetscCall(MatMultHermitianTransposeColumnRange(Sfull, Bs_j, StBs_j, 0, h));
-    lbfgs->St_count++;
-    if (lbfgs->strategy == MAT_LMVM_DENSE_REORDER) PetscCall(VecRecycleOrderToHistoryOrder(B, StBs_j, lbfgs->num_updates, lbfgs->cyclic_work_vec));
-    PetscCall(MatDenseRestoreColumnVecWrite(lbfgs->StBS, StBS_idx, &StBs_j));
     PetscCall(MatDenseRestoreColumnVecWrite(lbfgs->BS, S_idx, &Bs_j));
   }
+  // StB0
+  // Two GEMM:
+  // 1. Sfull[:,ii:]^T @ BS[:,ii:]
+  // 2. Sfull @ BS[:, 0:ii]
+  //
+  // TODO Complex conjugate?
+  ii = recycle_index(m, idx0);
+  if (ii == 0) {
+    PetscCall(MatDenseGetSubMatrix(Sfull, PETSC_DECIDE, PETSC_DECIDE, 0, h, &Sfull_sub));
+    PetscCall(MatDenseGetSubMatrix(lbfgs->BS, PETSC_DECIDE, PETSC_DECIDE, 0, h, &BS_sub));
+    PetscCall(MatDenseGetSubMatrix(lbfgs->StBS, 0, h, 0, h, &StBS_sub));
+    PetscCall(MatTransposeMatMult(Sfull_sub, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(Sfull, &Sfull_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
+  } else {
+    // BS_1
+    PetscCall(MatDenseGetSubMatrix(lbfgs->BS, PETSC_DECIDE, PETSC_DECIDE, 0, ii, &BS_sub));
+    // StBS_1
+    PetscCall(MatDenseGetSubMatrix(lbfgs->StBS, PETSC_DECIDE, PETSC_DECIDE, 0, ii, &StBS_sub));
+    // Second GEMM
+    PetscCall(MatTransposeMatMult(Sfull, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
+
+    // First GEMM
+    // S_0
+    PetscCall(MatDenseGetSubMatrix(Sfull, PETSC_DECIDE, PETSC_DECIDE, ii, h, &Sfull_sub));
+    // BS_0
+    PetscCall(MatDenseGetSubMatrix(lbfgs->BS, PETSC_DECIDE, PETSC_DECIDE, ii, h, &BS_sub));
+    // StBS_1
+    PetscCall(MatDenseGetSubMatrix(lbfgs->StBS, ii, h, ii, h, &StBS_sub));
+    PetscCall(MatTransposeMatMult(Sfull_sub, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(Sfull, &Sfull_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
+    PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
+
+    //Make Hermitian
+    PetscCall(MatDenseGetLocalMatrix(lbfgs->StBS, &StBS_sub));
+    PetscCall(MatGetLocalSize(StBS_sub, &m_local, NULL));
+    if (m_local) PetscCall(LMProductsMakeHermitian(StBS_sub, idx0, k));
+  }
+
+  if (lbfgs->strategy == MAT_LMVM_DENSE_REORDER) {
+    Vec StBs_j;
+
+    for (PetscInt j = idx0; j < k; j++) {
+      PetscInt S_idx    = recycle_index(m, j);
+      PetscInt StBS_idx = lbfgs->strategy == MAT_LMVM_DENSE_INPLACE ? S_idx : history_index(m, k, j);
+
+      PetscCall(MatDenseGetColumnVecWrite(lbfgs->StBS, StBS_idx, &StBs_j));
+      PetscCall(VecRecycleOrderToHistoryOrder(B, StBs_j, lbfgs->num_updates, lbfgs->cyclic_work_vec));
+      PetscCall(MatDenseRestoreColumnVecWrite(lbfgs->StBS, StBS_idx, &StBs_j));
+    }
+  }
+  PetscCall(PetscLogEventEnd(STBS_Comp, NULL, NULL, NULL, NULL));
   prev_oldest = oldest_update(m, lbfgs->num_mult_updates);
   if (lbfgs->strategy == MAT_LMVM_DENSE_REORDER && prev_oldest < oldest_update(m, k)) {
     /* move the YtS entries that have been computed and need to be kept back up */
@@ -713,6 +752,7 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
   }
   PetscCall(MatGetLocalSize(lbfgs->YtS_triu_strict, &m_local, NULL));
   j_0 = PetscMax(lbfgs->num_mult_updates, oldest_update(m, k));
+  PetscCall(PetscLogEventBegin(YTS_Comp, NULL, NULL, NULL, NULL));
   for (PetscInt j = j_0; j < k; j++) {
     PetscInt S_idx   = recycle_index(m, j);
     PetscInt YtS_idx = lbfgs->strategy == MAT_LMVM_DENSE_INPLACE ? S_idx : history_index(m, k, j);
@@ -735,16 +775,29 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
       PetscCall(MatDenseRestoreSubMatrix(YtS_local, &YtS_row));
     }
   }
-  if (!lbfgs->inv_diag_vec) PetscCall(VecDuplicate(lbfgs->diag_vec, &lbfgs->inv_diag_vec));
+  PetscCall(PetscLogEventEnd(YTS_Comp, NULL, NULL, NULL, NULL));
   PetscCall(VecCopy(lbfgs->diag_vec, lbfgs->inv_diag_vec));
   PetscCall(VecReciprocal(lbfgs->inv_diag_vec));
-  PetscCall(MatDenseGetLocalMatrix(lbfgs->J, &J_local));
-  PetscCall(MatSetFactorType(J_local, MAT_FACTOR_NONE));
-  PetscCall(MatGetLDLT(B, lbfgs->J));
-  PetscCall(MatAXPY(lbfgs->J, 1.0, lbfgs->StBS, SAME_NONZERO_PATTERN));
   if (m_local) {
+    Mat J_local, stril_StY, YtS_local, StBS_local;
+
+    PetscCall(MatDenseGetLocalMatrix(lbfgs->J, &J_local));
+    PetscCall(MatSetFactorType(J_local, MAT_FACTOR_NONE));
+
+    PetscCall(MatDenseGetLocalMatrix(lbfgs->YtS_triu_strict, &YtS_local));
+    if (!lbfgs->invD_local) PetscCall(VecCreateLocalVector(lbfgs->inv_diag_vec, &lbfgs->invD_local));
+    PetscCall(VecGetLocalVector(lbfgs->inv_diag_vec, lbfgs->invD_local));
+    PetscCall(MatTranspose(YtS_local, MAT_INITIAL_MATRIX, &stril_StY));
+    if (PetscDefined(USE_COMPLEX)) PetscCall(MatConjugate(stril_StY));
+    PetscCall(MatDiagonalScale(stril_StY, NULL, lbfgs->invD_local));
+    PetscCall(MatDenseGetLocalMatrix(lbfgs->J, &J_local));
+    PetscCall(MatDenseGetLocalMatrix(lbfgs->StBS, &StBS_local));
+    PetscCall(MatMatMult(stril_StY, YtS_local, MAT_REUSE_MATRIX, PETSC_DETERMINE, &J_local));
+    PetscCall(MatAXPY(J_local, 1.0, StBS_local, UNKNOWN_NONZERO_PATTERN));
     PetscCall(MatSetOption(J_local, MAT_SPD, PETSC_TRUE));
     PetscCall(MatCholeskyFactor(J_local, NULL, NULL));
+    PetscCall(MatDestroy(&stril_StY));
+    PetscCall(VecRestoreLocalVector(lbfgs->inv_diag_vec, lbfgs->invD_local));
   }
   lbfgs->num_mult_updates = lbfgs->num_updates;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -842,6 +895,7 @@ static PetscErrorCode MatSolve_LMVMDBFGS(Mat H, Vec F, Vec dX)
    Alternative approach: considering the fact that DFP is dual to BFGS, use MatMult of DPF:
    (See ddfp.c's MatMult_LMVMDDFP)
 
+   Note: Reorder memorytype currently does not support Dense Cholesky formulation.
 */
 static PetscErrorCode MatMult_LMVMDBFGS(Mat B, Vec X, Vec Z)
 {
@@ -935,7 +989,9 @@ static PetscErrorCode MatMult_LMVMDBFGS(Mat B, Vec X, Vec Z)
     }
     PetscCall(VecRestoreArrayAndMemType(lbfgs->rwork1, &workscalar));
   } else {
+    PetscCall(PetscLogEventBegin(DMult_Update, NULL, NULL, NULL, NULL));
     PetscCall(MatLMVMDBFGSUpdateMultData(B));
+    PetscCall(PetscLogEventEnd(DMult_Update, NULL, NULL, NULL, NULL));
     PetscCall(MatMultHermitianTransposeColumnRange(Yfull, X, lbfgs->rwork1, 0, h));
     lbfgs->Yt_count++;
     PetscCall(MatMultHermitianTransposeColumnRange(Sfull, Z, lbfgs->rwork2, 0, h));
@@ -1015,7 +1071,7 @@ PetscErrorCode MatCreate_LMVMDBFGS(Mat B)
   PetscCall(PetscNew(&lbfgs));
   lmvm->ctx              = (void *)lbfgs;
   lbfgs->allocated       = PETSC_FALSE;
-  lbfgs->use_recursive   = PETSC_TRUE;
+  lbfgs->use_recursive   = PETSC_FALSE;
   lbfgs->needPQ          = PETSC_TRUE;
   lbfgs->watchdog        = 0;
   lbfgs->max_seq_rejects = lmvm->m / 2;
@@ -1161,7 +1217,6 @@ static PetscErrorCode MatLMVMDDFPUpdateSolveData(Mat B)
       PetscCall(MatDenseRestoreSubMatrix(StY_local, &StY_row));
     }
   }
-  if (!ldfp->inv_diag_vec) PetscCall(VecDuplicate(ldfp->diag_vec, &ldfp->inv_diag_vec));
   PetscCall(VecCopy(ldfp->diag_vec, ldfp->inv_diag_vec));
   PetscCall(VecReciprocal(ldfp->inv_diag_vec));
   PetscCall(MatDenseGetLocalMatrix(ldfp->J, &J_local));
