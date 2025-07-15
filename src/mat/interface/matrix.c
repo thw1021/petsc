@@ -11370,3 +11370,28 @@ PetscErrorCode MatEliminateZeros(Mat A, PetscBool keep)
   PetscUseTypeMethod(A, eliminatezeros, keep);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*@C
+  MatGetCurrentMemType - Get the memory location of the provided matrix
+
+  Not Collective
+
+  Input Parameter:
+. A - the matrix whose memory type we are checking
+
+  Output Parameter:
+. m - the matrix memory type
+
+  Level: intermediate
+
+.seealso: [](ch_matrices), `Mat`, `MatBoundToCPU()`
+@*/
+PetscErrorCode MatGetCurrentMemType(Mat A, PetscMemType *m)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscAssertPointer(m, 2);
+  if (A->ops->getcurrentmemtype) PetscUseTypeMethod(A, getcurrentmemtype, m);
+  else *m = PETSC_MEMTYPE_HOST;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
