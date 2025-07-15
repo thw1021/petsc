@@ -197,7 +197,7 @@ static PetscErrorCode MatAllocate_LMVMDQN_Internal(Mat B)
         PetscCall(MatZeroEntries(lqn->YtS_triu));
         PetscCall(MatShift(lqn->YtS_triu, 1.0));
       }
-      if (lqn->use_recursive && (is_dbfgs || is_ddfp)) {
+      if ((lqn->use_recursive || (lqn->strategy == MAT_LMVM_DENSE_REORDER)) && (is_dbfgs || is_ddfp)) {
         PetscCall(VecDuplicateVecs(lmvm->Xprev, lmvm->m, &lqn->PQ));
         PetscCall(VecDuplicate(lmvm->Xprev, &lqn->column_work2));
         PetscCall(PetscMalloc1(lmvm->m, &lqn->yts));
@@ -338,7 +338,7 @@ static PetscErrorCode MatUpdate_LMVMDQN(Mat B, Vec X, Vec F)
         }
       }
 
-      if (lqn->use_recursive && (is_dbfgs || is_ddfp)) lqn->yts[idx] = PetscRealPart(curvature);
+      if ((lqn->use_recursive || (lqn->strategy == MAT_LMVM_DENSE_REORDER)) && (is_dbfgs || is_ddfp)) lqn->yts[idx] = PetscRealPart(curvature);
 
       if (is_dqn || is_dbfgs) { /* implement the scheme of Byrd, Nocedal, and Schnabel to save a MatMultTranspose call in the common case the       *
          * H_k is immediately applied to F after begin updated.   The S^T y computation can be split up as S^T (F - F_prev) */
@@ -504,7 +504,7 @@ static PetscErrorCode MatCopy_LMVMDQN(Mat B, Mat M, MatStructure str)
     PetscCall(VecDestroyThenCopy(blqn->diag_vec, &mlqn->diag_vec));
     PetscCall(VecDestroyThenCopy(blqn->diag_vec_recycle_order, &mlqn->diag_vec_recycle_order));
     PetscCall(VecDestroyThenCopy(blqn->inv_diag_vec, &mlqn->inv_diag_vec));
-    if (blqn->use_recursive && (is_dbfgs || is_ddfp)) {
+    if ((blqn->use_recursive || (blqn->strategy == MAT_LMVM_DENSE_REORDER)) && (is_dbfgs || is_ddfp)) {
       for (i = 0; i < bdata->m; i++) {
         PetscCall(VecDestroyThenCopy(blqn->PQ[i], &mlqn->PQ[i]));
         mlqn->yts[i] = blqn->yts[i];
@@ -890,6 +890,7 @@ static PetscErrorCode MatSolve_LMVMDBFGS(Mat H, Vec F, Vec dX)
    Alternative approach: considering the fact that DFP is dual to BFGS, use MatMult of DPF:
    (See ddfp.c's MatMult_LMVMDDFP)
 
+   Note: Reorder memorytype currently does not support Dense Cholesky formulation.
 */
 static PetscErrorCode MatMult_LMVMDBFGS(Mat B, Vec X, Vec Z)
 {
@@ -912,7 +913,7 @@ static PetscErrorCode MatMult_LMVMDBFGS(Mat B, Vec X, Vec Z)
   PetscCall(MatDQNApplyJ0Fwd(B, X, Z));
   if (!lbfgs->num_updates) { PetscFunctionReturn(PETSC_SUCCESS); /* No updates stored yet */ }
 
-  if (lbfgs->use_recursive) {
+  if (lbfgs->use_recursive || (lbfgs->strategy == MAT_LMVM_DENSE_REORDER)) {
     PetscDeviceContext dctx;
     PetscMemType       memtype;
     PetscScalar        stz, ytx, stp, sjtpi, yjtsi, *workscalar;
@@ -1065,7 +1066,7 @@ PetscErrorCode MatCreate_LMVMDBFGS(Mat B)
   PetscCall(PetscNew(&lbfgs));
   lmvm->ctx              = (void *)lbfgs;
   lbfgs->allocated       = PETSC_FALSE;
-  lbfgs->use_recursive   = PETSC_TRUE;
+  lbfgs->use_recursive   = PETSC_FALSE;
   lbfgs->needPQ          = PETSC_TRUE;
   lbfgs->watchdog        = 0;
   lbfgs->max_seq_rejects = lmvm->m / 2;
