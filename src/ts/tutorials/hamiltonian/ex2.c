@@ -747,7 +747,7 @@ static PetscErrorCode MonitorRegularizedEntropy(TS ts, PetscInt step, PetscReal 
     PetscCall(VecRestoreArrayRead(V, &velocity));
     PetscCall(VecRestoreSubVector(U, isv, &V));
     PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&weight));
-    PetscPrintf(PETSC_COMM_WORLD, "Regularized Entropy: :%2.12g\n", S);
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Regularized Entropy: :%2.12g\n", S));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
