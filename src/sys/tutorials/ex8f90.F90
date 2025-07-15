@@ -3,11 +3,11 @@
 
 #include "petsc/finclude/petsc.h"
       use petsc
-      implicit none
+      implicit none (type, external)
 
       PetscErrorCode                            :: ierr
       Character(len=99) list1(6)
-      PetscEnum                                 :: opt=-1
+      integer4                                 :: opt=-1
       PetscBool                                 :: set=PETSC_FALSE
 
       PetscCallA(PetscInitialize(ierr))

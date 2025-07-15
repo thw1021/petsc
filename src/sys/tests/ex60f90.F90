@@ -2,7 +2,7 @@ program ex60F90
 
 #include <petsc/finclude/petscsys.h>
     use petsc
-    implicit none
+    implicit none (type, external)
 
     PetscBool                        :: flg
     Character(len=256)               :: outputString

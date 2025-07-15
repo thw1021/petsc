@@ -8,7 +8,7 @@
       use petscvec
       use petscmat
       use petscksp
-      implicit none
+      implicit none (type, external)
       Vec                            x,b
       Mat                            A,aux,Y,C
       KSP                            ksp

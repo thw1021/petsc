@@ -45,7 +45,7 @@ the object as an argument you can use, for example,
 subroutine FormFunction(snes,x,f,dummy,ierr)
   use petscvec
   use petscsnesdef
-  implicit none
+  implicit none (type, external)
 ```
 
 ### Declaring PETSc Object Variables
@@ -112,7 +112,7 @@ make sure you have them marked as double precision (e.g., pass in `10.d0`
 instead of `10.0` or declare them as PETSc variables, e.g.
 `PetscScalar one = 1.0`). Otherwise, the compiler interprets the input as a single
 precision number, which can cause crashes or other mysterious problems.
-We **highly** recommend using the `implicit none`
+We **highly** recommend using the `implicit none (type, external)`
 option at the beginning of each Fortran subroutine and declaring all variables.
 
 (sec_fortran_errors)=

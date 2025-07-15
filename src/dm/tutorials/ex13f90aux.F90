@@ -2,7 +2,7 @@ module ex13f90auxmodule
 #include <petsc/finclude/petscdm.h>
 #include <petsc/finclude/petscdmda.h>
   use petscdm
-  implicit none
+  implicit none (type, external)
 contains
   !
   ! A subroutine which returns the boundary conditions.
