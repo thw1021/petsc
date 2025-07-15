@@ -689,6 +689,7 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
   //
   // TODO Complex conjugate?
   ii = recycle_index(m, idx0);
+  if (PetscDefined(USE_COMPLEX)) PetscCall(MatConjugate(Sfull));
   if (ii == 0) {
     PetscCall(MatDenseGetSubMatrix(Sfull, PETSC_DECIDE, PETSC_DECIDE, 0, h, &Sfull_sub));
     PetscCall(MatDenseGetSubMatrix(lbfgs->BS, PETSC_DECIDE, PETSC_DECIDE, 0, h, &BS_sub));
@@ -724,6 +725,7 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
     PetscCall(MatGetLocalSize(StBS_sub, &m_local, NULL));
     if (m_local) PetscCall(LMProductsMakeHermitian(StBS_sub, idx0, k));
   }
+  if (PetscDefined(USE_COMPLEX)) PetscCall(MatConjugate(Sfull));
 
   if (lbfgs->strategy == MAT_LMVM_DENSE_REORDER) {
     Vec StBs_j;
