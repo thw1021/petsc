@@ -69,7 +69,6 @@ class Configure(config.package.Package):
     help.addArgument('MPI', '-with-mpiexec-tail=<prog>',                         nargs.Arg(None, None, 'The utility you want to put at the very end of "mpiexec -n <np> ..." and right before your executable to launch MPI jobs.'))
     help.addArgument('MPI', '-with-mpi-compilers=<bool>',                        nargs.ArgBool(None, 1, 'Try to use the MPI compilers, e.g. mpicc'))
     help.addArgument('MPI', '-known-mpi-shared-libraries=<bool>',                nargs.ArgBool(None, None, 'Indicates the MPI libraries are shared (the usual test will be skipped)'))
-    help.addArgument('MPI', '-with-mpi-f90module-visibility=<bool>',             nargs.ArgBool(None, 1, 'Indicates the MPI f90 module is available via PETSc module. When disabled, mpi_f08 can be used from user code'))
     return
 
   def setupDependencies(self, framework):
@@ -684,25 +683,17 @@ Unable to run hostname to check the network')
     return
 
   def FortranMPICheck(self):
-    '''Make sure fortran include [mpif.h] and library symbols are found'''
-    if not hasattr(self.compilers, 'FC'):
-      return 0
-    # Fortran compiler is being used - so make sure mpif.h exists
-    self.libraries.pushLanguage('FC')
-    oldFlags = self.compilers.FPPFLAGS
-    self.compilers.FPPFLAGS += ' '+self.headers.toString(self.include)
-    # check if mpi_init form fortran works
-    self.log.write('Checking for fortran mpi_init()\n')
-    if not self.libraries.check(self.lib,'', call = '#include "mpif.h"\n       integer ierr\n       call mpi_init(ierr)'):
-      raise RuntimeError('Fortran error! mpi_init() could not be located!')
-    # check if mpi.mod exists
-    if self.fortran.fortranIsF90:
+    '''Make sure fortran module is found'''
+    if hasattr(self.compilers, 'FC') and self.framework.argDB['with-fortran-bindings']:
+      self.libraries.pushLanguage('FC')
+      oldFlags = self.compilers.FPPFLAGS
+      self.compilers.FPPFLAGS += ' '+self.headers.toString(self.include)
+      # check if mpi.mod exists
       self.log.write('Checking for mpi.mod\n')
-      if self.libraries.check(self.lib,'', call = '       use mpi\n       integer(kind=selected_int_kind(5)) ierr,rank\n       call mpi_init(ierr)\n       call mpi_comm_rank(MPI_COMM_WORLD,rank,ierr)\n'):
-        self.addDefine('HAVE_MPI_F90MODULE', 1)
-    self.compilers.FPPFLAGS = oldFlags
-    self.libraries.popLanguage()
-    return 0
+      if not self.libraries.check(self.lib,'', call = '       use mpi\n       integer(kind=selected_int_kind(5)) ierr,rank\n       call mpi_init(ierr)\n       call mpi_comm_rank(MPI_COMM_WORLD,rank,ierr)\n       call mpi_finalize(ierr)\n'):
+        raise RuntimeError('Unable to find MPI module that supports MPI_Init(), MPI_Comm_size(), and MPI_Finalize()')
+      self.compilers.FPPFLAGS = oldFlags
+      self.libraries.popLanguage()
 
   def configureIO(self):
     '''Check for the functions in MPI/IO
