@@ -254,6 +254,11 @@ static PetscErrorCode MatSetFromOptions_LMVMDQN(Mat B, PetscOptionItems PetscOpt
   } else {
     SETERRQ(PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_INCOMP, "MatSetFromOptions_LMVMDQN is only available for dense derived types. (DBFGS, DDFP, DQN");
   }
+  //For DBFGS, if REORDER, then non-recursive Mult is not supported
+  if (is_dbfgs && (lqn->strategy == MAT_LMVM_DENSE_REORDER)) {
+    PetscCall(PetscInfo(B, "MATLMVMDBFGS with MAT_LMVM_DENSE_REORDER does not support dense MatMult. Using Recursive.\n"));
+    lqn->use_recursive = PETSC_TRUE;
+  }
   PetscCall(SymBroydenRescaleSetFromOptions(B, lqn->rescale, PetscOptionsObject));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
