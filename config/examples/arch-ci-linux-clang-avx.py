@@ -23,7 +23,6 @@ if __name__ == '__main__':
     'CXXOPTFLAGS=-g -O',
     '--download-codipack=1',
     '--download-adblaslapack=1',
-    '--with-mpi-f90module-visibility=0',
     '--with-strict-petscerrorcode',
     '--with-coverage',
   ]

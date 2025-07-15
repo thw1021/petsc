@@ -18,14 +18,13 @@ if __name__ == '__main__':
     '--download-fblaslapack=1',
     '--with-cc=icl',
     '--with-cxx=icl',
-    '--with-fc=ifort',
+    '--with-fortran-bindings=0',
     '--with-clanguage=cxx',
     '--with-scalar-type=complex',
     '--with-mpi-include=['+mpidir+'/Include,'+mpidir+'/Include/x64]',
     '--with-mpi-lib=['+mpidir+'/lib/x64/msmpifec.lib,'+mpidir+'/lib/x64/msmpi.lib]',
     '--with-mpiexec='+mpiexec,
     '--with-shared-libraries=0',
-    '--with-mpi-f90module-visibility=0',
     '--with-strict-petscerrorcode',
   ]
   configure.petsc_configure(configure_options)

@@ -19,7 +19,6 @@ if __name__ == '__main__':
     '--with-scalar-type=complex',
     '--with-precision=single',
     '--with-cuda-dir=/usr/local/cuda-11.7',
-    '--with-mpi-f90module-visibility=0',
     '--with-strict-petscerrorcode',
     '--with-coverage',
   ]
