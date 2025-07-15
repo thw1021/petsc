@@ -110,17 +110,19 @@ typedef struct {
 } Parameter;
 
 typedef struct {
-  PetscBag     bag;               // Problem parameters
-  PetscBool    error;             // Flag for printing the error
-  PetscInt     remapFreq;         // Number of timesteps between remapping
-  PetscBool    efield_monitor;    // Flag to show electric field monitor
-  PetscBool    moment_monitor;    // Flag to show distribution moment monitor
-  PetscBool    positions_monitor; // Flag to show particle positins at each time step
-  PetscBool    poisson_monitor;   // Flag to display charge, E field, and potential at each solve
-  PetscBool    initial_monitor;   // Flag to monitor the initial conditions
-  PetscInt     velocity_monitor;  // Cell to monitor the velocity distribution for
-  PetscBool    perturbed_weights; // Uniformly sample x,v space with gaussian weights
-  PetscInt     ostep;             // Print the energy at each ostep time steps
+  PetscBag     bag;               /* Problem parameters */
+  PetscBool    error;             /* Flag for printing the error */
+  PetscInt     remapFreq;         /* Number of timesteps between remapping */
+  PetscBool    efield_monitor;    /* Flag to show electric field monitor */
+  PetscBool    moment_monitor;    /* Flag to show distribution moment monitor */
+  PetscBool    positions_monitor; /* Flag to show particle positins at each time step */
+  PetscBool    poisson_monitor;   /* Flag to display charge, E field, and potential at each solve */
+  PetscBool    initial_monitor;   /* Flag to monitor the initial conditions */
+  PetscBool    regularized_entropy_monitor;
+  PetscInt     rentropty_ostep;
+  PetscInt     velocity_monitor;  /* Cell to monitor the velocity distribution for */
+  PetscBool    perturbed_weights; /* Uniformly sample x,v space with gaussian weights */
+  PetscInt     ostep;             /* Print the energy at each ostep time steps */
   PetscInt     numParticles;
   PetscReal    timeScale;              /* Nondimensionalizing time scale */
   PetscReal    charges[2];             /* The charges of each species */
@@ -131,31 +133,32 @@ typedef struct {
   PetscReal    stepSize;
   PetscInt     steps;
   PetscReal    initVel;
-  EMType       em;           // Type of electrostatic model
-  SNES         snes;         // EM solver
-  DM           dmPot;        // The DM for potential
-  Mat          fftPot;       // Fourier Transform operator for the potential
-  Vec          fftX, fftY;   //   FFT vectors with phases added (complex parts)
-  IS           fftReal;      //   The indices for real parts
-  IS           isPot;        // The IS for potential, or NULL in primal
-  Mat          M;            // The finite element mass matrix for potential
-  PetscFEGeom *fegeom;       // Geometric information for the DM cells
-  PetscDrawHG  drawhgic_x;   // Histogram of the particle weight in each X cell
-  PetscDrawHG  drawhgic_v;   // Histogram of the particle weight in each X cell
-  PetscDrawHG  drawhgcell_v; // Histogram of the particle weight in a given cell
-  PetscBool    validE;       // Flag to indicate E-field in swarm is valid
-  PetscReal    drawlgEmin;   // The minimum lg(E) to plot
-  PetscDrawLG  drawlgE;      // Logarithm of maximum electric field
-  PetscDrawSP  drawspE;      // Electric field at particle positions
-  PetscDrawSP  drawspX;      // Particle positions
-  PetscViewer  viewerRho;    // Charge density viewer
-  PetscViewer  viewerRhoHat; // Charge density Fourier Transform viewer
-  PetscViewer  viewerPhi;    // Potential viewer
+  EMType       em;           /* Type of electrostatic model */
+  SNES         snes;         /* EM solver */
+  DM           dmPot;        /* The DM for potential */
+  Mat          fftPot;       /* Fourier Transform operator for the potential */
+  Vec          fftX, fftY;   /* FFT vectors with phases added (complex parts) */
+  IS           fftReal;      /* The indices for real parts */
+  IS           isPot;        /* The IS for potential, or NULL in primal */
+  Mat          M;            /* The finite element mass matrix for potential */
+  PetscFEGeom *fegeom;       /* Geometric information for the DM cells */
+  PetscDrawHG  drawhgic_x;   /* Histogram of the particle weight in each X cell */
+  PetscDrawHG  drawhgic_v;   /* Histogram of the particle weight in each X cell */
+  PetscDrawHG  drawhgcell_v; /* Histogram of the particle weight in a given cell */
+  PetscBool    validE;       /* Flag to indicate E-field in swarm is valid */
+  PetscReal    drawlgEmin;   /* The minimum lg(E) to plot */
+  PetscDrawLG  drawlgE;      /* Logarithm of maximum electric field */
+  PetscDrawLG  drawlgregS;   /* Regularized Entropy monitor */
+  PetscDrawSP  drawspE;      /* Electric field at particle positions */
+  PetscDrawSP  drawspX;      /* Particle positions */
+  PetscViewer  viewerRho;    /* Charge density viewer */
+  PetscViewer  viewerRhoHat; /* Charge density Fourier Transform viewer */
+  PetscViewer  viewerPhi;    /* Potential viewer */
   DM           swarm;
   PetscRandom  random;
   PetscBool    twostream;
   PetscBool    checkweights;
-  PetscInt     checkVRes; // Flag to check/output velocity residuals for nightly tests
+  PetscInt     checkVRes; /* Flag to check/output velocity residuals for nightly tests */
 
   PetscLogEvent RhsXEvent, RhsVEvent, ESolveEvent, ETabEvent;
 } AppCtx;
@@ -163,52 +166,55 @@ typedef struct {
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscFunctionBeginUser;
-  PetscInt d                      = 2;
-  PetscInt maxSpecies             = 2;
-  options->error                  = PETSC_FALSE;
-  options->remapFreq              = 1;
-  options->efield_monitor         = PETSC_FALSE;
-  options->moment_monitor         = PETSC_FALSE;
-  options->initial_monitor        = PETSC_FALSE;
-  options->perturbed_weights      = PETSC_FALSE;
-  options->poisson_monitor        = PETSC_FALSE;
-  options->positions_monitor      = PETSC_FALSE;
-  options->velocity_monitor       = -1;
-  options->ostep                  = 100;
-  options->timeScale              = 2.0e-14;
-  options->charges[0]             = -1.0;
-  options->charges[1]             = 1.0;
-  options->masses[0]              = 1.0;
-  options->masses[1]              = 1000.0;
-  options->thermal_energy[0]      = 1.0;
-  options->thermal_energy[1]      = 1.0;
-  options->cosine_coefficients[0] = 0.01;
-  options->cosine_coefficients[1] = 0.5;
-  options->initVel                = 1;
-  options->totalWeight            = 1.0;
-  options->drawhgic_x             = NULL;
-  options->drawhgic_v             = NULL;
-  options->drawhgcell_v           = NULL;
-  options->drawlgEmin             = -6;
-  options->drawlgE                = NULL;
-  options->drawspE                = NULL;
-  options->drawspX                = NULL;
-  options->viewerRho              = NULL;
-  options->viewerRhoHat           = NULL;
-  options->viewerPhi              = NULL;
-  options->em                     = EM_COULOMB;
-  options->snes                   = NULL;
-  options->dmPot                  = NULL;
-  options->fftPot                 = NULL;
-  options->fftX                   = NULL;
-  options->fftY                   = NULL;
-  options->fftReal                = NULL;
-  options->isPot                  = NULL;
-  options->M                      = NULL;
-  options->numParticles           = 32768;
-  options->twostream              = PETSC_FALSE;
-  options->checkweights           = PETSC_FALSE;
-  options->checkVRes              = 0;
+  PetscInt d                           = 2;
+  PetscInt maxSpecies                  = 2;
+  options->error                       = PETSC_FALSE;
+  options->remapFreq                   = 0;
+  options->efield_monitor              = PETSC_FALSE;
+  options->moment_monitor              = PETSC_FALSE;
+  options->initial_monitor             = PETSC_FALSE;
+  options->perturbed_weights           = PETSC_FALSE;
+  options->poisson_monitor             = PETSC_FALSE;
+  options->positions_monitor           = PETSC_FALSE;
+  options->regularized_entropy_monitor = PETSC_FALSE;
+  options->rentropty_ostep             = 100;
+  options->velocity_monitor            = -1;
+  options->ostep                       = 100;
+  options->timeScale                   = 2.0e-14;
+  options->charges[0]                  = -1.0;
+  options->charges[1]                  = 1.0;
+  options->masses[0]                   = 1.0;
+  options->masses[1]                   = 1000.0;
+  options->thermal_energy[0]           = 1.0;
+  options->thermal_energy[1]           = 1.0;
+  options->cosine_coefficients[0]      = 0.01;
+  options->cosine_coefficients[1]      = 0.5;
+  options->initVel                     = 1;
+  options->totalWeight                 = 1.0;
+  options->drawhgic_x                  = NULL;
+  options->drawhgic_v                  = NULL;
+  options->drawhgcell_v                = NULL;
+  options->drawlgEmin                  = -6;
+  options->drawlgE                     = NULL;
+  options->drawlgregS                  = NULL;
+  options->drawspE                     = NULL;
+  options->drawspX                     = NULL;
+  options->viewerRho                   = NULL;
+  options->viewerRhoHat                = NULL;
+  options->viewerPhi                   = NULL;
+  options->em                          = EM_COULOMB;
+  options->snes                        = NULL;
+  options->dmPot                       = NULL;
+  options->fftPot                      = NULL;
+  options->fftX                        = NULL;
+  options->fftY                        = NULL;
+  options->fftReal                     = NULL;
+  options->isPot                       = NULL;
+  options->M                           = NULL;
+  options->numParticles                = 32768;
+  options->twostream                   = PETSC_FALSE;
+  options->checkweights                = PETSC_FALSE;
+  options->checkVRes                   = 0;
 
   PetscOptionsBegin(comm, "", "Landau Damping and Two Stream options", "DMSWARM");
   PetscCall(PetscOptionsBool("-error", "Flag to print the error", "ex2.c", options->error, &options->error, NULL));
@@ -219,6 +225,8 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsBool("-ics_monitor", "Flag to show initial condition histograms", "ex2.c", options->initial_monitor, &options->initial_monitor, NULL));
   PetscCall(PetscOptionsBool("-positions_monitor", "The flag to show particle positions", "ex2.c", options->positions_monitor, &options->positions_monitor, NULL));
   PetscCall(PetscOptionsBool("-poisson_monitor", "The flag to show charges, Efield and potential solve", "ex2.c", options->poisson_monitor, &options->poisson_monitor, NULL));
+  PetscCall(PetscOptionsBool("-regularized_entropy_monitor", "The flag to show the regularized entropy", "ex2.c", options->regularized_entropy_monitor, &options->regularized_entropy_monitor, NULL));
+  PetscCall(PetscOptionsInt("-rentropy_output_step", "Number of time steps between regularized entropy output", "ex2.c", options->rentropty_ostep, &options->rentropty_ostep, NULL));
   PetscCall(PetscOptionsInt("-velocity_monitor", "Cell to show velocity histograms", "ex2.c", options->velocity_monitor, &options->velocity_monitor, NULL));
   PetscCall(PetscOptionsBool("-twostream", "Run two stream instability", "ex2.c", options->twostream, &options->twostream, NULL));
   PetscCall(PetscOptionsBool("-perturbed_weights", "Flag to run uniform sampling with perturbed weights", "ex2.c", options->perturbed_weights, &options->perturbed_weights, NULL));
@@ -334,6 +342,19 @@ static PetscErrorCode SetupContext(DM dm, DM sw, AppCtx *user)
     PetscCall(PetscDrawAxisSetLabels(axis, "Particles", "x", "v"));
     PetscCall(PetscDrawSPReset(user->drawspX));
   }
+  if (user->regularized_entropy_monitor) {
+    PetscDraw     draw;
+    PetscDrawAxis axis;
+
+    PetscCall(PetscDrawCreate(comm, NULL, "Regularized Entropy", 0, 300, 400, 300, &draw));
+    PetscCall(PetscDrawSetSave(draw, "ex2_REnt"));
+    PetscCall(PetscDrawSetFromOptions(draw));
+    PetscCall(PetscDrawLGCreate(draw, 1, &user->drawlgregS));
+    PetscCall(PetscDrawDestroy(&draw));
+    PetscCall(PetscDrawLGGetAxis(user->drawlgregS, &axis));
+    PetscCall(PetscDrawAxisSetLabels(axis, "Entropy", "time", "S"));
+    PetscCall(PetscDrawLGSetLimits(user->drawlgregS, 0., user->steps * user->stepSize, -35., 0.));
+  }
   if (user->poisson_monitor) {
     Vec           rho, rhohat, phi;
     PetscDraw     draw;
@@ -399,6 +420,7 @@ static PetscErrorCode DestroyContext(AppCtx *user)
   PetscCall(PetscDrawHGDestroy(&user->drawhgcell_v));
 
   PetscCall(PetscDrawLGDestroy(&user->drawlgE));
+  PetscCall(PetscDrawLGDestroy(&user->drawlgregS));
   PetscCall(PetscDrawSPDestroy(&user->drawspE));
   PetscCall(PetscDrawSPDestroy(&user->drawspX));
   PetscCall(PetscViewerDestroy(&user->viewerRho));
@@ -458,7 +480,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   DM          sw;
   PetscScalar intESq;
   PetscReal  *E, *x, *weight;
-  PetscReal   Enorm = 0., lgEnorm, lgEmax, sum = 0., Emax = 0., chargesum = 0.;
+  PetscReal   Enorm = 0., lgEnorm, lgEmax, sum = 0., Emax = 0., chargesum = 0., entropy = 0., weightsum = 0.;
   PetscReal   pmoments[4]; /* \int f, \int v f, \int v^2 f */
   PetscInt   *species, dim, Np, gNp;
   MPI_Comm    comm;
@@ -475,7 +497,6 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(DMSwarmGetField(sw, "E_field", NULL, NULL, (void **)&E));
   PetscCall(DMSwarmGetField(sw, "species", NULL, NULL, (void **)&species));
   PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
-
   for (PetscInt p = 0; p < Np; ++p) {
     for (PetscInt d = 0; d < 1; ++d) {
       PetscReal temp = PetscAbsReal(E[p * dim + d]);
@@ -483,8 +504,11 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
     }
     Enorm += PetscSqrtReal(E[p * dim] * E[p * dim]);
     sum += E[p * dim];
-    chargesum += user->charges[0] * weight[p];
+    chargesum += weight[p];
+    weightsum += weight[p];
   }
+  entropy += -chargesum * PetscLogReal(chargesum);
+  chargesum *= user->charges[0];
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &Emax, 1, MPIU_REAL, MPIU_MAX, comm));
   lgEnorm = Enorm != 0 ? PetscLog10Real(Enorm) : -16.;
   lgEmax  = Emax != 0 ? PetscLog10Real(Emax) : user->drawlgEmin;
@@ -509,7 +533,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(PetscDrawSave(draw));
 
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", pmoments));
-  PetscCall(PetscPrintf(comm, "E: %f\t%+e\t%e\t%f\t%20.15e\t%f\t%f\t%f\t%20.15e\t%20.15e\t%20.15e\t%" PetscInt_FMT "\t(%" PetscInt_FMT ")\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)PetscSqrtReal(intESq), gNp, step));
+  PetscCall(PetscPrintf(comm, "E: %f\t%+e\t%e\t%f\t%20.15e\t%f\t%2.15f\t%2.15f\t%2.15f\t%20.15e\t%2.15f\t%20.15e\t%20.15e\t%" PetscInt_FMT "\t(%" PetscInt_FMT ")\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)weightsum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)entropy, (double)0.5 * intESq, gNp, step));
   PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -575,7 +599,7 @@ PetscErrorCode MonitorInitialConditions(TS ts, PetscInt step, PetscReal t, Vec U
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// Right now, make the complete velocity histogram
+/* Right now, make the complete velocity histogram */
 PetscErrorCode MonitorVelocity(TS ts, PetscInt step, PetscReal t, Vec U, void *ctx)
 {
   AppCtx      *user = (AppCtx *)ctx;
@@ -669,6 +693,62 @@ PetscErrorCode MonitorVelocity(TS ts, PetscInt step, PetscReal t, Vec U, void *c
 
   PetscCall(PetscDrawHGDraw(user->drawhgcell_v));
   PetscCall(PetscDrawHGSave(user->drawhgcell_v));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+ * Computes regularized entropy of the particle distribution in velocity space.
+ * Note: I use a fixed choice of epsilon here, and do not compute it from the
+ * distribution like in the collision operator, because it depends on the spacing
+ * of the particle grid, where here we have many particles occupying the same
+ * points velocity space in the initial conditions.
+ * TODO: Figure out how we want to compute epsilon from the distribution
+ */
+static PetscErrorCode MonitorRegularizedEntropy(TS ts, PetscInt step, PetscReal t, Vec U, void *ctx)
+{
+  DM                 sw;
+  PetscReal         *weight; //, *velocity;
+  Vec                V;
+  IS                 isv;
+  const PetscScalar *velocity;
+  PetscInt           Np, dim;
+  PetscReal          kHermite[6] = {-2.3506049736745, -1.3358490740137, -0.43607741192762, 0.43607741192762, 1.3358490740137, 2.3506049736745};
+  PetscReal          wHermite[6] = {0.0045300099055088, 0.15706732032286, 0.72462959522439, 0.72462959522439, 0.15706732032286, 0.0045300099055088};
+  PetscReal          S = 0.0, epsilon = 0.1; /* Fixed epsilon until we compute it from the distribution */
+  AppCtx            *user = (AppCtx *)ctx;
+
+  PetscFunctionBeginUser;
+  if (step % user->rentropty_ostep == 0) {
+    PetscCall(TSGetDM(ts, &sw));
+    PetscCall(DMGetDimension(sw, &dim));
+    PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
+    PetscCall(TSRHSSplitGetIS(ts, "momentum", &isv));
+    PetscCall(VecGetSubVector(U, isv, &V));
+    PetscCall(VecGetArrayRead(V, &velocity));
+    PetscCall(DMSwarmGetLocalSize(sw, &Np));
+    for (PetscInt p = 0; p < Np; ++p) {
+      for (PetscInt i = 0; i < 6; i++) {
+        PetscReal logsum = 0, kpx, dx, SQRT2EPSM1, PI2EPSM1;
+        for (PetscInt q = 0; q < Np; ++q) {
+          SQRT2EPSM1 = 1. / PetscSqrtReal(2. * epsilon);
+          PI2EPSM1   = 1. / PetscSqrtReal(2 * PETSC_PI * epsilon);
+          kpx        = kHermite[i] + velocity[p * dim + 0] * SQRT2EPSM1;
+          dx         = kpx - velocity[q * dim + 0] * SQRT2EPSM1;
+          logsum += weight[q] * PetscExpReal(-dx * dx) * PI2EPSM1;
+        }
+        S -= 1. / PetscSqrtReal(PETSC_PI) * weight[p] * wHermite[i] * (PetscLogReal(logsum));
+      }
+    }
+    PetscCall(PetscDrawLGAddPoint(user->drawlgregS, &t, &S));
+    PetscCall(PetscDrawLGDraw(user->drawlgregS));
+    PetscDraw draw;
+    PetscCall(PetscDrawLGGetDraw(user->drawlgregS, &draw));
+    PetscCall(PetscDrawSave(draw));
+    PetscCall(VecRestoreArrayRead(V, &velocity));
+    PetscCall(VecRestoreSubVector(U, isv, &V));
+    PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&weight));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Regularized Entropy: :%2.12g\n", S));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -789,7 +869,7 @@ static PetscErrorCode MonitorPoisson(TS ts, PetscInt step, PetscReal t, Vec U, v
     PetscCall(VecViewFromOptions(user->fftX, NULL, "-real_view"));
     PetscCall(VecViewFromOptions(user->fftY, NULL, "-fft_view"));
     PetscCall(VecISCopy(user->fftY, user->fftReal, SCATTER_REVERSE, rhohat));
-    PetscCall(VecSetValue(rhohat, 0, 0., INSERT_VALUES)); // Remove large DC component
+    PetscCall(VecSetValue(rhohat, 0, 0., INSERT_VALUES)); /* Remove large DC component */
     PetscCall(VecView(rhohat, user->viewerRhoHat));
     PetscCall(DMRestoreNamedGlobalVector(user->dmPot, "rho", &rho));
     PetscCall(DMRestoreNamedGlobalVector(user->dmPot, "rhohat", &rhohat));
@@ -850,7 +930,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   PetscCall(PetscObjectSetName((PetscObject)*dm, "space"));
   PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
 
-  // Cache the mesh geometry
+  /* Cache the mesh geometry */
   DMField         coordField;
   IS              cellIS;
   PetscQuadrature quad;
@@ -1121,7 +1201,7 @@ static PetscErrorCode InitializeParticles_Centroid(DM sw)
   PetscCall(DMSwarmCellDMGetDM(celldm, &vdm));
   PetscCall(DMPlexGetHeightStratum(vdm, 0, &vcStart, &vcEnd));
 
-  // One particle per centroid on the tensor product grid
+  /* One particle per centroid on the tensor product grid */
   Npc = (vcEnd - vcStart) * Ns;
   Np  = (xcEnd - xcStart) * Npc;
   PetscCall(DMSwarmSetLocalSizes(sw, Np, 0));
@@ -1134,7 +1214,7 @@ static PetscErrorCode InitializeParticles_Centroid(DM sw)
     PetscCall(PetscPrintf(comm, "Global V-cells = %" PetscInt_FMT "\n", vcEnd - vcStart));
   }
 
-  // Set species and cellid
+  /* Set species and cellid */
   PetscCall(DMSwarmGetCellDMActive(sw, &celldm));
   PetscCall(DMSwarmCellDMGetCellID(celldm, &cellidname));
   PetscCall(DMSwarmGetField(sw, "species", NULL, NULL, (void **)&species));
@@ -1150,7 +1230,7 @@ static PetscErrorCode InitializeParticles_Centroid(DM sw)
   PetscCall(DMSwarmRestoreField(sw, "species", NULL, NULL, (void **)&species));
   PetscCall(DMSwarmRestoreField(sw, cellidname, NULL, NULL, (void **)&cellid));
 
-  // Set particle coordinates
+  /* Set particle coordinates */
   PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&x));
   PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&v));
   PetscCall(DMSwarmSortGetAccess(sw));
@@ -1235,12 +1315,12 @@ static PetscErrorCode InitializeWeights(DM sw, PetscReal totalWeight, PetscProbF
   PetscCall(DMSwarmCellDMGetDM(celldm, &vdm));
   PetscCall(DMPlexGetHeightStratum(vdm, 0, &vcStart, &vcEnd));
 
-  // Setup Quadrature for spatial and velocity weight calculations
+  /* Setup Quadrature for spatial and velocity weight calculations */
   PetscCall(PetscDTGaussTensorQuadrature(dim, 1, order, -1.0, 1.0, &xquad));
   PetscCall(PetscQuadratureGetData(xquad, NULL, NULL, &xNq, &xq, &xwq));
   for (PetscInt d = 0; d < dim; ++d) xi0[d] = -1.0;
 
-  // Integrate the density function to get the weights of particles in each cell
+  /* Integrate the density function to get the weights of particles in each cell */
   PetscCall(DMGetCoordinatesLocalSetUp(vdm));
   PetscCall(DMSwarmSortGetAccess(sw));
   PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
@@ -1257,10 +1337,10 @@ static PetscErrorCode InitializeWeights(DM sw, PetscReal totalWeight, PetscProbF
     PetscCheck(Npc == (vcEnd - vcStart) * Ns, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of particles %" PetscInt_FMT " in cell (rank %d) != %" PetscInt_FMT " number of velocity vertices", Npc, rank, (vcEnd - vcStart) * Ns);
     PetscCall(DMPlexComputeCellGeometryFEM(xdm, c, NULL, xv0, xJ, xinvJ, &xdetJ));
     for (PetscInt q = 0; q < xNq; ++q) {
-      // Transform quadrature points from ref space to real space
+      /* Transform quadrature points from ref space to real space */
       CoordinatesRefToReal(dim, dim, xi0, xv0, xJ, &xq[q * dim], xqr);
-      // Get probability density at quad point
-      //   No need to scale xqr since PDF will be periodic
+      /* Get probability density at quad point */
+      /*   No need to scale xqr since PDF will be periodic */
       PetscCall((*func)(xqr, param, &xden));
       xw += xden * (xwq[q] * xdetJ);
     }
@@ -1502,10 +1582,10 @@ static PetscErrorCode ComputeFieldAtParticles_Primal(SNES snes, DM sw, Mat M_p, 
   PetscDS    ds;
   PetscFE    fe;
   KSP        ksp;
-  Vec        rhoRhs;      // Weak charge density, \int phi_i rho
-  Vec        rho;         // Charge density, M^{-1} rhoRhs
-  Vec        phi, locPhi; // Potential
-  Vec        f;           // Particle weights
+  Vec        rhoRhs;      /* Weak charge density, \int phi_i rho */
+  Vec        rho;         /* Charge density, M^{-1} rhoRhs */
+  Vec        phi, locPhi; /* Potential */
+  Vec        f;           /* Particle weights */
   PetscReal *coords;
   PetscInt   dim, cStart, cEnd, Np;
 
@@ -1643,10 +1723,10 @@ static PetscErrorCode ComputeFieldAtParticles_Mixed(SNES snes, DM sw, Mat M_p, P
   PetscDS    ds;
   PetscFE    fe;
   KSP        ksp;
-  Vec        rhoRhs, rhoRhsFull;   // Weak charge density, \int phi_i rho, and embedding in mixed problem
-  Vec        rho;                  // Charge density, M^{-1} rhoRhs
-  Vec        phi, locPhi, phiFull; // Potential and embedding in mixed problem
-  Vec        f;                    // Particle weights
+  Vec        rhoRhs, rhoRhsFull;   /* Weak charge density, \int phi_i rho, and embedding in mixed problem */
+  Vec        rho;                  /* Charge density, M^{-1} rhoRhs */
+  Vec        phi, locPhi, phiFull; /* Potential and embedding in mixed problem */
+  Vec        f;                    /* Particle weights */
   PetscReal *coords;
   PetscInt   dim, cStart, cEnd, Np;
 
@@ -1840,9 +1920,7 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
 
 /* J_{ij} = dF_i/dx_j
    J_p = (  0   1)
-         (-w^2  0)
-   TODO Now there is another term with w^2 from the electric field. I think we will need to invert the operator.
-        Perhaps we can approximate the Jacobian using only the cellwise P-P gradient from Coulomb
+         (-1^2  0)
 */
 static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U, Mat J, Mat P, void *ctx)
 {
@@ -1859,10 +1937,7 @@ static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U, Mat J, Mat P, void 
   PetscCall(DMSwarmGetField(sw, "velocity", NULL, NULL, (void **)&vel));
   Np /= 2 * dim;
   for (p = 0; p < Np; ++p) {
-    const PetscReal x0      = coords[p * dim + 0];
-    const PetscReal vy0     = vel[p * dim + 1];
-    const PetscReal omega   = vy0 / x0;
-    PetscScalar     vals[4] = {0., 1., -PetscSqr(omega), 0.};
+    PetscScalar vals[4] = {0., 1., -1, 0.};
 
     for (d = 0; d < dim; ++d) {
       const PetscInt rows[2] = {(p * 2 + 0) * dim + d + rStart, (p * 2 + 1) * dim + d + rStart};
@@ -1952,6 +2027,113 @@ static PetscErrorCode RHSFunctionV(TS ts, PetscReal t, Vec X, Vec Vres, void *ct
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Discrete Gradients Formulation: S, F, gradF (G) */
+PetscErrorCode RHSJacobianS(TS ts, PetscReal t, Vec U, Mat S, void *ctx)
+{
+  PetscScalar vals[4] = {0., 1., -1., 0.};
+  DM          sw;
+  PetscInt    dim, d, Np, p, rStart;
+
+  PetscFunctionBeginUser;
+  PetscCall(TSGetDM(ts, &sw));
+  PetscCall(DMGetDimension(sw, &dim));
+  PetscCall(VecGetLocalSize(U, &Np));
+  PetscCall(MatGetOwnershipRange(S, &rStart, NULL));
+  Np /= 2 * dim;
+  for (p = 0; p < Np; ++p) {
+    for (d = 0; d < dim; ++d) {
+      const PetscInt rows[2] = {(p * 2 + 0) * dim + d + rStart, (p * 2 + 1) * dim + d + rStart};
+      PetscCall(MatSetValues(S, 2, rows, 2, rows, vals, INSERT_VALUES));
+    }
+  }
+  PetscCall(MatAssemblyBegin(S, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(S, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ctx)
+{
+  SNES               snes = ((AppCtx *)ctx)->snes;
+  DM                 dm, sw;
+  const PetscScalar *u, *phi_vals;
+  PetscInt           dim, Np, cStart, cEnd;
+  PetscReal          m_p = 1.;
+  Vec                phi;
+
+  PetscFunctionBeginUser;
+  PetscCall(TSGetDM(ts, &sw));
+  PetscCall(DMGetDimension(sw, &dim));
+  PetscCall(SNESGetDM(snes, &dm));
+  PetscCall(VecGetArrayRead(U, &u));
+  PetscCall(VecGetLocalSize(U, &Np));
+  PetscCall(DMGetGlobalVector(dm, &phi));
+  PetscCall(VecViewFromOptions(phi, NULL, "-phi_view_dg"));
+  PetscCall(PetscObjectSetName((PetscObject)phi, "potential"));
+  PetscInt phi_size;
+  PetscCall(VecGetSize(phi, &phi_size));
+  PetscCall(VecGetArrayRead(phi, &phi_vals));
+
+  PetscCall(DMSwarmSortGetAccess(sw));
+  PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
+  Np /= 2 * dim;
+  for (PetscInt c = cStart; c < cEnd; ++c) {
+    PetscInt *points;
+    PetscInt  Ncp;
+    PetscReal E = 0.5 * phi_vals[c];
+
+    PetscCall(DMSwarmSortGetPointsPerCell(sw, c, &Ncp, &points));
+    for (PetscInt cp = 0; cp < Ncp; ++cp) {
+      const PetscInt  p  = points[cp];
+      const PetscReal v2 = DMPlex_DotRealD_Internal(dim, &u[(p * 2 + 1) * dim], &u[(p * 2 + 1) * dim]);
+      E += 0.5 * m_p * (v2);
+
+      *F += E;
+    }
+    PetscCall(DMSwarmSortRestorePointsPerCell(sw, c, &Ncp, &points));
+  }
+  PetscCall(DMSwarmSortRestoreAccess(sw));
+  PetscCall(VecRestoreArrayRead(phi, &phi_vals));
+  PetscCall(DMRestoreGlobalVector(dm, &phi));
+  PetscCall(VecRestoreArrayRead(U, &u));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* dF/dx = q E   dF/dv = v */
+PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
+{
+  DM                 sw;
+  SNES               snes = ((AppCtx *)ctx)->snes;
+  const PetscScalar *u;
+  PetscScalar       *g;
+  PetscReal         *E, q_p = -1.;
+  PetscInt           dim, d, Np, p;
+
+  PetscFunctionBeginUser;
+  PetscCall(TSGetDM(ts, &sw));
+  PetscCall(DMGetDimension(sw, &dim));
+
+  PetscCall(DMSwarmGetLocalSize(sw, &Np));
+  PetscCall(VecGetArrayRead(U, &u));
+  PetscCall(VecGetArray(G, &g));
+
+  int COMPUTEFIELD;
+  PetscCall(PetscLogEventRegister("COMPFIELDATPART", TS_CLASSID, &COMPUTEFIELD));
+  PetscCall(PetscLogEventBegin(COMPUTEFIELD, 0, 0, 0, 0));
+  PetscCall(ComputeFieldAtParticles(snes, sw));
+  PetscCall(PetscLogEventEnd(COMPUTEFIELD, 0, 0, 0, 0));
+  PetscCall(DMSwarmGetField(sw, "E_field", NULL, NULL, (void **)&E));
+  for (p = 0; p < Np - 1; ++p) {
+    for (d = 0; d < dim; ++d) {
+      g[(p * 2 + 0) * dim + d] = -(q_p)*E[p * dim + d];
+      g[(p * 2 + 1) * dim + d] = u[(p * 2 + 1) * dim + d];
+    }
+  }
+  PetscCall(DMSwarmRestoreField(sw, "E_field", NULL, NULL, (void **)&E));
+  PetscCall(VecRestoreArrayRead(U, &u));
+  PetscCall(VecRestoreArray(G, &g));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode CreateSolution(TS ts)
 {
   DM       sw;
@@ -2022,6 +2204,10 @@ static PetscErrorCode SetProblem(TS ts)
     PetscCall(ISDestroy(&isv));
     PetscCall(TSRHSSplitSetRHSFunction(ts, "position", NULL, RHSFunctionX, user));
     PetscCall(TSRHSSplitSetRHSFunction(ts, "momentum", NULL, RHSFunctionV, user));
+  }
+  // Define symplectic formulation U_t = S . G, where G = grad F
+  {
+    PetscCall(TSDiscGradSetFormulation(ts, RHSJacobianS, RHSObjectiveF, RHSFunctionG, user));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2198,6 +2384,7 @@ static PetscErrorCode MigrateParticles(TS ts)
   PetscInt step;
 
   PetscCall(TSGetStepNumber(ts, &step));
+  // if (0) {
   if (!(step % ctx->remapFreq)) {
     // Monitor electric field before we destroy it
     PetscReal ptime;
@@ -2249,6 +2436,7 @@ int main(int argc, char **argv)
   if (user.positions_monitor) PetscCall(TSMonitorSet(ts, MonitorPositions_2D, &user, NULL));
   if (user.poisson_monitor) PetscCall(TSMonitorSet(ts, MonitorPoisson, &user, NULL));
   if (user.velocity_monitor >= 0) PetscCall(TSMonitorSet(ts, MonitorVelocity, &user, NULL));
+  if (user.regularized_entropy_monitor) PetscCall(TSMonitorSet(ts, MonitorRegularizedEntropy, &user, NULL));
 
   PetscCall(TSSetFromOptions(ts));
   PetscCall(TSGetTimeStep(ts, &dt));
@@ -2307,13 +2495,13 @@ int main(int argc, char **argv)
      nsize: {{1 2}}
      requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT)
      args: -dm_plex_dim 1 -dm_plex_simplex 0 -dm_plex_box_faces 36 \
-             -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
+           -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
            -vdm_plex_dim 1 -vdm_plex_simplex 0 -vdm_plex_box_faces 10 \
-             -vdm_plex_box_lower -3 -vdm_plex_box_upper 3 \
+           -vdm_plex_box_lower -3 -vdm_plex_box_upper 3 \
            -dm_swarm_num_species 1 -twostream -charges -1.,1. -sigma 1.0e-8 \
-             -cosine_coefficients 0.01,0.5 -perturbed_weights -total_weight 1. \
+           -cosine_coefficients 0.01,0.5 -perturbed_weights -total_weight 1. \
            -ts_type basicsymplectic -ts_basicsymplectic_type 2 \
-             -ts_dt 0.01 -ts_max_time 5 -ts_max_steps 10 \
+           -ts_dt 0.01 -ts_max_time 5 -ts_max_steps 10 \
            -em_snes_atol 1.e-15 -em_snes_error_if_not_converged -em_ksp_error_if_not_converged \
            -output_step 1 -check_vel_res -dm_swarm_print_coords 1 -dm_swarm_print_weights 1
      test:
@@ -2323,17 +2511,17 @@ int main(int argc, char **argv)
        suffix: two_stream_rt
        requires: superlu_dist
        args: -em_type mixed \
-               -potential_petscspace_degree 0 \
-               -potential_petscdualspace_lagrange_use_moments \
-               -potential_petscdualspace_lagrange_moment_order 2 \
-               -field_petscspace_degree 1 -field_petscfe_default_quadrature_order 1 \
+             -potential_petscspace_degree 0 \
+             -potential_petscdualspace_lagrange_use_moments \
+             -potential_petscdualspace_lagrange_moment_order 2 \
+             -field_petscspace_degree 1 -field_petscfe_default_quadrature_order 1 \
              -em_snes_error_if_not_converged \
              -em_ksp_type preonly -em_ksp_error_if_not_converged \
              -em_pc_type fieldsplit -em_pc_fieldsplit_type schur \
-               -em_pc_fieldsplit_schur_fact_type full -em_pc_fieldsplit_schur_precondition full \
-               -em_fieldsplit_field_pc_type lu \
-                 -em_fieldsplit_field_pc_factor_mat_solver_type superlu_dist \
-               -em_fieldsplit_potential_pc_type svd
+             -em_pc_fieldsplit_schur_fact_type full -em_pc_fieldsplit_schur_precondition full \
+             -em_fieldsplit_field_pc_type lu \
+             -em_fieldsplit_field_pc_factor_mat_solver_type superlu_dist \
+             -em_fieldsplit_potential_pc_type svd
 
    # For an eyeball check, we use
    # -ts_max_steps 1000 -dm_plex_box_faces 10,1 -vdm_plex_box_faces 2000 -efield_monitor
@@ -2343,15 +2531,15 @@ int main(int argc, char **argv)
    testset:
      nsize: {{1 2}}
      requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT)
-     args: -dm_plex_dim 1 -dm_plex_simplex 0 -dm_plex_box_faces 10 \
-             -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
-           -vdm_plex_dim 1 -vdm_plex_simplex 0 -vdm_plex_box_faces 10 \
-             -vdm_plex_box_lower -10 -vdm_plex_box_upper 10 \
-             -vpetscspace_degree 2 -vdm_plex_hash_location \
+     args: -dm_plex_dim 1 -dm_plex_simplex 0 -dm_plex_box_faces 20 \
+           -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
+           -vdm_plex_dim 1 -vdm_plex_simplex 0 -vdm_plex_box_faces 1000 \
+           -vdm_plex_box_lower -10 -vdm_plex_box_upper 10 \
+           -vpetscspace_degree 2 -vdm_plex_hash_location \
            -dm_swarm_num_species 1 -charges -1.,1. \
-             -cosine_coefficients 0.01,0.5 -perturbed_weights -total_weight 1. \
+           -cosine_coefficients 0.01,0.5 -perturbed_weights -total_weight 1. \
            -ts_type basicsymplectic -ts_basicsymplectic_type 1 \
-             -ts_dt 0.03 -ts_max_time 500 -ts_max_steps 1 \
+           -ts_dt 0.01 -ts_max_time 500 -ts_max_steps 1 \
            -em_snes_atol 1.e-12 -em_snes_error_if_not_converged -em_ksp_error_if_not_converged \
            -output_step 1 -check_vel_res -dm_swarm_print_coords 1 -dm_swarm_print_weights 1
 
@@ -2364,16 +2552,16 @@ int main(int argc, char **argv)
                -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
              -cosine_coefficients 0.0 -em_type primal -petscspace_degree 1 -em_pc_type svd
      test:
-       suffix: uniform_primal_1d
-       args: -em_type primal -petscspace_degree 1 -em_pc_type svd
+       suffix: landau_damping_1d
+       args: -em_type primal -petscspace_degree 1 -em_pc_type svd -remap_freq 0
      test:
-       suffix: uniform_primal_1d_real
+       suffix: landau_damping_1d_real
        args: -dm_plex_dim 1 -dm_plex_simplex 1 -dm_plex_box_faces 10 \
                -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
              -cosine_coefficients 0.01 -em_type primal -petscspace_degree 1 -em_pc_type svd
      # NOT WORKING -ftop_pc_type bjacobi -ftop_sub_pc_type lu -ftop_sub_pc_factor_shift_type nonzero
      test:
-       suffix: uniform_primal_1d_real_pfak
+       suffix: landau_damping_1d_real_pfak
        nsize: 1
        args: -dm_plex_dim 1 -dm_plex_simplex 1 -dm_plex_box_faces 10 \
                -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
@@ -2386,7 +2574,7 @@ int main(int argc, char **argv)
              -cosine_coefficients 0.01 -em_type primal -petscspace_degree 1 -em_pc_type svd -em_proj_pc_type lu
      test:
        requires: superlu_dist
-       suffix: uniform_mixed_1d
+       suffix: landau_damping_mixed_1d
        args: -em_type mixed \
                -potential_petscspace_degree 0 \
                -potential_petscdualspace_lagrange_use_moments \
@@ -2399,5 +2587,9 @@ int main(int argc, char **argv)
                -em_fieldsplit_field_pc_type lu \
                  -em_fieldsplit_field_pc_factor_mat_solver_type superlu_dist \
                -em_fieldsplit_potential_pc_type svd
+     test:
+       suffix: landau_damping_1d_dg
+       args: -em_type primal -petscspace_degree 1 -em_pc_type svd -ts_type discgrad -ts_discgrad_type average \
+             -snes_fd -snes_type qn  -snes_qn_type lbfgs -remap_freq 0
 
 TEST*/
