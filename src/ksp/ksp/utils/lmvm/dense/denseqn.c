@@ -1,5 +1,6 @@
 #include <../src/ksp/ksp/utils/lmvm/dense/denseqn.h> /*I "petscksp.h" I*/
 #include <../src/ksp/ksp/utils/lmvm/blas_cyclic/blas_cyclic.h>
+#include <../src/ksp/ksp/utils/lmvm/lmproducts.h>
 #include <petscblaslapack.h>
 #include <petscmat.h>
 #include <petscsys.h>
@@ -722,6 +723,7 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
     PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
     PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
 
+#if 0
     //TODO one more GEMM or memcpy to symmetrize?
     // Third GEMM?
     // S_1
@@ -734,6 +736,11 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
     PetscCall(MatDenseRestoreSubMatrix(Sfull, &Sfull_sub));
     PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
     PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
+#endif
+    //Make Hermitian
+    PetscCall(MatDenseGetLocalMatrix(lbfgs->StBS, &StBS_sub));
+    PetscCall(MatGetLocalSize(StBS_sub, &m_local, NULL));
+    if (m_local) PetscCall(LMProductsMakeHermitian(StBS_sub, idx0, k));
   }
 
   if (lbfgs->strategy == MAT_LMVM_DENSE_REORDER) {
