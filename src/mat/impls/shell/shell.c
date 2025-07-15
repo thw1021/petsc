@@ -2202,7 +2202,7 @@ PetscErrorCode MatShellTestMultTranspose(Mat mat, PetscErrorCode (*f)(void *, Ve
 
 .seealso: [](ch_matrices), `Mat`, `MATSHELL`, `MatCreateShell()`, `MatShellGetContext()`, `MatShellGetOperation()`, `MatShellSetContext()`, `MatSetOperation()`, `MatShellSetManageScalingShifts()`, `MatShellSetMatProductOperation()`
 @*/
-PetscErrorCode MatShellSetOperation(Mat mat, MatOperation op, void (*g)(void))
+PetscErrorCode MatShellSetOperation(Mat mat, MatOperation op, PetscVoidFn *g)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);

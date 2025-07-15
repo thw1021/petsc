@@ -3,13 +3,10 @@ module petscmpi
 #include <petscconf.h>
 #include "petsc/finclude/petscsys.h"
 #if defined(PETSC_HAVE_MPIUNI)
-  use mpiuni
+#include <petsc/mpiuni/mpiunifdef.h>
+        use mpiuni
 #else
-#if defined(PETSC_HAVE_MPI_F90MODULE)
   use mpi
-#else
-#include "mpif.h"
-#endif
 #endif
 
   public:: MPIU_REAL, MPIU_SUM, MPIU_SCALAR, MPIU_INTEGER
@@ -36,11 +33,8 @@ end module petscmpi
 ! ------------------------------------------------------------------------
 module petscsysdef
   use, intrinsic :: ISO_C_binding
-#if defined(PETSC_HAVE_MPI_F90MODULE_VISIBILITY)
   use petscmpi
-#else
-  use petscmpi, only: MPIU_REAL,MPIU_SUM,MPIU_SCALAR,MPIU_INTEGER,PETSC_COMM_WORLD,PETSC_COMM_SELF
-#endif
+
   PetscReal, parameter :: PetscReal_Private = 1.0
   Integer, parameter   :: PETSC_REAL_KIND = kind(PetscReal_Private)
 
@@ -304,7 +298,31 @@ module petscsys
       PetscReal, pointer :: PETSC_NULL_REAL_POINTER(:)
     end subroutine PetscSetFortranBasePointers
 
-    subroutine PetscOptionsString(string, text, man, default, value, flg, ierr)
+  subroutine PetscOptionsGetEnum(a,b,c,d,e,f, z)
+  use, intrinsic :: ISO_C_binding
+  import tPetscOptions
+  PetscOptions :: a
+  character(*) :: b
+  character(*) :: c
+  character(len=99):: d(*)
+  PetscEnum :: e
+  PetscBool :: f
+  PetscErrorCode z
+  end subroutine
+
+Subroutine PetscOptionsEnum(opt,text,man,Flist,curr,ivalue,set,ierr)
+  use,intrinsic :: iso_c_binding
+  use petscsysdef
+  implicit none
+
+  character(*)                opt,text,man
+  character(*)                Flist(*)
+  PetscEnum                   :: curr,ivalue
+  PetscBool                   :: set
+  PetscErrorCode,intent(out)  :: ierr
+  end subroutine
+
+      subroutine PetscOptionsString(string, text, man, default, value, flg, ierr)
       use, intrinsic :: ISO_C_binding
       character(*) string, text, man, default, value
       PetscBool flg
@@ -556,18 +574,77 @@ end subroutine F90ArraySetRealPointer
 !      ftn/sys/XXX.h90
 !      and skipping those in petscall.h
 
-module petscbag
-  use petscsys
+      module petscbagdef
+      use,intrinsic :: iso_c_binding
 #include <../include/petsc/finclude/petscbag.h>
 #include <../ftn/sys/petscbag.h>
-#include <../ftn/sys/petscbag.h90>
-  contains
-#include <../ftn/sys/petscbag.hf90>
-end module petscbag
+      end module
 
-!------------------------------------------------------------------------
-module petscbm
-  use petscsys
+        module petscbag
+        use,intrinsic :: iso_c_binding
+        use petscsys
+        use petscbagdef
+#include <../ftn/sys/petscbag.h90>
+
+      contains
+
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
+!DEC$ ATTRIBUTES DLLEXPORT::PetscBagRegisterEnum
+#endif
+      Subroutine PetscBagRegisterEnum(bag,addr,FArray,def,n,h,ierr)
+      use,intrinsic :: iso_c_binding
+      ! do not use implicit none external because PetscBagRegisterEnumPrivate() does not truly take a type of CArray
+      implicit none
+      PetscBag   bag
+      character(*)                n,h
+      character(*)                FArray(*)
+      PetscEnum                   :: def
+      PetscErrorCode,intent(out)  :: ierr
+      PetscEnum addr
+
+      Type(C_Ptr),Dimension(:),Pointer :: CArray
+      character(kind=c_char),pointer   :: nullc => null()
+      PetscInt   :: i,Len
+      Character(kind=C_char,len=256),Dimension(:),Pointer::list1
+
+      do i=1,256
+        if (len_trim(Farray(i)) .eq. 0) then
+          Len = i-1
+          goto 100
+        endif
+        if (len_trim(Farray(i)) .gt. 255) then
+          ierr = PETSC_ERR_ARG_OUTOFRANGE
+          return
+        endif
+      enddo
+      ierr = PETSC_ERR_ARG_OUTOFRANGE
+      return
+
+ 100  continue
+
+      Allocate(list1(Len),stat=ierr)
+      if (ierr .ne. 0) return
+      Allocate(CArray(Len+1),stat=ierr)
+      if (ierr .ne. 0) return
+
+      do i=1,Len
+         list1(i) = trim(FArray(i))//C_NULL_CHAR
+         CArray(i) = c_loc(list1(i))
+      enddo
+
+      CArray(Len+1) = c_loc(nullc)
+      call PetscBagRegisterEnumPrivate(bag,addr,CArray,def,n,h,ierr)
+      DeAllocate(CArray)
+      DeAllocate(list1)
+      End Subroutine
+
+#include <../ftn/sys/petscbag.hf90>
+      end module
+
+!     ------------------------------------------------------------------------
+
+        module petscbm
+        use petscsys
 #include <../include/petsc/finclude/petscbm.h>
 #include <../ftn/sys/petscbm.h>
 #include <../ftn/sys/petscbm.h90>
@@ -593,7 +670,6 @@ module petscdraw
   use petscsys
 #include <../include/petsc/finclude/petscdraw.h>
 #include <../ftn/sys/petscdraw.h>
-#include <../ftn/sys/petscdraw.h90>
 
   PetscEnum, parameter :: PETSC_DRAW_BASIC_COLORS = 33
   PetscEnum, parameter :: PETSC_DRAW_ROTATE = -1
@@ -631,78 +707,95 @@ module petscdraw
   PetscEnum, parameter :: PETSC_DRAW_LAVENDERBLUSH = 31
   PetscEnum, parameter :: PETSC_DRAW_PLUM = 32
 
-  contains
+#include <../ftn/sys/petscdraw.h90>
+
+      interface
+      subroutine PetscDrawZoom(draw,zoomfunction,dummy,ierr)
+      use,intrinsic :: iso_c_binding
+      import tPetscDraw
+      PetscDraw :: draw
+      external zoomfunction
+      PetscInt dummy
+      PetscErrorCode ierr
+      end subroutine PetscDrawZoom
+      end interface
+
+      contains
 
 #include <../ftn/sys/petscdraw.hf90>
-end module petscdraw
+      end module
 
-!------------------------------------------------------------------------
-subroutine PetscSetCOMM(c1,c2)
-  use, intrinsic :: ISO_C_binding
-  use petscmpi, only: PETSC_COMM_WORLD,PETSC_COMM_SELF
+!     ------------------------------------------------------------------------
 
-  implicit none
-  MPI_Comm c1,c2
+        subroutine PetscSetCOMM(c1,c2)
+        use petscmpi, only: PETSC_COMM_WORLD,PETSC_COMM_SELF
+        use,intrinsic :: iso_c_binding
+        implicit none (type, external)
+        MPI_Comm c1,c2
 
-  PETSC_COMM_WORLD    = c1
-  PETSC_COMM_SELF     = c2
-end
+        PETSC_COMM_WORLD    = c1
+        PETSC_COMM_SELF     = c2
+        end
 
-subroutine PetscGetCOMM(c1)
-  use, intrinsic :: ISO_C_binding
-  use petscmpi, only: PETSC_COMM_WORLD
-  implicit none
-  MPI_Comm c1
+        subroutine PetscGetCOMM(c1)
+        use petscmpi, only: PETSC_COMM_WORLD
+        use,intrinsic :: iso_c_binding
+        implicit none (type, external)
+        MPI_Comm c1
 
-  c1 = PETSC_COMM_WORLD
-end subroutine PetscGetCOMM
+        c1 = PETSC_COMM_WORLD
+        end
 
-subroutine PetscSetModuleBlock()
-  use, intrinsic :: ISO_C_binding
-  use petscsys!, only: PETSC_NULL_CHARACTER,PETSC_NULL_INTEGER,&
-     !  PETSC_NULL_SCALAR,PETSC_NULL_DOUBLE,PETSC_NULL_REAL,&
-     !  PETSC_NULL_BOOL,PETSC_NULL_FUNCTION,PETSC_NULL_MPI_COMM
-  implicit none
+        subroutine PetscSetModuleBlock()
+        use petscsys!, only: PETSC_NULL_CHARACTER,PETSC_NULL_INTEGER,&
+           !  PETSC_NULL_SCALAR,PETSC_NULL_DOUBLE,PETSC_NULL_REAL,&
+           !  PETSC_NULL_BOOL,PETSC_NULL_FUNCTION,PETSC_NULL_MPI_COMM
+        use,intrinsic :: iso_c_binding
+        implicit none (type, external)
 
-  call PetscSetFortranBasePointers(PETSC_NULL_CHARACTER,  &
-     PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,                &
-     PETSC_NULL_DOUBLE,PETSC_NULL_REAL,                   &
-     PETSC_NULL_BOOL,PETSC_NULL_ENUM,PETSC_NULL_FUNCTION, &
-     PETSC_NULL_MPI_COMM,                                 &
-     PETSC_NULL_INTEGER_ARRAY,PETSC_NULL_SCALAR_ARRAY,    &
-     PETSC_NULL_REAL_ARRAY, PETSC_NULL_INTEGER_POINTER,   &
-     PETSC_NULL_SCALAR_POINTER, PETSC_NULL_REAL_POINTER)
-end subroutine PetscSetModuleBlock
+        call PetscSetFortranBasePointers(PETSC_NULL_CHARACTER,          &
+     &     PETSC_NULL_INTEGER,PETSC_NULL_SCALAR,                        &
+     &     PETSC_NULL_DOUBLE,PETSC_NULL_REAL,                           &
+     &     PETSC_NULL_BOOL,PETSC_NULL_ENUM,PETSC_NULL_FUNCTION,         &
+     &     PETSC_NULL_MPI_COMM,                                         &
+     &     PETSC_NULL_INTEGER_ARRAY,PETSC_NULL_SCALAR_ARRAY,            &
+     &     PETSC_NULL_REAL_ARRAY, PETSC_NULL_INTEGER_POINTER,           &
+     &     PETSC_NULL_SCALAR_POINTER, PETSC_NULL_REAL_POINTER)
+        end
 
-subroutine PetscSetModuleBlockMPI(freal,fscalar,fsum,finteger)
-  use, intrinsic :: ISO_C_binding
-  use petscmpi, only: MPIU_REAL,MPIU_SUM,MPIU_SCALAR,MPIU_INTEGER
-  implicit none
+        subroutine PetscSetModuleBlockMPI(freal,fscalar,fsum,finteger)
+        use,intrinsic :: iso_c_binding
+        use petscmpi, only: MPIU_REAL,MPIU_SUM,MPIU_SCALAR,MPIU_INTEGER
+        implicit none (type, external)
 
-  integer4 freal,fscalar,fsum,finteger
+        integer4 freal,fscalar,fsum,finteger
 
-  MPIU_REAL    = freal
-  MPIU_SCALAR  = fscalar
-  MPIU_SUM     = fsum
-  MPIU_INTEGER = finteger
-end subroutine PetscSetModuleBlockMPI
+        MPIU_REAL    = freal
+        MPIU_SCALAR  = fscalar
+        MPIU_SUM     = fsum
+        MPIU_INTEGER = finteger
 
-subroutine PetscSetModuleBlockNumeric(pi,maxreal,minreal,eps,seps,small,pinf,pninf)
-  use petscsys, only: PETSC_PI,PETSC_MAX_REAL,PETSC_MIN_REAL,&
-       PETSC_MACHINE_EPSILON,PETSC_SQRT_MACHINE_EPSILON,&
-       PETSC_SMALL,PETSC_INFINITY,PETSC_NINFINITY
-  use, intrinsic :: ISO_C_binding
-  implicit none
+        end
 
-  PetscReal pi,maxreal,minreal,eps,seps
-  PetscReal small,pinf,pninf
+        subroutine PetscSetModuleBlockNumeric(pi,maxreal,minreal,eps,       &
+     &     seps,small,pinf,pninf)
+        use,intrinsic :: iso_c_binding
+        use petscsys, only: PETSC_PI,PETSC_MAX_REAL,PETSC_MIN_REAL,&
+             PETSC_MACHINE_EPSILON,PETSC_SQRT_MACHINE_EPSILON,&
+             PETSC_SMALL,PETSC_INFINITY,PETSC_NINFINITY
+        implicit none (type, external)
 
-  PETSC_PI = pi
-  PETSC_MAX_REAL = maxreal
-  PETSC_MIN_REAL = minreal
-  PETSC_MACHINE_EPSILON = eps
-  PETSC_SQRT_MACHINE_EPSILON = seps
-  PETSC_SMALL = small
-  PETSC_INFINITY = pinf
-  PETSC_NINFINITY = pninf
-end subroutine PetscSetModuleBlockNumeric
+        PetscReal pi,maxreal,minreal,eps,seps
+        PetscReal small,pinf,pninf
+
+        PETSC_PI = pi
+        PETSC_MAX_REAL = maxreal
+        PETSC_MIN_REAL = minreal
+        PETSC_MACHINE_EPSILON = eps
+        PETSC_SQRT_MACHINE_EPSILON = seps
+        PETSC_SMALL = small
+        PETSC_INFINITY = pinf
+        PETSC_NINFINITY = pninf
+
+        end
+

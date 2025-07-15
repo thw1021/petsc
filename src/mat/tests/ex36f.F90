@@ -5,7 +5,7 @@
       program main
 #include <petsc/finclude/petscsys.h>
       use petscsys
-      implicit none
+      implicit none (type, external)
 
       PetscErrorCode ierr
 
@@ -33,7 +33,7 @@
       subroutine Demo1()
 #include <petsc/finclude/petscmat.h>
       use petscmat
-      implicit none
+      implicit none (type, external)
 
       Mat         A
       PetscInt   n,m
@@ -77,7 +77,7 @@
       subroutine Demo2()
 #include <petsc/finclude/petscmat.h>
       use petscmat
-      implicit none
+      implicit none (type, external)
 
       PetscInt   n,m
       PetscErrorCode ierr

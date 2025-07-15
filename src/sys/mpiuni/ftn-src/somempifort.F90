@@ -1,4 +1,5 @@
 !
+!     Called from C so they should not be in a module
 !
       subroutine MPIUNISetModuleBlock()
       use mpiuni

@@ -6,7 +6,7 @@
       program main
 #include <petsc/finclude/petscmat.h>
       use petscmat
-      implicit none
+      implicit none (type, external)
 
       Vec            x,b,u
       Mat            A, fact

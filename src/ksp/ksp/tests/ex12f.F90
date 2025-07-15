@@ -2,7 +2,7 @@
       program main
 #include <petsc/finclude/petscksp.h>
       use petscksp
-      implicit none
+      implicit none (type, external)
 
 !
 !  This example is the Fortran version of ex6.c.  The program reads a PETSc matrix

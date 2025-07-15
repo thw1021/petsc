@@ -944,7 +944,7 @@ static inline PetscErrorCode PetscTimSortBuildRunWithArray_Private(char *arr, ch
   returns `result`. For example
 .vb
  subroutine CompareIntegers(left,right,ctx,result)
-   implicit none
+   implicit none (type, external)
 
    PetscInt,intent(in) :: left, right
    type(UserCtx)       :: ctx
@@ -1070,7 +1070,7 @@ PetscErrorCode PetscTimSort(PetscInt n, void *arr, size_t size, int (*cmp)(const
   returns `result`. For example
 .vb
  subroutine CompareIntegers(left,right,ctx,result)
-   implicit none
+   implicit none (type, external)
 
    PetscInt,intent(in) :: left, right
    type(UserCtx)       :: ctx

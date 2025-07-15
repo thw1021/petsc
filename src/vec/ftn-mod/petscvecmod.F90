@@ -13,7 +13,7 @@ use, intrinsic :: ISO_C_binding
 !     Needed by Fortran stub petscsfgetgraph_()
       subroutine F90Array1dCreateSFNode(array,start,len,ptr)
       use petscisdef
-      implicit none
+      implicit none (type, external)
       PetscInt start,len
       PetscSFNode, target :: array(start:start+len-1)
       PetscSFNode, pointer :: ptr(:)
@@ -25,7 +25,7 @@ use, intrinsic :: ISO_C_binding
 
       subroutine F90Array1dDestroySFNode(ptr)
       use petscisdef
-      implicit none
+      implicit none (type, external)
       PetscSFNode, pointer :: ptr(:)
       nullify(ptr)
       end subroutine
@@ -42,7 +42,7 @@ use, intrinsic :: ISO_C_binding
       interface PetscSFDestroyRemoteOffsets
       subroutine PetscSFDestroyRemoteOffsets(ptr, ierr)
       use petscisdef
-      implicit none
+      implicit none (type, external)
       PetscInt, pointer :: ptr(:)
       PetscErrorCode :: ierr
       end subroutine PetscSFDestroyRemoteOffsets

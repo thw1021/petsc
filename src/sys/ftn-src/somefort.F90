@@ -1,10 +1,8 @@
 !
-!     Prevents: Warning: Same actual argument associated with INTENT(IN)
-!     argument 'errorcode' and INTENT(OUT) argument 'ierror' at (1)
-!     when MPI_Abort() is called directly
+!     These are called from C so they should not be in a module
 !
-
 #include <petsc/finclude/petscsys.h>
+
       subroutine MPIU_Abort(comm,ierr)
       use, intrinsic :: ISO_C_binding
       implicit none
@@ -24,26 +22,25 @@
 
       subroutine PetscFortranPrintToFileUnit(unit,str,ierr)
       use, intrinsic :: ISO_C_binding
-      implicit none
+      implicit none (type, external)
       character(*) str
       integer4 unit
       PetscErrorCode ierr
       write(unit=unit, fmt="(A)", advance='no') str
       ierr = 0
-      end
+      end subroutine
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PetscFortranPrintToFileUnit
 #endif
 
-!  This uses F2003 feature - and is the preferred mode for accessing command line arguments
       integer function PetscCommandArgumentCount()
       use, intrinsic :: ISO_C_binding
-      implicit none
+      implicit none (type, external)
       PetscCommandArgumentCount = command_argument_count()
       end
 
       subroutine PetscGetCommandArgument(n,val)
-      implicit none
+      implicit none (type, external)
       integer, intent(in) :: n
       character(*) val
       call get_command_argument(n,val)
