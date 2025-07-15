@@ -670,9 +670,6 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
 
   PetscCall(PetscLogEventBegin(STBS_Comp, NULL, NULL, NULL, NULL));
   /* B_0 may have been updated, we must recompute B_0 S and S^T B_0 S */
-  //TODO be smart about B_0... see lmvmutils.c:1024
-  //TODO Main bottle neck...
-
   // BS compute. TODO B_0 scalar better..
   // Better memory access pattern by having separate forloop
   for (PetscInt j = idx0; j < k; j++) {
@@ -690,7 +687,6 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
   // 1. Sfull[:,ii:]^T @ BS[:,ii:]
   // 2. Sfull @ BS[:, 0:ii]
   //
-  // Need to Symmetrize
   // TODO Complex conjugate?
   ii = recycle_index(m, idx0);
   if (ii == 0) {
@@ -723,20 +719,6 @@ static PetscErrorCode MatLMVMDBFGSUpdateMultData(Mat B)
     PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
     PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
 
-#if 0
-    //TODO one more GEMM or memcpy to symmetrize?
-    // Third GEMM?
-    // S_1
-    PetscCall(MatDenseGetSubMatrix(Sfull, PETSC_DECIDE, PETSC_DECIDE, 0, ii, &Sfull_sub));
-    // BS_0
-    PetscCall(MatDenseGetSubMatrix(lbfgs->BS, PETSC_DECIDE, PETSC_DECIDE, ii, h, &BS_sub));
-    // StBS_2
-    PetscCall(MatDenseGetSubMatrix(lbfgs->StBS, 0, ii, ii, h, &StBS_sub));
-    PetscCall(MatTransposeMatMult(Sfull_sub, BS_sub, MAT_REUSE_MATRIX, PETSC_DECIDE, &StBS_sub));
-    PetscCall(MatDenseRestoreSubMatrix(Sfull, &Sfull_sub));
-    PetscCall(MatDenseRestoreSubMatrix(lbfgs->BS, &BS_sub));
-    PetscCall(MatDenseRestoreSubMatrix(lbfgs->StBS, &StBS_sub));
-#endif
     //Make Hermitian
     PetscCall(MatDenseGetLocalMatrix(lbfgs->StBS, &StBS_sub));
     PetscCall(MatGetLocalSize(StBS_sub, &m_local, NULL));
