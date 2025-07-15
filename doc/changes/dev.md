@@ -178,3 +178,4 @@
 ```
 
 - Add `PetscObjectNullify()`
+- Add requirement that MPI provides the `mpi` Fortran module and remove dependency on `mpif.h`
