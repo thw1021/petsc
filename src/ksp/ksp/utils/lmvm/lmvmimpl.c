@@ -3,6 +3,7 @@
 #include <petsc/private/deviceimpl.h>
 #include "blas_cyclic/blas_cyclic.h"
 #include "rescale/symbrdnrescale.h"
+#include "dense/denseqn.h"
 
 PetscLogEvent MATLMVM_Update;
 
@@ -27,6 +28,10 @@ static PetscErrorCode MatLMVMPackageInitialize(void)
   PetscCall(PetscLogEventRegister("LMProdsUpdate", MAT_CLASSID, &LMPROD_Update));
   PetscCall(PetscLogEventRegister("MatLMVMUpdate", MAT_CLASSID, &MATLMVM_Update));
   PetscCall(PetscLogEventRegister("SymBrdnRescale", MAT_CLASSID, &SBRDN_Rescale));
+  //TODO Remove
+  PetscCall(PetscLogEventRegister("DenseSTBS", MAT_CLASSID, &STBS_Comp));
+  PetscCall(PetscLogEventRegister("DenseYTS", MAT_CLASSID, &YTS_Comp));
+  PetscCall(PetscLogEventRegister("DMultUpdate", MAT_CLASSID, &DMult_Update));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
