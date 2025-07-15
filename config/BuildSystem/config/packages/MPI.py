@@ -684,22 +684,16 @@ Unable to run hostname to check the network')
     return
 
   def FortranMPICheck(self):
-    '''Make sure fortran include [mpif.h] and library symbols are found'''
+    '''Make sure fortran module is found'''
     if not hasattr(self.compilers, 'FC'):
       return 0
-    # Fortran compiler is being used - so make sure mpif.h exists
     self.libraries.pushLanguage('FC')
     oldFlags = self.compilers.FPPFLAGS
     self.compilers.FPPFLAGS += ' '+self.headers.toString(self.include)
-    # check if mpi_init form fortran works
-    self.log.write('Checking for fortran mpi_init()\n')
-    if not self.libraries.check(self.lib,'', call = '#include "mpif.h"\n       integer ierr\n       call mpi_init(ierr)'):
-      raise RuntimeError('Fortran error! mpi_init() could not be located!')
     # check if mpi.mod exists
-    if self.fortran.fortranIsF90:
-      self.log.write('Checking for mpi.mod\n')
-      if self.libraries.check(self.lib,'', call = '       use mpi\n       integer(kind=selected_int_kind(5)) ierr,rank\n       call mpi_init(ierr)\n       call mpi_comm_rank(MPI_COMM_WORLD,rank,ierr)\n'):
-        self.addDefine('HAVE_MPI_F90MODULE', 1)
+    self.log.write('Checking for mpi.mod\n')
+    if not self.libraries.check(self.lib,'', call = '       use mpi\n       integer(kind=selected_int_kind(5)) ierr,rank\n       call mpi_init(ierr)\n       call mpi_comm_rank(MPI_COMM_WORLD,rank,ierr)\n'):
+      raise RuntimeError('Unable to find MPI module')
     self.compilers.FPPFLAGS = oldFlags
     self.libraries.popLanguage()
     return 0
