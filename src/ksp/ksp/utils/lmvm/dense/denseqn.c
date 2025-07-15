@@ -890,6 +890,7 @@ static PetscErrorCode MatSolve_LMVMDBFGS(Mat H, Vec F, Vec dX)
    Alternative approach: considering the fact that DFP is dual to BFGS, use MatMult of DPF:
    (See ddfp.c's MatMult_LMVMDDFP)
 
+   Note: Reorder memorytype currently does not support Dense Cholesky formulation.
 */
 static PetscErrorCode MatMult_LMVMDBFGS(Mat B, Vec X, Vec Z)
 {
@@ -1065,7 +1066,7 @@ PetscErrorCode MatCreate_LMVMDBFGS(Mat B)
   PetscCall(PetscNew(&lbfgs));
   lmvm->ctx              = (void *)lbfgs;
   lbfgs->allocated       = PETSC_FALSE;
-  lbfgs->use_recursive   = PETSC_TRUE;
+  lbfgs->use_recursive   = PETSC_FALSE;
   lbfgs->needPQ          = PETSC_TRUE;
   lbfgs->watchdog        = 0;
   lbfgs->max_seq_rejects = lmvm->m / 2;

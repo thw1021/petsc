@@ -11,9 +11,9 @@ typedef enum {
 int main(int argc, char **argv)
 {
   const char   *perfTypes[2] = {"solve", "mult"};
-  PetscInt      n        = 1000;
-  PetscInt      n_epochs = 10;
-  PetscInt      n_iters  = 10;
+  PetscInt      n            = 1000;
+  PetscInt      n_epochs     = 10;
+  PetscInt      n_iters      = 10;
   PetscInt      perf;
   Vec           x, g, dx, df, p;
   PetscRandom   rand;
