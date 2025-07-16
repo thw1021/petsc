@@ -113,6 +113,16 @@
         End Subroutine
         end interface
 
+        interface
+          subroutine MatMPIAIJRestoreSeqAIJ(M,A,B,ptr,ierr)
+          use, intrinsic :: ISO_C_binding
+          import tMat
+          Mat M,A,B
+          PetscErrorCode ierr
+          PetscInt, pointer :: ptr(:)
+          end subroutine
+        end interface
+
   interface
   subroutine MatNullSpaceRestoreVecs(a,b,c,d, z)
   use, intrinsic :: ISO_C_binding

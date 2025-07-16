@@ -3,7 +3,7 @@
        subroutine ex7f(vec,comm)
 #include <petsc/finclude/petscvec.h>
        use petscvec
-       implicit none
+       implicit none (type, external)
 !
 !  Demonstrates how a computational module may be written
 !  in Fortran and called from a C routine, passing down PETSc objects.

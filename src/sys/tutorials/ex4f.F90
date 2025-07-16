@@ -6,9 +6,8 @@
 
       program main
 #include <petsc/finclude/petscsys.h>
-      use petscmpi  ! or mpi or mpi_f08
       use petscsys
-      implicit none
+      implicit none (type, external)
       PetscErrorCode ierr
       PetscMPIInt    rank, size,grank,zero,two
       PetscReal globalrank
@@ -28,7 +27,7 @@
 
 !     Every PETSc routine should begin with the PetscInitialize()
 !     routine.
-      PetscCallA(PetscInitializeNoArguments(ierr))
+      PetscCallA(PetscInitialize(ierr))
 
 !     The following MPI calls return the number of processes being used
 !     and the rank of this process in the group.

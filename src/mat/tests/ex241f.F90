@@ -7,7 +7,7 @@
   use PetscMat
   use ISO_Fortran_Env, only : real64
 
-  implicit none
+  implicit none (type, external)
   PetscInt,    parameter :: wp = real64, n = 10
   PetscScalar, parameter :: zero = 0.0, one = 1.0
   Mat      :: L
