@@ -453,6 +453,10 @@ static PetscErrorCode PCMPISolve(PC pc, Vec B, Vec X)
     if (pc) PetscCall(VecRestoreArray(X, &sx));
     PetscCall(VecRestoreArrayRead(ksp->vec_sol, &x));
   } else {
+    MPI_Comm comm;
+
+    PetscCall(PetscObjectGetComm((PetscObject)ksp, &comm));
+    PetscCallMPI(MPI_Barrier(comm));
     PetscCall(VecResetArray(ksp->vec_rhs));
     PetscCall(VecResetArray(ksp->vec_sol));
   }
