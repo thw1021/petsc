@@ -628,11 +628,11 @@ static PetscErrorCode PCSetFromOptions_HYPRE_Pilut(PC pc, PetscOptionItems Petsc
 static PetscErrorCode PCView_HYPRE_Pilut(PC pc, PetscViewer viewer)
 {
   PC_HYPRE *jac = (PC_HYPRE *)pc->data;
-  PetscBool iascii;
+  PetscBool isascii;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
-  if (iascii) {
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  HYPRE Pilut preconditioning\n"));
     if (jac->maxiter != PETSC_DEFAULT) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "    maximum number of iterations %" PetscInt_FMT "\n", jac->maxiter));
@@ -747,14 +747,14 @@ static PetscErrorCode PCView_HYPRE_ILU(PC pc, PetscViewer viewer)
 {
   PC_HYPRE         *jac      = (PC_HYPRE *)pc->data;
   hypre_ParILUData *ilu_data = (hypre_ParILUData *)jac->hsolver;
-  PetscBool         iascii;
+  PetscBool         isascii;
   PetscInt          indx;
   PetscReal         tmpdbl;
   PetscReal        *tmpdbl3;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
-  if (iascii) {
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  HYPRE ILU preconditioning\n"));
     PetscStackCallExternalVoid("hypre_ParILUDataIluType", indx = hypre_ParILUDataIluType(ilu_data));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    ILU type              %s (%" PetscInt_FMT ")\n", HYPREILUType[indx], indx));
@@ -823,11 +823,11 @@ static PetscErrorCode PCSetFromOptions_HYPRE_Euclid(PC pc, PetscOptionItems Pets
 static PetscErrorCode PCView_HYPRE_Euclid(PC pc, PetscViewer viewer)
 {
   PC_HYPRE *jac = (PC_HYPRE *)pc->data;
-  PetscBool iascii;
+  PetscBool isascii;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
-  if (iascii) {
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  HYPRE Euclid preconditioning\n"));
     if (jac->eu_level != PETSC_DEFAULT) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "    factorization levels %" PetscInt_FMT "\n", jac->eu_level));
@@ -1346,13 +1346,13 @@ static PetscErrorCode PCView_HYPRE_BoomerAMG(PC pc, PetscViewer viewer)
 {
   PC_HYPRE         *jac      = (PC_HYPRE *)pc->data;
   hypre_ParAMGData *amg_data = (hypre_ParAMGData *)jac->hsolver;
-  PetscBool         iascii;
+  PetscBool         isascii;
   PetscInt          indx;
   PetscReal         val;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
-  if (iascii) {
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  HYPRE BoomerAMG preconditioning\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    Cycle type %s\n", HYPREBoomerAMGCycleType[jac->cycletype]));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    Maximum number of levels %" PetscInt_FMT "\n", jac->maxlevels));
@@ -1497,12 +1497,12 @@ static PetscErrorCode PCSetFromOptions_HYPRE_ParaSails(PC pc, PetscOptionItems P
 static PetscErrorCode PCView_HYPRE_ParaSails(PC pc, PetscViewer viewer)
 {
   PC_HYPRE   *jac = (PC_HYPRE *)pc->data;
-  PetscBool   iascii;
+  PetscBool   isascii;
   const char *symt = 0;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
-  if (iascii) {
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  HYPRE ParaSails preconditioning\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    nlevels %" PetscInt_FMT "\n", jac->nlevels));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    threshold %g\n", (double)jac->threshold));
@@ -1571,11 +1571,11 @@ static PetscErrorCode PCSetFromOptions_HYPRE_AMS(PC pc, PetscOptionItems PetscOp
 static PetscErrorCode PCView_HYPRE_AMS(PC pc, PetscViewer viewer)
 {
   PC_HYPRE *jac = (PC_HYPRE *)pc->data;
-  PetscBool iascii;
+  PetscBool isascii;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
-  if (iascii) {
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  HYPRE AMS preconditioning\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    subspace iterations per application %" PetscInt_FMT "\n", jac->as_max_iter));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    subspace cycle type %" PetscInt_FMT "\n", jac->ams_cycle_type));
@@ -1665,11 +1665,11 @@ static PetscErrorCode PCSetFromOptions_HYPRE_ADS(PC pc, PetscOptionItems PetscOp
 static PetscErrorCode PCView_HYPRE_ADS(PC pc, PetscViewer viewer)
 {
   PC_HYPRE *jac = (PC_HYPRE *)pc->data;
-  PetscBool iascii;
+  PetscBool isascii;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
-  if (iascii) {
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  HYPRE ADS preconditioning\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    subspace iterations per application %" PetscInt_FMT "\n", jac->as_max_iter));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    subspace cycle type %" PetscInt_FMT "\n", jac->ads_cycle_type));
@@ -2737,12 +2737,12 @@ static const char *PFMGRAPType[]   = {"Galerkin", "non-Galerkin"};
 
 static PetscErrorCode PCView_PFMG(PC pc, PetscViewer viewer)
 {
-  PetscBool iascii;
+  PetscBool isascii;
   PC_PFMG  *ex = (PC_PFMG *)pc->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
-  if (iascii) {
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  HYPRE PFMG preconditioning\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    max iterations %" PetscInt_FMT "\n", ex->its));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    tolerance %g\n", ex->tol));
@@ -2960,12 +2960,12 @@ static const char *SysPFMGRelaxType[] = {"Weighted-Jacobi", "Red/Black-Gauss-Sei
 
 static PetscErrorCode PCView_SysPFMG(PC pc, PetscViewer viewer)
 {
-  PetscBool   iascii;
+  PetscBool   isascii;
   PC_SysPFMG *ex = (PC_SysPFMG *)pc->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
-  if (iascii) {
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  HYPRE SysPFMG preconditioning\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  max iterations %" PetscInt_FMT "\n", ex->its));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  tolerance %g\n", ex->tol));
@@ -3189,12 +3189,12 @@ static PetscErrorCode PCDestroy_SMG(PC pc)
 
 static PetscErrorCode PCView_SMG(PC pc, PetscViewer viewer)
 {
-  PetscBool iascii;
+  PetscBool isascii;
   PC_SMG   *ex = (PC_SMG *)pc->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
-  if (iascii) {
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  HYPRE SMG preconditioning\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    max iterations %" PetscInt_FMT "\n", ex->its));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    tolerance %g\n", ex->tol));
