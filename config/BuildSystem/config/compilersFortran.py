@@ -93,6 +93,26 @@ class Configure(config.base.Configure):
     self.logPrint('Fortran does NOT use preprocessor', 3, 'compilers')
     return
 
+  def checkFortranBool(self):
+    '''Determine whether the Fortran compiler has interoperable bool/logical'''
+    if self.argDB['with-batch']:
+      self.logPrint('Using --with-batch, so assume that Fortran bools are interoperable', 3, 'compilers')
+      return
+    self.pushLanguage('FC')
+    if not self.checkRun(None,
+      '''
+        use, intrinsic :: ISO_C_binding
+        implicit none
+        integer(C_INT8_T) :: int8_t
+
+        if (transfer(.true._C_BOOL,int8_t) /= 1_C_INT8_T) error stop 'true !=1'
+        if (transfer(.false._C_BOOL,int8_t) /= 0_C_INT8_T) error stop 'false !=0'
+      '''):
+      self.popLanguage()
+      raise RuntimeError('Fortran compiler uses non-interoperable bool representation')
+    self.logPrint('Fortran compiler uses interoperable bool representation')
+    return
+
   def checkFortranDefineCompilerOption(self):
     '''Check if -WF,-Dfoobar or -Dfoobar is the compiler option to define a macro'''
     self.FortranDefineCompilerOption = ''
@@ -312,7 +332,7 @@ class Configure(config.base.Configure):
     return
 
   def checkFortran90AssumedType(self):
-    '''Check if Fortran compiler array pointer is a raw pointer in C''' 
+    '''Check if Fortran compiler array pointer is a raw pointer in C'''
     if config.setCompilers.Configure.isIBM(self.setCompilers.FC, self.log):
       self.addDefine('HAVE_F90_ASSUMED_TYPE_NOT_PTR', 1)
       self.logPrint('IBM F90 compiler detected so using HAVE_F90_ASSUMED_TYPE_NOT_PTR', 3, 'compilers')
@@ -473,6 +493,7 @@ class Configure(config.base.Configure):
     if hasattr(self.setCompilers, 'FC'):
       self.executeTest(self.checkFortranTypeSizes)
       self.executeTest(self.checkFortranPreprocessor)
+      self.executeTest(self.checkFortranBool)
       self.executeTest(self.checkFortranDefineCompilerOption)
       self.executeTest(self.checkFortran90)
       self.executeTest(self.checkFortran90FreeForm)
