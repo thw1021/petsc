@@ -177,3 +177,4 @@
 ```
 
 - Add `PetscObjectNullify()`
+- Require Fortran compiler to have .true.=1 and .false.=0. Needs -fpscomp logicals for Intel, no solution for NVIDIA
