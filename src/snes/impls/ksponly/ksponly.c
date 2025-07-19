@@ -2,6 +2,7 @@
 
 typedef struct {
   PetscBool transpose_solve;
+  PetscBool skip_final_residual; // Even if running monitors, don't compute the final residual
 } SNES_KSPONLY;
 
 static PetscErrorCode SNESSolve_KSPONLY(SNES snes)
@@ -57,7 +58,7 @@ static PetscErrorCode SNESSolve_KSPONLY(SNES snes)
 
   /* Take the computed step. */
   PetscCall(VecAXPY(X, -1.0, Y));
-  if (snes->numbermonitors) {
+  if (snes->numbermonitors && !ksponly->skip_final_residual) {
     PetscReal fnorm;
     PetscCall(SNESComputeFunction(snes, X, F));
     PetscCall(VecNorm(F, NORM_2, &fnorm));
@@ -112,6 +113,9 @@ PETSC_EXTERN PetscErrorCode SNESCreate_KSPONLY(SNES snes)
   PetscCall(SNESParametersInitialize(snes));
 
   PetscCall(PetscNew(&ksponly));
+
+  // TODO: Make this option respect the snes prefix.
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-snes_ksponly_skip_final_residual", &ksponly->skip_final_residual, NULL));
   snes->data = (void *)ksponly;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
