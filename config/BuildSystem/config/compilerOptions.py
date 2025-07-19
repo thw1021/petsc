@@ -277,6 +277,7 @@ class CompilerOptions(config.base.Configure):
           flags.extend(['-fast', '-Mnoframe'])
       # Linux Intel
       if config.setCompilers.Configure.isIntel(compiler, self.log) and not re_win32fe_ifort.search(compiler):
+        flags.append('-standard-semantics')
         if bopt == 'g':
           flags.extend(['-g','-O0'])
         elif bopt == 'O':
@@ -284,6 +285,7 @@ class CompilerOptions(config.base.Configure):
           flags.append('-O3')
       # Windows Intel
       elif re_win32fe_ifort.search(compiler):
+        flags.append('-standard-semantics')
         if bopt == '':
           if self.argDB['with-shared-libraries']:
             flags.extend(['-MD'])
