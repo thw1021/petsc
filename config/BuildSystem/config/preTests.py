@@ -1,6 +1,6 @@
 '''
-This module tests features so broken, that he normal test apparatus is likely
-o fail. For example, there are several buggy implementations of Python, we can
+This module tests features so broken, that the normal test apparatus is likely
+to fail. For example, there are several buggy implementations of Python, we can
 recognize and work around.
 '''
 import os, sys
