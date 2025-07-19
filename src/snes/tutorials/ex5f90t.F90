@@ -145,7 +145,7 @@
       use petscsnes
       use ex5f90tmodule
       use f90moduleinterfacest
-      implicit none
+      implicit none (type, external)
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                   Variable declarations
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -19,7 +19,7 @@
       program main
 #include <petsc/finclude/petscts.h>
       use petscts
-      implicit none
+      implicit none (type, external)
 
 !
 !  Create an application context to contain data needed by the
@@ -187,7 +187,7 @@
 !
       subroutine FormInitialGuess(X,user,ierr)
       use petscts
-      implicit none
+      implicit none (type, external)
 
       Vec              X
       PetscReal user(3)
@@ -228,7 +228,7 @@
 !
       subroutine FormFunction(ts,t,X,F,user,ierr)
       use petscts
-      implicit none
+      implicit none (type, external)
 
       TS       ts
       PetscReal  t
@@ -284,7 +284,7 @@
 !
       subroutine FormJacobian(ts,ctime,X,JJ,B,user,ierr)
       use petscts
-      implicit none
+      implicit none (type, external)
 
       TS               ts
       Vec              X

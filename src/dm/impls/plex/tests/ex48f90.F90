@@ -3,7 +3,7 @@ program ex47f90
 #include "petsc/finclude/petscvec.h"
     use petsc
     use petscvec
-    implicit none
+    implicit none (type, external)
 
     Type(tDM)                         :: dm
     Type(tPetscSection)               :: section

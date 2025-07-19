@@ -1,11 +1,4 @@
 interface
-  Subroutine PetscFortranPrintToFileUnit(unit,str,ierr)
-    use, intrinsic :: ISO_C_binding
-    import tPetscViewer
-    integer unit
-    character(len=*), intent(in) :: str
-    PetscErrorCode, intent(out):: ierr
-  End Subroutine
   Subroutine PetscViewerASCIIOpenWithFileUnit(comm,unit,lab,ierr)
     use, intrinsic :: ISO_C_binding
     import tPetscViewer

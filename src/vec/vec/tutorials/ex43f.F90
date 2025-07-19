@@ -19,7 +19,7 @@
         use,intrinsic :: iso_c_binding
         use petscvec
         use ex43fmodule
-       implicit none
+       implicit none (type, external)
 !
 !  This routine demonstrates how to call a bind C function from Fortran
        Vec            v

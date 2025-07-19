@@ -13,7 +13,7 @@
       program main
 #include <petsc/finclude/petscvec.h>
       use petscvec
-      implicit none
+      implicit none (type, external)
 
       PetscMPIInt rank,size
       PetscInt nlocal,nghost,ifrom(2)

@@ -3,7 +3,7 @@
       program main
 #include <petsc/finclude/petscmat.h>
       use petscmat
-      implicit none
+      implicit none (type, external)
 
       PetscErrorCode ierr
       PetscInt i,one,twelve,j
@@ -20,13 +20,13 @@
       value = 3.0
       i     = 4
       one   = 1
-      PetscCallA(MatSetValuesMPIAIJ(m,one,[i],one,[i],[value],ADD_VALUES,ierr))
+      PetscCallA(MatSetValues(m,one,[i],one,[i],[value],ADD_VALUES,ierr))
       i = 5
       j = 7
-      PetscCallA(MatSetValuesMPIAIJ(m,one,[i],one,[j],[value],ADD_VALUES,ierr))
+      PetscCallA(MatSetValues(m,one,[i],one,[j],[value],ADD_VALUES,ierr))
       i = 10
       j = 9
-      PetscCallA(MatSetValuesMPIAIJ(m,one,[i],one,[j],[value],ADD_VALUES,ierr))
+      PetscCallA(MatSetValues(m,one,[i],one,[j],[value],ADD_VALUES,ierr))
       PetscCallA(MatAssemblyBegin(m,MAT_FINAL_ASSEMBLY,ierr))
       PetscCallA(MatAssemblyEnd(m,MAT_FINAL_ASSEMBLY,ierr))
 

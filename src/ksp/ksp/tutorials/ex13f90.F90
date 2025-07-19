@@ -13,7 +13,7 @@
 
       program main
       use ex13f90module
-      implicit none
+      implicit none (type, external)
 
 !    User-defined context that contains all the data structures used
 !    in the linear solution process.
@@ -144,7 +144,7 @@
 ! ----------------------------------------------------------------
       subroutine UserInitializeLinearSolver(m,n,userctx,ierr)
       use ex13f90module
-      implicit none
+      implicit none (type, external)
 
       PetscInt m,n
       PetscErrorCode ierr
@@ -203,7 +203,7 @@
 
       subroutine UserDoLinearSolver(rho,userctx,userb,userx,ierr)
       use ex13f90module
-      implicit none
+      implicit none (type, external)
 
       PetscErrorCode ierr
       type(User) userctx
@@ -327,7 +327,7 @@
 
       subroutine UserFinalizeLinearSolver(userctx,ierr)
       use ex13f90module
-      implicit none
+      implicit none (type, external)
 
       PetscErrorCode ierr
       type(User) userctx

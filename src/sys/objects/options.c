@@ -2583,7 +2583,7 @@ PetscErrorCode PetscOptionsGetEList(PetscOptions options, const char pre[], cons
           `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`, `PetscOptionsGetEList()`, `PetscOptionsEnum()`
 @*/
-PetscErrorCode PetscOptionsGetEnum(PetscOptions options, const char pre[], const char opt[], const char *const list[], PetscEnum *value, PetscBool *set) PeNSS
+PetscErrorCode PetscOptionsGetEnum(PetscOptions options, const char pre[], const char opt[], const char *const list[], PetscEnum *value, PetscBool *set) PeNS
 {
   PetscInt  ntext = 0, tval;
   PetscBool fset;
@@ -2833,15 +2833,8 @@ PetscErrorCode PetscOptionsGetScalar(PetscOptions options, const char pre[], con
   If the user does not use the option then `string` is not changed. Thus
   you should ALWAYS initialize `string` if you access it without first checking that the `set` flag is true.
 
-  Fortran Notes:
-  The Fortran interface is slightly different from the C/C++
-  interface.  Sample usage in Fortran follows
-.vb
-      character *20    string
-      PetscErrorCode   ierr
-      PetscBool        set
-      call PetscOptionsGetString(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-s',string,set,ierr)
-.ve
+  Fortran Note:
+  There is no `len` argument.
 
 .seealso: `PetscOptionsGetInt()`, `PetscOptionsGetReal()`,
           `PetscOptionsHasName()`, `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`,
@@ -2850,7 +2843,7 @@ PetscErrorCode PetscOptionsGetScalar(PetscOptions options, const char pre[], con
           `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`
 @*/
-PetscErrorCode PetscOptionsGetString(PetscOptions options, const char pre[], const char name[], char string[], size_t len, PetscBool *set) PeNS
+PetscErrorCode PetscOptionsGetString(PetscOptions options, const char pre[], const char name[], char string[], size_t len, PetscBool *set)
 {
   const char *value;
   PetscBool   flag;

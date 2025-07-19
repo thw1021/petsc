@@ -1,7 +1,7 @@
       program main
 #include <petsc/finclude/petscis.h>
       use petscis
-      implicit none
+      implicit none (type, external)
 
       type(tPetscSection)   section
       PetscInt       pStart, pEnd, p,three

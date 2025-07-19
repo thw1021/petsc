@@ -5,7 +5,7 @@ program main
 use petscvec
 use petscmat
 
-implicit none
+implicit none (type, external)
 
   Mat             A
   MatPartitioning   part
