@@ -1,9 +1,9 @@
 !
 !  Test Fortran binding of sort routines
 !
-module ex49fmodule
-  use petsc
 #include "petsc/finclude/petsc.h"
+module ex49f_mod
+  use petsc
   implicit none
   type uctx
      PetscInt myint
@@ -24,11 +24,11 @@ contains
        res = 1
     end if
   end subroutine CompareIntegers
-end module ex49fmodule
+end module ex49f_mod
 
-program main
+program ex49f
 
-  use ex49fmodule
+  use ex49f_mod
   implicit none
 
   PetscErrorCode          ierr
@@ -62,7 +62,7 @@ program main
   PetscCallA(PetscSortInt(iN,x,ierr))
   PetscCallA(PetscTimSort(N,x1,sizeofentry,CompareIntegers,ctx,ierr))
   do i = 1,N
-    PetscCheckA(x1(i) .eq. x(i),PETSC_COMM_SELF,PETSC_ERR_PLIB,'PetscTimSort and PetscSortInt arrays did not match')
+    PetscCheckA(x1(i) == x(i),PETSC_COMM_SELF,PETSC_ERR_PLIB,'PetscTimSort and PetscSortInt arrays did not match')
   end do
   PetscCallA(PetscSortIntWithArray(iN,y,x,ierr))
   PetscCallA(PetscSortIntWithArrayPair(iN,x,y,z,ierr))
@@ -77,7 +77,7 @@ program main
   PetscCallA(PetscSortRealWithArrayInt(iN,r,x,ierr))
 
   PetscCallA(PetscFinalize(ierr))
-end program main
+end program ex49f
 
 !/*TEST
 !

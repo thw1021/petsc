@@ -1,9 +1,9 @@
 !
 !  Program to test PetscRandom, PetscObjectReference() and other PetscObjectXXX functions.
 !
-      program main
-
 #include <petsc/finclude/petscsys.h>
+      program ex36f
+
       use petscsys
       implicit none
 
@@ -27,12 +27,12 @@
 
       PetscCallA(PetscObjectCompose(r,'test',r2,ierr))
       PetscCallA(PetscObjectQuery(r,'test',q,ierr))
-      PetscCheckA(q .eq. r2,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Object compose/query failed')
+      PetscCheckA(q == r2,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Object compose/query failed')
 
       PetscCallA(PetscRandomDestroy(r,ierr))
       PetscCallA(PetscRandomDestroy(r2,ierr))
       PetscCallA(PetscFinalize(ierr))
-      end
+      end program ex36f
 
 !
 !/*TEST

@@ -4,14 +4,15 @@
 !
 ! -----------------------------------------------------------------------
 
-      program main
 #include <petsc/finclude/petscsys.h>
+      program ex4f90
       use petscmpi  ! or mpi or mpi_f08
       use petscsys
       implicit none
 
       PetscErrorCode ierr
-      PetscMPIInt rank, size, zero, two
+      PetscMPIInt rank, size
+      PetscMPIInt, parameter :: zero = 0, two = 2
 
 !     We must call MPI_Init() first, making us, not PETSc, responsible
 !     for MPI
@@ -20,8 +21,6 @@
 
 !     We can now change the communicator universe for PETSc
 
-      zero = 0
-      two = 2
       PetscCallMPIA(MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr))
       PetscCallMPIA(MPI_Comm_split(MPI_COMM_WORLD,mod(rank,two),zero,PETSC_COMM_WORLD,ierr))
 
@@ -38,7 +37,7 @@
 
 !     Here we would like to print only one message that represents all
 !     the processes in the group.
-      if (rank .eq. 0) write(6,100) size,rank
+      if (rank == 0) write(6,100) size,rank
  100  format('No of Procs = ',i4,' rank = ',i4)
 
 !     Always call PetscFinalize() before exiting a program.  This
@@ -53,7 +52,7 @@
 !     Since we initialized MPI, we must call MPI_Finalize()
 
       PetscCallMPIA(MPI_Finalize(ierr))
-      end
+      end program ex4f90
 
 !
 !/*TEST

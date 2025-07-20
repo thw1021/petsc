@@ -1,11 +1,11 @@
+#include <petsc/finclude/petscsys.h>
 program ex60F90
 
-#include <petsc/finclude/petscsys.h>
     use petsc
     implicit none
 
     PetscBool                        :: flg
-    Character(len=256)               :: outputString
+    character(len=256)               :: outputString
     PetscScalar,dimension(:),pointer :: sopt
     PetscBool,dimension(:),pointer   :: bopt
     PetscInt                         :: nopt

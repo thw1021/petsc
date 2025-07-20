@@ -501,7 +501,7 @@ module petscsys
       character(len=*) :: help
       PetscErrorCode   :: ierr
 
-      if (filename .ne. PETSC_NULL_CHARACTER) then
+      if (filename /= PETSC_NULL_CHARACTER) then
         call PetscInitializeF(trim(filename),help,ierr)
         CHKERRQ(ierr)
       else
@@ -517,7 +517,7 @@ module petscsys
       character(len=*) :: filename
       PetscErrorCode   :: ierr
 
-      if (filename .ne. PETSC_NULL_CHARACTER) then
+      if (filename /= PETSC_NULL_CHARACTER) then
         call PetscInitializeF(trim(filename),PETSC_NULL_CHARACTER,ierr)
         CHKERRQ(ierr)
       else

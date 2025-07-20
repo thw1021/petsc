@@ -1,8 +1,8 @@
 !
 !
-      program main
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscdraw.h>
+      program ex5f
       use petscsys
       use petscdraw
       implicit none
@@ -15,19 +15,16 @@
       PetscDrawAxis     axis
       PetscErrorCode    ierr
       PetscBool         flg
-      integer4         x,y,width,height
+      integer4         width,height
+      integer4, parameter :: x = 0, y = 0
       PetscReal       xd,yd
-      PetscReal         ten
+      PetscReal, parameter :: ten = 10.0
       PetscInt          i,n,w,h
-      PetscInt          one
+      PetscInt, parameter :: one = 1
 
       n      = 15
-      x      = 0
-      y      = 0
       w      = 400
       h      = 300
-      ten    = 10.0
-      one    = 1
 
       PetscCallA(PetscInitialize(ierr))
 
@@ -46,11 +43,11 @@
       PetscCallA(PetscDrawAxisSetColors(axis,PETSC_DRAW_BLACK,PETSC_DRAW_RED,PETSC_DRAW_BLUE,ierr))
       PetscCallA(PetscDrawAxisSetLabels(axis,'toplabel','xlabel','ylabel',ierr))
 
-      do 10, i=0,n-1
+      do i=0,n-1
         xd = real(i) - 5.0
         yd = xd*xd
         PetscCallA(PetscDrawLGAddPoint(lg,xd,yd,ierr))
- 10   continue
+      end do
 
       PetscCallA(PetscDrawLGSetUseMarkers(lg,PETSC_TRUE,ierr))
       PetscCallA(PetscDrawLGDraw(lg,ierr))
@@ -60,7 +57,7 @@
       PetscCallA(PetscDrawLGDestroy(lg,ierr))
       PetscCallA(PetscDrawDestroy(draw,ierr))
       PetscCallA(PetscFinalize(ierr))
-      end
+      end program ex5f
 
 !/*TEST
 !

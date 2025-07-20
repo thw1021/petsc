@@ -1,7 +1,7 @@
 ! Synchronized printing: Fortran Example
 
-program main
 #include <petsc/finclude/petscsys.h>
+program ex2f
       use petscmpi  ! or mpi or mpi_f08
       use petscsys
 
@@ -39,7 +39,7 @@ program main
       PetscCallA(PetscPrintf(PETSC_COMM_SELF,outputString,ierr))
 
       PetscCallA(PetscFinalize(ierr))
-end program main
+end program ex2f
 
 !/*TEST
 !
