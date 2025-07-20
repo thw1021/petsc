@@ -1,14 +1,14 @@
 ! Example for PetscOptionsInsertFileYAML: Fortran Example
 
-program main
-
 #include <petsc/finclude/petscsys.h>
+program ex47f
+
       use petscsys
 
       implicit none
       PetscErrorCode                    :: ierr
       character(len=PETSC_MAX_PATH_LEN) :: filename
-      PetscBool                         ::  flg
+      PetscBool                         :: flg
 
       PetscCallA(PetscInitialize(ierr))
       PetscCallA(PetscOptionsGetString(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-f',filename,flg,ierr))
@@ -18,6 +18,8 @@ program main
 
       PetscCallA(PetscOptionsView(PETSC_NULL_OPTIONS,PETSC_VIEWER_STDOUT_WORLD,ierr))
       PetscCallA(PetscFinalize(ierr))
+
+end program ex47f
 
 !/*TEST
 !
@@ -35,4 +37,3 @@ program main
 !      output_file: output/ex47_2.out
 !
 !TEST*/
-end program main

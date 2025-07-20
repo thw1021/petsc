@@ -4,13 +4,14 @@
 !
 ! -----------------------------------------------------------------------
 
-      program main
 #include <petsc/finclude/petscsys.h>
+      program ex4f
       use petscmpi  ! or mpi or mpi_f08
       use petscsys
       implicit none
       PetscErrorCode ierr
-      PetscMPIInt    rank, size,grank,zero,two
+      PetscMPIInt    rank, size, grank
+      PetscMPIInt, parameter :: zero = 0, two = 2
       PetscReal globalrank
 
 !     We must call MPI_Init() first, making us, not PETSc, responsible for MPI
@@ -21,8 +22,6 @@
 #endif
 !     We can now change the communicator universe for PETSc
 
-      zero = 0
-      two = 2
       PetscCallMPIA(MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr))
       PetscCallMPIA(MPI_Comm_split(MPI_COMM_WORLD,mod(rank,two),zero,PETSC_COMM_WORLD,ierr))
 
@@ -42,7 +41,7 @@
       PetscCallMPIA(MPI_Comm_rank(MPI_COMM_WORLD,grank,ierr))
       globalrank = grank
       PetscCallA(PetscSleep(globalrank,ierr))
-      if (rank .eq. 0) write(6,100) size,rank
+      if (rank == 0) write(6,100) size,rank
  100  format('No of Procs = ',i4,' rank = ',i4)
 
 !     Always call PetscFinalize() before exiting a program.  This
@@ -60,7 +59,7 @@
 !     Since we initialized MPI, we must call MPI_Finalize()
 
       PetscCallMPIA(MPI_Finalize(ierr))
-      end
+      end program ex4f
 
 !/*TEST
 !

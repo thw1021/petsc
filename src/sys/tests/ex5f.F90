@@ -1,14 +1,14 @@
 !
 !  Simple PETSc Program written in Fortran
 !
-       program main
 #include <petsc/finclude/petscsys.h>
+       program ex5f
        use petscsys
        implicit none
 
        PetscErrorCode  ierr
        PetscMPIInt     rank
-       character*(80) arch
+       character(80)   arch
 
        PetscCallA(PetscInitialize(ierr))
        PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
@@ -19,7 +19,7 @@
  100   format (' PETSC_ARCH ',A)
 
        PetscCallA(PetscFinalize(ierr))
-       end
+       end program ex5f
 
 !
 !/*TEST

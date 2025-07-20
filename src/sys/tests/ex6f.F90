@@ -1,9 +1,9 @@
 !
 !  Tests random number generation routines from Fortran.
 !
-      program main
-
 #include <petsc/finclude/petscsys.h>
+      program ex6f
+
       use petscsys
       implicit none
 
@@ -19,7 +19,7 @@
       print*, 'Random value:',rand
       PetscCallA(PetscRandomDestroy(r,ierr))
       PetscCallA(PetscFinalize(ierr))
-      end
+      end program ex6f
 
 !
 !/*TEST

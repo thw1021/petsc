@@ -1,8 +1,8 @@
 !
 !  Simple PETSc Program written in Fortran
 !
-       program main
 #include <petsc/finclude/petscsys.h>
+       program ex38f
        use petscmpi  ! or mpi or mpi_f08
        use petscsys
        implicit none
@@ -13,7 +13,7 @@
        f(1) = 1
        PetscCallMPIA(MPI_Allreduce(MPI_IN_PLACE,f,1,MPIU_INTEGER,MPI_MIN,PETSC_COMM_WORLD,ierr))
        PetscCallA(PetscFinalize(ierr))
-       end
+       end program ex38f
 
 !/*TEST
 !

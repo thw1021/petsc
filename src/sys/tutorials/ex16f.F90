@@ -1,7 +1,7 @@
 ! Tests calling PetscOptionsSetValue() before PetscInitialize(): Fortran Example
 
-program main
 #include <petsc/finclude/petscsys.h>
+program ex16f
       use petscmpi  ! or mpi or mpi_f08
       use petscsys
 
@@ -22,7 +22,7 @@ program main
       write(outputString,*) 'Number of processors =',size,'rank =',rank,'\n'
       PetscCallA(PetscPrintf(PETSC_COMM_WORLD,outputString,ierr))
       PetscCallA(PetscFinalize(ierr))
-end program main
+end program ex16f
 
 !/*TEST
 !

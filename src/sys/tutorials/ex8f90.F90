@@ -1,12 +1,12 @@
 !
 !   Example of getting an enum value from the options database in Fortran
-
 #include "petsc/finclude/petsc.h"
+      program ex8f90
       use petsc
       implicit none
 
       PetscErrorCode                            :: ierr
-      Character(len=99) list1(6)
+      character(len=99) list1(6)
       PetscEnum                                 :: opt=-1
       PetscBool                                 :: set=PETSC_FALSE
 
@@ -25,7 +25,7 @@
       write(*,*) 'set is ', set
 
       PetscCallA(PetscFinalize(ierr))
-      end
+      end program ex8f90
 
 !
 !/*TEST
