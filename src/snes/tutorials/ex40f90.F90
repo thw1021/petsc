@@ -13,7 +13,7 @@
 #include <petsc/finclude/petscdmda.h>
       use petscdmda
       use petscsnes
-      implicit none
+      implicit none (type, external)
 
       SNES             snes
       PetscErrorCode   ierr
@@ -55,7 +55,7 @@
 
       subroutine FormFunctionLocal(in,x,f,dummy,ierr)
       use petscdmda
-      implicit none
+      implicit none (type, external)
       PetscInt i,j,k,dummy
       DMDALocalInfo in
       PetscScalar x(in%DOF,in%GXS+1:in%GXS+in%GXM,in%GYS+1:in%GYS+in%GYM)

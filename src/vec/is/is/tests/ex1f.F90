@@ -5,7 +5,7 @@
       program main
 #include <petsc/finclude/petscis.h>
       use petscis
-      implicit none
+      implicit none (type, external)
 
        PetscErrorCode ierr
        PetscInt i,n,indices(1004)

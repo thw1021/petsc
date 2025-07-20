@@ -3,7 +3,7 @@
 program ex9f
 #include "petsc/finclude/petscsys.h"
     use petscsys
-    implicit none
+    implicit none (type, external)
 
     PetscReal,Parameter                       :: PReal = 1.0
     Integer,Parameter                         :: Pr = Selected_Real_Kind(Precision(PReal))

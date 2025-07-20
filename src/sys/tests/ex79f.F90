@@ -4,7 +4,7 @@
       program main
 #include <petsc/finclude/petscsys.h>
       use petscsys
-      implicit none
+      implicit none (type, external)
       PetscReal2d, pointer :: dbleptr(:)
       PetscInt                i
       PetscErrorCode          ierr

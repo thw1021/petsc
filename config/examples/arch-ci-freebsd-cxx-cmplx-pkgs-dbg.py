@@ -33,7 +33,6 @@ configure_options = [
   #'--download-chaco=1',
   #'--download-spai=1',
   '--download-p4est=1',
-  '--with-mpi-f90module-visibility=0',
   '--download-kokkos=1',
   '--download-kokkos-kernels=1',
   '--with-ssl=1',

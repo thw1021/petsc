@@ -68,7 +68,7 @@ $(generated) : $(petscconf) $(petscvariables) config/gmakegen.py
 	$(PYTHON) ./config/gmakegen.py --petsc-arch=$(PETSC_ARCH)
 
 # Skip including generated files (which triggers rebuilding them) when we're just going to clean anyway.
-ifneq ($(filter-out help clean distclean check info gmakeinfo checkbadSource checkbadFileChange deletefortranbindings fortranbindings alletags clangformat checkclangformat lint get% %build,$(MAKECMDGOALS:clean%=clean)),)
+ifneq ($(filter-out help clean distclean check info gmakeinfo checkbadSource checkbadFileChange deletefortranbindings fortranbindings alletags etags clangformat checkclangformat lint get% %build,$(MAKECMDGOALS:clean%=clean)),)
 include $(generated)
 endif
 
@@ -247,6 +247,9 @@ clang-tidy: $(srcs.tidy)
 # Hack: manual dependencies on object files
 ifeq ($(MPI_IS_MPIUNI),1)
   MPIUNI_MOD := $(MODDIR)/mpiuni.mod
+  $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpi_sizeofs.o : $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpi_constants.o
+  $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpi_base.o : $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpi_sizeofs.o
+  $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpiunimod.o : $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpi_base.o
   $(OBJDIR)/src/sys/mpiuni/ftn-src/somempifort.o : $(OBJDIR)/src/sys/mpiuni/ftn-mod/mpiunimod.o
 endif
 $(OBJDIR)/src/sys/ftn-mod/petscsysmod.o   : $(if $(MPIUNI_MOD),$(OBJDIR)/src/sys/mpiuni/ftn-mod/mpiunimod.o)

@@ -5,7 +5,7 @@
 #include <petsc/finclude/petscdraw.h>
       use petscsys
       use petscdraw
-      implicit none
+      implicit none (type, external)
 !
 !  This example demonstrates basic use of the Fortran interface for
 !  PetscDraw routines.

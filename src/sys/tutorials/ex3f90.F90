@@ -7,9 +7,8 @@
       program SchoolDay
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petsclog.h>
-      use petscmpi  ! or mpi or mpi_f08
       use petscsys
-      implicit none
+      implicit none (type, external)
 
       ! Settings:
       integer, parameter        :: verbose=0               ! 0: silent, >=1 : increasing amount of debugging output

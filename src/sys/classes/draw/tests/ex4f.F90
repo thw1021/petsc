@@ -10,7 +10,7 @@
 #include <petsc/finclude/petscdraw.h>
       use petscsys
       use petscdraw
-      implicit none
+      implicit none (type, external)
 
       PetscReal zero, one,value, max
       PetscDraw    draw
@@ -31,7 +31,7 @@
       program main
       use petscsys
       use petscdraw
-      implicit none
+      implicit none (type, external)
 
       PetscDraw draw
       PetscErrorCode ierr

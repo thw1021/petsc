@@ -5,7 +5,7 @@
       program main
 #include <petsc/finclude/petsc.h>
       use petsc
-      implicit none
+      implicit none (type, external)
 
       PetscMPIInt :: rank
       PetscErrorCode :: ierr

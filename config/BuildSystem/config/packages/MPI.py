@@ -69,7 +69,6 @@ class Configure(config.package.Package):
     help.addArgument('MPI', '-with-mpiexec-tail=<prog>',                         nargs.Arg(None, None, 'The utility you want to put at the very end of "mpiexec -n <np> ..." and right before your executable to launch MPI jobs.'))
     help.addArgument('MPI', '-with-mpi-compilers=<bool>',                        nargs.ArgBool(None, 1, 'Try to use the MPI compilers, e.g. mpicc'))
     help.addArgument('MPI', '-known-mpi-shared-libraries=<bool>',                nargs.ArgBool(None, None, 'Indicates the MPI libraries are shared (the usual test will be skipped)'))
-    help.addArgument('MPI', '-with-mpi-f90module-visibility=<bool>',             nargs.ArgBool(None, 1, 'Indicates the MPI f90 module is available via PETSc module. When disabled, mpi_f08 can be used from user code'))
     return
 
   def setupDependencies(self, framework):
@@ -642,9 +641,6 @@ Unable to run hostname to check the network')
     self.addMakeMacro('MPIEXEC','${PETSC_DIR}/lib/petsc/bin/petsc-mpiexec.uni')
     self.executeTest(self.configureMPIEXEC_TAIL)
     self.framework.saveLog()
-    self.framework.addDefine('MPI_Type_create_struct(count,lens,displs,types,newtype)', 'MPI_Type_struct((count),(lens),(displs),(types),(newtype))')
-    self.framework.addDefine('MPI_Comm_create_errhandler(p_err_fun,p_errhandler)', 'MPI_Errhandler_create((p_err_fun),(p_errhandler))')
-    self.framework.addDefine('MPI_Comm_set_errhandler(comm,p_errhandler)', 'MPI_Errhandler_set((comm),(p_errhandler))')
     self.logWrite(self.framework.restoreLog())
     self.usingMPIUni = 1
     self.found = 1
@@ -687,22 +683,16 @@ Unable to run hostname to check the network')
     return
 
   def FortranMPICheck(self):
-    '''Make sure fortran include [mpif.h] and library symbols are found'''
+    '''Make sure fortran module is found'''
     if not hasattr(self.compilers, 'FC'):
       return 0
-    # Fortran compiler is being used - so make sure mpif.h exists
     self.libraries.pushLanguage('FC')
     oldFlags = self.compilers.FPPFLAGS
     self.compilers.FPPFLAGS += ' '+self.headers.toString(self.include)
-    # check if mpi_init form fortran works
-    self.log.write('Checking for fortran mpi_init()\n')
-    if not self.libraries.check(self.lib,'', call = '#include "mpif.h"\n       integer ierr\n       call mpi_init(ierr)'):
-      raise RuntimeError('Fortran error! mpi_init() could not be located!')
     # check if mpi.mod exists
-    if self.fortran.fortranIsF90:
-      self.log.write('Checking for mpi.mod\n')
-      if self.libraries.check(self.lib,'', call = '       use mpi\n       integer(kind=selected_int_kind(5)) ierr,rank\n       call mpi_init(ierr)\n       call mpi_comm_rank(MPI_COMM_WORLD,rank,ierr)\n'):
-        self.addDefine('HAVE_MPI_F90MODULE', 1)
+    self.log.write('Checking for mpi.mod\n')
+    if not self.libraries.check(self.lib,'', call = '       use mpi\n       integer(kind=selected_int_kind(5)) ierr,rank\n       call mpi_init(ierr)\n       call mpi_comm_rank(MPI_COMM_WORLD,rank,ierr)\n'):
+      raise RuntimeError('Unable to find MPI module')
     self.compilers.FPPFLAGS = oldFlags
     self.libraries.popLanguage()
     return 0
@@ -942,8 +932,6 @@ Unable to run hostname to check the network')
     if 'with-'+self.package+'-shared' in self.argDB:
       self.argDB['with-'+self.package] = 1
     config.package.Package.configureLibrary(self)
-    if self.argDB['with-mpi-f90module-visibility']:
-      self.addDefine('HAVE_MPI_F90MODULE_VISIBILITY',1)
     if self.setCompilers.usedMPICompilers:
       if 'with-mpi-include' in self.argDB: raise RuntimeError('Do not use --with-mpi-include when using MPI compiler wrappers')
       if 'with-mpi-lib' in self.argDB: raise RuntimeError('Do not use --with-mpi-lib when using MPI compiler wrappers')
