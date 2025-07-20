@@ -25,9 +25,9 @@
       subroutine PetscFortranPrintToFileUnit(unit,str,ierr)
       use, intrinsic :: ISO_C_binding
       implicit none
-      character(*) str
-      integer4 unit
-      PetscErrorCode ierr
+      character(*), intent(in) :: str
+      integer4, intent(in) :: unit
+      PetscErrorCode, intent(out) :: ierr
       write(unit=unit, fmt="(A)", advance='no') str
       ierr = 0
       end
@@ -45,6 +45,6 @@
       subroutine PetscGetCommandArgument(n,val)
       implicit none
       integer, intent(in) :: n
-      character(*) val
+      character(*), intent(out) :: val
       call get_command_argument(n,val)
       end

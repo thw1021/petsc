@@ -1,8 +1,8 @@
 !
 !  PETSc Program to test PetscReal2d
 !
-      program main
 #include <petsc/finclude/petscsys.h>
+      program ex79f
       use petscsys
       implicit none
       PetscReal2d, pointer :: dbleptr(:)
@@ -13,15 +13,15 @@
 
       allocate(dbleptr(10))
       do i=1,10
-      allocate(dbleptr(i)%ptr(20))
+        allocate(dbleptr(i)%ptr(20))
       enddo
       do i=1,10
-      deallocate(dbleptr(i)%ptr)
+        deallocate(dbleptr(i)%ptr)
       enddo
       deallocate(dbleptr)
 
       PetscCallA(PetscFinalize(ierr))
-      end
+      end program ex79f
 
 !/*TEST
 !

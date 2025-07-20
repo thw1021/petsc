@@ -2,15 +2,15 @@
 !
 !     Test for PetscFOpen() from Fortran
 !
-      program main
 #include <petsc/finclude/petscsys.h>
+      program ex17f
       use petscsys
       implicit none
 
       PetscErrorCode ierr
       PetscMPIInt rank
       PetscFortranAddr file
-      character*100    joe
+      character(100) joe
 
       PetscCallA(PetscInitialize(ierr))
       PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
@@ -31,7 +31,7 @@
       PetscCallA(PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT,ierr))
 
       PetscCallA(PetscFinalize(ierr))
-      end
+      end program ex17f
 
 !
 !/*TEST

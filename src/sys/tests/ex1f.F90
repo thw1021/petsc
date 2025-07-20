@@ -1,32 +1,37 @@
 !
 !  Simple PETSc Program to test setting error handlers from Fortran
 !
-      subroutine GenerateErr(line,ierr)
 
 #include <petsc/finclude/petscsys.h>
+      module ex1f_mod
       use petscsys
+      implicit none
+
+      contains
+      subroutine GenerateErr(line,ierr)
       PetscErrorCode  ierr
       integer line
 
       call PetscError(PETSC_COMM_SELF,1,PETSC_ERROR_INITIAL,'My error message')
-      end
+      end subroutine GenerateErr
 
       subroutine MyErrHandler(comm,line,fun,file,n,p,mess,ctx,ierr)
-      use petscsysdef
       integer line,n,p
       PetscInt ctx
       PetscErrorCode ierr
       MPI_Comm comm
-      character*(*) fun,file,mess
+      character(*) fun,file,mess
 
       write(6,*) 'My error handler ',mess
-      call flush(6)
-      end
+      flush(6)
+      end subroutine MyErrHandler
+      end module ex1f_mod
 
-      program main
+      program ex1f
+      use ex1f_mod
       use petscsys
+      implicit none
       PetscErrorCode ierr
-      external       MyErrHandler
 
       PetscCallA(PetscInitialize(ierr))
       PetscCallA(PetscPushErrorHandler(PetscTraceBackErrorHandler,PETSC_NULL_INTEGER,ierr))
@@ -36,8 +41,8 @@
       PetscCallA(PetscPushErrorHandler(PetscAbortErrorHandler,PETSC_NULL_INTEGER,ierr))
       PetscCallA(GenerateErr(__LINE__,ierr))
       PetscCallA(PetscFinalize(ierr))
-      end
 
+      end program ex1f
 !
 !     These test fails on some systems randomly due to the Fortran and C output becoming mixed up,
 !     using a Fortran flush after the Fortran print* does not resolve the issue

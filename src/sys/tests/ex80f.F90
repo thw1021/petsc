@@ -1,9 +1,9 @@
 !
 ! PETSc Program to test HDF5 viewer and HDF5 attribute I/O
 !
-program main
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscvec.h>
+program ex80f
   use petscsys
   use petscvec
   implicit none
@@ -12,8 +12,8 @@ program main
   PetscErrorCode :: ierr
   Vec :: x
   PetscReal, parameter :: one = 1.0
-  PetscInt :: ival = 42
-  PetscReal :: rval = 3.14
+  PetscInt, parameter :: ival = 42
+  PetscReal, parameter :: rval = 3.14
   ! initialize PETSc
   PetscCallA(PetscInitialize(ierr))
   ! create and write a vector
@@ -32,7 +32,7 @@ program main
   PetscCallA(PetscViewerDestroy(viewer, ierr))
   PetscCallA(VecDestroy(x, ierr))
   PetscCallA(PetscFinalize(ierr))
-end program main
+end program ex80f
 !/*TEST
 !  build:
 !    requires: hdf5

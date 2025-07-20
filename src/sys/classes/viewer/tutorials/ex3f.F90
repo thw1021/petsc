@@ -1,17 +1,15 @@
+#include <petsc/finclude/petscsys.h>
       program ex1f90
 
-#include <petsc/finclude/petscsys.h>
       use petscsys
       implicit none
-      integer4 unit
-
+      integer4, parameter :: unit = 22
       PetscErrorCode ierr
       PetscCallA(PetscInitialize(ierr))
 
-      unit = 22
       call PetscViewerASCIIStdoutSetFileUnit(unit,ierr)
       PetscCallA(PetscFinalize(ierr))
-      end
+      end program ex1f90
 
 !/*TEST
 !

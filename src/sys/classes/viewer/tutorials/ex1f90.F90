@@ -1,6 +1,6 @@
+#include <petsc/finclude/petscsys.h>
       program ex1f90
 
-#include <petsc/finclude/petscsys.h>
       use petscsys
       use,intrinsic :: iso_c_binding
       implicit none
@@ -12,7 +12,7 @@
       PetscCallA(PetscViewerBinaryOpen(PETSC_COMM_WORLD,'binaryoutput',FILE_MODE_READ,viewer,ierr))
       PetscCallA(PetscViewerDestroy(viewer,ierr))
       PetscCallA(PetscFinalize(ierr))
-      end
+      end program ex1f90
 
 !/*TEST
 !
