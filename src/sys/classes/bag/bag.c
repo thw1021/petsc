@@ -696,7 +696,7 @@ PetscErrorCode PetscBagView(PetscBag bag, PetscViewer view)
         PetscCall(PetscViewerASCIIPrintf(view, "  %s = ", nitem->name));
         for (i = 0; i < nitem->msize; i++) {
           /* stdbool.h defines true=1 and false=0, but non-conformant Fortran compilers defined .true.=0xff (-1 if signed, 255 if unsigned).
-          /* the checks here with != PETSC_FALSE and PETSC_TRUE is a special case; here we truly demand that the value be 0 or 1 */
+             with the checks here with != PETSC_FALSE and PETSC_TRUE truly demand that the value be 0 or 1 */
           PetscCheck(value[i] == PETSC_FALSE || value[i] == PETSC_TRUE, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Boolean value for %s %s is corrupt; integer value %" PetscInt_FMT, nitem->name, nitem->help, (PetscInt)value[i]);
           PetscCall(PetscViewerASCIIPrintf(view, " %s", PetscBools[value[i]]));
         }
