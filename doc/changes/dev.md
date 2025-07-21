@@ -179,4 +179,5 @@
 
 - Add `PetscObjectNullify()`
 - Require Fortran compiler to have `.true.=b00000001` and `.false.=b00000000` for `logical(C_BOOL)`.
-  Needs `-fpscomp logicals` for Intel and `-Munixlogical` for NVIDIA.
+  Needs `-fpscomp logicals` for Intel and `-Munixlogical` for NVIDIA
+- PetscBool is now a regular bool in C and `logical(C_BOOL)` in Fortran
