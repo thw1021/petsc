@@ -1,9 +1,9 @@
 !
 !  Tests PetscHasExternalPackage().
 !
-program main
-
 #include <petsc/finclude/petscsys.h>
+program ex56f
+
       use petscsys
       implicit none
 
@@ -18,7 +18,7 @@ program main
       write (outputString,*) 'PETSc has '//trim(pkg)//'?',has,'\n'
       PetscCallA(PetscPrintf(PETSC_COMM_WORLD,outputString,ierr))
       PetscCallA(PetscFinalize(ierr))
-end program main
+end program ex56f
 
 !/*TEST
 !

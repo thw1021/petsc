@@ -1,7 +1,6 @@
 ! Demonstrates PetscGetVersionNumber(): Fortran Example
-
-program main
 #include <petsc/finclude/petscsys.h>
+program ex17f
       use petscsys
 
       implicit none
@@ -30,7 +29,7 @@ program main
       endif
 
       PetscCallA(PetscFinalize(ierr))
-end program main
+end program ex17f
 
 !/*TEST
 !

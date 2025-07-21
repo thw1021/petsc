@@ -4,9 +4,9 @@
 !                inserting their own event logging.
 !
 
-      program SchoolDay
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petsclog.h>
+      program ex3f90
       use petscmpi  ! or mpi or mpi_f08
       use petscsys
       implicit none
@@ -72,9 +72,7 @@
       PetscCallA(PetscLogEventRegister('Tidy Classroom',  classid, TidyClass, ierr))
       PetscCallA(PetscLogEventRegister('Lessons',         classid, Lessons,   ierr))
       PetscCallA(PetscLogEventRegister('Correct Homework',classid,CorrectHomework,ierr))
-      if (verbose>=1) then
-        print '(a,i0,a)','[',rank,'] SchoolDay events have been defined'
-      endif
+      if (verbose>=1) print '(a,i0,a)','[',rank,'] SchoolDay events have been defined'
 
 !     Go through the school day
       PetscCallA(PetscLogEventBegin(Morning,ierr))
@@ -165,9 +163,7 @@
 
       PetscCallA(PetscLogEventEnd(Afternoon,ierr))
 
-      if (.false.) then
-         continue
-      else if (role==TEACHER) then
+      if (role==TEACHER) then
          PetscCallA(PetscLogEventBegin(TidyClass,ierr))
          PetscCallA(PetscLogFlops(612300d0,ierr))
          PetscCallA(PetscSleep(1.1*second, ierr))
@@ -235,7 +231,7 @@
       deallocate(message)
 
       PetscCallA(PetscFinalize(ierr))
-      end program SchoolDay
+      end program ex3f90
 
 !/*TEST
 !

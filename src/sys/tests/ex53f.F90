@@ -1,9 +1,9 @@
 !
 !  Program to test PetscSubcomm.
 !
-      program main
-
 #include <petsc/finclude/petscsys.h>
+      program ex53f
+
       use petscsys
       implicit none
 
@@ -23,7 +23,7 @@
       PetscCallA(PetscSubcommView(r,PETSC_VIEWER_STDOUT_WORLD,ierr))
       PetscCallA(PetscSubcommDestroy(r,ierr))
       PetscCallA(PetscFinalize(ierr))
-      end
+      end program ex53f
 
 !
 !/*TEST

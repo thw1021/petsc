@@ -1,27 +1,31 @@
 !
 !   Example of using PetscOptionsBegin in Fortran
-program ex9f
 #include "petsc/finclude/petscsys.h"
+program ex9f
     use petscsys
     implicit none
 
     PetscReal,Parameter                       :: PReal = 1.0
-    Integer,Parameter                         :: Pr = Selected_Real_Kind(Precision(PReal))
+    Integer,Parameter                         :: Pr = kind(PReal)
     PetscInt,Parameter                        :: PInt = 1
     Integer,Parameter                         :: Pi = kind(PInt)
 
     PetscErrorCode                            :: ierr
     PetscBool                                 :: flg
     PetscInt                                  :: nopt = 3_Pi
-    PetscBool                                 :: bvalue, bdefault = PETSC_TRUE
-    PetscBool,dimension(:),pointer            :: barray
+    PetscBool                                 :: bvalue
+    PetscBool, parameter                      :: bdefault = PETSC_TRUE
+    PetscBool,dimension(:),allocatable        :: barray
     PetscEnum                                 :: evalue, edefault = 2
-    PetscInt                                  :: ivalue, idefault = 2_Pi
-    PetscInt,dimension(:),pointer             :: iarray
-    PetscReal                                 :: rvalue, rdefault = 1.23_Pr
-    PetscReal,dimension(:),pointer            :: rarray
-    PetscScalar                               :: svalue, sdefault = -4.56_Pr
-    PetscScalar,dimension(:),pointer          :: sarray
+    PetscInt                                  :: ivalue
+    PetscInt, parameter                       :: idefault = 2_Pi
+    PetscInt,dimension(:),allocatable         :: iarray
+    PetscReal                                 :: rvalue
+    PetscReal, parameter                      :: rdefault = 1.23_Pr
+    PetscReal,dimension(:),allocatable        :: rarray
+    PetscScalar                               :: svalue
+    PetscScalar, parameter                    :: sdefault = -4.56_Pr
+    PetscScalar,dimension(:),allocatable      :: sarray
     character(len=256)                        :: IOBuffer
     character(len=256)                        :: stvalue,stdefault
     character(len=256)                        :: list(6)
@@ -35,11 +39,10 @@ program ex9f
     list(6)   = ''
     stdefault = 'oulala oulala'
 
-    Allocate(iarray(nopt),source=-1_Pi)
-    Allocate(rarray(nopt),source=-99.0_pr)
-    Allocate(barray(nopt),source=PETSC_FALSE)
-    Allocate(sarray(nopt))
-    sarray = 123.456_Pr
+    allocate(iarray(nopt),source=-1_Pi)
+    allocate(rarray(nopt),source=-99.0_pr)
+    allocate(barray(nopt),source=PETSC_FALSE)
+    allocate(sarray(nopt),source=123.456_Pr)
 
     PetscCallA(PetscOptionsBegin(PETSC_COMM_WORLD,'prefix_','Setting options for my application','Section 1',ierr))
         PetscCallA(PetscOptionsBool('-bool','Get an application bool','Man page',bdefault,bvalue,flg,ierr))
@@ -94,10 +97,6 @@ program ex9f
         endif
     PetscCallA(PetscOptionsEnd(ierr))
 
-    deallocate(iarray)
-    deallocate(rarray)
-    deallocate(barray)
-    deallocate(sarray)
     PetscCallA(PetscFinalize(ierr))
 end program ex9f
 

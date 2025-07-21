@@ -5,9 +5,9 @@
 !
 ! -----------------------------------------------------------------------
 
-      program main
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petsclog.h>
+      program ex3f
       use petscsys
       implicit none
 
@@ -22,13 +22,10 @@
       PetscLogEvent USER_EVENT7,USER_EVENT8
       PetscLogEvent USER_EVENT9
       PetscClassId  classid
-      integer imax
+      integer, parameter :: imax = 10000
       PetscErrorCode ierr
-      parameter (imax = 10000)
-      PetscLogDouble onefp
-      parameter (onefp = 1.0d0)
-      PetscReal onereal,tenreal
-      parameter (onereal = 1.0, tenreal = 10.0)
+      PetscLogDouble, parameter :: onefp = 1.0d0
+      PetscReal, parameter :: onereal = 1.0, tenreal = 10.0
       PetscInt n
 !
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -112,7 +109,7 @@
       PetscCallA(PetscOptionsAllUsed(PETSC_NULL_OPTIONS,n,ierr))
       PetscCallA(PetscFinalize(ierr))
 
-      end
+      end program ex3f
 
 !
 !/*TEST

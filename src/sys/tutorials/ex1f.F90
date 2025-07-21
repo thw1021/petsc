@@ -1,7 +1,7 @@
 ! Introductory example that illustrates printing: Fortran Example
 
-program main
 #include <petsc/finclude/petscsys.h>
+program ex1f
       use petscsys
 
       implicit none
@@ -43,7 +43,7 @@ program main
 
       PetscCallA(PetscFinalize(ierr))
 
-end program main
+end program ex1f
 !/*TEST
 !
 !   test:
