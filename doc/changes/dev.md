@@ -178,3 +178,4 @@
 
 - Add `PetscObjectNullify()`
 - Require Fortran compiler to have .true.=1 and .false.=0. Needs -fpscomp logicals for Intel, no solution for NVIDIA
+- PetscBool is no a regular bool in C and `logical(C_BOOL)` in Fortran
