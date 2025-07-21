@@ -69,7 +69,7 @@
 - Add `MatNullSpaceRemoveFn` type definition
 - Add `MatMFFDFn`, `MatMFFDiFn`, `MatMFFDiBaseFn`, and `MatMFFDCheckhFn` type definitions
 - Add `MatFDColoringFn` type definition
-- Add a `MatOption` `MAT_COO_BLOCKED_ASSEMBLY` flag to use Mat bs for blocked assembly
+- Add `MatSetPreallocationCOOBlocked` and `MatSetValuesCOOBlocked` to support blocked COO
 
 ```{rubric} MatCoarsen:
 ```
