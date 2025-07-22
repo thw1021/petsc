@@ -607,3 +607,13 @@ PETSC_EXTERN void f90array4dgetaddrfortranaddr_(void *array, PetscFortranAddr *a
 {
   *address = (PetscFortranAddr)array;
 }
+
+#if defined(PETSC_HAVE_FORTRAN_CAPS)
+  #define f90arraygetaddr_      F90ARRAYGETADDR
+#elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
+  #define f90arraygetaddr_      f90arraygetaddr
+#endif
+PETSC_EXTERN void f90arraygetaddr_(void *array, PetscFortranAddr *address)
+{
+  *address = (PetscFortranAddr)array;
+}
