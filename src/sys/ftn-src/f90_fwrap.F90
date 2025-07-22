@@ -2,6 +2,20 @@
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #include <petsc/finclude/petscsys.h>
+module GetAddr
+  use, intrinsic :: ISO_C_binding
+  implicit none
+
+  interface
+    subroutine F90ArrayGetAddr(array,address)
+      use, intrinsic :: ISO_C_binding
+      implicit none
+      type(*), intent(in), target, dimension(..) :: array
+      PetscFortranAddr, intent(out) :: address
+    end subroutine
+  end interface
+end module GetAddr
+
       subroutine F90Array1dCreateScalar(array,start,len1,ptr)
       use, intrinsic :: ISO_C_binding
       implicit none
@@ -17,33 +31,30 @@
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
-      PetscReal, target ::                                                        &
-     &     array(start:start+len1-1)
+      type(C_ptr), intent(in) :: array
       PetscReal, pointer :: ptr(:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,[len1])
       end subroutine
 
       subroutine F90Array1dCreateInt(array,start,len1,ptr)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
-      PetscInt, target ::                                                         &
-     &     array(start:start+len1-1)
+      type(C_ptr), intent(in) :: array
       PetscInt, pointer :: ptr(:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,[len1])
       end subroutine
 
       subroutine F90Array1dCreateMPIInt(array,start,len1,ptr)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
-      PetscMPIInt, target ::                                                      &
-      &     array(start:start+len1-1)
+      type(C_ptr), intent(in) :: array
       PetscMPIInt, pointer :: ptr(:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,[len1])
       end subroutine
 
       subroutine F90Array1dCreateFortranAddr(array,start,len1,ptr)
@@ -59,7 +70,7 @@
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine F90Array1dAccessScalar(ptr,address)
-      use, intrinsic :: ISO_C_binding
+      use GetAddr
       implicit none
       PetscScalar, pointer :: ptr(:)
       PetscFortranAddr address
@@ -69,7 +80,7 @@
         address = 0
       else
         start = lbound(ptr,1)
-        call F90Array1dGetAddrScalar(ptr(start),address)
+        call F90ArrayGetAddr(ptr(start),address)
       endif
       end subroutine
 
@@ -89,7 +100,7 @@
       end subroutine
 
       subroutine F90Array1dAccessInt(ptr,address)
-      use, intrinsic :: ISO_C_binding
+      use GetAddr
       implicit none
       PetscInt, pointer :: ptr(:)
       PetscFortranAddr address
@@ -99,7 +110,7 @@
         address = 0
       else
         start = lbound(ptr,1)
-        call F90Array1dGetAddrInt(ptr(start),address)
+        call F90ArrayGetAddr(ptr(start),address)
       endif
       end subroutine
 
@@ -182,11 +193,10 @@
       implicit none
       PetscInt start1,len1
       PetscInt start2,len2
-      PetscScalar, target ::                                                      &
-     &     array(start1:start1+len1-1,start2:start2+len2-1)
+      type(C_ptr), intent(in) :: array
       PetscScalar, pointer :: ptr(:,:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,[len1,len2])
       end subroutine
 
       subroutine F90Array2dCreateReal(array,start1,len1,                          &
@@ -230,7 +240,7 @@
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine F90Array2dAccessScalar(ptr,address)
-      use, intrinsic :: ISO_C_binding
+      use GetAddr
       implicit none
       PetscScalar, pointer :: ptr(:,:)
       PetscFortranAddr address
@@ -238,7 +248,7 @@
 
       start1 = lbound(ptr,1)
       start2 = lbound(ptr,2)
-      call F90Array2dGetAddrScalar(ptr(start1,start2),address)
+      call F90ArrayGetAddr(ptr(start1,start2),address)
       end subroutine
 
       subroutine F90Array2dAccessReal(ptr,address)
@@ -254,7 +264,7 @@
       end subroutine
 
       subroutine F90Array2dAccessInt(ptr,address)
-      use, intrinsic :: ISO_C_binding
+      use GetAddr
       implicit none
       PetscInt, pointer :: ptr(:,:)
       PetscFortranAddr address
@@ -262,7 +272,7 @@
 
       start1 = lbound(ptr,1)
       start2 = lbound(ptr,2)
-      call F90Array2dGetAddrInt(ptr(start1,start2),address)
+      call F90ArrayGetAddr(ptr(start1,start2),address)
       end subroutine
 
       subroutine F90Array2dAccessFortranAddr(ptr,address)

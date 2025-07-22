@@ -402,16 +402,11 @@ static inline PetscViewer PetscPatchDefaultViewers(PetscViewer *v)
 
 typedef struct {
   char dummy;
-} F90Array1d;
-typedef struct {
-  char dummy;
-} F90Array2d;
-typedef struct {
-  char dummy;
-} F90Array3d;
-typedef struct {
-  char dummy;
-} F90Array4d;
+} F90Array;
+typedef F90Array F90Array1d;
+typedef F90Array F90Array2d;
+typedef F90Array F90Array3d;
+typedef F90Array F90Array4d;
 
 PETSC_EXTERN PetscErrorCode F90Array1dCreate(void *, MPI_Datatype, PetscInt, PetscInt, F90Array1d *PETSC_F90_2PTR_PROTO_NOVAR);
 PETSC_EXTERN PetscErrorCode F90Array1dAccess(F90Array1d *, MPI_Datatype, void **PETSC_F90_2PTR_PROTO_NOVAR);
