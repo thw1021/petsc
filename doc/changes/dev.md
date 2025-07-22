@@ -113,7 +113,7 @@
 ```{rubric} TAO:
 ```
 
-- Add ``TaoBRGNSetRegularizationType()``, ``TaoBRGNGetRegularizationType()``
+- Add `TaoBRGNSetRegularizationType()`, `TaoBRGNGetRegularizationType()`
 
 ```{rubric} PetscRegressor:
 ```
@@ -127,10 +127,12 @@
 - Add `DMHasBound()`, `DM_BC_LOWER_BOUND` and `DM_BC_LOWER_BOUND`
 - Add `DMSetCellCoordinateField()`
 - Add ``localized`` argument to `DMSetCoordinateDisc()` and `DMCreateAffineCoordinates_Internal()`
-
+- Add `DMCreateGradientMatrix()`
 
 ```{rubric} DMSwarm:
 ```
+
+- Add `DMSwarmProjectFields()` and `DMSwarmProjectGradientFields()`
 
 ```{rubric} DMPlex:
 ```
