@@ -31,33 +31,30 @@ end module GetAddr
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
-      PetscReal, target ::                                                        &
-     &     array(start:start+len1-1)
+      type(C_ptr), intent(in) :: array
       PetscReal, pointer :: ptr(:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,[len1])
       end subroutine
 
       subroutine F90Array1dCreateInt(array,start,len1,ptr)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
-      PetscInt, target ::                                                         &
-     &     array(start:start+len1-1)
+      type(C_ptr), intent(in) :: array
       PetscInt, pointer :: ptr(:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,[len1])
       end subroutine
 
       subroutine F90Array1dCreateMPIInt(array,start,len1,ptr)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
-      PetscMPIInt, target ::                                                      &
-      &     array(start:start+len1-1)
+      type(C_ptr), intent(in) :: array
       PetscMPIInt, pointer :: ptr(:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,[len1])
       end subroutine
 
       subroutine F90Array1dCreateFortranAddr(array,start,len1,ptr)
@@ -196,11 +193,10 @@ end module GetAddr
       implicit none
       PetscInt start1,len1
       PetscInt start2,len2
-      PetscScalar, target ::                                                      &
-     &     array(start1:start1+len1-1,start2:start2+len2-1)
+      type(C_ptr), intent(in) :: array
       PetscScalar, pointer :: ptr(:,:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,[len1,len2])
       end subroutine
 
       subroutine F90Array2dCreateReal(array,start1,len1,                          &

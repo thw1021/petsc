@@ -104,8 +104,10 @@ PETSC_EXTERN void f90array1ddestroyfortranaddr_(F90Array1d *ptr PETSC_F90_2PTR_P
 .  type  - the MPI datatype of the array
 .  start - the first index of the array
 .  len   - the length of the array
-.  ptr   - the `F90Array1d` passed from Fortran
 -  ptrd   - an extra pointer passed by some Fortran compilers
+
+   Output Parameter:
+.  ptr   - the `F90Array1d` passed from Fortran
 
    Level: developer
 
@@ -609,9 +611,9 @@ PETSC_EXTERN void f90array4dgetaddrfortranaddr_(void *array, PetscFortranAddr *a
 }
 
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
-  #define f90arraygetaddr_      F90ARRAYGETADDR
+  #define f90arraygetaddr_ F90ARRAYGETADDR
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
-  #define f90arraygetaddr_      f90arraygetaddr
+  #define f90arraygetaddr_ f90arraygetaddr
 #endif
 PETSC_EXTERN void f90arraygetaddr_(void *array, PetscFortranAddr *address)
 {
