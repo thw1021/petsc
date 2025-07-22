@@ -156,6 +156,7 @@
 
 - Add `PetscFEExpandFaceQuadrature()`
 - Add `PetscFECreateBrokenElement()`
+- Changed `PetscFEIntegrateJacobian()` signature to allow rectangular operators
 
 ```{rubric} DMNetwork:
 ```
