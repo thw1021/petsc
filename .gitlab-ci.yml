@@ -83,9 +83,9 @@ check-ci-settings:
     - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
     - ${PYTHON} ./configure --with-debugging=0 COPTFLAGS='-O3 -march=native' CXXOPTFLAGS='-O3 -march=native' FOPTFLAGS='-O3 -march=native' ${CONFIG_OPTS}
     - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}"
-    - if [ ! -z ${ENABLE_CHECK+x} ]; then make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" EXTRA_OPTIONS="$EXTRA_OPTIONS $BASE_EXTRA_OPTIONS} check; fi
-    - make CFLAGS="${MAKE_TEST_CFLAGS}" CXXFLAGS="${MAKE_TEST_CXXFLAGS}" FFLAGS="${MAKE_TEST_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" EXTRA_OPTIONS="$EXTRA_OPTIONS $BASE_EXTRA_OPTIONS}  allgtests-tap gmakesearch="${TEST_SEARCH}" TIMEOUT=${TIMEOUT}
-    - if [ ! -z ${ENABLE_COMPILETESTS+x} ]; then make -j 16 CFLAGS="${MAKE_TEST_CFLAGS}" CXXFLAGS="${MAKE_TEST_CXXFLAGS}" FFLAGS="${MAKE_TEST_FFLAGS}" EXTRA_OPTIONS="$EXTRA_OPTIONS $BASE_EXTRA_OPTIONS}  test PRINTONLY=1; fi
+    - if [ ! -z ${ENABLE_CHECK+x} ]; then make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" EXTRA_OPTIONS="${EXTRA_OPTIONS} ${BASE_EXTRA_OPTIONS}" check; fi
+    - make CFLAGS="${MAKE_TEST_CFLAGS}" CXXFLAGS="${MAKE_TEST_CXXFLAGS}" FFLAGS="${MAKE_TEST_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" EXTRA_OPTIONS="${EXTRA_OPTIONS} ${BASE_EXTRA_OPTIONS}"  allgtests-tap gmakesearch="${TEST_SEARCH}" TIMEOUT=${TIMEOUT}
+    - if [ ! -z ${ENABLE_COMPILETESTS+x} ]; then make -j 16 CFLAGS="${MAKE_TEST_CFLAGS}" CXXFLAGS="${MAKE_TEST_CXXFLAGS}" FFLAGS="${MAKE_TEST_FFLAGS}" EXTRA_OPTIONS="${EXTRA_OPTIONS} ${BASE_EXTRA_OPTIONS}"  test PRINTONLY=1; fi
   variables:
     PYTHON: python3
     MAKE_CFLAGS: -Werror -Wmissing-field-initializers
@@ -317,10 +317,10 @@ pause-for-approval:
     - ./config/examples/${TEST_ARCH}.py || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
     - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
     - export ASAN_OPTIONS="log_path=stdout:detect_leaks=false" UBSAN_OPTIONS="suppressions=${PWD}/share/petsc/suppressions/ubsan" # only needed for -fsanitize=undefined (but harmless otherwise)
-    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" EXTRA_OPTIONS="$EXTRA_OPTIONS $BASE_EXTRA_OPTIONS}  check || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
+    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" EXTRA_OPTIONS="${EXTRA_OPTIONS} ${BASE_EXTRA_OPTIONS}"  check || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
     - make updatedatafiles
-    - if [ -z ${DISABLE_PETSC4PY_TESTS+x} ]; then if [ -z ${ENABLE_PETSC4PY_LDPRELOAD+x} ]; then echo "NOT using LD_PRELOAD"; EXTRA_OPTIONS="$EXTRA_OPTIONS $BASE_EXTRA_OPTIONS}  make petsc4pytest; else echo "using LD_PRELOAD"; LD_PRELOAD=${PWD}/${TEST_ARCH}/lib/libpetsc.so  EXTRA_OPTIONS="$EXTRA_OPTIONS $BASE_EXTRA_OPTIONS}  make petsc4pytest; fi; fi
-    - if [ -z ${DISABLE_TESTS+x} ]; then make cleantest && make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}"  EXTRA_OPTIONS="$EXTRA_OPTIONS $BASE_EXTRA_OPTIONS} allgtests-tap TIMEOUT=${TIMEOUT} ${TEST_OPTS} || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi; fi
+    - if [ -z ${DISABLE_PETSC4PY_TESTS+x} ]; then if [ -z ${ENABLE_PETSC4PY_LDPRELOAD+x} ]; then echo "NOT using LD_PRELOAD"; EXTRA_OPTIONS="${EXTRA_OPTIONS} ${BASE_EXTRA_OPTIONS}"  make petsc4pytest; else echo "using LD_PRELOAD"; LD_PRELOAD=${PWD}/${TEST_ARCH}/lib/libpetsc.so  EXTRA_OPTIONS="${EXTRA_OPTIONS} ${BASE_EXTRA_OPTIONS}"  make petsc4pytest; fi; fi
+    - if [ -z ${DISABLE_TESTS+x} ]; then make cleantest && make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}"  EXTRA_OPTIONS="${EXTRA_OPTIONS} ${BASE_EXTRA_OPTIONS}" allgtests-tap TIMEOUT=${TIMEOUT} ${TEST_OPTS} || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi; fi
     - if [ "${RUN_GCOV}" == 1 ]; then make gcov PETSC_GCOV_OPTIONS="${RUN_GCOV_OPTIONS}"; fi
   artifacts:
     reports:
