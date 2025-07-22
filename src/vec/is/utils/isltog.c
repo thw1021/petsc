@@ -1003,6 +1003,7 @@ PetscErrorCode ISGlobalToLocalMappingApply(ISLocalToGlobalMapping mapping, ISGlo
   The output `IS` will be sequential, as it encodes a purely local operation
 
   If `type` is `IS_GTOLM_MASK`, `newis` will have the same block size as `is`
+
 .seealso: [](sec_scatter), `ISGlobalToLocalMapping`, `ISGlobalToLocalMappingApply()`, `ISLocalToGlobalMappingCreate()`,
           `ISLocalToGlobalMappingDestroy()`
 @*/
