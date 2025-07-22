@@ -6,11 +6,12 @@
 
 #include <petsc/private/ftnimpl.h>
 #include <petscviewer.h>
+#include <string.h>
+#include "ISO_Fortran_binding.h"
 
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
   #define petscoptionsbegin_               PETSCOPTIONSBEGIN
   #define petscoptionsend_                 PETSCOPTIONSEND
-  #define petscoptionsbool_                PETSCOPTIONSBOOL
   #define petscoptionsboolarray_           PETSCOPTIONSBOOLARRAY
   #define petscoptionsenumprivate_         PETSCOPTIONSENUMPRIVATE
   #define petscoptionsint_                 PETSCOPTIONSINT
@@ -29,7 +30,6 @@
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
   #define petscoptionsbegin_               petscoptionsbegin
   #define petscoptionsend_                 petscoptionsend
-  #define petscoptionsbool_                petscoptionsbool
   #define petscoptionsboolarray_           petscoptionsboolarray
   #define petscoptionsenumprivate_         petscoptionsenumprivate
   #define petscoptionsint_                 petscoptionsint
@@ -84,13 +84,30 @@ PETSC_EXTERN void petscoptionsend_(PetscErrorCode *ierr)
   PetscOptionsObject        = NULL;
 }
 
-PETSC_EXTERN void petscoptionsbool_(char *opt, char *text, char *man, PetscBool *currentvalue, PetscBool *value, PetscBool *set, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T lenopt, PETSC_FORTRAN_CHARLEN_T lentext, PETSC_FORTRAN_CHARLEN_T lenman)
+PETSC_EXTERN void petscoptionsbool(const CFI_cdesc_t *opt, const CFI_cdesc_t *text, const CFI_cdesc_t *man, PetscBool *currentvalue, PetscBool *value, PetscBool *set, PetscErrorCode *ierr)
 {
-  char *copt, *ctext, *cman;
-
-  FIXCHAR(opt, lenopt, copt);
-  FIXCHAR(text, lentext, ctext);
-  FIXCHAR(man, lenman, cman);
+  char copt[opt->elem_len + 1], ctext[text->elem_len + 1], cman[man->elem_len + 1];
+  if (NULL != opt->base_addr && CFI_type_char == opt->type) {
+    memcpy(copt, (const char *)opt->base_addr, opt->elem_len);
+    copt[opt->elem_len] = '\0';
+  } else {
+    *ierr = PETSC_ERR_ARG_WRONGSTATE;
+    return;
+  }
+  if (NULL != text->base_addr && CFI_type_char == text->type) {
+    memcpy(ctext, (const char *)text->base_addr, text->elem_len);
+    ctext[text->elem_len] = '\0';
+  } else {
+    *ierr = PETSC_ERR_ARG_WRONGSTATE;
+    return;
+  }
+  if (NULL != man->base_addr && CFI_type_char == man->type) {
+    memcpy(cman, (const char *)man->base_addr, man->elem_len);
+    cman[man->elem_len] = '\0';
+  } else {
+    *ierr = PETSC_ERR_ARG_WRONGSTATE;
+    return;
+  }
   if (!PetscOptionsObject) {
     *ierr = PETSC_ERR_ARG_WRONGSTATE;
     return;
@@ -98,9 +115,6 @@ PETSC_EXTERN void petscoptionsbool_(char *opt, char *text, char *man, PetscBool 
   PetscOptionsObject->count = 1;
   *ierr                     = PetscOptionsBool_Private(PetscOptionsObject, copt, ctext, cman, *currentvalue, value, set);
   if (*ierr) return;
-  FREECHAR(opt, copt);
-  FREECHAR(text, ctext);
-  FREECHAR(man, cman);
 }
 
 PETSC_EXTERN void petscoptionsboolarray_(char *opt, char *text, char *man, PetscBool *dvalue, PetscInt *nmax, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T lenopt, PETSC_FORTRAN_CHARLEN_T lentext, PETSC_FORTRAN_CHARLEN_T lenman)

@@ -26,6 +26,17 @@ program ex9f
     character(len=256)                        :: stvalue,stdefault
     character(len=256)                        :: list(6)
 
+    interface
+      subroutine petscoptionsbool(opt, text, man, currentvalue, value, set, ierr) bind(C)
+        use, intrinsic :: ISO_C_Binding, only: C_CHAR, C_INT, C_BOOL
+        implicit none(type,external)
+        logical(kind=C_BOOL), intent(out) :: currentvalue, set
+        logical(kind=C_BOOL), intent(in) :: value
+        character(kind=C_CHAR,len=*), intent(in) :: opt, text, man
+        integer(kind=C_INT), intent(out) :: ierr
+      end subroutine
+    end interface
+
     PetscCallA(PetscInitialize(ierr))
     list(1)   = 'a123   '
     list(2)   = 'b456   '
