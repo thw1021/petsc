@@ -814,7 +814,7 @@ PetscErrorCode ISLocalToGlobalMappingDestroy(ISLocalToGlobalMapping *mapping)
 @*/
 PetscErrorCode ISLocalToGlobalMappingApplyIS(ISLocalToGlobalMapping mapping, IS is, IS *newis)
 {
-  PetscInt        n, *idxout;
+  PetscInt        n, *idxout, bs;
   const PetscInt *idxin;
 
   PetscFunctionBegin;
@@ -823,11 +823,13 @@ PetscErrorCode ISLocalToGlobalMappingApplyIS(ISLocalToGlobalMapping mapping, IS 
   PetscAssertPointer(newis, 3);
 
   PetscCall(ISGetLocalSize(is, &n));
+  PetscCall(ISGetBlockSize(is, &bs));
   PetscCall(ISGetIndices(is, &idxin));
   PetscCall(PetscMalloc1(n, &idxout));
   PetscCall(ISLocalToGlobalMappingApply(mapping, n, idxin, idxout));
   PetscCall(ISRestoreIndices(is, &idxin));
   PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)is), n, idxout, PETSC_OWN_POINTER, newis));
+  PetscCall(ISSetBlockSize(*newis, bs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1005,7 +1007,7 @@ PetscErrorCode ISGlobalToLocalMappingApply(ISLocalToGlobalMapping mapping, ISGlo
 @*/
 PetscErrorCode ISGlobalToLocalMappingApplyIS(ISLocalToGlobalMapping mapping, ISGlobalToLocalMappingMode type, IS is, IS *newis)
 {
-  PetscInt        n, nout, *idxout;
+  PetscInt        n, nout, *idxout, bs;
   const PetscInt *idxin;
 
   PetscFunctionBegin;
@@ -1024,6 +1026,10 @@ PetscErrorCode ISGlobalToLocalMappingApplyIS(ISLocalToGlobalMapping mapping, ISG
   PetscCall(ISGlobalToLocalMappingApply(mapping, type, n, idxin, &nout, idxout));
   PetscCall(ISRestoreIndices(is, &idxin));
   PetscCall(ISCreateGeneral(PETSC_COMM_SELF, nout, idxout, PETSC_OWN_POINTER, newis));
+  if (type == IS_GTOLM_MASK) {
+    PetscCall(ISGetBlockSize(is, &bs));
+    PetscCall(ISSetBlockSize(*newis, bs));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
