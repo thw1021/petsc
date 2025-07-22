@@ -12,7 +12,7 @@ if __name__ == '__main__':
     '--package-prefix-hash='+petsc_hash_pkgs,
     '--with-make-test-np=15',
     'COPTFLAGS=-g -O',
-    'FOPTFLAGS=-g -O',
+    'FOPTFLAGS=-g -O -Munixlogical',
     'CXXOPTFLAGS=-g -O',
     '--with-fortran-bindings=0',
     '--with-log=0',
