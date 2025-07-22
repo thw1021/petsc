@@ -807,7 +807,7 @@ PetscErrorCode ISLocalToGlobalMappingDestroy(ISLocalToGlobalMapping *mapping)
   Level: advanced
 
   Note:
-  The output `IS` will have the same communicator as the input `IS`.
+  The output `IS` will have the same communicator as the input `IS` as well as the same block size.
 
 .seealso: [](sec_scatter), `ISLocalToGlobalMappingApply()`, `ISLocalToGlobalMappingCreate()`,
           `ISLocalToGlobalMappingDestroy()`, `ISGlobalToLocalMappingApply()`
@@ -999,9 +999,10 @@ PetscErrorCode ISGlobalToLocalMappingApply(ISLocalToGlobalMapping mapping, ISGlo
 
   Level: advanced
 
-  Note:
+  Notes:
   The output `IS` will be sequential, as it encodes a purely local operation
 
+  If `type` is `IS_GTOLM_MASK`, `newis` will have the same block size as `is`
 .seealso: [](sec_scatter), `ISGlobalToLocalMapping`, `ISGlobalToLocalMappingApply()`, `ISLocalToGlobalMappingCreate()`,
           `ISLocalToGlobalMappingDestroy()`
 @*/
