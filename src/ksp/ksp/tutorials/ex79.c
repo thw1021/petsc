@@ -232,7 +232,7 @@ int main(int argc, char **args)
          args: -ksp_type hpddm -ksp_max_it 15 -ksp_error_if_not_converged
       test:
          suffix: 9_cuda
-         output_file: output/ex77_preonly.out
+         output_file: output/empty.out
          requires: cuda
          args: -mat_type aijcusparse -ksp_type preonly
 
