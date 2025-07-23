@@ -182,11 +182,10 @@
       implicit none
       PetscInt start1,len1
       PetscInt start2,len2
-      PetscScalar, target ::                                                      &
-     &     array(start1:start1+len1-1,start2:start2+len2-1)
+      type(C_ptr), intent(in) :: array
       PetscScalar, pointer :: ptr(:,:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,[len1,len2])
       end subroutine
 
       subroutine F90Array2dCreateReal(array,start1,len1,                          &
@@ -195,11 +194,10 @@
       implicit none
       PetscInt start1,len1
       PetscInt start2,len2
-      PetscReal, target ::                                                        &
-     &     array(start1:start1+len1-1,start2:start2+len2-1)
+      type(C_ptr), intent(in) :: array
       PetscReal, pointer :: ptr(:,:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,[len1,len2])
       end subroutine
 
       subroutine F90Array2dCreateInt(array,start1,len1,                           &
@@ -208,11 +206,10 @@
       implicit none
       PetscInt start1,len1
       PetscInt start2,len2
-      PetscInt, target ::                                                         &
-     &     array(start1:start1+len1-1,start2:start2+len2-1)
+      type(C_ptr), intent(in) :: array
       PetscInt, pointer :: ptr(:,:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,[len1,len2])
       end subroutine
 
       subroutine F90Array2dCreateFortranAddr(array,start1,len1,                   &
@@ -319,12 +316,10 @@
       PetscInt start1,len1
       PetscInt start2,len2
       PetscInt start3,len3
-      PetscScalar, target ::                                                      &
-     &     array(start1:start1+len1-1,start2:start2+len2-1,                       &
-     &           start3:start3+len3-1)
+      type(C_ptr), intent(in) :: array
       PetscScalar, pointer :: ptr(:,:,:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,[len1,len2,len3])
       end subroutine
 
       subroutine F90Array3dCreateReal(array,start1,len1,                          &
@@ -334,12 +329,10 @@
       PetscInt start1,len1
       PetscInt start2,len2
       PetscInt start3,len3
-      PetscReal, target ::                                                        &
-     &     array(start1:start1+len1-1,start2:start2+len2-1,                       &
-     &           start3:start3+len3-1)
+      type(C_ptr), intent(in) :: array
       PetscReal, pointer :: ptr(:,:,:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,[len1,len2,len3])
       end subroutine
 
       subroutine F90Array3dCreateInt(array,start1,len1,                           &
