@@ -64,7 +64,7 @@ int main(int argc, char **args)
   PetscCall(PetscObjectTypeCompare((PetscObject)A, MATIS, &ismatis));
   PetscCall(PetscObjectTypeCompare((PetscObject)A, MATHYPRE, &ishypre));
 
-  /* create fake l2g maps to test the local API */
+  /* create fake l2g maps to test the local API - not blocked */
   PetscCall(ISCreateStride(PETSC_COMM_WORLD, M - rstart, rstart, 1, &is));
   PetscCall(ISLocalToGlobalMappingCreateIS(is, &rl2g));
   PetscCall(ISDestroy(&is));
@@ -80,7 +80,7 @@ int main(int argc, char **args)
   PetscCall(VecSet(x, 1.));
   PetscCall(VecSet(z, 2.));
   if (!localapi)
-    for (i = 0; i < n1; i++) i1[i] += rstart;
+    for (i = 0; i < n1; i++) i1[i] += rstart; // bs = 1
   if (!localapi)
     for (i = 0; i < n2; i++) i2[i] += rstart;
   if (loc) {
@@ -113,7 +113,7 @@ int main(int argc, char **args)
   PetscCall(MatView(A, NULL));
   PetscCall(MatMult(A, x, y));
   PetscCall(VecView(y, NULL));
-  //exit(13);
+
   if (bs > 1) PetscCall(MatSetValuesCOOBlocked(A, v2_p, ADD_VALUES));
   else PetscCall(MatSetValuesCOO(A, v2_p, ADD_VALUES));
   PetscCall(MatMultAdd(A, x, y, y));
@@ -276,9 +276,10 @@ int main(int argc, char **args)
      args: -mat_type {{seqaij mpiaij}} -localapi {{0 1}} -neg {{0 1}}
 
    test:
-     suffix: 1_blocked
+     suffix: blocked
+     nsize: {{1 2 3}separate output}
      filter: grep -v type | grep -v "Mat Object"
-     args: -mat_block_size 2 -mat_type seqaij -localapi 0 -neg 0
+     args: -mat_block_size 2 -mat_type aij -localapi 0 -neg 0
 
    test:
      requires: hypre
