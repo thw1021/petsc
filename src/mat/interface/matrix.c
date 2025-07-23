@@ -11372,19 +11372,19 @@ PetscErrorCode MatEliminateZeros(Mat A, PetscBool keep)
 }
 
 /*@C
-  MatGetCurrentMemType - Get the memory location of the provided matrix
+  MatGetCurrentMemType - Get the memory location of the matrix
 
-  Not Collective
+  Not Collective, but the result will be the same on all MPI processes
 
   Input Parameter:
 . A - the matrix whose memory type we are checking
 
   Output Parameter:
-. m - the matrix memory type
+. m - the memory type
 
   Level: intermediate
 
-.seealso: [](ch_matrices), `Mat`, `MatBoundToCPU()`
+.seealso: [](ch_matrices), `Mat`, `MatBoundToCPU()`, `PetscMemType`
 @*/
 PetscErrorCode MatGetCurrentMemType(Mat A, PetscMemType *m)
 {

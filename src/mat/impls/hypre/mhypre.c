@@ -2415,6 +2415,7 @@ static PetscErrorCode MatGetCurrentMemType_HYPRE(Mat A, PetscMemType *m)
   if (PetscDefined(HAVE_HYPRE_DEVICE)) {
     PetscBool            hypreoncpu;
     HYPRE_MemoryLocation hyprememloc;
+
     PetscCallExternal(HYPRE_GetMemoryLocation, &hyprememloc);
     PetscCheck(hyprememloc != HYPRE_MEMORY_UNDEFINED, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "hypre memory shold already be initialized");
     hypreoncpu = hyprememloc == HYPRE_MEMORY_HOST ? PETSC_TRUE : PETSC_FALSE;

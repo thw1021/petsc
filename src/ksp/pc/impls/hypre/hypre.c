@@ -265,7 +265,7 @@ static PetscErrorCode PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(PC pc, 
   PetscFunctionBegin;
   if (jac->spgemm_type) {
     PetscCall(PetscStrcmp(jac->spgemm_type, name, &flag));
-    PetscCheck(flag, PetscObjectComm((PetscObject)pc), PETSC_ERR_ORDER, "Cannot reset the HYPRE SpGEMM (really we can)");
+    PetscCheck(flag, PetscObjectComm((PetscObject)pc), PETSC_ERR_ORDER, "PETSc support for resetting the HYPRE SpGEMM is not implemented");
     PetscFunctionReturn(PETSC_SUCCESS);
   } else jac->spgemm_type = name;
 
