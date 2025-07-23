@@ -2,6 +2,20 @@
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #include <petsc/finclude/petscsys.h>
+module GetAddr
+  use, intrinsic :: ISO_C_binding
+  implicit none
+
+  interface
+    subroutine F90ArrayGetAddr(array,address)
+      use, intrinsic :: ISO_C_binding
+      implicit none
+      type(*), target, dimension(..) :: array
+      PetscFortranAddr, intent(out) :: address
+    end subroutine
+  end interface
+end module GetAddr
+
       subroutine F90Array1dCreateScalar(array,start,len1,ptr)
       use, intrinsic :: ISO_C_binding
       implicit none
@@ -59,17 +73,17 @@
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine F90Array1dAccessScalar(ptr,address)
-      use, intrinsic :: ISO_C_binding
+      use GetAddr
       implicit none
       PetscScalar, pointer :: ptr(:)
-      PetscFortranAddr address
+      PetscFortranAddr, intent(out) :: address
       PetscInt start
 
-      if (associated(ptr) .eqv. .false.) then
+      if (.not. associated(ptr)) then
         address = 0
       else
         start = lbound(ptr,1)
-        call F90Array1dGetAddrScalar(ptr(start),address)
+        call F90ArrayGetAddr(ptr(start),address)
       endif
       end subroutine
 
@@ -89,17 +103,17 @@
       end subroutine
 
       subroutine F90Array1dAccessInt(ptr,address)
-      use, intrinsic :: ISO_C_binding
+      use GetAddr
       implicit none
       PetscInt, pointer :: ptr(:)
-      PetscFortranAddr address
+      PetscFortranAddr, intent(out) :: address
       PetscInt start
 
-      if (associated(ptr) .eqv. .false.) then
+      if (.not. associated(ptr)) then
         address = 0
       else
         start = lbound(ptr,1)
-        call F90Array1dGetAddrInt(ptr(start),address)
+        call F90ArrayGetAddr(ptr(start),address)
       endif
       end subroutine
 
@@ -230,39 +244,51 @@
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine F90Array2dAccessScalar(ptr,address)
-      use, intrinsic :: ISO_C_binding
+      use GetAddr
       implicit none
       PetscScalar, pointer :: ptr(:,:)
-      PetscFortranAddr address
+      PetscFortranAddr, intent(out) :: address
       PetscInt start1,start2
 
-      start1 = lbound(ptr,1)
-      start2 = lbound(ptr,2)
-      call F90Array2dGetAddrScalar(ptr(start1,start2),address)
+      if (.not. associated(ptr)) then
+        address = 0
+      else
+        start1 = lbound(ptr,1)
+        start2 = lbound(ptr,2)
+        call F90ArrayGetAddr(ptr(start1,start2),address)
+      endif
       end subroutine
 
       subroutine F90Array2dAccessReal(ptr,address)
-      use, intrinsic :: ISO_C_binding
+      use GetAddr
       implicit none
       PetscReal, pointer :: ptr(:,:)
-      PetscFortranAddr address
+      PetscFortranAddr, intent(out) :: address
       PetscInt start1,start2
 
-      start1 = lbound(ptr,1)
-      start2 = lbound(ptr,2)
-      call F90Array2dGetAddrReal(ptr(start1,start2),address)
+      if (.not. associated(ptr)) then
+        address = 0
+      else
+        start1 = lbound(ptr,1)
+        start2 = lbound(ptr,2)
+        call F90ArrayGetAddr(ptr(start1,start2),address)
+      endif
       end subroutine
 
       subroutine F90Array2dAccessInt(ptr,address)
-      use, intrinsic :: ISO_C_binding
+      use GetAddr
       implicit none
       PetscInt, pointer :: ptr(:,:)
-      PetscFortranAddr address
+      PetscFortranAddr, intent(out) :: address
       PetscInt start1,start2
 
-      start1 = lbound(ptr,1)
-      start2 = lbound(ptr,2)
-      call F90Array2dGetAddrInt(ptr(start1,start2),address)
+      if (.not. associated(ptr)) then
+        address = 0
+      else
+        start1 = lbound(ptr,1)
+        start2 = lbound(ptr,2)
+        call F90ArrayGetAddr(ptr(start1,start2),address)
+      endif
       end subroutine
 
       subroutine F90Array2dAccessFortranAddr(ptr,address)
