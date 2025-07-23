@@ -19,7 +19,8 @@ int main(int argc, char **args)
 
    test:
      requires: defined(PETSC_USE_DEBUG) !defined(PETSCTEST_VALGRIND) !defined(PETSC_HAVE_SANITIZER)
-     args: -petsc_ci_portable_error_output -error_output_stdout
+     # use 2>&1 to put redirect error messages in stderr from mpiexec to stdout
+     args: -petsc_ci_portable_error_output -error_output_stdout 2>&1
      nsize: 2
      filter: grep -E "(PETSC ERROR)" | grep -E "(Error Created|CreateError\(\)|main\(\))"
 
