@@ -2870,19 +2870,21 @@ M*/
 #if defined(PETSC_USE_DEBUG)
   #define MPIU_Allreduce(a, b, c, d, e, fcomm) \
     PetscMacroReturnStandard( \
-    PetscMPIInt a_b1[6], a_b2[6]; \
+    PetscMPIInt a_b1[4], a_b2[4]; \
     int _mpiu_allreduce_c_int = (int)(c); \
     a_b1[0] = -(PetscMPIInt)__LINE__; \
     a_b1[1] = -a_b1[0]; \
-    a_b1[2] = -(PetscMPIInt)PetscStrHash(PETSC_FUNCTION_NAME); \
+    a_b1[2] = -(PetscMPIInt)(c); \
     a_b1[3] = -a_b1[2]; \
-    a_b1[4] = -(PetscMPIInt)(c); \
-    a_b1[5] = -a_b1[4]; \
     \
-    PetscCallMPI(MPI_Allreduce(a_b1, a_b2, 6, MPI_INT, MPI_MAX, fcomm)); \
+    PetscCallMPI(MPI_Allreduce(a_b1, a_b2, 4, MPI_INT, MPI_MAX, fcomm)); \
+    if (-a_b2[0] != a_b2[1]) { \
+      PetscMPIInt rank; \
+      PetscCallMPI(MPI_Comm_rank((fcomm), &rank)); \
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]PETSC ERROR: MPIU_Allreduce called at %s:%d\n", rank, __FILE__, __LINE__)); \
+    } \
     PetscCheck(-a_b2[0] == a_b2[1], (fcomm), PETSC_ERR_PLIB, "MPIU_Allreduce() called in different locations (code lines) on different processors"); \
-    PetscCheck(-a_b2[2] == a_b2[3], (fcomm), PETSC_ERR_PLIB, "MPIU_Allreduce() called in different locations (functions) on different processors"); \
-    PetscCheck(-a_b2[4] == a_b2[5], (fcomm), PETSC_ERR_PLIB, "MPIU_Allreduce() called with different counts %d on different processors", _mpiu_allreduce_c_int); \
+    PetscCheck(-a_b2[2] == a_b2[3], (fcomm), PETSC_ERR_PLIB, "MPIU_Allreduce() called with different counts %d on different processors", _mpiu_allreduce_c_int); \
     PetscCallMPI(MPIU_Allreduce_Private((a), (b), (c), (d), (e), (fcomm)));)
 #else
   #define MPIU_Allreduce(a, b, c, d, e, fcomm) MPIU_Allreduce_Private((a), (b), (c), (d), (e), (fcomm))
