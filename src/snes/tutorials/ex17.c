@@ -941,6 +941,7 @@ int main(int argc, char **argv)
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_lower -5,-5,-0.25 -dm_plex_box_upper 5,5,0.25 \
           -dm_plex_box_faces 5,5,2 -dm_plex_separate_marker -dm_refine 0 -petscpartitioner_type simple \
           -sol_type elas_ge
+    output_file: output/empty.out
 
     test:
       suffix: ge_q1_0
