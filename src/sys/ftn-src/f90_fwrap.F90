@@ -2,7 +2,7 @@
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #include <petsc/finclude/petscsys.h>
-      subroutine F90Array1dCreateScalar(array,start,len1,ptr)
+      subroutine F90Array1dCreateScalar(array,start,len1,ptr) bind(C)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
@@ -13,7 +13,7 @@
       ptr => array
       end subroutine
 
-      subroutine F90Array1dCreateReal(array,start,len1,ptr)
+      subroutine F90Array1dCreateReal(array,start,len1,ptr) bind(C)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
@@ -24,7 +24,7 @@
       ptr => array
       end subroutine
 
-      subroutine F90Array1dCreateInt(array,start,len1,ptr)
+      subroutine F90Array1dCreateInt(array,start,len1,ptr) bind(C)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
@@ -35,7 +35,7 @@
       ptr => array
       end subroutine
 
-      subroutine F90Array1dCreateMPIInt(array,start,len1,ptr)
+      subroutine F90Array1dCreateMPIInt(array,start,len1,ptr) bind(C)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
@@ -46,7 +46,7 @@
       ptr => array
       end subroutine
 
-      subroutine F90Array1dCreateFortranAddr(array,start,len1,ptr)
+      subroutine F90Array1dCreateFortranAddr(array,start,len1,ptr) bind(C)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
