@@ -334,32 +334,47 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
          From https://hypre.readthedocs.io/en/latest/solvers-boomeramg.html#gpu-supported-options
          and /src/parcsr_ls/par_amg.c
          First handle options which users have interfaces for changing */
-      PetscObjectParameterSetDefault(jac, keeptranspose, PETSC_TRUE);
-      PetscCallExternal(HYPRE_BoomerAMGSetKeepTranspose, jac->hsolver, jac->keeptranspose ? 1 : 0);
       PetscObjectParameterSetDefault(jac, coarsentype, 8);
-      PetscCallExternal(HYPRE_BoomerAMGSetCoarsenType, jac->hsolver, jac->coarsentype);
       PetscObjectParameterSetDefault(jac, relaxorder, 0);
-      PetscCallExternal(HYPRE_BoomerAMGSetRelaxOrder, jac->hsolver, jac->relaxorder);
       PetscObjectParameterSetDefault(jac, interptype, 6);
-      PetscCallExternal(HYPRE_BoomerAMGSetInterpType, jac->hsolver, jac->interptype);
       PetscObjectParameterSetDefault(jac, relaxtype[0], 18);
       PetscObjectParameterSetDefault(jac, relaxtype[1], 18);
-      PetscCallExternal(HYPRE_BoomerAMGSetRelaxType, jac->hsolver, jac->relaxtype[0]);
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
       PetscObjectParameterSetDefault(jac, spgemm_type, HYPRESpgemmTypes[0]);
 #endif
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 18, 0)
+      PetscObjectParameterSetDefault(jac, keeptranspose, PETSC_TRUE);
       PetscObjectParameterSetDefault(jac, mod_rap2, 1);
-      PetscCallExternal(HYPRE_BoomerAMGSetModuleRAP2, jac->hsolver, jac->mod_rap2);
 #endif
       PetscObjectParameterSetDefault(jac, agg_interptype, 7);
-      PetscCallExternal(HYPRE_BoomerAMGSetAggInterpType, jac->hsolver, jac->agg_interptype);
-    }
+    } else {
+      PetscObjectParameterSetDefault(jac, coarsentype, 6);
+      PetscObjectParameterSetDefault(jac, relaxorder, 1);
+      PetscObjectParameterSetDefault(jac, interptype, 0);
+      PetscObjectParameterSetDefault(jac, relaxtype[0], 6);
+      PetscObjectParameterSetDefault(jac, relaxtype[1], 6); /* Defaults to SYMMETRIC since in PETSc we are using a PC - most likely with CG */
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
-    else
       PetscObjectParameterSetDefault(jac, spgemm_type, "hypre");
+#endif
+#if PETSC_PKG_HYPRE_VERSION_GE(2, 18, 0)
+      PetscObjectParameterSetDefault(jac, keeptranspose, PETSC_FALSE);
+      PetscObjectParameterSetDefault(jac, mod_rap2, 0);
+#endif
+      PetscObjectParameterSetDefault(jac, agg_interptype, 4);
+    }
+    PetscObjectParameterSetDefault(jac, relaxtype[2], 9); /*G.E. */
+    PetscCallExternal(HYPRE_BoomerAMGSetCoarsenType, jac->hsolver, jac->coarsentype);
+    PetscCallExternal(HYPRE_BoomerAMGSetRelaxOrder, jac->hsolver, jac->relaxorder);
+    PetscCallExternal(HYPRE_BoomerAMGSetInterpType, jac->hsolver, jac->interptype);
+    PetscCallExternal(HYPRE_BoomerAMGSetRelaxType, jac->hsolver, jac->relaxtype[0]);
+#if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
     PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, jac->spgemm_type));
 #endif
+#if PETSC_PKG_HYPRE_VERSION_GE(2, 18, 0)
+    PetscCallExternal(HYPRE_BoomerAMGSetKeepTranspose, jac->hsolver, jac->keeptranspose ? 1 : 0);
+    PetscCallExternal(HYPRE_BoomerAMGSetModuleRAP2, jac->hsolver, jac->mod_rap2);
+#endif
+    PetscCallExternal(HYPRE_BoomerAMGSetAggInterpType, jac->hsolver, jac->agg_interptype);
 
     PetscCall(MatGetBlockSize(pc->pmat, &bs));
     if (bs > 1) PetscCallExternal(HYPRE_BoomerAMGSetNumFunctions, jac->hsolver, bs);
@@ -2290,44 +2305,35 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
     jac->truncfactor     = 0.0;
     jac->strongthreshold = .25;
     jac->maxrowsum       = .9;
-    PetscObjectParameterSetDefault(jac, coarsentype, 6);
-    jac->measuretype   = 0;
+    jac->measuretype     = 0;
     jac->gridsweeps[0] = jac->gridsweeps[1] = jac->gridsweeps[2] = 1;
     jac->smoothtype                                              = -1; /* Not set by default */
     jac->smoothnumlevels                                         = 25;
     jac->eu_level                                                = 0;
     jac->eu_droptolerance                                        = 0;
     jac->eu_bj                                                   = 0;
-    PetscObjectParameterSetDefault(jac, relaxtype[0], 6);
-    PetscObjectParameterSetDefault(jac, relaxtype[1], 6); /* Defaults to SYMMETRIC since in PETSc we are using a PC - most likely with CG */
-    PetscObjectParameterSetDefault(jac, relaxtype[2], 9); /*G.E. */
-    jac->relaxweight      = 1.0;
-    jac->outerrelaxweight = 1.0;
-    PetscObjectParameterSetDefault(jac, relaxorder, 1);
-    PetscObjectParameterSetDefault(jac, interptype, 0);
-    jac->Rtype            = 0;
-    jac->Rstrongthreshold = 0.25;
-    jac->Rfilterthreshold = 0.0;
-    jac->Adroptype        = -1;
-    jac->Adroptol         = 0.0;
-    jac->agg_nl           = 0;
-    PetscObjectParameterSetDefault(jac, agg_interptype, 4);
-    jac->pmax                  = 0;
-    jac->truncfactor           = 0.0;
-    jac->agg_num_paths         = 1;
-    jac->maxc                  = 9;
-    jac->minc                  = 1;
-    jac->nodal_coarsening      = 0;
-    jac->nodal_coarsening_diag = 0;
-    jac->vec_interp_variant    = 0;
-    jac->vec_interp_qmax       = 0;
-    jac->vec_interp_smooth     = PETSC_FALSE;
-    jac->interp_refine         = 0;
-    jac->nodal_relax           = PETSC_FALSE;
-    jac->nodal_relax_levels    = 1;
-    jac->rap2                  = 0;
-    PetscObjectParameterSetDefault(jac, keeptranspose, PETSC_FALSE);
-    PetscObjectParameterSetDefault(jac, mod_rap2, 0);
+    jac->relaxweight                                             = 1.0;
+    jac->outerrelaxweight                                        = 1.0;
+    jac->Rtype                                                   = 0;
+    jac->Rstrongthreshold                                        = 0.25;
+    jac->Rfilterthreshold                                        = 0.0;
+    jac->Adroptype                                               = -1;
+    jac->Adroptol                                                = 0.0;
+    jac->agg_nl                                                  = 0;
+    jac->pmax                                                    = 0;
+    jac->truncfactor                                             = 0.0;
+    jac->agg_num_paths                                           = 1;
+    jac->maxc                                                    = 9;
+    jac->minc                                                    = 1;
+    jac->nodal_coarsening                                        = 0;
+    jac->nodal_coarsening_diag                                   = 0;
+    jac->vec_interp_variant                                      = 0;
+    jac->vec_interp_qmax                                         = 0;
+    jac->vec_interp_smooth                                       = PETSC_FALSE;
+    jac->interp_refine                                           = 0;
+    jac->nodal_relax                                             = PETSC_FALSE;
+    jac->nodal_relax_levels                                      = 1;
+    jac->rap2                                                    = 0;
 
     PetscCallExternal(HYPRE_BoomerAMGSetCycleType, jac->hsolver, jac->cycletype);
     PetscCallExternal(HYPRE_BoomerAMGSetMaxLevels, jac->hsolver, jac->maxlevels);
@@ -2336,26 +2342,16 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
     PetscCallExternal(HYPRE_BoomerAMGSetTruncFactor, jac->hsolver, jac->truncfactor);
     PetscCallExternal(HYPRE_BoomerAMGSetStrongThreshold, jac->hsolver, jac->strongthreshold);
     PetscCallExternal(HYPRE_BoomerAMGSetMaxRowSum, jac->hsolver, jac->maxrowsum);
-    PetscCallExternal(HYPRE_BoomerAMGSetCoarsenType, jac->hsolver, jac->coarsentype);
     PetscCallExternal(HYPRE_BoomerAMGSetMeasureType, jac->hsolver, jac->measuretype);
-    PetscCallExternal(HYPRE_BoomerAMGSetRelaxOrder, jac->hsolver, jac->relaxorder);
-    PetscCallExternal(HYPRE_BoomerAMGSetInterpType, jac->hsolver, jac->interptype);
     PetscCallExternal(HYPRE_BoomerAMGSetAggNumLevels, jac->hsolver, jac->agg_nl);
-    PetscCallExternal(HYPRE_BoomerAMGSetAggInterpType, jac->hsolver, jac->agg_interptype);
     PetscCallExternal(HYPRE_BoomerAMGSetPMaxElmts, jac->hsolver, jac->pmax);
     PetscCallExternal(HYPRE_BoomerAMGSetNumPaths, jac->hsolver, jac->agg_num_paths);
-    PetscCallExternal(HYPRE_BoomerAMGSetRelaxType, jac->hsolver, jac->relaxtype[0]);  /* defaults coarse to 9 */
     PetscCallExternal(HYPRE_BoomerAMGSetNumSweeps, jac->hsolver, jac->gridsweeps[0]); /* defaults coarse to 1 */
     PetscCallExternal(HYPRE_BoomerAMGSetMaxCoarseSize, jac->hsolver, jac->maxc);
     PetscCallExternal(HYPRE_BoomerAMGSetMinCoarseSize, jac->hsolver, jac->minc);
     /* GPU */
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 18, 0)
-    PetscCallExternal(HYPRE_BoomerAMGSetKeepTranspose, jac->hsolver, jac->keeptranspose ? 1 : 0);
     PetscCallExternal(HYPRE_BoomerAMGSetRAP2, jac->hsolver, jac->rap2);
-    PetscCallExternal(HYPRE_BoomerAMGSetModuleRAP2, jac->hsolver, jac->mod_rap2);
-#endif
-#if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
-    PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, "hypre"));
 #endif
 
     /* AIR */
