@@ -347,7 +347,6 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
       PetscCallExternal(HYPRE_BoomerAMGSetRelaxType, jac->hsolver, jac->relaxtype[0]);
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
       PetscObjectParameterSetDefault(jac, spgemm_type, HYPRESpgemmTypes[0]);
-      PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, HYPRESpgemmTypes[0]));
 #endif
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 18, 0)
       PetscObjectParameterSetDefault(jac, mod_rap2, 1);
@@ -356,6 +355,11 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
       PetscObjectParameterSetDefault(jac, agg_interptype, 7);
       PetscCallExternal(HYPRE_BoomerAMGSetAggInterpType, jac->hsolver, jac->agg_interptype);
     }
+#if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
+    else
+      PetscObjectParameterSetDefault(jac, spgemm_type, "hypre");
+    PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, jac->spgemm_type));
+#endif
 
     PetscCall(MatGetBlockSize(pc->pmat, &bs));
     if (bs > 1) PetscCallExternal(HYPRE_BoomerAMGSetNumFunctions, jac->hsolver, bs);
@@ -2324,9 +2328,6 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
     jac->rap2                  = 0;
     PetscObjectParameterSetDefault(jac, keeptranspose, PETSC_FALSE);
     PetscObjectParameterSetDefault(jac, mod_rap2, 0);
-#if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
-    PetscObjectParameterSetDefault(jac, spgemm_type, "hypre");
-#endif
 
     PetscCallExternal(HYPRE_BoomerAMGSetCycleType, jac->hsolver, jac->cycletype);
     PetscCallExternal(HYPRE_BoomerAMGSetMaxLevels, jac->hsolver, jac->maxlevels);
