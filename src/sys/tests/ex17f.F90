@@ -5,11 +5,12 @@
       program main
 #include <petsc/finclude/petscsys.h>
       use petscsys
+      use, intrinsic :: ISO_C_binding
       implicit none
 
       PetscErrorCode ierr
       PetscMPIInt rank
-      PetscFortranAddr file
+      type(C_ptr) :: file
       character*100    joe
 
       PetscCallA(PetscInitialize(ierr))
