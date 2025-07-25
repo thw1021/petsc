@@ -2878,6 +2878,30 @@ M*/
     a_b1[3] = -a_b1[2]; \
     \
     PetscCallMPI(MPI_Allreduce(a_b1, a_b2, 4, MPI_INT, MPI_MAX, fcomm)); \
+    if (-a_b2[0] != a_b2[1]) { \
+      size_t      len; \
+      PetscMPIInt maxlen;\
+      char       *str  = NULL;\
+      char       *str0 = NULL;\
+      PetscMPIInt size, rank;\
+      PetscCallMPI(MPI_Comm_size((fcomm), &size));\
+      PetscCallMPI(MPI_Comm_rank((fcomm), &rank));\
+      PetscCall(PetscStrlen(__FILE__, &len));\
+      maxlen = (PetscMPIInt)len;\
+      PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, &maxlen, 1, MPI_INT, MPI_MAX, (fcomm)));\
+      maxlen += 128; /* add enough space for leading and trailing chars in PetscSNPrintf around __FILE__ */\
+      PetscCall(PetscMalloc1(maxlen, &str));\
+      if (rank == 0) PetscMalloc1(maxlen * size + 1, &str0);\
+      PetscCall(PetscSNPrintf(str, maxlen, "                On processor %d, %s:%d\n", rank, __FILE__, __LINE__));\
+      PetscCall(PetscStrlen(str, &len));\
+      for (PetscMPIInt i = len - 1; i < maxlen; i++) str[i] = ' ';\
+      if (rank != size - 1) str[maxlen - 1] = '\n';\
+      PetscCallMPI(MPI_Gather(str, maxlen, MPI_CHAR, str0, maxlen, MPI_CHAR, 0, (fcomm)));\
+      str0[maxlen * size] = 0;\
+      PetscCall(PetscFree(str));\
+      SETERRQ((fcomm), PETSC_ERR_PLIB, "MPIU_Allreduce() called in different locations on different processors:\n%s", str0);\
+      if (rank == 0) PetscCall(PetscFree(str0));\
+    } \
     PetscCheck(-a_b2[0] == a_b2[1], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPIU_Allreduce() called in different locations on different processors: %s:%d", __FILE__, __LINE__); \
     PetscCheck(-a_b2[2] == a_b2[3], (fcomm), PETSC_ERR_PLIB, "MPIU_Allreduce() called with different counts %d on different processors", _mpiu_allreduce_c_int); \
     PetscCallMPI(MPIU_Allreduce_Private((a), (b), (c), (d), (e), (fcomm)));)
