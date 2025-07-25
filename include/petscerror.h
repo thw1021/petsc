@@ -957,7 +957,7 @@ void PETSCABORTWITHERR_Private(MPI_Comm, PetscErrorCode);
     do { \
       PetscMPIInt size_; \
       (void)MPI_Comm_size(comm, &size_); \
-      if (PetscCIEnabledPortableErrorOutput && (size_ == PetscGlobalSize || petscabortmpifinalize) && ierr != PETSC_ERR_SIG) { \
+      if (PetscCIEnabledPortableErrorOutput && ierr != PETSC_ERR_SIG) { \
         (void)MPI_Finalize(); \
         exit(0); \
       } else if (PetscCIEnabledPortableErrorOutput && PetscGlobalSize == 1) { \
