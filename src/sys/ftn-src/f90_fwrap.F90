@@ -2,59 +2,54 @@
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #include <petsc/finclude/petscsys.h>
-      subroutine F90Array1dCreateScalar(array,start,len1,ptr)
+      subroutine F90Array1dCreateScalar(array,start,len1,ptr) bind(C)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
-      PetscScalar, target ::                                                      &
-     &     array(start:start+len1-1)
+      type(C_ptr), target, value :: array
       PetscScalar, pointer :: ptr(:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,shape=[len1])
       end subroutine
 
-      subroutine F90Array1dCreateReal(array,start,len1,ptr)
+      subroutine F90Array1dCreateReal(array,start,len1,ptr) bind(C)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
-      PetscReal, target ::                                                        &
-     &     array(start:start+len1-1)
+      type(C_ptr), target, value :: array
       PetscReal, pointer :: ptr(:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,shape=[len1])
       end subroutine
 
-      subroutine F90Array1dCreateInt(array,start,len1,ptr)
+      subroutine F90Array1dCreateInt(array,start,len1,ptr) bind(C)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
-      PetscInt, target ::                                                         &
-     &     array(start:start+len1-1)
+      type(C_ptr), target, value :: array
       PetscInt, pointer :: ptr(:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,shape=[len1])
       end subroutine
 
-      subroutine F90Array1dCreateMPIInt(array,start,len1,ptr)
+      subroutine F90Array1dCreateMPIInt(array,start,len1,ptr) bind(C)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
-      PetscMPIInt, target ::                                                      &
-      &     array(start:start+len1-1)
+      type(C_ptr), target, value :: array
       PetscMPIInt, pointer :: ptr(:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,shape=[len1])
       end subroutine
 
-      subroutine F90Array1dCreateFortranAddr(array,start,len1,ptr)
+      subroutine F90Array1dCreateFortranAddr(array,start,len1,ptr) bind(C)
       use, intrinsic :: ISO_C_binding
       implicit none
       PetscInt start,len1
-      PetscFortranAddr, target ::                                                 &
-     &     array(start:start+len1-1)
+      type(C_ptr), target, value :: array
       PetscFortranAddr, pointer :: ptr(:)
 
-      ptr => array
+      call c_f_pointer(array,ptr,shape=[len1])
       end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
