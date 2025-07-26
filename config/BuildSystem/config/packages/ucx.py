@@ -23,7 +23,7 @@ class Configure(config.package.GNUPackage):
   def setupDependencies(self, framework):
     config.package.GNUPackage.setupDependencies(self, framework)
     self.cuda            = framework.require('config.packages.cuda',self)
-    self.hip             = framework.require('config.packages.hip',self)
+    self.hip             = framework.require('config.packages.HIP',self)
     self.odeps           = [self.cuda, self.hip]
     return
 

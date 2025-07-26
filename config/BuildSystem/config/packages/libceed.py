@@ -20,7 +20,7 @@ class Configure(config.package.Package):
     self.setCompilers    = framework.require('config.setCompilers',self)
     self.make            = framework.require('config.packages.make',self)
     self.cuda            = framework.require('config.packages.cuda',self)
-    self.hip             = framework.require('config.packages.hip',self)
+    self.hip             = framework.require('config.packages.HIP',self)
     self.odeps           = [self.cuda,self.hip]
     return
 
