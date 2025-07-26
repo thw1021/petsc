@@ -28,7 +28,7 @@ class Configure(config.package.Package):
     self.flibs           = framework.require('config.packages.flibs',self)
     self.deps            = [self.blasLapack,self.cxxlibs,self.mathlib,self.flibs] # KSPHPDDM
     self.mpi             = framework.require('config.packages.MPI',self)
-    self.slepc           = framework.require('config.packages.slepc',self)
+    self.slepc           = framework.require('config.packages.SLEPc',self)
     self.odeps           = [self.mpi,self.slepc] # KSPHPDDM + PCHPDDM
     return
 

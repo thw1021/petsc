@@ -22,7 +22,7 @@ class Configure(config.package.CMakePackage):
   def setupDependencies(self, framework):
     config.package.CMakePackage.setupDependencies(self, framework)
     self.cxxlibs    = framework.require('config.packages.cxxlibs',self)
-    self.openmp     = framework.require('config.packages.openmp',self)
+    self.openmp     = framework.require('config.packages.OpenMP',self)
     # self.cuda       = framework.require('config.packages.cuda',self)
     self.deps       = [self.cxxlibs]
     # self.odeps      = [self.openmp,self.cuda]

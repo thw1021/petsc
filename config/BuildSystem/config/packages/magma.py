@@ -39,7 +39,7 @@ class Configure(config.package.Package):
     self.blasLapack = framework.require('config.packages.BlasLapack',self)
     self.cuda       = framework.require('config.packages.cuda',self)
     self.hip        = framework.require('config.packages.hip',self)
-    self.openmp     = framework.require('config.packages.openmp',self)
+    self.openmp     = framework.require('config.packages.OpenMP',self)
     self.pthread    = framework.require('config.packages.pthread',self)
     self.odeps      = [self.openmp,self.pthread,self.cuda,self.hip]
     self.deps       = [self.blasLapack]

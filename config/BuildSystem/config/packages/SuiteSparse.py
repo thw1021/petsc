@@ -39,7 +39,7 @@ class Configure(config.package.CMakePackage):
     self.mathlib    = framework.require('config.packages.mathlib',self)
     self.deps       = [self.blasLapack,self.mathlib]
     self.cuda       = framework.require('config.packages.cuda',self)
-    self.openmp     = framework.require('config.packages.openmp',self)
+    self.openmp     = framework.require('config.packages.OpenMP',self)
     self.odeps      = [self.openmp,self.cuda]
     return
 

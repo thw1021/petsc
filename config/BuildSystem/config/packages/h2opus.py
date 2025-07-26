@@ -28,7 +28,7 @@ class Configure(config.package.Package):
     self.magma       = framework.require('config.packages.magma',self)
     self.blas        = framework.require('config.packages.BlasLapack',self)
     self.kblas       = framework.require('config.packages.kblas',self)
-    self.openmp      = framework.require('config.packages.openmp',self)
+    self.openmp      = framework.require('config.packages.OpenMP',self)
     self.mpi         = framework.require('config.packages.MPI',self)
     self.thrust      = framework.require('config.packages.thrust',self)
     self.math        = framework.require('config.packages.mathlib',self)

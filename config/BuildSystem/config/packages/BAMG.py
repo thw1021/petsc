@@ -20,7 +20,7 @@ class Configure(config.package.Package):
     self.mathlib         = framework.require('config.packages.mathlib',self)
     self.mpi             = framework.require('config.packages.MPI',self)
     self.blasLapack      = framework.require('config.packages.BlasLapack',self)
-    self.slepc           = framework.require('config.packages.slepc',self)
+    self.slepc           = framework.require('config.packages.SLEPc',self)
     self.parch           = framework.require('PETSc.options.arch',self)
     self.scalartypes     = framework.require('PETSc.options.scalarTypes',self)
     self.deps            = [self.blasLapack,self.mathlib,self.mpi,self.slepc]

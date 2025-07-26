@@ -34,7 +34,7 @@ class Configure(config.package.CMakePackage):
     self.python            = framework.require('config.packages.python',self)
     self.pugixml           = framework.require('config.packages.pugixml',self)
     self.spdlog            = framework.require('config.packages.spdlog',self)
-    self.slepc             = framework.require('config.packages.slepc',self)
+    self.slepc             = framework.require('config.packages.SLEPc',self)
     self.deps              = [self.mpi4py,self.petsc4py,self.boost,self.basix,self.ffcx,self.hdf5,self.pugixml,self.spdlog,self.scikit_build_core,self.nanobind,self.slepc]
     self.odeps             = [self.parmetis,self.ptscotch]
     return
@@ -57,11 +57,11 @@ class Configure(config.package.CMakePackage):
         found_hdf5_cpp_binding = True
         break
     if not found_hdf5_cpp_binding:
-      raise RuntimeError("fenics-dolfinx requires HDF5 with C++ bindings, ensure you use --with-hdf5-cxx-bindings")
+      raise RuntimeError("FEniCS-DOLFINx requires HDF5 with C++ bindings, ensure you use --with-hdf5-cxx-bindings")
     return args
 
   def Install(self):
-    # To avoid having the Python fenics-dolfinx build its dependencies --no-deps is passed to pip (the dependencies are all managed with setupDependencies() above)
+    # To avoid having the Python FEniCS-DOLFINx build its dependencies --no-deps is passed to pip (the dependencies are all managed with setupDependencies() above)
     output,err,ret  = config.package.Package.executeShellCommand('git describe --abbrev=12 --dirty --always --tags', cwd=self.packageDir)
     if not err and not ret:
       self.foundversion = output

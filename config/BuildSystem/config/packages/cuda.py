@@ -292,7 +292,7 @@ class Configure(config.package.Package):
   def checkNVCCDoubleAlign(self):
     if 'known-cuda-align-double' in self.argDB:
       if not self.argDB['known-cuda-align-double']:
-        raise RuntimeError('CUDA error: PETSC currently requires that CUDA double alignment match the C compiler')
+        raise RuntimeError('CUDA error: PETSc currently requires that CUDA double alignment match the C compiler')
     else:
       typedef = 'typedef struct {double a; int b;} teststruct;\n'
       cuda_size = self.types.checkSizeof('teststruct', (16, 12), lang='CUDA', codeBegin=typedef, save=False)

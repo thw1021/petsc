@@ -23,7 +23,7 @@ class Configure(config.package.Package):
     self.cub    = framework.require('config.packages.cub',self)
     self.cuda   = framework.require('config.packages.cuda',self)
     self.magma  = framework.require('config.packages.magma',self)
-    self.openmp = framework.require('config.packages.openmp',self)
+    self.openmp = framework.require('config.packages.OpenMP',self)
     self.deps   = [self.cuda,self.magma]
     self.odeps  = [self.openmp,self.cub]
     return

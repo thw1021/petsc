@@ -23,7 +23,7 @@ class Configure(config.package.CMakePackage):
     self.mpi           = framework.require('config.packages.MPI',self)
     self.ptscotch      = framework.require('config.packages.PTScotch',self)
     self.metis         = framework.require('config.packages.metis',self)
-    self.mmg           = framework.require('config.packages.mmg',self)
+    self.mmg           = framework.require('config.packages.Mmg',self)
     self.deps          = [self.mpi,self.mathlib,self.ptscotch,self.metis,self.mmg]
     return
 

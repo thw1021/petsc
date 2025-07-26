@@ -51,7 +51,7 @@ class Configure(config.package.CMakePackage):
     self.cxxlibs         = framework.require('config.packages.cxxlibs',self)
     self.mathlib         = framework.require('config.packages.mathlib',self)
     self.deps            = [self.blasLapack,self.flibs,self.cxxlibs,self.mathlib]
-    self.openmp          = framework.require('config.packages.openmp',self)
+    self.openmp          = framework.require('config.packages.OpenMP',self)
     self.cuda            = framework.require('config.packages.cuda',self)
     self.hip             = framework.require('config.packages.hip',self)
     self.sycl            = framework.require('config.packages.sycl',self)

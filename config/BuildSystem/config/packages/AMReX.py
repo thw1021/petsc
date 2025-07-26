@@ -34,7 +34,7 @@ class Configure(config.package.CMakePackage):
     self.cuda           = framework.require('config.packages.cuda',self)
     self.hip            = framework.require('config.packages.hip',self)
     self.sycl           = framework.require('config.packages.sycl',self)
-    self.openmp         = framework.require('config.packages.openmp',self)
+    self.openmp         = framework.require('config.packages.OpenMP',self)
     self.odeps          = [self.mpi,self.blasLapack,self.cuda,self.hip,self.sycl,self.openmp]
     self.deps           = [self.hypre,self.mpi,self.blasLapack]
     return

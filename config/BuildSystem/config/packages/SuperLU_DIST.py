@@ -29,7 +29,7 @@ class Configure(config.package.CMakePackage):
     self.mpi            = framework.require('config.packages.MPI',self)
     self.cuda           = framework.require('config.packages.cuda',self)
     self.hip            = framework.require('config.packages.hip',self)
-    self.openmp         = framework.require('config.packages.openmp',self)
+    self.openmp         = framework.require('config.packages.OpenMP',self)
     self.odeps          = [self.parmetis,self.cuda,self.hip,self.openmp]
     self.deps           = [self.mpi,self.blasLapack]
     return

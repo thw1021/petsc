@@ -35,9 +35,9 @@ class Configure(config.package.Package):
     self.metis            = framework.require('config.packages.metis',self)
     self.parmetis         = framework.require('config.packages.parmetis',self)
     self.ptscotch         = framework.require('config.packages.PTScotch',self)
-    self.scalapack        = framework.require('config.packages.scalapack',self)
+    self.scalapack        = framework.require('config.packages.ScaLAPACK',self)
     self.hwloc            = framework.require('config.packages.hwloc',self)
-    self.openmp           = framework.require('config.packages.openmp',self)
+    self.openmp           = framework.require('config.packages.OpenMP',self)
     self.scalartypes      = framework.require('PETSc.options.scalarTypes',self)
     if self.argDB['with-mumps-serial']:
       self.deps           = [self.blasLapack,self.flibs]
