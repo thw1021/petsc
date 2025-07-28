@@ -1448,11 +1448,11 @@ PetscErrorCode PCBDDCNedelecSupport(PC pc)
       const PetscInt *idxs;
       PetscScalar     one = 1.0;
 
-      PetscCall(ISGetLocalSize(alleedges[i], &cum));
+      PetscCall(ISGetLocalSize(eedges[i], &cum));
       if (!cum) continue;
-      PetscCall(ISGetIndices(alleedges[i], &idxs));
+      PetscCall(ISGetIndices(eedges[i], &idxs));
       PetscCall(VecSetValuesLocal(quad_vec, 1, idxs, &one, INSERT_VALUES));
-      PetscCall(ISRestoreIndices(alleedges[i], &idxs));
+      PetscCall(ISRestoreIndices(eedges[i], &idxs));
     }
     PetscCall(VecLockReadPush(quad_vec));
     PetscCall(VecDestroy(&quad_vec));
