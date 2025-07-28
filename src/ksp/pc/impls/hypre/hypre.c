@@ -2361,6 +2361,7 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
     jac->nodal_relax                                             = PETSC_FALSE;
     jac->nodal_relax_levels                                      = 1;
     jac->rap2                                                    = 0;
+    PetscObjectParameterSetDefault(jac, relaxorder, -1); /* Initialize with invalid value so we can recognize user input */
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(PetscStrcmp("ams", jac->hypre_type, &flag));
