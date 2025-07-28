@@ -375,7 +375,9 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
     PetscCallExternal(HYPRE_BoomerAMGSetAggNumLevels, jac->hsolver, jac->agg_nl);
     PetscCallExternal(HYPRE_BoomerAMGSetPMaxElmts, jac->hsolver, jac->pmax);
     PetscCallExternal(HYPRE_BoomerAMGSetNumPaths, jac->hsolver, jac->agg_num_paths);
-    PetscCallExternal(HYPRE_BoomerAMGSetNumSweeps, jac->hsolver, jac->gridsweeps[0]); /* defaults coarse to 1 */
+    PetscCallExternal(HYPRE_BoomerAMGSetCycleNumSweeps, jac->hsolver, jac->gridsweeps[0], 1);
+    PetscCallExternal(HYPRE_BoomerAMGSetCycleNumSweeps, jac->hsolver, jac->gridsweeps[1], 2);
+    PetscCallExternal(HYPRE_BoomerAMGSetCycleNumSweeps, jac->hsolver, jac->gridsweeps[2], 3);
     PetscCallExternal(HYPRE_BoomerAMGSetMaxCoarseSize, jac->hsolver, jac->maxc);
     PetscCallExternal(HYPRE_BoomerAMGSetMinCoarseSize, jac->hsolver, jac->minc);
     PetscCallExternal(HYPRE_BoomerAMGSetCoarsenType, jac->hsolver, jac->coarsentype);
@@ -1039,7 +1041,6 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems P
   /* Grid sweeps */
   PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_grid_sweeps_all", "Number of sweeps for the up and down grid levels", "None", jac->gridsweeps[0], &indx, &flg));
   if (flg) {
-    PetscCallExternal(HYPRE_BoomerAMGSetNumSweeps, jac->hsolver, indx);
     /* modify the jac structure so we can view the updated options with PC_View */
     jac->gridsweeps[0] = indx;
     jac->gridsweeps[1] = indx;
