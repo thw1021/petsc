@@ -353,11 +353,7 @@ PetscErrorCode MatMult_MyShell(Mat A, Vec x, Vec y)
   PetscCall(MatShellGetContext(A, &matshellctx));
   PetscCall(MatMult(matshellctx->Jmf, x, y));
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)A), &rank));
-  if (fail++ > 5) {
-    PetscCall(VecFlag(y, rank == 0));
-    PetscCall(VecAssemblyBegin(y));
-    PetscCall(VecAssemblyEnd(y));
-  }
+  if (fail++ > 5) PetscCall(VecFlag(y, rank == 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -379,11 +375,7 @@ PetscErrorCode PCApply_MyShell(PC pc, Vec x, Vec y)
   PetscFunctionBegin;
   PetscCall(VecCopy(x, y));
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)pc), &rank));
-  if (fail++ > 3) {
-    PetscCall(VecFlag(y, rank == 0));
-    PetscCall(VecAssemblyBegin(y));
-    PetscCall(VecAssemblyEnd(y));
-  }
+  if (fail++ > 3) PetscCall(VecFlag(y, rank == 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
