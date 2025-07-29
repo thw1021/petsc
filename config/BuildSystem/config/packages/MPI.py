@@ -93,7 +93,7 @@ class Configure(config.package.Package):
     return output+self.mpi_pkg_version
 
   def generateLibList(self, directory):
-    if self.setCompilers.usedMPICompilers:
+    if self.setCompilers.usedMPICompilers and 1:
       self.liblist = []
       self.libDirs = ['']
     return config.package.Package.generateLibList(self,directory)
