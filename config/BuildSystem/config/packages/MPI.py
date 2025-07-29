@@ -88,8 +88,8 @@ class Configure(config.package.Package):
     if self.mpiexec_tail: output  += '  mpiexec_tail: '+self.mpiexec_tail+'\n'
     if self.mpi_pkg: output  += '  Implementation: '+self.mpi_pkg+'\n'
     if hasattr(self,'includepaths'):
-      output  += '  MPI C++ include paths: '+ self.includepaths+'\n'
-      output += '  MPI C++ libraries: '+ self.libpaths + ' ' + self.mpilibs+'\n'
+    output  += '  MPI C++ include paths: '+ self.includepaths+'\n'
+    output += '  MPI C++ libraries: '+ self.libpaths + ' ' + self.mpilibs+'\n'
     return output+self.mpi_pkg_version
 
   def generateLibList(self, directory):
