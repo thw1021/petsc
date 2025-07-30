@@ -49,11 +49,10 @@ int main(int argc, char **args)
     v2_p          = v2_bs2;
     pre_alloc_coo = MatSetPreallocationCOOBlocked;
     set_values    = MatSetValuesCOOBlocked;
-  } else if (bs != 1) SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Invalid Mat block size (1 or 2)");
-  else {
+  } else if (bs == 1) {
     pre_alloc_coo = MatSetPreallocationCOO;
     set_values    = MatSetValuesCOO;
-  }
+  } else PetscCheck(bs == 1, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Invalid Mat block size (1 or 2)");
   if (loc) { // Nx is local size
     if (locdiag) {
       PetscCall(MatSetSizes(A, m, Nx, PETSC_DECIDE, PETSC_DECIDE));
