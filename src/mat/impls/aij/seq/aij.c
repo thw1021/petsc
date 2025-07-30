@@ -4918,24 +4918,27 @@ static PetscErrorCode MatSetValuesCOOBlocked_SeqAIJ(Mat A, const PetscScalar v[]
   PetscCall(PetscContainerGetPointer(container, (void **)&coo));
   perm = coo->perm;
   jmap = coo->jmap;
+  PetscCall(PetscIntView(coo->Atot, (PetscInt *)perm, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(MatSeqAIJGetArray(A, &Aa));
   /* setup for block assembly */
   {
     PetscScalar *sum;
-    PetscInt     k, ki, *ii, rbs = 1, cbs = 1, row, nz_row, joff, offset;
+    PetscInt     i, ki, *ii, rbs = 1, cbs = 1, row, nz_row, joff, offset;
     ii = aseq->i;
     PetscCall(MatGetBlockSizes(A, &rbs, &cbs));
     PetscCall(PetscMalloc1(rbs * cbs, &sum));
     Annz = Annz / (rbs * cbs);            // blocked iteration
-    for (k = 0, row = 0; k < Annz; k++) { // need to do blocks of rows in parallel to get 'row' to work or have longer search
+    for (i = 0, row = 0; i < Annz; i++) { // need to do blocks of rows in parallel to get 'row' to work or have longer search
       PetscCall(PetscArrayzero(sum, rbs * cbs));
-      for (j = jmap[k]; j < jmap[k + 1]; j++) {
-        const PetscScalar *tmp = &v[perm[j] * rbs * cbs]; // jump into v
+      // for (j = jmap[i]; j < jmap[i + 1]; j++) sum += v[perm[j]];
+      // Aa[i] = (imode == INSERT_VALUES ? 0.0 : Aa[i]) + sum;
+      for (j = jmap[i]; j < jmap[i + 1]; j++) {
+        const PetscScalar *tmp = &v[perm[j] * rbs * cbs]; // jump into
         for (ki = 0; ki < rbs; ki++) {
           for (PetscInt jj = 0; jj < cbs; jj++) { sum[ki * cbs + jj] += *tmp++; }
         }
       }
-      offset = k * rbs * cbs;                     // top corner of BAIJ data, in row block of AIJ
+      offset = i * rbs * cbs;                     // top corner of BAIJ data, in row block of AIJ
       while (offset >= ii[row + rbs]) row += rbs; // search: get to correct block row (TODO parallel)
       joff = (offset - ii[row]) / rbs;            // real (cbs * block-col) column j, offset is row_start + rbs * cbs * block-col
       PetscCheck(joff >= 0, PETSC_COMM_SELF, PETSC_ERR_FILE_UNEXPECTED, "joff < 0 : %d", (int)joff);
