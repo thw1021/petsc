@@ -7039,7 +7039,6 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJ_Private(Mat mat, const PetscScalar 
 
   PetscCall(MatSeqAIJRestoreArray(A, &Aa));
   PetscCall(MatSeqAIJRestoreArray(B, &Ba));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
