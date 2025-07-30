@@ -125,7 +125,7 @@ PetscErrorCode SNESGetAlwaysComputesFinalResidual(SNES snes, PetscBool *flg)
   Level: advanced
 
   Notes:
-  You must also ensure that you insert at least one `NaN` or infinity into the vector in which you evaluating the function unless you use `DMDASNESSetFunctionLocal()`.
+  You must also ensure that you insert at least one `NaN` or infinity into the vector into which you are evaluating the function unless you use `DMDASNESSetFunctionLocal()` (which automatically inserts the `NaN` for you when you call `SNESSetFunctionDomainError()`.
 
   This does not need to be called by all processes in the `SNES` MPI communicator.
 
