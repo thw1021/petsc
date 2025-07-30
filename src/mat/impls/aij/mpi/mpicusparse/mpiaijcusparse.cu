@@ -452,6 +452,13 @@ static PetscErrorCode MatSetUp_MPI_HASH_CUSPARSE(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatGetCurrentMemType_MPIAIJCUSPARSE(Mat A, PetscMemType *m)
+{
+  PetscFunctionBegin;
+  *m = PETSC_MEMTYPE_CUDA;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJCUSPARSE(Mat B, MatType, MatReuse reuse, Mat *newmat)
 {
   Mat_MPIAIJ *a;
@@ -482,6 +489,7 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJCUSPARSE(Mat B, MatType, Mat
   A->ops->zeroentries           = MatZeroEntries_MPIAIJCUSPARSE;
   A->ops->productsetfromoptions = MatProductSetFromOptions_MPIAIJBACKEND;
   A->ops->setup                 = MatSetUp_MPI_HASH_CUSPARSE;
+  A->ops->getcurrentmemtype     = MatGetCurrentMemType_MPIAIJCUSPARSE;
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATMPIAIJCUSPARSE));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJGetLocalMatMerge_C", MatMPIAIJGetLocalMatMerge_MPIAIJCUSPARSE));
