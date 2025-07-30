@@ -105,6 +105,8 @@ PetscErrorCode MatDestroy_MPIAIJ(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpiaij_mpisell_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatSetPreallocationCOO_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatSetValuesCOO_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatSetPreallocationCOOBlocked_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatSetValuesCOOBlocked_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -6352,7 +6354,7 @@ static PetscErrorCode MatCOOStructDestroy_MPIAIJ(void **data)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[])
+static PetscErrorCode MatSetPreallocationCOO_MPIAIJ_Private(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[], PetscInt rbs, PetscInt cbs)
 {
   MPI_Comm             comm;
   PetscMPIInt          rank, size;
@@ -6361,6 +6363,7 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
   Mat_MPIAIJ          *mpiaij = (Mat_MPIAIJ *)mat->data;
   PetscContainer       container;
   MatCOOStruct_MPIAIJ *coo;
+  Mat                  mat_orig;
 
   PetscFunctionBegin;
   PetscCall(PetscFree(mpiaij->garray));
@@ -6384,6 +6387,36 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
   PetscCall(MatGetLocalSize(mat, &m, &n));
   PetscCall(MatGetSize(mat, &M, &N));
 
+  if (rbs * cbs > 1) { // compress blocked matrix to a scalar for symbolic work
+    Mat  matscalar;
+    char buffer[256], str[12];
+    PetscCall(MatCreate(comm, &matscalar));
+    PetscCall(MatSetSizes(matscalar, mat->rmap->n / rbs, mat->cmap->n / cbs, mat->rmap->N / rbs, mat->cmap->N / cbs));
+    const char *prefix;
+    PetscCall(MatGetOptionsPrefix(mat, &prefix));
+    if (prefix) PetscCall(MatSetOptionsPrefix(matscalar, prefix));
+    if (prefix) PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "-%smat_block_size", prefix));
+    else PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "-mat_block_size"));
+    PetscCall(PetscOptionsSetValue(NULL, buffer, "1"));
+    PetscCall(MatSetFromOptions(matscalar));
+    PetscCall(PetscSNPrintf(str, sizeof(str), "%d", (int)rbs));
+    PetscCheck(rbs == cbs, PETSC_COMM_SELF, PETSC_ERR_USER_INPUT, "only square matrix block sizes supported (just set manually?)");
+    PetscCall(PetscOptionsSetValue(NULL, buffer, str)); // undo manual matrix sizing
+    Mat_MPIAIJ *mpiaij2 = (Mat_MPIAIJ *)matscalar->data;
+    PetscCheck(mpiaij2->donotstash == mpiaij->donotstash, PETSC_COMM_SELF, PETSC_ERR_USER_INPUT, "mpiaij2->donotstash != mpiaij->donotstash ???");
+    // mpiaij2->donotstash = mpiaij->donotstash;
+    mat_orig = mat;
+    mat      = matscalar;
+    mpiaij   = (Mat_MPIAIJ *)mat->data;
+    // redo get meta data
+    PetscCall(PetscLayoutSetUp(mat->rmap));
+    PetscCall(PetscLayoutSetUp(mat->cmap));
+    PetscCall(PetscLayoutGetRange(mat->rmap, &rstart, &rend));
+    PetscCall(PetscLayoutGetRange(mat->cmap, &cstart, &cend));
+    PetscCall(MatGetLocalSize(mat, &m, &n));
+    PetscCall(MatGetSize(mat, &M, &N));
+  }
+
   /* Sort (i,j) by row along with a permutation array, so that the to-be-ignored */
   /* entries come first, then local rows, then remote rows.                     */
   PetscCount n1 = coo_n, *perm1;
@@ -6404,7 +6437,6 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
       if (mpiaij->donotstash) i1[k] = PETSC_INT_MIN; /* Ignore offproc entries as if they had negative indices */
     }
   }
-
   /* Sort by row; after that, [0,k) have ignored entries, [k,rem) have local rows and [rem,n1) have remote rows */
   PetscCall(PetscSortIntWithIntCountArrayPair(n1, i1, j1, perm1));
 
@@ -6575,7 +6607,7 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
 
   PetscCall(PetscCalloc3(m, &rowBegin1, m, &rowMid1, m, &rowEnd1));
   PetscCall(PetscCalloc3(m, &rowBegin2, m, &rowMid2, m, &rowEnd2));
-  PetscCall(MatSplitEntries_Internal(mat, rem, i1, j1, perm1, rowBegin1, rowMid1, rowEnd1, &Atot1, &Aperm1, &Annz1, &Ajmap1, &Btot1, &Bperm1, &Bnnz1, &Bjmap1));
+  PetscCall(MatSplitEntries_Internal(mat, rem, i1, j1, perm1, rowBegin1, rowMid1, rowEnd1, &Atot1, &Aperm1, &Annz1, &Ajmap1, &Btot1, &Bperm1, &Bnnz1, &Bjmap1)); // uses r/c start/end and N of mat
   PetscCall(MatSplitEntries_Internal(mat, n2, i2, j2, perm2, rowBegin2, rowMid2, rowEnd2, &Atot2, &Aperm2, &Annz2, &Ajmap2, &Btot2, &Bperm2, &Bnnz2, &Bjmap2));
 
   /* Merge local COOs with received COOs: diag with diag, offdiag with offdiag */
@@ -6593,7 +6625,7 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
   PetscCall(PetscMalloc1(Annz2, &Aimap2));
   PetscCall(PetscMalloc1(Bnnz2, &Bimap2));
 
-  PetscCall(MatMergeEntries_Internal(mat, j1, j2, rowBegin1, rowMid1, rowBegin2, rowMid2, Ajmap1, Ajmap2, Aimap1, Aimap2, Ai, Aj));
+  PetscCall(MatMergeEntries_Internal(mat, j1, j2, rowBegin1, rowMid1, rowBegin2, rowMid2, Ajmap1, Ajmap2, Aimap1, Aimap2, Ai, Aj)); // uses m of mat only
   PetscCall(MatMergeEntries_Internal(mat, j1, j2, rowMid1, rowEnd1, rowMid2, rowEnd2, Bjmap1, Bjmap2, Bimap1, Bimap2, Bi, Bj));
 
   /* Expand Ajmap1/Bjmap1 to make them based off nonzeros in A/B, since we     */
@@ -6637,17 +6669,98 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
     Bj = Bj_new;
   }
 
+  /* make Aj[] local, i.e, based off the start column of the diagonal portion */
+  if (cstart) {
+    for (k = 0; k < Annz; k++) Aj[k] -= cstart;
+  }
+
+  // debug print
+  if (0) {
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   ai, aj\n"));
+    PetscCall(PetscIntView(m + 1, Ai, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscIntView(m + 1, Bi, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscIntView(Annz1 + Annz2, Aj, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscIntView(Bnnz1 + Bnnz2, Bj, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   A/B perm 2/1\n"));
+    PetscCall(PetscIntView(Atot2, (PetscInt *)Aperm2, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscIntView(Atot1, (PetscInt *)Aperm1, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscIntView(Btot2, (PetscInt *)Bperm2, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscIntView(Btot1, (PetscInt *)Bperm1, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   A/B j map 1/2\n"));
+    PetscCall(PetscIntView(Annz1 + 1, (PetscInt *)Ajmap1, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscIntView(Bnnz1 + 1, (PetscInt *)Bjmap1, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscIntView(Annz2 + 1, (PetscInt *)Ajmap2, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscIntView(Bnnz2 + 1, (PetscInt *)Bjmap2, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   range\n"));
+    PetscCall(PetscIntView(size + 1, mat->rmap->range, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscIntView(size + 1, mat->cmap->range, PETSC_VIEWER_STDOUT_WORLD));
+  }
+
+  if (rbs * cbs > 1) { // expand blocked matrix to a scalar for symbolic work
+    PetscInt *Aj_new, *Bj_new, *Ai_new, *Bi_new;
+    PetscCall(PetscMalloc1(m * rbs + 1, &Ai_new));
+    PetscCall(PetscMalloc1(m * rbs + 1, &Bi_new));
+    Ai_new[0] = Bi_new[0] = 0;
+    for (k = p = 0; k < m; k++) {
+      int ncolA = (Ai[k + 1] - Ai[k]) * cbs, ncolB = (Bi[k + 1] - Bi[k]) * cbs;
+      for (q = 0; q < rbs; q++, p++) {
+        Ai_new[p + 1] = Ai_new[p] + ncolA;
+        Bi_new[p + 1] = Bi_new[p] + ncolB;
+      }
+    }
+    /* PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   ai\n")); */
+    /* PetscCall(PetscIntView(m * rbs + 1, Ai_new, PETSC_VIEWER_STDOUT_WORLD)); */
+    /* PetscCall(PetscIntView(m * rbs + 1, Bi_new, PETSC_VIEWER_STDOUT_WORLD)); */
+    PetscCall(PetscMalloc1(Annz * rbs * cbs, &Aj_new));
+    PetscCall(PetscMalloc1(Bnnz * rbs * cbs, &Bj_new));
+    for (k = p = q = 0; k < m; k++) {
+      PetscInt jstartA = Ai[k], jendA = Ai[k + 1], jstartB = Bi[k], jendB = Bi[k + 1];
+      for (PetscInt i = 0; i < rbs; i++) {
+        // A
+        for (PetscInt jj = jstartA; jj < jendA; jj++) {
+          PetscInt col0 = Aj[jj] * cbs;
+          for (PetscInt j = 0; j < cbs; j++, p++) { Aj_new[p] = col0 + j; }
+        }
+        // B
+        for (PetscInt jj = jstartB; jj < jendB; jj++) {
+          PetscInt col0 = Bj[jj] * cbs;
+          for (PetscInt j = 0; j < cbs; j++, q++) { Bj_new[q] = col0 + j; }
+        }
+      }
+    }
+    PetscCheck(p == Annz * rbs * cbs, comm, PETSC_ERR_PLIB, "A Iterate wrong!!!!!");
+    PetscCheck(q == Bnnz * rbs * cbs, comm, PETSC_ERR_PLIB, "B Iterate wrong!!!!!");
+    /* PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   aj\n")); */
+    /* PetscCall(PetscIntView(Annz * rbs * cbs, Aj_new, PETSC_VIEWER_STDOUT_WORLD)); */
+    /* PetscCall(PetscIntView(Bnnz * rbs * cbs, Bj_new, PETSC_VIEWER_STDOUT_WORLD)); */
+    // replace
+    PetscCall(PetscFree(Ai));
+    PetscCall(PetscFree(Bi));
+    PetscCall(PetscFree(Aj));
+    PetscCall(PetscFree(Bj));
+    Ai = Ai_new;
+    Bi = Bi_new;
+    Aj = Aj_new;
+    Bj = Bj_new;
+    PetscCall(MatDestroy(&mat));
+    mat    = mat_orig;
+    mpiaij = (Mat_MPIAIJ *)mat->data;
+    // redo get meta data
+    PetscCall(PetscLayoutSetUp(mat->rmap));
+    PetscCall(PetscLayoutSetUp(mat->cmap));
+    PetscCall(PetscLayoutGetRange(mat->rmap, &rstart, &rend));
+    PetscCall(PetscLayoutGetRange(mat->cmap, &cstart, &cend));
+    PetscCall(MatGetLocalSize(mat, &m, &n));
+    PetscCall(MatGetSize(mat, &M, &N));
+  }
+
   /* Create new submatrices for on-process and off-process coupling                  */
   PetscScalar     *Aa, *Ba;
   MatType          rtype;
   Mat_SeqAIJ      *a, *b;
   PetscObjectState state;
-  PetscCall(PetscCalloc1(Annz, &Aa)); /* Zero matrix on device */
-  PetscCall(PetscCalloc1(Bnnz, &Ba));
-  /* make Aj[] local, i.e, based off the start column of the diagonal portion */
-  if (cstart) {
-    for (k = 0; k < Annz; k++) Aj[k] -= cstart;
-  }
+  PetscCall(PetscCalloc1(Annz * rbs * cbs, &Aa)); /* Zero matrix on device with block data */
+  PetscCall(PetscCalloc1(Bnnz * rbs * cbs, &Ba));
 
   PetscCall(MatGetRootType_Private(mat, &rtype));
 
@@ -6676,13 +6789,16 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
   b->free_ij = PETSC_TRUE;
   a->maxnz   = a->nz;
   b->maxnz   = b->nz;
+  PetscCheck(a->nz % (rbs * cbs) == 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Blocked COO assembly needs dense blocks, nz=%" PetscInt_FMT ", bs=(%" PetscInt_FMT ", %" PetscInt_FMT ")", a->nz, rbs, cbs);
+  PetscCheck(b->nz % (rbs * cbs) == 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Blocked COO assembly needs dense blocks, nz=%" PetscInt_FMT ", bs=(%" PetscInt_FMT ", %" PetscInt_FMT ")", b->nz, rbs, cbs);
 
   /* conversion must happen AFTER multiply setup */
   PetscCall(MatConvert(mpiaij->A, rtype, MAT_INPLACE_MATRIX, &mpiaij->A));
   PetscCall(MatConvert(mpiaij->B, rtype, MAT_INPLACE_MATRIX, &mpiaij->B));
   PetscCall(VecDestroy(&mpiaij->lvec));
   PetscCall(MatCreateVecs(mpiaij->B, &mpiaij->lvec, NULL));
-
+  PetscCall(PetscIntView(1, &nleaves, PETSC_VIEWER_STDOUT_WORLD));
+  PetscCall(PetscIntView(1, &nroots, PETSC_VIEWER_STDOUT_WORLD));
   // Put the COO struct in a container and then attach that to the matrix
   PetscCall(PetscMalloc1(1, &coo));
   coo->n       = coo_n;
@@ -6709,7 +6825,7 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
   coo->Bperm2  = Bperm2;
   coo->Cperm1  = Cperm1;
   // Allocate in preallocation. If not used, it has zero cost on host
-  PetscCall(PetscMalloc2(coo->sendlen, &coo->sendbuf, coo->recvlen, &coo->recvbuf));
+  PetscCall(PetscMalloc2(coo->sendlen * rbs * cbs, &coo->sendbuf, coo->recvlen * rbs * cbs, &coo->recvbuf));
   PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &container));
   PetscCall(PetscContainerSetPointer(container, coo));
   PetscCall(PetscContainerSetCtxDestroy(container, MatCOOStructDestroy_MPIAIJ));
@@ -6718,7 +6834,25 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatSetValuesCOO_MPIAIJ(Mat mat, const PetscScalar v[], InsertMode imode)
+PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[])
+{
+  PetscFunctionBegin;
+  PetscCall(MatSetPreallocationCOO_MPIAIJ_Private(mat, coo_n, coo_i, coo_j, 1, 1));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* coo_i/j are block indices, coo_n = NNZ/rbs*cbs. work in block indices until Mat allocate */
+PetscErrorCode MatSetPreallocationCOOBlocked_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[])
+{
+  PetscInt rbs = 1, cbs = 1;
+
+  PetscFunctionBegin;
+  PetscCall(MatGetBlockSizes(mat, &rbs, &cbs));
+  PetscCall(MatSetPreallocationCOO_MPIAIJ_Private(mat, coo_n, coo_i, coo_j, rbs, cbs));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSetValuesCOO_MPIAIJ_Private(Mat mat, const PetscScalar v[], InsertMode imode, PetscInt rbs, PetscInt cbs)
 {
   Mat_MPIAIJ          *mpiaij = (Mat_MPIAIJ *)mat->data;
   Mat                  A = mpiaij->A, B = mpiaij->B;
@@ -6753,32 +6887,175 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJ(Mat mat, const PetscScalar v[], Ins
   PetscCall(MatSeqAIJGetArray(B, &Ba));
 
   /* Pack entries to be sent to remote */
-  for (PetscCount i = 0; i < coo->sendlen; i++) sendbuf[i] = v[Cperm1[i]];
+  for (PetscCount i = 0, q = 0; i < coo->sendlen; i++) {
+    if (rbs * cbs == 1) sendbuf[i] = v[Cperm1[i]];
+    else {
+      const PetscScalar *tmp = &v[Cperm1[i] * rbs * cbs]; // jump into v
+      for (PetscInt ki = 0; ki < rbs; ki++) {
+        for (PetscInt jj = 0; jj < cbs; jj++) { sendbuf[q++] = *tmp++; }
+      }
+    }
+  }
 
+  MPI_Datatype MPI_BS2DOUBLES;
+  PetscCallMPI(MPI_Type_contiguous(rbs * cbs, MPI_DOUBLE, &MPI_BS2DOUBLES));
+  PetscCallMPI(MPI_Type_commit(&MPI_BS2DOUBLES));
   /* Send remote entries to their owner and overlap the communication with local computation */
-  PetscCall(PetscSFReduceWithMemTypeBegin(coo->sf, MPIU_SCALAR, PETSC_MEMTYPE_HOST, sendbuf, PETSC_MEMTYPE_HOST, recvbuf, MPI_REPLACE));
+  PetscCall(PetscSFReduceWithMemTypeBegin(coo->sf, MPI_BS2DOUBLES, PETSC_MEMTYPE_HOST, sendbuf, PETSC_MEMTYPE_HOST, recvbuf, MPI_REPLACE));
+
   /* Add local entries to A and B */
-  for (PetscCount i = 0; i < coo->Annz; i++) { /* All nonzeros in A are either zero'ed or added with a value (i.e., initialized) */
-    PetscScalar sum = 0.0;                     /* Do partial summation first to improve numerical stability */
-    for (PetscCount k = Ajmap1[i]; k < Ajmap1[i + 1]; k++) sum += v[Aperm1[k]];
-    Aa[i] = (imode == INSERT_VALUES ? 0.0 : Aa[i]) + sum;
+  if (rbs * cbs == 1) {
+    for (PetscCount i = 0; i < coo->Annz; i++) { /* All nonzeros in A are either zero'ed or added with a value (i.e., initialized) */
+      PetscScalar sum = 0.0;                     /* Do partial summation first to improve numerical stability */
+      for (PetscCount k = Ajmap1[i]; k < Ajmap1[i + 1]; k++) sum += v[Aperm1[k]];
+      Aa[i] = (imode == INSERT_VALUES ? 0.0 : Aa[i]) + sum;
+    }
+    for (PetscCount i = 0; i < coo->Bnnz; i++) {
+      PetscScalar sum = 0.0;
+      for (PetscCount k = Bjmap1[i]; k < Bjmap1[i + 1]; k++) sum += v[Bperm1[k]];
+      Ba[i] = (imode == INSERT_VALUES ? 0.0 : Ba[i]) + sum;
+    }
+  } else { // blocked
+    Mat_SeqAIJ  *aseq = (Mat_SeqAIJ *)A->data;
+    PetscInt    *ii   = aseq->i, offset, nz_row, joff;
+    PetscScalar *sum;
+    PetscCall(PetscMalloc1(rbs * cbs, &sum));
+    // A
+    for (PetscCount i = 0, row = 0; i < coo->Annz; i++) { /* All nonzeros in A are either zero'ed or added with a value (i.e., initialized) */
+      PetscCall(PetscArrayzero(sum, rbs * cbs));          /* Do partial summation first to improve numerical stability */
+      for (PetscCount j = Ajmap1[i]; j < Ajmap1[i + 1]; j++) {
+        const PetscScalar *tmp = &v[Aperm1[j] * rbs * cbs]; // jump into v
+        //sum += v[Aperm1[j]];
+        for (PetscInt ki = 0; ki < rbs; ki++) {
+          for (PetscInt jj = 0; jj < cbs; jj++) { sum[ki * cbs + jj] += *tmp++; }
+        }
+      }
+      //Aa[i] = (imode == INSERT_VALUES ? 0.0 : Aa[i]) + sum;
+      offset = i * rbs * cbs;                     // top corner of BAIJ data, in row block of AIJ
+      while (offset >= ii[row + rbs]) row += rbs; // search: get to correct block row (TODO parallel)
+      joff = (offset - ii[row]) / rbs;            // real (cbs * block-col) column j, offset is row_start + rbs * cbs * block-col
+      PetscCheck(joff >= 0, PETSC_COMM_SELF, PETSC_ERR_FILE_UNEXPECTED, "joff < 0 : %d", (int)joff);
+      nz_row = ii[row + 1] - ii[row];
+      for (PetscInt ki = 0; ki < rbs; ki++) {
+        for (PetscInt jj = 0; jj < cbs; jj++) {
+          PetscInt idx = ii[row] + ki * nz_row + joff + jj;
+          Aa[idx]      = (imode == INSERT_VALUES ? 0.0 : Aa[idx]) + sum[ki * cbs + jj];
+        }
+      }
+    }
+    // B
+    aseq = (Mat_SeqAIJ *)B->data;
+    ii   = aseq->i;
+    for (PetscCount i = 0, row = 0; i < coo->Bnnz; i++) { /* All nonzeros in B are either zero'ed or added with a value (i.e., initialized) */
+      PetscCall(PetscArrayzero(sum, rbs * cbs));          /* Do partial summation first to improve numerical stability */
+      for (PetscCount j = Bjmap1[i]; j < Bjmap1[i + 1]; j++) {
+        const PetscScalar *tmp = &v[Bperm1[j] * rbs * cbs]; // jump into v
+        //sum += v[Bperm1[j]];
+        for (PetscInt ki = 0; ki < rbs; ki++) {
+          for (PetscInt jj = 0; jj < cbs; jj++) { sum[ki * cbs + jj] += *tmp++; }
+        }
+      }
+      //Ba[i] = (imode == INSERT_VALUES ? 0.0 : Ba[i]) + sum;
+      offset = i * rbs * cbs;                     // top corner of BAIJ data, in row block of AIJ
+      while (offset >= ii[row + rbs]) row += rbs; // search: get to correct block row (TODO parallel)
+      joff = (offset - ii[row]) / rbs;            // real (cbs * block-col) column j, offset is row_start + rbs * cbs * block-col
+      PetscCheck(joff >= 0, PETSC_COMM_SELF, PETSC_ERR_FILE_UNEXPECTED, "joff < 0 : %d", (int)joff);
+      nz_row = ii[row + 1] - ii[row];
+      for (PetscInt ki = 0; ki < rbs; ki++) {
+        for (PetscInt jj = 0; jj < cbs; jj++) {
+          PetscInt idx = ii[row] + ki * nz_row + joff + jj;
+          Ba[idx]      = (imode == INSERT_VALUES ? 0.0 : Ba[idx]) + sum[ki * cbs + jj];
+        }
+      }
+    }
+    PetscCall(PetscFree(sum));
   }
-  for (PetscCount i = 0; i < coo->Bnnz; i++) {
-    PetscScalar sum = 0.0;
-    for (PetscCount k = Bjmap1[i]; k < Bjmap1[i + 1]; k++) sum += v[Bperm1[k]];
-    Ba[i] = (imode == INSERT_VALUES ? 0.0 : Ba[i]) + sum;
-  }
-  PetscCall(PetscSFReduceEnd(coo->sf, MPIU_SCALAR, sendbuf, recvbuf, MPI_REPLACE));
+
+  PetscCall(PetscSFReduceEnd(coo->sf, MPI_BS2DOUBLES, sendbuf, recvbuf, MPI_REPLACE));
+  PetscCallMPI(MPI_Type_free(&MPI_BS2DOUBLES));
 
   /* Add received remote entries to A and B */
-  for (PetscCount i = 0; i < coo->Annz2; i++) {
-    for (PetscCount k = Ajmap2[i]; k < Ajmap2[i + 1]; k++) Aa[Aimap2[i]] += recvbuf[Aperm2[k]];
+  if (rbs * cbs == 1) {
+    for (PetscCount i = 0; i < coo->Annz2; i++) {
+      for (PetscCount k = Ajmap2[i]; k < Ajmap2[i + 1]; k++) Aa[Aimap2[i]] += recvbuf[Aperm2[k]];
+    }
+    for (PetscCount i = 0; i < coo->Bnnz2; i++) {
+      for (PetscCount k = Bjmap2[i]; k < Bjmap2[i + 1]; k++) Ba[Bimap2[i]] += recvbuf[Bperm2[k]];
+    }
+  } else { // blocked
+    Mat_SeqAIJ *aseq = (Mat_SeqAIJ *)A->data;
+    PetscInt   *ii   = aseq->i, offset, nz_row, joff;
+    // A
+    for (PetscCount i = 0, row = 0; i < coo->Annz2; i++) {
+      offset = Aimap2[i] * rbs * cbs; // top corner of BAIJ data, in row block of AIJ
+      while (offset >= ii[row + rbs]) {
+        row += rbs; // search: get to correct block row (TODO parallel)
+        printf("\trecv ptr inc to %ld\n", row);
+      }
+      while (offset < ii[row]) {
+        row -= rbs; // search: get to correct block row (TODO parallel)
+        printf("\t\trecv ptr DEC to %ld\n", row);
+      }
+      joff = (offset - ii[row]) / rbs; // real (cbs * block-col) column j, offset is row_start + rbs * cbs * block-col
+      PetscCheck(joff >= 0, PETSC_COMM_SELF, PETSC_ERR_FILE_UNEXPECTED, "joff < 0 : %d", (int)joff);
+      nz_row = ii[row + 1] - ii[row];
+      for (PetscCount k = Ajmap2[i]; k < Ajmap2[i + 1]; k++) {
+        const PetscScalar *tmp = &recvbuf[Aperm2[k] * rbs * cbs]; // jump into
+        for (PetscInt ki = 0; ki < rbs; ki++) {
+          for (PetscInt jj = 0; jj < cbs; jj++) {
+            PetscInt idx = ii[row] + ki * nz_row + joff + jj;
+            Aa[idx] += *tmp++;
+          }
+        }
+      }
+    }
+    // B
+    aseq = (Mat_SeqAIJ *)B->data;
+    ii   = aseq->i;
+    for (PetscCount i = 0, row = 0; i < coo->Bnnz2; i++) {
+      offset = Bimap2[i] * rbs * cbs; // top corner of BAIJ data, in row block of AIJ
+      while (offset >= ii[row + rbs]) {
+        row += rbs; // search: get to correct block row (TODO parallel)
+        printf("\tB recv ptr inc to %ld\n", row);
+      }
+      while (offset < ii[row]) {
+        row -= rbs; // search: get to correct block row (TODO parallel)
+        printf("\t\tB recv ptr DEC to %ld\n", row);
+      }
+      joff = (offset - ii[row]) / rbs; // real (cbs * block-col) column j, offset is row_start + rbs * cbs * block-col
+      PetscCheck(joff >= 0, PETSC_COMM_SELF, PETSC_ERR_FILE_UNEXPECTED, "joff < 0 : %d", (int)joff);
+      nz_row = ii[row + 1] - ii[row];
+      for (PetscCount k = Bjmap2[i]; k < Bjmap2[i + 1]; k++) {
+        const PetscScalar *tmp = &recvbuf[Bperm2[k] * rbs * cbs]; // jump into
+        for (PetscInt ki = 0; ki < rbs; ki++) {
+          for (PetscInt jj = 0; jj < cbs; jj++) {
+            PetscInt idx = ii[row] + ki * nz_row + joff + jj;
+            Ba[idx] += *tmp++;
+          }
+        }
+      }
+    }
   }
-  for (PetscCount i = 0; i < coo->Bnnz2; i++) {
-    for (PetscCount k = Bjmap2[i]; k < Bjmap2[i + 1]; k++) Ba[Bimap2[i]] += recvbuf[Bperm2[k]];
-  }
+
   PetscCall(MatSeqAIJRestoreArray(A, &Aa));
   PetscCall(MatSeqAIJRestoreArray(B, &Ba));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSetValuesCOO_MPIAIJ(Mat mat, const PetscScalar v[], InsertMode imode)
+{
+  PetscFunctionBegin;
+  PetscCall(MatSetValuesCOO_MPIAIJ_Private(mat, v, imode, 1, 1));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSetValuesCOOBlocked_MPIAIJ(Mat mat, const PetscScalar v[], InsertMode imode)
+{
+  PetscInt rbs = 1, cbs = 1;
+
+  PetscFunctionBegin;
+  PetscCall(MatGetBlockSizes(mat, &rbs, &cbs));
+  PetscCall(MatSetValuesCOO_MPIAIJ_Private(mat, v, imode, rbs, cbs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -6880,6 +7157,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJ(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_mpiaij_mpiaij_C", MatProductSetFromOptions_MPIAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_MPIAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetValuesCOO_C", MatSetValuesCOO_MPIAIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetPreallocationCOOBlocked_C", MatSetPreallocationCOOBlocked_MPIAIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetValuesCOOBlocked_C", MatSetValuesCOOBlocked_MPIAIJ));
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATMPIAIJ));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

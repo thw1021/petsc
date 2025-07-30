@@ -246,6 +246,8 @@ PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat, MatType, MatReuse, M
 #endif
 PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_Basic(Mat, PetscCount, PetscInt[], PetscInt[]);
 PETSC_INTERN PetscErrorCode MatSetValuesCOO_Basic(Mat, const PetscScalar[], InsertMode);
+PETSC_INTERN PetscErrorCode MatSetPreallocationCOOBlocked_Basic(Mat, PetscCount, PetscInt[], PetscInt[]);
+PETSC_INTERN PetscErrorCode MatSetValuesCOOBlocked_Basic(Mat, const PetscScalar[], InsertMode);
 
 /* This can be moved to the public header after implementing some missing MatProducts */
 PETSC_INTERN PetscErrorCode MatCreateFromISLocalToGlobalMapping(ISLocalToGlobalMapping, Mat, PetscBool, PetscBool, MatType, Mat *);

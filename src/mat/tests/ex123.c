@@ -2,6 +2,8 @@ static char help[] = "Test MatSetPreallocationCOO and MatSetValuesCOO\n\n";
 
 #include <petscmat.h>
 
+#include <unistd.h>
+
 int main(int argc, char **args)
 {
   Mat                    A, At, AAt, T = NULL;
@@ -15,15 +17,21 @@ int main(int argc, char **args)
   PetscInt               j1[] = {1, 4, 3, 5, 3, 3, 4, 5, 0, 3, 1, -1, -1};
   PetscInt               i2[] = {7, 6, 2, 0, 4, 1, 1, 2, 1, -1, -1};
   PetscInt               j2[] = {1, 4, 3, 5, 3, 3, 4, 0, 1, -1, -1};
-  PetscScalar            v1[] = {-1., 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., PETSC_MAX_REAL, PETSC_MAX_REAL};
-  PetscScalar            v2[] = {1., -1., -2., -3., -4., -5., -6., -7., -8., -9., -10., PETSC_MAX_REAL, PETSC_MAX_REAL};
-  PetscInt               N = 6, m = 8, M, rstart, cstart, i;
-  PetscMPIInt            size;
-  PetscBool              loc      = PETSC_FALSE;
-  PetscBool              locdiag  = PETSC_TRUE;
-  PetscBool              localapi = PETSC_FALSE;
-  PetscBool              neg      = PETSC_FALSE;
-  PetscBool              ismatis, ismpiaij, ishypre;
+  PetscScalar            v1[] = {-1., 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., PETSC_MAX_REAL, PETSC_MAX_REAL}, *v1_p = v1;
+  PetscScalar v1_bs2[] = {-1.1, -1.2, -1.3, -1.4, 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4, 6.1, 6.2, 6.3, 6.4, 7.1, 7.2, 7.3, 7.4, 8.1, 8.2, 8.3, 8.4, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 10.3, 10.4, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL};
+  PetscScalar v2[] = {1., -1., -2., -3., -4., -5., -6., -7., -8., -9., -10., PETSC_MAX_REAL, PETSC_MAX_REAL}, *v2_p = v2;
+  PetscScalar v2_bs2[] = {1.1,  1.2,  1.3,  1.4,  -1.1,  -1.2,  -1.3,  -1.4,  -2.1,           -2.2,           -2.3,           -2.4,           -3.1,           -3.2,           -3.3,           -3.4,          -4.1, -4.2,
+                          -4.3, -4.4, -5.1, -5.2, -5.3,  -5.4,  -6.1,  -6.2,  -6.3,           -6.4,           -7.1,           -7.2,           -7.3,           -7.4,           -8.1,           -8.2,          -8.3, -8.4,
+                          -9.1, -9.2, -9.3, -9.4, -10.1, -10.2, -10.3, -10.4, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL};
+  PetscInt    Nx = 6, m = 8, M, rstart, cstart, i, bs = 1, paus = 0;
+  PetscMPIInt size;
+  PetscBool   loc      = PETSC_FALSE;
+  PetscBool   locdiag  = PETSC_TRUE;
+  PetscBool   localapi = PETSC_FALSE;
+  PetscBool   neg      = PETSC_FALSE;
+  PetscBool   ismatis, ismpiaij, ishypre;
+  PetscErrorCode (*pre_alloc_coo)(Mat, PetscCount, PetscInt[], PetscInt[]);
+  PetscErrorCode (*set_values)(Mat, const PetscScalar[], InsertMode);
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
@@ -31,33 +39,51 @@ int main(int argc, char **args)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-loc", &loc, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-locdiag", &locdiag, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-localapi", &localapi, NULL));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-pause", &paus, NULL));
   PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
-  if (loc) {
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-mat_block_size", &bs, NULL));
+  if (bs == 2) {
+    m *= 2;
+    Nx *= 2;
+    v1_p          = v1_bs2;
+    v2_p          = v2_bs2;
+    pre_alloc_coo = MatSetPreallocationCOOBlocked;
+    set_values    = MatSetValuesCOOBlocked;
+  } else if (bs == 1) {
+    pre_alloc_coo = MatSetPreallocationCOO;
+    set_values    = MatSetValuesCOO;
+  } else PetscCheck(bs == 1, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Invalid Mat block size (1 or 2)");
+  if (loc) { // Nx is local size
     if (locdiag) {
-      PetscCall(MatSetSizes(A, m, N, PETSC_DECIDE, PETSC_DECIDE));
+      PetscCall(MatSetSizes(A, m, Nx, PETSC_DECIDE, PETSC_DECIDE));
     } else {
-      PetscCall(MatSetSizes(A, m, m + N, PETSC_DECIDE, PETSC_DECIDE));
+      PetscCall(MatSetSizes(A, m, m + Nx, PETSC_DECIDE, PETSC_DECIDE)); // ??? what is !locdiag
     }
-  } else {
-    PetscCall(MatSetSizes(A, m, PETSC_DECIDE, PETSC_DECIDE, N));
+  } else {                                                        // !loc: Nx is global
+    PetscCall(MatSetSizes(A, m, PETSC_DECIDE, PETSC_DECIDE, Nx)); // N updated soon
   }
   PetscCall(MatSetFromOptions(A));
   PetscCall(MatGetLayouts(A, &rmap, &cmap));
   PetscCall(PetscLayoutSetUp(rmap));
   PetscCall(PetscLayoutSetUp(cmap));
-  PetscCall(PetscLayoutGetRange(rmap, &rstart, NULL));
+  PetscCall(PetscLayoutGetRange(rmap, &rstart, NULL)); // non-blocked (big) sizes
   PetscCall(PetscLayoutGetRange(cmap, &cstart, NULL));
   PetscCall(PetscLayoutGetSize(rmap, &M));
-  PetscCall(PetscLayoutGetSize(cmap, &N));
+  PetscCall(PetscLayoutGetSize(cmap, &Nx));
+
+  /* int rank; */
+  /* MPI_Comm_rank(MPI_COMM_WORLD, &rank); */
+  /* printf("Rank %d PID: %d - attach with LLDB\n", rank, getpid()); */
+  /* sleep(paus); */
 
   PetscCall(PetscObjectTypeCompare((PetscObject)A, MATIS, &ismatis));
   PetscCall(PetscObjectTypeCompare((PetscObject)A, MATHYPRE, &ishypre));
 
-  /* create fake l2g maps to test the local API */
+  /* create fake l2g maps to test the local API - not blocked */
   PetscCall(ISCreateStride(PETSC_COMM_WORLD, M - rstart, rstart, 1, &is));
   PetscCall(ISLocalToGlobalMappingCreateIS(is, &rl2g));
   PetscCall(ISDestroy(&is));
-  PetscCall(ISCreateStride(PETSC_COMM_WORLD, N, 0, 1, &is));
+  PetscCall(ISCreateStride(PETSC_COMM_WORLD, Nx, 0, 1, &is));
   PetscCall(ISLocalToGlobalMappingCreateIS(is, &cl2g));
   PetscCall(ISDestroy(&is));
   PetscCall(MatSetLocalToGlobalMapping(A, rl2g, cl2g));
@@ -69,16 +95,16 @@ int main(int argc, char **args)
   PetscCall(VecSet(x, 1.));
   PetscCall(VecSet(z, 2.));
   if (!localapi)
-    for (i = 0; i < n1; i++) i1[i] += rstart;
+    for (i = 0; i < n1; i++) i1[i] += rstart / bs;
   if (!localapi)
-    for (i = 0; i < n2; i++) i2[i] += rstart;
+    for (i = 0; i < n2; i++) i2[i] += rstart / bs;
   if (loc) {
     if (locdiag) {
-      for (i = 0; i < n1; i++) j1[i] += cstart;
-      for (i = 0; i < n2; i++) j2[i] += cstart;
+      for (i = 0; i < n1; i++) j1[i] += cstart / bs; // m and cstart not blocked
+      for (i = 0; i < n2; i++) j2[i] += cstart / bs;
     } else {
-      for (i = 0; i < n1; i++) j1[i] += cstart + m;
-      for (i = 0; i < n2; i++) j2[i] += cstart + m;
+      for (i = 0; i < n1; i++) j1[i] += cstart / bs + m / bs; // ??? what is !locdiag
+      for (i = 0; i < n2; i++) j2[i] += cstart / bs + m / bs;
     }
   }
   if (neg) {
@@ -89,20 +115,21 @@ int main(int argc, char **args)
   PetscCall(PetscMalloc2(PetscMax(n1, n2), &it, PetscMax(n1, n2), &jt));
   /* test with repeated entries */
   if (!localapi) {
-    PetscCall(MatSetPreallocationCOO(A, n1, i1, j1));
+    PetscCall(pre_alloc_coo(A, n1, i1, j1));
   } else {
     PetscCall(PetscArraycpy(it, i1, n1));
     PetscCall(PetscArraycpy(jt, j1, n1));
-    PetscCall(MatSetPreallocationCOOLocal(A, n1, it, jt));
+    PetscCall(pre_alloc_coo(A, n1, it, jt));
   }
-  PetscCall(MatSetValuesCOO(A, v1, ADD_VALUES));
-  PetscCall(MatMult(A, x, y));
+  PetscCall(set_values(A, v1_p, ADD_VALUES));
   PetscCall(MatView(A, NULL));
+  PetscCall(MatMult(A, x, y));
   PetscCall(VecView(y, NULL));
-  PetscCall(MatSetValuesCOO(A, v2, ADD_VALUES));
+  PetscCall(set_values(A, v2_p, ADD_VALUES));
   PetscCall(MatMultAdd(A, x, y, y));
   PetscCall(MatView(A, NULL));
   PetscCall(VecView(y, NULL));
+
   T = A;
   if (ishypre) PetscCall(MatConvert(A, MATAIJ, MAT_INITIAL_MATRIX, &T));
   PetscCall(MatTranspose(T, MAT_INITIAL_MATRIX, &At));
@@ -118,38 +145,38 @@ int main(int argc, char **args)
   if (ishypre) PetscCall(MatDestroy(&T));
 
   /* INSERT_VALUES will overwrite matrix entries but
-     still perform the sum of the repeated entries */
-  PetscCall(MatSetValuesCOO(A, v2, INSERT_VALUES));
+    still perform the sum of the repeated entries */
+  PetscCall(set_values(A, v2_p, INSERT_VALUES));
   PetscCall(MatView(A, NULL));
 
   /* test with unique entries */
   PetscCall(PetscArraycpy(it, i2, n2));
   PetscCall(PetscArraycpy(jt, j2, n2));
   if (!localapi) {
-    PetscCall(MatSetPreallocationCOO(A, n2, it, jt));
+    PetscCall(pre_alloc_coo(A, n2, it, jt));
   } else {
-    PetscCall(MatSetPreallocationCOOLocal(A, n2, it, jt));
+    PetscCall(pre_alloc_coo(A, n2, it, jt));
   }
-  PetscCall(MatSetValuesCOO(A, v1, ADD_VALUES));
+  PetscCall(set_values(A, v1_p, ADD_VALUES));
   PetscCall(MatMult(A, x, y));
   PetscCall(MatView(A, NULL));
   PetscCall(VecView(y, NULL));
-  PetscCall(MatSetValuesCOO(A, v2, ADD_VALUES));
+  PetscCall(set_values(A, v2_p, ADD_VALUES));
   PetscCall(MatMultAdd(A, x, y, z));
   PetscCall(MatView(A, NULL));
   PetscCall(VecView(z, NULL));
   PetscCall(PetscArraycpy(it, i2, n2));
   PetscCall(PetscArraycpy(jt, j2, n2));
   if (!localapi) {
-    PetscCall(MatSetPreallocationCOO(A, n2, it, jt));
+    PetscCall(pre_alloc_coo(A, n2, it, jt));
   } else {
-    PetscCall(MatSetPreallocationCOOLocal(A, n2, it, jt));
+    PetscCall(pre_alloc_coo(A, n2, it, jt));
   }
-  PetscCall(MatSetValuesCOO(A, v1, INSERT_VALUES));
+  PetscCall(set_values(A, v1_p, INSERT_VALUES));
   PetscCall(MatMult(A, x, y));
   PetscCall(MatView(A, NULL));
   PetscCall(VecView(y, NULL));
-  PetscCall(MatSetValuesCOO(A, v2, INSERT_VALUES));
+  PetscCall(set_values(A, v2_p, INSERT_VALUES));
   PetscCall(MatMultAdd(A, x, y, z));
   PetscCall(MatView(A, NULL));
   PetscCall(VecView(z, NULL));
@@ -209,12 +236,12 @@ int main(int argc, char **args)
     PetscCall(MatSeqAIJRestoreArrayRead(lB, &vB));
     if (ishypre) PetscCall(MatDestroy(&T));
 
-    PetscCall(MatSetPreallocationCOO(A, nnz, coo_i, coo_j));
-    PetscCall(MatSetValuesCOO(A, coo_v, ADD_VALUES));
+    PetscCall(pre_alloc_coo(A, nnz, coo_i, coo_j));
+    PetscCall(set_values(A, coo_v, ADD_VALUES));
     PetscCall(MatMult(A, x, y));
     PetscCall(MatView(A, NULL));
     PetscCall(VecView(y, NULL));
-    PetscCall(MatSetValuesCOO(A, coo_v, INSERT_VALUES));
+    PetscCall(set_values(A, coo_v, INSERT_VALUES));
     PetscCall(MatMult(A, x, y));
     PetscCall(MatView(A, NULL));
     PetscCall(VecView(y, NULL));
@@ -382,5 +409,31 @@ int main(int argc, char **args)
      filter: grep -v type | grep -v "Mat Object"
      diff_args: -j
      args: -mat_type is -localapi {{0 1}} -neg {{0 1}}
+
+   test:
+     suffix: 1_blocked
+     filter: grep -v type | grep -v "Mat Object"
+     args: -mat_type seqaij -mat_block_size 2
+#     args: -mat_type {{seqaij mpiaij}} -mat_block_size 2 -localapi {{0 1}} -neg {{0 1}}
+
+   test:
+     suffix: 2_blocked
+     nsize: 7
+     filter: grep -v type | grep -v "Mat Object"
+     args: -mat_type mpiaij -mat_block_size 2 -localapi {{0 1}} -neg {{0 1}}
+
+   test:
+     suffix: 3_blocked
+     nsize: 3
+     filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
+     args: -mat_type mpiaij -mat_block_size 2 -loc -localapi {{0 1}} -neg {{0 1}}
+
+   test:
+     suffix: 4_blocked
+     nsize: 4
+     filter: grep -v type | grep -v "Mat Object"
+     diff_args: -j
+     args: -mat_type mpiaij -mat_block_size 2 -loc -locdiag 0 -localapi {{0 1}} -neg {{0 1}}
 
 TEST*/

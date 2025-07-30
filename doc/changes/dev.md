@@ -69,6 +69,7 @@
 - Add `MatNullSpaceRemoveFn` type definition
 - Add `MatMFFDFn`, `MatMFFDiFn`, `MatMFFDiBaseFn`, and `MatMFFDCheckhFn` type definitions
 - Add `MatFDColoringFn` type definition
+- Add `MatSetPreallocationCOOBlocked` and `MatSetValuesCOOBlocked` to support blocked COO
 
 ```{rubric} MatCoarsen:
 ```

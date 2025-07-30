@@ -1558,7 +1558,7 @@ PetscErrorCode MatDestroy(Mat *A)
   This is labeled with C so does not automatically generate Fortran stubs and interfaces
   because it requires multiple Fortran interfaces depending on which arguments are scalar or arrays.
 
-.seealso: [](ch_matrices), `Mat`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`,
+.seealso: [](ch_matrices), `Mat`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`, `MatSetPreallocationCOO()`, `MatSetValuesCOO()`, `MatSetPreallocationCOOBlocked()`, `MatSetValuesCOOBlocked()`
           `InsertMode`, `INSERT_VALUES`, `ADD_VALUES`
 @*/
 PetscErrorCode MatSetValues(Mat mat, PetscInt m, const PetscInt idxm[], PetscInt n, const PetscInt idxn[], const PetscScalar v[], InsertMode addv)
