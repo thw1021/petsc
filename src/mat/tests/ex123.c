@@ -73,7 +73,7 @@ int main(int argc, char **args)
 
   /* int rank; */
   /* MPI_Comm_rank(MPI_COMM_WORLD, &rank); */
-  /* printf("Rank %d PID: %d — attach with LLDB\n", rank, getpid()); */
+  /* printf("Rank %d PID: %d - attach with LLDB\n", rank, getpid()); */
   /* sleep(paus); */
 
   PetscCall(PetscObjectTypeCompare((PetscObject)A, MATIS, &ismatis));
