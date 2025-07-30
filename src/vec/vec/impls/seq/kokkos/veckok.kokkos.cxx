@@ -1302,7 +1302,7 @@ PetscErrorCode VecKokkosPlaceArray(Vec v, PetscScalar *a)
   VecErrorIfNotKokkos(v);
   // Sync the old device view before replacing it; so that when it is put back, it has the saved value.
   PetscCall(KokkosDualViewSyncDevice(veckok->v_dual, PetscGetKokkosExecutionSpace()));
-  PetscCallCXX(veckok->unplaced_d = veckok->v_dual.view_device());
+  PetscCallCXX(veckok->unplacedarray_d = veckok->v_dual.view_device().data());
   // We assume a[] contains the latest data and discard the vector's old sync state
   PetscCall(veckok->UpdateArray<DefaultMemorySpace>(a));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1335,10 +1335,8 @@ PetscErrorCode VecKokkosResetArray(Vec v)
   VecErrorIfNotKokkos(v);
   // User wants to unhook the provided device array. Sync it so that user can get the latest
   PetscCall(KokkosDualViewSyncDevice(veckok->v_dual, PetscGetKokkosExecutionSpace()));
-  // Put the unplaced device view back
-  PetscCallCXX(veckok->v_dual = PetscScalarKokkosDualView(veckok->unplaced_d, veckok->v_dual.view_host()));
-  // Indicate that unplaced_d has the latest value before replacing.
-  PetscCallCXX(veckok->v_dual.modify_device());
+  // Put the unplaced device array back, and set an appropriate modify flag
+  PetscCall(veckok->UpdateArray<DefaultMemorySpace>(veckok->unplacedarray_d));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
