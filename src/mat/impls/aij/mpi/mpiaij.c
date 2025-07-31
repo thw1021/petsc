@@ -8033,13 +8033,12 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
 PETSC_INTERN PetscErrorCode MatGetCurrentMemType_MPIAIJ(Mat A, PetscMemType *memtype)
 {
   Mat_MPIAIJ  *mpiaij = (Mat_MPIAIJ *)A->data;
-  PetscMemType mD, mO;
+  PetscMemType mD = PETSC_MEMTYPE_HOST, mO = PETSC_MEMTYPE_HOST;
 
   PetscFunctionBegin;
-  PetscCall(MatGetCurrentMemType(mpiaij->A, &mD));
-  PetscCall(MatGetCurrentMemType(mpiaij->B, &mO));
-  PetscCheck(mD == mO, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "On-diagonal and off-diagonal matrices should have the same memory type");
-  *memtype = mD;
+  if (mpiaij->A) PetscCall(MatGetCurrentMemType(mpiaij->A, &mD));
+  if (mpiaij->B) PetscCall(MatGetCurrentMemType(mpiaij->B, &mO));
+  *memtype = (mD == mO) ? mD : PETSC_MEMTYPE_HOST;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
