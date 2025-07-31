@@ -20,11 +20,6 @@ class Configure(config.base.Configure):
     self.substPrefix  = ''
     return
 
-  def setupHelp(self, help):
-    import nargs
-    help.addArgument('Compilers', '-with-fortran-type-initialize=<bool>',   nargs.ArgBool(None, 1, 'Initialize PETSc objects in Fortran'))
-    return
-
   def setupDependencies(self, framework):
     config.base.Configure.setupDependencies(self, framework)
     self.setCompilers = framework.require('config.setCompilers', self)
@@ -123,15 +118,9 @@ class Configure(config.base.Configure):
     self.popLanguage()
     return
 
-  def checkFortranTypeInitialize(self):
-    '''Determines if PETSc objects in Fortran are initialized by default (doesn't work with common blocks)'''
-    if self.argDB['with-fortran-type-initialize']:
-      self.addDefine('FORTRAN_TYPE_INITIALIZE', ' = -2') # If change -2, please also update PETSC_FORTRAN_OBJECT_F_DESTROYED_TO_C_NULL() etc.
-      self.logPrint('Initializing Fortran objects')
-    else:
-      self.addDefine('FORTRAN_TYPE_INITIALIZE', ' ')
-      self.logPrint('Not initializing Fortran objects')
-    return
+  def setFortranTypeInitialize(self):
+    '''PETSc objects in Fortran are initialized by default (doesn't work with common blocks) hence PETSc objects cannot go in common blocks'''
+    self.addDefine('FORTRAN_TYPE_INITIALIZE', ' = -2') # If change -2, please also update PETSC_FORTRAN_OBJECT_F_DESTROYED_TO_C_NULL() etc.
 
   def checkFortranTypeStar(self):
     '''Determine whether the Fortran compiler handles type(*)'''
@@ -482,7 +471,7 @@ class Configure(config.base.Configure):
       self.executeTest(self.checkFortranModuleInclude)
       self.executeTest(self.checkFortranModuleOutput)
       self.executeTest(self.checkFortranTypeStar)
-      self.executeTest(self.checkFortranTypeInitialize)
+      self.executeTest(self.setFortranTypeInitialize)
       self.executeTest(self.configureFortranFlush)
       self.executeTest(self.checkDependencyGenerationFlag)
       self.executeTest(self.checkFortran90LineLength)
