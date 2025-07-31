@@ -2863,7 +2863,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIAIJ,
                                        /*139*/ NULL,
                                        NULL,
                                        NULL,
-                                       MatCopyHashToXAIJ_MPI_Hash};
+                                       MatCopyHashToXAIJ_MPI_Hash,
+                                       MatGetCurrentMemType_MPIAIJ};
 
 static PetscErrorCode MatStoreValues_MPIAIJ(Mat mat)
 {
@@ -8026,6 +8027,19 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
     PetscCall(MatViewFromOptions(Gmat, NULL, "-mat_filter_graph_view"));
   }
   *a_Gmat = Gmat;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode MatGetCurrentMemType_MPIAIJ(Mat A, PetscMemType *memtype)
+{
+  Mat_MPIAIJ  *mpiaij = (Mat_MPIAIJ *)A->data;
+  PetscMemType mD, mO;
+
+  PetscFunctionBegin;
+  PetscCall(MatGetCurrentMemType(mpiaij->A, &mD));
+  PetscCall(MatGetCurrentMemType(mpiaij->B, &mO));
+  PetscCheck(mD == mO, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "On-diagonal and off-diagonal matrices should have the same memory type");
+  *memtype = mD;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
