@@ -182,3 +182,4 @@
 ```
 
 - Add `PetscObjectNullify()`
+- Remove the `./configure` option `-with-fortran-type-initialize=0`. Hence, it is now not possible to include PETSc objects in common blocks
