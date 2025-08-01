@@ -32,8 +32,8 @@ int main(int argc, char **argv)
 
     // Check both x and y have correct values
     PetscCall(VecAXPY(x, -4.0, y)); // x -= 4 * y
-    // PetscCall(VecNorm(x, NORM_2, &norm));
-    // PetscCheck(norm < PETSC_SMALL, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Test failed with VecKokkosPlaceArray");
+    PetscCall(VecNorm(x, NORM_2, &norm));
+    PetscCheck(norm < PETSC_SMALL, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Test failed with VecKokkosPlaceArray");
 
     PetscCall(VecDestroy(&x));
     PetscCall(VecDestroy(&y));
