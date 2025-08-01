@@ -690,16 +690,16 @@ def getAPI():
     if not mansec: raise RuntimeError(i + ' does not have a MANSEC or SUBMANSEC')
     getFunctions(mansec.lower(), functiontoinclude, i)
 
-  # these functions are funky macros in C and cannot be parse directly
+  # these functions are funky macros in C and cannot be parsed directly
   funcs['PetscOptionsBegin']             = Function('PetscOptionsBegin')
   funcs['PetscOptionsBegin'].mansec      = 'sys'
   funcs['PetscOptionsBegin'].file        = 'aoptions.c';
-  funcs['PetscOptionsBegin'].includefile = 'petscsys.h'
+  funcs['PetscOptionsBegin'].includefile = 'petscoptions.h'
   funcs['PetscOptionsBegin'].dir         = 'src/sys/objects/'
   funcs['PetscOptionsBegin'].opaquestub  = True
   funcs['PetscOptionsBegin'].arguments   = [Argument('comm',   'MPI_Comm'),
                                             Argument('prefix', 'char', stars = 0, array = True, const = True),
-                                            Argument('prefix', 'char', stars = 0, array = True, const = True),
+                                            Argument('mess',   'char', stars = 0, array = True, const = True),
                                             Argument('sec',    'char', stars = 0, array = True, const = True)]
   funcs['PetscOptionsEnd']               = Function('PetscOptionsEnd')
   funcs['PetscOptionsEnd'].mansec        = 'sys'
