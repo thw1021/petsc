@@ -573,13 +573,13 @@ PETSC_EXTERN PetscErrorCode KSPResetFromOptions(KSP);
 
 PETSC_EXTERN PetscErrorCode       KSPMonitorSetFromOptions(KSP, const char[], const char[], void *);
 PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorResidual;
-PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorResidualDraw;
+PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorResidualView;
 PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorResidualDrawLG;
 PETSC_EXTERN PetscErrorCode       KSPMonitorResidualDrawLGCreate(PetscViewer, PetscViewerFormat, void *, PetscViewerAndFormat **);
 PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorResidualShort;
 PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorResidualRange;
 PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorTrueResidual;
-PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorTrueResidualDraw;
+PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorTrueResidualView;
 PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorTrueResidualDrawLG;
 PETSC_EXTERN PetscErrorCode       KSPMonitorTrueResidualDrawLGCreate(PetscViewer, PetscViewerFormat, void *, PetscViewerAndFormat **);
 PETSC_EXTERN KSPMonitorRegisterFn KSPMonitorTrueResidualMax;
