@@ -1,0 +1,318 @@
+DM Object: Particles 1 MPI process
+  type: swarm
+Particles in 1 dimension:
+  Number of particles per rank: 256
+dim = 1	totalWeight = 12.566400, user->charges[species[0]] = -1.000000	totalCharge = -12.566400, Total Area = 12.566400
+sigma: 1.
+(x0,v0,t0,m0,q0,phi0): (1.000000e+00, 1.000000e+00, 1.000000e+00, 1.000000e+00, 1.000000e+00, 0.000000e+00) - (P, V) = (1.000000e+00, 1.000000e+00)
+    0 SNES Function norm 5.531771191636e+01
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 6.502009584146e+02
+  1 KSP Residual norm 8.107438342481e-14
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 1.018180365913e-13
+  1 KSP Residual norm 1.327466893099e-15
+  2 KSP Residual norm 9.299964677569e-17
+  3 KSP Residual norm 1.771560970692e-29
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 2.237959117747e+04
+  1 KSP Residual norm 1.397038908136e+02
+  2 KSP Residual norm 2.856563209803e+00
+  3 KSP Residual norm 4.963772443023e-13
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 1.917517862817e-12
+  1 KSP Residual norm 8.301882578449e-28
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 3.857991446343e-28
+  1 KSP Residual norm 5.334578151906e-30
+  2 KSP Residual norm 3.443528990057e-31
+  3 KSP Residual norm 9.861334326593e-44
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 7.296139078004e-11
+  1 KSP Residual norm 4.203531178803e-13
+  2 KSP Residual norm 4.900482269068e-15
+  3 KSP Residual norm 1.518363354342e-26
+      0 SNES Function norm 5.531771191636e+01
+      1 SNES Function norm 3.328907294378e-03
+      2 SNES Function norm 7.342759828872e-13
+      Nonlinear fas_levels_1_ solve converged due to CONVERGED_FNORM_ABS iterations 2
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 4.000098806138e+00
+  1 KSP Residual norm 1.029328831253e-15
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 8.551363818816e-04
+  1 KSP Residual norm 1.400535476432e-05
+  2 KSP Residual norm 7.075397472939e-07
+  3 KSP Residual norm 4.140504629487e-20
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 1.116091897157e+01
+  1 KSP Residual norm 6.273356234778e-02
+  2 KSP Residual norm 1.091035241603e-10
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 3.125012400939e-12
+  1 KSP Residual norm 9.208549800643e-28
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 3.748851915019e-12
+  1 KSP Residual norm 3.713108934954e-14
+  2 KSP Residual norm 2.642554286790e-15
+  3 KSP Residual norm 2.401935806041e-29
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 1.144084133993e-10
+  1 KSP Residual norm 6.014584046992e-13
+  2 KSP Residual norm 1.050450806184e-14
+  3 KSP Residual norm 1.879647897774e-26
+        0 SNES Function norm 1.146810566130e-10
+        0 SNES Function norm 1.146810566130e-10 [      3.125012400939e-12      ,       3.746829044733e-12      ,       1.145772242440e-10      ]
+      Line search: Using full step: fnorm 1.146810566130e-10 gnorm 2.687625176905e-14
+        1 SNES Function norm 2.687625176905e-14
+        1 SNES Function norm 2.687625176905e-14 [      2.009896104563e-14      ,       2.400093323180e-15      ,       1.768061724261e-14      ]
+        Nonlinear fas_coarse_ solve converged due to CONVERGED_SNORM_RELATIVE iterations 1
+||n|| 6.08616e-14
+||p|| 1.92239e-13
+||e|| 1.14201e-11
+||rhs|| 1.14225e-11
+||Phi|| 1.90947e-13
+||dw|| 0.0339262
+      0 SNES Function norm 9.391469625205e-02
+      1 SNES Function norm 1.408561989503e-03
+      2 SNES Function norm 4.753890380204e-09
+      3 SNES Function norm 7.126073447497e-11
+      Nonlinear fas_levels_1_ solve converged due to CONVERGED_FNORM_ABS iterations 3
+    1 SNES Function norm 7.126073447497e-11
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+SNES Object: 1 MPI process
+  type: fas
+    type is MULTIPLICATIVE, levels=2, cycles=1
+    Not using Galerkin computed coarse grid function evaluation
+    Coarse grid solver -- level 0 -------------------------------
+    SNES Object: (fas_coarse_) 1 MPI process
+      type: newtonls
+      maximum iterations=50, maximum function evaluations=10000
+      tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
+      total number of linear solver iterations=1
+      total number of function evaluations=2
+      norm schedule ALWAYS
+      Jacobian is built using finite differences one column at a time
+      SNESLineSearch Object: (fas_coarse_) 1 MPI process
+        type: bt
+          interpolation: cubic
+          alpha=1.000000e-04
+        maxlambda=1.000000e+00, minlambda=1.000000e-12
+        tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+        maximum iterations=40
+      KSP Object: (fas_coarse_) 1 MPI process
+        type: gmres
+          restart=30, using classical (unmodified) Gram-Schmidt orthogonalization with no iterative refinement
+          happy breakdown tolerance=1e-30
+        maximum iterations=10000, initial guess is zero
+        tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+        left preconditioning
+        using PRECONDITIONED norm type for convergence test
+      PC Object: (fas_coarse_) 1 MPI process
+        type: lu
+          out-of-place factorization
+          tolerance for zero pivot 2.22045e-14
+          matrix ordering: nd
+          factor fill ratio given 5., needed 1.68813
+            Factored matrix:
+              Mat Object: (fas_coarse_) 1 MPI process
+                type: seqaij
+                rows=64, cols=64
+                package used to perform factorization: petsc
+                total: nonzeros=1835, allocated nonzeros=1835
+                  using I-node routines: found 47 nodes, limit used is 5
+        linear system matrix, which is also used to construct the preconditioner:
+        Mat Object: 1 MPI process
+          type: seqaij
+          rows=64, cols=64
+          total: nonzeros=1087, allocated nonzeros=1744
+          total number of mallocs used during MatSetValues calls=112
+            not using I-node routines
+    Down solver (pre-smoother) on level 1 -------------------------------
+    SNES Object: (fas_levels_1_) 1 MPI process
+      type: nrichardson
+        solution vector:
+        Vec Object: x 1 MPI process
+          type: seq
+          length=512, bs=2
+      maximum iterations=50, maximum function evaluations=30000
+      tolerances: relative=0., absolute=1e-10, solution=0.
+      total number of function evaluations=10
+      norm schedule ALWAYS
+      SNESLineSearch Object: (fas_levels_1_) 1 MPI process
+        type: secant
+        maxlambda=1.000000e+00, minlambda=1.000000e-12
+        tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+        maximum iterations=1
+    Up solver (post-smoother) same as down solver (pre-smoother)
+  maximum iterations=10000, maximum function evaluations=30000
+  tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
+  total number of function evaluations=1
+  norm schedule ALWAYS
+========== PFAK u_f ==========
+Mom 0: 12.5664
+Mom x: 78.9558
+Mom v: 5.09797e-06
+Mom 2: 13.7445
+Regular layout using 4 particles per cell
+========== Remapped ==========
+Mom 0: 12.5664 --> 12.5664
+Mom 1: 5.09797e-06 --> 5.09797e-06
+Mom 2: 13.1554 --> 13.1554
+    0 SNES Function norm 5.531782908020e+01
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 6.502009584146e+02
+  1 KSP Residual norm 1.359143387951e-13
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 1.607214383530e-13
+  1 KSP Residual norm 4.077246610520e-15
+  2 KSP Residual norm 2.504660226030e-16
+  3 KSP Residual norm 3.772169918660e-29
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 2.237959117747e+04
+  1 KSP Residual norm 1.397038908136e+02
+  2 KSP Residual norm 2.856563209803e+00
+  3 KSP Residual norm 3.272524064544e-12
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 1.929342194518e-12
+  1 KSP Residual norm 1.071000063367e-28
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 6.543521853015e-28
+  1 KSP Residual norm 3.153383018122e-29
+  2 KSP Residual norm 1.546931396664e-30
+  3 KSP Residual norm 3.109375047733e-44
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 7.333537803416e-11
+  1 KSP Residual norm 4.329776044889e-13
+  2 KSP Residual norm 5.599183260660e-15
+  3 KSP Residual norm 1.438355144628e-26
+      0 SNES Function norm 5.531782908020e+01
+      1 SNES Function norm 3.741414552942e-03
+      2 SNES Function norm 6.750554850410e-13
+      Nonlinear fas_levels_1_ solve converged due to CONVERGED_FNORM_ABS iterations 2
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 4.000186847055e+00
+  1 KSP Residual norm 1.501180933599e-15
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 1.730441649282e-01
+  1 KSP Residual norm 1.445992292763e-03
+  2 KSP Residual norm 9.743505076962e-05
+  3 KSP Residual norm 3.227509249354e-17
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 1.124306471054e+01
+  1 KSP Residual norm 6.391440776095e-02
+  2 KSP Residual norm 1.489747135064e-04
+  3 KSP Residual norm 8.721708785424e-16
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 3.032106719507e-12
+  1 KSP Residual norm 3.034355058845e-28
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 2.147272860200e-12
+  1 KSP Residual norm 2.339874328803e-14
+  2 KSP Residual norm 5.609996974496e-16
+  3 KSP Residual norm 4.222786068498e-28
+  Residual norms for mom_proj_ solve.
+  0 KSP Residual norm 1.062674459783e-10
+  1 KSP Residual norm 5.131688872417e-13
+  2 KSP Residual norm 4.577431682658e-15
+  3 KSP Residual norm 1.344423795816e-28
+        0 SNES Function norm 1.064828512831e-10
+        0 SNES Function norm 1.064828512831e-10 [      3.032106719507e-12      ,       2.147524480426e-12      ,       1.064180063937e-10      ]
+      Line search: Using full step: fnorm 1.064828512831e-10 gnorm 2.978562234377e-14
+        1 SNES Function norm 2.978562234377e-14
+        1 SNES Function norm 2.978562234377e-14 [      1.581764237087e-14      ,       3.144457025051e-15      ,       2.504192241523e-14      ]
+        Nonlinear fas_coarse_ solve converged due to CONVERGED_SNORM_RELATIVE iterations 1
+||n|| 5.73774e-14
+||p|| 1.44675e-13
+||e|| 1.06397e-11
+||rhs|| 1.06416e-11
+||Phi|| 1.78773e-13
+||dw|| 0.0371811
+      0 SNES Function norm 1.960689302328e-01
+      1 SNES Function norm 2.940703142951e-03
+      2 SNES Function norm 9.924871418269e-09
+      3 SNES Function norm 1.489102292260e-10
+      4 SNES Function norm 9.773930196197e-09
+      5 SNES Function norm 8.167555168858e-13
+      Nonlinear fas_levels_1_ solve converged due to CONVERGED_FNORM_ABS iterations 5
+    1 SNES Function norm 8.167555168858e-13
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+SNES Object: 1 MPI process
+  type: fas
+    type is MULTIPLICATIVE, levels=2, cycles=1
+    Not using Galerkin computed coarse grid function evaluation
+    Coarse grid solver -- level 0 -------------------------------
+    SNES Object: (fas_coarse_) 1 MPI process
+      type: newtonls
+      maximum iterations=50, maximum function evaluations=10000
+      tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
+      total number of linear solver iterations=1
+      total number of function evaluations=2
+      norm schedule ALWAYS
+      Jacobian is built using finite differences one column at a time
+      SNESLineSearch Object: (fas_coarse_) 1 MPI process
+        type: bt
+          interpolation: cubic
+          alpha=1.000000e-04
+        maxlambda=1.000000e+00, minlambda=1.000000e-12
+        tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+        maximum iterations=40
+      KSP Object: (fas_coarse_) 1 MPI process
+        type: gmres
+          restart=30, using classical (unmodified) Gram-Schmidt orthogonalization with no iterative refinement
+          happy breakdown tolerance=1e-30
+        maximum iterations=10000, initial guess is zero
+        tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+        left preconditioning
+        using PRECONDITIONED norm type for convergence test
+      PC Object: (fas_coarse_) 1 MPI process
+        type: lu
+          out-of-place factorization
+          tolerance for zero pivot 2.22045e-14
+          matrix ordering: nd
+          factor fill ratio given 5., needed 1.6912
+            Factored matrix:
+              Mat Object: (fas_coarse_) 1 MPI process
+                type: seqaij
+                rows=64, cols=64
+                package used to perform factorization: petsc
+                total: nonzeros=1884, allocated nonzeros=1884
+                  using I-node routines: found 47 nodes, limit used is 5
+        linear system matrix, which is also used to construct the preconditioner:
+        Mat Object: 1 MPI process
+          type: seqaij
+          rows=64, cols=64
+          total: nonzeros=1114, allocated nonzeros=1744
+          total number of mallocs used during MatSetValues calls=112
+            not using I-node routines
+    Down solver (pre-smoother) on level 1 -------------------------------
+    SNES Object: (fas_levels_1_) 1 MPI process
+      type: nrichardson
+        solution vector:
+        Vec Object: x 1 MPI process
+          type: seq
+          length=512, bs=2
+      maximum iterations=50, maximum function evaluations=30000
+      tolerances: relative=0., absolute=1e-10, solution=0.
+      total number of function evaluations=16
+      norm schedule ALWAYS
+      SNESLineSearch Object: (fas_levels_1_) 1 MPI process
+        type: secant
+        maxlambda=1.000000e+00, minlambda=1.000000e-12
+        tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+        maximum iterations=1
+    Up solver (post-smoother) same as down solver (pre-smoother)
+  maximum iterations=10000, maximum function evaluations=30000
+  tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
+  total number of function evaluations=1
+  norm schedule ALWAYS
+========== PFAK u_f ==========
+Mom 0: 12.5664
+Mom x: 79.1305
+Mom v: 1.34779e-05
+Mom 2: 13.7442
+Regular layout using 4 particles per cell
+========== Remapped ==========
+Mom 0: 12.5664 --> 12.5664
+Mom 1: 1.34779e-05 --> 1.34779e-05
+Mom 2: 13.1552 --> 13.1551

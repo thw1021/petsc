@@ -4,20 +4,10 @@ sigma: 1.
 ========== PFAK u_f ==========
 Mom 0: 12.5664
 Mom x: 78.9572
-Mom v: 3.34874e-15
-Mom 2: 12.5726
+Mom v: 6.58451e-11
+Mom 2: 35.7696
 Regular layout using 4 particles per cell
 ========== Remapped ==========
 Mom 0: 12.5664 --> 12.5664
-Mom 1: 8.22229e-17 --> 2.35816e-17
-Mom 2: 12.5695 --> 12.5695
-========== PFAK u_f ==========
-Mom 0: 12.5664
-Mom x: 78.9572
-Mom v: 1.71437e-15
-Mom 2: 12.5726
-Regular layout using 4 particles per cell
-========== Remapped ==========
-Mom 0: 12.5664 --> 12.5664
-Mom 1: 8.97875e-15 --> 1.36734e-14
-Mom 2: 12.5695 --> 12.5695
+Mom 1: 6.58428e-11 --> 6.58442e-11
+Mom 2: 43.6253 --> 41.8754
