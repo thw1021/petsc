@@ -2164,6 +2164,12 @@ static PetscErrorCode MatSetFromOptions_MUMPS(Mat F, Mat A)
     size          = mumps->id.size_schur;
     arr           = mumps->id.schur;
     listvar_schur = mumps->id.listvar_schur;
+    if (PetscDefined(USE_DEBUG)) {
+      for (PetscInt i = 0; i < size; i++)
+        PetscCheck(listvar_schur[i] - 1 >= 0 && listvar_schur[i] - 1 < A->rmap->N, PETSC_COMM_SELF, PETSC_ERR_USER, "Invalid Schur index at position %" PetscInt_FMT "! %" PetscInt_FMT " must be in [0, %" PetscInt_FMT ")", i, (PetscInt)listvar_schur[i] - 1,
+                   A->rmap->N);
+    }
+
     PetscMUMPS_c(mumps);
     PetscCheck(mumps->id.INFOG(1) >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error: INFOG(1)=%d " MUMPS_MANUALS, mumps->id.INFOG(1));
 
