@@ -2308,6 +2308,7 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
     jac->coarsentype    = 8;
     jac->relaxorder     = 0;
     jac->interptype     = 6;
+    jac->pmax           = 4;
     jac->relaxtype[0]   = 18;
     jac->relaxtype[1]   = 18;
     jac->agg_interptype = 7;
