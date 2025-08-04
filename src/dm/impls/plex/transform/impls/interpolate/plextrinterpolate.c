@@ -136,6 +136,10 @@ static PetscErrorCode DMPlexTransformDestroy_Interpolate(DMPlexTransform tr)
   DMPlexTransform_Interpolate *in = (DMPlexTransform_Interpolate *)tr->data;
 
   PetscFunctionBegin;
+  if (in->target) {
+    for (PetscInt ct = 0; ct < DM_NUM_POLYTOPES; ++ct) PetscCall(PetscFree4(in->target[ct], in->size[ct], in->cone[ct], in->ornt[ct]));
+  }
+  PetscCall(PetscFree5(in->Nt, in->target, in->size, in->cone, in->ornt));
   PetscCall(PetscFree(in));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

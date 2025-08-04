@@ -2417,9 +2417,8 @@ static PetscErrorCode DMPlexTransformSetCoordinates(DMPlexTransform tr, DM rdm)
 @*/
 PetscErrorCode DMPlexTransformApply(DMPlexTransform tr, DM dm, DM *tdm)
 {
-  DM                     rdm;
-  DMPlexInterpolatedFlag interp;
-  PetscInt               pStart, pEnd;
+  DM       rdm;
+  PetscInt pStart, pEnd;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
@@ -2431,9 +2430,6 @@ PetscErrorCode DMPlexTransformApply(DMPlexTransform tr, DM dm, DM *tdm)
   PetscCall(DMCreate(PetscObjectComm((PetscObject)dm), &rdm));
   PetscCall(DMSetType(rdm, DMPLEX));
   PetscCall(DMPlexTransformSetDimensions(tr, dm, rdm));
-  /* Calculate number of new points of each depth */
-  PetscCall(DMPlexIsInterpolatedCollective(dm, &interp));
-  PetscCheck(interp == DMPLEX_INTERPOLATED_FULL, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Mesh must be fully interpolated for regular refinement");
   /* Step 1: Set chart */
   PetscCall(DMPlexTransformGetChart(tr, &pStart, &pEnd));
   PetscCall(DMPlexSetChart(rdm, pStart, pEnd));
