@@ -12,7 +12,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
   PetscReal        gnorm;
   PetscReal        ynorm;
   PetscReal        xnorm;
-  PetscReal        steptol, maxstep, rtol, atol, ltol;
+  PetscReal        steptol, maxstep, atol, ltol;
   PetscViewer      monitor;
   PetscReal        lambda, lambda_old, lambda_mid, lambda_update, delLambda;
   PetscReal        fnrm, fnrm_old, fnrm_mid;
@@ -26,7 +26,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchGetLambda(linesearch, &lambda));
   PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
   PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_SUCCEEDED));
-  PetscCall(SNESLineSearchGetTolerances(linesearch, &steptol, &maxstep, &rtol, &atol, &ltol, &max_its));
+  PetscCall(SNESLineSearchGetTolerances(linesearch, &steptol, &maxstep, NULL, &atol, &ltol, &max_its));
   PetscCall(SNESLineSearchGetDefaultMonitor(linesearch, &monitor));
 
   PetscCall(SNESGetObjective(snes, &objective, NULL));
@@ -42,6 +42,8 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
   lambda_mid = 0.5 * (lambda + lambda_old);
 
   for (i = 0; i < max_its; i++) {
+
+    /* evaluate new endpoint and new midpoint */
     while (PETSC_TRUE) {
       PetscCall(VecWAXPY(W, -lambda_mid, Y, X));
       if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
@@ -90,13 +92,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
       lambda_mid = .5 * (lambda + lambda_old);
     }
 
-    delLambda = lambda - lambda_old;
-    /* compute f'() at the end points using second order one sided differencing */
-    delFnrm     = (3. * fnrm - 4. * fnrm_mid + 1. * fnrm_old) / delLambda;
-    delFnrm_old = (-3. * fnrm_old + 4. * fnrm_mid - 1. * fnrm) / delLambda;
-    /* compute f''() at the midpoint using centered differencing */
-    del2Fnrm = (delFnrm - delFnrm_old) / delLambda;
-
+    /* monitoring output */
     if (monitor) {
       PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
       if (!objective) {
@@ -107,23 +103,83 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
       PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
     }
 
+    /* determine change of lambda */
+    delLambda = lambda - lambda_old;
+
+    /* compute f'() at the end points using second order one sided differencing */
+    delFnrm     = (3. * fnrm - 4. * fnrm_mid + 1. * fnrm_old) / delLambda;
+    delFnrm_old = (-3. * fnrm_old + 4. * fnrm_mid - 1. * fnrm) / delLambda;
+    /* compute f''() at the midpoint using centered differencing */
+    del2Fnrm = (delFnrm - delFnrm_old) / delLambda;
+
+    /* check absolute tolerance */
+    if (PetscAbsScalar(delFnrm) <= atol) {
+      if (monitor) {
+        PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: abs(delFnrm) = %g <= atol = %g\n", (double)PetscAbsScalar(delFnrm), (double)atol));
+        PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
+      }
+      break;
+    }
+
+    /* check change of lambda tolerance */
+    if (PetscAbsReal(delLambda) < ltol) {
+      if (monitor) {
+        PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: abs(delLambda) = %g < ltol = %g\n", (double)PetscAbsReal(delLambda), (double)ltol));
+        PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
+      }
+      break;
+    }
+
     /* compute the secant (Newton) update -- always go downhill */
     if (del2Fnrm > 0.) lambda_update = lambda - delFnrm / del2Fnrm;
     else if (del2Fnrm < 0.) lambda_update = lambda + delFnrm / del2Fnrm;
-    else break;
+    else {
+      if (monitor) {
+        PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: del2Fnrm = 0\n"));
+        PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
+      }
+      break;
+    }
 
+    /* don't accept lambda below steptol */
     if (lambda_update < steptol) lambda_update = 0.5 * (lambda + lambda_old);
 
-    if (PetscIsInfOrNanReal(lambda_update)) break;
+    /* don't accept lambda which is NaN or Inf */
+    if (PetscIsInfOrNanReal(lambda_update)) {
+      if (monitor) {
+        PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: lambda_update is NaN or Inf\n"));
+        PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
+      }
+      break;
+    }
 
-    if (lambda_update > maxstep) break;
+    /* don't accept lambda which is larger than the maximum step */
+    if (lambda_update > maxstep) {
+      if (monitor) {
+        PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: lambda_update = %g > maxstep = %g\n", (double)lambda_update, (double)maxstep));
+        PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
+      }
+      break;
+    }
 
     /* update the endpoints and the midpoint of the bracketed secant region */
     lambda_old = lambda;
     lambda     = lambda_update;
     fnrm_old   = fnrm;
     lambda_mid = 0.5 * (lambda + lambda_old);
+
+    if ((i == max_its - 1) && monitor) {
+      PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
+      PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: reached maximum number of iterations!\n"));
+      PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
+    }
   }
+
   /* construct the solution */
   PetscCall(VecWAXPY(W, -lambda, Y, X));
   if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
@@ -160,13 +216,13 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
    When an objective function is provided $f(w)$ is the objective function otherwise $f(w) = ||F(w)||^2$.
    $x$ is the current step and $y$ is the search direction.
 
-   This has no checks on whether the secant method is actually converging.
-
    Options Database Keys:
-+  -snes_linesearch_max_it <1>            - maximum number of iterations
-.  -snes_linesearch_maxstep <1e8>         - maximum lambda allowed
-.  -snes_linesearch_damping <1.0>         - initial step length is scaled by this factor on entry to the line search
--  -snes_linesearch_minlambda <1e\-12>    - minimum allowable lambda
++  -snes_linesearch_max_it <1>         - maximum number of iterations
+.  -snes_linesearch_maxstep <1e8>      - maximum lambda allowed
+.  -snes_linesearch_damping <1.0>      - initial step length is scaled by this factor on entry to the line search
+.  -snes_linesearch_minlambda <1e\-12> - minimum allowable lambda
+.  -snes_linesearch_atol <1e\-15>      - absolute tolerance for the secant method $ f'() < atol $
+-  -snes_linesearch_ltol <1e\-8>       - minimum absolute change in lambda allowed
 
    Level: advanced
 
