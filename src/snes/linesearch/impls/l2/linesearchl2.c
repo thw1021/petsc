@@ -42,7 +42,6 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
   lambda_mid = 0.5 * (lambda + lambda_old);
 
   for (i = 0; i < max_its; i++) {
-
     /* evaluate new endpoint and new midpoint */
     while (PETSC_TRUE) {
       PetscCall(VecWAXPY(W, -lambda_mid, Y, X));
