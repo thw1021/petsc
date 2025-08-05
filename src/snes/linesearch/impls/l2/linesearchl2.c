@@ -155,7 +155,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
 
    Attempts to solve $ \min_{\lambda} f(x + \lambda y) $ using the secant method with the initial bracketing of $ \lambda $ between [0,damping].
    Differences of $f()$ are used to approximate the first and second derivative of $f()$ with respect to
-   $\lambda$, $f'()$ and $f''()$. The secant method is run for `maxit` iterations.
+   $\lambda$, $f'()$ and $f''()$. The secant method is run for `max_it` iterations.
 
    When an objective function is provided $f(w)$ is the objective function otherwise $f(w) = ||F(w)||^2$.
    $x$ is the current step and $y$ is the search direction.
@@ -163,10 +163,10 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
    This has no checks on whether the secant method is actually converging.
 
    Options Database Keys:
-+  -snes_linesearch_max_it <maxit>        - maximum number of iterations, default is 1
-.  -snes_linesearch_maxstep <length>      - the algorithm insures that a step length is never longer than this value
-.  -snes_linesearch_damping <damping>     - initial step is scaled back by this factor, default is 1.0
--  -snes_linesearch_minlambda <minlambda> - minimum allowable lambda
++  -snes_linesearch_max_it <1>            - maximum number of iterations
+.  -snes_linesearch_maxstep <1e8>         - maximum lambda allowed
+.  -snes_linesearch_damping <1.0>         - initial step length is scaled by this factor on entry to the line search
+-  -snes_linesearch_minlambda <1e\-12>    - minimum allowable lambda
 
    Level: advanced
 
