@@ -619,4 +619,9 @@ PetscErrorCode ComputeInitialGuess(SNES snes, Vec X, void *dummy)
       args: -snes_type vinewtonssls -snes_linesearch_type cp -snes_linesearch_order 3 -snes_linesearch_monitor -pc_type mg -ksp_monitor_short -pc_mg_galerkin pmat -da_refine 5 -snes_vi_monitor -pc_mg_type full -snes_max_it 100 -snes_converged_reason
       requires: !single
 
+   test:
+      suffix: 6
+      args: -snes_type vinewtonssls -snes_linesearch_type l2 -snes_linesearch_max_it 10 -snes_linesearch_monitor -pc_type mg -ksp_monitor_short -pc_mg_galerkin pmat -da_refine 5 -snes_vi_monitor -pc_mg_type full -snes_max_it 100 -snes_converged_reason
+      requires: !single
+
 TEST*/
