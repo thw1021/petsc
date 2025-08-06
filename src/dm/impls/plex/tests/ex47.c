@@ -545,8 +545,8 @@ int main(int argc, char **argv)
       InitPartForRank[0]        = &sInitialPartitionPrismsMesh[0][0];
       InitPartForRank[1]        = &sInitialPartitionPrismsMesh[1][0];
       const PetscInt (*Conn)[6] = sConnectivityPrismsMesh;
-      const PetscInt Ncor = 6;
-      const PetscInt dim  = 3;
+      const PetscInt Ncor       = 6;
+      const PetscInt dim        = 3;
 
       /* Create a PetscSection even if we have only one type of element: */
       PetscSection s;
@@ -559,7 +559,7 @@ int main(int argc, char **argv)
       PetscCall(PetscMalloc1(Nc * Ncor, &cells));
       PetscInt count = 0;
       for (c = 0; c < Nc; ++c) {
-        PetscInt cell         = (InitPartForRank[rank])[c], cor;
+        PetscInt cell = (InitPartForRank[rank])[c], cor;
         for (cor = 0; cor < Ncor; ++cor) {
           cells[count] = Conn[cell][cor];
           ++count;
@@ -572,7 +572,7 @@ int main(int argc, char **argv)
       PetscCall(DMPlexBuildFromCellSectionParallel(dm, Nc, PETSC_DECIDE, Nv, s, cells, &sfVert, NULL));
       PetscCall(PetscSectionDestroy(&s));
     } else if (hexprismmesh) {
-      Nc                        = sNLoclCellsHexPrismMesh[rank]; //Same on each rank for this example...
+      Nc                        = sNLoclCellsHexPrismMesh[rank];
       PetscInt Nv               = sNGlobVertsHexPrismMesh;
       InitPartForRank[0]        = &sInitialPartitionHexPrismMesh[0][0];
       InitPartForRank[1]        = &sInitialPartitionHexPrismMesh[1][0];
