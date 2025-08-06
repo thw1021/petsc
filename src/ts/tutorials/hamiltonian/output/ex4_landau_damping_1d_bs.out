@@ -1,0 +1,15 @@
+dim = 1	totalWeight = 12.566400, user->charges[species[0]] = -1.000000	totalCharge = -12.566400, Total Area = 12.566400
+sigma: 1.
+(x0,v0,t0,m0,q0,phi0): (1.000000e+00, 1.000000e+00, 1.000000e+00, 1.000000e+00, 1.000000e+00, 0.000000e+00) - (P, V) = (1.000000e+00, 1.000000e+00)
+WARNING! There are options you set that were not used!
+WARNING! could be spelling mistake, etc!
+There are 9 unused database options. They are:
+Option left: name:-emax_tao_brgn_regularization_type value: l2pure source: command line
+Option left: name:-emax_tao_brgn_regularizer_weight value: 1e-5 source: command line
+Option left: name:-emax_tao_max_it value: 100 source: command line
+Option left: name:-emax_tao_type value: brgn source: command line
+Option left: name:-ftop_ksp_rtol value: 1.e-14 source: command line
+Option left: name:-ftop_ksp_type value: lsqr source: command line
+Option left: name:-ftop_pc_type value: none source: command line
+Option left: name:-ptof_pc_type value: lu source: command line
+Option left: name:-tao_brgn_subsolver_tao_bnk_ksp_rtol value: 1e-12 source: command line
