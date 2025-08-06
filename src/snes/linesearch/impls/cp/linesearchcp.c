@@ -148,7 +148,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
 .  -snes_linesearch_maxstep <1e8>      - the algorithm ensures that lambda is never larger than this value
 .  -snes_linesearch_damping <1.0>      - initial trial step length is scaled by this factor on entry to the line search
 .  -snes_linesearch_order <1>          - order of the approximation in the secant method, must be 1, 2, or 3
--  -snes_linesearch_max_it <1>         - the maximum number of secant iterations performed
+.  -snes_linesearch_max_it <1>         - the maximum number of secant iterations performed
 .  -snes_linesearch_rtol <1e\-8>       - relative tolerance for the directional derivative
 .  -snes_linesearch_atol <1e\-15>      - absolute tolerance for the directional derivative
 -  -snes_linesearch_ltol <1e\-8>       - minimum absolute change in lambda allowed
