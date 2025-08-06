@@ -747,11 +747,17 @@ int main(int argc, char **argv)
   const PetscBool lUseCone    = PETSC_FALSE;
   const PetscBool lUseClosure = PETSC_TRUE;
   PetscCall(DMSetBasicAdjacency(ddm, lUseCone, lUseClosure));
-  const PetscInt lNbCellsInOverlap = 1;
-  PetscSF        lSFMigrationOvl;
-  DM             ddm_with_overlap;
+  PetscInt lNbCellsInOverlap = 1;
+  PetscSF  lSFMigrationOvl   = NULL;
+  DM       ddm_with_overlap;
 
-  PetscCall(DMPlexDistributeOverlap(ddm, lNbCellsInOverlap, &lSFMigrationOvl, &ddm_with_overlap));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-overlap", &lNbCellsInOverlap, NULL));
+  if (lNbCellsInOverlap > 0) {
+    PetscCall(DMPlexDistributeOverlap(ddm, lNbCellsInOverlap, &lSFMigrationOvl, &ddm_with_overlap));
+  } else {
+    ddm_with_overlap = ddm;
+    PetscCall(PetscObjectReference((PetscObject)ddm));
+  }
 
   IS lISCellWithOvl = 0;
   /* This is the buggy call with prisms since commit 5ae96e2b862 */
