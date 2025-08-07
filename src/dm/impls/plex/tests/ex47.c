@@ -375,6 +375,86 @@ const PetscInt sInitialPartitionHexPrismMesh[2][2] = {
 const PetscInt sNLoclCellsHexPrismMesh[2] = {0, 2};
 const PetscInt sNGlobVertsHexPrismMesh    = 10;
 
+/* 4x4x1 Hexa mesh */
+const PetscInt sConnectivityHexaMesh[16][8] = {
+  {0,  8,  32, 14, 4,  20, 41, 31},
+  {14, 32, 33, 15, 31, 41, 42, 30},
+  {15, 33, 34, 16, 30, 42, 43, 29},
+  {16, 34, 11, 2,  29, 43, 28, 7 },
+  {8,  9,  35, 32, 20, 21, 44, 41},
+  {32, 35, 36, 33, 41, 44, 45, 42},
+  {33, 36, 37, 34, 42, 45, 46, 43},
+  {34, 37, 12, 11, 43, 46, 27, 28},
+  {9,  10, 38, 35, 21, 22, 47, 44},
+  {35, 38, 39, 36, 44, 47, 48, 45},
+  {36, 39, 40, 37, 45, 48, 49, 46},
+  {37, 40, 13, 12, 46, 49, 26, 27},
+  {10, 1,  17, 38, 22, 5,  23, 47},
+  {38, 17, 18, 39, 47, 23, 24, 48},
+  {39, 18, 19, 40, 48, 24, 25, 49},
+  {40, 19, 3,  13, 49, 25, 6,  26}
+};
+
+/* Partitions of hexa mesh : */
+const PetscInt sInitialPartitionHexaMesh[2][8] = {
+  {0, 2, 4, 6, 8, 10, 12, 14},
+  {1, 3, 5, 7, 9, 11, 13, 15}
+};
+const PetscInt  sNLoclCellsHexaMesh[2] = {8, 8};
+const PetscInt  sNGlobVertsHexaMesh    = 50;
+const PetscReal sCoordsHexaMesh[50][3] = {
+  {0.0,  0.0,  0},
+  {1.0,  0.0,  0},
+  {0.0,  1.0,  0},
+  {1.0,  1.0,  0},
+  {0.0,  0.0,  1},
+  {1.0,  0.0,  1},
+  {1.0,  1.0,  1},
+  {0.0,  1.0,  1},
+  {0.25, 0.0,  0},
+  {0.5,  0.0,  0},
+  {0.75, 0.0,  0},
+  {0.25, 1.0,  0},
+  {0.5,  1.0,  0},
+  {0.75, 1.0,  0},
+  {0.0,  0.25, 0},
+  {0.0,  0.5,  0},
+  {0.0,  0.75, 0},
+  {1.0,  0.25, 0},
+  {1.0,  0.5,  0},
+  {1.0,  0.75, 0},
+  {0.25, 0.0,  1},
+  {0.5,  0.0,  1},
+  {0.75, 0.0,  1},
+  {1.0,  0.25, 1},
+  {1.0,  0.5,  1},
+  {1.0,  0.75, 1},
+  {0.75, 1.0,  1},
+  {0.5,  1.0,  1},
+  {0.25, 1.0,  1},
+  {0.0,  0.75, 1},
+  {0.0,  0.5,  1},
+  {0.0,  0.25, 1},
+  {0.25, 0.25, 0},
+  {0.25, 0.5,  0},
+  {0.25, 0.75, 0},
+  {0.5,  0.25, 0},
+  {0.5,  0.5,  0},
+  {0.5,  0.75, 0},
+  {0.75, 0.25, 0},
+  {0.75, 0.5,  0},
+  {0.75, 0.75, 0},
+  {0.25, 0.25, 1},
+  {0.25, 0.5,  1},
+  {0.25, 0.75, 1},
+  {0.5,  0.25, 1},
+  {0.5,  0.5,  1},
+  {0.5,  0.75, 1},
+  {0.75, 0.25, 1},
+  {0.75, 0.5,  1},
+  {0.75, 0.75, 1}
+};
+
 int main(int argc, char **argv)
 {
   PetscInt         Nc = 0;
@@ -385,7 +465,7 @@ int main(int argc, char **argv)
   PetscSection     s;
   PetscInt        *cells, c;
   PetscMPIInt      size, rank;
-  PetscBool        box = PETSC_FALSE, field = PETSC_FALSE, quadsmesh = PETSC_FALSE, trisquadsmesh = PETSC_FALSE, prismsmesh = PETSC_FALSE, hexprismmesh = PETSC_FALSE;
+  PetscBool        box = PETSC_FALSE, field = PETSC_FALSE, quadsmesh = PETSC_FALSE, trisquadsmesh = PETSC_FALSE, prismsmesh = PETSC_FALSE, hexprismmesh = PETSC_FALSE, hexamesh = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -398,7 +478,8 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-trisquadsmesh", &trisquadsmesh, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-prismsmesh", &prismsmesh, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-hexprismmesh", &hexprismmesh, NULL));
-  PetscCheck(1 == (box ? 1 : 0) + (quadsmesh ? 1 : 0) + (trisquadsmesh ? 1 : 0) + (prismsmesh ? 1 : 0) + (hexprismmesh ? 1 : 0), PETSC_COMM_WORLD, PETSC_ERR_SUP, "Specify one and only one of -box, -quadsmesh or -prismsmesh");
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-hexamesh", &hexamesh, NULL));
+  PetscCheck(1 == (box ? 1 : 0) + (quadsmesh ? 1 : 0) + (trisquadsmesh ? 1 : 0) + (prismsmesh ? 1 : 0) + (hexprismmesh ? 1 : 0) + (hexamesh ? 1 : 0), PETSC_COMM_WORLD, PETSC_ERR_SUP, "Specify one and only one of -box, -quadsmesh, -prismsmesh or -hexamesh.");
 
   PetscCall(DMPlexCreate(PETSC_COMM_WORLD, &dm));
   if (box) {
@@ -464,20 +545,34 @@ int main(int argc, char **argv)
       InitPartForRank[0]        = &sInitialPartitionPrismsMesh[0][0];
       InitPartForRank[1]        = &sInitialPartitionPrismsMesh[1][0];
       const PetscInt (*Conn)[6] = sConnectivityPrismsMesh;
+      const PetscInt Ncor       = 6;
+      const PetscInt dim        = 3;
 
-      const PetscInt Ncor = 6;
-      const PetscInt dim  = 3;
+      /* Create a PetscSection even if we have only one type of element: */
+      PetscSection s;
+      PetscInt     vStart = 0, vEnd = Nc;
+      PetscCall(PetscSectionCreate(PETSC_COMM_WORLD, &s));
+      PetscCall(PetscSectionSetNumFields(s, 1));
+      PetscCall(PetscSectionSetFieldComponents(s, 0, 1));
+      PetscCall(PetscSectionSetChart(s, vStart, vEnd));
 
       PetscCall(PetscMalloc1(Nc * Ncor, &cells));
+      PetscInt count = 0;
       for (c = 0; c < Nc; ++c) {
         PetscInt cell = (InitPartForRank[rank])[c], cor;
-
-        for (cor = 0; cor < Ncor; ++cor) cells[c * Ncor + cor] = Conn[cell][cor];
+        for (cor = 0; cor < Ncor; ++cor) {
+          cells[count] = Conn[cell][cor];
+          ++count;
+        }
+        PetscCall(PetscSectionSetDof(s, c, Ncor));
+        PetscCall(PetscSectionSetFieldDof(s, c, 0, Ncor));
       }
+      PetscCall(PetscSectionSetUp(s));
       PetscCall(DMSetDimension(dm, dim));
-      PetscCall(DMPlexBuildFromCellListParallel(dm, Nc, PETSC_DECIDE, Nv, Ncor, cells, &sfVert, NULL));
+      PetscCall(DMPlexBuildFromCellSectionParallel(dm, Nc, PETSC_DECIDE, Nv, s, cells, &sfVert, NULL));
+      PetscCall(PetscSectionDestroy(&s));
     } else if (hexprismmesh) {
-      Nc                        = sNLoclCellsHexPrismMesh[rank]; //Same on each rank for this example...
+      Nc                        = sNLoclCellsHexPrismMesh[rank];
       PetscInt Nv               = sNGlobVertsHexPrismMesh;
       InitPartForRank[0]        = &sInitialPartitionHexPrismMesh[0][0];
       InitPartForRank[1]        = &sInitialPartitionHexPrismMesh[1][0];
@@ -509,6 +604,38 @@ int main(int argc, char **argv)
       PetscCall(PetscSectionSetUp(s));
       PetscCall(DMSetDimension(dm, dim));
       PetscCall(PetscSectionView(s, PETSC_VIEWER_STDOUT_WORLD));
+      PetscCall(DMPlexBuildFromCellSectionParallel(dm, Nc, PETSC_DECIDE, Nv, s, cells, &sfVert, NULL));
+      PetscCall(PetscSectionDestroy(&s));
+    } else if (hexamesh) {
+      Nc                        = sNLoclCellsHexaMesh[rank]; //Same on each rank for this example...
+      PetscInt Nv               = sNGlobVertsHexaMesh;
+      InitPartForRank[0]        = &sInitialPartitionHexaMesh[0][0];
+      InitPartForRank[1]        = &sInitialPartitionHexaMesh[1][0];
+      const PetscInt (*Conn)[8] = sConnectivityHexaMesh;
+      const PetscInt Ncor       = 8;
+      const PetscInt dim        = 3;
+
+      /* Create a PetscSection even if we have only one type of element: */
+      PetscSection s;
+      PetscInt     vStart = 0, vEnd = Nc;
+      PetscCall(PetscSectionCreate(PETSC_COMM_WORLD, &s));
+      PetscCall(PetscSectionSetNumFields(s, 1));
+      PetscCall(PetscSectionSetFieldComponents(s, 0, 1));
+      PetscCall(PetscSectionSetChart(s, vStart, vEnd));
+
+      PetscCall(PetscMalloc1(Nc * Ncor, &cells));
+      PetscInt count = 0;
+      for (c = 0; c < Nc; ++c) {
+        PetscInt cell = (InitPartForRank[rank])[c], cor;
+        for (cor = 0; cor < Ncor; ++cor) {
+          cells[count] = Conn[cell][cor];
+          ++count;
+        }
+        PetscCall(PetscSectionSetDof(s, c, Ncor));
+        PetscCall(PetscSectionSetFieldDof(s, c, 0, Ncor));
+      }
+      PetscCall(PetscSectionSetUp(s));
+      PetscCall(DMSetDimension(dm, dim));
       PetscCall(DMPlexBuildFromCellSectionParallel(dm, Nc, PETSC_DECIDE, Nv, s, cells, &sfVert, NULL));
       PetscCall(PetscSectionDestroy(&s));
     }
@@ -620,15 +747,22 @@ int main(int argc, char **argv)
   const PetscBool lUseCone    = PETSC_FALSE;
   const PetscBool lUseClosure = PETSC_TRUE;
   PetscCall(DMSetBasicAdjacency(ddm, lUseCone, lUseClosure));
-  const PetscInt lNbCellsInOverlap = 1;
-  PetscSF        lSFMigrationOvl;
-  DM             ddm_with_overlap;
+  PetscInt lNbCellsInOverlap = 1;
+  PetscSF  lSFMigrationOvl   = NULL;
+  DM       ddm_with_overlap;
 
-  PetscCall(DMPlexDistributeOverlap(ddm, lNbCellsInOverlap, &lSFMigrationOvl, &ddm_with_overlap));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-overlap", &lNbCellsInOverlap, NULL));
+  if (lNbCellsInOverlap > 0) {
+    PetscCall(DMPlexDistributeOverlap(ddm, lNbCellsInOverlap, &lSFMigrationOvl, &ddm_with_overlap));
+  } else {
+    ddm_with_overlap = ddm;
+    PetscCall(PetscObjectReference((PetscObject)ddm));
+  }
 
   IS lISCellWithOvl = 0;
   /* This is the buggy call with prisms since commit 5ae96e2b862 */
   PetscCall(DMPlexCreateCellNumbering(ddm_with_overlap, PETSC_TRUE, &lISCellWithOvl));
+  PetscCall(PetscObjectSetName((PetscObject)lISCellWithOvl, "Initial elements # owned after partitionning and distributing"));
   /* Here, we can see the elements in the overlap within the IS: they are the ones with negative indices */
   PetscCall(ISView(lISCellWithOvl, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(ISDestroy(&lISCellWithOvl));
@@ -673,5 +807,10 @@ int main(int argc, char **argv)
       suffix: 4
       args: -hexprismmesh
       output_file: output/ex47_4.out
+
+    test:
+      suffix: 5
+      args: -hexamesh
+      output_file: output/ex47_5.out
 
 TEST*/

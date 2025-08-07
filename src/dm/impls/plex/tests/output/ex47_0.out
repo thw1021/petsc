@@ -276,7 +276,7 @@ Process [1]
 5.
 7.
 9.
-IS Object: 2 MPI processes
+IS Object: Initial elements # owned after partitionning and distributing 2 MPI processes
   type: general
 [0] Number of indices in set 10
 [0] 0 0
