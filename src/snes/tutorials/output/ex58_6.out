@@ -144,7 +144,8 @@
       Line search: lambdas = [1., 0.5, 0.], fnorms = [7.09522e-07, 0.000128637, 0.000257062]
       Line search: lambdas = [1.00082, 1.00041, 1.], fnorms = [6.09828e-07, 6.53251e-07, 7.09522e-07]
       Line search: lambdas = [1.00164, 1.00123, 1.00082], fnorms = [5.72455e-07, 5.82023e-07, 6.09828e-07]
-      Line search: abs(delFnrm) = 8.57451e-16 <= atol = 1e-15
+      Line search: lambdas = [1.00164, 1.00164, 1.00164], fnorms = [5.72455e-07, 5.72455e-07, 5.72455e-07]
+      Line search: abs(delLambda) = 6.53041e-09 < ltol = 1e-06
       Line search terminated: lambda = 1.00164, fnorm = 5.72455e-07
  11 SNES VI Function norm 5.72449e-07 Active lower constraints 198/198 upper constraints 0/0 Percent of total 0.0210437 Percent of bounded 0.
     0 KSP Residual norm 1.49079e-05
@@ -152,7 +153,10 @@
     2 KSP Residual norm 4.710e-10
     3 KSP Residual norm 2.186e-11
       Line search: lambdas = [1., 0.5, 0.], fnorms = [4.39233e-11, 2.86234e-07, 5.72455e-07]
-      Line search: abs(delFnrm) = 1.50531e-17 <= atol = 1e-15
-      Line search terminated: lambda = 1., fnorm = 4.39233e-11
- 12 SNES VI Function norm 4.36642e-11 Active lower constraints 198/198 upper constraints 0/0 Percent of total 0.0210437 Percent of bounded 0.
+      Line search: lambdas = [1.00002, 1.00001, 1.], fnorms = [4.05359e-11, 4.17491e-11, 4.39233e-11]
+      Line search: lambdas = [1.00003, 1.00003, 1.00002], fnorms = [4.03065e-11, 4.0364e-11, 4.05359e-11]
+      Line search: lambdas = [1.00003, 1.00003, 1.00003], fnorms = [4.03065e-11, 4.03065e-11, 4.03065e-11]
+      Line search: abs(delLambda) = 3.12556e-10 < ltol = 1e-06
+      Line search terminated: lambda = 1.00003, fnorm = 4.03065e-11
+ 12 SNES VI Function norm 4.00256e-11 Active lower constraints 198/198 upper constraints 0/0 Percent of total 0.0210437 Percent of bounded 0.
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 12
