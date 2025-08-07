@@ -56,7 +56,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
     delLambda = lambda - lambda_old;
 
     /* check for convergence */
-    if (PetscAbsReal(delLambda) < steptol * lambda) break;
+    if (PetscAbsReal(delLambda) < ltol) break;
     if (PetscAbsScalar(fty) / PetscAbsScalar(fty_init) < rtol) break;
     if (PetscAbsScalar(fty) < atol * ynorm && i > 0) break;
     if (monitor) {
@@ -140,14 +140,18 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
 
 /*MC
    SNESLINESEARCHCP - Critical point line search. This line search assumes that there exists some
-   artificial $G(x)$ for which the `SNESFunctionFn` $ F(x) = grad G(x)$.  Therefore, this line search seeks
+   artificial $G(x)$ for which the `SNESFunctionFn` $ F(x) = grad G(x)$. Therefore, this line search seeks
    to find roots of $ F^T Y$ via a secant method.
 
    Options Database Keys:
-+  -snes_linesearch_minlambda <minlambda> - the minimum acceptable lambda
-.  -snes_linesearch_maxstep <length>      - the algorithm insures that a step length is never longer than this value
-.  -snes_linesearch_damping <damping>     - initial trial step length is scaled by this factor on entry to the line search, default is 1.0
--  -snes_linesearch_max_it <max_it>       - the maximum number of secant steps performed.
++  -snes_linesearch_minlambda <1e\-12> - the minimum acceptable lambda
+.  -snes_linesearch_maxstep <1e8>      - the algorithm ensures that lambda is never larger than this value
+.  -snes_linesearch_damping <1.0>      - initial trial step length is scaled by this factor on entry to the line search
+.  -snes_linesearch_order <1>          - order of the approximation in the secant method, must be 1, 2, or 3
+.  -snes_linesearch_max_it <1>         - the maximum number of secant iterations performed
+.  -snes_linesearch_rtol <1e\-8>       - relative tolerance for the directional derivative
+.  -snes_linesearch_atol <1e\-15>      - absolute tolerance for the directional derivative
+-  -snes_linesearch_ltol <1e\-8>       - minimum absolute change in lambda allowed
 
    Level: advanced
 

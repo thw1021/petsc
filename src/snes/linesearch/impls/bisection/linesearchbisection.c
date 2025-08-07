@@ -188,17 +188,17 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
    This line search seeks to find the root of the directional derivative along the search direction $F^T Y$ through bisection.
 
    Options Database Keys:
-+  -snes_linesearch_max_it <50> - maximum number of iterations for the line search
-.  -snes_linesearch_damping <1.0> - initial trial step length on entry to the line search
-.  -snes_linesearch_rtol <1e\-8> - relative tolerance for the directional derivative
-.  -snes_linesearch_atol <1e\-6> - absolute tolerance for the directional derivative
--  -snes_linesearch_ltol <1e\-6> - minimum absolute change in lambda allowed
++  -snes_linesearch_max_it <50>   - maximum number of iterations for the line search
+.  -snes_linesearch_damping <1.0> - initial lambda on entry to the line search
+.  -snes_linesearch_rtol <1e\-8>  - relative tolerance for the directional derivative
+.  -snes_linesearch_atol <1e\-6>  - absolute tolerance for the directional derivative
+-  -snes_linesearch_ltol <1e\-6>  - minimum absolute change in lambda allowed
 
    Level: intermediate
 
    Note:
    This method does NOT use the objective function if it is provided with `SNESSetObjective()`.
-   This line search will always give a step size in the interval [0, damping].
+   This line search will always give a lambda in the interval [0, damping].
 
 .seealso: [](ch_snes), `SNESLineSearch`, `SNESLineSearchType`, `SNESLineSearchCreate()`, `SNESLineSearchSetType()`, `SNESLINESEARCHCP`
 M*/
