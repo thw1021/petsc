@@ -121,6 +121,7 @@ int main(int argc, char **argv)
   test:
     nsize: {{1 2}}
     suffix: 0
+    output_file: output/empty.out
 
   test:
     requires: cuda
