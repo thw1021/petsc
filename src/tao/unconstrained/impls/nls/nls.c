@@ -797,6 +797,9 @@ static PetscErrorCode TaoView_NLS(Tao tao, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
+    PetscViewerFormat format;
+    PetscCall(PetscViewerGetFormat(viewer, &format));
+    if (format != PETSC_VIEWER_ASCII_INFO && format != PETSC_VIEWER_ASCII_INFO_DETAIL) PetscFunctionReturn(PETSC_SUCCESS);
     PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Newton steps: %" PetscInt_FMT "\n", nlsP->newt));
     PetscCall(PetscViewerASCIIPrintf(viewer, "BFGS steps: %" PetscInt_FMT "\n", nlsP->bfgs));
@@ -877,11 +880,13 @@ PETSC_EXTERN PetscErrorCode TaoCreate_NLS(Tao tao)
   PetscFunctionBegin;
   PetscCall(PetscNew(&nlsP));
 
-  tao->ops->setup          = TaoSetUp_NLS;
-  tao->ops->solve          = TaoSolve_NLS;
-  tao->ops->view           = TaoView_NLS;
-  tao->ops->setfromoptions = TaoSetFromOptions_NLS;
-  tao->ops->destroy        = TaoDestroy_NLS;
+  tao->ops->setup            = TaoSetUp_NLS;
+  tao->ops->solve            = TaoSolve_NLS;
+  tao->ops->view             = TaoView_NLS;
+  tao->ops->setfromoptions   = TaoSetFromOptions_NLS;
+  tao->ops->destroy          = TaoDestroy_NLS;
+  tao->uses_gradient         = PETSC_TRUE;
+  tao->uses_hessian_matrices = PETSC_TRUE;
 
   /* Override default settings (unless already changed) */
   PetscCall(TaoParametersInitialize(tao));
