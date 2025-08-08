@@ -75,7 +75,6 @@ int main(int argc, char **args)
   test:
     suffix: prefix_tao
     args: -regressor_view
-    filter: grep -v "tol: "
 
   test:
     suffix: prefix_ksp
