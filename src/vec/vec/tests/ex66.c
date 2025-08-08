@@ -127,14 +127,14 @@ int main(int argc, char **argv)
     requires: cuda
     nsize: {{1 2}}
     suffix: cuda
-    output_file: output/ex66_0.out
+    output_file: output/empty.out
     args: -vec_type cuda
 
   test:
     requires: hip
     nsize: {{1 2}}
     suffix: hip
-    output_file: output/ex66_0.out
+    output_file: output/empty.out
     args: -vec_type hip
 
 TEST*/
