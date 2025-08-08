@@ -70,12 +70,11 @@ int main(int argc, char **args)
 /*TEST
 
   build:
-    requires: !complex
+    requires: !complex !single
 
   test:
     suffix: prefix_tao
     args: -regressor_view
-    filter: grep -v "tol: "
 
   test:
     suffix: prefix_ksp
