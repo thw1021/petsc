@@ -70,7 +70,7 @@ int main(int argc, char **args)
 /*TEST
 
   build:
-    requires: !complex
+    requires: !complex !single
 
   test:
     suffix: prefix_tao
