@@ -946,7 +946,7 @@ PetscErrorCode SNESLineSearchGetType(SNESLineSearch linesearch, SNESLineSearchTy
 - type       - The type of line search to be used, see `SNESLineSearchType`
 
   Options Database Key:
-. -snes_linesearch_type <type> - basic (or equivalently none), bt, l2, cp, nleqerr, shell
+. -snes_linesearch_type <type> - basic (or equivalently none), bt, l2, cp, nleqerr, bisection, shell
 
   Level: intermediate
 

@@ -365,6 +365,7 @@ listed in Table {any}`tab-linesearches`.
    identical to above   ``SNESLINESEARCHNONE``      ``none``
    L2-norm Minimization ``SNESLINESEARCHL2``        ``l2``
    Critical point       ``SNESLINESEARCHCP``        ``cp``
+   Error-oriented       ``SNESLINESEARCHNLEQERR``   ``nleqerr``
    Bisection            ``SNESLINESEARCHBISECTION`` ``bisection``
    Shell                ``SNESLINESEARCHSHELL``     ``shell``
    ==================== =========================== ================
