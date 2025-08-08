@@ -105,6 +105,16 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
     /* determine change of lambda */
     delLambda = lambda - lambda_old;
 
+    /* check change of lambda tolerance */
+    if (PetscAbsReal(delLambda) < ltol) {
+      if (monitor) {
+        PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: abs(delLambda) = %g < ltol = %g\n", (double)PetscAbsReal(delLambda), (double)ltol));
+        PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
+      }
+      break;
+    }
+
     /* compute f'() at the end points using second order one sided differencing */
     delFnrm     = (3. * fnrm - 4. * fnrm_mid + 1. * fnrm_old) / delLambda;
     delFnrm_old = (-3. * fnrm_old + 4. * fnrm_mid - 1. * fnrm) / delLambda;
@@ -112,20 +122,10 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
     del2Fnrm = (delFnrm - delFnrm_old) / delLambda;
 
     /* check absolute tolerance */
-    if (PetscAbsScalar(delFnrm) <= atol) {
+    if (PetscAbsReal(delFnrm) <= atol) {
       if (monitor) {
         PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
-        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: abs(delFnrm) = %g <= atol = %g\n", (double)PetscAbsScalar(delFnrm), (double)atol));
-        PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
-      }
-      break;
-    }
-
-    /* check change of lambda tolerance */
-    if (PetscAbsReal(delLambda) < ltol) {
-      if (monitor) {
-        PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
-        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: abs(delLambda) = %g < ltol = %g\n", (double)PetscAbsReal(delLambda), (double)ltol));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: abs(delFnrm) = %g <= atol = %g\n", (double)PetscAbsReal(delFnrm), (double)atol));
         PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
       }
       break;
