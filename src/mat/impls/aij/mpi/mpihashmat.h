@@ -9,17 +9,16 @@
 static PetscErrorCode MatSetValues_MPI_Hash(Mat A, PetscInt m, const PetscInt *rows, PetscInt n, const PetscInt *cols, const PetscScalar *values, InsertMode addv)
 {
   PetscConcat(Mat_MPI, TYPE) *a = (PetscConcat(Mat_MPI, TYPE) *)A->data;
-  PetscInt rStart, rEnd, cStart, cEnd;
+  const PetscInt rStart         = A->rmap->rstart;
+  const PetscInt rEnd           = A->rmap->rend;
+  const PetscInt cStart         = A->cmap->rstart;
+  const PetscInt cEnd           = A->cmap->rend;
 #if defined(TYPE_SBAIJ)
-  PetscInt bs;
+  const PetscInt bs = A->rmap->bs;
 #endif
+  const PetscBool ignorezeroentries = ((Mat_SeqAIJ *)a->A->data)->ignorezeroentries;
 
   PetscFunctionBegin;
-  PetscCall(MatGetOwnershipRange(A, &rStart, &rEnd));
-  PetscCall(MatGetOwnershipRangeColumn(A, &cStart, &cEnd));
-#if defined(TYPE_SBAIJ)
-  PetscCall(MatGetBlockSize(A, &bs));
-#endif
   for (PetscInt r = 0; r < m; ++r) {
     PetscScalar value;
     if (rows[r] < 0) continue;
@@ -28,9 +27,9 @@ static PetscErrorCode MatSetValues_MPI_Hash(Mat A, PetscInt m, const PetscInt *r
       if (!a->donotstash) {
         A->assembled = PETSC_FALSE;
         if (a->roworiented) {
-          PetscCall(MatStashValuesRow_Private(&A->stash, rows[r], n, cols, values + r * n, PETSC_FALSE));
+          PetscCall(MatStashValuesRow_Private(&A->stash, rows[r], n, cols, values + r * n, ignorezeroentries));
         } else {
-          PetscCall(MatStashValuesCol_Private(&A->stash, rows[r], n, cols, values + r, m, PETSC_FALSE));
+          PetscCall(MatStashValuesCol_Private(&A->stash, rows[r], n, cols, values + r, m, ignorezeroentries));
         }
       }
     } else {
