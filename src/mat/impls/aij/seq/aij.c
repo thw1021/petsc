@@ -1228,6 +1228,7 @@ static PetscErrorCode MatReset_SeqAIJ(Mat A)
   PetscCall(PetscFree(a->solve_work));
   PetscCall(ISDestroy(&a->icol));
   PetscCall(PetscFree(a->saved_values));
+  a->compressedrow.use = PETSC_FALSE;
   PetscCall(PetscFree2(a->compressedrow.i, a->compressedrow.rindex));
   PetscCall(MatDestroy_SeqAIJ_Inode(A));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -4650,7 +4651,6 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
   MatCOOStruct_SeqAIJ *coo;
   PetscBool            isorted;
   PetscBool            hypre;
-  const char          *name;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)mat, &comm));
@@ -4687,8 +4687,7 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
   PetscCall(PetscArrayzero(Ai, M + 1));
   PetscCall(PetscShmgetAllocateArray(coo_n - nneg, sizeof(PetscInt), (void **)&Aj)); /* We have at most coo_n-nneg unique nonzeros */
 
-  PetscCall(PetscObjectGetName((PetscObject)mat, &name));
-  PetscCall(PetscStrcmp("_internal_COO_mat_for_hypre", name, &hypre));
+  PetscCall(PetscStrcmp("_internal_COO_mat_for_hypre", ((PetscObject)mat)->name, &hypre));
 
   /* In each row, sort by column, then unique column indices to get row length */
   Ai++;  /* Inc by 1 for convenience */
