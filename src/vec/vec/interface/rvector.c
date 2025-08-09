@@ -930,7 +930,6 @@ PetscErrorCode VecSetValues(Vec x, PetscInt ni, const PetscInt ix[], const Petsc
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   if (!ni) PetscFunctionReturn(PETSC_SUCCESS);
   PetscAssertPointer(ix, 3);
-  PetscAssertPointer(y, 4);
   PetscValidType(x, 1);
 
   PetscCall(PetscLogEventBegin(VEC_SetValues, x, 0, 0, 0));
@@ -1031,7 +1030,6 @@ PetscErrorCode VecSetValuesBlocked(Vec x, PetscInt ni, const PetscInt ix[], cons
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   if (!ni) PetscFunctionReturn(PETSC_SUCCESS);
   PetscAssertPointer(ix, 3);
-  PetscAssertPointer(y, 4);
   PetscValidType(x, 1);
 
   PetscCall(PetscLogEventBegin(VEC_SetValues, x, 0, 0, 0));
@@ -1085,7 +1083,6 @@ PetscErrorCode VecSetValuesLocal(Vec x, PetscInt ni, const PetscInt ix[], const 
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   if (!ni) PetscFunctionReturn(PETSC_SUCCESS);
   PetscAssertPointer(ix, 3);
-  PetscAssertPointer(y, 4);
   PetscValidType(x, 1);
 
   PetscCall(PetscLogEventBegin(VEC_SetValues, x, 0, 0, 0));
@@ -1146,7 +1143,6 @@ PetscErrorCode VecSetValuesBlockedLocal(Vec x, PetscInt ni, const PetscInt ix[],
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   if (!ni) PetscFunctionReturn(PETSC_SUCCESS);
   PetscAssertPointer(ix, 3);
-  PetscAssertPointer(y, 4);
   PetscValidType(x, 1);
   PetscCall(PetscLogEventBegin(VEC_SetValues, x, 0, 0, 0));
   if (PetscUnlikely(!x->map->mapping && x->ops->getlocaltoglobalmapping)) PetscUseTypeMethod(x, getlocaltoglobalmapping, &x->map->mapping);
