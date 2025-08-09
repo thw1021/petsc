@@ -70,7 +70,7 @@ int main(int argc, char **args)
 /*TEST
 
   build:
-    requires: !complex !single
+    requires: !complex !single !__float128 !defined(PETSC_USE_64BIT_INDICES)
 
   test:
     suffix: prefix_tao
