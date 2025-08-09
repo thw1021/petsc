@@ -6600,7 +6600,7 @@ static inline PetscErrorCode DMPlexVecGetClosure_Fields_Static(DM dm, PetscSecti
 
   Notes:
   `DMPlexVecGetOrientedClosure()`/`DMPlexVecRestoreClosure()` only allocates the values array if it set to `NULL` in the
-  calling function. This is because `DMPlexVecGetClosure()` is typically called in the inner loop of a `Vec` or `Mat`
+  calling function. This is because `DMPlexVecGetOrientedClosure()` is typically called in the inner loop of a `Vec` or `Mat`
   assembly function, and a user may already have allocated storage for this operation.
 
   Fortran Notes:
