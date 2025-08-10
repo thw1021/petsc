@@ -2403,6 +2403,19 @@ cdef class TAOLineSearch(Object):
         CHKERR(TaoLineSearchApply(self.taols, x.vec, &f, g.vec, s.vec, &steplen, &reason))
         return (toReal(f), toReal(steplen), reason)
 
+    def setInitialStepLength(self, s: float) -> None:
+        """Sets the initial step length of a line search.
+
+        Logically collective.
+
+        See Also
+        --------
+        petsc.TaoLineSearchSetInitialStepLength
+
+        """
+        cdef PetscReal cs = asReal(s)
+        CHKERR(TaoLineSearchSetInitialStepLength(self.taols, cs))
+
 # --------------------------------------------------------------------
 
 del TAOLineSearchType
