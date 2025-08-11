@@ -74,20 +74,14 @@ PetscErrorCode TaoLineSearchView(TaoLineSearch ls, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERSTRING, &isstring));
   if (isascii) {
-    PetscViewerFormat format;
-
     PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)ls, viewer));
     PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscTryTypeMethod(ls, view, viewer);
     PetscCall(PetscViewerASCIIPopTab(viewer));
-    PetscCall(PetscViewerGetFormat(viewer, &format));
     PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscCall(PetscViewerASCIIPrintf(viewer, "maximum function evaluations=%" PetscInt_FMT "\n", ls->max_funcs));
     PetscCall(PetscViewerASCIIPrintf(viewer, "tolerances: ftol=%g, rtol=%g, gtol=%g\n", (double)ls->ftol, (double)ls->rtol, (double)ls->gtol));
     if (ls->bounded) PetscCall(PetscViewerASCIIPrintf(viewer, "using variable bounds\n"));
-    PetscCall(PetscViewerASCIIPopTab(viewer));
-    if (format != PETSC_VIEWER_ASCII_INFO && format != PETSC_VIEWER_ASCII_INFO_DETAIL) PetscFunctionReturn(PETSC_SUCCESS);
-    PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function evaluations=%" PetscInt_FMT "\n", ls->nfeval));
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations=%" PetscInt_FMT "\n", ls->ngeval));
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function/gradient evaluations=%" PetscInt_FMT "\n", ls->nfgeval));
