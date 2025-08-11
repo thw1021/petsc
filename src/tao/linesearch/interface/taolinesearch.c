@@ -81,7 +81,6 @@ PetscErrorCode TaoLineSearchView(TaoLineSearch ls, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscCall(PetscViewerASCIIPrintf(viewer, "maximum function evaluations=%" PetscInt_FMT "\n", ls->max_funcs));
     PetscCall(PetscViewerASCIIPrintf(viewer, "tolerances: ftol=%g, rtol=%g, gtol=%g\n", (double)ls->ftol, (double)ls->rtol, (double)ls->gtol));
-    if (ls->bounded) PetscCall(PetscViewerASCIIPrintf(viewer, "using variable bounds\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function evaluations=%" PetscInt_FMT "\n", ls->nfeval));
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations=%" PetscInt_FMT "\n", ls->ngeval));
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function/gradient evaluations=%" PetscInt_FMT "\n", ls->nfgeval));
