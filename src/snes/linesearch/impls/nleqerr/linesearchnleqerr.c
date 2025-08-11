@@ -287,7 +287,7 @@ static PetscErrorCode SNESLineSearchDestroy_NLEQERR(SNESLineSearch linesearch)
    Options Database Keys:
 +  -snes_linesearch_damping <1.0>      - initial step length
 .  -snes_linesearch_max_it <40>        - maximum number of iterations for the line search
--  -snes_linesearch_minlambda <1e\-12> - minimum step length allowed
+-  -snes_linesearch_minlambda <1e\-12> - minimum lambda allowed
 
    Level: advanced
 

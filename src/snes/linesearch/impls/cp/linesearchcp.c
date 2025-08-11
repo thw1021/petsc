@@ -140,13 +140,13 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
 
 /*MC
    SNESLINESEARCHCP - Critical point line search. This line search assumes that there exists some
-   artificial $G(x)$ for which the `SNESFunctionFn` $ F(x) = grad G(x)$. Therefore, this line search seeks
-   to find roots of $ F^T Y$ via a secant method.
+   artificial $G(x)$ for which the `SNESFunctionFn` $F(x) = grad G(x)$. Therefore, this line search seeks
+   to find roots of the directional derivative via a secant method, that is $F(x_k - \lambda Y_k) \cdot Y_k / ||Y_k|| = 0$.
 
    Options Database Keys:
-+  -snes_linesearch_minlambda <1e\-12> - the minimum acceptable lambda
++  -snes_linesearch_minlambda <1e\-12> - the minimum acceptable lambda (scaling of solution update)
 .  -snes_linesearch_maxstep <1e8>      - the algorithm ensures that lambda is never larger than this value
-.  -snes_linesearch_damping <1.0>      - initial trial step length is scaled by this factor on entry to the line search
+.  -snes_linesearch_damping <1.0>      - initial lambda on entry to the line search
 .  -snes_linesearch_order <1>          - order of the approximation in the secant method, must be 1, 2, or 3
 .  -snes_linesearch_max_it <1>         - the maximum number of secant iterations performed
 .  -snes_linesearch_rtol <1e\-8>       - relative tolerance for the directional derivative
