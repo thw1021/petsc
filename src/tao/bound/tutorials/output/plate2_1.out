@@ -1,22 +1,13 @@
 
 ---- Minimum Surface Area With Plate Problem -----
 mx:8, my:6, bmx:3, bmy:3, height:0.2
-iter =   0, Function value 1.67039, Residual: 0.47529
-iter =   1, Function value 1.506, Residual: 0.0373927
-iter =   2, Function value 1.50566, Residual: 1.78454e-05
-iter =   3, Function value 1.50566, Residual: < 1.0e-6
+iter =   0, Function value 1.67039, Residual: 0.47529 
+iter =   1, Function value 1.506, Residual: 0.0373927 
+iter =   2, Function value 1.50566, Residual: 1.78454e-05 
+iter =   3, Function value 1.50566, Residual: < 1.0e-6 
 Tao Object: 1 MPI process
   type: tron
   Total PG its: 9,  PG tolerance: 0.001 
-  Objective function:
-    Scale (tao_objective_scale): 1.
-    Function:
-      TaoTerm Object: (callbacks_) 1 MPI process
-        type: taocallbacks
-        solution vector space: N = 48 [VecType seq (taoterm_solution_vec_type)]
-        parameter vector space: (none)
-        attached to Tao [name omitted]
-    Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: more-thuente
     maximum function evaluations=30
@@ -56,7 +47,7 @@ Tao Object: 1 MPI process
   total KSP iterations: 12
   Active Set subset type: subvec
   convergence tolerances: gatol=1e-05,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=1.45121e-11
+  Residual in Function/Gradient:=1.4512e-11
   Objective value=1.50566
   total number of iterations=3,                          (max: 50)
   total number of function/gradient evaluations=14,      (max: unlimited)
