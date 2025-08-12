@@ -455,6 +455,41 @@ const PetscReal sCoordsHexaMesh[50][3] = {
   {0.75, 0.75, 1}
 };
 
+// 2x2x1
+const PetscInt sConnectivityHexaMesh2[4][8] = {
+  { 0,  3,  4,  1,  9, 10, 13, 12},
+  { 1,  4,  5,  2, 10, 11, 14, 13},
+  { 3,  6,  7,  4, 12, 13, 16, 15},
+  { 4,  7,  8,  5, 13, 14, 17, 16}
+};
+
+const PetscInt sInitialPartitionHexaMesh2[2][2] = {
+  {0, 1},
+  {2, 3}
+};
+const PetscInt  sNLoclCellsHexaMesh2[2] = {2, 2};
+const PetscInt  sNGlobVertsHexaMesh2    = 18;
+const PetscReal sCoordsHexaMesh2[18][3] = {
+  {0.0,  0.0,  0},
+  {1.0,  0.0,  0},
+  {2.0,  0.0,  0},
+  {0.0,  1.0,  0},
+  {1.0,  1.0,  0},
+  {2.0,  1.0,  0},
+  {0.0,  2.0,  0},
+  {1.0,  2.0,  0},
+  {2.0,  2.0,  0},
+  {0.0,  0.0,  1},
+  {1.0,  0.0,  1},
+  {2.0,  0.0,  1},
+  {0.0,  1.0,  1},
+  {1.0,  1.0,  1},
+  {2.0,  1.0,  1},
+  {0.0,  2.0,  1},
+  {1.0,  2.0,  1},
+  {2.0,  2.0,  1}
+};
+
 int main(int argc, char **argv)
 {
   PetscInt         Nc = 0;
@@ -607,21 +642,21 @@ int main(int argc, char **argv)
       PetscCall(DMPlexBuildFromCellSectionParallel(dm, Nc, PETSC_DECIDE, Nv, s, cells, &sfVert, NULL));
       PetscCall(PetscSectionDestroy(&s));
     } else if (hexamesh) {
-      Nc                        = sNLoclCellsHexaMesh[rank]; //Same on each rank for this example...
-      PetscInt Nv               = sNGlobVertsHexaMesh;
-      InitPartForRank[0]        = &sInitialPartitionHexaMesh[0][0];
-      InitPartForRank[1]        = &sInitialPartitionHexaMesh[1][0];
-      const PetscInt (*Conn)[8] = sConnectivityHexaMesh;
+      Nc                        = sNLoclCellsHexaMesh2[rank]; //Same on each rank for this example...
+      PetscInt Nv               = sNGlobVertsHexaMesh2;
+      InitPartForRank[0]        = &sInitialPartitionHexaMesh2[0][0];
+      InitPartForRank[1]        = &sInitialPartitionHexaMesh2[1][0];
+      const PetscInt (*Conn)[8] = sConnectivityHexaMesh2;
       const PetscInt Ncor       = 8;
       const PetscInt dim        = 3;
 
       /* Create a PetscSection even if we have only one type of element: */
       PetscSection s;
-      PetscInt     vStart = 0, vEnd = Nc;
+      PetscInt     cStart = 0, cEnd = Nc;
       PetscCall(PetscSectionCreate(PETSC_COMM_WORLD, &s));
       PetscCall(PetscSectionSetNumFields(s, 1));
       PetscCall(PetscSectionSetFieldComponents(s, 0, 1));
-      PetscCall(PetscSectionSetChart(s, vStart, vEnd));
+      PetscCall(PetscSectionSetChart(s, cStart, cEnd));
 
       PetscCall(PetscMalloc1(Nc * Ncor, &cells));
       PetscInt count = 0;
@@ -635,8 +670,10 @@ int main(int argc, char **argv)
         PetscCall(PetscSectionSetFieldDof(s, c, 0, Ncor));
       }
       PetscCall(PetscSectionSetUp(s));
+      PetscCall(PetscSectionViewFromOptions(s, NULL, "-s_view"));
       PetscCall(DMSetDimension(dm, dim));
       PetscCall(DMPlexBuildFromCellSectionParallel(dm, Nc, PETSC_DECIDE, Nv, s, cells, &sfVert, NULL));
+      PetscCall(PetscSFViewFromOptions(sfVert, NULL, "-sf_view"));
       PetscCall(PetscSectionDestroy(&s));
     }
     PetscCall(PetscSFDestroy(&sfVert));
