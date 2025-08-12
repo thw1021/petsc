@@ -348,6 +348,12 @@ static PetscErrorCode TaoBRGNSetRegularizationType_BRGN(Tao tao, TaoBRGNRegulari
     PetscCall(MatDestroy(&reg_map));
     PetscCall(MatDestroy(&Hreg));
   }
+  if (gn->reg_type == TAOBRGN_REGULARIZATION_LM) {
+    TaoLineSearch ls;
+
+    PetscCall(TaoGetLineSearch(gn->subsolver, &ls));
+    PetscCall(TaoLineSearchSetType(ls, TAOLINESEARCHUNIT));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -764,11 +770,33 @@ static PetscErrorCode TaoSetFromOptions_BRGN(Tao tao, PetscOptionItems PetscOpti
 static PetscErrorCode TaoView_BRGN(Tao tao, PetscViewer viewer)
 {
   TAO_BRGN *gn = (TAO_BRGN *)tao->data;
+  PetscBool isascii;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
+  if (isascii) {
+    PetscCall(PetscViewerASCIIPushTab(viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "BRGN Regularization Type: %s\n", TaoBRGNRegularizationTypes[gn->reg_type]));
+    switch (gn->reg_type) {
+    case TAOBRGN_REGULARIZATION_L1DICT:
+      PetscCall(PetscViewerASCIIPrintf(viewer, "L1 smooth epsilon: %g\n", (double)gn->epsilon));
+      break;
+    case TAOBRGN_REGULARIZATION_LM:
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Downhill trust region decrease factor:: %g\n", (double)gn->downhill_lambda_change));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Uphill trust region increase factor:: %g\n", (double)gn->uphill_lambda_change));
+      break;
+    case TAOBRGN_REGULARIZATION_L2PROX:
+    case TAOBRGN_REGULARIZATION_L2PURE:
+    case TAOBRGN_REGULARIZATION_USER:
+    default:
+      break;
+    }
+    PetscCall(PetscViewerASCIIPopTab(viewer));
+  }
   PetscCall(PetscViewerASCIIPushTab(viewer));
   PetscCall(TaoView(gn->subsolver, viewer));
   PetscCall(PetscViewerASCIIPopTab(viewer));
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
