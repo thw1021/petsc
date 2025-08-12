@@ -5916,7 +5916,7 @@ PetscErrorCode DMPlexCreate(MPI_Comm comm, DM *mesh)
         3
 .ve
 
-  Vertices are implicitly numbered consecutively 0, ..., NVertices.
+  Vertices are implicitly numbered consecutively $0, \ldots, \mathrm{NVertices}$.
 
   Each process owns a chunk of `numVertices` consecutive vertices.
 
