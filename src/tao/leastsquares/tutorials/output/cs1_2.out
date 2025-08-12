@@ -1,151 +1,7 @@
   Iteration information for tao_brgn_subsolver_ solve.
   0 TAO,  Function value: 0.65125,  Residual: 2.50483 
-    Linear tao_brgn_subsolver_tao_bnk_ solve converged due to CONVERGED_RTOL iterations 3
-  1 TAO,  Function value: 4.5516e-09,  Residual: 1.29926e-14 
-Tao Object: 1 MPI process
-  type: brgn
-    Tao Object: (tao_brgn_subsolver_) 1 MPI process
-      type: bnls
-        Tao Object: (tao_brgn_subsolver_tao_bnk_cg_) 1 MPI process
-          type: bncg
-            CG Type: ssml_bfgs
-            Skipped Stepdirection Updates: 0
-            Scaled gradient steps: 0
-            Pure gradient steps: 0
-            Not a descent direction: 0
-            Line search fails: 0
-            Matrix has not been preallocated yet
-          Objective function:
-            Scale (tao_objective_scale): 1.
-            Function:
-              TaoTerm Object: (tao_brgn_subsolver_tao_bnk_cg_callbacks_) 1 MPI process
-                type: taocallbacks
-                solution vector space: N = 5 [VecType seq (taoterm_solution_vec_type)]
-                parameter vector space: (none)
-                attached to Tao [name omitted] (tao_brgn_subsolver_tao_bnk_cg_)
-            Map: unmapped
-          TaoLineSearch Object: (tao_brgn_subsolver_tao_bnk_cg_) 1 MPI process
-            type: more-thuente
-            maximum function evaluations=30
-            tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
-            total number of function evaluations=0
-            total number of gradient evaluations=0
-            total number of function/gradient evaluations=0
-            Termination reason: 0
-          convergence tolerances: gatol=1e-08,           grtol=1e-08,           steptol=0.,           gttol=0.
-          Residual in Function/Gradient:=0.
-          Objective value=0.
-          total number of iterations=0,                                  (max: 2000)
-          Solver never run
-        Rejected BFGS updates: 0
-        CG steps: 0
-        Newton steps: 1
-        BFGS steps: 0
-        Scaled gradient steps: 0
-        Gradient steps: 0
-        KSP termination reasons:
-          atol: 0
-          rtol: 1
-          ctol: 0
-          negc: 0
-          dtol: 0
-          iter: 0
-          othr: 0
-      Objective function:
-        Scale (tao_objective_scale): 1.
-        Function:
-          TaoTerm Object: (tao_brgn_subsolver_objective_) 1 MPI process
-            type: sum
-            solution vector space: N = 5 [VecType seq (taoterm_solution_vec_type)]
-            parameter vector space: (optional) K = 5 [VecType nest (taoterm_parameters_vec_type)]
-            default Hessian MatType (taoterm_hessian_mat_type): shell
-            Sum of 2 terms:
-              Summand 0:
-                Scale (taoterm_sum_brgn_gauss_newton_scale): 1.
-                Map: unmapped
-                Term:
-                  TaoTerm Object: BRGN Gauss-Newton term (brgn_gauss_newton_) 1 MPI process
-                    type: shell
-                    solution vector space: N = 5 [VecType seq (taoterm_solution_vec_type)]
-                    parameter vector space: (none)
-                    default Hessian MatType (taoterm_hessian_mat_type): shell
-                    User context has been set
-                    The following methods have been set: objectiveandgradient, hessian,
-              Summand 1:
-                Scale (taoterm_sum_regularizer_scale): 1e-08
-                Map: unmapped
-                Term:
-                  TaoTerm Object: BRGN regularizer l2prox (brgn_regularizer_) 1 MPI process
-                    type: halfl2squared
-                    solution vector space: N = 5 [VecType seq (taoterm_solution_vec_type)]
-                    parameter vector space: (optional) K = 5 [VecType seq (taoterm_parameters_vec_type)]
-                    default Hessian MatType (taoterm_hessian_mat_type): shell
-        Map: unmapped
-      TaoLineSearch Object: (tao_brgn_subsolver_) 1 MPI process
-        type: more-thuente
-        maximum function evaluations=30
-        tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
-        total number of function evaluations=0
-        total number of gradient evaluations=0
-        total number of function/gradient evaluations=1
-        Termination reason: 1
-      KSP Object: (tao_brgn_subsolver_tao_bnk_) 1 MPI process
-        type: stcg
-        maximum iterations=10000, initial guess is zero
-        tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
-        left preconditioning
-        using UNPRECONDITIONED norm type for convergence test
-      PC Object: (tao_brgn_subsolver_tao_bnk_) 1 MPI process
-        type: lmvm
-        Mat Object: (tao_brgn_subsolver_tao_bnk_pc_lmvm_) 1 MPI process
-          type: lmvmbfgs
-          rows=5, cols=5
-            Max. storage: 5
-            Used storage: 0
-            Number of updates: 0
-            Number of rejects: 0
-            Number of resets: 0
-            J0:
-              Mat Object: (tao_brgn_subsolver_tao_bnk_pc_lmvm_mat_lmvm_J0_) 1 MPI process
-                type: diagonal
-                rows=5, cols=5
-                  Vec Object: 1 MPI process
-                    type: seq
-            Rescale type: diagonal
-            Rescale history: 1
-            Rescale params: alpha=1., beta=0.5, rho=1.
-            Rescale convex factor: theta=0.125
-        linear system matrix = precond matrix:
-        Mat Object: 1 MPI process
-          type: shell
-          rows=5, cols=5
-      total KSP iterations: 3
-      convergence tolerances: gatol=1e-06,       grtol=1e-08,       steptol=0.,       gttol=0.
-      Residual in Function/Gradient:=1.29926e-14
-      Objective value=4.5516e-09
-      total number of iterations=1,                              (max: 100)
-      total number of function evaluations=1,                      (max: unlimited)
-      total number of function/gradient evaluations=2,          (max: unlimited)
-      total number of Hessian evaluations=1
-      Solution converged:        ||g(X)|| <= gatol
-  Objective function:
-    Scale (tao_objective_scale): 1.
-    Function:
-      TaoTerm Object: (callbacks_) 1 MPI process
-        type: taocallbacks
-        solution vector space: N = 5 [VecType seq (taoterm_solution_vec_type)]
-        parameter vector space: (none)
-        attached to Tao [name omitted]
-    Map: unmapped
-  convergence tolerances: gatol=1e-06,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=0.
-  Objective value=0.65125
-  total number of iterations=1,                          (max: 100)
-  total number of function evaluations=1,                  (max: unlimited)
-  total number of function/gradient evaluations=2,      (max: unlimited)
-  total number of Hessian evaluations=1
-  total number of Jacobian evaluations=2
-  Solution converged:    ||g(X)|| <= gatol
+  Linear tao_brgn_subsolver_tao_bnk_ solve converged due to CONVERGED_RTOL iterations 3
+  1 TAO,  Function value: 4.5516e-09,  Residual: 3.53574e-14 
 -------- result x, residual f=A*x-b, and Jacobian=A. -------- 
 Vec Object: 1 MPI process
   type: seq
@@ -156,9 +12,9 @@ Vec Object: 1 MPI process
 0.13467
 Vec Object: 1 MPI process
   type: seq
-8.95156e-09
--8.3843e-09
--7.28987e-09
+8.95157e-09
+-8.38429e-09
+-7.28986e-09
 Mat Object: 1 MPI process
   type: seqdense
 8.1000000000000005e-01 9.1000000000000003e-01 2.8000000000000003e-01 9.5999999999999996e-01 9.5999999999999996e-01 
