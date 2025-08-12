@@ -163,8 +163,6 @@ int main(int argc, char **argv)
   /* Fill the content of matrix D from user application Context */
   PetscCall(FormDictionaryMatrix(D, &user));
 
-  /* If needed, set options via function for testing purpose */
-  PetscCall(SetTaoOptionsFromUserOptions(tao, &user));
   /* Bind x to tao->solution. */
   PetscCall(TaoSetSolution(tao, x));
   /* Bind D to tao->data->D */
@@ -176,6 +174,8 @@ int main(int argc, char **argv)
 
   /* Check for any TAO command line arguments */
   PetscCall(TaoSetFromOptions(tao));
+  /* If needed, set options via function for testing purpose */
+  PetscCall(SetTaoOptionsFromUserOptions(tao, &user));
 
   PetscCall(TaoSetConvergenceHistory(tao, hist, resid, 0, lits, 100, PETSC_TRUE));
 
