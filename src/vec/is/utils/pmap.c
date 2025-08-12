@@ -366,7 +366,7 @@ PetscErrorCode PetscLayoutSetISLocalToGlobalMapping(PetscLayout in, ISLocalToGlo
 
   Input Parameters:
 + map - pointer to the map
-- n   - the local size, pass `PETSC_DICIDE` (the default) to have this value determined by the global size set with `PetscLayoutSetSize()`
+- n   - the local size, pass `PETSC_DECIDE` (the default) to have this value determined by the global size set with `PetscLayoutSetSize()`
 
   Level: developer
 

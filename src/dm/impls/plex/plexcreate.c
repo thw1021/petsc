@@ -5918,13 +5918,13 @@ PetscErrorCode DMPlexCreate(MPI_Comm comm, DM *mesh)
 
   Vertices are implicitly numbered consecutively 0, ..., NVertices.
 
-  Each rank owns a chunk of `numVertices` consecutive vertices.
+  Each process owns a chunk of `numVertices` consecutive vertices.
 
   If `numVertices` is `PETSC_DECIDE`, PETSc will distribute them as evenly as possible using `PetscLayout`.
 
   If `NVertices` is `PETSC_DETERMINE` and `numVertices` is `PETSC_DECIDE`, `NVertices` is computed by PETSc as the maximum vertex index in $ cells + 1 $.
 
-  If only `NVertices` is `PETSC_DETERMINE`, it is computed as the sum of `numVertices` over all ranks.
+  If only `NVertices` is `PETSC_DETERMINE`, it is computed as the sum of `numVertices` over all processes.
 
   The cell distribution is arbitrary non-overlapping, independent of the vertex distribution.
 
