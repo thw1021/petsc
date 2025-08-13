@@ -38,7 +38,7 @@ static PetscErrorCode SNESLineSearchApply_NLEQERR(SNESLineSearch linesearch)
   PetscReal               fnorm, xnorm, ynorm, gnorm, wnorm;
   PetscReal               lambda, minlambda, stol;
   PetscViewer             monitor;
-  PetscInt                max_its, count, snes_iteration;
+  PetscInt                max_it, count, snes_iteration;
   PetscReal               theta, mudash, lambdadash;
   SNESLineSearch_NLEQERR *nleqerr = (SNESLineSearch_NLEQERR *)linesearch->data;
   KSPConvergedReason      kspreason;
@@ -51,7 +51,7 @@ static PetscErrorCode SNESLineSearchApply_NLEQERR(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchGetLambda(linesearch, &lambda));
   PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
   PetscCall(SNESLineSearchGetDefaultMonitor(linesearch, &monitor));
-  PetscCall(SNESLineSearchGetTolerances(linesearch, &minlambda, NULL, NULL, NULL, NULL, &max_its));
+  PetscCall(SNESLineSearchGetTolerances(linesearch, &minlambda, NULL, NULL, NULL, NULL, &max_it));
   PetscCall(SNESGetTolerances(snes, NULL, NULL, &stol, NULL, NULL));
 
   /* reset the state of the Lipschitz estimates */
@@ -125,7 +125,7 @@ static PetscErrorCode SNESLineSearchApply_NLEQERR(SNESLineSearch linesearch)
 
     /* Check that we haven't performed too many iterations */
     count += 1;
-    if (count >= max_its) {
+    if (count >= max_it) {
       if (monitor) {
         PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
         PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: maximum iterations reached\n"));
@@ -310,8 +310,8 @@ PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_NLEQERR(SNESLineSearch linesear
 
   PetscCall(PetscNew(&nleqerr));
 
-  linesearch->data    = (void *)nleqerr;
-  linesearch->max_its = 40;
+  linesearch->data   = (void *)nleqerr;
+  linesearch->max_it = 40;
   PetscCall(SNESLineSearchReset_NLEQERR(linesearch));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -199,7 +199,7 @@ PetscErrorCode SNESLineSearchCreate(MPI_Comm comm, SNESLineSearch *outlinesearch
   linesearch->ltol         = 1e-8;
   linesearch->precheckctx  = NULL;
   linesearch->postcheckctx = NULL;
-  linesearch->max_its      = 1;
+  linesearch->max_it       = 1;
   linesearch->setupcalled  = PETSC_FALSE;
   linesearch->monitor      = NULL;
   *outlinesearch           = linesearch;
@@ -839,7 +839,7 @@ PetscErrorCode SNESLineSearchSetFromOptions(SNESLineSearch linesearch)
   PetscCall(PetscOptionsReal("-snes_linesearch_rtol", "Relative tolerance for iterative line search", "SNESLineSearchSetTolerances", linesearch->rtol, &linesearch->rtol, NULL));
   PetscCall(PetscOptionsReal("-snes_linesearch_atol", "Absolute tolerance for iterative line search", "SNESLineSearchSetTolerances", linesearch->atol, &linesearch->atol, NULL));
   PetscCall(PetscOptionsReal("-snes_linesearch_ltol", "Change in lambda tolerance for iterative line search", "SNESLineSearchSetTolerances", linesearch->ltol, &linesearch->ltol, NULL));
-  PetscCall(PetscOptionsInt("-snes_linesearch_max_it", "Maximum iterations for iterative line searches", "SNESLineSearchSetTolerances", linesearch->max_its, &linesearch->max_its, NULL));
+  PetscCall(PetscOptionsInt("-snes_linesearch_max_it", "Maximum iterations for iterative line searches", "SNESLineSearchSetTolerances", linesearch->max_it, &linesearch->max_it, NULL));
 
   /* damping parameters */
   PetscCall(PetscOptionsReal("-snes_linesearch_damping", "Line search damping and initial step guess", "SNESLineSearchSetDamping", linesearch->damping, &linesearch->damping, NULL));
@@ -899,7 +899,7 @@ PetscErrorCode SNESLineSearchView(SNESLineSearch linesearch, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPopTab(viewer));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  maxstep=%e, minlambda=%e\n", (double)linesearch->maxstep, (double)linesearch->steptol));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  tolerances: relative=%e, absolute=%e, lambda=%e\n", (double)linesearch->rtol, (double)linesearch->atol, (double)linesearch->ltol));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  maximum iterations=%" PetscInt_FMT "\n", linesearch->max_its));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  maximum iterations=%" PetscInt_FMT "\n", linesearch->max_it));
     if (linesearch->ops->precheck) {
       if (linesearch->ops->precheck == SNESLineSearchPreCheckPicard) {
         PetscCall(PetscViewerASCIIPrintf(viewer, "  using precheck step to speed up Picard convergence\n"));
@@ -1102,7 +1102,7 @@ PetscErrorCode SNESLineSearchSetLambda(SNESLineSearch linesearch, PetscReal lamb
 . rtol    - The relative tolerance for iterative line searches
 . atol    - The absolute tolerance for iterative line searches
 . ltol    - The change in lambda tolerance for iterative line searches
-- max_its - The maximum number of iterations of the line search
+- max_it  - The maximum number of iterations of the line search
 
   Level: intermediate
 
@@ -1112,7 +1112,7 @@ PetscErrorCode SNESLineSearchSetLambda(SNESLineSearch linesearch, PetscReal lamb
 
 .seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESLineSearchSetTolerances()`
 @*/
-PetscErrorCode SNESLineSearchGetTolerances(SNESLineSearch linesearch, PetscReal *steptol, PetscReal *maxstep, PetscReal *rtol, PetscReal *atol, PetscReal *ltol, PetscInt *max_its)
+PetscErrorCode SNESLineSearchGetTolerances(SNESLineSearch linesearch, PetscReal *steptol, PetscReal *maxstep, PetscReal *rtol, PetscReal *atol, PetscReal *ltol, PetscInt *max_it)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
@@ -1136,9 +1136,9 @@ PetscErrorCode SNESLineSearchGetTolerances(SNESLineSearch linesearch, PetscReal 
     PetscAssertPointer(ltol, 6);
     *ltol = linesearch->ltol;
   }
-  if (max_its) {
-    PetscAssertPointer(max_its, 7);
-    *max_its = linesearch->max_its;
+  if (max_it) {
+    PetscAssertPointer(max_it, 7);
+    *max_it = linesearch->max_it;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1210,7 +1210,7 @@ PetscErrorCode SNESLineSearchSetTolerances(SNESLineSearch linesearch, PetscReal 
 
   if (max_it != PETSC_DEFAULT) {
     PetscCheck(max_it >= 0, PetscObjectComm((PetscObject)linesearch), PETSC_ERR_ARG_OUTOFRANGE, "Maximum number of iterations %" PetscInt_FMT " must be non-negative", max_it);
-    linesearch->max_its = max_it;
+    linesearch->max_it = max_it;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -61,7 +61,7 @@ static PetscErrorCode SNESLineSearchApply_BT(SNESLineSearch linesearch)
   PetscReal          f;
   PetscReal          g, gprev;
   PetscViewer        monitor;
-  PetscInt           max_its, count;
+  PetscInt           max_it, count;
   Mat                jac;
   SNESObjectiveFn   *objective;
   const char *const  ordStr[] = {"Linear", "Quadratic", "Cubic"};
@@ -72,7 +72,7 @@ static PetscErrorCode SNESLineSearchApply_BT(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchGetLambda(linesearch, &lambda));
   PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
   PetscCall(SNESLineSearchGetDefaultMonitor(linesearch, &monitor));
-  PetscCall(SNESLineSearchGetTolerances(linesearch, &minlambda, &maxstep, NULL, NULL, NULL, &max_its));
+  PetscCall(SNESLineSearchGetTolerances(linesearch, &minlambda, &maxstep, NULL, NULL, NULL, &max_it));
   PetscCall(SNESGetTolerances(snes, NULL, NULL, &stol, NULL, NULL));
   PetscCall(SNESGetObjective(snes, &objective, NULL));
   alpha = bt->alpha;
@@ -236,7 +236,7 @@ static PetscErrorCode SNESLineSearchApply_BT(SNESLineSearch linesearch)
         PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
       }
     } else {
-      for (count = 0; count < max_its; count++) {
+      for (count = 0; count < max_it; count++) {
         if (lambda <= minlambda) {
           if (monitor) {
             PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
@@ -427,9 +427,9 @@ PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_BT(SNESLineSearch linesearch)
 
   PetscCall(PetscNew(&bt));
 
-  linesearch->data    = (void *)bt;
-  linesearch->max_its = 40;
-  linesearch->order   = SNES_LINESEARCH_ORDER_CUBIC;
-  bt->alpha           = 1e-4;
+  linesearch->data   = (void *)bt;
+  linesearch->max_it = 40;
+  linesearch->order  = SNES_LINESEARCH_ORDER_CUBIC;
+  bt->alpha          = 1e-4;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -17,7 +17,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
   PetscReal        lambda, lambda_old, lambda_mid, lambda_update, delLambda;
   PetscReal        fnrm, fnrm_old, fnrm_mid;
   PetscReal        delFnrm, delFnrm_old, del2Fnrm;
-  PetscInt         i, max_its;
+  PetscInt         i, max_it;
   SNESObjectiveFn *objective;
 
   PetscFunctionBegin;
@@ -26,7 +26,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchGetLambda(linesearch, &lambda));
   PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
   PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_SUCCEEDED));
-  PetscCall(SNESLineSearchGetTolerances(linesearch, &steptol, &maxstep, NULL, &atol, &ltol, &max_its));
+  PetscCall(SNESLineSearchGetTolerances(linesearch, &steptol, &maxstep, NULL, &atol, &ltol, &max_it));
   PetscCall(SNESLineSearchGetDefaultMonitor(linesearch, &monitor));
 
   PetscCall(SNESGetObjective(snes, &objective, NULL));
@@ -41,7 +41,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
   }
   lambda_mid = 0.5 * (lambda + lambda_old);
 
-  for (i = 0; i < max_its; i++) {
+  for (i = 0; i < max_it; i++) {
     /* evaluate new endpoint and new midpoint */
     while (PETSC_TRUE) {
       PetscCall(VecWAXPY(W, -lambda_mid, Y, X));
@@ -172,7 +172,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
     fnrm_old   = fnrm;
     lambda_mid = 0.5 * (lambda + lambda_old);
 
-    if ((i == max_its - 1) && monitor) {
+    if ((i == max_it - 1) && monitor) {
       PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
       PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: reached maximum number of iterations!\n"));
       PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
@@ -242,6 +242,6 @@ PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_L2(SNESLineSearch linesearch)
   linesearch->ops->view           = NULL;
   linesearch->ops->setup          = NULL;
 
-  linesearch->max_its = 1;
+  linesearch->max_it = 1;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

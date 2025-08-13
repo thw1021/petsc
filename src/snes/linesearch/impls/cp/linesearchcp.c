@@ -9,7 +9,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
   PetscReal   xnorm, ynorm, gnorm, steptol, atol, rtol, ltol, maxstep;
   PetscReal   lambda, lambda_old, lambda_update, delLambda;
   PetscScalar fty, fty_init, fty_old, fty_mid1, fty_mid2, s;
-  PetscInt    i, max_its;
+  PetscInt    i, max_it;
   PetscViewer monitor;
 
   PetscFunctionBegin;
@@ -17,7 +17,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchGetNorms(linesearch, &xnorm, &gnorm, &ynorm));
   PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
   PetscCall(SNESLineSearchGetLambda(linesearch, &lambda));
-  PetscCall(SNESLineSearchGetTolerances(linesearch, &steptol, &maxstep, &rtol, &atol, &ltol, &max_its));
+  PetscCall(SNESLineSearchGetTolerances(linesearch, &steptol, &maxstep, &rtol, &atol, &ltol, &max_it));
   PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_SUCCEEDED));
   PetscCall(SNESLineSearchGetDefaultMonitor(linesearch, &monitor));
 
@@ -42,7 +42,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
 
   fty_init = fty_old;
 
-  for (i = 0; i < max_its; i++) {
+  for (i = 0; i < max_it; i++) {
     /* compute the norm at lambda */
     PetscCall(VecWAXPY(W, -lambda, Y, X));
     if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
@@ -173,6 +173,6 @@ PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_CP(SNESLineSearch linesearch)
   linesearch->ops->setup          = NULL;
   linesearch->order               = SNES_LINESEARCH_ORDER_LINEAR;
 
-  linesearch->max_its = 1;
+  linesearch->max_it = 1;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -11,13 +11,13 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
   PetscScalar fty_left, fty, fty_initial;
   PetscViewer monitor;
   PetscReal   rtol, atol, ltol;
-  PetscInt    it, max_its;
+  PetscInt    it, max_it;
 
   PetscFunctionBegin;
   PetscCall(SNESLineSearchGetVecs(linesearch, &X, &F, &Y, &W, &G));
   PetscCall(SNESLineSearchGetLambda(linesearch, &lambda));
   PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
-  PetscCall(SNESLineSearchGetTolerances(linesearch, NULL, NULL, &rtol, &atol, &ltol, &max_its));
+  PetscCall(SNESLineSearchGetTolerances(linesearch, NULL, NULL, &rtol, &atol, &ltol, &max_it));
   PetscCall(SNESLineSearchGetDefaultMonitor(linesearch, &monitor));
 
   /* pre-check */
@@ -100,7 +100,7 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
       }
 
       /* check maximum number of iterations */
-      if (it > max_its) {
+      if (it > max_it) {
         if (monitor) {
           PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
           PetscCall(PetscViewerASCIIPrintf(monitor, "      Line search: maximum iterations reached\n"));
@@ -215,9 +215,9 @@ PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_Bisection(SNESLineSearch linese
   linesearch->ops->setup          = NULL;
 
   /* set default option values */
-  linesearch->max_its = 50;
-  linesearch->rtol    = 1e-8;
-  linesearch->atol    = 1e-6;
-  linesearch->ltol    = 1e-6;
+  linesearch->max_it = 50;
+  linesearch->rtol   = 1e-8;
+  linesearch->atol   = 1e-6;
+  linesearch->ltol   = 1e-6;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
