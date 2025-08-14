@@ -53,9 +53,13 @@ public:
     cupmEvent_t end{};   // timer-only
 #if PetscDefined(USE_DEBUG)
     PetscBool timerInUse{};
+    PetscBool EnergyMeterInUse{};
 #endif
     cupmBlasHandle_t   blas{};
     cupmSolverHandle_t solver{};
+    nvmlDevice_t       nvmlHandle{};
+    unsigned long long energymeterbegin{};
+    unsigned long long energymeterend{};
 
     constexpr PetscDeviceContext_IMPLS() noexcept = default;
 
@@ -201,6 +205,9 @@ public:
   static PetscErrorCode getHandlePtr(PetscDeviceContext, void **) noexcept;
   static PetscErrorCode beginTimer(PetscDeviceContext) noexcept;
   static PetscErrorCode endTimer(PetscDeviceContext, PetscLogDouble *) noexcept;
+  static PetscErrorCode getPower(PetscDeviceContext, PetscLogDouble *) noexcept;
+  static PetscErrorCode beginEnergyMeter(PetscDeviceContext) noexcept;
+  static PetscErrorCode endEnergyMeter(PetscDeviceContext, PetscLogDouble *) noexcept;
   static PetscErrorCode memAlloc(PetscDeviceContext, PetscBool, PetscMemType, std::size_t, std::size_t, void **) noexcept;
   static PetscErrorCode memFree(PetscDeviceContext, PetscMemType, void **) noexcept;
   static PetscErrorCode memCopy(PetscDeviceContext, void *PETSC_RESTRICT, const void *PETSC_RESTRICT, std::size_t, PetscDeviceCopyMode) noexcept;
@@ -225,6 +232,9 @@ public:
     PetscDesignatedInitializer(getstreamhandle, getHandlePtr<stream_tag>),
     PetscDesignatedInitializer(begintimer, beginTimer),
     PetscDesignatedInitializer(endtimer, endTimer),
+    PetscDesignatedInitializer(getpower, getPower),
+    PetscDesignatedInitializer(beginenergymeter, beginEnergyMeter),
+    PetscDesignatedInitializer(endenergymeter, endEnergyMeter),
     PetscDesignatedInitializer(memalloc, memAlloc),
     PetscDesignatedInitializer(memfree, memFree),
     PetscDesignatedInitializer(memcopy, memCopy),
@@ -404,6 +414,56 @@ inline PetscErrorCode DeviceContext<T>::endTimer(PetscDeviceContext dctx, PetscL
   PetscCallCUPM(cupmEventSynchronize(end));
   PetscCallCUPM(cupmEventElapsedTime(&gtime, dci->begin, end));
   *elapsed = static_cast<util::remove_pointer_t<decltype(elapsed)>>(gtime);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <DeviceType T>
+inline PetscErrorCode DeviceContext<T>::getPower(PetscDeviceContext dctx, PetscLogDouble *power) noexcept
+{
+  const auto       dci = impls_cast_(dctx);
+  nvmlFieldValue_t values[1];
+
+  PetscFunctionBegin;
+  PetscCall(check_current_device_(dctx));
+  PetscCallCUPM(cupmStreamSynchronize(dci->stream.get_stream()));
+  values[0].fieldId = NVML_FI_DEV_POWER_INSTANT;
+  if (!dci->nvmlHandle) PetscCallNVML(nvmlDeviceGetHandleByIndex(dctx->device->deviceId, &dci->nvmlHandle));
+  PetscCallNVML(nvmlDeviceGetFieldValues(dci->nvmlHandle, 1, values));
+  *power = static_cast<util::remove_pointer_t<decltype(power)>>(values[0].value.uiVal);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <DeviceType T>
+inline PetscErrorCode DeviceContext<T>::beginEnergyMeter(PetscDeviceContext dctx) noexcept
+{
+  const auto dci = impls_cast_(dctx);
+
+  PetscFunctionBegin;
+  PetscCall(check_current_device_(dctx));
+#if PetscDefined(USE_DEBUG)
+  PetscCheck(!dci->EnergyMeterInUse, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Forgot to call PetscLogGpuEnergyMeterEnd()?");
+  dci->EnergyMeterInUse = PETSC_TRUE;
+#endif
+  if (!dci->nvmlHandle) PetscCallNVML(nvmlDeviceGetHandleByIndex(dctx->device->deviceId, &dci->nvmlHandle));
+  PetscCallNVML(nvmlDeviceGetTotalEnergyConsumption(dci->nvmlHandle, &dci->energymeterbegin));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <DeviceType T>
+inline PetscErrorCode DeviceContext<T>::endEnergyMeter(PetscDeviceContext dctx, PetscLogDouble *energy) noexcept
+{
+  const auto dci = impls_cast_(dctx);
+  const auto end = dci->end;
+
+  PetscFunctionBegin;
+  PetscCall(check_current_device_(dctx));
+#if PetscDefined(USE_DEBUG)
+  PetscCheck(dci->EnergyMeterInUse, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Forgot to call PetscLogGpuEnergyMeterBegin()?");
+  dci->EnergyMeterInUse = PETSC_FALSE;
+#endif
+  PetscCallCUPM(cupmStreamSynchronize(dci->stream.get_stream()));
+  PetscCallNVML(nvmlDeviceGetTotalEnergyConsumption(dci->nvmlHandle, &dci->energymeterend));
+  *energy = static_cast<util::remove_pointer_t<decltype(energy)>>(dci->energymeterend - dci->energymeterbegin) / 1000; // convert to Joule
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
