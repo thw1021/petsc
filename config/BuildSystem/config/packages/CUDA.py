@@ -8,8 +8,8 @@ class Configure(config.package.Package):
     self.versionname       = 'CUDA_VERSION'
     self.versioninclude    = 'cuda.h'
     self.requiresversion   = 1
-    self.functions         = ['cublasInit','cufftDestroy']
-    self.includes          = ['cublas.h','cufft.h','cusparse.h','cusolverDn.h','curand.h','thrust/version.h']
+    self.functions         = ['cublasInit','cufftDestroy', 'nvmlInit_v2']
+    self.includes          = ['cublas.h','cufft.h','cusparse.h','cusolverDn.h','curand.h','thrust/version.h', 'nvml.h']
     self.basicliblist      = [['libcudart.a','libnvtx3interop.a'],['libcudart.a','libnvToolsExt.a']]
     self.mathliblist       = [['libcufft.a', 'libcublas.a','libcusparse.a','libcusolver.a','libcurand.a']]
     # CUDA provides 2 variants of libcuda.so (for access to CUDA driver API):
@@ -22,7 +22,7 @@ class Configure(config.package.Package):
     # Note: PETSc does not use CUDA driver API (as of Sep 29, 2021), but external package for ex: Kokkos does.
     #
     # see more at https://stackoverflow.com/a/52784819
-    self.stubliblist       = [['libcuda.so']]
+    self.stubliblist       = [['libcuda.so', 'libnvidia-ml.so']]
     self.liblist           = 'dummy' # existence of self.liblist is used by package.py to determine if --with-cuda-lib must be provided
     self.precisions        = ['single','double']
     self.buildLanguages    = ['CUDA']
