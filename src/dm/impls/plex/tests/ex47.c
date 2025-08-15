@@ -671,11 +671,11 @@ int main(int argc, char **argv)
       PetscCall(DMPlexBuildFromCellSectionParallel(dm, Nc, PETSC_DECIDE, Nv, s, cells, &sfVert, NULL));
       PetscCall(PetscSectionDestroy(&s));
     } else if (hexamesh) {
-      Nc                        = sNLoclCellsHexaMesh2[rank]; //Same on each rank for this example...
-      PetscInt Nv               = sNGlobVertsHexaMesh2;
-      InitPartForRank[0]        = &sInitialPartitionHexaMesh2[0][0];
-      InitPartForRank[1]        = &sInitialPartitionHexaMesh2[1][0];
-      const PetscInt (*Conn)[8] = sConnectivityHexaMesh2;
+      Nc                        = sNLoclCellsHexaMesh[rank]; //Same on each rank for this example...
+      PetscInt Nv               = sNGlobVertsHexaMesh;
+      InitPartForRank[0]        = &sInitialPartitionHexaMesh[0][0];
+      InitPartForRank[1]        = &sInitialPartitionHexaMesh[1][0];
+      const PetscInt (*Conn)[8] = sConnectivityHexaMesh;
       const PetscInt Ncor       = 8;
       const PetscInt dim        = 3;
 
