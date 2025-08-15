@@ -129,6 +129,7 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
   tao->ops->convergencetest = TaoDefaultConvergenceTest;
 
   tao->hist_reset = PETSC_TRUE;
+  tao->term_set   = PETSC_FALSE;
 
   PetscCall(TaoTermCreateTaoCallbacks(tao, &tao->orig_callbacks));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)tao->orig_callbacks, "callbacks_"));
@@ -682,8 +683,8 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscTryTypeMethod(tao, view, viewer);
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
-      PetscCall(PetscViewerASCIIPushTab(viewer));
       PetscCall(PetscViewerASCIIPrintf(viewer, "Objective function:\n"));
+      PetscCall(PetscViewerASCIIPushTab(viewer));
       PetscCall(PetscViewerASCIIPrintf(viewer, "Scale (tao_objective_scale): %g\n", (double)tao->objective_term.scale));
       PetscCall(PetscViewerASCIIPrintf(viewer, "Function:\n"));
       PetscCall(PetscViewerASCIIPushTab(viewer));
@@ -707,6 +708,37 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
         PetscCall(PetscViewerASCIIPrintf(viewer, "Map: unmapped\n"));
       }
       PetscCall(PetscViewerASCIIPopTab(viewer));
+    } else if (tao->num_terms > 0 || tao->term_set) {
+      if (tao->objective_term.scale == 1.0 && tao->objective_term.map == NULL) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Objective function:\n"));
+        PetscCall(PetscViewerASCIIPushTab(viewer));
+        PetscCall(TaoTermView(tao->objective_term.term, viewer));
+        PetscCall(PetscViewerASCIIPopTab(viewer));
+      } else {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Objective function:\n"));
+        PetscCall(PetscViewerASCIIPushTab(viewer));
+        if (tao->objective_term.scale != 1.0) PetscCall(PetscViewerASCIIPrintf(viewer, "Scale: %g\n", (double)tao->objective_term.scale));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Function:\n"));
+        PetscCall(PetscViewerASCIIPushTab(viewer));
+        PetscCall(TaoTermView(tao->objective_term.term, viewer));
+        PetscCall(PetscViewerASCIIPopTab(viewer));
+        if (tao->objective_term.map) {
+          PetscCall(PetscViewerASCIIPrintf(viewer, "Map:\n"));
+          PetscCall(PetscViewerASCIIPushTab(viewer));
+          {
+            PetscBool pop = PETSC_FALSE;
+
+            if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
+              PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
+              pop = PETSC_TRUE;
+            }
+            PetscCall(MatView(tao->objective_term.map, viewer));
+            if (pop) PetscCall(PetscViewerPopFormat(viewer));
+          }
+          PetscCall(PetscViewerASCIIPopTab(viewer));
+        }
+        PetscCall(PetscViewerASCIIPopTab(viewer));
+      }
     }
     if (tao->linesearch) PetscCall(TaoLineSearchView(tao->linesearch, viewer));
     if (tao->ksp) {
@@ -1842,17 +1874,9 @@ PetscErrorCode TaoMonitorConstraintNorm(Tao tao, void *ctx)
   gnorm = tao->residual;
   PetscCall(PetscViewerASCIIGetTab(viewer, &tabs));
   PetscCall(PetscViewerASCIISetTab(viewer, ((PetscObject)tao)->tablevel));
-  if (its == 0 && ((PetscObject)tao)->prefix && !tao->header_printed) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Iteration information for %s solve.\n", ((PetscObject)tao)->prefix));
-    tao->header_printed = PETSC_TRUE;
-  }
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT, its));
-  PetscCall(PetscViewerASCIIPrintf(viewer, " TAO Function value: %g,", (double)fct));
-  if (gnorm == PETSC_DEFAULT) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual: (not computed) "));
-  } else {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual: %g ", (double)gnorm));
-  }
+  PetscCall(PetscViewerASCIIPrintf(viewer, "iter = %" PetscInt_FMT ",", its));
+  PetscCall(PetscViewerASCIIPrintf(viewer, " Function value: %g,", (double)fct));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual: %g ", (double)gnorm));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Constraint: %g \n", (double)tao->cnorm));
   PetscCall(PetscViewerASCIISetTab(viewer, tabs));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3033,6 +3057,7 @@ PetscErrorCode TaoSetTerm(Tao tao, PetscReal scale, TaoTerm term, Vec params, Ma
   PetscCall(PetscObjectReference((PetscObject)params));
   PetscCall(VecDestroy(&tao->objective_parameters));
   tao->objective_parameters = params;
+  tao->term_set = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

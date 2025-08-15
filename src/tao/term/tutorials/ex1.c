@@ -4,9 +4,16 @@ const char help[] = "Basic TaoTerm usage";
 
 int main(int argc, char **argv)
 {
-  TaoTerm term;
+  TaoTerm     term;
+  PetscViewer viewer;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+
+  PetscCall(PetscViewerCreate(PETSC_COMM_WORLD, &viewer));
+  PetscCall(PetscViewerSetType(viewer, PETSCVIEWERASCII));
+  PetscCall(PetscViewerSetUp(viewer));
+  PetscCall(PetscViewerSetFromOptions(viewer));
+  PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO_DETAIL));
 
   PetscCall(TaoTermCreate(PETSC_COMM_WORLD, &term));
   PetscCall(TaoTermSetSolutionSizes(term, PETSC_DECIDE, 10, 1));
@@ -14,8 +21,10 @@ int main(int argc, char **argv)
   PetscCall(PetscObjectSetName((PetscObject)term, "example TaoTerm"));
   PetscCall(TaoTermSetFromOptions(term));
   PetscCall(TaoTermSetUp(term));
-  PetscCall(TaoTermView(term, PETSC_VIEWER_STDOUT_WORLD));
+  PetscCall(TaoTermView(term, viewer));
+  PetscCall(PetscViewerPopFormat(viewer));
   PetscCall(TaoTermDestroy(&term));
+  PetscCall(PetscViewerDestroy(&viewer));
   PetscCall(PetscFinalize());
   return 0;
 }
