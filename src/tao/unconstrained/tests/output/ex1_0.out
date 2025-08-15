@@ -13,12 +13,12 @@ Tao Object: 1 MPI process
     nls ksp iter: 0
     nls ksp othr: 0
   Objective function:
-    Scale (tao_objective_scale): 3.
+    Scale: 3.
     Function:
       TaoTerm Object: (data_) 1 MPI process
         type: quadratic
-        solution vector space: N = 100 [VecType mpi (taoterm_solution_vec_type)]
-        parameter vector space: (optional) K = 100 [VecType mpi (taoterm_parameters_vec_type)]
+        solution vector space: N = 100
+        parameter vector space: (optional) K = 100
         Mat Object: 1 MPI process
           type: diagonal
           rows=100, cols=100
@@ -37,7 +37,7 @@ Tao Object: 1 MPI process
     total number of function evaluations=0
     total number of gradient evaluations=0
     total number of function/gradient evaluations=1
-    Termination reason: 1
+    Termination reason: SUCCESS
   KSP Object: (tao_nls_) 1 MPI process
     type: stcg
     maximum iterations=10000, initial guess is zero
@@ -65,7 +65,7 @@ Tao Object: 1 MPI process
       total number of mallocs used during MatSetValues calls=0
   total KSP iterations: 1
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=4.17208e-14
+  Residual in Function/Gradient:=2.94089e-14
   Objective value=56.8413
   total number of iterations=1,                          (max: 50)
   total number of function evaluations=5,                  (max: unlimited)

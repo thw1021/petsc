@@ -1,28 +1,28 @@
 TestADMMUnconstrained, test 0:
-  0 TAO Function value: 1.29417,  Residual: (not computed)   Constraint: 0. 
-  1 TAO Function value: 0.56286,  Residual: 0.761335   Constraint: 0.380484 
-  2 TAO Function value: 0.137021,  Residual: 0.370633   Constraint: 0.184892 
-  3 TAO Function value: 0.0361396,  Residual: 0.180545   Constraint: 0.0900656 
-  4 TAO Function value: 0.0047943,  Residual: 0.00649796   Constraint: 0.0125335 
-  5 TAO Function value: 0.00475358,  Residual: 2.01016e-16   Constraint: 6.18441e-15 
+iter = 0, Function value: 1.29417,  Residual: -2.   Constraint: 0. 
+iter = 1, Function value: 0.56286,  Residual: 0.761335   Constraint: 0.380484 
+iter = 2, Function value: 0.137021,  Residual: 0.370633   Constraint: 0.184892 
+iter = 3, Function value: 0.0361396,  Residual: 0.180545   Constraint: 0.0900656 
+iter = 4, Function value: 0.0047943,  Residual: 0.00649796   Constraint: 0.0125335 
+iter = 5, Function value: 0.00475358,  Residual: 2.60913e-16   Constraint: 7.91682e-15 
 TestADMMUnconstrained, test 1:
-  0 TAO Function value: 2.06376,  Residual: (not computed)   Constraint: 0. 
-  1 TAO Function value: 1.71491,  Residual: 0.572887   Constraint: 0.49502 
-  2 TAO Function value: 1.37954,  Residual: 0.241744   Constraint: 0.0554582 
-  3 TAO Function value: 1.33491,  Residual: 0.116349   Constraint: 0.0266915 
-  4 TAO Function value: 1.32147,  Residual: 0.00189673   Constraint: 0.00713293 
-  5 TAO Function value: 1.32146,  Residual: 2.93544e-16   Constraint: 1.71659e-16 
+iter = 0, Function value: 2.06376,  Residual: -2.   Constraint: 0. 
+iter = 1, Function value: 1.71491,  Residual: 0.572887   Constraint: 0.49502 
+iter = 2, Function value: 1.37954,  Residual: 0.241744   Constraint: 0.0554582 
+iter = 3, Function value: 1.33491,  Residual: 0.116349   Constraint: 0.0266915 
+iter = 4, Function value: 1.32147,  Residual: 0.00189673   Constraint: 0.00713293 
+iter = 5, Function value: 1.32146,  Residual: 1.45362e-16   Constraint: 1.77722e-16 
 TestADMMUnconstrained, test 2:
-  0 TAO Function value: 2.02032,  Residual: (not computed)   Constraint: 0. 
-  1 TAO Function value: 1.56396,  Residual: 0.513326   Constraint: 0.718015 
-  2 TAO Function value: 1.47531,  Residual: 0.0430425   Constraint: 0.0601872 
-  3 TAO Function value: 1.47708,  Residual: 0.0107606   Constraint: 0.0150468 
-  4 TAO Function value: 1.4772,  Residual: 0.000356906   Constraint: 0.000356906 
-  5 TAO Function value: 1.4772,  Residual: 2.59344e-16   Constraint: 8.35553e-17 
+iter = 0, Function value: 2.02032,  Residual: -2.   Constraint: 0. 
+iter = 1, Function value: 1.56396,  Residual: 0.513326   Constraint: 0.718015 
+iter = 2, Function value: 1.47531,  Residual: 0.0430425   Constraint: 0.0601872 
+iter = 3, Function value: 1.47708,  Residual: 0.0107606   Constraint: 0.0150468 
+iter = 4, Function value: 1.4772,  Residual: 0.000356906   Constraint: 0.000356906 
+iter = 5, Function value: 1.4772,  Residual: 2.51563e-16   Constraint: 7.85046e-17 
 TestADMMUnconstrained, test 3:
-  0 TAO Function value: 1.16654,  Residual: (not computed)   Constraint: 0. 
-  1 TAO Function value: 0.789301,  Residual: 0.429178   Constraint: 0.437548 
-  2 TAO Function value: 0.624031,  Residual: 0.0897197   Constraint: 0.0135717 
-  3 TAO Function value: 0.618619,  Residual: 0.0279763   Constraint: 0.0042319 
-  4 TAO Function value: 0.618039,  Residual: 0.00162001   Constraint: 0.00289409 
-  5 TAO Function value: 0.618036,  Residual: 3.73529e-16   Constraint: 1.78803e-16 
+iter = 0, Function value: 1.16654,  Residual: -2.   Constraint: 0. 
+iter = 1, Function value: 0.789301,  Residual: 0.429178   Constraint: 0.437548 
+iter = 2, Function value: 0.624031,  Residual: 0.0897197   Constraint: 0.0135717 
+iter = 3, Function value: 0.618619,  Residual: 0.0279763   Constraint: 0.0042319 
+iter = 4, Function value: 0.618039,  Residual: 0.00162001   Constraint: 0.00289409 
+iter = 5, Function value: 0.618036,  Residual: 2.83854e-16   Constraint: 1.72219e-16 
