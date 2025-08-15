@@ -57,6 +57,9 @@
 ```{rubric} Vec:
 ```
 
+- Add `VecNestGetSubVecsRead()` and `VecNestRestoreSubVecsRead()` for read-only access to subvectors
+- Add `VecPointwiseSign()` and `VecSignMode`
+
 ```{rubric} PetscSection:
 ```
 
@@ -119,7 +122,25 @@
 ```{rubric} TAO:
 ```
 
-- Add `TaoBRGNSetRegularizationType()`, `TaoBRGNGetRegularizationType()`
+- Add ``TaoBRGNSetRegularizationType()``, ``TaoBRGNGetRegularizationType()``
+- Add new `TaoTerm` object to manipulate objective function terms with many methods
+- Add `TaoComputeHessianSingle()` convenience function for when the user's code does not compute a preconditioning matrix
+- Add `TaoGetTerm()`, `TaoSetTerm()`, and `TaoAddTerm()` for manipulating the objective function of a `Tao` using `TaoTerm`
+- Add `TaoBRGNGetRegularizationType()`, `TaoBRGNSetReguarizationType()`, `TaoBRGNGetRegularizerTerm()` and `TaoBRGNSetRegularizerTerm()` for finer control of `TAOBRGN`
+- Remove `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` and `TaoBRGNSetRegularizerHessianRoutine()`, use `TaoBRGNSetRegulizerTerm()` instead
+- Remove many ADMM related operations as it has been reimplemented using `TaoTerm`: `TaoADMMRegularizerType` enum (including `TAO_ADMM_REGULARIZER_USER`, `TAO_ADMM_REGULARIZER_SOFT_THRESH` values), `TaoGetADMMParentTao()`, `TaoADMMSetConstraintVectorRHS()`, `TaoADMMSetRegularizerCoefficient()`, `TaoADMMGetRegularizerCoefficient()`, `TaoADMMSetMisfitConstraintJacobian()`, `TaoADMMSetRegularizerConstraintJacobian()`, `TaoADMMSetRegularizerHessianRoutine()`, `TaoADMMSetRegularizerObectiveAndGradientRoutine()`, `TaoADMMSetMisfitHessianRoutine()`, `TaoADMMSetMisfitObjectiveAndGradientRoutine()`, `TaoADMMSetMisfitHessianChangeStatus()`, `TaoADMMSetRegHessianChangeStatus()`, `TaoADMMSetRegularizerType()`, `TaoADMMGetRegularizerType()`
+- Add `TaoADMMSetTermGroups()` and `TaoADMMGetTermGroups()`
+
+```{rubric} TaoTerm:
+```
+
+- Add `TAOTERMTAOCALLBACKS` implementation of `TaoTerm` for constructing a term from the callbacks passed to a `Tao` object
+- Add `TAOTERMBRGNREGULARIZER` implementation of `TaoTerm` for constructing a term from the callbacks passed to a `TaoBRGNSetReguarizerObjectiveAndGradientRoutine()`
+- Add `TAOTERMSHELL` implementation of `TaoTerm` for user-defined callbacks
+- Add `TAOTERMSUM` implementation of `TaoTerm` for scaled, mapped sums of terms
+- Add `TAOTERMHALFL2SQUARED` implementation of `TaoTerm` for a typical squared-norm penalty function
+- Add `TAOTERML1` implementation of `TaoTerm` for a typical 1-norm penalty function
+- Add `TAOTERMQUADRATIC` implementation of `TaoTerm` for a quadratic penalty function
 
 ```{rubric} PetscRegressor:
 ```
