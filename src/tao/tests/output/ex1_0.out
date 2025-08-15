@@ -11,7 +11,6 @@ Tao Object: 1 MPI process
         Sum of 2 terms:
           Summand 0:
             Scale (taoterm_sum_subterm_0_scale): 1.
-            Map: unmapped
             Term:
               TaoTerm Object: 1 MPI process
                 type: shell
@@ -19,14 +18,9 @@ Tao Object: 1 MPI process
                 parameter vector space: (none)
                 No user context has been set
                 The following methods have been set: (none)
+            Map: unmapped
           Summand 1:
             Scale (taoterm_sum_subterm_1_scale): 2.
-            Map:
-              Mat Object: 1 MPI process
-                type: seqdense
-                rows=11, cols=10
-                total: nonzeros=110, allocated nonzeros=110
-                total number of mallocs used during MatSetValues calls=0
             Term:
               TaoTerm Object: 1 MPI process
                 type: shell
@@ -34,6 +28,12 @@ Tao Object: 1 MPI process
                 parameter vector space: (none)
                 No user context has been set
                 The following methods have been set: (none)
+            Map:
+              Mat Object: 1 MPI process
+                type: seqdense
+                rows=11, cols=10
+                total: nonzeros=110, allocated nonzeros=110
+                total number of mallocs used during MatSetValues calls=0
     Map:
       Mat Object: 1 MPI process
         type: seqdense
@@ -59,12 +59,6 @@ Tao Object: 1 MPI process
         Sum of 3 terms:
           Summand 0:
             Scale (taoterm_sum_subterm_0_scale): 1.5
-            Map:
-              Mat Object: 1 MPI process
-                type: seqdense
-                rows=10, cols=12
-                total: nonzeros=120, allocated nonzeros=120
-                total number of mallocs used during MatSetValues calls=0
             Term:
               TaoTerm Object: 1 MPI process
                 type: shell
@@ -72,14 +66,14 @@ Tao Object: 1 MPI process
                 parameter vector space: (none)
                 No user context has been set
                 The following methods have been set: (none)
-          Summand 1:
-            Scale (taoterm_sum_subterm_1_scale): 3.
             Map:
               Mat Object: 1 MPI process
                 type: seqdense
-                rows=11, cols=12
-                total: nonzeros=132, allocated nonzeros=132
+                rows=10, cols=12
+                total: nonzeros=120, allocated nonzeros=120
                 total number of mallocs used during MatSetValues calls=0
+          Summand 1:
+            Scale (taoterm_sum_subterm_1_scale): 3.
             Term:
               TaoTerm Object: 1 MPI process
                 type: shell
@@ -87,9 +81,14 @@ Tao Object: 1 MPI process
                 parameter vector space: (none)
                 No user context has been set
                 The following methods have been set: (none)
+            Map:
+              Mat Object: 1 MPI process
+                type: seqdense
+                rows=11, cols=12
+                total: nonzeros=132, allocated nonzeros=132
+                total number of mallocs used during MatSetValues calls=0
           Summand 2:
             Scale (taoterm_sum_subterm_2_scale): 3.
-            Map: unmapped
             Term:
               TaoTerm Object: 1 MPI process
                 type: shell
@@ -97,6 +96,7 @@ Tao Object: 1 MPI process
                 parameter vector space: (none)
                 No user context has been set
                 The following methods have been set: (none)
+            Map: unmapped
     Map: unmapped
   convergence tolerances: gatol=0.,   grtol=0.,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=0.
