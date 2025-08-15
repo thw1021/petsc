@@ -4,16 +4,23 @@ const char help[] = "Tests of TaoAddTerm()";
 
 int main(int argc, char **argv)
 {
-  Tao      tao;
-  TaoTerm  original_sum;
-  TaoTerm  sub_0, sub_1, sub_2;
-  Mat      sub_1_map;
-  Mat      original_map;
-  PetscInt n = 10, m = 11, k = 12;
-  MPI_Comm comm;
+  Tao         tao;
+  TaoTerm     original_sum;
+  TaoTerm     sub_0, sub_1, sub_2;
+  Mat         sub_1_map;
+  Mat         original_map;
+  PetscInt    n = 10, m = 11, k = 12;
+  MPI_Comm    comm;
+  PetscViewer viewer;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
+
+  PetscCall(PetscViewerCreate(comm, &viewer));
+  PetscCall(PetscViewerSetType(viewer, PETSCVIEWERASCII));
+  PetscCall(PetscViewerSetUp(viewer));
+  PetscCall(PetscViewerSetFromOptions(viewer));
+  PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO_DETAIL));
 
   PetscCall(TaoCreate(comm, &tao));
   PetscCall(TaoTermCreate(comm, &original_sum));
@@ -38,7 +45,7 @@ int main(int argc, char **argv)
   PetscCall(MatDestroy(&original_map));
   PetscCall(TaoTermDestroy(&original_sum));
 
-  PetscCall(TaoView(tao, PETSC_VIEWER_STDOUT_(comm)));
+  PetscCall(TaoView(tao, viewer));
 
   PetscCall(TaoTermCreateShell(comm, NULL, NULL, &sub_2));
   PetscCall(TaoTermSetParametersMode(sub_2, TAOTERM_PARAMETERS_NONE));
@@ -47,8 +54,10 @@ int main(int argc, char **argv)
   PetscCall(TaoAddTerm(tao, "subterm_2_", 3.0, sub_2, NULL, NULL));
   PetscCall(TaoTermDestroy(&sub_2));
 
-  PetscCall(TaoView(tao, PETSC_VIEWER_STDOUT_(comm)));
+  PetscCall(TaoView(tao, viewer));
 
+  PetscCall(PetscViewerPopFormat(viewer));
+  PetscCall(PetscViewerDestroy(&viewer));
   PetscCall(TaoDestroy(&tao));
   PetscCall(PetscFinalize());
   return 0;
