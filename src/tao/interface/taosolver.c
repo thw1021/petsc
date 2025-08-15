@@ -3057,7 +3057,7 @@ PetscErrorCode TaoSetTerm(Tao tao, PetscReal scale, TaoTerm term, Vec params, Ma
   PetscCall(PetscObjectReference((PetscObject)params));
   PetscCall(VecDestroy(&tao->objective_parameters));
   tao->objective_parameters = params;
-  tao->term_set = PETSC_TRUE;
+  tao->term_set             = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
