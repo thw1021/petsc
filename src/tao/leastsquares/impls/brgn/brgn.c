@@ -796,7 +796,6 @@ static PetscErrorCode TaoView_BRGN(Tao tao, PetscViewer viewer)
   PetscCall(PetscViewerASCIIPushTab(viewer));
   PetscCall(TaoView(gn->subsolver, viewer));
   PetscCall(PetscViewerASCIIPopTab(viewer));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
