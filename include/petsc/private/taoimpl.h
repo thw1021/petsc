@@ -199,6 +199,7 @@ struct _p_Tao {
   TaoMappedTerm objective_term; /* TaoTerm in use */
   Vec           objective_parameters;
   PetscInt      num_terms;
+  PetscBool     term_set;
   PetscReal    *objective_values;
 
   TaoTerm   orig_callbacks; /* TAOTERMTAOCALLBACKS for the original callbacks */
