@@ -1176,8 +1176,8 @@ PetscErrorCode TaoADMMGetUpdateType(Tao tao, TaoADMMUpdateType *type)
 
   ```{math}
   \begin{aligned}
-    &\min_{x,z} f(x) + g(z) \\
-    &\text{such that} A x + B z = c.
+  &\min_{x,z} f(x) + g(z) \\
+  &\text{such that} A x + B z = c.
   \end{aligned}
   ```
 
