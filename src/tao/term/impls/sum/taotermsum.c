@@ -826,8 +826,8 @@ static PetscErrorCode TaoTermSumSetSubtermHessianMatrices_Sum(TaoTerm term, Pets
   Logically collective
 
   Input Parameters:
-+ term - a `TaoTerm` of type `TAOTERMSUM`
-- index         - the index for the subterm from `TaoTermSumSetSubterm()` or `TaoTermSumAddSubterm()`
++ term  - a `TaoTerm` of type `TAOTERMSUM`
+- index - the index for the subterm from `TaoTermSumSetSubterm()` or `TaoTermSumAddSubterm()`
 
   Output Parameters:
 + unmapped_H    - (optional) unmapped Hessian matrix
