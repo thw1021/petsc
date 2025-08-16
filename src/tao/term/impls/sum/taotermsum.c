@@ -325,7 +325,7 @@ static PetscErrorCode TaoTermView_Sum_NameHasSpaces(const char name[], PetscBool
   PetscFunctionBegin;
   PetscCall(PetscStrlen(name, &n));
   for (size_t i = 0; i < n; i++) {
-    if (isspace(name[i])) {
+    if (isspace((unsigned char)name[i])) {
       *has_spaces = PETSC_TRUE;
       PetscFunctionReturn(PETSC_SUCCESS);
     }
