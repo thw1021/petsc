@@ -47,7 +47,7 @@ PetscRegressor Object: 1 MPI process
             type: sum
             solution vector space: N = 10
             parameter vector space: (optional) K = 10
-            Sum of 2 terms: f_{BRGN Gauss-Newton term}(x) + f_{BRGN regularizer l2prox}(x; [p_1])
+            Sum of 2 terms: f_{BRGN Gauss-Newton term}(x) + 0. f_{BRGN regularizer l2prox}(x; [p_1])
             f_{BRGN Gauss-Newton term}:
               TaoTerm Object: BRGN Gauss-Newton term (brgn_gauss_newton_) 1 MPI process
                 type: shell
