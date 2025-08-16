@@ -140,7 +140,7 @@ static PetscErrorCode SNESLineSearchApply_NLEQERR(SNESLineSearch linesearch)
       /* This isn't what is suggested by Deuflhard, but it works better in my experience */
       if (monitor) {
         PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
-        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: lambda has reached lambdamin, taking full Newton step\n"));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: lambda has reached minlambda, taking full Newton step\n"));
         PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
       }
       lambda = 1.0;

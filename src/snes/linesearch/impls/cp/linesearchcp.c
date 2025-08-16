@@ -6,7 +6,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
   PetscBool   changed_y, changed_w;
   Vec         X, Y, F, W;
   SNES        snes;
-  PetscReal   xnorm, ynorm, gnorm, steptol, atol, rtol, ltol, maxstep;
+  PetscReal   xnorm, ynorm, gnorm, minlambda, atol, rtol, ltol, maxstep;
   PetscReal   lambda, lambda_old, lambda_update, delLambda;
   PetscScalar fty, fty_init, fty_old, fty_mid1, fty_mid2, s;
   PetscInt    i, max_it;
@@ -17,7 +17,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchGetNorms(linesearch, &xnorm, &gnorm, &ynorm));
   PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
   PetscCall(SNESLineSearchGetLambda(linesearch, &lambda));
-  PetscCall(SNESLineSearchGetTolerances(linesearch, &steptol, &maxstep, &rtol, &atol, &ltol, &max_it));
+  PetscCall(SNESLineSearchGetTolerances(linesearch, &minlambda, &maxstep, &rtol, &atol, &ltol, &max_it));
   PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_SUCCEEDED));
   PetscCall(SNESLineSearchGetDefaultMonitor(linesearch, &monitor));
 
@@ -103,7 +103,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
     lambda_update = lambda - PetscRealPart(fty / s);
 
     /* switch directions if we stepped out of bounds */
-    if (lambda_update < steptol) lambda_update = lambda + PetscRealPart(fty / s);
+    if (lambda_update < minlambda) lambda_update = lambda + PetscRealPart(fty / s);
 
     if (PetscIsInfOrNanReal(lambda_update)) break;
     if (lambda_update > maxstep) break;
@@ -134,7 +134,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
     PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search terminated: lambda = %g, fnorms = %g\n", (double)lambda, (double)gnorm));
     PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
   }
-  if (lambda <= steptol) PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_REDUCT));
+  if (lambda <= minlambda) PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_REDUCT));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

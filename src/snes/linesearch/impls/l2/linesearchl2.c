@@ -12,7 +12,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
   PetscReal        gnorm;
   PetscReal        ynorm;
   PetscReal        xnorm;
-  PetscReal        steptol, maxstep, atol, ltol;
+  PetscReal        minlambda, maxstep, atol, ltol;
   PetscViewer      monitor;
   PetscReal        lambda, lambda_old, lambda_mid, lambda_update, delLambda;
   PetscReal        fnrm, fnrm_old, fnrm_mid;
@@ -26,7 +26,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchGetLambda(linesearch, &lambda));
   PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
   PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_SUCCEEDED));
-  PetscCall(SNESLineSearchGetTolerances(linesearch, &steptol, &maxstep, NULL, &atol, &ltol, &max_it));
+  PetscCall(SNESLineSearchGetTolerances(linesearch, &minlambda, &maxstep, NULL, &atol, &ltol, &max_it));
   PetscCall(SNESLineSearchGetDefaultMonitor(linesearch, &monitor));
 
   PetscCall(SNESGetObjective(snes, &objective, NULL));
@@ -82,7 +82,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
         PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: objective function at lambdas = %g is Inf or Nan, cutting lambda\n", (double)lambda));
         PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
       }
-      if (lambda <= steptol) {
+      if (lambda <= minlambda) {
         PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_REDUCT));
         PetscFunctionReturn(PETSC_SUCCESS);
       }
@@ -143,8 +143,8 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
       break;
     }
 
-    /* don't accept lambda below steptol */
-    if (lambda_update < steptol) lambda_update = 0.5 * (lambda + lambda_old);
+    /* don't accept lambda below minlambda */
+    if (lambda_update < minlambda) lambda_update = 0.5 * (lambda + lambda_old);
 
     /* don't accept lambda which is NaN or Inf */
     if (PetscIsInfOrNanReal(lambda_update)) {
@@ -201,7 +201,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
     PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search terminated: lambda = %g, fnorm = %g\n", (double)lambda, (double)gnorm));
     PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
   }
-  if (lambda <= steptol) PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_REDUCT));
+  if (lambda <= minlambda) PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_REDUCT));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
