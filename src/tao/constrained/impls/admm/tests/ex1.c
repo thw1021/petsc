@@ -134,13 +134,16 @@ int main(int argc, char **argv)
 
 /*TEST
 
-  test:
-    suffix: basic
-    args: -tao_converged_reason -tao_view
+   build:
+      requires: !complex !single !__float128 !defined(PETSC_USE_64BIT_INDICES)
 
-  test:
-    suffix: aradmm_exact
-    args: -n 13 -m_c 13 -m_d 13 -C_mat_type constantdiagonal -D_mat_type constantdiagonal
-    args: -tao_monitor_constraint_norm -tao_admm_update_type adaptive
+   test:
+      suffix: basic
+      args: -tao_converged_reason -tao_view
+
+   test:
+      suffix: aradmm_exact
+      args: -n 13 -m_c 13 -m_d 13 -C_mat_type constantdiagonal -D_mat_type constantdiagonal
+      args: -tao_monitor_constraint_norm -tao_admm_update_type adaptive
 
 TEST*/
