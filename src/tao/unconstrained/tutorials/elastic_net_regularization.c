@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 /*TEST
 
   build:
-    requires: !comple !singlex
+    requires: !complex !single
 
   test:
     suffix: 0
