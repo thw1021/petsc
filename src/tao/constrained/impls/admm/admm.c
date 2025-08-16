@@ -323,7 +323,7 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
     PetscCall(TaoADMMDualResidual(tao));
     PetscCall(VecNorm(am->d_x, NORM_2, &d_x_norm));
     PetscCall(VecNorm(am->d_z, NORM_2, &d_z_norm));
-    PetscCall(PetscInfo(tao, "x component of dual residual: %8.2e, z component of dual residual: %8.2e\n", d_x_norm, d_z_norm));
+    PetscCall(PetscInfo(tao, "x component of dual residual: %8.2e, z component of dual residual: %8.2e\n", (double)d_x_norm, (double)d_z_norm));
     d_norm = PetscSqrtReal(d_x_norm * d_x_norm + d_z_norm * d_z_norm);
     PetscCall(VecDotNorm2(am->y, am->r, &y_dot_r, &c_norm2));
     c_norm     = PetscSqrtReal(c_norm2);
