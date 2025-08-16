@@ -422,8 +422,8 @@ PETSC_INTERN PetscErrorCode TaoTermViewSumPrintSubterm(TaoTerm term, PetscViewer
   PetscFunctionBegin;
   PetscCall(TaoTermSumGetSubterm(term, i, NULL, &scale, &subterm, &map));
   if (scale == 1.0) PetscCall(PetscViewerASCIIPrintf(viewer, "%s", initial ? "" : " + "));
-  else if (initial) PetscCall(PetscViewerASCIIPrintf(viewer, "%g ", scale));
-  else PetscCall(PetscViewerASCIIPrintf(viewer, " %s %g ", scale >= 0.0 ? "+" : "-", PetscAbsReal(scale)));
+  else if (initial) PetscCall(PetscViewerASCIIPrintf(viewer, "%g ", (double)scale));
+  else PetscCall(PetscViewerASCIIPrintf(viewer, " %s %g ", scale >= 0.0 ? "+" : "-", (double)PetscAbsReal(scale)));
   PetscCall(TaoTermViewSumPrintSubtermName(viewer, subterm, i, f, PETSC_FALSE));
   PetscCall(PetscViewerASCIIPrintf(viewer, "("));
   if (print_map && map) {
