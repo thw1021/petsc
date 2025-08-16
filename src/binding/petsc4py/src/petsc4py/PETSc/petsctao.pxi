@@ -326,21 +326,6 @@ cdef PetscErrorCode TAO_ObjGrad(PetscTAO _tao,
     return PETSC_SUCCESS
 
 
-cdef PetscErrorCode TAO_BRGNRegObjGrad(PetscTAO _tao,
-                                       PetscVec _x, PetscReal *_f, PetscVec _g,
-                                       void *ctx) except PETSC_ERR_PYTHON with gil:
-
-    cdef TAO tao = ref_TAO(_tao)
-    cdef Vec x   = ref_Vec(_x)
-    cdef Vec g   = ref_Vec(_g)
-    context = tao.get_attr("__brgnregobjgrad__")
-    if context is None and ctx != NULL: context = <object>ctx
-    assert context is not None and type(context) is tuple # sanity check
-    (objgrad, args, kargs) = context
-    retv = objgrad(tao, x, g, *args, **kargs)
-    _f[0] = asReal(retv)
-    return PETSC_SUCCESS
-
 cdef PetscErrorCode TAO_Constraints(PetscTAO _tao,
                                     PetscVec _x, PetscVec _r,
                                     void *ctx) except PETSC_ERR_PYTHON with gil:
@@ -383,20 +368,6 @@ cdef PetscErrorCode TAO_Hessian(PetscTAO _tao,
     assert context is not None and type(context) is tuple # sanity check
     (hessian, args, kargs) = context
     hessian(tao, x, H, P, *args, **kargs)
-    return PETSC_SUCCESS
-
-cdef PetscErrorCode TAO_BRGNRegHessian(PetscTAO _tao,
-                                       PetscVec  _x,
-                                       PetscMat  _H,
-                                       void* ctx) except PETSC_ERR_PYTHON with gil:
-    cdef TAO tao = ref_TAO(_tao)
-    cdef Vec x   = ref_Vec(_x)
-    cdef Mat H   = ref_Mat(_H)
-    context = tao.get_attr("__brgnreghessian__")
-    if context is None and ctx != NULL: context = <object>ctx
-    assert context is not None and type(context) is tuple # sanity check
-    (hessian, args, kargs) = context
-    hessian(tao, x, H, *args, **kargs)
     return PETSC_SUCCESS
 
 cdef PetscErrorCode TAO_Jacobian(PetscTAO _tao,
