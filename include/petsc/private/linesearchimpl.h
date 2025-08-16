@@ -54,7 +54,7 @@ struct _p_LineSearch {
   PetscBool            keeplambda;
 
   PetscReal damping;
-  PetscReal maxstep;
+  PetscReal maxlambda;
   PetscReal minlambda;
   PetscInt  max_it;
   PetscReal rtol;

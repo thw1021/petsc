@@ -12,7 +12,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
   PetscReal        gnorm;
   PetscReal        ynorm;
   PetscReal        xnorm;
-  PetscReal        minlambda, maxstep, atol, ltol;
+  PetscReal        minlambda, maxlambda, atol, ltol;
   PetscViewer      monitor;
   PetscReal        lambda, lambda_old, lambda_mid, lambda_update, delLambda;
   PetscReal        fnrm, fnrm_old, fnrm_mid;
@@ -26,7 +26,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchGetLambda(linesearch, &lambda));
   PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
   PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_SUCCEEDED));
-  PetscCall(SNESLineSearchGetTolerances(linesearch, &minlambda, &maxstep, NULL, &atol, &ltol, &max_it));
+  PetscCall(SNESLineSearchGetTolerances(linesearch, &minlambda, &maxlambda, NULL, &atol, &ltol, &max_it));
   PetscCall(SNESLineSearchGetDefaultMonitor(linesearch, &monitor));
 
   PetscCall(SNESGetObjective(snes, &objective, NULL));
@@ -86,7 +86,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
         PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_REDUCT));
         PetscFunctionReturn(PETSC_SUCCESS);
       }
-      maxstep    = .95 * lambda; /* forbid the search from ever going back to the "failed" length that generates Nan or Inf */
+      maxlambda    = .95 * lambda; /* forbid the search from ever going back to the "failed" length that generates Nan or Inf */
       lambda     = .5 * (lambda + lambda_old);
       lambda_mid = .5 * (lambda + lambda_old);
     }
@@ -157,10 +157,10 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
     }
 
     /* don't accept lambda which is larger than the maximum step */
-    if (lambda_update > maxstep) {
+    if (lambda_update > maxlambda) {
       if (monitor) {
         PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
-        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: lambda_update = %g > maxstep = %g\n", (double)lambda_update, (double)maxstep));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: lambda_update = %g > maxlambda = %g\n", (double)lambda_update, (double)maxlambda));
         PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
       }
       break;
@@ -219,9 +219,9 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
 
    Options Database Keys:
 +  -snes_linesearch_max_it <1>         - maximum number of iterations within the line search
-.  -snes_linesearch_maxstep <1e8>      - maximum lambda (scaling of solution update) allowed
 .  -snes_linesearch_damping <1.0>      - initial lambda on entry to the line search
 .  -snes_linesearch_minlambda <1e\-12> - minimum allowable lambda
+.  -snes_linesearch_maxlambda <1.0>    - maximum lambda (scaling of solution update) allowed
 .  -snes_linesearch_atol <1e\-15>      - absolute tolerance for the secant method $ f'() < atol $
 -  -snes_linesearch_ltol <1e\-8>       - minimum absolute change in lambda allowed
 

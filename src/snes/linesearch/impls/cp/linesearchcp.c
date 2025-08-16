@@ -6,7 +6,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
   PetscBool   changed_y, changed_w;
   Vec         X, Y, F, W;
   SNES        snes;
-  PetscReal   xnorm, ynorm, gnorm, minlambda, atol, rtol, ltol, maxstep;
+  PetscReal   xnorm, ynorm, gnorm, minlambda, maxlambda, rtol, atol, ltol;
   PetscReal   lambda, lambda_old, lambda_update, delLambda;
   PetscScalar fty, fty_init, fty_old, fty_mid1, fty_mid2, s;
   PetscInt    i, max_it;
@@ -17,7 +17,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchGetNorms(linesearch, &xnorm, &gnorm, &ynorm));
   PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
   PetscCall(SNESLineSearchGetLambda(linesearch, &lambda));
-  PetscCall(SNESLineSearchGetTolerances(linesearch, &minlambda, &maxstep, &rtol, &atol, &ltol, &max_it));
+  PetscCall(SNESLineSearchGetTolerances(linesearch, &minlambda, &maxlambda, &rtol, &atol, &ltol, &max_it));
   PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_SUCCEEDED));
   PetscCall(SNESLineSearchGetDefaultMonitor(linesearch, &monitor));
 
@@ -106,7 +106,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
     if (lambda_update < minlambda) lambda_update = lambda + PetscRealPart(fty / s);
 
     if (PetscIsInfOrNanReal(lambda_update)) break;
-    if (lambda_update > maxstep) break;
+    if (lambda_update > maxlambda) break;
 
     /* compute the new state of the line search */
     lambda_old = lambda;
@@ -145,7 +145,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
 
    Options Database Keys:
 +  -snes_linesearch_minlambda <1e\-12> - the minimum acceptable lambda (scaling of solution update)
-.  -snes_linesearch_maxstep <1e8>      - the algorithm ensures that lambda is never larger than this value
+.  -snes_linesearch_maxlambda <1.0>    - the algorithm ensures that lambda is never larger than this value
 .  -snes_linesearch_damping <1.0>      - initial lambda on entry to the line search
 .  -snes_linesearch_order <1>          - order of the approximation in the secant method, must be 1, 2, or 3
 .  -snes_linesearch_max_it <1>         - the maximum number of secant iterations performed
