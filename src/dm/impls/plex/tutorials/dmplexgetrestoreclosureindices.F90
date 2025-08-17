@@ -47,15 +47,15 @@ program main
   allocate(offsets(Nf))
 
   ! Indices per cell
-  PetscCallA(DMPlexGetClosureIndices(cdm, gS, gS, c, PETSC_TRUE, nIdx, indices, offsets, PETSC_NULL_REAL_POINTER, ierr))
+  PetscCallA(DMPlexGetClosureIndices(cdm, gS, gS, c, PETSC_TRUE, nIdx, indices, offsets, PETSC_NULL_SCALAR_POINTER, ierr))
   allocate(idxMatrix(nIdx, cEnd - cStart))
   idxMatrix(1:nIdx, cStart + 1) = indices
   do c = cStart + 1, cEnd - 1
-    PetscCallA(DMPlexGetClosureIndices(cdm, gS, gS, c, PETSC_TRUE, nIdx, indices, offsets, PETSC_NULL_REAL_POINTER, ierr))
+    PetscCallA(DMPlexGetClosureIndices(cdm, gS, gS, c, PETSC_TRUE, nIdx, indices, offsets, PETSC_NULL_SCALAR_POINTER, ierr))
     idxMatrix(1:nIdx, c + 1) = indices
     ! Check size and content of output field offsets array
     PetscCheck(size(offsets) == 1 .and. offsets(1) == zero, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Wrong field offsets")
-    PetscCallA(DMPlexRestoreClosureIndices(cdm, gS, gS, c, PETSC_TRUE, nIdx, indices, offsets, PETSC_NULL_REAL_POINTER, ierr))
+    PetscCallA(DMPlexRestoreClosureIndices(cdm, gS, gS, c, PETSC_TRUE, nIdx, indices, offsets, PETSC_NULL_SCALAR_POINTER, ierr))
   end do
 
   ! Check number of shared indices between cell 0 and all others
