@@ -527,11 +527,15 @@ documentation for each TAO algorithm for further details.
 
 (sec_tao_term)=
 
-### TaoTerm: object-oriented objective function terms
+### TaoTerm: composable objective function terms
 
 In addition to the callback-based approach to specifying the optimization
-problem solved by TAO (see {any}`sec_tao_callbacks`), TAO includes an
-object-oriented interface in `TaoTerm`, which encapsulates a term that
+problem solved by TAO (see {any}`sec_tao_callbacks`), TAO includes a
+way to combine mutiple separate mathematical functions, each defined
+with a `TaoTerm`. For example, a `TaoTerm` that provides a regularization
+ can be combined with a `TaoTerm` that defines the user objective function.
+
+ which encapsulates a term that
 can appear in the objective function of an optimization problem.
 
 Each `TaoTerm` represents a parameteric real-valued function $f(x; p)$ for
@@ -566,13 +570,12 @@ the parametric behavior of a `TaoTerm` is determined by `TaoTermGetParametersMod
 
 #### Using a TaoTerm in a Tao solver
 
-A `TaoTerm` can be set as the whole objective function of a `Tao` solver
+A `TaoTerm` can be set as the entire objective function of a `Tao` solver
 with `TaoSetTerm()`.  A `TaoTerm` can also be added to the
 existing objective function of a `Tao` using `TaoAddTerm()`.
-This is compatible with the callback-based interface.  For example: if you
-have specified an objective function $f(x)$ using callbacks, and a
-regularizer $g(x;p)$ is specified by a `TaoTerm`, you can create the
-objective function $f(x) + \alpha g(Ax; p)$ this way:
+For example: if you have specified an objective function $f(x)$ using
+`TaoSetObjectiveAndGradient()`, and a regularizer $g(x;p)$ is specified by a `TaoTerm`,
+you can create the objective function $f(x) + \alpha g(Ax; p)$ using:
 
 ```
 PetscErrorCode (*f_obj_grad)(Tao, Vec, PetscReal *, Vec, void *);
