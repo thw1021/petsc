@@ -594,7 +594,7 @@ PetscErrorCode SNESLineSearchPreCheckPicard(SNESLineSearch linesearch, Vec X, Ve
 - Y     - The current search direction, on output the direction determined by the linesearch, i.e. Xnew = Xold - lambda*Y
 
   Options Database Keys:
-+ -snes_linesearch_type                - basic (or equivalently none), bt, l2, cp, nleqerr, bisection, shell
++ -snes_linesearch_type                - basic (or equivalently none), bt, secant, cp, nleqerr, bisection, shell
 . -snes_linesearch_monitor [:filename] - Print progress of line searches
 . -snes_linesearch_damping             - The linesearch damping parameter, default is 1.0 (no damping)
 . -snes_linesearch_norms               - Turn on/off the linesearch norms computation (SNESLineSearchSetComputeNorms())
@@ -789,7 +789,7 @@ PetscErrorCode SNESLineSearchMonitorSetFromOptions(SNESLineSearch ls, const char
 . linesearch - a `SNESLineSearch` line search context
 
   Options Database Keys:
-+ -snes_linesearch_type <type>                                      - basic (or equivalently none), `bt`, `l2`, `cp`, `nleqerr`, `bisection`, `shell`
++ -snes_linesearch_type <type>                                      - basic (or equivalently none), `bt`, `secant`, `cp`, `nleqerr`, `bisection`, `shell`
 . -snes_linesearch_order <order>                                    - 1, 2, 3.  Most types only support certain orders (`bt` supports 2 or 3)
 . -snes_linesearch_norms                                            - Turn on/off the linesearch norms for the basic linesearch typem (`SNESLineSearchSetComputeNorms()`)
 . -snes_linesearch_minlambda                                        - The minimum lambda
@@ -949,7 +949,7 @@ PetscErrorCode SNESLineSearchGetType(SNESLineSearch linesearch, SNESLineSearchTy
 - type       - The type of line search to be used, see `SNESLineSearchType`
 
   Options Database Key:
-. -snes_linesearch_type <type> - basic (or equivalently none), bt, l2, cp, nleqerr, bisection, shell
+. -snes_linesearch_type <type> - basic (or equivalently none), bt, secant, cp, nleqerr, bisection, shell
 
   Level: intermediate
 
@@ -1255,7 +1255,7 @@ PetscErrorCode SNESLineSearchGetDamping(SNESLineSearch linesearch, PetscReal *da
 
   Note:
   The `SNESLINESEARCHNONE` line search merely takes the update step scaled by the damping parameter.
-  The use of the damping parameter in the `SNESLINESEARCHL2` and `SNESLINESEARCHCP` line searches is much more subtle;
+  The use of the damping parameter in the `SNESLINESEARCHSECANT` and `SNESLINESEARCHCP` line searches is much more subtle;
   it is used as a starting point for the secant method. Depending on the choice for maxlambda,
   the eventual lambda may be greater than the damping parameter however.
   For `SNESLINESEARCHBISECTION` and `SNESLINESEARCHBT` the damping is instead used as the initial guess,

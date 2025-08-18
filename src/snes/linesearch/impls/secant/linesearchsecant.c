@@ -1,7 +1,7 @@
 #include <petsc/private/linesearchimpl.h>
 #include <petscsnes.h>
 
-static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
+static PetscErrorCode SNESLineSearchApply_Secant(SNESLineSearch linesearch)
 {
   PetscBool        changed_y, changed_w;
   Vec              X;
@@ -217,7 +217,7 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
 }
 
 /*MC
-   SNESLINESEARCHL2 - Secant search in the L2 norm of the function or the objective function.
+   SNESLINESEARCHSECANT - Secant search in the L2 norm of the function or the objective function.
 
    Attempts to solve $ \min_{\lambda} f(x_k + \lambda Y_k) $ using the secant method with the initial bracketing of $ \lambda $ between [0,damping].
    $f(x_k + \lambda Y_k)$ is either the squared L2-norm of the function $||F(x_k + \lambda Y_k)||_2^2$,
@@ -238,15 +238,12 @@ static PetscErrorCode SNESLineSearchApply_L2(SNESLineSearch linesearch)
 
    Level: advanced
 
-   Developer Note:
-   A better name for this method might be `SNESLINESEARCHSECANT`, L2 is not descriptive
-
 .seealso: [](ch_snes), `SNESLINESEARCHBT`, `SNESLINESEARCHCP`, `SNESLineSearch`, `SNESLineSearchType`, `SNESLineSearchCreate()`, `SNESLineSearchSetType()`
 M*/
-PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_L2(SNESLineSearch linesearch)
+PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_Secant(SNESLineSearch linesearch)
 {
   PetscFunctionBegin;
-  linesearch->ops->apply          = SNESLineSearchApply_L2;
+  linesearch->ops->apply          = SNESLineSearchApply_Secant;
   linesearch->ops->destroy        = NULL;
   linesearch->ops->setfromoptions = NULL;
   linesearch->ops->reset          = NULL;
