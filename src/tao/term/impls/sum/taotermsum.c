@@ -1015,7 +1015,7 @@ static PetscErrorCode TaoTermSetFromOptions_Sum(TaoTerm term, PetscOptionItems P
     char        arg[256];
     PetscBool   flg;
     PetscEnum   masks[4] = {ENUM_DUMMY, ENUM_DUMMY, ENUM_DUMMY, ENUM_DUMMY};
-    PetscInt    n_masks = PETSC_STATIC_ARRAY_LENGTH(masks);
+    PetscInt    n_masks  = PETSC_STATIC_ARRAY_LENGTH(masks);
 
     PetscCall(TaoTermSumGetSubterm(term, i, &subprefix, &scale, &subterm, &map));
     if (subterm == NULL) {
