@@ -704,14 +704,14 @@ def getAPI():
   funcs['PetscOptionsEnd']               = Function('PetscOptionsEnd')
   funcs['PetscOptionsEnd'].mansec        = 'sys'
   funcs['PetscOptionsEnd'].file          = 'aoptions.c';
-  funcs['PetscOptionsEnd'].includefile   = 'petscsys.h'
+  funcs['PetscOptionsEnd'].includefile   = 'petscoptions.h'
   funcs['PetscOptionsEnd'].dir           = 'src/sys/objects/'
   funcs['PetscOptionsEnd'].opaquestub    = True
 
   funcs['PetscOptionsBool']             = Function('PetscOptionsBool')
   funcs['PetscOptionsBool'].mansec      = 'sys'
   funcs['PetscOptionsBool'].file        = 'aoptions.c';
-  funcs['PetscOptionsBool'].includefile = 'petscsys.h'
+  funcs['PetscOptionsBool'].includefile = 'petscoptions.h'
   funcs['PetscOptionsBool'].dir         = 'src/sys/objects/'
   funcs['PetscOptionsBool'].opaquestub  = True
   funcs['PetscOptionsBool'].arguments   = [Argument('opt',           'char',      stars = 0, array = True, const = True),
@@ -723,7 +723,7 @@ def getAPI():
   funcs['PetscOptionsInt']             = Function('PetscOptionsInt')
   funcs['PetscOptionsInt'].mansec      = 'sys'
   funcs['PetscOptionsInt'].file        = 'aoptions.c';
-  funcs['PetscOptionsInt'].includefile = 'petscsys.h'
+  funcs['PetscOptionsInt'].includefile = 'petscoptions.h'
   funcs['PetscOptionsInt'].dir         = 'src/sys/objects/'
   funcs['PetscOptionsInt'].opaquestub  = True
   funcs['PetscOptionsInt'].arguments   = [Argument('opt',           'char',      stars = 0, array = True, const = True),
@@ -735,7 +735,7 @@ def getAPI():
   funcs['PetscOptionsReal']             = Function('PetscOptionsReal')
   funcs['PetscOptionsReal'].mansec      = 'sys'
   funcs['PetscOptionsReal'].file        = 'aoptions.c';
-  funcs['PetscOptionsReal'].includefile = 'petscsys.h'
+  funcs['PetscOptionsReal'].includefile = 'petscoptions.h'
   funcs['PetscOptionsReal'].dir         = 'src/sys/objects/'
   funcs['PetscOptionsReal'].opaquestub  = True
   funcs['PetscOptionsReal'].arguments   = [Argument('opt',           'char',      stars = 0, array = True, const = True),
@@ -747,7 +747,7 @@ def getAPI():
   funcs['PetscOptionsScalar']             = Function('PetscOptionsScalar')
   funcs['PetscOptionsScalar'].mansec      = 'sys'
   funcs['PetscOptionsScalar'].file        = 'aoptions.c';
-  funcs['PetscOptionsScalar'].includefile = 'petscsys.h'
+  funcs['PetscOptionsScalar'].includefile = 'petscoptions.h'
   funcs['PetscOptionsScalar'].dir         = 'src/sys/objects/'
   funcs['PetscOptionsScalar'].opaquestub  = True
   funcs['PetscOptionsScalar'].arguments   = [Argument('opt',           'char',      stars = 0, array = True, const = True),
@@ -759,7 +759,7 @@ def getAPI():
   funcs['PetscOptionsScalarArray']             = Function('PetscOptionsScalarArray')
   funcs['PetscOptionsScalarArray'].mansec      = 'sys'
   funcs['PetscOptionsScalarArray'].file        = 'aoptions.c';
-  funcs['PetscOptionsScalarArray'].includefile = 'petscsys.h'
+  funcs['PetscOptionsScalarArray'].includefile = 'petscoptions.h'
   funcs['PetscOptionsScalarArray'].dir         = 'src/sys/objects/'
   funcs['PetscOptionsScalarArray'].opaquestub  = True
   funcs['PetscOptionsScalarArray'].arguments   = [Argument('opt',           'char',        stars = 0, array = True, const = True),
@@ -771,7 +771,7 @@ def getAPI():
   funcs['PetscOptionsIntArray']             = Function('PetscOptionsIntArray')
   funcs['PetscOptionsIntArray'].mansec      = 'sys'
   funcs['PetscOptionsIntArray'].file        = 'aoptions.c';
-  funcs['PetscOptionsIntArray'].includefile = 'petscsys.h'
+  funcs['PetscOptionsIntArray'].includefile = 'petscoptions.h'
   funcs['PetscOptionsIntArray'].dir         = 'src/sys/objects/'
   funcs['PetscOptionsIntArray'].opaquestub  = True
   funcs['PetscOptionsIntArray'].arguments   = [Argument('opt',           'char',        stars = 0, array = True, const = True),
@@ -783,7 +783,7 @@ def getAPI():
   funcs['PetscOptionsRealArray']             = Function('PetscOptionsRealArray')
   funcs['PetscOptionsRealArray'].mansec      = 'sys'
   funcs['PetscOptionsRealArray'].file        = 'aoptions.c';
-  funcs['PetscOptionsRealArray'].includefile = 'petscsys.h'
+  funcs['PetscOptionsRealArray'].includefile = 'petscoptions.h'
   funcs['PetscOptionsRealArray'].dir         = 'src/sys/objects/'
   funcs['PetscOptionsRealArray'].opaquestub  = True
   funcs['PetscOptionsRealArray'].arguments   = [Argument('opt',           'char',        stars = 0, array = True, const = True),
@@ -795,7 +795,7 @@ def getAPI():
   funcs['PetscOptionsBoolArray']             = Function('PetscOptionsBoolArray')
   funcs['PetscOptionsBoolArray'].mansec      = 'sys'
   funcs['PetscOptionsBoolArray'].file        = 'aoptions.c';
-  funcs['PetscOptionsBoolArray'].includefile = 'petscsys.h'
+  funcs['PetscOptionsBoolArray'].includefile = 'petscoptions.h'
   funcs['PetscOptionsBoolArray'].dir         = 'src/sys/objects/'
   funcs['PetscOptionsBoolArray'].opaquestub  = True
   funcs['PetscOptionsBoolArray'].arguments   = [Argument('opt',           'char',        stars = 0, array = True, const = True),
