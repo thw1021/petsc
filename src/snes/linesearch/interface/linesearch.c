@@ -1188,6 +1188,7 @@ PetscErrorCode SNESLineSearchSetTolerances(SNESLineSearch linesearch, PetscReal 
 
   if (minlambda != (PetscReal)PETSC_DEFAULT) {
     PetscCheck(minlambda >= 0.0, PetscObjectComm((PetscObject)linesearch), PETSC_ERR_ARG_OUTOFRANGE, "Minimum lambda %14.12e must be non-negative", (double)minlambda);
+    PetscCheck(minlambda < maxlambda, PetscObjectComm((PetscObject)linesearch), PETSC_ERR_ARG_OUTOFRANGE, "Minimum lambda %14.12e must be smaller than maximum lambda %14.12e", (double)minlambda, (double)maxlambda);
     linesearch->minlambda = minlambda;
   }
 
