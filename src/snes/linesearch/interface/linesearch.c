@@ -192,7 +192,7 @@ PetscErrorCode SNESLineSearchCreate(MPI_Comm comm, SNESLineSearch *outlinesearch
   linesearch->norms        = PETSC_TRUE;
   linesearch->keeplambda   = PETSC_FALSE;
   linesearch->damping      = 1.0;
-  linesearch->maxlambda      = 1.0;
+  linesearch->maxlambda    = 1.0;
   linesearch->minlambda    = 1e-12;
   linesearch->rtol         = 1e-8;
   linesearch->atol         = 1e-15;

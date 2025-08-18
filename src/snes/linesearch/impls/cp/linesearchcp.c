@@ -25,6 +25,7 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchPreCheck(linesearch, X, Y, &changed_y));
   lambda_old = 0.0;
 
+  /* evaluate initial point */
   if (linesearch->ops->vidirderiv) {
     PetscCall((*linesearch->ops->vidirderiv)(snes, F, X, Y, &fty_old));
   } else {
@@ -39,7 +40,6 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
     PetscCall(SNESSetConvergedReason(linesearch->snes, SNES_CONVERGED_FNORM_ABS));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-
   fty_init = fty_old;
 
   for (i = 0; i < max_it; i++) {
@@ -53,22 +53,53 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
       PetscCall(VecDot(F, Y, &fty));
     }
 
+    /* compute change of lambda */
     delLambda = lambda - lambda_old;
 
-    /* check for convergence */
-    if (PetscAbsReal(delLambda) < ltol) break;
-    if (PetscAbsScalar(fty) / PetscAbsScalar(fty_init) < rtol) break;
-    if (PetscAbsScalar(fty) < atol * ynorm && i > 0) break;
+    /* check change of lambda tolerance */
+    if (PetscAbsReal(delLambda) < ltol) {
+      if (monitor) {
+        PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: abs(dlambda) = %g < ltol = %g\n", (double)PetscAbsReal(delLambda), (double)ltol));
+        PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
+      }
+      break;
+    }
+
+    /* check relative tolerance */
+    if (PetscAbsScalar(fty) / PetscAbsScalar(fty_init) < rtol) {
+      if (monitor) {
+        PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: abs(fty/fty_init) = %g <= rtol  = %g\n", (double)(PetscAbsScalar(fty) / PetscAbsScalar(fty_init)), (double)rtol));
+        PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
+      }
+      break;
+    }
+
+    /* check absolute tolerance */
+    if (PetscAbsScalar(fty) < atol * ynorm && i > 0) {
+      if (monitor) {
+        PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: abs(fty)/||y|| = %g <= atol = %g\n", (double)(PetscAbsScalar(fty) / ynorm), (double)atol));
+        PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
+      }
+      break;
+    }
+
+    /* print iteration information */
     if (monitor) {
       PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
       PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: lambdas = [%g, %g], ftys = [%g, %g]\n", (double)lambda, (double)lambda_old, (double)PetscRealPart(fty), (double)PetscRealPart(fty_old)));
       PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
     }
 
-    /* compute the search direction */
+    /* approximate the second derivative */
     if (linesearch->order == SNES_LINESEARCH_ORDER_LINEAR) {
+      /* first order finite difference approximation */
       s = (fty - fty_old) / delLambda;
+
     } else if (linesearch->order == SNES_LINESEARCH_ORDER_QUADRATIC) {
+      /* evaluate function at midpoint 0.5 * (lambda + lambda_old) */
       PetscCall(VecWAXPY(W, -0.5 * (lambda + lambda_old), Y, X));
       if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
       PetscCall((*linesearch->ops->snesfunc)(snes, W, F));
@@ -77,8 +108,12 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
       } else {
         PetscCall(VecDot(F, Y, &fty_mid1));
       }
+
+      /* second order finite difference approximation */
       s = (3. * fty - 4. * fty_mid1 + fty_old) / delLambda;
+
     } else {
+      /* evaluate function at midpoint 0.5 * (lambda + lambda_old) */
       PetscCall(VecWAXPY(W, -0.5 * (lambda + lambda_old), Y, X));
       if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
       PetscCall((*linesearch->ops->snesfunc)(snes, W, F));
@@ -87,6 +122,8 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
       } else {
         PetscCall(VecDot(F, Y, &fty_mid1));
       }
+
+      /* evaluate function at lambda + 0.5 * (lambda - lambda_old) */
       PetscCall(VecWAXPY(W, -(lambda + 0.5 * (lambda - lambda_old)), Y, X));
       if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
       PetscCall((*linesearch->ops->snesfunc)(snes, W, F));
@@ -95,24 +132,50 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
       } else {
         PetscCall(VecDot(F, Y, &fty_mid2));
       }
+
+      /* third order finite difference approximation */
       s = (2. * fty_mid2 + 3. * fty - 6. * fty_mid1 + fty_old) / (3. * delLambda);
     }
-    /* if the solve is going in the wrong direction, fix it */
+
+    /* compute secant update (modifying the search direction if necessary) */
     if (PetscRealPart(s) > 0.) s = -s;
-    if (s == 0.0) break;
+    if (s == 0.0) {
+      if (monitor) {
+        PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: del2Fnrm = 0\n"));
+        PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
+      }
+      break;
+    }
     lambda_update = lambda - PetscRealPart(fty / s);
 
-    /* switch directions if we stepped out of bounds */
-    if (lambda_update < minlambda) lambda_update = lambda + PetscRealPart(fty / s);
+    /* if secant method would step out of bounds, exit with the respective bound */
+    if (lambda_update < minlambda) {
+      lambda_update = minlambda;
+      break;
+    }
+    if (lambda_update > maxlambda) {
+      lambda_update = maxlambda;
+      break;
+    }
 
-    if (PetscIsInfOrNanReal(lambda_update)) break;
-    if (lambda_update > maxlambda) break;
+    /* if lambda is NaN or Inf, do not accept update but exit with previous lambda */
+    if (PetscIsInfOrNanReal(lambda_update)) {
+      if (monitor) {
+        PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
+        PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search: lambda_update is NaN or Inf\n"));
+        PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
+      }
+      PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_NANORINF));
+      break;
+    }
 
     /* compute the new state of the line search */
     lambda_old = lambda;
     lambda     = lambda_update;
     fty_old    = fty;
   }
+
   /* construct the solution */
   PetscCall(VecWAXPY(W, -lambda, Y, X));
   if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
@@ -134,7 +197,6 @@ static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
     PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search terminated: lambda = %g, fnorms = %g\n", (double)lambda, (double)gnorm));
     PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
   }
-  if (lambda <= minlambda) PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_REDUCT));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
