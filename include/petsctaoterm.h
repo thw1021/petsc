@@ -7,9 +7,13 @@
 /* SUBMANSEC = TaoTerm */
 
 /*S
-  TaoTerm - Abstract PETSc object for a parametric real-valued function that can be a term in a `Tao` objective function.
+  TaoTerm - Abstract PETSc object for a parametric real-valued function that can be (optionally)
+            combined with other terms to define the complete `Tao` objective function.
 
   Level: beginner
+
+  Note:
+  User can combine a user defined `TaoTerm` and a built-in types to define the objective function.
 
 .seealso: [](ch_tao), [](sec_tao_term),
           `TaoTermCreate()`,
