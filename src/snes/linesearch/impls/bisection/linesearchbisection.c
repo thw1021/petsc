@@ -189,17 +189,17 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
 
    Options Database Keys:
 +  -snes_linesearch_max_it <50>   - maximum number of bisection iterations for the line search
-.  -snes_linesearch_damping <1.0> - initial lambda on entry to the line search
+.  -snes_linesearch_damping <1.0> - initial `lambda` on entry to the line search
 .  -snes_linesearch_rtol <1e\-8>  - relative tolerance for the directional derivative
 .  -snes_linesearch_atol <1e\-6>  - absolute tolerance for the directional derivative
--  -snes_linesearch_ltol <1e\-6>  - minimum absolute change in lambda allowed
+-  -snes_linesearch_ltol <1e\-6>  - minimum absolute change in `lambda` allowed
 
    Level: intermediate
 
    Notes:
-   lambda is the scaling of the search direction (vector) that is computed by this algorithm.
-   If there is no change of sign in the directional derivative from $\lambda=0$ to the initial lambda (the damping), then the initial lambda will be used.
-   Hence, this line search will always give a lambda in the interval [0, damping].
+   `lambda` is the scaling of the search direction (vector) that is computed by this algorithm.
+   If there is no change of sign in the directional derivative from $\lambda=0$ to the initial `lambda` (the damping), then the initial `lambda` will be used.
+   Hence, this line search will always give a `lambda` in the interval $[0, damping]$.
    This method does NOT use the objective function if it is provided with `SNESSetObjective()`.
 
 .seealso: [](ch_snes), `SNESLineSearch`, `SNESLineSearchType`, `SNESLineSearchCreate()`, `SNESLineSearchSetType()`, `SNESLINESEARCHCP`
