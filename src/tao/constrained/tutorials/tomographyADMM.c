@@ -214,7 +214,7 @@ int main(int argc, char **argv)
 
       test:
          suffix: 2
-         args: -reg 2 -lambda 1.e-8 -tao_admm_update_type adaptive -tao_max_it 20 -tao_monitor_constraint_norm -admm_sub_0_tao_monitor -admm_sub_1_tao_monitor -admm_sub_0_tao_nls_pc_type none
+         args: -reg 2 -lambda 1.e-8 -tao_admm_update_type adaptive -tao_max_it 20 -tao_monitor_constraint_norm -admm_sub_0_tao_monitor -admm_sub_1_tao_monitor -admm_sub_0_tao_nls_pc_type none -fp_trap 0
 
       test:
          suffix: 3
