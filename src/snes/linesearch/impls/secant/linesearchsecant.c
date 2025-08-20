@@ -157,11 +157,8 @@ static PetscErrorCode SNESLineSearchApply_Secant(SNESLineSearch linesearch)
       break;
     }
 
-    /* if secant method would step out of bounds, exit with the respective bound */
-    if (lambda_update < minlambda) {
-      lambda_update = minlambda;
-      break;
-    }
+    /* prevent secant method from stepping out of bounds */
+    if (lambda_update < minlambda) lambda_update = 0.5 * (lambda + lambda_old);
     if (lambda_update > maxlambda) {
       lambda_update = maxlambda;
       break;

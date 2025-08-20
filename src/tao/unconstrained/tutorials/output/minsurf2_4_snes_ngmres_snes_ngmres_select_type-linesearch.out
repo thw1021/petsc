@@ -42,7 +42,7 @@ Tao Object: 1 MPI process
       Number of stored past updates: 30
       Additive line-search details:
     SNESLineSearch Object: (snes_ngmres_additive_) 1 MPI process
-      type: l2
+      type: secant
       maxlambda=1.000000e+00, minlambda=1.000000e-12
       tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
       maximum iterations=1
