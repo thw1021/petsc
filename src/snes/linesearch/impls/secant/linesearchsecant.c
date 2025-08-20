@@ -97,7 +97,7 @@ static PetscErrorCode SNESLineSearchApply_Secant(SNESLineSearch linesearch)
       }
 
       /* forbid the search from ever going back to the "failed" length that generates Nan or Inf */
-      maxlambda    = .95 * lambda;
+      maxlambda = .95 * lambda;
 
       /* shrink lambda towards the previous one which was viable */
       lambda     = .5 * (lambda + lambda_old);
