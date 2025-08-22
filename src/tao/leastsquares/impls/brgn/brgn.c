@@ -82,7 +82,7 @@ static PetscErrorCode TaoTermLevenbergMarquardtComputeDiagonal(TaoTerm_GaussNewt
 }
 
 // (1/2) || R(x) ||_2^2, where R is the residual function
-static PetscErrorCode TaoTermObjectiveAndGradient_GaussNewton(TaoTerm term, Vec x, Vec _params, PetscReal *value, Vec g)
+static PetscErrorCode TaoTermComputeObjectiveAndGradient_GaussNewton(TaoTerm term, Vec x, Vec _params, PetscReal *value, Vec g)
 {
   PetscScalar          sval;
   TaoTerm_GaussNewton *gnterm;
@@ -101,7 +101,7 @@ static PetscErrorCode TaoTermObjectiveAndGradient_GaussNewton(TaoTerm term, Vec 
 }
 
 // Gauss-Newton Hessian approximation, Hv = (J^T J)v
-static PetscErrorCode TaoTermHessianMult_GaussNewton(TaoTerm term, Vec x, Vec _params, Vec v, Vec Hv)
+static PetscErrorCode TaoTermComputeHessianMult_GaussNewton(TaoTerm term, Vec x, Vec _params, Vec v, Vec Hv)
 {
   TaoTerm_GaussNewton *gnterm;
   Mat                  ls_jac;
@@ -116,7 +116,7 @@ static PetscErrorCode TaoTermHessianMult_GaussNewton(TaoTerm term, Vec x, Vec _p
 }
 
 // Form H = (J^T J)
-static PetscErrorCode TaoTermHessianSingle_GaussNewton(TaoTerm term, Vec x, Vec _params, Mat H)
+static PetscErrorCode TaoTermComputeHessianSingle_GaussNewton(TaoTerm term, Vec x, Vec _params, Mat H)
 {
   TaoTerm_GaussNewton *gnterm;
   Mat                  ls_jac = NULL;
@@ -128,11 +128,11 @@ static PetscErrorCode TaoTermHessianSingle_GaussNewton(TaoTerm term, Vec x, Vec 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermHessian_GaussNewton(TaoTerm term, Vec x, Vec _params, Mat H, Mat Hpre)
+static PetscErrorCode TaoTermComputeHessian_GaussNewton(TaoTerm term, Vec x, Vec _params, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
   PetscCall(TaoTermUpdateHessianShells(term, x, _params, &H, &Hpre));
-  PetscCall(TaoTermHessianSingle(term, x, _params, H, Hpre, TaoTermHessianSingle_GaussNewton, UNKNOWN_NONZERO_PATTERN));
+  PetscCall(TaoTermComputeHessianSingle(term, x, _params, H, Hpre, TaoTermComputeHessianSingle_GaussNewton, UNKNOWN_NONZERO_PATTERN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -151,9 +151,9 @@ static PetscErrorCode TaoTermCreateGaussNewton(Tao tao, TaoTerm *term)
   PetscCall(TaoTermSetParametersMode(_term, TAOTERM_PARAMETERS_NONE));
   PetscCall(TaoTermShellSetCreateHessianMatrices(_term, TaoTermCreateHessianMatricesDefault));
   PetscCall(TaoTermSetCreateHessianMode(_term, PETSC_TRUE, MATSHELL, MATSHELL));
-  PetscCall(TaoTermShellSetObjectiveAndGradient(_term, TaoTermObjectiveAndGradient_GaussNewton));
-  PetscCall(TaoTermShellSetHessian(_term, TaoTermHessian_GaussNewton));
-  PetscCall(TaoTermShellSetHessianMult(_term, TaoTermHessianMult_GaussNewton));
+  PetscCall(TaoTermShellSetObjectiveAndGradient(_term, TaoTermComputeObjectiveAndGradient_GaussNewton));
+  PetscCall(TaoTermShellSetHessian(_term, TaoTermComputeHessian_GaussNewton));
+  PetscCall(TaoTermShellSetHessianMult(_term, TaoTermComputeHessianMult_GaussNewton));
   *term = _term;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -177,19 +177,19 @@ static PetscErrorCode TaoTermUpdateLevenbergMarquardt(TaoTerm term, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermHessian_LevenbergMarquardt(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
+static PetscErrorCode TaoTermComputeHessian_LevenbergMarquardt(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
   PetscCall(TaoTermUpdateLevenbergMarquardt(term, x));
-  PetscCall(TaoTermHessian_Quadratic(term, x, params, H, Hpre));
+  PetscCall(TaoTermComputeHessian_Quadratic(term, x, params, H, Hpre));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermHessianMult_LevenbergMarquardt(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
+static PetscErrorCode TaoTermComputeHessianMult_LevenbergMarquardt(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
 {
   PetscFunctionBegin;
   PetscCall(TaoTermUpdateLevenbergMarquardt(term, x));
-  PetscCall(TaoTermHessianMult_Quadratic(term, x, params, v, Hv));
+  PetscCall(TaoTermComputeHessianMult_Quadratic(term, x, params, v, Hv));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -216,8 +216,8 @@ static PetscErrorCode TaoTermCreateLevenbergMarquardt(TaoTerm gn, TaoTerm *lm)
   PetscCall(MatDestroy(&diag_mat));
   PetscCall(PetscObjectCompose((PetscObject)_term, "__TaoTermCreateLevenbergMarquardt", (PetscObject)gncontainer));
   PetscCall(PetscContainerDestroy(&gncontainer));
-  _term->ops->hessian     = TaoTermHessian_LevenbergMarquardt;
-  _term->ops->hessianmult = TaoTermHessianMult_LevenbergMarquardt;
+  _term->ops->hessian     = TaoTermComputeHessian_LevenbergMarquardt;
+  _term->ops->hessianmult = TaoTermComputeHessianMult_LevenbergMarquardt;
   *lm                     = _term;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

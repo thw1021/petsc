@@ -24,12 +24,12 @@ static PetscErrorCode SNESFunction_TaoTerm(SNES snes, Vec X, Vec G, void *ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(t->term, TAOTERM_CLASSID, 4);
-  PetscCall(TaoTermGradient(t->term, X, t->params, G));
+  PetscCall(TaoTermComputeGradient(t->term, X, t->params, G));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  TaoTermGradientFD - Approximate the gradient of a `TaoTerm` using finite differences
+  TaoTermComputeGradientFD - Approximate the gradient of a `TaoTerm` using finite differences
 
   Collective
 
@@ -43,7 +43,7 @@ static PetscErrorCode SNESFunction_TaoTerm(SNES snes, Vec X, Vec G, void *ctx)
 
   Options Database Keys:
 + -taoterm_fd_delta <delta>       - change in `x` used to calculate finite differences
-- -taoterm_gradient_use_fd <bool> - Use `TaoTermGradientFD()` in `TaoTermGradient()`
+- -taoterm_gradient_use_fd <bool> - Use `TaoTermComputeGradientFD()` in `TaoTermComputeGradient()`
 
   Level: advanced
 
@@ -51,20 +51,20 @@ static PetscErrorCode SNESFunction_TaoTerm(SNES snes, Vec X, Vec G, void *ctx)
   This routine is slow and expensive, and is not optimized to take advantage of
   sparsity in the problem.  Although not recommended for general use in
   large-scale applications, it can be useful in checking the correctness of a
-  user-provided gradient.  Call `TaoTermGradientUseFDPush()` to start using
-  this routine in `TaoTermGradient()`.
+  user-provided gradient.  Call `TaoTermComputeGradientUseFDPush()` to start using
+  this routine in `TaoTermComputeGradient()`.
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TaoTermGetFDDelta()`,
           `TaoTermSetFDDelta()`,
-          `TaoTermGradientUseFDPush()`,
-          `TaoTermGradientUseFDPop()`,
-          `TaoTermHessianSingleFD()`,
-          `TaoTermHessianMultFD()`,
-          `TaoTermHessianFD()`,
+          `TaoTermComputeGradientUseFDPush()`,
+          `TaoTermComputeGradientUseFDPop()`,
+          `TaoTermComputeHessianSingleFD()`,
+          `TaoTermComputeHessianMultFD()`,
+          `TaoTermComputeHessianFD()`,
 @*/
-PetscErrorCode TaoTermGradientFD(TaoTerm term, Vec x, Vec params, Vec g)
+PetscErrorCode TaoTermComputeGradientFD(TaoTerm term, Vec x, Vec params, Vec g)
 {
   Vec          x_perturbed;
   PetscScalar *_g;
@@ -83,11 +83,11 @@ PetscErrorCode TaoTermGradientFD(TaoTerm term, Vec x, Vec params, Vec g)
     PetscCall(VecSetValue(x_perturbed, i, -h, ADD_VALUES));
     PetscCall(VecAssemblyBegin(x_perturbed));
     PetscCall(VecAssemblyEnd(x_perturbed));
-    PetscCall(TaoTermObjective(term, x_perturbed, params, &f));
+    PetscCall(TaoTermComputeObjective(term, x_perturbed, params, &f));
     PetscCall(VecSetValue(x_perturbed, i, 2.0 * h, ADD_VALUES));
     PetscCall(VecAssemblyBegin(x_perturbed));
     PetscCall(VecAssemblyEnd(x_perturbed));
-    PetscCall(TaoTermObjective(term, x_perturbed, params, &f2));
+    PetscCall(TaoTermComputeObjective(term, x_perturbed, params, &f2));
     PetscCall(VecSetValue(x_perturbed, i, -h, ADD_VALUES));
     PetscCall(VecAssemblyBegin(x_perturbed));
     PetscCall(VecAssemblyEnd(x_perturbed));
@@ -153,7 +153,7 @@ static PetscErrorCode TaoTermGetStashedHessianColoring(TaoTerm term, Vec params,
 }
 
 /*@
-  TaoTermHessianSingleFD - Approximate the Hessian of a `TaoTerm` using finite differences
+  TaoTermComputeHessianSingleFD - Approximate the Hessian of a `TaoTerm` using finite differences
 
   Collective
 
@@ -167,7 +167,7 @@ static PetscErrorCode TaoTermGetStashedHessianColoring(TaoTerm term, Vec params,
 
   Options Database Keys:
 + -taoterm_fd_delta <delta>      - change in X used to calculate finite differences
-- -taoterm_hessian_use_fd <bool> - Use `TaoTermHessianFD()` in `TaoTermHessian()`
+- -taoterm_hessian_use_fd <bool> - Use `TaoTermComputeHessianFD()` in `TaoTermComputeHessian()`
 
   Level: advanced
 
@@ -175,17 +175,17 @@ static PetscErrorCode TaoTermGetStashedHessianColoring(TaoTerm term, Vec params,
   This routine is slow and expensive, and is not optimized to take advantage of
   sparsity in the problem.  Although not recommended for general use in
   large-scale applications, it can be useful in checking the correctness of a
-  user-provided gradient.  Call `TaoTermHessianUseFDPush()` to start using
+  user-provided gradient.  Call `TaoTermComputeHessianUseFDPush()` to start using
   this routine in `TaoTerm()`.
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TaoTermGetFDDelta()`,
           `TaoTermSetFDDelta()`,
-          `TaoTermGradientUseFDPush()`,
-          `TaoTermGradientUseFDPop()`,
+          `TaoTermComputeGradientUseFDPush()`,
+          `TaoTermComputeGradientUseFDPop()`,
 @*/
-PetscErrorCode TaoTermHessianSingleFD(TaoTerm term, Vec x, Vec params, Mat H)
+PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec params, Mat H)
 {
   SNES                  snes;
   TaoTermWithParameters t;
@@ -221,7 +221,7 @@ PetscErrorCode TaoTermHessianSingleFD(TaoTerm term, Vec x, Vec params, Mat H)
 }
 
 /*@
-  TaoTermHessianFD - Use `TaoTermHessianMultFD()` and `TaoTermHessianSingleFD()` to compute the provided Hessian matrices
+  TaoTermComputeHessianFD - Use `TaoTermComputeHessianMultFD()` and `TaoTermComputeHessianSingleFD()` to compute the provided Hessian matrices
 
   Collective
 
@@ -236,40 +236,40 @@ PetscErrorCode TaoTermHessianSingleFD(TaoTerm term, Vec x, Vec params, Mat H)
 
   Options Database Keys:
 + -taoterm_fd_delta <delta>      - change in X used to calculate finite differences
-- -taoterm_hessian_use_fd <bool> - Use `TaoTermHessianFD()` in `TaoTermHessian()`
+- -taoterm_hessian_use_fd <bool> - Use `TaoTermComputeHessianFD()` in `TaoTermComputeHessian()`
 
   Level: advanced
 
   Notes:
   If either matrix is a `MATSHELL` created with `TaoTermCreateHessianShell()`,
-  then `TaoTermHessianMultFD()` will be used for a matrix-free finite
+  then `TaoTermComputeHessianMultFD()` will be used for a matrix-free finite
   difference approximation (MFFD).
 
   If either matrix is an assembled matrix (like `MATAIJ`), then
-  `TaoTermHessianSingleFD()` will be used to compute the entries in the matrix.
+  `TaoTermComputeHessianSingleFD()` will be used to compute the entries in the matrix.
 
   This routine is slow and expensive, and is not optimized to take advantage of
   sparsity in the problem.  Although not recommended for general use in
   large-scale applications, it can be useful in checking the correctness of a
-  user-provided Hessian.  Call `TaoTermHessianUseFDPush()` to start using
-  this routine in `TaoTermHessian()`.
+  user-provided Hessian.  Call `TaoTermComputeHessianUseFDPush()` to start using
+  this routine in `TaoTermComputeHessian()`.
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
-          `TaoTermHessian()`,
-          `TaoTermHessianMult()`,
+          `TaoTermComputeHessian()`,
+          `TaoTermComputeHessianMult()`,
           `TaoTermGetFDDelta()`,
           `TaoTermSetFDDelta()`,
-          `TaoTermHessianUseFDPush()`,
-          `TaoTermHessianUseFDPop()`,
-          `TaoTermHessianSingleFD()`,
-          `TaoTermHessianMultFD()`,
+          `TaoTermComputeHessianUseFDPush()`,
+          `TaoTermComputeHessianUseFDPop()`,
+          `TaoTermComputeHessianSingleFD()`,
+          `TaoTermComputeHessianMultFD()`,
 @*/
-PetscErrorCode TaoTermHessianFD(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
+PetscErrorCode TaoTermComputeHessianFD(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
   PetscCall(TaoTermUpdateHessianShells(term, x, params, &H, &Hpre));
-  PetscCall(TaoTermHessianSingle(term, x, params, H, Hpre, TaoTermHessianSingleFD, UNKNOWN_NONZERO_PATTERN));
+  PetscCall(TaoTermComputeHessianSingle(term, x, params, H, Hpre, TaoTermComputeHessianSingleFD, UNKNOWN_NONZERO_PATTERN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -280,7 +280,7 @@ static PetscErrorCode MatMFFDFunction_TaoTermHessianShell(void *ctx, Vec x, Vec 
   PetscFunctionBegin;
   // we expect the solution to move around in a finite difference method, but not the parameters
   PetscCall(TaoTermHessianShellCheck(hess, PETSC_FALSE, PETSC_TRUE));
-  PetscCall(TaoTermGradient(hess->term, x, hess->params, g));
+  PetscCall(TaoTermComputeGradient(hess->term, x, hess->params, g));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -323,7 +323,7 @@ static PetscErrorCode TaoTermInitializeHessianMFFD(TaoTerm term, Mat mffd)
 
   Level: advanced
 
-.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermHessianFD()`
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermComputeHessianFD()`
 @*/
 PetscErrorCode TaoTermCreateHessianMFFD(TaoTerm term, Mat *mffd)
 {
@@ -346,7 +346,7 @@ PetscErrorCode TaoTermCreateHessianMFFD(TaoTerm term, Mat *mffd)
 
   Level: advanced
 
-.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermHessianFD()`, `TaoTermCreateHessianMFFD()`
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermComputeHessianFD()`, `TaoTermCreateHessianMFFD()`
 @*/
 PetscErrorCode TaoTermUpdateHessianMFFD(TaoTerm term, Mat mffd, Vec x, Vec params)
 {
@@ -380,7 +380,7 @@ PetscErrorCode TaoTermUpdateHessianMFFD(TaoTerm term, Mat mffd, Vec x, Vec param
 }
 
 /*@
-  TaoTermHessianMultFD - Approximate a Hessian-vector product of a `TaoTerm` using finite differences
+  TaoTermComputeHessianMultFD - Approximate a Hessian-vector product of a `TaoTerm` using finite differences
 
   Collective
 
@@ -397,12 +397,12 @@ PetscErrorCode TaoTermUpdateHessianMFFD(TaoTerm term, Mat mffd, Vec x, Vec param
 
   Options Database Keys:
 + -taoterm_fd_delta <delta>      - change in x used to calculate finite differences
-- -taoterm_hessian_use_fd <bool> - Use `TaoTermHessianMultFD()` in `TaoTermHessian()`
+- -taoterm_hessian_use_fd <bool> - Use `TaoTermComputeHessianMultFD()` in `TaoTermComputeHessian()`
 
   Note:
   The finite difference method in this routine does not attempt to choose the
   best step length, it only uses the value of `TaoTermGetFDDelta()`.
-  `TaoTermHessianMultFD()` calls `TaoTermGradient()` twice in each call, which
+  `TaoTermComputeHessianMultFD()` calls `TaoTermComputeGradient()` twice in each call, which
   is not efficient if you want to compute multiple Hessian-vector products for
   the same values of `x` and `params`.  Use `TaoTermCreateHessianMFFD()` to
   construct a a more sophisticated `MATMFFD` matrix-free Hessian approximation
@@ -412,12 +412,12 @@ PetscErrorCode TaoTermUpdateHessianMFFD(TaoTerm term, Mat mffd, Vec x, Vec param
           `TaoTerm`,
           `TaoTermGetFDDelta()`,
           `TaoTermSetFDDelta()`,
-          `TaoTermHessianUseFDPush()`,
-          `TaoTermHessianUseFDPop()`,
-          `TaoTermHessianSingleFD()`,
-          `TaoTermHessianFD()`,
+          `TaoTermComputeHessianUseFDPush()`,
+          `TaoTermComputeHessianUseFDPop()`,
+          `TaoTermComputeHessianSingleFD()`,
+          `TaoTermComputeHessianFD()`,
 @*/
-PetscErrorCode TaoTermHessianMultFD(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
+PetscErrorCode TaoTermComputeHessianMultFD(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
 {
   Vec       x_p;
   Vec       g;
@@ -427,9 +427,9 @@ PetscErrorCode TaoTermHessianMultFD(TaoTerm term, Vec x, Vec params, Vec v, Vec 
   PetscCall(TaoTermGetFDDelta(term, &h));
   PetscCall(VecDuplicate(x, &x_p));
   PetscCall(VecDuplicate(x, &g));
-  PetscCall(TaoTermGradient(term, x, params, g));
+  PetscCall(TaoTermComputeGradient(term, x, params, g));
   PetscCall(VecWAXPY(x_p, h, v, x));
-  PetscCall(TaoTermGradient(term, x_p, params, Hv));
+  PetscCall(TaoTermComputeGradient(term, x_p, params, Hv));
   PetscCall(VecAXPY(Hv, -1.0, g));
   PetscCall(VecScale(Hv, 1.0 / h));
   PetscCall(VecDestroy(&g));

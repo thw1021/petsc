@@ -63,7 +63,7 @@ static PetscErrorCode TaoTermQuadraticDiff(TaoTerm term, Vec x, Vec params, Vec 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermObjective_Quadratic(TaoTerm term, Vec x, Vec params, PetscReal *value)
+static PetscErrorCode TaoTermComputeObjective_Quadratic(TaoTerm term, Vec x, Vec params, PetscReal *value)
 {
   TaoTerm_Quadratic *quad = (TaoTerm_Quadratic *)term->data;
   Vec                diff;
@@ -78,7 +78,7 @@ static PetscErrorCode TaoTermObjective_Quadratic(TaoTerm term, Vec x, Vec params
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermGradient_Quadratic(TaoTerm term, Vec x, Vec params, Vec g)
+static PetscErrorCode TaoTermComputeGradient_Quadratic(TaoTerm term, Vec x, Vec params, Vec g)
 {
   TaoTerm_Quadratic *quad = (TaoTerm_Quadratic *)term->data;
   Vec                diff;
@@ -89,7 +89,7 @@ static PetscErrorCode TaoTermGradient_Quadratic(TaoTerm term, Vec x, Vec params,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermObjectiveAndGradient_Quadratic(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
+static PetscErrorCode TaoTermComputeObjectiveAndGradient_Quadratic(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
 {
   TaoTerm_Quadratic *quad = (TaoTerm_Quadratic *)term->data;
   Vec                diff;
@@ -103,7 +103,7 @@ static PetscErrorCode TaoTermObjectiveAndGradient_Quadratic(TaoTerm term, Vec x,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode TaoTermHessian_Quadratic(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
+PETSC_INTERN PetscErrorCode TaoTermComputeHessian_Quadratic(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
   TaoTerm_Quadratic *quad = (TaoTerm_Quadratic *)term->data;
 
@@ -113,7 +113,7 @@ PETSC_INTERN PetscErrorCode TaoTermHessian_Quadratic(TaoTerm term, Vec x, Vec pa
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode TaoTermHessianMult_Quadratic(TaoTerm term, Vec x, Vec Params, Vec v, Vec Hv)
+PETSC_INTERN PetscErrorCode TaoTermComputeHessianMult_Quadratic(TaoTerm term, Vec x, Vec Params, Vec v, Vec Hv)
 {
   TaoTerm_Quadratic *quad = (TaoTerm_Quadratic *)term->data;
 
@@ -263,11 +263,11 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm term)
 
   term->ops->destroy               = TaoTermDestroy_Quadratic;
   term->ops->view                  = TaoTermView_Quadratic;
-  term->ops->objective             = TaoTermObjective_Quadratic;
-  term->ops->gradient              = TaoTermGradient_Quadratic;
-  term->ops->objectiveandgradient  = TaoTermObjectiveAndGradient_Quadratic;
-  term->ops->hessian               = TaoTermHessian_Quadratic;
-  term->ops->hessianmult           = TaoTermHessianMult_Quadratic;
+  term->ops->objective             = TaoTermComputeObjective_Quadratic;
+  term->ops->gradient              = TaoTermComputeGradient_Quadratic;
+  term->ops->objectiveandgradient  = TaoTermComputeObjectiveAndGradient_Quadratic;
+  term->ops->hessian               = TaoTermComputeHessian_Quadratic;
+  term->ops->hessianmult           = TaoTermComputeHessianMult_Quadratic;
   term->ops->createhessianmatrices = TaoTermCreateHessianMatrices_Quadratic;
 
   term->Hpre_is_H = PETSC_TRUE;

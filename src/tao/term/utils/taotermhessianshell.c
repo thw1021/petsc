@@ -44,12 +44,12 @@ static PetscErrorCode MatMult_TaoTermHessianShell(Mat shell, Vec v, Vec y)
   PetscFunctionBegin;
   PetscCall(MatShellGetContext(shell, (void *)&hess));
   PetscCall(TaoTermHessianShellCheck(hess, PETSC_TRUE, PETSC_TRUE));
-  PetscCall(TaoTermHessianMult(hess->term, hess->x, hess->params, v, y));
+  PetscCall(TaoTermComputeHessianMult(hess->term, hess->x, hess->params, v, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  TaoTermCreateHessianShell - Create a `MATSHELL` for `TaoTermHessianMult()`
+  TaoTermCreateHessianShell - Create a `MATSHELL` for `TaoTermComputeHessianMult()`
 
   Collective
 
@@ -61,7 +61,7 @@ static PetscErrorCode MatMult_TaoTermHessianShell(Mat shell, Vec v, Vec y)
 
   Level: advanced
 
-.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermHessianMult()`, `TaoTermUpdateHessianShell()`
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermComputeHessianMult()`, `TaoTermUpdateHessianShell()`
 @*/
 PetscErrorCode TaoTermCreateHessianShell(TaoTerm term, Mat *shell)
 {
@@ -100,9 +100,9 @@ PetscErrorCode TaoTermCreateHessianShell(TaoTerm term, Mat *shell)
   Level: advanced
 
   Note:
-  After this is called `MatMult()` will perform `TaoTermHessianMult()` with the give solution and parameter vectors.
+  After this is called `MatMult()` will perform `TaoTermComputeHessianMult()` with the give solution and parameter vectors.
 
-.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermHessianMult()`, `TaoTermCreateHessianShell()`
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermComputeHessianMult()`, `TaoTermCreateHessianShell()`
 @*/
 PetscErrorCode TaoTermUpdateHessianShell(TaoTerm term, Mat shell, Vec x, Vec params)
 {
@@ -145,7 +145,7 @@ static PetscErrorCode TaoTermUpdateHessianShellSingle(TaoTerm term, Vec x, Vec p
 }
 
 /*@
-  TaoTermUpdateHessianShells - Handle `MATSHELL` and `MATMFFD` matrices in `TaoTermHessian()`
+  TaoTermUpdateHessianShells - Handle `MATSHELL` and `MATMFFD` matrices in `TaoTermComputeHessian()`
 
   Collective
 
@@ -153,15 +153,15 @@ static PetscErrorCode TaoTermUpdateHessianShellSingle(TaoTerm term, Vec x, Vec p
 + term   - a `TaoTerm`
 . x      - a solution vector
 . params - a parameters vector
-. H      - pointer to the `H` argument of `TaoTermHessian()`; if it is a `MATSHELL` or `MATMFFD`, it will be updated and the pointer will then point to `NULL`
-- Hpre   - pointer to the `Hpre` argument of `TaoTermHessian()`; if it is a `MATSHELL` or `MATMFFD`, it will be updated and the pointer will then point to `NULL`
+. H      - pointer to the `H` argument of `TaoTermComputeHessian()`; if it is a `MATSHELL` or `MATMFFD`, it will be updated and the pointer will then point to `NULL`
+- Hpre   - pointer to the `Hpre` argument of `TaoTermComputeHessian()`; if it is a `MATSHELL` or `MATMFFD`, it will be updated and the pointer will then point to `NULL`
 
   Level: developer
 
   Developer Note:
-  This function is to simplify implementing `TaoTermHessian()` when an
+  This function is to simplify implementing `TaoTermComputeHessian()` when an
   implementation can optionally use a `MATSHELL` or a `MATMFFD` for its Hessian matrices: call
-  this function at the start of `TaoTermHessian()`, and then only proceed to
+  this function at the start of `TaoTermComputeHessian()`, and then only proceed to
   assemble `H` and/or `Hpre` if they are not `NULL`.
 
 .vb
@@ -181,7 +181,7 @@ static PetscErrorCode AppComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, 
 TaoTermShellSetHessian(term, AppComputeHessian);
 .ve
 
-.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermHessianMult()`, `TaoTermCreateHessianShell()`
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermComputeHessianMult()`, `TaoTermCreateHessianShell()`
 @*/
 PetscErrorCode TaoTermUpdateHessianShells(TaoTerm term, Vec x, Vec params, Mat *H, Mat *Hpre)
 {

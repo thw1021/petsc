@@ -548,7 +548,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   }
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-tao_fd_gradient", "compute gradient using finite differences", "TaoDefaultComputeGradient", flg, &flg, NULL));
-  if (flg) PetscCall(TaoTermGradientUseFDPush(tao->objective_term.term));
+  if (flg) PetscCall(TaoTermComputeGradientUseFDPush(tao->objective_term.term));
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-tao_fd_hessian", "compute Hessian using finite differences", "TaoDefaultComputeHessian", flg, &flg, NULL));
   if (flg) {
@@ -557,7 +557,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     PetscCall(MatCreate(PetscObjectComm((PetscObject)tao), &H));
     PetscCall(MatSetType(H, MATAIJ));
     PetscCall(TaoSetHessianMatrices(tao, H, H));
-    PetscCall(TaoTermHessianUseFDPush(tao->objective_term.term));
+    PetscCall(TaoTermComputeHessianUseFDPush(tao->objective_term.term));
     PetscCall(MatDestroy(&H));
   }
   flg = PETSC_FALSE;
@@ -567,7 +567,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
 
     PetscCall(TaoTermCreateHessianMFFD(tao->objective_term.term, &H));
     PetscCall(TaoSetHessianMatrices(tao, H, H));
-    PetscCall(TaoTermHessianUseFDPush(tao->objective_term.term));
+    PetscCall(TaoTermComputeHessianUseFDPush(tao->objective_term.term));
     PetscCall(MatDestroy(&H));
   }
   PetscCall(PetscOptionsBool("-tao_recycle_history", "enable recycling/re-using information from the previous TaoSolve() call for some algorithms", "TaoSetRecycleHistory", flg, &flg, &found));
