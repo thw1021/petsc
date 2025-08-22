@@ -30,7 +30,7 @@
   correctness of a user-provided gradient using the command-line option `-tao_test_gradient`
   This finite difference gradient evaluation can be set using the routine `TaoSetGradient()` or by using the command line option -tao_fd_gradient
 
-.seealso: `Tao`, `TaoSetGradient()`, `TaoTermGradientFD()`
+.seealso: `Tao`, `TaoSetGradient()`, `TaoTermComputeGradientFD()`
 @*/
 PetscErrorCode TaoDefaultComputeGradient(Tao tao, Vec Xin, Vec G, void *dummy)
 {
@@ -41,9 +41,9 @@ PetscErrorCode TaoDefaultComputeGradient(Tao tao, Vec Xin, Vec G, void *dummy)
   PetscCall(TaoTermGetFDDelta(tao->objective_term.term, &h));
   PetscCall(PetscOptionsGetReal(((PetscObject)tao)->options, ((PetscObject)tao)->prefix, "-tao_fd_delta", &h, &flg));
   if (flg) PetscCall(TaoTermSetFDDelta(tao->objective_term.term, h));
-  PetscCall(TaoTermGradientUseFDPush(tao->objective_term.term));
-  PetscCall(TaoMappedTermGradient(&tao->objective_term, Xin, tao->objective_parameters, INSERT_VALUES, G));
-  PetscCall(TaoTermGradientUseFDPop(tao->objective_term.term));
+  PetscCall(TaoTermComputeGradientUseFDPush(tao->objective_term.term));
+  PetscCall(TaoMappedTermComputeGradient(&tao->objective_term, Xin, tao->objective_parameters, INSERT_VALUES, G));
+  PetscCall(TaoTermComputeGradientUseFDPop(tao->objective_term.term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -78,9 +78,9 @@ PetscErrorCode TaoDefaultComputeGradient(Tao tao, Vec Xin, Vec G, void *dummy)
 PetscErrorCode TaoDefaultComputeHessian(Tao tao, Vec V, Mat H, Mat B, void *dummy)
 {
   PetscFunctionBegin;
-  PetscCall(TaoTermHessianUseFDPush(tao->objective_term.term));
-  PetscCall(TaoMappedTermHessian(&tao->objective_term, V, tao->objective_parameters, INSERT_VALUES, NULL, B ? B : H));
-  PetscCall(TaoTermHessianUseFDPop(tao->objective_term.term));
+  PetscCall(TaoTermComputeHessianUseFDPush(tao->objective_term.term));
+  PetscCall(TaoMappedTermComputeHessian(&tao->objective_term, V, tao->objective_parameters, INSERT_VALUES, NULL, B ? B : H));
+  PetscCall(TaoTermComputeHessianUseFDPop(tao->objective_term.term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -110,9 +110,9 @@ PetscErrorCode TaoDefaultComputeHessianColor(Tao tao, Vec V, Mat H, Mat B, void 
   PetscValidHeaderSpecific(coloring, MAT_FDCOLORING_CLASSID, 5);
   B = B ? B : H;
   PetscCall(PetscObjectCompose((PetscObject)B, "__TaoTermHessianMatFDColoring", (PetscObject)coloring));
-  PetscCall(TaoTermHessianUseFDPush(tao->objective_term.term));
-  PetscCall(TaoMappedTermHessian(&tao->objective_term, V, tao->objective_parameters, INSERT_VALUES, NULL, B));
-  PetscCall(TaoTermHessianUseFDPop(tao->objective_term.term));
+  PetscCall(TaoTermComputeHessianUseFDPush(tao->objective_term.term));
+  PetscCall(TaoMappedTermComputeHessian(&tao->objective_term, V, tao->objective_parameters, INSERT_VALUES, NULL, B));
+  PetscCall(TaoTermComputeHessianUseFDPop(tao->objective_term.term));
   PetscCall(PetscObjectCompose((PetscObject)B, "__TaoTermHessianMatFDColoring", (PetscObject)NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

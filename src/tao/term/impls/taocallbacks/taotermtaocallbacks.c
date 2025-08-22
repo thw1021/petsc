@@ -55,7 +55,7 @@ static PetscErrorCode TaoTermDestroy_TaoCallbacks(TaoTerm term)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermObjective_TaoCallbacks(TaoTerm term, Vec x, Vec params, PetscReal *value)
+static PetscErrorCode TaoTermComputeObjective_TaoCallbacks(TaoTerm term, Vec x, Vec params, PetscReal *value)
 {
   TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)term->data;
 
@@ -74,7 +74,7 @@ static PetscErrorCode TaoTermObjective_TaoCallbacks(TaoTerm term, Vec x, Vec par
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermGradient_TaoCallbacks(TaoTerm term, Vec x, Vec params, Vec g)
+static PetscErrorCode TaoTermComputeGradient_TaoCallbacks(TaoTerm term, Vec x, Vec params, Vec g)
 {
   TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)term->data;
 
@@ -90,7 +90,7 @@ static PetscErrorCode TaoTermGradient_TaoCallbacks(TaoTerm term, Vec x, Vec para
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermObjectiveAndGradient_TaoCallbacks(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
+static PetscErrorCode TaoTermComputeObjectiveAndGradient_TaoCallbacks(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
 {
   TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)term->data;
 
@@ -105,7 +105,7 @@ static PetscErrorCode TaoTermObjectiveAndGradient_TaoCallbacks(TaoTerm term, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermHessian_TaoCallbacks(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
+static PetscErrorCode TaoTermComputeHessian_TaoCallbacks(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
   TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)term->data;
 
@@ -341,10 +341,10 @@ static PetscErrorCode TaoTermCreate_TaoCallbacks_Internal(TaoTerm term, const ch
   term->data = (void *)tt;
 
   term->ops->destroy                       = TaoTermDestroy_TaoCallbacks;
-  term->ops->objective                     = TaoTermObjective_TaoCallbacks;
-  term->ops->gradient                      = TaoTermGradient_TaoCallbacks;
-  term->ops->objectiveandgradient          = TaoTermObjectiveAndGradient_TaoCallbacks;
-  term->ops->hessian                       = TaoTermHessian_TaoCallbacks;
+  term->ops->objective                     = TaoTermComputeObjective_TaoCallbacks;
+  term->ops->gradient                      = TaoTermComputeGradient_TaoCallbacks;
+  term->ops->objectiveandgradient          = TaoTermComputeObjectiveAndGradient_TaoCallbacks;
+  term->ops->hessian                       = TaoTermComputeHessian_TaoCallbacks;
   term->ops->view                          = TaoTermView_TaoCallbacks;
   term->ops->isobjectivedefined            = TaoTermIsObjectiveDefined_TaoCallbacks;
   term->ops->isgradientdefined             = TaoTermIsGradientDefined_TaoCallbacks;

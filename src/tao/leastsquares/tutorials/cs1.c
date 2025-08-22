@@ -363,7 +363,7 @@ static PetscErrorCode BRGNCoverageTests(Tao tao)
 
     PetscCall(TaoTermCreateHessianMatrices(term, &H, NULL));
 
-    PetscCall(TaoTermHessian(term, x, params, H, NULL));
+    PetscCall(TaoTermComputeHessian(term, x, params, H, NULL));
     PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject)tao), &rand));
     PetscCall(VecDuplicate(x, &v));
     PetscCall(VecDuplicate(x, &Hv1));
@@ -371,11 +371,11 @@ static PetscErrorCode BRGNCoverageTests(Tao tao)
     PetscCall(VecSetRandom(v, rand));
 
     PetscCall(MatMult(H, v, Hv1));
-    PetscCall(TaoTermHessianMult(term, x, params, v, Hv2));
+    PetscCall(TaoTermComputeHessianMult(term, x, params, v, Hv2));
     PetscCall(VecAXPY(Hv2, -1.0, Hv1));
     PetscCall(VecNorm(Hv1, NORM_2, &norm));
     PetscCall(VecNorm(Hv2, NORM_2, &diff_norm));
-    PetscCheck(diff_norm <= PETSC_SMALL * norm, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "TaoTermHessianMult() does not match MatMult() of TaoTermHessian()");
+    PetscCheck(diff_norm <= PETSC_SMALL * norm, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "TaoTermComputeHessianMult() does not match MatMult() of TaoTermComputeHessian()");
     PetscCall(VecDestroy(&Hv2));
     PetscCall(VecDestroy(&Hv1));
     PetscCall(VecDestroy(&v));
