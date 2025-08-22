@@ -135,7 +135,7 @@ PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoMappedTermGradient(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, G));
+  PetscCall(TaoMappedTermComputeGradient(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, G));
   tao->ngrads++;
   PetscCall(TaoTestGradient(tao, X, G));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -165,7 +165,7 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoMappedTermObjective(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, f));
+  PetscCall(TaoMappedTermComputeObjective(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, f));
   if (tao->num_terms) {
     const PetscReal *sum_values;
 
@@ -202,7 +202,7 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(TaoMappedTermObjectiveAndGradient(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, f, G));
+  PetscCall(TaoMappedTermComputeObjectiveAndGradient(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, f, G));
   if (tao->num_terms) {
     const PetscReal *sum_values;
 

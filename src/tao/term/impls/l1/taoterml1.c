@@ -105,7 +105,7 @@ static PetscErrorCode TaoTermL1ComputeDiag(TaoTerm term, Vec x, Vec params, Vec 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermObjective_L1_Internal(TaoTerm term, Vec diff, Vec d, PetscReal *value)
+static PetscErrorCode TaoTermComputeObjective_L1_Internal(TaoTerm term, Vec diff, Vec d, PetscReal *value)
 {
   TaoTerm_L1 *l1 = (TaoTerm_L1 *)term->data;
 
@@ -123,13 +123,13 @@ static PetscErrorCode TaoTermObjective_L1_Internal(TaoTerm term, Vec diff, Vec d
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermObjective_L1(TaoTerm term, Vec x, Vec params, PetscReal *value)
+static PetscErrorCode TaoTermComputeObjective_L1(TaoTerm term, Vec x, Vec params, PetscReal *value)
 {
   Vec diff, d;
 
   PetscFunctionBegin;
   PetscCall(TaoTermL1ComputeData(term, x, params, &diff, &d));
-  PetscCall(TaoTermObjective_L1_Internal(term, diff, d, value));
+  PetscCall(TaoTermComputeObjective_L1_Internal(term, diff, d, value));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -145,7 +145,7 @@ static PetscErrorCode TaoTermL1DerivativeCheck(TaoTerm term)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermGradient_L1_Internal(TaoTerm term, Vec diff, Vec d, Vec g)
+static PetscErrorCode TaoTermComputeGradient_L1_Internal(TaoTerm term, Vec diff, Vec d, Vec g)
 {
   TaoTerm_L1 *l1 = (TaoTerm_L1 *)term->data;
 
@@ -159,28 +159,28 @@ static PetscErrorCode TaoTermGradient_L1_Internal(TaoTerm term, Vec diff, Vec d,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermGradient_L1(TaoTerm term, Vec x, Vec params, Vec g)
+static PetscErrorCode TaoTermComputeGradient_L1(TaoTerm term, Vec x, Vec params, Vec g)
 {
   Vec diff, d;
 
   PetscFunctionBegin;
   PetscCall(TaoTermL1ComputeData(term, x, params, &diff, &d));
-  PetscCall(TaoTermGradient_L1_Internal(term, diff, d, g));
+  PetscCall(TaoTermComputeGradient_L1_Internal(term, diff, d, g));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermObjectiveAndGradient_L1(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
+static PetscErrorCode TaoTermComputeObjectiveAndGradient_L1(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
 {
   Vec diff, d;
 
   PetscFunctionBegin;
   PetscCall(TaoTermL1ComputeData(term, x, params, &diff, &d));
-  PetscCall(TaoTermObjective_L1_Internal(term, diff, d, value));
-  PetscCall(TaoTermGradient_L1_Internal(term, diff, d, g));
+  PetscCall(TaoTermComputeObjective_L1_Internal(term, diff, d, value));
+  PetscCall(TaoTermComputeGradient_L1_Internal(term, diff, d, g));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermHessian_L1_Internal(TaoTerm term, Vec diag, Mat H)
+static PetscErrorCode TaoTermComputeHessian_L1_Internal(TaoTerm term, Vec diag, Mat H)
 {
   TaoTerm_L1 *l1 = (TaoTerm_L1 *)term->data;
 
@@ -194,7 +194,7 @@ static PetscErrorCode TaoTermHessian_L1_Internal(TaoTerm term, Vec diag, Mat H)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermHessian_L1(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
+static PetscErrorCode TaoTermComputeHessian_L1(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
   Vec diag;
 
@@ -202,12 +202,12 @@ static PetscErrorCode TaoTermHessian_L1(TaoTerm term, Vec x, Vec params, Mat H, 
   PetscCall(TaoTermUpdateHessianShells(term, x, params, &H, &Hpre));
   if (!H && !Hpre) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(TaoTermL1ComputeDiag(term, x, params, &diag));
-  if (H) PetscCall(TaoTermHessian_L1_Internal(term, diag, H));
-  if (Hpre && Hpre != H) PetscCall(TaoTermHessian_L1_Internal(term, diag, Hpre));
+  if (H) PetscCall(TaoTermComputeHessian_L1_Internal(term, diag, H));
+  if (Hpre && Hpre != H) PetscCall(TaoTermComputeHessian_L1_Internal(term, diag, Hpre));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermHessianMult_L1_Internal(TaoTerm term, Vec diag, Vec v, Vec Hv)
+static PetscErrorCode TaoTermComputeHessianMult_L1_Internal(TaoTerm term, Vec diag, Vec v, Vec Hv)
 {
   TaoTerm_L1 *l1 = (TaoTerm_L1 *)term->data;
 
@@ -221,13 +221,13 @@ static PetscErrorCode TaoTermHessianMult_L1_Internal(TaoTerm term, Vec diag, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermHessianMult_L1(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
+static PetscErrorCode TaoTermComputeHessianMult_L1(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
 {
   Vec diag;
 
   PetscFunctionBegin;
   PetscCall(TaoTermL1ComputeDiag(term, x, params, &diag));
-  PetscCall(TaoTermHessianMult_L1_Internal(term, diag, v, Hv));
+  PetscCall(TaoTermComputeHessianMult_L1_Internal(term, diag, v, Hv));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -370,11 +370,11 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   term->ops->destroy               = TaoTermDestroy_L1;
   term->ops->view                  = TaoTermView_L1;
   term->ops->setfromoptions        = TaoTermSetFromOptions_L1;
-  term->ops->objective             = TaoTermObjective_L1;
-  term->ops->gradient              = TaoTermGradient_L1;
-  term->ops->objectiveandgradient  = TaoTermObjectiveAndGradient_L1;
-  term->ops->hessian               = TaoTermHessian_L1;
-  term->ops->hessianmult           = TaoTermHessianMult_L1;
+  term->ops->objective             = TaoTermComputeObjective_L1;
+  term->ops->gradient              = TaoTermComputeGradient_L1;
+  term->ops->objectiveandgradient  = TaoTermComputeObjectiveAndGradient_L1;
+  term->ops->hessian               = TaoTermComputeHessian_L1;
+  term->ops->hessianmult           = TaoTermComputeHessianMult_L1;
   term->ops->createhessianmatrices = TaoTermCreateHessianMatricesDefault;
 
   if (!term->H_mattype) PetscCall(PetscStrallocpy(MATSHELL, &term->H_mattype));
