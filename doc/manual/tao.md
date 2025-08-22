@@ -540,10 +540,10 @@ can appear in the objective function of an optimization problem.
 
 Each `TaoTerm` represents a parameteric real-valued function $f(x; p)$ for
 solution variable $x$ and parameters $p$.  The interface includes methods for
-evaluating $f(x; p)$ (`TaoTermObjective()`),
-$\nabla_x f(x; p)$ (`TaoTermGradient()` and
-`TaoTermObjectiveAndGradient()`), and $\nabla_x^2 f(x; p)$
-(`TaoTermHessian()` and `TaoTermHessianMult()`).
+evaluating $f(x; p)$ (`TaoTermComputeObjective()`),
+$\nabla_x f(x; p)$ (`TaoTermComputeGradient()` and
+`TaoTermComputeObjectiveAndGradient()`), and $\nabla_x^2 f(x; p)$
+(`TaoTermComputeHessian()` and `TaoTermComputeHessianMult()`).
 
 #### Built-in TaoTerm implementations
 

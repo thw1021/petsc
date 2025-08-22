@@ -302,14 +302,14 @@ PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetHessian(TaoTerm, PetscErrorCod
 PETSC_INTERN PetscErrorCode TaoMappedTermSetData(TaoMappedTerm *, const char *, PetscReal, TaoTerm, Mat);
 PETSC_INTERN PetscErrorCode TaoMappedTermGetData(TaoMappedTerm *, const char **, PetscReal *, TaoTerm *, Mat *);
 PETSC_INTERN PetscErrorCode TaoMappedTermReset(TaoMappedTerm *);
-PETSC_INTERN PetscErrorCode TaoMappedTermObjective(TaoMappedTerm *, Vec, Vec, InsertMode, PetscReal *);
-PETSC_INTERN PetscErrorCode TaoMappedTermGradient(TaoMappedTerm *, Vec, Vec, InsertMode, Vec);
-PETSC_INTERN PetscErrorCode TaoMappedTermObjectiveAndGradient(TaoMappedTerm *, Vec, Vec, InsertMode, PetscReal *, Vec);
-PETSC_INTERN PetscErrorCode TaoMappedTermHessian(TaoMappedTerm *, Vec, Vec, InsertMode, Mat, Mat);
-PETSC_INTERN PetscErrorCode TaoMappedTermHessianMult(TaoMappedTerm *, Vec, Vec, Mat, Vec, InsertMode, Vec);
+PETSC_INTERN PetscErrorCode TaoMappedTermComputeObjective(TaoMappedTerm *, Vec, Vec, InsertMode, PetscReal *);
+PETSC_INTERN PetscErrorCode TaoMappedTermComputeGradient(TaoMappedTerm *, Vec, Vec, InsertMode, Vec);
+PETSC_INTERN PetscErrorCode TaoMappedTermComputeObjectiveAndGradient(TaoMappedTerm *, Vec, Vec, InsertMode, PetscReal *, Vec);
+PETSC_INTERN PetscErrorCode TaoMappedTermComputeHessian(TaoMappedTerm *, Vec, Vec, InsertMode, Mat, Mat);
+PETSC_INTERN PetscErrorCode TaoMappedTermComputeHessianMult(TaoMappedTerm *, Vec, Vec, Mat, Vec, InsertMode, Vec);
 PETSC_INTERN PetscErrorCode TaoMappedTermSetUp(TaoMappedTerm *);
 PETSC_INTERN PetscErrorCode TaoMappedTermCreateVecs(TaoMappedTerm *, Vec *, Vec *);
 PETSC_INTERN PetscErrorCode TaoMappedTermCreateHessianMatrices(TaoMappedTerm *, Mat *, Mat *);
 
-PETSC_INTERN PetscErrorCode TaoTermHessian_Quadratic(TaoTerm, Vec, Vec, Mat, Mat);
-PETSC_INTERN PetscErrorCode TaoTermHessianMult_Quadratic(TaoTerm, Vec, Vec, Vec, Vec);
+PETSC_INTERN PetscErrorCode TaoTermComputeHessian_Quadratic(TaoTerm, Vec, Vec, Mat, Mat);
+PETSC_INTERN PetscErrorCode TaoTermComputeHessianMult_Quadratic(TaoTerm, Vec, Vec, Vec, Vec);

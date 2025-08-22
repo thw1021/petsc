@@ -118,7 +118,7 @@ static PetscErrorCode FormHessianSingle(TaoTerm term, Vec X, Vec parameters_unus
 static PetscErrorCode FormHessian(TaoTerm term, Vec X, Vec params, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
-  PetscCall(TaoTermHessianSingle(term, X, params, H, Hpre, FormHessianSingle, SAME_NONZERO_PATTERN));
+  PetscCall(TaoTermComputeHessianSingle(term, X, params, H, Hpre, FormHessianSingle, SAME_NONZERO_PATTERN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
