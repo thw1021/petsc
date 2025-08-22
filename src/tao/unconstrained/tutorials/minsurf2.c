@@ -118,7 +118,7 @@ int main(int argc, char **argv)
 
       PetscCall(TaoGetTerm(tao, NULL, &term, NULL, NULL));
       PetscCall(TaoTermSetHessianColoring(term, iscoloring));
-      PetscCall(TaoTermHessianUseFDPush(term));
+      PetscCall(TaoTermComputeHessianUseFDPush(term));
       PetscCall(TaoSetHessianMatrices(tao, user.H, user.H));
     }
     PetscCall(ISColoringDestroy(&iscoloring));
@@ -129,7 +129,7 @@ int main(int argc, char **argv)
       TaoTerm term;
 
       PetscCall(TaoGetTerm(tao, NULL, &term, NULL, NULL));
-      PetscCall(TaoTermHessianUseFDPush(term));
+      PetscCall(TaoTermComputeHessianUseFDPush(term));
       PetscCall(TaoSetHessianMatrices(tao, user.H, user.H));
     }
   } else if (test_mffd) {
@@ -148,7 +148,7 @@ int main(int argc, char **argv)
       PetscCall(TaoGetTerm(tao, NULL, &term, NULL, NULL));
       PetscCall(TaoTermCreateHessianMFFD(term, &user.H));
       PetscCall(TaoSetHessianMatrices(tao, user.H, user.H));
-      PetscCall(TaoTermHessianUseFDPush(term));
+      PetscCall(TaoTermComputeHessianUseFDPush(term));
     }
   } else {
     PetscCall(TaoSetHessian(tao, user.H, user.H, FormHessian, (void *)&user));
