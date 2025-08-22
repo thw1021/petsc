@@ -21,15 +21,52 @@ PetscErrorCode TaoSetSolution(Tao tao, Vec x0)
   PetscCall(PetscObjectReference((PetscObject)x0));
   PetscCall(VecDestroy(&tao->solution));
   tao->solution = x0;
+  PetscCall(TaoTermSetSolutionTemplate(tao->orig_callbacks, x0));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoTestGradient_Internal(Tao tao, Vec x, Vec g1, PetscViewer viewer, PetscViewer mviewer)
+{
+  Vec         g2, g3;
+  PetscReal   hcnorm, fdnorm, hcmax, fdmax, diffmax, diffnorm;
+  PetscScalar dot;
+
+  PetscFunctionBegin;
+  PetscCall(VecDuplicate(x, &g2));
+  PetscCall(VecDuplicate(x, &g3));
+
+  /* Compute finite difference gradient, assume the gradient is already computed by TaoComputeGradient() and put into g1 */
+  PetscCall(TaoDefaultComputeGradient(tao, x, g2, NULL));
+
+  PetscCall(VecNorm(g2, NORM_2, &fdnorm));
+  PetscCall(VecNorm(g1, NORM_2, &hcnorm));
+  PetscCall(VecNorm(g2, NORM_INFINITY, &fdmax));
+  PetscCall(VecNorm(g1, NORM_INFINITY, &hcmax));
+  PetscCall(VecDot(g1, g2, &dot));
+  PetscCall(VecCopy(g1, g3));
+  PetscCall(VecAXPY(g3, -1.0, g2));
+  PetscCall(VecNorm(g3, NORM_2, &diffnorm));
+  PetscCall(VecNorm(g3, NORM_INFINITY, &diffmax));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  ||Gfd|| %g, ||G|| = %g, angle cosine = (Gfd'G)/||Gfd||||G|| = %g\n", (double)fdnorm, (double)hcnorm, (double)(PetscRealPart(dot) / (fdnorm * hcnorm))));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  2-norm ||G - Gfd||/||G|| = %g, ||G - Gfd|| = %g\n", (double)(diffnorm / PetscMax(hcnorm, fdnorm)), (double)diffnorm));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  max-norm ||G - Gfd||/||G|| = %g, ||G - Gfd|| = %g\n", (double)(diffmax / PetscMax(hcmax, fdmax)), (double)diffmax));
+
+  if (mviewer) {
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Hand-coded gradient ----------\n"));
+    PetscCall(VecView(g1, mviewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Finite difference gradient ----------\n"));
+    PetscCall(VecView(g2, mviewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Hand-coded minus finite-difference gradient ----------\n"));
+    PetscCall(VecView(g3, mviewer));
+  }
+  PetscCall(VecDestroy(&g2));
+  PetscCall(VecDestroy(&g3));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode TaoTestGradient(Tao tao, Vec x, Vec g1)
 {
-  Vec               g2, g3;
   PetscBool         complete_print = PETSC_FALSE, test = PETSC_FALSE;
-  PetscReal         hcnorm, fdnorm, hcmax, fdmax, diffmax, diffnorm;
-  PetscScalar       dot;
   MPI_Comm          comm;
   PetscViewer       viewer, mviewer;
   PetscViewerFormat format;
@@ -61,37 +98,7 @@ PetscErrorCode TaoTestGradient(Tao tao, Vec x, Vec g1)
     directionsprinted = PETSC_TRUE;
   }
   if (complete_print) PetscCall(PetscViewerPushFormat(mviewer, format));
-
-  PetscCall(VecDuplicate(x, &g2));
-  PetscCall(VecDuplicate(x, &g3));
-
-  /* Compute finite difference gradient, assume the gradient is already computed by TaoComputeGradient() and put into g1 */
-  PetscCall(TaoDefaultComputeGradient(tao, x, g2, NULL));
-
-  PetscCall(VecNorm(g2, NORM_2, &fdnorm));
-  PetscCall(VecNorm(g1, NORM_2, &hcnorm));
-  PetscCall(VecNorm(g2, NORM_INFINITY, &fdmax));
-  PetscCall(VecNorm(g1, NORM_INFINITY, &hcmax));
-  PetscCall(VecDot(g1, g2, &dot));
-  PetscCall(VecCopy(g1, g3));
-  PetscCall(VecAXPY(g3, -1.0, g2));
-  PetscCall(VecNorm(g3, NORM_2, &diffnorm));
-  PetscCall(VecNorm(g3, NORM_INFINITY, &diffmax));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  ||Gfd|| %g, ||G|| = %g, angle cosine = (Gfd'G)/||Gfd||||G|| = %g\n", (double)fdnorm, (double)hcnorm, (double)(PetscRealPart(dot) / (fdnorm * hcnorm))));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  2-norm ||G - Gfd||/||G|| = %g, ||G - Gfd|| = %g\n", (double)(diffnorm / PetscMax(hcnorm, fdnorm)), (double)diffnorm));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  max-norm ||G - Gfd||/||G|| = %g, ||G - Gfd|| = %g\n", (double)(diffmax / PetscMax(hcmax, fdmax)), (double)diffmax));
-
-  if (complete_print) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Hand-coded gradient ----------\n"));
-    PetscCall(VecView(g1, mviewer));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Finite difference gradient ----------\n"));
-    PetscCall(VecView(g2, mviewer));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Hand-coded minus finite-difference gradient ----------\n"));
-    PetscCall(VecView(g3, mviewer));
-  }
-  PetscCall(VecDestroy(&g2));
-  PetscCall(VecDestroy(&g3));
-
+  PetscCall(TaoTestGradient_Internal(tao, x, g1, viewer, complete_print ? mviewer : NULL));
   if (complete_print) {
     PetscCall(PetscViewerPopFormat(mviewer));
     PetscCall(PetscViewerDestroy(&mviewer));
@@ -126,28 +133,10 @@ PetscErrorCode TaoTestGradient(Tao tao, Vec x, Vec g1)
 @*/
 PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
 {
-  PetscReal dummy;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
-  PetscValidHeaderSpecific(G, VEC_CLASSID, 3);
-  PetscCheckSameComm(tao, 1, X, 2);
-  PetscCheckSameComm(tao, 1, G, 3);
-  PetscCall(VecLockReadPush(X));
-  if (tao->ops->computegradient) {
-    PetscCall(PetscLogEventBegin(TAO_GradientEval, tao, X, G, NULL));
-    PetscCallBack("Tao callback gradient", (*tao->ops->computegradient)(tao, X, G, tao->user_gradP));
-    PetscCall(PetscLogEventEnd(TAO_GradientEval, tao, X, G, NULL));
-    tao->ngrads++;
-  } else if (tao->ops->computeobjectiveandgradient) {
-    PetscCall(PetscLogEventBegin(TAO_ObjGradEval, tao, X, G, NULL));
-    PetscCallBack("Tao callback objective/gradient", (*tao->ops->computeobjectiveandgradient)(tao, X, &dummy, G, tao->user_objgradP));
-    PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, G, NULL));
-    tao->nfuncgrads++;
-  } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetGradient() has not been called");
-  PetscCall(VecLockReadPop(X));
-
+  PetscCall(TaoMappedTermComputeGradient(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, G));
+  tao->ngrads++;
   PetscCall(TaoTestGradient(tao, X, G));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -174,29 +163,17 @@ PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
 @*/
 PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
 {
-  Vec temp;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
-  PetscCheckSameComm(tao, 1, X, 2);
-  PetscCall(VecLockReadPush(X));
-  if (tao->ops->computeobjective) {
-    PetscCall(PetscLogEventBegin(TAO_ObjectiveEval, tao, X, NULL, NULL));
-    PetscCallBack("Tao callback objective", (*tao->ops->computeobjective)(tao, X, f, tao->user_objP));
-    PetscCall(PetscLogEventEnd(TAO_ObjectiveEval, tao, X, NULL, NULL));
-    tao->nfuncs++;
-  } else if (tao->ops->computeobjectiveandgradient) {
-    PetscCall(PetscInfo(tao, "Duplicating variable vector in order to call func/grad routine\n"));
-    PetscCall(VecDuplicate(X, &temp));
-    PetscCall(PetscLogEventBegin(TAO_ObjGradEval, tao, X, NULL, NULL));
-    PetscCallBack("Tao callback objective/gradient", (*tao->ops->computeobjectiveandgradient)(tao, X, f, temp, tao->user_objgradP));
-    PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, NULL, NULL));
-    PetscCall(VecDestroy(&temp));
-    tao->nfuncgrads++;
-  } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetObjective() has not been called");
-  PetscCall(PetscInfo(tao, "TAO Function evaluation: %20.19e\n", (double)(*f)));
-  PetscCall(VecLockReadPop(X));
+  PetscCall(TaoMappedTermComputeObjective(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, f));
+  if (tao->num_terms) {
+    const PetscReal *sum_values;
+
+    PetscCall(TaoTermSumGetLastSubtermObjectives(tao->objective_term.term, &sum_values));
+    if (!tao->objective_values) PetscCall(PetscMalloc1(tao->num_terms, &tao->objective_values));
+    PetscCall(PetscArraycpy(tao->objective_values, sum_values, tao->num_terms));
+  }
+  tao->nfuncs++;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -225,32 +202,15 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
-  PetscValidHeaderSpecific(G, VEC_CLASSID, 4);
-  PetscCheckSameComm(tao, 1, X, 2);
-  PetscCheckSameComm(tao, 1, G, 4);
-  PetscCall(VecLockReadPush(X));
-  if (tao->ops->computeobjectiveandgradient) {
-    PetscCall(PetscLogEventBegin(TAO_ObjGradEval, tao, X, G, NULL));
-    if (tao->ops->computegradient == TaoDefaultComputeGradient) {
-      PetscCall(TaoComputeObjective(tao, X, f));
-      PetscCall(TaoDefaultComputeGradient(tao, X, G, NULL));
-    } else PetscCallBack("Tao callback objective/gradient", (*tao->ops->computeobjectiveandgradient)(tao, X, f, G, tao->user_objgradP));
-    PetscCall(PetscLogEventEnd(TAO_ObjGradEval, tao, X, G, NULL));
-    tao->nfuncgrads++;
-  } else if (tao->ops->computeobjective && tao->ops->computegradient) {
-    PetscCall(PetscLogEventBegin(TAO_ObjectiveEval, tao, X, NULL, NULL));
-    PetscCallBack("Tao callback objective", (*tao->ops->computeobjective)(tao, X, f, tao->user_objP));
-    PetscCall(PetscLogEventEnd(TAO_ObjectiveEval, tao, X, NULL, NULL));
-    tao->nfuncs++;
-    PetscCall(PetscLogEventBegin(TAO_GradientEval, tao, X, G, NULL));
-    PetscCallBack("Tao callback gradient", (*tao->ops->computegradient)(tao, X, G, tao->user_gradP));
-    PetscCall(PetscLogEventEnd(TAO_GradientEval, tao, X, G, NULL));
-    tao->ngrads++;
-  } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetObjective() or TaoSetGradient() not set");
-  PetscCall(PetscInfo(tao, "TAO Function evaluation: %20.19e\n", (double)(*f)));
-  PetscCall(VecLockReadPop(X));
+  PetscCall(TaoMappedTermComputeObjectiveAndGradient(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, f, G));
+  if (tao->num_terms) {
+    const PetscReal *sum_values;
 
+    PetscCall(TaoTermSumGetLastSubtermObjectives(tao->objective_term.term, &sum_values));
+    if (!tao->objective_values) PetscCall(PetscMalloc1(tao->num_terms, &tao->objective_values));
+    PetscCall(PetscArraycpy(tao->objective_values, sum_values, tao->num_terms));
+  }
+  tao->nfuncgrads++;
   PetscCall(TaoTestGradient(tao, X, G));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -280,8 +240,7 @@ PetscErrorCode TaoSetObjective(Tao tao, PetscErrorCode (*func)(Tao tao, Vec x, P
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (ctx) tao->user_objP = ctx;
-  if (func) tao->ops->computeobjective = func;
+  PetscCall(TaoTermTaoCallbacksSetObjective(tao->orig_callbacks, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -305,14 +264,23 @@ PetscErrorCode TaoSetObjective(Tao tao, PetscErrorCode (*func)(Tao tao, Vec x, P
 
   Level: beginner
 
+  Note:
+  In addition to specifying an objective function using callbacks like
+  `TaoSetObjective()` and `TaoSetGradient()`, Tao also has an object-oriented
+  approach to specifying objective functions with `TaoSetTerm()` and
+  `TaoAddTerm()`.
+
+  `TaoGetObjective()` will always return the callback specified with
+  `TaoSetObjective()`, even if the objective function has been changed by
+  calling `TaoSetTerm()` and/or `TaoAddTerm()`.
+
 .seealso: [](ch_tao), `Tao`, `TaoSetGradient()`, `TaoSetHessian()`, `TaoSetObjective()`
 @*/
 PetscErrorCode TaoGetObjective(Tao tao, PetscErrorCode (**func)(Tao tao, Vec x, PetscReal *f, void *ctx), void **ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (func) *func = tao->ops->computeobjective;
-  if (ctx) *ctx = tao->user_objP;
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetObjective(tao->orig_callbacks, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -434,10 +402,10 @@ PetscErrorCode TaoComputeResidual(Tao tao, Vec X, Vec F)
   PetscCheckSameComm(tao, 1, X, 2);
   PetscCheckSameComm(tao, 1, F, 3);
   if (tao->ops->computeresidual) {
-    PetscCall(PetscLogEventBegin(TAO_ObjectiveEval, tao, X, NULL, NULL));
+    PetscCall(PetscLogEventBegin(TAO_ResidualEval, tao, X, NULL, NULL));
     PetscCallBack("Tao callback least-squares residual", (*tao->ops->computeresidual)(tao, X, F, tao->user_lsresP));
-    PetscCall(PetscLogEventEnd(TAO_ObjectiveEval, tao, X, NULL, NULL));
-    tao->nfuncs++;
+    PetscCall(PetscLogEventEnd(TAO_ResidualEval, tao, X, NULL, NULL));
+    tao->nres++;
   } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetResidualRoutine() has not been called");
   PetscCall(PetscInfo(tao, "TAO least-squares residual evaluation.\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -476,8 +444,7 @@ PetscErrorCode TaoSetGradient(Tao tao, Vec g, PetscErrorCode (*func)(Tao tao, Ve
     PetscCall(VecDestroy(&tao->gradient));
     tao->gradient = g;
   }
-  if (func) tao->ops->computegradient = func;
-  if (ctx) tao->user_gradP = ctx;
+  PetscCall(TaoTermTaoCallbacksSetGradient(tao->orig_callbacks, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -502,6 +469,16 @@ PetscErrorCode TaoSetGradient(Tao tao, Vec g, PetscErrorCode (*func)(Tao tao, Ve
 
   Level: beginner
 
+  Note:
+  In addition to specifying an objective function using callbacks like
+  `TaoSetObjective()` and `TaoSetGradient()`, Tao also has an object-oriented
+  approach to specifying objective functions with `TaoSetTerm()` and
+  `TaoAddTerm()`.
+
+  `TaoGetGradient()` will always return the callback specified with
+  `TaoSetGradient()`, even if the objective function has been changed by
+  calling `TaoSetTerm()` and/or `TaoAddTerm()`.
+
 .seealso: [](ch_tao), `Tao`, `TaoSetObjective()`, `TaoSetHessian()`, `TaoSetObjectiveAndGradient()`, `TaoSetGradient()`
 @*/
 PetscErrorCode TaoGetGradient(Tao tao, Vec *g, PetscErrorCode (**func)(Tao tao, Vec x, Vec g, void *ctx), void **ctx)
@@ -509,8 +486,7 @@ PetscErrorCode TaoGetGradient(Tao tao, Vec *g, PetscErrorCode (**func)(Tao tao, 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (g) *g = tao->gradient;
-  if (func) *func = tao->ops->computegradient;
-  if (ctx) *ctx = tao->user_gradP;
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetGradient(tao->orig_callbacks, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -551,8 +527,7 @@ PetscErrorCode TaoSetObjectiveAndGradient(Tao tao, Vec g, PetscErrorCode (*func)
     PetscCall(VecDestroy(&tao->gradient));
     tao->gradient = g;
   }
-  if (ctx) tao->user_objgradP = ctx;
-  if (func) tao->ops->computeobjectiveandgradient = func;
+  PetscCall(TaoTermTaoCallbacksSetObjAndGrad(tao->orig_callbacks, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -578,6 +553,16 @@ PetscErrorCode TaoSetObjectiveAndGradient(Tao tao, Vec g, PetscErrorCode (*func)
 
   Level: beginner
 
+  Note:
+  In addition to specifying an objective function using callbacks like
+  `TaoSetObjectiveAndGradient()`, Tao also has an object-oriented
+  approach to specifying objective functions with `TaoSetTerm()` and
+  `TaoAddTerm()`.
+
+  `TaoGetObjectiveAndGradient()` will always return the callback specified with
+  `TaoSetObjectiveAndGradient()`, even if the objective function has been changed by
+  calling `TaoSetTerm()` and/or `TaoAddTerm()`.
+
 .seealso: [](ch_tao), `Tao`, `TaoSolve()`, `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetHessian()`, `TaoSetObjectiveAndGradient()`
 @*/
 PetscErrorCode TaoGetObjectiveAndGradient(Tao tao, Vec *g, PetscErrorCode (**func)(Tao tao, Vec x, PetscReal *f, Vec g, void *ctx), void **ctx)
@@ -585,8 +570,7 @@ PetscErrorCode TaoGetObjectiveAndGradient(Tao tao, Vec *g, PetscErrorCode (**fun
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (g) *g = tao->gradient;
-  if (func) *func = tao->ops->computeobjectiveandgradient;
-  if (ctx) *ctx = tao->user_objgradP;
+  if (func || ctx) PetscCall(TaoTermTaoCallbacksGetObjAndGrad(tao->orig_callbacks, func, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -602,9 +586,13 @@ PetscErrorCode TaoGetObjectiveAndGradient(Tao tao, Vec *g, PetscErrorCode (**fun
 . tao - the `Tao` context
 
   Output Parameter:
-. flg - `PETSC_TRUE` if function routine is set by user, `PETSC_FALSE` otherwise
+. flg - `PETSC_TRUE` if the objective `TaoTerm` has this routine `PETSC_FALSE` otherwise
 
   Level: developer
+
+  Note:
+  Where the objective function `TaoTerm` is different from the one defined by the user callbacks,
+  this describes the former, not the latter.
 
 .seealso: [](ch_tao), `Tao`, `TaoSetObjective()`, `TaoIsGradientDefined()`, `TaoIsObjectiveAndGradientDefined()`
 @*/
@@ -612,14 +600,13 @@ PetscErrorCode TaoIsObjectiveDefined(Tao tao, PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (tao->ops->computeobjective == NULL) *flg = PETSC_FALSE;
-  else *flg = PETSC_TRUE;
+  PetscCall(TaoTermIsObjectiveDefined(tao->objective_term.term, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   TaoIsGradientDefined - Checks to see if the user has
-  declared an objective-only routine.  Useful for determining when
+  declared a gradient-only routine.  Useful for determining when
   it is appropriate to call `TaoComputeGradient()` or
   `TaoComputeGradientAndGradient()`
 
@@ -629,9 +616,13 @@ PetscErrorCode TaoIsObjectiveDefined(Tao tao, PetscBool *flg)
 . tao - the `Tao` context
 
   Output Parameter:
-. flg - `PETSC_TRUE` if function routine is set by user, `PETSC_FALSE` otherwise
+. flg - `PETSC_TRUE` if the objective `TaoTerm` has this routine `PETSC_FALSE` otherwise
 
   Level: developer
+
+  Note:
+  Where the objective function `TaoTerm` is different from the one defined by the user callbacks,
+  this describes the former, not the latter.
 
 .seealso: [](ch_tao), `TaoSetGradient()`, `TaoIsObjectiveDefined()`, `TaoIsObjectiveAndGradientDefined()`
 @*/
@@ -639,8 +630,7 @@ PetscErrorCode TaoIsGradientDefined(Tao tao, PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (tao->ops->computegradient == NULL) *flg = PETSC_FALSE;
-  else *flg = PETSC_TRUE;
+  PetscCall(TaoTermIsGradientDefined(tao->objective_term.term, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -656,9 +646,13 @@ PetscErrorCode TaoIsGradientDefined(Tao tao, PetscBool *flg)
 . tao - the `Tao` context
 
   Output Parameter:
-. flg - `PETSC_TRUE` if function routine is set by user, `PETSC_FALSE` otherwise
+. flg - `PETSC_TRUE` if the objective `TaoTerm` has this routine `PETSC_FALSE` otherwise
 
   Level: developer
+
+  Note:
+  Where the objective function `TaoTerm` is different from the one defined by the user callbacks,
+  this describes the former, not the latter.
 
 .seealso: [](ch_tao), `TaoSetObjectiveAndGradient()`, `TaoIsObjectiveDefined()`, `TaoIsGradientDefined()`
 @*/
@@ -666,7 +660,6 @@ PetscErrorCode TaoIsObjectiveAndGradientDefined(Tao tao, PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (tao->ops->computeobjectiveandgradient == NULL) *flg = PETSC_FALSE;
-  else *flg = PETSC_TRUE;
+  PetscCall(TaoTermIsObjectiveAndGradientDefined(tao->objective_term.term, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
