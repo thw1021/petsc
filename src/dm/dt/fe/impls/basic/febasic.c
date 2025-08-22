@@ -968,6 +968,7 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrateBdJacobian_Basic(PetscDS ds, PetscWe
     fegeom.v            = NULL;
     fegeom.J            = NULL;
     fegeom.detJ         = NULL;
+    fegeom.xi           = NULL;
     fegeom.dim          = fgeom->dim;
     fegeom.dimEmbed     = fgeom->dimEmbed;
     cgeom.dim           = fgeom->dim;
