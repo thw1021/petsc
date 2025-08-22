@@ -19,7 +19,7 @@ static PetscErrorCode TaoTermView_Test(TaoTerm term, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermObjective_Test(TaoTerm term, Vec x, Vec params, PetscReal *value)
+static PetscErrorCode TaoTermComputeObjective_Test(TaoTerm term, Vec x, Vec params, PetscReal *value)
 {
   Mat A;
   Vec r;
@@ -33,7 +33,7 @@ static PetscErrorCode TaoTermObjective_Test(TaoTerm term, Vec x, Vec params, Pet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermGradient_Test(TaoTerm term, Vec x, Vec params, Vec g)
+static PetscErrorCode TaoTermComputeGradient_Test(TaoTerm term, Vec x, Vec params, Vec g)
 {
   Mat A;
 
@@ -43,7 +43,7 @@ static PetscErrorCode TaoTermGradient_Test(TaoTerm term, Vec x, Vec params, Vec 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermObjectiveAndGradient_Test(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
+static PetscErrorCode TaoTermComputeObjectiveAndGradient_Test(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
 {
   Mat A;
 
@@ -93,11 +93,11 @@ static PetscErrorCode testShell(MPI_Comm comm, PetscBool separate)
   PetscCheck(test_n == n, comm, PETSC_ERR_PLIB, "Inconsistent parameters size");
 
   if (separate) {
-    PetscCall(TaoTermShellSetObjective(term, TaoTermObjective_Test));
-    PetscCall(TaoTermShellSetGradient(term, TaoTermGradient_Test));
+    PetscCall(TaoTermShellSetObjective(term, TaoTermComputeObjective_Test));
+    PetscCall(TaoTermShellSetGradient(term, TaoTermComputeGradient_Test));
   } else {
-    PetscCall(TaoTermShellSetObjectiveAndGradient(term, TaoTermObjectiveAndGradient_Test));
-    PetscCall(TaoTermShellSetObjectiveAndGradient(term, TaoTermObjectiveAndGradient_Test));
+    PetscCall(TaoTermShellSetObjectiveAndGradient(term, TaoTermComputeObjectiveAndGradient_Test));
+    PetscCall(TaoTermShellSetObjectiveAndGradient(term, TaoTermComputeObjectiveAndGradient_Test));
     PetscCall(TaoTermShellSetView(term, TaoTermView_Test));
   }
 
@@ -108,7 +108,7 @@ static PetscErrorCode testShell(MPI_Comm comm, PetscBool separate)
   PetscCall(VecSetRandom(x, rand));
   PetscCall(VecSetRandom(params, rand));
   PetscCall(VecDuplicate(x, &g));
-  PetscCall(TaoTermObjectiveAndGradient(term, x, params, &value, g));
+  PetscCall(TaoTermComputeObjectiveAndGradient(term, x, params, &value, g));
   PetscCall(VecNorm(g, NORM_2, &g_norm));
   PetscCall(PetscPrintf(comm, "objective: %g, gradient norm %g\n", (double)value, (double)g_norm));
 
