@@ -1313,6 +1313,7 @@ PetscErrorCode PCSetOperators(PC pc, Mat Amat, Mat Pmat)
   Note:
   Normally if a matrix inside a `PC` changes the `PC` automatically updates itself using information from the changed matrix. This option
   prevents this.
+  Multigrid's fine grid smoother needs the same treatment so that it does not update itself after the same matrix change
 
 .seealso: [](ch_ksp), `PC`, `PCGetOperators()`, `MatZeroEntries()`, `PCGetReusePreconditioner()`, `KSPSetReusePreconditioner()`
  @*/
@@ -1322,6 +1323,7 @@ PetscErrorCode PCSetReusePreconditioner(PC pc, PetscBool flag)
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidLogicalCollectiveBool(pc, flag, 2);
   pc->reusepreconditioner = flag;
+  PetscTryMethod(pc, "PCSetReusePreconditioner_C", (PC, PetscBool), (pc, flag));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
