@@ -171,7 +171,6 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrate_Basic(PetscDS ds, PetscInt field, P
   PetscReal         *x, cellScale;
   PetscInt          *uOff, *uOff_x, *aOff = NULL, *aOff_x = NULL;
   PetscInt           dim, dE, Np, numConstants, Nf, NfAux = 0, totDim, totDimAux = 0, cOffset = 0, cOffsetAux = 0, e;
-  PetscBool          isAffine;
   const PetscReal   *quadPoints, *quadWeights;
   PetscInt           qNc, Nq, q;
 
@@ -202,9 +201,9 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrate_Basic(PetscDS ds, PetscInt field, P
   }
   PetscCall(PetscQuadratureGetData(quad, NULL, &qNc, &Nq, &quadPoints, &quadWeights));
   PetscCheck(qNc == 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Only supports scalar quadrature, not %" PetscInt_FMT " components", qNc);
-  Np       = cgeom->numPoints;
-  dE       = cgeom->dimEmbed;
-  isAffine = cgeom->isAffine;
+  Np                       = cgeom->numPoints;
+  dE                       = cgeom->dimEmbed;
+  const PetscBool isAffine = cgeom->isAffine;
   for (e = 0; e < Ne; ++e) {
     PetscFEGeom fegeom;
 
@@ -261,7 +260,7 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrateBd_Basic(PetscDS ds, PetscInt field,
   const PetscScalar *constants;
   PetscReal         *x, cellScale;
   PetscInt          *uOff, *uOff_x, *aOff = NULL, *aOff_x = NULL;
-  PetscBool          isAffine, auxOnBd;
+  PetscBool          auxOnBd;
   const PetscReal   *quadPoints, *quadWeights;
   PetscInt           qNc, Nq, q, Np, dE;
   PetscInt           dim, dimAux, numConstants, Nf, NfAux = 0, totDim, totDimAux = 0, cOffset = 0, cOffsetAux = 0, e;
@@ -296,9 +295,9 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrateBd_Basic(PetscDS ds, PetscInt field,
   PetscCall(PetscQuadratureGetData(quad, NULL, &qNc, &Nq, &quadPoints, &quadWeights));
   PetscCheck(qNc == 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Only supports scalar quadrature, not %" PetscInt_FMT " components", qNc);
   if (debug > 1) PetscCall(PetscPrintf(PETSC_COMM_SELF, "Field: %" PetscInt_FMT " Nface: %" PetscInt_FMT " Nq: %" PetscInt_FMT "\n", field, Ne, Nq));
-  Np       = fgeom->numPoints;
-  dE       = fgeom->dimEmbed;
-  isAffine = fgeom->isAffine;
+  Np                       = fgeom->numPoints;
+  dE                       = fgeom->dimEmbed;
+  const PetscBool isAffine = fgeom->isAffine;
   for (e = 0; e < Ne; ++e) {
     PetscFEGeom    fegeom, cgeom;
     const PetscInt face = fgeom->face[e][0]; /* Local face number in cell */
@@ -906,7 +905,6 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrateBdJacobian_Basic(PetscDS ds, PetscWe
   PetscInt           *uOff, *uOff_x, *aOff = NULL, *aOff_x = NULL;
   PetscInt            NcI = 0, NcJ = 0;
   PetscInt            dim, numConstants, Nf, fieldI, fieldJ, NfAux = 0, totDim, totDimAux = 0, e;
-  PetscBool           isAffine;
   const PetscReal    *quadPoints, *quadWeights;
   PetscInt            qNc, Nq, q, Np, dE;
 
@@ -950,9 +948,9 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrateBdJacobian_Basic(PetscDS ds, PetscWe
     PetscCall(PetscDSGetFaceTabulation(dsAux, &TAux));
   }
   NcI = T[fieldI]->Nc, NcJ = T[fieldJ]->Nc;
-  Np       = fgeom->numPoints;
-  dE       = fgeom->dimEmbed;
-  isAffine = fgeom->isAffine;
+  Np                       = fgeom->numPoints;
+  dE                       = fgeom->dimEmbed;
+  const PetscBool isAffine = fgeom->isAffine;
   /* Initialize here in case the function is not defined */
   PetscCall(PetscArrayzero(g0, NcI * NcJ));
   PetscCall(PetscArrayzero(g1, NcI * NcJ * dE));

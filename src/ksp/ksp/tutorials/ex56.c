@@ -394,6 +394,8 @@ int main(int argc, char **args)
     PetscCall(MaybeLogStagePush(stage[5]));
 
     /* 3rd solve */
+    PetscCall(MatScale(Amat, 1. + PETSC_SQRT_MACHINE_EPSILON * PETSC_SQRT_MACHINE_EPSILON));
+    PetscCall(KSPSetReusePreconditioner(ksp, PETSC_TRUE));
     PetscCall(KSPSolve(ksp, bb, xx));
 
     PetscCall(MaybeLogStagePop());
