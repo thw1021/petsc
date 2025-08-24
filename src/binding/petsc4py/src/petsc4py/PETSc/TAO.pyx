@@ -791,7 +791,7 @@ cdef class TAO(Object):
 
     def getJacobianEquality(self) -> tuple[Mat, Mat, tuple[TAOConstraintsJacobianFunction, tuple[Any, ...] | None,
                                            kargs: dict[str, Any] | None]]:
-        """Return matrix, preconditioner matrix and callback of equality constraints Jacobian.
+        """Return matrix, precon matrix and callback of equality constraints Jacobian.
 
         Not collective.
 
