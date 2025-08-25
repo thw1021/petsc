@@ -129,7 +129,7 @@ class Configure(config.package.Package):
 
     # allow a user-specified suffix to be appended to BLAS/LAPACK symbols
     self.suffix = self.argDB.get('with-blaslapack-suffix', '')
-    #  allow user to dictate which blas/lapack mangling to use (some blas/lapack libraries, like on Apple, provide several)
+    #  allow user to dictate which BLAS/LAPACK mangling to use (some BLAS/LAPACK libraries, like on Apple, provide several)
     if 'known-blaslapack-mangling' in self.argDB:
       mangling = self.argDB['known-blaslapack-mangling']
       # check user-provided mangling, error on failure
@@ -142,7 +142,7 @@ class Configure(config.package.Package):
       return (foundBlas, foundLapack)
 
     manglings = ['unchanged', 'underscore', 'caps']
-    # if we have a fortran compiler, check that mangling first
+    # if we have a Fortran compiler, check that mangling first
     if hasattr(self.compilers, 'FC'):
       mangling = self.compilers.fortranMangling
       self.logPrint('Checking for Fortran name mangling "'+mangling+'" on BLAS/LAPACK')
@@ -185,7 +185,7 @@ class Configure(config.package.Package):
     if 'with-blaslapack-lib' in self.argDB and 'with-blaslapack-dir' in self.argDB:
       raise RuntimeError('You cannot set both the library containing BLAS/LAPACK with --with-blaslapack-lib=<lib>\nand the directory to search with --with-blaslapack-dir=<dir>')
 
-    # Try specified BLASLAPACK library
+    # Try specified BLAS/LAPACK library
     if 'with-blaslapack-lib' in self.argDB:
       if 'known-64-bit-blas-indices' in self.argDB:
         if self.argDB['known-64-bit-blas-indices']:
