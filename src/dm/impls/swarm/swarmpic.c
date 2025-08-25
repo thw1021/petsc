@@ -224,9 +224,12 @@ PetscErrorCode DMSwarmCellDMGetSort(DMSwarmCellDM celldm, DMSwarmSort *sort)
 
   Input Parameters:
 + celldm - The `DMSwarmCellDM` object
-- sort   - The `DMSwarmSort` object
+- sort   - The `DMSwarmSort` object, or `NULL` to clear the context
 
   Level: intermediate
+
+  Note:
+  User should destroy `sort` afterwards, as the swarm will hold a reference.
 
 .seealso: `DMSwarmCellDM`, `DM`, `DMSwarmSetCellDM()`
 @*/
@@ -234,7 +237,9 @@ PetscErrorCode DMSwarmCellDMSetSort(DMSwarmCellDM celldm, DMSwarmSort sort)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(celldm, DMSWARMCELLDM_CLASSID, 1);
-  PetscAssertPointer(sort, 2);
+  if (sort) PetscAssertPointer(sort, 2);
+  PetscCall(PetscObjectReference((PetscObject)sort));
+  PetscCall(DMSwarmSortDestroy(&celldm->sort));
   celldm->sort = sort;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

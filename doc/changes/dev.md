@@ -90,6 +90,10 @@
 
 - Add `DMPlexSetClosurePermutationLexicographic()`
 - Add `DMPlexDrawCell()`
+- Add `DMSwarmProjectFields()` and `DMSwarmProjectGradientFields()`
+- Add `DMSwarmSort` class
+- Add `DMSwarmSortDestroy()` and `DMSwarmSortView()`
+- Allow `DMSwarmCellDMSetSort()` to take in `NULL` and clear the sort
 
 ## FE/FV
 
