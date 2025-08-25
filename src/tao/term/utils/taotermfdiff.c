@@ -153,7 +153,7 @@ static PetscErrorCode TaoTermGetStashedHessianColoring(TaoTerm term, Vec params,
 }
 
 /*@
-  TaoTermCoputeHessianSingleFD - Approximate the Hessian of a `TaoTerm` using finite differences
+  TaoTermComputeHessianSingleFD - Approximate the Hessian of a `TaoTerm` using finite differences
 
   Collective
 
