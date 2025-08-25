@@ -172,6 +172,7 @@
 - Add an extra communicator argument to `DMPlexFilter()` to allow extracting local meshes
 - Change `verticesAdjSaved` parameter in `DMPlexCreateFromCell*Parallel*()` functions to be allocated by function rather than by user
 - Add `DMPlexCreateColoring()`
+- Add `DMPlexDrawCell()`
 
 ```{rubric} FE/FV:
 ```
