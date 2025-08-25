@@ -165,6 +165,11 @@
 ```{rubric} DMSwarm:
 ```
 
+- Add `DMSwarmProjectFields()` and `DMSwarmProjectGradientFields()`
+- Add `DMSwarmSort` class
+- Add `DMSwarmSortDestroy()` and `DMSwarmSortView()`
+- Allow `DMSwarmCellDMSetSort()` to take in `NULL` and clear the sort
+
 ```{rubric} DMPlex:
 ```
 
