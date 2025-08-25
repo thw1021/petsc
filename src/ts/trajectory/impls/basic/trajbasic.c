@@ -105,22 +105,21 @@ PetscErrorCode TSTrajectorySetUp_Basic(TSTrajectory tj, TS ts)
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)tj, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  if (rank == 0) {
-    char     *dir = tj->dirname;
-    PetscBool flg;
+  if (!tj->dirname) {
+    char dtempname[16] = "TS-data-XXXXXX";
+    if (rank == 0) PetscCall(PetscMkdtemp(dtempname));
+    PetscCallMPI(MPI_Bcast(dtempname, sizeof dtempname, MPI_CHAR, 0, PetscObjectComm((PetscObject)tj)));
+    PetscCall(TSTrajectorySetDirname(tj, dtempname));
+  } else if (rank == 0) {
+    const char *dir = tj->dirname;
+    PetscBool   flg;
 
-    if (!dir) {
-      char dtempname[16] = "TS-data-XXXXXX";
-      PetscCall(PetscMkdtemp(dtempname));
-      PetscCall(PetscStrallocpy(dtempname, &tj->dirname));
-    } else {
-      PetscCall(PetscTestDirectory(dir, 'w', &flg));
-      if (!flg) {
-        PetscCall(PetscTestFile(dir, 'r', &flg));
-        PetscCheck(!flg, PETSC_COMM_SELF, PETSC_ERR_USER, "Specified path is a file - not a dir: %s", dir);
-        PetscCall(PetscMkdir(dir));
-      } else SETERRQ(comm, PETSC_ERR_SUP, "Directory %s not empty", tj->dirname);
-    }
+    PetscCall(PetscTestDirectory(dir, 'w', &flg));
+    if (!flg) {
+      PetscCall(PetscTestFile(dir, 'r', &flg));
+      PetscCheck(!flg, PETSC_COMM_SELF, PETSC_ERR_USER, "Specified path is a file - not a dir: %s", dir);
+      PetscCall(PetscMkdir(dir));
+    } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Directory %s not empty", tj->dirname);
   }
   PetscCall(PetscBarrier((PetscObject)tj));
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -947,6 +947,7 @@ PetscErrorCode PetscViewerBinaryRead(PetscViewer viewer, void *data, PetscInt nu
 #if defined(PETSC_HAVE_MPIIO)
   if (vbinary->usempiio) {
     PetscCall(PetscViewerBinaryWriteReadMPIIO(viewer, data, num, count, dtype, PETSC_FALSE));
+    if (!PetscBinaryBigEndian()) PetscCall(PetscByteSwap(data, dtype, num));
   } else {
 #endif
     PetscCall(PetscBinarySynchronizedRead(PetscObjectComm((PetscObject)viewer), vbinary->fdes, data, num, count, dtype));
@@ -1336,6 +1337,7 @@ static PetscErrorCode PetscViewerFileSetUp_BinaryMPIIO(PetscViewer viewer)
 
   PetscFunctionBegin;
   vbinary->storecompressed = PETSC_FALSE;
+  // PetscCall(PetscViewerFileSetUp_BinaryRetrieve(viewer, &fname));
 
   vbinary->moff = 0;
   switch (vbinary->filemode) {
@@ -1369,20 +1371,15 @@ static PetscErrorCode PetscViewerFileSetUp_BinaryMPIIO(PetscViewer viewer)
 }
 #endif
 
-static PetscErrorCode PetscViewerFileSetUp_BinarySTDIO(PetscViewer viewer)
+static PetscErrorCode PetscViewerFileSetUp_BinaryRetrieve(PetscViewer viewer, const char **fname)
 {
   PetscViewer_Binary *vbinary = (PetscViewer_Binary *)viewer->data;
-  const char         *fname;
-  char                bname[PETSC_MAX_PATH_LEN], *gz = NULL;
-  PetscBool           found;
-  PetscMPIInt         rank;
 
   PetscFunctionBegin;
-  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer), &rank));
-
   /* if file name ends in .gz strip that off and note user wants file compressed */
   vbinary->storecompressed = PETSC_FALSE;
   if (vbinary->filemode == FILE_MODE_WRITE) {
+    char *gz = NULL;
     PetscCall(PetscStrstr(vbinary->filename, ".gz", &gz));
     if (gz && gz[3] == 0) {
       *gz                      = 0;
@@ -1393,18 +1390,32 @@ static PetscErrorCode PetscViewerFileSetUp_BinarySTDIO(PetscViewer viewer)
   PetscCheck(!vbinary->storecompressed, PetscObjectComm((PetscObject)viewer), PETSC_ERR_SUP_SYS, "Cannot run gzip on this machine");
 #endif
 
-  fname = vbinary->filename;
+  *fname = vbinary->filename;
   if (vbinary->filemode == FILE_MODE_READ) { /* possibly get the file from remote site or compressed file */
-    PetscCall(PetscFileRetrieve(PetscObjectComm((PetscObject)viewer), fname, bname, PETSC_MAX_PATH_LEN, &found));
-    PetscCheck(found, PetscObjectComm((PetscObject)viewer), PETSC_ERR_FILE_OPEN, "Cannot locate file: %s", fname);
-    fname = bname;
+    char      bname[PETSC_MAX_PATH_LEN];
+    PetscBool found;
+    PetscCall(PetscFileRetrieve(PetscObjectComm((PetscObject)viewer), *fname, bname, PETSC_MAX_PATH_LEN, &found));
+    PetscCheck(found, PetscObjectComm((PetscObject)viewer), PETSC_ERR_FILE_OPEN, "Cannot locate file: %s", *fname);
+    *fname = bname;
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
+static PetscErrorCode PetscViewerFileSetUp_BinarySTDIO(PetscViewer viewer)
+{
+  PetscViewer_Binary *vbinary = (PetscViewer_Binary *)viewer->data;
+  const char         *fname;
+  PetscMPIInt         rank;
+
+  PetscFunctionBegin;
+  PetscCall(PetscViewerFileSetUp_BinaryRetrieve(viewer, &fname));
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer), &rank));
   vbinary->fdes = -1;
   if (rank == 0) { /* only first processor opens file*/
     PetscFileMode mode = vbinary->filemode;
     if (mode == FILE_MODE_APPEND) {
       /* check if asked to append to a non-existing file */
+      PetscBool found;
       PetscCall(PetscTestFile(fname, '\0', &found));
       if (!found) mode = FILE_MODE_WRITE;
     }
@@ -1523,8 +1534,10 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_Binary(PetscViewer v)
 {
   PetscViewer_Binary *vbinary;
+  PetscMPIInt         size;
 
   PetscFunctionBegin;
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)v), &size));
   PetscCall(PetscNew(&vbinary));
   v->data = (void *)vbinary;
 
@@ -1539,9 +1552,9 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_Binary(PetscViewer v)
 
   vbinary->fdes = -1;
 #if defined(PETSC_HAVE_MPIIO)
-  vbinary->usempiio = PETSC_FALSE;
-  vbinary->mfdes    = MPI_FILE_NULL;
-  vbinary->mfsub    = MPI_FILE_NULL;
+  if (size > 1) vbinary->usempiio = PETSC_TRUE;
+  vbinary->mfdes = MPI_FILE_NULL;
+  vbinary->mfsub = MPI_FILE_NULL;
 #endif
   vbinary->filename        = NULL;
   vbinary->filemode        = FILE_MODE_UNDEFINED;

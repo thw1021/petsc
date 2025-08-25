@@ -19,7 +19,7 @@ PetscErrorCode MyVecDump(const char fname[], PetscBool skippheader, PetscBool us
   PetscCall(PetscViewerSetType(viewer, PETSCVIEWERBINARY));
   if (skippheader) PetscCall(PetscViewerBinarySetSkipHeader(viewer, PETSC_TRUE));
   PetscCall(PetscViewerFileSetMode(viewer, FILE_MODE_WRITE));
-  if (usempiio) PetscCall(PetscViewerBinarySetUseMPIIO(viewer, PETSC_TRUE));
+  PetscCall(PetscViewerBinarySetUseMPIIO(viewer, usempiio));
   PetscCall(PetscViewerFileSetName(viewer, fname));
 
   PetscCall(VecView(x, viewer));
@@ -46,7 +46,7 @@ PetscErrorCode MyVecLoad(const char fname[], PetscBool skippheader, PetscBool us
   PetscCall(PetscViewerSetType(viewer, PETSCVIEWERBINARY));
   if (skippheader) PetscCall(PetscViewerBinarySetSkipHeader(viewer, PETSC_TRUE));
   PetscCall(PetscViewerFileSetMode(viewer, FILE_MODE_READ));
-  if (usempiio) PetscCall(PetscViewerBinarySetUseMPIIO(viewer, PETSC_TRUE));
+  PetscCall(PetscViewerBinarySetUseMPIIO(viewer, usempiio));
   PetscCall(PetscViewerFileSetName(viewer, fname));
 
   PetscCall(VecLoad(x, viewer));

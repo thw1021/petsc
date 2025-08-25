@@ -38,6 +38,7 @@
 ```
 
 - Add `PetscViewerHDF5SetCompress()` and `PetscViewerHDF5GetCompress()`
+- Make ``-viewer_binary_mpiio`` (``PetscViewerBinarySetUseMPIIO()``) true by default when supported.
 
 ```{rubric} PetscDraw:
 ```
