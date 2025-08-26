@@ -47,9 +47,10 @@ program main
   allocate(offsets(Nf))
 
   ! Indices per cell
-  PetscCallA(DMPlexGetClosureIndices(cdm, gS, gS, c, PETSC_TRUE, nIdx, indices, offsets, PETSC_NULL_SCALAR_POINTER, ierr))
+  PetscCallA(DMPlexGetClosureIndices(cdm, gS, gS, cStart, PETSC_TRUE, nIdx, indices, offsets, PETSC_NULL_SCALAR_POINTER, ierr))
   allocate(idxMatrix(nIdx, cEnd - cStart))
   idxMatrix(1:nIdx, cStart + 1) = indices
+  PetscCallA(DMPlexRestoreClosureIndices(cdm, gS, gS, cStart, PETSC_TRUE, nIdx, indices, offsets, PETSC_NULL_SCALAR_POINTER, ierr))
   do c = cStart + 1, cEnd - 1
     PetscCallA(DMPlexGetClosureIndices(cdm, gS, gS, c, PETSC_TRUE, nIdx, indices, offsets, PETSC_NULL_SCALAR_POINTER, ierr))
     idxMatrix(1:nIdx, c + 1) = indices
