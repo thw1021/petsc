@@ -2,7 +2,6 @@
 
 typedef struct {
   PetscScalar diag;
-  Mat_Product product_inner;
 } Mat_ConstantDiagonal;
 
 static PetscErrorCode MatAXPY_ConstantDiagonal(Mat Y, PetscScalar a, Mat X, MatStructure str)
@@ -130,7 +129,6 @@ static PetscErrorCode MatDestroy_ConstantDiagonal(Mat mat)
   mat->structural_symmetry_eternal = PETSC_FALSE;
   mat->symmetry_eternal            = PETSC_FALSE;
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConstantDiagonalGetConstant_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_anytype_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -295,181 +293,6 @@ static PetscErrorCode MatGetInfo_ConstantDiagonal(Mat A, MatInfoType flag, MatIn
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatProductNumeric_ConstantDiagonal_Copy(Mat D)
-{
-  Mat            A, B, Dwork;
-  PetscBool      Aiscdiag, Biscdiag;
-  PetscScalar    scale;
-  MatProductType ptype;
-
-  PetscFunctionBegin;
-  MatCheckProduct(D, 1);
-  A     = D->product->A;
-  B     = D->product->B;
-  Dwork = D->product->Dwork;
-  ptype = D->product->type;
-  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATCONSTANTDIAGONAL, &Aiscdiag));
-  PetscCall(PetscObjectTypeCompare((PetscObject)B, MATCONSTANTDIAGONAL, &Biscdiag));
-  PetscCheck(Aiscdiag || Biscdiag, PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "This should not happen");
-  PetscCall(MatConstantDiagonalGetConstant(Aiscdiag ? A : B, &scale));
-  if (Biscdiag && (ptype == MATPRODUCT_PtAP || ptype == MATPRODUCT_RARt)) scale = scale * scale;
-  PetscCall(MatCopy(Dwork, D, DIFFERENT_NONZERO_PATTERN));
-  PetscCall(MatScale(D, scale));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatProductSymbolic_ConstantDiagonal_Copy(Mat D)
-{
-  PetscFunctionBegin;
-  D->ops->productnumeric = MatProductNumeric_ConstantDiagonal_Copy;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatProductNumeric_ConstantDiagonal_Transpose(Mat D)
-{
-  Mat         A, B, Dwork;
-  PetscBool   Aiscdiag, Biscdiag;
-  PetscScalar scale;
-
-  PetscFunctionBegin;
-  MatCheckProduct(D, 1);
-  A     = D->product->A;
-  B     = D->product->B;
-  Dwork = D->product->Dwork;
-  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATCONSTANTDIAGONAL, &Aiscdiag));
-  PetscCall(PetscObjectTypeCompare((PetscObject)B, MATCONSTANTDIAGONAL, &Biscdiag));
-  PetscCheck(Aiscdiag || Biscdiag, PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "This should not happen");
-  PetscCall(MatConstantDiagonalGetConstant(Aiscdiag ? A : B, &scale));
-  PetscCall(MatTransposeSetPrecursor(D, Dwork));
-  PetscCall(MatTranspose(Dwork, MAT_REUSE_MATRIX, &D));
-  PetscCall(MatScale(D, scale));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatProductSymbolic_ConstantDiagonal_Transpose(Mat D)
-{
-  PetscFunctionBegin;
-  D->ops->productnumeric = MatProductNumeric_ConstantDiagonal_Transpose;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatProductNumeric_ConstantDiagonal_Intermediate_Product(Mat D)
-{
-  Mat         A, B, C, Dwork;
-  PetscBool   Aiscdiag, Biscdiag, Ciscdiag;
-  PetscScalar scale;
-
-  PetscFunctionBegin;
-  MatCheckProduct(D, 1);
-  A     = D->product->A;
-  B     = D->product->B;
-  C     = D->product->C;
-  Dwork = D->product->Dwork;
-  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATCONSTANTDIAGONAL, &Aiscdiag));
-  PetscCall(PetscObjectTypeCompare((PetscObject)B, MATCONSTANTDIAGONAL, &Biscdiag));
-  PetscCall(PetscObjectTypeCompare((PetscObject)C, MATCONSTANTDIAGONAL, &Ciscdiag));
-  PetscCheck(Aiscdiag || Biscdiag || Ciscdiag, PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "This should not happen");
-  PetscCall(MatConstantDiagonalGetConstant(Aiscdiag ? A : Biscdiag ? B : C, &scale));
-  PetscCall(MatProductNumeric(Dwork));
-  PetscCall(MatCopy(Dwork, D, DIFFERENT_NONZERO_PATTERN));
-  PetscCall(MatScale(D, scale));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatProductSymbolic_ConstantDiagonal_Intermediate_Product(Mat D)
-{
-  Mat Dwork;
-
-  PetscFunctionBegin;
-  MatCheckProduct(D, 1);
-  Dwork = D->product->Dwork;
-  PetscCall(MatProductSymbolic(Dwork));
-  D->ops->productnumeric = MatProductNumeric_ConstantDiagonal_Intermediate_Product;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatProductSetFromOptions_ConstantDiagonal(Mat D)
-{
-  Mat            A, B, C;
-  PetscBool      Aiscdiag, Biscdiag, Ciscdiag;
-  MatProductType ptype;
-
-  PetscFunctionBegin;
-  MatCheckProduct(D, 1);
-  A = D->product->A;
-  B = D->product->B;
-  C = D->product->C;
-  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATCONSTANTDIAGONAL, &Aiscdiag));
-  PetscCall(PetscObjectTypeCompare((PetscObject)B, MATCONSTANTDIAGONAL, &Biscdiag));
-  PetscCall(PetscObjectTypeCompare((PetscObject)C, MATCONSTANTDIAGONAL, &Ciscdiag));
-  PetscCheck(Aiscdiag || Biscdiag || Ciscdiag, PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "This should not happen");
-  ptype                  = D->product->type;
-  D->ops->productnumeric = NULL;
-  if (Aiscdiag) {
-    switch (ptype) {
-    case MATPRODUCT_AB:
-    case MATPRODUCT_AtB:
-      PetscCall(MatDuplicate(B, MAT_SHARE_NONZERO_PATTERN, &D->product->Dwork));
-      D->ops->productsymbolic = MatProductSymbolic_ConstantDiagonal_Copy;
-      PetscCall(PetscObjectReference((PetscObject)B));
-      D->product->Dwork = B;
-      break;
-    case MATPRODUCT_ABt:
-      D->ops->productsymbolic = MatProductSymbolic_ConstantDiagonal_Transpose;
-      PetscCall(PetscObjectReference((PetscObject)B));
-      D->product->Dwork = B;
-      break;
-    case MATPRODUCT_PtAP:
-      D->ops->productsymbolic = MatProductSymbolic_ConstantDiagonal_Intermediate_Product;
-      PetscCall(MatProductCreate(B, B, NULL, &D->product->Dwork));
-      PetscCall(MatProductSetType(D->product->Dwork, MATPRODUCT_AtB));
-      PetscCall(MatProductSetFromOptions(D->product->Dwork));
-      break;
-    case MATPRODUCT_RARt:
-      D->ops->productsymbolic = MatProductSymbolic_ConstantDiagonal_Intermediate_Product;
-      PetscCall(MatProductCreate(B, B, NULL, &D->product->Dwork));
-      PetscCall(MatProductSetType(D->product->Dwork, MATPRODUCT_ABt));
-      break;
-    case MATPRODUCT_ABC:
-      D->ops->productsymbolic = MatProductSymbolic_ConstantDiagonal_Intermediate_Product;
-      PetscCall(MatProductCreate(B, C, NULL, &D->product->Dwork));
-      PetscCall(MatProductSetType(D->product->Dwork, MATPRODUCT_AB));
-      break;
-    default:
-      SETERRQ(PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "not implemented");
-    }
-  } else if (Biscdiag) {
-    switch (ptype) {
-    case MATPRODUCT_AB:
-    case MATPRODUCT_ABt:
-    case MATPRODUCT_PtAP:
-    case MATPRODUCT_RARt:
-      PetscCall(MatDuplicate(A, MAT_SHARE_NONZERO_PATTERN, &D->product->Dwork));
-      D->ops->productsymbolic = MatProductSymbolic_ConstantDiagonal_Copy;
-      PetscCall(PetscObjectReference((PetscObject)A));
-      D->product->Dwork = A;
-      break;
-    case MATPRODUCT_AtB:
-      D->ops->productsymbolic = MatProductSymbolic_ConstantDiagonal_Transpose;
-      PetscCall(PetscObjectReference((PetscObject)A));
-      D->product->Dwork = A;
-      break;
-    case MATPRODUCT_ABC:
-      D->ops->productsymbolic = MatProductSymbolic_ConstantDiagonal_Intermediate_Product;
-      PetscCall(MatProductCreate(A, C, NULL, &D->product->Dwork));
-      PetscCall(MatProductSetType(D->product->Dwork, MATPRODUCT_AB));
-      break;
-    default:
-      SETERRQ(PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "not implemented");
-    }
-  } else if (Ciscdiag) {
-    D->ops->productsymbolic = MatProductSymbolic_ConstantDiagonal_Intermediate_Product;
-    PetscCall(MatProductCreate(A, B, NULL, &D->product->Dwork));
-    PetscCall(MatProductSetType(D->product->Dwork, MATPRODUCT_AB));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*@
   MatCreateConstantDiagonal - Creates a matrix with a uniform value along the diagonal
 
@@ -594,7 +417,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_ConstantDiagonal(Mat A)
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATCONSTANTDIAGONAL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConstantDiagonalGetConstant_C", MatConstantDiagonalGetConstant_ConstantDiagonal));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_anytype_C", MatProductSetFromOptions_ConstantDiagonal));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

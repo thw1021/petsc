@@ -11,16 +11,17 @@ int main(int argc, char **argv)
    */
 
   MPI_Comm    comm;
-  Mat         A;       // data matrix
-  Mat         D;       // dicionary matrix
-  Mat         W;       // weight matrix
-  Vec         w;       // observation vector
-  Vec         b;       // observation vector
-  Vec         y;       // dictionary vector
-  Vec         x;       // solution vector
-  PetscInt    m = 100; // data size
-  PetscInt    n = 20;  // model size
-  PetscInt    k = 10;  // dicionary size
+  Mat         A;                // data matrix
+  Mat         D;                // dicionary matrix
+  Mat         W;                // weight matrix
+  Vec         w;                // observation vector
+  Vec         b;                // observation vector
+  Vec         y;                // dictionary vector
+  Vec         x;                // solution vector
+  PetscInt    m          = 100; // data size
+  PetscInt    n          = 20;  // model size
+  PetscInt    k          = 10;  // dicionary size
+  PetscBool   set_prefix = PETSC_TRUE;
   TaoTerm     data_term;
   TaoTerm     l2_reg_term;
   TaoTerm     l1_reg_term;
@@ -37,6 +38,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsBoundedInt("-m", "data size", "", m, &m, NULL, 0));
   PetscCall(PetscOptionsBoundedInt("-n", "model size", "", n, &n, NULL, 0));
   PetscCall(PetscOptionsBoundedInt("-k", "dictionary size", "", k, &k, NULL, 0));
+  PetscCall(PetscOptionsBool("-set_term_prefix", "Set prefix to subterms", NULL, set_prefix, &set_prefix, NULL));
   PetscOptionsEnd();
 
   PetscCall(TaoCreate(comm, &tao));
@@ -65,19 +67,19 @@ int main(int argc, char **argv)
 
   // the model term,  (1/2) || Ax - b ||_W^2
   PetscCall(TaoTermCreateQuadratic(W, &data_term));
-  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)data_term, "data_"));
+  if (set_prefix) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)data_term, "data_"));
   PetscCall(TaoSetTerm(tao, 1.0, data_term, b, A));
   PetscCall(TaoTermDestroy(&data_term));
 
   // the L2 term,  (1/2) lambda_2 || x ||_2^2
   PetscCall(TaoTermCreateHalfL2Squared(comm, PETSC_DECIDE, n, &l2_reg_term));
-  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l2_reg_term, "ridge_"));
+  if (set_prefix) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l2_reg_term, "ridge_"));
   PetscCall(TaoAddTerm(tao, "ridge_", lambda_2, l2_reg_term, NULL, NULL)); // Note: no parameter vector, no map matrix needed
   PetscCall(TaoTermDestroy(&l2_reg_term));
 
   // the L1 term,  lambda_1 || Dx - y ||_1
   PetscCall(TaoTermCreateL1(comm, PETSC_DECIDE, k, 0.0, &l1_reg_term));
-  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l1_reg_term, "lasso_"));
+  if (set_prefix) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l1_reg_term, "lasso_"));
   PetscCall(TaoAddTerm(tao, "lasso_", lambda_1, l1_reg_term, y, D));
   PetscCall(TaoTermDestroy(&l1_reg_term));
 
@@ -108,6 +110,16 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     args: -tao_monitor_short -tao_view -lasso_taoterm_l1_epsilon 0.1 -tao_type nls
+
+  test:
+    suffix: no_prefix
+    args: -tao_monitor_short -tao_view -taoterm_l1_epsilon 0.1 -tao_type nls -set_term_prefix 0
+
+  test:
+    suffix: mask_failure
+    args: -tao_monitor_short -tao_view -lasso_taoterm_l1_epsilon 0.1 -tao_type nls
+    args: -objective_taoterm_sum_ridge_mask objective -objective_taoterm_sum_lasso_mask gradient
+    args: -tao_view ::ascii_info_detail
 
   test:
     suffix: assembled

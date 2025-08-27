@@ -220,4 +220,8 @@ int main(int argc, char **argv)
          suffix: 3
          args: -reg 1 -lambda 1.e-8 -tao_admm_update_type basic -tao_max_it 20 -tao_monitor_constraint_norm -admm_sub_0_tao_monitor -admm_sub_1_tao_monitor -admm_sub_0_tao_nls_pc_type none
 
+      test:
+         suffix: debug_basic
+         args: -reg 1 -lambda 1.e-8 -tao_admm_update_type basic -tao_max_it 3 -tao_admm_debug
+
 TEST*/
