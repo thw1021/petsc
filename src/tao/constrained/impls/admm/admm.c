@@ -67,15 +67,6 @@ static PetscErrorCode TaoADMMComputeOuterSolution(Tao tao)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// TODO: remove
-PETSC_INTERN PetscErrorCode TaoADMMVecDuplicateAndCopy(Vec x, Vec *y)
-{
-  PetscFunctionBegin;
-  if (!*y) PetscCall(VecDuplicate(x, y));
-  PetscCall(VecCopy(x, *y));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode TaoADMMUpdateXSubproblem(Tao tao)
 {
   Tao_ADMM *am = (Tao_ADMM *)tao->data;
@@ -834,6 +825,7 @@ static PetscErrorCode TaoDestroy_ADMM(Tao tao)
   PetscCall(VecDestroy(&am->c));
   PetscCall(VecDestroy(&am->y));
 
+  PetscCall(PetscViewerDestroy(&am->debug_viewer));
   PetscCall(MatDestroy(&am->A));
   PetscCall(MatDestroy(&am->B));
   PetscCall(TaoDestroy(&am->x_subsolver));
@@ -950,6 +942,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_ADMM(Tao tao)
   am->z_inexact           = PETSC_TRUE;
   am->adaptivity_period   = 2;
   am->correlation_epsilon = 0.2;
+  am->debug_viewer        = NULL;
 
   PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &am->x_subsolver));
   PetscCall(TaoSetOptionsPrefix(am->x_subsolver, "admm_sub_0_"));

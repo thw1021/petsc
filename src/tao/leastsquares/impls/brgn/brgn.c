@@ -780,6 +780,12 @@ static PetscErrorCode TaoView_BRGN(Tao tao, PetscViewer viewer)
     switch (gn->reg_type) {
     case TAOBRGN_REGULARIZATION_L1DICT:
       PetscCall(PetscViewerASCIIPrintf(viewer, "L1 smooth epsilon: %g\n", (double)gn->epsilon));
+      if (gn->D) {
+        PetscCall(PetscViewerASCIIPushTab(viewer));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Dictionary Matrix:\n"));
+        PetscCall(MatView(gn->D, viewer));
+        PetscCall(PetscViewerASCIIPopTab(viewer));
+      }
       break;
     case TAOBRGN_REGULARIZATION_LM:
       PetscCall(PetscViewerASCIIPrintf(viewer, "Downhill trust region decrease factor:: %g\n", (double)gn->downhill_lambda_change));

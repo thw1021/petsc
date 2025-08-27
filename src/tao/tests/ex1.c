@@ -8,13 +8,17 @@ int main(int argc, char **argv)
   TaoTerm     original_sum;
   TaoTerm     sub_0, sub_1, sub_2;
   Mat         sub_1_map;
-  Mat         original_map;
   PetscInt    n = 10, m = 11, k = 12;
   MPI_Comm    comm;
+  PetscBool   orig_map_set = PETSC_TRUE;
   PetscViewer viewer;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
+
+  PetscOptionsBegin(comm, "", "TaoAddTerm Testing", "TAOTERM");
+  PetscCall(PetscOptionsBool("-set_orig_sum_mat", "Set Map to original TaoTermSum", "ex1.c", orig_map_set, &orig_map_set, NULL));
+  PetscOptionsEnd();
 
   PetscCall(PetscViewerCreate(comm, &viewer));
   PetscCall(PetscViewerSetType(viewer, PETSCVIEWERASCII));
@@ -40,10 +44,17 @@ int main(int argc, char **argv)
   PetscCall(MatDestroy(&sub_1_map));
   PetscCall(TaoTermDestroy(&sub_1));
 
-  PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, n, k, NULL, &original_map));
-  PetscCall(TaoSetTerm(tao, 1.5, original_sum, NULL, original_map));
-  PetscCall(MatDestroy(&original_map));
-  PetscCall(TaoTermDestroy(&original_sum));
+  if (orig_map_set) {
+    Mat original_map;
+
+    PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, n, k, NULL, &original_map));
+    PetscCall(TaoSetTerm(tao, 1.5, original_sum, NULL, original_map));
+    PetscCall(MatDestroy(&original_map));
+    PetscCall(TaoTermDestroy(&original_sum));
+  } else {
+    PetscCall(TaoSetTerm(tao, 1.5, original_sum, NULL, NULL));
+    PetscCall(TaoTermDestroy(&original_sum));
+  }
 
   PetscCall(TaoView(tao, viewer));
 
@@ -67,5 +78,10 @@ int main(int argc, char **argv)
 
   test:
     suffix: 0
+    args: -set_orig_sum_mat 1
+
+  test:
+    suffix: 1
+    args: -set_orig_sum_mat 0
 
 TEST*/
