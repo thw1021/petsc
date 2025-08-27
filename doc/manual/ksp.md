@@ -1114,7 +1114,7 @@ constructor (or the `-mat_type` from the command line). For instance,
   > - `-pc_gamg_aggressive_mis_k` \<k:int:2> k distance in MIS coarsening (>2 is 'aggressive') to use in coarsening.
   >   See `PCGAMGMISkSetAggressive()`. The larger value produces a preconditioner that is faster to create and solve with but the convergence may be slower.
   >   This option and the previous option work to determine how aggressively the grids are coarsened.
-  > - `-pc_gamg_mis_k_minimum_degree_ordering` \<bool:true> Use a minimum degree ordering in the greedy MIS algorithm used to coarsen.
+  > - `-pc_gamg_mis_k_minimum_degree_ordering` \<bool:false> Use a minimum degree ordering in the greedy MIS algorithm used to coarsen.
   >   See `PCGAMGMISkSetMinDegreeOrdering()`
 
 - Control the generation of the prolongation for `PCGAMGAGG`
