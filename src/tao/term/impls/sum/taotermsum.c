@@ -522,18 +522,7 @@ static PetscErrorCode TaoTermView_Sum(TaoTerm term, PetscViewer viewer)
       else if (map != NULL) {
         PetscCall(PetscViewerASCIIPrintf(viewer, "Map:\n"));
         PetscCall(PetscViewerASCIIPushTab(viewer));
-        {
-          PetscViewerFormat format;
-          PetscBool         pop = PETSC_FALSE;
-
-          PetscCall(PetscViewerGetFormat(viewer, &format));
-          if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
-            PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
-            pop = PETSC_TRUE;
-          }
-          PetscCall(MatView(map, viewer));
-          if (pop) PetscCall(PetscViewerPopFormat(viewer));
-        }
+        PetscCall(MatView(map, viewer));
         PetscCall(PetscViewerASCIIPopTab(viewer));
       }
       PetscCall(TaoTermSumGetSubtermMask(term, i, &mask));

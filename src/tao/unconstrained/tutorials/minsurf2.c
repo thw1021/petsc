@@ -917,6 +917,13 @@ PetscErrorCode My_Monitor(Tao tao, void *ctx)
       requires: !single
 
    test:
+      suffix: 2_fd_flag
+      nsize: 2
+      args: -tao_monitor_short -tao_type nls -tao_nls_ksp_max_it 15 -tao_gatol 1.e-4 -tao_fd_hessian
+      filter: grep -v "nls ksp"
+      requires: !single !__float128
+
+   test:
       suffix: 2_fd_coloring
       nsize: 2
       args: -tao_monitor_short -tao_type nls -tao_nls_ksp_max_it 15 -tao_gatol 1.e-4 -test_fd_coloring -test_fd_taoterm {{0 1}}

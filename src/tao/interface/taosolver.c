@@ -693,16 +693,7 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
       if (tao->objective_term.map) {
         PetscCall(PetscViewerASCIIPrintf(viewer, "Map:\n"));
         PetscCall(PetscViewerASCIIPushTab(viewer));
-        {
-          PetscBool pop = PETSC_FALSE;
-
-          if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
-            PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
-            pop = PETSC_TRUE;
-          }
-          PetscCall(MatView(tao->objective_term.map, viewer));
-          if (pop) PetscCall(PetscViewerPopFormat(viewer));
-        }
+        PetscCall(MatView(tao->objective_term.map, viewer));
         PetscCall(PetscViewerASCIIPopTab(viewer));
       } else if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
         PetscCall(PetscViewerASCIIPrintf(viewer, "Map: unmapped\n"));

@@ -144,10 +144,6 @@ static PetscErrorCode TaoTermView_Shell(TaoTerm term, PetscViewer viewer)
       any = PETSC_TRUE;
       PetscCall(PetscViewerASCIIPrintf(viewer, " hessian,"));
     }
-    if (term->ops->proximalmap) {
-      any = PETSC_TRUE;
-      PetscCall(PetscViewerASCIIPrintf(viewer, " proximalmap"));
-    }
     if (!any) PetscCall(PetscViewerASCIIPrintf(viewer, " (none)"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
@@ -167,7 +163,6 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
   term->ops->gradient             = NULL;
   term->ops->objectiveandgradient = NULL;
   term->ops->hessian              = NULL;
-  term->ops->proximalmap          = NULL;
   term->ops->view                 = TaoTermView_Shell;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetContextDestroy_C", NULL));

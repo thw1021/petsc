@@ -251,7 +251,6 @@ struct _TaoTermOps {
   TaoTermGradientFn             *gradient;
   TaoTermHessianFn              *hessian;
   TaoTermHessianMultFn          *hessianmult;
-  PetscErrorCode (*proximalmap)(TaoTerm, Vec, PetscReal, TaoTerm, Vec, PetscReal, Vec);
 
   PetscErrorCode (*isobjectivedefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*isgradientdefined)(TaoTerm, PetscBool *);
