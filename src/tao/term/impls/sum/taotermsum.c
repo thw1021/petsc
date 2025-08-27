@@ -31,7 +31,7 @@ PETSC_INTERN PetscErrorCode TaoTermSumVecNestGetSubVecsRead(Vec params, PetscInt
   *is_dummy = NULL;
   PetscCall(VecNestGetSubVecsRead(params, n, subparams));
   PetscCall(PetscObjectQuery((PetscObject)params, "__TaoTermSumParametersPack", (PetscObject *)&is_dummy_container));
-  if (is_dummy_container) { PetscCall(PetscContainerGetPointer(is_dummy_container, (void **)is_dummy)); }
+  if (is_dummy_container) PetscCall(PetscContainerGetPointer(is_dummy_container, (void **)is_dummy));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1269,7 +1269,7 @@ static PetscErrorCode TaoTermCreateVecs_Sum(TaoTerm term, Vec *solution_vec, Vec
       TaoTermParametersMode submode;
 
       PetscCall(TaoTermGetParametersMode(summand->term, &submode));
-      if (submode != TAOTERM_PARAMETERS_NONE) { PetscCall(TaoTermCreateVecs(summand->term, NULL, &vecs[i])); }
+      if (submode != TAOTERM_PARAMETERS_NONE) PetscCall(TaoTermCreateVecs(summand->term, NULL, &vecs[i]));
     }
     PetscCall(TaoTermSumParametersPack(term, vecs, parameters_vec));
     for (PetscInt i = 0; i < sum->n_terms; i++) PetscCall(VecDestroy(&vecs[i]));
