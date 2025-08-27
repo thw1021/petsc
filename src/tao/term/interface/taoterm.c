@@ -115,9 +115,9 @@ PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
     }
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL && term->ops->createhessianmatrices == TaoTermCreateHessianMatricesDefault) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian MatType (taoterm_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
-      if (!term->Hpre_is_H) { PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian preconditioning MatType (taoterm_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)")); }
+      if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian preconditioning MatType (taoterm_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
     }
-    if (term->ops->view) { PetscUseTypeMethod(term, view, viewer); }
+    if (term->ops->view) PetscUseTypeMethod(term, view, viewer);
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
