@@ -1886,7 +1886,7 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems PetscOptions
   Options Database Keys for Aggregation:
 + -pc_gamg_agg_nsmooths <nsmooth, default=1>                 - number of smoothing steps to use with smooth aggregation to construct prolongation
 . -pc_gamg_aggressive_coarsening <n,default=1>               - number of aggressive coarsening (MIS-2) levels from finest.
-. -pc_gamg_aggressive_square_graph <bool,default=true>       - Use square graph $ A^T A$ for aggressive coarsening. Otherwise, MIS-k (k=2) is used, see `PCGAMGMISkSetAggressive()`.
+. -pc_gamg_aggressive_square_graph <bool,default=true>       - Use square graph $ A^T A$ for coarsening. Otherwise, MIS-k (k=2) is used, see `PCGAMGMISkSetAggressive()`.
 . -pc_gamg_mis_k_minimum_degree_ordering <bool,default=false>- Use minimum degree ordering in greedy MIS algorithm
 . -pc_gamg_pc_gamg_asm_hem_aggs <n,default=0>                - Number of HEM aggregation steps for `PCASM` smoother
 - -pc_gamg_aggressive_mis_k <n,default=2>                    - Number (k) distance in MIS coarsening (>2 is 'aggressive')
