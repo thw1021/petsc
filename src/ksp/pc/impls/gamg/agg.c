@@ -115,7 +115,7 @@ PetscErrorCode PCGAMGMISkSetAggressive(PC pc, PetscInt n)
 }
 
 /*@
-  PCGAMGSetAggressiveSquareGraph - Use graph square, $A^T A$, for aggressive coarsening. Coarsens slower than the alternative (MIS-2), which is faster and uses less memory
+  PCGAMGSetAggressiveSquareGraph - Use graph square, $A^T A$, for aggressive coarsening. Coarsening is slower than the alternative (MIS-2), which is faster and uses less memory
 
   Logically Collective
 
