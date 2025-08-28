@@ -221,7 +221,7 @@ PetscErrorCode TaoTermSumParametersPack(TaoTerm term, Vec subparams[], Vec *para
 PetscErrorCode TaoTermSumParametersUnpack(TaoTerm term, Vec *params, Vec subparams[])
 {
   PetscInt       n_terms;
-  PetscInt      *is_dummy           = NULL;
+  PetscBool     *is_dummy           = NULL;
   PetscContainer is_dummy_container = NULL;
 
   PetscFunctionBegin;
@@ -274,7 +274,7 @@ PetscErrorCode TaoTermSumParametersUnpack(TaoTerm term, Vec *params, Vec subpara
 @*/
 PetscErrorCode VecNestGetTaoTermSumSubParameters(Vec params, PetscInt index, Vec *subparams)
 {
-  PetscInt      *is_dummy           = NULL;
+  PetscBool     *is_dummy           = NULL;
   PetscContainer is_dummy_container = NULL;
 
   PetscFunctionBegin;
