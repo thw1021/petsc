@@ -463,6 +463,9 @@ PetscErrorCode PCMGSetLevels_MG(PC pc, PetscInt levels, MPI_Comm *comms)
            you must pass `MPI_COMM_NULL`. Use comms = `NULL` to specify that all processes
            should participate in each level of problem.
 
+  Options Database Key:
+. -pc_mg_levels levels - set the number of levels to use
+
   Level: intermediate
 
   Notes:
@@ -872,6 +875,7 @@ PetscErrorCode PCSetUp_MG(PC pc)
   /* FIX: Move this to PCSetFromOptions_MG? */
   if (mg->usedmfornumberoflevels) {
     PetscInt levels;
+
     PetscCall(DMGetRefineLevel(pc->dm, &levels));
     levels++;
     if (levels > n) { /* the problem is now being solved on a finer grid */
@@ -1894,8 +1898,8 @@ PetscErrorCode PCMGGetCoarseSpaceConstructor(const char name[], PCMGCoarseSpaceC
 }
 
 /*MC
-   PCMG - Use multigrid preconditioning. This preconditioner requires you provide additional
-    information about the coarser grid matrices and restriction/interpolation operators.
+   PCMG - Use multigrid preconditioning. This preconditioner requires you provide additional information about the restriction/interpolation
+   operators using `PCMGSetInterpolation()` and/or `PCMGSetRestriction()`(and possibly the coarser grid matrices) or a `DM` that can provide such information.
 
    Options Database Keys:
 +  -pc_mg_levels <nlevels>                            - number of levels including finest
@@ -1903,7 +1907,7 @@ PetscErrorCode PCMGGetCoarseSpaceConstructor(const char name[], PCMGCoarseSpaceC
 .  -pc_mg_type <additive,multiplicative,full,kaskade> - multiplicative is the default
 .  -pc_mg_log                                         - log information about time spent on each level of the solver
 .  -pc_mg_distinct_smoothup                           - configure up (after interpolation) and down (before restriction) smoothers separately (with different options prefixes)
-.  -pc_mg_galerkin <both,pmat,mat,none>               - use Galerkin process to compute coarser operators, i.e. Acoarse = R A R'
+.  -pc_mg_galerkin <both,pmat,mat,none>               - use the Galerkin process to compute coarser operators, i.e. $ A_{coarse} = R A_{fine} R^T $
 .  -pc_mg_multiplicative_cycles                        - number of cycles to use as the preconditioner (defaults to 1)
 .  -pc_mg_dump_matlab                                  - dumps the matrices for each level and the restriction/interpolation matrices
                                                          to a `PETSCVIEWERSOCKET` for reading from MATLAB.
@@ -1913,6 +1917,15 @@ PetscErrorCode PCMGGetCoarseSpaceConstructor(const char name[], PCMGCoarseSpaceC
    Level: intermediate
 
    Notes:
+   `PCMG` provides a general framework for implementing multigrid methods. Use `PCGAMG` for PETSc's algebraic multigrid preconditioner, `PCHYPRE` for hypre's
+   BoomerAMG algebraic multigrid, and `PCML` for Trilinos's ML preconditioner. `PCAMGX` provides access to NVIDIA's AmgX algebraic multigrid.
+
+   If you use `KSPSetDM()` (or `SNESSetDM()` or `TSSetDM()`) with an appropriate `DM`, such as `DMDA` then `PCMG` will use the geometric information
+   from the `DM` to generate appropriate restriction and interpolation information and implement a geometric multigrid.
+
+   If you do not provide an appropriate `DM` and do not provide restriction or interpolation operators with `PCMGSetInterpolation()` and/or `PCMGSetRestriction()`
+   then `PCMG` will run multigrid with only a single level (so not really multigrid).
+
    The Krylov solver (if any) and preconditioner (smoother) and their parameters are controlled from the options database with the standard
    options database keywords prefixed with `-mg_levels_` to affect all the levels but the coarsest, which is controlled with `-mg_coarse_`,
    and the finest where `-mg_fine_` can override `-mg_levels_`.  One can set different preconditioners etc on specific levels with the prefix
