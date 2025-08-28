@@ -28,7 +28,7 @@ typedef struct {
 - n  - the number of smooths
 
   Options Database Key:
-. -pc_gamg_agg_nsmooths <nsmooth, default=1> - number of smoothing steps to use
+. -pc_gamg_agg_nsmooths <nsmooth, default=1>
 
   Level: intermediate
 
@@ -71,7 +71,7 @@ static PetscErrorCode PCGAMGSetNSmooths_AGG(PC pc, PetscInt n)
 - n  - 0, 1 or more
 
   Options Database Key:
-. -pc_gamg_aggressive_coarsening <n,default = 1> - Number of levels on which to aggressively coarsen
+. -pc_gamg_aggressive_coarsening <n,default = 1>
 
   Level: intermediate
 
@@ -99,7 +99,7 @@ PetscErrorCode PCGAMGSetAggressiveLevels(PC pc, PetscInt n)
 - n  - 1 or more (default = 2)
 
   Options Database Key:
-. -pc_gamg_aggressive_mis_k <n,default=2> - Number (k) distance in MIS coarsening (>2 is 'aggressive')
+. -pc_gamg_aggressive_mis_k <n,default=2>
 
   Level: intermediate
 
@@ -124,7 +124,7 @@ PetscErrorCode PCGAMGMISkSetAggressive(PC pc, PetscInt n)
 - b  - default true
 
   Options Database Key:
-. -pc_gamg_aggressive_square_graph <bool,default=true> - Use square graph, $ A^T A $ for aggressive coarsening
+. -pc_gamg_aggressive_square_graph <bool,default=true>
 
   Level: intermediate
 
@@ -155,7 +155,7 @@ PetscErrorCode PCGAMGSetAggressiveSquareGraph(PC pc, PetscBool b)
 - b  - default false
 
   Options Database Key:
-. -pc_gamg_mis_k_minimum_degree_ordering <bool,default=false> - Use minimum degree ordering in greedy MIS algorithm
+. -pc_gamg_mis_k_minimum_degree_ordering <bool,default=false>
 
   Level: intermediate
 
@@ -180,7 +180,7 @@ PetscErrorCode PCGAMGMISkSetMinDegreeOrdering(PC pc, PetscBool b)
 - b  - default false
 
   Options Database Key:
-. -pc_gamg_low_memory_threshold_filter <bool,default=false> - Use low memory graph/matrix filter
+. -pc_gamg_low_memory_threshold_filter <bool,default=false>
 
   Level: intermediate
 
@@ -206,7 +206,7 @@ PetscErrorCode PCGAMGSetLowMemoryFilter(PC pc, PetscBool b)
 - b  - default true
 
   Options Database Key:
-. -pc_gamg_graph_symmetrize <bool,default=true> - Symmetrize the graph (set to false if symmetric)
+. -pc_gamg_graph_symmetrize <bool,default=true>
 
   Level: intermediate
 
