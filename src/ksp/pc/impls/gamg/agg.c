@@ -25,10 +25,10 @@ typedef struct {
 
   Input Parameters:
 + pc - the preconditioner context
-- n  - the number of smooths - the flag
+- n  - the number of smooths
 
   Options Database Key:
-. -pc_gamg_agg_nsmooths <nsmooth, default=1>
+. -pc_gamg_agg_nsmooths <nsmooth, default=1> - the flag
 
   Level: intermediate
 
