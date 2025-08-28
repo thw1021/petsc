@@ -133,7 +133,7 @@ PetscErrorCode PCGAMGMISkSetAggressive(PC pc, PetscInt n)
 
   Squaring the matrix to perform the aggressive coarsening is slower and requires more memory than using MIS-k, but may result in a better preconditioner
   that converges faster.
-  
+
 .seealso: [the Users Manual section on PCGAMG](sec_amg), [the Users Manual section on PCMG](sec_mg), [](ch_ksp), `PCGAMG`, `PCGAMGSetThreshold()`, `PCGAMGSetAggressiveLevels()`, `PCGAMGMISkSetAggressive()`, `PCGAMGMISkSetMinDegreeOrdering()`, `PCGAMGSetLowMemoryFilter()`
 @*/
 PetscErrorCode PCGAMGSetAggressiveSquareGraph(PC pc, PetscBool b)
