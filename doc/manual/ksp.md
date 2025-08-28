@@ -1304,7 +1304,7 @@ operator, which can be set using `PCHYPRESetDiscreteCurl()`.
 **I am converging slowly, what do I do?** AMG methods are sensitive to
 coarsening rates and methods; for GAMG use `-pc_gamg_threshold <x>`
 or `PCGAMGSetThreshold()` to regulate coarsening rates; higher values decrease
-coarsening rate. A high threshold (e.g., $x=0.08$) will result in an
+the coarsening rate. A high threshold (e.g., $x=0.08$) will result in an
 expensive but potentially powerful preconditioner, and a low threshold
 (e.g., $x=0.0$) will result in faster coarsening, fewer levels,
 cheaper solves, and generally worse convergence rates.
@@ -1321,10 +1321,10 @@ to use MIS-k coarsening and `-pc_gamg_aggressive_mis_k k` to select
 the level of MIS other than the default $k=2$.
 The square graph approach seems to coarsen slower, which results in
 larger coarse grids and is more expensive, but generally improves
-convergence rate.
+the convergence rate.
 If the coarse grids are expensive to compute, and use a lot of memory,
 using MIS-2 is a good alternative (setting MIS-1 effectively turns
-aggressive coarsening off and MIS-3 is supported).
+aggressive coarsening off). Note that MIS-3 is also supported.
 
 One can run with `-info :pc` and grep for `PCGAMG` to get statistics on
 each level, which can be used to see if you are coarsening at an
