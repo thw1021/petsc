@@ -1,49 +1,49 @@
 Level 0 domain size (m)    8e+04 x    8e+04 x    1e+03, num elements 4 x 4 x 2 (32), size (m) 20000. x 20000. x 1000.
-        Linear solve converged due to CONVERGED_RTOL iterations 1
-        Linear solve converged due to CONVERGED_RTOL iterations 1
-        Linear solve converged due to CONVERGED_RTOL iterations 1
-        Linear solve converged due to CONVERGED_RTOL iterations 1
-        Linear solve converged due to CONVERGED_RTOL iterations 1
-        Linear solve converged due to CONVERGED_RTOL iterations 1
-        Linear solve converged due to CONVERGED_RTOL iterations 1
-        Linear solve converged due to CONVERGED_RTOL iterations 1
-        Linear solve converged due to CONVERGED_RTOL iterations 1
-      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+          Linear solve converged due to CONVERGED_RTOL iterations 1
+          Linear solve converged due to CONVERGED_RTOL iterations 1
+          Linear solve converged due to CONVERGED_RTOL iterations 1
+          Linear solve converged due to CONVERGED_RTOL iterations 1
+          Linear solve converged due to CONVERGED_RTOL iterations 1
+          Linear solve converged due to CONVERGED_RTOL iterations 1
+          Linear solve converged due to CONVERGED_RTOL iterations 1
+          Linear solve converged due to CONVERGED_RTOL iterations 1
+          Linear solve converged due to CONVERGED_RTOL iterations 1
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
 Level 1 domain size (m)    8e+04 x    8e+04 x    1e+03, num elements 8 x 8 x 2 (128), size (m) 10000. x 10000. x 1000.
 Level 0 domain size (m)    8e+04 x    8e+04 x    1e+03, num elements 4 x 4 x 2 (32), size (m) 20000. x 20000. x 1000.
-      Linear solve converged due to CONVERGED_RTOL iterations 4
-      Linear solve converged due to CONVERGED_RTOL iterations 5
-      Linear solve converged due to CONVERGED_RTOL iterations 5
-      Linear solve converged due to CONVERGED_RTOL iterations 6
-      Linear solve converged due to CONVERGED_RTOL iterations 6
-      Linear solve converged due to CONVERGED_RTOL iterations 5
-      Linear solve converged due to CONVERGED_RTOL iterations 6
-      Linear solve converged due to CONVERGED_RTOL iterations 7
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+        Linear solve converged due to CONVERGED_RTOL iterations 4
+        Linear solve converged due to CONVERGED_RTOL iterations 5
+        Linear solve converged due to CONVERGED_RTOL iterations 5
+        Linear solve converged due to CONVERGED_RTOL iterations 6
+        Linear solve converged due to CONVERGED_RTOL iterations 6
+        Linear solve converged due to CONVERGED_RTOL iterations 5
+        Linear solve converged due to CONVERGED_RTOL iterations 6
+        Linear solve converged due to CONVERGED_RTOL iterations 7
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
 Level 2 domain size (m)    8e+04 x    8e+04 x    1e+03, num elements 16 x 16 x 2 (512), size (m) 5000. x 5000. x 1000.
 Level 1 domain size (m)    8e+04 x    8e+04 x    1e+03, num elements 8 x 8 x 2 (128), size (m) 10000. x 10000. x 1000.
 Level 0 domain size (m)    8e+04 x    8e+04 x    1e+03, num elements 4 x 4 x 2 (32), size (m) 20000. x 20000. x 1000.
-    Linear solve converged due to CONVERGED_RTOL iterations 5
-    Linear solve converged due to CONVERGED_RTOL iterations 6
-    Linear solve converged due to CONVERGED_RTOL iterations 7
-    Linear solve converged due to CONVERGED_RTOL iterations 6
-    Linear solve converged due to CONVERGED_RTOL iterations 2
-    Linear solve converged due to CONVERGED_RTOL iterations 2
-    Linear solve converged due to CONVERGED_RTOL iterations 3
-    Linear solve converged due to CONVERGED_RTOL iterations 5
-    Linear solve converged due to CONVERGED_RTOL iterations 6
-    Linear solve converged due to CONVERGED_RTOL iterations 7
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 10
+      Linear solve converged due to CONVERGED_RTOL iterations 5
+      Linear solve converged due to CONVERGED_RTOL iterations 6
+      Linear solve converged due to CONVERGED_RTOL iterations 7
+      Linear solve converged due to CONVERGED_RTOL iterations 6
+      Linear solve converged due to CONVERGED_RTOL iterations 2
+      Linear solve converged due to CONVERGED_RTOL iterations 2
+      Linear solve converged due to CONVERGED_RTOL iterations 3
+      Linear solve converged due to CONVERGED_RTOL iterations 5
+      Linear solve converged due to CONVERGED_RTOL iterations 6
+      Linear solve converged due to CONVERGED_RTOL iterations 7
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 10
 Level 3 domain size (m)    8e+04 x    8e+04 x    1e+03, num elements 16 x 16 x 4 (1024), size (m) 5000. x 5000. x 333.333
 Level 2 domain size (m)    8e+04 x    8e+04 x    1e+03, num elements 16 x 16 x 2 (512), size (m) 5000. x 5000. x 1000.
 Level 1 domain size (m)    8e+04 x    8e+04 x    1e+03, num elements 8 x 8 x 2 (128), size (m) 10000. x 10000. x 1000.
 Level 0 domain size (m)    8e+04 x    8e+04 x    1e+03, num elements 4 x 4 x 2 (32), size (m) 20000. x 20000. x 1000.
-  Linear solve converged due to CONVERGED_RTOL iterations 2
-  Linear solve converged due to CONVERGED_RTOL iterations 2
-  Linear solve converged due to CONVERGED_RTOL iterations 4
-  Linear solve converged due to CONVERGED_RTOL iterations 7
-  Linear solve converged due to CONVERGED_RTOL iterations 7
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+    Linear solve converged due to CONVERGED_RTOL iterations 2
+    Linear solve converged due to CONVERGED_RTOL iterations 2
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+    Linear solve converged due to CONVERGED_RTOL iterations 7
+    Linear solve converged due to CONVERGED_RTOL iterations 7
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
 SNES Object: 6 MPI processes
   type: newtonls
   maximum iterations=50, maximum function evaluations=10000
@@ -65,7 +65,7 @@ SNES Object: 6 MPI processes
       restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
       happy breakdown tolerance 1e-30
     maximum iterations=10000, initial guess is zero
-    tolerances: relative=0.01, absolute=-1., divergence=10000.
+    tolerances: relative=0.01, absolute=0., divergence=10000.
     right preconditioning
     using UNPRECONDITIONED norm type for convergence test
   PC Object: 6 MPI processes
@@ -130,32 +130,32 @@ SNES Object: 6 MPI processes
           number of blocks = 6
           Local solver information for first block is in the following KSP and PC objects on rank 0:
           Use -mg_levels_1_ksp_view ::ascii_info_detail to display information for all blocks
-        KSP Object: (mg_levels_1_sub_) 1 MPI process
-          type: preonly
-          maximum iterations=10000, initial guess is zero
-          tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
-          left preconditioning
-          using NONE norm type for convergence test
-        PC Object: (mg_levels_1_sub_) 1 MPI process
-          type: cholesky
-            out-of-place factorization
-            tolerance for zero pivot 2.22045e-14
-            matrix ordering: natural
-            factor fill ratio given 5., needed 1.32237
-              Factored matrix follows:
-                Mat Object: (mg_levels_1_sub_) 1 MPI process
-                  type: seqsbaij
-                  rows=48, cols=48, bs=2
-                  package used to perform factorization: petsc
-                  total: nonzeros=804, allocated nonzeros=804
-                      block size is 2
-          linear system matrix = precond matrix:
-          Mat Object: (mg_levels_1_sub_) 1 MPI process
-            type: seqsbaij
-            rows=48, cols=48, bs=2
-            total: nonzeros=608, allocated nonzeros=608
-            total number of mallocs used during MatSetValues calls=0
-                block size is 2
+          KSP Object: (mg_levels_1_sub_) 1 MPI process
+            type: preonly
+            maximum iterations=10000, initial guess is zero
+            tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+            left preconditioning
+            using NONE norm type for convergence test
+          PC Object: (mg_levels_1_sub_) 1 MPI process
+            type: cholesky
+              out-of-place factorization
+              tolerance for zero pivot 2.22045e-14
+              matrix ordering: natural
+              factor fill ratio given 5., needed 1.32237
+                Factored matrix follows:
+                  Mat Object: (mg_levels_1_sub_) 1 MPI process
+                    type: seqsbaij
+                    rows=48, cols=48, bs=2
+                    package used to perform factorization: petsc
+                    total: nonzeros=804, allocated nonzeros=804
+                        block size is 2
+            linear system matrix = precond matrix:
+            Mat Object: (mg_levels_1_sub_) 1 MPI process
+              type: seqsbaij
+              rows=48, cols=48, bs=2
+              total: nonzeros=608, allocated nonzeros=608
+              total number of mallocs used during MatSetValues calls=0
+                  block size is 2
         linear system matrix = precond matrix:
         Mat Object: 6 MPI processes
           type: mpisbaij
@@ -177,34 +177,34 @@ SNES Object: 6 MPI processes
           number of blocks = 6
           Local solver information for first block is in the following KSP and PC objects on rank 0:
           Use -mg_levels_2_ksp_view ::ascii_info_detail to display information for all blocks
-        KSP Object: (mg_levels_2_sub_) 1 MPI process
-          type: preonly
-          maximum iterations=10000, initial guess is zero
-          tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
-          left preconditioning
-          using NONE norm type for convergence test
-        PC Object: (mg_levels_2_sub_) 1 MPI process
-          type: icc
-            out-of-place factorization
-            0 levels of fill
-            tolerance for zero pivot 2.22045e-14
-            using Manteuffel shift [POSITIVE_DEFINITE]
-            matrix ordering: natural
-            factor fill ratio given 1., needed 1.00133
-              Factored matrix follows:
-                Mat Object: (mg_levels_2_sub_) 1 MPI process
-                  type: seqsbaij
-                  rows=192, cols=192, bs=2
-                  package used to perform factorization: petsc
-                  total: nonzeros=3012, allocated nonzeros=3012
-                      block size is 2
-          linear system matrix = precond matrix:
-          Mat Object: (mg_levels_2_sub_) 1 MPI process
-            type: seqsbaij
-            rows=192, cols=192, bs=2
-            total: nonzeros=3008, allocated nonzeros=3008
-            total number of mallocs used during MatSetValues calls=0
-                block size is 2
+          KSP Object: (mg_levels_2_sub_) 1 MPI process
+            type: preonly
+            maximum iterations=10000, initial guess is zero
+            tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+            left preconditioning
+            using NONE norm type for convergence test
+          PC Object: (mg_levels_2_sub_) 1 MPI process
+            type: icc
+              out-of-place factorization
+              0 levels of fill
+              tolerance for zero pivot 2.22045e-14
+              using Manteuffel shift [POSITIVE_DEFINITE]
+              matrix ordering: natural
+              factor fill ratio given 1., needed 1.00133
+                Factored matrix follows:
+                  Mat Object: (mg_levels_2_sub_) 1 MPI process
+                    type: seqsbaij
+                    rows=192, cols=192, bs=2
+                    package used to perform factorization: petsc
+                    total: nonzeros=3012, allocated nonzeros=3012
+                        block size is 2
+            linear system matrix = precond matrix:
+            Mat Object: (mg_levels_2_sub_) 1 MPI process
+              type: seqsbaij
+              rows=192, cols=192, bs=2
+              total: nonzeros=3008, allocated nonzeros=3008
+              total number of mallocs used during MatSetValues calls=0
+                  block size is 2
         linear system matrix = precond matrix:
         Mat Object: 6 MPI processes
           type: mpisbaij
@@ -226,34 +226,34 @@ SNES Object: 6 MPI processes
           number of blocks = 6
           Local solver information for first block is in the following KSP and PC objects on rank 0:
           Use -mg_levels_3_ksp_view ::ascii_info_detail to display information for all blocks
-        KSP Object: (mg_levels_3_sub_) 1 MPI process
-          type: preonly
-          maximum iterations=10000, initial guess is zero
-          tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
-          left preconditioning
-          using NONE norm type for convergence test
-        PC Object: (mg_levels_3_sub_) 1 MPI process
-          type: icc
-            out-of-place factorization
-            0 levels of fill
-            tolerance for zero pivot 2.22045e-14
-            using Manteuffel shift [POSITIVE_DEFINITE]
-            matrix ordering: natural
-            factor fill ratio given 1., needed 1.00054
-              Factored matrix follows:
-                Mat Object: (mg_levels_3_sub_) 1 MPI process
-                  type: seqsbaij
-                  rows=384, cols=384, bs=2
-                  package used to perform factorization: petsc
-                  total: nonzeros=7428, allocated nonzeros=7428
-                      block size is 2
-          linear system matrix = precond matrix:
-          Mat Object: (mg_levels_3_sub_) 1 MPI process
-            type: seqsbaij
-            rows=384, cols=384, bs=2
-            total: nonzeros=7424, allocated nonzeros=7424
-            total number of mallocs used during MatSetValues calls=0
-                block size is 2
+          KSP Object: (mg_levels_3_sub_) 1 MPI process
+            type: preonly
+            maximum iterations=10000, initial guess is zero
+            tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+            left preconditioning
+            using NONE norm type for convergence test
+          PC Object: (mg_levels_3_sub_) 1 MPI process
+            type: icc
+              out-of-place factorization
+              0 levels of fill
+              tolerance for zero pivot 2.22045e-14
+              using Manteuffel shift [POSITIVE_DEFINITE]
+              matrix ordering: natural
+              factor fill ratio given 1., needed 1.00054
+                Factored matrix follows:
+                  Mat Object: (mg_levels_3_sub_) 1 MPI process
+                    type: seqsbaij
+                    rows=384, cols=384, bs=2
+                    package used to perform factorization: petsc
+                    total: nonzeros=7428, allocated nonzeros=7428
+                        block size is 2
+            linear system matrix = precond matrix:
+            Mat Object: (mg_levels_3_sub_) 1 MPI process
+              type: seqsbaij
+              rows=384, cols=384, bs=2
+              total: nonzeros=7424, allocated nonzeros=7424
+              total number of mallocs used during MatSetValues calls=0
+                  block size is 2
         linear system matrix = precond matrix:
         Mat Object: 6 MPI processes
           type: mpisbaij
