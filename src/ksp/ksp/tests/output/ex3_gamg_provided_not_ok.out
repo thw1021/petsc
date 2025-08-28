@@ -8,6 +8,7 @@ KSP Object: 1 MPI process
   using PRECONDITIONED norm type for convergence test
 PC Object: 1 MPI process
   type: gamg
+    WARNING: Multigrid is being run with only a single level!
     type is MULTIPLICATIVE, levels=2 cycles=v
       Cycles per PCApply=1
       Using externally compute Galerkin coarse grid matrices
