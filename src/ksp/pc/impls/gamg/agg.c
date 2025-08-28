@@ -25,7 +25,7 @@ typedef struct {
 
   Input Parameters:
 + pc - the preconditioner context
-- n  - the number of smooths
+- n  - the number of smooths - the flag
 
   Options Database Key:
 . -pc_gamg_agg_nsmooths <nsmooth, default=1>
@@ -71,7 +71,7 @@ static PetscErrorCode PCGAMGSetNSmooths_AGG(PC pc, PetscInt n)
 - n  - 0, 1 or more
 
   Options Database Key:
-. -pc_gamg_aggressive_coarsening <n,default = 1>
+. -pc_gamg_aggressive_coarsening <n,default = 1> - the flag
 
   Level: intermediate
 
@@ -99,7 +99,7 @@ PetscErrorCode PCGAMGSetAggressiveLevels(PC pc, PetscInt n)
 - n  - 1 or more (default = 2)
 
   Options Database Key:
-. -pc_gamg_aggressive_mis_k <n,default=2>
+. -pc_gamg_aggressive_mis_k <n,default=2> - the flag
 
   Level: intermediate
 
@@ -124,7 +124,7 @@ PetscErrorCode PCGAMGMISkSetAggressive(PC pc, PetscInt n)
 - b  - default true
 
   Options Database Key:
-. -pc_gamg_aggressive_square_graph <bool,default=true>
+. -pc_gamg_aggressive_square_graph <bool,default=true> - the flag
 
   Level: intermediate
 
@@ -155,7 +155,7 @@ PetscErrorCode PCGAMGSetAggressiveSquareGraph(PC pc, PetscBool b)
 - b  - default false
 
   Options Database Key:
-. -pc_gamg_mis_k_minimum_degree_ordering <bool,default=false>
+. -pc_gamg_mis_k_minimum_degree_ordering <bool,default=false> - the flag
 
   Level: intermediate
 
@@ -180,7 +180,7 @@ PetscErrorCode PCGAMGMISkSetMinDegreeOrdering(PC pc, PetscBool b)
 - b  - default false
 
   Options Database Key:
-. -pc_gamg_low_memory_threshold_filter <bool,default=false>
+. -pc_gamg_low_memory_threshold_filter <bool,default=false> - the flag
 
   Level: intermediate
 
@@ -206,7 +206,7 @@ PetscErrorCode PCGAMGSetLowMemoryFilter(PC pc, PetscBool b)
 - b  - default true
 
   Options Database Key:
-. -pc_gamg_graph_symmetrize <bool,default=true>
+. -pc_gamg_graph_symmetrize <bool,default=true> - the flag
 
   Level: intermediate
 
