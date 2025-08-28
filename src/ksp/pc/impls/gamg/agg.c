@@ -197,7 +197,7 @@ PetscErrorCode PCGAMGSetLowMemoryFilter(PC pc, PetscBool b)
 }
 
 /*@
-  PCGAMGSetGraphSymmetrize - Set flag to symmetrize the graph of the matrix that will be used for coarsening. Defaults to true, if the matrix has a symmetric attribute, then no computations are needed or done to symmetrize the matrix, since the graph is already known to be symmetric
+  PCGAMGSetGraphSymmetrize - Symmetrize graph used for coarsening. Defaults to true, but if matrix has symmetric attribute, then not needed since the graph is already known to be symmetric
 
   Logically Collective
 
