@@ -559,7 +559,7 @@ PETSC_INTERN PetscErrorCode TaoADMMConfigureSubTao_Default(Tao tao, Tao subtao)
 static PetscErrorCode MatCreateSubMatrixColumnScatter(Mat J, Mat matscatter, Mat *J_sub)
 {
   PetscSF            sf;
-  PetscInt           m, rstart, n_roots, n_leaves;
+  PetscInt           i, m, rstart, n_roots, n_leaves;
   const PetscInt    *leaves;
   const PetscSFNode *remotes;
   PetscInt          *sorted_perm;
@@ -575,9 +575,8 @@ static PetscErrorCode MatCreateSubMatrixColumnScatter(Mat J, Mat matscatter, Mat
 
   PetscCall(PetscMalloc1(n_leaves, &sorted_perm));
   PetscCall(PetscMalloc1(n_leaves, &is_indices));
-  if (leaves == NULL) {
-    for (PetscInt i = 0; i < n_leaves; i++) sorted_perm[i] = i;
-  } else {
+  for (i = 0; i < n_leaves; i++) sorted_perm[i] = i;
+  if (leaves != NULL) {
     PetscCall(PetscSortIntWithPermutation(n_leaves, leaves, sorted_perm));
   }
   PetscCall(MatGetLayouts(J, NULL, &col_map));
