@@ -91,7 +91,6 @@ typedef struct {
   PetscViewerFormat debug_viewer_format;
 } Tao_ADMM;
 
-PETSC_INTERN PetscErrorCode TaoADMMVecDuplicateAndCopy(Vec, Vec *);
 PETSC_INTERN PetscErrorCode TaoADMMSetUp_Basic(Tao);
 PETSC_INTERN PetscErrorCode TaoADMMSetUp_ARADMM(Tao);
 PETSC_INTERN PetscErrorCode TaoADMMSetUp_Linearized(Tao);
