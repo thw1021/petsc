@@ -5,6 +5,34 @@ from petsc4py import PETSc
 import unittest
 import numpy
 
+# --------------------------------------------------------------------
+
+# Testing BRGN via TaoTerm
+#Solving 0.5*|Ax-b|_2^2 + 0.5|x|_2^2
+# A = [0.3, 0.7; 0.2, 1.0, 1.5, 2.5];
+# b = [0.3; 0.5; 0.1];
+class Residual:
+    def __call__(self, tao, x, r):
+        r[0] = 0.3*x[0] + 0.7*x[1] - 0.3
+        r[1] = 0.2*x[0] + 1.0*x[1] - 0.5
+        r[2] = 1.5*x[0] + 2.5*x[1] - 0.1
+        r.assemble()
+
+class Jacobian:
+    def __call__(self, tao, x, J, P):
+        return
+
+class Obj2:
+    def __call__(self, tao, x):
+        return (0.5* x.dot(x))
+
+class Grad2:
+    def __call__(self, tao, x, g):
+        x.copy(g)
+
+class Hess2:
+    def __call__(self, tao, x, H, Hpre):
+        return
 
 # --------------------------------------------------------------------
 class Objective:
@@ -278,6 +306,76 @@ class BaseTestTAO:
     def testBQNLS_diagonal(self):
         self.templateBQNLS('diagonal')
 
+    def templateBRGN(self, reg_setup):
+        if self.tao.getComm().Get_size() > 1:
+            return
+        tao = self.tao
+
+        A = PETSc.Mat().create(tao.getComm())
+        A.setFromOptions()
+        A.setSizes([3,2])
+        A[0,0] = 0.3
+        A[0,1] = 0.7
+        A[1,0] = 0.2
+        A[1,1] = 1.0
+        A[2,0] = 1.5
+        A[2,1] = 2.5
+        A.assemble()
+
+        H = PETSc.Mat().create(tao.getComm())
+        H.setFromOptions()
+        H.setSizes([2,2])
+        H.zeroEntries()
+        H.assemble()
+        H.shift(1.)
+
+        x = PETSc.Vec().create(tao.getComm())
+        x.setType('standard')
+        x.setSizes(2)
+        x.set(0.)
+
+        res = PETSc.Vec().create(tao.getComm())
+        res.setType('standard')
+        res.setSizes(3)
+        res.set(0.)
+        xlb = x.duplicate()
+        xub = x.duplicate()
+        xlb.set(0.0)
+        xub.set(float('inf'))
+
+        tao.setResidual(Residual(), res)
+        tao.setJacobianResidual(Jacobian(), A)
+        tao.setSolution(x)
+        tao.setType(PETSc.TAO.Type.BRGN)
+        tao.setTolerances(gatol=1.0e-4)
+        tao.setVariableBounds((xlb,xub))
+
+        if reg_setup == 'l2create':
+            reg = PETSc.TAOTerm().create(tao.getComm())
+            reg.setType(PETSc.TAOTerm.Type.HALFL2SQUARED)
+            reg.setSolutionTemplate(x)
+            reg.setUp()
+        elif reg_setup == 'taogetterm':
+            reg_tao = PETSc.TAO().create(tao.getComm())
+            reg_tao.setObjective(Obj2())
+            reg_tao.setGradient(Grad2(), None)
+            reg_tao.setHessian(Hess2(), H)
+            reg_tao.setSolution(x)
+            reg_tao.setTolerances(gatol=1.0e-4)
+            [scale, reg, _, _] = reg_tao.getTerm()
+
+        tao.setBRGNRegularizerTerm(1.0, reg, None, None)
+        tao.setFromOptions()
+        tao.solve()
+
+        self.assertEqual(x[0], 0.)
+        self.assertAlmostEqual(x[1], 0.10984, places=4)
+
+    def testBRGN_taogetterm(self):
+        self.templateBRGN('taogetterm')
+
+    def testBRGN_l2create(self):
+        self.templateBRGN('l2create')
 
 # --------------------------------------------------------------------
 
