@@ -193,6 +193,10 @@ cdef extern from * nogil:
     PetscErrorCode TaoGetJacobianInequalityRoutine(PetscTAO, PetscMat*, PetscMat*, PetscTaoJacobianInequality**, void**)
     PetscErrorCode TaoSetUpdate(PetscTAO, PetscTaoUpdateFunction*, void*)
 
+    PetscErrorCode TaoSetTerm(PetscTAO, PetscReal, PetscTAOTerm, PetscVec, PetscMat)
+    PetscErrorCode TaoAddTerm(PetscTAO, const char*, PetscReal, PetscTAOTerm, PetscVec, PetscMat)
+    PetscErrorCode TaoGetTerm(PetscTAO, PetscReal*, PetscTAOTerm*, PetscVec*, PetscMat*)
+
     PetscErrorCode TaoSetInitialTrustRegionRadius(PetscTAO, PetscReal)
 
     PetscErrorCode TaoGetKSP(PetscTAO, PetscKSP*)
@@ -208,6 +212,7 @@ cdef extern from * nogil:
     PetscErrorCode TaoBRGNSetL1SmoothEpsilon(PetscTAO, PetscReal)
     PetscErrorCode TaoBRGNSetDictionaryMatrix(PetscTAO, PetscMat)
     PetscErrorCode TaoBRGNGetDampingVector(PetscTAO, PetscVec*)
+    PetscErrorCode TaoBRGNSetRegularizerTerm(PetscTAO, PetscReal, PetscTAOTerm, PetscVec, PetscMat)
 
     PetscErrorCode TaoPythonSetType(PetscTAO, char[])
     PetscErrorCode TaoPythonGetType(PetscTAO, char*[])
@@ -257,6 +262,23 @@ cdef extern from * nogil:
     PetscErrorCode TaoLineSearchSetGradientRoutine(PetscTAOLineSearch, PetscTaoLineSearchGradient, void*)
     PetscErrorCode TaoLineSearchSetObjectiveAndGradientRoutine(PetscTAOLineSearch, PetscTaoLineSearchObjGrad, void*)
     PetscErrorCode TaoLineSearchApply(PetscTAOLineSearch, PetscVec, PetscReal*, PetscVec, PetscVec, PetscReal*, PetscTAOLineSearchConvergedReason*)
+
+    ctypedef const char* PetscTAOTermType "TaoTermType"
+    PetscTAOTermType TAOTERMTAOCALLBACKS
+    PetscTAOTermType TAOTERMSHELL
+    PetscTAOTermType TAOTERMSUM
+    PetscTAOTermType TAOTERMHALFL2SQUARED
+    PetscTAOTermType TAOTERML1
+    PetscTAOTermType TAOTERMQUADRATIC
+
+    PetscErrorCode TaoTermView(PetscTAOTerm, PetscViewer)
+    PetscErrorCode TaoTermDestroy(PetscTAOTerm*)
+    PetscErrorCode TaoTermCreate(MPI_Comm, PetscTAOTerm*)
+    PetscErrorCode TaoTermSetType(PetscTAOTerm, PetscTAOTermType)
+    PetscErrorCode TaoTermGetType(PetscTAOTerm, PetscTAOTermType*)
+    PetscErrorCode TaoTermSetFromOptions(PetscTAOTerm)
+    PetscErrorCode TaoTermSetUp(PetscTAOTerm)
+    PetscErrorCode TaoTermSetSolutionTemplate(PetscTAOTerm, PetscVec)
 
 # --------------------------------------------------------------------
 
@@ -583,3 +605,11 @@ cdef PetscErrorCode TAOLS_ObjGrad(PetscTAOLineSearch _ls,
     retv = objgrad(ls, x, g, *args, **kargs)
     _f[0] = asReal(retv)
     return PETSC_SUCCESS
+
+# --------------------------------------------------------------------
+
+cdef inline TAOTerm ref_TAOTerm(PetscTAOTerm taoterm):
+    cdef TAOTerm ob = <TAOTerm> TAOTerm()
+    ob.taoterm = taoterm
+    CHKERR(PetscINCREF(ob.obj))
+    return ob
