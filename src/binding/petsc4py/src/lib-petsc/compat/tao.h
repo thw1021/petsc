@@ -14,6 +14,7 @@ PetscErrorCode TaoLMVMSetH0(PETSC_UNUSED Tao tao,PETSC_UNUSED Mat mat) {PetscTao
 PetscErrorCode TaoLMVMGetH0(PETSC_UNUSED Tao tao,PETSC_UNUSED Mat *mat) {PetscTaoError;}
 PetscErrorCode TaoLMVMGetH0KSP(PETSC_UNUSED Tao tao,PETSC_UNUSED KSP *ksp) {PetscTaoError;}
 
+PetscErrorCode TaoBRGNSetRegularizerTerm(PETSC_UNUSED Tao tao,PETSC_UNUSED PetscReal scale,PETSC_UNUSED TaoTerm term,PETSC_UNUSED Vec vec,PETSC_UNUSED Mat mat) {PetscTaoError;}
 PetscErrorCode TaoBRGNGetSubsolver(PETSC_UNUSED Tao tao,PETSC_UNUSED Tao *subsolver) {PetscTaoError;}
 PetscErrorCode TaoBRGNSetRegularizerWeight(PETSC_UNUSED Tao tao,PETSC_UNUSED PetscReal weight) {PetscTaoError;}
 PetscErrorCode TaoBRGNSetL1SmoothEpsilon(PETSC_UNUSED Tao tao,PETSC_UNUSED PetscReal epsilon) {PetscTaoError;}

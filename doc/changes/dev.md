@@ -89,6 +89,7 @@
 - Add `TaoGetTerm()`, `TaoSetTerm()`, and `TaoAddTerm()` for manipulating the objective, gradient, and Hessian evaluation of a `Tao` using `TaoTerm`
 - Add `TaoBRGNGetRegularizationType()`, `TaoBRGNSetReguarizationType()`, `TaoBRGNGetRegularizerTerm()` and `TaoBRGNSetRegularizerTerm()` for finer control of `TAOBRGN`
 - Remove `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` and `TaoBRGNSetRegularizerHessianRoutine()`, use `TaoBRGNSetRegulizerTerm()` instead
+- Remove `setBRGNRegularizerObjectiveGradient()`, and `setBRGNRegularizerHessian()` Python routines. Use `setBRGNRegularizerTerm()` instead
 - Remove many ADMM related operations as it has been reimplemented using `TaoTerm`: `TaoADMMRegularizerType` enum (including `TAO_ADMM_REGULARIZER_USER`, `TAO_ADMM_REGULARIZER_SOFT_THRESH` values), `TaoGetADMMParentTao()`, `TaoADMMSetConstraintVectorRHS()`, `TaoADMMSetRegularizerCoefficient()`, `TaoADMMGetRegularizerCoefficient()`, `TaoADMMSetMisfitConstraintJacobian()`, `TaoADMMSetRegularizerConstraintJacobian()`, `TaoADMMSetRegularizerHessianRoutine()`, `TaoADMMSetRegularizerObectiveAndGradientRoutine()`, `TaoADMMSetMisfitHessianRoutine()`, `TaoADMMSetMisfitObjectiveAndGradientRoutine()`, `TaoADMMSetMisfitHessianChangeStatus()`, `TaoADMMSetRegHessianChangeStatus()`, `TaoADMMSetRegularizerType()`, `TaoADMMGetRegularizerType()`
 - Add `TaoADMMSetTermGroups()` and `TaoADMMGetTermGroups()`
 
@@ -102,6 +103,7 @@
 - Add `TAOTERMHALFL2SQUARED` implementation of `TaoTerm` for a typical squared-norm penalty function
 - Add `TAOTERML1` implementation of `TaoTerm` for a typical 1-norm penalty function
 - Add `TAOTERMQUADRATIC` implementation of `TaoTerm` for a quadratic penalty function
+- Add Python routines for `TaoTerm`
 
 ```{rubric} PetscRegressor:
 ```
