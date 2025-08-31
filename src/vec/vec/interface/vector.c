@@ -1760,7 +1760,6 @@ PetscErrorCode VecCopyAsync_Private(Vec x, Vec y, PetscDeviceContext dctx)
   VecMethodDispatch(x, dctx, VecAsyncFnName(Copy), copy, (Vec, Vec, PetscDeviceContext), y);
 #endif
 
-  PetscCall(PetscObjectStateIncrease((PetscObject)y));
 #if !defined(PETSC_USE_MIXED_PRECISION)
   for (PetscInt i = 0; i < 4; i++) {
     if (flgs[i]) PetscCall(PetscObjectComposedDataSetReal((PetscObject)y, NormIds[i], norms[i]));
