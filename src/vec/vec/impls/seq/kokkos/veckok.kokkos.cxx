@@ -684,6 +684,7 @@ PetscErrorCode VecCopy_SeqKokkos(Vec xin, Vec yin)
        */
       ykok->v_dual.clear_sync_state();
       PetscCallCXX(Kokkos::deep_copy(exec, ykok->v_dual, xkok->v_dual)); // either cpu2cpu or gpu2cpu, so don't log it
+      PetscCall(PetscObjectStateIncrease((PetscObject)yin));
     } else {
       PetscScalar *yarray;
       PetscCall(VecGetArrayWrite(yin, &yarray));
