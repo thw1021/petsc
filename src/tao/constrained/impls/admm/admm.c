@@ -576,9 +576,7 @@ static PetscErrorCode MatCreateSubMatrixColumnScatter(Mat J, Mat matscatter, Mat
   PetscCall(PetscMalloc1(n_leaves, &sorted_perm));
   PetscCall(PetscMalloc1(n_leaves, &is_indices));
   for (i = 0; i < n_leaves; i++) sorted_perm[i] = i;
-  if (leaves != NULL) {
-    PetscCall(PetscSortIntWithPermutation(n_leaves, leaves, sorted_perm));
-  }
+  if (leaves != NULL) { PetscCall(PetscSortIntWithPermutation(n_leaves, leaves, sorted_perm)); }
   PetscCall(MatGetLayouts(J, NULL, &col_map));
   PetscCall(PetscLayoutGetRanges(col_map, &ranges));
   for (PetscInt i = 0; i < n_leaves; i++) {
@@ -662,6 +660,11 @@ static PetscErrorCode TaoSetUp_ADMM(Tao tao)
     if (g_map) PetscCall(PetscObjectTypeCompare((PetscObject)g_map, MATSCATTER, &g_map_is_scatter));
     PetscCheck(f_map_is_scatter && g_map_is_scatter, comm, PETSC_ERR_ARG_INCOMP, "ADMM can only be used with equality constraints if the maps are scatters");
     am->initialize_type = ADMM_INITIALIZE_SCATTER;
+
+    PetscCall(MatScatterGetVecScatter(f_map, &am->x_scatter));
+    PetscCall(MatScatterGetVecScatter(g_map, &am->z_scatter));
+
+    if (!tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
 
     PetscCall(VecDuplicate(tao->constraints_equality, &am->c));
     PetscCall(VecDuplicate(tao->solution, &zero_solution));

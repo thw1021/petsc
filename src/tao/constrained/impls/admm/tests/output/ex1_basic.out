@@ -61,7 +61,7 @@ TestADMMUnconstrained, test 0:
             rows=13, cols=13
         total KSP iterations: 5
         convergence tolerances: gatol=1e-08,         grtol=1e-08,         steptol=0.,         gttol=0.
-        Residual in Function/Gradient:=1.29071e-16
+        Residual in Function/Gradient:=2.32427e-16
         Objective value=0.0478108
         total number of iterations=1,                                (max: 50)
         total number of function evaluations=5,                        (max: unlimited)
@@ -124,7 +124,7 @@ TestADMMUnconstrained, test 0:
             rows=13, cols=13
         total KSP iterations: 8
         convergence tolerances: gatol=1e-08,         grtol=1e-08,         steptol=0.,         gttol=0.
-        Residual in Function/Gradient:=3.77277e-13
+        Residual in Function/Gradient:=3.7732e-13
         Objective value=0.0807903
         total number of iterations=1,                                (max: 50)
         total number of function evaluations=5,                        (max: unlimited)
@@ -227,7 +227,7 @@ TestADMMUnconstrained, test 1:
             rows=13, cols=13
         total KSP iterations: 5
         convergence tolerances: gatol=1e-08,         grtol=1e-08,         steptol=0.,         gttol=0.
-        Residual in Function/Gradient:=1.65845e-16
+        Residual in Function/Gradient:=4.504e-16
         Objective value=0.188748
         total number of iterations=1,                                (max: 50)
         total number of function evaluations=5,                        (max: unlimited)
@@ -290,7 +290,7 @@ TestADMMUnconstrained, test 1:
             rows=13, cols=13
         total KSP iterations: 8
         convergence tolerances: gatol=1e-08,         grtol=1e-08,         steptol=0.,         gttol=0.
-        Residual in Function/Gradient:=2.73744e-13
+        Residual in Function/Gradient:=2.73706e-13
         Objective value=0.220869
         total number of iterations=1,                                (max: 50)
         total number of function evaluations=5,                        (max: unlimited)
@@ -456,7 +456,7 @@ TestADMMUnconstrained, test 2:
             rows=13, cols=13
         total KSP iterations: 13
         convergence tolerances: gatol=1e-08,         grtol=1e-08,         steptol=0.,         gttol=0.
-        Residual in Function/Gradient:=7.39968e-12
+        Residual in Function/Gradient:=7.39959e-12
         Objective value=0.147043
         total number of iterations=1,                                (max: 50)
         total number of function evaluations=5,                        (max: unlimited)
@@ -565,7 +565,7 @@ TestADMMUnconstrained, test 3:
             rows=13, cols=13
         total KSP iterations: 13
         convergence tolerances: gatol=1e-08,         grtol=1e-08,         steptol=0.,         gttol=0.
-        Residual in Function/Gradient:=8.98378e-13
+        Residual in Function/Gradient:=8.98314e-13
         Objective value=0.0495395
         total number of iterations=1,                                (max: 50)
         total number of function evaluations=5,                        (max: unlimited)
@@ -622,7 +622,7 @@ TestADMMUnconstrained, test 3:
             rows=17, cols=17
         total KSP iterations: 0
         convergence tolerances: gatol=1e-08,         grtol=1e-08,         steptol=0.,         gttol=0.
-        Residual in Function/Gradient:=9.42193e-09
+        Residual in Function/Gradient:=9.42194e-09
         Objective value=0.0729343
         total number of iterations=0,                                (max: 50)
         total number of function/gradient evaluations=1,            (max: unlimited)
@@ -658,5 +658,167 @@ TestADMMUnconstrained, test 3:
     Residual in Function/Gradient:=2.48855e-08
     Objective value=0.0807971
     total number of iterations=38,                            (max: 10000)
+    total number of function evaluations=1,                    (max: unlimited)
+    Solution converged:      ||g(X)|| <= gatol
+TestADMMConstrained:
+  TAO solve converged due to CONVERGED_GATOL iterations 101
+  Tao Object: 1 MPI process
+    type: admm
+    ADMM type: min_{x,z} [f(x; u)] + [0.4 g(z)]
+               such that A x + B z = c
+    x subsolver:
+      Tao Object: (admm_sub_0_) 1 MPI process
+        type: nls
+          Newton steps: 1
+          BFGS steps: 0
+          Gradient steps: 0
+          nls ksp atol: 0
+          nls ksp rtol: 1
+          nls ksp ctol: 0
+          nls ksp negc: 0
+          nls ksp dtol: 0
+          nls ksp iter: 0
+          nls ksp othr: 0
+        Objective function:
+          TaoTerm Object: (admm_sub_0_) 1 MPI process
+            type: sum
+            solution vector space: N = 11
+            parameter vector space: K = 28
+            Sum of 2 terms: f(x; p_0) + f_{admm_sub_0_metric_}(E x; p_1)
+            f:
+              TaoTerm Object: f (f_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 11
+                parameter vector space: K = 11
+            f_{admm_sub_0_metric_}:
+              TaoTerm Object: (admm_sub_0_metric_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 17
+                parameter vector space: K = 17
+            E:
+              Mat Object: E (E_) 1 MPI process
+                type: seqdense
+                rows=17, cols=11
+                total: nonzeros=187, allocated nonzeros=187
+                total number of mallocs used during MatSetValues calls=0
+        TaoLineSearch Object: (admm_sub_0_) 1 MPI process
+          type: more-thuente
+          maximum function evaluations=30
+          tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+          total number of function evaluations=0
+          total number of gradient evaluations=0
+          total number of function/gradient evaluations=1
+          Termination reason: SUCCESS
+        KSP Object: (admm_sub_0_tao_nls_) 1 MPI process
+          type: stcg
+          maximum iterations=10000, initial guess is zero
+          tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+          left preconditioning
+          using UNPRECONDITIONED norm type for convergence test
+        PC Object: (admm_sub_0_tao_nls_) 1 MPI process
+          type: none
+          linear system matrix = precond matrix:
+          Mat Object: 1 MPI process
+            type: shell
+            rows=11, cols=11
+        total KSP iterations: 11
+        convergence tolerances: gatol=1e-08,         grtol=1e-08,         steptol=0.,         gttol=0.
+        Residual in Function/Gradient:=6.52905e-14
+        Objective value=6.43106
+        total number of iterations=1,                                (max: 50)
+        total number of function evaluations=5,                        (max: unlimited)
+        total number of function/gradient evaluations=2,            (max: unlimited)
+        total number of Hessian evaluations=1
+        Solution converged:          ||g(X)|| <= gatol
+    z subsolver:
+      Tao Object: (admm_sub_1_) 1 MPI process
+        type: nls
+          Newton steps: 1
+          BFGS steps: 0
+          Gradient steps: 0
+          nls ksp atol: 0
+          nls ksp rtol: 1
+          nls ksp ctol: 0
+          nls ksp negc: 0
+          nls ksp dtol: 0
+          nls ksp iter: 0
+          nls ksp othr: 0
+        Objective function:
+          TaoTerm Object: (admm_sub_1_) 1 MPI process
+            type: sum
+            solution vector space: N = 13
+            parameter vector space: K = 17
+            Sum of 2 terms: 0.4 g(x) + f_{admm_sub_1_metric_}(F x; p_1)
+            g:
+              TaoTerm Object: g (g_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 13
+            f_{admm_sub_1_metric_}:
+              TaoTerm Object: (admm_sub_1_metric_) 1 MPI process
+                type: halfl2squared
+                solution vector space: N = 17
+                parameter vector space: K = 17
+            F:
+              Mat Object: F (F_) 1 MPI process
+                type: seqdense
+                rows=17, cols=13
+                total: nonzeros=221, allocated nonzeros=221
+                total number of mallocs used during MatSetValues calls=0
+        TaoLineSearch Object: (admm_sub_1_) 1 MPI process
+          type: more-thuente
+          maximum function evaluations=30
+          tolerances: ftol=0.0001, rtol=1e-10, gtol=0.9
+          total number of function evaluations=0
+          total number of gradient evaluations=0
+          total number of function/gradient evaluations=1
+          Termination reason: SUCCESS
+        KSP Object: (admm_sub_1_tao_nls_) 1 MPI process
+          type: stcg
+          maximum iterations=10000, initial guess is zero
+          tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
+          left preconditioning
+          using UNPRECONDITIONED norm type for convergence test
+        PC Object: (admm_sub_1_tao_nls_) 1 MPI process
+          type: none
+          linear system matrix = precond matrix:
+          Mat Object: 1 MPI process
+            type: shell
+            rows=13, cols=13
+        total KSP iterations: 13
+        convergence tolerances: gatol=1e-08,         grtol=1e-08,         steptol=0.,         gttol=0.
+        Residual in Function/Gradient:=3.67719e-13
+        Objective value=5.96047
+        total number of iterations=1,                                (max: 50)
+        total number of function evaluations=5,                        (max: unlimited)
+        total number of function/gradient evaluations=2,            (max: unlimited)
+        total number of Hessian evaluations=1
+        Solution converged:          ||g(X)|| <= gatol
+    Objective function:
+      TaoTerm Object: (objective_) 1 MPI process
+        type: sum
+        solution vector space: N = 24
+        parameter vector space: K = 11
+        Sum of 2 terms: f(P_x x; p_0) + 0.4 g(P_y x)
+        f:
+          TaoTerm Object: f (f_) 1 MPI process
+            type: halfl2squared
+            solution vector space: N = 11
+            parameter vector space: K = 11
+        P_x:
+          Mat Object: P_x 1 MPI process
+            type: scatter
+            rows=11, cols=24
+        g:
+          TaoTerm Object: g (g_) 1 MPI process
+            type: halfl2squared
+            solution vector space: N = 13
+        P_y:
+          Mat Object: P_y 1 MPI process
+            type: scatter
+            rows=13, cols=24
+    convergence tolerances: gatol=1e-08,     grtol=1e-08,     steptol=0.,     gttol=0.
+    Residual in Function/Gradient:=4.1667e-08
+    Objective value=1.55458
+    total number of iterations=101,                            (max: 10000)
     total number of function evaluations=1,                    (max: unlimited)
     Solution converged:      ||g(X)|| <= gatol
