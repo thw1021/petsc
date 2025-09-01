@@ -392,8 +392,7 @@ static PetscErrorCode TaoView_ADMM(Tao tao, PetscViewer viewer)
 
         PetscCall(MatConstantDiagonalGetConstant(am->A, &scale));
         if (scale == 1.0) PetscCall(PetscViewerASCIIPrintf(viewer, "x = z"));
-        else if (PetscImaginaryPart(scale) == 0.0) PetscCall(PetscViewerASCIIPrintf(viewer, "%g x = z", (double)PetscRealPart(scale)));
-        else PetscCall(PetscViewerASCIIPrintf(viewer, "(%g + i %g) x = z", (double)PetscRealPart(scale), (double)PetscImaginaryPart(scale)));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "%g x = z", (double)scale));
       } else {
         PetscCall(TaoTermViewSumPrintMapName(viewer, am->A, am->g_terms[0], "A", PETSC_FALSE));
         PetscCall(PetscViewerASCIIPrintf(viewer, " x = z"));
@@ -408,8 +407,7 @@ static PetscErrorCode TaoView_ADMM(Tao tao, PetscViewer viewer)
 
         PetscCall(MatConstantDiagonalGetConstant(am->B, &scale));
         if (scale == 1.0) PetscCall(PetscViewerASCIIPrintf(viewer, "x = z"));
-        else if (PetscImaginaryPart(scale) == 0.0) PetscCall(PetscViewerASCIIPrintf(viewer, "x = %g z", (double)PetscRealPart(scale)));
-        else PetscCall(PetscViewerASCIIPrintf(viewer, "x = (%g + i %g)", (double)PetscRealPart(scale), (double)PetscImaginaryPart(scale)));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "x = %g z", (double)scale));
       } else {
         PetscCall(PetscViewerASCIIPrintf(viewer, "x = "));
         PetscCall(TaoTermViewSumPrintMapName(viewer, am->B, am->f_terms[0], "A", PETSC_FALSE));
@@ -576,9 +574,7 @@ static PetscErrorCode MatCreateSubMatrixColumnScatter(Mat J, Mat matscatter, Mat
   PetscCall(PetscMalloc1(n_leaves, &sorted_perm));
   PetscCall(PetscMalloc1(n_leaves, &is_indices));
   for (i = 0; i < n_leaves; i++) sorted_perm[i] = i;
-  if (leaves != NULL) {
-    PetscCall(PetscSortIntWithPermutation(n_leaves, leaves, sorted_perm));
-  }
+  if (leaves != NULL) PetscCall(PetscSortIntWithPermutation(n_leaves, leaves, sorted_perm));
   PetscCall(MatGetLayouts(J, NULL, &col_map));
   PetscCall(PetscLayoutGetRanges(col_map, &ranges));
   for (PetscInt i = 0; i < n_leaves; i++) {
@@ -662,6 +658,11 @@ static PetscErrorCode TaoSetUp_ADMM(Tao tao)
     if (g_map) PetscCall(PetscObjectTypeCompare((PetscObject)g_map, MATSCATTER, &g_map_is_scatter));
     PetscCheck(f_map_is_scatter && g_map_is_scatter, comm, PETSC_ERR_ARG_INCOMP, "ADMM can only be used with equality constraints if the maps are scatters");
     am->initialize_type = ADMM_INITIALIZE_SCATTER;
+
+    PetscCall(MatScatterGetVecScatter(f_map, &am->x_scatter));
+    PetscCall(MatScatterGetVecScatter(g_map, &am->z_scatter));
+
+    if (!tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
 
     PetscCall(VecDuplicate(tao->constraints_equality, &am->c));
     PetscCall(VecDuplicate(tao->solution, &zero_solution));
@@ -1250,6 +1251,6 @@ PetscErrorCode TaoADMMGetTermGroups(Tao tao, PetscInt *f_num_terms, const PetscI
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscTryMethod(tao, "TaoADMMGetTermGroups_C", (Tao, PetscInt *, const PetscInt *[], PetscInt *, const PetscInt *[]), (tao, f_num_terms, f_terms, g_num_terms, g_terms));
+  PetscTryMethod(tao, "TaoADMMGetTermGroups_C", (Tao, PetscInt *, const PetscInt *[], PetscBool *, PetscInt *, const PetscInt *[], PetscBool *), (tao, f_num_terms, f_terms, f_mapped, g_num_terms, g_terms, g_mapped));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
