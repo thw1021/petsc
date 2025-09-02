@@ -423,7 +423,7 @@ static PetscErrorCode MatHYPRE_CreateCOOMat(Mat mat)
   #elif defined(HYPRE_USING_SYCL) && defined(PETSC_HAVE_KOKKOS_KERNELS)
     matType = MATAIJKOKKOS;
   #else
-    SETERRQ(comm, PETSC_ERR_SUP, "Do not know the HYPRE device");
+    SETERRQ(comm, PETSC_ERR_SUP, "No HYPRE device available. Suggest re-installing with Kokkos Kernels");
   #endif
   }
 #endif
