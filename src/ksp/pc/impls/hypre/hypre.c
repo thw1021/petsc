@@ -362,7 +362,7 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
 #endif
       PetscObjectParameterSetDefault(jac, agg_interptype, 4);
     }
-    PetscObjectParameterSetDefault(jac, relaxtype[2], 9); /*G.E. */
+    PetscObjectParameterSetDefault(jac, relaxtype[2], 9); /* Gaussian Elimination */
 
     PetscCallExternal(HYPRE_BoomerAMGSetCycleType, jac->hsolver, jac->cycletype);
     PetscCallExternal(HYPRE_BoomerAMGSetMaxLevels, jac->hsolver, jac->maxlevels);
@@ -2359,7 +2359,13 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
     jac->nodal_relax                                             = PETSC_FALSE;
     jac->nodal_relax_levels                                      = 1;
     jac->rap2                                                    = 0;
-    PetscObjectParameterSetDefault(jac, relaxorder, -1); /* Initialize with invalid value so we can recognize user input */
+    /* Initialize with invalid values so we can recognize user input. We want to avoid concluding
+    that the user did not set a value and then set a default when in fact they set a parameter value
+    of 0 */
+    PetscObjectParameterSetDefault(jac, relaxorder, -1);
+    PetscObjectParameterSetDefault(jac, relaxtype[0], -1);
+    PetscObjectParameterSetDefault(jac, relaxtype[1], -1);
+    PetscObjectParameterSetDefault(jac, relaxtype[2], -1);
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(PetscStrcmp("ams", jac->hypre_type, &flag));
