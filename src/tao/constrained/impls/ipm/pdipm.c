@@ -774,9 +774,8 @@ static PetscErrorCode SNESLineSearch_PDIPM(SNESLineSearch linesearch, void *ctx)
   /* Update F; get tao->residual and tao->cnorm */
   PetscCall(TaoSNESFunction_PDIPM_residual(snes, X, F, (void *)tao));
 
-  tao->niter++;
+  PetscCall(TaoMonitor(tao, ++tao->niter, pdipm->obj, tao->residual, tao->cnorm, pdipm->mu));
   PetscCall(TaoLogConvergenceHistory(tao, pdipm->obj, tao->residual, tao->cnorm, tao->niter));
-  PetscCall(TaoMonitor(tao, tao->niter, pdipm->obj, tao->residual, tao->cnorm, pdipm->mu));
 
   PetscUseTypeMethod(tao, convergencetest, tao->cnvP);
   if (tao->reason) PetscCall(SNESSetConvergedReason(snes, SNES_CONVERGED_FNORM_ABS));

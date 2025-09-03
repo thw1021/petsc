@@ -181,9 +181,8 @@ static PetscErrorCode TaoSolve_IPM(Tao tao)
     }
 
     PetscCall(TaoLogConvergenceHistory(tao, ipmP->kkt_f, ipmP->phi, 0.0, tao->ksp_its));
-    PetscCall(TaoMonitor(tao, tao->niter, ipmP->kkt_f, ipmP->phi, 0.0, stepsize));
+    PetscCall(TaoMonitor(tao, tao->niter++, ipmP->kkt_f, ipmP->phi, 0.0, stepsize));
     PetscUseTypeMethod(tao, convergencetest, tao->cnvP);
-    tao->niter++;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

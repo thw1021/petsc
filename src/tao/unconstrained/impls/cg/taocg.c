@@ -138,9 +138,8 @@ static PetscErrorCode TaoSolve_CG(Tao tao)
 
     /*  Check for termination */
     gnorm2 = gnorm * gnorm;
-    tao->niter++;
     PetscCall(TaoLogConvergenceHistory(tao, f, gnorm, 0.0, tao->ksp_its));
-    PetscCall(TaoMonitor(tao, tao->niter, f, gnorm, 0.0, step));
+    PetscCall(TaoMonitor(tao, ++tao->niter, f, gnorm, 0.0, step));
     PetscUseTypeMethod(tao, convergencetest, tao->cnvP);
     if (tao->reason != TAO_CONTINUE_ITERATING) break;
 

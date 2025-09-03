@@ -467,7 +467,6 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
     default:
       break;
     }
-    tao->niter++;
 
     /* Calculate original function values. misfit part was done in TaoADMMToleranceUpdate*/
     switch (am->regswitch) {
@@ -487,7 +486,7 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
     PetscCall(VecNorm(am->residual, NORM_2, &am->resnorm));
     PetscCall(TaoLogConvergenceHistory(tao, am->last_misfit_val + reg_func, am->dualres, am->resnorm, tao->ksp_its));
 
-    PetscCall(TaoMonitor(tao, tao->niter, am->last_misfit_val + reg_func, am->dualres, am->resnorm, 1.0));
+    PetscCall(TaoMonitor(tao, ++tao->niter, am->last_misfit_val + reg_func, am->dualres, am->resnorm, 1.0));
     PetscUseTypeMethod(tao, convergencetest, tao->cnvP);
   }
   /* Update vectors */
