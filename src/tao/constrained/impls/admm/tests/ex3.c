@@ -87,8 +87,8 @@ static PetscErrorCode TaoComputeAffineEqualityJacobian(Tao tao, Vec x, Mat J, Ma
   TaoAffineEqConstraint *c = (TaoAffineEqConstraint *)ctx;
 
   PetscFunctionBegin;
-  if (J) { PetscCall(MatCopy(c->J, J, SAME_NONZERO_PATTERN)); }
-  if (Jpre && Jpre != J) { PetscCall(MatCopy(c->J, Jpre, SAME_NONZERO_PATTERN)); }
+  if (J) PetscCall(MatCopy(c->J, J, SAME_NONZERO_PATTERN));
+  if (Jpre && Jpre != J) PetscCall(MatCopy(c->J, Jpre, SAME_NONZERO_PATTERN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -276,7 +276,7 @@ static PetscErrorCode TestADMMConstrained(MPI_Comm comm, AppCtx *user)
 int main(int argc, char **argv)
 {
   MPI_Comm comm;
-  AppCtx   *user;
+  AppCtx  *user;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(PetscNew(&user));
