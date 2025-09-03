@@ -3,6 +3,8 @@
 #include <petsc/private/petscimpl.h>
 #include <petsc/private/vecimpl.h>
 
+const char *const TaoALMMTypes[] = {"CLASSIC", "PHR", "TaoALMMType", "TAO_ALMM_", NULL};
+
 static PetscErrorCode TaoALMMCombinePrimal_Private(Tao, Vec, Vec, Vec);
 static PetscErrorCode TaoALMMCombineDual_Private(Tao, Vec, Vec, Vec);
 static PetscErrorCode TaoALMMSplitPrimal_Private(Tao, Vec, Vec, Vec);
@@ -477,6 +479,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_ALMM(Tao tao)
   tao->ops->setfromoptions = TaoSetFromOptions_ALMM;
   tao->ops->view           = TaoView_ALMM;
   tao->ops->solve          = TaoSolve_ALMM;
+  tao->uses_gradient       = PETSC_TRUE;
 
   PetscCall(TaoParametersInitialize(tao));
   PetscObjectParameterSetDefault(tao, gatol, 1.e-5);

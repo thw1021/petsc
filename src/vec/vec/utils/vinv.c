@@ -1330,7 +1330,7 @@ PetscErrorCode VecAbsAsync_Private(Vec v, PetscDeviceContext dctx)
 
   Level: intermediate
 
-.seealso: `Vec`, `VecExp()`, `VecSqrtAbs()`, `VecReciprocal()`, `VecLog()`
+.seealso: `Vec`, `VecExp()`, `VecSqrtAbs()`, `VecReciprocal()`, `VecLog()`, `VecPointwiseSign()`
 @*/
 PetscErrorCode VecAbs(Vec v)
 {
