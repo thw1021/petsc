@@ -419,9 +419,8 @@ static PetscErrorCode TaoSolve_BMRM(Tao tao)
       df.tol = innerSolverTol * 0.5;
     }
 
-    tao->niter++;
     PetscCall(TaoLogConvergenceHistory(tao, min_jw, epsilon, 0.0, tao->ksp_its));
-    PetscCall(TaoMonitor(tao, tao->niter, min_jw, epsilon, 0.0, tao->step));
+    PetscCall(TaoMonitor(tao, ++tao->niter, min_jw, epsilon, 0.0, tao->step));
     PetscUseTypeMethod(tao, convergencetest, tao->cnvP);
   }
 

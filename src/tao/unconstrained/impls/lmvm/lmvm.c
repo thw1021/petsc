@@ -130,9 +130,8 @@ static PetscErrorCode TaoSolve_LMVM(Tao tao)
     }
 
     /* Check convergence */
-    tao->niter++;
     PetscCall(TaoLogConvergenceHistory(tao, f, gnorm, 0.0, tao->ksp_its));
-    PetscCall(TaoMonitor(tao, tao->niter, f, gnorm, 0.0, step));
+    PetscCall(TaoMonitor(tao, ++tao->niter, f, gnorm, 0.0, step));
     PetscUseTypeMethod(tao, convergencetest, tao->cnvP);
   }
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -540,9 +540,8 @@ static PetscErrorCode TaoSolve_LCL(Tao tao)
     PetscCall(VecNorm(tao->constraints, NORM_2, &cnorm));
 
     /* Monitor convergence */
-    tao->niter++;
+    PetscCall(TaoMonitor(tao, ++tao->niter, f, mnorm, cnorm, step));
     PetscCall(TaoLogConvergenceHistory(tao, f, mnorm, cnorm, tao->ksp_its));
-    PetscCall(TaoMonitor(tao, tao->niter, f, mnorm, cnorm, step));
     PetscUseTypeMethod(tao, convergencetest, tao->cnvP);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
