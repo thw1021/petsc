@@ -576,7 +576,7 @@ static PetscErrorCode MatCreateSubMatrixColumnScatter(Mat J, Mat matscatter, Mat
   PetscCall(PetscMalloc1(n_leaves, &sorted_perm));
   PetscCall(PetscMalloc1(n_leaves, &is_indices));
   for (i = 0; i < n_leaves; i++) sorted_perm[i] = i;
-  if (leaves != NULL) { PetscCall(PetscSortIntWithPermutation(n_leaves, leaves, sorted_perm)); }
+  if (leaves != NULL) PetscCall(PetscSortIntWithPermutation(n_leaves, leaves, sorted_perm));
   PetscCall(MatGetLayouts(J, NULL, &col_map));
   PetscCall(PetscLayoutGetRanges(col_map, &ranges));
   for (PetscInt i = 0; i < n_leaves; i++) {
