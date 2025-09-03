@@ -1765,7 +1765,7 @@ cdef class TAO(Object):
         cdef TAOTerm term = TAOTerm()
         cdef Vec params = Vec()
         cdef Mat mapmat = Mat()
-        cdef PetscReal _scale
+        cdef PetscReal _scale=1
         CHKERR(TaoGetTerm(self.tao, &_scale, &term.taoterm, &params.vec, &mapmat.mat))
         CHKERR(PetscINCREF(term.obj))
         if params is not None: CHKERR(PetscINCREF(params.obj))
