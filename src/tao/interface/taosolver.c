@@ -2507,6 +2507,7 @@ PetscErrorCode TaoMonitor(Tao tao, PetscInt its, PetscReal f, PetscReal res, Pet
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  tao->niter    = its;
   tao->fc       = f;
   tao->residual = res;
   tao->cnorm    = cnorm;
