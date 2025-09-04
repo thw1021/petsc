@@ -282,7 +282,7 @@ static PetscErrorCode SNESTSFormFunction_Pseudo(SNES snes, Vec X, Vec Y, TS ts)
   if (Xstate != pseudo->Xstate || ifunction || !KSPSNES) {
     PetscCall(TSComputeIFunction(ts, ts->ptime + ts->time_step, X, Xdot, Y, PETSC_FALSE));
   } else {
-    /* reuse the the TSComputeIFunction() result performed inside TSStep_Pseudo() */
+    /* reuse the TSComputeIFunction() result performed inside TSStep_Pseudo() */
     /* note that pseudo->func contains the negation of TSComputeRHSFunction() */
     PetscCall(VecWAXPY(Y, 1, pseudo->func, Xdot));
   }
