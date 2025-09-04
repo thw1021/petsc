@@ -1413,6 +1413,11 @@ static PetscErrorCode MatBindToCPU_HYPRE(Mat A, PetscBool bind)
 
   PetscFunctionBegin;
   A->boundtocpu = bind;
+  if (hA->cooMat) {
+    PetscBool coobound;
+    PetscCall(MatBoundToCPU(hA->cooMat, &coobound));
+    if (coobound != bind) PetscCall(MatBindToCPU(hA->cooMat, bind));
+  }
   if (hA->ij && hypre_IJMatrixAssembleFlag(hA->ij) && hmem != hypre_IJMatrixMemoryLocation(hA->ij)) {
     hypre_ParCSRMatrix *parcsr;
     PetscCallExternal(HYPRE_IJMatrixGetObject, hA->ij, (void **)&parcsr);
