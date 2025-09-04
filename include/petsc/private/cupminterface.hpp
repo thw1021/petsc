@@ -192,6 +192,8 @@ struct InterfaceImpl<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA> {
   #else
     cupmMemPoolAttr{0};
   #endif
+  static const auto cupmDevAttrClockRate       = cudaDevAttrClockRate;
+  static const auto cupmDevAttrMemoryClockRate = cudaDevAttrMemoryClockRate;
 
   // error functions
   PETSC_CUPM_ALIAS_FUNCTION(cupmGetErrorName, cudaGetErrorName)
@@ -201,6 +203,7 @@ struct InterfaceImpl<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA> {
   // device management
   PETSC_CUPM_ALIAS_FUNCTION(cupmGetDeviceCount, cudaGetDeviceCount)
   PETSC_CUPM_ALIAS_FUNCTION(cupmGetDeviceProperties, cudaGetDeviceProperties)
+  PETSC_CUPM_ALIAS_FUNCTION(cupmDeviceGetAttribute, cudaDeviceGetAttribute)
   PETSC_CUPM_ALIAS_FUNCTION(cupmGetDevice, cudaGetDevice)
   PETSC_CUPM_ALIAS_FUNCTION(cupmSetDevice, cudaSetDevice)
   PETSC_CUPM_ALIAS_FUNCTION(cupmGetDeviceFlags, cudaGetDeviceFlags)
@@ -333,6 +336,8 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP> {
   #else
     cupmMemPoolAttr{0};
   #endif
+  static const auto cupmDevAttrClockRate       = hipDeviceAttributeClockRate;
+  static const auto cupmDevAttrMemoryClockRate = hipDeviceAttributeMemoryClockRate;
 
   // error functions
   PETSC_CUPM_ALIAS_FUNCTION(cupmGetErrorName, hipGetErrorName)
@@ -342,6 +347,7 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP> {
   // device management
   PETSC_CUPM_ALIAS_FUNCTION(cupmGetDeviceCount, hipGetDeviceCount)
   PETSC_CUPM_ALIAS_FUNCTION(cupmGetDeviceProperties, hipGetDeviceProperties)
+  PETSC_CUPM_ALIAS_FUNCTION(cupmDeviceGetAttribute, hipDeviceGetAttribute)
   PETSC_CUPM_ALIAS_FUNCTION(cupmGetDevice, hipGetDevice)
   PETSC_CUPM_ALIAS_FUNCTION(cupmSetDevice, hipSetDevice)
   PETSC_CUPM_ALIAS_FUNCTION(cupmGetDeviceFlags, hipGetDeviceFlags)
@@ -466,12 +472,15 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP> {
   using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmHostAllocDefault; \
   using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmHostAllocWriteCombined; \
   using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmMemPoolAttrReleaseThreshold; \
+  using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmDevAttrClockRate; \
+  using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmDevAttrMemoryClockRate; \
   /* functions */ \
   using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmGetErrorName; \
   using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmGetErrorString; \
   using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmGetLastError; \
   using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmGetDeviceCount; \
   using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmGetDeviceProperties; \
+  using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmDeviceGetAttribute; \
   using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmGetDevice; \
   using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmSetDevice; \
   using ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmGetDeviceFlags; \
