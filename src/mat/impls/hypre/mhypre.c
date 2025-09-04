@@ -2114,10 +2114,20 @@ static PetscErrorCode MatGetRow_HYPRE(Mat A, PetscInt row, PetscInt *nz, PetscIn
 {
   hypre_ParCSRMatrix *parcsr;
   HYPRE_Int           hnz;
+#if PETSC_HAVE_HYPRE_DEVICE
+  Mat_HYPRE *hmat = (Mat_HYPRE *)A->data;
+#endif
 
   PetscFunctionBegin;
   /* retrieve the internal matrix */
   PetscCall(MatHYPREGetParCSR_HYPRE(A, &parcsr));
+#if PETSC_HAVE_HYPRE_DEVICE
+  if (hypre_ParCSRMatrixMemoryLocation(parcsr) == HYPRE_MEMORY_DEVICE) {
+    PetscCheck(hmat->cooMatAttached, PetscObjectComm((PetscObject)A), PETSC_ERR_USER, "No ability to retrieve hypre matrix row from device without an attached COO matrix");
+    PetscUseTypeMethod(hmat->cooMat, getrow, row, nz, idx, v);
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+#endif
   /* call HYPRE API */
   PetscCallExternal(HYPRE_ParCSRMatrixGetRow, parcsr, row, &hnz, (HYPRE_BigInt **)idx, (HYPRE_Complex **)v);
   if (nz) *nz = (PetscInt)hnz;
@@ -2128,10 +2138,20 @@ static PetscErrorCode MatRestoreRow_HYPRE(Mat A, PetscInt row, PetscInt *nz, Pet
 {
   hypre_ParCSRMatrix *parcsr;
   HYPRE_Int           hnz;
+#if PETSC_HAVE_HYPRE_DEVICE
+  Mat_HYPRE *hmat = (Mat_HYPRE *)A->data;
+#endif
 
   PetscFunctionBegin;
   /* retrieve the internal matrix */
   PetscCall(MatHYPREGetParCSR_HYPRE(A, &parcsr));
+#if PETSC_HAVE_HYPRE_DEVICE
+  if (hypre_ParCSRMatrixMemoryLocation(parcsr) == HYPRE_MEMORY_DEVICE) {
+    PetscCheck(hmat->cooMatAttached, PetscObjectComm((PetscObject)A), PETSC_ERR_USER, "No ability to retrieve hypre matrix row from device without an attached COO matrix");
+    PetscUseTypeMethod(hmat->cooMat, restorerow, row, nz, idx, v);
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+#endif
   /* call HYPRE API */
   hnz = nz ? (HYPRE_Int)(*nz) : 0;
   PetscCallExternal(HYPRE_ParCSRMatrixRestoreRow, parcsr, row, &hnz, (HYPRE_BigInt **)idx, (HYPRE_Complex **)v);
@@ -2142,9 +2162,21 @@ static PetscErrorCode MatGetValues_HYPRE(Mat A, PetscInt m, const PetscInt idxm[
 {
   Mat_HYPRE *hA = (Mat_HYPRE *)A->data;
   PetscInt   i;
+#if PETSC_HAVE_HYPRE_DEVICE
+  hypre_ParCSRMatrix *parcsr;
+#endif
 
   PetscFunctionBegin;
   if (!m || !n) PetscFunctionReturn(PETSC_SUCCESS);
+#if PETSC_HAVE_HYPRE_DEVICE
+  PetscCall(MatHYPREGetParCSR_HYPRE(A, &parcsr));
+  if (hypre_ParCSRMatrixMemoryLocation(parcsr) == HYPRE_MEMORY_DEVICE) {
+    PetscCheck(hA->cooMatAttached, PetscObjectComm((PetscObject)A), PETSC_ERR_USER, "No ability to retrieve hypre matrix row from device without an attached COO matrix");
+    PetscUseTypeMethod(hA->cooMat, getvalues, m, idxm, n, idxn, v);
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+#endif
+
   /* Ignore negative row indices
    * And negative column indices should be automatically ignored in hypre
    * */
