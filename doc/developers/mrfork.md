@@ -4,21 +4,21 @@
 
 `Developers` at times, need to checkout and build changes from a merge request fork branch.
 
-- Using the commit hash of the branch. This can be obtained from the MR web page (commits tab)
+- Using the COMMIT-SHA of the branch. This can be obtained from the MR web page (commits tab)
 
   ```console
-  % git fetch origin COMMIT-HASH
-  % git checkout COMMIT-HASH
+  % git fetch origin COMMIT-SHA
+  % git checkout COMMIT-SHA
   ```
 
-- Checkout the branch using the repo URL. This URL+branchname can be copied from the MR web page.
+- Checkout the branch using the repository URL. This `URL+branchname` can be copied from the MR web page.
 
   ```console
   % git fetch URL branchname
   % git checkout FETCH_HEAD
   ```
 
-- Setup local git clone to access the the MR branch via the MR number. Here use the following in .git/config
+- Setup local git clone to access the the MR branch via the MR-NUMBER. Here use the following in .git/config:
 
   ```console
   [remote "origin"]
@@ -49,6 +49,6 @@ Notes:
 
 For example, with `URL = https://gitlab.com/petsc/petsc`, `branchname = main` we have:
 
-- URL+branchname (that is listed in the MR webpage):  https://gitlab.com/petsc/petsc/-/tree/main
-- ssh-URL: git@gitlab.com:petsc
+- `URL+branchname` (that is listed in the MR webpage):  `https://gitlab.com/petsc/petsc/-/tree/main`
+- `ssh-URL`: `git@gitlab.com:petsc/petsc.git`
 
