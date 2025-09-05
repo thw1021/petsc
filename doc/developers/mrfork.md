@@ -55,6 +55,6 @@ For example, with `merge request` at <https://gitlab.com/petsc/petsc/-/merge_req
 - `COMMIT-SHA` = `a2cf3c576c19da12297b91b93d8d8a7a889de525` ("Copy commit SHA" from the "Commits" tab)
 - `URL with branchname` = `https://gitlab.com/petsc/petsc/-/tree/balay/update-packages-download-dir` ("Copying link" of "Source branch")
 - `URL` = `https://gitlab.com/petsc/petsc`
-- `branchname` = `balay/update-packages-download-dir`
 - `ssh-URL` = `git@gitlab.com:petsc/petsc.git`
+- `branchname` = `balay/update-packages-download-dir`
 
