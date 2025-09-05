@@ -23,6 +23,7 @@
   ```console
   [remote "origin"]
         url = https://gitlab.com/petsc/petsc.git
+        pushurl = git@gitlab.com:petsc/petsc.git
         fetch = +refs/heads/*:refs/remotes/origin/*
         fetch = +refs/merge-requests/*:refs/remotes/origin/merge-requests/*
   ```
