@@ -35,7 +35,7 @@ Now the branch is available to checkout:
 
 # Commit and push changes to a merge request fork branch
 
-Only `Owners/Maintainers` can push commits to a merge request fork branch. Here use the ssh git repo URL.
+Only `Owners/Maintainers` can push commits to a merge request fork branch. Here use the ssh-URL for the git repository.
 
    ```console
    % git fetch ssh-URL branchname
