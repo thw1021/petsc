@@ -49,12 +49,12 @@ Only `Owners/Maintainers` can push commits to a merge request fork branch. Here,
 
 Notes:
 
-For example, with `merge request` at <https://gitlab.com/petsc/petsc/-/merge_requests/8648> we have:
+For example, with `merge request` at <https://gitlab.com/petsc/petsc/-/merge_requests/8619> we have:
 
-- `MR-NUMBER` = `8648`
-- `COMMIT-SHA` = `a2cf3c576c19da12297b91b93d8d8a7a889de525` ("Copy commit SHA" from the "Commits" tab)
-- `URL with branchname` = `https://gitlab.com/petsc/petsc/-/tree/balay/update-packages-download-dir` ("Copy link" of "Source branch")
-- `URL` = `https://gitlab.com/petsc/petsc`
-- `ssh-URL` = `git@gitlab.com:petsc/petsc.git`
-- `branchname` = `balay/update-packages-download-dir`
+- `MR-NUMBER` = `8619`
+- `COMMIT-SHA` = `1b741c341f10772b6231f15a4abcef052bfe2d90` ("Copy commit SHA" of the HEAD commit from the "Commits" tab)
+- `URL with branchname` = `https://gitlab.com/paul.kuehner/petsc/-/tree/add-tao-get-constraints` ("Copy link" of "Source branch")
+- `URL` = `https://gitlab.com/paul.kuehner/petsc`
+- `ssh-URL` = `git@gitlab.com:paul.kuehner/petsc.git`
+- `branchname` = `add-tao-get-constraints`
 
