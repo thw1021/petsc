@@ -4,14 +4,14 @@
 
 `Developers` at times, need to checkout and build changes from a merge request fork branch.
 
-- Using the `COMMIT-SHA` of the branch. This can be obtained from the merge request web page (Commits tab)
+- Checkout `COMMIT-SHA` of the branch HEAD. It is available on the "Commits" tab of the merge request web page.
 
   ```console
   % git fetch origin <COMMIT-SHA>
   % git checkout FETCH_HEAD
   ```
 
-- Checkout the branch using the repository `URL`. This `URL+branchname` can be copied from the merge request web page.
+- Checkout branch using the repository `URL`. The `URL with branchname` is available as "Source branch" hyperlink on merge request web page.
 
   ```console
   % git fetch <URL> <branchname>
@@ -53,7 +53,7 @@ For example, with `merge request` at <https://gitlab.com/petsc/petsc/-/merge_req
 
 - `MR-NUMBER` = `8648`
 - `COMMIT-SHA` = `a2cf3c576c19da12297b91b93d8d8a7a889de525` ("Copy commit SHA" from the "Commits" tab)
-- `URL+branchname` = `https://gitlab.com/petsc/petsc/-/tree/balay/update-packages-download-dir` ("Copying link" of "Source branch")
+- `URL with branchname` = `https://gitlab.com/petsc/petsc/-/tree/balay/update-packages-download-dir` ("Copying link" of "Source branch")
 - `URL` = `https://gitlab.com/petsc/petsc`
 - `branchname` = `balay/update-packages-download-dir`
 - `ssh-URL` = `git@gitlab.com:petsc/petsc.git`
