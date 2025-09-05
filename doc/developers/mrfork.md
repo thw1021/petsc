@@ -8,7 +8,7 @@
 
   ```console
   % git fetch origin COMMIT-SHA
-  % git checkout COMMIT-SHA
+  % git checkout FETCH_HEAD
   ```
 
 - Checkout the branch using the repository URL. This `URL+branchname` can be copied from the MR web page.
