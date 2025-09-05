@@ -2,7 +2,7 @@
 
 # Checkout fork merge request branch
 
-`Developers` at times, need to checkout and build changes from a merge request fork branch. Any one of the following methods can be used.
+`Developers` at times, need to checkout and build changes from a merge request fork branch. Any one of the following methods can be used:
 
 - Checkout `COMMIT-SHA` of the branch HEAD. It is available on the "Commits" tab of the merge request web page.
 
