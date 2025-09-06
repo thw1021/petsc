@@ -168,13 +168,11 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
             ktypename =CToFortranTypes[ktypename]
           if ktypename == 'char':
             if getattr(k, 'char_type', None) == 'single':
-              fd.write(f' character :: {Letters[cnt]}\n')
+              fd.write(' character :: ' + Letters[cnt] + '\n')
             else:
-              fd.write(f' character(len=*) :: {Letters[cnt]}\n')
+              fd.write(' character(len=*) :: ' + Letters[cnt] + '\n')
           elif ktypename in senums:
             fd.write('  character(*) :: ' + Letters[cnt] + '\n')
-          # if ktypename in senums or ktypename == 'char':
-          #   fd.write('  character(*) :: ' + Letters[cnt] + '\n')
           elif k.array and k.stars:
             if not dim or dim == '1d': fd.write('  ' + ktypename + ', pointer :: ' +  Letters[cnt]  + '(:)\n')
             else: fd.write('  ' + ktypename + ', pointer :: ' +  Letters[cnt]  + '(:,:)\n')
