@@ -165,13 +165,13 @@ PETSC_EXTERN void dmplexrestoreclosureindices_(DM *dm, PetscSection *section, Pe
   PetscInt    *indices;
   PetscScalar *values;
 
-  *ierr = F90Array1dAccess(idxPtr, MPIU_SCALAR, (void **)&indices PETSC_F90_2PTR_PARAM(idxPtrd));
+  *ierr = F90Array1dAccess(idxPtr, MPIU_INT, (void **)&indices PETSC_F90_2PTR_PARAM(idxPtrd));
   if (*ierr) return;
   *ierr = F90Array1dAccess(valPtr, MPIU_SCALAR, (void **)&values PETSC_F90_2PTR_PARAM(valPtrd));
   if (*ierr) return;
   *ierr = DMPlexRestoreClosureIndices(*dm, *section, *idxSection, *point, *useClPerm, numIndices, &indices, outOffsets, &values);
   if (*ierr) return;
-  *ierr = F90Array1dDestroy(idxPtr, MPIU_SCALAR PETSC_F90_2PTR_PARAM(idxPtrd));
+  *ierr = F90Array1dDestroy(idxPtr, MPIU_INT PETSC_F90_2PTR_PARAM(idxPtrd));
   if (*ierr) return;
   *ierr = F90Array1dDestroy(valPtr, MPIU_SCALAR PETSC_F90_2PTR_PARAM(valPtrd));
 }
