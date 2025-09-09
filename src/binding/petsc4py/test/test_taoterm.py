@@ -1,6 +1,5 @@
 # --------------------------------------------------------------------
 
-from math import sqrt
 from petsc4py import PETSc
 import unittest
 import numpy
