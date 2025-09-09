@@ -52,6 +52,7 @@ static PetscErrorCode TaoTermDestroy_TaoCallbacks(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermTaoCallbacksGetObjAndGrad_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermTaoCallbacksSetHessian_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermTaoCallbacksGetHessian_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermTaoCallbacksGetHessianMatrices_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -105,6 +106,7 @@ static PetscErrorCode TaoTermComputeObjectiveAndGradient_TaoCallbacks(TaoTerm te
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+//TODO HessianMult
 static PetscErrorCode TaoTermComputeHessian_TaoCallbacks(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
   TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)term->data;
@@ -292,6 +294,24 @@ static PetscErrorCode TaoTermTaoCallbacksGetHessian_TaoCallbacks(TaoTerm term, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetHessianMatrices(TaoTerm term, Mat *H, Mat *Hpre)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscTryMethod(term, "TaoTermTaoCallbacksGetHessianMatrices_C", (TaoTerm, Mat *, Mat *), (term, H, Hpre));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermTaoCallbacksGetHessianMatrices_TaoCallbacks(TaoTerm term, Mat *H, Mat *Hpre)
+{
+  TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)term->data;
+
+  PetscFunctionBegin;
+  PetscCheck(tt->tao, PetscObjectComm((PetscObject)term), PETSC_ERR_USER, "TAOTERMTAOCALLBACKS does not have parent Tao");
+  PetscCall(TaoGetHessianMatrices(tt->tao, H, Hpre));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermIsObjectiveDefined_TaoCallbacks(TaoTerm term, PetscBool *flg)
 {
   TaoTerm_TaoCallbacks *tt = (TaoTerm_TaoCallbacks *)term->data;
@@ -358,6 +378,7 @@ static PetscErrorCode TaoTermCreate_TaoCallbacks_Internal(TaoTerm term, const ch
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermTaoCallbacksGetObjAndGrad_C", TaoTermTaoCallbacksGetObjAndGrad_TaoCallbacks));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermTaoCallbacksSetHessian_C", TaoTermTaoCallbacksSetHessian_TaoCallbacks));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermTaoCallbacksGetHessian_C", TaoTermTaoCallbacksGetHessian_TaoCallbacks));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermTaoCallbacksGetHessianMatrices_C", TaoTermTaoCallbacksGetHessianMatrices_TaoCallbacks));
 
   PetscCall(PetscSNPrintf(buf, len, "%s callback", obj ? obj : "unknown objective"));
   PetscCall(PetscStrallocpy(buf, &tt->obj_name));
