@@ -293,6 +293,7 @@ PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetObjective(TaoTerm, PetscErrorC
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetGradient(TaoTerm, PetscErrorCode (*)(Tao, Vec, Vec, void *), void *);
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetObjAndGrad(TaoTerm, PetscErrorCode (*)(Tao, Vec, PetscReal *, Vec, void *), void *);
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksSetHessian(TaoTerm, PetscErrorCode (*)(Tao, Vec, Mat, Mat, void *), void *);
+PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetHessianMatrices(TaoTerm term, Mat *H, Mat *Hpre);
 
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetObjective(TaoTerm, PetscErrorCode (**)(Tao, Vec, PetscReal *, void *), void **);
 PETSC_INTERN PetscErrorCode TaoTermTaoCallbacksGetGradient(TaoTerm, PetscErrorCode (**)(Tao, Vec, Vec, void *), void **);
