@@ -110,7 +110,7 @@ PetscErrorCode TestADMMCtxCreate(MPI_Comm comm, ADMMTestCtx *actx, AppCtx *user)
 }
 
 // test on alpha/2 || C x - u ||_2^2 + beta/2 || D x ||_2^2
-PetscErrorCode TestADMMCtxSolveDestoryReturnSol(ADMMTestCtx *actx, AppCtx *user, Vec *sol)
+PetscErrorCode TestADMMCtxSolve(ADMMTestCtx *actx, AppCtx *user, Vec *sol)
 {
   PetscFunctionBegin;
   PetscCall(TaoSetFromOptions(actx->tao));
@@ -118,9 +118,33 @@ PetscErrorCode TestADMMCtxSolveDestoryReturnSol(ADMMTestCtx *actx, AppCtx *user,
   PetscCall(VecCopy(user->init_sol, *sol));
   PetscCall(TaoSetSolution(actx->tao, *sol));
   PetscCall(TaoSolve(actx->tao));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode TestADMMCtxDestoryReturnSol(ADMMTestCtx *actx, AppCtx *user, Vec *sol)
+{
+  PetscFunctionBegin;
   PetscCall(TaoDestroy(&actx->tao));
   PetscCall(TaoTermDestroy(&actx->term_g));
   PetscCall(TaoTermDestroy(&actx->term_f));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode TestADMMGetter(MPI_Comm comm, ADMMTestCtx *actx, AppCtx *user, PetscBool fmap, PetscBool gmap)
+{
+  const PetscInt *fterms_get;
+  const PetscInt *gterms_get;
+  PetscInt        fnum, gnum;
+  PetscBool       f_mapped_test, g_mapped_test;
+
+  PetscFunctionBegin;
+  PetscCall(TaoADMMGetTermGroups(actx->tao, &fnum, &fterms_get, &f_mapped_test, &gnum, &gterms_get, &g_mapped_test));
+  PetscAssert(fnum == 1, comm, PETSC_ERR_ARG_CORRUPT, "fnum should equal to 1");
+  PetscAssert(gnum == 1, comm, PETSC_ERR_ARG_CORRUPT, "gnum should equal to 1");
+  PetscAssert(fterms_get[0] == 0, comm, PETSC_ERR_ARG_CORRUPT, "ftermidx should equal to 0");
+  PetscAssert(gterms_get[0] == 1, comm, PETSC_ERR_ARG_CORRUPT, "gtermidx should equal to 1");
+  PetscAssert(f_mapped_test == fmap, comm, PETSC_ERR_ARG_CORRUPT, "f_mapped should be false");
+  PetscAssert(g_mapped_test == gmap, comm, PETSC_ERR_ARG_CORRUPT, "g_mapped should be false");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -141,35 +165,45 @@ PetscErrorCode TestADMMUnconstrained1(MPI_Comm comm, AppCtx *user)
   // default behavior: min_{x,z} f(Ax) + g(Bz) s.t. x == z
   PetscCall(TestADMMCtxCreate(comm, actx, user));
   PetscCall(PetscViewerASCIIPrintf(user->viewer, "min f(Ax) + g(Bz) s.t. x == z, default \n"));
-  PetscCall(TestADMMCtxSolveDestoryReturnSol(actx, user, &sol1));
+  PetscCall(TestADMMCtxSolve(actx, user, &sol1));
+  PetscCall(TestADMMGetter(comm, actx, user, PETSC_FALSE, PETSC_FALSE));
+  PetscCall(TestADMMCtxDestoryReturnSol(actx, user, &sol1));
 
   // case 2
   // request min_{x,z} f(Ax) + g(Bz) s.t. x == z
   PetscCall(TestADMMCtxCreate(comm, actx, user));
   PetscCall(PetscViewerASCIIPrintf(user->viewer, "min f(Ax) + g(Bz) s.t. x == z, with SetTermGroups \n"));
   PetscCall(TaoADMMSetTermGroups(actx->tao, 1, NULL, PETSC_FALSE, 1, NULL, PETSC_FALSE));
-  PetscCall(TestADMMCtxSolveDestoryReturnSol(actx, user, &sol2));
+  PetscCall(TestADMMCtxSolve(actx, user, &sol2));
+  PetscCall(TestADMMGetter(comm, actx, user, PETSC_FALSE, PETSC_FALSE));
+  PetscCall(TestADMMCtxDestoryReturnSol(actx, user, &sol2));
 
   // case 3
   // min_{x,z} f(Ax) + g(Bz) s.t. x == z, with explicit f_term indexing
   PetscCall(TestADMMCtxCreate(comm, actx, user));
   PetscCall(PetscViewerASCIIPrintf(user->viewer, "min f(Ax) + g(Bz) s.t. x == z, with SetTermGroups and explicit f_term indexing \n"));
   PetscCall(TaoADMMSetTermGroups(actx->tao, 1, f_terms, PETSC_FALSE, 1, NULL, PETSC_FALSE));
-  PetscCall(TestADMMCtxSolveDestoryReturnSol(actx, user, &sol3));
+  PetscCall(TestADMMCtxSolve(actx, user, &sol3));
+  PetscCall(TestADMMGetter(comm, actx, user, PETSC_FALSE, PETSC_FALSE));
+  PetscCall(TestADMMCtxDestoryReturnSol(actx, user, &sol3));
 
   // case 4
   // min_{x,z} f(Ax) + g(Bz) s.t. x == z, with explicit g_term indexing
   PetscCall(TestADMMCtxCreate(comm, actx, user));
   PetscCall(PetscViewerASCIIPrintf(user->viewer, "min f(Ax) + g(Bz) s.t. x == z, with SetTermGroups and explicit g_term indexing \n"));
   PetscCall(TaoADMMSetTermGroups(actx->tao, 1, NULL, PETSC_FALSE, 1, g_terms, PETSC_FALSE));
-  PetscCall(TestADMMCtxSolveDestoryReturnSol(actx, user, &sol4));
+  PetscCall(TestADMMCtxSolve(actx, user, &sol4));
+  PetscCall(TestADMMGetter(comm, actx, user, PETSC_FALSE, PETSC_FALSE));
+  PetscCall(TestADMMCtxDestoryReturnSol(actx, user, &sol4));
 
   // case 5
   // min_{x,z} f(Ax) + g(Bz) s.t. x == z, with explicit f,g_term indexing
   PetscCall(TestADMMCtxCreate(comm, actx, user));
   PetscCall(PetscViewerASCIIPrintf(user->viewer, "min f(Ax) + g(Bz) s.t. x == z, with SetTermGroups and explicit f,g_term indexing \n"));
   PetscCall(TaoADMMSetTermGroups(actx->tao, 1, f_terms, PETSC_FALSE, 1, g_terms, PETSC_FALSE));
-  PetscCall(TestADMMCtxSolveDestoryReturnSol(actx, user, &sol5));
+  PetscCall(TestADMMCtxSolve(actx, user, &sol5));
+  PetscCall(TestADMMGetter(comm, actx, user, PETSC_FALSE, PETSC_FALSE));
+  PetscCall(TestADMMCtxDestoryReturnSol(actx, user, &sol5));
 
   // compare
   PetscCall(VecAXPY(sol2, -1., sol1));
@@ -213,28 +247,36 @@ PetscErrorCode TestADMMUnconstrained2(MPI_Comm comm, AppCtx *user)
   PetscCall(TestADMMCtxCreate(comm, actx, user));
   PetscCall(PetscViewerASCIIPrintf(user->viewer, "min f(x) + g(Bz) s.t. x == Az, with SetTermGroups \n"));
   PetscCall(TaoADMMSetTermGroups(actx->tao, 1, NULL, PETSC_TRUE, 1, NULL, PETSC_FALSE));
-  PetscCall(TestADMMCtxSolveDestoryReturnSol(actx, user, &sol1));
+  PetscCall(TestADMMCtxSolve(actx, user, &sol1));
+  PetscCall(TestADMMGetter(comm, actx, user, PETSC_TRUE, PETSC_FALSE));
+  PetscCall(TestADMMCtxDestoryReturnSol(actx, user, &sol1));
 
   // case 3
   // min f(x) + g(Bz) s.t. x = Az, with explicit f_term indexing
   PetscCall(TestADMMCtxCreate(comm, actx, user));
   PetscCall(PetscViewerASCIIPrintf(user->viewer, "min f(x) + g(Bz) s.t. x == Az, with SetTermGroups and explicit f_term indexing \n"));
   PetscCall(TaoADMMSetTermGroups(actx->tao, 1, f_terms, PETSC_TRUE, 1, NULL, PETSC_FALSE));
-  PetscCall(TestADMMCtxSolveDestoryReturnSol(actx, user, &sol2));
+  PetscCall(TestADMMCtxSolve(actx, user, &sol2));
+  PetscCall(TestADMMGetter(comm, actx, user, PETSC_TRUE, PETSC_FALSE));
+  PetscCall(TestADMMCtxDestoryReturnSol(actx, user, &sol2));
 
   // case 4
   // min f(x) + g(Bz) s.t. x = Az, with explicit g_term indexing
   PetscCall(TestADMMCtxCreate(comm, actx, user));
   PetscCall(PetscViewerASCIIPrintf(user->viewer, "min f(x) + g(Bz) s.t. x == Az, with SetTermGroups and explicit g_term indexing \n"));
   PetscCall(TaoADMMSetTermGroups(actx->tao, 1, NULL, PETSC_TRUE, 1, g_terms, PETSC_FALSE));
-  PetscCall(TestADMMCtxSolveDestoryReturnSol(actx, user, &sol3));
+  PetscCall(TestADMMCtxSolve(actx, user, &sol3));
+  PetscCall(TestADMMGetter(comm, actx, user, PETSC_TRUE, PETSC_FALSE));
+  PetscCall(TestADMMCtxDestoryReturnSol(actx, user, &sol3));
 
   // case 5
   // min f(x) + g(Bz) s.t. x = Az, with explicit f,g_term indexing
   PetscCall(TestADMMCtxCreate(comm, actx, user));
   PetscCall(PetscViewerASCIIPrintf(user->viewer, "min f(x) + g(Bz) s.t. x == Az, with SetTermGroups and explicit f,g_term indexing \n"));
   PetscCall(TaoADMMSetTermGroups(actx->tao, 1, f_terms, PETSC_TRUE, 1, g_terms, PETSC_FALSE));
-  PetscCall(TestADMMCtxSolveDestoryReturnSol(actx, user, &sol4));
+  PetscCall(TestADMMCtxSolve(actx, user, &sol4));
+  PetscCall(TestADMMGetter(comm, actx, user, PETSC_TRUE, PETSC_FALSE));
+  PetscCall(TestADMMCtxDestoryReturnSol(actx, user, &sol4));
 
   // compare
   PetscCall(VecAXPY(sol2, -1., sol1));
@@ -274,28 +316,36 @@ PetscErrorCode TestADMMUnconstrained3(MPI_Comm comm, AppCtx *user)
   PetscCall(TestADMMCtxCreate(comm, actx, user));
   PetscCall(PetscViewerASCIIPrintf(user->viewer, "min f(Ax) + g(z) s.t. z == Bx, with SetTermGroups \n"));
   PetscCall(TaoADMMSetTermGroups(actx->tao, 1, NULL, PETSC_FALSE, 1, NULL, PETSC_TRUE));
-  PetscCall(TestADMMCtxSolveDestoryReturnSol(actx, user, &sol1));
+  PetscCall(TestADMMCtxSolve(actx, user, &sol1));
+  PetscCall(TestADMMGetter(comm, actx, user, PETSC_FALSE, PETSC_TRUE));
+  PetscCall(TestADMMCtxDestoryReturnSol(actx, user, &sol1));
 
   // case 3
   // min f(Ax) + g(z) s.t. z = Bx, with explicit f_term indexing
   PetscCall(TestADMMCtxCreate(comm, actx, user));
   PetscCall(PetscViewerASCIIPrintf(user->viewer, "min f(Ax) + g(z) s.t. z == Bx, with SetTermGroups and explicit f_term indexing \n"));
   PetscCall(TaoADMMSetTermGroups(actx->tao, 1, f_terms, PETSC_FALSE, 1, NULL, PETSC_TRUE));
-  PetscCall(TestADMMCtxSolveDestoryReturnSol(actx, user, &sol2));
+  PetscCall(TestADMMCtxSolve(actx, user, &sol2));
+  PetscCall(TestADMMGetter(comm, actx, user, PETSC_FALSE, PETSC_TRUE));
+  PetscCall(TestADMMCtxDestoryReturnSol(actx, user, &sol2));
 
   // case 4
   // min f(Ax) + g(z) s.t. z = Bx, with explicit g_term indexing
   PetscCall(TestADMMCtxCreate(comm, actx, user));
   PetscCall(PetscViewerASCIIPrintf(user->viewer, "min f(Ax) + g(z) s.t. z == Bx, with SetTermGroups and explicit g_term indexing \n"));
   PetscCall(TaoADMMSetTermGroups(actx->tao, 1, NULL, PETSC_FALSE, 1, g_terms, PETSC_TRUE));
-  PetscCall(TestADMMCtxSolveDestoryReturnSol(actx, user, &sol3));
+  PetscCall(TestADMMCtxSolve(actx, user, &sol3));
+  PetscCall(TestADMMGetter(comm, actx, user, PETSC_FALSE, PETSC_TRUE));
+  PetscCall(TestADMMCtxDestoryReturnSol(actx, user, &sol3));
 
   // case 5
   // min f(Ax) + g(z) s.t. z = Bx, with explicit f,g_term indexing
   PetscCall(TestADMMCtxCreate(comm, actx, user));
   PetscCall(PetscViewerASCIIPrintf(user->viewer, "min f(Ax) + g(z) s.t. z == Bx, with SetTermGroups and explicit f,g_term indexing \n"));
   PetscCall(TaoADMMSetTermGroups(actx->tao, 1, f_terms, PETSC_FALSE, 1, g_terms, PETSC_TRUE));
-  PetscCall(TestADMMCtxSolveDestoryReturnSol(actx, user, &sol4));
+  PetscCall(TestADMMCtxSolve(actx, user, &sol4));
+  PetscCall(TestADMMGetter(comm, actx, user, PETSC_FALSE, PETSC_TRUE));
+  PetscCall(TestADMMCtxDestoryReturnSol(actx, user, &sol4));
 
   // compare
   PetscCall(VecAXPY(sol2, -1., sol1));
