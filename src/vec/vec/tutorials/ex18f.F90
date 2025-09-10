@@ -4,8 +4,8 @@
 ! Contributed by Mike McCourt <mccomic@iit.edu> and Nathan Johnston <johnnat@iit.edu>
 ! Fortran translation by Arko Bhattacharjee <a.bhattacharjee@mpie.de>
 
-program main
 #include <petsc/finclude/petscvec.h>
+program main
   use petscvec
   implicit none
 

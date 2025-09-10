@@ -2,8 +2,8 @@
 !  Description: Uses the Newton method to solve a two-variable system.
 !
 
-      program main
 #include <petsc/finclude/petsc.h>
+      program main
         use petsc
       implicit none
 
