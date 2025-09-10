@@ -23,9 +23,9 @@
 !
 ! ----------------------------------------------------------------------
 
-      module eptorsion2fmodule
 #include "petsc/finclude/petscdmda.h"
 #include "petsc/finclude/petsctao.h"
+      module eptorsion2fmodule
       use petscdmda
       use petsctao
       implicit none

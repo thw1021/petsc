@@ -1,6 +1,6 @@
+#include <petsc/finclude/petscsys.h>
       program ex1f90
 
-#include <petsc/finclude/petscsys.h>
       use petscsys
       use,intrinsic :: iso_c_binding
       implicit none
