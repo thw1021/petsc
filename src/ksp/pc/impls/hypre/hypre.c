@@ -1215,7 +1215,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems P
 
   /* the Relax Order */
   PetscCall(PetscOptionsBool("-pc_hypre_boomeramg_no_CF", "Do not use CF-relaxation", "None", PETSC_FALSE, &tmp_truth, &flg));
-  if (flg && tmp_truth) { jac->relaxorder = 0; }
+  if (flg && tmp_truth) jac->relaxorder = 0;
   PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_measure_type", "Measure type", "None", HYPREBoomerAMGMeasureType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGMeasureType), HYPREBoomerAMGMeasureType[0], &indx, &flg));
   if (flg) {
     jac->measuretype = indx;
@@ -1223,7 +1223,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems P
   }
   ct = jac->coarsentype >= 0 ? HYPREBoomerAMGCoarsenType[jac->coarsentype] : "unknown";
   PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_coarsen_type", "Coarsen type", "None", HYPREBoomerAMGCoarsenType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGCoarsenType), ct, &indx, &flg));
-  if (flg) { jac->coarsentype = indx; }
+  if (flg) jac->coarsentype = indx;
 
   PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_max_coarse_size", "Maximum size of coarsest grid", "None", jac->maxc, &jac->maxc, &flg));
   if (flg) PetscCallExternal(HYPRE_BoomerAMGSetMaxCoarseSize, jac->hsolver, jac->maxc);
