@@ -82,7 +82,7 @@ typedef struct {
   PetscObjectParameterDeclarePtr(const char, spgemm_type); // this is a global hypre parameter but is closely associated with BoomerAMG
 #endif
   /* GPU */
-  PetscObjectParameterDeclare(PetscBool, keeptranspose);
+  PetscObjectParameterDeclare(PetscBool3, keeptranspose);
   PetscInt rap2;
   PetscObjectParameterDeclare(PetscInt, mod_rap2);
 
@@ -259,28 +259,11 @@ static const char    *HYPRESpgemmTypes[] = {"cusparse", "hypre"};
 static PetscErrorCode PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(PC pc, const char name[])
 {
   PC_HYPRE *jac = (PC_HYPRE *)pc->data;
-  PetscBool flag;
 
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
   PetscFunctionBegin;
-  if (jac->spgemm_type) {
-    PetscCall(PetscStrcmp(jac->spgemm_type, name, &flag));
-    PetscCheck(flag, PetscObjectComm((PetscObject)pc), PETSC_ERR_ORDER, "PETSc support for resetting the HYPRE SpGEMM is not implemented");
-    PetscFunctionReturn(PETSC_SUCCESS);
-  } else jac->spgemm_type = name;
-
-  PetscCall(PetscStrcmp("cusparse", jac->spgemm_type, &flag));
-  if (flag) {
-    PetscCallExternal(HYPRE_SetSpGemmUseCusparse, 1);
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-  PetscCall(PetscStrcmp("hypre", jac->spgemm_type, &flag));
-  if (flag) {
-    PetscCallExternal(HYPRE_SetSpGemmUseCusparse, 0);
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-  jac->spgemm_type = NULL;
-  SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown HYPRE SpGEMM type %s; Choices are cusparse, hypre", name);
+  jac->spgemm_type = name;
+  PetscFunctionReturn(PETSC_SUCCESS);
 #endif
 }
 
@@ -343,7 +326,7 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
       PetscObjectParameterSetDefault(jac, spgemm_type, HYPRESpgemmTypes[0]);
 #endif
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 18, 0)
-      PetscObjectParameterSetDefault(jac, keeptranspose, PETSC_TRUE);
+      PetscObjectParameterSetDefault(jac, keeptranspose, PETSC_BOOL3_TRUE);
       PetscObjectParameterSetDefault(jac, mod_rap2, 1);
 #endif
       PetscObjectParameterSetDefault(jac, agg_interptype, 7);
@@ -357,13 +340,11 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
       PetscObjectParameterSetDefault(jac, spgemm_type, "hypre");
 #endif
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 18, 0)
-      PetscObjectParameterSetDefault(jac, keeptranspose, PETSC_FALSE);
+      PetscObjectParameterSetDefault(jac, keeptranspose, PETSC_BOOL3_FALSE);
       PetscObjectParameterSetDefault(jac, mod_rap2, 0);
 #endif
       PetscObjectParameterSetDefault(jac, agg_interptype, 4);
     }
-    PetscObjectParameterSetDefault(jac, relaxtype[2], 9); /*G.E. */
-
     PetscCallExternal(HYPRE_BoomerAMGSetCycleType, jac->hsolver, jac->cycletype);
     PetscCallExternal(HYPRE_BoomerAMGSetMaxLevels, jac->hsolver, jac->maxlevels);
     PetscCallExternal(HYPRE_BoomerAMGSetMaxIter, jac->hsolver, jac->maxiter);
@@ -383,13 +364,23 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
     PetscCallExternal(HYPRE_BoomerAMGSetCoarsenType, jac->hsolver, jac->coarsentype);
     PetscCallExternal(HYPRE_BoomerAMGSetRelaxOrder, jac->hsolver, jac->relaxorder);
     PetscCallExternal(HYPRE_BoomerAMGSetInterpType, jac->hsolver, jac->interptype);
-    PetscCallExternal(HYPRE_BoomerAMGSetRelaxType, jac->hsolver, jac->relaxtype[0]);
+    PetscCallExternal(HYPRE_BoomerAMGSetCycleRelaxType, jac->hsolver, jac->relaxtype[0], 1);
+    PetscCallExternal(HYPRE_BoomerAMGSetCycleRelaxType, jac->hsolver, jac->relaxtype[1], 2);
+    PetscCallExternal(HYPRE_BoomerAMGSetCycleRelaxType, jac->hsolver, jac->relaxtype[2], 3);
     /* GPU */
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
-    PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, jac->spgemm_type));
+    {
+      PetscBool flg_cusparse, flg_hypre;
+
+      PetscCall(PetscStrcmp("cusparse", jac->spgemm_type, &flg_cusparse));
+      PetscCall(PetscStrcmp("hypre", jac->spgemm_type, &flg_hypre));
+      if (flg_cusparse) PetscCallExternal(HYPRE_SetSpGemmUseCusparse, 1);
+      else if (flg_hypre) PetscCallExternal(HYPRE_SetSpGemmUseCusparse, 0);
+      else SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown HYPRE SpGEMM type %s; Choices are cusparse, hypre", jac->spgemm_type);
+    }
 #endif
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 18, 0)
-    PetscCallExternal(HYPRE_BoomerAMGSetKeepTranspose, jac->hsolver, jac->keeptranspose ? 1 : 0);
+    PetscCallExternal(HYPRE_BoomerAMGSetKeepTranspose, jac->hsolver, jac->keeptranspose == PETSC_BOOL3_TRUE ? 1 : 0);
     PetscCallExternal(HYPRE_BoomerAMGSetRAP2, jac->hsolver, jac->rap2);
     PetscCallExternal(HYPRE_BoomerAMGSetModuleRAP2, jac->hsolver, jac->mod_rap2);
 #endif
@@ -999,7 +990,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems P
   PetscInt    bs, n, indx, level;
   PetscBool   flg, tmp_truth;
   PetscReal   tmpdbl, twodbl[2];
-  const char *symtlist[] = {"nonsymmetric", "SPD", "nonsymmetric,SPD"};
+  const char *symtlist[] = {"nonsymmetric", "SPD", "nonsymmetric,SPD"}, *drt, *ct, *it;
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "HYPRE BoomerAMG Options");
@@ -1179,29 +1170,16 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems P
   }
 
   /* Relax type */
-  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_relax_type_all", "Relax type for the up and down cycles", "None", HYPREBoomerAMGRelaxType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGRelaxType), HYPREBoomerAMGRelaxType[6], &indx, &flg));
-  if (flg) {
-    jac->relaxtype[0] = jac->relaxtype[1] = indx;
-    PetscCallExternal(HYPRE_BoomerAMGSetRelaxType, jac->hsolver, indx);
-    /* by default, coarse type set to 9 */
-    jac->relaxtype[2] = 9;
-    PetscCallExternal(HYPRE_BoomerAMGSetCycleRelaxType, jac->hsolver, 9, 3);
-  }
-  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_relax_type_down", "Relax type for the down cycles", "None", HYPREBoomerAMGRelaxType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGRelaxType), HYPREBoomerAMGRelaxType[6], &indx, &flg));
-  if (flg) {
-    jac->relaxtype[0] = indx;
-    PetscCallExternal(HYPRE_BoomerAMGSetCycleRelaxType, jac->hsolver, indx, 1);
-  }
-  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_relax_type_up", "Relax type for the up cycles", "None", HYPREBoomerAMGRelaxType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGRelaxType), HYPREBoomerAMGRelaxType[6], &indx, &flg));
-  if (flg) {
-    jac->relaxtype[1] = indx;
-    PetscCallExternal(HYPRE_BoomerAMGSetCycleRelaxType, jac->hsolver, indx, 2);
-  }
-  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_relax_type_coarse", "Relax type on coarse grid", "None", HYPREBoomerAMGRelaxType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGRelaxType), HYPREBoomerAMGRelaxType[9], &indx, &flg));
-  if (flg) {
-    jac->relaxtype[2] = indx;
-    PetscCallExternal(HYPRE_BoomerAMGSetCycleRelaxType, jac->hsolver, indx, 3);
-  }
+  drt = jac->relaxtype[0] >= 0 ? HYPREBoomerAMGRelaxType[jac->relaxtype[0]] : "unknown";
+  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_relax_type_all", "Relax type for the up and down cycles", "None", HYPREBoomerAMGRelaxType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGRelaxType), drt, &indx, &flg));
+  if (flg) jac->relaxtype[0] = jac->relaxtype[1] = indx;
+  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_relax_type_down", "Relax type for the down cycles", "None", HYPREBoomerAMGRelaxType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGRelaxType), drt, &indx, &flg));
+  if (flg) jac->relaxtype[0] = indx;
+  drt = jac->relaxtype[1] >= 0 ? HYPREBoomerAMGRelaxType[jac->relaxtype[1]] : "unknown";
+  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_relax_type_up", "Relax type for the up cycles", "None", HYPREBoomerAMGRelaxType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGRelaxType), drt, &indx, &flg));
+  if (flg) jac->relaxtype[1] = indx;
+  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_relax_type_coarse", "Relax type on coarse grid", "None", HYPREBoomerAMGRelaxType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGRelaxType), HYPREBoomerAMGRelaxType[jac->relaxtype[9]], &indx, &flg));
+  if (flg) jac->relaxtype[2] = indx;
 
   /* Relaxation Weight */
   PetscCall(PetscOptionsReal("-pc_hypre_boomeramg_relax_weight_all", "Relaxation weight for all levels (0 = hypre estimates, -k = determined with k CG steps)", "None", jac->relaxweight, &tmpdbl, &flg));
@@ -1237,22 +1215,15 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems P
 
   /* the Relax Order */
   PetscCall(PetscOptionsBool("-pc_hypre_boomeramg_no_CF", "Do not use CF-relaxation", "None", PETSC_FALSE, &tmp_truth, &flg));
-
-  if (flg && tmp_truth) {
-    jac->relaxorder = 0;
-    PetscCallExternal(HYPRE_BoomerAMGSetRelaxOrder, jac->hsolver, jac->relaxorder);
-  }
+  if (flg && tmp_truth) jac->relaxorder = 0;
   PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_measure_type", "Measure type", "None", HYPREBoomerAMGMeasureType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGMeasureType), HYPREBoomerAMGMeasureType[0], &indx, &flg));
   if (flg) {
     jac->measuretype = indx;
     PetscCallExternal(HYPRE_BoomerAMGSetMeasureType, jac->hsolver, jac->measuretype);
   }
-  /* update list length 3/07 */
-  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_coarsen_type", "Coarsen type", "None", HYPREBoomerAMGCoarsenType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGCoarsenType), HYPREBoomerAMGCoarsenType[6], &indx, &flg));
-  if (flg) {
-    jac->coarsentype = indx;
-    PetscCallExternal(HYPRE_BoomerAMGSetCoarsenType, jac->hsolver, jac->coarsentype);
-  }
+  ct = jac->coarsentype >= 0 ? HYPREBoomerAMGCoarsenType[jac->coarsentype] : "unknown";
+  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_coarsen_type", "Coarsen type", "None", HYPREBoomerAMGCoarsenType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGCoarsenType), ct, &indx, &flg));
+  if (flg) jac->coarsentype = indx;
 
   PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_max_coarse_size", "Maximum size of coarsest grid", "None", jac->maxc, &jac->maxc, &flg));
   if (flg) PetscCallExternal(HYPRE_BoomerAMGSetMaxCoarseSize, jac->hsolver, jac->maxc);
@@ -1337,12 +1308,9 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems P
   PetscCheck(!jac->Rtype || !jac->agg_nl, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_INCOMP, "-pc_hypre_boomeramg_restriction_type (%" PetscInt_FMT ") and -pc_hypre_boomeramg_agg_nl (%" PetscInt_FMT ")", jac->Rtype, jac->agg_nl);
 #endif
 
-  /* new 3/07 */
-  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_interp_type", "Interpolation type", "None", HYPREBoomerAMGInterpType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGInterpType), HYPREBoomerAMGInterpType[0], &indx, &flg));
-  if (flg || jac->Rtype) {
-    if (flg) jac->interptype = indx;
-    PetscCallExternal(HYPRE_BoomerAMGSetInterpType, jac->hsolver, jac->interptype);
-  }
+  it = jac->interptype >= 0 ? HYPREBoomerAMGInterpType[jac->interptype] : "unknown";
+  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_interp_type", "Interpolation type", "None", HYPREBoomerAMGInterpType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGInterpType), it, &indx, &flg));
+  if (flg) jac->interptype = indx;
 
   PetscCall(PetscOptionsName("-pc_hypre_boomeramg_print_statistics", "Print statistics", "None", &flg));
   if (flg) {
@@ -1373,8 +1341,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems P
     PetscCallExternal(HYPRE_BoomerAMGSetSmoothNumLevels, jac->hsolver, jac->nodal_relax_levels);
   }
 
-  PetscCall(PetscOptionsBool("-pc_hypre_boomeramg_keeptranspose", "Avoid transpose matvecs in preconditioner application", "None", jac->keeptranspose, &jac->keeptranspose, NULL));
-  PetscCallExternal(HYPRE_BoomerAMGSetKeepTranspose, jac->hsolver, jac->keeptranspose ? 1 : 0);
+  PetscCall(PetscOptionsBool3("-pc_hypre_boomeramg_keeptranspose", "Avoid transpose matvecs in preconditioner application", "None", jac->keeptranspose, &jac->keeptranspose, NULL));
 
   /* options for ParaSails solvers */
   PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_parasails_sym", "Symmetry of matrix and preconditioner", "None", symtlist, PETSC_STATIC_ARRAY_LENGTH(symtlist), symtlist[0], &indx, &flg));
@@ -2359,7 +2326,25 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
     jac->nodal_relax                                             = PETSC_FALSE;
     jac->nodal_relax_levels                                      = 1;
     jac->rap2                                                    = 0;
-    PetscObjectParameterSetDefault(jac, relaxorder, -1); /* Initialize with invalid value so we can recognize user input */
+    PetscObjectParameterSetDefault(jac, relaxtype[2], 9); /* G.E. */
+
+    /*
+      Initialize the following parameters with invalid value so we can recognize user input.
+      If there is no user input they are overwritten in PCSetUp_HYPRE() depending on if the matrix is on the CPU or the GPU
+    */
+    PetscObjectParameterSetDefault(jac, relaxorder, PETSC_DECIDE);
+    PetscObjectParameterSetDefault(jac, coarsentype, PETSC_DECIDE);
+    PetscObjectParameterSetDefault(jac, interptype, PETSC_DECIDE);
+    PetscObjectParameterSetDefault(jac, relaxtype[0], PETSC_DECIDE);
+    PetscObjectParameterSetDefault(jac, relaxtype[1], PETSC_DECIDE);
+#if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
+    PetscObjectParameterSetDefault(jac, spgemm_type, "not yet set");
+#endif
+#if PETSC_PKG_HYPRE_VERSION_GE(2, 18, 0)
+    PetscObjectParameterSetDefault(jac, keeptranspose, PETSC_BOOL3_UNKNOWN);
+    PetscObjectParameterSetDefault(jac, mod_rap2, PETSC_DECIDE);
+#endif
+    PetscObjectParameterSetDefault(jac, agg_interptype, PETSC_DECIDE);
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(PetscStrcmp("ams", jac->hypre_type, &flag));
@@ -2630,9 +2615,9 @@ PetscErrorCode PCMGGalerkinGetMatProductAlgorithm(PC pc, const char *name[])
      PCHYPRE - Allows you to use the matrix element based preconditioners in the LLNL package hypre as PETSc `PC`
 
    Options Database Keys:
-+   -pc_hypre_type - One of `euclid`, `pilut`, `parasails`, `boomeramg`, `ams`, or `ads`
-.   -pc_hypre_boomeramg_nodal_coarsen <n> - where n is from 1 to 6 (see `HYPRE_BoomerAMGSetNodal()`)
-.   -pc_hypre_boomeramg_vec_interp_variant <v> - where v is from 1 to 3 (see `HYPRE_BoomerAMGSetInterpVecVariant()`)
++   -pc_hypre_type                             - One of `euclid`, `pilut`, `parasails`, `boomeramg`, `ams`, or `ads`
+.   -pc_hypre_boomeramg_nodal_coarsen <n>      - where `n` is from 1 to 6 (see `HYPRE_BoomerAMGSetNodal()`)
+.   -pc_hypre_boomeramg_vec_interp_variant <v> - where `v` is from 1 to 3 (see `HYPRE_BoomerAMGSetInterpVecVariant()`)
 -   Many others - run with `-pc_type hypre` `-pc_hypre_type XXX` `-help` to see options for the XXX preconditioner
 
    Level: intermediate
@@ -2890,14 +2875,14 @@ static PetscErrorCode PCSetUp_PFMG(PC pc)
      PCPFMG - the hypre PFMG multigrid solver
 
    Options Database Keys:
-+ -pc_pfmg_its <its> - number of iterations of PFMG to use as preconditioner
-. -pc_pfmg_num_pre_relax <steps> - number of smoothing steps before coarse grid solve
++ -pc_pfmg_its <its>              - number of iterations of PFMG to use as preconditioner
+. -pc_pfmg_num_pre_relax <steps>  - number of smoothing steps before coarse grid solve
 . -pc_pfmg_num_post_relax <steps> - number of smoothing steps after coarse grid solve
-. -pc_pfmg_tol <tol> - tolerance of PFMG
-. -pc_pfmg_relax_type - relaxation type for the up and down cycles, one of Jacobi,Weighted-Jacobi,symmetric-Red/Black-Gauss-Seidel,Red/Black-Gauss-Seidel
-. -pc_pfmg_rap_type - type of coarse matrix generation, one of Galerkin,non-Galerkin
-- -pc_pfmg_skip_relax - skip relaxation on certain grids for isotropic problems. This can greatly improve efficiency by eliminating unnecessary relaxations
-                        when the underlying problem is isotropic, one of 0,1
+. -pc_pfmg_tol <tol>              - tolerance of PFMG
+. -pc_pfmg_relax_type             - relaxation type for the up and down cycles, one of Jacobi,Weighted-Jacobi,symmetric-Red/Black-Gauss-Seidel,Red/Black-Gauss-Seidel
+. -pc_pfmg_rap_type               - type of coarse matrix generation, one of Galerkin,non-Galerkin
+- -pc_pfmg_skip_relax             - skip relaxation on certain grids for isotropic problems. This can greatly improve efficiency by eliminating unnecessary relaxations
+                                    when the underlying problem is isotropic, one of 0,1
 
    Level: advanced
 
@@ -3132,10 +3117,10 @@ static PetscErrorCode PCSetUp_SysPFMG(PC pc)
    Level: advanced
 
    Options Database Keys:
-+ -pc_syspfmg_its <its> - number of iterations of SysPFMG to use as preconditioner
-. -pc_syspfmg_num_pre_relax <steps> - number of smoothing steps before coarse grid
-. -pc_syspfmg_num_post_relax <steps> - number of smoothing steps after coarse grid
-. -pc_syspfmg_tol <tol> - tolerance of SysPFMG
++ -pc_syspfmg_its <its>                                           - number of iterations of SysPFMG to use as preconditioner
+. -pc_syspfmg_num_pre_relax <steps>                               - number of smoothing steps before coarse grid
+. -pc_syspfmg_num_post_relax <steps>                              - number of smoothing steps after coarse grid
+. -pc_syspfmg_tol <tol>                                           - tolerance of SysPFMG
 - -pc_syspfmg_relax_type <Weighted-Jacobi,Red/Black-Gauss-Seidel> - relaxation type for the up and down cycles
 
    Notes:
@@ -3329,10 +3314,10 @@ static PetscErrorCode PCSetUp_SMG(PC pc)
    Level: advanced
 
    Options Database Keys:
-+ -pc_smg_its <its> - number of iterations of SMG to use as preconditioner
-. -pc_smg_num_pre_relax <steps> - number of smoothing steps before coarse grid
++ -pc_smg_its <its>              - number of iterations of SMG to use as preconditioner
+. -pc_smg_num_pre_relax <steps>  - number of smoothing steps before coarse grid
 . -pc_smg_num_post_relax <steps> - number of smoothing steps after coarse grid
-- -pc_smg_tol <tol> - tolerance of SMG
+- -pc_smg_tol <tol>              - tolerance of SMG
 
    Notes:
    This is for CELL-centered descretizations

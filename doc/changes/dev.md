@@ -26,6 +26,7 @@
 ```{rubric} Sys:
 ```
 
+- Add `PetscOptionsBool3()`
 - Add `PETSC_E`
 
 - Deprecate `PetscSSEIsEnabled()`
