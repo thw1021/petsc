@@ -89,15 +89,6 @@
       PetscScalar,pointer :: lx_v(:)
       integer4 xl,yl,width,height
 
-!  Store parameters in common block
-
-      common /params/ lambda,mx,my,fd_coloring
-
-!  Note: Any user-defined Fortran routines (such as FormJacobian)
-!  MUST be declared as external.
-
-      external FormFunction,FormInitialGuess,FormJacobian
-
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Initialize program
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -275,7 +266,8 @@
       PetscCallA(SNESDestroy(snes,ierr))
       PetscCallA(PetscDrawDestroy(draw,ierr))
       PetscCallA(PetscFinalize(ierr))
-      end
+
+      contains
 
 ! ---------------------------------------------------------------------
 !
@@ -343,12 +335,6 @@
       use petscksp
       implicit none
 
-!  Common blocks:
-      PetscReal   lambda
-      PetscInt     mx,my
-      PetscBool         fd_coloring
-      common      /params/ lambda,mx,my,fd_coloring
-
 !  Input/output variables:
       PetscScalar x(mx,my)
       PetscErrorCode     ierr
@@ -409,12 +395,6 @@
       PetscErrorCode          ierr
       MatFDColoring fdcoloring
 
-!  Common blocks:
-      PetscReal         lambda
-      PetscInt          mx,my
-      PetscBool         fd_coloring
-      common            /params/ lambda,mx,my,fd_coloring
-
 !  Declarations for use with local arrays:
       PetscScalar,pointer :: lx_v(:), lf_v(:)
       PetscInt, pointer :: indices(:)
@@ -438,7 +418,7 @@
 
       PetscCallA(PetscLogFlops(11.0d0*mx*my,ierr))
 !
-!     fdcoloring is in the common block and used here ONLY to test the
+!     fdcoloring is used here ONLY to test the
 !     calls to MatFDColoringGetPerturbedColumns() and  MatFDColoringRestorePerturbedColumns()
 !
       if (fd_coloring) then
@@ -468,12 +448,6 @@
       subroutine ApplicationFunction(x,f,ierr)
       use petscsnes
       implicit none
-
-!  Common blocks:
-      PetscReal      lambda
-      PetscInt        mx,my
-      PetscBool         fd_coloring
-      common         /params/ lambda,mx,my,fd_coloring
 
 !  Input/output variables:
       PetscScalar    x(mx,my),f(mx,my)
@@ -544,12 +518,6 @@
       PetscErrorCode      ierr
       integer dummy
 
-!  Common blocks:
-      PetscReal     lambda
-      PetscInt       mx,my
-      PetscBool         fd_coloring
-      common        /params/ lambda,mx,my,fd_coloring
-
 !  Declarations for use with local array:
       PetscScalar,pointer :: lx_v(:)
 
@@ -591,12 +559,6 @@
       subroutine ApplicationJacobian(x,jac,jac_prec,ierr)
       use petscsnes
       implicit none
-
-!  Common blocks:
-      PetscReal    lambda
-      PetscInt      mx,my
-      PetscBool         fd_coloring
-      common       /params/ lambda,mx,my,fd_coloring
 
 !  Input/output variables:
       PetscScalar  x(mx,my)
@@ -650,7 +612,7 @@
  20   continue
 
       end
-
+      end
 !
 !/*TEST
 !
