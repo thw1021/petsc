@@ -1,8 +1,7 @@
 !
 !  Description: This example demonstrates repeated linear solves as
 !  well as the use of different preconditioner and linear system
-!  matrices.  This example also illustrates how to save PETSc objects
-!  in common blocks.
+!  matrices.
 !
 !
 
@@ -27,6 +26,10 @@
       PetscErrorCode ierr
       PetscBool  flg
       PetscScalar  v
+
+      ! global variables used by subroutine solve1
+      PetscMPIInt      rank
+      PetscBool        pflag
 
       PetscCallA(PetscInitialize(ierr))
       m      = 3
@@ -125,8 +128,8 @@
       PetscCallA(KSPDestroy(ksp,ierr))
 
       PetscCallA(PetscFinalize(ierr))
-      end
 
+      contains
 ! -----------------------------------------------------------------------
 !
       subroutine solve1(ksp,A,x,b,u,count,nsteps,A2,ierr)
@@ -149,11 +152,7 @@
       KSP     ksp
       Vec     x,b,u
 
-! Use common block to retain matrix between successive subroutine calls
       Mat              A2
-      PetscMPIInt      rank
-      PetscBool        pflag
-      common /my_data/ rank,pflag
 
       one = 1
 ! First time thorough: Create new matrix to define the linear system
@@ -204,6 +203,7 @@
  100  format('previous matrix: preconditioning')
  110  format('next matrix: defines linear system')
 
+      end
       end
 
 !/*TEST

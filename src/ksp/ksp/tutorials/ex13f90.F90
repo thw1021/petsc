@@ -25,17 +25,11 @@
 !
 !   Since we cannot store Scalars and integers in the same context,
 !   we store the integers/pointers in the user-defined context, and
-!   the scalar values are carried in the common block.
+!   the scalar values are globally shared.
 !   The scalar values in this simplistic example could easily
 !   be recalculated in each routine, where they are needed.
 !
 !   Scalar hx2,hy2  /* 1/(m+1)*(m+1) and 1/(n+1)*(n+1) */
-
-!  Note: Any user-defined Fortran routines MUST be declared as external.
-
-      external UserInitializeLinearSolver
-      external UserFinalizeLinearSolver
-      external UserDoLinearSolver
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                   Variable declarations
@@ -55,7 +49,6 @@
       PetscScalar,ALLOCATABLE :: rho(:,:)
 
       PetscReal hx2,hy2
-      common /param/ hx2,hy2
 
       tmax = 2
       m = 6
@@ -139,7 +132,8 @@
 
       PetscCallA(UserFinalizeLinearSolver(userctx,ierr))
       PetscCallA(PetscFinalize(ierr))
-      end
+
+      contains
 
 ! ----------------------------------------------------------------
       subroutine UserInitializeLinearSolver(m,n,userctx,ierr)
@@ -149,9 +143,6 @@
       PetscInt m,n
       PetscErrorCode ierr
       type(User) userctx
-
-      common /param/ hx2,hy2
-      PetscReal hx2,hy2
 
 !  Local variable declararions
       Mat     A
@@ -208,9 +199,6 @@
       PetscErrorCode ierr
       type(User) userctx
       PetscScalar rho(*),userb(*),userx(*)
-
-      common /param/ hx2,hy2
-      PetscReal hx2,hy2
 
       PC   pc
       KSP ksp
@@ -342,7 +330,7 @@
       PetscCall(MatDestroy(userctx%A,ierr))
       PetscCall(KSPDestroy(userctx%ksp,ierr))
       end
-
+      end
 !
 !/*TEST
 !

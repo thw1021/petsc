@@ -32,12 +32,6 @@
       PetscReal       zero
       PetscReal       alpha
       PetscInt        n
-      common /params/ alpha, n
-
-!  Note: Any user-defined Fortran routines (such as FormGradient)
-!  MUST be declared as external.
-
-      external FormFunctionGradient,FormHessian
 
       zero = 0.0d0
       i2 = 2
@@ -98,7 +92,7 @@
       PetscCallA(MatDestroy(H,ierr))
 
       PetscCallA(PetscFinalize(ierr))
-      end
+      contains
 
 ! --------------------------------------------------------------------
 !  FormFunctionGradient - Evaluates the function f(X) and gradient G(X)
@@ -125,9 +119,6 @@
       PetscReal        ff,t1,t2
       PetscInt         i,nn
       PetscReal, pointer :: g_v(:),x_v(:)
-      PetscReal        alpha
-      PetscInt         n
-      common /params/ alpha, n
 
       ierr = 0
       nn = n/2
@@ -195,9 +186,6 @@
 ! Notice that by declaring the arrays with range (0:1), we are using the C 0-indexing practice.
       PetscReal, pointer :: x_v(:)
       PetscInt         i,nn,ind(0:1),i2
-      PetscReal        alpha
-      PetscInt         n
-      common /params/ alpha, n
 
       ierr = 0
       nn= n/2
@@ -235,7 +223,7 @@
       PetscCall(PetscLogFlops(9.0d0*nn,ierr))
 
       end
-
+      end
 !
 !/*TEST
 !
