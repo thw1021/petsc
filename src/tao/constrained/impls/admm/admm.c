@@ -392,8 +392,7 @@ static PetscErrorCode TaoView_ADMM(Tao tao, PetscViewer viewer)
 
         PetscCall(MatConstantDiagonalGetConstant(am->A, &scale));
         if (scale == 1.0) PetscCall(PetscViewerASCIIPrintf(viewer, "x = z"));
-        else if (PetscImaginaryPart(scale) == 0.0) PetscCall(PetscViewerASCIIPrintf(viewer, "%g x = z", (double)PetscRealPart(scale)));
-        else PetscCall(PetscViewerASCIIPrintf(viewer, "(%g + i %g) x = z", (double)PetscRealPart(scale), (double)PetscImaginaryPart(scale)));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "%g x = z", (double)scale));
       } else {
         PetscCall(TaoTermViewSumPrintMapName(viewer, am->A, am->g_terms[0], "A", PETSC_FALSE));
         PetscCall(PetscViewerASCIIPrintf(viewer, " x = z"));
@@ -408,8 +407,7 @@ static PetscErrorCode TaoView_ADMM(Tao tao, PetscViewer viewer)
 
         PetscCall(MatConstantDiagonalGetConstant(am->B, &scale));
         if (scale == 1.0) PetscCall(PetscViewerASCIIPrintf(viewer, "x = z"));
-        else if (PetscImaginaryPart(scale) == 0.0) PetscCall(PetscViewerASCIIPrintf(viewer, "x = %g z", (double)PetscRealPart(scale)));
-        else PetscCall(PetscViewerASCIIPrintf(viewer, "x = (%g + i %g)", (double)PetscRealPart(scale), (double)PetscImaginaryPart(scale)));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "x = %g z", (double)scale));
       } else {
         PetscCall(PetscViewerASCIIPrintf(viewer, "x = "));
         PetscCall(TaoTermViewSumPrintMapName(viewer, am->B, am->f_terms[0], "A", PETSC_FALSE));
@@ -1253,6 +1251,6 @@ PetscErrorCode TaoADMMGetTermGroups(Tao tao, PetscInt *f_num_terms, const PetscI
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscTryMethod(tao, "TaoADMMGetTermGroups_C", (Tao, PetscInt *, const PetscInt *[], PetscInt *, const PetscInt *[]), (tao, f_num_terms, f_terms, g_num_terms, g_terms));
+  PetscTryMethod(tao, "TaoADMMGetTermGroups_C", (Tao, PetscInt *, const PetscInt *[], PetscBool *, PetscInt *, const PetscInt *[], PetscBool *), (tao, f_num_terms, f_terms, f_mapped, g_num_terms, g_terms, g_mapped));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
