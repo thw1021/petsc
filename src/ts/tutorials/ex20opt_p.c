@@ -34,9 +34,9 @@ struct _n_User {
   PetscBool implicitform;         /* implicit ODE? */
 };
 
-PetscErrorCode FormFunctionGradient(Tao, Vec, PetscReal *, Vec, void *);
-PetscErrorCode FormHessian(Tao, Vec, Mat, Mat, void *);
-PetscErrorCode Adjoint2(Vec, PetscScalar[], User);
+static PetscErrorCode FormFunctionGradient(Tao, Vec, PetscReal *, Vec, void *);
+static PetscErrorCode FormHessian(Tao, Vec, Mat, Mat, void *);
+static PetscErrorCode Adjoint2(Vec, PetscScalar[], User);
 
 /* ----------------------- Explicit form of the ODE  -------------------- */
 
@@ -522,7 +522,7 @@ int main(int argc, char **argv)
    f   - the newly evaluated function
    G   - the newly evaluated gradient
 */
-PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *ctx)
+static PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *ctx)
 {
   User               user_ptr = (User)ctx;
   TS                 ts       = user_ptr->ts;
@@ -572,7 +572,7 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec P, PetscReal *f, Vec G, void *c
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode FormHessian(Tao tao, Vec P, Mat H, Mat Hpre, void *ctx)
+static PetscErrorCode FormHessianSingle(Tao tao, Vec P, Mat H, void *ctx)
 {
   User           user_ptr = (User)ctx;
   PetscScalar    harr[1];
@@ -585,14 +585,17 @@ PetscErrorCode FormHessian(Tao tao, Vec P, Mat H, Mat Hpre, void *ctx)
 
   PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
-  if (H != Hpre) {
-    PetscCall(MatAssemblyBegin(Hpre, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode Adjoint2(Vec P, PetscScalar arr[], User ctx)
+static PetscErrorCode FormHessian(Tao tao, Vec P, Mat H, Mat Hpre, void *ctx)
+{
+  PetscFunctionBeginUser;
+  PetscCall(TaoComputeHessianSingle(tao, P, H, Hpre, FormHessianSingle, SAME_NONZERO_PATTERN, ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode Adjoint2(Vec P, PetscScalar arr[], User ctx)
 {
   TS                 ts = ctx->ts;
   const PetscScalar *z_ptr;
