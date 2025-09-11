@@ -21,6 +21,10 @@ if __name__ == '__main__':
     '--download-hypre=1',
     '--download-hypre-commit=hypre-3.0',
     '--download-hypre-configure-arguments=--without-umpire',
+    '--download-superlu_dist',
+    '--with-cxx-dialect=17',
+    '--download-kokkos',
+    '--download-kokkos-kernels',
     '--with-strict-petscerrorcode',
   ]
 
