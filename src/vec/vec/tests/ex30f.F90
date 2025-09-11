@@ -2,8 +2,8 @@
 !
 !  Tests parallel to parallel scatter where a to from index are
 !  duplicated
-      program main
 #include <petsc/finclude/petscvec.h>
+      program main
       use petscvec
       implicit none
 
@@ -22,7 +22,7 @@
       PetscCallA(PetscInitialize(ierr))
       PetscCallMPIA(MPI_COMM_RANK(PETSC_COMM_WORLD,rank,ierr))
       PetscCallMPIA(MPI_COMM_SIZE(PETSC_COMM_WORLD,size,ierr))
-      if (size.ne.4) then
+      if (size /= 4) then
          print *, 'Four processor test'
          stop
       end if
@@ -97,7 +97,7 @@
       PetscCallA(PetscObjectSetName(v2, 'V2',ierr))
       PetscCallA(VecView(v2,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
-      if (rank.eq.0) then
+      if (rank == 0) then
          PetscCallA(PetscObjectSetName(v3, 'V3',ierr))
          PetscCallA(VecView(v3,PETSC_VIEWER_STDOUT_SELF,ierr))
       end if

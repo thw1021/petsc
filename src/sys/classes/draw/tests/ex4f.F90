@@ -5,9 +5,9 @@
 !          This function is called repeatedly by PetscDrawZoom() to
 !      redraw the figure
 !
-      subroutine zoomfunction(draw,dummy,ierr)
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscdraw.h>
+      subroutine zoomfunction(draw,dummy,ierr)
       use petscsys
       use petscdraw
       implicit none
@@ -22,10 +22,10 @@
       zero = 0
       one  = 1
       max = 256.0
-      do 10, i=0,255
+      do i=0,255
         value = i/max
         PetscCall(PetscDrawLine(draw,zero,value,one,value,i,ierr))
- 10   continue
+      end do
       end
 
       program main

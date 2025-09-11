@@ -1,8 +1,8 @@
 !
 !
-      program main
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscdraw.h>
+      program main
       use petscsys
       use petscdraw
       implicit none
@@ -46,11 +46,11 @@
       PetscCallA(PetscDrawAxisSetColors(axis,PETSC_DRAW_BLACK,PETSC_DRAW_RED,PETSC_DRAW_BLUE,ierr))
       PetscCallA(PetscDrawAxisSetLabels(axis,'toplabel','xlabel','ylabel',ierr))
 
-      do 10, i=0,n-1
+      do i=0,n-1
         xd = real(i) - 5.0
         yd = xd*xd
         PetscCallA(PetscDrawLGAddPoint(lg,xd,yd,ierr))
- 10   continue
+      end do
 
       PetscCallA(PetscDrawLGSetUseMarkers(lg,PETSC_TRUE,ierr))
       PetscCallA(PetscDrawLGDraw(lg,ierr))

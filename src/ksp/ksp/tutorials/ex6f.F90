@@ -1,13 +1,12 @@
 !
 !  Description: This example demonstrates repeated linear solves as
 !  well as the use of different preconditioner and linear system
-!  matrices.  This example also illustrates how to save PETSc objects
-!  in common blocks.
+!  matrices.
 !
 !
 
-      program main
 #include <petsc/finclude/petscksp.h>
+      program main
       use petscksp
       implicit none
 
@@ -27,6 +26,10 @@
       PetscErrorCode ierr
       PetscBool  flg
       PetscScalar  v
+
+      ! global variables used by subroutine solve1
+      PetscMPIInt      rank
+      PetscBool        pflag
 
       PetscCallA(PetscInitialize(ierr))
       m      = 3
@@ -58,29 +61,29 @@
 !     appropriate processor during matrix assembly).
 !   - Always specify global rows and columns of matrix entries.
 
-      do 10, II=Istart,Iend-1
+      do II=Istart,Iend-1
         v = -1.0
         i = II/n
         j = II - i*n
-        if (i.gt.0) then
+        if (i > 0) then
           JJ = II - n
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (i.lt.m-1) then
+        if (i < m-1) then
           JJ = II + n
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (j.gt.0) then
+        if (j > 0) then
           JJ = II - 1
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (j.lt.n-1) then
+        if (j < n-1) then
           JJ = II + 1
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
         v = 4.0
         PetscCallA(MatSetValues(A,one,[II],one,[II],[v],ADD_VALUES,ierr))
- 10   continue
+      end do
 
 !  Assemble matrix, using the 2-step process:
 !       MatAssemblyBegin(), MatAssemblyEnd()
@@ -111,9 +114,9 @@
 
 !  Solve several linear systems in succession
 
-      do 100 i=1,nsteps
+      do i=1,nsteps
          PetscCallA(solve1(ksp,A,x,b,u,i,nsteps,A2,ierr))
- 100  continue
+      end do
 
 !  Free work space.  All PETSc objects should be destroyed when they
 !  are no longer needed.
@@ -125,8 +128,8 @@
       PetscCallA(KSPDestroy(ksp,ierr))
 
       PetscCallA(PetscFinalize(ierr))
-      end
 
+      contains
 ! -----------------------------------------------------------------------
 !
       subroutine solve1(ksp,A,x,b,u,count,nsteps,A2,ierr)
@@ -149,20 +152,16 @@
       KSP     ksp
       Vec     x,b,u
 
-! Use common block to retain matrix between successive subroutine calls
       Mat              A2
-      PetscMPIInt      rank
-      PetscBool        pflag
-      common /my_data/ rank,pflag
 
       one = 1
 ! First time thorough: Create new matrix to define the linear system
-      if (count .eq. 1) then
+      if (count == 1) then
         PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
         pflag = .false.
         PetscCallA(PetscOptionsHasName(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-mat_view',pflag,ierr))
         if (pflag) then
-          if (rank .eq. 0) write(6,100)
+          if (rank == 0) write(6,100)
           call PetscFlush(6)
         endif
         PetscCallA(MatConvert(A,MATSAME,MAT_INITIAL_MATRIX,A2,ierr))
@@ -173,13 +172,13 @@
 
 ! Alter the matrix A a bit
       PetscCallA(MatGetOwnershipRange(A,Istart,Iend,ierr))
-      do 20, II=Istart,Iend-1
+      do II=Istart,Iend-1
         v = 2.0
         PetscCallA(MatSetValues(A,one,[II],one,[II],[v],ADD_VALUES,ierr))
- 20   continue
+      end do
       PetscCallA(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr))
       if (pflag) then
-        if (rank .eq. 0) write(6,110)
+        if (rank == 0) write(6,110)
         call PetscFlush(6)
       endif
       PetscCallA(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr))
@@ -199,11 +198,12 @@
       PetscCallA(KSPSolve(ksp,b,x,ierr))
 
 ! Destroy the matrix used to construct the preconditioner on the last time through
-      if (count .eq. nsteps) PetscCallA(MatDestroy(A2,ierr))
+      if (count == nsteps) PetscCallA(MatDestroy(A2,ierr))
 
  100  format('previous matrix: preconditioning')
  110  format('next matrix: defines linear system')
 
+      end
       end
 
 !/*TEST

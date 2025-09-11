@@ -1,7 +1,7 @@
 ! Test MatCreateMPIAdj() with NULL argument 'values'
 
-program main
 #include <petsc/finclude/petscmat.h>
+program main
 use petscmat
 implicit none
 
@@ -16,12 +16,12 @@ implicit none
   PetscCallA(PetscInitialize(ierr))
 
   PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,sz,ierr))
-  PetscCheckA(sz.eq.2,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,'This example is for exactly two processes')
+  PetscCheckA(sz == 2,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,'This example is for exactly two processes')
   PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rnk,ierr))
   ii(1) = 0
   ii(2) = 3
   ii(3) = 6
-  if (rnk.eq.0) then
+  if (rnk == 0) then
     jj(1) = 0
     jj(2) = 1
     jj(3) = 2

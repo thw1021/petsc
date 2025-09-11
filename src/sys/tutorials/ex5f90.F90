@@ -1,7 +1,6 @@
 #include <petsc/finclude/petscsys.h>
 #include <petsc/finclude/petscbag.h>
 #include <petsc/finclude/petscviewer.h>
-
       module ex5f90module
       use petscsys
       use petscbag

@@ -5,8 +5,8 @@
 !   and then reads it back in as a SeqDense and MPIDense
 !   matrix, and prints out the contents.
 !
-      program main
 #include <petsc/finclude/petscmat.h>
+      program main
       use petscmat
       implicit none
 
@@ -23,7 +23,7 @@
 !
 !     Proc-0 Create a seq-dense matrix and write it to a file
 !
-      if (rank .eq. 0) then
+      if (rank == 0) then
          ten = 10
          PetscCallA(MatCreateSeqDense(PETSC_COMM_SELF,ten,ten,PETSC_NULL_SCALAR_ARRAY,A,ierr))
          v = 1.0

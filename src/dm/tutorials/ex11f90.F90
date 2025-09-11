@@ -1,8 +1,8 @@
 !     Tests DMDAGetVecGetArray()
 
-      program main
 #include <petsc/finclude/petscdm.h>
 #include <petsc/finclude/petscdmda.h>
+      program main
       use petscdmda
       use petsc
       implicit none
@@ -68,7 +68,7 @@
 
       PetscCallA(DMDAGetElements(ada,nen,nel,elements,ierr))
       do i=1,nen*nel
-         PetscCheckA(elements(i) .ge. 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error getting DMDA elements')
+         PetscCheckA(elements(i) >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error getting DMDA elements')
       enddo
       PetscCallA(DMDARestoreElements(ada,nen,nel,elements,ierr))
       PetscCallA(DMDestroy(ada,ierr))

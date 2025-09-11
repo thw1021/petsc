@@ -5,8 +5,8 @@
       !  -m <size> : problem size
       !  -mat_nonsym : use nonsymmetric matrix (default is symmetric)
 
-program main
 #include <petsc/finclude/petscksp.h>
+program main
       use petscksp
 
       implicit none
@@ -189,9 +189,9 @@ program main
       PetscCallA(KSPSetUp(ksp,ierr))
 
       ! Do not do this in application code, use -ksp_gmres_modifiedgramschmidt or -ksp_gmres_modifiedgramschmidt
-      if (orthog .eq. 1) then
+      if (orthog == 1) then
          PetscCallA(KSPGMRESSetOrthogonalization(ksp,KSPGMRESModifiedGramSchmidtOrthogonalization,ierr))
-      else if (orthog .eq. 2) then
+      else if (orthog == 2) then
          PetscCallA(KSPGMRESSetOrthogonalization(ksp,KSPGMRESClassicalGramSchmidtOrthogonalization,ierr))
       endif
 

@@ -1,6 +1,6 @@
 !
-      program main
 #include <petsc/finclude/petscvec.h>
+      program main
       use petscvec
       implicit none
 
@@ -38,33 +38,33 @@
       PetscCallA(VecSet(x,one,ierr))
 
       PetscCallA(VecNorm(x,NORM_2,norm,ierr))
-      if (rank .eq. 0) then
+      if (rank == 0) then
          write (6,100) norm
  100     format ('L_2 Norm of entire vector ',1pe9.2)
       endif
 
       comp = 0
       PetscCallA(VecStrideNorm(x,comp,NORM_2,norm,ierr))
-      if (rank .eq. 0) then
+      if (rank == 0) then
          write (6,200) norm
  200     format ('L_2 Norm of subvector 0',1pe9.2)
       endif
 
       comp = 1
       PetscCallA(VecStrideNorm(x,comp,NORM_2,norm,ierr))
-      if (rank .eq. 0) then
+      if (rank == 0) then
          write (6,300) norm
  300     format ('L_2 Norm of subvector 1',1pe9.2)
       endif
 
       PetscCallA(VecStrideNorm(x,comp,NORM_1,norm,ierr))
-      if (rank .eq. 0) then
+      if (rank == 0) then
          write (6,400) norm
  400     format ('L_1 Norm of subvector 0',1pe9.2)
       endif
 
       PetscCallA(VecStrideNorm(x,comp,NORM_INFINITY,norm,ierr))
-      if (rank .eq. 0) then
+      if (rank == 0) then
          write (6,500) norm
  500     format ('L_1 Norm of subvector 1',1pe9.2)
       endif

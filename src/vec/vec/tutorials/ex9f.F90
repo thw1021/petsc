@@ -10,8 +10,8 @@
 !      vector computations are otherwise unaffected.
 !
 
-      program main
 #include <petsc/finclude/petscvec.h>
+      program main
       use petscvec
       implicit none
 
@@ -31,7 +31,7 @@
       PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
       PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
 
-      PetscCheckA(size .eq. 2,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,'Requires 2 processors')
+      PetscCheckA(size == 2,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,'Requires 2 processors')
 
 !
 !     Construct a two dimensional graph connecting nlocal degrees of
@@ -53,7 +53,7 @@
 !         |-------------------------------------------------|
 !
 
-      if (rank .eq. 0) then
+      if (rank == 0) then
         ifrom(1) = 11
         ifrom(2) = 6
       else
@@ -86,10 +86,10 @@
        PetscCallA(VecGetOwnershipRange(gx,rstart,rend,ierr))
 
        ione = 1
-       do 10, i=rstart,rend-1
+       do i=rstart,rend-1
          value = real(i)
          PetscCallA(VecSetValues(gx,ione,[i],[value],INSERT_VALUES,ierr))
- 10    continue
+       end do
 
        PetscCallA(VecAssemblyBegin(gx,ierr))
        PetscCallA(VecAssemblyEnd(gx,ierr))

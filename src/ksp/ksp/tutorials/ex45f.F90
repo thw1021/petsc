@@ -1,6 +1,6 @@
-      program main
 #include <petsc/finclude/petscdmda.h>
 #include <petsc/finclude/petscksp.h>
+      program main
       use petscdm
       use petscdmda
       use petscksp
@@ -98,11 +98,11 @@
       HxdHy = Hx/Hy
       HydHx = Hy/Hx
       PetscCall(DMDAGetCorners(dm,xs,ys,PETSC_NULL_INTEGER,xm,ym,PETSC_NULL_INTEGER,ierr))
-      do 10,j=ys,ys+ym-1
-        do 20,i=xs,xs+xm-1
+      do j=ys,ys+ym-1
+        do i=xs,xs+xm-1
           row(1)%i = i
           row(1)%j = j
-          if (i.eq.0 .or. j.eq.0 .or. i.eq.mx-1 .or. j.eq.my-1) then
+          if (i == 0 .or. j == 0 .or. i == mx-1 .or. j == my-1) then
             v(1) = 2.0*(HxdHy + HydHx)
             PetscCall(MatSetValuesStencil(B,i1,row,i1,row,v,INSERT_VALUES,ierr))
           else
@@ -123,11 +123,11 @@
             col(5)%j = j+1
             PetscCall(MatSetValuesStencil(B,i1,row,i5,col,v,INSERT_VALUES,ierr))
             endif
- 20      continue
- 10   continue
+         end do
+       end do
        PetscCall(MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr))
        PetscCall(MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr))
-       if (A .ne. B) then
+       if (A /= B) then
          PetscCall(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr))
          PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr))
        endif

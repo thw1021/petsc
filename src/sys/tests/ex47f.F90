@@ -1,8 +1,8 @@
 ! Example for PetscOptionsInsertFileYAML: Fortran Example
 
+#include <petsc/finclude/petscsys.h>
 program main
 
-#include <petsc/finclude/petscsys.h>
       use petscsys
 
       implicit none

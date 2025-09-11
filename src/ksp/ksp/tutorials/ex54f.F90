@@ -15,8 +15,8 @@
 !
 
 ! -----------------------------------------------------------------------
-      program main
 #include <petsc/finclude/petscksp.h>
+      program main
       use petscksp
       implicit none
 
@@ -37,7 +37,6 @@
       PetscReal::theta,eps,h,x,y,xsj
       PetscReal::coord(2,4),dd(2,2),ev(3),blb(2)
 
-      common /ex54_theta/ theta
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                 Beginning of program
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -67,7 +66,7 @@
       if (.not. flg) then
          blb(1) = 0.0
          blb(2) = 0.0
-      else if (ki .ne. 2) then
+      else if (ki /= 2) then
          print *, 'error: ', ki,' arguments read for -blob_center.  Needs to be two.'
       endif
       PetscCallA(PetscOptionsGetBool(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-out_matlab',out_matlab,flg,ierr))
@@ -340,7 +339,7 @@
 !     Divide jacobian by 16 (multiply by .0625)
 
       xsj = 0.0625*xsj1
-      if (xsj1.eq.0.0) then
+      if (xsj1 == 0.0) then
          xsj1 = 1.0
       else
          xsj1 = 1.0/xsj1
@@ -409,8 +408,7 @@
 !     ex54_psi - anisotropic material direction
 !     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       PetscReal function ex54_psi(x,y)
-      PetscReal x,y,theta
-      common /ex54_theta/ theta
+      PetscReal x,y
       ex54_psi = theta
       if (theta < 0.) then     ! circular
          if (y==0) then

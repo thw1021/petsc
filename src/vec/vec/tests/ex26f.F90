@@ -2,8 +2,8 @@
 !  Test VecGetSubVector()
 !  Contributed-by: Adrian Croucher <gitlab@mg.gitlab.com>
 
-      program main
 #include <petsc/finclude/petsc.h>
+      program main
       use petsc
       implicit none
 
@@ -18,7 +18,7 @@
       PetscCallA(PetscInitialize(ierr))
       PetscCallMPIA(MPI_COMM_RANK(PETSC_COMM_WORLD, rank, ierr))
 
-      if (rank .eq. 0) then
+      if (rank == 0) then
          num_cells = 1
       else
          num_cells = 0

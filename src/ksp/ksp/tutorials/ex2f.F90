@@ -4,8 +4,8 @@
 !
 ! -----------------------------------------------------------------------
 
-      program main
 #include <petsc/finclude/petscksp.h>
+      program main
       use petscksp
       implicit none
 !
@@ -112,29 +112,29 @@
 !     instead of JJ = II +- m as you might expect. The more standard ordering
 !     would first do all variables for y = h, then y = 2h etc.
 
-      do 10, II=Istart,Iend-1
+      do II=Istart,Iend-1
         v = -1.0
         i = II/n
         j = II - i*n
-        if (i.gt.0) then
+        if (i > 0) then
           JJ = II - n
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],INSERT_VALUES,ierr))
         endif
-        if (i.lt.m-1) then
+        if (i < m-1) then
           JJ = II + n
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],INSERT_VALUES,ierr))
         endif
-        if (j.gt.0) then
+        if (j > 0) then
           JJ = II - 1
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],INSERT_VALUES,ierr))
         endif
-        if (j.lt.n-1) then
+        if (j < n-1) then
           JJ = II + 1
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],INSERT_VALUES,ierr))
         endif
         v = 4.0
         PetscCallA(MatSetValues(A,ione,[II],ione,[II],[v],INSERT_VALUES,ierr))
- 10   continue
+      end do
 
 !  Assemble matrix, using the 2-step process:
 !       MatAssemblyBegin(), MatAssemblyEnd()
@@ -249,7 +249,7 @@
 
 !  Solve small system on master
 
-      if (rank .eq. 0) then
+      if (rank == 0) then
 
          PetscCallA(MatCreate(PETSC_COMM_SELF,AA,ierr))
          PetscCallA(MatSetSizes(AA,PETSC_DECIDE,PETSC_DECIDE,m,m,ierr))
@@ -287,8 +287,8 @@
       PetscCallA(VecAXPY(x,neg_one,u,ierr))
       PetscCallA(VecNorm(x,NORM_2,norm,ierr))
       PetscCallA(KSPGetIterationNumber(ksp,its,ierr))
-      if (rank .eq. 0) then
-        if (norm .gt. 1.e-12) then
+      if (rank == 0) then
+        if (norm > 1.e-12) then
            write(6,100) norm,its
         else
            write(6,110) its
@@ -312,7 +312,7 @@
       PetscCallA(VecDestroy(b,ierr))
       PetscCallA(MatDestroy(A,ierr))
 
-      if (rank .eq. 0) then
+      if (rank == 0) then
          PetscCallA(KSPDestroy(kksp,ierr))
          PetscCallA(VecDestroy(uu,ierr))
          PetscCallA(VecDestroy(xx,ierr))
@@ -361,9 +361,9 @@
 !  cannot reliably print both together in CI
 
       PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
-      if (rank .eq. 0) write(6,100) n
+      if (rank == 0) write(6,100) n
 !      PetscCallA(VecView(x,PETSC_VIEWER_STDOUT_WORLD,ierr))
-      if (rank .eq. 0) write(6,200) n,rnorm
+      if (rank == 0) write(6,200) n,rnorm
 
  100  format('iteration ',i5,' solution vector:')
  200  format('iteration ',i5,' residual norm ',e11.4)
@@ -391,7 +391,7 @@
       KSPConvergedReason flag
       PetscReal rnorm
 
-      if (rnorm .le. .05) then
+      if (rnorm <= .05) then
         flag = KSP_CONVERGED_RTOL_NORMAL_EQUATIONS
       else
         flag = KSP_CONVERGED_ITERATING

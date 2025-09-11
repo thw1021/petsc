@@ -4,8 +4,8 @@
 !
 ! -----------------------------------------------------------------------
 
-      program main
 #include <petsc/finclude/petscsys.h>
+      program main
       use petscmpi  ! or mpi or mpi_f08
       use petscsys
       implicit none
@@ -42,7 +42,7 @@
       PetscCallMPIA(MPI_Comm_rank(MPI_COMM_WORLD,grank,ierr))
       globalrank = grank
       PetscCallA(PetscSleep(globalrank,ierr))
-      if (rank .eq. 0) write(6,100) size,rank
+      if (rank == 0) write(6,100) size,rank
  100  format('No of Procs = ',i4,' rank = ',i4)
 
 !     Always call PetscFinalize() before exiting a program.  This

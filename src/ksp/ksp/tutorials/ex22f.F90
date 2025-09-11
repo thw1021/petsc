@@ -9,9 +9,9 @@
 !
 !   This uses multigrid to solve the linear system
 
-      program main
 #include <petsc/finclude/petscdmda.h>
 #include <petsc/finclude/petscksp.h>
+      program main
       use petscdmda
       use petscksp
       implicit none
@@ -92,13 +92,13 @@
       HyHzdHx = Hy*Hz/Hx
       PetscCall(DMDAGetCorners(da,xs,ys,zs,xm,ym,zm,ierr))
 
-      do 10,k=zs,zs+zm-1
-        do 20,j=ys,ys+ym-1
-          do 30,i=xs,xs+xm-1
+      do k=zs,zs+zm-1
+        do j=ys,ys+ym-1
+          do i=xs,xs+xm-1
           row(1)%i = i
           row(1)%j = j
           row(1)%k = k
-          if (i.eq.0 .or. j.eq.0 .or. k.eq.0 .or. i.eq.mx-1 .or. j.eq.my-1 .or. k.eq.mz-1) then
+          if (i == 0 .or. j == 0 .or. k == 0 .or. i == mx-1 .or. j == my-1 .or. k == mz-1) then
             v(1) = 2.0*(HxHydHz + HxHzdHy + HyHzdHx)
             PetscCall(MatSetValuesStencil(jac,i1,row,i1,row,v,INSERT_VALUES,ierr))
           else
@@ -130,11 +130,11 @@
              col(7)%i = i
              col(7)%j = j
              col(7)%k = k+1
-      PetscCall(MatSetValuesStencil(jac,i1,row,i7,col,v,INSERT_VALUES,ierr))
+            PetscCall(MatSetValuesStencil(jac,i1,row,i7,col,v,INSERT_VALUES,ierr))
           endif
- 30       continue
- 20     continue
- 10   continue
+          end do
+        end do
+      end do
 
       PetscCall(MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr))
       PetscCall(MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr))

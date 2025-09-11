@@ -3,8 +3,8 @@
 ! It illustrates how to PetscCallA(MUMPS's LU solver
 !
 
-      program main
 #include <petsc/finclude/petscmat.h>
+      program main
       use petscmat
       implicit none
 
@@ -40,29 +40,29 @@
 
       PetscCallA(MatGetOwnershipRange(A,Istart,Iend,ierr))
 
-      do 10, II=Istart,Iend - 1
+      do II=Istart,Iend - 1
         v = -1.0
         i = II/m
         j = II - i*m
-        if (i.gt.0) then
+        if (i > 0) then
           JJ = II - m
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],INSERT_VALUES,ierr))
         endif
-        if (i.lt.m-1) then
+        if (i < m-1) then
           JJ = II + m
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],INSERT_VALUES,ierr))
         endif
-        if (j.gt.0) then
+        if (j > 0) then
           JJ = II - 1
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],INSERT_VALUES,ierr))
         endif
-        if (j.lt.m-1) then
+        if (j < m-1) then
           JJ = II + 1
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],INSERT_VALUES,ierr))
         endif
         v = 4.0
         PetscCallA(MatSetValues(A,ione,[II],ione,[II],[v],INSERT_VALUES,ierr))
- 10   continue
+      end do
 
       PetscCallA(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY, ierr))
       PetscCallA(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY, ierr))

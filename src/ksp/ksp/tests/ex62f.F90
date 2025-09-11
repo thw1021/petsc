@@ -6,8 +6,8 @@
 
 !
 !  -------------------------------------------------------------------------
-      module ex62fmodule
 #include <petsc/finclude/petscksp.h>
+      module ex62fmodule
       use petscksp
       PC jacobi,sor
       Vec work
@@ -89,29 +89,29 @@
 !   - Note that MatSetValues() uses 0-based row and column numbers
 !     in Fortran as well as in C.
 
-      do 10, II=Istart,Iend-1
+      do II=Istart,Iend-1
         v = -1.0
         i = II/n
         j = II - i*n
-        if (i.gt.0) then
+        if (i > 0) then
           JJ = II - n
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (i.lt.m-1) then
+        if (i < m-1) then
           JJ = II + n
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (j.gt.0) then
+        if (j > 0) then
           JJ = II - 1
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (j.lt.n-1) then
+        if (j < n-1) then
           JJ = II + 1
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],ADD_VALUES,ierr))
         endif
         v = 4.0
         PetscCallA(MatSetValues(A,ione,[II],ione,[II],[v],ADD_VALUES,ierr))
- 10   continue
+      end do
 
 !  Assemble matrix, using the 2-step process:
 !       MatAssemblyBegin(), MatAssemblyEnd()
@@ -200,8 +200,8 @@
       PetscCallA(VecNorm(x,NORM_2,norm,ierr))
       PetscCallA(KSPGetIterationNumber(ksp,its,ierr))
 
-      if (rank .eq. 0) then
-        if (norm .gt. 1.e-12) then
+      if (rank == 0) then
+        if (norm > 1.e-12) then
            write(6,100) norm,its
         else
            write(6,110) its

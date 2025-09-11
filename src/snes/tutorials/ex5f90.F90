@@ -30,10 +30,9 @@
 !  into a module or interface. This is because they can't handle declarations
 !  in them
 !
-
-      module ex5f90module
 #include <petsc/finclude/petscsnes.h>
 #include <petsc/finclude/petscdmda.h>
+      module ex5f90module
       use petscsnes
       use petscdmda
       type userctx
@@ -184,7 +183,7 @@
       ione = 1
       nfour = 4
       PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-par',user%lambda,flg,ierr))
-      PetscCheckA(user%lambda .lt. lambda_max .and. user%lambda .gt. lambda_min,PETSC_COMM_SELF,PETSC_ERR_USER,'Lambda provided with -par is out of range')
+      PetscCheckA(user%lambda < lambda_max .and. user%lambda > lambda_min,PETSC_COMM_SELF,PETSC_ERR_USER,'Lambda provided with -par is out of range')
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Create nonlinear solver context
@@ -285,7 +284,7 @@
       PetscCallA(FormInitialGuess(snes,x,ierr))
       PetscCallA(SNESSolve(snes,PETSC_NULL_VEC,x,ierr))
       PetscCallA(SNESGetIterationNumber(snes,its,ierr))
-      if (user%rank .eq. 0) then
+      if (user%rank == 0) then
          write(6,100) its
       endif
   100 format('Number of SNES iterations = ',i5)
@@ -395,16 +394,16 @@
       hy     = one/(user%my-1)
       temp1  = user%lambda/(user%lambda + one)
 
-      do 20 j=user%ys,user%ye
+      do j=user%ys,user%ye
          temp = min(j-1,user%my-j)*hy
-         do 10 i=user%xs,user%xe
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. user%mx .or. j .eq. user%my) then
+         do i=user%xs,user%xe
+            if (i == 1 .or. j == 1 .or. i == user%mx .or. j == user%my) then
               x(i,j) = 0.0
             else
               x(i,j) = temp1 * sqrt(min(hx*min(i-1,user%mx-i),temp))
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       end
 
@@ -449,9 +448,9 @@
 
 !  Compute function over the locally owned part of the grid
 
-      do 20 j=user%ys,user%ye
-         do 10 i=user%xs,user%xe
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. user%mx .or. j .eq. user%my) then
+      do j=user%ys,user%ye
+         do i=user%xs,user%xe
+            if (i == 1 .or. j == 1 .or. i == user%mx .or. j == user%my) then
                f(i,j) = x(i,j)
             else
                u = x(i,j)
@@ -459,8 +458,8 @@
                uyy = hxdhy * (two*u - x(i,j-1) - x(i,j+1))
                f(i,j) = uxx + uyy - sc*exp(u)
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       end
 
@@ -544,13 +543,13 @@
 !  by placing code between these two statements.
 
       PetscCallA(MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr))
-      if (jac .ne. jac_prec) then
+      if (jac /= jac_prec) then
          PetscCallA(MatAssemblyBegin(jac_prec,MAT_FINAL_ASSEMBLY,ierr))
       endif
       PetscCallA(VecRestoreArray(localX,lx_v,ierr))
       PetscCallA(DMRestoreLocalVector(da,localX,ierr))
       PetscCallA(MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr))
-      if (jac .ne. jac_prec) then
+      if (jac /= jac_prec) then
         PetscCallA(MatAssemblyEnd(jac_prec,MAT_FINAL_ASSEMBLY,ierr))
       endif
 
@@ -635,12 +634,12 @@
 !   - Note that MatSetValues() uses 0-based row and column numbers
 !     in Fortran as well as in C.
 
-      do 20 j=user%ys,user%ye
+      do j=user%ys,user%ye
          row = (j - user%gys)*user%gxm + user%xs - user%gxs - 1
-         do 10 i=user%xs,user%xe
+         do i=user%xs,user%xe
             row = row + 1
 !           boundary points
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. user%mx .or. j .eq. user%my) then
+            if (i == 1 .or. j == 1 .or. i == user%mx .or. j == user%my) then
                col(1) = row
                v(1)   = one
                PetscCallA(MatSetValuesLocal(jac_prec,ione,[row],ione,col,v,INSERT_VALUES,ierr))
@@ -658,8 +657,8 @@
                col(5) = row + user%gxm
                PetscCallA(MatSetValuesLocal(jac_prec,ione,[row],ifive,col,v,INSERT_VALUES,ierr))
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       end
 

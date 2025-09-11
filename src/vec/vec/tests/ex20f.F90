@@ -1,6 +1,6 @@
 !
-      program main
 #include <petsc/finclude/petscvec.h>
+      program main
       use petscvec
       implicit none
 
@@ -22,9 +22,9 @@
 
        PetscCallA(PetscInitialize(ierr))
 
-       do 10, i=1,5
+       do i=1,5
          array(i) = i
- 10    continue
+       end do
 
 !      Open binary file for writing
        PetscCallA(PetscBinaryOpen('testfile',FILE_MODE_WRITE,fd,ierr))

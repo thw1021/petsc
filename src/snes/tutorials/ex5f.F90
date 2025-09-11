@@ -30,11 +30,11 @@
 !  system of equations.
 !
 !  --------------------------------------------------------------------------
+#include <petsc/finclude/petscsnes.h>
+#include <petsc/finclude/petscdmda.h>
       module ex5fmodule
       use petscsnes
       use petscdmda
-#include <petsc/finclude/petscsnes.h>
-#include <petsc/finclude/petscdmda.h>
       PetscInt xs,xe,xm,gxs,gxe,gxm
       PetscInt ys,ye,ym,gys,gye,gym
       PetscInt mx,my
@@ -93,7 +93,7 @@
       CHKERRA(ierr)
 
 ! this statement is split into multiple-lines to keep lines under 132 char limit - required by 'make check'
-      if (lambda .ge. lambda_max .or. lambda .le. lambda_min) then
+      if (lambda >= lambda_max .or. lambda <= lambda_min) then
          ierr = PETSC_ERR_ARG_OUTOFRANGE
          SETERRA(PETSC_COMM_WORLD,ierr,'Lambda')
       endif
@@ -194,7 +194,7 @@
       CHKERRA(ierr)
       call SNESGetIterationNumber(snes,its,ierr)
       CHKERRA(ierr)
-      if (rank .eq. 0) then
+      if (rank == 0) then
          write(6,100) its
       endif
   100 format('Number of SNES iterations = ',i5)
@@ -304,16 +304,16 @@
       hy     = one/((real(my)-1))
       temp1  = lambda/(lambda + one)
 
-      do 20 j=ys,ye
+      do j=ys,ye
          temp = (real(min(j-1,my-j)))*hy
-         do 10 i=xs,xe
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+         do i=xs,xe
+            if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
               x(i,j) = 0.0
             else
               x(i,j) = temp1 * sqrt(min(real(min(i-1,mx-i))*hx,(temp)))
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       end
 
@@ -368,9 +368,9 @@
 
 !  Compute function over the locally owned part of the grid
 
-      do 20 j=ys,ye
-         do 10 i=xs,xe
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+      do j=ys,ye
+         do i=xs,xe
+            if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
                f(i,j) = x(i,j)
             else
                u = x(i,j)
@@ -378,8 +378,8 @@
                uyy = hxdhy * (two*u - x(i,j-1) - x(i,j+1))
                f(i,j) = uxx + uyy - sc*exp(u)
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       call PetscLogFlops(11.0d0*ym*xm,ierr)
       CHKERRQ(ierr)
@@ -466,12 +466,12 @@
 !   - Note that MatSetValues() uses 0-based row and column numbers
 !     in Fortran as well as in C.
 
-      do 20 j=ys,ye
+      do j=ys,ye
          row = (j - gys)*gxm + xs - gxs - 1
-         do 10 i=xs,xe
+         do i=xs,xe
             row = row + 1
 !           boundary points
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+            if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
 !       Some f90 compilers need 4th arg to be of same type in both calls
                col(1) = row
                v(1)   = one
@@ -492,13 +492,13 @@
                call MatSetValuesLocal(jac,i1,[row],i5,[col],[v], INSERT_VALUES,ierr)
                CHKERRQ(ierr)
             endif
- 10      continue
- 20   continue
+         end do
+      end do
       call MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr)
       CHKERRQ(ierr)
       call MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr)
       CHKERRQ(ierr)
-      if (A .ne. jac) then
+      if (A /= jac) then
          call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
          CHKERRQ(ierr)
          call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
@@ -524,7 +524,7 @@
       CHKERRQ(ierr)
       call VecNorm(f,NORM_INFINITY,nrm,ierr)
       CHKERRQ(ierr)
-      if (nrm .le. 1.e-5) reason = SNES_CONVERGED_FNORM_ABS
+      if (nrm <= 1.e-5) reason = SNES_CONVERGED_FNORM_ABS
 
       end
 

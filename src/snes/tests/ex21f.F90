@@ -2,16 +2,16 @@
 !
 !     Solves the problem A x - x^3 + 1 = 0 via Picard iteration
 !
+#include <petsc/finclude/petscsnes.h>
+#include <petsc/finclude/petscsnes.h>
       module ex21fmodule
         use petscsnes
-#include <petsc/finclude/petscsnes.h>
         type userctx
           Mat A
         end type userctx
       end module ex21fmodule
 
       program main
-#include <petsc/finclude/petscsnes.h>
       use ex21fmodule
       implicit none
       SNES snes
@@ -61,9 +61,9 @@
       PetscCallA(VecGetArray(f,ff,ierr))
       PetscCallA(VecGetArrayRead(x,xx,ierr))
       PetscCallA(VecGetLocalSize(x,n,ierr))
-      do 10, i=1,n
+      do i=1,n
          ff(i) = ff(i) - xx(i)*xx(i)*xx(i)*xx(i) + 1.0
- 10   continue
+      end do
       PetscCallA(VecRestoreArray(f,ff,ierr))
       PetscCallA(VecRestoreArrayRead(x,xx,ierr))
       end subroutine

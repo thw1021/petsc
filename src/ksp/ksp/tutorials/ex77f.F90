@@ -2,8 +2,8 @@
 !   Description: Solves a linear system with a block of right-hand sides using KSPHPDDM.
 !
 
-      program main
 #include <petsc/finclude/petscksp.h>
+      program main
       use petscksp
       implicit none
       Mat                            X,B
@@ -38,7 +38,7 @@
       PetscCallA(KSPSetUp(ksp,ierr))
       PetscCallA(KSPMatSolve(ksp,B,X,ierr))
       PetscCallA(KSPGetMatSolveBatchSize(ksp,M,ierr))
-      if (M .ne. PETSC_DECIDE) then
+      if (M /= PETSC_DECIDE) then
         PetscCallA(KSPSetMatSolveBatchSize(ksp,PETSC_DECIDE,ierr))
         PetscCallA(MatZeroEntries(X,ierr))
         PetscCallA(KSPMatSolve(ksp,B,X,ierr))

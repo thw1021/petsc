@@ -38,10 +38,8 @@
 !  into a module or interface. This is because they can't handle declarations
 !  in them
 !
+#include <petsc/finclude/petsc.h>
       module ex73f90tmodule
-#include <petsc/finclude/petscdmda.h>
-#include <petsc/finclude/petscdmcomposite.h>
-#include <petsc/finclude/petscmat.h>
       use petscdmda
       use petscdmcomposite
       use petscmat
@@ -63,7 +61,6 @@
 
       Interface SNESSetApplicationContext
         Subroutine SNESSetApplicationContext(snesIn,ctx,ierr)
-#include <petsc/finclude/petscsnes.h>
         use petscsnes
         use ex73f90tmodule
           SNES::    snesIn
@@ -74,7 +71,6 @@
 
       Interface SNESGetApplicationContext
         Subroutine SNESGetApplicationContext(snesIn,ctx,ierr)
-#include <petsc/finclude/petscsnes.h>
         use petscsnes
         use ex73f90tmodule
           SNES::     snesIn
@@ -85,7 +81,6 @@
       end module ex73f90tmodule_interfaces
 
       subroutine MyObjective(snes, x, result, ctx, ierr )
-#include <petsc/finclude/petsc.h>
         use petsc
         implicit none
         PetscInt ctx
@@ -103,8 +98,6 @@
       end subroutine MyObjective
 
       program main
-#include <petsc/finclude/petscdmda.h>
-#include <petsc/finclude/petscsnes.h>
       use petscsnes
       use ex73f90tmodule
       use ex73f90tmodule_interfaces
@@ -155,7 +148,7 @@
       itwo = 2
       useobjective = PETSC_FALSE
       PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-par', solver%lambda,flg,ierr))
-      PetscCheckA(solver%lambda .le. lambda_max .and. solver%lambda .ge. lambda_min,PETSC_COMM_SELF,PETSC_ERR_USER,'Lambda provided with -par is out of range')
+      PetscCheckA(solver%lambda <= lambda_max .and. solver%lambda >= lambda_min,PETSC_COMM_SELF,PETSC_ERR_USER,'Lambda provided with -par is out of range')
       PetscCallA(PetscOptionsGetBool(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-objective', useobjective,flg,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -237,23 +230,23 @@
 !  Set fake B and C
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       one    = 1.0
-      if (N2 .gt. 0) then
+      if (N2 > 0) then
          bval(1) = -one/(solver%mx-2)
 !     cval = -one/(solver%my*solver%mx)
          cval(1) = -one
-         do 20 irow=low,high-1
+         do irow=low,high-1
             j = irow/solver%mx   ! row in domain
             i = mod(irow,solver%mx)
             row(1) = irow
             col(1) = j
-            if (i .eq. 0 .or. j .eq. 0 .or. i .eq. solver%mx-1 .or. j .eq. solver%my-1) then
+            if (i == 0 .or. j == 0 .or. i == solver%mx-1 .or. j == solver%my-1) then
                !     no op
             else
                PetscCallA(MatSetValues(Bmat,ione,row,ione,col,bval,INSERT_VALUES,ierr))
             endif
             row(1) = j
             PetscCallA(MatSetValues(Cmat,ione,row,ione,row,cval,INSERT_VALUES,ierr))
- 20   continue
+         end do
       endif
       PetscCallA(MatAssemblyBegin(Bmat,MAT_FINAL_ASSEMBLY,ierr))
       PetscCallA(MatAssemblyEnd(Bmat,MAT_FINAL_ASSEMBLY,ierr))
@@ -263,11 +256,11 @@
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Set D (identity)
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      do 30 j=lamlow,lamhigh-1
+      do j=lamlow,lamhigh-1
          row(1) = j
          cval(1) = one
          PetscCallA(MatSetValues(Dmat,ione,row,ione,row,cval,INSERT_VALUES,ierr))
- 30   continue
+      end do
       PetscCallA(MatAssemblyBegin(Dmat,MAT_FINAL_ASSEMBLY,ierr))
       PetscCallA(MatAssemblyEnd(Dmat,MAT_FINAL_ASSEMBLY,ierr))
 
@@ -351,7 +344,7 @@
       PetscCallA(FormInitialGuess(mysnes,x,ierr))
       PetscCallA(SNESSolve(mysnes,PETSC_NULL_VEC,x,ierr))
       PetscCallA(SNESGetIterationNumber(mysnes,its,ierr))
-      if (solver%rank .eq. 0) then
+      if (solver%rank == 0) then
          write(6,100) its
       endif
   100 format('Number of SNES iterations = ',i5)
@@ -401,7 +394,6 @@
 !  the local vector data via VecGetArray() and VecRestoreArray().
 !
       subroutine FormInitialGuess(mysnes,Xnest,ierr)
-#include <petsc/finclude/petscsnes.h>
       use petscsnes
       use ex73f90tmodule
       use ex73f90tmodule_interfaces
@@ -449,7 +441,6 @@
 !  This routine uses standard Fortran-style computations over a 2-dim array.
 !
       subroutine InitialGuessLocal(solver,X1,ierr)
-#include <petsc/finclude/petscsys.h>
       use petscsys
       use ex73f90tmodule
       implicit none
@@ -473,17 +464,17 @@
 
       PetscCall(VecGetOwnershipRange(X1,low,high,ierr))
 
-      do 20 row=low,high-1
+      do row=low,high-1
          j = row/solver%mx
          i = mod(row,solver%mx)
          temp = min(j,solver%my-j+1)*hy
-         if (i .eq. 0 .or. j .eq. 0  .or. i .eq. solver%mx-1 .or. j .eq. solver%my-1) then
+         if (i == 0 .or. j == 0  .or. i == solver%mx-1 .or. j == solver%my-1) then
             v = 0.0
          else
             v = temp1 * sqrt(min(min(i,solver%mx-i+1)*hx,temp))
          endif
          PetscCall(VecSetValues(X1,ione,[row],[v],INSERT_VALUES,ierr))
- 20   continue
+      end do
 
       end subroutine InitialGuessLocal
 
@@ -501,7 +492,6 @@
 !  jac_prec - optionally different matrix used to construct the preconditioner (not used here)
 !
       subroutine FormJacobian(dummy,X,jac,jac_prec,solver,ierr)
-#include <petsc/finclude/petscsnes.h>
       use petscsnes
       use ex73f90tmodule
       implicit none
@@ -531,7 +521,7 @@
       ! the rest of the matrix is not touched
       PetscCall(MatAssemblyBegin(jac_prec,MAT_FINAL_ASSEMBLY,ierr))
       PetscCall(MatAssemblyEnd(jac_prec,MAT_FINAL_ASSEMBLY,ierr))
-      if (jac .ne. jac_prec) then
+      if (jac /= jac_prec) then
          PetscCall(MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr))
          PetscCall(MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr))
       end if
@@ -558,7 +548,6 @@
 !  This routine uses standard Fortran-style computations over a 2-dim array.
 !
       subroutine FormJacobianLocal(X1,jac,solver,add_nl_term,ierr)
-#include <petsc/finclude/petscmat.h>
       use ex73f90tmodule
       implicit none
 !  Input/output variables:
@@ -590,12 +579,12 @@
       PetscCall(VecGetArrayRead(X1,lx_v,ierr))
 
       ii = 0
-      do 20 irow=low,high-1
+      do irow=low,high-1
          j = irow/solver%mx
          i = mod(irow,solver%mx)
          ii = ii + 1            ! one based local index
 !     boundary points
-         if (i .eq. 0 .or. j .eq. 0 .or. i .eq. solver%mx-1 .or. j .eq. solver%my-1) then
+         if (i == 0 .or. j == 0 .or. i == solver%mx-1 .or. j == solver%my-1) then
             col(1) = irow
             row(1) = irow
             v(1)   = one
@@ -620,7 +609,7 @@
             row(1) = irow
             PetscCall(MatSetValues(jac,ione,row,ifive,col,v,INSERT_VALUES,ierr))
          endif
- 20   continue
+      end do
 
       PetscCall(VecRestoreArrayRead(X1,lx_v,ierr))
 
@@ -640,7 +629,6 @@
 !  F - function vector
 !
       subroutine FormFunction(snesIn,X,F,solver,ierr)
-#include <petsc/finclude/petscsnes.h>
       use petscsnes
       use ex73f90tmodule
       implicit none
@@ -691,7 +679,6 @@
 !  This routine uses standard Fortran-style computations over a 2-dim array.
 !
       subroutine FormFunctionNLTerm(X1,F1,solver,ierr)
-#include <petsc/finclude/petscvec.h>
       use ex73f90tmodule
       implicit none
 !  Input/output variables:
@@ -712,19 +699,19 @@
 
 !     Compute function over the locally owned part of the grid
       ii = 0
-      do 20 irow=low,high-1
+      do irow=low,high-1
          j = irow/solver%mx
          i = mod(irow,solver%mx)
          ii = ii + 1            ! one based local index
          row(1) = irow
-         if (i .eq. 0 .or. j .eq. 0 .or. i .eq. solver%mx-1 .or. j .eq. solver%my-1) then
+         if (i == 0 .or. j == 0 .or. i == solver%mx-1 .or. j == solver%my-1) then
             v(1) = 0.0
          else
             u = lx_v(ii)
             v(1) = -sc*exp(u)
          endif
          PetscCall(VecSetValues(F1,ione,row,v,INSERT_VALUES,ierr))
- 20   continue
+      end do
 
       PetscCall(VecRestoreArrayRead(X1,lx_v,ierr))
 

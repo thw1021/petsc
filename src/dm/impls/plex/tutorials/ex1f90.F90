@@ -1,6 +1,6 @@
-      program DMPlexTestField
 #include <petsc/finclude/petscdmplex.h>
 #include <petsc/finclude/petscdmlabel.h>
+      program DMPlexTestField
       use petscdm
       implicit none
 
@@ -54,9 +54,9 @@
 !     Test label retrieval
       PetscCallA(DMGetLabel(dm, 'marker', label, ierr))
       PetscCallA(DMLabelGetValue(label, zero, val, ierr))
-      PetscCheckA(size .ne. 1 .or. val .eq. -1,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error in library')
+      PetscCheckA(size /= 1 .or. val == -1,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error in library')
       PetscCallA(DMLabelGetValue(label, eight, val, ierr))
-      PetscCheckA(size .ne. 1 .or. val .eq. 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error in library')
+      PetscCheckA(size /= 1 .or. val == 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error in library')
 !     Prescribe a Dirichlet condition on u on the boundary
 !       Label "marker" is made by the mesh creation routine
       bcField(1) = 0
@@ -74,7 +74,7 @@
       PetscCallA(PetscSectionSetFieldName(section, zero, 'u', ierr))
       PetscCallA(PetscSectionSetFieldName(section, one,  'v', ierr))
       PetscCallA(PetscSectionSetFieldName(section, two,  'w', ierr))
-      if (size .eq. 1) then
+      if (size == 1) then
         PetscCallA(PetscSectionView(section, PETSC_VIEWER_STDOUT_WORLD, ierr))
       endif
 !     Tell the DM to use this data layout

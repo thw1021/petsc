@@ -2,8 +2,9 @@
 !
 !   This program demonstrates use of PETSc dense matrices.
 !
-      program main
 #include <petsc/finclude/petscsys.h>
+#include <petsc/finclude/petscmat.h>
+      program main
       use petscsys
       implicit none
 
@@ -31,7 +32,6 @@
 !  location.)
 !
       subroutine Demo1()
-#include <petsc/finclude/petscmat.h>
       use petscmat
       implicit none
 
@@ -75,7 +75,6 @@
 !  matrix storage.
 !
       subroutine Demo2()
-#include <petsc/finclude/petscmat.h>
       use petscmat
       implicit none
 
@@ -108,9 +107,9 @@
       PetscInt          m,n,i,j
       PetscScalar      X(m,n)
 
-      do 10, j=1,n
-        do 20, i=1,m
+      do j=1,n
+        do i=1,m
           X(i,j) = 1.0/real(i+j-1)
- 20     continue
- 10   continue
+        end do
+      end do
       end

@@ -4,8 +4,8 @@
 !
 !     This is a copy of ex1.c but currently only tests the broadcast operation
 
-      program main
 #include <petsc/finclude/petscvec.h>
+      program main
       use petscmpi  ! or mpi or mpi_f08
       use petscvec
       implicit none
@@ -103,12 +103,12 @@
       PetscCallA(PetscIntView(nrootsalloc,rootdata,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
       PetscCallA(PetscSFGetGraph(sf,gnroots,gnleaves,gmine,gremote,ierr))
-      PetscCheckA(gnleaves .eq. nleaves,PETSC_COMM_WORLD,PETSC_ERR_PLIB,'nleaves returned from PetscSFGetGraph() does not match that set with PetscSFSetGraph()')
+      PetscCheckA(gnleaves == nleaves,PETSC_COMM_WORLD,PETSC_ERR_PLIB,'nleaves returned from PetscSFGetGraph() does not match that set with PetscSFSetGraph()')
       do i=1,nleaves
-        PetscCheckA(gmine(i) .eq. mine(i),PETSC_COMM_WORLD,PETSC_ERR_PLIB,'Root from PetscSFGetGraph() does not match that set with PetscSFSetGraph()')
+        PetscCheckA(gmine(i) == mine(i),PETSC_COMM_WORLD,PETSC_ERR_PLIB,'Root from PetscSFGetGraph() does not match that set with PetscSFSetGraph()')
       enddo
       do i=1,nleaves
-       PetscCheckA(gremote(i)%index .eq. remote(i)%index,PETSC_COMM_WORLD,PETSC_ERR_PLIB,'Leaf from PetscSFGetGraph() does not match that set with PetscSFSetGraph()')
+       PetscCheckA(gremote(i)%index == remote(i)%index,PETSC_COMM_WORLD,PETSC_ERR_PLIB,'Leaf from PetscSFGetGraph() does not match that set with PetscSFSetGraph()')
       enddo
       PetscCallA(PetscSFRestoreGraph(sf,gnroots,gnleaves,gmine,gremote,ierr))
 
@@ -131,7 +131,7 @@
       PetscCallA(PetscViewerPopFormat(PETSC_VIEWER_STDOUT_WORLD,ierr))
 
       PetscCallA(PetscSFGetGraph(sf,gnroots,gnleaves,gmine,gremote,ierr))
-      PetscCheckA(loc(gmine) .eq. loc(PETSC_NULL_INTEGER),PETSC_COMM_WORLD,PETSC_ERR_PLIB,'Leaves from PetscSFGetGraph() not null as expected')
+      PetscCheckA(loc(gmine) == loc(PETSC_NULL_INTEGER),PETSC_COMM_WORLD,PETSC_ERR_PLIB,'Leaves from PetscSFGetGraph() not null as expected')
       PetscCallA(PetscSFRestoreGraph(sf,gnroots,gnleaves,gmine,gremote,ierr))
       PetscCallA(PetscSFDestroy(sf,ierr))
       PetscCallA(PetscFinalize(ierr))

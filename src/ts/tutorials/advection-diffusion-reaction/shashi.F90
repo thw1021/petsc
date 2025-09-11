@@ -1,5 +1,5 @@
-      program main
 #include <petsc/finclude/petsc.h>
+      program main
       use petsc
       implicit none
 
@@ -35,7 +35,7 @@
 
       PetscCallA(PetscInitialize(ierr))
       PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
-      PetscCheckA(size .eq. 1,PETSC_COMM_WORLD,1,'requires one process')
+      PetscCheckA(size == 1,PETSC_COMM_WORLD,1,'requires one process')
 
       big  = 2.88
       big  = PETSC_INFINITY

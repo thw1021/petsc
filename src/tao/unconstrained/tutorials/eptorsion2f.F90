@@ -23,9 +23,9 @@
 !
 ! ----------------------------------------------------------------------
 
-      module eptorsion2fmodule
 #include "petsc/finclude/petscdmda.h"
 #include "petsc/finclude/petsctao.h"
+      module eptorsion2fmodule
       use petscdmda
       use petsctao
       implicit none
@@ -255,22 +255,22 @@
 !  Set local loop dimensions
       xe = xs+xm
       ye = ys+ym
-      if (xs .eq. 0) then
+      if (xs == 0) then
          xsm = xs-1
       else
          xsm = xs
       endif
-      if (ys .eq. 0) then
+      if (ys == 0) then
          ysm = ys-1
       else
          ysm = ys
       endif
-      if (xe .eq. mx) then
+      if (xe == mx) then
          xep = xe+1
       else
          xep = xe
       endif
-      if (ye .eq. my) then
+      if (ye == my) then
          yep = ye+1
       else
          yep = ye
@@ -284,22 +284,22 @@
             v  = zero
             vr = zero
             vt = zero
-            if (i .ge. 0 .and. j .ge. 0)      v = lx_v(k+1)
-            if (i .lt. mx-1 .and. j .gt. -1) vr = lx_v(k+2)
-            if (i .gt. -1 .and. j .lt. my-1) vt = lx_v(k+1+gxm)
+            if (i >= 0 .and. j >= 0)      v = lx_v(k+1)
+            if (i < mx-1 .and. j > -1) vr = lx_v(k+2)
+            if (i > -1 .and. j < my-1) vt = lx_v(k+1+gxm)
             dvdx = (vr-v)/hx
             dvdy = (vt-v)/hy
-            if (i .ne. -1 .and. j .ne. -1) then
+            if (i /= -1 .and. j /= -1) then
                ind = k
                val = - dvdx/hx - dvdy/hy - cdiv3
                PetscCall(VecSetValuesLocal(G,i1,[k],[val],ADD_VALUES,ierr))
             endif
-            if (i .ne. mx-1 .and. j .ne. -1) then
+            if (i /= mx-1 .and. j /= -1) then
                ind = k+1
                val =  dvdx/hx - cdiv3
                PetscCall(VecSetValuesLocal(G,i1,[ind],[val],ADD_VALUES,ierr))
             endif
-            if (i .ne. -1 .and. j .ne. my-1) then
+            if (i /= -1 .and. j /= my-1) then
               ind = k+gxm
               val = dvdy/hy - cdiv3
               PetscCall(VecSetValuesLocal(G,i1,[ind],[val],ADD_VALUES,ierr))
@@ -317,22 +317,22 @@
             vb = zero
             vl = zero
             v  = zero
-            if (i .lt. mx .and. j .gt. 0) vb = lx_v(k+1-gxm)
-            if (i .gt. 0 .and. j .lt. my) vl = lx_v(k)
-            if (i .lt. mx .and. j .lt. my) v = lx_v(1+k)
+            if (i < mx .and. j > 0) vb = lx_v(k+1-gxm)
+            if (i > 0 .and. j < my) vl = lx_v(k)
+            if (i < mx .and. j < my) v = lx_v(1+k)
             dvdx = (v-vl)/hx
             dvdy = (v-vb)/hy
-            if (i .ne. mx .and. j .ne. 0) then
+            if (i /= mx .and. j /= 0) then
                ind = k-gxm
                val = - dvdy/hy - cdiv3
                PetscCall(VecSetValuesLocal(G,i1,[ind],[val],ADD_VALUES,ierr))
             endif
-            if (i .ne. 0 .and. j .ne. my) then
+            if (i /= 0 .and. j /= my) then
                ind = k-1
                val =  - dvdx/hx - cdiv3
                PetscCall(VecSetValuesLocal(G,i1,[ind],[val],ADD_VALUES,ierr))
             endif
-            if (i .ne. mx .and. j .ne. my) then
+            if (i /= mx .and. j /= my) then
                ind = k
                val =  dvdx/hx + dvdy/hy - cdiv3
                PetscCall(VecSetValuesLocal(G,i1,[ind],[val],ADD_VALUES,ierr))
@@ -387,13 +387,13 @@
             row = (j-gys)*gxm + (i-gxs)
 
             k = 0
-            if (j .gt. gys) then
+            if (j > gys) then
                v(k) = -1.0
                col(k) = row-gxm
                k = k + 1
             endif
 
-            if (i .gt. gxs) then
+            if (i > gxs) then
                v(k) = -1.0
                col(k) = row - 1
                k = k +1
@@ -403,13 +403,13 @@
             col(k) = row
             k = k + 1
 
-            if (i+1 .lt. gxs + gxm) then
+            if (i+1 < gxs + gxm) then
                v(k) = -1.0
                col(k) = row + 1
                k = k + 1
             endif
 
-            if (j+1 .lt. gys + gym) then
+            if (j+1 < gys + gym) then
                v(k) = -1.0
                col(k) = row + gxm
                k = k + 1
@@ -447,7 +447,7 @@
       TaoConvergedReason reason
 
       PetscCall(TaoGetSolutionStatus(ta,its,f,gnorm,cnorm,xdiff,reason,ierr))
-      if (mod(its,5) .ne. 0) then
+      if (mod(its,5) /= 0) then
          PetscCall(PetscPrintf(PETSC_COMM_WORLD,'iteration multiple of 5\n',ierr))
       endif
 
@@ -468,7 +468,7 @@
       TaoConvergedReason reason
 
       PetscCall(TaoGetSolutionStatus(ta,its,f,gnorm,cnorm,xdiff,reason,ierr))
-      if (its .eq. 7) then
+      if (its == 7) then
        PetscCall(TaoSetConvergedReason(ta,TAO_DIVERGED_MAXITS,ierr))
       endif
 

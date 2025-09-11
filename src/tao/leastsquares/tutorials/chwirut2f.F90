@@ -7,10 +7,10 @@
 !
 !  The C version of this code is chwirut1.c
 !
+#include <petsc/finclude/petsctao.h>
       module chwirut2fmodule
       use petscmpi              ! or mpi or mpi_f08
       use petsctao
-#include <petsc/finclude/petsctao.h>
       PetscReal t(0:213)
       PetscReal y(0:213)
       PetscInt  m,n
@@ -54,7 +54,7 @@
 !  Initialize problem parameters
       call InitializeData()
 
-      if (rank .eq. 0) then
+      if (rank == 0) then
 !  Allocate vectors for the solution and gradient
          PetscCallA(VecCreateSeq(PETSC_COMM_SELF,n,x,ierr))
          PetscCallA(VecCreateSeq(PETSC_COMM_SELF,m,f,ierr))
@@ -126,7 +126,7 @@
       PetscCall(VecGetArray(f,f_v,ierr))
 
 !     Compute F(X)
-      if (size .eq. 1) then
+      if (size == 1) then
          ! Single processor
          do i=1,m
             PetscCall(RunSimulation(x_v,i,f_v(i),ierr))
@@ -137,17 +137,17 @@
          finished_tasks = 0
          checkedin = 0
 
-         do while (finished_tasks .lt. m .or. checkedin .lt. size-1)
+         do while (finished_tasks < m .or. checkedin < size-1)
             PetscCallMPI(MPI_Recv(fval,one,MPIU_SCALAR,MPI_ANY_SOURCE,MPI_ANY_TAG,PETSC_COMM_WORLD,status,ierr))
             tag = status(MPI_TAG)
             source = status(MPI_SOURCE)
-            if (tag .eq. IDLE_TAG) then
+            if (tag == IDLE_TAG) then
                checkedin = checkedin + 1
             else
                f_v(tag+1) = fval(1)
                finished_tasks = finished_tasks + 1
             endif
-            if (next_task .lt. m) then
+            if (next_task < m) then
                ! Send task to worker
                PetscCallMPI(MPI_Send(x_v,nn,MPIU_SCALAR,source,next_task,PETSC_COMM_WORLD,ierr))
                next_task = next_task + one
@@ -412,12 +412,12 @@
       f   = 0.0
       ! Send check-in message to rank-0
       PetscCallMPI(MPI_Send(f,one,MPIU_SCALAR,zero,IDLE_TAG,PETSC_COMM_WORLD,ierr))
-      do while (tag .ne. DIE_TAG)
+      do while (tag /= DIE_TAG)
          PetscCallMPI(MPI_Recv(x,nn,MPIU_SCALAR,zero,MPI_ANY_TAG,PETSC_COMM_WORLD,status,ierr))
          tag = status(MPI_TAG)
-         if (tag .eq. IDLE_TAG) then
+         if (tag == IDLE_TAG) then
             PetscCallMPI(MPI_Send(f,one,MPIU_SCALAR,zero,IDLE_TAG,PETSC_COMM_WORLD,ierr))
-         else if (tag .ne. DIE_TAG) then
+         else if (tag /= DIE_TAG) then
             index = tag
             ! Compute local part of residual
             PetscCall(RunSimulation(x,index,f(1),ierr))
@@ -450,7 +450,7 @@
       PetscInt i
 
       checkedin=0
-      do while (checkedin .lt. size-1)
+      do while (checkedin < size-1)
          PetscCallMPI(MPI_Recv(f,one,MPIU_SCALAR,MPI_ANY_SOURCE,MPI_ANY_TAG,PETSC_COMM_WORLD,status,ierr))
          checkedin=checkedin+1
          source = status(MPI_SOURCE)

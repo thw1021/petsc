@@ -3,8 +3,8 @@
 !
 ! -----------------------------------------------------------------------
 
-      program main
 #include <petsc/finclude/petscksp.h>
+      program main
       use petscksp
       implicit none
 
@@ -70,29 +70,29 @@
 !     appropriate processor during matrix assembly).
 !   - Always specify global rows and columns of matrix entries.
 
-      do 10, II=Istart,Iend-1
+      do II=Istart,Iend-1
         v = -1.0
         i = II/n
         j = II - i*n
-        if (i.gt.0) then
+        if (i > 0) then
           JJ = II - n
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (i.lt.n-1) then
+        if (i < n-1) then
           JJ = II + n
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (j.gt.0) then
+        if (j > 0) then
           JJ = II - 1
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (j.lt.n-1) then
+        if (j < n-1) then
           JJ = II + 1
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
         v = 4.0
         PetscCallA(MatSetValues(A,one,[II],one,[II],[v],ADD_VALUES,ierr))
- 10   continue
+      end do
 
 !  Assemble matrix, using the 2-step process:
 !       MatAssemblyBegin(), MatAssemblyEnd()

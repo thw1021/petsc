@@ -14,8 +14,8 @@
 !     u(0,t) = 1-sin(12*t)^4
 !
 
-  module ex22f_mfmodule
 #include <petsc/finclude/petscts.h>
+  module ex22f_mfmodule
     use petscts
     PetscScalar::PETSC_SHIFT
     TS::tscontext
@@ -254,13 +254,13 @@ subroutine FormRHSFunctionLocal(mx,xs,xe,gxs,gxe,t,x,f,a,k,s,ierr)
   twelfth = one / twelve
   do  i = xs,xe
      do  j = 1,2
-        if (i .eq. 1) then
+        if (i == 1) then
            f(j,i) = a(j)/hx*(third*u0t(j) + half*x(j,i) - x(j,i+1) + sixth*x(j,i+2))
-        else if (i .eq. 2) then
+        else if (i == 2) then
            f(j,i) = a(j)/hx*(-twelfth*u0t(j) + twothird*x(j,i-1) - twothird*x(j,i+1) + twelfth*x(j,i+2))
-        else if (i .eq. mx-1) then
+        else if (i == mx-1) then
            f(j,i) = a(j)/hx*(-sixth*x(j,i-2) + x(j,i-1) - half*x(j,i) -third*x(j,i+1))
-        else if (i .eq. mx) then
+        else if (i == mx) then
            f(j,i) = a(j)/hx*(-x(j,i) + x(j,i-1))
         else
            f(j,i) = a(j)/hx*(-twelfth*x(j,i-2) + twothird*x(j,i-1) - twothird*x(j,i+1) + twelfth*x(j,i+2))
@@ -376,7 +376,7 @@ subroutine FormInitialSolutionLocal(mx,xs,xe,gxs,gxe,x,a,k,s,ierr)
   hx = one / mx
   do i=xs,xe
      r = i*hx
-     if (k(2) .ne. 0.0) then
+     if (k(2) /= 0.0) then
         ik = one/k(2)
      else
         ik = one

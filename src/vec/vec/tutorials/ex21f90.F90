@@ -5,8 +5,8 @@
 !
 ! -----------------------------------------------------------------------
 
-      module ex21f90module
 #include <petsc/finclude/petscsys.h>
+      module ex21f90module
       use petscsys
       type MyStruct
         sequence

@@ -1,5 +1,5 @@
-program main
 #include <petsc/finclude/petscvec.h>
+program main
   use petscvec
 
   implicit none
@@ -21,7 +21,7 @@ program main
   PetscCallA(PetscInitialize(ierr))
 
   PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
-  PetscCheckA(size .eq. 1,PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only!')
+  PetscCheckA(size == 1,PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only!')
 
   PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-m',m,flg,ierr))
 

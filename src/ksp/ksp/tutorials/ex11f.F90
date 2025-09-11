@@ -16,9 +16,8 @@
 !
 !
 ! -----------------------------------------------------------------------
-
-      program main
 #include <petsc/finclude/petscksp.h>
+      program main
       use petscksp
       implicit none
 
@@ -105,30 +104,30 @@
       h2 = 1.0/real((n+1)*(n+1))
 
       one = 1
-      do 10, II=Istart,Iend-1
+      do II=Istart,Iend-1
         v = -1.0
         i = II/n
         j = II - i*n
-        if (i.gt.0) then
+        if (i > 0) then
           JJ = II - n
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (i.lt.n-1) then
+        if (i < n-1) then
           JJ = II + n
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (j.gt.0) then
+        if (j > 0) then
           JJ = II - 1
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (j.lt.n-1) then
+        if (j < n-1) then
           JJ = II + 1
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
         if (use_random) PetscCallA(PetscRandomGetValue(rctx,sigma2,ierr))
         v = 4.0 - sigma1*h2 + sigma2*h2
         PetscCallA(MatSetValues(A,one,[II],one,[II],[v],ADD_VALUES,ierr))
- 10   continue
+      end do
       if (use_random) PetscCallA(PetscRandomDestroy(rctx,ierr))
 
 !  Assemble matrix, using the 2-step process:
@@ -196,8 +195,8 @@
       PetscCallA(VecAXPY(x,none,u,ierr))
       PetscCallA(VecNorm(x,NORM_2,norm,ierr))
       PetscCallA(KSPGetIterationNumber(ksp,its,ierr))
-      if (rank .eq. 0) then
-        if (norm .gt. 1.e-12) then
+      if (rank == 0) then
+        if (norm > 1.e-12) then
            write(6,100) norm,its
         else
            write(6,110) its

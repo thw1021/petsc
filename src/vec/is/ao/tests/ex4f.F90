@@ -1,8 +1,8 @@
 !
 !    Test AO with on IS with 0 entries - Fortran version of ex4.c
 !
-      program main
 #include <petsc/finclude/petscao.h>
+      program main
       use petscao
       implicit none
 
@@ -21,7 +21,7 @@
       PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
 
       nlocal = 0
-      if (rank .eq. 0) then
+      if (rank == 0) then
          nlocal = 4
          localvert(1) = 0
          localvert(2) = 1

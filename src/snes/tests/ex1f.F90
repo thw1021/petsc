@@ -7,7 +7,6 @@
 !    -mx <xg>, where <xg> = number of grid points in the x-direction
 !    -my <yg>, where <yg> = number of grid points in the y-direction
 !
-
 !
 !  --------------------------------------------------------------------------
 !
@@ -27,8 +26,9 @@
 !  The parallel version of this code is snes/tutorials/ex5f.F
 !
 !  --------------------------------------------------------------------------
-      subroutine postcheck(snes,x,y,w,changed_y,changed_w,ctx,ierr)
 #include <petsc/finclude/petscsnes.h>
+#include <petsc/finclude/petscdraw.h>
+      subroutine postcheck(snes,x,y,w,changed_y,changed_w,ctx,ierr)
       use petscsnes
       implicit none
       SNES           snes
@@ -53,7 +53,6 @@
       end
 
       program main
-#include <petsc/finclude/petscdraw.h>
       use petscdraw
       use petscsnes
       implicit none
@@ -90,15 +89,6 @@
       PetscScalar,pointer :: lx_v(:)
       integer4 xl,yl,width,height
 
-!  Store parameters in common block
-
-      common /params/ lambda,mx,my,fd_coloring
-
-!  Note: Any user-defined Fortran routines (such as FormJacobian)
-!  MUST be declared as external.
-
-      external FormFunction,FormInitialGuess,FormJacobian
-
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Initialize program
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -107,7 +97,7 @@
       PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
       PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
 
-      PetscCheckA(size .eq. 1,PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
+      PetscCheckA(size == 1,PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
 
 !  Initialize problem parameters
       i5 = 5
@@ -119,7 +109,7 @@
       PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-mx',mx,flg,ierr))
       PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-my',my,flg,ierr))
       PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-par',lambda,flg,ierr))
-      PetscCheckA(lambda .lt. lambda_max .and. lambda .gt. lambda_min,PETSC_COMM_SELF,PETSC_ERR_USER,'Lambda out of range ')
+      PetscCheckA(lambda < lambda_max .and. lambda > lambda_min,PETSC_COMM_SELF,PETSC_ERR_USER,'Lambda out of range ')
       N  = mx*my
       pc = PETSC_FALSE
       PetscCallA(PetscOptionsGetBool(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-pc',pc,PETSC_NULL_BOOL,ierr))
@@ -276,7 +266,8 @@
       PetscCallA(SNESDestroy(snes,ierr))
       PetscCallA(PetscDrawDestroy(draw,ierr))
       PetscCallA(PetscFinalize(ierr))
-      end
+
+      contains
 
 ! ---------------------------------------------------------------------
 !
@@ -344,12 +335,6 @@
       use petscksp
       implicit none
 
-!  Common blocks:
-      PetscReal   lambda
-      PetscInt     mx,my
-      PetscBool         fd_coloring
-      common      /params/ lambda,mx,my,fd_coloring
-
 !  Input/output variables:
       PetscScalar x(mx,my)
       PetscErrorCode     ierr
@@ -366,16 +351,16 @@
       hy     = one/(my-1)
       temp1  = lambda/(lambda + one)
 
-      do 20 j=1,my
+      do j=1,my
          temp = min(j-1,my-j)*hy
-         do 10 i=1,mx
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+         do i=1,mx
+            if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
               x(i,j) = 0.0
             else
               x(i,j) = temp1 * sqrt(min(min(i-1,mx-i)*hx,temp))
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       end
 
@@ -410,12 +395,6 @@
       PetscErrorCode          ierr
       MatFDColoring fdcoloring
 
-!  Common blocks:
-      PetscReal         lambda
-      PetscInt          mx,my
-      PetscBool         fd_coloring
-      common            /params/ lambda,mx,my,fd_coloring
-
 !  Declarations for use with local arrays:
       PetscScalar,pointer :: lx_v(:), lf_v(:)
       PetscInt, pointer :: indices(:)
@@ -439,7 +418,7 @@
 
       PetscCallA(PetscLogFlops(11.0d0*mx*my,ierr))
 !
-!     fdcoloring is in the common block and used here ONLY to test the
+!     fdcoloring is used here ONLY to test the
 !     calls to MatFDColoringGetPerturbedColumns() and  MatFDColoringRestorePerturbedColumns()
 !
       if (fd_coloring) then
@@ -470,12 +449,6 @@
       use petscsnes
       implicit none
 
-!  Common blocks:
-      PetscReal      lambda
-      PetscInt        mx,my
-      PetscBool         fd_coloring
-      common         /params/ lambda,mx,my,fd_coloring
-
 !  Input/output variables:
       PetscScalar    x(mx,my),f(mx,my)
       PetscErrorCode       ierr
@@ -497,9 +470,9 @@
 
 !  Compute function
 
-      do 20 j=1,my
-         do 10 i=1,mx
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+      do j=1,my
+         do i=1,mx
+            if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
                f(i,j) = x(i,j)
             else
                u = x(i,j)
@@ -507,8 +480,8 @@
                uyy = hxdhy * (two*u - x(i,j-1) - x(i,j+1))
                f(i,j) = uxx + uyy - sc*exp(u)
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       end
 
@@ -544,12 +517,6 @@
       Mat           jac,jac_prec
       PetscErrorCode      ierr
       integer dummy
-
-!  Common blocks:
-      PetscReal     lambda
-      PetscInt       mx,my
-      PetscBool         fd_coloring
-      common        /params/ lambda,mx,my,fd_coloring
 
 !  Declarations for use with local array:
       PetscScalar,pointer :: lx_v(:)
@@ -593,12 +560,6 @@
       use petscsnes
       implicit none
 
-!  Common blocks:
-      PetscReal    lambda
-      PetscInt      mx,my
-      PetscBool         fd_coloring
-      common       /params/ lambda,mx,my,fd_coloring
-
 !  Input/output variables:
       PetscScalar  x(mx,my)
       Mat          jac,jac_prec
@@ -626,12 +587,12 @@
 !   - Note that MatSetValues() uses 0-based row and column numbers
 !     in Fortran as well as in C.
 
-      do 20 j=1,my
+      do j=1,my
          row(1) = (j-1)*mx - 1
-         do 10 i=1,mx
+         do i=1,mx
             row(1) = row(1) + 1
 !           boundary points
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+            if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
                PetscCallA(MatSetValues(jac_prec,i1,row,i1,row,[one],INSERT_VALUES,ierr))
 !           interior grid points
             else
@@ -647,11 +608,11 @@
                col(5) = row(1) + mx
                PetscCallA(MatSetValues(jac_prec,i1,row,i5,col,v,INSERT_VALUES,ierr))
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       end
-
+      end
 !
 !/*TEST
 !

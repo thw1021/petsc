@@ -5,8 +5,8 @@
 !
 !     Include petscis.h so we can use PETSc IS objects.
 !
-      program main
 #include <petsc/finclude/petscis.h>
+      program main
       use petscis
       implicit none
 
@@ -35,10 +35,10 @@
       write(6,20)
 !     Bug in IRIX64 f90 compiler - write cannot handle
 !     integer(integer*8) correctly
-      do 10 i=1,n
+      do i=1,n
          val = index(i)
          write(6,30) val
- 10   continue
+      end do
  20   format('Printing indices directly')
  30   format(i3)
       PetscCallA(ISRestoreIndices(set,index,ierr))
@@ -46,7 +46,7 @@
 !     Determine information on stride
 
       PetscCallA(ISStrideGetInfo(set,first,step,ierr))
-      if (first .ne. 3 .or. step .ne. 2) then
+      if (first /= 3 .or. step /= 2) then
         print*,'Stride info not correct!'
       endif
 

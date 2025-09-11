@@ -1,8 +1,8 @@
 !
 !   This program demonstrates use of MatCreateSubMatrices() from Fortran
 !
-      program main
 #include <petsc/finclude/petscmat.h>
+      program main
       use petscmat
       implicit none
 
@@ -29,20 +29,20 @@
 
       nis     = 1
       zero(1) = 0
-      if (rank .eq. 1) then
+      if (rank == 1) then
          nis = 0 ! test nis = 0
       endif
       PetscCallA(ISCreateGeneral(PETSC_COMM_SELF,nis,zero,PETSC_COPY_VALUES,isrow,ierr))
 
       PetscCallA(MatCreateSubmatrices(A,nis,[isrow],[isrow],MAT_INITIAL_MATRIX,B,ierr))
 
-      if (rank .eq. 0) then
+      if (rank == 0) then
          PetscCallA(MatView(B(1),PETSC_VIEWER_STDOUT_SELF,ierr))
       endif
 
       PetscCallA(MatCreateSubmatrices(A,nis,[isrow],[isrow],MAT_REUSE_MATRIX,B,ierr))
 
-      if (rank .eq. 0) then
+      if (rank == 0) then
          PetscCallA(MatView(B(1),PETSC_VIEWER_STDOUT_SELF,ierr))
       endif
 

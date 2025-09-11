@@ -5,8 +5,8 @@
 !
 !  Demonstrate a custom KSP convergence test that calls the default convergence test
 !
-subroutine MyKSPConverged(ksp,n,rnorm,flag,defaultctx,ierr)
 #include <petsc/finclude/petscksp.h>
+subroutine MyKSPConverged(ksp,n,rnorm,flag,defaultctx,ierr)
       use petscksp
 
        KSP ksp
@@ -21,7 +21,6 @@ subroutine MyKSPConverged(ksp,n,rnorm,flag,defaultctx,ierr)
        end subroutine MyKSPConverged
 
       program main
-#include <petsc/finclude/petscksp.h>
       use petscksp
       implicit none
 
@@ -59,7 +58,7 @@ subroutine MyKSPConverged(ksp,n,rnorm,flag,defaultctx,ierr)
 
       PetscCallA(PetscInitialize(ierr))
       PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
-      PetscCheckA(size .eq. 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
+      PetscCheckA(size == 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
       none = -1.0
       one  = 1.0
       n    = 10
@@ -91,12 +90,12 @@ subroutine MyKSPConverged(ksp,n,rnorm,flag,defaultctx,ierr)
       value(1) = -1.0
       value(2) = 2.0
       value(3) = -1.0
-      do 50 i=1,n-2
+      do i=1,n-2
          col(1) = i-1
          col(2) = i
          col(3) = i+1
          PetscCallA(MatSetValues(A,i1,[i],i3,col,value,INSERT_VALUES,ierr))
-  50  continue
+      end do
       i = n - 1
       col(1) = n - 2
       col(2) = n - 1
@@ -187,7 +186,7 @@ subroutine MyKSPConverged(ksp,n,rnorm,flag,defaultctx,ierr)
       PetscCallA(VecAXPY(x,none,u,ierr))
       PetscCallA(VecNorm(x,NORM_2,norm,ierr))
       PetscCallA(KSPGetIterationNumber(ksp,its,ierr))
-      if (norm .gt. 1.e-12) then
+      if (norm > 1.e-12) then
         write(6,100) norm,its
       else
         write(6,200) its

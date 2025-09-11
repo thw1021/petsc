@@ -1,5 +1,5 @@
-      module ex13f90module
 #include <petsc/finclude/petscksp.h>
+      module ex13f90module
         use petscksp
         type User
           Vec x
@@ -25,17 +25,11 @@
 !
 !   Since we cannot store Scalars and integers in the same context,
 !   we store the integers/pointers in the user-defined context, and
-!   the scalar values are carried in the common block.
+!   the scalar values are globally shared.
 !   The scalar values in this simplistic example could easily
 !   be recalculated in each routine, where they are needed.
 !
 !   Scalar hx2,hy2  /* 1/(m+1)*(m+1) and 1/(n+1)*(n+1) */
-
-!  Note: Any user-defined Fortran routines MUST be declared as external.
-
-      external UserInitializeLinearSolver
-      external UserFinalizeLinearSolver
-      external UserDoLinearSolver
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                   Variable declarations
@@ -55,7 +49,6 @@
       PetscScalar,ALLOCATABLE :: rho(:,:)
 
       PetscReal hx2,hy2
-      common /param/ hx2,hy2
 
       tmax = 2
       m = 6
@@ -67,7 +60,7 @@
 
       PetscCallA(PetscInitialize(ierr))
       PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
-      PetscCheckA(size .eq. 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
+      PetscCheckA(size == 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
 
 !  The next two lines are for testing only; these allow the user to
 !  decide the grid size at runtime.
@@ -98,23 +91,23 @@
       hx = 1.0/real(m+1)
       hy = 1.0/real(n+1)
       y  = hy
-      do 20 j=1,n
+      do j=1,n
          x = hx
-         do 10 i=1,m
+         do i=1,m
             rho(i,j)      = x
             solution(i,j) = sin(2.*PETSC_PI*x)*sin(2.*PETSC_PI*y)
             userb(i,j)    = -2.*PETSC_PI*cos(2.*PETSC_PI*x)*sin(2.*PETSC_PI*y) + 8*PETSC_PI*PETSC_PI*x*sin(2.*PETSC_PI*x)*sin(2.*PETSC_PI*y)
            x = x + hx
- 10      continue
+         end do
          y = y + hy
- 20   continue
+      end do
 
 !  Loop over a bunch of timesteps, setting up and solver the linear
 !  system for each time-step.
 !  Note that this loop is somewhat artificial. It is intended to
 !  demonstrate how one may reuse the linear solvers in each time-step.
 
-      do 100 t=1,tmax
+      do t=1,tmax
          PetscCallA(UserDoLinearSolver(rho,userctx,userb,userx,ierr))
 
 !        Compute error: Note that this could (and usually should) all be done
@@ -122,15 +115,15 @@
 !        standard programming practices to show how they may be mixed with
 !        PETSc.
          cnorm = 0.0
-         do 90 j=1,n
-            do 80 i=1,m
+         do j=1,n
+            do i=1,m
               cnorm = cnorm + PetscConj(solution(i,j)-userx(i,j))*(solution(i,j)-userx(i,j))
- 80         continue
- 90      continue
+            end do
+         end do
          enorm =  PetscRealPart(cnorm*hx*hy)
          write(6,115) m,n,enorm
  115     format ('m = ',I2,' n = ',I2,' error norm = ',1PE11.4)
- 100  continue
+      end do
 
 !  We are finished solving linear systems, so we clean up the
 !  data structures.
@@ -139,7 +132,8 @@
 
       PetscCallA(UserFinalizeLinearSolver(userctx,ierr))
       PetscCallA(PetscFinalize(ierr))
-      end
+
+      contains
 
 ! ----------------------------------------------------------------
       subroutine UserInitializeLinearSolver(m,n,userctx,ierr)
@@ -149,9 +143,6 @@
       PetscInt m,n
       PetscErrorCode ierr
       type(User) userctx
-
-      common /param/ hx2,hy2
-      PetscReal hx2,hy2
 
 !  Local variable declararions
       Mat     A
@@ -209,9 +200,6 @@
       type(User) userctx
       PetscScalar rho(*),userb(*),userx(*)
 
-      common /param/ hx2,hy2
-      PetscReal hx2,hy2
-
       PC   pc
       KSP ksp
       Vec  b,x
@@ -241,24 +229,24 @@
 !  things slightly.
 
       II = 0
-      do 110 j=1,n
-         do 100 i=1,m
-            if (j .gt. 1) then
+      do j=1,n
+         do i=1,m
+            if (j > 1) then
                JJ = II - m
                v = -0.5*(rho(II+1) + rho(JJ+1))*hy2
                PetscCall(MatSetValues(A,one,[II],one,[JJ],[v],INSERT_VALUES,ierr))
             endif
-            if (j .lt. n) then
+            if (j < n) then
                JJ = II + m
                v = -0.5*(rho(II+1) + rho(JJ+1))*hy2
                PetscCall(MatSetValues(A,one,[II],one,[JJ],[v],INSERT_VALUES,ierr))
             endif
-            if (i .gt. 1) then
+            if (i > 1) then
                JJ = II - 1
                v = -0.5*(rho(II+1) + rho(JJ+1))*hx2
                PetscCall(MatSetValues(A,one,[II],one,[JJ],[v],INSERT_VALUES,ierr))
             endif
-            if (i .lt. m) then
+            if (i < m) then
                JJ = II + 1
                v = -0.5*(rho(II+1) + rho(JJ+1))*hx2
                PetscCall(MatSetValues(A,one,[II],one,[JJ],[v],INSERT_VALUES,ierr))
@@ -266,8 +254,8 @@
             v = 2*rho(II+1)*(hx2+hy2)
             PetscCall(MatSetValues(A,one,[II],one,[II],[v],INSERT_VALUES,ierr))
             II = II+1
- 100     continue
- 110  continue
+         end do
+      end do
 !
 !     Assemble matrix
 !
@@ -342,7 +330,7 @@
       PetscCall(MatDestroy(userctx%A,ierr))
       PetscCall(KSPDestroy(userctx%ksp,ierr))
       end
-
+      end
 !
 !/*TEST
 !
