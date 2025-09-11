@@ -66,7 +66,7 @@
       if (.not. flg) then
          blb(1) = 0.0
          blb(2) = 0.0
-      else if (ki .ne. 2) then
+      else if (ki /= 2) then
          print *, 'error: ', ki,' arguments read for -blob_center.  Needs to be two.'
       endif
       PetscCallA(PetscOptionsGetBool(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-out_matlab',out_matlab,flg,ierr))
@@ -339,7 +339,7 @@
 !     Divide jacobian by 16 (multiply by .0625)
 
       xsj = 0.0625*xsj1
-      if (xsj1.eq.0.0) then
+      if (xsj1 == 0.0) then
          xsj1 = 1.0
       else
          xsj1 = 1.0/xsj1

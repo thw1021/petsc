@@ -238,7 +238,7 @@
 
 !  Test for convergence
 
-       if (fnorm .le. ttol) then
+       if (fnorm <= ttol) then
          if (.not. nooutput) then
            print*,'Converged: function norm ',fnorm,' tolerance ',ttol
          endif
@@ -322,7 +322,7 @@
         temp = (min(j,my-j-1))*hy
         do i=xs,xs+xm-1
           row = i - xs + (j - ys)*xm + 1
-          if (i .eq. 0 .or. j .eq. 0 .or. i .eq. mx-1 .or. j .eq. my-1) then
+          if (i == 0 .or. j == 0 .or. i == mx-1 .or. j == my-1) then
             xx(row) = 0.0
             continue
           endif
@@ -396,7 +396,7 @@
           row  = row + 1
           rowf = rowf + 1
 
-          if (i .eq. 0 .or. j .eq. 0 .or. i .eq. mx-1 .or. j .eq. my-1) then
+          if (i == 0 .or. j == 0 .or. i == mx-1 .or. j == my-1) then
             ff(rowf) = xx(row)
             cycle
           endif
@@ -498,7 +498,7 @@
         do i=xs,xs+xm-1
           row = row + 1
           grow(1) = ltog(row)
-          if (i .eq. 0 .or. j .eq. 0 .or. i .eq. (mx-1) .or. j .eq. (my-1)) then
+          if (i == 0 .or. j == 0 .or. i == (mx-1) .or. j == (my-1)) then
              PetscCall(MatSetValues(jac,ione,grow,ione,grow,[one],INSERT_VALUES,ierr))
              cycle
           endif

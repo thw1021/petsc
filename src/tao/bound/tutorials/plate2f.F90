@@ -249,39 +249,39 @@
             xrb = xc
             xlt = xc
 
-            if (i .eq. 0) then !left side
+            if (i == 0) then !left side
                xl = left_v(1+j - ys + 1)
                xlt = left_v(1+j - ys + 2)
             else
                xl = x_v(1+row - 1)
             endif
 
-            if (j .eq. 0) then !bottom side
+            if (j == 0) then !bottom side
                xb = bottom_v(1+i - xs + 1)
                xrb = bottom_v(1+i - xs + 2)
             else
                xb = x_v(1+row - gxm)
             endif
 
-            if (i + 1 .eq. gxs + gxm) then !right side
+            if (i + 1 == gxs + gxm) then !right side
                xr = right_v(1+j - ys + 1)
                xrb = right_v(1+j - ys)
             else
                xr = x_v(1+row + 1)
             endif
 
-            if (j + 1 .eq. gys + gym) then !top side
+            if (j + 1 == gys + gym) then !top side
                xt = top_v(1+i - xs + 1)
                xlt = top_v(1+i - xs)
             else
                xt = x_v(1+row + gxm)
             endif
 
-            if ((i .gt. gxs) .and. (j + 1 .lt. gys + gym)) then
+            if ((i > gxs) .and. (j + 1 < gys + gym)) then
                xlt = x_v(1+row - 1 + gxm)
             endif
 
-            if ((j .gt. gys) .and. (i + 1 .lt. gxs + gxm)) then
+            if ((j > gys) .and. (i + 1 < gxs + gxm)) then
                xrb = x_v(1+row + 1 - gxm)
             endif
 
@@ -331,7 +331,7 @@
       enddo
 
 ! Compute triangular areas along the border of the domain.
-      if (xs .eq. 0) then  ! left side
+      if (xs == 0) then  ! left side
          do j=ys,ys+ym-1
             d3 = (left_v(1+j-ys+1) - left_v(1+j-ys+2)) * rhy
             d2 = (left_v(1+j-ys+1) - x_v(1+(j-gys)*gxm)) * rhx
@@ -339,7 +339,7 @@
          enddo
       endif
 
-      if (ys .eq. 0) then !bottom side
+      if (ys == 0) then !bottom side
          do i=xs,xs+xm-1
             d2 = (bottom_v(1+i+1-xs)-bottom_v(1+i-xs+2)) * rhx
             d3 = (bottom_v(1+i-xs+1)-x_v(1+i-gxs))*rhy
@@ -347,7 +347,7 @@
          enddo
       endif
 
-      if (xs + xm .eq. mx) then ! right side
+      if (xs + xm == mx) then ! right side
          do j=ys,ys+ym-1
             d1 = (x_v(1+(j+1-gys)*gxm-1)-right_v(1+j-ys+1))*rhx
             d4 = (right_v(1+j-ys) - right_v(1+j-ys+1))*rhy
@@ -355,7 +355,7 @@
          enddo
       endif
 
-      if (ys + ym .eq. my) then
+      if (ys + ym == my) then
          do i=xs,xs+xm-1
             d1 = (x_v(1+(gym-1)*gxm+i-gxs) - top_v(1+i-xs+1))*rhy
             d4 = (top_v(1+i-xs+1) - top_v(1+i-xs))*rhx
@@ -363,13 +363,13 @@
          enddo
       endif
 
-      if ((ys .eq. 0) .and. (xs .eq. 0)) then
+      if ((ys == 0) .and. (xs == 0)) then
          d1 = (left_v(1+0) - left_v(1+1)) * rhy
          d2 = (bottom_v(1+0)-bottom_v(1+1))*rhx
          ft = ft + sqrt(1.0 + d1*d1 + d2*d2)
       endif
 
-      if ((ys + ym .eq. my) .and. (xs + xm .eq. mx)) then
+      if ((ys + ym == my) .and. (xs + xm == mx)) then
          d1 = (right_v(1+ym+1) - right_v(1+ym))*rhy
          d2 = (top_v(1+xm+1) - top_v(1+xm))*rhx
          ft = ft + sqrt(1.0 + d1*d1 + d2*d2)
@@ -490,39 +490,39 @@
             xrb = xc
             xlt = xc
 
-            if (i .eq. gxs) then   ! Left side
+            if (i == gxs) then   ! Left side
                xl = left_v(1+j - ys + 1)
                xlt = left_v(1+j - ys + 2)
             else
                xl = x_v(1+row -1)
             endif
 
-            if (j .eq. gys) then ! bottom side
+            if (j == gys) then ! bottom side
                xb = bottom_v(1+i - xs + 1)
                xrb = bottom_v(1+i - xs + 2)
             else
                xb = x_v(1+row - gxm)
             endif
 
-            if (i+1 .eq. gxs + gxm) then !right side
+            if (i+1 == gxs + gxm) then !right side
                xr = right_v(1+j - ys + 1)
                xrb = right_v(1+j - ys)
             else
                xr = x_v(1+row + 1)
             endif
 
-            if (j+1 .eq. gym+gys) then !top side
+            if (j+1 == gym+gys) then !top side
                xt = top_v(1+i - xs + 1)
                xlt = top_v(1+i - xs)
             else
                xt = x_v(1+row + gxm)
             endif
 
-            if ((i .gt. gxs) .and. (j+1 .lt. gys+gym)) then
+            if ((i > gxs) .and. (j+1 < gys+gym)) then
                xlt = x_v(1+row - 1 + gxm)
             endif
 
-            if ((i+1 .lt. gxs+gxm) .and. (j .gt. gys)) then
+            if ((i+1 < gxs+gxm) .and. (j > gys)) then
                xrb = x_v(1+row + 1 - gxm)
             endif
 
@@ -567,19 +567,19 @@
 
             k = 0
 
-            if (j .gt. 0) then
+            if (j > 0) then
                v(k) = hb
                col(k) = row - gxm
                k=k+1
             endif
 
-            if ((j .gt. 0) .and. (i .lt. mx-1)) then
+            if ((j > 0) .and. (i < mx-1)) then
                v(k) = hbr
                col(k) = row-gxm+1
                k=k+1
             endif
 
-            if (i .gt. 0) then
+            if (i > 0) then
                v(k) = hl
                col(k) = row - 1
                k = k+1
@@ -589,19 +589,19 @@
             col(k) = row
             k=k+1
 
-            if (i .lt. mx-1) then
+            if (i < mx-1) then
                v(k) = hr
                col(k) = row + 1
                k=k+1
             endif
 
-            if ((i .gt. 0) .and. (j .lt. my-1)) then
+            if ((i > 0) .and. (j < my-1)) then
                v(k) = htl
                col(k) = row + gxm - 1
                k=k+1
             endif
 
-            if (j .lt. my-1) then
+            if (j < my-1) then
                v(k) = ht
                col(k) = row + gxm
                k=k+1
@@ -689,25 +689,25 @@
 
       do j=0,3
 
-         if (j.eq.0) then
+         if (j == 0) then
             yt=b
             xt=l+hx*xs
             limit=bsize
             PetscCall(VecGetArray(Bottom,boundary_v,ierr))
 
-         elseif (j.eq.1) then
+         elseif (j == 1) then
             yt=t
             xt=l+hx*xs
             limit=tsize
             PetscCall(VecGetArray(Top,boundary_v,ierr))
 
-         elseif (j.eq.2) then
+         elseif (j == 2) then
             yt=b+hy*ys
             xt=l
             limit=lsize
             PetscCall(VecGetArray(Left,boundary_v,ierr))
 
-         elseif (j.eq.3) then
+         elseif (j == 3) then
             yt=b+hy*ys
             xt=r
             limit=rsize
@@ -720,12 +720,12 @@
             u2=-yt
             k = 0
             exitloop = .false.
-            do while (k .lt. maxits .and. (.not. exitloop))
+            do while (k < maxits .and. (.not. exitloop))
 
                nf1=u1 + u1*u2*u2 - u1*u1*u1/three-xt
                nf2=-u2 - u1*u1*u2 + u2*u2*u2/three-yt
                fnorm=sqrt(nf1*nf1+nf2*nf2)
-               if (fnorm .gt. tol) then
+               if (fnorm > tol) then
                   njac11=one+u2*u2-u1*u1
                   njac12=two*u1*u2
                   njac21=-two*u1*u2
@@ -740,7 +740,7 @@
             enddo
 
             boundary_v(1+i) = u1*u1-u2*u2
-            if ((j .eq. 0) .or. (j .eq. 1)) then
+            if ((j == 0) .or. (j == 1)) then
                xt = xt + hx
             else
                yt = yt + hy
@@ -748,13 +748,13 @@
 
          enddo
 
-         if (j.eq.0) then
+         if (j == 0) then
             PetscCall(VecRestoreArray(Bottom,boundary_v,ierr))
-         elseif (j.eq.1) then
+         elseif (j == 1) then
             PetscCall(VecRestoreArray(Top,boundary_v,ierr))
-         elseif (j.eq.2) then
+         elseif (j == 2) then
             PetscCall(VecRestoreArray(Left,boundary_v,ierr))
-         elseif (j.eq.3) then
+         elseif (j == 3) then
             PetscCall(VecRestoreArray(Right,boundary_v,ierr))
          endif
 
@@ -810,10 +810,10 @@
       lb = PETSC_NINFINITY
       ub = PETSC_INFINITY
 
-      if (bmy .lt. 0) bmy = 0
-      if (bmy .gt. my) bmy = my
-      if (bmx .lt. 0) bmx = 0
-      if (bmx .gt. mx) bmx = mx
+      if (bmy < 0) bmy = 0
+      if (bmy > my) bmy = my
+      if (bmx < 0) bmx = 0
+      if (bmx > mx) bmx = mx
 
       PetscCall(DMDAGetCorners(dm,xs,ys,PETSC_NULL_INTEGER,xm,ym,PETSC_NULL_INTEGER,ierr))
 
@@ -828,8 +828,8 @@
 
             row=(j-ys)*xm + (i-xs)
 
-            if (i.ge.((mx-bmx)/2) .and. i.lt.(mx-(mx-bmx)/2) .and.           &
-     &          j.ge.((my-bmy)/2) .and. j.lt.(my-(my-bmy)/2)) then
+            if (i >= ((mx-bmx)/2) .and. i < (mx-(mx-bmx)/2) .and.           &
+     &          j >= ((my-bmy)/2) .and. j < (my-(my-bmy)/2)) then
                xl_v(1+row) = bheight
 
             endif
@@ -874,10 +874,10 @@
 
       PetscCall(PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-start', start,flg,ierr))
 
-      if ((flg .eqv. PETSC_TRUE) .and. (start .eq. 0)) then  ! the zero vector is reasonable
+      if ((flg .eqv. PETSC_TRUE) .and. (start == 0)) then  ! the zero vector is reasonable
          PetscCall(VecSet(X,zero,ierr))
 
-      elseif ((flg .eqv. PETSC_TRUE) .and. (start .gt. 0)) then  ! random start -0.5 < xi < 0.5
+      elseif ((flg .eqv. PETSC_TRUE) .and. (start > 0)) then  ! random start -0.5 < xi < 0.5
          PetscCall(PetscRandomCreate(PETSC_COMM_WORLD,rctx,ierr))
          do i=0,start-1
             PetscCall(VecSetRandom(X,rctx,ierr))

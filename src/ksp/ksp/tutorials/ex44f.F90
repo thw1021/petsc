@@ -76,7 +76,7 @@ program main              !   Solves the linear system  J x = f
       PetscCall(DMDAGetCorners(da,xs,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,xm,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,ierr))
       hx     = 1.0_PETSC_REAL_KIND/(mx-1)
       do i=xs,xs+xm-1
-        if ((i .eq. 0) .or. (i .eq. mx-1)) then
+        if ((i == 0) .or. (i == mx-1)) then
           PetscCall(MatSetValue(J,i,i,one,INSERT_VALUES,ierr))
         else
           PetscCall(MatSetValue(J,i,i-1,-hx,INSERT_VALUES,ierr))

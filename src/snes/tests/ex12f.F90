@@ -44,7 +44,7 @@
 !      write(6,*) '    its ',its,snesm%its,'lag',
 !     &            snesm%lag
 !      call flush(6)
-      if (mod(snesm%its,snesm%lag).eq.0) then
+      if (mod(snesm%its,snesm%lag) == 0) then
         one = 1
         PetscCall(SNESSetLagJacobian(snes,one,ierr))  ! build jacobian
       else
@@ -176,7 +176,7 @@
       PetscCall(DMGlobalToLocalEnd(ctx%da,x,INSERT_VALUES,ctx%xl,ierr))
 
       PetscCall(VecGetLocalSize(ctx%xl,n,ierr))
-      if (n .gt. 1000) then
+      if (n > 1000) then
         print*, 'Local work array not big enough'
         call MPI_Abort(PETSC_COMM_WORLD,zero,ierr)
       endif
@@ -203,7 +203,7 @@
 !                     ^^^^^^^           ^^^^^^^
 !                    1st local value   2nd local value
 !
-       if (rank .eq. 0) then
+       if (rank == 0) then
         s = 0
         vff(1) = vxx(1)
       else
@@ -214,7 +214,7 @@
         vff(i-s+1) = d*(vxx(i) - 2.0*vxx(i+1) + vxx(i+2)) + vxx(i+1)*vxx(i+1) - vF2(i-s+1)
       end do
 
-      if (rank .eq. size-1) then
+      if (rank == size-1) then
         vff(n-s) = vxx(n) - 1.0
       endif
 
@@ -265,14 +265,14 @@
       PetscCall(VecGetOwnershipRange(x,start,end,ierr))
       n = end - start
 
-      if (rank .eq. 0) then
+      if (rank == 0) then
         A = 1.0
         PetscCall(MatSetValues(jac,i1,[start],i1,[start],[A],INSERT_VALUES,ierr))
         istart = 1
       else
         istart = 0
       endif
-      if (rank .eq. size-1) then
+      if (rank == size-1) then
         i = INT(ctx%N-1)
         A = 1.0
         PetscCall(MatSetValues(jac,i1,[i],i1,[i],[A],INSERT_VALUES,ierr))

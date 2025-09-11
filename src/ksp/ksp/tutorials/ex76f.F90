@@ -81,7 +81,7 @@
       PetscCallA(VecGetLocalSize(x,m,ierr))
       PetscCallA(VecDestroy(x,ierr))
       PetscCallA(VecDestroy(b,ierr))
-      if (N .gt. 1) then
+      if (N > 1) then
         PetscCallA(PetscOptionsClearValue(PETSC_NULL_OPTIONS,'-ksp_converged_reason',ierr))
         PetscCallA(KSPSetFromOptions(ksp,ierr))
         PetscCallA(MatCreateDense(PETSC_COMM_WORLD,m,PETSC_DECIDE,PETSC_DECIDE,N,PETSC_NULL_SCALAR_ARRAY,C,ierr))

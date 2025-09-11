@@ -65,7 +65,7 @@
 !
 !   View the sequential vector on the 0th processor
 !
-      if (rank .eq. 0) then
+      if (rank == 0) then
         PetscCallA(VecView(x,PETSC_VIEWER_STDOUT_SELF,ierr))
       endif
 

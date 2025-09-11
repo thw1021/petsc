@@ -23,7 +23,7 @@
        n = 0
        PetscCallA(ISCreateGeneral(PETSC_COMM_SELF,n,indices,PETSC_COPY_VALUES,is,ierr))
        PetscCallA(ISGetLocalSize(is,n,ierr))
-       PetscCheckA(n .eq. 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error getting size of zero IS')
+       PetscCheckA(n == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error getting size of zero IS')
        PetscCallA(ISDestroy(is,ierr))
 
 !     Create large IS and test ISGetIndices(,ierr))
@@ -35,7 +35,7 @@
       PetscCallA(ISCreateGeneral(PETSC_COMM_SELF,n,indices,PETSC_COPY_VALUES,is,ierr))
       PetscCallA(ISGetIndices(is,ii,ierr))
       do i=1,n
-        PetscCheckA(ii(i) .eq. indices(i),PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error getting indices')
+        PetscCheckA(ii(i) == indices(i),PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error getting indices')
       end do
       PetscCallA(ISRestoreIndices(is,ii,ierr))
 
@@ -47,8 +47,8 @@
       PetscCheckA(.not. flag,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error checking permutation')
       PetscCallA(ISGetInfo(is,IS_PERMUTATION,IS_LOCAL,compute,flag,ierr))
       PetscCallA(ISIdentity(is,flag,ierr))
-      PetscCheckA((rank .ne. 0) .or. flag,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error checking identity')
-      PetscCheckA((rank .eq. 0) .or. (.not. flag),PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error checking identity')
+      PetscCheckA((rank /= 0) .or. flag,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error checking identity')
+      PetscCheckA((rank == 0) .or. (.not. flag),PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error checking identity')
       PetscCallA(ISSetInfo(is,IS_PERMUTATION,IS_LOCAL,permanent,PETSC_TRUE,ierr))
       PetscCallA(ISSetInfo(is,IS_IDENTITY,IS_LOCAL,permanent,PETSC_TRUE,ierr))
       PetscCallA(ISGetInfo(is,IS_PERMUTATION,IS_LOCAL,compute,flag,ierr))
@@ -88,7 +88,7 @@
       PetscCallA(ISInvertPermutation(is,PETSC_DECIDE,newis,ierr))
       PetscCallA(ISGetIndices(newis,ii,ierr))
       do i=1,n
-        PetscCheckA(ii(i) .eq. n - i,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error getting permutation indices')
+        PetscCheckA(ii(i) == n - i,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error getting permutation indices')
       end do
       PetscCallA(ISRestoreIndices(newis,ii,ierr))
       PetscCallA(ISDestroy(newis,ierr))

@@ -97,19 +97,19 @@
         v = -1.0
         i = II/n
         j = II - i*n
-        if (i.gt.0) then
+        if (i > 0) then
           JJ = II - n
           PetscCallA(MatSetValues(A,i1,[II],i1,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (i.lt.m-1) then
+        if (i < m-1) then
           JJ = II + n
           PetscCallA(MatSetValues(A,i1,[II],i1,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (j.gt.0) then
+        if (j > 0) then
           JJ = II - 1
           PetscCallA(MatSetValues(A,i1,[II],i1,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (j.lt.n-1) then
+        if (j < n-1) then
           JJ = II + 1
           PetscCallA(MatSetValues(A,i1,[II],i1,[JJ],[v],ADD_VALUES,ierr))
         endif
@@ -213,8 +213,8 @@
       PetscCallA(VecNorm(x,NORM_2,norm,ierr))
       PetscCallA(KSPGetIterationNumber(ksp,its,ierr))
 
-      if (rank .eq. 0) then
-        if (norm .gt. 1.e-12) then
+      if (rank == 0) then
+        if (norm > 1.e-12) then
            write(6,100) norm,its
         else
            write(6,110) its

@@ -18,7 +18,7 @@
       PetscCallA(PetscInitialize(ierr))
       PetscCallMPIA(MPI_COMM_RANK(PETSC_COMM_WORLD, rank, ierr))
 
-      if (rank .eq. 0) then
+      if (rank == 0) then
          num_cells = 1
       else
          num_cells = 0

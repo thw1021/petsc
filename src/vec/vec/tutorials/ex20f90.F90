@@ -87,7 +87,7 @@
 !  PETSC_USE_COMPLEX is defined in the makefiles; otherwise,
 !  (when using real numbers) it is undefined.
 
-      if (rank .eq. 0) then
+      if (rank == 0) then
 #if defined(PETSC_USE_COMPLEX)
          write(6,100) int(PetscRealPart(dot))
          write(6,110) int(PetscRealPart(dots(1))),int(PetscRealPart(dots(2))),int(PetscRealPart(dots(3)))
@@ -104,63 +104,63 @@
       PetscCallA(VecScale(x,two,ierr))
       PetscCallA(VecNorm(x,NORM_2,norm,ierr))
       v = abs(norm-2.0*sqrt(nfloat))
-      if (v .gt. -tol .and. v .lt. tol) v = 0.0
-      if (rank .eq. 0) write(6,130) v
+      if (v > -tol .and. v < tol) v = 0.0
+      if (rank == 0) write(6,130) v
  130  format ('VecScale ',1pe9.2)
 
       PetscCallA(VecCopy(x,w,ierr))
       PetscCallA(VecNorm(w,NORM_2,norm,ierr))
       v = abs(norm-2.0*sqrt(nfloat))
-      if (v .gt. -tol .and. v .lt. tol) v = 0.0
-      if (rank .eq. 0) write(6,140) v
+      if (v > -tol .and. v < tol) v = 0.0
+      if (rank == 0) write(6,140) v
  140  format ('VecCopy ',1pe9.2)
 
       PetscCallA(VecAXPY(y,three,x,ierr))
       PetscCallA(VecNorm(y,NORM_2,norm,ierr))
       v = abs(norm-8.0*sqrt(nfloat))
-      if (v .gt. -tol .and. v .lt. tol) v = 0.0
-      if (rank .eq. 0) write(6,150) v
+      if (v > -tol .and. v < tol) v = 0.0
+      if (rank == 0) write(6,150) v
  150  format ('VecAXPY ',1pe9.2)
 
       PetscCallA(VecAYPX(y,two,x,ierr))
       PetscCallA(VecNorm(y,NORM_2,norm,ierr))
       v = abs(norm-18.0*sqrt(nfloat))
-      if (v .gt. -tol .and. v .lt. tol) v = 0.0
-      if (rank .eq. 0) write(6,160) v
+      if (v > -tol .and. v < tol) v = 0.0
+      if (rank == 0) write(6,160) v
  160  format ('VecAYXP ',1pe9.2)
 
       PetscCallA(VecSwap(x,y,ierr))
       PetscCallA(VecNorm(y,NORM_2,norm,ierr))
       v = abs(norm-2.0*sqrt(nfloat))
-      if (v .gt. -tol .and. v .lt. tol) v = 0.0
-      if (rank .eq. 0) write(6,170) v
+      if (v > -tol .and. v < tol) v = 0.0
+      if (rank == 0) write(6,170) v
  170  format ('VecSwap ',1pe9.2)
 
       PetscCallA(VecNorm(x,NORM_2,norm,ierr))
       v = abs(norm-18.0*sqrt(nfloat))
-      if (v .gt. -tol .and. v .lt. tol) v = 0.0
-      if (rank .eq. 0) write(6,180) v
+      if (v > -tol .and. v < tol) v = 0.0
+      if (rank == 0) write(6,180) v
  180  format ('VecSwap ',1pe9.2)
 
       PetscCallA(VecWAXPY(w,two,x,y,ierr))
       PetscCallA(VecNorm(w,NORM_2,norm,ierr))
       v = abs(norm-38.0*sqrt(nfloat))
-      if (v .gt. -tol .and. v .lt. tol) v = 0.0
-      if (rank .eq. 0) write(6,190) v
+      if (v > -tol .and. v < tol) v = 0.0
+      if (rank == 0) write(6,190) v
  190  format ('VecWAXPY ',1pe9.2)
 
       PetscCallA(VecPointwiseMult(w,y,x,ierr))
       PetscCallA(VecNorm(w,NORM_2,norm,ierr))
       v = abs(norm-36.0*sqrt(nfloat))
-      if (v .gt. -tol .and. v .lt. tol) v = 0.0
-      if (rank .eq. 0) write(6,200) v
+      if (v > -tol .and. v < tol) v = 0.0
+      if (rank == 0) write(6,200) v
  200  format ('VecPointwiseMult ',1pe9.2)
 
       PetscCallA(VecPointwiseDivide(w,x,y,ierr))
       PetscCallA(VecNorm(w,NORM_2,norm,ierr))
       v = abs(norm-9.0*sqrt(nfloat))
-      if (v .gt. -tol .and. v .lt. tol) v = 0.0
-      if (rank .eq. 0) write(6,210) v
+      if (v > -tol .and. v < tol) v = 0.0
+      if (rank == 0) write(6,210) v
  210  format ('VecPointwiseDivide ',1pe9.2)
 
       dots(1) = one
@@ -170,14 +170,14 @@
       PetscCallA(VecMAXPY(x,ithree,dots,z,ierr))
       PetscCallA(VecNorm(z(1),NORM_2,norm,ierr))
       v = abs(norm-sqrt(nfloat))
-      if (v .gt. -tol .and. v .lt. tol) v = 0.0
+      if (v > -tol .and. v < tol) v = 0.0
       PetscCallA(VecNorm(z(2),NORM_2,norm,ierr))
       v1 = abs(norm-2.0*sqrt(nfloat))
-      if (v1 .gt. -tol .and. v1 .lt. tol) v1 = 0.0
+      if (v1 > -tol .and. v1 < tol) v1 = 0.0
       PetscCallA(VecNorm(z(3),NORM_2,norm,ierr))
       v2 = abs(norm-3.0*sqrt(nfloat))
-      if (v2 .gt. -tol .and. v2 .lt. tol) v2 = 0.0
-      if (rank .eq. 0) write(6,220) v,v1,v2
+      if (v2 > -tol .and. v2 < tol) v2 = 0.0
+      if (rank == 0) write(6,220) v,v1,v2
  220  format ('VecMAXPY ',3(1pe9.2))
 
 !  Free work space.  All PETSc objects should be destroyed when they

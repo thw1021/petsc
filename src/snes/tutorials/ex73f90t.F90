@@ -148,7 +148,7 @@
       itwo = 2
       useobjective = PETSC_FALSE
       PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-par', solver%lambda,flg,ierr))
-      PetscCheckA(solver%lambda .le. lambda_max .and. solver%lambda .ge. lambda_min,PETSC_COMM_SELF,PETSC_ERR_USER,'Lambda provided with -par is out of range')
+      PetscCheckA(solver%lambda <= lambda_max .and. solver%lambda >= lambda_min,PETSC_COMM_SELF,PETSC_ERR_USER,'Lambda provided with -par is out of range')
       PetscCallA(PetscOptionsGetBool(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-objective', useobjective,flg,ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -230,7 +230,7 @@
 !  Set fake B and C
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       one    = 1.0
-      if (N2 .gt. 0) then
+      if (N2 > 0) then
          bval(1) = -one/(solver%mx-2)
 !     cval = -one/(solver%my*solver%mx)
          cval(1) = -one
@@ -239,7 +239,7 @@
             i = mod(irow,solver%mx)
             row(1) = irow
             col(1) = j
-            if (i .eq. 0 .or. j .eq. 0 .or. i .eq. solver%mx-1 .or. j .eq. solver%my-1) then
+            if (i == 0 .or. j == 0 .or. i == solver%mx-1 .or. j == solver%my-1) then
                !     no op
             else
                PetscCallA(MatSetValues(Bmat,ione,row,ione,col,bval,INSERT_VALUES,ierr))
@@ -344,7 +344,7 @@
       PetscCallA(FormInitialGuess(mysnes,x,ierr))
       PetscCallA(SNESSolve(mysnes,PETSC_NULL_VEC,x,ierr))
       PetscCallA(SNESGetIterationNumber(mysnes,its,ierr))
-      if (solver%rank .eq. 0) then
+      if (solver%rank == 0) then
          write(6,100) its
       endif
   100 format('Number of SNES iterations = ',i5)
@@ -468,7 +468,7 @@
          j = row/solver%mx
          i = mod(row,solver%mx)
          temp = min(j,solver%my-j+1)*hy
-         if (i .eq. 0 .or. j .eq. 0  .or. i .eq. solver%mx-1 .or. j .eq. solver%my-1) then
+         if (i == 0 .or. j == 0  .or. i == solver%mx-1 .or. j == solver%my-1) then
             v = 0.0
          else
             v = temp1 * sqrt(min(min(i,solver%mx-i+1)*hx,temp))
@@ -521,7 +521,7 @@
       ! the rest of the matrix is not touched
       PetscCall(MatAssemblyBegin(jac_prec,MAT_FINAL_ASSEMBLY,ierr))
       PetscCall(MatAssemblyEnd(jac_prec,MAT_FINAL_ASSEMBLY,ierr))
-      if (jac .ne. jac_prec) then
+      if (jac /= jac_prec) then
          PetscCall(MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr))
          PetscCall(MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr))
       end if
@@ -584,7 +584,7 @@
          i = mod(irow,solver%mx)
          ii = ii + 1            ! one based local index
 !     boundary points
-         if (i .eq. 0 .or. j .eq. 0 .or. i .eq. solver%mx-1 .or. j .eq. solver%my-1) then
+         if (i == 0 .or. j == 0 .or. i == solver%mx-1 .or. j == solver%my-1) then
             col(1) = irow
             row(1) = irow
             v(1)   = one
@@ -704,7 +704,7 @@
          i = mod(irow,solver%mx)
          ii = ii + 1            ! one based local index
          row(1) = irow
-         if (i .eq. 0 .or. j .eq. 0 .or. i .eq. solver%mx-1 .or. j .eq. solver%my-1) then
+         if (i == 0 .or. j == 0 .or. i == solver%mx-1 .or. j == solver%my-1) then
             v(1) = 0.0
          else
             u = lx_v(ii)

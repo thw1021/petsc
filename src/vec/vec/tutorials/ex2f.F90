@@ -63,7 +63,7 @@
       PetscCallA(VecAssemblyEnd(x,ierr))
 
 !     Test VecGetValues() with scalar entries
-      if (rank .eq. 0) then
+      if (rank == 0) then
         ione = 0
         PetscCallA(VecGetValues(x,ione,[i],value,ierr))
       endif

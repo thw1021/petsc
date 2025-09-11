@@ -60,7 +60,7 @@
 !    Determine the block size of the index set
 !
       PetscCallA(ISGetBlockSize(set,bs,ierr))
-      if (bs .ne. 3) then
+      if (bs /= 3) then
         write(6,*) 'Blocksize != 3'
       endif
 
@@ -68,7 +68,7 @@
 !    Get the number of blocks
 !
       PetscCallA(ISBlockGetLocalSize(set,n,ierr))
-      if (n .ne. 4) then
+      if (n /= 4) then
         write(6,*) 'Number of blocks != 4'
       endif
 

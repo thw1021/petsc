@@ -62,7 +62,7 @@ program main
   PetscCallA(PetscSortInt(iN,x,ierr))
   PetscCallA(PetscTimSort(N,x1,sizeofentry,CompareIntegers,ctx,ierr))
   do i = 1,N
-    PetscCheckA(x1(i) .eq. x(i),PETSC_COMM_SELF,PETSC_ERR_PLIB,'PetscTimSort and PetscSortInt arrays did not match')
+    PetscCheckA(x1(i) == x(i),PETSC_COMM_SELF,PETSC_ERR_PLIB,'PetscTimSort and PetscSortInt arrays did not match')
   end do
   PetscCallA(PetscSortIntWithArray(iN,y,x,ierr))
   PetscCallA(PetscSortIntWithArrayPair(iN,x,y,z,ierr))

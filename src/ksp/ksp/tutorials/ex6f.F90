@@ -65,19 +65,19 @@
         v = -1.0
         i = II/n
         j = II - i*n
-        if (i.gt.0) then
+        if (i > 0) then
           JJ = II - n
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (i.lt.m-1) then
+        if (i < m-1) then
           JJ = II + n
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (j.gt.0) then
+        if (j > 0) then
           JJ = II - 1
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
-        if (j.lt.n-1) then
+        if (j < n-1) then
           JJ = II + 1
           PetscCallA(MatSetValues(A,one,[II],one,[JJ],[v],ADD_VALUES,ierr))
         endif
@@ -156,12 +156,12 @@
 
       one = 1
 ! First time thorough: Create new matrix to define the linear system
-      if (count .eq. 1) then
+      if (count == 1) then
         PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
         pflag = .false.
         PetscCallA(PetscOptionsHasName(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-mat_view',pflag,ierr))
         if (pflag) then
-          if (rank .eq. 0) write(6,100)
+          if (rank == 0) write(6,100)
           call PetscFlush(6)
         endif
         PetscCallA(MatConvert(A,MATSAME,MAT_INITIAL_MATRIX,A2,ierr))
@@ -178,7 +178,7 @@
       end do
       PetscCallA(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr))
       if (pflag) then
-        if (rank .eq. 0) write(6,110)
+        if (rank == 0) write(6,110)
         call PetscFlush(6)
       endif
       PetscCallA(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr))
@@ -198,7 +198,7 @@
       PetscCallA(KSPSolve(ksp,b,x,ierr))
 
 ! Destroy the matrix used to construct the preconditioner on the last time through
-      if (count .eq. nsteps) PetscCallA(MatDestroy(A2,ierr))
+      if (count == nsteps) PetscCallA(MatDestroy(A2,ierr))
 
  100  format('previous matrix: preconditioning')
  110  format('next matrix: defines linear system')

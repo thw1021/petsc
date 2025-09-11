@@ -60,7 +60,7 @@
 
       PetscCallA(PetscInitialize(ierr))
       PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
-      PetscCheckA(size .eq. 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
+      PetscCheckA(size == 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
 
 !  The next two lines are for testing only; these allow the user to
 !  decide the grid size at runtime.
@@ -231,22 +231,22 @@
       II = 0
       do j=1,n
          do i=1,m
-            if (j .gt. 1) then
+            if (j > 1) then
                JJ = II - m
                v = -0.5*(rho(II+1) + rho(JJ+1))*hy2
                PetscCall(MatSetValues(A,one,[II],one,[JJ],[v],INSERT_VALUES,ierr))
             endif
-            if (j .lt. n) then
+            if (j < n) then
                JJ = II + m
                v = -0.5*(rho(II+1) + rho(JJ+1))*hy2
                PetscCall(MatSetValues(A,one,[II],one,[JJ],[v],INSERT_VALUES,ierr))
             endif
-            if (i .gt. 1) then
+            if (i > 1) then
                JJ = II - 1
                v = -0.5*(rho(II+1) + rho(JJ+1))*hx2
                PetscCall(MatSetValues(A,one,[II],one,[JJ],[v],INSERT_VALUES,ierr))
             endif
-            if (i .lt. m) then
+            if (i < m) then
                JJ = II + 1
                v = -0.5*(rho(II+1) + rho(JJ+1))*hx2
                PetscCall(MatSetValues(A,one,[II],one,[JJ],[v],INSERT_VALUES,ierr))

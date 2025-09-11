@@ -38,7 +38,7 @@
       PetscCallA(VecScatterBegin(toall,v1,v2,INSERT_VALUES,SCATTER_FORWARD,ierr))
       PetscCallA(VecScatterEnd(toall,v1,v2,INSERT_VALUES,SCATTER_FORWARD,ierr))
 
-      if (rank.eq.2) then
+      if (rank == 2) then
          PetscCallA(PetscObjectSetName(v2, 'v2',ierr))
          PetscCallA(VecView(v2,PETSC_VIEWER_STDOUT_SELF,ierr))
       end if

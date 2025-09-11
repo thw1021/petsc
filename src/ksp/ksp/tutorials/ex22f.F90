@@ -98,7 +98,7 @@
           row(1)%i = i
           row(1)%j = j
           row(1)%k = k
-          if (i.eq.0 .or. j.eq.0 .or. k.eq.0 .or. i.eq.mx-1 .or. j.eq.my-1 .or. k.eq.mz-1) then
+          if (i == 0 .or. j == 0 .or. k == 0 .or. i == mx-1 .or. j == my-1 .or. k == mz-1) then
             v(1) = 2.0*(HxHydHz + HxHzdHy + HyHzdHx)
             PetscCall(MatSetValuesStencil(jac,i1,row,i1,row,v,INSERT_VALUES,ierr))
           else

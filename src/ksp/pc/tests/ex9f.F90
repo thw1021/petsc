@@ -27,7 +27,7 @@
 
       PetscCallA(PetscInitialize(ierr))
       PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
-      PetscCheckA(size .eq. 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
+      PetscCheckA(size == 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
       none = -1.0
       one  = 1.0
       n    = 10
@@ -117,7 +117,7 @@
       PetscCallA(ISCreateStride(PETSC_COMM_SELF,n,izero,ione,isin,ierr))
       PetscCallA(PCFieldSplitSetIS(pc,'splitname',isin,ierr))
       PetscCallA(PCFieldSplitGetIS(pc,'splitname',isout,ierr))
-      PetscCheckA(isin .eq. isout,PETSC_COMM_SELF,PETSC_ERR_PLIB,'PCFieldSplitGetIS() failed')
+      PetscCheckA(isin == isout,PETSC_COMM_SELF,PETSC_ERR_PLIB,'PCFieldSplitGetIS() failed')
 
 !  Set runtime options, e.g.,
 !      -ksp_type <type> -pc_type <type> -ksp_monitor -ksp_rtol <rtol>
@@ -132,7 +132,7 @@
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       PetscCallA(PCSetUp(pc,ierr))
       PetscCallA(PCFieldSplitGetSubKSP(pc,nksp,subksp,ierr))
-      PetscCheckA(nksp .eq. 2,PETSC_COMM_WORLD,PETSC_ERR_PLIB,'Number of KSP should be two')
+      PetscCheckA(nksp == 2,PETSC_COMM_WORLD,PETSC_ERR_PLIB,'Number of KSP should be two')
       PetscCallA(KSPView(subksp(1),PETSC_VIEWER_STDOUT_WORLD,ierr))
       PetscCallA(PCFieldSplitRestoreSubKSP(pc,nksp,subksp,ierr))
 
@@ -151,7 +151,7 @@
       PetscCallA(VecAXPY(x,none,u,ierr))
       PetscCallA(VecNorm(x,NORM_2,norm,ierr))
       PetscCallA(KSPGetIterationNumber(ksp,its,ierr))
-      if (norm .gt. 1.e-12) then
+      if (norm > 1.e-12) then
         write(6,100) norm,its
       else
         write(6,200) its

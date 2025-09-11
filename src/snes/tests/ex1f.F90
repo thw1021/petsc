@@ -97,7 +97,7 @@
       PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
       PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
 
-      PetscCheckA(size .eq. 1,PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
+      PetscCheckA(size == 1,PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
 
 !  Initialize problem parameters
       i5 = 5
@@ -109,7 +109,7 @@
       PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-mx',mx,flg,ierr))
       PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-my',my,flg,ierr))
       PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-par',lambda,flg,ierr))
-      PetscCheckA(lambda .lt. lambda_max .and. lambda .gt. lambda_min,PETSC_COMM_SELF,PETSC_ERR_USER,'Lambda out of range ')
+      PetscCheckA(lambda < lambda_max .and. lambda > lambda_min,PETSC_COMM_SELF,PETSC_ERR_USER,'Lambda out of range ')
       N  = mx*my
       pc = PETSC_FALSE
       PetscCallA(PetscOptionsGetBool(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-pc',pc,PETSC_NULL_BOOL,ierr))
@@ -354,7 +354,7 @@
       do j=1,my
          temp = min(j-1,my-j)*hy
          do i=1,mx
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+            if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
               x(i,j) = 0.0
             else
               x(i,j) = temp1 * sqrt(min(min(i-1,mx-i)*hx,temp))
@@ -472,7 +472,7 @@
 
       do j=1,my
          do i=1,mx
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+            if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
                f(i,j) = x(i,j)
             else
                u = x(i,j)
@@ -592,7 +592,7 @@
          do i=1,mx
             row(1) = row(1) + 1
 !           boundary points
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+            if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
                PetscCallA(MatSetValues(jac_prec,i1,row,i1,row,[one],INSERT_VALUES,ierr))
 !           interior grid points
             else

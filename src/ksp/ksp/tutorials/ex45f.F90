@@ -102,7 +102,7 @@
         do i=xs,xs+xm-1
           row(1)%i = i
           row(1)%j = j
-          if (i.eq.0 .or. j.eq.0 .or. i.eq.mx-1 .or. j.eq.my-1) then
+          if (i == 0 .or. j == 0 .or. i == mx-1 .or. j == my-1) then
             v(1) = 2.0*(HxdHy + HydHx)
             PetscCall(MatSetValuesStencil(B,i1,row,i1,row,v,INSERT_VALUES,ierr))
           else
@@ -127,7 +127,7 @@
        end do
        PetscCall(MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr))
        PetscCall(MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr))
-       if (A .ne. B) then
+       if (A /= B) then
          PetscCall(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr))
          PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr))
        endif

@@ -137,7 +137,7 @@
           isvalid_ii = (1 <= ii).and.(ii <= n)
           isvalid_jj = (1 <= jj).and.(jj <= n)
           if (isvalid_ii.and.isvalid_jj) then
-             is_diag = (ij .eq. ij2)
+             is_diag = (ij == ij2)
              nz = nz + 1
              ilist(nz) = ij
              jlist(nz) = ij2

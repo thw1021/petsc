@@ -46,7 +46,7 @@
 !     Determine information on stride
 
       PetscCallA(ISStrideGetInfo(set,first,step,ierr))
-      if (first .ne. 3 .or. step .ne. 2) then
+      if (first /= 3 .or. step /= 2) then
         print*,'Stride info not correct!'
       endif
 

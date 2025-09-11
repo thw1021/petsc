@@ -37,7 +37,7 @@
         PetscCallA(PetscViewerBinaryOpen(PETSC_COMM_WORLD,name,FILE_MODE_READ,viewer,ierr))
         PetscCallA(MatLoad(A,viewer,ierr))
         PetscCallA(PetscViewerDestroy(viewer,ierr))
-        if (i .eq. 0) then
+        if (i == 0) then
           PetscCallA(MatCreateVecs(A,x,b,ierr))
         endif
         write (name,'(a)')trim(dir)//'/rhs_'//cmat//'.dat'

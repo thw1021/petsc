@@ -52,7 +52,7 @@
 
       PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
       PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
-      PetscCheckA(size .eq. 1,PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
+      PetscCheckA(size == 1,PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,'This is a uniprocessor example only')
 
 !  Initialize problem parameters
       m = 214
@@ -84,7 +84,7 @@
       PetscCallA(TaoSolve(ta,ierr))
       PetscCallA(TaoGetConvergenceHistory(ta,nhist,ierr))
       PetscCallA(TaoGetConvergedReason(ta, reason, ierr))
-      if (reason%v .le. 0) then
+      if (reason%v <= 0) then
          print *,'Tao failed.'
          print *,'Try a different TAO method, adjust some parameters,'
          print *,'or check the function evaluation routines.'

@@ -21,11 +21,11 @@
       first = 2
       PetscCallA(ISCreateStride(PETSC_COMM_SELF,ssize,stride,first,is,ierr))
       PetscCallA(ISGetLocalSize(is,n,ierr))
-      PetscCheckA(n .eq. 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISCreateStride')
+      PetscCheckA(n == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISCreateStride')
 
       PetscCallA(ISStrideGetInfo(is,start,stride,ierr))
-      PetscCheckA(start .eq. 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISStrideGetInfo')
-      PetscCheckA(stride .eq. 2,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISStrideGetInfo')
+      PetscCheckA(start == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISStrideGetInfo')
+      PetscCheckA(stride == 2,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISStrideGetInfo')
 
       PetscCallA(PetscObjectTypeCompare(is,ISSTRIDE,flag,ierr))
       PetscCheckA(flag,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from PetscObjectTypeCompare')
@@ -42,7 +42,7 @@
       PetscCallA(ISGetLocalSize(is,n,ierr))
       PetscCallA(ISGetIndices(is,ii,ierr))
       do i=1,n
-        PetscCheckA(ii(i) .eq. -11 + 3*i,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISGetIndices')
+        PetscCheckA(ii(i) == -11 + 3*i,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Wrong result from ISGetIndices')
       end do
       PetscCallA(ISRestoreIndices(is,ii,ierr))
       PetscCallA(ISDestroy(is,ierr))

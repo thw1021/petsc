@@ -38,7 +38,7 @@
       PetscCallA(KSPSetUp(ksp,ierr))
       PetscCallA(KSPMatSolve(ksp,B,X,ierr))
       PetscCallA(KSPGetMatSolveBatchSize(ksp,M,ierr))
-      if (M .ne. PETSC_DECIDE) then
+      if (M /= PETSC_DECIDE) then
         PetscCallA(KSPSetMatSolveBatchSize(ksp,PETSC_DECIDE,ierr))
         PetscCallA(MatZeroEntries(X,ierr))
         PetscCallA(KSPMatSolve(ksp,B,X,ierr))

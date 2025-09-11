@@ -65,10 +65,10 @@
       PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-my',itmp,flg,ierr))
       user(lmy) = itmp
       PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-param',user(param),flg,ierr))
-      if (user(param) .ge. param_max .or. user(param) .le. param_min) then
+      if (user(param) >= param_max .or. user(param) <= param_min) then
         print*,'Parameter is out of range'
       endif
-      if (user(lmx) .gt. user(lmy)) then
+      if (user(lmx) > user(lmy)) then
         dt = .5/user(lmx)
       else
         dt = .5/user(lmy)
@@ -214,7 +214,7 @@
         temp = min(j-1,my-j)*hy
         do i=1,mx
           row = i + (j-1)*mx
-          if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+          if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
             xx(row) = 0.0
           else
             xx(row) = temp1*sqrt(min(min(i-1,mx-i)*hx,temp))
@@ -261,7 +261,7 @@
       do j=1,my
         do i=1,mx
           row = i + (j-1)*mx
-          if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+          if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
             ff(row) = xx(row)
           else
             u       = xx(row)
@@ -325,7 +325,7 @@
 !      When inserting into PETSc matrices, indices start at 0
 !
           row(1) = i - 1 + (j-1)*mx
-          if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+          if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
             PetscCall(MatSetValues(jac,i1,[row],i1,[row],[one],INSERT_VALUES,ierr))
           else
             v(1)   = hxdhy

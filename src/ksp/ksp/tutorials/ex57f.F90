@@ -114,19 +114,19 @@
         v = -1.0
         i = II/n
         j = II - i*n
-        if (i.gt.0) then
+        if (i > 0) then
           JJ = II - n
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],INSERT_VALUES,ierr))
         endif
-        if (i.lt.m-1) then
+        if (i < m-1) then
           JJ = II + n
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],INSERT_VALUES,ierr))
         endif
-        if (j.gt.0) then
+        if (j > 0) then
           JJ = II - 1
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],INSERT_VALUES,ierr))
         endif
-        if (j.lt.n-1) then
+        if (j < n-1) then
           JJ = II + 1
           PetscCallA(MatSetValues(A,ione,[II],ione,[JJ],[v],INSERT_VALUES,ierr))
         endif
@@ -238,7 +238,7 @@
       PetscCallA(VecAXPY(x,neg_one,u,ierr))
       PetscCallA(VecNorm(x,NORM_2,norm,ierr))
       PetscCallA(KSPGetIterationNumber(ksp,its,ierr))
-      if (rank .eq. 0) then
+      if (rank == 0) then
          write(6,100) norm,its
       endif
   100 format('Norm of error ',e11.4,' iterations ',i5)
@@ -294,9 +294,9 @@
 !     output is not jumbled.
 
       PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
-      if (rank .eq. 0) write(6,100) n
+      if (rank == 0) write(6,100) n
       PetscCallA(VecView(x,PETSC_VIEWER_STDOUT_WORLD,ierr))
-      if (rank .eq. 0) write(6,200) n,rnorm
+      if (rank == 0) write(6,200) n,rnorm
 
  100  format('iteration ',i5,' solution vector:')
  200  format('iteration ',i5,' residual norm ',e11.4)
@@ -324,7 +324,7 @@
       KSPConvergedReason flag
       PetscReal rnorm
 
-      if (rnorm .le. .05) then
+      if (rnorm <= .05) then
         flag = KSP_CONVERGED_RTOL
       else
         flag = KSP_CONVERGED_ITERATING

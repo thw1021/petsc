@@ -93,7 +93,7 @@
       CHKERRA(ierr)
 
 ! this statement is split into multiple-lines to keep lines under 132 char limit - required by 'make check'
-      if (lambda .ge. lambda_max .or. lambda .le. lambda_min) then
+      if (lambda >= lambda_max .or. lambda <= lambda_min) then
          ierr = PETSC_ERR_ARG_OUTOFRANGE
          SETERRA(PETSC_COMM_WORLD,ierr,'Lambda')
       endif
@@ -194,7 +194,7 @@
       CHKERRA(ierr)
       call SNESGetIterationNumber(snes,its,ierr)
       CHKERRA(ierr)
-      if (rank .eq. 0) then
+      if (rank == 0) then
          write(6,100) its
       endif
   100 format('Number of SNES iterations = ',i5)
@@ -307,7 +307,7 @@
       do j=ys,ye
          temp = (real(min(j-1,my-j)))*hy
          do i=xs,xe
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+            if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
               x(i,j) = 0.0
             else
               x(i,j) = temp1 * sqrt(min(real(min(i-1,mx-i))*hx,(temp)))
@@ -370,7 +370,7 @@
 
       do j=ys,ye
          do i=xs,xe
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+            if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
                f(i,j) = x(i,j)
             else
                u = x(i,j)
@@ -471,7 +471,7 @@
          do i=xs,xe
             row = row + 1
 !           boundary points
-            if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
+            if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
 !       Some f90 compilers need 4th arg to be of same type in both calls
                col(1) = row
                v(1)   = one
@@ -498,7 +498,7 @@
       CHKERRQ(ierr)
       call MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr)
       CHKERRQ(ierr)
-      if (A .ne. jac) then
+      if (A /= jac) then
          call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
          CHKERRQ(ierr)
          call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
@@ -524,7 +524,7 @@
       CHKERRQ(ierr)
       call VecNorm(f,NORM_INFINITY,nrm,ierr)
       CHKERRQ(ierr)
-      if (nrm .le. 1.e-5) reason = SNES_CONVERGED_FNORM_ABS
+      if (nrm <= 1.e-5) reason = SNES_CONVERGED_FNORM_ABS
 
       end
 

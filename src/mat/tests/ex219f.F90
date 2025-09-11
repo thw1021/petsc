@@ -33,14 +33,14 @@ program newnonzero
 
  idxn(1)=0
  idxm(1)=n-1
- if ((idxn(1).ge.nl1).and.(idxn(1).le.nl2-1)) then
+ if ((idxn(1) >= nl1).and.(idxn(1) <= nl2-1)) then
    v(1)=2.0
    PetscCallA(MatSetValues(A,one,idxn,one,idxm, v,INSERT_VALUES,ierr))
  end if
  PetscCallA(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr))
  PetscCallA(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr))
 
- if ((idxn(1).ge.nl1).and.(idxn(1).le.nl2-1)) then
+ if ((idxn(1) >= nl1).and.(idxn(1) <= nl2-1)) then
    PetscCallA(MatGetValues(A,one,idxn,one,idxm, v,ierr))
    write(6,*) PetscRealPart(v)
  end if

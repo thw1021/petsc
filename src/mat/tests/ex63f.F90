@@ -23,7 +23,7 @@
 !
 !     Proc-0 Create a seq-dense matrix and write it to a file
 !
-      if (rank .eq. 0) then
+      if (rank == 0) then
          ten = 10
          PetscCallA(MatCreateSeqDense(PETSC_COMM_SELF,ten,ten,PETSC_NULL_SCALAR_ARRAY,A,ierr))
          v = 1.0

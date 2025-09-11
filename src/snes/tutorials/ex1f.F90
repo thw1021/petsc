@@ -55,7 +55,7 @@
       PetscCallA(PetscLogSetThreshold(threshold,oldthreshold,ierr))
       PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,size,ierr))
       PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,rank,ierr))
-      PetscCheckA(size .eq. 1,PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,'Uniprocessor example')
+      PetscCheckA(size == 1,PETSC_COMM_SELF,PETSC_ERR_WRONG_MPI_SIZE,'Uniprocessor example')
 
       i2  = 2
       i20 = 20
@@ -141,7 +141,7 @@
       PetscCallA(SNESConvergedReasonView(snes,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
       PetscCallA(SNESGetIterationNumber(snes,its,ierr))
-      if (rank .eq. 0) then
+      if (rank == 0) then
          write(6,100) its
       endif
   100 format('Number of SNES iterations = ',i5)
@@ -267,7 +267,7 @@
 
       PetscCall(MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY,ierr))
       PetscCall(MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY,ierr))
-      if (B .ne. jac) then
+      if (B /= jac) then
         PetscCall(MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr))
         PetscCall(MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr))
       endif
