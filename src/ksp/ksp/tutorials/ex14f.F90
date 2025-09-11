@@ -201,7 +201,7 @@
 !  nonlinear problems whenever possible with application codes, as it
 !  offers many advantages over coding nonlinear solvers independently.
 
-       do 10 i=0,max_nonlin_its
+       do i=0,max_nonlin_its
 
 !  Compute the Jacobian matrix.  See the comments in this routine for
 !  important information about setting the flag mat_flag.
@@ -242,10 +242,9 @@
          if (.not. nooutput) then
            print*,'Converged: function norm ',fnorm,' tolerance ',ttol
          endif
-         goto 20
+         exit
        endif
- 10   continue
- 20   continue
+      end do
 
       write(6,100) i+1
  100  format('Number of SNES iterations =',I2)
@@ -319,17 +318,17 @@
 
 !  Compute initial guess over the locally owned part of the grid
 
-      do 30 j=ys,ys+ym-1
+      do j=ys,ys+ym-1
         temp = (min(j,my-j-1))*hy
-        do 40 i=xs,xs+xm-1
+        do i=xs,xs+xm-1
           row = i - xs + (j - ys)*xm + 1
           if (i .eq. 0 .or. j .eq. 0 .or. i .eq. mx-1 .or. j .eq. my-1) then
             xx(row) = 0.0
             continue
           endif
           xx(row) = temp1*sqrt(min((min(i,mx-i-1))*hx,temp))
- 40     continue
- 30   continue
+        end do
+      end do
 
 !     Restore vector
 
@@ -390,23 +389,23 @@
 
 !  Compute function over the locally owned part of the grid
       rowf = 0
-      do 50 j=ys,ys+ym-1
+      do j=ys,ys+ym-1
 
         row  = (j - gys)*gxm + xs - gxs
-        do 60 i=xs,xs+xm-1
+        do i=xs,xs+xm-1
           row  = row + 1
           rowf = rowf + 1
 
           if (i .eq. 0 .or. j .eq. 0 .or. i .eq. mx-1 .or. j .eq. my-1) then
             ff(rowf) = xx(row)
-            goto 60
+            cycle
           endif
           u   = xx(row)
           uxx = (two*u - xx(row-1) - xx(row+1))*hydhx
           uyy = (two*u - xx(row-gxm) - xx(row+gxm))*hxdhy
           ff(rowf) = uxx + uyy - sc*exp(u)
- 60     continue
- 50   continue
+        end do
+      end do
 
 !  Restore vectors
 
@@ -494,14 +493,14 @@
 !   - Always specify global row and columns of matrix entries.
 !   - Here, we set all entries for a particular row at once.
 
-      do 10 j=ys,ys+ym-1
+      do j=ys,ys+ym-1
         row = (j - gys)*gxm + xs - gxs
-        do 20 i=xs,xs+xm-1
+        do i=xs,xs+xm-1
           row = row + 1
           grow(1) = ltog(row)
           if (i .eq. 0 .or. j .eq. 0 .or. i .eq. (mx-1) .or. j .eq. (my-1)) then
              PetscCall(MatSetValues(jac,ione,grow,ione,grow,[one],INSERT_VALUES,ierr))
-             go to 20
+             cycle
           endif
           v(1)   = -hxdhy
           col(1) = ltog(row - gxm)
@@ -514,8 +513,8 @@
           v(5)   = -hxdhy
           col(5) = ltog(row + gxm)
           PetscCall(MatSetValues(jac,ione,grow,ifive,col,v,INSERT_VALUES,ierr))
- 20     continue
- 10   continue
+        end do
+      end do
 
       PetscCall(ISLocalToGlobalMappingRestoreIndices(ltogm,ltog,ierr))
 

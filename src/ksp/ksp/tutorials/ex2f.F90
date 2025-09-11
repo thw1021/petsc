@@ -112,7 +112,7 @@
 !     instead of JJ = II +- m as you might expect. The more standard ordering
 !     would first do all variables for y = h, then y = 2h etc.
 
-      do 10, II=Istart,Iend-1
+      do II=Istart,Iend-1
         v = -1.0
         i = II/n
         j = II - i*n
@@ -134,7 +134,7 @@
         endif
         v = 4.0
         PetscCallA(MatSetValues(A,ione,[II],ione,[II],[v],INSERT_VALUES,ierr))
- 10   continue
+      end do
 
 !  Assemble matrix, using the 2-step process:
 !       MatAssemblyBegin(), MatAssemblyEnd()

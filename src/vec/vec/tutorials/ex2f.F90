@@ -50,9 +50,9 @@
 !     contributions will be added together.
 
       ione = 1
-      do 100 i=0,N-rank-1
+      do i=0,N-rank-1
          PetscCallA(VecSetValues(x,ione,[i],[one],ADD_VALUES,ierr))
- 100  continue
+      end do
 
 !  Assemble vector, using the 2-step process:
 !    VecAssemblyBegin(), VecAssemblyEnd()

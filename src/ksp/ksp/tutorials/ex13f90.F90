@@ -91,23 +91,23 @@
       hx = 1.0/real(m+1)
       hy = 1.0/real(n+1)
       y  = hy
-      do 20 j=1,n
+      do j=1,n
          x = hx
-         do 10 i=1,m
+         do i=1,m
             rho(i,j)      = x
             solution(i,j) = sin(2.*PETSC_PI*x)*sin(2.*PETSC_PI*y)
             userb(i,j)    = -2.*PETSC_PI*cos(2.*PETSC_PI*x)*sin(2.*PETSC_PI*y) + 8*PETSC_PI*PETSC_PI*x*sin(2.*PETSC_PI*x)*sin(2.*PETSC_PI*y)
            x = x + hx
- 10      continue
+         end do
          y = y + hy
- 20   continue
+      end do
 
 !  Loop over a bunch of timesteps, setting up and solver the linear
 !  system for each time-step.
 !  Note that this loop is somewhat artificial. It is intended to
 !  demonstrate how one may reuse the linear solvers in each time-step.
 
-      do 100 t=1,tmax
+      do t=1,tmax
          PetscCallA(UserDoLinearSolver(rho,userctx,userb,userx,ierr))
 
 !        Compute error: Note that this could (and usually should) all be done
@@ -115,15 +115,15 @@
 !        standard programming practices to show how they may be mixed with
 !        PETSc.
          cnorm = 0.0
-         do 90 j=1,n
-            do 80 i=1,m
+         do j=1,n
+            do i=1,m
               cnorm = cnorm + PetscConj(solution(i,j)-userx(i,j))*(solution(i,j)-userx(i,j))
- 80         continue
- 90      continue
+            end do
+         end do
          enorm =  PetscRealPart(cnorm*hx*hy)
          write(6,115) m,n,enorm
  115     format ('m = ',I2,' n = ',I2,' error norm = ',1PE11.4)
- 100  continue
+      end do
 
 !  We are finished solving linear systems, so we clean up the
 !  data structures.
@@ -229,8 +229,8 @@
 !  things slightly.
 
       II = 0
-      do 110 j=1,n
-         do 100 i=1,m
+      do j=1,n
+         do i=1,m
             if (j .gt. 1) then
                JJ = II - m
                v = -0.5*(rho(II+1) + rho(JJ+1))*hy2
@@ -254,8 +254,8 @@
             v = 2*rho(II+1)*(hx2+hy2)
             PetscCall(MatSetValues(A,one,[II],one,[II],[v],INSERT_VALUES,ierr))
             II = II+1
- 100     continue
- 110  continue
+         end do
+      end do
 !
 !     Assemble matrix
 !

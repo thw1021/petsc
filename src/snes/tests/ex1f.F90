@@ -351,16 +351,16 @@
       hy     = one/(my-1)
       temp1  = lambda/(lambda + one)
 
-      do 20 j=1,my
+      do j=1,my
          temp = min(j-1,my-j)*hy
-         do 10 i=1,mx
+         do i=1,mx
             if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
               x(i,j) = 0.0
             else
               x(i,j) = temp1 * sqrt(min(min(i-1,mx-i)*hx,temp))
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       end
 
@@ -470,8 +470,8 @@
 
 !  Compute function
 
-      do 20 j=1,my
-         do 10 i=1,mx
+      do j=1,my
+         do i=1,mx
             if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
                f(i,j) = x(i,j)
             else
@@ -480,8 +480,8 @@
                uyy = hxdhy * (two*u - x(i,j-1) - x(i,j+1))
                f(i,j) = uxx + uyy - sc*exp(u)
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       end
 
@@ -587,9 +587,9 @@
 !   - Note that MatSetValues() uses 0-based row and column numbers
 !     in Fortran as well as in C.
 
-      do 20 j=1,my
+      do j=1,my
          row(1) = (j-1)*mx - 1
-         do 10 i=1,mx
+         do i=1,mx
             row(1) = row(1) + 1
 !           boundary points
             if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
@@ -608,8 +608,8 @@
                col(5) = row(1) + mx
                PetscCallA(MatSetValues(jac_prec,i1,row,i5,col,v,INSERT_VALUES,ierr))
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       end
       end

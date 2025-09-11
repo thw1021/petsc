@@ -38,12 +38,12 @@
       bb = .true.
       PetscCallA(MatGetRowIJ(Ad,one,bb,bb,n,ia,ja,done,ierr))
       PetscCallA(MatSeqAIJGetArray(Ad,aa,ierr))
-      do 10, i=1,n
+      do i=1,n
         write(7+rank,*) 'row ',i+rstart,' number nonzeros ',ia(i+1)-ia(i)
-        do 20, j=ia(i),ia(i+1)-1
+        do j=ia(i),ia(i+1)-1
           write(7+rank,*)'  ',j,ja(j)+rstart,aa(j)
- 20     continue
- 10   continue
+        end do
+      end do
       PetscCallA(MatRestoreRowIJ(Ad,one,bb,bb,n,ia,ja,done,ierr))
       PetscCallA(MatSeqAIJRestoreArray(Ad,aa,ierr))
 !
@@ -51,12 +51,12 @@
 !
       PetscCallA(MatGetRowIJ(Ao,one,bb,bb,n,ia,ja,done,ierr))
       PetscCallA(MatSeqAIJGetArray(Ao,aa,ierr))
-      do 30, i=1,n
+      do i=1,n
         write(7+rank,*) 'row ',i+rstart,' number nonzeros ',ia(i+1)-ia(i)
-        do 40, j=ia(i),ia(i+1)-1
+        do j=ia(i),ia(i+1)-1
           write(7+rank,*)'  ',j,icol(ja(j))+1,aa(j)
- 40     continue
- 30   continue
+        end do
+      end do
       PetscCallA(MatMPIAIJRestoreSeqAIJ(A,Ad,Ao,icol,ierr))
       PetscCallA(MatRestoreRowIJ(Ao,one,bb,bb,n,ia,ja,done,ierr))
       PetscCallA(MatSeqAIJRestoreArray(Ao,aa,ierr))

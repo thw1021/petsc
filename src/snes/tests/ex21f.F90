@@ -61,9 +61,9 @@
       PetscCallA(VecGetArray(f,ff,ierr))
       PetscCallA(VecGetArrayRead(x,xx,ierr))
       PetscCallA(VecGetLocalSize(x,n,ierr))
-      do 10, i=1,n
+      do i=1,n
          ff(i) = ff(i) - xx(i)*xx(i)*xx(i)*xx(i) + 1.0
- 10   continue
+      end do
       PetscCallA(VecRestoreArray(f,ff,ierr))
       PetscCallA(VecRestoreArrayRead(x,xx,ierr))
       end subroutine

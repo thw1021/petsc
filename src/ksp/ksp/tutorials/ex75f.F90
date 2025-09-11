@@ -29,7 +29,7 @@
       PetscCallA(MatCreate(PETSC_COMM_WORLD,A,ierr))
       PetscCallA(KSPCreate(PETSC_COMM_WORLD,ksp,ierr))
       PetscCallA(KSPSetOperators(ksp,A,A,ierr))
-      do 50 i=0,nmat-1
+      do i=0,nmat-1
         j = i+400
         fmt = '(I3)'
         write (cmat,fmt) j
@@ -60,7 +60,7 @@
           endif
         endif
 #endif
-  50  continue
+      end do
       PetscCallA(VecDestroy(x,ierr))
       PetscCallA(VecDestroy(b,ierr))
       PetscCallA(MatDestroy(A,ierr))

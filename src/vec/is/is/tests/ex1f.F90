@@ -29,14 +29,14 @@
 !     Create large IS and test ISGetIndices(,ierr))
 !     fortran indices start from 1 - but IS indices start from 0
       n = 1000 + rank
-      do 10, i=1,n
+      do i=1,n
         indices(i) = rank + i-1
- 10   continue
+      end do
       PetscCallA(ISCreateGeneral(PETSC_COMM_SELF,n,indices,PETSC_COPY_VALUES,is,ierr))
       PetscCallA(ISGetIndices(is,ii,ierr))
-      do 20, i=1,n
+      do i=1,n
         PetscCheckA(ii(i) .eq. indices(i),PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error getting indices')
- 20   continue
+      end do
       PetscCallA(ISRestoreIndices(is,ii,ierr))
 
 !     Check identity and permutation
@@ -79,17 +79,17 @@
 
 !     Inverting permutation
 
-      do 30, i=1,n
+      do i=1,n
         indices(i) = n - i
- 30   continue
+      end do
 
       PetscCallA(ISCreateGeneral(PETSC_COMM_SELF,n,indices,PETSC_COPY_VALUES,is,ierr))
       PetscCallA(ISSetPermutation(is,ierr))
       PetscCallA(ISInvertPermutation(is,PETSC_DECIDE,newis,ierr))
       PetscCallA(ISGetIndices(newis,ii,ierr))
-      do 40, i=1,n
+      do i=1,n
         PetscCheckA(ii(i) .eq. n - i,PETSC_COMM_SELF,PETSC_ERR_PLIB,'Error getting permutation indices')
- 40   continue
+      end do
       PetscCallA(ISRestoreIndices(newis,ii,ierr))
       PetscCallA(ISDestroy(newis,ierr))
       PetscCallA(ISDestroy(is,ierr))

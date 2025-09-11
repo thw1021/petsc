@@ -40,7 +40,7 @@
 
       PetscCallA(MatGetOwnershipRange(A,Istart,Iend,ierr))
 
-      do 10, II=Istart,Iend - 1
+      do II=Istart,Iend - 1
         v = -1.0
         i = II/m
         j = II - i*m
@@ -62,7 +62,7 @@
         endif
         v = 4.0
         PetscCallA(MatSetValues(A,ione,[II],ione,[II],[v],INSERT_VALUES,ierr))
- 10   continue
+      end do
 
       PetscCallA(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY, ierr))
       PetscCallA(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY, ierr))

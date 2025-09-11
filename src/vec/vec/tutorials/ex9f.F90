@@ -86,10 +86,10 @@
        PetscCallA(VecGetOwnershipRange(gx,rstart,rend,ierr))
 
        ione = 1
-       do 10, i=rstart,rend-1
+       do i=rstart,rend-1
          value = real(i)
          PetscCallA(VecSetValues(gx,ione,[i],[value],INSERT_VALUES,ierr))
- 10    continue
+       end do
 
        PetscCallA(VecAssemblyBegin(gx,ierr))
        PetscCallA(VecAssemblyEnd(gx,ierr))

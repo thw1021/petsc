@@ -234,7 +234,7 @@
          bval(1) = -one/(solver%mx-2)
 !     cval = -one/(solver%my*solver%mx)
          cval(1) = -one
-         do 20 irow=low,high-1
+         do irow=low,high-1
             j = irow/solver%mx   ! row in domain
             i = mod(irow,solver%mx)
             row(1) = irow
@@ -246,7 +246,7 @@
             endif
             row(1) = j
             PetscCallA(MatSetValues(Cmat,ione,row,ione,row,cval,INSERT_VALUES,ierr))
- 20   continue
+         end do
       endif
       PetscCallA(MatAssemblyBegin(Bmat,MAT_FINAL_ASSEMBLY,ierr))
       PetscCallA(MatAssemblyEnd(Bmat,MAT_FINAL_ASSEMBLY,ierr))
@@ -256,11 +256,11 @@
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Set D (identity)
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      do 30 j=lamlow,lamhigh-1
+      do j=lamlow,lamhigh-1
          row(1) = j
          cval(1) = one
          PetscCallA(MatSetValues(Dmat,ione,row,ione,row,cval,INSERT_VALUES,ierr))
- 30   continue
+      end do
       PetscCallA(MatAssemblyBegin(Dmat,MAT_FINAL_ASSEMBLY,ierr))
       PetscCallA(MatAssemblyEnd(Dmat,MAT_FINAL_ASSEMBLY,ierr))
 
@@ -464,7 +464,7 @@
 
       PetscCall(VecGetOwnershipRange(X1,low,high,ierr))
 
-      do 20 row=low,high-1
+      do row=low,high-1
          j = row/solver%mx
          i = mod(row,solver%mx)
          temp = min(j,solver%my-j+1)*hy
@@ -474,7 +474,7 @@
             v = temp1 * sqrt(min(min(i,solver%mx-i+1)*hx,temp))
          endif
          PetscCall(VecSetValues(X1,ione,[row],[v],INSERT_VALUES,ierr))
- 20   continue
+      end do
 
       end subroutine InitialGuessLocal
 
@@ -579,7 +579,7 @@
       PetscCall(VecGetArrayRead(X1,lx_v,ierr))
 
       ii = 0
-      do 20 irow=low,high-1
+      do irow=low,high-1
          j = irow/solver%mx
          i = mod(irow,solver%mx)
          ii = ii + 1            ! one based local index
@@ -609,7 +609,7 @@
             row(1) = irow
             PetscCall(MatSetValues(jac,ione,row,ifive,col,v,INSERT_VALUES,ierr))
          endif
- 20   continue
+      end do
 
       PetscCall(VecRestoreArrayRead(X1,lx_v,ierr))
 
@@ -699,7 +699,7 @@
 
 !     Compute function over the locally owned part of the grid
       ii = 0
-      do 20 irow=low,high-1
+      do irow=low,high-1
          j = irow/solver%mx
          i = mod(irow,solver%mx)
          ii = ii + 1            ! one based local index
@@ -711,7 +711,7 @@
             v(1) = -sc*exp(u)
          endif
          PetscCall(VecSetValues(F1,ione,row,v,INSERT_VALUES,ierr))
- 20   continue
+      end do
 
       PetscCall(VecRestoreArrayRead(X1,lx_v,ierr))
 

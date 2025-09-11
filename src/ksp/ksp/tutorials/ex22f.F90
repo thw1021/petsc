@@ -92,9 +92,9 @@
       HyHzdHx = Hy*Hz/Hx
       PetscCall(DMDAGetCorners(da,xs,ys,zs,xm,ym,zm,ierr))
 
-      do 10,k=zs,zs+zm-1
-        do 20,j=ys,ys+ym-1
-          do 30,i=xs,xs+xm-1
+      do k=zs,zs+zm-1
+        do j=ys,ys+ym-1
+          do i=xs,xs+xm-1
           row(1)%i = i
           row(1)%j = j
           row(1)%k = k
@@ -130,11 +130,11 @@
              col(7)%i = i
              col(7)%j = j
              col(7)%k = k+1
-      PetscCall(MatSetValuesStencil(jac,i1,row,i7,col,v,INSERT_VALUES,ierr))
+            PetscCall(MatSetValuesStencil(jac,i1,row,i7,col,v,INSERT_VALUES,ierr))
           endif
- 30       continue
- 20     continue
- 10   continue
+          end do
+        end do
+      end do
 
       PetscCall(MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr))
       PetscCall(MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr))

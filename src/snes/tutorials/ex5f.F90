@@ -304,16 +304,16 @@
       hy     = one/((real(my)-1))
       temp1  = lambda/(lambda + one)
 
-      do 20 j=ys,ye
+      do j=ys,ye
          temp = (real(min(j-1,my-j)))*hy
-         do 10 i=xs,xe
+         do i=xs,xe
             if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
               x(i,j) = 0.0
             else
               x(i,j) = temp1 * sqrt(min(real(min(i-1,mx-i))*hx,(temp)))
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       end
 
@@ -368,8 +368,8 @@
 
 !  Compute function over the locally owned part of the grid
 
-      do 20 j=ys,ye
-         do 10 i=xs,xe
+      do j=ys,ye
+         do i=xs,xe
             if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
                f(i,j) = x(i,j)
             else
@@ -378,8 +378,8 @@
                uyy = hxdhy * (two*u - x(i,j-1) - x(i,j+1))
                f(i,j) = uxx + uyy - sc*exp(u)
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       call PetscLogFlops(11.0d0*ym*xm,ierr)
       CHKERRQ(ierr)
@@ -466,9 +466,9 @@
 !   - Note that MatSetValues() uses 0-based row and column numbers
 !     in Fortran as well as in C.
 
-      do 20 j=ys,ye
+      do j=ys,ye
          row = (j - gys)*gxm + xs - gxs - 1
-         do 10 i=xs,xe
+         do i=xs,xe
             row = row + 1
 !           boundary points
             if (i .eq. 1 .or. j .eq. 1 .or. i .eq. mx .or. j .eq. my) then
@@ -492,8 +492,8 @@
                call MatSetValuesLocal(jac,i1,[row],i5,[col],[v], INSERT_VALUES,ierr)
                CHKERRQ(ierr)
             endif
- 10      continue
- 20   continue
+         end do
+      end do
       call MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr)
       CHKERRQ(ierr)
       call MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr)

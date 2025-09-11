@@ -104,7 +104,7 @@
       h2 = 1.0/real((n+1)*(n+1))
 
       one = 1
-      do 10, II=Istart,Iend-1
+      do II=Istart,Iend-1
         v = -1.0
         i = II/n
         j = II - i*n
@@ -127,7 +127,7 @@
         if (use_random) PetscCallA(PetscRandomGetValue(rctx,sigma2,ierr))
         v = 4.0 - sigma1*h2 + sigma2*h2
         PetscCallA(MatSetValues(A,one,[II],one,[II],[v],ADD_VALUES,ierr))
- 10   continue
+      end do
       if (use_random) PetscCallA(PetscRandomDestroy(rctx,ierr))
 
 !  Assemble matrix, using the 2-step process:

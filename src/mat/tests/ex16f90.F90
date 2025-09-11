@@ -30,14 +30,14 @@
 !
 !     Set values into the matrix. All processors set all values.
 !
-      do 10, i=0,m-1
+      do i=0,m-1
         iar(1) = i
-        do 20, j=0,n-1
+        do j=0,n-1
           jar(1) = j
           v(1)   = 9.0/real(i+j+1)
           PetscCallA(MatSetValues(A,one,iar,one,jar,v,INSERT_VALUES,ierr))
- 20     continue
- 10   continue
+        end do
+      end do
 
       PetscCallA(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr))
       PetscCallA(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr))

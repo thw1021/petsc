@@ -153,10 +153,10 @@
       PetscReal a(2),k(2),s(2)
       PetscErrorCode ierr
       PetscInt i
-      do 10 i = xs,xe
+      do i = xs,xe
          f(1,i) = xdot(1,i) + k(1)*x(1,i) - k(2)*x(2,i) - s(1)
          f(2,i) = xdot(2,i) - k(1)*x(1,i) + k(2)*x(2,i) - s(2)
- 10   continue
+      end do
       end subroutine
 
       subroutine FormIFunction(ts,t,X,Xdot,F,user,ierr)
@@ -218,8 +218,8 @@
       twothird = two / three
       sixth = one / six
       twelfth = one / twelve
-      do 20 i = xs,xe
-         do 10 j = 1,2
+      do i = xs,xe
+         do j = 1,2
             if (i .eq. 1) then
                f(j,i) = a(j)/hx*(third*u0t(j) + half*x(j,i) - x(j,i+1)  &
      &              + sixth*x(j,i+2))
@@ -236,8 +236,8 @@
      &              + twothird*x(j,i-1)                                 &
      &              - twothird*x(j,i+1) + twelfth*x(j,i+2))
             end if
- 10      continue
- 20   continue
+         end do
+      end do
       end subroutine
 
       subroutine FormRHSFunction(ts,t,X,F,user,ierr)
@@ -307,7 +307,7 @@
       i1 = 1
       k1 = user(user_k+1)
       k2 = user(user_k+2)
-      do 10 i = xs,xe
+      do i = xs,xe
          row = i-gxs
          col = i-gxs
          val(1) = shift + k1
@@ -315,7 +315,7 @@
          val(3) = -k1
          val(4) = shift + k2
          PetscCall(MatSetValuesBlockedLocal(Jpre,i1,[row],i1,[col],val,INSERT_VALUES,ierr))
- 10   continue
+      end do
       PetscCall(MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY,ierr))
       PetscCall(MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY,ierr))
       if (J /= Jpre) then
@@ -335,7 +335,7 @@
       PetscReal one,hx,r,ik
       one = 1.0
       hx = one / mx
-      do 10 i=xs,xe
+      do i=xs,xe
          r = i*hx
          if (k(2) .ne. 0.0) then
             ik = one/k(2)
@@ -344,7 +344,7 @@
          end if
          x(1,i) = one + s(2)*r
          x(2,i) = k(1)*ik*x(1,i) + s(2)*ik
- 10   continue
+      end do
       end subroutine
 
       subroutine FormInitialSolution(ts,X,user,ierr)

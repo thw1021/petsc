@@ -111,14 +111,14 @@
       xp = h*start
       nn = end - start
       ii = start
-      do 10, i=0,nn-1
+      do i=0,nn-1
         FF = 6.0*xp + (xp+1.e-12)**6.e0
         UU = xp*xp*xp
         PetscCallA(VecSetValues(ctx%F,i1,[ii],[FF],INSERT_VALUES,ierr))
         PetscCallA(VecSetValues(U,i1,[ii],[UU],INSERT_VALUES,ierr))
         xp = xp + h
         ii = ii + 1
- 10   continue
+      end do
       PetscCallA(VecAssemblyBegin(ctx%F,ierr))
       PetscCallA(VecAssemblyEnd(ctx%F,ierr))
       PetscCallA(VecAssemblyBegin(U,ierr))
@@ -210,9 +210,9 @@
         s = 1
       endif
 
-      do 10 i=1,n-2
-       vff(i-s+1) = d*(vxx(i) - 2.0*vxx(i+1) + vxx(i+2)) + vxx(i+1)*vxx(i+1) - vF2(i-s+1)
- 10   continue
+      do i=1,n-2
+        vff(i-s+1) = d*(vxx(i) - 2.0*vxx(i+1) + vxx(i+2)) + vxx(i+1)*vxx(i+1) - vF2(i-s+1)
+      end do
 
       if (rank .eq. size-1) then
         vff(n-s) = vxx(n) - 1.0
@@ -280,7 +280,7 @@
       else
         iend = n
       endif
-      do 10 i=istart,iend-1
+      do i=istart,iend-1
         ii = i + start
         j = start + i - 1
         PetscCall(MatSetValues(jac,i1,[ii],i1,[j],[d],INSERT_VALUES,ierr))
@@ -288,7 +288,7 @@
         PetscCall(MatSetValues(jac,i1,[ii],i1,[j],[d],INSERT_VALUES,ierr))
         A = -2.0*d + 2.0*vxx(i+1)
         PetscCall(MatSetValues(jac,i1,[ii],i1,[ii],[A],INSERT_VALUES,ierr))
- 10   continue
+      end do
       PetscCall(VecRestoreArrayRead(x,vxx,ierr))
       PetscCall(MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY,ierr))
       PetscCall(MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY,ierr))

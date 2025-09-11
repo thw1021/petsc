@@ -70,7 +70,7 @@
 !     appropriate processor during matrix assembly).
 !   - Always specify global rows and columns of matrix entries.
 
-      do 10, II=Istart,Iend-1
+      do II=Istart,Iend-1
         v = -1.0
         i = II/n
         j = II - i*n
@@ -92,7 +92,7 @@
         endif
         v = 4.0
         PetscCallA(MatSetValues(A,one,[II],one,[II],[v],ADD_VALUES,ierr))
- 10   continue
+      end do
 
 !  Assemble matrix, using the 2-step process:
 !       MatAssemblyBegin(), MatAssemblyEnd()

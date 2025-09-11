@@ -33,10 +33,10 @@
 !  the vector indices are 0-based in PETSc (for both Fortran and
 !  C vectors)
 
-       do 10 i=1,n
+       do i=1,n
           loc(i) = i-1
           xwork(i) = 10.0*real(i)
-  10   continue
+       end do
 
 !  Set vector values.  Note that we set multiple entries at once.
 !  Of course, usually one would create a work array that is the
@@ -66,10 +66,10 @@
 
 !  Modify vector data
 
-       do 30 i=1,n
+       do i=1,n
           xx_v(i) = 100.0*real(i)
           yy_v(i) = 1000.0*real(i)
-  30   continue
+       end do
 
 !  Restore vectors
 

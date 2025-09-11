@@ -90,12 +90,12 @@ subroutine MyKSPConverged(ksp,n,rnorm,flag,defaultctx,ierr)
       value(1) = -1.0
       value(2) = 2.0
       value(3) = -1.0
-      do 50 i=1,n-2
+      do i=1,n-2
          col(1) = i-1
          col(2) = i
          col(3) = i+1
          PetscCallA(MatSetValues(A,i1,[i],i3,col,value,INSERT_VALUES,ierr))
-  50  continue
+      end do
       i = n - 1
       col(1) = n - 2
       col(2) = n - 1

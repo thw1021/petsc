@@ -36,11 +36,11 @@
       PetscCallA(VecSet(x,zero,ierr))
       PetscCallA(VecGetOwnershipRange(y,low,high,ierr))
       ione = 1
-      do 10, i=0,n-1
+      do i=0,n-1
          iglobal = i + low
          value   = i + 10*rank
          PetscCallA(VecSetValues(y,ione,[iglobal],[value],INSERT_VALUES,ierr))
- 10   continue
+      end do
 
       PetscCallA(VecAssemblyBegin(y,ierr))
       PetscCallA(VecAssemblyEnd(y,ierr))

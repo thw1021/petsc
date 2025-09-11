@@ -395,16 +395,16 @@
       hy     = one/(PetscIntToReal(user%my-1))
       temp1  = user%lambda/(user%lambda + one)
 
-      do 20 j=user%ys,user%ye
+      do j=user%ys,user%ye
          temp = PetscIntToReal(min(j-1,user%my-j))*hy
-         do 10 i=user%xs,user%xe
+         do i=user%xs,user%xe
             if (i .eq. 1 .or. j .eq. 1 .or. i .eq. user%mx .or. j .eq. user%my) then
               x(i,j) = 0.0
             else
               x(i,j) = temp1 * sqrt(min(PetscIntToReal(min(i-1,user%mx-i)*hx),PetscIntToReal(temp)))
             endif
- 10      continue
- 20   continue
+         end do
+      end do
 
       end
 
@@ -447,8 +447,8 @@
 
 !  Compute function over the locally owned part of the grid
 
-      do 20 j=user%ys,user%ye
-         do 10 i=user%xs,user%xe
+      do j=user%ys,user%ye
+         do i=user%xs,user%xe
             if (i .eq. 1 .or. j .eq. 1 .or. i .eq. user%mx .or. j .eq. user%my) then
                f(i,j) = x(i,j)
             else
@@ -457,8 +457,8 @@
                uyy = hxdhy * (two*u - x(i,j-1) - x(i,j+1))
                f(i,j) = uxx + uyy - sc*exp(u)
             endif
- 10      continue
- 20   continue
+         end do
+      end do
       ierr = 0
       end
 
@@ -630,9 +630,9 @@
 !   - Note that MatSetValues() uses 0-based row and column numbers
 !     in Fortran as well as in C.
 
-      do 20 j=user%ys,user%ye
+      do j=user%ys,user%ye
          row = (j - user%gys)*user%gxm + user%xs - user%gxs - 1
-         do 10 i=user%xs,user%xe
+         do i=user%xs,user%xe
             row = row + 1
 !           boundary points
             if (i .eq. 1 .or. j .eq. 1 .or. i .eq. user%mx .or. j .eq. user%my) then
@@ -653,8 +653,8 @@
                col(5) = row + user%gxm
                PetscCallA(MatSetValuesLocal(jac_prec,ione,[row],ifive,col,v,INSERT_VALUES,ierr))
             endif
- 10      continue
- 20   continue
+         end do
+      end do
       end
 
 !/*TEST
