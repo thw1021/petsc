@@ -441,15 +441,17 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP> {
 #define PETSC_CUPM_IMPL_CLASS_HEADER(T) \
   PETSC_CUPM_BASE_CLASS_HEADER(T); \
   /* types */ \
-  using cupmComplex_t           = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmComplex_t; \
   using cupmError_t             = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmError_t; \
   using cupmEvent_t             = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmEvent_t; \
   using cupmStream_t            = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmStream_t; \
   using cupmDeviceProp_t        = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmDeviceProp_t; \
   using cupmMemcpyKind_t        = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmMemcpyKind_t; \
+  using cupmDeviceAttr_t        = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmDeviceAttr_t; \
+  using cupmComplex_t           = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmComplex_t; \
   using cupmPointerAttributes_t = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmPointerAttributes_t; \
   using cupmMemoryType_t        = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmMemoryType_t; \
   using cupmDim3                = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmDim3; \
+  using cupmHostFn_t            = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmHostFn_t; \
   using cupmMemPool_t           = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmMemPool_t; \
   using cupmMemPoolAttr         = typename ::Petsc::device::cupm::impl::InterfaceImpl<T>::cupmMemPoolAttr; \
   /* variables */ \
