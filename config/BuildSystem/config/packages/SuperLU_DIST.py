@@ -51,7 +51,6 @@ class Configure(config.package.CMakePackage):
         if item.find('CMAKE_C_FLAGS') >= 0 or item.find('CMAKE_CXX_FLAGS') >= 0:
           args[place]=item[:-1]+' '+self.headers.toString(self.cuda.include)+' -DDEBUGlevel=0 -DPRNTlevel=0"'
       args.append('-DTPL_ENABLE_CUDALIB=TRUE')
-      args.append('-DTPL_CUDA_LIBRARIES="'+self.libraries.toString(self.cuda.dlib)+'"')
       args.extend(self.cuda.getCmakeCUDAArchFlag())
       with self.Language('CUDA'):
         # already set in package.py so could be removed, but why are MPI include paths listed here
@@ -91,7 +90,6 @@ class Configure(config.package.CMakePackage):
     if empty:
       args.append('-DMPI_C_COMPILE_FLAGS:STRING=""')
       args.append('-DMPI_C_INCLUDE_PATH:STRING=""')
-      args.append('-DMPI_C_HEADER_DIR:STRING=""')
       args.append('-DMPI_C_LIBRARIES:STRING=""')
     return args
 
