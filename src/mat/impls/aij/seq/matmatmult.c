@@ -139,7 +139,7 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ(Mat A, Mat B, PetscReal fill, Ma
   }
 #endif
 
-  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Mat Product Algorithm is not supported");
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Mat Product Algorithm '%s' is not supported", alg);
 }
 
 PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_LLCondensed(Mat A, Mat B, PetscReal fill, Mat C)

@@ -57,8 +57,22 @@ const char *const MatCUSPARSEStorageFormats[] = {"CSR", "ELL", "HYB", "MatCUSPAR
       CUSPARSE_CSR2CSC_ALG2 = 2  // low memory requirement, non-deterministic
   } cusparseCsr2CscAlg_t;
   */
+
+// Copied from cuda-12.6: SPARSE MATRIX - SPARSE MATRIX MULTIPLICATION (SpGEMM)
+/*
+typedef enum {
+    CUSPARSE_SPGEMM_DEFAULT                 = 0,
+    CUSPARSE_SPGEMM_CSR_ALG_DETERMINITIC    = 1,
+    CUSPARSE_SPGEMM_CSR_ALG_NONDETERMINITIC = 2,
+    CUSPARSE_SPGEMM_ALG1                    = 3,
+    CUSPARSE_SPGEMM_ALG2                    = 4,
+    CUSPARSE_SPGEMM_ALG3                    = 5
+} cusparseSpGEMMAlg_t;
+*/
+
 const char *const MatCUSPARSESpMVAlgorithms[]    = {"MV_ALG_DEFAULT", "COOMV_ALG", "CSRMV_ALG1", "CSRMV_ALG2", "cusparseSpMVAlg_t", "CUSPARSE_", 0};
 const char *const MatCUSPARSESpMMAlgorithms[]    = {"ALG_DEFAULT", "COO_ALG1", "COO_ALG2", "COO_ALG3", "CSR_ALG1", "COO_ALG4", "CSR_ALG2", "cusparseSpMMAlg_t", "CUSPARSE_SPMM_", 0};
+const char *const MatCUSPARSESpGEMMAlgorithms[]  = {"DEFAULT", "CSR_ALG_DETERMINITIC", "CSR_ALG_NONDETERMINITIC", "ALG1", "ALG2", "ALG3", "cusparseSpGEMMAlg_t", "CUSPARSE_SPGEMM_", 0};
 const char *const MatCUSPARSECsr2CscAlgorithms[] = {"INVALID" /*cusparse does not have enum 0! We created one*/, "ALG1", "ALG2", "cusparseCsr2CscAlg_t", "CUSPARSE_CSR2CSC_", 0};
 #endif
 
@@ -213,7 +227,6 @@ static PetscErrorCode MatSetFromOptions_SeqAIJCUSPARSE(Mat A, PetscOptionItems P
   #endif
     PetscCall(PetscOptionsEnum("-mat_cusparse_spmm_alg", "sets cuSPARSE algorithm used in sparse-mat dense-mat multiplication (SpMM)", "cusparseSpMMAlg_t", MatCUSPARSESpMMAlgorithms, (PetscEnum)cusparsestruct->spmmAlg, (PetscEnum *)&cusparsestruct->spmmAlg, &flg));
     PetscCheck(!flg || CUSPARSE_SPMM_CSR_ALG1 == 4, PETSC_COMM_SELF, PETSC_ERR_SUP, "cuSPARSE enum cusparseSpMMAlg_t has been changed but PETSc has not been updated accordingly");
-
     PetscCall(
       PetscOptionsEnum("-mat_cusparse_csr2csc_alg", "sets cuSPARSE algorithm used in converting CSR matrices to CSC matrices", "cusparseCsr2CscAlg_t", MatCUSPARSECsr2CscAlgorithms, (PetscEnum)cusparsestruct->csr2cscAlg, (PetscEnum *)&cusparsestruct->csr2cscAlg, &flg));
     PetscCheck(!flg || CUSPARSE_CSR2CSC_ALG1 == 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "cuSPARSE enum cusparseCsr2CscAlg_t has been changed but PETSc has not been updated accordingly");
@@ -3014,12 +3027,12 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   BmatSpDescr = mmdata->Bcsr ? mmdata->matSpBDescr : Bmat->matDescr; /* B may be in compressed row storage */
   PetscCallCUSPARSE(cusparseSetPointerMode(Ccusp->handle, CUSPARSE_POINTER_MODE_DEVICE));
   #if PETSC_PKG_CUDA_VERSION_GE(11, 4, 0)
-  stat = cusparseSpGEMMreuse_compute(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc);
+  stat = cusparseSpGEMMreuse_compute(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, product->spgemmAlg, mmdata->spgemmDesc);
   PetscCallCUSPARSE(stat);
   #else
-  stat = cusparseSpGEMM_compute(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &mmdata->mmBufferSize, mmdata->mmBuffer);
+  stat = cusparseSpGEMM_compute(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, product->spgemmAlg, mmdata->spgemmDesc, &mmdata->mmBufferSize, mmdata->mmBuffer);
   PetscCallCUSPARSE(stat);
-  stat = cusparseSpGEMM_copy(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc);
+  stat = cusparseSpGEMM_copy(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, product->spgemmAlg, mmdata->spgemmDesc);
   PetscCallCUSPARSE(stat);
   #endif
 #else
@@ -3257,19 +3270,19 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
     size_t bufferSize5 = 0;
 
     /* ask bufferSize1 bytes for external memory */
-    stat = cusparseSpGEMMreuse_workEstimation(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &bufferSize1, NULL);
+    stat = cusparseSpGEMMreuse_workEstimation(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, product->spgemmAlg, mmdata->spgemmDesc, &bufferSize1, NULL);
     PetscCallCUSPARSE(stat);
     PetscCallCUDA(cudaMalloc((void **)&dBuffer1, bufferSize1));
     /* inspect the matrices A and B to understand the memory requirement for the next step */
-    stat = cusparseSpGEMMreuse_workEstimation(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &bufferSize1, dBuffer1);
+    stat = cusparseSpGEMMreuse_workEstimation(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, product->spgemmAlg, mmdata->spgemmDesc, &bufferSize1, dBuffer1);
     PetscCallCUSPARSE(stat);
 
-    stat = cusparseSpGEMMreuse_nnz(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &bufferSize2, NULL, &bufferSize3, NULL, &bufferSize4, NULL);
+    stat = cusparseSpGEMMreuse_nnz(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, product->spgemmAlg, mmdata->spgemmDesc, &bufferSize2, NULL, &bufferSize3, NULL, &bufferSize4, NULL);
     PetscCallCUSPARSE(stat);
     PetscCallCUDA(cudaMalloc((void **)&dBuffer2, bufferSize2));
     PetscCallCUDA(cudaMalloc((void **)&dBuffer3, bufferSize3));
     PetscCallCUDA(cudaMalloc((void **)&mmdata->dBuffer4, bufferSize4));
-    stat = cusparseSpGEMMreuse_nnz(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &bufferSize2, dBuffer2, &bufferSize3, dBuffer3, &bufferSize4, mmdata->dBuffer4);
+    stat = cusparseSpGEMMreuse_nnz(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, product->spgemmAlg, mmdata->spgemmDesc, &bufferSize2, dBuffer2, &bufferSize3, dBuffer3, &bufferSize4, mmdata->dBuffer4);
     PetscCallCUSPARSE(stat);
     PetscCallCUDA(cudaFree(dBuffer1));
     PetscCallCUDA(cudaFree(dBuffer2));
@@ -3286,27 +3299,27 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
     stat = cusparseCsrSetPointers(Cmat->matDescr, Ccsr->row_offsets->data().get(), Ccsr->column_indices->data().get(), Ccsr->values->data().get());
     PetscCallCUSPARSE(stat);
 
-    stat = cusparseSpGEMMreuse_copy(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &bufferSize5, NULL);
+    stat = cusparseSpGEMMreuse_copy(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, product->spgemmAlg, mmdata->spgemmDesc, &bufferSize5, NULL);
     PetscCallCUSPARSE(stat);
     PetscCallCUDA(cudaMalloc((void **)&mmdata->dBuffer5, bufferSize5));
-    stat = cusparseSpGEMMreuse_copy(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &bufferSize5, mmdata->dBuffer5);
+    stat = cusparseSpGEMMreuse_copy(Ccusp->handle, opA, opB, Amat->matDescr, BmatSpDescr, Cmat->matDescr, product->spgemmAlg, mmdata->spgemmDesc, &bufferSize5, mmdata->dBuffer5);
     PetscCallCUSPARSE(stat);
     PetscCallCUDA(cudaFree(dBuffer3));
-    stat = cusparseSpGEMMreuse_compute(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc);
+    stat = cusparseSpGEMMreuse_compute(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, product->spgemmAlg, mmdata->spgemmDesc);
     PetscCallCUSPARSE(stat);
     PetscCall(PetscInfo(C, "Buffer sizes for type %s, result %" PetscInt_FMT " x %" PetscInt_FMT " (k %" PetscInt_FMT ", nzA %" PetscInt_FMT ", nzB %" PetscInt_FMT ", nzC %" PetscInt_FMT ") are: %ldKB %ldKB\n", MatProductTypes[ptype], m, n, k, a->nz, b->nz, c->nz, bufferSize4 / 1024, bufferSize5 / 1024));
   }
   #else
   size_t bufSize2;
   /* ask bufferSize bytes for external memory */
-  stat = cusparseSpGEMM_workEstimation(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &bufSize2, NULL);
+  stat = cusparseSpGEMM_workEstimation(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, product->spgemmAlg, mmdata->spgemmDesc, &bufSize2, NULL);
   PetscCallCUSPARSE(stat);
   PetscCallCUDA(cudaMalloc((void **)&mmdata->mmBuffer2, bufSize2));
   /* inspect the matrices A and B to understand the memory requirement for the next step */
-  stat = cusparseSpGEMM_workEstimation(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &bufSize2, mmdata->mmBuffer2);
+  stat = cusparseSpGEMM_workEstimation(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, product->spgemmAlg, mmdata->spgemmDesc, &bufSize2, mmdata->mmBuffer2);
   PetscCallCUSPARSE(stat);
   /* ask bufferSize again bytes for external memory */
-  stat = cusparseSpGEMM_compute(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &mmdata->mmBufferSize, NULL);
+  stat = cusparseSpGEMM_compute(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, product->spgemmAlg, mmdata->spgemmDesc, &mmdata->mmBufferSize, NULL);
   PetscCallCUSPARSE(stat);
   /* The CUSPARSE documentation is not clear, nor the API
      We need both buffers to perform the operations properly!
@@ -3315,7 +3328,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
      is stored in the descriptor! What a messy API... */
   PetscCallCUDA(cudaMalloc((void **)&mmdata->mmBuffer, mmdata->mmBufferSize));
   /* compute the intermediate product of A * B */
-  stat = cusparseSpGEMM_compute(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc, &mmdata->mmBufferSize, mmdata->mmBuffer);
+  stat = cusparseSpGEMM_compute(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, product->spgemmAlg, mmdata->spgemmDesc, &mmdata->mmBufferSize, mmdata->mmBuffer);
   PetscCallCUSPARSE(stat);
   /* get matrix C non-zero entries C_nnz1 */
   PetscCallCUSPARSE(cusparseSpMatGetSize(Cmat->matDescr, &C_num_rows1, &C_num_cols1, &C_nnz1));
@@ -3328,7 +3341,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   PetscCallCUDA(cudaPeekAtLastError()); /* catch out of memory errors */
   stat = cusparseCsrSetPointers(Cmat->matDescr, Ccsr->row_offsets->data().get(), Ccsr->column_indices->data().get(), Ccsr->values->data().get());
   PetscCallCUSPARSE(stat);
-  stat = cusparseSpGEMM_copy(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, CUSPARSE_SPGEMM_DEFAULT, mmdata->spgemmDesc);
+  stat = cusparseSpGEMM_copy(Ccusp->handle, opA, opB, Cmat->alpha_one, Amat->matDescr, BmatSpDescr, Cmat->beta_zero, Cmat->matDescr, cusparse_scalartype, product->spgemmAlg, mmdata->spgemmDesc);
   PetscCallCUSPARSE(stat);
   #endif // PETSC_PKG_CUDA_VERSION_GE(11,4,0)
 #else
@@ -3519,6 +3532,14 @@ static PetscErrorCode MatProductSetFromOptions_SeqAIJCUSPARSE(Mat mat)
     case MATPRODUCT_AtB:
     case MATPRODUCT_ABt:
       mat->ops->productsymbolic = MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE;
+      PetscOptionsBegin(PetscObjectComm((PetscObject)mat), ((PetscObject)mat)->prefix, "MatProduct", "Mat");
+      PetscCall(PetscOptionsEnum("-mat_product_cusparse_spgemm_alg", "sets cuSPARSE algorithm used in sparse-mat sparse-mat multiplication (SpGEMM)", "cusparseSpGEMMAlg_t", MatCUSPARSESpGEMMAlgorithms, (PetscEnum)product->spgemmAlg, (PetscEnum *)&product->spgemmAlg, NULL));
+      PetscOptionsEnd();
+#if PETSC_PKG_CUDA_VERSION_GE(12, 0, 1)
+      PetscAssert(CUSPARSE_SPGEMM_ALG3 == 5, PETSC_COMM_SELF, PETSC_ERR_SUP, "cuSPARSE enum cusparseSpGEMMAlg_t has been changed but PETSc has not been updated accordingly");
+#else
+      PetscAssert(CUSPARSE_SPGEMM_CSR_ALG_NONDETERMINITIC == 2, PETSC_COMM_SELF, PETSC_ERR_SUP, "cuSPARSE enum cusparseSpGEMMAlg_t has been changed but PETSc has not been updated accordingly");
+#endif
       break;
     case MATPRODUCT_PtAP:
     case MATPRODUCT_RARt:
