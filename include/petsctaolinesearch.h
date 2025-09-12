@@ -82,6 +82,8 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchSetFromOptions(TaoLineSearch);
 PETSC_EXTERN PetscErrorCode TaoLineSearchSetUp(TaoLineSearch);
 PETSC_EXTERN PetscErrorCode TaoLineSearchDestroy(TaoLineSearch *);
 PETSC_EXTERN PetscErrorCode TaoLineSearchMonitor(TaoLineSearch, PetscInt, PetscReal, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoLineSearchMonitorDefault(TaoLineSearch, PetscInt, PetscReal, PetscReal, void*);
+PETSC_EXTERN PetscErrorCode TaoLineSearchMonitorSet(TaoLineSearch, PetscErrorCode (*)(TaoLineSearch, PetscInt, PetscReal, PetscReal, void *), void *, PetscCtxDestroyFn*);
 PETSC_EXTERN PetscErrorCode TaoLineSearchView(TaoLineSearch, PetscViewer);
 PETSC_EXTERN PetscErrorCode TaoLineSearchViewFromOptions(TaoLineSearch, PetscObject, const char[]);
 

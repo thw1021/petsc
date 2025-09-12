@@ -36,10 +36,10 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_Unit(TaoLineSearch ls)
 {
   PetscFunctionBegin;
-  ls->ops->setup   = NULL;
-  ls->ops->reset   = NULL;
-  ls->ops->monitor = NULL;
-  ls->ops->apply   = TaoLineSearchApply_Unit;
-  ls->ops->view    = TaoLineSearchView_Unit;
+  ls->monitor    = NULL;
+  ls->ops->setup = NULL;
+  ls->ops->reset = NULL;
+  ls->ops->apply = TaoLineSearchApply_Unit;
+  ls->ops->view  = TaoLineSearchView_Unit;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -203,7 +203,11 @@ class BaseTestTAO:
         tao.setTolerances(gatol=1.0e-4)
         ls = tao.getLineSearch()
         ls.setType(PETSc.TAOLineSearch.Type.UNIT)
+        opts = PETSc.Options("bncg")
+        opts["tao_ls_monitor"] = ""
+        tao.setOptionsPrefix("bncg")
         tao.setFromOptions()
+        ls.setMonitor(lambda ls, it, f, step: self.assertTrue(it >= 0))
         tao.solve()
         self.assertAlmostEqual(x[0], 2.0, places=4)
         self.assertAlmostEqual(x[1], 2.0, places=4)

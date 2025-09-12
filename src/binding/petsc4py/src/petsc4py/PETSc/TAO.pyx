@@ -2390,6 +2390,22 @@ cdef class TAOLineSearch(Object):
         CHKERR(TaoLineSearchApply(self.taols, x.vec, &f, g.vec, s.vec, &steplen, &reason))
         return (toReal(f), toReal(steplen), reason)
 
+    def setMonitor(self, monitor: TAOLSMonitorFunction, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
+        """Set the line search monitor.
+
+        Logically collective.
+
+        See Also
+        --------
+        petsc.TaoLineSearchMonitorSet
+        """
+        if monitor is None: return
+        if args  is None: args  = ()
+        if kargs is None: kargs = {}
+
+        CHKERR(TaoLineSearchMonitorSet(self.taols, TAOLS_Monitor, NULL, NULL))
+        self.set_attr("__monitor__", (monitor, args, kargs))
+
 # --------------------------------------------------------------------
 
 del TAOLineSearchType

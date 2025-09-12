@@ -307,7 +307,7 @@ PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_OWArmijo(TaoLineSearch ls)
   armP->nondescending     = PETSC_FALSE;
   ls->data                = (void *)armP;
   ls->initstep            = 0.1;
-  ls->ops->monitor        = NULL;
+  ls->monitor             = NULL;
   ls->ops->setup          = NULL;
   ls->ops->reset          = NULL;
   ls->ops->apply          = TaoLineSearchApply_OWArmijo;
