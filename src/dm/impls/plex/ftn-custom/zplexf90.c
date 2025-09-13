@@ -14,8 +14,8 @@
   #define dmplexvecrestoreclosure_        DMPLEXVECRESTORECLOSURE
   #define dmplexvecsetclosure_            DMPLEXVECSETCLOSURE
   #define dmplexmatsetclosure_            DMPLEXMATSETCLOSURE
-  #define dmplexgetclosureindices_        DMPLEXGETCLOSUREINDICES_
-  #define dmplexrestoreclosureindices_    DMPLEXRESTORECLOSUREINDICES_
+  #define dmplexgetclosureindices_        DMPLEXGETCLOSUREINDICES
+  #define dmplexrestoreclosureindices_    DMPLEXRESTORECLOSUREINDICES
   #define dmplexgetjoin_                  DMPLEXGETJOIN
   #define dmplexgetfulljoin_              DMPLEXGETFULLJOIN
   #define dmplexrestorejoin_              DMPLEXRESTOREJOIN
@@ -35,8 +35,8 @@
   #define dmplexvecrestoreclosure_        dmplexvecrestoreclosure
   #define dmplexvecsetclosure_            dmplexvecsetclosure
   #define dmplexmatsetclosure_            dmplexmatsetclosure
-  #define dmplexgetclosureindices_        DMPLEXGETCLOSUREINDICES_
-  #define dmplexrestoreclosureindices_    DMPLEXRESTORECLOSUREINDICES_
+  #define dmplexgetclosureindices_        dmplexgetclosureindices
+  #define dmplexrestoreclosureindices_    dmplexrestoreclosureindices
   #define dmplexgetjoin_                  dmplexgetjoin
   #define dmplexgetfulljoin_              dmplexgetfulljoin
   #define dmplexrestorejoin_              dmplexrestorejoin
