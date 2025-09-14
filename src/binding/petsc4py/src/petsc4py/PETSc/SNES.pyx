@@ -2188,7 +2188,6 @@ cdef class SNES(Object):
         CHKERR(PetscINCREF(xl.obj)); CHKERR(PetscINCREF(xu.obj))
         return (xl, xu)
 
-
     def getVIInactiveSet(self) -> IS:
         """Return the index set for the inactive set.
 
