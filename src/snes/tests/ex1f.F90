@@ -7,7 +7,6 @@
 !    -mx <xg>, where <xg> = number of grid points in the x-direction
 !    -my <yg>, where <yg> = number of grid points in the y-direction
 !
-
 !
 !  --------------------------------------------------------------------------
 !
@@ -27,8 +26,9 @@
 !  The parallel version of this code is snes/tutorials/ex5f.F
 !
 !  --------------------------------------------------------------------------
-      subroutine postcheck(snes,x,y,w,changed_y,changed_w,ctx,ierr)
 #include <petsc/finclude/petscsnes.h>
+#include <petsc/finclude/petscdraw.h>
+      subroutine postcheck(snes,x,y,w,changed_y,changed_w,ctx,ierr)
       use petscsnes
       implicit none
       SNES           snes
@@ -53,7 +53,6 @@
       end
 
       program main
-#include <petsc/finclude/petscdraw.h>
       use petscdraw
       use petscsnes
       implicit none

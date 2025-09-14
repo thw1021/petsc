@@ -6,8 +6,8 @@
 !
 !
 
-      program main
 #include <petsc/finclude/petscksp.h>
+      program main
       use petscksp
       implicit none
 
