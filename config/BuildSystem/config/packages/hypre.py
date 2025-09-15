@@ -151,8 +151,9 @@ class Configure(config.package.GNUPackage):
       if hasattr(self,'openmp') and hasattr(self.openmp,'ompflag'):
         args = self.rmValueArgStartsWith(args,['CC','CXX','FC'],self.openmp.ompflag)
 
-    if cucc: args.append('CUCC="'+cucc+'"')
-    args.append('CUFLAGS="'+devflags+'"')
+    if cucc:
+      args.append('CUCC="'+cucc+'"')
+      args.append('CUFLAGS="'+devflags+'"')
 
     # explicitly tell hypre BLAS/LAPACK mangling since it may not match Fortran mangling
     if self.blasLapack.mangling == 'underscore':
