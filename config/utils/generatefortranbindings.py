@@ -85,6 +85,9 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
     return
   if fun.name.find('_') > -1: return
   for k in fun.arguments:
+    if k.isfunction:
+      fun.opaque = True
+      return
     ktypename = k.typename
     if ktypename in CToFortranTypes and not CToFortranTypes[ktypename]:
       fun.opaque = True
@@ -96,8 +99,13 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
       # these function typedef are soon to be eliminated and so can this check
       fun.opaque = True
       return
-    if (ktypename == 'void' and not k.isfunction) or ktypename == 'PeCtx':
-      return
+    # if (ktypename == 'void' and not k.isfunction) or ktypename == 'PeCtx':
+    #  return
+    if ktypename == 'void' and not k.isfunction:
+      if k.stars == 0 or (k.stars == 1 and k.array) or k.stars > 1: 
+        fun.opaque=True
+        return
+    if ktypename == 'PeCtx': return
 
   mansec = fun.mansec
   file = fun.includefile + '90'
@@ -180,6 +188,8 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
             fd.write('  ' + ktypename + ' :: ' +  Letters[cnt]  + '(*)\n')
           elif k.isfunction:
             fd.write('  ' + 'external ' + Letters[cnt]  + '\n')
+          elif ktypename == 'void' and k.stars == 1 and not k.array and not k.isfunction:
+            fd.write('  type(*) :: ' + Letters[cnt] + '\n')
           else:
             fd.write('  ' + ktypename + ' :: ' + Letters[cnt] + '\n')
           cnt = cnt + 1
@@ -212,7 +222,11 @@ def generateCStub(petscarch,manualstubsfound,senums,classes,structs, funname,fun
   #     - stars == 1   - indicates the string is (in C) returned by a pointer to a string array
   #
   if fun.penss: return
-
+  for k in fun.arguments:
+    if k.isfunction:
+      #print ("Fortran stub for function", funname, "skipped.")
+      fun.opaque = True
+      return
   skipbody = False
   if fun.opaque or fun.opaquestub: skipbody = True
   for k in fun.arguments:
@@ -231,7 +245,8 @@ def generateCStub(petscarch,manualstubsfound,senums,classes,structs, funname,fun
     # no manual stub if dealing with multidimensional arrays, voids, etc
     if skipbody:
       if k.stars > 1: return
-      if k.typename == 'void': return
+      if k.typename == 'void' and not k.isfunction:
+        if k.stars == 0 or (k.stars == 1 and k.array) or k.stars > 1: return
       if k.typename == 'char' and not k.array: return
       return
 
@@ -285,6 +300,8 @@ def generateCStub(petscarch,manualstubsfound,senums,classes,structs, funname,fun
       else:
         if k.stars == 1 and k.array and not ktypename == 'char':
           fd.write('F90Array1d *')
+        # elif k.typename == 'void' and k.stars == 1 and not k.array:
+        #  fd.write('void *')
         else:
           fd.write(ktypename)
           fd.write(' ')
@@ -451,6 +468,7 @@ def generateFortranStub(senums, funname, fun, fd, opts):
   for k in fun.arguments:
     # no C stub if function returns an array, except if it is a string
     # TODO: generate fillible stub for functions that return arrays
+    if k.isfunction: return
     if k.array and k.stars and not k.typename == 'char': return
     if k.stars and k.typename == 'MPI_Fint': return   # TODO add support for returning MPI_Fint
     if k.stars == 2 and k.typename == 'void': return
@@ -475,6 +493,8 @@ def generateFortranStub(senums, funname, fun, fd, opts):
         fd.write('  ' + ktypename + ', pointer :: ' +  Letters[cnt] + '(:)\n')
       elif k.array:
         fd.write('  ' + ktypename + ' :: '+ Letters[cnt] + '(*)\n')
+      elif ktypename == 'void' and k.stars == 1 and not k.array and not k.isfunction:
+        fd.write('  type(*) :: ' + Letters[cnt] + '\n')
       else:
         fd.write('  '+ ktypename + ' :: ' + Letters[cnt] + '\n')
       cnt = cnt + 1
@@ -685,6 +705,7 @@ def main(petscdir,petscarch):
     # generate interface definitions for all objects' methods
     if i in ['PetscIntStack']: continue
     for j in classes[i].functions: # loop over functions in class
+      if any(arg.isfunction for arg in classes[i].functions[j].arguments): continue
       generateFortranInterface(petscarch,classes,enums,structs,senums,j,classes[i].functions[j])
 
     if i in ['PetscObject', 'PetscTabulation']: continue
@@ -716,10 +737,13 @@ def main(petscdir,petscarch):
         # the subclassing only works for PetscObjectXXX(PetscObject xxx,...) class methods
         if not fi.arguments or not fi.arguments[0].typename == 'PetscObject': continue
 
-        # cannot print Fortran interface definition if any arguments are void * or void **
+        # cannot print Fortran interface definition if any arguments are void ** and function pointers
         opaque = False
         for k in fi.arguments:
-          if k.typename == 'void' or k.typename == 'PeCtx': opaque = True
+          if k.isfunction: opaque = True
+          if k.typename == 'void' and not k.isfunction:
+              if k.stars != 1 or k.array: opaque = True
+          if k.typename == 'PeCtx': opaque = True
         if opaque: continue
 
         if funname.startswith('PetscObjectSAWs') or funname == 'PetscObjectViewSAWs':
@@ -733,6 +757,7 @@ def main(petscdir,petscarch):
 
   # generate interface definitions for all standalone functions
   for j in funcs.keys():
+    if any(arg.isfunction for arg in funcs[j].arguments): continue
     generateFortranInterface(petscarch,classes,enums,structs,senums,funcs[j].name,funcs[j])
 
   # generate .eq. and .neq. for enums
@@ -787,11 +812,15 @@ def main(petscdir,petscarch):
           if funname in ['PetscObjectCompose', 'PetscObjectQuery']: continue
           fi = classes['PetscObject'].functions[funname]
           if not fi.arguments or not fi.arguments[0].typename == 'PetscObject': continue
+          if any(k.isfunction for k in fi.arguments): continue
 
           # cannot generate Fortran functions if any argument is void or PeCtx
           opaque = False
           for k in fi.arguments:
-            if k.typename == 'void' or k.typename == 'PeCtx': opaque = True
+            if k.isfunction: opaque = True
+            if k.typename == 'void' and not k.isfunction:
+              if k.stars == 0 or (k.stars == 1 and k.array) or k.stars > 1: opaque = True
+            if k.typename == 'PeCtx': opaque = True
           if opaque: continue
 
           # write the PetscObject class function for the specific object that calls the base function
@@ -823,6 +852,8 @@ def main(petscdir,petscarch):
               fd.write('  ' + ktypename + ', pointer :: ' +  Letters[cnt]  + '(:)\n')
             elif k.array:
               fd.write('  ' + ktypename + ' :: ' +  Letters[cnt]  + '(*)\n')
+            elif ktypename == 'void' and k.stars == 1 and not k.array and not k.isfunction:
+              fd.write('  type(*) :: ' + Letters[cnt] + '\n')
             else:
               fd.write('  ' + ktypename + ' :: ' + Letters[cnt] + '\n')
             cnt = cnt + 1

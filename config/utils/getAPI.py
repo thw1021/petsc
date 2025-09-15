@@ -603,6 +603,7 @@ def getFunctions(mansec, functiontoinclude, filename):
               if arg.typename.endswith('Fn'):
                 arg.isfunction = True
               if arg.typename == 'external':
+                arg.isfunction = True
                 arg.fnctnptr   = fnctnptrs[fnctnptrnames.index(arg.name)]
                 fun.opaquestub = True
               if arg.typename.count('_') and not arg.typename in ['MPI_Comm', 'size_t']:
