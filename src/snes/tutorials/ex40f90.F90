@@ -8,9 +8,9 @@
 !   code for computing the Jacobian works fine and you will not need to implement
 !   your own FormJacobianLocal().
 
-      program ex40f90
 #include <petsc/finclude/petscsnes.h>
 #include <petsc/finclude/petscdmda.h>
+      program ex40f90
       use petscdmda
       use petscsnes
       implicit none

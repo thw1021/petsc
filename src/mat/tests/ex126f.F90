@@ -3,8 +3,8 @@
 ! It illustrates how to PetscCallA(MUMPS's LU solver
 !
 
-      program main
 #include <petsc/finclude/petscmat.h>
+      program main
       use petscmat
       implicit none
 

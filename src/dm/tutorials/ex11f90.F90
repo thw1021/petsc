@@ -1,8 +1,8 @@
 !     Tests DMDAGetVecGetArray()
 
-      program main
 #include <petsc/finclude/petscdm.h>
 #include <petsc/finclude/petscdmda.h>
+      program main
       use petscdmda
       use petsc
       implicit none

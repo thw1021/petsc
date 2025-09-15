@@ -2,8 +2,8 @@
 !   Description: Solves a linear system with a block of right-hand sides using KSPHPDDM.
 !
 
-      program main
 #include <petsc/finclude/petscksp.h>
+      program main
       use petscksp
       implicit none
       Mat                            X,B

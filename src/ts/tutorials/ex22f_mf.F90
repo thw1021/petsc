@@ -14,8 +14,8 @@
 !     u(0,t) = 1-sin(12*t)^4
 !
 
-  module ex22f_mfmodule
 #include <petsc/finclude/petscts.h>
+  module ex22f_mfmodule
     use petscts
     PetscScalar::PETSC_SHIFT
     TS::tscontext

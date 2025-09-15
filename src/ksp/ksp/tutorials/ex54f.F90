@@ -15,8 +15,8 @@
 !
 
 ! -----------------------------------------------------------------------
-      program main
 #include <petsc/finclude/petscksp.h>
+      program main
       use petscksp
       implicit none
 
@@ -37,7 +37,6 @@
       PetscReal::theta,eps,h,x,y,xsj
       PetscReal::coord(2,4),dd(2,2),ev(3),blb(2)
 
-      common /ex54_theta/ theta
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                 Beginning of program
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -409,8 +408,7 @@
 !     ex54_psi - anisotropic material direction
 !     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       PetscReal function ex54_psi(x,y)
-      PetscReal x,y,theta
-      common /ex54_theta/ theta
+      PetscReal x,y
       ex54_psi = theta
       if (theta < 0.) then     ! circular
          if (y==0) then
