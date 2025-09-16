@@ -2475,7 +2475,7 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
   PetscCall(PetscFree(jac->hypre_type));
 
   jac->hypre_type = NULL;
-  SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown HYPRE preconditioner %s; Choices are euclid, ilu, pilut, parasails, boomeramg, ams, ads", name);
+  SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown HYPRE preconditioner %s; Choices are ilu, euclid, pilut, parasails, boomeramg, ams, ads", name);
 }
 
 /*
@@ -2507,10 +2507,10 @@ static PetscErrorCode PCSetFromOptions_HYPRE(PC pc, PetscOptionItems PetscOption
 
   Input Parameters:
 + pc   - the preconditioner context
-- name - either euclid, ilu, pilut, parasails, boomeramg, ams, ads
+- name - either ilu, euclid, pilut, parasails, boomeramg, ams, ads
 
   Options Database Key:
-. pc_hypre_type - One of euclid, ilu, pilut, parasails, boomeramg, ams, ads
+. pc_hypre_type - One of ilu, euclid, pilut, parasails, boomeramg, ams, ads
 
   Level: intermediate
 
@@ -2561,7 +2561,7 @@ PetscErrorCode PCHYPREGetCFMarkers(PC pc, PetscInt *n_per_level[], PetscBT *CFMa
 . pc - the preconditioner context
 
   Output Parameter:
-. name - either euclid, ilu, pilut, parasails, boomeramg, ams, ads
+. name - either ilu, euclid, pilut, parasails, boomeramg, ams, ads
 
   Level: intermediate
 
@@ -2630,7 +2630,7 @@ PetscErrorCode PCMGGalerkinGetMatProductAlgorithm(PC pc, const char *name[])
      PCHYPRE - Allows you to use the matrix element based preconditioners in the LLNL package hypre as PETSc `PC`
 
    Options Database Keys:
-+   -pc_hypre_type - One of `euclid`, `pilut`, `parasails`, `boomeramg`, `ams`, or `ads`
++   -pc_hypre_type - One of `ilu`, `euclid`, `pilut`, `parasails`, `boomeramg`, `ams`, or `ads`
 .   -pc_hypre_boomeramg_nodal_coarsen <n> - where n is from 1 to 6 (see `HYPRE_BoomerAMGSetNodal()`)
 .   -pc_hypre_boomeramg_vec_interp_variant <v> - where v is from 1 to 3 (see `HYPRE_BoomerAMGSetInterpVecVariant()`)
 -   Many others - run with `-pc_type hypre` `-pc_hypre_type XXX` `-help` to see options for the XXX preconditioner
