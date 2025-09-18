@@ -685,6 +685,58 @@ static PetscErrorCode DMPlexLocatePoint_Hex_3D_Internal(DM dm, const PetscScalar
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  DMPlexSetPointLocationAlgorithm - Set the algorithm used for point location
+
+  Logically Collective
+
+  Options Database Keys:
+. -dm_plex_point_location_algorithm <brute_force,hash> - Set the point location algorithm, defaults to `brute_force`
+
+  Input Parameters:
++ dm  - The `DMPLEX`
+- alg - Point location algorithm to use, one of `DM_POINT_LOCATION_BRUTE_FORCE`, `DM_POINT_LOCATION_HASH`, `DM_POINT_LOCATION_KDTREE`
+
+  Level: beginner
+
+.seealso: `DMPLEX`, `DMPointLocationAlgorithm` `DMPlexGetPointLocationAlgorithm()`, `DMLocatePoints()`
+@*/
+PetscErrorCode DMPlexSetPointLocationAlgorithm(DM dm, DMPointLocationAlgorithm alg)
+{
+  DM_Plex *mesh = (DM_Plex *)dm->data;
+
+  PetscFunctionBegin;
+  PetscValidLogicalCollectiveEnum(dm, alg, 2);
+  if (mesh->pointLocationAlgorithm != alg && mesh->pointLocationAlgorithm == DM_POINT_LOCATION_HASH) PetscCall(PetscGridHashDestroy(&mesh->lbox));
+  mesh->pointLocationAlgorithm = alg;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMPlexGetPointLocationAlgorithm - Get the current algorithm used for point location
+
+  Not Collective
+
+  Input Parameters:
+. dm - The `DMPLEX`
+
+Output Parameters:
+. alg - Current point location algorithm value, one of `DM_POINT_LOCATION_BRUTE_FORCE`, `DM_POINT_LOCATION_HASH`, `DM_POINT_LOCATION_KDTREE`
+
+  Level: beginner
+
+.seealso: `DMPLEX`, `DMPlexSetPointLocationAlgorithm()`, `DMLocatePoints()`
+@*/
+PetscErrorCode DMPlexGetPointLocationAlgorithm(DM dm, DMPointLocationAlgorithm *alg)
+{
+  DM_Plex *mesh = (DM_Plex *)dm->data;
+
+  PetscFunctionBegin;
+  PetscAssertPointer(alg, 2);
+  *alg = mesh->pointLocationAlgorithm;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PetscGridHashInitialize_Internal(PetscGridHash box, PetscInt dim, const PetscScalar point[])
 {
   PetscInt d;
@@ -978,10 +1030,10 @@ static PetscErrorCode DMPlexClosestPoint_Internal(DM dm, PetscInt dim, const Pet
 */
 static PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *localBox)
 {
-  PetscInt        debug = ((DM_Plex *)dm->data)->printLocate;
+  const PetscInt  debug = ((DM_Plex *)dm->data)->printLocate;
   PetscGridHash   lbox;
   PetscSF         sf;
-  const PetscInt *leaves;
+  const PetscInt *leaves = NULL;
   PetscInt       *dboxes, *boxes;
   PetscInt        cdim, cStart, cEnd, Nl = -1;
   PetscBool       flg;
@@ -1000,7 +1052,7 @@ static PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *local
       for (PetscInt i = 0; i < cdim; ++i) n[i] = PetscMax(2, PetscFloorReal(PetscPowReal((PetscReal)(cEnd - cStart), 1.0 / cdim) * 0.8));
     }
     PetscCall(PetscGridHashSetGrid(lbox, n, NULL));
-    if (debug)
+    if (PetscUnlikelyDebug(debug))
       PetscCall(PetscPrintf(PETSC_COMM_SELF, "GridHash:\n  (%g, %g, %g) -- (%g, %g, %g)\n  n %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n  h %g %g %g\n", (double)lbox->lower[0], (double)lbox->lower[1], cdim > 2 ? (double)lbox->lower[2] : 0.,
                             (double)lbox->upper[0], (double)lbox->upper[1], cdim > 2 ? (double)lbox->upper[2] : 0, n[0], n[1], cdim > 2 ? n[2] : 0, (double)lbox->h[0], (double)lbox->h[1], cdim > 2 ? (double)lbox->h[2] : 0.));
   }
@@ -1038,7 +1090,7 @@ static PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *local
         dlim[d * 2 + 1] = PetscMax(dlim[d * 2 + 1], dboxes[e * cdim + d]);
       }
     }
-    if (debug > 4) {
+    if (PetscUnlikelyDebug(debug > 4)) {
       for (PetscInt d = 0; d < cdim; ++d) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " direction %" PetscInt_FMT " box limits %" PetscInt_FMT "--%" PetscInt_FMT "\n", c, d, dlim[d * 2 + 0], dlim[d * 2 + 1]));
     }
     // Initialize with lower planes for first box
@@ -1048,7 +1100,7 @@ static PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *local
     }
     for (PetscInt d = 0; d < cdim; ++d) {
       PetscCall(DMPlexGetPlaneCellIntersection_Internal(dm, c, lp, &normal[d * 3], &lower[d], &lowerInt[d], lowerIntPoints[d]));
-      if (debug > 4) {
+      if (PetscUnlikelyDebug(debug > 4)) {
         if (!lowerInt[d])
           PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " lower direction %" PetscInt_FMT " (%g, %g, %g) does not intersect %s\n", c, d, (double)lp[0], (double)lp[1], cdim > 2 ? (double)lp[2] : 0., lower[d] ? "positive" : "negative"));
         else PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " lower direction %" PetscInt_FMT " (%g, %g, %g) intersects %" PetscInt_FMT " times\n", c, d, (double)lp[0], (double)lp[1], cdim > 2 ? (double)lp[2] : 0., lowerInt[d]));
@@ -1057,13 +1109,13 @@ static PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *local
     // Loop over grid
     for (PetscInt k = dlim[2 * 2 + 0]; k <= dlim[2 * 2 + 1]; ++k, lp[2] = up[2], up[2] += h[2]) {
       if (cdim > 2) PetscCall(DMPlexGetPlaneCellIntersection_Internal(dm, c, up, &normal[3 * 2], &upper[2], &upperInt[2], upperIntPoints[2]));
-      if (cdim > 2 && debug > 4) {
+      if (PetscUnlikelyDebug(cdim > 2 && debug > 4)) {
         if (!upperInt[2]) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 2 (%g, %g, %g) does not intersect %s\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upper[2] ? "positive" : "negative"));
         else PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 2 (%g, %g, %g) intersects %" PetscInt_FMT " times\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upperInt[2]));
       }
       for (PetscInt j = dlim[1 * 2 + 0]; j <= dlim[1 * 2 + 1]; ++j, lp[1] = up[1], up[1] += h[1]) {
         if (cdim > 1) PetscCall(DMPlexGetPlaneCellIntersection_Internal(dm, c, up, &normal[3 * 1], &upper[1], &upperInt[1], upperIntPoints[1]));
-        if (cdim > 1 && debug > 4) {
+        if (PetscUnlikelyDebug(cdim > 1 && debug > 4)) {
           if (!upperInt[1])
             PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 1 (%g, %g, %g) does not intersect %s\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upper[1] ? "positive" : "negative"));
           else PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 1 (%g, %g, %g) intersects %" PetscInt_FMT " times\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upperInt[1]));
@@ -1076,7 +1128,7 @@ static PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *local
           PetscInt       NuInt  = 0;
 
           PetscCall(DMPlexGetPlaneCellIntersection_Internal(dm, c, up, &normal[3 * 0], &upper[0], &upperInt[0], upperIntPoints[0]));
-          if (debug > 4) {
+          if (PetscUnlikelyDebug(debug > 4)) {
             if (!upperInt[0])
               PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 0 (%g, %g, %g) does not intersect %s\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upper[0] ? "positive" : "negative"));
             else PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 0 (%g, %g, %g) intersects %" PetscInt_FMT " times\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upperInt[0]));
@@ -1100,12 +1152,12 @@ static PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *local
                 break;
               }
             if (excNeg || excPos) {
-              if (debug && excNeg) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " is on the negative side of the lower plane\n", c));
-              if (debug && excPos) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " is on the positive side of the upper plane\n", c));
+              if (PetscUnlikelyDebug(debug && excNeg)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " is on the negative side of the lower plane\n", c));
+              if (PetscUnlikelyDebug(debug && excPos)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " is on the positive side of the upper plane\n", c));
               continue;
             }
             // Otherwise it is in the box
-            if (debug) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " is contained in box %" PetscInt_FMT "\n", c, box));
+            if (PetscUnlikelyDebug(debug)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " is contained in box %" PetscInt_FMT "\n", c, box));
             PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
             continue;
           }
@@ -1130,7 +1182,7 @@ static PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *local
                 }
               }
               if (d == cdim) {
-                if (debug) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " intersected lower plane %" PetscInt_FMT " of box %" PetscInt_FMT "\n", c, plane, box));
+                if (PetscUnlikelyDebug(debug)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " intersected lower plane %" PetscInt_FMT " of box %" PetscInt_FMT "\n", c, plane, box));
                 PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
                 goto end;
               }
@@ -1145,7 +1197,7 @@ static PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *local
                 }
               }
               if (d == cdim) {
-                if (debug) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " intersected upper plane %" PetscInt_FMT " of box %" PetscInt_FMT "\n", c, plane, box));
+                if (PetscUnlikelyDebug(debug)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " intersected upper plane %" PetscInt_FMT " of box %" PetscInt_FMT "\n", c, plane, box));
                 PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
                 goto end;
               }
@@ -1235,36 +1287,180 @@ static PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *local
   }
   PetscCall(PetscFree2(dboxes, boxes));
 
-  if (debug) PetscCall(DMLabelView(lbox->cellsSparse, PETSC_VIEWER_STDOUT_SELF));
+  if (PetscUnlikelyDebug(debug)) PetscCall(DMLabelView(lbox->cellsSparse, PETSC_VIEWER_STDOUT_SELF));
   PetscCall(DMLabelConvertToSection(lbox->cellsSparse, &lbox->cellSection, &lbox->cells));
   PetscCall(DMLabelDestroy(&lbox->cellsSparse));
   *localBox = lbox;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode DMLocatePoints_Plex_BruteForce(DM dm, Vec v, DMPointLocationType ltype, PetscSFNode *cells, PetscInt terminatingQueryType[4])
+{
+  PetscInt           numPoints, bs, cdim, cStart, cEnd, Nl = 0;
+  const PetscInt    *leaves = NULL;
+  const PetscScalar *a;
+  PetscSF            sf;
+
+  PetscFunctionBegin;
+  PetscCheck(ltype != DM_POINTLOCATION_NEAREST, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_INCOMP, "Nearest cell search not supported for brute force point location");
+  PetscCall(VecGetLocalSize(v, &numPoints));
+  PetscCall(VecGetArrayRead(v, &a));
+  PetscCall(VecGetBlockSize(v, &bs));
+  numPoints /= bs;
+  PetscCall(DMGetCoordinateDim(dm, &cdim));
+  PetscCall(DMPlexGetSimplexOrBoxCells(dm, 0, &cStart, &cEnd));
+  PetscCall(DMGetPointSF(dm, &sf));
+  if (sf) PetscCall(PetscSFGetGraph(sf, NULL, &Nl, &leaves, NULL));
+  Nl = PetscMax(Nl, 0);
+
+  for (PetscInt p = 0; p < numPoints; p++) {
+    PetscBool          found = PETSC_FALSE;
+    const PetscScalar *point = &a[p * bs];
+
+    /* Already found in previous cell */
+    if (cells[p].index >= 0) continue;
+    /* Pre-filtered, outside of domain */
+    if (cells[p].index == DMLOCATEPOINT_POINT_NOT_FOUND) continue;
+    /* Search over cells to find point */
+    for (PetscInt c = cStart; c < cEnd; ++c) {
+      PetscInt idx, cell;
+
+      PetscCall(PetscFindInt(c, Nl, leaves, &idx));
+      if (idx >= 0) continue;
+      PetscCall(DMPlexLocatePoint_Internal(dm, cdim, point, c, &cell));
+      if (cell >= 0) {
+        cells[p].rank  = 0;
+        cells[p].index = cell;
+        terminatingQueryType[2]++;
+        found = PETSC_TRUE;
+        break;
+      }
+    }
+    if (!found) {
+      terminatingQueryType[0]++;
+      cells[p].index = DMLOCATEPOINT_POINT_NOT_FOUND;
+    }
+  }
+  PetscCall(VecRestoreArrayRead(v, &a));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMLocatePoints_Plex_Hash(DM dm, Vec v, DMPointLocationType ltype, PetscSFNode *cells, PetscInt terminatingQueryType[4])
+{
+  DM_Plex        *mesh  = (DM_Plex *)dm->data;
+  const PetscInt  debug = mesh->printLocate;
+  PetscInt        numPoints, bs, cdim, cStart, cEnd, Nl = 0;
+  const PetscInt *leaves = NULL;
+  PetscScalar    *a;
+  PetscSF         sf;
+  const PetscInt *boxCells;
+  PetscMPIInt     rank;
+
+  PetscFunctionBegin;
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
+  PetscCall(VecGetLocalSize(v, &numPoints));
+  PetscCall(VecGetArray(v, &a));
+  PetscCall(VecGetBlockSize(v, &bs));
+  numPoints /= bs;
+  PetscCall(DMGetCoordinateDim(dm, &cdim));
+  PetscCall(DMPlexGetSimplexOrBoxCells(dm, 0, &cStart, &cEnd));
+  PetscCall(DMGetPointSF(dm, &sf));
+  if (sf) PetscCall(PetscSFGetGraph(sf, NULL, &Nl, &leaves, NULL));
+  Nl = PetscMax(Nl, 0);
+  if (!mesh->lbox) {
+    PetscCall(PetscInfo(dm, "Initializing grid hashing\n"));
+    PetscCall(DMPlexComputeGridHash_Internal(dm, &mesh->lbox));
+  }
+  /* Designate the local box for each point */
+  /* Send points to correct process */
+  /* Search cells that lie in each subbox */
+  /*   Should we bin points before doing search? */
+  PetscCall(ISGetIndices(mesh->lbox->cells, &boxCells));
+
+  for (PetscInt p = 0; p < numPoints; p++) {
+    PetscBool          found_box, found = PETSC_FALSE;
+    const PetscScalar *point   = &a[p * bs];
+    PetscInt           dbin[3] = {-1, -1, -1}, bin;
+
+    /* Already found in previous cell */
+    if (cells[p].index >= 0) continue;
+    /* Pre-filtered, outside of domain */
+    if (cells[p].index == DMLOCATEPOINT_POINT_NOT_FOUND) continue;
+    /* Allow for case that point is outside box - abort early */
+    PetscCall(PetscGridHashGetEnclosingBoxQuery(mesh->lbox, mesh->lbox->cellSection, 1, point, dbin, &bin, &found_box));
+    /* Search over cells in box to find point */
+    if (found_box) {
+      PetscInt cell, numCells, cellOffset;
+
+      if (PetscUnlikelyDebug(debug)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]  Found point in box %" PetscInt_FMT " (%" PetscInt_FMT ", %" PetscInt_FMT ", %" PetscInt_FMT ")\n", rank, bin, dbin[0], dbin[1], cdim > 2 ? dbin[2] : 0));
+      /* TODO Lay an interface over this so we can switch between Section (dense) and Label (sparse) */
+      PetscCall(PetscSectionGetDof(mesh->lbox->cellSection, bin, &numCells));
+      PetscCall(PetscSectionGetOffset(mesh->lbox->cellSection, bin, &cellOffset));
+      for (PetscInt c = cellOffset; c < cellOffset + numCells; ++c) {
+        if (PetscUnlikelyDebug(debug)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]    Checking for point in cell %" PetscInt_FMT "\n", rank, boxCells[c]));
+        PetscCall(DMPlexLocatePoint_Internal(dm, cdim, point, boxCells[c], &cell));
+        if (cell >= 0) {
+          if (PetscUnlikelyDebug(debug)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]      FOUND in cell %" PetscInt_FMT "\n", rank, cell));
+          cells[p].rank  = 0;
+          cells[p].index = cell;
+          terminatingQueryType[2]++;
+          found = PETSC_TRUE;
+          break;
+        }
+      }
+      if (!found && ltype == DM_POINTLOCATION_NEAREST) {
+        PetscReal cpoint[3] = {0, 0, 0}, diff[3], best[3] = {PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL}, dist, distMax = PETSC_MAX_REAL;
+        PetscInt  bestc = -1;
+
+        for (PetscInt c = cellOffset; c < cellOffset + numCells; ++c) {
+          PetscCall(DMPlexClosestPoint_Internal(dm, cdim, point, boxCells[c], cpoint));
+          for (PetscInt d = 0; d < cdim; ++d) diff[d] = cpoint[d] - PetscRealPart(point[d]);
+          dist = DMPlex_NormD_Internal(cdim, diff);
+          if (dist < distMax) {
+            for (PetscInt d = 0; d < cdim; ++d) best[d] = cpoint[d];
+            bestc   = boxCells[c];
+            distMax = dist;
+          }
+        }
+        if (distMax < PETSC_MAX_REAL) {
+          cells[p].rank  = 0;
+          cells[p].index = bestc;
+          terminatingQueryType[3]++;
+          found = PETSC_TRUE;
+          for (PetscInt d = 0; d < cdim; ++d) a[p * bs + d] = best[d];
+        }
+      }
+    }
+    if (!found) {
+      terminatingQueryType[0]++;
+      cells[p].index = DMLOCATEPOINT_POINT_NOT_FOUND;
+    }
+  }
+  PetscCall(VecRestoreArray(v, &a));
+  PetscCall(ISRestoreIndices(mesh->lbox->cells, &boxCells));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, PetscSF cellSF)
 {
-  PetscInt        debug = ((DM_Plex *)dm->data)->printLocate;
-  DM_Plex        *mesh  = (DM_Plex *)dm->data;
-  PetscBool       hash = mesh->useHashLocation, reuse = PETSC_FALSE;
-  PetscInt        bs, numPoints, numFound, *found = NULL;
-  PetscInt        cdim, Nl = 0, cStart, cEnd, numCells;
-  PetscSF         sf;
-  const PetscInt *leaves;
-  const PetscInt *boxCells;
-  PetscSFNode    *cells;
-  PetscScalar    *a;
-  PetscMPIInt     result;
-  PetscLogDouble  t0, t1;
-  PetscReal       gmin[3], gmax[3];
-  PetscInt        terminating_query_type[] = {0, 0, 0};
-  PetscMPIInt     rank;
+  DM_Plex           *mesh  = (DM_Plex *)dm->data;
+  PetscBool          reuse = PETSC_FALSE;
+  PetscInt           bs, numPoints, *found = NULL;
+  PetscInt           cdim, Nl = 0, cStart, cEnd;
+  PetscSF            sf;
+  const PetscInt    *leaves;
+  PetscSFNode       *cells;
+  const PetscScalar *a;
+  PetscMPIInt        result;
+  PetscLogDouble     t0, t1;
+  PetscReal          lmin[3], lmax[3];
+  PetscInt           terminating_query_type[] = {0, 0, 0, 0};
+  PetscMPIInt        rank;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
   PetscCall(PetscLogEventBegin(DMPLEX_LocatePoints, 0, 0, 0, 0));
   PetscCall(PetscTime(&t0));
-  PetscCheck(ltype != DM_POINTLOCATION_NEAREST || hash, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Nearest point location only supported with grid hashing. Use -dm_plex_hash_location to enable it.");
   PetscCall(DMGetCoordinateDim(dm, &cdim));
   PetscCall(VecGetBlockSize(v, &bs));
   PetscCallMPI(MPI_Comm_compare(PetscObjectComm((PetscObject)cellSF), PETSC_COMM_SELF, &result));
@@ -1277,8 +1473,9 @@ PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, Pets
   if (sf) PetscCall(PetscSFGetGraph(sf, NULL, &Nl, &leaves, NULL));
   Nl = PetscMax(Nl, 0);
   PetscCall(VecGetLocalSize(v, &numPoints));
-  PetscCall(VecGetArray(v, &a));
   numPoints /= bs;
+
+  /* Get SFNode array for point location */
   {
     const PetscSFNode *sf_cells;
 
@@ -1293,35 +1490,29 @@ PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, Pets
       /* initialize cells if created */
       for (PetscInt p = 0; p < numPoints; p++) {
         cells[p].rank  = 0;
-        cells[p].index = DMLOCATEPOINT_POINT_NOT_FOUND;
+        cells[p].index = DMLOCATEPOINT_UNKNOWN;
       }
     }
   }
-  PetscCall(DMGetBoundingBox(dm, gmin, gmax));
-  if (hash) {
-    if (!mesh->lbox) {
-      PetscCall(PetscInfo(dm, "Initializing grid hashing\n"));
-      PetscCall(DMPlexComputeGridHash_Internal(dm, &mesh->lbox));
-    }
-    /* Designate the local box for each point */
-    /* Send points to correct process */
-    /* Search cells that lie in each subbox */
-    /*   Should we bin points before doing search? */
-    PetscCall(ISGetIndices(mesh->lbox->cells, &boxCells));
-  }
-  numFound = 0;
+
+  PetscCall(DMGetLocalBoundingBox(dm, lmin, lmax));
+
+  /* Do coarse search first */
+  /* Check if point is within local bounding box, if not set to DMLOCATEPOINT_POINT_NOT_FOUND */
+  /* Check if point is within the cell provided by user, if so save the current cell */
+  PetscCall(VecGetArrayRead(v, &a));
   for (PetscInt p = 0; p < numPoints; ++p) {
-    const PetscScalar *point   = &a[p * bs];
-    PetscInt           dbin[3] = {-1, -1, -1}, bin, cell = -1, cellOffset;
+    const PetscScalar *point                = &a[p * bs];
+    PetscInt           cell                 = -1;
     PetscBool          point_outside_domain = PETSC_FALSE;
 
     /* check bounding box of domain */
     for (PetscInt d = 0; d < cdim; d++) {
-      if (PetscRealPart(point[d]) < gmin[d]) {
+      if (PetscRealPart(point[d]) < lmin[d]) {
         point_outside_domain = PETSC_TRUE;
         break;
       }
-      if (PetscRealPart(point[d]) > gmax[d]) {
+      if (PetscRealPart(point[d]) > lmax[d]) {
         point_outside_domain = PETSC_TRUE;
         break;
       }
@@ -1334,116 +1525,51 @@ PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, Pets
     }
 
     /* check initial values in cells[].index - abort early if found */
-    if (cells[p].index != DMLOCATEPOINT_POINT_NOT_FOUND) {
+    if (cells[p].index >= 0) {
       PetscInt c = cells[p].index;
 
-      cells[p].index = DMLOCATEPOINT_POINT_NOT_FOUND;
+      cells[p].index = DMLOCATEPOINT_UNKNOWN;
       PetscCall(DMPlexLocatePoint_Internal(dm, cdim, point, c, &cell));
       if (cell >= 0) {
         cells[p].rank  = 0;
         cells[p].index = cell;
-        numFound++;
-      }
-    }
-    if (cells[p].index != DMLOCATEPOINT_POINT_NOT_FOUND) {
-      terminating_query_type[1]++;
-      continue;
-    }
-
-    if (debug) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]Checking point %" PetscInt_FMT " (%.2g, %.2g, %.2g)\n", rank, p, (double)PetscRealPart(point[0]), (double)PetscRealPart(point[1]), cdim > 2 ? (double)PetscRealPart(point[2]) : 0.));
-    if (hash) {
-      PetscBool found_box;
-
-      /* allow for case that point is outside box - abort early */
-      PetscCall(PetscGridHashGetEnclosingBoxQuery(mesh->lbox, mesh->lbox->cellSection, 1, point, dbin, &bin, &found_box));
-      if (found_box) {
-        if (debug) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]  Found point in box %" PetscInt_FMT " (%" PetscInt_FMT ", %" PetscInt_FMT ", %" PetscInt_FMT ")\n", rank, bin, dbin[0], dbin[1], cdim > 2 ? dbin[2] : 0));
-        /* TODO Lay an interface over this so we can switch between Section (dense) and Label (sparse) */
-        PetscCall(PetscSectionGetDof(mesh->lbox->cellSection, bin, &numCells));
-        PetscCall(PetscSectionGetOffset(mesh->lbox->cellSection, bin, &cellOffset));
-        for (PetscInt c = cellOffset; c < cellOffset + numCells; ++c) {
-          if (debug) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]    Checking for point in cell %" PetscInt_FMT "\n", rank, boxCells[c]));
-          PetscCall(DMPlexLocatePoint_Internal(dm, cdim, point, boxCells[c], &cell));
-          if (cell >= 0) {
-            if (debug) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]      FOUND in cell %" PetscInt_FMT "\n", rank, cell));
-            cells[p].rank  = 0;
-            cells[p].index = cell;
-            numFound++;
-            terminating_query_type[2]++;
-            break;
-          }
-        }
-      }
-    } else {
-      PetscBool found = PETSC_FALSE;
-      for (PetscInt c = cStart; c < cEnd; ++c) {
-        PetscInt idx;
-
-        PetscCall(PetscFindInt(c, Nl, leaves, &idx));
-        if (idx >= 0) continue;
-        PetscCall(DMPlexLocatePoint_Internal(dm, cdim, point, c, &cell));
-        if (cell >= 0) {
-          cells[p].rank  = 0;
-          cells[p].index = cell;
-          numFound++;
-          terminating_query_type[2]++;
-          found = PETSC_TRUE;
-          break;
-        }
-      }
-      if (!found) terminating_query_type[0]++;
-    }
-  }
-  if (hash) PetscCall(ISRestoreIndices(mesh->lbox->cells, &boxCells));
-  if (ltype == DM_POINTLOCATION_NEAREST && hash && numFound < numPoints) {
-    for (PetscInt p = 0; p < numPoints; p++) {
-      const PetscScalar *point     = &a[p * bs];
-      PetscReal          cpoint[3] = {0, 0, 0}, diff[3], best[3] = {PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL}, dist, distMax = PETSC_MAX_REAL;
-      PetscInt           dbin[3] = {-1, -1, -1}, bin, cellOffset, bestc = -1;
-
-      if (cells[p].index < 0) {
-        PetscCall(PetscGridHashGetEnclosingBox(mesh->lbox, 1, point, dbin, &bin));
-        PetscCall(PetscSectionGetDof(mesh->lbox->cellSection, bin, &numCells));
-        PetscCall(PetscSectionGetOffset(mesh->lbox->cellSection, bin, &cellOffset));
-        for (PetscInt c = cellOffset; c < cellOffset + numCells; ++c) {
-          PetscCall(DMPlexClosestPoint_Internal(dm, cdim, point, boxCells[c], cpoint));
-          for (PetscInt d = 0; d < cdim; ++d) diff[d] = cpoint[d] - PetscRealPart(point[d]);
-          dist = DMPlex_NormD_Internal(cdim, diff);
-          if (dist < distMax) {
-            for (PetscInt d = 0; d < cdim; ++d) best[d] = cpoint[d];
-            bestc   = boxCells[c];
-            distMax = dist;
-          }
-        }
-        if (distMax < PETSC_MAX_REAL) {
-          ++numFound;
-          cells[p].rank  = 0;
-          cells[p].index = bestc;
-          for (PetscInt d = 0; d < cdim; ++d) a[p * bs + d] = best[d];
-        }
+        terminating_query_type[1]++;
+        continue;
       }
     }
   }
+  PetscCall(VecRestoreArrayRead(v, &a));
+
+  switch (mesh->pointLocationAlgorithm) {
+  case DM_POINT_LOCATION_HASH:
+    PetscCall(DMLocatePoints_Plex_Hash(dm, v, ltype, cells, terminating_query_type));
+    break;
+  case DM_POINT_LOCATION_BRUTE_FORCE:
+  default:
+    PetscCall(DMLocatePoints_Plex_BruteForce(dm, v, ltype, cells, terminating_query_type));
+    break;
+  }
+
+  const PetscInt numFound = terminating_query_type[1] + terminating_query_type[2] + terminating_query_type[3];
+  PetscCheck(numFound + terminating_query_type[0] == numPoints, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Failed to assign a state for all points: %" PetscInt_FMT " [num points] != %" PetscInt_FMT " [outside domain] + %" PetscInt_FMT " [inside initial cell] + %" PetscInt_FMT " [found] + %" PetscInt_FMT " [nearest cell]", numPoints, terminating_query_type[0], terminating_query_type[1], terminating_query_type[2], terminating_query_type[3]);
+
   /* This code is only be relevant when interfaced to parallel point location */
   /* Check for highest numbered proc that claims a point (do we care?) */
-  if (ltype == DM_POINTLOCATION_REMOVE && numFound < numPoints) {
+  if (ltype == DM_POINTLOCATION_REMOVE && terminating_query_type[0] > 0) {
+    PetscInt idx = 0;
+
     PetscCall(PetscMalloc1(numFound, &found));
-    numFound = 0;
     for (PetscInt p = 0; p < numPoints; p++) {
       if (cells[p].rank >= 0 && cells[p].index >= 0) {
-        if (numFound < p) cells[numFound] = cells[p];
-        found[numFound++] = p;
+        if (idx < p) cells[idx] = cells[p];
+        found[idx++] = p;
       }
     }
   }
-  PetscCall(VecRestoreArray(v, &a));
-  if (!reuse) PetscCall(PetscSFSetGraph(cellSF, cEnd - cStart, numFound, found, PETSC_OWN_POINTER, cells, PETSC_OWN_POINTER));
+  if (!reuse || found != NULL) PetscCall(PetscSFSetGraph(cellSF, cEnd - cStart, numFound, found, PETSC_OWN_POINTER, cells, PETSC_OWN_POINTER));
   PetscCall(PetscTime(&t1));
-  if (hash) {
-    PetscCall(PetscInfo(dm, "[DMLocatePoints_Plex] terminating_query_type : %" PetscInt_FMT " [outside domain] : %" PetscInt_FMT " [inside initial cell] : %" PetscInt_FMT " [hash]\n", terminating_query_type[0], terminating_query_type[1], terminating_query_type[2]));
-  } else {
-    PetscCall(PetscInfo(dm, "[DMLocatePoints_Plex] terminating_query_type : %" PetscInt_FMT " [outside domain] : %" PetscInt_FMT " [inside initial cell] : %" PetscInt_FMT " [brute-force]\n", terminating_query_type[0], terminating_query_type[1], terminating_query_type[2]));
-  }
+  PetscCall(PetscInfo(dm, "[DMLocatePoints_Plex] algorithm: %s, terminating_query_type : %" PetscInt_FMT " [outside domain] : %" PetscInt_FMT " [inside initial cell] : %" PetscInt_FMT " [found] : %" PetscInt_FMT " [nearest cell]\n",
+                      DMPointLocationAlgorithms[mesh->pointLocationAlgorithm], terminating_query_type[0], terminating_query_type[1], terminating_query_type[2], terminating_query_type[3]));
   PetscCall(PetscInfo(dm, "[DMLocatePoints_Plex] npoints %" PetscInt_FMT " : time(rank0) %1.2e (sec): points/sec %1.4e\n", numPoints, t1 - t0, numPoints / (t1 - t0)));
   PetscCall(PetscLogEventEnd(DMPLEX_LocatePoints, 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);

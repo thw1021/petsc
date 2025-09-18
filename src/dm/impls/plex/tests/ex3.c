@@ -1016,15 +1016,15 @@ int main(int argc, char **argv)
   test:
     suffix: p1_2d_3
     requires: triangle mmg
-    args: -petscspace_degree 1 -qorder 1 -dm_plex_hash_location -convergence -conv_refine 0
+    args: -petscspace_degree 1 -qorder 1 -dm_plex_point_location_algorithm hash -convergence -conv_refine 0
   test:
     suffix: p1_2d_4
     requires: triangle mmg
-    args: -petscspace_degree 1 -qorder 1 -dm_plex_hash_location -porder 1 -conv_refine 0
+    args: -petscspace_degree 1 -qorder 1 -dm_plex_point_location_algorithm hash -porder 1 -conv_refine 0
   test:
     suffix: p1_2d_5
     requires: triangle mmg
-    args: -petscspace_degree 1 -qorder 1 -dm_plex_hash_location -porder 2 -conv_refine 0
+    args: -petscspace_degree 1 -qorder 1 -dm_plex_point_location_algorithm hash -porder 2 -conv_refine 0
 
   # 3D P_1 on a tetrahedron
   test:
@@ -1042,15 +1042,15 @@ int main(int argc, char **argv)
   test:
     suffix: p1_3d_3
     requires: ctetgen mmg
-    args: -dm_plex_dim 3 -petscspace_degree 1 -qorder 1 -dm_plex_hash_location -convergence -conv_refine 0
+    args: -dm_plex_dim 3 -petscspace_degree 1 -qorder 1 -dm_plex_point_location_algorithm hash -convergence -conv_refine 0
   test:
     suffix: p1_3d_4
     requires: ctetgen mmg
-    args: -dm_plex_dim 3 -petscspace_degree 1 -qorder 1 -dm_plex_hash_location -porder 1 -conv_refine 0
+    args: -dm_plex_dim 3 -petscspace_degree 1 -qorder 1 -dm_plex_point_location_algorithm hash -porder 1 -conv_refine 0
   test:
     suffix: p1_3d_5
     requires: ctetgen mmg
-    args: -dm_plex_dim 3 -petscspace_degree 1 -qorder 1 -dm_plex_hash_location -porder 2 -conv_refine 0
+    args: -dm_plex_dim 3 -petscspace_degree 1 -qorder 1 -dm_plex_point_location_algorithm hash -porder 2 -conv_refine 0
 
   # 2D P_2 on a triangle
   test:
@@ -1068,15 +1068,15 @@ int main(int argc, char **argv)
   test:
     suffix: p2_2d_3
     requires: triangle mmg
-    args: -petscspace_degree 2 -qorder 2 -dm_plex_hash_location -convergence -conv_refine 0
+    args: -petscspace_degree 2 -qorder 2 -dm_plex_point_location_algorithm hash -convergence -conv_refine 0
   test:
     suffix: p2_2d_4
     requires: triangle mmg
-    args: -petscspace_degree 2 -qorder 2 -dm_plex_hash_location -porder 1 -conv_refine 0
+    args: -petscspace_degree 2 -qorder 2 -dm_plex_point_location_algorithm hash -porder 1 -conv_refine 0
   test:
     suffix: p2_2d_5
     requires: triangle mmg
-    args: -petscspace_degree 2 -qorder 2 -dm_plex_hash_location -porder 2 -conv_refine 0
+    args: -petscspace_degree 2 -qorder 2 -dm_plex_point_location_algorithm hash -porder 2 -conv_refine 0
 
   # 3D P_2 on a tetrahedron
   test:
@@ -1094,15 +1094,15 @@ int main(int argc, char **argv)
   test:
     suffix: p2_3d_3
     requires: ctetgen mmg
-    args: -dm_plex_dim 3 -petscspace_degree 2 -qorder 2 -dm_plex_hash_location -convergence -conv_refine 0
+    args: -dm_plex_dim 3 -petscspace_degree 2 -qorder 2 -dm_plex_point_location_algorithm hash -convergence -conv_refine 0
   test:
     suffix: p2_3d_4
     requires: ctetgen mmg
-    args: -dm_plex_dim 3 -petscspace_degree 2 -qorder 2 -dm_plex_hash_location -porder 1 -conv_refine 0
+    args: -dm_plex_dim 3 -petscspace_degree 2 -qorder 2 -dm_plex_point_location_algorithm hash -porder 1 -conv_refine 0
   test:
     suffix: p2_3d_5
     requires: ctetgen mmg
-    args: -dm_plex_dim 3 -petscspace_degree 2 -qorder 2 -dm_plex_hash_location -porder 2 -conv_refine 0
+    args: -dm_plex_dim 3 -petscspace_degree 2 -qorder 2 -dm_plex_point_location_algorithm hash -porder 2 -conv_refine 0
 
   # 2D Q_1 on a quadrilaterial DA
   test:
@@ -1208,15 +1208,15 @@ int main(int argc, char **argv)
   test:
     suffix: p3_2d_4
     requires: triangle mmg
-    args: -petscspace_degree 3 -qorder 3 -dm_plex_hash_location -convergence -conv_refine 0
+    args: -petscspace_degree 3 -qorder 3 -dm_plex_point_location_algorithm hash -convergence -conv_refine 0
   test:
     suffix: p3_2d_5
     requires: triangle mmg
-    args: -petscspace_degree 3 -qorder 3 -dm_plex_hash_location -porder 1 -conv_refine 0
+    args: -petscspace_degree 3 -qorder 3 -dm_plex_point_location_algorithm hash -porder 1 -conv_refine 0
   test:
     suffix: p3_2d_6
     requires: triangle mmg
-    args: -petscspace_degree 3 -qorder 3 -dm_plex_hash_location -porder 3 -conv_refine 0
+    args: -petscspace_degree 3 -qorder 3 -dm_plex_point_location_algorithm hash -porder 3 -conv_refine 0
 
   # 2D Q_3 on a quadrilaterial
   test:
@@ -1482,13 +1482,13 @@ TEST*/
   test:
     suffix: p1d_2d_6
     requires: mmg
-    args: -petscspace_degree 1 -qorder 1 -dm_plex_hash_location -convergence -conv_refine 0
+    args: -petscspace_degree 1 -qorder 1 -dm_plex_point_location_algorithm hash -convergence -conv_refine 0
   test:
     suffix: p1d_2d_7
     requires: mmg
-    args: -petscspace_degree 1 -qorder 1 -dm_plex_hash_location -porder 1 -conv_refine 0
+    args: -petscspace_degree 1 -qorder 1 -dm_plex_point_location_algorithm hash -porder 1 -conv_refine 0
   test:
     suffix: p1d_2d_8
     requires: mmg
-    args: -petscspace_degree 1 -qorder 1 -dm_plex_hash_location -porder 2 -conv_refine 0
+    args: -petscspace_degree 1 -qorder 1 -dm_plex_point_location_algorithm hash -porder 2 -conv_refine 0
 */
