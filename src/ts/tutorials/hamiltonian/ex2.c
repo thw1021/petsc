@@ -41,13 +41,13 @@ For a Landau Damping verification run, we use
   # Physics
   -cosine_coefficients 0.01 -dm_swarm_num_species 1 -charges -1. -perturbed_weights -total_weight 1.
   # Spatial Mesh
-  -dm_plex_dim 1 -dm_plex_box_faces 40 -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic  -dm_plex_hash_location
+  -dm_plex_dim 1 -dm_plex_box_faces 40 -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic  -dm_plex_point_location_algorithm hash
   # Velocity Mesh
-  -vdm_plex_dim 1 -vdm_plex_box_faces 40 -vdm_plex_box_lower -6 -vdm_plex_box_upper 6 -vpetscspace_degree 2 -vdm_plex_hash_location
+  -vdm_plex_dim 1 -vdm_plex_box_faces 40 -vdm_plex_box_lower -6 -vdm_plex_box_upper 6 -vpetscspace_degree 2 -vdm_plex_point_location_algorithm hash
   # Remap Space
   -dm_swarm_remap_type pfak -remap_freq 100
   -remap_dm_plex_dim 2 -remap_dm_plex_simplex 0 -remap_dm_plex_box_faces 20,20 -remap_dm_plex_box_bd periodic,none -remap_dm_plex_box_lower 0.,-6.
-    -remap_dm_plex_box_upper 12.5664,6. -remap_petscspace_degree 1 -remap_dm_plex_hash_location
+    -remap_dm_plex_box_upper 12.5664,6. -remap_petscspace_degree 1 -remap_dm_plex_point_location_algorithm hash
   # Remap Solve
   -ftop_ksp_type lsqr -ftop_pc_type none -ftop_ksp_rtol 1.e-14 -ptof_pc_type lu
   # EM Solve
@@ -2522,7 +2522,7 @@ int main(int argc, char **argv)
              -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
            -vdm_plex_dim 1 -vdm_plex_simplex 0 -vdm_plex_box_faces 10 \
              -vdm_plex_box_lower -10 -vdm_plex_box_upper 10 \
-             -vpetscspace_degree 2 -vdm_plex_hash_location \
+             -vpetscspace_degree 2 -vdm_plex_point_location_algorithm hash \
            -dm_swarm_num_species 1 -charges -1.,1. \
              -cosine_coefficients 0.01,0.5 -perturbed_weights -total_weight 1. \
            -ts_type basicsymplectic -ts_basicsymplectic_type 1 \
@@ -2554,7 +2554,7 @@ int main(int argc, char **argv)
                -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
              -remap_dm_plex_dim 2 -remap_dm_plex_simplex 0 -remap_dm_plex_box_faces 10,10 -remap_dm_plex_box_bd periodic,none \
                -remap_dm_plex_box_lower 0.,-10. -remap_dm_plex_box_upper 12.5664,10. \
-               -remap_petscspace_degree 2 -remap_dm_plex_hash_location \
+               -remap_petscspace_degree 2 -remap_dm_plex_point_location_algorithm hash \
              -remap_freq 1 -dm_swarm_remap_type pfak \
                -ftop_ksp_type lsqr -ftop_pc_type none -ftop_ksp_rtol 1.e-14 \
                -ptof_pc_type lu \
@@ -2572,7 +2572,6 @@ int main(int argc, char **argv)
              -em_pc_type fieldsplit -em_pc_fieldsplit_type schur \
                -em_pc_fieldsplit_schur_fact_type full -em_pc_fieldsplit_schur_precondition full \
                -em_fieldsplit_field_pc_type lu \
-                 -em_fieldsplit_field_pc_factor_mat_solver_type superlu_dist \
                -em_fieldsplit_potential_pc_type svd
 
    # Same as above, with different timestepping
@@ -2582,7 +2581,7 @@ int main(int argc, char **argv)
              -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 -dm_plex_box_bd periodic \
            -vdm_plex_dim 1 -vdm_plex_simplex 0 -vdm_plex_box_faces 10 \
              -vdm_plex_box_lower -10 -vdm_plex_box_upper 10 \
-             -vpetscspace_degree 2 -vdm_plex_hash_location \
+             -vpetscspace_degree 2 -vdm_plex_point_location_algorithm hash \
            -dm_swarm_num_species 1 -charges -1.,1. \
              -cosine_coefficients 0.01,0.5 -perturbed_weights -total_weight 1. \
            -ts_type discgrad -ts_discgrad_type average \

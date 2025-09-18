@@ -226,48 +226,48 @@ int main(int argc, char **argv)
     requires: hip
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_box_faces 10,10,10\
           -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none\
-          -dm_plex_hash_location false -dm_vec_type hip -dm_plex_hash_location false
+          -dm_plex_point_location_algorithm hash false -dm_vec_type hip -dm_plex_point_location_algorithm hash false
   test:
     suffix: swarm_migrate_vec_hip_hash
     nsize: 2
     requires: hip
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_box_faces 10,10,10\
           -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none\
-          -dm_plex_hash_location false -dm_vec_type hip -dm_plex_hash_location true
+          -dm_plex_point_location_algorithm hash false -dm_vec_type hip -dm_plex_point_location_algorithm hash true
   test:
     suffix: swarm_migrate_vec_hip_hash_tensor_permutation
     nsize: 2
     requires: hip
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_box_faces 10,10,10\
           -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none\
-          -dm_plex_hash_location false -dm_vec_type hip -dm_plex_hash_location true\
+          -dm_plex_point_location_algorithm hash false -dm_vec_type hip -dm_plex_point_location_algorithm hash true\
           -set_closure_permutation
   test:
     suffix: swarm_migrate_hash
     nsize: 2
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_box_faces 10,10,10\
           -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none\
-          -dm_plex_hash_location true
+          -dm_plex_point_location_algorithm hash true
     filter: grep -v marker | grep -v atomic | grep -v usage
   test:
     suffix: swarm_migrate_hash_tensor_permutation
     nsize: 2
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_box_faces 10,10,10\
           -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none\
-          -dm_plex_hash_location true -set_closure_permutation
+          -dm_plex_point_location_algorithm hash true -set_closure_permutation
     filter: grep -v marker | grep -v atomic | grep -v usage
   test:
     suffix: swarm_migrate_scan
     nsize: 2
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_box_faces 10,10,10\
           -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none\
-          -dm_plex_hash_location false
+          -dm_plex_point_location_algorithm hash false
     filter: grep -v marker | grep -v atomic | grep -v usage
   test:
     suffix: swarm_migrate_scan_tensor_permutation
     nsize: 2
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_box_faces 10,10,10\
           -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none\
-          -dm_plex_hash_location false -set_closure_permutation
+          -dm_plex_point_location_algorithm hash false -set_closure_permutation
     filter: grep -v marker | grep -v atomic | grep -v usage
 TEST*/

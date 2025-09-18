@@ -160,7 +160,7 @@ int main(int argc, char **argv)
 
     test:
       suffix: seg_hash
-      args: -dm_refine 2 -dm_plex_hash_location
+      args: -dm_refine 2 -dm_plex_point_location_algorithm hash
 
   testset:
     args: -dm_plex_box_faces 5,5
@@ -173,7 +173,7 @@ int main(int argc, char **argv)
     test:
       suffix: tri_hash
       requires: triangle
-      args: -dm_refine 2 -dm_plex_hash_location
+      args: -dm_refine 2 -dm_plex_point_location_algorithm hash
 
     test:
       suffix: quad
@@ -185,7 +185,7 @@ int main(int argc, char **argv)
 
     test:
       suffix: quad_hash
-      args: -dm_plex_simplex 0 -dm_refine 2 -dm_plex_hash_location
+      args: -dm_plex_simplex 0 -dm_refine 2 -dm_plex_point_location_algorithm hash
 
   testset:
     args: -dm_plex_dim 3 -dm_plex_box_faces 3,3,3
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
     test:
       suffix: tet_hash
       requires: ctetgen
-      args: -dm_refine 1 -dm_plex_hash_location
+      args: -dm_refine 1 -dm_plex_point_location_algorithm hash
 
     test:
       suffix: hex
@@ -206,7 +206,7 @@ int main(int argc, char **argv)
 
     test:
       suffix: hex_hash
-      args: -dm_plex_simplex 0 -dm_refine 1 -dm_plex_hash_location
+      args: -dm_plex_simplex 0 -dm_refine 1 -dm_plex_point_location_algorithm hash
 
     test:
       suffix: hex_order_2
@@ -224,7 +224,7 @@ int main(int argc, char **argv)
 
     test:
       suffix: quad_overlap
-      args: -dm_plex_hash_location {{0 1}}
+      args: -dm_plex_point_location_algorithm {{brute_force hash}}
 
   # Test location on a Monge Manifold
   testset:
