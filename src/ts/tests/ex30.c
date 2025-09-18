@@ -1114,7 +1114,7 @@ int main(int argc, char **argv)
   testset:
     requires: double !defined(PETSC_USE_DMLANDAU_2D)
     output_file: output/ex30_3d.out
-    args: -dim 3 -petscspace_degree 2 -dm_landau_num_species_grid 1,1 -dm_refine 0 -number_particles_per_dimension 10 -dm_plex_hash_location \
+    args: -dim 3 -petscspace_degree 2 -dm_landau_num_species_grid 1,1 -dm_refine 0 -number_particles_per_dimension 10 -dm_plex_point_location_algorithm hash \
           -dm_landau_batch_size 1 -number_spatial_vertices 1 -vertex_view_target 0 -grid_view_target 0 -dm_landau_batch_view_idx 0 \
           -dm_landau_n 1.000018,1 -dm_landau_thermal_temps 2,1 -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 \
           -ftop_ksp_type cg -ftop_pc_type jacobi -ftop_ksp_rtol 1e-12 -ftop_ksp_error_if_not_converged -ksp_type preonly -pc_type lu -ksp_error_if_not_converged \
