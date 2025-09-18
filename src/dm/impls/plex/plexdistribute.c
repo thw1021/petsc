@@ -176,6 +176,10 @@ static PetscErrorCode DMPlexGetAdjacency_Transitive_Internal(DM dm, PetscInt p, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Returns Adjacent mesh points to the selected point given specific criteria
+//
+// + adjSize - Number of adjacent points
+// - adj - Array of the adjacent points
 PetscErrorCode DMPlexGetAdjacency_Internal(DM dm, PetscInt p, PetscBool useCone, PetscBool useTransitiveClosure, PetscBool useAnchors, PetscInt *adjSize, PetscInt *adj[])
 {
   static PetscInt asiz       = 0;
