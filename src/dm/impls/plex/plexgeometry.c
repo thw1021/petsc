@@ -434,7 +434,7 @@ static PetscErrorCode DMPlexLocatePoint_Simplex_1D_Internal(DM dm, const PetscSc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMPlexLocatePoint_Simplex_2D_Internal(DM dm, const PetscScalar point[], PetscInt c, PetscInt *cell)
+static PetscErrorCode DMPlexLocatePoint_Simplex_2D_Linear_Internal(DM dm, const PetscScalar point[], PetscInt c, PetscInt *cell)
 {
   const PetscReal eps   = PETSC_SQRT_MACHINE_EPSILON;
   PetscReal       xi[2] = {0., 0.};
@@ -449,6 +449,54 @@ static PetscErrorCode DMPlexLocatePoint_Simplex_2D_Internal(DM dm, const PetscSc
     for (PetscInt j = 0; j < embedDim; ++j) xi[i] += invJ[i * embedDim + j] * (x[j] - v0[j]);
   }
   if ((xi[0] >= -eps) && (xi[1] >= -eps) && (xi[0] + xi[1] <= 2.0 + eps)) *cell = c;
+  else *cell = DMLOCATEPOINT_POINT_NOT_FOUND;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMPlexLocatePoint_Simplex_2D_Internal(DM dm, const PetscScalar point[], PetscInt c, PetscInt *cell)
+{
+  DM           cdm;
+  PetscInt     degree, dimR, dimC;
+  PetscFE      fe;
+  PetscClassId id;
+  PetscSpace   sp;
+  PetscReal    pointR[3], ref[3], error;
+  Vec          coords;
+  PetscBool    found = PETSC_FALSE;
+
+  PetscFunctionBegin;
+  PetscCall(DMGetDimension(dm, &dimR));
+  PetscCall(DMGetCoordinateDM(dm, &cdm));
+  PetscCall(DMGetDimension(cdm, &dimC));
+  PetscCall(DMGetField(cdm, 0, NULL, (PetscObject *)&fe));
+  PetscCall(PetscObjectGetClassId((PetscObject)fe, &id));
+  if (id != PETSCFE_CLASSID) degree = 1;
+  else {
+    PetscCall(PetscFEGetBasisSpace(fe, &sp));
+    PetscCall(PetscSpaceGetDegree(sp, &degree, NULL));
+  }
+  if (degree == 1) {
+    /* Use simple location method for linear elements*/
+    PetscCall(DMPlexLocatePoint_Simplex_2D_Linear_Internal(dm, point, c, cell));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  /* Otherwise, we have to solve for the real to reference coordinates */
+  PetscCall(DMGetCoordinatesLocal(dm, &coords));
+  error = PETSC_SQRT_MACHINE_EPSILON;
+  for (PetscInt d = 0; d < dimC; d++) pointR[d] = PetscRealPart(point[d]);
+  PetscCall(DMPlexCoordinatesToReference_FE(cdm, fe, c, 1, pointR, ref, coords, dimC, dimR, 10, &error));
+  if (error < PETSC_SQRT_MACHINE_EPSILON) found = PETSC_TRUE;
+  if ((ref[0] < -1.0 - PETSC_SMALL) || (ref[1] < -1.0 - PETSC_SMALL) || (ref[0] + ref[1] > 0.0 + PETSC_SMALL)) found = PETSC_FALSE;
+  if (PetscDefined(USE_DEBUG) && found) {
+    PetscReal real[3], inverseError = 0, normPoint = DMPlex_NormD_Internal(dimC, pointR);
+
+    normPoint = normPoint > PETSC_SMALL ? normPoint : 1.0;
+    PetscCall(DMPlexReferenceToCoordinates_FE(cdm, fe, c, 1, ref, real, coords, dimC, dimR));
+    inverseError = DMPlex_DistRealD_Internal(dimC, real, pointR);
+    if (inverseError > PETSC_SQRT_MACHINE_EPSILON * normPoint) found = PETSC_FALSE;
+    if (!found) PetscCall(PetscInfo(dm, "Point (%g, %g, %g) != Mapped Ref Coords (%g, %g, %g) with error %g\n", (double)pointR[0], (double)pointR[1], (double)pointR[2], (double)real[0], (double)real[1], (double)real[2], (double)inverseError));
+  }
+  if (found) *cell = c;
   else *cell = DMLOCATEPOINT_POINT_NOT_FOUND;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -569,7 +617,7 @@ static PetscErrorCode DMPlexLocatePoint_Quad_2D_Internal(DM dm, const PetscScala
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMPlexLocatePoint_Simplex_3D_Internal(DM dm, const PetscScalar point[], PetscInt c, PetscInt *cell)
+static PetscErrorCode DMPlexLocatePoint_Simplex_3D_Linear_Internal(DM dm, const PetscScalar point[], PetscInt c, PetscInt *cell)
 {
   const PetscInt  embedDim = 3;
   const PetscReal eps      = PETSC_SQRT_MACHINE_EPSILON;
@@ -586,6 +634,54 @@ static PetscErrorCode DMPlexLocatePoint_Simplex_3D_Internal(DM dm, const PetscSc
   zeta = invJ[2 * embedDim + 0] * (x - v0[0]) + invJ[2 * embedDim + 1] * (y - v0[1]) + invJ[2 * embedDim + 2] * (z - v0[2]);
 
   if ((xi >= -eps) && (eta >= -eps) && (zeta >= -eps) && (xi + eta + zeta <= 2.0 + eps)) *cell = c;
+  else *cell = DMLOCATEPOINT_POINT_NOT_FOUND;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMPlexLocatePoint_Simplex_3D_Internal(DM dm, const PetscScalar point[], PetscInt c, PetscInt *cell)
+{
+  DM           cdm;
+  PetscInt     degree, dimR, dimC;
+  PetscFE      fe;
+  PetscClassId id;
+  PetscSpace   sp;
+  PetscReal    pointR[3], ref[3], error;
+  Vec          coords;
+  PetscBool    found = PETSC_FALSE;
+
+  PetscFunctionBegin;
+  PetscCall(DMGetDimension(dm, &dimR));
+  PetscCall(DMGetCoordinateDM(dm, &cdm));
+  PetscCall(DMGetDimension(cdm, &dimC));
+  PetscCall(DMGetField(cdm, 0, NULL, (PetscObject *)&fe));
+  PetscCall(PetscObjectGetClassId((PetscObject)fe, &id));
+  if (id != PETSCFE_CLASSID) degree = 1;
+  else {
+    PetscCall(PetscFEGetBasisSpace(fe, &sp));
+    PetscCall(PetscSpaceGetDegree(sp, &degree, NULL));
+  }
+  if (degree == 1) {
+    /* Use simple location method for linear elements*/
+    PetscCall(DMPlexLocatePoint_Simplex_3D_Linear_Internal(dm, point, c, cell));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  /* Otherwise, we have to solve for the real to reference coordinates */
+  PetscCall(DMGetCoordinatesLocal(dm, &coords));
+  error = PETSC_SQRT_MACHINE_EPSILON;
+  for (PetscInt d = 0; d < dimC; d++) pointR[d] = PetscRealPart(point[d]);
+  PetscCall(DMPlexCoordinatesToReference_FE(cdm, fe, c, 1, pointR, ref, coords, dimC, dimR, 10, &error));
+  if (error < PETSC_SQRT_MACHINE_EPSILON) found = PETSC_TRUE;
+  if ((ref[0] < -1.0 - PETSC_SMALL) || (ref[1] < -1.0 - PETSC_SMALL) || (ref[2] < -1.0 - PETSC_SMALL) || (ref[0] + ref[1] + ref[2] > -1.0 + PETSC_SMALL)) found = PETSC_FALSE;
+  if (PetscDefined(USE_DEBUG) && found) {
+    PetscReal real[3], inverseError = 0, normPoint = DMPlex_NormD_Internal(dimC, pointR);
+
+    normPoint = normPoint > PETSC_SMALL ? normPoint : 1.0;
+    PetscCall(DMPlexReferenceToCoordinates_FE(cdm, fe, c, 1, ref, real, coords, dimC, dimR));
+    inverseError = DMPlex_DistRealD_Internal(dimC, real, pointR);
+    if (inverseError > PETSC_SQRT_MACHINE_EPSILON * normPoint) found = PETSC_FALSE;
+    if (!found) PetscCall(PetscInfo(dm, "Point (%g, %g, %g) != Mapped Ref Coords (%g, %g, %g) with error %g\n", (double)pointR[0], (double)pointR[1], (double)pointR[2], (double)real[0], (double)real[1], (double)real[2], (double)inverseError));
+  }
+  if (found) *cell = c;
   else *cell = DMLOCATEPOINT_POINT_NOT_FOUND;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
