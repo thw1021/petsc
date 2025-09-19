@@ -1677,10 +1677,18 @@ static PetscErrorCode DMLocatePoints_Plex_KDTree(DM dm, Vec v, DMPointLocationTy
 #endif
     nearest_cell = (PetscInt)index;
 
+    /* Check nearest cell first, skip remaining checks if found */
+    PetscCall(DMPlexLocatePoint_Internal(dm, cdim, point, nearest_cell + cstart, &cell));
+    if (cell >= 0) {
+      cells[p].rank  = 0;
+      cells[p].index = cell;
+      terminatingQueryType[2]++;
+      continue;
+    }
+
     /* Search over adjacent cells to find point */
     PetscCall(PetscSectionGetDof(mesh->lkdtree->cellSection, nearest_cell, &numCells));
     PetscCall(PetscSectionGetOffset(mesh->lkdtree->cellSection, nearest_cell, &cellOffset));
-
     for (PetscInt c = cellOffset; c < cellOffset + numCells; c++) {
       PetscCall(DMPlexLocatePoint_Internal(dm, cdim, point, cellIndices[c], &cell));
       if (cell >= 0) {
