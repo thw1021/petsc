@@ -5078,7 +5078,7 @@ PetscErrorCode DMSetFromOptions_NonRefinement_Plex(DM dm, PetscOptionItems Petsc
 {
   DM_Plex                 *mesh = (DM_Plex *)dm->data;
   PetscBool                flg, flg2, flg3;
-  DMPointLocationAlgorithm alg = DM_POINT_LOCATION_BRUTE_FORCE;
+  DMPointLocationAlgorithm alg = mesh->pointLocationAlgorithm;
   char                     bdLabel[PETSC_MAX_PATH_LEN];
   char                     method[PETSC_MAX_PATH_LEN];
 
@@ -5815,7 +5815,7 @@ PETSC_INTERN PetscErrorCode DMClone_Plex(DM dm, DM *newdm)
 . -dm_refine                              - Refine mesh after distribution
 . -dm_localize <bool>                     - Whether to localize coordinates for periodic meshes
 . -dm_sparse_localize <bool>              - Whether to only localize cells on the periodic boundary
-. -dm_plex_point_location_algorithm <alg> - Set the algorithm to use for locating points, one of `brute_force`, `hash`
+. -dm_plex_point_location_algorithm <alg> - Set the algorithm to use for locating points, one of `brute_force`, `hash`, or `kdtree`
 . -dm_plex_hash_box_faces <n,m,p>         - The number of divisions in each direction of the grid hash
 . -dm_plex_partition_balance              - Attempt to evenly divide points on partition boundary between processes
 . -dm_plex_remesh_bd                      - Allow changes to the boundary on remeshing
