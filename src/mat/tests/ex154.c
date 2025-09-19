@@ -8,7 +8,7 @@ int main(int argc, char **args)
   IS            is_schur;
   PetscMPIInt   size;
   PetscInt      ns = 0, m, n;
-  PetscReal     norm, tol = PETSC_SQRT_MACHINE_EPSILON;
+  PetscReal     norm, tol = 1e-4; // large tol to accommodate -pc_precision single
   MatFactorType factor = MAT_FACTOR_LU;
   PetscViewer   fd;
   char          solver[256], converttype[256];
@@ -107,16 +107,17 @@ int main(int argc, char **args)
 
 /*TEST
 
-  test:
+  testset:
     output_file: output/empty.out
-    suffix: mumps_1
     requires: datafilespath mumps double !complex !defined(PETSC_USE_64BIT_INDICES)
-    args: -A ${DATAFILESPATH}/matrices/factorSchur/A.dat -B ${DATAFILESPATH}/matrices/factorSchur/B1.dat -ns {{0 1}}
+    args: -A ${DATAFILESPATH}/matrices/factorSchur/A.dat -ns {{0 1}} -pc_precision {{single double}}
 
-  test:
-    output_file: output/empty.out
-    suffix: mumps_2
-    requires: datafilespath mumps double !complex !defined(PETSC_USE_64BIT_INDICES)
-    args: -A ${DATAFILESPATH}/matrices/factorSchur/A.dat -B ${DATAFILESPATH}/matrices/factorSchur/B2.dat -ns {{0 1}}
+    test:
+      suffix: mumps_1
+      args: -B ${DATAFILESPATH}/matrices/factorSchur/B1.dat
+
+    test:
+      suffix: mumps_2
+      args: -B ${DATAFILESPATH}/matrices/factorSchur/B2.dat
 
 TEST*/
