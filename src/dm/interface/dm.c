@@ -24,7 +24,7 @@ const char *const DMPolytopeTypes[] =
   {"vertex",  "segment",      "tensor_segment", "triangle", "quadrilateral",  "tensor_quad",  "tetrahedron", "hexahedron", "triangular_prism", "tensor_triangular_prism", "tensor_quadrilateral_prism", "pyramid", "FV_ghost_cell", "interior_ghost_cell",
    "unknown", "unknown_cell", "unknown_face",   "invalid",  "DMPolytopeType", "DM_POLYTOPE_", NULL};
 const char *const DMCopyLabelsModes[]         = {"replace", "keep", "fail", "DMCopyLabelsMode", "DM_COPY_LABELS_", NULL};
-const char *const DMPointLocationAlgorithms[] = {"brute_force", "hash", "DMPointLocationAlgorithm", "DM_POINT_LOCATION_", NULL};
+const char *const DMPointLocationAlgorithms[] = {"brute_force", "hash", "kdtree", "DMPointLocationAlgorithm", "DM_POINT_LOCATION_", NULL};
 
 /*@
   DMCreate - Creates an empty `DM` object. `DM`s are the abstract objects in PETSc that mediate between meshes and discretizations and the
