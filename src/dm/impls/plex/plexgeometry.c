@@ -1358,31 +1358,46 @@ PetscErrorCode DMPlexCreateGridKDTree(DM dm, PetscGridKDTree *tree)
   DMLabel         cellLabel;
   PetscSF         sf;
   const PetscInt *leaves = NULL;
-  PetscInt        numCells, cdim, vstart, vend, cstart, cend, Nl = 0;
+  PetscInt        numCells, cellIndex, cdim, vstart, vend, cstart, cend, Nl = 0;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(tree));
   PetscCall(DMPlexGetSimplexOrBoxCells(dm, 0, &cstart, &cend));
-  numCells = cend - cstart;
   PetscCall(DMPlexGetDepthStratum(dm, 0, &vstart, &vend));
   PetscCall(DMGetCoordinateDim(dm, &cdim));
-  /* Create KD Tree with centroids of cells as points */
-  PetscCall(PetscInfo(dm, "Initializing KD tree for point location\n"));
-  PetscCall(PetscCalloc1(numCells * cdim, &pcoords));
-  for (PetscInt c = cstart; c < cend; ++c) PetscCall(DMPlexComputeCellGeometryFVM(dm, c, NULL, &pcoords[(c - cstart) * cdim], NULL));
-  PetscCall(PetscInfo(dm, "  KD Tree has %" PetscInt_FMT " points\n", numCells));
-  /* Copy values for optimal performance */
-  PetscCall(PetscKDTreeCreate(numCells, cdim, pcoords, PETSC_COPY_VALUES, PETSC_DETERMINE, &(*tree)->tree));
   /* Get SF describing ownership of overlap cells */
   PetscCall(DMGetPointSF(dm, &sf));
   if (sf) PetscCall(PetscSFGetGraph(sf, NULL, &Nl, &leaves, NULL));
   Nl = PetscMax(Nl, 0);
+  /* Create KD Tree with centroids of cells as points */
+  PetscCall(PetscInfo(dm, "Initializing KD tree for point location\n"));
+  PetscCall(PetscCalloc1((cend - cstart) * cdim, &pcoords));
+  numCells = 0;
+  for (PetscInt c = cstart; c < cend; c++) {
+    PetscInt idx;
+
+    /* Exclude unowned overlap vertices */
+    PetscCall(PetscFindInt(c, Nl, leaves, &idx));
+    if (idx >= 0) continue;
+    PetscCall(DMPlexComputeCellGeometryFVM(dm, c, NULL, &pcoords[(numCells++ - cstart) * cdim], NULL));
+  }
+  PetscCall(PetscInfo(dm, "  KD Tree has %" PetscInt_FMT " points\n", numCells));
+  /* Copy values for optimal performance */
+  PetscCall(PetscKDTreeCreate(numCells, cdim, pcoords, PETSC_COPY_VALUES, PETSC_DETERMINE, &(*tree)->tree));
   /* Temporary label to store adjacency info */
   PetscCall(DMLabelCreate(PETSC_COMM_SELF, "vertexToCells", &cellLabel));
   /* Add all cells which share a vertex to cell c to the stratum c - cstart (index in KD tree) */
+  PetscCall(PetscCalloc1(numCells, &(*tree)->mapIndexToCell));
+  cellIndex = 0;
   for (PetscInt c = cstart; c < cend; c++) {
     PetscInt  Nv;
     PetscInt *verts = NULL;
+    PetscInt  idx;
+
+    /* Exclude unowned overlap cells */
+    PetscCall(PetscFindInt(c, Nl, leaves, &idx));
+    if (idx >= 0) continue;
+    (*tree)->mapIndexToCell[cellIndex] = c;
 
     /* Get all vertices in transitive closure to cell c by using useCone=PETSC_TRUE */
     PetscCall(DMPlexGetTransitiveClosure(dm, c, PETSC_TRUE, &Nv, &verts));
@@ -1391,25 +1406,27 @@ PetscErrorCode DMPlexCreateGridKDTree(DM dm, PetscGridKDTree *tree)
       PetscInt  v     = verts[2 * i];
 
       if (vstart <= v && v < vend) {
+        /* Exclude unowned overlap vertices */
+        PetscCall(PetscFindInt(v, Nl, leaves, &idx));
+        if (idx >= 0) continue;
         /* Get all cells in transitive support of vertex v by using useCone=PETSC_FALSE */
         /* Duplicates are automatically removed due to DMLabel */
         PetscCall(DMPlexGetTransitiveClosure(dm, v, PETSC_FALSE, &Nc, &cells));
         for (PetscInt j = 0; j < Nc; j++) {
           PetscInt cell = cells[2 * j];
           if (cstart <= cell && cell < cend) {
-            PetscInt idx;
-
             /* Exclude unowned overlap cells */
             PetscCall(PetscFindInt(cell, Nl, leaves, &idx));
             if (idx >= 0) continue;
-            /* Add cell to stratum value c - cstart (index of cell c in KDTree) */
-            PetscCall(DMLabelSetValue(cellLabel, cell, c - cstart));
+            /* Add cell to stratum value cellIndex (index of cell c in KDTree) */
+            PetscCall(DMLabelSetValue(cellLabel, cell, cellIndex));
           }
         }
         PetscCall(DMPlexRestoreTransitiveClosure(dm, v, PETSC_FALSE, &Nc, &cells));
       }
     }
     PetscCall(DMPlexRestoreTransitiveClosure(dm, c, PETSC_TRUE, &Nv, &verts));
+    cellIndex++;
   }
   /* Convert to dense layout for fast queries */
   PetscCall(DMLabelConvertToSection(cellLabel, &(*tree)->cellSection, &(*tree)->cells));
@@ -1437,6 +1454,7 @@ PetscErrorCode PetscGridKDTreeDestroy(PetscGridKDTree *tree)
     PetscCall(PetscKDTreeDestroy(&(*tree)->tree));
     PetscCall(PetscSectionDestroy(&(*tree)->cellSection));
     PetscCall(ISDestroy(&(*tree)->cells));
+    PetscCall(PetscFree((*tree)->mapIndexToCell));
     PetscCall(PetscFree(*tree));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1658,9 +1676,8 @@ static PetscErrorCode DMLocatePoints_Plex_KDTree(DM dm, Vec v, DMPointLocationTy
     PetscBool          found = PETSC_FALSE;
     const PetscScalar *point = &a[p * bs];
     PetscReal          d;
-    PetscInt           cell, numCells, cellOffset;
+    PetscInt           cell, numCells, cellOffset, nearestCellIndex, nearestCell;
     PetscCount         index;
-    PetscInt           nearest_cell;
 
     /* Already found in previous cell */
     if (cells[p].index >= 0) continue;
@@ -1675,13 +1692,23 @@ static PetscErrorCode DMLocatePoints_Plex_KDTree(DM dm, Vec v, DMPointLocationTy
 #else
     PetscCall(PetscKDTreeQueryPointsNearestNeighbor(mesh->lkdtree->tree, 1, point, 0, &index, &d));
 #endif
-    nearest_cell = (PetscInt)index;
+    nearestCellIndex = (PetscInt)index;
+    nearestCell      = mesh->lkdtree->mapIndexToCell[nearestCellIndex];
+
+    /* Check nearest cell first, skip remaining checks if found */
+    PetscCall(DMPlexLocatePoint_Internal(dm, cdim, point, nearestCell, &cell));
+    if (cell >= 0) {
+      cells[p].rank  = 0;
+      cells[p].index = cell;
+      terminatingQueryType[2]++;
+      continue;
+    }
 
     /* Search over adjacent cells to find point */
-    PetscCall(PetscSectionGetDof(mesh->lkdtree->cellSection, nearest_cell, &numCells));
-    PetscCall(PetscSectionGetOffset(mesh->lkdtree->cellSection, nearest_cell, &cellOffset));
-
+    PetscCall(PetscSectionGetDof(mesh->lkdtree->cellSection, nearestCellIndex, &numCells));
+    PetscCall(PetscSectionGetOffset(mesh->lkdtree->cellSection, nearestCellIndex, &cellOffset));
     for (PetscInt c = cellOffset; c < cellOffset + numCells; c++) {
+      if (c == nearestCell) continue;
       PetscCall(DMPlexLocatePoint_Internal(dm, cdim, point, cellIndices[c], &cell));
       if (cell >= 0) {
         cells[p].rank  = 0;
