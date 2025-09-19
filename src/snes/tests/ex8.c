@@ -681,7 +681,7 @@ int main(int argc, char **argv)
   test:
     suffix: p1_pragmatic
     requires: triangle ctetgen pragmatic
-    args: -dm_plex_dim {{2}separate output} -dm_plex_box_faces 2,2,2 -petscspace_degree 1 -qorder 1 -dm_plex_point_location_algorithm hash -porder {{1 2}separate output}
+    args: -dm_plex_dim {{2}separate output} -dm_plex_box_faces 2,2,2 -petscspace_degree 1 -qorder 1 -dm_plex_point_location_algorithm {{hash kdtree}} -porder {{1 2}separate output}
   test:
     suffix: p1_adapt
     requires: triangle ctetgen
@@ -696,7 +696,7 @@ int main(int argc, char **argv)
   test:
     suffix: p2_pragmatic
     requires: triangle ctetgen pragmatic
-    args: -dm_plex_dim {{2}separate output} -dm_plex_box_faces 2,2,2 -petscspace_degree 2 -qorder 2 -dm_plex_point_location_algorithm hash -porder {{1 2 3}separate output}
+    args: -dm_plex_dim {{2}separate output} -dm_plex_box_faces 2,2,2 -petscspace_degree 2 -qorder 2 -dm_plex_point_location_algorithm {{hash kdtree}} -porder {{1 2 3}separate output}
 
   # TODO dim 3 will not work until I get composite elements in 3D (see plexrefine.c:34)
   # TODO This is broken. Check ex3 which worked
@@ -710,7 +710,7 @@ int main(int argc, char **argv)
     TODO: gll Lagrange nodes break this
     suffix: p3_pragmatic
     requires: triangle ctetgen pragmatic !single
-    args: -dm_plex_dim {{2}separate output} -dm_plex_box_faces 2,2,2 -petscspace_degree 3 -qorder 3 -dm_plex_point_location_algorithm hash -porder {{1 2 3 4}separate output}
+    args: -dm_plex_dim {{2}separate output} -dm_plex_box_faces 2,2,2 -petscspace_degree 3 -qorder 3 -dm_plex_point_location_algorithm {{hash kdtree}} -porder {{1 2 3 4}separate output}
 
   # 2D/3D Q_1 on a tensor cell
   test:
