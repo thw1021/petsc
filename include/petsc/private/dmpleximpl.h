@@ -90,6 +90,12 @@ struct _n_PetscGridHash {
   DMLabel      cellsSparse; /* Sparse storage for cell map */
 };
 
+struct _n_PetscGridKDTree {
+  PetscKDTree  tree;        /* KD Tree of centroids */
+  PetscSection cellSection; /* Section relating cells to all adjacent cells */
+  IS           cells;       /* List of adjacent cells to each cell */
+};
+
 typedef struct {
   PetscBool isotropic;               /* Is the metric isotropic? */
   PetscBool uniform;                 /* Is the metric uniform? */
@@ -227,6 +233,7 @@ typedef struct {
   PetscReal                minradius;              /* Minimum distance from cell centroid to face */
   DMPointLocationAlgorithm pointLocationAlgorithm; /* Algorithm to use for point location */
   PetscGridHash            lbox;                   /* Local box for searching */
+  PetscGridKDTree          lkdtree;                /* Local grid KD tree for searching */
   PetscPointFn            *coordFunc;              /* Function used to remap newly introduced vertices */
 
   /* Neighbors */
