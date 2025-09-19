@@ -162,6 +162,10 @@ int main(int argc, char **argv)
       suffix: seg_hash
       args: -dm_refine 2 -dm_plex_point_location_algorithm hash
 
+    test:
+      suffix: seg_kdtree
+      args: -dm_refine 2 -dm_plex_point_location_algorithm kdtree
+
   testset:
     args: -dm_plex_box_faces 5,5
     output_file: output/empty.out
@@ -174,6 +178,11 @@ int main(int argc, char **argv)
       suffix: tri_hash
       requires: triangle
       args: -dm_refine 2 -dm_plex_point_location_algorithm hash
+
+    test:
+      suffix: tri_kdtree
+      requires: triangle
+      args: -dm_refine 2 -dm_plex_point_location_algorithm kdtree
 
     test:
       suffix: tri_order_2
@@ -194,8 +203,16 @@ int main(int argc, char **argv)
       args: -dm_plex_simplex 0 -dm_coord_petscspace_degree 2
 
     test:
+      suffix: quad_order_2_kdtree
+      args: -dm_plex_simplex 0 -dm_coord_petscspace_degree 2 -dm_plex_point_location_algorithm kdtree
+
+    test:
       suffix: quad_hash
       args: -dm_plex_simplex 0 -dm_refine 2 -dm_plex_point_location_algorithm hash
+
+    test:
+      suffix: quad_kdtree
+      args: -dm_plex_simplex 0 -dm_refine 2 -dm_plex_point_location_algorithm kdtree
 
   testset:
     args: -dm_plex_dim 3 -dm_plex_box_faces 3,3,3
@@ -211,9 +228,19 @@ int main(int argc, char **argv)
       args: -dm_refine 1 -dm_plex_point_location_algorithm hash
 
     test:
+      suffix: tet_kdtree
+      requires: ctetgen
+      args: -dm_refine 1 -dm_plex_point_location_algorithm kdtree
+
+    test:
       suffix: tet_order_2
       requires: ctetgen
       args: -dm_refine 0 -dm_coord_petscspace_degree 2
+
+    test:
+      suffix: tet_order_2_kdtree
+      requires: ctetgen
+      args: -dm_refine 0 -dm_coord_petscspace_degree 2 -dm_plex_point_location_algorithm kdtree
 
     test:
       suffix: hex
@@ -224,13 +251,26 @@ int main(int argc, char **argv)
       args: -dm_plex_simplex 0 -dm_refine 1 -dm_plex_point_location_algorithm hash
 
     test:
+      suffix: hex_kdtree
+      args: -dm_plex_simplex 0 -dm_refine 1 -dm_plex_point_location_algorithm kdtree
+
+    test:
       suffix: hex_order_2
       args: -dm_plex_simplex 0 -dm_refine 1 -dm_coord_petscspace_degree 2
       nsize: 2
 
     test:
+      suffix: hex_order_2_kdtree
+      args: -dm_plex_simplex 0 -dm_refine 1 -dm_coord_petscspace_degree 2 -dm_plex_point_location_algorithm kdtree
+      nsize: 2
+
+    test:
       suffix: hex_order_3
       args: -dm_plex_simplex 0 -dm_coord_petscspace_degree 3
+
+    test:
+      suffix: hex_order_3_kdtree
+      args: -dm_plex_simplex 0 -dm_coord_petscspace_degree 3 -dm_plex_point_location_algorithm kdtree
 
   testset:
     args: -centroids 0 -custom \
@@ -239,7 +279,7 @@ int main(int argc, char **argv)
 
     test:
       suffix: quad_overlap
-      args: -dm_plex_point_location_algorithm {{brute_force hash}}
+      args: -dm_plex_point_location_algorithm {{brute_force hash kdtree}}
 
   # Test location on a Monge Manifold
   testset:
