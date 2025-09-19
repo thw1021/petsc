@@ -526,7 +526,7 @@ int main(int argc, char **argv)
     suffix: 1d_p1_oscillatory
     args: -mod_type oscillatory -epsilon 0.03125 \
           -dm_plex_dim 1 -dm_plex_box_faces 4 -potential_petscspace_degree 1 -dm_refine 2 -dmsnes_check \
-          -coarse_dm_plex_dim 1 -coarse_dm_plex_box_faces 4 -coarse_dm_plex_hash_location \
+          -coarse_dm_plex_dim 1 -coarse_dm_plex_box_faces 4 -coarse_dm_plex_point_location_algorithm hash \
           -fine_dg_petscspace_degree 1 -fine_dg_petscdualspace_lagrange_continuity 0 \
           -coarse_dg_petscspace_degree 1 -coarse_dg_petscdualspace_lagrange_continuity 0
 
