@@ -176,6 +176,16 @@ int main(int argc, char **argv)
       args: -dm_refine 2 -dm_plex_point_location_algorithm hash
 
     test:
+      suffix: tri_order_2
+      requires: triangle
+      args: -dm_coord_petscspace_degree 2
+
+    test:
+      suffix: tri_order_3
+      requires: triangle
+      args: -dm_coord_petscspace_degree 3
+
+    test:
       suffix: quad
       args: -dm_plex_simplex 0
 
@@ -199,6 +209,11 @@ int main(int argc, char **argv)
       suffix: tet_hash
       requires: ctetgen
       args: -dm_refine 1 -dm_plex_point_location_algorithm hash
+
+    test:
+      suffix: tet_order_2
+      requires: ctetgen
+      args: -dm_refine 0 -dm_coord_petscspace_degree 2
 
     test:
       suffix: hex
