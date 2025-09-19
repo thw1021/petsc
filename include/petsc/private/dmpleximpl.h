@@ -91,9 +91,10 @@ struct _n_PetscGridHash {
 };
 
 struct _n_PetscGridKDTree {
-  PetscKDTree  tree;        /* KD Tree of centroids */
-  PetscSection cellSection; /* Section relating cells to all adjacent cells */
-  IS           cells;       /* List of adjacent cells to each cell */
+  PetscKDTree  tree;           /* KD Tree of centroids */
+  PetscSection cellSection;    /* Section relating cells to all adjacent cells */
+  IS           cells;          /* List of adjacent cells to each cell */
+  PetscInt    *mapIndexToCell; /* Mapping between KD tree indices to cell point numbers */
 };
 
 typedef struct {
