@@ -94,6 +94,7 @@ int main(int argc, char **args)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_inertia", &test_inertia, NULL));
 
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-cholesky", &chol, NULL));
+  PetscCall(PetscOptionsGetReal(NULL, NULL, "-tol", &tol, NULL));
 
   /* test MATNEST support */
   flg = PETSC_FALSE;
@@ -570,20 +571,20 @@ skipoptions:
    test:
       suffix: mumps
       requires: mumps datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
-      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps
+      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps -pc_precision {{single double}} -tol 1e-5
       output_file: output/ex125_mumps_seq.out
 
    test:
       suffix: mumps_nest
       requires: mumps datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
-      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps -test_nest -test_nest_bordered {{0 1}}
+      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps -test_nest -test_nest_bordered {{0 1}} -pc_precision {{single double}} -tol 1e-4
       output_file: output/ex125_mumps_seq.out
 
    test:
       suffix: mumps_2
       nsize: 3
       requires: mumps datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
-      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps
+      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps -pc_precision {{single double}} -tol 1e-5
       output_file: output/ex125_mumps_par.out
 
    test:
