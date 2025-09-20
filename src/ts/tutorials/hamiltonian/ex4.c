@@ -3088,13 +3088,13 @@ int main(int argc, char **argv)
   testset:
     args: -cosine_coefficients 0.01 -charges -1. -perturbed_weights -total_weight 1. \
           -dm_plex_dim 1 -dm_plex_box_faces 80 -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 \
-            -dm_plex_box_bd periodic -dm_plex_hash_location \
+            -dm_plex_box_bd periodic -dm_plex_point_location_algorithm hash \
           -vdm_plex_dim 1 -vdm_plex_box_faces 220 -vdm_plex_box_lower -6 -vdm_plex_box_upper 6 \
-            -vpetscspace_degree 2 -vdm_plex_hash_location \
+            -vpetscspace_degree 2 -vdm_plex_point_location_algorithm hash \
           -remap_freq 1 -dm_swarm_remap_type pfak -remap_dm_plex_dim 2 -remap_dm_plex_simplex 0 \
             -remap_dm_plex_box_faces 40,110 -remap_dm_plex_box_bd periodic,none \
             -remap_dm_plex_box_lower 0.,-6. -remap_dm_plex_box_upper 12.5664,6. \
-            -remap_petscspace_degree 1 -remap_dm_plex_hash_location \
+            -remap_petscspace_degree 1 -remap_dm_plex_point_location_algorithm hash \
             -ftop_ksp_type lsqr -ftop_pc_type none -ftop_ksp_rtol 1.e-14 -ptof_pc_type lu \
           -em_type primal -petscspace_degree 1 -em_snes_atol 1.e-12 -em_snes_error_if_not_converged \
             -em_ksp_error_if_not_converged -em_pc_type svd -em_proj_pc_type lu \
@@ -3110,6 +3110,35 @@ int main(int argc, char **argv)
 
     test:
       suffix: landau_damping_1d_dg
+      args: -ts_type discgrad -ts_discgrad_type average -snes_type qn
+
+  testset:
+    args: -cosine_coefficients 0.01 -charges -1. -perturbed_weights -total_weight 1. \
+          -dm_plex_dim 1 -dm_plex_box_faces 80 -dm_plex_box_lower 0. -dm_plex_box_upper 12.5664 \
+            -dm_plex_box_bd periodic -dm_plex_point_location_algorithm kdtree \
+          -vdm_plex_dim 1 -vdm_plex_box_faces 220 -vdm_plex_box_lower -6 -vdm_plex_box_upper 6 \
+            -vpetscspace_degree 2 -vdm_plex_point_location_algorithm kdtree \
+          -remap_freq 1 -dm_swarm_remap_type pfak -remap_dm_plex_dim 2 -remap_dm_plex_simplex 0 \
+            -remap_dm_plex_box_faces 40,110 -remap_dm_plex_box_bd periodic,none \
+            -remap_dm_plex_box_lower 0.,-6. -remap_dm_plex_box_upper 12.5664,6. \
+            -remap_petscspace_degree 1 -remap_dm_plex_point_location_algorithm kdtree \
+            -ftop_ksp_type lsqr -ftop_pc_type none -ftop_ksp_rtol 1.e-14 -ptof_pc_type lu \
+          -em_type primal -petscspace_degree 1 -em_snes_atol 1.e-12 -em_snes_error_if_not_converged \
+            -em_ksp_error_if_not_converged -em_pc_type svd -em_proj_pc_type lu \
+          -ts_dt 0.03 -ts_max_steps 2 -ts_max_time 100 \
+          -emax_tao_type brgn -emax_tao_max_it 100 -emax_tao_brgn_regularization_type l2pure \
+            -emax_tao_brgn_regularizer_weight 1e-5 -tao_brgn_subsolver_tao_bnk_ksp_rtol 1e-12 \
+            -emax_start_step 1 -emax_solve_step 1 \
+          -output_step 1 -efield_monitor quiet
+
+    test:
+      suffix: landau_damping_1d_bs_kdtree
+      output_file: output/ex4_landau_damping_1d_bs.out
+      args: -ts_type basicsymplectic -ts_basicsymplectic_type 1
+
+    test:
+      suffix: landau_damping_1d_dg_kdtree
+      output_file: output/ex4_landau_damping_1d_bs.out
       args: -ts_type discgrad -ts_discgrad_type average -snes_type qn
 
 TEST*/

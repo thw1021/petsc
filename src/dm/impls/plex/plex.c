@@ -2881,6 +2881,7 @@ PetscErrorCode DMDestroy_Plex(DM dm)
   PetscCall(PetscFree(mesh->children));
   PetscCall(DMDestroy(&mesh->referenceTree));
   PetscCall(PetscGridHashDestroy(&mesh->lbox));
+  PetscCall(PetscGridKDTreeDestroy(&mesh->lkdtree));
   PetscCall(PetscFree(mesh->neighbors));
   if (mesh->metricCtx) PetscCall(PetscFree(mesh->metricCtx));
   if (mesh->nonempty_comm != MPI_COMM_NULL && mesh->nonempty_comm != MPI_COMM_SELF) PetscCallMPI(MPI_Comm_free(&mesh->nonempty_comm));
