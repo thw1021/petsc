@@ -140,7 +140,7 @@ typedef struct {
 } XMUMPS_STRUC_C;
 
 // Note: fixed-size arrays are allocated by MUMPS; redirect them to the outer struct
-#define DoAllocateMumpsInternalID(MUMPS_STRUC_T, outer) \
+#define AllocatInternalID(MUMPS_STRUC_T, outer) \
   do { \
     MUMPS_STRUC_T *inner; \
     PetscCall(PetscNew(&inner)); \
@@ -160,16 +160,16 @@ typedef struct {
   } while (0)
 
 // Allocate the internal [SDCZ]MUMPS_STRUC_C ID data structure in the given <precision>, and link fields of the outer and the inner
-static inline PetscErrorCode AllocateMumpsInternalID(XMUMPS_STRUC_C *outer, KSPHPDDMPrecision precision)
+static inline PetscErrorCode MatMumpsAllocateInternalID(XMUMPS_STRUC_C *outer, KSPHPDDMPrecision precision)
 {
   PetscFunctionBegin;
   outer->precision = precision;
 #if defined(PETSC_USE_COMPLEX)
-  if (precision == KSP_HPDDM_PRECISION_SINGLE) DoAllocateMumpsInternalID(CMUMPS_STRUC_C, outer);
-  else DoAllocateMumpsInternalID(ZMUMPS_STRUC_C, outer);
+  if (precision == KSP_HPDDM_PRECISION_SINGLE) AllocatInternalID(CMUMPS_STRUC_C, outer);
+  else AllocatInternalID(ZMUMPS_STRUC_C, outer);
 #else
-  if (precision == KSP_HPDDM_PRECISION_SINGLE) DoAllocateMumpsInternalID(SMUMPS_STRUC_C, outer);
-  else DoAllocateMumpsInternalID(DMUMPS_STRUC_C, outer);
+  if (precision == KSP_HPDDM_PRECISION_SINGLE) AllocatInternalID(SMUMPS_STRUC_C, outer);
+  else AllocatInternalID(DMUMPS_STRUC_C, outer);
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -184,11 +184,12 @@ static inline PetscErrorCode AllocateMumpsInternalID(XMUMPS_STRUC_C *outer, KSPH
     PetscCall(PetscFree(inner->sol_loc)); \
   } while (0)
 
-static inline PetscErrorCode FreeMumpsInternalID(XMUMPS_STRUC_C *outer)
+static inline PetscErrorCode MatMumpsFreeInternalID(XMUMPS_STRUC_C *outer)
 {
   KSPHPDDMPrecision precision = outer->precision; // precision used by MUMPS
 
   PetscFunctionBegin;
+  // Free intermediate buffers which are allocated when PetscScalar and MumpsScalar are different
 #if defined(PETSC_USE_COMPLEX)
   #if defined(PETSC_USE_REAL_SINGLE)
   if (precision == KSP_HPDDM_PRECISION_DOUBLE) FreeInternalIDFields(ZMUMPS_STRUC_C, outer);
@@ -211,55 +212,36 @@ static inline PetscErrorCode FreeMumpsInternalID(XMUMPS_STRUC_C *outer)
 // 1) If the two types are the same, <pa> will be returned in <*ma>, i.e., no conversion and memory allocation will happen.
 // 2) If *ma is not NULL, assume enough memory is given by *ma and the routine casts pa[i] to (*ma)[i] for each entry.
 // 3) If *ma is NULL, the routine will allocate memory with PetscMalloc1() and then do the casting. Caller is responsible for freeing the memory.
-static PetscErrorCode CastPetscScalarToMumpsScalar(PetscInt n, const PetscScalar *pa, KSPHPDDMPrecision precision, void **ma)
+static PetscErrorCode CastPetscScalarArrayToMumpsScalarArray(PetscInt n, const PetscScalar *pa, KSPHPDDMPrecision precision, void **ma)
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_COMPLEX)
-  #if defined(PETSC_USE_REAL_SINGLE)             // PetscScalar is float complex
-  if (precision == KSP_HPDDM_PRECISION_DOUBLE) { // MumpsScalar is double complex
-    ZMUMPS_COMPLEX *b;
-    if (*ma == NULL) {     // not allocated yet
-      PetscMalloc1(n, &b); // ZMUMPS_COMPLEX is struct {double r,i;}
-      *ma = b;
-    } else b = (ZMUMPS_COMPLEX *)*ma;
-    for (PetscInt i = 0; i < n; i++) {
-      b[i].r = PetscRealPart(pa[i]);
-      b[i].i = PetscImaginaryPart(pa[i]);
-    }
-  } else *ma = (void *)pa; // same precision
+  #if defined(PETSC_USE_REAL_SINGLE)
+  if (precision == KSP_HPDDM_PRECISION_DOUBLE) {
+    if (*ma == NULL) PetscCall(PetscMalloc1(n, (ZMUMPS_COMPLEX **)ma)); // ZMUMPS_COMPLEX is struct {double r,i;}
+    ZMUMPS_COMPLEX *b = *(ZMUMPS_COMPLEX **)ma;
   #elif defined(PETSC_USE_REAL_DOUBLE)
-  if (precision == KSP_HPDDM_PRECISION_SINGLE) { // MumpsScalar is single complex
-    CMUMPS_COMPLEX *b;
-    if (*ma == NULL) { // not allocated yet
-      PetscMalloc1(n, &b);
-      *ma = b;
-    } else b = (CMUMPS_COMPLEX *)*ma;
+  if (precision == KSP_HPDDM_PRECISION_SINGLE) {
+    if (*ma == NULL) PetscCall(PetscMalloc1(n, (CMUMPS_COMPLEX **)ma)); // CMUMPS_COMPLEX is struct {float r,i;}
+    CMUMPS_COMPLEX *b = *(CMUMPS_COMPLEX **)ma;
+  #endif
     for (PetscInt i = 0; i < n; i++) {
       b[i].r = PetscRealPart(pa[i]);
       b[i].i = PetscImaginaryPart(pa[i]);
-    }
+    };
   } else *ma = (void *)pa; // same precision
-  #endif
 #else
-  #if defined(PETSC_USE_REAL_SINGLE)   // PetscScalar is float
-  if (precision == KSP_HPDDM_PRECISION_DOUBLE) { // MumpsScalar is double
-    double *b;
-    if (*ma == NULL) { // not allocated yet
-      PetscMalloc1(n, &b);
-      *ma = b;
-    } else b = (double *)*ma;
-    for (PetscInt i = 0; i < n; i++) b[i] = pa[i];
-  } else *ma = (void *)pa; // same precision
-  #elif defined(PETSC_USE_REAL_DOUBLE) // PetscScalar is double
-  if (precision == KSP_HPDDM_PRECISION_SINGLE) { // MumpsScalar is float
-    float *b;
-    if (*ma == NULL) { // not allocated yet
-      PetscMalloc1(n, &b);
-      *ma = b;
-    } else b = (float *)*ma;
-    for (PetscInt i = 0; i < n; i++) b[i] = pa[i];
-  } else *ma = (void *)pa; // same precision
+  #if defined(PETSC_USE_REAL_SINGLE)
+  if (precision == KSP_HPDDM_PRECISION_DOUBLE) {
+    if (*ma == NULL) PetscCall(PetscMalloc1(n, (DMUMPS_REAL **)ma));
+    DMUMPS_REAL *b = *(DMUMPS_REAL **)ma;
+  #elif defined(PETSC_USE_REAL_DOUBLE)
+  if (precision == KSP_HPDDM_PRECISION_SINGLE) {
+    if (*ma == NULL) PetscCall(PetscMalloc1(n, (SMUMPS_REAL **)ma));
+    SMUMPS_REAL *b = *(SMUMPS_REAL **)ma;
   #endif
+    for (PetscInt i = 0; i < n; i++) b[i] = pa[i];
+  } else *ma = (void *)pa; // same precision
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -268,33 +250,29 @@ static PetscErrorCode CastPetscScalarToMumpsScalar(PetscInt n, const PetscScalar
 //
 // 1) If the two types are different, cast ma[i] to pa[i] for each entry.
 // 2) If the two types are the same, this works as a memory copy, i.e., ma[i] is copied to pa[i] for each entry.
-static PetscErrorCode CastMumpsScalarToPetscScalar(PetscInt n, KSPHPDDMPrecision precision, const void *ma, PetscScalar *pa)
+static PetscErrorCode CastMumpsScalarArrayToPetscScalarArray(PetscInt n, KSPHPDDMPrecision precision, const void *ma, PetscScalar *pa)
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_COMPLEX)
   #if defined(PETSC_USE_REAL_SINGLE)             // PetscScalar is single complex
   if (precision == KSP_HPDDM_PRECISION_DOUBLE) { // MumpsScalar is double complex
-    const double *b = (const double *)ma;
-    for (PetscInt i = 0; i < 2 * n; i++) pa[i] = b[i];
-  }
+    const DMUMPS_REAL *b = (const DMUMPS_REAL *)ma;
   #elif defined(PETSC_USE_REAL_DOUBLE)
   if (precision == KSP_HPDDM_PRECISION_SINGLE) { // MumpsScalar is single complex
-    const float *b = (const float *)ma;
+    const SMUMPS_REAL *b = (const SMUMPS_REAL *)ma;
+  #endif
     for (PetscInt i = 0; i < 2 * n; i++) pa[i] = b[i];
   }
-  #endif
 #else
   #if defined(PETSC_USE_REAL_SINGLE)   // PetscScalar is single
   if (precision == KSP_HPDDM_PRECISION_DOUBLE) { // MumpsScalar is double
-    const double *b = (const double *)ma;
-    for (PetscInt i = 0; i < n; i++) pa[i] = b[i];
-  }
+    const DMUMPS_REAL *b = (const DMUMPS_REAL *)ma;
   #elif defined(PETSC_USE_REAL_DOUBLE) // PetscScalar is double
   if (precision == KSP_HPDDM_PRECISION_SINGLE) { // MumpsScalar is single
-    const float *b = (const float *)ma;
+    const SMUMPS_REAL *b = (const SMUMPS_REAL *)ma;
+  #endif
     for (PetscInt i = 0; i < n; i++) pa[i] = b[i];
   }
-  #endif
 #endif
   else
     PetscCall(PetscArraycpy((PetscScalar *)pa, (PetscScalar *)ma, n));
@@ -303,49 +281,34 @@ static PetscErrorCode CastMumpsScalarToPetscScalar(PetscInt n, KSPHPDDMPrecision
 
 // If type MumpsScalar in the given <precision> is different from PetscScalar, allocate <n> MumpsScalars and returned the address in <*ma>,
 // otherwise, just return the given PetscScalar address <pa>.
-static PetscErrorCode AllocateMumpsScalarIfInDifferentPrecision(PetscInt n, const PetscScalar *pa, KSPHPDDMPrecision precision, void **ma)
+static PetscErrorCode MatMumpsAllocateMumpsScalarArrayIfInDifferentPrecision(PetscInt n, const PetscScalar *pa, KSPHPDDMPrecision precision, void **ma)
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_COMPLEX)
-  #if defined(PETSC_USE_REAL_SINGLE)             // PetscScalar is single complex
-  if (precision == KSP_HPDDM_PRECISION_DOUBLE) { // MumpsScalar is double complex
-    PetscCall(PetscMalloc1(n, (ZMUMPS_COMPLEX **)ma));
-  } else *ma = (void *)pa; // same precision
+  #if defined(PETSC_USE_REAL_SINGLE)
+  if (precision == KSP_HPDDM_PRECISION_DOUBLE) PetscCall(PetscMalloc1(n, (ZMUMPS_COMPLEX **)ma));
   #elif defined(PETSC_USE_REAL_DOUBLE)
-  if (precision == KSP_HPDDM_PRECISION_SINGLE) { // MumpsScalaris single complex
-    PetscCall(PetscMalloc1(n, (CMUMPS_COMPLEX **)ma));
-  } else *ma = (void *)pa; // same precision
+  if (precision == KSP_HPDDM_PRECISION_SINGLE) PetscCall(PetscMalloc1(n, (CMUMPS_COMPLEX **)ma));
   #endif
 #else
   #if defined(PETSC_USE_REAL_SINGLE)   // PetscScalar is single
-  if (precision == KSP_HPDDM_PRECISION_DOUBLE) { // MumpsScalar is double
-    PetscCall(PetscMalloc1(n, (double **)ma));
-  } else *ma = (void *)pa; // same precision
+  if (precision == KSP_HPDDM_PRECISION_DOUBLE) PetscCall(PetscMalloc1(n, (DMUMPS_REAL **)ma));
   #elif defined(PETSC_USE_REAL_DOUBLE) // PetscScalar is double
-  if (precision == KSP_HPDDM_PRECISION_SINGLE) { // MumpsScalar is single
-    PetscCall(PetscMalloc1(n, (float **)ma));
-  } else *ma = (void *)pa; // same precision
+  if (precision == KSP_HPDDM_PRECISION_SINGLE) PetscCall(PetscMalloc1(n, (SMUMPS_REAL **)ma));
   #endif
 #endif
+  else *ma = (void *)pa; // same precision
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 // If type MumpsScalar in the given <precision> is different from PetscScalar, free memory stored at <*ma> and assign NULL to it, otherwise do nothing.
-static PetscErrorCode FreeMumpsScalarIfInDifferentPrecision(KSPHPDDMPrecision precision, void **ma)
+static PetscErrorCode MatMumpsFreeMumpsScalarArrayIfInDifferentPrecision(KSPHPDDMPrecision precision, void **ma)
 {
   PetscFunctionBegin;
-#if defined(PETSC_USE_COMPLEX)
-  #if defined(PETSC_USE_REAL_SINGLE)
+#if defined(PETSC_USE_REAL_SINGLE)
   if (precision == KSP_HPDDM_PRECISION_DOUBLE)
-  #elif defined(PETSC_USE_REAL_DOUBLE)
+#elif defined(PETSC_USE_REAL_DOUBLE)
   if (precision == KSP_HPDDM_PRECISION_SINGLE)
-  #endif
-#else
-  #if defined(PETSC_USE_REAL_SINGLE)
-  if (precision == KSP_HPDDM_PRECISION_DOUBLE)
-  #elif defined(PETSC_USE_REAL_DOUBLE)
-  if (precision == KSP_HPDDM_PRECISION_SINGLE)
-  #endif
 #endif
   { // different types
     PetscCall(PetscFree(*ma));
@@ -354,74 +317,69 @@ static PetscErrorCode FreeMumpsScalarIfInDifferentPrecision(KSPHPDDMPrecision pr
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode AllocateMumpsScalarInPrecision(PetscInt n, KSPHPDDMPrecision precision, void **ma)
+// Allocate <n> MumpsScalar in the given <precision> and return the address in <*ma>
+static PetscErrorCode MatMumpsAllocateMumpsScalarArray(PetscInt n, KSPHPDDMPrecision precision, void **ma)
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_COMPLEX)
-  if (precision == KSP_HPDDM_PRECISION_DOUBLE) {
-    PetscCall(PetscMalloc1(n, (ZMUMPS_COMPLEX **)ma));
-  } else if (precision == KSP_HPDDM_PRECISION_SINGLE) {
-    PetscCall(PetscMalloc1(n, (CMUMPS_COMPLEX **)ma));
-  }
+  if (precision == KSP_HPDDM_PRECISION_DOUBLE) PetscCall(PetscMalloc1(n, (ZMUMPS_COMPLEX **)ma));
+  else if (precision == KSP_HPDDM_PRECISION_SINGLE) PetscCall(PetscMalloc1(n, (CMUMPS_COMPLEX **)ma));
 #else
-  if (precision == KSP_HPDDM_PRECISION_DOUBLE) {
-    PetscCall(PetscMalloc1(n, (double **)ma));
-  } else if (precision == KSP_HPDDM_PRECISION_SINGLE) {
-    PetscCall(PetscMalloc1(n, (float **)ma));
-  }
+  if (precision == KSP_HPDDM_PRECISION_DOUBLE) PetscCall(PetscMalloc1(n, (DMUMPS_REAL **)ma));
+  else if (precision == KSP_HPDDM_PRECISION_SINGLE) PetscCall(PetscMalloc1(n, (SMUMPS_REAL **)ma));
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#define CopyField(dst, src, f) \
-  do { \
-    (dst)->f = (src)->f; \
-  } while (0)
+static inline MPI_Datatype MPIU_MUMPSREAL(const XMUMPS_STRUC_C *id)
+{
+  return id->precision == KSP_HPDDM_PRECISION_DOUBLE ? MPI_DOUBLE : MPI_FLOAT;
+}
 
-#define PreMumpsCall(inner, outer) \
+#define PreMumpsCall(inner, outer, mumpsscalar) \
   do { \
-    CopyField(inner, outer, job); \
-    CopyField(inner, outer, n); \
-    CopyField(inner, outer, nblk); \
-    CopyField(inner, outer, nnz); \
-    CopyField(inner, outer, irn); \
-    CopyField(inner, outer, jcn); \
-    CopyField(inner, outer, a); \
-    CopyField(inner, outer, nnz_loc); \
-    CopyField(inner, outer, irn_loc); \
-    CopyField(inner, outer, jcn_loc); \
-    CopyField(inner, outer, a_loc); \
-    CopyField(inner, outer, blkptr); \
-    CopyField(inner, outer, blkvar); \
-    CopyField(inner, outer, perm_in); \
-    CopyField(inner, outer, pivots); \
-    CopyField(inner, outer, rhs); \
-    CopyField(inner, outer, redrhs); \
-    CopyField(inner, outer, rhs_sparse); \
-    CopyField(inner, outer, sol_loc); \
-    CopyField(inner, outer, rhs_loc); \
-    CopyField(inner, outer, irhs_sparse); \
-    CopyField(inner, outer, irhs_ptr); \
-    CopyField(inner, outer, isol_loc); \
-    CopyField(inner, outer, irhs_loc); \
-    CopyField(inner, outer, nrhs); \
-    CopyField(inner, outer, lrhs); \
-    CopyField(inner, outer, lredrhs); \
-    CopyField(inner, outer, nz_rhs); \
-    CopyField(inner, outer, lsol_loc); \
-    CopyField(inner, outer, nloc_rhs); \
-    CopyField(inner, outer, lrhs_loc); \
-    CopyField(inner, outer, nsol_loc); \
-    CopyField(inner, outer, schur_lld); \
-    CopyField(inner, outer, size_schur); \
-    CopyField(inner, outer, listvar_schur); \
-    CopyField(inner, outer, schur); \
+    inner->job           = outer->job; \
+    inner->n             = outer->n; \
+    inner->nblk          = outer->nblk; \
+    inner->nnz           = outer->nnz; \
+    inner->irn           = outer->irn; \
+    inner->jcn           = outer->jcn; \
+    inner->a             = (mumpsscalar *)outer->a; \
+    inner->nnz_loc       = outer->nnz_loc; \
+    inner->irn_loc       = outer->irn_loc; \
+    inner->jcn_loc       = outer->jcn_loc; \
+    inner->a_loc         = (mumpsscalar *)outer->a_loc; \
+    inner->blkptr        = outer->blkptr; \
+    inner->blkvar        = outer->blkvar; \
+    inner->perm_in       = outer->perm_in; \
+    inner->pivots        = (mumpsscalar *)outer->pivots; \
+    inner->rhs           = (mumpsscalar *)outer->rhs; \
+    inner->redrhs        = (mumpsscalar *)outer->redrhs; \
+    inner->rhs_sparse    = (mumpsscalar *)outer->rhs_sparse; \
+    inner->sol_loc       = (mumpsscalar *)outer->sol_loc; \
+    inner->rhs_loc       = (mumpsscalar *)outer->rhs_loc; \
+    inner->irhs_sparse   = outer->irhs_sparse; \
+    inner->irhs_ptr      = outer->irhs_ptr; \
+    inner->isol_loc      = outer->isol_loc; \
+    inner->irhs_loc      = outer->irhs_loc; \
+    inner->nrhs          = outer->nrhs; \
+    inner->lrhs          = outer->lrhs; \
+    inner->lredrhs       = outer->lredrhs; \
+    inner->nz_rhs        = outer->nz_rhs; \
+    inner->lsol_loc      = outer->lsol_loc; \
+    inner->nloc_rhs      = outer->nloc_rhs; \
+    inner->lrhs_loc      = outer->lrhs_loc; \
+    inner->nsol_loc      = outer->nsol_loc; \
+    inner->schur_lld     = outer->schur_lld; \
+    inner->size_schur    = outer->size_schur; \
+    inner->listvar_schur = outer->listvar_schur; \
+    inner->schur         = (mumpsscalar *)outer->schur; \
   } while (0)
 
 #define PostMumpsCall(inner, outer) \
   do { \
-    CopyField(outer, inner, pivnul_list); \
-    CopyField(outer, inner, mapping); \
+    outer->pivnul_list = inner->pivnul_list; \
+    outer->mapping     = inner->mapping; \
   } while (0)
 
 // Entry for PETSc to call mumps
@@ -431,21 +389,24 @@ static inline PetscErrorCode PetscCallMumps_Private(XMUMPS_STRUC_C *outer)
 #if defined(PETSC_USE_COMPLEX)
   if (outer->precision == KSP_HPDDM_PRECISION_SINGLE) {
     CMUMPS_STRUC_C *inner = (CMUMPS_STRUC_C *)outer->internal_id;
-    PreMumpsCall(inner, outer);
+    PreMumpsCall(inner, outer, CMUMPS_COMPLEX);
     PetscStackCallExternalVoid("cmumps_c", cmumps_c(inner));
+    PostMumpsCall(inner, outer);
   } else if (outer->precision == KSP_HPDDM_PRECISION_DOUBLE) {
     ZMUMPS_STRUC_C *inner = (ZMUMPS_STRUC_C *)outer->internal_id;
-    PreMumpsCall(inner, outer);
+    PreMumpsCall(inner, outer, ZMUMPS_COMPLEX);
     PetscStackCallExternalVoid("zmumps_c", zmumps_c(inner));
+    PostMumpsCall(inner, outer);
   }
 #else
   if (outer->precision == KSP_HPDDM_PRECISION_SINGLE) {
     SMUMPS_STRUC_C *inner = (SMUMPS_STRUC_C *)outer->internal_id;
-    PreMumpsCall(inner, outer);
+    PreMumpsCall(inner, outer, SMUMPS_REAL);
     PetscStackCallExternalVoid("smumps_c", smumps_c(inner));
+    PostMumpsCall(inner, outer);
   } else if (outer->precision == KSP_HPDDM_PRECISION_DOUBLE) {
     DMUMPS_STRUC_C *inner = (DMUMPS_STRUC_C *)outer->internal_id;
-    PreMumpsCall(inner, outer);
+    PreMumpsCall(inner, outer, DMUMPS_REAL);
     PetscStackCallExternalVoid("dmumps_c", dmumps_c(inner));
     PostMumpsCall(inner, outer);
   }
@@ -495,10 +456,11 @@ static inline PetscErrorCode PetscCallMumps_Private(XMUMPS_STRUC_C *outer)
          an easy translation between omp_comm and petsc_comm). See MUMPS-5.1.2 manual p82.                   \
          omp_comm is a small shared memory communicator, hence doing multiple Bcast as shown below is OK. \
       */ \
-        PetscCallMPI(MPI_Bcast(mumps->id.infog, PETSC_STATIC_ARRAY_LENGTH(mumps->id.infog), MPIU_MUMPSINT, 0, mumps->omp_comm)); \
-        PetscCallMPI(MPI_Bcast(mumps->id.rinfog, PETSC_STATIC_ARRAY_LENGTH(mumps->id.rinfog), MPIU_REAL, 0, mumps->omp_comm)); \
-        PetscCallMPI(MPI_Bcast(mumps->id.info, PETSC_STATIC_ARRAY_LENGTH(mumps->id.info), MPIU_MUMPSINT, 0, mumps->omp_comm)); \
-        PetscCallMPI(MPI_Bcast(mumps->id.rinfo, PETSC_STATIC_ARRAY_LENGTH(mumps->id.rinfo), MPIU_REAL, 0, mumps->omp_comm)); \
+        SMUMPS_STRUC_C tmp; /* All MUMPS_STRUC_C types have same lengths on these info arrays */ \
+        PetscCallMPI(MPI_Bcast(mumps->id.infog, PETSC_STATIC_ARRAY_LENGTH(tmp.infog), MPIU_MUMPSINT, 0, mumps->omp_comm)); \
+        PetscCallMPI(MPI_Bcast(mumps->id.info, PETSC_STATIC_ARRAY_LENGTH(tmp.info), MPIU_MUMPSINT, 0, mumps->omp_comm)); \
+        PetscCallMPI(MPI_Bcast(mumps->id.rinfog, PETSC_STATIC_ARRAY_LENGTH(tmp.rinfog), MPIU_MUMPSREAL(&mumps->id), 0, mumps->omp_comm)); \
+        PetscCallMPI(MPI_Bcast(mumps->id.rinfo, PETSC_STATIC_ARRAY_LENGTH(tmp.rinfo), MPIU_MUMPSREAL(&mumps->id), 0, mumps->omp_comm)); \
       } else { \
         PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF)); \
         PetscCall(PetscCallMumps_Private(&mumps->id)); \
@@ -683,7 +645,7 @@ static PetscErrorCode MatMumpsHandleSchur_Private(Mat F, PetscBool expansion)
     if (!mumps->id.redrhs || sizeredrhs > mumps->sizeredrhs) {
       PetscCall(PetscFree(mumps->id.redrhs));
       mumps->id.lredrhs = mumps->id.size_schur;
-      PetscCall(AllocateMumpsScalarInPrecision(mumps->id.nrhs * mumps->id.lredrhs, mumps->id.precision, &mumps->id.redrhs));
+      PetscCall(MatMumpsAllocateMumpsScalarArray(mumps->id.nrhs * mumps->id.lredrhs, mumps->id.precision, &mumps->id.redrhs));
       mumps->sizeredrhs = mumps->id.nrhs * mumps->id.lredrhs;
     }
   } else { /* prepare for the expansion step */
@@ -1725,7 +1687,7 @@ static PetscErrorCode MatDestroy_MUMPS(Mat A)
       else PetscCall(PetscCommRestoreComm(PetscObjectComm((PetscObject)A), &mumps->mumps_comm));
     }
   }
-  PetscCall(FreeMumpsInternalID(&mumps->id));
+  PetscCall(MatMumpsFreeInternalID(&mumps->id));
 #if defined(PETSC_HAVE_OPENMP_SUPPORT)
   if (mumps->use_petsc_omp_support) {
     PetscCall(PetscOmpCtrlDestroy(&mumps->omp_ctrl));
@@ -1779,7 +1741,7 @@ static PetscErrorCode MatMumpsSetUpDistRHSInfo(Mat A, PetscInt nrhs, const Petsc
       PetscCall(MatGetOwnershipRange(A, &rstart, NULL));
       for (i = 0; i < m; i++) PetscCall(PetscMUMPSIntCast(rstart + i + 1, &mumps->irhs_loc[i])); /* use 1-based indices */
     }
-    PetscCall(CastPetscScalarToMumpsScalar(m * nrhs, array, mumps->id.precision, &mumps->id.rhs_loc));
+    PetscCall(CastPetscScalarArrayToMumpsScalarArray(m * nrhs, array, mumps->id.precision, &mumps->id.rhs_loc));
   } else {
 #if defined(PETSC_HAVE_OPENMP_SUPPORT)
     const PetscInt *ranges;
@@ -1895,14 +1857,14 @@ static PetscErrorCode MatSolve_MUMPS(Mat A, Vec b, Vec x)
       PetscCall(VecScatterEnd(mumps->scat_rhs, b, mumps->b_seq, INSERT_VALUES, SCATTER_FORWARD));
       if (!mumps->myid) {
         PetscCall(VecGetArray(mumps->b_seq, &array));
-        PetscCall(CastPetscScalarToMumpsScalar(mumps->b_seq->map->n, array, mumps->id.precision, &mumps->id.rhs));
+        PetscCall(CastPetscScalarArrayToMumpsScalarArray(mumps->b_seq->map->n, array, mumps->id.precision, &mumps->id.rhs));
       }
     }
   } else {                   /* petsc_size == 1 */
     mumps->id.ICNTL(20) = 0; /* dense centralized RHS */
     PetscCall(VecCopy(b, x));
     PetscCall(VecGetArray(x, &array));
-    PetscCall(CastPetscScalarToMumpsScalar(x->map->n, array, mumps->id.precision, &mumps->id.rhs));
+    PetscCall(CastPetscScalarArrayToMumpsScalarArray(x->map->n, array, mumps->id.precision, &mumps->id.rhs));
   }
 
   /*
@@ -1951,7 +1913,7 @@ static PetscErrorCode MatSolve_MUMPS(Mat A, Vec b, Vec x)
 
     PetscScalar *xarray;
     PetscCall(VecGetArray(mumps->x_seq, &xarray));
-    PetscCall(CastMumpsScalarToPetscScalar(mumps->id.lsol_loc, mumps->id.precision, mumps->id.sol_loc, xarray));
+    PetscCall(CastMumpsScalarArrayToPetscScalarArray(mumps->id.lsol_loc, mumps->id.precision, mumps->id.sol_loc, xarray));
     PetscCall(VecRestoreArray(mumps->x_seq, &xarray));
     PetscCall(VecScatterBegin(mumps->scat_sol, mumps->x_seq, x, INSERT_VALUES, SCATTER_FORWARD));
     PetscCall(VecScatterEnd(mumps->scat_sol, mumps->x_seq, x, INSERT_VALUES, SCATTER_FORWARD));
@@ -1964,7 +1926,7 @@ static PetscErrorCode MatSolve_MUMPS(Mat A, Vec b, Vec x)
       PetscCall(VecRestoreArray(mumps->b_seq, &array));
     }
   } else {
-    PetscCall(CastMumpsScalarToPetscScalar(x->map->n, mumps->id.precision, mumps->id.rhs, array));
+    PetscCall(CastMumpsScalarArrayToPetscScalarArray(x->map->n, mumps->id.precision, mumps->id.rhs, array));
     PetscCall(VecRestoreArray(x, &array));
   }
 
@@ -2037,20 +1999,20 @@ static PetscErrorCode MatMatSolve_MUMPS(Mat A, Mat B, Mat X)
     PetscBool    second_solve = PETSC_FALSE;
 
     PetscCall(MatDenseGetArray(X, &array));
-    PetscCall(AllocateMumpsScalarIfInDifferentPrecision(nrhsM, array, mumps->id.precision, &mumps->id.rhs));
+    PetscCall(MatMumpsAllocateMumpsScalarArrayIfInDifferentPrecision(nrhsM, array, mumps->id.precision, &mumps->id.rhs));
 
     if (denseB) {
       /* copy B to X */
       PetscCall(MatDenseGetArrayRead(B, &rbray));
       PetscCall(PetscArraycpy(array, rbray, nrhsM));
       PetscCall(MatDenseRestoreArrayRead(B, &rbray));
-      PetscCall(CastPetscScalarToMumpsScalar(nrhsM, array, mumps->id.precision, &mumps->id.rhs));
+      PetscCall(CastPetscScalarArrayToMumpsScalarArray(nrhsM, array, mumps->id.precision, &mumps->id.rhs));
     } else { /* sparse B */
       PetscCall(MatSeqAIJGetArray(Bt, &aa));
       PetscCall(MatGetRowIJ(Bt, 1, PETSC_FALSE, PETSC_FALSE, &spnr, (const PetscInt **)&ia, (const PetscInt **)&ja, &flg));
       PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot get IJ structure");
       PetscCall(PetscMUMPSIntCSRCast(mumps, spnr, ia, ja, &mumps->id.irhs_ptr, &mumps->id.irhs_sparse, &mumps->id.nz_rhs));
-      PetscCall(CastPetscScalarToMumpsScalar(mumps->id.nz_rhs, aa, mumps->id.precision, &mumps->id.rhs_sparse));
+      PetscCall(CastPetscScalarArrayToMumpsScalarArray(mumps->id.nz_rhs, aa, mumps->id.precision, &mumps->id.rhs_sparse));
     }
     /* handle condensation step of Schur complement (if any) */
     if (mumps->id.size_schur > 0) {
@@ -2432,9 +2394,9 @@ static PetscErrorCode MatFactorNumeric_MUMPS(Mat F, Mat A, PETSC_UNUSED const Ma
   /* numerical factorization phase */
   mumps->id.job = JOB_FACTNUMERIC;
   if (!mumps->id.ICNTL(18)) { /* A is centralized */
-    if (!mumps->myid) PetscCall(CastPetscScalarToMumpsScalar(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a));
+    if (!mumps->myid) PetscCall(CastPetscScalarArrayToMumpsScalarArray(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a));
   } else {
-    PetscCall(CastPetscScalarToMumpsScalar(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc));
+    PetscCall(CastPetscScalarArrayToMumpsScalarArray(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc));
   }
   PetscMUMPS_c(mumps);
   if (mumps->id.INFOG(1) < 0) {
@@ -2484,13 +2446,13 @@ static PetscErrorCode MatFactorNumeric_MUMPS(Mat F, Mat A, PETSC_UNUSED const Ma
       PetscCall(VecScatterDestroy(&mumps->scat_sol));
       PetscCall(PetscFree(mumps->id.isol_loc));
       PetscCall(VecDestroy(&mumps->x_seq));
-      PetscCall(FreeMumpsScalarIfInDifferentPrecision(mumps->id.precision, &mumps->id.sol_loc));
+      PetscCall(MatMumpsFreeMumpsScalarArrayIfInDifferentPrecision(mumps->id.precision, &mumps->id.sol_loc));
     }
     lsol_loc = mumps->id.INFO(23); /* length of sol_loc */
     PetscCall(PetscMalloc1(lsol_loc, &mumps->id.isol_loc));
     PetscCall(VecCreateSeq(PETSC_COMM_SELF, lsol_loc, &mumps->x_seq));
     PetscCall(VecGetArray(mumps->x_seq, &array));
-    PetscCall(AllocateMumpsScalarIfInDifferentPrecision(lsol_loc, array, mumps->id.precision, &mumps->id.sol_loc));
+    PetscCall(MatMumpsAllocateMumpsScalarArrayIfInDifferentPrecision(lsol_loc, array, mumps->id.precision, &mumps->id.sol_loc));
     PetscCall(VecRestoreArray(mumps->x_seq, &array));
     mumps->id.lsol_loc = (PetscMUMPSInt)lsol_loc;
   }
@@ -2507,7 +2469,7 @@ static PetscErrorCode MatSetFromOptions_MUMPS(Mat F, Mat A)
   PetscInt      info[80], i, ninfo = 80, rbs, cbs;
   PetscBool     flg   = PETSC_FALSE;
   PetscBool     schur = mumps->id.icntl ? (PetscBool)(mumps->id.ICNTL(26) == -1) : (PetscBool)(mumps->ICNTL26 == -1);
-  MumpsScalar  *arr;
+  void         *arr;
 
   PetscFunctionBegin;
   PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "MUMPS Options", "Mat");
@@ -2573,7 +2535,7 @@ static PetscErrorCode MatSetFromOptions_MUMPS(Mat F, Mat A)
 
     PetscCall(PetscOptionsEnum("-pc_precision", "Precision used by MUMPS", "MATSOLVERMUMPS", KSPHPDDMPrecisionTypes, (PetscEnum)precision, (PetscEnum *)&precision, NULL));
     PetscCheck(precision == KSP_HPDDM_PRECISION_SINGLE || precision == KSP_HPDDM_PRECISION_DOUBLE, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "MUMPS does not support %s precision", KSPHPDDMPrecisionTypes[precision]);
-    PetscCall(AllocateMumpsInternalID(&mumps->id, precision));
+    PetscCall(MatMumpsAllocateInternalID(&mumps->id, precision));
 
     PetscMUMPS_c(mumps);
     PetscCheck(mumps->id.INFOG(1) >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error: INFOG(1)=%d " MUMPS_MANUALS, mumps->id.INFOG(1));
@@ -2628,7 +2590,7 @@ static PetscErrorCode MatSetFromOptions_MUMPS(Mat F, Mat A)
        For example, ICNTL(9) is initialized to 1 by MUMPS and slaves check ICNTL(9) in MatSolve_MUMPS.
      */
     PetscCallMPI(MPI_Bcast(mumps->id.icntl, 40, MPI_INT, 0, mumps->omp_comm));
-    PetscCallMPI(MPI_Bcast(mumps->id.cntl, 15, MPIU_REAL, 0, mumps->omp_comm)); // JC TODO on MPIU_REAL
+    PetscCallMPI(MPI_Bcast(mumps->id.cntl, 15, MPIU_MUMPSREAL(&mumps->id), 0, mumps->omp_comm));
 
     mumps->scat_rhs = NULL;
     mumps->scat_sol = NULL;
@@ -2820,7 +2782,7 @@ static PetscErrorCode MatLUFactorSymbolic_AIJMUMPS(Mat F, Mat A, IS r, PETSC_UNU
       mumps->id.nnz = mumps->nnz;
       mumps->id.irn = mumps->irn;
       mumps->id.jcn = mumps->jcn;
-      if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(CastPetscScalarToMumpsScalar(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a));
+      if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(CastPetscScalarArrayToMumpsScalarArray(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a));
       if (r && mumps->id.ICNTL(7) == 7) {
         mumps->id.ICNTL(7) = 1;
         if (!mumps->myid) {
@@ -2839,7 +2801,7 @@ static PetscErrorCode MatLUFactorSymbolic_AIJMUMPS(Mat F, Mat A, IS r, PETSC_UNU
     mumps->id.nnz_loc = mumps->nnz;
     mumps->id.irn_loc = mumps->irn;
     mumps->id.jcn_loc = mumps->jcn;
-    if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(CastPetscScalarToMumpsScalar(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc));
+    if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(CastPetscScalarArrayToMumpsScalarArray(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc));
     if (mumps->ICNTL20 == 0) { /* Centralized rhs. Create scatter scat_rhs for repeated use in MatSolve() */
       PetscCall(MatCreateVecs(A, NULL, &b));
       PetscCall(VecScatterCreateToZero(b, &mumps->scat_rhs, &mumps->b_seq));
@@ -2889,14 +2851,14 @@ static PetscErrorCode MatLUFactorSymbolic_BAIJMUMPS(Mat F, Mat A, PETSC_UNUSED I
       mumps->id.nnz = mumps->nnz;
       mumps->id.irn = mumps->irn;
       mumps->id.jcn = mumps->jcn;
-      if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(CastPetscScalarToMumpsScalar(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a));
+      if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(CastPetscScalarArrayToMumpsScalarArray(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a));
     }
     break;
   case 3: /* distributed assembled matrix input (size>1) */
     mumps->id.nnz_loc = mumps->nnz;
     mumps->id.irn_loc = mumps->irn;
     mumps->id.jcn_loc = mumps->jcn;
-    if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(CastPetscScalarToMumpsScalar(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc));
+    if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(CastPetscScalarArrayToMumpsScalarArray(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc));
     if (mumps->ICNTL20 == 0) { /* Centralized rhs. Create scatter scat_rhs for repeated use in MatSolve() */
       PetscCall(MatCreateVecs(A, NULL, &b));
       PetscCall(VecScatterCreateToZero(b, &mumps->scat_rhs, &mumps->b_seq));
@@ -2944,14 +2906,14 @@ static PetscErrorCode MatCholeskyFactorSymbolic_MUMPS(Mat F, Mat A, PETSC_UNUSED
       mumps->id.nnz = mumps->nnz;
       mumps->id.irn = mumps->irn;
       mumps->id.jcn = mumps->jcn;
-      if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(CastPetscScalarToMumpsScalar(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a));
+      if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(CastPetscScalarArrayToMumpsScalarArray(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a));
     }
     break;
   case 3: /* distributed assembled matrix input (size>1) */
     mumps->id.nnz_loc = mumps->nnz;
     mumps->id.irn_loc = mumps->irn;
     mumps->id.jcn_loc = mumps->jcn;
-    if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(CastPetscScalarToMumpsScalar(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc));
+    if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(CastPetscScalarArrayToMumpsScalarArray(mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc));
     if (mumps->ICNTL20 == 0) { /* Centralized rhs. Create scatter scat_rhs for repeated use in MatSolve() */
       PetscCall(MatCreateVecs(A, NULL, &b));
       PetscCall(VecScatterCreateToZero(b, &mumps->scat_rhs, &mumps->b_seq));
@@ -3163,7 +3125,7 @@ static PetscErrorCode MatFactorSetSchurIS_MUMPS(Mat F, IS is)
   PetscCall(MatDestroy(&F->schur));
   PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, size, size, NULL, &F->schur));
   PetscCall(MatDenseGetArrayRead(F->schur, &arr));
-  PetscCall(AllocateMumpsScalarIfInDifferentPrecision(size * size, arr, mumps->id.precision, &mumps->id.schur));
+  PetscCall(MatMumpsAllocateMumpsScalarArrayIfInDifferentPrecision(size * size, arr, mumps->id.precision, &mumps->id.schur));
   PetscCall(PetscMUMPSIntCast(size, &mumps->id.size_schur));
   PetscCall(PetscMUMPSIntCast(size, &mumps->id.schur_lld));
   PetscCall(MatDenseRestoreArrayRead(F->schur, &arr));
@@ -3177,7 +3139,7 @@ static PetscErrorCode MatFactorSetSchurIS_MUMPS(Mat F, IS is)
   PetscCall(ISRestoreIndices(is, &idxs));
   /* set a special value of ICNTL (not handled by MUMPS) to be used in the solve phase by PETSc */
   if (mumps->id.icntl) mumps->id.ICNTL(26) = -1;
-  else mumps->ICNTL26 = -1; // inner id not init'ed yet
+  else mumps->ICNTL26 = -1; // if inner id not allocated yet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3201,7 +3163,7 @@ static PetscErrorCode MatFactorCreateSchurComplement_MUMPS(Mat F, Mat *S)
         for (j = 0; j < N; j++) array[j * N + i] = ID_FIELD_GET(mumps->id, schur, i * N + j);
       }
     } else { /* stored by columns */
-      PetscCall(CastMumpsScalarToPetscScalar(N * N, mumps->id.precision, mumps->id.schur, array));
+      PetscCall(CastMumpsScalarArrayToPetscScalarArray(N * N, mumps->id.precision, mumps->id.schur, array));
     }
   } else {                          /* either full or lower-triangular (not packed) */
     if (mumps->id.ICNTL(19) == 2) { /* lower triangular stored by columns */
@@ -3209,7 +3171,7 @@ static PetscErrorCode MatFactorCreateSchurComplement_MUMPS(Mat F, Mat *S)
         for (j = i; j < N; j++) array[i * N + j] = array[j * N + i] = ID_FIELD_GET(mumps->id, schur, i * N + j);
       }
     } else if (mumps->id.ICNTL(19) == 3) { /* full matrix */
-      PetscCall(CastMumpsScalarToPetscScalar(N * N, mumps->id.precision, mumps->id.schur, array));
+      PetscCall(CastMumpsScalarArrayToPetscScalarArray(N * N, mumps->id.precision, mumps->id.schur, array));
     } else { /* ICNTL(19) == 1 lower triangular stored by rows */
       for (i = 0; i < N; i++) {
         for (j = 0; j < i + 1; j++) array[i * N + j] = array[j * N + i] = ID_FIELD_GET(mumps->id, schur, i * N + j);
