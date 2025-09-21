@@ -212,7 +212,7 @@ static inline PetscErrorCode MatMumpsFreeInternalID(XMUMPS_STRUC_C *outer)
 // 1) If the two types are the same, <pa> will be returned in <*ma>, i.e., no conversion and memory allocation will happen.
 // 2) If *ma is not NULL, assume enough memory is given by *ma and the routine casts pa[i] to (*ma)[i] for each entry.
 // 3) If *ma is NULL, the routine will allocate memory with PetscMalloc1() and then do the casting. Caller is responsible for freeing the memory.
-static PetscErrorCode CastPetscScalarArrayToMumpsScalarArray(PetscInt n, const PetscScalar *pa, KSPHPDDMPrecision precision, void **ma)
+static PetscErrorCode CastPetscScalarArrayToMumpsScalarArray(PetscCount n, const PetscScalar *pa, KSPHPDDMPrecision precision, void **ma)
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_COMPLEX)
@@ -250,18 +250,18 @@ static PetscErrorCode CastPetscScalarArrayToMumpsScalarArray(PetscInt n, const P
 //
 // 1) If the two types are different, cast ma[i] to pa[i] for each entry.
 // 2) If the two types are the same, this works as a memory copy, i.e., ma[i] is copied to pa[i] for each entry.
-static PetscErrorCode CastMumpsScalarArrayToPetscScalarArray(PetscInt n, KSPHPDDMPrecision precision, const void *ma, PetscScalar *pa)
+static PetscErrorCode CastMumpsScalarArrayToPetscScalarArray(PetscCount n, KSPHPDDMPrecision precision, const void *ma, PetscScalar *pa)
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_COMPLEX)
   #if defined(PETSC_USE_REAL_SINGLE)             // PetscScalar is single complex
   if (precision == KSP_HPDDM_PRECISION_DOUBLE) { // MumpsScalar is double complex
-    const DMUMPS_REAL *b = (const DMUMPS_REAL *)ma;
+    const ZMUMPS_COMPLEX *b = (const ZMUMPS_COMPLEX *)ma;
   #elif defined(PETSC_USE_REAL_DOUBLE)
   if (precision == KSP_HPDDM_PRECISION_SINGLE) { // MumpsScalar is single complex
-    const SMUMPS_REAL *b = (const SMUMPS_REAL *)ma;
+    const CMUMPS_COMPLEX *b = (const CMUMPS_COMPLEX *)ma;
   #endif
-    for (PetscInt i = 0; i < 2 * n; i++) pa[i] = b[i];
+    for (PetscCount i = 0; i < n; i++) pa[i] = b[i].r + PETSC_i * b[i].i;
   }
 #else
   #if defined(PETSC_USE_REAL_SINGLE)   // PetscScalar is single
@@ -271,7 +271,7 @@ static PetscErrorCode CastMumpsScalarArrayToPetscScalarArray(PetscInt n, KSPHPDD
   if (precision == KSP_HPDDM_PRECISION_SINGLE) { // MumpsScalar is single
     const SMUMPS_REAL *b = (const SMUMPS_REAL *)ma;
   #endif
-    for (PetscInt i = 0; i < n; i++) pa[i] = b[i];
+    for (PetscCount i = 0; i < n; i++) pa[i] = b[i];
   }
 #endif
   else
@@ -281,7 +281,7 @@ static PetscErrorCode CastMumpsScalarArrayToPetscScalarArray(PetscInt n, KSPHPDD
 
 // If type MumpsScalar in the given <precision> is different from PetscScalar, allocate <n> MumpsScalars and returned the address in <*ma>,
 // otherwise, just return the given PetscScalar address <pa>.
-static PetscErrorCode MatMumpsAllocateMumpsScalarArrayIfInDifferentPrecision(PetscInt n, const PetscScalar *pa, KSPHPDDMPrecision precision, void **ma)
+static PetscErrorCode MatMumpsAllocateMumpsScalarArrayIfInDifferentPrecision(PetscCount n, const PetscScalar *pa, KSPHPDDMPrecision precision, void **ma)
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_COMPLEX)
