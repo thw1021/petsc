@@ -2555,7 +2555,7 @@ static PetscErrorCode MatSetFromOptions_MUMPS(Mat F, Mat A)
       mumps->id.nblk      = nblk;
       mumps->id.blkvar    = blkvar;
       mumps->id.blkptr    = blkptr;
-    }
+    } else mumps->id.ICNTL(15) = 0;
 
     /* restore cached ICNTL and CNTL values */
     for (icntl = 0; icntl < nICNTL_pre; ++icntl) mumps->id.ICNTL(mumps->ICNTL_pre[1 + 2 * icntl]) = mumps->ICNTL_pre[2 + 2 * icntl];
@@ -3556,7 +3556,9 @@ static PetscErrorCode MatMumpsSetBlk_MUMPS(Mat F, PetscInt nblk, const PetscInt 
     PetscCall(PetscFree(mumps->id.blkptr));
     PetscCall(PetscMalloc1(nblk + 1, &mumps->id.blkptr));
     for (PetscInt i = 0; i < nblk + 1; ++i) PetscCall(PetscMUMPSIntCast(blkptr[i], mumps->id.blkptr + i));
-    mumps->id.ICNTL(15) = 1;
+    // mumps->id.icntl[] might have not been allocated, which is done in MatSetFromOptions_MUMPS(). So we don't assign ICNTL(15).
+    // We use id.nblk and id.blkptr to know what values to set to ICNTL(15) in MatSetFromOptions_MUMPS().
+    // mumps->id.ICNTL(15) = 1;
     if (blkvar) {
       PetscCall(PetscFree(mumps->id.blkvar));
       PetscCall(PetscMalloc1(F->rmap->N, &mumps->id.blkvar));
@@ -3565,7 +3567,8 @@ static PetscErrorCode MatMumpsSetBlk_MUMPS(Mat F, PetscInt nblk, const PetscInt 
   } else {
     PetscCall(PetscFree(mumps->id.blkptr));
     PetscCall(PetscFree(mumps->id.blkvar));
-    mumps->id.ICNTL(15) = 0;
+    // mumps->id.ICNTL(15) = 0;
+    mumps->id.nblk = 0;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
