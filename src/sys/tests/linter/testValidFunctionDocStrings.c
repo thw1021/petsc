@@ -416,7 +416,7 @@ PetscErrorCode testPredeclarationCursorIgnored(int arg, int *another_arg)
 
 .seealso: `testPredeclarationCursorIgnored()`
 */
-PetscErrorCode testFunctionPointerArguments(int (*foo)(int, double, float), int (*bar)(int bar_parm1, double bar_parm2, float bar_parm3), void (*baz)(int (*bop)(void), void (*blitz)(void (*)(void)), int baz_parm1, double baz_parm2, float baz_parm3))
+PetscErrorCode testFunctionPointerArguments(int (*foo)(int, double, float), int (*bar)(int bar_parm1, double bar_parm2, float bar_parm3), void (*baz)(int (*bop)(void), void (*blitz)(PetscErrorCodeFn *), int baz_parm1, double baz_parm2, float baz_parm3))
 {
   return 0;
 }
