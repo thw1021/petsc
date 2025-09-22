@@ -1,4 +1,3 @@
-
 !   Use DMPlexGetClosureIndices to check for shared node DOF
 !   The mesh consists of two tetrehadra, sharing a (triangular) face, hence
 !   the number of shared DOF equals 3 nodes x 3 dof/node = 9
