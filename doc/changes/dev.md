@@ -27,9 +27,11 @@
 ```
 
 - Add `PETSC_E`
-
 - Deprecate `PetscSSEIsEnabled()`
 - Add `PetscBTCopy()`
+- Add `PetscStackView()` to the public API
+- Change the default file pointer used in `PetscStackView()` if `NULL` is used to `PETSC_STDERR`
+- Add `-petsc_viewer_stdout_format formatname` to allow initializing the format of `PETSC_VIEWER_STDOUT_()`
 
 ```{rubric} Event Logging:
 ```
