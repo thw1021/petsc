@@ -7941,9 +7941,12 @@ PetscErrorCode MatGetVariableBlockSizes(Mat mat, PetscInt *nblocks, const PetscI
   Input Parameter:
 + subA  - the submatrix
 . A     - the original matrix
-- isrow - The `IS` of selected rows for the submatrix
+- isrow - The `IS` of selected rows for the submatrix, must be sorted
 
   Level: developer
+
+  Notes:
+  If the index set is not sorted or contains off-process entries, this function will do nothing.
 
 .seealso: [](ch_matrices), `Mat`, `MatSetVariableBlockSizes()`, `MatComputeVariableBlockEnvelope()`
 */
@@ -7951,19 +7954,33 @@ static PetscErrorCode MatSelectVariableBlockSizes(Mat subA, Mat A, IS isrow)
 {
   const PetscInt *rows;
   PetscInt        n, rStart, rEnd, Nb = 0;
+  PetscBool       flg;
 
   PetscFunctionBegin;
-  if (!A->bsizes) PetscFunctionReturn(PETSC_SUCCESS);
+  // The code for block size extraction seems buggy for unsorted IS
+  PetscCall(ISSorted(isrow, &flg));
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &flg, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject)subA)));
+  if (!flg) PetscFunctionReturn(PETSC_SUCCESS);
+
+  // If there isn't a variable block size information set, return
+  flg = A->bsizes ? PETSC_TRUE : PETSC_FALSE;
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &flg, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject)subA)));
+  if (!flg) PetscFunctionReturn(PETSC_SUCCESS);
+
   // The IS contains global row numbers, we cannot preserve blocks if it contains off-process entries
+  flg = PETSC_TRUE;
   PetscCall(MatGetOwnershipRange(A, &rStart, &rEnd));
   PetscCall(ISGetIndices(isrow, &rows));
   PetscCall(ISGetLocalSize(isrow, &n));
   for (PetscInt i = 0; i < n; ++i) {
-    if (rows[i] < rStart || rows[i] >= rEnd) {
-      PetscCall(ISRestoreIndices(isrow, &rows));
-      PetscFunctionReturn(PETSC_SUCCESS);
-    }
+    if (rows[i] < rStart || rows[i] >= rEnd) flg = PETSC_FALSE;
   }
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &flg, 1, MPIU_BOOL, MPI_LAND, PetscObjectComm((PetscObject)subA)));
+  if (flg) {
+    PetscCall(ISRestoreIndices(isrow, &rows));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
   for (PetscInt b = 0, gr = rStart, i = 0; b < A->nblocks; ++b) {
     PetscBool occupied = PETSC_FALSE;
 
