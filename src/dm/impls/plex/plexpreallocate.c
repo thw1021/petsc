@@ -191,7 +191,7 @@ static PetscErrorCode DMPlexComputeAnchorAdjacencies(DM dm, PetscBool useCone, P
 //TODO: Document and lift to be an internal function
 //
 //Also, note this may only give a estimate of the max adjacency size rather than an exact value
-PetscErrorCode DMPlexGetMaxAdjacencySize(DM dm, PetscBool useAnchors, PetscInt *max_adjacency_size)
+static PetscErrorCode DMPlexGetMaxAdjacencySize(DM dm, PetscBool useAnchors, PetscInt *max_adjacency_size)
 {
   PetscInt depth, maxC, maxS, maxP, pStart, pEnd, asiz, maxAnchors = 1;
 
@@ -569,7 +569,7 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
   PetscCall(PetscSectionCreate(comm, &sectionAdj));
   PetscCall(PetscSectionSetChart(sectionAdj, globalOffStart, globalOffEnd));
 
-  PetscInt *found_leaves, num_found_leaves, max_adjacency_size;
+  PetscInt *found_leaves, num_found_leaves, max_adjacency_size = 0;
   PetscCall(DMPlexGetMaxAdjacencySize(dm, useAnchors, &max_adjacency_size));
   PetscCall(PetscMalloc1(max_adjacency_size, &found_leaves));
 
