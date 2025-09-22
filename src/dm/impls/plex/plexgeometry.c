@@ -502,29 +502,96 @@ static PetscErrorCode DMPlexLocatePoint_Simplex_2D_Internal(DM dm, const PetscSc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMPlexClosestPoint_Simplex_2D_Internal(DM dm, const PetscScalar point[], PetscInt c, PetscReal cpoint[])
+static PetscErrorCode DMPlexClosestPoint_Simplex_2D_Internal(DM dm, const PetscScalar point[], PetscInt cell, PetscReal cpoint[])
 {
-  const PetscInt embedDim = 2;
-  PetscReal      x        = PetscRealPart(point[0]);
-  PetscReal      y        = PetscRealPart(point[1]);
-  PetscReal      v0[2], J[4], invJ[4], detJ;
-  PetscReal      xi, eta, r;
+  PetscInt  embedDim;
+  PetscReal a[3] = {0}, b[3] = {0}, c[3] = {0}, p[3] = {0}, ab[3] = {0}, ac[3] = {0}, ap[3] = {0}, bp[3] = {0}, cp[3] = {0};
+  PetscReal d1 = 0, d2 = 0, d3 = 0, d4 = 0, d5 = 0, d6 = 0, d7 = 0, d8 = 0, cross1, cross2, cross3;
 
   PetscFunctionBegin;
-  PetscCall(DMPlexComputeCellGeometryFEM(dm, c, NULL, v0, J, invJ, &detJ));
-  xi  = invJ[0 * embedDim + 0] * (x - v0[0]) + invJ[0 * embedDim + 1] * (y - v0[1]);
-  eta = invJ[1 * embedDim + 0] * (x - v0[0]) + invJ[1 * embedDim + 1] * (y - v0[1]);
+  PetscCall(DMGetCoordinateDim(dm, &embedDim));
+  /* Read coordinates for vertices */
+  {
+    PetscInt           numCoords;
+    PetscBool          isDG;
+    const PetscScalar *array;
+    PetscScalar       *coords = NULL;
 
-  xi  = PetscMax(xi, 0.0);
-  eta = PetscMax(eta, 0.0);
-  if (xi + eta > 2.0) {
-    r = (xi + eta) / 2.0;
-    xi /= r;
-    eta /= r;
+    PetscCall(DMPlexGetCellCoordinates(dm, cell, &isDG, &numCoords, &array, &coords));
+    PetscCheck(numCoords / embedDim == 3, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Closest point location only supported for linear simplices");
+    /* Triangle ABC, point P */
+    for (PetscInt i = 0; i < embedDim; i++) {
+      a[i] = PetscRealPart(coords[0 * embedDim + i]);
+      b[i] = PetscRealPart(coords[1 * embedDim + i]);
+      c[i] = PetscRealPart(coords[2 * embedDim + i]);
+      p[i] = PetscRealPart(point[i]);
+    }
+    PetscCall(DMPlexRestoreCellCoordinates(dm, cell, &isDG, &numCoords, &array, &coords));
   }
-  cpoint[0] = J[0 * embedDim + 0] * xi + J[0 * embedDim + 1] * eta + v0[0];
-  cpoint[1] = J[1 * embedDim + 0] * xi + J[1 * embedDim + 1] * eta + v0[1];
+
+  for (PetscInt i = 0; i < embedDim; i++) {
+    ab[i] = b[i] - a[i];
+    ac[i] = c[i] - a[i];
+    ap[i] = p[i] - a[i];
+  }
+  d1 = DMPlex_DotRealD_Internal(embedDim, ab, ap);
+  d2 = DMPlex_DotRealD_Internal(embedDim, ac, ap);
+  if (d1 <= 0. && d2 <= 0.) {
+    /* closest point is corner 0 (a) */
+    for (PetscInt i = 0; i < embedDim; i++) cpoint[i] = a[i];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  for (PetscInt i = 0; i < embedDim; i++) bp[i] = p[i] - b[i];
+  d3 = DMPlex_DotRealD_Internal(embedDim, ab, bp);
+  d4 = DMPlex_DotRealD_Internal(embedDim, ac, bp);
+  if (d3 >= 0. && d4 <= d3) {
+    /* closest point is corner 1 (b) */
+    for (PetscInt i = 0; i < embedDim; i++) cpoint[i] = b[i];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  for (PetscInt i = 0; i < embedDim; i++) cp[i] = p[i] - c[i];
+  d5 = DMPlex_DotRealD_Internal(embedDim, ab, cp);
+  d6 = DMPlex_DotRealD_Internal(embedDim, ac, cp);
+  if (d5 >= 0. && d5 <= d6) {
+    /* closest point is corner 2 (c) */
+    for (PetscInt i = 0; i < embedDim; i++) cpoint[i] = c[i];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  cross1 = d1 * d4 - d3 * d2;
+  if (cross1 <= 0.0 && d1 >= 0.0 && d3 <= 0.0) {
+    /* closest point is orthogonal projection to AB */
+    PetscReal v = d1 / (d1 - d3);
+
+    for (PetscInt i = 0; i < embedDim; i++) cpoint[i] = a[i] + v * ab[i];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  cross2 = d5 * d2 - d1 * d6;
+  if (cross2 <= 0.0 && d2 >= 0.0 && d6 <= 0.0) {
+    /* closest point is orthogonal projection to AC */
+    PetscReal v = d2 / (d2 - d6);
+
+    for (PetscInt i = 0; i < embedDim; i++) cpoint[i] = a[i] + v * ac[i];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  cross3 = d3 * d6 - d5 * d4;
+  d7     = d4 - d3;
+  d8     = d5 - d6;
+  if (cross3 <= 0.0 && d7 >= 0.0 && d8 >= 0.0) {
+    /* closest point is orthogonal projection to BC */
+    PetscReal v = d7 / (d7 + d8);
+
+    for (PetscInt i = 0; i < embedDim; i++) cpoint[i] = (1 - v) * b[i] + v * c[i];
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  // LCOV_EXCL_START
+  /* Otherwise point is in cell, but that's handled elsewhere for point location */
+  /* Include it here in case someone uses this function somewhere else */
+  PetscReal u = cross2 / (cross1 + cross2 + cross3), v = cross2 / (cross1 + cross2 + cross3);
+  for (PetscInt i = 0; i < embedDim; i++) cpoint[i] = a[i] + u * ab[i] + v * ac[i];
   PetscFunctionReturn(PETSC_SUCCESS);
+  // LCOV_EXCL_STOP
 }
 
 // This is the ray-casting, or even-odd algorithm: https://en.wikipedia.org/wiki/Even%E2%80%93odd_rule
@@ -1607,7 +1674,7 @@ static PetscErrorCode DMLocatePoints_Plex_Hash(DM dm, Vec v, DMPointLocationType
       /* TODO Lay an interface over this so we can switch between Section (dense) and Label (sparse) */
       PetscCall(PetscSectionGetDof(mesh->lbox->cellSection, bin, &numCells));
       PetscCall(PetscSectionGetOffset(mesh->lbox->cellSection, bin, &cellOffset));
-      for (PetscInt c = cellOffset; c < cellOffset + numCells; ++c) {
+      for (PetscInt c = cellOffset; c < cellOffset + numCells; c++) {
         if (PetscUnlikelyDebug(debug)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]    Checking for point in cell %" PetscInt_FMT "\n", rank, boxCells[c]));
         PetscCall(DMPlexLocatePoint_Internal(dm, cdim, point, boxCells[c], &cell));
         if (cell >= 0) {
@@ -1623,12 +1690,12 @@ static PetscErrorCode DMLocatePoints_Plex_Hash(DM dm, Vec v, DMPointLocationType
         PetscReal cpoint[3] = {0, 0, 0}, diff[3], best[3] = {PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL}, dist, distMax = PETSC_MAX_REAL;
         PetscInt  bestc = -1;
 
-        for (PetscInt c = cellOffset; c < cellOffset + numCells; ++c) {
+        for (PetscInt c = cellOffset; c < cellOffset + numCells; c++) {
           PetscCall(DMPlexClosestPoint_Internal(dm, cdim, point, boxCells[c], cpoint));
-          for (PetscInt d = 0; d < cdim; ++d) diff[d] = cpoint[d] - PetscRealPart(point[d]);
+          for (PetscInt d = 0; d < cdim; d++) diff[d] = cpoint[d] - PetscRealPart(point[d]);
           dist = DMPlex_NormD_Internal(cdim, diff);
           if (dist < distMax) {
-            for (PetscInt d = 0; d < cdim; ++d) best[d] = cpoint[d];
+            for (PetscInt d = 0; d < cdim; d++) best[d] = cpoint[d];
             bestc   = boxCells[c];
             distMax = dist;
           }
@@ -1638,7 +1705,7 @@ static PetscErrorCode DMLocatePoints_Plex_Hash(DM dm, Vec v, DMPointLocationType
           cells[p].index = bestc;
           terminatingQueryType[3]++;
           found = PETSC_TRUE;
-          for (PetscInt d = 0; d < cdim; ++d) a[p * bs + d] = best[d];
+          for (PetscInt d = 0; d < cdim; d++) a[p * bs + d] = best[d];
         }
       }
     }
@@ -1811,29 +1878,33 @@ PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, Pets
   /* Check if point is within the cell provided by user, if so save the current cell */
   PetscCall(VecGetArrayRead(v, &a));
   for (PetscInt p = 0; p < numPoints; ++p) {
-    const PetscScalar *point                = &a[p * bs];
-    PetscInt           cell                 = -1;
-    PetscBool          point_outside_domain = PETSC_FALSE;
+    const PetscScalar *point = &a[p * bs];
+    PetscInt           cell  = -1;
 
     /* reset any negative indices to ensure they are checked */
     if (cells[p].index < 0) cells[p].index = DMLOCATEPOINT_UNKNOWN;
 
-    /* check bounding box of domain */
-    for (PetscInt d = 0; d < cdim; d++) {
-      if (PetscRealPart(point[d]) < lmin[d]) {
-        point_outside_domain = PETSC_TRUE;
-        break;
+    /* nearest cell mode must allow points outside of domain */
+    if (ltype != DM_POINTLOCATION_NEAREST) {
+      PetscBool point_outside_domain = PETSC_FALSE;
+
+      /* check bounding box of domain */
+      for (PetscInt d = 0; d < cdim; d++) {
+        if (PetscRealPart(point[d]) < lmin[d]) {
+          point_outside_domain = PETSC_TRUE;
+          break;
+        }
+        if (PetscRealPart(point[d]) > lmax[d]) {
+          point_outside_domain = PETSC_TRUE;
+          break;
+        }
       }
-      if (PetscRealPart(point[d]) > lmax[d]) {
-        point_outside_domain = PETSC_TRUE;
-        break;
+      if (point_outside_domain) {
+        cells[p].rank  = 0;
+        cells[p].index = DMLOCATEPOINT_POINT_NOT_FOUND;
+        terminating_query_type[0]++;
+        continue;
       }
-    }
-    if (point_outside_domain) {
-      cells[p].rank  = 0;
-      cells[p].index = DMLOCATEPOINT_POINT_NOT_FOUND;
-      terminating_query_type[0]++;
-      continue;
     }
 
     /* check initial values in cells[].index - abort early if found */
