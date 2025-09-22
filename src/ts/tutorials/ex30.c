@@ -31,6 +31,7 @@ static char help[] = "Biological network from https://link.springer.com/article/
 
     We use Lagrange elements for C_ij and P.
     Equations are rescaled to obtain a symmetric Jacobian.
+    This code also supports the case where C is a multiple of the identity.
 */
 
 typedef enum _fieldidx {
@@ -47,13 +48,102 @@ typedef enum _constantidx {
   D_ID,
   FIXC_ID,
   SPLIT_ID,
+  SCALAREQ_ID,
+  ESSBC_ID,
   NUM_CONSTANTS
 } ConstantIdx;
 
+typedef enum {
+  ESS_BC_NONE = 0,
+  ESS_BC_ZERO,
+  ESS_BC_ARONSSON,
+  ESS_BC_BL1,
+  ESS_BC_BL2,
+  ESS_BC_CK,
+  NUM_ESS_BC_TYPES
+} EssBCType;
+const char *essential_bc_types[NUM_ESS_BC_TYPES] = {"none", "zero", "aronsson", "bl1", "bl2", "ck"};
+
+typedef enum {
+  FORCING_NONE = 0,
+  FORCING_CONSTANT,
+  FORCING_BL1,
+  FORCING_BL2,
+  FORCING_CK,
+  NUM_FORCING_TYPES
+} ForcingType;
+const char *forcing_types[NUM_FORCING_TYPES] = {"none", "constant", "bl1", "bl2", "ck"};
+
 PetscLogStage SetupStage, SolveStage;
 
+#define NORMVEC2(v)                             (PetscSqr((v)[0]) + PetscSqr((v)[1]))
 #define NORM2C(c00, c01, c11)                   (PetscSqr(c00) + 2 * PetscSqr(c01) + PetscSqr(c11))
 #define NORM2C_3d(c00, c01, c02, c11, c12, c22) (PetscSqr(c00) + 2 * PetscSqr(c01) + 2 * PetscSqr(c02) + PetscSqr(c11) + 2 * PetscSqr(c12) + PetscSqr(c22))
+
+/* a collection of gaussian, Dirac-like, source term S(x) = scale * cos(2*pi*(frequency*t + phase)) * exp(-w*||x - x0||^2) and general f(x) */
+typedef struct {
+  PetscInt    n;
+  PetscReal  *x0;
+  PetscReal  *w;
+  PetscReal  *k;
+  PetscReal  *p;
+  PetscReal  *r;
+  ForcingType forcing_type;
+  PetscErrorCode (*fgeneral)(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx);
+  void *fctx;
+} MultiSourceCtx;
+
+typedef struct {
+  PetscReal x0[3];
+  PetscReal w;
+  PetscReal k;
+  PetscReal p;
+  PetscReal r;
+} SingleSourceCtx;
+
+static PetscErrorCode gaussian(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
+{
+  SingleSourceCtx *s  = (SingleSourceCtx *)ctx;
+  const PetscReal *x0 = s->x0;
+  const PetscReal  w  = s->w;
+  const PetscReal  k  = s->k; /* frequency */
+  const PetscReal  p  = s->p; /* phase */
+  const PetscReal  r  = s->r; /* scale */
+  PetscReal        n  = 0;
+
+  for (PetscInt d = 0; d < dim; ++d) n += (x[d] - x0[d]) * (x[d] - x0[d]);
+  u[0] = r * PetscCosReal(2 * PETSC_PI * (k * time + p)) * PetscExpReal(-w * n);
+  return PETSC_SUCCESS;
+}
+
+static PetscErrorCode source(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
+{
+  MultiSourceCtx *s = (MultiSourceCtx *)ctx;
+  PetscScalar     ut[1];
+
+  u[0] = 0.0;
+  for (PetscInt i = 0; i < s->n; i++) {
+    SingleSourceCtx sctx;
+
+    sctx.x0[0] = s->x0[dim * i];
+    sctx.x0[1] = s->x0[dim * i + 1];
+    sctx.x0[2] = dim > 2 ? s->x0[dim * i + 2] : 0.0;
+    sctx.w     = s->w[i];
+    sctx.k     = s->k[i];
+    sctx.p     = s->p[i];
+    sctx.r     = s->r[i];
+
+    PetscCall(gaussian(dim, time, x, Nf, ut, &sctx));
+
+    u[0] += ut[0];
+  }
+  if (s->forcing_type == FORCING_CONSTANT) u[0] += *(PetscScalar *)s->fctx;
+  else if (s->fgeneral) {
+    (*s->fgeneral)(dim, time, x, Nf, ut, s->fctx);
+    u[0] += ut[0];
+  }
+  return PETSC_SUCCESS;
+}
 
 /* Eigenvalues real 3x3 symmetric matrix https://onlinelibrary.wiley.com/doi/full/10.1002/nme.7153 */
 #if !PetscDefined(USE_COMPLEX)
@@ -130,7 +220,12 @@ static inline PetscReal FIX_C_3d(PetscScalar C00, PetscScalar C01, PetscScalar C
 #if !PetscDefined(USE_COMPLEX)
   PetscReal eigs[3], s = 0.0;
   PetscBool twod = (PetscBool)(C02 == 0 && C12 == 0 && C22 == 0);
-  Eigenvalues_Sym3x3(C00, C01, C02, C11, C12, C22, eigs);
+  if (twod && C00 == C11) {
+    eigs[0] = C00;
+    eigs[1] = C00;
+  } else {
+    Eigenvalues_Sym3x3(C00, C01, C02, C11, C12, C22, eigs);
+  }
   if (twod) eigs[2] = 1.0;
   if (eigs[0] <= 0 || eigs[1] <= 0 || eigs[2] <= 0) s = -PetscMin(eigs[0], PetscMin(eigs[1], eigs[2])) + PETSC_SMALL;
   return s;
@@ -147,21 +242,45 @@ static inline PetscReal FIX_C(PetscScalar C00, PetscScalar C01, PetscScalar C11)
 /* residual for C when tested against basis functions */
 static void C_0(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
-  const PetscReal    alpha    = PetscRealPart(constants[ALPHA_ID]);
-  const PetscReal    gamma    = PetscRealPart(constants[GAMMA_ID]);
-  const PetscReal    eps      = PetscRealPart(constants[EPS_ID]);
-  const PetscBool    split    = (PetscBool)(PetscRealPart(constants[SPLIT_ID]) != 0.0);
-  const PetscScalar *gradp    = split ? a_x + aOff_x[P_FIELD_ID] : u_x + uOff_x[P_FIELD_ID];
-  const PetscScalar  outerp[] = {gradp[0] * gradp[0], gradp[0] * gradp[1], gradp[1] * gradp[1]};
-  const PetscScalar  C00      = split ? a[aOff[C_FIELD_ID]] : u[uOff[C_FIELD_ID]];
-  const PetscScalar  C01      = split ? a[aOff[C_FIELD_ID] + 1] : u[uOff[C_FIELD_ID] + 1];
-  const PetscScalar  C11      = split ? a[aOff[C_FIELD_ID] + 2] : u[uOff[C_FIELD_ID] + 2];
-  const PetscScalar  norm     = NORM2C(C00, C01, C11) + eps;
-  const PetscScalar  nexp     = (gamma - 2.0) / 2.0;
-  const PetscScalar  fnorm    = PetscPowScalar(norm, nexp);
-  const PetscScalar  eqss[]   = {0.5, 1., 0.5}; /* equations rescaling for a symmetric Jacobian */
+  const PetscBool    scaleq = (PetscBool)(PetscRealPart(constants[SCALAREQ_ID]) != 0.0);
+  const PetscReal    alpha  = PetscRealPart(constants[ALPHA_ID]);
+  const PetscReal    gamma  = PetscRealPart(constants[GAMMA_ID]);
+  const PetscReal    eps    = PetscRealPart(constants[EPS_ID]);
+  const PetscBool    split  = (PetscBool)(PetscRealPart(constants[SPLIT_ID]) != 0.0);
+  const PetscScalar *gradp  = split ? a_x + aOff_x[P_FIELD_ID] : u_x + uOff_x[P_FIELD_ID];
+  const PetscScalar  nexp   = (gamma - 2.0) / 2.0;
+  if (scaleq) {
+    const PetscScalar gnorm = PetscSqr(gradp[0]) + PetscSqr(gradp[1]);
+    const PetscScalar C     = split ? a[aOff[C_FIELD_ID]] : u[uOff[C_FIELD_ID]];
+#if 1
+    const PetscScalar norm  = PetscSqr(C) + (u_t ? eps : 0.0);
+    const PetscScalar fnorm = PetscPowScalar(norm, nexp);
 
-  for (PetscInt k = 0; k < 3; k++) f0[k] = eqss[k] * (u_t[uOff[C_FIELD_ID] + k] - outerp[k] + alpha * fnorm * u[uOff[C_FIELD_ID] + k]);
+    if (u_t) {
+      f0[0] = 0.5 * (u_t[uOff[C_FIELD_ID]] - gnorm + alpha * fnorm * u[uOff[C_FIELD_ID]]);
+    } else {
+      f0[0] = - gnorm + alpha * fnorm * u[uOff[C_FIELD_ID]];
+    }
+#else
+    const PetscReal fnorm = PetscPowScalar(PetscAbsScalar(C + (u_t ? eps : 0.0)), gamma - 1.0);
+
+    if (u_t) {
+      f0[0] = 0.5 * (u_t[uOff[C_FIELD_ID]] - gnorm + alpha * fnorm);
+    } else {
+      f0[0] = - gnorm + alpha * fnorm;
+    }
+#endif
+  } else {
+    const PetscScalar outerp[] = {gradp[0] * gradp[0], gradp[0] * gradp[1], gradp[1] * gradp[1]};
+    const PetscScalar C00      = split ? a[aOff[C_FIELD_ID]] : u[uOff[C_FIELD_ID]];
+    const PetscScalar C01      = split ? a[aOff[C_FIELD_ID] + 1] : u[uOff[C_FIELD_ID] + 1];
+    const PetscScalar C11      = split ? a[aOff[C_FIELD_ID] + 2] : u[uOff[C_FIELD_ID] + 2];
+    const PetscScalar norm     = NORM2C(C00, C01, C11) + eps;
+    const PetscScalar fnorm    = PetscPowScalar(norm, nexp);
+    const PetscScalar eqss[]   = {0.5, 1., 0.5}; /* equations rescaling for a symmetric Jacobian */
+
+    for (PetscInt k = 0; k < 3; k++) f0[k] = eqss[k] * ((u_t ? u_t[uOff[C_FIELD_ID] + k] : 0.0) - outerp[k] + alpha * fnorm * u[uOff[C_FIELD_ID] + k]);
+  }
 }
 
 /* 3D version */
@@ -184,31 +303,52 @@ static void C_0_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOf
   const PetscScalar  fnorm    = PetscPowScalar(norm, nexp);
   const PetscScalar  eqss[]   = {0.5, 1., 1., 0.5, 1., 0.5};
 
-  for (PetscInt k = 0; k < 6; k++) f0[k] = eqss[k] * (u_t[uOff[C_FIELD_ID] + k] - outerp[k] + alpha * fnorm * u[uOff[C_FIELD_ID] + k]);
+  for (PetscInt k = 0; k < 6; k++) f0[k] = eqss[k] * ((u_t ? u_t[uOff[C_FIELD_ID] + k] : 0.0) - outerp[k] + alpha * fnorm * u[uOff[C_FIELD_ID] + k]);
 }
 
 /* Jacobian for C against C basis functions */
 static void JC_0_c0c0(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar J[])
 {
+  const PetscBool   scaleq = (PetscBool)(PetscRealPart(constants[SCALAREQ_ID]) != 0.0);
   const PetscReal   alpha  = PetscRealPart(constants[ALPHA_ID]);
   const PetscReal   gamma  = PetscRealPart(constants[GAMMA_ID]);
   const PetscReal   eps    = PetscRealPart(constants[EPS_ID]);
   const PetscBool   split  = (PetscBool)(PetscRealPart(constants[SPLIT_ID]) != 0.0);
-  const PetscScalar C00    = split ? a[aOff[C_FIELD_ID]] : u[uOff[C_FIELD_ID]];
-  const PetscScalar C01    = split ? a[aOff[C_FIELD_ID] + 1] : u[uOff[C_FIELD_ID] + 1];
-  const PetscScalar C11    = split ? a[aOff[C_FIELD_ID] + 2] : u[uOff[C_FIELD_ID] + 2];
-  const PetscScalar norm   = NORM2C(C00, C01, C11) + eps;
   const PetscScalar nexp   = (gamma - 2.0) / 2.0;
-  const PetscScalar fnorm  = PetscPowScalar(norm, nexp);
-  const PetscScalar dfnorm = nexp * PetscPowScalar(norm, nexp - 1.0);
-  const PetscScalar dC[]   = {2 * C00, 4 * C01, 2 * C11};
-  const PetscScalar eqss[] = {0.5, 1., 0.5};
+  if (scaleq) {
+    const PetscScalar C      = split ? a[aOff[C_FIELD_ID]] : u[uOff[C_FIELD_ID]];
+    const PetscScalar norm   = PetscSqr(C) + eps;
+    if (split) {
+      const PetscScalar fnorm  = PetscPowScalar(norm, nexp);
+      J[0] = 0.5 * (u_tShift + alpha * fnorm);
+    } else {
+#if 1
+      const PetscScalar d1 = PetscPowScalar(norm, nexp - 1.0);
 
-  for (PetscInt k = 0; k < 3; k++) {
-    if (!split) {
-      for (PetscInt j = 0; j < 3; j++) J[k * 3 + j] = eqss[k] * (alpha * dfnorm * dC[j] * u[uOff[C_FIELD_ID] + k]);
+      //const PetscScalar fnorm  = PetscPowScalar(norm, nexp);
+      //const PetscScalar dfnorm = nexp * PetscPowScalar(norm, nexp - 1.0);
+      //J[0] = 0.5 * (u_tShift + alpha * fnorm + (split ? 0.0 : 2 * alpha * dfnorm * PetscSqr(C)));
+      J[0] = 0.5 * (u_tShift + alpha * d1 * (eps + (gamma - 1)*PetscSqr(C)));
+#else
+      J[0] = 0.5 * (u_tShift + (gamma - 1) * PetscPowScalar(PetscAbsScalar(C + eps),gamma - 2.0));
+#endif
     }
-    J[k * 3 + k] += eqss[k] * (alpha * fnorm + u_tShift);
+  } else {
+    const PetscScalar C00    = split ? a[aOff[C_FIELD_ID]] : u[uOff[C_FIELD_ID]];
+    const PetscScalar C01    = split ? a[aOff[C_FIELD_ID] + 1] : u[uOff[C_FIELD_ID] + 1];
+    const PetscScalar C11    = split ? a[aOff[C_FIELD_ID] + 2] : u[uOff[C_FIELD_ID] + 2];
+    const PetscScalar norm   = NORM2C(C00, C01, C11) + eps;
+    const PetscScalar fnorm  = PetscPowScalar(norm, nexp);
+    const PetscScalar dfnorm = nexp * PetscPowScalar(norm, nexp - 1.0);
+    const PetscScalar dC[]   = {2 * C00, 4 * C01, 2 * C11};
+    const PetscScalar eqss[] = {0.5, 1., 0.5};
+
+    for (PetscInt k = 0; k < 3; k++) {
+      if (!split) {
+        for (PetscInt j = 0; j < 3; j++) J[k * 3 + j] = eqss[k] * (alpha * dfnorm * dC[j] * u[uOff[C_FIELD_ID] + k]);
+      }
+      J[k * 3 + k] += eqss[k] * (alpha * fnorm + u_tShift);
+    }
   }
 }
 
@@ -243,16 +383,22 @@ static void JC_0_c0c0_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscI
 static void JC_0_c0p1(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar J[])
 {
   const PetscScalar *gradp  = u_x + uOff_x[P_FIELD_ID];
-  const PetscScalar  eqss[] = {0.5, 1., 0.5};
+  const PetscBool    scaleq = (PetscBool)(PetscRealPart(constants[SCALAREQ_ID]) != 0.0);
+  if (scaleq) {
+    J[0] = -gradp[0];
+    J[1] = -gradp[1];
+  } else {
+    const PetscScalar eqss[] = {0.5, 1., 0.5};
 
-  J[0] = -2 * gradp[0] * eqss[0];
-  J[1] = 0.0;
+    J[0] = -2 * gradp[0] * eqss[0];
+    J[1] = 0.0;
 
-  J[2] = -gradp[1] * eqss[1];
-  J[3] = -gradp[0] * eqss[1];
+    J[2] = -gradp[1] * eqss[1];
+    J[3] = -gradp[0] * eqss[1];
 
-  J[4] = 0.0;
-  J[5] = -2 * gradp[1] * eqss[2];
+    J[4] = 0.0;
+    J[5] = -2 * gradp[1] * eqss[2];
+  }
 }
 
 static void JC_0_c0p1_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar J[])
@@ -315,11 +461,21 @@ static void JC_1_c1c1_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscI
     for (PetscInt d = 0; d < 3; d++) J[k * (6 + 1) * 3 * 3 + d * 3 + d] = PetscSqr(D);
 }
 
+/* HACK: To sample some functions we need contexts, but cannot use contexts at this level of granularity; we use static variables */
+void *source_ctx = NULL;
+void *mms_ctx = NULL;
+PetscErrorCode (*mms_func)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *) = NULL;
+PetscErrorCode (*mms_grad)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *) = NULL;
+
 /* residual for P when tested against basis functions.
-   The source term always comes from the auxiliary data because it must be zero mean (algebraically) */
+   without essential bc the source term comes from the auxiliary data because it must be zero mean (algebraically) */
 static void P_0(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
-  PetscScalar S = a[aOff[NUM_FIELDS]];
+  const PetscBool has_ess_bc = (PetscBool)(PetscRealPart(constants[ESSBC_ID]));
+  PetscScalar     S;
+
+  if (has_ess_bc) PetscCallVoid(source(dim, t, x, 1, &S, source_ctx));
+  else S = a[aOff[NUM_FIELDS]];
 
   f0[0] = S;
 }
@@ -328,7 +484,11 @@ static void P_0(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[]
    here we don't impose symmetry, and we thus flip the sign of the source function */
 static void P_0_aux(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
-  PetscScalar S = a[aOff[NUM_FIELDS]];
+  const PetscBool has_ess_bc = (PetscBool)(PetscRealPart(constants[ESSBC_ID]));
+  PetscScalar     S;
+
+  if (has_ess_bc) PetscCallVoid(source(dim, t, x, 1, &S, source_ctx));
+  else S = a[aOff[NUM_FIELDS]];
 
   f0[0] = -S;
 }
@@ -336,17 +496,25 @@ static void P_0_aux(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uO
 /* residual for P when tested against gradients of basis functions */
 static void P_1(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
 {
-  const PetscReal    r     = PetscRealPart(constants[R_ID]);
-  const PetscScalar  C00   = u[uOff[C_FIELD_ID]] + r;
-  const PetscScalar  C01   = u[uOff[C_FIELD_ID] + 1];
-  const PetscScalar  C10   = C01;
-  const PetscScalar  C11   = u[uOff[C_FIELD_ID] + 2] + r;
-  const PetscScalar *gradp = u_x + uOff_x[P_FIELD_ID];
-  const PetscBool    fix_c = (PetscBool)(PetscRealPart(constants[FIXC_ID]) > 1.0);
-  const PetscScalar  s     = fix_c ? FIX_C(C00, C01, C11) : 0.0;
+  const PetscReal    r      = PetscRealPart(constants[R_ID]);
+  const PetscBool    scaleq = (PetscBool)(PetscRealPart(constants[SCALAREQ_ID]) != 0.0);
+  const PetscScalar *gradp  = u_x + uOff_x[P_FIELD_ID];
+  const PetscBool    fix_c  = (PetscBool)(PetscRealPart(constants[FIXC_ID]) > 1.0);
+  if (scaleq) {
+    const PetscScalar C = u[uOff[C_FIELD_ID]] + r;
+    const PetscScalar s = fix_c ? FIX_C(C, 0.0, C) : 0.0;
+    f1[0]               = -(C + s) * gradp[0];
+    f1[1]               = -(C + s) * gradp[1];
+  } else {
+    const PetscScalar C00 = u[uOff[C_FIELD_ID]] + r;
+    const PetscScalar C01 = u[uOff[C_FIELD_ID] + 1];
+    const PetscScalar C10 = C01;
+    const PetscScalar C11 = u[uOff[C_FIELD_ID] + 2] + r;
+    const PetscScalar s   = fix_c ? FIX_C(C00, C01, C11) : 0.0;
 
-  f1[0] = -((C00 + s) * gradp[0] + C01 * gradp[1]);
-  f1[1] = -(C10 * gradp[0] + (C11 + s) * gradp[1]);
+    f1[0] = -((C00 + s) * gradp[0] + C01 * gradp[1]);
+    f1[1] = -(C10 * gradp[0] + (C11 + s) * gradp[1]);
+  }
 }
 
 static void P_1_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
@@ -370,20 +538,28 @@ static void P_1_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOf
   f1[2] = -(C20 * gradp[0] + C21 * gradp[1] + (C22 + s) * gradp[2]);
 }
 
-/* Same as above except that the conductivity values come from the auxiliary vec */
+/* Same as above but applied to the pressure only and the conductivity values come from the auxiliary vec */
 static void P_1_aux(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
 {
-  const PetscReal    r     = PetscRealPart(constants[R_ID]);
-  const PetscScalar  C00   = a[aOff[C_FIELD_ID]] + r;
-  const PetscScalar  C01   = a[aOff[C_FIELD_ID] + 1];
-  const PetscScalar  C10   = C01;
-  const PetscScalar  C11   = a[aOff[C_FIELD_ID] + 2] + r;
-  const PetscScalar *gradp = u_x + uOff_x[Nf > 1 ? P_FIELD_ID : 0];
-  const PetscBool    fix_c = (PetscBool)(PetscRealPart(constants[FIXC_ID]) > 1.0);
-  const PetscScalar  s     = fix_c ? FIX_C(C00, C01, C11) : 0.0;
+  const PetscReal    r      = PetscRealPart(constants[R_ID]);
+  const PetscScalar *gradp  = u_x + uOff_x[Nf > 1 ? P_FIELD_ID : 0];
+  const PetscBool    fix_c  = (PetscBool)(PetscRealPart(constants[FIXC_ID]) > 1.0);
+  const PetscBool    scaleq = (PetscBool)(PetscRealPart(constants[SCALAREQ_ID]) != 0.0);
+  if (scaleq) {
+    const PetscScalar C = a[aOff[C_FIELD_ID]] + r;
+    const PetscScalar s = fix_c ? FIX_C(C, 0.0, C) : 0.0;
+    f1[0]               = (C + s) * gradp[0];
+    f1[1]               = (C + s) * gradp[1];
+  } else {
+    const PetscScalar C00 = a[aOff[C_FIELD_ID]] + r;
+    const PetscScalar C01 = a[aOff[C_FIELD_ID] + 1];
+    const PetscScalar C10 = C01;
+    const PetscScalar C11 = a[aOff[C_FIELD_ID] + 2] + r;
+    const PetscScalar s   = fix_c ? FIX_C(C00, C01, C11) : 0.0;
 
-  f1[0] = (C00 + s) * gradp[0] + C01 * gradp[1];
-  f1[1] = C10 * gradp[0] + (C11 + s) * gradp[1];
+    f1[0] = (C00 + s) * gradp[0] + C01 * gradp[1];
+    f1[1] = C10 * gradp[0] + (C11 + s) * gradp[1];
+  }
 }
 
 static void P_1_aux_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f1[])
@@ -410,18 +586,29 @@ static void P_1_aux_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt
 /* Jacobian for P against gradients of P basis functions */
 static void JP_1_p1p1(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar J[])
 {
-  const PetscReal   r     = PetscRealPart(constants[R_ID]);
-  const PetscScalar C00   = u[uOff[C_FIELD_ID]] + r;
-  const PetscScalar C01   = u[uOff[C_FIELD_ID] + 1];
-  const PetscScalar C10   = C01;
-  const PetscScalar C11   = u[uOff[C_FIELD_ID] + 2] + r;
-  const PetscBool   fix_c = (PetscBool)(PetscRealPart(constants[FIXC_ID]) > 0.0);
-  const PetscScalar s     = fix_c ? FIX_C(C00, C01, C11) : 0.0;
+  const PetscReal r      = PetscRealPart(constants[R_ID]);
+  const PetscBool scaleq = (PetscBool)(PetscRealPart(constants[SCALAREQ_ID]) != 0.0);
+  const PetscBool fix_c  = (PetscBool)(PetscRealPart(constants[FIXC_ID]) > 0.0);
+  if (scaleq) {
+    const PetscScalar C = u[uOff[C_FIELD_ID]] + r;
+    const PetscScalar s = fix_c ? FIX_C(C, 0.0, C) : 0.0;
 
-  J[0] = -(C00 + s);
-  J[1] = -C01;
-  J[2] = -C10;
-  J[3] = -(C11 + s);
+    J[0] = -(C + s);
+    J[1] = 0;
+    J[2] = 0;
+    J[3] = -(C + s);
+  } else {
+    const PetscScalar C00 = u[uOff[C_FIELD_ID]] + r;
+    const PetscScalar C01 = u[uOff[C_FIELD_ID] + 1];
+    const PetscScalar C10 = C01;
+    const PetscScalar C11 = u[uOff[C_FIELD_ID] + 2] + r;
+    const PetscScalar s   = fix_c ? FIX_C(C00, C01, C11) : 0.0;
+
+    J[0] = -(C00 + s);
+    J[1] = -C01;
+    J[2] = -C10;
+    J[3] = -(C11 + s);
+  }
 }
 
 static void JP_1_p1p1_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar J[])
@@ -452,18 +639,29 @@ static void JP_1_p1p1_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscI
 
 static void JP_1_p1p1_aux(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar J[])
 {
-  const PetscReal   r     = PetscRealPart(constants[R_ID]);
-  const PetscScalar C00   = a[aOff[C_FIELD_ID]] + r;
-  const PetscScalar C01   = a[aOff[C_FIELD_ID] + 1];
-  const PetscScalar C10   = C01;
-  const PetscScalar C11   = a[aOff[C_FIELD_ID] + 2] + r;
-  const PetscBool   fix_c = (PetscBool)(PetscRealPart(constants[FIXC_ID]) > 0.0);
-  const PetscScalar s     = fix_c ? FIX_C(C00, C01, C11) : 0.0;
+  const PetscReal r      = PetscRealPart(constants[R_ID]);
+  const PetscBool scaleq = (PetscBool)(PetscRealPart(constants[SCALAREQ_ID]) != 0.0);
+  const PetscBool fix_c  = (PetscBool)(PetscRealPart(constants[FIXC_ID]) > 0.0);
+  if (scaleq) {
+    const PetscScalar C = a[aOff[C_FIELD_ID]] + r;
+    const PetscScalar s = fix_c ? FIX_C(C, 0.0, C) : 0.0;
 
-  J[0] = C00 + s;
-  J[1] = C01;
-  J[2] = C10;
-  J[3] = C11 + s;
+    J[0] = C + s;
+    J[1] = 0;
+    J[2] = 0;
+    J[3] = C + s;
+  } else {
+    const PetscScalar C00 = a[aOff[C_FIELD_ID]] + r;
+    const PetscScalar C01 = a[aOff[C_FIELD_ID] + 1];
+    const PetscScalar C10 = C01;
+    const PetscScalar C11 = a[aOff[C_FIELD_ID] + 2] + r;
+    const PetscScalar s   = fix_c ? FIX_C(C00, C01, C11) : 0.0;
+
+    J[0] = C00 + s;
+    J[1] = C01;
+    J[2] = C10;
+    J[3] = C11 + s;
+  }
 }
 
 static void JP_1_p1p1_aux_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar J[])
@@ -495,16 +693,21 @@ static void JP_1_p1p1_aux_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const Pe
 /* Jacobian for P against gradients of P basis functions and C basis functions */
 static void JP_1_p1c0(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar J[])
 {
-  const PetscScalar *gradp = u_x + uOff_x[P_FIELD_ID];
+  const PetscScalar *gradp  = u_x + uOff_x[P_FIELD_ID];
+  const PetscBool    scaleq = (PetscBool)(PetscRealPart(constants[SCALAREQ_ID]) != 0.0);
+  if (scaleq) {
+    J[0] = -gradp[0];
+    J[1] = -gradp[1];
+  } else {
+    J[0] = -gradp[0];
+    J[1] = 0;
 
-  J[0] = -gradp[0];
-  J[1] = 0;
+    J[2] = -gradp[1];
+    J[3] = -gradp[0];
 
-  J[2] = -gradp[1];
-  J[3] = -gradp[0];
-
-  J[4] = 0;
-  J[5] = -gradp[1];
+    J[4] = 0;
+    J[5] = -gradp[1];
+  }
 }
 
 static void JP_1_p1c0_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar J[])
@@ -536,68 +739,33 @@ static void JP_1_p1c0_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscI
   J[17] = -gradp[2];
 }
 
-/* a collection of gaussian, Dirac-like, source term S(x) = scale * cos(2*pi*(frequency*t + phase)) * exp(-w*||x - x0||^2) */
-typedef struct {
-  PetscInt   n;
-  PetscReal *x0;
-  PetscReal *w;
-  PetscReal *k;
-  PetscReal *p;
-  PetscReal *r;
-} MultiSourceCtx;
-
-typedef struct {
-  PetscReal x0[3];
-  PetscReal w;
-  PetscReal k;
-  PetscReal p;
-  PetscReal r;
-} SingleSourceCtx;
-
-static PetscErrorCode gaussian(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
+/* Neumann forcing term */
+static void bd_forcing(PetscInt dim, PetscReal t, const PetscReal x[], const PetscReal n[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
-  SingleSourceCtx *s  = (SingleSourceCtx *)ctx;
-  const PetscReal *x0 = s->x0;
-  const PetscReal  w  = s->w;
-  const PetscReal  k  = s->k; /* frequency */
-  const PetscReal  p  = s->p; /* phase */
-  const PetscReal  r  = s->r; /* scale */
-  PetscReal        n  = 0;
+  if (!mms_grad) PetscCallAbort(PETSC_COMM_SELF,PETSC_ERR_SUP);
+  if (!mms_ctx) PetscCallAbort(PETSC_COMM_SELF,PETSC_ERR_SUP);
+  const PetscReal *constants = (const PetscReal *)ctx;
+  const PetscScalar  gamma   = constants[GAMMA_ID];
+  const PetscScalar  p       = 2 * gamma / (gamma - 1);
 
-  for (PetscInt d = 0; d < dim; ++d) n += (x[d] - x0[d]) * (x[d] - x0[d]);
-  u[0] = r * PetscCosReal(2 * PETSC_PI * (k * time + p)) * PetscExpReal(-w * n);
-  return PETSC_SUCCESS;
+  /* compute \grad u for the exact solution and then compute |\grad u|^(p-2) du/dn */
+  PetscScalar gradu[3];
+  mms_grad(dim, t, x, Nc, gradu, mms_ctx);
+  PetscScalar ngradu = PetscPowScalar(PetscSqr(gradu[0]) + PetscSqr(gradu[1]), (p - 2.0) / 2.0);
+  u[0] = gradu[0] * ngradu * n[0] + gradu[1] * ngradu * n[1];
 }
 
-static PetscErrorCode source(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx)
+void bd_P0(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
 {
-  MultiSourceCtx *s = (MultiSourceCtx *)ctx;
-
-  u[0] = 0.0;
-  for (PetscInt i = 0; i < s->n; i++) {
-    SingleSourceCtx sctx;
-    PetscScalar     ut[1];
-
-    sctx.x0[0] = s->x0[dim * i];
-    sctx.x0[1] = s->x0[dim * i + 1];
-    sctx.x0[2] = dim > 2 ? s->x0[dim * i + 2] : 0.0;
-    sctx.w     = s->w[i];
-    sctx.k     = s->k[i];
-    sctx.p     = s->p[i];
-    sctx.r     = s->r[i];
-
-    PetscCall(gaussian(dim, time, x, Nf, ut, &sctx));
-
-    u[0] += ut[0];
-  }
-  return PETSC_SUCCESS;
+  bd_forcing(dim, t, x, n, 1, f0, (void *)constants);
 }
 
 /* functionals to be integrated: average -> \int_\Omega u dx */
 static void average(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar obj[])
 {
   const PetscInt fid = (PetscInt)PetscRealPart(constants[numConstants]);
-  obj[0]             = u[uOff[fid]];
+
+  obj[0] = u[uOff[fid]];
 }
 
 /* functionals to be integrated: volume -> \int_\Omega dx */
@@ -609,30 +777,40 @@ static void volume(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOf
 /* functionals to be integrated: energy -> D^2/2 * ||\nabla C||^2 + c^2\nabla p * (r + C) * \nabla p + \alpha/ \gamma * ||C||^\gamma */
 static void energy(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar obj[])
 {
-  const PetscReal D     = PetscRealPart(constants[D_ID]);
-  const PetscReal r     = PetscRealPart(constants[R_ID]);
-  const PetscReal alpha = PetscRealPart(constants[ALPHA_ID]);
-  const PetscReal gamma = PetscRealPart(constants[GAMMA_ID]);
-  const PetscReal eps   = PetscRealPart(constants[EPS_ID]);
+  const PetscReal    D      = PetscRealPart(constants[D_ID]);
+  const PetscReal    r      = PetscRealPart(constants[R_ID]);
+  const PetscReal    alpha  = PetscRealPart(constants[ALPHA_ID]);
+  const PetscReal    gamma  = PetscRealPart(constants[GAMMA_ID]);
+  const PetscReal    eps    = PetscRealPart(constants[EPS_ID]);
+  const PetscBool    scaleq = (PetscBool)(PetscRealPart(constants[SCALAREQ_ID]) != 0.0);
+  const PetscScalar *gradp  = u_x + uOff_x[P_FIELD_ID];
+  const PetscScalar  nexp   = gamma / 2.0;
 
   if (dim == 2) {
-    const PetscScalar  C00       = u[uOff[C_FIELD_ID]];
-    const PetscScalar  C01       = u[uOff[C_FIELD_ID] + 1];
-    const PetscScalar  C10       = C01;
-    const PetscScalar  C11       = u[uOff[C_FIELD_ID] + 2];
-    const PetscScalar *gradp     = u_x + uOff_x[P_FIELD_ID];
-    const PetscScalar *gradC00   = u_x + uOff_x[C_FIELD_ID];
-    const PetscScalar *gradC01   = u_x + uOff_x[C_FIELD_ID] + 2;
-    const PetscScalar *gradC11   = u_x + uOff_x[C_FIELD_ID] + 4;
-    const PetscScalar  normC     = NORM2C(C00, C01, C11) + eps;
-    const PetscScalar  normgradC = NORM2C(gradC00[0], gradC01[0], gradC11[0]) + NORM2C(gradC00[1], gradC01[1], gradC11[1]);
-    const PetscScalar  nexp      = gamma / 2.0;
+    if (scaleq) {
+      const PetscScalar C     = u[uOff[C_FIELD_ID]];
+      const PetscScalar normC = PetscSqr(C) + eps;
 
-    const PetscScalar t0 = PetscSqr(D) / 2.0 * normgradC;
-    const PetscScalar t1 = gradp[0] * ((C00 + r) * gradp[0] + C01 * gradp[1]) + gradp[1] * (C10 * gradp[0] + (C11 + r) * gradp[1]);
-    const PetscScalar t2 = alpha / gamma * PetscPowScalar(normC, nexp);
+      const PetscScalar t1 = (C + r) * (PetscSqr(gradp[0]) + PetscSqr(gradp[1]));
+      const PetscScalar t2 = alpha / gamma * PetscPowScalar(normC, nexp);
+      obj[0]               = t1 + t2;
+    } else {
+      const PetscScalar  C00       = u[uOff[C_FIELD_ID]];
+      const PetscScalar  C01       = u[uOff[C_FIELD_ID] + 1];
+      const PetscScalar  C10       = C01;
+      const PetscScalar  C11       = u[uOff[C_FIELD_ID] + 2];
+      const PetscScalar *gradC00   = u_x + uOff_x[C_FIELD_ID];
+      const PetscScalar *gradC01   = u_x + uOff_x[C_FIELD_ID] + 2;
+      const PetscScalar *gradC11   = u_x + uOff_x[C_FIELD_ID] + 4;
+      const PetscScalar  normC     = NORM2C(C00, C01, C11) + eps;
+      const PetscScalar  normgradC = NORM2C(gradC00[0], gradC01[0], gradC11[0]) + NORM2C(gradC00[1], gradC01[1], gradC11[1]);
 
-    obj[0] = t0 + t1 + t2;
+      const PetscScalar t0 = PetscSqr(D) / 2.0 * normgradC;
+      const PetscScalar t1 = gradp[0] * ((C00 + r) * gradp[0] + C01 * gradp[1]) + gradp[1] * (C10 * gradp[0] + (C11 + r) * gradp[1]);
+      const PetscScalar t2 = alpha / gamma * PetscPowScalar(normC, nexp);
+
+      obj[0] = t0 + t1 + t2;
+    }
   } else {
     const PetscScalar  C00     = u[uOff[C_FIELD_ID]];
     const PetscScalar  C01     = u[uOff[C_FIELD_ID] + 1];
@@ -643,7 +821,6 @@ static void energy(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOf
     const PetscScalar  C20     = C02;
     const PetscScalar  C21     = C12;
     const PetscScalar  C22     = u[uOff[C_FIELD_ID] + 5];
-    const PetscScalar *gradp   = u_x + uOff_x[P_FIELD_ID];
     const PetscScalar *gradC00 = u_x + uOff_x[C_FIELD_ID];
     const PetscScalar *gradC01 = u_x + uOff_x[C_FIELD_ID] + 3;
     const PetscScalar *gradC02 = u_x + uOff_x[C_FIELD_ID] + 6;
@@ -652,7 +829,6 @@ static void energy(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOf
     const PetscScalar *gradC22 = u_x + uOff_x[C_FIELD_ID] + 15;
     const PetscScalar  normC   = NORM2C_3d(C00, C01, C02, C11, C12, C22) + eps;
     const PetscScalar normgradC = NORM2C_3d(gradC00[0], gradC01[0], gradC02[0], gradC11[0], gradC12[0], gradC22[0]) + NORM2C_3d(gradC00[1], gradC01[1], gradC02[1], gradC11[1], gradC12[1], gradC22[1]) + NORM2C_3d(gradC00[2], gradC01[2], gradC02[2], gradC11[2], gradC12[2], gradC22[2]);
-    const PetscScalar nexp = gamma / 2.0;
 
     const PetscScalar t0 = PetscSqr(D) / 2.0 * normgradC;
     const PetscScalar t1 = gradp[0] * ((C00 + r) * gradp[0] + C01 * gradp[1] + C02 * gradp[2]) + gradp[1] * (C10 * gradp[0] + (C11 + r) * gradp[1] + C12 * gradp[2]) + gradp[2] * (C20 * gradp[0] + C21 * gradp[1] + (C22 + r) * gradp[2]);
@@ -662,18 +838,40 @@ static void energy(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOf
   }
 }
 
+/* functionals to be integrated: p-Laplacian energy ->  |grap p|^p - f p */
+static void plap_energy(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar obj[])
+{
+  const PetscScalar *gradu  = u_x + uOff_x[P_FIELD_ID];
+  const PetscScalar  gamma  = constants[GAMMA_ID];
+  const PetscScalar  p      = 2 * gamma / (gamma - 1);
+
+  PetscScalar f[1];
+  P_0(dim, Nf, NfAux, uOff, uOff_x, u, u_t, u_x, aOff, aOff_x, a, a_t, a_x, t, x, numConstants, constants, f);
+  PetscScalar normup = PetscPowScalar(PetscSqrtScalar(PetscSqr(gradu[0]) + PetscSqr(gradu[1])),p);
+  PetscScalar pfu    = p * u[uOff[P_FIELD_ID]] * f[0];
+
+  obj[0] = normup - pfu;
+}
+
 /* functionals to be integrated: ellipticity_fail_private -> see below */
 static void ellipticity_fail_private(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar obj[], PetscBool add_reg)
 {
 #if !PetscDefined(USE_COMPLEX)
   PetscReal       eigs[3];
   PetscScalar     C00, C01, C02 = 0.0, C11, C12 = 0.0, C22 = 0.0;
-  const PetscReal r = add_reg ? PetscRealPart(constants[R_ID]) : 0.0;
+  const PetscReal r      = add_reg ? PetscRealPart(constants[R_ID]) : 0.0;
+  const PetscBool scaleq = (PetscBool)(PetscRealPart(constants[SCALAREQ_ID]) != 0.0);
 
   if (dim == 2) {
-    C00 = u[uOff[C_FIELD_ID]] + r;
-    C01 = u[uOff[C_FIELD_ID] + 1];
-    C11 = u[uOff[C_FIELD_ID] + 2] + r;
+    if (scaleq) {
+      C00 = u[uOff[C_FIELD_ID]] + r;
+      C01 = 0.0;
+      C11 = C00;
+    } else {
+      C00 = u[uOff[C_FIELD_ID]] + r;
+      C01 = u[uOff[C_FIELD_ID] + 1];
+      C11 = u[uOff[C_FIELD_ID] + 2] + r;
+    }
   } else {
     C00 = u[uOff[C_FIELD_ID]] + r;
     C01 = u[uOff[C_FIELD_ID] + 1];
@@ -703,13 +901,75 @@ static void jacobian_fail(PetscInt dim, PetscInt Nf, PetscInt NfAux, const Petsc
   ellipticity_fail_private(dim, Nf, NfAux, uOff, uOff_x, u, u_t, u_x, aOff, aOff_x, a, a_t, a_x, t, x, numConstants, constants, obj, PETSC_TRUE);
 }
 
+/* functionals to be integrated: ||dC/dt||^2 */
+static void norm_dcdt(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar obj[])
+{
+  PetscScalar out[6] = {0};
+  if (dim == 2) C_0(dim, Nf, NfAux, uOff, uOff_x, u, NULL, u_x, aOff, aOff_x, a, a_t, a_x, t, x, numConstants, constants, out);
+  else C_0_3d(dim, Nf, NfAux, uOff, uOff_x, u, NULL, u_x, aOff, aOff_x, a, a_t, a_x, t, x, numConstants, constants, out);
+  obj[0] = PetscSqr(out[0]) + PetscSqr(out[1]) + PetscSqr(out[2]) + PetscSqr(out[3]) + PetscSqr(out[4]) + PetscSqr(out[5]);
+}
+
+/* functionals to be integrated: L^p norm error (problem fields as auxiliary data) */
+static void lp_norm(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar obj[])
+{
+  const PetscScalar gamma = constants[GAMMA_ID];
+  const PetscScalar p     = 2 * gamma / (gamma - 1);
+
+  PetscScalar ue, ud;
+  if (mms_func) mms_func(dim, t, x, 1, &ue, mms_ctx);
+  else ue = u[uOff[0]];
+
+  ud     = PetscAbsScalar(ue - a[aOff[P_FIELD_ID]]);
+  obj[0] = PetscPowScalar(ud, p);
+}
+
+/* functionals to be integrated: W^1,p semi-norm error (problem fields as auxiliary data) */
+static void w1p_seminorm(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar obj[])
+{
+  const PetscScalar  gamma   = constants[GAMMA_ID];
+  const PetscScalar  p       = 2 * gamma / (gamma - 1);
+  const PetscScalar *gradu_h = a_x + aOff_x[P_FIELD_ID];
+
+  PetscScalar gradd[3], gradu[3];
+  if (mms_grad) mms_grad(dim, t, x, 1, gradu, mms_ctx);
+  else
+    for (PetscInt d = 0; d < dim; d++) gradu[d] = u_x[uOff_x[0] + d];
+  for (PetscInt d = 0; d < dim; d++) gradd[d] = gradu[d] - gradu_h[d];
+
+  obj[0] = PetscPowScalar(PetscSqrtScalar(NORMVEC2(gradd)), p);
+}
+
+/* functionals to be integrated: quasi-norm for p-Laplacian estimates (|grad u| + |grad(u - u_h)|)^(p-2) |grad(u - u_h)|^2, problem fields as auxiliary data */
+static void ebmeyer_liu_quasi_norm(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar obj[])
+{
+  const PetscScalar  gamma   = constants[GAMMA_ID];
+  const PetscScalar  p       = 2 * gamma / (gamma - 1);
+  const PetscScalar *gradu_h = a_x + aOff_x[P_FIELD_ID]; /* numerical solution comes from auxiliary vec */
+
+  PetscScalar gradd[3], gradu[3];
+  if (mms_grad) mms_grad(dim, t, x, 1, gradu, mms_ctx);
+  else
+    for (PetscInt d = 0; d < dim; d++) gradu[d] = u_x[uOff_x[0] + d];
+  for (PetscInt d = 0; d < dim; d++) gradd[d] = gradu[d] - gradu_h[d];
+
+  const PetscScalar n1 = NORMVEC2(gradu);
+  const PetscScalar n2 = NORMVEC2(gradd);
+
+  obj[0] = PetscPowScalar(PetscSqrtScalar(n1) + PetscSqrtScalar(n2), p - 2) * n2;
+}
+
 /* initial conditions for C: eq. 16 */
 static PetscErrorCode initial_conditions_C_0(PetscInt dim, PetscReal time, const PetscReal xx[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
   if (dim == 2) {
-    u[0] = 1;
-    u[1] = 0;
-    u[2] = 1;
+    if (Nc == 1) { /* scalar equations */
+      u[0] = 1;
+    } else {
+      u[0] = 1;
+      u[1] = 0;
+      u[2] = 1;
+    }
   } else {
     u[0] = 1;
     u[1] = 0;
@@ -728,15 +988,23 @@ static PetscErrorCode initial_conditions_C_1(PetscInt dim, PetscReal time, const
   const PetscReal y = xx[1];
 
   if (dim == 3) return PETSC_ERR_SUP;
-  u[0] = (2 - PetscAbsReal(x + y)) * PetscExpReal(-10 * PetscAbsReal(x - y));
-  u[1] = 0;
-  u[2] = (2 - PetscAbsReal(x + y)) * PetscExpReal(-10 * PetscAbsReal(x - y));
+  if (Nc == 1) { /* scalar equations */
+    u[0] = (2 - PetscAbsReal(x + y)) * PetscExpReal(-10 * PetscAbsReal(x - y));
+  } else {
+    u[0] = (2 - PetscAbsReal(x + y)) * PetscExpReal(-10 * PetscAbsReal(x - y));
+    u[1] = 0;
+    u[2] = (2 - PetscAbsReal(x + y)) * PetscExpReal(-10 * PetscAbsReal(x - y));
+  }
   return PETSC_SUCCESS;
 }
 
 /* initial conditions for C: eq. 18 */
 static PetscErrorCode initial_conditions_C_2(PetscInt dim, PetscReal time, const PetscReal xx[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
+  if (Nc == 1) { /* scalar equations */
+    u[0] = 0;
+    return PETSC_SUCCESS;
+  }
   u[0] = 0;
   u[1] = 0;
   u[2] = 0;
@@ -756,9 +1024,13 @@ static PetscErrorCode initial_conditions_C_random(PetscInt dim, PetscReal time, 
 
   PetscCall(PetscRandomGetValues(r, dim, vals));
   if (dim == 2) {
-    u[0] = vals[0];
-    u[1] = 0;
-    u[2] = vals[1];
+    if (Nc == 1) { /* scalar equations */
+      u[0] = vals[0];
+    } else {
+      u[0] = vals[0];
+      u[1] = 0;
+      u[2] = vals[1];
+    }
   } else {
     u[0] = vals[0];
     u[1] = 0;
@@ -779,17 +1051,25 @@ static void zero(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[
 /* functionals to be sampled: - (C + r) * \grad p */
 static void flux(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[])
 {
-  const PetscReal    r     = PetscRealPart(constants[R_ID]);
-  const PetscScalar *gradp = u_x + uOff_x[P_FIELD_ID];
+  const PetscReal    r      = PetscRealPart(constants[R_ID]);
+  const PetscScalar *gradp  = u_x + uOff_x[P_FIELD_ID];
+  const PetscBool    scaleq = (PetscBool)(PetscRealPart(constants[SCALAREQ_ID]) != 0.0);
 
   if (dim == 2) {
-    const PetscScalar C00 = u[uOff[C_FIELD_ID]] + r;
-    const PetscScalar C01 = u[uOff[C_FIELD_ID] + 1];
-    const PetscScalar C10 = C01;
-    const PetscScalar C11 = u[uOff[C_FIELD_ID] + 2] + r;
+    if (scaleq) {
+      const PetscScalar C = u[uOff[C_FIELD_ID]] + r;
 
-    f[0] = -C00 * gradp[0] - C01 * gradp[1];
-    f[1] = -C10 * gradp[0] - C11 * gradp[1];
+      f[0] = -C * gradp[0];
+      f[1] = -C * gradp[1];
+    } else {
+      const PetscScalar C00 = u[uOff[C_FIELD_ID]] + r;
+      const PetscScalar C01 = u[uOff[C_FIELD_ID] + 1];
+      const PetscScalar C10 = C01;
+      const PetscScalar C11 = u[uOff[C_FIELD_ID] + 2] + r;
+
+      f[0] = -C00 * gradp[0] - C01 * gradp[1];
+      f[1] = -C10 * gradp[0] - C11 * gradp[1];
+    }
   } else {
     const PetscScalar C00 = u[uOff[C_FIELD_ID]] + r;
     const PetscScalar C01 = u[uOff[C_FIELD_ID] + 1];
@@ -810,12 +1090,19 @@ static void flux(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[
 /* functionals to be sampled: ||C|| */
 static void normc(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[])
 {
+  const PetscBool scaleq = (PetscBool)(PetscRealPart(constants[SCALAREQ_ID]) != 0.0);
   if (dim == 2) {
-    const PetscScalar C00 = u[uOff[C_FIELD_ID]];
-    const PetscScalar C01 = u[uOff[C_FIELD_ID] + 1];
-    const PetscScalar C11 = u[uOff[C_FIELD_ID] + 2];
+    if (scaleq) {
+      const PetscScalar C = u[uOff[C_FIELD_ID]];
 
-    f[0] = PetscSqrtReal(PetscRealPart(NORM2C(C00, C01, C11)));
+      f[0] = PetscAbsScalar(C);
+    } else {
+      const PetscScalar C00 = u[uOff[C_FIELD_ID]];
+      const PetscScalar C01 = u[uOff[C_FIELD_ID] + 1];
+      const PetscScalar C11 = u[uOff[C_FIELD_ID] + 2];
+
+      f[0] = PetscSqrtReal(PetscRealPart(NORM2C(C00, C01, C11)));
+    }
   } else {
     const PetscScalar C00 = u[uOff[C_FIELD_ID]];
     const PetscScalar C01 = u[uOff[C_FIELD_ID] + 1];
@@ -831,13 +1118,20 @@ static void normc(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff
 /* functionals to be sampled: eigenvalues of C */
 static void eigsc(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[])
 {
+  const PetscBool scaleq = (PetscBool)(PetscRealPart(constants[SCALAREQ_ID]) != 0.0);
 #if !PetscDefined(USE_COMPLEX)
   PetscReal   eigs[3];
   PetscScalar C00, C01, C02 = 0.0, C11, C12 = 0.0, C22 = 0.0;
   if (dim == 2) {
-    C00 = u[uOff[C_FIELD_ID]];
-    C01 = u[uOff[C_FIELD_ID] + 1];
-    C11 = u[uOff[C_FIELD_ID] + 2];
+    if (scaleq) {
+      C00 = u[uOff[C_FIELD_ID]];
+      C01 = 0.0;
+      C11 = C00;
+    } else {
+      C00 = u[uOff[C_FIELD_ID]];
+      C01 = u[uOff[C_FIELD_ID] + 1];
+      C11 = u[uOff[C_FIELD_ID] + 2];
+    }
   } else {
     C00 = u[uOff[C_FIELD_ID]];
     C01 = u[uOff[C_FIELD_ID] + 1];
@@ -868,18 +1162,173 @@ static PetscErrorCode constantf(PetscInt dim, PetscReal time, const PetscReal xx
   return PETSC_SUCCESS;
 }
 
+/* mms for steady state: aronsson */
+static PetscErrorCode aronsson(PetscInt dim, PetscReal time, const PetscReal xx[], PetscInt Nc, PetscScalar *u, void *ctx)
+{
+  const PetscReal x = xx[0];
+  const PetscReal y = xx[1];
+
+  u[0] = PetscPowReal(PetscAbsReal(x), 4.0 / 3.0) - PetscPowReal(PetscAbsReal(y), 4.0 / 3.0);
+  return PETSC_SUCCESS;
+}
+
+typedef struct {
+  PetscScalar gamma;
+  PetscScalar sigma;
+} BLCtx;
+
+/* see (5.9) in Barrett and Liu */
+static PetscErrorCode barrett_and_liu_1_p(PetscInt dim, PetscReal time, const PetscReal xx[], PetscInt Nc, PetscScalar *u, void *vctx)
+{
+  BLCtx            *ctx   = (BLCtx *)vctx;
+  const PetscReal   x     = xx[0];
+  const PetscReal   y     = xx[1];
+  const PetscScalar gamma = ctx->gamma;
+  const PetscScalar p     = 2 * gamma / (gamma - 1);
+  const PetscScalar pm1   = p - 1.0;
+  const PetscScalar r     = PetscSqrtReal(PetscSqr(x) + PetscSqr(y));
+  const PetscScalar sigma = ctx->sigma;
+  const PetscScalar spp   = sigma + p;
+
+  u[0] = pm1 * PetscPowScalar(1.0 / (sigma + 2.0), 1.0 / pm1) * (1.0 - PetscPowScalar(r, spp / pm1)) / spp;
+  return PETSC_SUCCESS;
+}
+
+static PetscErrorCode barrett_and_liu_1_gradp(PetscInt dim, PetscReal time, const PetscReal xx[], PetscInt Nc, PetscScalar *u, void *vctx)
+{
+  BLCtx            *ctx   = (BLCtx *)vctx;
+  const PetscReal   x     = xx[0];
+  const PetscReal   y     = xx[1];
+  const PetscScalar gamma = ctx->gamma;
+  const PetscScalar p     = 2 * gamma / (gamma - 1);
+  const PetscScalar pm1   = p - 1.0;
+  const PetscScalar r     = PetscSqrtReal(PetscSqr(x) + PetscSqr(y));
+  const PetscScalar sigma = ctx->sigma;
+  const PetscScalar spp   = sigma + p;
+  const PetscScalar beta  = spp / pm1;
+  const PetscScalar drdx  = x / r;
+  const PetscScalar drdy  = y / r;
+
+  u[0] = -pm1 * PetscPowScalar(1.0 / (sigma + 2.0), 1.0 / pm1) * beta * PetscPowScalar(r, beta - 1) / spp * drdx;
+  u[1] = -pm1 * PetscPowScalar(1.0 / (sigma + 2.0), 1.0 / pm1) * beta * PetscPowScalar(r, beta - 1) / spp * drdy;
+  return PETSC_SUCCESS;
+}
+
+static PetscErrorCode barrett_and_liu_1_f(PetscInt dim, PetscReal time, const PetscReal xx[], PetscInt Nc, PetscScalar *u, void *vctx)
+{
+  BLCtx            *ctx   = (BLCtx *)vctx;
+  const PetscReal   x     = xx[0];
+  const PetscReal   y     = xx[1];
+  const PetscScalar r     = PetscSqrtReal(PetscSqr(x) + PetscSqr(y));
+  const PetscScalar sigma = ctx->sigma;
+
+  u[0] = PetscPowScalar(r, sigma);
+  return PETSC_SUCCESS;
+}
+
+/* see (5.11) in Barrett and Liu */
+static PetscErrorCode barrett_and_liu_2_p(PetscInt dim, PetscReal time, const PetscReal xx[], PetscInt Nc, PetscScalar *u, void *vctx)
+{
+  BLCtx            *ctx = (BLCtx *)vctx;
+  const PetscReal   x   = xx[0];
+  const PetscReal   y   = xx[1];
+  const PetscScalar r   = PetscSqrtReal(PetscSqr(x) + PetscSqr(y));
+  const PetscScalar a   = ctx->sigma;
+
+  u[0] = r <= a ? 0 : PetscPowScalar(r - a, 4.0);
+  return PETSC_SUCCESS;
+}
+
+static PetscErrorCode barrett_and_liu_2_gradp(PetscInt dim, PetscReal time, const PetscReal xx[], PetscInt Nc, PetscScalar *u, void *vctx)
+{
+  BLCtx            *ctx  = (BLCtx *)vctx;
+  const PetscReal   x    = xx[0];
+  const PetscReal   y    = xx[1];
+  const PetscScalar r    = PetscSqrtReal(PetscSqr(x) + PetscSqr(y));
+  const PetscScalar a    = ctx->sigma;
+  const PetscScalar drdx = x / r;
+  const PetscScalar drdy = y / r;
+
+  u[0] = r <= a ? 0 : 4.0 * PetscPowScalar(r - a, 3.0) * drdx;
+  u[1] = r <= a ? 0 : 4.0 * PetscPowScalar(r - a, 3.0) * drdy;
+  return PETSC_SUCCESS;
+}
+
+static PetscErrorCode barrett_and_liu_2_f(PetscInt dim, PetscReal time, const PetscReal xx[], PetscInt Nc, PetscScalar *u, void *vctx)
+{
+  BLCtx            *ctx   = (BLCtx *)vctx;
+  const PetscReal   x     = xx[0];
+  const PetscReal   y     = xx[1];
+  const PetscScalar r     = PetscSqrtReal(PetscSqr(x) + PetscSqr(y));
+  const PetscScalar gamma = ctx->gamma;
+  const PetscScalar p     = 2 * gamma / (gamma - 1);
+  const PetscScalar pm1   = p - 1.0;
+  const PetscScalar a     = ctx->sigma;
+
+  u[0] = r <= a ? 0 : PetscPowScalar(4.0, pm1) * PetscPowScalar(r - a, 3.0 * p - 4.0) * (2 + a / r - 3 * p);
+  return PETSC_SUCCESS;
+}
+
+/* formula for general p and scaling from Carstensen and Klose example 3: f(r,phi) = r^a * sin (a*phi), (p=4, a=7/8) */
+static PetscErrorCode carstensen_and_klose_p(PetscInt dim, PetscReal time, const PetscReal xx[], PetscInt Nc, PetscScalar *u, void *vctx)
+{
+  BLCtx            *ctx = (BLCtx *)vctx;
+  const PetscReal   x   = xx[0];
+  const PetscReal   y   = xx[1];
+  const PetscScalar r   = PetscSqrtReal(PetscSqr(x) + PetscSqr(y));
+  const PetscScalar phi = PetscAtan2Real(y, x);
+  const PetscScalar a   = ctx->sigma;
+
+  u[0] = PetscPowScalar(r, a) * PetscSinReal(a * phi);
+  return PETSC_SUCCESS;
+}
+
+static PetscErrorCode carstensen_and_klose_gradp(PetscInt dim, PetscReal time, const PetscReal xx[], PetscInt Nc, PetscScalar *u, void *vctx)
+{
+  BLCtx            *ctx = (BLCtx *)vctx;
+  const PetscReal   x   = xx[0];
+  const PetscReal   y   = xx[1];
+  const PetscScalar r   = PetscSqrtReal(PetscSqr(x) + PetscSqr(y));
+  const PetscScalar phi = PetscAtan2Real(y, x);
+  const PetscScalar a   = ctx->sigma;
+
+  u[0] = a * PetscPowScalar(r, a - 1) * PetscSinReal((a - 1) * phi);
+  u[1] = a * PetscPowScalar(r, a - 1) * PetscCosReal((a - 1) * phi);
+  return PETSC_SUCCESS;
+}
+
+static PetscErrorCode carstensen_and_klose_f(PetscInt dim, PetscReal time, const PetscReal xx[], PetscInt Nc, PetscScalar *u, void *vctx)
+{
+  BLCtx            *ctx   = (BLCtx *)vctx;
+  const PetscReal   x     = xx[0];
+  const PetscReal   y     = xx[1];
+  const PetscScalar r     = PetscSqrtReal(PetscSqr(x) + PetscSqr(y));
+  const PetscScalar phi   = PetscAtan2Real(y, x);
+  const PetscScalar gamma = ctx->gamma;
+  const PetscScalar p     = 2 * gamma / (gamma - 1);
+  const PetscScalar a     = ctx->sigma;
+
+  u[0] = -a * PetscPowScalar(PetscAbsScalar(a), p - 2.0) * (a - 1.0) * (p - 2.0) * PetscPowScalar(r, p * a - a - p) * PetscSinReal(a * phi);
+  return PETSC_SUCCESS;
+}
+
 /* application context: customizable parameters */
 typedef struct {
-  PetscInt              dim;
-  PetscBool             simplex;
-  PetscReal             r;
-  PetscReal             eps;
-  PetscReal             alpha;
-  PetscReal             gamma;
-  PetscReal             D;
-  PetscReal             domain_volume;
-  PetscInt              ic_num;
-  PetscBool             split;
+  PetscInt  dim;
+  PetscBool simplex;
+  PetscReal r;
+  PetscReal eps;
+  PetscReal alpha;
+  PetscReal gamma;
+  PetscReal D;
+  PetscReal domain_volume;
+  PetscInt  ic_num;
+  PetscBool split;
+  PetscBool scalar_eq;
+  EssBCType essential_bc_type;
+  void     *mms_ctx;
+  PetscErrorCode (*mms_func)(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx);
+  PetscErrorCode (*mms_grad)(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx);
   PetscBool             lump;
   PetscBool             amr;
   PetscBool             load;
@@ -906,8 +1355,9 @@ typedef struct {
   SNES snes;
 } AppCtx;
 
-/* process command line options */
 #include <petsc/private/tsimpl.h> /* To access TSMonitorVTKCtx */
+
+/* process command line options */
 static PetscErrorCode ProcessOptions(AppCtx *options)
 {
   char      vtkmonfilename[PETSC_MAX_PATH_LEN];
@@ -924,6 +1374,11 @@ static PetscErrorCode ProcessOptions(AppCtx *options)
   options->D                         = 1.e-2;
   options->ic_num                    = 0;
   options->split                     = PETSC_FALSE;
+  options->scalar_eq                 = PETSC_FALSE;
+  options->essential_bc_type         = ESS_BC_NONE;
+  options->mms_ctx                   = NULL;
+  options->mms_func                  = NULL;
+  options->mms_grad                  = NULL;
   options->lump                      = PETSC_FALSE;
   options->amr                       = PETSC_FALSE;
   options->load                      = PETSC_FALSE;
@@ -952,6 +1407,44 @@ static PetscErrorCode ProcessOptions(AppCtx *options)
   PetscCall(PetscOptionsReal("-eps", "eps", __FILE__, options->eps, &options->eps, NULL));
   PetscCall(PetscOptionsReal("-r", "r", __FILE__, options->r, &options->r, NULL));
   PetscCall(PetscOptionsInt("-ic_num", "ic_num", __FILE__, options->ic_num, &options->ic_num, NULL));
+  PetscCall(PetscOptionsBool("-scalar_eq", "Scalar equation", __FILE__, options->scalar_eq, &options->scalar_eq, NULL));
+  tmp = options->essential_bc_type;
+  PetscCall(PetscOptionsEList("-essential_bc_type", "Type of essential boundary condition", __FILE__, essential_bc_types, NUM_ESS_BC_TYPES, essential_bc_types[tmp], &tmp, NULL));
+  options->essential_bc_type = (EssBCType)tmp;
+  if (options->essential_bc_type == ESS_BC_BL1) {
+    BLCtx *blctx;
+
+    PetscCall(PetscMalloc1(1, &blctx));
+    blctx->gamma = options->gamma;
+    blctx->sigma = 0.0;
+    PetscCall(PetscOptionsScalar("-mms_bl1_sigma", "Barret and Liu MMS sigma", __FILE__, blctx->sigma, &blctx->sigma, NULL));
+    options->mms_ctx  = blctx;
+    options->mms_func = barrett_and_liu_1_p;
+    options->mms_grad = barrett_and_liu_1_gradp;
+  } else if (options->essential_bc_type == ESS_BC_BL2) {
+    BLCtx *blctx;
+
+    PetscCall(PetscMalloc1(1, &blctx));
+    blctx->gamma = options->gamma;
+    blctx->sigma = 0.3;
+    PetscCall(PetscOptionsScalar("-mms_bl2_a", "Barret and Liu MMS a", __FILE__, blctx->sigma, &blctx->sigma, NULL));
+    options->mms_ctx  = blctx;
+    options->mms_func = barrett_and_liu_2_p;
+    options->mms_grad = barrett_and_liu_2_gradp;
+  } else if (options->essential_bc_type == ESS_BC_CK) {
+    BLCtx *blctx;
+
+    PetscCall(PetscMalloc1(1, &blctx));
+    blctx->gamma = options->gamma;
+    blctx->sigma = 7.0 / 8.0;
+    PetscCall(PetscOptionsScalar("-mms_ck_a", "Carstensen and Klose MMS a", __FILE__, blctx->sigma, &blctx->sigma, NULL));
+    options->mms_ctx  = blctx;
+    options->mms_func = carstensen_and_klose_p;
+    options->mms_grad = carstensen_and_klose_gradp;
+  } else if (options->essential_bc_type == ESS_BC_ARONSSON) {
+    options->mms_func = aronsson;
+  }
+
   PetscCall(PetscOptionsBool("-split", "Operator splitting", __FILE__, options->split, &options->split, NULL));
   PetscCall(PetscOptionsBool("-lump", "use mass lumping", __FILE__, options->lump, &options->lump, NULL));
   PetscCall(PetscOptionsInt("-fix_c", "Fix conductivity: shift to always be positive semi-definite or raise domain error", __FILE__, options->fix_c, &options->fix_c, NULL));
@@ -994,9 +1487,45 @@ static PetscErrorCode ProcessOptions(AppCtx *options)
 
   /* source options */
   PetscCall(PetscNew(&options->source_ctx));
-  options->source_ctx->n = 1;
+  source_ctx = options->source_ctx;
+  tmp        = FORCING_NONE;
+  PetscCall(PetscOptionsEList("-forcing_type", "Type of additional forcing", __FILE__, forcing_types, NUM_FORCING_TYPES, forcing_types[tmp], &tmp, NULL));
+  options->source_ctx->forcing_type = (ForcingType)tmp;
+  if (options->source_ctx->forcing_type == FORCING_CONSTANT) {
+    PetscScalar *forcing_constant_value;
 
-  PetscCall(PetscOptionsInt("-source_num", "number of sources", __FILE__, options->source_ctx->n, &options->source_ctx->n, NULL));
+    PetscCall(PetscMalloc1(1, &forcing_constant_value));
+    *forcing_constant_value = 1.0;
+    PetscCall(PetscOptionsReal("-forcing_constant_value", "Value for constant forcing", __FILE__, *forcing_constant_value, forcing_constant_value, NULL));
+    options->source_ctx->fctx = forcing_constant_value;
+  } else if (options->source_ctx->forcing_type == FORCING_BL1) {
+    BLCtx *blctx;
+
+    PetscCheck(options->essential_bc_type == ESS_BC_BL1, PETSC_COMM_WORLD, PETSC_ERR_USER, "Use -essential_bc_type bl1");
+    PetscCall(PetscMalloc1(1, &blctx));
+    PetscCall(PetscMemcpy(blctx, options->mms_ctx, sizeof(*blctx)));
+    options->source_ctx->fctx     = blctx;
+    options->source_ctx->fgeneral = barrett_and_liu_1_f;
+  } else if (options->source_ctx->forcing_type == FORCING_BL2) {
+    BLCtx *blctx;
+
+    PetscCheck(options->essential_bc_type == ESS_BC_BL2, PETSC_COMM_WORLD, PETSC_ERR_USER, "Use -essential_bc_type bl2");
+    PetscCall(PetscMalloc1(1, &blctx));
+    PetscCall(PetscMemcpy(blctx, options->mms_ctx, sizeof(*blctx)));
+    options->source_ctx->fctx     = blctx;
+    options->source_ctx->fgeneral = barrett_and_liu_2_f;
+  } else if (options->source_ctx->forcing_type == FORCING_CK) {
+    BLCtx *blctx;
+
+    PetscCheck(options->essential_bc_type == ESS_BC_CK, PETSC_COMM_WORLD, PETSC_ERR_USER, "Use -essential_bc_type ck");
+    PetscCall(PetscMalloc1(1, &blctx));
+    PetscCall(PetscMemcpy(blctx, options->mms_ctx, sizeof(*blctx)));
+    options->source_ctx->fctx     = blctx;
+    options->source_ctx->fgeneral = carstensen_and_klose_f;
+  }
+
+  options->source_ctx->n = options->source_ctx->forcing_type == FORCING_NONE ? 1 : 0;
+  PetscCall(PetscOptionsInt("-source_num", "number of Gaussian sources", __FILE__, options->source_ctx->n, &options->source_ctx->n, NULL));
   tmp = options->source_ctx->n;
   PetscCall(PetscMalloc5(options->dim * tmp, &options->source_ctx->x0, tmp, &options->source_ctx->w, tmp, &options->source_ctx->k, tmp, &options->source_ctx->p, tmp, &options->source_ctx->r));
   for (PetscInt i = 0; i < options->source_ctx->n; i++) {
@@ -1271,6 +1800,69 @@ static PetscErrorCode LoadFromFile(MPI_Comm comm, const char *filename, DM *odm)
 #endif
 }
 
+static PetscErrorCode DMGetLabelISAll(DM dm, DMLabel label, IS *is)
+{
+  IS lis, liscomm;
+
+  PetscFunctionBeginUser;
+  PetscCall(DMLabelGetValueIS(label, &lis));
+  PetscCall(ISOnComm(lis, PetscObjectComm((PetscObject)dm), PETSC_COPY_VALUES, &liscomm));
+  PetscCall(ISAllGather(liscomm, is));
+  PetscCall(ISSortRemoveDups(*is));
+  PetscCall(ISDestroy(&liscomm));
+  PetscCall(ISDestroy(&lis));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode AddEssentialBoundary(DM dm, PetscInt field_id, AppCtx *ctx)
+{
+  PetscInt id = 1;
+  DMLabel  label, dirlabel, neulabel;
+  PetscErrorCode (*funcs_bc[NUM_ESS_BC_TYPES])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *) = {NULL, zerof, aronsson, barrett_and_liu_1_p, barrett_and_liu_2_p, carstensen_and_klose_p};
+
+  PetscFunctionBeginUser;
+  if (ctx->essential_bc_type == ESS_BC_NONE) PetscFunctionReturn(PETSC_SUCCESS);
+
+  PetscCall(DMGetLabel(dm, "dirichlet", &dirlabel));
+  PetscCall(DMGetLabel(dm, "neumann", &neulabel));
+  if (dirlabel && neulabel && ctx->mms_grad) { /* Mixed BC */
+    PetscDS ds;
+    PetscInt bd;
+    PetscWeakForm wf;
+    IS lvalues;
+    PetscInt nl;
+    const PetscInt *lidxs;
+
+    PetscCall(DMGetLabelISAll(dm, dirlabel, &lvalues));
+    PetscCall(ISGetLocalSize(lvalues, &nl));
+    PetscCheck(nl == 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Only 1 label value! Found %" PetscInt_FMT, nl);
+    PetscCall(ISGetIndices(lvalues, &lidxs));
+    PetscCall(DMAddBoundary(dm, DM_BC_ESSENTIAL, "dirichlet", dirlabel, nl, lidxs, field_id, 0, NULL, (void (*)(void))funcs_bc[ctx->essential_bc_type], NULL, ctx->mms_ctx, NULL));
+    PetscCall(ISRestoreIndices(lvalues, &lidxs));
+    PetscCall(ISDestroy(&lvalues));
+
+    PetscCall(DMGetLabelISAll(dm, neulabel, &lvalues));
+    PetscCall(ISGetLocalSize(lvalues, &nl));
+    PetscCheck(nl == 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Only 1 label value! Found %" PetscInt_FMT, nl);
+    PetscCall(ISGetIndices(lvalues, &lidxs));
+    PetscCall(DMAddBoundary(dm, DM_BC_NATURAL, "neumann", neulabel, nl, lidxs, field_id, 0, NULL, NULL, NULL, NULL, &bd));
+    PetscCall(ISRestoreIndices(lvalues, &lidxs));
+    PetscCall(ISDestroy(&lvalues));
+
+    PetscCall(DMGetDS(dm, &ds));
+    PetscCall(PetscDSGetBoundary(ds, bd, &wf, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL));
+    PetscCall(PetscWeakFormSetIndexBdResidual(wf, neulabel, lidxs[0], field_id, 0, 0, bd_P0, 0, NULL));
+    mms_grad = ctx->mms_grad;
+    mms_ctx  = ctx->mms_ctx;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(DMCreateLabel(dm, "essential_boundary"));
+  PetscCall(DMGetLabel(dm, "essential_boundary", &label));
+  PetscCall(DMPlexMarkBoundaryFaces(dm, 1, label));
+  PetscCall(DMAddBoundary(dm, DM_BC_ESSENTIAL, "dirichlet", label, 1, &id, field_id, 0, NULL, (void (*)(void))funcs_bc[ctx->essential_bc_type], NULL, ctx->mms_ctx, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*
    Setup AuxDM:
      - project source function and make it zero-mean
@@ -1309,6 +1901,7 @@ static PetscErrorCode ProjectAuxDM(DM dm, PetscReal time, Vec u, AppCtx *ctx)
     PetscCall(DMSetField(dmAux, NUM_FIELDS, NULL, (PetscObject)field));
     PetscCall(PetscFEDestroy(&field));
     PetscCall(DMCreateDS(dmAux));
+    PetscCall(AddEssentialBoundary(dmAux, P_FIELD_ID, ctx));
     PetscCall(DMCreateSubDM(dmAux, NUM_FIELDS, fields, &is, NULL));
     PetscCall(DMGetGlobalVector(dm, &tu));
     PetscCall(DMGetGlobalVector(dmAux, &ta));
@@ -1330,18 +1923,22 @@ static PetscErrorCode ProjectAuxDM(DM dm, PetscReal time, Vec u, AppCtx *ctx)
   PetscCall(VecGetDM(la, &dmAux));
   PetscCall(DMGetDS(dmAux, &ds));
   PetscCall(DMGetGlobalVector(dmAux, &a));
-  funcs[C_FIELD_ID] = zerof;
-  ctxs[C_FIELD_ID]  = NULL;
-  funcs[P_FIELD_ID] = zerof;
-  ctxs[P_FIELD_ID]  = NULL;
-  funcs[NUM_FIELDS] = source;
-  ctxs[NUM_FIELDS]  = ctx->source_ctx;
-  PetscCall(DMProjectFunction(dmAux, time, funcs, ctxs, INSERT_ALL_VALUES, a));
-  PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, zero));
-  PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, zero));
-  PetscCall(PetscDSSetObjective(ds, NUM_FIELDS, average));
-  PetscCall(DMPlexComputeIntegralFEM(dmAux, a, vals, NULL));
-  PetscCall(VecShift(a, -vals[NUM_FIELDS] / ctx->domain_volume));
+  if (ctx->essential_bc_type == ESS_BC_NONE) {
+    funcs[C_FIELD_ID] = zerof;
+    ctxs[C_FIELD_ID]  = NULL;
+    funcs[P_FIELD_ID] = zerof;
+    ctxs[P_FIELD_ID]  = NULL;
+    funcs[NUM_FIELDS] = source;
+    ctxs[NUM_FIELDS]  = ctx->source_ctx;
+    PetscCall(DMProjectFunction(dmAux, time, funcs, ctxs, INSERT_ALL_VALUES, a));
+    PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, zero));
+    PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, zero));
+    PetscCall(PetscDSSetObjective(ds, NUM_FIELDS, average));
+    PetscCall(DMPlexComputeIntegralFEM(dmAux, a, vals, NULL));
+    PetscCall(VecShift(a, -vals[NUM_FIELDS] / ctx->domain_volume));
+  } else {
+    PetscCall(VecSet(a, 0.0));
+  }
   if (u) {
     PetscCall(PetscObjectQuery((PetscObject)dmAux, "scatterAux", (PetscObject *)&sctAux));
     PetscCheck(sctAux, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing scatterAux");
@@ -1372,6 +1969,19 @@ static PetscErrorCode CreatePotentialNullSpace(DM dm, PetscInt ofield, PetscInt 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Utility to create VecScatters */
+static PetscErrorCode MakeScatterAndVec(Vec X, IS is, Vec *Y, VecScatter *sct)
+{
+  PetscInt n;
+
+  PetscFunctionBeginUser;
+  PetscCall(ISGetLocalSize(is, &n));
+  PetscCall(VecCreateMPI(PetscObjectComm((PetscObject)X), n, PETSC_DECIDE, Y));
+  PetscCall(VecScatterCreate(X, is, *Y, NULL, sct));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* support to use lumped mass matrix */
 static PetscErrorCode DMGetLumpedMass(DM dm, PetscBool local, Vec *lumped_mass)
 {
   PetscBool has;
@@ -1421,7 +2031,7 @@ static PetscErrorCode DMRestoreLumpedMass(DM dm, PetscBool local, Vec *lumped_ma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* callbacks for residual and Jacobian */
+/* callbacks for residual and Jacobian (support lumped mass matrix) */
 static PetscErrorCode DMPlexTSComputeIFunctionFEM_Private(DM dm, PetscReal time, Vec locX, Vec locX_t, Vec locF, void *user)
 {
   Vec     work, local_lumped_mass;
@@ -1485,54 +2095,58 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
   IS          is;
 
   PetscFunctionBeginUser;
-  constants[R_ID]     = ctx->r;
-  constants[EPS_ID]   = ctx->eps;
-  constants[ALPHA_ID] = ctx->alpha;
-  constants[GAMMA_ID] = ctx->gamma;
-  constants[D_ID]     = ctx->D;
-  constants[FIXC_ID]  = ctx->fix_c;
-  constants[SPLIT_ID] = ctx->split;
+  constants[R_ID]        = ctx->r;
+  constants[EPS_ID]      = ctx->eps;
+  constants[ALPHA_ID]    = ctx->alpha;
+  constants[GAMMA_ID]    = ctx->gamma;
+  constants[D_ID]        = ctx->D;
+  constants[FIXC_ID]     = ctx->fix_c;
+  constants[SPLIT_ID]    = ctx->split;
+  constants[SCALAREQ_ID] = ctx->scalar_eq;
+  constants[ESSBC_ID]    = ctx->essential_bc_type == ESS_BC_NONE ? 0.0 : 1.0;
 
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMGetCoordinateDim(dm, &cdim));
   PetscCheck(dim == 2 || dim == 3, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Topological dimension must be 2 or 3");
   PetscCheck(dim == ctx->dim, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Topological dimension mismatch: expected %" PetscInt_FMT ", found %" PetscInt_FMT, dim, ctx->dim);
   PetscCheck(cdim == ctx->dim, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Geometrical dimension mismatch: expected %" PetscInt_FMT ", found %" PetscInt_FMT, cdim, ctx->dim);
+  PetscCheck(!ctx->scalar_eq || dim == 2, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Scalar equations not coded for dimension %" PetscInt_FMT, dim);
+  PetscCheck(!ctx->scalar_eq || ctx->D == 0.0, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Scalar equations not coded for positive diffusion");
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(PetscDSSetConstants(ds, NUM_CONSTANTS, constants));
   PetscCall(PetscDSSetImplicit(ds, C_FIELD_ID, PETSC_TRUE));
   PetscCall(PetscDSSetImplicit(ds, P_FIELD_ID, PETSC_TRUE));
-  PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, energy));
-  PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, zero));
   if (ctx->dim == 2) {
-    PetscCall(PetscDSSetResidual(ds, C_FIELD_ID, C_0, C_1));
+    PetscCall(PetscDSSetResidual(ds, C_FIELD_ID, C_0, ctx->D > 0 ? C_1 : NULL));
     PetscCall(PetscDSSetResidual(ds, P_FIELD_ID, P_0, P_1));
     PetscCall(PetscDSSetJacobian(ds, C_FIELD_ID, C_FIELD_ID, JC_0_c0c0, NULL, NULL, ctx->D > 0 ? JC_1_c1c1 : NULL));
-    if (!ctx->split) { /* we solve a block diagonal system to mimic operator splitting, jacobians will not be correct */
-      PetscCall(PetscDSSetJacobian(ds, C_FIELD_ID, P_FIELD_ID, NULL, JC_0_c0p1, NULL, NULL));
-      PetscCall(PetscDSSetJacobian(ds, P_FIELD_ID, C_FIELD_ID, NULL, NULL, JP_1_p1c0, NULL));
-    }
+    if (!ctx->split) PetscCall(PetscDSSetJacobian(ds, C_FIELD_ID, P_FIELD_ID, NULL, JC_0_c0p1, NULL, NULL));
+    PetscCall(PetscDSSetJacobian(ds, P_FIELD_ID, C_FIELD_ID, NULL, NULL, JP_1_p1c0, NULL));
     PetscCall(PetscDSSetJacobian(ds, P_FIELD_ID, P_FIELD_ID, NULL, NULL, NULL, JP_1_p1p1));
   } else {
-    PetscCall(PetscDSSetResidual(ds, C_FIELD_ID, C_0_3d, C_1_3d));
+    PetscCall(PetscDSSetResidual(ds, C_FIELD_ID, C_0_3d, ctx->D > 0 ? C_1_3d : NULL));
     PetscCall(PetscDSSetResidual(ds, P_FIELD_ID, P_0, P_1_3d));
     PetscCall(PetscDSSetJacobian(ds, C_FIELD_ID, C_FIELD_ID, JC_0_c0c0_3d, NULL, NULL, ctx->D > 0 ? JC_1_c1c1_3d : NULL));
-    if (!ctx->split) {
-      PetscCall(PetscDSSetJacobian(ds, C_FIELD_ID, P_FIELD_ID, NULL, JC_0_c0p1_3d, NULL, NULL));
-      PetscCall(PetscDSSetJacobian(ds, P_FIELD_ID, C_FIELD_ID, NULL, NULL, JP_1_p1c0_3d, NULL));
-    }
+    if (!ctx->split) PetscCall(PetscDSSetJacobian(ds, C_FIELD_ID, P_FIELD_ID, NULL, JC_0_c0p1_3d, NULL, NULL));
+    PetscCall(PetscDSSetJacobian(ds, P_FIELD_ID, C_FIELD_ID, NULL, NULL, JP_1_p1c0_3d, NULL));
     PetscCall(PetscDSSetJacobian(ds, P_FIELD_ID, P_FIELD_ID, NULL, NULL, NULL, JP_1_p1p1_3d));
   }
+  PetscCall(AddEssentialBoundary(dm, P_FIELD_ID, ctx));
+
   /* Attach potential nullspace */
-  PetscCall(DMSetNullSpaceConstructor(dm, P_FIELD_ID, CreatePotentialNullSpace));
+  if (ctx->essential_bc_type == ESS_BC_NONE) PetscCall(DMSetNullSpaceConstructor(dm, P_FIELD_ID, CreatePotentialNullSpace));
 
   /* Compute domain volume */
   PetscCall(DMGetGlobalVector(dm, &dummy));
+  PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, zero));
   PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, volume));
   PetscCall(DMPlexComputeIntegralFEM(dm, dummy, vals, NULL));
-  PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, zero));
   PetscCall(DMRestoreGlobalVector(dm, &dummy));
   ctx->domain_volume = PetscRealPart(vals[P_FIELD_ID]);
+
+  /* Default objectives */
+  PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, energy));
+  PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, zero));
 
   /* Index sets for potential and conductivities */
   PetscCall(DMCreateSubDM(dm, 1, fields, &is, NULL));
@@ -1552,16 +2166,31 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
   /* Add callbacks */
   PetscCall(DMTSSetIFunctionLocal(dm, DMPlexTSComputeIFunctionFEM_Private, ctx));
   PetscCall(DMTSSetIJacobianLocal(dm, DMPlexTSComputeIJacobianFEM_Private, ctx));
-  /* DMPlexTSComputeBoundary is not needed because we use natural boundary conditions */
-  PetscCall(DMTSSetBoundaryLocal(dm, NULL, NULL));
+  /* for pure Neumann bc DMPlexTSComputeBoundary is not needed */
+  if (ctx->essential_bc_type == ESS_BC_NONE) PetscCall(DMTSSetBoundaryLocal(dm, NULL, NULL));
+  else PetscCall(DMTSSetBoundaryLocal(dm, DMPlexTSComputeBoundary, ctx));
 
   /* handle nullspace in residual (move it to TSComputeIFunction_DMLocal?) */
-  {
+  if (ctx->essential_bc_type == ESS_BC_NONE) {
     MatNullSpace nullsp;
 
     PetscCall(CreatePotentialNullSpace(dm, P_FIELD_ID, P_FIELD_ID, &nullsp));
     PetscCall(PetscObjectCompose((PetscObject)dm, "__dmtsnullspace", (PetscObject)nullsp));
     PetscCall(MatNullSpaceDestroy(&nullsp));
+  }
+
+  /* scatter data from monolithic vector to fields */
+  if (!ctx->subsct[C_FIELD_ID]) {
+    IS is;
+
+    PetscCall(DMGetGlobalVector(dm, &dummy));
+    PetscCall(PetscObjectQuery((PetscObject)dm, "IS conductivity", (PetscObject *)&is));
+    PetscCheck(is, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing conductivity IS");
+    PetscCall(MakeScatterAndVec(dummy, is, &ctx->subvec[C_FIELD_ID], &ctx->subsct[C_FIELD_ID]));
+    PetscCall(PetscObjectQuery((PetscObject)dm, "IS potential", (PetscObject *)&is));
+    PetscCheck(is, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing potential IS");
+    PetscCall(MakeScatterAndVec(dummy, is, &ctx->subvec[P_FIELD_ID], &ctx->subsct[P_FIELD_ID]));
+    PetscCall(DMRestoreGlobalVector(dm, &dummy));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1577,8 +2206,11 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *ctx)
   PetscFunctionBeginUser;
   PetscCall(DMGetDimension(dm, &dim));
 
-  /* We model Cij with Cij = Cji -> dim*(dim+1)/2 components */
-  PetscCall(PetscFECreateDefault(comm, dim, (dim * (dim + 1)) / 2, ctx->simplex, "c_", -1, &feC));
+  if (ctx->scalar_eq) { /* scalar equations */
+    PetscCall(PetscFECreateDefault(comm, dim, 1, ctx->simplex, "c_", -1, &feC));
+  } else { /* We model Cij with Cij = Cji -> dim*(dim+1)/2 components */
+    PetscCall(PetscFECreateDefault(comm, dim, (dim * (dim + 1)) / 2, ctx->simplex, "c_", -1, &feC));
+  }
   PetscCall(PetscObjectSetName((PetscObject)feC, "conductivity"));
   PetscCall(PetscFECreateDefault(comm, dim, 1, ctx->simplex, "p_", -1, &feP));
   PetscCall(PetscObjectSetName((PetscObject)feP, "potential"));
@@ -1742,7 +2374,8 @@ static PetscErrorCode SetInitialConditionsAndTolerances(TS ts, PetscInt nv, Vec 
       PetscCall(VecDestroy(&vatol));
       PetscCall(VecDestroy(&vrtol));
     }
-    for (PetscInt i = 0; i < nv; i++) PetscCall(ZeroMeanPotential(dm, vecs[i], ctx->domain_volume));
+    if (ctx->essential_bc_type == ESS_BC_NONE)
+      for (PetscInt i = 0; i < nv; i++) PetscCall(ZeroMeanPotential(dm, vecs[i], ctx->domain_volume));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(DMCreateSubDM(dm, 1, fields + 1, NULL, &dmp));
@@ -1755,6 +2388,59 @@ static PetscErrorCode SetInitialConditionsAndTolerances(TS ts, PetscInt nv, Vec 
     PetscCall(PetscDSSetResidual(ds, 0, P_0_aux, P_1_aux_3d));
     PetscCall(PetscDSSetJacobian(ds, 0, 0, NULL, NULL, NULL, JP_1_p1p1_aux_3d));
   }
+#if 0
+     //printf("SINGLE FIELD DS BEFORE\n");PetscDSView(ds,NULL);
+  {
+    PetscDS ods;
+    PetscInt nb;
+    PetscCall(DMGetDS(dm, &ods));
+    PetscCall(PetscDSGetNumBoundary(ods, &nb));
+          printf("ODS NB %d\n",nb);
+    for (PetscInt i = 0; i < nb; i++) {
+//PetscErrorCode PetscDSGetBoundary(PetscDS ds, PetscInt bd, PetscWeakForm *wf, DMBoundaryConditionType *type, const char *name[], DMLabel *label, PetscInt *Nv, const PetscInt *values[], PetscInt *field, PetscInt *Nc, const PetscInt *comps[], void (**func)(void), void (**func_t)(void), void **ctx)
+      PetscWeakForm owf, wf;
+      DMBoundaryConditionType bctype;
+      //const char *bcname;
+      DMLabel bclabel;
+      PetscInt bcnv, bcfield, bcnc;
+      const PetscInt *bcvals;
+      const PetscInt *bccomps;
+      DMBoundaryConditionType nbctype;
+      DMLabel nbclabel;
+      PetscInt nbcfield;
+
+      PetscCall(PetscDSGetBoundary(ods, i, &owf, &bctype, NULL, &bclabel, &bcnv, &bcvals, &bcfield, NULL /* &bcnc */, NULL /*&bccomps*/, NULL, NULL, NULL));
+      printf("  %d BC LAB %s type %d field %d\n",i,bclabel ? ((PetscObject)bclabel)->name : "noname",bctype,bcfield);
+      PetscCall(PetscDSGetBoundary(ds, i, &wf, &nbctype, NULL, &nbclabel, NULL, NULL, &nbcfield, NULL /* &bcnc */, NULL /*&bccomps*/, NULL, NULL, NULL));
+      printf("  %d NEW BC LAB %s type %d field %d\n",i,nbclabel ? ((PetscObject)nbclabel)->name : "noname",nbctype,nbcfield);
+      if (bctype == DM_BC_NATURAL && bcfield == P_FIELD_ID) {
+        printf("pre label %p type %d field %d\n",bclabel,bctype,bcfield);
+        //PetscCall(PetscDSGetBoundary(ds, i, &wf, NULL, NULL, NULL, NULL, NULL, NULL,  NULL , NULL , NULL, NULL, NULL));
+        PetscCall(PetscDSGetBoundary(ds, i, &wf, &nbctype, NULL, &nbclabel, NULL, NULL, &nbcfield,  NULL , NULL , NULL, NULL, NULL));
+        printf("post label %p type %d field %d\n",nbclabel,nbctype,nbcfield);
+        //PetscCall(PetscWeakFormClear(wf));
+        //PetscCall(PetscWeakFormSetNumFields(wf, 1));
+        for (PetscInt v = 0; v < bcnv; v++) {
+          PetscBdPointFn   **f0_func, **f1_func;
+          PetscInt n0, n1;
+          //PetscCall(PetscWeakFormGetBdResidual(wf, key.label, key.value, key.field, key.part, &n0, &f0_func, &n1, &f1_func));
+          PetscCall(PetscWeakFormGetBdResidual(owf, bclabel, bcvals[v], bcfield, 0, &n0, &f0_func, &n1, &f1_func));
+          printf("pre VAL %d for %d %d (%p %p)\n",bcvals[v],n0,n1,f0_func[0],f1_func);
+          PetscCall(PetscWeakFormGetBdResidual(wf, bclabel, bcvals[v], bcfield, 0, &n0, &f0_func, &n1, &f1_func));
+          printf("post VAL %d for %d %d (%p %p)\n",bcvals[v],n0,n1,f0_func[0],f1_func);
+          PetscCall(PetscWeakFormSetBdResidual(wf, bclabel, bcvals[v], 0, 0, n0, f0_func, n1, f1_func));
+        //PetscCall(PetscWeakFormSetIndexBdResidual(wf, bclabel, lidxs[0], field_id, 0, 0, bd_P0, 0, NULL));
+      //PetscCall(PetscDSGetBoundary(ds, bd, &wf, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL));
+      //PetscCall(PetscWeakFormSetIndexBdResidual(wf, neulabel, lidxs[0], field_id, 0, 0, bd_P0, 0, NULL));
+  //PetscCall(PetscWeakFormSetIndexFunction_Private(wf, wf->form[PETSC_WF_BDF0], label, val, f, part, i0, (void (*)(void))f0));
+  //PetscCall(PetscWeakFormSetIndexFunction_Private(wf, wf->form[PETSC_WF_BDF1], label, val, f, part, i1, (void (*)(void))f1));
+       }
+      }
+    }
+  }
+     printf("SINGLE FIELD DS AFTER\n");PetscDSView(ds,NULL);
+#endif
+  //PetscCall(AddEssentialBoundary(dmp,0,ctx));
   PetscCall(DMPlexSetSNESLocalFEM(dmp, PETSC_FALSE, NULL));
 
   PetscCall(DMCreateGlobalVector(dmp, &p));
@@ -1818,7 +2504,7 @@ static PetscErrorCode SetInitialConditionsAndTolerances(TS ts, PetscInt nv, Vec 
     /* scatter from potential only to full space */
     PetscCall(VecScatterBegin(sctp, p, u, INSERT_VALUES, SCATTER_REVERSE));
     PetscCall(VecScatterEnd(sctp, p, u, INSERT_VALUES, SCATTER_REVERSE));
-    PetscCall(ZeroMeanPotential(dm, u, ctx->domain_volume));
+    if (ctx->essential_bc_type == ESS_BC_NONE) PetscCall(ZeroMeanPotential(dm, u, ctx->domain_volume));
   }
   PetscCall(VecDestroy(&p));
   PetscCall(DMDestroy(&dmp));
@@ -1941,7 +2627,7 @@ static PetscErrorCode ResizeTransfer(TS ts, PetscInt nv, Vec vecsin[], Vec vecso
   PetscCall(TSSetDM(ts, adm));
   PetscCall(TSGetTime(ts, &time));
   PetscCall(TSGetApplicationContext(ts, &ctx));
-  PetscCall(DMSetNullSpaceConstructor(adm, P_FIELD_ID, CreatePotentialNullSpace));
+  if (ctx->essential_bc_type == ESS_BC_NONE) PetscCall(DMSetNullSpaceConstructor(adm, P_FIELD_ID, CreatePotentialNullSpace));
   PetscCall(DMCreateSubDM(adm, 1, fields, &is, NULL));
   PetscCall(PetscObjectCompose((PetscObject)adm, "IS conductivity", (PetscObject)is));
   PetscCall(ISDestroy(&is));
@@ -1949,7 +2635,7 @@ static PetscErrorCode ResizeTransfer(TS ts, PetscInt nv, Vec vecsin[], Vec vecso
   PetscCall(PetscObjectCompose((PetscObject)adm, "IS potential", (PetscObject)is));
   PetscCall(ISDestroy(&is));
   PetscCall(ProjectAuxDM(adm, time, NULL, ctx));
-  {
+  if (ctx->essential_bc_type == ESS_BC_NONE) {
     MatNullSpace nullsp;
 
     PetscCall(CreatePotentialNullSpace(adm, P_FIELD_ID, P_FIELD_ID, &nullsp));
@@ -1969,51 +2655,53 @@ static PetscErrorCode ComputeDiagnostic(Vec u, AppCtx *ctx, Vec *out)
 {
   DM       dm;
   PetscInt dim;
-  PetscFE  feFluxC, feNormC, feEigsC;
+  PetscFE  feFluxC = NULL, feNormC = NULL, feEigsC = NULL;
 
   void (*funcs[])(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[]) = {normc, eigsc, flux};
 
   PetscFunctionBeginUser;
   if (!ctx->view_dm) {
     PetscFE  feP;
-    PetscInt nf = PetscMax(PetscMin(ctx->diagnostic_num, 3), 1);
+    PetscInt nf = PetscMax(PetscMin(ctx->diagnostic_num, ctx->scalar_eq ? 2 : 3), 1);
 
     PetscCall(VecGetDM(u, &dm));
     PetscCall(DMGetDimension(dm, &dim));
-    PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, 1, ctx->simplex, "normc_", -1, &feNormC));
-    PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, dim, ctx->simplex, "eigsc_", -1, &feEigsC));
+    if (ctx->scalar_eq) {
+      PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, 1, ctx->simplex, "dcdt_", -1, &feNormC));
+      PetscCall(PetscObjectSetName((PetscObject)feNormC, "dcdt"));
+    } else {
+      PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, 1, ctx->simplex, "normc_", -1, &feNormC));
+      PetscCall(PetscObjectSetName((PetscObject)feNormC, "normC"));
+      PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, dim, ctx->simplex, "eigsc_", -1, &feEigsC));
+      PetscCall(PetscObjectSetName((PetscObject)feEigsC, "eigsC"));
+    }
     PetscCall(PetscFECreateDefault(PetscObjectComm((PetscObject)dm), dim, dim, ctx->simplex, "flux_", -1, &feFluxC));
+    PetscCall(PetscObjectSetName((PetscObject)feFluxC, "flux"));
     PetscCall(DMGetField(dm, P_FIELD_ID, NULL, (PetscObject *)&feP));
     PetscCall(PetscFECopyQuadrature(feP, feNormC));
-    PetscCall(PetscFECopyQuadrature(feP, feEigsC));
+    if (feEigsC) PetscCall(PetscFECopyQuadrature(feP, feEigsC));
     PetscCall(PetscFECopyQuadrature(feP, feFluxC));
-    PetscCall(PetscObjectSetName((PetscObject)feNormC, "normC"));
-    PetscCall(PetscObjectSetName((PetscObject)feEigsC, "eigsC"));
-    PetscCall(PetscObjectSetName((PetscObject)feFluxC, "flux"));
 
     PetscCall(DMClone(dm, &ctx->view_dm));
     PetscCall(DMSetNumFields(ctx->view_dm, nf));
     PetscCall(DMSetField(ctx->view_dm, 0, NULL, (PetscObject)feNormC));
-    if (nf > 1) PetscCall(DMSetField(ctx->view_dm, 1, NULL, (PetscObject)feEigsC));
-    if (nf > 2) PetscCall(DMSetField(ctx->view_dm, 2, NULL, (PetscObject)feFluxC));
+    if (ctx->scalar_eq) {
+      if (nf > 1) PetscCall(DMSetField(ctx->view_dm, 1, NULL, (PetscObject)feFluxC));
+    } else {
+      if (nf > 1) PetscCall(DMSetField(ctx->view_dm, 1, NULL, (PetscObject)feEigsC));
+      if (nf > 2) PetscCall(DMSetField(ctx->view_dm, 2, NULL, (PetscObject)feFluxC));
+    }
     PetscCall(DMCreateDS(ctx->view_dm));
     PetscCall(PetscFEDestroy(&feFluxC));
     PetscCall(PetscFEDestroy(&feNormC));
     PetscCall(PetscFEDestroy(&feEigsC));
   }
   PetscCall(DMCreateGlobalVector(ctx->view_dm, out));
+  if (ctx->scalar_eq) {
+    funcs[0] = norm_dcdt;
+    funcs[1] = flux;
+  }
   PetscCall(DMProjectField(ctx->view_dm, 0.0, u, funcs, INSERT_VALUES, *out));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MakeScatterAndVec(Vec X, IS is, Vec *Y, VecScatter *sct)
-{
-  PetscInt n;
-
-  PetscFunctionBeginUser;
-  PetscCall(ISGetLocalSize(is, &n));
-  PetscCall(VecCreateMPI(PetscObjectComm((PetscObject)X), n, PETSC_DECIDE, Y));
-  PetscCall(VecScatterCreate(X, is, *Y, NULL, sct));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2041,11 +2729,12 @@ static PetscErrorCode FunctionDomainError(TS ts, PetscReal time, Vec X, PetscBoo
 /* Monitor relevant functionals */
 static PetscErrorCode Monitor(TS ts, PetscInt stepnum, PetscReal time, Vec u, void *vctx)
 {
-  PetscScalar vals[2 * NUM_FIELDS];
+  PetscScalar vals[3 * NUM_FIELDS] = {0};
   DM          dm;
   PetscDS     ds;
   AppCtx     *ctx;
   PetscBool   need_hdf5, need_vtk;
+  PetscReal   errdcdt, errplapen;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &dm));
@@ -2063,7 +2752,19 @@ static PetscErrorCode Monitor(TS ts, PetscInt stepnum, PetscReal time, Vec u, vo
   PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, energy));
   vals[C_FIELD_ID] /= ctx->domain_volume;
 
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts), "%4" PetscInt_FMT " TS: time %g, energy %g, intp %g, ell %g\n", stepnum, (double)time, (double)PetscRealPart(vals[C_FIELD_ID]), (double)PetscRealPart(vals[P_FIELD_ID]), (double)PetscRealPart(vals[NUM_FIELDS + C_FIELD_ID])));
+  if (ctx->gamma < 1) {
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts), "%4" PetscInt_FMT " TS: time %3.8e, energy %1.8e, intp %1.8e, ell %1.8e\n", stepnum, (double)time, (double)PetscRealPart(vals[C_FIELD_ID]), (double)PetscRealPart(vals[P_FIELD_ID]), (double)PetscRealPart(vals[NUM_FIELDS + C_FIELD_ID])));
+  } else {
+    /* monitor ||dC/dt||^2  and p-Laplacian energy */
+    PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, plap_energy));
+    PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, norm_dcdt));
+    PetscCall(DMPlexComputeIntegralFEM(dm, u, vals + 2 * NUM_FIELDS, NULL));
+    PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, zero));
+    PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, energy));
+    errdcdt = PetscRealPart(PetscSqrtScalar(vals[2 * NUM_FIELDS + C_FIELD_ID]));
+    errplapen = vals[2 * NUM_FIELDS + P_FIELD_ID];
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts), "%4" PetscInt_FMT " TS: time %3.8e, energy %1.8e, ||dC/dt||_2 %1.8e, ell %1.8e, plap energy %1.8e\n", stepnum, (double)time, (double)PetscRealPart(vals[C_FIELD_ID]), (double)errdcdt, (double)PetscRealPart(vals[NUM_FIELDS + C_FIELD_ID]), errplapen));
+  }
 
   /* monitor diagnostic */
   need_hdf5 = (PetscBool)(ctx->view_hdf5_ctx && ((ctx->view_hdf5_ctx->view_interval > 0 && !(stepnum % ctx->view_hdf5_ctx->view_interval)) || (ctx->view_hdf5_ctx->view_interval && ts->reason)));
@@ -2073,6 +2774,7 @@ static PetscErrorCode Monitor(TS ts, PetscInt stepnum, PetscReal time, Vec u, vo
     if (ctx->view_vtk_ctx) need_vtk = PETSC_TRUE;
     ctx->view_times_k++;
   }
+
   if (need_vtk || need_hdf5) {
     Vec       diagnostic;
     PetscBool dump_dm = (PetscBool)(!!ctx->view_dm);
@@ -2084,7 +2786,7 @@ static PetscErrorCode Monitor(TS ts, PetscInt stepnum, PetscReal time, Vec u, vo
     }
     if (need_hdf5) {
       DM       vdm;
-      PetscInt seqnum;
+      PetscInt seqnum, nf;
 
       PetscCall(VecGetDM(diagnostic, &vdm));
       if (!dump_dm) {
@@ -2097,7 +2799,8 @@ static PetscErrorCode Monitor(TS ts, PetscInt stepnum, PetscReal time, Vec u, vo
       PetscCall(PetscObjectSetName((PetscObject)diagnostic, "diagnostic"));
       PetscCall(PetscViewerPushFormat(ctx->view_hdf5_ctx->viewer, ctx->view_hdf5_ctx->format));
       PetscCall(VecView(diagnostic, ctx->view_hdf5_ctx->viewer));
-      if (ctx->diagnostic_num > 3 || ctx->diagnostic_num < 0) {
+      PetscCall(DMGetNumFields(vdm, &nf));
+      if (ctx->diagnostic_num > nf || ctx->diagnostic_num < 0) {
         PetscCall(DMSetOutputSequenceNumber(dm, seqnum + 1, time));
         PetscCall(VecView(u, ctx->view_hdf5_ctx->viewer));
       }
@@ -2181,7 +2884,7 @@ static PetscErrorCode PostStage(TS ts, PetscReal stagetime, PetscInt stageindex,
   PetscCall(TSGetDM(ts, &dm));
   PetscCall(TSGetApplicationContext(ts, &ctx));
 
-  PetscCall(ZeroMeanPotential(dm, u, ctx->domain_volume));
+  if (ctx->essential_bc_type == ESS_BC_NONE) PetscCall(ZeroMeanPotential(dm, u, ctx->domain_volume));
 
   if (ctx->test_restart) PetscFunctionReturn(PETSC_SUCCESS);
 
@@ -2214,20 +2917,6 @@ PetscErrorCode MonitorNorms(SNES snes, PetscInt its, PetscReal f, void *vctx)
   PetscFunctionBeginUser;
   PetscCall(SNESGetDM(snes, &dm));
   PetscCall(SNESGetFunction(snes, &F, NULL, NULL));
-  if (!ctx->subsct[C_FIELD_ID]) {
-    IS is;
-
-    PetscCall(PetscObjectQuery((PetscObject)dm, "IS conductivity", (PetscObject *)&is));
-    PetscCheck(is, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing conductivity IS");
-    PetscCall(MakeScatterAndVec(F, is, &ctx->subvec[C_FIELD_ID], &ctx->subsct[C_FIELD_ID]));
-  }
-  if (!ctx->subsct[P_FIELD_ID]) {
-    IS is;
-
-    PetscCall(PetscObjectQuery((PetscObject)dm, "IS potential", (PetscObject *)&is));
-    PetscCheck(is, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing potential IS");
-    PetscCall(MakeScatterAndVec(F, is, &ctx->subvec[P_FIELD_ID], &ctx->subsct[P_FIELD_ID]));
-  }
   PetscCall(VecScatterBegin(ctx->subsct[C_FIELD_ID], F, ctx->subvec[C_FIELD_ID], INSERT_VALUES, SCATTER_FORWARD));
   PetscCall(VecScatterEnd(ctx->subsct[C_FIELD_ID], F, ctx->subvec[C_FIELD_ID], INSERT_VALUES, SCATTER_FORWARD));
   PetscCall(VecScatterBegin(ctx->subsct[P_FIELD_ID], F, ctx->subvec[P_FIELD_ID], INSERT_VALUES, SCATTER_FORWARD));
@@ -2260,6 +2949,7 @@ static PetscErrorCode Run(MPI_Comm comm, AppCtx *ctx)
   } else {
     PetscCall(PetscPrintf(comm, "----------------------------\n"));
     PetscCall(PetscPrintf(comm, "Simulation parameters:\n"));
+    if (ctx->scalar_eq) PetscCall(PetscPrintf(comm, "  Solving scalar equations\n"));
     PetscCall(PetscPrintf(comm, "  dim  : %" PetscInt_FMT "\n", ctx->dim));
     PetscCall(PetscPrintf(comm, "  r    : %g\n", (double)ctx->r));
     PetscCall(PetscPrintf(comm, "  eps  : %g\n", (double)ctx->eps));
@@ -2348,6 +3038,85 @@ static PetscErrorCode Run(MPI_Comm comm, AppCtx *ctx)
   if (ctx->view_vtk_ctx) PetscCall(TSMonitorSolutionVTKDestroy(&ctx->view_vtk_ctx));
   if (ctx->view_hdf5_ctx) PetscCall(PetscViewerAndFormatDestroy(&ctx->view_hdf5_ctx));
   PetscCall(DMDestroy(&ctx->view_dm));
+
+  /* Compute errors for MMS cases */
+  if (ctx->mms_func) {
+    DM        dmp;
+    PetscInt  fields[NUM_FIELDS] = {C_FIELD_ID, P_FIELD_ID};
+    Vec       exact, local_p, local_u, cellgeom, facegeom;
+    PetscDS   ds;
+    PetscReal qnorm_e = -1, lpnorm_e = -1, w1psnorm_e = -1, h, time;
+    PetscReal p = PetscRealPart(2 * ctx->gamma / (ctx->gamma - 1));
+
+    PetscCall(TSGetSolution(ts, &u));
+    PetscCall(TSGetDM(ts, &dm));
+    PetscCall(TSGetTime(ts, &time));
+
+    PetscCall(DMCreateSubDM(dm, 1, fields + 1, NULL, &dmp));
+
+    /* FEM interpolant of exact solution */
+    PetscCall(DMGetGlobalVector(dmp, &exact));
+    PetscCall(PetscObjectSetName((PetscObject)exact, "mms_solution_"));
+    PetscCall(DMProjectFunction(dmp, 0, &ctx->mms_func, &ctx->mms_ctx, INSERT_ALL_VALUES, exact));
+    PetscCall(VecViewFromOptions(exact, NULL, "-mms_solution_view"));
+
+    /* Difference between FEM interpolant and computed solution */
+    PetscCall(VecScatterBegin(ctx->subsct[P_FIELD_ID], u, ctx->subvec[P_FIELD_ID], INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(ctx->subsct[P_FIELD_ID], u, ctx->subvec[P_FIELD_ID], INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecAXPY(ctx->subvec[P_FIELD_ID], -1.0, exact));
+    PetscCall(DMGetLocalVector(dmp, &local_p));
+    PetscCall(DMGlobalToLocal(dmp, ctx->subvec[P_FIELD_ID], INSERT_VALUES, local_p));
+    PetscCall(PetscObjectSetName((PetscObject)local_p, "mms_error_"));
+    PetscCall(PetscObjectCompose((PetscObject)local_p, "__Vec_bc_zero__", (PetscObject)ts));
+    PetscCall(VecViewFromOptions(local_p, NULL, "-mms_error_view"));
+    PetscCall(PetscObjectCompose((PetscObject)local_p, "__Vec_bc_zero__", NULL));
+
+    /* Prepare for error computations */
+    PetscCall(DMGetDS(dmp, &ds));
+    PetscCall(DMGlobalToLocal(dmp, exact, INSERT_VALUES, local_p));
+    PetscCall(DMCreateLocalVector(dm, &local_u));
+    PetscCall(DMGlobalToLocal(dm, u, INSERT_VALUES, local_u));
+    PetscCall(DMPlexInsertBoundaryValues(dm, PETSC_TRUE, local_u, time, NULL, NULL, NULL));
+    PetscCall(DMSetAuxiliaryVec(dmp, NULL, 0, 0, local_u));
+    PetscCall(VecDestroy(&local_u));
+
+    /* Compute errors */
+    if (ctx->gamma > 1.0) {
+      mms_func = ctx->mms_func; /* function sampled at quadrature points */
+      mms_grad = ctx->mms_grad; /* if present, samples the gradient at quadrature points, otherwise uses the interpolant (variational crime) */
+      mms_ctx  = ctx->mms_ctx;
+
+      PetscCall(PetscDSSetObjective(ds, 0, ebmeyer_liu_quasi_norm));
+      PetscCall(DMPlexSNESComputeObjectiveFEM(dmp, local_p, &qnorm_e, NULL));
+      PetscCall(PetscDSSetObjective(ds, 0, lp_norm));
+      PetscCall(DMPlexSNESComputeObjectiveFEM(dmp, local_p, &lpnorm_e, NULL));
+      PetscCall(PetscDSSetObjective(ds, 0, w1p_seminorm));
+      PetscCall(DMPlexSNESComputeObjectiveFEM(dmp, local_p, &w1psnorm_e, NULL));
+      PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &qnorm_e, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)dm)));
+      PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &lpnorm_e, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)dm)));
+      PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &w1psnorm_e, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)dm)));
+
+      lpnorm_e   = PetscPowReal(lpnorm_e, 1.0 / p);
+      w1psnorm_e = PetscPowReal(w1psnorm_e, 1.0 / p);
+      qnorm_e    = PetscSqrtReal(qnorm_e);
+    }
+
+    /* Mesh size */
+    PetscCall(DMPlexComputeGeometryFVM(dmp, &cellgeom, &facegeom));
+    PetscCall(DMPlexGetMinRadius(dmp, &h));
+    PetscCall(VecDestroy(&cellgeom));
+    PetscCall(VecDestroy(&facegeom));
+
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "MMS errors (h,Lp,W1psemi,quasi) %1.8e %1.8e %1.8e %1.8e\n", h, lpnorm_e, w1psnorm_e, qnorm_e));
+
+    PetscCall(DMRestoreLocalVector(dmp, &local_p));
+    PetscCall(DMRestoreGlobalVector(dmp, &exact));
+    PetscCall(DMDestroy(&dmp));
+  }
+
+  PetscCall(TSGetSolution(ts, &u));
+  PetscCall(VecViewFromOptions(u, NULL, "-final_state_view"));
+
   for (PetscInt i = 0; i < NUM_FIELDS; i++) {
     PetscCall(VecScatterDestroy(&ctx->subsct[i]));
     PetscCall(VecDestroy(&ctx->subvec[i]));
@@ -2404,7 +3173,9 @@ int main(int argc, char **argv)
     PetscCall(Run(PETSC_COMM_WORLD, &ctx));
   }
   PetscCall(PetscFree5(ctx.source_ctx->x0, ctx.source_ctx->w, ctx.source_ctx->k, ctx.source_ctx->p, ctx.source_ctx->r));
+  PetscCall(PetscFree(ctx.source_ctx->fctx));
   PetscCall(PetscFree(ctx.source_ctx));
+  PetscCall(PetscFree(ctx.mms_ctx));
   PetscCall(PetscFinalize());
   return 0;
 }
@@ -2466,6 +3237,11 @@ int main(int argc, char **argv)
       suffix: 0_p4est_mg
       nsize: {{1 2}}
       args: -dm_forest_minimum_refinement 0 -dm_forest_initial_refinement 2 -dm_plex_convert_type p4est -pc_type mg -mg_coarse_pc_type svd -mg_levels_pc_type svd -lump 0
+
+    test:
+      suffix: scalar_eq
+      nsize: {{1 2}}
+      args: -scalar_eq -ic_num {{0 1 2 3}separate output}
 
   testset:
     requires: hdf5
