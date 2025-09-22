@@ -302,7 +302,6 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
   PetscCall(PetscSectionSetChart(rootSectionAdj, 0, numDof));
   /*   Fill in the ghost dofs on the interface */
   PetscCall(PetscSFGetGraph(sf, NULL, &nleaves, &leaves, &remotes));
-  PetscCall(PetscPrintf(comm, "nleaves: %" PetscInt_FMT "\n", nleaves));
   if (nleaves >= 0) PetscCall(PetscMalloc2(nleaves, &rootsSameRank, nleaves, &leavesSameRank));
   for (PetscInt i = 0; i < nleaves; i++) {
     if (remotes[i].rank == myrank) {
@@ -691,6 +690,8 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
   PetscCall(PetscSectionDestroy(&anchorSectionAdj));
   PetscCall(PetscSectionDestroy(&leafSectionAdj));
   PetscCall(PetscSectionDestroy(&rootSectionAdj));
+  PetscCall(PetscFree(found_leaves));
+  PetscCall(PetscFree2(rootsSameRank, leavesSameRank));
   PetscCall(PetscFree(anchorAdj));
   PetscCall(PetscFree(rootAdj));
   PetscCall(PetscFree(tmpAdj));
