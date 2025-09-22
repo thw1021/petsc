@@ -130,10 +130,10 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
 
   PetscFunctionBegin;
   if (ts->steps == 0) pseudo->dt_initial = ts->time_step;
-  PetscCall(VecCopy(ts->vec_sol, pseudo->update));
   PetscCall(TSPseudoComputeTimeStep(ts, &next_time_step));
   for (reject = 0; reject < ts->max_reject; reject++, ts->reject++) {
     ts->time_step = next_time_step;
+    PetscCall(VecCopy(ts->vec_sol, pseudo->update));
     PetscCall(TSPreStage(ts, ts->ptime + ts->time_step));
     PetscCall(SNESSolve(ts->snes, NULL, pseudo->update));
     PetscCall(SNESGetIterationNumber(ts->snes, &nits));
@@ -179,6 +179,7 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
 }
 
 /*------------------------------------------------------------*/
+
 static PetscErrorCode TSReset_Pseudo(TS ts)
 {
   TS_Pseudo *pseudo = (TS_Pseudo *)ts->data;
@@ -205,26 +206,11 @@ static PetscErrorCode TSDestroy_Pseudo(TS ts)
 
 /*------------------------------------------------------------*/
 
-/*
-    Compute Xdot = (X^{n+1}-X^n)/dt) = 0
-*/
 static PetscErrorCode TSPseudoGetXdot(TS ts, Vec X, Vec *Xdot)
 {
-  TS_Pseudo        *pseudo = (TS_Pseudo *)ts->data;
-  const PetscScalar mdt    = 1.0 / ts->time_step, *xnp1, *xn;
-  PetscScalar      *xdot;
-  PetscInt          i, n;
+  TS_Pseudo *pseudo = (TS_Pseudo *)ts->data;
 
   PetscFunctionBegin;
-  *Xdot = NULL;
-  PetscCall(VecGetArrayRead(ts->vec_sol, &xn));
-  PetscCall(VecGetArrayRead(X, &xnp1));
-  PetscCall(VecGetArray(pseudo->xdot, &xdot));
-  PetscCall(VecGetLocalSize(X, &n));
-  for (i = 0; i < n; i++) xdot[i] = mdt * (xnp1[i] - xn[i]);
-  PetscCall(VecRestoreArrayRead(ts->vec_sol, &xn));
-  PetscCall(VecRestoreArrayRead(X, &xnp1));
-  PetscCall(VecRestoreArray(pseudo->xdot, &xdot));
   *Xdot = pseudo->xdot;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -248,11 +234,12 @@ static PetscErrorCode TSPseudoGetXdot(TS ts, Vec X, Vec *Xdot)
 */
 static PetscErrorCode SNESTSFormFunction_Pseudo(SNES snes, Vec X, Vec Y, TS ts)
 {
-  Vec Xdot;
+  TS_Pseudo        *pseudo = (TS_Pseudo *)ts->data;
+  const PetscScalar mdt    = 1.0 / ts->time_step;
 
   PetscFunctionBegin;
-  PetscCall(TSPseudoGetXdot(ts, X, &Xdot));
-  PetscCall(TSComputeIFunction(ts, ts->ptime + ts->time_step, X, Xdot, Y, PETSC_FALSE));
+  PetscCall(VecAXPBYPCZ(pseudo->xdot, -mdt, mdt, 0, ts->vec_sol, X));
+  PetscCall(TSComputeIFunction(ts, ts->ptime + ts->time_step, X, pseudo->xdot, Y, PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -270,6 +257,7 @@ static PetscErrorCode SNESTSFormJacobian_Pseudo(SNES snes, Vec X, Mat AA, Mat BB
   Vec Xdot;
 
   PetscFunctionBegin;
+  /* Xdot has already been computed in SNESTSFormFunction_Pseudo (SNES guarantees this) */
   PetscCall(TSPseudoGetXdot(ts, X, &Xdot));
   PetscCall(TSComputeIJacobian(ts, ts->ptime + ts->time_step, X, Xdot, 1. / ts->time_step, AA, BB, PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -285,6 +273,7 @@ static PetscErrorCode TSSetUp_Pseudo(TS ts)
   PetscCall(VecDuplicate(ts->vec_sol, &pseudo->xdot));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 /*------------------------------------------------------------*/
 
 static PetscErrorCode TSPseudoMonitorDefault(TS ts, PetscInt step, PetscReal ptime, Vec v, void *dummy)

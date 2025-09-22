@@ -8028,7 +8028,7 @@ PetscErrorCode DMSetFineDM(DM dm, DM fdm)
 . Nc       - The number of constrained field components (0 will constrain all components)
 . comps    - An array of constrained component numbers
 . bcFunc   - A pointwise function giving boundary values
-. bcFunc_t - A pointwise function giving the time deriative of the boundary values, or NULL
+. bcFunc_t - A pointwise function giving the time derivative of the boundary values, or NULL
 - ctx      - An optional user context for bcFunc
 
   Output Parameter:
