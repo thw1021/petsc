@@ -1067,7 +1067,7 @@ PETSC_INTERN PetscErrorCode MatSolverTypeRegister_Htool(void)
 . -mat_htool_min_target_depth <`PetscInt`>                                                     - minimal cluster tree depth associated with the rows
 . -mat_htool_min_source_depth <`PetscInt`>                                                     - minimal cluster tree depth associated with the columns
 . -mat_htool_block_tree_consistency <`PetscBool`>                                              - block tree consistency
-. -mat_htool_recompression <`PetscBool`>                                                   - use recompression
+. -mat_htool_recompression <`PetscBool`>                                                       - use recompression
 . -mat_htool_compressor <sympartialACA, fullACA, SVD>                                          - type of compression
 - -mat_htool_clustering <PCARegular, PCAGeometric, BounbingBox1Regular, BoundingBox1Geometric> - type of clustering
 
