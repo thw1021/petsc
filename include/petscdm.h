@@ -16,6 +16,7 @@ PETSC_EXTERN PetscErrorCode DMInitializePackage(void);
 
 PETSC_EXTERN PetscClassId DM_CLASSID;
 
+#define DMLOCATEPOINT_UNKNOWN         -366
 #define DMLOCATEPOINT_POINT_NOT_FOUND -367
 
 /*J
