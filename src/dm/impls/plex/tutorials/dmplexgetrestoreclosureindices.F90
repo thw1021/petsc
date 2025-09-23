@@ -35,7 +35,7 @@ program main
 
   PetscCallA(DMPlexGetHeightStratum(dm, zero, cStart, cEnd, ierr))
   PetscCallA(PetscSectionGetNumFields(gS, Nf, ierr))
-  allocate(offsets(Nf+1))
+  allocate(offsets(Nf + 1))
 
   ! Indices per cell
   ! cell 0 (cStart)
@@ -43,7 +43,7 @@ program main
   allocate(idxMatrix(nIdx, cEnd - cStart))
   idxMatrix(1:nIdx, cStart + 1) = indices
   ! Check size and content of output field offsets array
-  PetscCheck(size(offsets) == Nf .and. offsets(1) == zero, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Wrong field offsets")
+  PetscCheckA(size(offsets) == (Nf + 1) .and. offsets(1) == zero, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Wrong field offsets")
   PetscCallA(DMPlexRestoreClosureIndices(cdm, gS, gS, cStart, PETSC_TRUE, nIdx, indices, offsets, PETSC_NULL_SCALAR_POINTER, ierr))
   ! cell 1 (cEnd - 1)
   PetscCallA(DMPlexGetClosureIndices(cdm, gS, gS, cEnd - 1, PETSC_TRUE, nIdx, indices, offsets, PETSC_NULL_SCALAR_POINTER, ierr))
