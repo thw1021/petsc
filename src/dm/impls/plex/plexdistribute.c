@@ -218,7 +218,7 @@ PetscErrorCode DMPlexGetAdjacency_Internal(DM dm, PetscInt p, PetscBool useCone,
     if ((depth == 3 && maxP > 200) || (depth == 2 && maxP > 580)) asiz = pEnd - pStart;
     else asiz = (maxP > 1) ? ((PetscPowInt(maxP, depth + 1) - 1) / (maxP - 1)) : depth + 1;
     asiz *= maxAnchors;
-    asiz = PetscMin(asiz, pEnd - pStart);
+    asiz = pEnd - pStart;// PetscMin(asiz, pEnd - pStart);
     PetscCall(PetscMalloc1(asiz, adj));
   }
   if (*adjSize < 0) *adjSize = asiz;
