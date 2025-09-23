@@ -3,45 +3,6 @@
 #include <petscsf.h>
 #include <petscds.h>
 
-//TODO: Move to somewhere nice
-// Possibly make flexible to be any array with a PetscDataType argument
-static PetscErrorCode PetscSectionIntView(PetscSection s, PetscInt array[], PetscViewer viewer)
-{
-  PetscInt    p, i;
-  PetscMPIInt rank;
-
-  PetscFunctionBegin;
-  if (!viewer) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)s), &viewer));
-  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 3);
-  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer), &rank));
-  PetscCall(PetscViewerASCIIPushSynchronized(viewer));
-  PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "Process %d:\n", rank));
-  for (p = 0; p < s->pEnd - s->pStart; ++p) {
-    if (s->bc && (s->bc->atlasDof[p] > 0)) {
-      PetscInt b;
-
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "  (%4" PetscInt_FMT ") dof %2" PetscInt_FMT " offset %3" PetscInt_FMT, p + s->pStart, s->atlasDof[p], s->atlasOff[p]));
-      for (i = s->atlasOff[p]; i < s->atlasOff[p] + s->atlasDof[p]; ++i) {
-        PetscInt v = array[i];
-        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, " %2" PetscInt_FMT, v));
-      }
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, " constrained"));
-      for (b = 0; b < s->bc->atlasDof[p]; ++b) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, " %" PetscInt_FMT, s->bcIndices[s->bc->atlasOff[p] + b]));
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "\n"));
-    } else {
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "  (%4" PetscInt_FMT ") dof %2" PetscInt_FMT " offset %3" PetscInt_FMT, p + s->pStart, s->atlasDof[p], s->atlasOff[p]));
-      for (i = s->atlasOff[p]; i < s->atlasOff[p] + s->atlasDof[p]; ++i) {
-        PetscInt v = array[i];
-        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, " %2" PetscInt_FMT, v));
-      }
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "\n"));
-    }
-  }
-  PetscCall(PetscViewerFlush(viewer));
-  PetscCall(PetscViewerASCIIPopSynchronized(viewer));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* get adjacencies due to point-to-point constraints that can't be found with DMPlexGetAdjacency() */
 static PetscErrorCode DMPlexComputeAnchorAdjacencies(DM dm, PetscBool useCone, PetscBool useClosure, PetscSection *anchorSectionAdj, PetscInt *anchorAdj[])
 {
@@ -416,7 +377,7 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
   /* Debugging */
   if (debug) {
     PetscCall(PetscPrintf(comm, "Leaf adjacency indices\n"));
-    PetscCall(PetscSectionIntView(leafSectionAdj, adj, NULL));
+    PetscCall(PetscSectionArrayView(leafSectionAdj, adj, PETSC_INT, NULL));
   }
   /* Gather adjacent indices to root */
   PetscCall(PetscSectionGetStorageSize(rootSectionAdj, &adjSize));
@@ -445,7 +406,7 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
   /* Debugging */
   if (debug) {
     PetscCall(PetscPrintf(comm, "Root adjacency indices after gather\n"));
-    PetscCall(PetscSectionIntView(rootSectionAdj, rootAdj, NULL));
+    PetscCall(PetscSectionArrayView(rootSectionAdj, rootAdj, PETSC_INT, NULL));
   }
   /* Add in local adjacency indices for owned dofs on interface (roots) */
   for (p = pStart; p < pEnd; ++p) {
@@ -487,7 +448,7 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
   /* Debugging */
   if (debug) {
     PetscCall(PetscPrintf(comm, "Adjacency Section for Preallocation on Roots before compression:\n"));
-    PetscCall(PetscSectionIntView(rootSectionAdj, rootAdj, NULL));
+    PetscCall(PetscSectionArrayView(rootSectionAdj, rootAdj, PETSC_INT, NULL));
   }
   /* Compress indices */
   PetscCall(PetscSectionSetUp(rootSectionAdj));
@@ -511,7 +472,7 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
   /* Debugging */
   if (debug) {
     PetscCall(PetscPrintf(comm, "Adjacency Section for Preallocation on Roots after compression:\n"));
-    PetscCall(PetscSectionIntView(rootSectionAdj, rootAdj, NULL));
+    PetscCall(PetscSectionArrayView(rootSectionAdj, rootAdj, PETSC_INT, NULL));
   }
   /* Build adjacency section: Maps global indices to sets of adjacent global indices */
   PetscCall(PetscSectionGetOffsetRange(sectionGlobal, &globalOffStart, &globalOffEnd));
@@ -610,8 +571,8 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
       PetscCall(PetscSectionGetDof(sectionAdj, d, &adof));
       PetscCall(PetscSectionGetOffset(sectionAdj, d, &aoff));
       for (q = 0; q < numAdj; ++q) {
-        const PetscInt  padj = tmpAdj[q], *ncind;
-        PetscInt        ndof, ncdof, ngoff, nd, count;
+        const PetscInt padj = tmpAdj[q], *ncind;
+        PetscInt       ndof, ncdof, ngoff, nd, count;
 
         /* Adjacent points may not be in the section chart */
         if ((padj < pStart) || (padj >= pEnd)) continue;
@@ -639,7 +600,7 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
   /* Debugging */
   if (debug) {
     PetscCall(PetscPrintf(comm, "Column indices\n"));
-    PetscCall(PetscSectionIntView(sectionAdj, cols, NULL));
+    PetscCall(PetscSectionArrayView(sectionAdj, cols, PETSC_INT, NULL));
   }
 
   *sA     = sectionAdj;
