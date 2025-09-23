@@ -51,21 +51,15 @@ class Configure(config.package.Package):
     for arg in ['with-64-bit-blas-indices','known-64-bit-blas-indices']:
       if self.argDB.get(arg):
         raise RuntimeError('MUMPS cannot be used with %s' % arg)
-    if self.scalartypes.precision == 'single':
-      if self.scalartypes.scalartype == 'real': l = 's'
-      else: l = 'c'
-    else:
-      if self.scalartypes.scalartype == 'real': l = 'd'
-      else: l = 'z'
-    self.functions = [l+'mumps_c']
-    self.includes  = [l+'mumps_c.h']
+    self.functions = ['smumps_c', 'dmumps_c', 'cmumps_c', 'zmumps_c',]
+    self.includes  = ['smumps_c.h', 'dmumps_c.h', 'cmumps_c.h', 'zmumps_c.h']
     liblist_common = [['libmumps_common.a','libpord.a','libpthread.a'],
                      ['libmumps_common.a','libpord.a'],
                      ['libmumps_common.a','libpord.a','libmpiseq.a'],
                      ['libmumps_common.a','libpord.a','libpthread.a','libmpiseq.a']]
     self.liblist   = []
     for libc in liblist_common:
-       self.liblist.append(['lib'+l+'mumps.a'] + libc)
+       self.liblist.append(['libsmumps.a', 'libdmumps.a', 'libcmumps.a', 'libzmumps.a'] + libc)
     config.package.Package.configureLibrary(self)
 
   def consistencyChecks(self):
