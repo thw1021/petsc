@@ -55,7 +55,7 @@ program main
   do idx = 1, nIdx
     cnt = cnt + count(idxMatrix(idx, 1) == idxMatrix(1:nIdx, cEnd))
   end do
-  PetscCheck(cnt == sharedNodes * cdim, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Wrong DOF indices")
+  PetscCheckA(cnt == sharedNodes * cdim, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Wrong DOF indices")
 
   ! Cleanup
   PetscCallA(DMDestroy(dm, ierr))
