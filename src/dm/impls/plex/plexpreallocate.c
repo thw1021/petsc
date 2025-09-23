@@ -4,6 +4,7 @@
 #include <petscds.h>
 
 //TODO: Move to somewhere nice
+// Possibly make flexible to be any array with a PetscDataType argument
 static PetscErrorCode PetscSectionIntView(PetscSection s, PetscInt array[], PetscViewer viewer)
 {
   PetscInt    p, i;
@@ -227,7 +228,7 @@ static inline PetscErrorCode AdjancencyContainsLeafRootPair(PetscInt num_pairs, 
 static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, PetscSF sfDof, PetscBool useCone, PetscBool useClosure, PetscBool useAnchors, PetscSection *sA, PetscInt **colIdx)
 {
   MPI_Comm           comm;
-  PetscMPIInt        size, myrank;
+  PetscMPIInt        myrank;
   PetscBool          doCommLocal, doComm, debug = PETSC_FALSE;
   PetscSF            sf, sfAdj;
   PetscSection       section, sectionGlobal, leafSectionAdj, rootSectionAdj, sectionAdj, anchorSectionAdj;
@@ -241,7 +242,6 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-dm_view_preallocation", &debug, NULL));
-  PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &myrank));
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMGetIsoperiodicPointSF_Internal(dm, &sf));
@@ -261,10 +261,10 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
 
   // Store leaf-root pairs if remote.rank is the current rank
   if (nleaves >= 0) PetscCall(PetscMalloc2(nleaves, &rootsMyRankPair, nleaves, &leavesMyRankPair));
-  for (PetscInt i = 0; i < nleaves; i++) {
-    if (remotes[i].rank == myrank) {
-      rootsMyRankPair[numMyRankPair]  = remotes[i].index;
-      leavesMyRankPair[numMyRankPair] = leaves[i];
+  for (PetscInt l = 0; l < nleaves; l++) {
+    if (remotes[l].rank == myrank) {
+      rootsMyRankPair[numMyRankPair]  = remotes[l].index;
+      leavesMyRankPair[numMyRankPair] = leaves[l];
       numMyRankPair++;
     }
   }
@@ -556,7 +556,7 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
       PetscCall(PetscSectionGetDof(section, padj, &ndof));
       PetscCall(PetscSectionGetConstraintDof(section, padj, &ncdof));
       PetscCall(PetscSectionGetOffset(section, padj, &noff));
-      // Only count roots if leaf-root pair are both on this rank
+      // If leaf-root pair are both on this rank, only count root
       PetscCall(PetscFindInt(padj, num_exclude_leaves, exclude_leaves, &count));
       if (count >= 0) continue;
       for (d = goff; d < goff + dof - cdof; ++d) PetscCall(PetscSectionAddDof(sectionAdj, d, ndof - ncdof));
@@ -619,7 +619,7 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
         PetscCall(PetscSectionGetConstraintDof(section, padj, &ncdof));
         PetscCall(PetscSectionGetConstraintIndices(section, padj, &ncind));
         PetscCall(PetscSectionGetOffset(sectionGlobal, padj, &ngoff));
-        // Only count roots if leaf-root pair are both on this rank
+        // If leaf-root pair are both on this rank, only count root
         PetscCall(PetscFindInt(padj, num_exclude_leaves, exclude_leaves, &count));
         if (count >= 0) continue;
         for (nd = 0; nd < ndof - ncdof; ++nd, ++i) cols[aoff + i] = ngoff < 0 ? -(ngoff + 1) + nd : ngoff + nd;
@@ -636,7 +636,6 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
   PetscCall(PetscFree(anchorAdj));
   PetscCall(PetscFree(rootAdj));
   PetscCall(PetscFree(tmpAdj));
-  PetscCall(PetscFree(rootsMyRankPair));
   /* Debugging */
   if (debug) {
     PetscCall(PetscPrintf(comm, "Column indices\n"));
@@ -784,7 +783,6 @@ PetscErrorCode DMPlexPreallocateOperator(DM dm, PetscInt bs, PetscInt dnz[], Pet
   PetscInt     Nf, f, idx, locRows;
   PetscLayout  rLayout;
   PetscBool    isSymBlock, isSymSeqBlock, isSymMPIBlock, debug = PETSC_FALSE;
-  PetscMPIInt  size;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -794,11 +792,9 @@ PetscErrorCode DMPlexPreallocateOperator(DM dm, PetscInt bs, PetscInt dnz[], Pet
   if (dnzu) PetscAssertPointer(dnzu, 5);
   if (onzu) PetscAssertPointer(onzu, 6);
   PetscCall(DMGetIsoperiodicPointSF_Internal(dm, &sf));
-  // PetscCall(DMGetPointSF(dm, &sf));
   PetscCall(DMGetLocalSection(dm, &section));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-dm_view_preallocation", &debug, NULL));
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
-  PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(PetscLogEventBegin(DMPLEX_Preallocate, dm, 0, 0, 0));
   /* Create dof SF based on point SF */
   if (debug) {
