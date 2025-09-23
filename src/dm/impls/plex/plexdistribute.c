@@ -222,7 +222,7 @@ PetscErrorCode DMPlexGetMaxAdjacencySize_Internal(DM dm, PetscBool useAnchors, P
 // - adj - Array of the adjacent points
 PetscErrorCode DMPlexGetAdjacency_Internal(DM dm, PetscInt p, PetscBool useCone, PetscBool useTransitiveClosure, PetscBool useAnchors, PetscInt *adjSize, PetscInt *adj[])
 {
-  static PetscInt asiz       = 0;
+  static PetscInt asiz   = 0;
   PetscInt        aStart = -1, aEnd = -1;
   PetscInt        maxAdjSize;
   PetscSection    aSec = NULL;
