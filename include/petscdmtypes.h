@@ -322,3 +322,22 @@ typedef struct _p_UniversalLabel *DMUniversalLabel;
 typedef struct _PETSc_DMCEED *DMCeed;
 
 typedef struct _n_DMGeneratorFunctionList *DMGeneratorFunctionList;
+
+/*E
+   DMPointLocationAlgorithm - Enum indicating what method the `DM` should use for point location
+
+   Values:
++  `DM_POINT_LOCATION_BRUTE_FORCE` - Brute force search of all cells (very slow).
+.  `DM_POINT_LOCATION_HASH`        - Use spatial hash map (Plex only, linear geometry only).
+-  `DM_POINT_LOCATION_KDTREE`      - Use KD Tree nearest-neighbor search on nodes (Plex only).
+
+   Level: beginner
+
+.seealso: `DMPlexGetPointLocationAlgorithm()`, `DMPlexSetPointLocationAlgorithm()`, `DMLocatePoints()`
+E*/
+typedef enum {
+  DM_POINT_LOCATION_BRUTE_FORCE = 0,
+  DM_POINT_LOCATION_HASH        = 1,
+  DM_POINT_LOCATION_KDTREE      = 2
+} DMPointLocationAlgorithm;
+PETSC_EXTERN const char *const DMPointLocationAlgorithms[];
