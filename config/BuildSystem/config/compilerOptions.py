@@ -261,6 +261,15 @@ class CompilerOptions(config.base.Configure):
           flags.extend(['-Wno-line-truncation']) # Work around bug in this series, fixed in 4.6: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=42852
         if config.setCompilers.Configure.isMINGW(compiler, self.log):
           flags.extend(['-fallow-invalid-boz'])
+
+        # avoid warnings such as clang: warning: overriding deployment version from '16.0' to '26.0'
+        if config.setCompilers.Configure.isDarwin(self.log):
+          try:
+            (output, error, status) = config.base.Configure.executeShellCommand('sw_vers', log = self.log)
+            version = output.split('\n')[1].split(':', 1)[1].strip()
+            flags.extend(['-mmacosx-version-min=' + version])
+          except:
+            pass
       elif bopt == 'g':
         # g77 3.2.3 preprocesses the file into nothing if we give -g3
         flags.extend(['-g','-O0'])
