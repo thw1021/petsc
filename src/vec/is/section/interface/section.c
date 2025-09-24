@@ -2640,12 +2640,12 @@ static inline PetscErrorCode PrintDataType(void *array, PetscDataType data_type,
 #if defined(PETSC_HAVE_COMPLEX)
   case PETSC_COMPLEX: {
     PetscComplex v = ((PetscComplex *)array)[index];
-    if (PetscImaginaryPart(v) > 0.0) {
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, " %g + %g i", (double)PetscRealPart(v), (double)PetscImaginaryPart(v)));
-    } else if (PetscImaginaryPart(v) < 0.0) {
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, " %g - %g i", (double)PetscRealPart(v), (double)(-PetscImaginaryPart(v))));
+    if (PetscImaginaryPartComplex(v) > 0.0) {
+      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, " %g + %g i", (double)PetscRealPartComplex(v), (double)PetscImaginaryPartComplex(v)));
+    } else if (PetscImaginaryPartComplex(v) < 0.0) {
+      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, " %g - %g i", (double)PetscRealPartComplex(v), (double)(-PetscImaginaryPartComplex(v))));
     } else {
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, " %g", (double)PetscRealPart(v)));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, " %g", (double)PetscRealPartComplex(v)));
     }
     break;
   }
