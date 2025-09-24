@@ -902,7 +902,7 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
   PetscMPIInt            size;
   superlu_dist_options_t options;
   PetscBool              flg;
-  char                   string[16];
+  PetscPrecision         precision;
 
   PetscFunctionBegin;
   /* Create the factorization matrix */
@@ -953,10 +953,9 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
   lu->matsolve_iscalled    = PETSC_FALSE;
   lu->matmatsolve_iscalled = PETSC_FALSE;
 
-  PetscCall(PetscOptionsGetString(NULL, NULL, "-pc_precision", string, sizeof(string), &flg));
+  PetscCall(PetscOptionsEnum("-pc_precision", "Precision used by SuperLU_DIST", "MATSOLVERSUPERLU_DIST", PetscPrecisionTypes, (PetscEnum)precision, (PetscEnum *)&precision, &flg));
   if (flg) {
-    PetscCall(PetscStrcasecmp(string, "single", &flg));
-    PetscCheck(flg, PetscObjectComm((PetscObject)A), PETSC_ERR_USER_INPUT, "-pc_precision only accepts single as option for SuperLU_DIST");
+    PetscCheck(precision == PETSC_PRECISION_SINGLE, PetscObjectComm((PetscObject)A), PETSC_ERR_USER_INPUT, "-pc_precision only accepts single as option for SuperLU_DIST");
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
     lu->singleprecision = PETSC_TRUE;
 #endif
