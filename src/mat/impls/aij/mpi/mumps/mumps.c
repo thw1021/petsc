@@ -200,6 +200,7 @@ static inline PetscErrorCode MatMumpsFreeInternalID(XMUMPS_STRUC_C *outer)
     PetscCall(PetscFree(inner->rhs_sparse));
     PetscCall(PetscFree(inner->rhs_loc));
     PetscCall(PetscFree(inner->sol_loc));
+    PetscCall(PetscFree(inner->schur));
   }
   PetscCall(PetscFree(outer->internal_id));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -232,6 +233,7 @@ static inline PetscErrorCode MatMumpsFreeInternalID(XMUMPS_STRUC_C *outer)
 static PetscErrorCode MatMumpsMakeMumpsScalarArray(PetscBool convert, PetscCount n, const PetscScalar *pa, PetscPrecision precision, PetscCount *m, void **ma)
 {
   PetscFunctionBegin;
+  PetscCheck(precision == PETSC_PRECISION_SINGLE || precision == PETSC_PRECISION_DOUBLE, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unsupported precicison (%d). Must be single or double", (int)precision);
 #if defined(PETSC_USE_COMPLEX)
   #if defined(PETSC_USE_REAL_SINGLE)
   if (precision == PETSC_PRECISION_DOUBLE) {
@@ -2464,6 +2466,15 @@ static PetscErrorCode MatFactorNumeric_MUMPS(Mat F, Mat A, PETSC_UNUSED const Ma
   } else {
     PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc_len, &mumps->id.a_loc));
   }
+
+  if (F->schur) {
+    const PetscScalar *array;
+    MUMPS_INT          size = mumps->id.size_schur;
+    PetscCall(MatDenseGetArrayRead(F->schur, &array));
+    PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_FALSE, size * size, array, mumps->id.precision, &mumps->id.schur_len, &mumps->id.schur));
+    PetscCall(MatDenseRestoreArrayRead(F->schur, &array));
+  }
+
   PetscMUMPS_c(mumps);
   if (mumps->id.INFOG(1) < 0) {
     PetscCheck(!A->erroriffailure, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error in numerical factorization: INFOG(1)=%d, INFO(2)=%d " MUMPS_MANUALS, mumps->id.INFOG(1), mumps->id.INFO(2));
@@ -2489,6 +2500,10 @@ static PetscErrorCode MatFactorNumeric_MUMPS(Mat F, Mat A, PETSC_UNUSED const Ma
 #if defined(PETSC_HAVE_CUDA)
     F->schur->offloadmask = PETSC_OFFLOAD_CPU;
 #endif
+    PetscScalar *array;
+    PetscCall(MatDenseGetArray(F->schur, &array));
+    PetscCall(MatMumpsCastMumpsScalarArray(mumps->id.size_schur * mumps->id.size_schur, mumps->id.precision, mumps->id.schur, array));
+    PetscCall(MatDenseRestoreArray(F->schur, &array));
     if (mumps->id.ICNTL(19) == 1) { /* stored by rows */
       mumps->id.ICNTL(19) = 2;
       PetscCall(MatTranspose(F->schur, MAT_INPLACE_MATRIX, &F->schur));
@@ -3189,7 +3204,7 @@ static PetscErrorCode MatFactorSetSchurIS_MUMPS(Mat F, IS is)
   PetscCall(MatDestroy(&F->schur));
   PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, size, size, NULL, &F->schur));
   PetscCall(MatDenseGetArrayRead(F->schur, &arr));
-  PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_FALSE, size * size, arr, mumps->id.precision, &mumps->id.schur_len, &mumps->id.schur));
+  // don't allocate mumps->id.schur[] now as its precision is yet to know
   PetscCall(PetscMUMPSIntCast(size, &mumps->id.size_schur));
   PetscCall(PetscMUMPSIntCast(size, &mumps->id.schur_lld));
   PetscCall(MatDenseRestoreArrayRead(F->schur, &arr));
