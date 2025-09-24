@@ -107,10 +107,10 @@ M*/
     Values:
 +   `PETSC_PRECISION_INVALID`     - an invalid value
 .   `PETSC_PRECISION_BFLOAT16`    - half precision (Google Brain bfloat16)
-.   `PETSC_PRECISION_FLOAT16`     - half precison (IEEE FP16)
+.   `PETSC_PRECISION___FP16`      - half precison (IEEE FP16)
 .   `PETSC_PRECISION_SINGLE`      - single precision
 .   `PETSC_PRECISION_DOUBLE`      - double precision
--   `PETSC_PRECISION_FLOAT128`    - quadruple precision (__float128)
+-   `PETSC_PRECISION___FLOAT128`  - quadruple precision (__float128)
 
     Level: intermediate
 E*/
@@ -118,10 +118,10 @@ E*/
 typedef enum {
   PETSC_PRECISION_INVALID = 0,
   PETSC_PRECISION_BFLOAT16,
-  PETSC_PRECISION_FLOAT16,
+  PETSC_PRECISION___FP16,
   PETSC_PRECISION_SINGLE,
   PETSC_PRECISION_DOUBLE,
-  PETSC_PRECISION_FLOAT128
+  PETSC_PRECISION___FLOAT128
 } PetscPrecision;
 
 /* ========================================================================== */
