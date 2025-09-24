@@ -355,7 +355,8 @@ int main(int argc, char **args)
 
    testset:
      requires: mumps double !complex
-     args: -solver 0 -pc_precision {{single double}}
+     # large tol to accomondate pc precision single
+     args: -solver 0 -pc_precision {{single double}} -tol 3.4e-4
 
      test:
        suffix: mumps
