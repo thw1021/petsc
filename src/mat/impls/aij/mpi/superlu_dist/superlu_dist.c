@@ -953,7 +953,9 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
   lu->matsolve_iscalled    = PETSC_FALSE;
   lu->matmatsolve_iscalled = PETSC_FALSE;
 
+  PetscOptionsBegin(PetscObjectComm((PetscObject)B), ((PetscObject)B)->prefix, "SuperLU_DIST Options", "Mat");
   PetscCall(PetscOptionsEnum("-pc_precision", "Precision used by SuperLU_DIST", "MATSOLVERSUPERLU_DIST", PetscPrecisionTypes, (PetscEnum)precision, (PetscEnum *)&precision, &flg));
+  PetscOptionsEnd();
   if (flg) {
     PetscCheck(precision == PETSC_PRECISION_SINGLE, PetscObjectComm((PetscObject)A), PETSC_ERR_USER_INPUT, "-pc_precision only accepts single as option for SuperLU_DIST");
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)

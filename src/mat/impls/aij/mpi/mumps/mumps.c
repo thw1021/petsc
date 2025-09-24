@@ -72,13 +72,13 @@ static inline PetscErrorCode PetscOptionsMUMPSInt_Private(PetscOptionItems Petsc
 
 // TODO: maybe we should expose a global var PETSC_REAL_PRECISION
 #if defined(PETSC_USE_REAL___FP16)
-static const PetscPrecision PETSC_REAL_PRECISION = PETSC_PRECISION_FLOAT16;
+static const PetscPrecision PETSC_REAL_PRECISION = PETSC_PRECISION___FP16;
 #elif defined(PETSC_USE_REAL_SINGLE)
 static const PetscPrecision PETSC_REAL_PRECISION = PETSC_PRECISION_SINGLE;
 #elif defined(PETSC_USE_REAL_DOUBLE)
 static const PetscPrecision PETSC_REAL_PRECISION = PETSC_PRECISION_DOUBLE;
 #elif defined(PETSC_USE_REAL___FLOAT128)
-static const PetscPrecision PETSC_REAL_PRECISION = PETSC_PRECISION_FLOAT128;
+static const PetscPrecision PETSC_REAL_PRECISION = PETSC_PRECISION___FLOAT128;
 #endif
 
 // An abstract type for specific MUMPS types {S,D,C,Z}MUMPS_STRUC_C.

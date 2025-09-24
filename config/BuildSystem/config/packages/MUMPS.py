@@ -12,7 +12,6 @@ class Configure(config.package.Package):
                              'https://web.cels.anl.gov/projects/petsc/download/externalpackages/MUMPS_'+self.version+'.tar.gz']
     self.downloaddirnames = ['petsc-pkg-mumps','MUMPS']
     self.buildLanguages   = ['C','FC']
-    self.precisions       = ['single','double']
     self.downloadonWindows= 1
     self.hastests         = 1
     self.hastestsdatafiles= 1
