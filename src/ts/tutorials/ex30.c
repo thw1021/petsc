@@ -2527,6 +2527,69 @@ static PetscErrorCode SetInitialConditionsAndTolerances(TS ts, PetscInt nv, Vec 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode NPCFunction(SNES snes, Vec u, Vec F, void *ctx)
+{
+  IS is;
+  SNES psnes;
+  DM dm;
+  //    SNESFunctionFn *computefunction;
+  //void *fctx;
+
+  PetscFunctionBeginUser;
+  printf("WTF %p\n",snes);
+  PetscCall(PetscObjectQuery((PetscObject)snes, "parent SNES", (PetscObject *)&psnes));
+  PetscCheck(psnes, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing parent SNES");
+  PetscCall(SNESGetDM(psnes, &dm));
+  PetscCall(PetscObjectQuery((PetscObject)dm, "IS conductivity", (PetscObject *)&is));
+  PetscCheck(is, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing conductivity IS");
+  PetscCall(SNESComputeFunction(psnes, u, F));
+  //PetscCall(DMSNESGetFunction(dm, &computefunction, &fctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode SetupNPC(TS ts)
+{
+  //DM dm, dmc;
+  //PetscDS   ds;
+  //PetscInt   fields[NUM_FIELDS] = {C_FIELD_ID, P_FIELD_ID};
+  SNES snes, npc;
+  PetscBool flg;
+  SNESFunctionFn *func;
+  SNESJacobianFn *jac;
+  void          *funcctx;
+  void          *jacctx;
+  Mat            J, Jp;
+
+  PetscFunctionBeginUser;
+  PetscCall(TSGetSNES(ts, &snes));
+  PetscCall(SNESHasNPC(snes, &flg));
+  if (!flg) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(TSSetUp(ts));
+  PetscCall(SNESSetUp(snes));
+  PetscCall(SNESGetNPC(snes, &npc));
+  PetscCall(SNESGetFunction(snes, NULL, &func, &funcctx));
+  PetscCall(SNESGetJacobian(snes, NULL, NULL, &jac, &jacctx));
+  PetscCall(SNESSetFunction(npc, NULL, NPCFunction, funcctx));
+  printf("WTF SETUP %p (parent %p func %p) \n",npc,snes,func);
+  PetscCall(PetscObjectCompose((PetscObject)npc, "parent SNES", (PetscObject)snes));
+  PetscCall(TSGetSNES(ts, &snes));
+  PetscCall(SNESGetFunction(snes, NULL, &func, &funcctx));
+  printf("WTF SETUP %p (parent %p func %p) \n",npc,snes,func);
+  //PetscCall(SNESSetJacobian(npc, NULL, NULL, NPCJacobian, jacctx));
+//  PetscCall(TSGetDM(ts, &dm));
+//  PetscCall(DMCreateSubDM(dm, 1, fields, NULL, &dmc));
+//  PetscCall(DMSetMatType(dmc, MATAIJ));
+//  PetscCall(DMGetDS(dmc, &ds));
+//  if (ctx->dim == 2) {
+//    PetscCall(PetscDSSetResidual(ds, 0, P_0_aux, P_1_aux));
+//    PetscCall(PetscDSSetJacobian(ds, 0, 0, NULL, NULL, NULL, JP_1_p1p1_aux));
+//  } else {
+//    PetscCall(PetscDSSetResidual(ds, 0, P_0_aux, P_1_aux_3d));
+//    PetscCall(PetscDSSetJacobian(ds, 0, 0, NULL, NULL, NULL, JP_1_p1p1_aux_3d));
+//  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* mesh adaption context */
 typedef struct {
   VecTagger refineTag;
@@ -3030,6 +3093,7 @@ static PetscErrorCode Run(MPI_Comm comm, AppCtx *ctx)
   PetscCall(TSSetSolution(ts, u));
   PetscCall(VecDestroy(&u));
   PetscCall(DMDestroy(&dm));
+  PetscCall(SetupNPC(ts));
   if (!ctx->test_restart) PetscCall(PetscLogStagePop());
 
   if (!ctx->test_restart) PetscCall(PetscLogStagePush(SolveStage));
