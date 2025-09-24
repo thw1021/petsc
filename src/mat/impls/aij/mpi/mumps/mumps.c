@@ -81,7 +81,7 @@ static inline PetscErrorCode PetscOptionsMUMPSInt_Private(PetscOptionItems Petsc
 // Also note that we added some *_len fields not in specific types to track sizes of those MumpsScalar buffers.
 typedef struct {
   PetscPrecision precision;   // precision used by MUMPS
-  void          *internal_id; // the data structure passed to MUMPS, whose actual type {S,D,C,Z}MUMPS_STRUC_C is to be decided by precision and petsc's use of complex
+  void          *internal_id; // the data structure passed to MUMPS, whose actual type {S,D,C,Z}MUMPS_STRUC_C is to be decided by precision and PETSc's use of complex
 
   // aliased fields from internal_id, so that we can use XMUMPS_STRUC_C to write shared code across different precisions.
   MUMPS_INT  sym, par, job;
