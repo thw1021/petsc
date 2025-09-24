@@ -2613,7 +2613,7 @@ static inline PetscErrorCode PrintDataType(void *array, PetscDataType data_type,
     break;
   }
   case PETSC_COUNT: {
-    PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, " %2" PetscInt64_FMT, ((PetscCount *)array)[index]));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, " %2" PetscCount_FMT, ((PetscCount *)array)[index]));
     break;
   }
   // PETSC_SCALAR is set to the appropriate type
@@ -2709,7 +2709,7 @@ PetscErrorCode PetscSectionArrayView(PetscSection s, void *array, PetscDataType 
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
   PetscAssertPointer(array, 2);
   if (!viewer) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)s), &viewer));
-  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 3);
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
     if (s->numFields) {
