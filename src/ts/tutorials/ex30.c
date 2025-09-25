@@ -259,7 +259,7 @@ static void C_0(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[]
     if (u_t) {
       f0[0] = 0.5 * (u_t[uOff[C_FIELD_ID]] - gnorm + alpha * fnorm * u[uOff[C_FIELD_ID]]);
     } else {
-      f0[0] = - gnorm + alpha * fnorm * u[uOff[C_FIELD_ID]];
+      f0[0] = -gnorm + alpha * fnorm * u[uOff[C_FIELD_ID]];
     }
 #else
     const PetscReal fnorm = PetscPowScalar(PetscAbsScalar(C + (u_t ? eps : 0.0)), gamma - 1.0);
@@ -267,7 +267,7 @@ static void C_0(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[]
     if (u_t) {
       f0[0] = 0.5 * (u_t[uOff[C_FIELD_ID]] - gnorm + alpha * fnorm);
     } else {
-      f0[0] = - gnorm + alpha * fnorm;
+      f0[0] = -gnorm + alpha * fnorm;
     }
 #endif
   } else {
@@ -316,10 +316,11 @@ static void JC_0_c0c0(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt 
   const PetscBool   split  = (PetscBool)(PetscRealPart(constants[SPLIT_ID]) != 0.0);
   const PetscScalar nexp   = (gamma - 2.0) / 2.0;
   if (scaleq) {
-    const PetscScalar C      = split ? a[aOff[C_FIELD_ID]] : u[uOff[C_FIELD_ID]];
-    const PetscScalar norm   = PetscSqr(C) + eps;
+    const PetscScalar C    = split ? a[aOff[C_FIELD_ID]] : u[uOff[C_FIELD_ID]];
+    const PetscScalar norm = PetscSqr(C) + eps;
     if (split) {
-      const PetscScalar fnorm  = PetscPowScalar(norm, nexp);
+      const PetscScalar fnorm = PetscPowScalar(norm, nexp);
+
       J[0] = 0.5 * (u_tShift + alpha * fnorm);
     } else {
 #if 1
@@ -328,9 +329,9 @@ static void JC_0_c0c0(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt 
       //const PetscScalar fnorm  = PetscPowScalar(norm, nexp);
       //const PetscScalar dfnorm = nexp * PetscPowScalar(norm, nexp - 1.0);
       //J[0] = 0.5 * (u_tShift + alpha * fnorm + (split ? 0.0 : 2 * alpha * dfnorm * PetscSqr(C)));
-      J[0] = 0.5 * (u_tShift + alpha * d1 * (eps + (gamma - 1)*PetscSqr(C)));
+      J[0] = 0.5 * (u_tShift + alpha * d1 * (eps + (gamma - 1) * PetscSqr(C)));
 #else
-      J[0] = 0.5 * (u_tShift + (gamma - 1) * PetscPowScalar(PetscAbsScalar(C + eps),gamma - 2.0));
+      J[0] = 0.5 * (u_tShift + (gamma - 1) * PetscPowScalar(PetscAbsScalar(C + eps), gamma - 2.0));
 #endif
     }
   } else {
@@ -462,10 +463,11 @@ static void JC_1_c1c1_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscI
 }
 
 /* HACK: To sample some functions we need contexts, but cannot use contexts at this level of granularity; we use static variables */
-void *source_ctx = NULL;
-void *mms_ctx = NULL;
 PetscErrorCode (*mms_func)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *) = NULL;
 PetscErrorCode (*mms_grad)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *) = NULL;
+
+void *source_ctx = NULL;
+void *mms_ctx    = NULL;
 
 /* residual for P when tested against basis functions.
    without essential bc the source term comes from the auxiliary data because it must be zero mean (algebraically) */
@@ -742,16 +744,17 @@ static void JP_1_p1c0_3d(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscI
 /* Neumann forcing term */
 static void bd_forcing(PetscInt dim, PetscReal t, const PetscReal x[], const PetscReal n[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
-  if (!mms_grad) PetscCallAbort(PETSC_COMM_SELF,PETSC_ERR_SUP);
-  if (!mms_ctx) PetscCallAbort(PETSC_COMM_SELF,PETSC_ERR_SUP);
-  const PetscReal *constants = (const PetscReal *)ctx;
-  const PetscScalar  gamma   = constants[GAMMA_ID];
-  const PetscScalar  p       = 2 * gamma / (gamma - 1);
+  if (!mms_grad) PetscCallAbort(PETSC_COMM_SELF, PETSC_ERR_SUP);
+  if (!mms_ctx) PetscCallAbort(PETSC_COMM_SELF, PETSC_ERR_SUP);
+  const PetscReal  *constants = (const PetscReal *)ctx;
+  const PetscScalar gamma     = constants[GAMMA_ID];
+  const PetscScalar p         = 2 * gamma / (gamma - 1);
 
   /* compute \grad u for the exact solution and then compute |\grad u|^(p-2) du/dn */
   PetscScalar gradu[3];
   mms_grad(dim, t, x, Nc, gradu, mms_ctx);
   PetscScalar ngradu = PetscPowScalar(PetscSqr(gradu[0]) + PetscSqr(gradu[1]), (p - 2.0) / 2.0);
+
   u[0] = gradu[0] * ngradu * n[0] + gradu[1] * ngradu * n[1];
 }
 
@@ -841,13 +844,13 @@ static void energy(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOf
 /* functionals to be integrated: p-Laplacian energy ->  |grap p|^p - f p */
 static void plap_energy(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar obj[])
 {
-  const PetscScalar *gradu  = u_x + uOff_x[P_FIELD_ID];
-  const PetscScalar  gamma  = constants[GAMMA_ID];
-  const PetscScalar  p      = 2 * gamma / (gamma - 1);
+  const PetscScalar *gradu = u_x + uOff_x[P_FIELD_ID];
+  const PetscScalar  gamma = constants[GAMMA_ID];
+  const PetscScalar  p     = 2 * gamma / (gamma - 1);
 
   PetscScalar f[1];
   P_0(dim, Nf, NfAux, uOff, uOff_x, u, u_t, u_x, aOff, aOff_x, a, a_t, a_x, t, x, numConstants, constants, f);
-  PetscScalar normup = PetscPowScalar(PetscSqrtScalar(PetscSqr(gradu[0]) + PetscSqr(gradu[1])),p);
+  PetscScalar normup = PetscPowScalar(PetscSqrtScalar(PetscSqr(gradu[0]) + PetscSqr(gradu[1])), p);
   PetscScalar pfu    = p * u[uOff[P_FIELD_ID]] * f[0];
 
   obj[0] = normup - pfu;
@@ -1352,7 +1355,8 @@ typedef struct {
   PetscBool             exclude_potential_lte;
 
   /* hack: need some more plumbing in the library */
-  SNES snes;
+  SNES  snes;
+  void *npcctx;
 } AppCtx;
 
 #include <petsc/private/tsimpl.h> /* To access TSMonitorVTKCtx */
@@ -1398,6 +1402,9 @@ static PetscErrorCode ProcessOptions(AppCtx *options)
     options->subvec[i] = NULL;
   }
   for (PetscInt i = 0; i < 64; i++) options->view_times[i] = PETSC_MAX_REAL;
+
+  options->snes   = NULL;
+  options->npcctx = NULL;
 
   PetscOptionsBegin(PETSC_COMM_WORLD, "", __FILE__, "DMPLEX");
   PetscCall(PetscOptionsInt("-dim", "space dimension", __FILE__, options->dim, &options->dim, NULL));
@@ -1826,11 +1833,11 @@ static PetscErrorCode AddEssentialBoundary(DM dm, PetscInt field_id, AppCtx *ctx
   PetscCall(DMGetLabel(dm, "dirichlet", &dirlabel));
   PetscCall(DMGetLabel(dm, "neumann", &neulabel));
   if (dirlabel && neulabel && ctx->mms_grad) { /* Mixed BC */
-    PetscDS ds;
-    PetscInt bd;
-    PetscWeakForm wf;
-    IS lvalues;
-    PetscInt nl;
+    PetscDS         ds;
+    PetscInt        bd;
+    PetscWeakForm   wf;
+    IS              lvalues;
+    PetscInt        nl;
     const PetscInt *lidxs;
 
     PetscCall(DMGetLabelISAll(dm, dirlabel, &lvalues));
@@ -2527,69 +2534,6 @@ static PetscErrorCode SetInitialConditionsAndTolerances(TS ts, PetscInt nv, Vec 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode NPCFunction(SNES snes, Vec u, Vec F, void *ctx)
-{
-  IS is;
-  SNES psnes;
-  DM dm;
-  //    SNESFunctionFn *computefunction;
-  //void *fctx;
-
-  PetscFunctionBeginUser;
-  printf("WTF %p\n",snes);
-  PetscCall(PetscObjectQuery((PetscObject)snes, "parent SNES", (PetscObject *)&psnes));
-  PetscCheck(psnes, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing parent SNES");
-  PetscCall(SNESGetDM(psnes, &dm));
-  PetscCall(PetscObjectQuery((PetscObject)dm, "IS conductivity", (PetscObject *)&is));
-  PetscCheck(is, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing conductivity IS");
-  PetscCall(SNESComputeFunction(psnes, u, F));
-  //PetscCall(DMSNESGetFunction(dm, &computefunction, &fctx));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode SetupNPC(TS ts)
-{
-  //DM dm, dmc;
-  //PetscDS   ds;
-  //PetscInt   fields[NUM_FIELDS] = {C_FIELD_ID, P_FIELD_ID};
-  SNES snes, npc;
-  PetscBool flg;
-  SNESFunctionFn *func;
-  SNESJacobianFn *jac;
-  void          *funcctx;
-  void          *jacctx;
-  Mat            J, Jp;
-
-  PetscFunctionBeginUser;
-  PetscCall(TSGetSNES(ts, &snes));
-  PetscCall(SNESHasNPC(snes, &flg));
-  if (!flg) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(TSSetUp(ts));
-  PetscCall(SNESSetUp(snes));
-  PetscCall(SNESGetNPC(snes, &npc));
-  PetscCall(SNESGetFunction(snes, NULL, &func, &funcctx));
-  PetscCall(SNESGetJacobian(snes, NULL, NULL, &jac, &jacctx));
-  PetscCall(SNESSetFunction(npc, NULL, NPCFunction, funcctx));
-  printf("WTF SETUP %p (parent %p func %p) \n",npc,snes,func);
-  PetscCall(PetscObjectCompose((PetscObject)npc, "parent SNES", (PetscObject)snes));
-  PetscCall(TSGetSNES(ts, &snes));
-  PetscCall(SNESGetFunction(snes, NULL, &func, &funcctx));
-  printf("WTF SETUP %p (parent %p func %p) \n",npc,snes,func);
-  //PetscCall(SNESSetJacobian(npc, NULL, NULL, NPCJacobian, jacctx));
-//  PetscCall(TSGetDM(ts, &dm));
-//  PetscCall(DMCreateSubDM(dm, 1, fields, NULL, &dmc));
-//  PetscCall(DMSetMatType(dmc, MATAIJ));
-//  PetscCall(DMGetDS(dmc, &ds));
-//  if (ctx->dim == 2) {
-//    PetscCall(PetscDSSetResidual(ds, 0, P_0_aux, P_1_aux));
-//    PetscCall(PetscDSSetJacobian(ds, 0, 0, NULL, NULL, NULL, JP_1_p1p1_aux));
-//  } else {
-//    PetscCall(PetscDSSetResidual(ds, 0, P_0_aux, P_1_aux_3d));
-//    PetscCall(PetscDSSetJacobian(ds, 0, 0, NULL, NULL, NULL, JP_1_p1p1_aux_3d));
-//  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* mesh adaption context */
 typedef struct {
   VecTagger refineTag;
@@ -2824,7 +2768,7 @@ static PetscErrorCode Monitor(TS ts, PetscInt stepnum, PetscReal time, Vec u, vo
     PetscCall(DMPlexComputeIntegralFEM(dm, u, vals + 2 * NUM_FIELDS, NULL));
     PetscCall(PetscDSSetObjective(ds, P_FIELD_ID, zero));
     PetscCall(PetscDSSetObjective(ds, C_FIELD_ID, energy));
-    errdcdt = PetscRealPart(PetscSqrtScalar(vals[2 * NUM_FIELDS + C_FIELD_ID]));
+    errdcdt   = PetscRealPart(PetscSqrtScalar(vals[2 * NUM_FIELDS + C_FIELD_ID]));
     errplapen = vals[2 * NUM_FIELDS + P_FIELD_ID];
     PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts), "%4" PetscInt_FMT " TS: time %3.8e, energy %1.8e, ||dC/dt||_2 %1.8e, ell %1.8e, plap energy %1.8e\n", stepnum, (double)time, (double)PetscRealPart(vals[C_FIELD_ID]), (double)errdcdt, (double)PetscRealPart(vals[NUM_FIELDS + C_FIELD_ID]), errplapen));
   }
@@ -2887,6 +2831,27 @@ static PetscErrorCode MonitorSave(TS ts, PetscInt steps, PetscReal time, Vec u, 
   PetscCall(TSGetDM(ts, &dm));
   PetscCall(TSGetConvergedReason(ts, &reason));
   if ((save_every > 0 && steps % save_every == 0) || (save_every == -1 && reason) || save_every < -1) PetscCall(SaveToFile(dm, u, ctx->save_filename));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Monitor separate residual norms for potential and conductivity */
+static PetscErrorCode MonitorNorms(SNES snes, PetscInt its, PetscReal f, void *vctx)
+{
+  AppCtx   *ctx = (AppCtx *)vctx;
+  Vec       F;
+  DM        dm;
+  PetscReal subnorm[NUM_FIELDS];
+
+  PetscFunctionBeginUser;
+  PetscCall(SNESGetDM(snes, &dm));
+  PetscCall(SNESGetFunction(snes, &F, NULL, NULL));
+  PetscCall(VecScatterBegin(ctx->subsct[C_FIELD_ID], F, ctx->subvec[C_FIELD_ID], INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterEnd(ctx->subsct[C_FIELD_ID], F, ctx->subvec[C_FIELD_ID], INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterBegin(ctx->subsct[P_FIELD_ID], F, ctx->subvec[P_FIELD_ID], INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterEnd(ctx->subsct[P_FIELD_ID], F, ctx->subvec[P_FIELD_ID], INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecNorm(ctx->subvec[C_FIELD_ID], NORM_2, &subnorm[C_FIELD_ID]));
+  PetscCall(VecNorm(ctx->subvec[P_FIELD_ID], NORM_2, &subnorm[P_FIELD_ID]));
+  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "      %3" PetscInt_FMT " SNES Function norms %14.12e, %14.12e\n", its, (double)subnorm[C_FIELD_ID], (double)subnorm[P_FIELD_ID]));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2970,23 +2935,94 @@ static PetscErrorCode PostStage(TS ts, PetscReal stagetime, PetscInt stageindex,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MonitorNorms(SNES snes, PetscInt its, PetscReal f, void *vctx)
+/* nonlinear preconditioning support */
+typedef struct {
+  SNES            parentsnes;
+  SNESFunctionFn *func;
+  SNESJacobianFn *jac;
+  void           *funcctx;
+  void           *jacctx;
+} NPCAwareFunctionCtx;
+
+static PetscErrorCode NPCAwareFunction(SNES snes, Vec u, Vec F, void *ctx)
 {
-  AppCtx   *ctx = (AppCtx *)vctx;
-  Vec       F;
-  DM        dm;
-  PetscReal subnorm[NUM_FIELDS];
+  NPCAwareFunctionCtx *nctx = (NPCAwareFunctionCtx *)ctx;
+  DM                   dm;
 
   PetscFunctionBeginUser;
   PetscCall(SNESGetDM(snes, &dm));
-  PetscCall(SNESGetFunction(snes, &F, NULL, NULL));
-  PetscCall(VecScatterBegin(ctx->subsct[C_FIELD_ID], F, ctx->subvec[C_FIELD_ID], INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall(VecScatterEnd(ctx->subsct[C_FIELD_ID], F, ctx->subvec[C_FIELD_ID], INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall(VecScatterBegin(ctx->subsct[P_FIELD_ID], F, ctx->subvec[P_FIELD_ID], INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall(VecScatterEnd(ctx->subsct[P_FIELD_ID], F, ctx->subvec[P_FIELD_ID], INSERT_VALUES, SCATTER_FORWARD));
-  PetscCall(VecNorm(ctx->subvec[C_FIELD_ID], NORM_2, &subnorm[C_FIELD_ID]));
-  PetscCall(VecNorm(ctx->subvec[P_FIELD_ID], NORM_2, &subnorm[P_FIELD_ID]));
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "    %3" PetscInt_FMT " SNES Function norms %14.12e, %14.12e\n", its, (double)subnorm[C_FIELD_ID], (double)subnorm[P_FIELD_ID]));
+  if (snes != nctx->parentsnes) { /* this is the npc */
+    IS  is;
+    Vec un;
+
+    //printf("NPC SUBFUNC\n");
+    PetscCall(PetscObjectQuery((PetscObject)dm, "IS potential", (PetscObject *)&is));
+    PetscCheck(is, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing potential IS");
+    //PetscCall(DMGetGlobalVector(dm, &un));
+    //PetscCall(VecCopy(u, un));
+    //PetscCall(VecISSet(un, is, 0));
+    PetscCall((*nctx->func)(nctx->parentsnes, u, F, nctx->funcctx));
+    PetscCall(VecISSet(F, is, 0));
+    //PetscCall(DMRestoreGlobalVector(dm, &un));
+  } else {
+    //printf("PARENT FUNC\n");
+    PetscCall((*nctx->func)(nctx->parentsnes, u, F, nctx->funcctx));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode NPCAwareJacobian(SNES snes, Vec u, Mat J, Mat Jp, void *ctx)
+{
+  NPCAwareFunctionCtx *nctx = (NPCAwareFunctionCtx *)ctx;
+  DM                   dm;
+
+  PetscFunctionBeginUser;
+  PetscCall(SNESGetDM(snes, &dm));
+  if (snes != nctx->parentsnes) { /* this is the npc */
+    IS  is;
+    Vec un;
+
+    //printf("NPC SUBJAC\n");
+    PetscCall(PetscObjectQuery((PetscObject)dm, "IS potential", (PetscObject *)&is));
+    PetscCheck(is, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Missing potential IS");
+    //PetscCall(DMGetGlobalVector(dm, &un));
+    //PetscCall(VecCopy(u, un));
+    //PetscCall(VecISSet(un, is, 0));
+    PetscCall((*nctx->jac)(nctx->parentsnes, u, J, Jp, nctx->jacctx));
+    PetscCall(MatZeroRowsColumnsIS(Jp, is, PETSC_MAX_REAL, NULL, NULL));
+    if (J != Jp) PetscCall(MatZeroRowsColumnsIS(J, is, PETSC_MAX_REAL, NULL, NULL));
+    //PetscCall(DMRestoreGlobalVector(dm, &un));
+  } else {
+    //printf("PARENT JAC\n");
+    PetscCall((*nctx->jac)(nctx->parentsnes, u, J, Jp, nctx->jacctx));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode SetupNPC(TS ts)
+{
+  SNES                 snes, npc;
+  PetscBool            flg;
+  AppCtx              *ctx;
+  NPCAwareFunctionCtx *npcctx;
+
+  PetscFunctionBeginUser;
+  PetscCall(TSGetSNES(ts, &snes));
+  PetscCall(SNESHasNPC(snes, &flg));
+  if (!flg) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscMalloc1(1, &npcctx));
+  PetscCall(TSGetApplicationContext(ts, &ctx));
+  ctx->npcctx = npcctx;
+
+  PetscCall(TSSetUp(ts));
+  PetscCall(SNESSetUp(snes));
+  PetscCall(SNESGetNPC(snes, &npc));
+  PetscCall(SNESGetFunction(snes, NULL, &npcctx->func, &npcctx->funcctx));
+  PetscCall(SNESGetJacobian(snes, NULL, NULL, &npcctx->jac, &npcctx->jacctx));
+  PetscCall(SNESSetFunction(npc, NULL, NPCAwareFunction, npcctx));
+  PetscCall(SNESSetJacobian(npc, NULL, NULL, NPCAwareJacobian, npcctx));
+  npcctx->parentsnes = snes;
+  if (ctx->monitor_norms) PetscCall(SNESMonitorSet(npc, MonitorNorms, ctx, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3185,6 +3221,7 @@ static PetscErrorCode Run(MPI_Comm comm, AppCtx *ctx)
     PetscCall(VecScatterDestroy(&ctx->subsct[i]));
     PetscCall(VecDestroy(&ctx->subvec[i]));
   }
+  PetscCall(PetscFree(ctx->npcctx));
 
   PetscCall(TSDestroy(&ts));
   PetscCall(VecTaggerDestroy(&actx->refineTag));
