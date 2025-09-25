@@ -1623,3 +1623,5 @@ struct _n_PetscObjectList {
   PetscObject     obj;
   PetscObjectList next;
 };
+
+PETSC_EXTERN const char *const PetscPrecisionTypes[];
