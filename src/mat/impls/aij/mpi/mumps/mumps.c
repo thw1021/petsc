@@ -617,7 +617,7 @@ static PetscErrorCode MatMumpsSolveSchur_Private(Mat F)
   Mat                  S, B, X; // solve S*X = B; all three matrices are dense
   MatFactorSchurStatus schurstatus;
   PetscInt             sizesol;
-  const PetscScalar   *barray;
+  const PetscScalar   *xarray;
 
   PetscFunctionBegin;
   PetscCall(MatFactorFactorizeSchurComplement(F));
@@ -669,10 +669,10 @@ static PetscErrorCode MatMumpsSolveSchur_Private(Mat F)
   default:
     SETERRQ(PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Unhandled MatFactorSchurStatus %d", F->schur_status);
   }
-
-  PetscCall(MatDenseGetArrayRead(B, &barray)); // barray should be mumps->redrhs, but using MatDenseGetArrayRead is safer with GPUs.
-  PetscCall(MatMumpsCastPetscScalarArray(mumps->sizeredrhs, barray, mumps->id.precision, mumps->id.redrhs));
-  PetscCall(MatDenseRestoreArrayRead(B, &barray));
+  // MUST get the array from X (not B), though they share the same host array. We can only guarantee X has the correct data on device.
+  PetscCall(MatDenseGetArrayRead(X, &xarray)); // xarray should be mumps->redrhs, but using MatDenseGetArrayRead is safer with GPUs.
+  PetscCall(MatMumpsCastPetscScalarArray(mumps->sizeredrhs, xarray, mumps->id.precision, mumps->id.redrhs));
+  PetscCall(MatDenseRestoreArrayRead(X, &xarray));
   PetscCall(MatFactorRestoreSchurComplement(F, &S, schurstatus));
   PetscCall(MatDestroy(&B));
   PetscCall(MatDestroy(&X));
@@ -699,7 +699,7 @@ static PetscErrorCode MatMumpsHandleSchur_Private(Mat F, PetscBool expansion)
       PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_FALSE, mumps->sizeredrhs, mumps->redrhs, mumps->id.precision, &mumps->id.redrhs_len, &mumps->id.redrhs));
     }
   } else {                                    /* prepare for the expansion step */
-    PetscCall(MatMumpsSolveSchur_Private(F)); /* solve Schur complement (this has to be done by the MUMPS user, so basically us) */
+    PetscCall(MatMumpsSolveSchur_Private(F)); /* solve Schur complement, put solution in id.redrhs (this has to be done by the MUMPS user, so basically us) */
     mumps->id.ICNTL(26) = 2;                  /* expansion phase */
     PetscMUMPS_c(mumps);
     PetscCheck(mumps->id.INFOG(1) >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error in solve: INFOG(1)=%d, INFO(2)=%d " MUMPS_MANUALS, mumps->id.INFOG(1), mumps->id.INFO(2));
@@ -1929,13 +1929,13 @@ static PetscErrorCode MatSolve_MUMPS(Mat A, Vec b, Vec x)
     PetscCheck(mumps->petsc_size <= 1, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Parallel Schur complements not yet supported from PETSc");
     if (mumps->id.ICNTL(26) < 0 || mumps->id.ICNTL(26) > 2) {
       second_solve = PETSC_TRUE;
-      PetscCall(MatMumpsHandleSchur_Private(A, PETSC_FALSE));
-      mumps->id.ICNTL(26) = 1; /* condensation phase */
+      PetscCall(MatMumpsHandleSchur_Private(A, PETSC_FALSE)); // allocate id.redrhs
+      mumps->id.ICNTL(26) = 1;                                /* condensation phase */
     } else if (mumps->id.ICNTL(26) == 1) PetscCall(MatMumpsHandleSchur_Private(A, PETSC_FALSE));
   }
 
   mumps->id.job = JOB_SOLVE;
-  PetscMUMPS_c(mumps);
+  PetscMUMPS_c(mumps); // reduced solve, put solution in id.redrhs
   PetscCheck(mumps->id.INFOG(1) >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error in solve: INFOG(1)=%d, INFO(2)=%d " MUMPS_MANUALS, mumps->id.INFOG(1), mumps->id.INFO(2));
 
   /* handle expansion step of Schur complement (if any) */
