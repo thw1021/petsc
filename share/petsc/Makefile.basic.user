@@ -25,6 +25,13 @@ LDFLAGS    = # Used by link targets - option occurs after the linker, before obj
 PRELIBS    = # Used by link targets - option occurs before PETSC_LIB
 LIBS       = # Used by link targets - option occurs after PETSC_LIB
 
+include ${PETSC_DIR}/lib/petsc/conf/variables
+
+#  To access the PETSc variables for the build, including compilers, compiler flags, libraries etc but
+#  manage the build rules yourself (rarely needed) comment out the next line
+#
+include ${PETSC_DIR}/lib/petsc/conf/rules
+
 #  For example - a single source file (ex1.c or ex1.F90) can be compiled with:
 #
 #      make ex1
@@ -41,12 +48,17 @@ LIBS       = # Used by link targets - option occurs after PETSC_LIB
 #  (with additional modifications - if needed):
 #
 # myapp : app.o b.o c.o
-#	$(LINK.F) $^ $(LOADLIBES) $(LDLIBS) -o $@
+#	${LINK.F} $^ ${LOADLIBES} ${LDLIBS} -o $@
 
-include ${PETSC_DIR}/lib/petsc/conf/variables
-
-#  To access the PETSc variables for the build, including compilers, compiler flags, libraries etc but
-#  manage the build rules yourself (rarely needed) comment out the next lines
+# Say you have above sources in "src", includes in "include", and require application binary in "bin", then use "make all" with:
 #
-include ${PETSC_DIR}/lib/petsc/conf/rules
-
+# VPATH            = src
+# OBJS             = app.o b.o c.o
+# MYAPP            = bin/app
+# CPPFLAGS         = -Iinclude
+# CLEANFILES       = ${MYAPP} ${OBJS}
+#
+# ${MYAPP}: ${OBJS}
+#	${LINK.C} $^ ${LOADLIBES} ${LDLIBS} -o $@
+#
+# all: ${MYAPP}
