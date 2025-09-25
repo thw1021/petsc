@@ -282,12 +282,12 @@ int main(int argc, char **argv)
     test:
       suffix: tri_order_2
       requires: triangle
-      args: -dm_coord_petscspace_degree 2
+      args: -dm_coord_petscspace_degree 2 -dm_plex_point_location_algorithm {{brute_force hash kdtree}}
 
     test:
       suffix: tri_order_3
       requires: triangle
-      args: -dm_coord_petscspace_degree 3
+      args: -dm_coord_petscspace_degree 3 -dm_plex_point_location_algorithm {{brute_force hash kdtree}}
 
     test:
       suffix: quad
@@ -295,11 +295,7 @@ int main(int argc, char **argv)
 
     test:
       suffix: quad_order_2
-      args: -dm_plex_simplex 0 -dm_coord_petscspace_degree 2
-
-    test:
-      suffix: quad_order_2_kdtree
-      args: -dm_plex_simplex 0 -dm_coord_petscspace_degree 2 -dm_plex_point_location_algorithm kdtree
+      args: -dm_plex_simplex 0 -dm_coord_petscspace_degree 2 -dm_plex_point_location_algorithm {{brute_force hash kdtree}}
 
     test:
       suffix: quad_hash
@@ -335,7 +331,12 @@ int main(int argc, char **argv)
     test:
       suffix: tet_order_2_kdtree
       requires: ctetgen
-      args: -dm_refine 0 -dm_coord_petscspace_degree 2 -dm_plex_point_location_algorithm kdtree
+      args: -dm_refine 1 -dm_coord_petscspace_degree 2 -dm_plex_point_location_algorithm kdtree
+
+    test:
+      suffix: tet_order_2_hash
+      requires: ctetgen
+      args: -dm_refine 1 -dm_coord_petscspace_degree 2 -dm_plex_point_location_algorithm hash
 
     test:
       suffix: hex
@@ -355,8 +356,13 @@ int main(int argc, char **argv)
       nsize: 2
 
     test:
+        suffix: hex_order_2_hash
+        args: -dm_plex_simplex 0 -dm_refine 2 -dm_coord_petscspace_degree 2 -dm_plex_point_location_algorithm hash
+        nsize: 2
+
+    test:
       suffix: hex_order_2_kdtree
-      args: -dm_plex_simplex 0 -dm_refine 1 -dm_coord_petscspace_degree 2 -dm_plex_point_location_algorithm kdtree
+      args: -dm_plex_simplex 0 -dm_refine 2 -dm_coord_petscspace_degree 2 -dm_plex_point_location_algorithm kdtree
       nsize: 2
 
     test:
@@ -364,8 +370,12 @@ int main(int argc, char **argv)
       args: -dm_plex_simplex 0 -dm_coord_petscspace_degree 3
 
     test:
+      suffix: hex_order_3_hash
+      args: -dm_plex_simplex 0 -dm_refine 1 -dm_coord_petscspace_degree 3 -dm_plex_point_location_algorithm hash
+
+    test:
       suffix: hex_order_3_kdtree
-      args: -dm_plex_simplex 0 -dm_coord_petscspace_degree 3 -dm_plex_point_location_algorithm kdtree
+      args: -dm_plex_simplex 0 -dm_refine 1 -dm_coord_petscspace_degree 3 -dm_plex_point_location_algorithm kdtree
 
   testset:
     args: -centroids 0 -custom \
