@@ -174,6 +174,9 @@
 - Remove ``coordFunc`` argument from `DMPlexCreateCoordinateSpace()`
 - Change `DMPlexExtrude()` to take a label argument
 - Rename `DMPlexVecGetOrientedClosure_Internal()` to `DMPlexVecGetOrientedClosure()`
+- Add `DMPointLocationAlgorithm` enum, `DMPlexSetPointLocationAlgorithm()`, and `DMPlexGetPointLocationAlgorithm()`
+- Deprecate `-dm_plex_hash_location` in favor of `-dm_plex_point_location_algorithm hash`
+- Add KD tree-based point location algorithm: `PetscGridKDTree`, `DMPlexCreateGridKDTree()`, `PetscGridKDTreeDestroy()`, and `-dm_plex_point_location_algorithm kdtree`
 
 ```{rubric} FE/FV:
 ```

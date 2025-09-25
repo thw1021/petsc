@@ -393,7 +393,9 @@ static PetscErrorCode Remesh(DM dm, Vec U, DM *newdm)
   PetscCall(SetupDiscretization(*newdm, ctx));
 
   // TODO
-  ((DM_Plex *)(*newdm)->data)->useHashLocation = ((DM_Plex *)dm->data)->useHashLocation;
+  DMPointLocationAlgorithm alg;
+  PetscCall(DMPlexGetPointLocationAlgorithm(dm, &alg));
+  PetscCall(DMPlexSetPointLocationAlgorithm(*newdm, alg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -678,7 +680,7 @@ int main(int argc, char **argv)
   test:
     suffix: remesh
     requires: triangle mmg
-    args: -sol_type quadratic_trig -dm_refine 2 -temp_petscspace_degree 1 -ts_type beuler -ts_dt 0.01 -snes_error_if_not_converged -pc_type lu -grad_petscspace_degree 1 -dm_adaptor mmg -dm_plex_hash_location -remesh_every 5
+    args: -sol_type quadratic_trig -dm_refine 2 -temp_petscspace_degree 1 -ts_type beuler -ts_dt 0.01 -snes_error_if_not_converged -pc_type lu -grad_petscspace_degree 1 -dm_adaptor mmg -dm_plex_point_location_algorithm hash -remesh_every 5
     output_file: output/empty.out
 
 TEST*/

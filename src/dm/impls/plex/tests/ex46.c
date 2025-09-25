@@ -160,6 +160,6 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     args: -num_refine 4 -petscspace_degree 3 \
-          -dm_plex_dim 1 -dm_plex_box_faces 5 -dm_plex_transform_type refine_1d -dm_plex_hash_location -dm_view
+          -dm_plex_dim 1 -dm_plex_box_faces 5 -dm_plex_transform_type refine_1d -dm_plex_point_location_algorithm hash -dm_view
 
 TEST*/
