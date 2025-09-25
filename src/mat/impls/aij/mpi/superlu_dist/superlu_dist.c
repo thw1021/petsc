@@ -902,7 +902,7 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
   PetscMPIInt            size;
   superlu_dist_options_t options;
   PetscBool              flg;
-  PetscPrecision         precision;
+  PetscPrecision         precision = PetscDefined(USE_REAL_SINGLE) ? PETSC_PRECISION_SINGLE : PETSC_PRECISION_DOUBLE;
 
   PetscFunctionBegin;
   /* Create the factorization matrix */
@@ -1005,8 +1005,7 @@ PETSC_INTERN PetscErrorCode MatSolverTypeRegister_SuperLU_DIST(void)
 . -mat_superlu_dist_fact <SamePattern> - (choose one of) `SamePattern`, `SamePattern_SameRowPerm`, `DOFACT`
 . -mat_superlu_dist_iterrefine - use iterative refinement
 . -mat_superlu_dist_printstat - print factorization information
-- -pc_precision single - use SuperLU_DIST single precision with PETSc double precision. Currently this does not accept an options prefix, so
-                         regardless of the `PC` prefix you must use no prefix here
+- -pc_precision single - use SuperLU_DIST single precision with PETSc double precision.
 
   Level: beginner
 
