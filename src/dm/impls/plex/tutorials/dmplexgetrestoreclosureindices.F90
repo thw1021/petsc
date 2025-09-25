@@ -20,7 +20,7 @@ program main
   PetscSection :: gS
   PetscErrorCode :: ierr
 
-  PetscInt, allocatable :: idxMatrix(:,:), offsets(:)
+  PetscInt, allocatable :: idxMatrix(:, :), offsets(:)
   PetscInt, pointer, dimension(:) :: indices
 
   PetscCallA(PetscInitialize(ierr))
@@ -35,12 +35,12 @@ program main
 
   PetscCallA(DMPlexGetHeightStratum(dm, zero, cStart, cEnd, ierr))
   PetscCallA(PetscSectionGetNumFields(gS, Nf, ierr))
-  allocate(offsets(Nf + 1), source = zero)
+  allocate (offsets(Nf + 1), source=zero)
 
   ! Indices per cell
   ! cell 0 (cStart)
   PetscCallA(DMPlexGetClosureIndices(cdm, gS, gS, cStart, PETSC_TRUE, nIdx, indices, offsets, PETSC_NULL_SCALAR_POINTER, ierr))
-  allocate(idxMatrix(nIdx, cEnd - cStart))
+  allocate (idxMatrix(nIdx, cEnd - cStart))
   idxMatrix(1:nIdx, cStart + 1) = indices
   ! Check size and content of output field offsets array
   PetscCheckA(size(offsets) == (Nf + 1) .and. offsets(1) == zero, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Wrong field offsets")
@@ -55,7 +55,7 @@ program main
   do idx = 1, nIdx
     cnt = cnt + count(idxMatrix(idx, 1) == idxMatrix(1:nIdx, cEnd))
   end do
-  PetscCheckA(cnt == sharedNodes * cdim, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Wrong DOF indices")
+  PetscCheckA(cnt == sharedNodes*cdim, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Wrong DOF indices")
 
   ! Cleanup
   PetscCallA(DMDestroy(dm, ierr))
