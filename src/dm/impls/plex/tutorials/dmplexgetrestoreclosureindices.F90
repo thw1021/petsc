@@ -35,7 +35,7 @@ program main
 
   PetscCallA(DMPlexGetHeightStratum(dm, zero, cStart, cEnd, ierr))
   PetscCallA(PetscSectionGetNumFields(gS, Nf, ierr))
-  allocate(offsets(Nf + 1))
+  allocate(offsets(Nf + 1), source = zero)
 
   ! Indices per cell
   ! cell 0 (cStart)
