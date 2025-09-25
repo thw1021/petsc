@@ -50,13 +50,13 @@ static PetscErrorCode VecGhostStateSync_Private(Vec g, Vec l)
   `VecGhostUpdateBegin()` and `VecGhostUpdateEnd()` before accessing the ghost values. Thus normal
   usage is
 .vb
-     VecGhostUpdateBegin(x,INSERT_VALUES,SCATTER_FORWARD);
-     VecGhostUpdateEnd(x,INSERT_VALUES,SCATTER_FORWARD);
-     VecGhostGetLocalForm(x,&xlocal);
-     VecGetArrayRead(xlocal,&xvalues);
+     VecGhostUpdateBegin(x, INSERT_VALUES, SCATTER_FORWARD);
+     VecGhostUpdateEnd(x, INSERT_VALUES, SCATTER_FORWARD);
+     VecGhostGetLocalForm(x, &xlocal);
+     VecGetArrayRead(xlocal, &xvalues);
         // access the non-ghost values in locations xvalues[0:n-1] and ghost values in locations xvalues[n:n+nghost];
-     VecRestoreArrayRead(xlocal,&xvalues);
-     VecGhostRestoreLocalForm(x,&xlocal);
+     VecRestoreArrayRead(xlocal, &xvalues);
+     VecGhostRestoreLocalForm(x, &xlocal);
 .ve
 
   One should call `VecGhostRestoreLocalForm()` or `VecDestroy()` once one is
