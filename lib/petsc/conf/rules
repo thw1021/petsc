@@ -145,28 +145,28 @@ clean:: clean-legacy
          cat trashz ; fi; ${RM} trashz;
 
 .c.o:
-	${PETSC_COMPILE_SINGLE} $<
+	${PETSC_COMPILE_SINGLE} -o $@ $<
 
 .cpp.o .cxx.o .cc.o .C.o:
-	${PETSC_CXXCOMPILE_SINGLE} $<
+	${PETSC_CXXCOMPILE_SINGLE} -o $@ $<
 
 .cu.o:
-	${PETSC_CUCOMPILE_SINGLE} $<
+	${PETSC_CUCOMPILE_SINGLE} -o $@ $<
 
 .hip.cpp.o:
-	${PETSC_HIPCOMPILE_SINGLE} $<
+	${PETSC_HIPCOMPILE_SINGLE} -o $@ $<
 
 .kokkos.cxx.o:
-	${PETSC_KOKKOSCOMPILE_SINGLE} $<
+	${PETSC_KOKKOSCOMPILE_SINGLE} -o $@ $<
 
 .sycl.cxx.o:
-	${PETSC_SYCLCOMPILE_SINGLE} $<
+	${PETSC_SYCLCOMPILE_SINGLE} -o $@ $<
 
 .raja.cxx.o:
-	${PETSC_RAJACOMPILE_SINGLE} $<
+	${PETSC_RAJACOMPILE_SINGLE} -o $@ $<
 
 .F.o .F90.o .F95.o:
-	${PETSC_FCOMPILE_SINGLE} $<
+	${PETSC_FCOMPILE_SINGLE} -o $@ $<
 
 .f.o .f90.o .f95.o:
 	${FC} -c ${FC_FLAGS} ${FFLAGS} -o $@ $<
