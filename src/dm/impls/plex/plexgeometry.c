@@ -1141,36 +1141,88 @@ PetscErrorCode PetscGridHashDestroy(PetscGridHash *box)
 static PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *localBox)
 {
   const PetscInt  debug = ((DM_Plex *)dm->data)->printLocate;
+  DM              cdm;
   PetscGridHash   lbox;
   PetscSF         sf;
   const PetscInt *leaves = NULL;
   PetscInt       *dboxes, *boxes;
-  PetscInt        cdim, cStart, cEnd, Nl = -1;
-  PetscBool       flg;
+  PetscInt        cdim, cStart, cEnd, maxSize = 0, Nl = -1;
+  PetscBool       flg, high_order = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscCall(DMGetCoordinateDim(dm, &cdim));
+  PetscCall(DMGetCoordinateDM(dm, &cdm));
   PetscCall(DMPlexGetSimplexOrBoxCells(dm, 0, &cStart, &cEnd));
+
+  /* Check for high-order coordinates */
+  {
+    PetscFE fe_coord;
+
+    PetscCall(DMGetField(cdm, 0, NULL, (PetscObject *)&fe_coord));
+    if (fe_coord) {
+      PetscClassId id;
+
+      PetscCall(PetscObjectGetClassId((PetscObject)fe_coord, &id));
+      if (id == PETSCFE_CLASSID) {
+        PetscSpace sp;
+        PetscInt   degree;
+
+        PetscCall(PetscFEGetBasisSpace(fe_coord, &sp));
+        PetscCall(PetscSpaceGetDegree(sp, &degree, NULL));
+        if (degree > 1) high_order = PETSC_TRUE;
+      }
+    }
+  }
+
   PetscCall(DMPlexCreateGridHash(dm, &lbox));
   {
-    PetscInt n[3], d;
+    PetscInt n[3], d = 3;
 
     PetscCall(PetscOptionsGetIntArray(NULL, ((PetscObject)dm)->prefix, "-dm_plex_hash_box_faces", n, &d, &flg));
     if (flg) {
       for (PetscInt i = d; i < cdim; ++i) n[i] = n[d - 1];
     } else {
-      for (PetscInt i = 0; i < cdim; ++i) n[i] = PetscMax(2, PetscFloorReal(PetscPowReal((PetscReal)(cEnd - cStart), 1.0 / cdim) * 0.8));
+      if (!high_order) {
+        /* For linear elements, avoid making hash map too big */
+        for (PetscInt i = 0; i < cdim; ++i) n[i] = PetscMax(2, PetscFloorReal(PetscPowReal((PetscReal)(cEnd - cStart), 1.0 / cdim) * 0.8));
+      } else {
+        /* For high-order elements, prioritize smaller hash cell size */
+        for (PetscInt i = 0; i < cdim; ++i) n[i] = PetscMax(2, PetscFloorReal(PetscPowReal((PetscReal)(cEnd - cStart), 1.0 / cdim) * 1.2));
+      }
     }
     PetscCall(PetscGridHashSetGrid(lbox, n, NULL));
     if (PetscUnlikelyDebug(debug))
       PetscCall(PetscPrintf(PETSC_COMM_SELF, "GridHash:\n  (%g, %g, %g) -- (%g, %g, %g)\n  n %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n  h %g %g %g\n", (double)lbox->lower[0], (double)lbox->lower[1], cdim > 2 ? (double)lbox->lower[2] : 0.,
                             (double)lbox->upper[0], (double)lbox->upper[1], cdim > 2 ? (double)lbox->upper[2] : 0, n[0], n[1], cdim > 2 ? n[2] : 0, (double)lbox->h[0], (double)lbox->h[1], cdim > 2 ? (double)lbox->h[2] : 0.));
   }
-
   PetscCall(DMGetPointSF(dm, &sf));
   if (sf) PetscCall(PetscSFGetGraph(sf, NULL, &Nl, &leaves, NULL));
   Nl = PetscMax(Nl, 0);
-  PetscCall(PetscCalloc2(16 * cdim, &dboxes, 16, &boxes));
+
+  /* Determine max closure size for dboxes and boxes arrays */
+  {
+    PetscSection csection;
+
+    PetscCall(DMGetLocalSection(cdm, &csection));
+    for (PetscInt c = cStart; c < cEnd; ++c) {
+      PetscSection    clSection;
+      IS              clPoints;
+      const PetscInt *clp;
+      PetscInt       *points;
+      PetscInt        Ncl, Ni = 0;
+
+      PetscCall(DMPlexGetCompressedClosure(dm, csection, c, 0, &Ncl, &points, &clSection, &clPoints, &clp));
+      for (PetscInt p = 0; p < Ncl * 2; p += 2) {
+        PetscInt dof;
+
+        PetscCall(PetscSectionGetDof(csection, points[p], &dof));
+        Ni += dof;
+      }
+      PetscCall(DMPlexRestoreCompressedClosure(dm, csection, c, &Ncl, &points, &clSection, &clPoints, &clp));
+      maxSize = PetscMax(Ni, maxSize);
+    }
+  }
+  PetscCall(PetscCalloc2(maxSize, &dboxes, maxSize / cdim, &boxes));
 
   PetscCall(DMLabelCreate(PETSC_COMM_SELF, "cells", &lbox->cellsSparse));
   PetscCall(DMLabelCreateIndex(lbox->cellsSparse, cStart, cEnd));
@@ -1203,196 +1255,216 @@ static PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *local
     if (PetscUnlikelyDebug(debug > 4)) {
       for (PetscInt d = 0; d < cdim; ++d) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " direction %" PetscInt_FMT " box limits %" PetscInt_FMT "--%" PetscInt_FMT "\n", c, d, dlim[d * 2 + 0], dlim[d * 2 + 1]));
     }
-    // Initialize with lower planes for first box
-    for (PetscInt d = 0; d < cdim; ++d) {
-      lp[d] = lbox->lower[d] + dlim[d * 2 + 0] * h[d];
-      up[d] = lp[d] + h[d];
-    }
-    for (PetscInt d = 0; d < cdim; ++d) {
-      PetscCall(DMPlexGetPlaneCellIntersection_Internal(dm, c, lp, &normal[d * 3], &lower[d], &lowerInt[d], lowerIntPoints[d]));
-      if (PetscUnlikelyDebug(debug > 4)) {
-        if (!lowerInt[d])
-          PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " lower direction %" PetscInt_FMT " (%g, %g, %g) does not intersect %s\n", c, d, (double)lp[0], (double)lp[1], cdim > 2 ? (double)lp[2] : 0., lower[d] ? "positive" : "negative"));
-        else PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " lower direction %" PetscInt_FMT " (%g, %g, %g) intersects %" PetscInt_FMT " times\n", c, d, (double)lp[0], (double)lp[1], cdim > 2 ? (double)lp[2] : 0., lowerInt[d]));
+    if (high_order) {
+      // Can't do plane-cell intersections, just use bounding-box of nodes expanded by 1 in each direction
+      // This can miss points for very curved elements
+      // TODO: Implement tight bounding boxes or plane-cell intersection for high order
+      for (PetscInt d = 0; d < cdim; ++d) {
+        dlim[d * 2 + 0] = PetscMax(dlim[d * 2 + 0] - 1, 0);
+        dlim[d * 2 + 1] = PetscMin(dlim[d * 2 + 1] + 1, lbox->n[d] - 1);
       }
-    }
-    // Loop over grid
-    for (PetscInt k = dlim[2 * 2 + 0]; k <= dlim[2 * 2 + 1]; ++k, lp[2] = up[2], up[2] += h[2]) {
-      if (cdim > 2) PetscCall(DMPlexGetPlaneCellIntersection_Internal(dm, c, up, &normal[3 * 2], &upper[2], &upperInt[2], upperIntPoints[2]));
-      if (PetscUnlikelyDebug(cdim > 2 && debug > 4)) {
-        if (!upperInt[2]) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 2 (%g, %g, %g) does not intersect %s\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upper[2] ? "positive" : "negative"));
-        else PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 2 (%g, %g, %g) intersects %" PetscInt_FMT " times\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upperInt[2]));
-      }
-      for (PetscInt j = dlim[1 * 2 + 0]; j <= dlim[1 * 2 + 1]; ++j, lp[1] = up[1], up[1] += h[1]) {
-        if (cdim > 1) PetscCall(DMPlexGetPlaneCellIntersection_Internal(dm, c, up, &normal[3 * 1], &upper[1], &upperInt[1], upperIntPoints[1]));
-        if (PetscUnlikelyDebug(cdim > 1 && debug > 4)) {
-          if (!upperInt[1])
-            PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 1 (%g, %g, %g) does not intersect %s\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upper[1] ? "positive" : "negative"));
-          else PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 1 (%g, %g, %g) intersects %" PetscInt_FMT " times\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upperInt[1]));
+      // printf("setting %d boxes for cell %d: [%d, %d]x[%d, %d]x[%d, %d]\n", (dlim[2 * 2 + 1] - dlim[2 * 2 + 0]) * (dlim[1 * 2 + 1] - dlim[1 * 2 + 0]) * (dlim[0 * 2 + 1] - dlim[0 * 2 + 0]), c, dlim[0 * 2 + 0], dlim[0 * 2 + 1], dlim[1 * 2 + 0], dlim[1 * 2 + 1], dlim[2 * 2 + 0], dlim[2 * 2 + 1]);
+      for (PetscInt k = dlim[2 * 2 + 0]; k <= dlim[2 * 2 + 1]; k++) {
+        for (PetscInt j = dlim[1 * 2 + 0]; j <= dlim[1 * 2 + 1]; j++) {
+          for (PetscInt i = dlim[0 * 2 + 0]; i <= dlim[0 * 2 + 1]; i++) {
+            const PetscInt box = (k * lbox->n[1] + j) * lbox->n[0] + i;
+            PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
+          }
         }
-        for (PetscInt i = dlim[0 * 2 + 0]; i <= dlim[0 * 2 + 1]; ++i, lp[0] = up[0], up[0] += h[0]) {
-          const PetscInt box    = (k * lbox->n[1] + j) * lbox->n[0] + i;
-          PetscBool      excNeg = PETSC_TRUE;
-          PetscBool      excPos = PETSC_TRUE;
-          PetscInt       NlInt  = 0;
-          PetscInt       NuInt  = 0;
+      }
+    } else {
+      // Initialize with lower planes for first box
+      for (PetscInt d = 0; d < cdim; ++d) {
+        lp[d] = lbox->lower[d] + dlim[d * 2 + 0] * h[d];
+        up[d] = lp[d] + h[d];
+      }
+      for (PetscInt d = 0; d < cdim; ++d) {
+        PetscCall(DMPlexGetPlaneCellIntersection_Internal(dm, c, lp, &normal[d * 3], &lower[d], &lowerInt[d], lowerIntPoints[d]));
+        if (PetscUnlikelyDebug(debug > 4)) {
+          if (!lowerInt[d])
+            PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " lower direction %" PetscInt_FMT " (%g, %g, %g) does not intersect %s\n", c, d, (double)lp[0], (double)lp[1], cdim > 2 ? (double)lp[2] : 0., lower[d] ? "positive" : "negative"));
+          else PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " lower direction %" PetscInt_FMT " (%g, %g, %g) intersects %" PetscInt_FMT " times\n", c, d, (double)lp[0], (double)lp[1], cdim > 2 ? (double)lp[2] : 0., lowerInt[d]));
+        }
+      }
+      // Loop over grid
+      for (PetscInt k = dlim[2 * 2 + 0]; k <= dlim[2 * 2 + 1]; ++k, lp[2] = up[2], up[2] += h[2]) {
+        if (cdim > 2) PetscCall(DMPlexGetPlaneCellIntersection_Internal(dm, c, up, &normal[3 * 2], &upper[2], &upperInt[2], upperIntPoints[2]));
+        if (PetscUnlikelyDebug(cdim > 2 && debug > 4)) {
+          if (!upperInt[2])
+            PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 2 (%g, %g, %g) does not intersect %s\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upper[2] ? "positive" : "negative"));
+          else PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 2 (%g, %g, %g) intersects %" PetscInt_FMT " times\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upperInt[2]));
+        }
+        for (PetscInt j = dlim[1 * 2 + 0]; j <= dlim[1 * 2 + 1]; ++j, lp[1] = up[1], up[1] += h[1]) {
+          if (cdim > 1) PetscCall(DMPlexGetPlaneCellIntersection_Internal(dm, c, up, &normal[3 * 1], &upper[1], &upperInt[1], upperIntPoints[1]));
+          if (PetscUnlikelyDebug(cdim > 1 && debug > 4)) {
+            if (!upperInt[1])
+              PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 1 (%g, %g, %g) does not intersect %s\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upper[1] ? "positive" : "negative"));
+            else PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 1 (%g, %g, %g) intersects %" PetscInt_FMT " times\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upperInt[1]));
+          }
+          for (PetscInt i = dlim[0 * 2 + 0]; i <= dlim[0 * 2 + 1]; ++i, lp[0] = up[0], up[0] += h[0]) {
+            const PetscInt box    = (k * lbox->n[1] + j) * lbox->n[0] + i;
+            PetscBool      excNeg = PETSC_TRUE;
+            PetscBool      excPos = PETSC_TRUE;
+            PetscInt       NlInt  = 0;
+            PetscInt       NuInt  = 0;
 
-          PetscCall(DMPlexGetPlaneCellIntersection_Internal(dm, c, up, &normal[3 * 0], &upper[0], &upperInt[0], upperIntPoints[0]));
-          if (PetscUnlikelyDebug(debug > 4)) {
-            if (!upperInt[0])
-              PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 0 (%g, %g, %g) does not intersect %s\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upper[0] ? "positive" : "negative"));
-            else PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 0 (%g, %g, %g) intersects %" PetscInt_FMT " times\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upperInt[0]));
-          }
-          for (PetscInt d = 0; d < cdim; ++d) {
-            NlInt += lowerInt[d];
-            NuInt += upperInt[d];
-          }
-          // If there is no intersection...
-          if (!NlInt && !NuInt) {
-            // If the cell is on the negative side of the lower planes, it is not in the box
-            for (PetscInt d = 0; d < cdim; ++d)
-              if (lower[d]) {
-                excNeg = PETSC_FALSE;
-                break;
+            PetscCall(DMPlexGetPlaneCellIntersection_Internal(dm, c, up, &normal[3 * 0], &upper[0], &upperInt[0], upperIntPoints[0]));
+            if (PetscUnlikelyDebug(debug > 4)) {
+              if (!upperInt[0])
+                PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 0 (%g, %g, %g) does not intersect %s\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upper[0] ? "positive" : "negative"));
+              else PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " upper direction 0 (%g, %g, %g) intersects %" PetscInt_FMT " times\n", c, (double)up[0], (double)up[1], cdim > 2 ? (double)up[2] : 0., upperInt[0]));
+            }
+            for (PetscInt d = 0; d < cdim; ++d) {
+              NlInt += lowerInt[d];
+              NuInt += upperInt[d];
+            }
+            // If there is no intersection...
+            if (!NlInt && !NuInt) {
+              // If the cell is on the negative side of the lower planes, it is not in the box
+              for (PetscInt d = 0; d < cdim; ++d)
+                if (lower[d]) {
+                  excNeg = PETSC_FALSE;
+                  break;
+                }
+              // If the cell is on the positive side of the upper planes, it is not in the box
+              for (PetscInt d = 0; d < cdim; ++d)
+                if (!upper[d]) {
+                  excPos = PETSC_FALSE;
+                  break;
+                }
+              if (excNeg || excPos) {
+                if (PetscUnlikelyDebug(debug && excNeg)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " is on the negative side of the lower plane\n", c));
+                if (PetscUnlikelyDebug(debug && excPos)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " is on the positive side of the upper plane\n", c));
+                continue;
               }
-            // If the cell is on the positive side of the upper planes, it is not in the box
-            for (PetscInt d = 0; d < cdim; ++d)
-              if (!upper[d]) {
-                excPos = PETSC_FALSE;
-                break;
-              }
-            if (excNeg || excPos) {
-              if (PetscUnlikelyDebug(debug && excNeg)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " is on the negative side of the lower plane\n", c));
-              if (PetscUnlikelyDebug(debug && excPos)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " is on the positive side of the upper plane\n", c));
+              // Otherwise it is in the box
+              if (PetscUnlikelyDebug(debug)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " is contained in box %" PetscInt_FMT "\n", c, box));
+              PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
               continue;
             }
-            // Otherwise it is in the box
-            if (PetscUnlikelyDebug(debug)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " is contained in box %" PetscInt_FMT "\n", c, box));
-            PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
-            continue;
-          }
-          /*
-            If any intersection point is within the box limits, it is in the box
-            We need to have tolerances here since intersection point calculations can introduce errors
-            Initialize a count to track which planes have intersection outside the box.
-            if two adjacent planes have intersection points upper and lower all outside the box, look
-            first at if another plane has intersection points outside the box, if so, it is inside the cell
-            look next if no intersection points exist on the other planes, and check if the planes are on the
-            outside of the intersection points but on opposite ends. If so, the box cuts through the cell.
-          */
-          PetscInt outsideCount[6] = {0, 0, 0, 0, 0, 0};
-          for (PetscInt plane = 0; plane < cdim; ++plane) {
-            for (PetscInt ip = 0; ip < lowerInt[plane]; ++ip) {
-              PetscInt d;
+            /*
+              If any intersection point is within the box limits, it is in the box
+              We need to have tolerances here since intersection point calculations can introduce errors
+              Initialize a count to track which planes have intersection outside the box.
+              if two adjacent planes have intersection points upper and lower all outside the box, look
+              first at if another plane has intersection points outside the box, if so, it is inside the cell
+              look next if no intersection points exist on the other planes, and check if the planes are on the
+              outside of the intersection points but on opposite ends. If so, the box cuts through the cell.
+            */
+            PetscInt outsideCount[6] = {0, 0, 0, 0, 0, 0};
+            for (PetscInt plane = 0; plane < cdim; ++plane) {
+              for (PetscInt ip = 0; ip < lowerInt[plane]; ++ip) {
+                PetscInt d;
 
-              for (d = 0; d < cdim; ++d) {
-                if ((lowerIntPoints[plane][ip * cdim + d] < (lp[d] - PETSC_SMALL)) || (lowerIntPoints[plane][ip * cdim + d] > (up[d] + PETSC_SMALL))) {
-                  if (lowerIntPoints[plane][ip * cdim + d] < (lp[d] - PETSC_SMALL)) outsideCount[d]++; // The lower point is to the left of this box, and we count it
-                  break;
+                for (d = 0; d < cdim; ++d) {
+                  if ((lowerIntPoints[plane][ip * cdim + d] < (lp[d] - PETSC_SMALL)) || (lowerIntPoints[plane][ip * cdim + d] > (up[d] + PETSC_SMALL))) {
+                    if (lowerIntPoints[plane][ip * cdim + d] < (lp[d] - PETSC_SMALL)) outsideCount[d]++; // The lower point is to the left of this box, and we count it
+                    break;
+                  }
+                }
+                if (d == cdim) {
+                  if (PetscUnlikelyDebug(debug)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " intersected lower plane %" PetscInt_FMT " of box %" PetscInt_FMT "\n", c, plane, box));
+                  PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
+                  goto end;
                 }
               }
-              if (d == cdim) {
-                if (PetscUnlikelyDebug(debug)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " intersected lower plane %" PetscInt_FMT " of box %" PetscInt_FMT "\n", c, plane, box));
+              for (PetscInt ip = 0; ip < upperInt[plane]; ++ip) {
+                PetscInt d;
+
+                for (d = 0; d < cdim; ++d) {
+                  if ((upperIntPoints[plane][ip * cdim + d] < (lp[d] - PETSC_SMALL)) || (upperIntPoints[plane][ip * cdim + d] > (up[d] + PETSC_SMALL))) {
+                    if (upperIntPoints[plane][ip * cdim + d] > (up[d] + PETSC_SMALL)) outsideCount[cdim + d]++; // The upper point is to the right of this box, and we count it
+                    break;
+                  }
+                }
+                if (d == cdim) {
+                  if (PetscUnlikelyDebug(debug)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " intersected upper plane %" PetscInt_FMT " of box %" PetscInt_FMT "\n", c, plane, box));
+                  PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
+                  goto end;
+                }
+              }
+            }
+            /*
+               Check the planes with intersections
+               in 2D, check if the square falls in the middle of a cell
+               ie all four planes have intersection points outside of the box
+               You do not want to be doing this, because it means your grid hashing is finer than your grid,
+               but we should still support it I guess
+            */
+            if (cdim == 2) {
+              PetscInt nIntersects = 0;
+              for (PetscInt d = 0; d < cdim; ++d) nIntersects += (outsideCount[d] + outsideCount[d + cdim]);
+              // if the count adds up to 8, that means each plane has 2 external intersections and thus it is in the cell
+              if (nIntersects == 8) {
                 PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
                 goto end;
               }
             }
-            for (PetscInt ip = 0; ip < upperInt[plane]; ++ip) {
-              PetscInt d;
-
-              for (d = 0; d < cdim; ++d) {
-                if ((upperIntPoints[plane][ip * cdim + d] < (lp[d] - PETSC_SMALL)) || (upperIntPoints[plane][ip * cdim + d] > (up[d] + PETSC_SMALL))) {
-                  if (upperIntPoints[plane][ip * cdim + d] > (up[d] + PETSC_SMALL)) outsideCount[cdim + d]++; // The upper point is to the right of this box, and we count it
-                  break;
+            /*
+               In 3 dimensions, if two adjacent planes have at least 3 intersections outside the cell in the appropriate direction,
+               we then check the 3rd planar dimension. If a plane falls between intersection points, the cell belongs to that box.
+               If the planes are on opposite sides of the intersection points, the cell belongs to that box and it passes through the cell.
+            */
+            if (cdim == 3) {
+              PetscInt faces[3] = {0, 0, 0}, checkInternalFace = 0;
+              // Find two adjacent planes with at least 3 intersection points in the upper and lower
+              // if the third plane has 3 intersection points or more, a pyramid base is formed on that plane and it is in the cell
+              for (PetscInt d = 0; d < cdim; ++d)
+                if (outsideCount[d] >= 3 && outsideCount[cdim + d] >= 3) {
+                  faces[d]++;
+                  checkInternalFace++;
                 }
+              if (checkInternalFace == 3) {
+                // All planes have 3 intersection points, add it.
+                PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
+                goto end;
               }
-              if (d == cdim) {
-                if (PetscUnlikelyDebug(debug)) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " intersected upper plane %" PetscInt_FMT " of box %" PetscInt_FMT "\n", c, plane, box));
+              // Gross, figure out which adjacent faces have at least 3 points
+              PetscInt nonIntersectingFace = -1;
+              if (faces[0] == faces[1]) nonIntersectingFace = 2;
+              if (faces[0] == faces[2]) nonIntersectingFace = 1;
+              if (faces[1] == faces[2]) nonIntersectingFace = 0;
+              if (nonIntersectingFace >= 0) {
+                for (PetscInt plane = 0; plane < cdim; ++plane) {
+                  if (!lowerInt[nonIntersectingFace] && !upperInt[nonIntersectingFace]) continue;
+                  // If we have 2 adjacent sides with pyramids of intersection outside of them, and there is a point between the end caps at all, it must be between the two non intersecting ends, and the box is inside the cell.
+                  for (PetscInt ip = 0; ip < lowerInt[nonIntersectingFace]; ++ip) {
+                    if (lowerIntPoints[plane][ip * cdim + nonIntersectingFace] > lp[nonIntersectingFace] - PETSC_SMALL || lowerIntPoints[plane][ip * cdim + nonIntersectingFace] < up[nonIntersectingFace] + PETSC_SMALL) goto setpoint;
+                  }
+                  for (PetscInt ip = 0; ip < upperInt[nonIntersectingFace]; ++ip) {
+                    if (upperIntPoints[plane][ip * cdim + nonIntersectingFace] > lp[nonIntersectingFace] - PETSC_SMALL || upperIntPoints[plane][ip * cdim + nonIntersectingFace] < up[nonIntersectingFace] + PETSC_SMALL) goto setpoint;
+                  }
+                  goto end;
+                }
+                // The points are within the bonds of the non intersecting planes, add it.
+              setpoint:
                 PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
                 goto end;
               }
             }
+          end:
+            lower[0]          = upper[0];
+            lowerInt[0]       = upperInt[0];
+            tmp               = lowerIntPoints[0];
+            lowerIntPoints[0] = upperIntPoints[0];
+            upperIntPoints[0] = tmp;
           }
-          /*
-             Check the planes with intersections
-             in 2D, check if the square falls in the middle of a cell
-             ie all four planes have intersection points outside of the box
-             You do not want to be doing this, because it means your grid hashing is finer than your grid,
-             but we should still support it I guess
-          */
-          if (cdim == 2) {
-            PetscInt nIntersects = 0;
-            for (PetscInt d = 0; d < cdim; ++d) nIntersects += (outsideCount[d] + outsideCount[d + cdim]);
-            // if the count adds up to 8, that means each plane has 2 external intersections and thus it is in the cell
-            if (nIntersects == 8) {
-              PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
-              goto end;
-            }
-          }
-          /*
-             In 3 dimensions, if two adjacent planes have at least 3 intersections outside the cell in the appropriate direction,
-             we then check the 3rd planar dimension. If a plane falls between intersection points, the cell belongs to that box.
-             If the planes are on opposite sides of the intersection points, the cell belongs to that box and it passes through the cell.
-          */
-          if (cdim == 3) {
-            PetscInt faces[3] = {0, 0, 0}, checkInternalFace = 0;
-            // Find two adjacent planes with at least 3 intersection points in the upper and lower
-            // if the third plane has 3 intersection points or more, a pyramid base is formed on that plane and it is in the cell
-            for (PetscInt d = 0; d < cdim; ++d)
-              if (outsideCount[d] >= 3 && outsideCount[cdim + d] >= 3) {
-                faces[d]++;
-                checkInternalFace++;
-              }
-            if (checkInternalFace == 3) {
-              // All planes have 3 intersection points, add it.
-              PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
-              goto end;
-            }
-            // Gross, figure out which adjacent faces have at least 3 points
-            PetscInt nonIntersectingFace = -1;
-            if (faces[0] == faces[1]) nonIntersectingFace = 2;
-            if (faces[0] == faces[2]) nonIntersectingFace = 1;
-            if (faces[1] == faces[2]) nonIntersectingFace = 0;
-            if (nonIntersectingFace >= 0) {
-              for (PetscInt plane = 0; plane < cdim; ++plane) {
-                if (!lowerInt[nonIntersectingFace] && !upperInt[nonIntersectingFace]) continue;
-                // If we have 2 adjacent sides with pyramids of intersection outside of them, and there is a point between the end caps at all, it must be between the two non intersecting ends, and the box is inside the cell.
-                for (PetscInt ip = 0; ip < lowerInt[nonIntersectingFace]; ++ip) {
-                  if (lowerIntPoints[plane][ip * cdim + nonIntersectingFace] > lp[nonIntersectingFace] - PETSC_SMALL || lowerIntPoints[plane][ip * cdim + nonIntersectingFace] < up[nonIntersectingFace] + PETSC_SMALL) goto setpoint;
-                }
-                for (PetscInt ip = 0; ip < upperInt[nonIntersectingFace]; ++ip) {
-                  if (upperIntPoints[plane][ip * cdim + nonIntersectingFace] > lp[nonIntersectingFace] - PETSC_SMALL || upperIntPoints[plane][ip * cdim + nonIntersectingFace] < up[nonIntersectingFace] + PETSC_SMALL) goto setpoint;
-                }
-                goto end;
-              }
-              // The points are within the bonds of the non intersecting planes, add it.
-            setpoint:
-              PetscCall(DMLabelSetValue(lbox->cellsSparse, c, box));
-              goto end;
-            }
-          }
-        end:
-          lower[0]          = upper[0];
-          lowerInt[0]       = upperInt[0];
-          tmp               = lowerIntPoints[0];
-          lowerIntPoints[0] = upperIntPoints[0];
-          upperIntPoints[0] = tmp;
+          lp[0]             = lbox->lower[0] + dlim[0 * 2 + 0] * h[0];
+          up[0]             = lp[0] + h[0];
+          lower[1]          = upper[1];
+          lowerInt[1]       = upperInt[1];
+          tmp               = lowerIntPoints[1];
+          lowerIntPoints[1] = upperIntPoints[1];
+          upperIntPoints[1] = tmp;
         }
-        lp[0]             = lbox->lower[0] + dlim[0 * 2 + 0] * h[0];
-        up[0]             = lp[0] + h[0];
-        lower[1]          = upper[1];
-        lowerInt[1]       = upperInt[1];
-        tmp               = lowerIntPoints[1];
-        lowerIntPoints[1] = upperIntPoints[1];
-        upperIntPoints[1] = tmp;
+        lp[1]             = lbox->lower[1] + dlim[1 * 2 + 0] * h[1];
+        up[1]             = lp[1] + h[1];
+        lower[2]          = upper[2];
+        lowerInt[2]       = upperInt[2];
+        tmp               = lowerIntPoints[2];
+        lowerIntPoints[2] = upperIntPoints[2];
+        upperIntPoints[2] = tmp;
       }
-      lp[1]             = lbox->lower[1] + dlim[1 * 2 + 0] * h[1];
-      up[1]             = lp[1] + h[1];
-      lower[2]          = upper[2];
-      lowerInt[2]       = upperInt[2];
-      tmp               = lowerIntPoints[2];
-      lowerIntPoints[2] = upperIntPoints[2];
-      upperIntPoints[2] = tmp;
     }
   }
   PetscCall(PetscFree2(dboxes, boxes));
