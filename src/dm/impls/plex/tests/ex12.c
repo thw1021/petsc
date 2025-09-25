@@ -96,6 +96,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 
     PetscCall(DMPlexGetPartitioner(*dm, &part));
     PetscCall(PetscPartitionerSetFromOptions(part));
+    PetscCall(PetscPartitionerViewFromOptions(part, NULL, "-view_partitioner_pre"));
     PetscCall(DMPlexSetPartitionBalance(*dm, user->partitionBalance));
     if (user->testPartition) {
       const PetscInt *sizes  = NULL;
@@ -123,6 +124,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
       PetscCall(PetscPartitionerShellSetPartition(part, size, sizes, points));
     }
     PetscCall(DMPlexDistribute(*dm, overlap, NULL, &pdm));
+    PetscCall(PetscPartitionerViewFromOptions(part, NULL, "-view_partitioner"));
   } else {
     PetscSF sf;
 
@@ -151,6 +153,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     PetscCall(DMPlexSetOptionsPrefix(*dm, "lb_"));
     PetscCall(PetscLogStagePush(user->stages[STAGE_REDISTRIBUTE]));
     PetscCall(DMPlexGetPartitioner(*dm, &part));
+    PetscCall(PetscPartitionerViewFromOptions(part, NULL, "-view_partitioner_pre"));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)part, "lb_"));
     PetscCall(PetscPartitionerSetFromOptions(part));
     if (user->testPartition) {
@@ -166,6 +169,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     }
     PetscCall(DMPlexSetPartitionBalance(*dm, user->partitionBalance));
     PetscCall(DMPlexDistribute(*dm, overlap, NULL, &pdm));
+    PetscCall(PetscPartitionerViewFromOptions(part, NULL, "-view_partitioner"));
     if (pdm) {
       PetscCall(DMDestroy(dm));
       *dm = pdm;
@@ -197,7 +201,7 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     requires: triangle
-    args: -dm_coord_space 0 -dm_view ascii:mesh.tex:ascii_latex
+    args: -dm_coord_space 0 -dm_view ascii:mesh.tex:ascii_latex -petscpartitioner_type {{simple multistage}}
     output_file: output/empty.out
   test:
     suffix: 1
@@ -209,6 +213,14 @@ int main(int argc, char **argv)
     requires: triangle
     nsize: 8
     args: -dm_coord_space 0 -test_partition -dm_view ascii::ascii_info_detail
+  test:
+    suffix: 2_ms
+    requires: triangle
+    nsize: 8
+    args: -dm_coord_space 0 -dm_view ascii::ascii_info_detail \
+          -petscpartitioner_type multistage \
+          -petscpartitioner_multistage_strategy node -petscpartitioner_multistage_node_size {{1 2 3 4}separate output} -petscpartitioner_multistage_node_interleaved {{0 1}separate output} \
+          -petscpartitioner_multistage_levels_petscpartitioner_type simple -petscpartitioner_view ascii::ascii_info_detail
   # Parallel, level-1 overlap tests 3-4
   test:
     suffix: 3
@@ -226,6 +238,14 @@ int main(int argc, char **argv)
     requires: triangle
     nsize: 8
     args: -dm_coord_space 0 -test_partition -overlap 2 -dm_view ascii::ascii_info_detail
+  test:
+    suffix: 5_ms
+    requires: triangle
+    nsize: 8
+    args: -dm_coord_space 0 -overlap 2 -dm_view ascii::ascii_info_detail \
+          -petscpartitioner_type multistage \
+          -petscpartitioner_multistage_strategy msection -petscpartitioner_multistage_msection {{2 3}separate output} \
+          -petscpartitioner_multistage_levels_petscpartitioner_type simple -petscpartitioner_view ascii::ascii_info_detail
   # Parallel load balancing, test 6-7
   test:
     suffix: 6
@@ -248,12 +268,17 @@ int main(int argc, char **argv)
     requires: parmetis
     nsize: 4
     args: -dm_coord_space 0 -dm_plex_simplex 0 -dm_plex_box_faces 4,4 -petscpartitioner_type shell -petscpartitioner_shell_random -lb_petscpartitioner_type parmetis -load_balance -lb_petscpartitioner_view -prelb_dm_view ::load_balance -dm_view ::load_balance
+  test:
+    suffix: lb_0_ms
+    requires: parmetis
+    nsize: 4
+    args: -dm_coord_space 0 -dm_plex_simplex 0 -dm_plex_box_faces 4,4 -petscpartitioner_type shell -petscpartitioner_shell_random -lb_petscpartitioner_type multistage -load_balance -lb_petscpartitioner_view ::ascii_info_detail -prelb_dm_view ::load_balance -dm_view ::load_balance -lb_petscpartitioner_multistage_levels_petscpartitioner_type parmetis -lb_petscpartitioner_multistage_node_size 2
 
   # Same tests as above, but with balancing of the shared point partition
   test:
     suffix: 9
     requires: triangle
-    args: -dm_coord_space 0 -dm_view ascii:mesh.tex:ascii_latex -partition_balance
+    args: -dm_coord_space 0 -dm_view ascii:mesh.tex:ascii_latex -partition_balance -petscpartitioner_type {{simple multistage}}
     output_file: output/empty.out
   test:
     suffix: 10
@@ -265,6 +290,14 @@ int main(int argc, char **argv)
     requires: triangle
     nsize: 8
     args: -dm_coord_space 0 -test_partition -dm_view ascii::ascii_info_detail -partition_balance
+  test:
+    suffix: 11_ms
+    requires: triangle
+    nsize: 8
+    args: -dm_coord_space 0 -dm_view ascii::ascii_info_detail -partition_balance \
+          -petscpartitioner_type multistage \
+          -petscpartitioner_multistage_strategy node -petscpartitioner_multistage_node_size {{1 2 3 4}separate output} -petscpartitioner_multistage_node_interleaved {{0 1}separate output} \
+          -petscpartitioner_multistage_levels_petscpartitioner_type simple -petscpartitioner_view ascii::ascii_info_detail
   # Parallel, level-1 overlap tests 3-4
   test:
     suffix: 12
