@@ -7,8 +7,8 @@ class Configure(config.package.CMakePackage):
     self.version           = '13.2.0'
     self.gitcommit         = 'v{0}'.format(self.version)
     self.versionname       = 'PACKAGE_VERSION'
-    self.download          = ['git://https://gitlab.com/petsc/pkg-trilinos-ml',
-                              'https://gitlab.com/petsc/pkg-trilinos-ml/-/archive/{0}/pkg-trilinos-ml-{0}.tar.gz'.format(self.gitcommit)]
+    self.download          = ['git://https://gitlab.com/pkg-trilinos-ml/pkg-trilinos-ml',
+                              'https://gitlab.com/petsc/pkg-trilinos-ml/pkg-trilinos-ml/-/archive/{0}/pkg-trilinos-ml-{0}.tar.gz'.format(self.gitcommit)]
     self.functions         = ['ML_Set_PrintLevel']
     self.includes          = ['ml_include.h']
     self.liblist           = [['libml.a']]
