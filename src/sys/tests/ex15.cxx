@@ -1,35 +1,41 @@
 static char help[] = "Tests inclusion of petscsystypes.h.\n\n";
 
-#include <petscsystypes.h>
-#include <stddef.h> /* for NULL */
+#include <petscsys.h>
 
 #if defined(PETSC_HAVE_COMPLEX)
-  #define TestComplexOperators(type, value) \
-    do { \
-      type         x = value; \
-      PetscComplex z = value; \
-      (void)z; \
-      z = x; \
-      z += x; \
-      z = z + x; \
-      z = x + z; \
-      z = x; \
-      z -= x; \
-      z = z - x; \
-      z = x - z; \
-      z = x; \
-      z *= x; \
-      z = z * x; \
-      z = x * z; \
-      z = x; \
-      z /= x; \
-      z = z / x; \
-      z = x / z; \
-      (void)(z == x); \
-      (void)(x == z); \
-      (void)(z != x); \
-      (void)(x != z); \
-    } while (0)
+template <class Type>
+PetscErrorCode TestComplexOperators(Type x, PetscBool check, double &ans)
+{
+  double       res;
+  PetscComplex z = x;
+
+  PetscFunctionBeginUser;
+  (void)z;
+  z = x;
+  z += x;
+  z = z + x;
+  z = x + z;
+  z = x;
+  z -= x;
+  z = z - x;
+  z = x - z;
+  z = x;
+  z *= x;
+  z = z * x;
+  z = x * z;
+  z = x;
+  z /= x;
+  z = z / x;
+  z = x / z;
+  (void)(z == x);
+  (void)(x == z);
+  (void)(z != x);
+  (void)(x != z);
+  res = PetscRealPartComplex(z);
+  if (check) PetscCheck(PetscAbs(ans - res) < 1e-5, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected %g, but get incorrect result %g", ans, res);
+  else ans = res;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 #endif
 
 int main(int argc, char **argv)
@@ -85,7 +91,8 @@ int main(int argc, char **argv)
   PetscSegBuffer          sbuff;
   PetscOptionsHelpPrinted oh;
 
-  ierr   = PETSC_SUCCESS;
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, nullptr, help));
   svalue = 0.0;
   rvalue = 0.0;
 #if defined(PETSC_HAVE_COMPLEX)
@@ -93,15 +100,23 @@ int main(int argc, char **argv)
 #endif
 
 #if defined(PETSC_HAVE_COMPLEX)
+  double ans = 0.0;
   /* this example returns an error of 141 in GitLab CI once in a great while; this is an attempt to debug that issue */
-  if (ierr != PETSC_SUCCESS) return 77;
-  TestComplexOperators(signed char, 1);
-  TestComplexOperators(signed short, 1);
-  TestComplexOperators(signed int, 1);
-  TestComplexOperators(signed long, 1L);
-  TestComplexOperators(float, 1.0f);
-  TestComplexOperators(double, 1.0);
-  if (ierr != PETSC_SUCCESS) return 78;
+  PetscCall(TestComplexOperators((PetscReal)1.0, PETSC_FALSE, ans)); // assuming with PetscReal, we get the correct answer
+  PetscCall(TestComplexOperators((signed char)1, PETSC_TRUE, ans));  // check against the answer
+  PetscCall(TestComplexOperators((signed short)1, PETSC_TRUE, ans));
+  PetscCall(TestComplexOperators((signed int)1, PETSC_TRUE, ans));
+  PetscCall(TestComplexOperators((signed long)1L, PETSC_TRUE, ans));
+  PetscCall(TestComplexOperators((signed long long)1LL, PETSC_TRUE, ans));
+  PetscCall(TestComplexOperators((PetscReal)0.5, PETSC_FALSE, ans)); // get the answer again
+  PetscCall(TestComplexOperators((double)0.5, PETSC_TRUE, ans));
+  PetscCall(TestComplexOperators((float)0.5f, PETSC_TRUE, ans));
+  #if defined(PETSC_HAVE_REAL___FLOAT128)
+  PetscCall(TestComplexOperators((__float128)0.5, PETSC_TRUE, ans));
+  #endif
+  #if defined(PETSC_HAVE_REAL___FP16)
+  PetscCall(TestComplexOperators((__fp16)0.5, PETSC_TRUE, ans));
+  #endif
 #endif
 
   i64  = 0;
@@ -128,20 +143,20 @@ int main(int argc, char **argv)
   im    = INSERT_VALUES;
   subct = PETSC_SUBCOMM_GENERAL;
 
-  obj   = NULL;
-  rand  = NULL;
-  token = NULL;
-  flist = NULL;
-  dlh   = NULL;
-  olist = NULL;
-  dlist = NULL;
-  cont  = NULL;
-  subc  = NULL;
-  pheap = NULL;
-  scomm = NULL;
-  octrl = NULL;
-  sbuff = NULL;
-  oh    = NULL;
+  obj   = nullptr;
+  rand  = nullptr;
+  token = nullptr;
+  flist = nullptr;
+  dlh   = nullptr;
+  olist = nullptr;
+  dlist = nullptr;
+  cont  = nullptr;
+  subc  = nullptr;
+  pheap = nullptr;
+  scomm = nullptr;
+  octrl = nullptr;
+  sbuff = nullptr;
+  oh    = nullptr;
 
   /* prevent to issue warning about unused-but-set variables */
   (void)help;
@@ -190,7 +205,8 @@ int main(int argc, char **argv)
   (void)octrl;
   (void)sbuff;
   (void)oh;
-  return (int)ierr;
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 /*TEST
