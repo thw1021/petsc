@@ -318,11 +318,13 @@ static PetscErrorCode MatMumpsCastMumpsScalarArray(PetscCount n, PetscPrecision 
   if (mumps_precision != PETSC_REAL_PRECISION) {
 #if defined(PETSC_USE_COMPLEX)
     if (mumps_precision == PETSC_PRECISION_SINGLE) {
-      const CMUMPS_COMPLEX *b = (const CMUMPS_COMPLEX *)ma;
-      for (PetscCount i = 0; i < n; i++) pa[i] = b[i].r + PETSC_i * b[i].i;
+      PetscReal         *a = (PetscReal *)pa;
+      const SMUMPS_REAL *b = (const SMUMPS_REAL *)ma;
+      for (PetscCount i = 0; i < 2 * n; i++) a[i] = b[i];
     } else {
-      const ZMUMPS_COMPLEX *b = (const ZMUMPS_COMPLEX *)ma;
-      for (PetscCount i = 0; i < n; i++) pa[i] = b[i].r + PETSC_i * b[i].i;
+      PetscReal         *a = (PetscReal *)pa;
+      const DMUMPS_REAL *b = (const DMUMPS_REAL *)ma;
+      for (PetscCount i = 0; i < 2 * n; i++) a[i] = b[i];
     }
 #else
     if (mumps_precision == PETSC_PRECISION_SINGLE) {
@@ -432,7 +434,7 @@ static inline PetscErrorCode PetscCallMumps_Private(XMUMPS_STRUC_C *outer)
     PreMumpsCall(inner, outer, CMUMPS_COMPLEX);
     PetscStackCallExternalVoid("cmumps_c", cmumps_c(inner));
     PostMumpsCall(inner, outer);
-  } else if (outer->precision == PETSC_PRECISION_DOUBLE) {
+  } else {
     ZMUMPS_STRUC_C *inner = (ZMUMPS_STRUC_C *)outer->internal_id;
     PreMumpsCall(inner, outer, ZMUMPS_COMPLEX);
     PetscStackCallExternalVoid("zmumps_c", zmumps_c(inner));
@@ -444,7 +446,7 @@ static inline PetscErrorCode PetscCallMumps_Private(XMUMPS_STRUC_C *outer)
     PreMumpsCall(inner, outer, SMUMPS_REAL);
     PetscStackCallExternalVoid("smumps_c", smumps_c(inner));
     PostMumpsCall(inner, outer);
-  } else if (outer->precision == PETSC_PRECISION_DOUBLE) {
+  } else {
     DMUMPS_STRUC_C *inner = (DMUMPS_STRUC_C *)outer->internal_id;
     PreMumpsCall(inner, outer, DMUMPS_REAL);
     PetscStackCallExternalVoid("dmumps_c", dmumps_c(inner));
