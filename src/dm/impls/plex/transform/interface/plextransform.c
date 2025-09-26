@@ -2457,10 +2457,11 @@ PetscErrorCode DMPlexTransformApply(DMPlexTransform tr, DM dm, DM *tdm)
 
 PetscErrorCode DMPlexTransformAdaptLabel(DM dm, PETSC_UNUSED Vec metric, DMLabel adaptLabel, PETSC_UNUSED DMLabel rgLabel, DM *rdm)
 {
-  DMPlexTransform tr;
-  DM              cdm, rcdm;
-  const char     *prefix;
-  PetscBool       save;
+  DMPlexTransform          tr;
+  DMPointLocationAlgorithm alg;
+  DM                       cdm, rcdm;
+  const char              *prefix;
+  PetscBool                save;
 
   PetscFunctionBegin;
   PetscCall(DMPlexTransformCreate(PetscObjectComm((PetscObject)dm), &tr));
@@ -2482,6 +2483,7 @@ PetscErrorCode DMPlexTransformAdaptLabel(DM dm, PETSC_UNUSED Vec metric, DMLabel
   PetscCall(DMPlexGetSaveTransform(dm, &save));
   if (save) PetscCall(DMPlexSetTransform(*rdm, tr));
   PetscCall(DMPlexTransformDestroy(&tr));
-  ((DM_Plex *)(*rdm)->data)->useHashLocation = ((DM_Plex *)dm->data)->useHashLocation;
+  PetscCall(DMPlexGetPointLocationAlgorithm(dm, &alg));
+  PetscCall(DMPlexSetPointLocationAlgorithm(*rdm, alg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
