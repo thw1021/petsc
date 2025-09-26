@@ -14,6 +14,8 @@ configure_options = [
   '--download-f2cblaslapack=1',
   '--download-slepc=1',
   '--download-hpddm=1',
+  '--download-mumps',
+  '--download-scalapack',
   '--with-precision=__float128',
   '--with-clanguage=cxx',
   '--with-mpi-f90module-visibility=0',
