@@ -90,12 +90,5 @@
   } \
 /* PETSC_CXX_COMPLEX_FIX */
 
-/*
-    Due to the C++ automatic promotion rules for floating point and integer values only the two cases below
-    need to be handled.
-*/
-#if defined(PETSC_USE_REAL_SINGLE)
-PETSC_CXX_COMPLEX_FIX(double)
-#elif defined(PETSC_USE_REAL_DOUBLE)
-PETSC_CXX_COMPLEX_FIX(PetscInt)
-#endif /* PETSC_USE_REAL_* */
+// Provide PetscReal only, let C++ promote integers, floating points to PetscReals
+PETSC_CXX_COMPLEX_FIX(PetscReal)
