@@ -7,8 +7,9 @@ class Configure(config.package.CMakePackage):
     self.version           = '13.2.0'
     self.gitcommit         = 'v{0}'.format(self.version)
     self.versionname       = 'PACKAGE_VERSION'
-    self.download          = ['git://https://gitlab.com/petsc/pkg-trilinos-ml',
-                              'https://gitlab.com/petsc/pkg-trilinos-ml/-/archive/{0}/pkg-trilinos-ml-{0}.tar.gz'.format(self.gitcommit)]
+    self.download          = ['git://https://bitbucket.org/petsc/pkg-trilinos-ml.git',
+                              'https://bitbucket.org/petsc/pkg-trilinos-ml/get/{0}.tar.gz'.format(self.gitcommit),
+                              'https://web.cels.anl.gov/projects/petsc/download/externalpackages/pkg-trilinos-ml-{0}.tar.gz'.format(self.gitcommit)]
     self.functions         = ['ML_Set_PrintLevel']
     self.includes          = ['ml_include.h']
     self.liblist           = [['libml.a']]
@@ -20,7 +21,7 @@ class Configure(config.package.CMakePackage):
     self.requires32bitint  = 1;  # ml uses a combination of "global" indices that can be 64-bit and local indices that are always int therefore it is
                                  # essentially impossible to use ML's 64-bit integer mode with PETSc's --with-64-bit-indices
     self.hastests          = 1
-    self.downloaddirnames  = ['pkg-trilinos-ml']
+    self.downloaddirnames  = ['petsc-pkg-trilinos-ml','pkg-trilinos-ml']
     return
 
   def setupDependencies(self, framework):
