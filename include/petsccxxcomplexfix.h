@@ -91,11 +91,15 @@
 /* PETSC_CXX_COMPLEX_FIX */
 
 /*
-    Due to the C++ automatic promotion rules for floating point and integer values only the two cases below
+    Due to the C++ automatic promotion rules for floating point and integer values only the cases below
     need to be handled.
 */
 #if defined(PETSC_USE_REAL_SINGLE)
+PETSC_CXX_COMPLEX_FIX(PetscInt32)
+PETSC_CXX_COMPLEX_FIX(PetscInt64)
 PETSC_CXX_COMPLEX_FIX(double)
 #elif defined(PETSC_USE_REAL_DOUBLE)
-PETSC_CXX_COMPLEX_FIX(PetscInt)
+PETSC_CXX_COMPLEX_FIX(PetscInt32)
+PETSC_CXX_COMPLEX_FIX(PetscInt64)
+PETSC_CXX_COMPLEX_FIX(float)
 #endif /* PETSC_USE_REAL_* */
