@@ -29,8 +29,8 @@ Before a regressor can be used to make predictions, the model must be fitted usi
 Once a fitted model has been obtained, it can be used to predict target values for new observations.
 Every `PetscRegressor` implementation provides a `Fit()` and a `Predict()` method to support this workflow.
 Fitting (or "training") a model is a relatively computationally intensive task that generally involves solving an
-optimization problem (often using `TAO` solvers), whereas making predictions (or performing "inference")
-is generally much simpler.
+optimization problem (often using `TAO` solvers) to determine the model parameters, whereas making predictions
+(or performing "inference") is generally much simpler.
 
 Here, we introduce a simple example to demonstrate `PetscRegressor` usage.
 Please read {any}`sec_regressor_solvers` for more in-depth discussion.
