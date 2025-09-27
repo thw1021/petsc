@@ -389,6 +389,8 @@ int main(int argc, char **args)
 
      test:
        suffix: mumps_s
+       output_file: output/ex192_mumps.out
+
      test:
        requires: cuda
        suffix: mumps_cuda_s
