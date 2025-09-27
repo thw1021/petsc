@@ -2,14 +2,14 @@
 
 # PetscRegressor: Regression Solvers
 
-The ``PetscRegressor`` component provides some basic infrastructure and a general API for machine learning tasks
-at a higher level of abstraction than a purely algebraic "solvers" view.
+The `PetscRegressor` component provides some basic infrastructure and a general API for supervised
+machine learning tasks at a higher level of abstraction than a purely algebraic "solvers" view.
 Methods are currently available for
 
 - {any}`sec_regressor_linear`
 
-Note that by "regressor" we mean an algorithm or implementation used to fit a regression model,
-following standard parlance in the machine-learning community.
+Note that by "regressor" we mean an algorithm or implementation used to fit and apply a regression
+model, following standard parlance in the machine-learning community.
 Regressor here does NOT mean an independent (or predictor) variable, as it often does in the
 statistics community.
 
@@ -17,17 +17,31 @@ statistics community.
 
 ## Basic Regressor Usage
 
+`PetscRegressor` supports supervised learning tasks:
+Given a matrix of observed data $X$ with size $n_{samples}$ by $n_{features}$,
+predict a vector of "target" values $y$ (of size $n_{samples}$), where the $i$th entry of $y$
+corresponds to the observation (or "sample"), stored in the $i$th entry of $X$.
+Traditionally, when the target consists of continuous values this is called "regression",
+and when it consists of discrete values (or "labels"), this task is called "classification";
+we use `PetscRegressor` to support both of these cases.
+
+Before a regressor can be used to make predictions, the model must be fitted using an initial set of training data.
+Once a fitted model has been obtained, it can be used to predict target values for new observations.
+Every `PetscRegressor` implementation provides a `Fit()` and a `Predict()` method to support this workflow.
+Fitting (or "training") a model is a relatively computationally intensive task that generally involves solving an
+optimization problem (often using `TAO` solvers), whereas making predictions (or performing "inference")
+is generally much simpler.
+
 Here, we introduce a simple example to demonstrate `PetscRegressor` usage.
 Please read {any}`sec_regressor_solvers` for more in-depth discussion.
 The code presented {any}`below <regressor-ex3>` solves an ordinary linear
 regression problem, with various options for regularization.
 
-In the simplest usage of a regressor solver, the user simply needs to
-provide a design matrix (`Mat`) and a target vector (`Vec`) against which to
-fit the regressor. With a fitted regressor, the user can then obtain a
-vector of predicted values for a set of new observations.
+In the simplest usage of a regressor, the user provides a training (or "design") matrix
+(`Mat`) and a target vector (`Vec`) against which to fit the model.
+With a fitted regressor, the user can then obtain a vector of predicted values for a set of new observations.
 
-PETSc's default method for solving regression problem is ordinary least squares,
+PETSc's default method for solving regression problems is ordinary least squares,
 `REGRESSOR_LINEAR_OLS`, which is a sub-type of linear regressor,
 `PETSCREGRESSORLINEAR`.
 By "linear" we mean that the model $f(x, \theta)$ is linear in its coefficients $\theta$
@@ -46,13 +60,13 @@ clarity. The complete code is available in {ref}`ex3.c <regressor-ex3>`.
 ```
 :::
 
-To create a `PetscRegressor` solver, one must first call `PetscRegressorCreate()`:
+To create a `PetscRegressor` instance, one must first call `PetscRegressorCreate()`:
 
 ```
 PetscRegressorCreate(MPI_Comm comm, PetscRegressor *regressor);
 ```
 
-To choose a solver type, the user can either call
+To choose a regressor type, the user can either call
 
 ```
 PetscRegressorSetType(PetscRegressor regressor, PetscRegressorType type);
@@ -69,7 +83,7 @@ PetscRegressorSetFromOptions(regressor);
 ```
 
 which interfaces with the PETSc options database and enables convenient
-runtime selection of the type of regression solver and setting various
+runtime selection of the type of regression algorithm and setting various
 various solver or problem parameters.
 This routine can also control all inner solver options in the `KSP`, and `Tao`
 modules, as discussed in {any}`ch_ksp`, {any}`ch_tao`.
@@ -82,7 +96,7 @@ PetscRegressorFit(PetscRegressor regressor, Mat X, Vec y);
 ```
 
 where `X` is training data, and `y` is target values.
-Finally, after fitting the regressor solver, the user can compute model
+Finally, after fitting the regressor, the user can compute model
 predictions, that is, perform inference, for a data matrix of unlabeled observations
 using the fitted regressor:
 
@@ -101,9 +115,9 @@ PetscRegressorDestroy(PetscRegressor *regressor);
 
 ## Regression Solvers
 
-One can see the list of regressor solver types in Table
+One can see the list of regressor types in Table
 {any}`tab-regressordefaults`. Currently, we only support one type,
-`PETSCREGRESSORLINEAR`, although we plan to add several other types in the near future.
+`PETSCREGRESSORLINEAR`, although we plan to add several others in the near future.
 
 ```{eval-rst}
 .. list-table:: PETSc Regressor
@@ -131,12 +145,11 @@ or with the option `-regressor_regularizer_weight <weight>`.
 
 ## Linear regressor
 
-The method `PETSCREGRESSORLINEAR` (`-regressor_type linear`)
+The `PETSCREGRESSORLINEAR` (`-regressor_type linear`) implementation
 constructs a linear model to reduce the sum of squared differences
 between the actual target values ("observations") in the dataset and the target
-values estimated by the fitted model. By default,
-this method will use bound-constrained regularized Gauss-Newton
-`TAOBRGN` to solve the underlying optimization problem.
+values estimated by the fitted model.
+By default, bound-constrained regularized Gauss-Newton `TAOBRGN` is used to solve the underlying optimization problem.
 
 Currently, linear regressor has three types, which are described
 in Table {any}`tab-lineartypes`.
