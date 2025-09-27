@@ -91,11 +91,12 @@
 /* PETSC_CXX_COMPLEX_FIX */
 
 /*
-    Due to the C++ automatic promotion rules for floating point and integer values only the two cases below
-    need to be handled.
+    Due to the C++ automatic promotion rules for floating point and integer values only one floating point type
+    is defined, to avoid compile errors complaining ambiguous overloaded operators,
+    e.g., compilers don't know whether to match a signed char to PetscInt or float if we also do PETSC_CXX_COMPLEX_FIX(PetscInt).
 */
 #if defined(PETSC_USE_REAL_SINGLE)
 PETSC_CXX_COMPLEX_FIX(double)
 #elif defined(PETSC_USE_REAL_DOUBLE)
-PETSC_CXX_COMPLEX_FIX(PetscInt)
+PETSC_CXX_COMPLEX_FIX(float)
 #endif /* PETSC_USE_REAL_* */
