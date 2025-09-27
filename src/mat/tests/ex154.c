@@ -8,7 +8,7 @@ int main(int argc, char **args)
   IS            is_schur;
   PetscMPIInt   size;
   PetscInt      ns = 0, m, n;
-  PetscReal     norm, tol = 1e-4; // large tol to accommodate -pc_precision single
+  PetscReal     norm, tol = PETSC_SQRT_MACHINE_EPSILON;
   MatFactorType factor = MAT_FACTOR_LU;
   PetscViewer   fd;
   char          solver[256], converttype[256];
@@ -19,6 +19,8 @@ int main(int argc, char **args)
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
   PetscCheck(size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This is a uniprocessor test");
+
+  PetscCall(PetscOptionsGetReal(NULL, NULL, "-tol", &tol, NULL));
 
   PetscCall(PetscOptionsGetString(NULL, NULL, "-A", file, sizeof(file), &flg));
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_SUP, "Must provide a binary matrix with -A filename option");
@@ -110,7 +112,7 @@ int main(int argc, char **args)
   testset:
     output_file: output/empty.out
     requires: datafilespath mumps double !complex !defined(PETSC_USE_64BIT_INDICES)
-    args: -A ${DATAFILESPATH}/matrices/factorSchur/A.dat -ns {{0 1}} -pc_precision {{single double}}
+    args: -A ${DATAFILESPATH}/matrices/factorSchur/A.dat -ns {{0 1}}
 
     test:
       suffix: mumps_1
@@ -118,6 +120,19 @@ int main(int argc, char **args)
 
     test:
       suffix: mumps_2
+      args: -B ${DATAFILESPATH}/matrices/factorSchur/B2.dat
+
+  testset:
+    output_file: output/empty.out
+    requires: datafilespath mumps double !complex !defined(PETSC_USE_64BIT_INDICES)
+    args: -A ${DATAFILESPATH}/matrices/factorSchur/A.dat -ns {{0 1}} -pc_precision single -tol 1e-4
+
+    test:
+      suffix: mumps_1_single
+      args: -B ${DATAFILESPATH}/matrices/factorSchur/B1.dat
+
+    test:
+      suffix: mumps_2_single
       args: -B ${DATAFILESPATH}/matrices/factorSchur/B2.dat
 
 TEST*/

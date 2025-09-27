@@ -568,24 +568,42 @@ skipoptions:
       args: -mat_solver_type mkl_pardiso
       output_file: output/ex125_mkl_pardiso.out
 
-   test:
-      suffix: mumps
+   testset:
       requires: mumps datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
-      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps -pc_precision {{single double}} -tol 1e-5
+      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps
       output_file: output/ex125_mumps_seq.out
 
-   test:
-      suffix: mumps_nest
+      test:
+        suffix: mumps_single
+        args: -pc_precision single -tol 1e-5
+      test:
+        suffix: mumps_double
+        args: -pc_precision double
+
+   testset:
       requires: mumps datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
-      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps -test_nest -test_nest_bordered {{0 1}} -pc_precision {{single double}} -tol 1e-4
+      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps -test_nest -test_nest_bordered {{0 1}}
       output_file: output/ex125_mumps_seq.out
 
-   test:
-      suffix: mumps_2
+      test:
+        suffix: mumps_nest_single
+        args: -pc_precision single -tol 1e-4
+      test:
+        suffix: mumps_nest_double
+        args: -pc_precision double
+
+   testset:
       nsize: 3
       requires: mumps datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
-      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps -pc_precision {{single double}} -tol 1e-5
+      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps
       output_file: output/ex125_mumps_par.out
+
+      test:
+        suffix: mumps_2_single
+        args: -pc_precision single -tol 1e-5
+      test:
+        suffix: mumps_2_double
+        args: -pc_precision double
 
    test:
       suffix: mumps_2_nest
