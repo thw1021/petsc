@@ -1,5 +1,7 @@
 #include <petsc/private/petscscalapack.h> /*I "petscmat.h" I*/
+#include <petscconf.h>
 
+#if defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE)
 const char       ScaLAPACKCitation[] = "@BOOK{scalapack-user-guide,\n"
                                        "       AUTHOR = {L. S. Blackford and J. Choi and A. Cleary and E. D'Azevedo and\n"
                                        "                 J. Demmel and I. Dhillon and J. Dongarra and S. Hammarling and\n"
@@ -11,7 +13,7 @@ const char       ScaLAPACKCitation[] = "@BOOK{scalapack-user-guide,\n"
                                        "}\n";
 static PetscBool ScaLAPACKCite       = PETSC_FALSE;
 
-#define DEFAULT_BLOCKSIZE 64
+  #define DEFAULT_BLOCKSIZE 64
 
 /*
     The variable Petsc_ScaLAPACK_keyval is used to indicate an MPI attribute that
@@ -664,9 +666,9 @@ static PetscErrorCode MatTranspose_ScaLAPACK(Mat A, MatReuse reuse, Mat *B)
   Mat            Bs   = *B;
   PetscBLASInt   one  = 1;
   PetscScalar    sone = 1.0, zero = 0.0;
-#if defined(PETSC_USE_COMPLEX)
+  #if defined(PETSC_USE_COMPLEX)
   PetscInt i, j;
-#endif
+  #endif
 
   PetscFunctionBegin;
   if (reuse == MAT_REUSE_MATRIX) PetscCall(MatTransposeCheckNonzeroState_Private(A, *B));
@@ -675,11 +677,11 @@ static PetscErrorCode MatTranspose_ScaLAPACK(Mat A, MatReuse reuse, Mat *B)
   *B = Bs;
   b  = (Mat_ScaLAPACK *)Bs->data;
   PetscCallBLAS("PBLAStran", PBLAStran_(&a->N, &a->M, &sone, a->loc, &one, &one, a->desc, &zero, b->loc, &one, &one, b->desc));
-#if defined(PETSC_USE_COMPLEX)
+  #if defined(PETSC_USE_COMPLEX)
   /* undo conjugation */
   for (i = 0; i < b->locr; i++)
     for (j = 0; j < b->locc; j++) b->loc[i + j * b->lld] = PetscConj(b->loc[i + j * b->lld]);
-#endif
+  #endif
   Bs->assembled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1641,12 +1643,12 @@ static PetscErrorCode MatStashScatterBegin_ScaLAPACK(Mat mat, MatStash *stash, P
       PetscCallMPI(MPIU_Isend(svalues + bs2 * startv[i], bs2 * nlengths[i], MPIU_SCALAR, i, tag2, comm, send_waits + count++));
     }
   }
-#if defined(PETSC_USE_INFO)
+  #if defined(PETSC_USE_INFO)
   PetscCall(PetscInfo(NULL, "No of messages: %" PetscInt_FMT "\n", nsends));
   for (PetscMPIInt i = 0; i < size; i++) {
     if (sizes[i]) PetscCall(PetscInfo(NULL, "Mesg_to: %d: size: %zu bytes\n", i, (size_t)(nlengths[i] * (bs2 * sizeof(PetscScalar) + 2 * sizeof(PetscInt)))));
   }
-#endif
+  #endif
   PetscCall(PetscFree(nlengths));
   PetscCall(PetscFree(owner));
   PetscCall(PetscFree2(startv, starti));
@@ -1927,3 +1929,4 @@ PetscErrorCode MatCreateScaLAPACK(MPI_Comm comm, PetscInt mb, PetscInt nb, Petsc
   PetscCall(MatSetUp(*A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
