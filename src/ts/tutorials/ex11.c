@@ -1655,6 +1655,8 @@ int initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[]
   return 0;
 }
 
+/* PetscCall(manualpage(DMFOREST); */
+
 /*TEST
 
   testset:
