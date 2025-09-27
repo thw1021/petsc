@@ -901,8 +901,7 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
   PetscInt               M = A->rmap->N, N = A->cmap->N;
   PetscMPIInt            size;
   superlu_dist_options_t options;
-  PetscBool              flg;
-  char                   string[16];
+  PetscPrecision         precision = PetscDefined(USE_REAL_DOUBLE) ? PETSC_PRECISION_DOUBLE : PETSC_PRECISION_SINGLE; // with all other PetscReal precisions, use superlu in single
 
   PetscFunctionBegin;
   /* Create the factorization matrix */
@@ -953,14 +952,17 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
   lu->matsolve_iscalled    = PETSC_FALSE;
   lu->matmatsolve_iscalled = PETSC_FALSE;
 
-  PetscCall(PetscOptionsGetString(NULL, NULL, "-pc_precision", string, sizeof(string), &flg));
-  if (flg) {
-    PetscCall(PetscStrcasecmp(string, "single", &flg));
-    PetscCheck(flg, PetscObjectComm((PetscObject)A), PETSC_ERR_USER_INPUT, "-pc_precision only accepts single as option for SuperLU_DIST");
+  PetscOptionsBegin(PetscObjectComm((PetscObject)B), ((PetscObject)B)->prefix, "SuperLU_DIST Options", "Mat");
+  PetscCall(PetscOptionsEnum("-pc_precision", "Precision used by SuperLU_DIST", "MATSOLVERSUPERLU_DIST", PetscPrecisionTypes, (PetscEnum)precision, (PetscEnum *)&precision, NULL));
+  PetscOptionsEnd();
+  PetscCheck(precision == PETSC_PRECISION_SINGLE || precision == PETSC_PRECISION_DOUBLE, PetscObjectComm((PetscObject)A), PETSC_ERR_USER_INPUT, "-pc_precision only accepts single or double as option for SuperLU_DIST");
+  if (precision == PETSC_PRECISION_SINGLE) {
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
     lu->singleprecision = PETSC_TRUE;
+#else
+    SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Your SuperLU_DIST library does not support single precision but it is required");
 #endif
-  }
+  } else PetscCheck(PetscDefined(USE_REAL_DOUBLE), PetscObjectComm((PetscObject)A), PETSC_ERR_USER_INPUT, "-pc_precision only accepts double as option for SuperLU_DIST when PetscReal is double");
 
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatFactorGetSolverType_C", MatFactorGetSolverType_aij_superlu_dist));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSuperluDistGetDiagU_C", MatSuperluDistGetDiagU_SuperLU_DIST));
@@ -1004,8 +1006,7 @@ PETSC_INTERN PetscErrorCode MatSolverTypeRegister_SuperLU_DIST(void)
 . -mat_superlu_dist_fact <SamePattern> - (choose one of) `SamePattern`, `SamePattern_SameRowPerm`, `DOFACT`
 . -mat_superlu_dist_iterrefine - use iterative refinement
 . -mat_superlu_dist_printstat - print factorization information
-- -pc_precision single - use SuperLU_DIST single precision with PETSc double precision. Currently this does not accept an options prefix, so
-                         regardless of the `PC` prefix you must use no prefix here
+- -pc_precision single - use SuperLU_DIST single precision with PETSc double precision.
 
   Level: beginner
 
