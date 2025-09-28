@@ -39,7 +39,7 @@ regression problem, with various options for regularization.
 
 In the simplest usage of a regressor, the user provides a training (or "design") matrix
 (`Mat`) and a target vector (`Vec`) against which to fit the model.
-With a fitted regressor, the user can then obtain a vector of predicted values for a set of new observations.
+Once the regressor is fitted, the user can then obtain a vector of predicted values for a set of new observations.
 
 PETSc's default method for solving regression problems is ordinary least squares,
 `REGRESSOR_LINEAR_OLS`, which is a sub-type of linear regressor,
