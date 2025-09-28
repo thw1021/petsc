@@ -20,7 +20,7 @@ statistics community.
 `PetscRegressor` supports supervised learning tasks:
 Given a matrix of observed data $X$ with size $n_{samples}$ by $n_{features}$,
 predict a vector of "target" values $y$ (of size $n_{samples}$), where the $i$th entry of $y$
-corresponds to the observation (or "sample"), stored in the $i$th row of $X$.
+corresponds to the observation (or "sample") stored in the $i$th row of $X$.
 Traditionally, when the target consists of continuous values this is called "regression",
 and when it consists of discrete values (or "labels"), this task is called "classification";
 we use `PetscRegressor` to support both of these cases.
