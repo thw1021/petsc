@@ -1459,8 +1459,8 @@ static PetscErrorCode ProcessOptions(AppCtx *options)
   PetscCall(PetscOptionsReal("-domain_error_tol", "domain error tolerance", __FILE__, options->function_domain_error_tol, &options->function_domain_error_tol, NULL));
   PetscCall(PetscOptionsBool("-test_restart", "test restarting files", __FILE__, options->test_restart, &options->test_restart, NULL));
   if (!options->test_restart) {
-    PetscCall(PetscOptionsString("-load", "filename with data to be loaded for restarting", __FILE__, options->load_filename, options->load_filename, PETSC_MAX_PATH_LEN, &options->load));
-    PetscCall(PetscOptionsString("-save", "filename with data to be saved for restarting", __FILE__, options->save_filename, options->save_filename, PETSC_MAX_PATH_LEN, &options->save));
+    PetscCall(PetscOptionsString("-load", "filename with data to be loaded for restarting", __FILE__, NULL, options->load_filename, PETSC_MAX_PATH_LEN, &options->load));
+    PetscCall(PetscOptionsString("-save", "filename with data to be saved for restarting", __FILE__, NULL, options->save_filename, PETSC_MAX_PATH_LEN, &options->save));
     if (options->save) PetscCall(PetscOptionsInt("-save_every", "save every n timestep (-1 saves only the last)", __FILE__, options->save_every, &options->save_every, NULL));
   }
   PetscCall(PetscOptionsBool("-exclude_potential_lte", "exclude potential from LTE", __FILE__, options->exclude_potential_lte, &options->exclude_potential_lte, NULL));
