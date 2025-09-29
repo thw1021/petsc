@@ -214,7 +214,7 @@ int main(int argc, char **args)
 /*TEST
 
    build:
-      requires: scalapack
+      requires: scalapack double
 
    test:
       requires: !single # garbage prints in single precision from sgemr2d

@@ -327,6 +327,12 @@ int main(int argc, char **args)
       args: -ksp_type preonly -m 9 -n 12 -mat_type sell -pc_type lu -pc_factor_mat_solver_type mumps -pc_factor_mat_ordering_type natural
 
    test:
+      requires: mumps __float128
+      suffix: mumps_fp128
+      nsize: 4
+      args: -m 9 -n 12 -ksp_type fgmres -pc_type lu -pc_precision double -pc_precision double -pc_factor_mat_solver_type mumps
+
+   test:
       suffix: telescope
       nsize: 4
       args: -m 100 -n 100 -ksp_converged_reason -pc_type telescope -pc_telescope_reduction_factor 4 -telescope_pc_type bjacobi
