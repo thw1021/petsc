@@ -49,21 +49,22 @@ Tao Object: 2 MPI processes
                 type: seqaij
                 rows=50, cols=50
                 package used to perform factorization: petsc
-                total: nonzeros=364, allocated nonzeros=364
+                total: nonzeros=292, allocated nonzeros=292
                   not using I-node routines
         linear system matrix = precond matrix:
         Mat Object: (tao_nls_sub_) 1 MPI process
           type: seqaij
           rows=50, cols=50
-          total: nonzeros=364, allocated nonzeros=364
+          total: nonzeros=292, allocated nonzeros=292
           total number of mallocs used during MatSetValues calls=0
             not using I-node routines
     linear system matrix = precond matrix:
     Mat Object: 2 MPI processes
       type: mpiaij
       rows=100, cols=100
-      total: nonzeros=784, allocated nonzeros=784
+      total: nonzeros=620, allocated nonzeros=620
       total number of mallocs used during MatSetValues calls=0
+        not using I-node (on process 0) routines
   total KSP iterations: 36
   convergence tolerances: gatol=0.0001,   grtol=1e-08,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=2.64233e-08
