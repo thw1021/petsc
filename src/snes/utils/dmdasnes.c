@@ -36,6 +36,7 @@ static PetscErrorCode DMSNESDestroy_DMDA(DMSNES sdm)
 static PetscErrorCode DMSNESDuplicate_DMDA(DMSNES oldsdm, DMSNES sdm)
 {
   PetscFunctionBegin;
+  PetscCall(PetscFree(sdm->data));
   PetscCall(PetscNew((DMSNES_DA **)&sdm->data));
   if (oldsdm->data) PetscCall(PetscMemcpy(sdm->data, oldsdm->data, sizeof(DMSNES_DA)));
   PetscFunctionReturn(PETSC_SUCCESS);
