@@ -20,10 +20,9 @@ program main
 !
 !     Contributed by Aasmund Ervik (asmunder at pvv.org)
 !
-
+#include <petsc/finclude/petscdmda.h>
   use ex13f90auxmodule
 
-#include <petsc/finclude/petscdmda.h>
   use petscdmda
 
   PetscErrorCode ierr

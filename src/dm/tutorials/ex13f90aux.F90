@@ -1,6 +1,6 @@
-module ex13f90auxmodule
 #include <petsc/finclude/petscdm.h>
 #include <petsc/finclude/petscdmda.h>
+module ex13f90auxmodule
   use petscdm
   implicit none
 contains
