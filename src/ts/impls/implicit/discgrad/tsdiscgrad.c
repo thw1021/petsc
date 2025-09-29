@@ -24,6 +24,7 @@ typedef struct {
   PetscErrorCode (*Sfunc)(TS, PetscReal, Vec, Mat, void *);
   PetscErrorCode (*Ffunc)(TS, PetscReal, Vec, PetscScalar *, void *);
   PetscErrorCode (*Gfunc)(TS, PetscReal, Vec, Vec, void *);
+  PetscErrorCode (*IGfunc)(TS, PetscReal, Vec, Vec, Vec, void *);
 } TS_DiscGrad;
 
 static PetscErrorCode TSDiscGradGetX0AndXdot(TS ts, DM dm, Vec *X0, Vec *Xdot)
@@ -290,6 +291,7 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   PetscInt     n, dim;
   Vec          X0, Xdot, Xp, Xdiff;
   Mat          S;
+  PetscReal    Snorm;
   PetscScalar  F = 0, F0 = 0, Gp;
   Vec          G, SgF;
   DM           dm, dmsave;
@@ -319,6 +321,7 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   PetscCall(PetscFree(S_prealloc_arr));
   PetscCall(PetscObjectSetName((PetscObject)S, "S"));
   PetscCall(MatViewFromOptions(S, NULL, "-S_view"));
+  PetscCall(MatNorm(S, NORM_FROBENIUS, &Snorm));
   PetscCall(TSDiscGradGetX0AndXdot(ts, dm, &X0, &Xdot));
   PetscCall(VecAXPBYPCZ(Xdot, -shift, shift, 0, X0, x)); /* Xdot = shift (x - X0) */
 
@@ -330,6 +333,11 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   PetscCall(VecViewFromOptions(X0, NULL, "-X0_view"));
   PetscCall(VecViewFromOptions(Xp, NULL, "-Xp_view"));
 
+  if (Snorm == 0.) {
+    PetscCall(VecZeroEntries(G));
+    PetscCall((*dg->IGfunc)(ts, dg->stage_time, Xp, Xdot, y, dg->funcCtx));
+    goto end;
+  }
   if (dg->discgrad == TS_DG_AVERAGE) {
     /* Average Value DG:
     \overline{\nabla} F (x_{n+1},x_{n}) = \int_0^1 \nabla F ((1-\xi)*x_{n+1} + \xi*x_{n}) d \xi */
@@ -390,6 +398,7 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   PetscCall(VecAXPBYPCZ(y, 1, -1, 0, Xdot, SgF));
 
   ts->dm = dmsave;
+end:
   PetscCall(TSDiscGradRestoreX0AndXdot(ts, dm, &X0, &Xdot));
 
   PetscCall(VecDestroy(&Xp));
@@ -588,6 +597,17 @@ PetscErrorCode TSDiscGradSetFormulation(TS ts, PetscErrorCode (*Sfunc)(TS ts, Pe
   PetscValidFunction(Ffunc, 3);
   PetscValidFunction(Gfunc, 4);
   PetscTryMethod(ts, "TSDiscGradSetFormulation_C", (TS, PetscErrorCode (*Sfunc)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode (*Ffunc)(TS, PetscReal, Vec, PetscScalar *, void *), PetscErrorCode (*Gfunc)(TS, PetscReal, Vec, Vec, void *), void *), (ts, Sfunc, Ffunc, Gfunc, ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode TSDiscGradSetImplicitFormulation(TS ts, PetscErrorCode (*IGfunc)(TS ts, PetscReal time, Vec u, Vec u_t, Vec G, void *ctx))
+{
+  TS_DiscGrad *dg = (TS_DiscGrad *)ts->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscValidFunction(IGfunc, 2);
+  dg->IGfunc = IGfunc;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
