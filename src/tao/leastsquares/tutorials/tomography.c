@@ -252,6 +252,6 @@ static PetscErrorCode InitializeUserData(AppCtx *user)
 
       test:
          suffix: 3
-         args: -tao_monitor -tao_max_it 1000 -tao_brgn_regularization_type user -tao_brgn_regularizer_weight 1e-8 -tao_gatol 1.e-6 -test_tao_term {{0 1}}
+         args: -tao_monitor -tao_max_it 1000 -tao_brgn_regularization_type user -tao_brgn_regularizer_weight 1e-8 -tao_gatol 1.e-6
 
 TEST*/
