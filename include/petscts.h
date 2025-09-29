@@ -1514,6 +1514,7 @@ typedef enum {
 } TSDGType;
 PETSC_EXTERN PetscErrorCode TSDiscGradSetFormulation(TS, PetscErrorCode (*)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode (*)(TS, PetscReal, Vec, PetscScalar *, void *), PetscErrorCode (*)(TS, PetscReal, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode TSDiscGradGetFormulation(TS, PetscErrorCode (**)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode (**)(TS, PetscReal, Vec, PetscScalar *, void *), PetscErrorCode (**)(TS, PetscReal, Vec, Vec, void *), void *);
+PETSC_EXTERN PetscErrorCode TSDiscGradSetImplicitFormulation(TS, PetscErrorCode (*)(TS, PetscReal, Vec, Vec, Vec, void *));
 PETSC_EXTERN PetscErrorCode TSDiscGradSetType(TS, TSDGType);
 PETSC_EXTERN PetscErrorCode TSDiscGradGetType(TS, TSDGType *);
 
