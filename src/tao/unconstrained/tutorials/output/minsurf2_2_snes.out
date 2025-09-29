@@ -68,15 +68,6 @@ Tao Object: 2 MPI processes
         rows=100, cols=100
         total: nonzeros=784, allocated nonzeros=784
         total number of mallocs used during MatSetValues calls=0
-  Objective function:
-    Scale (tao_objective_scale): 1.
-    Function:
-      TaoTerm Object: (callbacks_) 2 MPI processes
-        type: taocallbacks
-        solution vector space: N = 100 [VecType mpi (taoterm_solution_vec_type)]
-        parameter vector space: (none)
-        attached to Tao [name omitted]
-    Map: unmapped
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=9.23151e-08
   Objective value=1.41847

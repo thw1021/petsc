@@ -19,9 +19,9 @@ Tao Object: 1 MPI process
       type: sum
       solution vector space: N = 20
       parameter vector space: (optional) K = 130
-      Sum of 3 terms: f_{data_}(A_0 x; [p_0]) + 0.1 f_{ridge_}(x; [p_1]) + 0.1 f_{lasso_}(A_2 x; [p_2])
-      f_{data_}:
-        TaoTerm Object: (data_) 1 MPI process
+      Sum of 3 terms: f_0(A_0 x; [p_0]) + 0.1 f_1(x; [p_1]) + 0.1 f_2(A_2 x; [p_2])
+      f_0:
+        TaoTerm Object: 1 MPI process
           type: quadratic
           solution vector space: N = 100
           parameter vector space: (optional) K = 100
@@ -36,13 +36,13 @@ Tao Object: 1 MPI process
           rows=100, cols=20
           total: nonzeros=2000, allocated nonzeros=2000
           total number of mallocs used during MatSetValues calls=0
-      f_{ridge_}:
-        TaoTerm Object: (ridge_) 1 MPI process
+      f_1:
+        TaoTerm Object: 1 MPI process
           type: halfl2squared
           solution vector space: N = 20
           parameter vector space: (optional) K = 20
-      f_{lasso_}:
-        TaoTerm Object: (lasso_) 1 MPI process
+      f_2:
+        TaoTerm Object: 1 MPI process
           type: l1
           solution vector space: N = 10
           parameter vector space: (optional) K = 10
