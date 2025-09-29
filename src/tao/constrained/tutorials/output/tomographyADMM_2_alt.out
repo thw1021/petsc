@@ -4,86 +4,86 @@ iter = 0, Function value: 0.00378251,  Residual: -2.   Constraint: 0.
     1 TAO,    Function value: 0.003782,    Residual: 2.87946e-13 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 1.15133e-06,    Residual: 0.00151745 
-    1 TAO,    Function value: 1.15133e-14,    Residual: 7.39869e-19 
+    1 TAO,    Function value: 1.15133e-14,    Residual: 4.77948e-18 
 iter = 1, Function value: 0.00378149,  Residual: 0.00101163   Constraint: 0.000505817 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 0.00378162,    Residual: 0.00151745 
     1 TAO,    Function value: 0.00378047,    Residual: 4.31902e-13 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 1.15081e-06,    Residual: 0.00151711 
-    1 TAO,    Function value: 4.60427e-14,    Residual: 2.44875e-19 
+    1 TAO,    Function value: 4.60427e-14,    Residual: 4.63345e-19 
 iter = 2, Function value: 0.00377996,  Residual: 0.0010114   Constraint: 0.000505702 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 0.00378008,    Residual: 0.00151711 
     1 TAO,    Function value: 0.00377893,    Residual: 4.31877e-13 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 1.15029e-06,    Residual: 0.00151677 
-    1 TAO,    Function value: 1.03573e-13,    Residual: 2.71916e-19 
+    1 TAO,    Function value: 1.03573e-13,    Residual: 1.94074e-18 
 iter = 3, Function value: 0.00377842,  Residual: 0.00101118   Constraint: 0.000505588 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 0.00377842,    Residual: 0.00101118 
     1 TAO,    Function value: 6.62577e-05,    Residual: 9.22634e-09 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 6.29169e-05,    Residual: 1.24227e-05 
-    1 TAO,    Function value: 5.09201e-07,    Residual: 4.36436e-21 
+    1 TAO,    Function value: 5.09201e-07,    Residual: 2.32151e-20 
 iter = 4, Function value: 5.84051e-06,  Residual: 1.21229e-05   Constraint: 0.0805991 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 5.34353e-06,    Residual: 1.22218e-05 
-    1 TAO,    Function value: 1.03266e-06,    Residual: 8.46767e-11 
+    1 TAO,    Function value: 1.03266e-06,    Residual: 8.96265e-11 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 1.22744e-06,    Residual: 1.26697e-06 
-    1 TAO,    Function value: 5.783e-07,    Residual: 7.56566e-22 
-iter = 5, Function value: 9.05188e-07,  Residual: 1.23639e-06   Constraint: 0.00822014 
+    1 TAO,    Function value: 5.783e-07,    Residual: 1.15176e-21 
+iter = 5, Function value: 9.05188e-07,  Residual: 1.23639e-06   Constraint: 0.00822013 
     Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 3.37259e-07,    Residual: 1.24473e-06 
-    1 TAO,    Function value: 1.78601e-07,    Residual: 7.87325e-12 
+    0 TAO,    Function value: 3.37259e-07,    Residual: 1.24472e-06 
+    1 TAO,    Function value: 1.78601e-07,    Residual: 7.73455e-12 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 6.39781e-07,    Residual: 3.08137e-07 
-    1 TAO,    Function value: 5.93402e-07,    Residual: 4.93498e-22 
+    1 TAO,    Function value: 5.93402e-07,    Residual: 4.91003e-22 
 iter = 6, Function value: 7.01967e-07,  Residual: 2.99165e-07   Constraint: 0.00291181 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 1.20164e-07,    Residual: 3.02117e-07 
-    1 TAO,    Function value: 1.00149e-07,    Residual: 2.61239e-12 
+    1 TAO,    Function value: 1.00149e-07,    Residual: 2.81443e-12 
     Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 6.08903e-07,    Residual: 1.56765e-07 
-    1 TAO,    Function value: 5.96899e-07,    Residual: 5.14247e-22 
+    0 TAO,    Function value: 6.08903e-07,    Residual: 1.56764e-07 
+    1 TAO,    Function value: 5.96899e-07,    Residual: 7.82014e-22 
 iter = 7, Function value: 6.70414e-07,  Residual: 1.522e-07   Constraint: 0.00148138 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 1.12748e-07,    Residual: 1.52462e-07 
-    1 TAO,    Function value: 8.63829e-08,    Residual: 1.42783e-12 
+    1 TAO,    Function value: 8.63829e-08,    Residual: 1.26782e-12 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 6.4501e-07,    Residual: 7.73734e-08 
-    1 TAO,    Function value: 6.28999e-07,    Residual: 9.40555e-23 
+    1 TAO,    Function value: 6.28999e-07,    Residual: 1.50331e-22 
 iter = 8, Function value: 6.31155e-07,  Residual: 6.54005e-08   Constraint: 0.0208853 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 6.94825e-08,    Residual: 6.90964e-08 
-    1 TAO,    Function value: 6.15209e-08,    Residual: 5.46755e-13 
+    1 TAO,    Function value: 6.15209e-08,    Residual: 6.27986e-13 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 6.36512e-07,    Residual: 4.32986e-08 
-    1 TAO,    Function value: 6.31499e-07,    Residual: 9.70099e-23 
+    1 TAO,    Function value: 6.31499e-07,    Residual: 9.67577e-23 
 iter = 9, Function value: 6.19195e-07,  Residual: 3.65985e-08   Constraint: 0.0116875 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 1.49271e-07,    Residual: 3.71452e-08 
-    1 TAO,    Function value: 1.43259e-07,    Residual: 3.2622e-13 
+    1 TAO,    Function value: 1.43259e-07,    Residual: 3.24019e-13 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 7.35119e-07,    Residual: 2.25915e-08 
-    1 TAO,    Function value: 7.30624e-07,    Residual: 3.17016e-23 
+    1 TAO,    Function value: 7.30624e-07,    Residual: 4.56496e-23 
 iter = 10, Function value: 6.11009e-07,  Residual: 1.20554e-08   Constraint: 0.0551071 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 1.37844e-07,    Residual: 1.46329e-08 
-    1 TAO,    Function value: 1.36567e-07,    Residual: 1.17984e-13 
+    1 TAO,    Function value: 1.36567e-07,    Residual: 1.43601e-13 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 7.33079e-07,    Residual: 8.6498e-09 
 iter = 11, Function value: 6.10535e-07,  Residual: 9.00674e-09   Constraint: 0.131261 
     Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 1.8272e-07,    Residual: 7.14288e-09 
+    0 TAO,    Function value: 1.8272e-07,    Residual: 7.14289e-09 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 7.81528e-07,    Residual: 1.78491e-08 
-    1 TAO,    Function value: 7.78011e-07,    Residual: 2.4707e-23 
+    1 TAO,    Function value: 7.78011e-07,    Residual: 4.72075e-23 
 iter = 12, Function value: 6.0914e-07,  Residual: 2.19843e-09   Constraint: 0.262831 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 1.75903e-07,    Residual: 1.14742e-08 
-    1 TAO,    Function value: 1.74731e-07,    Residual: 1.1288e-13 
+    1 TAO,    Function value: 1.74731e-07,    Residual: 1.08648e-13 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 7.76382e-07,    Residual: 5.30454e-09 
 iter = 13, Function value: 6.09488e-07,  Residual: 5.92223e-09   Constraint: 0.075688 
@@ -96,7 +96,7 @@ iter = 14, Function value: 6.09683e-07,  Residual: 9.45291e-09   Constraint: 0.0
     0 TAO,    Function value: 3.37155e-07,    Residual: 6.57198e-09 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 9.39267e-07,    Residual: 1.04655e-08 
-    1 TAO,    Function value: 9.37308e-07,    Residual: 1.53384e-23 
+    1 TAO,    Function value: 9.37308e-07,    Residual: 2.17238e-23 
 iter = 15, Function value: 6.08668e-07,  Residual: 1.074e-09   Constraint: 0.298829 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 3.43011e-07,    Residual: 4.28816e-09 
@@ -105,25 +105,25 @@ iter = 15, Function value: 6.08668e-07,  Residual: 1.074e-09   Constraint: 0.298
 iter = 16, Function value: 6.11072e-07,  Residual: 1.06426e-08   Constraint: 0.298829 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 3.51584e-07,    Residual: 1.23314e-08 
-    1 TAO,    Function value: 3.50227e-07,    Residual: 1.19182e-13 
+    1 TAO,    Function value: 3.50227e-07,    Residual: 8.19408e-14 
     Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 9.46054e-07,    Residual: 1.03582e-08 
-    1 TAO,    Function value: 9.44134e-07,    Residual: 1.54451e-23 
-iter = 17, Function value: 6.0943e-07,  Residual: 5.85177e-09   Constraint: 0.284956 
+    0 TAO,    Function value: 9.46054e-07,    Residual: 1.03583e-08 
+    1 TAO,    Function value: 9.44134e-07,    Residual: 3.64539e-23 
+iter = 17, Function value: 6.0943e-07,  Residual: 5.85178e-09   Constraint: 0.284956 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 2.5377e-07,    Residual: 1.27512e-08 
-    1 TAO,    Function value: 2.52513e-07,    Residual: 1.2144e-13 
+    1 TAO,    Function value: 2.52513e-07,    Residual: 1.23911e-13 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 8.54039e-07,    Residual: 4.02832e-09 
-iter = 18, Function value: 6.09435e-07,  Residual: 4.35863e-09   Constraint: 0.0973295 
+iter = 18, Function value: 6.09435e-07,  Residual: 4.35863e-09   Constraint: 0.0973296 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 2.51057e-07,    Residual: 4.02832e-09 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 8.5286e-07,    Residual: 8.05664e-09 
-iter = 19, Function value: 6.09827e-07,  Residual: 9.86493e-09   Constraint: 0.0973295 
+iter = 19, Function value: 6.09827e-07,  Residual: 9.86493e-09   Constraint: 0.0973296 
     Iteration information for admm_sub_0_ solve.
     0 TAO,    Function value: 1.24548e-07,    Residual: 1.05201e-08 
-    1 TAO,    Function value: 1.24033e-07,    Residual: 1.00639e-13 
+    1 TAO,    Function value: 1.24033e-07,    Residual: 1.00354e-13 
     Iteration information for admm_sub_1_ solve.
     0 TAO,    Function value: 7.27057e-07,    Residual: 8.20645e-09 
 iter = 20, Function value: 6.09574e-07,  Residual: 8.25449e-09   Constraint: 0.0199221 
