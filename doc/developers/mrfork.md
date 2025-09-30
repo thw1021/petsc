@@ -37,12 +37,22 @@
 
 # Commit and push changes to a merge request fork branch
 
-Only `Owners/Maintainers` can push commits to a merge request fork branch. Here, use the `ssh-URL` for the Git repository.
+Only `Owners/Maintainers` can push commits to a merge request fork branch. Here, use the `ssh-URL` for the (fork) Git repository.
+
+```console
+% git fetch <ssh-URL> <branchname>
+% git checkout -b <branchname> FETCH_HEAD
+% (edit/commit)
+% git push <ssh-URL> <branchname>
+```
+
+Alternatively, use -u or --set-upstream option to help with subsequent push/pull actions from this local branch to the remote branch in fork (i.e use similar workflow as with 'origin' as remote).
 
 ```console
 % git fetch <ssh-URL> <branchname>
 % git checkout -b <branchname> FETCH_HEAD
 % git push -u <ssh-URL> <branchname>
+% git pull
 % (edit/commit)
 % git push
 ```
