@@ -42,9 +42,8 @@ Only `Owners/Maintainers` can push commits to a merge request fork branch. Here,
 ```console
 % git fetch <ssh-URL> <branchname>
 % git checkout -b <branchname> FETCH_HEAD
-% git push -u <ssh-URL> <branchname>
 % (edit/commit)
-% git push
+% git push <ssh-URL> <branchname>
 ```
 
 Notes:
