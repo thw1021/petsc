@@ -58,6 +58,8 @@ program main
   PetscCheckA(cnt == sharedNodes*cdim, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Wrong DOF indices")
 
   ! Cleanup
+  deallocate (offsets)
+  deallocate (idxMatrix)
   PetscCallA(DMDestroy(dm, ierr))
   PetscCallA(PetscFinalize(ierr))
 
