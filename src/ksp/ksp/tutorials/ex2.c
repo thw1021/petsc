@@ -330,7 +330,7 @@ int main(int argc, char **args)
       requires: mumps __float128
       suffix: mumps_fp128
       nsize: 4
-      args: -m 9 -n 12 -ksp_type fgmres -pc_type lu -pc_precision double -pc_precision double -pc_factor_mat_solver_type mumps
+      args: -m 9 -n 12 -ksp_type fgmres -pc_type lu -pc_precision double
 
    test:
       suffix: telescope
