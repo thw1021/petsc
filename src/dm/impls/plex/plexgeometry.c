@@ -1882,7 +1882,8 @@ static PetscErrorCode DMLocatePoints_Plex_KDTree(DM dm, Vec v, DMPointLocationTy
         nextDepthCount = 0;
         depth++;
       }
-      if (depth > 1 && ltype == DM_POINTLOCATION_NEAREST) break;
+      if (ltype == DM_POINTLOCATION_NEAREST && mesh->pointLocationMaxDepth == 0 && depth > 1) break;
+      if (mesh->pointLocationMaxDepth > 0 && depth > mesh->pointLocationMaxDepth) break;
     }
     if (!found && ltype == DM_POINTLOCATION_NEAREST) {
       PetscReal cpoint[3] = {0, 0, 0}, diff[3], best[3] = {PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL}, dist, distMax = PETSC_MAX_REAL;

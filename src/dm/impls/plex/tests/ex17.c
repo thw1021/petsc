@@ -392,7 +392,7 @@ int main(int argc, char **argv)
 
     test:
       suffix: tri_nearest_kdtree
-      args: -dm_plex_point_location_algorithm kdtree
+      args: -dm_plex_point_location_algorithm kdtree -dm_plex_point_location_kdtree_max_depth {{0 1 2}}
 
     test:
       TODO: Broken, hash cannot locate points outside of the axis-aligned bounding box of domain

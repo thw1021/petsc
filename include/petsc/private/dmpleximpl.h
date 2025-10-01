@@ -240,6 +240,7 @@ typedef struct {
   DMPointLocationAlgorithm pointLocationAlgorithm; /* Algorithm to use for point location */
   PetscGridHash            lbox;                   /* Local box for searching */
   PetscGridKDTree          lkdtree;                /* Local grid KD tree for searching */
+  PetscInt                 pointLocationMaxDepth;  /* Maximum depth to search neighbor tree for KD tree point location */
   PetscPointFn            *coordFunc;              /* Function used to remap newly introduced vertices */
 
   /* Neighbors */
