@@ -101,6 +101,7 @@ PetscErrorCode DMPlexCopy_Internal(DM dmin, PetscBool copyPeriodicity, PetscBool
   PetscCall(DMPlexGetPartitionBalance(dmin, &balance_partition));
   PetscCall(DMPlexSetPartitionBalance(dmout, balance_partition));
   ((DM_Plex *)dmout->data)->pointLocationAlgorithm = ((DM_Plex *)dmin->data)->pointLocationAlgorithm;
+  ((DM_Plex *)dmout->data)->pointLocationMaxDepth  = ((DM_Plex *)dmin->data)->pointLocationMaxDepth;
   ((DM_Plex *)dmout->data)->printSetValues         = ((DM_Plex *)dmin->data)->printSetValues;
   ((DM_Plex *)dmout->data)->printFEM               = ((DM_Plex *)dmin->data)->printFEM;
   ((DM_Plex *)dmout->data)->printFVM               = ((DM_Plex *)dmin->data)->printFVM;
@@ -5099,11 +5100,12 @@ PetscErrorCode DMSetFromOptions_NonRefinement_Plex(DM dm, PetscOptionItems Petsc
   if (flg) PetscCall(DMPlexCreateBoundaryLabel_Private(dm, bdLabel));
   /* Point Location */
   PetscCall(PetscOptionsDeprecated("-dm_plex_hash_location", NULL, "3.23", "Use -dm_plex_point_location_algorithm hash"));
-  PetscCall(PetscOptionsBool("-dm_plex_hash_location", "Use grid hashing for point location", "DMLocatePoints", PETSC_FALSE, &flg, &flg2));
+  PetscCall(PetscOptionsBool("-dm_plex_hash_location", "Use grid hashing for point location", "DMLocatePoints", alg == DM_POINT_LOCATION_HASH, &flg, &flg2));
   PetscCall(PetscOptionsEnum("-dm_plex_point_location_algorithm", "Use grid hashing for point location", "DMLocatePoints", DMPointLocationAlgorithms, (PetscEnum)alg, (PetscEnum *)&alg, &flg3));
   PetscCheck(!(flg2 && flg3), PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_INCOMP, "Only one of -dm_plex_hash_location and -dm_plex_point_location_algorithm may be provided");
   if (flg2 && flg) alg = DM_POINT_LOCATION_HASH;
   PetscCall(DMPlexSetPointLocationAlgorithm(dm, alg));
+  PetscCall(PetscOptionsBoundedInt("-dm_plex_point_location_kdtree_max_depth", "Maximum depth to search in neighbor tree", "DMLocatePoints", mesh->pointLocationMaxDepth, &mesh->pointLocationMaxDepth, NULL, 0));
 
   if (flg) /* Partitioning and distribution */
     PetscCall(PetscOptionsBool("-dm_plex_partition_balance", "Attempt to evenly divide points on partition boundary between processes", "DMPlexSetPartitionBalance", PETSC_FALSE, &mesh->partitionBalance, NULL));
@@ -5806,30 +5808,31 @@ PETSC_INTERN PetscErrorCode DMClone_Plex(DM dm, DM *newdm)
            ownership of the underlying `DMPLEX` points. This is specified by another `PetscSection` object.
 
   Options Database Keys:
-+ -dm_refine_pre                          - Refine mesh before distribution
-+ -dm_refine_uniform_pre                  - Choose uniform or generator-based refinement
-+ -dm_refine_volume_limit_pre             - Cell volume limit after pre-refinement using generator
-. -dm_distribute                          - Distribute mesh across processes
-. -dm_distribute_overlap                  - Number of cells to overlap for distribution
-. -dm_refine                              - Refine mesh after distribution
-. -dm_localize <bool>                     - Whether to localize coordinates for periodic meshes
-. -dm_sparse_localize <bool>              - Whether to only localize cells on the periodic boundary
-. -dm_plex_point_location_algorithm <alg> - Set the algorithm to use for locating points, one of `brute_force`, `hash`, or `kdtree`
-. -dm_plex_hash_box_faces <n,m,p>         - The number of divisions in each direction of the grid hash
-. -dm_plex_partition_balance              - Attempt to evenly divide points on partition boundary between processes
-. -dm_plex_remesh_bd                      - Allow changes to the boundary on remeshing
-. -dm_plex_max_projection_height          - Maximum mesh point height used to project locally
-. -dm_plex_regular_refinement             - Use special nested projection algorithm for regular refinement
-. -dm_plex_reorder_section                - Use specialized blocking if available
-. -dm_plex_check_all                      - Perform all checks below
-. -dm_plex_check_symmetry                 - Check that the adjacency information in the mesh is symmetric
-. -dm_plex_check_skeleton <celltype>      - Check that each cell has the correct number of vertices
-. -dm_plex_check_faces <celltype>         - Check that the faces of each cell give a vertex order this is consistent with what we expect from the cell type
-. -dm_plex_check_geometry                 - Check that cells have positive volume
-. -dm_view :mesh.tex:ascii_latex          - View the mesh in LaTeX/TikZ
-. -dm_plex_view_scale <num>               - Scale the TikZ
-. -dm_plex_print_fem <num>                - View FEM assembly information, such as element vectors and matrices
-- -dm_plex_print_fvm <num>                - View FVM assembly information, such as flux updates
++ -dm_refine_pre                                 - Refine mesh before distribution
++ -dm_refine_uniform_pre                         - Choose uniform or generator-based refinement
++ -dm_refine_volume_limit_pre                    - Cell volume limit after pre-refinement using generator
+. -dm_distribute                                 - Distribute mesh across processes
+. -dm_distribute_overlap                         - Number of cells to overlap for distribution
+. -dm_refine                                     - Refine mesh after distribution
+. -dm_localize <bool>                            - Whether to localize coordinates for periodic meshes
+. -dm_sparse_localize <bool>                     - Whether to only localize cells on the periodic boundary
+. -dm_plex_point_location_algorithm <alg>        - Set the algorithm to use for locating points, one of `brute_force`, `hash`, or `kdtree`
+. -dm_plex_point_location_kdtree_max_depth <int> - Set the maximum depth in the neighbor tree to search for KD tree point location, or 0 for no limit (default: 0)
+. -dm_plex_hash_box_faces <n,m,p>                - The number of divisions in each direction of the grid hash
+. -dm_plex_partition_balance                     - Attempt to evenly divide points on partition boundary between processes
+. -dm_plex_remesh_bd                             - Allow changes to the boundary on remeshing
+. -dm_plex_max_projection_height                 - Maximum mesh point height used to project locally
+. -dm_plex_regular_refinement                    - Use special nested projection algorithm for regular refinement
+. -dm_plex_reorder_section                       - Use specialized blocking if available
+. -dm_plex_check_all                             - Perform all checks below
+. -dm_plex_check_symmetry                        - Check that the adjacency information in the mesh is symmetric
+. -dm_plex_check_skeleton <celltype>             - Check that each cell has the correct number of vertices
+. -dm_plex_check_faces <celltype>                - Check that the faces of each cell give a vertex order this is consistent with what we expect from the cell type
+. -dm_plex_check_geometry                        - Check that cells have positive volume
+. -dm_view :mesh.tex:ascii_latex                 - View the mesh in LaTeX/TikZ
+. -dm_plex_view_scale <num>                      - Scale the TikZ
+. -dm_plex_print_fem <num>                       - View FEM assembly information, such as element vectors and matrices
+- -dm_plex_print_fvm <num>                       - View FVM assembly information, such as flux updates
 
   Level: intermediate
 
