@@ -2519,10 +2519,14 @@ static PetscErrorCode MatFactorNumeric_MUMPS(Mat F, Mat A, PETSC_UNUSED const Ma
   if (!mumps->sym && mumps->id.ICNTL(19) && mumps->id.ICNTL(19) != 1) mumps->id.ICNTL(19) = 3;
 
   if (!mumps->is_omp_master) mumps->id.INFO(23) = 0;
-  // userguide: ISOL_loc should be allocated by the user between the factorization and the
+  // MUMPS userguide: ISOL_loc should be allocated by the user between the factorization and the
   // solve phases. On exit from the solve phase, ISOL_loc(i) contains the index of the variables for
   // which the solution (in SOL_loc) is available on the local processor.
-  if (mumps->petsc_size > 1 && (!mumps->x_seq || mumps->x_seq->map->N < mumps->id.INFO(23))) { // reallocate x_seq only when needed
+  // If successive calls to the solve phase (JOB= 3) are performed for a given matrix, ISOL_loc will
+  // normally have the same contents for each of these calls. The only exception is the case of
+  // unsymmetric matrices (SYM=1) when the transpose option is changed (see ICNTL(9)) and non
+  // symmetric row/column exchanges (see ICNTL(6)) have occurred before the solve phase.
+  if (mumps->petsc_size > 1) {
     PetscInt     lsol_loc;
     PetscScalar *array;
 
