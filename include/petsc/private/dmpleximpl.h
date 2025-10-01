@@ -6,6 +6,7 @@
 #include <petscbt.h>
 #include <petscsf.h>
 #include <petsc/private/dmimpl.h>
+#include <petsc/private/hashseti.h>
 
 #if defined(PETSC_HAVE_EXODUSII)
   #include <exodusII.h>
@@ -95,7 +96,10 @@ struct _n_PetscGridKDTree {
   PetscKDTree  tree;           /* KD Tree of centroids */
   PetscSection cellSection;    /* Section relating cells to all adjacent cells */
   IS           cells;          /* List of adjacent cells to each cell */
+  PetscHMapI   mapCellToIndex; /* Mapping from cell point numbers to KD tree indices */
   PetscInt    *mapIndexToCell; /* Mapping between KD tree indices to cell point numbers */
+  PetscInt    *toCheckQueue;   /* Buffer to store cell search queue */
+  PetscHSetI   checkedCells;   /* Hash set of checked cell point numbers */
 };
 
 typedef struct {
