@@ -240,13 +240,13 @@ int main(int argc, char **argv)
 
    test:
       nsize: 2
-      requires: !single # garbage prints in single precision from sgemr2d
+      requires: double # garbage prints in single precision from sgemr2d
       output_file: output/ex245.out
 
    test:
       suffix: 2
       nsize: 6
-      requires: !single # garbage prints in single precision from sgemr2d
+      requires: double # garbage prints in single precision from sgemr2d
       output_file: output/ex245.out
 
 TEST*/
