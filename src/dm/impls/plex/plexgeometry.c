@@ -1504,6 +1504,10 @@ PetscErrorCode DMPlexCreateGridKDTree(DM dm, PetscGridKDTree *tree)
   PetscCall(DMPlexGetSimplexOrBoxCells(dm, 0, &cstart, &cend));
   PetscCall(DMPlexGetDepthStratum(dm, 0, &vstart, &vend));
   PetscCall(DMGetCoordinateDim(dm, &cdim));
+  /* Preallocate work space */
+  PetscCall(PetscCalloc1(cend - cstart, &(*tree)->toCheckQueue));
+  PetscCall(PetscHSetICreate(&(*tree)->checkedCells));
+  if (cend - cstart > 0) PetscCall(PetscHSetIResize((*tree)->checkedCells, cend - cstart));
   /* Get SF describing ownership of overlap cells */
   PetscCall(DMGetPointSF(dm, &sf));
   if (sf) PetscCall(PetscSFGetGraph(sf, NULL, &Nl, &leaves, NULL));
@@ -1527,6 +1531,7 @@ PetscErrorCode DMPlexCreateGridKDTree(DM dm, PetscGridKDTree *tree)
   PetscCall(DMLabelCreate(PETSC_COMM_SELF, "vertexToCells", &cellLabel));
   /* Add all cells which share a vertex to cell c to the stratum c - cstart (index in KD tree) */
   PetscCall(PetscCalloc1(numCells, &(*tree)->mapIndexToCell));
+  PetscCall(PetscHMapICreateWithSize(numCells, &(*tree)->mapCellToIndex));
   cellIndex = 0;
   for (PetscInt c = cstart; c < cend; c++) {
     PetscInt  Nv;
@@ -1537,6 +1542,7 @@ PetscErrorCode DMPlexCreateGridKDTree(DM dm, PetscGridKDTree *tree)
     PetscCall(PetscFindInt(c, Nl, leaves, &idx));
     if (idx >= 0) continue;
     (*tree)->mapIndexToCell[cellIndex] = c;
+    PetscCall(PetscHMapISet((*tree)->mapCellToIndex, c, cellIndex));
 
     /* Get all vertices in transitive closure to cell c by using useCone=PETSC_TRUE */
     PetscCall(DMPlexGetTransitiveClosure(dm, c, PETSC_TRUE, &Nv, &verts));
@@ -1569,6 +1575,7 @@ PetscErrorCode DMPlexCreateGridKDTree(DM dm, PetscGridKDTree *tree)
   }
   /* Convert to dense layout for fast queries */
   PetscCall(DMLabelConvertToSection(cellLabel, &(*tree)->cellSection, &(*tree)->cells));
+
   PetscCall(PetscFree(pcoords));
   PetscCall(DMLabelDestroy(&cellLabel));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1594,6 +1601,9 @@ PetscErrorCode PetscGridKDTreeDestroy(PetscGridKDTree *tree)
     PetscCall(PetscSectionDestroy(&(*tree)->cellSection));
     PetscCall(ISDestroy(&(*tree)->cells));
     PetscCall(PetscFree((*tree)->mapIndexToCell));
+    PetscCall(PetscFree((*tree)->toCheckQueue));
+    PetscCall(PetscHMapIDestroy(&(*tree)->mapCellToIndex));
+    PetscCall(PetscHSetIDestroy(&(*tree)->checkedCells));
     PetscCall(PetscFree(*tree));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1794,7 +1804,7 @@ static PetscErrorCode DMLocatePoints_Plex_Hash(DM dm, Vec v, DMPointLocationType
 static PetscErrorCode DMLocatePoints_Plex_KDTree(DM dm, Vec v, DMPointLocationType ltype, PetscSFNode *cells, PetscInt terminatingQueryType[4])
 {
   DM_Plex        *mesh = (DM_Plex *)dm->data;
-  PetscInt        numPoints, bs, cdim, vstart, vend, cstart, cend;
+  PetscInt        numPoints, numCellsTotal, bs, cdim, cstart, cend;
   PetscScalar    *a;
   PetscMPIInt     rank;
   const PetscInt *cellIndices;
@@ -1806,7 +1816,7 @@ static PetscErrorCode DMLocatePoints_Plex_KDTree(DM dm, Vec v, DMPointLocationTy
   PetscCall(VecGetBlockSize(v, &bs));
   numPoints /= bs;
   PetscCall(DMPlexGetSimplexOrBoxCells(dm, 0, &cstart, &cend));
-  PetscCall(DMPlexGetDepthStratum(dm, 0, &vstart, &vend));
+  numCellsTotal = cend - cstart;
   PetscCall(DMGetCoordinateDim(dm, &cdim));
   if (!mesh->lkdtree) PetscCall(DMPlexCreateGridKDTree(dm, &mesh->lkdtree));
 
@@ -1815,7 +1825,7 @@ static PetscErrorCode DMLocatePoints_Plex_KDTree(DM dm, Vec v, DMPointLocationTy
     PetscBool          found = PETSC_FALSE;
     const PetscScalar *point = &a[p * bs];
     PetscReal          d;
-    PetscInt           cell, numCells, cellOffset, nearestCellIndex, nearestCell;
+    PetscInt           cell, numCells, cellOffset, nearestCellIndex, nearestCell, numChecked = 0, numToCheck = 0, depthCount = 1, nextDepthCount = 0, depth = 0;
     PetscCount         index;
 
     /* Already found in previous cell */
@@ -1833,22 +1843,19 @@ static PetscErrorCode DMLocatePoints_Plex_KDTree(DM dm, Vec v, DMPointLocationTy
 #endif
     nearestCellIndex = (PetscInt)index;
     nearestCell      = mesh->lkdtree->mapIndexToCell[nearestCellIndex];
+    PetscCall(PetscHSetIClear(mesh->lkdtree->checkedCells));
+    mesh->lkdtree->toCheckQueue[numToCheck++] = nearestCell;
+    PetscCall(PetscHSetIAdd(mesh->lkdtree->checkedCells, nearestCell));
 
-    /* Check nearest cell first, skip remaining checks if found */
-    PetscCall(DMPlexLocatePoint_Internal(dm, cdim, point, nearestCell, &cell));
-    if (cell >= 0) {
-      cells[p].rank  = 0;
-      cells[p].index = cell;
-      terminatingQueryType[2]++;
-      continue;
-    }
+    /* Search recursively over neighborhood of cells breadth-first, starting with cell with nearest centroid */
+    while (!found && depthCount > 0 && numChecked < numCellsTotal) {
+      PetscInt currentCell = mesh->lkdtree->toCheckQueue[numChecked];
+      PetscInt currentCellIndex;
 
-    /* Search over adjacent cells to find point */
-    PetscCall(PetscSectionGetDof(mesh->lkdtree->cellSection, nearestCellIndex, &numCells));
-    PetscCall(PetscSectionGetOffset(mesh->lkdtree->cellSection, nearestCellIndex, &cellOffset));
-    for (PetscInt c = cellOffset; c < cellOffset + numCells; c++) {
-      if (c == nearestCell) continue;
-      PetscCall(DMPlexLocatePoint_Internal(dm, cdim, point, cellIndices[c], &cell));
+      PetscCall(PetscHMapIGet(mesh->lkdtree->mapCellToIndex, currentCell, &currentCellIndex));
+
+      /* Check nearest cell first, skip remaining checks if found */
+      PetscCall(DMPlexLocatePoint_Internal(dm, cdim, point, currentCell, &cell));
       if (cell >= 0) {
         cells[p].rank  = 0;
         cells[p].index = cell;
@@ -1856,10 +1863,34 @@ static PetscErrorCode DMLocatePoints_Plex_KDTree(DM dm, Vec v, DMPointLocationTy
         found = PETSC_TRUE;
         break;
       }
+      numChecked++;
+
+      /* Add adjacent cells to search queue, skipping checked points */
+      PetscCall(PetscSectionGetDof(mesh->lkdtree->cellSection, currentCellIndex, &numCells));
+      PetscCall(PetscSectionGetOffset(mesh->lkdtree->cellSection, currentCellIndex, &cellOffset));
+      for (PetscInt c = cellOffset; c < cellOffset + numCells && numToCheck < numCellsTotal; c++) {
+        PetscBool alreadyChecked;
+
+        PetscCall(PetscHSetIHas(mesh->lkdtree->checkedCells, cellIndices[c], &alreadyChecked));
+        if (alreadyChecked) continue;
+        nextDepthCount++;
+        mesh->lkdtree->toCheckQueue[numToCheck++] = cellIndices[c];
+        PetscCall(PetscHSetIAdd(mesh->lkdtree->checkedCells, cellIndices[c]));
+      }
+      if (--depthCount == 0) {
+        depthCount     = nextDepthCount;
+        nextDepthCount = 0;
+        depth++;
+      }
+      if (depth > 1 && ltype == DM_POINTLOCATION_NEAREST) break;
     }
     if (!found && ltype == DM_POINTLOCATION_NEAREST) {
       PetscReal cpoint[3] = {0, 0, 0}, diff[3], best[3] = {PETSC_MAX_REAL, PETSC_MAX_REAL, PETSC_MAX_REAL}, dist, distMax = PETSC_MAX_REAL;
       PetscInt  bestc = -1;
+
+      /* Only consider nearest centroid neighbors */
+      PetscCall(PetscSectionGetDof(mesh->lkdtree->cellSection, nearestCellIndex, &numCells));
+      PetscCall(PetscSectionGetOffset(mesh->lkdtree->cellSection, nearestCellIndex, &cellOffset));
 
       for (PetscInt c = cellOffset; c < cellOffset + numCells; c++) {
         PetscCall(DMPlexClosestPoint_Internal(dm, cdim, point, cellIndices[c], cpoint));
