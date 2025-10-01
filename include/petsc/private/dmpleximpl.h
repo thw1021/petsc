@@ -6,6 +6,7 @@
 #include <petscbt.h>
 #include <petscsf.h>
 #include <petsc/private/dmimpl.h>
+#include <petsc/private/hashseti.h>
 
 #if defined(PETSC_HAVE_EXODUSII)
   #include <exodusII.h>
@@ -89,6 +90,16 @@ struct _n_PetscGridHash {
   PetscSection cellSection; /* Offsets for cells in each subbox*/
   IS           cells;       /* List of cells in each subbox */
   DMLabel      cellsSparse; /* Sparse storage for cell map */
+};
+
+struct _n_PetscGridKDTree {
+  PetscKDTree  tree;           /* KD Tree of centroids */
+  PetscSection cellSection;    /* Section relating cells to all adjacent cells */
+  IS           cells;          /* List of adjacent cells to each cell */
+  PetscHMapI   mapCellToIndex; /* Mapping from cell point numbers to KD tree indices */
+  PetscInt    *mapIndexToCell; /* Mapping between KD tree indices to cell point numbers */
+  PetscInt    *toCheckQueue;   /* Buffer to store cell search queue */
+  PetscHSetI   checkedCells;   /* Hash set of checked cell point numbers */
 };
 
 typedef struct {
@@ -225,10 +236,12 @@ typedef struct {
   PetscReal scale[NUM_PETSC_UNITS]; /* The scale for each SI unit */
 
   /* Geometry */
-  PetscReal     minradius;       /* Minimum distance from cell centroid to face */
-  PetscBool     useHashLocation; /* Use grid hashing for point location */
-  PetscGridHash lbox;            /* Local box for searching */
-  PetscPointFn *coordFunc;       /* Function used to remap newly introduced vertices */
+  PetscReal                minradius;              /* Minimum distance from cell centroid to face */
+  DMPointLocationAlgorithm pointLocationAlgorithm; /* Algorithm to use for point location */
+  PetscGridHash            lbox;                   /* Local box for searching */
+  PetscGridKDTree          lkdtree;                /* Local grid KD tree for searching */
+  PetscInt                 pointLocationMaxDepth;  /* Maximum depth to search neighbor tree for KD tree point location */
+  PetscPointFn            *coordFunc;              /* Function used to remap newly introduced vertices */
 
   /* Neighbors */
   PetscMPIInt *neighbors;
