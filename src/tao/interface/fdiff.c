@@ -42,7 +42,7 @@ PetscErrorCode TaoDefaultComputeGradient(Tao tao, Vec Xin, Vec G, void *dummy)
   PetscCall(PetscOptionsGetReal(((PetscObject)tao)->options, ((PetscObject)tao)->prefix, "-tao_fd_delta", &h, &flg));
   if (flg) PetscCall(TaoTermSetFDDelta(tao->objective_term.term, h));
   PetscCall(TaoTermComputeGradientUseFDPush(tao->objective_term.term));
-  PetscCall(TaoMappedTermComputeGradient(&tao->objective_term, Xin, tao->objective_parameters, INSERT_VALUES, G));
+  PetscCall(TaoTermMappingComputeGradient(&tao->objective_term, Xin, tao->objective_parameters, INSERT_VALUES, G));
   PetscCall(TaoTermComputeGradientUseFDPop(tao->objective_term.term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -79,7 +79,7 @@ PetscErrorCode TaoDefaultComputeHessian(Tao tao, Vec V, Mat H, Mat B, void *dumm
 {
   PetscFunctionBegin;
   PetscCall(TaoTermComputeHessianUseFDPush(tao->objective_term.term));
-  PetscCall(TaoMappedTermComputeHessian(&tao->objective_term, V, tao->objective_parameters, INSERT_VALUES, NULL, B ? B : H));
+  PetscCall(TaoTermMappingComputeHessian(&tao->objective_term, V, tao->objective_parameters, INSERT_VALUES, NULL, B ? B : H));
   PetscCall(TaoTermComputeHessianUseFDPop(tao->objective_term.term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -111,7 +111,7 @@ PetscErrorCode TaoDefaultComputeHessianColor(Tao tao, Vec V, Mat H, Mat B, void 
   B = B ? B : H;
   PetscCall(PetscObjectCompose((PetscObject)B, "__TaoTermHessianMatFDColoring", (PetscObject)coloring));
   PetscCall(TaoTermComputeHessianUseFDPush(tao->objective_term.term));
-  PetscCall(TaoMappedTermComputeHessian(&tao->objective_term, V, tao->objective_parameters, INSERT_VALUES, NULL, B));
+  PetscCall(TaoTermMappingComputeHessian(&tao->objective_term, V, tao->objective_parameters, INSERT_VALUES, NULL, B));
   PetscCall(TaoTermComputeHessianUseFDPop(tao->objective_term.term));
   PetscCall(PetscObjectCompose((PetscObject)B, "__TaoTermHessianMatFDColoring", (PetscObject)NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
