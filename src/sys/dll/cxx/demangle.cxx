@@ -14,7 +14,7 @@ PetscErrorCode PetscDemangleSymbol(const char mangledName[], char **name)
   char *newname;
   int   status;
 
-  newname = __cxxabiv1::__cxa_demangle(mangledName, NULL, NULL, &status);
+  newname = __cxxabiv1::__cxa_demangle(mangledName, nullptr, nullptr, &status);
   if (status) {
     PetscCheck(status != -1, PETSC_COMM_SELF, PETSC_ERR_MEM, "Failed to allocate memory for symbol %s", mangledName);
     PetscCheck(status == -2, PETSC_COMM_SELF, PETSC_ERR_LIB, "Demangling failed for symbol %s", mangledName);
