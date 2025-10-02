@@ -2,16 +2,16 @@
 !
 !     Solves the problem A x - x^3 + 1 = 0 via Picard iteration
 !
+#include <petsc/finclude/petscsnes.h>
+#include <petsc/finclude/petscsnes.h>
 module ex21fmodule
   use petscsnes
-#include <petsc/finclude/petscsnes.h>
   type userctx
     Mat A
   end type userctx
 end module ex21fmodule
 
 program main
-#include <petsc/finclude/petscsnes.h>
   use ex21fmodule
   implicit none
   SNES snes
@@ -61,22 +61,22 @@ subroutine FormFunction(snes, x, f, user, ierr)
   PetscCallA(VecGetArray(f, ff, ierr))
   PetscCallA(VecGetArrayRead(x, xx, ierr))
   PetscCallA(VecGetLocalSize(x, n, ierr))
-  do 10, i = 1, n
+  do i = 1, n
     ff(i) = ff(i) - xx(i)*xx(i)*xx(i)*xx(i) + 1.0
-10  continue
-    PetscCallA(VecRestoreArray(f, ff, ierr))
-    PetscCallA(VecRestoreArrayRead(x, xx, ierr))
-    end subroutine
+  end do
+  PetscCallA(VecRestoreArray(f, ff, ierr))
+  PetscCallA(VecRestoreArrayRead(x, xx, ierr))
+end subroutine
 
 !      The matrix is constant so no need to recompute it
-    subroutine FormJacobian(snes, x, jac, jacb, user, ierr)
-      use ex21fmodule
-      SNES snes
-      Vec x
-      type(userctx) user
-      Mat jac, jacb
-      PetscErrorCode ierr
-    end subroutine
+subroutine FormJacobian(snes, x, jac, jacb, user, ierr)
+  use ex21fmodule
+  SNES snes
+  Vec x
+  type(userctx) user
+  Mat jac, jacb
+  PetscErrorCode ierr
+end subroutine
 
 !/*TEST
 !
