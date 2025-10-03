@@ -58,6 +58,14 @@ PyAPI_FUNC(int)  PyBuffer_FillInfo(Py_buffer *, PyObject *,
 
 /* -------------------------------------------------------------------------- */
 
+#if defined(Py_LIMITED_API) && Py_LIMITED_API+0 < 0x030B0000
+
+PyAPI_DATA(const unsigned long) Py_Version;
+
+#endif
+
+/* -------------------------------------------------------------------------- */
+
 #if (defined(Py_LIMITED_API) && Py_LIMITED_API+0 < 0x030C0000) || PY_VERSION_HEX < 0X30C0000
 
 #define PyErr_GetRaisedException PyErr_GetRaisedException_312
