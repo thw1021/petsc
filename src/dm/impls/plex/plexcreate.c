@@ -5019,15 +5019,17 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems PetscOpt
   //   Faces are input, completed, and all points are marked with their depth
   PetscCall(PetscOptionsFindPairPrefix_Private(NULL, ((PetscObject)dm)->prefix, "-dm_plex_cohesive_label_", &option, NULL, &flg));
   if (flg) {
-    DMLabel   label;
-    PetscInt  points[1024], n, pStart, pEnd, Nl = 1;
-    PetscBool noCreate = PETSC_FALSE;
-    char      fulloption[PETSC_MAX_PATH_LEN];
-    char      name[PETSC_MAX_PATH_LEN];
-    size_t    len;
+    DMLabel     label;
+    PetscInt    points[1024], n, pStart, pEnd, Nl = 1;
+    PetscBool   noCreate = PETSC_FALSE;
+    char        fulloption[PETSC_MAX_PATH_LEN];
+    char        name[PETSC_MAX_PATH_LEN];
+    const char *prefix = ((PetscObject)dm)->prefix;
+    size_t      len, plen = 0;
 
+    if (prefix) PetscCall(PetscStrlen(prefix, &plen));
     PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
-    PetscCall(PetscStrncpy(name, &option[23], PETSC_MAX_PATH_LEN));
+    PetscCall(PetscStrncpy(name, &option[23 + plen], PETSC_MAX_PATH_LEN));
     PetscCall(PetscStrlen(name, &len));
     if (name[len - 1] == '0') Nl = 10;
     for (PetscInt l = 0; l < Nl; ++l) {
