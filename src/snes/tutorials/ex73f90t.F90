@@ -43,6 +43,9 @@ module ex73f90tmodule
   use petscdmda
   use petscdmcomposite
   use petscmat
+  use petscsys
+  use petscsnes
+  implicit none
   type ex73f90tmodule_type
     DM::da
 !     temp A block stuff
@@ -54,53 +57,44 @@ module ex73f90tmodule
     IS::isPhi, isLambda
   end type ex73f90tmodule_type
 
-end module ex73f90tmodule
-
-module ex73f90tmodule_interfaces
-  use ex73f90tmodule
-
-  Interface SNESSetApplicationContext
-    Subroutine SNESSetApplicationContext(snesIn, ctx, ierr)
+  interface
+    subroutine SNESSetApplicationContext(snesIn, ctx, ierr)
       use petscsnes
-      use ex73f90tmodule
-      SNES::    snesIn
+      import ex73f90tmodule_type
+      SNES :: snesIn
       type(ex73f90tmodule_type) ctx
       PetscErrorCode ierr
-    End Subroutine
-  End Interface SNESSetApplicationContext
-
-  Interface SNESGetApplicationContext
+    end subroutine
     Subroutine SNESGetApplicationContext(snesIn, ctx, ierr)
       use petscsnes
-      use ex73f90tmodule
-      SNES::     snesIn
+      import ex73f90tmodule_type
+      SNES :: snesIn
       type(ex73f90tmodule_type), pointer :: ctx
       PetscErrorCode ierr
-    End Subroutine
-  End Interface SNESGetApplicationContext
-end module ex73f90tmodule_interfaces
+    end subroutine
+  end interface
 
-subroutine MyObjective(snes, x, result, ctx, ierr)
-  use petsc
-  implicit none
-  PetscInt ctx
-  Vec x, f
-  SNES snes
-  PetscErrorCode ierr
-  PetscScalar result
-  PetscReal fnorm
+contains
+  subroutine MyObjective(snes, x, result, ctx, ierr)
+    PetscInt ctx
+    Vec x, f
+    SNES snes
+    PetscErrorCode ierr
+    PetscScalar result
+    PetscReal fnorm
 
-  PetscCall(VecDuplicate(x, f, ierr))
-  PetscCall(SNESComputeFunction(snes, x, f, ierr))
-  PetscCall(VecNorm(f, NORM_2, fnorm, ierr))
-  result = .5*fnorm*fnorm
-  PetscCall(VecDestroy(f, ierr))
-end subroutine MyObjective
+    PetscCall(VecDuplicate(x, f, ierr))
+    PetscCall(SNESComputeFunction(snes, x, f, ierr))
+    PetscCall(VecNorm(f, NORM_2, fnorm, ierr))
+    result = .5*fnorm*fnorm
+    PetscCall(VecDestroy(f, ierr))
+  end subroutine MyObjective
+
+end module ex73f90tmodule
 
 program main
   use petscsnes
   use ex73f90tmodule
-  use ex73f90tmodule_interfaces
   implicit none
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                   Variable declarations
@@ -131,7 +125,7 @@ program main
 
 !  Note: Any user-defined Fortran routines (such as FormJacobian)
 !  MUST be declared as external.
-  external FormInitialGuess, FormJacobian, FormFunction, MyObjective
+  external FormInitialGuess, FormJacobian, FormFunction
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Initialize program
@@ -396,7 +390,6 @@ end
 subroutine FormInitialGuess(mysnes, Xnest, ierr)
   use petscsnes
   use ex73f90tmodule
-  use ex73f90tmodule_interfaces
   implicit none
 !  Input/output variables:
   SNES::     mysnes
