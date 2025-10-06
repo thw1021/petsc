@@ -34,6 +34,7 @@ class Configure(config.package.Package):
     self.sharedLibraries = framework.require('PETSc.options.sharedLibraries', self)
     self.installdir      = framework.require('PETSc.options.installDir',self)
     self.mpi             = framework.require('config.packages.MPI',self)
+    self.hdf5            = framework.require('config.packages.HDF5',self)
     return
 
   def getDir(self):
@@ -69,6 +70,11 @@ class Configure(config.package.Package):
     numpy_include = self.argDB.get('with-numpy-include')
     if numpy_include is not None:
       newdir += 'NUMPY_INCLUDE="'+numpy_include+'" '
+
+    # Add HDF5 support if it exists
+    if self.hdf5.found:
+      newdir += 'HDF5_INCLUDE="'+self.headers.toStringNoDupes(self.hdf5.include)+'" '
+      newdir += 'HDF5_LIB="'+self.libraries.toStringNoDupes(self.hdf5.lib)+'" '
 
     self.addDefine('HAVE_PETSC4PY',1)
     self.addDefine('PETSC4PY_INSTALL_PATH','"'+os.path.join(self.installdir.dir,'lib')+'"')
@@ -118,4 +124,3 @@ class Configure(config.package.Package):
   def alternateConfigureLibrary(self):
     '''This is ugly but currently .gitlab-ci.yml is hardwired to use petsc4pytest'''
     self.addMakeRule('petsc4pytest','')
-
