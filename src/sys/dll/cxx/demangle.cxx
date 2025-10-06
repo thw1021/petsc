@@ -14,13 +14,13 @@ PetscErrorCode PetscDemangleSymbol(const char mangledName[], char **name)
   if (mangledName) PetscAssertPointer(mangledName, 1);
   PetscAssertPointer(name, 2);
 
-  *name = PETSC_NULLPTR;
+  *name = nullptr;
   if (!mangledName) PetscFunctionReturn(PETSC_SUCCESS);
 #if defined(PETSC_HAVE_CXXABI_H)
   char *newname;
   int   status;
 
-  newname = __cxxabiv1::__cxa_demangle(mangledName, PETSC_NULLPTR, PETSC_NULLPTR, &status);
+  newname = __cxxabiv1::__cxa_demangle(mangledName, nullptr, nullptr, &status);
   if (status) {
     PetscCheck(status != -1, PETSC_COMM_SELF, PETSC_ERR_MEM, "Failed to allocate memory for symbol %s", mangledName);
     PetscCheck(status == -2, PETSC_COMM_SELF, PETSC_ERR_LIB, "Demangling failed for symbol %s", mangledName);
