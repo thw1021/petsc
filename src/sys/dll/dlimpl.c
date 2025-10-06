@@ -334,11 +334,7 @@ PetscErrorCode PetscDLAddr(PetscVoidFn *func, char *name[])
     Dl_info info;
 
     PetscCheck(dladdr(*(void **)&func, &info), PETSC_COMM_SELF, PETSC_ERR_LIB, "Failed to lookup symbol: %s", dlerror());
-  #ifdef PETSC_HAVE_CXX
     PetscCall(PetscDemangleSymbol(info.dli_sname, name));
-  #else
-    PetscCall(PetscStrallocpy(info.dli_sname, name));
-  #endif
   }
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
