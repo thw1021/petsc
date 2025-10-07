@@ -26,28 +26,28 @@ Tao Object: 1 MPI process
     Function:
       TaoTerm Object: (objective_) 1 MPI process
         type: sum
-        solution vector space: N = 2 [VecType seq (taoterm_solution_vec_type)]
-        parameter vector space: (optional) K = 2 [VecType nest (taoterm_parameters_vec_type)]
-        default Hessian MatType (taoterm_hessian_mat_type): shell
+        solution vector space: N = 2 [VecType seq (tao_term_solution_vec_type)]
+        parameter vector space: (optional) K = 2 [VecType nest (tao_term_parameters_vec_type)]
+        default Hessian MatType (tao_term_hessian_mat_type): shell
         Sum of 2 terms:
           Summand 0:
-            Scale (taoterm_sum_callbacks_scale): 1.
+            Scale (tao_term_sum_callbacks_scale): 1.
             Term:
               TaoTerm Object: (callbacks_) 1 MPI process
                 type: callbacks
-                solution vector space: N = 2 [VecType seq (taoterm_solution_vec_type)]
+                solution vector space: N = 2 [VecType seq (tao_term_solution_vec_type)]
                 parameter vector space: (none)
                 attached to Tao [name omitted]
             Map: unmapped
           Summand 1:
-            Scale (taoterm_sum_reg_scale): 0.3
+            Scale (tao_term_sum_reg_scale): 0.3
             Term:
               TaoTerm Object: (reg_) 1 MPI process
                 type: l1
-                solution vector space: N = 2 [VecType seq (taoterm_solution_vec_type)]
-                parameter vector space: (optional) K = 2 [VecType seq (taoterm_parameters_vec_type)]
-                default Hessian MatType (taoterm_hessian_mat_type): shell
-                epsilon (taoterm_l1_epsilon): 0.4
+                solution vector space: N = 2 [VecType seq (tao_term_solution_vec_type)]
+                parameter vector space: (optional) K = 2 [VecType seq (tao_term_parameters_vec_type)]
+                default Hessian MatType (tao_term_hessian_mat_type): shell
+                epsilon (tao_term_l1_epsilon): 0.4
             Map: unmapped
     Map: unmapped
   TaoLineSearch Object: 1 MPI process
