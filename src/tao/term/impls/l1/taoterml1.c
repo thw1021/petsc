@@ -241,7 +241,7 @@ static PetscErrorCode TaoTermComputeHessianMult_L1(TaoTerm term, Vec x, Vec para
 - epsilon - a real number $\geq 0$
 
   Options Database Keys:
-. -taoterm_l1_epsilon <real> - $\epsilon$
+. -tao_term_l1_epsilon <real> - $\epsilon$
 
   Level: advanced
 
@@ -316,7 +316,7 @@ static PetscErrorCode TaoTermView_L1(TaoTerm term, PetscViewer viewer)
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &is_ascii));
-  if (is_ascii) PetscCall(PetscViewerASCIIPrintf(viewer, "epsilon (taoterm_l1_epsilon): %g\n", (double)l1->epsilon));
+  if (is_ascii) PetscCall(PetscViewerASCIIPrintf(viewer, "epsilon (tao_term_l1_epsilon): %g\n", (double)l1->epsilon));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -326,7 +326,7 @@ static PetscErrorCode TaoTermSetFromOptions_L1(TaoTerm term, PetscOptionItems Pe
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "TaoTerm l1 options");
-  PetscCall(PetscOptionsBoundedReal("-taoterm_l1_epsilon", "smoothing parameter", "TaoTermL1SetEpsilon", l1->epsilon, &l1->epsilon, NULL, 0.0));
+  PetscCall(PetscOptionsBoundedReal("-tao_term_l1_epsilon", "smoothing parameter", "TaoTermL1SetEpsilon", l1->epsilon, &l1->epsilon, NULL, 0.0));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -337,7 +337,7 @@ static PetscErrorCode TaoTermSetFromOptions_L1(TaoTerm term, PetscOptionItems Pe
   Level: intermediate
 
   Options Database Keys:
-. -taoterm_l1_epsilon <real> - (default 0.0) a smoothing parameter (see `TaoTermL1SetEpsilon()`)
+. -tao_term_l1_epsilon <real> - (default 0.0) a smoothing parameter (see `TaoTermL1SetEpsilon()`)
 
   Notes:
   This term is `TAOTERM_PARAMETERS_OPTIONAL`.  If the paramters argument is `NULL` for

@@ -42,8 +42,8 @@ static PetscErrorCode SNESFunction_TaoTerm(SNES snes, Vec X, Vec G, void *ctx)
 . g - the computed finite difference approximation to the gradient
 
   Options Database Keys:
-+ -taoterm_fd_delta <delta>       - change in `x` used to calculate finite differences
-- -taoterm_gradient_use_fd <bool> - Use `TaoTermComputeGradientFD()` in `TaoTermComputeGradient()`
++ -tao_term_fd_delta <delta>       - change in `x` used to calculate finite differences
+- -tao_term_gradient_use_fd <bool> - Use `TaoTermComputeGradientFD()` in `TaoTermComputeGradient()`
 
   Level: advanced
 
@@ -166,8 +166,8 @@ static PetscErrorCode TaoTermGetStashedHessianColoring(TaoTerm term, Vec params,
 . H - the computed finite difference approximation to the Hessian
 
   Options Database Keys:
-+ -taoterm_fd_delta <delta>      - change in X used to calculate finite differences
-- -taoterm_hessian_use_fd <bool> - Use `TaoTermComputeHessianFD()` in `TaoTermComputeHessian()`
++ -tao_term_fd_delta <delta>      - change in X used to calculate finite differences
+- -tao_term_hessian_use_fd <bool> - Use `TaoTermComputeHessianFD()` in `TaoTermComputeHessian()`
 
   Level: advanced
 
@@ -235,8 +235,8 @@ PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec params, Ma
 - Hpre - (optional) Hessian preconditioning matrix
 
   Options Database Keys:
-+ -taoterm_fd_delta <delta>      - change in X used to calculate finite differences
-- -taoterm_hessian_use_fd <bool> - Use `TaoTermComputeHessianFD()` in `TaoTermComputeHessian()`
++ -tao_term_fd_delta <delta>      - change in X used to calculate finite differences
+- -tao_term_hessian_use_fd <bool> - Use `TaoTermComputeHessianFD()` in `TaoTermComputeHessian()`
 
   Level: advanced
 
@@ -396,8 +396,8 @@ PetscErrorCode TaoTermUpdateHessianMFFD(TaoTerm term, Mat mffd, Vec x, Vec param
   Level: advanced
 
   Options Database Keys:
-+ -taoterm_fd_delta <delta>      - change in x used to calculate finite differences
-- -taoterm_hessian_use_fd <bool> - Use `TaoTermComputeHessianMultFD()` in `TaoTermComputeHessian()`
++ -tao_term_fd_delta <delta>      - change in x used to calculate finite differences
+- -tao_term_hessian_use_fd <bool> - Use `TaoTermComputeHessianMultFD()` in `TaoTermComputeHessian()`
 
   Note:
   The finite difference method in this routine does not attempt to choose the

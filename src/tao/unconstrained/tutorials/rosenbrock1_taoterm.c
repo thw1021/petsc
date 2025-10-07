@@ -145,11 +145,11 @@ static PetscErrorCode CreateVecs(TaoTerm term, Vec *solution, Vec *parameters_un
    test:
      suffix: test_gradient
      requires: !single
-     args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4 -tao_test_gradient -tao_fd_delta 1.e-6 -n 4 -chained -taoterm_hessian_mat_type aij -alpha 49.0
+     args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4 -tao_test_gradient -tao_fd_delta 1.e-6 -n 4 -chained -tao_term_hessian_mat_type aij -alpha 49.0
 
    test:
      suffix: separate_hessians
      requires: !single
-     args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4 -taoterm_hessian_pre_is_hessian 0 -taoterm_hessian_mat_type aij -taoterm_hessian_pre_mat_type sbaij -tao_view
+     args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4 -tao_term_hessian_pre_is_hessian 0 -tao_term_hessian_mat_type aij -tao_term_hessian_pre_mat_type sbaij -tao_view
 
 TEST*/
