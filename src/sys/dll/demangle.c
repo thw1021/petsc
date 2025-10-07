@@ -17,7 +17,7 @@
 
 PetscErrorCode PetscDemangleSymbol(const char mangledName[], char **name)
 {
-  char *(*cxa_demangle)(const char*, char*, size_t*, int*) = PETSC_NULLPTR;
+  char *(*cxa_demangle)(const char *, char *, size_t *, int *) = PETSC_NULLPTR;
   char *newname;
   int   status;
 
@@ -39,7 +39,7 @@ PetscErrorCode PetscDemangleSymbol(const char mangledName[], char **name)
     symbol = dlsym(RTLD_DEFAULT, "__cxa_demangle");
   #endif
     if (!symbol) {
-      int mode = 0;
+      int   mode   = 0;
       void *handle = PETSC_NULLPTR;
   #if defined(RTLD_LAZY)
       mode |= RTLD_LAZY;
