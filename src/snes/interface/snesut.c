@@ -65,14 +65,28 @@ PetscErrorCode SNESMonitorSolution(SNES snes, PetscInt its, PetscReal fgnorm, Pe
 @*/
 PetscErrorCode SNESMonitorResidual(SNES snes, PetscInt its, PetscReal fgnorm, PetscViewerAndFormat *vf)
 {
-  Vec x;
+  Vec       x;
+  DM        dm;
+  PetscInt  oseqnum;
+  PetscReal otime;
+  PetscBool ishdf5;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vf->viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(SNESGetFunction(snes, &x, NULL, NULL));
+  PetscCall(PetscObjectCompose((PetscObject)x, "__Vec_bc_zero__", (PetscObject)snes));
   PetscCall(PetscViewerPushFormat(vf->viewer, vf->format));
+  PetscCall(PetscObjectTypeCompare((PetscObject)vf->viewer, PETSCVIEWERHDF5, &ishdf5));
+  if (ishdf5) {
+    PetscCall(VecGetDM(x, &dm));
+    PetscCall(DMGetOutputSequenceNumber(dm, &oseqnum, &otime));
+    PetscCall(DMSetOutputSequenceNumber(dm, its, its * 1.0));
+    if (!its) PetscCall(DMView(dm, vf->viewer));
+  }
   PetscCall(VecView(x, vf->viewer));
   PetscCall(PetscViewerPopFormat(vf->viewer));
+  if (ishdf5) PetscCall(DMSetOutputSequenceNumber(dm, oseqnum, otime));
+  PetscCall(PetscObjectCompose((PetscObject)x, "__Vec_bc_zero__", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
