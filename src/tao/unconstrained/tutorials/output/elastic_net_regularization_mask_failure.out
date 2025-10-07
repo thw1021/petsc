@@ -25,17 +25,17 @@ Tao Object: 1 MPI process
     Function:
       TaoTerm Object: (objective_) 1 MPI process
         type: sum
-        solution vector space: N = 20 [VecType standard (taoterm_solution_vec_type)]
-        parameter vector space: (optional) K = 130 [VecType nest (taoterm_parameters_vec_type)]
-        default Hessian MatType (taoterm_hessian_mat_type): shell
+        solution vector space: N = 20 [VecType standard (tao_term_solution_vec_type)]
+        parameter vector space: (optional) K = 130 [VecType nest (tao_term_parameters_vec_type)]
+        default Hessian MatType (tao_term_hessian_mat_type): shell
         Sum of 3 terms:
           Summand 0:
-            Scale (taoterm_sum_data_scale): 1.
+            Scale (tao_term_sum_data_scale): 1.
             Term:
               TaoTerm Object: (data_) 1 MPI process
                 type: quadratic
-                solution vector space: N = 100 [VecType seq (taoterm_solution_vec_type)]
-                parameter vector space: (optional) K = 100 [VecType seq (taoterm_parameters_vec_type)]
+                solution vector space: N = 100 [VecType seq (tao_term_solution_vec_type)]
+                parameter vector space: (optional) K = 100 [VecType seq (tao_term_parameters_vec_type)]
                 Mat Object: 1 MPI process
                   type: diagonal
                   rows=100, cols=100
@@ -49,31 +49,31 @@ Tao Object: 1 MPI process
                 total: nonzeros=2000, allocated nonzeros=2000
                 total number of mallocs used during MatSetValues calls=0
           Summand 1:
-            Scale (taoterm_sum_ridge_scale): 0.1
+            Scale (tao_term_sum_ridge_scale): 0.1
             Term:
               TaoTerm Object: (ridge_) 1 MPI process
                 type: halfl2squared
-                solution vector space: N = 20 [VecType standard (taoterm_solution_vec_type)]
-                parameter vector space: (optional) K = 20 [VecType standard (taoterm_parameters_vec_type)]
-                default Hessian MatType (taoterm_hessian_mat_type): shell
+                solution vector space: N = 20 [VecType standard (tao_term_solution_vec_type)]
+                parameter vector space: (optional) K = 20 [VecType standard (tao_term_parameters_vec_type)]
+                default Hessian MatType (tao_term_hessian_mat_type): shell
             Map: unmapped
-            Mask (taoterm_sum_ridge_mask): objective
+            Mask (tao_term_sum_ridge_mask): objective
           Summand 2:
-            Scale (taoterm_sum_lasso_scale): 0.1
+            Scale (tao_term_sum_lasso_scale): 0.1
             Term:
               TaoTerm Object: (lasso_) 1 MPI process
                 type: l1
-                solution vector space: N = 10 [VecType standard (taoterm_solution_vec_type)]
-                parameter vector space: (optional) K = 10 [VecType standard (taoterm_parameters_vec_type)]
-                default Hessian MatType (taoterm_hessian_mat_type): shell
-                epsilon (taoterm_l1_epsilon): 0.1
+                solution vector space: N = 10 [VecType standard (tao_term_solution_vec_type)]
+                parameter vector space: (optional) K = 10 [VecType standard (tao_term_parameters_vec_type)]
+                default Hessian MatType (tao_term_hessian_mat_type): shell
+                epsilon (tao_term_l1_epsilon): 0.1
             Map:
               Mat Object: 1 MPI process
                 type: seqdense
                 rows=10, cols=20
                 total: nonzeros=200, allocated nonzeros=200
                 total number of mallocs used during MatSetValues calls=0
-            Mask (taoterm_sum_lasso_mask): gradient
+            Mask (tao_term_sum_lasso_mask): gradient
     Map: unmapped
   TaoLineSearch Object: 1 MPI process
     type: more-thuente

@@ -57,7 +57,7 @@ Tao Object: 1 MPI process
               type: l1
               solution vector space: N = 5
               parameter vector space: (optional) K = 5
-              epsilon (taoterm_l1_epsilon): 1e-06
+              epsilon (tao_term_l1_epsilon): 1e-06
       TaoLineSearch Object: (tao_brgn_subsolver_) 1 MPI process
         type: more-thuente
         maximum function evaluations=30

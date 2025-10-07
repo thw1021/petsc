@@ -528,7 +528,7 @@ static PetscErrorCode TaoTermView_Sum(TaoTerm term, PetscViewer viewer)
       PetscCall(PetscViewerASCIIPrintf(viewer, "Summand %" PetscInt_FMT ":\n", i));
       PetscCall(PetscViewerASCIIPushTab(viewer));
 
-      if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) PetscCall(PetscViewerASCIIPrintf(viewer, "Scale (taoterm_sum_%sscale): %g\n", subprefix, (double)scale));
+      if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) PetscCall(PetscViewerASCIIPrintf(viewer, "Scale (tao_term_sum_%sscale): %g\n", subprefix, (double)scale));
       else PetscCall(PetscViewerASCIIPrintf(viewer, "Scale: %g\n", (double)scale));
       PetscCall(PetscViewerASCIIPrintf(viewer, "Term:\n"));
       PetscCall(PetscViewerASCIIPushTab(viewer));
@@ -545,7 +545,7 @@ static PetscErrorCode TaoTermView_Sum(TaoTerm term, PetscViewer viewer)
       if (format == PETSC_VIEWER_ASCII_INFO_DETAIL && mask != TAOTERM_MASK_NONE) {
         PetscBool preceding = PETSC_FALSE;
 
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Mask (taoterm_sum_%smask): ", subprefix));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Mask (tao_term_sum_%smask): ", subprefix));
         PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
         if (TaoTermObjectiveMasked(mask)) {
           PetscCall(PetscViewerASCIIPrintf(viewer, "objective"));
@@ -922,7 +922,7 @@ static PetscErrorCode TaoTermSumGetSubtermMask_Sum(TaoTerm term, PetscInt index,
 - mask  - a bitmask of `TaoTermMask` evaluation methods to mask (e.g. just `TAOTERM_MASK_OBJECTIVE` or a bitwise-or like `TAOTERM_MASK_OBJECTIVE | TAOTERM_MASK_GRADIENT`)
 
   Options Database Keys:
-. -taoterm_sum_<prefix_>mask - a list containing any of `none`, `objective`, `gradient`, and `hessian` to indicate which evaluations to mask for a term with a given prefix (see `TaoTermSumSetSubterm()`)
+. -tao_term_sum_<prefix_>mask - a list containing any of `none`, `objective`, `gradient`, and `hessian` to indicate which evaluations to mask for a term with a given prefix (see `TaoTermSumSetSubterm()`)
 
   Level: advanced
 
@@ -1010,7 +1010,7 @@ static PetscErrorCode TaoTermSetFromOptions_Sum(TaoTerm term, PetscOptionItems P
   PetscCall(TaoTermSumGetNumSubterms(term, &n_terms));
   PetscCall(PetscObjectGetOptionsPrefix((PetscObject)term, &prefix));
   PetscOptionsHeadBegin(PetscOptionsObject, "TaoTerm sum options");
-  PetscCall(PetscOptionsBoundedInt("-taoterm_sum_num_subterms", "The number of terms in the sum", "TaoTermSumSetNumSubterms", n_terms, &n_terms, NULL, 0));
+  PetscCall(PetscOptionsBoundedInt("-tao_term_sum_num_subterms", "The number of terms in the sum", "TaoTermSumSetNumSubterms", n_terms, &n_terms, NULL, 0));
   PetscCall(TaoTermSumSetNumSubterms(term, n_terms));
   for (PetscInt i = 0; i < n_terms; i++) {
     const char *subprefix;
@@ -1030,10 +1030,10 @@ static PetscErrorCode TaoTermSetFromOptions_Sum(TaoTerm term, PetscOptionItems P
     } else PetscCall(PetscObjectReference((PetscObject)subterm));
     PetscCall(TaoTermSetFromOptions(subterm));
 
-    PetscCall(PetscSNPrintf(arg, 256, "-taoterm_sum_%sscale", subprefix));
+    PetscCall(PetscSNPrintf(arg, 256, "-tao_term_sum_%sscale", subprefix));
     PetscCall(PetscOptionsReal(arg, "The scale of the subterm in the sum", "TaoTermSumSetSubterm", scale, &scale, NULL));
 
-    PetscCall(PetscSNPrintf(arg, 256, "-taoterm_sum_%smask", subprefix));
+    PetscCall(PetscSNPrintf(arg, 256, "-tao_term_sum_%smask", subprefix));
     PetscCall(PetscOptionsEnumArray(arg, "The mask of the subterm in the sum", "TaoTermSumSetSubtermMask", TaoTermMasks, masks, &n_masks, &flg));
     if (flg) {
       PetscEnum mask = (PetscEnum)TAOTERM_MASK_NONE;
