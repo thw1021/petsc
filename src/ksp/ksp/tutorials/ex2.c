@@ -327,7 +327,7 @@ int main(int argc, char **args)
       args: -ksp_type preonly -m 9 -n 12 -mat_type sell -pc_type lu -pc_factor_mat_solver_type mumps -pc_factor_mat_ordering_type natural
 
    test:
-      requires: mumps __float128
+      requires: mumps __float128 defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
       suffix: mumps_fp128
       nsize: 4
       args: -m 9 -n 12 -ksp_type fgmres -pc_type lu -pc_precision double

@@ -384,7 +384,7 @@ int main(int argc, char **args)
        output_file: output/ex192_mumps_3.out
 
    testset:
-     requires: mumps double !complex
+     requires: mumps double !complex defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
      args: -solver 0 -pc_precision single -tol 3.4e-4
 
      test:

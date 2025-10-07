@@ -124,7 +124,7 @@ int main(int argc, char **args)
 
   testset:
     output_file: output/empty.out
-    requires: datafilespath mumps double !complex !defined(PETSC_USE_64BIT_INDICES)
+    requires: datafilespath mumps double !complex !defined(PETSC_USE_64BIT_INDICES) defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
     args: -A ${DATAFILESPATH}/matrices/factorSchur/A.dat -ns {{0 1}} -pc_precision single -tol 1e-4
 
     test:

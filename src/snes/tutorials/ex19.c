@@ -1034,7 +1034,7 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
    test:
       suffix: mumps_mixed
       nsize: 2
-      requires: mumps
+      requires: mumps defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
       args: -da_grid_x 20 -da_grid_y 20 -pc_type lu -pc_factor_mat_solver_type mumps -pc_precision {{single double}}
       output_file: output/ex19_superlu.out
 

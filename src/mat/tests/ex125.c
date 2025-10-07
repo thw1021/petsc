@@ -574,6 +574,7 @@ skipoptions:
       output_file: output/ex125_mumps_seq.out
 
       test:
+        requires: defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
         suffix: mumps_single
         args: -pc_precision single -tol 1e-5
       test:
@@ -586,6 +587,7 @@ skipoptions:
       output_file: output/ex125_mumps_seq.out
 
       test:
+        requires: defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
         suffix: mumps_nest_single
         args: -pc_precision single -tol 1e-4
       test:
@@ -599,6 +601,7 @@ skipoptions:
       output_file: output/ex125_mumps_par.out
 
       test:
+        requires: defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
         suffix: mumps_2_single
         args: -pc_precision single -tol 1e-5
       test:

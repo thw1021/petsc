@@ -11,10 +11,38 @@
 #define MUMPS_MANUALS "(see users manual https://mumps-solver.org/index.php?page=doc \"Error and warning diagnostics\")"
 
 EXTERN_C_BEGIN
-#include <cmumps_c.h>
-#include <zmumps_c.h>
-#include <smumps_c.h>
-#include <dmumps_c.h>
+#if defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
+  #include <cmumps_c.h>
+  #include <zmumps_c.h>
+  #include <smumps_c.h>
+  #include <dmumps_c.h>
+#else
+  #if defined(PETSC_USE_COMPLEX)
+    #if defined(PETSC_USE_REAL_SINGLE)
+      #include <cmumps_c.h>
+      #define MUMPS_c       cmumps_c
+      #define MUMPS_STRUC_C CMUMPS_STRUC_C
+      #define MumpsScalar   CMUMPS_COMPLEX
+    #else
+      #include <zmumps_c.h>
+      #define MUMPS_c       zmumps_c
+      #define MUMPS_STRUC_C ZMUMPS_STRUC_C
+      #define MumpsScalar   ZMUMPS_COMPLEX
+    #endif
+  #else
+    #if defined(PETSC_USE_REAL_SINGLE)
+      #include <smumps_c.h>
+      #define MUMPS_c       smumps_c
+      #define MUMPS_STRUC_C SMUMPS_STRUC_C
+      #define MumpsScalar   SMUMPS_REAL
+    #else
+      #include <dmumps_c.h>
+      #define MUMPS_c       dmumps_c
+      #define MUMPS_STRUC_C DMUMPS_STRUC_C
+      #define MumpsScalar   DMUMPS_REAL
+    #endif
+  #endif
+#endif
 EXTERN_C_END
 
 #define JOB_INIT         -1
@@ -173,12 +201,16 @@ static inline PetscErrorCode MatMumpsAllocateInternalID(XMUMPS_STRUC_C *outer, P
 {
   PetscFunctionBegin;
   outer->precision = precision;
-#if defined(PETSC_USE_COMPLEX)
+#if defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
+  #if defined(PETSC_USE_COMPLEX)
   if (precision == PETSC_PRECISION_SINGLE) AllocatInternalID(CMUMPS_STRUC_C, outer);
   else AllocatInternalID(ZMUMPS_STRUC_C, outer);
-#else
+  #else
   if (precision == PETSC_PRECISION_SINGLE) AllocatInternalID(SMUMPS_STRUC_C, outer);
   else AllocatInternalID(DMUMPS_STRUC_C, outer);
+  #endif
+#else
+  AllocatInternalID(MUMPS_STRUC_C, outer);
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -200,16 +232,18 @@ static inline PetscErrorCode MatMumpsFreeInternalID(XMUMPS_STRUC_C *outer)
 {
   PetscFunctionBegin;
   if (outer->internal_id) { // sometimes, the inner is never created before we destroy the outer
+#if defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
     const PetscPrecision mumps_precision = outer->precision;
     if (mumps_precision != PETSC_REAL_PRECISION) { // Free internal buffers if we used mixed precision
-#if defined(PETSC_USE_COMPLEX)
+  #if defined(PETSC_USE_COMPLEX)
       if (mumps_precision == PETSC_PRECISION_SINGLE) FreeInternalIDFields(CMUMPS_STRUC_C, outer);
       else FreeInternalIDFields(ZMUMPS_STRUC_C, outer);
-#else
+  #else
       if (mumps_precision == PETSC_PRECISION_SINGLE) FreeInternalIDFields(SMUMPS_STRUC_C, outer);
       else FreeInternalIDFields(DMUMPS_STRUC_C, outer);
-#endif
+  #endif
     }
+#endif
     PetscCall(PetscFree(outer->internal_id));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -241,11 +275,11 @@ static inline PetscErrorCode MatMumpsFreeInternalID(XMUMPS_STRUC_C *outer)
 //    New memory, if allocated, is done via PetscMalloc1(), and is owned by caller.
 static PetscErrorCode MatMumpsMakeMumpsScalarArray(PetscBool convert, PetscCount n, const PetscScalar *pa, PetscPrecision precision, PetscCount *m, void **ma)
 {
-  const PetscPrecision mumps_precision = precision;
-
   PetscFunctionBegin;
+#if defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
+  const PetscPrecision mumps_precision = precision;
   PetscCheck(precision == PETSC_PRECISION_SINGLE || precision == PETSC_PRECISION_DOUBLE, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unsupported precicison (%d). Must be single or double", (int)precision);
-#if defined(PETSC_USE_COMPLEX)
+  #if defined(PETSC_USE_COMPLEX)
   if (mumps_precision != PETSC_REAL_PRECISION) {
     if (mumps_precision == PETSC_PRECISION_SINGLE) {
       if (*m < n) {
@@ -275,7 +309,7 @@ static PetscErrorCode MatMumpsMakeMumpsScalarArray(PetscBool convert, PetscCount
       }
     }
   }
-#else
+  #else
   if (mumps_precision != PETSC_REAL_PRECISION) {
     if (mumps_precision == PETSC_PRECISION_SINGLE) {
       if (*m < n) {
@@ -299,8 +333,10 @@ static PetscErrorCode MatMumpsMakeMumpsScalarArray(PetscBool convert, PetscCount
       }
     }
   }
+  #endif
+  else
 #endif
-  else {
+  {
     if (*m != 0) PetscCall(PetscFree(*ma)); // free existing buffer if any
     *ma = (void *)pa;                       // same precision, make them alias
     *m  = 0;
@@ -315,8 +351,9 @@ static PetscErrorCode MatMumpsMakeMumpsScalarArray(PetscBool convert, PetscCount
 static PetscErrorCode MatMumpsCastMumpsScalarArray(PetscCount n, PetscPrecision mumps_precision, const void *ma, PetscScalar *pa)
 {
   PetscFunctionBegin;
+#if defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
   if (mumps_precision != PETSC_REAL_PRECISION) {
-#if defined(PETSC_USE_COMPLEX)
+  #if defined(PETSC_USE_COMPLEX)
     if (mumps_precision == PETSC_PRECISION_SINGLE) {
       PetscReal         *a = (PetscReal *)pa;
       const SMUMPS_REAL *b = (const SMUMPS_REAL *)ma;
@@ -326,7 +363,7 @@ static PetscErrorCode MatMumpsCastMumpsScalarArray(PetscCount n, PetscPrecision 
       const DMUMPS_REAL *b = (const DMUMPS_REAL *)ma;
       for (PetscCount i = 0; i < 2 * n; i++) a[i] = b[i];
     }
-#else
+  #else
     if (mumps_precision == PETSC_PRECISION_SINGLE) {
       const SMUMPS_REAL *b = (const SMUMPS_REAL *)ma;
       for (PetscCount i = 0; i < n; i++) pa[i] = b[i];
@@ -334,8 +371,10 @@ static PetscErrorCode MatMumpsCastMumpsScalarArray(PetscCount n, PetscPrecision 
       const DMUMPS_REAL *b = (const DMUMPS_REAL *)ma;
       for (PetscCount i = 0; i < n; i++) pa[i] = b[i];
     }
+  #endif
+  } else
 #endif
-  } else PetscCall(PetscArraycpy((PetscScalar *)pa, (PetscScalar *)ma, n));
+    PetscCall(PetscArraycpy((PetscScalar *)pa, (PetscScalar *)ma, n));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -346,8 +385,9 @@ static PetscErrorCode MatMumpsCastMumpsScalarArray(PetscCount n, PetscPrecision 
 static PetscErrorCode MatMumpsCastPetscScalarArray(PetscCount n, const PetscScalar *pa, PetscPrecision mumps_precision, const void *ma)
 {
   PetscFunctionBegin;
+#if defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
   if (mumps_precision != PETSC_REAL_PRECISION) {
-#if defined(PETSC_USE_COMPLEX)
+  #if defined(PETSC_USE_COMPLEX)
     if (mumps_precision == PETSC_PRECISION_SINGLE) {
       CMUMPS_COMPLEX *b = (CMUMPS_COMPLEX *)ma;
       for (PetscCount i = 0; i < n; i++) {
@@ -361,7 +401,7 @@ static PetscErrorCode MatMumpsCastPetscScalarArray(PetscCount n, const PetscScal
         b[i].i = PetscImaginaryPart(pa[i]);
       }
     }
-#else
+  #else
     if (mumps_precision == PETSC_PRECISION_SINGLE) {
       SMUMPS_REAL *b = (SMUMPS_REAL *)ma;
       for (PetscCount i = 0; i < n; i++) b[i] = pa[i];
@@ -369,8 +409,10 @@ static PetscErrorCode MatMumpsCastPetscScalarArray(PetscCount n, const PetscScal
       DMUMPS_REAL *b = (DMUMPS_REAL *)ma;
       for (PetscCount i = 0; i < n; i++) b[i] = pa[i];
     }
+  #endif
+  } else
 #endif
-  } else PetscCall(PetscArraycpy((PetscScalar *)ma, (PetscScalar *)pa, n));
+    PetscCall(PetscArraycpy((PetscScalar *)ma, (PetscScalar *)pa, n));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -428,7 +470,8 @@ static inline MPI_Datatype MPIU_MUMPSREAL(const XMUMPS_STRUC_C *id)
 static inline PetscErrorCode PetscCallMumps_Private(XMUMPS_STRUC_C *outer)
 {
   PetscFunctionBegin;
-#if defined(PETSC_USE_COMPLEX)
+#if defined(PETSC_HAVE_MUMPS_MIXED_PRECISION)
+  #if defined(PETSC_USE_COMPLEX)
   if (outer->precision == PETSC_PRECISION_SINGLE) {
     CMUMPS_STRUC_C *inner = (CMUMPS_STRUC_C *)outer->internal_id;
     PreMumpsCall(inner, outer, CMUMPS_COMPLEX);
@@ -440,7 +483,7 @@ static inline PetscErrorCode PetscCallMumps_Private(XMUMPS_STRUC_C *outer)
     PetscStackCallExternalVoid("zmumps_c", zmumps_c(inner));
     PostMumpsCall(inner, outer);
   }
-#else
+  #else
   if (outer->precision == PETSC_PRECISION_SINGLE) {
     SMUMPS_STRUC_C *inner = (SMUMPS_STRUC_C *)outer->internal_id;
     PreMumpsCall(inner, outer, SMUMPS_REAL);
@@ -452,6 +495,12 @@ static inline PetscErrorCode PetscCallMumps_Private(XMUMPS_STRUC_C *outer)
     PetscStackCallExternalVoid("dmumps_c", dmumps_c(inner));
     PostMumpsCall(inner, outer);
   }
+  #endif
+#else
+  MUMPS_STRUC_C *inner = (MUMPS_STRUC_C *)outer->internal_id;
+  PreMumpsCall(inner, outer, MumpsScalar);
+  PetscStackCallExternalVoid(PetscStringize(MUMPS_c), MUMPS_c(inner));
+  PostMumpsCall(inner, outer);
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2622,6 +2671,7 @@ static PetscErrorCode MatSetFromOptions_MUMPS(Mat F, Mat A)
 
     PetscCall(PetscOptionsEnum("-pc_precision", "Precision used by MUMPS", "MATSOLVERMUMPS", PetscPrecisionTypes, (PetscEnum)precision, (PetscEnum *)&precision, NULL));
     PetscCheck(precision == PETSC_PRECISION_SINGLE || precision == PETSC_PRECISION_DOUBLE, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "MUMPS does not support %s precision", PetscPrecisionTypes[precision]);
+    PetscCheck(precision == PETSC_REAL_PRECISION || PetscDefined(HAVE_MUMPS_MIXED_PRECISION), PetscObjectComm((PetscObject)F), PETSC_ERR_USER, "Your MUMPS library does not support mixed precision, but which is needed with your specified PetscScalar");
     PetscCall(MatMumpsAllocateInternalID(&mumps->id, precision));
 
     PetscMUMPS_c(mumps);
