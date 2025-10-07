@@ -86,6 +86,13 @@ TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*FormHessian)(Tao, Vec, 
 TaoSolve(Tao tao);
 TaoDestroy(Tao tao);
 ```
+Alternatively, TAO supports a composable interface via the `TaoTerm` object.
+With `TaoTerm`, the user can define one or more problem ‘terms’ —for example,
+a data‑misfit term and a regularization term—each providing objective, gradient, and optional Hessian routines.
+TAO automatically composes the registered terms to form the overall objective and its derivatives at runtime.
+This approach promotes code reuse, makes it easy to modify scaling parameters,
+and simplifies complex problems that are naturally expressed as sums of contributions.
+See {any}`sec_tao_term` for more information on the `TaoTerm` objects.
 
 Note that the solver algorithm selected through the function
 `TaoSetType()` can be overridden at runtime by using an options
@@ -529,14 +536,28 @@ documentation for each TAO algorithm for further details.
 
 ### TaoTerm: composable objective function terms
 
-In addition to the callback-based approach to specifying the optimization
-problem solved by TAO (see {any}`sec_tao_callbacks`), TAO includes a
-way to combine mutiple separate mathematical functions, each defined
-with a `TaoTerm`. For example, a `TaoTerm` that provides a regularization
- can be combined with a `TaoTerm` that defines the user objective function.
+The objective function optimized by `Tao` may be a sum of one or more terms,
+where each term can provide various evaluation routines, such as the objective value,
+gradient, or Hessian. Here, we define `term` as the basic additive unit
+used to form an objective function, equipped with appropriate evaluation routines
+(objective, gradient, and/or Hessian).
 
- which encapsulates a term that
-can appear in the objective function of an optimization problem.
+For an example, Tikhonov regularization (also known as
+Ridge Regression), can be formulated as $f(x) + \beta ||x||_2^2$.
+This can be viewed as the summation of two terms, $f(x) + g(x)$, where
+$g(x) = \beta ||x||_2^2$.
+
+In a callback-based paradigm, in order to achieve such regulariztion,
+the user needs to change user defined callback funtion code.
+Such coupling of modelling choices (e.g., adding regularization, or penalty term)
+with implementation details (objective, gradient, Hessian)
+complicates maintenance, testing, and inhibits code reuse.
+
+`TaoTerm` decouples these concerns by introducing a composable interface
+for objective terms. Each term encapsulates all the routines needed to
+evaluate its own contribution, and `Tao` aggregates the value, gradient,
+and/or Hessian across all registered `TaoTerm` objects. This lets users modify
+terms without changing the original callbacks.
 
 Each `TaoTerm` represents a parameteric real-valued function $f(x; p)$ for
 solution variable $x$ and parameters $p$.  The interface includes methods for
@@ -562,7 +583,7 @@ implemented by a `TaoTerm` are passed as arguments in the evaluation
 routines.  For some terms, however, omitting the parameters results in a
 default value of $p$ being used.  For `TAOTERMHALFL2SQUARED`,
 `TAOTERML1`, and `TAOTERMQUADRATIC` the default is $p = 0$.  In general,
-the parametric behavior of a `TaoTerm` is determined by `TaoTermGetParametersMode()`:
+the parametric behavior of a `TaoTerm` is determined by `TaoTermSetParametersMode()`:
 
 * `TAOTERM_PARAMETERS_OPTIONAL`: default parameters are used if `NULL` is passed for the parameters argument
 * `TAOTERM_PARAMETERS_NONE`: the term is not parametric, `NULL` is the only valid parameters argument
@@ -572,7 +593,7 @@ the parametric behavior of a `TaoTerm` is determined by `TaoTermGetParametersMod
 
 A `TaoTerm` can be set as the entire objective function of a `Tao` solver
 with `TaoSetTerm()`.  A `TaoTerm` can also be added to the
-existing objective function of a `Tao` using `TaoAddTerm()`.
+existing, or empty objective function of a `Tao` using `TaoAddTerm()`.
 For example: if you have specified an objective function $f(x)$ using
 `TaoSetObjectiveAndGradient()`, and a regularizer $g(x;p)$ is specified by a `TaoTerm`,
 you can create the objective function $f(x) + \alpha g(Ax; p)$ using:
@@ -609,13 +630,34 @@ $\frac{0.4}{2} \|x\|_2^2 + 0.7 \|x\|_1$ can be added with the following options:
 
 ```
 -tao_add_terms ridge_,lasso_
--ridge_taoterm_type halfl2squared
--lasso_taoterm_type l1
--objective_taoterm_sum_ridge_scale 0.4
--objective_taoterm_sum_lasso_scale 0.7
+-ridge_tao_term_type halfl2squared
+-lasso_tao_term_type l1
+-objective_tao_term_sum_ridge_scale 0.4
+-objective_tao_term_sum_lasso_scale 0.7
 ```
 
 In the above, `ridge_`, and `lasso_` could be any unique strings for each term to be added.
+
+When an objective function is specificed using callback methods, such as `TaoSetObjective()`,
+they are stored in `TaoTerm` with type `TAOTERMCALLBACK` inside `Tao`, with `callback_` prefix.
+When additional `TaoTerm` objects are set to `Tao`, a new `TaoTerm` with type `TAOTERMSUM` gets created,
+with `objective_` prefix, and all the subsequently added `TaoTerm` objects gets stored there.
+With this structure in mind, users can granually control each terms, with following command line options:
+
+```
+// If you want to control how callbacks behave
+-callback_tao_term_{hessian_mat_type, ...}
+
+// If you want to control regularizers
+-ridge_tao_term_{hessian_mat_type, ...}
+-lasso_tao_term_{hessian_mat_type, ...}
+
+// If you want to control the whole objective
+-objective_tao_term_{hessian_mat_type, ...}
+
+// If you want to control scaling of each parts
+-objective_tao_term_sum_{callback, ridge, lasso}_scale {number}
+```
 
 (sec_tao_term_shell)=
 
@@ -638,6 +680,19 @@ in {any}`the example below <tao_example3>` demonstrates the same Rosenbrock exam
 :append: return 0;}
 ```
 :::
+
+#### Masking TaoTerm evaluations
+
+In some cases, for a given `TAOTERMSUM`, the user may only want certain evaluation of a specific `TaoTerm`.
+For an example, in a case where `TAOTERMSUM` is composed of `TAOTERMHALFL2SQUARED` and `TAOTERML1`,
+ but the user only want objective function evaluation of `TAOTERML1`, and not its gradient and Hessian evaulations.
+In this case, user can `mask` desired evaluation operations via `TaoTermSumSetSubtermMask()`.
+Masking can also be done from the command line. For instance, for the elastic net regularization example above,
+the user can mask gradient and Hessian evaluation of `TAOTERML1` with the following options:
+
+```
+-objective_tao_term_sum_lasso_mask gradient,hessian
+```
 
 ### Solving
 

@@ -430,12 +430,12 @@ static PetscErrorCode BRGNCoverageTests(Tao tao)
    test:
       suffix: 3_hessian_fd
       localrunfiles: cs1Data_A_b_xGT
-      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l1dict -tao_brgn_regularizer_weight 1e-8 -tao_brgn_l1_smooth_epsilon 1e-6 -tao_gatol 1.e-6 -brgn_regularizer_taoterm_hessian_use_fd
+      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l1dict -tao_brgn_regularizer_weight 1e-8 -tao_brgn_l1_smooth_epsilon 1e-6 -tao_gatol 1.e-6 -brgn_regularizer_tao_term_hessian_use_fd
 
    test:
       suffix: 3_gradient_fd
       localrunfiles: cs1Data_A_b_xGT
-      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l1dict -tao_brgn_regularizer_weight 1e-8 -tao_brgn_l1_smooth_epsilon 1e-6 -tao_gatol 1.e-6 -brgn_regularizer_taoterm_gradient_use_fd
+      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l1dict -tao_brgn_regularizer_weight 1e-8 -tao_brgn_l1_smooth_epsilon 1e-6 -tao_gatol 1.e-6 -brgn_regularizer_tao_term_gradient_use_fd
 
    test:
       suffix: 4

@@ -29,7 +29,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm);
   Then, your term can be chosen with the procedural interface via
 $     TaoTermType(term, "my_term")
   or at runtime via the option
-$     -taoterm_type my_term
+$     -tao_term_type my_term
 
   Level: advanced
 
