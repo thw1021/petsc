@@ -17,9 +17,9 @@
 
 PetscErrorCode PetscDemangleSymbol(const char mangledName[], char **name)
 {
-  char* (*cxa_demangle)(const char*, char*, size_t*, int*) = PETSC_NULLPTR;
-  char   *newname;
-  int    status;
+  char *(*cxa_demangle)(const char*, char*, size_t*, int*) = PETSC_NULLPTR;
+  char *newname;
+  int   status;
 
   PetscFunctionBegin;
   if (mangledName) PetscAssertPointer(mangledName, 1);
@@ -35,26 +35,26 @@ PetscErrorCode PetscDemangleSymbol(const char mangledName[], char **name)
 #if defined(PETSC_HAVE_DLFCN_H) && defined(PETSC_HAVE_DLOPEN)
   if (!cxa_demangle) {
     void *symbol = PETSC_NULLPTR;
-#if defined(RTLD_DEFAULT)
+  #if defined(RTLD_DEFAULT)
     symbol = dlsym(RTLD_DEFAULT, "__cxa_demangle");
-#endif
+  #endif
     if (!symbol) {
       int mode = 0;
       void *handle = PETSC_NULLPTR;
-#if defined(RTLD_LAZY)
+  #if defined(RTLD_LAZY)
       mode |= RTLD_LAZY;
-#endif
-#if defined(RTLD_LOCAL)
+  #endif
+  #if defined(RTLD_LOCAL)
       mode |= RTLD_LOCAL;
-# endif
-#if defined(RTLD_NOLOAD)
+  #endif
+  #if defined(RTLD_NOLOAD)
       mode |= RTLD_NOLOAD;
-#endif
-#ifdef __APPLE__
+  #endif
+  #ifdef __APPLE__
       if (!handle) handle = dlopen("libc++.1.dylib", mode);
-#else
+  #else
       if (!handle) handle = dlopen("libstdc++.so.6", mode);
-#endif
+  #endif
       if (handle) {
         symbol = dlsym(handle, "__cxa_demangle");
         dlclose(handle);
