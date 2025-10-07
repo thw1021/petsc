@@ -3,7 +3,7 @@
 PetscBool         TaoTermRegisterAllCalled = PETSC_FALSE;
 PetscFunctionList TaoTermList              = NULL;
 
-PETSC_INTERN PetscErrorCode TaoTermCreate_TaoCallbacks(TaoTerm);
+PETSC_INTERN PetscErrorCode TaoTermCreate_Callbacks(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_ADMMRegularizer(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_ADMMMisfit(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm);
@@ -51,7 +51,7 @@ PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void)
   PetscFunctionBegin;
   if (TaoTermRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   TaoTermRegisterAllCalled = PETSC_TRUE;
-  PetscCall(TaoTermRegister(TAOTERMTAOCALLBACKS, TaoTermCreate_TaoCallbacks));
+  PetscCall(TaoTermRegister(TAOTERMCALLBACKS, TaoTermCreate_Callbacks));
   PetscCall(TaoTermRegister(TAOTERMSHELL, TaoTermCreate_Shell));
   PetscCall(TaoTermRegister(TAOTERMSUM, TaoTermCreate_Sum));
   PetscCall(TaoTermRegister(TAOTERMHALFL2SQUARED, TaoTermCreate_Halfl2squared));

@@ -265,7 +265,7 @@ cdef extern from * nogil:
     PetscErrorCode TaoLineSearchSetInitialStepLength(PetscTAOLineSearch, PetscReal)
 
     ctypedef const char* PetscTAOTermType "TaoTermType"
-    PetscTAOTermType TAOTERMTAOCALLBACKS
+    PetscTAOTermType TAOTERMCALLBACKS
     PetscTAOTermType TAOTERMSHELL
     PetscTAOTermType TAOTERMSUM
     PetscTAOTermType TAOTERMHALFL2SQUARED
