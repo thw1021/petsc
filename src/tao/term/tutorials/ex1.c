@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 
   test:
     suffix: 1
-    args: -taoterm_type taocallbacks
+    args: -taoterm_type callbacks
 
   test:
     suffix: 2
