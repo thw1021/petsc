@@ -20,7 +20,7 @@ PetscRegressor Object: 1 MPI process
               Scale (tao_objective_scale): 1.
               Function:
                 TaoTerm Object: (tao_brgn_subsolver_tao_bnk_cg_callbacks_) 1 MPI process
-                  type: taocallbacks
+                  type: callbacks
                   solution vector space: N = 2 [VecType seq (taoterm_solution_vec_type)]
                   parameter vector space: (none)
                   attached to Tao [name omitted] (tao_brgn_subsolver_tao_bnk_cg_)
@@ -133,7 +133,7 @@ PetscRegressor Object: 1 MPI process
       Scale (tao_objective_scale): 1.
       Function:
         TaoTerm Object: (regressor_linear_callbacks_) 1 MPI process
-          type: taocallbacks
+          type: callbacks
           solution vector space: N = 2 [VecType seq (taoterm_solution_vec_type)]
           parameter vector space: (none)
           attached to Tao [name omitted] (regressor_linear_)

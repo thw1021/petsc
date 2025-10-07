@@ -1,4 +1,4 @@
-const char help[] = "TAOTERMTAOCALLBACKS coverage tests";
+const char help[] = "TAOTERMCALLBACKS coverage tests";
 
 #include <petsctao.h>
 
@@ -87,7 +87,7 @@ static PetscErrorCode testCallbacks(PetscBool separate)
   PetscCall(TaoSetSolution(tao, sol));
   PetscCall(TaoGetTerm(tao, NULL, &term, NULL, NULL));
   PetscCall(TaoTermGetType(term, &type));
-  PetscCall(PetscStrcmp(type, TAOTERMTAOCALLBACKS, &same));
+  PetscCall(PetscStrcmp(type, TAOTERMCALLBACKS, &same));
   PetscCheck(same, comm, PETSC_ERR_PLIB, "wrong TaoTermType");
 
   if (separate) {

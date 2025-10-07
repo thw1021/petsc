@@ -78,8 +78,8 @@ static PetscErrorCode TaoTermSumHessCacheGetHessians(TaoTerm term, Vec x, Vec pa
       } else {
         PetscBool iscallback;
 
-        PetscCall(PetscObjectTypeCompare((PetscObject)summand->term, TAOTERMTAOCALLBACKS, &iscallback));
-        // taocallback without unmapped_H, but may have hessian from original Tao formulation
+        PetscCall(PetscObjectTypeCompare((PetscObject)summand->term, TAOTERMCALLBACKS, &iscallback));
+        // callback without unmapped_H, but may have hessian from original Tao formulation
         // see tao/leastsquares/tutorials/brgn_term.c for an example
         if (iscallback) {
           PetscBool ishess;
@@ -87,7 +87,7 @@ static PetscErrorCode TaoTermSumHessCacheGetHessians(TaoTerm term, Vec x, Vec pa
           // Currently TAOTERMCALLBACK without Hessian set cannot use Hessian method
           PetscCall(TaoTermIsHessianDefined(summand->term, &ishess));
           PetscCheck(ishess, PetscObjectComm((PetscObject)summand->term), PETSC_ERR_USER, "TAOTERMCALLBACK does not have Hessian routines set");
-          PetscCall(TaoTermTaoCallbacksGetHessianMatrices(summand->term, &cache->hessians[i], NULL));
+          PetscCall(TaoTermCallbacksGetHessianMatrices(summand->term, &cache->hessians[i], NULL));
           PetscCall(PetscObjectReference((PetscObject)cache->hessians[i]));
         } else PetscCall(TaoTermCreateHessianMatrices(summand->term, &cache->hessians[i], NULL));
       }

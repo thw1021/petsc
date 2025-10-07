@@ -131,7 +131,7 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
   tao->hist_reset = PETSC_TRUE;
   tao->term_set   = PETSC_FALSE;
 
-  PetscCall(TaoTermCreateTaoCallbacks(tao, &tao->orig_callbacks));
+  PetscCall(TaoTermCreateCallbacks(tao, &tao->orig_callbacks));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)tao->orig_callbacks, "callbacks_"));
   PetscCall(TaoTermMappingSetData(&tao->objective_term, "objective_", 1.0, tao->orig_callbacks, NULL));
   PetscCall(TaoResetStatistics(tao));
@@ -2987,7 +2987,7 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
   Note:
   Tao has a callback interface for specifying an objective function and an object-oriented interface.
   If the objective function was defined with callbacks, e.g. `TaoSetObjectiveAndGradient()`, then
-  `TaoGetTerm` will return a `TaoTerm` with the type `TAOTERMTAOCALLBACKS` that encapsulates
+  `TaoGetTerm` will return a `TaoTerm` with the type `TAOTERMCALLBACKS` that encapsulates
   those callbacks.
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoSetTerm()`, `TaoAddTerm()`
@@ -3020,7 +3020,7 @@ PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params,
   Note:
   Tao has a callback interface for specifying an objective function and an object-oriented interface.
   If the objective function was defined with callbacks, e.g. `TaoSetObjectiveAndGradient()`, then
-  `TaoGetTerm` will return a `TaoTerm` with the type `TAOTERMTAOCALLBACKS` that encapsulates
+  `TaoGetTerm` will return a `TaoTerm` with the type `TAOTERMCALLBACKS` that encapsulates
   those callbacks.
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoAddTerm()`
