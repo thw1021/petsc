@@ -91,8 +91,8 @@ PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
     PetscCall(MatGetVecType(term->solution_factory, &solution_vec_type));
     PetscCall(MatGetSize(term->solution_factory, &N, NULL));
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
-      if (N < 0) PetscCall(PetscViewerASCIIPrintf(viewer, "solution vector space: not set up yet [VecType %s (taoterm_solution_vec_type)]\n", solution_vec_type));
-      else PetscCall(PetscViewerASCIIPrintf(viewer, "solution vector space: N = %" PetscInt_FMT " [VecType %s (taoterm_solution_vec_type)]\n", N, solution_vec_type));
+      if (N < 0) PetscCall(PetscViewerASCIIPrintf(viewer, "solution vector space: not set up yet [VecType %s (tao_term_solution_vec_type)]\n", solution_vec_type));
+      else PetscCall(PetscViewerASCIIPrintf(viewer, "solution vector space: N = %" PetscInt_FMT " [VecType %s (tao_term_solution_vec_type)]\n", N, solution_vec_type));
     } else {
       if (N < 0) PetscCall(PetscViewerASCIIPrintf(viewer, "solution vector space: not set up yet\n"));
       else PetscCall(PetscViewerASCIIPrintf(viewer, "solution vector space: N = %" PetscInt_FMT "\n", N));
@@ -106,16 +106,16 @@ PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
       PetscCall(MatGetVecType(term->parameters_factory, &parameters_vec_type));
       PetscCall(MatGetSize(term->parameters_factory, &K, NULL));
       if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
-        if (K < 0) PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space: (%s) not set up yet [VecType %s (taoterm_parameters_vec_type)]\n", TaoTermParametersModes[term->parameters_mode], parameters_vec_type));
-        else PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space: (%s) K = %" PetscInt_FMT " [VecType %s (taoterm_parameters_vec_type)]\n", TaoTermParametersModes[term->parameters_mode], K, parameters_vec_type));
+        if (K < 0) PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space: (%s) not set up yet [VecType %s (tao_term_parameters_vec_type)]\n", TaoTermParametersModes[term->parameters_mode], parameters_vec_type));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space: (%s) K = %" PetscInt_FMT " [VecType %s (tao_term_parameters_vec_type)]\n", TaoTermParametersModes[term->parameters_mode], K, parameters_vec_type));
       } else {
         if (K < 0) PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space:%s not set up yet\n", term->parameters_mode == TAOTERM_PARAMETERS_OPTIONAL ? " (optional)" : ""));
         else PetscCall(PetscViewerASCIIPrintf(viewer, "parameter vector space:%s K = %" PetscInt_FMT "\n", term->parameters_mode == TAOTERM_PARAMETERS_OPTIONAL ? " (optional)" : "", K));
       }
     }
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL && term->ops->createhessianmatrices == TaoTermCreateHessianMatricesDefault) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian MatType (taoterm_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
-      if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian preconditioning MatType (taoterm_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
+      if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
     }
     if (term->ops->view) PetscUseTypeMethod(term, view, viewer);
     PetscCall(PetscViewerASCIIPopTab(viewer));
@@ -184,16 +184,16 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
 . term - a `TaoTerm`
 
   Options Database Keys:
-+ -taoterm_type <type>                              - l1, halfl2squared, `TaoTermType` for complete list
-. -taoterm_solution_vec_type <type>                 - `VecType` for complete list of vector types
-. -taoterm_parameters_vec_type <type>               - `VecType` for complete list of vector types
-. -taoterm_parameters_mode <optional,none,required> - `TAOTERM_PARAMETERS_OPTIONAL`, `TAOTERM_PARAMETERS_NONE`, `TAOTERM_PARAMETERS_REQUIRED`
-. -taoterm_hessian_pre_is_hessian <bool>            - Whether `TaoTermCreateHessianMatricesDefault()` should make a separate preconditioning matrix
-. -taoterm_hessian_mat_type <type>                  - `MatType` for Hessian matrix created by `TaoTermCreateHessianMatricesDefault()`
-. -taoterm_hessian_pre_mat_type <type>              - `MatType` for Hessian preconditioning matrix created by `TaoTermCreateHessianMatricesDefault()`
-. -taoterm_fd_delta <real>                          - Increment for finite difference derivative approximations in `TaoTermComputeGradientFD()`
-. -taoterm_gradient_use_fd <bool>                   - Use finite differences in `TaoTermComputeGradient()`, overriding other user-provided or buit-in routines
-- -taoterm_hessian_use_fd <bool>                    - Use finite differences in `TaoTermComputeHessian()` and `TaoTermComputeHessianMult()`, overriding other user-provided or buit-in routines
++ -tao_term_type <type>                              - l1, halfl2squared, `TaoTermType` for complete list
+. -tao_term_solution_vec_type <type>                 - `VecType` for complete list of vector types
+. -tao_term_parameters_vec_type <type>               - `VecType` for complete list of vector types
+. -tao_term_parameters_mode <optional,none,required> - `TAOTERM_PARAMETERS_OPTIONAL`, `TAOTERM_PARAMETERS_NONE`, `TAOTERM_PARAMETERS_REQUIRED`
+. -tao_term_hessian_pre_is_hessian <bool>            - Whether `TaoTermCreateHessianMatricesDefault()` should make a separate preconditioning matrix
+. -tao_term_hessian_mat_type <type>                  - `MatType` for Hessian matrix created by `TaoTermCreateHessianMatricesDefault()`
+. -tao_term_hessian_pre_mat_type <type>              - `MatType` for Hessian preconditioning matrix created by `TaoTermCreateHessianMatricesDefault()`
+. -tao_term_fd_delta <real>                          - Increment for finite difference derivative approximations in `TaoTermComputeGradientFD()`
+. -tao_term_gradient_use_fd <bool>                   - Use finite differences in `TaoTermComputeGradient()`, overriding other user-provided or buit-in routines
+- -tao_term_hessian_use_fd <bool>                    - Use finite differences in `TaoTermComputeHessian()` and `TaoTermComputeHessianMult()`, overriding other user-provided or buit-in routines
 
   Level: beginner
 
@@ -219,23 +219,23 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   if (((PetscObject)term)->type_name) deft = ((PetscObject)term)->type_name;
   PetscObjectOptionsBegin((PetscObject)term);
-  PetscCall(PetscOptionsFList("-taoterm_type", "TaoTerm type", "TaoTermType", TaoTermList, deft, typeName, 256, &flg));
+  PetscCall(PetscOptionsFList("-tao_term_type", "TaoTerm type", "TaoTermType", TaoTermList, deft, typeName, 256, &flg));
   if (flg) {
     PetscCall(TaoTermSetType(term, typeName));
   } else {
     PetscCall(TaoTermSetType(term, deft));
   }
   PetscCall(TaoTermGetVecTypes(term, &sol_type, &params_type));
-  PetscCall(PetscOptionsFList("-taoterm_solution_vec_type", "Solution vector type", "TaoTermSetVecTypes", VecList, sol_type, typeName, 256, &opt));
+  PetscCall(PetscOptionsFList("-tao_term_solution_vec_type", "Solution vector type", "TaoTermSetVecTypes", VecList, sol_type, typeName, 256, &opt));
   if (opt) PetscCall(TaoTermSetVecTypes(term, typeName, NULL));
-  PetscCall(PetscOptionsFList("-taoterm_parameters_vec_type", "Parameters vector type", "TaoTermSetVecTypes", VecList, params_type, typeName, 256, &opt));
+  PetscCall(PetscOptionsFList("-tao_term_parameters_vec_type", "Parameters vector type", "TaoTermSetVecTypes", VecList, params_type, typeName, 256, &opt));
   if (opt) PetscCall(TaoTermSetVecTypes(term, NULL, typeName));
-  PetscCall(PetscOptionsEnum("-taoterm_parameters_mode", "Parameters requirement type", "TaoTermSetParametersMode", TaoTermParametersModes, (PetscEnum)term->parameters_mode, (PetscEnum *)&term->parameters_mode, NULL));
-  PetscCall(PetscOptionsBool("-taoterm_hessian_pre_is_hessian", "If the Hessian and its preconditioning matrix should be the same", "TaoTermSetCreateHessianMode", term->Hpre_is_H, &term->Hpre_is_H, NULL));
+  PetscCall(PetscOptionsEnum("-tao_term_parameters_mode", "Parameters requirement type", "TaoTermSetParametersMode", TaoTermParametersModes, (PetscEnum)term->parameters_mode, (PetscEnum *)&term->parameters_mode, NULL));
+  PetscCall(PetscOptionsBool("-tao_term_hessian_pre_is_hessian", "If the Hessian and its preconditioning matrix should be the same", "TaoTermSetCreateHessianMode", term->Hpre_is_H, &term->Hpre_is_H, NULL));
 
   deft = MATSHELL;
   if (term->H_mattype) deft = term->H_mattype;
-  PetscCall(PetscOptionsFList("-taoterm_hessian_mat_type", "Hessian mat type", "TaoTermSetCreateHessianMode", MatList, deft, typeName, 256, &opt));
+  PetscCall(PetscOptionsFList("-tao_term_hessian_mat_type", "Hessian mat type", "TaoTermSetCreateHessianMode", MatList, deft, typeName, 256, &opt));
   if (opt) {
     PetscCall(PetscFree(term->H_mattype));
     PetscCall(PetscStrallocpy(typeName, &term->H_mattype));
@@ -243,18 +243,18 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
 
   deft = MATAIJ;
   if (term->Hpre_mattype) deft = term->Hpre_mattype;
-  PetscCall(PetscOptionsFList("-taoterm_hessian_pre_mat_type", "Hessian preconditioning mat type", "TaoTermSetCreateHessianMode", MatList, deft, typeName, 256, &opt));
+  PetscCall(PetscOptionsFList("-tao_term_hessian_pre_mat_type", "Hessian preconditioning mat type", "TaoTermSetCreateHessianMode", MatList, deft, typeName, 256, &opt));
   if (opt) {
     PetscCall(PetscFree(term->Hpre_mattype));
     PetscCall(PetscStrallocpy(typeName, &term->Hpre_mattype));
   }
 
-  PetscCall(PetscOptionsBoundedReal("-taoterm_fd_delta", "Finite difference increment", "TaoTermSetFDDelta", term->fd_delta, &term->fd_delta, NULL, 0.0));
+  PetscCall(PetscOptionsBoundedReal("-tao_term_fd_delta", "Finite difference increment", "TaoTermSetFDDelta", term->fd_delta, &term->fd_delta, NULL, 0.0));
 
-  PetscCall(PetscOptionsBool("-taoterm_gradient_use_fd", "Use finite differences in TaoTermComputeGradient()", "TaoTermComputeGradientUseFDPush", grad_use_fd, &grad_use_fd, NULL));
+  PetscCall(PetscOptionsBool("-tao_term_gradient_use_fd", "Use finite differences in TaoTermComputeGradient()", "TaoTermComputeGradientUseFDPush", grad_use_fd, &grad_use_fd, NULL));
   if (grad_use_fd) PetscCall(TaoTermComputeGradientUseFDPush(term));
 
-  PetscCall(PetscOptionsBool("-taoterm_hessian_use_fd", "Use finite differences in TaoTermComputeHessian() and TaoTermComputeHessianMult()", "TaoTermComputeHessianUseFDPush", hess_use_fd, &hess_use_fd, NULL));
+  PetscCall(PetscOptionsBool("-tao_term_hessian_use_fd", "Use finite differences in TaoTermComputeHessian() and TaoTermComputeHessianMult()", "TaoTermComputeHessianUseFDPush", hess_use_fd, &hess_use_fd, NULL));
   if (hess_use_fd) PetscCall(TaoTermComputeHessianUseFDPush(term));
 
   PetscTryTypeMethod(term, setfromoptions, PetscOptionsObject);
@@ -274,7 +274,7 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
   Level: beginner
 
   Options Database Keys:
-. -taoterm_type <type> - l1, halfl2squared, `TaoTermType` for complete list
+. -tao_term_type <type> - l1, halfl2squared, `TaoTermType` for complete list
 
   Note:
   New types of `TaoTerm` can be created with `TaoTermRegister()`
@@ -1209,8 +1209,8 @@ PetscErrorCode TaoTermSetParametersTemplate(TaoTerm term, Vec params_template)
 - parameters_type - the `VecType` for the parameter space
 
   Options Database Keys:
-+ -taoterm_solution_vec_type <type>   - `VecType` for complete list of vector types
-- -taoterm_parameters_vec_type <type> - `VecType` for complete list of vector types
++ -tao_term_solution_vec_type <type>   - `VecType` for complete list of vector types
+- -tao_term_parameters_vec_type <type> - `VecType` for complete list of vector types
 
   Level: advanced
 
@@ -1482,9 +1482,9 @@ PetscErrorCode TaoTermCreateHessianMatricesDefault(TaoTerm term, Mat *H, Mat *Hp
   Level: developer
 
   Options Database Keys:
-+ -taoterm_hessian_pre_is_hessian <bool> - Whether `TaoTermCreateHessianMatrices()` should make a separate preconditioning matrix
-. -taoterm_hessian_mat_type <type>       - `MatType` for Hessian matrix created by `TaoTermCreateHessianMatrices()`
-- -taoterm_hessian_pre_mat_type <type>   - `MatType` for Hessian preconditioning matrix created by `TaoTermCreateHessianMatrices()`
++ -tao_term_hessian_pre_is_hessian <bool> - Whether `TaoTermCreateHessianMatrices()` should make a separate preconditioning matrix
+. -tao_term_hessian_mat_type <type>       - `MatType` for Hessian matrix created by `TaoTermCreateHessianMatrices()`
+- -tao_term_hessian_pre_mat_type <type>   - `MatType` for Hessian preconditioning matrix created by `TaoTermCreateHessianMatrices()`
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -1592,7 +1592,7 @@ PetscErrorCode TaoTermDuplicate(TaoTerm term, TaoTermDuplicateOption opt, TaoTer
   Level: advanced
 
   Options Database Keys:
-. -taoterm_parameters_mode <optional,none,required> - `TAOTERM_PARAMETERS_OPTIONAL`, `TAOTERM_PARAMETERS_NONE`, `TAOTERM_PARAMETERS_REQUIRED`
+. -tao_term_parameters_mode <optional,none,required> - `TAOTERM_PARAMETERS_OPTIONAL`, `TAOTERM_PARAMETERS_NONE`, `TAOTERM_PARAMETERS_REQUIRED`
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -1645,7 +1645,7 @@ PetscErrorCode TaoTermGetParametersMode(TaoTerm term, TaoTermParametersMode *par
 . delta - the finite difference increment
 
   Options Database Keys:
-. -taoterm_fd_delta <delta> - the above increment
+. -tao_term_fd_delta <delta> - the above increment
 
   Level: advanced
 
@@ -1674,7 +1674,7 @@ PetscErrorCode TaoTermGetFDDelta(TaoTerm term, PetscReal *delta)
 - delta - the finite difference increment
 
   Options Database Keys:
-. -taoterm_fd_delta <delta> - the above increment
+. -tao_term_fd_delta <delta> - the above increment
 
   Level: advanced
 
@@ -1708,7 +1708,7 @@ PetscErrorCode TaoTermSetFDDelta(TaoTerm term, PetscReal delta)
 . term - a `TaoTerm`
 
   Options Database Keys:
-. -taoterm_gradient_use_fd <bool> - pushes once, making finite differences the default for gradient computation
+. -tao_term_gradient_use_fd <bool> - pushes once, making finite differences the default for gradient computation
 
   Level: advanced
 
@@ -1777,7 +1777,7 @@ PetscErrorCode TaoTermComputeGradientUseFDPop(TaoTerm term)
 . term - a `TaoTerm`
 
   Options Database Keys:
-. -taoterm_hessian_use_fd <bool> - pushes once, making finite differences the default for Hessian computation
+. -tao_term_hessian_use_fd <bool> - pushes once, making finite differences the default for Hessian computation
 
   Level: advanced
 

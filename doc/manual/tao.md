@@ -86,6 +86,13 @@ TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*FormHessian)(Tao, Vec, 
 TaoSolve(Tao tao);
 TaoDestroy(Tao tao);
 ```
+Alternatively, TAO supports a composable interface via the `TaoTerm` object.
+With `TaoTerm`, the user can define one or more problem ‘terms’ —for example,
+a data‑misfit term and a regularization term—each providing objective, gradient, and optional Hessian routines.
+TAO automatically composes the registered terms to form the overall objective and its derivatives at runtime.
+This approach promotes code reuse, makes it easy to modify scaling parameters,
+and simplifies complex problems that are naturally expressed as sums of contributions.
+See {any}`sec_tao_term` for more information on the `TaoTerm` objects.
 
 Note that the solver algorithm selected through the function
 `TaoSetType()` can be overridden at runtime by using an options
@@ -535,9 +542,6 @@ way to combine mutiple separate mathematical functions, each defined
 with a `TaoTerm`. For example, a `TaoTerm` that provides a regularization
  can be combined with a `TaoTerm` that defines the user objective function.
 
- which encapsulates a term that
-can appear in the objective function of an optimization problem.
-
 Each `TaoTerm` represents a parameteric real-valued function $f(x; p)$ for
 solution variable $x$ and parameters $p$.  The interface includes methods for
 evaluating $f(x; p)$ (`TaoTermComputeObjective()`),
@@ -562,7 +566,7 @@ implemented by a `TaoTerm` are passed as arguments in the evaluation
 routines.  For some terms, however, omitting the parameters results in a
 default value of $p$ being used.  For `TAOTERMHALFL2SQUARED`,
 `TAOTERML1`, and `TAOTERMQUADRATIC` the default is $p = 0$.  In general,
-the parametric behavior of a `TaoTerm` is determined by `TaoTermGetParametersMode()`:
+the parametric behavior of a `TaoTerm` is determined by `TaoTermSetParametersMode()`:
 
 * `TAOTERM_PARAMETERS_OPTIONAL`: default parameters are used if `NULL` is passed for the parameters argument
 * `TAOTERM_PARAMETERS_NONE`: the term is not parametric, `NULL` is the only valid parameters argument
@@ -572,7 +576,7 @@ the parametric behavior of a `TaoTerm` is determined by `TaoTermGetParametersMod
 
 A `TaoTerm` can be set as the entire objective function of a `Tao` solver
 with `TaoSetTerm()`.  A `TaoTerm` can also be added to the
-existing objective function of a `Tao` using `TaoAddTerm()`.
+existing, or empty objective function of a `Tao` using `TaoAddTerm()`.
 For example: if you have specified an objective function $f(x)$ using
 `TaoSetObjectiveAndGradient()`, and a regularizer $g(x;p)$ is specified by a `TaoTerm`,
 you can create the objective function $f(x) + \alpha g(Ax; p)$ using:
@@ -609,10 +613,10 @@ $\frac{0.4}{2} \|x\|_2^2 + 0.7 \|x\|_1$ can be added with the following options:
 
 ```
 -tao_add_terms ridge_,lasso_
--ridge_taoterm_type halfl2squared
--lasso_taoterm_type l1
--objective_taoterm_sum_ridge_scale 0.4
--objective_taoterm_sum_lasso_scale 0.7
+-ridge_tao_term_type halfl2squared
+-lasso_tao_term_type l1
+-objective_tao_term_sum_ridge_scale 0.4
+-objective_tao_term_sum_lasso_scale 0.7
 ```
 
 In the above, `ridge_`, and `lasso_` could be any unique strings for each term to be added.
