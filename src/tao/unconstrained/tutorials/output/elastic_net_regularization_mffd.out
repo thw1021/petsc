@@ -47,7 +47,7 @@ Tao Object: 1 MPI process
           type: l1
           solution vector space: N = 10
           parameter vector space: (optional) K = 10
-          epsilon (taoterm_l1_epsilon): 0.1
+          epsilon (tao_term_l1_epsilon): 0.1
       A_2:
         Mat Object: 1 MPI process
           type: seqdense

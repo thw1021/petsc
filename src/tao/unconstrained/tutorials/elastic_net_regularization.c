@@ -109,40 +109,40 @@ int main(int argc, char **argv)
 
   test:
     suffix: 0
-    args: -tao_monitor_short -tao_view -lasso_taoterm_l1_epsilon 0.1 -tao_type nls
+    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls
 
   test:
     suffix: no_prefix
-    args: -tao_monitor_short -tao_view -taoterm_l1_epsilon 0.1 -tao_type nls -set_term_prefix 0
+    args: -tao_monitor_short -tao_view -tao_term_l1_epsilon 0.1 -tao_type nls -set_term_prefix 0
 
   test:
     suffix: mask_failure
-    args: -tao_monitor_short -tao_view -lasso_taoterm_l1_epsilon 0.1 -tao_type nls
-    args: -objective_taoterm_sum_ridge_mask objective -objective_taoterm_sum_lasso_mask gradient
+    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls
+    args: -objective_tao_term_sum_ridge_mask objective -objective_tao_term_sum_lasso_mask gradient
     args: -tao_view ::ascii_info_detail
 
   test:
     suffix: assembled
-    args: -tao_monitor_short -tao_view -lasso_taoterm_l1_epsilon 0.1 -tao_type nls -objective_taoterm_hessian_mat_type dense -ridge_taoterm_hessian_mat_type constantdiagonal -lasso_taoterm_hessian_mat_type diagonal
+    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -objective_tao_term_hessian_mat_type dense -ridge_tao_term_hessian_mat_type constantdiagonal -lasso_tao_term_hessian_mat_type diagonal
 
   test:
     suffix: mffd
     requires: !single !__float128
-    args: -tao_monitor_short -tao_view -lasso_taoterm_l1_epsilon 0.1 -tao_type nls -objective_taoterm_hessian_mat_type mffd
+    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -objective_tao_term_hessian_mat_type mffd
 
   test:
     suffix: separate_shell
     requires: !single !__float128
-    args: -tao_monitor_short -tao_view -lasso_taoterm_l1_epsilon 0.1 -tao_type nls -objective_taoterm_hessian_pre_is_hessian 0 -objective_taoterm_hessian_pre_mat_type shell
+    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -objective_tao_term_hessian_pre_is_hessian 0 -objective_tao_term_hessian_pre_mat_type shell
 
   test:
     suffix: separate_mffd
     requires: !single !__float128
-    args: -tao_monitor_short -tao_view -lasso_taoterm_l1_epsilon 0.1 -tao_type nls -objective_taoterm_hessian_pre_is_hessian 0 -objective_taoterm_hessian_pre_mat_type mffd
+    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -objective_tao_term_hessian_pre_is_hessian 0 -objective_tao_term_hessian_pre_mat_type mffd
 
   test:
     suffix: snes
     requires: !single
-    args: -tao_monitor_short -tao_view -lasso_taoterm_l1_epsilon 0.1 -tao_type snes
+    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type snes
 
 TEST*/
