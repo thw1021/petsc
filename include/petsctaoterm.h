@@ -33,19 +33,19 @@ typedef struct _p_TaoTerm *TaoTerm;
   TaoTermType - String with the name of a `TaoTerm` method
 
   Values:
-+ `TAOTERMTAOCALLBACKS`    - uses the callback functions set in `TaoSetObjective()`, `TaoSetGradient()`, etc.
-. `TAOTERMSHELL`           - a container for arbitrary user-defined callbacks
-. `TAOTERMSUM`             - a sum of multiple other `TaoTerm`s
-. `TAOTERMHALFL2SQUARED`   - $\tfrac{1}{2}\|x - p\|_2^2$
-. `TAOTERML1`              - $\|x - p\|_1$
-- `TAOTERMQUADRATIC`       - a quadratic form $\tfrac{1}{2}(x - p)^T A (x - p)$
++ `TAOTERMCALLBACKS`     - uses the callback functions set in `TaoSetObjective()`, `TaoSetGradient()`, etc.
+. `TAOTERMSHELL`         - a container for arbitrary user-defined callbacks
+. `TAOTERMSUM`           - a sum of multiple other `TaoTerm`s
+. `TAOTERMHALFL2SQUARED` - $\tfrac{1}{2}\|x - p\|_2^2$
+. `TAOTERML1`            - $\|x - p\|_1$
+- `TAOTERMQUADRATIC`     - a quadratic form $\tfrac{1}{2}(x - p)^T A (x - p)$
 
   Level: intermediate
 
 .seealso: [](ch_tao), [](sec_tao_term), `TaoTerm`, `TaoTermCreate()`, `TaoTermSetType()`
 J*/
 typedef const char *TaoTermType;
-#define TAOTERMTAOCALLBACKS  "taocallbacks"
+#define TAOTERMCALLBACKS     "callbacks"
 #define TAOTERMSHELL         "shell"
 #define TAOTERMSUM           "sum"
 #define TAOTERMHALFL2SQUARED "halfl2squared"

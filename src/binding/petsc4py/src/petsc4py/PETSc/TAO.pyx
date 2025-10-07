@@ -2502,7 +2502,7 @@ del TAOLineSearchConvergedReason
 class TAOTermType:
     """TAO Term Types."""
     SHELL         = S_(TAOTERMSHELL)
-    TAOCALLBACKS  = S_(TAOTERMTAOCALLBACKS)
+    CALLBACKS     = S_(TAOTERMCALLBACKS)
     SUM           = S_(TAOTERMSUM)
     HALFL2SQUARED = S_(TAOTERMHALFL2SQUARED)
     L1            = S_(TAOTERML1)
