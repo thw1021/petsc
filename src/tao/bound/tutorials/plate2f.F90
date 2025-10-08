@@ -12,10 +12,9 @@
 !    -bmy <byg>, where <byg> = number of grid points under plate in 2nd direction
 !    -bheight <ht>, where <ht> = height of the plate
 !
-
-module plate2fmodule
 #include "petsc/finclude/petscdmda.h"
 #include "petsc/finclude/petsctao.h"
+module plate2fmodule
   use petscdmda
   use petsctao
 
@@ -37,131 +36,132 @@ end module
 !    Nx, Ny           number of processors in x- and y- directions
 !    mx, my           number of grid points in x,y directions
 !    N    global dimension of vector
-use plate2fmodule
-implicit none
+program plate2f
+  use plate2fmodule
+  implicit none
 
-PetscErrorCode ierr          ! used to check for functions returning nonzeros
-Vec x             ! solution vector
-PetscInt m             ! number of local elements in vector
-Tao ta           ! Tao solver context
-Mat H             ! Hessian matrix
-ISLocalToGlobalMapping isltog  ! local to global mapping object
-PetscBool flg
-PetscInt i1, i3, i7
+  PetscErrorCode ierr          ! used to check for functions returning nonzeros
+  Vec x             ! solution vector
+  PetscInt m             ! number of local elements in vector
+  Tao ta           ! Tao solver context
+  Mat H             ! Hessian matrix
+  ISLocalToGlobalMapping isltog  ! local to global mapping object
+  PetscBool flg
+  PetscInt i1, i3, i7
 
-external FormFunctionGradient
-external FormHessian
-external MSA_BoundaryConditions
-external MSA_Plate
-external MSA_InitialPoint
+  external FormFunctionGradient
+  external FormHessian
+  external MSA_BoundaryConditions
+  external MSA_Plate
+  external MSA_InitialPoint
 ! Initialize Tao
 
-i1 = 1
-i3 = 3
-i7 = 7
+  i1 = 1
+  i3 = 3
+  i7 = 7
 
-PetscCallA(PetscInitialize(ierr))
+  PetscCallA(PetscInitialize(ierr))
 
 ! Specify default dimensions of the problem
-mx = 10
-my = 10
-bheight = 0.1
+  mx = 10
+  my = 10
+  bheight = 0.1
 
 ! Check for any command line arguments that override defaults
 
-PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-mx', mx, flg, ierr))
-PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-my', my, flg, ierr))
+  PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-mx', mx, flg, ierr))
+  PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-my', my, flg, ierr))
 
-bmx = mx/2
-bmy = my/2
+  bmx = mx/2
+  bmy = my/2
 
-PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-bmx', bmx, flg, ierr))
-PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-bmy', bmy, flg, ierr))
-PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-bheight', bheight, flg, ierr))
+  PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-bmx', bmx, flg, ierr))
+  PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-bmy', bmy, flg, ierr))
+  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-bheight', bheight, flg, ierr))
 
 ! Calculate any derived values from parameters
-N = mx*my
+  N = mx*my
 
 ! Let PETSc determine the dimensions of the local vectors
-Nx = PETSC_DECIDE
-NY = PETSC_DECIDE
+  Nx = PETSC_DECIDE
+  NY = PETSC_DECIDE
 
 ! A two dimensional distributed array will help define this problem, which
 ! derives from an elliptic PDE on a two-dimensional domain.  From the
 ! distributed array, create the vectors
 
-PetscCallA(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX, mx, my, Nx, Ny, i1, i1, PETSC_NULL_INTEGER_ARRAY, PETSC_NULL_INTEGER_ARRAY, dm, ierr))
-PetscCallA(DMSetFromOptions(dm, ierr))
-PetscCallA(DMSetUp(dm, ierr))
+  PetscCallA(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX, mx, my, Nx, Ny, i1, i1, PETSC_NULL_INTEGER_ARRAY, PETSC_NULL_INTEGER_ARRAY, dm, ierr))
+  PetscCallA(DMSetFromOptions(dm, ierr))
+  PetscCallA(DMSetUp(dm, ierr))
 
 ! Extract global and local vectors from DM; The local vectors are
 ! used solely as work space for the evaluation of the function,
 ! gradient, and Hessian.  Duplicate for remaining vectors that are
 ! the same types.
 
-PetscCallA(DMCreateGlobalVector(dm, x, ierr))
-PetscCallA(DMCreateLocalVector(dm, localX, ierr))
-PetscCallA(VecDuplicate(localX, localV, ierr))
+  PetscCallA(DMCreateGlobalVector(dm, x, ierr))
+  PetscCallA(DMCreateLocalVector(dm, localX, ierr))
+  PetscCallA(VecDuplicate(localX, localV, ierr))
 
 ! Create a matrix data structure to store the Hessian.
 ! Here we (optionally) also associate the local numbering scheme
 ! with the matrix so that later we can use local indices for matrix
 ! assembly
 
-PetscCallA(VecGetLocalSize(x, m, ierr))
-PetscCallA(MatCreateAIJ(PETSC_COMM_WORLD, m, m, N, N, i7, PETSC_NULL_INTEGER_ARRAY, i3, PETSC_NULL_INTEGER_ARRAY, H, ierr))
+  PetscCallA(VecGetLocalSize(x, m, ierr))
+  PetscCallA(MatCreateAIJ(PETSC_COMM_WORLD, m, m, N, N, i7, PETSC_NULL_INTEGER_ARRAY, i3, PETSC_NULL_INTEGER_ARRAY, H, ierr))
 
-PetscCallA(MatSetOption(H, MAT_SYMMETRIC, PETSC_TRUE, ierr))
-PetscCallA(DMGetLocalToGlobalMapping(dm, isltog, ierr))
-PetscCallA(MatSetLocalToGlobalMapping(H, isltog, isltog, ierr))
+  PetscCallA(MatSetOption(H, MAT_SYMMETRIC, PETSC_TRUE, ierr))
+  PetscCallA(DMGetLocalToGlobalMapping(dm, isltog, ierr))
+  PetscCallA(MatSetLocalToGlobalMapping(H, isltog, isltog, ierr))
 
 ! The Tao code begins here
 ! Create TAO solver and set desired solution method.
 ! This problems uses bounded variables, so the
 ! method must either be 'tao_tron' or 'tao_blmvm'
 
-PetscCallA(TaoCreate(PETSC_COMM_WORLD, ta, ierr))
-PetscCallA(TaoSetType(ta, TAOBLMVM, ierr))
+  PetscCallA(TaoCreate(PETSC_COMM_WORLD, ta, ierr))
+  PetscCallA(TaoSetType(ta, TAOBLMVM, ierr))
 
 !     Set minimization function and gradient, hessian evaluation functions
 
-PetscCallA(TaoSetObjectiveAndGradient(ta, PETSC_NULL_VEC, FormFunctionGradient, 0, ierr))
+  PetscCallA(TaoSetObjectiveAndGradient(ta, PETSC_NULL_VEC, FormFunctionGradient, 0, ierr))
 
-PetscCallA(TaoSetHessian(ta, H, H, FormHessian, 0, ierr))
+  PetscCallA(TaoSetHessian(ta, H, H, FormHessian, 0, ierr))
 
 ! Set Variable bounds
-PetscCallA(MSA_BoundaryConditions(ierr))
-PetscCallA(TaoSetVariableBoundsRoutine(ta, MSA_Plate, 0, ierr))
+  PetscCallA(MSA_BoundaryConditions(ierr))
+  PetscCallA(TaoSetVariableBoundsRoutine(ta, MSA_Plate, 0, ierr))
 
 ! Set the initial solution guess
-PetscCallA(MSA_InitialPoint(x, ierr))
-PetscCallA(TaoSetSolution(ta, x, ierr))
+  PetscCallA(MSA_InitialPoint(x, ierr))
+  PetscCallA(TaoSetSolution(ta, x, ierr))
 
 ! Check for any tao command line options
-PetscCallA(TaoSetFromOptions(ta, ierr))
+  PetscCallA(TaoSetFromOptions(ta, ierr))
 
 ! Solve the application
-PetscCallA(TaoSolve(ta, ierr))
+  PetscCallA(TaoSolve(ta, ierr))
 
 ! Free TAO data structures
-PetscCallA(TaoDestroy(ta, ierr))
+  PetscCallA(TaoDestroy(ta, ierr))
 
 ! Free PETSc data structures
-PetscCallA(VecDestroy(x, ierr))
-PetscCallA(VecDestroy(Top, ierr))
-PetscCallA(VecDestroy(Bottom, ierr))
-PetscCallA(VecDestroy(Left, ierr))
-PetscCallA(VecDestroy(Right, ierr))
-PetscCallA(MatDestroy(H, ierr))
-PetscCallA(VecDestroy(localX, ierr))
-PetscCallA(VecDestroy(localV, ierr))
-PetscCallA(DMDestroy(dm, ierr))
+  PetscCallA(VecDestroy(x, ierr))
+  PetscCallA(VecDestroy(Top, ierr))
+  PetscCallA(VecDestroy(Bottom, ierr))
+  PetscCallA(VecDestroy(Left, ierr))
+  PetscCallA(VecDestroy(Right, ierr))
+  PetscCallA(MatDestroy(H, ierr))
+  PetscCallA(VecDestroy(localX, ierr))
+  PetscCallA(VecDestroy(localV, ierr))
+  PetscCallA(DMDestroy(dm, ierr))
 
 ! Finalize TAO
 
-PetscCallA(PetscFinalize(ierr))
+  PetscCallA(PetscFinalize(ierr))
 
-end
+end program plate2f
 
 ! ---------------------------------------------------------------------
 !
