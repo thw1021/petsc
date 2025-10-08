@@ -2,7 +2,6 @@
 #include <petsc/private/petschpddm.h> /*I "petscksp.h" I*/
 
 const char *const KSPHPDDMTypes[]          = {KSPGMRES, "bgmres", KSPCG, "bcg", "gcrodr", "bgcrodr", "bfbcg", KSPPREONLY};
-const char *const KSPHPDDMPrecisionTypes[] = {"HALF", "SINGLE", "DOUBLE", "QUADRUPLE", "KSPHPDDMPrecisionType", "KSP_HPDDM_PRECISION_", nullptr};
 const char *const HPDDMOrthogonalization[] = {"cgs", "mgs"};
 const char *const HPDDMQR[]                = {"cholqr", "cgs", "mgs"};
 const char *const HPDDMVariant[]           = {"left", "right", "flexible"};
@@ -37,9 +36,9 @@ static PetscErrorCode KSPSetFromOptions_HPDDM(KSP ksp, PetscOptionItems PetscOpt
   PetscCall(PetscOptionsEList("-ksp_hpddm_type", "Type of Krylov method", "KSPHPDDMGetType", KSPHPDDMTypes, PETSC_STATIC_ARRAY_LENGTH(KSPHPDDMTypes), KSPHPDDMTypes[HPDDM_KRYLOV_METHOD_GMRES], &i, nullptr));
   if (i == PETSC_STATIC_ARRAY_LENGTH(KSPHPDDMTypes) - 1) i = HPDDM_KRYLOV_METHOD_NONE; /* need to shift the value since HPDDM_KRYLOV_METHOD_RICHARDSON is not registered in PETSc */
   data->cntl[0] = i;
-  PetscCall(PetscOptionsEnum("-ksp_hpddm_precision", "Precision in which Krylov bases are stored", "KSPHPDDM", KSPHPDDMPrecisionTypes, (PetscEnum)data->precision, (PetscEnum *)&data->precision, nullptr));
-  PetscCheck(data->precision != KSP_HPDDM_PRECISION_QUADRUPLE || PetscDefined(HAVE_REAL___FLOAT128), PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP_SYS, "Unsupported %s precision", KSPHPDDMPrecisionTypes[data->precision]);
-  PetscCheck(std::abs(data->precision - PETSC_KSPHPDDM_DEFAULT_PRECISION) <= 1, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Unhandled mixed %s and %s precisions", KSPHPDDMPrecisionTypes[data->precision], KSPHPDDMPrecisionTypes[PETSC_KSPHPDDM_DEFAULT_PRECISION]);
+  PetscCall(PetscOptionsEnum("-ksp_hpddm_precision", "Precision in which Krylov bases are stored", "KSPHPDDM", PetscPrecision, (PetscEnum)data->precision, (PetscEnum *)&data->precision, nullptr));
+  PetscCheck(data->precision != PETSC_PRECISION___FLOAT128 || PetscDefined(HAVE_REAL___FLOAT128), PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP_SYS, "Unsupported %s precision", PetscPrecisionTypes[data->precision]);
+  PetscCheck(std::abs(data->precision - PETSC_KSPHPDDM_DEFAULT_PRECISION) <= 1, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Unhandled mixed %s and %s precisions", PetscPrecisionTypes[data->precision], PetscPrecisionTypes[PETSC_KSPHPDDM_DEFAULT_PRECISION]);
   if (data->cntl[0] != HPDDM_KRYLOV_METHOD_NONE) {
     if (data->cntl[0] != HPDDM_KRYLOV_METHOD_BCG && data->cntl[0] != HPDDM_KRYLOV_METHOD_BFBCG) {
       i = (data->cntl[1] == static_cast<char>(PETSC_DECIDE) ? HPDDM_VARIANT_LEFT : data->cntl[1]);
@@ -112,7 +111,7 @@ static PetscErrorCode KSPView_HPDDM(KSP ksp, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &ascii));
   if (op && ascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "HPDDM type: %s%s\n", KSPHPDDMTypes[std::min(static_cast<PetscInt>(data->cntl[0]), static_cast<PetscInt>(PETSC_STATIC_ARRAY_LENGTH(KSPHPDDMTypes) - 1))], data->cntl[1] == HPDDM_VARIANT_FLEXIBLE ? " (with support for variable preconditioning)" : ""));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "precision: %s\n", KSPHPDDMPrecisionTypes[data->precision]));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "precision: %s\n", PetscPrecisionTypes[data->precision]));
     if (data->cntl[0] == HPDDM_KRYLOV_METHOD_BGMRES || data->cntl[0] == HPDDM_KRYLOV_METHOD_BGCRODR || data->cntl[0] == HPDDM_KRYLOV_METHOD_BFBCG) {
       if (PetscAbsReal(data->rcntl[0] - static_cast<PetscReal>(PETSC_DECIDE)) < PETSC_SMALL) PetscCall(PetscViewerASCIIPrintf(viewer, "no deflation at restarts\n"));
       else PetscCall(PetscViewerASCIIPrintf(viewer, "deflation tolerance: %g\n", static_cast<double>(data->rcntl[0])));
@@ -282,7 +281,7 @@ static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *
   #endif
     }
 #else
-    PetscCheck(data->precision != KSP_HPDDM_PRECISION_QUADRUPLE, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Reconfigure with --download-f2cblaslapack --with-f2cblaslapack-float128-bindings");
+    PetscCheck(data->precision != PETSC_PRECISION___FLOAT128, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Reconfigure with --download-f2cblaslapack --with-f2cblaslapack-float128-bindings");
 #endif
   } else if (data->precision < PETSC_KSPHPDDM_DEFAULT_PRECISION) { /* Krylov basis stored in lower precision than PetscScalar */
 #if !PetscDefined(USE_REAL_SINGLE) || PetscDefined(HAVE_F2CBLASLAPACK___FP16_BINDINGS)
@@ -314,7 +313,7 @@ static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *
   #endif
     }
 #else
-    PetscCheck(data->precision != KSP_HPDDM_PRECISION_HALF, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Reconfigure with --download-f2cblaslapack --with-f2cblaslapack-fp16-bindings");
+    PetscCheck(data->precision != PETSC_PRECISION___FP16, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Reconfigure with --download-f2cblaslapack --with-f2cblaslapack-fp16-bindings");
 #endif
   } else { /* Krylov basis stored in the same precision as PetscScalar */
     if (type == PETSC_MEMTYPE_HOST) PetscCall(HPDDM::IterativeMethod::solve(*data->op, b, x, n, PetscObjectComm((PetscObject)ksp)));
@@ -457,7 +456,7 @@ static PetscErrorCode KSPHPDDMSetDeflationMat_HPDDM(KSP ksp, Mat U)
     PetscCall(KSPSetUp(ksp));
     op = data->op;
   }
-  PetscCheck(data->precision == PETSC_KSPHPDDM_DEFAULT_PRECISION, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "%s != %s", KSPHPDDMPrecisionTypes[data->precision], KSPHPDDMPrecisionTypes[PETSC_KSPHPDDM_DEFAULT_PRECISION]);
+  PetscCheck(data->precision == PETSC_KSPHPDDM_DEFAULT_PRECISION, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "%s != %s", PetscPrecisionTypes[data->precision], PetscPrecisionTypes[PETSC_KSPHPDDM_DEFAULT_PRECISION]);
   PetscCall(KSPGetOperators(ksp, &A, nullptr));
   PetscCall(MatGetLocalSize(A, &m1, nullptr));
   PetscCall(MatGetLocalSize(U, &m2, &n2));
@@ -489,7 +488,7 @@ static PetscErrorCode KSPHPDDMGetDeflationMat_HPDDM(KSP ksp, Mat *U)
     PetscCall(KSPSetUp(ksp));
     op = data->op;
   }
-  PetscCheck(data->precision == PETSC_KSPHPDDM_DEFAULT_PRECISION, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "%s != %s", KSPHPDDMPrecisionTypes[data->precision], KSPHPDDMPrecisionTypes[PETSC_KSPHPDDM_DEFAULT_PRECISION]);
+  PetscCheck(data->precision == PETSC_KSPHPDDM_DEFAULT_PRECISION, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "%s != %s", PetscPrecisionTypes[data->precision], PetscPrecisionTypes[PETSC_KSPHPDDM_DEFAULT_PRECISION]);
   array = op->storage();
   N2    = op->k().first * op->k().second;
   if (!array) *U = nullptr;
@@ -636,7 +635,7 @@ static PetscErrorCode KSPHPDDMGetType_HPDDM(KSP ksp, KSPHPDDMType *type)
    Options Database Keys:
 +   -ksp_gmres_restart <restart, default=30>                  - see `KSPGMRES`
 .   -ksp_hpddm_type <type, default=gmres>                     - any of gmres, bgmres, cg, bcg, gcrodr, bgcrodr, bfbcg, or preonly, see `KSPHPDDMType`
-.   -ksp_hpddm_precision <value, default=same as PetscScalar> - any of half, single, double or quadruple, see `KSPHPDDMPrecision`
+.   -ksp_hpddm_precision <value, default=same as PetscScalar> - any of __fp16, single, double or __float128, see `PetscPrecision`
 .   -ksp_hpddm_deflation_tol <eps, default=\-1.0>             - tolerance when deflating right-hand sides inside block methods (no deflation by default,
                                                               only relevant with block methods)
 .   -ksp_hpddm_enlarge_krylov_subspace <p, default=1>         - split the initial right-hand side into multiple vectors (only relevant with nonblock methods)
