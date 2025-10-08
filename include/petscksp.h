@@ -461,7 +461,6 @@ typedef enum {
 } KSPHPDDMType;
 PETSC_EXTERN const char *const KSPHPDDMTypes[];
 
-typedef PetscPrecision      KSPHPDDMPrecision PETSC_DEPRECATED_TYPEDEF(3, 25, 0, "PetscPrecision", );
 PETSC_EXTERN PetscErrorCode KSPHPDDMSetType(KSP, KSPHPDDMType);
 PETSC_EXTERN PetscErrorCode KSPHPDDMGetType(KSP, KSPHPDDMType *);
 
