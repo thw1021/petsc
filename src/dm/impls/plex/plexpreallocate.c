@@ -214,13 +214,13 @@ static inline PetscErrorCode AdjancencyContainsLeafRootPair(PetscInt num_pairs, 
     if (root_index >= 0) {
       leaves_found[num_roots_found] = root_index; // Initially use leaves_found to store pair indices
       num_roots_found++;
-      break;
+      continue;
     }
   }
   if (num_roots_found == 0) PetscFunctionReturn(PETSC_SUCCESS);
 
   for (PetscInt i = 0; i < num_roots_found; i++) {
-    leaf_ = leaves[root_index];
+    leaf_ = leaves[leaves_found[i]]; // use root_index stored in leaves_found
     for (PetscInt q = 0; q < numAdj; q++) {
       if (tmpAdj[q] == leaf_) {
         leaves_found[*num_leaves_found] = leaf_;
