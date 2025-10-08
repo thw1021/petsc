@@ -1855,7 +1855,7 @@ PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ(Mat P, Mat A, PetscReal
   owners_co[0] = 0;
   for (proc = 0; proc < size; proc++) {
     owners_co[proc + 1] = owners_co[proc] + len_si[proc];
-    if (len_si[proc]) {
+    if (len_s[proc]) {
       merge->nsend++;
       len_si[proc] = 2 * (len_si[proc] + 1);
       len += len_si[proc];
