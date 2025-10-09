@@ -3072,7 +3072,7 @@ PetscErrorCode TaoSetTerm(Tao tao, PetscReal scale, TaoTerm term, Vec params, Ma
 @*/
 PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm term, Vec params, Mat map)
 {
-  PetscBool is_sum;
+  PetscBool is_sum, is_callback;
   PetscInt  num_old_terms;
   Vec      *vec_list = NULL;
 
@@ -3081,6 +3081,28 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
   if (prefix) PetscAssertPointer(prefix, 2);
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 4);
   PetscCheckSameComm(tao, 1, term, 4);
+  // If user is using TaoAddTerm, before setting any terms or callbacks,
+  // then tao->objective_term.term is empty callback, which we want to remove.
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callback));
+  if (is_callback) {
+    PetscBool is_obj, is_objgrad, is_grad;
+
+    PetscCall(TaoTermIsObjectiveDefined(tao->objective_term.term, &is_obj));
+    PetscCall(TaoTermIsObjectiveAndGradientDefined(tao->objective_term.term, &is_objgrad));
+    PetscCall(TaoTermIsGradientDefined(tao->objective_term.term, &is_grad));
+    if (!(is_obj || is_objgrad || is_grad)) {
+      PetscBool is_sum;
+
+      PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSUM, &is_sum));
+      if (is_sum) PetscCall(TaoTermSumGetNumSubterms(term, &tao->num_terms));
+      PetscCall(TaoTermMappingSetData(&tao->objective_term, "objective_", scale, term, map));
+      PetscCall(PetscObjectReference((PetscObject)params));
+      PetscCall(VecDestroy(&tao->objective_parameters));
+      tao->objective_parameters = params;
+      tao->term_set             = PETSC_TRUE;
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
   PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
   if (!is_sum) {
     TaoTerm     old_sum;
