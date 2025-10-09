@@ -151,7 +151,8 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
   term->setup_called = PETSC_TRUE;
   PetscTryTypeMethod(term, setup);
   PetscCall(MatGetSize(term->solution_factory, &N, NULL));
-  if (N < 0 && term->ops->createvecs) {
+  if (N < 0) {
+    PetscCheck(term->ops->createvecs, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not know. You should have called TaoTermShellSetCreateVecs()");
     Vec sol_template;
 
     PetscCall(TaoTermCreateVecs(term, &sol_template, NULL));
@@ -163,7 +164,8 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
     PetscInt K;
 
     PetscCall(MatGetSize(term->parameters_factory, &K, NULL));
-    if (K < 0 && term->ops->createvecs) {
+    if (K < 0) {
+      PetscCheck(term->ops->createvecs, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not know. You should have called TaoTermShellSetCreateVecs()");
       Vec params_template;
 
       PetscCall(TaoTermCreateVecs(term, NULL, &params_template));
