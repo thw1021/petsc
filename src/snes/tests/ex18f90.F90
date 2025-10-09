@@ -2,9 +2,9 @@
 ! Example usage of Fortran 2003/2008 classes (extended derived types) as
 ! user-defined contexts in PETSc. Example contributed by Glenn Hammond.
 !
-module ex18f90base_module
 #include <petsc/finclude/petscsys.h>
 #include "petsc/finclude/petscsnes.h"
+module ex18f90base_module
   use PetscSys
   use PetscSnes
   implicit none
@@ -18,7 +18,6 @@ module ex18f90base_module
   end type base_type
 contains
   subroutine BasePrint(this)
-    implicit none
     class(base_type) :: this
     print *
     print *, 'Base printout'
@@ -28,7 +27,6 @@ end module ex18f90base_module
 
 module ex18f90extended_module
   use ex18f90base_module
-#include <petsc/finclude/petscsys.h>
   use PetscSys
   implicit none
   private
@@ -40,7 +38,6 @@ module ex18f90extended_module
   end type extended_type
 contains
   subroutine ExtendedPrint(this)
-    implicit none
     class(extended_type) :: this
     print *
     print *, 'Extended printout'
@@ -50,12 +47,11 @@ end module ex18f90extended_module
 
 module ex18f90function_module
   use petscsnes
+  use ex18f90base_module
   implicit none
   public :: TestFunction
 contains
   subroutine TestFunction(snes, xx, r, ctx, ierr)
-    use ex18f90base_module
-    implicit none
     SNES :: snes
     Vec :: xx
     Vec :: r
