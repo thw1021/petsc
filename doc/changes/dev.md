@@ -59,7 +59,7 @@
 ```{rubric} KSP:
 ```
 
-- Deprecate `KSPHPDDMPrecision` in favor of `PetscPrecision`
+- Remove `KSPHPDDMPrecision` in favor of `PetscPrecision`
 
 ```{rubric} SNES:
 ```
