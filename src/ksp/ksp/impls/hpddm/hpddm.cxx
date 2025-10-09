@@ -36,7 +36,7 @@ static PetscErrorCode KSPSetFromOptions_HPDDM(KSP ksp, PetscOptionItems PetscOpt
   PetscCall(PetscOptionsEList("-ksp_hpddm_type", "Type of Krylov method", "KSPHPDDMGetType", KSPHPDDMTypes, PETSC_STATIC_ARRAY_LENGTH(KSPHPDDMTypes), KSPHPDDMTypes[HPDDM_KRYLOV_METHOD_GMRES], &i, nullptr));
   if (i == PETSC_STATIC_ARRAY_LENGTH(KSPHPDDMTypes) - 1) i = HPDDM_KRYLOV_METHOD_NONE; /* need to shift the value since HPDDM_KRYLOV_METHOD_RICHARDSON is not registered in PETSc */
   data->cntl[0] = i;
-  PetscCall(PetscOptionsEnum("-ksp_hpddm_precision", "Precision in which Krylov bases are stored", "KSPHPDDM", PetscPrecision, (PetscEnum)data->precision, (PetscEnum *)&data->precision, nullptr));
+  PetscCall(PetscOptionsEnum("-ksp_hpddm_precision", "Precision in which Krylov bases are stored", "KSPHPDDM", PetscPrecisionTypes, (PetscEnum)data->precision, (PetscEnum *)&data->precision, nullptr));
   PetscCheck(data->precision != PETSC_PRECISION___FLOAT128 || PetscDefined(HAVE_REAL___FLOAT128), PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP_SYS, "Unsupported %s precision", PetscPrecisionTypes[data->precision]);
   PetscCheck(std::abs(data->precision - PETSC_KSPHPDDM_DEFAULT_PRECISION) <= 1, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Unhandled mixed %s and %s precisions", PetscPrecisionTypes[data->precision], PetscPrecisionTypes[PETSC_KSPHPDDM_DEFAULT_PRECISION]);
   if (data->cntl[0] != HPDDM_KRYLOV_METHOD_NONE) {
