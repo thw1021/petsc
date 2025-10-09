@@ -2,9 +2,8 @@
 
 #include <petsc/private/kspimpl.h>
 
-#define PETSC_KSPHPDDM_DEFAULT_PRECISION \
-  (PetscDefined(USE_REAL_SINGLE) ? KSP_HPDDM_PRECISION_SINGLE : (PetscDefined(USE_REAL_DOUBLE) ? KSP_HPDDM_PRECISION_DOUBLE : (PetscDefined(USE_REAL___FLOAT128) ? KSP_HPDDM_PRECISION_QUADRUPLE : KSP_HPDDM_PRECISION_HALF)))
-#define PETSC_PCHPDDM_MAXLEVELS 9
+#define PETSC_KSPHPDDM_DEFAULT_PRECISION (PetscDefined(USE_REAL_SINGLE) ? PETSC_PRECISION_SINGLE : (PetscDefined(USE_REAL_DOUBLE) ? PETSC_PRECISION_DOUBLE : (PetscDefined(USE_REAL___FLOAT128) ? PETSC_PRECISION___FLOAT128 : PETSC_PRECISION___FP16)))
+#define PETSC_PCHPDDM_MAXLEVELS          9
 
 namespace HPDDM
 {
@@ -48,7 +47,7 @@ struct KSP_HPDDM {
   int                   icntl[2];
   unsigned short        scntl[2];
   char                  cntl[5];
-  KSPHPDDMPrecision     precision;
+  PetscPrecision        precision;
 };
 
 typedef struct _n_Harmonic *Harmonic;
