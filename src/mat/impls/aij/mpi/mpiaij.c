@@ -3006,7 +3006,7 @@ PetscErrorCode MatDuplicate_MPIAIJ(Mat matin, MatDuplicateOption cpvalues, Mat *
     if (oldmat->garray) {
       PetscInt len;
       len = oldmat->B->cmap->n;
-      PetscCall(PetscMalloc1(len + 1, &a->garray));
+      PetscCall(PetscMalloc1(len, &a->garray));
       if (len) PetscCall(PetscArraycpy(a->garray, oldmat->garray, len));
     } else a->garray = NULL;
 
@@ -5860,11 +5860,11 @@ PetscErrorCode MatGetBrowsOfAoCols_MPIAIJ(Mat A, Mat B, MatReuse scall, PetscInt
     PetscCall(PetscFree(svalues));
 
     /* allocate buffers for sending j and a arrays */
-    PetscCall(PetscMalloc1(len + 1, &bufj));
-    PetscCall(PetscMalloc1(len + 1, &bufa));
+    PetscCall(PetscMalloc1(len, &bufj));
+    PetscCall(PetscMalloc1(len, &bufa));
 
     /* create i-array of B_oth */
-    PetscCall(PetscMalloc1(aBn + 2, &b_othi));
+    PetscCall(PetscMalloc1(aBn + 1, &b_othi));
 
     b_othi[0] = 0;
     len       = 0; /* total length of j or a array to be received */
@@ -5882,8 +5882,8 @@ PetscErrorCode MatGetBrowsOfAoCols_MPIAIJ(Mat A, Mat B, MatReuse scall, PetscInt
     PetscCall(PetscFree(rvalues));
 
     /* allocate space for j and a arrays of B_oth */
-    PetscCall(PetscMalloc1(b_othi[aBn] + 1, &b_othj));
-    PetscCall(PetscMalloc1(b_othi[aBn] + 1, &b_otha));
+    PetscCall(PetscMalloc1(b_othi[aBn], &b_othj));
+    PetscCall(PetscMalloc1(b_othi[aBn], &b_otha));
 
     /* j-array */
     /*  post receives of j-array */
