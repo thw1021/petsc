@@ -3,7 +3,6 @@
 !     Solves the problem A x - x^3 + 1 = 0 via Picard iteration
 !
 #include <petsc/finclude/petscsnes.h>
-#include <petsc/finclude/petscsnes.h>
 module ex21f_mod
   use petscsnes
   implicit none

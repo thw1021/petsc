@@ -43,8 +43,6 @@
 #include <petsc/finclude/petscdmda.h>
 #include <petsc/finclude/petscksp.h>
 module ex14f_mod
-  use petscis
-  use petscvec
   use petscdm
   use petscdmda
   use petscksp

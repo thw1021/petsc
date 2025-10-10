@@ -99,7 +99,6 @@ contains
 end module ex45f_mod
 
 program main
-  use petscdm
   use petscdmda
   use petscksp
   use ex45f_mod

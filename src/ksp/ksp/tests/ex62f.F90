@@ -55,7 +55,6 @@ contains
     PetscCallA(PCSetUp(sor, ierr))
 
     PetscCallA(VecDuplicate(x, work, ierr))
-
   end
 
 ! -------------------------------------------------------------------
@@ -89,7 +88,6 @@ contains
     PetscCallA(PCApply(jacobi, x, y, ierr))
     PetscCallA(PCApply(sor, x, work, ierr))
     PetscCallA(VecAXPY(y, one, work, ierr))
-
   end
 
 end module
