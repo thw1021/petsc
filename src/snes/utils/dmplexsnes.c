@@ -295,6 +295,7 @@ PetscErrorCode DMPlexSNESComputeResidualFEM(DM dm, Vec X, Vec F, void *user)
     PetscDS      ds;
     IS           cellIS;
     PetscFormKey key;
+    PetscBool    iscohesive;
 
     PetscCall(DMGetRegionNumDS(dm, s, &key.label, NULL, &ds, NULL));
     key.value = 0;
@@ -311,7 +312,21 @@ PetscErrorCode DMPlexSNESComputeResidualFEM(DM dm, Vec X, Vec F, void *user)
       PetscCall(ISIntersect_Caching_Internal(allcellIS, pointIS, &cellIS));
       PetscCall(ISDestroy(&pointIS));
     }
-    PetscCall(DMPlexComputeResidualByKey(plex, key, cellIS, PETSC_MIN_REAL, X, NULL, 0.0, F, user));
+    PetscCall(PetscDSIsCohesive(ds, &iscohesive));
+    if (iscohesive) {
+      PetscFormKey keys[3];
+
+      keys[0].label = NULL;
+      keys[0].value = 0;
+      keys[0].part  = 0;
+      keys[1].label = NULL;
+      keys[1].value = 1;
+      keys[1].part  = 0;
+      keys[2]       = key;
+      PetscCall(DMPlexComputeResidualHybridByKey(plex, keys, cellIS, PETSC_MIN_REAL, X, NULL, 0.0, F, user));
+    } else {
+      PetscCall(DMPlexComputeResidualByKey(plex, key, cellIS, PETSC_MIN_REAL, X, NULL, 0.0, F, user));
+    }
     PetscCall(ISDestroy(&cellIS));
   }
   PetscCall(ISDestroy(&allcellIS));
@@ -542,7 +557,7 @@ PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP, voi
 {
   DM        plex;
   IS        allcellIS;
-  PetscBool hasJac, hasPrec;
+  PetscBool hasJac, hasPrec, assJac = PETSC_FALSE, gassJac;
   PetscInt  Nds, s;
 
   PetscFunctionBegin;
@@ -553,6 +568,7 @@ PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP, voi
     PetscDS      ds;
     IS           cellIS;
     PetscFormKey key;
+    PetscBool    iscohesive;
 
     PetscCall(DMGetRegionNumDS(dm, s, &key.label, NULL, &ds, NULL));
     key.value = 0;
@@ -575,9 +591,31 @@ PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP, voi
       if (hasJac && hasPrec) PetscCall(MatZeroEntries(Jac));
       PetscCall(MatZeroEntries(JacP));
     }
-    PetscCall(DMPlexComputeJacobianByKey(plex, key, cellIS, 0.0, 0.0, X, NULL, Jac, JacP, user));
+    assJac = assJac || (hasJac && hasPrec) ? PETSC_TRUE : PETSC_FALSE;
+    PetscCall(PetscDSIsCohesive(ds, &iscohesive));
+    if (iscohesive) {
+      PetscFormKey keys[3];
+
+      keys[0].label = NULL;
+      keys[0].value = 0;
+      keys[0].part  = 0;
+      keys[1].label = NULL;
+      keys[1].value = 1;
+      keys[1].part  = 0;
+      keys[2]       = key;
+      PetscCall(DMPlexComputeJacobianHybridByKey(plex, keys, cellIS, 0.0, 0.0, X, NULL, Jac, JacP, user));
+    } else {
+      PetscCall(DMPlexComputeJacobianByKey(plex, key, cellIS, 0.0, 0.0, X, NULL, Jac, JacP, user));
+    }
     PetscCall(ISDestroy(&cellIS));
   }
+  PetscCallMPI(MPIU_Allreduce(&assJac, &gassJac, 1, MPI_C_BOOL, MPI_LOR, PetscObjectComm((PetscObject)dm)));
+  if (gassJac) {
+    PetscCall(MatAssemblyBegin(Jac, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Jac, MAT_FINAL_ASSEMBLY));
+  }
+  PetscCall(MatAssemblyBegin(JacP, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(JacP, MAT_FINAL_ASSEMBLY));
   PetscCall(ISDestroy(&allcellIS));
   PetscCall(DMDestroy(&plex));
   PetscFunctionReturn(PETSC_SUCCESS);
