@@ -89,7 +89,7 @@ PetscErrorCode DMLabelSetUp(DMLabel label)
 static PetscErrorCode DMLabelMakeValid_Private(DMLabel label, PetscInt v)
 {
   IS       is;
-  PetscInt off = 0, *pointArray, p;
+  PetscInt off = 0, *pointArray;
 
   PetscFunctionBegin;
   if ((PetscLikely(v >= 0 && v < label->numStrata) && label->validIS[v]) || label->readonly) PetscFunctionReturn(PETSC_SUCCESS);
@@ -100,7 +100,7 @@ static PetscErrorCode DMLabelMakeValid_Private(DMLabel label, PetscInt v)
   PetscCall(PetscHSetIClear(label->ht[v]));
   PetscCall(PetscSortInt(label->stratumSizes[v], pointArray));
   if (label->bt) {
-    for (p = 0; p < label->stratumSizes[v]; ++p) {
+    for (PetscInt p = 0; p < label->stratumSizes[v]; ++p) {
       const PetscInt point = pointArray[p];
       PetscCheck(!(point < label->pStart) && !(point >= label->pEnd), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
       PetscCall(PetscBTSet(label->bt, point - label->pStart));
@@ -1089,6 +1089,8 @@ PetscErrorCode DMLabelSetValue(DMLabel label, PetscInt point, PetscInt value)
   /* Set key */
   PetscCall(DMLabelMakeInvalid_Private(label, v));
   PetscCall(PetscHSetIAdd(label->ht[v], point));
+  // If we add a point outside the index, destroy it
+  if (label->bt && (point < label->pStart || point >= label->pEnd)) PetscCall(DMLabelDestroyIndex(label));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
