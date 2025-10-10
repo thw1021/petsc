@@ -188,6 +188,7 @@ struct _n_Boundary {
 typedef struct _n_Field {
   PetscObject disc;         /* Field discretization, or a PetscContainer with the field name */
   DMLabel     label;        /* Label defining the domain of definition of the field */
+  PetscInt    value;        /* Label value defining the domain of definition of the field */
   PetscBool   adjacency[2]; /* Flags for defining variable influence (adjacency) for each field [use cone() or support() first, use the transitive closure] */
   PetscBool   avoidTensor;  /* Flag to avoid defining field over tensor cells */
 } RegionField;
@@ -546,7 +547,7 @@ PETSC_INTERN PetscErrorCode DMGetBasisTransformVec_Internal(DM, Vec *);
 PETSC_INTERN PetscErrorCode DMConstructBasisTransform_Internal(DM);
 
 PETSC_INTERN PetscErrorCode DMGetLocalBoundingIndices_DMDA(DM, PetscReal[], PetscReal[]);
-PETSC_INTERN PetscErrorCode DMSetField_Internal(DM, PetscInt, DMLabel, PetscObject);
+PETSC_EXTERN PetscErrorCode DMSetField_Internal(DM, PetscInt, DMLabel, PetscInt, PetscObject);
 
 PETSC_INTERN PetscErrorCode DMSetLabelValue_Fast(DM, DMLabel *, const char[], PetscInt, PetscInt);
 PETSC_INTERN PetscErrorCode DMGetPoints_Internal(DM, DMLabel, PetscInt, PetscInt, IS *);

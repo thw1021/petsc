@@ -5052,13 +5052,14 @@ PetscErrorCode DMGetField(DM dm, PetscInt f, DMLabel *label, PetscObject *disc)
 }
 
 /* Does not clear the DS */
-PetscErrorCode DMSetField_Internal(DM dm, PetscInt f, DMLabel label, PetscObject disc)
+PetscErrorCode DMSetField_Internal(DM dm, PetscInt f, DMLabel label, PetscInt val, PetscObject disc)
 {
   PetscFunctionBegin;
   PetscCall(DMFieldEnlarge_Static(dm, f + 1));
   PetscCall(DMLabelDestroy(&dm->fields[f].label));
   PetscCall(PetscObjectDestroy(&dm->fields[f].disc));
   dm->fields[f].label = label;
+  dm->fields[f].value = val;
   dm->fields[f].disc  = disc;
   PetscCall(PetscObjectReference((PetscObject)label));
   PetscCall(PetscObjectReference(disc));
@@ -5088,7 +5089,7 @@ PetscErrorCode DMSetField(DM dm, PetscInt f, DMLabel label, PetscObject disc)
   if (label) PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 3);
   PetscValidHeader(disc, 4);
   PetscCheck(f >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %" PetscInt_FMT " must be non-negative", f);
-  PetscCall(DMSetField_Internal(dm, f, label, disc));
+  PetscCall(DMSetField_Internal(dm, f, label, 1, disc));
   PetscCall(DMSetDefaultAdjacency_Private(dm, f, disc));
   PetscCall(DMClearDS(dm));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -5127,11 +5128,7 @@ PetscErrorCode DMAddField(DM dm, DMLabel label, PetscObject disc)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   if (label) PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 2);
   PetscValidHeader(disc, 3);
-  PetscCall(DMFieldEnlarge_Static(dm, Nf + 1));
-  dm->fields[Nf].label = label;
-  dm->fields[Nf].disc  = disc;
-  PetscCall(PetscObjectReference((PetscObject)label));
-  PetscCall(PetscObjectReference(disc));
+  PetscCall(DMSetField_Internal(dm, Nf, label, 1, disc));
   PetscCall(DMSetDefaultAdjacency_Private(dm, Nf, disc));
   PetscCall(DMClearDS(dm));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -5934,6 +5931,7 @@ PetscErrorCode DMCreateDS(DM dm)
   MPI_Comm  comm;
   PetscDS   dsDef;
   DMLabel  *labelSet;
+  PetscInt *valueSet;
   PetscInt  dE, Nf = dm->Nf, f, s, Nl, l, Ndef, k;
   PetscBool doSetup = PETSC_TRUE, flg;
 
@@ -5946,11 +5944,12 @@ PetscErrorCode DMCreateDS(DM dm)
   PetscCall(PetscFree2(dm->nullspaceConstructors, dm->nearnullspaceConstructors));
   PetscCall(PetscCalloc2(Nf, &dm->nullspaceConstructors, Nf, &dm->nearnullspaceConstructors));
   /* Determine how many regions we have */
-  PetscCall(PetscMalloc1(Nf, &labelSet));
+  PetscCall(PetscMalloc2(Nf, &labelSet, Nf, &valueSet));
   Nl   = 0;
   Ndef = 0;
   for (f = 0; f < Nf; ++f) {
     DMLabel  label = dm->fields[f].label;
+    PetscInt value = dm->fields[f].value;
     PetscInt l;
 
 #ifdef PETSC_HAVE_LIBCEED
@@ -5974,7 +5973,8 @@ PetscErrorCode DMCreateDS(DM dm)
     for (l = 0; l < Nl; ++l)
       if (label == labelSet[l]) break;
     if (l < Nl) continue;
-    labelSet[Nl++] = label;
+    labelSet[Nl]   = label;
+    valueSet[Nl++] = value;
   }
   /* Create default DS if there are no labels to intersect with */
   PetscCall(DMGetRegionDS(dm, NULL, NULL, &dsDef, NULL));
@@ -6015,11 +6015,12 @@ PetscErrorCode DMCreateDS(DM dm)
     if (!allcellIS) PetscCall(DMGetStratumIS(plex, "depth", depth, &allcellIS));
     /* TODO This looks like it only works for one label */
     for (l = 0; l < Nl; ++l) {
-      DMLabel label = labelSet[l];
-      IS      pointIS;
+      DMLabel  label = labelSet[l];
+      PetscInt value = valueSet[l];
+      IS       pointIS;
 
       PetscCall(ISDestroy(&defcellIS));
-      PetscCall(DMLabelGetStratumIS(label, 1, &pointIS));
+      PetscCall(DMLabelGetStratumIS(label, value, &pointIS));
       PetscCall(ISDifference(allcellIS, pointIS, &defcellIS));
       PetscCall(ISDestroy(&pointIS));
     }
@@ -6113,7 +6114,7 @@ PetscErrorCode DMCreateDS(DM dm)
     PetscCall(PetscDSDestroy(&ds));
     PetscCall(PetscDSDestroy(&dsIn));
   }
-  PetscCall(PetscFree(labelSet));
+  PetscCall(PetscFree2(labelSet, valueSet));
   /* Set fields in DSes */
   for (s = 0; s < dm->Nds; ++s) {
     PetscDS         ds     = dm->probs[s].ds;

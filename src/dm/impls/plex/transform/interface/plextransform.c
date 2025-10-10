@@ -1969,7 +1969,7 @@ PetscErrorCode DMPlexTransformCreateDiscLabels(DMPlexTransform tr, DM rdm)
     PetscCall(PetscObjectGetName((PetscObject)label, &lname));
     PetscCall(DMLabelCreate(PETSC_COMM_SELF, lname, &labelNew));
     PetscCall(RefineLabel_Internal(tr, label, labelNew));
-    PetscCall(DMSetField_Internal(rdm, f, labelNew, obj));
+    PetscCall(DMSetField_Internal(rdm, f, labelNew, 1, obj));
     PetscCall(DMLabelDestroy(&labelNew));
   }
   PetscCall(DMGetNumDS(dm, &Nds));
