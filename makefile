@@ -24,6 +24,14 @@ include ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscrules
 include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk
 include ${PETSC_DIR}/lib/petsc/conf/rules_util.mk
 
+V ?= 0
+ifeq ($(V),0)
+  QUIET = @ # Suppress entire command
+else
+  QUIET = # Show the full command line
+endif
+export QUIET # Make it available in sub-makefiles
+
 # This makefile contains a lot of PHONY targets with improperly specified prerequisites
 # where correct execution instead depends on the targets being processed in the correct
 # order.
@@ -125,6 +133,7 @@ check_install: check
 check_body:
 	-@echo "Running PETSc check examples to verify correct installation"
 	-@echo "Using PETSC_DIR=${PETSC_DIR} and PETSC_ARCH=${PETSC_ARCH}"
+	-@if [ "$V" != "0" ]; then echo "Building and testing under directories such as src/snes/tutorials/"; fi;
 	@if [ "${PETSC_WITH_BATCH}" != "" ]; then \
            echo "Running with batch filesystem, cannot run make check"; \
         elif [ "${MPIEXEC}" = "/bin/false" ]; then \
