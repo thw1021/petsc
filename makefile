@@ -24,6 +24,10 @@ include ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscrules
 include ${PETSC_DIR}/lib/petsc/conf/rules_doc.mk
 include ${PETSC_DIR}/lib/petsc/conf/rules_util.mk
 
+# To support 'make check V=1' with both FreeBSD make and gmake
+V ?= 0
+QUIET = $(shell [ "$(V)" = "0" ] && echo @)
+
 # This makefile contains a lot of PHONY targets with improperly specified prerequisites
 # where correct execution instead depends on the targets being processed in the correct
 # order.
@@ -116,7 +120,7 @@ gnumake:
 
 # ********  Rules for make check ****************************************************************************************************************************
 
-RUN_TEST = ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff
+RUN_TEST = ${OMAKE_SELF} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} DIFF=${PETSC_DIR}/lib/petsc/bin/petscdiff QUIET="$(QUIET)"
 
 check: check_body ${PETSC_POST_CHECKS}
 
@@ -125,6 +129,7 @@ check_install: check
 check_body:
 	-@echo "Running PETSc check examples to verify correct installation"
 	-@echo "Using PETSC_DIR=${PETSC_DIR} and PETSC_ARCH=${PETSC_ARCH}"
+	-@if [ "$V" != "0" ]; then echo "Building and testing under directories such as src/snes/tutorials/"; fi;
 	@if [ "${PETSC_WITH_BATCH}" != "" ]; then \
            echo "Running with batch filesystem, cannot run make check"; \
         elif [ "${MPIEXEC}" = "/bin/false" ]; then \

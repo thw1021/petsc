@@ -4,7 +4,7 @@ include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
 testex55:
-	-@export PYTHONPATH=$${PYTHONPATH:+$$PYTHONPATH:}${PETSCPYTHONPATH};\
+	-${QUIET}export PYTHONPATH=$${PYTHONPATH:+$$PYTHONPATH:}${PETSCPYTHONPATH};\
          echo "Using PYTHONPATH=$${PYTHONPATH} to locate mpi4py for test"; \
          ${MPIEXEC} -n 2 ${MPIEXEC_TAIL} ${PYTHON_EXE} ./ex55.py > ex55_1.tmp  2>&1;\
          if (test ! -s ex55_1.tmp) then \
