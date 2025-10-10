@@ -94,7 +94,7 @@ clean:: clean-legacy
           echo "See https://petsc.org/release/faq/";\
           echo ${PWD} $* ;\
           printf "*********************************************************************************"${PETSC_TEXT_NORMAL}"\n" ;\
-         cat trashz ; fi; ${RM} trashz
+         cat trashz ; elif [ "$V" = "1" ]; then cat trashz; fi; ${RM} trashz
 
 .F.PETSc .F90.PETSc:
 	-+@${OMAKE}  PETSC_ARCH=${PETSC_ARCH}  $* > trashz 2>&1
@@ -142,7 +142,7 @@ clean:: clean-legacy
           echo "See https://petsc.org/release/faq/";\
           echo ${PWD} $* ;\
           printf "*********************************************************"${PETSC_TEXT_NORMAL}"\n" ;\
-         cat trashz ; fi; ${RM} trashz;
+         cat trashz ; elif [ "$V" = "1" ]; then cat trashz; fi; ${RM} trashz
 
 .c.o:
 	${PETSC_COMPILE_SINGLE} $<
