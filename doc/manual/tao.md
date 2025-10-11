@@ -18,7 +18,7 @@ architectures. Methods are available for
 
 ## Getting Started: A Simple TAO Example
 
-To help the user start using TAO immediately, we introduce here a simple
+To help start using TAO immediately, we introduce here a simple
 uniprocessor example. Please read {any}`sec_tao_solvers`
 for a more in-depth discussion on using the TAO solvers. The code
 presented {any}`below <tao_example1>` minimizes the
@@ -30,8 +30,8 @@ f(x) = \sum_{i=0}^{m-1} \left( \alpha(x_{2i+1}-x_{2i}^2)^2 + (1-x_{2i})^2 \right
 $$
 
 where $n = 2m$ is the number of variables. Note that while we use
-the C language to introduce the TAO software, the package is fully
-usable from C++ and Fortran.
+the C language to introduce the TAO software, the package is
+usable from C++, Fortran, and Python.
 {any}`ch_fortran` discusses additional
 issues concerning Fortran usage.
 
@@ -86,10 +86,10 @@ TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*FormHessian)(Tao, Vec, 
 TaoSolve(Tao tao);
 TaoDestroy(Tao tao);
 ```
-Alternatively, TAO supports a composable interface via the `TaoTerm` object.
-With `TaoTerm`, the user can define one or more problem ‘terms’ —for example,
+TAO supports constructing an objective function by summing several distinct functions (called terms) via the `TaoTerm` object.
+With `TaoTerm`, the user can define one or more objective function ‘terms’ —for example,
 a data‑misfit term and a regularization term—each providing objective, gradient, and optional Hessian routines.
-TAO automatically composes the registered terms to form the overall objective and its derivatives at runtime.
+TAO automatically composes (sums) the terms to form the overall objective and its derivatives at runtime.
 This approach promotes code reuse, makes it easy to modify scaling parameters,
 and simplifies complex problems that are naturally expressed as sums of contributions.
 See {any}`sec_tao_term` for more information on the `TaoTerm` objects.
@@ -218,8 +218,8 @@ A `Tao` must be able to evaluate a function in order to optimized it;
 depending on the solver chosen, it may also need to evaluate the
 gradient vector and Hessian matrix.  TAO gives users two ways to specify
 this information: with callback functions for the evaluation operations
-(described in this section), or with a `TaoTerm` object that
-encapsulates the functions and its derivatives (see
+(described in this section) provided directly to the `Tao` object, or with `TaoTerm` objects that
+encapsulates the functions and derivatives (see
 {any}`sec_tao_term`).
 
 #### Application Context
@@ -343,15 +343,15 @@ pointer to a user-defined context.
 
 The TAO example problems demonstrate the use of these application
 contexts as well as specific instances of function, gradient, and
-Hessian evaluation routines. All these routines should return the
-integer $0$ after successful completion and a nonzero integer if
+Hessian evaluation routines. All these routines should return `PetscSuccess`
+after successful completion and a nonzero integer if
 the function is undefined at that point or an error occurred.
 
 (sec_tao_matrixfree)=
 
 #### Hessian Evaluation
 
-Some optimization routines also require a Hessian matrix from the user.
+Some optimization algorithms also require a Hessian matrix from the user.
 The routine that evaluates the Hessian should have the form
 
 ```
@@ -424,7 +424,7 @@ or `-tao_test_hessian`.
 
 ##### Matrix-Free Methods
 
-TAO fully supports matrix-free methods. The matrices specified in the
+TAO also supports matrix-free methods. The matrices specified in the
 Hessian evaluation routine need not be conventional matrices; instead,
 they can point to the data required to implement a particular
 matrix-free method. The matrix-free variant is allowed *only* when the
@@ -537,8 +537,8 @@ documentation for each TAO algorithm for further details.
 ### TaoTerm: composable objective function terms
 
 The objective function optimized by `Tao` may be a sum of one or more terms,
-where each term can provide various evaluation routines, such as the objective value,
-gradient, or Hessian. Here, we define `term` as the basic additive unit
+where each term provides various evaluation routines, such as the objective value,
+gradient, or Hessian for itself. Here, we define `term` as the basic additive unit
 used to form an objective function, equipped with appropriate evaluation routines
 (objective, gradient, and/or Hessian).
 
@@ -547,17 +547,11 @@ Ridge Regression), can be formulated as $f(x) + \beta ||x||_2^2$.
 This can be viewed as the summation of two terms, $f(x) + g(x)$, where
 $g(x) = \beta ||x||_2^2$.
 
-In a callback-based paradigm, in order to achieve such regulariztion,
-the user needs to change user defined callback funtion code.
-Such coupling of modelling choices (e.g., adding regularization, or penalty term)
-with implementation details (objective, gradient, Hessian)
-complicates maintenance, testing, and inhibits code reuse.
 
-`TaoTerm` decouples these concerns by introducing a composable interface
-for objective terms. Each term encapsulates all the routines needed to
-evaluate its own contribution, and `Tao` aggregates the value, gradient,
-and/or Hessian across all registered `TaoTerm` objects. This lets users modify
-terms without changing the original callbacks.
+Each `TaoTerm` encapsulates the routines needed to
+evaluate its own contribution, and `Tao` automatically manages aggregating the value, gradient,
+and/or Hessian across all `TaoTerm` objects in the `Tao` object. This lets users modify
+terms without changing their base $f(x)$ function code; for example, to add regularization.
 
 Each `TaoTerm` represents a parameteric real-valued function $f(x; p)$ for
 solution variable $x$ and parameters $p$.  The interface includes methods for
@@ -568,7 +562,7 @@ $\nabla_x f(x; p)$ (`TaoTermComputeGradient()` and
 
 #### Built-in TaoTerm implementations
 
-TAO comes with built-in implementations for `TaoTerm`:
+TAO comes with several built-in implementations for `TaoTerm`:
 
 * `TAOTERMHALFL2SQUARED`: $f(x;p) = \tfrac{1}{2} \|x - p\|_2^2$ (See `TaoTermCreateHalfL2Squared()`.)
 * `TAOTERML1`: $f(x;p) = \|x - p\|_1$ (See `TaoTermCreateL1()`.)
@@ -636,13 +630,15 @@ $\frac{0.4}{2} \|x\|_2^2 + 0.7 \|x\|_1$ can be added with the following options:
 -objective_tao_term_sum_lasso_scale 0.7
 ```
 
-In the above, `ridge_`, and `lasso_` could be any unique strings for each term to be added.
+In the above, `ridge_`, and `lasso_` are PETSc option prefixes and could be any unique strings for each term to be added.
 
-When an objective function is specificed using callback methods, such as `TaoSetObjective()`,
-they are stored in `TaoTerm` with type `TAOTERMCALLBACK` inside `Tao`, with `callback_` prefix.
-When additional `TaoTerm` objects are set to `Tao`, a new `TaoTerm` with type `TAOTERMSUM` gets created,
-with `objective_` prefix, and all the subsequently added `TaoTerm` objects gets stored there.
-With this structure in mind, users can granually control each terms, with following command line options:
+When an objective function is specified using `TaoSetObjective()`,
+it is stored in special `TaoTerm` of the type `TAOTERMCALLBACK` inside `Tao`, with `callback_` prefix.
+
+When more than one `TaoTerm` object is set to `Tao` (or both `TaoSetObjective()` and `TaoAddTerm()` are used),
+a `TaoTerm` with type `TAOTERMSUM` gets created internally,
+with `objective_` prefix, and all the subsequently added `TaoTerm` objects gets stored in it.
+With this structure in mind, users can gradually control each terms, with following command line options:
 
 ```
 // If you want to control how callbacks behave
@@ -663,10 +659,11 @@ With this structure in mind, users can granually control each terms, with follow
 
 #### User-defined TaoTerm implementations
 
-A user-defined `TaoTerm` can be defined from callbacks using the
+A user-defined `TaoTerm` can be defined from function callbacks using the
 `TAOTERMSHELL` type.  This interface is very similar to `MATSHELL`:
 there is a single user context that is set with `TaoTermShellSetContext()` and obtained `TaoTermShellGetContext()`,
-and the evaluation routines are set by passing callbacks with the same signature as routines they implement (see for example `TaoTermShellSetObjectiveAndGradient()`).
+and the evaluation routines are set by passing function callbacks with the same signature as routines they implement
+(see for example `TaoTermShellSetObjectiveAndGradient()`).
 As an example,
 <a href="PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/tao/unconstrained/tutorials/rosenbrock1_taoterm.c.html">\$TAO_DIR/src/unconstrained/tutorials/rosenbrock1_taoterm.c</a>
 in {any}`the example below <tao_example3>` demonstrates the same Rosenbrock example as {any}`the first example <tao_example1>`.
@@ -683,9 +680,9 @@ in {any}`the example below <tao_example3>` demonstrates the same Rosenbrock exam
 
 #### Masking TaoTerm evaluations
 
-In some cases, for a given `TAOTERMSUM`, the user may only want certain evaluation of a specific `TaoTerm`.
+In some cases, for a given `TAOTERMSUM`, the user may only want evaluation of a specific `TaoTerm` (instead of computing all of them and summing the results).
 For an example, in a case where `TAOTERMSUM` is composed of `TAOTERMHALFL2SQUARED` and `TAOTERML1`,
- but the user only want objective function evaluation of `TAOTERML1`, and not its gradient and Hessian evaulations.
+ but the user only want objective function evaluation of `TAOTERML1`, and not its gradient and Hessian evaluations.
 In this case, user can `mask` desired evaluation operations via `TaoTermSumSetSubtermMask()`.
 Masking can also be done from the command line. For instance, for the elastic net regularization example above,
 the user can mask gradient and Hessian evaluation of `TAOTERML1` with the following options:
@@ -696,7 +693,7 @@ the user can mask gradient and Hessian evaluation of `TAOTERML1` with the follow
 
 ### Solving
 
-Once the application and solver have been set up, the solver can be
+Once the application and solver have been set up, the solve takes place with a call to the
 
 ```
 TaoSolve(Tao);
