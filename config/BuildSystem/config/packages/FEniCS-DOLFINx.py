@@ -87,10 +87,6 @@ class Configure(config.package.CMakePackage):
       shutil.rmtree(folder)
     os.mkdir(folder)
 
-    if not hasattr(self.framework, 'packages'):
-      self.framework.packages = []
-    self.framework.packages.append(self)
-
     # these checks are usually done in configureLibrary
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
       self.directory = os.path.abspath(os.path.expanduser(self.argDB['prefix']))
@@ -101,7 +97,6 @@ class Configure(config.package.CMakePackage):
       self.include_a = '-I'+os.path.join(self.petscdir.dir,self.arch,'include')
       self.lib_a = [os.path.join(self.petscdir.dir,self.arch,'lib',self.liblist[0][0])]
     self.found_a     = 1
-    self.addDefine('HAVE_DOLFINX', 1)
     self.addMakeMacro('DOLFINX_LIB',' '.join(map(self.libraries.getLibArgument, self.lib_a)))
     self.addMakeMacro('DOLFINX_INCLUDE',self.include_a)
 
@@ -113,12 +108,9 @@ class Configure(config.package.CMakePackage):
        prefix = os.path.join(self.petscdir.dir,self.arch)
        carg = ''
 
-    # provide access to mpi4py, petsc4py and FEnicS/ffcx.py to Python
+    # provide access to mpi4py, petsc4py and FEniCS/ffcx.py to Python
     ppath = 'PYTHONPATH=' + os.path.join(self.installDir,'lib')
     dpath = 'DOLFINX_DIR=' + self.installDir + ' HDF5_ROOT="'+self.installDir+'" HDF5_ENABLE_PARALLEL=on CMAKE_PREFIX_PATH="' + self.pugixml.installDir + ':' + self.spdlog.installDir + '"'
-
-    self.addDefine('HAVE_DOLFINX',1)
-    self.addMakeMacro('DOLFINX','yes')
 
     ccarg = 'CC=' + self.compilers.CC
     if 'Cxx' in self.buildLanguages:
