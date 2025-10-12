@@ -1057,6 +1057,9 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
       self.framework.postinstalls.append(self.name.lower() + 'build')
     else:
       self.framework.postbuilds.append(self.name.lower() + 'build')
+    if not hasattr(self.framework, 'packages'):
+      self.framework.packages = []
+    self.framework.packages.append(self)
 
   def addMakeCheck(self, dir, rule):
     '''Adds a small make check for the project'''
