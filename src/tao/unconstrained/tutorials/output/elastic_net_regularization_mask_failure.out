@@ -23,7 +23,7 @@ Tao Object: 1 MPI process
   Objective function:
     Scale (tao_objective_scale): 1.
     Function:
-      TaoTerm Object: (objective_) 1 MPI process
+      TaoTerm Object: 1 MPI process
         type: sum
         solution vector space: N = 20 [VecType standard (tao_term_solution_vec_type)]
         parameter vector space: (optional) K = 130 [VecType nest (tao_term_parameters_vec_type)]

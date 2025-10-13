@@ -15,7 +15,7 @@ Tao Object: 1 MPI process
     nls ksp iter: 0
     nls ksp othr: 0
   Objective function:
-    TaoTerm Object: (objective_) 1 MPI process
+    TaoTerm Object: 1 MPI process
       type: sum
       solution vector space: N = 20
       parameter vector space: (optional) K = 130
