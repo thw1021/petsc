@@ -1,20 +1,37 @@
 #include <petsc/private/taoimpl.h> /*I "petsctao.h" I*/
 
-static PetscErrorCode TaoTermComputeObjective_Halfl2squared(TaoTerm term, Vec x, Vec params, PetscReal *value)
+typedef struct _n_TaoTerm_HalfL2Squared TaoTerm_HalfL2Squared;
+
+struct _n_TaoTerm_HalfL2Squared {
+  Vec pdiff_work;
+};
+
+static PetscErrorCode TaoTermDestroy_Halfl2squared(TaoTerm term)
 {
-  PetscScalar v;
-  Vec         diff;
+  TaoTerm_HalfL2Squared *l2 = (TaoTerm_HalfL2Squared *)term->data;
 
   PetscFunctionBegin;
-  diff = x;
+  term->data = NULL;
+  PetscCall(VecDestroy(&l2->pdiff_work));
+  PetscCall(PetscFree(l2));
+  PetscCall(TaoTermDestroy_ElementwiseDivergence_Internal(term));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermComputeObjective_Halfl2squared(TaoTerm term, Vec x, Vec params, PetscReal *value)
+{
+  PetscScalar            v;
+  TaoTerm_HalfL2Squared *l2 = (TaoTerm_HalfL2Squared *)term->data;
+
+  PetscFunctionBegin;
   if (params) {
-    PetscCall(VecDuplicate(x, &diff));
-    PetscCall(VecCopy(x, diff));
-    PetscCall(VecAXPY(diff, -1.0, params));
-  }
-  PetscCall(VecDot(diff, diff, &v));
+    if (!l2->pdiff_work) PetscCall(VecDuplicate(x, &l2->pdiff_work));
+
+    PetscCall(VecCopy(x, l2->pdiff_work));
+    PetscCall(VecAXPY(l2->pdiff_work, -1.0, params));
+    PetscCall(VecDot(l2->pdiff_work, l2->pdiff_work, &v));
+  } else PetscCall(VecDot(x, x, &v));
   *value = 0.5 * PetscRealPart(v);
-  if (params) PetscCall(VecDestroy(&diff));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -23,11 +40,8 @@ static PetscErrorCode TaoTermComputeObjectiveAndGradient_Halfl2squared(TaoTerm t
   PetscScalar v;
 
   PetscFunctionBegin;
-  if (params) {
-    PetscCall(VecWAXPY(g, -1.0, params, x));
-  } else {
-    PetscCall(VecCopy(x, g));
-  }
+  if (params) PetscCall(VecWAXPY(g, -1.0, params, x));
+  else PetscCall(VecCopy(x, g));
   PetscCall(VecDot(g, g, &v));
   *value = 0.5 * PetscRealPart(v);
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -36,11 +50,8 @@ static PetscErrorCode TaoTermComputeObjectiveAndGradient_Halfl2squared(TaoTerm t
 static PetscErrorCode TaoTermComputeGradient_Halfl2squared(TaoTerm term, Vec x, Vec params, Vec g)
 {
   PetscFunctionBegin;
-  if (params) {
-    PetscCall(VecWAXPY(g, -1.0, params, x));
-  } else {
-    PetscCall(VecCopy(x, g));
-  }
+  if (params) PetscCall(VecWAXPY(g, -1.0, params, x));
+  else PetscCall(VecCopy(x, g));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -50,14 +61,10 @@ static PetscErrorCode TaoTermComputeHessian_Halfl2squared(TaoTerm term, Vec x, V
   PetscCall(TaoTermUpdateHessianShells(term, x, params, &H, &Hpre));
   if (H) {
     PetscCall(MatZeroEntries(H));
-    PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
     PetscCall(MatShift(H, 1.0));
   }
   if (Hpre && Hpre != H) {
     PetscCall(MatZeroEntries(Hpre));
-    PetscCall(MatAssemblyBegin(Hpre, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
     PetscCall(MatShift(Hpre, 1.0));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -93,9 +100,14 @@ static PetscErrorCode TaoTermComputeHessianMult_Halfl2squared(TaoTerm term, Vec 
 M*/
 PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
 {
+  TaoTerm_HalfL2Squared *l2;
+
   PetscFunctionBegin;
   PetscCall(TaoTermCreate_ElementwiseDivergence_Internal(term));
-  term->ops->destroy               = TaoTermDestroy_ElementwiseDivergence_Internal;
+  PetscCall(PetscNew(&l2));
+  term->data = (void *)l2;
+
+  term->ops->destroy               = TaoTermDestroy_Halfl2squared;
   term->ops->objective             = TaoTermComputeObjective_Halfl2squared;
   term->ops->gradient              = TaoTermComputeGradient_Halfl2squared;
   term->ops->objectiveandgradient  = TaoTermComputeObjectiveAndGradient_Halfl2squared;
