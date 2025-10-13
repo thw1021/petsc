@@ -3,8 +3,12 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
+# To support 'make check V=1' with both FreeBSD make and gmake
+V ?= 0
+QUIET = $(shell [ "$(V)" = "0" ] && echo @)
+
 testex55:
-	-@export PYTHONPATH=$${PYTHONPATH:+$$PYTHONPATH:}${PETSCPYTHONPATH};\
+	-${QUIET}export PYTHONPATH=$${PYTHONPATH:+$$PYTHONPATH:}${PETSCPYTHONPATH};\
          echo "Using PYTHONPATH=$${PYTHONPATH} to locate mpi4py for test"; \
          ${MPIEXEC} -n 2 ${MPIEXEC_TAIL} ${PYTHON_EXE} ./ex55.py > ex55_1.tmp  2>&1;\
          if (test ! -s ex55_1.tmp) then \

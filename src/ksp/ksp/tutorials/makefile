@@ -6,8 +6,12 @@ NP               = 1
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
+# To support 'make check V=1' with both FreeBSD make and gmake
+V ?= 0
+QUIET = $(shell [ "$(V)" = "0" ] && echo @)
+
 testex100: ex100.PETSc
-	-@OMPI_MCA_mpi_warn_on_fork=0 ${MPIEXEC} -n 1 ${MPIEXEC_TAIL} ./ex100 -test  > ex100_1.tmp 2>&1; \
+	-${QUIET}OMPI_MCA_mpi_warn_on_fork=0 ${MPIEXEC} -n 1 ${MPIEXEC_TAIL} ./ex100 -test  > ex100_1.tmp 2>&1; \
 	 if (${DIFF} output/ex100_1.testout ex100_1.tmp > /dev/null 2>&1) then \
            echo "C/C++ Python example src/ksp/ksp/tutorials/ex100 run successfully with 1 MPI process"; \
 	 else \

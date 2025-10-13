@@ -3,8 +3,12 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
+# To support 'make check V=1' with both FreeBSD make and gmake
+V ?= 0
+QUIET = $(shell [ "$(V)" = "0" ] && echo @)
+
 runex47: ex47.PETSc
-	-@H5OUT=`mktemp -t petsc.h5.XXXXXX`; ${MPIEXEC} -n 1 ${MPIEXEC_TAIL} ./ex47 -filename $${H5OUT} > ex47_1.tmp 2>&1; \
+	-${QUIET}H5OUT=`mktemp -t petsc.h5.XXXXXX`; ${MPIEXEC} -n 1 ${MPIEXEC_TAIL} ./ex47 -filename $${H5OUT} > ex47_1.tmp 2>&1; \
 	   if (test ! -s ex47_1.tmp) then \
              echo "C/C++ example src/vec/vec/tests/ex47 run successfully with HDF5"; \
            else \
