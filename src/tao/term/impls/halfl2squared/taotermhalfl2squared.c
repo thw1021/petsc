@@ -77,7 +77,7 @@ static PetscErrorCode TaoTermComputeHessianMult_Halfl2squared(TaoTerm term, Vec 
 
   Notes:
   By default this term is `TAOTERM_PARAMETERS_OPTIONAL`.  If the parameters
-  argument in `NULL` in the evaluation routines (`TaoTermComputeObjective()`,
+  argument is `NULL` in the evaluation routines (`TaoTermComputeObjective()`,
   `TaoTermComputeGradient()`, etc.), then it is assumed $p = 0$ and the term computes
   $\tfrac{1}{2}\|x\|_2^2$.
 
@@ -113,7 +113,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
   Collective
 
   Input Parameters:
-+ comm - the MPI communicator where the term will be computed
++ comm - the MPI communicator where the `TaoTerm` will be computed
 . n    - the local size of the $x$ and $p$ vectors (or `PETSC_DECIDE`)
 - N    - the global size of the $x$ and $p$ vectors (or `PETSC_DECIDE`)
 

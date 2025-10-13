@@ -95,14 +95,14 @@ PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)
 }
 
 /*@
-  TaoSetHessianMatrices - Set the matrices to store the Hessian matrix and its preconditioner in Tao solver algorithms
+  TaoSetHessianMatrices - Set the matrices to store the Hessian matrix and a possible approximation to the Hessian to use to build the preconditioner
 
   Collective
 
   Input Parameters:
 + tao  - the `Tao` context
 . H    - the Hessian matrix
-- Hpre - the Hessian matrix preconditioner
+- Hpre - an approximation to the Hessian matrix to be used to build a preconditioner (often `H`)
 
   Level: intermediate
 
@@ -133,7 +133,7 @@ PetscErrorCode TaoSetHessianMatrices(Tao tao, Mat H, Mat Hpre)
 }
 
 /*@
-  TaoGetHessianMatrices - Get the matrices that store the Hessian matrix and its preconditioner in Tao solver algorithms
+  TaoGetHessianMatrices - Get the matrices that store the Hessian matrix and its (optional) approximation that is used to compute the preconditioner
 
   Collective
 
@@ -142,7 +142,7 @@ PetscErrorCode TaoSetHessianMatrices(Tao tao, Mat H, Mat Hpre)
 
   Output Parameters:
 + H    - the Hessian matrix
-- Hpre - the Hessian matrix preconditioner
+- Hpre - approximation to the Hessian matrix used to construct the preconditioner (often `H`)
 
   Level: intermediate
 
@@ -333,7 +333,7 @@ PetscErrorCode TaoComputeHessian(Tao tao, Vec X, Mat H, Mat Hpre)
 }
 
 /*@C
-  TaoComputeHessianSingle - Handle the computation of optional Hessian and Hessian preconditioning matrices from a routine for computing just one.
+  TaoComputeHessianSingle - Handle the computation of Hessian and approximate Hessian used to compute the preconditioner from a routine for computing just one.
 
   Logically collective
 
@@ -341,7 +341,7 @@ PetscErrorCode TaoComputeHessian(Tao tao, Vec X, Mat H, Mat Hpre)
 + tao            - a `Tao` context
 . x              - a solution vector
 . H              - (optional) a matrix for the Hessian
-. Hpre           - (optional) a matrix for the Hessian preconditioning matrix
+. Hpre           - (optional) a matrix that approximates the Hessian used to compute the preconditioner
 . func           - a callback that computes a single copy of the Hessian matrix
 . copy_structure - if `H` and `Hpre` are distinct matrices, the `str` argument to `MatCopy()` for copying `H` to `Hpre`
 - ctx            - the user context supplied in `TaoSetHessian()`
