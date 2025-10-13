@@ -1,5 +1,5 @@
 -include ../../../../../petscdir.mk
-#requiresdefine 'PETSC_HAVE_CXX'
+#requiresdefine 'PETSC_HAVE_CUPM' 'PETSC_HAVE_SYCL'
 
 MANSEC    = Sys
 
