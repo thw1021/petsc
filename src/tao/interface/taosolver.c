@@ -133,7 +133,7 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
 
   PetscCall(TaoTermCreateCallbacks(tao, &tao->orig_callbacks));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)tao->orig_callbacks, "callbacks_"));
-  PetscCall(TaoTermMappingSetData(&tao->objective_term, "objective_", 1.0, tao->orig_callbacks, NULL));
+  PetscCall(TaoTermMappingSetData(&tao->objective_term, NULL, 1.0, tao->orig_callbacks, NULL));
   PetscCall(TaoResetStatistics(tao));
   *newtao = tao;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3038,7 +3038,7 @@ PetscErrorCode TaoSetTerm(Tao tao, PetscReal scale, TaoTerm term, Vec params, Ma
     PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSUM, &is_sum));
     if (is_sum) PetscCall(TaoTermSumGetNumSubterms(term, &tao->num_terms));
   }
-  PetscCall(TaoTermMappingSetData(&tao->objective_term, "objective_", scale, term, map));
+  PetscCall(TaoTermMappingSetData(&tao->objective_term, NULL, scale, term, map));
   if (params) {
     PetscValidHeaderSpecific(params, VEC_CLASSID, 4);
     PetscCheckSameComm(tao, 1, params, 4);
@@ -3095,7 +3095,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
 
       PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSUM, &is_sum));
       if (is_sum) PetscCall(TaoTermSumGetNumSubterms(term, &tao->num_terms));
-      PetscCall(TaoTermMappingSetData(&tao->objective_term, "objective_", scale, term, map));
+      PetscCall(TaoTermMappingSetData(&tao->objective_term, NULL, scale, term, map));
       PetscCall(PetscObjectReference((PetscObject)params));
       PetscCall(VecDestroy(&tao->objective_parameters));
       tao->objective_parameters = params;
@@ -3125,7 +3125,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(TaoTermSetType(old_sum, TAOTERMSUM));
     PetscCall(TaoGetOptionsPrefix(tao, &tao_prefix));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)old_sum, tao_prefix));
-    PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)old_sum, "objective_"));
+    PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)old_sum, NULL));
     PetscCall(TaoTermSumSetNumSubterms(old_sum, 1));
     PetscCall(PetscObjectGetOptionsPrefix((PetscObject)tao->objective_term.term, &term_prefix));
     PetscCall(TaoTermSumSetSubterm(old_sum, 0, term_prefix, tao->objective_term.scale, tao->objective_term.term, tao->objective_term.map));
@@ -3133,7 +3133,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(MatDestroy(&tao->hessian));
     PetscCall(MatDestroy(&tao->hessian_pre));
     PetscCall(TaoTermMappingReset(&tao->objective_term));
-    PetscCall(TaoTermMappingSetData(&tao->objective_term, "objective_", 1.0, old_sum, NULL));
+    PetscCall(TaoTermMappingSetData(&tao->objective_term, NULL, 1.0, old_sum, NULL));
     if (tao->objective_parameters) {
       // convert the parameters to a VECNEST
       Vec subvecs[1];
