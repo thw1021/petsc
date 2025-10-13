@@ -41,7 +41,29 @@ PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugpro
 }
 
 /*
-  DMPlexGetRawFaces_Internal - Gets groups of vertices that correspond to faces for the given cone
+  DMPlexGetRawFaces_Internal - Gets groups of vertices that correspond to faces for the given uninterpolated input cell
+
+  Not Collective
+
+  Input Parameters:
++ dm   - The `DMPLEX` object
+. ct   - The `DMPolytopeType` for the input cell
+- cone - An array of the vertices comprising the input cell
+
+  Output Parameters:
++ numFaces  - The number of faces on the input cell
+. faceType  - An array of the `DMPolytopeType` of each face
+. faceSizes - An array of the number of vertices for each face
+- faces     - An array of the list of vertices for each face, using the numbering from `cone`
+
+  Level: developer
+
+  Notes:
+  The size of `cone` is given by `DMPolytopeTypeGetNumVertices()`
+
+  The input cell is described by a set of vertices, because it has not yet been interpolated.
+
+.seealso: `DMPlexInterpolate()`, `DMPLEX`, `DMPlexGetCone()`, `DMPolytopeTypeGetNumVertices()`
 */
 PetscErrorCode DMPlexGetRawFaces_Internal(DM dm, DMPolytopeType ct, const PetscInt cone[], PetscInt *numFaces, const DMPolytopeType *faceTypes[], const PetscInt *faceSizes[], const PetscInt *faces[])
 {
