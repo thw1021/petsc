@@ -97,7 +97,6 @@
 - Add ``TaoBRGNSetRegularizationType()``, ``TaoBRGNGetRegularizationType()``
 - Add `TaoGetInequalityConstraintsRoutine()`, `TaoGetEqualityConstraintsRoutine()`, `TaoGetJacobianInequalityRoutine()` and `TaoGetJacobianEqualityRoutine()`
 - Add new `TaoTerm` object to manipulate objective function terms with many methods
-- Add `TaoComputeHessianSingle()` convenience function for when the user's code does not compute a preconditioning matrix
 - Add `TaoGetTerm()`, `TaoSetTerm()`, and `TaoAddTerm()` for manipulating the objective, gradient, and Hessian evaluation of a `Tao` using `TaoTerm`
 - Add `TaoBRGNGetRegularizationType()`, `TaoBRGNSetReguarizationType()`, `TaoBRGNGetRegularizerTerm()` and `TaoBRGNSetRegularizerTerm()` for finer control of `TAOBRGN`
 - Remove `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` and `TaoBRGNSetRegularizerHessianRoutine()`, use `TaoBRGNSetRegulizerTerm()` instead
