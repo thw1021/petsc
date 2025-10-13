@@ -17,6 +17,8 @@
 ```{rubric} Sys:
 ```
 
+- Deactivate `PetscDevice` code when PETSc has been configured with no device
+
 ```{rubric} Event Logging:
 ```
 

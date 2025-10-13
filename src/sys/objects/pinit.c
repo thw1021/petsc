@@ -1057,7 +1057,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
       its own SIGSEV handler via the push/pop interface.
    4. Logging initialized
   */
-  PetscCall(PetscDeviceInitializeFromOptions_Internal(PETSC_COMM_WORLD));
+  if (PetscDefined(DEVICELANGUAGE_CXX)) PetscCall(PetscDeviceInitializeFromOptions_Internal(PETSC_COMM_WORLD));
 
 #if PetscDefined(HAVE_VIENNACL)
   flg = PETSC_FALSE;
