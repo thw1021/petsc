@@ -34,7 +34,7 @@ Tao Object: 1 MPI process
         type: shell
         rows=20, cols=20
   Objective function:
-    TaoTerm Object: (objective_) 1 MPI process
+    TaoTerm Object: 1 MPI process
       type: sum
       solution vector space: N = 20
       parameter vector space: (optional) K = 130

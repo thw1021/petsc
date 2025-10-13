@@ -133,7 +133,7 @@ Tao Object: 1 MPI process
       total number of Hessian evaluations=1
       Solution converged:        ||g(X)|| <= gatol
   Objective function:
-    TaoTerm Object: (objective_) 1 MPI process
+    TaoTerm Object: 1 MPI process
       type: sum
       solution vector space: N = 24
       parameter vector space: K = 11
@@ -295,7 +295,7 @@ Tao Object: 1 MPI process
       total number of Hessian evaluations=1
       Solution converged:        ||g(X)|| <= gatol
   Objective function:
-    TaoTerm Object: (objective_) 1 MPI process
+    TaoTerm Object: 1 MPI process
       type: sum
       solution vector space: N = 24
       parameter vector space: K = 11
@@ -457,7 +457,7 @@ Tao Object: 1 MPI process
       total number of Hessian evaluations=1
       Solution converged:        ||g(X)|| <= gatol
   Objective function:
-    TaoTerm Object: (objective_) 1 MPI process
+    TaoTerm Object: 1 MPI process
       type: sum
       solution vector space: N = 24
       parameter vector space: K = 11
@@ -619,7 +619,7 @@ Tao Object: 1 MPI process
       total number of Hessian evaluations=1
       Solution converged:        ||g(X)|| <= gatol
   Objective function:
-    TaoTerm Object: (objective_) 1 MPI process
+    TaoTerm Object: 1 MPI process
       type: sum
       solution vector space: N = 24
       parameter vector space: K = 11

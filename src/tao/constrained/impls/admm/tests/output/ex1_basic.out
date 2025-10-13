@@ -132,7 +132,7 @@ TestADMMUnconstrained, test 0:
         total number of Hessian evaluations=1
         Solution converged:          ||g(X)|| <= gatol
     Objective function:
-      TaoTerm Object: (objective_) 1 MPI process
+      TaoTerm Object: 1 MPI process
         type: sum
         solution vector space: N = 13
         parameter vector space: K = 4
@@ -298,7 +298,7 @@ TestADMMUnconstrained, test 1:
         total number of Hessian evaluations=1
         Solution converged:          ||g(X)|| <= gatol
     Objective function:
-      TaoTerm Object: (objective_) 1 MPI process
+      TaoTerm Object: 1 MPI process
         type: sum
         solution vector space: N = 13
         parameter vector space: K = 4
@@ -464,7 +464,7 @@ TestADMMUnconstrained, test 2:
         total number of Hessian evaluations=1
         Solution converged:          ||g(X)|| <= gatol
     Objective function:
-      TaoTerm Object: (objective_) 1 MPI process
+      TaoTerm Object: 1 MPI process
         type: sum
         solution vector space: N = 13
         parameter vector space: K = 4
@@ -628,7 +628,7 @@ TestADMMUnconstrained, test 3:
         total number of function/gradient evaluations=1,            (max: unlimited)
         Solution converged:          ||g(X)|| <= gatol
     Objective function:
-      TaoTerm Object: (objective_) 1 MPI process
+      TaoTerm Object: 1 MPI process
         type: sum
         solution vector space: N = 13
         parameter vector space: K = 4
