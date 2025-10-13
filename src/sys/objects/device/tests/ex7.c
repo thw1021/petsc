@@ -108,44 +108,46 @@ static PetscErrorCode TestAsyncCoherence(PetscDeviceContext dctx, PetscRandom ra
   PetscCall(PetscDeviceContextGetDeviceType(dctx, &dtype));
   // ensure the streams are nonblocking
   PetscCall(PetscDeviceContextForkWithStreamType(dctx, PETSC_STREAM_NONBLOCKING, nsub, &sub));
-  // do a warmup to ensure each context acquires any necessary data structures
-  for (PetscInt i = 0; i < nsub; ++i) {
-    PetscCall(PetscDeviceMalloc(sub[i], PETSC_MEMTYPE_HOST, n, &ptr));
-    PetscCall(PetscDeviceFree(sub[i], ptr));
-    if (dtype != PETSC_DEVICE_HOST) {
-      PetscCall(PetscDeviceMalloc(sub[i], PETSC_MEMTYPE_DEVICE, n, &ptr));
+  if (PetscDefined(HAVE_DEVICE) || PetscDefined(HAVE_SYCL)) {
+    // do a warmup to ensure each context acquires any necessary data structures
+    for (PetscInt i = 0; i < nsub; ++i) {
+      PetscCall(PetscDeviceMalloc(sub[i], PETSC_MEMTYPE_HOST, n, &ptr));
       PetscCall(PetscDeviceFree(sub[i], ptr));
+      if (dtype != PETSC_DEVICE_HOST) {
+        PetscCall(PetscDeviceMalloc(sub[i], PETSC_MEMTYPE_DEVICE, n, &ptr));
+        PetscCall(PetscDeviceFree(sub[i], ptr));
+      }
     }
-  }
 
-  // allocate on one
-  PetscCall(PetscDeviceMalloc(sub[0], PETSC_MEMTYPE_HOST, n, &ptr));
-  // free on the other
-  PetscCall(PetscDeviceFree(sub[1], ptr));
+    // allocate on one
+    PetscCall(PetscDeviceMalloc(sub[0], PETSC_MEMTYPE_HOST, n, &ptr));
+    // free on the other
+    PetscCall(PetscDeviceFree(sub[1], ptr));
 
-  // allocate on one
-  PetscCall(PetscDeviceMalloc(sub[0], PETSC_MEMTYPE_HOST, n, &ptr));
-  // zero on the other
-  PetscCall(PetscDeviceArrayZero(sub[1], ptr, n));
-  PetscCall(PetscDeviceContextSynchronize(sub[1]));
-  for (PetscInt i = 0; i < n; ++i) {
-    for (PetscInt i = 0; i < n; ++i) PetscCheck(ptr[i] == (PetscScalar)0.0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDeviceArrayZero() was not properly serialized, ptr[%" PetscInt_FMT "] %g != 0", i, (double)PetscAbsScalar(ptr[i]));
-  }
-  PetscCall(PetscDeviceFree(sub[1], ptr));
-
-  // test the transfers are serialized
-  if (dtype != PETSC_DEVICE_HOST) {
-    PetscCall(PetscDeviceCalloc(dctx, PETSC_MEMTYPE_DEVICE, n, &ptr));
-    PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, n, &tmp_ptr));
-    PetscCall(PetscDeviceArrayCopy(sub[0], tmp_ptr, ptr, n));
-    PetscCall(PetscDeviceContextSynchronize(sub[0]));
+    // allocate on one
+    PetscCall(PetscDeviceMalloc(sub[0], PETSC_MEMTYPE_HOST, n, &ptr));
+    // zero on the other
+    PetscCall(PetscDeviceArrayZero(sub[1], ptr, n));
+    PetscCall(PetscDeviceContextSynchronize(sub[1]));
     for (PetscInt i = 0; i < n; ++i) {
-      for (PetscInt i = 0; i < n; ++i) PetscCheck(tmp_ptr[i] == (PetscScalar)0.0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDeviceArrayCopt() was not properly serialized, ptr[%" PetscInt_FMT "] %g != 0", i, (double)PetscAbsScalar(tmp_ptr[i]));
+      for (PetscInt i = 0; i < n; ++i) PetscCheck(ptr[i] == (PetscScalar)0.0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDeviceArrayZero() was not properly serialized, ptr[%" PetscInt_FMT "] %g != 0", i, (double)PetscAbsScalar(ptr[i]));
     }
     PetscCall(PetscDeviceFree(sub[1], ptr));
-  }
 
-  PetscCall(PetscDeviceContextJoin(dctx, nsub, PETSC_DEVICE_CONTEXT_JOIN_DESTROY, &sub));
+    // test the transfers are serialized
+    if (dtype != PETSC_DEVICE_HOST) {
+      PetscCall(PetscDeviceCalloc(dctx, PETSC_MEMTYPE_DEVICE, n, &ptr));
+      PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, n, &tmp_ptr));
+      PetscCall(PetscDeviceArrayCopy(sub[0], tmp_ptr, ptr, n));
+      PetscCall(PetscDeviceContextSynchronize(sub[0]));
+      for (PetscInt i = 0; i < n; ++i) {
+        for (PetscInt i = 0; i < n; ++i) PetscCheck(tmp_ptr[i] == (PetscScalar)0.0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDeviceArrayCopt() was not properly serialized, ptr[%" PetscInt_FMT "] %g != 0", i, (double)PetscAbsScalar(tmp_ptr[i]));
+      }
+      PetscCall(PetscDeviceFree(sub[1], ptr));
+    }
+
+    PetscCall(PetscDeviceContextJoin(dctx, nsub, PETSC_DEVICE_CONTEXT_JOIN_DESTROY, &sub));
+  } else PetscCheck(dtype == PETSC_DEVICE_HOST && !sub, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Pointer should be NULL");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -205,9 +207,6 @@ int main(int argc, char *argv[])
     args: -info :device
     suffix: with_info
     test:
-      requires: !device
-      suffix: host_no_device
-    test:
       requires: device
       args: -default_device_type host
       filter: sed -e 's/host/IMPL/g' -e 's/cuda/IMPL/g' -e 's/hip/IMPL/g' -e 's/sycl/IMPL/g'
@@ -231,9 +230,6 @@ int main(int argc, char *argv[])
     filter: grep -v "\[DEBUG OUTPUT\]"
     suffix: no_info
     test:
-      requires: !device
-      suffix: host_no_device
-    test:
       requires: device
       args: -default_device_type host
       suffix: host_with_device
@@ -247,13 +243,13 @@ int main(int argc, char *argv[])
       suffix: hip
     test:
       requires: sycl
-      args: -default_device_type sycl
+      args: -default_device_type {{host sycl}}
       suffix: sycl
 
   test:
-    requires: !cxx
+    requires: !device !sycl
     output_file: output/ExitSuccess.out
     filter: grep -v "\[DEBUG OUTPUT\]"
-    suffix: no_cxx
+    suffix: no_device
 
 TEST*/

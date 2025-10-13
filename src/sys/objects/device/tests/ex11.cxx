@@ -434,9 +434,6 @@ int main(int argc, char *argv[])
     requires: cxx
     output_file: output/ExitSuccess.out
     test:
-      requires: !device
-      suffix: host_no_device
-    test:
       requires: device
       args: -default_device_type host
       suffix: host_with_device
@@ -450,7 +447,7 @@ int main(int argc, char *argv[])
       suffix: hip
     test:
       requires: sycl
-      args: -default_device_type sycl
+      args: -default_device_type {{host sycl}}
       suffix: sycl
 
 TEST*/

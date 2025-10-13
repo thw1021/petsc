@@ -1047,6 +1047,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
   */
   PetscCall(PetscLogInitialize());
 
+#if PetscDefined(HAVE_DEVICE) || PetscDefined(HAVE_SYCL)
   /*
    Initialize PetscDevice and PetscDeviceContext
 
@@ -1058,6 +1059,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
    4. Logging initialized
   */
   PetscCall(PetscDeviceInitializeFromOptions_Internal(PETSC_COMM_WORLD));
+#endif
 
 #if PetscDefined(HAVE_VIENNACL)
   flg = PETSC_FALSE;

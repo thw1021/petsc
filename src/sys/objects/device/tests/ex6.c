@@ -48,9 +48,6 @@ int main(int argc, char *argv[])
       {{default default_with_barrier nonblocking}separate output}
     filter: grep -ve "ex6 on a" -ve "\[0\] "
     test:
-      requires: !device
-      suffix: host_no_device
-    test:
       requires: device
       args: -root_device_context_device_type host
       suffix: host_with_device
@@ -68,8 +65,8 @@ int main(int argc, char *argv[])
       suffix: sycl
 
   testset:
-    requires: !cxx
+    requires: !device !sycl
     output_file: output/ExitSuccess.out
-    suffix: no_cxx
+    suffix: no_device
 
 TEST*/

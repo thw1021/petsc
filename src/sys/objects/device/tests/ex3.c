@@ -78,9 +78,6 @@ int main(int argc, char *argv[])
     args: -device_enable {{lazy eager}}
     args: -local_device_context_stream_type {{default nonblocking default_with_barrier nonblocking_with_barrier}}
     test:
-      requires: !device
-      suffix: host_no_device
-    test:
       requires: device
       args: -default_device_type host -root_device_context_device_type host
       suffix: host_with_device
