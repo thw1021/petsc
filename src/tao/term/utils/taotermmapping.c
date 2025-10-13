@@ -276,7 +276,6 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *mt, Vec
     }
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscCheck(Hpre == NULL || Hpre != H, PetscObjectComm((PetscObject)mt->term), PETSC_ERR_PLIB, "Hessian inputs not sanitized");
   PetscCall(TaoTermMappingMap(mt, x, &Ax));
   PetscCall(TaoTermMappingGetHessians(mt, mode, H, Hpre, &mapped_H, &mapped_Hpre, &unmapped_H, &unmapped_Hpre));
   PetscCall(TaoTermComputeHessian(mt->term, Ax, params, unmapped_H, unmapped_Hpre));

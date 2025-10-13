@@ -204,12 +204,13 @@ static PetscErrorCode GradientMisfit(Tao tao, Vec x, Vec V, void *_ctx)
 }
 
 /* returns FTF */
-static PetscErrorCode HessianMisfitSingle(Tao tao, Vec x, Mat H, void *_ctx)
+static PetscErrorCode HessianMisfit(Tao tao, Vec x, Mat H, Mat Hpre, void *_ctx)
 {
   UserCtx ctx = (UserCtx)_ctx;
 
   PetscFunctionBegin;
   if (H != ctx->W) PetscCall(MatCopy(ctx->W, H, DIFFERENT_NONZERO_PATTERN));
+  if (Hpre != ctx->W) PetscCall(MatCopy(ctx->W, Hpre, DIFFERENT_NONZERO_PATTERN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -260,21 +261,14 @@ static PetscErrorCode GradientMisfitADMM(Tao tao, Vec x, Vec V, void *_ctx)
 }
 
 /* returns FTF + diag(mu) */
-static PetscErrorCode HessianMisfitADMMSingle(Tao tao, Vec x, Mat H, void *_ctx)
+static PetscErrorCode HessianMisfitADMM(Tao tao, Vec x, Mat H, Mat Hpre, void *_ctx)
 {
   UserCtx ctx = (UserCtx)_ctx;
 
   PetscFunctionBegin;
   PetscCall(MatCopy(ctx->W, H, DIFFERENT_NONZERO_PATTERN));
   PetscCall(MatShift(H, ctx->mu));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/* returns FTF + diag(mu) */
-static PetscErrorCode HessianMisfitADMM(Tao tao, Vec x, Mat H, Mat Hpre, void *_ctx)
-{
-  PetscFunctionBegin;
-  PetscCall(TaoComputeHessianSingle(tao, x, H, Hpre, HessianMisfitADMMSingle, DIFFERENT_NONZERO_PATTERN, _ctx));
+  if (Hpre != H) PetscCall(MatCopy(H, Hpre, DIFFERENT_NONZERO_PATTERN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -411,7 +405,7 @@ static PetscErrorCode GradientRegularizationADMM(Tao tao, Vec z, Vec V, void *_c
 
 /* NORM_2 Case: returns diag(mu)
  * NORM_1 Case: FTF + diag(mu) */
-static PetscErrorCode HessianRegularizationADMMSingle(Tao tao, Vec x, Mat H, void *_ctx)
+static PetscErrorCode HessianRegularizationADMM(Tao tao, Vec x, Mat H, Mat Hpre, void *_ctx)
 {
   UserCtx ctx = (UserCtx)_ctx;
 
@@ -420,19 +414,15 @@ static PetscErrorCode HessianRegularizationADMMSingle(Tao tao, Vec x, Mat H, voi
     /* Identity matrix scaled by mu */
     PetscCall(MatZeroEntries(H));
     PetscCall(MatShift(H, ctx->mu));
+    if (Hpre != H) {
+      PetscCall(MatZeroEntries(Hpre));
+      PetscCall(MatShift(Hpre, ctx->mu));
+    }
   } else if (ctx->p == NORM_1) {
-    PetscCall(HessianMisfitSingle(tao, x, H, (void *)ctx));
+    PetscCall(HessianMisfit(tao, x, H, Hpre, (void *)ctx));
     PetscCall(MatShift(H, ctx->mu));
+    if (Hpre != H) PetscCall(MatShift(Hpre, ctx->mu));
   } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_OUTOFRANGE, "Example only works for NORM_1 and NORM_2");
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/* NORM_2 Case: returns diag(mu)
- * NORM_1 Case: FTF + diag(mu) */
-static PetscErrorCode HessianRegularizationADMM(Tao tao, Vec x, Mat H, Mat Hpre, void *_ctx)
-{
-  PetscFunctionBegin;
-  PetscCall(TaoComputeHessianSingle(tao, x, H, Hpre, HessianRegularizationADMMSingle, DIFFERENT_NONZERO_PATTERN, _ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -464,23 +454,17 @@ static PetscErrorCode GradientComplete(Tao tao, Vec x, Vec V, void *ctx)
 
 /* NORM_2 Case: diag(mu) + FTF
  * NORM_1 Case: diag(mu* 1/sqrt(x_i^2 + eps) * (1 - x_i^2/ABS(x_i^2+eps))) + FTF  */
-static PetscErrorCode HessianCompleteSingle(Tao tao, Vec x, Mat H, void *ctx)
+static PetscErrorCode HessianComplete(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx)
 {
   Mat tempH;
 
   PetscFunctionBegin;
   PetscCall(MatDuplicate(H, MAT_SHARE_NONZERO_PATTERN, &tempH));
-  PetscCall(HessianMisfitSingle(tao, x, H, ctx));
+  PetscCall(HessianMisfit(tao, x, H, H, ctx));
   PetscCall(HessianRegularization(tao, x, tempH, tempH, ctx));
   PetscCall(MatAXPY(H, 1., tempH, DIFFERENT_NONZERO_PATTERN));
+  if (Hpre != H) PetscCall(MatCopy(H, Hpre, DIFFERENT_NONZERO_PATTERN));
   PetscCall(MatDestroy(&tempH));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode HessianComplete(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx)
-{
-  PetscFunctionBegin;
-  PetscCall(TaoComputeHessianSingle(tao, x, H, Hpre, HessianCompleteSingle, DIFFERENT_NONZERO_PATTERN, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
