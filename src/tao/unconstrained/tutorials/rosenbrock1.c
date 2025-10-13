@@ -96,15 +96,6 @@ static PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *f, Vec G, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode FormHessianSingle(Tao tao, Vec X, Mat H, void *ptr)
-{
-  AppCtx *user = (AppCtx *)ptr;
-
-  PetscFunctionBegin;
-  PetscCall(AppCtxFormHessianSingle(user, X, H));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*
   FormHessian - Evaluates Hessian matrix.
 
@@ -120,10 +111,12 @@ static PetscErrorCode FormHessianSingle(Tao tao, Vec X, Mat H, void *ptr)
   Note:  Providing the Hessian may not be necessary.  Only some solvers
   require this matrix.
 */
-static PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
+PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
 {
+  AppCtx *user = (AppCtx *)ptr;
+
   PetscFunctionBeginUser;
-  PetscCall(TaoComputeHessianSingle(tao, X, H, Hpre, FormHessianSingle, SAME_NONZERO_PATTERN, ptr));
+  PetscCall(AppCtxFormHessianSingle(user, X, H));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -297,18 +290,8 @@ static PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
      args: -tao_type nls -tao_add_terms reg_ -reg_tao_term_type halfl2squared -tao_term_sum_reg_scale 0.3 -tao_monitor_short -tao_view ::ascii_info_detail
 
    test:
-     suffix: add_terms_l2_pre
-     requires: !single
-     args: -tao_type nls -tao_add_terms reg_ -reg_tao_term_type halfl2squared -tao_term_sum_reg_scale 0.3 -tao_monitor_short -tao_view ::ascii_info_detail -tao_term_hessian_pre_is_hessian 0 -reg_tao_term_hessian_pre_is_hessian 0
-
-   test:
      suffix: add_terms_l1_no_pre
      requires: !single
      args: -tao_type nls -tao_add_terms reg_ -reg_tao_term_type l1 -reg_tao_term_l1_epsilon 0.4 -tao_term_sum_reg_scale 0.3 -tao_monitor_short -tao_view ::ascii_info_detail
-
-   test:
-     suffix: add_terms_l1_pre
-     requires: !single
-     args: -tao_type nls -tao_add_terms reg_ -reg_tao_term_type l1 -reg_tao_term_l1_epsilon 0.4 -tao_term_sum_reg_scale 0.3 -tao_monitor_short -tao_view ::ascii_info_detail -tao_term_hessian_pre_is_hessian 0 -reg_tao_term_hessian_pre_is_hessian 0
 
 TEST*/

@@ -608,7 +608,6 @@ PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm term, Vec x, Vec param
 PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
-  if (Hpre == H) Hpre = NULL;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
   PetscCall(VecLockReadPush(x));
