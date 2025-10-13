@@ -41,7 +41,7 @@ Tao Object: 1 MPI process
           iter: 0
           othr: 0
       Objective function:
-        TaoTerm Object: (tao_brgn_subsolver_objective_) 1 MPI process
+        TaoTerm Object: (tao_brgn_subsolver_) 1 MPI process
           type: sum
           solution vector space: N = 5
           parameter vector space: (optional) K = 5
