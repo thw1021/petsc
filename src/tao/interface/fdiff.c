@@ -118,18 +118,18 @@ PetscErrorCode TaoDefaultComputeHessianColor(Tao tao, Vec V, Mat H, Mat B, void 
 }
 
 /*@
-  TaoDefaultComputeHessianMFFD - Computes the Hessian using `MATMFFD`.
+  TaoDefaultComputeHessianMFFD - Computes a Hessian `Mat` object that can perform matrix-vector products using `MATMFFD`.
 
   Collective
 
   Input Parameters:
-+ tao - the Tao context
++ tao - the `Tao` context
 . X   - compute Hessian at this point
 - ctx - ignored
 
   Output Parameters:
 + H - Hessian matrix of type `MATMFFD`
-- B - should be NULL or equal to H
+- B - should be `NULL` or equal to `H`
 
   Level: advanced
 
