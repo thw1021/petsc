@@ -205,9 +205,6 @@ int main(int argc, char *argv[])
     args: -info :device
     suffix: with_info
     test:
-      requires: !device
-      suffix: host_no_device
-    test:
       requires: device
       args: -default_device_type host
       filter: sed -e 's/host/IMPL/g' -e 's/cuda/IMPL/g' -e 's/hip/IMPL/g' -e 's/sycl/IMPL/g'
@@ -231,9 +228,6 @@ int main(int argc, char *argv[])
     filter: grep -v "\[DEBUG OUTPUT\]"
     suffix: no_info
     test:
-      requires: !device
-      suffix: host_no_device
-    test:
       requires: device
       args: -default_device_type host
       suffix: host_with_device
@@ -251,9 +245,9 @@ int main(int argc, char *argv[])
       suffix: sycl
 
   test:
-    requires: !cxx
+    requires: !device
     output_file: output/ExitSuccess.out
     filter: grep -v "\[DEBUG OUTPUT\]"
-    suffix: no_cxx
+    suffix: no_device
 
 TEST*/
