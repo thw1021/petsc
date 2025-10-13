@@ -6,19 +6,19 @@ NP               = 1
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-# To support 'make check V=1' with both FreeBSD make and gmake
 V ?= 0
 QUIET = $(shell [ "$(V)" = "0" ] && echo @)
 
 testex100: ex100.PETSc
-	-${QUIET}OMPI_MCA_mpi_warn_on_fork=0 ${MPIEXEC} -n 1 ${MPIEXEC_TAIL} ./ex100 -test  > ex100_1.tmp 2>&1; \
-	 if (${DIFF} output/ex100_1.testout ex100_1.tmp > /dev/null 2>&1) then \
-           echo "C/C++ Python example src/ksp/ksp/tutorials/ex100 run successfully with 1 MPI process"; \
-	 else \
-           echo "Possible error running C/C++ Python src/ksp/ksp/tutorials/ex100 with 1 MPI process"; \
-           echo "See https://petsc.org/release/faq/";\
-           cat ex100_1.tmp;\
-           touch ../../../../check_error;\
-         fi; \
-         ${RM} -f ex100_1.tmp
+	-${QUIET}OMPI_MCA_mpi_warn_on_fork=0 ${MPIEXEC} -n 1 ${MPIEXEC_TAIL} ./ex100 -test  > ex100_1.tmp 2>&1;
+	-${QUIET}${DIFF} output/ex100_1.testout ex100_1.tmp > ex100_1.dtmp;
+	-@if [ ! -s ex100_1.dtmp ];  then \
+	  echo "C/C++ Python example src/ksp/ksp/tutorials/ex100 run successfully with 1 MPI process"; \
+	else \
+  	echo "Possible error running C/C++ Python src/ksp/ksp/tutorials/ex100 with 1 MPI process"; \
+		echo "See https://petsc.org/release/faq/";\
+		cat ex100_1.tmp;\
+		touch ../../../../check_error;\
+	fi; \
+	${RM} -f ex100_1.tmp ex100_1.dtmp;
 

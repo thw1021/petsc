@@ -3,20 +3,19 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-# To support 'make check V=1' with both FreeBSD make and gmake
 V ?= 0
 QUIET = $(shell [ "$(V)" = "0" ] && echo @)
 
 testex55:
 	-${QUIET}export PYTHONPATH=$${PYTHONPATH:+$$PYTHONPATH:}${PETSCPYTHONPATH};\
-         echo "Using PYTHONPATH=$${PYTHONPATH} to locate mpi4py for test"; \
-         ${MPIEXEC} -n 2 ${MPIEXEC_TAIL} ${PYTHON_EXE} ./ex55.py > ex55_1.tmp  2>&1;\
-         if (test ! -s ex55_1.tmp) then \
-             echo "C/C++ mpi4py python example src/sys/tests/ex55.py run successfully with 2 MPI processes"; \
-         else \
-           echo "Possible error running Python src/sys/tests/ex55.py with 2 MPI processes"; \
-           echo "See https://petsc.org/release/faq/";\
-           cat ex55_1.tmp; \
-           touch ../../../check_error;\
-         fi; \
-         ${RM} -f ex55.tmp
+		echo "Using PYTHONPATH=$${PYTHONPATH} to locate mpi4py for test"; \
+		${MPIEXEC} -n 2 ${MPIEXEC_TAIL} ${PYTHON_EXE} ./ex55.py > ex55_1.tmp  2>&1;
+	-@if (test ! -s ex55_1.tmp) then \
+		echo "C/C++ mpi4py python example src/sys/tests/ex55.py run successfully with 2 MPI processes"; \
+	else \
+		echo "Possible error running Python src/sys/tests/ex55.py with 2 MPI processes"; \
+		echo "See https://petsc.org/release/faq/";\
+		cat ex55_1.tmp; \
+		touch ../../../check_error;\
+	fi; \
+	${RM} -f ex55.tmp
