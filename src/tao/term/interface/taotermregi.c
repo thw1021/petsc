@@ -19,7 +19,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm);
 
   Input Parameters:
 + sname - name of a new user-defined solver
-- func  - routine to Create method context
+- func  - routine to create the context for the `TaoTermType`
 
   Example Usage:
 .vb
@@ -34,7 +34,7 @@ $     -tao_term_type my_term
   Level: advanced
 
   Note:
-  `TaoTermRegister()` may be called multiple times to add several user-defined solvers.
+  `TaoTermRegister()` may be called multiple times to add multiple new `TaoTermType`.
 
 .seealso: [](sec_tao_term), `TaoTerm`, `TaoTermSetType()`
 @*/

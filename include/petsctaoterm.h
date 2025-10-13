@@ -13,7 +13,7 @@
   Level: beginner
 
   Note:
-  User can combine a user defined `TaoTerm` and a built-in types to define the objective function.
+  User can combine a user-defined `TaoTerm` using `TaoTermCreateShell() and built-in `TaoTerm` to define the objective function.
 
 .seealso: [](ch_tao), [](sec_tao_term),
           `TaoTermCreate()`,
@@ -26,6 +26,9 @@
           `TaoTermComputeHessian()`,
           `TaoTermComputeHessianMult()`,
           `TaoTermDestroy()`,
+          `TaoTermCreateShell()`,
+          `Tao`,
+          `TaoAddTerm()`
 S*/
 typedef struct _p_TaoTerm *TaoTerm;
 
@@ -34,7 +37,7 @@ typedef struct _p_TaoTerm *TaoTerm;
 
   Values:
 + `TAOTERMCALLBACKS`     - uses the callback functions set in `TaoSetObjective()`, `TaoSetGradient()`, etc.
-. `TAOTERMSHELL`         - a container for arbitrary user-defined callbacks
+. `TAOTERMSHELL`         - uses user-provided callback functions, see `TaoTermCreateShell()`
 . `TAOTERMSUM`           - a sum of multiple other `TaoTerm`s
 . `TAOTERMHALFL2SQUARED` - $\tfrac{1}{2}\|x - p\|_2^2$
 . `TAOTERML1`            - $\|x - p\|_1$
@@ -42,7 +45,7 @@ typedef struct _p_TaoTerm *TaoTerm;
 
   Level: intermediate
 
-.seealso: [](ch_tao), [](sec_tao_term), `TaoTerm`, `TaoTermCreate()`, `TaoTermSetType()`
+.seealso: [](ch_tao), [](sec_tao_term), `TaoTerm`, `TaoTermCreate()`, `TaoTermSetType()`, `TaoTermCreateShell()`
 J*/
 typedef const char *TaoTermType;
 #define TAOTERMCALLBACKS     "callbacks"
@@ -75,6 +78,10 @@ PETSC_EXTERN PetscErrorCode TaoTermSetFromOptions(TaoTerm);
 
   Level: intermediate
 
+  Note:
+  Tao objective functions are parameteric real-valued functions $f(x; p)$ for
+solution variable $x$ and parameters $p$.
+
 .seealso: [](sec_tao_term), `TaoTerm`, `TaoTermGetParametersMode()`, `TaoTermSetParametersMode()`
 E*/
 typedef enum {
@@ -85,7 +92,7 @@ typedef enum {
 PETSC_EXTERN const char *const TaoTermParametersModes[];
 
 /*E
-  TaoTermMask - Determine which evaluation operations are masked.
+  TaoTermMask - Determine which evaluation operations are masked; that is, skipped (not used) by Tao when computing the objective function or its derivatives for a particular `TaoTerm`.
 
   Values:
 + `TAOTERM_MASK_NONE`      - do not mask any evaluation routines
@@ -147,7 +154,7 @@ PETSC_EXTERN PetscErrorCode TaoTermGetCreateHessianMode(TaoTerm, PetscBool *, Ma
   Calling Sequence:
 + term   - a `TaoTerm`
 . x      - the solution vector
-. params - (optional) the parameters vector (see `TaoTermGetParametersMode()`)
+. params - the parameters vector (for some `TaoTerm` this may be `NULL`, see `TaoTermGetParametersMode()`)
 - value  - output, the value of the term
 
   Level: intermediate
@@ -170,7 +177,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermObjectiveFn)(TaoTerm term, Ve
   Calling Sequence:
 + term   - a `TaoTerm`
 . x      - the solution vector
-. params - (optional) the parameters vector (see `TaoTermGetParametersMode()`)
+. params - the parameters vector (for some `TaoTerm` this may be `NULL`, see `TaoTermGetParametersMode()`)
 . value  - output, the value of the term
 - g      - output, the gradient of the term
 
@@ -194,7 +201,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermObjectiveAndGradientFn)(TaoTe
   Calling Sequence:
 + term   - a `TaoTerm`
 . x      - the solution vector
-. params - (optional) the parameters vector (see `TaoTermGetParametersMode()`)
+. params - the parameters vector (for some `TaoTerm` this may be `NULL`, see `TaoTermGetParametersMode()`)
 - g      - output, the gradient of the term
 
   Level: intermediate
@@ -217,8 +224,8 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermGradientFn)(TaoTerm term, Vec
   Calling Sequence:
 + term   - a `TaoTerm`
 . x      - the solution vector
-. params - (optional) the parameters vector (see `TaoTermGetParametersMode()`)
-. H      - (optional) output, the Hessian of the term
+. params - the parameters vector (for some `TaoTerm` this may be `NULL`, see `TaoTermGetParametersMode()`)
+. H      - (optional) output, the Hessian of `term`
 - Hpre   - (optional) output, the approximation of `H` for preconditioning
 
   Level: intermediate
@@ -241,7 +248,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermHessianFn)(TaoTerm term, Vec 
   Calling Sequence:
 + term   - a `TaoTerm`
 . x      - the solution vector
-. params - (optional) the parameters vector (see `TaoTermGetParametersMode()`)
+. params - the parameters vector (for some `TaoTerm` this may be `NULL`, see `TaoTermGetParametersMode()`)
 . v      - a variation vector
 - Hv     - output, the product of the Hessian with `v`
 
@@ -265,7 +272,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermHessianMultFn)(TaoTerm term, 
   Calling Sequence:
 + term   - a `TaoTerm`
 . x      - the solution vector
-. params - (optional) the parameters vector (see `TaoTermGetParametersMode()`)
+. params - the parameters vector (for some `TaoTerm` this may be `NULL`, see `TaoTermGetParametersMode()`)
 - H      - output, the Hessian of the term
 
   Level: intermediate
