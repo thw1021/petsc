@@ -7,7 +7,7 @@ struct _n_TaoTerm_Shell {
 };
 
 /*@C
-  TaoTermShellSetContextDestroy - Set a method to destroy user context resources when a `TAOTERMSHELL` is destroyed
+  TaoTermShellSetContextDestroy - Set a method to destroy the user context resources when a `TAOTERMSHELL` is destroyed
 
   Logically collective
 
@@ -451,7 +451,7 @@ static PetscErrorCode TaoTermShellCreateHessianMatrices_Shell(TaoTerm term, Pets
 }
 
 /*MC
-  TAOTERMSHELL - A `TaoTerm` that collects user-defined callbacks for the operations of the term
+  TAOTERMSHELL - A `TaoTerm` that uses user-defined function callbacks for its operations
 
   Level: intermediate
 

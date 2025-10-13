@@ -36,7 +36,7 @@ static PetscErrorCode SNESFunction_TaoTerm(SNES snes, Vec X, Vec G, void *ctx)
   Input Parameters:
 + term   - a `TaoTerm`
 . x      - a solution vector
-- params - (optional) parameters vector (see `TaoTermParametersMode()`)
+- params - parameters vector (may be `NULL`, see `TaoTermParametersMode()`)
 
   Output Parameter:
 . g - the computed finite difference approximation to the gradient
@@ -160,7 +160,7 @@ static PetscErrorCode TaoTermGetStashedHessianColoring(TaoTerm term, Vec params,
   Input Parameters:
 + term   - a `TaoTerm`
 . x      - a solution vector
-- params - (optional) parameters vector (see `TaoTermParametersMode()`)
+- params - parameters vector (may be `NULL`, see `TaoTermParametersMode()`)
 
   Output Parameter:
 . H - the computed finite difference approximation to the Hessian
@@ -228,7 +228,7 @@ PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec params, Ma
   Input Parameters:
 + term   - a `TaoTerm`
 . x      - a solution vector
-- params - (optional) parameters vector (see `TaoTermParametersMode()`)
+- params - parameters vector (may be `NULL`, see `TaoTermParametersMode()`)
 
   Output Parameter:
 + H    - (optional) Hessian matrix
@@ -243,7 +243,7 @@ PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec params, Ma
   Notes:
   If either matrix is a `MATSHELL` created with `TaoTermCreateHessianShell()`,
   then `TaoTermComputeHessianMultFD()` will be used for a matrix-free finite
-  difference approximation (MFFD).
+  difference approximation (`MATMFFD`).
 
   If either matrix is an assembled matrix (like `MATAIJ`), then
   `TaoTermComputeHessianSingleFD()` will be used to compute the entries in the matrix.
@@ -387,7 +387,7 @@ PetscErrorCode TaoTermUpdateHessianMFFD(TaoTerm term, Mat mffd, Vec x, Vec param
   Input Parameters:
 + term   - a `TaoTerm` representing a parametric function $f(x; p)$
 . x      - the solution variable $x$ in $f(x; p)$
-. params - the parameters $p$ in $f(x; p)$ (may be NULL if the term is not parametric)
+. params - the parameters $p$ in $f(x; p)$ (may be `NULL` if the term is not parametric)
 - v      - a vector in the solution space
 
   Output Parameters:
@@ -401,7 +401,7 @@ PetscErrorCode TaoTermUpdateHessianMFFD(TaoTerm term, Mat mffd, Vec x, Vec param
 
   Note:
   The finite difference method in this routine does not attempt to choose the
-  best step length, it only uses the value of `TaoTermGetFDDelta()`.
+  best step length, it uses the value of `TaoTermGetFDDelta()`.
   `TaoTermComputeHessianMultFD()` calls `TaoTermComputeGradient()` twice in each call, which
   is not efficient if you want to compute multiple Hessian-vector products for
   the same values of `x` and `params`.  Use `TaoTermCreateHessianMFFD()` to
