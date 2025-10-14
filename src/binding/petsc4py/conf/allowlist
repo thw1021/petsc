@@ -1,5 +1,4 @@
 petsc4py.PETSc.ComplexType
-petsc4py.PETSc.DeviceContext.DeviceJoinMode
 petsc4py.PETSc.Error.__init__
 petsc4py.PETSc.IntType
 petsc4py.PETSc.LGMap.GLMapMode
