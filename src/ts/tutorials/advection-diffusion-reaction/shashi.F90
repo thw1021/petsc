@@ -1014,4 +1014,3 @@ program main
   PetscCallA(SNESDestroy(snes, ierr))
   PetscCallA(PetscFinalize(ierr))
 end
-
