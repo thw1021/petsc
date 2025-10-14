@@ -13,6 +13,10 @@ Example: mpiexec -n <np> ./ex125 -f <matrix binary file> -nrhs 4 -mat_solver_typ
 
 #include <petscmat.h>
 
+#if defined(PETSC_HAVE_MUMPS)
+#include <unistd.h>
+#endif
+
 PetscErrorCode CreateRandom(PetscInt n, PetscInt m, Mat *A)
 {
   PetscFunctionBeginUser;
@@ -42,11 +46,55 @@ PetscErrorCode CreateIdentity(PetscInt n, Mat *A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(PETSC_HAVE_MUMPS)
+PetscErrorCode CheckMumpsSaveLoad(Mat A, Vec b, Vec x_ref, const char *tmp_dir_path, PetscBool chol, int rank)
+{
+  Mat           A_load, F_load;
+  Vec           x_load;
+  PetscScalar   norm;
+  IS            perm = NULL, iperm = NULL;
+  char          fname[256];
+  MatFactorInfo info;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscSNPrintf(fname, 256, "%s/A_%i.info", tmp_dir_path, rank));
+  PetscCheck(access(fname, F_OK) == 0, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "A_x.info does not exist");
+  PetscCall(PetscSNPrintf(fname, 256, "%s/A_%i.mumps", tmp_dir_path, rank));
+  PetscCheck(access(fname, F_OK) == 0, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "A_x.mumps does not exist");
+  PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &A_load));
+  PetscCall(MatSetFromOptions(A_load));
+  PetscCall(MatCreateVecs(A_load, &x_load, NULL));
+  PetscCall(MatFactorInfoInitialize(&info));
+  info.fill      = 5.0;
+  info.shifttype = (PetscReal)MAT_SHIFT_NONE;
+  if (chol) {
+    PetscCall(MatGetFactor(A_load, MATSOLVERMUMPS, MAT_FACTOR_CHOLESKY, &F_load));
+    PetscCall(MatCholeskyFactorSymbolic(F_load, A_load, perm, &info));
+    PetscCall(MatCholeskyFactorNumeric(F_load, A_load, &info));
+  } else {
+    PetscCall(MatGetFactor(A_load, MATSOLVERMUMPS, MAT_FACTOR_LU, &F_load));
+    PetscCall(MatLUFactorSymbolic(F_load, A_load, perm, iperm, &info));
+    PetscCall(MatLUFactorNumeric(F_load, A_load, &info));
+  }
+  PetscCall(MatSolve(F_load, b, x_load));
+  PetscCall(VecAXPY(x_load, -1.0, x_ref));
+  PetscCall(VecNorm(x_load, NORM_INFINITY, &norm));
+  PetscCheck(norm < PETSC_SMALL, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Different solution after load");
+  PetscCall(PetscRMTree(tmp_dir_path));
+  PetscCall(MatDestroy(&A_load));
+  PetscCall(MatDestroy(&F_load));
+  PetscCall(VecDestroy(&x_load));
+  PetscCall(ISDestroy(&perm));
+  PetscCall(ISDestroy(&iperm));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif
+
 int main(int argc, char **args)
 {
   Mat           A, Ae, RHS = NULL, RHS1 = NULL, C, F, X;
   Vec           u, x, b;
-  PetscMPIInt   size;
+  PetscMPIInt   size, rank;
   PetscInt      m, n, nfact, nsolve, nrhs, ipack = 5;
   PetscReal     norm, tol = 10 * PETSC_SQRT_MACHINE_EPSILON;
   IS            perm = NULL, iperm = NULL;
@@ -55,7 +103,11 @@ int main(int argc, char **args)
   PetscBool     flg, symm, testMatSolve = PETSC_TRUE, testMatMatSolve = PETSC_TRUE, testMatMatSolveTranspose = PETSC_TRUE, testMatSolveTranspose = PETSC_TRUE, match = PETSC_FALSE;
   PetscBool     chol = PETSC_FALSE, view = PETSC_FALSE, matsolvexx = PETSC_FALSE, test_inertia;
 #if defined(PETSC_HAVE_MUMPS)
-  PetscBool test_mumps_opts = PETSC_FALSE;
+  PetscBool    test_mumps_opts = PETSC_FALSE;
+  PetscBool    test_mumps_io = PETSC_FALSE;
+  char         tmp_dir_path[] = "XXXXXXX";
+  char         tmp_dir_param[256];
+  PetscOptions save_options, load_options;
 #endif
   PetscViewer fd;                       /* viewer */
   char        file[PETSC_MAX_PATH_LEN]; /* input file name */
@@ -64,6 +116,29 @@ int main(int argc, char **args)
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+
+#if defined(PETSC_HAVE_MUMPS)
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_mumps_io", &test_mumps_io, NULL));
+  if (test_mumps_io) {
+    PetscCall(PetscMkdtemp(tmp_dir_path));
+
+    PetscCall(PetscSNPrintf(tmp_dir_param, 256, "-mat_mumps_save_dir %s", tmp_dir_path));
+
+    PetscOptionsCreate(&save_options);
+    PetscOptionsInsert(save_options, &argc, &args, NULL);
+    PetscCall(PetscOptionsInsertString(save_options, "-mat_mumps_save 1"));
+    PetscCall(PetscOptionsInsertString(save_options, "-mat_mumps_save_prefix A"));
+    PetscCall(PetscOptionsInsertString(save_options, tmp_dir_param));
+
+    PetscOptionsCreate(&load_options);
+    PetscOptionsInsert(load_options, &argc, &args, NULL);
+    PetscCall(PetscOptionsInsertString(load_options, "-mat_mumps_load 1"));
+    PetscCall(PetscOptionsInsertString(load_options, "-mat_mumps_save_prefix A"));
+    PetscCall(PetscOptionsInsertString(load_options, tmp_dir_param));
+    PetscOptionsPush(save_options);
+  }
+#endif
 
   /* Determine file from which we read the matrix A */
   PetscCall(PetscOptionsGetString(NULL, NULL, "-f", file, sizeof(file), &flg));
@@ -499,6 +574,14 @@ skipoptions:
           PetscCall(VecNorm(u, NORM_2, &resi));
           PetscCall(PetscPrintf(PETSC_COMM_WORLD, "MatSolve: Norm of error %g, resi %g, numfact %" PetscInt_FMT "\n", (double)norm, (double)resi, nfact));
         }
+#if defined(PETSC_HAVE_MUMPS)
+        if (test_mumps_io && nsolve == 0 && nfact == 0) {
+          PetscOptionsPop();
+          PetscOptionsPush(load_options);
+          CheckMumpsSaveLoad(A, b, x, tmp_dir_path, chol, rank);
+          PetscOptionsPop();
+        }
+#endif
       }
     }
 
@@ -597,7 +680,7 @@ skipoptions:
    testset:
       nsize: 3
       requires: mumps datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
-      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps
+      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type mumps -test_mumps_io
       output_file: output/ex125_mumps_par.out
 
       test:
@@ -618,7 +701,7 @@ skipoptions:
    test:
       suffix: mumps_3
       requires: mumps
-      args: -mat_solver_type mumps
+      args: -mat_solver_type mumps -test_mumps_io
       output_file: output/ex125_mumps_seq.out
 
    testset:
@@ -638,7 +721,7 @@ skipoptions:
       suffix: mumps_4
       nsize: 3
       requires: mumps
-      args: -mat_solver_type mumps
+      args: -mat_solver_type mumps -test_mumps_io
       output_file: output/ex125_mumps_par.out
 
    testset:
@@ -659,7 +742,7 @@ skipoptions:
       suffix: mumps_5
       nsize: 3
       requires: mumps
-      args: -mat_solver_type mumps -cholesky
+      args: -mat_solver_type mumps -cholesky -test_mumps_io
       output_file: output/ex125_mumps_par_cholesky.out
 
    testset:
