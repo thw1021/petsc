@@ -244,7 +244,6 @@ struct _p_PetscDeviceContext {
 // ===================================================================================
 //                            PetscDevice Internal Functions
 // ===================================================================================
-#if PetscDefined(HAVE_DEVICE)
 PETSC_INTERN PetscErrorCode                PetscDeviceInitializeFromOptions_Internal(MPI_Comm);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDeviceGetDefaultForType_Internal(PetscDeviceType, PetscDevice *);
 
@@ -255,6 +254,7 @@ static inline PetscErrorCode PetscDeviceReference_Internal(PetscDevice device)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if PetscDefined(HAVE_DEVICE)
 static inline PetscErrorCode PetscDeviceDereference_Internal(PetscDevice device)
 {
   PetscFunctionBegin;
@@ -262,12 +262,6 @@ static inline PetscErrorCode PetscDeviceDereference_Internal(PetscDevice device)
   PetscAssert(device->refcnt >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "PetscDevice has negative reference count %" PetscInt_FMT, device->refcnt);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-#else
-  #define PetscDeviceInitializeFromOptions_Internal(comm)     PETSC_SUCCESS
-  #define PetscDeviceGetDefaultForType_Internal(Type, device) (*(device) = PETSC_NULLPTR, PETSC_SUCCESS)
-  #define PetscDeviceReference_Internal(device)               PETSC_SUCCESS
-  #define PetscDeviceDereference_Internal(device)             PETSC_SUCCESS
-#endif /* PETSC_HAVE_DEVICE for PetscDevice Internal Functions */
 
 static inline PetscErrorCode PetscDeviceCheckDeviceCount_Internal(PetscInt count)
 {
@@ -275,6 +269,7 @@ static inline PetscErrorCode PetscDeviceCheckDeviceCount_Internal(PetscInt count
   PetscAssert(count < PETSC_DEVICE_MAX_DEVICES, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Detected %" PetscInt_FMT " devices, which is larger than maximum supported number of devices %d", count, PETSC_DEVICE_MAX_DEVICES);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif /* PETSC_HAVE_DEVICE for PetscDevice Internal Functions */
 
 /* More general form of PetscDeviceDefaultType_Internal(), as it calls the former using
  * the automatically selected default PetscDeviceType */
@@ -303,9 +298,8 @@ static inline PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor_Internal(Pet
 // ===================================================================================
 //                     PetscDeviceContext Internal Functions
 // ===================================================================================
-#if PetscDefined(HAVE_DEVICE)
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDeviceContextGetNullContext_Internal(PetscDeviceContext *);
-
+#if PetscDefined(HAVE_DEVICE)
 static inline PetscErrorCode PetscDeviceContextGetBLASHandle_Internal(PetscDeviceContext dctx, void *handle)
 {
   PetscFunctionBegin;
@@ -352,13 +346,6 @@ static inline PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDeviceCont
   PetscUseTypeMethod(dctx, endtimer, elapsed);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-#else
-  #define PetscDeviceContextGetNullContext_Internal(dctx)          (*(dctx) = PETSC_NULLPTR, PETSC_SUCCESS)
-  #define PetscDeviceContextGetBLASHandle_Internal(dctx, handle)   (*(handle) = PETSC_NULLPTR, PETSC_SUCCESS)
-  #define PetscDeviceContextGetSOLVERHandle_Internal(dctx, handle) (*(handle) = PETSC_NULLPTR, PETSC_SUCCESS)
-  #define PetscDeviceContextGetStreamHandle_Internal(dctx, handle) (*(handle) = PETSC_NULLPTR, PETSC_SUCCESS)
-  #define PetscDeviceContextBeginTimer_Internal(dctx)              PETSC_SUCCESS
-  #define PetscDeviceContextEndTimer_Internal(dctx, elapsed)       PETSC_SUCCESS
 #endif /* PETSC_HAVE_DEVICE for PetscDeviceContext Internal Functions */
 
 /* note, only does assertion checking in debug mode */
@@ -386,14 +373,15 @@ static inline PetscErrorCode PetscDeviceContextGetOptionalNullContext_Internal(P
 }
 
 /* Experimental API -- it will eventually become public */
-#if PetscDefined(HAVE_DEVICE)
 PETSC_EXTERN PetscErrorCode PetscDeviceRegisterMemory(const void *PETSC_RESTRICT, PetscMemType, size_t);
 PETSC_EXTERN PetscErrorCode PetscDeviceGetAttribute(PetscDevice, PetscDeviceAttribute, void *);
+#if PetscDefined(HAVE_DEVICE)
 PETSC_EXTERN PetscErrorCode PetscDeviceContextMarkIntentFromID(PetscDeviceContext, PetscObjectId, PetscMemoryAccessMode, const char name[]);
+#endif
 // Used for testing purposes, internal use ONLY
 PETSC_EXTERN PetscErrorCode PetscGetMarkedObjectMap_Internal(size_t *, PetscObjectId **, PetscMemoryAccessMode **, size_t **, PetscEvent ***);
 PETSC_EXTERN PetscErrorCode PetscRestoreMarkedObjectMap_Internal(size_t, PetscObjectId **, PetscMemoryAccessMode **, size_t **, PetscEvent ***);
-  #if defined(__cplusplus)
+#if PetscDefined(HAVE_DEVICE) && defined(__cplusplus)
 namespace
 {
 
@@ -405,13 +393,6 @@ inline PetscErrorCode PetscDeviceContextMarkIntentFromID(PetscDeviceContext dctx
 }
 
 } // anonymous namespace
-  #endif // __cplusplus
-#else
-  #define PetscDeviceRegisterMemory(void_ptr, PetscMemType, size)                                           PETSC_SUCCESS
-  #define PetscDeviceGetAttribute(PetscDevice, PetscDeviceAttribute, void_star)                             ((*((int *)(void_star)) = 0), PETSC_SUCCESS)
-  #define PetscDeviceContextMarkIntentFromID(PetscDeviceContext, PetscObjectId, PetscMemoryAccessMode, ptr) PETSC_SUCCESS
-  #define PetscGetMarkedObjectMap_Internal(nkeys, keys, modes, ndeps, dependencies)                         (*(nkeys) = 0, *(keys) = PETSC_NULLPTR, *(modes) = PETSC_NULLPTR, *(ndeps) = PETSC_NULLPTR, *(dependencies) = PETSC_NULLPTR, PETSC_SUCCESS)
-  #define PetscRestoreMarkedObjectMap_Internal(nkeys, keys, modes, ndeps, dependencies)                     PETSC_SUCCESS
 #endif
 
 PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_HOST(PetscDeviceContext);
