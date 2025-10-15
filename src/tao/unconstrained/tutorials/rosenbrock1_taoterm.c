@@ -9,7 +9,7 @@ to define the Rosenbrock function.\n";
 
 static PetscErrorCode FormFunctionGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 static PetscErrorCode FormHessian(TaoTerm, Vec, Vec, Mat, Mat);
-static PetscErrorCode CreateVecs(TaoTerm, Vec *, Vec *);
+static PetscErrorCode CreateSolutionVec(TaoTerm, Vec *);
 
 int main(int argc, char **argv)
 {
@@ -34,7 +34,7 @@ int main(int argc, char **argv)
   /* Define the objective function */
   PetscCall(TaoTermCreateShell(comm, (void *)&user, NULL /* no destructor is needed for `user` */, &objective));
   PetscCall(TaoTermSetParametersMode(objective, TAOTERM_PARAMETERS_NONE));
-  PetscCall(TaoTermShellSetCreateVecs(objective, CreateVecs));
+  PetscCall(TaoTermShellSetCreateSolutionVec(objective, CreateSolutionVec));
   PetscCall(TaoTermShellSetCreateHessianMatrices(objective, TaoTermCreateHessianMatricesDefault));
   PetscCall(TaoTermSetCreateHessianMode(objective, PETSC_TRUE /* H == Hpre */, MATBAIJ, NULL));
   PetscCall(TaoTermShellSetObjectiveAndGradient(objective, FormFunctionGradient));
@@ -124,7 +124,7 @@ static PetscErrorCode FormHessian(TaoTerm term, Vec X, Vec params, Mat H, Mat Hp
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CreateVecs(TaoTerm term, Vec *solution, Vec *parameters_unused)
+static PetscErrorCode CreateSolutionVec(TaoTerm term, Vec *solution)
 {
   AppCtx *user;
 

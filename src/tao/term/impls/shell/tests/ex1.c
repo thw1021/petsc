@@ -2,13 +2,23 @@ const char help[] = "Coverage tests for TAOTERMSHELL";
 
 #include <petsctaoterm.h>
 
-static PetscErrorCode TaoTermCreateVecs_Test(TaoTerm term, Vec *solution, Vec *params)
+static PetscErrorCode TaoTermCreateSolutionVec_Test(TaoTerm term, Vec *solution)
 {
   Mat A;
 
   PetscFunctionBegin;
   PetscCall(TaoTermShellGetContext(term, (void *)&A));
-  PetscCall(MatCreateVecs(A, params, solution));
+  PetscCall(MatCreateVecs(A, NULL, solution));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermCreateParametersVec_Test(TaoTerm term, Vec *params)
+{
+  Mat A;
+
+  PetscFunctionBegin;
+  PetscCall(TaoTermShellGetContext(term, (void *)&A));
+  PetscCall(MatCreateVecs(A, params, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -82,7 +92,8 @@ static PetscErrorCode testShell(MPI_Comm comm, PetscBool separate)
     PetscCall(VecDestroy(&params));
     PetscCall(VecDestroy(&x));
   } else {
-    PetscCall(TaoTermShellSetCreateVecs(term, TaoTermCreateVecs_Test));
+    PetscCall(TaoTermShellSetCreateSolutionVec(term, TaoTermCreateSolutionVec_Test));
+    PetscCall(TaoTermShellSetCreateParametersVec(term, TaoTermCreateParametersVec_Test));
   }
 
   PetscCall(TaoTermSetUp(term));
@@ -103,7 +114,8 @@ static PetscErrorCode testShell(MPI_Comm comm, PetscBool separate)
 
   PetscCall(TaoTermView(term, PETSC_VIEWER_STDOUT_(comm)));
 
-  PetscCall(TaoTermCreateVecs(term, &x, &params));
+  PetscCall(TaoTermCreateSolutionVec(term, &x));
+  PetscCall(TaoTermCreateParametersVec(term, &params));
 
   PetscCall(VecSetRandom(x, rand));
   PetscCall(VecSetRandom(params, rand));
