@@ -1728,33 +1728,6 @@ cdef class TAO(Object):
 
     # TaoTerm related routines
 
-    def setTerm(self, scale: float, term: TAOTerm, Vec params=None, Mat mapmat=None) -> None:
-        """Set the objective term of the solver.
-
-        Logically collective.
-
-        Parameters
-        ----------
-        scale
-            The scale of the term.
-        params
-            The parameter vector.
-        mapmat
-            The mapping matrix.
-
-        See Also
-        --------
-        getTerm, petsc.TaoSetTerm
-
-        """
-        cdef TAOTerm ctype = term
-        cdef PetscVec p = NULL
-        if params is not None: p = params.vec
-        cdef PetscMat m = NULL
-        if mapmat is not None: m = mapmat.mat
-        cdef PetscReal cscale = asReal(scale)
-        CHKERR(TaoSetTerm(self.tao, cscale, ctype.taoterm, p, m))
-
     def getTerm(self) -> tuple[float, TAOTerm, Vec, Mat]:
         """Return the whole objective term of the solver.
 
@@ -1806,7 +1779,7 @@ cdef class TAO(Object):
 
         See Also
         --------
-        setTerm, petsc.TaoAddTerm
+        petsc.TaoAddTerm
 
         """
         cdef const char *cprefix = NULL

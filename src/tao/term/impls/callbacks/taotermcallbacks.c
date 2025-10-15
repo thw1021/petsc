@@ -423,12 +423,12 @@ static PetscErrorCode TaoTermCreate_Callbacks_Internal(TaoTerm term, const char 
   The routines that get the user-defined `Tao` callback functions
   (`TaoGetObjective()`, `TaoGetObjectiveAndGradient()`, `TaoGetGradient()`,
   `TaoGetHessian()`) will always return those original callbacks, even if the
-  objective function has been changed by `TaoSetTerm()` or `TaoAddTerm()`,
+  objective function has been changed by `TaoAddTerm()`,
   so PETSc/TAO should not assume that those callbacks are valid in any library code.
 
   A `TAOTERMCALLBACKS` has a weak-reference to the `Tao` that created it,
   which may not be the `Tao` currently using it because the term could have been shared
-  using `TaoGetTerm()` and `TaoSetTerm()`.
+  using `TaoGetTerm()` and `TaoAddTerm()`.
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,

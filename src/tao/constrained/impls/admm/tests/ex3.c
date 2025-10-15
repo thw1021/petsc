@@ -174,7 +174,7 @@ PetscErrorCode TestADMMCtxCreate(MPI_Comm comm, ADMMTestCtx *actx, AppCtx *user)
 
   // Tao
   PetscCall(TaoCreate(comm, &actx->tao));
-  PetscCall(TaoSetTerm(actx->tao, user->alpha, actx->term_f, user->u, user->C));
+  PetscCall(TaoAddTerm(actx->tao, NULL, user->alpha, actx->term_f, user->u, user->C));
   PetscCall(TaoAddTerm(actx->tao, NULL, user->beta, actx->term_g, NULL, user->D));
   PetscCall(VecDuplicate(user->d, &user->ce));
   PetscCall(TaoSetEqualityConstraintsRoutine(actx->tao, user->ce, TaoComputeAffineEqualityConstraints, (void *)&user->constraints));

@@ -1047,7 +1047,7 @@ PetscErrorCode TaoSetUp_BNK(Tao tao)
       Mat       map;
 
       PetscCall(TaoGetTerm(tao, &scale, &term, &params, &map));
-      PetscCall(TaoSetTerm(bnk->bncg, scale, term, params, map));
+      PetscCall(TaoAddTerm(bnk->bncg, NULL, scale, term, params, map));
     }
     PetscCall(PetscObjectCopyFortranFunctionPointers((PetscObject)tao, (PetscObject)bnk->bncg));
     for (i = 0; i < tao->numbermonitors; ++i) {

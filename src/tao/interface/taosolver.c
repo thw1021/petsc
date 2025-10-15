@@ -581,8 +581,6 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
 
   PetscCall(TaoTermSetFromOptions(tao->orig_callbacks));
 
-  PetscCall(PetscOptionsReal("-tao_objective_scale", "Scale of the objective function", "TaoSetTerm", tao->objective_term.scale, &tao->objective_term.scale, NULL));
-
   {
     char    *term_prefixes[8];
     PetscInt n_terms = PETSC_STATIC_ARRAY_LENGTH(term_prefixes);
@@ -2991,7 +2989,7 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
 
   If multiple `TaoTerms` were provided to `Tao` via, for example, `TaoAddTerm()`, or in combination with giving functions directly to `Tao`, then the type `TAOTERMSUM` is returned.
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoSetTerm()`, `TaoAddTerm()`
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoAddTerm()`
 @*/
 PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params, Mat *map)
 {
@@ -3003,57 +3001,9 @@ PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params,
 }
 
 /*@
-  TaoSetTerm - Set the whole objective function of the `Tao` to be
-  $\alpha f(Ax; p)$, where $\alpha$ is a scaing coefficient, $f$ is a
-  `TaoTerm`, $A$ is an (optional) map and $p$ are the parameters of $f$.
-
-  Collective
-
-  Input Parameters:
-+ tao    - a `Tao` context
-. scale  - the scale of the term
-. term   - a `TaoTerm` for the real-valued function defining the objective
-. params - the vector of parameters for `term`, or `NULL` if no parameters were specified for `term`
-- map    - a map from the solution space of `tao` to the solution space of `term`, if `NULL` then the map is the identity
-
-  Level: intermediate
-
-  Note:
-  Tao has a callback interface for specifying an objective function and an object-oriented interface.
-  If the objective function was defined with callbacks, e.g. `TaoSetObjectiveAndGradient()`, then
-  `TaoGetTerm` will return a `TaoTerm` with the type `TAOTERMCALLBACKS` that encapsulates
-  those callbacks.
-
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoAddTerm()`
-@*/
-PetscErrorCode TaoSetTerm(Tao tao, PetscReal scale, TaoTerm term, Vec params, Mat map)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (term) {
-    PetscBool is_sum;
-
-    PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 3);
-    PetscCheckSameComm(tao, 1, term, 3);
-
-    PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSUM, &is_sum));
-    if (is_sum) PetscCall(TaoTermSumGetNumSubterms(term, &tao->num_terms));
-  }
-  PetscCall(TaoTermMappingSetData(&tao->objective_term, NULL, scale, term, map));
-  if (params) {
-    PetscValidHeaderSpecific(params, VEC_CLASSID, 4);
-    PetscCheckSameComm(tao, 1, params, 4);
-  }
-  PetscCall(PetscObjectReference((PetscObject)params));
-  PetscCall(VecDestroy(&tao->objective_parameters));
-  tao->objective_parameters = params;
-  tao->term_set             = PETSC_TRUE;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoAddTerm - Add a term to the objective function.  If the objective
-  function was $f(x)$, it becomes $f(x) + \alpha g(Ax; p)$, where $\alpha$ is
+  TaoAddTerm - Add a `term` to the objective function. If `Tao` is empty,
+  `term` will be the objective of `Tao`. If the objective function was
+  $f(x)$, it becomes $f(x) + \alpha g(Ax; p)$, where $\alpha$ is
   the `scale`, $g$ is the `term`, $A$ is the (optional) map, and $p$ are the
   (optional) parameters of $g$.
 
@@ -3069,7 +3019,7 @@ PetscErrorCode TaoSetTerm(Tao tao, PetscReal scale, TaoTerm term, Vec params, Ma
 
   Level: beginner
 
-.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoGetTerm()`, `TaoSetTerm()`
+.seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoGetTerm()`
 @*/
 PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm term, Vec params, Mat map)
 {

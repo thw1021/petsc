@@ -48,11 +48,11 @@ int main(int argc, char **argv)
     Mat original_map;
 
     PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, n, k, NULL, &original_map));
-    PetscCall(TaoSetTerm(tao, 1.5, original_sum, NULL, original_map));
+    PetscCall(TaoAddTerm(tao, NULL, 1.5, original_sum, NULL, original_map));
     PetscCall(MatDestroy(&original_map));
     PetscCall(TaoTermDestroy(&original_sum));
   } else {
-    PetscCall(TaoSetTerm(tao, 1.5, original_sum, NULL, NULL));
+    PetscCall(TaoAddTerm(tao, NULL, 1.5, original_sum, NULL, NULL));
     PetscCall(TaoTermDestroy(&original_sum));
   }
 
