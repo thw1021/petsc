@@ -2967,7 +2967,7 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
 }
 
 /*@
-  TaoGetTerm - Get the whole objective function of the `Tao` as a
+  TaoGetTerm - Get the entire objective function of the `Tao` as a
   single `TaoTerm` in the form $\alpha f(Ax; p)$, where $\alpha$ is a scaing
   coefficient, $f$ is a `TaoTerm`, $A$ is an (optional) map and $p$ are the parameters of $f$.
 
@@ -2984,11 +2984,12 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
 
   Level: intermediate
 
-  Note:
-  Tao has a callback interface for specifying an objective function and an object-oriented interface.
-  If the objective function was defined with callbacks, e.g. `TaoSetObjectiveAndGradient()`, then
+  Notes:
+  If the objective function was defined by providing function callbacks directly to `Tao` (for example, with `TaoSetObjectiveAndGradient()`), then
   `TaoGetTerm` will return a `TaoTerm` with the type `TAOTERMCALLBACKS` that encapsulates
-  those callbacks.
+  those functions.
+
+  If multiple `TaoTerms` were provided to `Tao` via, for example, `TaoAddTerm()`, or in combination with giving functions directly to `Tao`, then the type `TAOTERMSUM` is returned.
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoSetTerm()`, `TaoAddTerm()`
 @*/
