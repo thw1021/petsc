@@ -77,7 +77,7 @@ static PetscErrorCode TestADMMUnconstrained(MPI_Comm comm, PetscRandom rand, Pet
 
   // Tao
   PetscCall(TaoCreate(comm, &tao));
-  PetscCall(TaoSetTerm(tao, alpha, term_f, u, C));
+  PetscCall(TaoAddTerm(tao, NULL, alpha, term_f, u, C));
   PetscCall(TaoAddTerm(tao, NULL, beta, term_g, NULL, D));
   PetscCall(TaoSetType(tao, TAOADMM));
 

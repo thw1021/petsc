@@ -266,13 +266,12 @@ PetscErrorCode TaoSetObjective(Tao tao, PetscErrorCode (*func)(Tao tao, Vec x, P
 
   Note:
   In addition to specifying an objective function using callbacks like
-  `TaoSetObjective()` and `TaoSetGradient()`, Tao also has an object-oriented
-  approach to specifying objective functions with `TaoSetTerm()` and
-  `TaoAddTerm()`.
+  `TaoSetObjective()` and `TaoSetGradient()`, user can specify
+  objective functions with `TaoAddTerm()`.
 
   `TaoGetObjective()` will always return the callback specified with
   `TaoSetObjective()`, even if the objective function has been changed by
-  calling `TaoSetTerm()` and/or `TaoAddTerm()`.
+  calling `TaoAddTerm()`.
 
 .seealso: [](ch_tao), `Tao`, `TaoSetGradient()`, `TaoSetHessian()`, `TaoSetObjective()`
 @*/
@@ -470,13 +469,12 @@ PetscErrorCode TaoSetGradient(Tao tao, Vec g, PetscErrorCode (*func)(Tao tao, Ve
 
   Note:
   In addition to specifying an objective function using callbacks like
-  `TaoSetObjective()` and `TaoSetGradient()`, Tao also has an object-oriented
-  approach to specifying objective functions with `TaoSetTerm()` and
-  `TaoAddTerm()`.
+  `TaoSetObjective()` and `TaoSetGradient()`, user can specify
+  objective functions with `TaoAddTerm()`.
 
   `TaoGetGradient()` will always return the callback specified with
   `TaoSetGradient()`, even if the objective function has been changed by
-  calling `TaoSetTerm()` and/or `TaoAddTerm()`.
+  calling `TaoAddTerm()`.
 
 .seealso: [](ch_tao), `Tao`, `TaoSetObjective()`, `TaoSetHessian()`, `TaoSetObjectiveAndGradient()`, `TaoSetGradient()`
 @*/
@@ -554,13 +552,12 @@ PetscErrorCode TaoSetObjectiveAndGradient(Tao tao, Vec g, PetscErrorCode (*func)
 
   Note:
   In addition to specifying an objective function using callbacks like
-  `TaoSetObjectiveAndGradient()`, Tao also has an object-oriented
-  approach to specifying objective functions with `TaoSetTerm()` and
-  `TaoAddTerm()`.
+  `TaoSetObjectiveAndGradient()`, user can specify
+  objective functions with `TaoAddTerm()`.
 
   `TaoGetObjectiveAndGradient()` will always return the callback specified with
   `TaoSetObjectiveAndGradient()`, even if the objective function has been changed by
-  calling `TaoSetTerm()` and/or `TaoAddTerm()`.
+  calling `TaoAddTerm()`.
 
 .seealso: [](ch_tao), `Tao`, `TaoSolve()`, `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetHessian()`, `TaoSetObjectiveAndGradient()`
 @*/

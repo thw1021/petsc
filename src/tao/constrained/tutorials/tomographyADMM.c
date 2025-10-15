@@ -140,7 +140,7 @@ int main(int argc, char **argv)
     PetscCall(TaoTermSetSolutionTemplate(misfit_term, user->b));
     PetscCall(TaoTermSetParametersMode(misfit_term, TAOTERM_PARAMETERS_REQUIRED));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)misfit_term, "misfit_"));
-    PetscCall(TaoSetTerm(tao, 1.0, misfit_term, user->b, user->A));
+    PetscCall(TaoAddTerm(tao, NULL, 1.0, misfit_term, user->b, user->A));
     PetscCall(TaoTermDestroy(&misfit_term));
   }
 
