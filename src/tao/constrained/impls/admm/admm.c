@@ -778,7 +778,7 @@ static PetscErrorCode TaoSetUp_ADMM(Tao tao)
     PetscCall(TaoSetType(am->x_subsolver, TAONLS));
     if (am->initialize_type == ADMM_INITIALIZE_Z_AX) PetscCall(TaoSetSolution(am->x_subsolver, tao->solution)); // x subproblem can share a solution with the outer tao
   }
-  PetscCall(TaoSetTerm(am->x_subsolver, 1.0, am->f, f_params, NULL));
+  PetscCall(TaoAddTerm(am->x_subsolver, NULL, 1.0, am->f, f_params, NULL));
   PetscCall(VecDestroy(&f_params));
 
   if (!am->z_subsolver) {
@@ -789,7 +789,7 @@ static PetscErrorCode TaoSetUp_ADMM(Tao tao)
     PetscCall(TaoSetType(am->z_subsolver, TAONLS));
     if (am->initialize_type == ADMM_INITIALIZE_X_BZ) PetscCall(TaoSetSolution(am->z_subsolver, tao->solution)); // z subproblem can share a solution with the outer tao
   }
-  PetscCall(TaoSetTerm(am->z_subsolver, 1.0, am->g, g_params, NULL));
+  PetscCall(TaoAddTerm(am->z_subsolver, NULL, 1.0, am->g, g_params, NULL));
   PetscCall(VecDestroy(&g_params));
 
   /* we have constructed the constraints (Ax + Bz + c == 0) and initialized x_subsolver with f(x) and z_subsolver with g(z):

@@ -68,7 +68,7 @@ int main(int argc, char **argv)
   // the model term,  (1/2) || Ax - b ||_W^2
   PetscCall(TaoTermCreateQuadratic(W, &data_term));
   if (set_prefix) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)data_term, "data_"));
-  PetscCall(TaoSetTerm(tao, 1.0, data_term, b, A));
+  PetscCall(TaoAddTerm(tao, "data_", 1.0, data_term, b, A));
   PetscCall(TaoTermDestroy(&data_term));
 
   // the L2 term,  (1/2) lambda_2 || x ||_2^2

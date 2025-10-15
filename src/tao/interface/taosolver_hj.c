@@ -75,13 +75,12 @@ PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Ta
 
   Note:
   In addition to specifying an objective function using callbacks like
-  `TaoSetObjectiveAndGradient()` and `TaoSetHessian()`, Tao also has an object-oriented
-  approach to specifying objective functions with `TaoSetTerm()` and
-  `TaoAddTerm()`.
+  `TaoSetObjectiveAndGradient()` and `TaoSetHessian()`, user can specify
+  objective functions with `TaoAddTerm()`.
 
   `TaoGetHessian()` will always return the callback specified with
   `TaoSetHessian()`, even if the objective function has been changed by
-  calling `TaoSetTerm()` and/or `TaoAddTerm()`.
+  calling `TaoAddTerm()`.
 
 .seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoSetHessianMatrices()`, `TaoGetHessianMatrices()`
 @*/
