@@ -68,6 +68,7 @@ PetscErrorCode TaoTermDestroy(TaoTerm *term)
           `TaoTermSetFromOptions()`,
           `TaoTermSetUp()`,
           `TaoTermDestroy()`,
+          `PetscViewer`
 @*/
 PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
 {
@@ -178,7 +179,7 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
 }
 
 /*@
-  TaoTermSetFromOptions - Configure a `TaoTerm` from options
+  TaoTermSetFromOptions - Configure a `TaoTerm` from the PETSc options database
 
   Collective
 
@@ -186,16 +187,16 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
 . term - a `TaoTerm`
 
   Options Database Keys:
-+ -tao_term_type <type>                              - l1, halfl2squared, `TaoTermType` for complete list
-. -tao_term_solution_vec_type <type>                 - `VecType` for complete list of vector types
-. -tao_term_parameters_vec_type <type>               - `VecType` for complete list of vector types
++ -tao_term_type <type>                              - l1, halfl2squared; see `TaoTermType` for a complete list
+. -tao_term_solution_vec_type <type>                 - the type of vector to use for the solution, see `VecType` for a complete list of vector types
+. -tao_term_parameters_vec_type <type>               - the type of vector to use for the parameters, see `VecType` for a complete list of vector 
 . -tao_term_parameters_mode <optional,none,required> - `TAOTERM_PARAMETERS_OPTIONAL`, `TAOTERM_PARAMETERS_NONE`, `TAOTERM_PARAMETERS_REQUIRED`
 . -tao_term_hessian_pre_is_hessian <bool>            - Whether `TaoTermCreateHessianMatricesDefault()` should make a separate preconditioning matrix
 . -tao_term_hessian_mat_type <type>                  - `MatType` for Hessian matrix created by `TaoTermCreateHessianMatricesDefault()`
-. -tao_term_hessian_pre_mat_type <type>              - `MatType` for Hessian preconditioning matrix created by `TaoTermCreateHessianMatricesDefault()`
+. -tao_term_hessian_pre_mat_type <type>              - `MatType` for approximate Hessian matrix used to construct the preconditioner created by `TaoTermCreateHessianMatricesDefault()`
 . -tao_term_fd_delta <real>                          - Increment for finite difference derivative approximations in `TaoTermComputeGradientFD()`
-. -tao_term_gradient_use_fd <bool>                   - Use finite differences in `TaoTermComputeGradient()`, overriding other user-provided or buit-in routines
-- -tao_term_hessian_use_fd <bool>                    - Use finite differences in `TaoTermComputeHessian()` and `TaoTermComputeHessianMult()`, overriding other user-provided or buit-in routines
+. -tao_term_gradient_use_fd <bool>                   - Use finite differences in `TaoTermComputeGradient()`, overriding other user-provided or built-in routines
+- -tao_term_hessian_use_fd <bool>                    - Use finite differences in `TaoTermComputeHessian()` and `TaoTermComputeHessianMult()`, overriding other user-provided or built-in routines
 
   Level: beginner
 
@@ -278,7 +279,9 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
   Options Database Keys:
 . -tao_term_type <type> - l1, halfl2squared, `TaoTermType` for complete list
 
-  Note:
+  Notes:
+  Use `TaoTermCreateShell()` to define a custom term using your own function definition
+
   New types of `TaoTerm` can be created with `TaoTermRegister()`
 
 .seealso: [](sec_tao_term),
@@ -347,7 +350,7 @@ PetscErrorCode TaoTermGetType(TaoTerm term, TaoTermType *type)
 }
 
 /*@
-  TaoTermCreate - Create a TaoTerm to use in `Tao` objective functions
+  TaoTermCreate - Create a TaoTerm to use in defining the function `Tao` is to optimize
 
   Collective
 
@@ -355,13 +358,14 @@ PetscErrorCode TaoTermGetType(TaoTerm term, TaoTermType *type)
 . comm - communicator for MPI processes that compute the term
 
   Output Parameter:
-. term - a new TaoTerm
+. term - a new `TaoTerm`
 
   Level: beginner
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
-          `TaoTermSetType()`
+          `TaoTermSetType()`,
+          `TaoAddTerm()`,
           `TaoTermSetFromOptions()`,
           `TaoTermSetUp()`,
           `TaoTermView()`,
@@ -395,14 +399,14 @@ PetscErrorCode TaoTermCreate(MPI_Comm comm, TaoTerm *term)
 }
 
 /*@
-  TaoTermComputeObjective - Evaluate a `TaoTerm` for a given set of solution variables and parameters
+  TaoTermComputeObjective - Evaluate a `TaoTerm` for a given solution vector and parameter vector
 
   Collective
 
   Input Parameters:
 + term   - a `TaoTerm` representing a parametric function $f(x; p)$
 . x      - the solution variable $x$ in $f(x; p)$
-- params - the parameters $p$ in $f(x; p)$ (may be NULL if the term is not parametric)
+- params - the parameters $p$ in $f(x; p)$ (may be `NULL` if the term is not parametric)
 
   Output Parameter:
 . value - the value of $f(x; p)$
@@ -451,7 +455,7 @@ PetscErrorCode TaoTermComputeObjective(TaoTerm term, Vec x, Vec params, PetscRea
 }
 
 /*@
-  TaoTermComputeGradient - Evaluate the gradient of a `TaoTerm` for a given set of solution variables and parameters
+  TaoTermComputeGradient - Evaluate the gradient of a `TaoTerm` for a given solution vector and parameter vector
 
   Collective
 
@@ -510,7 +514,7 @@ PetscErrorCode TaoTermComputeGradient(TaoTerm term, Vec x, Vec params, Vec g)
 
 /*@
   TaoTermComputeObjectiveAndGradient - Evaluate both the value and gradient of
-  a `TaoTerm` for a given set of solution variables and parameters
+  a `TaoTerm` for a given set of solution vector and parameter vector
 
   Collective
 
@@ -578,7 +582,7 @@ PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm term, Vec x, Vec param
 
 /*@
   TaoTermComputeHessian - Evaluate the Hessian of a `TaoTerm`
-  (with respect to the solution variables) for a given set of solution variables and parameters
+  (with respect to the solution variables) for a given solution vector and parameter vector
 
   Collective
 
@@ -589,7 +593,7 @@ PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm term, Vec x, Vec param
 
   Output Parameters:
 + H    - Hessian matrix $\nabla_x^2 f(x;p)$
-- Hpre - precondiitoning matrix
+- Hpre - an (approximate) Hessian from which the preconditioner will be constructed, often the same as `H`
 
   Level: beginner
 
@@ -705,14 +709,14 @@ PetscErrorCode TaoTermComputeHessianSingle(TaoTerm term, Vec x, Vec params, Mat 
 
 /*@
   TaoTermComputeHessianMult - Evaluate the Hessian-vector product of
-  a `TaoTerm` for a given set of solution variables and parameters
+  a `TaoTerm` for a given solution vector and parameter vector
 
   Collective
 
   Input Parameters:
 + term   - a `TaoTerm` representing a parametric function $f(x; p)$
 . x      - the solution variable $x$ in $f(x; p)$
-. params - the parameters $p$ in $f(x; p)$ (may be NULL if the term is not parametric)
+. params - the parameters $p$ in $f(x; p)$ (may be `NULL` if the term is not parametric)
 - v      - a vector in the solution space
 
   Output Parameters:
@@ -926,6 +930,9 @@ PetscErrorCode TaoTermIsCreateHessianMatricesDefined(TaoTerm term, PetscBool *is
 
   Level: beginner
 
+  Note:
+  Alternatively, one may use TaoTermSetLayouts()` or TaoTermSetSolutionTemplate()` to define the vector sizes
+
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TaoTermGetSolutionSizes()`,
@@ -999,6 +1006,8 @@ PetscErrorCode TaoTermGetSolutionSizes(TaoTerm term, PetscInt *n, PetscInt *N, P
 
   Level: beginner
 
+  Note:
+  Alternatively, one may use TaoTermSetParameterLayouts()` or TaoTermSetParameterTemplate()` to define the vector sizes
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TaoTermGetParametersSizes()`,
@@ -1134,6 +1143,9 @@ PetscErrorCode TaoTermGetLayouts(TaoTerm term, PetscLayout *solution_layout, Pet
 
   Level: intermediate
 
+  Note:
+  Alternatively, one may use TaoTermSetSolutionsSizes()` or TaoTermSetSolutionLayout()` to define the vector sizes
+
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TaoTermGetVecTypes()`,
@@ -1171,6 +1183,9 @@ PetscErrorCode TaoTermSetSolutionTemplate(TaoTerm term, Vec sol_template)
 - params_template - a vector with the desired size, layout, and `VecType` of parameter vectors for `TaoTerm`
 
   Level: intermediate
+
+  Note:
+  Alternatively, one may use TaoTermSetParameterSizes()` or TaoTermSetParameterLayout()` to define the vector sizes
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -1483,7 +1498,7 @@ PetscErrorCode TaoTermCreateHessianMatricesDefault(TaoTerm term, Mat *H, Mat *Hp
   Level: developer
 
   Options Database Keys:
-+ -tao_term_hessian_pre_is_hessian <bool> - Whether `TaoTermCreateHessianMatrices()` should make a separate preconditioning matrix
++ -tao_term_hessian_pre_is_hessian <bool> - Whether `TaoTermCreateHessianMatrices()` should make a separate matrix for constructing the preconditioner
 . -tao_term_hessian_mat_type <type>       - `MatType` for Hessian matrix created by `TaoTermCreateHessianMatrices()`
 - -tao_term_hessian_pre_mat_type <type>   - `MatType` for Hessian preconditioning matrix created by `TaoTermCreateHessianMatrices()`
 
@@ -1582,7 +1597,7 @@ PetscErrorCode TaoTermDuplicate(TaoTerm term, TaoTermDuplicateOption opt, TaoTer
 }
 
 /*@
-  TaoTermSetParametersMode - The way a `TaoTerm` can accept parameters
+  TaoTermSetParametersMode - Sets the way a `TaoTerm` can accept parameters
 
   Logically collective
 
@@ -1609,7 +1624,7 @@ PetscErrorCode TaoTermSetParametersMode(TaoTerm term, TaoTermParametersMode para
 }
 
 /*@
-  TaoTermGetParametersMode - The way a `TaoTerm` can accept parameters
+  TaoTermGetParametersMode - Gets the way a `TaoTerm` can accept parameters
 
   Not collective
 
@@ -1674,7 +1689,7 @@ PetscErrorCode TaoTermGetFDDelta(TaoTerm term, PetscReal *delta)
 + term  - a `TaoTerm`
 - delta - the finite difference increment
 
-  Options Database Keys:
+  Options Database Key:
 . -tao_term_fd_delta <delta> - the above increment
 
   Level: advanced
@@ -1881,7 +1896,7 @@ PetscErrorCode TaoTermSetHessianColoring(TaoTerm term, ISColoring coloring)
 . term - a `TaoTerm`
 
   Output Parameter:
-. coloring - an `ISColoring`, or NULL if a coloring has not been set
+. coloring - an `ISColoring`, or `NULL` if a coloring has not been set
 
   Level: advanced
 
