@@ -947,7 +947,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
   PetscCall(PetscObjectSetName((PetscObject)gauss_newton_term, "BRGN Gauss-Newton term"));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)gauss_newton_term, prefix));
   PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)gauss_newton_term, "brgn_gauss_newton_"));
-  PetscCall(TaoSetTerm(gn->subsolver, 1.0, gauss_newton_term, NULL, NULL));
+  PetscCall(TaoAddTerm(gn->subsolver, "brgn_gauss_newton_", 1.0, gauss_newton_term, NULL, NULL));
   PetscCall(TaoTermDestroy(&gauss_newton_term));
 
   PetscCall(TaoBRGNCreateRegularizerTerm(tao, &regularizer_term, &map, &Hreg));

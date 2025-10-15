@@ -18,7 +18,6 @@ int main(int argc, char **argv)
   PetscMPIInt size; /* number of processes running */
   AppCtx      user; /* user-defined application context */
   MPI_Comm    comm;
-  PetscBool   test_addterm = PETSC_FALSE;
 
   /* Initialize TAO and PETSc */
   PetscFunctionBeginUser;
@@ -28,7 +27,6 @@ int main(int argc, char **argv)
   PetscCheck(size == 1, comm, PETSC_ERR_WRONG_MPI_SIZE, "Incorrect number of processors");
 
   PetscOptionsBegin(comm, "", help, "none");
-  PetscCall(PetscOptionsBool("-test_addterm", "Use TaoAddTerm instead of TaoSetTerm", NULL, test_addterm, &test_addterm, NULL));
   PetscOptionsEnd();
   /* Initialize problem parameters */
   PetscCall(AppCtxInitialize(comm, &user));
@@ -47,11 +45,7 @@ int main(int argc, char **argv)
   PetscCall(TaoSetType(tao, TAOLMVM));
 
   /* Set routines for function, gradient, hessian evaluation */
-  if (test_addterm) {
-    PetscCall(TaoAddTerm(tao, NULL, 1.0, objective, NULL, NULL));
-  } else {
-    PetscCall(TaoSetTerm(tao, 1.0, objective, NULL, NULL));
-  }
+  PetscCall(TaoAddTerm(tao, NULL, 1.0, objective, NULL, NULL));
 
   /* Check for TAO command line options */
   PetscCall(TaoSetFromOptions(tao));
@@ -148,16 +142,16 @@ static PetscErrorCode CreateVecs(TaoTerm term, Vec *solution, Vec *parameters_un
    test:
      requires: !single
      output_file: output/rosenbrock1_1.out
-     args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4 -test_addterm {{0 1}}
+     args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4
 
    test:
      suffix: test_gradient
      requires: !single
-     args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4 -tao_test_gradient -tao_fd_delta 1.e-6 -n 4 -chained -tao_term_hessian_mat_type aij -alpha 49.0 -test_addterm {{0 1}}
+     args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4 -tao_test_gradient -tao_fd_delta 1.e-6 -n 4 -chained -tao_term_hessian_mat_type aij -alpha 49.0
 
    test:
      suffix: separate_hessians
      requires: !single
-     args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4 -tao_term_hessian_pre_is_hessian 0 -tao_term_hessian_mat_type aij -tao_term_hessian_pre_mat_type sbaij -tao_view -test_addterm {{0 1}}
+     args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4 -tao_term_hessian_pre_is_hessian 0 -tao_term_hessian_mat_type aij -tao_term_hessian_pre_mat_type sbaij -tao_view
 
 TEST*/

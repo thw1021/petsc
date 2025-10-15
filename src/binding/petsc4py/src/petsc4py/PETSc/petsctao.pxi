@@ -193,7 +193,6 @@ cdef extern from * nogil:
     PetscErrorCode TaoGetJacobianInequalityRoutine(PetscTAO, PetscMat*, PetscMat*, PetscTaoJacobianInequality**, void**)
     PetscErrorCode TaoSetUpdate(PetscTAO, PetscTaoUpdateFunction*, void*)
 
-    PetscErrorCode TaoSetTerm(PetscTAO, PetscReal, PetscTAOTerm, PetscVec, PetscMat)
     PetscErrorCode TaoAddTerm(PetscTAO, const char*, PetscReal, PetscTAOTerm, PetscVec, PetscMat)
     PetscErrorCode TaoGetTerm(PetscTAO, PetscReal*, PetscTAOTerm*, PetscVec*, PetscMat*)
 

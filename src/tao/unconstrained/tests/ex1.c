@@ -44,7 +44,7 @@ int main(int argc, char **argv)
   // the model term,  (1/2) || Ax - b ||_W^2
   PetscCall(TaoTermCreateQuadratic(W, &data_term));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)data_term, "data_"));
-  PetscCall(TaoSetTerm(tao, 3.0, data_term, b, A));
+  PetscCall(TaoAddTerm(tao, "data_", 3.0, data_term, b, A));
   PetscCall(TaoTermDestroy(&data_term));
 
   PetscCall(TaoSetFromOptions(tao));
