@@ -585,9 +585,8 @@ the parametric behavior of a `TaoTerm` is determined by `TaoTermSetParametersMod
 
 #### Using a TaoTerm in a Tao solver
 
-A `TaoTerm` can be set as the entire objective function of a `Tao` solver
-with `TaoSetTerm()`.  A `TaoTerm` can also be added to the
-existing, or empty objective function of a `Tao` using `TaoAddTerm()`.
+A `TaoTerm` can be set to an empty `Tao` object or added to an existing
+`Tao` using `TaoAddTerm()`.
 For example: if you have specified an objective function $f(x)$ using
 `TaoSetObjectiveAndGradient()`, and a regularizer $g(x;p)$ is specified by a `TaoTerm`,
 you can create the objective function $f(x) + \alpha g(Ax; p)$ using:

@@ -103,7 +103,7 @@ PetscErrorCode TestADMMCtxCreate(MPI_Comm comm, ADMMTestCtx *actx, AppCtx *user)
 
   // Tao
   PetscCall(TaoCreate(comm, &actx->tao));
-  PetscCall(TaoSetTerm(actx->tao, user->alpha, actx->term_f, user->u, user->C));
+  PetscCall(TaoAddTerm(actx->tao, NULL, user->alpha, actx->term_f, user->u, user->C));
   PetscCall(TaoAddTerm(actx->tao, NULL, user->beta, actx->term_g, NULL, user->D));
   PetscCall(TaoSetType(actx->tao, TAOADMM));
   PetscFunctionReturn(PETSC_SUCCESS);
