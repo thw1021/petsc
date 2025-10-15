@@ -411,7 +411,7 @@ PetscErrorCode TaoTermCreate(MPI_Comm comm, TaoTerm *term)
   Output Parameter:
 . value - the value of $f(x; p)$
 
-  Level: beginner
+  Level: developer
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -467,7 +467,7 @@ PetscErrorCode TaoTermComputeObjective(TaoTerm term, Vec x, Vec params, PetscRea
   Output Parameter:
 . g - the value of $\nabla_x f(x; p)$
 
-  Level: beginner
+  Level: developer
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -527,7 +527,7 @@ PetscErrorCode TaoTermComputeGradient(TaoTerm term, Vec x, Vec params, Vec g)
 + value - the value of $f(x; p)$
 - g     - the value of $\nabla_x f(x; p)$
 
-  Level: beginner
+  Level: developer
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -595,7 +595,7 @@ PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm term, Vec x, Vec param
 + H    - Hessian matrix $\nabla_x^2 f(x;p)$
 - Hpre - an (approximate) Hessian from which the preconditioner will be constructed, often the same as `H`
 
-  Level: beginner
+  Level: developer
 
   Note:
   If there is no separate preconditioning matrix, then `TaoTermComputeHessian(term, x, params, H, NULL)`
@@ -656,7 +656,7 @@ PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat
 . func           - a `TaoTermHessianSingleFn` callback that computes a single copy of the Hessian matrix
 - copy_structure - if `H` and `Hpre` are distinct matrices, the `str` argument to `MatCopy()` for copying `H` to `Hpre`
 
-  Level: intermediate
+  Level: developer
 
   Note:
   `TaoTermComputeHessian()` can be called with either matrix being present. All of the following are valid calling sequences\:
@@ -722,7 +722,7 @@ PetscErrorCode TaoTermComputeHessianSingle(TaoTerm term, Vec x, Vec params, Mat 
   Output Parameters:
 . Hv - the product Hessian matrix $\nabla_x^2 f(x;p) v$
 
-  Level: intermediate
+  Level: developer
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -770,7 +770,7 @@ PetscErrorCode TaoTermComputeHessianMult(TaoTerm term, Vec x, Vec params, Vec v,
   Output Parameter:
 . is_defined - whether the objective is defined
 
-  Level: intermediate
+  Level: developer
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -801,7 +801,7 @@ PetscErrorCode TaoTermIsObjectiveDefined(TaoTerm term, PetscBool *is_defined)
   Output Parameter:
 . is_defined - whether the gradient is defined
 
-  Level: intermediate
+  Level: developer
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -832,7 +832,7 @@ PetscErrorCode TaoTermIsGradientDefined(TaoTerm term, PetscBool *is_defined)
   Output Parameter:
 . is_defined - whether the objective/gradient is defined
 
-  Level: intermediate
+  Level: developer
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -863,7 +863,7 @@ PetscErrorCode TaoTermIsObjectiveAndGradientDefined(TaoTerm term, PetscBool *is_
   Output Parameter:
 . is_defined - whether the hessian is defined
 
-  Level: intermediate
+  Level: developer
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -894,7 +894,7 @@ PetscErrorCode TaoTermIsHessianDefined(TaoTerm term, PetscBool *is_defined)
   Output Parameter:
 . is_defined - whether the term can create new Hessian matrices
 
-  Level: intermediate
+  Level: developer
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -1361,7 +1361,7 @@ PetscErrorCode TaoTermGetVecTypes(TaoTerm term, VecType *solution_type, VecType 
 + solution   - (optional) a compatible solution vector for `term`
 - parameters - (optional) a compatible parameter vector for `term`
 
-  Level: beginner
+  Level: advanced
 
   Note:
   Before a `TaoTerm` can create a solution or parameter vector, you must do one of the following\:
