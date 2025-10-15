@@ -71,9 +71,9 @@ PetscErrorCode TaoTermCreateHessianShell(TaoTerm term, Mat *shell)
 
   PetscFunctionBegin;
   PetscCall(MatCreate(PetscObjectComm((PetscObject)term), shell));
-  PetscCall(TaoTermGetLayouts(term, &sol_layout, NULL));
+  PetscCall(TaoTermGetSolutionLayout(term, &sol_layout));
   PetscCall(MatSetLayouts(*shell, sol_layout, sol_layout));
-  PetscCall(TaoTermGetVecTypes(term, &sol_vec_type, NULL));
+  PetscCall(TaoTermGetSolutionVecType(term, &sol_vec_type));
   PetscCall(MatSetVecType(*shell, sol_vec_type));
   PetscCall(MatSetType(*shell, MATSHELL));
   PetscCall(PetscNew(&hess));

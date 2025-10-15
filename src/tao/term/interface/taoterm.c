@@ -153,10 +153,10 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
   PetscTryTypeMethod(term, setup);
   PetscCall(MatGetSize(term->solution_factory, &N, NULL));
   if (N < 0) {
-    PetscCheck(term->ops->createvecs, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not know. You should have called TaoTermShellSetCreateVecs()");
+    PetscCheck(term->ops->createsolutionvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not know. You should have called TaoTermShellSetCreateSolutionVec()");
     Vec sol_template;
 
-    PetscCall(TaoTermCreateVecs(term, &sol_template, NULL));
+    PetscCall(TaoTermCreateSolutionVec(term, &sol_template));
     PetscCall(TaoTermSetSolutionTemplate(term, sol_template));
     PetscCall(VecDestroy(&sol_template));
   }
@@ -166,10 +166,10 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
 
     PetscCall(MatGetSize(term->parameters_factory, &K, NULL));
     if (K < 0) {
-      PetscCheck(term->ops->createvecs, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not know. You should have called TaoTermShellSetCreateVecs()");
+      PetscCheck(term->ops->createsolutionvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not know. You should have called TaoTermShellSetCreateSolutionVec()");
       Vec params_template;
 
-      PetscCall(TaoTermCreateVecs(term, NULL, &params_template));
+      PetscCall(TaoTermCreateParametersVec(term, &params_template));
       PetscCall(TaoTermSetParametersTemplate(term, params_template));
       PetscCall(VecDestroy(&params_template));
     }
@@ -228,11 +228,12 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
   } else {
     PetscCall(TaoTermSetType(term, deft));
   }
-  PetscCall(TaoTermGetVecTypes(term, &sol_type, &params_type));
-  PetscCall(PetscOptionsFList("-tao_term_solution_vec_type", "Solution vector type", "TaoTermSetVecTypes", VecList, sol_type, typeName, 256, &opt));
-  if (opt) PetscCall(TaoTermSetVecTypes(term, typeName, NULL));
-  PetscCall(PetscOptionsFList("-tao_term_parameters_vec_type", "Parameters vector type", "TaoTermSetVecTypes", VecList, params_type, typeName, 256, &opt));
-  if (opt) PetscCall(TaoTermSetVecTypes(term, NULL, typeName));
+  PetscCall(TaoTermGetSolutionVecType(term, &sol_type));
+  PetscCall(TaoTermGetParametersVecType(term, &params_type));
+  PetscCall(PetscOptionsFList("-tao_term_solution_vec_type", "Solution vector type", "TaoTermSetSolutionVecType", VecList, sol_type, typeName, 256, &opt));
+  if (opt) PetscCall(TaoTermSetSolutionVecType(term, typeName));
+  PetscCall(PetscOptionsFList("-tao_term_parameters_vec_type", "Parameters vector type", "TaoTermSetParametersVecType", VecList, params_type, typeName, 256, &opt));
+  if (opt) PetscCall(TaoTermSetParametersVecType(term, typeName));
   PetscCall(PetscOptionsEnum("-tao_term_parameters_mode", "Parameters requirement type", "TaoTermSetParametersMode", TaoTermParametersModes, (PetscEnum)term->parameters_mode, (PetscEnum *)&term->parameters_mode, NULL));
   PetscCall(PetscOptionsBool("-tao_term_hessian_pre_is_hessian", "If the Hessian and its preconditioning matrix should be the same", "TaoTermSetCreateHessianMode", term->Hpre_is_H, &term->Hpre_is_H, NULL));
 
@@ -931,17 +932,17 @@ PetscErrorCode TaoTermIsCreateHessianMatricesDefined(TaoTerm term, PetscBool *is
   Level: beginner
 
   Note:
-  Alternatively, one may use TaoTermSetLayouts()` or TaoTermSetSolutionTemplate()` to define the vector sizes
+  Alternatively, one may use TaoTermSetSolutionLayout()` or TaoTermSetSolutionTemplate()` to define the vector sizes
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TaoTermGetSolutionSizes()`,
           `TaoTermSetSolutionTemplate()`,
-          `TaoTermGetVecTypes()`,
-          `TaoTermSetVecTypes()`,
-          `TaoTermGetLayouts()`,
-          `TaoTermSetLayouts()`,
-          `TaoTermCreateVecs()`
+          `TaoTermGetSolutionVecType()`,
+          `TaoTermSetSolutionVecType()`,
+          `TaoTermGetSolutionLayout()`,
+          `TaoTermSetSolutionLayout()`,
+          `TaoTermCreateSolutionVec()`
 @*/
 PetscErrorCode TaoTermSetSolutionSizes(TaoTerm term, PetscInt n, PetscInt N, PetscInt bs)
 {
@@ -975,11 +976,11 @@ PetscErrorCode TaoTermSetSolutionSizes(TaoTerm term, PetscInt n, PetscInt N, Pet
           `TaoTerm`,
           `TaoTermSetSolutionSizes()`,
           `TaoTermSetSolutionTemplate()`,
-          `TaoTermGetVecTypes()`,
-          `TaoTermSetVecTypes()`,
-          `TaoTermGetLayouts()`,
-          `TaoTermSetLayouts()`,
-          `TaoTermCreateVecs()`
+          `TaoTermGetSolutionVecType()`,
+          `TaoTermSetSolutionVecType()`,
+          `TaoTermGetSolutionLayout()`,
+          `TaoTermSetSolutionLayout()`,
+          `TaoTermCreateSolutionVec()`
 @*/
 PetscErrorCode TaoTermGetSolutionSizes(TaoTerm term, PetscInt *n, PetscInt *N, PetscInt *bs)
 {
@@ -1013,11 +1014,11 @@ PetscErrorCode TaoTermGetSolutionSizes(TaoTerm term, PetscInt *n, PetscInt *N, P
           `TaoTerm`,
           `TaoTermGetParametersSizes()`,
           `TaoTermSetParametersTemplate()`,
-          `TaoTermGetVecTypes()`,
-          `TaoTermSetVecTypes()`,
-          `TaoTermGetLayouts()`,
-          `TaoTermSetLayouts()`,
-          `TaoTermCreateVecs()`
+          `TaoTermGetParametersVecType()`,
+          `TaoTermSetSolutionVecType()`,
+          `TaoTermGetParametersLayout()`,
+          `TaoTermSetParametersLayout()`,
+          `TaoTermCreateParametersVec()`
 @*/
 PetscErrorCode TaoTermSetParametersSizes(TaoTerm term, PetscInt k, PetscInt K, PetscInt bs)
 {
@@ -1051,11 +1052,11 @@ PetscErrorCode TaoTermSetParametersSizes(TaoTerm term, PetscInt k, PetscInt K, P
           `TaoTerm`,
           `TaoTermSetParametersSizes()`,
           `TaoTermSetParametersTemplate()`,
-          `TaoTermGetVecTypes()`,
-          `TaoTermSetVecTypes()`,
-          `TaoTermGetLayouts()`,
-          `TaoTermSetLayouts()`,
-          `TaoTermCreateVecs()`
+          `TaoTermGetParametersVecType()`,
+          `TaoTermSetParametersVecType()`,
+          `TaoTermGetParametersLayout()`,
+          `TaoTermSetParametersLayout()`,
+          `TaoTermCreateParametersVec()`
 @*/
 PetscErrorCode TaoTermGetParametersSizes(TaoTerm term, PetscInt *k, PetscInt *K, PetscInt *bs)
 {
@@ -1068,32 +1069,25 @@ PetscErrorCode TaoTermGetParametersSizes(TaoTerm term, PetscInt *k, PetscInt *K,
 }
 
 /*@
-  TaoTermSetLayouts - Set the layouts describing the solution vectors and parameter vectors of a `TaoTerm`.
+  TaoTermSetParametersLayout - Set the layout describing the parameter vector of `TaoTerm`.
 
   Collective
 
   Input Parameters:
 + term              - a `TaoTerm`
-<<<<<<< HEAD
-. solution_layout   - the `PetscLayout` for the solution space
-=======
->>>>>>> ce09075004f (wip)
 - parameters_layout - the `PetscLayout` for the parameter space
 
   Level: intermediate
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
-          `TaoTermGetVecTypes()`,
-          `TaoTermSetVecTypes()`,
-          `TaoTermGetLayouts()`,
+          `TaoTermGetParametersVecType()`,
+          `TaoTermSetParametersVecType()`,
+          `TaoTermGetParametersLayout()`,
           `TaoTermSetSolutionTemplate()`,
           `TaoTermSetParametersTemplate()`,
-          `TaoTermCreateVecs()`
+          `TaoTermCreateParametersVec()`
 @*/
-<<<<<<< HEAD
-PetscErrorCode TaoTermSetLayouts(TaoTerm term, PetscLayout solution_layout, PetscLayout parameters_layout)
-=======
 PetscErrorCode TaoTermSetParametersLayout(TaoTerm term, PetscLayout parameters_layout)
 {
   PetscLayout rlayout, clayout;
@@ -1156,7 +1150,6 @@ PetscErrorCode TaoTermGetParametersLayout(TaoTerm term, PetscLayout *parameters_
           `TaoTermCreateSolutionVec()`
 @*/
 PetscErrorCode TaoTermSetSolutionLayout(TaoTerm term, PetscLayout solution_layout)
->>>>>>> ce09075004f (wip)
 {
   PetscLayout rlayout, clayout;
 
@@ -1164,13 +1157,11 @@ PetscErrorCode TaoTermSetSolutionLayout(TaoTerm term, PetscLayout solution_layou
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscCall(MatGetLayouts(term->solution_factory, &rlayout, &clayout));
   PetscCall(MatSetLayouts(term->solution_factory, solution_layout, clayout));
-  PetscCall(MatGetLayouts(term->parameters_factory, &rlayout, &clayout));
-  PetscCall(MatSetLayouts(term->parameters_factory, parameters_layout, clayout));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  TaoTermGetLayouts - Get the layouts describing the solution vectors and parameter vectors of a `TaoTerm`.
+  TaoTermGetSolutionLayout - Get the layouts describing the solution vectors of a `TaoTerm`.
 
   Not collective
 
@@ -1178,26 +1169,24 @@ PetscErrorCode TaoTermSetSolutionLayout(TaoTerm term, PetscLayout solution_layou
 . term - a `TaoTerm`
 
   Output Parameters:
-+ solution_layout   - (optional) the `PetscLayout` for the solution space
-- parameters_layout - (optional) the `PetscLayout` for the parameter space
+. solution_layout - the `PetscLayout` for the parameter space
 
   Level: intermediate
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
-          `TaoTermGetVecTypes()`,
-          `TaoTermSetVecTypes()`,
-          `TaoTermSetLayouts()`,
+          `TaoTermGetSolutionVecType()`,
+          `TaoTermSetSolutionVecType()`,
+          `TaoTermSetSolutionLayout()`,
           `TaoTermSetSolutionTemplate()`,
           `TaoTermSetParametersTemplate()`,
-          `TaoTermCreateVecs()`
+          `TaoTermCreateSolutionVec()`
 @*/
-PetscErrorCode TaoTermGetLayouts(TaoTerm term, PetscLayout *solution_layout, PetscLayout *parameters_layout)
+PetscErrorCode TaoTermGetSolutionLayout(TaoTerm term, PetscLayout *solution_layout)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   if (solution_layout) PetscCall(MatGetLayouts(term->solution_factory, solution_layout, NULL));
-  if (parameters_layout) PetscCall(MatGetLayouts(term->parameters_factory, parameters_layout, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1213,16 +1202,16 @@ PetscErrorCode TaoTermGetLayouts(TaoTerm term, PetscLayout *solution_layout, Pet
   Level: intermediate
 
   Note:
-  Alternatively, one may use TaoTermSetSolutionsSizes()` or TaoTermSetSolutionLayout()` to define the vector sizes
+  Alternatively, one may use `TaoTermSetSolutionsSizes()` or `TaoTermSetSolutionLayout()` to define the vector sizes
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
-          `TaoTermGetVecTypes()`,
-          `TaoTermSetVecTypes()`,
+          `TaoTermGetSolutionVecType()`,
+          `TaoTermSetSolutionVecType()`,
           `TaoTermSetParametersTemplate()`,
-          `TaoTermGetLayouts()`,
-          `TaoTermSetLayouts()`,
-          `TaoTermCreateVecs()`
+          `TaoTermGetSolutionLayout()`,
+          `TaoTermSetSolutionLayout()`,
+          `TaoTermCreateSolutionVec()`
 @*/
 PetscErrorCode TaoTermSetSolutionTemplate(TaoTerm term, Vec sol_template)
 {
@@ -1254,16 +1243,16 @@ PetscErrorCode TaoTermSetSolutionTemplate(TaoTerm term, Vec sol_template)
   Level: intermediate
 
   Note:
-  Alternatively, one may use TaoTermSetParameterSizes()` or TaoTermSetParameterLayout()` to define the vector sizes
+  Alternatively, one may use `TaoTermSetParameterSizes()` or `TaoTermSetParametersLayout()` to define the vector sizes
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
-          `TaoTermGetVecTypes()`,
-          `TaoTermSetVecTypes()`,
+          `TaoTermGetParametersVecType()`,
+          `TaoTermSetParametersVecType()`,
           `TaoTermSetSolutionTemplate()`,
-          `TaoTermGetLayouts()`,
-          `TaoTermSetLayouts()`,
-          `TaoTermCreateVecs()`
+          `TaoTermGetParametersLayout()`,
+          `TaoTermSetParametersLayout()`,
+          `TaoTermCreateSolutionVec()`
 @*/
 PetscErrorCode TaoTermSetParametersTemplate(TaoTerm term, Vec params_template)
 {
@@ -1284,41 +1273,68 @@ PetscErrorCode TaoTermSetParametersTemplate(TaoTerm term, Vec params_template)
 }
 
 /*@
-  TaoTermSetVecTypes - Set the vector types of the solution and parameter vectors of a `TaoTerm`
+  TaoTermSetSolutionVecType - Set the vector types of the solution vector of a `TaoTerm`
 
   Logically collective
 
   Input Parameters:
-+ term            - a `TaoTerm`
-. solution_type   - the `VecType` for the solution space
-- parameters_type - the `VecType` for the parameter space
++ term          - a `TaoTerm`
+- solution_type - the `VecType` for the solution space
 
   Options Database Keys:
-+ -tao_term_solution_vec_type <type>   - `VecType` for complete list of vector types
-- -tao_term_parameters_vec_type <type> - `VecType` for complete list of vector types
+. -tao_term_solution_vec_type <type> - `VecType` for complete list of vector types
 
   Level: advanced
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
-          `TaoTermGetVecTypes()`,
+          `TaoTermGetSolutionVecType()`,
           `TaoTermSetLayouts()`,
           `TaoTermGetLayouts()`,
           `TaoTermSetSolutionTemplate()`,
           `TaoTermSetParametersTemplate()`,
-          `TaoTermCreateVecs()`
+          `TaoTermCreateSolutionVec()`
 @*/
-PetscErrorCode TaoTermSetVecTypes(TaoTerm term, VecType solution_type, VecType parameters_type)
+PetscErrorCode TaoTermSetSolutionVecType(TaoTerm term, VecType solution_type)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   if (solution_type) PetscCall(MatSetVecType(term->solution_factory, solution_type));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermSetParametersVecType - Set the vector types of the parameters vector of a `TaoTerm`
+
+  Logically collective
+
+  Input Parameters:
++ term            - a `TaoTerm`
+- parameters_type - the `VecType` for the parameters space
+
+  Options Database Keys:
+. -tao_term_parameters_vec_type <type> - `VecType` for complete list of vector types
+
+  Level: advanced
+
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TaoTermGetParametersVecType()`,
+          `TaoTermSetParametersLayout()`,
+          `TaoTermGetParametersLayout()`,
+          `TaoTermSetParametersTemplate()`,
+          `TaoTermCreateParametersVec()`
+@*/
+PetscErrorCode TaoTermSetParametersVecType(TaoTerm term, VecType parameters_type)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   if (parameters_type) PetscCall(MatSetVecType(term->parameters_factory, parameters_type));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  TaoTermGetVecTypes - Get the vector types of the solution and parameter vectors of a `TaoTerm`
+  TaoTermGetSolutionVecType - Get the vector types of the solution vector of a `TaoTerm`
 
   Not collective
 
@@ -1326,31 +1342,59 @@ PetscErrorCode TaoTermSetVecTypes(TaoTerm term, VecType solution_type, VecType p
 . term - a `TaoTerm`
 
   Output Parameters:
-+ solution_type   - (optional) the `VecType` for the solution space
-- parameters_type - (optional) the `VecType` for the parameter space
+. solution_type - the `VecType` for the solution space
 
   Level: advanced
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
-          `TaoTermSetVecTypes()`,
+          `TaoTermSetSolutionVecType()`,
           `TaoTermGetLayouts()`,
-          `TaoTermSetLayouts()`,
+          `TaoTermSetSolutionLayout()`,
           `TaoTermSetSolutionTemplate()`,
           `TaoTermSetParametersTemplate()`,
-          `TaoTermCreateVecs()`
+          `TaoTermCreateSolutionVec()`
 @*/
-PetscErrorCode TaoTermGetVecTypes(TaoTerm term, VecType *solution_type, VecType *parameters_type)
+PetscErrorCode TaoTermGetSolutionVecType(TaoTerm term, VecType *solution_type)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   if (solution_type) PetscCall(MatGetVecType(term->solution_factory, solution_type));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermGetParametersVecType - Get the vector types of the parameter vector of a `TaoTerm`
+
+  Not collective
+
+  Input Parameter:
+. term - a `TaoTerm`
+
+  Output Parameters:
+. parameters_type - the `VecType` for the parameter space
+
+  Level: advanced
+
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TaoTermSetParametersVecType()`,
+          `TaoTermGetLayouts()`,
+          `TaoTermSetSolutionLayout()`,
+          `TaoTermSetSolutionTemplate()`,
+          `TaoTermSetParametersTemplate()`,
+          `TaoTermCreateParametersVec()`
+@*/
+PetscErrorCode TaoTermGetParametersVecType(TaoTerm term, VecType *parameters_type)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   if (parameters_type) PetscCall(MatGetVecType(term->parameters_factory, parameters_type));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  TaoTermCreateVecs - Create a solution and/or parameter vector for a `TaoTerm`
+  TaoTermCreateSolutionVec - Create a solution vector for a `TaoTerm`
 
   Collective
 
@@ -1358,48 +1402,90 @@ PetscErrorCode TaoTermGetVecTypes(TaoTerm term, VecType *solution_type, VecType 
 . term - a `TaoTerm`
 
   Output Parameters:
-+ solution   - (optional) a compatible solution vector for `term`
-- parameters - (optional) a compatible parameter vector for `term`
+. solution - a compatible solution vector for `term`
 
   Level: advanced
 
   Note:
-  Before a `TaoTerm` can create a solution or parameter vector, you must do one of the following\:
+  Before a `TaoTerm` can create a solution vector, you must do one of the following\:
 
-  * Call `TaoTermSetSolutionSizes()` to describe the size and parallel layout of a solution vector
-  and `TaoTermSetParametersSizes()` to describe a parameters vector (unless
-  the term does not use parameters, see `TaoTermGetParametersMode()`).
-  * Call `TaoTermSetLayouts()` to directly set `PetscLayout`s for the solution and/or parameters vectors.
-  * Call `TaoTermSetSolutionTemplate()` and/or `TaoTermSetParametersTemplate()` to set the
-  solution/parameters vector spaces to match existing `Vec`s.
-  * If the `TaoTerm` is a `TAOTERMSHELL`, you can call `TaoTermShellSetCreateVecs()` to use your own code
-  for creating vectors.
+  * Call `TaoTermSetSolutionSizes()` to describe the size and parallel layout of a solution vector.
+  * Call `TaoTermSetSolutionLayout()` to directly set `PetscLayout`s for the solution vector.
+  * Call `TaoTermSetSolutionTemplate()` to set the solution vector spaces to match existing `Vec`.
+  * If the `TaoTerm` is a `TAOTERMSHELL`, you can call `TaoTermShellSetCreateSolutionVec()` to use
+  your own code for creating vectors.
 
-  You can also call `TaoTermSetVecTypes()` to set the type of vector created (e.g. `VECCUDA`).
+  You can also call `TaoTermSetSolutionVecType()` to set the type of vector created (e.g. `VECCUDA`).
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
-          `TaoTermShellSetCreateVecs()`,
+          `TaoTermShellSetCreateSolutionVec()`,
           `TaoTermGetSolutionSizes()`,
           `TaoTermSetSolutionSizes()`,
-          `TaoTermGetParametersSizes()`,
-          `TaoTermSetParametersSizes()`,
           `TaoTermSetSolutionTemplate()`,
-          `TaoTermSetParametersTemplate()`,
-          `TaoTermGetVecTypes()`,
-          `TaoTermSetVecTypes()`,
-          `TaoTermGetLayouts()`,
-          `TaoTermSetLayouts()`,
+          `TaoTermGetSolutionTemplate()`,
+          `TaoTermGetSolutionVecType()`,
+          `TaoTermSetSolutionVecType()`,
+          `TaoTermGetSolutionLayout()`,
+          `TaoTermSetSolutionLayout()`,
           `TaoTermCreateHessianMatrices()`
 @*/
-PetscErrorCode TaoTermCreateVecs(TaoTerm term, Vec *solution, Vec *parameters)
+PetscErrorCode TaoTermCreateSolutionVec(TaoTerm term, Vec *solution)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  if (term->ops->createvecs) {
-    PetscUseTypeMethod(term, createvecs, solution, parameters);
+  if (term->ops->createsolutionvec) {
+    PetscUseTypeMethod(term, createsolutionvec, solution);
   } else {
     PetscCall(MatCreateVecs(term->solution_factory, NULL, solution));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermCreateParametersVec - Create a parameter vector for a `TaoTerm`
+
+  Collective
+
+  Input Parameter:
+. term - a `TaoTerm`
+
+  Output Parameters:
+. parameters - a compatible parameter vector for `term`
+
+  Level: advanced
+
+  Note:
+  Before a `TaoTerm` can create a parameter vector, you must do one of the following\:
+
+  * Call `TaoTermSetParametersSize()` to describe the size and parallel layout of a parameters vector.
+  * Call `TaoTermSetParametersLayout()` to directly set `PetscLayout`s for the parameters vector.
+  * Call `TaoTermSetParametersTemplate()` to set the parameters vector spaces to match existing `Vec`.
+  * If the `TaoTerm` is a `TAOTERMSHELL`, you can call `TaoTermShellSetCreateParametersVec()` to use your
+  own code for creating vectors.
+
+  You can also call `TaoTermSetParametersVecType()` to set the type of vector created (e.g. `VECCUDA`).
+
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TaoTermShellSetCreateParametersVec()`,
+          `TaoTermGetParametersSizes()`,
+          `TaoTermSetParametersSizes()`,
+          `TaoTermSetParametersTemplate()`,
+          `TaoTermGetParametersTemplate()`,
+          `TaoTermGetParametersVecType()`,
+          `TaoTermSetParametersVecType()`,
+          `TaoTermGetParametersLayout()`,
+          `TaoTermSetParametersLayout()`,
+          `TaoTermCreateHessianMatrices()`
+@*/
+PetscErrorCode TaoTermCreateParametersVec(TaoTerm term, Vec *parameters)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  if (term->ops->createparametersvec) {
+    PetscUseTypeMethod(term, createparametersvec, parameters);
+  } else {
     PetscCall(MatCreateVecs(term->parameters_factory, NULL, parameters));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1421,7 +1507,7 @@ PetscErrorCode TaoTermCreateVecs(TaoTerm term, Vec *solution, Vec *parameters)
 
   Note:
   Before Hessian matrices can be created, the size of the solution vector space
-  must be set (see the ways this can be done in `TaoTermCreateVecs()`).  If the
+  must be set (see the ways this can be done in `TaoTermCreateSolutionVec()`).  If the
   term is a `TAOTERMSHELL`, `TaoTermShellSetCreateHessianMatrices()` must be
   called.  Most `TaoTerm`s use `TaoTermCreateHessianMatricesDefault()` to create
   their Hessian matrices: the behavior of that function can be controlled by
@@ -1431,7 +1517,7 @@ PetscErrorCode TaoTermCreateVecs(TaoTerm term, Vec *solution, Vec *parameters)
           `TaoTerm`,
           `TaoTermComputeHessian()`,
           `TaoTermShellSetCreateHessianMatrices()`,
-          `TaoTermCreateVecs()`,
+          `TaoTermCreateSolutionVec()`,
           `TaoTermCreateHessianMatricesDefault()`,
           `TaoTermGetCreateHessianMode()`,
           `TaoTermSetCreateHessianMode()`,
@@ -1503,9 +1589,9 @@ PetscErrorCode TaoTermCreateHessianMatricesDefault(TaoTerm term, Mat *H, Mat *Hp
       VecType     sol_vec_type;
 
       PetscCall(MatCreate(PetscObjectComm((PetscObject)term), &_H));
-      PetscCall(TaoTermGetLayouts(term, &sol_layout, NULL));
+      PetscCall(TaoTermGetSolutionLayout(term, &sol_layout));
       PetscCall(MatSetLayouts(_H, sol_layout, sol_layout));
-      PetscCall(TaoTermGetVecTypes(term, &sol_vec_type, NULL));
+      PetscCall(TaoTermGetSolutionVecType(term, &sol_vec_type));
       PetscCall(MatSetVecType(_H, sol_vec_type));
       if (H_mattype) PetscCall(MatSetType(_H, H_mattype));
       PetscCall(MatSetOption(_H, MAT_SYMMETRIC, PETSC_TRUE));
@@ -1540,9 +1626,9 @@ PetscErrorCode TaoTermCreateHessianMatricesDefault(TaoTerm term, Mat *H, Mat *Hp
       VecType     sol_vec_type;
 
       PetscCall(MatCreate(PetscObjectComm((PetscObject)term), &_Hpre));
-      PetscCall(TaoTermGetLayouts(term, &sol_layout, NULL));
+      PetscCall(TaoTermGetSolutionLayout(term, &sol_layout));
       PetscCall(MatSetLayouts(_Hpre, sol_layout, sol_layout));
-      PetscCall(TaoTermGetVecTypes(term, &sol_vec_type, NULL));
+      PetscCall(TaoTermGetSolutionVecType(term, &sol_vec_type));
       PetscCall(MatSetVecType(_Hpre, sol_vec_type));
       if (Hpre_mattype) PetscCall(MatSetType(_Hpre, Hpre_mattype));
       PetscCall(MatSetOption(_Hpre, MAT_SYMMETRIC, PETSC_TRUE));
