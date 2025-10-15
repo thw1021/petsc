@@ -1,0 +1,9 @@
+t = 0.000e+00  L2 error = 2.828852e-05  Linf error = 2.000300e-04
+t = 1.000e+00  L2 error = 5.889864e-03  Linf error = 4.044997e-02
+t = 2.000e+00  L2 error = 2.176894e-03  Linf error = 9.644158e-03
+t = 3.000e+00  L2 error = 1.282550e-03  Linf error = 5.859578e-03
+t = 4.000e+00  L2 error = 3.532460e-03  Linf error = 2.366228e-02
+t = 5.000e+00  L2 error = 2.868917e-03  Linf error = 1.875271e-02
+t = 6.000e+00  L2 error = 3.891713e-03  Linf error = 2.628002e-02
+t = 7.000e+00  L2 error = 2.661052e-03  Linf error = 1.676156e-02
+t = 8.000e+00  L2 error = 3.803015e-03  Linf error = 2.568188e-02

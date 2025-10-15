@@ -1445,7 +1445,7 @@ PetscErrorCode TSMonitorSPSwarmSolution(TS ts, PetscInt step, PetscReal ptime, V
 
     PetscCall(TSGetDM(ts, &dm));
     PetscCall(DMGetDimension(dm, &dim));
-    PetscCheck(dim == 2, PETSC_COMM_SELF, PETSC_ERR_SUP, "Monitor only supports two dimensional fields");
+    // PetscCheck(dim == 2, PETSC_COMM_SELF, PETSC_ERR_SUP, "Monitor only supports two dimensional fields");
     PetscCall(DMSwarmGetCellDM(dm, &cdm));
     PetscCall(DMGetBoundingBox(cdm, dmboxlower, dmboxupper));
     PetscCall(VecGetLocalSize(u, &Np));
