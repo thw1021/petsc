@@ -84,7 +84,7 @@ int main(int argc, char **argv)
   PetscCall(TaoTermDestroy(&l1_reg_term));
 
   PetscCall(TaoGetTerm(tao, NULL, &full_objective, NULL, NULL));
-  PetscCall(TaoTermCreateVecs(full_objective, &x, NULL));
+  PetscCall(TaoTermCreateSolutionVec(full_objective, &x));
   PetscCall(VecSetRandom(x, rand));
   PetscCall(TaoSetSolution(tao, x));
   PetscCall(TaoSetFromOptions(tao));

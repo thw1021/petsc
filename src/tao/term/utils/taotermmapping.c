@@ -92,7 +92,7 @@ static PetscErrorCode TaoTermMappingGetGradients(TaoTermMapping *mt, InsertMode 
   }
   *unmapped_g = *mapped_g;
   if (mt->map) {
-    if (!mt->_unmapped_gradient) PetscCall(TaoTermCreateVecs(mt->term, &mt->_unmapped_gradient, NULL));
+    if (!mt->_unmapped_gradient) PetscCall(TaoTermCreateSolutionVec(mt->term, &mt->_unmapped_gradient));
     *unmapped_g = mt->_unmapped_gradient;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -310,13 +310,18 @@ PETSC_INTERN PetscErrorCode TaoTermMappingSetUp(TaoTermMapping *mt)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode TaoTermMappingCreateVecs(TaoTermMapping *mt, Vec *solution, Vec *params)
+PETSC_INTERN PetscErrorCode TaoTermMappingCreateSolutionVec(TaoTermMapping *mt, Vec *solution)
 {
   PetscFunctionBegin;
-  if (mt->map) {
-    PetscCall(MatCreateVecs(mt->map, solution, NULL));
-    PetscCall(TaoTermCreateVecs(mt->term, NULL, params));
-  } else PetscCall(TaoTermCreateVecs(mt->term, solution, params));
+  if (mt->map) PetscCall(MatCreateVecs(mt->map, solution, NULL));
+  else PetscCall(TaoTermCreateSolutionVec(mt->term, solution));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode TaoTermMappingCreateParametersVec(TaoTermMapping *mt, Vec *params)
+{
+  PetscFunctionBegin;
+  PetscCall(TaoTermCreateParametersVec(mt->term, params));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

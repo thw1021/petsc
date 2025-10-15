@@ -185,8 +185,8 @@ PetscErrorCode TaoTermSumParametersPack(TaoTerm term, Vec subparams[], Vec *para
       PetscCall(TaoTermSumGetSubterm(term, i, NULL, NULL, &subterm, NULL));
       PetscCall(TaoTermGetParametersMode(subterm, &mode));
       if (mode != TAOTERM_PARAMETERS_NONE) {
-        PetscCall(TaoTermGetVecTypes(subterm, NULL, &vec_type));
-        PetscCall(TaoTermGetLayouts(subterm, NULL, &layout));
+        PetscCall(TaoTermGetParametersVecType(subterm, &vec_type));
+        PetscCall(TaoTermGetParametersLayout(subterm, &layout));
         layout->refcnt++;
       } else {
         PetscCall(PetscLayoutCreate(PetscObjectComm((PetscObject)term), &layout));
@@ -1220,7 +1220,7 @@ static PetscErrorCode TaoTermSetUp_Sum(TaoTerm term)
     if (summand->map) {
       PetscCall(MatSetUp(summand->map));
       PetscCall(MatGetLayouts(summand->map, NULL, &sub_layout));
-    } else PetscCall(TaoTermGetLayouts(summand->term, &sub_layout, NULL));
+    } else PetscCall(TaoTermGetSolutionLayout(summand->term, &sub_layout));
     if (i == 0 && layout == NULL) layout = sub_layout;
     PetscCall(PetscLayoutCompare(layout, sub_layout, &congruent));
     if (!congruent) {
@@ -1270,12 +1270,18 @@ static PetscErrorCode TaoTermSetUp_Sum(TaoTerm term)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermCreateVecs_Sum(TaoTerm term, Vec *solution_vec, Vec *parameters_vec)
+static PetscErrorCode TaoTermCreateSolutionVec_Sum(TaoTerm term, Vec *solution_vec)
+{
+  PetscFunctionBegin;
+  if (solution_vec) PetscCall(MatCreateVecs(term->solution_factory, NULL, solution_vec));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermCreateParametersVec_Sum(TaoTerm term, Vec *parameters_vec)
 {
   TaoTerm_Sum *sum = (TaoTerm_Sum *)term->data;
 
   PetscFunctionBegin;
-  if (solution_vec) PetscCall(MatCreateVecs(term->solution_factory, NULL, solution_vec));
   if (parameters_vec) {
     Vec *vecs;
 
@@ -1285,7 +1291,7 @@ static PetscErrorCode TaoTermCreateVecs_Sum(TaoTerm term, Vec *solution_vec, Vec
       TaoTermParametersMode submode;
 
       PetscCall(TaoTermGetParametersMode(summand->term, &submode));
-      if (submode != TAOTERM_PARAMETERS_NONE) PetscCall(TaoTermCreateVecs(summand->term, NULL, &vecs[i]));
+      if (submode != TAOTERM_PARAMETERS_NONE) PetscCall(TaoTermCreateParametersVec(summand->term, &vecs[i]));
     }
     PetscCall(TaoTermSumParametersPack(term, vecs, parameters_vec));
     for (PetscInt i = 0; i < sum->n_terms; i++) PetscCall(VecDestroy(&vecs[i]));
@@ -1334,7 +1340,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm term)
   term->ops->hessian               = TaoTermComputeHessian_Sum;
   term->ops->hessianmult           = TaoTermComputeHessianMult_Sum;
   term->ops->setup                 = TaoTermSetUp_Sum;
-  term->ops->createvecs            = TaoTermCreateVecs_Sum;
+  term->ops->createsolutionvec     = TaoTermCreateSolutionVec_Sum;
+  term->ops->createparametersvec   = TaoTermCreateParametersVec_Sum;
   term->ops->createhessianmatrices = TaoTermCreateHessianMatricesDefault;
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetNumSubterms_C", TaoTermSumGetNumSubterms_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetNumSubterms_C", TaoTermSumSetNumSubterms_Sum));

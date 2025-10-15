@@ -233,7 +233,7 @@ PetscErrorCode TaoSetUp(Tao tao)
   if (tao->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(TaoSetUpEW_Private(tao));
   PetscCall(TaoTermMappingSetUp(&tao->objective_term));
-  if (!tao->solution) PetscCall(TaoTermMappingCreateVecs(&tao->objective_term, &tao->solution, NULL));
+  if (!tao->solution) PetscCall(TaoTermMappingCreateSolutionVec(&tao->objective_term, &tao->solution));
   PetscCheck(tao->solution, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoSetSolution()");
   if (tao->uses_gradient && !tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
   if (tao->uses_hessian_matrices) {
@@ -3067,11 +3067,13 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
       PetscLayout cmap, param_layout;
 
       PetscCall(MatGetVecType(tao->objective_term.map, &map_vectype));
-      PetscCall(TaoTermGetVecTypes(old_sum, NULL, &param_vectype));
-      PetscCall(TaoTermSetVecTypes(old_sum, map_vectype, param_vectype));
+      PetscCall(TaoTermGetParametersVecType(old_sum, &param_vectype));
+      PetscCall(TaoTermSetSolutionVecType(old_sum, map_vectype));
+      PetscCall(TaoTermSetParametersVecType(old_sum, param_vectype));
       PetscCall(MatGetLayouts(tao->objective_term.map, NULL, &cmap));
-      PetscCall(TaoTermGetLayouts(old_sum, NULL, &param_layout));
-      PetscCall(TaoTermSetLayouts(old_sum, cmap, param_layout));
+      PetscCall(TaoTermGetParametersLayout(old_sum, &param_layout));
+      PetscCall(TaoTermSetSolutionLayout(old_sum, cmap));
+      PetscCall(TaoTermSetParametersLayout(old_sum, param_layout));
     }
     PetscCall(TaoTermSetType(old_sum, TAOTERMSUM));
     PetscCall(TaoGetOptionsPrefix(tao, &tao_prefix));

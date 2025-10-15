@@ -174,7 +174,8 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessian_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessianMult_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetView_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateVecs_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateSolutionVec_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateParametersVec_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateHessianMatrices_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -383,36 +384,68 @@ static PetscErrorCode TaoTermShellSetView_Shell(TaoTerm term, PetscErrorCode (*v
 }
 
 /*@C
-  TaoTermShellSetCreateVecs - Set the routine that creates vectors for a `TaoTerm` of type `TAOTERMSHELL`
+  TaoTermShellSetCreateSolutionVec - Set the routine that creates solution vector for a `TaoTerm` of type `TAOTERMSHELL`
 
   Logically collective
 
   Input Parameters:
-+ term       - a `TaoTerm` of type `TAOTERMSHELL`
-- createvecs - a function with the same signature as `TaoTermCreateVecs()`
++ term              - a `TaoTerm` of type `TAOTERMSHELL`
+- createsolutionvec - a function with the same signature as `TaoTermCreateSolutionVec()`
 
-  Calling sequence of `createvecs`:
-+ term       - the `TaoTerm`
-. solution   - (optional) a solution vector for `term`
-- parameters - (optional) a parameter vector for `term`
+  Calling sequence of `createsolutionvec`:
++ term     - the `TaoTerm`
+- solution - a solution vector for `term`
 
   Level: intermediate
 
 .seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellGetContext()`, `TaoTermShellSetContextDestroy()`,
           `TaoTermShellSetCreateHessianMatrices()`
 @*/
-PetscErrorCode TaoTermShellSetCreateVecs(TaoTerm term, PetscErrorCode (*createvecs)(TaoTerm term, Vec *solution, Vec *parameters))
+PetscErrorCode TaoTermShellSetCreateSolutionVec(TaoTerm term, PetscErrorCode (*createsolutionvec)(TaoTerm term, Vec *solution))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscTryMethod(term, "TaoTermShellSetCreateVecs_C", (TaoTerm, PetscErrorCode (*)(TaoTerm, Vec *, Vec *)), (term, createvecs));
+  PetscTryMethod(term, "TaoTermShellSetCreateSolutionVec_C", (TaoTerm, PetscErrorCode (*)(TaoTerm, Vec *)), (term, createsolutionvec));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermShellSetCreateVecs_Shell(TaoTerm term, PetscErrorCode (*createvecs)(TaoTerm, Vec *, Vec *))
+/*@C
+  TaoTermShellSetCreateParametersVec - Set the routine that creates parameters vector for a `TaoTerm` of type `TAOTERMSHELL`
+
+  Logically collective
+
+  Input Parameters:
++ term                - a `TaoTerm` of type `TAOTERMSHELL`
+- createparametersvec - a function with the same signature as `TaoTermCreateParametersVec()`
+
+  Calling sequence of `createparametersvec`:
++ term       - the `TaoTerm`
+- parameters - a parameters vector for `term`
+
+  Level: intermediate
+
+.seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellGetContext()`, `TaoTermShellSetContextDestroy()`,
+          `TaoTermShellSetCreateHessianMatrices()`
+@*/
+PetscErrorCode TaoTermShellSetCreateParametersVec(TaoTerm term, PetscErrorCode (*createparametersvec)(TaoTerm term, Vec *parameters))
 {
   PetscFunctionBegin;
-  term->ops->createvecs = createvecs;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscTryMethod(term, "TaoTermShellSetCreateParametersVec_C", (TaoTerm, PetscErrorCode (*)(TaoTerm, Vec *)), (term, createparametersvec));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermShellSetCreateSolutionVec_Shell(TaoTerm term, PetscErrorCode (*createsolutionvec)(TaoTerm, Vec *))
+{
+  PetscFunctionBegin;
+  term->ops->createsolutionvec = createsolutionvec;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermShellSetCreateParametersVec_Shell(TaoTerm term, PetscErrorCode (*createparametersvec)(TaoTerm, Vec *))
+{
+  PetscFunctionBegin;
+  term->ops->createparametersvec = createparametersvec;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -433,7 +466,7 @@ static PetscErrorCode TaoTermShellSetCreateVecs_Shell(TaoTerm term, PetscErrorCo
   Level: intermediate
 
 .seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellGetContext()`, `TaoTermShellSetContextDestroy()`,
-          `TaoTermShellSetCreateVecs()`
+          `TaoTermShellSetCreateSolutionVec()`, `TaoTermShellSetCreateParametersVec()`
 @*/
 PetscErrorCode TaoTermShellSetCreateHessianMatrices(TaoTerm term, PetscErrorCode (*createmats)(TaoTerm f, Mat *H, Mat *Hpre))
 {
@@ -481,7 +514,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessian_C", TaoTermShellSetHessian_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessianMult_C", TaoTermShellSetHessianMult_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetView_C", TaoTermShellSetView_Shell));
-  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateVecs_C", TaoTermShellSetCreateVecs_Shell));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateSolutionVec_C", TaoTermShellSetCreateSolutionVec_Shell));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateParametersVec_C", TaoTermShellSetCreateParametersVec_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateHessianMatrices_C", TaoTermShellCreateHessianMatrices_Shell));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

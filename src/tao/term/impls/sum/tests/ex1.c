@@ -47,7 +47,8 @@ int main(int argc, char **argv)
   PetscCall(TaoTermGetParametersMode(sum, &mode));
   PetscCheck(mode == TAOTERM_PARAMETERS_REQUIRED, comm, PETSC_ERR_PLIB, "wrong parameters mode");
 
-  PetscCall(TaoTermCreateVecs(sum, &sol, &params));
+  PetscCall(TaoTermCreateSolutionVec(sum, &sol));
+  PetscCall(TaoTermCreateParametersVec(sum, &params));
   PetscCall(VecGetSize(sol, &N));
   PetscCall(VecGetSize(params, &K));
 
