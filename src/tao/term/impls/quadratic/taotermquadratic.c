@@ -222,8 +222,10 @@ static PetscErrorCode TaoTermQuadraticSetMat_Quadratic(TaoTerm term, Mat A)
     PetscCall(VecDestroy(&quad->_Adiff));
     quad->A = A;
     PetscCall(MatGetVecType(A, &vec_type));
-    PetscCall(TaoTermSetVecTypes(term, vec_type, vec_type));
-    PetscCall(TaoTermSetLayouts(term, rmap, rmap));
+    PetscCall(TaoTermSetSolutionVecType(term, vec_type));
+    PetscCall(TaoTermSetParametersVecType(term, vec_type));
+    PetscCall(TaoTermSetSolutionLayout(term, rmap));
+    PetscCall(TaoTermSetParametersLayout(term, rmap));
     PetscCall(PetscFree(term->H_mattype));
     PetscCall(PetscFree(term->Hpre_mattype));
     PetscCall(MatGetType(A, &mat_type));
