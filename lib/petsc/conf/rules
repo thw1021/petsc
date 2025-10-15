@@ -196,12 +196,12 @@ else ifneq ($(KOKKOS_USE_SYCL_COMPILER),)
   LINK.kokkos.cxx = $(SYCLC) $(SYCLC_FLAGS) $(SYCLC_LINKER_FLAGS) $(SYCLOPTFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(SYCLPP_FLAGS) $(LDFLAGS) $(MPICXX_INCLUDES) $(MPICXX_LIBS)
 else
   KOKKOS_COMPILE_SINGLE = ${PETSC_CXXCOMPILE_SINGLE}
-  LINK.kokkos.cxx = $(CXXLINKER) $(CXX_FLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(LDFLAGS)
+  LINK.kokkos.cxx = $(CXXLINKER) $(CXX_FLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(LDFLAGS) $(MPICXX_INCLUDES) $(MPICXX_LIBS)
 endif
 
 # Why do we filter out -fvisibility=hidden? See comments in gmakefile.test on PETSC_COMPILE.kokkos.cxx
 PETSC_KOKKOSCOMPILE_SINGLE = $(filter-out -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(KOKKOS_COMPILE_SINGLE))))
-LINK.kokkos.cxx := $(filter-out -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(LINK.kokkos.cxx))))
+LINK.kokkos.cxx = $(filter-out -fvisibility=hidden,$(subst -Xcompiler -fvisibility=hidden ,,$(strip $(LINK.kokkos.cxx))))
 
 LINK.hip.cpp = $(HIPC) $(HIPC_FLAGS) $(HIPPP_FLAGS) $(HIPOPTFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(LDFLAGS) $(MPICXX_INCLUDES) $(MPICXX_LIBS)
 
