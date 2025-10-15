@@ -125,6 +125,7 @@ check_install: check
 check_body:
 	-@echo "Running PETSc check examples to verify correct installation"
 	-@echo "Using PETSC_DIR=${PETSC_DIR} and PETSC_ARCH=${PETSC_ARCH}"
+	-@echo "Building and testing under directories such as src/snes/tutorials/"
 	@if [ "${PETSC_WITH_BATCH}" != "" ]; then \
            echo "Running with batch filesystem, cannot run make check"; \
         elif [ "${MPIEXEC}" = "/bin/false" ]; then \
