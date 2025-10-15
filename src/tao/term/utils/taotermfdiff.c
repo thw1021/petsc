@@ -292,9 +292,9 @@ static PetscErrorCode TaoTermInitializeHessianMFFD(TaoTerm term, Mat mffd)
   PetscContainer       container;
 
   PetscFunctionBegin;
-  PetscCall(TaoTermGetLayouts(term, &sol_layout, NULL));
+  PetscCall(TaoTermGetSolutionLayout(term, &sol_layout));
   PetscCall(MatSetLayouts(mffd, sol_layout, sol_layout));
-  PetscCall(TaoTermGetVecTypes(term, &sol_vec_type, NULL));
+  PetscCall(TaoTermGetSolutionVecType(term, &sol_vec_type));
   PetscCall(MatSetVecType(mffd, sol_vec_type));
   PetscCall(MatSetType(mffd, MATMFFD));
   PetscCall(PetscNew(&hess));

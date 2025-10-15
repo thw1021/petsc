@@ -258,7 +258,8 @@ struct _TaoTermOps {
   PetscErrorCode (*ishessiandefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*iscreatehessianmatricesdefined)(TaoTerm, PetscBool *);
 
-  PetscErrorCode (*createvecs)(TaoTerm, Vec *, Vec *);
+  PetscErrorCode (*createsolutionvec)(TaoTerm, Vec *);
+  PetscErrorCode (*createparametersvec)(TaoTerm, Vec *);
   PetscErrorCode (*createhessianmatrices)(TaoTerm, Mat *, Mat *);
 };
 
@@ -309,7 +310,8 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjectiveAndGradient(TaoTermMap
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *, Vec, Vec, InsertMode, Mat, Mat);
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessianMult(TaoTermMapping *, Vec, Vec, Mat, Vec, InsertMode, Vec);
 PETSC_INTERN PetscErrorCode TaoTermMappingSetUp(TaoTermMapping *);
-PETSC_INTERN PetscErrorCode TaoTermMappingCreateVecs(TaoTermMapping *, Vec *, Vec *);
+PETSC_INTERN PetscErrorCode TaoTermMappingCreateSolutionVec(TaoTermMapping *, Vec *);
+PETSC_INTERN PetscErrorCode TaoTermMappingCreateParametersVec(TaoTermMapping *, Vec *);
 PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *, Mat *, Mat *);
 
 PETSC_INTERN PetscErrorCode TaoTermComputeHessian_Quadratic(TaoTerm, Vec, Vec, Mat, Mat);
