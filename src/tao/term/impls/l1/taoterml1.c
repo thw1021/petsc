@@ -367,6 +367,12 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   PetscCall(PetscNew(&l1));
   term->data = (void *)l1;
 
+  term->H_mattype    = NULL;
+  term->Hpre_mattype = NULL;
+
+  PetscCall(PetscStrallocpy(MATSHELL, (char **)&term->H_mattype));
+  PetscCall(PetscStrallocpy(MATSHELL, (char **)&term->Hpre_mattype));
+
   term->ops->destroy               = TaoTermDestroy_L1;
   term->ops->view                  = TaoTermView_L1;
   term->ops->setfromoptions        = TaoTermSetFromOptions_L1;
@@ -376,9 +382,6 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   term->ops->hessian               = TaoTermComputeHessian_L1;
   term->ops->hessianmult           = TaoTermComputeHessianMult_L1;
   term->ops->createhessianmatrices = TaoTermCreateHessianMatricesDefault;
-
-  if (!term->H_mattype) PetscCall(PetscStrallocpy(MATSHELL, &term->H_mattype));
-  if (!term->Hpre_mattype) PetscCall(PetscStrallocpy(MATDIAGONAL, &term->Hpre_mattype));
 
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermL1SetEpsilon_C", TaoTermL1SetEpsilon_L1));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermL1GetEpsilon_C", TaoTermL1GetEpsilon_L1));
