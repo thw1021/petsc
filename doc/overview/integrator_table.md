@@ -97,6 +97,10 @@
      - Gauss-Legrendre
      - implicit
      - :math:`2s`
+   * - rks
+     - Runge-Kutta Super-time-stepper
+     - explicit
+     - :math:`1-2`
 ```
 
 ```{eval-rst}
