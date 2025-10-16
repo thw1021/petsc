@@ -131,8 +131,14 @@ static PetscErrorCode TaoTermComputeHessianSingle_GaussNewton(TaoTerm term, Vec 
 static PetscErrorCode TaoTermComputeHessian_GaussNewton(TaoTerm term, Vec x, Vec _params, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
+  //Below maay make H null... TODO taotermhessians may not actually compute. delay-lazy
+  //which may be smart, but breaks interace.... need to nuke the whole thing
   PetscCall(TaoTermUpdateHessianShells(term, x, _params, &H, &Hpre));
-  PetscCall(TaoTermComputeHessianSingle(term, x, _params, H, Hpre, TaoTermComputeHessianSingle_GaussNewton, UNKNOWN_NONZERO_PATTERN));
+  if (H) PetscCall(TaoTermComputeHessianSingle_GaussNewton(term, x, _params, H));
+  if (Hpre && Hpre != H) {
+    if (H) PetscCall(MatCopy(H, Hpre, UNKNOWN_NONZERO_PATTERN));
+    else PetscCall(TaoTermComputeHessianSingle_GaussNewton(term, x, _params, Hpre));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

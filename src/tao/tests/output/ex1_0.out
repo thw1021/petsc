@@ -34,12 +34,7 @@ Tao Object: 1 MPI process
                 rows=11, cols=10
                 total: nonzeros=110, allocated nonzeros=110
                 total number of mallocs used during MatSetValues calls=0
-    Map:
-      Mat Object: 1 MPI process
-        type: seqdense
-        rows=10, cols=12
-        total: nonzeros=120, allocated nonzeros=120
-        total number of mallocs used during MatSetValues calls=0
+    Map: unmapped
   convergence tolerances: gatol=0.,   grtol=0.,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=0.
   convergence tolerances: function minimum=0.
@@ -66,12 +61,7 @@ Tao Object: 1 MPI process
                 parameter vector space: (none)
                 No user context has been set
                 The following methods have been set: (none)
-            Map:
-              Mat Object: 1 MPI process
-                type: seqdense
-                rows=10, cols=12
-                total: nonzeros=120, allocated nonzeros=120
-                total number of mallocs used during MatSetValues calls=0
+            Map: unmapped
           Summand 1:
             Scale (tao_term_sum_subterm_1_scale): 3.
             Term:
@@ -84,8 +74,8 @@ Tao Object: 1 MPI process
             Map:
               Mat Object: 1 MPI process
                 type: seqdense
-                rows=11, cols=12
-                total: nonzeros=132, allocated nonzeros=132
+                rows=11, cols=10
+                total: nonzeros=110, allocated nonzeros=110
                 total number of mallocs used during MatSetValues calls=0
           Summand 2:
             Scale (tao_term_sum_subterm_2_scale): 3.

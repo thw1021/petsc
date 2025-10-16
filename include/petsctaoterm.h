@@ -328,6 +328,7 @@ PETSC_EXTERN PetscErrorCode TaoTermSumSetSubtermHessianMatrices(TaoTerm, PetscIn
 PETSC_EXTERN PetscErrorCode TaoTermSumGetSubtermMask(TaoTerm, PetscInt, TaoTermMask *);
 PETSC_EXTERN PetscErrorCode TaoTermSumSetSubtermMask(TaoTerm, PetscInt, TaoTermMask);
 PETSC_EXTERN PetscErrorCode TaoTermSumGetLastSubtermObjectives(TaoTerm, const PetscReal *[]);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetCompositeHessianMatrices(TaoTerm, Mat *, Mat *);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateHalfL2Squared(MPI_Comm, PetscInt, PetscInt, TaoTerm *);
 
