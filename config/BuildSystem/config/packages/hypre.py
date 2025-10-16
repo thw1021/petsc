@@ -98,7 +98,7 @@ class Configure(config.package.GNUPackage):
       stdflag  = '-std=c++14'
       hipbuild = True
       args.append('ROCM_PATH="{0}"'.format(self.hip.hipDir))
-      args.append('--enable-gpu-aware-mpi') # preferred by hypre with GPU, default is off! (https://hypre.readthedocs.io/en/latest/ch-misc.html)
+      args.append('--enable-gpu-aware-mpi') # preferred by hypre with GPU, default is off! (https://hypre.readthedocs.io/en/latest/ch-misc.html#gpu-build-options)
       args.append('--with-hip')
       if not hasharch:
         if not 'with-hypre-gpu-arch' in self.framework.clArgDB:
