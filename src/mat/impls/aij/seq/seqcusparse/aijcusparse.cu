@@ -96,7 +96,7 @@ PETSC_INTERN PetscErrorCode MatCUSPARSESetFormat_SeqAIJCUSPARSE(Mat A, MatCUSPAR
   Input Parameters:
 + A      - Matrix of type `MATSEQAIJCUSPARSE`
 . op     - `MatCUSPARSEFormatOperation`. `MATSEQAIJCUSPARSE` matrices support `MAT_CUSPARSE_MULT` and `MAT_CUSPARSE_ALL`.
-        `MATMPIAIJCUSPARSE` matrices support `MAT_CUSPARSE_MULT_DIAG`,`MAT_CUSPARSE_MULT_OFFDIAG`, and `MAT_CUSPARSE_ALL`.
+           `MATMPIAIJCUSPARSE` matrices support `MAT_CUSPARSE_MULT_DIAG`,`MAT_CUSPARSE_MULT_OFFDIAG`, and `MAT_CUSPARSE_ALL`.
 - format - `MatCUSPARSEStorageFormat` (one of `MAT_CUSPARSE_CSR`, `MAT_CUSPARSE_ELL`, `MAT_CUSPARSE_HYB`.)
 
   Level: intermediate
@@ -130,8 +130,8 @@ PETSC_INTERN PetscErrorCode MatCUSPARSESetUseCPUSolve_SeqAIJCUSPARSE(Mat A, Pets
   Level: intermediate
 
   Note:
-  The cuSparse LU solver currently computes the factors with the built-in CPU method
-  and moves the factors to the GPU for the solve. We have observed better performance keeping the data on the CPU and computing the solve there.
+  The NVIDIA cuSparse LU solver currently computes the factors with the built-in CPU method
+  and moves the factors to the GPU for the solve. We have observed better performance keeping the data on the CPU and performing the solve there.
   This method to specify if the solve is done on the CPU or GPU (GPU is the default).
 
 .seealso: [](ch_matrices), `Mat`, `MatSolve()`, `MATSEQAIJCUSPARSE`, `MatCUSPARSEStorageFormat`, `MatCUSPARSEFormatOperation`
@@ -2488,7 +2488,6 @@ PETSC_INTERN PetscErrorCode MatSeqAIJCUSPARSECopyToGPU(Mat A)
           mat->num_entries = nnz;
           PetscCallCXX(mat->row_offsets = new THRUSTINTARRAY32(m + 1));
           mat->row_offsets->assign(ii, ii + m + 1);
-
           PetscCallCXX(mat->column_indices = new THRUSTINTARRAY32(nnz));
           mat->column_indices->assign(a->j, a->j + nnz);
 
@@ -3729,6 +3728,48 @@ static PetscErrorCode MatMultTransposeAdd_SeqAIJCUSPARSE(Mat A, Vec xx, Vec yy, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode MatGetDiagonal_SeqAIJ(Mat A, Vec xx);
+
+__global__ static void GetDiagonal_CSR(const int *row, const int *col, const PetscScalar *val, const PetscInt len, PetscScalar *diag)
+{
+  const size_t x = blockIdx.x * blockDim.x + threadIdx.x;
+
+  if (x < len) {
+    const PetscInt rowx = row[x], num_non0_row = row[x + 1] - rowx;
+    PetscScalar    d = 0.0;
+
+    for (PetscInt i = 0; i < num_non0_row; i++) {
+      if (col[i + rowx] == x) {
+        d = val[i + rowx];
+        break;
+      }
+    }
+    diag[x] = d;
+  }
+}
+
+static PetscErrorCode MatGetDiagonal_SeqAIJCUSPARSE(Mat A, Vec diag)
+{
+  Mat_SeqAIJCUSPARSE           *cusparsestruct = (Mat_SeqAIJCUSPARSE *)A->spptr;
+  Mat_SeqAIJCUSPARSEMultStruct *matstruct      = (Mat_SeqAIJCUSPARSEMultStruct *)cusparsestruct->mat;
+  PetscScalar                  *darray;
+
+  PetscFunctionBegin;
+  if (A->offloadmask == PETSC_OFFLOAD_BOTH || A->offloadmask == PETSC_OFFLOAD_GPU) {
+    PetscInt   n   = A->rmap->n;
+    CsrMatrix *mat = (CsrMatrix *)matstruct->mat;
+
+    PetscCheck(cusparsestruct->format == MAT_CUSPARSE_CSR, PETSC_COMM_SELF, PETSC_ERR_SUP, "Only CSR format supported");
+    if (n > 0) {
+      PetscCall(VecCUDAGetArrayWrite(diag, (PetscScalar **)&darray));
+      GetDiagonal_CSR<<<(int)((n + 255) / 256), 256, 0, PetscDefaultCudaStream>>>(mat->row_offsets->data().get(), mat->column_indices->data().get(), mat->values->data().get(), n, darray);
+      PetscCallCUDA(cudaPeekAtLastError());
+      PetscCall(VecCUDARestoreArrayWrite(diag, &darray));
+    }
+  } else PetscCall(MatGetDiagonal_SeqAIJ(A, diag));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatAssemblyEnd_SeqAIJCUSPARSE(Mat A, MatAssemblyType mode)
 {
   PetscFunctionBegin;
@@ -3737,8 +3778,7 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJCUSPARSE(Mat A, MatAssemblyType mode)
 }
 
 /*@
-  MatCreateSeqAIJCUSPARSE - Creates a sparse matrix in `MATAIJCUSPARSE` (compressed row) format
-  (the default parallel PETSc format).
+  MatCreateSeqAIJCUSPARSE - Creates a sparse matrix in `MATAIJCUSPARSE` (compressed row) format for use on NVIDIA GPUs
 
   Collective
 
@@ -3772,7 +3812,10 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJCUSPARSE(Mat A, MatAssemblyType mode)
   Set `nz` = `PETSC_DEFAULT` and `nnz` = `NULL` for PETSc to control dynamic memory
   allocation.
 
-.seealso: [](ch_matrices), `Mat`, `MATSEQAIJCUSPARSE`, `MatCreate()`, `MatCreateAIJ()`, `MatSetValues()`, `MatSeqAIJSetColumnIndices()`, `MatCreateSeqAIJWithArrays()`, `MATAIJCUSPARSE`
+  When working with matrices for GPUs it is often better to use the `MatSetPreallocationCOO()` and `MatSetValuesCOO()` paradigm rather than using this routine and `MatSetValues()`
+
+.seealso: [](ch_matrices), `Mat`, `MATSEQAIJCUSPARSE`, `MatCreate()`, `MatCreateAIJ()`, `MatSetValues()`, `MatSeqAIJSetColumnIndices()`, `MatCreateSeqAIJWithArrays()`, `MATAIJCUSPARSE`,
+          `MatSetPreallocationCOO()`, `MatSetValuesCOO()`
 @*/
 PetscErrorCode MatCreateSeqAIJCUSPARSE(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt nz, const PetscInt nnz[], Mat *A)
 {
@@ -3969,6 +4012,7 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A, PetscBool flg)
     PetscCall(MatSeqAIJCUSPARSECopyFromGPU(A));
 
     A->ops->scale                     = MatScale_SeqAIJ;
+    A->ops->getdiagonal               = MatGetDiagonal_SeqAIJ;
     A->ops->axpy                      = MatAXPY_SeqAIJ;
     A->ops->zeroentries               = MatZeroEntries_SeqAIJ;
     A->ops->mult                      = MatMult_SeqAIJ;
@@ -3988,6 +4032,7 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A, PetscBool flg)
     PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_seqaijcusparse_seqaijcusparse_C", NULL));
   } else {
     A->ops->scale                     = MatScale_SeqAIJCUSPARSE;
+    A->ops->getdiagonal               = MatGetDiagonal_SeqAIJCUSPARSE;
     A->ops->axpy                      = MatAXPY_SeqAIJCUSPARSE;
     A->ops->zeroentries               = MatZeroEntries_SeqAIJCUSPARSE;
     A->ops->mult                      = MatMult_SeqAIJCUSPARSE;
@@ -4092,20 +4137,24 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJCUSPARSE(Mat B)
 }
 
 /*MC
-   MATSEQAIJCUSPARSE - MATAIJCUSPARSE = "(seq)aijcusparse" - A matrix type to be used for sparse matrices.
-
-   A matrix type whose data resides on NVIDIA GPUs. These matrices can be in either
-   CSR, ELL, or Hybrid format.
-   All matrix calculations are performed on NVIDIA GPUs using the CuSPARSE library.
+   MATSEQAIJCUSPARSE - MATAIJCUSPARSE = "(seq)aijcusparse" - A matrix type to be used for sparse matrices on NVIDIA GPUs.
 
    Options Database Keys:
-+  -mat_type aijcusparse - sets the matrix type to "seqaijcusparse" during a call to `MatSetFromOptions()`
-.  -mat_cusparse_storage_format csr - sets the storage format of matrices (for `MatMult()` and factors in `MatSolve()`).
-                                      Other options include ell (ellpack) or hyb (hybrid).
-.  -mat_cusparse_mult_storage_format csr - sets the storage format of matrices (for `MatMult()`). Other options include ell (ellpack) or hyb (hybrid).
--  -mat_cusparse_use_cpu_solve - Do `MatSolve()` on CPU
++  -mat_type aijcusparse                 - Sets the matrix type to "seqaijcusparse" during a call to `MatSetFromOptions()`
+.  -mat_cusparse_storage_format csr      - Sets the storage format of matrices (for `MatMult()` and factors in `MatSolve()`).
+                                           Other options include ell (ellpack) or hyb (hybrid).
+.  -mat_cusparse_mult_storage_format csr - Sets the storage format of matrices (for `MatMult()`). Other options include ell (ellpack) or hyb (hybrid).
+-  -mat_cusparse_use_cpu_solve           - Perform the `MatSolve()` on the CPU
 
   Level: beginner
+
+  Notes:
+  These matrices can be in either CSR, ELL, or Hybrid format.
+
+  All matrix calculations are performed on NVIDIA GPUs using the CuSPARSE library.
+
+  Uses 32 bit integers internally. If PETSc is configured with `--with-64-bit-indices` the integer row and column indices are stored on the GPU with `int`. It is unclear what happens
+  if some integer values passed in do not fit in `int`.
 
 .seealso: [](ch_matrices), `Mat`, `MatCreateSeqAIJCUSPARSE()`, `MatCUSPARSESetUseCPUSolve()`, `MATAIJCUSPARSE`, `MatCreateAIJCUSPARSE()`, `MatCUSPARSESetFormat()`, `MatCUSPARSEStorageFormat`, `MatCUSPARSEFormatOperation`
 M*/
@@ -4420,8 +4469,8 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJCUSPARSE(Mat A, const PetscScalar v[
 - compressed - `PETSC_TRUE` or `PETSC_FALSE` indicating the matrix data structure should be always returned in compressed form
 
   Output Parameters:
-+ i - the CSR row pointers
-- j - the CSR column indices
++ i - the CSR row pointers, these are always `int` even when PETSc is configured with `--with-64-bit-indices`
+- j - the CSR column indices, these are always `int` even when PETSc is configured with `--with-64-bit-indices`
 
   Level: developer
 
@@ -4485,7 +4534,7 @@ PetscErrorCode MatSeqAIJCUSPARSERestoreIJ(Mat A, PetscBool compressed, const int
 }
 
 /*@C
-  MatSeqAIJCUSPARSEGetArrayRead - gives read-only access to the array where the device data for a `MATSEQAIJCUSPARSE` matrix is stored
+  MatSeqAIJCUSPARSEGetArrayRead - gives read-only access to the array where the device data for a `MATSEQAIJCUSPARSE` matrix nonzero entries are stored
 
   Not Collective
 
@@ -4498,7 +4547,7 @@ PetscErrorCode MatSeqAIJCUSPARSERestoreIJ(Mat A, PetscBool compressed, const int
   Level: developer
 
   Note:
-  May trigger host-device copies if up-to-date matrix data is on host
+  Will trigger host to device copies if the most up-to-date matrix data is on the host
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJCUSPARSEGetArray()`, `MatSeqAIJCUSPARSEGetArrayWrite()`, `MatSeqAIJCUSPARSERestoreArrayRead()`
 @*/
@@ -4557,7 +4606,7 @@ PetscErrorCode MatSeqAIJCUSPARSERestoreArrayRead(Mat A, const PetscScalar **a)
   Level: developer
 
   Note:
-  May trigger host-device copies if up-to-date matrix data is on host
+  Will trigger host to device copies if the most up-to-date matrix data is on the host
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJCUSPARSEGetArrayRead()`, `MatSeqAIJCUSPARSEGetArrayWrite()`, `MatSeqAIJCUSPARSERestoreArray()`
 @*/
@@ -4619,7 +4668,9 @@ PetscErrorCode MatSeqAIJCUSPARSERestoreArray(Mat A, PetscScalar **a)
   Level: developer
 
   Note:
-  Does not trigger host-device copies and flags data validity on the GPU
+  Does not trigger any host to device copies.
+
+  It marks the data GPU valid so users must set all the values in `a` to ensure out-of-date data is not considered current
 
 .seealso: [](ch_matrices), `Mat`, `MatSeqAIJCUSPARSEGetArray()`, `MatSeqAIJCUSPARSEGetArrayRead()`, `MatSeqAIJCUSPARSERestoreArrayWrite()`
 @*/
