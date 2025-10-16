@@ -1,5 +1,5 @@
 
-     Interface
+     interface
        subroutine KSPRestoreConvergenceHistory(ksp, r, na, ierr)
          use, intrinsic :: ISO_C_binding
          import tKSP
@@ -8,7 +8,7 @@
          PetscReal, pointer :: r(:)
          PetscErrorCode, intent(out) :: ierr
        end subroutine
-     end Interface
+     end interface
 
      interface
        subroutine PCBJacobiRestoreSubKSP(a, b, c, d, z)
