@@ -229,8 +229,8 @@ static PetscErrorCode TaoTermQuadraticSetMat_Quadratic(TaoTerm term, Mat A)
     PetscCall(PetscFree(term->H_mattype));
     PetscCall(PetscFree(term->Hpre_mattype));
     PetscCall(MatGetType(A, &mat_type));
-    PetscCall(PetscStrallocpy(mat_type, &term->H_mattype));
-    PetscCall(PetscStrallocpy(mat_type, &term->Hpre_mattype));
+    PetscCall(PetscStrallocpy(mat_type, (char **)&term->H_mattype));
+    PetscCall(PetscStrallocpy(mat_type, (char **)&term->Hpre_mattype));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -262,6 +262,9 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm term)
   PetscCall(TaoTermCreate_ElementwiseDivergence_Internal(term));
   PetscCall(PetscNew(&quad));
   term->data = (void *)quad;
+
+  term->H_mattype    = NULL;
+  term->Hpre_mattype = NULL;
 
   term->ops->destroy               = TaoTermDestroy_Quadratic;
   term->ops->view                  = TaoTermView_Quadratic;

@@ -272,8 +272,8 @@ struct _p_TaoTerm {
   Mat                   parameters_factory_orig; // copy so that parameter_factor can be made a reference of solution_factory if parameter space == vector space
   TaoTermParametersMode parameters_mode;
   PetscBool             Hpre_is_H; // Hessian mode data
-  char                 *H_mattype;
-  char                 *Hpre_mattype;
+  MatType               H_mattype;
+  MatType               Hpre_mattype;
 
   PetscReal  fd_delta;      // increment for TaoTermGradientFD()
   PetscInt   fd_grad_level; // push/pop using finite difference for the gradient

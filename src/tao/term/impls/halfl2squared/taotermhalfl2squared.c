@@ -107,6 +107,12 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
   PetscCall(PetscNew(&l2));
   term->data = (void *)l2;
 
+  term->H_mattype    = NULL;
+  term->Hpre_mattype = NULL;
+
+  PetscCall(PetscStrallocpy(MATSHELL, (char **)&term->H_mattype));
+  PetscCall(PetscStrallocpy(MATSHELL, (char **)&term->Hpre_mattype));
+
   term->ops->destroy               = TaoTermDestroy_Halfl2squared;
   term->ops->objective             = TaoTermComputeObjective_Halfl2squared;
   term->ops->gradient              = TaoTermComputeGradient_Halfl2squared;
@@ -114,8 +120,6 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
   term->ops->hessian               = TaoTermComputeHessian_Halfl2squared;
   term->ops->hessianmult           = TaoTermComputeHessianMult_Halfl2squared;
   term->ops->createhessianmatrices = TaoTermCreateHessianMatricesDefault;
-  if (!term->H_mattype) PetscCall(PetscStrallocpy(MATSHELL, &term->H_mattype));
-  if (!term->Hpre_mattype) PetscCall(PetscStrallocpy(MATCONSTANTDIAGONAL, &term->Hpre_mattype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -242,7 +242,7 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
   PetscCall(PetscOptionsFList("-tao_term_hessian_mat_type", "Hessian mat type", "TaoTermSetCreateHessianMode", MatList, deft, typeName, 256, &opt));
   if (opt) {
     PetscCall(PetscFree(term->H_mattype));
-    PetscCall(PetscStrallocpy(typeName, &term->H_mattype));
+    PetscCall(PetscStrallocpy(typeName, (char **)&term->H_mattype));
   }
 
   deft = MATAIJ;
@@ -250,7 +250,7 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
   PetscCall(PetscOptionsFList("-tao_term_hessian_pre_mat_type", "Hessian preconditioning mat type", "TaoTermSetCreateHessianMode", MatList, deft, typeName, 256, &opt));
   if (opt) {
     PetscCall(PetscFree(term->Hpre_mattype));
-    PetscCall(PetscStrallocpy(typeName, &term->Hpre_mattype));
+    PetscCall(PetscStrallocpy(typeName, (char **)&term->Hpre_mattype));
   }
 
   PetscCall(PetscOptionsBoundedReal("-tao_term_fd_delta", "Finite difference increment", "TaoTermSetFDDelta", term->fd_delta, &term->fd_delta, NULL, 0.0));
@@ -1563,9 +1563,9 @@ PetscErrorCode TaoTermCreateHessianMatrices(TaoTerm term, Mat *H, Mat *Hpre)
 @*/
 PetscErrorCode TaoTermCreateHessianMatricesDefault(TaoTerm term, Mat *H, Mat *Hpre)
 {
-  PetscBool   Hpre_is_H;
-  const char *H_mattype;
-  const char *Hpre_mattype;
+  PetscBool Hpre_is_H;
+  MatType   H_mattype;
+  MatType   Hpre_mattype;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
@@ -1664,18 +1664,22 @@ PetscErrorCode TaoTermCreateHessianMatricesDefault(TaoTerm term, Mat *H, Mat *Hp
           `TaoTermCreateHessianMatricesDefault()`,
           `TaoTermGetCreateHessianMode()`,
 @*/
-PetscErrorCode TaoTermSetCreateHessianMode(TaoTerm term, PetscBool Hpre_is_H, const char H_mattype[], const char Hpre_mattype[])
+PetscErrorCode TaoTermSetCreateHessianMode(TaoTerm term, PetscBool Hpre_is_H, MatType H_mattype, MatType Hpre_mattype)
 {
+  PetscBool is_hsame, is_hpresame;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   term->Hpre_is_H = Hpre_is_H;
-  if (H_mattype != term->H_mattype) {
+  PetscCall(PetscStrcmp(term->H_mattype, H_mattype, &is_hsame));
+  PetscCall(PetscStrcmp(term->Hpre_mattype, Hpre_mattype, &is_hpresame));
+  if (!is_hsame) {
     PetscCall(PetscFree(term->H_mattype));
-    if (H_mattype) PetscCall(PetscStrallocpy(H_mattype, &term->H_mattype));
+    if (H_mattype) PetscCall(PetscStrallocpy(H_mattype, (char **)&term->H_mattype));
   }
-  if (Hpre_mattype != term->Hpre_mattype) {
+  if (!is_hpresame) {
     PetscCall(PetscFree(term->Hpre_mattype));
-    if (Hpre_mattype) PetscCall(PetscStrallocpy(Hpre_mattype, &term->Hpre_mattype));
+    if (Hpre_mattype) PetscCall(PetscStrallocpy(Hpre_mattype, (char **)&term->Hpre_mattype));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1702,7 +1706,7 @@ PetscErrorCode TaoTermSetCreateHessianMode(TaoTerm term, PetscBool Hpre_is_H, co
           `TaoTermCreateHessianMatricesDefault()`,
           `TaoTermSetCreateHessianMode()`,
 @*/
-PetscErrorCode TaoTermGetCreateHessianMode(TaoTerm term, PetscBool *Hpre_is_H, const char *H_mattype[], const char *Hpre_mattype[])
+PetscErrorCode TaoTermGetCreateHessianMode(TaoTerm term, PetscBool *Hpre_is_H, MatType *H_mattype, MatType *Hpre_mattype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
