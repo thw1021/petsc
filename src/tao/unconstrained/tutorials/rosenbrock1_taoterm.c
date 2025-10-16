@@ -91,13 +91,13 @@ static PetscErrorCode FormFunctionGradient(TaoTerm term, Vec X, Vec parameters_u
 }
 
 /*
-  FormHessianSingle - Evaluates Hessian matrix.
+  FormHessian - Evaluates Hessian matrix.
 
   Input Parameters:
-+ tao               - the Tao context
-. x                 - input vector
-. parameters_unused - optional vector of parameters that this rosenbrock function does not use
-- ptr               - optional user-defined context, as set by TaoSetHessian()
++ tao    - the Tao context
+. x      - input vector
+. params - optional vector of parameters that this rosenbrock function does not use
+- ptr    - optional user-defined context, as set by TaoSetHessian()
 
   Output Parameters:
 + H    - Hessian matrix
@@ -106,21 +106,18 @@ static PetscErrorCode FormFunctionGradient(TaoTerm term, Vec X, Vec parameters_u
   Note:  Providing the Hessian may not be necessary.  Only some solvers
   require this matrix.
 */
-static PetscErrorCode FormHessianSingle(TaoTerm term, Vec X, Vec parameters_unused, Mat H)
+static PetscErrorCode FormHessian(TaoTerm term, Vec X, Vec params, Mat H, Mat Hpre)
 {
   AppCtx *user;
 
-  PetscFunctionBeginUser;
-  PetscCheck(parameters_unused == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "Rosenbrock function does not take a parameter vector");
-  PetscCall(TaoTermShellGetContext(term, &user));
-  PetscCall(AppCtxFormHessianSingle(user, X, H));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode FormHessian(TaoTerm term, Vec X, Vec params, Mat H, Mat Hpre)
-{
   PetscFunctionBegin;
-  PetscCall(TaoTermComputeHessianSingle(term, X, params, H, Hpre, FormHessianSingle, SAME_NONZERO_PATTERN));
+  PetscCheck(params == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "Rosenbrock function does not take a parameter vector");
+  PetscCall(TaoTermShellGetContext(term, &user));
+  if (H) PetscCall(AppCtxFormHessianSingle(user, X, H));
+  if (Hpre && Hpre != H) {
+    if (H) PetscCall(MatCopy(H, Hpre, SAME_NONZERO_PATTERN));
+    else PetscCall(AppCtxFormHessianSingle(user, X, Hpre));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
