@@ -2186,13 +2186,26 @@ static PetscErrorCode DMPlexTransformSetCoordinates(DMPlexTransform tr, DM rdm)
   }
   PetscCall(DMGetCoordinateSection(dm, &coordSection));
   PetscCall(PetscSectionGetFieldComponents(coordSection, 0, &dEo));
-  if (maxCell) {
-    PetscReal maxCellNew[3];
-
-    for (d = 0; d < dEo; ++d) maxCellNew[d] = maxCell[d] / 2.0;
-    PetscCall(DMSetPeriodicity(rdm, maxCellNew, Lstart, L));
-  }
   PetscCall(DMGetCoordinateDim(rdm, &dE));
+  if (maxCell) {
+    PetscReal LstartNew[3], LNew[3], maxCellNew[3], factor = 1.0;
+    PetscBool isreg;
+
+    PetscCall(PetscObjectTypeCompare((PetscObject)tr, DMPLEXREFINEREGULAR, &isreg));
+    if (isreg) factor = 0.5;
+    // TODO periodic extrusion must set the torus for the new dimension
+    for (d = 0; d < dEo; ++d) {
+      maxCellNew[d] = maxCell[d] * factor;
+      LstartNew[d]  = Lstart ? Lstart[d] : 0.;
+      LNew[d]       = L ? L[d] : 0.;
+    }
+    for (d = dEo; d < dE; ++d) {
+      maxCellNew[d] = maxCell[dEo - 1] * factor;
+      LstartNew[d]  = 0.;
+      LNew[d]       = -1;
+    }
+    PetscCall(DMSetPeriodicity(rdm, maxCellNew, Lstart ? LstartNew : NULL, L ? LNew : NULL));
+  }
   PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)rdm), &coordSectionNew));
   PetscCall(PetscSectionSetNumFields(coordSectionNew, 1));
   PetscCall(PetscSectionSetFieldComponents(coordSectionNew, 0, dE));
