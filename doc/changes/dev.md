@@ -15,6 +15,9 @@
 ```{rubric} Sys:
 ```
 
+- Add `PetscCallHYPRE()` to check HYPRE error codes and print error messages on failure
+
+
 ```{rubric} Event Logging:
 ```
 
