@@ -106,7 +106,6 @@ static PetscErrorCode TaoTermComputeObjectiveAndGradient_Callbacks(TaoTerm term,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-//TODO HessianMult
 static PetscErrorCode TaoTermComputeHessian_Callbacks(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
   TaoTerm_Callbacks *tt = (TaoTerm_Callbacks *)term->data;

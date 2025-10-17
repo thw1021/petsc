@@ -283,25 +283,6 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *mt, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessianMult(TaoTermMapping *mt, Vec Ax, Vec params, Mat unmapped_H, Vec v, InsertMode mode, Vec Hv)
-{
-  Vec Av;
-  Vec mapped_Hv, unmapped_Hv = NULL;
-
-  PetscFunctionBegin;
-  TaoTermMappingCheckInsertMode(mt, mode);
-  if (TaoTermHessianMasked(mt->mask)) {
-    if (mode == INSERT_VALUES) PetscCall(VecZeroEntries(Hv));
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-  PetscCall(TaoTermMappingMap(mt, v, &Av));
-  PetscCall(TaoTermMappingGetGradients(mt, mode, Hv, &mapped_Hv, &unmapped_Hv));
-  if (unmapped_H) PetscCall(MatMult(unmapped_H, Av, unmapped_Hv));
-  else PetscCall(TaoTermComputeHessianMult(mt->term, Ax, params, Av, unmapped_Hv));
-  PetscCall(TaoTermMappingSetGradients(mt, mode, Hv, mapped_Hv, unmapped_Hv));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PETSC_INTERN PetscErrorCode TaoTermMappingSetUp(TaoTermMapping *mt)
 {
   PetscFunctionBegin;
