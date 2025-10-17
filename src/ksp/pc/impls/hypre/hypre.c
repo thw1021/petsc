@@ -21,6 +21,105 @@ static PetscBool  cite            = PETSC_FALSE;
 static const char hypreCitation[] = "@manual{hypre-web-page,\n  title  = {{\\sl hypre}: High Performance Preconditioners},\n  organization = {Lawrence Livermore National Laboratory},\n  note  = "
                                     "{\\url{https://www.llnl.gov/casc/hypre}}\n}\n";
 
+typedef enum {
+  PETSC_HYPRE_RELAX_JACOBI                   = 0,  /* 0 */
+  PETSC_HYPRE_RELAX_GS_SEQ                   = 1,  /* 1 */
+  PETSC_HYPRE_RELAX_GS_SEQBOUNDARY           = 2,  /* 2 */
+  PETSC_HYPRE_RELAX_SOR_JACOBI_FORWARD       = 3,  /* 3 */
+  PETSC_HYPRE_RELAX_SOR_JACOBI_BACKWARD      = 4,  /* 4 */
+  PETSC_HYPRE_RELAX_GS_CHAOTIC               = 5,  /* 5, requires OpenMP */
+  PETSC_HYPRE_RELAX_SOR_JACOBI_SYM           = 6,  /* 6 */
+  PETSC_HYPRE_RELAX_SOR_JACOBI_L1            = 7,  /* 8 */
+  PETSC_HYPRE_RELAX_GAUSSIAN_ELIMINATION     = 8,  /* 9, only on coarse, computation locked to host execution */
+  PETSC_HYPRE_RELAX_GS_L1_FORWARD            = 9,  /* 13, nonsymmetric */
+  PETSC_HYPRE_RELAX_GS_L1_BACKWARD           = 10, /* 14, nonsymmetric */
+  PETSC_HYPRE_RELAX_CG                       = 11, /* 15, nonstationary (needs FGMRES) */
+  PETSC_HYPRE_RELAX_CHEBYSHEV                = 12, /* 16 */
+  PETSC_HYPRE_RELAX_FCF_JACOBI               = 13, /* 17*/
+  PETSC_HYPRE_RELAX_JACOBI_L1                = 14, /* 18*/
+  PETSC_HYPRE_RELAX_KACZMARZ                 = 15, /* 30 */
+  PETSC_HYPRE_RELAX_SOR_JACOBI_L1_CONVERGENT = 16, /* 88, same as 8 but with convergent L1 term */
+  PETSC_HYPRE_RELAX_GS_SYM_HYBRID_L1         = 17, /* 89, i.e., GS_L1_FORWARD followed by GS_L1_BACKWARD */
+  PETSC_HYPRE_RELAX_LU                       = 18, /* 99, only on coarse, requires magma (HIP/CUDA) or cuSolver (CUDA) for device execution */
+  PETSC_HYPRE_RELAX_EXPLICIT_INVERSE         = 19, /* 199, only on coarse, requires magma (HIP/CUDA) or cuSolver (CUDA) for device execution */
+} PetscHYPRERelaxType;
+
+const char *PetscHYPRERelaxTypes[] = {
+  [PETSC_HYPRE_RELAX_JACOBI]                   = "Jacobi",
+  [PETSC_HYPRE_RELAX_GS_SEQ]                   = "sequential-Gauss-Seidel",
+  [PETSC_HYPRE_RELAX_GS_SEQBOUNDARY]           = "seqboundary-Gauss-Seidel",
+  [PETSC_HYPRE_RELAX_SOR_JACOBI_FORWARD]       = "SOR/Jacobi",
+  [PETSC_HYPRE_RELAX_SOR_JACOBI_BACKWARD]      = "backward-SOR/Jacobi",
+  [PETSC_HYPRE_RELAX_GS_CHAOTIC]               = "chaotic-Gauss-Seidel" /* works only with OpenMP */,
+  [PETSC_HYPRE_RELAX_SOR_JACOBI_SYM]           = "symmetric-SOR/Jacobi",
+  [PETSC_HYPRE_RELAX_SOR_JACOBI_L1]            = "l1scaled-SOR/Jacobi",
+  [PETSC_HYPRE_RELAX_GAUSSIAN_ELIMINATION]     = "Gaussian-elimination",
+  [PETSC_HYPRE_RELAX_GS_L1_FORWARD]            = "l1-Gauss-Seidel" /* nonsymmetric */,
+  [PETSC_HYPRE_RELAX_GS_L1_BACKWARD]           = "backward-l1-Gauss-Seidel" /* nonsymmetric */,
+  [PETSC_HYPRE_RELAX_CG]                       = "CG" /* non-stationary */,
+  [PETSC_HYPRE_RELAX_CHEBYSHEV]                = "Chebyshev",
+  [PETSC_HYPRE_RELAX_FCF_JACOBI]               = "FCF-Jacobi",
+  [PETSC_HYPRE_RELAX_JACOBI_L1]                = "l1scaled-Jacobi",
+  [PETSC_HYPRE_RELAX_KACZMARZ]                 = "Kaczmarz",
+  [PETSC_HYPRE_RELAX_SOR_JACOBI_L1_CONVERGENT] = "l1scaled-convergent-SOR/Jacobi",
+  [PETSC_HYPRE_RELAX_GS_SYM_HYBRID_L1]         = "symmetric-l1-Gauss-Seidel",
+  [PETSC_HYPRE_RELAX_LU]                       = "lu",
+  [PETSC_HYPRE_RELAX_EXPLICIT_INVERSE]         = "explicit-inverse",
+  "PetscHYPRERelaxType",
+  "PETSC_HYPRE_RELAX_",
+  NULL,
+};
+
+static inline HYPRE_Int PetscRelaxTypeToHYPRE(PetscHYPRERelaxType relax_type)
+{
+  switch (relax_type) {
+  case PETSC_HYPRE_RELAX_JACOBI:
+    return 0;
+  case PETSC_HYPRE_RELAX_GS_SEQ:
+    return 1;
+  case PETSC_HYPRE_RELAX_GS_SEQBOUNDARY:
+    return 2;
+  case PETSC_HYPRE_RELAX_SOR_JACOBI_FORWARD:
+    return 3;
+  case PETSC_HYPRE_RELAX_SOR_JACOBI_BACKWARD:
+    return 4;
+  case PETSC_HYPRE_RELAX_GS_CHAOTIC:
+    return 5;
+  case PETSC_HYPRE_RELAX_SOR_JACOBI_SYM:
+    return 6;
+  case PETSC_HYPRE_RELAX_SOR_JACOBI_L1:
+    return 8;
+  case PETSC_HYPRE_RELAX_GAUSSIAN_ELIMINATION:
+    return 9;
+  case PETSC_HYPRE_RELAX_GS_L1_FORWARD:
+    return 13;
+  case PETSC_HYPRE_RELAX_GS_L1_BACKWARD:
+    return 14;
+  case PETSC_HYPRE_RELAX_CG:
+    return 15;
+  case PETSC_HYPRE_RELAX_CHEBYSHEV:
+    return 16;
+  case PETSC_HYPRE_RELAX_FCF_JACOBI:
+    return 17;
+  case PETSC_HYPRE_RELAX_JACOBI_L1:
+    return 18;
+  case PETSC_HYPRE_RELAX_KACZMARZ:
+    return 30;
+  case PETSC_HYPRE_RELAX_SOR_JACOBI_L1_CONVERGENT:
+    return 88;
+  case PETSC_HYPRE_RELAX_GS_SYM_HYBRID_L1:
+    return 89;
+  case PETSC_HYPRE_RELAX_LU:
+    return 99;
+  case PETSC_HYPRE_RELAX_EXPLICIT_INVERSE:
+    return 199;
+  // LCOV_EXCL_START
+  default:
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unknown relaxation type: %" PetscInt_FMT, (PetscInt)relax_type);
+    // LCOV_EXCL_STOP
+  }
+}
+
 /*
    Private context (data structure) for the  preconditioner.
 */
@@ -320,8 +419,16 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
       PetscObjectParameterSetDefault(jac, coarsentype, 8);
       PetscObjectParameterSetDefault(jac, relaxorder, 0);
       PetscObjectParameterSetDefault(jac, interptype, 6);
-      PetscObjectParameterSetDefault(jac, relaxtype[0], 18);
-      PetscObjectParameterSetDefault(jac, relaxtype[1], 18);
+      PetscObjectParameterSetDefault(jac, relaxtype[0], (PetscInt)PETSC_HYPRE_RELAX_JACOBI_L1);
+      PetscObjectParameterSetDefault(jac, relaxtype[1], (PetscInt)PETSC_HYPRE_RELAX_JACOBI_L1);
+      /* default to LU on coarse grid for device execution, when supported */
+#if defined(HYPRE_USING_CUDA) && (defined(HYPRE_USING_CUSOLVER) || defined(HYPRE_USING_MAGMA))
+      PetscObjectParameterSetDefault(jac, relaxtype[2], (PetscInt)PETSC_HYPRE_RELAX_LU);
+#elif defined(HYPRE_USING_HIP) && defined(HYPRE_USING_MAGMA)
+      PetscObjectParameterSetDefault(jac, relaxtype[2], (PetscInt)PETSC_HYPRE_RELAX_LU);
+#else
+      PetscObjectParameterSetDefault(jac, relaxtype[2], (PetscInt)PETSC_HYPRE_RELAX_GAUSSIAN_ELIMINATION);
+#endif
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
       PetscObjectParameterSetDefault(jac, spgemm_type, HYPRESpgemmTypes[0]);
 #endif
@@ -334,8 +441,10 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
       PetscObjectParameterSetDefault(jac, coarsentype, 6);
       PetscObjectParameterSetDefault(jac, relaxorder, 1);
       PetscObjectParameterSetDefault(jac, interptype, 0);
-      PetscObjectParameterSetDefault(jac, relaxtype[0], 6);
-      PetscObjectParameterSetDefault(jac, relaxtype[1], 6); /* Defaults to SYMMETRIC since in PETSc we are using a PC - most likely with CG */
+      /* Defaults to SYMMETRIC since in PETSc we are using a PC - most likely with CG */
+      PetscObjectParameterSetDefault(jac, relaxtype[0], (PetscInt)PETSC_HYPRE_RELAX_SOR_JACOBI_SYM);
+      PetscObjectParameterSetDefault(jac, relaxtype[1], (PetscInt)PETSC_HYPRE_RELAX_SOR_JACOBI_SYM);
+      PetscObjectParameterSetDefault(jac, relaxtype[2], (PetscInt)PETSC_HYPRE_RELAX_GAUSSIAN_ELIMINATION);
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
       PetscObjectParameterSetDefault(jac, spgemm_type, "hypre");
 #endif
@@ -364,10 +473,10 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
     PetscCallHYPRE(HYPRE_BoomerAMGSetCoarsenType(jac->hsolver, (HYPRE_Int)jac->coarsentype));
     PetscCallHYPRE(HYPRE_BoomerAMGSetRelaxOrder(jac->hsolver, (HYPRE_Int)jac->relaxorder));
     PetscCallHYPRE(HYPRE_BoomerAMGSetInterpType(jac->hsolver, (HYPRE_Int)jac->interptype));
-    PetscCallHYPRE(HYPRE_BoomerAMGSetRelaxType(jac->hsolver, (HYPRE_Int)jac->relaxtype[0]));
-    PetscCallHYPRE(HYPRE_BoomerAMGSetCycleRelaxType(jac->hsolver, (HYPRE_Int)jac->relaxtype[0], 1));
-    PetscCallHYPRE(HYPRE_BoomerAMGSetCycleRelaxType(jac->hsolver, (HYPRE_Int)jac->relaxtype[1], 2));
-    PetscCallHYPRE(HYPRE_BoomerAMGSetCycleRelaxType(jac->hsolver, (HYPRE_Int)jac->relaxtype[2], 3));
+    PetscCallHYPRE(HYPRE_BoomerAMGSetRelaxType(jac->hsolver, PetscRelaxTypeToHYPRE(jac->relaxtype[0])));
+    PetscCallHYPRE(HYPRE_BoomerAMGSetCycleRelaxType(jac->hsolver, PetscRelaxTypeToHYPRE(jac->relaxtype[0]), 1));
+    PetscCallHYPRE(HYPRE_BoomerAMGSetCycleRelaxType(jac->hsolver, PetscRelaxTypeToHYPRE(jac->relaxtype[1]), 2));
+    PetscCallHYPRE(HYPRE_BoomerAMGSetCycleRelaxType(jac->hsolver, PetscRelaxTypeToHYPRE(jac->relaxtype[2]), 3));
     /* GPU */
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
     {
@@ -980,18 +1089,17 @@ static PetscErrorCode PCMGGalerkinGetMatProductAlgorithm_HYPRE_BoomerAMG(PC pc, 
 static const char *HYPREBoomerAMGCycleType[]   = {"", "V", "W"};
 static const char *HYPREBoomerAMGCoarsenType[] = {"CLJP", "Ruge-Stueben", "", "modifiedRuge-Stueben", "", "", "Falgout", "", "PMIS", "", "HMIS"};
 static const char *HYPREBoomerAMGMeasureType[] = {"local", "global"};
-/* The following corresponds to HYPRE_BoomerAMGSetRelaxType which has many missing numbers in the enum */
-static const char *HYPREBoomerAMGSmoothType[] = {"ILU", "Schwarz-smoothers", "Pilut", "ParaSails", "Euclid"};
-static const char *HYPREBoomerAMGRelaxType[] = {"Jacobi", "sequential-Gauss-Seidel", "seqboundary-Gauss-Seidel", "SOR/Jacobi", "backward-SOR/Jacobi", "" /* [5] hybrid chaotic Gauss-Seidel (works only with OpenMP) */, "symmetric-SOR/Jacobi", "" /* 7 */, "l1scaled-SOR/Jacobi", "Gaussian-elimination", "" /* 10 */, "" /* 11 */, "" /* 12 */, "l1-Gauss-Seidel" /* nonsymmetric */, "backward-l1-Gauss-Seidel" /* nonsymmetric */, "CG" /* non-stationary */, "Chebyshev", "FCF-Jacobi", "l1scaled-Jacobi"};
-static const char *HYPREBoomerAMGInterpType[] = {"classical", "", "", "direct", "multipass", "multipass-wts", "ext+i", "ext+i-cc", "standard", "standard-wts", "block", "block-wtd", "FF", "FF1", "ext", "ad-wts", "ext-mm", "ext+i-mm", "ext+e-mm"};
+static const char *HYPREBoomerAMGSmoothType[]  = {"ILU", "Schwarz-smoothers", "Pilut", "ParaSails", "Euclid"};
+static const char *HYPREBoomerAMGInterpType[]  = {"classical", "", "", "direct", "multipass", "multipass-wts", "ext+i", "ext+i-cc", "standard", "standard-wts", "block", "block-wtd", "FF", "FF1", "ext", "ad-wts", "ext-mm", "ext+i-mm", "ext+e-mm"};
 
 static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems PetscOptionsObject)
 {
-  PC_HYPRE   *jac = (PC_HYPRE *)pc->data;
-  PetscInt    bs, n, indx, level;
-  PetscBool   flg, tmp_truth;
-  PetscReal   tmpdbl, twodbl[2];
-  const char *symtlist[] = {"nonsymmetric", "SPD", "nonsymmetric,SPD"};
+  PC_HYPRE           *jac = (PC_HYPRE *)pc->data;
+  PetscInt            bs, n, indx, level;
+  PetscBool           flg, tmp_truth;
+  PetscReal           tmpdbl, twodbl[2];
+  PetscHYPRERelaxType relaxtype;
+  const char         *symtlist[] = {"nonsymmetric", "SPD", "nonsymmetric,SPD"};
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "HYPRE BoomerAMG Options");
@@ -1171,17 +1279,21 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems P
   }
 
   /* Relax type */
-  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_relax_type_all", "Relax type for the up and down cycles", "None", HYPREBoomerAMGRelaxType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGRelaxType),
-                              jac->relaxtype[0] < 0 ? "not yet set" : HYPREBoomerAMGRelaxType[jac->relaxtype[0]], &indx, &flg));
-  if (flg) jac->relaxtype[0] = jac->relaxtype[1] = indx;
-  PetscCall(
-    PetscOptionsEList("-pc_hypre_boomeramg_relax_type_down", "Relax type for the down cycles", "None", HYPREBoomerAMGRelaxType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGRelaxType), jac->relaxtype[0] < 0 ? "not yet set" : HYPREBoomerAMGRelaxType[jac->relaxtype[0]], &indx, &flg));
-  if (flg) jac->relaxtype[0] = indx;
-  PetscCall(
-    PetscOptionsEList("-pc_hypre_boomeramg_relax_type_up", "Relax type for the up cycles", "None", HYPREBoomerAMGRelaxType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGRelaxType), jac->relaxtype[1] < 0 ? "not yet set" : HYPREBoomerAMGRelaxType[jac->relaxtype[1]], &indx, &flg));
-  if (flg) jac->relaxtype[1] = indx;
-  PetscCall(PetscOptionsEList("-pc_hypre_boomeramg_relax_type_coarse", "Relax type on coarse grid", "None", HYPREBoomerAMGRelaxType, PETSC_STATIC_ARRAY_LENGTH(HYPREBoomerAMGRelaxType), HYPREBoomerAMGRelaxType[jac->relaxtype[2]], &indx, &flg));
-  if (flg) jac->relaxtype[2] = indx;
+  relaxtype = (PetscHYPRERelaxType)(jac->relaxtype[0] > 0 ? jac->relaxtype[0] : PETSC_HYPRE_RELAX_SOR_JACOBI_SYM);
+  PetscCall(PetscOptionsEnum("-pc_hypre_boomeramg_relax_type_all", "Relax type for the up and down cycles", "None", PetscHYPRERelaxTypes, (PetscEnum)relaxtype, (PetscEnum *)&relaxtype, &flg));
+  if (flg) jac->relaxtype[0] = jac->relaxtype[1] = (PetscInt)relaxtype;
+  relaxtype = (PetscHYPRERelaxType)(jac->relaxtype[0] > 0 ? jac->relaxtype[0] : PETSC_HYPRE_RELAX_SOR_JACOBI_SYM);
+  PetscCall(PetscOptionsEnum("-pc_hypre_boomeramg_relax_type_down", "Relax type for the down cycles", "None", PetscHYPRERelaxTypes, (PetscEnum)relaxtype, (PetscEnum *)&relaxtype, &flg));
+  if (flg) jac->relaxtype[0] = (PetscInt)relaxtype;
+  relaxtype = (PetscHYPRERelaxType)(jac->relaxtype[1] > 0 ? jac->relaxtype[1] : PETSC_HYPRE_RELAX_SOR_JACOBI_SYM);
+  PetscCall(PetscOptionsEnum("-pc_hypre_boomeramg_relax_type_up", "Relax type for the up cycles", "None", PetscHYPRERelaxTypes, (PetscEnum)relaxtype, (PetscEnum *)&relaxtype, &flg));
+  if (flg) jac->relaxtype[1] = (PetscInt)relaxtype;
+  relaxtype = (PetscHYPRERelaxType)(jac->relaxtype[2] > 0 ? jac->relaxtype[2] : PETSC_HYPRE_RELAX_GAUSSIAN_ELIMINATION);
+  PetscCall(PetscOptionsEnum("-pc_hypre_boomeramg_relax_type_coarse", "Relax type on coarse grid", "None", PetscHYPRERelaxTypes, (PetscEnum)relaxtype, (PetscEnum *)&relaxtype, &flg));
+  if (flg) {
+    PetscCheck(relaxtype == PETSC_HYPRE_RELAX_GAUSSIAN_ELIMINATION || relaxtype == PETSC_HYPRE_RELAX_LU || relaxtype == PETSC_HYPRE_RELAX_EXPLICIT_INVERSE, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "-pc_hypre_boomeramg_relax_type_coarse must be one of `Gaussian-elimination`, `lu`, or `lu-form-inverse`");
+    jac->relaxtype[2] = (PetscInt)relaxtype;
+  }
 
   /* Relaxation Weight */
   PetscCall(PetscOptionsReal("-pc_hypre_boomeramg_relax_weight_all", "Relaxation weight for all levels (0 = hypre estimates, -k = determined with k CG steps)", "None", jac->relaxweight, &tmpdbl, &flg));
@@ -1235,7 +1347,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems P
   PetscCall(PetscOptionsEList("-pc_mg_galerkin_mat_product_algorithm", "Type of SpGEMM to use in hypre (only for now)", "PCMGGalerkinSetMatProductAlgorithm", HYPRESpgemmTypes, PETSC_STATIC_ARRAY_LENGTH(HYPRESpgemmTypes), jac->spgemm_type, &indx, &flg));
   if (flg) PetscCall(PCMGGalerkinSetMatProductAlgorithm_HYPRE_BoomerAMG(pc, HYPRESpgemmTypes[indx]));
 #endif
-  /* AIR */
+/* AIR */
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 18, 0)
   PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_restriction_type", "Type of AIR method (distance 1 or 2, 0 means no AIR)", "None", jac->Rtype, &jac->Rtype, NULL));
   PetscCallHYPRE(HYPRE_BoomerAMGSetRestriction(jac->hsolver, (HYPRE_Int)jac->Rtype));
@@ -1404,9 +1516,9 @@ static PetscErrorCode PCView_HYPRE_BoomerAMG(PC pc, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "    Sweeps up           %" PetscInt_FMT "\n", jac->gridsweeps[1]));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    Sweeps on coarse    %" PetscInt_FMT "\n", jac->gridsweeps[2]));
 
-    PetscCall(PetscViewerASCIIPrintf(viewer, "    Relax down          %s\n", jac->relaxtype[0] < 0 ? "not yet set" : HYPREBoomerAMGRelaxType[jac->relaxtype[0]]));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "    Relax up            %s\n", jac->relaxtype[1] < 0 ? "not yet set" : HYPREBoomerAMGRelaxType[jac->relaxtype[1]]));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "    Relax on coarse     %s\n", HYPREBoomerAMGRelaxType[jac->relaxtype[2]]));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "    Relax down          %s\n", jac->relaxtype[0] < 0 ? "not yet set" : PetscHYPRERelaxTypes[jac->relaxtype[0]]));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "    Relax up            %s\n", jac->relaxtype[1] < 0 ? "not yet set" : PetscHYPRERelaxTypes[jac->relaxtype[1]]));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "    Relax on coarse     %s\n", jac->relaxtype[2] < 0 ? "not yet set" : PetscHYPRERelaxTypes[jac->relaxtype[2]]));
 
     PetscCall(PetscViewerASCIIPrintf(viewer, "    Relax weight  (all)      %g\n", (double)jac->relaxweight));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    Outer relax weight (all) %g\n", (double)jac->outerrelaxweight));
@@ -2329,7 +2441,6 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
     jac->nodal_relax                                             = PETSC_FALSE;
     jac->nodal_relax_levels                                      = 1;
     jac->rap2                                                    = 0;
-    PetscObjectParameterSetDefault(jac, relaxtype[2], 9); /* G.E. */
 
     /*
       Initialize the following parameters with invalid value so we can recognize user input that sets the parameter.
@@ -2340,6 +2451,7 @@ static PetscErrorCode PCHYPRESetType_HYPRE(PC pc, const char name[])
     PetscObjectParameterSetDefault(jac, interptype, PETSC_DECIDE);
     PetscObjectParameterSetDefault(jac, relaxtype[0], PETSC_DECIDE);
     PetscObjectParameterSetDefault(jac, relaxtype[1], PETSC_DECIDE);
+    PetscObjectParameterSetDefault(jac, relaxtype[2], PETSC_DECIDE);
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
     PetscObjectParameterSetDefault(jac, spgemm_type, "not yet set");
 #endif
