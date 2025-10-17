@@ -698,8 +698,11 @@ Unable to run hostname to check the network')
     # check if mpi.mod exists
     if self.fortran.fortranIsF90:
       self.log.write('Checking for mpi.mod\n')
-      if self.libraries.check(self.lib,'', call = '       use mpi\n       integer(kind=selected_int_kind(5)) ierr,rank\n       call mpi_init(ierr)\n       call mpi_comm_rank(MPI_COMM_WORLD,rank,ierr)\n'):
+      if self.libraries.check(self.lib,'', call = '   fuc    use mpi\n       integer(kind=selected_int_kind(5)) ierr,rank\n       call mpi_init(ierr)\n       call mpi_comm_rank(MPI_COMM_WORLD,rank,ierr)\n'):
         self.addDefine('HAVE_MPI_F90MODULE', 1)
+      else:
+        # Satish this warning should not be printed if using MSMPI. Is there a way to determine if MSMPI is being used? For example "Microsoft Compute Cluster Pack"? That seems to be the only place searched for MSMPI.
+        self.logPrintWarning('Unable to find or use the MPI Fortran module file mpi.mod! PETSc will be configured to use "mpif.h" and not the MPI Fortran module')
     self.compilers.FPPFLAGS = oldFlags
     self.libraries.popLanguage()
     return 0
