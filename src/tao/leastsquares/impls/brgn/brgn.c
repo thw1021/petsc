@@ -116,7 +116,6 @@ static PetscErrorCode TaoTermComputeHessian_GaussNewton_Internal(TaoTerm term, V
 static PetscErrorCode TaoTermComputeHessian_GaussNewton(TaoTerm term, Vec x, Vec _params, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
-  PetscCall(TaoTermUpdateHessianShells(term, x, _params, &H, &Hpre));
   if (H) PetscCall(TaoTermComputeHessian_GaussNewton_Internal(term, x, _params, H));
   if (Hpre && Hpre != H) {
     if (H) PetscCall(MatCopy(H, Hpre, UNKNOWN_NONZERO_PATTERN));

@@ -199,7 +199,6 @@ static PetscErrorCode TaoTermComputeHessian_L1(TaoTerm term, Vec x, Vec params, 
   Vec diag;
 
   PetscFunctionBegin;
-  PetscCall(TaoTermUpdateHessianShells(term, x, params, &H, &Hpre));
   if (!H && !Hpre) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(TaoTermL1ComputeDiag(term, x, params, &diag));
   if (H) PetscCall(TaoTermComputeHessian_L1_Internal(term, diag, H));
@@ -323,7 +322,7 @@ static PetscErrorCode TaoTermSetFromOptions_L1(TaoTerm term, PetscOptionItems Pe
   the term computes a smooth approximation of $\|x - p\|_1$, see `TaoTermL1SetEpsilon()`.
 
   The default Hessian creation mode (see `TaoTermGetCreateHessianMode()`) is `H == Hpre` and `TaoTermCreateHessianMatrices()`
-  will create a `MATSHELL` for the Hessian.
+  will create a `MATDIAGONAL` for the Hessian.
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -346,8 +345,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   term->H_mattype    = NULL;
   term->Hpre_mattype = NULL;
 
-  PetscCall(PetscStrallocpy(MATSHELL, (char **)&term->H_mattype));
-  PetscCall(PetscStrallocpy(MATSHELL, (char **)&term->Hpre_mattype));
+  PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->H_mattype));
+  PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->Hpre_mattype));
 
   term->ops->destroy               = TaoTermDestroy_L1;
   term->ops->view                  = TaoTermView_L1;

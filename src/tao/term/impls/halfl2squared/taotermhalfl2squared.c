@@ -58,7 +58,6 @@ static PetscErrorCode TaoTermComputeGradient_Halfl2squared(TaoTerm term, Vec x, 
 static PetscErrorCode TaoTermComputeHessian_Halfl2squared(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
-  PetscCall(TaoTermUpdateHessianShells(term, x, params, &H, &Hpre));
   if (H) {
     PetscCall(MatZeroEntries(H));
     PetscCall(MatShift(H, 1.0));
@@ -82,7 +81,7 @@ static PetscErrorCode TaoTermComputeHessian_Halfl2squared(TaoTerm term, Vec x, V
   $\tfrac{1}{2}\|x\|_2^2$.
 
   The default Hessian creation mode (see `TaoTermGetCreateHessianMode()`) is `H == Hpre` and `TaoTermCreateHessianMatrices()`
-  will create a `MATSHELL` for the Hessian.
+  will create a `MATDIAGONAL` for the Hessian.
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -103,8 +102,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
   term->H_mattype    = NULL;
   term->Hpre_mattype = NULL;
 
-  PetscCall(PetscStrallocpy(MATSHELL, (char **)&term->H_mattype));
-  PetscCall(PetscStrallocpy(MATSHELL, (char **)&term->Hpre_mattype));
+  PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->H_mattype));
+  PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->Hpre_mattype));
 
   term->ops->destroy               = TaoTermDestroy_Halfl2squared;
   term->ops->objective             = TaoTermComputeObjective_Halfl2squared;
