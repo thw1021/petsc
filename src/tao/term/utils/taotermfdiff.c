@@ -60,7 +60,6 @@ static PetscErrorCode SNESFunction_TaoTerm(SNES snes, Vec X, Vec G, void *ctx)
           `TaoTermSetFDDelta()`,
           `TaoTermComputeGradientUseFDPush()`,
           `TaoTermComputeGradientUseFDPop()`,
-          `TaoTermComputeHessianSingleFD()`,
           `TaoTermComputeHessianMultFD()`,
           `TaoTermComputeHessianFD()`,
 @*/
@@ -185,7 +184,7 @@ static PetscErrorCode TaoTermGetStashedHessianColoring(TaoTerm term, Vec params,
           `TaoTermComputeGradientUseFDPush()`,
           `TaoTermComputeGradientUseFDPop()`,
 @*/
-PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec params, Mat H)
+static PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec params, Mat H)
 {
   SNES                  snes;
   TaoTermWithParameters t;
@@ -221,7 +220,7 @@ PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec params, Ma
 }
 
 /*@
-  TaoTermComputeHessianFD - Use `TaoTermComputeHessianMultFD()` and `TaoTermComputeHessianSingleFD()` to compute the provided Hessian matrices
+  TaoTermComputeHessianFD - Use `TaoTermComputeHessianMultFD()` to compute the provided Hessian matrices
 
   Collective
 
@@ -245,9 +244,6 @@ PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec params, Ma
   then `TaoTermComputeHessianMultFD()` will be used for a matrix-free finite
   difference approximation (`MATMFFD`).
 
-  If either matrix is an assembled matrix (like `MATAIJ`), then
-  `TaoTermComputeHessianSingleFD()` will be used to compute the entries in the matrix.
-
   This routine is slow and expensive, and is not optimized to take advantage of
   sparsity in the problem.  Although not recommended for general use in
   large-scale applications, it can be useful in checking the correctness of a
@@ -262,14 +258,23 @@ PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec params, Ma
           `TaoTermSetFDDelta()`,
           `TaoTermComputeHessianUseFDPush()`,
           `TaoTermComputeHessianUseFDPop()`,
-          `TaoTermComputeHessianSingleFD()`,
           `TaoTermComputeHessianMultFD()`,
 @*/
 PetscErrorCode TaoTermComputeHessianFD(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
   PetscCall(TaoTermUpdateHessianShells(term, x, params, &H, &Hpre));
-  PetscCall(TaoTermComputeHessianSingle(term, x, params, H, Hpre, TaoTermComputeHessianSingleFD, UNKNOWN_NONZERO_PATTERN));
+  //TODO just cccp hessiansingle code for now
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  if (params) PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
+  if (H) PetscValidHeaderSpecific(H, MAT_CLASSID, 4);
+  if (Hpre) PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 5);
+  if (H) PetscCall(TaoTermComputeHessianSingleFD(term, x, params, H));
+  if (Hpre && Hpre != H) {
+    if (H) PetscCall(MatCopy(H, Hpre, UNKNOWN_NONZERO_PATTERN));
+    else PetscCall(TaoTermComputeHessianSingleFD(term, x, params, Hpre));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -414,7 +419,6 @@ PetscErrorCode TaoTermUpdateHessianMFFD(TaoTerm term, Mat mffd, Vec x, Vec param
           `TaoTermSetFDDelta()`,
           `TaoTermComputeHessianUseFDPush()`,
           `TaoTermComputeHessianUseFDPop()`,
-          `TaoTermComputeHessianSingleFD()`,
           `TaoTermComputeHessianFD()`,
 @*/
 PetscErrorCode TaoTermComputeHessianMultFD(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)

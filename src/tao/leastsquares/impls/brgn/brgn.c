@@ -116,7 +116,7 @@ static PetscErrorCode TaoTermComputeHessianMult_GaussNewton(TaoTerm term, Vec x,
 }
 
 // Form H = (J^T J)
-static PetscErrorCode TaoTermComputeHessianSingle_GaussNewton(TaoTerm term, Vec x, Vec _params, Mat H)
+static PetscErrorCode TaoTermComputeHessian_GaussNewton_Internal(TaoTerm term, Vec x, Vec _params, Mat H)
 {
   TaoTerm_GaussNewton *gnterm;
   Mat                  ls_jac = NULL;
@@ -134,10 +134,10 @@ static PetscErrorCode TaoTermComputeHessian_GaussNewton(TaoTerm term, Vec x, Vec
   //Below maay make H null... TODO taotermhessians may not actually compute. delay-lazy
   //which may be smart, but breaks interace.... need to nuke the whole thing
   PetscCall(TaoTermUpdateHessianShells(term, x, _params, &H, &Hpre));
-  if (H) PetscCall(TaoTermComputeHessianSingle_GaussNewton(term, x, _params, H));
+  if (H) PetscCall(TaoTermComputeHessian_GaussNewton_Internal(term, x, _params, H));
   if (Hpre && Hpre != H) {
     if (H) PetscCall(MatCopy(H, Hpre, UNKNOWN_NONZERO_PATTERN));
-    else PetscCall(TaoTermComputeHessianSingle_GaussNewton(term, x, _params, Hpre));
+    else PetscCall(TaoTermComputeHessian_GaussNewton_Internal(term, x, _params, Hpre));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

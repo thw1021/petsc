@@ -113,10 +113,10 @@ static PetscErrorCode FormHessian(TaoTerm term, Vec X, Vec params, Mat H, Mat Hp
   PetscFunctionBegin;
   PetscCheck(params == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "Rosenbrock function does not take a parameter vector");
   PetscCall(TaoTermShellGetContext(term, &user));
-  if (H) PetscCall(AppCtxFormHessianSingle(user, X, H));
+  if (H) PetscCall(AppCtxFormHessian(user, X, H));
   if (Hpre && Hpre != H) {
     if (H) PetscCall(MatCopy(H, Hpre, SAME_NONZERO_PATTERN));
-    else PetscCall(AppCtxFormHessianSingle(user, X, Hpre));
+    else PetscCall(AppCtxFormHessian(user, X, Hpre));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

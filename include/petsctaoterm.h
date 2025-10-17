@@ -172,7 +172,6 @@ PETSC_EXTERN PetscErrorCode TaoTermGetCreateHessianMode(TaoTerm, PetscBool *, Ma
           `TaoTermGradientFn`,
           `TaoTermHessianFn`,
           `TaoTermHessianMultFn`,
-          `TaoTermHessianSingleFn`,
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermObjectiveFn)(TaoTerm term, Vec x, Vec params, PetscReal *value);
 
@@ -196,7 +195,6 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermObjectiveFn)(TaoTerm term, Ve
           `TaoTermGradientFn`,
           `TaoTermHessianFn`,
           `TaoTermHessianMultFn`,
-          `TaoTermHessianSingleFn`,
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermObjectiveAndGradientFn)(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g);
 
@@ -219,7 +217,6 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermObjectiveAndGradientFn)(TaoTe
           `TaoTermObjectiveAndGradientFn`,
           `TaoTermHessianFn`,
           `TaoTermHessianMultFn`,
-          `TaoTermHessianSingleFn`,
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermGradientFn)(TaoTerm term, Vec x, Vec params, Vec g);
 
@@ -243,7 +240,6 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermGradientFn)(TaoTerm term, Vec
           `TaoTermObjectiveAndGradientFn`,
           `TaoTermGradientFn`,
           `TaoTermHessianMultFn`,
-          `TaoTermHessianSingleFn`,
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermHessianFn)(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre);
 
@@ -267,38 +263,13 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermHessianFn)(TaoTerm term, Vec 
           `TaoTermObjectiveAndGradientFn`,
           `TaoTermGradientFn`,
           `TaoTermHessianFn`,
-          `TaoTermHessianSingleFn`,
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermHessianMultFn)(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv);
-
-/*S
-  TaoTermHessianSingleFn - A prototype of a `TaoTerm` function that would be passed to `TaoTermHessianSingle()`
-
-  Calling Sequence:
-+ term   - a `TaoTerm`
-. x      - the solution vector
-. params - the parameters vector (for some `TaoTerm` this may be `NULL`, see `TaoTermGetParametersMode()`)
-- H      - output, the Hessian of the term
-
-  Level: intermediate
-
-.seealso: [](sec_tao_term),
-          `TaoTerm`,
-          `TAOTERMSHELL`,
-          `TaoTermComputeHessianSingle()`,
-          `TaoTermObjectiveFn`,
-          `TaoTermObjectiveAndGradientFn`,
-          `TaoTermGradientFn`,
-          `TaoTermHessianFn`,
-          `TaoTermHessianMultFn`,
-S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermHessianSingleFn)(TaoTerm term, Vec x, Vec params, Mat H);
 
 PETSC_EXTERN PetscErrorCode TaoTermComputeObjective(TaoTerm, Vec, Vec, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoTermComputeGradient(TaoTerm, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessian(TaoTerm, Vec, Vec, Mat, Mat);
-PETSC_EXTERN PetscErrorCode TaoTermComputeHessianSingle(TaoTerm, Vec, Vec, Mat, Mat, TaoTermHessianSingleFn *, MatStructure);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianMult(TaoTerm, Vec, Vec, Vec, Vec);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateShell(MPI_Comm, void *, PetscCtxDestroyFn *, TaoTerm *);
@@ -357,7 +328,6 @@ PETSC_EXTERN PetscErrorCode TaoTermComputeGradientUseFDPush(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermComputeGradientUseFDPop(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermSetHessianColoring(TaoTerm, ISColoring);
 PETSC_EXTERN PetscErrorCode TaoTermGetHessianColoring(TaoTerm, ISColoring *);
-PETSC_EXTERN PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm, Vec, Vec, Mat);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianFD(TaoTerm, Vec, Vec, Mat, Mat);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianMultFD(TaoTerm, Vec, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianUseFDPush(TaoTerm);
