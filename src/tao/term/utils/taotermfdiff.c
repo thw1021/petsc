@@ -60,7 +60,6 @@ static PetscErrorCode SNESFunction_TaoTerm(SNES snes, Vec X, Vec G, void *ctx)
           `TaoTermSetFDDelta()`,
           `TaoTermComputeGradientUseFDPush()`,
           `TaoTermComputeGradientUseFDPop()`,
-          `TaoTermComputeHessianMultFD()`,
           `TaoTermComputeHessianFD()`,
 @*/
 PetscErrorCode TaoTermComputeGradientFD(TaoTerm term, Vec x, Vec params, Vec g)
@@ -220,7 +219,7 @@ static PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec par
 }
 
 /*@
-  TaoTermComputeHessianFD - Use `TaoTermComputeHessianMultFD()` to compute the provided Hessian matrices
+  TaoTermComputeHessianFD - Use finite difference to compute Hessian matrix.
 
   Collective
 
@@ -241,7 +240,7 @@ static PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec par
 
   Notes:
   If either matrix is a `MATSHELL` created with `TaoTermCreateHessianShell()`,
-  then `TaoTermComputeHessianMultFD()` will be used for a matrix-free finite
+  then finite difference  will be used for a matrix-free finite
   difference approximation (`MATMFFD`).
 
   This routine is slow and expensive, and is not optimized to take advantage of
@@ -253,12 +252,10 @@ static PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec par
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TaoTermComputeHessian()`,
-          `TaoTermComputeHessianMult()`,
           `TaoTermGetFDDelta()`,
           `TaoTermSetFDDelta()`,
           `TaoTermComputeHessianUseFDPush()`,
           `TaoTermComputeHessianUseFDPop()`,
-          `TaoTermComputeHessianMultFD()`,
 @*/
 PetscErrorCode TaoTermComputeHessianFD(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
@@ -381,62 +378,5 @@ PetscErrorCode TaoTermUpdateHessianMFFD(TaoTerm term, Mat mffd, Vec x, Vec param
   PetscCall(MatMFFDSetBase(mffd, x, NULL));
   PetscCall(MatAssemblyBegin(mffd, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(mffd, MAT_FINAL_ASSEMBLY));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoTermComputeHessianMultFD - Approximate a Hessian-vector product of a `TaoTerm` using finite differences
-
-  Collective
-
-  Input Parameters:
-+ term   - a `TaoTerm` representing a parametric function $f(x; p)$
-. x      - the solution variable $x$ in $f(x; p)$
-. params - the parameters $p$ in $f(x; p)$ (may be `NULL` if the term is not parametric)
-- v      - a vector in the solution space
-
-  Output Parameters:
-. Hv - a finite difference approximation of the product $\nabla_x^2 f(x;p) v$
-
-  Level: advanced
-
-  Options Database Keys:
-+ -tao_term_fd_delta <delta>      - change in x used to calculate finite differences
-- -tao_term_hessian_use_fd <bool> - Use `TaoTermComputeHessianMultFD()` in `TaoTermComputeHessian()`
-
-  Note:
-  The finite difference method in this routine does not attempt to choose the
-  best step length, it uses the value of `TaoTermGetFDDelta()`.
-  `TaoTermComputeHessianMultFD()` calls `TaoTermComputeGradient()` twice in each call, which
-  is not efficient if you want to compute multiple Hessian-vector products for
-  the same values of `x` and `params`.  Use `TaoTermCreateHessianMFFD()` to
-  construct a a more sophisticated `MATMFFD` matrix-free Hessian approximation
-  to use in iterative methods.
-
-.seealso: [](sec_tao_term),
-          `TaoTerm`,
-          `TaoTermGetFDDelta()`,
-          `TaoTermSetFDDelta()`,
-          `TaoTermComputeHessianUseFDPush()`,
-          `TaoTermComputeHessianUseFDPop()`,
-          `TaoTermComputeHessianFD()`,
-@*/
-PetscErrorCode TaoTermComputeHessianMultFD(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
-{
-  Vec       x_p;
-  Vec       g;
-  PetscReal h;
-
-  PetscFunctionBegin;
-  PetscCall(TaoTermGetFDDelta(term, &h));
-  PetscCall(VecDuplicate(x, &x_p));
-  PetscCall(VecDuplicate(x, &g));
-  PetscCall(TaoTermComputeGradient(term, x, params, g));
-  PetscCall(VecWAXPY(x_p, h, v, x));
-  PetscCall(TaoTermComputeGradient(term, x_p, params, Hv));
-  PetscCall(VecAXPY(Hv, -1.0, g));
-  PetscCall(VecScale(Hv, 1.0 / h));
-  PetscCall(VecDestroy(&g));
-  PetscCall(VecDestroy(&x_p));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

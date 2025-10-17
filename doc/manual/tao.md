@@ -558,7 +558,7 @@ solution variable $x$ and parameters $p$.  The interface includes methods for
 evaluating $f(x; p)$ (`TaoTermComputeObjective()`),
 $\nabla_x f(x; p)$ (`TaoTermComputeGradient()` and
 `TaoTermComputeObjectiveAndGradient()`), and $\nabla_x^2 f(x; p)$
-(`TaoTermComputeHessian()` and `TaoTermComputeHessianMult()`).
+(`TaoTermComputeHessian()`).
 
 #### Built-in TaoTerm implementations
 
