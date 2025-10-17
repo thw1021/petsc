@@ -153,7 +153,7 @@ static PetscErrorCode AppCtxFormFunctionGradient(AppCtx *user, Vec X, PetscReal 
 }
 
 /*
-  AppCtxFormHessianSingle - Evaluates Hessian matrix.
+  AppCtxFormHessian - Evaluates Hessian matrix.
 
   Input Parameters:
 + tao   - the Tao context
@@ -163,7 +163,7 @@ static PetscErrorCode AppCtxFormFunctionGradient(AppCtx *user, Vec X, PetscReal 
 + H     - Hessian matrix
 - Hpre  - Hessian preconditioner
 */
-static PetscErrorCode AppCtxFormHessianSingle(AppCtx *user, Vec X, Mat H)
+static PetscErrorCode AppCtxFormHessian(AppCtx *user, Vec X, Mat H)
 {
   PetscInt           ind[2];
   PetscReal          alpha = user->alpha;

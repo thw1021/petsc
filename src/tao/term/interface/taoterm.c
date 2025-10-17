@@ -642,72 +642,6 @@ PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  TaoTermComputeHessianSingle - Handle the computation of optional Hessian and
-  Hessian preconditioning matrices from a routine for computing just one.
-
-  Logically collective
-
-  Input Parameters:
-+ term           - a `TaoTerm` context
-. x              - a solution vector
-. params         - (optional) a parameter vector
-. H              - (optional) a matrix for the Hessian to be computed
-. Hpre           - (optional) a matrix for the Hessian preconditioning matrix to be computed
-. func           - a `TaoTermHessianSingleFn` callback that computes a single copy of the Hessian matrix
-- copy_structure - if `H` and `Hpre` are distinct matrices, the `str` argument to `MatCopy()` for copying `H` to `Hpre`
-
-  Level: developer
-
-  Note:
-  `TaoTermComputeHessian()` can be called with either matrix being present. All of the following are valid calling sequences\:
-.vb
-    TaoTermComputeHessian(term, x, params, H, NULL);    // no preconditioning matrix requested
-    TaoTermComputeHessian(term, x, params, H, H);       // the preconditioning matrix is the Hessian matrix
-    TaoTermComputeHessian(term, x, params, H, Hpre);    // the preconditioning matrix is distinct from the Hessian matrix
-    TaoTermComputeHessian(term, x, params, NULL, Hpre); // only the preconditioning matrix is requested
-.ve
-  If your code does not construct the Hessian preconditioner any differently
-  than the true Hessian, you can use `TaoTermComputeHessianSingle()` in a callback
-  passed to `TaoTermShellSetHessian()` to handle all of the above cases, using
-  the following pattern\:
-.vb
-    static PetscErrorCode AppComputeHessianSingle(TaoTerm term, Vec x, Vec params, Mat H)
-    {
-      // ... your code for computing H
-    }
-
-    static PetscErrorCode AppComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
-    {
-      return TaoTermComputeHessianSingle(term, x, params, H, Hpre, AppComputeHessianSingle, SAME_NONZERO_PATTERN);
-    }
-
-    // ... when setting the Hessian callback function, use AppComputeHessian()
-    TaoTermShellSetHessian(taoterm, AppComputeHessian);
-.ve
-
-.seealso: [](sec_tao_term),
-          `TaoTerm`,
-          `TaoTermComputeHessian()`,
-          `TaoTermShellSetHessian()`,
-          `TaoTermHessianSingleFn`
-@*/
-PetscErrorCode TaoTermComputeHessianSingle(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre, TaoTermHessianSingleFn *func, MatStructure copy_structure)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
-  if (params) PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
-  if (H) PetscValidHeaderSpecific(H, MAT_CLASSID, 4);
-  if (Hpre) PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 5);
-  if (H) PetscCallBack("TaoTermComputeHessiansSingle() H", (*func)(term, x, params, H));
-  if (Hpre && Hpre != H) {
-    if (H) PetscCall(MatCopy(H, Hpre, copy_structure));
-    else PetscCallBack("TaoTermComputeHessiansSingle() Hpre", (*func)(term, x, params, Hpre));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*@
   TaoTermComputeHessianMult - Evaluate the Hessian-vector product of
   a `TaoTerm` for a given solution vector and parameter vector
@@ -1592,8 +1526,8 @@ PetscErrorCode TaoTermCreateHessianMatricesDefault(TaoTerm term, Mat *H, Mat *Hp
       PetscCall(TaoTermGetSolutionLayout(term, &sol_layout));
       PetscCall(MatSetLayouts(_H, sol_layout, sol_layout));
       PetscCall(TaoTermGetSolutionVecType(term, &sol_vec_type));
-      PetscCall(MatSetVecType(_H, sol_vec_type));
       if (H_mattype) PetscCall(MatSetType(_H, H_mattype));
+      else PetscCall(MatSetVecType(_H, sol_vec_type));
       PetscCall(MatSetOption(_H, MAT_SYMMETRIC, PETSC_TRUE));
       PetscCall(MatSetOption(_H, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
     }

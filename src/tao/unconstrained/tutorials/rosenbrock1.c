@@ -116,7 +116,7 @@ PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
   AppCtx *user = (AppCtx *)ptr;
 
   PetscFunctionBeginUser;
-  PetscCall(AppCtxFormHessianSingle(user, X, H));
+  PetscCall(AppCtxFormHessian(user, X, H));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
