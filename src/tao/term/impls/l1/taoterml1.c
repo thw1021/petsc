@@ -207,30 +207,6 @@ static PetscErrorCode TaoTermComputeHessian_L1(TaoTerm term, Vec x, Vec params, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermComputeHessianMult_L1_Internal(TaoTerm term, Vec diag, Vec v, Vec Hv)
-{
-  TaoTerm_L1 *l1 = (TaoTerm_L1 *)term->data;
-
-  PetscFunctionBegin;
-  if (l1->epsilon == 0.0) {
-    PetscCall(TaoTermL1DerivativeCheck(term));
-    PetscCall(VecZeroEntries(Hv));
-  } else {
-    PetscCall(VecPointwiseMult(Hv, v, diag));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoTermComputeHessianMult_L1(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
-{
-  Vec diag;
-
-  PetscFunctionBegin;
-  PetscCall(TaoTermL1ComputeDiag(term, x, params, &diag));
-  PetscCall(TaoTermComputeHessianMult_L1_Internal(term, diag, v, Hv));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*@
   TaoTermL1SetEpsilon - Set an $\epsilon$ smoothing parameter.
 
@@ -380,7 +356,6 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   term->ops->gradient              = TaoTermComputeGradient_L1;
   term->ops->objectiveandgradient  = TaoTermComputeObjectiveAndGradient_L1;
   term->ops->hessian               = TaoTermComputeHessian_L1;
-  term->ops->hessianmult           = TaoTermComputeHessianMult_L1;
   term->ops->createhessianmatrices = TaoTermCreateHessianMatricesDefault;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermL1SetEpsilon_C", TaoTermL1SetEpsilon_L1));

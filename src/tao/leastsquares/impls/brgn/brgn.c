@@ -100,21 +100,6 @@ static PetscErrorCode TaoTermComputeObjectiveAndGradient_GaussNewton(TaoTerm ter
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// Gauss-Newton Hessian approximation, Hv = (J^T J)v
-static PetscErrorCode TaoTermComputeHessianMult_GaussNewton(TaoTerm term, Vec x, Vec _params, Vec v, Vec Hv)
-{
-  TaoTerm_GaussNewton *gnterm;
-  Mat                  ls_jac;
-
-  PetscFunctionBegin;
-  PetscCall(TaoTermShellGetContext(term, (void *)&gnterm));
-  PetscCall(TaoTermGaussNewtonGetJacobian(gnterm, x, &ls_jac));
-  if (!gnterm->r_work) PetscCall(MatCreateVecs(ls_jac, NULL, &gnterm->r_work));
-  PetscCall(MatMult(ls_jac, v, gnterm->r_work));
-  PetscCall(MatMultHermitianTranspose(ls_jac, gnterm->r_work, Hv));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 // Form H = (J^T J)
 static PetscErrorCode TaoTermComputeHessian_GaussNewton_Internal(TaoTerm term, Vec x, Vec _params, Mat H)
 {
@@ -131,8 +116,6 @@ static PetscErrorCode TaoTermComputeHessian_GaussNewton_Internal(TaoTerm term, V
 static PetscErrorCode TaoTermComputeHessian_GaussNewton(TaoTerm term, Vec x, Vec _params, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
-  //Below maay make H null... TODO taotermhessians may not actually compute. delay-lazy
-  //which may be smart, but breaks interace.... need to nuke the whole thing
   PetscCall(TaoTermUpdateHessianShells(term, x, _params, &H, &Hpre));
   if (H) PetscCall(TaoTermComputeHessian_GaussNewton_Internal(term, x, _params, H));
   if (Hpre && Hpre != H) {
@@ -159,7 +142,6 @@ static PetscErrorCode TaoTermCreateGaussNewton(Tao tao, TaoTerm *term)
   PetscCall(TaoTermSetCreateHessianMode(_term, PETSC_TRUE, MATSHELL, MATSHELL));
   PetscCall(TaoTermShellSetObjectiveAndGradient(_term, TaoTermComputeObjectiveAndGradient_GaussNewton));
   PetscCall(TaoTermShellSetHessian(_term, TaoTermComputeHessian_GaussNewton));
-  PetscCall(TaoTermShellSetHessianMult(_term, TaoTermComputeHessianMult_GaussNewton));
   *term = _term;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -191,14 +173,6 @@ static PetscErrorCode TaoTermComputeHessian_LevenbergMarquardt(TaoTerm term, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermComputeHessianMult_LevenbergMarquardt(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
-{
-  PetscFunctionBegin;
-  PetscCall(TaoTermUpdateLevenbergMarquardt(term, x));
-  PetscCall(TaoTermComputeHessianMult_Quadratic(term, x, params, v, Hv));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode TaoTermCreateLevenbergMarquardt(TaoTerm gn, TaoTerm *lm)
 {
   PetscContainer       gncontainer;
@@ -223,7 +197,6 @@ static PetscErrorCode TaoTermCreateLevenbergMarquardt(TaoTerm gn, TaoTerm *lm)
   PetscCall(PetscObjectCompose((PetscObject)_term, "__TaoTermCreateLevenbergMarquardt", (PetscObject)gncontainer));
   PetscCall(PetscContainerDestroy(&gncontainer));
   _term->ops->hessian     = TaoTermComputeHessian_LevenbergMarquardt;
-  _term->ops->hessianmult = TaoTermComputeHessianMult_LevenbergMarquardt;
   *lm                     = _term;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

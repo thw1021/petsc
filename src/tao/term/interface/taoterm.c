@@ -7,7 +7,6 @@ PetscLogEvent TAOTERM_ObjectiveEval;
 PetscLogEvent TAOTERM_GradientEval;
 PetscLogEvent TAOTERM_ObjGradEval;
 PetscLogEvent TAOTERM_HessianEval;
-PetscLogEvent TAOTERM_HessianMult;
 
 const char *const TaoTermParametersModes[] = {"optional", "none", "required", "TaoTermParametersMode", "TAOTERM_PARAMETERS_", NULL};
 
@@ -196,7 +195,7 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
 . -tao_term_hessian_pre_mat_type <type>              - `MatType` for approximate Hessian matrix used to construct the preconditioner created by `TaoTermCreateHessianMatricesDefault()`
 . -tao_term_fd_delta <real>                          - Increment for finite difference derivative approximations in `TaoTermComputeGradientFD()`
 . -tao_term_gradient_use_fd <bool>                   - Use finite differences in `TaoTermComputeGradient()`, overriding other user-provided or built-in routines
-- -tao_term_hessian_use_fd <bool>                    - Use finite differences in `TaoTermComputeHessian()` and `TaoTermComputeHessianMult()`, overriding other user-provided or built-in routines
+- -tao_term_hessian_use_fd <bool>                    - Use finite differences in `TaoTermComputeHessian()` overriding other user-provided or built-in routines
 
   Level: beginner
 
@@ -258,7 +257,7 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
   PetscCall(PetscOptionsBool("-tao_term_gradient_use_fd", "Use finite differences in TaoTermComputeGradient()", "TaoTermComputeGradientUseFDPush", grad_use_fd, &grad_use_fd, NULL));
   if (grad_use_fd) PetscCall(TaoTermComputeGradientUseFDPush(term));
 
-  PetscCall(PetscOptionsBool("-tao_term_hessian_use_fd", "Use finite differences in TaoTermComputeHessian() and TaoTermComputeHessianMult()", "TaoTermComputeHessianUseFDPush", hess_use_fd, &hess_use_fd, NULL));
+  PetscCall(PetscOptionsBool("-tao_term_hessian_use_fd", "Use finite differences in TaoTermComputeHessian()", "TaoTermComputeHessianUseFDPush", hess_use_fd, &hess_use_fd, NULL));
   if (hess_use_fd) PetscCall(TaoTermComputeHessianUseFDPush(term));
 
   PetscTryTypeMethod(term, setfromoptions, PetscOptionsObject);
@@ -419,7 +418,6 @@ PetscErrorCode TaoTermCreate(MPI_Comm comm, TaoTerm *term)
           `TaoTermComputeGradient()`,
           `TaoTermComputeObjectiveAndGradient()`,
           `TaoTermComputeHessian()`,
-          `TaoTermComputeHessianMult()`,
           `TaoTermShellSetObjective()`
 @*/
 PetscErrorCode TaoTermComputeObjective(TaoTerm term, Vec x, Vec params, PetscReal *value)
@@ -475,7 +473,6 @@ PetscErrorCode TaoTermComputeObjective(TaoTerm term, Vec x, Vec params, PetscRea
           `TaoTermComputeObjective()`,
           `TaoTermComputeObjectiveAndGradient()`,
           `TaoTermComputeHessian()`,
-          `TaoTermComputeHessianMult()`,
           `TaoTermShellSetGradient()`
 @*/
 PetscErrorCode TaoTermComputeGradient(TaoTerm term, Vec x, Vec params, Vec g)
@@ -535,7 +532,6 @@ PetscErrorCode TaoTermComputeGradient(TaoTerm term, Vec x, Vec params, Vec g)
           `TaoTermComputeObjective()`,
           `TaoTermComputeGradient()`,
           `TaoTermComputeHessian()`,
-          `TaoTermComputeHessianMult()`,
           `TaoTermShellSetObjectiveAndGradient()`
 @*/
 PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g)
@@ -607,7 +603,6 @@ PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm term, Vec x, Vec param
           `TaoTermComputeObjective()`,
           `TaoTermComputeGradient()`,
           `TaoTermComputeObjectiveAndGradient()`,
-          `TaoTermComputeHessianMult()`,
           `TaoTermShellSetHessian()`
 @*/
 PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
@@ -637,58 +632,6 @@ PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat
     PetscUseTypeMethod(term, hessian, x, params, H, Hpre);
   }
   PetscCall(PetscLogEventEnd(TAOTERM_HessianEval, term, NULL, NULL, NULL));
-  if (params) PetscCall(VecLockReadPop(params));
-  PetscCall(VecLockReadPop(x));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoTermComputeHessianMult - Evaluate the Hessian-vector product of
-  a `TaoTerm` for a given solution vector and parameter vector
-
-  Collective
-
-  Input Parameters:
-+ term   - a `TaoTerm` representing a parametric function $f(x; p)$
-. x      - the solution variable $x$ in $f(x; p)$
-. params - the parameters $p$ in $f(x; p)$ (may be `NULL` if the term is not parametric)
-- v      - a vector in the solution space
-
-  Output Parameters:
-. Hv - the product Hessian matrix $\nabla_x^2 f(x;p) v$
-
-  Level: developer
-
-.seealso: [](sec_tao_term),
-          `TaoTerm`,
-          `TaoTermComputeObjective()`,
-          `TaoTermComputeGradient()`,
-          `TaoTermComputeObjectiveAndGradient()`,
-          `TaoTermComputeHessian()`
-@*/
-PetscErrorCode TaoTermComputeHessianMult(TaoTerm term, Vec x, Vec params, Vec v, Vec Hv)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
-  PetscCheckSameComm(term, 1, x, 2);
-  PetscCall(VecLockReadPush(x));
-  if (params) {
-    PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
-    PetscCheckSameComm(term, 1, params, 3);
-    PetscCall(VecLockReadPush(params));
-  }
-  PetscValidHeaderSpecific(v, VEC_CLASSID, 4);
-  PetscCheckSameComm(term, 1, v, 4);
-  PetscCall(VecLockReadPush(v));
-  PetscCall(PetscLogEventBegin(TAOTERM_HessianMult, term, NULL, NULL, NULL));
-  if (term->fd_hess_level > 0) {
-    PetscCall(TaoTermComputeHessianMultFD(term, x, params, v, Hv));
-  } else {
-    PetscUseTypeMethod(term, hessianmult, x, params, v, Hv);
-  }
-  PetscCall(PetscLogEventEnd(TAOTERM_HessianMult, term, NULL, NULL, NULL));
-  PetscCall(VecLockReadPop(v));
   if (params) PetscCall(VecLockReadPop(params));
   PetscCall(VecLockReadPop(x));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1794,7 +1737,6 @@ PetscErrorCode TaoTermGetFDDelta(TaoTerm term, PetscReal *delta)
           `TaoTermComputeGradientUseFDPush()`,
           `TaoTermComputeGradientUseFDPop()`,
           `TaoTermComputeHessianFD()`,
-          `TaoTermComputeHessianMultFD()`,
           `TaoTermComputeHessianUseFDPush()`,
           `TaoTermComputeHessianUseFDPop()`,
 @*/
@@ -1832,7 +1774,6 @@ PetscErrorCode TaoTermSetFDDelta(TaoTerm term, PetscReal delta)
           `TaoTermComputeGradientFD()`,
           `TaoTermComputeGradientUseFDPop()`,
           `TaoTermComputeHessianFD()`,
-          `TaoTermComputeHessianMultFD()`,
           `TaoTermComputeHessianUseFDPush()`,
           `TaoTermComputeHessianUseFDPop()`,
 @*/
@@ -1865,7 +1806,6 @@ PetscErrorCode TaoTermComputeGradientUseFDPush(TaoTerm term)
           `TaoTermComputeGradientFD()`,
           `TaoTermComputeGradientUseFDPush()`,
           `TaoTermComputeHessianFD()`,
-          `TaoTermComputeHessianMultFD()`,
           `TaoTermComputeHessianUseFDPush()`,
           `TaoTermComputeHessianUseFDPop()`,
 @*/
@@ -1878,7 +1818,7 @@ PetscErrorCode TaoTermComputeGradientUseFDPop(TaoTerm term)
 }
 
 /*@
-  TaoTermComputeHessianUseFDPush - Use finite differences instead of the user-provided or built-in methods in `TaoTermComputeHessian()` and `TaoTermComputeHessianMult()`.
+  TaoTermComputeHessianUseFDPush - Use finite differences instead of the user-provided or built-in methods in `TaoTermComputeHessian()`.
 
   Logically collective
 
@@ -1902,7 +1842,6 @@ PetscErrorCode TaoTermComputeGradientUseFDPop(TaoTerm term)
           `TaoTermComputeGradientUseFDPush()`,
           `TaoTermComputeGradientUseFDPop()`,
           `TaoTermComputeHessianFD()`,
-          `TaoTermComputeHessianMultFD()`,
           `TaoTermComputeHessianUseFDPop()`,
 @*/
 PetscErrorCode TaoTermComputeHessianUseFDPush(TaoTerm term)
@@ -1935,7 +1874,6 @@ PetscErrorCode TaoTermComputeHessianUseFDPush(TaoTerm term)
           `TaoTermComputeGradientUseFDPush()`,
           `TaoTermComputeGradientUseFDPop()`,
           `TaoTermComputeHessianFD()`,
-          `TaoTermComputeHessianMultFD()`,
           `TaoTermComputeHessianUseFDPush()`,
 @*/
 PetscErrorCode TaoTermComputeHessianUseFDPop(TaoTerm term)
