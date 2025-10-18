@@ -100,8 +100,10 @@ Tao Object: 1 MPI process
             Rescale convex factor: theta=0.125
         linear system matrix, which is also used to construct the preconditioner:
         Mat Object: 1 MPI process
-          type: shell
+          type: seqdense
           rows=5, cols=5
+          total: nonzeros=25, allocated nonzeros=25
+          total number of mallocs used during MatSetValues calls=0
       total KSP iterations: 6
       convergence tolerances: gatol=1e-06,       grtol=1e-08,       steptol=0.,       gttol=0.
       Residual in Function/Gradient:=9.07258e-09

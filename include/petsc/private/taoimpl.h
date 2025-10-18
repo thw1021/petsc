@@ -312,3 +312,5 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateParametersVec(TaoTermMapping *, 
 PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *, Mat *, Mat *);
 
 PETSC_INTERN PetscErrorCode TaoTermComputeHessian_Quadratic(TaoTerm, Vec, Vec, Mat, Mat);
+
+PETSC_INTERN PetscErrorCode VecIfNotCongruentGetSameLayoutVec(Vec, Vec *);

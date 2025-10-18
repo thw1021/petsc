@@ -725,7 +725,6 @@ static PetscErrorCode TaoSetFromOptions_BRGN(Tao tao, PetscOptionItems PetscOpti
   PetscFunctionBegin;
   PetscCall(TaoBRGNGetRegularizerWeight(tao, &lambda));
   PetscOptionsHeadBegin(PetscOptionsObject, "least-squares problems with regularizer: ||f(x)||^2 + lambda*g(x), g(x) = ||xk-xkm1||^2 or ||Dx||_1 or user defined function.");
-  PetscCall(PetscOptionsBool("-tao_brgn_mat_explicit", "switches the Hessian construction to be an explicit matrix rather than MATSHELL", "", gn->mat_explicit, &gn->mat_explicit, NULL));
   PetscCall(PetscOptionsReal("-tao_brgn_regularizer_weight", "regularizer weight (default 1e-4)", "", lambda, &lambda, NULL));
   PetscCall(PetscOptionsReal("-tao_brgn_l1_smooth_epsilon", "L1-norm smooth approximation parameter: ||x||_1 = sum(sqrt(x.^2+epsilon^2)-epsilon) (default 1e-6)", "", epsilon, &epsilon, NULL));
   PetscCall(PetscOptionsReal("-tao_brgn_lm_downhill_lambda_change", "Factor to decrease trust region by on downhill steps", "", gn->downhill_lambda_change, &gn->downhill_lambda_change, NULL));
@@ -813,7 +812,7 @@ static PetscErrorCode TaoSetUp_BRGN(Tao tao)
   }
 
   /* Hessian setup */
-  if (gn->mat_explicit) {
+  {
     TaoTerm   reg_term;
     MatType   H_type, Hpre_type;
     PetscBool H_is_Hpre, is_shell;
@@ -840,15 +839,6 @@ static PetscErrorCode TaoSetUp_BRGN(Tao tao)
       }
     }
     PetscCall(TaoTermSetCreateHessianMode(reg_term, H_is_Hpre, H_type, Hpre_type));
-  } else {
-    TaoTerm   reg_term;
-    MatType   H_type, Hpre_type;
-    PetscBool H_is_Hpre;
-
-    PetscCall(TaoTermCreateHessianShell(gn->subsolver->objective_term.term, &H));
-    PetscCall(TaoBRGNGetRegularizerTerm(tao, NULL, &reg_term, NULL, NULL));
-    PetscCall(TaoTermGetCreateHessianMode(reg_term, &H_is_Hpre, &H_type, &Hpre_type));
-    PetscCall(TaoTermSetCreateHessianMode(reg_term, H_is_Hpre, MATSHELL, Hpre_type));
   }
   PetscCall(MatSetUp(H));
   PetscCall(TaoSetHessianMatrices(gn->subsolver, H, H));
