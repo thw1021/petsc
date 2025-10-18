@@ -37,17 +37,6 @@ PETSC_INTERN PetscErrorCode TaoTermHessianShellCheck(TaoTermHessianShell *hess, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMult_TaoTermHessianShell(Mat shell, Vec v, Vec y)
-{
-  TaoTermHessianShell *hess;
-
-  PetscFunctionBegin;
-  PetscCall(MatShellGetContext(shell, (void *)&hess));
-  PetscCall(TaoTermHessianShellCheck(hess, PETSC_TRUE, PETSC_TRUE));
-  PetscCall(TaoTermComputeHessianMult(hess->term, hess->x, hess->params, v, y));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*@
   TaoTermCreateHessianShell - Create a `MATSHELL` for `TaoTermComputeHessianMult()`
 
@@ -80,7 +69,6 @@ PetscErrorCode TaoTermCreateHessianShell(TaoTerm term, Mat *shell)
   hess->term = term;
   PetscCall(MatShellSetContext(*shell, (void *)hess));
   PetscCall(MatShellSetContextDestroy(*shell, TaoTermHessianShellDestroy));
-  PetscCall(MatShellSetOperation(*shell, MATOP_MULT, (void (*)(void))MatMult_TaoTermHessianShell));
   PetscCall(MatSetOption(*shell, MAT_SYMMETRIC, PETSC_TRUE));
   PetscCall(MatSetOption(*shell, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
   PetscFunctionReturn(PETSC_SUCCESS);
