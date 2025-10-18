@@ -4517,15 +4517,6 @@ PetscErrorCode MatSeqAIJCheckInode_FactorLU(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSeqAIJInvalidateDiagonal_Inode(Mat A)
-{
-  Mat_SeqAIJ *a = (Mat_SeqAIJ *)A->data;
-
-  PetscFunctionBegin;
-  a->inode.ibdiagvalid = PETSC_FALSE;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*
      This is really ugly. if inodes are used this replaces the
   permutations with ones that correspond to rows/cols of the matrix
