@@ -2860,6 +2860,7 @@ PetscErrorCode DMDestroy_Plex(DM dm)
   PetscCall(ISDestroy(&mesh->subpointIS));
   PetscCall(ISDestroy(&mesh->globalVertexNumbers));
   PetscCall(ISDestroy(&mesh->globalCellNumbers));
+  PetscCall(ISDestroy(&mesh->globalPointNumbers));
   if (mesh->periodic.face_sfs) {
     for (PetscInt i = 0; i < mesh->periodic.num_face_sfs; i++) PetscCall(PetscSFDestroy(&mesh->periodic.face_sfs[i]));
     PetscCall(PetscFree(mesh->periodic.face_sfs));
@@ -9115,6 +9116,59 @@ PetscErrorCode DMPlexCreatePointNumbering(DM dm, IS *globalPointNumbers)
   }
   PetscCall(ISConcatenate(PETSC_COMM_SELF, depth + 1, nums, globalPointNumbers));
   for (d = 0; d <= depth; ++d) PetscCall(ISDestroy(&nums[d]));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMPlexGetPointNumbering - Get the global point numbering for all points
+
+  Collective
+
+  Input Parameter:
+. dm - The `DMPLEX` object
+
+  Output Parameter:
+. globalPointNumbers - Global numbers for all points on this process
+
+  Level: developer
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexCreatePointNumbering()`, `DMPlexSetPointNumbering()`
+@*/
+PetscErrorCode DMPlexGetPointNumbering(DM dm, IS *globalPointNumbers)
+{
+  DM_Plex *mesh = (DM_Plex *)dm->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscAssertPointer(globalPointNumbers, 2);
+  if (!mesh->globalPointNumbers) PetscCall(DMPlexCreatePointNumbering(dm, &mesh->globalPointNumbers));
+  *globalPointNumbers = mesh->globalPointNumbers;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMPlexSetPointNumbering - Set the global point numbering for all points
+
+  Collective
+
+  Input Parameter:
++ dm                 - The `DMPLEX` object
+- globalPointNumbers - Global numbers for all points on this process, or `NULL` if resetting
+
+  Level: developer
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexCreatePointNumbering()`, `DMPlexGetPointNumbering()`
+@*/
+PetscErrorCode DMPlexSetPointNumbering(DM dm, PeOp IS globalPointNumbers)
+{
+  DM_Plex *mesh = (DM_Plex *)dm->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  if (globalPointNumbers) PetscValidHeaderSpecific(globalPointNumbers, IS_CLASSID, 2);
+  PetscCall(ISDestroy(&mesh->globalPointNumbers));
+  mesh->globalPointNumbers = globalPointNumbers;
+  PetscCall(PetscObjectReference((PetscObject)globalPointNumbers));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

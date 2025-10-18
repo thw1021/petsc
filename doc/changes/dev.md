@@ -81,6 +81,8 @@
 ```{rubric} DMPlex:
 ```
 
+- Add `DMPlexSetPointNumbering()` and `DMPlexGetPointNumbering()`
+
 ```{rubric} FE/FV:
 ```
 

@@ -181,6 +181,7 @@ typedef struct {
   PetscObjectState celltypeState; /* State of celltype label, so that we can determine if a user changes it */
   IS               globalVertexNumbers;
   IS               globalCellNumbers;
+  IS               globalPointNumbers;
 
   /* Constraints */
   PetscSection anchorSection;          /* maps constrained points to anchor points */

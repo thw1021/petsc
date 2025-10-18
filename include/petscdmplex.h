@@ -123,6 +123,8 @@ PETSC_EXTERN PetscErrorCode DMPlexSetInterpolatePreferTensor(DM, PetscBool);
 PETSC_EXTERN PetscErrorCode DMPlexFilter(DM, DMLabel, PetscInt, PetscBool, PetscBool, PetscSF *, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexGetCellNumbering(DM, IS *);
 PETSC_EXTERN PetscErrorCode DMPlexGetVertexNumbering(DM, IS *);
+PETSC_EXTERN PetscErrorCode DMPlexSetPointNumbering(DM, IS);
+PETSC_EXTERN PetscErrorCode DMPlexGetPointNumbering(DM, IS *);
 PETSC_EXTERN PetscErrorCode DMPlexCreatePointNumbering(DM, IS *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateEdgeNumbering(DM, IS *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateCellNumbering(DM, PetscBool, IS *);
