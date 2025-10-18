@@ -55,12 +55,12 @@ static PetscErrorCode TaoTermL1ComputeData(TaoTerm term, Vec x, Vec params, Vec 
     l1->d_epsilon = l1->epsilon;
     diff          = x;
     if (params) {
-      if (!l1->diff) PetscCall(VecDuplicate(x, &l1->diff));
+      PetscCall(VecIfNotCongruentGetSameLayoutVec(x, &l1->diff));
       PetscCall(VecWAXPY(l1->diff, -1.0, params, x));
       diff = l1->diff;
     }
     if (l1->epsilon != 0.0) {
-      if (!l1->d) PetscCall(VecDuplicate(x, &l1->d));
+      PetscCall(VecIfNotCongruentGetSameLayoutVec(x, &l1->d));
       PetscCall(VecPointwiseMult(l1->d, diff, diff));
       PetscCall(VecShift(l1->d, l1->epsilon * l1->epsilon));
       PetscCall(VecSqrtAbs(l1->d));
@@ -93,7 +93,7 @@ static PetscErrorCode TaoTermL1ComputeDiag(TaoTerm term, Vec x, Vec params, Vec 
     l1->diag_p_state = p_state;
     l1->diag_epsilon = l1->epsilon;
     if (l1->epsilon != 0.0) {
-      if (!l1->diag) PetscCall(VecDuplicate(x, &l1->diag));
+      PetscCall(VecIfNotCongruentGetSameLayoutVec(x, &l1->diag));
       PetscCall(VecCopy(d, l1->diag));
       PetscCall(VecPointwiseMult(l1->diag, l1->diag, d));
       PetscCall(VecPointwiseMult(l1->diag, l1->diag, d));

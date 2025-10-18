@@ -149,24 +149,21 @@ int main(int argc, char **argv)
   for (i = 0; i < N; i++) user.idn[i] = i;
   for (i = 0; i < K; i++) user.idk[i] = i;
 
-  /* Create TAO solver and set desired solution method */
-  PetscCall(TaoCreate(PETSC_COMM_SELF, &tao));
-  PetscCall(TaoSetType(tao, TAOBRGN));
-  PetscCall(TaoBRGNSetRegularizationType(tao, TAOBRGN_REGULARIZATION_L1DICT));
-
   /* User set application context: A, D matrice, and b vector. */
   PetscCall(InitializeUserData(&user));
-
+  /* Fill the content of matrix D from user application Context */
+  PetscCall(FormDictionaryMatrix(D, &user));
   /* Set initial guess */
   PetscCall(FormStartingPoint(x));
 
-  /* Fill the content of matrix D from user application Context */
-  PetscCall(FormDictionaryMatrix(D, &user));
-
+  /* Create TAO solver and set desired solution method */
+  PetscCall(TaoCreate(PETSC_COMM_SELF, &tao));
+  PetscCall(TaoSetType(tao, TAOBRGN));
   /* Bind x to tao->solution. */
   PetscCall(TaoSetSolution(tao, x));
   /* Bind D to tao->data->D */
   PetscCall(TaoBRGNSetDictionaryMatrix(tao, D));
+  PetscCall(TaoBRGNSetRegularizationType(tao, TAOBRGN_REGULARIZATION_L1DICT));
 
   /* Set the function and Jacobian routines. */
   PetscCall(TaoSetResidualRoutine(tao, f, EvaluateFunction, (void *)&user));
@@ -358,6 +355,11 @@ static PetscErrorCode BRGNCoverageTests(Tao tao)
     PetscCall(TaoBRGNGetSubsolver(tao, &subsolver));
     PetscCall(TaoGetSolution(subsolver, &x));
 
+    // Because Regularizer has been used with Mapping matrix A,
+    // its SolutionTemplate is on that stores A @ x, not A.
+    // For for this problem, H size would be 4 by 4, but we don't want that
+    // Thus, need to re-set the solution size
+    PetscCall(TaoTermSetSolutionTemplate(term, x));
     PetscCall(TaoTermCreateHessianMatrices(term, &H, NULL));
     PetscCall(TaoTermComputeHessian(term, x, params, H, NULL));
 
@@ -400,7 +402,7 @@ static PetscErrorCode BRGNCoverageTests(Tao tao)
    test:
       suffix: 3
       localrunfiles: cs1Data_A_b_xGT
-      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l1dict -tao_brgn_regularizer_weight 1e-8 -tao_brgn_l1_smooth_epsilon 1e-6 -tao_gatol 1.e-6 -tao_brgn_mat_explicit {{0 1}}
+      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l1dict -tao_brgn_regularizer_weight 1e-8 -tao_brgn_l1_smooth_epsilon 1e-6 -tao_gatol 1.e-6
 
    test:
       suffix: 3_unsmoothed
@@ -420,12 +422,12 @@ static PetscErrorCode BRGNCoverageTests(Tao tao)
    test:
       suffix: 4
       localrunfiles: cs1Data_A_b_xGT
-      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l2pure -tao_brgn_regularizer_weight 1e-8 -tao_gatol 1.e-6 -tao_brgn_mat_explicit {{0 1}}
+      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l2pure -tao_brgn_regularizer_weight 1e-8 -tao_gatol 1.e-6
 
    test:
       suffix: 5
       localrunfiles: cs1Data_A_b_xGT
-      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type lm -tao_gatol 1.e-6 -tao_brgn_subsolver_tao_type bnls -tao_brgn_mat_explicit {{0 1}}
+      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type lm -tao_gatol 1.e-6 -tao_brgn_subsolver_tao_type bnls
 
    test:
       suffix: view_lm
