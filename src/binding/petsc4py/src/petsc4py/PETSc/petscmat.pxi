@@ -429,8 +429,6 @@ cdef extern from * nogil:
     PetscErrorCode MatLMVMGetJ0KSP(PetscMat, PetscKSP*)
     PetscErrorCode MatLMVMSetJ0KSP(PetscMat, PetscKSP)
 
-    PetscErrorCode MatMissingDiagonal(Mat, PetscBool*, PetscInt*)
-
     ctypedef enum PetscMatFactorShiftType "MatFactorShiftType":
         MAT_SHIFT_NONE
         MAT_SHIFT_NONZERO

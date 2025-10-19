@@ -52,9 +52,7 @@ PETSC_INTERN PetscErrorCode MatCholeskyFactorSymbolic_SeqBAIJ(Mat, Mat, IS, cons
 PETSC_INTERN PetscErrorCode MatCholeskyFactorNumeric_SeqBAIJ_N(Mat, Mat, const MatFactorInfo *);
 PETSC_INTERN PetscErrorCode MatCholeskyFactorNumeric_SeqBAIJ_N_NaturalOrdering(Mat, Mat, const MatFactorInfo *);
 PETSC_INTERN PetscErrorCode MatDuplicate_SeqBAIJ(Mat, MatDuplicateOption, Mat *);
-PETSC_INTERN PetscErrorCode MatMissingDiagonal_SeqBAIJ(Mat, PetscBool *, PetscInt *);
-PETSC_INTERN PetscErrorCode MatMarkDiagonal_SeqBAIJ(Mat);
-PETSC_INTERN PetscErrorCode MatILUDTFactor_SeqBAIJ(Mat, IS, IS, const MatFactorInfo *, Mat *);
+PETSC_INTERN PetscErrorCode MatGetDiagonalMarkers_SeqBAIJ(Mat, const PetscInt **, PetscBool *);
 
 PETSC_INTERN PetscErrorCode MatLUFactorSymbolic_SeqBAIJ(Mat, Mat, IS, IS, const MatFactorInfo *);
 PETSC_INTERN PetscErrorCode MatLUFactor_SeqBAIJ(Mat, IS, IS, const MatFactorInfo *);
