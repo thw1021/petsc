@@ -1783,3 +1783,74 @@ PETSC_EXTERN PetscLogEvent MAT_H2Opus_Orthog;
 PETSC_EXTERN PetscLogEvent MAT_H2Opus_LR;
 PETSC_EXTERN PetscLogEvent MAT_CUDACopyToGPU;
 PETSC_EXTERN PetscLogEvent MAT_HIPCopyToGPU;
+
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+  #define MatGetDiagonalMarkers(SeqXXX, bs)
+#else
+  /*
+   Adds diagonal pointers to sparse matrix nonzero structure and determines if all diagonal entries are present
+
+   Rechecks the matrix data structure automatically if the nonzero structure of the matrix changed since the last call
+
+   Potential optimization: since the a->j[j] are sorted this could use bisection to find the diagonal
+
+   Developer Note:
+   Uses the C preprocessor as a template mechanism to produce MatGetDiagonal_Seq[SB]AIJ() to avoid duplicate code
+*/
+  #define MatGetDiagonalMarkers(SeqXXX, bs) \
+    PetscErrorCode MatGetDiagonalMarkers_##SeqXXX(Mat A, const PetscInt **diag, PetscBool *diagDense) \
+    { \
+      Mat_##SeqXXX *a = (Mat_##SeqXXX *)A->data; \
+\
+      PetscFunctionBegin; \
+      if (A->factortype != MAT_FACTOR_NONE) { \
+        if (diagDense) *diagDense = PETSC_TRUE; \
+        if (diag) *diag = a->diag; \
+        PetscFunctionReturn(PETSC_SUCCESS); \
+      } \
+      PetscCheck(diag || diagDense, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "At least one of diag or diagDense must be requested"); \
+      if (a->diagNonzeroState != A->nonzerostate || (diag && !a->diag)) { \
+        const PetscInt m = A->rmap->n / bs; \
+\
+        if (!diag && !a->diag) { \
+          a->diagDense = PETSC_TRUE; \
+          for (PetscInt i = 0; i < m; i++) { \
+            PetscBool found = PETSC_FALSE; \
+\
+            for (PetscInt j = a->i[i]; j < a->i[i + 1]; j++) { \
+              if (a->j[j] == i) { \
+                found = PETSC_TRUE; \
+                break; \
+              } \
+            } \
+            if (!found) { \
+              a->diagDense        = PETSC_FALSE; \
+              *diagDense          = a->diagDense; \
+              a->diagNonzeroState = A->nonzerostate; \
+              PetscFunctionReturn(PETSC_SUCCESS); \
+            } \
+          } \
+        } else { \
+          if (!a->diag) PetscCall(PetscMalloc1(m, &a->diag)); \
+          a->diagDense = PETSC_TRUE; \
+          for (PetscInt i = 0; i < m; i++) { \
+            PetscBool found = PETSC_FALSE; \
+\
+            a->diag[i] = a->i[i + 1]; \
+            for (PetscInt j = a->i[i]; j < a->i[i + 1]; j++) { \
+              if (a->j[j] == i) { \
+                a->diag[i] = j; \
+                found      = PETSC_TRUE; \
+                break; \
+              } \
+            } \
+            if (!found) a->diagDense = PETSC_FALSE; \
+          } \
+        } \
+        a->diagNonzeroState = A->nonzerostate; \
+      } \
+      if (diag) *diag = a->diag; \
+      if (diagDense) *diagDense = a->diagDense; \
+      PetscFunctionReturn(PETSC_SUCCESS); \
+    }
+#endif
