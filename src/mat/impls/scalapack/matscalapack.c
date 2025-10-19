@@ -574,13 +574,6 @@ static PetscErrorCode MatDiagonalScale_ScaLAPACK(Mat A, Vec L, Vec R)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMissingDiagonal_ScaLAPACK(Mat A, PetscBool *missing, PetscInt *d)
-{
-  PetscFunctionBegin;
-  *missing = PETSC_FALSE;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode MatScale_ScaLAPACK(Mat X, PetscScalar a)
 {
   Mat_ScaLAPACK *x = (Mat_ScaLAPACK *)X->data;
@@ -1477,7 +1470,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_ScaLAPACK,
                                        NULL,
                                        NULL,
                                        NULL,
-                                       /*104*/ MatMissingDiagonal_ScaLAPACK,
+                                       /*104*/ NULL,
                                        NULL,
                                        NULL,
                                        NULL,
