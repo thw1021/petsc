@@ -70,6 +70,9 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJKokkos(Mat A, MatAssemblyType mode)
   PetscCall(MatAssemblyEnd_SeqAIJ(A, mode));
 
   aijseq = static_cast<Mat_SeqAIJ *>(A->data);
+  const PetscInt *adiag;
+  /* the a->diag is created at assmebly here because the rest of the Kokkos AIJ code assumes it always exists. This needs to be fixed since it is now only created when needed! */
+  PetscCall(MatGetDiagonalMarkers_SeqAIJ(A, &adiag, NULL));
   aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
 
   /* If aijkok does not exist, we just copy i, j to device.
@@ -96,6 +99,9 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJKokkos(Mat A, MatAssemblyType mode)
     aijkok   = new Mat_SeqAIJKokkos(A->rmap->n, A->cmap->n, aijseq, A->nonzerostate, PETSC_FALSE /*don't copy mat values to device*/);
     A->spptr = aijkok;
   } else if (A->rmap->n && aijkok->diag_dual.extent(0) == 0) { // MatProduct might directly produce AIJ on device, but not the diag.
+    const PetscInt *adiag;
+    /* the a->diag is created at assmebly here because the rest of the Kokkos AIJ code assumes it always exists. This needs to be fixed since it is now only created when needed! */
+    PetscCall(MatGetDiagonalMarkers_SeqAIJ(A, &adiag, NULL));
     MatRowMapKokkosViewHost diag_h(aijseq->diag, A->rmap->n);
     auto                    diag_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), diag_h);
     aijkok->diag_dual              = MatRowMapKokkosDualView(diag_d, diag_h);
@@ -1372,6 +1378,11 @@ static PetscErrorCode MatSetPreallocationCOO_SeqAIJKokkos(Mat mat, PetscCount co
   aseq = static_cast<Mat_SeqAIJ *>(mat->data);
   akok = static_cast<Mat_SeqAIJKokkos *>(mat->spptr);
   delete akok;
+
+  // a->diag must exist before new Mat_SeqAIJKokkos()
+  const PetscInt *adiag;
+  PetscCall(MatGetDiagonalMarkers_SeqAIJ(mat, &adiag, NULL));
+
   mat->spptr = akok = new Mat_SeqAIJKokkos(mat->rmap->n, mat->cmap->n, aseq, mat->nonzerostate + 1, PETSC_FALSE);
   PetscCall(MatZeroEntries_SeqAIJKokkos(mat));
 

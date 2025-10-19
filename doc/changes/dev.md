@@ -51,6 +51,8 @@
 ```{rubric} Mat:
 ```
 
+- Remove `MatMissingDiagonal()`. Developers should use `MatGetDiagonalMarkers_SeqXXX()` when the functionality is needed
+
 ```{rubric} MatCoarsen:
 ```
 
