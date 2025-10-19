@@ -953,7 +953,7 @@ static PetscErrorCode MatConvertToTriples_seqaij_seqsbaij(Mat A, PetscInt shift,
   PetscScalar       *val;
   PetscMUMPSInt     *row, *col;
   Mat_SeqAIJ        *aa = (Mat_SeqAIJ *)A->data;
-  PetscBool          missing;
+  PetscBool          diagDense;
 #if defined(PETSC_USE_COMPLEX)
   PetscBool hermitian, isset;
 #endif
@@ -964,14 +964,13 @@ static PetscErrorCode MatConvertToTriples_seqaij_seqsbaij(Mat A, PetscInt shift,
   PetscCheck(!isset || !hermitian, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MUMPS does not support Hermitian symmetric matrices for Choleksy");
 #endif
   PetscCall(MatSeqAIJGetArrayRead(A, &av));
-  ai    = aa->i;
-  aj    = aa->j;
-  adiag = aa->diag;
-  PetscCall(MatMissingDiagonal_SeqAIJ(A, &missing, NULL));
+  ai = aa->i;
+  aj = aa->j;
+  PetscCall(MatGetDiagonalMarkers_SeqAIJ(A, &adiag, &diagDense);
   if (reuse == MAT_INITIAL_MATRIX) {
     /* count nz in the upper triangular part of A */
     nz = 0;
-    if (missing) {
+    if (!diagDense) {
       for (i = 0; i < M; i++) {
         if (PetscUnlikely(adiag[i] >= ai[i + 1])) {
           for (j = ai[i]; j < ai[i + 1]; j++) {
