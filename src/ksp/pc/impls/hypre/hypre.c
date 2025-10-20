@@ -70,55 +70,28 @@ const char *PetscHYPRERelaxTypes[] = {
   NULL,
 };
 
-static inline HYPRE_Int PetscRelaxTypeToHYPRE(PetscHYPRERelaxType relax_type)
-{
-  switch (relax_type) {
-  case PETSC_HYPRE_RELAX_JACOBI:
-    return 0;
-  case PETSC_HYPRE_RELAX_GS_SEQ:
-    return 1;
-  case PETSC_HYPRE_RELAX_GS_SEQBOUNDARY:
-    return 2;
-  case PETSC_HYPRE_RELAX_SOR_JACOBI_FORWARD:
-    return 3;
-  case PETSC_HYPRE_RELAX_SOR_JACOBI_BACKWARD:
-    return 4;
-  case PETSC_HYPRE_RELAX_GS_CHAOTIC:
-    return 5;
-  case PETSC_HYPRE_RELAX_SOR_JACOBI_SYM:
-    return 6;
-  case PETSC_HYPRE_RELAX_SOR_JACOBI_L1:
-    return 8;
-  case PETSC_HYPRE_RELAX_GAUSSIAN_ELIMINATION:
-    return 9;
-  case PETSC_HYPRE_RELAX_GS_L1_FORWARD:
-    return 13;
-  case PETSC_HYPRE_RELAX_GS_L1_BACKWARD:
-    return 14;
-  case PETSC_HYPRE_RELAX_CG:
-    return 15;
-  case PETSC_HYPRE_RELAX_CHEBYSHEV:
-    return 16;
-  case PETSC_HYPRE_RELAX_FCF_JACOBI:
-    return 17;
-  case PETSC_HYPRE_RELAX_JACOBI_L1:
-    return 18;
-  case PETSC_HYPRE_RELAX_KACZMARZ:
-    return 30;
-  case PETSC_HYPRE_RELAX_SOR_JACOBI_L1_CONVERGENT:
-    return 88;
-  case PETSC_HYPRE_RELAX_GS_SYM_HYBRID_L1:
-    return 89;
-  case PETSC_HYPRE_RELAX_LU:
-    return 99;
-  case PETSC_HYPRE_RELAX_EXPLICIT_INVERSE:
-    return 199;
-  // LCOV_EXCL_START
-  default:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unknown relaxation type: %" PetscInt_FMT, (PetscInt)relax_type);
-    // LCOV_EXCL_STOP
-  }
-}
+const HYPRE_Int PetscRelaxTypeToHYPRE[] = {
+  [PETSC_HYPRE_RELAX_JACOBI]                   = 0,
+  [PETSC_HYPRE_RELAX_GS_SEQ]                   = 1,
+  [PETSC_HYPRE_RELAX_GS_SEQBOUNDARY]           = 2,
+  [PETSC_HYPRE_RELAX_SOR_JACOBI_FORWARD]       = 3,
+  [PETSC_HYPRE_RELAX_SOR_JACOBI_BACKWARD]      = 4,
+  [PETSC_HYPRE_RELAX_GS_CHAOTIC]               = 5,
+  [PETSC_HYPRE_RELAX_SOR_JACOBI_SYM]           = 6,
+  [PETSC_HYPRE_RELAX_SOR_JACOBI_L1]            = 8,
+  [PETSC_HYPRE_RELAX_GAUSSIAN_ELIMINATION]     = 9,
+  [PETSC_HYPRE_RELAX_GS_L1_FORWARD]            = 13,
+  [PETSC_HYPRE_RELAX_GS_L1_BACKWARD]           = 14,
+  [PETSC_HYPRE_RELAX_CG]                       = 15,
+  [PETSC_HYPRE_RELAX_CHEBYSHEV]                = 16,
+  [PETSC_HYPRE_RELAX_FCF_JACOBI]               = 17,
+  [PETSC_HYPRE_RELAX_JACOBI_L1]                = 18,
+  [PETSC_HYPRE_RELAX_KACZMARZ]                 = 30,
+  [PETSC_HYPRE_RELAX_SOR_JACOBI_L1_CONVERGENT] = 88,
+  [PETSC_HYPRE_RELAX_GS_SYM_HYBRID_L1]         = 89,
+  [PETSC_HYPRE_RELAX_LU]                       = 99,
+  [PETSC_HYPRE_RELAX_EXPLICIT_INVERSE]         = 199,
+};
 
 /*
    Private context (data structure) for the  preconditioner.
@@ -473,10 +446,10 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
     PetscCallHYPRE(HYPRE_BoomerAMGSetCoarsenType(jac->hsolver, (HYPRE_Int)jac->coarsentype));
     PetscCallHYPRE(HYPRE_BoomerAMGSetRelaxOrder(jac->hsolver, (HYPRE_Int)jac->relaxorder));
     PetscCallHYPRE(HYPRE_BoomerAMGSetInterpType(jac->hsolver, (HYPRE_Int)jac->interptype));
-    PetscCallHYPRE(HYPRE_BoomerAMGSetRelaxType(jac->hsolver, PetscRelaxTypeToHYPRE(jac->relaxtype[0])));
-    PetscCallHYPRE(HYPRE_BoomerAMGSetCycleRelaxType(jac->hsolver, PetscRelaxTypeToHYPRE(jac->relaxtype[0]), 1));
-    PetscCallHYPRE(HYPRE_BoomerAMGSetCycleRelaxType(jac->hsolver, PetscRelaxTypeToHYPRE(jac->relaxtype[1]), 2));
-    PetscCallHYPRE(HYPRE_BoomerAMGSetCycleRelaxType(jac->hsolver, PetscRelaxTypeToHYPRE(jac->relaxtype[2]), 3));
+    PetscCallHYPRE(HYPRE_BoomerAMGSetRelaxType(jac->hsolver, PetscRelaxTypeToHYPRE[jac->relaxtype[0]]));
+    PetscCallHYPRE(HYPRE_BoomerAMGSetCycleRelaxType(jac->hsolver, PetscRelaxTypeToHYPRE[jac->relaxtype[0]], 1));
+    PetscCallHYPRE(HYPRE_BoomerAMGSetCycleRelaxType(jac->hsolver, PetscRelaxTypeToHYPRE[jac->relaxtype[1]], 2));
+    PetscCallHYPRE(HYPRE_BoomerAMGSetCycleRelaxType(jac->hsolver, PetscRelaxTypeToHYPRE[jac->relaxtype[2]], 3));
     /* GPU */
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 23, 0)
     {
