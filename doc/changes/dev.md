@@ -82,6 +82,7 @@
 ```
 
 - Add `DMPlexSetPointNumbering()` and `DMPlexGetPointNumbering()`
+- Remove ``globalPointNumbers`` argument from `DMPlexTopologyView_HDF5_Internal()` and `DMPlexLabelsView_HDF5_Internal()'
 
 ```{rubric} FE/FV:
 ```

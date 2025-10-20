@@ -1036,11 +1036,12 @@ static PetscErrorCode DMPlexTopologyView_HDF5_Private(DM dm, IS globalPointNumbe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, PetscViewer viewer)
+PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, PetscViewer viewer)
 {
   DMPlexStorageVersion version;
   const char          *topologydm_name;
   char                 group[PETSC_MAX_PATH_LEN];
+  IS                   globalPointNumbers;
 
   PetscFunctionBegin;
   PetscCall(PetscViewerHDF5GetDMPlexStorageVersionWriting(viewer, &version));
@@ -1053,6 +1054,7 @@ PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, Pe
   }
   PetscCall(PetscViewerHDF5PushGroup(viewer, group));
 
+  PetscCall(DMPlexGetPointNumbering(dm, &globalPointNumbers));
   PetscCall(PetscViewerHDF5PushGroup(viewer, "topology"));
   if (version->major < 3) {
     PetscCall(DMPlexTopologyView_HDF5_Legacy_Private(dm, globalPointNumbers, viewer));
@@ -1177,11 +1179,11 @@ static PetscErrorCode CreateConesIS_Private(DM dm, PetscInt cStart, PetscInt cEn
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMPlexTopologyView_HDF5_XDMF_Private(DM dm, IS globalCellNumbers, PetscViewer viewer)
+static PetscErrorCode DMPlexTopologyView_HDF5_XDMF_Private(DM dm, PetscViewer viewer)
 {
   DM       cdm;
   DMLabel  depthLabel, ctLabel;
-  IS       cellIS;
+  IS       cellIS, globalCellNumbers;
   PetscInt dim, depth, cellHeight, c, n = 0;
 
   PetscFunctionBegin;
@@ -1208,6 +1210,7 @@ static PetscErrorCode DMPlexTopologyView_HDF5_XDMF_Private(DM dm, IS globalCellN
     }
     PetscCallMPI(MPIU_Allreduce(&output, &doOutput, 1, MPI_C_BOOL, MPI_LOR, PetscObjectComm((PetscObject)dm)));
     if (!doOutput) continue;
+    PetscCall(DMPlexGetPointNumbering(dm, &globalCellNumbers));
     PetscCall(CreateConesIS_Private(dm, pStart, pEnd, globalCellNumbers, &numCorners, &cellIS));
     if (!n) {
       PetscCall(PetscViewerHDF5PushGroup(viewer, "/viz/topology"));
@@ -1444,7 +1447,7 @@ static PetscErrorCode DMPlexCoordinatesView_HDF5_XDMF_Private(DM dm, PetscViewer
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexLabelsView_HDF5_Internal(DM dm, IS globalPointNumbers, PetscViewer viewer)
+PetscErrorCode DMPlexLabelsView_HDF5_Internal(DM dm, PetscViewer viewer)
 {
   const char          *topologydm_name;
   const PetscInt      *gpoint;
@@ -1452,6 +1455,7 @@ PetscErrorCode DMPlexLabelsView_HDF5_Internal(DM dm, IS globalPointNumbers, Pets
   PetscBool            omitCelltypes = PETSC_FALSE, ocompress;
   DMPlexStorageVersion version;
   char                 group[PETSC_MAX_PATH_LEN];
+  IS                   globalPointNumbers;
 
   PetscFunctionBegin;
   PetscCall(PetscOptionsGetBool(NULL, dm->hdr.prefix, "-dm_plex_omit_celltypes", &omitCelltypes, NULL));
@@ -1460,6 +1464,7 @@ PetscErrorCode DMPlexLabelsView_HDF5_Internal(DM dm, IS globalPointNumbers, Pets
     PetscCall(PetscViewerHDF5GetCompress(viewer, &ocompress));
     PetscCall(PetscViewerHDF5SetCompress(viewer, PETSC_TRUE));
   }
+  PetscCall(DMPlexGetPointNumbering(dm, &globalPointNumbers));
   PetscCall(ISGetIndices(globalPointNumbers, &gpoint));
   PetscCall(DMPlexGetHDF5Name_Private(dm, &topologydm_name));
   if (DMPlexStorageVersionGE(version, 2, 0, 0)) {
@@ -1536,12 +1541,10 @@ PetscErrorCode DMPlexLabelsView_HDF5_Internal(DM dm, IS globalPointNumbers, Pets
 /* We only write cells and vertices. Does this screw up parallel reading? */
 PetscErrorCode DMPlexView_HDF5_Internal(DM dm, PetscViewer viewer)
 {
-  IS                globalPointNumbers;
   PetscViewerFormat format;
   PetscBool         viz_geom = PETSC_FALSE, xdmf_topo = PETSC_FALSE, petsc_topo = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(DMPlexCreatePointNumbering(dm, &globalPointNumbers));
   PetscCall(DMPlexCoordinatesView_HDF5_Internal(dm, viewer));
 
   PetscCall(PetscViewerGetFormat(viewer, &format));
@@ -1567,16 +1570,15 @@ PetscErrorCode DMPlexView_HDF5_Internal(DM dm, PetscViewer viewer)
   }
 
   if (viz_geom) PetscCall(DMPlexCoordinatesView_HDF5_XDMF_Private(dm, viewer));
-  if (xdmf_topo) PetscCall(DMPlexTopologyView_HDF5_XDMF_Private(dm, globalPointNumbers, viewer));
+  if (xdmf_topo) PetscCall(DMPlexTopologyView_HDF5_XDMF_Private(dm, viewer));
   if (petsc_topo) {
     PetscBool viewLabels = PETSC_TRUE;
 
-    PetscCall(DMPlexTopologyView_HDF5_Internal(dm, globalPointNumbers, viewer));
+    PetscCall(DMPlexTopologyView_HDF5_Internal(dm, viewer));
     PetscCall(PetscOptionsGetBool(NULL, dm->hdr.prefix, "-dm_plex_view_labels", &viewLabels, NULL));
-    if (viewLabels) PetscCall(DMPlexLabelsView_HDF5_Internal(dm, globalPointNumbers, viewer));
+    if (viewLabels) PetscCall(DMPlexLabelsView_HDF5_Internal(dm, viewer));
   }
 
-  PetscCall(ISDestroy(&globalPointNumbers));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1614,7 +1616,7 @@ PetscErrorCode DMPlexSectionView_HDF5_Internal(DM dm, PetscViewer viewer, DM sec
     PetscInt       *order;
 
     PetscCall(PetscSectionGetChart(gsection, &pStart, &pEnd));
-    PetscCall(DMPlexCreatePointNumbering(dm, &globalPointNumbers));
+    PetscCall(DMPlexGetPointNumbering(dm, &globalPointNumbers));
     PetscCall(ISGetIndices(globalPointNumbers, &gpoints));
     for (p = pStart, n = 0; p < pEnd; ++p)
       if (gpoints[p] >= 0) n++;
@@ -1625,7 +1627,6 @@ PetscErrorCode DMPlexSectionView_HDF5_Internal(DM dm, PetscViewer viewer, DM sec
     for (p = pStart, n = 0; p < pEnd; ++p)
       if (gpoints[p] >= 0) order[n++] = gpoints[p];
     PetscCall(ISRestoreIndices(globalPointNumbers, &gpoints));
-    PetscCall(ISDestroy(&globalPointNumbers));
     PetscCall(ISCreateGeneral(comm, n, order, PETSC_OWN_POINTER, &orderIS));
     PetscCall(PetscObjectSetName((PetscObject)orderIS, "order"));
     PetscCall(ISView(orderIS, viewer));
