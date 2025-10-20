@@ -1824,6 +1824,48 @@ static PetscErrorCode DMPlexDistribute_Multistage(DM dm, PetscInt overlap, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode DMPlexDistribute_DistributeGlobalPointNumbers(DM dm, PetscSF sfDist, DM dmDist)
+{
+  DM_Plex        *mesh = (DM_Plex *)dm->data;
+  DM_Plex        *meshDist = (DM_Plex *)dmDist->data;
+  const PetscInt *numbers;
+  PetscInt       *numbersDist, pStart, pEnd, pStartDist, pEndDist, p, nroots, nleaves;
+
+  PetscFunctionBegin;
+  if (!mesh->globalPointNumbers) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCheck(!meshDist->globalPointNumbers, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Global point numbers are already set");
+  PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
+  PetscCall(DMPlexGetChart(dmDist, &pStartDist, &pEndDist));
+  PetscCall(PetscSFGetGraph(sfDist, &nroots, &nleaves, NULL, NULL));
+  PetscCheck(nroots == pEnd - pStart, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "sfDist root size %" PetscInt_FMT " != dm chart size %" PetscInt_FMT, nroots, pEnd - pStart);
+  PetscCheck(nleaves == pEndDist - pStartDist, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "sfDist leaf size %" PetscInt_FMT " != dmDist chart size %" PetscInt_FMT, nleaves, pEndDist - pStartDist);
+  PetscCall(PetscMalloc1(pEndDist - pStartDist, &numbersDist));
+  for (p = pStartDist; p < pEndDist; ++p) numbersDist[p - pStartDist] = -1;
+  PetscCall(ISGetIndices(mesh->globalPointNumbers, &numbers));
+  numbers -= pStart;
+  numbersDist -= pStartDist;
+  PetscCall(PetscSFBcastBegin(sfDist, MPIU_INT, numbers, numbersDist, MPI_REPLACE));
+  PetscCall(PetscSFBcastEnd(sfDist, MPIU_INT, numbers, numbersDist, MPI_REPLACE));
+  numbers += pStart;
+  numbersDist += pStartDist;
+  PetscCall(ISRestoreIndices(mesh->globalPointNumbers, &numbers));
+  for (p = pStartDist; p < pEndDist; ++p) PetscCheck(numbersDist[p - pStartDist] >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Global point numbers must be non-negative");
+  {
+    PetscSF            sfPoint;
+    PetscInt           nleaves, i, p;
+    const PetscInt    *ilocal;
+
+    PetscCall(DMGetPointSF(dmDist, &sfPoint));
+    PetscCall(PetscSFGetGraph(sfPoint, NULL, &nleaves, &ilocal, NULL));
+    for (i = 0; i < nleaves; ++i) {
+      p = ilocal ? ilocal[i] : i;
+      numbersDist[p - pStartDist] = -(numbersDist[p - pStartDist] + 1);
+    }
+  }
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)dmDist), pEndDist - pStartDist, numbersDist, PETSC_OWN_POINTER, &meshDist->globalPointNumbers));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   DMPlexDistribute - Distributes the mesh and any associated sections.
 
@@ -1951,6 +1993,7 @@ PetscErrorCode DMPlexDistribute(DM dm, PetscInt overlap, PeOp PetscSF *sf, DM *d
   PetscCall(DMPlexSetPartitionBalance(*dmParallel, balance));
   PetscCall(DMPlexCreatePointSF(*dmParallel, sfMigration, PETSC_TRUE, &sfPoint));
   PetscCall(DMSetPointSF(*dmParallel, sfPoint));
+  PetscCall(DMPlexDistribute_DistributeGlobalPointNumbers(dm, sfMigration, *dmParallel));
   PetscCall(DMPlexMigrateIsoperiodicFaceSF_Internal(dm, *dmParallel, sfMigration));
   PetscCall(DMGetCoordinateDM(*dmParallel, &dmCoord));
   if (dmCoord) PetscCall(DMSetPointSF(dmCoord, sfPoint));
@@ -2100,6 +2143,7 @@ PetscErrorCode DMPlexDistributeOverlap_Internal(DM dm, PetscInt overlap, MPI_Com
   /* Build the new point SF */
   PetscCall(DMPlexCreatePointSF(*dmOverlap, sfOverlap, PETSC_FALSE, &sfPoint));
   PetscCall(DMSetPointSF(*dmOverlap, sfPoint));
+  PetscCall(DMPlexDistribute_DistributeGlobalPointNumbers(dm, sfOverlap, *dmOverlap));
   PetscCall(DMGetCoordinateDM(*dmOverlap, &dmCoord));
   if (dmCoord) PetscCall(DMSetPointSF(dmCoord, sfPoint));
   PetscCall(DMGetCellCoordinateDM(*dmOverlap, &dmCoord));
