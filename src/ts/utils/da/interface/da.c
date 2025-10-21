@@ -425,7 +425,7 @@ PetscErrorCode DASetUp(DA da)
 
     PetscCall(MatDenseGetArray(da->U, &uarray));
     for (i = 0; i < da->ensemble_size; i++) {
-      for (j = 0; j < da->ensemble_size; j++) { uarray[i * da->ensemble_size + j] = (i == j) ? 1.0 : 0.0; }
+      for (j = 0; j < da->ensemble_size; j++) uarray[i * da->ensemble_size + j] = (i == j) ? 1.0 : 0.0;
     }
     PetscCall(MatDenseRestoreArray(da->U, &uarray));
     PetscCall(MatAssemblyBegin(da->U, MAT_FINAL_ASSEMBLY));
@@ -570,7 +570,6 @@ PetscErrorCode DASetOrthogonalTransform(DA da, Mat U)
   if (da->U) PetscCall(MatDestroy(&da->U));
   PetscCall(PetscObjectReference((PetscObject)U));
   da->U = U;
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -625,7 +624,6 @@ PetscErrorCode DAGetEnsembleMember(DA da, PetscInt member_idx, Vec *member)
   PetscCheck(member_idx >= 0 && member_idx < da->ensemble_size, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Member index %" PetscInt_FMT " out of range [0, %" PetscInt_FMT ")", member_idx, da->ensemble_size);
 
   PetscCall(MatDenseGetColumnVecRead(da->ensemble, member_idx, member));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -651,7 +649,6 @@ PetscErrorCode DARestoreEnsembleMember(DA da, PetscInt member_idx, Vec *member)
   PetscAssertPointer(member, 3);
 
   PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, member_idx, member));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -683,7 +680,6 @@ PetscErrorCode DASetEnsembleMember(DA da, PetscInt member_idx, Vec member)
   PetscCall(MatDenseGetColumnVecWrite(da->ensemble, member_idx, &col));
   PetscCall(VecCopy(member, col));
   PetscCall(MatDenseRestoreColumnVecWrite(da->ensemble, member_idx, &col));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

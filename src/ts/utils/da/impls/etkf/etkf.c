@@ -286,7 +286,6 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(MatDestroy(&w_ones));
   PetscCall(MatDestroy(&T_sqrt_U));
   PetscCall(MatDestroy(&X_Y));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

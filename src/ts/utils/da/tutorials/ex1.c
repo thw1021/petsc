@@ -37,7 +37,7 @@ static PetscErrorCode Lorenz95RHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ct
   PetscCall(DMDAVecGetArray(l95->da, F_vec, &f));
 
   /* Standard Lorenz-95 tendency: (x_{i+1} - x_{i-2}) * x_{i-1} - x_i + F. */
-  for (i = xs; i < xs + xm; i++) { f[i] = (x[i + 1] - x[i - 2]) * x[i - 1] - x[i] + l95->F; }
+  for (i = xs; i < xs + xm; i++) f[i] = (x[i + 1] - x[i - 2]) * x[i - 1] - x[i] + l95->F;
 
   PetscCall(DMDAVecRestoreArrayRead(l95->da, X_local, &x));
   PetscCall(DMDAVecRestoreArray(l95->da, F_vec, &f));
