@@ -304,7 +304,6 @@ int main(int argc, char **argv) {
 
   test:
     suffix: chol
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1.0 -daetkf_sqrt_type
-cholesky
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1.0 -daetkf_sqrt_type cholesky
 
 TEST*/
