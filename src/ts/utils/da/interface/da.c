@@ -315,7 +315,6 @@ PetscErrorCode DASetFromOptions(DA da)
   PetscObjectOptionsBegin((PetscObject)da);
   if (da->ops->setfromoptions) PetscCall((*da->ops->setfromoptions)(da, &PetscOptionsObject));
   PetscOptionsEnd();
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -517,7 +516,6 @@ PetscErrorCode DASetObsErrorVariance(DA da, Vec obs_error_var)
 
   if (!da->obs_error_var) PetscCall(VecDuplicate(obs_error_var, &da->obs_error_var));
   PetscCall(VecCopy(obs_error_var, da->obs_error_var));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -812,7 +810,6 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
   PetscReal    u1, u2, z0, z1;
 
   PetscFunctionBegin;
-
   PetscCall(VecGetLocalSize(v, &n));
   PetscCall(VecGetArray(v, &array));
 
@@ -839,7 +836,6 @@ PetscErrorCode DACholeskySqrt_Private(Mat A, Mat *L_out)
   PetscBLASInt bn, info;
 
   PetscFunctionBegin;
-
   PetscCall(MatGetSize(A, &m, &n));
   PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square");
 
@@ -889,7 +885,6 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   PetscReal    eps;
 
   PetscFunctionBegin;
-
   PetscCall(MatGetSize(A, &m, &n));
   PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square");
 

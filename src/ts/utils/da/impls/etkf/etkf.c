@@ -122,7 +122,6 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   Vec          S_T_delta;
 
   PetscFunctionBegin;
-
   /* Map of ETKF analysis steps to Algorithm 6.4:
    *   1-2: build ensemble mean X and observation ensemble Z (lines below)
    *   3-4: compute normalized innovation statistics (S, delta_scaled)
