@@ -243,7 +243,7 @@ PetscErrorCode TaoSetUp(Tao tao)
     // TaoSetHessian or TaoSetHessianMatrices has been called, but as terms have been added,
     // subterms' Hessian and PtAP routines, if needed, have to be created
     // TODO TaoSetHessianMatrices should mean, setting Hessian for SUM.
-    if (is_sum && tao->hessian) {
+    if (is_sum && tao->hessian) {//TODO actually wrong? never gets entered here
       PetscCall(TaoTermSumSetSubtermHessianMatrices(tao->objective_term.term, 0, NULL, NULL, tao->hessian, tao->hessian_pre));
       PetscCall(MatDestroy(&tao->hessian));
       PetscCall(MatDestroy(&tao->hessian_pre));
