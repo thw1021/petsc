@@ -166,7 +166,7 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &y_mean));
   PetscCall(VecSetSizes(y_mean, PETSC_DECIDE, da->obs_size));
   PetscCall(VecSetFromOptions(y_mean));
-  PetscCall(VecSet(y_mean, 0.0)); /* Step 3: observation-space mean ȳ. */
+  PetscCall(VecSet(y_mean, 0.0)); /* Step 3: observation-space mean y_bar. */
 
   for (i = 0; i < m; i++) {
     PetscCall(MatDenseGetColumnVecRead(Z, i, &col_in));
@@ -187,7 +187,7 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
     PetscCall(MatDenseGetColumnVecRead(Z, i, &col_in));
     PetscCall(MatDenseGetColumnVecWrite(S, i, &col_out));
 
-    PetscCall(VecWAXPY(col_out, -1.0, y_mean, col_in));        /* H(x_i^f) - ȳ */
+    PetscCall(VecWAXPY(col_out, -1.0, y_mean, col_in));        /* H(x_i^f) - y_bar */
     PetscCall(VecScale(col_out, scale));                       /* 1/sqrt(m-1) scaling */
     PetscCall(VecPointwiseMult(col_out, col_out, r_inv_sqrt)); /* Step 3: S = R^{-1/2} Y_f */
 
@@ -196,12 +196,12 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   }
 
   PetscCall(VecDuplicate(y_mean, &delta));
-  PetscCall(VecWAXPY(delta, -1.0, y_mean, observation)); /* Innovation y^o - ȳ. */
+  PetscCall(VecWAXPY(delta, -1.0, y_mean, observation)); /* Innovation y^o - y_bar. */
 
   PetscCall(VecDuplicate(delta, &delta_scaled));
-  PetscCall(VecPointwiseMult(delta_scaled, delta, r_inv_sqrt)); /* Step 4: δ̃. */
+  PetscCall(VecPointwiseMult(delta_scaled, delta, r_inv_sqrt)); /* Step 4: del_tilda. */
 
-  PetscCall(MatTransposeMatMult(S, S, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T)); /* Step 5: S Sᵀ. */
+  PetscCall(MatTransposeMatMult(S, S, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T)); /* Step 5: S S'. */
 
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &I_m));
   PetscCall(MatSetUp(I_m));
@@ -211,7 +211,7 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(MatAssemblyEnd(I_m, MAT_FINAL_ASSEMBLY));
 
   // optimize to not invert T but solve with Cholesky or eigen data -- TODO
-  PetscCall(MatAXPY(T, 1.0, I_m, SAME_NONZERO_PATTERN)); /* Step 5: T = S Sᵀ + I. */
+  PetscCall(MatAXPY(T, 1.0, I_m, SAME_NONZERO_PATTERN)); /* Step 5: T = S S' + I. */
 
   PetscCall(MatLUFactor(T, NULL, NULL, NULL));
   Mat T_inv;
@@ -223,7 +223,7 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &S_T_delta));
   PetscCall(VecSetSizes(S_T_delta, PETSC_DECIDE, m));
   PetscCall(VecSetFromOptions(S_T_delta));
-  PetscCall(MatMultTranspose(S, delta_scaled, S_T_delta)); /* Sᵀ δ̃. */
+  PetscCall(MatMultTranspose(S, delta_scaled, S_T_delta)); /* S' del_tilda. */
 
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &w));
   PetscCall(VecSetSizes(w, PETSC_DECIDE, m));
@@ -245,7 +245,7 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(MatSetUp(w_ones));
   PetscCall(VecGetArray(w, &w_array));
   for (i = 0; i < m; i++) {
-    for (PetscInt j = 0; j < m; j++) PetscCall(MatSetValue(w_ones, i, j, w_array[i], INSERT_VALUES)); /* w replicated across columns (w·1ᵀ). */
+    for (PetscInt j = 0; j < m; j++) PetscCall(MatSetValue(w_ones, i, j, w_array[i], INSERT_VALUES)); /* w replicated across columns (w·1'). */
   }
   PetscCall(VecRestoreArray(w, &w_array));
   PetscCall(MatAssemblyBegin(w_ones, MAT_FINAL_ASSEMBLY));
