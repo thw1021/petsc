@@ -166,5 +166,4 @@ static inline PetscErrorCode ETKFGetSqrtType(ETKF etkf, ETKFSqrtType *type)
 {
   return DAETKFGetSqrtType(etkf, type);
 }
-
 #endif /* PETSC_DA_H */

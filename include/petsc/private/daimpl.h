@@ -58,5 +58,4 @@ typedef DAOps ETKFOps;
 
 #define ETKFCholeskySqrt_Private       DACholeskySqrt_Private
 #define ETKFSymmetricEigenSqrt_Private DASymmetricEigenSqrt_Private
-
 #endif /* DAIMPL_H */
