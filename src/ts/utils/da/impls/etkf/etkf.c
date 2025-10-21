@@ -245,7 +245,7 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(MatSetUp(w_ones));
   PetscCall(VecGetArray(w, &w_array));
   for (i = 0; i < m; i++) {
-    for (PetscInt j = 0; j < m; j++) PetscCall(MatSetValue(w_ones, i, j, w_array[i], INSERT_VALUES)); /* w replicated across columns (w·1'). */
+    for (PetscInt j = 0; j < m; j++) PetscCall(MatSetValue(w_ones, i, j, w_array[i], INSERT_VALUES)); /* w replicated across columns (w * 1'). */
   }
   PetscCall(VecRestoreArray(w, &w_array));
   PetscCall(MatAssemblyBegin(w_ones, MAT_FINAL_ASSEMBLY));
