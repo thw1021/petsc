@@ -4,9 +4,9 @@
 #include <petsc/private/daimpl.h> /*I "petscda.h"  I*/
 #include <petscblaslapack.h>
 
-PetscClassId DA_CLASSID = 0;
-PetscBool DARegisterAllCalled = PETSC_FALSE;
-PetscFunctionList DAList = NULL;
+PetscClassId      DA_CLASSID          = 0;
+PetscBool         DARegisterAllCalled = PETSC_FALSE;
+PetscFunctionList DAList              = NULL;
 
 static PetscBool DAPackageInitialized = PETSC_FALSE;
 
@@ -20,10 +20,10 @@ libraries.
 
 .seealso: `DAFinalizePackage()`, `PetscInitialize()`
 @*/
-PetscErrorCode DAInitializePackage(void) {
+PetscErrorCode DAInitializePackage(void)
+{
   PetscFunctionBegin;
-  if (DAPackageInitialized)
-    PetscFunctionReturn(PETSC_SUCCESS);
+  if (DAPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
 
   DAPackageInitialized = PETSC_TRUE;
   PetscCall(PetscClassIdRegister("Data Assimilation", &DA_CLASSID));
@@ -40,10 +40,11 @@ is called from `PetscFinalize()`.
 
 .seealso: `DAInitializePackage()`, `PetscInitialize()`
 @*/
-PetscErrorCode DAFinalizePackage(void) {
+PetscErrorCode DAFinalizePackage(void)
+{
   PetscFunctionBegin;
   PetscCall(PetscFunctionListDestroy(&DAList));
-  DARegisterAllCalled = PETSC_FALSE;
+  DARegisterAllCalled  = PETSC_FALSE;
   DAPackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -64,7 +65,8 @@ dispatcher.
 
 .seealso: [](ch_da), `DARegisterAll()`, `DASetType()`
 @*/
-PetscErrorCode DARegister(const char sname[], PetscErrorCode (*function)(DA)) {
+PetscErrorCode DARegister(const char sname[], PetscErrorCode (*function)(DA))
+{
   PetscFunctionBegin;
   PetscCall(DAInitializePackage());
   PetscCall(PetscFunctionListAdd(&DAList, sname, function));
@@ -81,29 +83,28 @@ in.
 
 .seealso: [](ch_da), `DARegister()`
 @*/
-PetscErrorCode DARegisterAll(void) {
+PetscErrorCode DARegisterAll(void)
+{
   PetscFunctionBegin;
-  if (DARegisterAllCalled)
-    PetscFunctionReturn(PETSC_SUCCESS);
+  if (DARegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   DARegisterAllCalled = PETSC_TRUE;
   PetscCall(DAETKFRegister());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-static PetscErrorCode DAComputeMean_Default(DA da, Vec mean) {
-  Vec member;
+static PetscErrorCode DAComputeMean_Default(DA da, Vec mean)
+{
+  Vec         member;
   PetscScalar inv_m;
-  PetscInt m, j;
+  PetscInt    m, j;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscValidHeaderSpecific(mean, VEC_CLASSID, 2);
-  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER,
-             "DASetUp() must be called before computing the ensemble mean");
-  PetscCheck(da->ensemble_size > 0, PetscObjectComm((PetscObject)da),
-             PETSC_ERR_ARG_WRONG, "Ensemble size must be positive");
+  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "DASetUp() must be called before computing the ensemble mean");
+  PetscCheck(da->ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONG, "Ensemble size must be positive");
 
   PetscCall(VecSet(mean, 0.0));
-  m = da->ensemble_size;
+  m     = da->ensemble_size;
   inv_m = 1.0 / (PetscScalar)m;
   for (j = 0; j < m; ++j) {
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, j, &member));
@@ -113,22 +114,20 @@ static PetscErrorCode DAComputeMean_Default(DA da, Vec mean) {
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out) {
-  Vec mean, col_in, col_out;
-  Mat anomalies;
+static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out)
+{
+  Vec       mean, col_in, col_out;
+  Mat       anomalies;
   PetscReal scale;
-  PetscInt m, j;
+  PetscInt  m, j;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscAssertPointer(anomalies_out, 2);
-  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER,
-             "DASetUp() must be called before computing anomalies");
-  PetscCheck(da->ensemble_size > 1, PetscObjectComm((PetscObject)da),
-             PETSC_ERR_ARG_OUTOFRANGE,
-             "Ensemble size must be at least 2 to form anomalies");
+  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "DASetUp() must be called before computing anomalies");
+  PetscCheck(da->ensemble_size > 1, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be at least 2 to form anomalies");
 
-  m = da->ensemble_size;
+  m     = da->ensemble_size;
   scale = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
 
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &mean));
@@ -136,9 +135,7 @@ static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out) {
   PetscCall(VecSetFromOptions(mean));
   PetscCall(DAComputeMean(da, mean));
 
-  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble),
-                           PETSC_DECIDE, PETSC_DECIDE, da->state_size, m, NULL,
-                           &anomalies));
+  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->state_size, m, NULL, &anomalies));
   PetscCall(MatSetUp(anomalies));
   for (j = 0; j < m; ++j) {
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, j, &col_in));
@@ -171,7 +168,8 @@ static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out) {
 
 .seealso: [](ch_da), `DADestroy()`, `DASetType()`, `DASetUp()`
 @*/
-PetscErrorCode DACreate(MPI_Comm comm, DA *da_out) {
+PetscErrorCode DACreate(MPI_Comm comm, DA *da_out)
+{
   DA da;
 
   PetscFunctionBegin;
@@ -179,20 +177,19 @@ PetscErrorCode DACreate(MPI_Comm comm, DA *da_out) {
 
   PetscCall(DAInitializePackage());
 
-  PetscCall(PetscHeaderCreate(da, DA_CLASSID, "DA", "Data Assimilation",
-                              "DataAssimilation", comm, DADestroy, DAView));
+  PetscCall(PetscHeaderCreate(da, DA_CLASSID, "DA", "Data Assimilation", "DataAssimilation", comm, DADestroy, DAView));
   PetscCall(PetscMemzero(da->ops, sizeof(*da->ops)));
-  da->ops->computemean = DAComputeMean_Default;
+  da->ops->computemean      = DAComputeMean_Default;
   da->ops->computeanomalies = DAComputeAnomalies_Default;
 
   da->ensemble_size = 0;
-  da->state_size = 0;
-  da->obs_size = 0;
-  da->ensemble = NULL;
+  da->state_size    = 0;
+  da->obs_size      = 0;
+  da->ensemble      = NULL;
   da->obs_error_var = NULL;
-  da->U = NULL;
-  da->assembled = PETSC_FALSE;
-  da->data = NULL;
+  da->U             = NULL;
+  da->assembled     = PETSC_FALSE;
+  da->data          = NULL;
 
   *da_out = da;
 
@@ -212,18 +209,17 @@ PetscErrorCode DACreate(MPI_Comm comm, DA *da_out) {
 
 .seealso: [](ch_da), `DACreate()`
 @*/
-PetscErrorCode DADestroy(DA *da) {
+PetscErrorCode DADestroy(DA *da)
+{
   PetscFunctionBegin;
-  if (!da || !*da)
-    PetscFunctionReturn(PETSC_SUCCESS);
+  if (!da || !*da) PetscFunctionReturn(PETSC_SUCCESS);
   PetscValidHeaderSpecific(*da, DA_CLASSID, 1);
   if (--((PetscObject)*da)->refct > 0) {
     *da = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  if ((*da)->ops->destroy)
-    PetscCall((*(*da)->ops->destroy)(*da));
+  if ((*da)->ops->destroy) PetscCall((*(*da)->ops->destroy)(*da));
 
   PetscCall(MatDestroy(&(*da)->ensemble));
   PetscCall(VecDestroy(&(*da)->obs_error_var));
@@ -246,7 +242,8 @@ PetscErrorCode DADestroy(DA *da) {
 
 .seealso: [](ch_da), `DAGetType()`, `DARegister()`
 @*/
-PetscErrorCode DASetType(DA da, DAType type) {
+PetscErrorCode DASetType(DA da, DAType type)
+{
   PetscErrorCode (*r)(DA);
   PetscBool match;
 
@@ -255,24 +252,19 @@ PetscErrorCode DASetType(DA da, DAType type) {
   PetscAssertPointer(type, 2);
 
   PetscCall(PetscObjectTypeCompare((PetscObject)da, type, &match));
-  if (match)
-    PetscFunctionReturn(PETSC_SUCCESS);
+  if (match) PetscFunctionReturn(PETSC_SUCCESS);
 
   PetscCall(DARegisterAll());
   PetscCall(PetscFunctionListFind(DAList, type, &r));
-  PetscCheck(r, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE,
-             "Unknown DA type: %s", type);
+  PetscCheck(r, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown DA type: %s", type);
 
-  if (da->ops->destroy)
-    PetscCall((*da->ops->destroy)(da));
+  if (da->ops->destroy) PetscCall((*da->ops->destroy)(da));
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)da, type));
   PetscCall((*r)(da));
 
-  if (!da->ops->computemean)
-    da->ops->computemean = DAComputeMean_Default;
-  if (!da->ops->computeanomalies)
-    da->ops->computeanomalies = DAComputeAnomalies_Default;
+  if (!da->ops->computemean) da->ops->computemean = DAComputeMean_Default;
+  if (!da->ops->computeanomalies) da->ops->computeanomalies = DAComputeAnomalies_Default;
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -293,7 +285,8 @@ PetscErrorCode DASetType(DA da, DAType type) {
 
 .seealso: [](ch_da), `DASetType()`
 @*/
-PetscErrorCode DAGetType(DA da, DAType *type) {
+PetscErrorCode DAGetType(DA da, DAType *type)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   if (type) {
@@ -315,13 +308,13 @@ PetscErrorCode DAGetType(DA da, DAType *type) {
 
 .seealso: [](ch_da), `DASetType()`, `PetscObjectOptionsBegin()`
 @*/
-PetscErrorCode DASetFromOptions(DA da) {
+PetscErrorCode DASetFromOptions(DA da)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
 
   PetscObjectOptionsBegin((PetscObject)da);
-  if (da->ops->setfromoptions)
-    PetscCall((*da->ops->setfromoptions)(da, &PetscOptionsObject));
+  if (da->ops->setfromoptions) PetscCall((*da->ops->setfromoptions)(da, &PetscOptionsObject));
   PetscOptionsEnd();
 
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -343,19 +336,18 @@ PetscErrorCode DASetFromOptions(DA da) {
 
 .seealso: [](ch_da), `DAGetSizes()`, `DASetUp()`
 @*/
-PetscErrorCode DASetSizes(DA da, PetscInt state_size, PetscInt obs_size,
-                          PetscInt ensemble_size) {
+PetscErrorCode DASetSizes(DA da, PetscInt state_size, PetscInt obs_size, PetscInt ensemble_size)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscValidLogicalCollectiveInt(da, state_size, 2);
   PetscValidLogicalCollectiveInt(da, obs_size, 3);
   PetscValidLogicalCollectiveInt(da, ensemble_size, 4);
 
-  PetscCheck(!da->assembled, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER,
-             "Cannot change sizes after DASetUp() has been called");
+  PetscCheck(!da->assembled, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Cannot change sizes after DASetUp() has been called");
 
-  da->state_size = state_size;
-  da->obs_size = obs_size;
+  da->state_size    = state_size;
+  da->obs_size      = obs_size;
   da->ensemble_size = ensemble_size;
 
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -378,16 +370,13 @@ PetscErrorCode DASetSizes(DA da, PetscInt state_size, PetscInt obs_size,
 
 .seealso: [](ch_da), `DASetSizes()`
 @*/
-PetscErrorCode DAGetSizes(DA da, PetscInt *state_size, PetscInt *obs_size,
-                          PetscInt *ensemble_size) {
+PetscErrorCode DAGetSizes(DA da, PetscInt *state_size, PetscInt *obs_size, PetscInt *ensemble_size)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
-  if (state_size)
-    *state_size = da->state_size;
-  if (obs_size)
-    *obs_size = da->obs_size;
-  if (ensemble_size)
-    *ensemble_size = da->ensemble_size;
+  if (state_size) *state_size = da->state_size;
+  if (obs_size) *obs_size = da->obs_size;
+  if (ensemble_size) *ensemble_size = da->ensemble_size;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -404,29 +393,22 @@ previously provided sizes.
 
 .seealso: [](ch_da), `DASetSizes()`, `DASetType()`
 @*/
-PetscErrorCode DASetUp(DA da) {
-  PetscInt i, j;
+PetscErrorCode DASetUp(DA da)
+{
+  PetscInt     i, j;
   PetscScalar *uarray;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
 
-  if (da->assembled)
-    PetscFunctionReturn(PETSC_SUCCESS);
+  if (da->assembled) PetscFunctionReturn(PETSC_SUCCESS);
 
-  PetscCheck(da->state_size > 0, PetscObjectComm((PetscObject)da),
-             PETSC_ERR_ORDER, "Must set state size before calling DASetUp()");
-  PetscCheck(da->obs_size > 0, PetscObjectComm((PetscObject)da),
-             PETSC_ERR_ORDER,
-             "Must set observation size before calling DASetUp()");
-  PetscCheck(da->ensemble_size > 0, PetscObjectComm((PetscObject)da),
-             PETSC_ERR_ORDER,
-             "Must set ensemble size before calling DASetUp()");
+  PetscCheck(da->state_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set state size before calling DASetUp()");
+  PetscCheck(da->obs_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set observation size before calling DASetUp()");
+  PetscCheck(da->ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set ensemble size before calling DASetUp()");
 
   if (!da->ensemble) {
-    PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da), PETSC_DECIDE,
-                             PETSC_DECIDE, da->state_size, da->ensemble_size,
-                             NULL, &da->ensemble));
+    PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da), PETSC_DECIDE, PETSC_DECIDE, da->state_size, da->ensemble_size, NULL, &da->ensemble));
     PetscCall(MatSetUp(da->ensemble));
   }
 
@@ -438,16 +420,12 @@ PetscErrorCode DASetUp(DA da) {
   }
 
   if (!da->U) {
-    PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da), PETSC_DECIDE,
-                             PETSC_DECIDE, da->ensemble_size, da->ensemble_size,
-                             NULL, &da->U));
+    PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da), PETSC_DECIDE, PETSC_DECIDE, da->ensemble_size, da->ensemble_size, NULL, &da->U));
     PetscCall(MatSetUp(da->U));
 
     PetscCall(MatDenseGetArray(da->U, &uarray));
     for (i = 0; i < da->ensemble_size; i++) {
-      for (j = 0; j < da->ensemble_size; j++) {
-        uarray[i * da->ensemble_size + j] = (i == j) ? 1.0 : 0.0;
-      }
+      for (j = 0; j < da->ensemble_size; j++) { uarray[i * da->ensemble_size + j] = (i == j) ? 1.0 : 0.0; }
     }
     PetscCall(MatDenseRestoreArray(da->U, &uarray));
     PetscCall(MatAssemblyBegin(da->U, MAT_FINAL_ASSEMBLY));
@@ -471,36 +449,26 @@ PetscErrorCode DASetUp(DA da) {
 
 .seealso: [](ch_da), `DAViewFromOptions()`
 @*/
-PetscErrorCode DAView(DA da, PetscViewer viewer) {
+PetscErrorCode DAView(DA da, PetscViewer viewer)
+{
   PetscBool iascii;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
-  if (!viewer)
-    PetscCall(
-        PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)da), &viewer));
+  if (!viewer) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)da), &viewer));
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
   PetscCheckSameComm(da, 1, viewer, 2);
 
-  PetscCall(
-      PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(
-        viewer, "DA Object: %d MPI processes\n",
-        PetscObjectComm((PetscObject)da) == MPI_COMM_SELF ? 1
-                                                          : PetscGlobalSize));
-    PetscCall(PetscViewerASCIIPrintf(
-        viewer, "  State size: %" PetscInt_FMT "\n", da->state_size));
-    PetscCall(PetscViewerASCIIPrintf(
-        viewer, "  Observation size: %" PetscInt_FMT "\n", da->obs_size));
-    PetscCall(PetscViewerASCIIPrintf(
-        viewer, "  Ensemble size: %" PetscInt_FMT "\n", da->ensemble_size));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Assembled: %s\n",
-                                     da->assembled ? "true" : "false"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "DA Object: %d MPI processes\n", PetscObjectComm((PetscObject)da) == MPI_COMM_SELF ? 1 : PetscGlobalSize));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  State size: %" PetscInt_FMT "\n", da->state_size));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Observation size: %" PetscInt_FMT "\n", da->obs_size));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Ensemble size: %" PetscInt_FMT "\n", da->ensemble_size));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Assembled: %s\n", da->assembled ? "true" : "false"));
   }
 
-  if (da->ops->view)
-    PetscCall((*da->ops->view)(da, viewer));
+  if (da->ops->view) PetscCall((*da->ops->view)(da, viewer));
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -520,7 +488,8 @@ should be viewed.
 
 .seealso: [](ch_da), `DAView()`, `PetscObjectViewFromOptions()`
 @*/
-PetscErrorCode DAViewFromOptions(DA da, PetscObject obj, const char option[]) {
+PetscErrorCode DAViewFromOptions(DA da, PetscObject obj, const char option[])
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscCall(PetscObjectViewFromOptions((PetscObject)da, obj, option));
@@ -541,13 +510,13 @@ PetscErrorCode DAViewFromOptions(DA da, PetscObject obj, const char option[]) {
 
 .seealso: [](ch_da), `DAGetObsErrorVariance()`
 @*/
-PetscErrorCode DASetObsErrorVariance(DA da, Vec obs_error_var) {
+PetscErrorCode DASetObsErrorVariance(DA da, Vec obs_error_var)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscValidHeaderSpecific(obs_error_var, VEC_CLASSID, 2);
 
-  if (!da->obs_error_var)
-    PetscCall(VecDuplicate(obs_error_var, &da->obs_error_var));
+  if (!da->obs_error_var) PetscCall(VecDuplicate(obs_error_var, &da->obs_error_var));
   PetscCall(VecCopy(obs_error_var, da->obs_error_var));
 
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -569,7 +538,8 @@ variance vector.
 
 .seealso: [](ch_da), `DASetObsErrorVariance()`
 @*/
-PetscErrorCode DAGetObsErrorVariance(DA da, Vec *obs_error_var) {
+PetscErrorCode DAGetObsErrorVariance(DA da, Vec *obs_error_var)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscAssertPointer(obs_error_var, 2);
@@ -591,13 +561,13 @@ in deterministic square-root updates.
 
 .seealso: [](ch_da), `DAGetOrthogonalTransform()`, `DAETKFAnalysis()`
 @*/
-PetscErrorCode DASetOrthogonalTransform(DA da, Mat U) {
+PetscErrorCode DASetOrthogonalTransform(DA da, Mat U)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscValidHeaderSpecific(U, MAT_CLASSID, 2);
 
-  if (da->U)
-    PetscCall(MatDestroy(&da->U));
+  if (da->U) PetscCall(MatDestroy(&da->U));
   PetscCall(PetscObjectReference((PetscObject)U));
   da->U = U;
 
@@ -620,7 +590,8 @@ a `DA`.
 
 .seealso: [](ch_da), `DASetOrthogonalTransform()`
 @*/
-PetscErrorCode DAGetOrthogonalTransform(DA da, Mat *U) {
+PetscErrorCode DAGetOrthogonalTransform(DA da, Mat *U)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscAssertPointer(U, 2);
@@ -645,16 +616,13 @@ the `DA`.
 
 .seealso: [](ch_da), `DARestoreEnsembleMember()`, `DASetEnsembleMember()`
 @*/
-PetscErrorCode DAGetEnsembleMember(DA da, PetscInt member_idx, Vec *member) {
+PetscErrorCode DAGetEnsembleMember(DA da, PetscInt member_idx, Vec *member)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscAssertPointer(member, 3);
 
-  PetscCheck(member_idx >= 0 && member_idx < da->ensemble_size, PETSC_COMM_SELF,
-             PETSC_ERR_ARG_OUTOFRANGE,
-             "Member index %" PetscInt_FMT " out of range [0, %" PetscInt_FMT
-             ")",
-             member_idx, da->ensemble_size);
+  PetscCheck(member_idx >= 0 && member_idx < da->ensemble_size, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Member index %" PetscInt_FMT " out of range [0, %" PetscInt_FMT ")", member_idx, da->ensemble_size);
 
   PetscCall(MatDenseGetColumnVecRead(da->ensemble, member_idx, member));
 
@@ -676,8 +644,8 @@ PetscErrorCode DAGetEnsembleMember(DA da, PetscInt member_idx, Vec *member) {
 
 .seealso: [](ch_da), `DAGetEnsembleMember()`
 @*/
-PetscErrorCode DARestoreEnsembleMember(DA da, PetscInt member_idx,
-                                       Vec *member) {
+PetscErrorCode DARestoreEnsembleMember(DA da, PetscInt member_idx, Vec *member)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscAssertPointer(member, 3);
@@ -702,15 +670,15 @@ data.
 
 .seealso: [](ch_da), `DAGetEnsembleMember()`
 @*/
-PetscErrorCode DASetEnsembleMember(DA da, PetscInt member_idx, Vec member) {
+PetscErrorCode DASetEnsembleMember(DA da, PetscInt member_idx, Vec member)
+{
   Vec col;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscValidHeaderSpecific(member, VEC_CLASSID, 3);
 
-  PetscCheck(member_idx >= 0 && member_idx < da->ensemble_size, PETSC_COMM_SELF,
-             PETSC_ERR_ARG_OUTOFRANGE, "Member index out of range");
+  PetscCheck(member_idx >= 0 && member_idx < da->ensemble_size, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Member index out of range");
 
   PetscCall(MatDenseGetColumnVecWrite(da->ensemble, member_idx, &col));
   PetscCall(VecCopy(member, col));
@@ -732,15 +700,13 @@ PetscErrorCode DASetEnsembleMember(DA da, PetscInt member_idx, Vec member) {
 
 .seealso: [](ch_da), `DAComputeAnomalies()`
 @*/
-PetscErrorCode DAComputeMean(DA da, Vec mean) {
+PetscErrorCode DAComputeMean(DA da, Vec mean)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscValidHeaderSpecific(mean, VEC_CLASSID, 2);
 
-  PetscCheck(da->ops->computemean, PetscObjectComm((PetscObject)da),
-             PETSC_ERR_SUP, "DA type %s does not implement ComputeMean()",
-             ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name
-                                          : "unknown");
+  PetscCheck(da->ops->computemean, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "DA type %s does not implement ComputeMean()", ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name : "unknown");
   PetscCall((*da->ops->computemean)(da, mean));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -758,15 +724,13 @@ PetscErrorCode DAComputeMean(DA da, Vec mean) {
 
 .seealso: [](ch_da), `DAComputeMean()`
 @*/
-PetscErrorCode DAComputeAnomalies(DA da, Mat *anomalies) {
+PetscErrorCode DAComputeAnomalies(DA da, Mat *anomalies)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscAssertPointer(anomalies, 2);
 
-  PetscCheck(da->ops->computeanomalies, PetscObjectComm((PetscObject)da),
-             PETSC_ERR_SUP, "DA type %s does not implement ComputeAnomalies()",
-             ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name
-                                          : "unknown");
+  PetscCheck(da->ops->computeanomalies, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "DA type %s does not implement ComputeAnomalies()", ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name : "unknown");
   PetscCall((*da->ops->computeanomalies)(da, anomalies));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -787,21 +751,15 @@ assimilation method.
 
 .seealso: [](ch_da), `DAApplyModel()`, `DAETKFAnalysis()`
 @*/
-PetscErrorCode DAAnalysis(DA da, Vec observation,
-                          PetscErrorCode (*observation_operator)(Vec, Vec,
-                                                                 void *),
-                          void *obs_ctx) {
+PetscErrorCode DAAnalysis(DA da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
   PetscAssertPointer(observation_operator, 3);
 
-  PetscCheck(da->ops->analysis, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP,
-             "DA type %s does not implement Analysis()",
-             ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name
-                                          : "unknown");
-  PetscCall(
-      (*da->ops->analysis)(da, observation, observation_operator, obs_ctx));
+  PetscCheck(da->ops->analysis, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "DA type %s does not implement Analysis()", ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name : "unknown");
+  PetscCall((*da->ops->analysis)(da, observation, observation_operator, obs_ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -820,16 +778,13 @@ forecast model.
 
 .seealso: [](ch_da), `DAAnalysis()`
 @*/
-PetscErrorCode DAApplyModel(DA da, PetscErrorCode (*model)(Vec, Vec, void *),
-                            void *model_ctx) {
+PetscErrorCode DAApplyModel(DA da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscAssertPointer(model, 2);
 
-  PetscCheck(da->ops->applymodel, PetscObjectComm((PetscObject)da),
-             PETSC_ERR_SUP, "DA type %s does not implement ApplyModel()",
-             ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name
-                                          : "unknown");
+  PetscCheck(da->ops->applymodel, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "DA type %s does not implement ApplyModel()", ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name : "unknown");
   PetscCall((*da->ops->applymodel)(da, model, model_ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -850,16 +805,16 @@ mean and standard deviation.
 
 .seealso: [](ch_vec), `PetscRandomSetInterval()`, `VecSetRandom()`
 @*/
-PetscErrorCode VecSetRandomGaussian(Vec v, PetscRandom rng, PetscReal mean,
-                                    PetscReal std_dev) {
+PetscErrorCode VecSetRandomGaussian(Vec v, PetscRandom rng, PetscReal mean, PetscReal std_dev)
+{
   return VecSetRandomGaussian_Private(v, rng, mean, std_dev);
 }
 
-PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng,
-                                            PetscReal mean, PetscReal std_dev) {
-  PetscInt n, i;
+PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal mean, PetscReal std_dev)
+{
+  PetscInt     n, i;
   PetscScalar *array;
-  PetscReal u1, u2, z0, z1;
+  PetscReal    u1, u2, z0, z1;
 
   PetscFunctionBegin;
 
@@ -870,43 +825,38 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng,
     PetscCall(PetscRandomGetValueReal(rng, &u1));
     PetscCall(PetscRandomGetValueReal(rng, &u2));
 
-    z0 = PetscSqrtReal(-2.0 * PetscLogReal(u1)) *
-         PetscCosReal(2.0 * PETSC_PI * u2);
-    z1 = PetscSqrtReal(-2.0 * PetscLogReal(u1)) *
-         PetscSinReal(2.0 * PETSC_PI * u2);
+    z0 = PetscSqrtReal(-2.0 * PetscLogReal(u1)) * PetscCosReal(2.0 * PETSC_PI * u2);
+    z1 = PetscSqrtReal(-2.0 * PetscLogReal(u1)) * PetscSinReal(2.0 * PETSC_PI * u2);
 
     array[i] = mean + std_dev * z0;
-    if (i + 1 < n)
-      array[i + 1] = mean + std_dev * z1;
+    if (i + 1 < n) array[i + 1] = mean + std_dev * z1;
   }
 
   PetscCall(VecRestoreArray(v, &array));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DACholeskySqrt_Private(Mat A, Mat *L_out) {
-  Mat L;
-  PetscInt m, n, i, j;
+PetscErrorCode DACholeskySqrt_Private(Mat A, Mat *L_out)
+{
+  Mat          L;
+  PetscInt     m, n, i, j;
   PetscScalar *array;
   PetscBLASInt bn, info;
 
   PetscFunctionBegin;
 
   PetscCall(MatGetSize(A, &m, &n));
-  PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG,
-             "Matrix must be square");
+  PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square");
 
   PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &L));
   PetscCall(MatDenseGetArray(L, &array));
 
   PetscCall(PetscBLASIntCast(n, &bn));
   LAPACKpotrf_("L", &bn, array, &bn, &info);
-  PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB,
-             "LAPACK potrf failed with info = %" PetscBLASInt_FMT, info);
+  PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK potrf failed with info = %" PetscBLASInt_FMT, info);
 
   for (j = 0; j < n; j++) {
-    for (i = 0; i < j; i++)
-      array[i + j * n] = 0.0;
+    for (i = 0; i < j; i++) array[i + j * n] = 0.0;
   }
 
   PetscCall(MatDenseRestoreArray(L, &array));
@@ -915,10 +865,9 @@ PetscErrorCode DACholeskySqrt_Private(Mat A, Mat *L_out) {
 
   // check correctness
   if (PetscDefined(USE_DEBUG)) {
-    Mat sqrtA = L, sqrtA_check;
+    Mat       sqrtA = L, sqrtA_check;
     PetscReal normA, normDiff, tolerance, eps;
-    PetscCall(MatMatTransposeMult(sqrtA, sqrtA, MAT_INITIAL_MATRIX,
-                                  PETSC_DEFAULT, &sqrtA_check));
+    PetscCall(MatMatTransposeMult(sqrtA, sqrtA, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &sqrtA_check));
     PetscCall(MatNorm(A, NORM_FROBENIUS, &normA));
     PetscCall(MatAXPY(sqrtA_check, -1.0, A, DIFFERENT_NONZERO_PATTERN));
     PetscCall(MatNorm(sqrtA_check, NORM_FROBENIUS, &normDiff));
@@ -934,19 +883,19 @@ PetscErrorCode DACholeskySqrt_Private(Mat A, Mat *L_out) {
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out) {
-  Mat sqrtA, V, Vt, VSqrtD;
-  Vec sqrtD;
-  PetscInt m, n, i;
+PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
+{
+  Mat          sqrtA, V, Vt, VSqrtD;
+  Vec          sqrtD;
+  PetscInt     m, n, i;
   PetscScalar *varray, *sqrtvals;
-  PetscReal *work, *eigvals;
+  PetscReal   *work, *eigvals;
   PetscBLASInt bn, lwork, info;
-  PetscReal eps;
+  PetscReal    eps;
   PetscFunctionBegin;
 
   PetscCall(MatGetSize(A, &m, &n));
-  PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG,
-             "Matrix must be square");
+  PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square");
 
   lwork = 3 * n;
   PetscCall(PetscMalloc1(lwork, &work));
@@ -960,19 +909,14 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out) {
 
   PetscCall(PetscBLASIntCast(n, &bn));
   LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, &info);
-  PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB,
-             "LAPACK syev failed with info = %" PetscBLASInt_FMT, info);
+  PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK syev failed with info = %" PetscBLASInt_FMT, info);
 
   eps = 10.0 * PETSC_MACHINE_EPSILON;
   for (i = 0; i < n; i++) {
-    PetscReal eig = eigvals[i];
+    PetscReal eig       = eigvals[i];
     PetscReal threshold = eps * PetscMax(1.0, PetscAbsReal(eig));
-    PetscCheck(
-        eig >= -threshold, PETSC_COMM_SELF, PETSC_ERR_LIB,
-        "Matrix square root failed: eigenvalue %g is negative beyond tolerance",
-        (double)eig);
-    eigvals[i] =
-        (eig > threshold) ? PetscSqrtReal(PetscMax(eig, (PetscReal)0.0)) : 0.0;
+    PetscCheck(eig >= -threshold, PETSC_COMM_SELF, PETSC_ERR_LIB, "Matrix square root failed: eigenvalue %g is negative beyond tolerance", (double)eig);
+    eigvals[i] = (eig > threshold) ? PetscSqrtReal(PetscMax(eig, (PetscReal)0.0)) : 0.0;
   }
 
   PetscCall(VecRestoreArrayWrite(sqrtD, &sqrtvals));
@@ -991,10 +935,9 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out) {
 
   // check correctness
   if (PetscDefined(USE_DEBUG)) {
-    Mat sqrtA_check;
+    Mat       sqrtA_check;
     PetscReal normA, normDiff, tolerance;
-    PetscCall(MatMatMult(sqrtA, sqrtA, MAT_INITIAL_MATRIX, PETSC_DEFAULT,
-                         &sqrtA_check));
+    PetscCall(MatMatMult(sqrtA, sqrtA, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &sqrtA_check));
     PetscCall(MatNorm(A, NORM_FROBENIUS, &normA));
     PetscCall(MatAXPY(sqrtA_check, -1.0, A, DIFFERENT_NONZERO_PATTERN));
     PetscCall(MatNorm(sqrtA_check, NORM_FROBENIUS, &normDiff));

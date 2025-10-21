@@ -12,19 +12,19 @@ static char help[] = "Deterministic ETKF example for the Lorenz-95 model. See "
 // -ensemble_size 30 : "Mean RMSE (analysis): 0.474040"
 
 typedef struct {
-  DM da;        /* 1D periodic DM storing the Lorenz-95 state */
-  PetscInt n;   /* State dimension (number of grid points) */
+  DM        da; /* 1D periodic DM storing the Lorenz-95 state */
+  PetscInt  n;  /* State dimension (number of grid points) */
   PetscReal F;  /* Constant forcing term in the Lorenz-95 equations */
   PetscReal dt; /* Integration time step size */
 } Lorenz95Ctx;
 
-static PetscErrorCode Lorenz95RHS(TS ts, PetscReal t, Vec X, Vec F_vec,
-                                  void *ctx) {
-  Lorenz95Ctx *l95 = (Lorenz95Ctx *)ctx;
-  Vec X_local;
+static PetscErrorCode Lorenz95RHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ctx)
+{
+  Lorenz95Ctx       *l95 = (Lorenz95Ctx *)ctx;
+  Vec                X_local;
   const PetscScalar *x;
-  PetscScalar *f;
-  PetscInt xs, xm, i;
+  PetscScalar       *f;
+  PetscInt           xs, xm, i;
 
   PetscFunctionBeginUser;
   /* Work with a local (ghosted) vector so the Lorenz-95 stencil has the
@@ -37,9 +37,7 @@ static PetscErrorCode Lorenz95RHS(TS ts, PetscReal t, Vec X, Vec F_vec,
   PetscCall(DMDAVecGetArray(l95->da, F_vec, &f));
 
   /* Standard Lorenz-95 tendency: (x_{i+1} - x_{i-2}) * x_{i-1} - x_i + F. */
-  for (i = xs; i < xs + xm; i++) {
-    f[i] = (x[i + 1] - x[i - 2]) * x[i - 1] - x[i] + l95->F;
-  }
+  for (i = xs; i < xs + xm; i++) { f[i] = (x[i + 1] - x[i - 2]) * x[i - 1] - x[i] + l95->F; }
 
   PetscCall(DMDAVecRestoreArrayRead(l95->da, X_local, &x));
   PetscCall(DMDAVecRestoreArray(l95->da, F_vec, &f));
@@ -47,9 +45,10 @@ static PetscErrorCode Lorenz95RHS(TS ts, PetscReal t, Vec X, Vec F_vec,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode Lorenz95Step(Vec x_in, Vec x_out, void *ctx) {
+static PetscErrorCode Lorenz95Step(Vec x_in, Vec x_out, void *ctx)
+{
   Lorenz95Ctx *l95 = (Lorenz95Ctx *)ctx;
-  TS ts;
+  TS           ts;
 
   PetscFunctionBeginUser;
   PetscCall(TSCreate(PETSC_COMM_SELF, &ts));
@@ -69,75 +68,64 @@ static PetscErrorCode Lorenz95Step(Vec x_in, Vec x_out, void *ctx) {
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode Lorenz95ObsIdentity(Vec x, Vec y, void *ctx) {
+static PetscErrorCode Lorenz95ObsIdentity(Vec x, Vec y, void *ctx)
+{
   PetscFunctionBeginUser;
   PetscCall(VecCopy(x, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-int main(int argc, char **argv) {
-  PetscInt ensemble_size = 30;
+int main(int argc, char **argv)
+{
+  PetscInt    ensemble_size = 30;
   Lorenz95Ctx l95_ctx;
-  DM da_state;
-  DA da_ctx;
-  Vec x0, x_mean, x_forecast, diff;
-  Vec truth_state, truth_next;
-  Vec observation, obs_noise, obs_error_var;
+  DM          da_state;
+  DA          da_ctx;
+  Vec         x0, x_mean, x_forecast, diff;
+  Vec         truth_state, truth_next;
+  Vec         observation, obs_noise, obs_error_var;
   PetscRandom rng;
-  PetscInt n = 40;
-  PetscInt steps = 200;
-  PetscInt burn = 100;
-  PetscInt obs_freq = 5;
-  PetscInt random_seed = 12345;
-  PetscReal F = 8.0;
-  PetscReal dt = 0.05;
-  PetscReal obs_error_std = 1.0;
-  PetscReal rmse_forecast = 0.0, rmse_analysis = 0.0;
-  PetscReal sum_rmse_forecast = 0.0, sum_rmse_analysis = 0.0;
-  PetscInt n_stat_steps = 0;
-  PetscInt obs_count = 0;
-  PetscInt step;
+  PetscInt    n             = 40;
+  PetscInt    steps         = 200;
+  PetscInt    burn          = 100;
+  PetscInt    obs_freq      = 5;
+  PetscInt    random_seed   = 12345;
+  PetscReal   F             = 8.0;
+  PetscReal   dt            = 0.05;
+  PetscReal   obs_error_std = 1.0;
+  PetscReal   rmse_forecast = 0.0, rmse_analysis = 0.0;
+  PetscReal   sum_rmse_forecast = 0.0, sum_rmse_analysis = 0.0;
+  PetscInt    n_stat_steps = 0;
+  PetscInt    obs_count    = 0;
+  PetscInt    step;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
 
   /* Expose key configuration parameters so the experiment can be tuned from the
    * command line. */
-  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Lorenz-95 ETKF Quick Example",
-                    NULL);
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Lorenz-95 ETKF Quick Example", NULL);
   PetscCall(PetscOptionsInt("-n", "State dimension", "", n, &n, NULL));
-  PetscCall(PetscOptionsInt("-steps", "Number of time steps", "", steps, &steps,
-                            NULL));
-  PetscCall(PetscOptionsInt("-burn", "Burn-in steps excluded from statistics",
-                            "", burn, &burn, NULL));
-  PetscCall(PetscOptionsInt("-obs_freq", "Observation frequency", "", obs_freq,
-                            &obs_freq, NULL));
+  PetscCall(PetscOptionsInt("-steps", "Number of time steps", "", steps, &steps, NULL));
+  PetscCall(PetscOptionsInt("-burn", "Burn-in steps excluded from statistics", "", burn, &burn, NULL));
+  PetscCall(PetscOptionsInt("-obs_freq", "Observation frequency", "", obs_freq, &obs_freq, NULL));
   PetscCall(PetscOptionsReal("-F", "Forcing parameter", "", F, &F, NULL));
   PetscCall(PetscOptionsReal("-dt", "Time step size", "", dt, &dt, NULL));
-  PetscCall(PetscOptionsReal("-obs_error",
-                             "Observation error standard deviation", "",
-                             obs_error_std, &obs_error_std, NULL));
-  PetscCall(PetscOptionsInt("-ensemble_size", "Number of ensemble members", "",
-                            ensemble_size, &ensemble_size, NULL));
-  PetscCall(PetscOptionsInt("-random_seed",
-                            "Random seed for ensemble perturbations", "",
-                            random_seed, &random_seed, NULL));
+  PetscCall(PetscOptionsReal("-obs_error", "Observation error standard deviation", "", obs_error_std, &obs_error_std, NULL));
+  PetscCall(PetscOptionsInt("-ensemble_size", "Number of ensemble members", "", ensemble_size, &ensemble_size, NULL));
+  PetscCall(PetscOptionsInt("-random_seed", "Random seed for ensemble perturbations", "", random_seed, &random_seed, NULL));
   PetscOptionsEnd();
 
-  if (obs_freq < 1)
-    obs_freq = 1;
-  if (burn > steps)
-    burn = steps;
-  if (ensemble_size < 1)
-    ensemble_size = 1;
+  if (obs_freq < 1) obs_freq = 1;
+  if (burn > steps) burn = steps;
+  if (ensemble_size < 1) ensemble_size = 1;
 
-  PetscCall(DMDACreate1d(PETSC_COMM_WORLD, DM_BOUNDARY_PERIODIC, n, 1, 2, NULL,
-                         &da_state));
+  PetscCall(DMDACreate1d(PETSC_COMM_WORLD, DM_BOUNDARY_PERIODIC, n, 1, 2, NULL, &da_state));
   PetscCall(DMSetFromOptions(da_state));
   PetscCall(DMSetUp(da_state));
 
   l95_ctx.da = da_state;
-  l95_ctx.n = n;
-  l95_ctx.F = F;
+  l95_ctx.n  = n;
+  l95_ctx.F  = F;
   l95_ctx.dt = dt;
 
   PetscCall(DMCreateGlobalVector(da_state, &x0));
@@ -206,8 +194,7 @@ int main(int argc, char **argv) {
                         "  Burn-in steps         : %D\n"
                         "  Observation frequency : %D\n"
                         "  Observation noise std : %.3f\n\n",
-                        n, ensemble_size, (double)dt, steps, burn, obs_freq,
-                        (double)obs_error_std));
+                        n, ensemble_size, (double)dt, steps, burn, obs_freq, (double)obs_error_std));
 
   /* Cycle through forecast and analysis steps, tracking skill metrics along the
    * way. */
@@ -247,11 +234,7 @@ int main(int argc, char **argv) {
     }
 
     if ((step % (steps / 10) == 0) || (step == steps) || (step == 0)) {
-      PetscCall(PetscPrintf(
-          PETSC_COMM_WORLD,
-          "Step %4D time %.3f  RMSE_forecast %.5f  RMSE_analysis %.5f%s\n",
-          step, (double)time, (double)rmse_forecast, (double)rmse_analysis,
-          (step < burn) ? " [burn-in]" : ""));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4D time %.3f  RMSE_forecast %.5f  RMSE_analysis %.5f%s\n", step, (double)time, (double)rmse_forecast, (double)rmse_analysis, (step < burn) ? " [burn-in]" : ""));
     }
 
     if (step < steps) {
@@ -268,16 +251,10 @@ int main(int argc, char **argv) {
   if (n_stat_steps > 0) {
     PetscReal avg_rmse_forecast = sum_rmse_forecast / n_stat_steps;
     PetscReal avg_rmse_analysis = sum_rmse_analysis / n_stat_steps;
-    PetscCall(
-        PetscPrintf(PETSC_COMM_WORLD,
-                    "\nStatistics over %D assimilation steps (post burn-in):\n",
-                    n_stat_steps));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (forecast): %.6f\n",
-                          (double)avg_rmse_forecast));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (analysis): %.6f\n",
-                          (double)avg_rmse_analysis));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,
-                          "  Observations assimilated: %D\n\n", obs_count));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nStatistics over %D assimilation steps (post burn-in):\n", n_stat_steps));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (forecast): %.6f\n", (double)avg_rmse_forecast));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (analysis): %.6f\n", (double)avg_rmse_analysis));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Observations assimilated: %D\n\n", obs_count));
   }
 
   PetscCall(VecDestroy(&diff));

@@ -6,47 +6,45 @@ typedef struct {
 } DAETKFData;
 
 static PetscFunctionList DAETKFSqrtList = NULL;
-static PetscBool DAETKFPackageInitialized;
+static PetscBool         DAETKFPackageInitialized;
 
-static PetscErrorCode DAETKFSetSqrt_Cholesky(DA da) {
+static PetscErrorCode DAETKFSetSqrt_Cholesky(DA da)
+{
   PetscFunctionBegin;
   PetscCall(DAETKFSetSqrtType(da, DAETKF_SQRT_CHOLESKY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DAETKFSetSqrt_Eigen(DA da) {
+static PetscErrorCode DAETKFSetSqrt_Eigen(DA da)
+{
   PetscFunctionBegin;
   PetscCall(DAETKFSetSqrtType(da, DAETKF_SQRT_EIGEN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DAETKFDestroy(DA da) {
+static PetscErrorCode DAETKFDestroy(DA da)
+{
   PetscFunctionBegin;
   PetscCall(PetscFree(da->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DASetFromOptions_DAETKF(DA da,
-                                              PetscOptionItems *PetscOptions) {
-  DAETKFData *impl = (DAETKFData *)da->data;
+static PetscErrorCode DASetFromOptions_DAETKF(DA da, PetscOptionItems *PetscOptions)
+{
+  DAETKFData      *impl               = (DAETKFData *)da->data;
   PetscOptionItems PetscOptionsObject = PetscOptions ? *PetscOptions : NULL;
-  const char *defaultType;
-  char typeName[64];
-  PetscBool set;
+  const char      *defaultType;
+  char             typeName[64];
+  PetscBool        set;
   PetscErrorCode (*setter)(DA);
 
   PetscFunctionBegin;
   defaultType = (impl->sqrt_type == DAETKF_SQRT_EIGEN) ? "eigen" : "cholesky";
   PetscCall(PetscStrncpy(typeName, defaultType, sizeof(typeName)));
-  PetscCall(PetscOptionsFList("-daetkf_sqrt_type",
-                              "Matrix square root factorization",
-                              "DAETKFSetSqrtType", DAETKFSqrtList, defaultType,
-                              typeName, sizeof(typeName), &set));
+  PetscCall(PetscOptionsFList("-daetkf_sqrt_type", "Matrix square root factorization", "DAETKFSetSqrtType", DAETKFSqrtList, defaultType, typeName, sizeof(typeName), &set));
   if (set) {
     PetscCall(PetscFunctionListFind(DAETKFSqrtList, typeName, &setter));
-    PetscCheck(setter, PetscObjectComm((PetscObject)da),
-               PETSC_ERR_ARG_UNKNOWN_TYPE,
-               "Unknown DAETKF square-root type \"%s\"", typeName);
+    PetscCheck(setter, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown DAETKF square-root type \"%s\"", typeName);
     PetscCall((*setter)(da));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -60,15 +58,13 @@ package. It is called from `TSInitializePackage()`.
 
 .seealso: [](ch_ts), `PetscInitialize()`, `DAETKFFinalizePackage()`
 @*/
-PetscErrorCode DAETKFInitializePackage(void) {
+PetscErrorCode DAETKFInitializePackage(void)
+{
   PetscFunctionBegin;
-  if (DAETKFPackageInitialized)
-    PetscFunctionReturn(PETSC_SUCCESS);
+  if (DAETKFPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   DAETKFPackageInitialized = PETSC_TRUE;
-  PetscCall(PetscFunctionListAdd(&DAETKFSqrtList, "cholesky",
-                                 DAETKFSetSqrt_Cholesky));
-  PetscCall(
-      PetscFunctionListAdd(&DAETKFSqrtList, "eigen", DAETKFSetSqrt_Eigen));
+  PetscCall(PetscFunctionListAdd(&DAETKFSqrtList, "cholesky", DAETKFSetSqrt_Cholesky));
+  PetscCall(PetscFunctionListAdd(&DAETKFSqrtList, "eigen", DAETKFSetSqrt_Eigen));
   PetscCall(PetscRegisterFinalize(DAETKFFinalizePackage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -81,7 +77,8 @@ package. It is called from `PetscFinalize()`.
 
 .seealso: [](ch_ts), `PetscFinalize()`, `DAETKFInitiallizePackage()`
 @*/
-PetscErrorCode DAETKFFinalizePackage(void) {
+PetscErrorCode DAETKFFinalizePackage(void)
+{
   PetscFunctionBegin;
   DAETKFPackageInitialized = PETSC_FALSE;
   PetscCall(PetscFunctionListDestroy(&DAETKFSqrtList));
@@ -112,19 +109,17 @@ transform, and Step 10 applies the transform to refresh every ensemble member.
 .seealso: [](ch_da), `DA`, `DAETKFApplyModel()`, `DAComputeMean()`,
 `DAComputeAnomalies()`
 @*/
-static PetscErrorCode
-DAETKFAnalysis(DA da, Vec observation,
-               PetscErrorCode (*observation_operator)(Vec, Vec, void *),
-               void *obs_ctx) {
-  DAETKFData *impl = (DAETKFData *)da->data;
-  Vec mean, y_mean, delta, delta_scaled, col_in, col_out, w, temp_vec;
-  Mat X, Z, S, T, T_sqrt;
-  PetscInt i, m;
-  PetscScalar inv_m, scale, sqrt_m_minus_1;
+static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
+{
+  DAETKFData  *impl = (DAETKFData *)da->data;
+  Vec          mean, y_mean, delta, delta_scaled, col_in, col_out, w, temp_vec;
+  Mat          X, Z, S, T, T_sqrt;
+  PetscInt     i, m;
+  PetscScalar  inv_m, scale, sqrt_m_minus_1;
   PetscScalar *r_inv_sqrt_array, *w_array;
-  Vec r_inv_sqrt;
-  Mat I_m, w_ones, T_sqrt_U, X_Y;
-  Vec S_T_delta;
+  Vec          r_inv_sqrt;
+  Mat          I_m, w_ones, T_sqrt_U, X_Y;
+  Vec          S_T_delta;
 
   PetscFunctionBegin;
 
@@ -136,9 +131,9 @@ DAETKFAnalysis(DA da, Vec observation,
    *  10: update ensemble states with mean + anomalies * transform
    */
 
-  m = da->ensemble_size;
-  inv_m = 1.0 / ((PetscScalar)m);
-  scale = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
+  m              = da->ensemble_size;
+  inv_m          = 1.0 / ((PetscScalar)m);
+  scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
 
   /* Step 1: compute the prior ensemble mean in state space. */
@@ -152,9 +147,7 @@ DAETKFAnalysis(DA da, Vec observation,
   PetscCall(DAComputeAnomalies(da, &X));
 
   /* Buffer to hold raw observation-space evaluations H(x_i^f). */
-  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble),
-                           PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL,
-                           &Z));
+  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &Z));
   PetscCall(MatSetUp(Z));
 
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &temp_vec));
@@ -183,58 +176,43 @@ DAETKFAnalysis(DA da, Vec observation,
   }
 
   PetscCall(VecDuplicate(da->obs_error_var, &r_inv_sqrt));
-  PetscCall(VecCopy(da->obs_error_var,
-                    r_inv_sqrt)); /* Step 3: reuse diag(R) to build R^{-1/2}. */
+  PetscCall(VecCopy(da->obs_error_var, r_inv_sqrt)); /* Step 3: reuse diag(R) to build R^{-1/2}. */
   PetscCall(VecGetArray(r_inv_sqrt, &r_inv_sqrt_array));
-  for (i = 0; i < da->obs_size; i++) {
-    r_inv_sqrt_array[i] =
-        1.0 / PetscSqrtReal(
-                  PetscRealPart(r_inv_sqrt_array[i])); /* assumes R diagonal. */
-  }
+  for (i = 0; i < da->obs_size; i++) { r_inv_sqrt_array[i] = 1.0 / PetscSqrtReal(PetscRealPart(r_inv_sqrt_array[i])); /* assumes R diagonal. */ }
   PetscCall(VecRestoreArray(r_inv_sqrt, &r_inv_sqrt_array));
 
-  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble),
-                           PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL,
-                           &S));
+  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &S));
   PetscCall(MatSetUp(S));
 
   for (i = 0; i < m; i++) {
     PetscCall(MatDenseGetColumnVecRead(Z, i, &col_in));
     PetscCall(MatDenseGetColumnVecWrite(S, i, &col_out));
 
-    PetscCall(VecWAXPY(col_out, -1.0, y_mean, col_in)); /* H(x_i^f) - ȳ */
-    PetscCall(VecScale(col_out, scale)); /* 1/sqrt(m-1) scaling */
-    PetscCall(VecPointwiseMult(col_out, col_out,
-                               r_inv_sqrt)); /* Step 3: S = R^{-1/2} Y_f */
+    PetscCall(VecWAXPY(col_out, -1.0, y_mean, col_in));        /* H(x_i^f) - ȳ */
+    PetscCall(VecScale(col_out, scale));                       /* 1/sqrt(m-1) scaling */
+    PetscCall(VecPointwiseMult(col_out, col_out, r_inv_sqrt)); /* Step 3: S = R^{-1/2} Y_f */
 
     PetscCall(MatDenseRestoreColumnVecRead(Z, i, &col_in));
     PetscCall(MatDenseRestoreColumnVecWrite(S, i, &col_out));
   }
 
   PetscCall(VecDuplicate(y_mean, &delta));
-  PetscCall(
-      VecWAXPY(delta, -1.0, y_mean, observation)); /* Innovation y^o - ȳ. */
+  PetscCall(VecWAXPY(delta, -1.0, y_mean, observation)); /* Innovation y^o - ȳ. */
 
   PetscCall(VecDuplicate(delta, &delta_scaled));
   PetscCall(VecPointwiseMult(delta_scaled, delta, r_inv_sqrt)); /* Step 4: δ̃. */
 
-  PetscCall(MatTransposeMatMult(S, S, MAT_INITIAL_MATRIX, PETSC_DEFAULT,
-                                &T)); /* Step 5: S Sᵀ. */
+  PetscCall(MatTransposeMatMult(S, S, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T)); /* Step 5: S Sᵀ. */
 
-  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble),
-                           PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &I_m));
+  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &I_m));
   PetscCall(MatSetUp(I_m));
   PetscCall(MatZeroEntries(I_m));
-  for (i = 0; i < m; i++) {
-    PetscCall(MatSetValue(I_m, i, i, 1.0,
-                          INSERT_VALUES)); /* Identity in reduced space. */
-  }
+  for (i = 0; i < m; i++) { PetscCall(MatSetValue(I_m, i, i, 1.0, INSERT_VALUES)); /* Identity in reduced space. */ }
   PetscCall(MatAssemblyBegin(I_m, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(I_m, MAT_FINAL_ASSEMBLY));
 
   // optimize to not invert T but solve with Cholesky or eigen data -- TODO
-  PetscCall(
-      MatAXPY(T, 1.0, I_m, SAME_NONZERO_PATTERN)); /* Step 5: T = S Sᵀ + I. */
+  PetscCall(MatAXPY(T, 1.0, I_m, SAME_NONZERO_PATTERN)); /* Step 5: T = S Sᵀ + I. */
 
   PetscCall(MatLUFactor(T, NULL, NULL, NULL));
   Mat T_inv;
@@ -261,44 +239,31 @@ DAETKFAnalysis(DA da, Vec observation,
     PetscCall(DASymmetricEigenSqrt_Private(T, &T_sqrt)); /* Step 7b. */
     break;
   default:
-    SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE,
-            "Unsupported DAETKF square-root type %" PetscInt_FMT,
-            (PetscInt)impl->sqrt_type);
+    SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported DAETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
   }
 
-  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble),
-                           PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &w_ones));
+  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &w_ones));
   PetscCall(MatSetUp(w_ones));
   PetscCall(VecGetArray(w, &w_array));
   for (i = 0; i < m; i++) {
-    for (PetscInt j = 0; j < m; j++) {
-      PetscCall(
-          MatSetValue(w_ones, i, j, w_array[i],
-                      INSERT_VALUES)); /* w replicated across columns (w·1ᵀ). */
-    }
+    for (PetscInt j = 0; j < m; j++) { PetscCall(MatSetValue(w_ones, i, j, w_array[i], INSERT_VALUES)); /* w replicated across columns (w·1ᵀ). */ }
   }
   PetscCall(VecRestoreArray(w, &w_array));
   PetscCall(MatAssemblyBegin(w_ones, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(w_ones, MAT_FINAL_ASSEMBLY));
 
-  PetscCall(
-      MatMatMult(T_sqrt, da->U, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T_sqrt_U));
-  PetscCall(MatScale(T_sqrt_U,
-                     sqrt_m_minus_1)); /* Step 8: rotate and undo scaling. */
+  PetscCall(MatMatMult(T_sqrt, da->U, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T_sqrt_U));
+  PetscCall(MatScale(T_sqrt_U, sqrt_m_minus_1)); /* Step 8: rotate and undo scaling. */
 
-  PetscCall(MatAXPY(
-      w_ones, 1.0, T_sqrt_U,
-      DIFFERENT_NONZERO_PATTERN)); /* Step 9: deterministic transform. */
+  PetscCall(MatAXPY(w_ones, 1.0, T_sqrt_U, DIFFERENT_NONZERO_PATTERN)); /* Step 9: deterministic transform. */
 
-  PetscCall(MatMatMult(X, w_ones, MAT_INITIAL_MATRIX, PETSC_DEFAULT,
-                       &X_Y)); /* Transformed anomalies. */
+  PetscCall(MatMatMult(X, w_ones, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &X_Y)); /* Transformed anomalies. */
 
   for (i = 0; i < m; i++) {
     PetscCall(MatDenseGetColumnVecRead(X_Y, i, &col_in));
     PetscCall(MatDenseGetColumnVecWrite(da->ensemble, i, &col_out));
 
-    PetscCall(VecWAXPY(col_out, 1.0, mean,
-                       col_in)); /* Step 10: final analysis member. */
+    PetscCall(VecWAXPY(col_out, 1.0, mean, col_in)); /* Step 10: final analysis member. */
 
     PetscCall(MatDenseRestoreColumnVecRead(X_Y, i, &col_in));
     PetscCall(MatDenseRestoreColumnVecWrite(da->ensemble, i, &col_out));
@@ -345,10 +310,9 @@ the next forecast cycle.
 
 .seealso: [](ch_da), `DA`, `DAETKFAnalysis()`
 @*/
-static PetscErrorCode
-DAETKFApplyModel(DA da, PetscErrorCode (*model)(Vec, Vec, void *),
-                 void *model_ctx) {
-  Vec col_in, col_out, temp;
+static PetscErrorCode DAETKFApplyModel(DA da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
+{
+  Vec      col_in, col_out, temp;
   PetscInt i;
 
   PetscFunctionBegin;
@@ -384,14 +348,13 @@ during the ETKF analysis.
 
 .seealso: [](ch_da), `DA`, `DAETKFGetSqrtType()`, `DAETKFAnalysis()`
 @*/
-PetscErrorCode DAETKFSetSqrtType(DA da, DAETKFSqrtType type) {
+PetscErrorCode DAETKFSetSqrtType(DA da, DAETKFSqrtType type)
+{
   DAETKFData *impl = (DAETKFData *)da->data;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
-  PetscCheck(type == DAETKF_SQRT_CHOLESKY || type == DAETKF_SQRT_EIGEN,
-             PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE,
-             "Invalid DAETKF square-root type %" PetscInt_FMT, (PetscInt)type);
+  PetscCheck(type == DAETKF_SQRT_CHOLESKY || type == DAETKF_SQRT_EIGEN, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Invalid DAETKF square-root type %" PetscInt_FMT, (PetscInt)type);
 
   impl->sqrt_type = type;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -413,7 +376,8 @@ configured for the ETKF analysis.
 
 .seealso: [](ch_da), `DA`, `DAETKFSetSqrtType()`
 @*/
-PetscErrorCode DAETKFGetSqrtType(DA da, DAETKFSqrtType *type) {
+PetscErrorCode DAETKFGetSqrtType(DA da, DAETKFSqrtType *type)
+{
   DAETKFData *impl = (DAETKFData *)da->data;
 
   PetscFunctionBegin;
@@ -437,25 +401,27 @@ PetscErrorCode DAETKFGetSqrtType(DA da, DAETKFSqrtType *type) {
 
 .seealso: [](ch_da), `DA`, `DAETKFRegister()`, `DAETKFAnalysis()`
 @*/
-static PetscErrorCode DAETKFInitialize(DA da) {
+static PetscErrorCode DAETKFInitialize(DA da)
+{
   DAETKFData *impl;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&impl));
   impl->sqrt_type = DAETKF_SQRT_EIGEN;
 
-  da->data = impl;
-  da->ops->analysis = DAETKFAnalysis;
-  da->ops->applymodel = DAETKFApplyModel;
-  da->ops->computemean = NULL;
+  da->data                  = impl;
+  da->ops->analysis         = DAETKFAnalysis;
+  da->ops->applymodel       = DAETKFApplyModel;
+  da->ops->computemean      = NULL;
   da->ops->computeanomalies = NULL;
-  da->ops->destroy = DAETKFDestroy;
-  da->ops->view = NULL;
-  da->ops->setfromoptions = DASetFromOptions_DAETKF;
+  da->ops->destroy          = DAETKFDestroy;
+  da->ops->view             = NULL;
+  da->ops->setfromoptions   = DASetFromOptions_DAETKF;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DAETKFRegister(void) {
+PetscErrorCode DAETKFRegister(void)
+{
   PetscFunctionBegin;
   PetscCall(DARegister(DAETKF, DAETKFInitialize));
   PetscCall(DAETKFInitializePackage());
