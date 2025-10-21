@@ -912,9 +912,6 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   eigvals = (PetscReal *)sqrtvals;
 
   PetscCall(PetscBLASIntCast(n, &bn));
-  LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, &info);
-  PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK syev failed with info = %" PetscBLASInt_FMT, info);
-
 #if defined(PETSC_USE_COMPLEX)
   {
     PetscReal *rwork;
@@ -925,6 +922,7 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
 #else
   PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, &info));
 #endif
+  PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK syev failed with info = %" PetscBLASInt_FMT, info);
 
   eps = 10.0 * PETSC_MACHINE_EPSILON;
   for (i = 0; i < n; i++) {

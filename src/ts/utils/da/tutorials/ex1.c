@@ -187,12 +187,12 @@ int main(int argc, char **argv)
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-95 ETKF quick example\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,
-                        "  State dimension      : %D\n"
-                        "  Ensemble size        : %D\n"
+                        "  State dimension      : %" PetscInt_FMT "\n"
+                        "  Ensemble size        : %" PetscInt_FMT "\n"
                         "  Time step             : %.4f\n"
-                        "  Total steps           : %D\n"
-                        "  Burn-in steps         : %D\n"
-                        "  Observation frequency : %D\n"
+                        "  Total steps           : %" PetscInt_FMT "\n"
+                        "  Burn-in steps         : %" PetscInt_FMT "\n"
+                        "  Observation frequency : %" PetscInt_FMT "\n"
                         "  Observation noise std : %.3f\n\n",
                         n, ensemble_size, (double)dt, steps, burn, obs_freq, (double)obs_error_std));
 
@@ -234,7 +234,7 @@ int main(int argc, char **argv)
     }
 
     if ((step % (steps / 10) == 0) || (step == steps) || (step == 0)) {
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4D time %.3f  RMSE_forecast %.5f  RMSE_analysis %.5f%s\n", step, (double)time, (double)rmse_forecast, (double)rmse_analysis, (step < burn) ? " [burn-in]" : ""));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT "time %.3f  RMSE_forecast %.5f  RMSE_analysis %.5f%s\n", step, (double)time, (double)rmse_forecast, (double)rmse_analysis, (step < burn) ? " [burn-in]" : ""));
     }
 
     if (step < steps) {
@@ -251,10 +251,10 @@ int main(int argc, char **argv)
   if (n_stat_steps > 0) {
     PetscReal avg_rmse_forecast = sum_rmse_forecast / n_stat_steps;
     PetscReal avg_rmse_analysis = sum_rmse_analysis / n_stat_steps;
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nStatistics over %D assimilation steps (post burn-in):\n", n_stat_steps));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nStatistics over %" PetscInt_FMT " assimilation steps (post burn-in):\n", n_stat_steps));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (forecast): %.6f\n", (double)avg_rmse_forecast));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (analysis): %.6f\n", (double)avg_rmse_analysis));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Observations assimilated: %D\n\n", obs_count));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Observations assimilated: %" PetscInt_FMT "\n\n", obs_count));
   }
 
   PetscCall(VecDestroy(&diff));
