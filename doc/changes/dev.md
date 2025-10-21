@@ -115,6 +115,8 @@
 - Correct option `-ts_max_reject` to `-ts_max_step_rejections`
 - Correct option `-ts_dt` to `-ts_time_step`
 
+- Add data assimilation (DA) base class as a utility with implementation of ETKF: [](ch_da)
+
 ```{rubric} TAO:
 ```
 
