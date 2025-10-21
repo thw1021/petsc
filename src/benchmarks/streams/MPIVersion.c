@@ -9,12 +9,9 @@
 #include <petscsys.h>
 
 #define NTIMESINNER 1
-//#define N 2*4*20000000
-#define N 80000000
-//#define N 1200000
-//#define N 120000
-#define NTIMES 50
-#define OFFSET 0
+#define N           80000000 // 3*sizeof(double)*N > aggregated last level cache size on a compute node
+#define NTIMES      50
+#define OFFSET      0
 
 static double a[N + OFFSET], b[N + OFFSET], c[N + OFFSET];
 static double mintime = FLT_MAX;
@@ -57,8 +54,8 @@ int main(int argc, char **args)
     // Do not include barrier in the timed region
     times[k] = MPI_Wtime();
     for (int l = 0; l < NTIMESINNER; l++) {
-      for (register int j = 0; j < n; j++) a[j] = b[j] + scalar * c[j];
-      if (size == 65) printf("never printed %g\n", a[11]);
+      for (int j = 0; j < n; j++) a[j] = b[j] + scalar * c[j];
+      if (size == 2000) PetscCall(PetscPrintf(PETSC_COMM_SELF, "never printed %g\n", a[11])); // to prevent the compiler from optimizing the loop out
     }
     //   PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
     times[k] = MPI_Wtime() - times[k];
@@ -76,15 +73,15 @@ int main(int argc, char **args)
     if (size != 1) {
       double prate;
 
-      fd = fopen("flops", "r");
-      fscanf(fd, "%lg", &prate);
-      fclose(fd);
-      printf("%d %11.4f   Rate (MB/s) %g \n", size, rate, rate / prate);
+      PetscCall(PetscFOpen(PETSC_COMM_SELF, "flops", "r", &fd));
+      PetscCheck(fscanf(fd, "%lg", &prate) == 1, PETSC_COMM_SELF, PETSC_ERR_FILE_READ, "Unable to read file");
+      PetscCall(PetscFClose(PETSC_COMM_SELF, fd));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "%3d %11.1f   Rate (MB/s) %6.1f\n", size, rate, rate / prate));
     } else {
-      fd = fopen("flops", "w");
-      fprintf(fd, "%g\n", rate);
-      fclose(fd);
-      printf("%d %11.4f   Rate (MB/s) 1\n", size, rate);
+      PetscCall(PetscFOpen(PETSC_COMM_SELF, "flops", "w", &fd));
+      PetscCall(PetscFPrintf(PETSC_COMM_SELF, fd, "%g\n", rate));
+      PetscCall(PetscFClose(PETSC_COMM_SELF, fd));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "%3d %11.1f   Rate (MB/s) %6.1f\n", size, rate, 1.0));
     }
   }
   PetscCall(PetscFinalize());
