@@ -1,22 +1,8 @@
-#ifndef PETSC_DA_H
-#define PETSC_DA_H
+#pragma once
 
 #include <petsc.h>
 #include <petscmat.h>
 #include <petscvec.h>
-
-/*S
-   DA - Abstract PETSc object that orchestrates ensemble-based data assimilation workflows
-
-   Level: intermediate
-
-   Notes:
-   DA manages ensemble state vectors, observation-error descriptions, and user-provided
-   model/observation operators so that analysis steps and forecast propagations can be
-   expressed independently of the underlying parallel layout.
-
-.seealso: `DACreate()`, `DASetType()`, `DASetFromOptions()`, `DASetSizes()`, `DAComputeMean()`, `DAComputeAnomalies()`, `DAAnalysis()`, `DAApplyModel()`, `DAType`, `DAGetType()`
-S*/
 
 /* MANSEC = TS */
 /* SUBMANSEC = DA */
@@ -166,4 +152,3 @@ static inline PetscErrorCode ETKFGetSqrtType(ETKF etkf, ETKFSqrtType *type)
 {
   return DAETKFGetSqrtType(etkf, type);
 }
-#endif /* PETSC_DA_H */

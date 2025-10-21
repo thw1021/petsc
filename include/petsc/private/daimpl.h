@@ -1,5 +1,4 @@
-#ifndef DAIMPL_H
-#define DAIMPL_H
+#pragma once
 
 #include "petscda.h"
 #include <petsc/private/petscimpl.h>
@@ -58,4 +57,3 @@ typedef DAOps ETKFOps;
 
 #define ETKFCholeskySqrt_Private       DACholeskySqrt_Private
 #define ETKFSymmetricEigenSqrt_Private DASymmetricEigenSqrt_Private
-#endif /* DAIMPL_H */
