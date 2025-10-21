@@ -24,6 +24,10 @@ class Configure(config.package.GNUPackage):
     import nargs
     help.addArgument('HYPRE', '-with-hypre-gpu-arch=<string>',  nargs.ArgString(None, 0, 'Value passed to hypre\'s --with-gpu-arch= configure option'))
     help.addArgument('HYPRE', '-download-hypre-openmp', nargs.ArgBool(None, 1, 'Let hypre use OpenMP if available'))
+    help.addArgument('HYPRE', '-with-hypre-superlu', nargs.ArgBool(None, 1, 'Let hypre use SuperLU/SuperLU_DIST if available'))
+    help.addArgument('HYPRE', '-with-hypre-async-malloc', nargs.ArgBool(None, 0, 'Enable use of asynchronous device malloc routines'))
+    help.addArgument('HYPRE', '-with-hypre-async-thrust', nargs.ArgBool(None, 0, 'Enable use of asynchronous thrust execution routines'))
+    help.addArgument('HYPRE', '-with-hypre-vendor-libraries', nargs.ArgBool(None, 1, 'Enable use of vendor solver, sparse, BLAS, and rand libraries'))
     return
 
   def setupDependencies(self, framework):
@@ -38,11 +42,13 @@ class Configure(config.package.GNUPackage):
     self.sycl          = framework.require('config.packages.SYCL',self)
     self.umpire        = framework.require('config.packages.Umpire',self)
     self.openmp        = framework.require('config.packages.OpenMP',self)
+    self.superlu       = framework.require('config.packages.SuperLU',self)
+    self.superlu_dist  = framework.require('config.packages.SuperLU_DIST',self)
     self.compilerFlags = framework.require('config.compilerFlags', self)
     self.scalar        = framework.require('PETSc.options.scalarTypes',self)
     self.languages     = framework.require('PETSc.options.languages',self)
     self.deps          = [self.mpi,self.blasLapack,self.cxxlibs,self.mathlib]
-    self.odeps         = [self.cuda,self.hip,self.openmp,self.umpire]
+    self.odeps         = [self.cuda,self.hip,self.openmp,self.umpire,self.superlu,self.superlu_dist]
     if self.setCompilers.isCrayKNL(None,self.log):
       self.installwithbatch = 0
 
@@ -99,6 +105,8 @@ class Configure(config.package.GNUPackage):
       hipbuild = True
       args.append('ROCM_PATH="{0}"'.format(self.hip.hipDir))
       args.append('--with-hip')
+      if self.argDB['with-hypre-vendor-libraries']:
+        args.extend(['--enable-rocsolver', '--enable-rocsparse', '--enable-rocblas', '--enable-rocrand'])
       if not hasharch:
         if not 'with-hypre-gpu-arch' in self.framework.clArgDB:
           if hasattr(self.hip,'hipArch'):
@@ -119,6 +127,8 @@ class Configure(config.package.GNUPackage):
         raise RuntimeError('CUDA directory not detected! Mail configure.log to petsc-maint@mcs.anl.gov.')
       args.append('CUDA_HOME="'+self.cuda.cudaDir+'"')
       args.append('--with-cuda')
+      if self.argDB['with-hypre-vendor-libraries']:
+        args.extend(['--enable-cusolver', '--enable-cusparse', '--enable-cublas', '--enable-curand'])
       if not hasharch:
         if not 'with-hypre-gpu-arch' in self.framework.clArgDB:
           if hasattr(self.cuda,'cudaArch'):
@@ -148,23 +158,40 @@ class Configure(config.package.GNUPackage):
       args.append('--with-openmp')
       self.usesopenmp = 'yes'
 
-    # If building for CUDA or HIP, checks whether Umpire is available or not
+    # If building for CUDA or HIP, checks whether Umpire, MAGMA, and SuperLU_DIST is available or not
     if (cudabuild or hipbuild):
+      # Umpire
       if not hasattr(self, 'umpire') or not self.umpire.found:
         self.logPrintWarning('Compiling HYPRE with GPU support but without Umpire support (not recommended). For best performance, consider reconfiguring --with-umpire-dir or with --download-umpire')
         args.append('--without-umpire')
       else:
         args.append('--with-umpire')
         # Include path
-        try:
-          incdir = self.umpire.include[0]
-        except Exception:
-          incdir = os.path.join(self.umpire.installDir,'include')
-        args.append('--with-umpire-include="'+incdir+'"')
+        args.append('--with-umpire-include="'+self.headers.toStringNoDupes(self.umpire.dinclude)+'"')
         # Library path and libs
         libdir = os.path.join(self.umpire.installDir,'lib')
         args.append('--with-umpire-lib-dirs="'+libdir+'"')
         args.append('--with-umpire-libs="camp umpire"')
+      # SuperLU_DIST
+      if self.argDB['with-hypre-superlu']:
+        if hasattr(self, 'superlu') and self.superlu.found:
+          args.append('--with-superlu')
+          # Include path
+          args.append('--with-superlu-include="'+self.headers.toStringNoDupes(self.superlu.dinclude)+'"')
+          # HYPRE only accepts --with-superlu-lib, not separate library path and libs
+          args.append('--with-superlu-lib="'+self.libraries.toStringNoDupes(self.superlu.dlib)+'"')
+        if hasattr(self, 'superlu_dist') and self.superlu_dist.found:
+          args.append('--with-dsuperlu')
+          # Include path
+          args.append('--with-dsuperlu-include="'+self.headers.toStringNoDupes(self.superlu_dist.dinclude)+'"')
+          # HYPRE only accepts --with-dsuperlu-lib, not separate library path and libs
+          args.append('--with-dsuperlu-lib="'+self.libraries.toStringNoDupes(self.superlu_dist.dlib)+'"')
+
+    if cudabuild or hipbuild or syclbuild:
+      if self.argDB['with-hypre-async-malloc']:
+        args.append('--enable-device-malloc-async')
+      if self.argDB['with-hypre-async-thrust']:
+        args.append('--enable-thrust-nosync')
 
     if self.usesopenmp == 'no':
       if hasattr(self,'openmp') and hasattr(self.openmp,'ompflag'):
@@ -185,7 +212,6 @@ class Configure(config.package.GNUPackage):
     args.append('--with-fmangle-lapack='+mang)
 
     args.append('--without-mli')
-    args.append('--without-superlu')
 
     if self.getDefaultIndexSize() == 64:
       if cudabuild or hipbuild or syclbuild: # HYPRE 2.23 supports only mixedint configurations with CUDA/HIP/SYCL
