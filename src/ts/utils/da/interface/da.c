@@ -855,7 +855,7 @@ PetscErrorCode DACholeskySqrt_Private(Mat A, Mat *L_out)
   // check correctness
   if (PetscDefined(USE_DEBUG)) {
     Mat       sqrtA = L, sqrtA_check;
-    PetscReal normA, normDiff, tolerance, eps;
+    PetscReal normA, normDiff, tolerance;
     PetscCall(MatMatTransposeMult(sqrtA, sqrtA, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &sqrtA_check));
     PetscCall(MatNorm(A, NORM_FROBENIUS, &normA));
     PetscCall(MatAXPY(sqrtA_check, -1.0, A, DIFFERENT_NONZERO_PATTERN));
@@ -877,8 +877,8 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   Mat          sqrtA, V, Vt, VSqrtD;
   Vec          sqrtD;
   PetscInt     m, n, i;
-  PetscScalar *varray, *sqrtvals;
-  PetscReal   *work, *eigvals;
+  PetscScalar *work, *varray, *sqrtvals;
+  PetscReal   *eigvals;
   PetscBLASInt bn, lwork, info;
   PetscReal    eps;
 
@@ -899,6 +899,17 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   PetscCall(PetscBLASIntCast(n, &bn));
   LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, &info);
   PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK syev failed with info = %" PetscBLASInt_FMT, info);
+
+#if defined(PETSC_USE_COMPLEX)
+  {
+    PetscReal *rwork;
+    PetscCall(PetscMalloc1(3 * dim, &rwork));
+    PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, rwork, &lierr));
+    PetscCall(PetscFree(rwork));
+  }
+#else
+  PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, &info));
+#endif
 
   eps = 10.0 * PETSC_MACHINE_EPSILON;
   for (i = 0; i < n; i++) {
