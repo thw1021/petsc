@@ -1,297 +1,205 @@
----
-Language:        Cpp
 AccessModifierOffset: -2
 AlignAfterOpenBracket: Align
-AlignArrayOfStructures: None
-AlignConsecutiveAssignments:
-  Enabled:         false
-  AcrossEmptyLines: false
-  AcrossComments:  false
-  AlignCompound:   false
-  AlignFunctionDeclarations: false
-  AlignFunctionPointers: false
-  PadOperators:    true
-AlignConsecutiveBitFields:
-  Enabled:         false
-  AcrossEmptyLines: false
-  AcrossComments:  false
-  AlignCompound:   false
-  AlignFunctionDeclarations: false
-  AlignFunctionPointers: false
-  PadOperators:    false
-AlignConsecutiveDeclarations:
-  Enabled:         false
-  AcrossEmptyLines: false
-  AcrossComments:  false
-  AlignCompound:   false
-  AlignFunctionDeclarations: true
-  AlignFunctionPointers: false
-  PadOperators:    false
-AlignConsecutiveMacros:
-  Enabled:         false
-  AcrossEmptyLines: false
-  AcrossComments:  false
-  AlignCompound:   false
-  AlignFunctionDeclarations: false
-  AlignFunctionPointers: false
-  PadOperators:    false
-AlignConsecutiveShortCaseStatements:
-  Enabled:         false
-  AcrossEmptyLines: false
-  AcrossComments:  false
-  AlignCaseArrows: false
-  AlignCaseColons: false
-AlignConsecutiveTableGenBreakingDAGArgColons:
-  Enabled:         false
-  AcrossEmptyLines: false
-  AcrossComments:  false
-  AlignCompound:   false
-  AlignFunctionDeclarations: false
-  AlignFunctionPointers: false
-  PadOperators:    false
-AlignConsecutiveTableGenCondOperatorColons:
-  Enabled:         false
-  AcrossEmptyLines: false
-  AcrossComments:  false
-  AlignCompound:   false
-  AlignFunctionDeclarations: false
-  AlignFunctionPointers: false
-  PadOperators:    false
-AlignConsecutiveTableGenDefinitionColons:
-  Enabled:         false
-  AcrossEmptyLines: false
-  AcrossComments:  false
-  AlignCompound:   false
-  AlignFunctionDeclarations: false
-  AlignFunctionPointers: false
-  PadOperators:    false
-AlignEscapedNewlines: Right
-AlignOperands:   Align
+AlignArrayOfStructures: Left
+AlignConsecutiveMacros: Consecutive
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveBitFields: Consecutive
+AlignConsecutiveDeclarations: Consecutive
+AlignEscapedNewlines: DontAlign
+AlignOperands: AlignAfterOperator
 AlignTrailingComments:
-  Kind:            Always
-  OverEmptyLines:  0
+  Kind: Always
+  OverEmptyLines: 0
 AllowAllArgumentsOnNextLine: true
+AllowAllConstructorInitializersOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
-AllowBreakBeforeNoexceptSpecifier: Never
-AllowShortBlocksOnASingleLine: Never
-AllowShortCaseExpressionOnASingleLine: true
+AllowShortEnumsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Always
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortCompoundRequirementOnASingleLine: true
-AllowShortEnumsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: All
-AllowShortIfStatementsOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: Inline
 AllowShortLambdasOnASingleLine: All
-AllowShortLoopsOnASingleLine: false
-AllowShortNamespacesOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortLoopsOnASingleLine: true
 AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: Yes
 AttributeMacros:
   - __capability
+  - PETSC_EXTERN
+  - PETSC_INTERN
+  - PETSC_UNUSED
+  - PETSC_RESTRICT
+  - PETSC_SINGLE_LIBRARY_INTERN
+  - PETSC_ATTRIBUTE_FORMAT
+  - PETSC_ATTRIBUTE_MPI_TYPE_TAG
+  - PETSC_ATTRIBUTE_MPI_POINTER_WITH_TYPE
+  - PETSC_ATTRIBUTE_MPI_TYPE_TAG_LAYOUT_COMPATIBLE
+  - PETSC_ATTRIBUTE_COLD
 BinPackArguments: true
-BinPackLongBracedList: true
-BinPackParameters: BinPack
-BitFieldColonSpacing: Both
-BracedInitializerIndentWidth: -1
+BinPackParameters: true
+BreakBeforeBraces: Custom
 BraceWrapping:
   AfterCaseLabel:  false
   AfterClass:      false
   AfterControlStatement: Never
   AfterEnum:       false
-  AfterExternBlock: false
-  AfterFunction:   false
-  AfterNamespace:  false
+  AfterFunction:   true
+  AfterNamespace:  true
   AfterObjCDeclaration: false
   AfterStruct:     false
-  AfterUnion:      false
+  AfterUnion:      true
+  AfterExternBlock: false
   BeforeCatch:     false
   BeforeElse:      false
   BeforeLambdaBody: false
   BeforeWhile:     false
   IndentBraces:    false
   SplitEmptyFunction: true
-  SplitEmptyRecord: true
+  SplitEmptyRecord: false
   SplitEmptyNamespace: true
-BreakAdjacentStringLiterals: true
-BreakAfterAttributes: Leave
-BreakAfterJavaFieldAnnotations: false
-BreakAfterReturnType: None
-BreakArrays:     true
 BreakBeforeBinaryOperators: None
-BreakBeforeConceptDeclarations: Always
-BreakBeforeBraces: Attach
-BreakBeforeInlineASMColon: OnlyMultiline
-BreakBeforeTemplateCloser: false
+# BreakBeforeConceptDeclarations: Allowed
+BreakBeforeInheritanceComma: false
+BreakInheritanceList: AfterColon
 BreakBeforeTernaryOperators: true
-BreakBinaryOperations: Never
-BreakConstructorInitializers: BeforeColon
-BreakFunctionDefinitionParameters: false
-BreakInheritanceList: BeforeColon
+BreakConstructorInitializersBeforeComma: false
+BreakConstructorInitializers: AfterColon
+BreakAfterJavaFieldAnnotations: false
 BreakStringLiterals: true
-BreakTemplateDeclarations: MultiLine
-ColumnLimit:     80
-CommentPragmas:  '^ IWYU pragma:'
+ColumnLimit: 250
 CompactNamespaces: false
-ConstructorInitializerIndentWidth: 4
-ContinuationIndentWidth: 4
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+ConstructorInitializerIndentWidth: 2
+ContinuationIndentWidth: 2
 Cpp11BracedListStyle: true
+DeriveLineEnding: true
 DerivePointerAlignment: false
-DisableFormat:   false
+DisableFormat: false
 EmptyLineAfterAccessModifier: Never
 EmptyLineBeforeAccessModifier: LogicalBlock
-EnumTrailingComma: Leave
 ExperimentalAutoDetectBinPacking: false
 FixNamespaceComments: true
 ForEachMacros:
-  - foreach
-  - Q_FOREACH
-  - BOOST_FOREACH
+#  - BOOST_FOREACH
 IfMacros:
-  - KJ_IF_MAYBE
-IncludeBlocks:   Preserve
-IncludeCategories:
-  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
-    Priority:        2
-    SortPriority:    0
-    CaseSensitive:   false
-  - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
-    Priority:        3
-    SortPriority:    0
-    CaseSensitive:   false
-  - Regex:           '.*'
-    Priority:        1
-    SortPriority:    0
-    CaseSensitive:   false
-IncludeIsMainRegex: '(Test)?$'
+  #- PetscCheck
+  #- PetscAssert
+IncludeBlocks: Preserve
 IncludeIsMainSourceRegex: ''
 IndentAccessModifiers: false
-IndentCaseBlocks: false
 IndentCaseLabels: false
-IndentExportBlock: true
-IndentExternBlock: AfterExternBlock
+IndentCaseBlocks: false
 IndentGotoLabels: true
-IndentPPDirectives: None
-IndentRequiresClause: true
-IndentWidth:     2
+IndentPPDirectives: BeforeHash
+IndentExternBlock: NoIndent
+IndentRequires: false
+IndentWidth: 2
 IndentWrappedFunctionNames: false
-InsertBraces:    false
-InsertNewlineAtEOF: false
 InsertTrailingCommas: None
-IntegerLiteralSeparator:
-  Binary:          0
-  BinaryMinDigits: 0
-  Decimal:         0
-  DecimalMinDigits: 0
-  Hex:             0
-  HexMinDigits:    0
-JavaScriptQuotes: Leave
-JavaScriptWrapImports: true
-KeepEmptyLines:
-  AtEndOfFile:     false
-  AtStartOfBlock:  true
-  AtStartOfFile:   true
-KeepFormFeed:    false
+KeepEmptyLinesAtTheStartOfBlocks: false
+KeepEmptyLinesAtEOF: false
 LambdaBodyIndentation: Signature
-LineEnding:      DeriveLF
 MacroBlockBegin: ''
 MacroBlockEnd:   ''
-MainIncludeChar: Quote
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
-ObjCBinPackProtocolList: Auto
-ObjCBlockIndentWidth: 2
-ObjCBreakBeforeNestedBlockParam: true
-ObjCSpaceAfterProperty: false
-ObjCSpaceBeforeProtocolList: true
-OneLineFormatOffRegex: ''
-PackConstructorInitializers: BinPack
-PenaltyBreakAssignment: 2
-PenaltyBreakBeforeFirstCallParameter: 19
-PenaltyBreakBeforeMemberAccess: 150
-PenaltyBreakComment: 300
+PackConstructorInitializers: NextLine
+PenaltyBreakAssignment: 1000000
+PenaltyBreakBeforeFirstCallParameter: 1000000
+PenaltyBreakComment: 300000
 PenaltyBreakFirstLessLess: 120
-PenaltyBreakOpenParenthesis: 0
-PenaltyBreakScopeResolution: 500
 PenaltyBreakString: 1000
 PenaltyBreakTemplateDeclaration: 10
-PenaltyExcessCharacter: 1000000
+PenaltyExcessCharacter: 0
+PenaltyReturnTypeOnItsOwnLine: 1000000
 PenaltyIndentedWhitespace: 0
-PenaltyReturnTypeOnItsOwnLine: 60
 PointerAlignment: Right
-PPIndentWidth:   -1
-QualifierAlignment: Leave
+PPIndentWidth: -1
 ReferenceAlignment: Pointer
-ReflowComments:  Always
-RemoveBracesLLVM: false
-RemoveEmptyLinesInUnwrappedLines: false
-RemoveParentheses: Leave
-RemoveSemicolon: false
-RequiresClausePosition: OwnLine
-RequiresExpressionIndentation: OuterScope
-SeparateDefinitionBlocks: Leave
-ShortNamespaceLines: 1
-SkipMacroDefinitionBody: false
-SortIncludes:
-  Enabled:         true
-  IgnoreCase:      false
-SortJavaStaticImport: Before
-SortUsingDeclarations: LexicographicNumeric
+ReflowComments: false
+ShortNamespaceLines: 0
+SortIncludes: Never
+SortUsingDeclarations: false
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
-SpaceAfterOperatorKeyword: false
 SpaceAfterTemplateKeyword: true
-SpaceAroundPointerQualifiers: Default
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeCaseColon: false
 SpaceBeforeCpp11BracedList: false
 SpaceBeforeCtorInitializerColon: true
 SpaceBeforeInheritanceColon: true
-SpaceBeforeJsonColon: false
-SpaceBeforeParens: ControlStatements
-SpaceBeforeParensOptions:
-  AfterControlStatements: true
-  AfterForeachMacros: true
-  AfterFunctionDefinitionName: false
-  AfterFunctionDeclarationName: false
-  AfterIfMacros:   true
-  AfterNot:        false
-  AfterOverloadedOperator: false
-  AfterPlacementOperator: true
-  AfterRequiresInClause: false
-  AfterRequiresInExpression: false
-  BeforeNonEmptyParentheses: false
+SpaceBeforeParens: ControlStatementsExceptControlMacros
+SpaceAroundPointerQualifiers: Default
 SpaceBeforeRangeBasedForLoopColon: true
-SpaceBeforeSquareBrackets: false
-SpaceInEmptyBlock: false
+SpaceInEmptyBlock: true
+SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
-SpacesInAngles:  Never
+SpacesInAngles: Never
+SpacesInConditionalStatement: false
 SpacesInContainerLiterals: true
+SpacesInCStyleCastParentheses: false
 SpacesInLineCommentPrefix:
-  Minimum:         1
-  Maximum:         -1
-SpacesInParens:  Never
-SpacesInParensOptions:
-  ExceptDoubleParentheses: false
-  InCStyleCasts:   false
-  InConditionalStatements: false
-  InEmptyParentheses: false
-  Other:           false
+  Minimum: 1
+  Maximum: -1
+SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard:        Latest
+SpaceBeforeSquareBrackets: false
+SeparateDefinitionBlocks: Leave
+BitFieldColonSpacing: Both
+Standard: Latest
 StatementAttributeLikeMacros:
-  - Q_EMIT
+  - PETSC_EXTERN
+  - PETSC_INTERN
+  - PETSC_NODISCARD
+  - PETSC_DEPRECATED_FUNCTION
+  - PETSC_DEPRECATED_ENUM
+  - PETSC_DEPRECATED_TYPEDEF
+  - PETSC_DEPRECATED_MACRO
 StatementMacros:
-  - Q_UNUSED
-  - QT_REQUIRE_VERSION
-TableGenBreakInsideDAGArg: DontBreak
-TabWidth:        8
-UseTab:          Never
-VerilogBreakBetweenInstancePorts: true
+  - PetscKernel_A_gets_transpose_A_DECLARE
+  - PETSC_RETURNS
+  - PETSC_DECLTYPE_AUTO_RETURNS
+  - PETSC_NOEXCEPT_AUTO_RETURNS
+  - PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS
+  - PETSC_UNUSED
+  - PetscPragmaOMP
+  - PetscPragmaUseOMPKernels
+  - PetscPragmaSIMD
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN_
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END_
+  - _Pragma
+TypeNames:
+  - PetscScalar
+  - PetscComplex
+  - PetscReal
+  - PetscInt
+  - PetscMPIInt
+  - PetscBLASInt
+  - PetscErrorCode
+  - PetscBool
+  - PetscBool3
+  - PetscCtxDestroyFn
+  - Func
+TabWidth: 2
+UseCRLF: false
+UseTab: Never
 WhitespaceSensitiveMacros:
-  - BOOST_PP_STRINGIZE
-  - CF_SWIFT_NAME
-  - NS_SWIFT_NAME
-  - PP_STRINGIZE
-  - STRINGIZE
-WrapNamespaceBodyWithEmptyLines: Leave
-...
-
+  - PetscStringize
+  - PetscStringize_
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN_
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END_
+  - _Pragma
+  - PETSC_DEPRECATED_IDENTIFIER
+  - PETSC_DEPRECATED_IDENTIFIER_
+  - PETSC_VALID_POINTER_IMPL_SPECIALIZATION
+  - _Generic
+  - PETSC_GENERIC_CV
+  - PetscMacroReturnStandard
+TypenameMacros:
+  - khash_t
+InsertNewlineAtEOF: true
