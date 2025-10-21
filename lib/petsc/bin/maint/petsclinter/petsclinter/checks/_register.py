@@ -130,6 +130,7 @@ def __register_all_classids() -> None:
     "_p_AO *"                     : "AO_CLASSID",
     "_p_PetscBench *"                : "BM_CLASSID",
     "_p_Characteristic *"         : "CHARACTERISTIC_CLASSID",
+    "_p_DA *"                     : "DA_CLASSID",
     "_p_DM *"                     : "DM_CLASSID",
     "_p_DMAdaptor *"              : "DMADAPTOR_CLASSID",
     "_p_DMField *"                : "DMFIELD_CLASSID",
