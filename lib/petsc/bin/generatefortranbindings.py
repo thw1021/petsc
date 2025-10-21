@@ -65,7 +65,10 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
       return
 
   mansec = fun.mansec
-  if not mansec: mansec = fun.submansec
+  if not mansec:
+    if not hasattr('submansec', fun):
+      print(fun)
+    mansec = fun.submansec
   file = fun.includefile + '90'
   if not file.startswith(pkgname): file = pkgname + file
   ofile = os.path.join(petscarch,'ftn', getAPI.mansecpath(mansec),file)
