@@ -66,9 +66,11 @@ class Configure(config.package.CMakePackage):
         args.append('-DHIP_HIPCC_FLAGS="'+hipArchFlags+' '+self.getCompilerFlags()+' '+self.mpi.includepaths+' '+self.headers.toString(self.hip.include)+' -DDEBUGlevel=0 -DPRNTlevel=0"')
 
     args.append('-DUSE_XSDK_DEFAULTS=YES')
+    args.append('-DTPL_ENABLE_LAPACKLIB=TRUE')
     args.append('-DTPL_BLAS_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
     args.append('-DTPL_LAPACK_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
     if self.parmetis.found:
+      args.append('-DTPL_ENABLE_PARMETISLIB=TRUE')
       args.append('-DTPL_PARMETIS_INCLUDE_DIRS="'+';'.join(self.parmetis.dinclude)+'"')
       args.append('-DTPL_PARMETIS_LIBRARIES="'+self.libraries.toString(self.parmetis.dlib)+'"')
     else:
