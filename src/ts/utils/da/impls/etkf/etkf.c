@@ -178,7 +178,7 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(VecDuplicate(da->obs_error_var, &r_inv_sqrt));
   PetscCall(VecCopy(da->obs_error_var, r_inv_sqrt)); /* Step 3: reuse diag(R) to build R^{-1/2}. */
   PetscCall(VecGetArray(r_inv_sqrt, &r_inv_sqrt_array));
-  for (i = 0; i < da->obs_size; i++) { r_inv_sqrt_array[i] = 1.0 / PetscSqrtReal(PetscRealPart(r_inv_sqrt_array[i])); /* assumes R diagonal. */ }
+  for (i = 0; i < da->obs_size; i++) r_inv_sqrt_array[i] = 1.0 / PetscSqrtReal(PetscRealPart(r_inv_sqrt_array[i])); /* assumes R diagonal. */
   PetscCall(VecRestoreArray(r_inv_sqrt, &r_inv_sqrt_array));
 
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &S));
@@ -207,7 +207,7 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &I_m));
   PetscCall(MatSetUp(I_m));
   PetscCall(MatZeroEntries(I_m));
-  for (i = 0; i < m; i++) { PetscCall(MatSetValue(I_m, i, i, 1.0, INSERT_VALUES)); /* Identity in reduced space. */ }
+  for (i = 0; i < m; i++) PetscCall(MatSetValue(I_m, i, i, 1.0, INSERT_VALUES)); /* Identity in reduced space. */
   PetscCall(MatAssemblyBegin(I_m, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(I_m, MAT_FINAL_ASSEMBLY));
 
@@ -246,7 +246,7 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(MatSetUp(w_ones));
   PetscCall(VecGetArray(w, &w_array));
   for (i = 0; i < m; i++) {
-    for (PetscInt j = 0; j < m; j++) { PetscCall(MatSetValue(w_ones, i, j, w_array[i], INSERT_VALUES)); /* w replicated across columns (w·1ᵀ). */ }
+    for (PetscInt j = 0; j < m; j++) PetscCall(MatSetValue(w_ones, i, j, w_array[i], INSERT_VALUES)); /* w replicated across columns (w·1ᵀ). */
   }
   PetscCall(VecRestoreArray(w, &w_array));
   PetscCall(MatAssemblyBegin(w_ones, MAT_FINAL_ASSEMBLY));

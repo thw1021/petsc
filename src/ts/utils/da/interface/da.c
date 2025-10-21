@@ -265,7 +265,6 @@ PetscErrorCode DASetType(DA da, DAType type)
 
   if (!da->ops->computemean) da->ops->computemean = DAComputeMean_Default;
   if (!da->ops->computeanomalies) da->ops->computeanomalies = DAComputeAnomalies_Default;
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -888,6 +887,7 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   PetscReal   *work, *eigvals;
   PetscBLASInt bn, lwork, info;
   PetscReal    eps;
+
   PetscFunctionBegin;
 
   PetscCall(MatGetSize(A, &m, &n));
