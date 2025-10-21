@@ -1,4 +1,4 @@
-const char help[] = "test least-squares problem created from a mapped taoterm";
+const char help[] = "test least-squares problem created from a mapped taoterm quadratic";
 
 #include <petsctao.h>
 
@@ -49,6 +49,9 @@ int main(int argc, char **argv)
 
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSolve(tao));
+
+  //TODO create second TAO, with quad mat set to term directly, without mapping. sol should be the same
+  //TODO where is solution?
 
   PetscCall(VecDestroy(&b));
   PetscCall(MatDestroy(&W));

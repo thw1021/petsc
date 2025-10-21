@@ -17,7 +17,8 @@ typedef struct _n_TaoTermSumHessCache {
 } TaoTermSumHessCache;
 
 struct _n_TaoTerm_Sum {
-  Mat                 hessian_composite;
+  Mat                 H_composite;
+  Mat                 Hpre_composite;
   PetscInt            n_terms;
   TaoTermMapping     *terms;
   PetscReal          *subterm_values;
@@ -63,15 +64,16 @@ static PetscErrorCode TaoTermSumIsDummyDestroy(void **ctx)
   return PetscFree(*ctx);
 }
 
-//Creates MATCOMPOSITE that contains a list of subterms' Hessians
-static PetscErrorCode TaoTermCreateHessianMatrices_Sum(TaoTerm term, Mat *H, Mat *Hpre)
+static PetscErrorCode TaoTermCreateCompositeHessianMatrices_Internal(TaoTerm term, Mat *H, Mat *Hpre)
 {
   TaoTerm_Sum *sum = (TaoTerm_Sum *)term->data;
   Mat         *hessians = NULL;
   PetscReal   *scale    = NULL;
 
   PetscFunctionBegin;
-  if (sum->hessian_composite) PetscCall(MatDestroy(&sum->hessian_composite));
+  //TODO when will destroy happen? not clear
+  if (sum->H_composite) PetscCall(MatDestroy(&sum->H_composite));
+  if (sum->Hpre_composite) PetscCall(MatDestroy(&sum->Hpre_composite));
   PetscCall(PetscCalloc1(sum->n_terms, &hessians));
   PetscCall(PetscCalloc1(sum->n_terms, &scale));
 
@@ -100,9 +102,9 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Sum(TaoTerm term, Mat *H, Mat
     }
   }
 
-  PetscCall(MatCreateComposite(PetscObjectComm((PetscObject)term), sum->n_terms, hessians, &sum->hessian_composite));
-  PetscCall(MatCompositeSetType(sum->hessian_composite, MAT_COMPOSITE_ADDITIVE));
-  PetscCall(MatCompositeSetScalings(sum->hessian_composite, scale));
+  PetscCall(MatCreateComposite(PetscObjectComm((PetscObject)term), sum->n_terms, hessians, &sum->H_composite));
+  PetscCall(MatCompositeSetType(sum->H_composite, MAT_COMPOSITE_ADDITIVE));
+  PetscCall(MatCompositeSetScalings(sum->H_composite, scale));
   PetscCall(PetscFree(hessians));
   PetscCall(PetscFree(scale));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -287,7 +289,8 @@ static PetscErrorCode TaoTermDestroy_Sum(TaoTerm term)
 
   PetscFunctionBegin;
   PetscCall(TaoTermSumHessCacheReset(&sum->hessian_cache));
-  PetscCall(MatDestroy(&sum->hessian_composite));
+  PetscCall(MatDestroy(&sum->H_composite));
+  PetscCall(MatDestroy(&sum->Hpre_composite));
   for (PetscInt i = 0; i < sum->n_terms; i++) PetscCall(TaoTermMappingReset(&sum->terms[i]));
   for (PetscInt i = 0; i < sum->hessian_cache.n_terms; i++) PetscCall(MatDestroy(&sum->hessian_cache.hessians[i]));
   PetscCall(PetscFree(sum->hessian_cache.hessians));
@@ -309,6 +312,7 @@ static PetscErrorCode TaoTermDestroy_Sum(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetSubtermMask_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetSubtermMask_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetLastSubtermObjectives_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumUpdateCompositeHessianMatrices_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -734,13 +738,92 @@ static PetscErrorCode TaoTermSumSetSubterm_Sum(TaoTerm term, PetscInt index, con
 }
 
 /*@
+  TaoTermSumUpdateCompositeHessianMatrices - Updates internal Hessian matrices of `TAOTERMSUM`,
+  which is of `MatType` `MATCOMPOSITE`.
+
+  Logically collective
+
+  Input Parameters:
+- term - a `TaoTerm` of type `TAOTERMSUM`
+
+  Level: developer
+
+  Note:
+  `TAOTERMSUM` stores a list of Hessians of its subterms, in a `MATCOMPOSITE`.
+  TODO only mapped_H. right?
+  TODO can some of matcomposite be null? vecnest had to do custom stuff bc vecnest doesnt allow it
+
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TAOTERMSUM`,
+          `TaoTermComputeHessian()`,
+          `TaoTermSumSetSubtermHessianMatrices()`
+@*/
+PetscErrorCode TaoTermSumUpdateCompositeHessianMatrices(TaoTerm term)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscTryMethod(term, "TaoTermSumUpdateCompositeHessianMatrices_C", (TaoTerm), (term));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermSumUpdateCompositeHessianMatrices_Sum(TaoTerm term)
+{
+  TaoTerm_Sum *sum      = (TaoTerm_Sum *)term->data;
+  Mat         *hessians = NULL;
+  PetscReal   *scale    = NULL;
+  PetscBool    Hpre_is_H;
+
+  PetscFunctionBegin;
+  //TODO sanity check whether matcomposite exists
+  if (!sum->H_composite) PetscCall(TaoTermCreateCompositeHessianMatrices_Internal(term, &sum->H_composite, &sum->H_composite));
+
+  for (PetscInt i = 0; i < sum->n_terms; i++) {
+    TaoTermMapping *summand = &sum->terms[i];
+    PetscBool       is_callback;
+
+    PetscCall(PetscObjectTypeCompare((PetscObject)summand->term, TAOTERMCALLBACKS, &is_callback));
+
+    scale[i] = summand->scale;
+    if (is_callback) {
+      PetscBool ishess;
+
+      // Currently TAOTERMCALLBACK without Hessian set cannot use Hessian method
+      // callback without unmapped_H, but may have hessian from original Tao formulation
+      // see tao/leastsquares/tutorials/brgn_term.c for an example
+      PetscCall(TaoTermIsHessianDefined(summand->term, &ishess));
+      PetscCheck(ishess, PetscObjectComm((PetscObject)summand->term), PETSC_ERR_USER, "TAOTERMCALLBACK does not have Hessian routines set");
+      PetscCall(TaoTermCallbacksGetHessianMatrices(summand->term, &hessians[i], NULL));
+      PetscCall(PetscObjectReference((PetscObject)hessians[i]));
+    } else {
+      if (summand->_mapped_H) {
+        PetscCall(PetscObjectReference((PetscObject)summand->_mapped_H));
+        hessians[i] = summand->_mapped_H;
+      } else if (summand->_unmapped_H) {
+        PetscCall(PetscObjectReference((PetscObject)summand->_unmapped_H));
+        hessians[i] = summand->_unmapped_H;
+      } else {
+        PetscCall(TaoTermCreateHessianMatrices(summand->term, &hessians[i], NULL));
+      }
+    }
+  }
+
+  PetscCall(MatCreateComposite(PetscObjectComm((PetscObject)term), sum->n_terms, hessians, &sum->H_composite));
+  PetscCall(MatCompositeSetType(sum->H_composite, MAT_COMPOSITE_ADDITIVE));
+  PetscCall(MatCompositeSetScalings(sum->H_composite, scale));
+  PetscCall(PetscFree(hessians));
+  PetscCall(PetscFree(scale));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   TaoTermSumGetCompositeHessianMatrices - Get Hessian matrices of type `MATCOMPOSITE` with additive type,
   which is sum of `TAOTERMSUM`'s substerms' Hessian matrices.
 
   Logically collective
 
   Input Parameters:
-- term   - a `TaoTerm` of type `TAOTERMSUM`
+- term - a `TaoTerm` of type `TAOTERMSUM`
 
   Output Parameters:
 + H    - (optional) unmapped Hessian matrix
@@ -750,7 +833,7 @@ static PetscErrorCode TaoTermSumSetSubterm_Sum(TaoTerm term, PetscInt index, con
 
   Note:
   This routine does not update Hessians. To obtain the latest Hessian, call
-  `TaoTermComputeHe
+  `TaoTermComputeHessian()`.
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -773,7 +856,7 @@ static PetscErrorCode TaoTermSumGetCompositeHessianMatrices_Sum(TaoTerm term, Ma
   PetscReal   *scale    = NULL;
 
   PetscFunctionBegin;
-  if (sum->hessian_composite) PetscCall(MatDestroy(&sum->hessian_composite));
+  if (sum->H_composite) PetscCall(MatDestroy(&sum->H_composite));
   PetscCall(PetscCalloc1(sum->n_terms, &hessians));
   PetscCall(PetscCalloc1(sum->n_terms, &scale));
 
@@ -802,9 +885,9 @@ static PetscErrorCode TaoTermSumGetCompositeHessianMatrices_Sum(TaoTerm term, Ma
     }
   }
 
-  PetscCall(MatCreateComposite(PetscObjectComm((PetscObject)term), sum->n_terms, hessians, &sum->hessian_composite));
-  PetscCall(MatCompositeSetType(sum->hessian_composite, MAT_COMPOSITE_ADDITIVE));
-  PetscCall(MatCompositeSetScalings(sum->hessian_composite, scale));
+  PetscCall(MatCreateComposite(PetscObjectComm((PetscObject)term), sum->n_terms, hessians, &sum->H_composite));
+  PetscCall(MatCompositeSetType(sum->H_composite, MAT_COMPOSITE_ADDITIVE));
+  PetscCall(MatCompositeSetScalings(sum->H_composite, scale));
   PetscCall(PetscFree(hessians));
   PetscCall(PetscFree(scale));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1333,6 +1416,29 @@ static PetscErrorCode TaoTermCreateParametersVec_Sum(TaoTerm term, Vec *paramete
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermCreateHessianMatrices_Sum(TaoTerm term, Mat *H, Mat *Hpre)
+{
+  TaoTerm_Sum *sum       = (TaoTerm_Sum *)term->data;
+  PetscBool    Hpre_is_H = PETSC_TRUE;
+  TaoTerm      subterm0;
+  MatType      H_mattype;
+  MatType      Hpre_mattype;
+
+  PetscFunctionBegin;
+  PetscCall(TaoTermSumGetSubterm(term, 0, NULL, NULL, &subterm0, NULL));
+  PetscCall(TaoTermGetCreateHessianMode(subterm0, NULL, &H_mattype, &Hpre_mattype));
+  //TODO is_shell, need to so something???
+  if (H || Hpre) PetscCall(TaoTermCreateHessianMatricesDefault_H_Internal(term, H, Hpre, Hpre_is_H, H_mattype));
+  PetscCall(TaoTermSetCreateHessianMode(term,  PETSC_TRUE, H_mattype, Hpre_mattype));
+  // Need to create subterms' mapped Hessians and PtAP routines, if needed
+  for (PetscInt i = 0; i < sum->n_terms; i++) {
+    TaoTermMapping *summand   = &sum->terms[i];
+
+    PetscCall(TaoTermMappingCreateHessianMatrices(summand, &summand->_mapped_H, &summand->_mapped_Hpre));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
   TAOTERMSUM - A `TaoTerm` that is a sum of multiple other terms.
 
@@ -1364,8 +1470,12 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm term)
   term->data            = (void *)sum;
   term->parameters_mode = TAOTERM_PARAMETERS_OPTIONAL;
 
+  sum->H_composite    = NULL;
+  sum->Hpre_composite = NULL;
+
   term->H_mattype    = NULL;
   term->Hpre_mattype = NULL;
+  term->Hpre_is_H    = PETSC_TRUE;
 
   term->ops->destroy               = TaoTermDestroy_Sum;
   term->ops->view                  = TaoTermView_Sum;
@@ -1386,6 +1496,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetSubtermHessianMatrices_C", TaoTermSumGetSubtermHessianMatrices_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetSubtermHessianMatrices_C", TaoTermSumSetSubtermHessianMatrices_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetCompositeHessianMatrices_C", TaoTermSumGetCompositeHessianMatrices_Sum));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumUpdateCompositeHessianMatrices_C", TaoTermSumUpdateCompositeHessianMatrices_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetSubtermMask_C", TaoTermSumGetSubtermMask_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumSetSubtermMask_C", TaoTermSumSetSubtermMask_Sum));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermSumGetLastSubtermObjectives_C", TaoTermSumGetLastSubtermObjectives_Sum));
