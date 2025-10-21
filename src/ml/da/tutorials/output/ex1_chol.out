@@ -1,0 +1,26 @@
+Lorenz-96 ETKF quick example
+  State dimension      : 40
+  Ensemble size        : 30
+  Time step             : 0.0500
+  Total steps           : 120
+  Burn-in steps         : 10
+  Observation frequency : 1
+  Observation noise std : 1.000
+
+Step    0, time 0.000  RMSE_forecast 0.16153  RMSE_analysis 0.34140 [burn-in]
+Step   12, time 0.600  RMSE_forecast 0.58212  RMSE_analysis 0.40418
+Step   24, time 1.200  RMSE_forecast 0.56861  RMSE_analysis 0.45139
+Step   36, time 1.800  RMSE_forecast 0.62728  RMSE_analysis 0.51729
+Step   48, time 2.400  RMSE_forecast 0.57026  RMSE_analysis 0.39388
+Step   60, time 3.000  RMSE_forecast 0.61214  RMSE_analysis 0.50427
+Step   72, time 3.600  RMSE_forecast 0.46141  RMSE_analysis 0.38899
+Step   84, time 4.200  RMSE_forecast 0.66247  RMSE_analysis 0.49635
+Step   96, time 4.800  RMSE_forecast 0.59940  RMSE_analysis 0.52637
+Step  108, time 5.400  RMSE_forecast 0.73736  RMSE_analysis 0.50954
+Step  120, time 6.000  RMSE_forecast 0.61756  RMSE_analysis 0.47051
+
+Statistics over 111 assimilation steps (post burn-in):
+  Mean RMSE (forecast): 0.630521
+  Mean RMSE (analysis): 0.469631
+  Observations assimilated: 121
+
