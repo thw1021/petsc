@@ -57,8 +57,7 @@ int main(int argc, char **args)
     // Do not include barrier in the timed region
     times[k] = MPI_Wtime();
     for (int l = 0; l < NTIMESINNER; l++) {
-      for (register int j = 0; j < n; j++) a[j] = b[j] + scalar * c[j];
-      if (size == 65) printf("never printed %g\n", a[11]);
+      for (int j = 0; j < n; j++) a[j] = b[j] + scalar * c[j];
     }
     //   PetscCallMPI(MPI_Barrier(MPI_COMM_WORLD));
     times[k] = MPI_Wtime() - times[k];
@@ -79,12 +78,12 @@ int main(int argc, char **args)
       fd = fopen("flops", "r");
       fscanf(fd, "%lg", &prate);
       fclose(fd);
-      printf("%d %11.4f   Rate (MB/s) %g \n", size, rate, rate / prate);
+      printf("%3d %11.1f   Rate (MB/s) %6.1f\n", size, rate, rate / prate);
     } else {
       fd = fopen("flops", "w");
       fprintf(fd, "%g\n", rate);
       fclose(fd);
-      printf("%d %11.4f   Rate (MB/s) 1\n", size, rate);
+      printf("%3d %11.1f   Rate (MB/s) %6.1f\n", size, rate, 1.0);
     }
   }
   PetscCall(PetscFinalize());
