@@ -89,8 +89,6 @@
 - Add `TaoBRGNGetRegularizationType()`, `TaoBRGNSetReguarizationType()`, `TaoBRGNGetRegularizerTerm()` and `TaoBRGNSetRegularizerTerm()` for finer control of `TAOBRGN`
 - Remove `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` and `TaoBRGNSetRegularizerHessianRoutine()`, use `TaoBRGNSetRegulizerTerm()` instead
 - Remove `setBRGNRegularizerObjectiveGradient()`, and `setBRGNRegularizerHessian()` Python routines. Use `setBRGNRegularizerTerm()` instead
-- Remove many ADMM related operations as it has been reimplemented using `TaoTerm`: `TaoADMMRegularizerType` enum (including `TAO_ADMM_REGULARIZER_USER`, `TAO_ADMM_REGULARIZER_SOFT_THRESH` values), `TaoGetADMMParentTao()`, `TaoADMMSetConstraintVectorRHS()`, `TaoADMMSetRegularizerCoefficient()`, `TaoADMMGetRegularizerCoefficient()`, `TaoADMMSetMisfitConstraintJacobian()`, `TaoADMMSetRegularizerConstraintJacobian()`, `TaoADMMSetRegularizerHessianRoutine()`, `TaoADMMSetRegularizerObectiveAndGradientRoutine()`, `TaoADMMSetMisfitHessianRoutine()`, `TaoADMMSetMisfitObjectiveAndGradientRoutine()`, `TaoADMMSetMisfitHessianChangeStatus()`, `TaoADMMSetRegHessianChangeStatus()`, `TaoADMMSetRegularizerType()`, `TaoADMMGetRegularizerType()`
-- Add `TaoADMMSetTermGroups()` and `TaoADMMGetTermGroups()`
 
 ```{rubric} TaoTerm:
 ```

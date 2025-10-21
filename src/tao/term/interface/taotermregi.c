@@ -4,8 +4,6 @@ PetscBool         TaoTermRegisterAllCalled = PETSC_FALSE;
 PetscFunctionList TaoTermList              = NULL;
 
 PETSC_INTERN PetscErrorCode TaoTermCreate_Callbacks(TaoTerm);
-PETSC_INTERN PetscErrorCode TaoTermCreate_ADMMRegularizer(TaoTerm);
-PETSC_INTERN PetscErrorCode TaoTermCreate_ADMMMisfit(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm);

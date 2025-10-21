@@ -282,8 +282,6 @@ struct _p_TaoTerm {
 PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void);
 
 PETSC_INTERN PetscErrorCode TaoTermCreateCallbacks(Tao, TaoTerm *);
-PETSC_INTERN PetscErrorCode TaoTermCreateADMMMisfit(Tao, TaoTerm *);
-PETSC_INTERN PetscErrorCode TaoTermCreateADMMRegularizer(Tao, TaoTerm *);
 
 PETSC_INTERN PetscErrorCode TaoTermCreate_ElementwiseDivergence_Internal(TaoTerm);
 PETSC_INTERN PetscErrorCode TaoTermDestroy_ElementwiseDivergence_Internal(TaoTerm);

@@ -1,123 +1,81 @@
-iter = 0, Function value: 0.00378251,  Residual: -2.   Constraint: 0. 
-    Iteration information for admm_sub_0_ solve.
+    Iteration information for misfit_ solve.
     0 TAO,    Function value: 0.00378251,    Residual: 0.00101179 
-    1 TAO,    Function value: 0.000434894,    Residual: 1.00663e-08 
-    2 TAO,    Function value: 0.000434894,    Residual: 1.0019e-13 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 5.45211e-09,    Residual: 0. 
-iter = 1, Function value: 0.000394366,  Residual: 0.000126505   Constraint: 0.00450139 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000404491,    Residual: 0.000189756 
-    1 TAO,    Function value: 0.000387246,    Residual: 1.89597e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 4.24615e-09,    Residual: 0. 
-iter = 2, Function value: 0.000379354,  Residual: 0.000123352   Constraint: 0.00198686 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000381323,    Residual: 0.000185018 
-    1 TAO,    Function value: 0.000376742,    Residual: 1.84226e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 5.25286e-09,    Residual: 0. 
-iter = 3, Function value: 0.000374483,  Residual: 0.000122356   Constraint: 0.00106391 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000375043,    Residual: 0.000183534 
-    1 TAO,    Function value: 0.00037268,    Residual: 1.76088e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 5.57261e-09,    Residual: 0. 
-iter = 4, Function value: 0.000371655,  Residual: 0.00012174   Constraint: 0.000717794 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000371907,    Residual: 0.000182608 
-    1 TAO,    Function value: 0.000370234,    Residual: 1.788e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 6.04926e-09,    Residual: 0. 
-iter = 5, Function value: 0.000369556,  Residual: 0.000121311   Constraint: 0.00058458 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000369721,    Residual: 0.000181966 
-    1 TAO,    Function value: 0.000368372,    Residual: 1.69352e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 6.41015e-09,    Residual: 0. 
-iter = 6, Function value: 0.000367828,  Residual: 0.000120906   Constraint: 0.000524232 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000367959,    Residual: 0.000181358 
-    1 TAO,    Function value: 0.000366796,    Residual: 1.74903e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 6.78976e-09,    Residual: 0. 
-iter = 7, Function value: 0.00036632,  Residual: 0.000120546   Constraint: 0.00049075 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000366434,    Residual: 0.000180818 
-    1 TAO,    Function value: 0.000365388,    Residual: 1.77005e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 7.15008e-09,    Residual: 0. 
-iter = 8, Function value: 0.000364954,  Residual: 0.000120196   Constraint: 0.000469403 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000365057,    Residual: 0.000180293 
-    1 TAO,    Function value: 0.000364089,    Residual: 1.72944e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 7.51221e-09,    Residual: 0. 
-iter = 9, Function value: 0.000363682,  Residual: 0.00011986   Constraint: 0.00045467 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000363778,    Residual: 0.00017979 
-    1 TAO,    Function value: 0.000362864,    Residual: 1.77306e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 7.87315e-09,    Residual: 0. 
-iter = 10, Function value: 0.000362477,  Residual: 0.000119529   Constraint: 0.000443964 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000362567,    Residual: 0.000179292 
-    1 TAO,    Function value: 0.000361692,    Residual: 1.78758e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 8.24061e-09,    Residual: 0. 
-iter = 11, Function value: 0.00036132,  Residual: 0.000119205   Constraint: 0.00043587 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000361407,    Residual: 0.000178806 
-    1 TAO,    Function value: 0.00036056,    Residual: 1.78437e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 8.61103e-09,    Residual: 0. 
-iter = 12, Function value: 0.0003602,  Residual: 0.000118886   Constraint: 0.000429518 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000360283,    Residual: 0.000178329 
-    1 TAO,    Function value: 0.00035946,    Residual: 1.76371e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 8.98686e-09,    Residual: 0. 
-iter = 13, Function value: 0.000359108,  Residual: 0.000118572   Constraint: 0.000424365 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.00035919,    Residual: 0.000177857 
-    1 TAO,    Function value: 0.000358385,    Residual: 1.70815e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 9.3663e-09,    Residual: 0. 
-iter = 14, Function value: 0.000358041,  Residual: 0.00011826   Constraint: 0.000420059 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.00035812,    Residual: 0.00017739 
-    1 TAO,    Function value: 0.000357331,    Residual: 1.71518e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 9.74788e-09,    Residual: 0. 
-iter = 15, Function value: 0.000356993,  Residual: 0.000117952   Constraint: 0.000416356 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.00035707,    Residual: 0.000176928 
-    1 TAO,    Function value: 0.000356294,    Residual: 1.70242e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 1.01309e-08,    Residual: 0. 
-iter = 16, Function value: 0.000355963,  Residual: 0.000117645   Constraint: 0.000413101 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000356038,    Residual: 0.000176467 
-    1 TAO,    Function value: 0.000355274,    Residual: 1.66083e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 1.05174e-08,    Residual: 0. 
-iter = 17, Function value: 0.000354947,  Residual: 0.000117341   Constraint: 0.000410178 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000355021,    Residual: 0.000176011 
-    1 TAO,    Function value: 0.000354267,    Residual: 1.75271e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 1.09098e-08,    Residual: 0. 
-iter = 18, Function value: 0.000353945,  Residual: 0.00011704   Constraint: 0.000407508 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000354018,    Residual: 0.00017556 
-    1 TAO,    Function value: 0.000353273,    Residual: 1.71434e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 1.13088e-08,    Residual: 0. 
-iter = 19, Function value: 0.000352956,  Residual: 0.000116739   Constraint: 0.000405043 
-    Iteration information for admm_sub_0_ solve.
-    0 TAO,    Function value: 0.000353027,    Residual: 0.000175108 
-    1 TAO,    Function value: 0.000352291,    Residual: 1.72035e-09 
-    Iteration information for admm_sub_1_ solve.
-    0 TAO,    Function value: 1.17125e-08,    Residual: 0. 
-iter = 20, Function value: 0.000351978,  Residual: 0.000116441   Constraint: 0.000402739 
-relative reconstruction error: ||x-xGT||/||xGT|| = 8.0076e-01.
+    1 TAO,    Function value: 0.000434894,    Residual: 1.12158e-09 
+  1 TAO,  Function value: 0.000394366,  Residual: 0.000126505 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000394362,    Residual: 0.000126502 
+    1 TAO,    Function value: 0.000386698,    Residual: 7.22215e-10 
+  2 TAO,  Function value: 0.000382584,  Residual: 0.000123925 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.00038258,    Residual: 0.000123912 
+    1 TAO,    Function value: 0.000379782,    Residual: 6.49615e-10 
+  3 TAO,  Function value: 0.000377718,  Residual: 0.000122979 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000377713,    Residual: 0.000122975 
+    1 TAO,    Function value: 0.000376098,    Residual: 5.83379e-10 
+  4 TAO,  Function value: 0.000374784,  Residual: 0.000122394 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.00037478,    Residual: 0.000122389 
+    1 TAO,    Function value: 0.000373666,    Residual: 5.31271e-10 
+  5 TAO,  Function value: 0.000372703,  Residual: 0.000121971 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000372698,    Residual: 0.00012197 
+    1 TAO,    Function value: 0.000371837,    Residual: 4.73686e-10 
+  6 TAO,  Function value: 0.000371064,  Residual: 0.000121627 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000371058,    Residual: 0.000121625 
+    1 TAO,    Function value: 0.000370344,    Residual: 4.14345e-10 
+  7 TAO,  Function value: 0.000369687,  Residual: 0.000121328 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000369681,    Residual: 0.000121327 
+    1 TAO,    Function value: 0.000369061,    Residual: 3.53686e-10 
+  8 TAO,  Function value: 0.000368481,  Residual: 0.000121057 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000368475,    Residual: 0.000121057 
+    1 TAO,    Function value: 0.00036792,    Residual: 2.92724e-10 
+  9 TAO,  Function value: 0.000367395,  Residual: 0.0001208 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000367389,    Residual: 0.000120799 
+    1 TAO,    Function value: 0.00036688,    Residual: 2.33571e-10 
+ 10 TAO,  Function value: 0.000366395,  Residual: 0.000120556 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000366389,    Residual: 0.000120555 
+    1 TAO,    Function value: 0.000365914,    Residual: 1.79442e-10 
+ 11 TAO,  Function value: 0.000365461,  Residual: 0.00012032 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000365454,    Residual: 0.000120318 
+    1 TAO,    Function value: 0.000365006,    Residual: 1.3359e-10 
+ 12 TAO,  Function value: 0.000364576,  Residual: 0.000120091 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000364568,    Residual: 0.00012009 
+    1 TAO,    Function value: 0.000364141,    Residual: 1.13584e-09 
+ 13 TAO,  Function value: 0.000363729,  Residual: 0.000119867 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000363722,    Residual: 0.000119866 
+    1 TAO,    Function value: 0.000363311,    Residual: 9.68676e-10 
+ 14 TAO,  Function value: 0.000362914,  Residual: 0.000119645 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000362906,    Residual: 0.000119642 
+    1 TAO,    Function value: 0.000362508,    Residual: 8.38019e-10 
+ 15 TAO,  Function value: 0.000362123,  Residual: 0.000119425 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000362115,    Residual: 0.000119423 
+    1 TAO,    Function value: 0.000361727,    Residual: 7.33595e-10 
+ 16 TAO,  Function value: 0.000361352,  Residual: 0.00011921 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000361344,    Residual: 0.000119209 
+    1 TAO,    Function value: 0.000360965,    Residual: 6.48058e-10 
+ 17 TAO,  Function value: 0.000360599,  Residual: 0.000118996 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.00036059,    Residual: 0.000118995 
+    1 TAO,    Function value: 0.000360219,    Residual: 5.77046e-10 
+ 18 TAO,  Function value: 0.00035986,  Residual: 0.000118785 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000359851,    Residual: 0.000118785 
+    1 TAO,    Function value: 0.000359486,    Residual: 5.17567e-10 
+ 19 TAO,  Function value: 0.000359133,  Residual: 0.000118576 
+    Iteration information for misfit_ solve.
+    0 TAO,    Function value: 0.000359124,    Residual: 0.000118576 
+    1 TAO,    Function value: 0.000358765,    Residual: 4.6806e-10 
+ 20 TAO,  Function value: 0.000358417,  Residual: 0.000118367 
+relative reconstruction error: ||x-xGT||/||xGT|| = 8.0320e-01.
