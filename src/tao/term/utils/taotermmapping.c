@@ -161,6 +161,42 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjectiveAndGradient(TaoTermMap
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermMappingMatPtAP(Mat unmapped_H, Mat map, Mat mapped_H)
+{
+  Mat            A, P;
+  MatProductType prod_type;
+
+  PetscFunctionBegin;
+  PetscCall(MatProductGetType(mapped_H, &prod_type));
+  if (prod_type != MATPRODUCT_PtAP && prod_type != MATPRODUCT_UNSPECIFIED) PetscCall(MatProductClear(mapped_H));
+  PetscCall(MatProductGetMats(mapped_H, &A, &P, NULL));
+  if (A != unmapped_H || P != map) {
+    PetscBool is_assembled;
+
+    PetscCall(MatAssembled(unmapped_H, &is_assembled));
+    if (!is_assembled) {
+      PetscCall(MatAssemblyBegin(unmapped_H, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(unmapped_H, MAT_FINAL_ASSEMBLY));
+    }
+    PetscCall(MatAssembled(map, &is_assembled));
+    if (!is_assembled) {
+      PetscCall(MatAssemblyBegin(map, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(map, MAT_FINAL_ASSEMBLY));
+    }
+    PetscCall(MatAssembled(mapped_H, &is_assembled));
+    if (!is_assembled) {
+      PetscCall(MatAssemblyBegin(mapped_H, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(mapped_H, MAT_FINAL_ASSEMBLY));
+    }
+    PetscCall(MatProductCreateWithMat(unmapped_H, map, NULL, mapped_H));
+    PetscCall(MatProductSetType(mapped_H, MATPRODUCT_PtAP));
+    PetscCall(MatProductSetFromOptions(mapped_H));
+    PetscCall(MatProductSymbolic(mapped_H));
+  }
+  PetscCall(MatProductNumeric(mapped_H));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermMappingGetHessians(TaoTermMapping *mt, InsertMode mode, Mat H, Mat Hpre, Mat *mapped_H, Mat *mapped_Hpre, Mat *unmapped_H, Mat *unmapped_Hpre)
 {
   PetscFunctionBegin;
@@ -211,21 +247,8 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
   PetscFunctionBegin;
   if (mt->map) {
     // currently only implements Gauss-Newton Hessian approximation
-    // TODO MatProduct is not gneralizable for various MatTypes
-    if (mapped_H) {
-      Mat temp;
-
-      PetscCall(MatMatMult(unmapped_H, mt->map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &temp));
-      PetscCall(MatTransposeMatMult(unmapped_H, temp, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &mapped_H));
-      PetscCall(MatDestroy(&temp));
-    }
-    if (mapped_Hpre) {
-      Mat temp;
-
-      PetscCall(MatMatMult(unmapped_Hpre, mt->map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &temp));
-      PetscCall(MatTransposeMatMult(unmapped_Hpre, temp, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &mapped_Hpre));
-      PetscCall(MatDestroy(&temp));
-    }
+    if (mapped_H) PetscCall(TaoTermMappingMatPtAP(unmapped_H, mt->map, mapped_H));
+    if (mapped_Hpre) PetscCall(TaoTermMappingMatPtAP(unmapped_Hpre, mt->map, mapped_Hpre));
   }
   if (mode == ADD_VALUES) {
     if (H) PetscCall(MatAXPY(H, mt->scale, mapped_H, UNKNOWN_NONZERO_PATTERN));
@@ -283,38 +306,28 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateParametersVec(TaoTermMapping *mt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermMappingCreatePtAP(Mat unmapped_H, Mat map, Mat *H)
+{
+  PetscFunctionBegin;
+  PetscCall(MatProductCreate(unmapped_H, map, NULL, H));
+  PetscCall(MatProductSetType(*H, MATPRODUCT_PtAP));
+  PetscCall(MatProductSetFromOptions(*H));
+  PetscCall(MatProductSymbolic(*H));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *mt, Mat *H, Mat *Hpre)
 {
   PetscFunctionBegin;
   if (!mt->map) PetscCall(TaoTermCreateHessianMatrices(mt->term, H, Hpre));
   else {
     PetscCall(TaoTermCreateHessianMatrices(mt->term, H ? &mt->_unmapped_H : NULL, Hpre ? &mt->_unmapped_Hpre : NULL));
-    if (mt->_unmapped_H) {
-      PetscLayout clayout;
-      MatType     type;
-
-      PetscCall(MatCreate(PetscObjectComm((PetscObject)(mt->map)), H));
-      PetscCall(MatGetLayouts(mt->map, NULL, &clayout));
-      PetscCall(MatSetLayouts(*H, clayout, clayout));
-      PetscCall(MatGetType(mt->_unmapped_H, &type));
-      PetscCall(MatSetType(*H, type));
-      PetscCall(MatSetUp(*H));
-    }
+    if (mt->_unmapped_H) PetscCall(TaoTermMappingCreatePtAP(mt->_unmapped_H, mt->map, H));
     if (mt->_unmapped_Hpre) {
       if (mt->_unmapped_Hpre == mt->_unmapped_H) {
         PetscCall(PetscObjectReference((PetscObject)*H));
         *Hpre = *H;
-      } else {
-        PetscLayout clayout;
-        MatType     type;
-
-        PetscCall(MatCreate(PetscObjectComm((PetscObject)(mt->map)), Hpre));
-        PetscCall(MatGetLayouts(mt->map, NULL, &clayout));
-        PetscCall(MatSetLayouts(*Hpre, clayout, clayout));
-        PetscCall(MatGetType(mt->_unmapped_Hpre, &type));
-        PetscCall(MatSetType(*Hpre, type));
-        PetscCall(MatSetUp(*Hpre));
-      }
+      } else PetscCall(TaoTermMappingCreatePtAP(mt->_unmapped_Hpre, mt->map, Hpre));
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
