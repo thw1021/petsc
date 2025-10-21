@@ -915,8 +915,8 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
 #if defined(PETSC_USE_COMPLEX)
   {
     PetscReal *rwork;
-    PetscCall(PetscMalloc1(3 * dim, &rwork));
-    PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, rwork, &lierr));
+    PetscCall(PetscMalloc1(n, &rwork));
+    PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, rwork, &ierr));
     PetscCall(PetscFree(rwork));
   }
 #else
