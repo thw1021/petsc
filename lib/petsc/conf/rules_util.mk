@@ -73,7 +73,6 @@ GITCFSRCEXCL = \
 ':!*mpiunifdef.h' \
 ':!*finclude/*' \
 ':!systems/*' \
-':!*benchmarks/*' \
 ':!*binding/*' \
 ':!*ftn-mod/*'
 
