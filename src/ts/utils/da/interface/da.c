@@ -32,6 +32,21 @@ PetscErrorCode DAInitializePackage(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
+/*
+  PetscDLLibraryRegister - This function is called when the dynamic library it is in is opened.
+
+  This one registers DA.
+
+*/
+PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscda(void)
+{
+  PetscFunctionBegin;
+  PetscCall(DAInitializePackage());
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+#endif /* PETSC_HAVE_DYNAMIC_LIBRARIES */
 /*@C
   DAFinalizePackage - This function finalizes everything in the `DA` package. It
 is called from `PetscFinalize()`.
