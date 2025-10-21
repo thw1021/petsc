@@ -1,5 +1,4 @@
-iter = 0, Function value: 0.00378251,  Residual: -2.   Constraint: 0. 
-    Iteration information for admm_sub_0_ solve.
+    Iteration information for misfit_ solve.
     0 TAO,    Function value: 0.00378251,    Residual: 0.00101179 
     1 TAO,    Function value: 0.000434894,    Residual: 1.12158e-09 
   1 TAO,  Function value: 0.000394366,  Residual: 0.000126505 
