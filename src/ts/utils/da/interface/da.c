@@ -347,7 +347,6 @@ PetscErrorCode DASetSizes(DA da, PetscInt state_size, PetscInt obs_size, PetscIn
   da->state_size    = state_size;
   da->obs_size      = obs_size;
   da->ensemble_size = ensemble_size;
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -467,7 +466,6 @@ PetscErrorCode DAView(DA da, PetscViewer viewer)
   }
 
   if (da->ops->view) PetscCall((*da->ops->view)(da, viewer));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
