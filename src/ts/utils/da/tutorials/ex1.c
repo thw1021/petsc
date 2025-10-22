@@ -234,7 +234,7 @@ int main(int argc, char **argv)
     }
 
     if ((step % (steps / 10) == 0) || (step == steps) || (step == 0)) {
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT "time %.3f  RMSE_forecast %.5f  RMSE_analysis %.5f%s\n", step, (double)time, (double)rmse_forecast, (double)rmse_analysis, (step < burn) ? " [burn-in]" : ""));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT ", time %.3f  RMSE_forecast %.5f  RMSE_analysis %.5f%s\n", step, (double)time, (double)rmse_forecast, (double)rmse_analysis, (step < burn) ? " [burn-in]" : ""));
     }
 
     if (step < steps) {
@@ -278,7 +278,7 @@ int main(int argc, char **argv)
 
   test:
     requires: !complex
-    args: -steps 120 -burn 10 -obs_freq 2 -obs_error 0.5 -da_view
+    args: -steps 120 -burn 10 -obs_freq 2 -obs_error 0.5 -da_view -ensemble_size 40
 
   test:
     suffix: chol

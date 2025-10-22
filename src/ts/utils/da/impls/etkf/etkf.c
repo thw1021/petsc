@@ -370,6 +370,39 @@ PetscErrorCode DAETKFGetSqrtType(DA da, DAETKFSqrtType *type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  DAETKFView - Views a `DAETKF` and its implementation-specific data structure.
+
+  Collective
+
+  Input Parameters:
++ da     - the `DA` context
+- viewer - the `PetscViewer` to use (or `NULL` for standard output)
+
+  Level: beginner
+
+.seealso: [](ch_da), `DAViewFromOptions()`
+@*/
+PetscErrorCode DAETKFView(DA da, PetscViewer viewer)
+{
+  PetscBool   iascii;
+  DAETKFData *impl = (DAETKFData *)da->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  if (!viewer) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)da), &viewer));
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  PetscCheckSameComm(da, 1, viewer, 2);
+
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) {
+    PetscCall(PetscViewerASCIIPrintf(viewer, "DAEKF Object:\n"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Square root type: %s\n", (impl->sqrt_type == DAETKF_SQRT_EIGEN) ? "eigen" : "cholesky"));
+  }
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*
   DAETKFInitialize - Installs the ETKF-specific operations on a newly created `DA` object.
 
@@ -396,7 +429,7 @@ static PetscErrorCode DAETKFInitialize(DA da)
   da->ops->computemean      = NULL;
   da->ops->computeanomalies = NULL;
   da->ops->destroy          = DAETKFDestroy;
-  da->ops->view             = NULL;
+  da->ops->view             = DAETKFView;
   da->ops->setfromoptions   = DASetFromOptions_DAETKF;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
