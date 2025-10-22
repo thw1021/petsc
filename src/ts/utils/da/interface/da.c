@@ -173,7 +173,7 @@ static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out)
   Collective
 
   Input Parameter:
-. comm   - MPI communicator used to create the object
+. comm - MPI communicator used to create the object
 
   Output Parameter:
 . da_out - newly created `DA` object
