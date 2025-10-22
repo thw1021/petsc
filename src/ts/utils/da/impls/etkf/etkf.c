@@ -51,8 +51,7 @@ static PetscErrorCode DASetFromOptions_DAETKF(DA da, PetscOptionItems *PetscOpti
 }
 
 /*@C
-  DAETKFInitializePackage - This function initializes everything in the `DAETKF`
-package. It is called from `TSInitializePackage()`.
+  DAETKFInitializePackage - This function initializes everything in the `DAETKF` package. It is called from `TSInitializePackage()`.
 
   Level: developer
 
@@ -70,8 +69,7 @@ PetscErrorCode DAETKFInitializePackage(void)
 }
 
 /*@C
-  DAETKFFinalizePackage - This function destroys everything in the `DAETKF`
-package. It is called from `PetscFinalize()`.
+  DAETKFFinalizePackage - This function destroys everything in the `DAETKF` package. It is called from `PetscFinalize()`.
 
   Level: developer
 
@@ -86,8 +84,7 @@ PetscErrorCode DAETKFFinalizePackage(void)
 }
 
 /*
-  DAETKFAnalysis - Performs the ensemble transform Kalman filter (ETKF) analysis
-  defined by Algorithm 6.4 in Law, Stuart, and Zygalakis.
+  DAETKFAnalysis - Performs the ensemble transform Kalman filter (ETKF) analysis defined by Algorithm 6.4 in Law, Stuart, and Zygalakis.
 
   Collective
 
@@ -99,9 +96,7 @@ user-supplied routine `H(x, y; ctx)` that maps a state to observation space
 
   Notes:
   The implementation follows the book's deterministic ETKF steps verbatim:
-  Step 1 computes the state mean, Step 2 the state anomalies, Steps 3-4 build
-the normalized innovation statistics, Step 5 assembles the reduced-space
-inverse, Step 6 forms the analysis weights, Steps 7-9 construct the square-root
+  Step 1 computes the state mean, Step 2 the state anomalies, Steps 3-4 build the normalized innovation statistics, Step 5 assembles the reduced-space inverse, Step 6 forms the analysis weights, Steps 7-9 construct the square-root
 transform, and Step 10 applies the transform to refresh every ensemble member.
 
   Level: advanced
@@ -296,9 +291,7 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
 - model_ctx - optional context for `model`
 
   Notes:
-  This routine overwrites every ensemble column with the model result supplied
-by `model`. It is typically called immediately after `DAETKFAnalysis()` to start
-the next forecast cycle.
+  This routine overwrites every ensemble column with the model result supplied by `model`. It is typically called immediately after `DAETKFAnalysis()` to start the next forecast cycle.
 
   Level: intermediate
 
@@ -329,8 +322,7 @@ static PetscErrorCode DAETKFApplyModel(DA da, PetscErrorCode (*model)(Vec, Vec, 
 }
 
 /*@
-  DAETKFSetSqrtType - Selects the reduced-space square-root algorithm used
-during the ETKF analysis.
+  DAETKFSetSqrtType - Selects the reduced-space square-root algorithm used during the ETKF analysis.
 
   Logically Collective
 
@@ -355,8 +347,7 @@ PetscErrorCode DAETKFSetSqrtType(DA da, DAETKFSqrtType type)
 }
 
 /*@
-  DAETKFGetSqrtType - Retrieves the current square-root implementation
-configured for the ETKF analysis.
+  DAETKFGetSqrtType - Retrieves the current square-root implementation configured for the ETKF analysis.
 
   Not Collective
 
@@ -383,8 +374,7 @@ PetscErrorCode DAETKFGetSqrtType(DA da, DAETKFSqrtType *type)
 }
 
 /*
-  DAETKFInitialize - Installs the ETKF-specific operations on a newly created
-  `DA` object.
+  DAETKFInitialize - Installs the ETKF-specific operations on a newly created `DA` object.
 
   Collective
 

@@ -12,9 +12,9 @@ static PetscBool DAPackageInitialized = PETSC_FALSE;
 
 /*@C
   DAInitializePackage - This function initializes everything in the `DA`
-package. It is called from `PetscDLLibraryRegister_petscda()` when using dynamic
-libraries, and on the first call to `DACreate()` when using static or shared
-libraries.
+    package. It is called from `PetscDLLibraryRegister_petscda()` when using dynamic
+  libraries, and on the first call to `DACreate()` when using static or shared
+  libraries.
 
   Level: developer
 
@@ -49,7 +49,7 @@ PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscda(void)
 #endif /* PETSC_HAVE_DYNAMIC_LIBRARIES */
 /*@C
   DAFinalizePackage - This function finalizes everything in the `DA` package. It
-is called from `PetscFinalize()`.
+  is called from `PetscFinalize()`.
 
   Level: developer
 
@@ -68,7 +68,7 @@ PETSC_EXTERN PetscErrorCode DAETKFRegister(void);
 
 /*@
   DARegister - Registers a constructor for a `DA` implementation with the
-dispatcher.
+  dispatcher.
 
   Not Collective
 
@@ -89,8 +89,7 @@ PetscErrorCode DARegister(const char sname[], PetscErrorCode (*function)(DA))
 }
 
 /*@
-  DARegisterAll - Registers all data assimilation backends that were compiled
-in.
+  DARegisterAll - Registers all data assimilation backends that were compiled in.
 
   Not Collective
 
@@ -284,8 +283,7 @@ PetscErrorCode DASetType(DA da, DAType type)
 }
 
 /*@
-  DAGetType - Gets the name of the implementation currently associated with a
-`DA`.
+  DAGetType - Gets the name of the implementation currently associated with a `DA`.
 
   Not Collective
 
@@ -334,8 +332,7 @@ PetscErrorCode DASetFromOptions(DA da)
 }
 
 /*@
-  DASetSizes - Sets the state, observation, and ensemble dimensions used by a
-`DA`.
+  DASetSizes - Sets the state, observation, and ensemble dimensions used by a `DA`.
 
   Collective
 
@@ -393,8 +390,7 @@ PetscErrorCode DAGetSizes(DA da, PetscInt *state_size, PetscInt *obs_size, Petsc
 }
 
 /*@
-  DASetUp - Allocates internal data structures for a `DA` based on the
-previously provided sizes.
+  DASetUp - Allocates internal data structures for a `DA` based on the previously provided sizes.
 
   Collective
 
@@ -485,8 +481,7 @@ PetscErrorCode DAView(DA da, PetscViewer viewer)
 }
 
 /*@
-  DAViewFromOptions - Processes command-line options to determine if a `DA`
-should be viewed.
+  DAViewFromOptions - Processes command-line options to determine if a `DA` should be viewed.
 
   Collective
 
@@ -508,8 +503,7 @@ PetscErrorCode DAViewFromOptions(DA da, PetscObject obj, const char option[])
 }
 
 /*@
-  DASetObsErrorVariance - Sets the observation-error variances associated with a
-`DA`.
+  DASetObsErrorVariance - Sets the observation-error variances associated with a `DA`.
 
   Collective
 
@@ -533,8 +527,7 @@ PetscErrorCode DASetObsErrorVariance(DA da, Vec obs_error_var)
 }
 
 /*@
-  DAGetObsErrorVariance - Returns a borrowed reference to the observation-error
-variance vector.
+  DAGetObsErrorVariance - Returns a borrowed reference to the observation-error variance vector.
 
   Not Collective
 
@@ -558,8 +551,7 @@ PetscErrorCode DAGetObsErrorVariance(DA da, Vec *obs_error_var)
 }
 
 /*@
-  DASetOrthogonalTransform - Installs the ensemble-space orthogonal matrix used
-in deterministic square-root updates.
+  DASetOrthogonalTransform - Installs the ensemble-space orthogonal matrix used in deterministic square-root updates.
 
   Collective
 
@@ -584,8 +576,7 @@ PetscErrorCode DASetOrthogonalTransform(DA da, Mat U)
 }
 
 /*@
-  DAGetOrthogonalTransform - Retrieves the orthogonal matrix currently stored in
-a `DA`.
+  DAGetOrthogonalTransform - Retrieves the orthogonal matrix currently stored in a `DA`.
 
   Not Collective
 
@@ -609,8 +600,7 @@ PetscErrorCode DAGetOrthogonalTransform(DA da, Mat *U)
 }
 
 /*@
-  DAGetEnsembleMember - Returns a read-only view of an ensemble member stored in
-the `DA`.
+  DAGetEnsembleMember - Returns a read-only view of an ensemble member stored in the `DA`.
 
   Collective
 
@@ -638,8 +628,7 @@ PetscErrorCode DAGetEnsembleMember(DA da, PetscInt member_idx, Vec *member)
 }
 
 /*@
-  DARestoreEnsembleMember - Returns a column view obtained with
-`DAGetEnsembleMember()`.
+  DARestoreEnsembleMember - Returns a column view obtained with `DAGetEnsembleMember()`.
 
   Collective
 
@@ -663,8 +652,7 @@ PetscErrorCode DARestoreEnsembleMember(DA da, PetscInt member_idx, Vec *member)
 }
 
 /*@
-  DASetEnsembleMember - Overwrites an ensemble member with user-provided state
-data.
+  DASetEnsembleMember - Overwrites an ensemble member with user-provided state data.
 
   Collective
 
@@ -740,8 +728,7 @@ PetscErrorCode DAComputeAnomalies(DA da, Mat *anomalies)
 }
 
 /*@
-  DAAnalysis - Executes the analysis (update) step of the configured data
-assimilation method.
+  DAAnalysis - Executes the analysis (update) step of the configured data assimilation method.
 
   Collective
 
@@ -766,8 +753,7 @@ PetscErrorCode DAAnalysis(DA da, Vec observation, PetscErrorCode (*observation_o
 }
 
 /*@
-  DAApplyModel - Advances every ensemble member through the user-supplied
-forecast model.
+  DAApplyModel - Advances every ensemble member through the user-supplied forecast model.
 
   Collective
 
@@ -791,8 +777,7 @@ PetscErrorCode DAApplyModel(DA da, PetscErrorCode (*model)(Vec, Vec, void *), vo
 }
 
 /*@
-  VecSetRandomGaussian - Fills a vector with Gaussian random values of the given
-mean and standard deviation.
+  VecSetRandomGaussian - Fills a vector with Gaussian random values of the given mean and standard deviation.
 
   Collective
 
