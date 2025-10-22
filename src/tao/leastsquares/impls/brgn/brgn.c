@@ -138,7 +138,7 @@ static PetscErrorCode TaoTermCreateGaussNewton(Tao tao, TaoTerm *term)
   PetscCall(TaoTermCreateShell(PetscObjectComm((PetscObject)tao), (void *)gnterm, TaoTermDestroy_GaussNewton, &_term));
   PetscCall(TaoTermSetParametersMode(_term, TAOTERM_PARAMETERS_NONE));
   PetscCall(TaoTermShellSetCreateHessianMatrices(_term, TaoTermCreateHessianMatricesDefault));
-  PetscCall(TaoTermSetCreateHessianMode(_term, PETSC_TRUE, MATSHELL, MATSHELL));
+  PetscCall(TaoTermSetCreateHessianMode(_term, PETSC_TRUE, MATDENSE, MATDENSE));
   PetscCall(TaoTermShellSetObjectiveAndGradient(_term, TaoTermComputeObjectiveAndGradient_GaussNewton));
   PetscCall(TaoTermShellSetHessian(_term, TaoTermComputeHessian_GaussNewton));
   *term = _term;
@@ -841,8 +841,8 @@ static PetscErrorCode TaoSetUp_BRGN(Tao tao)
     PetscCall(TaoTermSetCreateHessianMode(reg_term, H_is_Hpre, H_type, Hpre_type));
   }
   PetscCall(MatSetUp(H));
-  PetscCall(TaoSetHessianMatrices(gn->subsolver, H, H));//TODO
-  //PetscCall(TaoTermSumSetSubtermHessianMatrices(gn->subsolver->objective_term.term, 1, H, H, NULL, NULL));
+  //PetscCall(TaoSetHessianMatrices(gn->subsolver, H, H));//TODO
+  PetscCall(TaoTermSumSetSubtermHessianMatrices(gn->subsolver->objective_term.term, 0, H, H, NULL, NULL));
   PetscCall(MatDestroy(&H));
   /* Subsolver setup,include initial vector and dictionary D */
   PetscCall(TaoSetUpdate(gn->subsolver, GNHookFunction, gn));

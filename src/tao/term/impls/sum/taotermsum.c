@@ -1244,8 +1244,36 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Sum(TaoTerm term, Mat *H, Mat
       PetscCall(TaoTermSumGetSubtermHessianMatrices(term, i, &c_H, NULL, NULL, NULL));
       PetscCheck(c_H, PetscObjectComm((PetscObject)summand->term), PETSC_ERR_USER, "TAOTERMCALLBACK does not have Hessian routines set. Call TaoSetHessian()");
     }
-    PetscCall(TaoTermMappingCreateHessianMatrices(summand, &summand->_mapped_H, &summand->_mapped_Hpre));
-
+    // summand Hessians may have been set via TaoTermSumSetSubtermHessianMatrices
+    // TODO Hpre set but H not set - doesn't makes sense? Just document it in notes..
+    // Cases: 1) unmapped has been set, 2) mapped has been set, 3) both has been set (no-op)
+    // if (summand->_unmapped_H), then
+    //   a) summand->map != NULL : proceed to create &summand->_mapped_H
+    //   b) summand->map == NULL : mapped_H = unmapped_H
+    // if (summand->_mapped_H), then
+    //   a) summand->map != NULL : (custom PtAP mapped_H). Just create unmapped_H, dont overwrite mapped_H
+    //   b) summand->map == NULL : unmapped_H = mapped_H
+    if (summand->_unmapped_H && !summand->_mapped_H) {
+      if (summand->map) PetscCall(TaoTermMappingCreateHessianMatrices(summand, &summand->_mapped_H, &summand->_mapped_Hpre));
+      else {
+        PetscCall(PetscObjectReference((PetscObject)summand->_unmapped_H));
+        summand->_mapped_H = summand->_unmapped_H;
+        if (summand->_unmapped_Hpre) {
+          PetscCall(PetscObjectReference((PetscObject)summand->_unmapped_Hpre));
+          summand->_mapped_Hpre = summand->_unmapped_Hpre;
+        }
+      }
+    } else if (summand->_mapped_H && !summand->_unmapped_H) {
+      if (summand->map) PetscCall(TaoTermCreateHessianMatrices(summand->term, &summand->_unmapped_H, &summand->_unmapped_Hpre));
+      else {
+        PetscCall(PetscObjectReference((PetscObject)summand->_mapped_H));
+        summand->_unmapped_H = summand->_mapped_H;
+        if (summand->_mapped_Hpre) {
+          PetscCall(PetscObjectReference((PetscObject)summand->_mapped_Hpre));
+          summand->_unmapped_Hpre = summand->_mapped_Hpre;
+        }
+      }
+    } else PetscCall(TaoTermMappingCreateHessianMatrices(summand, &summand->_mapped_H, &summand->_mapped_Hpre));
     sub_Hpre_is_H = (summand->_mapped_H == summand->_mapped_Hpre) ? PETSC_TRUE : PETSC_FALSE;
     Hpre_is_H     = (Hpre_is_H && sub_Hpre_is_H) ? PETSC_TRUE : PETSC_FALSE;
   }
