@@ -43,4 +43,3 @@ struct _p_DA {
 PETSC_INTERN PetscErrorCode DACholeskySqrt_Private(Mat, Mat *);
 PETSC_INTERN PetscErrorCode DASymmetricEigenSqrt_Private(Mat, Mat *);
 PETSC_INTERN PetscErrorCode VecSetRandomGaussian_Private(Vec, PetscRandom, PetscReal, PetscReal);
-

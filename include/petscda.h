@@ -60,4 +60,3 @@ PETSC_EXTERN PetscErrorCode DAETKFInitializePackage(void);
 PETSC_EXTERN PetscErrorCode DAETKFFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode DAETKFSetSqrtType(DA, DAETKFSqrtType);
 PETSC_EXTERN PetscErrorCode DAETKFGetSqrtType(DA, DAETKFSqrtType *);
-
