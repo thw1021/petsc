@@ -352,7 +352,7 @@ PetscErrorCode DAETKFSetSqrtType(DA da, DAETKFSqrtType type)
   Not Collective
 
   Input Parameters:
-+ da - the `DA` object
+. da - the `DA` object
 
   Output Parameter:
 . type - on output, the configured `DAETKFSqrtType`

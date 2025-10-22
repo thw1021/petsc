@@ -13,8 +13,8 @@ static PetscBool DAPackageInitialized = PETSC_FALSE;
 /*@C
   DAInitializePackage - This function initializes everything in the `DA`
     package. It is called from `PetscDLLibraryRegister_petscda()` when using dynamic
-  libraries, and on the first call to `DACreate()` when using static or shared
-  libraries.
+    libraries, and on the first call to `DACreate()` when using static or shared
+    libraries.
 
   Level: developer
 
@@ -66,7 +66,7 @@ PetscErrorCode DAFinalizePackage(void)
 
 PETSC_EXTERN PetscErrorCode DAETKFRegister(void);
 
-/*@
+/*@C
   DARegister - Registers a constructor for a `DA` implementation with the
   dispatcher.
 
@@ -173,10 +173,10 @@ static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out)
   Collective
 
   Input Parameter:
-+ comm  - MPI communicator used to create the object
+. comm  - MPI communicator used to create the object
 
   Output Parameter:
-- da_out - newly created `DA` object
+. da_out - newly created `DA` object
 
   Level: beginner
 
@@ -217,7 +217,7 @@ PetscErrorCode DACreate(MPI_Comm comm, DA *da_out)
   Collective
 
   Input Parameter:
-+ da - pointer to the `DA` object to destroy
+. da - pointer to the `DA` object to destroy
 
   Level: beginner
 
@@ -288,10 +288,10 @@ PetscErrorCode DASetType(DA da, DAType type)
   Not Collective
 
   Input Parameter:
-+ da - the `DA` context
+. da - the `DA` context
 
   Output Parameter:
-- type - pointer that will receive the type name (may be `NULL`)
+. type - pointer that will receive the type name (may be `NULL`)
 
   Level: intermediate
 
@@ -314,7 +314,7 @@ PetscErrorCode DAGetType(DA da, DAType *type)
   Collective
 
   Input Parameter:
-+ da - the `DA` context to set up
+. da - the `DA` context to set up
 
   Level: intermediate
 
@@ -368,7 +368,7 @@ PetscErrorCode DASetSizes(DA da, PetscInt state_size, PetscInt obs_size, PetscIn
   Not Collective
 
   Input Parameter:
-+ da - the `DA` context
+. da - the `DA` context
 
   Output Parameters:
 + state_size    - number of state components (may be `NULL`)
@@ -395,7 +395,7 @@ PetscErrorCode DAGetSizes(DA da, PetscInt *state_size, PetscInt *obs_size, Petsc
   Collective
 
   Input Parameter:
-+ da - the `DA` context to assemble
+. da - the `DA` context to assemble
 
   Level: beginner
 
@@ -532,10 +532,10 @@ PetscErrorCode DASetObsErrorVariance(DA da, Vec obs_error_var)
   Not Collective
 
   Input Parameter:
-+ da - the `DA` context
+. da - the `DA` context
 
   Output Parameter:
-- obs_error_var - pointer to the variance vector managed by the `DA`
+. obs_error_var - pointer to the variance vector managed by the `DA`
 
   Level: beginner
 
@@ -581,10 +581,10 @@ PetscErrorCode DASetOrthogonalTransform(DA da, Mat U)
   Not Collective
 
   Input Parameter:
-+ da - the `DA` context
+. da - the `DA` context
 
   Output Parameter:
-- U - pointer that will receive the matrix (may be `NULL`)
+. U - pointer that will receive the matrix (may be `NULL`)
 
   Level: developer
 
@@ -609,7 +609,7 @@ PetscErrorCode DAGetOrthogonalTransform(DA da, Mat *U)
 - member_idx - index of the requested member (0 <= idx < ensemble_size)
 
   Output Parameter:
-- member - read-only vector view; call `DARestoreEnsembleMember()` when done
+. member - read-only vector view; call `DARestoreEnsembleMember()` when done
 
   Level: intermediate
 
@@ -727,7 +727,7 @@ PetscErrorCode DAComputeAnomalies(DA da, Mat *anomalies)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   DAAnalysis - Executes the analysis (update) step of the configured data assimilation method.
 
   Collective
