@@ -12,9 +12,9 @@ static PetscBool DAPackageInitialized = PETSC_FALSE;
 
 /*@C
   DAInitializePackage - This function initializes everything in the `DA`
-    package. It is called from `PetscDLLibraryRegister_petscda()` when using dynamic
-    libraries, and on the first call to `DACreate()` when using static or shared
-    libraries.
+  package. It is called from `PetscDLLibraryRegister_petscda()` when using dynamic
+  libraries, and on the first call to `DACreate()` when using static or shared
+  libraries.
 
   Level: developer
 
@@ -173,7 +173,7 @@ static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out)
   Collective
 
   Input Parameter:
-. comm  - MPI communicator used to create the object
+. comm   - MPI communicator used to create the object
 
   Output Parameter:
 . da_out - newly created `DA` object
@@ -752,7 +752,7 @@ PetscErrorCode DAAnalysis(DA da, Vec observation, PetscErrorCode (*observation_o
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   DAApplyModel - Advances every ensemble member through the user-supplied forecast model.
 
   Collective
@@ -881,7 +881,7 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   PetscCall(MatGetSize(A, &m, &n));
   PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square");
 
-  lwork = 3 * n;
+  PetscCall(PetscBLASIntCast(3 * n, &lwork));
   PetscCall(PetscMalloc1(lwork, &work));
 
   PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &V));
@@ -889,17 +889,20 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
 
   PetscCall(MatCreateVecs(V, NULL, &sqrtD));
   PetscCall(VecGetArrayWrite(sqrtD, &sqrtvals));
-  eigvals = (PetscReal *)sqrtvals;
 
   PetscCall(PetscBLASIntCast(n, &bn));
+
 #if defined(PETSC_USE_COMPLEX)
   {
     PetscReal *rwork;
-    PetscCall(PetscMalloc1(lwork, &rwork));
+    PetscCall(PetscMalloc1(3 * n - 2, &rwork));
+    PetscCall(PetscMalloc(n, &eigvals));
     PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, rwork, &info));
+    for (int i = 0; i < n; i++) sqrtvals[i] = eigvals[i];
     PetscCall(PetscFree(rwork));
   }
 #else
+  eigvals = (PetscReal *)sqrtvals;
   PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, &info));
 #endif
   PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK syev failed with info = %" PetscBLASInt_FMT, info);
@@ -911,6 +914,10 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
     PetscCheck(eig >= -threshold, PETSC_COMM_SELF, PETSC_ERR_LIB, "Matrix square root failed: eigenvalue %g is negative beyond tolerance", (double)eig);
     eigvals[i] = (eig > threshold) ? PetscSqrtReal(PetscMax(eig, (PetscReal)0.0)) : 0.0;
   }
+
+#if defined(PETSC_USE_COMPLEX)
+  PetscCall(PetscFree(eigvals));
+#endif
 
   PetscCall(VecRestoreArrayWrite(sqrtD, &sqrtvals));
   PetscCall(MatDenseRestoreArray(V, &varray));

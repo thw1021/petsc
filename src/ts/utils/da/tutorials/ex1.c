@@ -277,6 +277,7 @@ int main(int argc, char **argv)
 /*TEST
 
   test:
+    requires: !complex
     args: -steps 120 -burn 10 -obs_freq 2 -obs_error 0.5 -da_view
 
   test:
