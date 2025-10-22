@@ -161,13 +161,10 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &y_mean));
   PetscCall(VecSetSizes(y_mean, PETSC_DECIDE, da->obs_size));
   PetscCall(VecSetFromOptions(y_mean));
-  PetscCall(VecSet(y_mean, 0.0)); /* Step 3: observation-space mean y_bar. */
 
-  for (i = 0; i < m; i++) {
-    PetscCall(MatDenseGetColumnVecRead(Z, i, &col_in));
-    PetscCall(VecAXPY(y_mean, inv_m, col_in)); /* accumulate 1/m * H(x_i^f). */
-    PetscCall(MatDenseRestoreColumnVecRead(Z, i, &col_in));
-  }
+  /* Step 3: observation-space mean y_bar. */
+  PetscCall(MatGetRowSum(Z, y_mean)); /* accumulate 1/m * H(x_i^f). */
+  PetscCall(VecScale(y_mean, inv_m));
 
   PetscCall(VecDuplicate(da->obs_error_var, &r_inv_sqrt));
   PetscCall(VecCopy(da->obs_error_var, r_inv_sqrt)); /* Step 3: reuse diag(R) to build R^{-1/2}. */
