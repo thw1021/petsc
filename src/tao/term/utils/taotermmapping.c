@@ -200,6 +200,7 @@ static PetscErrorCode TaoTermMappingMatPtAP(Mat unmapped_H, Mat map, Mat mapped_
 static PetscErrorCode TaoTermMappingGetHessians(TaoTermMapping *mt, InsertMode mode, Mat H, Mat Hpre, Mat *mapped_H, Mat *mapped_Hpre, Mat *unmapped_H, Mat *unmapped_Hpre)
 {
   PetscFunctionBegin;
+#if 0
   *mapped_H    = H;
   *mapped_Hpre = Hpre;
   if (mode == ADD_VALUES || mt->map) {
@@ -239,9 +240,17 @@ static PetscErrorCode TaoTermMappingGetHessians(TaoTermMapping *mt, InsertMode m
     if (H) *unmapped_H = mt->_unmapped_H;
     if (Hpre) *unmapped_Hpre = mt->_unmapped_Hpre;
   }
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// if (map) mapped_H \gets map^T @ unmapped_H @ map
+// else (assumes that unmapped == mapped. TODO is this true?
+//
+// if INSERT
+//   H \gets mapped_H
+// else if ADD
+//   H \gets H + scale * mapped_H
 static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode mode, Mat H, Mat Hpre, Mat mapped_H, Mat mapped_Hpre, Mat unmapped_H, Mat unmapped_Hpre)
 {
   PetscFunctionBegin;
@@ -250,10 +259,13 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
     if (mapped_H) PetscCall(TaoTermMappingMatPtAP(unmapped_H, mt->map, mapped_H));
     if (mapped_Hpre) PetscCall(TaoTermMappingMatPtAP(unmapped_Hpre, mt->map, mapped_Hpre));
   }
+  // else assert mapped_H == unmapped_H TODO
   if (mode == ADD_VALUES) {
     if (H) PetscCall(MatAXPY(H, mt->scale, mapped_H, UNKNOWN_NONZERO_PATTERN));
     if (Hpre) PetscCall(MatAXPY(Hpre, mt->scale, mapped_Hpre, UNKNOWN_NONZERO_PATTERN));
   } else {
+    //TODO if n_terms ==1, then unmapped_H == mapped_H == tao->hessian. then what?
+    PetscCall(MatCopy(H, mapped_H, DIFFERENT_NONZERO_PATTERN));
     if (mt->scale != 1.0) {
       if (H) PetscCall(MatScale(H, mt->scale));
       if (Hpre && Hpre != H) PetscCall(MatScale(Hpre, mt->scale));
@@ -262,10 +274,26 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+//Either called by TaoComputeHessian (one term in Tao), or by TAOTERMSUM
+//
+// First case: (one term in Tao)
+// TaoComputeHessian
+//   -> TaoTermMappingComputeHessian
+//      (unmapped_H == mapped_H)
+//
+// Second case: TAOTERMSUM, (more than one term in Tao)
+// TaoComputeHessian
+//   -> TaoTermMappingComputeHessian
+//     -> (mt->_unmapped_H == mt->_mapped_H == tao->hessian) (SUM does not take mapping)
+//     -> TaoTermComputeHessian
+//       -> TaoTermComputeHessian_Sum
+//         -> for(i:n_terms)
+//         -> TaoTermMappingComputeHessian
+//           -> (unmapped_H may not == mapped_H)
 PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *mt, Vec x, Vec params, InsertMode mode, Mat H, Mat Hpre)
 {
   Vec Ax;
-  Mat mapped_H, mapped_Hpre, unmapped_H = NULL, unmapped_Hpre = NULL;
+  //Mat mapped_H, mapped_Hpre, unmapped_H = NULL, unmapped_Hpre = NULL;
 
   PetscFunctionBegin;
   TaoTermMappingCheckInsertMode(mt, mode);
@@ -277,9 +305,15 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *mt, Vec
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(TaoTermMappingMap(mt, x, &Ax));
+#if 0
   PetscCall(TaoTermMappingGetHessians(mt, mode, H, Hpre, &mapped_H, &mapped_Hpre, &unmapped_H, &unmapped_Hpre));
   PetscCall(TaoTermComputeHessian(mt->term, Ax, params, unmapped_H, unmapped_Hpre));
   PetscCall(TaoTermMappingSetHessians(mt, mode, H, Hpre, mapped_H, mapped_Hpre, unmapped_H, unmapped_Hpre));
+#endif
+  //TODO if TAOTERMSUM, assuming that tao->hessian == H == mt->_unmapped_H == mt->_mapped_H. Is this true?
+  //What about n_terms == 1? TODO
+  PetscCall(TaoTermComputeHessian(mt->term, Ax, params, mt->_unmapped_H, mt->_unmapped_Hpre));
+  PetscCall(TaoTermMappingSetHessians(mt, mode, H, Hpre, mt->_mapped_H, mt->_mapped_Hpre, mt->_unmapped_H, mt->_unmapped_Hpre));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
