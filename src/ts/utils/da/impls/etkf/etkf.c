@@ -85,7 +85,7 @@ PetscErrorCode DAETKFFinalizePackage(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*
   DAETKFAnalysis - Performs the ensemble transform Kalman filter (ETKF) analysis
   defined by Algorithm 6.4 in Law, Stuart, and Zygalakis.
 
@@ -108,7 +108,7 @@ transform, and Step 10 applies the transform to refresh every ensemble member.
 
 .seealso: [](ch_da), `DA`, `DAETKFApplyModel()`, `DAComputeMean()`,
 `DAComputeAnomalies()`
-@*/
+*/
 static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
 {
   DAETKFData  *impl = (DAETKFData *)da->data;
@@ -288,7 +288,7 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*
   DAETKFApplyModel - Advances each ensemble member through the user-supplied
   nonlinear model (Algorithm 6.4, Step 10 forecast propagation).
 
@@ -307,7 +307,7 @@ the next forecast cycle.
   Level: intermediate
 
 .seealso: [](ch_da), `DA`, `DAETKFAnalysis()`
-@*/
+*/
 static PetscErrorCode DAETKFApplyModel(DA da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
 {
   Vec      col_in, col_out, temp;
@@ -386,7 +386,7 @@ PetscErrorCode DAETKFGetSqrtType(DA da, DAETKFSqrtType *type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*
   DAETKFInitialize - Installs the ETKF-specific operations on a newly created
   `DA` object.
 
@@ -398,7 +398,7 @@ PetscErrorCode DAETKFGetSqrtType(DA da, DAETKFSqrtType *type)
   Level: developer
 
 .seealso: [](ch_da), `DA`, `DAETKFRegister()`, `DAETKFAnalysis()`
-@*/
+*/
 static PetscErrorCode DAETKFInitialize(DA da)
 {
   DAETKFData *impl;

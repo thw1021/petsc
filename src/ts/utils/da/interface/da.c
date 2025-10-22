@@ -762,7 +762,7 @@ PetscErrorCode DAAnalysis(DA da, Vec observation, PetscErrorCode (*observation_o
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
-  PetscAssertPointer(observation_operator, 3);
+  PetscAssertPointer(obs_ctx, 3);
 
   PetscCheck(da->ops->analysis, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "DA type %s does not implement Analysis()", ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name : "unknown");
   PetscCall((*da->ops->analysis)(da, observation, observation_operator, obs_ctx));
@@ -788,7 +788,7 @@ PetscErrorCode DAApplyModel(DA da, PetscErrorCode (*model)(Vec, Vec, void *), vo
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
-  PetscAssertPointer(model, 2);
+  PetscAssertPointer(model_ctx, 3);
 
   PetscCheck(da->ops->applymodel, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "DA type %s does not implement ApplyModel()", ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name : "unknown");
   PetscCall((*da->ops->applymodel)(da, model, model_ctx));
