@@ -399,7 +399,6 @@ PetscErrorCode DAETKFView(DA da, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "DAEKF Object:\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Square root type: %s\n", (impl->sqrt_type == DAETKF_SQRT_EIGEN) ? "eigen" : "cholesky"));
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
