@@ -44,16 +44,3 @@ PETSC_INTERN PetscErrorCode DACholeskySqrt_Private(Mat, Mat *);
 PETSC_INTERN PetscErrorCode DASymmetricEigenSqrt_Private(Mat, Mat *);
 PETSC_INTERN PetscErrorCode VecSetRandomGaussian_Private(Vec, PetscRandom, PetscReal, PetscReal);
 
-/* -------------------------------------------------------------------------- */
-/* Legacy ETKF compatibility layer                                            */
-/* -------------------------------------------------------------------------- */
-
-#define ETKF_CLASSID          DA_CLASSID
-#define ETKFRegisterAllCalled DARegisterAllCalled
-#define ETKFList              DAList
-
-typedef DAOps ETKFOps;
-#define _p_ETKF _p_DA
-
-#define ETKFCholeskySqrt_Private       DACholeskySqrt_Private
-#define ETKFSymmetricEigenSqrt_Private DASymmetricEigenSqrt_Private

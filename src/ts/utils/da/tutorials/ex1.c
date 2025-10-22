@@ -3,7 +3,7 @@
 #include <petscts.h>
 #include <petscvec.h>
 
-static char help[] = "Deterministic ETKF example for the Lorenz-95 model. See "
+static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
                      "Algorithm 6.4 of \n"
                      "Asch, Bocquet, and Nodet (2016) \"Data Assimilation\" "
                      "(SIAM, doi:10.1137/1.9781611974546).\n\n";
@@ -12,22 +12,22 @@ static char help[] = "Deterministic ETKF example for the Lorenz-95 model. See "
 // -ensemble_size 30 : "Mean RMSE (analysis): 0.474040"
 
 typedef struct {
-  DM        da; /* 1D periodic DM storing the Lorenz-95 state */
+  DM        da; /* 1D periodic DM storing the Lorenz-96 state */
   PetscInt  n;  /* State dimension (number of grid points) */
-  PetscReal F;  /* Constant forcing term in the Lorenz-95 equations */
+  PetscReal F;  /* Constant forcing term in the Lorenz-96 equations */
   PetscReal dt; /* Integration time step size */
-} Lorenz95Ctx;
+} Lorenz96Ctx;
 
-static PetscErrorCode Lorenz95RHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ctx)
+static PetscErrorCode Lorenz96RHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ctx)
 {
-  Lorenz95Ctx       *l95 = (Lorenz95Ctx *)ctx;
+  Lorenz96Ctx       *l95 = (Lorenz96Ctx *)ctx;
   Vec                X_local;
   const PetscScalar *x;
   PetscScalar       *f;
   PetscInt           xs, xm, i;
 
   PetscFunctionBeginUser;
-  /* Work with a local (ghosted) vector so the Lorenz-95 stencil has the
+  /* Work with a local (ghosted) vector so the Lorenz-96 stencil has the
    * required neighbors. */
   PetscCall(DMDAGetCorners(l95->da, &xs, NULL, NULL, &xm, NULL, NULL));
   PetscCall(DMGetLocalVector(l95->da, &X_local));
@@ -36,7 +36,7 @@ static PetscErrorCode Lorenz95RHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ct
   PetscCall(DMDAVecGetArrayRead(l95->da, X_local, &x));
   PetscCall(DMDAVecGetArray(l95->da, F_vec, &f));
 
-  /* Standard Lorenz-95 tendency: (x_{i+1} - x_{i-2}) * x_{i-1} - x_i + F. */
+  /* Standard Lorenz-96 tendency: (x_{i+1} - x_{i-2}) * x_{i-1} - x_i + F. */
   for (i = xs; i < xs + xm; i++) f[i] = (x[i + 1] - x[i - 2]) * x[i - 1] - x[i] + l95->F;
 
   PetscCall(DMDAVecRestoreArrayRead(l95->da, X_local, &x));
@@ -45,15 +45,15 @@ static PetscErrorCode Lorenz95RHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ct
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode Lorenz95Step(Vec x_in, Vec x_out, void *ctx)
+static PetscErrorCode Lorenz96Step(Vec x_in, Vec x_out, void *ctx)
 {
-  Lorenz95Ctx *l95 = (Lorenz95Ctx *)ctx;
+  Lorenz96Ctx *l95 = (Lorenz96Ctx *)ctx;
   TS           ts;
 
   PetscFunctionBeginUser;
   PetscCall(TSCreate(PETSC_COMM_SELF, &ts));
   PetscCall(TSSetProblemType(ts, TS_NONLINEAR));
-  PetscCall(TSSetRHSFunction(ts, NULL, Lorenz95RHS, l95));
+  PetscCall(TSSetRHSFunction(ts, NULL, Lorenz96RHS, l95));
   /* Configure a single explicit RK4 step to forecast one ensemble member
    * forward in time. */
   PetscCall(TSSetType(ts, TSRK));
@@ -68,7 +68,7 @@ static PetscErrorCode Lorenz95Step(Vec x_in, Vec x_out, void *ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode Lorenz95ObsIdentity(Vec x, Vec y, void *ctx)
+static PetscErrorCode Lorenz96ObsIdentity(Vec x, Vec y, void *ctx)
 {
   PetscFunctionBeginUser;
   PetscCall(VecCopy(x, y));
@@ -78,7 +78,7 @@ static PetscErrorCode Lorenz95ObsIdentity(Vec x, Vec y, void *ctx)
 int main(int argc, char **argv)
 {
   PetscInt    ensemble_size = 30;
-  Lorenz95Ctx l95_ctx;
+  Lorenz96Ctx l95_ctx;
   DM          da_state;
   DA          da_ctx;
   Vec         x0, x_mean, x_forecast, diff;
@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 
   /* Expose key configuration parameters so the experiment can be tuned from the
    * command line. */
-  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Lorenz-95 ETKF Quick Example", NULL);
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Lorenz-96 ETKF Quick Example", NULL);
   PetscCall(PetscOptionsInt("-n", "State dimension", "", n, &n, NULL));
   PetscCall(PetscOptionsInt("-steps", "Number of time steps", "", steps, &steps, NULL));
   PetscCall(PetscOptionsInt("-burn", "Burn-in steps excluded from statistics", "", burn, &burn, NULL));
@@ -185,7 +185,7 @@ int main(int argc, char **argv)
   PetscCall(VecDestroy(&member));
   PetscCall(VecDestroy(&spread));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-95 ETKF quick example\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-96 ETKF quick example\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                         "  State dimension      : %" PetscInt_FMT "\n"
                         "  Ensemble size        : %" PetscInt_FMT "\n"
@@ -216,7 +216,7 @@ int main(int argc, char **argv)
       PetscCall(VecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
       PetscCall(VecCopy(truth_state, observation));
       PetscCall(VecAXPY(observation, 1.0, obs_noise));
-      PetscCall(DAAnalysis(da_ctx, observation, Lorenz95ObsIdentity, NULL));
+      PetscCall(DAAnalysis(da_ctx, observation, Lorenz96ObsIdentity, NULL));
 
       PetscCall(DAComputeMean(da_ctx, x_mean));
       PetscCall(VecCopy(x_mean, diff));
@@ -240,8 +240,8 @@ int main(int argc, char **argv)
     if (step < steps) {
       /* Propagate every ensemble member (in-place) and advance the truth
        * trajectory. */
-      PetscCall(DAApplyModel(da_ctx, Lorenz95Step, &l95_ctx));
-      PetscCall(Lorenz95Step(truth_state, truth_next, &l95_ctx));
+      PetscCall(DAApplyModel(da_ctx, Lorenz96Step, &l95_ctx));
+      PetscCall(Lorenz96Step(truth_state, truth_next, &l95_ctx));
       PetscCall(VecCopy(truth_next, truth_state));
     }
   }

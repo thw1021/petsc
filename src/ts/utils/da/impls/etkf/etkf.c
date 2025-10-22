@@ -195,11 +195,11 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
     PetscCall(MatDenseRestoreColumnVecWrite(S, i, &col_out));
   }
 
-  PetscCall(VecDuplicate(y_mean, &delta));
-  PetscCall(VecWAXPY(delta, -1.0, y_mean, observation)); /* Innovation y^o - y_bar. */
+  delta = y_mean;
+  PetscCall(VecAYPX(delta, -1.0, observation)); /* Innovation y^o - y_bar. */
 
-  PetscCall(VecDuplicate(delta, &delta_scaled));
-  PetscCall(VecPointwiseMult(delta_scaled, delta, r_inv_sqrt)); /* Step 4: del_tilda. */
+  delta_scaled = delta;
+  PetscCall(VecPointwiseMult(delta_scaled, delta_scaled, r_inv_sqrt)); /* Step 4: del_tilda. */
 
   PetscCall(MatTransposeMatMult(S, S, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T)); /* Step 5: S S'. */
 
@@ -220,9 +220,7 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(MatDestroy(&T));
   T = T_inv;
 
-  PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &S_T_delta));
-  PetscCall(VecSetSizes(S_T_delta, PETSC_DECIDE, m));
-  PetscCall(VecSetFromOptions(S_T_delta));
+  PetscCall(MatCreateVecs(T, NULL, &S_T_delta));
   PetscCall(MatMultTranspose(S, delta_scaled, S_T_delta)); /* S' del_tilda. */
 
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &w));
@@ -270,8 +268,6 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
 
   PetscCall(VecDestroy(&mean));
   PetscCall(VecDestroy(&y_mean));
-  PetscCall(VecDestroy(&delta));
-  PetscCall(VecDestroy(&delta_scaled));
   PetscCall(VecDestroy(&temp_vec));
   PetscCall(VecDestroy(&r_inv_sqrt));
   PetscCall(VecDestroy(&w));

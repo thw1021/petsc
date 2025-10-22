@@ -712,8 +712,7 @@ PetscErrorCode DAComputeMean(DA da, Vec mean)
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscValidHeaderSpecific(mean, VEC_CLASSID, 2);
 
-  PetscCheck(da->ops->computemean, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "DA type %s does not implement ComputeMean()", ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name : "unknown");
-  PetscCall((*da->ops->computemean)(da, mean));
+  PetscUseTypeMethod(da, computemean, mean);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -736,8 +735,7 @@ PetscErrorCode DAComputeAnomalies(DA da, Mat *anomalies)
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscAssertPointer(anomalies, 2);
 
-  PetscCheck(da->ops->computeanomalies, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "DA type %s does not implement ComputeAnomalies()", ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name : "unknown");
-  PetscCall((*da->ops->computeanomalies)(da, anomalies));
+  PetscUseTypeMethod(da, computeanomalies, anomalies);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -762,10 +760,8 @@ PetscErrorCode DAAnalysis(DA da, Vec observation, PetscErrorCode (*observation_o
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
-  PetscAssertPointer(obs_ctx, 3);
 
-  PetscCheck(da->ops->analysis, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "DA type %s does not implement Analysis()", ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name : "unknown");
-  PetscCall((*da->ops->analysis)(da, observation, observation_operator, obs_ctx));
+  PetscUseTypeMethod(da, analysis, observation, observation_operator, obs_ctx);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -790,8 +786,7 @@ PetscErrorCode DAApplyModel(DA da, PetscErrorCode (*model)(Vec, Vec, void *), vo
   PetscValidHeaderSpecific(da, DA_CLASSID, 1);
   PetscAssertPointer(model_ctx, 3);
 
-  PetscCheck(da->ops->applymodel, PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "DA type %s does not implement ApplyModel()", ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name : "unknown");
-  PetscCall((*da->ops->applymodel)(da, model, model_ctx));
+  PetscUseTypeMethod(da, applymodel, model, model_ctx);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -889,7 +884,7 @@ PetscErrorCode DACholeskySqrt_Private(Mat A, Mat *L_out)
 
 PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
 {
-  Mat          sqrtA, V, Vt, VSqrtD;
+  Mat          sqrtA, V, VSqrtD;
   Vec          sqrtD;
   PetscInt     m, n, i;
   PetscScalar *work, *varray, *sqrtvals;
@@ -915,7 +910,7 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
 #if defined(PETSC_USE_COMPLEX)
   {
     PetscReal *rwork;
-    PetscCall(PetscMalloc1(n, &rwork));
+    PetscCall(PetscMalloc1(lwork, &rwork));
     PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, rwork, &info));
     PetscCall(PetscFree(rwork));
   }
@@ -937,11 +932,9 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
 
   PetscCall(MatDuplicate(V, MAT_COPY_VALUES, &VSqrtD));
   PetscCall(MatDiagonalScale(VSqrtD, NULL, sqrtD));
-  PetscCall(MatTranspose(V, MAT_INITIAL_MATRIX, &Vt));
-  PetscCall(MatMatMult(VSqrtD, Vt, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &sqrtA));
+  PetscCall(MatMatTransposeMult(VSqrtD, V, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &sqrtA));
   PetscCall(MatDestroy(&VSqrtD));
   PetscCall(VecDestroy(&sqrtD));
-  PetscCall(MatDestroy(&Vt));
 
   PetscCall(MatAssemblyBegin(sqrtA, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(sqrtA, MAT_FINAL_ASSEMBLY));

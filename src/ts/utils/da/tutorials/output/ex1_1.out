@@ -3,7 +3,7 @@ DA Object: 1 MPI processes
   Observation size: 40
   Ensemble size: 30
   Assembled: true
-Lorenz-95 ETKF quick example
+Lorenz-96 ETKF quick example
   State dimension      : 40
   Ensemble size        : 30
   Time step             : 0.0500
@@ -12,17 +12,17 @@ Lorenz-95 ETKF quick example
   Observation frequency : 2
   Observation noise std : 0.500
 
-Step    0 time 0.000  RMSE_forecast 0.08077  RMSE_analysis 0.16975 [burn-in]
-Step   12 time 0.600  RMSE_forecast 0.58976  RMSE_analysis 0.25764
-Step   24 time 1.200  RMSE_forecast 0.40807  RMSE_analysis 0.28325
-Step   36 time 1.800  RMSE_forecast 0.51162  RMSE_analysis 0.26205
-Step   48 time 2.400  RMSE_forecast 0.57792  RMSE_analysis 0.34791
-Step   60 time 3.000  RMSE_forecast 0.53855  RMSE_analysis 0.28397
-Step   72 time 3.600  RMSE_forecast 0.60684  RMSE_analysis 0.29352
-Step   84 time 4.200  RMSE_forecast 0.69902  RMSE_analysis 0.27790
-Step   96 time 4.800  RMSE_forecast 0.48858  RMSE_analysis 0.28625
-Step  108 time 5.400  RMSE_forecast 0.49056  RMSE_analysis 0.27069
-Step  120 time 6.000  RMSE_forecast 0.38692  RMSE_analysis 0.25400
+Step    0time 0.000  RMSE_forecast 0.08077  RMSE_analysis 0.16975 [burn-in]
+Step   12time 0.600  RMSE_forecast 0.58976  RMSE_analysis 0.25764
+Step   24time 1.200  RMSE_forecast 0.40807  RMSE_analysis 0.28325
+Step   36time 1.800  RMSE_forecast 0.51162  RMSE_analysis 0.26205
+Step   48time 2.400  RMSE_forecast 0.57792  RMSE_analysis 0.34791
+Step   60time 3.000  RMSE_forecast 0.53855  RMSE_analysis 0.28397
+Step   72time 3.600  RMSE_forecast 0.60684  RMSE_analysis 0.29352
+Step   84time 4.200  RMSE_forecast 0.69902  RMSE_analysis 0.27790
+Step   96time 4.800  RMSE_forecast 0.48858  RMSE_analysis 0.28625
+Step  108time 5.400  RMSE_forecast 0.49056  RMSE_analysis 0.27069
+Step  120time 6.000  RMSE_forecast 0.38692  RMSE_analysis 0.25400
 
 Statistics over 111 assimilation steps (post burn-in):
   Mean RMSE (forecast): 0.455371

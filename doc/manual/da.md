@@ -121,18 +121,6 @@ Because `DA` participates in the PETSc object registry, any prefix applied with 
 
 `DAView()` and `DAViewFromOptions()` expose ensemble sizing, observation dimensions, and implementation-specific diagnostics. Views can be directed to ASCII, HDF5, or custom `PetscViewer` targets, enabling lightweight instrumentation of assimilation experiments. For advanced profiling, the DA package registers with PETSc's logging infrastructure via `DAInitializePackage()`/`DAFinalizePackage()`, so standard `-log_view` runs capture time spent in forecast and analysis kernels.
 
-## Interoperability with legacy ETKF helpers
-
-For backward compatibility, `DA` offers aliases that mirror the original ETKF API:
-
-```c
-ETKF etkf;
-
-PetscCall(ETKFCreate(PETSC_COMM_WORLD, &etkf));
-PetscCall(ETKFSetType(etkf, ETKFSTANDARD));
-PetscCall(ETKFSetSqrtType(etkf, DAETKF_SQRT_CHOLESKY));
-PetscCall(ETKFAnalysis(etkf, observation_vec, ObservationOperator, user_ctx));
-```
 
 These thin wrappers keep existing applications functional while encouraging new developments to migrate to the canonical `DA*()` routines.
 
