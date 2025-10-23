@@ -3110,7 +3110,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
       PetscCall(VecDestroy(&subvecs[0]));
     }
     PetscCall(TaoTermDestroy(&old_sum));
-    tao->num_terms = 1;
+    tao->num_terms = 1;//TODO wrong
   }
   //TODO 1. let's not care about scale for a moment
   //TODO 2. i don't want sum's map to propagate

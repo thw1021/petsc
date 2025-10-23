@@ -97,6 +97,7 @@ int main(int argc, char **argv)
 
       PetscCall(TaoBRGNSetRegularizationType(tao, TAOBRGN_REGULARIZATION_L1DICT));
       PetscCall(TaoBRGNSetL1SmoothEpsilon(tao, 1.e-6));
+      PetscCall(TaoBRGNSetRegularizerWeight(tao, 1.e-8));
       PetscCall(TaoBRGNGetSubsolver(tao, &subsolver));
       PetscCall(TaoGetTerm(subsolver, NULL, &sum, NULL, NULL));
       PetscCall(TaoTermSumSetSubtermHessianMatrices(sum, 1, NULL, NULL, user.DTD, user.DTD));
@@ -104,6 +105,7 @@ int main(int argc, char **argv)
     break;
   case TEST_L2PROX:
     PetscCall(TaoBRGNSetRegularizationType(tao, TAOBRGN_REGULARIZATION_L2PROX));
+    PetscCall(TaoBRGNSetRegularizerWeight(tao, 1.e-8));
     break;
   case TEST_USER:
     PetscCall(TaoTermCreateHalfL2Squared(PETSC_COMM_SELF, user.N, user.N, &term));
@@ -204,7 +206,9 @@ static PetscErrorCode InitializeUserData(AppCtx *user)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-path", path, sizeof(path), &flg));
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must specify -path ${DATAFILESPATH}/tao/tomography");
   //Custom PtAP mapped Hessian gets destroyed if regularzer is set via command line options. Manually doing it
+  run = user->tType;
   PetscCall(PetscOptionsEList("-test_type", "Hard coding regularizer types", "tomography.c", testTypes, 3, testTypes[user->tType], &run, NULL));
+  user->tType = (TestType)run;
   /* Load the A matrix, b vector, and xGT vector from a binary file. */
   PetscCall(PetscSNPrintf(dataFile, sizeof(dataFile), "%s/tomographyData_A_b_xGT", path));
   PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, dataFile, FILE_MODE_READ, &fd));
