@@ -1,6 +1,6 @@
 -include ../../../../../../petscdir.mk
 
-MANSEC   = DM
+MANSEC   = TS
 SUBMANSEC = DA
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
