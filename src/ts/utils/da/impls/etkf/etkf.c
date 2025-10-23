@@ -370,7 +370,7 @@ PetscErrorCode DAETKFGetSqrtType(DA da, DAETKFSqrtType *type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*
   DAETKFView - Views a `DAETKF` and its implementation-specific data structure.
 
   Collective
@@ -382,7 +382,7 @@ PetscErrorCode DAETKFGetSqrtType(DA da, DAETKFSqrtType *type)
   Level: beginner
 
 .seealso: [](ch_da), `DAViewFromOptions()`
-@*/
+*/
 static PetscErrorCode DAETKFView(DA da, PetscViewer viewer)
 {
   PetscBool   iascii;
