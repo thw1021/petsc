@@ -6,8 +6,9 @@ const char *const TaoBRGNRegularizationTypes[] = {"user", "l2prox", "l2pure", "l
 typedef struct _n_TaoTerm_GaussNewton TaoTerm_GaussNewton;
 
 struct _n_TaoTerm_GaussNewton {
-  Tao      tao;   // weak-reference
-  PetscInt refct; // because this can be reference from the Gauss-Newton and the Levenberg-Marquardt terms
+  Tao      tao;    // weak-reference to gn->subsolver
+  Tao      parent; // weak-reference for solution template
+  PetscInt refct;  // because this can be reference from the Gauss-Newton and the Levenberg-Marquardt terms
 
   PetscObjectId    x_id; // data for recomputing the residual Jacobian J
   PetscObjectState x_state;
@@ -90,6 +91,7 @@ static PetscErrorCode TaoTermComputeObjectiveAndGradient_GaussNewton(TaoTerm ter
   Mat                  ls_jac;
 
   PetscFunctionBegin;
+  //Tao here is subsolver
   PetscCall(TaoTermShellGetContext(term, (void *)&gnterm));
   tao = gnterm->tao;
   PetscCall(TaoComputeResidual(tao, x, tao->ls_res));
@@ -124,7 +126,7 @@ static PetscErrorCode TaoTermComputeHessian_GaussNewton(TaoTerm term, Vec x, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermCreateGaussNewton(Tao tao, TaoTerm *term)
+static PetscErrorCode TaoTermCreateGaussNewton(Tao tao, TaoTerm *term, Tao parent)
 {
   TaoTerm_GaussNewton *gnterm;
   TaoTerm              _term;
@@ -132,6 +134,7 @@ static PetscErrorCode TaoTermCreateGaussNewton(Tao tao, TaoTerm *term)
   PetscFunctionBegin;
   PetscCall(PetscNew(&gnterm));
   gnterm->tao     = tao;
+  gnterm->parent  = parent;
   gnterm->refct   = 1;
   gnterm->x_id    = 0;
   gnterm->x_state = 0;
@@ -188,7 +191,7 @@ static PetscErrorCode TaoTermCreateLevenbergMarquardt(TaoTerm gn, TaoTerm *lm)
   PetscCall(PetscContainerSetCtxDestroy(gncontainer, TaoTermDestroy_GaussNewton));
   PetscCall(TaoTermDuplicate(gn, TAOTERM_DUPLICATE_SIZEONLY, &_term));
   PetscCall(TaoTermSetType(_term, TAOTERMQUADRATIC));
-  PetscCall(VecDuplicate(gnterm->tao->solution, &diag_vec));
+  PetscCall(VecDuplicate(gnterm->parent->solution, &diag_vec));
   PetscCall(MatCreateDiagonal(diag_vec, &diag_mat));
   PetscCall(VecDestroy(&diag_vec));
   PetscCall(TaoTermQuadraticSetMat(_term, diag_mat));
@@ -914,7 +917,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
   PetscCall(TaoSetOptionsPrefix(gn->subsolver, prefix));
   PetscCall(TaoAppendOptionsPrefix(gn->subsolver, "tao_brgn_subsolver_"));
 
-  PetscCall(TaoTermCreateGaussNewton(gn->subsolver, &gauss_newton_term));
+  PetscCall(TaoTermCreateGaussNewton(gn->subsolver, &gauss_newton_term, tao));
   PetscCall(PetscObjectSetName((PetscObject)gauss_newton_term, "BRGN Gauss-Newton term"));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)gauss_newton_term, prefix));
   PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)gauss_newton_term, "brgn_gauss_newton_"));
