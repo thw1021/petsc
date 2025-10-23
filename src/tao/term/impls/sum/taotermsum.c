@@ -17,8 +17,6 @@ typedef struct _n_TaoTermSumHessCache {
 } TaoTermSumHessCache;
 
 struct _n_TaoTerm_Sum {
-  Mat                 H_composite;
-  Mat                 Hpre_composite;
   PetscInt            n_terms;
   TaoTermMapping     *terms;
   PetscReal          *subterm_values;
@@ -243,8 +241,6 @@ static PetscErrorCode TaoTermDestroy_Sum(TaoTerm term)
 
   PetscFunctionBegin;
   PetscCall(TaoTermSumHessCacheReset(&sum->hessian_cache));
-  PetscCall(MatDestroy(&sum->H_composite));
-  PetscCall(MatDestroy(&sum->Hpre_composite));
   for (PetscInt i = 0; i < sum->n_terms; i++) PetscCall(TaoTermMappingReset(&sum->terms[i]));
   for (PetscInt i = 0; i < sum->hessian_cache.n_terms; i++) PetscCall(MatDestroy(&sum->hessian_cache.hessians[i]));
   PetscCall(PetscFree(sum->hessian_cache.hessians));
@@ -1281,9 +1277,6 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm term)
   PetscCall(PetscNew(&sum));
   term->data            = (void *)sum;
   term->parameters_mode = TAOTERM_PARAMETERS_OPTIONAL;
-
-  sum->H_composite    = NULL;
-  sum->Hpre_composite = NULL;
 
   term->H_mattype    = NULL;
   term->Hpre_mattype = NULL;
