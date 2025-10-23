@@ -1233,7 +1233,7 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Sum(TaoTerm term, Mat *H, Mat
     if (is_callback) {
       Mat c_H;
 
-      PetscCall(TaoTermSumGetSubtermHessianMatrices(term, i, &c_H, NULL, NULL, NULL));
+      PetscCall(TaoTermSumGetSubtermHessianMatrices(term, i, NULL, NULL, &c_H, NULL));
       PetscCheck(c_H, PetscObjectComm((PetscObject)summand->term), PETSC_ERR_USER, "TAOTERMCALLBACK does not have Hessian routines set. Call TaoSetHessian()");
     }
     PetscCall(TaoTermMappingCreateHessianMatrices(summand, &summand->_mapped_H, &summand->_mapped_Hpre));
