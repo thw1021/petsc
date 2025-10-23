@@ -383,7 +383,7 @@ PetscErrorCode DAETKFGetSqrtType(DA da, DAETKFSqrtType *type)
 
 .seealso: [](ch_da), `DAViewFromOptions()`
 @*/
-PetscErrorCode DAETKFView(DA da, PetscViewer viewer)
+static DAETKFView(DA da, PetscViewer viewer)
 {
   PetscBool   iascii;
   DAETKFData *impl = (DAETKFData *)da->data;
