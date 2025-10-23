@@ -50,8 +50,6 @@ PETSC_EXTERN PetscErrorCode DASetEnsembleMember(DA, PetscInt, Vec);
 
 PETSC_EXTERN PetscErrorCode DAComputeMean(DA, Vec);
 PETSC_EXTERN PetscErrorCode DAComputeAnomalies(DA, Mat *);
-PETSC_EXTERN PetscErrorCode DAAnalysis(DA, Vec, PetscErrorCode (*)(Vec, Vec, void *), void *);
-PETSC_EXTERN PetscErrorCode DAApplyModel(DA, PetscErrorCode (*)(Vec, Vec, void *), void *);
 
 PETSC_EXTERN PetscErrorCode VecSetRandomGaussian(Vec, PetscRandom, PetscReal, PetscReal);
 
