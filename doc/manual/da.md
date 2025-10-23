@@ -129,4 +129,4 @@ These thin wrappers keep existing applications functional while encouraging new 
 - {any}`ch_ts` discusses PETSc time integrators that can supply the forecast operator passed to `DAApplyModel()`.
 - {any}`ch_vectors` documents vector assembly and parallel data management for the state and observation spaces.
 - {any}`ch_snes` outlines nonlinear solvers that often participate in observation or model operators.
-- {any}`ch_dm` provides background on distributed mesh infrastructure that can coexist with DA-managed ensembles.
+- {any}`ch_dmbase` provides background on distributed mesh infrastructure that can coexist with DA-managed ensembles.
