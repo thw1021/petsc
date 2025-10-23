@@ -2686,21 +2686,6 @@ static PetscErrorCode MatShift_MPIAIJ(Mat Y, PetscScalar a)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMissingDiagonal_MPIAIJ(Mat A, PetscBool *missing, PetscInt *d)
-{
-  Mat_MPIAIJ *a = (Mat_MPIAIJ *)A->data;
-
-  PetscFunctionBegin;
-  PetscCheck(A->rmap->n == A->cmap->n, PETSC_COMM_SELF, PETSC_ERR_SUP, "Only works for square matrices");
-  PetscCall(MatMissingDiagonal(a->A, missing, d));
-  if (d) {
-    PetscInt rstart;
-    PetscCall(MatGetOwnershipRange(A, &rstart, NULL));
-    *d += rstart;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode MatInvertVariableBlockDiagonal_MPIAIJ(Mat A, PetscInt nblocks, const PetscInt *bsizes, PetscScalar *diag)
 {
   Mat_MPIAIJ *a = (Mat_MPIAIJ *)A->data;
@@ -2824,7 +2809,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIAIJ,
                                        NULL,
                                        MatGetRowMin_MPIAIJ,
                                        NULL,
-                                       /*104*/ MatMissingDiagonal_MPIAIJ,
+                                       /*104*/ NULL,
                                        MatGetSeqNonzeroStructure_MPIAIJ,
                                        NULL,
                                        MatGetGhosts_MPIAIJ,
