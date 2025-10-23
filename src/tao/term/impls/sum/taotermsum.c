@@ -745,15 +745,6 @@ static PetscErrorCode TaoTermSumSetSubtermHessianMatrices_Sum(TaoTerm term, Pets
     PetscCall(TaoTermSetCreateHessianMode(summand->term, Hpre_is_H, H_type, Hpre_type));
   }
 
-  if (!summand->map) {
-    // accept inputs in either position
-    unmapped_H = unmapped_H ? unmapped_H : mapped_H;
-    mapped_H   = NULL;
-
-    unmapped_Hpre = unmapped_Hpre ? unmapped_Hpre : mapped_Hpre;
-    mapped_Hpre   = NULL;
-  }
-
   PetscCall(PetscObjectReference((PetscObject)unmapped_H));
   PetscCall(MatDestroy(&summand->_unmapped_H));
   summand->_unmapped_H = unmapped_H;
@@ -1112,11 +1103,16 @@ static PetscErrorCode TaoTermComputeHessian_Sum(TaoTerm term, Vec x, Vec params,
   PetscFunctionBegin;
   if (!H && !Hpre) PetscFunctionReturn(PETSC_SUCCESS);
   if (params) PetscCall(TaoTermSumVecNestGetSubVecsRead(params, NULL, &sub_params, &is_dummy));
+
+  //TODO Ideally, SUM's Hessian would be two matrices - one COMPOSITE and one DENSE
+  // and DENSE only gets updated by merge from COMPOSITE, iff subterms' Hessians' states have changed
+  if (H) PetscCall(MatZeroEntries(H));
+  if (Hpre && (Hpre != H)) PetscCall(MatZeroEntries(Hpre));
   for (PetscInt i = 0; i < sum->n_terms; i++) {
     TaoTermMapping *summand   = &sum->terms[i];
     Vec             sub_param = TaoTermSumGetSubVec(params, sub_params, is_dummy, i);
 
-    PetscCall(TaoTermMappingComputeHessian(summand, x, sub_param, i == 0 ? INSERT_VALUES : ADD_VALUES, H, Hpre == H ? NULL : Hpre));
+    PetscCall(TaoTermMappingComputeHessian(summand, x, sub_param, ADD_VALUES, H, Hpre == H ? NULL : Hpre));
   }
   if (params) PetscCall(TaoTermSumVecNestRestoreSubVecsRead(params, NULL, &sub_params, &is_dummy));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1244,36 +1240,8 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Sum(TaoTerm term, Mat *H, Mat
       PetscCall(TaoTermSumGetSubtermHessianMatrices(term, i, &c_H, NULL, NULL, NULL));
       PetscCheck(c_H, PetscObjectComm((PetscObject)summand->term), PETSC_ERR_USER, "TAOTERMCALLBACK does not have Hessian routines set. Call TaoSetHessian()");
     }
-    // summand Hessians may have been set via TaoTermSumSetSubtermHessianMatrices
-    // TODO Hpre set but H not set - doesn't makes sense? Just document it in notes..
-    // Cases: 1) unmapped has been set, 2) mapped has been set, 3) both has been set (no-op)
-    // if (summand->_unmapped_H), then
-    //   a) summand->map != NULL : proceed to create &summand->_mapped_H
-    //   b) summand->map == NULL : mapped_H = unmapped_H
-    // if (summand->_mapped_H), then
-    //   a) summand->map != NULL : (custom PtAP mapped_H). Just create unmapped_H, dont overwrite mapped_H
-    //   b) summand->map == NULL : unmapped_H = mapped_H
-    if (summand->_unmapped_H && !summand->_mapped_H) {
-      if (summand->map) PetscCall(TaoTermMappingCreateHessianMatrices(summand, &summand->_mapped_H, &summand->_mapped_Hpre));
-      else {
-        PetscCall(PetscObjectReference((PetscObject)summand->_unmapped_H));
-        summand->_mapped_H = summand->_unmapped_H;
-        if (summand->_unmapped_Hpre) {
-          PetscCall(PetscObjectReference((PetscObject)summand->_unmapped_Hpre));
-          summand->_mapped_Hpre = summand->_unmapped_Hpre;
-        }
-      }
-    } else if (summand->_mapped_H && !summand->_unmapped_H) {
-      if (summand->map) PetscCall(TaoTermCreateHessianMatrices(summand->term, &summand->_unmapped_H, &summand->_unmapped_Hpre));
-      else {
-        PetscCall(PetscObjectReference((PetscObject)summand->_mapped_H));
-        summand->_unmapped_H = summand->_mapped_H;
-        if (summand->_mapped_Hpre) {
-          PetscCall(PetscObjectReference((PetscObject)summand->_mapped_Hpre));
-          summand->_unmapped_Hpre = summand->_mapped_Hpre;
-        }
-      }
-    } else PetscCall(TaoTermMappingCreateHessianMatrices(summand, &summand->_mapped_H, &summand->_mapped_Hpre));
+    PetscCall(TaoTermMappingCreateHessianMatrices(summand, &summand->_mapped_H, &summand->_mapped_Hpre));
+
     sub_Hpre_is_H = (summand->_mapped_H == summand->_mapped_Hpre) ? PETSC_TRUE : PETSC_FALSE;
     Hpre_is_H     = (Hpre_is_H && sub_Hpre_is_H) ? PETSC_TRUE : PETSC_FALSE;
   }

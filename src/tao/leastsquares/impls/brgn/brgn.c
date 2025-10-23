@@ -842,12 +842,14 @@ static PetscErrorCode TaoSetUp_BRGN(Tao tao)
   }
   PetscCall(MatSetUp(H));
   //PetscCall(TaoSetHessianMatrices(gn->subsolver, H, H));//TODO
-  PetscCall(TaoTermSumSetSubtermHessianMatrices(gn->subsolver->objective_term.term, 0, H, H, NULL, NULL));
+  PetscCall(TaoTermSumSetSubtermHessianMatrices(gn->subsolver->objective_term.term, 0, NULL, NULL, H, H));
   PetscCall(MatDestroy(&H));
   /* Subsolver setup,include initial vector and dictionary D */
   PetscCall(TaoSetUpdate(gn->subsolver, GNHookFunction, gn));
   PetscCall(TaoSetSolution(gn->subsolver, tao->solution));
   if (tao->bounded) PetscCall(TaoSetVariableBounds(gn->subsolver, tao->XL, tao->XU));
+  PetscCall(TaoSetResidualRoutine(gn->subsolver, tao->ls_res, tao->ops->computeresidual, tao->user_lsresP));
+  PetscCall(TaoSetJacobianResidualRoutine(gn->subsolver, tao->ls_jac, tao->ls_jac, tao->ops->computeresidualjacobian, tao->user_lsjacP));
   /* Propagate some options down */
   PetscCall(TaoSetTolerances(gn->subsolver, tao->gatol, tao->grtol, tao->gttol));
   PetscCall(TaoSetMaximumIterations(gn->subsolver, tao->max_it));
@@ -912,7 +914,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
   PetscCall(TaoSetOptionsPrefix(gn->subsolver, prefix));
   PetscCall(TaoAppendOptionsPrefix(gn->subsolver, "tao_brgn_subsolver_"));
 
-  PetscCall(TaoTermCreateGaussNewton(tao, &gauss_newton_term));
+  PetscCall(TaoTermCreateGaussNewton(gn->subsolver, &gauss_newton_term));
   PetscCall(PetscObjectSetName((PetscObject)gauss_newton_term, "BRGN Gauss-Newton term"));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)gauss_newton_term, prefix));
   PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)gauss_newton_term, "brgn_gauss_newton_"));
@@ -921,7 +923,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
 
   PetscCall(TaoBRGNCreateRegularizerTerm(tao, &regularizer_term, &map, &Hreg));
   PetscCall(TaoAddTerm(gn->subsolver, "regularizer_", 1.e-4, regularizer_term, NULL, map));
-  PetscCall(TaoTermSumSetSubtermHessianMatrices(gn->subsolver->objective_term.term, 1, Hreg, Hreg, NULL, NULL));
+  PetscCall(TaoTermSumSetSubtermHessianMatrices(gn->subsolver->objective_term.term, 1, NULL, NULL, Hreg, Hreg));
   PetscCall(TaoTermDestroy(&regularizer_term));
   PetscCall(MatDestroy(&map));
   PetscCall(MatDestroy(&Hreg));
