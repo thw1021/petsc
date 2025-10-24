@@ -558,6 +558,8 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     PetscCall(TaoMonitorDrawCtxCreate(PetscObjectComm((PetscObject)tao), NULL, NULL, PETSC_DECIDE, PETSC_DECIDE, 300, 300, howoften, &drawctx));
     PetscCall(TaoMonitorSet(tao, TaoMonitorGradientDraw, drawctx, (PetscCtxDestroyFn *)TaoMonitorDrawCtxDestroy));
   }
+
+  //TODO tao_fd,mf flags are only for OLD API with just callbacks. For TaoTerm, need to manually set for each individual ones
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-tao_fd_gradient", "compute gradient using finite differences", "TaoDefaultComputeGradient", flg, &flg, NULL));
   if (flg) PetscCall(TaoTermComputeGradientUseFDPush(tao->objective_term.term));
@@ -577,9 +579,8 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   if (flg) {
     Mat H;
 
-    PetscCall(TaoTermCreateHessianMFFD(tao->objective_term.term, &H));
-    PetscCall(TaoSetHessianMatrices(tao, H, H));
-    PetscCall(TaoTermComputeHessianUseFDPush(tao->objective_term.term));
+    PetscCall(MatCreate(PetscObjectComm((PetscObject)tao), &H));
+    PetscCall(TaoSetHessian(tao, H, H, TaoDefaultComputeHessianMFFD, NULL));
     PetscCall(MatDestroy(&H));
   }
   PetscCall(PetscOptionsBool("-tao_recycle_history", "enable recycling/re-using information from the previous TaoSolve() call for some algorithms", "TaoSetRecycleHistory", flg, &flg, &found));
@@ -1830,13 +1831,13 @@ PetscErrorCode TaoMonitorDefaultShort(Tao tao, void *ctx)
   PetscCall(PetscViewerASCIIPrintf(viewer, "iter = %3" PetscInt_FMT ",", its));
   PetscCall(PetscViewerASCIIPrintf(viewer, " Function value %g,", (double)fct));
   if (gnorm >= PETSC_INFINITY) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, " Residual: Inf \n"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, " Residual: Inf\n"));
   } else if (gnorm > 1.e-6) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, " Residual: %g \n", (double)gnorm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, " Residual: %g\n", (double)gnorm));
   } else if (gnorm > 1.e-11) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, " Residual: < 1.0e-6 \n"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, " Residual: < 1.0e-6\n"));
   } else {
-    PetscCall(PetscViewerASCIIPrintf(viewer, " Residual: < 1.0e-11 \n"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, " Residual: < 1.0e-11\n"));
   }
   PetscCall(PetscViewerASCIISetTab(viewer, tabs));
   PetscFunctionReturn(PETSC_SUCCESS);

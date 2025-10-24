@@ -41,6 +41,8 @@ PetscErrorCode TaoTermDestroy(TaoTerm *term)
   PetscTryTypeMethod(*term, destroy);
   PetscCall(PetscFree((*term)->H_mattype));
   PetscCall(PetscFree((*term)->Hpre_mattype));
+  PetscCall(PetscFree((*term)->H_mattype_pre_fd_push));
+  PetscCall(PetscFree((*term)->Hpre_mattype_pre_fd_push));
   PetscCall(MatDestroy(&(*term)->solution_factory));
   PetscCall(MatDestroy(&(*term)->parameters_factory));
   PetscCall(MatDestroy(&(*term)->parameters_factory_orig));
@@ -249,7 +251,7 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
   PetscCall(PetscOptionsEnum("-tao_term_parameters_mode", "Parameters requirement type", "TaoTermSetParametersMode", TaoTermParametersModes, (PetscEnum)term->parameters_mode, (PetscEnum *)&term->parameters_mode, NULL));
   PetscCall(PetscOptionsBool("-tao_term_hessian_pre_is_hessian", "If the Hessian and its preconditioning matrix should be the same", "TaoTermSetCreateHessianMode", term->Hpre_is_H, &term->Hpre_is_H, NULL));
 
-  deft = MATSHELL;
+  deft = MATAIJ;
   if (term->H_mattype) deft = term->H_mattype;
   PetscCall(PetscOptionsFList("-tao_term_hessian_mat_type", "Hessian mat type", "TaoTermSetCreateHessianMode", MatList, deft, typeName, 256, &opt));
   if (opt) {
@@ -405,9 +407,13 @@ PetscErrorCode TaoTermCreate(MPI_Comm comm, TaoTerm *term)
   PetscCall(MatGetLayouts(_term->parameters_factory, &rlayout, &clayout));
   PetscCall(MatSetLayouts(_term->parameters_factory, rlayout, zero_layout));
   PetscCall(PetscLayoutDestroy(&zero_layout));
-  _term->Hpre_is_H = PETSC_TRUE;
-  _term->fd_delta  = 0.5 * PETSC_SQRT_MACHINE_EPSILON;
-  *term            = _term;
+  _term->Hpre_is_H                = PETSC_TRUE;
+  _term->fd_delta                 = 0.5 * PETSC_SQRT_MACHINE_EPSILON;
+  _term->H_mattype                = NULL;
+  _term->Hpre_mattype             = NULL;
+  _term->H_mattype_pre_fd_push    = NULL;
+  _term->Hpre_mattype_pre_fd_push = NULL;
+  *term                           = _term;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1419,6 +1425,7 @@ PetscErrorCode TaoTermCreateHessianMatrices(TaoTerm term, Mat *H, Mat *Hpre)
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   if (H) PetscAssertPointer(H, 2);
   if (Hpre) PetscAssertPointer(Hpre, 3);
+  //TODO if mattype is inelligible for specific term, we should ignore it and put it on info
   PetscUseTypeMethod(term, createhessianmatrices, H, Hpre);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1799,6 +1806,12 @@ PetscErrorCode TaoTermComputeHessianUseFDPush(TaoTerm term)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   term->fd_hess_level++;
+  PetscCall(PetscStrallocpy(term->H_mattype, (char **)&term->H_mattype_pre_fd_push));
+  PetscCall(PetscStrallocpy(term->Hpre_mattype, (char **)&term->Hpre_mattype_pre_fd_push));
+  PetscCall(PetscFree(term->H_mattype));
+  PetscCall(PetscFree(term->Hpre_mattype));
+  PetscCall(PetscStrallocpy(MATAIJ, (char **)&term->H_mattype));
+  PetscCall(PetscStrallocpy(MATAIJ, (char **)&term->Hpre_mattype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1831,6 +1844,10 @@ PetscErrorCode TaoTermComputeHessianUseFDPop(TaoTerm term)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   term->fd_hess_level--;
+  PetscCall(PetscStrallocpy(term->H_mattype_pre_fd_push, (char **)&term->H_mattype));
+  PetscCall(PetscStrallocpy(term->Hpre_mattype_pre_fd_push, (char **)&term->Hpre_mattype));
+  PetscCall(PetscFree(term->H_mattype_pre_fd_push));
+  PetscCall(PetscFree(term->Hpre_mattype_pre_fd_push));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

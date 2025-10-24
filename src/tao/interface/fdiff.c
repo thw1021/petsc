@@ -141,8 +141,22 @@ PetscErrorCode TaoDefaultComputeHessianColor(Tao tao, Vec V, Mat H, Mat B, void 
 @*/
 PetscErrorCode TaoDefaultComputeHessianMFFD(Tao tao, Vec X, Mat H, Mat B, void *ctx)
 {
+  PetscInt  n,N;
+  PetscBool assembled;
+
   PetscFunctionBegin;
   PetscCheck(!B || B == H, PetscObjectComm((PetscObject)tao), PETSC_ERR_SUP, "Preconditioning Hessian matrix");
-  PetscCall(TaoTermUpdateHessianMFFD(tao->objective_term.term, H, X, tao->objective_parameters));
+  PetscCall(MatAssembled(H, &assembled));
+  if (!assembled) {
+    PetscCall(VecGetSize(X, &N));
+    PetscCall(VecGetLocalSize(X, &n));
+    PetscCall(MatSetSizes(H, n, n, N, N));
+    PetscCall(MatSetType(H, MATMFFD));
+    PetscCall(MatSetUp(H));
+    PetscCall(MatMFFDSetFunction(H, (PetscErrorCode (*)(void *, Vec, Vec))TaoComputeGradient, tao));
+  }
+  PetscCall(MatMFFDSetBase(H, X, NULL));
+  PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
