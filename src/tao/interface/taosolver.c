@@ -570,8 +570,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
 
     PetscCall(MatCreate(PetscObjectComm((PetscObject)tao), &H));
     PetscCall(MatSetType(H, MATAIJ));
-    PetscCall(TaoSetHessianMatrices(tao, H, H));
-    PetscCall(TaoTermComputeHessianUseFDPush(tao->objective_term.term));
+    PetscCall(TaoSetHessian(tao, H, H, TaoDefaultComputeHessian, NULL));
     PetscCall(MatDestroy(&H));
   }
   flg = PETSC_FALSE;
