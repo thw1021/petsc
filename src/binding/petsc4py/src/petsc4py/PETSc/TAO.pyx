@@ -1103,6 +1103,42 @@ cdef class TAO(Object):
         CHKERR(TaoComputeJacobian(self.tao, x.vec, jmat, pmat))
 
     # --------------
+    def setLR(self, lr: float = None) -> None:
+        """Set the learning rate
+        Collective.
+
+        Parameters
+        ----------
+        lr
+           The learning rate
+
+        See also
+        --------
+        getLR, petsc.TaoGetLR
+
+        """
+        cdef PetscReal _lr=PETSC_CURRENT
+        if lr is not None: _lr = asReal(lr)
+        CHKERR(TaoSetLR(self.tao, _lr))
+
+    def getLR(self) -> float:
+        """Return the learning rate.
+
+        Not collective.
+
+        Returns
+        -------
+        lr : float
+            The learning rate.
+
+        See Also
+        --------
+        setLR, petsc.TaoSetLR
+
+        """
+        cdef PetscReal _lr=PETSC_CURRENT
+        CHKERR(TaoGetLR(self.tao, &_lr))
+        return toReal(_lr)
 
     def setTolerances(self, gatol: float | None = None, grtol: float | None = None, gttol: float | None = None) -> None:
         """Set the tolerance parameters used in the solver convergence tests.
