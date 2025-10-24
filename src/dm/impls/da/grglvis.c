@@ -18,9 +18,9 @@ typedef struct {
   Vec xlocal;
 } DMDAFieldGLVisViewerCtx;
 
-static PetscErrorCode DMDAFieldDestroyGLVisViewerCtx_Private(void *vctx)
+static PetscErrorCode DMDAFieldDestroyGLVisViewerCtx_Private(void **vctx)
 {
-  DMDAFieldGLVisViewerCtx *ctx = (DMDAFieldGLVisViewerCtx *)vctx;
+  DMDAFieldGLVisViewerCtx *ctx = *(DMDAFieldGLVisViewerCtx **)vctx;
 
   PetscFunctionBegin;
   PetscCall(VecDestroy(&ctx->xlocal));

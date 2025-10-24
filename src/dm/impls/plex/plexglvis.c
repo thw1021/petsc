@@ -11,9 +11,9 @@ typedef struct {
   VecScatter *scctx;
 } GLVisViewerCtx;
 
-static PetscErrorCode DestroyGLVisViewerCtx_Private(void *vctx)
+static PetscErrorCode DestroyGLVisViewerCtx_Private(void **vctx)
 {
-  GLVisViewerCtx *ctx = (GLVisViewerCtx *)vctx;
+  GLVisViewerCtx *ctx = *(GLVisViewerCtx **)vctx;
   PetscInt        i;
 
   PetscFunctionBegin;
