@@ -4,8 +4,8 @@ class Configure(config.package.Package):
     def __init__(self, framework):
         config.package.Package.__init__(self, framework)
         self.version                = '1.24.11'
-        self.gitcommit              = '35c63fc2475a54e00453311c5a87017fe5d0ae63'
-        self.download               = ['git://https://github.com/PFLAREProject/PFLARE','https://github.com/PFLAREProject/PFLARE/archive/'+self.gitcommit+'.tar.gz']
+        self.gitcommit              = '783a2c4cc1776cee8889e82606a665909a87911d'
+        self.download               = ['git://https://github.com/BarrySmith/PFLARE','https://github.com/BarrySmith/PFLARE/archive/'+self.gitcommit+'.tar.gz']
         self.functions              = ['PCRegister_PFLARE']
         self.includes               = ['pflare.h']
         self.liblist                = [['libpflare.a']]
@@ -62,7 +62,7 @@ class Configure(config.package.Package):
         if self.argDB['with-petsc4py']:
             post_cmds.append(barg + ' ${OMAKE} ' + barg + ' python')
         post_cmds.append(barg + ' ${OMAKE} ' + barg + ' install')
-        post_cmds.append('cd "{0}" && ln -sf libpflare.{1} libpetscpflare.so'.format(libdir, self.setCompilers.sharedLibraryExt))
+        post_cmds.append('cd "{0}" && ln -sf libpflare.{1} libpetscpflare.$(SL_LINKER_SUFFIX)'.format(libdir, self.setCompilers.sharedLibraryExt))
         self.addPost(self.packageDir, post_cmds)
         self.addMakeCheck(self.packageDir, '${OMAKE} ' + checkarg + ' check')
 
