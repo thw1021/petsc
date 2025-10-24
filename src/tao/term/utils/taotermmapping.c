@@ -329,7 +329,7 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
   if (mt->map) {
     // currently only implements Gauss-Newton Hessian approximation
     if (mapped_H) PetscCall(TaoTermMappingMatPtAP(unmapped_H, mt->map, mapped_H, mt->_mapped_H_work));
-    if (mapped_Hpre) PetscCall(TaoTermMappingMatPtAP(unmapped_Hpre, mt->map, mapped_Hpre, mt->_mapped_Hpre_work));
+    if (mapped_Hpre && (mapped_Hpre != mapped_H)) PetscCall(TaoTermMappingMatPtAP(unmapped_Hpre, mt->map, mapped_Hpre, mt->_mapped_Hpre_work));
   }
   if (mode == ADD_VALUES) {
     if (H) PetscCall(MatAXPY(H, mt->scale, mapped_H, UNKNOWN_NONZERO_PATTERN));
@@ -531,27 +531,25 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
   else {
     // create _unmapped only if they are empty
     PetscCall(TaoTermCreateHessianMatrices(mt->term, (mt->_unmapped_H) ? NULL : &mt->_unmapped_H, (mt->_unmapped_Hpre) ? NULL : &mt->_unmapped_Hpre));
-    //Create PtAP only if mt->_mapped_H is empty
-    //Warning: not all matrices combinations have PtAP available. If not, have to manually set it.
-    //TODO just because mapped_H has been set ...doesnt work... Need to set manual routines... how?
-    //Special case: if L2, the A=I, so A^T A
+    // Create PtAP only if mt->_mapped_H is empty
     if (mt->_unmapped_H && !mt->_mapped_H) PetscCall(TaoTermMappingCreatePtAP(mt->_unmapped_H, mt->map, &mt->_mapped_H));
-    // Creating expensive work matrix to store AP
-    // TODO if diag, then you need work matrix same size as map...
+    // Creating expensive work matrix to store AP TODO remove when diag PtAP gets implemented
     if (!mt->_mapped_H_work) PetscCall(TaoTermMappingCreateAPWorkMatrix(mt->map, mt->_unmapped_H, &mt->_mapped_H_work));
     if (*H != mt->_mapped_H) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_H));
     *H = mt->_mapped_H;
-    if (mt->_unmapped_Hpre) {
-      // Hpre_is_H true
-      if (mt->_unmapped_Hpre == mt->_unmapped_H) {
-        PetscCall(PetscObjectReference((PetscObject)*H));
-        *Hpre = *H;
-      } else {
-        if (!mt->_mapped_Hpre) PetscCall(TaoTermMappingCreatePtAP(mt->_unmapped_Hpre, mt->map, &mt->_mapped_Hpre));
-        if (!mt->_mapped_Hpre_work) PetscCall(TaoTermMappingCreateAPWorkMatrix(mt->map, mt->_unmapped_H, &mt->_mapped_Hpre_work));
-        if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_Hpre));
-        *H = mt->_mapped_Hpre;
+    if (mt->_unmapped_Hpre == mt->_unmapped_H) {
+      // Hpre_is_H true, so mapped_H = mapped_Hpre
+      if (!mt->_mapped_Hpre) {
+        PetscCall(PetscObjectReference((PetscObject)mt->_mapped_H));
+        mt->_mapped_Hpre = mt->_mapped_H;
       }
+      if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)*H));
+      *Hpre = *H;
+    } else {
+      if (!mt->_mapped_Hpre) PetscCall(TaoTermMappingCreatePtAP(mt->_unmapped_Hpre, mt->map, &mt->_mapped_Hpre));
+      if (!mt->_mapped_Hpre_work) PetscCall(TaoTermMappingCreateAPWorkMatrix(mt->map, mt->_unmapped_H, &mt->_mapped_Hpre_work));
+      if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_Hpre));
+      *Hpre = mt->_mapped_Hpre;
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
