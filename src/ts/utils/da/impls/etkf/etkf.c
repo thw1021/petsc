@@ -200,7 +200,7 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(MatAssemblyBegin(I_m, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(I_m, MAT_FINAL_ASSEMBLY));
 
-  // T = (I + S' S)^−1
+  // T = (I + S' S)^-1
   PetscCall(MatTransposeMatMult(S, S, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T));
   PetscCall(MatAXPY(T, 1.0, I_m, SAME_NONZERO_PATTERN)); /* Algorithm 3.1 Step 6: T = (S^T S + I) (doc/manual/da_ex1.tex:84). */
 
