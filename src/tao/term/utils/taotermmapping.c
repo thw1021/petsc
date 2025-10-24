@@ -15,7 +15,9 @@ PETSC_INTERN PetscErrorCode TaoTermMappingSetData(TaoTermMapping *mt, const char
     PetscCall(MatDestroy(&mt->_unmapped_H));
     PetscCall(MatDestroy(&mt->_unmapped_Hpre));
     PetscCall(MatDestroy(&mt->_mapped_H));
-    PetscCall(MatDestroy(&mt->_mapped_H));
+    PetscCall(MatDestroy(&mt->_mapped_Hpre));
+    PetscCall(MatDestroy(&mt->_mapped_H_work));
+    PetscCall(MatDestroy(&mt->_mapped_Hpre_work));
   }
   PetscCall(PetscObjectReference((PetscObject)term));
   PetscCall(TaoTermDestroy(&mt->term));
@@ -37,6 +39,8 @@ PETSC_INTERN PetscErrorCode TaoTermMappingReset(TaoTermMapping *mt)
   PetscCall(MatDestroy(&mt->_unmapped_Hpre));
   PetscCall(MatDestroy(&mt->_mapped_H));
   PetscCall(MatDestroy(&mt->_mapped_Hpre));
+  PetscCall(MatDestroy(&mt->_mapped_H_work));
+  PetscCall(MatDestroy(&mt->_mapped_Hpre_work));
   mt->mask = TAOTERM_MASK_NONE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -165,7 +169,7 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjectiveAndGradient(TaoTermMap
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermMappingMatPtAP(Mat unmapped_H, Mat map, Mat mapped_H)
+static PetscErrorCode TaoTermMappingMatPtAP_Internal(Mat unmapped_H, Mat map, Mat mapped_H)
 {
   Mat            A, P;
   MatProductType prod_type;
@@ -198,6 +202,72 @@ static PetscErrorCode TaoTermMappingMatPtAP(Mat unmapped_H, Mat map, Mat mapped_
     PetscCall(MatProductSymbolic(mapped_H));
   }
   PetscCall(MatProductNumeric(mapped_H));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermMappingMatPtAP(Mat unmapped_H, Mat map, Mat mapped_H, Mat work)
+{
+  PetscBool      is_uH_diag, is_map_diag, is_uH_cdiag, is_map_cdiag;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)unmapped_H, MATDIAGONAL, &is_uH_diag));
+  PetscCall(PetscObjectTypeCompare((PetscObject)unmapped_H, MATCONSTANTDIAGONAL, &is_uH_cdiag));
+  PetscCall(PetscObjectTypeCompare((PetscObject)map, MATDIAGONAL, &is_map_diag));
+  PetscCall(PetscObjectTypeCompare((PetscObject)map, MATCONSTANTDIAGONAL, &is_map_cdiag));
+
+  if (is_map_diag) {
+    Vec m_diag;
+
+    PetscCall(MatDiagonalGetDiagonal(map, &m_diag));
+    if (is_uH_cdiag) {
+      Vec         mapped_diag;
+      PetscScalar cc;
+
+      // mapped_H \gets cc map * map
+      PetscCall(MatConstantDiagonalGetConstant(unmapped_H, &cc));
+      PetscCall(MatDiagonalGetDiagonal(mapped_H, &mapped_diag));
+      PetscCall(VecPointwiseMult(mapped_diag, m_diag, m_diag));
+      PetscCall(VecScale(mapped_diag, cc));
+      PetscCall(MatDiagonalRestoreDiagonal(mapped_H, &mapped_diag));
+    } else if (is_uH_diag) {
+      Vec mapped_diag, unmapped_diag;
+
+      PetscCall(MatDiagonalGetDiagonal(mapped_H, &mapped_diag));
+      PetscCall(MatDiagonalGetDiagonal(unmapped_H, &unmapped_diag));
+      PetscCall(VecPointwiseMult(mapped_diag, m_diag, m_diag));
+      PetscCall(VecPointwiseMult(mapped_diag, unmapped_diag, mapped_diag));
+      PetscCall(MatDiagonalRestoreDiagonal(mapped_H, &mapped_diag));
+      PetscCall(MatDiagonalRestoreDiagonal(unmapped_H, &unmapped_diag));
+    } else {
+      PetscCall(MatCopy(unmapped_H, mapped_H, SAME_NONZERO_PATTERN));
+      PetscCall(MatDiagonalScale(mapped_H, m_diag, m_diag));
+    }
+    PetscCall(MatDiagonalRestoreDiagonal(map, &m_diag));
+  } else if (is_map_cdiag) {
+    PetscScalar cc;
+
+    PetscCall(MatConstantDiagonalGetConstant(map, &cc));
+    PetscCall(MatCopy(unmapped_H, mapped_H, SAME_NONZERO_PATTERN));
+    PetscCall(MatScale(mapped_H, cc*cc));
+  } else if (is_uH_diag) {
+    Vec unmapped_diag;
+
+    //TODO inefficient. Remove when diag PtAP gets implemented
+    PetscCall(MatDiagonalGetDiagonal(unmapped_H, &unmapped_diag));
+    PetscCall(MatCopy(map, work, SAME_NONZERO_PATTERN));
+    PetscCall(MatDiagonalScale(work, unmapped_diag, NULL));
+    PetscCall(MatTransposeMatMult(map, work, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped_H));
+    PetscCall(MatDiagonalRestoreDiagonal(unmapped_H, &unmapped_diag));
+  } else if (is_uH_cdiag) {
+    // cc * A^T A
+    PetscScalar cc;
+
+    PetscCall(MatConstantDiagonalGetConstant(unmapped_H, &cc));
+    PetscCall(MatTransposeMatMult(map, map, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped_H));
+    PetscCall(MatScale(mapped_H, cc));
+  } else {
+    PetscCall(TaoTermMappingMatPtAP_Internal(unmapped_H, map, mapped_H));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -258,8 +328,8 @@ static PetscErrorCode TaoTermMappingSetHessians(TaoTermMapping *mt, InsertMode m
   PetscFunctionBegin;
   if (mt->map) {
     // currently only implements Gauss-Newton Hessian approximation
-    if (mapped_H) PetscCall(TaoTermMappingMatPtAP(unmapped_H, mt->map, mapped_H));
-    if (mapped_Hpre) PetscCall(TaoTermMappingMatPtAP(unmapped_Hpre, mt->map, mapped_Hpre));
+    if (mapped_H) PetscCall(TaoTermMappingMatPtAP(unmapped_H, mt->map, mapped_H, mt->_mapped_H_work));
+    if (mapped_Hpre) PetscCall(TaoTermMappingMatPtAP(unmapped_Hpre, mt->map, mapped_Hpre, mt->_mapped_Hpre_work));
   }
   if (mode == ADD_VALUES) {
     if (H) PetscCall(MatAXPY(H, mt->scale, mapped_H, UNKNOWN_NONZERO_PATTERN));
@@ -342,13 +412,44 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateParametersVec(TaoTermMapping *mt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermMappingCreateAPWorkMatrix(Mat map, Mat unmapped, Mat *mapped_work)
+{
+  PetscBool is_uH_diag, is_map_diag;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectBaseTypeCompareAny((PetscObject)map, &is_map_diag,  MATDIAGONAL, MATCONSTANTDIAGONAL, ""));
+  PetscCall(PetscObjectTypeCompare((PetscObject)unmapped, MATDIAGONAL, &is_uH_diag));
+  if (is_uH_diag && !is_map_diag) PetscCall(MatDuplicate(map, MAT_DO_NOT_COPY_VALUES, mapped_work));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TaoTermMappingCreatePtAP(Mat unmapped_H, Mat map, Mat *H)
 {
+  PetscBool is_uH_diag, is_map_diag, is_uH_cdiag;
+
   PetscFunctionBegin;
-  PetscCall(MatProductCreate(unmapped_H, map, NULL, H));
-  PetscCall(MatProductSetType(*H, MATPRODUCT_PtAP));
-  PetscCall(MatProductSetFromOptions(*H));
-  PetscCall(MatProductSymbolic(*H));
+  PetscCall(PetscObjectTypeCompare((PetscObject)unmapped_H, MATDIAGONAL, &is_uH_diag));
+  PetscCall(PetscObjectTypeCompare((PetscObject)unmapped_H, MATCONSTANTDIAGONAL, &is_uH_cdiag));
+  PetscCall(PetscObjectBaseTypeCompareAny((PetscObject)map, &is_map_diag,  MATDIAGONAL, MATCONSTANTDIAGONAL, ""));
+
+  // TODO support for PtAP with diagonal would be ideal
+  if (is_map_diag) {
+    // map is diag, which means mapped's same size as unmapped
+    // Technically, if A is dense, PtAP is available, but ignoring for now
+    PetscCall(MatDuplicate(unmapped_H, MAT_DO_NOT_COPY_VALUES, H));
+  } else if (is_uH_cdiag) {
+    // mapped \gets \alpha P^T P
+    PetscCall(MatTransposeMatMult(map, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
+  } else if (is_uH_diag) {
+    PetscCall(MatTransposeMatMult(map, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
+  } else {
+    //TODO MatProductSetFromOptions_Private has composed function querying to see if PtAP is availble
+    //That should be turned into intern function to be used here. If unavailable, densify matrices
+    PetscCall(MatProductCreate(unmapped_H, map, NULL, H));
+    PetscCall(MatProductSetType(*H, MATPRODUCT_PtAP));
+    PetscCall(MatProductSetFromOptions(*H));
+    PetscCall(MatProductSymbolic(*H));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -432,9 +533,12 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
     PetscCall(TaoTermCreateHessianMatrices(mt->term, (mt->_unmapped_H) ? NULL : &mt->_unmapped_H, (mt->_unmapped_Hpre) ? NULL : &mt->_unmapped_Hpre));
     //Create PtAP only if mt->_mapped_H is empty
     //Warning: not all matrices combinations have PtAP available. If not, have to manually set it.
-    //TODO just because mapped_H has been set ...doesnt work... Need to set manual routines...
+    //TODO just because mapped_H has been set ...doesnt work... Need to set manual routines... how?
     //Special case: if L2, the A=I, so A^T A
     if (mt->_unmapped_H && !mt->_mapped_H) PetscCall(TaoTermMappingCreatePtAP(mt->_unmapped_H, mt->map, &mt->_mapped_H));
+    // Creating expensive work matrix to store AP
+    // TODO if diag, then you need work matrix same size as map...
+    if (!mt->_mapped_H_work) PetscCall(TaoTermMappingCreateAPWorkMatrix(mt->map, mt->_unmapped_H, &mt->_mapped_H_work));
     if (*H != mt->_mapped_H) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_H));
     *H = mt->_mapped_H;
     if (mt->_unmapped_Hpre) {
@@ -444,8 +548,9 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
         *Hpre = *H;
       } else {
         if (!mt->_mapped_Hpre) PetscCall(TaoTermMappingCreatePtAP(mt->_unmapped_Hpre, mt->map, &mt->_mapped_Hpre));
-          if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_Hpre));
-          *H = mt->_mapped_Hpre;
+        if (!mt->_mapped_Hpre_work) PetscCall(TaoTermMappingCreateAPWorkMatrix(mt->map, mt->_unmapped_H, &mt->_mapped_Hpre_work));
+        if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_Hpre));
+        *H = mt->_mapped_Hpre;
       }
     }
   }

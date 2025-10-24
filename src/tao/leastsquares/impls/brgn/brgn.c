@@ -324,7 +324,7 @@ static PetscErrorCode TaoBRGNSetRegularizationType_BRGN(Tao tao, TaoBRGNRegulari
     PetscCall(TaoBRGNCreateRegularizerTerm(tao, &reg_term, &reg_map, &Hreg));
     PetscCall(TaoTermSumGetSubterm(gn->subsolver->objective_term.term, 1, &name, &scale, NULL, NULL));
     PetscCall(TaoTermSumSetSubterm(gn->subsolver->objective_term.term, 1, name, scale, reg_term, reg_map));
-    PetscCall(TaoTermSumSetSubtermHessianMatrices(gn->subsolver->objective_term.term, 1, Hreg, Hreg, NULL, NULL));
+    PetscCall(TaoTermSumSetSubtermHessianMatrices(gn->subsolver->objective_term.term, 1, NULL, NULL, Hreg, Hreg));
     PetscCall(TaoTermDestroy(&reg_term));
     PetscCall(MatDestroy(&reg_map));
     PetscCall(MatDestroy(&Hreg));
