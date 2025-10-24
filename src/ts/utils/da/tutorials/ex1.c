@@ -11,6 +11,40 @@ static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
 // ./ex1 -steps 105000 -burn 5000 -obs_freq 1 -obs_error 1 -da_view
 // -ensemble_size 30 : "Mean RMSE (analysis): 0.474040"
 
+
+/* \begin{algorithm}
+\caption{Ensemble Transform Kalman Filter (ETKF) - Deterministic}
+\begin{algorithmic}[1]
+\State \textbf{Initialize:} Ensemble $\mathbf{E}_0 = [\mathbf{x}_0^{(1)}, \ldots, \mathbf{x}_0^{(m)}]$ \Comment{$\mathbf{E}_0 \in \mathbb{R}^{n \times m}$}
+\For{$k = 1, 2, \ldots, K$}
+    \State \textbf{// Forecast Step}
+    \For{$i = 1$ to $m$}
+        \State $\mathbf{x}_k^{f,(i)} = \mathcal{M}_{k-1}(\mathbf{x}_{k-1}^{a,(i)})$ \Comment{$\mathbf{x}_k^{f,(i)} \in \mathbb{R}^{n}$}
+    \EndFor
+    \State Assemble forecast matrix: $\mathbf{E}_k^f = [\mathbf{x}_k^{f,(1)}, \ldots, \mathbf{x}_k^{f,(m)}]$ \Comment{$\mathbf{E}_k^f \in \mathbb{R}^{n \times m}$}
+    \State
+    \State \textbf{// Analysis Step (if observation available)}
+    \If{observation $\mathbf{y}_k$ available}
+        \State Compute ensemble mean: $\overline{\mathbf{x}}_k^f = \frac{1}{m}\sum_{i=1}^m \mathbf{x}_k^{f,(i)}$ \Comment{$\overline{\mathbf{x}}_k^f \in \mathbb{R}^{n}$}
+        \State Compute anomalies: $\mathbf{X}_k = \frac{1}{\sqrt{m-1}}(\mathbf{E}_k^f - \overline{\mathbf{x}}_k^f \mathbf{1}^T)$ \Comment{$\mathbf{X}_k \in \mathbb{R}^{n \times m}$}
+        \State Apply observation operator: $\mathbf{Z}_k = \mathcal{H}(\mathbf{E}_k^f)$ \Comment{$\mathbf{Z}_k \in \mathbb{R}^{b \times m}$}
+        \State Compute obs ensemble mean: $\overline{\mathbf{y}}_k = \frac{1}{m}\sum_{i=1}^m \mathcal{H}(\mathbf{x}_k^{f,(i)})$ \Comment{$\overline{\mathbf{y}}_k \in \mathbb{R}^{b}$}
+        \State Compute obs anomalies: $\mathbf{S}_k = \frac{1}{\sqrt{m-1}}\mathbf{R}^{-1/2}(\mathbf{Z}_k - \overline{\mathbf{y}}_k\mathbf{1}^T)$ \Comment{$\mathbf{S}_k \in \mathbb{R}^{b \times m}$}
+        \State Compute raw innovation: $\boldsymbol{\delta}_k = \mathbf{y}_k - \overline{\mathbf{y}}_k$ \Comment{$\boldsymbol{\delta}_k \in \mathbb{R}^{b}$}
+        \State Whiten innovation: $\tilde{\boldsymbol{\delta}}_k = \mathbf{R}^{-1/2}\boldsymbol{\delta}_k$ \Comment{$\tilde{\boldsymbol{\delta}}_k \in \mathbb{R}^{b}$}
+        \State Compute transform matrix: $\mathbf{T}_k = (\mathbf{I}_m + \mathbf{S}_k^T\mathbf{S}_k)^{-1}$ \Comment{$\mathbf{T}_k \in \mathbb{R}^{m \times m}$}
+        \State Compute weight vector: $\mathbf{w}_k = \mathbf{T}_k \mathbf{S}_k^T \tilde{\boldsymbol{\delta}}_k$ \Comment{$\mathbf{w}_k \in \mathbb{R}^{m}$}
+        \State Form deterministic map: $\mathbf{G}_k = \mathbf{w}_k\mathbf{1}^T + \sqrt{m-1}\,\mathbf{T}_k^{1/2}\mathbf{U}$ \Comment{$\mathbf{G}_k \in \mathbb{R}^{m \times m}$}
+        \State Update ensemble: $\mathbf{E}_k^a = \overline{\mathbf{x}}_k^f\mathbf{1}^T + \mathbf{X}_k \mathbf{G}_k$ \Comment{$\mathbf{E}_k^a \in \mathbb{R}^{n \times m}$}
+        \State where $\mathbf{U}$ is orthogonal with $\mathbf{U}\mathbf{1} = \mathbf{1}$ (the PETSc implementation stores it as \texttt{da->U} and defaults to $\mathbf{I}_m$)
+    \Else
+        \State $\mathbf{E}_k^a = \mathbf{E}_k^f$ \Comment{$\mathbf{E}_k^a \in \mathbb{R}^{n \times m}$}
+    \EndIf
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+ */
+
 typedef struct {
   DM        da; /* 1D periodic DM storing the Lorenz-96 state */
   PetscInt  n;  /* State dimension (number of grid points) */

@@ -105,6 +105,8 @@ PetscErrorCode DARegisterAll(void)
   PetscCall(DAETKFRegister());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/* Compute mean of ensemble */
 static PetscErrorCode DAComputeMean_Default(DA da, Vec mean)
 {
   Vec         member;
@@ -141,12 +143,14 @@ static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out)
   PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "DASetUp() must be called before computing anomalies");
   PetscCheck(da->ensemble_size > 1, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be at least 2 to form anomalies");
 
-  m     = da->ensemble_size;
+  m = da->ensemble_size;
+  /* Algorithm line 14: anomalies are normalized by 1/sqrt(m-1) so that X X^T equals the ensemble covariance. */
   scale = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
 
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &mean));
   PetscCall(VecSetSizes(mean, PETSC_DECIDE, da->state_size));
   PetscCall(VecSetFromOptions(mean));
+  /* Algorithm line 12: \bar{x} = (1/m)\sum_j x^{(j)} */
   PetscCall(DAComputeMean(da, mean));
 
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->state_size, m, NULL, &anomalies));
@@ -154,7 +158,9 @@ static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out)
   for (j = 0; j < m; ++j) {
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, j, &col_in));
     PetscCall(MatDenseGetColumnVecWrite(anomalies, j, &col_out));
+    /* Algorithm line 13: subtract the mean column-wise to form x^{(j)} - \bar{x} */
     PetscCall(VecWAXPY(col_out, -1.0, mean, col_in));
+    /* Algorithm line 14: scale anomalies by 1/\sqrt{m-1} */
     PetscCall(VecScale(col_out, scale));
     PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, j, &col_in));
     PetscCall(MatDenseRestoreColumnVecWrite(anomalies, j, &col_out));
@@ -881,9 +887,11 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   PetscCall(MatGetSize(A, &m, &n));
   PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square");
 
+  /* Workspace length for LAPACKsyev: 3*n follows the routine documentation. */
   PetscCall(PetscBLASIntCast(3 * n, &lwork));
   PetscCall(PetscMalloc1(lwork, &work));
 
+  /* Copy A because LAPACKsyev overwrites its input with eigenvectors. */
   PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &V));
   PetscCall(MatDenseGetArray(V, &varray));
 
@@ -895,6 +903,7 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
 #if defined(PETSC_USE_COMPLEX)
   {
     PetscReal *rwork;
+    /* Complex-valued path needs an auxiliary real rwork array and a separate real eigenvalue buffer. */
     PetscCall(PetscMalloc1(3 * n - 2, &rwork));
     PetscCall(PetscMalloc(n, &eigvals));
     PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, rwork, &info));
@@ -902,6 +911,7 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
     PetscCall(PetscFree(rwork));
   }
 #else
+  /* In real arithmetic LAPACK writes eigenvalues directly into sqrtvals. */
   eigvals = (PetscReal *)sqrtvals;
   PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, &info));
 #endif
@@ -923,7 +933,9 @@ PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   PetscCall(MatDenseRestoreArray(V, &varray));
 
   PetscCall(MatDuplicate(V, MAT_COPY_VALUES, &VSqrtD));
+  /* Form V * sqrt(D) by scaling each eigenvector column. */
   PetscCall(MatDiagonalScale(VSqrtD, NULL, sqrtD));
+  /* Reconstruct sqrt(A) = (V sqrt(D)) * V^T. */
   PetscCall(MatMatTransposeMult(VSqrtD, V, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &sqrtA));
   PetscCall(MatDestroy(&VSqrtD));
   PetscCall(VecDestroy(&sqrtD));

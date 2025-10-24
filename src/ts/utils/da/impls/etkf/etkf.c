@@ -130,17 +130,16 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
 
-  /* Step 1: compute the prior ensemble mean in state space. */
+  /* compute the prior/ensemble mean */
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &mean));
   PetscCall(VecSetSizes(mean, PETSC_DECIDE, da->state_size));
   PetscCall(VecSetFromOptions(mean));
   PetscCall(DAComputeMean(da, mean));
 
-  /* Step 2: form anomalies X scaled by 1/sqrt(m-1); columns span the ensemble
-   * subspace. */
+  /* scaled anomalies X = (E - x_bar)/sqrt(m - 1) */
   PetscCall(DAComputeAnomalies(da, &X));
 
-  /* Buffer to hold raw observation-space evaluations H(x_i^f). */
+  /* Z = H(x_i^f). */
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &Z));
   PetscCall(MatSetUp(Z));
 
@@ -158,23 +157,23 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
     PetscCall(MatDenseRestoreColumnVecWrite(Z, i, &col_out));
   }
 
+  /* observation mean y_bar */
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &y_mean));
   PetscCall(VecSetSizes(y_mean, PETSC_DECIDE, da->obs_size));
   PetscCall(VecSetFromOptions(y_mean));
-
-  /* Step 3: observation-space mean y_bar. */
   PetscCall(MatGetRowSum(Z, y_mean)); /* accumulate 1/m * H(x_i^f). */
   PetscCall(VecScale(y_mean, inv_m));
 
+  // r_inv_sqrt: R^-1/2
   PetscCall(VecDuplicate(da->obs_error_var, &r_inv_sqrt));
   PetscCall(VecCopy(da->obs_error_var, r_inv_sqrt)); /* Step 3: reuse diag(R) to build R^{-1/2}. */
   PetscCall(VecGetArray(r_inv_sqrt, &r_inv_sqrt_array));
   for (i = 0; i < da->obs_size; i++) r_inv_sqrt_array[i] = 1.0 / PetscSqrtReal(PetscRealPart(r_inv_sqrt_array[i])); /* assumes R diagonal. */
   PetscCall(VecRestoreArray(r_inv_sqrt, &r_inv_sqrt_array));
 
+  // create S = R^-1/2 (Z - y_bar * 1)/sqrt(m - 1)
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &S));
   PetscCall(MatSetUp(S));
-
   for (i = 0; i < m; i++) {
     PetscCall(MatDenseGetColumnVecRead(Z, i, &col_in));
     PetscCall(MatDenseGetColumnVecWrite(S, i, &col_out));
@@ -187,14 +186,13 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
     PetscCall(MatDenseRestoreColumnVecWrite(S, i, &col_out));
   }
 
+  /* Innovation y^o - y_bar. */
   delta = y_mean;
-  PetscCall(VecAYPX(delta, -1.0, observation)); /* Innovation y^o - y_bar. */
-
+  PetscCall(VecAYPX(delta, -1.0, observation));
   delta_scaled = delta;
-  PetscCall(VecPointwiseMult(delta_scaled, delta_scaled, r_inv_sqrt)); /* Step 4: del_tilda. */
+  PetscCall(VecPointwiseMult(delta_scaled, delta_scaled, r_inv_sqrt)); /* delta. */
 
-  PetscCall(MatTransposeMatMult(S, S, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T)); /* Step 5: S S'. */
-
+  // I_m
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &I_m));
   PetscCall(MatSetUp(I_m));
   PetscCall(MatZeroEntries(I_m));
@@ -202,35 +200,38 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(MatAssemblyBegin(I_m, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(I_m, MAT_FINAL_ASSEMBLY));
 
-  // optimize to not invert T but solve with Cholesky or eigen data -- TODO
-  PetscCall(MatAXPY(T, 1.0, I_m, SAME_NONZERO_PATTERN)); /* Step 5: T = S S' + I. */
+  // T = (I + S' S)^−1
+  PetscCall(MatTransposeMatMult(S, S, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T));
+  PetscCall(MatAXPY(T, 1.0, I_m, SAME_NONZERO_PATTERN)); /* Algorithm 3.1 Step 6: T = (S^T S + I) (doc/manual/da_ex1.tex:84). */
 
+  // Invert T -- todo: optimize to not invert T but solve with Cholesky or eigen data
   PetscCall(MatLUFactor(T, NULL, NULL, NULL));
   Mat T_inv;
   PetscCall(MatDuplicate(I_m, MAT_COPY_VALUES, &T_inv));
   PetscCall(MatMatSolve(T, I_m, T_inv));
   PetscCall(MatDestroy(&T));
-  T = T_inv;
+  T = T_inv; // T = (I + S'S)^-1
 
+  // make w = T S^T delta
   PetscCall(MatCreateVecs(T, NULL, &S_T_delta));
-  PetscCall(MatMultTranspose(S, delta_scaled, S_T_delta)); /* S' del_tilda. */
-
+  PetscCall(MatMultTranspose(S, delta_scaled, S_T_delta)); /* Algorithm 3.1 Step 7: S^T delta */
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &w));
   PetscCall(VecSetSizes(w, PETSC_DECIDE, m));
   PetscCall(VecSetFromOptions(w));
-  PetscCall(MatMult(T, S_T_delta, w)); /* Step 6: weights in ensemble space. */
+  PetscCall(MatMult(T, S_T_delta, w)); // w = T S^T delta
 
+  /* T_sqrt = square-root of T */
   switch (impl->sqrt_type) {
   case DAETKF_SQRT_CHOLESKY:
-    PetscCall(DACholeskySqrt_Private(T, &T_sqrt)); /* Step 7a. */
+    PetscCall(DACholeskySqrt_Private(T, &T_sqrt));
     break;
   case DAETKF_SQRT_EIGEN:
-    PetscCall(DASymmetricEigenSqrt_Private(T, &T_sqrt)); /* Step 7b. */
+    PetscCall(DASymmetricEigenSqrt_Private(T, &T_sqrt));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported DAETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
   }
-
+  // w * 1
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &w_ones));
   PetscCall(MatSetUp(w_ones));
   PetscCall(VecGetArray(w, &w_array));
@@ -241,18 +242,18 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(MatAssemblyBegin(w_ones, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(w_ones, MAT_FINAL_ASSEMBLY));
 
+  // w_ones: G = w * 1 + (m - 1) T^1/2 U -- U = I -- remove
   PetscCall(MatMatMult(T_sqrt, da->U, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T_sqrt_U));
-  PetscCall(MatScale(T_sqrt_U, sqrt_m_minus_1)); /* Step 8: rotate and undo scaling. */
-
-  PetscCall(MatAXPY(w_ones, 1.0, T_sqrt_U, DIFFERENT_NONZERO_PATTERN)); /* Step 9: deterministic transform. */
-
-  PetscCall(MatMatMult(X, w_ones, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &X_Y)); /* Transformed anomalies. */
-
+  PetscCall(MatScale(T_sqrt_U, sqrt_m_minus_1)); /* sqrt(m - 1) T^.5 U */
+  PetscCall(MatAXPY(w_ones, 1.0, T_sqrt_U, DIFFERENT_NONZERO_PATTERN));
+  // X_Y = X G
+  PetscCall(MatMatMult(X, w_ones, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &X_Y));
+  // da->ensemble: E = mean + X G
   for (i = 0; i < m; i++) {
     PetscCall(MatDenseGetColumnVecRead(X_Y, i, &col_in));
     PetscCall(MatDenseGetColumnVecWrite(da->ensemble, i, &col_out));
 
-    PetscCall(VecWAXPY(col_out, 1.0, mean, col_in)); /* Step 10: final analysis member. */
+    PetscCall(VecWAXPY(col_out, 1.0, mean, col_in));
 
     PetscCall(MatDenseRestoreColumnVecRead(X_Y, i, &col_in));
     PetscCall(MatDenseRestoreColumnVecWrite(da->ensemble, i, &col_out));
