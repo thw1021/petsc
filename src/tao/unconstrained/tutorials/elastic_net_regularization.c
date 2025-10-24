@@ -123,12 +123,12 @@ int main(int argc, char **argv)
 
   test:
     suffix: assembled
-    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -tao_term_hessian_mat_type dense -ridge_tao_term_hessian_mat_type constantdiagonal -lasso_tao_term_hessian_mat_type diagonal
+    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -ridge_tao_term_hessian_mat_type constantdiagonal -lasso_tao_term_hessian_mat_type diagonal
 
   test:
     suffix: mffd
     requires: !single !__float128
-    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -tao_term_hessian_mat_type mffd
+    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -data_tao_term_hessian_mat_type mffd -ridge_tao_term_hessian_mat_type mffd -lasso_tao_term_hessian_mat_type mffd
 
   test:
     suffix: separate_shell

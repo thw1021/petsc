@@ -275,6 +275,9 @@ struct _p_TaoTerm {
   MatType               H_mattype;
   MatType               Hpre_mattype;
 
+  MatType               H_mattype_pre_fd_push;
+  MatType               Hpre_mattype_pre_fd_push;
+
   PetscReal  fd_delta;      // increment for TaoTermGradientFD()
   PetscInt   fd_grad_level; // push/pop using finite difference for the gradient
   PetscInt   fd_hess_level; // push/pop using finite difference for the Hessian
