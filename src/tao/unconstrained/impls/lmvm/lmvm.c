@@ -72,7 +72,8 @@ static PetscErrorCode TaoSolve_LMVM(Tao tao)
          scaled gradient step.  No need to check for this condition. */
       stepType = LMVM_STEP_GRAD;
     }
-    PetscCall(VecScale(lmP->D, -1.0));
+    /* Default lr=1.0 */
+    PetscCall(VecScale(lmP->D, -tao->lr));
 
     /*  Perform the linesearch */
     fold = f;
@@ -99,7 +100,8 @@ static PetscErrorCode TaoSolve_LMVM(Tao tao)
       /* On a reset, the direction cannot be not a number; it is a
           scaled gradient step.  No need to check for this condition. */
       stepType = LMVM_STEP_GRAD;
-      PetscCall(VecScale(lmP->D, -1.0));
+      /* Default lr=1.0 */
+      PetscCall(VecScale(lmP->D, -tao->lr));
 
       /*  Perform the linesearch */
       PetscCall(TaoLineSearchApply(tao->linesearch, tao->solution, &f, tao->gradient, lmP->D, &step, &ls_status));
