@@ -133,8 +133,8 @@ int main(int argc, char **argv)
   PetscCall(VecSet(x0, F));
 
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rng));
-  PetscCall(PetscRandomSetType(rng, PETSCRAND48));
-  PetscCall(PetscRandomSetSeed(rng, (unsigned long)random_seed));
+  PetscCall(PetscRandomSetSeed(rng, (unsigned long)random_seed)); // do we ant this?
+  PetscCall(PetscRandomSetFromOptions(rng));
   PetscCall(PetscRandomSeed(rng));
 
   /* Vec perturb; // not clear if this is correct but it hurts results
