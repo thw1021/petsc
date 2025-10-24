@@ -51,6 +51,8 @@ struct _n_TaoTermMapping {
   Mat         _unmapped_Hpre;
   Mat         _mapped_H;
   Mat         _mapped_Hpre;
+  Mat         _mapped_H_work; //Temporary work matrices for PtAP for diagonal A
+  Mat         _mapped_Hpre_work;
   TaoTermMask mask;
 };
 
