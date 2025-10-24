@@ -73,6 +73,8 @@
 ```{rubric} TS:
 ```
 
+- Add data assimilation (DA) base class as a utility with implementation of ETKF
+
 ```{rubric} TAO:
 ```
 
