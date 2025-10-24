@@ -11,7 +11,6 @@ static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
 // ./ex1 -steps 105000 -burn 5000 -obs_freq 1 -obs_error 1 -da_view
 // -ensemble_size 30 : "Mean RMSE (analysis): 0.474040"
 
-
 /* \begin{algorithm}
 \caption{Ensemble Transform Kalman Filter (ETKF) - Deterministic}
 \begin{algorithmic}[1]
