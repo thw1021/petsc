@@ -96,6 +96,9 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJKokkos(Mat A, MatAssemblyType mode)
     aijkok   = new Mat_SeqAIJKokkos(A->rmap->n, A->cmap->n, aijseq, A->nonzerostate, PETSC_FALSE /*don't copy mat values to device*/);
     A->spptr = aijkok;
   } else if (A->rmap->n && aijkok->diag_dual.extent(0) == 0) { // MatProduct might directly produce AIJ on device, but not the diag.
+    const PetscInt *adiag;
+    /* the a->diag is created at assmebly here because the rest of the Kokkos AIJ code assumes it always exists. This needs to be fixed since it is now only created when needed! */
+    PetscCall(MatGetDiagonalMarkers_SeqAIJ(A, &adiag, NULL));
     MatRowMapKokkosViewHost diag_h(aijseq->diag, A->rmap->n);
     auto                    diag_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), diag_h);
     aijkok->diag_dual              = MatRowMapKokkosDualView(diag_d, diag_h);
@@ -130,7 +133,6 @@ PETSC_INTERN PetscErrorCode MatSeqAIJKokkosModifyDevice(Mat A)
   aijkok->a_dual.modify_device();
   aijkok->transpose_updated = PETSC_FALSE;
   aijkok->hermitian_updated = PETSC_FALSE;
-  PetscCall(MatSeqAIJInvalidateDiagonal(A));
   PetscCall(PetscObjectStateIncrease((PetscObject)A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1035,7 +1037,7 @@ static PetscErrorCode MatShift_SeqAIJKokkos(Mat A, PetscScalar a)
   Mat_SeqAIJ *aijseq = static_cast<Mat_SeqAIJ *>(A->data);
 
   PetscFunctionBegin;
-  if (A->assembled && aijseq->diagonaldense) { // no missing diagonals
+  if (A->assembled && aijseq->diagDense) { // no missing diagonals
     PetscInt n = PetscMin(A->rmap->n, A->cmap->n);
 
     PetscCall(PetscLogGpuTimeBegin());
@@ -1058,7 +1060,7 @@ static PetscErrorCode MatDiagonalSet_SeqAIJKokkos(Mat Y, Vec D, InsertMode is)
   Mat_SeqAIJ *aijseq = static_cast<Mat_SeqAIJ *>(Y->data);
 
   PetscFunctionBegin;
-  if (Y->assembled && aijseq->diagonaldense) { // no missing diagonals
+  if (Y->assembled && aijseq->diagDense) { // no missing diagonals
     ConstPetscScalarKokkosView dv;
     PetscInt                   n, nv;
 
