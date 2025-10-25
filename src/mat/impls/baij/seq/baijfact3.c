@@ -161,12 +161,12 @@ PetscErrorCode MatLUFactorSymbolic_SeqBAIJ(Mat B, Mat A, IS isrow, IS iscol, con
   PetscInt           nlnk, *lnk, k, **bi_ptr;
   PetscFreeSpaceList free_space = NULL, current_space = NULL;
   PetscBT            lnkbt;
-  PetscBool          missing;
+  PetscBool          diagDense;
 
   PetscFunctionBegin;
   PetscCheck(A->rmap->N == A->cmap->N, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "matrix must be square");
-  PetscCall(MatMissingDiagonal(A, &missing, &i));
-  PetscCheck(!missing, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Matrix is missing diagonal entry %" PetscInt_FMT, i);
+  PetscCall(MatGetDiagonalMarkers_SeqBAIJ(A, NULL, &diagDense));
+  PetscCheck(diagDense, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Matrix is missing diagonal entry");
 
   if (bs > 1) { /* check shifttype */
     PetscCheck(info->shifttype != (PetscReal)MAT_SHIFT_NONZERO && info->shifttype != (PetscReal)MAT_SHIFT_POSITIVE_DEFINITE, PETSC_COMM_SELF, PETSC_ERR_SUP, "Only MAT_SHIFT_NONE and MAT_SHIFT_INBLOCKS are supported for BAIJ matrix");
@@ -258,7 +258,6 @@ PetscErrorCode MatLUFactorSymbolic_SeqBAIJ(Mat B, Mat A, IS isrow, IS iscol, con
   b->j             = bj;
   b->i             = bi;
   b->diag          = bdiag;
-  b->free_diag     = PETSC_TRUE;
   b->ilen          = NULL;
   b->imax          = NULL;
   b->row           = isrow;
@@ -318,12 +317,12 @@ static PetscErrorCode MatLUFactorSymbolic_SeqBAIJ_inplace(Mat B, Mat A, IS isrow
   PetscInt           nlnk, *lnk, k, **bi_ptr;
   PetscFreeSpaceList free_space = NULL, current_space = NULL;
   PetscBT            lnkbt;
-  PetscBool          missing;
+  PetscBool          diagDense;
 
   PetscFunctionBegin;
   PetscCheck(A->rmap->N == A->cmap->N, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "matrix must be square");
-  PetscCall(MatMissingDiagonal(A, &missing, &i));
-  PetscCheck(!missing, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Matrix is missing diagonal entry %" PetscInt_FMT, i);
+  PetscCall(MatGetDiagonalMarkers_SeqBAIJ(A, NULL, &diagDense));
+  PetscCheck(diagDense, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Matrix is missing diagonal entry");
 
   PetscCall(ISInvertPermutation(iscol, PETSC_DECIDE, &isicol));
   PetscCall(ISGetIndices(isrow, &r));
@@ -421,7 +420,6 @@ static PetscErrorCode MatLUFactorSymbolic_SeqBAIJ_inplace(Mat B, Mat A, IS isrow
   b->j             = bj;
   b->i             = bi;
   b->diag          = bdiag;
-  b->free_diag     = PETSC_TRUE;
   b->ilen          = NULL;
   b->imax          = NULL;
   b->row           = isrow;
