@@ -768,7 +768,6 @@ PETSC_EXTERN PetscErrorCode MatIsSymmetricKnown(Mat, PetscBool *, PetscBool *);
 PETSC_EXTERN PetscErrorCode MatIsHermitianKnown(Mat, PetscBool *, PetscBool *);
 PETSC_EXTERN PetscErrorCode MatIsStructurallySymmetricKnown(Mat, PetscBool *, PetscBool *);
 PETSC_EXTERN PetscErrorCode MatIsSPDKnown(Mat, PetscBool *, PetscBool *);
-PETSC_EXTERN PetscErrorCode MatMissingDiagonal(Mat, PetscBool *, PetscInt *);
 PETSC_EXTERN PetscErrorCode MatLoad(Mat, PetscViewer);
 
 PETSC_EXTERN PetscErrorCode MatGetRowIJ(Mat, PetscInt, PetscBool, PetscBool, PetscInt *, const PetscInt *[], const PetscInt *[], PetscBool *);
