@@ -60,10 +60,14 @@ static PetscErrorCode TaoTermComputeHessian_Halfl2squared(TaoTerm term, Vec x, V
   PetscFunctionBegin;
   if (H) {
     PetscCall(MatZeroEntries(H));
+    PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
     PetscCall(MatShift(H, 1.0));
   }
   if (Hpre && Hpre != H) {
     PetscCall(MatZeroEntries(Hpre));
+    PetscCall(MatAssemblyBegin(Hpre, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
     PetscCall(MatShift(Hpre, 1.0));
   }
   PetscFunctionReturn(PETSC_SUCCESS);

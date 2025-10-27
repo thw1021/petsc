@@ -1099,11 +1099,18 @@ static PetscErrorCode TaoTermComputeHessian_Sum(TaoTerm term, Vec x, Vec params,
   PetscFunctionBegin;
   if (!H && !Hpre) PetscFunctionReturn(PETSC_SUCCESS);
   if (params) PetscCall(TaoTermSumVecNestGetSubVecsRead(params, NULL, &sub_params, &is_dummy));
-
-  //TODO Ideally, SUM's Hessian would be two matrices - one COMPOSITE and one DENSE
-  // and DENSE only gets updated by merge from COMPOSITE, iff subterms' Hessians' states have changed
-  if (H) PetscCall(MatZeroEntries(H));
-  if (Hpre && (Hpre != H)) PetscCall(MatZeroEntries(Hpre));
+  // If mattype dense, then after zero entreis, H->assembled = true.
+  // But for aij, H->assembled is still false.
+  if (H) {
+    PetscCall(MatZeroEntries(H));
+    PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
+  }
+  if (Hpre && (Hpre != H)) {
+    PetscCall(MatZeroEntries(Hpre));
+    PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
+  }
   for (PetscInt i = 0; i < sum->n_terms; i++) {
     TaoTermMapping *summand   = &sum->terms[i];
     Vec             sub_param = TaoTermSumGetSubVec(params, sub_params, is_dummy, i);
