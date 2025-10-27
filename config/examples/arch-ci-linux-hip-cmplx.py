@@ -14,8 +14,8 @@ if __name__ == '__main__':
     #'--with-blaslapack-dir=/home/users/balay/soft/instinct/gcc-10.2.0/fblaslapack',
     '--with-make-np=24',
     '--with-make-test-np=8',
-    '--with-hipc=/opt/rocm-5.4.3/bin/hipcc',
-    '--with-hip-dir=/opt/rocm-5.4.3',
+    '--with-hipc=/opt/rocm-6.2.4/bin/hipcc', # kokkos-5.0 requires rocm-6.2+
+    '--with-hip-dir=/opt/rocm-6.2.4',
     'COPTFLAGS=-g -O',
     'FOPTFLAGS=-g -O',
     'CXXOPTFLAGS=-g -O',
