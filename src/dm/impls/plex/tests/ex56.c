@@ -86,40 +86,34 @@ typedef enum {
 
 static PetscErrorCode LoadMeshLowLevel(AppCtx *options, PetscViewer v, PetscBool explicitDistribute, AuxObjLoadMode mode, DM *newdm)
 {
-  DM      dm;
-  PetscSF sfXC;
+  DM dm;
 
   PetscFunctionBeginUser;
   PetscCall(DMCreate(options->comm, &dm));
   PetscCall(DMSetType(dm, DMPLEX));
   PetscCall(PetscObjectSetName((PetscObject)dm, options->meshname));
-  PetscCall(DMPlexTopologyLoad(dm, v, &sfXC));
+  PetscCall(DMPlexTopologyLoad(dm, v));
   if (mode == PRE_DIST) {
-    PetscCall(DMPlexCoordinatesLoad(dm, v, sfXC));
-    PetscCall(DMPlexLabelsLoad(dm, v, sfXC));
+    PetscCall(DMPlexCoordinatesLoad(dm, v));
+    PetscCall(DMPlexLabelsLoad(dm, v));
   }
   if (explicitDistribute) {
-    DM      dmdist;
-    PetscSF sfXB = sfXC, sfBC;
+    DM dmdist;
 
-    PetscCall(DMPlexDistribute(dm, 0, &sfBC, &dmdist));
+    PetscCall(DMPlexDistribute(dm, 0, NULL, &dmdist));
     if (dmdist) {
       const char *name;
 
       PetscCall(PetscObjectGetName((PetscObject)dm, &name));
       PetscCall(PetscObjectSetName((PetscObject)dmdist, name));
-      PetscCall(PetscSFCompose(sfXB, sfBC, &sfXC));
-      PetscCall(PetscSFDestroy(&sfXB));
-      PetscCall(PetscSFDestroy(&sfBC));
       PetscCall(DMDestroy(&dm));
       dm = dmdist;
     }
   }
   if (mode == POST_DIST) {
-    PetscCall(DMPlexLabelsLoad(dm, v, sfXC));
-    PetscCall(DMPlexCoordinatesLoad(dm, v, sfXC));
+    PetscCall(DMPlexLabelsLoad(dm, v));
+    PetscCall(DMPlexCoordinatesLoad(dm, v));
   }
-  PetscCall(PetscSFDestroy(&sfXC));
   *newdm = dm;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

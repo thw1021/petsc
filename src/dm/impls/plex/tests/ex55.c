@@ -156,12 +156,9 @@ static PetscErrorCode DMPlexWriteAndReadHDF5(DM dm, Vec vec, const char filename
   PetscCall(PetscObjectSetName((PetscObject)dmnew, savedName));
   PetscCall(DMSetOptionsPrefix(dmnew, prefix));
   if (user->use_low_level_functions) {
-    PetscSF sfXC;
-
-    PetscCall(DMPlexTopologyLoad(dmnew, v, &sfXC));
-    PetscCall(DMPlexCoordinatesLoad(dmnew, v, sfXC));
-    PetscCall(DMPlexLabelsLoad(dmnew, v, sfXC));
-    PetscCall(PetscSFDestroy(&sfXC));
+    PetscCall(DMPlexTopologyLoad(dmnew, v));
+    PetscCall(DMPlexCoordinatesLoad(dmnew, v));
+    PetscCall(DMPlexLabelsLoad(dmnew, v));
   } else {
     PetscCall(DMLoad(dmnew, v));
     if (vec) {

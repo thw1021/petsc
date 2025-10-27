@@ -130,6 +130,7 @@ PETSC_EXTERN PetscErrorCode DMPlexCreateEdgeNumbering(DM, IS *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateCellNumbering(DM, PetscBool, IS *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateRankField(DM, Vec *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateLabelField(DM, DMLabel, Vec *);
+PETSC_EXTERN PetscErrorCode DMPlexCreatePointNumberingSF(DM, PetscSF *);
 
 PETSC_EXTERN PetscErrorCode DMPlexGetDepth(DM, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMPlexGetDepthLabel(DM, DMLabel *);
@@ -585,10 +586,10 @@ PETSC_EXTERN PetscErrorCode DMPlexGlobalVectorView(DM, PetscViewer, DM, Vec);
 PETSC_EXTERN PetscErrorCode DMPlexLocalVectorView(DM, PetscViewer, DM, Vec);
 PETSC_EXTERN PetscErrorCode DMPlexVecView1D(DM, PetscInt, Vec[], PetscViewer);
 
-PETSC_EXTERN PetscErrorCode DMPlexTopologyLoad(DM, PetscViewer, PetscSF *);
-PETSC_EXTERN PetscErrorCode DMPlexCoordinatesLoad(DM, PetscViewer, PetscSF);
-PETSC_EXTERN PetscErrorCode DMPlexLabelsLoad(DM, PetscViewer, PetscSF);
-PETSC_EXTERN PetscErrorCode DMPlexSectionLoad(DM, PetscViewer, DM, PetscSF, PetscSF *, PetscSF *);
+PETSC_EXTERN PetscErrorCode DMPlexTopologyLoad(DM, PetscViewer);
+PETSC_EXTERN PetscErrorCode DMPlexCoordinatesLoad(DM, PetscViewer);
+PETSC_EXTERN PetscErrorCode DMPlexLabelsLoad(DM, PetscViewer);
+PETSC_EXTERN PetscErrorCode DMPlexSectionLoad(DM, PetscViewer, DM, PetscSF *, PetscSF *);
 PETSC_EXTERN PetscErrorCode DMPlexGlobalVectorLoad(DM, PetscViewer, DM, PetscSF, Vec);
 PETSC_EXTERN PetscErrorCode DMPlexLocalVectorLoad(DM, PetscViewer, DM, PetscSF, Vec);
 

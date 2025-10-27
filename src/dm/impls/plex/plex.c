@@ -2467,23 +2467,18 @@ PetscErrorCode DMLoad_Plex(DM dm, PetscViewer viewer)
 + dm     - The `DM` into which the topology is loaded
 - viewer - The `PetscViewer` for the saved topology
 
-  Output Parameter:
-. globalToLocalPointSF - The `PetscSF` that pushes points in [0, N) to the associated points in the loaded `DMPLEX`, where N is the global number of points;
-  `NULL` if unneeded
-
   Level: advanced
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMLoad()`, `DMPlexCoordinatesLoad()`, `DMPlexLabelsLoad()`, `DMView()`, `PetscViewerHDF5Open()`, `PetscViewerPushFormat()`,
           `PetscViewer`, `PetscSF`
 @*/
-PetscErrorCode DMPlexTopologyLoad(DM dm, PetscViewer viewer, PetscSF *globalToLocalPointSF)
+PetscErrorCode DMPlexTopologyLoad(DM dm, PetscViewer viewer)
 {
   PetscBool ishdf5;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  if (globalToLocalPointSF) PetscAssertPointer(globalToLocalPointSF, 3);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5));
   PetscCall(PetscLogEventBegin(DMPLEX_TopologyLoad, viewer, 0, 0, 0));
   if (ishdf5) {
@@ -2492,7 +2487,7 @@ PetscErrorCode DMPlexTopologyLoad(DM dm, PetscViewer viewer, PetscSF *globalToLo
 
     PetscCall(PetscViewerGetFormat(viewer, &format));
     PetscCheck(format == PETSC_VIEWER_HDF5_PETSC || format == PETSC_VIEWER_DEFAULT || format == PETSC_VIEWER_NATIVE, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PetscViewerFormat %s not supported for HDF5 input.", PetscViewerFormats[format]);
-    PetscCall(DMPlexTopologyLoad_HDF5_Internal(dm, viewer, globalToLocalPointSF));
+    PetscCall(DMPlexTopologyLoad_HDF5_Internal(dm, viewer));
 #else
     SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
 #endif
@@ -2508,22 +2503,20 @@ PetscErrorCode DMPlexTopologyLoad(DM dm, PetscViewer viewer, PetscSF *globalToLo
 
   Input Parameters:
 + dm                   - The `DM` into which the coordinates are loaded
-. viewer               - The `PetscViewer` for the saved coordinates
-- globalToLocalPointSF - The `PetscSF` returned by `DMPlexTopologyLoad()` when loading dm from viewer
+- viewer               - The `PetscViewer` for the saved coordinates
 
   Level: advanced
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMLoad()`, `DMPlexTopologyLoad()`, `DMPlexLabelsLoad()`, `DMView()`, `PetscViewerHDF5Open()`, `PetscViewerPushFormat()`,
           `PetscSF`, `PetscViewer`
 @*/
-PetscErrorCode DMPlexCoordinatesLoad(DM dm, PetscViewer viewer, PetscSF globalToLocalPointSF)
+PetscErrorCode DMPlexCoordinatesLoad(DM dm, PetscViewer viewer)
 {
   PetscBool ishdf5;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  PetscValidHeaderSpecific(globalToLocalPointSF, PETSCSF_CLASSID, 3);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5));
   PetscCall(PetscLogEventBegin(DMPLEX_CoordinatesLoad, viewer, 0, 0, 0));
   if (ishdf5) {
@@ -2532,7 +2525,7 @@ PetscErrorCode DMPlexCoordinatesLoad(DM dm, PetscViewer viewer, PetscSF globalTo
 
     PetscCall(PetscViewerGetFormat(viewer, &format));
     PetscCheck(format == PETSC_VIEWER_HDF5_PETSC || format == PETSC_VIEWER_DEFAULT || format == PETSC_VIEWER_NATIVE, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PetscViewerFormat %s not supported for HDF5 input.", PetscViewerFormats[format]);
-    PetscCall(DMPlexCoordinatesLoad_HDF5_Internal(dm, viewer, globalToLocalPointSF));
+    PetscCall(DMPlexCoordinatesLoad_HDF5_Internal(dm, viewer));
 #else
     SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
 #endif
@@ -2548,25 +2541,20 @@ PetscErrorCode DMPlexCoordinatesLoad(DM dm, PetscViewer viewer, PetscSF globalTo
 
   Input Parameters:
 + dm                   - The `DM` into which the labels are loaded
-. viewer               - The `PetscViewer` for the saved labels
-- globalToLocalPointSF - The `PetscSF` returned by `DMPlexTopologyLoad()` when loading `dm` from viewer
+- viewer               - The `PetscViewer` for the saved labels
 
   Level: advanced
-
-  Note:
-  The `PetscSF` argument must not be `NULL` if the `DM` is distributed, otherwise an error occurs.
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMLoad()`, `DMPlexTopologyLoad()`, `DMPlexCoordinatesLoad()`, `DMView()`, `PetscViewerHDF5Open()`, `PetscViewerPushFormat()`,
           `PetscSF`, `PetscViewer`
 @*/
-PetscErrorCode DMPlexLabelsLoad(DM dm, PetscViewer viewer, PetscSF globalToLocalPointSF)
+PetscErrorCode DMPlexLabelsLoad(DM dm, PetscViewer viewer)
 {
   PetscBool ishdf5;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  if (globalToLocalPointSF) PetscValidHeaderSpecific(globalToLocalPointSF, PETSCSF_CLASSID, 3);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5));
   PetscCall(PetscLogEventBegin(DMPLEX_LabelsLoad, viewer, 0, 0, 0));
   if (ishdf5) {
@@ -2575,7 +2563,7 @@ PetscErrorCode DMPlexLabelsLoad(DM dm, PetscViewer viewer, PetscSF globalToLocal
 
     PetscCall(PetscViewerGetFormat(viewer, &format));
     PetscCheck(format == PETSC_VIEWER_HDF5_PETSC || format == PETSC_VIEWER_DEFAULT || format == PETSC_VIEWER_NATIVE, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PetscViewerFormat %s not supported for HDF5 input.", PetscViewerFormats[format]);
-    PetscCall(DMPlexLabelsLoad_HDF5_Internal(dm, viewer, globalToLocalPointSF));
+    PetscCall(DMPlexLabelsLoad_HDF5_Internal(dm, viewer));
 #else
     SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
 #endif
@@ -2592,8 +2580,7 @@ PetscErrorCode DMPlexLabelsLoad(DM dm, PetscViewer viewer, PetscSF globalToLocal
   Input Parameters:
 + dm                   - The `DM` that represents the topology
 . viewer               - The `PetscViewer` that represents the on-disk section (sectionA)
-. sectiondm            - The `DM` into which the on-disk section (sectionA) is migrated, can be `NULL`
-- globalToLocalPointSF - The `PetscSF` returned by `DMPlexTopologyLoad(`) when loading dm from viewer
+- sectiondm            - The `DM` into which the on-disk section (sectionA) is migrated, can be `NULL`
 
   Output Parameters:
 + globalDofSF - The `PetscSF` that migrates any on-disk `Vec` data associated with sectionA into a global `Vec` associated with the `sectiondm`'s global section (`NULL` if not needed)
@@ -2602,7 +2589,7 @@ PetscErrorCode DMPlexLabelsLoad(DM dm, PetscViewer viewer, PetscSF globalToLocal
   Level: advanced
 
   Notes:
-  This function is a wrapper around `PetscSectionLoad()`; it loads, in addition to the raw section, a list of global point numbers that associates each on-disk section point with a global point number in [0, NX), where NX is the number of topology points in `dm`. Noting that globalToLocalPointSF associates each topology point in dm with a global number in [0, NX), one can readily establish an association of the on-disk section points with the topology points.
+  This function is a wrapper around `PetscSectionLoad()`; it loads, in addition to the raw section, a list of global point numbers that associates each on-disk section point with a global point number in [0, NX), where NX is the number of topology points in `dm`. Noting that globalPointNumbers stored in `dm` associates each topology point in dm with a global number in [0, NX), one can readily establish an association of the on-disk section points with the topology points.
 
   In general `dm` and `sectiondm` are two different objects, the former carrying the topology and the latter carrying the section, and have been given a topology name and a section name, respectively, with `PetscObjectSetName()`. In practice, however, they can be the same object (or in case `sectiondm` is `NULL`) if it carries both topology and section; in that case the name of the object is used as both the topology name and the section name.
 
@@ -2622,8 +2609,8 @@ PetscErrorCode DMPlexLabelsLoad(DM dm, PetscViewer viewer, PetscSF globalToLocal
   sectionA->atlasOff             :       0 2 | 1             <- loaded in PetscSectionLoad()
   sectionA->atlasDof             :       1 3 | 1             <- loaded in PetscSectionLoad()
   sectionA's global point numbers:       0 2 | 3             <- loaded in DMPlexSectionLoad()
-  [0, NX)                        :       0 1 | 2 3           <- conceptual partition used in globalToLocalPointSF
-  sectionB's global point numbers:     0 1 3 | 3 2           <- associated with [0, NX) by globalToLocalPointSF
+  [0, NX)                        :       0 1 | 2 3           <- conceptual partition of global point numbers
+  sectionB's global point numbers:     0 1 3 | 3 2           <- globalPointNumbers stored in dm
   sectionB->atlasDof             :     1 0 1 | 1 3
   sectionB->atlasOff (no perm)   :     0 1 1 | 0 1
   vecB (local)                   :   [.0 .4] | [.4 .1 .2 .3] <- to be constructed by calling DMPlexLocalVectorLoad() with localDofSF
@@ -2633,7 +2620,7 @@ PetscErrorCode DMPlexLabelsLoad(DM dm, PetscViewer viewer, PetscSF globalToLocal
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMLoad()`, `DMPlexTopologyLoad()`, `DMPlexCoordinatesLoad()`, `DMPlexLabelsLoad()`, `DMPlexGlobalVectorLoad()`, `DMPlexLocalVectorLoad()`, `PetscSectionLoad()`, `DMPlexSectionView()`, `PetscSF`, `PetscViewer`
 @*/
-PetscErrorCode DMPlexSectionLoad(DM dm, PetscViewer viewer, PeOp DM sectiondm, PetscSF globalToLocalPointSF, PeOp PetscSF *globalDofSF, PeOp PetscSF *localDofSF)
+PetscErrorCode DMPlexSectionLoad(DM dm, PetscViewer viewer, PeOp DM sectiondm, PeOp PetscSF *globalDofSF, PeOp PetscSF *localDofSF)
 {
   PetscBool ishdf5;
 
@@ -2642,14 +2629,13 @@ PetscErrorCode DMPlexSectionLoad(DM dm, PetscViewer viewer, PeOp DM sectiondm, P
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
   if (!sectiondm) sectiondm = dm;
   PetscValidHeaderSpecific(sectiondm, DM_CLASSID, 3);
-  PetscValidHeaderSpecific(globalToLocalPointSF, PETSCSF_CLASSID, 4);
-  if (globalDofSF) PetscAssertPointer(globalDofSF, 5);
-  if (localDofSF) PetscAssertPointer(localDofSF, 6);
+  if (globalDofSF) PetscAssertPointer(globalDofSF, 4);
+  if (localDofSF) PetscAssertPointer(localDofSF, 5);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5));
   PetscCall(PetscLogEventBegin(DMPLEX_SectionLoad, viewer, 0, 0, 0));
   if (ishdf5) {
 #if defined(PETSC_HAVE_HDF5)
-    PetscCall(DMPlexSectionLoad_HDF5_Internal(dm, viewer, sectiondm, globalToLocalPointSF, globalDofSF, localDofSF));
+    PetscCall(DMPlexSectionLoad_HDF5_Internal(dm, viewer, sectiondm, globalDofSF, localDofSF));
 #else
     SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
 #endif
@@ -2680,10 +2666,10 @@ PetscErrorCode DMPlexSectionLoad(DM dm, PetscViewer viewer, PeOp DM sectiondm, P
        DMCreate(PETSC_COMM_WORLD, &dm);
        DMSetType(dm, DMPLEX);
        PetscObjectSetName((PetscObject)dm, "topologydm_name");
-       DMPlexTopologyLoad(dm, viewer, &sfX);
+       DMPlexTopologyLoad(dm, viewer);
        DMClone(dm, &sectiondm);
        PetscObjectSetName((PetscObject)sectiondm, "sectiondm_name");
-       DMPlexSectionLoad(dm, viewer, sectiondm, sfX, &gsf, NULL);
+       DMPlexSectionLoad(dm, viewer, sectiondm, &gsf, NULL);
        DMGetGlobalVector(sectiondm, &vec);
        PetscObjectSetName((PetscObject)vec, "vec_name");
        DMPlexGlobalVectorLoad(dm, viewer, sectiondm, gsf, vec);
@@ -2756,10 +2742,10 @@ PetscErrorCode DMPlexGlobalVectorLoad(DM dm, PetscViewer viewer, DM sectiondm, P
        DMCreate(PETSC_COMM_WORLD, &dm);
        DMSetType(dm, DMPLEX);
        PetscObjectSetName((PetscObject)dm, "topologydm_name");
-       DMPlexTopologyLoad(dm, viewer, &sfX);
+       DMPlexTopologyLoad(dm, viewer);
        DMClone(dm, &sectiondm);
        PetscObjectSetName((PetscObject)sectiondm, "sectiondm_name");
-       DMPlexSectionLoad(dm, viewer, sectiondm, sfX, NULL, &lsf);
+       DMPlexSectionLoad(dm, viewer, sectiondm, NULL, &lsf);
        DMGetLocalVector(sectiondm, &vec);
        PetscObjectSetName((PetscObject)vec, "vec_name");
        DMPlexLocalVectorLoad(dm, viewer, sectiondm, lsf, vec);
@@ -9110,6 +9096,60 @@ PetscErrorCode DMPlexCreatePointNumbering(DM dm, IS *globalPointNumbers)
   }
   PetscCall(ISConcatenate(PETSC_COMM_SELF, depth + 1, nums, globalPointNumbers));
   for (d = 0; d <= depth; ++d) PetscCall(ISDestroy(&nums[d]));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMPlexCreatePointNumberingSF - Create the global point numbering SF.
+
+  Collective
+
+  Input Parameter:
+. dm - The `DMPLEX` object
+
+  Output Parameter:
+. sf - The `PetscSF` that pushes forward the global point numbers to the plex points
+
+  Level: developer
+
+  Notes:
+  This function internally calls `DMPlexGetPointNumbering()` to get (cached) global point numbers.
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexCreatePointNumbering()`, `DMPlexGetPointNumbering()`, `DMPlexSetPointNumbering()`
+@*/
+PetscErrorCode DMPlexCreatePointNumberingSF(DM dm, PetscSF *sf)
+{
+  PetscInt        pStart, pEnd, p, n = 0;
+  IS              globalPointNumberIS;
+  const PetscInt *globalPointNumbers;
+  PetscInt       *globalPointNumbers1;
+  PetscLayout     layout;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscAssertPointer(sf, 2);
+  PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
+  PetscCall(PetscMalloc1(pEnd - pStart, &globalPointNumbers1));
+  PetscCall(DMPlexGetPointNumbering(dm, &globalPointNumberIS));
+  PetscCall(ISGetIndices(globalPointNumberIS, &globalPointNumbers));
+  for (p = pStart; p < pEnd; ++p) {
+    if (globalPointNumbers[p - pStart] >= 0) {
+      globalPointNumbers1[p - pStart] = globalPointNumbers[p - pStart];
+      n++;
+    } else {
+      globalPointNumbers1[p - pStart] = -(globalPointNumbers[p - pStart] + 1);
+    }
+  }
+  PetscCall(ISRestoreIndices(globalPointNumberIS, &globalPointNumbers));
+  PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)dm), sf));
+  PetscCall(PetscSFSetFromOptions(*sf));
+  PetscCall(PetscLayoutCreate(PetscObjectComm((PetscObject)(*sf)), &layout));
+  PetscCall(PetscLayoutSetLocalSize(layout, n));
+  PetscCall(PetscLayoutSetBlockSize(layout, 1));
+  PetscCall(PetscLayoutSetUp(layout));
+  PetscCall(PetscSFSetGraphLayout(*sf, layout, pEnd - pStart, NULL, PETSC_OWN_POINTER, globalPointNumbers1));
+  PetscCall(PetscLayoutDestroy(&layout));
+  PetscCall(PetscFree(globalPointNumbers1));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

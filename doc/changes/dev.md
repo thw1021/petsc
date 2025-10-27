@@ -83,6 +83,9 @@
 
 - Add `DMPlexSetPointNumbering()` and `DMPlexGetPointNumbering()`
 - Remove ``globalPointNumbers`` argument from `DMPlexTopologyView_HDF5_Internal()` and `DMPlexLabelsView_HDF5_Internal()'
+- Add `DMPlexCreatePointNumberingSF()`
+- Remove `sfXC` argument from `DMPlexTopologyLoad()`, `DMPlexCoordinatesLoad()`, `DMPlexLabelsLoad()`, and `DMPlexSectionLoad_HDF5`
+- Remove `sfXC` argument from `DMPlexTopologyLoad_HDF5_Internal()`, `DMPlexCoordinatesLoad_HDF5_Internal()`, `DMPlexLabelsLoad_HDF5_Internal()`, and `DMPlexSectionLoad_HDF5_Internal()`
 
 ```{rubric} FE/FV:
 ```

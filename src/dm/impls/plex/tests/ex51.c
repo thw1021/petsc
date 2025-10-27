@@ -71,7 +71,6 @@ int main(int argc, char **argv)
   /* Load */
   {
     DM          dm;
-    PetscSF     sfXC;
     PetscViewer viewer;
 
     PetscCall(PetscViewerHDF5Open(PETSC_COMM_WORLD, user.fname, FILE_MODE_READ, &viewer));
@@ -80,24 +79,20 @@ int main(int argc, char **argv)
     PetscCall(DMSetType(dm, DMPLEX));
     PetscCall(PetscObjectSetName((PetscObject)dm, exampleDMPlexName));
     PetscCall(DMPlexDistributionSetName(dm, exampleDistributionName));
-    /* sfXC: X -> C                         */
-    /* X: set of globalPointNumbers, [0, N) */
-    /* C: loaded in-memory plex             */
     PetscCall(PetscViewerPushFormat(viewer, format));
-    PetscCall(DMPlexTopologyLoad(dm, viewer, &sfXC));
+    PetscCall(DMPlexTopologyLoad(dm, viewer));
     PetscCall(PetscViewerPopFormat(viewer));
     /* Do not distribute (Already distributed just like the saved plex) */
     /* Load labels */
-    PetscCall(DMPlexLabelsLoad(dm, viewer, sfXC));
+    PetscCall(DMPlexLabelsLoad(dm, viewer));
     /* Load coordinates */
     PetscCall(PetscViewerPushFormat(viewer, format));
-    PetscCall(DMPlexCoordinatesLoad(dm, viewer, sfXC));
+    PetscCall(DMPlexCoordinatesLoad(dm, viewer));
     PetscCall(PetscViewerPopFormat(viewer));
     PetscCall(DMSetFromOptions(dm));
     /* Print the exact same plex as the saved one */
     PetscCall(PetscObjectSetName((PetscObject)dm, "Load: DM"));
     PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
-    PetscCall(PetscSFDestroy(&sfXC));
     PetscCall(DMDestroy(&dm));
     PetscCall(PetscViewerDestroy(&viewer));
   }

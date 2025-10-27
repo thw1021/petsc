@@ -3319,7 +3319,7 @@ cdef class DMPlex(DM):
 
     # Load
 
-    def topologyLoad(self, Viewer viewer) -> SF:
+    def topologyLoad(self, Viewer viewer) -> None:
         """Load a topology into this `DMPlex` object.
 
         Collective.
@@ -3329,23 +3329,15 @@ cdef class DMPlex(DM):
         viewer
             The `Viewer` for the saved topology
 
-        Returns
-        -------
-        sfxc : SF
-            The `SF` that pushes points in ``[0, N)`` to the associated points
-            in the loaded `DMPlex`, where ``N`` is the global number of points.
-
         See Also
         --------
         DM, DMPlex, DM.load, DMPlex.coordinatesLoad, DMPlex.labelsLoad
         DM.view, SF, Viewer, petsc.DMPlexTopologyLoad
 
         """
-        cdef SF sf = SF()
-        CHKERR(DMPlexTopologyLoad(self.dm, viewer.vwr, &sf.sf))
-        return sf
+        CHKERR(DMPlexTopologyLoad(self.dm, viewer.vwr))
 
-    def coordinatesLoad(self, Viewer viewer, SF sfxc) -> None:
+    def coordinatesLoad(self, Viewer viewer) -> None:
         """Load coordinates into this `DMPlex` object.
 
         Collective.
@@ -3354,8 +3346,6 @@ cdef class DMPlex(DM):
         ----------
         viewer
             The `Viewer` for the saved coordinates.
-        sfxc
-            The `SF` returned by `topologyLoad`.
 
         See Also
         --------
@@ -3363,9 +3353,9 @@ cdef class DMPlex(DM):
         SF, Viewer, petsc.DMPlexCoordinatesLoad
 
         """
-        CHKERR(DMPlexCoordinatesLoad(self.dm, viewer.vwr, sfxc.sf))
+        CHKERR(DMPlexCoordinatesLoad(self.dm, viewer.vwr))
 
-    def labelsLoad(self, Viewer viewer, SF sfxc) -> None:
+    def labelsLoad(self, Viewer viewer) -> None:
         """Load labels into this `DMPlex` object.
 
         Collective.
@@ -3374,8 +3364,6 @@ cdef class DMPlex(DM):
         ----------
         viewer
             The `Viewer` for the saved labels.
-        sfxc
-            The `SF` returned by `topologyLoad`.
 
         See Also
         --------
@@ -3383,9 +3371,9 @@ cdef class DMPlex(DM):
         DM.view, SF, Viewer, petsc.DMPlexLabelsLoad
 
         """
-        CHKERR(DMPlexLabelsLoad(self.dm, viewer.vwr, sfxc.sf))
+        CHKERR(DMPlexLabelsLoad(self.dm, viewer.vwr))
 
-    def sectionLoad(self, Viewer viewer, DM sectiondm, SF sfxc) -> tuple[SF, SF]:
+    def sectionLoad(self, Viewer viewer, DM sectiondm) -> tuple[SF, SF]:
         """Load section into a `DM`.
 
         Collective.
@@ -3396,8 +3384,6 @@ cdef class DMPlex(DM):
             The `Viewer` that represents the on-disk section (``sectionA``).
         sectiondm
             The `DM` into which the on-disk section (``sectionA``) is migrated.
-        sfxc
-            The `SF` returned by `topologyLoad`.
 
         Returns
         -------
@@ -3419,7 +3405,7 @@ cdef class DMPlex(DM):
         """
         cdef SF gsf = SF()
         cdef SF lsf = SF()
-        CHKERR(DMPlexSectionLoad(self.dm, viewer.vwr, sectiondm.dm, sfxc.sf, &gsf.sf, &lsf.sf))
+        CHKERR(DMPlexSectionLoad(self.dm, viewer.vwr, sectiondm.dm, &gsf.sf, &lsf.sf))
         return gsf, lsf
 
     def globalVectorLoad(self, Viewer viewer, DM sectiondm, SF sf, Vec vec) -> None:

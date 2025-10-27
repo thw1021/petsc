@@ -326,52 +326,37 @@ int main(int argc, char **argv)
   PetscCallMPI(MPI_Comm_split(PETSC_COMM_WORLD, mycolor, rank, &comm));
   if (mycolor == 0) {
     DM          dm;
-    PetscSF     sfXC;
     PetscViewer viewer;
 
     PetscCall(PetscViewerHDF5Open(comm, user.fname, FILE_MODE_READ, &viewer));
     /* Load exampleDMPlex */
+    PetscCall(DMCreate(comm, &dm));
+    PetscCall(DMSetType(dm, DMPLEX));
+    PetscCall(PetscObjectSetName((PetscObject)dm, exampleDMPlexName));
+    PetscCall(PetscViewerPushFormat(viewer, format));
+    PetscCall(DMPlexTopologyLoad(dm, viewer));
+    PetscCall(PetscViewerPopFormat(viewer));
     {
-      PetscSF sfXB, sfBC;
+      DM               distributedDM;
+      PetscInt         overlap = 1;
+      PetscPartitioner part;
 
-      PetscCall(DMCreate(comm, &dm));
-      PetscCall(DMSetType(dm, DMPLEX));
-      PetscCall(PetscObjectSetName((PetscObject)dm, exampleDMPlexName));
-      /* sfXB: X -> B                         */
-      /* X: set of globalPointNumbers, [0, N) */
-      /* B: loaded naive in-memory plex       */
-      PetscCall(PetscViewerPushFormat(viewer, format));
-      PetscCall(DMPlexTopologyLoad(dm, viewer, &sfXB));
-      PetscCall(PetscViewerPopFormat(viewer));
-      {
-        DM               distributedDM;
-        PetscInt         overlap = 1;
-        PetscPartitioner part;
-
-        PetscCall(DMPlexGetPartitioner(dm, &part));
-        PetscCall(PetscPartitionerSetFromOptions(part));
-        /* sfBC: B -> C                    */
-        /* B: loaded naive in-memory plex  */
-        /* C: redistributed good in-memory */
-        PetscCall(DMPlexDistribute(dm, overlap, &sfBC, &distributedDM));
-        if (distributedDM) {
-          PetscCall(DMDestroy(&dm));
-          dm = distributedDM;
-        }
-        PetscCall(PetscObjectSetName((PetscObject)dm, exampleDMPlexName));
+      PetscCall(DMPlexGetPartitioner(dm, &part));
+      PetscCall(PetscPartitionerSetFromOptions(part));
+      PetscCall(DMPlexDistribute(dm, overlap, NULL, &distributedDM));
+      if (distributedDM) {
+        PetscCall(DMDestroy(&dm));
+        dm = distributedDM;
       }
-      /* sfXC: X -> C */
-      PetscCall(PetscSFCompose(sfXB, sfBC, &sfXC));
-      PetscCall(PetscSFDestroy(&sfXB));
-      PetscCall(PetscSFDestroy(&sfBC));
+      PetscCall(PetscObjectSetName((PetscObject)dm, exampleDMPlexName));
     }
     /* Load labels */
     PetscCall(PetscViewerPushFormat(viewer, format));
-    PetscCall(DMPlexLabelsLoad(dm, viewer, sfXC));
+    PetscCall(DMPlexLabelsLoad(dm, viewer));
     PetscCall(PetscViewerPopFormat(viewer));
     /* Load coordinates */
     PetscCall(PetscViewerPushFormat(viewer, format));
-    PetscCall(DMPlexCoordinatesLoad(dm, viewer, sfXC));
+    PetscCall(DMPlexCoordinatesLoad(dm, viewer));
     PetscCall(PetscViewerPopFormat(viewer));
     PetscCall(PetscObjectSetName((PetscObject)dm, "Load: DM (with coordinates)"));
     PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
@@ -413,7 +398,7 @@ int main(int argc, char **argv)
       PetscCall(ISDestroy(&perm));
       PetscCall(DMSetLocalSection(sdm, section));
       PetscCall(PetscSectionDestroy(&section));
-      PetscCall(DMPlexSectionLoad(dm, viewer, sdm, sfXC, &gsf, &lsf));
+      PetscCall(DMPlexSectionLoad(dm, viewer, sdm, &gsf, &lsf));
       /* Load as local vector */
       PetscCall(DMGetLocalSection(sdm, &section));
       PetscCall(PetscObjectSetName((PetscObject)section, "Load: local section"));
@@ -468,7 +453,6 @@ int main(int argc, char **argv)
       PetscCall(DMDestroy(&sdm));
     }
     PetscCall(PetscViewerDestroy(&viewer));
-    PetscCall(PetscSFDestroy(&sfXC));
     PetscCall(DMDestroy(&dm));
   }
   PetscCallMPI(MPI_Comm_free(&comm));

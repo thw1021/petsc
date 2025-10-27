@@ -1578,7 +1578,6 @@ PetscErrorCode DMPlexView_HDF5_Internal(DM dm, PetscViewer viewer)
     PetscCall(PetscOptionsGetBool(NULL, dm->hdr.prefix, "-dm_plex_view_labels", &viewLabels, NULL));
     if (viewLabels) PetscCall(DMPlexLabelsView_HDF5_Internal(dm, viewer));
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1901,26 +1900,29 @@ static herr_t ReadLabelHDF5_Static(hid_t g_id, const char *lname, const H5L_info
   return err;
 }
 
-PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer, PetscSF sfXC)
+PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer)
 {
+  DM_Plex             *mesh = (DM_Plex *)dm->data;
   const char          *topologydm_name;
   LoadLabelsCtx        ctx;
   hsize_t              idx = 0;
   char                 group[PETSC_MAX_PATH_LEN];
   DMPlexStorageVersion version;
-  PetscBool            distributed, hasGroup;
+  PetscBool            hasGroup;
+  PetscSF              sfXC = NULL;
 
   PetscFunctionBegin;
-  PetscCall(DMPlexIsDistributed(dm, &distributed));
-  if (distributed) PetscCheck(sfXC, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_NULL, "PetscSF must be given for parallel load");
-  PetscCall(LoadLabelsCtxCreate(dm, viewer, sfXC, &ctx));
   PetscCall(DMPlexGetHDF5Name_Private(dm, &topologydm_name));
   PetscCall(PetscViewerHDF5GetDMPlexStorageVersionReading(viewer, &version));
   if (DMPlexStorageVersionGE(version, 2, 0, 0)) {
+    PetscCheck(mesh->globalPointNumbers, PETSC_COMM_SELF, PETSC_ERR_PLIB, "globalPointNumbers must have been set when loading topology");
+    PetscCall(DMPlexCreatePointNumberingSF(dm, &sfXC));
     PetscCall(PetscSNPrintf(group, sizeof(group), "topologies/%s/labels", topologydm_name));
   } else {
     PetscCall(PetscStrncpy(group, "labels", sizeof(group)));
   }
+  PetscCall(LoadLabelsCtxCreate(dm, viewer, sfXC, &ctx));
+  PetscSFDestroy(&sfXC);
   PetscCall(PetscViewerHDF5PushGroup(viewer, group));
   PetscCall(PetscViewerHDF5HasGroup(viewer, NULL, &hasGroup));
   if (hasGroup) {
@@ -2670,7 +2672,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_Private(DM dm, PetscViewer viewer,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, PetscSF *sfXC)
+PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer)
 {
   DMPlexStorageVersion version;
   const char          *topologydm_name;
@@ -2718,11 +2720,28 @@ PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, Petsc
     }
     PetscCall(PetscViewerHDF5PopGroup(viewer)); /* "distributions" */
   }
-  if (sfXC) {
-    *sfXC = sfwork;
-  } else {
-    PetscCall(PetscSFDestroy(&sfwork));
+  if (DMPlexStorageVersionGE(version, 2, 0, 0)) {
+    /* Set mesh->globalPointNumbers. */
+    PetscInt        pStart, pEnd, p, nleaves, nleaves1, i;
+    PetscSF         sfPoint;
+    const PetscInt *ilocal;
+    PetscInt       *globalPointNumbers;
+    IS              globalPointNumberIS;
+
+    PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
+    PetscCall(DMGetPointSF(dm, &sfPoint));
+    PetscCall(PetscSFGetGraph(sfPoint, NULL, &nleaves, &ilocal, NULL));
+    PetscCall(PetscSFGetGraphLayout(sfwork, NULL, &nleaves1, NULL, &globalPointNumbers));
+    PetscCheck(nleaves1 == pEnd - pStart, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "Mismatching sizes: nleaves (%" PetscInt_FMT ") != (pEnd - pStart) (%" PetscInt_FMT ")", nleaves, pEnd - pStart);
+    for (i = 0; i < nleaves; ++i) {
+      p = ilocal ? ilocal[i] : i;
+      globalPointNumbers[p - pStart] = -(globalPointNumbers[p - pStart] + 1);
+    }
+    PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)dm), pEnd - pStart, globalPointNumbers, PETSC_OWN_POINTER, &globalPointNumberIS));
+    PetscCall(DMPlexSetPointNumbering(dm, globalPointNumberIS));
+    PetscCall(ISDestroy(&globalPointNumberIS));
   }
+  PetscCall(PetscSFDestroy(&sfwork));
 
   PetscCall(PetscViewerHDF5PopGroup(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2774,9 +2793,10 @@ static PetscErrorCode DMPlexCoordinatesLoad_HDF5_Legacy_Private(DM dm, PetscView
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscViewer viewer, PetscSF sfXC)
+PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscViewer viewer)
 {
   DMPlexStorageVersion version;
+  DM_Plex             *mesh = (DM_Plex *)dm->data;
   DM                   cdm;
   Vec                  coords;
   PetscInt             blockSize;
@@ -2792,7 +2812,7 @@ PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscViewer viewer, Pe
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   /* else: since DMPlexStorageVersion 2.0.0 */
-  PetscCheck(sfXC, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_NULL, "PetscSF must be given for parallel load");
+  PetscCheck(mesh->globalPointNumbers, PETSC_COMM_SELF, PETSC_ERR_PLIB, "globalPointNumbers must have been set when loading topology");
   PetscCall(DMPlexGetHDF5Name_Private(dm, &topologydm_name));
   PetscCall(PetscViewerHDF5PushGroup(viewer, "topologies"));
   PetscCall(PetscViewerHDF5PushGroup(viewer, topologydm_name));
@@ -2804,7 +2824,7 @@ PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscViewer viewer, Pe
   PetscCall(PetscObjectSetName((PetscObject)cdm, coordinatedm_name));
   PetscCall(PetscFree(coordinatedm_name));
   /* lsf: on-disk data -> in-memory local vector associated with cdm's local section */
-  PetscCall(DMPlexSectionLoad(dm, viewer, cdm, sfXC, NULL, &lsf));
+  PetscCall(DMPlexSectionLoad(dm, viewer, cdm, NULL, &lsf));
   PetscCall(DMCreateLocalVector(cdm, &coords));
   PetscCall(PetscObjectSetName((PetscObject)coords, coordinates_name));
   PetscCall(PetscFree(coordinates_name));
@@ -2829,17 +2849,14 @@ PetscErrorCode DMPlexLoad_HDF5_Internal(DM dm, PetscViewer viewer)
   PetscCall(PetscViewerHDF5GetDMPlexStorageVersionReading(viewer, &version));
   PetscCall(PetscInfo(dm, "Loading DM %s storage version %d.%d.%d\n", dm->hdr.name, version->major, version->minor, version->subminor));
   if (!DMPlexStorageVersionGE(version, 2, 0, 0)) {
-    PetscCall(DMPlexTopologyLoad_HDF5_Internal(dm, viewer, NULL));
-    PetscCall(DMPlexLabelsLoad_HDF5_Internal(dm, viewer, NULL));
+    PetscCall(DMPlexTopologyLoad_HDF5_Internal(dm, viewer));
+    PetscCall(DMPlexLabelsLoad_HDF5_Internal(dm, viewer));
     PetscCall(DMPlexCoordinatesLoad_HDF5_Legacy_Private(dm, viewer));
   } else {
-    PetscSF sfXC;
-
     /* since DMPlexStorageVersion 2.0.0 */
-    PetscCall(DMPlexTopologyLoad_HDF5_Internal(dm, viewer, &sfXC));
-    PetscCall(DMPlexLabelsLoad_HDF5_Internal(dm, viewer, sfXC));
-    PetscCall(DMPlexCoordinatesLoad_HDF5_Internal(dm, viewer, sfXC));
-    PetscCall(PetscSFDestroy(&sfXC));
+    PetscCall(DMPlexTopologyLoad_HDF5_Internal(dm, viewer));
+    PetscCall(DMPlexLabelsLoad_HDF5_Internal(dm, viewer));
+    PetscCall(DMPlexCoordinatesLoad_HDF5_Internal(dm, viewer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2894,7 +2911,7 @@ static PetscErrorCode DMPlexSectionLoad_HDF5_Internal_CreateDataSF(PetscSection 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexSectionLoad_HDF5_Internal(DM dm, PetscViewer viewer, DM sectiondm, PetscSF sfXB, PetscSF *gsf, PetscSF *lsf)
+PetscErrorCode DMPlexSectionLoad_HDF5_Internal(DM dm, PetscViewer viewer, DM sectiondm, PetscSF *gsf, PetscSF *lsf)
 {
   MPI_Comm     comm;
   PetscMPIInt  size, rank;
@@ -2957,9 +2974,10 @@ PetscErrorCode DMPlexSectionLoad_HDF5_Internal(DM dm, PetscViewer viewer, DM sec
   }
 #endif
   {
+    DM_Plex        *mesh = (DM_Plex *)dm->data;
     IS              orderIS;
     const PetscInt *gpoints;
-    PetscSF         sfXA, sfAX;
+    PetscSF         sfXA, sfAX, sfXB;
     PetscLayout     layout;
     PetscSFNode    *owners, *buffer;
     PetscInt        nleaves;
@@ -2972,6 +2990,8 @@ PetscErrorCode DMPlexSectionLoad_HDF5_Internal(DM dm, PetscViewer viewer, DM sec
     PetscCall(PetscLayoutSetLocalSize(orderIS->map, n));
     PetscCall(ISLoad(orderIS, viewer));
     PetscCall(PetscLayoutCreate(comm, &layout));
+    PetscCheck(mesh->globalPointNumbers, PETSC_COMM_SELF, PETSC_ERR_PLIB, "globalPointNumbers must have been set when loading topology");
+    PetscCall(DMPlexCreatePointNumberingSF(dm, &sfXB));
     PetscCall(PetscSFGetGraph(sfXB, &nX, NULL, NULL, NULL));
     PetscCall(PetscLayoutSetLocalSize(layout, nX));
     PetscCall(PetscLayoutSetBlockSize(layout, 1));
@@ -3014,6 +3034,7 @@ PetscErrorCode DMPlexSectionLoad_HDF5_Internal(DM dm, PetscViewer viewer, DM sec
     PetscCall(PetscSFSetGraph(sfAX, n, nleaves, ilocal, PETSC_OWN_POINTER, iremote, PETSC_OWN_POINTER));
     PetscCall(PetscSFCompose(sfAX, sfXB, &sfAB));
     PetscCall(PetscSFDestroy(&sfAX));
+    PetscSFDestroy(&sfXB);
   }
   PetscCall(PetscViewerHDF5PopGroup(viewer));
   PetscCall(PetscViewerHDF5PopGroup(viewer));

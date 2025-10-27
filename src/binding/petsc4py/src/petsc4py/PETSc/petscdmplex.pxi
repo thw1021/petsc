@@ -176,10 +176,10 @@ cdef extern from * nogil:
     PetscErrorCode DMPlexGlobalVectorView(PetscDM, PetscViewer, PetscDM, PetscVec)
     PetscErrorCode DMPlexLocalVectorView(PetscDM, PetscViewer, PetscDM, PetscVec)
 
-    PetscErrorCode DMPlexTopologyLoad(PetscDM, PetscViewer, PetscSF*)
-    PetscErrorCode DMPlexCoordinatesLoad(PetscDM, PetscViewer, PetscSF)
-    PetscErrorCode DMPlexLabelsLoad(PetscDM, PetscViewer, PetscSF)
-    PetscErrorCode DMPlexSectionLoad(PetscDM, PetscViewer, PetscDM, PetscSF, PetscSF*, PetscSF*)
+    PetscErrorCode DMPlexTopologyLoad(PetscDM, PetscViewer)
+    PetscErrorCode DMPlexCoordinatesLoad(PetscDM, PetscViewer)
+    PetscErrorCode DMPlexLabelsLoad(PetscDM, PetscViewer)
+    PetscErrorCode DMPlexSectionLoad(PetscDM, PetscViewer, PetscDM, PetscSF*, PetscSF*)
     PetscErrorCode DMPlexGlobalVectorLoad(PetscDM, PetscViewer, PetscDM, PetscSF, PetscVec)
     PetscErrorCode DMPlexLocalVectorLoad(PetscDM, PetscViewer, PetscDM, PetscSF, PetscVec)
 

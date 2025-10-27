@@ -1149,7 +1149,7 @@ static PetscErrorCode LoadFromFile(MPI_Comm comm, const char *filename, DM *odm)
   PetscCall(PetscViewerPushFormat(viewer, format));
   for (PetscInt level = 0; level < numlevels; level++) {
     char             groupname[PETSC_MAX_PATH_LEN], *dmname;
-    PetscSF          sfXB, sfBC, sfG;
+    PetscSF          sfG;
     PetscPartitioner part;
     PetscInt         rr, cc;
     PetscBool        isRegular, isUniform;
@@ -1164,9 +1164,9 @@ static PetscErrorCode LoadFromFile(MPI_Comm comm, const char *filename, DM *odm)
     PetscCall(PetscViewerHDF5ReadAttribute(viewer, NULL, "refRegular", PETSC_BOOL, NULL, &isRegular));
     PetscCall(PetscViewerHDF5ReadAttribute(viewer, NULL, "refUniform", PETSC_BOOL, NULL, &isUniform));
     PetscCall(PetscObjectSetName((PetscObject)dm, dmname));
-    PetscCall(DMPlexTopologyLoad(dm, viewer, &sfXB));
-    PetscCall(DMPlexLabelsLoad(dm, viewer, sfXB));
-    PetscCall(DMPlexCoordinatesLoad(dm, viewer, sfXB));
+    PetscCall(DMPlexTopologyLoad(dm, viewer));
+    PetscCall(DMPlexLabelsLoad(dm, viewer));
+    PetscCall(DMPlexCoordinatesLoad(dm, viewer));
     PetscCall(DMPlexGetPartitioner(dm, &part));
     if (!level) { /* partition the coarse level only */
       PetscCall(PetscPartitionerSetFromOptions(part));
@@ -1182,7 +1182,7 @@ static PetscErrorCode LoadFromFile(MPI_Comm comm, const char *filename, DM *odm)
 
       PetscCall(DMClone(dm, &sdm));
       PetscCall(PetscObjectSetName((PetscObject)sdm, "pdm"));
-      PetscCall(DMPlexSectionLoad(dm, viewer, sdm, sfXB, NULL, &sf));
+      PetscCall(DMPlexSectionLoad(dm, viewer, sdm, NULL, &sf));
       PetscCall(DMGetLocalVector(sdm, &map));
       PetscCall(PetscObjectSetName((PetscObject)map, "pdm_map"));
       PetscCall(DMPlexLocalVectorLoad(dm, viewer, sdm, sf, map));
@@ -1227,25 +1227,19 @@ static PetscErrorCode LoadFromFile(MPI_Comm comm, const char *filename, DM *odm)
       PetscCall(DMDestroy(&sdm));
     }
     PetscCall(PetscSFDestroy(&sfXC));
-    PetscCall(DMPlexDistribute(dm, 0, &sfBC, odm));
+    PetscCall(DMPlexDistribute(dm, 0, NULL, odm));
     if (*odm) {
       PetscCall(DMDestroy(&dm));
       dm   = *odm;
       *odm = NULL;
       PetscCall(PetscObjectSetName((PetscObject)dm, dmname));
     }
-    if (sfBC) PetscCall(PetscSFCompose(sfXB, sfBC, &sfXC));
-    else {
-      PetscCall(PetscObjectReference((PetscObject)sfXB));
-      sfXC = sfXB;
-    }
-    PetscCall(PetscSFDestroy(&sfXB));
-    PetscCall(PetscSFDestroy(&sfBC));
+    PetscCall(DMPlexCreatePointNumberingSF(dm, &sfXC));
     PetscCall(DMSetCoarsenLevel(dm, cc));
     PetscCall(DMSetRefineLevel(dm, rr));
     PetscCall(DMPlexSetRegularRefinement(dm, isRegular));
     PetscCall(DMPlexSetRefinementUniform(dm, isUniform));
-    PetscCall(DMPlexSectionLoad(dm, viewer, NULL, sfXC, &sfG, NULL));
+    PetscCall(DMPlexSectionLoad(dm, viewer, NULL, &sfG, NULL));
     if (level == numlevels - 1) {
       Vec u;
 
