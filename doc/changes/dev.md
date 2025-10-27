@@ -86,6 +86,8 @@
 - Add `DMPlexCreatePointNumberingSF()`
 - Remove `sfXC` argument from `DMPlexTopologyLoad()`, `DMPlexCoordinatesLoad()`, `DMPlexLabelsLoad()`, and `DMPlexSectionLoad_HDF5`
 - Remove `sfXC` argument from `DMPlexTopologyLoad_HDF5_Internal()`, `DMPlexCoordinatesLoad_HDF5_Internal()`, `DMPlexLabelsLoad_HDF5_Internal()`, and `DMPlexSectionLoad_HDF5_Internal()`
+- Add `globalDofSF` argument to `DMPlexGlobalVectorView()` and `DMPlexGlobalVectorView_HDF5_Internal()`
+- Add `localDofSF` argument to `DMPlexLocalVectorView()` and `DMPlexLocalVectorView_HDF5_Internal()`
 
 ```{rubric} FE/FV:
 ```

@@ -309,7 +309,7 @@ int main(int argc, char **argv)
         }
       }
       PetscCall(VecRestoreArrayWrite(vec, &array));
-      PetscCall(DMPlexGlobalVectorView(dm, viewer, sdm, vec));
+      PetscCall(DMPlexGlobalVectorView(dm, viewer, sdm, NULL, vec));
       if (user.shell) {
         PetscCall(VecDestroy(&vec));
       } else {

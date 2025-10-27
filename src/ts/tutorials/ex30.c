@@ -1062,7 +1062,7 @@ static PetscErrorCode SaveToFile(DM dm, Vec u, const char *filename)
     PetscCall(DMPlexSectionView(dm, viewer, NULL));
     if (level == numlevels - 1) {
       PetscCall(PetscObjectSetName((PetscObject)u, "solution_"));
-      PetscCall(DMPlexGlobalVectorView(dm, viewer, NULL, u));
+      PetscCall(DMPlexGlobalVectorView(dm, viewer, NULL, NULL, u));
     }
     if (level) {
       PetscInt        cStart, cEnd, ccStart, ccEnd, cpStart;
@@ -1119,7 +1119,7 @@ static PetscErrorCode SaveToFile(DM dm, Vec u, const char *filename)
       PetscCall(VecRestoreArray(map, &array));
       PetscCall(DMPlexTransformDestroy(&tr));
       PetscCall(DMPlexSectionView(dm, viewer, sdm));
-      PetscCall(DMPlexLocalVectorView(dm, viewer, sdm, map));
+      PetscCall(DMPlexLocalVectorView(dm, viewer, sdm, NULL, map));
       PetscCall(DMRestoreLocalVector(sdm, &map));
       PetscCall(DMDestroy(&sdm));
     }

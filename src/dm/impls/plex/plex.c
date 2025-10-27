@@ -2287,15 +2287,18 @@ PetscErrorCode DMPlexSectionView(DM dm, PetscViewer viewer, DM sectiondm)
   Collective
 
   Input Parameters:
-+ dm        - The `DM` that represents the topology
-. viewer    - The `PetscViewer` to save data with
-. sectiondm - The `DM` that contains the global section on which vec is defined, can be `NULL`
-- vec       - The global vector to be saved
++ dm          - The `DM` that represents the topology
+. viewer      - The `PetscViewer` to save data with
+. sectiondm   - The `DM` that contains the global section on which vec is defined, can be `NULL`
+. globalDofSF - The `PetscSF` returned by `DMPlexSectionLoad()` if `sectiondm` was loaded from the disk; `NULL` otherwise
+- vec         - The global vector to be saved
 
   Level: advanced
 
   Notes:
   In general `dm` and `sectiondm` are two different objects, the former carrying the topology and the latter carrying the section, and have been given a topology name and a section name, respectively, with `PetscObjectSetName()`. In practice, however, they can be the same object (or in case `sectiondm` is `NULL`) if it carries both topology and section; in that case the name of the object is used as both the topology name and the section name.
+
+  If you loaded `sectiondm` from the disk with `DMPlexSectionLoad()`, created `vec`, and would like to save `vec` under the same on-disk section, you need to pass globalDofSF, returned by `DMPlexSectionLoad()`, as `globalDofSF` argument so that correct permutation is applied to `vec` before saving; this is the reverse of what happens when you load an on-disk vec into an in-memory global vec with `DMPlexGlobalVectorLoad()` passing globalDofSF.
 
   Calling sequence:
 .vb
@@ -2314,7 +2317,7 @@ PetscErrorCode DMPlexSectionView(DM dm, PetscViewer viewer, DM sectiondm)
        PetscObjectSetName((PetscObject)vec, "vec_name");
        DMPlexTopologyView(dm, viewer);
        DMPlexSectionView(dm, viewer, sectiondm);
-       DMPlexGlobalVectorView(dm, viewer, sectiondm, vec);
+       DMPlexGlobalVectorView(dm, viewer, sectiondm, NULL, vec);
        DMRestoreGlobalVector(sectiondm, &vec);
        DMDestroy(&sectiondm);
        DMDestroy(&dm);
@@ -2322,7 +2325,7 @@ PetscErrorCode DMPlexSectionView(DM dm, PetscViewer viewer, DM sectiondm)
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexTopologyView()`, `DMPlexSectionView()`, `DMPlexLocalVectorView()`, `DMPlexGlobalVectorLoad()`, `DMPlexLocalVectorLoad()`
 @*/
-PetscErrorCode DMPlexGlobalVectorView(DM dm, PetscViewer viewer, DM sectiondm, Vec vec)
+PetscErrorCode DMPlexGlobalVectorView(DM dm, PetscViewer viewer, DM sectiondm, PetscSF globalDofSF, Vec vec)
 {
   PetscBool ishdf5;
 
@@ -2349,7 +2352,7 @@ PetscErrorCode DMPlexGlobalVectorView(DM dm, PetscViewer viewer, DM sectiondm, V
   PetscCall(PetscLogEventBegin(DMPLEX_GlobalVectorView, viewer, 0, 0, 0));
   if (ishdf5) {
 #if defined(PETSC_HAVE_HDF5)
-    PetscCall(DMPlexGlobalVectorView_HDF5_Internal(dm, viewer, sectiondm, vec));
+    PetscCall(DMPlexGlobalVectorView_HDF5_Internal(dm, viewer, sectiondm, globalDofSF, vec));
 #else
     SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
 #endif
@@ -2364,15 +2367,18 @@ PetscErrorCode DMPlexGlobalVectorView(DM dm, PetscViewer viewer, DM sectiondm, V
   Collective
 
   Input Parameters:
-+ dm        - The `DM` that represents the topology
-. viewer    - The `PetscViewer` to save data with
-. sectiondm - The `DM` that contains the local section on which `vec` is defined, can be `NULL`
-- vec       - The local vector to be saved
++ dm         - The `DM` that represents the topology
+. viewer     - The `PetscViewer` to save data with
+. sectiondm  - The `DM` that contains the local section on which `vec` is defined, can be `NULL`
+. localDofSF - The `PetscSF` returned by `DMPlexSectionLoad()` if `sectiondm` was loaded from the disk; `NULL` otherwise
+- vec        - The local vector to be saved
 
   Level: advanced
 
   Note:
   In general `dm` and `sectiondm` are two different objects, the former carrying the topology and the latter carrying the section, and have been given a topology name and a section name, respectively, with `PetscObjectSetName()`. In practice, however, they can be the same object (or in case `sectiondm` is `NULL`) if it carries both topology and section; in that case the name of the object is used as both the topology name and the section name.
+
+  If you loaded `sectiondm` from the disk with `DMPlexSectionLoad()`, created `vec`, and would like to save `vec` under the same on-disk section, you need to pass localDofSF, returned by `DMPlexSectionLoad()`, as `localDofSF` argument so that correct permutation is applied to `vec` before saving; this is the reverse of what happens when you load an on-disk vec into an in-memory local vec with `DMPlexLocalVectorLoad()` passing localDofSF.
 
   Calling sequence:
 .vb
@@ -2390,7 +2396,7 @@ PetscErrorCode DMPlexGlobalVectorView(DM dm, PetscViewer viewer, DM sectiondm, V
        PetscObjectSetName((PetscObject)vec, "vec_name");
        DMPlexTopologyView(dm, viewer);
        DMPlexSectionView(dm, viewer, sectiondm);
-       DMPlexLocalVectorView(dm, viewer, sectiondm, vec);
+       DMPlexLocalVectorView(dm, viewer, sectiondm, NULL, vec);
        DMRestoreLocalVector(sectiondm, &vec);
        DMDestroy(&sectiondm);
        DMDestroy(&dm);
@@ -2398,7 +2404,7 @@ PetscErrorCode DMPlexGlobalVectorView(DM dm, PetscViewer viewer, DM sectiondm, V
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexTopologyView()`, `DMPlexSectionView()`, `DMPlexGlobalVectorView()`, `DMPlexGlobalVectorLoad()`, `DMPlexLocalVectorLoad()`
 @*/
-PetscErrorCode DMPlexLocalVectorView(DM dm, PetscViewer viewer, DM sectiondm, Vec vec)
+PetscErrorCode DMPlexLocalVectorView(DM dm, PetscViewer viewer, DM sectiondm, PetscSF localDofSF, Vec vec)
 {
   PetscBool ishdf5;
 
@@ -2425,7 +2431,7 @@ PetscErrorCode DMPlexLocalVectorView(DM dm, PetscViewer viewer, DM sectiondm, Ve
   PetscCall(PetscLogEventBegin(DMPLEX_LocalVectorView, viewer, 0, 0, 0));
   if (ishdf5) {
 #if defined(PETSC_HAVE_HDF5)
-    PetscCall(DMPlexLocalVectorView_HDF5_Internal(dm, viewer, sectiondm, vec));
+    PetscCall(DMPlexLocalVectorView_HDF5_Internal(dm, viewer, sectiondm, localDofSF, vec));
 #else
     SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
 #endif

@@ -3269,7 +3269,7 @@ cdef class DMPlex(DM):
         """
         CHKERR(DMPlexSectionView(self.dm, viewer.vwr, sectiondm.dm))
 
-    def globalVectorView(self, Viewer viewer, DM sectiondm, Vec vec) -> None:
+    def globalVectorView(self, Viewer viewer, DM sectiondm, Vec vec, SF sf = None) -> None:
         """Save a global vector.
 
         Collective.
@@ -3283,6 +3283,9 @@ cdef class DMPlex(DM):
             is defined; may be the same as this `DMPlex` object.
         vec
             The global vector to be saved.
+        sf
+            The `SF` (``gsf``) returned when ``sectiondm`` was loaded;
+            `None` if ``sectiondm`` was not loaded from the disk.
 
         See Also
         --------
@@ -3291,9 +3294,12 @@ cdef class DMPlex(DM):
         DMPlex.localVectorLoad, petsc.DMPlexGlobalVectorView
 
         """
-        CHKERR(DMPlexGlobalVectorView(self.dm, viewer.vwr, sectiondm.dm, vec.vec))
+        if sf is None:
+            CHKERR(DMPlexGlobalVectorView(self.dm, viewer.vwr, sectiondm.dm, NULL, vec.vec))
+        else:
+            CHKERR(DMPlexGlobalVectorView(self.dm, viewer.vwr, sectiondm.dm, sf.sf, vec.vec))
 
-    def localVectorView(self, Viewer viewer, DM sectiondm, Vec vec) -> None:
+    def localVectorView(self, Viewer viewer, DM sectiondm, Vec vec, SF sf = None) -> None:
         """Save a local vector.
 
         Collective.
@@ -3307,6 +3313,9 @@ cdef class DMPlex(DM):
             defined; may be the same as this `DMPlex` object.
         vec
             The local vector to be saved.
+        sf
+            The `SF` (``lsf``) returned when ``sectiondm`` was loaded;
+            `None` if ``sectiondm`` was not loaded from the disk.
 
         See Also
         --------
@@ -3315,7 +3324,10 @@ cdef class DMPlex(DM):
         DMPlex.localVectorLoad, petsc.DMPlexLocalVectorView
 
         """
-        CHKERR(DMPlexLocalVectorView(self.dm, viewer.vwr, sectiondm.dm, vec.vec))
+        if sf is None:
+          CHKERR(DMPlexLocalVectorView(self.dm, viewer.vwr, sectiondm.dm, NULL, vec.vec))
+        else:
+          CHKERR(DMPlexLocalVectorView(self.dm, viewer.vwr, sectiondm.dm, sf.sf, vec.vec))
 
     # Load
 

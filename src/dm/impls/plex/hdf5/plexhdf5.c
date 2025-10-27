@@ -1309,7 +1309,7 @@ PetscErrorCode DMPlexCoordinatesView_HDF5_Internal(DM dm, PetscViewer viewer)
   PetscCall(DMPlexGetScale(dm, PETSC_UNIT_LENGTH, &lengthScale));
   PetscCall(VecScale(newcoords, lengthScale));
   PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_NATIVE));
-  PetscCall(DMPlexGlobalVectorView(dm, viewer, cdm, newcoords));
+  PetscCall(DMPlexGlobalVectorView(dm, viewer, cdm, NULL, newcoords));
   PetscCall(PetscViewerPopFormat(viewer));
   PetscCall(VecDestroy(&newcoords));
   if (DMPlexStorageVersionGE(version, 3, 1, 0)) PetscCall(PetscViewerHDF5SetCompress(viewer, ocompress));
@@ -1639,7 +1639,7 @@ PetscErrorCode DMPlexSectionView_HDF5_Internal(DM dm, PetscViewer viewer, DM sec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexGlobalVectorView_HDF5_Internal(DM dm, PetscViewer viewer, DM sectiondm, Vec vec)
+PetscErrorCode DMPlexGlobalVectorView_HDF5_Internal(DM dm, PetscViewer viewer, DM sectiondm, PetscSF globalDofSF, Vec vec)
 {
   const char *topologydm_name;
   const char *sectiondm_name;
@@ -1679,14 +1679,41 @@ PetscErrorCode DMPlexGlobalVectorView_HDF5_Internal(DM dm, PetscViewer viewer, D
 
     PetscCall(VecCreate(PetscObjectComm((PetscObject)vec), &temp));
     PetscCall(PetscObjectSetName((PetscObject)temp, vec_name));
-    PetscCall(VecGetLayout(vec, &map));
-    PetscCall(VecSetLayout(temp, map));
-    PetscCall(VecSetUp(temp));
-    PetscCall(VecGetArrayRead(vec, &array));
-    PetscCall(VecPlaceArray(temp, array));
-    PetscCall(VecView(temp, viewer));
-    PetscCall(VecResetArray(temp));
-    PetscCall(VecRestoreArrayRead(vec, &array));
+    if (globalDofSF) {
+      /* sectiondm has been loaded from the disk using DMPlexSectionLoad(), and the loaded    */
+      /* section has different distribution and/or permutation from the saved section.        */
+      /* Need to permute vec before saving using globalDofSF returned by DMPlexSectionLoad(). */
+      PetscScalar    *temp_array;
+      PetscInt        n, N, n1, N1;
+      const PetscInt *ilocal;
+
+      PetscCall(PetscSFGetGraphLayout(globalDofSF, &map, &n1, &ilocal, NULL));
+      PetscCall(PetscLayoutGetSize(map, &N1));
+      PetscCall(VecGetSize(vec, &N));
+      PetscCall(VecGetLocalSize(vec, &n));
+      PetscCheck(N1 == N, PETSC_COMM_SELF, PETSC_ERR_PLIB, "globalDofSF root layout size (%" PetscInt_FMT ") != vec global size (%" PetscInt_FMT ")", N1, N);
+      PetscCheck(!ilocal, PETSC_COMM_SELF, PETSC_ERR_PLIB, "globalDofSF leaf space not dense");
+      PetscCheck(n1 == n, PETSC_COMM_SELF, PETSC_ERR_PLIB, "globalDofSF leaf size (%" PetscInt_FMT ") != vec local size (%" PetscInt_FMT ")", n1, n);
+      PetscCall(VecSetLayout(temp, map));
+      PetscCall(PetscLayoutDestroy(&map));
+      PetscCall(VecSetUp(temp));
+      PetscCall(VecGetArrayWrite(temp, &temp_array));
+      PetscCall(VecGetArrayRead(vec, &array));
+      PetscCall(PetscSFReduceBegin(globalDofSF, MPIU_SCALAR, array, temp_array, MPI_REPLACE));
+      PetscCall(PetscSFReduceEnd(globalDofSF, MPIU_SCALAR, array, temp_array, MPI_REPLACE));
+      PetscCall(VecRestoreArrayRead(vec, &array));
+      PetscCall(VecRestoreArrayWrite(temp, &temp_array));
+      PetscCall(VecView(temp, viewer));
+    } else {
+      PetscCall(VecGetLayout(vec, &map));
+      PetscCall(VecSetLayout(temp, map));
+      PetscCall(VecSetUp(temp));
+      PetscCall(VecGetArrayRead(vec, &array));
+      PetscCall(VecPlaceArray(temp, array));
+      PetscCall(VecView(temp, viewer));
+      PetscCall(VecResetArray(temp));
+      PetscCall(VecRestoreArrayRead(vec, &array));
+    }
     PetscCall(VecDestroy(&temp));
   }
   PetscCall(VecSetBlockSize(vec, bs));
@@ -1699,16 +1726,14 @@ PetscErrorCode DMPlexGlobalVectorView_HDF5_Internal(DM dm, PetscViewer viewer, D
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexLocalVectorView_HDF5_Internal(DM dm, PetscViewer viewer, DM sectiondm, Vec vec)
+PetscErrorCode DMPlexLocalVectorView_HDF5_Internal(DM dm, PetscViewer viewer, DM sectiondm, PetscSF localDofSF, Vec vec)
 {
-  MPI_Comm     comm;
-  const char  *topologydm_name;
-  const char  *sectiondm_name;
-  const char  *vec_name;
-  PetscSection section;
-  PetscBool    includesConstraints;
-  Vec          gvec;
-  PetscInt     m, bs;
+  MPI_Comm    comm;
+  const char *topologydm_name;
+  const char *sectiondm_name;
+  const char *vec_name;
+  Vec         gvec;
+  PetscInt    bs;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -1733,14 +1758,47 @@ PetscErrorCode DMPlexLocalVectorView_HDF5_Internal(DM dm, PetscViewer viewer, DM
   PetscCall(PetscViewerHDF5WriteAttribute(viewer, NULL, "blockSize", PETSC_INT, (void *)&bs));
   PetscCall(VecCreate(comm, &gvec));
   PetscCall(PetscObjectSetName((PetscObject)gvec, vec_name));
-  PetscCall(DMGetGlobalSection(sectiondm, &section));
-  PetscCall(PetscSectionGetIncludesConstraints(section, &includesConstraints));
-  if (includesConstraints) PetscCall(PetscSectionGetStorageSize(section, &m));
-  else PetscCall(PetscSectionGetConstrainedStorageSize(section, &m));
-  PetscCall(VecSetSizes(gvec, m, PETSC_DECIDE));
-  PetscCall(VecSetUp(gvec));
-  PetscCall(DMLocalToGlobalBegin(sectiondm, vec, INSERT_VALUES, gvec));
-  PetscCall(DMLocalToGlobalEnd(sectiondm, vec, INSERT_VALUES, gvec));
+  if (localDofSF) {
+    /* sectiondm has been loaded from the disk using DMPlexSectionLoad(), and the loaded   */
+    /* section has different distribution and/or permutation from the saved section.       */
+    /* Need to permute vec before saving using localDofSF returned by DMPlexSectionLoad(). */
+    PetscLayout        map;
+    const PetscScalar *array;
+    PetscScalar       *temp_array;
+    PetscSection       section;
+    PetscBool          includesConstraints;
+
+    PetscCall(DMGetLocalSection(sectiondm, &section));
+    PetscCall(PetscSectionGetIncludesConstraints(section, &includesConstraints));
+    /* If includesConstraints = PETSC_FALSE on the local section, and                   */
+    /* includesConstraints = PETSC_TRUE on the on-disk section, which is always global, */
+    /* we would not be able to fill gvec as we would not know the constrained values.   */
+    /* Just raise error if includesConstraints = PETSC_FALSE on the local section.      */
+    PetscCheck(includesConstraints, PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for vec on local section with includesConstraints = PETSC_FALSE");
+    PetscCall(PetscSFGetGraphLayout(localDofSF, &map, NULL, NULL, NULL));
+    PetscCall(VecSetLayout(gvec, map));
+    PetscCall(PetscLayoutDestroy(&map));
+    PetscCall(VecSetUp(gvec));
+    PetscCall(VecGetArrayWrite(gvec, &temp_array));
+    PetscCall(VecGetArrayRead(vec, &array));
+    PetscCall(PetscSFReduceBegin(localDofSF, MPIU_SCALAR, array, temp_array, MPI_REPLACE));
+    PetscCall(PetscSFReduceEnd(localDofSF, MPIU_SCALAR, array, temp_array, MPI_REPLACE));
+    PetscCall(VecRestoreArrayRead(vec, &array));
+    PetscCall(VecRestoreArrayWrite(gvec, &temp_array));
+  } else {
+    PetscSection section;
+    PetscBool    includesConstraints;
+    PetscInt     m;
+
+    PetscCall(DMGetGlobalSection(sectiondm, &section));
+    PetscCall(PetscSectionGetIncludesConstraints(section, &includesConstraints));
+    if (includesConstraints) PetscCall(PetscSectionGetStorageSize(section, &m));
+    else PetscCall(PetscSectionGetConstrainedStorageSize(section, &m));
+    PetscCall(VecSetSizes(gvec, m, PETSC_DECIDE));
+    PetscCall(VecSetUp(gvec));
+    PetscCall(DMLocalToGlobalBegin(sectiondm, vec, INSERT_VALUES, gvec));
+    PetscCall(DMLocalToGlobalEnd(sectiondm, vec, INSERT_VALUES, gvec));
+  }
   PetscCall(VecView(gvec, viewer));
   PetscCall(VecDestroy(&gvec));
   PetscCall(PetscViewerHDF5PopGroup(viewer));
