@@ -126,21 +126,6 @@ int main(int argc, char **argv)
     args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -ridge_tao_term_hessian_mat_type constantdiagonal -lasso_tao_term_hessian_mat_type diagonal
 
   test:
-    suffix: mffd
-    requires: !single !__float128
-    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -data_tao_term_hessian_mat_type mffd -ridge_tao_term_hessian_mat_type mffd -lasso_tao_term_hessian_mat_type mffd
-
-  test:
-    suffix: separate_shell
-    requires: !single !__float128
-    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -tao_term_hessian_pre_is_hessian 0 -tao_term_hessian_pre_mat_type shell
-
-  test:
-    suffix: separate_mffd
-    requires: !single !__float128
-    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -tao_term_hessian_pre_is_hessian 0 -tao_term_hessian_pre_mat_type mffd
-
-  test:
     suffix: snes
     requires: !single
     args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type snes

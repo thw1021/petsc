@@ -573,6 +573,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     PetscCall(MatSetOption(H, MAT_SYMMETRIC, PETSC_TRUE));
     PetscCall(MatSetOption(H, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
     PetscCall(TaoSetHessian(tao, H, H, TaoDefaultComputeHessian, NULL));
+    PetscCall(TaoTermComputeHessianUseFDPush(tao->objective_term.term));
     PetscCall(MatDestroy(&H));
   }
   flg = PETSC_FALSE;
