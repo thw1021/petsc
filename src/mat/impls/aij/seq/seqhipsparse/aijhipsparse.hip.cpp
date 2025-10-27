@@ -2170,7 +2170,7 @@ struct VecHIPEqualsReverse {
   }
 };
 
-struct MatMatHipsparse {
+struct MatProductCtx_MatMatHipsparse {
   PetscBool             cisdense;
   PetscScalar          *Bt;
   Mat                   X;
@@ -2190,9 +2190,9 @@ struct MatMatHipsparse {
   hipsparseSpGEMMDescr_t spgemmDesc;
 };
 
-static PetscErrorCode MatDestroy_MatMatHipsparse(void *data)
+static PetscErrorCode MatProductCtxDestroy_MatMatHipsparse(void **data)
 {
-  MatMatHipsparse *mmdata = (MatMatHipsparse *)data;
+  MatProductCtxMatMatHipsparse *mmdata = *(MatProductCtx_MatMatHipsparse **)data;
 
   PetscFunctionBegin;
   PetscCallHIP(hipFree(mmdata->Bt));
@@ -2208,7 +2208,7 @@ static PetscErrorCode MatDestroy_MatMatHipsparse(void *data)
   if (mmdata->mmBuffer) PetscCallHIP(hipFree(mmdata->mmBuffer));
   if (mmdata->mmBuffer2) PetscCallHIP(hipFree(mmdata->mmBuffer2));
   PetscCall(MatDestroy(&mmdata->X));
-  PetscCall(PetscFree(data));
+  PetscCall(PetscFree(*data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2400,7 +2400,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJHIPSPARSE_SeqDENSEHIP(Mat C)
     else PetscCall(MatSetSizes(mmdata->X, A->rmap->n, B->cmap->n, A->rmap->n, B->cmap->n));
   }
   C->product->data       = mmdata;
-  C->product->destroy    = MatDestroy_MatMatHipsparse;
+  C->product->destroy    = MatMatProductCtxDestroy_MatMatHipsparse;
   C->ops->productnumeric = MatProductNumeric_SeqAIJHIPSPARSE_SeqDENSEHIP;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2556,7 +2556,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJHIPSPARSE_SeqAIJHIPSPARSE(Mat C)
   /* product data */
   PetscCall(PetscNew(&mmdata));
   C->product->data    = mmdata;
-  C->product->destroy = MatDestroy_MatMatHipsparse;
+  C->product->destroy = MatMatProductCtxDestroy_MatMatHipsparse;
 
   PetscCall(MatSeqAIJHIPSPARSECopyToGPU(A));
   PetscCall(MatSeqAIJHIPSPARSECopyToGPU(B));
