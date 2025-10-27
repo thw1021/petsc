@@ -570,6 +570,8 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
 
     PetscCall(MatCreate(PetscObjectComm((PetscObject)tao), &H));
     PetscCall(MatSetType(H, MATAIJ));
+    PetscCall(MatSetOption(H, MAT_SYMMETRIC, PETSC_TRUE));
+    PetscCall(MatSetOption(H, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
     PetscCall(TaoSetHessian(tao, H, H, TaoDefaultComputeHessian, NULL));
     PetscCall(MatDestroy(&H));
   }
@@ -579,6 +581,8 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     Mat H;
 
     PetscCall(MatCreate(PetscObjectComm((PetscObject)tao), &H));
+    PetscCall(MatSetOption(H, MAT_SYMMETRIC, PETSC_TRUE));
+    PetscCall(MatSetOption(H, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
     PetscCall(TaoSetHessian(tao, H, H, TaoDefaultComputeHessianMFFD, NULL));
     PetscCall(MatDestroy(&H));
   }
