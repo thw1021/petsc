@@ -188,6 +188,8 @@ static PetscErrorCode TaoTermComputeHessian_L1_Internal(TaoTerm term, Vec diag, 
   if (l1->epsilon == 0.0) {
     PetscCall(TaoTermL1DerivativeCheck(term));
     PetscCall(MatZeroEntries(H));
+    PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
   } else {
     PetscCall(MatDiagonalSet(H, diag, INSERT_VALUES));
   }

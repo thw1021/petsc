@@ -370,8 +370,16 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *mt, Vec
   TaoTermMappingCheckInsertMode(mt, mode);
   if (TaoTermHessianMasked(mt->mask)) {
     if (mode == INSERT_VALUES) {
-      if (H) PetscCall(MatZeroEntries(H));
-      if (Hpre && Hpre != H) PetscCall(MatZeroEntries(Hpre));
+      if (H) {
+        PetscCall(MatZeroEntries(H));
+        PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
+        PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
+      }
+      if (Hpre && Hpre != H) {
+        PetscCall(MatZeroEntries(Hpre));
+        PetscCall(MatAssemblyBegin(Hpre, MAT_FINAL_ASSEMBLY));
+        PetscCall(MatAssemblyEnd(Hpre, MAT_FINAL_ASSEMBLY));
+      }
     }
     PetscFunctionReturn(PETSC_SUCCESS);
   }

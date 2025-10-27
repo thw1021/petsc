@@ -119,7 +119,7 @@ PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
       if (term->ops->createhessianmatrices == TaoTermCreateHessianMatricesDefault) {
         PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
         if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
-      } else {
+      } else {//TODO if callback, mattype changed, its not reflected on mt...
         PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
         if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
       }
@@ -255,6 +255,8 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
   if (term->H_mattype) deft = term->H_mattype;
   PetscCall(PetscOptionsFList("-tao_term_hessian_mat_type", "Hessian mat type", "TaoTermSetCreateHessianMode", MatList, deft, typeName, 256, &opt));
   if (opt) {
+    //TODO Check for MFFD. If so, nuke term->ops->hessian with custom TaoDefaultComputeHessianMFFD, or something like that
+    //but L1, L2, Quad doesnt really makes sense at all! should we send warning?
     PetscCall(PetscFree(term->H_mattype));
     PetscCall(PetscStrallocpy(typeName, (char **)&term->H_mattype));
   }
