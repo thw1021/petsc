@@ -93,6 +93,13 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Halfl2squared(TaoTerm term, M
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermIsComputeHessianFDPossible_Halfl2squared(TaoTerm term, PetscBool3 *ispossible)
+{
+  PetscFunctionBegin;
+  *ispossible = PETSC_BOOL3_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
   TAOTERMHALFL2SQUARED - A `TaoTerm` that computes $\tfrac{1}{2}\|x - p\|_2^2$, for solution $x$ and parameters $p$.
 
@@ -129,12 +136,13 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
   PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->H_mattype));
   PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->Hpre_mattype));
 
-  term->ops->destroy               = TaoTermDestroy_Halfl2squared;
-  term->ops->objective             = TaoTermComputeObjective_Halfl2squared;
-  term->ops->gradient              = TaoTermComputeGradient_Halfl2squared;
-  term->ops->objectiveandgradient  = TaoTermComputeObjectiveAndGradient_Halfl2squared;
-  term->ops->hessian               = TaoTermComputeHessian_Halfl2squared;
-  term->ops->createhessianmatrices = TaoTermCreateHessianMatrices_Halfl2squared;
+  term->ops->destroy                    = TaoTermDestroy_Halfl2squared;
+  term->ops->objective                  = TaoTermComputeObjective_Halfl2squared;
+  term->ops->gradient                   = TaoTermComputeGradient_Halfl2squared;
+  term->ops->objectiveandgradient       = TaoTermComputeObjectiveAndGradient_Halfl2squared;
+  term->ops->hessian                    = TaoTermComputeHessian_Halfl2squared;
+  term->ops->createhessianmatrices      = TaoTermCreateHessianMatrices_Halfl2squared;
+  term->ops->iscomputehessianfdpossible = TaoTermIsComputeHessianFDPossible_Halfl2squared;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

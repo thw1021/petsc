@@ -227,6 +227,14 @@ static PetscErrorCode TaoTermQuadraticSetMat_Quadratic(TaoTerm term, Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermIsComputeHessianFDPossible_Quadratic(TaoTerm term, PetscBool3 *ispossible)
+{
+  PetscFunctionBegin;
+  *ispossible = PETSC_BOOL3_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+
 /*MC
   TAOTERMQUADRATIC - A `TaoTerm` that computes $\tfrac{1}{2}(x - p)^T A (x - p)$, for a fixed matrix $A$, solution $x$ and parameters $p$.
 
@@ -258,13 +266,14 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm term)
   term->H_mattype    = NULL;
   term->Hpre_mattype = NULL;
 
-  term->ops->destroy               = TaoTermDestroy_Quadratic;
-  term->ops->view                  = TaoTermView_Quadratic;
-  term->ops->objective             = TaoTermComputeObjective_Quadratic;
-  term->ops->gradient              = TaoTermComputeGradient_Quadratic;
-  term->ops->objectiveandgradient  = TaoTermComputeObjectiveAndGradient_Quadratic;
-  term->ops->hessian               = TaoTermComputeHessian_Quadratic;
-  term->ops->createhessianmatrices = TaoTermCreateHessianMatrices_Quadratic;
+  term->ops->destroy                    = TaoTermDestroy_Quadratic;
+  term->ops->view                       = TaoTermView_Quadratic;
+  term->ops->objective                  = TaoTermComputeObjective_Quadratic;
+  term->ops->gradient                   = TaoTermComputeGradient_Quadratic;
+  term->ops->objectiveandgradient       = TaoTermComputeObjectiveAndGradient_Quadratic;
+  term->ops->hessian                    = TaoTermComputeHessian_Quadratic;
+  term->ops->createhessianmatrices      = TaoTermCreateHessianMatrices_Quadratic;
+  term->ops->iscomputehessianfdpossible = TaoTermIsComputeHessianFDPossible_Quadratic;
 
   term->Hpre_is_H = PETSC_TRUE;
 
