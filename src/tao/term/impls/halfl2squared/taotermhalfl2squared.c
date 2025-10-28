@@ -73,6 +73,26 @@ static PetscErrorCode TaoTermComputeHessian_Halfl2squared(TaoTerm term, Vec x, V
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermCreateHessianMatrices_Halfl2squared(TaoTerm term, Mat *H, Mat *Hpre)
+{
+  PetscBool   is_hdiag, is_hprediag;
+
+  PetscFunctionBegin;
+  PetscCall(PetscInfo(term, "Creating TAOTERMHALFL2SQUARED Hessian Matrices. TAOTERMHALFL2SQUARED only accepts MATDIAGONAL for MatType, overriding any user-set MatType.\n"));
+  PetscCall(PetscStrcmp(term->H_mattype, MATDIAGONAL, &is_hdiag));
+  PetscCall(PetscStrcmp(term->Hpre_mattype, MATDIAGONAL, &is_hprediag));
+  if (!is_hdiag) {
+    PetscCall(PetscFree(term->H_mattype));
+    PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->H_mattype));
+  }
+  if (!is_hprediag) {
+    PetscCall(PetscFree(term->Hpre_mattype));
+    PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->Hpre_mattype));
+  }
+  PetscCall(TaoTermCreateHessianMatricesDefault(term, H, Hpre));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
   TAOTERMHALFL2SQUARED - A `TaoTerm` that computes $\tfrac{1}{2}\|x - p\|_2^2$, for solution $x$ and parameters $p$.
 
@@ -114,7 +134,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
   term->ops->gradient              = TaoTermComputeGradient_Halfl2squared;
   term->ops->objectiveandgradient  = TaoTermComputeObjectiveAndGradient_Halfl2squared;
   term->ops->hessian               = TaoTermComputeHessian_Halfl2squared;
-  term->ops->createhessianmatrices = TaoTermCreateHessianMatricesDefault;
+  term->ops->createhessianmatrices = TaoTermCreateHessianMatrices_Halfl2squared;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

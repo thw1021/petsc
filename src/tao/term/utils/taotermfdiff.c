@@ -335,6 +335,26 @@ PetscErrorCode TaoTermCreateHessianMFFD(TaoTerm term, Mat *mffd)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode TaoTermComputeHessianMFFD(TaoTerm term, Vec x, Vec params, Mat H, Mat B)
+{
+  PetscContainer       container;
+  TaoTermHessianShell *hess;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectQuery((PetscObject)H, "__TaoTermHessianShell", (PetscObject *)&container));
+  if (!container) {
+    PetscCall(TaoTermInitializeHessianMFFD(term, H));
+    PetscCall(PetscObjectQuery((PetscObject)H, "__TaoTermHessianShell", (PetscObject *)&container));
+    PetscCheck(container, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "failed to initialize mffd matrix");
+  }
+  PetscCall(PetscContainerGetPointer(container, (void **)&hess));
+  PetscCheck(hess->term == term, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_INCOMP, "Hessian shell matrix does not come from this TaoTerm");
+  PetscCall(MatMFFDSetBase(H, x, NULL));
+  PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   TaoTermUpdateHessianMFFD - Update the solution and parameter vectors for a shell matrix constructed with `TaoTermCreateHessianMFFD()`
 

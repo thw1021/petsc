@@ -118,6 +118,7 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Quadratic(TaoTerm term, Mat *
   TaoTerm_Quadratic *quad = (TaoTerm_Quadratic *)term->data;
 
   PetscFunctionBegin;
+  PetscCall(PetscInfo(term, "Creating TAOTERMQUADRATIC Hessian Matrices by duplicating quadratic matrix set by TaoTermQuadraticSetMat, overriding custom MatType options.\n"));
   if (H) PetscCall(MatDuplicate(quad->A, MAT_DO_NOT_COPY_VALUES, H));
   if (Hpre) {
     if (H) {

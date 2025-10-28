@@ -208,6 +208,26 @@ static PetscErrorCode TaoTermComputeHessian_L1(TaoTerm term, Vec x, Vec params, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermCreateHessianMatrices_L1(TaoTerm term, Mat *H, Mat *Hpre)
+{
+  PetscBool   is_hdiag, is_hprediag;
+
+  PetscFunctionBegin;
+  PetscCall(PetscInfo(term, "Creating TAOTERML1 Hessian Matrices. TAOTERML1 only accepts MATDIAGONAL for MatType, overriding any user-set MatType.\n"));
+  PetscCall(PetscStrcmp(term->H_mattype, MATDIAGONAL, &is_hdiag));
+  PetscCall(PetscStrcmp(term->Hpre_mattype, MATDIAGONAL, &is_hprediag));
+  if (!is_hdiag) {
+    PetscCall(PetscFree(term->H_mattype));
+    PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->H_mattype));
+  }
+  if (!is_hprediag) {
+    PetscCall(PetscFree(term->Hpre_mattype));
+    PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->Hpre_mattype));
+  }
+  PetscCall(TaoTermCreateHessianMatricesDefault(term, H, Hpre));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   TaoTermL1SetEpsilon - Set an $\epsilon$ smoothing parameter.
 
@@ -357,7 +377,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   term->ops->gradient              = TaoTermComputeGradient_L1;
   term->ops->objectiveandgradient  = TaoTermComputeObjectiveAndGradient_L1;
   term->ops->hessian               = TaoTermComputeHessian_L1;
-  term->ops->createhessianmatrices = TaoTermCreateHessianMatricesDefault;
+  term->ops->createhessianmatrices = TaoTermCreateHessianMatrices_L1;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermL1SetEpsilon_C", TaoTermL1SetEpsilon_L1));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermL1GetEpsilon_C", TaoTermL1GetEpsilon_L1));
