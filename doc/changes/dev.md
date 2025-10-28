@@ -79,6 +79,8 @@
 ```{rubric} TS:
 ```
 
+-  Change the `destroy()` function argument of `TSTrajectorySetTransform()` to type `PetscCtxDestroyFn *`. This means the destroy function must deference the argument before operating on it
+
 ```{rubric} TAO:
 ```
 
