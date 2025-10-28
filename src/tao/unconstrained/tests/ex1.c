@@ -14,6 +14,8 @@ int main(int argc, char **argv)
   TaoTerm     data_term;
   PetscRandom rand;
   Tao         tao;
+  PetscInt    i, j;
+  PetscReal   val, density = 0.3;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
@@ -30,8 +32,24 @@ int main(int argc, char **argv)
   PetscCall(PetscRandomSetFromOptions(rand));
 
   // create the model data, A, W and b
-  PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, NULL, &A));
-  PetscCall(MatSetRandom(A, rand));
+  //PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, NULL, &A));
+
+  PetscCall(MatCreate(comm, &A));
+  PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, m, n));
+  PetscCall(MatSetType(A, MATAIJ));
+  PetscCall(MatSetUp(A));
+  PetscCall(MatSetFromOptions(A));
+  for (i = 0; i < m; i++) {
+      for (j = 0; j < n; j++) {
+          PetscCall(PetscRandomGetValue(rand, &val));
+          // Optionally make it sparse: only insert some entries
+          if (val < density) {
+              PetscCall(MatSetValue(A, i, j, val, INSERT_VALUES));
+          }
+      }
+  }
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   PetscCall(VecCreateMPI(comm, PETSC_DECIDE, m, &b));
   PetscCall(VecSetRandom(b, rand));
   PetscCall(VecDuplicate(b, &w));
