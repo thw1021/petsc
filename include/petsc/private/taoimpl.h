@@ -257,6 +257,7 @@ struct _TaoTermOps {
   PetscErrorCode (*isobjectiveandgradientdefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*ishessiandefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*iscreatehessianmatricesdefined)(TaoTerm, PetscBool *);
+  PetscErrorCode (*iscomputehessianfdpossible)(TaoTerm, PetscBool3 *);
 
   PetscErrorCode (*createsolutionvec)(TaoTerm, Vec *);
   PetscErrorCode (*createparametersvec)(TaoTerm, Vec *);

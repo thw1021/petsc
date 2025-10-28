@@ -328,6 +328,13 @@ static PetscErrorCode TaoTermSetFromOptions_L1(TaoTerm term, PetscOptionItems Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermIsComputeHessianFDPossible_L1(TaoTerm term, PetscBool3 *ispossible)
+{
+  PetscFunctionBegin;
+  *ispossible = PETSC_BOOL3_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
   TAOTERML1 - A `TaoTerm` that computes $\|x - p\|_1$, for solution $x$ and parameters $p$.
 
@@ -370,14 +377,15 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->H_mattype));
   PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->Hpre_mattype));
 
-  term->ops->destroy               = TaoTermDestroy_L1;
-  term->ops->view                  = TaoTermView_L1;
-  term->ops->setfromoptions        = TaoTermSetFromOptions_L1;
-  term->ops->objective             = TaoTermComputeObjective_L1;
-  term->ops->gradient              = TaoTermComputeGradient_L1;
-  term->ops->objectiveandgradient  = TaoTermComputeObjectiveAndGradient_L1;
-  term->ops->hessian               = TaoTermComputeHessian_L1;
-  term->ops->createhessianmatrices = TaoTermCreateHessianMatrices_L1;
+  term->ops->destroy                    = TaoTermDestroy_L1;
+  term->ops->view                       = TaoTermView_L1;
+  term->ops->setfromoptions             = TaoTermSetFromOptions_L1;
+  term->ops->objective                  = TaoTermComputeObjective_L1;
+  term->ops->gradient                   = TaoTermComputeGradient_L1;
+  term->ops->objectiveandgradient       = TaoTermComputeObjectiveAndGradient_L1;
+  term->ops->hessian                    = TaoTermComputeHessian_L1;
+  term->ops->createhessianmatrices      = TaoTermCreateHessianMatrices_L1;
+  term->ops->iscomputehessianfdpossible = TaoTermIsComputeHessianFDPossible_L1;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermL1SetEpsilon_C", TaoTermL1SetEpsilon_L1));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermL1GetEpsilon_C", TaoTermL1GetEpsilon_L1));
