@@ -255,6 +255,7 @@ PETSC_EXTERN PetscErrorCode TaoTermShellSetView(TaoTerm, PetscErrorCode (*)(TaoT
 PETSC_EXTERN PetscErrorCode TaoTermShellSetCreateSolutionVec(TaoTerm, PetscErrorCode (*)(TaoTerm, Vec *));
 PETSC_EXTERN PetscErrorCode TaoTermShellSetCreateParametersVec(TaoTerm, PetscErrorCode (*)(TaoTerm, Vec *));
 PETSC_EXTERN PetscErrorCode TaoTermShellSetCreateHessianMatrices(TaoTerm, PetscErrorCode (*)(TaoTerm, Mat *, Mat *));
+PETSC_EXTERN PetscErrorCode TaoTermShellSetIsComputeHessianFDPossible(TaoTerm, PetscBool3);
 
 PETSC_EXTERN PetscErrorCode TaoTermSumSetNumSubterms(TaoTerm, PetscInt);
 PETSC_EXTERN PetscErrorCode TaoTermSumGetNumSubterms(TaoTerm, PetscInt *);
@@ -285,6 +286,7 @@ PETSC_EXTERN PetscErrorCode TaoTermIsGradientDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsObjectiveAndGradientDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsHessianDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsCreateHessianMatricesDefined(TaoTerm, PetscBool *);
+PETSC_INTERN PetscErrorCode TaoTermIsComputeHessianFDPossible(TaoTerm, PetscBool3 *);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateHessianShell(TaoTerm, Mat *);
 PETSC_EXTERN PetscErrorCode TaoTermUpdateHessianShell(TaoTerm, Mat, Vec, Vec);

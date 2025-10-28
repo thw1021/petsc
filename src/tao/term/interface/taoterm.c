@@ -116,14 +116,27 @@ PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
       }
     }
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
-      if (term->fd_hess_level > 0) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Using finite differences for Hessian computation\n"));
-      } else if (term->ops->createhessianmatrices == TaoTermCreateHessianMatricesDefault) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
-        if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
-      } else {//TODO if callback, mattype changed, its not reflected on mt...
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
-        if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
+      PetscBool3 is_fdpossible;
+
+      PetscCall(TaoTermIsComputeHessianFDPossible(term, &is_fdpossible));
+      if (is_fdpossible == PETSC_BOOL3_FALSE) {
+        if (term->fd_hess_level > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "Finite differences for Hessian computation was requested, but ignored.\n"));
+        if (term->ops->createhessianmatrices == TaoTermCreateHessianMatricesDefault) {
+          PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
+          if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
+        } else {
+          PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
+          if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
+        }
+      } else {
+        if (term->fd_hess_level > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "Using finite differences for Hessian computation\n"));
+        else if (term->ops->createhessianmatrices == TaoTermCreateHessianMatricesDefault) {
+          PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
+          if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
+        } else {//TODO if callback, mattype changed, its not reflected on mt...
+          PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
+          if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
+        }
       }
     }
     if (term->ops->view) PetscUseTypeMethod(term, view, viewer);
@@ -636,7 +649,8 @@ PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm term, Vec x, Vec param
 @*/
 PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
-  PetscBool is_mffd;
+  PetscBool  is_mffd;
+  PetscBool3 is_fdpossible = PETSC_BOOL3_UNKNOWN;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
@@ -657,17 +671,55 @@ PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat
     PetscCheckSameComm(term, 1, Hpre, 5);
   }
   PetscCall(PetscObjectTypeCompare((PetscObject)H, MATMFFD, &is_mffd));
+  PetscCall(TaoTermIsComputeHessianFDPossible(term, &is_fdpossible));
   PetscCall(PetscLogEventBegin(TAOTERM_HessianEval, term, NULL, NULL, NULL));
-  if (term->fd_hess_level > 0) {
-    PetscCall(TaoTermComputeHessianFD(term, x, params, H, Hpre));
-  } else  if (is_mffd) {
-    PetscCall(TaoTermComputeHessianMFFD(term, x, params, H, Hpre      ));
-  } else {
+  if (is_fdpossible == PETSC_BOOL3_FALSE) {
     PetscUseTypeMethod(term, hessian, x, params, H, Hpre);
+  } else if (term->fd_hess_level > 0) {
+    if (is_fdpossible == PETSC_BOOL3_UNKNOWN) PetscCall(PetscInfo(term, "Whether TaoTermComputeHessianFD is possible is unknown. Trying anyway.\n"));
+    PetscCall(TaoTermComputeHessianFD(term, x, params, H, Hpre));
+  } else if (is_mffd) {
+    if (is_fdpossible == PETSC_BOOL3_UNKNOWN) PetscCall(PetscInfo(term, "Whether TaoTermComputeHessianMFFD is possible is unknown. Trying anyway.\n"));
+    PetscCall(TaoTermComputeHessianMFFD(term, x, params, H, Hpre));
+  } else {
+    if (term->ops->hessian) PetscUseTypeMethod(term, hessian, x, params, H, Hpre);
+    else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have TaoTermComputeHessian routine, and cannot use finite differences for Hessian computation. Either call TaoTermShellSetHessian, set Hessian MatType to MATMFFD, or call TaoTermComputeHessianUseFDPush().\n");
   }
   PetscCall(PetscLogEventEnd(TAOTERM_HessianEval, term, NULL, NULL, NULL));
   if (params) PetscCall(VecLockReadPop(params));
   PetscCall(VecLockReadPop(x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoTermIsComputeHessianFDPossible - Whether this term can compute Hessian with finite differences
+  with either `-tao_term_hessian_use_fd`, `TaoTermComputeHessianUseFDPush()`,  or `MATMFFD`.
+
+  Not collective
+
+  Input Parameter:
+. term - a `TaoTerm`
+
+  Output Parameter:
+. is_fdpossible - whether Hessian computation with finite differences is possible
+
+  Level: developer
+
+.seealso: [](sec_tao_term),
+          `TaoTerm`,
+          `TaoTermComputeObjective()`,
+          `TaoTermShellSetObjective()`,
+          `TaoTermIsGradientDefined()`,
+          `TaoTermIsObjectiveAndGradientDefined()`,
+          `TaoTermIsHessianDefined()`
+@*/
+PetscErrorCode TaoTermIsComputeHessianFDPossible(TaoTerm term, PetscBool3 *is_fdpossible)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(is_fdpossible, 2);
+  if (term->ops->iscomputehessianfdpossible) PetscUseTypeMethod(term, iscomputehessianfdpossible, is_fdpossible);
+  else *is_fdpossible = PETSC_BOOL3_UNKNOWN;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
