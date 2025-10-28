@@ -143,7 +143,11 @@ int main(int argc, char **argv)
 
   /* Allocate Jacobian and Dictionary matrix. */
   PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, M, N, NULL, &J));
-  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, K, N, NULL, &D)); /* XH: TODO: dense -> sparse/dense/shell etc, do it on fly  */
+  //PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, K, N, NULL, &D)); /* XH: TODO: dense -> sparse/dense/shell etc, do it on fly  */
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &D));
+  PetscCall(MatSetSizes(D, PETSC_DECIDE, PETSC_DECIDE, K, N));
+  PetscCall(MatSetType(D, MATAIJ));
+  PetscCall(MatSetUp(D));
 
   for (i = 0; i < M; i++) user.idm[i] = i;
   for (i = 0; i < N; i++) user.idn[i] = i;

@@ -266,7 +266,9 @@ static PetscErrorCode TaoTermMappingMatPtAP(Mat unmapped_H, Mat map, Mat mapped_
     PetscCall(MatTransposeMatMult(map, map, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped_H));
     PetscCall(MatScale(mapped_H, cc));
   } else {
-    PetscCall(TaoTermMappingMatPtAP_Internal(unmapped_H, map, mapped_H));
+    //PetscCall(TaoTermMappingMatPtAP_Internal(unmapped_H, map, mapped_H));
+
+    PetscCall(MatPtAP(unmapped_H, map, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped_H));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -431,6 +433,7 @@ static PetscErrorCode TaoTermMappingCreateAPWorkMatrix(Mat map, Mat unmapped, Ma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+//TODO MatProduct v fragile? aij-aij doesn't work....
 static PetscErrorCode TaoTermMappingCreatePtAP(Mat unmapped_H, Mat map, Mat *H)
 {
   PetscBool is_uH_diag, is_map_diag, is_uH_cdiag;
@@ -451,10 +454,15 @@ static PetscErrorCode TaoTermMappingCreatePtAP(Mat unmapped_H, Mat map, Mat *H)
   } else if (is_uH_diag) {
     PetscCall(MatTransposeMatMult(map, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
   } else {
-    PetscCall(MatProductCreate(unmapped_H, map, NULL, H));
-    PetscCall(MatProductSetType(*H, MATPRODUCT_PtAP));
-    PetscCall(MatProductSetFromOptions(*H));
-    PetscCall(MatProductSymbolic(*H));
+    PetscCall(MatPtAP(unmapped_H, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
+//    PetscCall(MatProductCreate(unmapped_H, map, NULL, H));
+//    PetscCall(MatProductSetType(*H, MATPRODUCT_PtAP));
+//    PetscCall(MatProductSetFromOptions(*H));
+//    PetscCall(MatProductSymbolic(*H));
+//    PetscCall(MatProductNumeric(*H));
+//    PetscCall(MatZeroEntries(*H));
+//    PetscCall(MatAssemblyBegin(*H, MAT_FINAL_ASSEMBLY));
+//    PetscCall(MatAssemblyEnd(*H, MAT_FINAL_ASSEMBLY));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -537,6 +545,10 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
   else {
     // create _unmapped only if they are empty
     PetscCall(TaoTermCreateHessianMatrices(mt->term, (mt->_unmapped_H) ? NULL : &mt->_unmapped_H, (mt->_unmapped_Hpre) ? NULL : &mt->_unmapped_Hpre));
+    //TODO for AIJ....
+    PetscCall(MatAssemblyBegin(mt->_unmapped_H, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(mt->_unmapped_H, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatShift(mt->_unmapped_H, 1.));
     // Create PtAP only if mt->_mapped_H is empty
     if (mt->_unmapped_H && !mt->_mapped_H) PetscCall(TaoTermMappingCreatePtAP(mt->_unmapped_H, mt->map, &mt->_mapped_H));
     // Creating expensive work matrix to store AP TODO remove when diag PtAP gets implemented
