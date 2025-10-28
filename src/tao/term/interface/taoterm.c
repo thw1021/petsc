@@ -269,6 +269,12 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
     PetscCall(PetscStrallocpy(typeName, (char **)&term->Hpre_mattype));
   }
 
+  if (term->Hpre_is_H && (term->H_mattype != term->Hpre_mattype)) {
+    PetscCall(PetscInfo(term, "Hpre_is_H, but H_mattype and Hpre_mattype are different. Setting Hpre_mattype to be same as H_mattype\n"));
+    PetscCall(PetscFree(term->Hpre_mattype));
+    PetscCall(PetscStrallocpy(term->H_mattype, (char **)&term->Hpre_mattype));
+  }
+
   PetscCall(PetscOptionsBoundedReal("-tao_term_fd_delta", "Finite difference increment", "TaoTermSetFDDelta", term->fd_delta, &term->fd_delta, NULL, 0.0));
 
   PetscCall(PetscOptionsBool("-tao_term_gradient_use_fd", "Use finite differences in TaoTermComputeGradient()", "TaoTermComputeGradientUseFDPush", grad_use_fd, &grad_use_fd, NULL));
