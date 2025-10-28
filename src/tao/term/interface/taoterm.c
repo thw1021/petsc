@@ -116,7 +116,9 @@ PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
       }
     }
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
-      if (term->ops->createhessianmatrices == TaoTermCreateHessianMatricesDefault) {
+      if (term->fd_hess_level > 0) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Using finite differences for Hessian computation\n"));
+      } else if (term->ops->createhessianmatrices == TaoTermCreateHessianMatricesDefault) {
         PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
         if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
       } else {//TODO if callback, mattype changed, its not reflected on mt...
@@ -256,7 +258,7 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
   PetscCall(PetscOptionsFList("-tao_term_hessian_mat_type", "Hessian mat type", "TaoTermSetCreateHessianMode", MatList, deft, typeName, 256, &opt));
   if (opt) {
     //TODO Check for MFFD. If so, nuke term->ops->hessian with custom TaoDefaultComputeHessianMFFD, or something like that
-    //but L1, L2, Quad doesnt really makes sense at all! should we send warning?
+    //but L1, L2, Quad doesnt really makes sense at all! should we send warning? -> ignore. only shell supports MFFD for now. rosenbrock1_taoterm
     PetscCall(PetscFree(term->H_mattype));
     PetscCall(PetscStrallocpy(typeName, (char **)&term->H_mattype));
   }
@@ -634,6 +636,8 @@ PetscErrorCode TaoTermComputeObjectiveAndGradient(TaoTerm term, Vec x, Vec param
 @*/
 PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
+  PetscBool is_mffd;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
@@ -652,9 +656,12 @@ PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat
     PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 5);
     PetscCheckSameComm(term, 1, Hpre, 5);
   }
+  PetscCall(PetscObjectTypeCompare((PetscObject)H, MATMFFD, &is_mffd));
   PetscCall(PetscLogEventBegin(TAOTERM_HessianEval, term, NULL, NULL, NULL));
   if (term->fd_hess_level > 0) {
     PetscCall(TaoTermComputeHessianFD(term, x, params, H, Hpre));
+  } else  if (is_mffd) {
+    PetscCall(TaoTermComputeHessianMFFD(term, x, params, H, Hpre      ));
   } else {
     PetscUseTypeMethod(term, hessian, x, params, H, Hpre);
   }
@@ -1433,7 +1440,6 @@ PetscErrorCode TaoTermCreateHessianMatrices(TaoTerm term, Mat *H, Mat *Hpre)
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   if (H) PetscAssertPointer(H, 2);
   if (Hpre) PetscAssertPointer(Hpre, 3);
-  //TODO if mattype is inelligible for specific term, we should ignore it and put it on info
   PetscUseTypeMethod(term, createhessianmatrices, H, Hpre);
   PetscFunctionReturn(PETSC_SUCCESS);
 }

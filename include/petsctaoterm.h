@@ -302,3 +302,4 @@ PETSC_EXTERN PetscErrorCode TaoTermComputeHessianUseFDPush(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianUseFDPop(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermCreateHessianMFFD(TaoTerm, Mat *);
 PETSC_EXTERN PetscErrorCode TaoTermUpdateHessianMFFD(TaoTerm, Mat, Vec, Vec);
+PETSC_EXTERN PetscErrorCode TaoTermComputeHessianMFFD(TaoTerm, Vec, Vec, Mat, Mat);
