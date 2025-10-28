@@ -92,15 +92,9 @@ int main(int argc, char **argv)
   switch (user.tType) {
   case TEST_L1DICT:
     {
-      Tao     subsolver;
-      TaoTerm sum;
-
       PetscCall(TaoBRGNSetRegularizationType(tao, TAOBRGN_REGULARIZATION_L1DICT));
       PetscCall(TaoBRGNSetL1SmoothEpsilon(tao, 1.e-6));
       PetscCall(TaoBRGNSetRegularizerWeight(tao, 1.e-8));
-      PetscCall(TaoBRGNGetSubsolver(tao, &subsolver));
-      PetscCall(TaoGetTerm(subsolver, NULL, &sum, NULL, NULL));
-      PetscCall(TaoTermSumSetSubtermHessianMatrices(sum, 1, NULL, NULL, user.DTD, user.DTD));
     }
     break;
   case TEST_L2PROX:

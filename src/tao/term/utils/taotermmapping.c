@@ -451,8 +451,6 @@ static PetscErrorCode TaoTermMappingCreatePtAP(Mat unmapped_H, Mat map, Mat *H)
   } else if (is_uH_diag) {
     PetscCall(MatTransposeMatMult(map, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
   } else {
-    //TODO MatProductSetFromOptions_Private has composed function querying to see if PtAP is availble
-    //That should be turned into intern function to be used here. If unavailable, densify matrices
     PetscCall(MatProductCreate(unmapped_H, map, NULL, H));
     PetscCall(MatProductSetType(*H, MATPRODUCT_PtAP));
     PetscCall(MatProductSetFromOptions(*H));
