@@ -1,5 +1,6 @@
 Tao Object: 1 MPI process
   type: brgn
+    Regularizer weight: 0.0001
     BRGN Regularization Type: l1dict
     L1 smooth epsilon: 1e-06
     Tao Object: (tao_brgn_subsolver_) 1 MPI process
@@ -28,36 +29,18 @@ Tao Object: 1 MPI process
           Solver never run
         Rejected BFGS updates: 0
         CG steps: 0
-        Newton steps: 30
-        BFGS steps: 0
+        Newton steps: 18
+        BFGS steps: 1
         Scaled gradient steps: 0
         Gradient steps: 0
         KSP termination reasons:
           atol: 0
           rtol: 5
-          ctol: 25
+          ctol: 13
           negc: 0
           dtol: 0
-          iter: 0
+          iter: 1
           othr: 0
-      Objective function:
-        TaoTerm Object: (tao_brgn_subsolver_) 1 MPI process
-          type: sum
-          solution vector space: N = 5
-          parameter vector space: (optional) K = 5
-          Sum of 2 terms: f_{BRGN Gauss-Newton term}(x) + 0.0001 f_{BRGN regularizer l1dict}(x; [p_1])
-          f_{BRGN Gauss-Newton term}:
-            TaoTerm Object: BRGN Gauss-Newton term (brgn_gauss_newton_) 1 MPI process
-              type: shell
-              solution vector space: N = 5
-              User context has been set
-              The following methods have been set: objectiveandgradient, hessian,
-          f_{BRGN regularizer l1dict}:
-            TaoTerm Object: BRGN regularizer l1dict (brgn_regularizer_) 1 MPI process
-              type: l1
-              solution vector space: N = 5
-              parameter vector space: (optional) K = 5
-              epsilon (tao_term_l1_epsilon): 1e-06
       TaoLineSearch Object: (tao_brgn_subsolver_) 1 MPI process
         type: more-thuente
         maximum function evaluations=30
@@ -79,7 +62,7 @@ Tao Object: 1 MPI process
           rows=5, cols=5
             Max. storage: 5
             Used storage: 5
-            Number of updates: 29
+            Number of updates: 18
             Number of rejects: 0
             Number of resets: 0
             J0:
@@ -96,21 +79,21 @@ Tao Object: 1 MPI process
         Mat Object: 1 MPI process
           type: shell
           rows=5, cols=5
-      total KSP iterations: 70
+      total KSP iterations: 60
       convergence tolerances: gatol=1e-06,       grtol=1e-08,       steptol=0.,       gttol=0.
-      Residual in Function/Gradient:=5.75519e-08
-      Objective value=9.99959e-05
-      total number of iterations=30,                              (max: 10000)
-      total number of function evaluations=30,                      (max: unlimited)
-      total number of function/gradient evaluations=69,          (max: unlimited)
-      total number of Hessian evaluations=30
+      Residual in Function/Gradient:=7.45232e-07
+      Objective value=0.000199924
+      total number of iterations=19,                              (max: 10000)
+      total number of function evaluations=96,                      (max: unlimited)
+      total number of function/gradient evaluations=96,          (max: unlimited)
+      total number of Hessian evaluations=19
+      total number of Jacobian evaluations=115
       Solution converged:        ||g(X)|| <= gatol
   convergence tolerances: gatol=1e-06,   grtol=1e-08,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=0.
-  Objective value=9.99959e-05
-  total number of iterations=30,                          (max: 10000)
-  total number of function evaluations=30,                  (max: unlimited)
-  total number of function/gradient evaluations=69,      (max: unlimited)
-  total number of Hessian evaluations=30
-  total number of Jacobian evaluations=98
+  Objective value=0.000199924
+  total number of iterations=19,                          (max: 10000)
+  total number of function evaluations=96,                  (max: unlimited)
+  total number of function/gradient evaluations=96,      (max: unlimited)
+  total number of Hessian evaluations=19
   Solution converged:    ||g(X)|| <= gatol
