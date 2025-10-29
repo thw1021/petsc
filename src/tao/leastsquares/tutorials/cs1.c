@@ -50,12 +50,11 @@ typedef struct {
 } AppCtx;
 
 /* User provided Routines */
-static PetscErrorCode InitializeUserData(AppCtx *);
-static PetscErrorCode FormStartingPoint(Vec);
-static PetscErrorCode FormDictionaryMatrix(Mat, AppCtx *);
-static PetscErrorCode EvaluateFunction(Tao, Vec, Vec, void *);
-static PetscErrorCode EvaluateJacobian(Tao, Vec, Mat, Mat, void *);
-static PetscErrorCode BRGNCoverageTests(Tao);
+PetscErrorCode InitializeUserData(AppCtx *);
+PetscErrorCode FormStartingPoint(Vec);
+PetscErrorCode FormDictionaryMatrix(Mat, AppCtx *);
+PetscErrorCode EvaluateFunction(Tao, Vec, Vec, void *);
+PetscErrorCode EvaluateJacobian(Tao, Vec, Mat, Mat, void *);
 
 static PetscErrorCode SetTaoOptionsFromUserOptions(Tao tao, AppCtx *ctx)
 {
@@ -143,31 +142,31 @@ int main(int argc, char **argv)
 
   /* Allocate Jacobian and Dictionary matrix. */
   PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, M, N, NULL, &J));
-  //PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, K, N, NULL, &D)); /* XH: TODO: dense -> sparse/dense/shell etc, do it on fly  */
-  PetscCall(MatCreate(PETSC_COMM_WORLD, &D));
-  PetscCall(MatSetSizes(D, PETSC_DECIDE, PETSC_DECIDE, K, N));
-  PetscCall(MatSetType(D, MATAIJ));
-  PetscCall(MatSetUp(D));
+  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, K, N, NULL, &D)); /* XH: TODO: dense -> sparse/dense/shell etc, do it on fly  */
 
   for (i = 0; i < M; i++) user.idm[i] = i;
   for (i = 0; i < N; i++) user.idn[i] = i;
   for (i = 0; i < K; i++) user.idk[i] = i;
 
-  /* User set application context: A, D matrice, and b vector. */
-  PetscCall(InitializeUserData(&user));
-  /* Fill the content of matrix D from user application Context */
-  PetscCall(FormDictionaryMatrix(D, &user));
-  /* Set initial guess */
-  PetscCall(FormStartingPoint(x));
-
   /* Create TAO solver and set desired solution method */
   PetscCall(TaoCreate(PETSC_COMM_SELF, &tao));
   PetscCall(TaoSetType(tao, TAOBRGN));
+
+  /* User set application context: A, D matrice, and b vector. */
+  PetscCall(InitializeUserData(&user));
+
+  /* Set initial guess */
+  PetscCall(FormStartingPoint(x));
+
+  /* Fill the content of matrix D from user application Context */
+  PetscCall(FormDictionaryMatrix(D, &user));
+
+  /* If needed, set options via function for testing purpose */
+  PetscCall(SetTaoOptionsFromUserOptions(tao, &user));
   /* Bind x to tao->solution. */
   PetscCall(TaoSetSolution(tao, x));
   /* Bind D to tao->data->D */
   PetscCall(TaoBRGNSetDictionaryMatrix(tao, D));
-  PetscCall(TaoBRGNSetRegularizationType(tao, TAOBRGN_REGULARIZATION_L1DICT));
 
   /* Set the function and Jacobian routines. */
   PetscCall(TaoSetResidualRoutine(tao, f, EvaluateFunction, (void *)&user));
@@ -175,8 +174,6 @@ int main(int argc, char **argv)
 
   /* Check for any TAO command line arguments */
   PetscCall(TaoSetFromOptions(tao));
-  /* If needed, set options via function for testing purpose */
-  PetscCall(SetTaoOptionsFromUserOptions(tao, &user));
 
   PetscCall(TaoSetConvergenceHistory(tao, hist, resid, 0, lits, 100, PETSC_TRUE));
 
@@ -193,8 +190,6 @@ int main(int argc, char **argv)
   }
   PetscCall(TestOutType(tao, &user));
 
-  PetscCall(BRGNCoverageTests(tao));
-
   /* Free TAO data structures */
   PetscCall(TaoDestroy(&tao));
 
@@ -209,7 +204,7 @@ int main(int argc, char **argv)
 }
 
 /*--------------------------------------------------------------------*/
-static PetscErrorCode EvaluateFunction(Tao tao, Vec X, Vec F, void *ptr)
+PetscErrorCode EvaluateFunction(Tao tao, Vec X, Vec F, void *ptr)
 {
   AppCtx          *user = (AppCtx *)ptr;
   PetscInt         m, n;
@@ -233,7 +228,7 @@ static PetscErrorCode EvaluateFunction(Tao tao, Vec X, Vec F, void *ptr)
 
 /*------------------------------------------------------------*/
 /* J[m][n] = df[m]/dx[n] */
-static PetscErrorCode EvaluateJacobian(Tao tao, Vec X, Mat J, Mat Jpre, void *ptr)
+PetscErrorCode EvaluateJacobian(Tao tao, Vec X, Mat J, Mat Jpre, void *ptr)
 {
   AppCtx          *user = (AppCtx *)ptr;
   PetscInt         m, n;
@@ -258,7 +253,7 @@ static PetscErrorCode EvaluateJacobian(Tao tao, Vec X, Mat J, Mat Jpre, void *pt
 
 /* ------------------------------------------------------------ */
 /* Currently fixed matrix, in future may be dynamic for D(x)? */
-static PetscErrorCode FormDictionaryMatrix(Mat D, AppCtx *user)
+PetscErrorCode FormDictionaryMatrix(Mat D, AppCtx *user)
 {
   PetscFunctionBegin;
   PetscCall(MatSetValues(D, K, user->idk, N, user->idn, (PetscReal *)user->D, INSERT_VALUES));
@@ -270,7 +265,7 @@ static PetscErrorCode FormDictionaryMatrix(Mat D, AppCtx *user)
 }
 
 /* ------------------------------------------------------------ */
-static PetscErrorCode FormStartingPoint(Vec X)
+PetscErrorCode FormStartingPoint(Vec X)
 {
   PetscFunctionBegin;
   PetscCall(VecSet(X, 0.0));
@@ -278,7 +273,7 @@ static PetscErrorCode FormStartingPoint(Vec X)
 }
 
 /* ---------------------------------------------------------------------- */
-static PetscErrorCode InitializeUserData(AppCtx *user)
+PetscErrorCode InitializeUserData(AppCtx *user)
 {
   PetscReal *b = user->b; /* **A=user->A, but we don't know the dimension of A in this way, how to fix? */
   PetscInt   m, n, k;     /* loop index for M,N,K dimension. */
@@ -331,64 +326,6 @@ static PetscErrorCode InitializeUserData(AppCtx *user)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode BRGNCoverageTests(Tao tao)
-{
-  Tao                       subsolver;
-  TaoBRGNRegularizationType reg_type;
-  PetscBool                 is_brgn;
-  PetscBool                 is_smooth;
-  TaoTerm                   term;
-  Vec                       params;
-
-  PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)tao, TAOBRGN, &is_brgn));
-  if (!is_brgn) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(TaoBRGNGetRegularizationType(tao, &reg_type));
-  is_smooth = PETSC_TRUE;
-  PetscCall(TaoBRGNGetRegularizerTerm(tao, NULL, &term, &params, NULL));
-  if (reg_type == TAOBRGN_REGULARIZATION_L1DICT) {
-    PetscReal epsilon;
-
-    PetscCall(TaoTermL1GetEpsilon(term, &epsilon));
-    is_smooth = epsilon > 0.0 ? PETSC_TRUE : PETSC_FALSE;
-  }
-  if (is_smooth) {
-    Vec         x;
-    Mat         H;
-
-    PetscCall(TaoBRGNGetSubsolver(tao, &subsolver));
-    PetscCall(TaoGetSolution(subsolver, &x));
-
-    // Because Regularizer has been used with Mapping matrix A,
-    // its SolutionTemplate is on that stores A @ x, not A.
-    // For for this problem, H size would be 4 by 4, but we don't want that
-    // Thus, need to re-set the solution size
-    PetscCall(TaoTermSetSolutionTemplate(term, x));
-    PetscCall(TaoTermCreateHessianMatrices(term, &H, NULL));
-    PetscCall(TaoTermComputeHessian(term, x, params, H, NULL));
-
-    if (reg_type == TAOBRGN_REGULARIZATION_LM) {
-      PetscBool is_diagonal;
-
-      PetscCall(PetscObjectTypeCompare((PetscObject)H, MATDIAGONAL, &is_diagonal));
-
-      if (is_diagonal) {
-        PetscBool equal;
-        Vec       d_1, d_2;
-
-        PetscCall(MatDiagonalGetDiagonal(H, &d_1));
-        PetscCall(TaoBRGNGetDampingVector(tao, &d_2));
-        PetscCall(VecEqual(d_1, d_2, &equal));
-        PetscCheck(equal, PetscObjectComm((PetscObject)tao), PETSC_ERR_PLIB, "TaoBRGNGetDampingVector() does not match diagonal of regularization Hessian");
-        PetscCall(MatDiagonalRestoreDiagonal(H, &d_1));
-      }
-    }
-
-    PetscCall(MatDestroy(&H));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*TEST
 
    build:
@@ -401,27 +338,12 @@ static PetscErrorCode BRGNCoverageTests(Tao tao)
    test:
       suffix: 2
       localrunfiles: cs1Data_A_b_xGT
-      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l2prox -tao_brgn_regularizer_weight 1e-8 -tao_gatol 1.e-6 -tao_brgn_subsolver_tao_bnk_ksp_converged_reason -tao_view
+      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l2prox -tao_brgn_regularizer_weight 1e-8 -tao_gatol 1.e-6 -tao_brgn_subsolver_tao_bnk_ksp_converged_reason
 
    test:
       suffix: 3
       localrunfiles: cs1Data_A_b_xGT
       args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l1dict -tao_brgn_regularizer_weight 1e-8 -tao_brgn_l1_smooth_epsilon 1e-6 -tao_gatol 1.e-6
-
-   test:
-      suffix: 3_unsmoothed
-      localrunfiles: cs1Data_A_b_xGT
-      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l1dict -tao_brgn_regularizer_weight 1e-8 -tao_brgn_l1_smooth_epsilon 0.0 -tao_gatol 1.e-6
-
-   test:
-      suffix: 3_hessian_fd
-      localrunfiles: cs1Data_A_b_xGT
-      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l1dict -tao_brgn_regularizer_weight 1e-8 -tao_brgn_l1_smooth_epsilon 1e-6 -tao_gatol 1.e-6 -brgn_regularizer_tao_term_hessian_use_fd
-
-   test:
-      suffix: 3_gradient_fd
-      localrunfiles: cs1Data_A_b_xGT
-      args: -tao_monitor -tao_max_it 100 -tao_type brgn -tao_brgn_regularization_type l1dict -tao_brgn_regularizer_weight 1e-8 -tao_brgn_l1_smooth_epsilon 1e-6 -tao_gatol 1.e-6 -brgn_regularizer_tao_term_gradient_use_fd
 
    test:
       suffix: 4

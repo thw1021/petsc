@@ -1,4 +1,0 @@
-Testing First Tao, L2 Regularizer created via TaoTermCreate
-Testing Second Tao, L2 Regularizer created TaoGetTerm
-Regularizer TaoSetObjective and TaoSetGradient
-Solution difference between different BRGN regularizer term strategy: < 1.e-11
