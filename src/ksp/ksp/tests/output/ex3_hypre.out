@@ -25,7 +25,7 @@ PC Object: 1 MPI process
       Sweeps on coarse    1
       Relax down          not yet set
       Relax up            not yet set
-      Relax on coarse     Gaussian-elimination
+      Relax on coarse     not yet set
       Relax weight  (all)      1.
       Outer relax weight (all) 1.
       Maximum size of coarsest grid 9
