@@ -1,6 +1,8 @@
 #include <petsc/finclude/petscksp.h>
 module ex13f90module
   use petscksp
+  implicit none
+  PetscReal hx2, hy2
   type User
     Vec x
     Vec b
@@ -17,9 +19,6 @@ contains
     PetscInt m, n
     PetscErrorCode ierr
     type(User) userctx
-
-    common/param/hx2, hy2
-    PetscReal hx2, hy2
 
 !  Local variable declararions
     Mat A
@@ -74,9 +73,6 @@ contains
     PetscErrorCode ierr
     type(User) userctx
     PetscScalar rho(*), userb(*), userx(*)
-
-    common/param/hx2, hy2
-    PetscReal hx2, hy2
 
     PC pc
     KSP ksp
@@ -223,7 +219,7 @@ program main
 !
 !   Since we cannot store Scalars and integers in the same context,
 !   we store the integers/pointers in the user-defined context, and
-!   the scalar values are carried in the common block.
+!   the scalar values are carried as module variables.
 !   The scalar values in this simplistic example could easily
 !   be recalculated in each routine, where they are needed.
 !
@@ -245,9 +241,6 @@ program main
   PetscScalar, allocatable :: userb(:, :)
   PetscScalar, allocatable :: solution(:, :)
   PetscScalar, allocatable :: rho(:, :)
-
-  PetscReal hx2, hy2
-  common/param/hx2, hy2
 
   tmax = 2
   m = 6
