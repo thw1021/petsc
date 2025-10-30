@@ -481,19 +481,19 @@ static PetscErrorCode MatDestroy_Shell(Mat mat)
 
 typedef struct {
   PetscErrorCode (*numeric)(Mat, Mat, Mat, void *);
-  PetscErrorCode (*destroy)(void *);
-  void *userdata;
-  Mat   B;
-  Mat   Bt;
-  Mat   axpy;
+  PetscCtxDestroyFn *destroy;
+  void              *userdata;
+  Mat                B;
+  Mat                Bt;
+  Mat                axpy;
 } MatMatDataShell;
 
-static PetscErrorCode DestroyMatMatDataShell(void *data)
+static PetscErrorCode DestroyMatMatDataShell(void **data)
 {
-  MatMatDataShell *mmdata = (MatMatDataShell *)data;
+  MatMatDataShell *mmdata = *(MatMatDataShell **)data;
 
   PetscFunctionBegin;
-  if (mmdata->destroy) PetscCall((*mmdata->destroy)(mmdata->userdata));
+  if (mmdata->destroy) PetscCall((*mmdata->destroy)(&mmdata->userdata));
   PetscCall(MatDestroy(&mmdata->B));
   PetscCall(MatDestroy(&mmdata->Bt));
   PetscCall(MatDestroy(&mmdata->axpy));
@@ -773,7 +773,7 @@ static PetscErrorCode MatProductSetFromOptions_Shell_X(Mat D)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatShellSetMatProductOperation_Private(Mat A, MatProductType ptype, PetscErrorCode (*symbolic)(Mat, Mat, Mat, void **), PetscErrorCode (*numeric)(Mat, Mat, Mat, void *), PetscErrorCode (*destroy)(void *), char *composedname, const char *resultname)
+static PetscErrorCode MatShellSetMatProductOperation_Private(Mat A, MatProductType ptype, PetscErrorCode (*symbolic)(Mat, Mat, Mat, void **), PetscErrorCode (*numeric)(Mat, Mat, Mat, void *), PetscCtxDestroyFn *destroy, char *composedname, const char *resultname)
 {
   PetscBool               flg;
   Mat_Shell              *shell;
@@ -836,7 +836,7 @@ set:
 .vb
   extern PetscErrorCode usersymbolic(Mat, Mat, Mat, void**);
   extern PetscErrorCode usernumeric(Mat, Mat, Mat, void*);
-  extern PetscErrorCode ctxdestroy(void*);
+  PetscCtxDestroyFn *ctxdestroy;
 
   MatCreateShell(comm, m, n, M, N, ctx, &A);
   MatShellSetMatProductOperation(
@@ -854,16 +854,16 @@ set:
   Notes:
   `MATPRODUCT_ABC` is not supported yet.
 
-  If the symbolic phase is not specified, `MatSetUp()` is called on the result matrix that must have its type set if Ctype is `NULL`.
+  If the symbolic phase is not specified, `MatSetUp()` is called on the result matrix that must have its type set if `Ctype` is `NULL`.
 
   Any additional data needed by the matrix product needs to be returned during the symbolic phase and destroyed with the destroy callback.
   PETSc will take care of calling the user-defined callbacks.
-  It is allowed to specify the same callbacks for different Btype matrix types.
-  The couple (Btype,ptype) uniquely identifies the operation, the last specified callbacks takes precedence.
+  It is allowed to specify the same callbacks for different `Btype` matrix types.
+  The couple (`Btype`,`ptype`) uniquely identifies the operation, the last specified callbacks takes precedence.
 
 .seealso: [](ch_matrices), `Mat`, `MATSHELL`, `MatCreateShell()`, `MatShellGetContext()`, `MatShellGetOperation()`, `MatShellSetContext()`, `MatSetOperation()`, `MatProductType`, `MatType`, `MatSetUp()`
 @*/
-PetscErrorCode MatShellSetMatProductOperation(Mat A, MatProductType ptype, PetscErrorCode (*symbolic)(Mat, Mat, Mat, void **), PetscErrorCode (*numeric)(Mat, Mat, Mat, void *), PetscErrorCode (*destroy)(void *), MatType Btype, MatType Ctype)
+PetscErrorCode MatShellSetMatProductOperation(Mat A, MatProductType ptype, PetscErrorCode (*symbolic)(Mat, Mat, Mat, void **), PetscErrorCode (*numeric)(Mat, Mat, Mat, void *), PetscCtxDestroyFn *destroy, MatType Btype, MatType Ctype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
@@ -872,11 +872,11 @@ PetscErrorCode MatShellSetMatProductOperation(Mat A, MatProductType ptype, Petsc
   PetscCheck(numeric, PetscObjectComm((PetscObject)A), PETSC_ERR_USER, "Missing numeric routine, argument 4");
   PetscAssertPointer(Btype, 6);
   if (Ctype) PetscAssertPointer(Ctype, 7);
-  PetscTryMethod(A, "MatShellSetMatProductOperation_C", (Mat, MatProductType, PetscErrorCode (*)(Mat, Mat, Mat, void **), PetscErrorCode (*)(Mat, Mat, Mat, void *), PetscErrorCode (*)(void *), MatType, MatType), (A, ptype, symbolic, numeric, destroy, Btype, Ctype));
+  PetscTryMethod(A, "MatShellSetMatProductOperation_C", (Mat, MatProductType, PetscErrorCode (*)(Mat, Mat, Mat, void **), PetscErrorCode (*)(Mat, Mat, Mat, void *), PetscCtxDestroyFn *, MatType, MatType), (A, ptype, symbolic, numeric, destroy, Btype, Ctype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatShellSetMatProductOperation_Shell(Mat A, MatProductType ptype, PetscErrorCode (*symbolic)(Mat, Mat, Mat, void **), PetscErrorCode (*numeric)(Mat, Mat, Mat, void *), PetscErrorCode (*destroy)(void *), MatType Btype, MatType Ctype)
+static PetscErrorCode MatShellSetMatProductOperation_Shell(Mat A, MatProductType ptype, PetscErrorCode (*symbolic)(Mat, Mat, Mat, void **), PetscErrorCode (*numeric)(Mat, Mat, Mat, void *), PetscCtxDestroyFn *destroy, MatType Btype, MatType Ctype)
 {
   PetscBool   flg;
   char        composedname[256];
