@@ -43,18 +43,19 @@
 
 // In PETSc, a quad precision PetscComplex is a C type even with clanguage=cxx, therefore no C++ operator overloading needed for it.
 #if !defined(PETSC_USE_REAL___FLOAT128)
+  #include <type_traits>
 // For operations "T op PetscComplex" or "PetscComplex op T", PetscComplex's built-in support allows T to be PetscComplex or PetscReal.
 // We extend T to other C++ arithmetic types, and __fp16, __float128 if available.  This requires C++11 or later.
 template <typename T>
-struct petsccomplex_extended_type {
-  static constexpr bool value = (std::is_arithmetic<T>::value && !std::is_same<T, PetscReal>::value)
+struct petsccomplex_extended_type :
+  std::integral_constant<bool, (std::is_arithmetic<T>::value && !std::is_same<T, PetscReal>::value)
   #if defined(PETSC_HAVE_REAL___FP16) && !defined(PETSC_USE_REAL___FP16)
-                             || std::is_same<T, __fp16>::value
+                                 || std::is_same<T, __fp16>::value
   #endif
   #if defined(PETSC_HAVE_REAL___FLOAT128) && !defined(PETSC_USE_REAL___FLOAT128)
-                             || std::is_same<T, __float128>::value
+                                 || std::is_same<T, __float128>::value
   #endif
-    ;
+                         > {
 };
 
 template <typename T>
