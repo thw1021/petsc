@@ -20,6 +20,7 @@ module ex21f90module
     subroutine VecGetArrayMyStruct(v, array, ierr)
       use petscvec
       import MyStruct
+      implicit none
       type(MyStruct), pointer :: array(:)
       PetscErrorCode ierr
       Vec v
@@ -28,6 +29,7 @@ module ex21f90module
     subroutine VecRestoreArrayMyStruct(v, array, ierr)
       use petscvec
       import MyStruct
+      implicit none
       type(MyStruct), pointer :: array(:)
       PetscErrorCode ierr
       Vec v

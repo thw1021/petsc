@@ -32,7 +32,6 @@ module Bratu2D
 contains
 
   subroutine GetGridInfo(da, grd, ierr)
-    implicit none
     DM da
     type(gridinfo) grd
     PetscErrorCode ierr
@@ -54,7 +53,6 @@ contains
   end subroutine GetGridInfo
 
   subroutine InitGuessLocal(grd, x, lambda, ierr)
-    implicit none
     type(gridinfo) grd
     PetscScalar x(grd%xs:grd%xe, grd%ys:grd%ye)
     PetscReal lambda
@@ -85,7 +83,6 @@ contains
   end subroutine InitGuessLocal
 
   subroutine FunctionLocal(grd, x, f, lambda, ierr)
-    implicit none
     type(gridinfo) grd
     PetscScalar x(grd%gxs:grd%gxe, grd%gys:grd%gye)
     PetscScalar f(grd%xs:grd%xe, grd%ys:grd%ye)
@@ -123,7 +120,6 @@ contains
   end subroutine FunctionLocal
 
   subroutine JacobianLocal(grd, x, Jac, lambda, ierr)
-    implicit none
     type(gridinfo) grd
     PetscScalar x(grd%gxs:grd%gxe, grd%gys:grd%gye)
     Mat Jac
