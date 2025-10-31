@@ -41,92 +41,92 @@
      files to prevent these methods from being provided.
 */
 
-#define PETSC_CXX_COMPLEX_FIX(Type) \
-  static inline PetscComplex operator+(const PetscComplex &lhs, const Type &rhs) \
-  { \
-    return const_cast<PetscComplex &>(lhs) + PetscReal(rhs); \
-  } \
-  static inline PetscComplex operator+(const Type &lhs, const PetscComplex &rhs) \
-  { \
-    return PetscReal(lhs) + const_cast<PetscComplex &>(rhs); \
-  } \
-  static inline PetscComplex operator-(const PetscComplex &lhs, const Type &rhs) \
-  { \
-    return const_cast<PetscComplex &>(lhs) - PetscReal(rhs); \
-  } \
-  static inline PetscComplex operator-(const Type &lhs, const PetscComplex &rhs) \
-  { \
-    return PetscReal(lhs) - const_cast<PetscComplex &>(rhs); \
-  } \
-  static inline PetscComplex operator*(const PetscComplex &lhs, const Type &rhs) \
-  { \
-    return const_cast<PetscComplex &>(lhs) * PetscReal(rhs); \
-  } \
-  static inline PetscComplex operator*(const Type &lhs, const PetscComplex &rhs) \
-  { \
-    return PetscReal(lhs) * const_cast<PetscComplex &>(rhs); \
-  } \
-  static inline PetscComplex operator/(const PetscComplex &lhs, const Type &rhs) \
-  { \
-    return const_cast<PetscComplex &>(lhs) / PetscReal(rhs); \
-  } \
-  static inline PetscComplex operator/(const Type &lhs, const PetscComplex &rhs) \
-  { \
-    return PetscReal(lhs) / const_cast<PetscComplex &>(rhs); \
-  } \
-  static inline bool operator==(const PetscComplex &lhs, const Type &rhs) \
-  { \
-    return const_cast<PetscComplex &>(lhs).imag() == PetscReal(0) && const_cast<PetscComplex &>(lhs).real() == PetscReal(rhs); \
-  } \
-  static inline bool operator==(const Type &lhs, const PetscComplex &rhs) \
-  { \
-    return const_cast<PetscComplex &>(rhs).imag() == PetscReal(0) && const_cast<PetscComplex &>(rhs).real() == PetscReal(lhs); \
-  } \
-  static inline bool operator!=(const PetscComplex &lhs, const Type &rhs) \
-  { \
-    return const_cast<PetscComplex &>(lhs).imag() != PetscReal(0) || const_cast<PetscComplex &>(lhs).real() != PetscReal(rhs); \
-  } \
-  static inline bool operator!=(const Type &lhs, const PetscComplex &rhs) \
-  { \
-    return const_cast<PetscComplex &>(rhs).imag() != PetscReal(0) || const_cast<PetscComplex &>(rhs).real() != PetscReal(lhs); \
-  } \
-/* PETSC_CXX_COMPLEX_FIX */
-
 // In PETSc, a quad precision PetscComplex is a C type even with clanguage=cxx, therefore no C++ operator overloading needed for it.
 #if !defined(PETSC_USE_REAL___FLOAT128)
-
-// Provide operator overloading for 'PetscComplex .op. (an integer type or a real type but not PetscReal)'.
-//
-// We enumerate all C/C++ POD (Plain Old Data) types to provide exact overload resolution, to keep the precision change
-// in the Type to PetscReal conversion intact, as intended by users performing these mixed precision operations.
-  #if !defined(PETSC_USE_REAL___FP16) && defined(PETSC_HAVE_REAL___FP16)
-PETSC_CXX_COMPLEX_FIX(__fp16)
+// For operations "T op PetscComplex" or "PetscComplex op T", PetscComplex's built-in support allows T to be PetscComplex or PetscReal.
+// We extend T to other C++ arithmetic types, and __fp16, __float128 if available.  This requires C++11 or later.
+template <typename T>
+struct petsccomplex_extended_type {
+  static constexpr bool value = (std::is_arithmetic<T>::value && !std::is_same<T, PetscReal>::value)
+  #if defined(PETSC_HAVE_REAL___FP16) && !defined(PETSC_USE_REAL___FP16)
+                             || std::is_same<T, __fp16>::value
   #endif
-
-  #if !defined(PETSC_USE_REAL_SINGLE)
-PETSC_CXX_COMPLEX_FIX(float)
+  #if defined(PETSC_HAVE_REAL___FLOAT128) && !defined(PETSC_USE_REAL___FLOAT128)
+                             || std::is_same<T, __float128>::value
   #endif
+    ;
+};
 
-  #if !defined(PETSC_USE_REAL_DOUBLE)
-PETSC_CXX_COMPLEX_FIX(double)
-  #endif
+template <typename T>
+inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator+(const T &lhs, const PetscComplex &rhs)
+{
+  return PetscReal(lhs) + rhs;
+}
 
-PETSC_CXX_COMPLEX_FIX(long double)
+template <typename T>
+inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator+(const PetscComplex &lhs, const T &rhs)
+{
+  return lhs + PetscReal(rhs);
+}
 
-  #if defined(PETSC_HAVE_REAL___FLOAT128)
-PETSC_CXX_COMPLEX_FIX(__float128)
-  #endif
+template <typename T>
+inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator-(const T &lhs, const PetscComplex &rhs)
+{
+  return PetscReal(lhs) - rhs;
+}
 
-PETSC_CXX_COMPLEX_FIX(signed char)
-PETSC_CXX_COMPLEX_FIX(short)
-PETSC_CXX_COMPLEX_FIX(int)
-PETSC_CXX_COMPLEX_FIX(long)
-PETSC_CXX_COMPLEX_FIX(long long)
+template <typename T>
+inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator-(const PetscComplex &lhs, const T &rhs)
+{
+  return lhs - PetscReal(rhs);
+}
 
-PETSC_CXX_COMPLEX_FIX(unsigned char)
-PETSC_CXX_COMPLEX_FIX(unsigned short)
-PETSC_CXX_COMPLEX_FIX(unsigned int)
-PETSC_CXX_COMPLEX_FIX(unsigned long)
-PETSC_CXX_COMPLEX_FIX(unsigned long long)
+template <typename T>
+inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator*(const T &lhs, const PetscComplex &rhs)
+{
+  return PetscReal(lhs) * rhs;
+}
+
+template <typename T>
+inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator*(const PetscComplex &lhs, const T &rhs)
+{
+  return lhs * PetscReal(rhs);
+}
+
+template <typename T>
+inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator/(const T &lhs, const PetscComplex &rhs)
+{
+  return PetscReal(lhs) / rhs;
+}
+
+template <typename T>
+inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator/(const PetscComplex &lhs, const T &rhs)
+{
+  return lhs / PetscReal(rhs);
+}
+
+template <typename T>
+inline typename std::enable_if<petsccomplex_extended_type<T>::value, bool>::type operator==(const T &lhs, const PetscComplex &rhs)
+{
+  return rhs.imag() == PetscReal(0) && rhs.real() == PetscReal(lhs);
+}
+
+template <typename T>
+inline typename std::enable_if<petsccomplex_extended_type<T>::value, bool>::type operator==(const PetscComplex &lhs, const T &rhs)
+{
+  return lhs.imag() == PetscReal(0) && lhs.real() == PetscReal(rhs);
+}
+
+template <typename T>
+inline typename std::enable_if<petsccomplex_extended_type<T>::value, bool>::type operator!=(const T &lhs, const PetscComplex &rhs)
+{
+  return rhs.imag() != PetscReal(0) || rhs.real() != PetscReal(lhs);
+}
+
+template <typename T>
+inline typename std::enable_if<petsccomplex_extended_type<T>::value, bool>::type operator!=(const PetscComplex &lhs, const T &rhs)
+{
+  return lhs.imag() != PetscReal(0) || lhs.real() != PetscReal(rhs);
+}
 
 #endif
