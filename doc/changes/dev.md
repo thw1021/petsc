@@ -24,6 +24,8 @@
 ```{rubric} PetscViewer:
 ```
 
+-  Change the final argument of `PetscViewerGLVisSetFields()` to `PetscCtxDestroyFn *`. This means the destroy function must deference the argument before operating on it
+
 ```{rubric} PetscDraw:
 ```
 
@@ -51,6 +53,8 @@
 ```{rubric} Mat:
 ```
 
+-  Change the `destroy()` function argument of `MatShellSetMatProductOperation()` to type `PetscCtxDestroyFn *`. This means the destroy function must deference the argument before operating on it
+
 ```{rubric} MatCoarsen:
 ```
 
@@ -67,11 +71,15 @@
 ```{rubric} SNES:
 ```
 
+-  Change the `destroy()` function argument of `SNESSetConvergenceTest()` to type `PetscCtxDestroyFn *`. This means the destroy function must deference the argument before operating on it
+
 ```{rubric} SNESLineSearch:
 ```
 
 ```{rubric} TS:
 ```
+
+-  Change the `destroy()` function argument of `TSTrajectorySetTransform()` to type `PetscCtxDestroyFn *`. This means the destroy function must deference the argument before operating on it
 
 ```{rubric} TAO:
 ```
@@ -81,6 +89,8 @@
 
 ```{rubric} DM/DA:
 ```
+
+-  Change the final argument of `DMShellSetDestroyContext()` to `PetscCtxDestroyFn *`. This means the destroy function must deference the argument before operating on it
 
 ```{rubric} DMSwarm:
 ```
