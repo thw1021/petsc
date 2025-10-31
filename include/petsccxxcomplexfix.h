@@ -44,11 +44,13 @@
 // In PETSc, a quad precision PetscComplex is a C type even with clanguage=cxx, therefore no C++ operator overloading needed for it.
 #if !defined(PETSC_USE_REAL___FLOAT128)
   #include <type_traits>
-// For operations "T op PetscComplex" or "PetscComplex op T", PetscComplex's built-in support allows T to be PetscComplex or PetscReal.
-// We extend T to other C++ arithmetic types, and __fp16, __float128 if available.  This requires C++11 or later.
-template <typename T>
+// For operations "T op C" or "C op T" with C being PetscComplex, PetscComplex built-in support allows T to be PetscComplex or PetscReal.
+// We extend T to other C++ arithmetic types, and __fp16, __float128 if available.
+// We put C as a template parameter so that we can require C be PetscComplex and disallow  "T op U", where compiler tries to convert U to PetscComplex.
+// This requires C++11 or later.
+template <typename T, typename C>
 struct petsccomplex_extended_type :
-  std::integral_constant<bool, (std::is_arithmetic<T>::value && !std::is_same<T, PetscReal>::value)
+  std::integral_constant<bool, (std::is_same<C, PetscComplex>::value && std::is_arithmetic<T>::value && !std::is_same<T, PetscReal>::value)
   #if defined(PETSC_HAVE_REAL___FP16) && !defined(PETSC_USE_REAL___FP16)
                                  || std::is_same<T, __fp16>::value
   #endif
@@ -58,74 +60,74 @@ struct petsccomplex_extended_type :
                          > {
 };
 
-template <typename T>
-inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator+(const T &lhs, const PetscComplex &rhs)
+template <typename T, typename C>
+inline typename std::enable_if<petsccomplex_extended_type<T, C>::value, C>::type operator+(const T &lhs, const C &rhs)
 {
   return PetscReal(lhs) + rhs;
 }
 
-template <typename T>
-inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator+(const PetscComplex &lhs, const T &rhs)
+template <typename T, typename C>
+inline typename std::enable_if<petsccomplex_extended_type<T, C>::value, C>::type operator+(const C &lhs, const T &rhs)
 {
   return lhs + PetscReal(rhs);
 }
 
-template <typename T>
-inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator-(const T &lhs, const PetscComplex &rhs)
+template <typename T, typename C>
+inline typename std::enable_if<petsccomplex_extended_type<T, C>::value, C>::type operator-(const T &lhs, const C &rhs)
 {
   return PetscReal(lhs) - rhs;
 }
 
-template <typename T>
-inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator-(const PetscComplex &lhs, const T &rhs)
+template <typename T, typename C>
+inline typename std::enable_if<petsccomplex_extended_type<T, C>::value, C>::type operator-(const C &lhs, const T &rhs)
 {
   return lhs - PetscReal(rhs);
 }
 
-template <typename T>
-inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator*(const T &lhs, const PetscComplex &rhs)
+template <typename T, typename C>
+inline typename std::enable_if<petsccomplex_extended_type<T, C>::value, C>::type operator*(const T &lhs, const C &rhs)
 {
   return PetscReal(lhs) * rhs;
 }
 
-template <typename T>
-inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator*(const PetscComplex &lhs, const T &rhs)
+template <typename T, typename C>
+inline typename std::enable_if<petsccomplex_extended_type<T, C>::value, C>::type operator*(const C &lhs, const T &rhs)
 {
   return lhs * PetscReal(rhs);
 }
 
-template <typename T>
-inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator/(const T &lhs, const PetscComplex &rhs)
+template <typename T, typename C>
+inline typename std::enable_if<petsccomplex_extended_type<T, C>::value, C>::type operator/(const T &lhs, const C &rhs)
 {
   return PetscReal(lhs) / rhs;
 }
 
-template <typename T>
-inline typename std::enable_if<petsccomplex_extended_type<T>::value, PetscComplex>::type operator/(const PetscComplex &lhs, const T &rhs)
+template <typename T, typename C>
+inline typename std::enable_if<petsccomplex_extended_type<T, C>::value, C>::type operator/(const C &lhs, const T &rhs)
 {
   return lhs / PetscReal(rhs);
 }
 
-template <typename T>
-inline typename std::enable_if<petsccomplex_extended_type<T>::value, bool>::type operator==(const T &lhs, const PetscComplex &rhs)
+template <typename T, typename C>
+inline typename std::enable_if<petsccomplex_extended_type<T, C>::value, bool>::type operator==(const T &lhs, const C &rhs)
 {
   return rhs.imag() == PetscReal(0) && rhs.real() == PetscReal(lhs);
 }
 
-template <typename T>
-inline typename std::enable_if<petsccomplex_extended_type<T>::value, bool>::type operator==(const PetscComplex &lhs, const T &rhs)
+template <typename T, typename C>
+inline typename std::enable_if<petsccomplex_extended_type<T, C>::value, bool>::type operator==(const C &lhs, const T &rhs)
 {
   return lhs.imag() == PetscReal(0) && lhs.real() == PetscReal(rhs);
 }
 
-template <typename T>
-inline typename std::enable_if<petsccomplex_extended_type<T>::value, bool>::type operator!=(const T &lhs, const PetscComplex &rhs)
+template <typename T, typename C>
+inline typename std::enable_if<petsccomplex_extended_type<T, C>::value, bool>::type operator!=(const T &lhs, const C &rhs)
 {
   return rhs.imag() != PetscReal(0) || rhs.real() != PetscReal(lhs);
 }
 
-template <typename T>
-inline typename std::enable_if<petsccomplex_extended_type<T>::value, bool>::type operator!=(const PetscComplex &lhs, const T &rhs)
+template <typename T, typename C>
+inline typename std::enable_if<petsccomplex_extended_type<T, C>::value, bool>::type operator!=(const C &lhs, const T &rhs)
 {
   return lhs.imag() != PetscReal(0) || lhs.real() != PetscReal(rhs);
 }
