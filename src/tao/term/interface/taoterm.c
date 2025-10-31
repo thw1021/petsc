@@ -133,7 +133,7 @@ PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
         else if (term->ops->createhessianmatrices == TaoTermCreateHessianMatricesDefault) {
           PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
           if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
-        } else {//TODO if callback, mattype changed, its not reflected on mt...
+        } else { //TODO if callback, mattype changed, its not reflected on mt...
           PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
           if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
         }
@@ -178,8 +178,10 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
     Vec       sol_template;
 
     PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSHELL, &is_shell));
-    if (is_shell) PetscCheck(term->ops->createsolutionvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not know. You should have called TaoTermSetSolutionSizes(), TaoTermSetSolutionTemplate(), TaoTermSetSolutionLayout(), or TaoTermShellSetCreateSolutionVec()");
-    else PetscCheck(term->ops->createsolutionvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not know. You should have called TaoTermSetSolutionSizes(), TaoTermSetSolutionTemplate(), or TaoTermSetSolutionLayout()");
+    if (is_shell)
+      PetscCheck(term->ops->createsolutionvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not know. You should have called TaoTermSetSolutionSizes(), TaoTermSetSolutionTemplate(), TaoTermSetSolutionLayout(), or TaoTermShellSetCreateSolutionVec()");
+    else
+      PetscCheck(term->ops->createsolutionvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not know. You should have called TaoTermSetSolutionSizes(), TaoTermSetSolutionTemplate(), or TaoTermSetSolutionLayout()");
 
     PetscCall(TaoTermCreateSolutionVec(term, &sol_template));
     PetscCall(TaoTermSetSolutionTemplate(term, sol_template));
@@ -195,8 +197,10 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
       Vec       params_template;
 
       PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSHELL, &is_shell));
-      if (is_shell) PetscCheck(term->ops->createparametersvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm parameters space not know. You should have called TaoTermSetParametersSizes(), TaoTermSetParametersTemplate(), TaoTermSetParametersLayout(), or TaoTermShellSetCreateParametersVec()");
-      else PetscCheck(term->ops->createparametersvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm parameters space not know. You should have called TaoTermSetParametersSizes(), TaoTermSetParametersTemplate(), or TaoTermSetParametersLayout()");
+      if (is_shell)
+        PetscCheck(term->ops->createparametersvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm parameters space not know. You should have called TaoTermSetParametersSizes(), TaoTermSetParametersTemplate(), TaoTermSetParametersLayout(), or TaoTermShellSetCreateParametersVec()");
+      else
+        PetscCheck(term->ops->createparametersvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm parameters space not know. You should have called TaoTermSetParametersSizes(), TaoTermSetParametersTemplate(), or TaoTermSetParametersLayout()");
 
       PetscCall(TaoTermCreateParametersVec(term, &params_template));
       PetscCall(TaoTermSetParametersTemplate(term, params_template));
@@ -683,7 +687,8 @@ PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat
     PetscCall(TaoTermComputeHessianMFFD(term, x, params, H, Hpre));
   } else {
     if (term->ops->hessian) PetscUseTypeMethod(term, hessian, x, params, H, Hpre);
-    else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have TaoTermComputeHessian routine, and cannot use finite differences for Hessian computation. Either call TaoTermShellSetHessian, set Hessian MatType to MATMFFD, or call TaoTermComputeHessianUseFDPush().\n");
+    else
+      SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have TaoTermComputeHessian routine, and cannot use finite differences for Hessian computation. Either call TaoTermShellSetHessian, set Hessian MatType to MATMFFD, or call TaoTermComputeHessianUseFDPush().\n");
   }
   PetscCall(PetscLogEventEnd(TAOTERM_HessianEval, term, NULL, NULL, NULL));
   if (params) PetscCall(VecLockReadPop(params));

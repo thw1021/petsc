@@ -234,7 +234,6 @@ static PetscErrorCode TaoTermIsComputeHessianFDPossible_Quadratic(TaoTerm term, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-
 /*MC
   TAOTERMQUADRATIC - A `TaoTerm` that computes $\tfrac{1}{2}(x - p)^T A (x - p)$, for a fixed matrix $A$, solution $x$ and parameters $p$.
 

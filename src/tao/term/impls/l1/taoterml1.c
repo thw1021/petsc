@@ -210,7 +210,7 @@ static PetscErrorCode TaoTermComputeHessian_L1(TaoTerm term, Vec x, Vec params, 
 
 static PetscErrorCode TaoTermCreateHessianMatrices_L1(TaoTerm term, Mat *H, Mat *Hpre)
 {
-  PetscBool   is_hdiag, is_hprediag;
+  PetscBool is_hdiag, is_hprediag;
 
   PetscFunctionBegin;
   PetscCall(PetscInfo(term, "Creating TAOTERML1 Hessian Matrices. TAOTERML1 only accepts MATDIAGONAL for MatType, overriding any user-set MatType.\n"));
