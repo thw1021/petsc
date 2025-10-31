@@ -2399,7 +2399,7 @@ PetscErrorCode PetscLogGpuTimeBegin(void)
   PetscFunctionBegin;
   PetscCall(PetscLogEventBeginIsActive(&isActive));
   if (!isActive || !PetscLogGpuTimeFlag) PetscFunctionReturn(PETSC_SUCCESS);
-    #if defined(PETSC_HAVE_DEVICE) && !defined(PETSC_HAVE_KOKKOS_WITHOUT_GPU)
+    #if !defined(PETSC_HAVE_KOKKOS_WITHOUT_GPU)
   {
     PetscDeviceContext dctx;
 
@@ -2426,7 +2426,7 @@ PetscErrorCode PetscLogGpuTimeEnd(void)
   PetscFunctionBegin;
   PetscCall(PetscLogEventEndIsActive(&isActive));
   if (!isActive || !PetscLogGpuTimeFlag) PetscFunctionReturn(PETSC_SUCCESS);
-    #if defined(PETSC_HAVE_DEVICE) && !defined(PETSC_HAVE_KOKKOS_WITHOUT_GPU)
+    #if !defined(PETSC_HAVE_KOKKOS_WITHOUT_GPU)
   {
     PetscDeviceContext dctx;
     PetscLogDouble     elapsed;
@@ -2521,7 +2521,7 @@ PetscErrorCode PetscLogGpuEnergyMeterBegin(void)
   PetscFunctionBegin;
   PetscCall(PetscLogEventBeginIsActive(&isActive));
   if (!isActive || !PetscLogGpuEnergyMeterFlag) PetscFunctionReturn(PETSC_SUCCESS);
-    #if defined(PETSC_HAVE_DEVICE) && !defined(PETSC_HAVE_KOKKOS_WITHOUT_GPU)
+    #if !defined(PETSC_HAVE_KOKKOS_WITHOUT_GPU)
   {
     PetscDeviceContext dctx;
 
@@ -2546,7 +2546,7 @@ PetscErrorCode PetscLogGpuEnergyMeterEnd(void)
   PetscFunctionBegin;
   PetscCall(PetscLogEventEndIsActive(&isActive));
   if (!isActive || !PetscLogGpuEnergyMeterFlag) PetscFunctionReturn(PETSC_SUCCESS);
-    #if defined(PETSC_HAVE_DEVICE) && !defined(PETSC_HAVE_KOKKOS_WITHOUT_GPU)
+    #if !defined(PETSC_HAVE_KOKKOS_WITHOUT_GPU)
   {
     PetscDeviceContext dctx;
     PetscLogDouble     energy;
