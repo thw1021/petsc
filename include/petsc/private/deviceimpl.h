@@ -220,7 +220,9 @@ struct _DeviceContextOps {
   PetscErrorCode (*getstreamhandle)(PetscDeviceContext, void **);
   PetscErrorCode (*begintimer)(PetscDeviceContext);
   PetscErrorCode (*endtimer)(PetscDeviceContext, PetscLogDouble *);
+#if PetscDefined(HAVE_CUDA_VERSION_12_2PLUS)
   PetscErrorCode (*getpower)(PetscDeviceContext, PetscLogDouble *);
+#endif
   PetscErrorCode (*beginenergymeter)(PetscDeviceContext);
   PetscErrorCode (*endenergymeter)(PetscDeviceContext, PetscLogDouble *);
   PetscErrorCode (*memalloc)(PetscDeviceContext, PetscBool, PetscMemType, size_t, size_t, void **);                             // optional
@@ -350,6 +352,7 @@ static inline PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDeviceCont
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+  #if PetscDefined(HAVE_CUDA_VERSION_12_2PLUS)
 static inline PetscErrorCode PetscDeviceContextGetPower_Internal(PetscDeviceContext dctx, PetscLogDouble *power)
 {
   PetscFunctionBegin;
@@ -358,6 +361,7 @@ static inline PetscErrorCode PetscDeviceContextGetPower_Internal(PetscDeviceCont
   PetscUseTypeMethod(dctx, getpower, power);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+  #endif
 
 static inline PetscErrorCode PetscDeviceContextBeginEnergyMeter_Internal(PetscDeviceContext dctx)
 {

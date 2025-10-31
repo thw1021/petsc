@@ -432,6 +432,8 @@ class Configure(config.package.Package):
     self.addDefine('HAVE_CUPM','1') # Have either CUDA or HIP
     if not self.version_tuple:
       self.checkVersion(); # set version_tuple
+    if self.version_tuple[0] > 12 or (self.version_tuple[0] == 12 and self.version_tuple[1] >=2):
+      self.addDefine('HAVE_CUDA_VERSION_12_2PLUS','1')
     if self.version_tuple[0] >= 11:
       self.addDefine('HAVE_CUDA_VERSION_11PLUS','1')
     if self.cudaclang:

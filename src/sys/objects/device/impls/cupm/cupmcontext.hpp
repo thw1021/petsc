@@ -205,7 +205,9 @@ public:
   static PetscErrorCode getHandlePtr(PetscDeviceContext, void **) noexcept;
   static PetscErrorCode beginTimer(PetscDeviceContext) noexcept;
   static PetscErrorCode endTimer(PetscDeviceContext, PetscLogDouble *) noexcept;
+#if PetscDefined(HAVE_CUDA_VERSION_12_2PLUS)
   static PetscErrorCode getPower(PetscDeviceContext, PetscLogDouble *) noexcept;
+#endif
   static PetscErrorCode beginEnergyMeter(PetscDeviceContext) noexcept;
   static PetscErrorCode endEnergyMeter(PetscDeviceContext, PetscLogDouble *) noexcept;
   static PetscErrorCode memAlloc(PetscDeviceContext, PetscBool, PetscMemType, std::size_t, std::size_t, void **) noexcept;
@@ -232,7 +234,9 @@ public:
     PetscDesignatedInitializer(getstreamhandle, getHandlePtr<stream_tag>),
     PetscDesignatedInitializer(begintimer, beginTimer),
     PetscDesignatedInitializer(endtimer, endTimer),
+#if PetscDefined(HAVE_CUDA_VERSION_12_2PLUS)
     PetscDesignatedInitializer(getpower, getPower),
+#endif
     PetscDesignatedInitializer(beginenergymeter, beginEnergyMeter),
     PetscDesignatedInitializer(endenergymeter, endEnergyMeter),
     PetscDesignatedInitializer(memalloc, memAlloc),
@@ -417,6 +421,7 @@ inline PetscErrorCode DeviceContext<T>::endTimer(PetscDeviceContext dctx, PetscL
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if PetscDefined(HAVE_CUDA_VERSION_12_2PLUS)
 template <DeviceType T>
 inline PetscErrorCode DeviceContext<T>::getPower(PetscDeviceContext dctx, PetscLogDouble *power) noexcept
 {
@@ -432,6 +437,7 @@ inline PetscErrorCode DeviceContext<T>::getPower(PetscDeviceContext dctx, PetscL
   *power = static_cast<util::remove_pointer_t<decltype(power)>>(values[0].value.uiVal);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
 
 template <DeviceType T>
 inline PetscErrorCode DeviceContext<T>::beginEnergyMeter(PetscDeviceContext dctx) noexcept
