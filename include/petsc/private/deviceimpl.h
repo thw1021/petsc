@@ -350,6 +350,7 @@ static inline PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDeviceCont
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+  #if PetscDefined(HAVE_CUDA_VERSION_12_2PLUS)
 static inline PetscErrorCode PetscDeviceContextGetPower_Internal(PetscDeviceContext dctx, PetscLogDouble *power)
 {
   PetscFunctionBegin;
@@ -358,6 +359,7 @@ static inline PetscErrorCode PetscDeviceContextGetPower_Internal(PetscDeviceCont
   PetscUseTypeMethod(dctx, getpower, power);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+  #endif
 
 static inline PetscErrorCode PetscDeviceContextBeginEnergyMeter_Internal(PetscDeviceContext dctx)
 {
