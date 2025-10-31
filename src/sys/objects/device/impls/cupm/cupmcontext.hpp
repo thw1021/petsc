@@ -428,6 +428,7 @@ inline PetscErrorCode DeviceContext<T>::endTimer(PetscDeviceContext dctx, PetscL
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if PetscDefined(HAVE_CUDA_VERSION_12_2PLUS)
 template <DeviceType T>
 inline PetscErrorCode DeviceContext<T>::getPower(PetscDeviceContext dctx, PetscLogDouble *power) noexcept
 {
@@ -443,6 +444,7 @@ inline PetscErrorCode DeviceContext<T>::getPower(PetscDeviceContext dctx, PetscL
   *power = static_cast<util::remove_pointer_t<decltype(power)>>(values[0].value.uiVal);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
 
 #if PetscDefined(HAVE_CUDA)
 template <DeviceType T>
