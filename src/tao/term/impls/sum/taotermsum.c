@@ -731,7 +731,7 @@ static PetscErrorCode TaoTermSumSetSubtermHessianMatrices_Sum(TaoTerm term, Pets
 
   PetscCall(PetscObjectTypeCompare((PetscObject)summand->term, TAOTERMCALLBACKS, &is_callback));
   if (is_callback) {
-    MatType H_type, Hpre_type;
+    MatType   H_type, Hpre_type;
     PetscBool Hpre_is_H;
 
     Hpre_is_H = (mapped_H == mapped_Hpre) ? PETSC_TRUE : PETSC_FALSE;
@@ -1291,7 +1291,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm term)
 
   PetscCall(PetscStrallocpy(MATDENSE, (char **)&term->H_mattype));
   PetscCall(PetscStrallocpy(MATDENSE, (char **)&term->Hpre_mattype));
-  term->Hpre_is_H    = PETSC_TRUE;
+  term->Hpre_is_H = PETSC_TRUE;
 
   term->ops->destroy               = TaoTermDestroy_Sum;
   term->ops->view                  = TaoTermView_Sum;

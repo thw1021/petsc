@@ -75,7 +75,7 @@ static PetscErrorCode TaoTermComputeHessian_Halfl2squared(TaoTerm term, Vec x, V
 
 static PetscErrorCode TaoTermCreateHessianMatrices_Halfl2squared(TaoTerm term, Mat *H, Mat *Hpre)
 {
-  PetscBool   is_hdiag, is_hprediag;
+  PetscBool is_hdiag, is_hprediag;
 
   PetscFunctionBegin;
   PetscCall(PetscInfo(term, "Creating TAOTERMHALFL2SQUARED Hessian Matrices. TAOTERMHALFL2SQUARED only accepts MATDIAGONAL for MatType, overriding any user-set MatType.\n"));
