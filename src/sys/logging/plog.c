@@ -2434,11 +2434,13 @@ PetscErrorCode PetscLogGpuTimeEnd(void)
     PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
     PetscCall(PetscDeviceContextEndTimer_Internal(dctx, &elapsed));
     petsc_gtime += (elapsed / 1000.0);
+    #if PetscDefined(HAVE_CUDA_VERSION_12_2PLUS)
     if (PetscLogGpuEnergyFlag) {
       PetscLogDouble power;
       PetscCall(PetscDeviceContextGetPower_Internal(dctx, &power));
       petsc_genergy += (power * elapsed / 1000000.0); // convert to Joules
     }
+    #endif
   }
     #else
   PetscCall(PetscTimeAdd(&petsc_gtime));
@@ -2459,15 +2461,18 @@ PetscErrorCode PetscLogGpuTimeEnd(void)
 
   Developer Note:
 
-  This option turns on energy monitoring of GPU kernels. The energy consumption is estimated as instant_power * gpu_kernel_time.
-  Due to the delay in NVML power sampling, we read the instantaneous power draw at the end of each event using nvmlDeviceGetFieldValues()
-  with the field ID NVML_FI_DEV_POWER_INSTANT.
+  This option turns on energy monitoring of GPU kernels and requires CUDA version >= 12.2. The energy consumption is estimated as
+  instant_power * gpu_kernel_time. Due to the delay in NVML power sampling, we read the instantaneous power draw at the end of each
+  event using nvmlDeviceGetFieldValues() with the field ID NVML_FI_DEV_POWER_INSTANT.
 
 .seealso: [](ch_profiling), `PetscLogView()`, `PetscLogGpuEnergyMeter()`
 @*/
 PetscErrorCode PetscLogGpuEnergy(void)
 {
   PetscFunctionBegin;
+    #if !PetscDefined(HAVE_CUDA_VERSION_12_2PLUS)
+  SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP_SYS, "-log_view_gpu_energy requires CUDA version >= 12.2");
+    #endif
   PetscCheck(petsc_genergy == 0.0, PETSC_COMM_SELF, PETSC_ERR_SUP, "GPU energy logging has already been turned on");
   PetscLogGpuEnergyFlag      = PETSC_TRUE;
   PetscLogGpuEnergyMeterFlag = PETSC_FALSE;
