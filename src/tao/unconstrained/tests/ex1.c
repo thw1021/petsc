@@ -40,13 +40,11 @@ int main(int argc, char **argv)
   PetscCall(MatSetUp(A));
   PetscCall(MatSetFromOptions(A));
   for (i = 0; i < m; i++) {
-      for (j = 0; j < n; j++) {
-          PetscCall(PetscRandomGetValue(rand, &val));
-          // Optionally make it sparse: only insert some entries
-          if (val < density) {
-              PetscCall(MatSetValue(A, i, j, val, INSERT_VALUES));
-          }
-      }
+    for (j = 0; j < n; j++) {
+      PetscCall(PetscRandomGetValue(rand, &val));
+      // Optionally make it sparse: only insert some entries
+      if (val < density) { PetscCall(MatSetValue(A, i, j, val, INSERT_VALUES)); }
+    }
   }
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
