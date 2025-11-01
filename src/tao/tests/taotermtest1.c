@@ -21,6 +21,8 @@ typedef struct {
   PetscReal      term2_scale_callback;
   /* Common sizes */
   PetscInt       term_size;
+  /* Debug options */
+  PetscBool      print_callback_debug;
   /* Random number generator */
   PetscRandom    rand;
   /* Stored terms data for callback implementation */
@@ -172,11 +174,12 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
   ctx->term1_has_params   = PETSC_FALSE;
   ctx->term2_has_A        = PETSC_FALSE;
   ctx->term2_has_params   = PETSC_FALSE;
-  ctx->term1_scale        = 0.1;
-  ctx->term2_scale        = 0.05;
-  ctx->term1_scale_callback = 0.1;  /* Default same as term1_scale */
-  ctx->term2_scale_callback = 0.05; /* Default same as term2_scale */
-  ctx->term_size          = ctx->user->n;
+  ctx->term1_scale          = 0.1;
+  ctx->term2_scale          = 0.05;
+  ctx->term1_scale_callback = 0;
+  ctx->term2_scale_callback = 0;
+  ctx->term_size            = ctx->user->n;
+  ctx->print_callback_debug = PETSC_FALSE;
 
   PetscOptionsBegin(comm, "", "TaoTerm Coverage Test Options", "TAO");
   PetscCall(PetscOptionsBool("-use_term1", "Use first additional term", "", ctx->use_term1, &ctx->use_term1, NULL));
@@ -190,7 +193,11 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
   PetscCall(PetscOptionsReal("-term1_scale_callback", "Scaling for term 1 in callback version", "", ctx->term1_scale_callback, &ctx->term1_scale_callback, NULL));
   PetscCall(PetscOptionsReal("-term2_scale_callback", "Scaling for term 2 in callback version", "", ctx->term2_scale_callback, &ctx->term2_scale_callback, NULL));
   PetscCall(PetscOptionsInt("-term_size", "Size of term domain", "", ctx->term_size, &ctx->term_size, NULL));
+  PetscCall(PetscOptionsBool("-print_callback_debug", "Print detailed debug info in callbacks", "", ctx->print_callback_debug, &ctx->print_callback_debug, NULL));
   PetscOptionsEnd();
+
+  if (ctx->term1_scale_callback == 0) ctx->term1_scale_callback = ctx->term1_scale;
+  if (ctx->term2_scale_callback == 0) ctx->term2_scale_callback = ctx->term2_scale;
 
   ctx->term1 = NULL;
   ctx->term2 = NULL;
@@ -311,23 +318,25 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
   PetscReal gnorm;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK] FormFunctionGradient called\n"));
+  if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK] FormFunctionGradient called\n"));
   
   /* Compute Rosenbrock part */
   PetscCall(FormObjectiveGradient(tao, X, f, G, ctx->user));
-  PetscCall(VecNorm(G, NORM_2, &gnorm));
-  PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   After Rosenbrock: f = %.16e, ||G|| = %.16e\n", (double)*f, (double)gnorm));
+  if (ctx->print_callback_debug) {
+    PetscCall(VecNorm(G, NORM_2, &gnorm));
+    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   After Rosenbrock: f = %.16e, ||G|| = %.16e\n", (double)*f, (double)gnorm));
+  }
   /* Add term 1 contribution */
   if (ctx->use_term1 && ctx->term1) {
-    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   Adding term1 (scale_callback = %.16e)\n", (double)ctx->term1_scale_callback));
+    if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   Adding term1 (scale_callback = %.16e)\n", (double)ctx->term1_scale_callback));
     /* Map X if needed */
     if (ctx->term1_A_callback) {
       PetscCall(MatCreateVecs(ctx->term1_A_callback, NULL, &X_mapped1));
       PetscCall(MatMult(ctx->term1_A_callback, X, X_mapped1));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     X mapped through A1\n"));
+      if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     X mapped through A1\n"));
     } else {
       X_mapped1 = X;
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     No A1 mapping\n"));
+      if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     No A1 mapping\n"));
     }
 
     /* Compute term objective and gradient */
@@ -336,13 +345,17 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
       PetscReal gnorm_term, gnorm_add;
       PetscCall(VecDuplicate(X_mapped1, &G_mapped1));
       PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, X_mapped1, ctx->term1_params, &f_term, G_mapped1));
-      PetscCall(VecNorm(G_mapped1, NORM_2, &gnorm_term));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     Term1 raw: f_term = %.16e, ||G_term|| = %.16e\n", (double)f_term, (double)gnorm_term));
+      if (ctx->print_callback_debug) {
+        PetscCall(VecNorm(G_mapped1, NORM_2, &gnorm_term));
+        PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     Term1 raw: f_term = %.16e, ||G_term|| = %.16e\n", (double)f_term, (double)gnorm_term));
+      }
       /* Map gradient back and add to G */
       PetscCall(VecDuplicate(X, &G_add));
       PetscCall(MatMultTranspose(ctx->term1_A_callback, G_mapped1, G_add));
-      PetscCall(VecNorm(G_add, NORM_2, &gnorm_add));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After A1^T mapping: ||G_add|| = %.16e\n", (double)gnorm_add));
+      if (ctx->print_callback_debug) {
+        PetscCall(VecNorm(G_add, NORM_2, &gnorm_add));
+        PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After A1^T mapping: ||G_add|| = %.16e\n", (double)gnorm_add));
+      }
       PetscCall(VecAXPY(G, ctx->term1_scale_callback, G_add));
       PetscCall(VecDestroy(&G_add));
       PetscCall(VecDestroy(&X_mapped1));
@@ -352,27 +365,31 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
       PetscReal gnorm_term;
       PetscCall(VecDuplicate(X, &G_term));
       PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, X_mapped1, ctx->term1_params, &f_term, G_term));
-      PetscCall(VecNorm(G_term, NORM_2, &gnorm_term));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     Term1 raw: f_term = %.16e, ||G_term|| = %.16e\n", (double)f_term, (double)gnorm_term));
+      if (ctx->print_callback_debug) {
+        PetscCall(VecNorm(G_term, NORM_2, &gnorm_term));
+        PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     Term1 raw: f_term = %.16e, ||G_term|| = %.16e\n", (double)f_term, (double)gnorm_term));
+      }
       PetscCall(VecAXPY(G, ctx->term1_scale_callback, G_term));
       PetscCall(VecDestroy(&G_term));
     }
     *f += ctx->term1_scale_callback * f_term;
-    PetscCall(VecNorm(G, NORM_2, &gnorm));
-    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After adding scaled term1: f = %.16e, ||G|| = %.16e\n", (double)*f, (double)gnorm));
+    if (ctx->print_callback_debug) {
+      PetscCall(VecNorm(G, NORM_2, &gnorm));
+      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After adding scaled term1: f = %.16e, ||G|| = %.16e\n", (double)*f, (double)gnorm));
+    }
   }
 
   /* Add term 2 contribution */
   if (ctx->use_term2 && ctx->term2) {
-    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   Adding term2 (scale_callback = %.16e)\n", (double)ctx->term2_scale_callback));
+    if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   Adding term2 (scale_callback = %.16e)\n", (double)ctx->term2_scale_callback));
     /* Map X if needed */
     if (ctx->term2_A_callback) {
       PetscCall(MatCreateVecs(ctx->term2_A_callback, NULL, &X_mapped2));
       PetscCall(MatMult(ctx->term2_A_callback, X, X_mapped2));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     X mapped through A2\n"));
+      if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     X mapped through A2\n"));
     } else {
       X_mapped2 = X;
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     No A2 mapping\n"));
+      if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     No A2 mapping\n"));
     }
 
     /* Compute term objective and gradient */
@@ -381,13 +398,17 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
       PetscReal gnorm_term, gnorm_add;
       PetscCall(VecDuplicate(X_mapped2, &G_mapped2));
       PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, X_mapped2, ctx->term2_params, &f_term, G_mapped2));
-      PetscCall(VecNorm(G_mapped2, NORM_2, &gnorm_term));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     Term2 raw: f_term = %.16e, ||G_term|| = %.16e\n", (double)f_term, (double)gnorm_term));
+      if (ctx->print_callback_debug) {
+        PetscCall(VecNorm(G_mapped2, NORM_2, &gnorm_term));
+        PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     Term2 raw: f_term = %.16e, ||G_term|| = %.16e\n", (double)f_term, (double)gnorm_term));
+      }
       /* Map gradient back and add to G */
       PetscCall(VecDuplicate(X, &G_add));
       PetscCall(MatMultTranspose(ctx->term2_A_callback, G_mapped2, G_add));
-      PetscCall(VecNorm(G_add, NORM_2, &gnorm_add));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After A2^T mapping: ||G_add|| = %.16e\n", (double)gnorm_add));
+      if (ctx->print_callback_debug) {
+        PetscCall(VecNorm(G_add, NORM_2, &gnorm_add));
+        PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After A2^T mapping: ||G_add|| = %.16e\n", (double)gnorm_add));
+      }
       PetscCall(VecAXPY(G, ctx->term2_scale_callback, G_add));
       PetscCall(VecDestroy(&G_add));
       PetscCall(VecDestroy(&X_mapped2));
@@ -397,17 +418,24 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
       PetscReal gnorm_term;
       PetscCall(VecDuplicate(X, &G_term));
       PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, X_mapped2, ctx->term2_params, &f_term, G_term));
-      PetscCall(VecNorm(G_term, NORM_2, &gnorm_term));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     Term2 raw: f_term = %.16e, ||G_term|| = %.16e\n", (double)f_term, (double)gnorm_term));
+      if (ctx->print_callback_debug) {
+        PetscCall(VecNorm(G_term, NORM_2, &gnorm_term));
+        PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     Term2 raw: f_term = %.16e, ||G_term|| = %.16e\n", (double)f_term, (double)gnorm_term));
+      }
       PetscCall(VecAXPY(G, ctx->term2_scale_callback, G_term));
       PetscCall(VecDestroy(&G_term));
     }
     *f += ctx->term2_scale_callback * f_term;
-    PetscCall(VecNorm(G, NORM_2, &gnorm));
-    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After adding scaled term2: f = %.16e, ||G|| = %.16e\n", (double)*f, (double)gnorm));
+    if (ctx->print_callback_debug) {
+      PetscCall(VecNorm(G, NORM_2, &gnorm));
+      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After adding scaled term2: f = %.16e, ||G|| = %.16e\n", (double)*f, (double)gnorm));
+    }
   }
 
-  PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   FINAL: f = %.16e, ||G|| = %.16e\n", (double)*f, (double)gnorm));
+  if (ctx->print_callback_debug) {
+    PetscCall(VecNorm(G, NORM_2, &gnorm));
+    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   FINAL: f = %.16e, ||G|| = %.16e\n", (double)*f, (double)gnorm));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -420,18 +448,20 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
   PetscReal hnorm;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK] FormHessian called\n"));
+  if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK] FormHessian called\n"));
   
   /* Compute Rosenbrock Hessian */
   PetscCall(FormHessian(tao, X, H, Hpre, ctx->user));
-  PetscCall(MatNorm(H, NORM_FROBENIUS, &hnorm));
-  PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   After Rosenbrock: ||H||_F = %.16e\n", (double)hnorm));
+  if (ctx->print_callback_debug) {
+    PetscCall(MatNorm(H, NORM_FROBENIUS, &hnorm));
+    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   After Rosenbrock: ||H||_F = %.16e\n", (double)hnorm));
+  }
 
   /* Add term 1 Hessian contribution */
   if (ctx->use_term1 && ctx->term1) {
     PetscInt  m, n;
     PetscReal hnorm_term;
-    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   Adding term1 Hessian (scale_callback = %.16e)\n", (double)ctx->term1_scale_callback));
+    if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   Adding term1 Hessian (scale_callback = %.16e)\n", (double)ctx->term1_scale_callback));
     if (ctx->term1_A_callback) {
       PetscCall(MatCreateVecs(ctx->term1_A_callback, NULL, &X_mapped));
       PetscCall(MatMult(ctx->term1_A_callback, X, X_mapped));
@@ -440,7 +470,7 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, m, m));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     X mapped through A1, H_term created (%d x %d)\n", (int)m, (int)m));
+      if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     X mapped through A1, H_term created (%d x %d)\n", (int)m, (int)m));
     } else {
       X_mapped = X;
       PetscCall(VecGetSize(X, &n));
@@ -448,12 +478,14 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, n, n));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     No A1 mapping, H_term created (%d x %d)\n", (int)n, (int)n));
+      if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     No A1 mapping, H_term created (%d x %d)\n", (int)n, (int)n));
     }
 
     PetscCall(TaoTermComputeHessian(ctx->term1, X_mapped, ctx->term1_params, H_term, NULL));
-    PetscCall(MatNorm(H_term, NORM_FROBENIUS, &hnorm_term));
-    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     Term1 raw Hessian: ||H_term||_F = %.16e\n", (double)hnorm_term));
+    if (ctx->print_callback_debug) {
+      PetscCall(MatNorm(H_term, NORM_FROBENIUS, &hnorm_term));
+      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     Term1 raw Hessian: ||H_term||_F = %.16e\n", (double)hnorm_term));
+    }
 
     if (ctx->term1_A_callback) {
       Mat H_mapped;
@@ -462,8 +494,10 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatDestroy(&H_term));
       PetscCall(MatTransposeMatMult(ctx->term1_A_callback, H_mapped, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &H_term));
       PetscCall(MatDestroy(&H_mapped));
-      PetscCall(MatNorm(H_term, NORM_FROBENIUS, &hnorm_term));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After A1^T * H_term * A1: ||H_term||_F = %.16e\n", (double)hnorm_term));
+      if (ctx->print_callback_debug) {
+        PetscCall(MatNorm(H_term, NORM_FROBENIUS, &hnorm_term));
+        PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After A1^T * H_term * A1: ||H_term||_F = %.16e\n", (double)hnorm_term));
+      }
       PetscCall(MatScale(H_term, ctx->term1_scale_callback));
       PetscCall(MatAXPY(H, 1.0, H_term, DIFFERENT_NONZERO_PATTERN));
       PetscCall(MatDestroy(&H_term));
@@ -473,15 +507,17 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatAXPY(H, 1.0, H_term, DIFFERENT_NONZERO_PATTERN));
       PetscCall(MatDestroy(&H_term));
     }
-    PetscCall(MatNorm(H, NORM_FROBENIUS, &hnorm));
-    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After adding scaled term1: ||H||_F = %.16e\n", (double)hnorm));
+    if (ctx->print_callback_debug) {
+      PetscCall(MatNorm(H, NORM_FROBENIUS, &hnorm));
+      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After adding scaled term1: ||H||_F = %.16e\n", (double)hnorm));
+    }
   }
 
   /* Add term 2 Hessian contribution */
   if (ctx->use_term2 && ctx->term2) {
     PetscInt  m, n;
     PetscReal hnorm_term;
-    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   Adding term2 Hessian (scale_callback = %.16e)\n", (double)ctx->term2_scale_callback));
+    if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   Adding term2 Hessian (scale_callback = %.16e)\n", (double)ctx->term2_scale_callback));
     if (ctx->term2_A_callback) {
       PetscCall(MatCreateVecs(ctx->term2_A_callback, NULL, &X_mapped));
       PetscCall(MatMult(ctx->term2_A_callback, X, X_mapped));
@@ -490,7 +526,7 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, m, m));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     X mapped through A2, H_term created (%d x %d)\n", (int)m, (int)m));
+      if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     X mapped through A2, H_term created (%d x %d)\n", (int)m, (int)m));
     } else {
       X_mapped = X;
       PetscCall(VecGetSize(X, &n));
@@ -498,12 +534,14 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, n, n));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     No A2 mapping, H_term created (%d x %d)\n", (int)n, (int)n));
+      if (ctx->print_callback_debug) PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     No A2 mapping, H_term created (%d x %d)\n", (int)n, (int)n));
     }
 
     PetscCall(TaoTermComputeHessian(ctx->term2, X_mapped, ctx->term2_params, H_term, NULL));
-    PetscCall(MatNorm(H_term, NORM_FROBENIUS, &hnorm_term));
-    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     Term2 raw Hessian: ||H_term||_F = %.16e\n", (double)hnorm_term));
+    if (ctx->print_callback_debug) {
+      PetscCall(MatNorm(H_term, NORM_FROBENIUS, &hnorm_term));
+      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     Term2 raw Hessian: ||H_term||_F = %.16e\n", (double)hnorm_term));
+    }
 
     if (ctx->term2_A_callback) {
       Mat H_mapped;
@@ -512,8 +550,10 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatDestroy(&H_term));
       PetscCall(MatTransposeMatMult(ctx->term2_A_callback, H_mapped, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &H_term));
       PetscCall(MatDestroy(&H_mapped));
-      PetscCall(MatNorm(H_term, NORM_FROBENIUS, &hnorm_term));
-      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After A2^T * H_term * A2: ||H_term||_F = %.16e\n", (double)hnorm_term));
+      if (ctx->print_callback_debug) {
+        PetscCall(MatNorm(H_term, NORM_FROBENIUS, &hnorm_term));
+        PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After A2^T * H_term * A2: ||H_term||_F = %.16e\n", (double)hnorm_term));
+      }
       PetscCall(MatScale(H_term, ctx->term2_scale_callback));
       PetscCall(MatAXPY(H, 1.0, H_term, DIFFERENT_NONZERO_PATTERN));
       PetscCall(MatDestroy(&H_term));
@@ -523,11 +563,16 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatAXPY(H, 1.0, H_term, DIFFERENT_NONZERO_PATTERN));
       PetscCall(MatDestroy(&H_term));
     }
-    PetscCall(MatNorm(H, NORM_FROBENIUS, &hnorm));
-    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After adding scaled term2: ||H||_F = %.16e\n", (double)hnorm));
+    if (ctx->print_callback_debug) {
+      PetscCall(MatNorm(H, NORM_FROBENIUS, &hnorm));
+      PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]     After adding scaled term2: ||H||_F = %.16e\n", (double)hnorm));
+    }
   }
 
-  PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   FINAL: ||H||_F = %.16e\n", (double)hnorm));
+  if (ctx->print_callback_debug) {
+    PetscCall(MatNorm(H, NORM_FROBENIUS, &hnorm));
+    PetscCall(PetscPrintf(ctx->user->comm, "[CALLBACK]   FINAL: ||H||_F = %.16e\n", (double)hnorm));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -602,56 +647,80 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       suffix: 0
       args: -tao_monitor_short
 
-#TODO outputfile name prob wrong due to params separate output
+# Single term tests
+   # L1 with A
    testset:
+      suffix: term1_l1_A
       nsize: {{1 2 3 4}}
-      args: -tao_type nls -use_term1 -term1_has_params {{0 1}separate output} -tao_monitor_short -term1_has_A -A1_mat_type {{aij dense diagonal}} -tao_term_sum_hessian_mat_type {{aij dense}}
+      args: -tao_type nls -use_term1 -term1_has_params {{0 1}separate output} -tao_monitor_short
+      args: -term1_has_A -A1_mat_type {{aij dense diagonal}} -tao_term_sum_hessian_mat_type {{aij dense}}
+      args: -reg1_tao_term_type l1
       test:
-         suffix: term1_only_l1_A
-         args: -reg1_tao_term_type l1 -term1_scale 1.234
+         suffix: ctx
+         args: -term1_scale 1.234
       test:
-         suffix: term1_only_l1_2_A
-         output_file: output/taotermtest1_term1_only_l1_A.out
-         args: -reg1_tao_term_type l1 -tao_term_sum_reg1_scale 1.234 -term1_scale_callback 1.234
-      test:
-         suffix: term1_only_l2_A
-         args: -reg1_tao_term_type halfl2squared -term1_scale 1.234
-      test:
-         suffix: term1_only_l2_2_A
-         output_file: output/taotermtest1_term1_only_l2_A.out
-         args: -reg1_tao_term_type halfl2squared -tao_term_sum_reg1_scale 1.234 -term1_scale_callback 1.234
-      test:
-         suffix: term1_only_quad_A
-         args: -reg1_tao_term_type quadratic -Q1_mat_type {{aij dense diagonal}} -term1_scale 1.234
-      test:
-         suffix: term1_only_quad_2_A
-         output_file: output/taotermtest1_term1_only_quad_A.out
-         args: -reg1_tao_term_type quadratic -Q1_mat_type {{aij dense diagonal}} -tao_term_sum_reg1_scale 1.234 -term1_scale_callback 1.234
+         suffix: taoterm
+         output_file: output/taotermtest1_term1_l1_A_ctx.out
+         args: -tao_term_sum_reg1_scale 1.234 -term1_scale_callback 1.234
 
+   # L1 without A
    testset:
+      suffix: term1_l1_no_A
       nsize: {{1 2 3 4}}
-      args: -tao_type nls -use_term1 -term1_has_params {{0 1}separate output} -tao_monitor_short -term1_has_A 0
+      args: -tao_type nls -use_term1 -term1_has_params {{0 1}separate output} -tao_monitor_short
+      args: -term1_has_A 0 -reg1_tao_term_type l1
       test:
-         suffix: term1_only_l1_no_A
-         args: -reg1_tao_term_type l1 -term1_scale 1.234
+         args: -term1_scale 1.234
       test:
-         suffix: term1_only_l1_2_no_A
-         output_file: output/taotermtest1_term1_only_l1_no_A.out
-         args: -reg1_tao_term_type l1 -tao_term_sum_reg1_scale 1.234 -term1_scale_callback 1.234
+         args: -tao_term_sum_reg1_scale 1.234 -term1_scale_callback 1.234
+
+   # L2 with A
+   testset:
+      suffix: term1_l2_A
+      nsize: {{1 2 3 4}}
+      args: -tao_type nls -use_term1 -term1_has_params {{0 1}separate output} -tao_monitor_short
+      args: -term1_has_A -A1_mat_type {{aij dense diagonal}} -tao_term_sum_hessian_mat_type {{aij dense}}
+      args: -reg1_tao_term_type halfl2squared
       test:
-         suffix: term1_only_l2_no_A
-         args: -reg1_tao_term_type halfl2squared -term1_scale 1.234
+         args: -term1_scale 1.234
       test:
-         suffix: term1_only_l2_2_no_A
-         output_file: output/taotermtest1_term1_only_l2_no_A.out
-         args: -reg1_tao_term_type halfl2squared -tao_term_sum_reg1_scale 1.234 -term1_scale_callback 1.234
+         args: -tao_term_sum_reg1_scale 1.234 -term1_scale_callback 1.234
+
+   # L2 without A
+   testset:
+      suffix: term1_l2_no_A
+      nsize: {{1 2 3 4}}
+      args: -tao_type nls -use_term1 -term1_has_params {{0 1}separate output} -tao_monitor_short
+      args: -term1_has_A 0
+      args: -reg1_tao_term_type halfl2squared
       test:
-         suffix: term1_only_quad_no_A
-         args: -reg1_tao_term_type quadratic -Q1_mat_type {{aij dense diagonal}} -term1_scale 1.234
+         args: -term1_scale 1.234
       test:
-         suffix: term1_only_quad_2_no_A
-         output_file: output/taotermtest1_term1_only_quad_no_A.out
-         args: -reg1_tao_term_type quadratic -Q1_mat_type {{aij dense diagonal}} -tao_term_sum_reg1_scale 1.234 -term1_scale_callback 1.234
+         args: -tao_term_sum_reg1_scale 1.234 -term1_scale_callback 1.234
+
+   # QUADRATIC with A
+   testset:
+      suffix: term1_quad_A
+      nsize: {{1 2 3 4}}
+      args: -tao_type nls -use_term1 -term1_has_params {{0 1}separate output} -tao_monitor_short
+      args: -term1_has_A -A1_mat_type {{aij dense diagonal}} -tao_term_sum_hessian_mat_type {{aij dense}}
+      args: -reg1_tao_term_type quadratic -Q1_mat_type {{aij dense diagonal}}
+      test:
+         args: -term1_scale 1.234
+      test:
+         args: -tao_term_sum_reg1_scale 1.234 -term1_scale_callback 1.234
+
+   # QUADRATIC without A
+   testset:
+      suffix: term1_quad_no_A
+      nsize: {{1 2 3 4}}
+      args: -tao_type nls -use_term1 -term1_has_params {{0 1}separate output} -tao_monitor_short
+      args: -term1_has_A 0
+      args: -reg1_tao_term_type quadratic -Q1_mat_type {{aij dense diagonal}}
+      test:
+         args: -term1_scale 1.234
+      test:
+         args: -tao_term_sum_reg1_scale 1.234 -term1_scale_callback 1.234
 
 # Two terms, with no mapping
    testset:
@@ -662,11 +731,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l1_l2_no_A1_no_A2
@@ -676,11 +745,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l1_quad_no_A1_no_A2
@@ -690,11 +759,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l2_l1_no_A1_no_A2
@@ -704,11 +773,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l2_l2_no_A1_no_A2
@@ -718,11 +787,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l2_quad_no_A1_no_A2
@@ -732,11 +801,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: quad_l1_no_A1_no_A2
@@ -746,11 +815,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: quad_l2_no_A1_no_A2
@@ -760,11 +829,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: quad_quad_no_A1_no_A2
@@ -775,11 +844,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
 
 # Two terms: term1 no A, term2 has A
@@ -791,11 +860,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l1_l2_no_A1_A2
@@ -805,11 +874,12 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         suffix: both_taoterm
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l1_quad_no_A1_A2
@@ -817,13 +887,16 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}separate output} -term2_has_params {{0 1}separate output} -tao_monitor_short
       args: -term1_has_A 0 -term2_has_A 1 -A2_mat_type {{aij dense diagonal}} -reg1_tao_term_type l1 -reg2_tao_term_type quadratic -Q2_mat_type {{aij dense diagonal}}
       test:
+         suffix: ctx
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         suffix: term2_taoterm
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         suffix: term1_taoterm
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l2_l1_no_A1_A2
@@ -833,11 +906,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l2_l2_no_A1_A2
@@ -847,11 +920,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l2_quad_no_A1_A2
@@ -861,11 +934,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: quad_l1_no_A1_A2
@@ -875,11 +948,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: quad_l2_no_A1_A2
@@ -889,11 +962,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: quad_quad_no_A1_A2
@@ -903,11 +976,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
 # Two terms: term1 has A, term2 no A
    testset:
@@ -918,11 +991,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l1_l2_A1_no_A2
@@ -932,11 +1005,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l1_quad_A1_no_A2
@@ -946,11 +1019,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l2_l1_A1_no_A2
@@ -960,11 +1033,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l2_l2_A1_no_A2
@@ -974,11 +1047,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l2_quad_A1_no_A2
@@ -988,11 +1061,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: quad_l1_A1_no_A2
@@ -1002,11 +1075,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: quad_l2_A1_no_A2
@@ -1016,11 +1089,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: quad_quad_A1_no_A2
@@ -1030,11 +1103,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
 # Two terms: term1 has A, term2 has A
    testset:
@@ -1045,11 +1118,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l1_l2_A1_A2
@@ -1059,11 +1132,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l1_quad_A1_A2
@@ -1073,11 +1146,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l2_l1_A1_A2
@@ -1087,11 +1160,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l2_l2_A1_A2
@@ -1101,11 +1174,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: l2_quad_A1_A2
@@ -1113,13 +1186,17 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}separate output} -term2_has_params {{0 1}separate output} -tao_monitor_short
       args: -term1_has_A 1 -term2_has_A 1 -A1_mat_type {{aij dense diagonal}} -A2_mat_type {{aij dense diagonal}} -reg1_tao_term_type halfl2squared -reg2_tao_term_type quadratic -Q2_mat_type {{aij dense diagonal}}
       test:
+         suffix: ctx
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         suffix: term2_taoterm
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         suffix: term1_taoterm
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         suffix: both_taoterm
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: quad_l1_A1_A2
@@ -1129,11 +1206,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: quad_l2_A1_A2
@@ -1143,11 +1220,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
    testset:
       suffix: quad_quad_A1_A2
@@ -1157,11 +1234,11 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback)
       test:
          args: -term1_scale 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale 0.123 -term2_scale_callback 1.852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 1.852
       test:
-         args: -term1_scale_callback 0.123 -term2_scale_callback 1.852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 1.852 -term2_scale_callback 1.852
 
 TEST*/
 
