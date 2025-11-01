@@ -2456,14 +2456,13 @@ PetscErrorCode PetscLogGpuTimeEnd(void)
 
   Level: advanced
 
-  Notes:
+  Note:
   This option is mutually exclusive to `-log_view_gpu_energy_meter`.
 
   Developer Note:
-
   This option turns on energy monitoring of GPU kernels and requires CUDA version >= 12.2. The energy consumption is estimated as
   instant_power * gpu_kernel_time. Due to the delay in NVML power sampling, we read the instantaneous power draw at the end of each
-  event using nvmlDeviceGetFieldValues() with the field ID NVML_FI_DEV_POWER_INSTANT.
+  event using `nvmlDeviceGetFieldValues()` with the field ID `NVML_FI_DEV_POWER_INSTANT`.
 
 .seealso: [](ch_profiling), `PetscLogView()`, `PetscLogGpuEnergyMeter()`
 @*/
@@ -2487,13 +2486,12 @@ PetscErrorCode PetscLogGpuEnergy(void)
 
   Level: advanced
 
-  Notes:
+  Note:
   This option is mutually exclusive to `-log_view_gpu_energy`.
 
   Developer Note:
-
   This option turns on energy monitoring of GPU kernels. The energy consumption is measured directly using the NVML API
-  nvmlDeviceGetTotalEnergyConsumption(), which returns the total energy used by the GPU since the driver was last initialized.
+  `nvmlDeviceGetTotalEnergyConsumption()`, which returns the total energy used by the GPU since the driver was last initialized.
   For newer GPUs, energy readings are updated every 20-100ms, so this approach may be inaccurate for short-duration GPU events.
 
 @*/
@@ -2514,8 +2512,8 @@ PetscErrorCode PetscLogGpuEnergyMeter(void)
   Notes:
   The GPU event energy meter captures the energy used by the GPU between `PetscLogGpuEnergyMeterBegin()` and `PetscLogGpuEnergyMeterEnd()`.
 
-  `PetscLogGpuEnergyMeterBegin()` and `PetscLogGpuEnergyMeterEnd()` collect the energy readings using nvmlDeviceGetTotalEnergyConsumption().
-  The function cupmStreamSynchronize() is called before the energy query to ensure completion.
+  `PetscLogGpuEnergyMeterBegin()` and `PetscLogGpuEnergyMeterEnd()` collect the energy readings using `nvmlDeviceGetTotalEnergyConsumption()`.
+  The function `cupmStreamSynchronize()` is called before the energy query to ensure completion.
 
 .seealso: [](ch_profiling), `PetscLogView()`, `PetscLogGpuEnergyMeterEnd()`, `PetscLogGpuEnergyMeter()`
 @*/
