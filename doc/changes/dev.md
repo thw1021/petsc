@@ -20,6 +20,7 @@
 
 ```{rubric} Event Logging:
 ```
+
 - Add two approaches for GPU energy monitoring:  `-log_view_gpu_energy` and `-log_view_gpu_energy_meter`
 
 ```{rubric} PetscViewer:
