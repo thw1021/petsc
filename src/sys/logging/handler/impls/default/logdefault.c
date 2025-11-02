@@ -1545,7 +1545,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
   if (PetscLogMemory) PetscCall(PetscViewerASCIIPrintf(viewer, " Mbytes Mbytes Mbytes Mbytes"));
 #if defined(PETSC_HAVE_DEVICE)
   PetscCall(PetscViewerASCIIPrintf(viewer, " Mflop/s Count   Size   Count   Size  %%F"));
-  if (PetscLogGpuEnergyFlag || PetscLogGpuEnergyMeterFlag) PetscCall(PetscViewerASCIIPrintf(viewer, "   Joule   Mflop/j"));
+  if (PetscLogGpuEnergyFlag || PetscLogGpuEnergyMeterFlag) PetscCall(PetscViewerASCIIPrintf(viewer, "   Joule   Mflop/J"));
 #endif
   PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "------------------------------------------------------------------------------------------------------------------------"));
