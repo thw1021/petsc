@@ -2469,9 +2469,7 @@ PetscErrorCode PetscLogGpuTimeEnd(void)
 PetscErrorCode PetscLogGpuEnergy(void)
 {
   PetscFunctionBegin;
-    #if !PetscDefined(HAVE_CUDA_VERSION_12_2PLUS)
-  SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP_SYS, "-log_view_gpu_energy requires CUDA version >= 12.2");
-    #endif
+  PetscCheck(PetscDefined(HAVE_CUDA_VERSION_12_2PLUS), PETSC_COMM_WORLD, PETSC_ERR_SUP_SYS, "-log_view_gpu_energy requires CUDA version >= 12.2");
   PetscCheck(petsc_genergy == 0.0, PETSC_COMM_SELF, PETSC_ERR_SUP, "GPU energy logging has already been turned on");
   PetscLogGpuEnergyFlag      = PETSC_TRUE;
   PetscLogGpuEnergyMeterFlag = PETSC_FALSE;
