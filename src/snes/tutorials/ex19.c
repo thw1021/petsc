@@ -1250,4 +1250,14 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
         args: -ksp_hpddm_type gcrodr -ksp_pc_side right
         output_file: output/ex19_hpddm_cuda_ksp_hpddm_type-gcrodr.out
 
+   test:
+     suffix: sell_sor
+     nsize: 1
+     args: -dm_mat_type sell -pc_type sor -snes_monitor -ksp_monitor -snes_view
+
+   test:
+     suffix: sell_jacobi
+     nsize: 1
+     args: -dm_mat_type sell -pc_type jacobi -snes_monitor -ksp_monitor -snes_view
+
 TEST*/
