@@ -374,6 +374,7 @@ PETSC_EXTERN PetscErrorCode PCGAMGASMSetHEM(PC, PetscInt);
 PETSC_EXTERN PetscErrorCode PCGAMGSetLowMemoryFilter(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCGAMGSetGraphSymmetrize(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCGAMGSetInjectionIndex(PC, PetscInt, PetscInt[]);
+PETSC_EXTERN PetscErrorCode PCGAMGGetCFMarkers(PC pc, PetscInt *[], Vec *[]);
 
 PETSC_EXTERN PetscErrorCode PCGAMGClassicalSetType(PC, PCGAMGClassicalType);
 PETSC_EXTERN PetscErrorCode PCGAMGClassicalGetType(PC, PCGAMGClassicalType *);

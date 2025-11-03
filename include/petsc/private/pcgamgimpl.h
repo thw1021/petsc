@@ -53,6 +53,11 @@ typedef struct gamg_TAG {
   PetscBool recompute_esteig;
   PetscInt  injection_index_size;
   PetscInt  injection_index[MAT_COARSEN_STRENGTH_INDEX_SIZE];
+
+  /* Data required for compression (DataCAP) */
+  PetscBool keepCFlists;
+  PetscInt  nnodes[PETSC_MG_MAXLEVELS];
+  PetscCoarsenData **CFlists;
 } PC_GAMG;
 
 /* hooks create derivied classes */
