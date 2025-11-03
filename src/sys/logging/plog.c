@@ -2399,16 +2399,14 @@ PetscErrorCode PetscLogGpuTimeBegin(void)
   PetscFunctionBegin;
   PetscCall(PetscLogEventBeginIsActive(&isActive));
   if (!isActive || !PetscLogGpuTimeFlag) PetscFunctionReturn(PETSC_SUCCESS);
-    #if !defined(PETSC_HAVE_KOKKOS_WITHOUT_GPU)
-  {
+  if (!PetscDefined(HAVE_KOKKOS_WITHOUT_GPU)) {
     PetscDeviceContext dctx;
 
     PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
     PetscCall(PetscDeviceContextBeginTimer_Internal(dctx));
+  } else {
+    PetscCall(PetscTimeSubtract(&petsc_gtime));
   }
-    #else
-  PetscCall(PetscTimeSubtract(&petsc_gtime));
-    #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2426,8 +2424,7 @@ PetscErrorCode PetscLogGpuTimeEnd(void)
   PetscFunctionBegin;
   PetscCall(PetscLogEventEndIsActive(&isActive));
   if (!isActive || !PetscLogGpuTimeFlag) PetscFunctionReturn(PETSC_SUCCESS);
-    #if !defined(PETSC_HAVE_KOKKOS_WITHOUT_GPU)
-  {
+  if (!PetscDefined(HAVE_KOKKOS_WITHOUT_GPU)) {
     PetscDeviceContext dctx;
     PetscLogDouble     elapsed;
 
@@ -2441,10 +2438,9 @@ PetscErrorCode PetscLogGpuTimeEnd(void)
       petsc_genergy += (power * elapsed / 1000000.0); // convert to Joules
     }
     #endif
+  } else {
+    PetscCall(PetscTimeAdd(&petsc_gtime));
   }
-    #else
-  PetscCall(PetscTimeAdd(&petsc_gtime));
-    #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2522,14 +2518,12 @@ PetscErrorCode PetscLogGpuEnergyMeterBegin(void)
   PetscFunctionBegin;
   PetscCall(PetscLogEventBeginIsActive(&isActive));
   if (!isActive || !PetscLogGpuEnergyMeterFlag) PetscFunctionReturn(PETSC_SUCCESS);
-    #if !defined(PETSC_HAVE_KOKKOS_WITHOUT_GPU)
-  {
+  if (!PetscDefined(HAVE_KOKKOS_WITHOUT_GPU)) {
     PetscDeviceContext dctx;
 
     PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
     PetscCall(PetscDeviceContextBeginEnergyMeter_Internal(dctx));
   }
-    #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2547,8 +2541,7 @@ PetscErrorCode PetscLogGpuEnergyMeterEnd(void)
   PetscFunctionBegin;
   PetscCall(PetscLogEventEndIsActive(&isActive));
   if (!isActive || !PetscLogGpuEnergyMeterFlag) PetscFunctionReturn(PETSC_SUCCESS);
-    #if !defined(PETSC_HAVE_KOKKOS_WITHOUT_GPU)
-  {
+  if (!PetscDefined(HAVE_KOKKOS_WITHOUT_GPU)) {
     PetscDeviceContext dctx;
     PetscLogDouble     energy;
 
@@ -2556,7 +2549,6 @@ PetscErrorCode PetscLogGpuEnergyMeterEnd(void)
     PetscCall(PetscDeviceContextEndEnergyMeter_Internal(dctx, &energy));
     petsc_genergy_meter += (energy / 1000.0); // convert to Joules
   }
-    #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
   #endif /* end of PETSC_HAVE_DEVICE */
