@@ -4,17 +4,6 @@
 #include <../src/ksp/pc/impls/gamg/gamg.h>            /*I "petscpc.h" I*/
 #include <../src/ksp/ksp/impls/cheby/chebyshevimpl.h> /*I "petscksp.h" I*/
 
-typedef struct {
-  PetscInt   nsmooths;                     // number of smoothing steps to construct prolongation
-  PetscInt   aggressive_coarsening_levels; // number of aggressive coarsening levels (square or MISk)
-  PetscInt   aggressive_mis_k;             // the k in MIS-k
-  PetscBool  use_aggressive_square_graph;
-  PetscBool  use_minimum_degree_ordering;
-  PetscBool  use_low_mem_filter;
-  PetscBool  graph_symmetrize;
-  MatCoarsen crs;
-} PC_GAMG_AGG;
-
 #if defined(PETSC_HAVE_CUDA)
   #include <petscdevice_cuda.h>
 #endif
@@ -46,9 +35,7 @@ static PetscErrorCode PCReset_GAMG(PC pc)
   for (PetscInt level = 0; level < PETSC_MG_MAXLEVELS; level++) {
     mg->min_eigen_DinvA[level] = 0;
     mg->max_eigen_DinvA[level] = 0;
-    PetscCall(PetscFree(pc_gamg->CFlists[level]));
   }
-  PetscCall(PetscFree(pc_gamg->CFlists));
   pc_gamg->emin = 0;
   pc_gamg->emax = 0;
   PetscCall(PCReset_MG(pc));
@@ -565,7 +552,6 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
 #endif
 
   PetscFunctionBegin;
-  printf("Beginning setup of GAMG, Nlevels = %" PetscInt_FMT "\n", pc_gamg->Nlevels);
   PetscCall(PetscObjectGetComm((PetscObject)pc, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &size));
@@ -683,9 +669,6 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
     }
     PetscCall(PetscLogStagePush(gamg_stages[level]));
 #endif
-
-    if (level == 0) { PetscCall(PetscMalloc(pc_gamg->Nlevels, &pc_gamg->CFlists)); }
-
     /* construct prolongator - Parr[level1] */
     if (level == 0 && pc_gamg->injection_index_size > 0) {
       Mat      Prol;
@@ -807,19 +790,7 @@ static PetscErrorCode PCSetUp_GAMG(PC pc)
       PetscCall(PetscCDGetMat(agg_lists, &mat));
       if (mat == Gmat) PetscCall(PetscCDClearMat(agg_lists)); // take the Mat away from the list (yuck)
       PetscCall(MatDestroy(&Gmat));
-      if (pc_gamg->keepCFlists) {
-        // Write functions to ensure the lists get kept.
-        printf("The option worked! WOO!\n");
-        PetscInt rows, cols;
-        PetscCall(MatGetSize(Prol11, &rows, &cols));
-        printf("rows = %" PetscInt_FMT " , cols = %" PetscInt_FMT "\n", rows, cols);
-        PetscCheck(agg_lists, PetscObjectComm((PetscObject)pc_gamg->asm_crs), PETSC_ERR_ARG_WRONGSTATE, "No linked list, don't know why yet.\n");
-        pc_gamg->CFlists[level] = agg_lists;
-        pc_gamg->nnodes[level]  = rows;
-        pc_gamg->nnodes[level1] = cols;
-      } else {
-        PetscCall(PetscCDDestroy(agg_lists));
-      }
+      PetscCall(PetscCDDestroy(agg_lists));
     } /* construct prolongator scope */
     if (level == 0) Aarr[0] = Pmat; /* use Pmat for finest level setup */
     if (!Parr[level1]) {            /* failed to coarsen */
@@ -1029,7 +1000,6 @@ PetscErrorCode PCDestroy_GAMG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGASMSetHEM_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetInjectionIndices_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetInjectionIndex_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetCFMarkers_C", NULL));
   PetscCall(PCDestroy_MG(pc));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1829,77 +1799,6 @@ static PetscErrorCode PCGAMGSetInjectionIndex_GAMG(PC pc, PetscInt n, PetscInt i
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCGAMGGetCFMarkers(PC pc, PetscInt *n_per_level[], Vec *CFMarkers_Vec[])
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  //PetscValidLogicalCollectiveInt(pc, n, 2);
-  PetscTryMethod(pc, "PCGAMGGetCFMarkers_C", (PC, PetscInt *[], Vec *[]), (pc, n_per_level, CFMarkers_Vec));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode PCGAMGGetCFMarkers_GAMG(PC pc, PetscInt *n_per_level[], Vec *CFMarkers_Vec[])
-{
-  //PetscCoarsenData *llist;
-  PC_MG        *mg      = (PC_MG *)pc->data;
-  PC_GAMG      *pc_gamg = (PC_GAMG *)mg->innerctx;
-  PC_MG_Levels *levels  = (PC_MG_Levels *)mg->levels;
-  PC_MG_Levels  current_level;
-  PetscInt      ncoarse, nfine, num_levels, i;
-  PetscScalar   coarse_nodes;
-  PetscInt     *n_per_temp;
-  PetscCDIntNd *node;
-  Vec          *markertmp_Vec;
-  PetscMPIInt   myrank;
-
-  PetscFunctionBegin;
-
-  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &myrank));
-  //llist = (PetscCoarsenData *)pc_gamg->CFlists;
-  //PetscCall(MatCoarsenGetData(pc_gamg_agg->crs, &llist));
-  num_levels = mg->nlevels;
-
-  PetscCall(PetscCalloc1(num_levels, &n_per_temp));
-  PetscCall(PetscMalloc1(num_levels - 1, &markertmp_Vec));
-
-  printf("Max levels: %" PetscInt_FMT "\n", num_levels);
-  for (PetscInt l = 0, CFMaxIndex = num_levels - 2; CFMaxIndex >= 0; l++, CFMaxIndex--) {
-    current_level = levels[CFMaxIndex];
-    ncoarse       = pc_gamg->nnodes[CFMaxIndex+1];
-    nfine         = pc_gamg->nnodes[CFMaxIndex];
-
-    PetscCall(VecCreate(PetscObjectComm((PetscObject)pc), &markertmp_Vec[l]));
-    PetscCall(VecSetType(markertmp_Vec[l], VECSTANDARD));
-    PetscCall(VecSetSizes(markertmp_Vec[l], nfine, PETSC_DETERMINE));
-    PetscCall(VecSet(markertmp_Vec[l], -1));
-
-    if (ncoarse > 0) {
-      printf("Rank %d - ncoarse is: %" PetscInt_FMT " \n", myrank, ncoarse);
-      printf("Rank %d - nfine is: %" PetscInt_FMT " \n", myrank, nfine);
-      //loop over the nodes of this level
-      coarse_nodes = 0;
-      i = 0;
-      node         = pc_gamg->CFlists[CFMaxIndex]->array[i];
-      while (node != NULL) {
-        //PetscCheck(node, PetscObjectComm((PetscObject)CFlists), PETSC_ERR_ARG_WRONGSTATE, "node is null");
-        printf("Rank %d - Node %" PetscInt_FMT " - gid %" PetscInt_FMT "\n", myrank, i, node->gid);
-        PetscCall(VecSetValues(markertmp_Vec[l], 1, &node->gid, &coarse_nodes, INSERT_VALUES));
-        coarse_nodes++;
-        i++;
-        node = pc_gamg->CFlists[CFMaxIndex]->array[i];
-      }
-      PetscCall(VecAssemblyBegin(markertmp_Vec[l]));
-      PetscCall(VecAssemblyEnd(markertmp_Vec[l]));
-      n_per_temp[l] = n_per_temp[l] + i;
-    }
-    n_per_temp[num_levels - 1] = nfine;
-    *n_per_level = n_per_temp;
-
-    *CFMarkers_Vec = markertmp_Vec;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems PetscOptionsObject)
 {
   PC_MG             *mg      = (PC_MG *)pc->data;
@@ -1960,9 +1859,6 @@ static PetscErrorCode PCSetFromOptions_GAMG(PC pc, PetscOptionItems PetscOptions
   }
   pc_gamg->injection_index_size = MAT_COARSEN_STRENGTH_INDEX_SIZE;
   PetscCall(PetscOptionsIntArray("-pc_gamg_injection_index", "Array of indices to use to use injection coarse grid space", "PCGAMGSetInjectionIndex", pc_gamg->injection_index, &pc_gamg->injection_index_size, NULL));
-
-  PetscCall(PetscOptionsBool("-pc_gamg_keep_CF_lists", "Retain the C/F node lists for each level.", NULL, pc_gamg->keepCFlists, &pc_gamg->keepCFlists, NULL));
-
   /* set options for subtype */
   PetscCall((*pc_gamg->ops->setfromoptions)(pc, PetscOptionsObject));
 
@@ -2067,7 +1963,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_GAMG(PC pc)
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetNlevels_C", PCGAMGSetNlevels_GAMG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGASMSetHEM_C", PCGAMGASMSetHEM_GAMG));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGSetInjectionIndex_C", PCGAMGSetInjectionIndex_GAMG));
-  PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCGAMGGetCFMarkers_C", PCGAMGGetCFMarkers_GAMG));
   pc_gamg->repart                          = PETSC_FALSE;
   pc_gamg->reuse_prol                      = PETSC_TRUE;
   pc_gamg->use_aggs_in_asm                 = PETSC_FALSE;
@@ -2085,9 +1980,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_GAMG(PC pc)
   pc_gamg->recompute_esteig = PETSC_TRUE;
   pc_gamg->emin             = 0;
   pc_gamg->emax             = 0;
-
-  pc_gamg->keepCFlists = PETSC_FALSE; /* For data compression purposes */
-  pc_gamg->CFlists     = NULL;
 
   pc_gamg->ops->createlevel = PCGAMGCreateLevel_GAMG;
 
