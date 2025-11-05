@@ -1,5 +1,5 @@
 const char help[] = "TaoTerm coverage test comparing TaoTerm interface with traditional callbacks for Rosenbrock problem.\n\
-Tests different TaoTerm configurations including L1, HALFL2SQUARED, and QUADRATIC types with various matrix and parameter options.\n";
+Tests different TaoTerm configurations for L1, andHALFL2SQUARED types with various matrix and parameter options.\n";
 
 #include <petsctao.h>
 #include "../unconstrained/tutorials/rosenbrock4.h"
@@ -25,8 +25,7 @@ typedef struct {
   /* Stored terms data for callback implementation */
   TaoTerm        term1, term2;
   Vec            term1_params, term2_params;
-  Vec            X_mapped, G_mapped;
-  Mat            Q1, Q2; //Storing Quad matrix if TAOTERMQUADRATIC
+  Vec            X_mapped1, X_mapped2, G_mapped1, G_mapped2;
   Mat            term1_A_callback; /* AIJ version for callbacks */
   Mat            term2_A_callback; /* AIJ version for callbacks */
 } TestCtx;
@@ -34,7 +33,7 @@ typedef struct {
 /* Forward declarations */
 static PetscErrorCode TestCtxInitialize(MPI_Comm, TestCtx *);
 static PetscErrorCode TestCtxFinalize(TestCtx *);
-static PetscErrorCode CreateTaoTermWithOptions(TestCtx *, TaoTerm *, Vec *, Mat *, const char *, const char *, const char *, PetscBool, PetscBool);
+static PetscErrorCode CreateTaoTermWithOptions(TestCtx *, TaoTerm *, Vec *, Mat *, const char *, const char *, PetscBool, PetscBool);
 static PetscErrorCode FormFunctionGradient_TaoTerm(Tao, Vec, PetscReal *, Vec, void *);
 static PetscErrorCode FormHessian_TaoTerm(Tao, Vec, Mat, Mat, void *);
 static PetscErrorCode FormFunctionGradient_Callbacks(Tao, Vec, PetscReal *, Vec, void *);
@@ -48,7 +47,6 @@ int main(int argc, char **argv)
   Vec         x_term, x_callback;
   Mat         H_term, H_callback;
   TaoTerm     term1, term2;
-  PetscBool   is_quad;
   Vec         term1_params, term2_params, term1_params_callback, term2_params_callback;
   Mat         term1_A, term2_A;
   MPI_Comm    comm;
@@ -75,18 +73,14 @@ int main(int argc, char **argv)
 
   /* Add term 1 if requested */
   if (ctx.use_term1) {
-    PetscCall(CreateTaoTermWithOptions(&ctx, &term1, &term1_params, &term1_A, "reg1_", "A1_", "Q1_", ctx.term1_has_A, ctx.term1_has_params));
+    PetscCall(CreateTaoTermWithOptions(&ctx, &term1, &term1_params, &term1_A, "reg1_", "A1_", ctx.term1_has_A, ctx.term1_has_params));
     PetscCall(TaoAddTerm(tao_term, "reg1_", ctx.term1_scale, term1, term1_params, term1_A));
-    PetscCall(PetscObjectTypeCompare((PetscObject)term1, TAOTERMQUADRATIC, &is_quad));
-    if (is_quad) PetscCall(TaoTermQuadraticGetMat(term1, &ctx.Q1));
     PetscCall(TaoTermDestroy(&term1));
   }
   /* Add term 2 if requested */
   if (ctx.use_term2) {
-    PetscCall(CreateTaoTermWithOptions(&ctx, &term2, &term2_params, &term2_A, "reg2_", "A2_", "Q2_", ctx.term2_has_A, ctx.term2_has_params));
+    PetscCall(CreateTaoTermWithOptions(&ctx, &term2, &term2_params, &term2_A, "reg2_", "A2_", ctx.term2_has_A, ctx.term2_has_params));
     PetscCall(TaoAddTerm(tao_term, "reg2_", ctx.term2_scale, term2, term2_params, term2_A));
-    PetscCall(PetscObjectTypeCompare((PetscObject)term2, TAOTERMQUADRATIC, &is_quad));
-    if (is_quad) PetscCall(TaoTermQuadraticGetMat(term2, &ctx.Q2));
     PetscCall(TaoTermDestroy(&term2));
   }
 
@@ -116,8 +110,6 @@ int main(int argc, char **argv)
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)term1, "reg1_"));
     PetscCall(TaoTermSetSolutionSizes(term1, PETSC_DECIDE, ctx.user->n, 1));
     PetscCall(TaoTermSetFromOptions(term1));
-    PetscCall(PetscObjectTypeCompare((PetscObject)term1, TAOTERMQUADRATIC, &is_quad));
-    if (is_quad) PetscCall(TaoTermQuadraticSetMat(term1, ctx.Q1));
     /* Store for callback implementation */
     ctx.term1        = term1;
     ctx.term1_params = term1_params_callback;
@@ -134,18 +126,22 @@ int main(int argc, char **argv)
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)term2, "reg2_"));
     PetscCall(TaoTermSetSolutionSizes(term2, PETSC_DECIDE, ctx.user->n, 1));
     PetscCall(TaoTermSetFromOptions(term2));
-    PetscCall(PetscObjectTypeCompare((PetscObject)term1, TAOTERMQUADRATIC, &is_quad));
-    if (is_quad) PetscCall(TaoTermQuadraticSetMat(term1, ctx.Q1));
     /* Store for callback implementation */
     ctx.term2        = term2;
     ctx.term2_params = term2_params_callback;
 
     if (term2_A) PetscCall(MatDuplicate(term2_A, MAT_COPY_VALUES, &ctx.term2_A_callback));
   }
-  if (ctx.use_term1 || ctx.use_term2) {
-    if (ctx.term1_has_A || ctx.term2_has_A) PetscCall(MatCreateVecs(ctx.term1_A_callback ?  ctx.term1_A_callback : ctx.term2_A_callback, NULL, &ctx.X_mapped));
-    else PetscCall(VecDuplicate(x_term, &ctx.X_mapped));
-    PetscCall(VecDuplicate(ctx.X_mapped, &ctx.G_mapped));
+
+  if (ctx.use_term1) {
+    if (ctx.term1_has_A) PetscCall(MatCreateVecs(ctx.term1_A_callback, NULL, &ctx.X_mapped1));
+    else PetscCall(VecDuplicate(x_term, &ctx.X_mapped1));
+    PetscCall(VecDuplicate(ctx.X_mapped1, &ctx.G_mapped1));
+  }
+  if (ctx.use_term2) {
+    if (ctx.term2_has_A) PetscCall(MatCreateVecs(ctx.term2_A_callback, NULL, &ctx.X_mapped2));
+    else PetscCall(VecDuplicate(x_term, &ctx.X_mapped2));
+    PetscCall(VecDuplicate(ctx.X_mapped2, &ctx.G_mapped2));
   }
 
   PetscCall(TaoSetFromOptions(tao_callback));
@@ -171,6 +167,7 @@ int main(int argc, char **argv)
     PetscCall(VecDestroy(&term2_params));
     PetscCall(MatDestroy(&term2_A));
     PetscCall(MatDestroy(&ctx.term2_A_callback));
+    PetscCall(VecDestroy(&ctx.term2_params));
     PetscCall(TaoTermDestroy(&term2));
   }
   PetscCall(TaoDestroy(&tao_term));
@@ -241,27 +238,30 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
 static PetscErrorCode TestCtxFinalize(TestCtx *ctx)
 {
   PetscFunctionBeginUser;
-  PetscCall(VecDestroy(&ctx->X_mapped));
-  PetscCall(VecDestroy(&ctx->G_mapped));
+  PetscCall(VecDestroy(&ctx->X_mapped1));
+  PetscCall(VecDestroy(&ctx->X_mapped2));
+  PetscCall(VecDestroy(&ctx->G_mapped1));
+  PetscCall(VecDestroy(&ctx->G_mapped2));
   PetscCall(AppCtxDestroy(&ctx->user));
   PetscCall(AppCtxDestroy(&ctx->user2));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec *params, Mat *A, const char *term_prefix, const char *A_prefix, const char *Q_prefix, PetscBool has_A, PetscBool has_params)
+static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec *params, Mat *A, const char *term_prefix, const char *A_prefix, PetscBool has_A, PetscBool has_params)
 {
   MPI_Comm      comm = ctx->user->comm;
-  PetscBool     is_quad;
+  PetscMPIInt   size;
 
   PetscFunctionBeginUser;
   *term   = NULL;
   *params = NULL;
   *A      = NULL;
 
+  PetscCallMPI(MPI_Comm_size(comm, &size));
   /* Create parameters if requested */
   if (has_params) {
     PetscCall(VecCreate(comm, params));
-    PetscCall(VecSetSizes(*params, PETSC_DECIDE, ctx->user->n));
+    PetscCall(VecSetSizes(*params, PETSC_DECIDE, has_A ? ctx->map_row_size : ctx->user->n));
     PetscCall(VecSetFromOptions(*params));
     PetscCall(VecSetRandom(*params, NULL));
   }
@@ -270,11 +270,12 @@ static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec 
   if (has_A) {
     PetscCall(MatCreate(comm, A));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*A, A_prefix));
-    PetscCall(MatSetSizes(*A, PETSC_DECIDE, PETSC_DECIDE, ctx->user->n, ctx->user->n));
+    PetscCall(MatSetSizes(*A, PETSC_DECIDE, PETSC_DECIDE, ctx->map_row_size, ctx->user->n));
     PetscCall(MatSetType(*A, MATAIJ)); /* Set default type before SetFromOptions */
     PetscCall(MatSetFromOptions(*A));
-    PetscCall(MatSeqAIJSetPreallocation(*A, 5, NULL));
-    PetscCall(MatMPIAIJSetPreallocation(*A, 5, NULL, 5, NULL));
+    /* Check matrix type and set up accordingly */
+    if (size == 1) PetscCall(MatSeqAIJSetPreallocation(*A, PETSC_DEFAULT, NULL));
+    else PetscCall(MatMPIAIJSetPreallocation(*A, 5, NULL, 5, NULL));
     PetscCall(MatSetUp(*A));
     PetscCall(MatSetRandom(*A, NULL));
     PetscCall(MatAssemblyBegin(*A, MAT_FINAL_ASSEMBLY));
@@ -284,28 +285,9 @@ static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec 
   /* Create TaoTerm, set prefix, and configure from options */
   PetscCall(TaoTermCreate(comm, term));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*term, term_prefix));
-  PetscCall(TaoTermSetSolutionSizes(*term, PETSC_DECIDE, ctx->user->n, 1));
+  PetscCall(TaoTermSetSolutionSizes(*term, PETSC_DECIDE, has_A ? ctx->map_row_size : ctx->user->n, 1));
   PetscCall(TaoTermSetFromOptions(*term));
 
-  /* For quadratic terms, set up the matrix after type is set */
-  PetscCall(PetscObjectTypeCompare((PetscObject)*term, TAOTERMQUADRATIC, &is_quad));
-  if (is_quad) {
-    Mat Aquad;
-    /* Create matrix for quadratic term */
-    PetscCall(MatCreate(comm, &Aquad));
-    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)Aquad, Q_prefix));
-    PetscCall(MatSetSizes(Aquad, PETSC_DECIDE, PETSC_DECIDE, ctx->user->n, ctx->user->n));
-    PetscCall(MatSetType(Aquad, MATAIJ)); /* Set default type before SetFromOptions */
-    PetscCall(MatSetFromOptions(Aquad));
-    PetscCall(MatSeqAIJSetPreallocation(Aquad, 5, NULL));
-    PetscCall(MatMPIAIJSetPreallocation(Aquad, 5, NULL, 5, NULL));
-    PetscCall(MatSetUp(Aquad));
-    PetscCall(MatSetRandom(Aquad, NULL));
-    PetscCall(MatAssemblyBegin(Aquad, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(Aquad, MAT_FINAL_ASSEMBLY));
-    PetscCall(TaoTermQuadraticSetMat(*term, Aquad));
-    PetscCall(MatDestroy(&Aquad));
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -350,10 +332,10 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
     if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   Adding term1 (scale_callback = %.19e)\n", (double)ctx->term1_scale_callback));
     /* Map X if needed */
     if (ctx->term1_A_callback) {
-      PetscCall(MatMult(ctx->term1_A_callback, X, ctx->X_mapped));
+      PetscCall(MatMult(ctx->term1_A_callback, X, ctx->X_mapped1));
       if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     X mapped through A1\n"));
     } else {
-      PetscCall(VecCopy(X, ctx->X_mapped));
+      PetscCall(VecCopy(X, ctx->X_mapped1));
       if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     No A1 mapping\n"));
     }
 
@@ -362,14 +344,14 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
       Vec       G_add;
       PetscReal gnorm_term, gnorm_add;
 
-      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, ctx->X_mapped, ctx->term1_params, &f_term, ctx->G_mapped));
+      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, ctx->X_mapped1, ctx->term1_params, &f_term, ctx->G_mapped1));
       if (ctx->print_debug_info) {
-        PetscCall(VecNorm(ctx->G_mapped, NORM_2, &gnorm_term));
+        PetscCall(VecNorm(ctx->G_mapped1, NORM_2, &gnorm_term));
         PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term1 raw: f_term = %.19e, ||G_term|| = %.19e\n", (double)f_term, (double)gnorm_term));
       }
       /* Map gradient back and add to G */
       PetscCall(VecDuplicate(X, &G_add));
-      PetscCall(MatMultTranspose(ctx->term1_A_callback, ctx->G_mapped, G_add));
+      PetscCall(MatMultTranspose(ctx->term1_A_callback, ctx->G_mapped1, G_add));
       if (ctx->print_debug_info) {
         PetscCall(VecNorm(G_add, NORM_2, &gnorm_add));
         PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     After A1^T mapping: ||G_add|| = %.19e\n", (double)gnorm_add));
@@ -381,7 +363,7 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
       PetscReal gnorm_term;
 
       PetscCall(VecDuplicate(X, &G_term));
-      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, ctx->X_mapped, ctx->term1_params, &f_term, G_term));
+      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, ctx->X_mapped1, ctx->term1_params, &f_term, G_term));
       if (ctx->print_debug_info) {
         PetscCall(VecNorm(G_term, NORM_2, &gnorm_term));
         PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term1 raw: f_term = %.19e, ||G_term|| = %.19e\n", (double)f_term, (double)gnorm_term));
@@ -401,10 +383,10 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
     if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   Adding term2 (scale_callback = %.19e)\n", (double)ctx->term2_scale_callback));
     /* Map X if needed */
     if (ctx->term2_A_callback) {
-      PetscCall(MatMult(ctx->term2_A_callback, X, ctx->X_mapped));
+      PetscCall(MatMult(ctx->term2_A_callback, X, ctx->X_mapped2));
       if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     X mapped through A2\n"));
     } else {
-      PetscCall(VecCopy(X, ctx->X_mapped));
+      PetscCall(VecCopy(X, ctx->X_mapped2));
       if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     No A2 mapping\n"));
     }
 
@@ -413,14 +395,14 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
       Vec       G_add;
       PetscReal gnorm_term, gnorm_add;
 
-      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, ctx->X_mapped, ctx->term2_params, &f_term, ctx->G_mapped));
+      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, ctx->X_mapped2, ctx->term2_params, &f_term, ctx->G_mapped2));
       if (ctx->print_debug_info) {
-        PetscCall(VecNorm(ctx->G_mapped, NORM_2, &gnorm_term));
+        PetscCall(VecNorm(ctx->G_mapped2, NORM_2, &gnorm_term));
         PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term2 raw: f_term = %.19e, ||G_term|| = %.19e\n", (double)f_term, (double)gnorm_term));
       }
       /* Map gradient back and add to G */
       PetscCall(VecDuplicate(X, &G_add));
-      PetscCall(MatMultTranspose(ctx->term2_A_callback, ctx->G_mapped, G_add));
+      PetscCall(MatMultTranspose(ctx->term2_A_callback, ctx->G_mapped2, G_add));
       if (ctx->print_debug_info) {
         PetscCall(VecNorm(G_add, NORM_2, &gnorm_add));
         PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     After A2^T mapping: ||G_add|| = %.19e\n", (double)gnorm_add));
@@ -431,7 +413,7 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
       Vec       G_term;
       PetscReal gnorm_term;
       PetscCall(VecDuplicate(X, &G_term));
-      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, ctx->X_mapped, ctx->term2_params, &f_term, G_term));
+      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, ctx->X_mapped2, ctx->term2_params, &f_term, G_term));
       if (ctx->print_debug_info) {
         PetscCall(VecNorm(G_term, NORM_2, &gnorm_term));
         PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term2 raw: f_term = %.19e, ||G_term|| = %.19e\n", (double)f_term, (double)gnorm_term));
@@ -459,6 +441,7 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
   TestCtx   *ctx = (TestCtx *)ptr;
   Mat       H_term;
   PetscReal hnorm;
+  PetscInt  m, n;
   PetscBool is_assembled;
 
   PetscFunctionBeginUser;
@@ -473,23 +456,23 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
 
   /* Add term 1 Hessian contribution */
   if (ctx->use_term1 && ctx->term1) {
-    PetscInt  m, n;
-    PetscReal hnorm_term;
     if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   Adding term1 Hessian (scale_callback = %.19e)\n", (double)ctx->term1_scale_callback));
     if (ctx->term1_A_callback) {
-      PetscCall(MatMult(ctx->term1_A_callback, X, ctx->X_mapped));
-      PetscCall(VecGetSize(ctx->X_mapped, &m));
+      PetscCall(MatMult(ctx->term1_A_callback, X, ctx->X_mapped1));
+      PetscCall(VecGetSize(ctx->X_mapped1, &m));
       PetscCall(MatCreate(ctx->user2->comm, &H_term));
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, m, m));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
+      if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     X mapped through A1, H_term created (%d x %d)\n", (int)m, (int)m));
     } else {
-      PetscCall(VecCopy(X, ctx->X_mapped));
+      PetscCall(VecCopy(X, ctx->X_mapped1));
       PetscCall(VecGetSize(X, &n));
       PetscCall(MatCreate(ctx->user2->comm, &H_term));
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, n, n));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
+      if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     No A1 mapping, H_term created (%d x %d)\n", (int)n, (int)n));
     }
     PetscCall(MatAssembled(H_term, &is_assembled));
     if (!is_assembled) {
@@ -497,7 +480,7 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatAssemblyEnd(H_term, MAT_FINAL_ASSEMBLY));
     }
 
-    PetscCall(TaoTermComputeHessian(ctx->term1, ctx->X_mapped, ctx->term1_params, H_term, NULL));
+    PetscCall(TaoTermComputeHessian(ctx->term1, ctx->X_mapped1, ctx->term1_params, H_term, NULL));
 
     if (ctx->term1_A_callback) {
       Mat H_mapped;
@@ -506,10 +489,6 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatDestroy(&H_term));
       PetscCall(MatTransposeMatMult(ctx->term1_A_callback, H_mapped, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &H_term));
       PetscCall(MatDestroy(&H_mapped));
-      if (ctx->print_debug_info) {
-        PetscCall(MatNorm(H_term, NORM_FROBENIUS, &hnorm_term));
-        PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     After A1^T * H_term * A1: ||H_term||_F = %.19e\n", (double)hnorm_term));
-      }
       PetscCall(MatScale(H_term, ctx->term1_scale_callback));
       PetscCall(MatAXPY(H, 1.0, H_term, DIFFERENT_NONZERO_PATTERN));
       PetscCall(MatDestroy(&H_term));
@@ -518,27 +497,21 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatAXPY(H, 1.0, H_term, DIFFERENT_NONZERO_PATTERN));
       PetscCall(MatDestroy(&H_term));
     }
-    if (ctx->print_debug_info) {
-      PetscCall(MatNorm(H, NORM_FROBENIUS, &hnorm));
-      PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     After adding scaled term1: ||H||_F = %.19e\n", (double)hnorm));
-    }
   }
 
   /* Add term 2 Hessian contribution */
   if (ctx->use_term2 && ctx->term2) {
-    PetscInt  m, n;
-    PetscReal hnorm_term;
     if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   Adding term2 Hessian (scale_callback = %.19e)\n", (double)ctx->term2_scale_callback));
     if (ctx->term2_A_callback) {
-      PetscCall(MatMult(ctx->term2_A_callback, X, ctx->X_mapped));
-      PetscCall(VecGetSize(ctx->X_mapped, &m));
+      PetscCall(MatMult(ctx->term2_A_callback, X, ctx->X_mapped2));
+      PetscCall(VecGetSize(ctx->X_mapped2, &m));
       PetscCall(MatCreate(ctx->user2->comm, &H_term));
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, m, m));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
       if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     X mapped through A2, H_term created (%d x %d)\n", (int)m, (int)m));
     } else {
-      PetscCall(VecCopy(X, ctx->X_mapped));
+      PetscCall(VecCopy(X, ctx->X_mapped2));
       PetscCall(VecGetSize(X, &n));
       PetscCall(MatCreate(ctx->user2->comm, &H_term));
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, n, n));
@@ -546,12 +519,13 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatSetUp(H_term));
       if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     No A2 mapping, H_term created (%d x %d)\n", (int)n, (int)n));
     }
-
-    PetscCall(TaoTermComputeHessian(ctx->term2, ctx->X_mapped, ctx->term2_params, H_term, NULL));
-    if (ctx->print_debug_info) {
-      PetscCall(MatNorm(H_term, NORM_FROBENIUS, &hnorm_term));
-      PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term2 raw Hessian: ||H_term||_F = %.19e\n", (double)hnorm_term));
+    PetscCall(MatAssembled(H_term, &is_assembled));
+    if (!is_assembled) {
+      PetscCall(MatAssemblyBegin(H_term, MAT_FINAL_ASSEMBLY));
+      PetscCall(MatAssemblyEnd(H_term, MAT_FINAL_ASSEMBLY));
     }
+
+    PetscCall(TaoTermComputeHessian(ctx->term2, ctx->X_mapped2, ctx->term2_params, H_term, NULL));
 
     if (ctx->term2_A_callback) {
       Mat H_mapped;
@@ -560,10 +534,6 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatDestroy(&H_term));
       PetscCall(MatTransposeMatMult(ctx->term2_A_callback, H_mapped, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &H_term));
       PetscCall(MatDestroy(&H_mapped));
-      if (ctx->print_debug_info) {
-        PetscCall(MatNorm(H_term, NORM_FROBENIUS, &hnorm_term));
-        PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     After A2^T * H_term * A2: ||H_term||_F = %.19e\n", (double)hnorm_term));
-      }
       PetscCall(MatScale(H_term, ctx->term2_scale_callback));
       PetscCall(MatAXPY(H, 1.0, H_term, DIFFERENT_NONZERO_PATTERN));
       PetscCall(MatDestroy(&H_term));
@@ -572,15 +542,6 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatAXPY(H, 1.0, H_term, DIFFERENT_NONZERO_PATTERN));
       PetscCall(MatDestroy(&H_term));
     }
-    if (ctx->print_debug_info) {
-      PetscCall(MatNorm(H, NORM_FROBENIUS, &hnorm));
-      PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     After adding scaled term2: ||H||_F = %.19e\n", (double)hnorm));
-    }
-  }
-
-  if (ctx->print_debug_info) {
-    PetscCall(MatNorm(H, NORM_FROBENIUS, &hnorm));
-    PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   FINAL: ||H||_F = %.19e\n", (double)hnorm));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -660,8 +621,7 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
       suffix: term1_l1_A
       nsize: {{1 2}}
       output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -term1_has_params {{0 1}}
-      args: -term1_has_A -A1_mat_type {{aij dense}} -tao_term_hessian_mat_type {{aij dense}}
+      args: -tao_type nls -use_term1 -term1_has_params {{0 1}} -term1_has_A
       args: -reg1_tao_term_type l1
       test:
          args: -term1_scale 0.012
@@ -685,8 +645,7 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
       suffix: term1_l2_A
       nsize: {{1 2}}
       output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -term1_has_params {{0 1}}
-      args: -term1_has_A -A1_mat_type {{aij dense}} -tao_term_hessian_mat_type {{aij dense}}
+      args: -tao_type nls -use_term1 -term1_has_params {{0 1}} -term1_has_A
       args: -reg1_tao_term_type halfl2squared
       test:
          args: -term1_scale 0.12
@@ -706,48 +665,7 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
       test:
          args: -tao_term_sum_reg1_scale 0.12 -term1_scale_callback 0.12
 
-   # QUADRATIC with A
-   testset:
-      suffix: term1_quad_A
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -term1_has_params {{0 1}}
-      args: -term1_has_A -A1_mat_type {{aij dense}} -tao_term_hessian_mat_type {{aij dense}}
-      args: -reg1_tao_term_type quadratic -Q1_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.12
-      test:
-         args: -tao_term_sum_reg1_scale 0.12 -term1_scale_callback 0.12
-
-   # QUADRATIC without A
-   testset:
-      suffix: term1_quad_no_A
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -term1_has_params {{0 1}}
-      args: -term1_has_A 0
-      args: -reg1_tao_term_type quadratic -Q1_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.12
-      test:
-         args: -tao_term_sum_reg1_scale 0.12 -term1_scale_callback 0.12
-
 # Two terms, with no mapping
-   testset:
-      suffix: l1_l1_no_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 0 -reg1_tao_term_type l1 -reg2_tao_term_type l1
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
    testset:
       suffix: l1_l2_no_A1_no_A2
       nsize: {{1 2}}
@@ -755,528 +673,60 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
       args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
       args: -term1_has_A 0 -term2_has_A 0 -reg1_tao_term_type l1 -reg2_tao_term_type halfl2squared
       test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
+         args: -term1_scale 0.123 -term2_scale 0.098
       test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.098 -term2_scale_callback 0.098
       test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.098
       test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.098 -term2_scale_callback 0.098
 
-   testset:
-      suffix: l1_quad_no_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 0 -reg1_tao_term_type l1 -reg2_tao_term_type quadratic -Q2_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l2_l1_no_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 0 -reg1_tao_term_type halfl2squared -reg2_tao_term_type l1
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l2_l2_no_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 0 -reg1_tao_term_type halfl2squared -reg2_tao_term_type halfl2squared
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l2_quad_no_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 0 -reg1_tao_term_type halfl2squared -reg2_tao_term_type quadratic -Q2_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: quad_l1_no_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 0 -reg1_tao_term_type quadratic -Q1_mat_type {{aij dense}} -reg2_tao_term_type l1
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: quad_l2_no_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 0 -reg1_tao_term_type quadratic -Q1_mat_type {{aij dense}} -reg2_tao_term_type halfl2squared
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: quad_quad_no_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 0 -reg1_tao_term_type quadratic -Q1_mat_type {{aij dense}}
-      args: -reg2_tao_term_type quadratic -Q2_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-
-# Two terms: term1 no A, term2 has A
-   testset:
-      suffix: l1_l1_no_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 1 -A2_mat_type {{aij dense}} -reg1_tao_term_type l1 -reg2_tao_term_type l1
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
+# Two terms, with one mapping
    testset:
       suffix: l1_l2_no_A1_A2
       nsize: {{1 2}}
       output_file: output/taotermtest1.out
       args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 1 -A2_mat_type {{aij dense}} -reg1_tao_term_type l1 -reg2_tao_term_type halfl2squared
+      args: -term1_has_A 0 -term2_has_A 1 -reg1_tao_term_type l1 -reg2_tao_term_type halfl2squared
       test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
+         args: -term1_scale 0.123 -term2_scale 0.098
       test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.098 -term2_scale_callback 0.098
       test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.098
       test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l1_quad_no_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 1 -A2_mat_type {{aij dense}} -reg1_tao_term_type l1 -reg2_tao_term_type quadratic -Q2_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.098 -term2_scale_callback 0.098
 
    testset:
       suffix: l2_l1_no_A1_A2
       nsize: {{1 2}}
       output_file: output/taotermtest1.out
       args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 1 -A2_mat_type {{aij dense}} -reg1_tao_term_type halfl2squared -reg2_tao_term_type l1
+      args: -term1_has_A 0 -term2_has_A 1 -reg1_tao_term_type halfl2squared -reg2_tao_term_type l1
       test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
+         args: -term1_scale 0.123 -term2_scale 0.098
       test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
+         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.098 -term2_scale_callback 0.098
       test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.098
       test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l2_l2_no_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 1 -A2_mat_type {{aij dense}} -reg1_tao_term_type halfl2squared -reg2_tao_term_type halfl2squared
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l2_quad_no_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 1 -A2_mat_type {{aij dense}} -reg1_tao_term_type halfl2squared -reg2_tao_term_type quadratic -Q2_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: quad_l1_no_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 1 -A2_mat_type {{aij dense}} -reg1_tao_term_type quadratic -reg2_tao_term_type l1 -Q1_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: quad_l2_no_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 1 -A2_mat_type {{aij dense}} -reg1_tao_term_type quadratic -reg2_tao_term_type halfl2squared -Q1_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: quad_quad_no_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 0 -term2_has_A 1 -A2_mat_type {{aij dense}} -reg1_tao_term_type quadratic -reg2_tao_term_type quadratic -Q1_mat_type {{aij dense}} -Q2_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-# Two terms: term1 has A, term2 no A
-   testset:
-      suffix: l1_l1_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 0 -A1_mat_type {{aij dense}} -reg1_tao_term_type l1 -reg2_tao_term_type l1
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l1_l2_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 0 -A1_mat_type {{aij dense}} -reg1_tao_term_type l1 -reg2_tao_term_type halfl2squared
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l1_quad_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 0 -A1_mat_type {{aij dense}} -reg1_tao_term_type l1 -reg2_tao_term_type quadratic -Q2_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l2_l1_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 0 -A1_mat_type {{aij dense}} -reg1_tao_term_type halfl2squared -reg2_tao_term_type l1
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l2_l2_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 0 -A1_mat_type {{aij dense}} -reg1_tao_term_type halfl2squared -reg2_tao_term_type halfl2squared
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l2_quad_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 0 -A1_mat_type {{aij dense}} -reg1_tao_term_type halfl2squared -reg2_tao_term_type quadratic -Q2_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: quad_l1_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 0 -A1_mat_type {{aij dense}} -reg1_tao_term_type quadratic -reg2_tao_term_type l1 -Q1_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: quad_l2_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 0 -A1_mat_type {{aij dense}} -reg1_tao_term_type quadratic -reg2_tao_term_type halfl2squared -Q1_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: quad_quad_A1_no_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 0 -A1_mat_type {{aij dense}} -reg1_tao_term_type quadratic -reg2_tao_term_type quadratic -Q1_mat_type {{aij dense}} -Q2_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
+         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.098 -term2_scale_callback 0.098
 
 # Two terms: term1 has A, term2 has A
-   testset:
-      suffix: l1_l1_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 1 -A1_mat_type {{aij dense}} -A2_mat_type {{aij dense}} -reg1_tao_term_type l1 -reg2_tao_term_type l1
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
    testset:
       suffix: l1_l2_A1_A2
       nsize: {{1 2}}
       output_file: output/taotermtest1.out
       args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 1 -A1_mat_type {{aij dense}} -A2_mat_type {{aij dense}} -reg1_tao_term_type l1 -reg2_tao_term_type halfl2squared
+      args: -term1_has_A 1 -term2_has_A 1 -reg1_tao_term_type l1 -reg2_tao_term_type halfl2squared
       test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
+         args: -term1_scale 0.075 -term2_scale 0.098
       test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
+         args: -term1_scale 0.075 -tao_term_sum_reg2_scale 0.098 -term2_scale_callback 0.098
       test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
+         args: -tao_term_sum_reg1_scale 0.075 -term1_scale_callback 0.075 -term2_scale 0.098
       test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l1_quad_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 1 -A1_mat_type {{aij dense}} -A2_mat_type {{aij dense}} -reg1_tao_term_type l1 -reg2_tao_term_type quadratic -Q2_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l2_l1_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 1 -A1_mat_type {{aij dense}} -A2_mat_type {{aij dense}} -reg1_tao_term_type halfl2squared -reg2_tao_term_type l1
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l2_l2_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 1 -A1_mat_type {{aij dense}} -A2_mat_type {{aij dense}} -reg1_tao_term_type halfl2squared -reg2_tao_term_type halfl2squared
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: l2_quad_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 1 -A1_mat_type {{aij dense}} -A2_mat_type {{aij dense}} -reg1_tao_term_type halfl2squared -reg2_tao_term_type quadratic -Q2_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: quad_l1_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 1 -A1_mat_type {{aij dense}} -A2_mat_type {{aij dense}} -reg1_tao_term_type quadratic -reg2_tao_term_type l1 -Q1_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: quad_l2_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 1 -A1_mat_type {{aij dense}} -A2_mat_type {{aij dense}} -reg1_tao_term_type quadratic -reg2_tao_term_type halfl2squared -Q1_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-
-   testset:
-      suffix: quad_quad_A1_A2
-      nsize: {{1 2}}
-      output_file: output/taotermtest1.out
-      args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
-      args: -term1_has_A 1 -term2_has_A 1 -A1_mat_type {{aij dense}} -A2_mat_type {{aij dense}} -reg1_tao_term_type quadratic -reg2_tao_term_type quadratic -Q1_mat_type {{aij dense}} -Q2_mat_type {{aij dense}}
-      test:
-         args: -term1_scale 0.123 -term2_scale 0.1852
-      test:
-         args: -term1_scale 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -term2_scale 0.1852
-      test:
-         args: -tao_term_sum_reg1_scale 0.123 -term1_scale_callback 0.123 -tao_term_sum_reg2_scale 0.1852 -term2_scale_callback 0.1852
+         args: -tao_term_sum_reg1_scale 0.075 -term1_scale_callback 0.075 -tao_term_sum_reg2_scale 0.098 -term2_scale_callback 0.098
 
 TEST*/
 
