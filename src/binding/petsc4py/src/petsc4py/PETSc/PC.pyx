@@ -404,7 +404,7 @@ cdef class PC(Object):
         Notes
         -----
         Using this directly is rarely needed, the preferred, and equivalent, usage
-        is `KSP.setOperators()`
+        is to call `KSP.setOperators`.
 
         See Also
         --------

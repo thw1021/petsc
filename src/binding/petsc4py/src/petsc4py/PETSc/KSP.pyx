@@ -825,7 +825,7 @@ cdef class KSP(Object):
 
         Notes
         -----
-        This is equivalent to `pc = ksp.getPC(); pc.setOperators(A, P)`
+        This is equivalent to ``pc = ksp.getPC(); pc.setOperators(A, P)``
         but is the preferred approach.
 
         If you know the operator ``A`` has a null space you can use

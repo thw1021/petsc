@@ -1250,7 +1250,7 @@ PetscErrorCode PCModifySubMatrices(PC pc, PetscInt nsub, const IS row[], const I
   Level: advanced
 
   Notes:
-  Using this routine directly is rarely needed, the preferred, and equivalent, usage is `KSPSetOperators()`
+  Using this routine directly is rarely needed, the preferred, and equivalent, usage is `KSPSetOperators()`.
 
   Passing a `NULL` for `Amat` or `Pmat` removes the matrix that is currently used.
 
