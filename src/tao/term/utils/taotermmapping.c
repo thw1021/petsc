@@ -169,42 +169,6 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeObjectiveAndGradient(TaoTermMap
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermMappingMatPtAP_Internal(Mat unmapped_H, Mat map, Mat mapped_H)
-{
-  Mat            A, P;
-  MatProductType prod_type;
-
-  PetscFunctionBegin;
-  PetscCall(MatProductGetType(mapped_H, &prod_type));
-  if (prod_type != MATPRODUCT_PtAP && prod_type != MATPRODUCT_UNSPECIFIED) PetscCall(MatProductClear(mapped_H));
-  PetscCall(MatProductGetMats(mapped_H, &A, &P, NULL));
-  if (A != unmapped_H || P != map) {
-    PetscBool is_assembled;
-
-    PetscCall(MatAssembled(unmapped_H, &is_assembled));
-    if (!is_assembled) {
-      PetscCall(MatAssemblyBegin(unmapped_H, MAT_FINAL_ASSEMBLY));
-      PetscCall(MatAssemblyEnd(unmapped_H, MAT_FINAL_ASSEMBLY));
-    }
-    PetscCall(MatAssembled(map, &is_assembled));
-    if (!is_assembled) {
-      PetscCall(MatAssemblyBegin(map, MAT_FINAL_ASSEMBLY));
-      PetscCall(MatAssemblyEnd(map, MAT_FINAL_ASSEMBLY));
-    }
-    PetscCall(MatAssembled(mapped_H, &is_assembled));
-    if (!is_assembled) {
-      PetscCall(MatAssemblyBegin(mapped_H, MAT_FINAL_ASSEMBLY));
-      PetscCall(MatAssemblyEnd(mapped_H, MAT_FINAL_ASSEMBLY));
-    }
-    PetscCall(MatProductCreateWithMat(unmapped_H, map, NULL, mapped_H));
-    PetscCall(MatProductSetType(mapped_H, MATPRODUCT_PtAP));
-    PetscCall(MatProductSetFromOptions(mapped_H));
-    PetscCall(MatProductSymbolic(mapped_H));
-  }
-  PetscCall(MatProductNumeric(mapped_H));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode TaoTermMappingMatPtAP(Mat unmapped_H, Mat map, Mat mapped_H, Mat work)
 {
   PetscBool is_uH_diag, is_map_diag, is_uH_cdiag, is_map_cdiag;
@@ -386,16 +350,9 @@ PETSC_INTERN PetscErrorCode TaoTermMappingComputeHessian(TaoTermMapping *mt, Vec
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(TaoTermMappingMap(mt, x, &Ax));
-#if 1
   PetscCall(TaoTermMappingGetHessians(mt, mode, H, Hpre, &mapped_H, &mapped_Hpre, &unmapped_H, &unmapped_Hpre));
   PetscCall(TaoTermComputeHessian(mt->term, Ax, params, unmapped_H, unmapped_Hpre));
   PetscCall(TaoTermMappingSetHessians(mt, mode, H, Hpre, mapped_H, mapped_Hpre, unmapped_H, unmapped_Hpre));
-#else
-  //TODO if TAOTERMSUM, assuming that tao->hessian == H == mt->_unmapped_H == mt->_mapped_H. Is this true?
-  //What about n_terms == 1? TODO
-  PetscCall(TaoTermComputeHessian(mt->term, Ax, params, mt->_unmapped_H, mt->_unmapped_Hpre));
-  PetscCall(TaoTermMappingSetHessians(mt, mode, H, Hpre, mt->_mapped_H, mt->_mapped_Hpre, mt->_unmapped_H, mt->_unmapped_Hpre));
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -433,7 +390,6 @@ static PetscErrorCode TaoTermMappingCreateAPWorkMatrix(Mat map, Mat unmapped, Ma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-//TODO MatProduct v fragile? aij-aij doesn't work....
 static PetscErrorCode TaoTermMappingCreatePtAP(Mat unmapped_H, Mat map, Mat *H)
 {
   PetscBool is_uH_diag, is_map_diag, is_uH_cdiag;
@@ -454,15 +410,15 @@ static PetscErrorCode TaoTermMappingCreatePtAP(Mat unmapped_H, Mat map, Mat *H)
   } else if (is_uH_diag) {
     PetscCall(MatTransposeMatMult(map, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
   } else {
-    PetscCall(MatPtAP(unmapped_H, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
-    //    PetscCall(MatProductCreate(unmapped_H, map, NULL, H));
-    //    PetscCall(MatProductSetType(*H, MATPRODUCT_PtAP));
-    //    PetscCall(MatProductSetFromOptions(*H));
-    //    PetscCall(MatProductSymbolic(*H));
-    //    PetscCall(MatProductNumeric(*H));
-    //    PetscCall(MatZeroEntries(*H));
-    //    PetscCall(MatAssemblyBegin(*H, MAT_FINAL_ASSEMBLY));
-    //    PetscCall(MatAssemblyEnd(*H, MAT_FINAL_ASSEMBLY));
+    //PetscCall(MatPtAP(unmapped_H, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
+    PetscCall(MatProductCreate(unmapped_H, map, NULL, H));
+    PetscCall(MatProductSetType(*H, MATPRODUCT_PtAP));
+    PetscCall(MatProductSetFromOptions(*H));
+    PetscCall(MatProductSymbolic(*H));
+    PetscCall(MatProductNumeric(*H));
+    PetscCall(MatZeroEntries(*H));
+    PetscCall(MatAssemblyBegin(*H, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(*H, MAT_FINAL_ASSEMBLY));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
