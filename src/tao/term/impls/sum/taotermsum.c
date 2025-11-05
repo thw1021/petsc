@@ -1262,7 +1262,7 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Sum(TaoTerm term, Mat *H, Mat
 
   Note:
   The default Hessian creation mode (see `TaoTermGetCreateHessianMode()`) is `H == Hpre` and `TaoTermCreateHessianMatrices()`
-  will create a `MATDENSE`.
+  will create a `MATAIJ`.
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -1289,8 +1289,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Sum(TaoTerm term)
   term->H_mattype    = NULL;
   term->Hpre_mattype = NULL;
 
-  PetscCall(PetscStrallocpy(MATDENSE, (char **)&term->H_mattype));
-  PetscCall(PetscStrallocpy(MATDENSE, (char **)&term->Hpre_mattype));
+  PetscCall(PetscStrallocpy(MATAIJ, (char **)&term->H_mattype));
+  PetscCall(PetscStrallocpy(MATAIJ, (char **)&term->Hpre_mattype));
   term->Hpre_is_H = PETSC_TRUE;
 
   term->ops->destroy               = TaoTermDestroy_Sum;

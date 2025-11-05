@@ -234,8 +234,8 @@ static PetscErrorCode TestCtxFinalize(TestCtx *ctx)
 
 static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec *params, Mat *A, const char *term_prefix, const char *A_prefix, PetscBool has_A, PetscBool has_params)
 {
-  MPI_Comm      comm = ctx->user->comm;
-  PetscMPIInt   size;
+  MPI_Comm    comm = ctx->user->comm;
+  PetscMPIInt size;
 
   PetscFunctionBeginUser;
   *term   = NULL;
@@ -295,7 +295,7 @@ static PetscErrorCode FormHessian_TaoTerm(Tao tao, Vec X, Mat H, Mat Hpre, void 
 /* Form function and gradient for callback version (Rosenbrock + terms manually) */
 static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
 {
-  TestCtx   *ctx = (TestCtx *)ptr;
+  TestCtx  *ctx = (TestCtx *)ptr;
   PetscReal f_term;
 
   PetscFunctionBeginUser;
@@ -315,7 +315,6 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
     } else {
       PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, ctx->X_mapped1, ctx->term1_params, &f_term, ctx->G_work));
       PetscCall(VecAXPY(G, ctx->term1_scale_callback, ctx->G_work));
-      PetscCall(VecDestroy(&ctx->G_work));
     }
     *f += ctx->term1_scale_callback * f_term;
   }
@@ -332,11 +331,9 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
       /* Map gradient back and add to G */
       PetscCall(MatMultTranspose(ctx->term2_A_callback, ctx->G_mapped2, ctx->G_work));
       PetscCall(VecAXPY(G, ctx->term2_scale_callback, ctx->G_work));
-      PetscCall(VecDestroy(&ctx->G_work));
     } else {
       PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, ctx->X_mapped2, ctx->term2_params, &f_term, ctx->G_work));
       PetscCall(VecAXPY(G, ctx->term2_scale_callback, ctx->G_work));
-      PetscCall(VecDestroy(&ctx->G_work));
     }
     *f += ctx->term2_scale_callback * f_term;
   }
@@ -346,7 +343,7 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
 /* Form Hessian for callback version (Rosenbrock + terms manually) */
 static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
 {
-  TestCtx   *ctx = (TestCtx *)ptr;
+  TestCtx  *ctx = (TestCtx *)ptr;
   Mat       H_term;
   PetscInt  m, n;
   PetscBool is_assembled;
@@ -603,4 +600,3 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
          args: -tao_term_sum_reg1_scale 0.075 -term1_scale_callback 0.075 -tao_term_sum_reg2_scale 0.098 -term2_scale_callback 0.098
 
 TEST*/
-
