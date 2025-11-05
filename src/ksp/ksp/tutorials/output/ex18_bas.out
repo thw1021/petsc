@@ -28,7 +28,7 @@ PC Object: 1 MPI process
           package used to perform factorization: bas
           total: nonzeros=1020, allocated nonzeros=1020
               block size is 1
-  linear system matrix = precond matrix:
+  linear system matrix, which is also used to construct the preconditioner, follows:
   Mat Object: 1 MPI process
     type: seqaij
     rows=221, cols=221

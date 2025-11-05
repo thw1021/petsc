@@ -37,7 +37,7 @@ Tao Object: 1 MPI process
             package used to perform factorization: petsc
             total: nonzeros=228, allocated nonzeros=228
               not using I-node routines
-    linear system matrix = precond matrix:
+    linear system matrix, which is also used to construct the preconditioner, follows:
     Mat Object: 1 MPI process
       type: seqaij
       rows=40, cols=40

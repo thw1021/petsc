@@ -18,7 +18,7 @@ PC Object: 1 MPI process
           rows=3, cols=3
           package used to perform factorization: spqr
           total: nonzeros=6, allocated nonzeros=6
-  linear system matrix followed by preconditioner matrix:
+  linear system matrix, followed by the matrix used to construct the preconditioner, follows:
   Mat Object: 1 MPI process
     type: seqaij
     rows=8, cols=3
@@ -49,7 +49,7 @@ PC Object: 1 MPI process
           package used to perform factorization: petsc
           total: nonzeros=6, allocated nonzeros=6
               block size is 1
-  linear system matrix followed by preconditioner matrix:
+  linear system matrix, followed by the matrix used to construct the preconditioner, follows:
   Mat Object: 1 MPI process
     type: seqaij
     rows=8, cols=3

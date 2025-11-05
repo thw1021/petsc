@@ -50,7 +50,7 @@ TS Object: 1 MPI process
               package used to perform factorization: petsc
               total: nonzeros=9, allocated nonzeros=9
                 using I-node routines: found 1 nodes, limit used is 5
-      linear system matrix = precond matrix:
+      linear system matrix, which is also used to construct the preconditioner, follows:
       Mat Object: 1 MPI process
         type: seqaij
         rows=3, cols=3

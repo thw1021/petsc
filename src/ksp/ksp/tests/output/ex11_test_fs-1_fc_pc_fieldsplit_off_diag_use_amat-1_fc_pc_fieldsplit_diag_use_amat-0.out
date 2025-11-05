@@ -104,7 +104,7 @@ PC Object: (fc_) 1 MPI process
                 package used to perform factorization: petsc
                 total: nonzeros=81520, allocated nonzeros=81520
                     block size is 1
-        linear system matrix = precond matrix:
+        linear system matrix, which is also used to construct the preconditioner, follows:
         Mat Object: (fc_fieldsplit_velocity_) 1 MPI process
           type: seqaij
           rows=2046, cols=2046, bs=2
@@ -143,7 +143,7 @@ PC Object: (fc_) 1 MPI process
                     package used to perform factorization: petsc
                     total: nonzeros=4930, allocated nonzeros=4930
                         block size is 1
-            linear system matrix = precond matrix:
+            linear system matrix, which is also used to construct the preconditioner, follows:
             Mat Object: 1 MPI process
               type: seqaij
               rows=1024, cols=1024
@@ -151,7 +151,7 @@ PC Object: (fc_) 1 MPI process
               total number of mallocs used during MatSetValues calls=0
                 has attached null space
                 not using I-node routines
-        linear system matrix followed by preconditioner matrix:
+        linear system matrix, followed by the matrix used to construct the preconditioner, follows:
         Mat Object: (fc_fieldsplit_pressure_) 1 MPI process
           type: schurcomplement
           rows=1024, cols=1024
@@ -185,7 +185,7 @@ PC Object: (fc_) 1 MPI process
           total: nonzeros=1024, allocated nonzeros=1024
           total number of mallocs used during MatSetValues calls=0
             not using I-node routines
-  linear system matrix followed by preconditioner matrix:
+  linear system matrix, followed by the matrix used to construct the preconditioner, follows:
   Mat Object: 1 MPI process
     type: nest
     rows=3070, cols=3070
@@ -293,7 +293,7 @@ PC Object: (fc_) 1 MPI process
                 package used to perform factorization: petsc
                 total: nonzeros=81520, allocated nonzeros=81520
                     block size is 1
-        linear system matrix = precond matrix:
+        linear system matrix, which is also used to construct the preconditioner, follows:
         Mat Object: (fc_fieldsplit_velocity_) 1 MPI process
           type: seqaij
           rows=2046, cols=2046, bs=2
@@ -332,7 +332,7 @@ PC Object: (fc_) 1 MPI process
                     package used to perform factorization: petsc
                     total: nonzeros=4930, allocated nonzeros=4930
                         block size is 1
-            linear system matrix = precond matrix:
+            linear system matrix, which is also used to construct the preconditioner, follows:
             Mat Object: 1 MPI process
               type: seqaij
               rows=1024, cols=1024
@@ -340,7 +340,7 @@ PC Object: (fc_) 1 MPI process
               total number of mallocs used during MatSetValues calls=0
                 has attached null space
                 not using I-node routines
-        linear system matrix followed by preconditioner matrix:
+        linear system matrix, followed by the matrix used to construct the preconditioner, follows:
         Mat Object: (fc_fieldsplit_pressure_) 1 MPI process
           type: schurcomplement
           rows=1024, cols=1024
@@ -374,7 +374,7 @@ PC Object: (fc_) 1 MPI process
           total: nonzeros=1024, allocated nonzeros=1024
           total number of mallocs used during MatSetValues calls=0
             not using I-node routines
-  linear system matrix followed by preconditioner matrix:
+  linear system matrix, followed by the matrix used to construct the preconditioner, follows:
   Mat Object: 1 MPI process
     type: nest
     rows=3070, cols=3070

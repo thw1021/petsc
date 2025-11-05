@@ -33,7 +33,7 @@ PC Object: 1 MPI process
           package used to perform factorization: petsc
           total: nonzeros=156, allocated nonzeros=156
             not using I-node routines
-  linear system matrix = precond matrix:
+  linear system matrix, which is also used to construct the preconditioner, follows:
   Mat Object: 1 MPI process
     type: seqaijperm
     rows=36, cols=36

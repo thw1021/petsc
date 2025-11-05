@@ -53,7 +53,7 @@ SNES Object: 1 MPI process
                 package used to perform factorization: petsc
                 total: nonzeros=14, allocated nonzeros=14
                   using I-node routines: found 3 nodes, limit used is 5
-        linear system matrix = precond matrix:
+        linear system matrix, which is also used to construct the preconditioner, follows:
         Mat Object: 1 MPI process
           type: seqaij
           rows=4, cols=4
@@ -83,7 +83,7 @@ SNES Object: 1 MPI process
                 package used to perform factorization: petsc
                 total: nonzeros=73, allocated nonzeros=73
                   not using I-node routines
-        linear system matrix = precond matrix:
+        linear system matrix, which is also used to construct the preconditioner, follows:
         Mat Object: 1 MPI process
           type: seqaij
           rows=15, cols=15
@@ -114,7 +114,7 @@ SNES Object: 1 MPI process
                 package used to perform factorization: petsc
                 total: nonzeros=347, allocated nonzeros=347
                   not using I-node routines
-        linear system matrix = precond matrix:
+        linear system matrix, which is also used to construct the preconditioner, follows:
         Mat Object: 1 MPI process
           type: seqaij
           rows=59, cols=59
@@ -145,7 +145,7 @@ SNES Object: 1 MPI process
                 package used to perform factorization: petsc
                 total: nonzeros=1457, allocated nonzeros=1457
                   not using I-node routines
-        linear system matrix = precond matrix:
+        linear system matrix, which is also used to construct the preconditioner, follows:
         Mat Object: 1 MPI process
           type: seqaij
           rows=225, cols=225
@@ -153,7 +153,7 @@ SNES Object: 1 MPI process
           total number of mallocs used during MatSetValues calls=0
             not using I-node routines
     Up solver (post-smoother) same as down solver (pre-smoother)
-    linear system matrix = precond matrix:
+    linear system matrix, which is also used to construct the preconditioner, follows:
     Mat Object: 1 MPI process
       type: seqaij
       rows=225, cols=225

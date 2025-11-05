@@ -40,7 +40,7 @@ PC Object: (beta_) 2 MPI processes
               INFOG(37) (after analysis: estimated size of all MUMPS internal data for running BLR in-core - sum over all processors): 0
               INFOG(38) (after analysis: estimated size of all MUMPS internal data for running BLR out-of-core - value on the most memory consuming processor): 0
               INFOG(39) (after analysis: estimated size of all MUMPS internal data for running BLR out-of-core - sum over all processors): 0
-  linear system matrix = precond matrix:
+  linear system matrix, which is also used to construct the preconditioner, follows:
   Mat Object: (alpha_) 2 MPI processes
     type: mpiaij
     rows=4, cols=4
@@ -89,7 +89,7 @@ PC Object: (beta_) 2 MPI processes
               INFOG(37) (after analysis: estimated size of all MUMPS internal data for running BLR in-core - sum over all processors): 0
               INFOG(38) (after analysis: estimated size of all MUMPS internal data for running BLR out-of-core - value on the most memory consuming processor): 0
               INFOG(39) (after analysis: estimated size of all MUMPS internal data for running BLR out-of-core - sum over all processors): 0
-  linear system matrix = precond matrix:
+  linear system matrix, which is also used to construct the preconditioner, follows:
   Mat Object: (gamma_) 2 MPI processes
     type: mpiaij
     rows=4, cols=4
