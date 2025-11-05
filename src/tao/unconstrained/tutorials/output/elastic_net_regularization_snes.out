@@ -1,15 +1,15 @@
-iter =   0, Function value 153.798, Residual: 132.652 
-iter =   1, Function value 19.6011, Residual: 1.73948 
-iter =   2, Function value 19.561, Residual: 0.0252063 
-iter =   3, Function value 19.561, Residual: 2.02678e-05 
-iter =   4, Function value 19.561, Residual: < 1.0e-6 
+iter =   0, Function value 153.798, Residual: 132.652
+iter =   1, Function value 19.6011, Residual: 1.73952
+iter =   2, Function value 19.561, Residual: 0.0251996
+iter =   3, Function value 19.561, Residual: 2.02571e-05
+iter =   4, Function value 19.561, Residual: < 1.0e-6
 Tao Object: 1 MPI process
   type: snes
   SNES Object: 1 MPI process
     type: newtonls
     maximum iterations=50, maximum function evaluations=10000
     tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
-    total number of linear solver iterations=44
+    total number of linear solver iterations=4
     total number of function evaluations=5
     norm schedule ALWAYS
     SNESLineSearch Object: 1 MPI process
@@ -28,11 +28,27 @@ Tao Object: 1 MPI process
       left preconditioning
       using PRECONDITIONED norm type for convergence test
     PC Object: 1 MPI process
-      type: none
+      type: icc
+        out-of-place factorization
+        0 levels of fill
+        tolerance for zero pivot 2.22045e-14
+        using Manteuffel shift [POSITIVE_DEFINITE]
+        matrix ordering: natural
+        factor fill ratio given 1., needed 1.
+          Factored matrix follows:
+            Mat Object: 1 MPI process
+              type: seqsbaij
+              rows=20, cols=20
+              package used to perform factorization: petsc
+              total: nonzeros=210, allocated nonzeros=210
+                  block size is 1
       linear system matrix = precond matrix:
       Mat Object: 1 MPI process
-        type: shell
+        type: seqaij
         rows=20, cols=20
+        total: nonzeros=400, allocated nonzeros=400
+        total number of mallocs used during MatSetValues calls=0
+          using I-node routines: found 4 nodes, limit used is 5
   Objective function:
     TaoTerm Object: 1 MPI process
       type: sum
@@ -73,7 +89,7 @@ Tao Object: 1 MPI process
           total: nonzeros=200, allocated nonzeros=200
           total number of mallocs used during MatSetValues calls=0
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=1.00975e-10
+  Residual in Function/Gradient:=1.33266e-11
   Objective value=19.561
   total number of iterations=4,                          (max: 10000)
   total number of function evaluations=13,                  (max: unlimited)

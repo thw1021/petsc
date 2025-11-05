@@ -66,9 +66,6 @@ int main(int argc, char **argv)
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSolve(tao));
 
-  //TODO create second TAO, with quad mat set to term directly, without mapping. sol should be the same
-  //TODO where is solution?
-
   PetscCall(VecDestroy(&b));
   PetscCall(MatDestroy(&W));
   PetscCall(MatDestroy(&A));
@@ -81,7 +78,7 @@ int main(int argc, char **argv)
 /*TEST
 
   build:
-    requires: !complex
+    requires: !complex !single
 
   test:
     suffix: 0

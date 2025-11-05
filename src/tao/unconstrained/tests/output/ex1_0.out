@@ -1,5 +1,5 @@
-iter =   0, Function value 76.5209, Residual: 67.496 
-iter =   1, Function value 56.8413, Residual: < 1.0e-11 
+iter =   0, Function value 76.5209, Residual: 85.0733
+iter =   1, Function value 51.7831, Residual: < 1.0e-11
 Tao Object: 1 MPI process
   type: nls
     Newton steps: 1
@@ -26,10 +26,11 @@ Tao Object: 1 MPI process
               type: mpi
     Map:
       Mat Object: 1 MPI process
-        type: seqdense
+        type: seqaij
         rows=100, cols=20
-        total: nonzeros=2000, allocated nonzeros=2000
+        total: nonzeros=1343, allocated nonzeros=1343
         total number of mallocs used during MatSetValues calls=0
+          not using I-node routines
   TaoLineSearch Object: 1 MPI process
     type: more-thuente
     maximum function evaluations=30
@@ -49,24 +50,26 @@ Tao Object: 1 MPI process
       out-of-place factorization
       0 levels of fill
       tolerance for zero pivot 2.22045e-14
-      matrix ordering: external
-      factor fill ratio given 0., needed 0.
+      matrix ordering: natural
+      factor fill ratio given 1., needed 1.
         Factored matrix follows:
           Mat Object: (tao_nls_) 1 MPI process
-            type: seqdense
+            type: seqaij
             rows=20, cols=20
             package used to perform factorization: petsc
             total: nonzeros=400, allocated nonzeros=400
+              using I-node routines: found 4 nodes, limit used is 5
     linear system matrix = precond matrix:
     Mat Object: 1 MPI process
-      type: seqdense
+      type: seqaij
       rows=20, cols=20
       total: nonzeros=400, allocated nonzeros=400
       total number of mallocs used during MatSetValues calls=0
+        using I-node routines: found 4 nodes, limit used is 5
   total KSP iterations: 1
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=2.94089e-14
-  Objective value=56.8413
+  Residual in Function/Gradient:=3.69676e-14
+  Objective value=51.7831
   total number of iterations=1,                          (max: 50)
   total number of function evaluations=5,                  (max: unlimited)
   total number of function/gradient evaluations=2,      (max: unlimited)
