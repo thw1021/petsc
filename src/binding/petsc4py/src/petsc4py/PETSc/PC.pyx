@@ -401,6 +401,11 @@ cdef class PC(Object):
             the matrix to be used in constructing the preconditioner, usually
             the same as ``A``
 
+        Notes
+        -----
+        Using this directly is rarely needed, the preferred, and equivalent, usage
+        is `KSP.setOperators()`
+
         See Also
         --------
         petsc.PCSetOperators
