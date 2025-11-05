@@ -21,7 +21,7 @@ PC Object: 1 MPI process
           package used to perform factorization: petsc
           total: nonzeros=5, allocated nonzeros=5
             not using I-node routines
-  linear system matrix = precond matrix:
+  linear system matrix, which is also used to construct the preconditioner, follows:
   Mat Object: 1 MPI process
     type: seqaij
     rows=3, cols=3
@@ -51,7 +51,7 @@ PC Object: 1 MPI process
           package used to perform factorization: petsc
           total: nonzeros=5, allocated nonzeros=5
             not using I-node routines
-  linear system matrix = precond matrix:
+  linear system matrix, which is also used to construct the preconditioner, follows:
   Mat Object: 1 MPI process
     type: seqaij
     rows=3, cols=3

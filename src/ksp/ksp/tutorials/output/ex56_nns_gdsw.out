@@ -47,14 +47,14 @@ PC Object: 8 MPI processes
                   package used to perform factorization: petsc
                   total: nonzeros=10404, allocated nonzeros=10404
                     using I-node routines: found 21 nodes, limit used is 5
-          linear system matrix = precond matrix:
+          linear system matrix, which is also used to construct the preconditioner, follows:
           Mat Object: 1 MPI process
             type: seqaij
             rows=102, cols=102
             total: nonzeros=10404, allocated nonzeros=10404
             total number of mallocs used during MatSetValues calls=0
               using I-node routines: found 21 nodes, limit used is 5
-      linear system matrix = precond matrix:
+      linear system matrix, which is also used to construct the preconditioner, follows:
       Mat Object: 8 MPI processes
         type: mpiaij
         rows=102, cols=102
@@ -108,14 +108,14 @@ PC Object: 8 MPI processes
                   package used to perform factorization: petsc
                   total: nonzeros=576, allocated nonzeros=576
                     using I-node routines: found 5 nodes, limit used is 5
-          linear system matrix = precond matrix:
+          linear system matrix, which is also used to construct the preconditioner, follows:
           Mat Object: (mg_levels_1_sub_) 1 MPI process
             type: seqaij
             rows=24, cols=24, bs=3
             total: nonzeros=576, allocated nonzeros=576
             total number of mallocs used during MatSetValues calls=0
               using I-node routines: found 5 nodes, limit used is 5
-      linear system matrix = precond matrix:
+      linear system matrix, which is also used to construct the preconditioner, follows:
       Mat Object: 8 MPI processes
         type: mpiaij
         rows=192, cols=192, bs=3
@@ -124,7 +124,7 @@ PC Object: 8 MPI processes
           has attached near null space
           using I-node (on process 0) routines: found 5 nodes, limit used is 5
   Up solver (post-smoother) same as down solver (pre-smoother)
-  linear system matrix = precond matrix:
+  linear system matrix, which is also used to construct the preconditioner, follows:
   Mat Object: 8 MPI processes
     type: mpiaij
     rows=192, cols=192, bs=3

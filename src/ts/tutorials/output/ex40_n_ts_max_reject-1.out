@@ -56,7 +56,7 @@ TS Object: 1 MPI process
               rows=2, cols=2
               package used to perform factorization: petsc
               total: nonzeros=4, allocated nonzeros=4
-      linear system matrix = precond matrix:
+      linear system matrix, which is also used to construct the preconditioner, follows:
       Mat Object: 1 MPI process
         type: seqdense
         rows=2, cols=2

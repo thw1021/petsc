@@ -54,7 +54,7 @@ PC Object: 1 MPI process
               Common.ndbounds_hit      0. (number of times diagonal was modified by dbound)
               Common.rowfacfl          0. (number of flops in last call to cholmod_rowfac)
               Common.aatfl             0. (number of flops to compute A(:,f)*A(:,f)')
-  linear system matrix = precond matrix:
+  linear system matrix, which is also used to construct the preconditioner, follows:
   Mat Object: 1 MPI process
     type: seqaij
     rows=512, cols=512

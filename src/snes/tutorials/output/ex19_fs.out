@@ -566,7 +566,7 @@ SNES Object: 1 MPI process
               package used to perform factorization: petsc
               total: nonzeros=14065, allocated nonzeros=14065
                 not using I-node routines
-      linear system matrix = precond matrix:
+      linear system matrix, which is also used to construct the preconditioner, follows:
       Mat Object: (fieldsplit_x_velocity_) 1 MPI process
         type: seqaij
         rows=625, cols=625
@@ -593,7 +593,7 @@ SNES Object: 1 MPI process
               package used to perform factorization: petsc
               total: nonzeros=14065, allocated nonzeros=14065
                 not using I-node routines
-      linear system matrix = precond matrix:
+      linear system matrix, which is also used to construct the preconditioner, follows:
       Mat Object: (fieldsplit_y_velocity_) 1 MPI process
         type: seqaij
         rows=625, cols=625
@@ -621,7 +621,7 @@ SNES Object: 1 MPI process
               package used to perform factorization: petsc
               total: nonzeros=3025, allocated nonzeros=3025
                 not using I-node routines
-      linear system matrix = precond matrix:
+      linear system matrix, which is also used to construct the preconditioner, follows:
       Mat Object: (fieldsplit_Omega_) 1 MPI process
         type: seqaij
         rows=625, cols=625
@@ -648,14 +648,14 @@ SNES Object: 1 MPI process
               package used to perform factorization: petsc
               total: nonzeros=14065, allocated nonzeros=14065
                 not using I-node routines
-      linear system matrix = precond matrix:
+      linear system matrix, which is also used to construct the preconditioner, follows:
       Mat Object: (fieldsplit_temperature_) 1 MPI process
         type: seqaij
         rows=625, cols=625
         total: nonzeros=3025, allocated nonzeros=3025
         total number of mallocs used during MatSetValues calls=0
           not using I-node routines
-    linear system matrix = precond matrix:
+    linear system matrix, which is also used to construct the preconditioner, follows:
     Mat Object: 1 MPI process
       type: seqaij
       rows=2500, cols=2500, bs=4

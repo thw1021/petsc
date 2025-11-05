@@ -34,14 +34,14 @@ PC Object: 1 MPI process
               package used to perform factorization: petsc
               total: nonzeros=77, allocated nonzeros=77
                 using I-node routines: found 8 nodes, limit used is 5
-      linear system matrix = precond matrix:
+      linear system matrix, which is also used to construct the preconditioner, follows:
       Mat Object: (sub_) 1 MPI process
         type: seqaij
         rows=10, cols=10
         total: nonzeros=55, allocated nonzeros=55
         total number of mallocs used during MatSetValues calls=0
           not using I-node routines
-  linear system matrix = precond matrix:
+  linear system matrix, which is also used to construct the preconditioner, follows:
   Mat Object: 1 MPI process
     type: seqaij
     rows=10, cols=10
@@ -86,14 +86,14 @@ PC Object: 1 MPI process
               package used to perform factorization: petsc
               total: nonzeros=77, allocated nonzeros=77
                 using I-node routines: found 8 nodes, limit used is 5
-      linear system matrix = precond matrix:
+      linear system matrix, which is also used to construct the preconditioner, follows:
       Mat Object: (sub_) 1 MPI process
         type: seqaij
         rows=10, cols=10
         total: nonzeros=55, allocated nonzeros=55
         total number of mallocs used during MatSetValues calls=0
           not using I-node routines
-  linear system matrix = precond matrix:
+  linear system matrix, which is also used to construct the preconditioner, follows:
   Mat Object: 1 MPI process
     type: seqaij
     rows=10, cols=10
