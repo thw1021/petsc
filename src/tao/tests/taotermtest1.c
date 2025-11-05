@@ -22,11 +22,11 @@ typedef struct {
   PetscReal      term2_scale_callback;
   PetscInt       map_row_size;
   PetscBool      print_debug, print_debug_info;
-  PetscRandom    rand;
   /* Stored terms data for callback implementation */
   TaoTerm        term1, term2;
   Vec            term1_params, term2_params;
-  Mat            term1_A, term2_A;
+  Vec            X_mapped, G_mapped;
+  Mat            H1, H2;
   Mat            term1_A_callback; /* AIJ version for callbacks */
   Mat            term2_A_callback; /* AIJ version for callbacks */
 } TestCtx;
@@ -114,9 +114,9 @@ int main(int argc, char **argv)
     /* Store for callback implementation */
     ctx.term1        = term1;
     ctx.term1_params = term1_params_callback;
-    ctx.term1_A      = term1_A;
-    /* Create AIJ version for callbacks if matrix exists */
-    if (term1_A) PetscCall(MatConvert(term1_A, MATAIJ, MAT_INITIAL_MATRIX, &ctx.term1_A_callback));
+
+    if (term1_A) PetscCall(MatDuplicate(term1_A, MAT_COPY_VALUES, &ctx.term1_A_callback));
+//    PetscCall(TaoTermCreateHessianMatrices(term1, &ctx.H1, NULL));
   }
   /* creating duplicate term2 for callback if requested */
   if (ctx.use_term2) {
@@ -131,12 +131,19 @@ int main(int argc, char **argv)
     /* Store for callback implementation */
     ctx.term2        = term2;
     ctx.term2_params = term2_params_callback;
-    ctx.term2_A      = term2_A;
-    /* Create AIJ version for callbacks if matrix exists */
-    if (term2_A) PetscCall(MatConvert(term2_A, MATAIJ, MAT_INITIAL_MATRIX, &ctx.term2_A_callback));
+
+    if (term2_A) PetscCall(MatDuplicate(term2_A, MAT_COPY_VALUES, &ctx.term2_A_callback));
+//    PetscCall(TaoTermCreateHessianMatrices(term2, &ctx.H2, NULL));
+  }
+  if (ctx.use_term1 || ctx.use_term2) {
+    if (ctx.term1_has_A || ctx.term2_has_A) PetscCall(MatCreateVecs(ctx.term1_A_callback ?  ctx.term1_A_callback : ctx.term2_A_callback, NULL, &ctx.X_mapped));
+    else PetscCall(VecDuplicate(x_term, &ctx.X_mapped));
+    PetscCall(VecDuplicate(ctx.X_mapped, &ctx.G_mapped));
   }
 
   PetscCall(TaoSetFromOptions(tao_callback));
+
+  //Create PtAP matrices for callback version
 
   /* Solve with traditional callback interface */
   if (ctx.print_debug) PetscCall(PetscPrintf(comm, "Solving Callback version \n"));
@@ -150,11 +157,14 @@ int main(int argc, char **argv)
     PetscCall(VecDestroy(&term1_params));
     PetscCall(MatDestroy(&term1_A));
     PetscCall(MatDestroy(&ctx.term1_A_callback));
+    PetscCall(VecDestroy(&ctx.term1_params));
+    PetscCall(TaoTermDestroy(&term1));
   }
   if (ctx.use_term2) {
     PetscCall(VecDestroy(&term2_params));
     PetscCall(MatDestroy(&term2_A));
     PetscCall(MatDestroy(&ctx.term2_A_callback));
+    PetscCall(TaoTermDestroy(&term2));
   }
   PetscCall(TaoDestroy(&tao_term));
   PetscCall(TaoDestroy(&tao_callback));
@@ -162,6 +172,8 @@ int main(int argc, char **argv)
   PetscCall(VecDestroy(&x_callback));
   PetscCall(MatDestroy(&H_term));
   PetscCall(MatDestroy(&H_callback));
+//  PetscCall(MatDestroy(&ctx.H1));
+//  PetscCall(MatDestroy(&ctx.H2));
   PetscCall(TestCtxFinalize(&ctx));
   PetscCall(PetscFinalize());
   return 0;
@@ -215,14 +227,8 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
   ctx->term2            = NULL;
   ctx->term1_params     = NULL;
   ctx->term2_params     = NULL;
-  ctx->term1_A          = NULL;
-  ctx->term2_A          = NULL;
   ctx->term1_A_callback = NULL;
   ctx->term2_A_callback = NULL;
-
-  /* Create random number generator */
-  PetscCall(PetscRandomCreate(comm, &ctx->rand));
-  PetscCall(PetscRandomSetFromOptions(ctx->rand));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -230,7 +236,8 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
 static PetscErrorCode TestCtxFinalize(TestCtx *ctx)
 {
   PetscFunctionBeginUser;
-  PetscCall(PetscRandomDestroy(&ctx->rand));
+  PetscCall(VecDestroy(&ctx->X_mapped));
+  PetscCall(VecDestroy(&ctx->G_mapped));
   PetscCall(AppCtxDestroy(&ctx->user));
   PetscCall(AppCtxDestroy(&ctx->user2));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -251,7 +258,7 @@ static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec 
     PetscCall(VecCreate(comm, params));
     PetscCall(VecSetSizes(*params, PETSC_DECIDE, ctx->user->n));
     PetscCall(VecSetFromOptions(*params));
-    PetscCall(VecSetRandom(*params, ctx->rand));
+    PetscCall(VecSetRandom(*params, NULL));
   }
 
   /* Create map matrix A if requested */
@@ -264,7 +271,7 @@ static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec 
     PetscCall(MatSeqAIJSetPreallocation(*A, 5, NULL));
     PetscCall(MatMPIAIJSetPreallocation(*A, 5, NULL, 5, NULL));
     PetscCall(MatSetUp(*A));
-    PetscCall(MatSetRandom(*A, ctx->rand));
+    PetscCall(MatSetRandom(*A, NULL));
     PetscCall(MatAssemblyBegin(*A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(*A, MAT_FINAL_ASSEMBLY));
   }
@@ -288,7 +295,7 @@ static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec 
     PetscCall(MatSeqAIJSetPreallocation(Aquad, 5, NULL));
     PetscCall(MatMPIAIJSetPreallocation(Aquad, 5, NULL, 5, NULL));
     PetscCall(MatSetUp(Aquad));
-    PetscCall(MatSetRandom(Aquad, ctx->rand));
+    PetscCall(MatSetRandom(Aquad, NULL));
     PetscCall(MatAssemblyBegin(Aquad, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(Aquad, MAT_FINAL_ASSEMBLY));
 
@@ -324,8 +331,6 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
 {
   TestCtx   *ctx = (TestCtx *)ptr;
   PetscReal f_term;
-  Vec       X_mapped1 = NULL, X_mapped2 = NULL;
-  Vec       G_mapped1 = NULL, G_mapped2 = NULL;
   PetscReal gnorm;
 
   PetscFunctionBeginUser;
@@ -342,11 +347,10 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
     if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   Adding term1 (scale_callback = %.19e)\n", (double)ctx->term1_scale_callback));
     /* Map X if needed */
     if (ctx->term1_A_callback) {
-      PetscCall(MatCreateVecs(ctx->term1_A_callback, NULL, &X_mapped1));
-      PetscCall(MatMult(ctx->term1_A_callback, X, X_mapped1));
+      PetscCall(MatMult(ctx->term1_A_callback, X, ctx->X_mapped));
       if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     X mapped through A1\n"));
     } else {
-      X_mapped1 = X;
+      PetscCall(VecCopy(X, ctx->X_mapped));
       if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     No A1 mapping\n"));
     }
 
@@ -355,29 +359,26 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
       Vec       G_add;
       PetscReal gnorm_term, gnorm_add;
 
-      PetscCall(VecDuplicate(X_mapped1, &G_mapped1));
-      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, X_mapped1, ctx->term1_params, &f_term, G_mapped1));
+      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, ctx->X_mapped, ctx->term1_params, &f_term, ctx->G_mapped));
       if (ctx->print_debug_info) {
-        PetscCall(VecNorm(G_mapped1, NORM_2, &gnorm_term));
+        PetscCall(VecNorm(ctx->G_mapped, NORM_2, &gnorm_term));
         PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term1 raw: f_term = %.19e, ||G_term|| = %.19e\n", (double)f_term, (double)gnorm_term));
       }
       /* Map gradient back and add to G */
       PetscCall(VecDuplicate(X, &G_add));
-      PetscCall(MatMultTranspose(ctx->term1_A_callback, G_mapped1, G_add));
+      PetscCall(MatMultTranspose(ctx->term1_A_callback, ctx->G_mapped, G_add));
       if (ctx->print_debug_info) {
         PetscCall(VecNorm(G_add, NORM_2, &gnorm_add));
         PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     After A1^T mapping: ||G_add|| = %.19e\n", (double)gnorm_add));
       }
       PetscCall(VecAXPY(G, ctx->term1_scale_callback, G_add));
       PetscCall(VecDestroy(&G_add));
-      PetscCall(VecDestroy(&X_mapped1));
-      PetscCall(VecDestroy(&G_mapped1));
     } else {
       Vec       G_term;
       PetscReal gnorm_term;
 
       PetscCall(VecDuplicate(X, &G_term));
-      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, X_mapped1, ctx->term1_params, &f_term, G_term));
+      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, ctx->X_mapped, ctx->term1_params, &f_term, G_term));
       if (ctx->print_debug_info) {
         PetscCall(VecNorm(G_term, NORM_2, &gnorm_term));
         PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term1 raw: f_term = %.19e, ||G_term|| = %.19e\n", (double)f_term, (double)gnorm_term));
@@ -397,11 +398,10 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
     if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   Adding term2 (scale_callback = %.19e)\n", (double)ctx->term2_scale_callback));
     /* Map X if needed */
     if (ctx->term2_A_callback) {
-      PetscCall(MatCreateVecs(ctx->term2_A_callback, NULL, &X_mapped2));
-      PetscCall(MatMult(ctx->term2_A_callback, X, X_mapped2));
+      PetscCall(MatMult(ctx->term2_A_callback, X, ctx->X_mapped));
       if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     X mapped through A2\n"));
     } else {
-      X_mapped2 = X;
+      PetscCall(VecCopy(X, ctx->X_mapped));
       if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     No A2 mapping\n"));
     }
 
@@ -409,28 +409,26 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
     if (ctx->term2_A_callback) {
       Vec       G_add;
       PetscReal gnorm_term, gnorm_add;
-      PetscCall(VecDuplicate(X_mapped2, &G_mapped2));
-      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, X_mapped2, ctx->term2_params, &f_term, G_mapped2));
+
+      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, ctx->X_mapped, ctx->term2_params, &f_term, ctx->G_mapped));
       if (ctx->print_debug_info) {
-        PetscCall(VecNorm(G_mapped2, NORM_2, &gnorm_term));
+        PetscCall(VecNorm(ctx->G_mapped, NORM_2, &gnorm_term));
         PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term2 raw: f_term = %.19e, ||G_term|| = %.19e\n", (double)f_term, (double)gnorm_term));
       }
       /* Map gradient back and add to G */
       PetscCall(VecDuplicate(X, &G_add));
-      PetscCall(MatMultTranspose(ctx->term2_A_callback, G_mapped2, G_add));
+      PetscCall(MatMultTranspose(ctx->term2_A_callback, ctx->G_mapped, G_add));
       if (ctx->print_debug_info) {
         PetscCall(VecNorm(G_add, NORM_2, &gnorm_add));
         PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     After A2^T mapping: ||G_add|| = %.19e\n", (double)gnorm_add));
       }
       PetscCall(VecAXPY(G, ctx->term2_scale_callback, G_add));
       PetscCall(VecDestroy(&G_add));
-      PetscCall(VecDestroy(&X_mapped2));
-      PetscCall(VecDestroy(&G_mapped2));
     } else {
       Vec       G_term;
       PetscReal gnorm_term;
       PetscCall(VecDuplicate(X, &G_term));
-      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, X_mapped2, ctx->term2_params, &f_term, G_term));
+      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, ctx->X_mapped, ctx->term2_params, &f_term, G_term));
       if (ctx->print_debug_info) {
         PetscCall(VecNorm(G_term, NORM_2, &gnorm_term));
         PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term2 raw: f_term = %.19e, ||G_term|| = %.19e\n", (double)f_term, (double)gnorm_term));
@@ -452,12 +450,24 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if 0
+static PetscErrorCode DiagMatPtAP_Internal(Mat H, Mat A, 
+{
+  PetscFunctionBeginUser;
+
+      PetscCall(MatMatMult(H_term, ctx->term1_A_callback, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &H_mapped));
+      PetscCall(MatDestroy(&H_term));
+      PetscCall(MatTransposeMatMult(ctx->term1_A_callback, H_mapped, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &H_term));
+      PetscCall(MatDestroy(&H_mapped));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif
+
 /* Form Hessian for callback version (Rosenbrock + terms manually) */
 static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
 {
   TestCtx   *ctx = (TestCtx *)ptr;
   Mat       H_term;
-  Vec       X_mapped;
   PetscReal hnorm;
 
   PetscFunctionBeginUser;
@@ -476,29 +486,22 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
     PetscReal hnorm_term;
     if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   Adding term1 Hessian (scale_callback = %.19e)\n", (double)ctx->term1_scale_callback));
     if (ctx->term1_A_callback) {
-      PetscCall(MatCreateVecs(ctx->term1_A_callback, NULL, &X_mapped));
-      PetscCall(MatMult(ctx->term1_A_callback, X, X_mapped));
-      PetscCall(VecGetSize(X_mapped, &m));
+      PetscCall(MatMult(ctx->term1_A_callback, X, ctx->X_mapped));
+      PetscCall(VecGetSize(ctx->X_mapped, &m));
       PetscCall(MatCreate(ctx->user2->comm, &H_term));
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, m, m));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
-      if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     X mapped through A1, H_term created (%d x %d)\n", (int)m, (int)m));
     } else {
-      X_mapped = X;
+      PetscCall(VecCopy(X, ctx->X_mapped));
       PetscCall(VecGetSize(X, &n));
       PetscCall(MatCreate(ctx->user2->comm, &H_term));
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, n, n));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
-      if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     No A1 mapping, H_term created (%d x %d)\n", (int)n, (int)n));
     }
 
-    PetscCall(TaoTermComputeHessian(ctx->term1, X_mapped, ctx->term1_params, H_term, NULL));
-    if (ctx->print_debug_info) {
-      PetscCall(MatNorm(H_term, NORM_FROBENIUS, &hnorm_term));
-      PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term1 raw Hessian: ||H_term||_F = %.19e\n", (double)hnorm_term));
-    }
+    PetscCall(TaoTermComputeHessian(ctx->term1, ctx->X_mapped, ctx->term1_params, H_term, NULL));
 
     if (ctx->term1_A_callback) {
       Mat H_mapped;
@@ -514,7 +517,6 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatScale(H_term, ctx->term1_scale_callback));
       PetscCall(MatAXPY(H, 1.0, H_term, DIFFERENT_NONZERO_PATTERN));
       PetscCall(MatDestroy(&H_term));
-      PetscCall(VecDestroy(&X_mapped));
     } else {
       PetscCall(MatScale(H_term, ctx->term1_scale_callback));
       PetscCall(MatAXPY(H, 1.0, H_term, DIFFERENT_NONZERO_PATTERN));
@@ -532,16 +534,15 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
     PetscReal hnorm_term;
     if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   Adding term2 Hessian (scale_callback = %.19e)\n", (double)ctx->term2_scale_callback));
     if (ctx->term2_A_callback) {
-      PetscCall(MatCreateVecs(ctx->term2_A_callback, NULL, &X_mapped));
-      PetscCall(MatMult(ctx->term2_A_callback, X, X_mapped));
-      PetscCall(VecGetSize(X_mapped, &m));
+      PetscCall(MatMult(ctx->term2_A_callback, X, ctx->X_mapped));
+      PetscCall(VecGetSize(ctx->X_mapped, &m));
       PetscCall(MatCreate(ctx->user2->comm, &H_term));
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, m, m));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
       if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     X mapped through A2, H_term created (%d x %d)\n", (int)m, (int)m));
     } else {
-      X_mapped = X;
+      PetscCall(VecCopy(X, ctx->X_mapped));
       PetscCall(VecGetSize(X, &n));
       PetscCall(MatCreate(ctx->user2->comm, &H_term));
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, n, n));
@@ -550,7 +551,7 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     No A2 mapping, H_term created (%d x %d)\n", (int)n, (int)n));
     }
 
-    PetscCall(TaoTermComputeHessian(ctx->term2, X_mapped, ctx->term2_params, H_term, NULL));
+    PetscCall(TaoTermComputeHessian(ctx->term2, ctx->X_mapped, ctx->term2_params, H_term, NULL));
     if (ctx->print_debug_info) {
       PetscCall(MatNorm(H_term, NORM_FROBENIUS, &hnorm_term));
       PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term2 raw Hessian: ||H_term||_F = %.19e\n", (double)hnorm_term));
@@ -570,7 +571,6 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatScale(H_term, ctx->term2_scale_callback));
       PetscCall(MatAXPY(H, 1.0, H_term, DIFFERENT_NONZERO_PATTERN));
       PetscCall(MatDestroy(&H_term));
-      PetscCall(VecDestroy(&X_mapped));
     } else {
       PetscCall(MatScale(H_term, ctx->term2_scale_callback));
       PetscCall(MatAXPY(H, 1.0, H_term, DIFFERENT_NONZERO_PATTERN));
@@ -668,9 +668,9 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
       args: -term1_has_A -A1_mat_type {{aij dense diagonal}} -tao_term_hessian_mat_type {{aij dense}}
       args: -reg1_tao_term_type l1
       test:
-         args: -term1_scale 1.234
+         args: -term1_scale 0.12
       test:
-         args: -tao_term_sum_reg1_scale 1.234 -term1_scale_callback 1.234
+         args: -tao_term_sum_reg1_scale 0.12 -term1_scale_callback 0.12
 
    # L1 without A
    testset:
