@@ -419,7 +419,7 @@ static PetscErrorCode VecView_Nest(Vec x, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
     PetscCall(PetscViewerASCIIPushTab(viewer));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "VecNest, rows=%" PetscInt_FMT ",  structure: \n", bx->nb));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "VecNest, rows=%" PetscInt_FMT ", structure: \n", bx->nb));
     for (i = 0; i < bx->nb; i++) {
       VecType  type;
       char     name[256] = "", prefix[256] = "";
