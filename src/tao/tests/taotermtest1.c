@@ -5,29 +5,25 @@ Tests different TaoTerm configurations for L1, andHALFL2SQUARED types with vario
 #include "../unconstrained/tutorials/rosenbrock4.h"
 
 typedef struct {
-  AppCtx         user;  /* Note: AppCtx is a pointer type in rosenbrock4.h */
-  AppCtx         user2; /* Second user context for callback version */
-  /* Configuration for term 1 */
-  PetscBool      use_term1;
-  PetscBool      term1_has_A;
-  PetscBool      term1_has_params;
-  PetscReal      term1_scale;
-  /* Configuration for term 2 */
-  PetscBool      use_term2;
-  PetscBool      term2_has_A;
-  PetscBool      term2_has_params;
-  PetscReal      term2_scale;
-  /* Callback-only scale options (for testing equivalence with TaoTerm scales) */
-  PetscReal      term1_scale_callback;
-  PetscReal      term2_scale_callback;
-  PetscInt       map_row_size;
-  PetscBool      print_debug, print_debug_info;
-  /* Stored terms data for callback implementation */
-  TaoTerm        term1, term2;
-  Vec            term1_params, term2_params;
-  Vec            X_mapped1, X_mapped2, G_mapped1, G_mapped2;
-  Mat            term1_A_callback; /* AIJ version for callbacks */
-  Mat            term2_A_callback; /* AIJ version for callbacks */
+  AppCtx    user;  /* Note: AppCtx is a pointer type in rosenbrock4.h */
+  AppCtx    user2; /* Second user context for callback version */
+  PetscBool use_term1;
+  PetscBool term1_has_A;
+  PetscBool term1_has_params;
+  PetscReal term1_scale;
+  PetscBool use_term2;
+  PetscBool term2_has_A;
+  PetscBool term2_has_params;
+  PetscReal term2_scale;
+  PetscReal term1_scale_callback; /* Callback-only scale options (for testing equivalence with TaoTerm scales) */
+  PetscReal term2_scale_callback;
+  PetscInt  map_row_size;
+  PetscBool print_debug;
+  TaoTerm   term1, term2;
+  Vec       term1_params, term2_params;
+  Vec       X_mapped1, X_mapped2, G_mapped1, G_mapped2, G_work;
+  Mat       term1_A_callback; /* AIJ version for callbacks */
+  Mat       term2_A_callback; /* AIJ version for callbacks */
 } TestCtx;
 
 /* Forward declarations */
@@ -42,24 +38,20 @@ static PetscErrorCode CompareSolutions(Tao, Tao, TestCtx *);
 
 int main(int argc, char **argv)
 {
-  TestCtx     ctx;
-  Tao         tao_term, tao_callback;
-  Vec         x_term, x_callback;
-  Mat         H_term, H_callback;
-  TaoTerm     term1, term2;
-  Vec         term1_params, term2_params, term1_params_callback, term2_params_callback;
-  Mat         term1_A, term2_A;
-  MPI_Comm    comm;
+  TestCtx  ctx;
+  Tao      tao_term, tao_callback;
+  Vec      x_term, x_callback;
+  Mat      H_term, H_callback;
+  TaoTerm  term1, term2;
+  Vec      term1_params, term2_params, term1_params_callback, term2_params_callback;
+  Mat      term1_A, term2_A;
+  MPI_Comm comm;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
 
-  /* Initialize test context */
-
   PetscCall(TestCtxInitialize(comm, &ctx));
-
-  /* ===================== Setup Tao with TaoTerm interface ===================== */
   PetscCall(TaoCreate(comm, &tao_term));
   PetscCall(TaoSetType(tao_term, TAOLMVM));
 
@@ -85,7 +77,6 @@ int main(int argc, char **argv)
   }
 
   PetscCall(TaoSetFromOptions(tao_term));
-  if (ctx.print_debug) PetscCall(PetscPrintf(comm, "Solving TaoTerm version \n"));
   PetscCall(TaoSolve(tao_term));
 
   /* ===================== Setup Tao with traditional callbacks ===================== */
@@ -135,27 +126,23 @@ int main(int argc, char **argv)
 
   if (ctx.use_term1) {
     if (ctx.term1_has_A) PetscCall(MatCreateVecs(ctx.term1_A_callback, NULL, &ctx.X_mapped1));
-    else PetscCall(VecDuplicate(x_term, &ctx.X_mapped1));
+    else PetscCall(VecDuplicate(x_callback, &ctx.X_mapped1));
     PetscCall(VecDuplicate(ctx.X_mapped1, &ctx.G_mapped1));
   }
   if (ctx.use_term2) {
     if (ctx.term2_has_A) PetscCall(MatCreateVecs(ctx.term2_A_callback, NULL, &ctx.X_mapped2));
-    else PetscCall(VecDuplicate(x_term, &ctx.X_mapped2));
+    else PetscCall(VecDuplicate(x_callback, &ctx.X_mapped2));
     PetscCall(VecDuplicate(ctx.X_mapped2, &ctx.G_mapped2));
   }
 
+  PetscCall(VecDuplicate(x_callback, &ctx.G_work));
   PetscCall(TaoSetFromOptions(tao_callback));
-
-  //Create PtAP matrices for callback version
-
-  /* Solve with traditional callback interface */
   if (ctx.print_debug) PetscCall(PetscPrintf(comm, "Solving Callback version \n"));
   PetscCall(TaoSolve(tao_callback));
 
   /* ===================== Compare solutions ===================== */
   PetscCall(CompareSolutions(tao_term, tao_callback, &ctx));
 
-  /* Clean up */
   if (ctx.use_term1) {
     PetscCall(VecDestroy(&term1_params));
     PetscCall(MatDestroy(&term1_A));
@@ -181,7 +168,6 @@ int main(int argc, char **argv)
   return 0;
 }
 
-/* Initialize test context with command line options */
 static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
 {
   PetscFunctionBeginUser;
@@ -203,7 +189,6 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
   ctx->term1_scale_callback = 0;
   ctx->term2_scale_callback = 0;
   ctx->print_debug          = PETSC_FALSE;
-  ctx->print_debug_info     = PETSC_FALSE;
   ctx->map_row_size         = ctx->user->n - 1;
 
   PetscOptionsBegin(comm, "", "TaoTerm Coverage Test Options", "TAO");
@@ -219,7 +204,6 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
   PetscCall(PetscOptionsReal("-term2_scale_callback", "Scaling for term 2 in callback version", "", ctx->term2_scale_callback, &ctx->term2_scale_callback, NULL));
   PetscCall(PetscOptionsInt("-map_row_size", "Row size of mapping matrix", "", ctx->map_row_size, &ctx->map_row_size, NULL));
   PetscCall(PetscOptionsBool("-print_debug", "Print extra floating point for comparison", "", ctx->print_debug, &ctx->print_debug, NULL));
-  PetscCall(PetscOptionsBool("-print_debug_info", "Print detailed debug info", "", ctx->print_debug_info, &ctx->print_debug_info, NULL));
   PetscOptionsEnd();
 
   if (ctx->term1_scale_callback == 0) ctx->term1_scale_callback = ctx->term1_scale;
@@ -242,6 +226,7 @@ static PetscErrorCode TestCtxFinalize(TestCtx *ctx)
   PetscCall(VecDestroy(&ctx->X_mapped2));
   PetscCall(VecDestroy(&ctx->G_mapped1));
   PetscCall(VecDestroy(&ctx->G_mapped2));
+  PetscCall(VecDestroy(&ctx->G_work));
   PetscCall(AppCtxDestroy(&ctx->user));
   PetscCall(AppCtxDestroy(&ctx->user2));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -281,17 +266,14 @@ static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec 
     PetscCall(MatAssemblyBegin(*A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(*A, MAT_FINAL_ASSEMBLY));
   }
-
   /* Create TaoTerm, set prefix, and configure from options */
   PetscCall(TaoTermCreate(comm, term));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*term, term_prefix));
   PetscCall(TaoTermSetSolutionSizes(*term, PETSC_DECIDE, has_A ? ctx->map_row_size : ctx->user->n, 1));
   PetscCall(TaoTermSetFromOptions(*term));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Form function and gradient for TaoTerm version (just Rosenbrock) */
 static PetscErrorCode FormFunctionGradient_TaoTerm(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
 {
   TestCtx *ctx = (TestCtx *)ptr;
@@ -301,7 +283,6 @@ static PetscErrorCode FormFunctionGradient_TaoTerm(Tao tao, Vec X, PetscReal *f,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Form Hessian for TaoTerm version (just Rosenbrock) */
 static PetscErrorCode FormHessian_TaoTerm(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
 {
   TestCtx *ctx = (TestCtx *)ptr;
@@ -316,121 +297,48 @@ static PetscErrorCode FormFunctionGradient_Callbacks(Tao tao, Vec X, PetscReal *
 {
   TestCtx   *ctx = (TestCtx *)ptr;
   PetscReal f_term;
-  PetscReal gnorm;
 
   PetscFunctionBeginUser;
-  if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK] FormFunctionGradient called\n"));
-
   /* Compute Rosenbrock part */
   PetscCall(FormObjectiveGradient(tao, X, f, G, ctx->user2));
-  if (ctx->print_debug_info) {
-    PetscCall(VecNorm(G, NORM_2, &gnorm));
-    PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   After Rosenbrock: f = %.19e, ||G|| = %.19e\n", (double)*f, (double)gnorm));
-  }
   /* Add term 1 contribution */
   if (ctx->use_term1 && ctx->term1) {
-    if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   Adding term1 (scale_callback = %.19e)\n", (double)ctx->term1_scale_callback));
     /* Map X if needed */
-    if (ctx->term1_A_callback) {
-      PetscCall(MatMult(ctx->term1_A_callback, X, ctx->X_mapped1));
-      if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     X mapped through A1\n"));
-    } else {
-      PetscCall(VecCopy(X, ctx->X_mapped1));
-      if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     No A1 mapping\n"));
-    }
+    if (ctx->term1_A_callback) PetscCall(MatMult(ctx->term1_A_callback, X, ctx->X_mapped1));
+    else PetscCall(VecCopy(X, ctx->X_mapped1));
 
     /* Compute term objective and gradient */
     if (ctx->term1_A_callback) {
-      Vec       G_add;
-      PetscReal gnorm_term, gnorm_add;
-
       PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, ctx->X_mapped1, ctx->term1_params, &f_term, ctx->G_mapped1));
-      if (ctx->print_debug_info) {
-        PetscCall(VecNorm(ctx->G_mapped1, NORM_2, &gnorm_term));
-        PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term1 raw: f_term = %.19e, ||G_term|| = %.19e\n", (double)f_term, (double)gnorm_term));
-      }
-      /* Map gradient back and add to G */
-      PetscCall(VecDuplicate(X, &G_add));
-      PetscCall(MatMultTranspose(ctx->term1_A_callback, ctx->G_mapped1, G_add));
-      if (ctx->print_debug_info) {
-        PetscCall(VecNorm(G_add, NORM_2, &gnorm_add));
-        PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     After A1^T mapping: ||G_add|| = %.19e\n", (double)gnorm_add));
-      }
-      PetscCall(VecAXPY(G, ctx->term1_scale_callback, G_add));
-      PetscCall(VecDestroy(&G_add));
+      PetscCall(MatMultTranspose(ctx->term1_A_callback, ctx->G_mapped1, ctx->G_work));
+      PetscCall(VecAXPY(G, ctx->term1_scale_callback, ctx->G_work));
     } else {
-      Vec       G_term;
-      PetscReal gnorm_term;
-
-      PetscCall(VecDuplicate(X, &G_term));
-      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, ctx->X_mapped1, ctx->term1_params, &f_term, G_term));
-      if (ctx->print_debug_info) {
-        PetscCall(VecNorm(G_term, NORM_2, &gnorm_term));
-        PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term1 raw: f_term = %.19e, ||G_term|| = %.19e\n", (double)f_term, (double)gnorm_term));
-      }
-      PetscCall(VecAXPY(G, ctx->term1_scale_callback, G_term));
-      PetscCall(VecDestroy(&G_term));
+      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term1, ctx->X_mapped1, ctx->term1_params, &f_term, ctx->G_work));
+      PetscCall(VecAXPY(G, ctx->term1_scale_callback, ctx->G_work));
+      PetscCall(VecDestroy(&ctx->G_work));
     }
     *f += ctx->term1_scale_callback * f_term;
-    if (ctx->print_debug_info) {
-      PetscCall(VecNorm(G, NORM_2, &gnorm));
-      PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     After adding scaled term1: f = %.19e, ||G|| = %.19e\n", (double)*f, (double)gnorm));
-    }
   }
 
   /* Add term 2 contribution */
   if (ctx->use_term2 && ctx->term2) {
-    if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   Adding term2 (scale_callback = %.19e)\n", (double)ctx->term2_scale_callback));
     /* Map X if needed */
-    if (ctx->term2_A_callback) {
-      PetscCall(MatMult(ctx->term2_A_callback, X, ctx->X_mapped2));
-      if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     X mapped through A2\n"));
-    } else {
-      PetscCall(VecCopy(X, ctx->X_mapped2));
-      if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     No A2 mapping\n"));
-    }
+    if (ctx->term2_A_callback) PetscCall(MatMult(ctx->term2_A_callback, X, ctx->X_mapped2));
+    else PetscCall(VecCopy(X, ctx->X_mapped2));
 
     /* Compute term objective and gradient */
     if (ctx->term2_A_callback) {
-      Vec       G_add;
-      PetscReal gnorm_term, gnorm_add;
-
       PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, ctx->X_mapped2, ctx->term2_params, &f_term, ctx->G_mapped2));
-      if (ctx->print_debug_info) {
-        PetscCall(VecNorm(ctx->G_mapped2, NORM_2, &gnorm_term));
-        PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term2 raw: f_term = %.19e, ||G_term|| = %.19e\n", (double)f_term, (double)gnorm_term));
-      }
       /* Map gradient back and add to G */
-      PetscCall(VecDuplicate(X, &G_add));
-      PetscCall(MatMultTranspose(ctx->term2_A_callback, ctx->G_mapped2, G_add));
-      if (ctx->print_debug_info) {
-        PetscCall(VecNorm(G_add, NORM_2, &gnorm_add));
-        PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     After A2^T mapping: ||G_add|| = %.19e\n", (double)gnorm_add));
-      }
-      PetscCall(VecAXPY(G, ctx->term2_scale_callback, G_add));
-      PetscCall(VecDestroy(&G_add));
+      PetscCall(MatMultTranspose(ctx->term2_A_callback, ctx->G_mapped2, ctx->G_work));
+      PetscCall(VecAXPY(G, ctx->term2_scale_callback, ctx->G_work));
+      PetscCall(VecDestroy(&ctx->G_work));
     } else {
-      Vec       G_term;
-      PetscReal gnorm_term;
-      PetscCall(VecDuplicate(X, &G_term));
-      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, ctx->X_mapped2, ctx->term2_params, &f_term, G_term));
-      if (ctx->print_debug_info) {
-        PetscCall(VecNorm(G_term, NORM_2, &gnorm_term));
-        PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     Term2 raw: f_term = %.19e, ||G_term|| = %.19e\n", (double)f_term, (double)gnorm_term));
-      }
-      PetscCall(VecAXPY(G, ctx->term2_scale_callback, G_term));
-      PetscCall(VecDestroy(&G_term));
+      PetscCall(TaoTermComputeObjectiveAndGradient(ctx->term2, ctx->X_mapped2, ctx->term2_params, &f_term, ctx->G_work));
+      PetscCall(VecAXPY(G, ctx->term2_scale_callback, ctx->G_work));
+      PetscCall(VecDestroy(&ctx->G_work));
     }
     *f += ctx->term2_scale_callback * f_term;
-    if (ctx->print_debug_info) {
-      PetscCall(VecNorm(G, NORM_2, &gnorm));
-      PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     After adding scaled term2: f = %.19e, ||G|| = %.19e\n", (double)*f, (double)gnorm));
-    }
-  }
-
-  if (ctx->print_debug_info) {
-    PetscCall(VecNorm(G, NORM_2, &gnorm));
-    PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   FINAL: f = %.19e, ||G|| = %.19e\n", (double)*f, (double)gnorm));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -440,23 +348,14 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
 {
   TestCtx   *ctx = (TestCtx *)ptr;
   Mat       H_term;
-  PetscReal hnorm;
   PetscInt  m, n;
   PetscBool is_assembled;
 
   PetscFunctionBeginUser;
-  if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK] FormHessian called\n"));
-
   /* Compute Rosenbrock Hessian */
   PetscCall(FormHessian(tao, X, H, Hpre, ctx->user2));
-  if (ctx->print_debug_info) {
-    PetscCall(MatNorm(H, NORM_FROBENIUS, &hnorm));
-    PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   After Rosenbrock: ||H||_F = %.19e\n", (double)hnorm));
-  }
-
   /* Add term 1 Hessian contribution */
   if (ctx->use_term1 && ctx->term1) {
-    if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   Adding term1 Hessian (scale_callback = %.19e)\n", (double)ctx->term1_scale_callback));
     if (ctx->term1_A_callback) {
       PetscCall(MatMult(ctx->term1_A_callback, X, ctx->X_mapped1));
       PetscCall(VecGetSize(ctx->X_mapped1, &m));
@@ -464,7 +363,6 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, m, m));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
-      if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     X mapped through A1, H_term created (%d x %d)\n", (int)m, (int)m));
     } else {
       PetscCall(VecCopy(X, ctx->X_mapped1));
       PetscCall(VecGetSize(X, &n));
@@ -472,7 +370,6 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, n, n));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
-      if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     No A1 mapping, H_term created (%d x %d)\n", (int)n, (int)n));
     }
     PetscCall(MatAssembled(H_term, &is_assembled));
     if (!is_assembled) {
@@ -481,7 +378,6 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
     }
 
     PetscCall(TaoTermComputeHessian(ctx->term1, ctx->X_mapped1, ctx->term1_params, H_term, NULL));
-
     if (ctx->term1_A_callback) {
       Mat H_mapped;
       /* H = H + scale * A^T * H_term * A */
@@ -501,7 +397,6 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
 
   /* Add term 2 Hessian contribution */
   if (ctx->use_term2 && ctx->term2) {
-    if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]   Adding term2 Hessian (scale_callback = %.19e)\n", (double)ctx->term2_scale_callback));
     if (ctx->term2_A_callback) {
       PetscCall(MatMult(ctx->term2_A_callback, X, ctx->X_mapped2));
       PetscCall(VecGetSize(ctx->X_mapped2, &m));
@@ -509,7 +404,6 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, m, m));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
-      if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     X mapped through A2, H_term created (%d x %d)\n", (int)m, (int)m));
     } else {
       PetscCall(VecCopy(X, ctx->X_mapped2));
       PetscCall(VecGetSize(X, &n));
@@ -517,7 +411,6 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
       PetscCall(MatSetSizes(H_term, PETSC_DECIDE, PETSC_DECIDE, n, n));
       PetscCall(MatSetType(H_term, MATAIJ));
       PetscCall(MatSetUp(H_term));
-      if (ctx->print_debug_info) PetscCall(PetscPrintf(ctx->user2->comm, "[CALLBACK]     No A2 mapping, H_term created (%d x %d)\n", (int)n, (int)n));
     }
     PetscCall(MatAssembled(H_term, &is_assembled));
     if (!is_assembled) {
@@ -549,9 +442,9 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
 /* Compare solutions from both methods */
 static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *ctx)
 {
-  Vec         x_term, x_callback, diff;
-  PetscReal   norm_term, norm_callback, norm_diff, rel_diff;
-  PetscReal   f_term, f_callback;
+  Vec                x_term, x_callback, diff;
+  PetscReal          norm_term, norm_callback, norm_diff, rel_diff;
+  PetscReal          f_term, f_callback;
   TaoConvergedReason reason_term, reason_callback;
 
   PetscFunctionBeginUser;
@@ -577,25 +470,6 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
   PetscCall(TaoGetConvergedReason(tao_term, &reason_term));
   PetscCall(TaoGetConvergedReason(tao_callback, &reason_callback));
 
-  #if 0
-  /* Print comparison */
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "\n============== Solution Comparison ==============\n"));
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "TaoTerm interface:\n"));
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "  Final objective: %.6e\n", (double)f_term));
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "  Solution norm:   %.6e\n", (double)norm_term));
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "  Converged reason: %d\n", (int)reason_term));
-
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "\nTraditional callbacks:\n"));
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "  Final objective: %.6e\n", (double)f_callback));
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "  Solution norm:   %.6e\n", (double)norm_callback));
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "  Converged reason: %d\n", (int)reason_callback));
-
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "\nDifference:\n"));
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "  Absolute difference norm: %.6e\n", (double)norm_diff));
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "  Relative difference:      %.6e\n", (double)rel_diff));
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "  Objective difference:     %.6e\n", (double)PetscAbsReal(f_term - f_callback)));
-#endif
-  /* Check if solutions are close */
   if (rel_diff < 1.0e-12) {
     if (ctx->print_debug) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "Solutions match (relative difference < 1e-12), %6.10e\n", (double)rel_diff));
     else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao_term), "Solutions match (relative difference < 1e-12)\n"));
