@@ -870,7 +870,7 @@
   61: 
   62: Notes Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
 [31m[1m./src/sys/tests/linter/testValidFunctionDocStrings.c:62:3: error:[0m Line seems to be a section header but missing ':', did you mean 'Notes:'? [-fdoc-section-header-maybe-header]:
-  60: qui officia deserunt mollit anim id est laborum as follows:
+  60: qui officia deserunt mollit anim id est laborum as:
   61: 
 > 62: [33m[1mNotes[0m Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
       [33m[1m^^^^^[0m
@@ -920,7 +920,7 @@
   78: {
   79:   return 0;
 [31m[1m./src/sys/tests/linter/testValidFunctionDocStrings.c:62:8: error:[0m Heading must appear alone on a line, any content must be on the next line [-fdoc-section-header-solitary]:
-  60: qui officia deserunt mollit anim id est laborum as follows:
+  60: qui officia deserunt mollit anim id est laborum as:
   61: 
 > 62: Notes[33m[1m Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor[0m
            [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
