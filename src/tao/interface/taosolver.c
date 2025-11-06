@@ -3117,39 +3117,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(TaoTermDestroy(&old_sum));
     tao->num_terms = 1; //TODO wrong
   }
-  //TODO 1. let's not care about scale for a moment
-  //TODO 2. i don't want sum's map to propagate
-#if 0
-  if (tao->objective_term.scale != 1.0 || tao->objective_term.map != NULL) {
-    PetscInt num_terms;
-
-    PetscCall(TaoTermSumGetNumSubterms(tao->objective_term.term, &num_terms));
-    for (PetscInt i = 0; i < num_terms; i++) {
-      const char *sub_name;
-      PetscReal   sub_scale;
-      Mat         sub_map, new_sub_map;
-      TaoTerm     sub_term;
-
-      PetscCall(TaoTermSumGetSubterm(tao->objective_term.term, i, &sub_name, &sub_scale, &sub_term, &sub_map));
-      sub_scale *= tao->objective_term.scale;
-      if (!sub_map) {
-        // there was no inner map, i.e. map was the identity, so now map is the outer map
-        new_sub_map = tao->objective_term.map;
-        PetscCall(PetscObjectReference((PetscObject)new_sub_map));
-      } else if (!tao->objective_term.map) {
-        // there was no outer map, i.e. map was the identity, so now map is the inner map
-        new_sub_map = sub_map;
-        PetscCall(PetscObjectReference((PetscObject)new_sub_map));
-      } else {
-        // multiply together the maps
-        PetscCall(MatMatMult(sub_map, tao->objective_term.map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &new_sub_map));
-      }
-      PetscCall(TaoTermSumSetSubterm(tao->objective_term.term, i, sub_name, sub_scale, sub_term, new_sub_map));
-      PetscCall(MatDestroy(&new_sub_map));
-    }
-    PetscCall(TaoTermMappingSetData(&tao->objective_term, tao->objective_term.prefix, 1.0, tao->objective_term.term, NULL));
-  }
-#endif
+  //Note: SUM's Map does not propagate down to its subterms.
   PetscCall(TaoTermSumGetNumSubterms(tao->objective_term.term, &num_old_terms));
   if (tao->objective_parameters || params) { //TODO isn't this duplicate work for first adding to sum?
     PetscCall(PetscCalloc1(num_old_terms + 1, &vec_list));
