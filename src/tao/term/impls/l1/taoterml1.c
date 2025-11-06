@@ -198,7 +198,7 @@ static PetscErrorCode TaoTermComputeHessian_L1_Internal(TaoTerm term, Vec diag, 
 
 static PetscErrorCode TaoTermComputeHessian_L1(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
-  Vec diag;
+  Vec diag = NULL; /* Appease -Wmaybe-uninitialized */
 
   PetscFunctionBegin;
   if (!H && !Hpre) PetscFunctionReturn(PETSC_SUCCESS);
