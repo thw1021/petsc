@@ -1,4 +1,5 @@
 -include ../../../petscdir.mk
+#requiresscalar    real
 
 MANSEC    = Tao
 SUBMANSEC = TaoTerm

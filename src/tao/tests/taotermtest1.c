@@ -484,7 +484,7 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
 /*TEST
 
    build:
-      requires: !complex
+      requires: !complex !single !quad !defined(PETSC_USE_64BIT_INDICES) !__float128
 
 # Single term tests
    # L1 with A
