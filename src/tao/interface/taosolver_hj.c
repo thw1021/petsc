@@ -322,16 +322,8 @@ PetscErrorCode TaoTestHessian(Tao tao)
 @*/
 PetscErrorCode TaoComputeHessian(Tao tao, Vec X, Mat H, Mat Hpre)
 {
-  PetscBool is_sum;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
-  // If SUM, H is MATCOMPOSITE. We want to merge it to a new matrix.
-  if (is_sum) {
-    // there should be something like tao->hess_work?
-    // MatCopy(). TODO how am I gonna deal with initial tao->hessian? shouldn't destroy them...
-  }
   PetscCall(TaoTermMappingComputeHessian(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, H, Hpre));
   PetscCall(TaoTestHessian(tao));
   tao->nhess++;
