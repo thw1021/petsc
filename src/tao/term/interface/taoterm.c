@@ -687,7 +687,7 @@ PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat
     PetscCall(TaoTermComputeHessianMFFD(term, x, params, H, Hpre));
   } else {
     if (term->ops->hessian) PetscUseTypeMethod(term, hessian, x, params, H, Hpre);
-    else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have TaoTermComputeHessian routine, and cannot use finite differences for Hessian computation. Either call TaoTermShellSetHessian, set Hessian MatType to MATMFFD, or call TaoTermComputeHessianUseFDPush().\n");
+    else SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have TaoTermComputeHessian routine, and cannot use finite differences for Hessian computation. Either call TaoTermShellSetHessian, set Hessian MatType to MATMFFD, or call TaoTermComputeHessianUseFDPush()");
   }
   PetscCall(PetscLogEventEnd(TAOTERM_HessianEval, term, NULL, NULL, NULL));
   if (params) PetscCall(VecLockReadPop(params));
