@@ -16,122 +16,16 @@
 
 #include <petsc/finclude/petscts.h>
 #include <petsc/finclude/petscdmda.h>
-program main
+module ex22fmodule
+  use petscdm
   use petscts
   implicit none
 
-!
-!  Create an application context to contain data needed by the
-!  application-provided call-back routines, FormJacobian() and
-!  FormFunction(). We use a double precision array with six
-!  entries, two for each problem parameter a, k, s.
-!
-  PetscReal user(6)
-  integer user_a, user_k, user_s
-  parameter(user_a=0, user_k=2, user_s=4)
-
-  TS ts
-  SNES snes
-  SNESLineSearch linesearch
-  Vec X
-  Mat J
-  PetscInt mx
-  PetscErrorCode ierr
-  DM da
-  PetscReal ftime, dt
-  PetscReal one, pone
-  PetscInt im11, i2
-  PetscBool flg
-
-  im11 = 11
-  i2 = 2
-  one = 1.0
-  pone = one/10
-
-  PetscCallA(PetscInitialize(ierr))
-
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!  Create distributed array (DMDA) to manage parallel grid and vectors
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  PetscCallA(DMDACreate1d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, im11, i2, i2, PETSC_NULL_INTEGER, da, ierr))
-  PetscCallA(DMSetFromOptions(da, ierr))
-  PetscCallA(DMSetUp(da, ierr))
-
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!    Extract global vectors from DMDA
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  PetscCallA(DMCreateGlobalVector(da, X, ierr))
-
-! Initialize user application context
-! Use zero-based indexing for command line parameters to match ex22.c
-  user(user_a + 1) = 1.0
-  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-a0', user(user_a + 1), flg, ierr))
-  user(user_a + 2) = 0.0
-  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-a1', user(user_a + 2), flg, ierr))
-  user(user_k + 1) = 1000000.0
-  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-k0', user(user_k + 1), flg, ierr))
-  user(user_k + 2) = 2*user(user_k + 1)
-  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-k1', user(user_k + 2), flg, ierr))
-  user(user_s + 1) = 0.0
-  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-s0', user(user_s + 1), flg, ierr))
-  user(user_s + 2) = 1.0
-  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-s1', user(user_s + 2), flg, ierr))
-
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!    Create timestepping solver context
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  PetscCallA(TSCreate(PETSC_COMM_WORLD, ts, ierr))
-  PetscCallA(TSSetDM(ts, da, ierr))
-  PetscCallA(TSSetType(ts, TSARKIMEX, ierr))
-  PetscCallA(TSSetRHSFunction(ts, PETSC_NULL_VEC, FormRHSFunction, user, ierr))
-  PetscCallA(TSSetIFunction(ts, PETSC_NULL_VEC, FormIFunction, user, ierr))
-  PetscCallA(DMSetMatType(da, MATAIJ, ierr))
-  PetscCallA(DMCreateMatrix(da, J, ierr))
-  PetscCallA(TSSetIJacobian(ts, J, J, FormIJacobian, user, ierr))
-
-  PetscCallA(TSGetSNES(ts, snes, ierr))
-  PetscCallA(SNESGetLineSearch(snes, linesearch, ierr))
-  PetscCallA(SNESLineSearchSetType(linesearch, SNESLINESEARCHBASIC, ierr))
-
-  ftime = 1.0
-  PetscCallA(TSSetMaxTime(ts, ftime, ierr))
-  PetscCallA(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_STEPOVER, ierr))
-
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!  Set initial conditions
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  PetscCallA(FormInitialSolution(ts, X, user, ierr))
-  PetscCallA(TSSetSolution(ts, X, ierr))
-  PetscCallA(VecGetSize(X, mx, ierr))
-!  Advective CFL, I don't know why it needs so much safety factor.
-  dt = pone*max(user(user_a + 1), user(user_a + 2))/mx
-  PetscCallA(TSSetTimeStep(ts, dt, ierr))
-
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!   Set runtime options
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  PetscCallA(TSSetFromOptions(ts, ierr))
-
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!  Solve nonlinear system
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  PetscCallA(TSSolve(ts, X, ierr))
-
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!  Free work space.
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  PetscCallA(MatDestroy(J, ierr))
-  PetscCallA(VecDestroy(X, ierr))
-  PetscCallA(TSDestroy(ts, ierr))
-  PetscCallA(DMDestroy(da, ierr))
-  PetscCallA(PetscFinalize(ierr))
+  integer, parameter :: user_a = 1, user_k = 3, user_s = 5
 contains
 
 ! Small helper to extract the layout, result uses 1-based indexing.
   subroutine GetLayout(da, mx, xs, xe, gxs, gxe, ierr)
-    use petscdm
-    implicit none
-
     DM da
     PetscInt mx, xs, xe, gxs, gxe
     PetscErrorCode ierr
@@ -146,7 +40,6 @@ contains
   end subroutine
 
   subroutine FormIFunctionLocal(mx, xs, xe, gxs, gxe, x, xdot, f, a, k, s, ierr)
-    implicit none
     PetscInt mx, xs, xe, gxs, gxe
     PetscScalar x(2, xs:xe)
     PetscScalar xdot(2, xs:xe)
@@ -161,16 +54,11 @@ contains
   end subroutine
 
   subroutine FormIFunction(ts, t, X, Xdot, F, user, ierr)
-    use petscts
-    implicit none
-
     TS ts
     PetscReal t
     Vec X, Xdot, F
     PetscReal user(6)
     PetscErrorCode ierr
-    integer user_a, user_k, user_s
-    parameter(user_a=1, user_k=3, user_s=5)
 
     DM da
     PetscInt mx, xs, xe, gxs, gxe
@@ -192,7 +80,6 @@ contains
   end subroutine
 
   subroutine FormRHSFunctionLocal(mx, xs, xe, gxs, gxe, t, x, f, a, k, s, ierr)
-    implicit none
     PetscInt mx, xs, xe, gxs, gxe
     PetscReal t
     PetscScalar x(2, gxs:gxe), f(2, xs:xe)
@@ -242,16 +129,11 @@ contains
   end subroutine
 
   subroutine FormRHSFunction(ts, t, X, F, user, ierr)
-    use petscts
-    implicit none
-
     TS ts
     PetscReal t
     Vec X, F
     PetscReal user(6)
     PetscErrorCode ierr
-    integer user_a, user_k, user_s
-    parameter(user_a=1, user_k=3, user_s=5)
     DM da
     Vec Xloc
     PetscInt mx, xs, xe, gxs, gxe
@@ -284,17 +166,12 @@ contains
 !  IJacobian - Compute IJacobian = dF/dU + shift*dF/dUdot
 !
   subroutine FormIJacobian(ts, t, X, Xdot, shift, J, Jpre, user, ierr)
-    use petscts
-    implicit none
-
     TS ts
     PetscReal t, shift
     Vec X, Xdot
     Mat J, Jpre
     PetscReal user(6)
     PetscErrorCode ierr
-    integer user_a, user_k, user_s
-    parameter(user_a=0, user_k=2, user_s=4)
 
     DM da
     PetscInt mx, xs, xe, gxs, gxe
@@ -306,8 +183,8 @@ contains
     PetscCall(GetLayout(da, mx, xs, xe, gxs, gxe, ierr))
 
     i1 = 1
-    k1 = user(user_k + 1)
-    k2 = user(user_k + 2)
+    k1 = user(user_k)
+    k2 = user(user_k + 1)
     do i = xs, xe
       row = i - gxs
       col = i - gxs
@@ -326,7 +203,6 @@ contains
   end subroutine
 
   subroutine FormInitialSolutionLocal(mx, xs, xe, gxs, gxe, x, a, k, s, ierr)
-    implicit none
     PetscInt mx, xs, xe, gxs, gxe
     PetscScalar x(2, xs:xe)
     PetscReal a(2), k(2), s(2)
@@ -349,15 +225,10 @@ contains
   end subroutine
 
   subroutine FormInitialSolution(ts, X, user, ierr)
-    use petscts
-    implicit none
-
     TS ts
     Vec X
     PetscReal user(6)
     PetscErrorCode ierr
-    integer user_a, user_k, user_s
-    parameter(user_a=1, user_k=3, user_s=5)
 
     DM da
     PetscInt mx, xs, xe, gxs, gxe
@@ -373,6 +244,116 @@ contains
 
     PetscCall(VecRestoreArray(X, xx, ierr))
   end subroutine
+end module
+
+program main
+  use petscts
+  use ex22fmodule
+  implicit none
+
+!
+!  Create an application context to contain data needed by the
+!  application-provided call-back routines, FormJacobian() and
+!  FormFunction(). We use a double precision array with six
+!  entries, two for each problem parameter a, k, s.
+!
+  PetscReal user(6)
+
+  TS ts
+  SNES snes
+  SNESLineSearch linesearch
+  Vec X
+  Mat J
+  PetscInt mx
+  PetscErrorCode ierr
+  DM da
+  PetscReal ftime, dt
+  PetscReal one, pone
+  PetscInt im11, i2
+  PetscBool flg
+
+  im11 = 11
+  i2 = 2
+  one = 1.0
+  pone = one/10
+
+  PetscCallA(PetscInitialize(ierr))
+
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!  Create distributed array (DMDA) to manage parallel grid and vectors
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  PetscCallA(DMDACreate1d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, im11, i2, i2, PETSC_NULL_INTEGER, da, ierr))
+  PetscCallA(DMSetFromOptions(da, ierr))
+  PetscCallA(DMSetUp(da, ierr))
+
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!    Extract global vectors from DMDA
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  PetscCallA(DMCreateGlobalVector(da, X, ierr))
+
+! Initialize user application context
+! Use zero-based indexing for command line parameters to match ex22.c
+  user(user_a) = 1.0
+  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-a0', user(user_a), flg, ierr))
+  user(user_a + 1) = 0.0
+  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-a1', user(user_a + 1), flg, ierr))
+  user(user_k) = 1000000.0
+  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-k0', user(user_k), flg, ierr))
+  user(user_k + 1) = 2*user(user_k)
+  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-k1', user(user_k + 1), flg, ierr))
+  user(user_s) = 0.0
+  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-s0', user(user_s), flg, ierr))
+  user(user_s + 1) = 1.0
+  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-s1', user(user_s + 1), flg, ierr))
+
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!    Create timestepping solver context
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  PetscCallA(TSCreate(PETSC_COMM_WORLD, ts, ierr))
+  PetscCallA(TSSetDM(ts, da, ierr))
+  PetscCallA(TSSetType(ts, TSARKIMEX, ierr))
+  PetscCallA(TSSetRHSFunction(ts, PETSC_NULL_VEC, FormRHSFunction, user, ierr))
+  PetscCallA(TSSetIFunction(ts, PETSC_NULL_VEC, FormIFunction, user, ierr))
+  PetscCallA(DMSetMatType(da, MATAIJ, ierr))
+  PetscCallA(DMCreateMatrix(da, J, ierr))
+  PetscCallA(TSSetIJacobian(ts, J, J, FormIJacobian, user, ierr))
+
+  PetscCallA(TSGetSNES(ts, snes, ierr))
+  PetscCallA(SNESGetLineSearch(snes, linesearch, ierr))
+  PetscCallA(SNESLineSearchSetType(linesearch, SNESLINESEARCHBASIC, ierr))
+
+  ftime = 1.0
+  PetscCallA(TSSetMaxTime(ts, ftime, ierr))
+  PetscCallA(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_STEPOVER, ierr))
+
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!  Set initial conditions
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  PetscCallA(FormInitialSolution(ts, X, user, ierr))
+  PetscCallA(TSSetSolution(ts, X, ierr))
+  PetscCallA(VecGetSize(X, mx, ierr))
+!  Advective CFL, I don't know why it needs so much safety factor.
+  dt = pone*max(user(user_a + 1), user(user_a + 2))/mx
+  PetscCallA(TSSetTimeStep(ts, dt, ierr))
+
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!   Set runtime options
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  PetscCallA(TSSetFromOptions(ts, ierr))
+
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!  Solve nonlinear system
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  PetscCallA(TSSolve(ts, X, ierr))
+
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!  Free work space.
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  PetscCallA(MatDestroy(J, ierr))
+  PetscCallA(VecDestroy(X, ierr))
+  PetscCallA(TSDestroy(ts, ierr))
+  PetscCallA(DMDestroy(da, ierr))
+  PetscCallA(PetscFinalize(ierr))
 end program
 !/*TEST
 !
