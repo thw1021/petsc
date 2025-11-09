@@ -12,8 +12,8 @@ module petscmpi
 #endif
 #endif
 
-  public:: MPIU_REAL, MPIU_SUM, MPIU_SCALAR, MPIU_INTEGER
-  public:: PETSC_COMM_WORLD, PETSC_COMM_SELF
+  public :: MPIU_REAL, MPIU_SUM, MPIU_SCALAR, MPIU_INTEGER
+  public :: PETSC_COMM_WORLD, PETSC_COMM_SELF
 
   integer4 :: MPIU_REAL
   integer4 :: MPIU_SUM
@@ -221,14 +221,15 @@ module petscsysdef
 !
 !     Basic math constants
 !
-  PetscReal PETSC_PI
-  PetscReal PETSC_MAX_REAL
-  PetscReal PETSC_MIN_REAL
-  PetscReal PETSC_MACHINE_EPSILON
-  PetscReal PETSC_SQRT_MACHINE_EPSILON
+  PetscReal, parameter :: PETSC_PI = acos(-1.0_PETSC_REAL_KIND)
+  PetscReal, parameter :: PETSC_MAX_REAL = huge(PetscReal_Private)
+  PetscReal, parameter :: PETSC_MIN_REAL = -PETSC_MAX_REAL
+  PetscReal, parameter :: PETSC_REAL_MIN = tiny(PetscReal_Private)
+  PetscReal, parameter :: PETSC_MACHINE_EPSILON = epsilon(PetscReal_Private)
+  PetscReal, parameter :: PETSC_SQRT_MACHINE_EPSILON = sqrt(PETSC_MACHINE_EPSILON)
+  PetscReal, parameter :: PETSC_INFINITY = PETSC_MAX_REAL/4.0_PETSC_REAL_KIND
+  PetscReal, parameter :: PETSC_NINFINITY = -PETSC_INFINITY
   PetscReal PETSC_SMALL
-  PetscReal PETSC_INFINITY
-  PetscReal PETSC_NINFINITY
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_CHARACTER
@@ -687,22 +688,23 @@ subroutine PetscSetModuleBlockMPI(freal, fscalar, fsum, finteger)
   MPIU_INTEGER = finteger
 end subroutine PetscSetModuleBlockMPI
 
-subroutine PetscSetModuleBlockNumeric(pi, maxreal, minreal, eps, seps, small, pinf, pninf)
-  use petscsys, only: PETSC_PI, PETSC_MAX_REAL, PETSC_MIN_REAL, &
+subroutine PetscSetModuleBlockNumeric(pi, maxreal, minreal, realmin, eps, seps, small, pinf, pninf)
+  use petscsys, only: PETSC_PI, PETSC_MAX_REAL, PETSC_MIN_REAL, PETSC_REAL_MIN, &
                       PETSC_MACHINE_EPSILON, PETSC_SQRT_MACHINE_EPSILON, &
                       PETSC_SMALL, PETSC_INFINITY, PETSC_NINFINITY
   use, intrinsic :: ISO_C_binding
   implicit none
 
-  PetscReal pi, maxreal, minreal, eps, seps
+  PetscReal pi, maxreal, minreal, realmin, eps, seps
   PetscReal small, pinf, pninf
 
-  PETSC_PI = pi
-  PETSC_MAX_REAL = maxreal
-  PETSC_MIN_REAL = minreal
-  PETSC_MACHINE_EPSILON = eps
-  PETSC_SQRT_MACHINE_EPSILON = seps
+  if (PETSC_PI /= pi) error stop 'mismatch C-Fortran: PETSC_PI'
+  if (PETSC_MAX_REAL /= maxreal) error stop 'mismatch C-Fortran: PETSC_MAX_REAL'
+  if (PETSC_MIN_REAL /= minreal) error stop 'mismatch C-Fortran: PETSC_MIN_REAL'
+  if (PETSC_REAL_MIN /= realmin) error stop 'mismatch C-Fortran: PETSC_REAL_MIN'
+  if (PETSC_MACHINE_EPSILON /= eps) error stop 'mismatch C-Fortran: PETSC_MACHINE_EPSILON'
+  if (PETSC_SQRT_MACHINE_EPSILON /= seps) error stop 'mismatch C-Fortran: PETSC_SQRT_MACHINE_EPSILON'
+  if (PETSC_INFINITY /= pinf) error stop 'mismatch C-Fortran: PETSC_INFINITY'
+  if (PETSC_NINFINITY /= pninf) error stop 'mismatch C-Fortran: PETSC_NINFINITY'
   PETSC_SMALL = small
-  PETSC_INFINITY = pinf
-  PETSC_NINFINITY = pninf
 end subroutine PetscSetModuleBlockNumeric
