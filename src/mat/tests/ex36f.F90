@@ -6,6 +6,8 @@
 module ex36fmodule
   use petscmat
   implicit none
+
+  PetscInt, parameter :: n = 4, m = 5
 ! -----------------------------------------------------------------
 !
 !  Demo1 -  This subroutine demonstrates the use of PETSc-allocated dense
@@ -20,12 +22,8 @@ contains
   subroutine Demo1()
 
     Mat A
-    PetscInt n, m
     PetscErrorCode ierr
     PetscScalar, pointer :: aa(:, :)
-
-    n = 4
-    m = 5
 
 !  Create matrix
 
@@ -59,10 +57,8 @@ contains
 !  matrix storage.
 !
   subroutine Demo2()
-
-    PetscInt n, m
+    external MatCreateSeqDense
     PetscErrorCode ierr
-    parameter(m=5, n=4)
     Mat A
     PetscScalar aa(m, n)
 
@@ -94,21 +90,31 @@ contains
         X(i, j) = 1.0/real(i + j - 1)
       end do
     end do
-    end module ex36fmodule
+  end subroutine FillUpMatrix
 
-    end program main
-    use ex36fmodule
-    implicit none
+end module ex36fmodule
 
-    PetscErrorCode ierr
+program main
+  use ex36fmodule
+  implicit none
 
-    PetscCallA(PetscInitialize(ierr))
+  PetscErrorCode ierr
+
+  PetscCallA(PetscInitialize(ierr))
 
 !  Demo of PETSc-allocated dense matrix storage
-    call Demo1()
+  call Demo1()
 
 !  Demo of user-allocated dense matrix storage
-    call Demo2()
+  call Demo2()
 
-    PetscCallA(PetscFinalize(ierr))
-  end
+  PetscCallA(PetscFinalize(ierr))
+end program
+
+!/*TEST
+!
+!   test:
+!      nsize: 1
+!      output_file: output/ex36f.out
+!
+!TEST*/
