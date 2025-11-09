@@ -23,6 +23,8 @@ module ex22f_mfmodule
   TS::tscontext
   Mat::Jmat
   PetscReal::MFuser(6)
+  integer, parameter :: user_a = 1, user_k = 3, user_s = 5
+
 contains
 
 ! Small helper to extract the layout, result uses 1-based indexing.
@@ -60,9 +62,6 @@ contains
     Vec X, Xdot, F
     PetscReal user(6)
     PetscErrorCode ierr
-    integer user_a, user_k, user_s
-    parameter(user_a=1, user_k=3, user_s=5)
-
     DM da
     PetscInt mx, xs, xe, gxs, gxe
     PetscScalar, pointer :: xx(:), xxdot(:), ff(:)
@@ -139,8 +138,6 @@ contains
     Vec X, F
     PetscReal user(6)
     PetscErrorCode ierr
-    integer user_a, user_k, user_s
-    parameter(user_a=1, user_k=3, user_s=5)
     DM da
     Vec Xloc
     PetscInt mx, xs, xe, gxs, gxe
@@ -179,8 +176,6 @@ contains
     Mat J, Jpre
     PetscReal user(6)
     PetscErrorCode ierr
-    integer user_a, user_k, user_s
-    parameter(user_a=0, user_k=2, user_s=4)
 
     DM da
     PetscInt mx, xs, xe, gxs, gxe
@@ -192,8 +187,8 @@ contains
     PetscCall(GetLayout(da, mx, xs, xe, gxs, gxe, ierr))
 
     i1 = 1
-    k1 = user(user_k + 1)
-    k2 = user(user_k + 2)
+    k1 = user(user_k)
+    k2 = user(user_k + 1)
     do i = xs, xe
       row = i - gxs
       col = i - gxs
@@ -238,8 +233,6 @@ contains
     Vec X
     PetscReal user(6)
     PetscErrorCode ierr
-    integer user_a, user_k, user_s
-    parameter(user_a=1, user_k=3, user_s=5)
 
     DM da
     PetscInt mx, xs, xe, gxs, gxe
@@ -289,14 +282,7 @@ contains
 
     PetscErrorCode ierr
     PetscScalar shift
-
-!  Mat J,Jpre
-
     PetscReal user(6)
-
-    integer user_a, user_k, user_s
-    parameter(user_a=0, user_k=2, user_s=4)
-
     DM da
     PetscInt mx, xs, xe, gxs, gxe
     PetscInt i, i1, row, col
@@ -310,8 +296,8 @@ contains
     PetscCall(GetLayout(da, mx, xs, xe, gxs, gxe, ierr))
 
     i1 = 1
-    k1 = user(user_k + 1)
-    k2 = user(user_k + 2)
+    k1 = user(user_k)
+    k2 = user(user_k + 1)
 
     do i = xs, xe
       row = i - gxs
@@ -371,8 +357,6 @@ program main
   !     entries, two for each problem parameter a, k, s.
   !
   PetscReal user(6)
-  integer user_a, user_k, user_s
-  parameter(user_a=0, user_k=2, user_s=4)
 
   TS ts
   Vec X
@@ -411,18 +395,18 @@ program main
 
   ! Initialize user application context
   ! Use zero-based indexing for command line parameters to match ex22.c
-  user(user_a + 1) = 1.0
-  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-a0', user(user_a + 1), flg, ierr))
-  user(user_a + 2) = 0.0
-  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-a1', user(user_a + 2), flg, ierr))
-  user(user_k + 1) = 1000000.0
-  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-k0', user(user_k + 1), flg, ierr))
-  user(user_k + 2) = 2*user(user_k + 1)
-  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-k1', user(user_k + 2), flg, ierr))
-  user(user_s + 1) = 0.0
-  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-s0', user(user_s + 1), flg, ierr))
-  user(user_s + 2) = 1.0
-  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-s1', user(user_s + 2), flg, ierr))
+  user(user_a) = 1.0
+  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-a0', user(user_a), flg, ierr))
+  user(user_a + 1) = 0.0
+  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-a1', user(user_a + 1), flg, ierr))
+  user(user_k) = 1000000.0
+  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-k0', user(user_k), flg, ierr))
+  user(user_k + 1) = 2*user(user_k)
+  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-k1', user(user_k + 1), flg, ierr))
+  user(user_s) = 0.0
+  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-s0', user(user_s), flg, ierr))
+  user(user_s + 1) = 1.0
+  PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-s1', user(user_s + 1), flg, ierr))
 
   OptionSaveToDisk = .false.
   PetscCallA(PetscOptionsGetBool(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-sdisk', OptionSaveToDisk, flg, ierr))
@@ -465,7 +449,7 @@ program main
   PetscCallA(TSSetSolution(ts, X, ierr))
   PetscCallA(VecGetSize(X, mx, ierr))
   !  Advective CFL, I don't know why it needs so much safety factor.
-  dt = pone*max(user(user_a + 1), user(user_a + 2))/mx
+  dt = pone*max(user(user_a), user(user_a + 1))/mx
   PetscCallA(TSSetTimeStep(ts, dt, ierr))
 
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
