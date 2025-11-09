@@ -410,7 +410,7 @@ class Package(config.base.Configure):
             # from set(CMAKE_CXX_STANDARD <val> [CACHE <type> <docstring> [FORCE]]) extract
             # <val> CACHE <type> <docstring> [FORCE]
             cmakeSetCmd = match.groups()[1].split()[1:]
-            if (len(cmakeSetCmd) == 1) or 'CACHE' not in cmakeSetList:
+            if (len(cmakeSetCmd) == 1):
               # The worst behaved, we have a pure "set". we shouldn't rely on
               # CMAKE_CXX_STANDARD, since the package overrides it unconditionally. Thus
               # we leave the std flag in the compiler flags.
