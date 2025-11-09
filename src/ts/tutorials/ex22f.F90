@@ -16,8 +16,246 @@
 
 #include <petsc/finclude/petscts.h>
 #include <petsc/finclude/petscdmda.h>
+module ex22fmodule
+  use petscdm
+  use petscts
+  implicit none
+
+contains
+
+! Small helper to extract the layout, result uses 1-based indexing.
+  subroutine GetLayout(da, mx, xs, xe, gxs, gxe, ierr)
+    DM da
+    PetscInt mx, xs, xe, gxs, gxe
+    PetscErrorCode ierr
+    PetscInt xm, gxm
+    PetscCall(DMDAGetInfo(da, PETSC_NULL_INTEGER, mx, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_ENUM, PETSC_NULL_ENUM, PETSC_NULL_ENUM, PETSC_NULL_ENUM, ierr))
+    PetscCall(DMDAGetCorners(da, xs, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, xm, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ierr))
+    PetscCall(DMDAGetGhostCorners(da, gxs, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, gxm, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ierr))
+    xs = xs + 1
+    gxs = gxs + 1
+    xe = xs + xm - 1
+    gxe = gxs + gxm - 1
+  end subroutine
+
+  subroutine FormIFunctionLocal(mx, xs, xe, gxs, gxe, x, xdot, f, a, k, s, ierr)
+    PetscInt mx, xs, xe, gxs, gxe
+    PetscScalar x(2, xs:xe)
+    PetscScalar xdot(2, xs:xe)
+    PetscScalar f(2, xs:xe)
+    PetscReal a(2), k(2), s(2)
+    PetscErrorCode ierr
+    PetscInt i
+    do i = xs, xe
+      f(1, i) = xdot(1, i) + k(1)*x(1, i) - k(2)*x(2, i) - s(1)
+      f(2, i) = xdot(2, i) - k(1)*x(1, i) + k(2)*x(2, i) - s(2)
+    end do
+  end subroutine
+
+  subroutine FormIFunction(ts, t, X, Xdot, F, user, ierr)
+    TS ts
+    PetscReal t
+    Vec X, Xdot, F
+    PetscReal user(6)
+    PetscErrorCode ierr
+    integer user_a, user_k, user_s
+    parameter(user_a=1, user_k=3, user_s=5)
+
+    DM da
+    PetscInt mx, xs, xe, gxs, gxe
+    PetscScalar, pointer :: xx(:), xxdot(:), ff(:)
+
+    PetscCall(TSGetDM(ts, da, ierr))
+    PetscCall(GetLayout(da, mx, xs, xe, gxs, gxe, ierr))
+
+! Get access to vector data
+    PetscCall(VecGetArrayRead(X, xx, ierr))
+    PetscCall(VecGetArrayRead(Xdot, xxdot, ierr))
+    PetscCall(VecGetArray(F, ff, ierr))
+
+    PetscCall(FormIFunctionLocal(mx, xs, xe, gxs, gxe, xx, xxdot, ff, user(user_a), user(user_k), user(user_s), ierr))
+
+    PetscCall(VecRestoreArrayRead(X, xx, ierr))
+    PetscCall(VecRestoreArrayRead(Xdot, xxdot, ierr))
+    PetscCall(VecRestoreArray(F, ff, ierr))
+  end subroutine
+
+  subroutine FormRHSFunctionLocal(mx, xs, xe, gxs, gxe, t, x, f, a, k, s, ierr)
+    PetscInt mx, xs, xe, gxs, gxe
+    PetscReal t
+    PetscScalar x(2, gxs:gxe), f(2, xs:xe)
+    PetscReal a(2), k(2), s(2)
+    PetscErrorCode ierr
+    PetscInt i, j
+    PetscReal hx, u0t(2)
+    PetscReal one, two, three, four, six, twelve
+    PetscReal half, third, twothird, sixth
+    PetscReal twelfth
+
+    one = 1.0
+    two = 2.0
+    three = 3.0
+    four = 4.0
+    six = 6.0
+    twelve = 12.0
+    hx = one/mx
+!     The Fortran standard only allows positive base for power functions; Nag compiler fails on this
+    u0t(1) = one - abs(sin(twelve*t))**four
+    u0t(2) = 0.0
+    half = one/two
+    third = one/three
+    twothird = two/three
+    sixth = one/six
+    twelfth = one/twelve
+    do i = xs, xe
+      do j = 1, 2
+        if (i == 1) then
+          f(j, i) = a(j)/hx*(third*u0t(j) + half*x(j, i) - x(j, i + 1)  &
+&              + sixth*x(j, i + 2))
+        else if (i == 2) then
+          f(j, i) = a(j)/hx*(-twelfth*u0t(j) + twothird*x(j, i - 1)    &
+&              - twothird*x(j, i + 1) + twelfth*x(j, i + 2))
+        else if (i == mx - 1) then
+          f(j, i) = a(j)/hx*(-sixth*x(j, i - 2) + x(j, i - 1)             &
+&         - half*x(j, i) - third*x(j, i + 1))
+        else if (i == mx) then
+          f(j, i) = a(j)/hx*(-x(j, i) + x(j, i - 1))
+        else
+          f(j, i) = a(j)/hx*(-twelfth*x(j, i - 2)                      &
+&              + twothird*x(j, i - 1)                                 &
+&              - twothird*x(j, i + 1) + twelfth*x(j, i + 2))
+        end if
+      end do
+    end do
+  end subroutine
+
+  subroutine FormRHSFunction(ts, t, X, F, user, ierr)
+    TS ts
+    PetscReal t
+    Vec X, F
+    PetscReal user(6)
+    PetscErrorCode ierr
+    integer user_a, user_k, user_s
+    parameter(user_a=1, user_k=3, user_s=5)
+    DM da
+    Vec Xloc
+    PetscInt mx, xs, xe, gxs, gxe
+    PetscScalar, pointer :: xx(:), ff(:)
+
+    PetscCall(TSGetDM(ts, da, ierr))
+    PetscCall(GetLayout(da, mx, xs, xe, gxs, gxe, ierr))
+
+!     Scatter ghost points to local vector,using the 2-step process
+!        DMGlobalToLocalBegin(),DMGlobalToLocalEnd().
+!     By placing code between these two statements, computations can be
+!     done while messages are in transition.
+    PetscCall(DMGetLocalVector(da, Xloc, ierr))
+    PetscCall(DMGlobalToLocalBegin(da, X, INSERT_VALUES, Xloc, ierr))
+    PetscCall(DMGlobalToLocalEnd(da, X, INSERT_VALUES, Xloc, ierr))
+
+! Get access to vector data
+    PetscCall(VecGetArrayRead(Xloc, xx, ierr))
+    PetscCall(VecGetArray(F, ff, ierr))
+
+    PetscCall(FormRHSFunctionLocal(mx, xs, xe, gxs, gxe, t, xx, ff, user(user_a), user(user_k), user(user_s), ierr))
+
+    PetscCall(VecRestoreArrayRead(Xloc, xx, ierr))
+    PetscCall(VecRestoreArray(F, ff, ierr))
+    PetscCall(DMRestoreLocalVector(da, Xloc, ierr))
+  end subroutine
+
+! ---------------------------------------------------------------------
+!
+!  IJacobian - Compute IJacobian = dF/dU + shift*dF/dUdot
+!
+  subroutine FormIJacobian(ts, t, X, Xdot, shift, J, Jpre, user, ierr)
+    TS ts
+    PetscReal t, shift
+    Vec X, Xdot
+    Mat J, Jpre
+    PetscReal user(6)
+    PetscErrorCode ierr
+    integer user_a, user_k, user_s
+    parameter(user_a=0, user_k=2, user_s=4)
+
+    DM da
+    PetscInt mx, xs, xe, gxs, gxe
+    PetscInt i, i1, row, col
+    PetscReal k1, k2
+    PetscScalar val(4)
+
+    PetscCall(TSGetDM(ts, da, ierr))
+    PetscCall(GetLayout(da, mx, xs, xe, gxs, gxe, ierr))
+
+    i1 = 1
+    k1 = user(user_k + 1)
+    k2 = user(user_k + 2)
+    do i = xs, xe
+      row = i - gxs
+      col = i - gxs
+      val(1) = shift + k1
+      val(2) = -k2
+      val(3) = -k1
+      val(4) = shift + k2
+      PetscCall(MatSetValuesBlockedLocal(Jpre, i1, [row], i1, [col], val, INSERT_VALUES, ierr))
+    end do
+    PetscCall(MatAssemblyBegin(Jpre, MAT_FINAL_ASSEMBLY, ierr))
+    PetscCall(MatAssemblyEnd(Jpre, MAT_FINAL_ASSEMBLY, ierr))
+    if (J /= Jpre) then
+      PetscCall(MatAssemblyBegin(J, MAT_FINAL_ASSEMBLY, ierr))
+      PetscCall(MatAssemblyEnd(J, MAT_FINAL_ASSEMBLY, ierr))
+    end if
+  end subroutine
+
+  subroutine FormInitialSolutionLocal(mx, xs, xe, gxs, gxe, x, a, k, s, ierr)
+    PetscInt mx, xs, xe, gxs, gxe
+    PetscScalar x(2, xs:xe)
+    PetscReal a(2), k(2), s(2)
+    PetscErrorCode ierr
+
+    PetscInt i
+    PetscReal one, hx, r, ik
+    one = 1.0
+    hx = one/mx
+    do i = xs, xe
+      r = i*hx
+      if (k(2) /= 0.0) then
+        ik = one/k(2)
+      else
+        ik = one
+      end if
+      x(1, i) = one + s(2)*r
+      x(2, i) = k(1)*ik*x(1, i) + s(2)*ik
+    end do
+  end subroutine
+
+  subroutine FormInitialSolution(ts, X, user, ierr)
+    TS ts
+    Vec X
+    PetscReal user(6)
+    PetscErrorCode ierr
+    integer user_a, user_k, user_s
+    parameter(user_a=1, user_k=3, user_s=5)
+
+    DM da
+    PetscInt mx, xs, xe, gxs, gxe
+    PetscScalar, pointer :: xx(:)
+
+    PetscCall(TSGetDM(ts, da, ierr))
+    PetscCall(GetLayout(da, mx, xs, xe, gxs, gxe, ierr))
+
+! Get access to vector data
+    PetscCall(VecGetArray(X, xx, ierr))
+
+    PetscCall(FormInitialSolutionLocal(mx, xs, xe, gxs, gxe, xx, user(user_a), user(user_k), user(user_s), ierr))
+
+    PetscCall(VecRestoreArray(X, xx, ierr))
+  end subroutine
+end module
+
 program main
   use petscts
+  use ex22fmodule
   implicit none
 
 !
@@ -125,254 +363,6 @@ program main
   PetscCallA(TSDestroy(ts, ierr))
   PetscCallA(DMDestroy(da, ierr))
   PetscCallA(PetscFinalize(ierr))
-contains
-
-! Small helper to extract the layout, result uses 1-based indexing.
-  subroutine GetLayout(da, mx, xs, xe, gxs, gxe, ierr)
-    use petscdm
-    implicit none
-
-    DM da
-    PetscInt mx, xs, xe, gxs, gxe
-    PetscErrorCode ierr
-    PetscInt xm, gxm
-    PetscCall(DMDAGetInfo(da, PETSC_NULL_INTEGER, mx, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_ENUM, PETSC_NULL_ENUM, PETSC_NULL_ENUM, PETSC_NULL_ENUM, ierr))
-    PetscCall(DMDAGetCorners(da, xs, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, xm, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ierr))
-    PetscCall(DMDAGetGhostCorners(da, gxs, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, gxm, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ierr))
-    xs = xs + 1
-    gxs = gxs + 1
-    xe = xs + xm - 1
-    gxe = gxs + gxm - 1
-  end subroutine
-
-  subroutine FormIFunctionLocal(mx, xs, xe, gxs, gxe, x, xdot, f, a, k, s, ierr)
-    implicit none
-    PetscInt mx, xs, xe, gxs, gxe
-    PetscScalar x(2, xs:xe)
-    PetscScalar xdot(2, xs:xe)
-    PetscScalar f(2, xs:xe)
-    PetscReal a(2), k(2), s(2)
-    PetscErrorCode ierr
-    PetscInt i
-    do i = xs, xe
-      f(1, i) = xdot(1, i) + k(1)*x(1, i) - k(2)*x(2, i) - s(1)
-      f(2, i) = xdot(2, i) - k(1)*x(1, i) + k(2)*x(2, i) - s(2)
-    end do
-  end subroutine
-
-  subroutine FormIFunction(ts, t, X, Xdot, F, user, ierr)
-    use petscts
-    implicit none
-
-    TS ts
-    PetscReal t
-    Vec X, Xdot, F
-    PetscReal user(6)
-    PetscErrorCode ierr
-    integer user_a, user_k, user_s
-    parameter(user_a=1, user_k=3, user_s=5)
-
-    DM da
-    PetscInt mx, xs, xe, gxs, gxe
-    PetscScalar, pointer :: xx(:), xxdot(:), ff(:)
-
-    PetscCall(TSGetDM(ts, da, ierr))
-    PetscCall(GetLayout(da, mx, xs, xe, gxs, gxe, ierr))
-
-! Get access to vector data
-    PetscCall(VecGetArrayRead(X, xx, ierr))
-    PetscCall(VecGetArrayRead(Xdot, xxdot, ierr))
-    PetscCall(VecGetArray(F, ff, ierr))
-
-    PetscCall(FormIFunctionLocal(mx, xs, xe, gxs, gxe, xx, xxdot, ff, user(user_a), user(user_k), user(user_s), ierr))
-
-    PetscCall(VecRestoreArrayRead(X, xx, ierr))
-    PetscCall(VecRestoreArrayRead(Xdot, xxdot, ierr))
-    PetscCall(VecRestoreArray(F, ff, ierr))
-  end subroutine
-
-  subroutine FormRHSFunctionLocal(mx, xs, xe, gxs, gxe, t, x, f, a, k, s, ierr)
-    implicit none
-    PetscInt mx, xs, xe, gxs, gxe
-    PetscReal t
-    PetscScalar x(2, gxs:gxe), f(2, xs:xe)
-    PetscReal a(2), k(2), s(2)
-    PetscErrorCode ierr
-    PetscInt i, j
-    PetscReal hx, u0t(2)
-    PetscReal one, two, three, four, six, twelve
-    PetscReal half, third, twothird, sixth
-    PetscReal twelfth
-
-    one = 1.0
-    two = 2.0
-    three = 3.0
-    four = 4.0
-    six = 6.0
-    twelve = 12.0
-    hx = one/mx
-!     The Fortran standard only allows positive base for power functions; Nag compiler fails on this
-    u0t(1) = one - abs(sin(twelve*t))**four
-    u0t(2) = 0.0
-    half = one/two
-    third = one/three
-    twothird = two/three
-    sixth = one/six
-    twelfth = one/twelve
-    do i = xs, xe
-      do j = 1, 2
-        if (i == 1) then
-          f(j, i) = a(j)/hx*(third*u0t(j) + half*x(j, i) - x(j, i + 1)  &
-&              + sixth*x(j, i + 2))
-        else if (i == 2) then
-          f(j, i) = a(j)/hx*(-twelfth*u0t(j) + twothird*x(j, i - 1)    &
-&              - twothird*x(j, i + 1) + twelfth*x(j, i + 2))
-        else if (i == mx - 1) then
-          f(j, i) = a(j)/hx*(-sixth*x(j, i - 2) + x(j, i - 1)             &
-&         - half*x(j, i) - third*x(j, i + 1))
-        else if (i == mx) then
-          f(j, i) = a(j)/hx*(-x(j, i) + x(j, i - 1))
-        else
-          f(j, i) = a(j)/hx*(-twelfth*x(j, i - 2)                      &
-&              + twothird*x(j, i - 1)                                 &
-&              - twothird*x(j, i + 1) + twelfth*x(j, i + 2))
-        end if
-      end do
-    end do
-  end subroutine
-
-  subroutine FormRHSFunction(ts, t, X, F, user, ierr)
-    use petscts
-    implicit none
-
-    TS ts
-    PetscReal t
-    Vec X, F
-    PetscReal user(6)
-    PetscErrorCode ierr
-    integer user_a, user_k, user_s
-    parameter(user_a=1, user_k=3, user_s=5)
-    DM da
-    Vec Xloc
-    PetscInt mx, xs, xe, gxs, gxe
-    PetscScalar, pointer :: xx(:), ff(:)
-
-    PetscCall(TSGetDM(ts, da, ierr))
-    PetscCall(GetLayout(da, mx, xs, xe, gxs, gxe, ierr))
-
-!     Scatter ghost points to local vector,using the 2-step process
-!        DMGlobalToLocalBegin(),DMGlobalToLocalEnd().
-!     By placing code between these two statements, computations can be
-!     done while messages are in transition.
-    PetscCall(DMGetLocalVector(da, Xloc, ierr))
-    PetscCall(DMGlobalToLocalBegin(da, X, INSERT_VALUES, Xloc, ierr))
-    PetscCall(DMGlobalToLocalEnd(da, X, INSERT_VALUES, Xloc, ierr))
-
-! Get access to vector data
-    PetscCall(VecGetArrayRead(Xloc, xx, ierr))
-    PetscCall(VecGetArray(F, ff, ierr))
-
-    PetscCall(FormRHSFunctionLocal(mx, xs, xe, gxs, gxe, t, xx, ff, user(user_a), user(user_k), user(user_s), ierr))
-
-    PetscCall(VecRestoreArrayRead(Xloc, xx, ierr))
-    PetscCall(VecRestoreArray(F, ff, ierr))
-    PetscCall(DMRestoreLocalVector(da, Xloc, ierr))
-  end subroutine
-
-! ---------------------------------------------------------------------
-!
-!  IJacobian - Compute IJacobian = dF/dU + shift*dF/dUdot
-!
-  subroutine FormIJacobian(ts, t, X, Xdot, shift, J, Jpre, user, ierr)
-    use petscts
-    implicit none
-
-    TS ts
-    PetscReal t, shift
-    Vec X, Xdot
-    Mat J, Jpre
-    PetscReal user(6)
-    PetscErrorCode ierr
-    integer user_a, user_k, user_s
-    parameter(user_a=0, user_k=2, user_s=4)
-
-    DM da
-    PetscInt mx, xs, xe, gxs, gxe
-    PetscInt i, i1, row, col
-    PetscReal k1, k2
-    PetscScalar val(4)
-
-    PetscCall(TSGetDM(ts, da, ierr))
-    PetscCall(GetLayout(da, mx, xs, xe, gxs, gxe, ierr))
-
-    i1 = 1
-    k1 = user(user_k + 1)
-    k2 = user(user_k + 2)
-    do i = xs, xe
-      row = i - gxs
-      col = i - gxs
-      val(1) = shift + k1
-      val(2) = -k2
-      val(3) = -k1
-      val(4) = shift + k2
-      PetscCall(MatSetValuesBlockedLocal(Jpre, i1, [row], i1, [col], val, INSERT_VALUES, ierr))
-    end do
-    PetscCall(MatAssemblyBegin(Jpre, MAT_FINAL_ASSEMBLY, ierr))
-    PetscCall(MatAssemblyEnd(Jpre, MAT_FINAL_ASSEMBLY, ierr))
-    if (J /= Jpre) then
-      PetscCall(MatAssemblyBegin(J, MAT_FINAL_ASSEMBLY, ierr))
-      PetscCall(MatAssemblyEnd(J, MAT_FINAL_ASSEMBLY, ierr))
-    end if
-  end subroutine
-
-  subroutine FormInitialSolutionLocal(mx, xs, xe, gxs, gxe, x, a, k, s, ierr)
-    implicit none
-    PetscInt mx, xs, xe, gxs, gxe
-    PetscScalar x(2, xs:xe)
-    PetscReal a(2), k(2), s(2)
-    PetscErrorCode ierr
-
-    PetscInt i
-    PetscReal one, hx, r, ik
-    one = 1.0
-    hx = one/mx
-    do i = xs, xe
-      r = i*hx
-      if (k(2) /= 0.0) then
-        ik = one/k(2)
-      else
-        ik = one
-      end if
-      x(1, i) = one + s(2)*r
-      x(2, i) = k(1)*ik*x(1, i) + s(2)*ik
-    end do
-  end subroutine
-
-  subroutine FormInitialSolution(ts, X, user, ierr)
-    use petscts
-    implicit none
-
-    TS ts
-    Vec X
-    PetscReal user(6)
-    PetscErrorCode ierr
-    integer user_a, user_k, user_s
-    parameter(user_a=1, user_k=3, user_s=5)
-
-    DM da
-    PetscInt mx, xs, xe, gxs, gxe
-    PetscScalar, pointer :: xx(:)
-
-    PetscCall(TSGetDM(ts, da, ierr))
-    PetscCall(GetLayout(da, mx, xs, xe, gxs, gxe, ierr))
-
-! Get access to vector data
-    PetscCall(VecGetArray(X, xx, ierr))
-
-    PetscCall(FormInitialSolutionLocal(mx, xs, xe, gxs, gxe, xx, user(user_a), user(user_k), user(user_s), ierr))
-
-    PetscCall(VecRestoreArray(X, xx, ierr))
-  end subroutine
 end program
 !/*TEST
 !

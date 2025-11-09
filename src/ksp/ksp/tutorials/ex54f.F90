@@ -16,8 +16,188 @@
 
 ! -----------------------------------------------------------------------
 #include <petsc/finclude/petscksp.h>
+
+module ex54fmodule
+  use petscksp
+  implicit none
+
+  PetscReal :: theta
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!     thfx2d - compute material tensor
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!     Compute thermal gradient and flux
+
+contains
+  subroutine thfx2d(ev, xl, shp, dd, ndm, ndf, nel, dir)
+
+    PetscInt ndm, ndf, nel, i
+    PetscReal ev(2), xl(ndm, nel), shp(3, *), dir
+    PetscReal xx, yy, psi, cs, sn, c2, s2, dd(2, 2)
+
+    xx = 0.0
+    yy = 0.0
+    do i = 1, nel
+      xx = xx + shp(3, i)*xl(1, i)
+      yy = yy + shp(3, i)*xl(2, i)
+    end do
+    psi = dir(xx, yy)
+!     Compute thermal flux
+    cs = cos(psi)
+    sn = sin(psi)
+    c2 = cs*cs
+    s2 = sn*sn
+    cs = cs*sn
+
+    dd(1, 1) = c2*ev(1) + s2*ev(2)
+    dd(2, 2) = s2*ev(1) + c2*ev(2)
+    dd(1, 2) = cs*(ev(1) - ev(2))
+    dd(2, 1) = dd(1, 2)
+
+!      flux(1) = -dd(1,1)*gradt(1) - dd(1,2)*gradt(2)
+!      flux(2) = -dd(2,1)*gradt(1) - dd(2,2)*gradt(2)
+
+  end
+
+!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!     shp2dquad - shape functions - compute derivatives w/r natural coords.
+!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  subroutine shp2dquad(s, t, xl, shp, xsj, ndm)
+!-----[--.----+----.----+----.-----------------------------------------]
+!      Purpose: Shape function routine for 4-node isoparametric quads
+!
+!      Inputs:
+!         s,t       - Natural coordinates of point
+!         xl(ndm,*) - Nodal coordinates for element
+!         ndm       - Spatial dimension of mesh
+
+!      Outputs:
+!         shp(3,*)  - Shape functions and derivatives at point
+!                     shp(1,i) = dN_i/dx  or dN_i/dxi_1
+!                     shp(2,i) = dN_i/dy  or dN_i/dxi_2
+!                     shp(3,i) = N_i
+!         xsj       - Jacobian determinant at point
+!-----[--.----+----.----+----.-----------------------------------------]
+    PetscInt ndm
+    PetscReal xo, xs, xt, yo, ys, yt, xsm, xsp, xtm
+    PetscReal xtp, ysm, ysp, ytm, ytp
+    PetscReal s, t, xsj, xsj1, sh, th, sp, tp, sm
+    PetscReal tm, xl(ndm, 4), shp(3, 4)
+
+!     Set up interpolations
+
+    sh = 0.5*s
+    th = 0.5*t
+    sp = 0.5 + sh
+    tp = 0.5 + th
+    sm = 0.5 - sh
+    tm = 0.5 - th
+    shp(3, 1) = sm*tm
+    shp(3, 2) = sp*tm
+    shp(3, 3) = sp*tp
+    shp(3, 4) = sm*tp
+
+!     Set up natural coordinate functions (times 4)
+
+    xo = xl(1, 1) - xl(1, 2) + xl(1, 3) - xl(1, 4)
+    xs = -xl(1, 1) + xl(1, 2) + xl(1, 3) - xl(1, 4) + xo*t
+    xt = -xl(1, 1) - xl(1, 2) + xl(1, 3) + xl(1, 4) + xo*s
+    yo = xl(2, 1) - xl(2, 2) + xl(2, 3) - xl(2, 4)
+    ys = -xl(2, 1) + xl(2, 2) + xl(2, 3) - xl(2, 4) + yo*t
+    yt = -xl(2, 1) - xl(2, 2) + xl(2, 3) + xl(2, 4) + yo*s
+
+!     Compute jacobian (times 16)
+
+    xsj1 = xs*yt - xt*ys
+
+!     Divide jacobian by 16 (multiply by .0625)
+
+    xsj = 0.0625*xsj1
+    if (xsj1 == 0.0) then
+      xsj1 = 1.0
+    else
+      xsj1 = 1.0/xsj1
+    end if
+
+!     Divide functions by jacobian
+
+    xs = (xs + xs)*xsj1
+    xt = (xt + xt)*xsj1
+    ys = (ys + ys)*xsj1
+    yt = (yt + yt)*xsj1
+
+!     Multiply by interpolations
+
+    ytm = yt*tm
+    ysm = ys*sm
+    ytp = yt*tp
+    ysp = ys*sp
+    xtm = xt*tm
+    xsm = xs*sm
+    xtp = xt*tp
+    xsp = xs*sp
+
+!     Compute shape functions
+
+    shp(1, 1) = -ytm + ysm
+    shp(1, 2) = ytm + ysp
+    shp(1, 3) = ytp - ysp
+    shp(1, 4) = -ytp - ysm
+    shp(2, 1) = xtm - xsm
+    shp(2, 2) = -xtm - xsp
+    shp(2, 3) = -xtp + xsp
+    shp(2, 4) = xtp + xsm
+
+  end
+
+!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!     int2d
+!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  subroutine int2d(l, sg)
+!-----[--.----+----.----+----.-----------------------------------------]
+!     Purpose: Form Gauss points and weights for two dimensions
+
+!     Inputs:
+!     l       - Number of points/direction
+
+!     Outputs:
+!     sg(3,*) - Array of points and weights
+!-----[--.----+----.----+----.-----------------------------------------]
+    PetscInt l, i
+    PetscReal g, sg(3, *)
+    PetscInt, parameter, dimension(9) :: &
+      lr = [-1, 1, 1, -1, 0, 1, 0, -1, 0], &
+      lz = [-1, -1, 1, 1, -1, 0, 1, 0, 0]
+    PetscReal, parameter :: third = 0.3333333333333333
+
+!     2x2 integration
+    g = sqrt(third)
+    do i = 1, 4
+      sg(1, i) = g*lr(i)
+      sg(2, i) = g*lz(i)
+      sg(3, i) = 1.0
+    end do
+
+  end
+
+!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!     ex54_psi - anisotropic material direction
+!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  PetscReal function ex54_psi(x, y)
+    PetscReal x, y
+    ex54_psi = theta
+    if (theta < 0.) then     ! circular
+      if (y == 0) then
+        ex54_psi = 2.0*atan(1.0)
+      else
+        ex54_psi = atan(-x/y)
+      end if
+    end if
+  end
+end module
+
 program main
   use petscksp
+  use ex54fmodule
   implicit none
 
   Vec xvec, bvec, uvec
@@ -34,10 +214,9 @@ program main
   PetscScalar::ss(4, 4), val
   PetscReal::shp(3, 9), sg(3, 9)
   PetscReal::thk, a1, a2
-  PetscReal::theta, eps, h, x, y, xsj
+  PetscReal:: eps, h, x, y, xsj
   PetscReal::coord(2, 4), dd(2, 2), ev(3), blb(2)
 
-  common/ex54_theta/theta
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                 Beginning of program
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -249,179 +428,7 @@ program main
   PetscCallA(MatDestroy(Amat, ierr))
   PetscCallA(KSPDestroy(ksp, ierr))
   PetscCallA(PetscFinalize(ierr))
-
-contains
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!     thfx2d - compute material tensor
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!     Compute thermal gradient and flux
-
-  subroutine thfx2d(ev, xl, shp, dd, ndm, ndf, nel, dir)
-
-    PetscInt ndm, ndf, nel, i
-    PetscReal ev(2), xl(ndm, nel), shp(3, *), dir
-    PetscReal xx, yy, psi, cs, sn, c2, s2, dd(2, 2)
-
-    xx = 0.0
-    yy = 0.0
-    do i = 1, nel
-      xx = xx + shp(3, i)*xl(1, i)
-      yy = yy + shp(3, i)*xl(2, i)
-    end do
-    psi = dir(xx, yy)
-!     Compute thermal flux
-    cs = cos(psi)
-    sn = sin(psi)
-    c2 = cs*cs
-    s2 = sn*sn
-    cs = cs*sn
-
-    dd(1, 1) = c2*ev(1) + s2*ev(2)
-    dd(2, 2) = s2*ev(1) + c2*ev(2)
-    dd(1, 2) = cs*(ev(1) - ev(2))
-    dd(2, 1) = dd(1, 2)
-
-!      flux(1) = -dd(1,1)*gradt(1) - dd(1,2)*gradt(2)
-!      flux(2) = -dd(2,1)*gradt(1) - dd(2,2)*gradt(2)
-
-  end
-
-!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!     shp2dquad - shape functions - compute derivatives w/r natural coords.
-!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  subroutine shp2dquad(s, t, xl, shp, xsj, ndm)
-!-----[--.----+----.----+----.-----------------------------------------]
-!      Purpose: Shape function routine for 4-node isoparametric quads
-!
-!      Inputs:
-!         s,t       - Natural coordinates of point
-!         xl(ndm,*) - Nodal coordinates for element
-!         ndm       - Spatial dimension of mesh
-
-!      Outputs:
-!         shp(3,*)  - Shape functions and derivatives at point
-!                     shp(1,i) = dN_i/dx  or dN_i/dxi_1
-!                     shp(2,i) = dN_i/dy  or dN_i/dxi_2
-!                     shp(3,i) = N_i
-!         xsj       - Jacobian determinant at point
-!-----[--.----+----.----+----.-----------------------------------------]
-    PetscInt ndm
-    PetscReal xo, xs, xt, yo, ys, yt, xsm, xsp, xtm
-    PetscReal xtp, ysm, ysp, ytm, ytp
-    PetscReal s, t, xsj, xsj1, sh, th, sp, tp, sm
-    PetscReal tm, xl(ndm, 4), shp(3, 4)
-
-!     Set up interpolations
-
-    sh = 0.5*s
-    th = 0.5*t
-    sp = 0.5 + sh
-    tp = 0.5 + th
-    sm = 0.5 - sh
-    tm = 0.5 - th
-    shp(3, 1) = sm*tm
-    shp(3, 2) = sp*tm
-    shp(3, 3) = sp*tp
-    shp(3, 4) = sm*tp
-
-!     Set up natural coordinate functions (times 4)
-
-    xo = xl(1, 1) - xl(1, 2) + xl(1, 3) - xl(1, 4)
-    xs = -xl(1, 1) + xl(1, 2) + xl(1, 3) - xl(1, 4) + xo*t
-    xt = -xl(1, 1) - xl(1, 2) + xl(1, 3) + xl(1, 4) + xo*s
-    yo = xl(2, 1) - xl(2, 2) + xl(2, 3) - xl(2, 4)
-    ys = -xl(2, 1) + xl(2, 2) + xl(2, 3) - xl(2, 4) + yo*t
-    yt = -xl(2, 1) - xl(2, 2) + xl(2, 3) + xl(2, 4) + yo*s
-
-!     Compute jacobian (times 16)
-
-    xsj1 = xs*yt - xt*ys
-
-!     Divide jacobian by 16 (multiply by .0625)
-
-    xsj = 0.0625*xsj1
-    if (xsj1 == 0.0) then
-      xsj1 = 1.0
-    else
-      xsj1 = 1.0/xsj1
-    end if
-
-!     Divide functions by jacobian
-
-    xs = (xs + xs)*xsj1
-    xt = (xt + xt)*xsj1
-    ys = (ys + ys)*xsj1
-    yt = (yt + yt)*xsj1
-
-!     Multiply by interpolations
-
-    ytm = yt*tm
-    ysm = ys*sm
-    ytp = yt*tp
-    ysp = ys*sp
-    xtm = xt*tm
-    xsm = xs*sm
-    xtp = xt*tp
-    xsp = xs*sp
-
-!     Compute shape functions
-
-    shp(1, 1) = -ytm + ysm
-    shp(1, 2) = ytm + ysp
-    shp(1, 3) = ytp - ysp
-    shp(1, 4) = -ytp - ysm
-    shp(2, 1) = xtm - xsm
-    shp(2, 2) = -xtm - xsp
-    shp(2, 3) = -xtp + xsp
-    shp(2, 4) = xtp + xsm
-
-  end
-
-!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!     int2d
-!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  subroutine int2d(l, sg)
-!-----[--.----+----.----+----.-----------------------------------------]
-!     Purpose: Form Gauss points and weights for two dimensions
-
-!     Inputs:
-!     l       - Number of points/direction
-
-!     Outputs:
-!     sg(3,*) - Array of points and weights
-!-----[--.----+----.----+----.-----------------------------------------]
-    PetscInt l, i, lr(9), lz(9)
-    PetscReal g, third, sg(3, *)
-    data lr/-1, 1, 1, -1, 0, 1, 0, -1, 0/, lz/-1, -1, 1, 1, -1, 0, 1, 0, 0/
-    data third/0.3333333333333333/
-
-!     2x2 integration
-    g = sqrt(third)
-    do i = 1, 4
-      sg(1, i) = g*lr(i)
-      sg(2, i) = g*lz(i)
-      sg(3, i) = 1.0
-    end do
-
-  end
-
-!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!     ex54_psi - anisotropic material direction
-!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  PetscReal function ex54_psi(x, y)
-    PetscReal x, y, theta
-    common/ex54_theta/theta
-    ex54_psi = theta
-    if (theta < 0.) then     ! circular
-      if (y == 0) then
-        ex54_psi = 2.0*atan(1.0)
-      else
-        ex54_psi = atan(-x/y)
-      end if
-    end if
-  end
-end
-
+end program
 !
 !/*TEST
 !

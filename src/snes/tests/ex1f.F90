@@ -32,6 +32,11 @@
 module ex1fmodule
   use petscsnes
   implicit none
+
+  PetscReal lambda
+  PetscInt mx, my
+  PetscBool fd_coloring
+
 contains
   subroutine postcheck(snes, x, y, w, changed_y, changed_w, ctx, ierr)
     SNES snes
@@ -117,12 +122,6 @@ contains
 !
   subroutine ApplicationInitialGuess(x, ierr)
 
-!  Common blocks:
-    PetscReal lambda
-    PetscInt mx, my
-    PetscBool fd_coloring
-    common/params/lambda, mx, my, fd_coloring
-
 !  Input/output variables:
     PetscScalar x(mx, my)
     PetscErrorCode ierr
@@ -181,12 +180,6 @@ contains
     PetscErrorCode ierr
     MatFDColoring fdcoloring
 
-!  Common blocks:
-    PetscReal lambda
-    PetscInt mx, my
-    PetscBool fd_coloring
-    common/params/lambda, mx, my, fd_coloring
-
 !  Declarations for use with local arrays:
     PetscScalar, pointer :: lx_v(:), lf_v(:)
     PetscInt, pointer :: indices(:)
@@ -210,7 +203,7 @@ contains
 
     PetscCallA(PetscLogFlops(11.0d0*mx*my, ierr))
 !
-!     fdcoloring is in the common block and used here ONLY to test the
+!     fdcoloring is a module variable and used here ONLY to test the
 !     calls to MatFDColoringGetPerturbedColumns() and  MatFDColoringRestorePerturbedColumns()
 !
     if (fd_coloring) then
@@ -238,12 +231,6 @@ contains
 !  This routine uses standard Fortran-style computations over a 2-dim array.
 !
   subroutine ApplicationFunction(x, f, ierr)
-
-!  Common blocks:
-    PetscReal lambda
-    PetscInt mx, my
-    PetscBool fd_coloring
-    common/params/lambda, mx, my, fd_coloring
 
 !  Input/output variables:
     PetscScalar x(mx, my), f(mx, my)
@@ -312,12 +299,6 @@ contains
     PetscErrorCode ierr
     integer dummy
 
-!  Common blocks:
-    PetscReal lambda
-    PetscInt mx, my
-    PetscBool fd_coloring
-    common/params/lambda, mx, my, fd_coloring
-
 !  Declarations for use with local array:
     PetscScalar, pointer :: lx_v(:)
 
@@ -357,11 +338,6 @@ contains
 !  This routine uses standard Fortran-style computations over a 2-dim array.
 !
   subroutine ApplicationJacobian(x, jac, jac_prec, ierr)
-!  Common blocks:
-    PetscReal lambda
-    PetscInt mx, my
-    PetscBool fd_coloring
-    common/params/lambda, mx, my, fd_coloring
 
 !  Input/output variables:
     PetscScalar x(mx, my)
@@ -441,11 +417,11 @@ program main
   Vec x, r
   PetscDraw draw
   Mat J
-  PetscBool matrix_free, flg, fd_coloring
+  PetscBool matrix_free, flg
   PetscErrorCode ierr
-  PetscInt its, N, mx, my, i5
+  PetscInt its, N, i5
   PetscMPIInt size, rank
-  PetscReal lambda_max, lambda_min, lambda
+  PetscReal lambda_max, lambda_min
   MatFDColoring fdcoloring
   ISColoring iscoloring
   PetscBool pc
@@ -453,10 +429,6 @@ program main
   character(len=PETSC_MAX_PATH_LEN) :: outputString
   PetscScalar, pointer :: lx_v(:)
   integer4 xl, yl, width, height
-
-!  Store parameters in common block
-
-  common/params/lambda, mx, my, fd_coloring
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  Initialize program
@@ -489,7 +461,7 @@ program main
 
   PetscCallA(SNESCreate(PETSC_COMM_WORLD, snes, ierr))
 
-  if (pc .eqv. PETSC_TRUE) then
+  if (pc) then
     PetscCallA(SNESSetType(snes, SNESNEWTONTR, ierr))
     PetscCallA(SNESNewtonTRSetPostCheck(snes, postcheck, snes, ierr))
   end if

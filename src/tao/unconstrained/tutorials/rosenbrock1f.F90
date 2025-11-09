@@ -16,6 +16,10 @@
 module rosenbrock1fmodule
   use petsctao
   implicit none
+
+  PetscReal alpha
+  PetscInt n
+
 contains
 ! --------------------------------------------------------------------
 !  FormFunctionGradient - Evaluates the function f(X) and gradient G(X)
@@ -39,9 +43,6 @@ contains
     PetscReal ff, t1, t2
     PetscInt i, nn
     PetscReal, pointer :: g_v(:), x_v(:)
-    PetscReal alpha
-    PetscInt n
-    common/params/alpha, n
 
     ierr = 0
     nn = n/2
@@ -107,9 +108,6 @@ contains
 ! Notice that by declaring the arrays with range (0:1), we are using the C 0-indexing practice.
     PetscReal, pointer :: x_v(:)
     PetscInt i, nn, ind(0:1), i2
-    PetscReal alpha
-    PetscInt n
-    common/params/alpha, n
 
     ierr = 0
     nn = n/2
@@ -168,9 +166,6 @@ program rosenbrock1f
   PetscInt i2, i1
   PetscMPIInt size
   PetscReal zero
-  PetscReal alpha
-  PetscInt n
-  common/params/alpha, n
 
   zero = 0.0d0
   i2 = 2

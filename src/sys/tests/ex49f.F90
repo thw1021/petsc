@@ -10,8 +10,6 @@ module ex49fmodule
   end type uctx
 contains
   subroutine CompareIntegers(a, b, ctx, res)
-    implicit none
-
     PetscInt :: a, b
     type(uctx) :: ctx
     integer  :: res
