@@ -171,8 +171,10 @@ checkbadSource:
 	-@echo "----- Fortran: #include <petsc/finclude/...> not 1st line (examples/tutorials)" >> checkbadSource.out
 	-@git --no-pager grep -H -B9999 '#include <petsc/finclude/.*>' -- '*/tutorials/*.F90' '*/tests/*.F90' | grep -v -e '!' -e 'F90-$$' -e '#include <petsc/finclude/.*>' -e '--' >> checkbadSource.out;true
 	-@echo "----- Fortran: labeled do loop -------------------------------------" >> checkbadSource.out
-	-@git --no-pager grep -n "[[:space:]]*do[[:space:]]*[0-9]" -- ${GITFSRC} >> checkbadSource.out;true
-	@a=`cat checkbadSource.out | wc -l`; l=`expr $$a - 39` ;\
+	-@git --no-pager grep -n "^[[:space:]]*do[[:space:]]*[0-9]" -- ${GITFSRC} >> checkbadSource.out;true
+	-@echo "----- Fortran: common block ----------------------------------------" >> checkbadSource.out
+	-@git --no-pager grep -n "^[[:space:]]*common" -- ${GITFSRC} >> checkbadSource.out;true
+	@a=`cat checkbadSource.out | wc -l`; l=`expr $$a - 40` ;\
          if [ $$l -gt 0 ] ; then \
            echo $$l " files with errors detected in source code formatting" ;\
            cat checkbadSource.out ;\
