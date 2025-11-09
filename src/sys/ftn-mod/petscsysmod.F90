@@ -12,8 +12,8 @@ module petscmpi
 #endif
 #endif
 
-  public:: MPIU_REAL, MPIU_SUM, MPIU_SCALAR, MPIU_INTEGER
-  public:: PETSC_COMM_WORLD, PETSC_COMM_SELF
+  public :: MPIU_REAL, MPIU_SUM, MPIU_SCALAR, MPIU_INTEGER
+  public :: PETSC_COMM_WORLD, PETSC_COMM_SELF
 
   integer4 :: MPIU_REAL
   integer4 :: MPIU_SUM
@@ -41,14 +41,29 @@ module petscsysdef
 #else
   use petscmpi, only: MPIU_REAL, MPIU_SUM, MPIU_SCALAR, MPIU_INTEGER, PETSC_COMM_WORLD, PETSC_COMM_SELF
 #endif
-  PetscReal, parameter :: PetscReal_Private = 1.0
-  integer, parameter   :: PETSC_REAL_KIND = kind(PetscReal_Private)
+  PetscReal, private      :: PetscReal_Private = 0.0
+  integer, parameter      :: PETSC_REAL_KIND = kind(PetscReal_Private)
 
-  PetscBool, parameter :: PETSC_TRUE = .true._C_BOOL
-  PetscBool, parameter :: PETSC_FALSE = .false._C_BOOL
+  PetscComplex, private   :: PetscComplex_Private = 0.0
+  integer, parameter      :: PETSC_COMPLEX_KIND = kind(PetscComplex_Private)
 
-  PetscInt, parameter :: PETSC_DECIDE = -1
-  PetscInt, parameter :: PETSC_DECIDE_INTEGER = -1
+  PetscScalar, private    :: PetscScalar_Private = 0.0
+  integer, parameter      :: PETSC_SCALAR_KIND = kind(PetscScalar_Private)
+
+  PetscInt, private       :: PetscInt_Private = 0
+  integer, parameter      :: PETSC_INT_KIND = kind(PetscInt_Private)
+
+  PetscErrorCode, private :: PetscErrorCode_Private = 0
+  integer, parameter      :: PETSC_ERRORCODE_KIND = kind(PetscErrorCode_Private)
+
+  PetscBool, private      :: PetscBool_Private = .true._C_BOOL
+  integer, parameter      :: PETSC_BOOL_KIND = kind(PetscBool_Private)
+
+  PetscBool, parameter :: PETSC_TRUE = .true._PETSC_BOOL_KIND
+  PetscBool, parameter :: PETSC_FALSE = .false._PETSC_BOOL_KIND
+
+  PetscInt, parameter :: PETSC_DECIDE = -1_PETSC_INT_KIND
+  PetscInt, parameter :: PETSC_DECIDE_INTEGER = -1_PETSC_INT_KIND
   PetscReal, parameter :: PETSC_DECIDE_REAL = -1.0_PETSC_REAL_KIND
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_DECIDE
@@ -56,8 +71,8 @@ module petscsysdef
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_DECIDE_REAL
 #endif
 
-  PetscInt, parameter :: PETSC_DETERMINE = -1
-  PetscInt, parameter :: PETSC_DETERMINE_INTEGER = -1
+  PetscInt, parameter :: PETSC_DETERMINE = -1_PETSC_INT_KIND
+  PetscInt, parameter :: PETSC_DETERMINE_INTEGER = -1_PETSC_INT_KIND
   PetscReal, parameter :: PETSC_DETERMINE_REAL = -1.0_PETSC_REAL_KIND
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_DETERMINE
@@ -65,8 +80,8 @@ module petscsysdef
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_DETERMINE_REAL
 #endif
 
-  PetscInt, parameter :: PETSC_CURRENT = -2
-  PetscInt, parameter :: PETSC_CURRENT_INTEGER = -2
+  PetscInt, parameter :: PETSC_CURRENT = -2_PETSC_INT_KIND
+  PetscInt, parameter :: PETSC_CURRENT_INTEGER = -2_PETSC_INT_KIND
   PetscReal, parameter :: PETSC_CURRENT_REAL = -2.0_PETSC_REAL_KIND
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_CURRENT
@@ -74,8 +89,8 @@ module petscsysdef
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_CURRENT_REAL
 #endif
 
-  PetscInt, parameter :: PETSC_DEFAULT = -2
-  PetscInt, parameter :: PETSC_DEFAULT_INTEGER = -2
+  PetscInt, parameter :: PETSC_DEFAULT = -2_PETSC_INT_KIND
+  PetscInt, parameter :: PETSC_DEFAULT_INTEGER = -2_PETSC_INT_KIND
   PetscReal, parameter :: PETSC_DEFAULT_REAL = -2.0_PETSC_REAL_KIND
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_DEFAULT
@@ -101,7 +116,7 @@ module petscsysdef
 ! floating point numbers as well as complex and integers.
 !
 ! Representation of complex i
-  PetscComplex, parameter :: PETSC_i = (0.0_PETSC_REAL_KIND, 1.0_PETSC_REAL_KIND)
+  PetscComplex, parameter :: PETSC_i = cmplx(0.0, 1.0, PETSC_COMPLEX_KIND)
 
 ! A PETSC_NULL_FUNCTION pointer
 !
@@ -221,14 +236,15 @@ module petscsysdef
 !
 !     Basic math constants
 !
-  PetscReal PETSC_PI
-  PetscReal PETSC_MAX_REAL
-  PetscReal PETSC_MIN_REAL
-  PetscReal PETSC_MACHINE_EPSILON
-  PetscReal PETSC_SQRT_MACHINE_EPSILON
+  PetscReal, parameter :: PETSC_PI = acos(-1.0_PETSC_REAL_KIND)
+  PetscReal, parameter :: PETSC_MAX_REAL = huge(PetscReal_Private)
+  PetscReal, parameter :: PETSC_MIN_REAL = -PETSC_MAX_REAL
+  PetscReal, parameter :: PETSC_REAL_MIN = tiny(PetscReal_Private)
+  PetscReal, parameter :: PETSC_MACHINE_EPSILON = epsilon(PetscReal_Private)
+  PetscReal, parameter :: PETSC_SQRT_MACHINE_EPSILON = sqrt(PETSC_MACHINE_EPSILON)
+  PetscReal, parameter :: PETSC_INFINITY = PETSC_MAX_REAL/4.0_PETSC_REAL_KIND
+  PetscReal, parameter :: PETSC_NINFINITY = -PETSC_INFINITY
   PetscReal PETSC_SMALL
-  PetscReal PETSC_INFINITY
-  PetscReal PETSC_NINFINITY
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_CHARACTER
@@ -687,22 +703,23 @@ subroutine PetscSetModuleBlockMPI(freal, fscalar, fsum, finteger)
   MPIU_INTEGER = finteger
 end subroutine PetscSetModuleBlockMPI
 
-subroutine PetscSetModuleBlockNumeric(pi, maxreal, minreal, eps, seps, small, pinf, pninf)
-  use petscsys, only: PETSC_PI, PETSC_MAX_REAL, PETSC_MIN_REAL, &
+subroutine PetscSetModuleBlockNumeric(pi, maxreal, minreal, realmin, eps, seps, small, pinf, pninf)
+  use petscsys, only: PETSC_PI, PETSC_MAX_REAL, PETSC_MIN_REAL, PETSC_REAL_MIN, &
                       PETSC_MACHINE_EPSILON, PETSC_SQRT_MACHINE_EPSILON, &
                       PETSC_SMALL, PETSC_INFINITY, PETSC_NINFINITY
   use, intrinsic :: ISO_C_binding
   implicit none
 
-  PetscReal pi, maxreal, minreal, eps, seps
+  PetscReal pi, maxreal, minreal, realmin, eps, seps
   PetscReal small, pinf, pninf
 
-  PETSC_PI = pi
-  PETSC_MAX_REAL = maxreal
-  PETSC_MIN_REAL = minreal
-  PETSC_MACHINE_EPSILON = eps
-  PETSC_SQRT_MACHINE_EPSILON = seps
+  if (PETSC_PI /= pi) error stop 'mismatch C-Fortran: PETSC_PI'
+  if (PETSC_MAX_REAL /= maxreal) error stop 'mismatch C-Fortran: PETSC_MAX_REAL'
+  if (PETSC_MIN_REAL /= minreal) error stop 'mismatch C-Fortran: PETSC_MIN_REAL'
+  if (PETSC_REAL_MIN /= realmin) error stop 'mismatch C-Fortran: PETSC_REAL_MIN'
+  if (PETSC_MACHINE_EPSILON /= eps) error stop 'mismatch C-Fortran: PETSC_MACHINE_EPSILON'
+  if (PETSC_SQRT_MACHINE_EPSILON /= seps) error stop 'mismatch C-Fortran: PETSC_SQRT_MACHINE_EPSILON'
+  if (PETSC_INFINITY /= pinf) error stop 'mismatch C-Fortran: PETSC_INFINITY'
+  if (PETSC_NINFINITY /= pninf) error stop 'mismatch C-Fortran: PETSC_NINFINITY'
   PETSC_SMALL = small
-  PETSC_INFINITY = pinf
-  PETSC_NINFINITY = pninf
 end subroutine PetscSetModuleBlockNumeric
