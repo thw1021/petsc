@@ -8,7 +8,7 @@ static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
                      "Asch, Bocquet, and Nodet (2016) \"Data Assimilation\" "
                      "(SIAM, doi:10.1137/1.9781611974546).\n\n";
 
-// ./ex1 -steps 105000 -burn 5000 -obs_freq 1 -obs_error 1 -da_view
+// ./ex1 -steps 105000 -burn 5000 -obs_freq 1 -obs_error 1 -petscda_view
 // -ensemble_size 30 : "Mean RMSE (analysis): 0.474040"
 
 /* \begin{algorithm}
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
   PetscInt    ensemble_size = 30;
   Lorenz96Ctx l95_ctx;
   DM          da_state;
-  DA          da_ctx;
+  PetscDA     da_ctx;
   Vec         x0, x_mean, x_forecast, diff;
   Vec         truth_state, truth_next;
   Vec         observation, obs_noise, obs_error_var;
@@ -195,14 +195,14 @@ int main(int argc, char **argv)
   /* x_mean/x_forecast track ensemble statistics; diff is reused for RMSE
    * diagnostics. */
 
-  PetscCall(DACreate(PETSC_COMM_WORLD, &da_ctx));
-  /* DA stores ensemble members in a logical 3D layout: state_dim x state_dim x
+  PetscCall(PetscDACreate(PETSC_COMM_WORLD, &da_ctx));
+  /* PetscDA stores ensemble members in a logical 3D layout: state_dim x state_dim x
    * ensemble_size. */
-  PetscCall(DASetSizes(da_ctx, n, n, ensemble_size));
-  PetscCall(DASetFromOptions(da_ctx));
-  PetscCall(DASetUp(da_ctx));
-  PetscCall(DAViewFromOptions(da_ctx, NULL, "-da_view"));
-  PetscCall(DASetObsErrorVariance(da_ctx, obs_error_var));
+  PetscCall(PetscDASetSizes(da_ctx, n, n, ensemble_size));
+  PetscCall(PetscDASetFromOptions(da_ctx));
+  PetscCall(PetscDASetUp(da_ctx));
+  PetscCall(PetscDAViewFromOptions(da_ctx, NULL, "-petscda_view"));
+  PetscCall(PetscDASetObsErrorVariance(da_ctx, obs_error_var));
 
   Vec member, spread;
   PetscCall(VecDuplicate(x0, &member));
@@ -213,7 +213,7 @@ int main(int argc, char **argv)
     PetscCall(VecCopy(x0, member));
     PetscCall(VecSetRandomGaussian(spread, rng, 0.0, obs_error_std));
     PetscCall(VecAXPY(member, 1.0, spread));
-    PetscCall(DASetEnsembleMember(da_ctx, i, member));
+    PetscCall(PetscDASetEnsembleMember(da_ctx, i, member));
   }
   PetscCall(VecDestroy(&member));
   PetscCall(VecDestroy(&spread));
@@ -235,7 +235,7 @@ int main(int argc, char **argv)
     PetscReal time = step * dt;
 
     /* Forecast: advance every ensemble member and compute the ensemble mean. */
-    PetscCall(DAComputeMean(da_ctx, x_mean));
+    PetscCall(PetscDAComputeMean(da_ctx, x_mean));
     PetscCall(VecCopy(x_mean, x_forecast));
     PetscCall(VecCopy(x_forecast, diff));
     PetscCall(VecAXPY(diff, -1.0, truth_state));
@@ -249,9 +249,9 @@ int main(int argc, char **argv)
       PetscCall(VecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
       PetscCall(VecCopy(truth_state, observation));
       PetscCall(VecAXPY(observation, 1.0, obs_noise));
-      PetscCall(DAAnalysis(da_ctx, observation, Lorenz96ObsIdentity, NULL));
+      PetscCall(PetscDAAnalysis(da_ctx, observation, Lorenz96ObsIdentity, NULL));
 
-      PetscCall(DAComputeMean(da_ctx, x_mean));
+      PetscCall(PetscDAComputeMean(da_ctx, x_mean));
       PetscCall(VecCopy(x_mean, diff));
       PetscCall(VecAXPY(diff, -1.0, truth_state));
       PetscCall(VecNorm(diff, NORM_2, &rmse_analysis));
@@ -273,7 +273,7 @@ int main(int argc, char **argv)
     if (step < steps) {
       /* Propagate every ensemble member (in-place) and advance the truth
        * trajectory. */
-      PetscCall(DAApplyModel(da_ctx, Lorenz96Step, &l95_ctx));
+      PetscCall(PetscDAApplyModel(da_ctx, Lorenz96Step, &l95_ctx));
       PetscCall(Lorenz96Step(truth_state, truth_next, &l95_ctx));
       PetscCall(VecCopy(truth_next, truth_state));
     }
@@ -299,7 +299,7 @@ int main(int argc, char **argv)
   PetscCall(VecDestroy(&truth_state));
   PetscCall(VecDestroy(&obs_error_var));
   PetscCall(VecDestroy(&x0));
-  PetscCall(DADestroy(&da_ctx));
+  PetscCall(PetscDADestroy(&da_ctx));
   PetscCall(DMDestroy(&da_state));
   PetscCall(PetscRandomDestroy(&rng));
 
@@ -311,10 +311,10 @@ int main(int argc, char **argv)
 
   test:
     requires: !complex
-    args: -steps 120 -burn 10 -obs_freq 2 -obs_error 0.5 -da_view -ensemble_size 40
+    args: -steps 120 -burn 10 -obs_freq 2 -obs_error 0.5 -petscda_view -ensemble_size 40
 
   test:
     suffix: chol
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1.0 -daetkf_sqrt_type cholesky
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1.0 -petscdaetkf_sqrt_type cholesky
 
 TEST*/
