@@ -115,7 +115,10 @@
 - Correct option `-ts_max_reject` to `-ts_max_step_rejections`
 - Correct option `-ts_dt` to `-ts_time_step`
 
-- Add data assimilation (DA) base class as a utility with implementation of ETKF: [](ch_da)
+```{rubric} DA:
+```
+
+- Add data assimilation (PetscDA) base class with implementation of ETKF: [](ch_da)
 
 ```{rubric} TAO:
 ```
@@ -155,9 +158,12 @@
 ```{rubric} Fortran:
 ```
 
+<<<<<<< HEAD
 - Replace `./configure` option `--with-mpi-f90module-visibility` with `--with-mpi-ftn-module=<mpi or mpi_f08>`
 - Add `PETSC_INT_KIND` and `PETSC_MPIINT_KIND`
 - Fortran code should now use `MPIU_Comm` instead of `MPI_Comm`, and similarly for other MPI types, see section "Fortran and MPI" in the users guide
 - Fortran interface definitions are now automatically generated for all functions that take context variable arguments, represented in the C source code with a type of `PetscCtx`, allowing the use of any Fortran derived type (or PETSc object) as the context
 - For all PETSc functions `XXXGetYYY()` that return a context variable as an argument, represented in the C source code with an argument type of `PetscCtxRt`, a macro is generated used with `Interface_XXXGetYYY(AppCtx)` which tells the Fortran compiler that a pointer to that derived type `type(AppCtx)` is returned from the Fortran version of `XXXGetYYY()`. See src/snes/tutorials/ex5f90.F90`
 
+=======
+>>>>>>> 065f9a4f670 (Move DA class from src/ml/da to src/da and rename to PetscDA)
