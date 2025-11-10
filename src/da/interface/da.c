@@ -4,31 +4,31 @@
 #include <petsc/private/daimpl.h> /*I "petscda.h"  I*/
 #include <petscblaslapack.h>
 
-PetscClassId      DA_CLASSID          = 0;
-PetscBool         DARegisterAllCalled = PETSC_FALSE;
-PetscFunctionList DAList              = NULL;
+PetscClassId      PETSCDA_CLASSID          = 0;
+PetscBool         PetscDARegisterAllCalled = PETSC_FALSE;
+PetscFunctionList PetscDAList              = NULL;
 
-static PetscBool DAPackageInitialized = PETSC_FALSE;
+static PetscBool PetscDAPackageInitialized = PETSC_FALSE;
 
 /*@C
-  DAInitializePackage - This function initializes everything in the `DA`
+  PetscDAInitializePackage - This function initializes everything in the `PetscDA`
   package. It is called from `PetscDLLibraryRegister_petscda()` when using dynamic
-  libraries, and on the first call to `DACreate()` when using static or shared
+  libraries, and on the first call to `PetscDACreate()` when using static or shared
   libraries.
 
   Level: developer
 
-.seealso: `DAFinalizePackage()`, `PetscInitialize()`
+.seealso: `PetscDAFinalizePackage()`, `PetscInitialize()`
 @*/
-PetscErrorCode DAInitializePackage(void)
+PetscErrorCode PetscDAInitializePackage(void)
 {
   PetscFunctionBegin;
-  if (DAPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
+  if (PetscDAPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
 
-  DAPackageInitialized = PETSC_TRUE;
-  PetscCall(PetscClassIdRegister("Data Assimilation", &DA_CLASSID));
-  PetscCall(DARegisterAll());
-  PetscCall(PetscRegisterFinalize(DAFinalizePackage));
+  PetscDAPackageInitialized = PETSC_TRUE;
+  PetscCall(PetscClassIdRegister("Data Assimilation", &PETSCDA_CLASSID));
+  PetscCall(PetscDARegisterAll());
+  PetscCall(PetscRegisterFinalize(PetscDAFinalizePackage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -36,38 +36,38 @@ PetscErrorCode DAInitializePackage(void)
 /*
   PetscDLLibraryRegister - This function is called when the dynamic library it is in is opened.
 
-  This one registers DA.
+  This one registers PetscDA.
 
 */
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscda(void)
 {
   PetscFunctionBegin;
-  PetscCall(DAInitializePackage());
+  PetscCall(PetscDAInitializePackage());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #endif /* PETSC_HAVE_DYNAMIC_LIBRARIES */
 /*@C
-  DAFinalizePackage - This function finalizes everything in the `DA` package. It
+  PetscDAFinalizePackage - This function finalizes everything in the `PetscDA` package. It
   is called from `PetscFinalize()`.
 
   Level: developer
 
-.seealso: `DAInitializePackage()`, `PetscInitialize()`
+.seealso: `PetscDAInitializePackage()`, `PetscInitialize()`
 @*/
-PetscErrorCode DAFinalizePackage(void)
+PetscErrorCode PetscDAFinalizePackage(void)
 {
   PetscFunctionBegin;
-  PetscCall(PetscFunctionListDestroy(&DAList));
-  DARegisterAllCalled  = PETSC_FALSE;
-  DAPackageInitialized = PETSC_FALSE;
+  PetscCall(PetscFunctionListDestroy(&PetscDAList));
+  PetscDARegisterAllCalled  = PETSC_FALSE;
+  PetscDAPackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode DAETKFRegister(void);
+PETSC_EXTERN PetscErrorCode PetscDAETKFRegister(void);
 
 /*@C
-  DARegister - Registers a constructor for a `DA` implementation with the
+  PetscDARegister - Registers a constructor for a `PetscDA` implementation with the
   dispatcher.
 
   Not Collective
@@ -78,45 +78,45 @@ PETSC_EXTERN PetscErrorCode DAETKFRegister(void);
 
   Level: developer
 
-.seealso: [](ch_da), `DARegisterAll()`, `DASetType()`
+.seealso: [](ch_da), `PetscDARegisterAll()`, `PetscDASetType()`
 @*/
-PetscErrorCode DARegister(const char sname[], PetscErrorCode (*function)(DA))
+PetscErrorCode PetscDARegister(const char sname[], PetscErrorCode (*function)(PetscDA))
 {
   PetscFunctionBegin;
-  PetscCall(DAInitializePackage());
-  PetscCall(PetscFunctionListAdd(&DAList, sname, function));
+  PetscCall(PetscDAInitializePackage());
+  PetscCall(PetscFunctionListAdd(&PetscDAList, sname, function));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  DARegisterAll - Registers all data assimilation backends that were compiled in.
+  PetscDARegisterAll - Registers all data assimilation backends that were compiled in.
 
   Not Collective
 
   Level: developer
 
-.seealso: [](ch_da), `DARegister()`
+.seealso: [](ch_da), `PetscDARegister()`
 @*/
-PetscErrorCode DARegisterAll(void)
+PetscErrorCode PetscDARegisterAll(void)
 {
   PetscFunctionBegin;
-  if (DARegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
-  DARegisterAllCalled = PETSC_TRUE;
-  PetscCall(DAETKFRegister());
+  if (PetscDARegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscDARegisterAllCalled = PETSC_TRUE;
+  PetscCall(PetscDAETKFRegister());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* Compute mean of ensemble */
-static PetscErrorCode DAComputeMean_Default(DA da, Vec mean)
+static PetscErrorCode PetscDAComputeMean_Default(PetscDA da, Vec mean)
 {
   Vec         member;
   PetscScalar inv_m;
   PetscInt    m, j;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(mean, VEC_CLASSID, 2);
-  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "DASetUp() must be called before computing the ensemble mean");
+  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDASetUp() must be called before computing the ensemble mean");
   PetscCheck(da->ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONG, "Ensemble size must be positive");
 
   PetscCall(VecSet(mean, 0.0));
@@ -130,7 +130,7 @@ static PetscErrorCode DAComputeMean_Default(DA da, Vec mean)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out)
+static PetscErrorCode PetscDAComputeAnomalies_Default(PetscDA da, Mat *anomalies_out)
 {
   Vec       mean, col_in, col_out;
   Mat       anomalies;
@@ -138,9 +138,9 @@ static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out)
   PetscInt  m, j;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscAssertPointer(anomalies_out, 2);
-  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "DASetUp() must be called before computing anomalies");
+  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDASetUp() must be called before computing anomalies");
   PetscCheck(da->ensemble_size > 1, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be at least 2 to form anomalies");
 
   m = da->ensemble_size;
@@ -151,7 +151,7 @@ static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out)
   PetscCall(VecSetSizes(mean, PETSC_DECIDE, da->state_size));
   PetscCall(VecSetFromOptions(mean));
   /* Algorithm line 12: \bar{x} = (1/m)\sum_j x^{(j)} */
-  PetscCall(DAComputeMean(da, mean));
+  PetscCall(PetscDAComputeMean(da, mean));
 
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->state_size, m, NULL, &anomalies));
   PetscCall(MatSetUp(anomalies));
@@ -174,7 +174,7 @@ static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out)
 }
 
 /*@
-  DACreate - Creates a new `DA` object for ensemble-based data assimilation.
+  PetscDACreate - Creates a new `PetscDA` object for ensemble-based data assimilation.
 
   Collective
 
@@ -182,25 +182,25 @@ static PetscErrorCode DAComputeAnomalies_Default(DA da, Mat *anomalies_out)
 . comm - MPI communicator used to create the object
 
   Output Parameter:
-. da_out - newly created `DA` object
+. da_out - newly created `PetscDA` object
 
   Level: beginner
 
-.seealso: [](ch_da), `DADestroy()`, `DASetType()`, `DASetUp()`
+.seealso: [](ch_da), `PetscDADestroy()`, `PetscDASetType()`, `PetscDASetUp()`
 @*/
-PetscErrorCode DACreate(MPI_Comm comm, DA *da_out)
+PetscErrorCode PetscDACreate(MPI_Comm comm, PetscDA *da_out)
 {
-  DA da;
+  PetscDA da;
 
   PetscFunctionBegin;
   PetscAssertPointer(da_out, 2);
 
-  PetscCall(DAInitializePackage());
+  PetscCall(PetscDAInitializePackage());
 
-  PetscCall(PetscHeaderCreate(da, DA_CLASSID, "DA", "Data Assimilation", "DataAssimilation", comm, DADestroy, DAView));
+  PetscCall(PetscHeaderCreate(da, PETSCDA_CLASSID, "PetscDA", "Data Assimilation", "DataAssimilation", comm, PetscDADestroy, PetscDAView));
   PetscCall(PetscMemzero(da->ops, sizeof(*da->ops)));
-  da->ops->computemean      = DAComputeMean_Default;
-  da->ops->computeanomalies = DAComputeAnomalies_Default;
+  da->ops->computemean      = PetscDAComputeMean_Default;
+  da->ops->computeanomalies = PetscDAComputeAnomalies_Default;
 
   da->ensemble_size = 0;
   da->state_size    = 0;
@@ -213,27 +213,27 @@ PetscErrorCode DACreate(MPI_Comm comm, DA *da_out)
 
   *da_out = da;
 
-  PetscCall(DASetType(da, DAETKF));
+  PetscCall(PetscDASetType(da, PETSCDAETKF));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  DADestroy - Destroys a `DA` object and releases its resources.
+  PetscDADestroy - Destroys a `PetscDA` object and releases its resources.
 
   Collective
 
   Input Parameter:
-. da - pointer to the `DA` object to destroy
+. da - pointer to the `PetscDA` object to destroy
 
   Level: beginner
 
-.seealso: [](ch_da), `DACreate()`
+.seealso: [](ch_da), `PetscDACreate()`
 @*/
-PetscErrorCode DADestroy(DA *da)
+PetscErrorCode PetscDADestroy(PetscDA *da)
 {
   PetscFunctionBegin;
   if (!da || !*da) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscValidHeaderSpecific(*da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(*da, PETSCDA_CLASSID, 1);
   if (--((PetscObject)*da)->refct > 0) {
     *da = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
@@ -250,63 +250,63 @@ PetscErrorCode DADestroy(DA *da)
 }
 
 /*@
-  DASetType - Sets the data assimilation implementation used by a `DA` object.
+  PetscDASetType - Sets the data assimilation implementation used by a `PetscDA` object.
 
   Collective
 
   Input Parameters:
-+ da   - the `DA` context
-- type - name of the implementation (for example `DAETKF`)
++ da   - the `PetscDA` context
+- type - name of the implementation (for example `PETSCDAETKF`)
 
   Level: intermediate
 
-.seealso: [](ch_da), `DAGetType()`, `DARegister()`
+.seealso: [](ch_da), `PetscDAGetType()`, `PetscDARegister()`
 @*/
-PetscErrorCode DASetType(DA da, DAType type)
+PetscErrorCode PetscDASetType(PetscDA da, PetscDAType type)
 {
-  PetscErrorCode (*r)(DA);
+  PetscErrorCode (*r)(PetscDA);
   PetscBool match;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscAssertPointer(type, 2);
 
   PetscCall(PetscObjectTypeCompare((PetscObject)da, type, &match));
   if (match) PetscFunctionReturn(PETSC_SUCCESS);
 
-  PetscCall(DARegisterAll());
-  PetscCall(PetscFunctionListFind(DAList, type, &r));
-  PetscCheck(r, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown DA type: %s", type);
+  PetscCall(PetscDARegisterAll());
+  PetscCall(PetscFunctionListFind(PetscDAList, type, &r));
+  PetscCheck(r, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDA type: %s", type);
 
   if (da->ops->destroy) PetscCall((*da->ops->destroy)(da));
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)da, type));
   PetscCall((*r)(da));
 
-  if (!da->ops->computemean) da->ops->computemean = DAComputeMean_Default;
-  if (!da->ops->computeanomalies) da->ops->computeanomalies = DAComputeAnomalies_Default;
+  if (!da->ops->computemean) da->ops->computemean = PetscDAComputeMean_Default;
+  if (!da->ops->computeanomalies) da->ops->computeanomalies = PetscDAComputeAnomalies_Default;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  DAGetType - Gets the name of the implementation currently associated with a `DA`.
+  PetscDAGetType - Gets the name of the implementation currently associated with a `PetscDA`.
 
   Not Collective
 
   Input Parameter:
-. da - the `DA` context
+. da - the `PetscDA` context
 
   Output Parameter:
 . type - pointer that will receive the type name (may be `NULL`)
 
   Level: intermediate
 
-.seealso: [](ch_da), `DASetType()`
+.seealso: [](ch_da), `PetscDASetType()`
 @*/
-PetscErrorCode DAGetType(DA da, DAType *type)
+PetscErrorCode PetscDAGetType(PetscDA da, PetscDAType *type)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   if (type) {
     PetscAssertPointer(type, 2);
     *type = ((PetscObject)da)->type_name;
@@ -315,21 +315,21 @@ PetscErrorCode DAGetType(DA da, DAType *type)
 }
 
 /*@
-  DASetFromOptions - Configures a `DA` object from the options database.
+  PetscDASetFromOptions - Configures a `PetscDA` object from the options database.
 
   Collective
 
   Input Parameter:
-. da - the `DA` context to set up
+. da - the `PetscDA` context to set up
 
   Level: intermediate
 
-.seealso: [](ch_da), `DASetType()`, `PetscObjectOptionsBegin()`
+.seealso: [](ch_da), `PetscDASetType()`, `PetscObjectOptionsBegin()`
 @*/
-PetscErrorCode DASetFromOptions(DA da)
+PetscErrorCode PetscDASetFromOptions(PetscDA da)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
 
   PetscObjectOptionsBegin((PetscObject)da);
   if (da->ops->setfromoptions) PetscCall((*da->ops->setfromoptions)(da, &PetscOptionsObject));
@@ -338,29 +338,29 @@ PetscErrorCode DASetFromOptions(DA da)
 }
 
 /*@
-  DASetSizes - Sets the state, observation, and ensemble dimensions used by a `DA`.
+  PetscDASetSizes - Sets the state, observation, and ensemble dimensions used by a `PetscDA`.
 
   Collective
 
   Input Parameters:
-+ da            - the `DA` context
++ da            - the `PetscDA` context
 . state_size    - number of state components
 . obs_size      - number of observation components
 - ensemble_size - number of ensemble members
 
   Level: beginner
 
-.seealso: [](ch_da), `DAGetSizes()`, `DASetUp()`
+.seealso: [](ch_da), `PetscDAGetSizes()`, `PetscDASetUp()`
 @*/
-PetscErrorCode DASetSizes(DA da, PetscInt state_size, PetscInt obs_size, PetscInt ensemble_size)
+PetscErrorCode PetscDASetSizes(PetscDA da, PetscInt state_size, PetscInt obs_size, PetscInt ensemble_size)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidLogicalCollectiveInt(da, state_size, 2);
   PetscValidLogicalCollectiveInt(da, obs_size, 3);
   PetscValidLogicalCollectiveInt(da, ensemble_size, 4);
 
-  PetscCheck(!da->assembled, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Cannot change sizes after DASetUp() has been called");
+  PetscCheck(!da->assembled, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Cannot change sizes after PetscDASetUp() has been called");
 
   da->state_size    = state_size;
   da->obs_size      = obs_size;
@@ -369,12 +369,12 @@ PetscErrorCode DASetSizes(DA da, PetscInt state_size, PetscInt obs_size, PetscIn
 }
 
 /*@
-  DAGetSizes - Retrieves the dimension settings associated with a `DA`.
+  PetscDAGetSizes - Retrieves the dimension settings associated with a `PetscDA`.
 
   Not Collective
 
   Input Parameter:
-. da - the `DA` context
+. da - the `PetscDA` context
 
   Output Parameters:
 + state_size    - number of state components (may be `NULL`)
@@ -383,12 +383,12 @@ PetscErrorCode DASetSizes(DA da, PetscInt state_size, PetscInt obs_size, PetscIn
 
   Level: beginner
 
-.seealso: [](ch_da), `DASetSizes()`
+.seealso: [](ch_da), `PetscDASetSizes()`
 @*/
-PetscErrorCode DAGetSizes(DA da, PetscInt *state_size, PetscInt *obs_size, PetscInt *ensemble_size)
+PetscErrorCode PetscDAGetSizes(PetscDA da, PetscInt *state_size, PetscInt *obs_size, PetscInt *ensemble_size)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   if (state_size) *state_size = da->state_size;
   if (obs_size) *obs_size = da->obs_size;
   if (ensemble_size) *ensemble_size = da->ensemble_size;
@@ -396,30 +396,30 @@ PetscErrorCode DAGetSizes(DA da, PetscInt *state_size, PetscInt *obs_size, Petsc
 }
 
 /*@
-  DASetUp - Allocates internal data structures for a `DA` based on the previously provided sizes.
+  PetscDASetUp - Allocates internal data structures for a `PetscDA` based on the previously provided sizes.
 
   Collective
 
   Input Parameter:
-. da - the `DA` context to assemble
+. da - the `PetscDA` context to assemble
 
   Level: beginner
 
-.seealso: [](ch_da), `DASetSizes()`, `DASetType()`
+.seealso: [](ch_da), `PetscDASetSizes()`, `PetscDASetType()`
 @*/
-PetscErrorCode DASetUp(DA da)
+PetscErrorCode PetscDASetUp(PetscDA da)
 {
   PetscInt     i, j;
   PetscScalar *uarray;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
 
   if (da->assembled) PetscFunctionReturn(PETSC_SUCCESS);
 
-  PetscCheck(da->state_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set state size before calling DASetUp()");
-  PetscCheck(da->obs_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set observation size before calling DASetUp()");
-  PetscCheck(da->ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set ensemble size before calling DASetUp()");
+  PetscCheck(da->state_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set state size before calling PetscDASetUp()");
+  PetscCheck(da->obs_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set observation size before calling PetscDASetUp()");
+  PetscCheck(da->ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set ensemble size before calling PetscDASetUp()");
 
   if (!da->ensemble) {
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da), PETSC_DECIDE, PETSC_DECIDE, da->state_size, da->ensemble_size, NULL, &da->ensemble));
@@ -451,31 +451,31 @@ PetscErrorCode DASetUp(DA da)
 }
 
 /*@
-  DAView - Views a `DA` and its implementation-specific data structure.
+  PetscDAView - Views a `PetscDA` and its implementation-specific data structure.
 
   Collective
 
   Input Parameters:
-+ da     - the `DA` context
++ da     - the `PetscDA` context
 - viewer - the `PetscViewer` to use (or `NULL` for standard output)
 
   Level: beginner
 
-.seealso: [](ch_da), `DAViewFromOptions()`
+.seealso: [](ch_da), `PetscDAViewFromOptions()`
 @*/
-PetscErrorCode DAView(DA da, PetscViewer viewer)
+PetscErrorCode PetscDAView(PetscDA da, PetscViewer viewer)
 {
   PetscBool iascii;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   if (!viewer) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)da), &viewer));
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
   PetscCheckSameComm(da, 1, viewer, 2);
 
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "DA Object: %d MPI processes\n", PetscObjectComm((PetscObject)da) == MPI_COMM_SELF ? 1 : PetscGlobalSize));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "PetscDA Object: %d MPI processes\n", PetscObjectComm((PetscObject)da) == MPI_COMM_SELF ? 1 : PetscGlobalSize));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  State size: %" PetscInt_FMT "\n", da->state_size));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Observation size: %" PetscInt_FMT "\n", da->obs_size));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Ensemble size: %" PetscInt_FMT "\n", da->ensemble_size));
@@ -487,44 +487,44 @@ PetscErrorCode DAView(DA da, PetscViewer viewer)
 }
 
 /*@
-  DAViewFromOptions - Processes command-line options to determine if a `DA` should be viewed.
+  PetscDAViewFromOptions - Processes command-line options to determine if a `PetscDA` should be viewed.
 
   Collective
 
   Input Parameters:
-+ da     - the `DA` context
++ da     - the `PetscDA` context
 . obj    - optional object that provides the prefix for options
 - option - option name to check (may be `NULL`)
 
   Level: beginner
 
-.seealso: [](ch_da), `DAView()`, `PetscObjectViewFromOptions()`
+.seealso: [](ch_da), `PetscDAView()`, `PetscObjectViewFromOptions()`
 @*/
-PetscErrorCode DAViewFromOptions(DA da, PetscObject obj, const char option[])
+PetscErrorCode PetscDAViewFromOptions(PetscDA da, PetscObject obj, const char option[])
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscCall(PetscObjectViewFromOptions((PetscObject)da, obj, option));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  DASetObsErrorVariance - Sets the observation-error variances associated with a `DA`.
+  PetscDASetObsErrorVariance - Sets the observation-error variances associated with a `PetscDA`.
 
   Collective
 
   Input Parameters:
-+ da            - the `DA` context
++ da            - the `PetscDA` context
 - obs_error_var - vector containing observation error variances
 
   Level: beginner
 
-.seealso: [](ch_da), `DAGetObsErrorVariance()`
+.seealso: [](ch_da), `PetscDAGetObsErrorVariance()`
 @*/
-PetscErrorCode DASetObsErrorVariance(DA da, Vec obs_error_var)
+PetscErrorCode PetscDASetObsErrorVariance(PetscDA da, Vec obs_error_var)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(obs_error_var, VEC_CLASSID, 2);
 
   if (!da->obs_error_var) PetscCall(VecDuplicate(obs_error_var, &da->obs_error_var));
@@ -533,46 +533,46 @@ PetscErrorCode DASetObsErrorVariance(DA da, Vec obs_error_var)
 }
 
 /*@
-  DAGetObsErrorVariance - Returns a borrowed reference to the observation-error variance vector.
+  PetscDAGetObsErrorVariance - Returns a borrowed reference to the observation-error variance vector.
 
   Not Collective
 
   Input Parameter:
-. da - the `DA` context
+. da - the `PetscDA` context
 
   Output Parameter:
-. obs_error_var - pointer to the variance vector managed by the `DA`
+. obs_error_var - pointer to the variance vector managed by the `PetscDA`
 
   Level: beginner
 
-.seealso: [](ch_da), `DASetObsErrorVariance()`
+.seealso: [](ch_da), `PetscDASetObsErrorVariance()`
 @*/
-PetscErrorCode DAGetObsErrorVariance(DA da, Vec *obs_error_var)
+PetscErrorCode PetscDAGetObsErrorVariance(PetscDA da, Vec *obs_error_var)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscAssertPointer(obs_error_var, 2);
   *obs_error_var = da->obs_error_var;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  DASetOrthogonalTransform - Installs the ensemble-space orthogonal matrix used in deterministic square-root updates.
+  PetscDASetOrthogonalTransform - Installs the ensemble-space orthogonal matrix used in deterministic square-root updates.
 
   Collective
 
   Input Parameters:
-+ da - the `DA` context
++ da - the `PetscDA` context
 - U  - orthogonal matrix to store (referenced internally)
 
   Level: developer
 
-.seealso: [](ch_da), `DAGetOrthogonalTransform()`, `DAETKFAnalysis()`
+.seealso: [](ch_da), `PetscDAGetOrthogonalTransform()`, `PetscDAETKFAnalysis()`
 @*/
-PetscErrorCode DASetOrthogonalTransform(DA da, Mat U)
+PetscErrorCode PetscDASetOrthogonalTransform(PetscDA da, Mat U)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(U, MAT_CLASSID, 2);
 
   if (da->U) PetscCall(MatDestroy(&da->U));
@@ -582,49 +582,49 @@ PetscErrorCode DASetOrthogonalTransform(DA da, Mat U)
 }
 
 /*@
-  DAGetOrthogonalTransform - Retrieves the orthogonal matrix currently stored in a `DA`.
+  PetscDAGetOrthogonalTransform - Retrieves the orthogonal matrix currently stored in a `PetscDA`.
 
   Not Collective
 
   Input Parameter:
-. da - the `DA` context
+. da - the `PetscDA` context
 
   Output Parameter:
 . U - pointer that will receive the matrix (may be `NULL`)
 
   Level: developer
 
-.seealso: [](ch_da), `DASetOrthogonalTransform()`
+.seealso: [](ch_da), `PetscDASetOrthogonalTransform()`
 @*/
-PetscErrorCode DAGetOrthogonalTransform(DA da, Mat *U)
+PetscErrorCode PetscDAGetOrthogonalTransform(PetscDA da, Mat *U)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscAssertPointer(U, 2);
   *U = da->U;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  DAGetEnsembleMember - Returns a read-only view of an ensemble member stored in the `DA`.
+  PetscDAGetEnsembleMember - Returns a read-only view of an ensemble member stored in the `PetscDA`.
 
   Collective
 
   Input Parameters:
-+ da         - the `DA` context
++ da         - the `PetscDA` context
 - member_idx - index of the requested member (0 <= idx < ensemble_size)
 
   Output Parameter:
-. member - read-only vector view; call `DARestoreEnsembleMember()` when done
+. member - read-only vector view; call `PetscDARestoreEnsembleMember()` when done
 
   Level: intermediate
 
-.seealso: [](ch_da), `DARestoreEnsembleMember()`, `DASetEnsembleMember()`
+.seealso: [](ch_da), `PetscDARestoreEnsembleMember()`, `PetscDASetEnsembleMember()`
 @*/
-PetscErrorCode DAGetEnsembleMember(DA da, PetscInt member_idx, Vec *member)
+PetscErrorCode PetscDAGetEnsembleMember(PetscDA da, PetscInt member_idx, Vec *member)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscAssertPointer(member, 3);
 
   PetscCheck(member_idx >= 0 && member_idx < da->ensemble_size, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Member index %" PetscInt_FMT " out of range [0, %" PetscInt_FMT ")", member_idx, da->ensemble_size);
@@ -634,23 +634,23 @@ PetscErrorCode DAGetEnsembleMember(DA da, PetscInt member_idx, Vec *member)
 }
 
 /*@
-  DARestoreEnsembleMember - Returns a column view obtained with `DAGetEnsembleMember()`.
+  PetscDARestoreEnsembleMember - Returns a column view obtained with `PetscDAGetEnsembleMember()`.
 
   Collective
 
   Input Parameters:
-+ da         - the `DA` context
++ da         - the `PetscDA` context
 . member_idx - index that was previously requested
 - member     - location that holds the view to restore
 
   Level: intermediate
 
-.seealso: [](ch_da), `DAGetEnsembleMember()`
+.seealso: [](ch_da), `PetscDAGetEnsembleMember()`
 @*/
-PetscErrorCode DARestoreEnsembleMember(DA da, PetscInt member_idx, Vec *member)
+PetscErrorCode PetscDARestoreEnsembleMember(PetscDA da, PetscInt member_idx, Vec *member)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscAssertPointer(member, 3);
 
   PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, member_idx, member));
@@ -658,25 +658,25 @@ PetscErrorCode DARestoreEnsembleMember(DA da, PetscInt member_idx, Vec *member)
 }
 
 /*@
-  DASetEnsembleMember - Overwrites an ensemble member with user-provided state data.
+  PetscDASetEnsembleMember - Overwrites an ensemble member with user-provided state data.
 
   Collective
 
   Input Parameters:
-+ da         - the `DA` context
++ da         - the `PetscDA` context
 . member_idx - index of the entry to modify
 - member     - vector containing the new state values
 
   Level: intermediate
 
-.seealso: [](ch_da), `DAGetEnsembleMember()`
+.seealso: [](ch_da), `PetscDAGetEnsembleMember()`
 @*/
-PetscErrorCode DASetEnsembleMember(DA da, PetscInt member_idx, Vec member)
+PetscErrorCode PetscDASetEnsembleMember(PetscDA da, PetscInt member_idx, Vec member)
 {
   Vec col;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(member, VEC_CLASSID, 3);
 
   PetscCheck(member_idx >= 0 && member_idx < da->ensemble_size, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Member index out of range");
@@ -688,22 +688,22 @@ PetscErrorCode DASetEnsembleMember(DA da, PetscInt member_idx, Vec member)
 }
 
 /*@
-  DAComputeMean - Computes the ensemble mean state for a `DA`.
+  PetscDAComputeMean - Computes the ensemble mean state for a `PetscDA`.
 
   Collective
 
   Input Parameters:
-+ da   - the `DA` context
++ da   - the `PetscDA` context
 - mean - vector that will hold the ensemble mean
 
   Level: intermediate
 
-.seealso: [](ch_da), `DAComputeAnomalies()`
+.seealso: [](ch_da), `PetscDAComputeAnomalies()`
 @*/
-PetscErrorCode DAComputeMean(DA da, Vec mean)
+PetscErrorCode PetscDAComputeMean(PetscDA da, Vec mean)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(mean, VEC_CLASSID, 2);
 
   PetscUseTypeMethod(da, computemean, mean);
@@ -711,22 +711,22 @@ PetscErrorCode DAComputeMean(DA da, Vec mean)
 }
 
 /*@
-  DAComputeAnomalies - Forms the state-space anomalies matrix for a `DA`.
+  PetscDAComputeAnomalies - Forms the state-space anomalies matrix for a `PetscDA`.
 
   Collective
 
   Input Parameters:
-+ da        - the `DA` context
++ da        - the `PetscDA` context
 - anomalies - location to store the newly created anomalies matrix
 
   Level: intermediate
 
-.seealso: [](ch_da), `DAComputeMean()`
+.seealso: [](ch_da), `PetscDAComputeMean()`
 @*/
-PetscErrorCode DAComputeAnomalies(DA da, Mat *anomalies)
+PetscErrorCode PetscDAComputeAnomalies(PetscDA da, Mat *anomalies)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscAssertPointer(anomalies, 2);
 
   PetscUseTypeMethod(da, computeanomalies, anomalies);
@@ -734,24 +734,24 @@ PetscErrorCode DAComputeAnomalies(DA da, Mat *anomalies)
 }
 
 /*@C
-  DAAnalysis - Executes the analysis (update) step of the configured data assimilation method.
+  PetscDAAnalysis - Executes the analysis (update) step of the configured data assimilation method.
 
   Collective
 
   Input Parameters:
-+ da                   - the `DA` context
++ da                   - the `PetscDA` context
 . observation          - observation vector
 . observation_operator - routine that evaluates the observation model `H(x)`
 - obs_ctx              - optional context for `observation_operator`
 
   Level: intermediate
 
-.seealso: [](ch_da), `DAApplyModel()`, `DAETKFAnalysis()`
+.seealso: [](ch_da), `PetscDAApplyModel()`, `PetscDAETKFAnalysis()`
 @*/
-PetscErrorCode DAAnalysis(DA da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
+PetscErrorCode PetscDAAnalysis(PetscDA da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
 
   PetscUseTypeMethod(da, analysis, observation, observation_operator, obs_ctx);
@@ -759,23 +759,23 @@ PetscErrorCode DAAnalysis(DA da, Vec observation, PetscErrorCode (*observation_o
 }
 
 /*@C
-  DAApplyModel - Advances every ensemble member through the user-supplied forecast model.
+  PetscDAApplyModel - Advances every ensemble member through the user-supplied forecast model.
 
   Collective
 
   Input Parameters:
-+ da        - the `DA` context
++ da        - the `PetscDA` context
 . model     - routine that evaluates the model map `f(x, xnew; ctx)`
 - model_ctx - optional context for `model`
 
   Level: intermediate
 
-.seealso: [](ch_da), `DAAnalysis()`
+.seealso: [](ch_da), `PetscDAAnalysis()`
 @*/
-PetscErrorCode DAApplyModel(DA da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
+PetscErrorCode PetscDAApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscAssertPointer(model_ctx, 3);
 
   PetscUseTypeMethod(da, applymodel, model, model_ctx);
@@ -827,7 +827,7 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DACholeskySqrt_Private(Mat A, Mat *L_out)
+PetscErrorCode PetscDACholeskySqrt_Private(Mat A, Mat *L_out)
 {
   Mat          L;
   PetscInt     m, n, i, j;
@@ -873,7 +873,7 @@ PetscErrorCode DACholeskySqrt_Private(Mat A, Mat *L_out)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
+PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
 {
   Mat          sqrtA, V, VSqrtD;
   Vec          sqrtD;
