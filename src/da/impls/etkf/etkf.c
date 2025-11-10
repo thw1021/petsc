@@ -2,94 +2,94 @@
 #include <petsc/private/daimpl.h>
 
 typedef struct {
-  DAETKFSqrtType sqrt_type;
-} DAETKFData;
+  PetscDAETKFSqrtType sqrt_type;
+} PetscDAETKFData;
 
-static PetscFunctionList DAETKFSqrtList = NULL;
-static PetscBool         DAETKFPackageInitialized;
+static PetscFunctionList PetscDAETKFSqrtList = NULL;
+static PetscBool         PetscDAETKFPackageInitialized;
 
-static PetscErrorCode DAETKFSetSqrt_Cholesky(DA da)
+static PetscErrorCode PetscDAETKFSetSqrt_Cholesky(PetscDA da)
 {
   PetscFunctionBegin;
-  PetscCall(DAETKFSetSqrtType(da, DAETKF_SQRT_CHOLESKY));
+  PetscCall(PetscDAETKFSetSqrtType(da, PETSCDAETKF_SQRT_CHOLESKY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DAETKFSetSqrt_Eigen(DA da)
+static PetscErrorCode PetscDAETKFSetSqrt_Eigen(PetscDA da)
 {
   PetscFunctionBegin;
-  PetscCall(DAETKFSetSqrtType(da, DAETKF_SQRT_EIGEN));
+  PetscCall(PetscDAETKFSetSqrtType(da, PETSCDAETKF_SQRT_EIGEN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DAETKFDestroy(DA da)
+static PetscErrorCode PetscDAETKFDestroy(PetscDA da)
 {
   PetscFunctionBegin;
   PetscCall(PetscFree(da->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DASetFromOptions_DAETKF(DA da, PetscOptionItems *PetscOptions)
+static PetscErrorCode PetscDASetFromOptions_DAETKF(PetscDA da, PetscOptionItems *PetscOptions)
 {
-  DAETKFData      *impl               = (DAETKFData *)da->data;
-  PetscOptionItems PetscOptionsObject = PetscOptions ? *PetscOptions : NULL;
-  const char      *defaultType;
-  char             typeName[64];
-  PetscBool        set;
-  PetscErrorCode (*setter)(DA);
+  PetscDAETKFData  *impl               = (PetscDAETKFData *)da->data;
+  PetscOptionItems  PetscOptionsObject = PetscOptions ? *PetscOptions : NULL;
+  const char       *defaultType;
+  char              typeName[64];
+  PetscBool         set;
+  PetscErrorCode (*setter)(PetscDA);
 
   PetscFunctionBegin;
-  defaultType = (impl->sqrt_type == DAETKF_SQRT_EIGEN) ? "eigen" : "cholesky";
+  defaultType = (impl->sqrt_type == PETSCDAETKF_SQRT_EIGEN) ? "eigen" : "cholesky";
   PetscCall(PetscStrncpy(typeName, defaultType, sizeof(typeName)));
-  PetscCall(PetscOptionsFList("-daetkf_sqrt_type", "Matrix square root factorization", "DAETKFSetSqrtType", DAETKFSqrtList, defaultType, typeName, sizeof(typeName), &set));
+  PetscCall(PetscOptionsFList("-petscdaetkf_sqrt_type", "Matrix square root factorization", "PetscDAETKFSetSqrtType", PetscDAETKFSqrtList, defaultType, typeName, sizeof(typeName), &set));
   if (set) {
-    PetscCall(PetscFunctionListFind(DAETKFSqrtList, typeName, &setter));
-    PetscCheck(setter, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown DAETKF square-root type \"%s\"", typeName);
+    PetscCall(PetscFunctionListFind(PetscDAETKFSqrtList, typeName, &setter));
+    PetscCheck(setter, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDAETKF square-root type \"%s\"", typeName);
     PetscCall((*setter)(da));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  DAETKFInitializePackage - This function initializes everything in the `DAETKF` package. It is called from `TSInitializePackage()`.
+  PetscDAETKFInitializePackage - This function initializes everything in the `PetscDAETKF` package. It is called from `TSInitializePackage()`.
 
   Level: developer
 
-.seealso: [](ch_ts), `PetscInitialize()`, `DAETKFFinalizePackage()`
+.seealso: [](ch_ts), `PetscInitialize()`, `PetscDAETKFFinalizePackage()`
 @*/
-PetscErrorCode DAETKFInitializePackage(void)
+PetscErrorCode PetscDAETKFInitializePackage(void)
 {
   PetscFunctionBegin;
-  if (DAETKFPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
-  DAETKFPackageInitialized = PETSC_TRUE;
-  PetscCall(PetscFunctionListAdd(&DAETKFSqrtList, "cholesky", DAETKFSetSqrt_Cholesky));
-  PetscCall(PetscFunctionListAdd(&DAETKFSqrtList, "eigen", DAETKFSetSqrt_Eigen));
-  PetscCall(PetscRegisterFinalize(DAETKFFinalizePackage));
+  if (PetscDAETKFPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscDAETKFPackageInitialized = PETSC_TRUE;
+  PetscCall(PetscFunctionListAdd(&PetscDAETKFSqrtList, "cholesky", PetscDAETKFSetSqrt_Cholesky));
+  PetscCall(PetscFunctionListAdd(&PetscDAETKFSqrtList, "eigen", PetscDAETKFSetSqrt_Eigen));
+  PetscCall(PetscRegisterFinalize(PetscDAETKFFinalizePackage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  DAETKFFinalizePackage - This function destroys everything in the `DAETKF` package. It is called from `PetscFinalize()`.
+  PetscDAETKFFinalizePackage - This function destroys everything in the `PetscDAETKF` package. It is called from `PetscFinalize()`.
 
   Level: developer
 
-.seealso: [](ch_ts), `PetscFinalize()`, `DAETKFInitiallizePackage()`
+.seealso: [](ch_ts), `PetscFinalize()`, `PetscDAETKFInitiallizePackage()`
 @*/
-PetscErrorCode DAETKFFinalizePackage(void)
+PetscErrorCode PetscDAETKFFinalizePackage(void)
 {
   PetscFunctionBegin;
-  DAETKFPackageInitialized = PETSC_FALSE;
-  PetscCall(PetscFunctionListDestroy(&DAETKFSqrtList));
+  PetscDAETKFPackageInitialized = PETSC_FALSE;
+  PetscCall(PetscFunctionListDestroy(&PetscDAETKFSqrtList));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
-  DAETKFAnalysis - Performs the ensemble transform Kalman filter (ETKF) analysis defined by Algorithm 6.4 in Law, Stuart, and Zygalakis.
+  PetscDAETKFAnalysis - Performs the ensemble transform Kalman filter (ETKF) analysis defined by Algorithm 6.4 in Law, Stuart, and Zygalakis.
 
   Collective
 
   Input Parameters:
-+ da                   - the `DA` context owning the forecast ensemble and
++ da                   - the `PetscDA` context owning the forecast ensemble and
 buffers . observation          - observation vector `y` . observation_operator -
 user-supplied routine `H(x, y; ctx)` that maps a state to observation space
 - obs_ctx              - optional context for `observation_operator`
@@ -101,20 +101,20 @@ transform, and Step 10 applies the transform to refresh every ensemble member.
 
   Level: advanced
 
-.seealso: [](ch_da), `DA`, `DAETKFApplyModel()`, `DAComputeMean()`,
-`DAComputeAnomalies()`
+.seealso: [](ch_da), `PetscDA`, `PetscDAETKFApplyModel()`, `PetscDAComputeMean()`,
+`PetscDAComputeAnomalies()`
 */
-static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
+static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
 {
-  DAETKFData  *impl = (DAETKFData *)da->data;
-  Vec          mean, y_mean, delta, delta_scaled, col_in, col_out, w, temp_vec;
-  Mat          X, Z, S, T, T_sqrt;
-  PetscInt     i, m;
-  PetscScalar  inv_m, scale, sqrt_m_minus_1;
-  PetscScalar *r_inv_sqrt_array, *w_array;
-  Vec          r_inv_sqrt;
-  Mat          I_m, w_ones, T_sqrt_U, X_Y;
-  Vec          S_T_delta;
+  PetscDAETKFData *impl = (PetscDAETKFData *)da->data;
+  Vec              mean, y_mean, delta, delta_scaled, col_in, col_out, w, temp_vec;
+  Mat              X, Z, S, T, T_sqrt;
+  PetscInt         i, m;
+  PetscScalar      inv_m, scale, sqrt_m_minus_1;
+  PetscScalar     *r_inv_sqrt_array, *w_array;
+  Vec              r_inv_sqrt;
+  Mat              I_m, w_ones, T_sqrt_U, X_Y;
+  Vec              S_T_delta;
 
   PetscFunctionBegin;
   /* Map of ETKF analysis steps to Algorithm 6.4:
@@ -134,10 +134,10 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &mean));
   PetscCall(VecSetSizes(mean, PETSC_DECIDE, da->state_size));
   PetscCall(VecSetFromOptions(mean));
-  PetscCall(DAComputeMean(da, mean));
+  PetscCall(PetscDAComputeMean(da, mean));
 
   /* scaled anomalies X = (E - x_bar)/sqrt(m - 1) */
-  PetscCall(DAComputeAnomalies(da, &X));
+  PetscCall(PetscDAComputeAnomalies(da, &X));
 
   /* Z = H(x_i^f). */
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &Z));
@@ -222,14 +222,14 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
 
   /* T_sqrt = square-root of T */
   switch (impl->sqrt_type) {
-  case DAETKF_SQRT_CHOLESKY:
-    PetscCall(DACholeskySqrt_Private(T, &T_sqrt));
+  case PETSCDAETKF_SQRT_CHOLESKY:
+    PetscCall(PetscDACholeskySqrt_Private(T, &T_sqrt));
     break;
-  case DAETKF_SQRT_EIGEN:
-    PetscCall(DASymmetricEigenSqrt_Private(T, &T_sqrt));
+  case PETSCDAETKF_SQRT_EIGEN:
+    PetscCall(PetscDASymmetricEigenSqrt_Private(T, &T_sqrt));
     break;
   default:
-    SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported DAETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
+    SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported PetscDAETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
   }
   // w * 1
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &w_ones));
@@ -278,24 +278,24 @@ static PetscErrorCode DAETKFAnalysis(DA da, Vec observation, PetscErrorCode (*ob
 }
 
 /*
-  DAETKFApplyModel - Advances each ensemble member through the user-supplied
+  PetscDAETKFApplyModel - Advances each ensemble member through the user-supplied
   nonlinear model (Algorithm 6.4, Step 10 forecast propagation).
 
   Collective
 
   Input Parameters:
-+ da     - the `DA` context that stores the ensemble
++ da     - the `PetscDA` context that stores the ensemble
 . model  - routine that evaluates the model `f(x, xnew; ctx)`
 - model_ctx - optional context for `model`
 
   Notes:
-  This routine overwrites every ensemble column with the model result supplied by `model`. It is typically called immediately after `DAETKFAnalysis()` to start the next forecast cycle.
+  This routine overwrites every ensemble column with the model result supplied by `model`. It is typically called immediately after `PetscDAETKFAnalysis()` to start the next forecast cycle.
 
   Level: intermediate
 
-.seealso: [](ch_da), `DA`, `DAETKFAnalysis()`
+.seealso: [](ch_da), `PetscDA`, `PetscDAETKFAnalysis()`
 */
-static PetscErrorCode DAETKFApplyModel(DA da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
+static PetscErrorCode PetscDAETKFApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
 {
   Vec      col_in, col_out, temp;
   PetscInt i;
@@ -320,51 +320,51 @@ static PetscErrorCode DAETKFApplyModel(DA da, PetscErrorCode (*model)(Vec, Vec, 
 }
 
 /*@
-  DAETKFSetSqrtType - Selects the reduced-space square-root algorithm used during the ETKF analysis.
+  PetscDAETKFSetSqrtType - Selects the reduced-space square-root algorithm used during the ETKF analysis.
 
   Logically Collective
 
   Input Parameters:
-+ da   - the `DA` object
-- type - either `DAETKF_SQRT_CHOLESKY` or `DAETKF_SQRT_EIGEN`
++ da   - the `PetscDA` object
+- type - either `PETSCDAETKF_SQRT_CHOLESKY` or `PETSCDAETKF_SQRT_EIGEN`
 
   Level: intermediate
 
-.seealso: [](ch_da), `DA`, `DAETKFGetSqrtType()`, `DAETKFAnalysis()`
+.seealso: [](ch_da), `PetscDA`, `PetscDAETKFGetSqrtType()`, `PetscDAETKFAnalysis()`
 @*/
-PetscErrorCode DAETKFSetSqrtType(DA da, DAETKFSqrtType type)
+PetscErrorCode PetscDAETKFSetSqrtType(PetscDA da, PetscDAETKFSqrtType type)
 {
-  DAETKFData *impl = (DAETKFData *)da->data;
+  PetscDAETKFData *impl = (PetscDAETKFData *)da->data;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
-  PetscCheck(type == DAETKF_SQRT_CHOLESKY || type == DAETKF_SQRT_EIGEN, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Invalid DAETKF square-root type %" PetscInt_FMT, (PetscInt)type);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscCheck(type == PETSCDAETKF_SQRT_CHOLESKY || type == PETSCDAETKF_SQRT_EIGEN, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Invalid PetscDAETKF square-root type %" PetscInt_FMT, (PetscInt)type);
 
   impl->sqrt_type = type;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  DAETKFGetSqrtType - Retrieves the current square-root implementation configured for the ETKF analysis.
+  PetscDAETKFGetSqrtType - Retrieves the current square-root implementation configured for the ETKF analysis.
 
   Not Collective
 
   Input Parameters:
-. da - the `DA` object
+. da - the `PetscDA` object
 
   Output Parameter:
-. type - on output, the configured `DAETKFSqrtType`
+. type - on output, the configured `PetscDAETKFSqrtType`
 
   Level: intermediate
 
-.seealso: [](ch_da), `DA`, `DAETKFSetSqrtType()`
+.seealso: [](ch_da), `PetscDA`, `PetscDAETKFSetSqrtType()`
 @*/
-PetscErrorCode DAETKFGetSqrtType(DA da, DAETKFSqrtType *type)
+PetscErrorCode PetscDAETKFGetSqrtType(PetscDA da, PetscDAETKFSqrtType *type)
 {
-  DAETKFData *impl = (DAETKFData *)da->data;
+  PetscDAETKFData *impl = (PetscDAETKFData *)da->data;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscAssertPointer(type, 2);
 
   *type = impl->sqrt_type;
@@ -372,72 +372,72 @@ PetscErrorCode DAETKFGetSqrtType(DA da, DAETKFSqrtType *type)
 }
 
 /*
-  DAETKFView - Views a `DAETKF` and its implementation-specific data structure.
+  PetscDAETKFView - Views a `PetscDAETKF` and its implementation-specific data structure.
 
   Collective
 
   Input Parameters:
-+ da     - the `DA` context
++ da     - the `PetscDA` context
 - viewer - the `PetscViewer` to use (or `NULL` for standard output)
 
   Level: beginner
 
-.seealso: [](ch_da), `DAViewFromOptions()`
+.seealso: [](ch_da), `PetscDAViewFromOptions()`
 */
-static PetscErrorCode DAETKFView(DA da, PetscViewer viewer)
+static PetscErrorCode PetscDAETKFView(PetscDA da, PetscViewer viewer)
 {
-  PetscBool   iascii;
-  DAETKFData *impl = (DAETKFData *)da->data;
+  PetscBool        iascii;
+  PetscDAETKFData *impl = (PetscDAETKFData *)da->data;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, DA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   if (!viewer) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)da), &viewer));
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
   PetscCheckSameComm(da, 1, viewer, 2);
 
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "DAEKF Object:\n"));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Square root type: %s\n", (impl->sqrt_type == DAETKF_SQRT_EIGEN) ? "eigen" : "cholesky"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "PetscDAEKF Object:\n"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Square root type: %s\n", (impl->sqrt_type == PETSCDAETKF_SQRT_EIGEN) ? "eigen" : "cholesky"));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
-  DAETKFInitialize - Installs the ETKF-specific operations on a newly created `DA` object.
+  PetscDAETKFInitialize - Installs the ETKF-specific operations on a newly created `PetscDA` object.
 
   Collective
 
   Input Parameter:
-. da - the `DA` object to configure
+. da - the `PetscDA` object to configure
 
   Level: developer
 
-.seealso: [](ch_da), `DA`, `DAETKFRegister()`, `DAETKFAnalysis()`
+.seealso: [](ch_da), `PetscDA`, `PetscDAETKFRegister()`, `PetscDAETKFAnalysis()`
 */
-static PetscErrorCode DAETKFInitialize(DA da)
+static PetscErrorCode PetscDAETKFInitialize(PetscDA da)
 {
-  DAETKFData *impl;
+  PetscDAETKFData *impl;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&impl));
-  impl->sqrt_type = DAETKF_SQRT_EIGEN;
+  impl->sqrt_type = PETSCDAETKF_SQRT_EIGEN;
 
   da->data                  = impl;
-  da->ops->analysis         = DAETKFAnalysis;
-  da->ops->applymodel       = DAETKFApplyModel;
+  da->ops->analysis         = PetscDAETKFAnalysis;
+  da->ops->applymodel       = PetscDAETKFApplyModel;
   da->ops->computemean      = NULL;
   da->ops->computeanomalies = NULL;
-  da->ops->destroy          = DAETKFDestroy;
-  da->ops->view             = DAETKFView;
-  da->ops->setfromoptions   = DASetFromOptions_DAETKF;
+  da->ops->destroy          = PetscDAETKFDestroy;
+  da->ops->view             = PetscDAETKFView;
+  da->ops->setfromoptions   = PetscDASetFromOptions_DAETKF;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DAETKFRegister(void)
+PetscErrorCode PetscDAETKFRegister(void)
 {
   PetscFunctionBegin;
-  PetscCall(DARegister(DAETKF, DAETKFInitialize));
-  PetscCall(DAETKFInitializePackage());
+  PetscCall(PetscDARegister(PETSCDAETKF, PetscDAETKFInitialize));
+  PetscCall(PetscDAETKFInitializePackage());
   PetscFunctionReturn(PETSC_SUCCESS);
 }

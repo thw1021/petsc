@@ -92,7 +92,10 @@
 -  Remove unused `TSPseudoVerifyTimeStepDefault()`
 -  Remove `TSPseudoComputeTimeStep()` and `TSPseudoVerifyTimeStep()`
 
-- Add data assimilation (DA) base class as a utility with implementation of ETKF: [](ch_da)
+```{rubric} DA:
+```
+
+- Add data assimilation (PetscDA) base class with implementation of ETKF: [](ch_da)
 
 ```{rubric} TAO:
 ```
@@ -128,3 +131,4 @@
 
 ```{rubric} Fortran:
 ```
+
