@@ -54,7 +54,7 @@ PETSC_EXTERN PetscErrorCode KSPInitializePackage(void);
 PETSC_EXTERN PetscErrorCode SNESInitializePackage(void);
 PETSC_EXTERN PetscErrorCode TSInitializePackage(void);
 PETSC_EXTERN PetscErrorCode TaoInitializePackage(void);
-PETSC_EXTERN PetscErrorCode DAInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscDAInitializePackage(void);
 #endif
 
 /*
@@ -128,7 +128,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void)
     PetscCall(SNESInitializePackage());
     PetscCall(TSInitializePackage());
     PetscCall(TaoInitializePackage());
-    PetscCall(DAInitializePackage());
+    PetscCall(PetscDAInitializePackage());
   #else
     SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Cannot use -library_preload with multiple static PETSc libraries");
   #endif
