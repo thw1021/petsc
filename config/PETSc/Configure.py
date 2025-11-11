@@ -494,7 +494,7 @@ prepend-path PATH "%s"
       self.addMakeMacro('PETSC_TAO_LIB','${PETSC_WITH_EXTERNAL_LIB}')
       self.addMakeMacro('PETSC_ML_LIB','${PETSC_WITH_EXTERNAL_LIB}')
     else:
-      pkgs = ['ml', 'tao', 'ts', 'snes', 'ksp', 'dm', 'mat', 'vec', 'sys']
+      pkgs = ['ml', 'da', 'tao', 'ts', 'snes', 'ksp', 'dm', 'mat', 'vec', 'sys']
       def liblist_basic(libs):
         return [ '-lpetsc'+lib+self.LIB_NAME_SUFFIX for lib in libs]
       def liblist(libs):
