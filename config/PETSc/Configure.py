@@ -492,6 +492,7 @@ prepend-path PATH "%s"
       self.addMakeMacro('PETSC_SNES_LIB','${PETSC_WITH_EXTERNAL_LIB}')
       self.addMakeMacro('PETSC_TS_LIB','${PETSC_WITH_EXTERNAL_LIB}')
       self.addMakeMacro('PETSC_TAO_LIB','${PETSC_WITH_EXTERNAL_LIB}')
+      self.addMakeMacro('PETSC_DA_LIB','${PETSC_WITH_EXTERNAL_LIB}')
       self.addMakeMacro('PETSC_ML_LIB','${PETSC_WITH_EXTERNAL_LIB}')
     else:
       pkgs = ['ml', 'da', 'tao', 'ts', 'snes', 'ksp', 'dm', 'mat', 'vec', 'sys']
@@ -508,7 +509,8 @@ prepend-path PATH "%s"
       self.addMakeMacro('PETSC_SNES_LIB',liblist(pkgs[-6:]))
       self.addMakeMacro('PETSC_TS_LIB',  liblist(pkgs[-7:]))
       self.addMakeMacro('PETSC_TAO_LIB', liblist(pkgs[-8:]))
-      self.addMakeMacro('PETSC_ML_LIB', liblist(pkgs[-9:]))
+      self.addMakeMacro('PETSC_DA_LIB',  liblist(pkgs[-9:]))
+      self.addMakeMacro('PETSC_ML_LIB',  liblist(pkgs[-10:]))
     self.addMakeMacro('PETSC_LIB','${PETSC_ML_LIB}')
     self.addMakeMacro('PETSC_LIB_BASIC',self.petsclib)
 
