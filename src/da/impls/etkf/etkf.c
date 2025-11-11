@@ -31,14 +31,20 @@ static PetscErrorCode PetscDAETKFDestroy(PetscDA da)
 
 static PetscErrorCode PetscDASetFromOptions_DAETKF(PetscDA da, PetscOptionItems *PetscOptions)
 {
-  PetscDAETKFData  *impl               = (PetscDAETKFData *)da->data;
-  PetscOptionItems  PetscOptionsObject = PetscOptions ? *PetscOptions : NULL;
-  const char       *defaultType;
-  char              typeName[64];
-  PetscBool         set;
-  PetscErrorCode (*setter)(PetscDA);
+  PetscDAETKFData        *impl;
+  PetscOptionItems        PetscOptionsObject;
+  const char             *defaultType;
+  char                    typeName[256];
+  PetscBool               set = PETSC_FALSE;
+  PetscErrorCode (*setter)(PetscDA) = NULL;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscAssert(da->data, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDA data structure not initialized");
+  
+  impl               = (PetscDAETKFData *)da->data;
+  PetscOptionsObject = PetscOptions ? *PetscOptions : NULL;
+  
   defaultType = (impl->sqrt_type == PETSCDAETKF_SQRT_EIGEN) ? "eigen" : "cholesky";
   PetscCall(PetscStrncpy(typeName, defaultType, sizeof(typeName)));
   PetscCall(PetscOptionsFList("-petscdaetkf_sqrt_type", "Matrix square root factorization", "PetscDAETKFSetSqrtType", PetscDAETKFSqrtList, defaultType, typeName, sizeof(typeName), &set));
@@ -89,9 +95,9 @@ PetscErrorCode PetscDAETKFFinalizePackage(void)
   Collective
 
   Input Parameters:
-+ da                   - the `PetscDA` context owning the forecast ensemble and
-buffers . observation          - observation vector `y` . observation_operator -
-user-supplied routine `H(x, y; ctx)` that maps a state to observation space
++ da                   - the `PetscDA` context owning the forecast ensemble and buffers
+. observation          - observation vector `y`
+. observation_operator - user-supplied routine `H(x, y; ctx)` that maps a state to observation space
 - obs_ctx              - optional context for `observation_operator`
 
   Notes:
