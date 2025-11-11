@@ -336,7 +336,6 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
-  PetscAssertPointer(observation_operator, 3);
 
   /* Validate ensemble size */
   m = da->ensemble_size;
@@ -494,7 +493,6 @@ static PetscErrorCode PetscDAETKFApplyModel(PetscDA da, PetscErrorCode (*model)(
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscAssertPointer(model, 2);
 
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &temp));
   PetscCall(VecSetSizes(temp, PETSC_DECIDE, da->state_size));
