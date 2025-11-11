@@ -1,33 +1,37 @@
-PetscDA Object: 1 MPI processes
+PetscDA Object: 1 MPI process
   State size: 40
   Observation size: 40
   Ensemble size: 40
   Assembled: true
-PetscDAEKF Object:
+PetscDAETKF Object:
   Square root type: eigen
-Lorenz-96 ETKF quick example
-  State dimension      : 40
-  Ensemble size        : 40
-  Time step             : 0.0500
+Lorenz-96 ETKF Example
+======================
+  State dimension       : 40
+  Ensemble size         : 40
+  Forcing parameter (F) : 8.0000
+  Time step (dt)        : 0.0500
   Total steps           : 120
   Burn-in steps         : 10
   Observation frequency : 2
   Observation noise std : 0.500
+  Random seed           : 12345
 
-Step    0, time 0.000  RMSE_forecast 0.06350  RMSE_analysis 0.30764 [burn-in]
-Step   12, time 0.600  RMSE_forecast 0.63886  RMSE_analysis 0.29160
-Step   24, time 1.200  RMSE_forecast 0.53910  RMSE_analysis 0.37928
-Step   36, time 1.800  RMSE_forecast 0.48211  RMSE_analysis 0.25464
-Step   48, time 2.400  RMSE_forecast 0.54692  RMSE_analysis 0.19211
-Step   60, time 3.000  RMSE_forecast 0.49758  RMSE_analysis 0.28734
-Step   72, time 3.600  RMSE_forecast 0.28132  RMSE_analysis 0.28091
-Step   84, time 4.200  RMSE_forecast 0.66446  RMSE_analysis 0.29441
-Step   96, time 4.800  RMSE_forecast 0.46157  RMSE_analysis 0.34409
-Step  108, time 5.400  RMSE_forecast 0.52690  RMSE_analysis 0.31365
-Step  120, time 6.000  RMSE_forecast 0.40326  RMSE_analysis 0.25805
+Step    0, time  0.000  RMSE_forecast 0.06350  RMSE_analysis 0.06350 [burn-in]
+Step   12, time  0.600  RMSE_forecast 0.11647  RMSE_analysis 0.11665
+Step   24, time  1.200  RMSE_forecast 0.10826  RMSE_analysis 0.10492
+Step   36, time  1.800  RMSE_forecast 0.08978  RMSE_analysis 0.08724
+Step   48, time  2.400  RMSE_forecast 0.07239  RMSE_analysis 0.07679
+Step   60, time  3.000  RMSE_forecast 0.06745  RMSE_analysis 0.06623
+Step   72, time  3.600  RMSE_forecast 0.06077  RMSE_analysis 0.06363
+Step   84, time  4.200  RMSE_forecast 0.06141  RMSE_analysis 0.06256
+Step   96, time  4.800  RMSE_forecast 0.06310  RMSE_analysis 0.06554
+Step  108, time  5.400  RMSE_forecast 0.06659  RMSE_analysis 0.06367
+Step  120, time  6.000  RMSE_forecast 0.06076  RMSE_analysis 0.06058
 
-Statistics over 111 assimilation steps (post burn-in):
-  Mean RMSE (forecast): 0.463344
-  Mean RMSE (analysis): 0.338874
-  Observations assimilated: 61
+Statistics (111 post-burn-in steps):
+==================================================
+  Mean RMSE (forecast) : 0.076670
+  Mean RMSE (analysis) : 0.076115
+  Observations used    : 60
 
