@@ -542,7 +542,7 @@ PetscErrorCode PetscDASetObsErrorVariance(PetscDA da, Vec obs_error_var)
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(obs_error_var, VEC_CLASSID, 2);
 
-  if (!da->obs_error_var) { PetscCall(VecDuplicate(obs_error_var, &da->obs_error_var)); }
+  if (!da->obs_error_var) PetscCall(VecDuplicate(obs_error_var, &da->obs_error_var));
   PetscCall(VecCopy(obs_error_var, da->obs_error_var));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
