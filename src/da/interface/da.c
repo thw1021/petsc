@@ -10,6 +10,12 @@ PetscFunctionList PetscDAList              = NULL;
 
 static PetscBool PetscDAPackageInitialized = PETSC_FALSE;
 
+/* Tolerance for matrix square root verification in debug mode */
+#define MATRIX_SQRT_TOLERANCE_FACTOR 100.0
+
+/* Tolerance for eigenvalue negativity check */
+#define EIGENVALUE_TOLERANCE_FACTOR 10.0
+
 /*@C
   PetscDAInitializePackage - This function initializes everything in the `PetscDA`
   package. It is called from `PetscDLLibraryRegister_petscda()` when using dynamic
@@ -119,9 +125,10 @@ static PetscErrorCode PetscDAComputeMean_Default(PetscDA da, Vec mean)
   PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDASetUp() must be called before computing the ensemble mean");
   PetscCheck(da->ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONG, "Ensemble size must be positive");
 
-  PetscCall(VecSet(mean, 0.0));
   m     = da->ensemble_size;
   inv_m = 1.0 / (PetscScalar)m;
+
+  PetscCall(VecSet(mean, 0.0));
   for (j = 0; j < m; ++j) {
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, j, &member));
     PetscCall(VecAXPY(mean, inv_m, member));
@@ -134,6 +141,7 @@ static PetscErrorCode PetscDAComputeAnomalies_Default(PetscDA da, Mat *anomalies
 {
   Vec       mean, col_in, col_out;
   Mat       anomalies;
+  MPI_Comm  comm;
   PetscReal scale;
   PetscInt  m, j;
 
@@ -143,28 +151,35 @@ static PetscErrorCode PetscDAComputeAnomalies_Default(PetscDA da, Mat *anomalies
   PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDASetUp() must be called before computing anomalies");
   PetscCheck(da->ensemble_size > 1, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be at least 2 to form anomalies");
 
-  m = da->ensemble_size;
+  m    = da->ensemble_size;
+  comm = PetscObjectComm((PetscObject)da->ensemble);
+
   /* Algorithm line 14: anomalies are normalized by 1/sqrt(m-1) so that X X^T equals the ensemble covariance. */
   scale = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
 
-  PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &mean));
+  PetscCall(VecCreate(comm, &mean));
   PetscCall(VecSetSizes(mean, PETSC_DECIDE, da->state_size));
   PetscCall(VecSetFromOptions(mean));
+
   /* Algorithm line 12: \bar{x} = (1/m)\sum_j x^{(j)} */
   PetscCall(PetscDAComputeMean(da, mean));
 
-  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->state_size, m, NULL, &anomalies));
+  PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, da->state_size, m, NULL, &anomalies));
   PetscCall(MatSetUp(anomalies));
+
   for (j = 0; j < m; ++j) {
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, j, &col_in));
     PetscCall(MatDenseGetColumnVecWrite(anomalies, j, &col_out));
+
     /* Algorithm line 13: subtract the mean column-wise to form x^{(j)} - \bar{x} */
     PetscCall(VecWAXPY(col_out, -1.0, mean, col_in));
     /* Algorithm line 14: scale anomalies by 1/\sqrt{m-1} */
     PetscCall(VecScale(col_out, scale));
+
     PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, j, &col_in));
     PetscCall(MatDenseRestoreColumnVecWrite(anomalies, j, &col_out));
   }
+
   PetscCall(MatAssemblyBegin(anomalies, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(anomalies, MAT_FINAL_ASSEMBLY));
 
@@ -409,8 +424,7 @@ PetscErrorCode PetscDAGetSizes(PetscDA da, PetscInt *state_size, PetscInt *obs_s
 @*/
 PetscErrorCode PetscDASetUp(PetscDA da)
 {
-  PetscInt     i, j;
-  PetscScalar *uarray;
+  MPI_Comm comm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
@@ -421,27 +435,26 @@ PetscErrorCode PetscDASetUp(PetscDA da)
   PetscCheck(da->obs_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set observation size before calling PetscDASetUp()");
   PetscCheck(da->ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set ensemble size before calling PetscDASetUp()");
 
+  comm = PetscObjectComm((PetscObject)da);
+
   if (!da->ensemble) {
-    PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da), PETSC_DECIDE, PETSC_DECIDE, da->state_size, da->ensemble_size, NULL, &da->ensemble));
+    PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, da->state_size, da->ensemble_size, NULL, &da->ensemble));
     PetscCall(MatSetUp(da->ensemble));
   }
 
   if (!da->obs_error_var) {
-    PetscCall(VecCreate(PetscObjectComm((PetscObject)da), &da->obs_error_var));
+    PetscCall(VecCreate(comm, &da->obs_error_var));
     PetscCall(VecSetSizes(da->obs_error_var, PETSC_DECIDE, da->obs_size));
     PetscCall(VecSetFromOptions(da->obs_error_var));
     PetscCall(VecSet(da->obs_error_var, 1.0));
   }
 
   if (!da->U) {
-    PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da), PETSC_DECIDE, PETSC_DECIDE, da->ensemble_size, da->ensemble_size, NULL, &da->U));
+    PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, da->ensemble_size, da->ensemble_size, NULL, &da->U));
     PetscCall(MatSetUp(da->U));
-
-    PetscCall(MatDenseGetArray(da->U, &uarray));
-    for (i = 0; i < da->ensemble_size; i++) {
-      for (j = 0; j < da->ensemble_size; j++) uarray[i * da->ensemble_size + j] = (i == j) ? 1.0 : 0.0;
-    }
-    PetscCall(MatDenseRestoreArray(da->U, &uarray));
+    /* Initialize U as identity matrix */
+    PetscCall(MatZeroEntries(da->U));
+    PetscCall(MatShift(da->U, 1.0));
     PetscCall(MatAssemblyBegin(da->U, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(da->U, MAT_FINAL_ASSEMBLY));
   }
@@ -465,7 +478,8 @@ PetscErrorCode PetscDASetUp(PetscDA da)
 @*/
 PetscErrorCode PetscDAView(PetscDA da, PetscViewer viewer)
 {
-  PetscBool iascii;
+  PetscBool   iascii;
+  PetscMPIInt size;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
@@ -475,7 +489,8 @@ PetscErrorCode PetscDAView(PetscDA da, PetscViewer viewer)
 
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "PetscDA Object: %d MPI processes\n", PetscObjectComm((PetscObject)da) == MPI_COMM_SELF ? 1 : PetscGlobalSize));
+    PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)da), &size));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "PetscDA Object: %d MPI process%s\n", size, size > 1 ? "es" : ""));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  State size: %" PetscInt_FMT "\n", da->state_size));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Observation size: %" PetscInt_FMT "\n", da->obs_size));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Ensemble size: %" PetscInt_FMT "\n", da->ensemble_size));
@@ -527,7 +542,7 @@ PetscErrorCode PetscDASetObsErrorVariance(PetscDA da, Vec obs_error_var)
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(obs_error_var, VEC_CLASSID, 2);
 
-  if (!da->obs_error_var) PetscCall(VecDuplicate(obs_error_var, &da->obs_error_var));
+  if (!da->obs_error_var) { PetscCall(VecDuplicate(obs_error_var, &da->obs_error_var)); }
   PetscCall(VecCopy(obs_error_var, da->obs_error_var));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -626,7 +641,7 @@ PetscErrorCode PetscDAGetEnsembleMember(PetscDA da, PetscInt member_idx, Vec *me
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscAssertPointer(member, 3);
-
+  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDASetUp() must be called before accessing ensemble members");
   PetscCheck(member_idx >= 0 && member_idx < da->ensemble_size, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Member index %" PetscInt_FMT " out of range [0, %" PetscInt_FMT ")", member_idx, da->ensemble_size);
 
   PetscCall(MatDenseGetColumnVecRead(da->ensemble, member_idx, member));
@@ -678,8 +693,8 @@ PetscErrorCode PetscDASetEnsembleMember(PetscDA da, PetscInt member_idx, Vec mem
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(member, VEC_CLASSID, 3);
-
-  PetscCheck(member_idx >= 0 && member_idx < da->ensemble_size, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Member index out of range");
+  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDASetUp() must be called before setting ensemble members");
+  PetscCheck(member_idx >= 0 && member_idx < da->ensemble_size, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Member index %" PetscInt_FMT " out of range [0, %" PetscInt_FMT ")", member_idx, da->ensemble_size);
 
   PetscCall(MatDenseGetColumnVecWrite(da->ensemble, member_idx, &col));
   PetscCall(VecCopy(member, col));
@@ -753,6 +768,7 @@ PetscErrorCode PetscDAAnalysis(PetscDA da, Vec observation, PetscErrorCode (*obs
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
+  PetscAssertPointer(observation_operator, 3);
 
   PetscUseTypeMethod(da, analysis, observation, observation_operator, obs_ctx);
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -776,7 +792,7 @@ PetscErrorCode PetscDAApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, v
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscAssertPointer(model_ctx, 3);
+  PetscAssertPointer(model, 2);
 
   PetscUseTypeMethod(da, applymodel, model, model_ctx);
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -795,29 +811,45 @@ PetscErrorCode PetscDAApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, v
 
   Level: developer
 
+  Notes:
+  Uses the Box-Muller transform to generate normally distributed random numbers
+  from uniform random numbers. Handles edge cases where uniform random values
+  approach 0 or 1.
+
 .seealso: [](ch_vec), `PetscRandomSetInterval()`, `VecSetRandom()`
 @*/
 PetscErrorCode VecSetRandomGaussian(Vec v, PetscRandom rng, PetscReal mean, PetscReal std_dev)
 {
-  return VecSetRandomGaussian_Private(v, rng, mean, std_dev);
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v, VEC_CLASSID, 1);
+  PetscValidHeaderSpecific(rng, PETSC_RANDOM_CLASSID, 2);
+  PetscCall(VecSetRandomGaussian_Private(v, rng, mean, std_dev));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal mean, PetscReal std_dev)
 {
-  PetscInt     n, i;
-  PetscScalar *array;
-  PetscReal    u1, u2, z0, z1;
+  PetscInt        n, i;
+  PetscScalar    *array;
+  PetscReal       u1, u2, z0, z1, radius;
+  const PetscReal min_uniform = PETSC_MACHINE_EPSILON;
 
   PetscFunctionBegin;
   PetscCall(VecGetLocalSize(v, &n));
   PetscCall(VecGetArray(v, &array));
 
   for (i = 0; i < n; i += 2) {
-    PetscCall(PetscRandomGetValueReal(rng, &u1));
+    /* Get uniform random values, ensuring they're not too close to 0 to avoid log(0) */
+    do {
+      PetscCall(PetscRandomGetValueReal(rng, &u1));
+    } while (u1 < min_uniform);
+
     PetscCall(PetscRandomGetValueReal(rng, &u2));
 
-    z0 = PetscSqrtReal(-2.0 * PetscLogReal(u1)) * PetscCosReal(2.0 * PETSC_PI * u2);
-    z1 = PetscSqrtReal(-2.0 * PetscLogReal(u1)) * PetscSinReal(2.0 * PETSC_PI * u2);
+    /* Box-Muller transform */
+    radius = PetscSqrtReal(-2.0 * PetscLogReal(u1));
+    z0     = radius * PetscCosReal(2.0 * PETSC_PI * u2);
+    z1     = radius * PetscSinReal(2.0 * PETSC_PI * u2);
 
     array[i] = mean + std_dev * z0;
     if (i + 1 < n) array[i + 1] = mean + std_dev * z1;
@@ -836,7 +868,7 @@ PetscErrorCode PetscDACholeskySqrt_Private(Mat A, Mat *L_out)
 
   PetscFunctionBegin;
   PetscCall(MatGetSize(A, &m, &n));
-  PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square");
+  PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square for Cholesky factorization");
 
   PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &L));
   PetscCall(MatDenseGetArray(L, &array));
@@ -845,6 +877,7 @@ PetscErrorCode PetscDACholeskySqrt_Private(Mat A, Mat *L_out)
   LAPACKpotrf_("L", &bn, array, &bn, &info);
   PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK potrf failed with info = %" PetscBLASInt_FMT, info);
 
+  /* Zero out upper triangle to get lower triangular result */
   for (j = 0; j < n; j++) {
     for (i = 0; i < j; i++) array[i + j * n] = 0.0;
   }
@@ -853,7 +886,7 @@ PetscErrorCode PetscDACholeskySqrt_Private(Mat A, Mat *L_out)
   PetscCall(MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY));
 
-  // check correctness
+  /* Verify correctness in debug mode */
   if (PetscDefined(USE_DEBUG)) {
     Mat       sqrtA = L, sqrtA_check;
     PetscReal normA, normDiff, tolerance;
@@ -861,12 +894,9 @@ PetscErrorCode PetscDACholeskySqrt_Private(Mat A, Mat *L_out)
     PetscCall(MatNorm(A, NORM_FROBENIUS, &normA));
     PetscCall(MatAXPY(sqrtA_check, -1.0, A, DIFFERENT_NONZERO_PATTERN));
     PetscCall(MatNorm(sqrtA_check, NORM_FROBENIUS, &normDiff));
-    tolerance = 100.0 * PETSC_MACHINE_EPSILON * PetscMax(1.0, normA);
+    tolerance = MATRIX_SQRT_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON * PetscMax(1.0, normA);
     PetscCall(MatDestroy(&sqrtA_check));
-    PetscCheck(normDiff <= tolerance, PETSC_COMM_SELF, PETSC_ERR_LIB,
-               "Matrix square root verification failed: ||sqrtA*sqrtA - A||_F "
-               "= %g (||A||_F = %g)",
-               (double)normDiff, (double)normA);
+    PetscCheck(normDiff <= tolerance, PETSC_COMM_SELF, PETSC_ERR_LIB, "Matrix square root verification failed: ||sqrtA*sqrtA^T - A||_F = %g (||A||_F = %g, tolerance = %g)", (double)normDiff, (double)normA, (double)tolerance);
   }
 
   *L_out = L;
@@ -885,7 +915,7 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
 
   PetscFunctionBegin;
   PetscCall(MatGetSize(A, &m, &n));
-  PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square");
+  PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square for eigenvalue decomposition");
 
   /* Workspace length for LAPACKsyev: 3*n follows the routine documentation. */
   PetscCall(PetscBLASIntCast(3 * n, &lwork));
@@ -903,11 +933,12 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
 #if defined(PETSC_USE_COMPLEX)
   {
     PetscReal *rwork;
+    PetscInt   ridx;
     /* Complex-valued path needs an auxiliary real rwork array and a separate real eigenvalue buffer. */
     PetscCall(PetscMalloc1(3 * n - 2, &rwork));
-    PetscCall(PetscMalloc(n, &eigvals));
+    PetscCall(PetscMalloc1(n, &eigvals));
     PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &bn, varray, &bn, eigvals, work, &lwork, rwork, &info));
-    for (int i = 0; i < n; i++) sqrtvals[i] = eigvals[i];
+    for (ridx = 0; ridx < n; ridx++) sqrtvals[ridx] = eigvals[ridx];
     PetscCall(PetscFree(rwork));
   }
 #else
@@ -917,11 +948,12 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
 #endif
   PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK syev failed with info = %" PetscBLASInt_FMT, info);
 
-  eps = 10.0 * PETSC_MACHINE_EPSILON;
+  /* Compute square root of eigenvalues and check for negative eigenvalues */
+  eps = EIGENVALUE_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON;
   for (i = 0; i < n; i++) {
     PetscReal eig       = eigvals[i];
     PetscReal threshold = eps * PetscMax(1.0, PetscAbsReal(eig));
-    PetscCheck(eig >= -threshold, PETSC_COMM_SELF, PETSC_ERR_LIB, "Matrix square root failed: eigenvalue %g is negative beyond tolerance", (double)eig);
+    PetscCheck(eig >= -threshold, PETSC_COMM_SELF, PETSC_ERR_LIB, "Matrix square root failed: eigenvalue %g is negative beyond tolerance %g", (double)eig, (double)threshold);
     eigvals[i] = (eig > threshold) ? PetscSqrtReal(PetscMax(eig, (PetscReal)0.0)) : 0.0;
   }
 
@@ -943,7 +975,7 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   PetscCall(MatAssemblyBegin(sqrtA, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(sqrtA, MAT_FINAL_ASSEMBLY));
 
-  // check correctness
+  /* Verify correctness in debug mode */
   if (PetscDefined(USE_DEBUG)) {
     Mat       sqrtA_check;
     PetscReal normA, normDiff, tolerance;
@@ -951,12 +983,9 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
     PetscCall(MatNorm(A, NORM_FROBENIUS, &normA));
     PetscCall(MatAXPY(sqrtA_check, -1.0, A, DIFFERENT_NONZERO_PATTERN));
     PetscCall(MatNorm(sqrtA_check, NORM_FROBENIUS, &normDiff));
-    tolerance = 100.0 * PETSC_MACHINE_EPSILON * PetscMax(1.0, normA);
+    tolerance = MATRIX_SQRT_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON * PetscMax(1.0, normA);
     PetscCall(MatDestroy(&sqrtA_check));
-    PetscCheck(normDiff <= tolerance, PETSC_COMM_SELF, PETSC_ERR_LIB,
-               "Matrix square root verification failed: ||sqrtA*sqrtA - A||_F "
-               "= %g (||A||_F = %g)",
-               (double)normDiff, (double)normA);
+    PetscCheck(normDiff <= tolerance, PETSC_COMM_SELF, PETSC_ERR_LIB, "Matrix square root verification failed: ||sqrtA*sqrtA - A||_F = %g (||A||_F = %g, tolerance = %g)", (double)normDiff, (double)normA, (double)tolerance);
   }
 
   PetscCall(MatDestroy(&V));
