@@ -227,7 +227,7 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *steps, PetscInt 
 
   /* Apply constraints */
   if (*obs_freq < MIN_OBS_FREQ) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency adjusted from %" PetscInt_FMT " to %" PetscInt_FMT "\n", *obs_freq, MIN_OBS_FREQ));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency adjusted from %" PetscInt_FMT " to %d\n", *obs_freq, MIN_OBS_FREQ));
     *obs_freq = MIN_OBS_FREQ;
   }
   if (*burn > *steps) {
