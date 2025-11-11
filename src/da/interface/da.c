@@ -768,7 +768,6 @@ PetscErrorCode PetscDAAnalysis(PetscDA da, Vec observation, PetscErrorCode (*obs
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
-  PetscAssertPointer(observation_operator, 3);
 
   PetscUseTypeMethod(da, analysis, observation, observation_operator, obs_ctx);
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -792,7 +791,6 @@ PetscErrorCode PetscDAApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, v
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscAssertPointer(model, 2);
 
   PetscUseTypeMethod(da, applymodel, model, model_ctx);
   PetscFunctionReturn(PETSC_SUCCESS);
