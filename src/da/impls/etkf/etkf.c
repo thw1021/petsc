@@ -164,7 +164,7 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
 
   PetscCall(VecGetArrayRead(w, &w_array));
   for (i = 0; i < m; i++) {
-    for (j = 0; j < m; j++) { PetscCall(MatSetValue(*w_ones, i, j, w_array[i], INSERT_VALUES)); }
+    for (j = 0; j < m; j++) PetscCall(MatSetValue(*w_ones, i, j, w_array[i], INSERT_VALUES));
   }
   PetscCall(VecRestoreArrayRead(w, &w_array));
 
