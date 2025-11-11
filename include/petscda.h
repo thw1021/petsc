@@ -4,7 +4,9 @@
 #include <petscmat.h>
 #include <petscvec.h>
 
-/* MANSEC = DA */
+/*I <petscts.h> I*/
+
+/* SUBMANSEC = DA */
 
 typedef struct _p_PetscDA *PetscDA;
 
