@@ -1,9 +1,9 @@
-DA Object: 1 MPI processes
+PetscDA Object: 1 MPI processes
   State size: 40
   Observation size: 40
   Ensemble size: 40
   Assembled: true
-DAEKF Object:
+PetscDAEKF Object:
   Square root type: eigen
 Lorenz-96 ETKF quick example
   State dimension      : 40
