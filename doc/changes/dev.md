@@ -84,6 +84,11 @@
 
 -  Change the `destroy()` function argument of `TSTrajectorySetTransform()` to type `PetscCtxDestroyFn *`. This means the destroy function must dereference the argument before operating on it
 
+```{rubric} DA:
+```
+
+- Add data assimilation (PetscDA) base class with implementation of ETKF: [](ch_da)
+
 ```{rubric} TAO:
 ```
 
@@ -117,3 +122,4 @@
 
 ```{rubric} Fortran:
 ```
+
