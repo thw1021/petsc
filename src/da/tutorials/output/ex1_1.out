@@ -1,37 +1,37 @@
 PetscDA Object: 1 MPI process
   State size: 40
   Observation size: 40
-  Ensemble size: 40
+  Ensemble size: 30
   Assembled: true
 PetscDAETKF Object:
   Square root type: eigen
 Lorenz-96 ETKF Example
 ======================
   State dimension       : 40
-  Ensemble size         : 40
+  Ensemble size         : 30
   Forcing parameter (F) : 8.0000
   Time step (dt)        : 0.0500
   Total steps           : 120
   Burn-in steps         : 10
-  Observation frequency : 2
-  Observation noise std : 0.500
+  Observation frequency : 1
+  Observation noise std : 1.000
   Random seed           : 12345
 
-Step    0, time  0.000  RMSE_forecast 0.06350  RMSE_analysis 0.06350 [burn-in]
-Step   12, time  0.600  RMSE_forecast 0.11647  RMSE_analysis 0.11665
-Step   24, time  1.200  RMSE_forecast 0.10826  RMSE_analysis 0.10492
-Step   36, time  1.800  RMSE_forecast 0.08978  RMSE_analysis 0.08724
-Step   48, time  2.400  RMSE_forecast 0.07239  RMSE_analysis 0.07679
-Step   60, time  3.000  RMSE_forecast 0.06745  RMSE_analysis 0.06623
-Step   72, time  3.600  RMSE_forecast 0.06077  RMSE_analysis 0.06363
-Step   84, time  4.200  RMSE_forecast 0.06141  RMSE_analysis 0.06256
-Step   96, time  4.800  RMSE_forecast 0.06310  RMSE_analysis 0.06554
-Step  108, time  5.400  RMSE_forecast 0.06659  RMSE_analysis 0.06367
-Step  120, time  6.000  RMSE_forecast 0.06076  RMSE_analysis 0.06058
+Step    0, time  0.000  RMSE_forecast 0.16153  RMSE_analysis 0.16153 [burn-in]
+Step   12, time  0.600  RMSE_forecast 0.21911  RMSE_analysis 0.20121
+Step   24, time  1.200  RMSE_forecast 0.18452  RMSE_analysis 0.18180
+Step   36, time  1.800  RMSE_forecast 0.15893  RMSE_analysis 0.14682
+Step   48, time  2.400  RMSE_forecast 0.13577  RMSE_analysis 0.13495
+Step   60, time  3.000  RMSE_forecast 0.13866  RMSE_analysis 0.13919
+Step   72, time  3.600  RMSE_forecast 0.13084  RMSE_analysis 0.13205
+Step   84, time  4.200  RMSE_forecast 0.13201  RMSE_analysis 0.13233
+Step   96, time  4.800  RMSE_forecast 0.13102  RMSE_analysis 0.12998
+Step  108, time  5.400  RMSE_forecast 0.12708  RMSE_analysis 0.12747
+Step  120, time  6.000  RMSE_forecast 0.12433  RMSE_analysis 0.12312
 
 Statistics (111 post-burn-in steps):
 ==================================================
-  Mean RMSE (forecast) : 0.076670
-  Mean RMSE (analysis) : 0.076115
-  Observations used    : 60
+  Mean RMSE (forecast) : 0.144850
+  Mean RMSE (analysis) : 0.143789
+  Observations used    : 120
 
