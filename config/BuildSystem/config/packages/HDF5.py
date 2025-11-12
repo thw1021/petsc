@@ -6,7 +6,7 @@ class Configure(config.package.CMakePackage):
     config.package.CMakePackage.__init__(self, framework)
     self.minversion       = '1.8'
     self.versionname      = 'H5_VERSION'
-    self.version          = '1.14.6'
+    self.version          = '2.0.0'
     self.download         = ['https://github.com/HDFGroup/hdf5/archive/hdf5_'+self.version+'/hdf5-'+self.version+'.tar.gz',
                              'https://web.cels.anl.gov/projects/petsc/download/externalpackages/hdf5-'+self.version+'.tar.gz']
 # David Moulton reports that HDF5 configure can fail on NERSC systems and this can be worked around by removing the
@@ -41,20 +41,25 @@ class Configure(config.package.CMakePackage):
     return
 
   def applyPatches(self):
+    '''Not needed/does not work for 2.0.0'''
     try:
       with open(self.packageDir+'/config/cmake/HDFMacros.cmake') as f_in:
         content = f_in.readlines()
       with open(self.packageDir+'/config/cmake/HDFMacros.cmake','w') as f_out:
         f_out.writelines(c.replace('(CMAKE_DEBUG_POSTFIX "_debug")','(CMAKE_DEBUG_POSTFIX "")') for c in content)
     except:
-      self.logPrintWarning("Patching HDF5 failed! Continuing with build")
+      self.logPrintWarning('Patching HDF5 failed! Continuing with build')
 
   def versionToStandardForm(self,ver):
-    '''HDF5 indicates patches by appending a -patch<n> after the regular part of the version'''
+    '''
+    HDF5 indicates patches by appending a -patch<n> after the regular part of the version
+
+    Probably not needed for versions >= 2.0.0 due to switch to semantic versioning
+    '''
     return ver.replace('-patch','.')
 
   def formCMakeConfigureArgs(self):
-    ''' Add HDF5 specific --enable-parallel flag and enable Fortran if available '''
+    ''' Add HDF5 specific flags'''
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-DHDF5_BUILD_HL_LIB=ON')
     args.append('-DHDF5_BUILD_TOOLS=OFF')
@@ -69,11 +74,11 @@ class Configure(config.package.CMakePackage):
         raise RuntimeError('Cannot build HDF5 Fortran bindings --with-fc=0 or with a malfunctioning Fortran compiler.')
     if self.argDB['with-hdf5-cxx-bindings']:
       if hasattr(self.compilers, 'CXX'):
-        args.extend(['-DHDF5_BUILD_CPP_LIB=ON', '-DALLOW_UNSUPPORTED=ON'])
+        args.extend(['-DHDF5_BUILD_CPP_LIB=ON', '-DHDF5_ALLOW_UNSUPPORTED=ON'])
       else:
-        raise RuntimeError('Cannot build HDF5 Cxx bindings --with-cxx=0 or with a malfunctioning Cxx compiler.')
+        raise RuntimeError('Cannot build HDF5 C++ bindings --with-cxx=0 or with a malfunctioning C++ compiler.')
 
-    args.append('-DHDF5_ENABLE_Z_LIB_SUPPORT='+('ON' if self.zlib.found else 'OFF'))
+    args.append('-DHDF5_ENABLE_ZLIB_SUPPORT='+('ON' if self.zlib.found else 'OFF'))
     args.append('-DHDF5_ENABLE_SZIP_SUPPORT='+('ON' if self.szlib.found else 'OFF'))
 
     return args
