@@ -9,7 +9,7 @@ static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
                      "(SIAM, doi:10.1137/1.9781611974546).\n\n"
                      "Example usage:\n"
                      "  ./ex1 -steps 105000 -burn 5000 -obs_freq 1 -obs_error 1 -petscda_view -ensemble_size 30\n"
-                     "  Expected result: Mean RMSE (analysis): ~0.474040\n\n";
+                     "  Expected result: Mean RMSE (analysis): ~0.09593\n\n";
 
 /* \begin{algorithm}
 \caption{Ensemble Transform Kalman Filter (ETKF) - Deterministic}
@@ -492,10 +492,10 @@ int main(int argc, char **argv)
 
   test:
     requires: !complex
-    args: -steps 120 -burn 10 -obs_freq 2 -obs_error 0.5 -petscda_view -ensemble_size 40
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -petscda_view -ensemble_size 30
 
   test:
     suffix: chol
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1.0 -petscdaetkf_sqrt_type cholesky
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -petscda_view -ensemble_size 30 -petscdaetkf_sqrt_type cholesky
 
 TEST*/
