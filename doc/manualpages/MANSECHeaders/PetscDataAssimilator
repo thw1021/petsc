@@ -1,0 +1,40 @@
+# Data Assimilation (PetscDA)
+
+The [`PetscDA`](PetscDA.md) object provides ensemble-based data assimilation capabilities for combining model forecasts with observations in dynamical systems. It centralizes ensemble storage, observational metadata, and user-defined forecast/analysis operators, enabling algorithms to run independently of MPI layout or vector/matrix backends.
+
+## Key Features
+
+- **Ensemble-based state estimation** - Manages ensembles of state vectors with configurable sizes
+- **Nonlinear observation operators** - Supports arbitrary observation models through user callbacks
+- **Deterministic square-root updates** - Implements the Ensemble Transform Kalman Filter (ETKF) for numerical stability
+- **Modular design** - Extensible architecture allowing multiple data assimilation algorithm implementations
+- **Parallel scalability** - Built on PETSc's distributed memory infrastructure
+
+## Main Operations
+
+- [`PetscDACreate()`](PetscDACreate.md) - Create a new data assimilation context
+- [`PetscDASetSizes()`](PetscDASetSizes.md) - Configure ensemble, state, and observation dimensions
+- [`PetscDASetUp()`](PetscDASetUp.md) - Allocate internal data structures
+- [`PetscDAAnalysis()`](PetscDAAnalysis.md) - Perform analysis (update) step with observations
+- [`PetscDAApplyModel()`](PetscDAApplyModel.md) - Advance ensemble through forecast model
+- [`PetscDAComputeMean()`](PetscDAComputeMean.md) - Compute ensemble mean state
+- [`PetscDAComputeAnomalies()`](PetscDAComputeAnomalies.md) - Form ensemble anomalies matrix
+
+## Typical Workflow
+
+1. Initialize [`PetscDA`](PetscDA.md) and configure ensemble sizes
+2. Populate ensemble state vectors and observation-error descriptions
+3. Advance each ensemble member using [`PetscDAApplyModel()`](PetscDAApplyModel.md)
+4. Combine forecasts with observations via [`PetscDAAnalysis()`](PetscDAAnalysis.md)
+5. Repeat until simulation horizon is complete
+
+## Available Implementations
+
+- **ETKF** ([`PETSCDAETKF`](PETSCDAETKF.md)) - Ensemble Transform Kalman Filter with deterministic square-root updates
+
+## See Also
+
+- Users guide chapter: [](ch_dataassimilator)
+- [Time integrators (`TS`)](ch_ts.md) for forecast operators
+- [Vectors (`Vec`)](ch_vectors.md) for state and observation management
+- [Nonlinear solvers (`SNES`)](ch_snes.md) for observation/model operators
