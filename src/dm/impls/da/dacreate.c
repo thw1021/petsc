@@ -366,7 +366,7 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   PetscCall(PetscSectionSetFromOptions(s));
   PetscCall(PetscSectionSetUp(s));
   // Set BC indices
-  //PetscCall(DMSetLocalSection(dm, s));
+  PetscCall(DMSetLocalSection(dm, s));
   DMView(dm, NULL);
   PetscSectionView(s, NULL);
   PetscCall(PetscSectionDestroy(&s));
@@ -425,7 +425,8 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   PetscCall(DMDARestoreGhostOwnershipRanges(dm, &glx, &glxs, &gly, &glys, &glz, &glzs));
   for (PetscInt l = 0; l < Nl; ++l) PetscSynchronizedPrintf(comm, "[%d]local: %d remote %d %d\n", rank, local[l], remote[l].rank, remote[l].index);
   PetscSynchronizedFlush(comm, NULL);
-  PetscCall(PetscSFSetGraph(sf, Nv, Nl, local, PETSC_OWN_POINTER, remote, PETSC_OWN_POINTER));
+  // Should it be gNv?
+  PetscCall(PetscSFSetGraph(sf, gNv, Nl, local, PETSC_OWN_POINTER, remote, PETSC_OWN_POINTER));
   PetscCall(DMSetPointSF(dm, sf));
   PetscSFView(sf, NULL);
   PetscCall(PetscSFDestroy(&sf));
