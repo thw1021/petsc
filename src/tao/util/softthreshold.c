@@ -53,6 +53,10 @@ PetscErrorCode TaoSoftThreshold(Vec in, PetscReal lb, PetscReal ub, Vec out)
 // Does tao's objective term have the form alpha * || x - a ||_l1 + beta/2 * || x - b ||_l2 ?
 static PetscErrorCode TaoIsSoftThreshold_Internal(Tao tao, PetscBool *is_softthreshold, PetscReal *l1_scale, PetscReal *l2_scale, Vec *l1_shift, Vec *l2_shift)
 {
+#if defined(PETSC_USE_COMPLEX)
+  PetscFunctionBegin;
+  PetscFunctionReturn(PETSC_SUCCESS);
+#else
   TaoTerm   objective;
   PetscBool is_sum;
   Vec       params;
@@ -112,6 +116,7 @@ static PetscErrorCode TaoIsSoftThreshold_Internal(Tao tao, PetscBool *is_softthr
     PetscCall(TaoTermSumVecNestRestoreSubVecsRead(params, NULL, &sub_params, &is_dummy));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
+#endif
 }
 
 PetscErrorCode TaoIsSoftThreshold(Tao tao, PetscBool *is_softthreshold)
