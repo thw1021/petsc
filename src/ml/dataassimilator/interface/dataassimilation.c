@@ -898,7 +898,7 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
     /*
       Apply Box-Muller transform:
       - magnitude: sqrt(-2 * ln(U1)) represents the radial distance from origin
-      - theta: 2π * U2 represents the angle uniformly distributed on [0, 2π]
+      - theta: 2pi * U2 represents the angle uniformly distributed on [0, 2pi]
       - Converting from polar to Cartesian coordinates yields two independent samples
     */
     magnitude     = PetscSqrtReal(-2.0 * PetscLogReal(u1));
