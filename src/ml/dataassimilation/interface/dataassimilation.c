@@ -1,7 +1,7 @@
 /* Deterministic ensemble Kalman filter support for SWE-GPT5.
    Implements the ETKF package described in Algorithm 6.4 of Asch, Bocquet, and
    Nodet (2016) "Data Assimilation" (SIAM, doi:10.1137/1.9781611974546). */
-#include <petsc/private/daimpl.h> /*I "petscda.h"  I*/
+#include <petsc/private/daimpl.h>
 #include <petscblaslapack.h>
 
 PetscClassId      PETSCDA_CLASSID          = 0;
@@ -18,8 +18,7 @@ static PetscBool PetscDAPackageInitialized = PETSC_FALSE;
 
 /*@C
   PetscDAInitializePackage - This function initializes everything in the `PetscDA`
-  package. It is called from `PetscDLLibraryRegister_petscda()` when using dynamic
-  libraries, and on the first call to `PetscDACreate()` when using static or shared
+  package. called on the first call to `PetscDACreate()` when using static or shared
   libraries.
 
   Level: developer
@@ -38,21 +37,6 @@ PetscErrorCode PetscDAInitializePackage(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
-/*
-  PetscDLLibraryRegister - This function is called when the dynamic library it is in is opened.
-
-  This one registers PetscDA.
-
-*/
-PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscda(void)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscDAInitializePackage());
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-#endif /* PETSC_HAVE_DYNAMIC_LIBRARIES */
 /*@C
   PetscDAFinalizePackage - This function finalizes everything in the `PetscDA` package. It
   is called from `PetscFinalize()`.
