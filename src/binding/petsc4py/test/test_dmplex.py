@@ -233,6 +233,13 @@ class BaseTestPlex:
             if exc.ierr != ERR_ARG_OUTOFRANGE:
                 raise
 
+    def testNatural(self):
+        gv = self.plex.createGlobalVec()
+        nv = self.plex.createNaturalVec()
+        self.plex.globalToNaturalBegin(gv, nv)
+        self.plex.globalToNaturalEnd(gv, nv)
+        self.plex.naturalToGlobalBegin(nv, gv)
+        self.plex.naturalToGlobalEnd(nv, gv)
 
 # --------------------------------------------------------------------
 
