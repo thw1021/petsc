@@ -108,8 +108,6 @@ PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void)
     PetscCheck(found, PETSC_COMM_SELF, PETSC_ERR_FILE_OPEN, "Unable to locate PETSc TS dynamic library. You cannot move the dynamic libraries!");
     PetscCall(PetscLoadDynamicLibrary("tao", &found));
     PetscCheck(found, PETSC_COMM_SELF, PETSC_ERR_FILE_OPEN, "Unable to locate Tao dynamic library. You cannot move the dynamic libraries!");
-    PetscCall(PetscLoadDynamicLibrary("da", &found));
-    PetscCheck(found, PETSC_COMM_SELF, PETSC_ERR_FILE_OPEN, "Unable to locate DA dynamic library. You cannot move the dynamic libraries!");
   #endif
 #else /* defined(PETSC_HAVE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES) */
   #if defined(PETSC_USE_SINGLE_LIBRARY)
