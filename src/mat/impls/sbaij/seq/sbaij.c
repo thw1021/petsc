@@ -259,14 +259,13 @@ static PetscErrorCode MatSetOption_SeqSBAIJ(Mat A, MatOption op, PetscBool flg)
       PetscCheck(bs <= 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for Hermitian with block size greater than 1");
       A->ops->multtranspose    = NULL;
       A->ops->multtransposeadd = NULL;
-      A->symmetric             = PETSC_BOOL3_FALSE;
     }
 #endif
     break;
   case MAT_SYMMETRIC:
   case MAT_SPD:
 #if defined(PETSC_USE_COMPLEX)
-    if (flg) { /* An hermitian and symmetric matrix has zero imaginary part (restore back transpose ops) */
+    if (flg) { /* An Hermitian and symmetric matrix has zero imaginary part (restore back transpose ops) */
       A->ops->multtranspose    = A->ops->mult;
       A->ops->multtransposeadd = A->ops->multadd;
     }
