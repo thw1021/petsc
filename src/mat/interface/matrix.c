@@ -5686,6 +5686,8 @@ PetscErrorCode MatEqual(Mat A, Mat B, PetscBool *flg)
 @*/
 PetscErrorCode MatDiagonalScale(Mat mat, Vec l, Vec r)
 {
+  PetscBool flg = PETSC_FALSE;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   PetscValidType(mat, 1);
@@ -5706,7 +5708,36 @@ PetscErrorCode MatDiagonalScale(Mat mat, Vec l, Vec r)
   PetscUseTypeMethod(mat, diagonalscale, l, r);
   PetscCall(PetscLogEventEnd(MAT_Scale, mat, 0, 0, 0));
   PetscCall(PetscObjectStateIncrease((PetscObject)mat));
-  if (l != r) mat->symmetric = PETSC_BOOL3_FALSE;
+  if (l != r && (PetscBool3ToBool(mat->symmetric) || PetscBool3ToBool(mat->hermitian))) {
+    if (!PetscDefined(USE_COMPLEX) || PetscBool3ToBool(mat->symmetric)) {
+      if (l && r) PetscCall(VecEqual(l, r, &flg));
+      if (!flg) {
+        PetscCall(PetscObjectTypeCompareAny((PetscObject)mat, &flg, MATSEQSBAIJ, MATMPISBAIJ, ""));
+        PetscCheck(!flg, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "For symmetric format, left and right scaling vectors must be the same");
+        mat->symmetric = PETSC_BOOL3_FALSE;
+        if (!PetscDefined(USE_COMPLEX)) mat->hermitian = PETSC_BOOL3_FALSE;
+        else mat->hermitian = PETSC_BOOL3_UNKNOWN;
+      }
+    }
+    if (PetscDefined(USE_COMPLEX) && PetscBool3ToBool(mat->hermitian)) {
+      flg = PETSC_FALSE;
+      if (l && r) {
+        Vec conjugate;
+
+        PetscCall(VecDuplicate(l, &conjugate));
+        PetscCall(VecCopy(l, conjugate));
+        PetscCall(VecConjugate(conjugate));
+        PetscCall(VecEqual(conjugate, r, &flg));
+        PetscCall(VecDestroy(&conjugate));
+      }
+      if (!flg) {
+        PetscCall(PetscObjectTypeCompareAny((PetscObject)mat, &flg, MATSEQSBAIJ, MATMPISBAIJ, ""));
+        PetscCheck(!flg, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "For symmetric format, left and right scaling vectors must be the same");
+        mat->hermitian = PETSC_BOOL3_FALSE;
+        mat->symmetric = PETSC_BOOL3_UNKNOWN;
+      }
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

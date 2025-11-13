@@ -266,7 +266,7 @@ static PetscErrorCode MatSetOption_SeqSBAIJ(Mat A, MatOption op, PetscBool flg)
   case MAT_SYMMETRIC:
   case MAT_SPD:
 #if defined(PETSC_USE_COMPLEX)
-    if (flg) { /* An hermitian and symmetric matrix has zero imaginary part (restore back transpose ops) */
+    if (flg) { /* An Hermitian and symmetric matrix has zero imaginary part (restore back transpose ops) */
       A->ops->multtranspose    = A->ops->mult;
       A->ops->multtransposeadd = A->ops->multadd;
     }
