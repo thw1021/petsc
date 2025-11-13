@@ -74,7 +74,6 @@ PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscdm(void);
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscksp(void);
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscsnes(void);
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscts(void);
-PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscda(void);
   #endif
 
   /*
@@ -105,7 +104,6 @@ PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscsys(void)
   PetscCall(PetscDLLibraryRegister_petscksp());
   PetscCall(PetscDLLibraryRegister_petscsnes());
   PetscCall(PetscDLLibraryRegister_petscts());
-  PetscCall(PetscDLLibraryRegister_petscda());
   #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
