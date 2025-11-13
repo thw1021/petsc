@@ -10,7 +10,6 @@ mat
 ksp
 snes
 ts
-da
 tao
 regressor
 ```
