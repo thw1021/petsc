@@ -890,7 +890,7 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
     do {
       PetscCall(PetscRandomGetValueReal(rng, &u1));
       retry_count++;
-      PetscCheck(retry_count < max_retry_count, PETSC_COMM_SELF, PETSC_ERR_LIB, "Random number generator failed to produce valid values after %d attempts", max_retry_count);
+      PetscCheck(retry_count < max_retry_count, PETSC_COMM_SELF, PETSC_ERR_LIB, "Random number generator failed to produce valid values after %d attempts", (int)max_retry_count);
     } while (u1 < min_uniform);
 
     PetscCall(PetscRandomGetValueReal(rng, &u2));
@@ -1088,7 +1088,7 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
     PetscCall(MatDenseGetArray(sqrtA, &eigvec_array));
     val = eigvec_array[0];
     PetscCheck(PetscRealPart(val) >= -EIGENVALUE_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix square root failed: value %g is negative", (double)PetscRealPart(val));
-    eigvec_array[0] = PetscSqrtScalar(PetscMax(val, (PetscScalar)0.0));
+    eigvec_array[0] = PetscSqrtScalar(PetscMax((double)PetscRealPart(val), (double)0.0));
     PetscCall(MatDenseRestoreArray(sqrtA, &eigvec_array));
     PetscCall(MatAssemblyBegin(sqrtA, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(sqrtA, MAT_FINAL_ASSEMBLY));
