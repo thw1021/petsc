@@ -140,13 +140,13 @@ static PetscErrorCode PetscDAComputeMean_Default(PetscDA da, Vec mean)
 
 static PetscErrorCode PetscDAComputeAnomalies_Default(PetscDA da, Mat *anomalies_out)
 {
-  Vec        mean;
-  Vec        col_in, col_out;
-  Mat        anomalies;
-  MPI_Comm   comm;
-  PetscReal  scale;
-  PetscInt   ensemble_size;
-  PetscInt   j;
+  Vec       mean;
+  Vec       col_in, col_out;
+  Mat       anomalies;
+  MPI_Comm  comm;
+  PetscReal scale;
+  PetscInt  ensemble_size;
+  PetscInt  j;
 
   PetscFunctionBegin;
   /* Validate input parameters */
@@ -860,7 +860,7 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
   PetscCheck(PetscIsInfOrNanReal(std_dev) == PETSC_FALSE, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Standard deviation must be a finite real number");
 
   PetscCall(VecGetLocalSize(v, &n));
-  
+
   /* Handle empty vector case efficiently */
   if (n == 0) PetscFunctionReturn(PETSC_SUCCESS);
 
@@ -901,10 +901,10 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
       - theta: 2π * U2 represents the angle uniformly distributed on [0, 2π]
       - Converting from polar to Cartesian coordinates yields two independent samples
     */
-    magnitude      = PetscSqrtReal(-2.0 * PetscLogReal(u1));
-    theta          = 2.0 * PETSC_PI * u2;
-    gauss_sample1  = magnitude * PetscCosReal(theta);
-    gauss_sample2  = magnitude * PetscSinReal(theta);
+    magnitude     = PetscSqrtReal(-2.0 * PetscLogReal(u1));
+    theta         = 2.0 * PETSC_PI * u2;
+    gauss_sample1 = magnitude * PetscCosReal(theta);
+    gauss_sample2 = magnitude * PetscSinReal(theta);
 
     /* Scale and shift to achieve desired mean and standard deviation */
     array[i] = mean + std_dev * gauss_sample1;
@@ -941,9 +941,9 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
 */
 PetscErrorCode PetscDACholeskySqrt_Private(Mat A, Mat *L_out)
 {
-  Mat          L           = NULL;
+  Mat          L = NULL;
   PetscInt     m, n, i, j;
-  PetscScalar *array       = NULL;
+  PetscScalar *array = NULL;
   PetscBLASInt bn, info;
   PetscBool    is_dense;
 
@@ -969,7 +969,7 @@ PetscErrorCode PetscDACholeskySqrt_Private(Mat A, Mat *L_out)
   /* Perform Cholesky factorization using LAPACK */
   PetscCall(PetscBLASIntCast(n, &bn));
   PetscCallBLAS("LAPACKpotrf", LAPACKpotrf_("L", &bn, array, &bn, &info));
-  
+
   /* Handle LAPACK error codes with detailed diagnostics */
   if (info != 0) {
     PetscCall(MatDenseRestoreArray(L, &array));
@@ -995,7 +995,7 @@ PetscErrorCode PetscDACholeskySqrt_Private(Mat A, Mat *L_out)
   }
 
   PetscCall(MatDenseRestoreArray(L, &array));
-  
+
   /* Finalize matrix assembly */
   PetscCall(MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY));
@@ -1007,22 +1007,20 @@ PetscErrorCode PetscDACholeskySqrt_Private(Mat A, Mat *L_out)
   if (PetscDefined(USE_DEBUG)) {
     Mat       sqrtA_check;
     PetscReal normA, normDiff, tolerance;
-    
+
     /* Reconstruct A from L*L^T */
     PetscCall(MatMatTransposeMult(L, L, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &sqrtA_check));
-    
+
     /* Compute verification metrics */
     PetscCall(MatNorm(A, NORM_FROBENIUS, &normA));
     PetscCall(MatAXPY(sqrtA_check, -1.0, A, DIFFERENT_NONZERO_PATTERN));
     PetscCall(MatNorm(sqrtA_check, NORM_FROBENIUS, &normDiff));
-    
+
     /* Set tolerance relative to matrix magnitude */
     tolerance = MATRIX_SQRT_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON * PetscMax(1.0, normA);
-    
+
     PetscCall(MatDestroy(&sqrtA_check));
-    PetscCheck(normDiff <= tolerance, PETSC_COMM_SELF, PETSC_ERR_LIB,
-               "Matrix square root verification failed: ||L*L^T - A||_F = %g exceeds tolerance %g (||A||_F = %g)",
-               (double)normDiff, (double)tolerance, (double)normA);
+    PetscCheck(normDiff <= tolerance, PETSC_COMM_SELF, PETSC_ERR_LIB, "Matrix square root verification failed: ||L*L^T - A||_F = %g exceeds tolerance %g (||A||_F = %g)", (double)normDiff, (double)tolerance, (double)normA);
   }
 
   *L_out = L;
@@ -1075,17 +1073,13 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
 
   /* Verify matrix is square */
   PetscCall(MatGetSize(A, &matrix_rows, &matrix_cols));
-  PetscCheck(matrix_rows == matrix_cols, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG,
-             "Matrix must be square for eigenvalue decomposition, got %" PetscInt_FMT " x %" PetscInt_FMT,
-             matrix_rows, matrix_cols);
-  PetscCheck(matrix_rows > 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE,
-             "Matrix dimension must be positive, got %" PetscInt_FMT, matrix_rows);
+  PetscCheck(matrix_rows == matrix_cols, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square for eigenvalue decomposition, got %" PetscInt_FMT " x %" PetscInt_FMT, matrix_rows, matrix_cols);
+  PetscCheck(matrix_rows > 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Matrix dimension must be positive, got %" PetscInt_FMT, matrix_rows);
 
   /* Verify matrix type - eigendecomposition requires dense storage */
   PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQDENSE, &is_dense));
   if (!is_dense) PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPIDENSE, &is_dense));
-  PetscCheck(is_dense, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG,
-             "Matrix must be dense for eigenvalue decomposition");
+  PetscCheck(is_dense, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be dense for eigenvalue decomposition");
 
   /* Handle edge case: 1x1 matrix */
   if (matrix_rows == 1) {
@@ -1093,8 +1087,7 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
     PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &sqrtA));
     PetscCall(MatDenseGetArray(sqrtA, &eigvec_array));
     val = eigvec_array[0];
-    PetscCheck(PetscRealPart(val) >= -EIGENVALUE_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON, PETSC_COMM_SELF,
-               PETSC_ERR_ARG_WRONG, "Matrix square root failed: value %g is negative", (double)PetscRealPart(val));
+    PetscCheck(PetscRealPart(val) >= -EIGENVALUE_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix square root failed: value %g is negative", (double)PetscRealPart(val));
     eigvec_array[0] = PetscSqrtScalar(PetscMax(val, (PetscScalar)0.0));
     PetscCall(MatDenseRestoreArray(sqrtA, &eigvec_array));
     PetscCall(MatAssemblyBegin(sqrtA, MAT_FINAL_ASSEMBLY));
@@ -1123,9 +1116,9 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   /* Perform eigendecomposition using LAPACK */
 #if defined(PETSC_USE_COMPLEX)
   {
-    PetscReal *rwork      = NULL;
+    PetscReal *rwork = NULL;
     PetscInt   ridx;
-    
+
     /*
       Complex-valued path requires:
       - Separate real workspace (rwork) of size 3*n-2
@@ -1133,14 +1126,13 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
     */
     PetscCall(PetscMalloc1(3 * matrix_rows - 2, &rwork));
     PetscCall(PetscMalloc1(matrix_rows, &eigenvalues));
-    
+
     /* Call LAPACK: compute eigenvalues and eigenvectors */
-    PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &blas_n, eigvec_array, &blas_n,
-                                             eigenvalues, workspace, &workspace_size, rwork, &lapack_info));
-    
+    PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &blas_n, eigvec_array, &blas_n, eigenvalues, workspace, &workspace_size, rwork, &lapack_info));
+
     /* Copy real eigenvalues to complex array */
     for (ridx = 0; ridx < matrix_rows; ridx++) sqrt_eigval_array[ridx] = eigenvalues[ridx];
-    
+
     PetscCall(PetscFree(rwork));
   }
 #else
@@ -1149,8 +1141,7 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
     This avoids an extra allocation and copy.
   */
   eigenvalues = (PetscReal *)sqrt_eigval_array;
-  PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &blas_n, eigvec_array, &blas_n,
-                                           eigenvalues, workspace, &workspace_size, &lapack_info));
+  PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &blas_n, eigvec_array, &blas_n, eigenvalues, workspace, &workspace_size, &lapack_info));
 #endif
 
   /* Check LAPACK return status */
@@ -1164,12 +1155,9 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
     PetscCall(PetscFree(eigenvalues));
 #endif
     if (lapack_info < 0) {
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB,
-              "LAPACK syev: illegal argument at position %" PetscBLASInt_FMT, -lapack_info);
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK syev: illegal argument at position %" PetscBLASInt_FMT, -lapack_info);
     } else {
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_CONV_FAILED,
-              "LAPACK syev: failed to converge, %" PetscBLASInt_FMT " off-diagonal elements did not converge to zero",
-              lapack_info);
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_CONV_FAILED, "LAPACK syev: failed to converge, %" PetscBLASInt_FMT " off-diagonal elements did not converge to zero", lapack_info);
     }
   }
 
@@ -1180,18 +1168,17 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   */
   eigenvalue_tolerance = EIGENVALUE_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON;
   for (i = 0; i < matrix_rows; i++) {
-    PetscReal eigenvalue          = eigenvalues[i];
+    PetscReal eigenvalue           = eigenvalues[i];
     PetscReal negativity_threshold = eigenvalue_tolerance * PetscMax(1.0, PetscAbsReal(eigenvalue));
-    
+
     /* Check that eigenvalue is not significantly negative */
     PetscCheck(eigenvalue >= -negativity_threshold, PETSC_COMM_SELF, PETSC_ERR_LIB,
                "Matrix square root failed: eigenvalue[%" PetscInt_FMT "] = %g is negative beyond tolerance %g. "
                "Matrix may not be symmetric or positive semi-definite.",
                i, (double)eigenvalue, (double)negativity_threshold);
-    
+
     /* Compute sqrt(eigenvalue), clamping small negative values to zero */
-    eigenvalues[i] = (eigenvalue > eigenvalue_tolerance) ?
-                     PetscSqrtReal(eigenvalue) : 0.0;
+    eigenvalues[i] = (eigenvalue > eigenvalue_tolerance) ? PetscSqrtReal(eigenvalue) : 0.0;
   }
 
 #if defined(PETSC_USE_COMPLEX)
@@ -1212,8 +1199,7 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   */
   PetscCall(MatDuplicate(eigenvectors, MAT_COPY_VALUES, &scaled_eigenvectors));
   PetscCall(MatDiagonalScale(scaled_eigenvectors, NULL, sqrt_eigenvalues));
-  PetscCall(MatMatTransposeMult(scaled_eigenvectors, eigenvectors, MAT_INITIAL_MATRIX,
-                                PETSC_DEFAULT, &sqrtA));
+  PetscCall(MatMatTransposeMult(scaled_eigenvectors, eigenvectors, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &sqrtA));
 
   /* Clean up intermediate matrices and vectors */
   PetscCall(MatDestroy(&scaled_eigenvectors));
@@ -1230,26 +1216,24 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   if (PetscDefined(USE_DEBUG)) {
     Mat       verification_matrix = NULL;
     PetscReal norm_original, norm_difference, verification_tolerance;
-    
+
     /* Compute sqrtA * sqrtA */
     PetscCall(MatMatMult(sqrtA, sqrtA, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &verification_matrix));
-    
+
     /* Compute ||A||_F and ||sqrtA*sqrtA - A||_F */
     PetscCall(MatNorm(A, NORM_FROBENIUS, &norm_original));
     PetscCall(MatAXPY(verification_matrix, -1.0, A, DIFFERENT_NONZERO_PATTERN));
     PetscCall(MatNorm(verification_matrix, NORM_FROBENIUS, &norm_difference));
-    
+
     /* Set relative tolerance */
-    verification_tolerance = MATRIX_SQRT_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON *
-                            PetscMax(1.0, norm_original);
-    
+    verification_tolerance = MATRIX_SQRT_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON * PetscMax(1.0, norm_original);
+
     PetscCall(MatDestroy(&verification_matrix));
-    
+
     PetscCheck(norm_difference <= verification_tolerance, PETSC_COMM_SELF, PETSC_ERR_LIB,
                "Matrix square root verification failed: ||sqrtA*sqrtA - A||_F = %g exceeds tolerance %g "
                "(||A||_F = %g, relative error = %g)",
-               (double)norm_difference, (double)verification_tolerance, (double)norm_original,
-               (double)(norm_difference / PetscMax(norm_original, 1.0)));
+               (double)norm_difference, (double)verification_tolerance, (double)norm_original, (double)(norm_difference / PetscMax(norm_original, 1.0)));
   }
 
   /* Clean up and return result */

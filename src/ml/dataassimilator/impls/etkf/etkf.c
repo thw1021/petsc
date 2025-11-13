@@ -36,7 +36,7 @@ static PetscErrorCode ComputeObservationEnsemble(PetscDA da, PetscErrorCode (*ob
   PetscAssertPointer(observation_operator, 2);
   PetscAssertPointer(Z, 4);
   PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Ensemble matrix not initialized");
-  
+
   /* Extract and validate ensemble size */
   ensemble_size = da->ensemble_size;
   PetscCheck(ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be positive, got %" PetscInt_FMT, ensemble_size);
@@ -55,10 +55,10 @@ static PetscErrorCode ComputeObservationEnsemble(PetscDA da, PetscErrorCode (*ob
   for (ensemble_idx = 0; ensemble_idx < ensemble_size; ensemble_idx++) {
     /* Get read-only access to ensemble member */
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, ensemble_idx, &ensemble_member_in));
-    
+
     /* Apply observation operator: temp_observation = H(ensemble_member_in) */
     PetscCall(observation_operator(ensemble_member_in, temp_observation, obs_ctx));
-    
+
     /* Release ensemble member */
     PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, ensemble_idx, &ensemble_member_in));
 
@@ -192,7 +192,7 @@ static PetscErrorCode ComputeAnalysisWeights(Mat T, Mat S, Vec delta_scaled, Vec
   PetscCall(MatGetSize(T, &t_rows, &t_cols));
   PetscCall(MatGetSize(S, &s_rows, &s_cols));
   PetscCall(VecGetSize(delta_scaled, &delta_size));
-  
+
   PetscCheck(t_rows == t_cols, PetscObjectComm((PetscObject)T), PETSC_ERR_ARG_INCOMP, "Matrix T must be square, got %" PetscInt_FMT " x %" PetscInt_FMT, t_rows, t_cols);
   PetscCheck(s_cols == t_rows, PetscObjectComm((PetscObject)T), PETSC_ERR_ARG_INCOMP, "Matrix S columns (%" PetscInt_FMT ") must match T rows (%" PetscInt_FMT ")", s_cols, t_rows);
   PetscCheck(delta_size == s_rows, PetscObjectComm((PetscObject)S), PETSC_ERR_ARG_INCOMP, "Vector delta_scaled size (%" PetscInt_FMT ") must match S rows (%" PetscInt_FMT ")", delta_size, s_rows);
@@ -254,7 +254,7 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
   PetscValidHeaderSpecific(w, VEC_CLASSID, 1);
   PetscValidLogicalCollectiveInt(w, m, 2);
   PetscAssertPointer(w_ones, 3);
-  
+
   /* Validate ensemble size is physically meaningful */
   PetscCheck(m > 0, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m must be positive for broadcasting, got %" PetscInt_FMT, m);
   PetscCheck(m < PETSC_MAX_INT / m, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m = %" PetscInt_FMT " too large, m*m would overflow", m);
@@ -276,10 +276,10 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
   for (i = 0; i < m; i++) {
     /* Obtain write access to column i of the output matrix */
     PetscCall(MatDenseGetColumnVecWrite(*w_ones, i, &col_out));
-    
+
     /* Copy weight vector to this column: w_ones[:, i] = w */
     PetscCall(VecCopy(w, col_out));
-    
+
     /* Release column vector, marking it as modified */
     PetscCall(MatDenseRestoreColumnVecWrite(*w_ones, i, &col_out));
   }
@@ -340,10 +340,9 @@ static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscI
   PetscValidHeaderSpecific(G, MAT_CLASSID, 3);
   PetscValidLogicalCollectiveInt(X, m, 4);
   PetscValidHeaderSpecific(ensemble, MAT_CLASSID, 5);
-  
+
   /* Validate ensemble size is physically meaningful */
-  PetscCheck(m > 0, PetscObjectComm((PetscObject)ensemble), PETSC_ERR_ARG_OUTOFRANGE,
-             "Ensemble size m must be positive, got %" PetscInt_FMT, m);
+  PetscCheck(m > 0, PetscObjectComm((PetscObject)ensemble), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m must be positive, got %" PetscInt_FMT, m);
 
   /* Retrieve and validate matrix dimensions for compatibility */
   PetscCall(MatGetSize(X, &x_rows, &x_cols));
@@ -352,18 +351,12 @@ static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscI
   PetscCall(VecGetSize(mean, &mean_size));
 
   /* Verify dimension consistency across all inputs */
-  PetscCheck(x_cols == m, PetscObjectComm((PetscObject)X), PETSC_ERR_ARG_INCOMP,
-             "Anomaly matrix X columns (%" PetscInt_FMT ") must equal ensemble size (%" PetscInt_FMT ")", x_cols, m);
-  PetscCheck(g_rows == m, PetscObjectComm((PetscObject)G), PETSC_ERR_ARG_INCOMP,
-             "Transform matrix G rows (%" PetscInt_FMT ") must equal ensemble size (%" PetscInt_FMT ")", g_rows, m);
-  PetscCheck(g_cols == m, PetscObjectComm((PetscObject)G), PETSC_ERR_ARG_INCOMP,
-             "Transform matrix G must be square, got %" PetscInt_FMT " x %" PetscInt_FMT, g_rows, g_cols);
-  PetscCheck(ens_rows == x_rows, PetscObjectComm((PetscObject)ensemble), PETSC_ERR_ARG_INCOMP,
-             "Ensemble rows (%" PetscInt_FMT ") must match anomaly matrix X rows (%" PetscInt_FMT ")", ens_rows, x_rows);
-  PetscCheck(ens_cols == m, PetscObjectComm((PetscObject)ensemble), PETSC_ERR_ARG_INCOMP,
-             "Ensemble columns (%" PetscInt_FMT ") must equal ensemble size (%" PetscInt_FMT ")", ens_cols, m);
-  PetscCheck(mean_size == x_rows, PetscObjectComm((PetscObject)mean), PETSC_ERR_ARG_INCOMP,
-             "Mean vector size (%" PetscInt_FMT ") must match state size (%" PetscInt_FMT ")", mean_size, x_rows);
+  PetscCheck(x_cols == m, PetscObjectComm((PetscObject)X), PETSC_ERR_ARG_INCOMP, "Anomaly matrix X columns (%" PetscInt_FMT ") must equal ensemble size (%" PetscInt_FMT ")", x_cols, m);
+  PetscCheck(g_rows == m, PetscObjectComm((PetscObject)G), PETSC_ERR_ARG_INCOMP, "Transform matrix G rows (%" PetscInt_FMT ") must equal ensemble size (%" PetscInt_FMT ")", g_rows, m);
+  PetscCheck(g_cols == m, PetscObjectComm((PetscObject)G), PETSC_ERR_ARG_INCOMP, "Transform matrix G must be square, got %" PetscInt_FMT " x %" PetscInt_FMT, g_rows, g_cols);
+  PetscCheck(ens_rows == x_rows, PetscObjectComm((PetscObject)ensemble), PETSC_ERR_ARG_INCOMP, "Ensemble rows (%" PetscInt_FMT ") must match anomaly matrix X rows (%" PetscInt_FMT ")", ens_rows, x_rows);
+  PetscCheck(ens_cols == m, PetscObjectComm((PetscObject)ensemble), PETSC_ERR_ARG_INCOMP, "Ensemble columns (%" PetscInt_FMT ") must equal ensemble size (%" PetscInt_FMT ")", ens_cols, m);
+  PetscCheck(mean_size == x_rows, PetscObjectComm((PetscObject)mean), PETSC_ERR_ARG_INCOMP, "Mean vector size (%" PetscInt_FMT ") must match state size (%" PetscInt_FMT ")", mean_size, x_rows);
 
   /* Compute transformed anomaly matrix: X_G = X * G (state_size x m) */
   PetscCall(MatMatMult(X, G, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &X_G));
@@ -372,7 +365,7 @@ static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscI
   for (ensemble_idx = 0; ensemble_idx < m; ensemble_idx++) {
     /* Get read-only access to transformed anomaly column */
     PetscCall(MatDenseGetColumnVecRead(X_G, ensemble_idx, &col_in));
-    
+
     /* Get write access to ensemble column for in-place update */
     PetscCall(MatDenseGetColumnVecWrite(ensemble, ensemble_idx, &col_out));
 
