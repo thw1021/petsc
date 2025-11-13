@@ -172,7 +172,7 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
   This function performs the two-step matrix-vector multiplication\:
   1. Compute S^T * delta_scaled (projection to reduced space)
   2. Apply inverse T to get weights w = T * (S^T * delta_scaled)
-  
+
   The result is used in Step 6 of Algorithm 6.4 from Law, Stuart, and Zygalakis
   to compute the ensemble analysis weights.
 */
@@ -224,13 +224,13 @@ static PetscErrorCode ComputeAnalysisWeights(Mat T, Mat S, Vec delta_scaled, Vec
   This function constructs the broadcast matrix w * 1^T, where w is the m-dimensional
   weight vector and 1 is an m-dimensional vector of ones. This matrix is a fundamental
   component in the ETKF transform\: G = w * 1^T + sqrt(m-1) * T^{1/2} * U.
-  
+
   The implementation uses column-wise vector operations following PETSc best practices,
   which ensures\:
   - Proper parallel distribution and communication
   - Efficient memory access patterns
   - Consistency with other PETSc matrix operations
-  
+
   Complexity\: O(m^2) time for sequential replication, O(m^2/p) parallel time where p
   is the number of processes. Memory\: O(m^2) total, O(m^2/p) per process.
 
