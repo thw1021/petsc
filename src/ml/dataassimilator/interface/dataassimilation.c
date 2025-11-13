@@ -876,8 +876,8 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
     Generate Gaussian-distributed random values using the Box-Muller transform.
     This transform converts pairs of uniform random variables U1, U2 ~ Uniform(0,1)
     into pairs of independent standard normal variables Z0, Z1 ~ N(0,1):
-      Z0 = sqrt(-2 * ln(U1)) * cos(2π * U2)
-      Z1 = sqrt(-2 * ln(U1)) * sin(2π * U2)
+      Z0 = sqrt(-2 * ln(U1)) * cos(2pi * U2)
+      Z1 = sqrt(-2 * ln(U1)) * sin(2pi * U2)
     Then scale and shift to get desired mean and standard deviation.
   */
   for (i = 0; i < n; i += 2) {
