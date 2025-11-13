@@ -3,6 +3,6 @@
 ```{toctree}
 :maxdepth: 1
 
-PetscRegressor/index
+PetscRegressor/index 
 PetscDataAssimilator/index
 ```
