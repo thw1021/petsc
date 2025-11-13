@@ -33,7 +33,6 @@ static PetscErrorCode ComputeObservationEnsemble(PetscDA da, PetscErrorCode (*ob
   PetscFunctionBegin;
   /* Validate input parameters */
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscAssertPointer(observation_operator, 2);
   PetscAssertPointer(Z, 4);
   PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Ensemble matrix not initialized");
 
