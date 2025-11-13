@@ -986,7 +986,7 @@ PetscErrorCode PetscDACholeskySqrt_Private(Mat A, Mat *L_out)
     LAPACK potrf stores the result in the lower triangle and leaves the
     upper triangle unchanged. We explicitly zero it for clarity and to
     ensure the output is a proper lower triangular matrix.
-    
+
     Performance note: This loop is O(n^2) but negligible compared to the
     O(n^3/3) cost of the Cholesky factorization itself.
   */
@@ -1192,7 +1192,7 @@ PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
   /*
     Reconstruct matrix square root: sqrt(A) = V * sqrt(D) * V^T
     where V contains eigenvectors as columns and sqrt(D) is diagonal.
-    
+
     Algorithm:
     1. Create scaled_eigenvectors = V * sqrt(D) by column scaling
     2. Compute sqrtA = scaled_eigenvectors * V^T via matrix-transpose-mult
