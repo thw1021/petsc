@@ -25,30 +25,51 @@ static PetscBool         PetscDAETKFPackageInitialized = PETSC_FALSE;
 */
 static PetscErrorCode ComputeObservationEnsemble(PetscDA da, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx, Mat *Z)
 {
-  Vec      col_in, col_out, temp_vec;
-  PetscInt i, m;
+  /* Ensemble and observation-related vectors */
+  Vec ensemble_member_in, observation_out, temp_observation;
+  /* Loop counter and ensemble size */
+  PetscInt ensemble_idx, ensemble_size;
 
   PetscFunctionBegin;
-  m = da->ensemble_size;
+  /* Validate input parameters */
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscAssertPointer(observation_operator, 2);
+  PetscAssertPointer(Z, 4);
+  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Ensemble matrix not initialized");
+  
+  /* Extract and validate ensemble size */
+  ensemble_size = da->ensemble_size;
+  PetscCheck(ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be positive, got %" PetscInt_FMT, ensemble_size);
+  PetscCheck(da->obs_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Observation size must be positive, got %" PetscInt_FMT, da->obs_size);
 
-  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, Z));
+  /* Create output observation ensemble matrix Z (obs_size x ensemble_size) */
+  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, ensemble_size, NULL, Z));
   PetscCall(MatSetUp(*Z));
 
-  PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &temp_vec));
-  PetscCall(VecSetSizes(temp_vec, PETSC_DECIDE, da->obs_size));
-  PetscCall(VecSetFromOptions(temp_vec));
+  /* Create temporary observation vector for operator application */
+  PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &temp_observation));
+  PetscCall(VecSetSizes(temp_observation, PETSC_DECIDE, da->obs_size));
+  PetscCall(VecSetFromOptions(temp_observation));
 
-  for (i = 0; i < m; i++) {
-    PetscCall(MatDenseGetColumnVecRead(da->ensemble, i, &col_in));
-    PetscCall(observation_operator(col_in, temp_vec, obs_ctx));
-    PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, i, &col_in));
+  /* Apply observation operator H to each ensemble member: Z_i = H(E_i) */
+  for (ensemble_idx = 0; ensemble_idx < ensemble_size; ensemble_idx++) {
+    /* Get read-only access to ensemble member */
+    PetscCall(MatDenseGetColumnVecRead(da->ensemble, ensemble_idx, &ensemble_member_in));
+    
+    /* Apply observation operator: temp_observation = H(ensemble_member_in) */
+    PetscCall(observation_operator(ensemble_member_in, temp_observation, obs_ctx));
+    
+    /* Release ensemble member */
+    PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, ensemble_idx, &ensemble_member_in));
 
-    PetscCall(MatDenseGetColumnVecWrite(*Z, i, &col_out));
-    PetscCall(VecCopy(temp_vec, col_out));
-    PetscCall(MatDenseRestoreColumnVecWrite(*Z, i, &col_out));
+    /* Write result to observation ensemble matrix */
+    PetscCall(MatDenseGetColumnVecWrite(*Z, ensemble_idx, &observation_out));
+    PetscCall(VecCopy(temp_observation, observation_out));
+    PetscCall(MatDenseRestoreColumnVecWrite(*Z, ensemble_idx, &observation_out));
   }
 
-  PetscCall(VecDestroy(&temp_vec));
+  /* Clean up temporary vector */
+  PetscCall(VecDestroy(&temp_observation));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -86,60 +107,106 @@ static PetscErrorCode ComputeInverseSquareRootR(Vec obs_error_var, Vec *r_inv_sq
 */
 static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r_inv_sqrt, PetscInt m, PetscScalar scale, Mat *S)
 {
-  Vec         col_in, col_out;
-  PetscInt    i, obs_size, obs_size_local;
-  PetscMPIInt size;
+  Vec      z_column, s_column;
+  PetscInt ensemble_idx, obs_size, obs_size_local, z_cols;
 
   PetscFunctionBegin;
-  /* Get observation size from input matrix Z */
-  PetscCall(MatGetSize(Z, &obs_size, NULL));
+  /* Validate input parameters */
+  PetscValidHeaderSpecific(Z, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(y_mean, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(r_inv_sqrt, VEC_CLASSID, 3);
+  PetscValidLogicalCollectiveInt(Z, m, 4);
+  PetscValidLogicalCollectiveScalar(Z, scale, 5);
+  PetscAssertPointer(S, 6);
+  PetscCheck(m > 0, PetscObjectComm((PetscObject)Z), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m must be positive, got %" PetscInt_FMT, m);
+
+  /* Get observation size from input matrix Z and validate dimensions */
+  PetscCall(MatGetSize(Z, &obs_size, &z_cols));
   PetscCall(MatGetLocalSize(Z, &obs_size_local, NULL));
+  PetscCheck(z_cols == m, PetscObjectComm((PetscObject)Z), PETSC_ERR_ARG_INCOMP, "Matrix Z has %" PetscInt_FMT " columns but ensemble size is %" PetscInt_FMT, z_cols, m);
 
-  /* For sequential matrices, use local size; for parallel, use PETSC_DECIDE */
-  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)Z), &size));
+  /* Verify vector dimensions match observation size */
+  PetscInt y_mean_size, r_inv_sqrt_size;
+  PetscCall(VecGetSize(y_mean, &y_mean_size));
+  PetscCall(VecGetSize(r_inv_sqrt, &r_inv_sqrt_size));
+  PetscCheck(y_mean_size == obs_size, PetscObjectComm((PetscObject)Z), PETSC_ERR_ARG_INCOMP, "Vector y_mean size %" PetscInt_FMT " does not match observation size %" PetscInt_FMT, y_mean_size, obs_size);
+  PetscCheck(r_inv_sqrt_size == obs_size, PetscObjectComm((PetscObject)Z), PETSC_ERR_ARG_INCOMP, "Vector r_inv_sqrt size %" PetscInt_FMT " does not match observation size %" PetscInt_FMT, r_inv_sqrt_size, obs_size);
+
+  /* Create output matrix S with same distribution as Z */
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)Z), obs_size_local, PETSC_DECIDE, obs_size, m, NULL, S));
-
   PetscCall(MatSetUp(*S));
 
-  for (i = 0; i < m; i++) {
-    PetscCall(MatDenseGetColumnVecRead(Z, i, &col_in));
-    PetscCall(MatDenseGetColumnVecWrite(*S, i, &col_out));
+  /* Compute normalized innovation for each ensemble member */
+  for (ensemble_idx = 0; ensemble_idx < m; ensemble_idx++) {
+    /* Get read-only access to Z column and write access to S column */
+    PetscCall(MatDenseGetColumnVecRead(Z, ensemble_idx, &z_column));
+    PetscCall(MatDenseGetColumnVecWrite(*S, ensemble_idx, &s_column));
 
-    /* S_i = (Z_i - y_mean) / sqrt(m-1) */
-    PetscCall(VecWAXPY(col_out, -1.0, y_mean, col_in));
-    PetscCall(VecScale(col_out, scale));
-    /* Apply R^{-1/2} */
-    PetscCall(VecPointwiseMult(col_out, col_out, r_inv_sqrt));
+    /* S_i = R^{-1/2} * (Z_i - y_mean) / sqrt(m-1) */
+    /* First: s_column = Z_i - y_mean */
+    PetscCall(VecWAXPY(s_column, -1.0, y_mean, z_column));
+    /* Second: s_column *= scale (= 1/sqrt(m-1)) */
+    PetscCall(VecScale(s_column, scale));
+    /* Third: s_column = s_column .* r_inv_sqrt (element-wise multiplication) */
+    PetscCall(VecPointwiseMult(s_column, s_column, r_inv_sqrt));
 
-    PetscCall(MatDenseRestoreColumnVecRead(Z, i, &col_in));
-    PetscCall(MatDenseRestoreColumnVecWrite(*S, i, &col_out));
+    /* Restore column vectors */
+    PetscCall(MatDenseRestoreColumnVecRead(Z, ensemble_idx, &z_column));
+    PetscCall(MatDenseRestoreColumnVecWrite(*S, ensemble_idx, &s_column));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
-  ComputeAnalysisWeights - Computes weight vector w = T * S^T * delta_scaled
+  ComputeAnalysisWeights - Computes analysis weight vector w = T * S^T * delta_scaled
 
   Input Parameters:
-+ T            - reduced-space inverse matrix (I + S^T S)^{-1}
-. S            - normalized innovation matrix
-- delta_scaled - scaled innovation vector R^{-1/2}(y^o - y_mean)
++ T            - reduced-space inverse matrix (I + S^T S)^{-1}, m x m SPD matrix
+. S            - normalized innovation matrix, obs_size x m
+- delta_scaled - scaled innovation vector R^{-1/2}(y^o - y_mean), size obs_size
 
   Output Parameter:
-. w - analysis weight vector
+. w - analysis weight vector, size m
+
+  Notes:
+  This function performs the two-step matrix-vector multiplication\:
+  1. Compute S^T * delta_scaled (projection to reduced space)
+  2. Apply inverse T to get weights w = T * (S^T * delta_scaled)
+  
+  The result is used in Step 6 of Algorithm 6.4 from Law, Stuart, and Zygalakis
+  to compute the ensemble analysis weights.
 */
 static PetscErrorCode ComputeAnalysisWeights(Mat T, Mat S, Vec delta_scaled, Vec *w)
 {
-  Vec S_T_delta;
+  Vec      s_transpose_delta;
+  PetscInt t_rows, t_cols, s_rows, s_cols, delta_size;
 
   PetscFunctionBegin;
-  PetscCall(MatCreateVecs(T, NULL, &S_T_delta));
-  PetscCall(MatMultTranspose(S, delta_scaled, S_T_delta));
+  /* Validate input parameters */
+  PetscValidHeaderSpecific(T, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(S, MAT_CLASSID, 2);
+  PetscValidHeaderSpecific(delta_scaled, VEC_CLASSID, 3);
+  PetscAssertPointer(w, 4);
 
+  /* Validate matrix dimensions for compatibility */
+  PetscCall(MatGetSize(T, &t_rows, &t_cols));
+  PetscCall(MatGetSize(S, &s_rows, &s_cols));
+  PetscCall(VecGetSize(delta_scaled, &delta_size));
+  
+  PetscCheck(t_rows == t_cols, PetscObjectComm((PetscObject)T), PETSC_ERR_ARG_INCOMP, "Matrix T must be square, got %" PetscInt_FMT " x %" PetscInt_FMT, t_rows, t_cols);
+  PetscCheck(s_cols == t_rows, PetscObjectComm((PetscObject)T), PETSC_ERR_ARG_INCOMP, "Matrix S columns (%" PetscInt_FMT ") must match T rows (%" PetscInt_FMT ")", s_cols, t_rows);
+  PetscCheck(delta_size == s_rows, PetscObjectComm((PetscObject)S), PETSC_ERR_ARG_INCOMP, "Vector delta_scaled size (%" PetscInt_FMT ") must match S rows (%" PetscInt_FMT ")", delta_size, s_rows);
+
+  /* Step 1: Compute S^T * delta_scaled (project innovation to reduced space) */
+  PetscCall(MatCreateVecs(T, NULL, &s_transpose_delta));
+  PetscCall(MatMultTranspose(S, delta_scaled, s_transpose_delta));
+
+  /* Step 2: Compute w = T * (S^T * delta_scaled) (apply inverse transform) */
   PetscCall(MatCreateVecs(T, w, NULL));
-  PetscCall(MatMult(T, S_T_delta, *w));
+  PetscCall(MatMult(T, s_transpose_delta, *w));
 
-  PetscCall(VecDestroy(&S_T_delta));
+  /* Cleanup intermediate vector */
+  PetscCall(VecDestroy(&s_transpose_delta));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -147,61 +214,182 @@ static PetscErrorCode ComputeAnalysisWeights(Mat T, Mat S, Vec delta_scaled, Vec
   BroadcastWeightVector - Creates matrix with weight vector replicated across all columns
 
   Input Parameters:
-+ w - weight vector of size m
-- m - ensemble size
++ w - weight vector of size m (analysis weights from ETKF update)
+- m - ensemble size (number of columns to replicate, must equal vector size)
 
   Output Parameter:
-. w_ones - m x m matrix where each column is w
+. w_ones - m x m dense matrix where each column is a copy of w (i.e., w * 1^T)
+
+  Notes:
+  This function constructs the broadcast matrix w * 1^T, where w is the m-dimensional
+  weight vector and 1 is an m-dimensional vector of ones. This matrix is a fundamental
+  component in the ETKF transform\: G = w * 1^T + sqrt(m-1) * T^{1/2} * U.
+  
+  The implementation uses column-wise vector operations following PETSc best practices,
+  which ensures\:
+  - Proper parallel distribution and communication
+  - Efficient memory access patterns
+  - Consistency with other PETSc matrix operations
+  
+  Complexity\: O(m^2) time for sequential replication, O(m^2/p) parallel time where p
+  is the number of processes. Memory\: O(m^2) total, O(m^2/p) per process.
+
+  Alternative Implementation Considered\:
+  Direct array manipulation via [`MatDenseGetArrayWrite()`](petscmat.h) could reduce function
+  call overhead but sacrifices code clarity and parallel safety. The current approach
+  prioritizes maintainability and correctness.
+
+  Level\: developer
+
+.seealso\: [`ComputeAnalysisWeights()`](etkf.c:179), [`MatDenseGetColumnVecWrite()`](petscmat.h), [`PetscDAETKFAnalysis()`](etkf.c:417)
 */
 static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
 {
-  const PetscScalar *w_array;
-  PetscInt           i, j;
+  Vec      col_out;
+  PetscInt i, w_size, w_size_local;
+  PetscInt mat_rows_local, mat_cols_local;
 
   PetscFunctionBegin;
-  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)w), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, w_ones));
+  /* Validate input parameters for type correctness and null pointers */
+  PetscValidHeaderSpecific(w, VEC_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(w, m, 2);
+  PetscAssertPointer(w_ones, 3);
+  
+  /* Validate ensemble size is physically meaningful */
+  PetscCheck(m > 0, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m must be positive for broadcasting, got %" PetscInt_FMT, m);
+  PetscCheck(m < PETSC_MAX_INT / m, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m = %" PetscInt_FMT " too large, m*m would overflow", m);
+
+  /* Verify vector dimensions match ensemble size (global and local) */
+  PetscCall(VecGetSize(w, &w_size));
+  PetscCall(VecGetLocalSize(w, &w_size_local));
+  PetscCheck(w_size == m, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_INCOMP, "Weight vector global size (%" PetscInt_FMT ") must match ensemble size (%" PetscInt_FMT ")", w_size, m);
+
+  /* Create dense matrix with parallel distribution matching weight vector */
+  PetscCall(MatCreateDense(PetscObjectComm((PetscObject)w), w_size_local, PETSC_DECIDE, m, m, NULL, w_ones));
   PetscCall(MatSetUp(*w_ones));
 
-  PetscCall(VecGetArrayRead(w, &w_array));
-  for (i = 0; i < m; i++) {
-    for (j = 0; j < m; j++) PetscCall(MatSetValue(*w_ones, i, j, w_array[i], INSERT_VALUES));
-  }
-  PetscCall(VecRestoreArrayRead(w, &w_array));
+  /* Verify consistent parallel layout between vector and matrix */
+  PetscCall(MatGetLocalSize(*w_ones, &mat_rows_local, &mat_cols_local));
+  PetscCheck(mat_rows_local == w_size_local, PetscObjectComm((PetscObject)w), PETSC_ERR_PLIB, "Matrix row distribution (%" PetscInt_FMT ") inconsistent with vector distribution (%" PetscInt_FMT ")", mat_rows_local, w_size_local);
 
+  /* Broadcast weight vector: copy w to each of the m columns */
+  for (i = 0; i < m; i++) {
+    /* Obtain write access to column i of the output matrix */
+    PetscCall(MatDenseGetColumnVecWrite(*w_ones, i, &col_out));
+    
+    /* Copy weight vector to this column: w_ones[:, i] = w */
+    PetscCall(VecCopy(w, col_out));
+    
+    /* Release column vector, marking it as modified */
+    PetscCall(MatDenseRestoreColumnVecWrite(*w_ones, i, &col_out));
+  }
+
+  /* Finalize matrix assembly for parallel consistency and communication */
   PetscCall(MatAssemblyBegin(*w_ones, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*w_ones, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
-  UpdateEnsembleWithTransform - Updates ensemble: E = mean * 1' + X * G
+  UpdateEnsembleWithTransform - Updates ensemble via ETKF transform: E = mean * 1' + X * G
 
   Input Parameters:
-+ mean  - ensemble mean vector
-. X     - anomaly matrix
-. G     - transform matrix
-. m     - ensemble size
-- ensemble - ensemble matrix to update (in-place)
++ mean     - ensemble mean vector (size state_size)
+. X        - scaled anomaly matrix (state_size x ensemble_size), X = (E - mean*1')/sqrt(m-1)
+. G        - ETKF transform matrix (ensemble_size x ensemble_size), G = w*1' + sqrt(m-1)*T^{1/2}*U
+. m        - ensemble size (number of columns in ensemble)
+- ensemble - ensemble matrix to update in-place (state_size x ensemble_size)
+
+  Notes:
+  This function performs the final step (Step 10) of the ETKF analysis algorithm from
+  Law, Stuart, and Zygalakis, transforming the forecast ensemble into the analysis ensemble.
+  The operation E^a = mean + X * G is computed column-wise to efficiently handle large
+  state spaces while minimizing memory footprint.
+
+  The computation proceeds as\:
+  1. Compute the transformed anomaly matrix\: X_G = X * G (state_size x m)
+  2. For each ensemble member i\: E^a_i = mean + (X*G)_i
+
+  Mathematical Background\:
+  The transform ensures the analysis ensemble has the correct\:
+  - Mean\: E[E^a] = mean + X*G*1 = mean (since G is constructed such that G*1 = 0)
+  - Covariance\: Cov(E^a) = X*G*G^T*X^T which approximates the analysis covariance P^a
+
+  Performance Considerations\:
+  - Memory\: Creates one temporary matrix X_G of size (state_size x m)
+  - Time complexity\: O(state_size * m^2) for matrix multiply + O(state_size * m) for additions
+  - Parallel\: Fully parallelizable across both matrix multiply and column updates
+
+  Level\: developer
+
+.seealso\: [`PetscDAETKFAnalysis()`](etkf.c:446), [`ComputeAnalysisWeights()`](etkf.c:179),
+[`BroadcastWeightVector()`](etkf.c:246), [`MatMatMult()`](petscmat.h), [`VecWAXPY()`](petscvec.h)
 */
 static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscInt m, Mat ensemble)
 {
   Mat      X_G;
   Vec      col_in, col_out;
-  PetscInt i;
+  PetscInt ensemble_idx;
+  PetscInt x_rows, x_cols, g_rows, g_cols, ens_rows, ens_cols;
+  PetscInt mean_size;
 
   PetscFunctionBegin;
+  /* Validate input parameters for correct types and null pointers */
+  PetscValidHeaderSpecific(mean, VEC_CLASSID, 1);
+  PetscValidHeaderSpecific(X, MAT_CLASSID, 2);
+  PetscValidHeaderSpecific(G, MAT_CLASSID, 3);
+  PetscValidLogicalCollectiveInt(X, m, 4);
+  PetscValidHeaderSpecific(ensemble, MAT_CLASSID, 5);
+  
+  /* Validate ensemble size is physically meaningful */
+  PetscCheck(m > 0, PetscObjectComm((PetscObject)ensemble), PETSC_ERR_ARG_OUTOFRANGE,
+             "Ensemble size m must be positive, got %" PetscInt_FMT, m);
+
+  /* Retrieve and validate matrix dimensions for compatibility */
+  PetscCall(MatGetSize(X, &x_rows, &x_cols));
+  PetscCall(MatGetSize(G, &g_rows, &g_cols));
+  PetscCall(MatGetSize(ensemble, &ens_rows, &ens_cols));
+  PetscCall(VecGetSize(mean, &mean_size));
+
+  /* Verify dimension consistency across all inputs */
+  PetscCheck(x_cols == m, PetscObjectComm((PetscObject)X), PETSC_ERR_ARG_INCOMP,
+             "Anomaly matrix X columns (%" PetscInt_FMT ") must equal ensemble size (%" PetscInt_FMT ")", x_cols, m);
+  PetscCheck(g_rows == m, PetscObjectComm((PetscObject)G), PETSC_ERR_ARG_INCOMP,
+             "Transform matrix G rows (%" PetscInt_FMT ") must equal ensemble size (%" PetscInt_FMT ")", g_rows, m);
+  PetscCheck(g_cols == m, PetscObjectComm((PetscObject)G), PETSC_ERR_ARG_INCOMP,
+             "Transform matrix G must be square, got %" PetscInt_FMT " x %" PetscInt_FMT, g_rows, g_cols);
+  PetscCheck(ens_rows == x_rows, PetscObjectComm((PetscObject)ensemble), PETSC_ERR_ARG_INCOMP,
+             "Ensemble rows (%" PetscInt_FMT ") must match anomaly matrix X rows (%" PetscInt_FMT ")", ens_rows, x_rows);
+  PetscCheck(ens_cols == m, PetscObjectComm((PetscObject)ensemble), PETSC_ERR_ARG_INCOMP,
+             "Ensemble columns (%" PetscInt_FMT ") must equal ensemble size (%" PetscInt_FMT ")", ens_cols, m);
+  PetscCheck(mean_size == x_rows, PetscObjectComm((PetscObject)mean), PETSC_ERR_ARG_INCOMP,
+             "Mean vector size (%" PetscInt_FMT ") must match state size (%" PetscInt_FMT ")", mean_size, x_rows);
+
+  /* Compute transformed anomaly matrix: X_G = X * G (state_size x m) */
   PetscCall(MatMatMult(X, G, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &X_G));
 
-  for (i = 0; i < m; i++) {
-    PetscCall(MatDenseGetColumnVecRead(X_G, i, &col_in));
-    PetscCall(MatDenseGetColumnVecWrite(ensemble, i, &col_out));
+  /* Update each ensemble member: E_i = mean + (X*G)_i */
+  for (ensemble_idx = 0; ensemble_idx < m; ensemble_idx++) {
+    /* Get read-only access to transformed anomaly column */
+    PetscCall(MatDenseGetColumnVecRead(X_G, ensemble_idx, &col_in));
+    
+    /* Get write access to ensemble column for in-place update */
+    PetscCall(MatDenseGetColumnVecWrite(ensemble, ensemble_idx, &col_out));
 
+    /* Compute: ensemble[:, i] = mean + (X*G)[:, i]
+       VecWAXPY performs: col_out = 1.0 * col_in + mean */
     PetscCall(VecWAXPY(col_out, 1.0, mean, col_in));
 
-    PetscCall(MatDenseRestoreColumnVecRead(X_G, i, &col_in));
-    PetscCall(MatDenseRestoreColumnVecWrite(ensemble, i, &col_out));
+    /* Restore column vectors, marking ensemble column as modified */
+    PetscCall(MatDenseRestoreColumnVecRead(X_G, ensemble_idx, &col_in));
+    PetscCall(MatDenseRestoreColumnVecWrite(ensemble, ensemble_idx, &col_out));
   }
 
+  /* Finalize ensemble matrix assembly for parallel consistency */
+  PetscCall(MatAssemblyBegin(ensemble, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(ensemble, MAT_FINAL_ASSEMBLY));
+
+  /* Clean up temporary transformed anomaly matrix */
   PetscCall(MatDestroy(&X_G));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -300,7 +488,21 @@ PetscErrorCode PetscDAETKFFinalizePackage(void)
 }
 
 /* ========================================================================== */
-/*                          ETKF Analysis Algorithm                          */
+/*                    ETKF Analysis Algorithm (Algorithm 6.4)                */
+/*                                                                            */
+/*  This section implements the deterministic Ensemble Transform Kalman      */
+/*  Filter (ETKF) analysis step as described in Law, Stuart, and Zygalakis.  */
+/*  The algorithm updates the forecast ensemble to produce the analysis      */
+/*  ensemble by combining observations with the forecast using optimal       */
+/*  Kalman filtering in the reduced ensemble subspace.                       */
+/*                                                                            */
+/*  Key computational steps:                                                 */
+/*    - Observation space projection via H(x) operator                       */
+/*    - Reduced-space Kalman gain computation via (I + S^T S)^{-1}          */
+/*    - Matrix square root factorization (Cholesky or eigendecomposition)   */
+/*    - Transform application to update ensemble members                     */
+/*                                                                            */
+/*  See also: Helper Functions (line 11), Model Propagation (line 654)      */
 /* ========================================================================== */
 
 /*
@@ -322,7 +524,7 @@ PetscErrorCode PetscDAETKFFinalizePackage(void)
 
   Level: advanced
 
-.seealso: [](ch_da), `PetscDA`, `PetscDAETKFApplyModel()`, `PetscDAComputeMean()`,
+.seealso: [](ch_dataassimilator), `PetscDA`, `PetscDAETKFApplyModel()`, `PetscDAComputeMean()`,
 `PetscDAComputeAnomalies()`
 */
 static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
@@ -484,7 +686,7 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
 
   Level: intermediate
 
-.seealso: [](ch_da), `PetscDA`, `PetscDAETKFAnalysis()`
+.seealso: [](ch_dataassimilator), `PetscDA`, `PetscDAETKFAnalysis()`
 */
 static PetscErrorCode PetscDAETKFApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
 {
@@ -527,7 +729,7 @@ static PetscErrorCode PetscDAETKFApplyModel(PetscDA da, PetscErrorCode (*model)(
 
   Level: intermediate
 
-.seealso: [](ch_da), `PetscDA`, `PetscDAETKFGetSqrtType()`, `PetscDAETKFAnalysis()`
+.seealso: [](ch_dataassimilator), `PetscDA`, `PetscDAETKFGetSqrtType()`, `PetscDAETKFAnalysis()`
 @*/
 PetscErrorCode PetscDAETKFSetSqrtType(PetscDA da, PetscDAETKFSqrtType type)
 {
@@ -556,7 +758,7 @@ PetscErrorCode PetscDAETKFSetSqrtType(PetscDA da, PetscDAETKFSqrtType type)
 
   Level: intermediate
 
-.seealso: [](ch_da), `PetscDA`, `PetscDAETKFSetSqrtType()`
+.seealso: [](ch_dataassimilator), `PetscDA`, `PetscDAETKFSetSqrtType()`
 @*/
 PetscErrorCode PetscDAETKFGetSqrtType(PetscDA da, PetscDAETKFSqrtType *type)
 {
@@ -583,7 +785,7 @@ PetscErrorCode PetscDAETKFGetSqrtType(PetscDA da, PetscDAETKFSqrtType *type)
 
   Level: beginner
 
-.seealso: [](ch_da), `PetscDAViewFromOptions()`
+.seealso: [](ch_dataassimilator), `PetscDAViewFromOptions()`
 */
 static PetscErrorCode PetscDAETKFView(PetscDA da, PetscViewer viewer)
 {
@@ -616,7 +818,7 @@ static PetscErrorCode PetscDAETKFView(PetscDA da, PetscViewer viewer)
 
   Level: developer
 
-.seealso: [](ch_da), `PetscDA`, `PetscDAETKFRegister()`, `PetscDAETKFAnalysis()`
+.seealso: [](ch_dataassimilator), `PetscDA`, `PetscDAETKFRegister()`, `PetscDAETKFAnalysis()`
 */
 static PetscErrorCode PetscDAETKFInitialize(PetscDA da)
 {
