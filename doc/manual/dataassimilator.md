@@ -1,9 +1,10 @@
-(ch_da)=
-(sec_da)=
+(ch_dataassimilator)=
 
 # PetscDA: Ensemble Data Assimilation
 
 PETSc's `PetscDA` object coordinates ensemble-based data assimilation (DA) workflows. It centralizes ensemble storage, observational metadata, and user-defined forecast/analysis operators so that algorithms can run independently of the MPI layout or the vector/matrix backends. The PetscDA layer currently focuses on ensemble transform Kalman filter (ETKF)-style updates but is extensible to other assimilation techniques that follow the same interfaces.
+
+(sec_da_lifecycle)=
 
 ## Lifecycle overview
 
@@ -16,6 +17,8 @@ A typical assimilation cycle alternates between forecast propagation and statist
 5. Repeat until the desired simulation horizon is complete, optionally extracting diagnostics after each phase.
 
 Throughout this loop the `PetscDA` object abstracts the global vectors, scatters, and reductions needed to compute ensemble means, anomalies, and square-root transforms.
+
+(sec_da_creating)=
 
 ## Creating a PetscDA context
 
@@ -36,6 +39,8 @@ PetscCall(PetscDADestroy(&da));
 
 `PetscDASetSizes()` records (1) the number of ensemble members, (2) the local state dimension per MPI rank, and (3) the number of observations that will be processed simultaneously. After `PetscDASetUp()` the object owns ensemble storage and is ready to hand out views on members.
 
+(sec_da_ensemble)=
+
 ## Managing ensemble structure
 
 `PetscDA` stores ensemble members as PETSc `Vec` objects and exposes convenience helpers to access them safely:
@@ -46,6 +51,8 @@ PetscCall(PetscDADestroy(&da));
 - `PetscDAComputeAnomalies()` returns a tall-and-skinny `Mat` whose columns are the mean-subtracted ensemble anomalies. Many square-root filters use this matrix to construct low-rank covariance factorizations.
 
 When ensemble perturbations are needed, `VecSetRandomGaussian()` can be used to draw samples consistent with a desired mean and variance by combining PETSc's random number generators with user-provided scaling parameters.
+
+(sec_da_observation)=
 
 ## Observation handling and analysis
 
@@ -78,6 +85,8 @@ PetscCall(VecAXPY(observation_vec, 1.0, noise));
 
 This pattern produces perturbed observations consistent with the diagonal variance model.
 
+(sec_da_forecast)=
+
 ## Forecast propagation
 
 `PetscDAApplyModel()` wraps the forecast step. The user supplies a function that advances a single ensemble member:
@@ -98,6 +107,8 @@ The operator can call into PETSc time integrators ({any}`ch_ts`), nonlinear solv
 
 Applications that maintain long-lived solver contexts commonly preload Jacobians, preconditioners, or MPI layouts outside of the callback and pass them through `ctx` for efficiency.
 
+(sec_da_implementations)=
+
 ## Choosing implementations
 
 The default implementation is the ensemble transform Kalman filter indicated by the type string `PETSCDAETKF`. Alternative PetscDA types can be registered with `PetscDARegister()` and selected at runtime:
@@ -106,6 +117,8 @@ The default implementation is the ensemble transform Kalman filter indicated by 
 - `-petscdaetkf_sqrt_type {cholesky,eigen}` (or, programmatically, `PetscDAETKFSetSqrtType()`) toggles between Cholesky and eigenvalue-based square-root updates.
 
 Custom PetscDA types should implement the `PetscDASetType()` registration hook, populate virtual methods for analysis and forecast orchestration, and take advantage of the anomaly computations provided by the base class.
+
+(sec_da_options)=
 
 ## Options database
 
@@ -118,12 +131,16 @@ The `PetscDA` object obeys standard PETSc options parsing. Commonly used switche
 
 Because `PetscDA` participates in the PETSc object registry, any prefix applied with `PetscDASetOptionsPrefix()` scopes these options.
 
+(sec_da_diagnostics)=
+
 ## Diagnostics and viewing
 
 `PetscDAView()` and `PetscDAViewFromOptions()` expose ensemble sizing, observation dimensions, and implementation-specific diagnostics. Views can be directed to ASCII, HDF5, or custom `PetscViewer` targets, enabling lightweight instrumentation of assimilation experiments. For advanced profiling, the PetscDA package registers with PETSc's logging infrastructure via `PetscDAInitializePackage()`/`PetscDAFinalizePackage()`, so standard `-log_view` runs capture time spent in forecast and analysis kernels.
 
 
 These thin wrappers keep existing applications functional while encouraging new developments to migrate to the canonical `PetscDA*()` routines.
+
+(sec_da_related)=
 
 ## Related reading
 
