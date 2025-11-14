@@ -3,7 +3,7 @@ PetscDataAssimilator Object: 1 MPI process
   Observation size: 40
   Ensemble size: 30
   Assembled: true
-PetscDAETKF Object:
+PetscDataAssimilatorETKF Object:
   Square root type: eigen
 Lorenz-96 ETKF Example
 ======================

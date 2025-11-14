@@ -1,5 +1,5 @@
 /* Data assimilation framework header (provides PetscDataAssimilator) */
-#include "petscda.h"
+#include "petscdataassimilator.h"
 /* PETSc DMDA header (provides DM, DMDA functionality) */
 #include <petscdmda.h>
 #include <petscts.h>
@@ -494,10 +494,10 @@ int main(int argc, char **argv)
 
   test:
     requires: !complex
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -petscda_view -ensemble_size 30
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -petscdaas_view -ensemble_size 30
 
   test:
     suffix: chol
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -petscda_view -ensemble_size 30 -dataassimilator_etkf_sqrt_type cholesky
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -petscdaas_view -ensemble_size 30 -dataassimilator_etkf_sqrt_type cholesky
 
 TEST*/

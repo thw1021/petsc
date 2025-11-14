@@ -1,5 +1,5 @@
-#include "petscda.h"
-#include <petsc/private/daimpl.h>
+#include "petscdataassimilator.h"
+#include <petsc/private/dataassimilatorimpl.h>
 
 typedef struct {
   PetscDataAssimilatorETKFSqrtType sqrt_type;
