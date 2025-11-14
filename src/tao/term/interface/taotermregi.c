@@ -49,13 +49,11 @@ PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void)
   PetscFunctionBegin;
   if (TaoTermRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   TaoTermRegisterAllCalled = PETSC_TRUE;
-#if !defined(PETSC_USE_COMPLEX)
   PetscCall(TaoTermRegister(TAOTERMCALLBACKS, TaoTermCreate_Callbacks));
   PetscCall(TaoTermRegister(TAOTERMSHELL, TaoTermCreate_Shell));
   PetscCall(TaoTermRegister(TAOTERMSUM, TaoTermCreate_Sum));
   PetscCall(TaoTermRegister(TAOTERMHALFL2SQUARED, TaoTermCreate_Halfl2squared));
   PetscCall(TaoTermRegister(TAOTERML1, TaoTermCreate_L1));
   PetscCall(TaoTermRegister(TAOTERMQUADRATIC, TaoTermCreate_Quadratic));
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
