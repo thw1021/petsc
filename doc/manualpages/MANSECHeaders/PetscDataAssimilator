@@ -1,7 +1,3 @@
 # Data Assimilation (PetscDataAssimilator)
 
-The PetscDataAssimilator object provides ensemble-based data assimilation capabilities for combining model forecasts with observations in dynamical systems. It centralizes ensemble storage, observational metadata, and user-defined forecast/analysis operators, enabling algorithms to run independently of MPI layout or vector/matrix backends.
-
-## See Also
-
-- Users guide chapter: [](ch_dataassimilator)
+The PetscDataAssimilator object provides ensemble-based data assimilation capabilities for combining model forecasts with observations in dynamical systems. It centralizes ensemble storage, observational metadata, and user-defined forecast/analysis operators, enabling algorithms to run independently of MPI layout or vector/matrix backends. Users guide chapter: [](ch_dataassimilator)
