@@ -9,12 +9,52 @@ const char help[] = "CUDA backend of rosenbrock4cu.cu\n";
 
 #include "rosenbrock4.h"
 
+//Note: duplicate code as in rosenbrock4.c, to avoid unused function
+// for rosenbrock tests used elsewhere
 int main(int argc, char **argv)
 {
+  Vec           x;    /* solution vector */
+  Vec           g;    /* gradient vector */
+  Mat           H;    /* Hessian matrix */
+  Tao           tao;  /* Tao solver context */
+  AppCtx        user; /* user-defined application context */
+  PetscLogStage solve;
+
   /* Initialize TAO and PETSc */
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-  PetscCall(RosenbrockMain());
+  PetscCall(PetscLogStageRegister("Rosenbrock solve", &solve));
+
+  PetscCall(AppCtxCreate(PETSC_COMM_WORLD, &user));
+  PetscCall(CreateHessian(user, &H));
+  PetscCall(CreateVectors(user, H, &x, &g));
+
+  /* The TAO code begins here */
+
+  PetscCall(TaoCreate(user->comm, &tao));
+  PetscCall(VecZeroEntries(x));
+  PetscCall(TaoSetSolution(tao, x));
+
+  /* Set routines for function, gradient, hessian evaluation */
+  PetscCall(TaoSetObjective(tao, FormObjective, user));
+  PetscCall(TaoSetObjectiveAndGradient(tao, g, FormObjectiveGradient, user));
+  PetscCall(TaoSetGradient(tao, g, FormGradient, user));
+  PetscCall(TaoSetHessian(tao, H, H, FormHessian, user));
+
+  PetscCall(TaoSetFromOptions(tao));
+
+  /* SOLVE THE APPLICATION */
+  PetscCall(PetscLogStagePush(solve));
+  PetscCall(TaoSolve(tao));
+  PetscCall(PetscLogStagePop());
+
+  if (user->test_lmvm) PetscCall(TestLMVM(tao));
+
+  PetscCall(TaoDestroy(&tao));
+  PetscCall(VecDestroy(&g));
+  PetscCall(VecDestroy(&x));
+  PetscCall(MatDestroy(&H));
+  PetscCall(AppCtxDestroy(&user));
   PetscCall(PetscFinalize());
   return 0;
 }
