@@ -111,10 +111,10 @@ Applications that maintain long-lived solver contexts commonly preload Jacobians
 
 ## Choosing implementations
 
-The default implementation is the ensemble transform Kalman filter indicated by the type string `PETSCDAETKF`. Alternative PetscDataAssimilator types can be registered with `PetscDataAssimilatorRegister()` and selected at runtime:
+The default implementation is the ensemble transform Kalman filter indicated by the type string `PETSCDAETKF` (which resolves to `"etkf"`). Alternative PetscDataAssimilator types can be registered with `PetscDataAssimilatorRegister()` and selected at runtime:
 
-- `-petscdataassimilator_type petscdaetkf` chooses the built-in square-root ETKF.
-- `-petscdaetkf_sqrt_type {cholesky,eigen}` (or, programmatically, `PetscDataAssimilatorETKFSetSqrtType()`) toggles between Cholesky and eigenvalue-based square-root updates.
+- `-petscdataassimilator_type etkf` chooses the built-in square-root ETKF.
+- `-etkf_sqrt_type {cholesky,eigen}` (or, programmatically, `PetscDataAssimilatorETKFSetSqrtType()`) toggles between Cholesky and eigenvalue-based square-root updates.
 
 Custom PetscDataAssimilator types should implement the `PetscDataAssimilatorSetType()` registration hook, populate virtual methods for analysis and forecast orchestration, and take advantage of the anomaly computations provided by the base class.
 
@@ -126,7 +126,7 @@ The `PetscDataAssimilator` object obeys standard PETSc options parsing. Commonly
 
 - `-petscdataassimilator_type <name>` – select a registered PetscDataAssimilator implementation.
 - `-petscdataassimilator_view` / `-petscdataassimilator_view ::ascii_info_detail` – inspect ensemble metadata and internal sizes.
-- `-petscdaetkf_sqrt_type <cholesky,eigen>` – set the square-root solver used by the ETKF backend.
+- `-etkf_sqrt_type <cholesky,eigen>` – set the square-root solver used by the ETKF backend.
 - `-petscda_monitor` – enable runtime logging, when supported by the selected implementation.
 
 Because `PetscDataAssimilator` participates in the PETSc object registry, any prefix applied with `PetscDataAssimilatorSetOptionsPrefix()` scopes these options.
