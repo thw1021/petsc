@@ -1485,6 +1485,10 @@ PetscErrorCode MatDestroy(Mat *A)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
+  if (PetscDefined(USE_DEBUG) && !PetscDefined(USE_COMPLEX)) {
+    PetscCheck((*A)->symmetric == (*A)->hermitian, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "MAT_SYMMETRIC and MAT_HERMITIAN options do not match: %s != %s", PetscBool3s[(*A)->symmetric], PetscBool3s[(*A)->hermitian]);
+    if (PetscBool3ToBool((*A)->spd)) PetscCheck(PetscBool3ToBool((*A)->symmetric), PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "MAT_SPD and MAT_SYMMETRIC options do not match: %s != %s", PetscBool3s[(*A)->spd], PetscBool3s[(*A)->symmetric]);
+  }
   /* if memory was published with SAWs then destroy it */
   PetscCall(PetscObjectSAWsViewOff((PetscObject)*A));
   PetscTryTypeMethod(*A, destroy);
@@ -6086,6 +6090,9 @@ PetscErrorCode MatSetOption(Mat mat, MatOption op, PetscBool flg)
       mat->spd                    = PETSC_BOOL3_TRUE;
       mat->symmetric              = PETSC_BOOL3_TRUE;
       mat->structurally_symmetric = PETSC_BOOL3_TRUE;
+#if !defined(PETSC_USE_COMPLEX)
+      mat->hermitian = PETSC_BOOL3_TRUE;
+#endif
     } else {
       mat->spd = PETSC_BOOL3_FALSE;
     }
