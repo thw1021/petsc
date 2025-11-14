@@ -501,8 +501,8 @@ static PetscErrorCode PCBDDCScalingSetUp_Deluxe_Private(PC pc)
     /* \sum_k S^k_E_j */
     PetscCall(MatDestroy(&deluxe_ctx->seq_mat_inv_sum[i]));
     PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, subset_size, subset_size, matdata2 + cum2, &deluxe_ctx->seq_mat_inv_sum[i]));
-    PetscCall(MatSetOption(deluxe_ctx->seq_mat_inv_sum[i], MAT_SPD, sub_schurs->is_posdef));
     PetscCall(MatSetOption(deluxe_ctx->seq_mat_inv_sum[i], MAT_HERMITIAN, sub_schurs->is_hermitian));
+    PetscCall(MatSetOption(deluxe_ctx->seq_mat_inv_sum[i], MAT_SPD, sub_schurs->is_posdef));
     switch (sub_schurs->mat_factor_type) {
     case MAT_FACTOR_CHOLESKY:
       PetscCall(MatCholeskyFactor(deluxe_ctx->seq_mat_inv_sum[i], NULL, NULL));
