@@ -555,6 +555,7 @@ linux-hip-double:
     - gpu:amd
     - os:linux
   variables:
+    PATH: /opt/rocm-6.2.4/bin/hipcc:$PATH
     TEST_ARCH: arch-ci-linux-hip-double
 
 linux-hip-cmplx:
@@ -566,6 +567,7 @@ linux-hip-cmplx:
     - gpu:amd
     - os:linux
   variables:
+    PATH: /opt/rocm-6.2.4/bin/hipcc:$PATH
     TEST_ARCH: arch-ci-linux-hip-cmplx
 
 linux-sycl-double:
@@ -590,7 +592,9 @@ linux-cuda-pkgs:
   tags:
     - cuda-stage3
   variables:
+    MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/spack-2024-11-27-cuda/modules/linux-ubuntu22.04-x86_64/Core:/nfs/gce/projects/petsc/soft/u22.04/modulefiles
     TEST_ARCH: arch-ci-linux-cuda-pkgs
+    LOAD_MODULES: cuda/12.8.0-rz6425d openmpi/5.0.8-cuda-12.8
     # run all tests that:
     # 1. require cuda, OR
     # 2. require device, OR
@@ -603,7 +607,7 @@ linux-cuda-pkgs:
     MAKE_CUDAFLAGS: --compiler-options -Wall,-Werror
     OMP_PROC_BIND: false
 
-linux-cuda112-omp:
+linux-cuda-omp:
   extends:
     - .stage-3
     - .linux_test
@@ -611,9 +615,10 @@ linux-cuda112-omp:
   tags:
     - cuda-stage3
   variables:
-    TEST_ARCH: arch-ci-linux-cuda112-omp
+    MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/spack-2024-11-27-cuda/modules/linux-ubuntu22.04-x86_64/Core:/nfs/gce/software/custom/linux-ubuntu22.04-x86_64/spack/share/spack/lmod/linux-ubuntu22.04-x86_64/Core
+    TEST_ARCH: arch-ci-linux-cuda-omp
     TEST_OPTS: -j4 query=requires queryval=kokkos_kernels
-    LOAD_MODULES: cuda/11.2.2 u-gcc-9/9.4.0
+    LOAD_MODULES: cuda/12.8.0-rz6425d gcc/11.3.0
     OMP_PROC_BIND: "false"
     OMP_NUM_THREADS: 1
     MAKE_CUDAFLAGS: --compiler-options -Wall,-Werror
@@ -819,6 +824,8 @@ linux-pkgs-valgrind:
     - gce-valgrind
   variables:
     TEST_ARCH: arch-ci-linux-pkgs-valgrind
+    MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/spack-2024-11-27-cuda/modules/linux-ubuntu22.04-x86_64/Core
+    LOAD_MODULES: cuda/12.8.0-rz6425d
     TIMEOUT: 1200
     UCX_SYSV_HUGETLB_MODE: n
 

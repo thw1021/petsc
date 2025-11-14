@@ -10,12 +10,12 @@ if __name__ == '__main__':
   import configure
   configure_options = [
     '--package-prefix-hash='+petsc_hash_pkgs,
-    #'--with-mpi-dir=/home/users/balay/soft/instinct/gcc-10.2.0/mpich-4.1',
+    '--with-mpi-dir=/nfs/gce/projects/petsc/soft/u22.04/openmpi-5.0.9/',
     #'--with-blaslapack-dir=/home/users/balay/soft/instinct/gcc-10.2.0/fblaslapack',
     '--with-make-np=24',
     '--with-make-test-np=8',
-    '--with-hipc=/opt/rocm-5.4.3/bin/hipcc',
-    '--with-hip-dir=/opt/rocm-5.4.3',
+    '--with-hipc=/opt/rocm-6.2.4/bin/hipcc',
+    '--with-hip-dir=/opt/rocm-6.2.4',
     'COPTFLAGS=-g -O',
     'FOPTFLAGS=-g -O',
     'CXXOPTFLAGS=-g -O',

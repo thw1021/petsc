@@ -3,8 +3,8 @@ import config.package
 class Configure(config.package.Package):
     def __init__(self, framework):
         config.package.Package.__init__(self, framework)
-        self.version                = '1.24.11'
-        self.gitcommit              = 'fc6566705d239ba150cab7d1fb55886345a491bd'
+        self.version                = '1.25.0'
+        self.gitcommit              = 'v1.25.0'
         self.download               = ['git://https://github.com/PFLAREProject/PFLARE','https://github.com/PFLAREProject/PFLARE/archive/'+self.gitcommit+'.tar.gz']
         self.functions              = ['PCRegister_PFLARE']
         self.includes               = ['pflare.h']
