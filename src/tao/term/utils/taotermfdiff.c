@@ -183,7 +183,7 @@ static PetscErrorCode TaoTermGetStashedHessianColoring(TaoTerm term, Vec params,
           `TaoTermComputeGradientUseFDPush()`,
           `TaoTermComputeGradientUseFDPop()`,
 @*/
-static PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec params, Mat H)
+PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm term, Vec x, Vec params, Mat H)
 {
   SNES                  snes;
   TaoTermWithParameters t;
