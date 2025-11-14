@@ -6,7 +6,8 @@
 
 /*I <petscts.h> I*/
 
-/* SUBMANSEC = DA */
+/* MANSEC = ML */
+/* SUBMANSEC = PetscDataAssimilator */
 
 typedef struct _p_PetscDA *PetscDA;
 
