@@ -21,11 +21,11 @@
 #include <petsc/private/daimpl.h>
 #include <petscblaslapack.h>
 
-PetscClassId      PETSCDA_CLASSID          = 0;
-PetscBool         PetscDARegisterAllCalled = PETSC_FALSE;
-PetscFunctionList PetscDAList              = NULL;
+PetscClassId      PETSCDATAASSIMILATOR_CLASSID          = 0;
+PetscBool         PetscDataAssimilatorRegisterAllCalled = PETSC_FALSE;
+PetscFunctionList PetscDataAssimilatorList              = NULL;
 
-static PetscBool PetscDAPackageInitialized = PETSC_FALSE;
+static PetscBool PetscDataAssimilatorPackageInitialized = PETSC_FALSE;
 
 /* Tolerance for matrix square root verification in debug mode */
 #define MATRIX_SQRT_TOLERANCE_FACTOR 100.0
@@ -34,47 +34,47 @@ static PetscBool PetscDAPackageInitialized = PETSC_FALSE;
 #define EIGENVALUE_TOLERANCE_FACTOR 10.0
 
 /*@C
-  PetscDAInitializePackage - This function initializes everything in the `PetscDA`
-  package. called on the first call to `PetscDACreate()` when using static or shared
+  PetscDataAssimilatorInitializePackage - This function initializes everything in the `PetscDataAssimilator`
+  package. called on the first call to `PetscDataAssimilatorCreate()` when using static or shared
   libraries.
 
   Level: developer
 
-.seealso: `PetscDAFinalizePackage()`, `PetscInitialize()`
+.seealso: `PetscDataAssimilatorFinalizePackage()`, `PetscInitialize()`
 @*/
-PetscErrorCode PetscDAInitializePackage(void)
+PetscErrorCode PetscDataAssimilatorInitializePackage(void)
 {
   PetscFunctionBegin;
-  if (PetscDAPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
+  if (PetscDataAssimilatorPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
 
-  PetscDAPackageInitialized = PETSC_TRUE;
-  PetscCall(PetscClassIdRegister("Data Assimilation", &PETSCDA_CLASSID));
-  PetscCall(PetscDARegisterAll());
-  PetscCall(PetscRegisterFinalize(PetscDAFinalizePackage));
+  PetscDataAssimilatorPackageInitialized = PETSC_TRUE;
+  PetscCall(PetscClassIdRegister("Data Assimilation", &PETSCDATAASSIMILATOR_CLASSID));
+  PetscCall(PetscDataAssimilatorRegisterAll());
+  PetscCall(PetscRegisterFinalize(PetscDataAssimilatorFinalizePackage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  PetscDAFinalizePackage - This function finalizes everything in the `PetscDA` package. It
+  PetscDataAssimilatorFinalizePackage - This function finalizes everything in the `PetscDataAssimilator` package. It
   is called from `PetscFinalize()`.
 
   Level: developer
 
-.seealso: `PetscDAInitializePackage()`, `PetscInitialize()`
+.seealso: `PetscDataAssimilatorInitializePackage()`, `PetscInitialize()`
 @*/
-PetscErrorCode PetscDAFinalizePackage(void)
+PetscErrorCode PetscDataAssimilatorFinalizePackage(void)
 {
   PetscFunctionBegin;
-  PetscCall(PetscFunctionListDestroy(&PetscDAList));
-  PetscDARegisterAllCalled  = PETSC_FALSE;
-  PetscDAPackageInitialized = PETSC_FALSE;
+  PetscCall(PetscFunctionListDestroy(&PetscDataAssimilatorList));
+  PetscDataAssimilatorRegisterAllCalled  = PETSC_FALSE;
+  PetscDataAssimilatorPackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode PetscDAETKFRegister(void);
+PETSC_EXTERN PetscErrorCode PetscDataAssimilatorETKFRegister(void);
 
 /*@C
-  PetscDARegister - Registers a constructor for a `PetscDA` implementation with the
+  PetscDataAssimilatorRegister - Registers a constructor for a `PetscDataAssimilator` implementation with the
   dispatcher.
 
   Not Collective
@@ -85,45 +85,45 @@ PETSC_EXTERN PetscErrorCode PetscDAETKFRegister(void);
 
   Level: developer
 
-.seealso: [](ch_dataassimilator), `PetscDARegisterAll()`, `PetscDASetType()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorRegisterAll()`, `PetscDataAssimilatorSetType()`
 @*/
-PetscErrorCode PetscDARegister(const char sname[], PetscErrorCode (*function)(PetscDA))
+PetscErrorCode PetscDataAssimilatorRegister(const char sname[], PetscErrorCode (*function)(PetscDataAssimilator))
 {
   PetscFunctionBegin;
-  PetscCall(PetscDAInitializePackage());
-  PetscCall(PetscFunctionListAdd(&PetscDAList, sname, function));
+  PetscCall(PetscDataAssimilatorInitializePackage());
+  PetscCall(PetscFunctionListAdd(&PetscDataAssimilatorList, sname, function));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscDARegisterAll - Registers all data assimilation backends that were compiled in.
+  PetscDataAssimilatorRegisterAll - Registers all data assimilation backends that were compiled in.
 
   Not Collective
 
   Level: developer
 
-.seealso: [](ch_dataassimilator), `PetscDARegister()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorRegister()`
 @*/
-PetscErrorCode PetscDARegisterAll(void)
+PetscErrorCode PetscDataAssimilatorRegisterAll(void)
 {
   PetscFunctionBegin;
-  if (PetscDARegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscDARegisterAllCalled = PETSC_TRUE;
-  PetscCall(PetscDAETKFRegister());
+  if (PetscDataAssimilatorRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscDataAssimilatorRegisterAllCalled = PETSC_TRUE;
+  PetscCall(PetscDataAssimilatorETKFRegister());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* Compute mean of ensemble */
-static PetscErrorCode PetscDAComputeMean_Default(PetscDA da, Vec mean)
+static PetscErrorCode PetscDataAssimilatorComputeMean_Default(PetscDataAssimilator da, Vec mean)
 {
   Vec         member;
   PetscScalar inv_m;
   PetscInt    m, j;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscValidHeaderSpecific(mean, VEC_CLASSID, 2);
-  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDASetUp() must be called before computing the ensemble mean");
+  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDataAssimilatorSetUp() must be called before computing the ensemble mean");
   PetscCheck(da->ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONG, "Ensemble size must be positive");
 
   m     = da->ensemble_size;
@@ -138,7 +138,7 @@ static PetscErrorCode PetscDAComputeMean_Default(PetscDA da, Vec mean)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscDAComputeAnomalies_Default(PetscDA da, Mat *anomalies_out)
+static PetscErrorCode PetscDataAssimilatorComputeAnomalies_Default(PetscDataAssimilator da, Mat *anomalies_out)
 {
   Vec       mean;
   Vec       col_in, col_out;
@@ -150,9 +150,9 @@ static PetscErrorCode PetscDAComputeAnomalies_Default(PetscDA da, Mat *anomalies
 
   PetscFunctionBegin;
   /* Validate input parameters */
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscAssertPointer(anomalies_out, 2);
-  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDASetUp() must be called before computing anomalies");
+  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDataAssimilatorSetUp() must be called before computing anomalies");
   PetscCheck(da->ensemble_size > 1, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be at least 2 to form anomalies");
   PetscCheck(da->state_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "State size must be positive");
 
@@ -174,7 +174,7 @@ static PetscErrorCode PetscDAComputeAnomalies_Default(PetscDA da, Mat *anomalies
   PetscCall(VecSetFromOptions(mean));
 
   /* Algorithm line 12: \bar{x} = (1/m)\sum_j x^{(j)} */
-  PetscCall(PetscDAComputeMean(da, mean));
+  PetscCall(PetscDataAssimilatorComputeMean(da, mean));
 
   /* Allocate anomalies matrix (state_size x ensemble_size) */
   PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, da->state_size, ensemble_size, NULL, &anomalies));
@@ -208,7 +208,7 @@ static PetscErrorCode PetscDAComputeAnomalies_Default(PetscDA da, Mat *anomalies
 }
 
 /*@
-  PetscDACreate - Creates a new `PetscDA` object for ensemble-based data assimilation.
+  PetscDataAssimilatorCreate - Creates a new `PetscDataAssimilator` object for ensemble-based data assimilation.
 
   Collective
 
@@ -216,25 +216,25 @@ static PetscErrorCode PetscDAComputeAnomalies_Default(PetscDA da, Mat *anomalies
 . comm - MPI communicator used to create the object
 
   Output Parameter:
-. da_out - newly created `PetscDA` object
+. da_out - newly created `PetscDataAssimilator` object
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDADestroy()`, `PetscDASetType()`, `PetscDASetUp()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorDestroy()`, `PetscDataAssimilatorSetType()`, `PetscDataAssimilatorSetUp()`
 @*/
-PetscErrorCode PetscDACreate(MPI_Comm comm, PetscDA *da_out)
+PetscErrorCode PetscDataAssimilatorCreate(MPI_Comm comm, PetscDataAssimilator *da_out)
 {
-  PetscDA da;
+  PetscDataAssimilator da;
 
   PetscFunctionBegin;
   PetscAssertPointer(da_out, 2);
 
-  PetscCall(PetscDAInitializePackage());
+  PetscCall(PetscDataAssimilatorInitializePackage());
 
-  PetscCall(PetscHeaderCreate(da, PETSCDA_CLASSID, "PetscDA", "Data Assimilation", "DataAssimilation", comm, PetscDADestroy, PetscDAView));
+  PetscCall(PetscHeaderCreate(da, PETSCDATAASSIMILATOR_CLASSID, "PetscDataAssimilator", "Data Assimilation", "DataAssimilation", comm, PetscDataAssimilatorDestroy, PetscDataAssimilatorView));
   PetscCall(PetscMemzero(da->ops, sizeof(*da->ops)));
-  da->ops->computemean      = PetscDAComputeMean_Default;
-  da->ops->computeanomalies = PetscDAComputeAnomalies_Default;
+  da->ops->computemean      = PetscDataAssimilatorComputeMean_Default;
+  da->ops->computeanomalies = PetscDataAssimilatorComputeAnomalies_Default;
 
   da->ensemble_size = 0;
   da->state_size    = 0;
@@ -247,27 +247,27 @@ PetscErrorCode PetscDACreate(MPI_Comm comm, PetscDA *da_out)
 
   *da_out = da;
 
-  PetscCall(PetscDASetType(da, PETSCDAETKF));
+  PetscCall(PetscDataAssimilatorSetType(da, PETSCDAETKF));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscDADestroy - Destroys a `PetscDA` object and releases its resources.
+  PetscDataAssimilatorDestroy - Destroys a `PetscDataAssimilator` object and releases its resources.
 
   Collective
 
   Input Parameter:
-. da - pointer to the `PetscDA` object to destroy
+. da - pointer to the `PetscDataAssimilator` object to destroy
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDACreate()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorCreate()`
 @*/
-PetscErrorCode PetscDADestroy(PetscDA *da)
+PetscErrorCode PetscDataAssimilatorDestroy(PetscDataAssimilator *da)
 {
   PetscFunctionBegin;
   if (!da || !*da) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscValidHeaderSpecific(*da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(*da, PETSCDATAASSIMILATOR_CLASSID, 1);
   if (--((PetscObject)*da)->refct > 0) {
     *da = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
@@ -284,63 +284,63 @@ PetscErrorCode PetscDADestroy(PetscDA *da)
 }
 
 /*@
-  PetscDASetType - Sets the data assimilation implementation used by a `PetscDA` object.
+  PetscDataAssimilatorSetType - Sets the data assimilation implementation used by a `PetscDataAssimilator` object.
 
   Collective
 
   Input Parameters:
-+ da   - the `PetscDA` context
++ da   - the `PetscDataAssimilator` context
 - type - name of the implementation (for example `PETSCDAETKF`)
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDAGetType()`, `PetscDARegister()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorGetType()`, `PetscDataAssimilatorRegister()`
 @*/
-PetscErrorCode PetscDASetType(PetscDA da, PetscDAType type)
+PetscErrorCode PetscDataAssimilatorSetType(PetscDataAssimilator da, PetscDataAssimilatorType type)
 {
-  PetscErrorCode (*r)(PetscDA);
+  PetscErrorCode (*r)(PetscDataAssimilator);
   PetscBool match;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscAssertPointer(type, 2);
 
   PetscCall(PetscObjectTypeCompare((PetscObject)da, type, &match));
   if (match) PetscFunctionReturn(PETSC_SUCCESS);
 
-  PetscCall(PetscDARegisterAll());
-  PetscCall(PetscFunctionListFind(PetscDAList, type, &r));
-  PetscCheck(r, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDA type: %s", type);
+  PetscCall(PetscDataAssimilatorRegisterAll());
+  PetscCall(PetscFunctionListFind(PetscDataAssimilatorList, type, &r));
+  PetscCheck(r, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDataAssimilator type: %s", type);
 
   if (da->ops->destroy) PetscCall((*da->ops->destroy)(da));
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)da, type));
   PetscCall((*r)(da));
 
-  if (!da->ops->computemean) da->ops->computemean = PetscDAComputeMean_Default;
-  if (!da->ops->computeanomalies) da->ops->computeanomalies = PetscDAComputeAnomalies_Default;
+  if (!da->ops->computemean) da->ops->computemean = PetscDataAssimilatorComputeMean_Default;
+  if (!da->ops->computeanomalies) da->ops->computeanomalies = PetscDataAssimilatorComputeAnomalies_Default;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscDAGetType - Gets the name of the implementation currently associated with a `PetscDA`.
+  PetscDataAssimilatorGetType - Gets the name of the implementation currently associated with a `PetscDataAssimilator`.
 
   Not Collective
 
   Input Parameter:
-. da - the `PetscDA` context
+. da - the `PetscDataAssimilator` context
 
   Output Parameter:
 . type - pointer that will receive the type name (may be `NULL`)
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDASetType()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorSetType()`
 @*/
-PetscErrorCode PetscDAGetType(PetscDA da, PetscDAType *type)
+PetscErrorCode PetscDataAssimilatorGetType(PetscDataAssimilator da, PetscDataAssimilatorType *type)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   if (type) {
     PetscAssertPointer(type, 2);
     *type = ((PetscObject)da)->type_name;
@@ -349,21 +349,21 @@ PetscErrorCode PetscDAGetType(PetscDA da, PetscDAType *type)
 }
 
 /*@
-  PetscDASetFromOptions - Configures a `PetscDA` object from the options database.
+  PetscDataAssimilatorSetFromOptions - Configures a `PetscDataAssimilator` object from the options database.
 
   Collective
 
   Input Parameter:
-. da - the `PetscDA` context to set up
+. da - the `PetscDataAssimilator` context to set up
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDASetType()`, `PetscObjectOptionsBegin()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorSetType()`, `PetscObjectOptionsBegin()`
 @*/
-PetscErrorCode PetscDASetFromOptions(PetscDA da)
+PetscErrorCode PetscDataAssimilatorSetFromOptions(PetscDataAssimilator da)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
 
   PetscObjectOptionsBegin((PetscObject)da);
   if (da->ops->setfromoptions) PetscCall((*da->ops->setfromoptions)(da, &PetscOptionsObject));
@@ -372,29 +372,29 @@ PetscErrorCode PetscDASetFromOptions(PetscDA da)
 }
 
 /*@
-  PetscDASetSizes - Sets the state, observation, and ensemble dimensions used by a `PetscDA`.
+  PetscDataAssimilatorSetSizes - Sets the state, observation, and ensemble dimensions used by a `PetscDataAssimilator`.
 
   Collective
 
   Input Parameters:
-+ da            - the `PetscDA` context
++ da            - the `PetscDataAssimilator` context
 . state_size    - number of state components
 . obs_size      - number of observation components
 - ensemble_size - number of ensemble members
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDAGetSizes()`, `PetscDASetUp()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorGetSizes()`, `PetscDataAssimilatorSetUp()`
 @*/
-PetscErrorCode PetscDASetSizes(PetscDA da, PetscInt state_size, PetscInt obs_size, PetscInt ensemble_size)
+PetscErrorCode PetscDataAssimilatorSetSizes(PetscDataAssimilator da, PetscInt state_size, PetscInt obs_size, PetscInt ensemble_size)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscValidLogicalCollectiveInt(da, state_size, 2);
   PetscValidLogicalCollectiveInt(da, obs_size, 3);
   PetscValidLogicalCollectiveInt(da, ensemble_size, 4);
 
-  PetscCheck(!da->assembled, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Cannot change sizes after PetscDASetUp() has been called");
+  PetscCheck(!da->assembled, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Cannot change sizes after PetscDataAssimilatorSetUp() has been called");
 
   da->state_size    = state_size;
   da->obs_size      = obs_size;
@@ -403,12 +403,12 @@ PetscErrorCode PetscDASetSizes(PetscDA da, PetscInt state_size, PetscInt obs_siz
 }
 
 /*@
-  PetscDAGetSizes - Retrieves the dimension settings associated with a `PetscDA`.
+  PetscDataAssimilatorGetSizes - Retrieves the dimension settings associated with a `PetscDataAssimilator`.
 
   Not Collective
 
   Input Parameter:
-. da - the `PetscDA` context
+. da - the `PetscDataAssimilator` context
 
   Output Parameters:
 + state_size    - number of state components (may be `NULL`)
@@ -417,12 +417,12 @@ PetscErrorCode PetscDASetSizes(PetscDA da, PetscInt state_size, PetscInt obs_siz
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDASetSizes()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorSetSizes()`
 @*/
-PetscErrorCode PetscDAGetSizes(PetscDA da, PetscInt *state_size, PetscInt *obs_size, PetscInt *ensemble_size)
+PetscErrorCode PetscDataAssimilatorGetSizes(PetscDataAssimilator da, PetscInt *state_size, PetscInt *obs_size, PetscInt *ensemble_size)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   if (state_size) *state_size = da->state_size;
   if (obs_size) *obs_size = da->obs_size;
   if (ensemble_size) *ensemble_size = da->ensemble_size;
@@ -430,29 +430,29 @@ PetscErrorCode PetscDAGetSizes(PetscDA da, PetscInt *state_size, PetscInt *obs_s
 }
 
 /*@
-  PetscDASetUp - Allocates internal data structures for a `PetscDA` based on the previously provided sizes.
+  PetscDataAssimilatorSetUp - Allocates internal data structures for a `PetscDataAssimilator` based on the previously provided sizes.
 
   Collective
 
   Input Parameter:
-. da - the `PetscDA` context to assemble
+. da - the `PetscDataAssimilator` context to assemble
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDASetSizes()`, `PetscDASetType()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorSetSizes()`, `PetscDataAssimilatorSetType()`
 @*/
-PetscErrorCode PetscDASetUp(PetscDA da)
+PetscErrorCode PetscDataAssimilatorSetUp(PetscDataAssimilator da)
 {
   MPI_Comm comm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
 
   if (da->assembled) PetscFunctionReturn(PETSC_SUCCESS);
 
-  PetscCheck(da->state_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set state size before calling PetscDASetUp()");
-  PetscCheck(da->obs_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set observation size before calling PetscDASetUp()");
-  PetscCheck(da->ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set ensemble size before calling PetscDASetUp()");
+  PetscCheck(da->state_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set state size before calling PetscDataAssimilatorSetUp()");
+  PetscCheck(da->obs_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set observation size before calling PetscDataAssimilatorSetUp()");
+  PetscCheck(da->ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Must set ensemble size before calling PetscDataAssimilatorSetUp()");
 
   comm = PetscObjectComm((PetscObject)da);
 
@@ -483,25 +483,25 @@ PetscErrorCode PetscDASetUp(PetscDA da)
 }
 
 /*@
-  PetscDAView - Views a `PetscDA` and its implementation-specific data structure.
+  PetscDataAssimilatorView - Views a `PetscDataAssimilator` and its implementation-specific data structure.
 
   Collective
 
   Input Parameters:
-+ da     - the `PetscDA` context
++ da     - the `PetscDataAssimilator` context
 - viewer - the `PetscViewer` to use (or `NULL` for standard output)
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDAViewFromOptions()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorViewFromOptions()`
 @*/
-PetscErrorCode PetscDAView(PetscDA da, PetscViewer viewer)
+PetscErrorCode PetscDataAssimilatorView(PetscDataAssimilator da, PetscViewer viewer)
 {
   PetscBool   iascii;
   PetscMPIInt size;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   if (!viewer) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)da), &viewer));
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
   PetscCheckSameComm(da, 1, viewer, 2);
@@ -509,7 +509,7 @@ PetscErrorCode PetscDAView(PetscDA da, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
     PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)da), &size));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "PetscDA Object: %d MPI process%s\n", size, size > 1 ? "es" : ""));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "PetscDataAssimilator Object: %d MPI process%s\n", size, size > 1 ? "es" : ""));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  State size: %" PetscInt_FMT "\n", da->state_size));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Observation size: %" PetscInt_FMT "\n", da->obs_size));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Ensemble size: %" PetscInt_FMT "\n", da->ensemble_size));
@@ -521,44 +521,44 @@ PetscErrorCode PetscDAView(PetscDA da, PetscViewer viewer)
 }
 
 /*@
-  PetscDAViewFromOptions - Processes command-line options to determine if a `PetscDA` should be viewed.
+  PetscDataAssimilatorViewFromOptions - Processes command-line options to determine if a `PetscDataAssimilator` should be viewed.
 
   Collective
 
   Input Parameters:
-+ da     - the `PetscDA` context
++ da     - the `PetscDataAssimilator` context
 . obj    - optional object that provides the prefix for options
 - option - option name to check (may be `NULL`)
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDAView()`, `PetscObjectViewFromOptions()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorView()`, `PetscObjectViewFromOptions()`
 @*/
-PetscErrorCode PetscDAViewFromOptions(PetscDA da, PetscObject obj, const char option[])
+PetscErrorCode PetscDataAssimilatorViewFromOptions(PetscDataAssimilator da, PetscObject obj, const char option[])
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscCall(PetscObjectViewFromOptions((PetscObject)da, obj, option));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscDASetObsErrorVariance - Sets the observation-error variances associated with a `PetscDA`.
+  PetscDataAssimilatorSetObsErrorVariance - Sets the observation-error variances associated with a `PetscDataAssimilator`.
 
   Collective
 
   Input Parameters:
-+ da            - the `PetscDA` context
++ da            - the `PetscDataAssimilator` context
 - obs_error_var - vector containing observation error variances
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDAGetObsErrorVariance()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorGetObsErrorVariance()`
 @*/
-PetscErrorCode PetscDASetObsErrorVariance(PetscDA da, Vec obs_error_var)
+PetscErrorCode PetscDataAssimilatorSetObsErrorVariance(PetscDataAssimilator da, Vec obs_error_var)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscValidHeaderSpecific(obs_error_var, VEC_CLASSID, 2);
 
   if (!da->obs_error_var) PetscCall(VecDuplicate(obs_error_var, &da->obs_error_var));
@@ -567,46 +567,46 @@ PetscErrorCode PetscDASetObsErrorVariance(PetscDA da, Vec obs_error_var)
 }
 
 /*@
-  PetscDAGetObsErrorVariance - Returns a borrowed reference to the observation-error variance vector.
+  PetscDataAssimilatorGetObsErrorVariance - Returns a borrowed reference to the observation-error variance vector.
 
   Not Collective
 
   Input Parameter:
-. da - the `PetscDA` context
+. da - the `PetscDataAssimilator` context
 
   Output Parameter:
-. obs_error_var - pointer to the variance vector managed by the `PetscDA`
+. obs_error_var - pointer to the variance vector managed by the `PetscDataAssimilator`
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDASetObsErrorVariance()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorSetObsErrorVariance()`
 @*/
-PetscErrorCode PetscDAGetObsErrorVariance(PetscDA da, Vec *obs_error_var)
+PetscErrorCode PetscDataAssimilatorGetObsErrorVariance(PetscDataAssimilator da, Vec *obs_error_var)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscAssertPointer(obs_error_var, 2);
   *obs_error_var = da->obs_error_var;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscDASetOrthogonalTransform - Installs the ensemble-space orthogonal matrix used in deterministic square-root updates.
+  PetscDataAssimilatorSetOrthogonalTransform - Installs the ensemble-space orthogonal matrix used in deterministic square-root updates.
 
   Collective
 
   Input Parameters:
-+ da - the `PetscDA` context
++ da - the `PetscDataAssimilator` context
 - U  - orthogonal matrix to store (referenced internally)
 
   Level: developer
 
-.seealso: [](ch_dataassimilator), `PetscDAGetOrthogonalTransform()`, `PetscDAETKFAnalysis()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorGetOrthogonalTransform()`, `PetscDataAssimilatorETKFAnalysis()`
 @*/
-PetscErrorCode PetscDASetOrthogonalTransform(PetscDA da, Mat U)
+PetscErrorCode PetscDataAssimilatorSetOrthogonalTransform(PetscDataAssimilator da, Mat U)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscValidHeaderSpecific(U, MAT_CLASSID, 2);
 
   if (da->U) PetscCall(MatDestroy(&da->U));
@@ -616,51 +616,51 @@ PetscErrorCode PetscDASetOrthogonalTransform(PetscDA da, Mat U)
 }
 
 /*@
-  PetscDAGetOrthogonalTransform - Retrieves the orthogonal matrix currently stored in a `PetscDA`.
+  PetscDataAssimilatorGetOrthogonalTransform - Retrieves the orthogonal matrix currently stored in a `PetscDataAssimilator`.
 
   Not Collective
 
   Input Parameter:
-. da - the `PetscDA` context
+. da - the `PetscDataAssimilator` context
 
   Output Parameter:
 . U - pointer that will receive the matrix (may be `NULL`)
 
   Level: developer
 
-.seealso: [](ch_dataassimilator), `PetscDASetOrthogonalTransform()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorSetOrthogonalTransform()`
 @*/
-PetscErrorCode PetscDAGetOrthogonalTransform(PetscDA da, Mat *U)
+PetscErrorCode PetscDataAssimilatorGetOrthogonalTransform(PetscDataAssimilator da, Mat *U)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscAssertPointer(U, 2);
   *U = da->U;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscDAGetEnsembleMember - Returns a read-only view of an ensemble member stored in the `PetscDA`.
+  PetscDataAssimilatorGetEnsembleMember - Returns a read-only view of an ensemble member stored in the `PetscDataAssimilator`.
 
   Collective
 
   Input Parameters:
-+ da         - the `PetscDA` context
++ da         - the `PetscDataAssimilator` context
 - member_idx - index of the requested member (0 <= idx < ensemble_size)
 
   Output Parameter:
-. member - read-only vector view; call `PetscDARestoreEnsembleMember()` when done
+. member - read-only vector view; call `PetscDataAssimilatorRestoreEnsembleMember()` when done
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDARestoreEnsembleMember()`, `PetscDASetEnsembleMember()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorRestoreEnsembleMember()`, `PetscDataAssimilatorSetEnsembleMember()`
 @*/
-PetscErrorCode PetscDAGetEnsembleMember(PetscDA da, PetscInt member_idx, Vec *member)
+PetscErrorCode PetscDataAssimilatorGetEnsembleMember(PetscDataAssimilator da, PetscInt member_idx, Vec *member)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscAssertPointer(member, 3);
-  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDASetUp() must be called before accessing ensemble members");
+  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDataAssimilatorSetUp() must be called before accessing ensemble members");
   PetscCheck(member_idx >= 0 && member_idx < da->ensemble_size, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Member index %" PetscInt_FMT " out of range [0, %" PetscInt_FMT ")", member_idx, da->ensemble_size);
 
   PetscCall(MatDenseGetColumnVecRead(da->ensemble, member_idx, member));
@@ -668,23 +668,23 @@ PetscErrorCode PetscDAGetEnsembleMember(PetscDA da, PetscInt member_idx, Vec *me
 }
 
 /*@
-  PetscDARestoreEnsembleMember - Returns a column view obtained with `PetscDAGetEnsembleMember()`.
+  PetscDataAssimilatorRestoreEnsembleMember - Returns a column view obtained with `PetscDataAssimilatorGetEnsembleMember()`.
 
   Collective
 
   Input Parameters:
-+ da         - the `PetscDA` context
++ da         - the `PetscDataAssimilator` context
 . member_idx - index that was previously requested
 - member     - location that holds the view to restore
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDAGetEnsembleMember()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorGetEnsembleMember()`
 @*/
-PetscErrorCode PetscDARestoreEnsembleMember(PetscDA da, PetscInt member_idx, Vec *member)
+PetscErrorCode PetscDataAssimilatorRestoreEnsembleMember(PetscDataAssimilator da, PetscInt member_idx, Vec *member)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscAssertPointer(member, 3);
 
   PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, member_idx, member));
@@ -692,27 +692,27 @@ PetscErrorCode PetscDARestoreEnsembleMember(PetscDA da, PetscInt member_idx, Vec
 }
 
 /*@
-  PetscDASetEnsembleMember - Overwrites an ensemble member with user-provided state data.
+  PetscDataAssimilatorSetEnsembleMember - Overwrites an ensemble member with user-provided state data.
 
   Collective
 
   Input Parameters:
-+ da         - the `PetscDA` context
++ da         - the `PetscDataAssimilator` context
 . member_idx - index of the entry to modify
 - member     - vector containing the new state values
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDAGetEnsembleMember()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorGetEnsembleMember()`
 @*/
-PetscErrorCode PetscDASetEnsembleMember(PetscDA da, PetscInt member_idx, Vec member)
+PetscErrorCode PetscDataAssimilatorSetEnsembleMember(PetscDataAssimilator da, PetscInt member_idx, Vec member)
 {
   Vec col;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscValidHeaderSpecific(member, VEC_CLASSID, 3);
-  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDASetUp() must be called before setting ensemble members");
+  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "PetscDataAssimilatorSetUp() must be called before setting ensemble members");
   PetscCheck(member_idx >= 0 && member_idx < da->ensemble_size, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Member index %" PetscInt_FMT " out of range [0, %" PetscInt_FMT ")", member_idx, da->ensemble_size);
 
   PetscCall(MatDenseGetColumnVecWrite(da->ensemble, member_idx, &col));
@@ -722,22 +722,22 @@ PetscErrorCode PetscDASetEnsembleMember(PetscDA da, PetscInt member_idx, Vec mem
 }
 
 /*@
-  PetscDAComputeMean - Computes the ensemble mean state for a `PetscDA`.
+  PetscDataAssimilatorComputeMean - Computes the ensemble mean state for a `PetscDataAssimilator`.
 
   Collective
 
   Input Parameters:
-+ da   - the `PetscDA` context
++ da   - the `PetscDataAssimilator` context
 - mean - vector that will hold the ensemble mean
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDAComputeAnomalies()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorComputeAnomalies()`
 @*/
-PetscErrorCode PetscDAComputeMean(PetscDA da, Vec mean)
+PetscErrorCode PetscDataAssimilatorComputeMean(PetscDataAssimilator da, Vec mean)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscValidHeaderSpecific(mean, VEC_CLASSID, 2);
 
   PetscUseTypeMethod(da, computemean, mean);
@@ -745,22 +745,22 @@ PetscErrorCode PetscDAComputeMean(PetscDA da, Vec mean)
 }
 
 /*@
-  PetscDAComputeAnomalies - Forms the state-space anomalies matrix for a `PetscDA`.
+  PetscDataAssimilatorComputeAnomalies - Forms the state-space anomalies matrix for a `PetscDataAssimilator`.
 
   Collective
 
   Input Parameters:
-+ da        - the `PetscDA` context
++ da        - the `PetscDataAssimilator` context
 - anomalies - location to store the newly created anomalies matrix
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDAComputeMean()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorComputeMean()`
 @*/
-PetscErrorCode PetscDAComputeAnomalies(PetscDA da, Mat *anomalies)
+PetscErrorCode PetscDataAssimilatorComputeAnomalies(PetscDataAssimilator da, Mat *anomalies)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscAssertPointer(anomalies, 2);
 
   PetscUseTypeMethod(da, computeanomalies, anomalies);
@@ -768,24 +768,24 @@ PetscErrorCode PetscDAComputeAnomalies(PetscDA da, Mat *anomalies)
 }
 
 /*@C
-  PetscDAAnalysis - Executes the analysis (update) step of the configured data assimilation method.
+  PetscDataAssimilatorAnalysis - Executes the analysis (update) step of the configured data assimilation method.
 
   Collective
 
   Input Parameters:
-+ da                   - the `PetscDA` context
++ da                   - the `PetscDataAssimilator` context
 . observation          - observation vector
 . observation_operator - routine that evaluates the observation model `H(x)`
 - obs_ctx              - optional context for `observation_operator`
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDAApplyModel()`, `PetscDAETKFAnalysis()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorApplyModel()`, `PetscDataAssimilatorETKFAnalysis()`
 @*/
-PetscErrorCode PetscDAAnalysis(PetscDA da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
+PetscErrorCode PetscDataAssimilatorAnalysis(PetscDataAssimilator da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
 
   PetscUseTypeMethod(da, analysis, observation, observation_operator, obs_ctx);
@@ -793,23 +793,23 @@ PetscErrorCode PetscDAAnalysis(PetscDA da, Vec observation, PetscErrorCode (*obs
 }
 
 /*@C
-  PetscDAApplyModel - Advances every ensemble member through the user-supplied forecast model.
+  PetscDataAssimilatorApplyModel - Advances every ensemble member through the user-supplied forecast model.
 
   Collective
 
   Input Parameters:
-+ da        - the `PetscDA` context
++ da        - the `PetscDataAssimilator` context
 . model     - routine that evaluates the model map `f(x, xnew; ctx)`
 - model_ctx - optional context for `model`
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDAAnalysis()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorAnalysis()`
 @*/
-PetscErrorCode PetscDAApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
+PetscErrorCode PetscDataAssimilatorApplyModel(PetscDataAssimilator da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
 
   PetscUseTypeMethod(da, applymodel, model, model_ctx);
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -916,7 +916,7 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
 }
 
 /*
-  PetscDACholeskySqrt_Private - Computes the lower triangular Cholesky factorization of a symmetric positive definite matrix.
+  PetscDataAssimilatorCholeskySqrt_Private - Computes the lower triangular Cholesky factorization of a symmetric positive definite matrix.
 
   Input Parameter:
 . A - symmetric positive definite matrix to factorize
@@ -937,9 +937,9 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
   Developer Notes:
   This is a private function used internally by the data assimilation module.
   For a general symmetric matrix square root that handles semi-definite matrices,
-  use PetscDASymmetricEigenSqrt_Private instead.
+  use PetscDataAssimilatorSymmetricEigenSqrt_Private instead.
 */
-PetscErrorCode PetscDACholeskySqrt_Private(Mat A, Mat *L_out)
+PetscErrorCode PetscDataAssimilatorCholeskySqrt_Private(Mat A, Mat *L_out)
 {
   Mat          L = NULL;
   PetscInt     m, n, i, j;
@@ -1028,7 +1028,7 @@ PetscErrorCode PetscDACholeskySqrt_Private(Mat A, Mat *L_out)
 }
 
 /*
-  PetscDASymmetricEigenSqrt_Private - Computes the symmetric matrix square root using eigendecomposition.
+  PetscDataAssimilatorSymmetricEigenSqrt_Private - Computes the symmetric matrix square root using eigendecomposition.
 
   Input Parameter:
 . A - symmetric matrix to compute the square root of
@@ -1051,11 +1051,11 @@ PetscErrorCode PetscDACholeskySqrt_Private(Mat A, Mat *L_out)
   Performance: O(n^3) for eigendecomposition, plus O(n^3) for matrix multiplications.
 
   Developer Notes:
-  - Prefer PetscDACholeskySqrt_Private for positive definite matrices (faster)
+  - Prefer PetscDataAssimilatorCholeskySqrt_Private for positive definite matrices (faster)
   - This function is more robust for semi-definite or nearly singular matrices
   - All eigenvalues must be non-negative (within tolerance) for the operation to succeed
 */
-PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
+PetscErrorCode PetscDataAssimilatorSymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
 {
   Mat          sqrtA = NULL, eigenvectors = NULL, scaled_eigenvectors = NULL;
   Vec          sqrt_eigenvalues = NULL;
