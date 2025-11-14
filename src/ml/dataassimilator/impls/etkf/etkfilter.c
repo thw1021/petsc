@@ -2,11 +2,11 @@
 #include <petsc/private/daimpl.h>
 
 typedef struct {
-  PetscDAETKFSqrtType sqrt_type;
-} PetscDAETKFData;
+  PetscDataAssimilatorETKFSqrtType sqrt_type;
+} PetscDataAssimilatorETKFData;
 
-static PetscFunctionList PetscDAETKFSqrtList           = NULL;
-static PetscBool         PetscDAETKFPackageInitialized = PETSC_FALSE;
+static PetscFunctionList PetscDataAssimilatorETKFSqrtList           = NULL;
+static PetscBool         PetscDataAssimilatorETKFPackageInitialized = PETSC_FALSE;
 
 /* ========================================================================== */
 /*                    Helper Functions for ETKF Analysis                     */
@@ -16,14 +16,14 @@ static PetscBool         PetscDAETKFPackageInitialized = PETSC_FALSE;
   ComputeObservationEnsemble - Applies observation operator H to each ensemble member
 
   Input Parameters:
-+ da                   - the PetscDA context
++ da                   - the PetscDataAssimilator context
 . observation_operator - user-supplied routine H(x, y; ctx)
 - obs_ctx              - optional context for observation_operator
 
   Output Parameter:
 . Z - observation ensemble matrix (obs_size x ensemble_size)
 */
-static PetscErrorCode ComputeObservationEnsemble(PetscDA da, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx, Mat *Z)
+static PetscErrorCode ComputeObservationEnsemble(PetscDataAssimilator da, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx, Mat *Z)
 {
   /* Ensemble and observation-related vectors */
   Vec ensemble_member_in, observation_out, temp_observation;
@@ -32,7 +32,7 @@ static PetscErrorCode ComputeObservationEnsemble(PetscDA da, PetscErrorCode (*ob
 
   PetscFunctionBegin;
   /* Validate input parameters */
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscAssertPointer(Z, 4);
   PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Ensemble matrix not initialized");
 
@@ -240,7 +240,7 @@ static PetscErrorCode ComputeAnalysisWeights(Mat T, Mat S, Vec delta_scaled, Vec
 
   Level\: developer
 
-.seealso\: [`ComputeAnalysisWeights()`](etkf.c:179), [`MatDenseGetColumnVecWrite()`](petscmat.h), [`PetscDAETKFAnalysis()`](etkf.c:417)
+.seealso\: [`ComputeAnalysisWeights()`](etkf.c:179), [`MatDenseGetColumnVecWrite()`](petscmat.h), [`PetscDataAssimilatorETKFAnalysis()`](etkf.c:417)
 */
 static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
 {
@@ -321,7 +321,7 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
 
   Level\: developer
 
-.seealso\: [`PetscDAETKFAnalysis()`](etkf.c:446), [`ComputeAnalysisWeights()`](etkf.c:179),
+.seealso\: [`PetscDataAssimilatorETKFAnalysis()`](etkf.c:446), [`ComputeAnalysisWeights()`](etkf.c:179),
 [`BroadcastWeightVector()`](etkf.c:246), [`MatMatMult()`](petscmat.h), [`VecWAXPY()`](petscvec.h)
 */
 static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscInt m, Mat ensemble)
@@ -390,17 +390,17 @@ static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscI
 /*                       Square Root Type Setters                            */
 /* ========================================================================== */
 
-static PetscErrorCode PetscDAETKFSetSqrt_Cholesky(PetscDA da)
+static PetscErrorCode PetscDataAssimilatorETKFSetSqrt_Cholesky(PetscDataAssimilator da)
 {
   PetscFunctionBegin;
-  PetscCall(PetscDAETKFSetSqrtType(da, PETSCDAETKF_SQRT_CHOLESKY));
+  PetscCall(PetscDataAssimilatorETKFSetSqrtType(da, PETSCDAETKF_SQRT_CHOLESKY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscDAETKFSetSqrt_Eigen(PetscDA da)
+static PetscErrorCode PetscDataAssimilatorETKFSetSqrt_Eigen(PetscDataAssimilator da)
 {
   PetscFunctionBegin;
-  PetscCall(PetscDAETKFSetSqrtType(da, PETSCDAETKF_SQRT_EIGEN));
+  PetscCall(PetscDataAssimilatorETKFSetSqrtType(da, PETSCDAETKF_SQRT_EIGEN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -408,34 +408,34 @@ static PetscErrorCode PetscDAETKFSetSqrt_Eigen(PetscDA da)
 /*                       ETKF Implementation Lifecycle                       */
 /* ========================================================================== */
 
-static PetscErrorCode PetscDAETKFDestroy(PetscDA da)
+static PetscErrorCode PetscDataAssimilatorETKFDestroy(PetscDataAssimilator da)
 {
   PetscFunctionBegin;
   PetscCall(PetscFree(da->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscDASetFromOptions_DAETKF(PetscDA da, PetscOptionItems *PetscOptions)
+static PetscErrorCode PetscDataAssimilatorSetFromOptions_DAETKF(PetscDataAssimilator da, PetscOptionItems *PetscOptions)
 {
-  PetscDAETKFData *impl;
+  PetscDataAssimilatorETKFData *impl;
   PetscOptionItems PetscOptionsObject;
   const char      *defaultType;
   char             typeName[256];
   PetscBool        set              = PETSC_FALSE;
-  PetscErrorCode (*setter)(PetscDA) = NULL;
+  PetscErrorCode (*setter)(PetscDataAssimilator) = NULL;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscAssert(da->data, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDA data structure not initialized");
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
+  PetscAssert(da->data, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDataAssimilator data structure not initialized");
 
-  impl               = (PetscDAETKFData *)da->data;
+  impl               = (PetscDataAssimilatorETKFData *)da->data;
   PetscOptionsObject = PetscOptions ? *PetscOptions : NULL;
 
   defaultType = (impl->sqrt_type == PETSCDAETKF_SQRT_EIGEN) ? "eigen" : "cholesky";
   PetscCall(PetscStrncpy(typeName, defaultType, sizeof(typeName)));
-  PetscCall(PetscOptionsFList("-petscdaetkf_sqrt_type", "Matrix square root factorization", "PetscDAETKFSetSqrtType", PetscDAETKFSqrtList, defaultType, typeName, sizeof(typeName), &set));
+  PetscCall(PetscOptionsFList("-petscdaetkf_sqrt_type", "Matrix square root factorization", "PetscDataAssimilatorETKFSetSqrtType", PetscDataAssimilatorETKFSqrtList, defaultType, typeName, sizeof(typeName), &set));
   if (set) {
-    PetscCall(PetscFunctionListFind(PetscDAETKFSqrtList, typeName, &setter));
+    PetscCall(PetscFunctionListFind(PetscDataAssimilatorETKFSqrtList, typeName, &setter));
     PetscCheck(setter, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDAETKF square-root type \"%s\"", typeName);
     PetscCall((*setter)(da));
   }
@@ -447,35 +447,35 @@ static PetscErrorCode PetscDASetFromOptions_DAETKF(PetscDA da, PetscOptionItems 
 /* ========================================================================== */
 
 /*@C
-  PetscDAETKFInitializePackage - This function initializes everything in the `PetscDAETKF` package. It is called from `TSInitializePackage()`.
+  PetscDataAssimilatorETKFInitializePackage - This function initializes everything in the `PetscDataAssimilatorETKF` package. It is called from `TSInitializePackage()`.
 
   Level: developer
 
-.seealso: [](ch_ts), `PetscInitialize()`, `PetscDAETKFFinalizePackage()`
+.seealso: [](ch_ts), `PetscInitialize()`, `PetscDataAssimilatorETKFFinalizePackage()`
 @*/
-PetscErrorCode PetscDAETKFInitializePackage(void)
+PetscErrorCode PetscDataAssimilatorETKFInitializePackage(void)
 {
   PetscFunctionBegin;
-  if (PetscDAETKFPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscDAETKFPackageInitialized = PETSC_TRUE;
-  PetscCall(PetscFunctionListAdd(&PetscDAETKFSqrtList, "cholesky", PetscDAETKFSetSqrt_Cholesky));
-  PetscCall(PetscFunctionListAdd(&PetscDAETKFSqrtList, "eigen", PetscDAETKFSetSqrt_Eigen));
-  PetscCall(PetscRegisterFinalize(PetscDAETKFFinalizePackage));
+  if (PetscDataAssimilatorETKFPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscDataAssimilatorETKFPackageInitialized = PETSC_TRUE;
+  PetscCall(PetscFunctionListAdd(&PetscDataAssimilatorETKFSqrtList, "cholesky", PetscDataAssimilatorETKFSetSqrt_Cholesky));
+  PetscCall(PetscFunctionListAdd(&PetscDataAssimilatorETKFSqrtList, "eigen", PetscDataAssimilatorETKFSetSqrt_Eigen));
+  PetscCall(PetscRegisterFinalize(PetscDataAssimilatorETKFFinalizePackage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  PetscDAETKFFinalizePackage - This function destroys everything in the `PetscDAETKF` package. It is called from `PetscFinalize()`.
+  PetscDataAssimilatorETKFFinalizePackage - This function destroys everything in the `PetscDataAssimilatorETKF` package. It is called from `PetscFinalize()`.
 
   Level: developer
 
-.seealso: [](ch_ts), `PetscFinalize()`, `PetscDAETKFInitializePackage()`
+.seealso: [](ch_ts), `PetscFinalize()`, `PetscDataAssimilatorETKFInitializePackage()`
 @*/
-PetscErrorCode PetscDAETKFFinalizePackage(void)
+PetscErrorCode PetscDataAssimilatorETKFFinalizePackage(void)
 {
   PetscFunctionBegin;
-  PetscDAETKFPackageInitialized = PETSC_FALSE;
-  PetscCall(PetscFunctionListDestroy(&PetscDAETKFSqrtList));
+  PetscDataAssimilatorETKFPackageInitialized = PETSC_FALSE;
+  PetscCall(PetscFunctionListDestroy(&PetscDataAssimilatorETKFSqrtList));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -498,12 +498,12 @@ PetscErrorCode PetscDAETKFFinalizePackage(void)
 /* ========================================================================== */
 
 /*
-  PetscDAETKFAnalysis - Performs the ensemble transform Kalman filter (ETKF) analysis defined by Algorithm 6.4 in Law, Stuart, and Zygalakis.
+  PetscDataAssimilatorETKFAnalysis - Performs the ensemble transform Kalman filter (ETKF) analysis defined by Algorithm 6.4 in Law, Stuart, and Zygalakis.
 
   Collective
 
   Input Parameters:
-+ da                   - the `PetscDA` context owning the forecast ensemble and buffers
++ da                   - the `PetscDataAssimilator` context owning the forecast ensemble and buffers
 . observation          - observation vector `y`
 . observation_operator - user-supplied routine `H(x, y; ctx)` that maps a state to observation space
 - obs_ctx              - optional context for `observation_operator`
@@ -516,26 +516,26 @@ PetscErrorCode PetscDAETKFFinalizePackage(void)
 
   Level: advanced
 
-.seealso: [](ch_dataassimilator), `PetscDA`, `PetscDAETKFApplyModel()`, `PetscDAComputeMean()`,
-`PetscDAComputeAnomalies()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilator`, `PetscDataAssimilatorETKFApplyModel()`, `PetscDataAssimilatorComputeMean()`,
+`PetscDataAssimilatorComputeAnomalies()`
 */
-static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
+static PetscErrorCode PetscDataAssimilatorETKFAnalysis(PetscDataAssimilator da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
 {
-  PetscDAETKFData *impl;
+  PetscDataAssimilatorETKFData *impl;
   Vec              mean, y_mean, delta_scaled, w, r_inv_sqrt;
   Mat              X, Z, S, T, T_sqrt, I_m, w_ones, T_sqrt_U, G;
   PetscInt         m;
   PetscScalar      inv_m, scale, sqrt_m_minus_1;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
 
   /* Validate ensemble size */
   m = da->ensemble_size;
   PetscCheck(m > 1, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be > 1, got %" PetscInt_FMT, m);
 
-  impl           = (PetscDAETKFData *)da->data;
+  impl           = (PetscDataAssimilatorETKFData *)da->data;
   inv_m          = 1.0 / ((PetscScalar)m);
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
@@ -546,10 +546,10 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &mean));
   PetscCall(VecSetSizes(mean, PETSC_DECIDE, da->state_size));
   PetscCall(VecSetFromOptions(mean));
-  PetscCall(PetscDAComputeMean(da, mean));
+  PetscCall(PetscDataAssimilatorComputeMean(da, mean));
 
   /* X = (E - x_mean * 1') / sqrt(m - 1) */
-  PetscCall(PetscDAComputeAnomalies(da, &X));
+  PetscCall(PetscDataAssimilatorComputeAnomalies(da, &X));
 
   /* ===================================================================== */
   /* Step 3: Compute observation ensemble Z = H(x_i^f)                   */
@@ -611,10 +611,10 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
   /* ===================================================================== */
   switch (impl->sqrt_type) {
   case PETSCDAETKF_SQRT_CHOLESKY:
-    PetscCall(PetscDACholeskySqrt_Private(T, &T_sqrt));
+    PetscCall(PetscDataAssimilatorCholeskySqrt_Private(T, &T_sqrt));
     break;
   case PETSCDAETKF_SQRT_EIGEN:
-    PetscCall(PetscDASymmetricEigenSqrt_Private(T, &T_sqrt));
+    PetscCall(PetscDataAssimilatorSymmetricEigenSqrt_Private(T, &T_sqrt));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported PetscDAETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
@@ -662,31 +662,31 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
 /* ========================================================================== */
 
 /*
-  PetscDAETKFApplyModel - Advances each ensemble member through the user-supplied
+  PetscDataAssimilatorETKFApplyModel - Advances each ensemble member through the user-supplied
   nonlinear model (Algorithm 6.4, Step 10 forecast propagation).
 
   Collective
 
   Input Parameters:
-+ da        - the `PetscDA` context that stores the ensemble
++ da        - the `PetscDataAssimilator` context that stores the ensemble
 . model     - routine that evaluates the model `f(x, xnew; ctx)`
 - model_ctx - optional context for `model`
 
   Notes:
   This routine overwrites every ensemble column with the model result supplied by `model`.
-  It is typically called immediately after `PetscDAETKFAnalysis()` to start the next forecast cycle.
+  It is typically called immediately after `PetscDataAssimilatorETKFAnalysis()` to start the next forecast cycle.
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDA`, `PetscDAETKFAnalysis()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilator`, `PetscDataAssimilatorETKFAnalysis()`
 */
-static PetscErrorCode PetscDAETKFApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
+static PetscErrorCode PetscDataAssimilatorETKFApplyModel(PetscDataAssimilator da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
 {
   Vec      col_in, col_out, temp;
   PetscInt i;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
 
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &temp));
   PetscCall(VecSetSizes(temp, PETSC_DECIDE, da->state_size));
@@ -711,86 +711,86 @@ static PetscErrorCode PetscDAETKFApplyModel(PetscDA da, PetscErrorCode (*model)(
 /* ========================================================================== */
 
 /*@
-  PetscDAETKFSetSqrtType - Selects the reduced-space square-root algorithm used during the ETKF analysis.
+  PetscDataAssimilatorETKFSetSqrtType - Selects the reduced-space square-root algorithm used during the ETKF analysis.
 
   Logically Collective
 
   Input Parameters:
-+ da   - the `PetscDA` object
++ da   - the `PetscDataAssimilator` object
 - type - either `PETSCDAETKF_SQRT_CHOLESKY` or `PETSCDAETKF_SQRT_EIGEN`
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDA`, `PetscDAETKFGetSqrtType()`, `PetscDAETKFAnalysis()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilator`, `PetscDataAssimilatorETKFGetSqrtType()`, `PetscDataAssimilatorETKFAnalysis()`
 @*/
-PetscErrorCode PetscDAETKFSetSqrtType(PetscDA da, PetscDAETKFSqrtType type)
+PetscErrorCode PetscDataAssimilatorETKFSetSqrtType(PetscDataAssimilator da, PetscDataAssimilatorETKFSqrtType type)
 {
-  PetscDAETKFData *impl;
+  PetscDataAssimilatorETKFData *impl;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscCheck(da->data, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDA data structure not initialized");
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
+  PetscCheck(da->data, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDataAssimilator data structure not initialized");
   PetscCheck(type == PETSCDAETKF_SQRT_CHOLESKY || type == PETSCDAETKF_SQRT_EIGEN, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Invalid PetscDAETKF square-root type %" PetscInt_FMT, (PetscInt)type);
 
-  impl            = (PetscDAETKFData *)da->data;
+  impl            = (PetscDataAssimilatorETKFData *)da->data;
   impl->sqrt_type = type;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscDAETKFGetSqrtType - Retrieves the current square-root implementation configured for the ETKF analysis.
+  PetscDataAssimilatorETKFGetSqrtType - Retrieves the current square-root implementation configured for the ETKF analysis.
 
   Not Collective
 
   Input Parameters:
-. da - the `PetscDA` object
+. da - the `PetscDataAssimilator` object
 
   Output Parameter:
-. type - on output, the configured `PetscDAETKFSqrtType`
+. type - on output, the configured `PetscDataAssimilatorETKFSqrtType`
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDA`, `PetscDAETKFSetSqrtType()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilator`, `PetscDataAssimilatorETKFSetSqrtType()`
 @*/
-PetscErrorCode PetscDAETKFGetSqrtType(PetscDA da, PetscDAETKFSqrtType *type)
+PetscErrorCode PetscDataAssimilatorETKFGetSqrtType(PetscDataAssimilator da, PetscDataAssimilatorETKFSqrtType *type)
 {
-  PetscDAETKFData *impl;
+  PetscDataAssimilatorETKFData *impl;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscAssertPointer(type, 2);
-  PetscCheck(da->data, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDA data structure not initialized");
+  PetscCheck(da->data, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDataAssimilator data structure not initialized");
 
-  impl  = (PetscDAETKFData *)da->data;
+  impl  = (PetscDataAssimilatorETKFData *)da->data;
   *type = impl->sqrt_type;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
-  PetscDAETKFView - Views a `PetscDAETKF` and its implementation-specific data structure.
+  PetscDataAssimilatorETKFView - Views a `PetscDataAssimilatorETKF` and its implementation-specific data structure.
 
   Collective
 
   Input Parameters:
-+ da     - the `PetscDA` context
++ da     - the `PetscDataAssimilator` context
 - viewer - the `PetscViewer` to use (or `NULL` for standard output)
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDAViewFromOptions()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilatorViewFromOptions()`
 */
-static PetscErrorCode PetscDAETKFView(PetscDA da, PetscViewer viewer)
+static PetscErrorCode PetscDataAssimilatorETKFView(PetscDataAssimilator da, PetscViewer viewer)
 {
   PetscBool        iascii;
-  PetscDAETKFData *impl;
+  PetscDataAssimilatorETKFData *impl;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   if (!viewer) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)da), &viewer));
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
   PetscCheckSameComm(da, 1, viewer, 2);
 
-  impl = (PetscDAETKFData *)da->data;
+  impl = (PetscDataAssimilatorETKFData *)da->data;
 
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
@@ -801,40 +801,40 @@ static PetscErrorCode PetscDAETKFView(PetscDA da, PetscViewer viewer)
 }
 
 /*
-  PetscDAETKFInitialize - Installs the ETKF-specific operations on a newly created `PetscDA` object.
+  PetscDataAssimilatorETKFInitialize - Installs the ETKF-specific operations on a newly created `PetscDataAssimilator` object.
 
   Collective
 
   Input Parameter:
-. da - the `PetscDA` object to configure
+. da - the `PetscDataAssimilator` object to configure
 
   Level: developer
 
-.seealso: [](ch_dataassimilator), `PetscDA`, `PetscDAETKFRegister()`, `PetscDAETKFAnalysis()`
+.seealso: [](ch_dataassimilator), `PetscDataAssimilator`, `PetscDataAssimilatorETKFRegister()`, `PetscDataAssimilatorETKFAnalysis()`
 */
-static PetscErrorCode PetscDAETKFInitialize(PetscDA da)
+static PetscErrorCode PetscDataAssimilatorETKFInitialize(PetscDataAssimilator da)
 {
-  PetscDAETKFData *impl;
+  PetscDataAssimilatorETKFData *impl;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&impl));
   impl->sqrt_type = PETSCDAETKF_SQRT_EIGEN;
 
   da->data                  = impl;
-  da->ops->analysis         = PetscDAETKFAnalysis;
-  da->ops->applymodel       = PetscDAETKFApplyModel;
+  da->ops->analysis         = PetscDataAssimilatorETKFAnalysis;
+  da->ops->applymodel       = PetscDataAssimilatorETKFApplyModel;
   da->ops->computemean      = NULL;
   da->ops->computeanomalies = NULL;
-  da->ops->destroy          = PetscDAETKFDestroy;
-  da->ops->view             = PetscDAETKFView;
-  da->ops->setfromoptions   = PetscDASetFromOptions_DAETKF;
+  da->ops->destroy          = PetscDataAssimilatorETKFDestroy;
+  da->ops->view             = PetscDataAssimilatorETKFView;
+  da->ops->setfromoptions   = PetscDataAssimilatorSetFromOptions_DAETKF;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscDAETKFRegister(void)
+PetscErrorCode PetscDataAssimilatorETKFRegister(void)
 {
   PetscFunctionBegin;
-  PetscCall(PetscDARegister(PETSCDAETKF, PetscDAETKFInitialize));
-  PetscCall(PetscDAETKFInitializePackage());
+  PetscCall(PetscDataAssimilatorRegister(PETSCDAETKF, PetscDataAssimilatorETKFInitialize));
+  PetscCall(PetscDataAssimilatorETKFInitializePackage());
   PetscFunctionReturn(PETSC_SUCCESS);
 }

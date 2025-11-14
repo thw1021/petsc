@@ -1,4 +1,4 @@
-/* Data assimilation framework header (provides PetscDA) */
+/* Data assimilation framework header (provides PetscDataAssimilator) */
 #include "petscda.h"
 /* PETSc DMDA header (provides DM, DMDA functionality) */
 #include <petscdmda.h>
@@ -248,7 +248,7 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *steps, PetscInt 
   InitializeEnsemble - Initialize ensemble members with Gaussian perturbations
 
   Input Parameters:
-+ da_ctx        - PetscDA context
++ da_ctx        - PetscDataAssimilator context
 . x0            - Background state
 . ensemble_size - Number of ensemble members
 . obs_error_std - Standard deviation for perturbations
@@ -257,7 +257,7 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *steps, PetscInt 
   Notes:
   Each ensemble member is initialized as x0 + Gaussian(0, obs_error_std)
 */
-static PetscErrorCode InitializeEnsemble(PetscDA da_ctx, Vec x0, PetscInt ensemble_size, PetscReal obs_error_std, PetscRandom rng)
+static PetscErrorCode InitializeEnsemble(PetscDataAssimilator da_ctx, Vec x0, PetscInt ensemble_size, PetscReal obs_error_std, PetscRandom rng)
 {
   Vec      member, spread;
   PetscInt i;
@@ -271,7 +271,7 @@ static PetscErrorCode InitializeEnsemble(PetscDA da_ctx, Vec x0, PetscInt ensemb
     PetscCall(VecCopy(x0, member));
     PetscCall(VecSetRandomGaussian(spread, rng, 0.0, obs_error_std));
     PetscCall(VecAXPY(member, 1.0, spread));
-    PetscCall(PetscDASetEnsembleMember(da_ctx, i, member));
+    PetscCall(PetscDataAssimilatorSetEnsembleMember(da_ctx, i, member));
   }
 
   PetscCall(VecDestroy(&member));
@@ -319,13 +319,13 @@ int main(int argc, char **argv)
   PetscReal obs_error_std = DEFAULT_OBS_ERROR_STD;
 
   /* PETSc objects */
-  Lorenz96Ctx *l95_ctx = NULL;
-  DM           da_state;
-  PetscDA      da_ctx;
-  Vec          x0, x_mean, x_forecast;
-  Vec          truth_state, truth_next;
-  Vec          observation, obs_noise, obs_error_var;
-  PetscRandom  rng;
+  Lorenz96Ctx         *l95_ctx = NULL;
+  DM                   da_state;
+  PetscDataAssimilator da_ctx;
+  Vec                  x0, x_mean, x_forecast;
+  Vec                  truth_state, truth_next;
+  Vec                  observation, obs_noise, obs_error_var;
+  PetscRandom          rng;
 
   /* Statistics tracking */
   PetscReal rmse_forecast = 0.0, rmse_analysis = 0.0;
@@ -388,13 +388,13 @@ int main(int argc, char **argv)
   PetscCall(VecDuplicate(x0, &x_mean));
   PetscCall(VecDuplicate(x0, &x_forecast));
 
-  /* Create and configure PetscDA for ensemble data assimilation */
-  PetscCall(PetscDACreate(PETSC_COMM_WORLD, &da_ctx));
-  PetscCall(PetscDASetSizes(da_ctx, n, n, ensemble_size));
-  PetscCall(PetscDASetFromOptions(da_ctx));
-  PetscCall(PetscDASetUp(da_ctx));
-  PetscCall(PetscDAViewFromOptions(da_ctx, NULL, "-petscda_view"));
-  PetscCall(PetscDASetObsErrorVariance(da_ctx, obs_error_var));
+  /* Create and configure PetscDataAssimilator for ensemble data assimilation */
+  PetscCall(PetscDataAssimilatorCreate(PETSC_COMM_WORLD, &da_ctx));
+  PetscCall(PetscDataAssimilatorSetSizes(da_ctx, n, n, ensemble_size));
+  PetscCall(PetscDataAssimilatorSetFromOptions(da_ctx));
+  PetscCall(PetscDataAssimilatorSetUp(da_ctx));
+  PetscCall(PetscDataAssimilatorViewFromOptions(da_ctx, NULL, "-petscda_view"));
+  PetscCall(PetscDataAssimilatorSetObsErrorVariance(da_ctx, obs_error_var));
 
   /* Initialize ensemble members */
   PetscCall(InitializeEnsemble(da_ctx, x0, ensemble_size, obs_error_std, rng));
@@ -419,7 +419,7 @@ int main(int argc, char **argv)
     PetscReal time = step * dt;
 
     /* Forecast step: compute ensemble mean and forecast RMSE */
-    PetscCall(PetscDAComputeMean(da_ctx, x_mean));
+    PetscCall(PetscDataAssimilatorComputeMean(da_ctx, x_mean));
     PetscCall(VecCopy(x_mean, x_forecast));
     PetscCall(ComputeRMSE(x_forecast, truth_state, n, &rmse_forecast));
     rmse_analysis = rmse_forecast; /* Default to forecast RMSE if no analysis */
@@ -431,10 +431,10 @@ int main(int argc, char **argv)
       PetscCall(VecWAXPY(observation, 1.0, obs_noise, truth_state));
 
       /* Perform ETKF analysis */
-      PetscCall(PetscDAAnalysis(da_ctx, observation, Lorenz96ObsIdentity, NULL));
+      PetscCall(PetscDataAssimilatorAnalysis(da_ctx, observation, Lorenz96ObsIdentity, NULL));
 
       /* Compute analysis RMSE */
-      PetscCall(PetscDAComputeMean(da_ctx, x_mean));
+      PetscCall(PetscDataAssimilatorComputeMean(da_ctx, x_mean));
       PetscCall(ComputeRMSE(x_mean, truth_state, n, &rmse_analysis));
       obs_count++;
     }
@@ -453,7 +453,7 @@ int main(int argc, char **argv)
 
     /* Propagate ensemble and truth trajectory */
     if (step < steps) {
-      PetscCall(PetscDAApplyModel(da_ctx, Lorenz96Step, l95_ctx));
+      PetscCall(PetscDataAssimilatorApplyModel(da_ctx, Lorenz96Step, l95_ctx));
       PetscCall(Lorenz96Step(truth_state, truth_next, l95_ctx));
       PetscCall(VecCopy(truth_next, truth_state));
     }
@@ -481,7 +481,7 @@ int main(int argc, char **argv)
   PetscCall(VecDestroy(&truth_next));
   PetscCall(VecDestroy(&truth_state));
   PetscCall(VecDestroy(&x0));
-  PetscCall(PetscDADestroy(&da_ctx));
+  PetscCall(PetscDataAssimilatorDestroy(&da_ctx));
   PetscCall(DMDestroy(&da_state));
   PetscCall(Lorenz96ContextDestroy(&l95_ctx));
   PetscCall(PetscRandomDestroy(&rng));

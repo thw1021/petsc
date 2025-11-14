@@ -127,7 +127,7 @@
 ```{rubric} ML/DataAssimilation:
 ```
 
-- Add data assimilation (PetscDA) base class with implementation of ETKF: [](ch_dataassimilator)
+- Add data assimilation (PetscDataAssimilator) base class with implementation of ETKF: [](ch_dataassimilator)
 
 ```{rubric} DM/DA:
 ```
