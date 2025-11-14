@@ -4397,7 +4397,7 @@ PetscErrorCode MatCopy(Mat A, Mat B, MatStructure str)
 PetscErrorCode MatConvert(Mat mat, MatType newtype, MatReuse reuse, Mat *M)
 {
   PetscBool  sametype, issame, flg;
-  PetscBool3 issymmetric, ishermitian;
+  PetscBool3 issymmetric, ishermitian, isspd;
   char       convname[256], mtype[256];
   Mat        B;
 
@@ -4425,9 +4425,10 @@ PetscErrorCode MatConvert(Mat mat, MatType newtype, MatReuse reuse, Mat *M)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  /* Cache Mat options because some converters use MatHeaderReplace  */
+  /* Cache Mat options because some converters use MatHeaderReplace() */
   issymmetric = mat->symmetric;
   ishermitian = mat->hermitian;
+  isspd       = mat->spd;
 
   if ((sametype || issame) && (reuse == MAT_INITIAL_MATRIX) && mat->ops->duplicate) {
     PetscCall(PetscInfo(mat, "Calling duplicate for initial matrix %s %d %d\n", ((PetscObject)mat)->type_name, sametype, issame));
@@ -4538,11 +4539,10 @@ PetscErrorCode MatConvert(Mat mat, MatType newtype, MatReuse reuse, Mat *M)
   }
   PetscCall(PetscObjectStateIncrease((PetscObject)*M));
 
-  /* Copy Mat options */
-  if (issymmetric == PETSC_BOOL3_TRUE) PetscCall(MatSetOption(*M, MAT_SYMMETRIC, PETSC_TRUE));
-  else if (issymmetric == PETSC_BOOL3_FALSE) PetscCall(MatSetOption(*M, MAT_SYMMETRIC, PETSC_FALSE));
-  if (ishermitian == PETSC_BOOL3_TRUE) PetscCall(MatSetOption(*M, MAT_HERMITIAN, PETSC_TRUE));
-  else if (ishermitian == PETSC_BOOL3_FALSE) PetscCall(MatSetOption(*M, MAT_HERMITIAN, PETSC_FALSE));
+  /* Reset Mat options */
+  if (issymmetric != PETSC_BOOL3_UNKNOWN) PetscCall(MatSetOption(*M, MAT_SYMMETRIC, PetscBool3ToBool(issymmetric)));
+  if (ishermitian != PETSC_BOOL3_UNKNOWN) PetscCall(MatSetOption(*M, MAT_HERMITIAN, PetscBool3ToBool(ishermitian)));
+  if (isspd != PETSC_BOOL3_UNKNOWN) PetscCall(MatSetOption(*M, MAT_SPD, PetscBool3ToBool(isspd)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
