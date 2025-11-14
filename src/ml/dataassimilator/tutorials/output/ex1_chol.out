@@ -1,4 +1,4 @@
-PetscDA Object: 1 MPI process
+PetscDataAssimilator Object: 1 MPI process
   State size: 40
   Observation size: 40
   Ensemble size: 30
