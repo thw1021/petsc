@@ -369,11 +369,11 @@ PetscErrorCode PetscDataAssimilatorSetFromOptions(PetscDataAssimilator da)
   PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
 
   PetscObjectOptionsBegin((PetscObject)da);
-
-  /* Allow runtime selection of data assimilation type */
+  
+  /* FIX: Allow runtime selection of data assimilation type */
   PetscCall(PetscOptionsFList("-petscdataassimilator_type", "Data assimilation method", "PetscDataAssimilatorSetType", PetscDataAssimilatorList, ((PetscObject)da)->type_name, type_name, sizeof(type_name), &type_set));
   if (type_set) PetscCall(PetscDataAssimilatorSetType(da, type_name));
-
+  
   if (da->ops->setfromoptions) PetscCall((*da->ops->setfromoptions)(da, &PetscOptionsObject));
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
