@@ -614,7 +614,7 @@ linux-cuda-omp:
     - cuda-stage3
   variables:
     MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/spack-2024-11-27-cuda/modules/linux-ubuntu22.04-x86_64/Core:/nfs/gce/software/custom/linux-ubuntu22.04-x86_64/spack/share/spack/lmod/linux-ubuntu22.04-x86_64/Core
-    TEST_ARCH: arch-ci-linux-cuda112-omp
+    TEST_ARCH: arch-ci-linux-cuda-omp
     TEST_OPTS: -j4 query=requires queryval=kokkos_kernels
     LOAD_MODULES: cuda/12.8.0-rz6425d gcc/11.3.0
     OMP_PROC_BIND: "false"

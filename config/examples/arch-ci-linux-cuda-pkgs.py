@@ -38,7 +38,10 @@ if __name__ == '__main__':
     '--with-openmp',
     '--with-shared-libraries',
     '--download-magma',
-    '--download-kblas',
+    # KBLAS is out of update, and fails to build with cuda-12.8,
+    # ../include/kblas_operators.h(129): error: cannot overload functions distinguished by return type alone
+    # __attribute__((device)) static __inline__ void atomicAdd(cuFloatComplex* address, cuFloatComplex val)
+    # '--download-kblas',
     '--download-h2opus',
     '--download-kokkos', # Kokkos-5.0 requires c++20
     '--download-kokkos-kernels',
