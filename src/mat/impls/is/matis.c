@@ -2051,6 +2051,7 @@ general_assembly:
   PetscCall(MatDestroy(&local_mat));
   PetscCall(MatAssemblyBegin(MT, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(MT, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatPropagateSymmetryOptions(mat, MT));
   if (reuse == MAT_INPLACE_MATRIX) {
     PetscCall(MatHeaderReplace(mat, &MT));
   } else if (reuse == MAT_INITIAL_MATRIX) {
