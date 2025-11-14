@@ -819,7 +819,7 @@ static PetscErrorCode PetscDataAssimilatorETKFInitialize(PetscDataAssimilator da
   PetscFunctionBegin;
   if (da->data) PetscCall(PetscFree(da->data)); // can be called twice (useful?)
   PetscCall(PetscNew(&impl));
-  impl->sqrt_type = PETSCDAETKF_SQRT_EIGEN;
+  impl->sqrt_type = PETSCDAETKF_SQRT_CHOLESKY;
 
   da->data                  = impl;
   da->ops->analysis         = PetscDataAssimilatorETKFAnalysis;
