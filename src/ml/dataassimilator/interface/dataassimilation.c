@@ -18,7 +18,7 @@
    - Deterministic square-root updates for numerical stability
    - Modular design allowing for multiple DA algorithm implementations
 */
-#include <petsc/private/daimpl.h>
+#include <petsc/private/dataassimilatorimpl.h>
 #include <petscblaslapack.h>
 
 PetscClassId      PETSCDATAASSIMILATOR_CLASSID          = 0;
