@@ -17,7 +17,7 @@ typedef enum {
 } PetscDataAssimilatorETKFSqrtType;
 
 typedef const char *PetscDataAssimilatorType;
-#define PETSCDAETKF "petscdaetkf"
+#define PETSCDAETKF "etkf"
 
 /* Logging support */
 PETSC_EXTERN PetscClassId PETSCDA_CLASSID;
