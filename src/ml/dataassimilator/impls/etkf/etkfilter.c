@@ -418,10 +418,10 @@ static PetscErrorCode PetscDataAssimilatorETKFDestroy(PetscDataAssimilator da)
 static PetscErrorCode PetscDataAssimilatorSetFromOptions_DAETKF(PetscDataAssimilator da, PetscOptionItems *PetscOptions)
 {
   PetscDataAssimilatorETKFData *impl;
-  PetscOptionItems PetscOptionsObject;
-  const char      *defaultType;
-  char             typeName[256];
-  PetscBool        set              = PETSC_FALSE;
+  PetscOptionItems              PetscOptionsObject;
+  const char                   *defaultType;
+  char                          typeName[256];
+  PetscBool                     set              = PETSC_FALSE;
   PetscErrorCode (*setter)(PetscDataAssimilator) = NULL;
 
   PetscFunctionBegin;
@@ -522,10 +522,10 @@ PetscErrorCode PetscDataAssimilatorETKFFinalizePackage(void)
 static PetscErrorCode PetscDataAssimilatorETKFAnalysis(PetscDataAssimilator da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
 {
   PetscDataAssimilatorETKFData *impl;
-  Vec              mean, y_mean, delta_scaled, w, r_inv_sqrt;
-  Mat              X, Z, S, T, T_sqrt, I_m, w_ones, T_sqrt_U, G;
-  PetscInt         m;
-  PetscScalar      inv_m, scale, sqrt_m_minus_1;
+  Vec                           mean, y_mean, delta_scaled, w, r_inv_sqrt;
+  Mat                           X, Z, S, T, T_sqrt, I_m, w_ones, T_sqrt_U, G;
+  PetscInt                      m;
+  PetscScalar                   inv_m, scale, sqrt_m_minus_1;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
@@ -781,7 +781,7 @@ PetscErrorCode PetscDataAssimilatorETKFGetSqrtType(PetscDataAssimilator da, Pets
 */
 static PetscErrorCode PetscDataAssimilatorETKFView(PetscDataAssimilator da, PetscViewer viewer)
 {
-  PetscBool        iascii;
+  PetscBool                     iascii;
   PetscDataAssimilatorETKFData *impl;
 
   PetscFunctionBegin;
