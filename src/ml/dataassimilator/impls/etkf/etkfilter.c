@@ -240,7 +240,7 @@ static PetscErrorCode ComputeAnalysisWeights(Mat T, Mat S, Vec delta_scaled, Vec
 
   Level\: developer
 
-.seealso\: [`ComputeAnalysisWeights()`](etkf.c:179), [`MatDenseGetColumnVecWrite()`](petscmat.h), [`PetscDataAssimilatorETKFAnalysis()`](etkf.c:417)
+.seealso\: [`ComputeAnalysisWeights()`](etkfilter.c:178), [`MatDenseGetColumnVecWrite()`](petscmat.h), [`PetscDataAssimilatorETKFAnalysis()`](etkfilter.c:522)
 */
 static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
 {
@@ -321,8 +321,8 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
 
   Level\: developer
 
-.seealso\: [`PetscDataAssimilatorETKFAnalysis()`](etkf.c:446), [`ComputeAnalysisWeights()`](etkf.c:179),
-[`BroadcastWeightVector()`](etkf.c:246), [`MatMatMult()`](petscmat.h), [`VecWAXPY()`](petscvec.h)
+.seealso\: [`PetscDataAssimilatorETKFAnalysis()`](etkfilter.c:522), [`ComputeAnalysisWeights()`](etkfilter.c:178),
+[`BroadcastWeightVector()`](etkfilter.c:245), [`MatMatMult()`](petscmat.h), [`VecWAXPY()`](petscvec.h)
 */
 static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscInt m, Mat ensemble)
 {
@@ -433,10 +433,10 @@ static PetscErrorCode PetscDataAssimilatorSetFromOptions_DAETKF(PetscDataAssimil
 
   defaultType = (impl->sqrt_type == PETSCDAETKF_SQRT_EIGEN) ? "eigen" : "cholesky";
   PetscCall(PetscStrncpy(typeName, defaultType, sizeof(typeName)));
-  PetscCall(PetscOptionsFList("-petscdaetkf_sqrt_type", "Matrix square root factorization", "PetscDataAssimilatorETKFSetSqrtType", PetscDataAssimilatorETKFSqrtList, defaultType, typeName, sizeof(typeName), &set));
+  PetscCall(PetscOptionsFList("-dataassimilator_etkf_sqrt_type", "Matrix square root factorization", "PetscDataAssimilatorETKFSetSqrtType", PetscDataAssimilatorETKFSqrtList, defaultType, typeName, sizeof(typeName), &set));
   if (set) {
     PetscCall(PetscFunctionListFind(PetscDataAssimilatorETKFSqrtList, typeName, &setter));
-    PetscCheck(setter, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDAETKF square-root type \"%s\"", typeName);
+    PetscCheck(setter, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDataAssimilatorETKF square-root type \"%s\"", typeName);
     PetscCall((*setter)(da));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -494,7 +494,7 @@ PetscErrorCode PetscDataAssimilatorETKFFinalizePackage(void)
 /*    - Matrix square root factorization (Cholesky or eigendecomposition)   */
 /*    - Transform application to update ensemble members                     */
 /*                                                                            */
-/*  See also: Helper Functions (line 11), Model Propagation (line 654)      */
+/*  See also: Helper Functions (line 11), Model Propagation (line 660)      */
 /* ========================================================================== */
 
 /*
@@ -617,7 +617,7 @@ static PetscErrorCode PetscDataAssimilatorETKFAnalysis(PetscDataAssimilator da, 
     PetscCall(PetscDataAssimilatorSymmetricEigenSqrt_Private(T, &T_sqrt));
     break;
   default:
-    SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported PetscDAETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
+    SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported PetscDataAssimilatorETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
   }
 
   /* ===================================================================== */
@@ -730,7 +730,7 @@ PetscErrorCode PetscDataAssimilatorETKFSetSqrtType(PetscDataAssimilator da, Pets
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscCheck(da->data, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDataAssimilator data structure not initialized");
-  PetscCheck(type == PETSCDAETKF_SQRT_CHOLESKY || type == PETSCDAETKF_SQRT_EIGEN, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Invalid PetscDAETKF square-root type %" PetscInt_FMT, (PetscInt)type);
+  PetscCheck(type == PETSCDAETKF_SQRT_CHOLESKY || type == PETSCDAETKF_SQRT_EIGEN, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Invalid PetscDataAssimilatorETKF square-root type %" PetscInt_FMT, (PetscInt)type);
 
   impl            = (PetscDataAssimilatorETKFData *)da->data;
   impl->sqrt_type = type;
@@ -794,7 +794,7 @@ static PetscErrorCode PetscDataAssimilatorETKFView(PetscDataAssimilator da, Pets
 
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "PetscDAETKF Object:\n"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "PetscDataAssimilatorETKF Object:\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Square root type: %s\n", (impl->sqrt_type == PETSCDAETKF_SQRT_EIGEN) ? "eigen" : "cholesky"));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
