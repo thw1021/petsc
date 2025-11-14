@@ -114,7 +114,7 @@ Applications that maintain long-lived solver contexts commonly preload Jacobians
 The default implementation is the ensemble transform Kalman filter indicated by the type string `PETSCDAETKF` (which resolves to `"etkf"`). Alternative PetscDataAssimilator types can be registered with `PetscDataAssimilatorRegister()` and selected at runtime:
 
 - `-petscdataassimilator_type etkf` chooses the built-in square-root ETKF.
-- `-etkf_sqrt_type {cholesky,eigen}` (or, programmatically, `PetscDataAssimilatorETKFSetSqrtType()`) toggles between Cholesky and eigenvalue-based square-root updates.
+- `-dataassimilator_etkf_sqrt_type {cholesky,eigen}` (or, programmatically, `PetscDataAssimilatorETKFSetSqrtType()`) toggles between Cholesky and eigenvalue-based square-root updates. The default is `cholesky`, which is computationally more efficient (O(n³/3) vs O(n³)) and preferred when the reduced-space matrix is known to be positive definite. The `eigen` method is more robust for semi-definite matrices as it handles small negative eigenvalues arising from numerical round-off.
 
 Custom PetscDataAssimilator types should implement the `PetscDataAssimilatorSetType()` registration hook, populate virtual methods for analysis and forecast orchestration, and take advantage of the anomaly computations provided by the base class.
 
