@@ -841,7 +841,7 @@ PetscErrorCode PetscDataAssimilatorApplyModel(PetscDataAssimilator da, PetscErro
   from uniform random numbers. Handles edge cases where uniform random values
   approach 0 or 1.
 
-.seealso: [](ch_vec), `PetscRandomSetInterval()`, `VecSetRandom()`
+.seealso: [](ch_dataassimilator), `PetscRandomSetInterval()`, `VecSetRandom()`
 @*/
 PetscErrorCode VecSetRandomGaussian(Vec v, PetscRandom rng, PetscReal mean, PetscReal std_dev)
 {
