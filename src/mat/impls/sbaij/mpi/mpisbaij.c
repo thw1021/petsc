@@ -1533,7 +1533,6 @@ static PetscErrorCode MatSetOption_MPISBAIJ(Mat A, MatOption op, PetscBool flg)
       A->ops->multadd          = MatMultAdd_MPISBAIJ_Hermitian;
       A->ops->multtranspose    = NULL;
       A->ops->multtransposeadd = NULL;
-      A->symmetric             = PETSC_BOOL3_FALSE;
     }
 #endif
     break;

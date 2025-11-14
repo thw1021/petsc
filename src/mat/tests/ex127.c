@@ -86,6 +86,11 @@ int main(int argc, char **args)
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatViewFromOptions(A, NULL, "-disp_mat"));
 
+  if (flg) {
+    PetscCall(MatIsSymmetric(A, 0.0, &flg));
+    PetscCheck(!flg, PETSC_COMM_SELF, PETSC_ERR_USER, "A is symmetric");
+  }
+  PetscCall(MatSetOption(A, MAT_SYMMETRIC, PETSC_FALSE));
   /* Check whether A is Hermitian, then set A->hermitian flag */
   PetscCall(PetscOptionsHasName(NULL, NULL, "-check_Hermitian", &flg));
   if (flg && size == 1) {
