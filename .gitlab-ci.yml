@@ -555,6 +555,7 @@ linux-hip-double:
     - gpu:amd
     - os:linux
   variables:
+    PATH: /opt/rocm-6.2.4/bin/hipcc:$PATH
     TEST_ARCH: arch-ci-linux-hip-double
 
 linux-hip-cmplx:
@@ -566,6 +567,7 @@ linux-hip-cmplx:
     - gpu:amd
     - os:linux
   variables:
+    PATH: /opt/rocm-6.2.4/bin/hipcc:$PATH
     TEST_ARCH: arch-ci-linux-hip-cmplx
 
 linux-sycl-double:

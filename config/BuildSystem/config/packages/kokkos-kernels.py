@@ -105,7 +105,7 @@ class Configure(config.package.CMakePackage):
         else:
           args.append('-DROCBLAS_ROOT='+self.hip.hipDir) # KK-4.0.1 and higher only support these
           args.append('-DROCSPARSE_ROOT='+self.hip.hipDir)
-          args.append('-DROCSPARSE_ROOT='+self.hip.hipDir)
+          args.append('-DROCSOLVER_ROOT='+self.hip.hipDir)
           args.append('-DKokkosKernels_ROCBLAS_ROOT='+self.hip.hipDir) # KK-4.0.0 and lower support these; remove the two lines once self.miniversion >= 4.0.1
           args.append('-DKokkosKernels_ROCSPARSE_ROOT='+self.hip.hipDir)
           args.append('-DKokkosKernels_ROCSOLVER_ROOT='+self.hip.hipDir)
