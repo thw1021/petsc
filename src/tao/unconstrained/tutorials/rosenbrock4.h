@@ -85,7 +85,7 @@ static PETSC_HOSTDEVICE_INLINE_DECL void RosenbrockHessian(PetscScalar alpha, Pe
 
 static const PetscLogDouble RosenbrockHessianFlops = 11.0;
 
-static PetscErrorCode AppCtxCreate(MPI_Comm comm, AppCtx *ctx)
+PetscErrorCode AppCtxCreate(MPI_Comm comm, AppCtx *ctx)
 {
   AppCtx             user;
   PetscDeviceContext dctx;
@@ -117,7 +117,7 @@ static PetscErrorCode AppCtxCreate(MPI_Comm comm, AppCtx *ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode AppCtxDestroy(AppCtx *ctx)
+PetscErrorCode AppCtxDestroy(AppCtx *ctx)
 {
   AppCtx user;
 
@@ -134,7 +134,7 @@ static PetscErrorCode AppCtxDestroy(AppCtx *ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CreateHessian(AppCtx user, Mat *Hessian)
+PetscErrorCode CreateHessian(AppCtx user, Mat *Hessian)
 {
   Mat         H;
   PetscLayout layout;
@@ -248,7 +248,7 @@ static PetscErrorCode CreateHessian(AppCtx user, Mat *Hessian)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CreateVectors(AppCtx user, Mat H, Vec *solution, Vec *gradient)
+PetscErrorCode CreateVectors(AppCtx user, Mat H, Vec *solution, Vec *gradient)
 {
   VecType     vec_type;
   PetscInt    n_coo, *coo_i, i_start, i_end;
@@ -462,7 +462,7 @@ static PetscErrorCode RosenbrockHessian_Host(Rosenbrock r, const PetscScalar x[]
 
 /* -------------------------------------------------------------------- */
 
-static PetscErrorCode FormObjective(Tao tao, Vec X, PetscReal *f, void *ptr)
+PetscErrorCode FormObjective(Tao tao, Vec X, PetscReal *f, void *ptr)
 {
   AppCtx             user    = (AppCtx)ptr;
   PetscReal          f_local = 0.0;
@@ -501,7 +501,7 @@ static PetscErrorCode FormObjective(Tao tao, Vec X, PetscReal *f, void *ptr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode FormGradient(Tao tao, Vec X, Vec G, void *ptr)
+PetscErrorCode FormGradient(Tao tao, Vec X, Vec G, void *ptr)
 {
   AppCtx             user = (AppCtx)ptr;
   PetscScalar       *g;
@@ -556,7 +556,7 @@ static PetscErrorCode FormGradient(Tao tao, Vec X, Vec G, void *ptr)
     at the same time.  Evaluating both at once may be more efficient that
     evaluating each separately.
 */
-static PetscErrorCode FormObjectiveGradient(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
+PetscErrorCode FormObjectiveGradient(Tao tao, Vec X, PetscReal *f, Vec G, void *ptr)
 {
   AppCtx             user    = (AppCtx)ptr;
   PetscReal          f_local = 0.0;
@@ -654,7 +654,7 @@ static PetscErrorCode FormHessianSingle(Tao tao, Vec X, Mat H, void *ptr)
    Note:  Providing the Hessian may not be necessary.  Only some solvers
    require this matrix.
 */
-static PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
+PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
 {
   PetscFunctionBeginUser;
   if (H) PetscCall(FormHessianSingle(tao, X, H, ptr));
@@ -665,7 +665,7 @@ static PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TestLMVM(Tao tao)
+PetscErrorCode TestLMVM(Tao tao)
 {
   KSP       ksp;
   PC        pc;
@@ -704,5 +704,50 @@ static PetscErrorCode TestLMVM(Tao tao)
     PetscCall(VecDestroy(&out));
     PetscCall(VecDestroy(&out2));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode RosenbrockMain()
+{
+  Vec           x;    /* solution vector */
+  Vec           g;    /* gradient vector */
+  Mat           H;    /* Hessian matrix */
+  Tao           tao;  /* Tao solver context */
+  AppCtx        user; /* user-defined application context */
+  PetscLogStage solve;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogStageRegister("Rosenbrock solve", &solve));
+
+  PetscCall(AppCtxCreate(PETSC_COMM_WORLD, &user));
+  PetscCall(CreateHessian(user, &H));
+  PetscCall(CreateVectors(user, H, &x, &g));
+
+  /* The TAO code begins here */
+
+  PetscCall(TaoCreate(user->comm, &tao));
+  PetscCall(VecZeroEntries(x));
+  PetscCall(TaoSetSolution(tao, x));
+
+  /* Set routines for function, gradient, hessian evaluation */
+  PetscCall(TaoSetObjective(tao, FormObjective, user));
+  PetscCall(TaoSetObjectiveAndGradient(tao, g, FormObjectiveGradient, user));
+  PetscCall(TaoSetGradient(tao, g, FormGradient, user));
+  PetscCall(TaoSetHessian(tao, H, H, FormHessian, user));
+
+  PetscCall(TaoSetFromOptions(tao));
+
+  /* SOLVE THE APPLICATION */
+  PetscCall(PetscLogStagePush(solve));
+  PetscCall(TaoSolve(tao));
+  PetscCall(PetscLogStagePop());
+
+  if (user->test_lmvm) PetscCall(TestLMVM(tao));
+
+  PetscCall(TaoDestroy(&tao));
+  PetscCall(VecDestroy(&g));
+  PetscCall(VecDestroy(&x));
+  PetscCall(MatDestroy(&H));
+  PetscCall(AppCtxDestroy(&user));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
