@@ -4,11 +4,6 @@
 #include <petscmat.h>
 #include <petscvec.h>
 
-/*I <petscts.h> I*/
-
-/* MANSEC = ML */
-/* SUBMANSEC = PetscDataAssimilator */
-
 typedef struct _p_PetscDataAssimilator *PetscDataAssimilator;
 
 typedef enum {
