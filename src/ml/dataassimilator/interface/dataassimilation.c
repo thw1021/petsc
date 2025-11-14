@@ -109,7 +109,7 @@ PetscErrorCode PetscDataAssimilatorRegisterAll(void)
   PetscFunctionBegin;
   if (PetscDataAssimilatorRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscDataAssimilatorRegisterAllCalled = PETSC_TRUE;
-  PetscCall(PetscDataAssimilatorETKFRegister());
+  PetscCall(PetscDataAssimilatorETKFRegister()); // add new methods here
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -362,17 +362,10 @@ PetscErrorCode PetscDataAssimilatorGetType(PetscDataAssimilator da, PetscDataAss
 @*/
 PetscErrorCode PetscDataAssimilatorSetFromOptions(PetscDataAssimilator da)
 {
-  char      type_name[256];
-  PetscBool type_set;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
 
   PetscObjectOptionsBegin((PetscObject)da);
-
-  /* FIX: Allow runtime selection of data assimilation type */
-  PetscCall(PetscOptionsFList("-petscdataassimilator_type", "Data assimilation method", "PetscDataAssimilatorSetType", PetscDataAssimilatorList, ((PetscObject)da)->type_name, type_name, sizeof(type_name), &type_set));
-  if (type_set) PetscCall(PetscDataAssimilatorSetType(da, type_name));
 
   if (da->ops->setfromoptions) PetscCall((*da->ops->setfromoptions)(da, &PetscOptionsObject));
   PetscOptionsEnd();
