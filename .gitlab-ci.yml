@@ -617,6 +617,8 @@ linux-hip-double:
     - gpu:amd
     - os:linux
   variables:
+    MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/modulefiles
+    LOAD_MODULES: rocm/6.2.4 openmpi/5.0.9
     TEST_ARCH: arch-ci-linux-hip-double
 
 linux-hip-cmplx:
@@ -628,6 +630,8 @@ linux-hip-cmplx:
     - gpu:amd
     - os:linux
   variables:
+    MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/modulefiles
+    LOAD_MODULES: rocm/6.2.4
     TEST_ARCH: arch-ci-linux-hip-cmplx
 
 linux-hip-cxx-64idx:
