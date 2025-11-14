@@ -1485,6 +1485,24 @@ PetscErrorCode MatDestroy(Mat *A)
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
+  if (PetscDefined(USE_DEBUG)) {
+    if (!PetscDefined(USE_COMPLEX)) {
+      PetscCheck((*A)->symmetric == (*A)->hermitian, PetscObjectComm((PetscObject)*A), PETSC_ERR_ARG_WRONGSTATE, "MAT_SYMMETRIC and MAT_HERMITIAN options do not match: %s != %s", PetscBool3s[(*A)->symmetric], PetscBool3s[(*A)->hermitian]);
+      if (PetscBool3ToBool((*A)->spd))
+        PetscCheck(PetscBool3ToBool((*A)->symmetric), PetscObjectComm((PetscObject)*A), PETSC_ERR_ARG_WRONGSTATE, "MAT_SPD and MAT_SYMMETRIC options do not match: %s != %s", PetscBool3s[(*A)->spd], PetscBool3s[(*A)->symmetric]);
+    } else if ((*A)->symmetric == PETSC_BOOL3_TRUE && (*A)->hermitian == PETSC_BOOL3_TRUE && !(*A)->factortype) {
+      PetscBool flg;
+
+      PetscCall(PetscObjectBaseTypeCompareAny((PetscObject)*A, &flg, MATSEQAIJ, MATMPIAIJ, MATSEQSBAIJ, MATMPISBAIJ, MATSEQBAIJ, MATMPIBAIJ, MATSEQDENSE, MATMPIDENSE, ""));
+      if (flg) {
+        PetscReal nrm;
+
+        PetscCall(MatImaginaryPart(*A));
+        PetscCall(MatNorm(*A, NORM_INFINITY, &nrm));
+        PetscCheck(nrm == 0.0, PetscObjectComm((PetscObject)*A), PETSC_ERR_ARG_WRONGSTATE, "MAT_SYMMETRIC and MAT_HERMITIAN are set to %s but the matrix has a nonzero imaginary part", PetscBools[PETSC_TRUE]);
+      }
+    }
+  }
   /* if memory was published with SAWs then destroy it */
   PetscCall(PetscObjectSAWsViewOff((PetscObject)*A));
   PetscTryTypeMethod(*A, destroy);
@@ -6086,6 +6104,9 @@ PetscErrorCode MatSetOption(Mat mat, MatOption op, PetscBool flg)
       mat->spd                    = PETSC_BOOL3_TRUE;
       mat->symmetric              = PETSC_BOOL3_TRUE;
       mat->structurally_symmetric = PETSC_BOOL3_TRUE;
+#if !defined(PETSC_USE_COMPLEX)
+      mat->hermitian = PETSC_BOOL3_TRUE;
+#endif
     } else {
       mat->spd = PETSC_BOOL3_FALSE;
     }
@@ -10113,8 +10134,10 @@ PetscErrorCode MatPtAP(Mat A, Mat P, MatReuse scall, PetscReal fill, Mat *C)
   }
 
   PetscCall(MatProductNumeric(*C));
-  (*C)->symmetric = A->symmetric;
-  (*C)->spd       = A->spd;
+  if (A->symmetric == PETSC_BOOL3_TRUE) {
+    PetscCall(MatSetOption(*C, MAT_SYMMETRIC, PETSC_TRUE));
+    (*C)->spd = A->spd;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
