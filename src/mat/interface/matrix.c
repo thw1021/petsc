@@ -4379,7 +4379,7 @@ PetscErrorCode MatCopy(Mat A, Mat B, MatStructure str)
 PetscErrorCode MatConvert(Mat mat, MatType newtype, MatReuse reuse, Mat *M)
 {
   PetscBool  sametype, issame, flg;
-  PetscBool3 issymmetric, ishermitian;
+  PetscBool3 issymmetric, ishermitian, isspd;
   char       convname[256], mtype[256];
   Mat        B;
 
@@ -4410,6 +4410,7 @@ PetscErrorCode MatConvert(Mat mat, MatType newtype, MatReuse reuse, Mat *M)
   /* Cache Mat options because some converters use MatHeaderReplace  */
   issymmetric = mat->symmetric;
   ishermitian = mat->hermitian;
+  isspd       = mat->spd;
 
   if ((sametype || issame) && (reuse == MAT_INITIAL_MATRIX) && mat->ops->duplicate) {
     PetscCall(PetscInfo(mat, "Calling duplicate for initial matrix %s %d %d\n", ((PetscObject)mat)->type_name, sametype, issame));
@@ -4521,10 +4522,10 @@ PetscErrorCode MatConvert(Mat mat, MatType newtype, MatReuse reuse, Mat *M)
   PetscCall(PetscObjectStateIncrease((PetscObject)*M));
 
   /* Copy Mat options */
-  if (issymmetric == PETSC_BOOL3_TRUE) PetscCall(MatSetOption(*M, MAT_SYMMETRIC, PETSC_TRUE));
-  else if (issymmetric == PETSC_BOOL3_FALSE) PetscCall(MatSetOption(*M, MAT_SYMMETRIC, PETSC_FALSE));
-  if (ishermitian == PETSC_BOOL3_TRUE) PetscCall(MatSetOption(*M, MAT_HERMITIAN, PETSC_TRUE));
-  else if (ishermitian == PETSC_BOOL3_FALSE) PetscCall(MatSetOption(*M, MAT_HERMITIAN, PETSC_FALSE));
+  PetscCheck(issymmetric == mat->symmetric, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "MAT_SYMMETRIC option not preserved");
+  PetscCheck(ishermitian == mat->hermitian, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "MAT_HERMITIAN option not preserved");
+  PetscCheck(isspd == mat->spd, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "MAT_SPD option not preserved");
+  PetscCall(MatPropagateSymmetryOptions(mat, *M));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
