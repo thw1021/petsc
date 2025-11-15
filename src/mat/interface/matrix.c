@@ -5563,8 +5563,13 @@ PetscErrorCode MatIsHermitianTranspose(Mat A, Mat B, PetscReal tol, PetscBool *f
   PetscCall(PetscObjectQueryFunction((PetscObject)A, "MatIsHermitianTranspose_C", &f));
   PetscCall(PetscObjectQueryFunction((PetscObject)B, "MatIsHermitianTranspose_C", &g));
   if (f && g) {
-    PetscCheck(f != g, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_NOTSAMETYPE, "Matrices do not have the same comparator for Hermitian test");
+    PetscCheck(f == g, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_NOTSAMETYPE, "Matrices do not have the same comparator for Hermitian test");
     PetscCall((*f)(A, B, tol, flg));
+  } else {
+    MatType mattype;
+
+    PetscCall(MatGetType(f ? B : A, &mattype));
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Matrix of type %s does not support checking for Hermitian transpose", mattype);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
