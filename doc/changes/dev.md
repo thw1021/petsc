@@ -92,16 +92,13 @@
 -  Remove unused `TSPseudoVerifyTimeStepDefault()`
 -  Remove `TSPseudoComputeTimeStep()` and `TSPseudoVerifyTimeStep()`
 
-```{rubric} DA:
-```
-
 ```{rubric} TAO:
 ```
 
 ```{rubric} PetscRegressor:
 ```
 
-```{rubric} ML/DataAssimilation:
+```{rubric} ML/DataAssimilator:
 ```
 
 - Add data assimilation (PetscDataAssimilator) base class with implementation of ETKF: [](ch_dataassimilator)
