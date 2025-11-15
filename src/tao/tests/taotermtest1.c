@@ -378,9 +378,9 @@ static PetscErrorCode FormHessian_Callbacks(Tao tao, Vec X, Mat H, Mat Hpre, voi
     if (ctx->term1_A_callback) {
       Mat H_mapped;
       /* H = H + scale * A^T * H_term * A */
-      PetscCall(MatMatMult(H_term, ctx->term1_A_callback, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &H_mapped));
+      PetscCall(MatMatMult(H_term, ctx->term1_A_callback, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &H_mapped));
       PetscCall(MatDestroy(&H_term));
-      PetscCall(MatTransposeMatMult(ctx->term1_A_callback, H_mapped, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &H_term));
+      PetscCall(MatTransposeMatMult(ctx->term1_A_callback, H_mapped, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &H_term));
       PetscCall(MatDestroy(&H_mapped));
       PetscCall(MatScale(H_term, ctx->term1_scale_callback));
       PetscCall(MatAXPY(H, 1.0, H_term, DIFFERENT_NONZERO_PATTERN));
@@ -490,7 +490,6 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
    # L1 with A
    testset:
       suffix: term1_l1_A
-      nsize: {{1 2}}
       output_file: output/taotermtest1.out
       args: -tao_type nls -use_term1 -term1_has_params {{0 1}} -term1_has_A
       args: -reg1_tao_term_type l1
@@ -502,7 +501,6 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
    # L1 without A
    testset:
       suffix: term1_l1_no_A
-      nsize: {{1 2}}
       output_file: output/taotermtest1.out
       args: -tao_type nls -use_term1 -term1_has_params {{0 1}}
       args: -term1_has_A 0 -reg1_tao_term_type l1
@@ -514,7 +512,6 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
    # L2 with A
    testset:
       suffix: term1_l2_A
-      nsize: {{1 2}}
       output_file: output/taotermtest1.out
       args: -tao_type nls -use_term1 -term1_has_params {{0 1}} -term1_has_A
       args: -reg1_tao_term_type halfl2squared
@@ -526,7 +523,6 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
    # L2 without A
    testset:
       suffix: term1_l2_no_A
-      nsize: {{1 2}}
       output_file: output/taotermtest1.out
       args: -tao_type nls -use_term1 -term1_has_params {{0 1}}
       args: -term1_has_A 0
@@ -539,7 +535,6 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
 # Two terms, with no mapping
    testset:
       suffix: l1_l2_no_A1_no_A2
-      nsize: {{1 2}}
       output_file: output/taotermtest1.out
       args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
       args: -term1_has_A 0 -term2_has_A 0 -reg1_tao_term_type l1 -reg2_tao_term_type halfl2squared
@@ -555,7 +550,6 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
 # Two terms, with one mapping
    testset:
       suffix: l1_l2_no_A1_A2
-      nsize: {{1 2}}
       output_file: output/taotermtest1.out
       args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
       args: -term1_has_A 0 -term2_has_A 1 -reg1_tao_term_type l1 -reg2_tao_term_type halfl2squared
@@ -570,7 +564,6 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
 
    testset:
       suffix: l2_l1_no_A1_A2
-      nsize: {{1 2}}
       output_file: output/taotermtest1.out
       args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
       args: -term1_has_A 0 -term2_has_A 1 -reg1_tao_term_type halfl2squared -reg2_tao_term_type l1
@@ -586,7 +579,6 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
 # Two terms: term1 has A, term2 has A
    testset:
       suffix: l1_l2_A1_A2
-      nsize: {{1 2}}
       output_file: output/taotermtest1.out
       args: -tao_type nls -use_term1 -use_term2 -term1_has_params {{0 1}} -term2_has_params {{0 1}}
       args: -term1_has_A 1 -term2_has_A 1 -reg1_tao_term_type l1 -reg2_tao_term_type halfl2squared
