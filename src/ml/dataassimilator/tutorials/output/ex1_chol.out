@@ -1,0 +1,37 @@
+PetscDataAssimilator Object: 1 MPI process
+  State size: 40
+  Observation size: 40
+  Ensemble size: 30
+  Assembled: true
+PetscDataAssimilatorETKF Object:
+  Square root type: cholesky
+Lorenz-96 ETKF Example
+======================
+  State dimension       : 40
+  Ensemble size         : 30
+  Forcing parameter (F) : 8.0000
+  Time step (dt)        : 0.0500
+  Total steps           : 120
+  Burn-in steps         : 10
+  Observation frequency : 1
+  Observation noise std : 1.000
+  Random seed           : 12345
+
+Step    0, time  0.000  RMSE_forecast 0.16153  RMSE_analysis 0.16153 [burn-in]
+Step   12, time  0.600  RMSE_forecast 0.22149  RMSE_analysis 0.20360
+Step   24, time  1.200  RMSE_forecast 0.18438  RMSE_analysis 0.18193
+Step   36, time  1.800  RMSE_forecast 0.15809  RMSE_analysis 0.14607
+Step   48, time  2.400  RMSE_forecast 0.13498  RMSE_analysis 0.13386
+Step   60, time  3.000  RMSE_forecast 0.13816  RMSE_analysis 0.13846
+Step   72, time  3.600  RMSE_forecast 0.13040  RMSE_analysis 0.13152
+Step   84, time  4.200  RMSE_forecast 0.13106  RMSE_analysis 0.13127
+Step   96, time  4.800  RMSE_forecast 0.12977  RMSE_analysis 0.12896
+Step  108, time  5.400  RMSE_forecast 0.12543  RMSE_analysis 0.12590
+Step  120, time  6.000  RMSE_forecast 0.12286  RMSE_analysis 0.12168
+
+Statistics (111 post-burn-in steps):
+==================================================
+  Mean RMSE (forecast) : 0.144362
+  Mean RMSE (analysis) : 0.143241
+  Observations used    : 120
+
