@@ -4525,6 +4525,10 @@ PetscErrorCode MatConvert(Mat mat, MatType newtype, MatReuse reuse, Mat *M)
   (*M)->symmetric = issymmetric;
   (*M)->hermitian = ishermitian;
   (*M)->spd       = isspd;
+  /* Copy Mat options */
+  PetscCheck(issymmetric == mat->symmetric, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "MAT_SYMMETRIC option not preserved");
+  PetscCheck(ishermitian == mat->hermitian, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "MAT_HERMITIAN option not preserved");
+  PetscCheck(isspd == mat->spd, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "MAT_SPD option not preserved");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
