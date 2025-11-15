@@ -3472,6 +3472,45 @@ cdef class DMPlex(DM):
         """
         CHKERR(DMPlexLocalVectorLoad(self.dm, viewer.vwr, sectiondm.dm, sf.sf, vec.vec))
 
+    def getRedundantDM(self) -> tuple[DMPlex, SF]:
+        """
+        Get a copy of the `DMPlex` on each process.
+
+        Collective.
+        
+        Returns
+        -------
+        newdm : DMPlex
+            The migrated redundant `DMPlex`.
+        sf : SF
+            The `SF` to be used to migrate data.
+
+        See Also
+        --------
+        distribute, getGatherDM
+        petsc.DMPlexGetRedundantDM
+        """
+        cdef DMPlex newdm = DMPlex()
+        cdef SF sf = SF()
+        CHKERR(DMPlexGetRedundantDM(self.dm, &sf.sf, &newdm.dm))
+        return newdm, sf
+
+    def getGatherDM(self) -> tuple[DMPlex, SF]:
+        """
+        Gather the `DMPlex` on the original communicator's root process.
+
+        Collective.
+
+        See Also
+        --------
+        distribute, getRedundantDM
+        petsc.DMPlexGetGatherDM
+        """
+        cdef DMPlex newdm = DMPlex()
+        cdef SF sf = SF()
+        CHKERR(DMPlexGetGatherDM(self.dm, &sf.sf, &newdm.dm))
+        return newdm, sf
+
 # --------------------------------------------------------------------
 
 
