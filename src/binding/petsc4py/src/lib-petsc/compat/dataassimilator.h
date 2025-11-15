@@ -1,5 +1,8 @@
 #ifndef PETSC4PY_COMPAT_DATAASSIMILATOR_H
 #define PETSC4PY_COMPAT_DATAASSIMILATOR_H
+
+#include <petscdataassimilator.h>
+
 #if defined(PETSC_USE_COMPLEX)
 
 #define PetscDataAssimilatorError do { \
