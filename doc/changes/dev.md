@@ -104,16 +104,13 @@
 - Correct option `-ts_max_reject` to `-ts_max_step_rejections`
 - Correct option `-ts_dt` to `-ts_time_step`
 
-```{rubric} DA:
-```
-
 ```{rubric} TAO:
 ```
 
 ```{rubric} PetscRegressor:
 ```
 
-```{rubric} ML/DataAssimilation:
+```{rubric} ML/DataAssimilator:
 ```
 
 - Add data assimilation (PetscDataAssimilator) base class with implementation of ETKF: [](ch_dataassimilator)
