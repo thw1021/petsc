@@ -3221,7 +3221,7 @@ PetscErrorCode MatEqual_SeqBAIJ(Mat A, Mat B, PetscBool *flg)
 
   PetscFunctionBegin;
   /* If the  matrix/block dimensions are not equal, or no of nonzeros or shift */
-  if ((A->rmap->N != B->rmap->N) || (A->cmap->n != B->cmap->n) || (A->rmap->bs != B->rmap->bs) || (a->nz != b->nz)) {
+  if (A->rmap->N != B->rmap->N || A->cmap->n != B->cmap->n || A->rmap->bs != B->rmap->bs || a->nz != b->nz) {
     *flg = PETSC_FALSE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
@@ -3235,7 +3235,7 @@ PetscErrorCode MatEqual_SeqBAIJ(Mat A, Mat B, PetscBool *flg)
   if (!*flg) PetscFunctionReturn(PETSC_SUCCESS);
 
   /* if a->a are the same */
-  PetscCall(PetscArraycmp(a->a, b->a, (a->nz) * (A->rmap->bs) * (B->rmap->bs), flg));
+  PetscCall(PetscArraycmp(a->a, b->a, a->nz * A->rmap->bs * A->rmap->bs, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
