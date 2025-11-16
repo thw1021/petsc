@@ -2177,7 +2177,6 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       case 1:
         /* MatCreateSubMatrices() does not work with MATSBAIJ and unsorted ISes, so convert to MPIBAIJ */
         PetscCall(MatConvert(P, MATMPIBAIJ, MAT_INITIAL_MATRIX, &C));
-        PetscCall(MatSetOption(C, MAT_SYMMETRIC, PETSC_TRUE));
         break;
       default:
         PetscCall(MatConvert(P, MATMPIAIJ, MAT_INITIAL_MATRIX, &C));
