@@ -1471,7 +1471,7 @@ In this case, since the reduction operation performed (the final argument of `Pe
 of the previous value at that location plus all the values it that entries leafs. So `rootdata` on MPI rank 0 contains (3, 6) while on MPI rank
 1 it contains (9).
 
-Note that `PetscSFBcastBegin()` and `PetscSFBcastEnd()` also take an `MPI_Op` reduction argument, though that is almost always `MPI_REPLACE`.
+As shown in the example above, `PetscSFBcastBegin()` and `PetscSFBcastEnd()` (as well as other `PetscSF` functions) also take an `MPI_Op` reduction argument, though that is almost always `MPI_REPLACE`.
 
 ## Non-contiguous storage of leafdata
 
