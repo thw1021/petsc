@@ -1756,9 +1756,18 @@ static PetscErrorCode MatIsTranspose_SeqBAIJ(Mat A, Mat B, PetscReal tol, PetscB
   Mat Btrans;
 
   PetscFunctionBegin;
-  *f = PETSC_FALSE;
   PetscCall(MatTranspose(A, MAT_INITIAL_MATRIX, &Btrans));
-  PetscCall(MatEqual_SeqBAIJ(B, Btrans, f));
+  if (tol == 0.0) PetscCall(MatEqual_SeqBAIJ(B, Btrans, f));
+  else {
+    Mat_SeqBAIJ *a = (Mat_SeqBAIJ *)A->data, *b = (Mat_SeqBAIJ *)Btrans->data;
+
+    *f = PETSC_TRUE;
+    if ((A->rmap->N != B->rmap->N) || (A->cmap->n != B->cmap->n) || (A->rmap->bs != B->rmap->bs) || (a->nz != b->nz)) *f = PETSC_FALSE;
+    if (*f) PetscCall(PetscArraycmp(a->i, b->i, a->mbs + 1, f));
+    if (*f) PetscCall(PetscArraycmp(a->j, b->j, a->nz, f));
+    for (PetscInt i = 0; (i < a->nz * A->rmap->bs * A->rmap->bs) && *f; ++i)
+      if (PetscAbsScalar(a->a[i] - b->a[i]) > tol) *f = PETSC_FALSE;
+  }
   PetscCall(MatDestroy(&Btrans));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
