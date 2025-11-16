@@ -13,7 +13,7 @@
   "ghost locations" for the root nodes.
 
   The standard usage paradigm for `PetscSF` is to provide the communication pattern with `PetscSFSetGraph()` or `PetscSFSetGraphWithPattern()` and
-  then perform the communication using `PetscSFBcastBegin()` and `PetscSFBcastEnd()`, `PetscSFReduceBegin()` and `PetscSFReduceEnd()`,
+  then perform the communication using `PetscSFBcastBegin()` and `PetscSFBcastEnd()`, `PetscSFReduceBegin()` and `PetscSFReduceEnd()`.
 
 .seealso: [](sec_petscsf), `PetscSFCreate()`, `PetscSFSetGraph()`, `PetscSFSetGraphWithPattern()`, `PetscSFBcastBegin()`, `PetscSFBcastEnd()`,
           `PetscSFReduceBegin()`, `PetscSFReduceEnd()`, `VecScatter`, `VecScatterCreate()`
@@ -21,13 +21,13 @@ S*/
 typedef struct _p_PetscSF *PetscSF;
 
 /*J
-  PetscSFType - String with the name of a `PetscSF` type. Each `PetscSFType` use different mechanisms to perform the communication.
+  PetscSFType - String with the name of a `PetscSF` type. Each `PetscSFType` uses different mechanisms to perform the communication.
 
   Level: beginner
 
   Available Types:
 + `PETSCSFBASIC`      - use MPI sends and receives
-. `PETSCSFNEIGHBOR`   - uses MPI_Neighbor operations
+. `PETSCSFNEIGHBOR`   - use MPI_Neighbor operations
 . `PETSCSFALLGATHERV` - use MPI_Allgatherv operations
 . `PETSCSFALLGATHER`  - use MPI_Allgather operations
 . `PETSCSFGATHERV`    - use MPI_Igatherv and MPI_Iscatterv operations
@@ -36,7 +36,7 @@ typedef struct _p_PetscSF *PetscSF;
 - `PETSCSFWINDOW`     - use MPI_Win operations
 
   Note:
-  Some `PetscSFType` only provide specialized code for a subset of the `PetscSF` operations and use `PETSCSFBASIC` for the others
+  Some `PetscSFType` only provide specialized code for a subset of the `PetscSF` operations and use `PETSCSFBASIC` for the others.
 
 .seealso: [](sec_petscsf), `PetscSFSetType()`, `PetscSF`
 J*/
@@ -111,7 +111,7 @@ typedef struct _n_PetscSFLink *PetscSFLink;
   Level: beginner
 
   Note:
-  This is an alias for `PetscSF`
+  This is an alias for `PetscSF`.
 
 .seealso: [](sec_petscsf), `Vec`, `PetscSF`, `VecScatterCreate()`, `VecScatterBegin()`, `VecScatterEnd()`
 S*/

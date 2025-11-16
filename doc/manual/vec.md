@@ -1505,7 +1505,7 @@ MPI rank 1 (3, 2, 1) where x indicates the previous value in `leafdata` that was
 ## GPU usage
 
 `rootdata` and `leafdata` can live either on CPU memory or GPU memory. The `PetscSF` routines automatically detect the memory type. But the time for the calls to the `CUDA` or `HIP`
-routines for doing this determination (`cudaPointerGetAttributes()` or `hipPointerGetAttributes()` is not trivial. To avoid the cost of the check,
+routines for doing this determination (`cudaPointerGetAttributes()` or `hipPointerGetAttributes()`) is not trivial. To avoid the cost of the check,
 `PetscSF` provides the routines `PetscSFBcastWithMemTypeBegin()` and `PetscSFReduceWithMemTypeBegin()` where the user provides the memory type information.
 
 ## Gathering leafdata but not reducing it
