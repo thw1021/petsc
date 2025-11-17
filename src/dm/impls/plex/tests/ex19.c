@@ -342,11 +342,11 @@ int main(int argc, char *argv[])
           -met 2 -hmax 0.5 -hmin 0.001 -init_dm_view -adapt_dm_view -dm_adaptor pragmatic
   test:
     suffix: proj2
-    args: -dm_plex_box_faces 2,2 -dm_plex_hash_location -dm_adaptor pragmatic -init_dm_view -adapt_dm_view -do_L2 \
+    args: -dm_plex_box_faces 2,2 -dm_plex_point_location_algorithm hash -dm_adaptor pragmatic -init_dm_view -adapt_dm_view -do_L2 \
           -petscspace_degree 1 -petscfe_default_quadrature_order 1 -pc_type lu -dm_adaptor pragmatic
   test:
     suffix: proj4
-    args: -dm_plex_box_faces 4,4 -dm_plex_hash_location -dm_adaptor pragmatic -init_dm_view -adapt_dm_view -do_L2 \
+    args: -dm_plex_box_faces 4,4 -dm_plex_point_location_algorithm hash -dm_adaptor pragmatic -init_dm_view -adapt_dm_view -do_L2 \
           -petscspace_degree 1 -petscfe_default_quadrature_order 1 -pc_type lu -dm_adaptor pragmatic
 
   test:
