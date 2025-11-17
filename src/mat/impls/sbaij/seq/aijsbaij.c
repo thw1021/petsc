@@ -343,7 +343,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqBAIJ_SeqSBAIJ(Mat A, MatType newtype, 
   PetscBool     flg;
 
   PetscFunctionBegin;
-  PetscCheck(A->symmetric, PetscObjectComm((PetscObject)A), PETSC_ERR_USER, "Matrix must be symmetric. Call MatSetOption(mat,MAT_SYMMETRIC,PETSC_TRUE)");
+  PetscCheck(A->symmetric == PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)A), PETSC_ERR_USER, "Matrix must be symmetric. Call MatSetOption(mat,MAT_SYMMETRIC,PETSC_TRUE)");
   PetscCheck(n == m, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square");
   PetscCall(MatMissingDiagonal_SeqBAIJ(A, &flg, &dd)); /* check for missing diagonals, then mark diag */
   PetscCheck(!flg, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Matrix is missing diagonal %" PetscInt_FMT, dd);
