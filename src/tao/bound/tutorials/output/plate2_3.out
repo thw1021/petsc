@@ -7,7 +7,7 @@ iter =   2, Function value 1.49406, Residual: 0.000580218
 iter =   3, Function value 1.49406, Residual: < 1.0e-6
 Tao Object: 3 MPI processes
   type: tron
-  Total PG its: 9,  PG tolerance: 0.001 
+  Total PG its: 9,  PG tolerance: 0.001
   TaoLineSearch Object: 3 MPI processes
     type: more-thuente
     maximum function evaluations=30
