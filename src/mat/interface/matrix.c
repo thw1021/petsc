@@ -5570,6 +5570,45 @@ PetscErrorCode MatIsHermitianTranspose(Mat A, Mat B, PetscReal tol, PetscBool *f
 }
 
 /*@
+  MatStructureCompare - Test whether a matrix has the same structure as another one.
+
+  Collective
+
+  Input Parameters:
++ A   - the matrix to test
+- B   - the matrix to test against, this can equal the first parameter
+
+  Output Parameter:
+. structure - the result
+
+  Level: intermediate
+
+.seealso: [](ch_matrices), `Mat`, `MatAXPY()`, `MatStructure`
+@*/
+PetscErrorCode MatStructureCompare(Mat A, Mat B, MatStructure *structure)
+{
+  PetscErrorCode (*f)(Mat, Mat, MatStructure *), (*g)(Mat, Mat, MatStructure *);
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(B, MAT_CLASSID, 2);
+  PetscAssertPointer(structure, 3);
+  PetscCall(PetscObjectQueryFunction((PetscObject)A, "MatStructureCompare_C", &f));
+  PetscCall(PetscObjectQueryFunction((PetscObject)B, "MatStructureCompare_C", &g));
+  *structure = UNKNOWN_NONZERO_PATTERN;
+  if (f && g) {
+    PetscCheck(f == g, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_NOTSAMETYPE, "Matrices do not have the same comparator for structure");
+    PetscCall((*f)(A, B, structure));
+  } else {
+    MatType mattype;
+
+    PetscCall(MatGetType(f ? B : A, &mattype));
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Matrix of type %s does not support checking for structure", mattype);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   MatPermute - Creates a new matrix with rows and columns permuted from the
   original.
 

@@ -899,6 +899,7 @@ PetscErrorCode MatDestroy_SeqSELL(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSeqSELLGetArray_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSeqSELLRestoreArray_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqsell_seqaij_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatStructureCompare_C", NULL));
 #if defined(PETSC_HAVE_CUDA)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqsell_seqsellcuda_C", NULL));
 #endif
@@ -2125,6 +2126,37 @@ PetscErrorCode MatSeqSELLGetVarSliceSize(Mat A, PetscReal *variance)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatStructureCompare_SeqSELL(Mat A, Mat B, MatStructure *structure)
+{
+  Mat_SeqSELL *a = (Mat_SeqSELL *)A->data, *b = (Mat_SeqSELL *)B->data;
+  PetscInt     totalslices = a->totalslices;
+  PetscBool    flg;
+
+  PetscFunctionBegin;
+  /* if the matrix dimensions are not equal, or number of nonzeros */
+  if (A->rmap->n != B->rmap->n || A->cmap->n != B->cmap->n || a->nz != b->nz || a->rlenmax != b->rlenmax || totalslices != b->totalslices) {
+    *structure = DIFFERENT_NONZERO_PATTERN;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  /* if the a->sliidx are the same */
+  PetscCall(PetscArraycmp(a->sliidx, b->sliidx, totalslices + 1, &flg));
+  if (!flg) {
+    *structure = DIFFERENT_NONZERO_PATTERN;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  /* if a->colidx are the same */
+  PetscCall(PetscArraycmp(a->colidx, b->colidx, a->sliidx[totalslices], &flg));
+  if (!flg) {
+    *structure = DIFFERENT_NONZERO_PATTERN;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  *structure = SAME_NONZERO_PATTERN;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 #if defined(PETSC_HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode MatConvert_SeqSELL_SeqSELLCUDA(Mat);
 #endif
@@ -2174,6 +2206,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqSELL(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatRetrieveValues_C", MatRetrieveValues_SeqSELL));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSeqSELLSetPreallocation_C", MatSeqSELLSetPreallocation_SeqSELL));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_seqsell_seqaij_C", MatConvert_SeqSELL_SeqAIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatStructureCompare_C", MatStructureCompare_SeqSELL));
 #if defined(PETSC_HAVE_CUDA)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_seqsell_seqsellcuda_C", MatConvert_SeqSELL_SeqSELLCUDA));
 #endif
@@ -2396,16 +2429,14 @@ PetscErrorCode MatEqual_SeqSELL(Mat A, Mat B, PetscBool *flg)
 {
   Mat_SeqSELL *a = (Mat_SeqSELL *)A->data, *b = (Mat_SeqSELL *)B->data;
   PetscInt     totalslices = a->totalslices;
+  MatStructure structure;
 
   PetscFunctionBegin;
-  /* If the  matrix dimensions are not equal,or no of nonzeros */
-  if ((A->rmap->n != B->rmap->n) || (A->cmap->n != B->cmap->n) || (a->nz != b->nz) || (a->rlenmax != b->rlenmax)) {
+  PetscCall(MatStructureCompare(A, B, &structure));
+  if (structure != SAME_NONZERO_PATTERN) {
     *flg = PETSC_FALSE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  /* if the a->colidx are the same */
-  PetscCall(PetscArraycmp(a->colidx, b->colidx, a->sliidx[totalslices], flg));
-  if (!*flg) PetscFunctionReturn(PETSC_SUCCESS);
   /* if a->val are the same */
   PetscCall(PetscArraycmp(a->val, b->val, a->sliidx[totalslices], flg));
   PetscFunctionReturn(PETSC_SUCCESS);
