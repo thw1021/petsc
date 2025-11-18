@@ -290,6 +290,7 @@ static PetscErrorCode MatDestroy_MPIAdj(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMPIAdjCreateNonemptySubcommMat_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMPIAdjToSeq_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMPIAdjToSeqRankZero_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatStructureCompare_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -333,22 +334,44 @@ static PetscErrorCode MatGetRow_MPIAdj(Mat A, PetscInt row, PetscInt *nz, PetscI
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatEqual_MPIAdj(Mat A, Mat B, PetscBool *flg)
+static PetscErrorCode MatStructureCompare_MPIAdj(Mat A, Mat B, MatStructure *structure)
 {
   Mat_MPIAdj *a = (Mat_MPIAdj *)A->data, *b = (Mat_MPIAdj *)B->data;
   PetscBool   flag;
 
   PetscFunctionBegin;
-  /* If the  matrix dimensions are not equal,or no of nonzeros */
-  if ((A->rmap->n != B->rmap->n) || (a->nz != b->nz)) flag = PETSC_FALSE;
+  /* if the matrix dimensions are not equal, or number of nonzeros */
+  if (A->rmap->n != B->rmap->n || a->nz != b->nz) {
+    *structure = DIFFERENT_NONZERO_PATTERN;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
 
   /* if the a->i are the same */
   PetscCall(PetscArraycmp(a->i, b->i, A->rmap->n + 1, &flag));
+  if (!flag) {
+    *structure = DIFFERENT_NONZERO_PATTERN;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
 
   /* if a->j are the same */
-  PetscCall(PetscMemcmp(a->j, b->j, (a->nz) * sizeof(PetscInt), &flag));
+  PetscCall(PetscArraycmp(a->j, b->j, a->nz, &flag));
+  if (!flag) {
+    *structure = DIFFERENT_NONZERO_PATTERN;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
 
-  PetscCallMPI(MPIU_Allreduce(&flag, flg, 1, MPI_C_BOOL, MPI_LAND, PetscObjectComm((PetscObject)A)));
+  *structure = SAME_NONZERO_PATTERN;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatEqual_MPIAdj(Mat A, Mat B, PetscBool *flg)
+{
+  MatStructure structure;
+
+  PetscFunctionBegin;
+  PetscCall(MatStructureCompare(A, B, &structure));
+  *flg = structure == SAME_NONZERO_PATTERN;
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, flg, 1, MPI_C_BOOL, MPI_LAND, PetscObjectComm((PetscObject)A)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -952,6 +975,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAdj(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIAdjCreateNonemptySubcommMat_C", MatMPIAdjCreateNonemptySubcommMat_MPIAdj));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIAdjToSeq_C", MatMPIAdjToSeq_MPIAdj));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIAdjToSeqRankZero_C", MatMPIAdjToSeqRankZero_MPIAdj));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatStructureCompare_C", MatStructureCompare_MPIAdj));
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATMPIADJ));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -1376,24 +1376,17 @@ PetscErrorCode MatNorm_SeqSBAIJ(Mat A, NormType type, PetscReal *norm)
 PetscErrorCode MatEqual_SeqSBAIJ(Mat A, Mat B, PetscBool *flg)
 {
   Mat_SeqSBAIJ *a = (Mat_SeqSBAIJ *)A->data, *b = (Mat_SeqSBAIJ *)B->data;
+  MatStructure  structure;
 
   PetscFunctionBegin;
-  /* If the  matrix/block dimensions are not equal, or no of nonzeros or shift */
-  if ((A->rmap->N != B->rmap->N) || (A->cmap->n != B->cmap->n) || (A->rmap->bs != B->rmap->bs) || (a->nz != b->nz)) {
+  PetscCall(MatStructureCompare(A, B, &structure));
+  if (structure != SAME_NONZERO_PATTERN) {
     *flg = PETSC_FALSE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  /* if the a->i are the same */
-  PetscCall(PetscArraycmp(a->i, b->i, a->mbs + 1, flg));
-  if (!*flg) PetscFunctionReturn(PETSC_SUCCESS);
-
-  /* if a->j are the same */
-  PetscCall(PetscArraycmp(a->j, b->j, a->nz, flg));
-  if (!*flg) PetscFunctionReturn(PETSC_SUCCESS);
-
   /* if a->a are the same */
-  PetscCall(PetscArraycmp(a->a, b->a, (a->nz) * (A->rmap->bs) * (A->rmap->bs), flg));
+  PetscCall(PetscArraycmp(a->a, b->a, a->nz * A->rmap->bs * A->rmap->bs, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

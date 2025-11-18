@@ -213,6 +213,7 @@ PetscErrorCode MatDestroy_SeqSBAIJ(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqsbaij_seqbaij_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSeqSBAIJSetPreallocation_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSeqSBAIJSetPreallocationCSR_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatStructureCompare_C", NULL));
 #if defined(PETSC_HAVE_ELEMENTAL)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_seqsbaij_elemental_C", NULL));
 #endif
@@ -1027,15 +1028,11 @@ static PetscErrorCode MatAXPY_SeqSBAIJ(Mat Y, PetscScalar a, Mat X, MatStructure
 
   PetscFunctionBegin;
   if (str == UNKNOWN_NONZERO_PATTERN || (PetscDefined(USE_DEBUG) && str == SAME_NONZERO_PATTERN)) {
-    PetscBool e = x->nz == y->nz && x->mbs == y->mbs ? PETSC_TRUE : PETSC_FALSE;
-    if (e) {
-      PetscCall(PetscArraycmp(x->i, y->i, x->mbs + 1, &e));
-      if (e) {
-        PetscCall(PetscArraycmp(x->j, y->j, x->i[x->mbs], &e));
-        if (e) str = SAME_NONZERO_PATTERN;
-      }
-    }
-    if (!e) PetscCheck(str != SAME_NONZERO_PATTERN, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "MatStructure is not SAME_NONZERO_PATTERN");
+    MatStructure structure;
+
+    PetscCall(MatStructureCompare(X, Y, &structure));
+    PetscCheck(!(PetscDefined(USE_DEBUG) && str == SAME_NONZERO_PATTERN) || structure == SAME_NONZERO_PATTERN, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "MatStructure is not SAME_NONZERO_PATTERN");
+    str = structure;
   }
   if (str == SAME_NONZERO_PATTERN) {
     PetscScalar  alpha = a;
@@ -1246,6 +1243,36 @@ PetscErrorCode MatEliminateZeros_SeqSBAIJ(Mat A, PetscBool keep)
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode MatStructureCompare_SeqSBAIJ(Mat A, Mat B, MatStructure *structure)
+{
+  Mat_SeqSBAIJ *a = (Mat_SeqSBAIJ *)A->data, *b = (Mat_SeqSBAIJ *)B->data;
+  PetscBool     flg;
+
+  PetscFunctionBegin;
+  /* if the matrix/block dimensions are not equal, or no of nonzeros or shift */
+  if (A->rmap->N != B->rmap->N || A->cmap->n != B->cmap->n || A->rmap->bs != B->rmap->bs || a->nz != b->nz) {
+    *structure = DIFFERENT_NONZERO_PATTERN;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  /* if the a->i are the same */
+  PetscCall(PetscArraycmp(a->i, b->i, a->mbs + 1, &flg));
+  if (!flg) {
+    *structure = DIFFERENT_NONZERO_PATTERN;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  /* if a->j are the same */
+  PetscCall(PetscArraycmp(a->j, b->j, a->nz, &flg));
+  if (!flg) {
+    *structure = DIFFERENT_NONZERO_PATTERN;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  *structure = SAME_NONZERO_PATTERN;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1878,6 +1905,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqSBAIJ(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_seqsbaij_seqbaij_C", MatConvert_SeqSBAIJ_SeqBAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSeqSBAIJSetPreallocation_C", MatSeqSBAIJSetPreallocation_SeqSBAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSeqSBAIJSetPreallocationCSR_C", MatSeqSBAIJSetPreallocationCSR_SeqSBAIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatStructureCompare_C", MatStructureCompare_SeqSBAIJ));
 #if defined(PETSC_HAVE_ELEMENTAL)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_seqsbaij_elemental_C", MatConvert_SeqSBAIJ_Elemental));
 #endif

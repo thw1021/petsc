@@ -763,6 +763,7 @@ PETSC_EXTERN PetscErrorCode MatCopy(Mat, Mat, MatStructure);
 PETSC_EXTERN PetscErrorCode MatView(Mat, PetscViewer);
 PETSC_EXTERN PetscErrorCode MatIsSymmetric(Mat, PetscReal, PetscBool *);
 PETSC_EXTERN PetscErrorCode MatIsStructurallySymmetric(Mat, PetscBool *);
+PETSC_EXTERN PetscErrorCode MatStructureCompare(Mat, Mat, MatStructure *);
 PETSC_EXTERN PetscErrorCode MatIsHermitian(Mat, PetscReal, PetscBool *);
 PETSC_EXTERN PetscErrorCode MatIsSymmetricKnown(Mat, PetscBool *, PetscBool *);
 PETSC_EXTERN PetscErrorCode MatIsHermitianKnown(Mat, PetscBool *, PetscBool *);
