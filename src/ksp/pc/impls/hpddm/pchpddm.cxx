@@ -1411,6 +1411,19 @@ static PetscErrorCode PCHPDDMCheckInclusion_Private(PC pc, IS is, IS is_local, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PCHPDDMCheckMatStructure_Private(PC pc, Mat A, Mat B)
+{
+  MatStructure structure;
+  PetscBool    flg;
+
+  PetscFunctionBegin;
+  PetscCall(MatStructureCompare(A, B, &structure));
+  flg = (PetscBool)(structure != DIFFERENT_NONZERO_PATTERN);
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &flg, 1, MPI_C_BOOL, MPI_LOR, PetscObjectComm((PetscObject)pc)));
+  PetscCheck(flg, PetscObjectComm((PetscObject)pc), PETSC_ERR_USER_INPUT, "Auxiliary Mat is supposedly the local Neumann matrix but it has a different sparsity pattern than the local assembled matrix");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PCHPDDMDestroySubMatrices_Private(PetscBool flg, PetscBool algebraic, Mat *sub)
 {
   IS is;
@@ -1854,6 +1867,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
             PC              pc_00;
             Mat             A11 = nullptr;
             Vec             d   = nullptr;
+            PetscReal       norm;
             const PetscInt *ranges;
             PetscMPIInt     size;
             char           *prefix;
@@ -1957,14 +1971,14 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
                 }
                 if (flg) PetscCall(PetscInfo(pc, "A11 block is likely diagonal so the PC will build an auxiliary Mat (which was not initially provided by the user)\n"));
               }
-              if (data->Neumann != PETSC_BOOL3_TRUE && !flg && A11) {
-                PetscReal norm;
-
+              if ((PetscDefined(USE_DEBUG) || (data->Neumann != PETSC_BOOL3_TRUE && !flg)) && A11) {
                 PetscCall(MatNorm(A11, NORM_INFINITY, &norm));
-                PetscCheck(norm < PETSC_MACHINE_EPSILON * static_cast<PetscReal>(10.0), PetscObjectComm((PetscObject)P), PETSC_ERR_ARG_INCOMP, "-%spc_hpddm_schur_precondition geneo and -%spc_hpddm_has_neumann != true with a nonzero or non-diagonal A11 block", pcpre ? pcpre : "", pcpre ? pcpre : "");
-                PetscCall(PetscInfo(pc, "A11 block is likely zero so the PC will build an auxiliary Mat (which was%s initially provided by the user)\n", data->aux ? "" : " not"));
-                PetscCall(MatDestroy(&data->aux));
-                flg = PETSC_TRUE;
+                if (data->Neumann != PETSC_BOOL3_TRUE && !flg) {
+                  PetscCheck(norm < PETSC_MACHINE_EPSILON * static_cast<PetscReal>(10.0), PetscObjectComm((PetscObject)P), PETSC_ERR_ARG_INCOMP, "-%spc_hpddm_schur_precondition geneo and -%spc_hpddm_has_neumann != true with a nonzero or non-diagonal A11 block", pcpre ? pcpre : "", pcpre ? pcpre : "");
+                  PetscCall(PetscInfo(pc, "A11 block is likely zero so the PC will build an auxiliary Mat (which was%s initially provided by the user)\n", data->aux ? "" : " not"));
+                  PetscCall(MatDestroy(&data->aux));
+                  flg = PETSC_TRUE;
+                }
               }
               if (!data->aux) { /* if A11 is near zero, e.g., Stokes equation, or diagonal, build an auxiliary (Neumann) Mat which is a (possibly slightly shifted) diagonal weighted by the inverse of the multiplicity */
                 PetscSF            scatter;
@@ -2031,6 +2045,11 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
               PetscCall(PCSetType(std::get<0>(*ctx)[1], PCHPDDM));
               PetscCall(PCHPDDMSetAuxiliaryMat(std::get<0>(*ctx)[1], uis, uaux, nullptr, nullptr)); /* transfer ownership of the auxiliary inputs from the inner (PCKSP) to the inner-most (PCHPDDM) PC */
               if (flg) static_cast<PC_HPDDM *>(std::get<0>(*ctx)[1]->data)->Neumann = PETSC_BOOL3_TRUE;
+              else if (PetscDefined(USE_DEBUG) && norm > PETSC_MACHINE_EPSILON * static_cast<PetscReal>(10.0)) {
+                PetscCall(MatCreateSubMatrices(A11, 1, &uis, &uis, MAT_INITIAL_MATRIX, &sub));
+                PetscCall(PCHPDDMCheckMatStructure_Private(pc, sub[0], uaux));
+                PetscCall(MatDestroySubMatrices(1, &sub));
+              }
               PetscCall(PCSetFromOptions(std::get<0>(*ctx)[1]));
               PetscCall(PetscObjectDereference((PetscObject)uis));
               PetscCall(PetscObjectDereference((PetscObject)uaux));
@@ -2527,8 +2546,10 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
               else cmp[3] = PETSC_FALSE;
               PetscCheck(cmp[0] == cmp[1] && cmp[2] == cmp[3], PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "-%spc_hpddm_levels_1_pc_asm_sub_mat_type %s and auxiliary Mat of type %s", pcpre ? pcpre : "", ((PetscObject)D)->type_name, ((PetscObject)C)->type_name);
               if (!cmp[0] && !cmp[2]) {
-                if (!block) PetscCall(MatAXPY(D, 1.0, C, SUBSET_NONZERO_PATTERN));
-                else {
+                if (!block) {
+                  if (PetscDefined(USE_DEBUG)) PetscCall(PCHPDDMCheckMatStructure_Private(pc, D, C));
+                  PetscCall(MatAXPY(D, 1.0, C, SUBSET_NONZERO_PATTERN));
+                } else {
                   PetscCall(MatMissingDiagonal(D, cmp, nullptr));
                   if (cmp[0]) structure = DIFFERENT_NONZERO_PATTERN; /* data->aux has no missing diagonal entry */
                   PetscCall(MatAXPY(D, 1.0, data->aux, structure));
