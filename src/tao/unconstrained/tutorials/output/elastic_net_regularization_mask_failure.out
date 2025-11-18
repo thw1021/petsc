@@ -1,13 +1,13 @@
-iter =   0, Function value 153.545, Residual: 132.41 
-iter =   1, Function value 19.5801, Residual: 1.83069 
-iter =   2, Function value 19.5516, Residual: 0.0449114 
-iter =   3, Function value 19.5515, Residual: 0.00639381 
-iter =   4, Function value 19.5515, Residual: 0.000967911 
-iter =   5, Function value 19.5515, Residual: 0.000147518 
-iter =   6, Function value 19.5515, Residual: 2.25053e-05 
-iter =   7, Function value 19.5515, Residual: 3.43409e-06 
-iter =   8, Function value 19.5515, Residual: < 1.0e-6 
-iter =   9, Function value 19.5515, Residual: < 1.0e-6 
+iter =   0, Function value 153.545, Residual: 132.41
+iter =   1, Function value 19.5801, Residual: 1.83082
+iter =   2, Function value 19.5516, Residual: 0.0449057
+iter =   3, Function value 19.5515, Residual: 0.00639275
+iter =   4, Function value 19.5515, Residual: 0.000967751
+iter =   5, Function value 19.5515, Residual: 0.000147493
+iter =   6, Function value 19.5515, Residual: 2.25016e-05
+iter =   7, Function value 19.5515, Residual: 3.43352e-06
+iter =   8, Function value 19.5515, Residual: < 1.0e-6
+iter =   9, Function value 19.5515, Residual: < 1.0e-6
 Tao Object: 1 MPI process
   type: nls
     Newton steps: 9
@@ -97,14 +97,14 @@ Tao Object: 1 MPI process
       tolerance for zero pivot 2.22045e-14
       matrix ordering: natural
       factor fill ratio given 1., needed 1.
-        Factored matrix follows:
+        Factored matrix:
           Mat Object: (tao_nls_) 1 MPI process
             type: seqaij
             rows=20, cols=20
             package used to perform factorization: petsc
             total: nonzeros=400, allocated nonzeros=400
               using I-node routines: found 4 nodes, limit used is 5
-    linear system matrix = precond matrix:
+    linear system matrix, which is also used to construct the preconditioner:
     Mat Object: 1 MPI process
       type: seqaij
       rows=20, cols=20
