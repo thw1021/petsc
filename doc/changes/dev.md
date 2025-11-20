@@ -86,6 +86,9 @@
 ```
 
 -  Change the `destroy()` function argument of `TSTrajectorySetTransform()` to type `PetscCtxDestroyFn *`. This means the destroy function must dereference the argument before operating on it
+-  Add `TSPseudoGetSteadyResidual()` to get steady residual, avoiding recalculation of residual if possible
+-  Remove unused `TSPseudoVerifyTimeStepDefault()`
+-  Remove `TSPseudoComputeTimeStep()` and `TSPseudoVerifyTimeStep()`
 
 ```{rubric} TAO:
 ```
