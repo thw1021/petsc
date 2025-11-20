@@ -352,7 +352,7 @@ static PetscErrorCode testGroupsDatasets(PetscViewer viewer)
   PetscCall(PetscRandomCreate(comm, &rand));
   PetscCall(PetscRandomSetInterval(rand, 0.0, 10.0));
   PetscCall(PetscRandomSetFromOptions(rand));
-  PetscCall(PetscMemzero(vecs, nap * ns * sizeof(Vec)));
+  PetscCall(PetscArrayzero(vecs, nap * ns));
 
   /* test dataset writing */
   if (verbose) PetscCall(PetscPrintf(comm, "## WRITE PHASE\n"));
@@ -502,7 +502,7 @@ static PetscErrorCode testAttributesAbsolutePath(PetscViewer viewer, const char 
     }
     PetscCall(PetscPrintf(comm, "## WRITE PHASE\n"));
   }
-  PetscCall(PetscMemzero(capsules, nap * ns * sizeof(Capsule)));
+  PetscCall(PetscArrayzero(capsules, nap * ns));
 
   /* test attribute writing */
   if (prefix) PetscCall(PetscViewerHDF5PushGroup(viewer, prefix));
@@ -591,7 +591,7 @@ static PetscErrorCode testAttributesPushedPath(PetscViewer viewer)
     PetscCall(PetscPrintf(comm, "# TEST testAttributesPushedPath\n"));
     PetscCall(PetscPrintf(comm, "## WRITE PHASE\n"));
   }
-  PetscCall(PetscMemzero(capsules, nap * ns * sizeof(Capsule)));
+  PetscCall(PetscArrayzero(capsules, nap * ns));
 
   /* test attribute writing */
   for (p = 0; p < np; p++) {
@@ -667,7 +667,7 @@ static PetscErrorCode testObjectAttributes(PetscViewer viewer)
     PetscCall(PetscPrintf(comm, "# TEST testObjectAttributes\n"));
     PetscCall(PetscPrintf(comm, "## WRITE PHASE\n"));
   }
-  PetscCall(PetscMemzero(capsules, nap * ns * sizeof(Capsule)));
+  PetscCall(PetscArrayzero(capsules, nap * ns));
 
   /* test attribute writing */
   for (p = 0; p < np; p++) {
