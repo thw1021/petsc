@@ -373,13 +373,47 @@ PetscErrorCode TSAdaptSetMonitor(TSAdapt adapt, PetscBool flg)
 
   Level: advanced
 
-.seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSGetAdapt()`, `TSAdaptChoose()`
+  Note:
+  If `TSAdaptSetAlwaysCheckStage()` is set to true, the `accept` parameter passed to the callback will be the result of the default checks in `TSAdaptCheckStage()`.
+  For example, if the nonlinear solve fails or the fails `TSFunctionDomainError()`, `accept = PETSC_FALSE`.
+  Thus, it is recommended that the callback function only reset `accept` if `accept == PETSC_TRUE`.
+
+.seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSAdaptSetAlwaysCheckStage()`, `TSGetAdapt()`, `TSAdaptChoose()`
 @*/
 PetscErrorCode TSAdaptSetCheckStage(TSAdapt adapt, PetscErrorCode (*func)(TSAdapt adapt, TS ts, PetscReal t, Vec Y, PetscBool *accept))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
   adapt->checkstage = func;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TSAdaptSetAlwaysCheckStage - Set whether the callback from `TSAdaptSetCheckStage()` should always be called or not
+
+  Logically Collective
+
+  Input Parameters:
++ adapt - time step adaptivity context, usually gotten with `TSGetAdapt()`
+- flag  - whether to always run the callback function
+
+  Level: intermediate
+
+  Notes:
+  By default, the callback set by `TSAdaptSetCheckStage()` is only called if other default checks accept the step (e.g. nonlinear solve succeeded or stage vector passes `TSFunctionDomainError()`).
+  Setting `flag = PETSC_TRUE` will force the callback to be called even if other checks reject the step.
+
+  The `accept` parameter passed to the callback (see `TSAdaptSetCheckStage()`) will be the result of the default checks in `TSAdaptCheckStage()` (e.g. if the nonlinear solve fails, `accept = PETSC_FALSE`).
+  Thus, it is recommended that the callback function only reset `accept` if `accept == PETSC_TRUE`.
+
+.seealso: [](ch_ts), `TSAdapt`, `TSAdaptSetCheckStage()`, `TSGetAdapt()`, `TSAdaptChoose()`
+@*/
+PetscErrorCode TSAdaptSetAlwaysCheckStage(TSAdapt adapt, PetscBool flag)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(adapt, flag, 2);
+  adapt->always_checkstage = flag;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1090,7 +1124,7 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
     }
   } else {
     *accept = (PetscBool)(func_accept && !snes_div_func);
-    if (*accept && adapt->checkstage) PetscCall((*adapt->checkstage)(adapt, ts, t, Y, accept));
+    if (*accept && adapt->checkstage && !adapt->always_checkstage) PetscCall((*adapt->checkstage)(adapt, ts, t, Y, accept));
     if (!*accept) {
       const char *user_func = !func_accept ? "TSSetFunctionDomainError()" : "TSAdaptSetCheckStage";
       const char *snes_err  = "SNES invalid function domain";
@@ -1103,6 +1137,7 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
       }
     }
   }
+  if (adapt->checkstage && adapt->always_checkstage) PetscCall((*adapt->checkstage)(adapt, ts, t, Y, accept));
 
   if (!*accept && !ts->reason) {
     PetscReal dt, new_dt;
