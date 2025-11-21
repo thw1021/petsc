@@ -1015,7 +1015,7 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
     PetscCall(MatSetOption(A, MAT_HERMITIAN, sub_schurs->is_hermitian));
     PetscCall(MatSetOption(A, MAT_SPD, sub_schurs->is_posdef));
 
-    /* for complexes, symmetric and hermitian at the same time implies null imaginary part */
+    /* for complexes, symmetric and Hermitian at the same time implies null imaginary part */
     use_cholesky = (PetscBool)((use_potr || use_sytr) && sub_schurs->is_hermitian && sub_schurs->is_symmetric);
 
     /* when using the benign subspace trick, the local Schur complements are SPD */
@@ -1115,8 +1115,8 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
       if (gpu) PetscCall(PetscStrncpy(stype, MATSEQDENSECUDA, sizeof(stype)));
       PetscCall(PetscOptionsGetString(NULL, sub_schurs->prefix, "-sub_schurs_schur_mat_type", stype, sizeof(stype), NULL));
       PetscCall(MatConvert(S_all, stype, MAT_INPLACE_MATRIX, &S_all));
-      PetscCall(MatSetOption(S_all, MAT_SPD, sub_schurs->is_posdef));
       PetscCall(MatSetOption(S_all, MAT_HERMITIAN, sub_schurs->is_hermitian));
+      PetscCall(MatSetOption(S_all, MAT_SPD, sub_schurs->is_posdef));
       PetscCall(MatGetType(S_all, &Stype));
 
       /* we can reuse the solvers if we are not using the economic version */
@@ -1315,8 +1315,8 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
       }
       PetscCall(MatAssemblyBegin(S_all, MAT_FINAL_ASSEMBLY));
       PetscCall(MatAssemblyEnd(S_all, MAT_FINAL_ASSEMBLY));
-      PetscCall(MatSetOption(S_all, MAT_SPD, sub_schurs->is_posdef));
       PetscCall(MatSetOption(S_all, MAT_HERMITIAN, sub_schurs->is_hermitian));
+      PetscCall(MatSetOption(S_all, MAT_SPD, sub_schurs->is_posdef));
       Stype             = MATDENSE;
       reuse_solvers     = PETSC_FALSE;
       factor_workaround = PETSC_FALSE;
@@ -1509,8 +1509,8 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
           PetscBool          isdense, isdensecuda;
 
           PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, subset_size, subset_size, work, &M));
-          PetscCall(MatSetOption(M, MAT_SPD, sub_schurs->is_posdef));
           PetscCall(MatSetOption(M, MAT_HERMITIAN, sub_schurs->is_hermitian));
+          PetscCall(MatSetOption(M, MAT_SPD, sub_schurs->is_posdef));
           if (!PetscBTLookup(sub_schurs->is_edge, i)) PetscCall(MatSetType(M, Stype));
           PetscCall(PetscObjectTypeCompare((PetscObject)M, MATSEQDENSE, &isdense));
           PetscCall(PetscObjectTypeCompare((PetscObject)M, MATSEQDENSECUDA, &isdensecuda));
@@ -1678,8 +1678,8 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
 
               PetscCall(MatCreateSubMatrix(S_all, is_sub_schur[sub], is_sub_schur[sub], MAT_INITIAL_MATRIX, &M));
               PetscCall(MatConvert(M, MATDENSE, MAT_INPLACE_MATRIX, &M));
-              PetscCall(MatSetOption(M, MAT_SPD, sub_schurs->is_posdef));
               PetscCall(MatSetOption(M, MAT_HERMITIAN, sub_schurs->is_hermitian));
+              PetscCall(MatSetOption(M, MAT_SPD, sub_schurs->is_posdef));
               switch (sub_schurs->mat_factor_type) {
               case MAT_FACTOR_CHOLESKY:
                 PetscCall(MatCholeskyFactor(M, NULL, NULL));
