@@ -1,0 +1,70 @@
+===== PetscDAS ETKF Tests =====
+
+Test 1: Gaussian Random Number Generation
+  Target mean = 0., computed mean = 0.0187531
+  Target variance = 1., computed variance = 0.997781
+  PASS
+
+Test 2: Eigenvalue Square Root Verification
+  Error in eigenvalue inverse: 4.29988e-16
+  PASS
+
+Test 3: Ensemble Mean Computation
+  Error in ensemble mean: 0.
+  PASS
+
+Test 4: Linear 2D System Verification
+PetscDAS Object: 1 MPI process
+  type: etkf
+  Ensemble size: 20
+  State size: 2
+    ETKF Data Assimilation
+PetscDAS Object: 1 MPI process
+  type: etkf
+  Ensemble size: 20
+  State size: 2
+    ETKF Data Assimilation
+PetscDAS Object: 1 MPI process
+  type: etkf
+  Ensemble size: 20
+  State size: 2
+    ETKF Data Assimilation
+PetscDAS Object: 1 MPI process
+  type: etkf
+  Ensemble size: 20
+  State size: 2
+    ETKF Data Assimilation
+PetscDAS Object: 1 MPI process
+  type: etkf
+  Ensemble size: 20
+  State size: 2
+    ETKF Data Assimilation
+PetscDAS Object: 1 MPI process
+  type: etkf
+  Ensemble size: 20
+  State size: 2
+    ETKF Data Assimilation
+PetscDAS Object: 1 MPI process
+  type: etkf
+  Ensemble size: 20
+  State size: 2
+    ETKF Data Assimilation
+PetscDAS Object: 1 MPI process
+  type: etkf
+  Ensemble size: 20
+  State size: 2
+    ETKF Data Assimilation
+PetscDAS Object: 1 MPI process
+  type: etkf
+  Ensemble size: 20
+  State size: 2
+    ETKF Data Assimilation
+PetscDAS Object: 1 MPI process
+  type: etkf
+  Ensemble size: 20
+  State size: 2
+    ETKF Data Assimilation
+  RMSE after 10 steps: 0.0228813
+  PASS
+
+===== All Tests Passed =====

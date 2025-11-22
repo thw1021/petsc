@@ -37,6 +37,8 @@ PETSc/TAO is a tool for writing, analyzing, and optimizing large-scale numerical
 
 - {any}`PetscRegressor <ch_regressor>` for regression and classification problems (`PetscRegressor`).
 
+- {any}`PetscDAS <ch_das>` for ensemble-based data assimilation methods (`PetscDAS`).
+
 - Eigenvalue/Eigenvectors and related algorithms in the package [SLEPc](https://slepc.upv.es).
 
 ## Model/Discretization Interfaces to Solvers

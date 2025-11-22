@@ -20,6 +20,7 @@ The important PETSc classes include
 - scalable {any}`ch_tao` including a rich set of gradient-based optimizers,
   Newton-based optimizers and optimization with constraints (`Tao`).
 - {any}ch_regressor (`PetscRegressor)`
+- {any}`ch_das` (`PetscDAS`)
 - {any}`ch_dmbase` code for managing interactions between mesh data structures and vectors,
   matrices, and solvers (`DM`);
 
@@ -1123,6 +1124,7 @@ directories:
   - `ml` - Machine Learning
 
     - `regressor` - Regression solvers
+    - `das` - Data assimilation systems
 
   - `dm` - data management between meshes and solvers, vectors, and
     matrices,
