@@ -23,7 +23,7 @@ if __name__ == '__main__':
      '--download-kokkos',
      '--download-kokkos-kernels',
     '--download-superlu_dist',
-    '--with-cxx-dialect=17', # over-ride superlu-dist default - to be compatible with kokkos
+    '--with-cxx-dialect=20', # over-ride superlu-dist default - to be compatible with kokkos
     '--with-strict-petscerrorcode',
   ]
 
