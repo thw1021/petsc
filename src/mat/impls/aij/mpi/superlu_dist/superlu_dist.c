@@ -920,8 +920,8 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
      options.ParSymbFact         = NO;
      options.ColPerm             = METIS_AT_PLUS_A;
      options.RowPerm             = LargeDiag_MC64;
-     options.ReplaceTinyPivot    = YES;
-     options.IterRefine          = DOUBLE;
+     options.ReplaceTinyPivot    = NO;
+     options.IterRefine          = SLU_DOUBLE;
      options.Trans               = NOTRANS;
      options.SolveInitialized    = NO; -hold the communication pattern used MatSolve() and MatMatSolve()
      options.RefineInitialized   = NO;
