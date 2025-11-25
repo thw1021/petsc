@@ -23,7 +23,8 @@ if __name__ == '__main__':
     '--download-hypre',
     '--download-hypre-configure-arguments=--enable-unified-memory',
     '--with-strict-petscerrorcode',
-    '--download-mpich=1',
+    # '--download-mpich', # mpich builds with cuda-12.8, but its libmpi.so does not have RPATH to libcudart.so
+    '--download-openmpi',
     #'--with-coverage',
   ]
 
