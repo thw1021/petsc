@@ -38,15 +38,18 @@ if __name__ == '__main__':
     '--with-openmp',
     '--with-shared-libraries',
     '--download-magma',
-    '--download-kblas',
-    '--download-h2opus',
-    '--download-kokkos',
+    # KBLAS is out of update, and fails to build with cuda-12.8,
+    # ../include/kblas_operators.h(129): error: cannot overload functions distinguished by return type alone
+    # __attribute__((device)) static __inline__ void atomicAdd(cuFloatComplex* address, cuFloatComplex val)
+    # '--download-kblas',
+    # '--download-h2opus', # h2opus does not support cuda-12.8
+    '--download-kokkos', # Kokkos-5.0 requires c++20
     '--download-kokkos-kernels',
     '--download-hwloc',
     #'--download-umpire', #'hypre' reserves 4G VRAM for each MPI process
     '--download-hypre',
     '--download-raja',
-    '--download-amgx',
+    # '--download-amgx', # amgx maxCxxVersion=c++17
     '--download-zfp',
     '--download-butterflypack',
     '--download-strumpack',
