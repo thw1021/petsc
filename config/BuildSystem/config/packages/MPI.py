@@ -251,7 +251,7 @@ shared libraries and run with --known-mpi-shared-libraries=1')
       self.mpiexec = self.mpiexec.replace(' ', r'\\ ').replace('(', r'\\(').replace(')', r'\\)').replace(r'\ -',' -')
       if hasattr(self, 'ompi_major_version'):
         if int(self.ompi_major_version) >= 5:
-          mpiexecargs += ' --oversubscribe' # alias to --map-by :OVERSUBSCRIBE
+          mpiexecargs += ' --oversubscribe --bind-to core:overload-allowed'
         elif int(self.ompi_major_version) >= 3:
           (out, err, ret) = Configure.executeShellCommand(self.mpiexec+' -help all', checkCommand = noCheck, timeout = 60, log = self.log, threads = 1)
           if out.find('--oversubscribe') >=0:
