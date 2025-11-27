@@ -362,13 +362,48 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &s));
   PetscCall(PetscSectionSetChart(s, 0, gNv));
   for (PetscInt v = 0; v < gNv; ++v) PetscCall(PetscSectionSetDof(s, v, dof));
+
   // Set BC Dofs
+  // Temporary - constrain outermost edge in each dimension
+  // TODO: need a nice way of passing this information through
+  for (PetscInt j = gy; j < gy + gn; j++) {
+    for (PetscInt i = gx; i < gx + gm; i++) {
+      // local ghosted id
+      PetscInt localId = (j - gy) * gm + (i - gx);
+      PetscBool isBoundary =
+          (i == 0) || (i == M - 1) ||
+          (j == 0) || (j == N - 1);
+
+      if (isBoundary) {
+        PetscCall(PetscSectionSetConstraintDof(s, localId, dof));
+      }
+    }
+  }
+
   PetscCall(PetscSectionSetFromOptions(s));
   PetscCall(PetscSectionSetUp(s));
+
   // Set BC indices
+  // Temporary - constrain outermost edge in each dimension
+  // TODO: need a nice way of passing this information through
+  for (PetscInt j = gy; j < gy + gn; j++) {
+    for (PetscInt i = gx; i < gx + gm; i++) {
+      // local ghosted id
+      PetscInt localId = (j - gy) * gm + (i - gx);
+      PetscBool isBoundary =
+          (i == 0) || (i == M - 1) ||
+          (j == 0) || (j == N - 1);
+
+      if (isBoundary) {
+        const PetscInt idx[1] = {0};
+        PetscCall(PetscSectionSetConstraintIndices(s, localId, idx));
+      }
+    }
+  }
+
   PetscCall(DMSetLocalSection(dm, s));
-  DMView(dm, NULL);
-  PetscSectionView(s, NULL);
+  // DMView(dm, NULL);
+  // PetscSectionView(s, NULL);
   PetscCall(PetscSectionDestroy(&s));
 
   // Create point SF
@@ -397,8 +432,8 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   //   NEED DMDAGetOwnershipRanges
   PetscCall(DMDAGetGhostOwnershipRanges(dm, &glx, &glxs, &gly, &glys, &glz, &glzs));
   PetscCall(PetscMalloc2(Nl, &local, Nl, &remote));
-  for (PetscInt i = 0; i < pm; ++i) PetscSynchronizedPrintf(comm, "[%d]glx %d\n", rank, glx[i]);
-  for (PetscInt i = 0; i < pn; ++i) PetscSynchronizedPrintf(comm, "[%d]gly %d\n", rank, gly[i]);
+  // for (PetscInt i = 0; i < pm; ++i) PetscSynchronizedPrintf(comm, "[%d]glx %d\n", rank, glx[i]);
+  // for (PetscInt i = 0; i < pn; ++i) PetscSynchronizedPrintf(comm, "[%d]gly %d\n", rank, gly[i]);
   switch (dim) {
   case 2:
     // Lower left
@@ -423,12 +458,13 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   }
   PetscCall(PetscFree2(bases, ldims));
   PetscCall(DMDARestoreGhostOwnershipRanges(dm, &glx, &glxs, &gly, &glys, &glz, &glzs));
-  for (PetscInt l = 0; l < Nl; ++l) PetscSynchronizedPrintf(comm, "[%d]local: %d remote %d %d\n", rank, local[l], remote[l].rank, remote[l].index);
-  PetscSynchronizedFlush(comm, NULL);
-  // Should it be gNv?
+  // for (PetscInt l = 0; l < Nl; ++l) PetscSynchronizedPrintf(comm, "[%d]local: %d remote %d %d\n", rank, local[l], remote[l].rank, remote[l].index);
+  // PetscSynchronizedFlush(comm, NULL);
   PetscCall(PetscSFSetGraph(sf, gNv, Nl, local, PETSC_OWN_POINTER, remote, PETSC_OWN_POINTER));
   PetscCall(DMSetPointSF(dm, sf));
-  PetscSFView(sf, NULL);
+  DM_DA          *dd = (DM_DA *)dm->data;
+  dd->gtol = sf;
+  // PetscSFView(sf, NULL);
   PetscCall(PetscSFDestroy(&sf));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
