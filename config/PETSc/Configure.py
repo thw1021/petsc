@@ -343,7 +343,7 @@ prepend-path PATH "%s"
         if not self.ftncmdline.have_command_argument:
           raise RuntimeError('Error! Fortran compiler "'+self.compilers.FC+'" does not support F2003 GET_COMMAND_ARGUMENT()!')
         if not self.fortran.fortranInitializePtrInDecl:
-          raise RuntimeError('Error! Fortran compiler "'+self.compilers.FC+'" does not support the F2018 standard allowing initializing pointers in the declaration!')
+          self.addDefine('USE_FORTRAN_POINTERS_WORKAROUND',1)
       self.setCompilers.pushLanguage('FC')
       # need FPPFLAGS in config/setCompilers
       self.addMakeMacro('FPP_FLAGS',self.setCompilers.FPPFLAGS)

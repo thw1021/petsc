@@ -139,6 +139,10 @@ PetscErrorCode KSPFinalizePackage(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(PETSC_USE_FORTRAN_POINTERS_WORKAROUND)
+PETSC_EXTERN void petscksp_kspfortranpointersworkaround_();
+#endif
+
 /*@C
   KSPInitializePackage - This function initializes everything in the `KSP` package. It is called
   from `PetscDLLibraryRegister_petscksp()` when using dynamic libraries, and on the first call to `KSPCreate()`
@@ -159,6 +163,9 @@ PetscErrorCode KSPInitializePackage(void)
   PetscFunctionBegin;
   if (KSPPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   KSPPackageInitialized = PETSC_TRUE;
+#if defined(PETSC_USE_FORTRAN_POINTERS_WORKAROUND)
+  petscksp_kspfortranpointersworkaround_();
+#endif
   /* Register Classes */
   PetscCall(PetscClassIdRegister("Krylov Solver", &KSP_CLASSID));
   PetscCall(PetscClassIdRegister("DMKSP interface", &DMKSP_CLASSID));
