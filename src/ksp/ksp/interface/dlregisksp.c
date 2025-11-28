@@ -139,8 +139,8 @@ PetscErrorCode KSPFinalizePackage(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_USE_FORTRAN_POINTERS_WORKAROUND)
-PETSC_EXTERN void petscksp_kspfortranpointersworkaround_();
+#if defined(PETSC_USE_FORTRAN_POINTERS_INITIALIZATION_WORKAROUND)
+PETSC_EXTERN void petscksp_kspfortranpointersinitializationworkaround_();
 #endif
 
 /*@C
@@ -164,7 +164,7 @@ PetscErrorCode KSPInitializePackage(void)
   if (KSPPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   KSPPackageInitialized = PETSC_TRUE;
 #if defined(PETSC_USE_FORTRAN_POINTERS_WORKAROUND)
-  petscksp_kspfortranpointersworkaround_();
+  petscksp_kspfortranpointersinitializationworkaround_();
 #endif
   /* Register Classes */
   PetscCall(PetscClassIdRegister("Krylov Solver", &KSP_CLASSID));
