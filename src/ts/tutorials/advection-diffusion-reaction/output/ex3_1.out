@@ -48,6 +48,7 @@ TS Object: 1 MPI process
   maximum steps=1000
   maximum time=0.3
   Maximum number of step rejections=10
+  Maximum number of SNES failures allowed=1
   using relative error tolerance of 0.0001,   using absolute error tolerance of 0.0001
   TSAdapt Object: 1 MPI process
     type: basic

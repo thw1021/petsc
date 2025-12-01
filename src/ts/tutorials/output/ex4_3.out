@@ -105,6 +105,7 @@ TS Object: 1 MPI process
   maximum steps=100
   maximum time=1.
   Maximum number of step rejections=10
+  Maximum number of SNES failures allowed=1
   total number of RHS function evaluations=100
   total number of RHS Jacobian evaluations=100
   total number of rejected steps=0

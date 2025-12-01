@@ -1924,6 +1924,8 @@ PetscErrorCode TSView(TS ts, PetscViewer viewer)
     if (ts->max_time < PETSC_MAX_REAL) PetscCall(PetscViewerASCIIPrintf(viewer, "  maximum time=%g\n", (double)ts->max_time));
     if (ts->max_reject == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "  Maximum number of step rejections is unlimited\n"));
     else PetscCall(PetscViewerASCIIPrintf(viewer, "  Maximum number of step rejections=%" PetscInt_FMT "\n", ts->max_reject));
+    if (ts->max_snes_failures == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "  Maximum number of SNES failures allowed is unlimited\n"));
+    else PetscCall(PetscViewerASCIIPrintf(viewer, "  Maximum number of SNES failures allowed=%" PetscInt_FMT "\n", ts->max_snes_failures));
     if (ts->ifuncs) PetscCall(PetscViewerASCIIPrintf(viewer, "  total number of I function evaluations=%" PetscInt_FMT "\n", ts->ifuncs));
     if (ts->ijacs) PetscCall(PetscViewerASCIIPrintf(viewer, "  total number of I Jacobian evaluations=%" PetscInt_FMT "\n", ts->ijacs));
     if (ts->rhsfuncs) PetscCall(PetscViewerASCIIPrintf(viewer, "  total number of RHS function evaluations=%" PetscInt_FMT "\n", ts->rhsfuncs));
@@ -5041,7 +5043,7 @@ PetscErrorCode TSSetMaxStepRejections(TS ts, PetscInt rejects)
 }
 
 /*@
-  TSSetMaxSNESFailures - Sets the maximum number of failed `SNES` solves
+  TSSetMaxSNESFailures - Sets the maximum number of failed `SNES` solves allowed before `TSSolve()` is ended with a `TSConvergedReason` of `TS_DIVERGED_NONLINEAR_SOLVE`
 
   Not Collective
 
@@ -5054,7 +5056,8 @@ PetscErrorCode TSSetMaxStepRejections(TS ts, PetscInt rejects)
 
   Level: intermediate
 
-.seealso: [](ch_ts), `TS`, `SNES`, `TSGetSNESIterations()`, `TSGetKSPIterations()`, `TSSetMaxStepRejections()`, `TSGetStepRejections()`, `TSGetSNESFailures()`, `SNESGetConvergedReason()`, `TSGetConvergedReason()`
+.seealso: [](ch_ts), `TS`, `SNES`, `TSGetSNESIterations()`, `TSGetKSPIterations()`, `TSSetMaxStepRejections()`, `TSGetStepRejections()`, `TSGetSNESFailures()`, `SNESGetConvergedReason()`,
+          `TSGetConvergedReason()`, `TS_DIVERGED_NONLINEAR_SOLVE`, `TSConvergedReason`
 @*/
 PetscErrorCode TSSetMaxSNESFailures(TS ts, PetscInt fails)
 {

@@ -5,6 +5,7 @@ TS Object: 1 MPI process
     Abscissa of A+Gamma =  0.435867  0.871733  0.731580  1.000000 
   maximum time=1.
   Maximum number of step rejections=10
+  Maximum number of SNES failures allowed=1
   total number of I function evaluations=256
   total number of RHS function evaluations=256
   total number of nonlinear solver iterations=64

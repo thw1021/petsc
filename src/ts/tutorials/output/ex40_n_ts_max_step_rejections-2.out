@@ -7,6 +7,7 @@ TS Object: 1 MPI process
   maximum steps=1
   maximum time=30.
   Maximum number of step rejections=2
+  Maximum number of SNES failures allowed=1
   total number of I function evaluations=18
   total number of I Jacobian evaluations=9
   total number of nonlinear solver iterations=9
