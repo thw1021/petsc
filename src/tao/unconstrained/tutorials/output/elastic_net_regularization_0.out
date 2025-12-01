@@ -20,7 +20,7 @@ Tao Object: 1 MPI process
       type: sum
       solution vector space: N = 20
       parameter vector space: (optional) K = 130
-      Sum of 3 terms: f_{data_}(A_0 x; [p_0]) + 0.1 f_{ridge_}(x; [p_1]) + 0.1 f_{lasso_}(A_2 x; [p_2])
+      Sum of 3 terms: f_{data_}(A_{Amat_} x; [p_0]) + 0.1 f_{ridge_}(x; [p_1]) + 0.1 f_{lasso_}(A_{Dmat_} x; [p_2])
       f_{data_}:
         TaoTerm Object: (data_) 1 MPI process
           type: quadratic
@@ -31,8 +31,8 @@ Tao Object: 1 MPI process
             rows=100, cols=100
               Vec Object: 1 MPI process
                 type: seq
-      A_0:
-        Mat Object: 1 MPI process
+      A_{Amat_}:
+        Mat Object: (Amat_) 1 MPI process
           type: seqdense
           rows=100, cols=20
           total: nonzeros=2000, allocated nonzeros=2000
@@ -48,8 +48,8 @@ Tao Object: 1 MPI process
           solution vector space: N = 10
           parameter vector space: (optional) K = 10
           epsilon (tao_term_l1_epsilon): 0.1
-      A_2:
-        Mat Object: 1 MPI process
+      A_{Dmat_}:
+        Mat Object: (Dmat_) 1 MPI process
           type: seqdense
           rows=10, cols=20
           total: nonzeros=200, allocated nonzeros=200

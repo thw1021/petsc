@@ -44,7 +44,7 @@ Tao Object: 1 MPI process
                       type: seq
                       length=100
             Map:
-              Mat Object: 1 MPI process
+              Mat Object: (Amat_) 1 MPI process
                 type: seqdense
                 rows=100, cols=20
                 total: nonzeros=2000, allocated nonzeros=2000
@@ -69,7 +69,7 @@ Tao Object: 1 MPI process
                 Hessian MatType (tao_term_hessian_mat_type): diagonal
                 epsilon (tao_term_l1_epsilon): 0.1
             Map:
-              Mat Object: 1 MPI process
+              Mat Object: (Dmat_) 1 MPI process
                 type: seqdense
                 rows=10, cols=20
                 total: nonzeros=200, allocated nonzeros=200
