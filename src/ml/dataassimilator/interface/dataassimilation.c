@@ -162,7 +162,7 @@ static PetscErrorCode PetscDataAssimilatorComputeAnomalies_Default(PetscDataAssi
 
   /*
     Compute normalization scale for anomalies.
-    Algorithm line 14: anomalies are normalized by 1/sqrt(m-1) so that
+    Algorithm line 2: anomalies are normalized by 1/sqrt(m-1) so that
     the anomalies matrix X satisfies X*X^T = ensemble covariance matrix.
     This ensures proper statistical properties for ensemble-based methods.
   */
@@ -173,7 +173,7 @@ static PetscErrorCode PetscDataAssimilatorComputeAnomalies_Default(PetscDataAssi
   PetscCall(VecSetSizes(mean, PETSC_DECIDE, da->state_size));
   PetscCall(VecSetFromOptions(mean));
 
-  /* Algorithm line 12: \bar{x} = (1/m)\sum_j x^{(j)} */
+  /* Algorithm line 1: \bar{x} = (1/m)\sum_j x^{(j)} */
   PetscCall(PetscDataAssimilatorComputeMean(da, mean));
 
   /* Allocate anomalies matrix (state_size x ensemble_size) */
@@ -188,9 +188,9 @@ static PetscErrorCode PetscDataAssimilatorComputeAnomalies_Default(PetscDataAssi
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, j, &col_in));
     PetscCall(MatDenseGetColumnVecWrite(anomalies, j, &col_out));
 
-    /* Algorithm line 13: subtract the mean column-wise to form x^{(j)} - \bar{x} */
+    /* Algorithm line 2: subtract the mean column-wise to form x^{(j)} - \bar{x} */
     PetscCall(VecWAXPY(col_out, -1.0, mean, col_in));
-    /* Algorithm line 14: scale anomalies by 1/\sqrt{m-1} */
+    /* Algorithm line 2: scale anomalies by 1/\sqrt{m-1} */
     PetscCall(VecScale(col_out, scale));
 
     PetscCall(MatDenseRestoreColumnVecWrite(anomalies, j, &col_out));
@@ -1122,35 +1122,8 @@ PetscErrorCode PetscDataAssimilatorSymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_
   PetscCall(PetscBLASIntCast(matrix_rows, &blas_n));
 
   /* Perform eigendecomposition using LAPACK */
-#if defined(PETSC_USE_COMPLEX)
-  {
-    PetscReal *rwork = NULL;
-    PetscInt   ridx;
-
-    /*
-      Complex-valued path requires:
-      - Separate real workspace (rwork) of size 3*n-2
-      - Real eigenvalue buffer (eigenvalues are always real for Hermitian matrices)
-    */
-    PetscCall(PetscMalloc1(3 * matrix_rows - 2, &rwork));
-    PetscCall(PetscMalloc1(matrix_rows, &eigenvalues));
-
-    /* Call LAPACK: compute eigenvalues and eigenvectors */
-    PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &blas_n, eigvec_array, &blas_n, eigenvalues, workspace, &workspace_size, rwork, &lapack_info));
-
-    /* Copy real eigenvalues to complex array */
-    for (ridx = 0; ridx < matrix_rows; ridx++) sqrt_eigval_array[ridx] = eigenvalues[ridx];
-
-    PetscCall(PetscFree(rwork));
-  }
-#else
-  /*
-    Real arithmetic path: LAPACK writes eigenvalues directly to output array.
-    This avoids an extra allocation and copy.
-  */
   eigenvalues = (PetscReal *)sqrt_eigval_array;
   PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &blas_n, eigvec_array, &blas_n, eigenvalues, workspace, &workspace_size, &lapack_info));
-#endif
 
   /* Check LAPACK return status */
   if (lapack_info != 0) {
@@ -1159,9 +1132,6 @@ PetscErrorCode PetscDataAssimilatorSymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_
     PetscCall(MatDestroy(&eigenvectors));
     PetscCall(VecDestroy(&sqrt_eigenvalues));
     PetscCall(PetscFree(workspace));
-#if defined(PETSC_USE_COMPLEX)
-    PetscCall(PetscFree(eigenvalues));
-#endif
     if (lapack_info < 0) {
       SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK syev: illegal argument at position %" PetscBLASInt_FMT, -lapack_info);
     } else {
