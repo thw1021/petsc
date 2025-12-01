@@ -112,6 +112,72 @@ PetscErrorCode PetscDataAssimilatorRegisterAll(void)
   PetscCall(PetscDataAssimilatorETKFRegister()); // add new methods here
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+/*@
+  PetscDataAssimilatorSetOptionsPrefix - Sets the prefix used for searching for all
+  PetscDataAssimilator options in the database.
+
+  Logically Collective
+
+  Input Parameters:
++ das - the `PetscDataAssimilator` context
+- p   - the prefix string to prepend to all PetscDataAssimilator option requests
+
+  Level: advanced
+
+.seealso: `PetscDataAssimilator`, `PetscDataAssimilatorSetFromOptions()`, `PetscDataAssimilatorAppendOptionsPrefix()`, `PetscDataAssimilatorGetOptionsPrefix()`
+@*/
+PetscErrorCode PetscDataAssimilatorSetOptionsPrefix(PetscDataAssimilator das, const char p[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(das, PETSCDATAASSIMILATOR_CLASSID, 1);
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)das, p));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscDataAssimilatorAppendOptionsPrefix - Appends to the prefix used for searching for all PetscDataAssimilator options in the database.
+
+  Logically Collective
+
+  Input Parameters:
++ das - the `PetscDataAssimilator` context
+- p   - the prefix string to prepend to all `PetscDataAssimilator` option requests
+
+  Level: advanced
+
+.seealso: `PetscDataAssimilator`, `PetscDataAssimilatorSetFromOptions()`, `PetscDataAssimilatorSetOptionsPrefix()`, `PetscDataAssimilatorGetOptionsPrefix()`
+@*/
+PetscErrorCode PetscDataAssimilatorAppendOptionsPrefix(PetscDataAssimilator das, const char p[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(das, PETSCDATAASSIMILATOR_CLASSID, 1);
+  PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)das, p));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscDataAssimilatorGetOptionsPrefix - Gets the prefix used for searching for all
+  PetscDataAssimilator options in the database
+
+  Not Collective
+
+  Input Parameter:
+. das - the `PetscDataAssimilator` context
+
+  Output Parameter:
+. p - pointer to the prefix string used
+
+  Level: advanced
+
+.seealso: `PetscDataAssimilator`, `PetscDataAssimilatorSetFromOptions()`, `PetscDataAssimilatorSetOptionsPrefix()`, `PetscDataAssimilatorAppendOptionsPrefix()`
+@*/
+PetscErrorCode PetscDataAssimilatorGetOptionsPrefix(PetscDataAssimilator das, const char *p[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(das, PETSCDATAASSIMILATOR_CLASSID, 1);
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)das, p));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 /* Compute mean of ensemble */
 static PetscErrorCode PetscDataAssimilatorComputeMean_Default(PetscDataAssimilator da, Vec mean)
@@ -557,7 +623,7 @@ PetscErrorCode PetscDataAssimilatorViewFromOptions(PetscDataAssimilator da, Pets
 
   Input Parameters:
 + da            - the `PetscDataAssimilator` context
-- obs_error_var - vector containing observation error variances
+- obs_error_var - vector containing observation error variances (assumes R is a diagonal matrix)
 
   Level: beginner
 
