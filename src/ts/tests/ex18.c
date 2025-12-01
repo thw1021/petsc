@@ -121,6 +121,6 @@ PetscErrorCode IJacobian(TS ts, PetscReal t, Vec X, Vec Xdot, PetscReal shift, M
     test:
       output_file: output/ex18_1.out
       suffix: dirk_explicit_first_random_dae
-      args: -dae -ts_type dirk -ts_dirk_type es122sal -random 1 -ts_max_reject -1
+      args: -dae -ts_type dirk -ts_dirk_type es122sal -random 1 -ts_max_step_rejections -1
 
 TEST*/

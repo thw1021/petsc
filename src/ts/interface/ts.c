@@ -43,7 +43,7 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 . -ts_dt <dt>                                                        - initial time step
 . -ts_exact_final_time <stepover,interpolate,matchstep>              - whether to stop at the exact given final time and how to compute the solution at that time
 . -ts_max_snes_failures <maxfailures>                                - Maximum number of nonlinear solve failures allowed
-. -ts_max_reject <maxrejects>                                        - Maximum number of step rejections before step fails
+. -ts_max_step_rejections <maxrejects>                               - Maximum number of step rejections before step fails
 . -ts_error_if_step_fails <true,false>                               - Error if no step succeeds
 . -ts_rtol <rtol>                                                    - relative tolerance for local truncation error
 . -ts_atol <atol>                                                    - Absolute tolerance for local truncation error
@@ -129,7 +129,8 @@ PetscErrorCode TSSetFromOptions(TS ts)
   if (flg) PetscCall(TSSetExactFinalTime(ts, eftopt));
   PetscCall(PetscOptionsInt("-ts_max_snes_failures", "Maximum number of nonlinear solve failures", "TSSetMaxSNESFailures", ts->max_snes_failures, &ts->max_snes_failures, &flg));
   if (flg) PetscCall(TSSetMaxSNESFailures(ts, ts->max_snes_failures));
-  PetscCall(PetscOptionsInt("-ts_max_reject", "Maximum number of step rejections before step fails", "TSSetMaxStepRejections", ts->max_reject, &ts->max_reject, &flg));
+  PetscCall(PetscOptionsDeprecated("-ts_max_reject", "-ts_max_step_rejections", "3.25", NULL));
+  PetscCall(PetscOptionsInt("-ts_max_step_rejections", "Maximum number of step rejections before step fails", "TSSetMaxStepRejections", ts->max_reject, &ts->max_reject, &flg));
   if (flg) PetscCall(TSSetMaxStepRejections(ts, ts->max_reject));
   PetscCall(PetscOptionsBool("-ts_error_if_step_fails", "Error if no step succeeds", "TSSetErrorIfStepFails", ts->errorifstepfailed, &ts->errorifstepfailed, NULL));
   PetscCall(PetscOptionsBoundedReal("-ts_rtol", "Relative tolerance for local truncation error", "TSSetTolerances", ts->rtol, &ts->rtol, NULL, 0));
@@ -5014,7 +5015,7 @@ PetscErrorCode TSGetSNESFailures(TS ts, PetscInt *fails)
 - rejects - maximum number of rejected steps, pass `PETSC_UNLIMITED` for unlimited
 
   Options Database Key:
-. -ts_max_reject - Maximum number of step rejections before a step fails
+. -ts_max_step_rejections - Maximum number of step rejections before a step fails
 
   Level: intermediate
 
