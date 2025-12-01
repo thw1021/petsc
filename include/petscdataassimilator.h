@@ -53,6 +53,10 @@ PETSC_EXTERN PetscErrorCode PetscDataAssimilatorComputeAnomalies(PetscDataAssimi
 PETSC_EXTERN PetscErrorCode PetscDataAssimilatorAnalysis(PetscDataAssimilator, Vec, PetscErrorCode (*)(Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode PetscDataAssimilatorApplyModel(PetscDataAssimilator, PetscErrorCode (*)(Vec, Vec, void *), void *);
 
+PETSC_EXTERN PetscErrorCode PetscDataAssimilatorSetOptionsPrefix(PetscDataAssimilator, const char[]);
+PETSC_EXTERN PetscErrorCode PetscDataAssimilatorAppendOptionsPrefix(PetscDataAssimilator, const char[]);
+PETSC_EXTERN PetscErrorCode PetscDataAssimilatorGetOptionsPrefix(PetscDataAssimilator, const char *[]);
+
 PETSC_EXTERN PetscErrorCode VecSetRandomGaussian(Vec, PetscRandom, PetscReal, PetscReal);
 
 PETSC_EXTERN PetscErrorCode PetscDataAssimilatorETKFRegister(void);
