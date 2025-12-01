@@ -344,13 +344,21 @@ PETSC_EXTERN PetscErrorCode DMPlexComputeProjection3Dto1D(PetscScalar[], PetscRe
 PETSC_EXTERN PetscErrorCode DMPlexComputeProjection3Dto2D(PetscInt, PetscScalar[], PetscReal[]);
 
 /* Point Location */
+PETSC_EXTERN PetscErrorCode DMPlexSetPointLocationAlgorithm(DM, DMPointLocationAlgorithm);
+PETSC_EXTERN PetscErrorCode DMPlexGetPointLocationAlgorithm(DM, DMPointLocationAlgorithm *);
+
 typedef struct _n_PetscGridHash *PetscGridHash;
 PETSC_EXTERN PetscErrorCode      PetscGridHashCreate(MPI_Comm, PetscInt, const PetscScalar[], PetscGridHash *);
 PETSC_EXTERN PetscErrorCode      PetscGridHashEnlarge(PetscGridHash, const PetscScalar[]);
 PETSC_EXTERN PetscErrorCode      PetscGridHashSetGrid(PetscGridHash, const PetscInt[], const PetscReal[]);
 PETSC_EXTERN PetscErrorCode      PetscGridHashGetEnclosingBox(PetscGridHash, PetscInt, const PetscScalar[], PetscInt[], PetscInt[]);
 PETSC_EXTERN PetscErrorCode      PetscGridHashDestroy(PetscGridHash *);
-PETSC_EXTERN PetscErrorCode      DMPlexFindVertices(DM, Vec, PetscReal, IS *);
+
+typedef struct _n_PetscGridKDTree *PetscGridKDTree;
+PETSC_EXTERN PetscErrorCode        DMPlexCreateGridKDTree(DM, PetscGridKDTree *);
+PETSC_EXTERN PetscErrorCode        PetscGridKDTreeDestroy(PetscGridKDTree *);
+
+PETSC_EXTERN PetscErrorCode DMPlexFindVertices(DM, Vec, PetscReal, IS *);
 
 /* FVM Support */
 PETSC_EXTERN PetscErrorCode DMPlexComputeCellGeometryFVM(DM, PetscInt, PetscReal *, PetscReal[], PetscReal[]);
