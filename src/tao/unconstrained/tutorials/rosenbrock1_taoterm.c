@@ -134,17 +134,23 @@ static PetscErrorCode CreateSolutionVec(TaoTerm term, Vec *solution)
 /*TEST
 
    build:
-     requires: !complex
+     requires: !complex !single
 
    test:
-     requires: !single
      output_file: output/rosenbrock1_1.out
      args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4
 
    test:
      suffix: test_gradient
-     requires: !single
      args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4 -tao_test_gradient -tao_fd_delta 1.e-6 -n 4 -chained -tao_term_hessian_mat_type aij -alpha 49.0
+
+   test:
+     suffix: test_fd_hess
+     args: -tao_type nls -tao_fd_hessian -tao_view -tao_monitor_short
+
+   test:
+     suffix: test_mf_hessian
+     args: -tao_type nls -tao_term_hessian_mat_type mffd -tao_monitor_short -tao_view
 
    test:
      suffix: separate_hessians
