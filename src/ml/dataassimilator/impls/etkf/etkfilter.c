@@ -340,9 +340,6 @@ static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscI
   PetscValidLogicalCollectiveInt(X, m, 4);
   PetscValidHeaderSpecific(ensemble, MAT_CLASSID, 5);
 
-  /* Validate ensemble size is physically meaningful */
-  PetscCheck(m > 0, PetscObjectComm((PetscObject)ensemble), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m must be positive, got %" PetscInt_FMT, m);
-
   /* Retrieve and validate matrix dimensions for compatibility */
   PetscCall(MatGetSize(X, &x_rows, &x_cols));
   PetscCall(MatGetSize(G, &g_rows, &g_cols));
