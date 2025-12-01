@@ -28,10 +28,9 @@ PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_H_Internal(TaoTe
 
   PetscFunctionBegin;
   PetscCall(PetscStrcmp(H_mattype, MATSHELL, &is_shell));
+  if (is_shell) PetscCall(PetscInfo(term, "TaoTerm currently does not currently support MATSHELL for Hessian matrices. Using default MatCreate routines.\n"));
   PetscCall(PetscStrcmp(H_mattype, MATMFFD, &is_mffd));
-  if (is_shell) {
-    PetscCall(TaoTermCreateHessianShell(term, &_H));
-  } else if (is_mffd) {
+  if (is_mffd) {
     PetscCall(TaoTermCreateHessianMFFD(term, &_H));
   } else {
     PetscLayout sol_layout;
@@ -67,10 +66,9 @@ PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_Hpre_Internal(Ta
 
   PetscFunctionBegin;
   PetscCall(PetscStrcmp(Hpre_mattype, MATSHELL, &is_shell));
+  if (is_shell) PetscCall(PetscInfo(term, "TaoTerm currently does not currently support MATSHELL for Hessian matrices. Using default MatCreate routines.\n"));
   PetscCall(PetscStrcmp(Hpre_mattype, MATMFFD, &is_mffd));
-  if (is_shell) {
-    PetscCall(TaoTermCreateHessianShell(term, &_Hpre));
-  } else if (is_mffd) {
+  if (is_mffd) {
     PetscCall(TaoTermCreateHessianMFFD(term, &_Hpre));
   } else {
     PetscLayout sol_layout;

@@ -688,7 +688,7 @@ PetscErrorCode TaoTermComputeHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat
   } else {
     if (term->ops->hessian) PetscUseTypeMethod(term, hessian, x, params, H, Hpre);
     else
-      SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have TaoTermComputeHessian routine, and cannot use finite differences for Hessian computation. Either call TaoTermShellSetHessian, set Hessian MatType to MATMFFD, or call TaoTermComputeHessianUseFDPush()");
+      SETERRQ(PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm does not have TaoTermComputeHessian routine, and cannot use finite differences for Hessian computation. Either set Hessian MatType to MATMFFD, or call TaoTermComputeHessianUseFDPush()");
   }
   PetscCall(PetscLogEventEnd(TAOTERM_HessianEval, term, NULL, NULL, NULL));
   if (params) PetscCall(VecLockReadPop(params));
@@ -1519,7 +1519,6 @@ PetscErrorCode TaoTermCreateHessianMatrices(TaoTerm term, Mat *H, Mat *Hpre)
   The behavior of this routine is determined by `TaoTermSetCreateHessianMode()`.
   If `Hpre_is_H`, then the same matrix will be returned for `H` and `Hpre`,
   otherwise they will be separate matrices, with the matrix types `H_mattype` and `Hpre_mattype`.
-  If either type is `MATSHELL`, then it will create a shell matrix with `TaoTermCreateHessianShell()`.
   If either type is `MATMFFD`, then it will create a shell matrix with `TaoTermCreateHessianMFFD()`.
 
 .seealso: [](sec_tao_term),

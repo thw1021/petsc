@@ -288,10 +288,6 @@ PETSC_EXTERN PetscErrorCode TaoTermIsHessianDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsCreateHessianMatricesDefined(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermIsComputeHessianFDPossible(TaoTerm, PetscBool3 *);
 
-PETSC_EXTERN PetscErrorCode TaoTermCreateHessianShell(TaoTerm, Mat *);
-PETSC_EXTERN PetscErrorCode TaoTermUpdateHessianShell(TaoTerm, Mat, Vec, Vec);
-PETSC_EXTERN PetscErrorCode TaoTermUpdateHessianShells(TaoTerm, Vec, Vec, Mat *, Mat *);
-
 PETSC_EXTERN PetscErrorCode TaoTermGetFDDelta(TaoTerm, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoTermSetFDDelta(TaoTerm, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoTermComputeGradientFD(TaoTerm, Vec, Vec, Vec);
@@ -300,9 +296,7 @@ PETSC_EXTERN PetscErrorCode TaoTermComputeGradientUseFDPop(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermSetHessianColoring(TaoTerm, ISColoring);
 PETSC_EXTERN PetscErrorCode TaoTermGetHessianColoring(TaoTerm, ISColoring *);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianFD(TaoTerm, Vec, Vec, Mat, Mat);
-PETSC_EXTERN PetscErrorCode TaoTermComputeHessianSingleFD(TaoTerm, Vec, Vec, Mat);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianUseFDPush(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianUseFDPop(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermCreateHessianMFFD(TaoTerm, Mat *);
-PETSC_EXTERN PetscErrorCode TaoTermUpdateHessianMFFD(TaoTerm, Mat, Vec, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianMFFD(TaoTerm, Vec, Vec, Mat, Mat);
