@@ -1120,11 +1120,13 @@ PetscErrorCode PetscDataAssimilatorSymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_
   PetscCall(VecGetArrayWrite(sqrt_eigenvalues, &sqrt_eigval_array));
 
   PetscCall(PetscBLASIntCast(matrix_rows, &blas_n));
-
+#if defined(PETSC_USE_COMPLEX)
+  SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Support not provided for complex");
+#else
   /* Perform eigendecomposition using LAPACK */
   eigenvalues = (PetscReal *)sqrt_eigval_array;
   PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &blas_n, eigvec_array, &blas_n, eigenvalues, workspace, &workspace_size, &lapack_info));
-
+#endif
   /* Check LAPACK return status */
   if (lapack_info != 0) {
     PetscCall(VecRestoreArrayWrite(sqrt_eigenvalues, &sqrt_eigval_array));
