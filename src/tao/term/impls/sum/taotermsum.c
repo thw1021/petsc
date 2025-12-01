@@ -306,32 +306,6 @@ static PetscErrorCode TaoTermViewSumPrintSubtermName(PetscViewer viewer, TaoTerm
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermViewSumPrintParametersName(PetscViewer viewer, Vec params, PetscInt i, const char f[], PetscBool colon_newline)
-{
-  const char *params_prefix;
-  const char *params_name = NULL;
-
-  PetscFunctionBegin;
-  if (((PetscObject)params)->name) PetscCall(PetscObjectGetName((PetscObject)params, &params_name));
-  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)params, &params_prefix));
-  if (params_name) {
-    PetscBool same;
-
-    PetscCall(PetscStrncmp(params_name, "Vec_", 4, &same));
-    if (!same) {
-      PetscBool has_spaces;
-
-      PetscCall(TaoTermView_Sum_NameHasSpaces(params_name, &has_spaces));
-      if (has_spaces) PetscCall(PetscViewerASCIIPrintf(viewer, "%s_{%s}%s", f, params_name, colon_newline ? ":\n" : ""));
-      else PetscCall(PetscViewerASCIIPrintf(viewer, "%s%s", params_name, colon_newline ? ":\n" : ""));
-      PetscFunctionReturn(PETSC_SUCCESS);
-    }
-  }
-  if (params_prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "%s_{%s}%s", f, params_prefix, colon_newline ? ":\n" : ""));
-  else PetscCall(PetscViewerASCIIPrintf(viewer, "%s_%" PetscInt_FMT "%s", f, i, colon_newline ? ":\n" : ""));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PETSC_INTERN PetscErrorCode TaoTermViewSumPrintMapName(PetscViewer viewer, Mat map, PetscInt i, const char A[], PetscBool colon_newline)
 {
   const char *map_prefix;
@@ -358,7 +332,7 @@ PETSC_INTERN PetscErrorCode TaoTermViewSumPrintMapName(PetscViewer viewer, Mat m
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode TaoTermViewSumPrintSubterm(TaoTerm term, PetscViewer viewer, PetscBool use_params, Vec params, PetscInt i, PetscBool initial, PetscBool print_map, const char f[], const char A[], const char x[], const char p[])
+PETSC_INTERN PetscErrorCode TaoTermViewSumPrintSubterm(TaoTerm term, PetscViewer viewer, Vec params, PetscInt i, PetscBool initial, PetscBool print_map, const char f[], const char A[], const char x[], const char p[])
 {
   PetscReal             scale;
   TaoTerm               subterm;
@@ -377,23 +351,16 @@ PETSC_INTERN PetscErrorCode TaoTermViewSumPrintSubterm(TaoTerm term, PetscViewer
     PetscCall(PetscViewerASCIIPrintf(viewer, " "));
   }
   PetscCall(PetscViewerASCIIPrintf(viewer, "%s", x));
-  if (use_params) {
-    if (params) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "; "));
-      PetscCall(TaoTermViewSumPrintParametersName(viewer, params, i, p, PETSC_FALSE));
-    }
-  } else {
-    PetscCall(TaoTermGetParametersMode(subterm, &pmode));
-    switch (pmode) {
-    case TAOTERM_PARAMETERS_NONE:
-      break;
-    case TAOTERM_PARAMETERS_OPTIONAL:
-      PetscCall(PetscViewerASCIIPrintf(viewer, "; [p_%" PetscInt_FMT "]", i));
-      break;
-    case TAOTERM_PARAMETERS_REQUIRED:
-      PetscCall(PetscViewerASCIIPrintf(viewer, "; p_%" PetscInt_FMT, i));
-      break;
-    }
+  PetscCall(TaoTermGetParametersMode(subterm, &pmode));
+  switch (pmode) {
+  case TAOTERM_PARAMETERS_NONE:
+    break;
+  case TAOTERM_PARAMETERS_OPTIONAL:
+    PetscCall(PetscViewerASCIIPrintf(viewer, "; [p_%" PetscInt_FMT "]", i));
+    break;
+  case TAOTERM_PARAMETERS_REQUIRED:
+    PetscCall(PetscViewerASCIIPrintf(viewer, "; p_%" PetscInt_FMT, i));
+    break;
   }
   PetscCall(PetscViewerASCIIPrintf(viewer, ")"));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -406,7 +373,7 @@ static PetscErrorCode TaoTermView_Sum_ASCII_INFO(TaoTerm term, PetscViewer viewe
   PetscFunctionBegin;
   PetscCall(PetscViewerASCIIPrintf(viewer, "Sum of %" PetscInt_FMT " terms:%s", sum->n_terms, sum->n_terms > 0 ? " " : ""));
   PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
-  for (PetscInt i = 0; i < sum->n_terms; i++) PetscCall(TaoTermViewSumPrintSubterm(term, viewer, PETSC_FALSE, NULL, i, (i == 0) ? PETSC_TRUE : PETSC_FALSE, PETSC_TRUE, "f", "A", "x", "p"));
+  for (PetscInt i = 0; i < sum->n_terms; i++) PetscCall(TaoTermViewSumPrintSubterm(term, viewer, NULL, i, (i == 0) ? PETSC_TRUE : PETSC_FALSE, PETSC_TRUE, "f", "A", "x", "p"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
   PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
   for (PetscInt i = 0; i < sum->n_terms; i++) {

@@ -82,6 +82,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_Hpre_Internal(Ta
     PetscCall(TaoTermGetSolutionVecType(term, &sol_vec_type));
     PetscCall(MatSetVecType(_Hpre, sol_vec_type));
     if (Hpre_mattype) PetscCall(MatSetType(_Hpre, Hpre_mattype));
+    else PetscCall(MatSetVecType(_Hpre, sol_vec_type));
     PetscCall(MatSetOption(_Hpre, MAT_SYMMETRIC, PETSC_TRUE));
     PetscCall(MatSetOption(_Hpre, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
   }

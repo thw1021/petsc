@@ -67,13 +67,21 @@ int main(int argc, char **argv)
 
   // the model term,  (1/2) || Ax - b ||_W^2
   PetscCall(TaoTermCreateQuadratic(W, &data_term));
-  if (set_prefix) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)data_term, "data_"));
+  if (set_prefix) {
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)data_term, "data_"));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)b, "bvec_"));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)A, "Amat_"));
+  }
   PetscCall(TaoAddTerm(tao, "data_", 1.0, data_term, b, A));
   PetscCall(TaoTermDestroy(&data_term));
 
   // the L2 term,  (1/2) lambda_2 || x ||_2^2
   PetscCall(TaoTermCreateHalfL2Squared(comm, PETSC_DECIDE, n, &l2_reg_term));
-  if (set_prefix) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l2_reg_term, "ridge_"));
+  if (set_prefix) {
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l2_reg_term, "ridge_"));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)y, "yvec_"));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)D, "Dmat_"));
+  }
   PetscCall(TaoAddTerm(tao, "ridge_", lambda_2, l2_reg_term, NULL, NULL)); // Note: no parameter vector, no map matrix needed
   PetscCall(TaoTermDestroy(&l2_reg_term));
 
