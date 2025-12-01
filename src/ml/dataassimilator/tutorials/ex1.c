@@ -506,6 +506,7 @@ int main(int argc, char **argv)
 
   test:
     suffix: chol
+    requires: !complex
     args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -petscdaas_view -ensemble_size 30
 
 TEST*/
