@@ -8,6 +8,7 @@ TS Object: 1 MPI process
   type: beuler
   maximum steps=5
   maximum time=4.
+  Maximum number of step rejections=10
   total number of RHS function evaluations=24
   total number of RHS Jacobian evaluations=17
   total number of nonlinear solver iterations=17

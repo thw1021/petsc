@@ -4,6 +4,7 @@ TS Object: 1 MPI process
   type: euler
   maximum steps=4
   maximum time=100.
+  Maximum number of step rejections=10
   total number of RHS function evaluations=4
   total number of RHS Jacobian evaluations=4
   total number of rejected steps=0

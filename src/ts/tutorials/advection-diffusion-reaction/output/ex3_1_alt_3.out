@@ -45,6 +45,7 @@ TS Object: 1 MPI process
     Nonstiff abscissa     c =  0.000000  0.871733  0.600000  1.000000 
   maximum steps=1000
   maximum time=0.3
+  Maximum number of step rejections=10
   using relative error tolerance of 0.0001,   using absolute error tolerance of 0.0001
   TSAdapt Object: 1 MPI process
     type: basic

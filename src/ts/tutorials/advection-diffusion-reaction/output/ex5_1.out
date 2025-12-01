@@ -32,6 +32,7 @@ TS Object: 1 MPI process
   FSAL property: yes
     Nonstiff abscissa     c =  0.000000  0.871733  0.600000  1.000000 
   maximum time=500.
+  Maximum number of step rejections=10
   total number of RHS function evaluations=368
   total number of RHS Jacobian evaluations=264
   total number of nonlinear solver iterations=264

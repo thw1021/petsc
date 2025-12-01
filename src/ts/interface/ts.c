@@ -1922,6 +1922,8 @@ PetscErrorCode TSView(TS ts, PetscViewer viewer)
     if (ts->max_steps < PETSC_INT_MAX) PetscCall(PetscViewerASCIIPrintf(viewer, "  maximum steps=%" PetscInt_FMT "\n", ts->max_steps));
     if (ts->run_steps < PETSC_INT_MAX) PetscCall(PetscViewerASCIIPrintf(viewer, "  run steps=%" PetscInt_FMT "\n", ts->run_steps));
     if (ts->max_time < PETSC_MAX_REAL) PetscCall(PetscViewerASCIIPrintf(viewer, "  maximum time=%g\n", (double)ts->max_time));
+    if (ts->max_reject == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "  Maximum number of step rejections is unlimited\n"));
+    else PetscCall(PetscViewerASCIIPrintf(viewer, "  Maximum number of step rejections=%" PetscInt_FMT "\n", ts->max_reject));
     if (ts->ifuncs) PetscCall(PetscViewerASCIIPrintf(viewer, "  total number of I function evaluations=%" PetscInt_FMT "\n", ts->ifuncs));
     if (ts->ijacs) PetscCall(PetscViewerASCIIPrintf(viewer, "  total number of I Jacobian evaluations=%" PetscInt_FMT "\n", ts->ijacs));
     if (ts->rhsfuncs) PetscCall(PetscViewerASCIIPrintf(viewer, "  total number of RHS function evaluations=%" PetscInt_FMT "\n", ts->rhsfuncs));
@@ -5006,7 +5008,7 @@ PetscErrorCode TSGetSNESFailures(TS ts, PetscInt *fails)
 }
 
 /*@
-  TSSetMaxStepRejections - Sets the maximum number of step rejections before a time step fails
+  TSSetMaxStepRejections - Sets the maximum number of step rejections allowed in a single time-step attempt before a time step fails in `TSSolve()` with `TS_DIVERGED_STEP_REJECTED`
 
   Not Collective
 
@@ -5022,7 +5024,8 @@ PetscErrorCode TSGetSNESFailures(TS ts, PetscInt *fails)
   Developer Note:
   The options database name is incorrect.
 
-.seealso: [](ch_ts), `TS`, `SNES`, `TSGetSNESIterations()`, `TSGetKSPIterations()`, `TSSetMaxSNESFailures()`, `TSGetStepRejections()`, `TSGetSNESFailures()`, `TSSetErrorIfStepFails()`, `TSGetConvergedReason()`
+.seealso: [](ch_ts), `TS`, `SNES`, `TSGetSNESIterations()`, `TSGetKSPIterations()`, `TSSetMaxSNESFailures()`, `TSGetStepRejections()`, `TSGetSNESFailures()`, `TSSetErrorIfStepFails()`,
+          `TSGetConvergedReason()`, `TSSolve()`, `TS_DIVERGED_STEP_REJECTED`
 @*/
 PetscErrorCode TSSetMaxStepRejections(TS ts, PetscInt rejects)
 {
