@@ -494,7 +494,6 @@ PetscErrorCode PetscDataAssimilatorETKFFinalizePackage(void)
 /*    - Matrix square root factorization (Cholesky or eigendecomposition)   */
 /*    - Transform application to update ensemble members                     */
 /*                                                                            */
-/*  See also: Helper Functions (line 11), Model Propagation (line 660)      */
 /* ========================================================================== */
 
 /*
