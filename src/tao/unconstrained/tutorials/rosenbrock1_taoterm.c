@@ -134,7 +134,7 @@ static PetscErrorCode CreateSolutionVec(TaoTerm term, Vec *solution)
 /*TEST
 
    build:
-     requires: !complex !single
+     requires: !complex !single !quad !defined(PETSC_USE_64BIT_INDICES) !__float128
 
    test:
      output_file: output/rosenbrock1_1.out
