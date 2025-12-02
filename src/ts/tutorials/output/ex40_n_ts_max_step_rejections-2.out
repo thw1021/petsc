@@ -4,6 +4,7 @@
 TS Object: 1 MPI process
   type: alpha
     Alpha_m=0.5, Alpha_f=0.5, Gamma=0.5
+  initial time step 0.25
   maximum steps=1
   maximum time=30.
   Maximum number of step rejections=2

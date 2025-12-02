@@ -43,6 +43,7 @@ X range of indices: 0 5, Y range of indices: 3 5
 TS Object: 2 MPI processes
   type: bdf
     Order=2
+  initial time step 0.001
   maximum steps=5
   maximum time=1.
   Maximum number of step rejections=10

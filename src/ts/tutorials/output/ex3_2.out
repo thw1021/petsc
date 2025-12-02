@@ -104,6 +104,7 @@ avg. error (2 norm) = 0.000913004, avg. error (max norm) = 0.00130754
 TS Object: 1 MPI process
   type: ssp
     Scheme: rks2
+  initial time step 0.0005
   maximum steps=100
   maximum time=100.
   Maximum number of step rejections=10
