@@ -37,10 +37,10 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 . -ts_time_span <t0,...tf>                                           - sets the time span, solutions are computed and stored for each indicated time, init_time and max_time are set
 . -ts_eval_times <t0,...tn>                                          - time points where solutions are computed and stored for each indicated time
 . -ts_max_steps <steps>                                              - maximum time-step number to execute until (possibly with nonzero starting value)
-. -ts_run_steps <steps>                                              - maximum number of time steps for TSSolve to take on each call
+. -ts_run_steps <steps>                                              - maximum number of time steps for `TSSolve()` to take on each call
 . -ts_init_time <time>                                               - initial time to start computation
 . -ts_final_time <time>                                              - final time to compute to (deprecated: use `-ts_max_time`)
-. -ts_dt <dt>                                                        - initial time step
+. -ts_time_step <dt>                                                 - initial time step (only a suggestion, the actual initial time step used differ)
 . -ts_exact_final_time <stepover,interpolate,matchstep>              - whether to stop at the exact given final time and how to compute the solution at that time
 . -ts_max_snes_failures <maxfailures>                                - Maximum number of nonlinear solve failures allowed
 . -ts_max_step_rejections <maxrejects>                               - Maximum number of step rejections before step fails
@@ -123,7 +123,8 @@ PetscErrorCode TSSetFromOptions(TS ts)
   PetscCall(PetscOptionsInt("-ts_max_steps", "Maximum time step number to execute to (possibly with non-zero starting value)", "TSSetMaxSteps", ts->max_steps, &ts->max_steps, NULL));
   PetscCall(PetscOptionsInt("-ts_run_steps", "Maximum number of time steps to take on each call to TSSolve()", "TSSetRunSteps", ts->run_steps, &ts->run_steps, NULL));
   PetscCall(PetscOptionsReal("-ts_init_time", "Initial time", "TSSetTime", ts->ptime, &ts->ptime, NULL));
-  PetscCall(PetscOptionsReal("-ts_dt", "Initial time step", "TSSetTimeStep", ts->time_step, &time_step, &flg));
+  PetscCall(PetscOptionsDeprecated("-ts_dt", "-ts_time_step", "3.25", NULL));
+  PetscCall(PetscOptionsReal("-ts_time_step", "Initial time step", "TSSetTimeStep", ts->time_step, &time_step, &flg));
   if (flg) PetscCall(TSSetTimeStep(ts, time_step));
   PetscCall(PetscOptionsEnum("-ts_exact_final_time", "Option for handling of final time step", "TSSetExactFinalTime", TSExactFinalTimeOptions, (PetscEnum)ts->exact_final_time, (PetscEnum *)&eftopt, &flg));
   if (flg) PetscCall(TSSetExactFinalTime(ts, eftopt));
@@ -1888,6 +1889,8 @@ PetscErrorCode TSViewFromOptions(TS ts, PetscObject obj, const char name[])
 
   In the debugger you can do call `TSView`(ts,0) to display the `TS` solver. (The same holds for any PETSc object viewer).
 
+  The "initial time step" displayed is the default time step from `TSCreate()` or that set with `TSSetTimeStep()` or `-ts_time_step`
+
 .seealso: [](ch_ts), `TS`, `PetscViewer`, `PetscViewerASCIIOpen()`
 @*/
 PetscErrorCode TSView(TS ts, PetscViewer viewer)
@@ -1919,6 +1922,7 @@ PetscErrorCode TSView(TS ts, PetscViewer viewer)
       PetscUseTypeMethod(ts, view, viewer);
       PetscCall(PetscViewerASCIIPopTab(viewer));
     }
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  initial time step %g\n", (double)ts->initial_time_step));
     if (ts->max_steps < PETSC_INT_MAX) PetscCall(PetscViewerASCIIPrintf(viewer, "  maximum steps=%" PetscInt_FMT "\n", ts->max_steps));
     if (ts->run_steps < PETSC_INT_MAX) PetscCall(PetscViewerASCIIPrintf(viewer, "  run steps=%" PetscInt_FMT "\n", ts->run_steps));
     if (ts->max_time < PETSC_MAX_REAL) PetscCall(PetscViewerASCIIPrintf(viewer, "  maximum time=%g\n", (double)ts->max_time));
@@ -2146,8 +2150,7 @@ PetscErrorCode TSSetStepNumber(TS ts, PetscInt steps)
 }
 
 /*@
-  TSSetTimeStep - Allows one to reset the timestep at any time,
-  useful for simple pseudo-timestepping codes.
+  TSSetTimeStep - Allows one to reset the timestep at any time.
 
   Logically Collective
 
@@ -2155,7 +2158,15 @@ PetscErrorCode TSSetStepNumber(TS ts, PetscInt steps)
 + ts        - the `TS` context obtained from `TSCreate()`
 - time_step - the size of the timestep
 
+  Options Database Key:
+. -ts_time_step <dt> - provide the initial time step
+
   Level: intermediate
+
+  Notes:
+  This is only a suggestion, the actual initial time step used may differ
+
+  If this is called after `TSSetUp()` it will not change the initial time step value printed by `TSView()`
 
 .seealso: [](ch_ts), `TS`, `TSPSEUDO`, `TSGetTimeStep()`, `TSSetTime()`
 @*/
@@ -2165,6 +2176,7 @@ PetscErrorCode TSSetTimeStep(TS ts, PetscReal time_step)
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
   PetscValidLogicalCollectiveReal(ts, time_step, 2);
   ts->time_step = time_step;
+  if (ts->setupcalled == PETSC_FALSE) ts->initial_time_step = time_step;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

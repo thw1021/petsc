@@ -13,6 +13,7 @@
 Interpolated solution at time 1. between steps 10 and 11
 TS Object: 1 MPI process
   type: euler
+  initial time step 0.1
   maximum time=1.
   Maximum number of step rejections=10
   Maximum number of SNES failures allowed=1

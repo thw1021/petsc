@@ -18,6 +18,7 @@ Labels:
 TS Object: 1 MPI process
   type: ssp
     Scheme: rks2
+  initial time step 0.993392
   maximum steps=1000
   maximum time=2.
   Maximum number of step rejections=10
