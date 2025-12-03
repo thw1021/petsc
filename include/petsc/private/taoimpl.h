@@ -282,7 +282,6 @@ struct _p_TaoTerm {
   PetscReal  fd_delta;      // increment for TaoTermGradientFD()
   PetscInt   fd_grad_level; // push/pop using finite difference for the gradient
   PetscInt   fd_hess_level; // push/pop using finite difference for the Hessian
-  ISColoring fd_coloring;
 };
 
 PETSC_INTERN PetscErrorCode TaoTermRegisterAll(void);

@@ -46,7 +46,6 @@ PetscErrorCode TaoTermDestroy(TaoTerm *term)
   PetscCall(MatDestroy(&(*term)->solution_factory));
   PetscCall(MatDestroy(&(*term)->parameters_factory));
   PetscCall(MatDestroy(&(*term)->parameters_factory_orig));
-  PetscCall(ISColoringDestroy(&(*term)->fd_coloring));
   PetscCall(PetscHeaderDestroy(term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1929,70 +1928,5 @@ PetscErrorCode TaoTermComputeHessianUseFDPop(TaoTerm term)
   PetscCall(PetscStrallocpy(term->Hpre_mattype_pre_fd_push, (char **)&term->Hpre_mattype));
   PetscCall(PetscFree(term->H_mattype_pre_fd_push));
   PetscCall(PetscFree(term->Hpre_mattype_pre_fd_push));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoTermSetHessianColoring - Set an `ISColoring` object that can be used
-  when approximating the Hessian using finite differences in
-  `TaoTermComputeHessianFD()`.
-
-  Collective
-
-  Input Parameters:
-+ term     - a `TaoTerm`
-- coloring - an `ISColoring` for the sparsity pattern of the Hessian (see for example `DMCreateColoring()`)
-
-  Level: advanced
-
-.seealso: [](sec_tao_term),
-          `TaoTerm`,
-          `TaoTermGetFDDelta()`,
-          `TaoTermSetFDDelta()`,
-          `TaoTermComputeHessianFD()`,
-          `TaoTermComputeHessianUseFDPush()`,
-          `TaoTermComputeHessianUseFDPop()`,
-          `TaoTermGetHessianColoring()`
-@*/
-PetscErrorCode TaoTermSetHessianColoring(TaoTerm term, ISColoring coloring)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscCall(ISColoringReference(coloring));
-  PetscCall(ISColoringDestroy(&term->fd_coloring));
-  term->fd_coloring = coloring;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoTermGetHessianColoring - Get the `ISColoring` object used
-  when approximating the Hessian using finite differences in
-  `TaoTermComputeHessianFD()`.
-
-  Collective
-
-  Input Parameter:
-. term - a `TaoTerm`
-
-  Output Parameter:
-. coloring - an `ISColoring`, or `NULL` if a coloring has not been set
-
-  Level: advanced
-
-.seealso: [](sec_tao_term),
-          `TaoTerm`,
-          `TaoTermGetFDDelta()`,
-          `TaoTermSetFDDelta()`,
-          `TaoTermComputeHessianFD()`,
-          `TaoTermComputeHessianUseFDPush()`,
-          `TaoTermComputeHessianUseFDPop()`,
-          `TaoTermSetHessianColoring()`
-@*/
-PetscErrorCode TaoTermGetHessianColoring(TaoTerm term, ISColoring *coloring)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscAssertPointer(coloring, 2);
-  *coloring = term->fd_coloring;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

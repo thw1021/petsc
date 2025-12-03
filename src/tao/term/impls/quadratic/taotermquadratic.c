@@ -108,6 +108,7 @@ PETSC_INTERN PetscErrorCode TaoTermComputeHessian_Quadratic(TaoTerm term, Vec x,
   TaoTerm_Quadratic *quad = (TaoTerm_Quadratic *)term->data;
 
   PetscFunctionBegin;
+  //TODO cacheing to avoid unnecessary computation
   if (H) PetscCall(MatCopy(quad->A, H, UNKNOWN_NONZERO_PATTERN));
   if (Hpre && Hpre != H) PetscCall(MatCopy(quad->A, Hpre, UNKNOWN_NONZERO_PATTERN));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -121,10 +122,10 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Quadratic(TaoTerm term, Mat *
   PetscCall(PetscInfo(term, "Creating TAOTERMQUADRATIC Hessian Matrices by duplicating quadratic matrix set by TaoTermQuadraticSetMat, overriding custom MatType options.\n"));
   if (H) PetscCall(MatDuplicate(quad->A, MAT_DO_NOT_COPY_VALUES, H));
   if (Hpre) {
-    if (H) {
+    if (term->Hpre_is_H && H) {
       PetscCall(PetscObjectReference((PetscObject)*H));
       *Hpre = *H;
-    } else PetscCall(MatDuplicate(quad->A, MAT_DO_NOT_COPY_VALUES, H));
+    } else PetscCall(MatDuplicate(quad->A, MAT_DO_NOT_COPY_VALUES, Hpre));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

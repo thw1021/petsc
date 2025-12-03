@@ -22,6 +22,7 @@ int main(int argc, char **argv)
   PetscInt    n          = 20;  // model size
   PetscInt    k          = 10;  // dicionary size
   PetscBool   set_prefix = PETSC_TRUE;
+  PetscBool   set_name   = PETSC_FALSE;
   TaoTerm     data_term;
   TaoTerm     l2_reg_term;
   TaoTerm     l1_reg_term;
@@ -39,6 +40,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsBoundedInt("-n", "model size", "", n, &n, NULL, 0));
   PetscCall(PetscOptionsBoundedInt("-k", "dictionary size", "", k, &k, NULL, 0));
   PetscCall(PetscOptionsBool("-set_term_prefix", "Set prefix to subterms", NULL, set_prefix, &set_prefix, NULL));
+  PetscCall(PetscOptionsBool("-set_term_name", "Set name to subterms", NULL, set_name, &set_name, NULL));
   PetscOptionsEnd();
 
   PetscCall(TaoCreate(comm, &tao));
@@ -72,22 +74,25 @@ int main(int argc, char **argv)
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)b, "bvec_"));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)A, "Amat_"));
   }
+  if (set_name) PetscCall(PetscObjectSetName((PetscObject)data_term, "Data TaoTerm"));
   PetscCall(TaoAddTerm(tao, "data_", 1.0, data_term, b, A));
   PetscCall(TaoTermDestroy(&data_term));
 
   // the L2 term,  (1/2) lambda_2 || x ||_2^2
   PetscCall(TaoTermCreateHalfL2Squared(comm, PETSC_DECIDE, n, &l2_reg_term));
-  if (set_prefix) {
-    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l2_reg_term, "ridge_"));
-    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)y, "yvec_"));
-    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)D, "Dmat_"));
-  }
+  if (set_prefix) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l2_reg_term, "ridge_"));
+  if (set_name) PetscCall(PetscObjectSetName((PetscObject)l2_reg_term, "Ridge TaoTerm"));
   PetscCall(TaoAddTerm(tao, "ridge_", lambda_2, l2_reg_term, NULL, NULL)); // Note: no parameter vector, no map matrix needed
   PetscCall(TaoTermDestroy(&l2_reg_term));
 
   // the L1 term,  lambda_1 || Dx - y ||_1
   PetscCall(TaoTermCreateL1(comm, PETSC_DECIDE, k, 0.0, &l1_reg_term));
-  if (set_prefix) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l1_reg_term, "lasso_"));
+  if (set_prefix) {
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l1_reg_term, "lasso_"));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)y, "yvec_"));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)D, "Dmat_"));
+  }
+  if (set_name) PetscCall(PetscObjectSetName((PetscObject)l1_reg_term, "Lasso TaoTerm"));
   PetscCall(TaoAddTerm(tao, "lasso_", lambda_1, l1_reg_term, y, D));
   PetscCall(TaoTermDestroy(&l1_reg_term));
 
@@ -97,6 +102,17 @@ int main(int argc, char **argv)
   PetscCall(TaoSetSolution(tao, x));
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSolve(tao));
+
+  {
+    PetscReal scale_get;
+    TaoTerm   get_term;
+    Vec       get_vec, p2;
+    Mat       get_mat;
+
+    PetscCall(TaoGetTerm(tao, &scale_get, &get_term, &get_vec, &get_mat));
+    PetscCall(VecNestGetTaoTermSumSubParameters(get_vec, 1, &p2));
+    PetscCheck(p2 == NULL, PETSC_COMM_SELF, PETSC_ERR_COR, "Second parameter vector is not none");
+  }
 
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&y));
@@ -124,8 +140,42 @@ int main(int argc, char **argv)
     args: -tao_type nls -lasso_tao_term_hessian_mat_type aij -tao_view ::ascii_info_detail
 
   test:
+    suffix: sum_hpre_is_not_h
+    args: -tao_type nls -tao_view ::ascii_info_detail -tao_term_hessian_pre_is_hessian 0
+
+  test:
+    suffix: data_hpre_is_not_h
+    args: -tao_type nls -tao_view ::ascii_info_detail -data_tao_term_hessian_pre_is_hessian 0
+
+  test:
+    suffix: ridge_hpre_is_not_h
+    args: -tao_type nls -tao_view ::ascii_info_detail -ridge_tao_term_hessian_pre_is_hessian 0
+
+  test:
+    suffix: lasso_hpre_is_not_h
+    args: -tao_type nls -tao_view ::ascii_info_detail -lasso_tao_term_hessian_pre_is_hessian 0
+
+  test:
+    suffix: hpre_is_not_h
+    args: -tao_type nls -tao_view ::ascii_info_detail -lasso_tao_term_hessian_pre_is_hessian 0
+    args: -ridge_tao_term_hessian_pre_is_hessian 0 -data_tao_term_hessian_pre_is_hessian 0
+
+  test:
+    suffix: data_ridge_hpre_is_not_h
+    args: -tao_type nls -tao_view ::ascii_info_detail
+    args: -ridge_tao_term_hessian_pre_is_hessian 0 -data_tao_term_hessian_pre_is_hessian 0
+
+  test:
     suffix: no_prefix
     args: -tao_monitor_short -tao_view -tao_term_l1_epsilon 0.1 -tao_type nls -set_term_prefix 0
+
+  test:
+    suffix: no_prefix_yes_name
+    args: -tao_monitor_short -tao_view -tao_term_l1_epsilon 0.1 -tao_type nls -set_term_prefix 0 -set_term_name 1
+
+  test:
+    suffix: yes_prefix_yes_name
+    args: -tao_monitor_short -tao_view -tao_term_l1_epsilon 0.1 -tao_type nls -set_term_prefix 1 -set_term_name 1
 
   test:
     suffix: mask_failure

@@ -293,8 +293,6 @@ PETSC_EXTERN PetscErrorCode TaoTermSetFDDelta(TaoTerm, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoTermComputeGradientFD(TaoTerm, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode TaoTermComputeGradientUseFDPush(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermComputeGradientUseFDPop(TaoTerm);
-PETSC_EXTERN PetscErrorCode TaoTermSetHessianColoring(TaoTerm, ISColoring);
-PETSC_EXTERN PetscErrorCode TaoTermGetHessianColoring(TaoTerm, ISColoring *);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianFD(TaoTerm, Vec, Vec, Mat, Mat);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianUseFDPush(TaoTerm);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianUseFDPop(TaoTerm);

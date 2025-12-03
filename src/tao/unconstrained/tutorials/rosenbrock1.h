@@ -14,6 +14,7 @@ typedef struct {
   PetscBool chained;   /* chained vs. unchained Rosenbrock function */
   PetscBool test;      /* run tests in AppCtxFinalize() */
   PetscBool jacobi_pc; /* Create Jacobi Hpre */
+  PetscBool use_fd;    /* Use finite difference for grad and hess */
 } AppCtx;
 
 static PetscErrorCode AppCtxInitialize(MPI_Comm, AppCtx *); /* process options */
@@ -32,12 +33,14 @@ static PetscErrorCode AppCtxInitialize(MPI_Comm comm, AppCtx *usr)
   usr->chained   = PETSC_FALSE;
   usr->test      = PETSC_FALSE;
   usr->jacobi_pc = PETSC_FALSE;
+  usr->use_fd    = PETSC_FALSE;
   /* Check for command line arguments to override defaults */
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &usr->n, &flg));
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-alpha", &usr->alpha, &flg));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-chained", &usr->chained, &flg));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_lmvm", &usr->test, &flg));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-jacobi_pc", &usr->jacobi_pc, &flg));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_fd", &usr->use_fd, &flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

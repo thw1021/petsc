@@ -51,6 +51,11 @@ int main(int argc, char **argv)
   PetscCall(TaoCreate(PETSC_COMM_SELF, &tao));
   PetscCall(TaoSetType(tao, TAOLMVM));
 
+  if (user.use_fd) {
+    PetscCall(TaoTermSetFDDelta(objective, 7.e-9));
+    PetscCall(TaoTermComputeGradientUseFDPush(objective));
+    PetscCall(TaoTermComputeHessianUseFDPush(objective));
+  }
   /* Set routines for function, gradient, hessian evaluation */
   PetscCall(TaoAddTerm(tao, NULL, 1.0, objective, NULL, NULL));
 
@@ -60,6 +65,10 @@ int main(int argc, char **argv)
   /* SOLVE THE APPLICATION */
   PetscCall(TaoSolve(tao));
 
+  if (user.use_fd) {
+    PetscCall(TaoTermComputeGradientUseFDPop(objective));
+    PetscCall(TaoTermComputeHessianUseFDPop(objective));
+  }
   /* Clean up */
   PetscCall(AppCtxFinalize(&user, tao));
   PetscCall(TaoDestroy(&tao));
@@ -176,6 +185,10 @@ static PetscErrorCode CreateSolutionVec(TaoTerm term, Vec *solution)
    test:
      suffix: test_mf_hessian
      args: -tao_type nls -tao_term_hessian_mat_type mffd -tao_monitor_short -tao_view
+
+   test:
+     suffix: add_term
+     args: -tao_type nls -tao_add_terms extra_ -extra_tao_term_type halfl2squared
 
    test:
      suffix: separate_hessians
