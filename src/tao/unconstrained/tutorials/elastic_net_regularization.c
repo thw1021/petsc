@@ -120,6 +120,10 @@ int main(int argc, char **argv)
     args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls
 
   test:
+    suffix: 1
+    args: -tao_type nls -lasso_tao_term_hessian_mat_type aij -tao_view ::ascii_info_detail
+
+  test:
     suffix: no_prefix
     args: -tao_monitor_short -tao_view -tao_term_l1_epsilon 0.1 -tao_type nls -set_term_prefix 0
 
@@ -135,7 +139,10 @@ int main(int argc, char **argv)
 
   test:
     suffix: snes
-    requires: !single
     args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type snes
+
+  test:
+    suffix: extra_info_view
+    args: -tao_type nls -tao_add_terms extra_ -extra_tao_term_type halfl2squared -tao_term_sum_extra_scale 1.0 -tao_view
 
 TEST*/

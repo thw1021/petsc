@@ -11,6 +11,12 @@ static PetscErrorCode FormFunctionGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 static PetscErrorCode FormHessian(TaoTerm, Vec, Vec, Mat, Mat);
 static PetscErrorCode CreateSolutionVec(TaoTerm, Vec *);
 
+PetscErrorCode CtxDestroy(void **ctx)
+{
+  PetscFunctionBegin;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   TaoTerm     objective;
@@ -32,12 +38,13 @@ int main(int argc, char **argv)
   PetscCall(AppCtxInitialize(comm, &user));
 
   /* Define the objective function */
-  PetscCall(TaoTermCreateShell(comm, (void *)&user, NULL /* no destructor is needed for `user` */, &objective));
+  PetscCall(TaoTermCreateShell(comm, (void *)&user, CtxDestroy, &objective));
   PetscCall(TaoTermSetParametersMode(objective, TAOTERM_PARAMETERS_NONE));
   PetscCall(TaoTermShellSetCreateSolutionVec(objective, CreateSolutionVec));
-  PetscCall(TaoTermShellSetCreateHessianMatrices(objective, TaoTermCreateHessianMatricesDefault));
-  PetscCall(TaoTermSetCreateHessianMode(objective, PETSC_TRUE /* H == Hpre */, MATBAIJ, NULL));
   PetscCall(TaoTermShellSetObjectiveAndGradient(objective, FormFunctionGradient));
+  PetscCall(TaoTermShellSetCreateHessianMatrices(objective, TaoTermCreateHessianMatricesDefault));
+  if (user.jacobi_pc) PetscCall(TaoTermSetCreateHessianMode(objective, PETSC_FALSE, MATBAIJ, MATBAIJ));
+  else PetscCall(TaoTermSetCreateHessianMode(objective, PETSC_TRUE /* H == Hpre */, MATBAIJ, NULL));
   PetscCall(TaoTermShellSetHessian(objective, FormHessian));
 
   /* Create TAO solver with desired solution method */
@@ -115,8 +122,18 @@ static PetscErrorCode FormHessian(TaoTerm term, Vec X, Vec params, Mat H, Mat Hp
   PetscCall(TaoTermShellGetContext(term, &user));
   if (H) PetscCall(AppCtxFormHessian(user, X, H));
   if (Hpre && Hpre != H) {
-    if (H) PetscCall(MatCopy(H, Hpre, SAME_NONZERO_PATTERN));
-    else PetscCall(AppCtxFormHessian(user, X, Hpre));
+    if (user->jacobi_pc) {
+      Vec v;
+
+      PetscCall(VecDuplicate(X, &v));
+      PetscCall(MatGetDiagonal(H, v));
+      PetscCall(MatZeroEntries(Hpre));
+      PetscCall(MatDiagonalSet(Hpre, v, INSERT_VALUES));
+      PetscCall(VecDestroy(&v));
+    } else {
+      if (H) PetscCall(MatCopy(H, Hpre, SAME_NONZERO_PATTERN));
+      else PetscCall(AppCtxFormHessian(user, X, Hpre));
+    }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -143,6 +160,14 @@ static PetscErrorCode CreateSolutionVec(TaoTerm term, Vec *solution)
    test:
      suffix: test_gradient
      args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4 -tao_test_gradient -tao_fd_delta 1.e-6 -n 4 -chained -tao_term_hessian_mat_type aij -alpha 49.0
+
+   test:
+     suffix: fd_grad
+     args: -tao_monitor_short -tao_type nls -tao_term_gradient_use_fd
+
+   test:
+     suffix: fd_hess
+     args: -tao_monitor_short -tao_type nls -tao_term_hessian_use_fd
 
    test:
      suffix: test_fd_hess

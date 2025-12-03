@@ -18,7 +18,7 @@ static PetscErrorCode FormHessian(Tao, Vec, Mat, Mat, void *);
 int main(int argc, char **argv)
 {
   Vec         x; /* solution vector */
-  Mat         H;
+  Mat         H, Hpre;
   Tao         tao;  /* Tao solver context */
   PetscMPIInt size; /* number of processes running */
   AppCtx      user; /* user-defined application context */
@@ -38,7 +38,7 @@ int main(int argc, char **argv)
   PetscCall(AppCtxCreateSolution(&user, &x));
 
   /* Allocate the Hessian matrix */
-  PetscCall(AppCtxCreateHessianMatrices(&user, &H, NULL));
+  PetscCall(AppCtxCreateHessianMatrices(&user, &H, &Hpre));
 
   /* The TAO code begins here */
 
@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 
   /* Set routines for function, gradient, hessian evaluation */
   PetscCall(TaoSetObjectiveAndGradient(tao, NULL, FormFunctionGradient, &user));
-  PetscCall(TaoSetHessian(tao, H, H, FormHessian, &user));
+  PetscCall(TaoSetHessian(tao, H, Hpre, FormHessian, &user));
 
   /* Check for TAO command line options */
   PetscCall(TaoSetFromOptions(tao));
@@ -65,6 +65,7 @@ int main(int argc, char **argv)
   PetscCall(TaoDestroy(&tao));
   PetscCall(VecDestroy(&x));
   PetscCall(MatDestroy(&H));
+  PetscCall(MatDestroy(&Hpre));
 
   PetscCall(PetscFinalize());
   return 0;
@@ -117,181 +118,166 @@ PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
 
   PetscFunctionBeginUser;
   PetscCall(AppCtxFormHessian(user, X, H));
+  // Manual Jacobia preconditioner for testing
+  if (user->jacobi_pc) {
+    Vec v;
+
+    PetscCall(VecDuplicate(X, &v));
+    PetscCall(MatGetDiagonal(H, v));
+    PetscCall(MatZeroEntries(Hpre));
+    PetscCall(MatDiagonalSet(Hpre, v, INSERT_VALUES));
+    PetscCall(VecDestroy(&v));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*TEST
 
    build:
-     requires: !complex
+     requires: !complex !single !quad !defined(PETSC_USE_64BIT_INDICES) !__float128
 
    test:
-     requires: !single
      args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4
 
    test:
      suffix: 2
-     requires: !single
      args: -tao_monitor_short -tao_type lmvm -tao_gatol 1.e-3
 
    test:
      suffix: 3
-     requires: !single
      args: -tao_monitor_short -tao_type ntr -tao_gatol 1.e-4
 
    test:
      suffix: 4
-     requires: !single
      args: -tao_monitor_short -tao_type ntr -tao_mf_hessian -tao_ntr_pc_type none -tao_gatol 1.e-4
 
    test:
      suffix: 5
-     requires: !single
      args: -tao_monitor_short -tao_type bntr -tao_gatol 1.e-4
 
    test:
      suffix: 6
-     requires: !single
      args: -tao_monitor_short -tao_type bntl -tao_gatol 1.e-4
 
    test:
      suffix: 7
-     requires: !single
      args: -tao_monitor_short -tao_type bnls -tao_gatol 1.e-4
 
    test:
      suffix: 8
-     requires: !single
      args: -tao_monitor_short -tao_type bntr -tao_bnk_max_cg_its 3 -tao_gatol 1.e-4
 
    test:
      suffix: 9
-     requires: !single
      args: -tao_monitor_short -tao_type bntl -tao_bnk_max_cg_its 3 -tao_gatol 1.e-4
 
    test:
      suffix: 10
-     requires: !single
      args: -tao_monitor_short -tao_type bnls -tao_bnk_max_cg_its 3 -tao_gatol 1.e-4
 
    test:
      suffix: 11
-     requires: !single
      args: -test_lmvm -tao_type bqnktr -tao_max_it 10 -tao_bqnk_mat_type lmvmbroyden
 
    test:
      suffix: 12
-     requires: !single
      args: -test_lmvm -tao_type bqnktr -tao_max_it 10 -tao_bqnk_mat_type lmvmbadbroyden
 
    test:
      suffix: 13
-     requires: !single
      args: -test_lmvm -tao_type bqnktr -tao_max_it 10 -tao_bqnk_mat_type lmvmsymbroyden -tao_bqnk_mat_lmvm_beta {{0.0 0.25 1.0}} -tao_bqnk_mat_lmvm_rho 0.75 -tao_bqnk_mat_lmvm_sigma_hist 2
 
    test:
      suffix: 14
-     requires: !single
      args: -test_lmvm -tao_type bqnktr -tao_max_it 10 -tao_bqnk_mat_type lmvmbfgs -tao_bqnk_mat_lmvm_scale_type {{scalar diagonal}} -tao_bqnk_mat_lmvm_alpha {{0.0 0.25 0.5}} -tao_bqnk_mat_lmvm_theta 1.0
 
    test:
      suffix: 15
-     requires: !single
      args: -test_lmvm -tao_type bqnktr -tao_max_it 10 -tao_bqnk_mat_type lmvmdfp
 
    test:
      suffix: 16
-     requires: !single
      args: -test_lmvm -tao_type bqnktr -tao_max_it 10 -tao_bqnk_mat_type lmvmsr1
 
    test:
      suffix: 17
-     requires: !single
      args: -tao_monitor_short -tao_gatol 1e-4 -tao_type bqnls
 
    test:
      suffix: 18
-     requires: !single
      args: -tao_monitor_short -tao_gatol 1e-4 -tao_type blmvm
 
    test:
      suffix: 19
-     requires: !single
      args: -tao_monitor_short -tao_gatol 1e-4 -tao_type bqnktr -tao_bqnk_mat_type lmvmsr1
 
    test:
      suffix: 20
-     requires: !single
      args: -tao_monitor -tao_gatol 1e-4 -tao_type blmvm -tao_ls_monitor
 
    test:
      suffix: 21
-     requires: !single
      args: -test_lmvm -tao_type bqnktr -tao_max_it 10 -tao_bqnk_mat_type lmvmsymbadbroyden
 
    test:
      suffix: 22
-     requires: !single
      args: -tao_max_it 1 -tao_converged_reason
 
    test:
      suffix: 23
-     requires: !single
      args: -tao_max_funcs 0 -tao_converged_reason
 
    test:
      suffix: 24
-     requires: !single
      args: -tao_gatol 10 -tao_converged_reason
 
    test:
      suffix: 25
-     requires: !single
      args: -tao_grtol 10 -tao_converged_reason
 
    test:
      suffix: 26
-     requires: !single
      args: -tao_gttol 10 -tao_converged_reason
 
    test:
      suffix: 27
-     requires: !single
      args: -tao_steptol 10 -tao_converged_reason
 
    test:
      suffix: 28
-     requires: !single
      args: -tao_fmin 10 -tao_converged_reason
 
    test:
      suffix: snes
-     requires: !single
      args: -snes_monitor ::ascii_info_detail -tao_type snes -snes_type newtontr -snes_atol 1.e-4 -pc_type none -tao_mf_hessian -ksp_type cg
 
    test:
      suffix: snes_ls_armijo
-     requires: !single
      args: -snes_monitor ::ascii_info_detail -tao_type snes -snes_type newtonls -snes_atol 1.e-4 -pc_type none -tao_mf_hessian -snes_linesearch_monitor -snes_linesearch_order 1
 
    test:
      suffix: snes_tr_cgnegcurve_kmdc
-     requires: !single
      args: -snes_monitor ::ascii_info_detail -tao_type snes -snes_type newtontr -snes_atol 1.e-4 -pc_type none -ksp_type cg -snes_tr_kmdc 0.9 -ksp_converged_neg_curve -ksp_converged_reason
 
    test:
      suffix: snes_ls_lmvm
-     requires: !single
      args: -snes_monitor ::ascii_info_detail -tao_type snes -snes_type newtonls -snes_atol 1.e-4 -pc_type lmvm -tao_mf_hessian
 
    test:
      suffix: add_terms_l2_no_pre
-     requires: !single
      args: -tao_type nls -tao_add_terms reg_ -reg_tao_term_type halfl2squared -tao_term_sum_reg_scale 0.3 -tao_monitor_short -tao_view ::ascii_info_detail
 
    test:
      suffix: add_terms_l1_no_pre
-     requires: !single
      args: -tao_type nls -tao_add_terms reg_ -reg_tao_term_type l1 -reg_tao_term_l1_epsilon 0.4 -tao_term_sum_reg_scale 0.3 -tao_monitor_short -tao_view ::ascii_info_detail
+
+   test:
+     suffix: hpre_is_not_h
+     args: -tao_type nls -jacobi_pc 1 -tao_view ::ascii_info_detail -n 10
+
+   test:
+     suffix: param_none
+     args: -tao_type nls -tao_add_terms reg_ -reg_tao_term_type halfl2squared -tao_term_sum_reg_scale 0.3 -tao_monitor_short
+     args: -tao_view ::ascii_info_detail -reg_tao_term_parameters_mode none
 
 TEST*/

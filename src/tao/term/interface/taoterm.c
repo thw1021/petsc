@@ -179,9 +179,9 @@ PetscErrorCode TaoTermSetUp(TaoTerm term)
 
     PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSHELL, &is_shell));
     if (is_shell)
-      PetscCheck(term->ops->createsolutionvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not know. You should have called TaoTermSetSolutionSizes(), TaoTermSetSolutionTemplate(), TaoTermSetSolutionLayout(), or TaoTermShellSetCreateSolutionVec()");
+      PetscCheck(term->ops->createsolutionvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not known. You should have called TaoTermSetSolutionSizes(), TaoTermSetSolutionTemplate(), TaoTermSetSolutionLayout(), or TaoTermShellSetCreateSolutionVec()");
     else
-      PetscCheck(term->ops->createsolutionvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not know. You should have called TaoTermSetSolutionSizes(), TaoTermSetSolutionTemplate(), or TaoTermSetSolutionLayout()");
+      PetscCheck(term->ops->createsolutionvec, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONGSTATE, "TaoTerm solution space not known. You should have called TaoTermSetSolutionSizes(), TaoTermSetSolutionTemplate(), or TaoTermSetSolutionLayout()");
 
     PetscCall(TaoTermCreateSolutionVec(term, &sol_template));
     PetscCall(TaoTermSetSolutionTemplate(term, sol_template));
@@ -1642,14 +1642,25 @@ PetscErrorCode TaoTermDuplicate(TaoTerm term, TaoTermDuplicateOption opt, TaoTer
 {
   VecType     solution_vec_type;
   PetscLayout rlayout, clayout;
+  PetscBool   is_shell;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)term), newterm));
-  PetscCall(MatGetVecType(term->solution_factory, &solution_vec_type));
-  PetscCall(MatGetLayouts(term->solution_factory, &rlayout, &clayout));
-  PetscCall(MatSetVecType((*newterm)->solution_factory, solution_vec_type));
-  PetscCall(MatSetLayouts((*newterm)->solution_factory, rlayout, clayout));
+  PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSHELL, &is_shell));
+  // Check if createsolutionvec is available first (for TaoTermShell)
+  if (is_shell && term->ops->createsolutionvec) {
+    Vec sol_template;
+
+    PetscCall(TaoTermCreateSolutionVec(term, &sol_template));
+    PetscCall(TaoTermSetSolutionTemplate(*newterm, sol_template));
+    PetscCall(VecDestroy(&sol_template));
+  } else {
+    PetscCall(MatGetVecType(term->solution_factory, &solution_vec_type));
+    PetscCall(MatGetLayouts(term->solution_factory, &rlayout, &clayout));
+    PetscCall(MatSetVecType((*newterm)->solution_factory, solution_vec_type));
+    PetscCall(MatSetLayouts((*newterm)->solution_factory, rlayout, clayout));
+  }
   if (opt == TAOTERM_DUPLICATE_TYPE) {
     TaoTermType type;
 

@@ -243,12 +243,7 @@ PetscErrorCode TaoSetUp(Tao tao)
     // TaoSetHessian or TaoSetHessianMatrices has been called, but as terms have been added,
     // subterms' Hessian and PtAP routines, if needed, have to be created
     // TODO TaoSetHessianMatrices should mean, setting Hessian for SUM.
-    if (is_sum && tao->hessian) { //TODO actually wrong? never gets entered here
-      PetscCall(TaoTermSumSetSubtermHessianMatrices(tao->objective_term.term, 0, NULL, NULL, tao->hessian, tao->hessian_pre));
-      PetscCall(MatDestroy(&tao->hessian));
-      PetscCall(MatDestroy(&tao->hessian_pre));
-      PetscCall(TaoTermMappingCreateHessianMatrices(&tao->objective_term, &tao->hessian, &tao->hessian_pre));
-    } else if (!tao->hessian) {
+    if (!tao->hessian) {
       PetscBool is_defined;
 
       //TAOTERMSUM's Hessian will follow layout and type of first term's Hessian
@@ -710,9 +705,7 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
         PetscCall(PetscViewerASCIIPushTab(viewer));
         PetscCall(MatView(tao->objective_term.map, viewer));
         PetscCall(PetscViewerASCIIPopTab(viewer));
-      } else if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Map: unmapped\n"));
-      }
+      } else PetscCall(PetscViewerASCIIPrintf(viewer, "Map: unmapped\n"));
       PetscCall(PetscViewerASCIIPopTab(viewer));
     } else if (tao->num_terms > 0 || tao->term_set) {
       if (tao->objective_term.scale == 1.0 && tao->objective_term.map == NULL) {
@@ -731,16 +724,9 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
         if (tao->objective_term.map) {
           PetscCall(PetscViewerASCIIPrintf(viewer, "Map:\n"));
           PetscCall(PetscViewerASCIIPushTab(viewer));
-          {
-            PetscBool pop = PETSC_FALSE;
-
-            if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
-              PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
-              pop = PETSC_TRUE;
-            }
-            PetscCall(MatView(tao->objective_term.map, viewer));
-            if (pop) PetscCall(PetscViewerPopFormat(viewer));
-          }
+          PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
+          PetscCall(MatView(tao->objective_term.map, viewer));
+          PetscCall(PetscViewerPopFormat(viewer));
           PetscCall(PetscViewerASCIIPopTab(viewer));
         }
         PetscCall(PetscViewerASCIIPopTab(viewer));

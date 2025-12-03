@@ -435,7 +435,9 @@ static PetscErrorCode TaoTermView_Sum(TaoTerm term, PetscViewer viewer)
       else if (map != NULL) {
         PetscCall(PetscViewerASCIIPrintf(viewer, "Map:\n"));
         PetscCall(PetscViewerASCIIPushTab(viewer));
+        PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
         PetscCall(MatView(map, viewer));
+        PetscCall(PetscViewerPopFormat(viewer));
         PetscCall(PetscViewerASCIIPopTab(viewer));
       }
       PetscCall(TaoTermSumGetSubtermMask(term, i, &mask));
