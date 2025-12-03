@@ -82,7 +82,7 @@ M*/
 .seealso: [](ch_ts), `TSGLEE`
 M*/
 /*MC
-     TSGLEE24 - Second order four stage explict GLEE method
+     TSGLEE24 - Second order four stage explicit GLEE method
 
      This method has four stages.
      s = 4, r = 2
@@ -102,7 +102,7 @@ M*/
 .seealso: [](ch_ts), `TSGLEE`
 M*/
 /*MC
-     TSGLEE35  - Third order five stage explict GLEE method
+     TSGLEE35  - Third order five stage explicit GLEE method
 
      This method has five stages.
      s = 5, r = 2
@@ -122,7 +122,7 @@ M*/
 .seealso: [](ch_ts), `TSGLEE`
 M*/
 /*MC
-     TSGLEERK32G1  - Third order eight stage explict GLEE method
+     TSGLEERK32G1  - Third order eight stage explicit GLEE method
 
      This method has eight stages.
      s = 8, r = 2
@@ -132,7 +132,7 @@ M*/
 .seealso: [](ch_ts), `TSGLEE`
 M*/
 /*MC
-     TSGLEERK285EX  - Second order nine stage explict GLEE method
+     TSGLEERK285EX  - Second order nine stage explicit GLEE method
 
      This method has nine stages.
      s = 9, r = 2

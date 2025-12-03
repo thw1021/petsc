@@ -1743,7 +1743,7 @@ $$
 $$
   y_i = \gamma_{ij} k_j
 $$
-  The $ k_j $ can be recovered because $\Gamma$ is invertible. Let $\C$ be the lower triangular part of $Gamma^{-1}$ and define
+  The $ k_j $ can be recovered because $\Gamma$ is invertible. Let $C$ be the lower triangular part of $\Gamma^{-1}$ and define
 $$
   A = \Alpha \Gamma^{-1}, bt^T = b^T \Gamma^{-1}
 $$
