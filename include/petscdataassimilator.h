@@ -17,9 +17,6 @@ typedef enum {
 typedef const char *PetscDataAssimilatorType;
 #define PETSCDAETKF "etkf"
 
-/* Logging support */
-PETSC_EXTERN PetscClassId PETSCDA_CLASSID;
-
 PETSC_EXTERN PetscErrorCode PetscDataAssimilatorInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDataAssimilatorFinalizePackage(void);
 
