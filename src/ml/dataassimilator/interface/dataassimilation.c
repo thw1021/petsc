@@ -228,7 +228,7 @@ static PetscErrorCode PetscDataAssimilatorComputeAnomalies_Default(PetscDataAssi
 
   /*
     Compute normalization scale for anomalies.
-    Algorithm line 2: anomalies are normalized by 1/sqrt(m-1) so that
+    Alg 6.4 line 2: anomalies are normalized by 1/sqrt(m-1) so that
     the anomalies matrix X satisfies X*X^T = ensemble covariance matrix.
     This ensures proper statistical properties for ensemble-based methods.
   */
@@ -239,7 +239,7 @@ static PetscErrorCode PetscDataAssimilatorComputeAnomalies_Default(PetscDataAssi
   PetscCall(VecSetSizes(mean, PETSC_DECIDE, da->state_size));
   PetscCall(VecSetFromOptions(mean));
 
-  /* Algorithm line 1: \bar{x} = (1/m)\sum_j x^{(j)} */
+  /* Alg 6.4 line 1: \bar{x} = (1/m)\sum_j x^{(j)} */
   PetscCall(PetscDataAssimilatorComputeMean(da, mean));
 
   /* Allocate anomalies matrix (state_size x ensemble_size) */
@@ -250,13 +250,13 @@ static PetscErrorCode PetscDataAssimilatorComputeAnomalies_Default(PetscDataAssi
     Form anomalies by subtracting mean from each ensemble member and scaling.
     For each column j: anomaly_j = (ensemble_j - mean) / sqrt(m-1)
   */
-  for (j = 0; j < ensemble_size; ++j) {
+  for (j = 0; j < ensemble_size; ++j) { // should be locals only
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, j, &col_in));
     PetscCall(MatDenseGetColumnVecWrite(anomalies, j, &col_out));
 
-    /* Algorithm line 2: subtract the mean column-wise to form x^{(j)} - \bar{x} */
+    /* Alg 6.4 line 2: subtract the mean column-wise to form x^{(j)} - \bar{x} */
     PetscCall(VecWAXPY(col_out, -1.0, mean, col_in));
-    /* Algorithm line 2: scale anomalies by 1/\sqrt{m-1} */
+    /* Alg 6.4 line 2: scale anomalies by 1/\sqrt{m-1} */
     PetscCall(VecScale(col_out, scale));
 
     PetscCall(MatDenseRestoreColumnVecWrite(anomalies, j, &col_out));
@@ -986,306 +986,5 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
   }
 
   PetscCall(VecRestoreArray(v, &array));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-  PetscDataAssimilatorCholeskySqrt_Private - Computes the lower triangular Cholesky factorization of a symmetric positive definite matrix.
-
-  Input Parameter:
-. A - symmetric positive definite matrix to factorize
-
-  Output Parameter:
-. L_out - lower triangular Cholesky factor such that A = L * L^T
-
-  Notes:
-  This function uses LAPACK's potrf routine for the Cholesky decomposition.
-  The input matrix A must be symmetric and positive definite for the factorization to succeed.
-  In debug mode, the result is verified by checking ||L*L^T - A||_F.
-
-  The Cholesky factorization is preferred over eigendecomposition-based square roots when:
-  - The matrix is known to be positive definite
-  - A lower triangular factor is specifically needed
-  - Performance is critical (Cholesky is O(n^3/3) vs O(n^3) for eigendecomposition)
-
-  Developer Notes:
-  This is a private function used internally by the data assimilation module.
-  For a general symmetric matrix square root that handles semi-definite matrices,
-  use PetscDataAssimilatorSymmetricEigenSqrt_Private instead.
-*/
-PetscErrorCode PetscDataAssimilatorCholeskySqrt_Private(Mat A, Mat *L_out)
-{
-  Mat          L = NULL;
-  PetscInt     m, n, i, j;
-  PetscScalar *array = NULL;
-  PetscBLASInt bn, info;
-  PetscBool    is_dense;
-
-  PetscFunctionBegin;
-  /* Validate input parameters */
-  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscAssertPointer(L_out, 2);
-
-  /* Verify matrix properties required for Cholesky factorization */
-  PetscCall(MatGetSize(A, &m, &n));
-  PetscCheck(m == n, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square for Cholesky factorization, got %" PetscInt_FMT " x %" PetscInt_FMT, m, n);
-  PetscCheck(n > 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Matrix dimension must be positive, got %" PetscInt_FMT, n);
-
-  /* Verify matrix type - Cholesky requires dense storage */
-  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQDENSE, &is_dense));
-  if (!is_dense) PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPIDENSE, &is_dense));
-  PetscCheck(is_dense, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be dense for Cholesky factorization");
-
-  /* Create working copy to preserve input matrix */
-  PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &L));
-  PetscCall(MatDenseGetArray(L, &array));
-
-  /* Perform Cholesky factorization using LAPACK */
-  PetscCall(PetscBLASIntCast(n, &bn));
-  PetscCallBLAS("LAPACKpotrf", LAPACKpotrf_("L", &bn, array, &bn, &info));
-
-  /* Handle LAPACK error codes with detailed diagnostics */
-  if (info != 0) {
-    PetscCall(MatDenseRestoreArray(L, &array));
-    PetscCall(MatDestroy(&L));
-    if (info < 0) {
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK potrf: illegal argument at position %" PetscBLASInt_FMT, -info);
-    } else {
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_MAT_LU_ZRPVT, "LAPACK potrf: matrix is not positive definite, leading minor of order %" PetscBLASInt_FMT " is not positive", info);
-    }
-  }
-
-  /*
-    Zero out upper triangle to obtain strict lower triangular result.
-    LAPACK potrf stores the result in the lower triangle and leaves the
-    upper triangle unchanged. We explicitly zero it for clarity and to
-    ensure the output is a proper lower triangular matrix.
-
-    Performance note: This loop is O(n^2) but negligible compared to the
-    O(n^3/3) cost of the Cholesky factorization itself.
-  */
-  for (j = 0; j < n; j++) {
-    for (i = 0; i < j; i++) array[i + j * n] = 0.0;
-  }
-
-  PetscCall(MatDenseRestoreArray(L, &array));
-
-  /* Finalize matrix assembly */
-  PetscCall(MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY));
-
-  /*
-    Verify correctness in debug mode by checking ||L*L^T - A||_F <= tolerance.
-    This helps catch numerical issues and validates the implementation.
-  */
-  if (PetscDefined(USE_DEBUG)) {
-    Mat       sqrtA_check;
-    PetscReal normA, normDiff, tolerance;
-
-    /* Reconstruct A from L*L^T */
-    PetscCall(MatMatTransposeMult(L, L, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &sqrtA_check));
-
-    /* Compute verification metrics */
-    PetscCall(MatNorm(A, NORM_FROBENIUS, &normA));
-    PetscCall(MatAXPY(sqrtA_check, -1.0, A, DIFFERENT_NONZERO_PATTERN));
-    PetscCall(MatNorm(sqrtA_check, NORM_FROBENIUS, &normDiff));
-
-    /* Set tolerance relative to matrix magnitude */
-    tolerance = MATRIX_SQRT_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON * PetscMax(1.0, normA);
-
-    PetscCall(MatDestroy(&sqrtA_check));
-    PetscCheck(normDiff <= tolerance, PETSC_COMM_SELF, PETSC_ERR_LIB, "Matrix square root verification failed: ||L*L^T - A||_F = %g exceeds tolerance %g (||A||_F = %g)", (double)normDiff, (double)tolerance, (double)normA);
-  }
-
-  *L_out = L;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-  PetscDataAssimilatorSymmetricEigenSqrt_Private - Computes the symmetric matrix square root using eigendecomposition.
-
-  Input Parameter:
-. A - symmetric matrix to compute the square root of
-
-  Output Parameter:
-. sqrtA_out - matrix square root such that sqrtA * sqrtA = A
-
-  Notes:
-  This function uses LAPACK's syev routine to compute eigenvalues and eigenvectors.
-  For a symmetric matrix A, the square root is computed as:
-    A = V * D * V^T  (eigendecomposition)
-    sqrt(A) = V * sqrt(D) * V^T
-
-  The function handles semi-definite matrices by clamping small negative eigenvalues
-  (within numerical tolerance) to zero. This is more robust than Cholesky factorization
-  for matrices that may not be strictly positive definite.
-
-  In debug mode, the result is verified by checking ||sqrtA*sqrtA - A||_F.
-
-  Performance: O(n^3) for eigendecomposition, plus O(n^3) for matrix multiplications.
-
-  Developer Notes:
-  - Prefer PetscDataAssimilatorCholeskySqrt_Private for positive definite matrices (faster)
-  - This function is more robust for semi-definite or nearly singular matrices
-  - All eigenvalues must be non-negative (within tolerance) for the operation to succeed
-*/
-PetscErrorCode PetscDataAssimilatorSymmetricEigenSqrt_Private(Mat A, Mat *sqrtA_out)
-{
-  Mat          sqrtA = NULL, eigenvectors = NULL, scaled_eigenvectors = NULL;
-  Vec          sqrt_eigenvalues = NULL;
-  PetscInt     matrix_rows, matrix_cols, i;
-  PetscScalar *workspace = NULL, *eigvec_array = NULL, *sqrt_eigval_array = NULL;
-  PetscReal   *eigenvalues = NULL;
-  PetscBLASInt blas_n, workspace_size, lapack_info;
-  PetscReal    eigenvalue_tolerance;
-  PetscBool    is_dense;
-
-  PetscFunctionBegin;
-  /* Validate input parameters */
-  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscAssertPointer(sqrtA_out, 2);
-
-  /* Verify matrix is square */
-  PetscCall(MatGetSize(A, &matrix_rows, &matrix_cols));
-  PetscCheck(matrix_rows == matrix_cols, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square for eigenvalue decomposition, got %" PetscInt_FMT " x %" PetscInt_FMT, matrix_rows, matrix_cols);
-  PetscCheck(matrix_rows > 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Matrix dimension must be positive, got %" PetscInt_FMT, matrix_rows);
-
-  /* Verify matrix type - eigendecomposition requires dense storage */
-  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQDENSE, &is_dense));
-  if (!is_dense) PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPIDENSE, &is_dense));
-  PetscCheck(is_dense, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be dense for eigenvalue decomposition");
-
-  /* Handle edge case: 1x1 matrix */
-  if (matrix_rows == 1) {
-    PetscScalar val;
-    PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &sqrtA));
-    PetscCall(MatDenseGetArray(sqrtA, &eigvec_array));
-    val = eigvec_array[0];
-    PetscCheck(PetscRealPart(val) >= -EIGENVALUE_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix square root failed: value %g is negative", (double)PetscRealPart(val));
-    eigvec_array[0] = PetscSqrtScalar(PetscMax((double)PetscRealPart(val), (double)0.0));
-    PetscCall(MatDenseRestoreArray(sqrtA, &eigvec_array));
-    PetscCall(MatAssemblyBegin(sqrtA, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(sqrtA, MAT_FINAL_ASSEMBLY));
-    *sqrtA_out = sqrtA;
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-
-  /* Allocate workspace for LAPACK syev (requires 3*n elements per documentation) */
-  PetscCall(PetscBLASIntCast(3 * matrix_rows, &workspace_size));
-  PetscCall(PetscMalloc1(workspace_size, &workspace));
-
-  /*
-    Create a copy of A to hold eigenvectors.
-    LAPACK syev overwrites the input matrix with eigenvectors.
-  */
-  PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &eigenvectors));
-  PetscCall(MatDenseGetArray(eigenvectors, &eigvec_array));
-
-  /* Create vector to store square roots of eigenvalues */
-  PetscCall(MatCreateVecs(eigenvectors, NULL, &sqrt_eigenvalues));
-  PetscCall(VecGetArrayWrite(sqrt_eigenvalues, &sqrt_eigval_array));
-
-  PetscCall(PetscBLASIntCast(matrix_rows, &blas_n));
-#if defined(PETSC_USE_COMPLEX)
-  SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Support not provided for complex");
-#else
-  /* Perform eigendecomposition using LAPACK */
-  eigenvalues = (PetscReal *)sqrt_eigval_array;
-  PetscCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &blas_n, eigvec_array, &blas_n, eigenvalues, workspace, &workspace_size, &lapack_info));
-#endif
-  /* Check LAPACK return status */
-  if (lapack_info != 0) {
-    PetscCall(VecRestoreArrayWrite(sqrt_eigenvalues, &sqrt_eigval_array));
-    PetscCall(MatDenseRestoreArray(eigenvectors, &eigvec_array));
-    PetscCall(MatDestroy(&eigenvectors));
-    PetscCall(VecDestroy(&sqrt_eigenvalues));
-    PetscCall(PetscFree(workspace));
-    if (lapack_info < 0) {
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK syev: illegal argument at position %" PetscBLASInt_FMT, -lapack_info);
-    } else {
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_CONV_FAILED, "LAPACK syev: failed to converge, %" PetscBLASInt_FMT " off-diagonal elements did not converge to zero", lapack_info);
-    }
-  }
-
-  /*
-    Compute square root of eigenvalues with robust handling of numerical noise.
-    For symmetric matrices, eigenvalues should be real and non-negative.
-    We allow small negative eigenvalues (within tolerance) and clamp them to zero.
-  */
-  eigenvalue_tolerance = EIGENVALUE_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON;
-  for (i = 0; i < matrix_rows; i++) {
-    PetscReal eigenvalue           = eigenvalues[i];
-    PetscReal negativity_threshold = eigenvalue_tolerance * PetscMax(1.0, PetscAbsReal(eigenvalue));
-
-    /* Check that eigenvalue is not significantly negative */
-    PetscCheck(eigenvalue >= -negativity_threshold, PETSC_COMM_SELF, PETSC_ERR_LIB,
-               "Matrix square root failed: eigenvalue[%" PetscInt_FMT "] = %g is negative beyond tolerance %g. "
-               "Matrix may not be symmetric or positive semi-definite.",
-               i, (double)eigenvalue, (double)negativity_threshold);
-
-    /* Compute sqrt(eigenvalue), clamping small negative values to zero */
-    eigenvalues[i] = (eigenvalue > eigenvalue_tolerance) ? PetscSqrtReal(eigenvalue) : 0.0;
-  }
-
-#if defined(PETSC_USE_COMPLEX)
-  PetscCall(PetscFree(eigenvalues));
-#endif
-
-  /* Restore arrays before matrix operations */
-  PetscCall(VecRestoreArrayWrite(sqrt_eigenvalues, &sqrt_eigval_array));
-  PetscCall(MatDenseRestoreArray(eigenvectors, &eigvec_array));
-
-  /*
-    Reconstruct matrix square root: sqrt(A) = V * sqrt(D) * V^T
-    where V contains eigenvectors as columns and sqrt(D) is diagonal.
-
-    Algorithm:
-    1. Create scaled_eigenvectors = V * sqrt(D) by column scaling
-    2. Compute sqrtA = scaled_eigenvectors * V^T via matrix-transpose-mult
-  */
-  PetscCall(MatDuplicate(eigenvectors, MAT_COPY_VALUES, &scaled_eigenvectors));
-  PetscCall(MatDiagonalScale(scaled_eigenvectors, NULL, sqrt_eigenvalues));
-  PetscCall(MatMatTransposeMult(scaled_eigenvectors, eigenvectors, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &sqrtA));
-
-  /* Clean up intermediate matrices and vectors */
-  PetscCall(MatDestroy(&scaled_eigenvectors));
-  PetscCall(VecDestroy(&sqrt_eigenvalues));
-
-  /* Finalize matrix assembly */
-  PetscCall(MatAssemblyBegin(sqrtA, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(sqrtA, MAT_FINAL_ASSEMBLY));
-
-  /*
-    Verification in debug mode: check ||sqrtA * sqrtA - A||_F <= tolerance
-    This validates both the implementation and numerical stability.
-  */
-  if (PetscDefined(USE_DEBUG)) {
-    Mat       verification_matrix = NULL;
-    PetscReal norm_original, norm_difference, verification_tolerance;
-
-    /* Compute sqrtA * sqrtA */
-    PetscCall(MatMatMult(sqrtA, sqrtA, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &verification_matrix));
-
-    /* Compute ||A||_F and ||sqrtA*sqrtA - A||_F */
-    PetscCall(MatNorm(A, NORM_FROBENIUS, &norm_original));
-    PetscCall(MatAXPY(verification_matrix, -1.0, A, DIFFERENT_NONZERO_PATTERN));
-    PetscCall(MatNorm(verification_matrix, NORM_FROBENIUS, &norm_difference));
-
-    /* Set relative tolerance */
-    verification_tolerance = MATRIX_SQRT_TOLERANCE_FACTOR * PETSC_MACHINE_EPSILON * PetscMax(1.0, norm_original);
-
-    PetscCall(MatDestroy(&verification_matrix));
-
-    PetscCheck(norm_difference <= verification_tolerance, PETSC_COMM_SELF, PETSC_ERR_LIB,
-               "Matrix square root verification failed: ||sqrtA*sqrtA - A||_F = %g exceeds tolerance %g "
-               "(||A||_F = %g, relative error = %g)",
-               (double)norm_difference, (double)verification_tolerance, (double)norm_original, (double)(norm_difference / PetscMax(norm_original, 1.0)));
-  }
-
-  /* Clean up and return result */
-  PetscCall(MatDestroy(&eigenvectors));
-  PetscCall(PetscFree(workspace));
-
-  *sqrtA_out = sqrtA;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -372,13 +372,12 @@ int main(int argc, char **argv)
   PetscCall(VecDuplicate(x0, &truth_next));
   PetscCall(VecCopy(x0, truth_state));
 
-  /* Spin up truth for 10 steps to get onto attractor (useful with burn in?)*/
-  /*   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for 10 steps...\n"));
-  for (int k = 0; k < 10; k++) {
-    //PetscCall(Lorenz96Step(x0, &lorenz_ctx));
+  /* Spin up truth for 100 steps to get onto attractor */
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for 100 steps...\n"));
+  for (int k = 0; k < 100; k++) {
     PetscCall(Lorenz96Step(truth_state, truth_next, l95_ctx));
     PetscCall(VecCopy(truth_next, truth_state));
-  } */
+  }
 
   /* Initialize random number generator */
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rng));
