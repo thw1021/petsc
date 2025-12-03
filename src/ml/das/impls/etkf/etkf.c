@@ -132,7 +132,7 @@ static PetscErrorCode ComputeInnovation(PetscDAS das, Vec observation, Vec *delt
 }
 
 /* Helper function to build and compute eigendecomposition of T = (I + S^T S)^(-1) (Algorithm 6.4 Line 7) */
-static PetscErrorCode BuildAndFactorMatrix(PetscDAS das, Mat *I_plus_StS, Mat *V_T, Vec *D_T)
+static PetscErrorCode BuildAndFactorMatrix(PetscDAS das, Mat *I_plus_StS, Mat *V_T, Vec *D)
 {
   PetscDAS_ETKF *etkf = (PetscDAS_ETKF *)das->data;
   PetscInt       m    = das->ensemble_size;
@@ -144,18 +144,18 @@ static PetscErrorCode BuildAndFactorMatrix(PetscDAS das, Mat *I_plus_StS, Mat *V
   PetscCall(MatShift(*I_plus_StS, 1.0));
 
   /* Compute eigendecomposition of I + S^T S: (I + S^T S) = V D V^T */
-  /* Always recreate V_T and D_T since LAPACK modifies them */
+  /* Always recreate V_T and D since LAPACK modifies them */
   if (*V_T) PetscCall(MatDestroy(V_T));
-  if (*D_T) PetscCall(VecDestroy(D_T));
+  if (*D) PetscCall(VecDestroy(D));
   PetscCall(MatDuplicate(*I_plus_StS, MAT_COPY_VALUES, V_T));
-  PetscCall(MatCreateVecs(*I_plus_StS, D_T, NULL));
+  PetscCall(MatCreateVecs(*I_plus_StS, D, NULL));
   
   PetscScalar *eig_vals, *eig_vecs;
   PetscBLASInt n_blas, lwork = -1, info_lapack;
   PetscScalar  work_query, *work;
   PetscCall(PetscBLASIntCast(m, &n_blas));
   PetscCall(MatDenseGetArray(*V_T, &eig_vecs));
-  PetscCall(VecGetArray(*D_T, &eig_vals));
+  PetscCall(VecGetArray(*D, &eig_vals));
   
   /* Query optimal workspace */
   LAPACKsyev_("V", "U", &n_blas, eig_vecs, &n_blas, eig_vals, &work_query, &lwork, &info_lapack);
@@ -167,13 +167,13 @@ static PetscErrorCode BuildAndFactorMatrix(PetscDAS das, Mat *I_plus_StS, Mat *V
   PetscCall(PetscFree(work));
   PetscCheck(info_lapack == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK syev failed with info = %d", (int)info_lapack);
   
-  PetscCall(VecRestoreArray(*D_T, &eig_vals));
+  PetscCall(VecRestoreArray(*D, &eig_vals));
   PetscCall(MatDenseRestoreArray(*V_T, &eig_vecs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* Helper function to solve for weights using eigendecomposition (Algorithm 6.4 Line 8) */
-static PetscErrorCode SolveForWeights(PetscDAS das, Mat V_T, Vec D_T, Vec *w)
+static PetscErrorCode SolveForWeights(PetscDAS das, Mat V_T, Vec D, Vec *w)
 {
   PetscDAS_ETKF *etkf = (PetscDAS_ETKF *)das->data;
   Vec            rhs, temp;
@@ -194,12 +194,12 @@ static PetscErrorCode SolveForWeights(PetscDAS das, Mat V_T, Vec D_T, Vec *w)
   /* Apply D^(-1) */
   PetscScalar *temp_arr, *eig_vals;
   PetscCall(VecGetArray(temp, &temp_arr));
-  PetscCall(VecGetArray(D_T, &eig_vals));
+  PetscCall(VecGetArray(D, &eig_vals));
   for (j = 0; j < m; j++) {
     PetscCheck(PetscRealPart(eig_vals[j]) > 0.0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Eigenvalue %d is non-positive: %g", (int)j, (double)PetscRealPart(eig_vals[j]));
     temp_arr[j] /= eig_vals[j];
   }
-  PetscCall(VecRestoreArray(D_T, &eig_vals));
+  PetscCall(VecRestoreArray(D, &eig_vals));
   PetscCall(VecRestoreArray(temp, &temp_arr));
   
   /* w = V * (D^(-1) * temp) */
@@ -211,7 +211,7 @@ static PetscErrorCode SolveForWeights(PetscDAS das, Mat V_T, Vec D_T, Vec *w)
 }
 
 /* Helper function to update ensemble using eigendecomposition (Algorithm 6.4 Line 9) */
-static PetscErrorCode UpdateEnsembleWithEigen(PetscDAS das, Mat V_T, Vec D_T)
+static PetscErrorCode UpdateEnsembleWithEigen(PetscDAS das, Mat V_T, Vec D)
 {
   PetscDAS_ETKF *etkf = (PetscDAS_ETKF *)das->data;
   PetscInt       i, m = das->ensemble_size;
@@ -229,7 +229,7 @@ static PetscErrorCode UpdateEnsembleWithEigen(PetscDAS das, Mat V_T, Vec D_T)
   PetscCall(MatDuplicate(V_T, MAT_COPY_VALUES, &V_D_sqrt));
   
   PetscScalar *eig_vals;
-  PetscCall(VecGetArray(D_T, &eig_vals));
+  PetscCall(VecGetArray(D, &eig_vals));
   for (i = 0; i < m; i++) {
     Vec col;
     PetscCheck(PetscRealPart(eig_vals[i]) > 0.0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Eigenvalue %d is non-positive: %g", (int)i, (double)PetscRealPart(eig_vals[i]));
@@ -237,7 +237,7 @@ static PetscErrorCode UpdateEnsembleWithEigen(PetscDAS das, Mat V_T, Vec D_T)
     PetscCall(VecScale(col, 1.0 / PetscSqrtScalar(eig_vals[i])));
     PetscCall(MatDenseRestoreColumnVecWrite(V_D_sqrt, i, &col));
   }
-  PetscCall(VecRestoreArray(D_T, &eig_vals));
+  PetscCall(VecRestoreArray(D, &eig_vals));
 
   /* Compute T^(1/2) = V * D^(-1/2) * V^T */
   PetscCall(MatTransposeMatMult(V_D_sqrt, V_T, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T_sqrt));
