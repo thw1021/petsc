@@ -1,8 +1,13 @@
 #include "petscdataassimilator.h"
 #include <petsc/private/dataassimilatorimpl.h>
+#include <petscblaslapack.h>
 
 typedef struct {
   PetscDataAssimilatorETKFSqrtType sqrt_type;
+  Mat                              V_t;             /* Eigen vectors transposed (LAPACK column-major storage) */
+  Mat                              L_cholesky;      /* Lower triangular Cholesky factor */
+  Vec                              sqrt_eigen_vals; /* Square root of eigen values */
+  Mat                              I_StS;           /* T = I + S^T * S matrix */
 } PetscDataAssimilatorETKFData;
 
 static PetscFunctionList PetscDataAssimilatorETKFSqrtList           = NULL;
@@ -157,59 +162,6 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
 }
 
 /*
-  ComputeAnalysisWeights - Computes analysis weight vector w = T * S^T * delta_scaled
-
-  Input Parameters:
-+ T            - reduced-space inverse matrix (I + S^T S)^{-1}, m x m SPD matrix
-. S            - normalized innovation matrix, obs_size x m
-- delta_scaled - scaled innovation vector R^{-1/2}(y^o - y_mean), size obs_size
-
-  Output Parameter:
-. w - analysis weight vector, size m
-
-  Notes:
-  This function performs the two-step matrix-vector multiplication\:
-  1. Compute S^T * delta_scaled (projection to reduced space)
-  2. Apply inverse T to get weights w = T * (S^T * delta_scaled)
-
-  The result is used in Step 6 of Algorithm 6.4 from Law, Stuart, and Zygalakis
-  to compute the ensemble analysis weights.
-*/
-static PetscErrorCode ComputeAnalysisWeights(Mat T, Mat S, Vec delta_scaled, Vec *w)
-{
-  Vec      s_transpose_delta;
-  PetscInt t_rows, t_cols, s_rows, s_cols, delta_size;
-
-  PetscFunctionBegin;
-  /* Validate input parameters */
-  PetscValidHeaderSpecific(T, MAT_CLASSID, 1);
-  PetscValidHeaderSpecific(S, MAT_CLASSID, 2);
-  PetscValidHeaderSpecific(delta_scaled, VEC_CLASSID, 3);
-  PetscAssertPointer(w, 4);
-
-  /* Validate matrix dimensions for compatibility */
-  PetscCall(MatGetSize(T, &t_rows, &t_cols));
-  PetscCall(MatGetSize(S, &s_rows, &s_cols));
-  PetscCall(VecGetSize(delta_scaled, &delta_size));
-
-  PetscCheck(t_rows == t_cols, PetscObjectComm((PetscObject)T), PETSC_ERR_ARG_INCOMP, "Matrix T must be square, got %" PetscInt_FMT " x %" PetscInt_FMT, t_rows, t_cols);
-  PetscCheck(s_cols == t_rows, PetscObjectComm((PetscObject)T), PETSC_ERR_ARG_INCOMP, "Matrix S columns (%" PetscInt_FMT ") must match T rows (%" PetscInt_FMT ")", s_cols, t_rows);
-  PetscCheck(delta_size == s_rows, PetscObjectComm((PetscObject)S), PETSC_ERR_ARG_INCOMP, "Vector delta_scaled size (%" PetscInt_FMT ") must match S rows (%" PetscInt_FMT ")", delta_size, s_rows);
-
-  /* Step 1: Compute S^T * delta_scaled (project innovation to reduced space) */
-  PetscCall(MatCreateVecs(T, NULL, &s_transpose_delta));
-  PetscCall(MatMultTranspose(S, delta_scaled, s_transpose_delta));
-
-  /* Step 2: Compute w = T * (S^T * delta_scaled) (apply inverse transform) */
-  PetscCall(MatCreateVecs(T, w, NULL));
-  PetscCall(MatMult(T, s_transpose_delta, *w));
-
-  /* Cleanup intermediate vector */
-  PetscCall(VecDestroy(&s_transpose_delta));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
   BroadcastWeightVector - Creates matrix with weight vector replicated across all columns
 
   Input Parameters:
@@ -253,11 +205,9 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
   PetscValidHeaderSpecific(w, VEC_CLASSID, 1);
   PetscValidLogicalCollectiveInt(w, m, 2);
   PetscAssertPointer(w_ones, 3);
-
   /* Validate ensemble size is physically meaningful */
   PetscCheck(m > 0, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m must be positive for broadcasting, got %" PetscInt_FMT, m);
   PetscCheck(m < PETSC_MAX_INT / m, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m = %" PetscInt_FMT " too large, m*m would overflow", m);
-
   /* Verify vector dimensions match ensemble size (global and local) */
   PetscCall(VecGetSize(w, &w_size));
   PetscCall(VecGetLocalSize(w, &w_size_local));
@@ -266,7 +216,6 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
   /* Create dense matrix with parallel distribution matching weight vector */
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)w), w_size_local, PETSC_DECIDE, m, m, NULL, w_ones));
   PetscCall(MatSetUp(*w_ones));
-
   /* Verify consistent parallel layout between vector and matrix */
   PetscCall(MatGetLocalSize(*w_ones, &mat_rows_local, &mat_cols_local));
   PetscCheck(mat_rows_local == w_size_local, PetscObjectComm((PetscObject)w), PETSC_ERR_PLIB, "Matrix row distribution (%" PetscInt_FMT ") inconsistent with vector distribution (%" PetscInt_FMT ")", mat_rows_local, w_size_local);
@@ -293,31 +242,29 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
   UpdateEnsembleWithTransform - Updates ensemble via ETKF transform: E = mean * 1' + X * G
 
   Input Parameters:
-+ mean     - ensemble mean vector (size state_size)
++ mean     - ensemble mean vector (size state_size), must be initialized
 . X        - scaled anomaly matrix (state_size x ensemble_size), X = (E - mean*1')/sqrt(m-1)
 . G        - ETKF transform matrix (ensemble_size x ensemble_size), G = w*1' + sqrt(m-1)*T^{1/2}*U
-. m        - ensemble size (number of columns in ensemble)
+. m        - ensemble size (number of columns in ensemble), must be > 0
 - ensemble - ensemble matrix to update in-place (state_size x ensemble_size)
 
   Notes:
   This function performs the final step (Step 10) of the ETKF analysis algorithm from
   Law, Stuart, and Zygalakis, transforming the forecast ensemble into the analysis ensemble.
-  The operation E^a = mean + X * G is computed column-wise to efficiently handle large
-  state spaces while minimizing memory footprint.
+  The operation E^a = mean + X * G is computed using matrix-matrix multiplication followed
+  by column-wise addition to efficiently handle large state spaces.
 
-  The computation proceeds as\:
-  1. Compute the transformed anomaly matrix\: X_G = X * G (state_size x m)
-  2. For each ensemble member i\: E^a_i = mean + (X*G)_i
-
-  Mathematical Background\:
-  The transform ensures the analysis ensemble has the correct\:
-  - Mean\: E[E^a] = mean + X*G*1 = mean (since G is constructed such that G*1 = 0)
-  - Covariance\: Cov(E^a) = X*G*G^T*X^T which approximates the analysis covariance P^a
+  Error Handling\:
+  - Validates all input dimensions for consistency
+  - Checks for positive ensemble size
+  - Ensures proper matrix/vector initialization
+  - Handles parallel assembly correctly
 
   Performance Considerations\:
   - Memory\: Creates one temporary matrix X_G of size (state_size x m)
   - Time complexity\: O(state_size * m^2) for matrix multiply + O(state_size * m) for additions
   - Parallel\: Fully parallelizable across both matrix multiply and column updates
+  - For very large state spaces, consider using MatMatMultSymbolic/Numeric to reuse structure
 
   Level\: developer
 
@@ -339,13 +286,11 @@ static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscI
   PetscValidHeaderSpecific(G, MAT_CLASSID, 3);
   PetscValidLogicalCollectiveInt(X, m, 4);
   PetscValidHeaderSpecific(ensemble, MAT_CLASSID, 5);
-
   /* Retrieve and validate matrix dimensions for compatibility */
   PetscCall(MatGetSize(X, &x_rows, &x_cols));
   PetscCall(MatGetSize(G, &g_rows, &g_cols));
   PetscCall(MatGetSize(ensemble, &ens_rows, &ens_cols));
   PetscCall(VecGetSize(mean, &mean_size));
-
   /* Verify dimension consistency across all inputs */
   PetscCheck(x_cols == m, PetscObjectComm((PetscObject)X), PETSC_ERR_ARG_INCOMP, "Anomaly matrix X columns (%" PetscInt_FMT ") must equal ensemble size (%" PetscInt_FMT ")", x_cols, m);
   PetscCheck(g_rows == m, PetscObjectComm((PetscObject)G), PETSC_ERR_ARG_INCOMP, "Transform matrix G rows (%" PetscInt_FMT ") must equal ensemble size (%" PetscInt_FMT ")", g_rows, m);
@@ -407,8 +352,17 @@ static PetscErrorCode PetscDataAssimilatorETKFSetSqrt_Eigen(PetscDataAssimilator
 
 static PetscErrorCode PetscDataAssimilatorETKFDestroy(PetscDataAssimilator da)
 {
+  PetscDataAssimilatorETKFData *impl;
+
   PetscFunctionBegin;
-  PetscCall(PetscFree(da->data));
+  if (da->data) {
+    impl = (PetscDataAssimilatorETKFData *)da->data;
+    PetscCall(MatDestroy(&impl->V_t));
+    PetscCall(MatDestroy(&impl->L_cholesky));
+    PetscCall(VecDestroy(&impl->sqrt_eigen_vals));
+    PetscCall(MatDestroy(&impl->I_StS));
+    PetscCall(PetscFree(da->data));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -477,6 +431,341 @@ PetscErrorCode PetscDataAssimilatorETKFFinalizePackage(void)
 }
 
 /* ========================================================================== */
+/*                    T-Matrix Factorization and Application Methods         */
+/* ========================================================================== */
+
+/*
+  PetscDataAssimilatorTFactor - Compute and store factorization of T matrix
+
+  Input Parameters:
++ da - the PetscDataAssimilator context
+- S  - normalized innovation matrix (obs_size x m)
+
+  Notes:
+  This function computes T = I + S^T * S and stores its factorization based on
+  sqrt_type. For CHOLESKY mode, it computes and stores the lower triangular
+  Cholesky factor. For EIGEN mode, it computes and stores the transposed
+  eigenvectors and square root of eigenvalues.
+*/
+static PetscErrorCode PetscDataAssimilatorTFactor(PetscDataAssimilator da, Mat S)
+{
+  PetscDataAssimilatorETKFData *impl;
+  PetscInt                      s_rows, s_cols;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
+  PetscValidHeaderSpecific(S, MAT_CLASSID, 2);
+  PetscCheck(da->data, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDataAssimilator data structure not initialized");
+
+  impl = (PetscDataAssimilatorETKFData *)da->data;
+
+  /* Validate matrix dimensions for safety */
+  PetscCall(MatGetSize(S, &s_rows, &s_cols));
+  PetscCheck(s_cols > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Innovation matrix S must have positive columns, got %" PetscInt_FMT, s_cols);
+
+  /* Clean up any previous factorization to avoid memory leaks */
+  PetscCall(MatDestroy(&impl->I_StS));
+  PetscCall(MatDestroy(&impl->V_t));
+  PetscCall(MatDestroy(&impl->L_cholesky));
+  PetscCall(VecDestroy(&impl->sqrt_eigen_vals));
+
+  /* Compute T = I + S^T * S */
+  PetscCall(MatTransposeMatMult(S, S, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &impl->I_StS));
+  PetscCall(MatShift(impl->I_StS, 1.0));
+
+  /* Compute and store factorization based on sqrt_type */
+  switch (impl->sqrt_type) {
+  case PETSCDAETKF_SQRT_CHOLESKY: {
+    /* Compute Cholesky factorization: T = L * L^T -- this is not correct */
+    PetscCall(MatDuplicate(impl->I_StS, MAT_COPY_VALUES, &impl->L_cholesky));
+    PetscCall(MatCholeskyFactor(impl->L_cholesky, NULL, NULL));
+    break;
+  }
+  case PETSCDAETKF_SQRT_EIGEN: {
+    /* Compute eigendecomposition: T = V * D * V^T */
+    Vec          eigen_vals;
+    PetscBLASInt n, lda, lwork, info;
+    PetscScalar *a_array, *work, *eig_array;
+    PetscInt     m_vt, N_vt;
+#if defined(PETSC_USE_COMPLEX)
+    PetscReal *rwork = NULL;
+#endif
+
+    PetscCall(MatCreateVecs(impl->I_StS, &eigen_vals, NULL));
+    PetscCall(MatDuplicate(impl->I_StS, MAT_COPY_VALUES, &impl->V_t));
+
+    /* Inline eigendecomposition computation using LAPACK syev */
+    /* Get matrix dimensions */
+    PetscCall(MatGetSize(impl->V_t, &m_vt, &N_vt));
+    PetscCheck(m_vt == N_vt, PetscObjectComm((PetscObject)impl->V_t), PETSC_ERR_ARG_WRONG, "Matrix must be square");
+
+    /* Convert to BLAS int */
+    PetscCall(PetscBLASIntCast(N_vt, &n));
+    lda = n;
+
+    /* Get array from dense matrix */
+    PetscCall(MatDenseGetArray(impl->V_t, &a_array));
+
+    /* Get array from eigenvalue vector */
+    PetscCall(VecGetArray(eigen_vals, &eig_array));
+
+    /* Query optimal workspace size */
+    lwork = -1;
+    PetscCall(PetscMalloc1(1, &work));
+
+#if defined(PETSC_USE_COMPLEX)
+    PetscCall(PetscMalloc1(PetscMax(1, 3 * n - 2), &rwork));
+    LAPACKsyev_("V", "U", &n, a_array, &lda, (PetscReal *)eig_array, work, &lwork, rwork, &info);
+#else
+    LAPACKsyev_("V", "U", &n, a_array, &lda, eig_array, work, &lwork, &info);
+#endif
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine xSYEV work query: info=%d", (int)info);
+
+    /* Allocate workspace */
+    lwork = (PetscBLASInt)PetscRealPart(work[0]);
+    PetscCall(PetscFree(work));
+    PetscCall(PetscMalloc1(lwork, &work));
+
+    /* Compute eigendecomposition */
+#if defined(PETSC_USE_COMPLEX)
+    LAPACKsyev_("V", "U", &n, a_array, &lda, (PetscReal *)eig_array, work, &lwork, rwork, &info);
+    PetscCall(PetscFree(rwork));
+#else
+    LAPACKsyev_("V", "U", &n, a_array, &lda, eig_array, work, &lwork, &info);
+#endif
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine xSYEV: info=%d", (int)info);
+
+    /* Cleanup */
+    PetscCall(PetscFree(work));
+    PetscCall(VecRestoreArray(eigen_vals, &eig_array));
+    PetscCall(MatDenseRestoreArray(impl->V_t, &a_array));
+    PetscCall(MatAssemblyBegin(impl->V_t, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(impl->V_t, MAT_FINAL_ASSEMBLY));
+
+    /* Compute and store sqrt(eigenvalues) for later use */
+    PetscCall(VecDuplicate(eigen_vals, &impl->sqrt_eigen_vals));
+    PetscCall(VecCopy(eigen_vals, impl->sqrt_eigen_vals));
+    PetscCall(VecSqrtAbs(impl->sqrt_eigen_vals));
+
+    /* Debug verification: Ensure V * D * V^T == T */
+    if (PetscDefined(USE_DEBUG)) {
+      PetscReal norm_T, norm_diff;
+      Mat       Vt_D, VDVt;
+
+      /* Compute D * V^T by scaling rows */
+      PetscCall(MatDuplicate(impl->V_t, MAT_COPY_VALUES, &Vt_D));
+      PetscCall(MatDiagonalScale(Vt_D, NULL, eigen_vals));
+
+      /* Compute V * D * V^T */
+      PetscCall(MatMatTransposeMult(Vt_D, impl->V_t, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &VDVt));
+
+      /* Compute ||V*D*V^T - T|| / ||T|| */
+      PetscCall(MatAXPY(VDVt, -1.0, impl->I_StS, SAME_NONZERO_PATTERN));
+      PetscCall(MatNorm(impl->I_StS, NORM_FROBENIUS, &norm_T));
+      PetscCall(MatNorm(VDVt, NORM_FROBENIUS, &norm_diff));
+
+      if (norm_T > 0) {
+        PetscReal relative_error = norm_diff / norm_T;
+        PetscCheck(relative_error <= 1.e-10, PetscObjectComm((PetscObject)da), PETSC_ERR_PLIB, "Eigendecomposition verification failed: ||V*D*V^T - T||/||T|| = %g > 1e-10", (double)relative_error);
+      }
+
+      /* Cleanup debug matrices */
+      PetscCall(MatDestroy(&Vt_D));
+      PetscCall(MatDestroy(&VDVt));
+    }
+
+    PetscCall(VecDestroy(&eigen_vals));
+    break;
+  }
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported PetscDataAssimilatorETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
+  }
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  PetscDataAssimilatorApplyTInverse - Apply T^{-1} to a vector
+
+  Input Parameters:
++ da - the PetscDataAssimilator context
+- sdel  - input vector
+
+  Output Parameter:
+. w - output vector w = T^{-1} * sdel
+
+  Notes:_
+  This function applies the inverse of T = I + S^T S using the stored
+  factorization. For CHOLESKY mode, it uses triangular solves. For EIGEN mode,
+  it uses the eigendecomposition.
+*/
+static PetscErrorCode PetscDataAssimilatorApplyTInverse(PetscDataAssimilator da, Vec sdel, Vec *w)
+{
+  PetscDataAssimilatorETKFData *impl;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
+  PetscValidHeaderSpecific(sdel, VEC_CLASSID, 2);
+  PetscAssertPointer(w, 3);
+
+  impl = (PetscDataAssimilatorETKFData *)da->data;
+  PetscCheck(impl->I_StS, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "T matrix not factored. Call PetscDataAssimilatorTFactor first");
+
+  PetscCall(VecDuplicate(sdel, w));
+
+  switch (impl->sqrt_type) {
+  case PETSCDAETKF_SQRT_CHOLESKY:
+    /* Solve L * L^T * w = sdel using forward and back substitution -- todo */
+    PetscCheck(impl->L_cholesky, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Cholesky factor not computed");
+    PetscCall(MatSolve(impl->L_cholesky, sdel, *w));
+    PetscCheck(0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "no chol");
+    break;
+  case PETSCDAETKF_SQRT_EIGEN: {
+    /* Solve using eigendecomposition: T^{-1} = V * D^{-1} * V^T */
+    Vec temp;
+    PetscCheck(impl->V_t, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvectors not computed");
+    PetscCheck(impl->sqrt_eigen_vals, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvalues not computed");
+
+    PetscCall(VecDuplicate(sdel, &temp));
+    /* temp = V^T * sdel */
+    PetscCall(MatMult(impl->V_t, sdel, temp));
+    /* temp = D^{-1} * temp = D^{-1} * V^T * sdel */
+    PetscCall(VecPointwiseDivide(temp, temp, impl->sqrt_eigen_vals));
+    PetscCall(VecPointwiseDivide(temp, temp, impl->sqrt_eigen_vals));
+    /* w = V * temp = V * D^{-1} * V^T * sdel */
+    PetscCall(MatMultTranspose(impl->V_t, temp, *w));
+
+    Mat           L;
+    MatFactorInfo finfo;
+    PetscCall(MatGetFactor(impl->I_StS, MATSOLVERPETSC, MAT_FACTOR_CHOLESKY, &L)); /* change solver if desired */
+    PetscCall(MatFactorInfoInitialize(&finfo));
+    finfo.fill = 1.0; /* heuristic fill estimate */
+    PetscCall(MatCholeskyFactorSymbolic(L, impl->I_StS, NULL, &finfo));
+    PetscCall(MatCholeskyFactorNumeric(L, impl->I_StS, &finfo));
+    PetscCall(MatSolve(L, sdel, *w)); /* does Ly = b  then L^T x = y */
+    PetscCall(MatDestroy(&L));
+    PetscCall(VecDestroy(&temp));
+    break;
+  }
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported PetscDataAssimilatorETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
+  }
+  /* Debugging verification: Test that sdel == T * w */
+  if (PetscDefined(USE_DEBUG)) {
+    PetscReal norm_T, norm_diff;
+    Vec       temp;
+    PetscCall(VecDuplicate(sdel, &temp));
+    /* Compute Ty = (I + S'S) * w */
+    PetscCall(MatMult(impl->I_StS, *w, temp));
+    /* Compute difference: t = T w - sdel */
+    PetscCall(VecAYPX(temp, -1.0, sdel));
+    /* Compute norms for comparison */
+    PetscCall(VecNorm(sdel, NORM_2, &norm_T));
+    PetscCall(VecNorm(temp, NORM_2, &norm_diff));
+    /* Verify is small */
+    if (norm_T > 0) {
+      PetscReal relative_error = norm_diff / norm_T;
+      if (relative_error > 1.e-10) {
+        PetscCall(PetscPrintf(PetscObjectComm((PetscObject)da), "WARNING: T^{-1} verification failed! ||T*w - sdel||/||sdel|| = %g\n", (double)relative_error));
+      } else {
+        // PetscCall(PetscPrintf(PetscObjectComm((PetscObject)da), "T^{-1/2} verification passed: ||T*w - sdel|| = %g\n", (double)relative_error));
+      }
+    }
+    PetscCall(VecDestroy(&temp));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  PetscDataAssimilatorApplySqrtTInverse - Apply T^{-1/2} to a matrix (I)
+
+  Input Parameters:
++ da - the PetscDataAssimilator context
+- U  - input matrix
+
+  Output Parameter:
+. Y - output matrix Y = T^{-1/2} * U
+
+  Notes:
+  This function applies the inverse square root of T = I + S^T * S using the
+  stored factorization. For CHOLESKY mode, it uses a forward solve with L.
+  For EIGEN mode, use T = V * D * V^T.
+*/
+static PetscErrorCode PetscDataAssimilatorApplySqrtTInverse(PetscDataAssimilator da, Mat U, Mat *Y)
+{
+  PetscDataAssimilatorETKFData *impl;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
+  PetscValidHeaderSpecific(U, MAT_CLASSID, 2);
+  PetscAssertPointer(Y, 3);
+
+  impl = (PetscDataAssimilatorETKFData *)da->data;
+  PetscCheck(impl->I_StS, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "I_StS matrix not created. Call PetscDataAssimilatorTFactor first");
+
+  switch (impl->sqrt_type) {
+  case PETSCDAETKF_SQRT_CHOLESKY:
+    /* T^{-1/2} = L^{-T}, so solve L^T * Y = U -- Use LAPACK */
+    PetscCheck(impl->L_cholesky, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Cholesky factor not computed");
+    PetscCall(MatDuplicate(U, MAT_DO_NOT_COPY_VALUES, Y));
+    PetscCall(MatMatSolve(impl->L_cholesky, U, *Y));
+    break;
+  case PETSCDAETKF_SQRT_EIGEN: {
+    Vec diag_inv;
+    /* T^-1 = V D^-1 V^T = (V D^-1/2) (V D^-1/2)^T: T^{-1/2} = V * D^{-1/2} */
+    PetscCheck(impl->V_t, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvectors not computed");
+    PetscCheck(impl->sqrt_eigen_vals, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvalues not computed");
+
+    /* Y = V^T = V^T * U[I] */
+    PetscCall(MatMatMult(impl->V_t, U, MAT_INITIAL_MATRIX, PETSC_DEFAULT, Y));
+    /* Scale columns by D^{-1/2}: Y = V * D^{-1/2} */
+    PetscCall(VecDuplicate(impl->sqrt_eigen_vals, &diag_inv));
+    PetscCall(VecCopy(impl->sqrt_eigen_vals, diag_inv));
+    PetscCall(VecReciprocal(diag_inv));
+    PetscCall(MatDiagonalScale(*Y, NULL, diag_inv));
+    PetscCall(VecDestroy(&diag_inv));
+    break;
+  }
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported PetscDataAssimilatorETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
+  }
+
+  /* Debugging verification: Test that T*Y*Y = U^2 (assume U*U = U = I) 
+     Mathematical property: If Y = T^{-1/2} U, then T * Y * Y = U^2 */
+  if (PetscDefined(USE_DEBUG)) {
+    Mat       Y2, T_diff;
+    PetscReal norm_T, norm_diff;
+
+    /* Compute Y2 = Y * Y' = T^-1 */
+    PetscCall(MatMatTransposeMult(*Y, *Y, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Y2));
+
+    /* Compute T_diff = T * T^-1 = U^2 = U = I */
+    PetscCall(MatMatMult(Y2, impl->I_StS, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T_diff));
+
+    /* Compute difference: T_diff = Y Y' T - U ~ 0 */
+    PetscCall(MatAYPX(T_diff, -1.0, U, SAME_NONZERO_PATTERN));
+
+    /* Compute norms for comparison */
+    PetscCall(MatNorm(U, NORM_FROBENIUS, &norm_T));
+    PetscCall(MatNorm(T_diff, NORM_FROBENIUS, &norm_diff));
+    /* Verify that ||Y * Y^T * T - U[U=I] || / ||U|| is small */
+    if (norm_T > 0) {
+      PetscReal relative_error = norm_diff / norm_T;
+      if (relative_error > 1.e-10) {
+        PetscCall(PetscPrintf(PetscObjectComm((PetscObject)da), "WARNING: T^{-1/2} verification failed! ||T*Y*Y - U||/||U|| = %g\n", (double)relative_error));
+        PetscCall(MatNorm(T_diff, NORM_FROBENIUS, &norm_diff));
+      }
+    }
+
+    /* Cleanup */
+    PetscCall(MatDestroy(&Y2));
+    PetscCall(MatDestroy(&T_diff));
+  }
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* ========================================================================== */
 /*                    ETKF Analysis Algorithm (Algorithm 6.4)                */
 /*                                                                            */
 /*  This section implements the deterministic Ensemble Transform Kalman      */
@@ -519,7 +808,7 @@ static PetscErrorCode PetscDataAssimilatorETKFAnalysis(PetscDataAssimilator da, 
 {
   PetscDataAssimilatorETKFData *impl;
   Vec                           mean, y_mean, delta_scaled, w, r_inv_sqrt;
-  Mat                           X, Z, S, T, T_sqrt, I_m, w_ones, T_sqrt_U, G;
+  Mat                           X, Z, S, T_sqrt, w_ones;
   PetscInt                      m;
   PetscScalar                   inv_m, scale, sqrt_m_minus_1;
 
@@ -537,7 +826,7 @@ static PetscErrorCode PetscDataAssimilatorETKFAnalysis(PetscDataAssimilator da, 
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
 
   /* ===================================================================== */
-  /* Step 1-2: Compute ensemble mean and scaled anomalies                */
+  /* Alg 6.4 line 1-2: Compute ensemble mean and scaled anomalies        */
   /* ===================================================================== */
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &mean));
   PetscCall(VecSetSizes(mean, PETSC_DECIDE, da->state_size));
@@ -548,7 +837,7 @@ static PetscErrorCode PetscDataAssimilatorETKFAnalysis(PetscDataAssimilator da, 
   PetscCall(PetscDataAssimilatorComputeAnomalies(da, &X));
 
   /* ===================================================================== */
-  /* Step 3: Compute observation ensemble Z = H(x_i^f)                   */
+  /* Alg 6.4 line 3-4: Compute observation ensemble Z = H(x_i^f)         */
   /* ===================================================================== */
   PetscCall(ComputeObservationEnsemble(da, observation_operator, obs_ctx, &Z));
 
@@ -560,7 +849,7 @@ static PetscErrorCode PetscDataAssimilatorETKFAnalysis(PetscDataAssimilator da, 
   PetscCall(VecScale(y_mean, inv_m));
 
   /* ===================================================================== */
-  /* Step 4: Build normalized innovation statistics                       */
+  /* Alg 6.4 line 5-6: Build normalized innovation statistics            */
   /* ===================================================================== */
   /* Compute R^{-1/2} (assumes diagonal R) */
   PetscCall(ComputeInverseSquareRootR(da->obs_error_var, &r_inv_sqrt));
@@ -574,66 +863,40 @@ static PetscErrorCode PetscDataAssimilatorETKFAnalysis(PetscDataAssimilator da, 
   PetscCall(VecPointwiseMult(delta_scaled, delta_scaled, r_inv_sqrt));
 
   /* ===================================================================== */
-  /* Step 5: Form T = (I + S^T S)^{-1} via solve (not explicit inverse)  */
+  /* Alg 6.4 line 7: Factor T = (I + S^T S) and store factorization (T is not inverted here but solved later) */
   /* ===================================================================== */
-  /* Create identity matrix I_m */
-  PetscCall(MatCreate(PetscObjectComm((PetscObject)da->ensemble), &I_m));
-  PetscCall(MatSetSizes(I_m, PETSC_DECIDE, PETSC_DECIDE, m, m));
-  PetscCall(MatSetType(I_m, MATDENSE));
-  PetscCall(MatSetUp(I_m));
-  PetscCall(MatZeroEntries(I_m));
-  PetscCall(MatShift(I_m, 1.0));
-  PetscCall(MatAssemblyBegin(I_m, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(I_m, MAT_FINAL_ASSEMBLY));
-
-  /* T_temp = I + S^T S */
-  PetscCall(MatTransposeMatMult(S, S, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T));
-  PetscCall(MatAXPY(T, 1.0, I_m, SAME_NONZERO_PATTERN));
-
-  /* Solve (I + S^T S) X = I for T = X using Cholesky (T is SPD) */
-  Mat T_factored;
-  PetscCall(MatDuplicate(T, MAT_COPY_VALUES, &T_factored));
-  PetscCall(MatCholeskyFactor(T_factored, NULL, NULL));
-  PetscCall(MatMatSolve(T_factored, I_m, T));
-  PetscCall(MatDestroy(&T_factored));
+  PetscCall(PetscDataAssimilatorTFactor(da, S));
 
   /* ===================================================================== */
-  /* Step 6: Compute analysis weights w = T * S^T * delta_scaled         */
+  /* Alg 6.4 line 8: Compute analysis weights w = T * S^T * delta_scaled */
   /* ===================================================================== */
-  PetscCall(ComputeAnalysisWeights(T, S, delta_scaled, &w));
+  Vec s_transpose_delta;
+  PetscCall(MatCreateVecs(impl->I_StS, NULL, &s_transpose_delta));
+  PetscCall(MatMultTranspose(S, delta_scaled, s_transpose_delta));
+  PetscCall(PetscDataAssimilatorApplyTInverse(da, s_transpose_delta, &w));
+  PetscCall(VecDestroy(&s_transpose_delta));
 
   /* ===================================================================== */
-  /* Step 7-9: Compute square-root transform T_sqrt                       */
+  /* Alg 6.4 line 9: Compute square-root transform T^{1/2} U = T^{1/2}     */
   /* ===================================================================== */
-  switch (impl->sqrt_type) {
-  case PETSCDAETKF_SQRT_CHOLESKY:
-    PetscCall(PetscDataAssimilatorCholeskySqrt_Private(T, &T_sqrt));
-    break;
-  case PETSCDAETKF_SQRT_EIGEN:
-    PetscCall(PetscDataAssimilatorSymmetricEigenSqrt_Private(T, &T_sqrt));
-    break;
-  default:
-    SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported PetscDataAssimilatorETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
-  }
+  PetscCall(PetscDataAssimilatorApplySqrtTInverse(da, da->U, &T_sqrt));
 
   /* ===================================================================== */
-  /* Step 8: Form transform G = w * 1' + sqrt(m - 1) * T^{1/2} * U       */
+  /* Alg 6.4 line 9: Form transform G = w * 1' + sqrt(m - 1) * T^{1/2} * U */
   /* ===================================================================== */
   /* w_ones = w * 1' (broadcast weight vector to all columns) */
   PetscCall(BroadcastWeightVector(w, m, &w_ones));
 
-  /* T_sqrt_U = T^{1/2} * U */
-  PetscCall(MatMatMult(T_sqrt, da->U, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T_sqrt_U));
-  PetscCall(MatScale(T_sqrt_U, sqrt_m_minus_1));
+  /* sqrt(m-1) T^{1/2} * U */
+  PetscCall(MatScale(T_sqrt, sqrt_m_minus_1));
 
   /* G = w_ones + T_sqrt_U */
-  PetscCall(MatDuplicate(w_ones, MAT_COPY_VALUES, &G));
-  PetscCall(MatAXPY(G, 1.0, T_sqrt_U, DIFFERENT_NONZERO_PATTERN));
+  PetscCall(MatAXPY(w_ones, 1.0, T_sqrt, SAME_NONZERO_PATTERN));
 
   /* ===================================================================== */
-  /* Step 10: Update ensemble E = x_mean * 1' + X * G                    */
+  /* Alg 6.4 line 9: Update ensemble E = x_mean * 1' + X * G             */
   /* ===================================================================== */
-  PetscCall(UpdateEnsembleWithTransform(mean, X, G, m, da->ensemble));
+  PetscCall(UpdateEnsembleWithTransform(mean, X, w_ones, m, da->ensemble));
 
   /* Cleanup */
   PetscCall(VecDestroy(&mean));
@@ -644,12 +907,8 @@ static PetscErrorCode PetscDataAssimilatorETKFAnalysis(PetscDataAssimilator da, 
   PetscCall(MatDestroy(&X));
   PetscCall(MatDestroy(&Z));
   PetscCall(MatDestroy(&S));
-  PetscCall(MatDestroy(&I_m));
-  PetscCall(MatDestroy(&T));
   PetscCall(MatDestroy(&T_sqrt));
   PetscCall(MatDestroy(&w_ones));
-  PetscCall(MatDestroy(&T_sqrt_U));
-  PetscCall(MatDestroy(&G));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -815,7 +1074,11 @@ static PetscErrorCode PetscDataAssimilatorETKFInitialize(PetscDataAssimilator da
   PetscFunctionBegin;
   if (da->data) PetscCall(PetscFree(da->data)); // can be called twice (useful?)
   PetscCall(PetscNew(&impl));
-  impl->sqrt_type = PETSCDAETKF_SQRT_CHOLESKY;
+  impl->sqrt_type       = PETSCDAETKF_SQRT_EIGEN;
+  impl->V_t             = NULL;
+  impl->L_cholesky      = NULL;
+  impl->sqrt_eigen_vals = NULL;
+  impl->I_StS           = NULL;
 
   da->data                  = impl;
   da->ops->analysis         = PetscDataAssimilatorETKFAnalysis;
