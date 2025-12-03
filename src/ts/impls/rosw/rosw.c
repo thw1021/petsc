@@ -1706,9 +1706,8 @@ static PetscErrorCode TSDestroy_RosW(TS ts)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* ------------------------------------------------------------ */
 /*MC
-      TSROSW - ODE solver using Rosenbrock-W schemes
+  TSROSW - ODE solver using Rosenbrock-W schemes
 
   These methods are intended for problems with well-separated time scales, especially when a slow scale is strongly
   nonlinear such that it is expensive to solve with a fully implicit method. The user should provide the stiff part
@@ -1717,11 +1716,14 @@ static PetscErrorCode TSDestroy_RosW(TS ts)
   Level: beginner
 
   Notes:
+  This is an IMEX method
+
   This method currently only works with autonomous ODE and DAE.
 
   Consider trying `TSARKIMEX` if the stiff part is strongly nonlinear.
 
-  Since this uses a single linear solve per time-step if you wish to lag the jacobian or preconditioner computation you must use also -snes_lag_jacobian_persists true or -snes_lag_jacobian_preconditioner true
+  Since this uses a single linear solve per time-step if you wish to lag the Jacobian or preconditioner computation you must use also `-snes_lag_jacobian_persists true`
+  or `-snes_lag_jacobian_preconditioner true`
 
   Developer Notes:
   Rosenbrock-W methods are typically specified for autonomous ODE
