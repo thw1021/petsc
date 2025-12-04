@@ -3,28 +3,28 @@
 #include "petscdataassimilator.h"
 #include <petsc/private/petscimpl.h>
 
-/* PetscDataAssimilator object cookie */
-PETSC_EXTERN PetscClassId PETSCDATAASSIMILATOR_CLASSID;
+/* PetscDAS object cookie */
+PETSC_EXTERN PetscClassId PETSCDAS_CLASSID;
 
-/* Operator table for PetscDataAssimilator implementations */
-typedef struct _PetscDataAssimilatorOps *PetscDataAssimilatorOps;
-struct _PetscDataAssimilatorOps {
-  PetscErrorCode (*analysis)(PetscDataAssimilator, Vec, PetscErrorCode (*)(Vec, Vec, void *), void *);
-  PetscErrorCode (*applymodel)(PetscDataAssimilator, PetscErrorCode (*)(Vec, Vec, void *), void *);
-  PetscErrorCode (*computemean)(PetscDataAssimilator, Vec);
-  PetscErrorCode (*computeanomalies)(PetscDataAssimilator, Mat *);
-  PetscErrorCode (*destroy)(PetscDataAssimilator);
-  PetscErrorCode (*view)(PetscDataAssimilator, PetscViewer);
-  PetscErrorCode (*setfromoptions)(PetscDataAssimilator, PetscOptionItems *);
+/* Operator table for PetscDAS implementations */
+typedef struct _PetscDASOps *PetscDASOps;
+struct _PetscDASOps {
+  PetscErrorCode (*analysis)(PetscDAS, Vec, PetscErrorCode (*)(Vec, Vec, void *), void *);
+  PetscErrorCode (*applymodel)(PetscDAS, PetscErrorCode (*)(Vec, Vec, void *), void *);
+  PetscErrorCode (*computemean)(PetscDAS, Vec);
+  PetscErrorCode (*computeanomalies)(PetscDAS, Mat *);
+  PetscErrorCode (*destroy)(PetscDAS);
+  PetscErrorCode (*view)(PetscDAS, PetscViewer);
+  PetscErrorCode (*setfromoptions)(PetscDAS, PetscOptionItems *);
 };
 
 /*
-  Internal PetscDataAssimilator structure following PETSc object conventions
+  Internal PetscDAS structure following PETSc object conventions
 */
-struct _p_PetscDataAssimilator {
-  PETSCHEADER(struct _PetscDataAssimilatorOps);
+struct _p_PetscDAS {
+  PETSCHEADER(struct _PetscDASOps);
 
-  /* Core PetscDataAssimilator data */
+  /* Core PetscDAS data */
   PetscInt ensemble_size; /* Number of ensemble members (m) */
   PetscInt state_size;    /* State vector dimension (n) */
   PetscInt obs_size;      /* Observation vector dimension (p) */
@@ -33,13 +33,13 @@ struct _p_PetscDataAssimilator {
   Mat      U;             /* Orthogonal transformation matrix (m x m) */
 
   /* Algorithm state */
-  PetscBool assembled; /* Is the PetscDataAssimilator object assembled/ready */
+  PetscBool assembled; /* Is the PetscDAS object assembled/ready */
 
   /* Implementation-specific data */
   void *data; /* For implementation-specific storage */
 };
 
-/* Internal utility functions shared across PetscDataAssimilator implementations */
-PETSC_INTERN PetscErrorCode PetscDataAssimilatorCholeskySqrt_Private(Mat, Mat *);
-PETSC_INTERN PetscErrorCode PetscDataAssimilatorSymmetricEigenSqrt_Private(Mat, Mat *);
+/* Internal utility functions shared across PetscDAS implementations */
+PETSC_INTERN PetscErrorCode PetscDASCholeskySqrt_Private(Mat, Mat *);
+PETSC_INTERN PetscErrorCode PetscDASSymmetricEigenSqrt_Private(Mat, Mat *);
 PETSC_INTERN PetscErrorCode VecSetRandomGaussian_Private(Vec, PetscRandom, PetscReal, PetscReal);
