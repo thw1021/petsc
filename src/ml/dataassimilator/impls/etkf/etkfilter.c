@@ -476,9 +476,30 @@ static PetscErrorCode PetscDataAssimilatorTFactor(PetscDataAssimilator da, Mat S
   /* Compute and store factorization based on sqrt_type */
   switch (impl->sqrt_type) {
   case PETSCDAETKF_SQRT_CHOLESKY: {
-    /* Compute Cholesky factorization: T = L * L^T -- this is not correct */
+    /* Compute Cholesky factorization: T = L * L^T using LAPACK */
+    PetscBLASInt n, lda, info;
+    PetscScalar *a_array;
+    PetscInt     m_T, N_T;
+
     PetscCall(MatDuplicate(impl->I_StS, MAT_COPY_VALUES, &impl->L_cholesky));
-    PetscCall(MatCholeskyFactor(impl->L_cholesky, NULL, NULL));
+
+    /* Get matrix dimensions and convert to BLAS int */
+    PetscCall(MatGetSize(impl->L_cholesky, &m_T, &N_T));
+    PetscCheck(m_T == N_T, PetscObjectComm((PetscObject)impl->L_cholesky), PETSC_ERR_ARG_WRONG, "Matrix must be square for Cholesky");
+    PetscCall(PetscBLASIntCast(N_T, &n));
+    lda = n;
+
+    /* Get array from dense matrix */
+    PetscCall(MatDenseGetArray(impl->L_cholesky, &a_array));
+
+    /* Compute Cholesky factorization: A = L * L^T (lower triangular) */
+    LAPACKpotrf_("L", &n, a_array, &lda, &info);
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK Cholesky factorization (xPOTRF): info=%d", (int)info);
+
+    /* Restore array and finalize matrix */
+    PetscCall(MatDenseRestoreArray(impl->L_cholesky, &a_array));
+    PetscCall(MatAssemblyBegin(impl->L_cholesky, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(impl->L_cholesky, MAT_FINAL_ASSEMBLY));
     break;
   }
   case PETSCDAETKF_SQRT_EIGEN: {
@@ -614,12 +635,36 @@ static PetscErrorCode PetscDataAssimilatorApplyTInverse(PetscDataAssimilator da,
   PetscCall(VecDuplicate(sdel, w));
 
   switch (impl->sqrt_type) {
-  case PETSCDAETKF_SQRT_CHOLESKY:
-    /* Solve L * L^T * w = sdel using forward and back substitution -- todo */
+  case PETSCDAETKF_SQRT_CHOLESKY: {
+    /* Solve L * L^T * w = sdel using LAPACK's Cholesky solve (xPOTRS) */
+    PetscBLASInt n, lda, nrhs, info;
+    PetscScalar *a_array, *b_array;
+    PetscInt     m_L, N_L;
+
     PetscCheck(impl->L_cholesky, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Cholesky factor not computed");
-    PetscCall(MatSolve(impl->L_cholesky, sdel, *w));
-    PetscCheck(0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "no chol");
+
+    /* Get dimensions */
+    PetscCall(MatGetSize(impl->L_cholesky, &m_L, &N_L));
+    PetscCall(PetscBLASIntCast(N_L, &n));
+    lda  = n;
+    nrhs = 1;
+
+    /* Copy sdel to w for in-place solve */
+    PetscCall(VecCopy(sdel, *w));
+
+    /* Get arrays */
+    PetscCall(MatDenseGetArray(impl->L_cholesky, &a_array));
+    PetscCall(VecGetArray(*w, &b_array));
+
+    /* Solve L * L^T * w = sdel */
+    LAPACKpotrs_("L", &n, &nrhs, a_array, &lda, b_array, &n, &info);
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK Cholesky solve (xPOTRS): info=%d", (int)info);
+
+    /* Restore arrays */
+    PetscCall(MatDenseRestoreArray(impl->L_cholesky, &a_array));
+    PetscCall(VecRestoreArray(*w, &b_array));
     break;
+  }
   case PETSCDAETKF_SQRT_EIGEN: {
     /* Solve using eigendecomposition: T^{-1} = V * D^{-1} * V^T */
     Vec temp;
@@ -696,12 +741,41 @@ static PetscErrorCode PetscDataAssimilatorApplySqrtTInverse(PetscDataAssimilator
   PetscCheck(impl->I_StS, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "I_StS matrix not created. Call PetscDataAssimilatorTFactor first");
 
   switch (impl->sqrt_type) {
-  case PETSCDAETKF_SQRT_CHOLESKY:
-    /* T^{-1/2} = L^{-T}, so solve L^T * Y = U -- Use LAPACK */
+  case PETSCDAETKF_SQRT_CHOLESKY: {
+    /* T^{-1/2} = L^{-T}, so solve L^T * Y = U using LAPACK triangular solve */
+    PetscBLASInt n, lda, nrhs, info;
+    PetscScalar *a_array, *b_array;
+    PetscInt     m_L, N_L, m_U, N_U;
+
     PetscCheck(impl->L_cholesky, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Cholesky factor not computed");
-    PetscCall(MatDuplicate(U, MAT_DO_NOT_COPY_VALUES, Y));
-    PetscCall(MatMatSolve(impl->L_cholesky, U, *Y));
+
+    /* Get dimensions */
+    PetscCall(MatGetSize(impl->L_cholesky, &m_L, &N_L));
+    PetscCall(MatGetSize(U, &m_U, &N_U));
+    PetscCheck(m_L == m_U, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Cholesky factor rows (%" PetscInt_FMT ") must match U rows (%" PetscInt_FMT ")", m_L, m_U);
+
+    PetscCall(PetscBLASIntCast(N_L, &n));
+    PetscCall(PetscBLASIntCast(N_U, &nrhs));
+    lda = n;
+
+    /* Copy U to Y for in-place solve */
+    PetscCall(MatDuplicate(U, MAT_COPY_VALUES, Y));
+
+    /* Get arrays */
+    PetscCall(MatDenseGetArray(impl->L_cholesky, &a_array));
+    PetscCall(MatDenseGetArray(*Y, &b_array));
+
+    /* Solve L^T * Y = U using triangular solve (L is lower, so L^T is upper) */
+    LAPACKtrtrs_("L", "T", "N", &n, &nrhs, a_array, &lda, b_array, &n, &info);
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK triangular solve (xTRTRS): info=%d", (int)info);
+
+    /* Restore arrays */
+    PetscCall(MatDenseRestoreArray(impl->L_cholesky, &a_array));
+    PetscCall(MatDenseRestoreArray(*Y, &b_array));
+    PetscCall(MatAssemblyBegin(*Y, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(*Y, MAT_FINAL_ASSEMBLY));
     break;
+  }
   case PETSCDAETKF_SQRT_EIGEN: {
     Vec diag_inv;
     /* T^-1 = V D^-1 V^T = (V D^-1/2 V^T)^2 : T^{-1/2} = V D^{-1/2} V^T */
@@ -734,7 +808,7 @@ static PetscErrorCode PetscDataAssimilatorApplySqrtTInverse(PetscDataAssimilator
     PetscReal norm_T, norm_diff;
 
     /* Compute Y2 = Y * Y' = T^-1 */
-    PetscCall(MatMatMult(*Y, *Y, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Y2));
+    PetscCall(MatMatTransposeMult(*Y, *Y, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Y2));
 
     /* Compute T_diff = T * T^-1 = U^2 = U = I */
     PetscCall(MatMatMult(Y2, impl->I_StS, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T_diff));
@@ -805,7 +879,6 @@ static PetscErrorCode PetscDataAssimilatorETKFAnalysis(PetscDataAssimilator da, 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDATAASSIMILATOR_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
-
   /* Validate ensemble size */
   m = da->ensemble_size;
   PetscCheck(m > 1, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be > 1, got %" PetscInt_FMT, m);
@@ -814,7 +887,7 @@ static PetscErrorCode PetscDataAssimilatorETKFAnalysis(PetscDataAssimilator da, 
   inv_m          = 1.0 / ((PetscScalar)m);
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
-
+  PetscCall(PetscInfo(da, "squaroot type %s, %d ensembles\n", (impl->sqrt_type == PETSCDAETKF_SQRT_EIGEN) ? "eigen" : "cholesky", (int)m));
   /* ===================================================================== */
   /* Alg 6.4 line 1-2: Compute ensemble mean and scaled anomalies        */
   /* ===================================================================== */
