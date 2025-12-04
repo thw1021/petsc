@@ -590,9 +590,7 @@ linux-cuda-pkgs:
   tags:
     - cuda-stage3
   variables:
-    MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/spack-2024-11-27-cuda/modules/linux-ubuntu22.04-x86_64/Core:/nfs/gce/projects/petsc/soft/u22.04/modulefiles
     TEST_ARCH: arch-ci-linux-cuda-pkgs
-    LOAD_MODULES: cuda/12.8.0-rz6425d openmpi/5.0.8-cuda-12.8
     # run all tests that:
     # 1. require cuda, OR
     # 2. require device, OR
