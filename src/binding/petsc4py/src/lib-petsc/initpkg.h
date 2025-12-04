@@ -23,7 +23,7 @@ PetscErrorCode PetscInitializePackageAll(void)
   PetscCall(PetscDSInitializePackage());
   PetscCall(PetscFEInitializePackage());
   PetscCall(PetscRegressorInitializePackage());
-  PetscCall(PetscDataAssimilatorInitializePackage());
+  PetscCall(PetscDASInitializePackage());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
