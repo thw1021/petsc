@@ -589,7 +589,7 @@ static PetscErrorCode PetscDataAssimilatorTFactor(PetscDataAssimilator da, Mat S
 
   Input Parameters:
 + da - the PetscDataAssimilator context
-- sdel  - input vector
+- sdel  - input vector S^T-delta
 
   Output Parameter:
 . w - output vector w = T^{-1} * sdel
@@ -626,24 +626,15 @@ static PetscErrorCode PetscDataAssimilatorApplyTInverse(PetscDataAssimilator da,
     PetscCheck(impl->V_t, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvectors not computed");
     PetscCheck(impl->sqrt_eigen_vals, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvalues not computed");
 
+    /* w = T^-1 S^T-delta [sdel] */
     PetscCall(VecDuplicate(sdel, &temp));
     /* temp = V^T * sdel */
-    PetscCall(MatMult(impl->V_t, sdel, temp));
+    PetscCall(MatMultTranspose(impl->V_t, sdel, temp));
     /* temp = D^{-1} * temp = D^{-1} * V^T * sdel */
     PetscCall(VecPointwiseDivide(temp, temp, impl->sqrt_eigen_vals));
     PetscCall(VecPointwiseDivide(temp, temp, impl->sqrt_eigen_vals));
     /* w = V * temp = V * D^{-1} * V^T * sdel */
-    PetscCall(MatMultTranspose(impl->V_t, temp, *w));
-
-    Mat           L;
-    MatFactorInfo finfo;
-    PetscCall(MatGetFactor(impl->I_StS, MATSOLVERPETSC, MAT_FACTOR_CHOLESKY, &L)); /* change solver if desired */
-    PetscCall(MatFactorInfoInitialize(&finfo));
-    finfo.fill = 1.0; /* heuristic fill estimate */
-    PetscCall(MatCholeskyFactorSymbolic(L, impl->I_StS, NULL, &finfo));
-    PetscCall(MatCholeskyFactorNumeric(L, impl->I_StS, &finfo));
-    PetscCall(MatSolve(L, sdel, *w)); /* does Ly = b  then L^T x = y */
-    PetscCall(MatDestroy(&L));
+    PetscCall(MatMult(impl->V_t, temp, *w));
     PetscCall(VecDestroy(&temp));
     break;
   }
@@ -667,6 +658,7 @@ static PetscErrorCode PetscDataAssimilatorApplyTInverse(PetscDataAssimilator da,
       PetscReal relative_error = norm_diff / norm_T;
       if (relative_error > 1.e-10) {
         PetscCall(PetscPrintf(PetscObjectComm((PetscObject)da), "WARNING: T^{-1} verification failed! ||T*w - sdel||/||sdel|| = %g\n", (double)relative_error));
+        //PetscCall(PetscPrintf(PetscObjectComm((PetscObject)da), "*"));
       } else {
         // PetscCall(PetscPrintf(PetscObjectComm((PetscObject)da), "T^{-1/2} verification passed: ||T*w - sdel|| = %g\n", (double)relative_error));
       }
