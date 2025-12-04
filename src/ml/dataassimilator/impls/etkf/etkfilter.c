@@ -4,7 +4,7 @@
 
 typedef struct {
   PetscDataAssimilatorETKFSqrtType sqrt_type;
-  Mat                              V_t;             /* Eigen vectors transposed (LAPACK column-major storage) */
+  Mat                              V;               /* Eigen vectors (LAPACK column-major storage) */
   Mat                              L_cholesky;      /* Lower triangular Cholesky factor */
   Vec                              sqrt_eigen_vals; /* Square root of eigen values */
   Mat                              I_StS;           /* T = I + S^T * S matrix */
@@ -357,7 +357,7 @@ static PetscErrorCode PetscDataAssimilatorETKFDestroy(PetscDataAssimilator da)
   PetscFunctionBegin;
   if (da->data) {
     impl = (PetscDataAssimilatorETKFData *)da->data;
-    PetscCall(MatDestroy(&impl->V_t));
+    PetscCall(MatDestroy(&impl->V));
     PetscCall(MatDestroy(&impl->L_cholesky));
     PetscCall(VecDestroy(&impl->sqrt_eigen_vals));
     PetscCall(MatDestroy(&impl->I_StS));
@@ -444,7 +444,7 @@ PetscErrorCode PetscDataAssimilatorETKFFinalizePackage(void)
   Notes:
   This function computes T = I + S^T * S and stores its factorization based on
   sqrt_type. For CHOLESKY mode, it computes and stores the lower triangular
-  Cholesky factor. For EIGEN mode, it computes and stores the transposed
+  Cholesky factor. For EIGEN mode, it computes and stores the
   eigenvectors and square root of eigenvalues.
 */
 static PetscErrorCode PetscDataAssimilatorTFactor(PetscDataAssimilator da, Mat S)
@@ -465,7 +465,7 @@ static PetscErrorCode PetscDataAssimilatorTFactor(PetscDataAssimilator da, Mat S
 
   /* Clean up any previous factorization to avoid memory leaks */
   PetscCall(MatDestroy(&impl->I_StS));
-  PetscCall(MatDestroy(&impl->V_t));
+  PetscCall(MatDestroy(&impl->V));
   PetscCall(MatDestroy(&impl->L_cholesky));
   PetscCall(VecDestroy(&impl->sqrt_eigen_vals));
 
@@ -486,25 +486,25 @@ static PetscErrorCode PetscDataAssimilatorTFactor(PetscDataAssimilator da, Mat S
     Vec          eigen_vals;
     PetscBLASInt n, lda, lwork, info;
     PetscScalar *a_array, *work, *eig_array;
-    PetscInt     m_vt, N_vt;
+    PetscInt     m_V, N_V;
 #if defined(PETSC_USE_COMPLEX)
     PetscReal *rwork = NULL;
 #endif
 
     PetscCall(MatCreateVecs(impl->I_StS, &eigen_vals, NULL));
-    PetscCall(MatDuplicate(impl->I_StS, MAT_COPY_VALUES, &impl->V_t));
+    PetscCall(MatDuplicate(impl->I_StS, MAT_COPY_VALUES, &impl->V));
 
     /* Inline eigendecomposition computation using LAPACK syev */
     /* Get matrix dimensions */
-    PetscCall(MatGetSize(impl->V_t, &m_vt, &N_vt));
-    PetscCheck(m_vt == N_vt, PetscObjectComm((PetscObject)impl->V_t), PETSC_ERR_ARG_WRONG, "Matrix must be square");
+    PetscCall(MatGetSize(impl->V, &m_V, &N_V));
+    PetscCheck(m_V == N_V, PetscObjectComm((PetscObject)impl->V), PETSC_ERR_ARG_WRONG, "Matrix must be square");
 
     /* Convert to BLAS int */
-    PetscCall(PetscBLASIntCast(N_vt, &n));
+    PetscCall(PetscBLASIntCast(N_V, &n));
     lda = n;
 
     /* Get array from dense matrix */
-    PetscCall(MatDenseGetArray(impl->V_t, &a_array));
+    PetscCall(MatDenseGetArray(impl->V, &a_array));
 
     /* Get array from eigenvalue vector */
     PetscCall(VecGetArray(eigen_vals, &eig_array));
@@ -538,9 +538,9 @@ static PetscErrorCode PetscDataAssimilatorTFactor(PetscDataAssimilator da, Mat S
     /* Cleanup */
     PetscCall(PetscFree(work));
     PetscCall(VecRestoreArray(eigen_vals, &eig_array));
-    PetscCall(MatDenseRestoreArray(impl->V_t, &a_array));
-    PetscCall(MatAssemblyBegin(impl->V_t, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(impl->V_t, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatDenseRestoreArray(impl->V, &a_array));
+    PetscCall(MatAssemblyBegin(impl->V, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(impl->V, MAT_FINAL_ASSEMBLY));
 
     /* Compute and store sqrt(eigenvalues) for later use */
     PetscCall(VecDuplicate(eigen_vals, &impl->sqrt_eigen_vals));
@@ -550,14 +550,14 @@ static PetscErrorCode PetscDataAssimilatorTFactor(PetscDataAssimilator da, Mat S
     /* Debug verification: Ensure V * D * V^T == T */
     if (PetscDefined(USE_DEBUG)) {
       PetscReal norm_T, norm_diff;
-      Mat       Vt_D, VDVt;
+      Mat       V_D, VDVt;
 
       /* Compute D * V^T by scaling rows */
-      PetscCall(MatDuplicate(impl->V_t, MAT_COPY_VALUES, &Vt_D));
-      PetscCall(MatDiagonalScale(Vt_D, NULL, eigen_vals));
+      PetscCall(MatDuplicate(impl->V, MAT_COPY_VALUES, &V_D));
+      PetscCall(MatDiagonalScale(V_D, NULL, eigen_vals));
 
       /* Compute V * D * V^T */
-      PetscCall(MatMatTransposeMult(Vt_D, impl->V_t, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &VDVt));
+      PetscCall(MatMatTransposeMult(V_D, impl->V, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &VDVt));
 
       /* Compute ||V*D*V^T - T|| / ||T|| */
       PetscCall(MatAXPY(VDVt, -1.0, impl->I_StS, SAME_NONZERO_PATTERN));
@@ -570,7 +570,7 @@ static PetscErrorCode PetscDataAssimilatorTFactor(PetscDataAssimilator da, Mat S
       }
 
       /* Cleanup debug matrices */
-      PetscCall(MatDestroy(&Vt_D));
+      PetscCall(MatDestroy(&V_D));
       PetscCall(MatDestroy(&VDVt));
     }
 
@@ -623,18 +623,18 @@ static PetscErrorCode PetscDataAssimilatorApplyTInverse(PetscDataAssimilator da,
   case PETSCDAETKF_SQRT_EIGEN: {
     /* Solve using eigendecomposition: T^{-1} = V * D^{-1} * V^T */
     Vec temp;
-    PetscCheck(impl->V_t, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvectors not computed");
+    PetscCheck(impl->V, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvectors not computed");
     PetscCheck(impl->sqrt_eigen_vals, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvalues not computed");
 
     /* w = T^-1 S^T-delta [sdel] */
     PetscCall(VecDuplicate(sdel, &temp));
     /* temp = V^T * sdel */
-    PetscCall(MatMultTranspose(impl->V_t, sdel, temp));
+    PetscCall(MatMultTranspose(impl->V, sdel, temp));
     /* temp = D^{-1} * temp = D^{-1} * V^T * sdel */
     PetscCall(VecPointwiseDivide(temp, temp, impl->sqrt_eigen_vals));
     PetscCall(VecPointwiseDivide(temp, temp, impl->sqrt_eigen_vals));
     /* w = V * temp = V * D^{-1} * V^T * sdel */
-    PetscCall(MatMult(impl->V_t, temp, *w));
+    PetscCall(MatMult(impl->V, temp, *w));
     PetscCall(VecDestroy(&temp));
     break;
   }
@@ -705,22 +705,22 @@ static PetscErrorCode PetscDataAssimilatorApplySqrtTInverse(PetscDataAssimilator
   case PETSCDAETKF_SQRT_EIGEN: {
     Vec diag_inv;
     /* T^-1 = V D^-1 V^T = (V D^-1/2 V^T)^2 : T^{-1/2} = V D^{-1/2} V^T */
-    PetscCheck(impl->V_t, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvectors not computed");
+    PetscCheck(impl->V, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvectors not computed");
     PetscCheck(impl->sqrt_eigen_vals, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvalues not computed");
 
-    /* Vt_D_2 = V^T = V^T * U[I] */
-    Mat Vt_D_2;
-    PetscCall(MatMatMult(impl->V_t, U, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Vt_D_2));
+    /* V_D_2 = V = V * U[I] */
+    Mat V_D_2;
+    PetscCall(MatMatMult(impl->V, U, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &V_D_2));
     /* D^{-1/2} */
     PetscCall(VecDuplicate(impl->sqrt_eigen_vals, &diag_inv));
     PetscCall(VecCopy(impl->sqrt_eigen_vals, diag_inv));
     PetscCall(VecReciprocal(diag_inv));
-    /* Vt_D_2 = V^T * D^{-1/2} */
-    PetscCall(MatDiagonalScale(Vt_D_2, NULL, diag_inv));
+    /* V_D_2 = V * D^{-1/2} */
+    PetscCall(MatDiagonalScale(V_D_2, NULL, diag_inv));
     PetscCall(VecDestroy(&diag_inv));
-    /* T^{-1/2} = Vt_D_2 * V^T^T = V^T * D^{-1/2} * V = V * D^{-1/2} * V^T by symmetry */
-    PetscCall(MatMatTransposeMult(Vt_D_2, impl->V_t, MAT_INITIAL_MATRIX, PETSC_DEFAULT, Y));
-    PetscCall(MatDestroy(&Vt_D_2));
+    /* T^{-1/2} = V_D_2 * V^T = V * D^{-1/2} * V^T */
+    PetscCall(MatMatTransposeMult(V_D_2, impl->V, MAT_INITIAL_MATRIX, PETSC_DEFAULT, Y));
+    PetscCall(MatDestroy(&V_D_2));
     break;
   }
   default:
@@ -1064,7 +1064,7 @@ static PetscErrorCode PetscDataAssimilatorETKFInitialize(PetscDataAssimilator da
   if (da->data) PetscCall(PetscFree(da->data)); // can be called twice (useful?)
   PetscCall(PetscNew(&impl));
   impl->sqrt_type       = PETSCDAETKF_SQRT_EIGEN;
-  impl->V_t             = NULL;
+  impl->V               = NULL;
   impl->L_cholesky      = NULL;
   impl->sqrt_eigen_vals = NULL;
   impl->I_StS           = NULL;
