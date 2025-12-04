@@ -5,59 +5,59 @@
 #include <petscvec.h>
 
 /* MANSEC = ML */
-/* SUBMANSEC = PetscDataAssimilator */
+/* SUBMANSEC = PetscDAS */
 
-typedef struct _p_PetscDataAssimilator *PetscDataAssimilator;
+typedef struct _p_PetscDAS *PetscDAS;
 
 typedef enum {
-  PETSCDAETKF_SQRT_CHOLESKY = 0,
-  PETSCDAETKF_SQRT_EIGEN    = 1
-} PetscDataAssimilatorETKFSqrtType;
+  PETSCDASETKF_SQRT_CHOLESKY = 0,
+  PETSCDASETKF_SQRT_EIGEN    = 1
+} PetscDASETKFSqrtType;
 
-typedef const char *PetscDataAssimilatorType;
-#define PETSCDAETKF "etkf"
+typedef const char *PetscDASType;
+#define PETSCDASETKF "etkf"
 
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorInitializePackage(void);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorFinalizePackage(void);
+PETSC_EXTERN PetscErrorCode PetscDASInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscDASFinalizePackage(void);
 
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorRegister(const char[], PetscErrorCode (*)(PetscDataAssimilator));
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorRegisterAll(void);
+PETSC_EXTERN PetscErrorCode PetscDASRegister(const char[], PetscErrorCode (*)(PetscDAS));
+PETSC_EXTERN PetscErrorCode PetscDASRegisterAll(void);
 
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorCreate(MPI_Comm, PetscDataAssimilator *);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorDestroy(PetscDataAssimilator *);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorSetType(PetscDataAssimilator, PetscDataAssimilatorType);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorGetType(PetscDataAssimilator, PetscDataAssimilatorType *);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorView(PetscDataAssimilator, PetscViewer);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorViewFromOptions(PetscDataAssimilator, PetscObject, const char[]);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorSetFromOptions(PetscDataAssimilator);
+PETSC_EXTERN PetscErrorCode PetscDASCreate(MPI_Comm, PetscDAS *);
+PETSC_EXTERN PetscErrorCode PetscDASDestroy(PetscDAS *);
+PETSC_EXTERN PetscErrorCode PetscDASSetType(PetscDAS, PetscDASType);
+PETSC_EXTERN PetscErrorCode PetscDASGetType(PetscDAS, PetscDASType *);
+PETSC_EXTERN PetscErrorCode PetscDASView(PetscDAS, PetscViewer);
+PETSC_EXTERN PetscErrorCode PetscDASViewFromOptions(PetscDAS, PetscObject, const char[]);
+PETSC_EXTERN PetscErrorCode PetscDASSetFromOptions(PetscDAS);
 
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorSetSizes(PetscDataAssimilator, PetscInt, PetscInt, PetscInt);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorGetSizes(PetscDataAssimilator, PetscInt *, PetscInt *, PetscInt *);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorSetUp(PetscDataAssimilator);
+PETSC_EXTERN PetscErrorCode PetscDASSetSizes(PetscDAS, PetscInt, PetscInt, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscDASGetSizes(PetscDAS, PetscInt *, PetscInt *, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscDASSetUp(PetscDAS);
 
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorSetObsErrorVariance(PetscDataAssimilator, Vec);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorGetObsErrorVariance(PetscDataAssimilator, Vec *);
+PETSC_EXTERN PetscErrorCode PetscDASSetObsErrorVariance(PetscDAS, Vec);
+PETSC_EXTERN PetscErrorCode PetscDASGetObsErrorVariance(PetscDAS, Vec *);
 
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorSetOrthogonalTransform(PetscDataAssimilator, Mat);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorGetOrthogonalTransform(PetscDataAssimilator, Mat *);
+PETSC_EXTERN PetscErrorCode PetscDASSetOrthogonalTransform(PetscDAS, Mat);
+PETSC_EXTERN PetscErrorCode PetscDASGetOrthogonalTransform(PetscDAS, Mat *);
 
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorGetEnsembleMember(PetscDataAssimilator, PetscInt, Vec *);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorRestoreEnsembleMember(PetscDataAssimilator, PetscInt, Vec *);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorSetEnsembleMember(PetscDataAssimilator, PetscInt, Vec);
+PETSC_EXTERN PetscErrorCode PetscDASGetEnsembleMember(PetscDAS, PetscInt, Vec *);
+PETSC_EXTERN PetscErrorCode PetscDASRestoreEnsembleMember(PetscDAS, PetscInt, Vec *);
+PETSC_EXTERN PetscErrorCode PetscDASSetEnsembleMember(PetscDAS, PetscInt, Vec);
 
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorComputeMean(PetscDataAssimilator, Vec);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorComputeAnomalies(PetscDataAssimilator, Mat *);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorAnalysis(PetscDataAssimilator, Vec, PetscErrorCode (*)(Vec, Vec, void *), void *);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorApplyModel(PetscDataAssimilator, PetscErrorCode (*)(Vec, Vec, void *), void *);
+PETSC_EXTERN PetscErrorCode PetscDASComputeMean(PetscDAS, Vec);
+PETSC_EXTERN PetscErrorCode PetscDASComputeAnomalies(PetscDAS, Mat *);
+PETSC_EXTERN PetscErrorCode PetscDASAnalysis(PetscDAS, Vec, PetscErrorCode (*)(Vec, Vec, void *), void *);
+PETSC_EXTERN PetscErrorCode PetscDASApplyModel(PetscDAS, PetscErrorCode (*)(Vec, Vec, void *), void *);
 
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorSetOptionsPrefix(PetscDataAssimilator, const char[]);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorAppendOptionsPrefix(PetscDataAssimilator, const char[]);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorGetOptionsPrefix(PetscDataAssimilator, const char *[]);
+PETSC_EXTERN PetscErrorCode PetscDASSetOptionsPrefix(PetscDAS, const char[]);
+PETSC_EXTERN PetscErrorCode PetscDASAppendOptionsPrefix(PetscDAS, const char[]);
+PETSC_EXTERN PetscErrorCode PetscDASGetOptionsPrefix(PetscDAS, const char *[]);
 
 PETSC_EXTERN PetscErrorCode VecSetRandomGaussian(Vec, PetscRandom, PetscReal, PetscReal);
 
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorETKFRegister(void);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorETKFInitializePackage(void);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorETKFFinalizePackage(void);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorETKFSetSqrtType(PetscDataAssimilator, PetscDataAssimilatorETKFSqrtType);
-PETSC_EXTERN PetscErrorCode PetscDataAssimilatorETKFGetSqrtType(PetscDataAssimilator, PetscDataAssimilatorETKFSqrtType *);
+PETSC_EXTERN PetscErrorCode PetscDASETKFRegister(void);
+PETSC_EXTERN PetscErrorCode PetscDASETKFInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscDASETKFFinalizePackage(void);
+PETSC_EXTERN PetscErrorCode PetscDASETKFSetSqrtType(PetscDAS, PetscDASETKFSqrtType);
+PETSC_EXTERN PetscErrorCode PetscDASETKFGetSqrtType(PetscDAS, PetscDASETKFSqrtType *);
