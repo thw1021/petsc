@@ -77,7 +77,7 @@ def crossCreate(L):
     else: opts.append('a')
   return cross(opts)
 
-def generateFortranInterface(petscarch, classes, enums, structs, senums, funname, fun):
+def generateFortranInterface(petscarch, classes, enums, structs, senums, funname, mpi_f08, fun):
   '''Generates the interface definition for a function'''
   '''This is used both by class functions and standalone functions'''
   # check for functions for which we cannot build interfaces
@@ -153,6 +153,9 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
             if ktypename in structs and not structs[ktypename].opaque:
               if simport: simport = simport + ','
               simport = simport + 's' + ktypename
+            if mpi_f08 and ktypename.startswith('MPI_'):
+              if simport: simport = simport + ','
+              simport = simport + ktypename
           simportset.add(ktypename)
           cnt = cnt + 1
         if cnt: fd.write(',')
@@ -163,9 +166,9 @@ def generateFortranInterface(petscarch, classes, enums, structs, senums, funname
         cnt = 0
         for k in fun.arguments:
           if k.stringlen: continue
-          ktypename = k.typename
+          ktypename = k.typename.replace('MPI_', 'MPIU_').replace('MPIU_Fint', 'MPI_Fint')
           if ktypename in CToFortranTypes:
-            ktypename =CToFortranTypes[ktypename]
+            ktypename = CToFortranTypes[ktypename]
           if ktypename == 'char':
             if getattr(k, 'char_type', None) == 'single':
               fd.write('  character :: ' + Letters[cnt] + '\n')
@@ -273,7 +276,7 @@ def generateCStub(petscarch,manualstubsfound,senums,classes,structs, funname,fun
     cnt = 0
     for k in fun.arguments:
       if k.stringlen: continue
-      ktypename = k.typename
+      ktypename = k.typename.replace('MPI_', 'MPIU_').replace('MPIU_Fint', 'MPI_Fint')
       if cnt: fd.write(', ')
       if k.const and not ((k.typename == 'char' or k.typename in senums) and k.array):
         # see note one at the top of the file why const is not added for this case
@@ -466,7 +469,7 @@ def generateFortranStub(senums, funname, fun, fd, opts):
     cnt = 0
     for k in fun.arguments:
       if k.stringlen: continue
-      ktypename = k.typename
+      ktypename = k.typename.replace('MPI_', 'MPIU_').replace('MPIU_Fint', 'MPI_Fint')
       if fi[cnt] == 'O':
         fd.write('  PetscNull :: ' + Letters[cnt] + '\n')
       elif ktypename in senums or ktypename == 'char':
@@ -483,7 +486,7 @@ def generateFortranStub(senums, funname, fun, fd, opts):
     cnt = 0
     for k in fun.arguments:
       if k.stringlen: continue
-      ktypename = k.typename
+      ktypename = k.typename.replace('MPI_', 'MPIU_').replace('MPIU_Fint', 'MPI_Fint')
       if cnt: fd.write(',')
       if fi[cnt] == 'a':
         fd.write(Letters[cnt])
@@ -499,11 +502,15 @@ def generateFortranStub(senums, funname, fun, fd, opts):
 
 ##########  main
 
-def main(petscdir,petscarch):
+def main(petscdir,petscarch,mpi_f08 = 'Unknown'):
   '''Generates all the Fortran include and C stub files needed for the Fortran API'''
   sys.path.insert(0,os.path.realpath(os.path.dirname(__file__)))
   import getAPI
   del sys.path[0]
+
+  if mpi_f08 == 'Unknown':
+    with open(os.path.join(petscdir,petscarch,'include','petscconf.h')) as fd:
+      mpi_f08 = fd.read().find('mpi_f08') > -1
 
   classes, enums, senums, typedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI()
 
@@ -685,7 +692,7 @@ def main(petscdir,petscarch):
     # generate interface definitions for all objects' methods
     if i in ['PetscIntStack']: continue
     for j in classes[i].functions: # loop over functions in class
-      generateFortranInterface(petscarch,classes,enums,structs,senums,j,classes[i].functions[j])
+      generateFortranInterface(petscarch,classes,enums,structs,senums,j,mpi_f08,classes[i].functions[j])
 
     if i in ['PetscObject', 'PetscTabulation']: continue
     file = classes[i].includefile + '90'
@@ -733,7 +740,7 @@ def main(petscdir,petscarch):
 
   # generate interface definitions for all standalone functions
   for j in funcs.keys():
-    generateFortranInterface(petscarch,classes,enums,structs,senums,funcs[j].name,funcs[j])
+    generateFortranInterface(petscarch,classes,enums,structs,senums,funcs[j].name,mpi_f08,funcs[j])
 
   # generate .eq. and .neq. for enums
   for i in enums.keys():
@@ -809,7 +816,7 @@ def main(petscdir,petscarch):
           cnt = 1
           for k in fi.arguments[1:]:
             if k.stringlen: continue
-            ktypename = k.typename
+            ktypename = k.typename.replace('MPI_', 'MPIU_').replace('MPIU_Fint', 'MPI_Fint')
             if ktypename in CToFortranTypes:
               ktypename = CToFortranTypes[ktypename]
             if ktypename in senums:
