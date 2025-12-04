@@ -4,6 +4,32 @@
 
 Make sure the suffix of your Fortran files is .F90, not .f or .f90.
 
+## Fortran and MPI
+
+By default PETSc uses the MPI Fortran module `mpi`. To use `mpi_f08` run `./configure` with `--with-mpi-ftn-module=mpi_f08`.
+
+We do not recommend it but it is possible to write Fortran code that works with both `use mpi` or `use mpi_f08`.
+You must declare MPI objects using, for example, `MPIU_Comm`, which the PETSc include files map to either `integer4` or `type(MPI_Comm)`.
+In addition, you must handle `MPIU_Status` declarations and access to entries using the Fortran preprocessor. For example,
+
+```fortran
+#if defined(PETSC_USE_MPI_F08)
+  MPIU_Status status
+#else
+  MPIU_Status status(MPI_STATUS_SIZE)
+#endif
+```
+
+and
+
+```fortran
+#if defined(PETSC_USE_MPI_F08)
+      tag = status%MPI_TAG
+#else
+      tag = status(MPI_TAG)
+#endif
+```
+
 ## Basic Fortran API Differences
 
 (sec_fortran_includes)=
@@ -19,34 +45,16 @@ At the beginning of every function and module definition you need something like
 ```
 
 The Fortran include files for PETSc are located in the directory
-`$PETSC_DIR/include/petsc/finclude` and the module files are located in `$PETSC_DIR/$PETSC_ARCH/include`
+`$PETSC_DIR/$PETSC_ARCH/include/petsc/finclude` and the module files are located in `$PETSC_DIR/$PETSC_ARCH/include`
 
 The include files are nested, that is, for example, `petsc/finclude/petscmat.h` automatically includes
-`petsc/finclude/petscvec.h` and so on. Except for `petscsys` which is nested in the other modules,
-modules are **not** nested. Thus if your routine uses, for example, both
-`Mat` and `Vec` operations you need
-
-```c
-use petscvec
-use petscmat
-```
-
-The reason they are not nested is that they are very large and including all of them slows down the compile time.
-One can use
+`petsc/finclude/petscvec.h` and so on. The modules are also nested. One can use
 
 ```c
 use petsc
 ```
 
-to include all of them. In addition, if you have a routine that does not have function calls for an object, but has
-the object as an argument you can use, for example,
-
-```c
-subroutine FormFunction(snes,x,f,dummy,ierr)
-  use petscvec
-  use petscsnesdef
-  implicit none
-```
+to include all of them.
 
 ### Declaring PETSc Object Variables
 
