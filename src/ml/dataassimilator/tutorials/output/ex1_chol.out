@@ -1,10 +1,10 @@
 Spinning up truth for 100 steps...
-PetscDataAssimilator Object: 1 MPI process
+PetscDAS Object: 1 MPI process
   State size: 40
   Observation size: 40
   Ensemble size: 30
   Assembled: true
-PetscDataAssimilatorETKF Object:
+PetscDASETKF Object:
   Square root type: cholesky
 Lorenz-96 ETKF Example
 ======================
