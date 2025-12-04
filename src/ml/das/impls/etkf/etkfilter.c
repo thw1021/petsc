@@ -601,7 +601,6 @@ static PetscErrorCode PetscDASTFactor(PetscDAS da, Mat S)
   default:
     SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported PetscDASETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -825,7 +824,6 @@ static PetscErrorCode PetscDASApplySqrtTInverse(PetscDAS da, Mat U, Mat *Y)
     PetscCall(MatDestroy(&Y2));
     PetscCall(MatDestroy(&T_diff));
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
