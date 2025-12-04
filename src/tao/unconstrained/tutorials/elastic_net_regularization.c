@@ -175,7 +175,7 @@ int main(int argc, char **argv)
 
   test:
     suffix: yes_prefix_yes_name
-    args: -tao_monitor_short -tao_view -tao_term_l1_epsilon 0.1 -tao_type nls -set_term_prefix 1 -set_term_name 1
+    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -set_term_prefix 1 -set_term_name 1
 
   test:
     suffix: mask_failure
