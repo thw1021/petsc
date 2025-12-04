@@ -819,7 +819,7 @@ static PetscErrorCode PetscDASApplySqrtTInverse(PetscDAS da, Mat U, Mat *Y)
     PetscCall(MatNorm(U, NORM_FROBENIUS, &norm_T));
     PetscCall(MatNorm(T_diff, NORM_FROBENIUS, &norm_diff));
     /* Verify that ||Y * Y * T - U[U=I] || / ||U|| is small */
-    PetscCheck(norm_diff / norm_T < 1.e-10, PETSC_COMM_SELF, PETSC_ERR_LIB, "T^{1/2} wrong. ||Y*Y*T-I||/||I||>tol %g", norm_diff);
+    PetscCheck(norm_diff / norm_T < 1.e-10, PETSC_COMM_SELF, PETSC_ERR_LIB, "T^{1/2} wrong. ||Y*Y*T-I||/||I||>tol %g", (double)norm_diff);
     /* Cleanup */
     PetscCall(MatDestroy(&Y2));
     PetscCall(MatDestroy(&T_diff));
