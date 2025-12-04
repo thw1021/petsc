@@ -319,13 +319,13 @@ int main(int argc, char **argv)
   PetscReal obs_error_std = DEFAULT_OBS_ERROR_STD;
 
   /* PETSc objects */
-  Lorenz96Ctx         *l95_ctx = NULL;
-  DM                   da_state;
-  PetscDAS             daas;
-  Vec                  x0, x_mean, x_forecast;
-  Vec                  truth_state, truth_next;
-  Vec                  observation, obs_noise, obs_error_var;
-  PetscRandom          rng;
+  Lorenz96Ctx *l95_ctx = NULL;
+  DM           da_state;
+  PetscDAS     daas;
+  Vec          x0, x_mean, x_forecast;
+  Vec          truth_state, truth_next;
+  Vec          observation, obs_noise, obs_error_var;
+  PetscRandom  rng;
 
   /* Statistics tracking */
   PetscReal rmse_forecast = 0.0, rmse_analysis = 0.0;
