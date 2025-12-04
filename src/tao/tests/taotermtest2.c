@@ -7,10 +7,10 @@ typedef struct {
 } HalfL2Ctx;
 
 typedef struct {
-  Mat A;      /* Mapping matrix A */
-  Vec p;      /* Target vector p */
-  Vec Ax;     /* Work vector for A*x */
-  Vec Ax_p;   /* Work vector for A*x - p */
+  Mat A;    /* Mapping matrix A */
+  Vec p;    /* Target vector p */
+  Vec Ax;   /* Work vector for A*x */
+  Vec Ax_p; /* Work vector for A*x - p */
 } CallbackCtx;
 
 static PetscErrorCode FormFunctionGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
@@ -23,22 +23,22 @@ static PetscErrorCode FormHessian_Callback(Tao, Vec, Mat, Mat, void *);
 
 int main(int argc, char **argv)
 {
-  TaoTerm      objective;
-  Tao          tao, tao2;
-  PetscMPIInt  size;
-  HalfL2Ctx    *ctx;
-  MPI_Comm     comm;
-  PetscInt     n = 10, m = 10;
-  Mat          A;
-  Vec          target;
-  PetscRandom  rand;
-  CallbackCtx  cb_ctx;
-  Vec          x_term, x_callback, x2, diff;
-  Mat          H2;
-  PetscReal    norm_diff, diag_val;
-  PetscBool    opt, is_diag, is_cdiag, is_aij, is_dense;
-  const char  *mtype = MATAIJ;
-  char         typeName[256] = "";
+  TaoTerm     objective;
+  Tao         tao, tao2;
+  PetscMPIInt size;
+  HalfL2Ctx  *ctx;
+  MPI_Comm    comm;
+  PetscInt    n = 10, m = 10;
+  Mat         A;
+  Vec         target;
+  PetscRandom rand;
+  CallbackCtx cb_ctx;
+  Vec         x_term, x_callback, x2, diff;
+  Mat         H2;
+  PetscReal   norm_diff, diag_val;
+  PetscBool   opt, is_diag, is_cdiag, is_aij, is_dense;
+  const char *mtype         = MATAIJ;
+  char        typeName[256] = "";
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
@@ -58,7 +58,7 @@ int main(int argc, char **argv)
 
   /* Initialize typeName to default if option was not set */
   if (!opt) PetscCall(PetscStrcpy(typeName, mtype));
-  
+
   PetscCall(PetscStrcmp(typeName, MATDIAGONAL, &is_diag));
   PetscCall(PetscStrcmp(typeName, MATCONSTANTDIAGONAL, &is_cdiag));
   PetscCall(PetscStrcmp(typeName, MATAIJ, &is_aij));
@@ -154,13 +154,13 @@ int main(int argc, char **argv)
     PetscCall(VecDestroy(&A_diag));
     PetscCall(VecDestroy(&H2_diag));
   } else if (is_cdiag) {
-      PetscScalar diag_val_squared;
-      PetscInt    M, N;
+    PetscScalar diag_val_squared;
+    PetscInt    M, N;
 
-      PetscCall(MatConstantDiagonalGetConstant(A, &diag_val));
-      diag_val_squared = diag_val * diag_val;
-      PetscCall(MatGetSize(A, &M, &N));
-      PetscCall(MatCreateConstantDiagonal(comm, PETSC_DECIDE, PETSC_DECIDE, N, N, diag_val_squared, &H2));
+    PetscCall(MatConstantDiagonalGetConstant(A, &diag_val));
+    diag_val_squared = diag_val * diag_val;
+    PetscCall(MatGetSize(A, &M, &N));
+    PetscCall(MatCreateConstantDiagonal(comm, PETSC_DECIDE, PETSC_DECIDE, N, N, diag_val_squared, &H2));
   } else {
     PetscCall(MatTransposeMatMult(A, A, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &H2));
     PetscCall(MatAssemblyBegin(H2, MAT_FINAL_ASSEMBLY));
@@ -195,7 +195,6 @@ int main(int argc, char **argv)
   return 0;
 }
 
-
 /*
   FormFunctionGradient - Evaluates the function, f(X), and gradient, G(X).
 
@@ -213,8 +212,8 @@ int main(int argc, char **argv)
 */
 static PetscErrorCode FormFunctionGradient(TaoTerm term, Vec x, Vec params, PetscReal *f, Vec G)
 {
-  HalfL2Ctx   *ctx;
-  PetscScalar  v;
+  HalfL2Ctx  *ctx;
+  PetscScalar v;
 
   PetscFunctionBeginUser;
   PetscCall(TaoTermShellGetContext(term, &ctx));
@@ -262,7 +261,6 @@ static PetscErrorCode FormHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hp
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 PetscErrorCode CtxDestroy(void **ctx_ptr)
 {
