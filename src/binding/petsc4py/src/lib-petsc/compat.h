@@ -12,7 +12,7 @@
 #include "compat/hip.h"
 #include "compat/tao.h"
 #include "compat/regressor.h"
-#include "compat/dataassimilator.h"
+#include "compat/das.h"
 #include "compat/h2opus.h"
 #include "compat/spai.h"
 #include "compat/plexexodusii.h"
