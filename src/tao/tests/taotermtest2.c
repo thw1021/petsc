@@ -34,7 +34,7 @@ int main(int argc, char **argv)
   CallbackCtx *cb_ctx;
   Vec          x_term, x_callback, x2, diff;
   Mat          H2;
-  PetscReal    norm_diff, diag_val;
+  PetscReal    norm_diff, diag_val = 1.1;
   PetscBool    opt, is_diag, is_cdiag, is_aij, is_dense;
   const char  *mtype         = MATAIJ;
   char         typeName[256] = "";
@@ -48,6 +48,7 @@ int main(int argc, char **argv)
   PetscOptionsBegin(comm, "", help, "none");
   PetscCall(PetscOptionsInt("-n", "Problem size", "", n, &n, NULL));
   PetscCall(PetscOptionsInt("-m", "Mapping matrix row size", "", m, &m, NULL));
+  PetscCall(PetscOptionsReal("-diag_val", "Value of constant diagonal matrix", NULL, diag_val, &diag_val, NULL));
   PetscCall(PetscOptionsFList("-mapping_mtype", "Mapping matrix type", "", MatList, mtype, typeName, 256, &opt));
   PetscOptionsEnd();
 
@@ -77,7 +78,6 @@ int main(int argc, char **argv)
   } else if (is_cdiag) {
     /* Create a constant diagonal matrix */
     PetscCheck(m == n, comm, PETSC_ERR_ARG_INCOMP, "For constant diagonal matrix, m and n must be equal (got m=%" PetscInt_FMT ", n=%" PetscInt_FMT ")", m, n);
-    diag_val = 1.1;
     PetscCall(MatCreateConstantDiagonal(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, diag_val, &A));
   } else if (is_dense) {
     /* Create a dense matrix */
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
   PetscCall(TaoTermCreateShell(comm, (void *)ctx, CtxDestroy, &objective));
 
   /* Set solution and parameter sizes to match the mapped space (m) */
-  PetscCall(TaoTermSetSolutionSizes(objective, PETSC_DECIDE, m, 1));
+  PetscCall(TaoTermSetSolutionSizes(objective, PETSC_DECIDE, n, 1));
   PetscCall(TaoTermSetParametersSizes(objective, PETSC_DECIDE, m, 1));
 
   PetscCall(TaoTermShellSetObjectiveAndGradient(objective, FormFunctionGradient));
@@ -149,13 +149,7 @@ int main(int argc, char **argv)
     PetscCall(VecDestroy(&A_diag));
     PetscCall(VecDestroy(&H2_diag));
   } else if (is_cdiag) {
-    PetscScalar diag_val_squared;
-    PetscInt    M, N;
-
-    PetscCall(MatConstantDiagonalGetConstant(A, &diag_val));
-    diag_val_squared = diag_val * diag_val;
-    PetscCall(MatGetSize(A, &M, &N));
-    PetscCall(MatCreateConstantDiagonal(comm, PETSC_DECIDE, PETSC_DECIDE, N, N, diag_val_squared, &H2));
+    PetscCall(MatCreateConstantDiagonal(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, diag_val * diag_val, &H2));
   } else {
     PetscCall(MatTransposeMatMult(A, A, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &H2));
     PetscCall(MatAssemblyBegin(H2, MAT_FINAL_ASSEMBLY));
