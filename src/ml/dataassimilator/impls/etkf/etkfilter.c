@@ -18,7 +18,7 @@ static PetscBool         PetscDataAssimilatorETKFPackageInitialized = PETSC_FALS
 /* ========================================================================== */
 
 /*
-  ComputeObservationEnsemble - Applies observation operator H to each ensemble member
+  ComputeObservationEnsemble - Applies observation operator H to each ensemble member (Alg 6.4 line 3-4)
 
   Input Parameters:
 + da                   - the PetscDataAssimilator context
@@ -86,18 +86,18 @@ static PetscErrorCode ComputeObservationEnsemble(PetscDataAssimilator da, PetscE
   Output Parameter:
 . r_inv_sqrt - element-wise R^{-1/2}
 */
-static PetscErrorCode ComputeInverseSquareRootR(Vec obs_error_var, Vec *r_inv_sqrt)
-{
-  PetscFunctionBegin;
-  PetscCall(VecDuplicate(obs_error_var, r_inv_sqrt));
-  PetscCall(VecCopy(obs_error_var, *r_inv_sqrt));
-  PetscCall(VecSqrtAbs(*r_inv_sqrt));
-  PetscCall(VecReciprocal(*r_inv_sqrt));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
+/* static PetscErrorCode ComputeInverseSquareRootR(Vec obs_error_var, Vec *r_inv_sqrt) */
+/* { */
+/*   PetscFunctionBegin; */
+/*   PetscCall(VecDuplicate(obs_error_var, r_inv_sqrt)); */
+/*   PetscCall(VecCopy(obs_error_var, *r_inv_sqrt)); */
+/*   PetscCall(VecSqrtAbs(*r_inv_sqrt)); */
+/*   PetscCall(VecReciprocal(*r_inv_sqrt)); */
+/*   PetscFunctionReturn(PETSC_SUCCESS); */
+/* } */
 
 /*
-  ComputeNormalizedInnovationMatrix - Computes S = R^{-1/2}(Z - y_mean * 1')/sqrt(m-1)
+  ComputeNormalizedInnovationMatrix - Computes S = R^{-1/2}(Z - y_mean * 1')/sqrt(m-1) [Alg 6.4 line 5]
 
   Input Parameters:
 + Z          - observation ensemble matrix
@@ -239,7 +239,7 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
 }
 
 /*
-  UpdateEnsembleWithTransform - Updates ensemble via ETKF transform: E = mean * 1' + X * G
+  UpdateEnsembleWithTransform - Updates ensemble via ETKF transform: E = mean * 1' + X * G [Alg 6.4 line 9]
 
   Input Parameters:
 + mean     - ensemble mean vector (size state_size), must be initialized
@@ -431,7 +431,7 @@ PetscErrorCode PetscDataAssimilatorETKFFinalizePackage(void)
 }
 
 /* ========================================================================== */
-/*                    T-Matrix Factorization and Application Methods         */
+/*         T-Matrix Factorization and Application Methods [Alg 6.4 line 7]    */
 /* ========================================================================== */
 
 /*
@@ -585,7 +585,7 @@ static PetscErrorCode PetscDataAssimilatorTFactor(PetscDataAssimilator da, Mat S
 }
 
 /*
-  PetscDataAssimilatorApplyTInverse - Apply T^{-1} to a vector
+  PetscDataAssimilatorApplyTInverse - Apply T^{-1} to a vector [Alg 6.4 line 8]
 
   Input Parameters:
 + da - the PetscDataAssimilator context
@@ -677,7 +677,7 @@ static PetscErrorCode PetscDataAssimilatorApplyTInverse(PetscDataAssimilator da,
 }
 
 /*
-  PetscDataAssimilatorApplySqrtTInverse - Apply T^{-1/2} to a matrix (I)
+  PetscDataAssimilatorApplySqrtTInverse - Apply T^{-1/2} to a matrix (I) [Alg 6.4 line 9]
 
   Input Parameters:
 + da - the PetscDataAssimilator context
@@ -712,32 +712,37 @@ static PetscErrorCode PetscDataAssimilatorApplySqrtTInverse(PetscDataAssimilator
     break;
   case PETSCDAETKF_SQRT_EIGEN: {
     Vec diag_inv;
-    /* T^-1 = V D^-1 V^T = (V D^-1/2) (V D^-1/2)^T: T^{-1/2} = V * D^{-1/2} */
+    /* T^-1 = V D^-1 V^T = (V D^-1/2 V^T)^2 : T^{-1/2} = V D^{-1/2} V^T */
     PetscCheck(impl->V_t, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvectors not computed");
     PetscCheck(impl->sqrt_eigen_vals, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Eigenvalues not computed");
 
-    /* Y = V^T = V^T * U[I] */
-    PetscCall(MatMatMult(impl->V_t, U, MAT_INITIAL_MATRIX, PETSC_DEFAULT, Y));
-    /* Scale columns by D^{-1/2}: Y = V * D^{-1/2} */
+    /* Vt_D_2 = V^T = V^T * U[I] */
+    Mat Vt_D_2;
+    PetscCall(MatMatMult(impl->V_t, U, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Vt_D_2));
+    /* D^{-1/2} */
     PetscCall(VecDuplicate(impl->sqrt_eigen_vals, &diag_inv));
     PetscCall(VecCopy(impl->sqrt_eigen_vals, diag_inv));
     PetscCall(VecReciprocal(diag_inv));
-    PetscCall(MatDiagonalScale(*Y, NULL, diag_inv));
+    /* Vt_D_2 = V^T * D^{-1/2} */
+    PetscCall(MatDiagonalScale(Vt_D_2, NULL, diag_inv));
     PetscCall(VecDestroy(&diag_inv));
+    /* T^{-1/2} = Vt_D_2 * V^T^T = V^T * D^{-1/2} * V = V * D^{-1/2} * V^T by symmetry */
+    PetscCall(MatMatTransposeMult(Vt_D_2, impl->V_t, MAT_INITIAL_MATRIX, PETSC_DEFAULT, Y));
+    PetscCall(MatDestroy(&Vt_D_2));
     break;
   }
   default:
     SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported PetscDataAssimilatorETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
   }
 
-  /* Debugging verification: Test that T*Y*Y = U^2 (assume U*U = U = I) 
+  /* Debugging verification: Test that T*Y*Y = U^2 (assume U*U = U = I)
      Mathematical property: If Y = T^{-1/2} U, then T * Y * Y = U^2 */
   if (PetscDefined(USE_DEBUG)) {
     Mat       Y2, T_diff;
     PetscReal norm_T, norm_diff;
 
     /* Compute Y2 = Y * Y' = T^-1 */
-    PetscCall(MatMatTransposeMult(*Y, *Y, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Y2));
+    PetscCall(MatMatMult(*Y, *Y, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Y2));
 
     /* Compute T_diff = T * T^-1 = U^2 = U = I */
     PetscCall(MatMatMult(Y2, impl->I_StS, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T_diff));
@@ -748,15 +753,8 @@ static PetscErrorCode PetscDataAssimilatorApplySqrtTInverse(PetscDataAssimilator
     /* Compute norms for comparison */
     PetscCall(MatNorm(U, NORM_FROBENIUS, &norm_T));
     PetscCall(MatNorm(T_diff, NORM_FROBENIUS, &norm_diff));
-    /* Verify that ||Y * Y^T * T - U[U=I] || / ||U|| is small */
-    if (norm_T > 0) {
-      PetscReal relative_error = norm_diff / norm_T;
-      if (relative_error > 1.e-10) {
-        PetscCall(PetscPrintf(PetscObjectComm((PetscObject)da), "WARNING: T^{-1/2} verification failed! ||T*Y*Y - U||/||U|| = %g\n", (double)relative_error));
-        PetscCall(MatNorm(T_diff, NORM_FROBENIUS, &norm_diff));
-      }
-    }
-
+    /* Verify that ||Y * Y * T - U[U=I] || / ||U|| is small */
+    PetscCheck(norm_diff / norm_T < 1.e-10, PETSC_COMM_SELF, PETSC_ERR_LIB, "T^{1/2} wrong. ||Y*Y*T-I||/||I||>tol %g",norm_diff);
     /* Cleanup */
     PetscCall(MatDestroy(&Y2));
     PetscCall(MatDestroy(&T_diff));
@@ -852,12 +850,15 @@ static PetscErrorCode PetscDataAssimilatorETKFAnalysis(PetscDataAssimilator da, 
   /* Alg 6.4 line 5-6: Build normalized innovation statistics            */
   /* ===================================================================== */
   /* Compute R^{-1/2} (assumes diagonal R) */
-  PetscCall(ComputeInverseSquareRootR(da->obs_error_var, &r_inv_sqrt));
+  PetscCall(VecDuplicate(da->obs_error_var, &r_inv_sqrt));
+  PetscCall(VecCopy(da->obs_error_var, r_inv_sqrt));
+  PetscCall(VecSqrtAbs(r_inv_sqrt));
+  PetscCall(VecReciprocal(r_inv_sqrt));
 
   /* S = R^{-1/2} * (Z - y_mean * 1') / sqrt(m - 1) */
   PetscCall(ComputeNormalizedInnovationMatrix(Z, y_mean, r_inv_sqrt, m, scale, &S));
 
-  /* delta_scaled = R^{-1/2} * (y^o - y_mean) */
+  /* delta_scaled = R^{-1/2} * (y^o - y_mean) [Alg 6.4 line 6] */
   PetscCall(VecDuplicate(y_mean, &delta_scaled));
   PetscCall(VecWAXPY(delta_scaled, -1.0, y_mean, observation));
   PetscCall(VecPointwiseMult(delta_scaled, delta_scaled, r_inv_sqrt));
@@ -880,19 +881,15 @@ static PetscErrorCode PetscDataAssimilatorETKFAnalysis(PetscDataAssimilator da, 
   /* Alg 6.4 line 9: Compute square-root transform T^{1/2} U = T^{1/2}     */
   /* ===================================================================== */
   PetscCall(PetscDataAssimilatorApplySqrtTInverse(da, da->U, &T_sqrt));
-
   /* ===================================================================== */
   /* Alg 6.4 line 9: Form transform G = w * 1' + sqrt(m - 1) * T^{1/2} * U */
   /* ===================================================================== */
-  /* w_ones = w * 1' (broadcast weight vector to all columns) */
+  /* w_ones = w * 1' (broadcast weight vector to all columns) -- remove */
   PetscCall(BroadcastWeightVector(w, m, &w_ones));
-
   /* sqrt(m-1) T^{1/2} * U */
   PetscCall(MatScale(T_sqrt, sqrt_m_minus_1));
-
   /* G = w_ones + T_sqrt_U */
   PetscCall(MatAXPY(w_ones, 1.0, T_sqrt, SAME_NONZERO_PATTERN));
-
   /* ===================================================================== */
   /* Alg 6.4 line 9: Update ensemble E = x_mean * 1' + X * G             */
   /* ===================================================================== */
