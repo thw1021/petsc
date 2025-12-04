@@ -40,11 +40,10 @@ static PetscErrorCode Fsnes(SNES snes, Vec X, Vec G, void *ctx)
   to take advantage of sparsity in the problem.  Although
   not recommended for general use
   in large-scale applications, it can be useful in checking the
-  correctness of a user-provided gradient.  Use the tao method TAOTEST
-  to get an indication of whether your gradient is correct.
+  correctness of a user-provided gradient using the command-line option `-tao_test_gradient`
   This finite difference gradient evaluation can be set using the routine `TaoSetGradient()` or by using the command line option -tao_fd_gradient
 
-.seealso: `Tao`, `TaoSetGradient()`
+.seealso: `Tao`, `TaoSetGradient()`, `TaoTermComputeGradientFD()`
 @*/
 PetscErrorCode TaoDefaultComputeGradient(Tao tao, Vec Xin, Vec G, void *dummy)
 {
@@ -176,6 +175,28 @@ PetscErrorCode TaoDefaultComputeHessianColor(Tao tao, Vec V, Mat H, Mat B, void 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  TaoDefaultComputeHessianMFFD - Computes a Hessian `Mat` object that can perform matrix-vector products using `MATMFFD`.
+
+  Collective
+
+  Input Parameters:
++ tao - the `Tao` context
+. X   - compute Hessian at this point
+- ctx - ignored
+
+  Output Parameters:
++ H - Hessian matrix of type `MATMFFD`
+- B - should be `NULL` or equal to `H`
+
+  Level: advanced
+
+  Note:
+  This can be passed to `TaoSetHessian()` to use `MATMFFD` for approximate Hessian-vector products.  The matrix `H` can originate from
+  `MatCreateMFFD()` or from `TaoTermCreateHessianMFFD()`
+
+.seealso: `Tao`, `MATMFFD`, `MatCreateMFFD()`, `TaoTermCreateMFFD()`
+@*/
 PetscErrorCode TaoDefaultComputeHessianMFFD(Tao tao, Vec X, Mat H, Mat B, void *ctx)
 {
   PetscInt  n, N;
