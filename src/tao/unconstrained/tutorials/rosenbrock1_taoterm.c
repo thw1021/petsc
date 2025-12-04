@@ -188,7 +188,7 @@ static PetscErrorCode CreateSolutionVec(TaoTerm term, Vec *solution)
 
    test:
      suffix: add_term
-     args: -tao_type nls -tao_add_terms extra_ -extra_tao_term_type halfl2squared
+     args: -tao_type nls -tao_add_terms extra_ -extra_tao_term_type halfl2squared -tao_view ::ascii_info_detail
 
    test:
      suffix: separate_hessians
