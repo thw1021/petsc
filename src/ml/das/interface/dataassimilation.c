@@ -18,7 +18,7 @@
    - Deterministic square-root updates for numerical stability
    - Modular design allowing for multiple DA algorithm implementations
 */
-#include <petsc/private/dataassimilatorimpl.h>
+#include <petsc/private/dasimpl.h>
 #include <petscblaslapack.h>
 
 PetscClassId      PETSCDAS_CLASSID          = 0;
@@ -85,7 +85,7 @@ PETSC_EXTERN PetscErrorCode PetscDASETKFRegister(void);
 
   Level: developer
 
-.seealso: [](ch_dataassimilator), `PetscDASRegisterAll()`, `PetscDASSetType()`
+.seealso: [](ch_das), `PetscDASRegisterAll()`, `PetscDASSetType()`
 @*/
 PetscErrorCode PetscDASRegister(const char sname[], PetscErrorCode (*function)(PetscDAS))
 {
@@ -102,7 +102,7 @@ PetscErrorCode PetscDASRegister(const char sname[], PetscErrorCode (*function)(P
 
   Level: developer
 
-.seealso: [](ch_dataassimilator), `PetscDASRegister()`
+.seealso: [](ch_das), `PetscDASRegister()`
 @*/
 PetscErrorCode PetscDASRegisterAll(void)
 {
@@ -286,7 +286,7 @@ static PetscErrorCode PetscDASComputeAnomalies_Default(PetscDAS da, Mat *anomali
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDASDestroy()`, `PetscDASSetType()`, `PetscDASSetUp()`
+.seealso: [](ch_das), `PetscDASDestroy()`, `PetscDASSetType()`, `PetscDASSetUp()`
 @*/
 PetscErrorCode PetscDASCreate(MPI_Comm comm, PetscDAS *da_out)
 {
@@ -327,7 +327,7 @@ PetscErrorCode PetscDASCreate(MPI_Comm comm, PetscDAS *da_out)
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDASCreate()`
+.seealso: [](ch_das), `PetscDASCreate()`
 @*/
 PetscErrorCode PetscDASDestroy(PetscDAS *da)
 {
@@ -360,7 +360,7 @@ PetscErrorCode PetscDASDestroy(PetscDAS *da)
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDASGetType()`, `PetscDASRegister()`
+.seealso: [](ch_das), `PetscDASGetType()`, `PetscDASRegister()`
 @*/
 PetscErrorCode PetscDASSetType(PetscDAS da, PetscDASType type)
 {
@@ -401,7 +401,7 @@ PetscErrorCode PetscDASSetType(PetscDAS da, PetscDASType type)
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDASSetType()`
+.seealso: [](ch_das), `PetscDASSetType()`
 @*/
 PetscErrorCode PetscDASGetType(PetscDAS da, PetscDASType *type)
 {
@@ -424,7 +424,7 @@ PetscErrorCode PetscDASGetType(PetscDAS da, PetscDASType *type)
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDASSetType()`, `PetscObjectOptionsBegin()`
+.seealso: [](ch_das), `PetscDASSetType()`, `PetscObjectOptionsBegin()`
 @*/
 PetscErrorCode PetscDASSetFromOptions(PetscDAS da)
 {
@@ -458,7 +458,7 @@ PetscErrorCode PetscDASSetFromOptions(PetscDAS da)
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDASGetSizes()`, `PetscDASSetUp()`
+.seealso: [](ch_das), `PetscDASGetSizes()`, `PetscDASSetUp()`
 @*/
 PetscErrorCode PetscDASSetSizes(PetscDAS da, PetscInt state_size, PetscInt obs_size, PetscInt ensemble_size)
 {
@@ -491,7 +491,7 @@ PetscErrorCode PetscDASSetSizes(PetscDAS da, PetscInt state_size, PetscInt obs_s
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDASSetSizes()`
+.seealso: [](ch_das), `PetscDASSetSizes()`
 @*/
 PetscErrorCode PetscDASGetSizes(PetscDAS da, PetscInt *state_size, PetscInt *obs_size, PetscInt *ensemble_size)
 {
@@ -513,7 +513,7 @@ PetscErrorCode PetscDASGetSizes(PetscDAS da, PetscInt *state_size, PetscInt *obs
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDASSetSizes()`, `PetscDASSetType()`
+.seealso: [](ch_das), `PetscDASSetSizes()`, `PetscDASSetType()`
 @*/
 PetscErrorCode PetscDASSetUp(PetscDAS da)
 {
@@ -567,7 +567,7 @@ PetscErrorCode PetscDASSetUp(PetscDAS da)
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDASViewFromOptions()`
+.seealso: [](ch_das), `PetscDASViewFromOptions()`
 @*/
 PetscErrorCode PetscDASView(PetscDAS da, PetscViewer viewer)
 {
@@ -606,7 +606,7 @@ PetscErrorCode PetscDASView(PetscDAS da, PetscViewer viewer)
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDASView()`, `PetscObjectViewFromOptions()`
+.seealso: [](ch_das), `PetscDASView()`, `PetscObjectViewFromOptions()`
 @*/
 PetscErrorCode PetscDASViewFromOptions(PetscDAS da, PetscObject obj, const char option[])
 {
@@ -627,7 +627,7 @@ PetscErrorCode PetscDASViewFromOptions(PetscDAS da, PetscObject obj, const char 
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDASGetObsErrorVariance()`
+.seealso: [](ch_das), `PetscDASGetObsErrorVariance()`
 @*/
 PetscErrorCode PetscDASSetObsErrorVariance(PetscDAS da, Vec obs_error_var)
 {
@@ -653,7 +653,7 @@ PetscErrorCode PetscDASSetObsErrorVariance(PetscDAS da, Vec obs_error_var)
 
   Level: beginner
 
-.seealso: [](ch_dataassimilator), `PetscDASSetObsErrorVariance()`
+.seealso: [](ch_das), `PetscDASSetObsErrorVariance()`
 @*/
 PetscErrorCode PetscDASGetObsErrorVariance(PetscDAS da, Vec *obs_error_var)
 {
@@ -675,7 +675,7 @@ PetscErrorCode PetscDASGetObsErrorVariance(PetscDAS da, Vec *obs_error_var)
 
   Level: developer
 
-.seealso: [](ch_dataassimilator), `PetscDASGetOrthogonalTransform()`, `PetscDASETKFAnalysis()`
+.seealso: [](ch_das), `PetscDASGetOrthogonalTransform()`, `PetscDASETKFAnalysis()`
 @*/
 PetscErrorCode PetscDASSetOrthogonalTransform(PetscDAS da, Mat U)
 {
@@ -702,7 +702,7 @@ PetscErrorCode PetscDASSetOrthogonalTransform(PetscDAS da, Mat U)
 
   Level: developer
 
-.seealso: [](ch_dataassimilator), `PetscDASSetOrthogonalTransform()`
+.seealso: [](ch_das), `PetscDASSetOrthogonalTransform()`
 @*/
 PetscErrorCode PetscDASGetOrthogonalTransform(PetscDAS da, Mat *U)
 {
@@ -727,7 +727,7 @@ PetscErrorCode PetscDASGetOrthogonalTransform(PetscDAS da, Mat *U)
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDASRestoreEnsembleMember()`, `PetscDASSetEnsembleMember()`
+.seealso: [](ch_das), `PetscDASRestoreEnsembleMember()`, `PetscDASSetEnsembleMember()`
 @*/
 PetscErrorCode PetscDASGetEnsembleMember(PetscDAS da, PetscInt member_idx, Vec *member)
 {
@@ -753,7 +753,7 @@ PetscErrorCode PetscDASGetEnsembleMember(PetscDAS da, PetscInt member_idx, Vec *
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDASGetEnsembleMember()`
+.seealso: [](ch_das), `PetscDASGetEnsembleMember()`
 @*/
 PetscErrorCode PetscDASRestoreEnsembleMember(PetscDAS da, PetscInt member_idx, Vec *member)
 {
@@ -777,7 +777,7 @@ PetscErrorCode PetscDASRestoreEnsembleMember(PetscDAS da, PetscInt member_idx, V
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDASGetEnsembleMember()`
+.seealso: [](ch_das), `PetscDASGetEnsembleMember()`
 @*/
 PetscErrorCode PetscDASSetEnsembleMember(PetscDAS da, PetscInt member_idx, Vec member)
 {
@@ -806,7 +806,7 @@ PetscErrorCode PetscDASSetEnsembleMember(PetscDAS da, PetscInt member_idx, Vec m
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDASComputeAnomalies()`
+.seealso: [](ch_das), `PetscDASComputeAnomalies()`
 @*/
 PetscErrorCode PetscDASComputeMean(PetscDAS da, Vec mean)
 {
@@ -829,7 +829,7 @@ PetscErrorCode PetscDASComputeMean(PetscDAS da, Vec mean)
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDASComputeMean()`
+.seealso: [](ch_das), `PetscDASComputeMean()`
 @*/
 PetscErrorCode PetscDASComputeAnomalies(PetscDAS da, Mat *anomalies)
 {
@@ -854,7 +854,7 @@ PetscErrorCode PetscDASComputeAnomalies(PetscDAS da, Mat *anomalies)
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDASApplyModel()`, `PetscDASETKFAnalysis()`
+.seealso: [](ch_das), `PetscDASApplyModel()`, `PetscDASETKFAnalysis()`
 @*/
 PetscErrorCode PetscDASAnalysis(PetscDAS da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
 {
@@ -878,7 +878,7 @@ PetscErrorCode PetscDASAnalysis(PetscDAS da, Vec observation, PetscErrorCode (*o
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDASAnalysis()`
+.seealso: [](ch_das), `PetscDASAnalysis()`
 @*/
 PetscErrorCode PetscDASApplyModel(PetscDAS da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
 {
@@ -907,7 +907,7 @@ PetscErrorCode PetscDASApplyModel(PetscDAS da, PetscErrorCode (*model)(Vec, Vec,
   from uniform random numbers. Handles edge cases where uniform random values
   approach 0 or 1.
 
-.seealso: [](ch_dataassimilator), `PetscRandomSetInterval()`, `VecSetRandom()`
+.seealso: [](ch_das), `PetscRandomSetInterval()`, `VecSetRandom()`
 @*/
 PetscErrorCode VecSetRandomGaussian(Vec v, PetscRandom rng, PetscReal mean, PetscReal std_dev)
 {
