@@ -35,7 +35,7 @@ int main(int argc, char **argv)
   CallbackCtx  cb_ctx;
   Vec          x_term, x_callback, x2, diff;
   Mat          H2;
-  PetscReal    norm_diff, rel_diff, diag_val;
+  PetscReal    norm_diff, diag_val;
   PetscBool    opt, is_diag, is_cdiag, is_aij, is_dense;
   const char  *mtype = MATAIJ;
   char         typeName[256] = "";
@@ -58,7 +58,7 @@ int main(int argc, char **argv)
 
   /* Initialize typeName to default if option was not set */
   if (!opt) PetscCall(PetscStrcpy(typeName, mtype));
-
+  
   PetscCall(PetscStrcmp(typeName, MATDIAGONAL, &is_diag));
   PetscCall(PetscStrcmp(typeName, MATCONSTANTDIAGONAL, &is_cdiag));
   PetscCall(PetscStrcmp(typeName, MATAIJ, &is_aij));
@@ -79,7 +79,6 @@ int main(int argc, char **argv)
     PetscCall(VecDestroy(&diag_vec));
   } else if (is_cdiag) {
     /* Create a constant diagonal matrix */
-    PetscScalar diag_val;
     PetscCheck(m == n, comm, PETSC_ERR_ARG_INCOMP, "For constant diagonal matrix, m and n must be equal (got m=%" PetscInt_FMT ", n=%" PetscInt_FMT ")", m, n);
     PetscCall(PetscRandomGetValue(rand, &diag_val));
     PetscCall(MatCreateConstantDiagonal(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, diag_val, &A));
@@ -93,6 +92,7 @@ int main(int argc, char **argv)
   } else {
     /* Create an AIJ matrix (default) */
     PetscCall(MatCreateSeqAIJ(comm, m, n, PETSC_DEFAULT, NULL, &A));
+    PetscCall(MatSetFromOptions(A));
     PetscCall(MatSetRandom(A, rand));
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
@@ -154,13 +154,13 @@ int main(int argc, char **argv)
     PetscCall(VecDestroy(&A_diag));
     PetscCall(VecDestroy(&H2_diag));
   } else if (is_cdiag) {
-    PetscScalar diag_val_squared;
-    PetscInt    M, N;
+      PetscScalar diag_val_squared;
+      PetscInt    M, N;
 
-    PetscCall(MatConstantDiagonalGetConstant(A, &diag_val));
-    diag_val_squared = diag_val * diag_val;
-    PetscCall(MatGetSize(A, &M, &N));
-    PetscCall(MatCreateConstantDiagonal(comm, PETSC_DECIDE, PETSC_DECIDE, N, N, diag_val_squared, &H2));
+      PetscCall(MatConstantDiagonalGetConstant(A, &diag_val));
+      diag_val_squared = diag_val * diag_val;
+      PetscCall(MatGetSize(A, &M, &N));
+      PetscCall(MatCreateConstantDiagonal(comm, PETSC_DECIDE, PETSC_DECIDE, N, N, diag_val_squared, &H2));
   } else {
     PetscCall(MatTransposeMatMult(A, A, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &H2));
     PetscCall(MatAssemblyBegin(H2, MAT_FINAL_ASSEMBLY));
@@ -183,8 +183,8 @@ int main(int argc, char **argv)
   PetscCall(VecCopy(x_term, diff));
   PetscCall(VecAXPY(diff, -1.0, x_callback));
   PetscCall(VecNorm(diff, NORM_2, &norm_diff));
-  rel_diff = norm_diff / PetscMax(norm_diff, 1.0e-10);
-  PetscCall(PetscPrintf(comm, "Solutions match (relative difference < 1e-12): %6.10e\n", (double)rel_diff));
+  if (norm_diff <= 1.e-12) PetscCall(PetscPrintf(comm, "Relative difference < 1e-12\n"));
+  else PetscCall(PetscPrintf(comm, "Relative difference > 1e-12: %6.10e\n", (double)norm_diff));
   PetscCall(VecDestroy(&x2));
   PetscCall(VecDestroy(&diff));
   PetscCall(MatDestroy(&H2));
@@ -342,7 +342,83 @@ static PetscErrorCode FormHessian_Callback(Tao tao, Vec x, Mat H, Mat Hpre, void
      requires: !complex !single !quad !defined(PETSC_USE_64BIT_INDICES) !__float128
 
    test:
+     suffix: diag_diag
      args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type diagonal
+     args: -tao_term_hessian_mat_type diagonal -mapping_mtype diagonal
+
+   test:
+     suffix: diag_cdiag
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type diagonal -mapping_mtype constantdiagonal
+
+   test:
+     suffix: diag_dense
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type diagonal -mapping_mtype dense
+
+   test:
+     suffix: diag_aij
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type diagonal -mapping_mtype aij
+
+   test:
+     suffix: cdiag_diag
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type constantdiagonal -mapping_mtype diagonal
+
+   test:
+     suffix: cdiag_cdiag
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type constantdiagonal -mapping_mtype constantdiagonal
+
+   test:
+     suffix: cdiag_dense
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type constantdiagonal -mapping_mtype dense
+
+   test:
+     suffix: cdiag_aij
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type constantdiagonal -mapping_mtype aij
+
+   test:
+     suffix: dense_diag
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type dense -mapping_mtype diagonal
+
+   test:
+     suffix: dense_cdiag
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type dense -mapping_mtype constantdiagonal
+
+   test:
+     suffix: dense_dense
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type dense -mapping_mtype dense
+
+   test:
+     suffix: dense_aij
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type dense -mapping_mtype aij
+
+   test:
+     suffix: aij_diag
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type aij -mapping_mtype diagonal
+
+   test:
+     suffix: aij_cdiag
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type aij -mapping_mtype constantdiagonal
+
+   test:
+     suffix: aij_dense
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type aij -mapping_mtype dense
+
+   test:
+     suffix: aij_aij
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type aij -mapping_mtype aij
 
 TEST*/

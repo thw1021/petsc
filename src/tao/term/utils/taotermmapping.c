@@ -390,31 +390,61 @@ static PetscErrorCode TaoTermMappingCreateAPWorkMatrix(Mat map, Mat unmapped, Ma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// This function takes in unmapped_H, map, and returns matrix for mapped_H, which is PtAP
 static PetscErrorCode TaoTermMappingCreatePtAP(Mat unmapped_H, Mat map, Mat *H)
 {
-  PetscBool is_uH_diag, is_map_diag, is_uH_cdiag;
+  PetscBool is_uH_diag, is_uH_cdiag, is_map_diag, is_map_cdiag;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)unmapped_H, MATDIAGONAL, &is_uH_diag));
   PetscCall(PetscObjectTypeCompare((PetscObject)unmapped_H, MATCONSTANTDIAGONAL, &is_uH_cdiag));
-  PetscCall(PetscObjectBaseTypeCompareAny((PetscObject)map, &is_map_diag, MATDIAGONAL, MATCONSTANTDIAGONAL, ""));
+  PetscCall(PetscObjectTypeCompare((PetscObject)map, MATDIAGONAL, &is_map_diag));
+  PetscCall(PetscObjectTypeCompare((PetscObject)map, MATCONSTANTDIAGONAL, &is_map_cdiag));
 
   // TODO support for PtAP with diagonal would be ideal
-  if (is_map_diag) {
-    // map is diag, which means mapped's same size as unmapped
-    // Technically, if A is dense, PtAP is available, but ignoring for now
+  if (is_map_diag && is_uH_diag) {
     PetscCall(MatDuplicate(unmapped_H, MAT_DO_NOT_COPY_VALUES, H));
-  } else if (is_uH_cdiag) {
-    // mapped \gets \alpha P^T P
+  } else if (is_map_cdiag && is_uH_cdiag) {
+    // MatDiagonal does not support setvalues, thus AIJ
+    PetscLayout rlayout;
+    PetscInt    m, M;
+
+    PetscCall(MatGetLayouts(map, &rlayout, NULL));
+    PetscCall(MatGetSize(map, &M, NULL));
+    PetscCall(MatGetLocalSize(map, &m, NULL));
+    PetscCall(MatCreate(PetscObjectComm((PetscObject)map), H));
+    PetscCall(MatSetSizes(*H, m, m, M, M));
+    PetscCall(MatSetLayouts(*H, rlayout, rlayout));
+    PetscCall(MatSetType(*H, MATAIJ));
+    PetscCall(MatSetUp(*H));
+  } else if ((is_map_diag && !is_uH_diag && !is_uH_cdiag)) {
+    PetscCall(MatDuplicate(unmapped_H, MAT_DO_NOT_COPY_VALUES, H));
+  } else if (is_map_cdiag && is_uH_diag) {
+    // MatDiagonal does not support setvalues, thus AIJ
+    PetscLayout rlayout;
+    PetscInt    m, M;
+
+    PetscCall(MatGetLayouts(map, &rlayout, NULL));
+    PetscCall(MatGetSize(map, &M, NULL));
+    PetscCall(MatGetLocalSize(map, &m, NULL));
+    PetscCall(MatCreate(PetscObjectComm((PetscObject)map), H));
+    PetscCall(MatSetSizes(*H, m, m, M, M));
+    PetscCall(MatSetLayouts(*H, rlayout, rlayout));
+    PetscCall(MatSetType(*H, MATAIJ));
+    PetscCall(MatSetUp(*H));
+  } else if (is_map_diag && is_uH_cdiag) {
+    PetscCall(MatDuplicate(map, MAT_DO_NOT_COPY_VALUES, H));
+  } else if ((is_uH_diag && !is_map_diag && !is_map_cdiag) || (is_uH_cdiag && !is_map_diag && !is_map_cdiag)) {
     PetscCall(MatTransposeMatMult(map, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
-  } else if (is_uH_diag) {
-    PetscCall(MatTransposeMatMult(map, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
+  } else if (!is_uH_diag && !is_uH_cdiag && is_map_cdiag) {
+    PetscCall(MatTransposeMatMult(unmapped_H, unmapped_H, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
   } else {
     //PetscCall(MatPtAP(unmapped_H, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
     PetscCall(MatProductCreate(unmapped_H, map, NULL, H));
     PetscCall(MatProductSetType(*H, MATPRODUCT_PtAP));
     PetscCall(MatProductSetFromOptions(*H));
     PetscCall(MatProductSymbolic(*H));
+    //TODO need to check mat->ops->ptap ?? and if not ... something...
     PetscCall(MatProductNumeric(*H));
     PetscCall(MatZeroEntries(*H));
     PetscCall(MatAssemblyBegin(*H, MAT_FINAL_ASSEMBLY));
