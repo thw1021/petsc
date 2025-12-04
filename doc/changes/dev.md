@@ -129,3 +129,7 @@
 
 ```{rubric} Fortran:
 ```
+
+- Replace `./configure` option `--with-mpi-f90module-visibility` with `--with-mpi-ftn-module=[mpi or mpi_f08]`
+- Add `PETSC_INT_KIND` and `PETSC_MPIINT_KIND`
+
