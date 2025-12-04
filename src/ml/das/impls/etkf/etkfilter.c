@@ -31,7 +31,7 @@ static PetscBool         PetscDASETKFPackageInitialized = PETSC_FALSE;
 static PetscErrorCode ComputeObservationEnsemble(PetscDAS da, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx, Mat *Z)
 {
   /* Ensemble and observation-related vectors */
-  Vec ensemble_member_in, observation_out, temp_observation;
+  Vec ensemble_member_in, observation_out;
   /* Loop counter and ensemble size */
   PetscInt ensemble_idx, ensemble_size;
 
@@ -50,51 +50,25 @@ static PetscErrorCode ComputeObservationEnsemble(PetscDAS da, PetscErrorCode (*o
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, ensemble_size, NULL, Z));
   PetscCall(MatSetUp(*Z));
 
-  /* Create temporary observation vector for operator application */
-  PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &temp_observation));
-  PetscCall(VecSetSizes(temp_observation, PETSC_DECIDE, da->obs_size));
-  PetscCall(VecSetFromOptions(temp_observation));
-
   /* Apply observation operator H to each ensemble member: Z_i = H(E_i) */
   for (ensemble_idx = 0; ensemble_idx < ensemble_size; ensemble_idx++) {
     /* Get read-only access to ensemble member */
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, ensemble_idx, &ensemble_member_in));
 
-    /* Apply observation operator: temp_observation = H(ensemble_member_in) */
-    PetscCall(observation_operator(ensemble_member_in, temp_observation, obs_ctx));
-
-    /* Release ensemble member */
-    PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, ensemble_idx, &ensemble_member_in));
-
-    /* Write result to observation ensemble matrix */
+    /* Get write access to the corresponding column in Z.
+       Directly writing to Z avoids allocating a temporary vector and performing a copy. */
     PetscCall(MatDenseGetColumnVecWrite(*Z, ensemble_idx, &observation_out));
-    PetscCall(VecCopy(temp_observation, observation_out));
+
+    /* Apply observation operator: observation_out = H(ensemble_member_in) */
+    PetscCall(observation_operator(ensemble_member_in, observation_out, obs_ctx));
+
+    /* Restore vectors */
     PetscCall(MatDenseRestoreColumnVecWrite(*Z, ensemble_idx, &observation_out));
+    PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, ensemble_idx, &ensemble_member_in));
   }
 
-  /* Clean up temporary vector */
-  PetscCall(VecDestroy(&temp_observation));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/*
-  ComputeInverseSquareRootR - Computes R^{-1/2} from diagonal observation error variance
-
-  Input Parameter:
-. obs_error_var - diagonal of observation error covariance matrix R
-
-  Output Parameter:
-. r_inv_sqrt - element-wise R^{-1/2}
-*/
-/* static PetscErrorCode ComputeInverseSquareRootR(Vec obs_error_var, Vec *r_inv_sqrt) */
-/* { */
-/*   PetscFunctionBegin; */
-/*   PetscCall(VecDuplicate(obs_error_var, r_inv_sqrt)); */
-/*   PetscCall(VecCopy(obs_error_var, *r_inv_sqrt)); */
-/*   PetscCall(VecSqrtAbs(*r_inv_sqrt)); */
-/*   PetscCall(VecReciprocal(*r_inv_sqrt)); */
-/*   PetscFunctionReturn(PETSC_SUCCESS); */
-/* } */
 
 /*
   ComputeNormalizedInnovationMatrix - Computes S = R^{-1/2}(Z - y_mean * 1')/sqrt(m-1) [Alg 6.4 line 5]
@@ -176,39 +150,33 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
   weight vector and 1 is an m-dimensional vector of ones. This matrix is a fundamental
   component in the ETKF transform\: G = w * 1^T + sqrt(m-1) * T^{1/2} * U.
 
-  The implementation uses column-wise vector operations following PETSc best practices,
-  which ensures\:
-  - Proper parallel distribution and communication
-  - Efficient memory access patterns
-  - Consistency with other PETSc matrix operations
+  The implementation uses direct array access for performance, avoiding the overhead of
+  repeated vector wrapping and copying. This is particularly efficient for dense matrices
+  where memory is contiguous column-wise.
 
-  Complexity\: O(m^2) time for sequential replication, O(m^2/p) parallel time where p
-  is the number of processes. Memory\: O(m^2) total, O(m^2/p) per process.
-
-  Alternative Implementation Considered\:
-  Direct array manipulation via [`MatDenseGetArrayWrite()`](petscmat.h) could reduce function
-  call overhead but sacrifices code clarity and parallel safety. The current approach
-  prioritizes maintainability and correctness.
+  Complexity\: O(m^2) time and memory.
 
   Level\: developer
 
-.seealso\: [`ComputeAnalysisWeights()`](etkfilter.c:178), [`MatDenseGetColumnVecWrite()`](petscmat.h), [`PetscDASETKFAnalysis()`](etkfilter.c:522)
+.seealso\: [`PetscDASETKFAnalysis()`](etkfilter.c:837), [`MatDenseGetArrayWrite()`](petscmat.h)
 */
 static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
 {
-  Vec      col_out;
-  PetscInt i, w_size, w_size_local;
-  PetscInt mat_rows_local, mat_cols_local;
+  const PetscScalar *w_array;
+  PetscScalar       *mat_array;
+  PetscInt           w_size, w_size_local, mat_rows_local, mat_cols_local;
+  PetscInt           i, lda;
 
   PetscFunctionBegin;
-  /* Validate input parameters for type correctness and null pointers */
+  /* Validate input parameters */
   PetscValidHeaderSpecific(w, VEC_CLASSID, 1);
   PetscValidLogicalCollectiveInt(w, m, 2);
   PetscAssertPointer(w_ones, 3);
-  /* Validate ensemble size is physically meaningful */
   PetscCheck(m > 0, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m must be positive for broadcasting, got %" PetscInt_FMT, m);
-  PetscCheck(m < PETSC_MAX_INT / m, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m = %" PetscInt_FMT " too large, m*m would overflow", m);
-  /* Verify vector dimensions match ensemble size (global and local) */
+  /* Check for potential overflow in matrix size calculation */
+  PetscCheck(m <= PETSC_MAX_INT / m, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m = %" PetscInt_FMT " too large", m);
+
+  /* Verify dimensions */
   PetscCall(VecGetSize(w, &w_size));
   PetscCall(VecGetLocalSize(w, &w_size_local));
   PetscCheck(w_size == m, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_INCOMP, "Weight vector global size (%" PetscInt_FMT ") must match ensemble size (%" PetscInt_FMT ")", w_size, m);
@@ -216,23 +184,26 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
   /* Create dense matrix with parallel distribution matching weight vector */
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)w), w_size_local, PETSC_DECIDE, m, m, NULL, w_ones));
   PetscCall(MatSetUp(*w_ones));
+
   /* Verify consistent parallel layout between vector and matrix */
   PetscCall(MatGetLocalSize(*w_ones, &mat_rows_local, &mat_cols_local));
   PetscCheck(mat_rows_local == w_size_local, PetscObjectComm((PetscObject)w), PETSC_ERR_PLIB, "Matrix row distribution (%" PetscInt_FMT ") inconsistent with vector distribution (%" PetscInt_FMT ")", mat_rows_local, w_size_local);
+  PetscCheck(mat_cols_local == m, PetscObjectComm((PetscObject)w), PETSC_ERR_PLIB, "Matrix local columns (%" PetscInt_FMT ") must equal global columns m (%" PetscInt_FMT ") for MPIDense", mat_cols_local, m);
 
-  /* Broadcast weight vector: copy w to each of the m columns */
-  for (i = 0; i < m; i++) {
-    /* Obtain write access to column i of the output matrix */
-    PetscCall(MatDenseGetColumnVecWrite(*w_ones, i, &col_out));
+  /* Access raw arrays for efficient broadcasting */
+  PetscCall(VecGetArrayRead(w, &w_array));
+  PetscCall(MatDenseGetArrayWrite(*w_ones, &mat_array));
+  PetscCall(MatDenseGetLDA(*w_ones, &lda));
 
-    /* Copy weight vector to this column: w_ones[:, i] = w */
-    PetscCall(VecCopy(w, col_out));
+  /* Copy w to each column of w_ones */
+  /* Note: MatDense uses column-major storage. We copy the vector w into each column. */
+  for (i = 0; i < m; i++) { PetscCall(PetscArraycpy(mat_array + i * lda, w_array, w_size_local)); }
 
-    /* Release column vector, marking it as modified */
-    PetscCall(MatDenseRestoreColumnVecWrite(*w_ones, i, &col_out));
-  }
+  /* Restore arrays */
+  PetscCall(MatDenseRestoreArrayWrite(*w_ones, &mat_array));
+  PetscCall(VecRestoreArrayRead(w, &w_array));
 
-  /* Finalize matrix assembly for parallel consistency and communication */
+  /* Finalize matrix assembly */
   PetscCall(MatAssemblyBegin(*w_ones, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*w_ones, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -263,21 +234,23 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
   Performance Considerations\:
   - Memory\: Creates one temporary matrix X_G of size (state_size x m)
   - Time complexity\: O(state_size * m^2) for matrix multiply + O(state_size * m) for additions
+  - Optimization\: Uses direct array access for dense matrices to avoid Vec overhead
   - Parallel\: Fully parallelizable across both matrix multiply and column updates
-  - For very large state spaces, consider using MatMatMultSymbolic/Numeric to reuse structure
 
   Level\: developer
 
 .seealso\: [`PetscDASETKFAnalysis()`](etkfilter.c:522), [`ComputeAnalysisWeights()`](etkfilter.c:178),
-[`BroadcastWeightVector()`](etkfilter.c:245), [`MatMatMult()`](petscmat.h), [`VecWAXPY()`](petscvec.h)
+[`BroadcastWeightVector()`](etkfilter.c:245), [`MatMatMult()`](petscmat.h), [`MatDenseGetArrayRead()`](petscmat.h)
 */
 static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscInt m, Mat ensemble)
 {
-  Mat      X_G;
-  Vec      col_in, col_out;
-  PetscInt ensemble_idx;
-  PetscInt x_rows, x_cols, g_rows, g_cols, ens_rows, ens_cols;
-  PetscInt mean_size;
+  Mat                X_G;
+  const PetscScalar *xg_array, *mean_array;
+  PetscScalar       *ens_array;
+  PetscInt           x_rows, x_cols, g_rows, g_cols, ens_rows, ens_cols;
+  PetscInt           n_local_ens, n_local_xg, mean_local_size;
+  PetscInt           lda_ens, lda_xg;
+  PetscInt           mean_size, i, j;
 
   PetscFunctionBegin;
   /* Validate input parameters for correct types and null pointers */
@@ -286,11 +259,13 @@ static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscI
   PetscValidHeaderSpecific(G, MAT_CLASSID, 3);
   PetscValidLogicalCollectiveInt(X, m, 4);
   PetscValidHeaderSpecific(ensemble, MAT_CLASSID, 5);
+
   /* Retrieve and validate matrix dimensions for compatibility */
   PetscCall(MatGetSize(X, &x_rows, &x_cols));
   PetscCall(MatGetSize(G, &g_rows, &g_cols));
   PetscCall(MatGetSize(ensemble, &ens_rows, &ens_cols));
   PetscCall(VecGetSize(mean, &mean_size));
+
   /* Verify dimension consistency across all inputs */
   PetscCheck(x_cols == m, PetscObjectComm((PetscObject)X), PETSC_ERR_ARG_INCOMP, "Anomaly matrix X columns (%" PetscInt_FMT ") must equal ensemble size (%" PetscInt_FMT ")", x_cols, m);
   PetscCheck(g_rows == m, PetscObjectComm((PetscObject)G), PETSC_ERR_ARG_INCOMP, "Transform matrix G rows (%" PetscInt_FMT ") must equal ensemble size (%" PetscInt_FMT ")", g_rows, m);
@@ -302,24 +277,36 @@ static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscI
   /* Compute transformed anomaly matrix: X_G = X * G (state_size x m) */
   PetscCall(MatMatMult(X, G, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &X_G));
 
-  /* Update each ensemble member: E_i = mean + (X*G)_i */
-  for (ensemble_idx = 0; ensemble_idx < m; ensemble_idx++) {
-    /* Get read-only access to transformed anomaly column */
-    PetscCall(MatDenseGetColumnVecRead(X_G, ensemble_idx, &col_in));
+  /* Access underlying data arrays for direct performance access
+     This avoids creating/destroying m Vec objects and calling VecWAXPY m times. */
+  PetscCall(MatDenseGetArrayRead(X_G, &xg_array));
+  PetscCall(MatDenseGetArrayWrite(ensemble, &ens_array));
+  PetscCall(VecGetArrayRead(mean, &mean_array));
 
-    /* Get write access to ensemble column for in-place update */
-    PetscCall(MatDenseGetColumnVecWrite(ensemble, ensemble_idx, &col_out));
+  /* Get local dimensions and strides for array traversal */
+  PetscCall(MatGetLocalSize(ensemble, &n_local_ens, NULL));
+  PetscCall(MatGetLocalSize(X_G, &n_local_xg, NULL));
+  PetscCall(VecGetLocalSize(mean, &mean_local_size));
+  PetscCall(MatDenseGetLDA(ensemble, &lda_ens));
+  PetscCall(MatDenseGetLDA(X_G, &lda_xg));
 
-    /* Compute: ensemble[:, i] = mean + (X*G)[:, i]
-       VecWAXPY performs: col_out = 1.0 * col_in + mean */
-    PetscCall(VecWAXPY(col_out, 1.0, mean, col_in));
+  /* Verify local dimensions match before direct array access */
+  PetscCheck(n_local_ens == n_local_xg, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Local row size mismatch: ensemble (%" PetscInt_FMT ") vs X_G (%" PetscInt_FMT ")", n_local_ens, n_local_xg);
+  PetscCheck(n_local_ens == mean_local_size, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Local row size mismatch: ensemble (%" PetscInt_FMT ") vs mean (%" PetscInt_FMT ")", n_local_ens, mean_local_size);
 
-    /* Restore column vectors, marking ensemble column as modified */
-    PetscCall(MatDenseRestoreColumnVecRead(X_G, ensemble_idx, &col_in));
-    PetscCall(MatDenseRestoreColumnVecWrite(ensemble, ensemble_idx, &col_out));
+  /* Update each ensemble member: E_ij = (XG)_ij + mean_i
+     Loop over columns (j) and rows (i) of the local data block */
+  for (j = 0; j < m; j++) {
+    const PetscScalar *xg_col  = xg_array + j * lda_xg;
+    PetscScalar       *ens_col = ens_array + j * lda_ens;
+    for (i = 0; i < n_local_ens; i++) { ens_col[i] = xg_col[i] + mean_array[i]; }
   }
 
-  /* Finalize ensemble matrix assembly for parallel consistency */
+  /* Restore arrays and finalize assembly */
+  PetscCall(VecRestoreArrayRead(mean, &mean_array));
+  PetscCall(MatDenseRestoreArrayWrite(ensemble, &ens_array));
+  PetscCall(MatDenseRestoreArrayRead(X_G, &xg_array));
+
   PetscCall(MatAssemblyBegin(ensemble, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(ensemble, MAT_FINAL_ASSEMBLY));
 
