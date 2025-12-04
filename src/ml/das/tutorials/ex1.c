@@ -1,5 +1,5 @@
 /* Data assimilation framework header (provides PetscDAS) */
-#include "petscdataassimilator.h"
+#include "petscdas.h"
 /* PETSc DMDA header (provides DM, DMDA functionality) */
 #include <petscdmda.h>
 #include <petscts.h>

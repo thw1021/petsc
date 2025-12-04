@@ -1,4 +1,4 @@
-(ch_dataassimilator)=
+(ch_das)=
 
 # PetscDAS: Ensemble Data Assimilation
 
