@@ -1,6 +1,6 @@
 #pragma once
 
-#include "petscdataassimilator.h"
+#include "petscdas.h"
 #include <petsc/private/petscimpl.h>
 
 /* PetscDAS object cookie */
