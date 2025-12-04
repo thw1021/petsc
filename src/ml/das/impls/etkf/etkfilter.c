@@ -1,5 +1,5 @@
-#include "petscdataassimilator.h"
-#include <petsc/private/dataassimilatorimpl.h>
+#include "petscdas.h"
+#include <petsc/private/dasimpl.h>
 #include <petscblaslapack.h>
 
 typedef struct {
@@ -852,7 +852,7 @@ static PetscErrorCode PetscDASApplySqrtTInverse(PetscDAS da, Mat U, Mat *Y)
 
   Level: advanced
 
-.seealso: [](ch_dataassimilator), `PetscDAS`, `PetscDASETKFApplyModel()`, `PetscDASComputeMean()`,
+.seealso: [](ch_das), `PetscDAS`, `PetscDASETKFApplyModel()`, `PetscDASComputeMean()`,
 `PetscDASComputeAnomalies()`
 */
 static PetscErrorCode PetscDASETKFAnalysis(PetscDAS da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
@@ -982,7 +982,7 @@ static PetscErrorCode PetscDASETKFAnalysis(PetscDAS da, Vec observation, PetscEr
 
   Level: intermediate
 
-.seealso: [](ch_dataassimilator), `PetscDAS`, `PetscDASETKFAnalysis()`
+.seealso: [](ch_das), `PetscDAS`, `PetscDASETKFAnalysis()`
 */
 static PetscErrorCode PetscDASETKFApplyModel(PetscDAS da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
 {
@@ -1025,7 +1025,7 @@ static PetscErrorCode PetscDASETKFApplyModel(PetscDAS da, PetscErrorCode (*model
 
   Level: advanced
 
-.seealso: [](ch_dataassimilator), `PetscDAS`, `PetscDASETKFGetSqrtType()`, `PetscDASETKFAnalysis()`
+.seealso: [](ch_das), `PetscDAS`, `PetscDASETKFGetSqrtType()`, `PetscDASETKFAnalysis()`
 @*/
 PetscErrorCode PetscDASETKFSetSqrtType(PetscDAS da, PetscDASETKFSqrtType type)
 {
@@ -1054,7 +1054,7 @@ PetscErrorCode PetscDASETKFSetSqrtType(PetscDAS da, PetscDASETKFSqrtType type)
 
   Level: advanced
 
-.seealso: [](ch_dataassimilator), `PetscDAS`, `PetscDASETKFSetSqrtType()`
+.seealso: [](ch_das), `PetscDAS`, `PetscDASETKFSetSqrtType()`
 @*/
 PetscErrorCode PetscDASETKFGetSqrtType(PetscDAS da, PetscDASETKFSqrtType *type)
 {
@@ -1079,7 +1079,7 @@ PetscErrorCode PetscDASETKFGetSqrtType(PetscDAS da, PetscDASETKFSqrtType *type)
 
   Level: internal
 
-.seealso: [](ch_dataassimilator), `PetscDASViewFromOptions()`
+.seealso: [](ch_das), `PetscDASViewFromOptions()`
 */
 static PetscErrorCode PetscDASETKFView(PetscDAS da, PetscViewer viewer)
 {
@@ -1108,7 +1108,7 @@ static PetscErrorCode PetscDASETKFView(PetscDAS da, PetscViewer viewer)
 
   Level: internal
 
-.seealso: [](ch_dataassimilator), `PetscDAS`, `PetscDASETKFRegister()`, `PetscDASETKFAnalysis()`
+.seealso: [](ch_das), `PetscDAS`, `PetscDASETKFRegister()`, `PetscDASETKFAnalysis()`
 */
 static PetscErrorCode PetscDASETKFInitialize(PetscDAS da)
 {
