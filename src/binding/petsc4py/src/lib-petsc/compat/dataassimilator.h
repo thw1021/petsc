@@ -1,7 +1,7 @@
-#ifndef PETSC4PY_COMPAT_DATAASSIMILATOR_H
-#define PETSC4PY_COMPAT_DATAASSIMILATOR_H
+#ifndef PETSC4PY_COMPAT_DAS_H
+#define PETSC4PY_COMPAT_DAS_H
 
-#include <petscdataassimilator.h>
+#include <petscdas.h>
 
 #if defined(PETSC_USE_COMPLEX)
 
@@ -15,4 +15,4 @@ PetscErrorCode PetscDASETKFGetSqrtType(PETSC_UNUSED PetscDAS da,PETSC_UNUSED Pet
 #undef PetscDASError
 
 #endif/*PETSC_USE_COMPLEX*/
-#endif/*PETSC4PY_COMPAT_DATAASSIMILATOR_H*/
+#endif/*PETSC4PY_COMPAT_DAS_H*/
