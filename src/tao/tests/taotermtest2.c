@@ -23,22 +23,21 @@ static PetscErrorCode FormHessian_Callback(Tao, Vec, Mat, Mat, void *);
 
 int main(int argc, char **argv)
 {
-  TaoTerm     objective;
-  Tao         tao, tao2;
-  PetscMPIInt size;
-  HalfL2Ctx  *ctx;
-  MPI_Comm    comm;
-  PetscInt    n = 10, m = 10;
-  Mat         A;
-  Vec         target;
-  PetscRandom rand;
-  CallbackCtx cb_ctx;
-  Vec         x_term, x_callback, x2, diff;
-  Mat         H2;
-  PetscReal   norm_diff, diag_val;
-  PetscBool   opt, is_diag, is_cdiag, is_aij, is_dense;
-  const char *mtype         = MATAIJ;
-  char        typeName[256] = "";
+  TaoTerm      objective;
+  Tao          tao, tao2;
+  PetscMPIInt  size;
+  HalfL2Ctx   *ctx;
+  MPI_Comm     comm;
+  PetscInt     n = 10, m = 10;
+  Mat          A;
+  Vec          target;
+  CallbackCtx *cb_ctx;
+  Vec          x_term, x_callback, x2, diff;
+  Mat          H2;
+  PetscReal    norm_diff, diag_val;
+  PetscBool    opt, is_diag, is_cdiag, is_aij, is_dense;
+  const char  *mtype         = MATAIJ;
+  char         typeName[256] = "";
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -53,8 +52,6 @@ int main(int argc, char **argv)
   PetscOptionsEnd();
 
   PetscCall(PetscNew(&ctx));
-  PetscCall(PetscRandomCreate(comm, &rand));
-  PetscCall(PetscRandomSetFromOptions(rand));
 
   /* Initialize typeName to default if option was not set */
   if (!opt) PetscCall(PetscStrcpy(typeName, mtype));
@@ -74,26 +71,26 @@ int main(int argc, char **argv)
     PetscCall(VecCreate(comm, &diag_vec));
     PetscCall(VecSetSizes(diag_vec, PETSC_DECIDE, diag_size));
     PetscCall(VecSetFromOptions(diag_vec));
-    PetscCall(VecSetRandom(diag_vec, rand));
+    PetscCall(VecSetRandom(diag_vec, NULL));
     PetscCall(MatCreateDiagonal(diag_vec, &A));
     PetscCall(VecDestroy(&diag_vec));
   } else if (is_cdiag) {
     /* Create a constant diagonal matrix */
     PetscCheck(m == n, comm, PETSC_ERR_ARG_INCOMP, "For constant diagonal matrix, m and n must be equal (got m=%" PetscInt_FMT ", n=%" PetscInt_FMT ")", m, n);
-    PetscCall(PetscRandomGetValue(rand, &diag_val));
+    diag_val = 1.1;
     PetscCall(MatCreateConstantDiagonal(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, diag_val, &A));
   } else if (is_dense) {
     /* Create a dense matrix */
     PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, NULL, &A));
     PetscCall(MatSetFromOptions(A));
-    PetscCall(MatSetRandom(A, rand));
+    PetscCall(MatSetRandom(A, NULL));
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   } else {
     /* Create an AIJ matrix (default) */
     PetscCall(MatCreateSeqAIJ(comm, m, n, PETSC_DEFAULT, NULL, &A));
     PetscCall(MatSetFromOptions(A));
-    PetscCall(MatSetRandom(A, rand));
+    PetscCall(MatSetRandom(A, NULL));
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   }
@@ -115,7 +112,7 @@ int main(int argc, char **argv)
 
   /* Create target vector for least squares problem (parameters) */
   PetscCall(TaoTermCreateParametersVec(objective, &target));
-  PetscCall(VecSetRandom(target, rand));
+  PetscCall(VecSetRandom(target, NULL));
 
   PetscCall(TaoCreate(comm, &tao));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)tao, "shell_"));
@@ -128,15 +125,13 @@ int main(int argc, char **argv)
   PetscCall(TaoSolve(tao));
 
   /* Allocate callback context */
-  PetscCall(PetscMemzero(&cb_ctx, sizeof(CallbackCtx)));
-  PetscCall(PetscObjectReference((PetscObject)A));
-  PetscCall(PetscObjectReference((PetscObject)target));
-  cb_ctx.A = A;
-  cb_ctx.p = target;
+  PetscCall(PetscNew(&cb_ctx));
+  cb_ctx->A = A;
+  cb_ctx->p = target;
 
   /* Create work vectors */
-  PetscCall(MatCreateVecs(A, &cb_ctx.Ax, NULL));
-  PetscCall(VecDuplicate(target, &cb_ctx.Ax_p));
+  PetscCall(MatCreateVecs(A, &cb_ctx->Ax, NULL));
+  PetscCall(VecDuplicate(target, &cb_ctx->Ax_p));
 
   /* Create solution vector for callback version (size n, not m) - initialize to zero like tao */
   PetscCall(MatCreateVecs(A, NULL, &x2));
@@ -171,8 +166,8 @@ int main(int argc, char **argv)
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)tao2, "regular_"));
   PetscCall(TaoSetType(tao2, TAOLMVM));
   PetscCall(TaoSetSolution(tao2, x2));
-  PetscCall(TaoSetObjectiveAndGradient(tao2, NULL, FormObjectiveGradient_Callback, &cb_ctx));
-  PetscCall(TaoSetHessian(tao2, H2, H2, FormHessian_Callback, &cb_ctx));
+  PetscCall(TaoSetObjectiveAndGradient(tao2, NULL, FormObjectiveGradient_Callback, cb_ctx));
+  PetscCall(TaoSetHessian(tao2, H2, H2, FormHessian_Callback, cb_ctx));
   PetscCall(TaoSetFromOptions(tao2));
   PetscCall(TaoSolve(tao2));
 
@@ -187,11 +182,15 @@ int main(int argc, char **argv)
   else PetscCall(PetscPrintf(comm, "Relative difference > 1e-12: %6.10e\n", (double)norm_diff));
   PetscCall(VecDestroy(&x2));
   PetscCall(VecDestroy(&diff));
+  PetscCall(VecDestroy(&cb_ctx->Ax));
+  PetscCall(VecDestroy(&cb_ctx->Ax_p));
+  PetscCall(PetscFree(cb_ctx));
+  PetscCall(VecDestroy(&target));
+  PetscCall(MatDestroy(&A));
   PetscCall(MatDestroy(&H2));
   PetscCall(TaoDestroy(&tao2));
   PetscCall(TaoDestroy(&tao));
   PetscCall(TaoTermDestroy(&objective));
-  PetscCall(PetscRandomDestroy(&rand));
   PetscCall(PetscFinalize());
   return 0;
 }
