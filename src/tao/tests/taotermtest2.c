@@ -41,7 +41,7 @@ int main(int argc, char **argv)
   char        typeName[256] = "";
 
   PetscFunctionBeginUser;
-  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCheck(size == 1, comm, PETSC_ERR_WRONG_MPI_SIZE, "Incorrect number of processors");
@@ -192,6 +192,7 @@ int main(int argc, char **argv)
   PetscCall(TaoDestroy(&tao));
   PetscCall(TaoTermDestroy(&objective));
   PetscCall(PetscRandomDestroy(&rand));
+  PetscCall(PetscFinalize());
   return 0;
 }
 
