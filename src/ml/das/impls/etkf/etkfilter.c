@@ -372,7 +372,7 @@ static PetscErrorCode PetscDASSetFromOptions_DASETKF(PetscDAS da, PetscOptionIte
   PetscOptionItems  PetscOptionsObject;
   const char       *defaultType;
   char              typeName[256];
-  PetscBool         set             = PETSC_FALSE;
+  PetscBool         set              = PETSC_FALSE;
   PetscErrorCode (*setter)(PetscDAS) = NULL;
 
   PetscFunctionBegin;
