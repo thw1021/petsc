@@ -25,7 +25,7 @@ if __name__ == '__main__':
     '--with-mpi-lib=['+mpidir+'/lib/x64/msmpifec.lib,'+mpidir+'/lib/x64/msmpi.lib]',
     '--with-mpiexec='+mpiexec,
     '--with-shared-libraries=0',
-    '--with-mpi-f90module-visibility=0',
+    '--with-mpi-ftn-module=mpi_f08',
     '--with-strict-petscerrorcode',
   ]
   configure.petsc_configure(configure_options)
