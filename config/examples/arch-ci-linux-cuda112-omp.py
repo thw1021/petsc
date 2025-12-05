@@ -19,6 +19,10 @@ if __name__ == '__main__':
     '--with-threadsafety',
     '--download-kokkos',
     '--download-kokkos-kernels',
+    '--download-kokkos-commit=4.3.00',
+    '--download-kokkos-kernels-commit=4.3.00',
+    '-ignoreCxxBoundCheck=1', # as kokkos v5 imposes cxx-dialect=20, but v3 is lower
+    '--with-cxx-dialect=17',
     '--download-umpire',
     '--download-hypre',
     '--download-hypre-configure-arguments=--enable-unified-memory',

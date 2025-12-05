@@ -21,7 +21,9 @@ if __name__ == '__main__':
     #'--download-umpire', #'hypre' reserves 4G VRAM for each MPI process
     '--download-hypre=1',
     '--download-superlu_dist',
-    '--with-cxx-dialect=17',
+    '--with-cxx-dialect=20', # over-ride superlu-dist default - to be compatible with kokkos
+     '--download-kokkos',
+     '--download-kokkos-kernels',
     '--with-strict-petscerrorcode',
   ]
 
