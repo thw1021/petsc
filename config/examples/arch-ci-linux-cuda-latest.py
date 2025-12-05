@@ -20,8 +20,10 @@ if __name__ == '__main__':
     '--with-cuda-dir=/usr/local/cuda-13.1',
     #'--download-umpire', #'hypre' reserves 4G VRAM for each MPI process
     '--download-hypre=1',
+     '--download-kokkos',
+     '--download-kokkos-kernels',
     '--download-superlu_dist',
-    '--with-cxx-dialect=17',
+    '--with-cxx-dialect=17', # over-ride superlu-dist default - to be compatible with kokkos
     '--with-strict-petscerrorcode',
   ]
 
