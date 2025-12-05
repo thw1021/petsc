@@ -84,7 +84,7 @@ int main(int argc, char **argv)
   /* The analysis should move the ensemble closer to the observation (truth) */
   /* Since observation error is small (0.1) and prior spread is ~0.08, it should pull towards observation */
 
-  PetscCall(PetscDASViewFromOptions(da, NULL, "-petscdas_view"));
+  PetscCall(PetscDASViewFromOptions(da, NULL, "-das_view"));
 
   /* Cleanup */
   PetscCall(VecDestroy(&x_true));
@@ -104,12 +104,12 @@ int main(int argc, char **argv)
   test:
     suffix: 1
     requires: !complex
-    args: -petscdas_view
+    args: -das_view
     requires: !complex
 
   test:
     suffix: chol
     requires: !complex
-    args: -petscdas_view -das_etkf_sqrt_type cholesky
+    args: -das_view -das_etkf_sqrt_type cholesky
 
 TEST*/
