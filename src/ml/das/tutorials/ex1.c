@@ -233,7 +233,7 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *steps, PetscInt 
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency adjusted from %" PetscInt_FMT " to %d\n", *obs_freq, MIN_OBS_FREQ));
     *obs_freq = MIN_OBS_FREQ;
   }
-  if (*obs_freq > *steps && *steps > 0) { PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency (%" PetscInt_FMT ") > total steps (%" PetscInt_FMT "), no observations will be assimilated.\n", *obs_freq, *steps)); }
+  if (*obs_freq > *steps && *steps > 0) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency (%" PetscInt_FMT ") > total steps (%" PetscInt_FMT "), no observations will be assimilated.\n", *obs_freq, *steps));
   if (*burn > *steps) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Burn-in steps (%" PetscInt_FMT ") exceeds total steps (%" PetscInt_FMT "), setting burn = steps\n", *burn, *steps));
     *burn = *steps;
@@ -373,7 +373,7 @@ int main(int argc, char **argv)
 
   /* Spin up truth to get onto attractor */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for %d steps...\n", SPINUP_STEPS));
-  for (int k = 0; k < SPINUP_STEPS; k++) { PetscCall(Lorenz96Step(truth_state, truth_state, l95_ctx)); }
+  for (int k = 0; k < SPINUP_STEPS; k++) PetscCall(Lorenz96Step(truth_state, truth_state, l95_ctx));
 
   /* Initialize random number generator */
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rng));
