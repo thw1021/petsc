@@ -85,8 +85,11 @@ static PetscErrorCode ComputeObservationEnsemble(PetscDAS da, PetscErrorCode (*o
 */
 static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r_inv_sqrt, PetscInt m, PetscScalar scale, Mat *S)
 {
-  Vec      z_column, s_column;
-  PetscInt ensemble_idx, obs_size, obs_size_local, z_cols;
+  const PetscScalar *z_array, *y_array, *r_array;
+  PetscScalar       *s_array;
+  PetscInt           obs_size, obs_size_local, z_cols, i, j;
+  PetscInt           y_local_size, r_local_size;
+  PetscInt           lda_z, lda_s;
 
   PetscFunctionBegin;
   /* Validate input parameters */
@@ -103,35 +106,45 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
   PetscCall(MatGetLocalSize(Z, &obs_size_local, NULL));
   PetscCheck(z_cols == m, PetscObjectComm((PetscObject)Z), PETSC_ERR_ARG_INCOMP, "Matrix Z has %" PetscInt_FMT " columns but ensemble size is %" PetscInt_FMT, z_cols, m);
 
-  /* Verify vector dimensions match observation size */
-  PetscInt y_mean_size, r_inv_sqrt_size;
-  PetscCall(VecGetSize(y_mean, &y_mean_size));
-  PetscCall(VecGetSize(r_inv_sqrt, &r_inv_sqrt_size));
-  PetscCheck(y_mean_size == obs_size, PetscObjectComm((PetscObject)Z), PETSC_ERR_ARG_INCOMP, "Vector y_mean size %" PetscInt_FMT " does not match observation size %" PetscInt_FMT, y_mean_size, obs_size);
-  PetscCheck(r_inv_sqrt_size == obs_size, PetscObjectComm((PetscObject)Z), PETSC_ERR_ARG_INCOMP, "Vector r_inv_sqrt size %" PetscInt_FMT " does not match observation size %" PetscInt_FMT, r_inv_sqrt_size, obs_size);
+  /* Verify vector dimensions match observation size (both global and local) */
+  PetscCall(VecGetLocalSize(y_mean, &y_local_size));
+  PetscCall(VecGetLocalSize(r_inv_sqrt, &r_local_size));
+  PetscCheck(y_local_size == obs_size_local, PetscObjectComm((PetscObject)Z), PETSC_ERR_ARG_INCOMP, "Vector y_mean local size %" PetscInt_FMT " does not match matrix local rows %" PetscInt_FMT, y_local_size, obs_size_local);
+  PetscCheck(r_local_size == obs_size_local, PetscObjectComm((PetscObject)Z), PETSC_ERR_ARG_INCOMP, "Vector r_inv_sqrt local size %" PetscInt_FMT " does not match matrix local rows %" PetscInt_FMT, r_local_size, obs_size_local);
 
   /* Create output matrix S with same distribution as Z */
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)Z), obs_size_local, PETSC_DECIDE, obs_size, m, NULL, S));
   PetscCall(MatSetUp(*S));
 
-  /* Compute normalized innovation for each ensemble member */
-  for (ensemble_idx = 0; ensemble_idx < m; ensemble_idx++) {
-    /* Get read-only access to Z column and write access to S column */
-    PetscCall(MatDenseGetColumnVecRead(Z, ensemble_idx, &z_column));
-    PetscCall(MatDenseGetColumnVecWrite(*S, ensemble_idx, &s_column));
+  /* Get direct access to arrays for performance */
+  PetscCall(MatDenseGetArrayRead(Z, &z_array));
+  PetscCall(MatDenseGetArrayWrite(*S, &s_array));
+  PetscCall(VecGetArrayRead(y_mean, &y_array));
+  PetscCall(VecGetArrayRead(r_inv_sqrt, &r_array));
 
-    /* S_i = R^{-1/2} * (Z_i - y_mean) / sqrt(m-1) */
-    /* First: s_column = Z_i - y_mean */
-    PetscCall(VecWAXPY(s_column, -1.0, y_mean, z_column));
-    /* Second: s_column *= scale (= 1/sqrt(m-1)) */
-    PetscCall(VecScale(s_column, scale));
-    /* Third: s_column = s_column .* r_inv_sqrt (element-wise multiplication) */
-    PetscCall(VecPointwiseMult(s_column, s_column, r_inv_sqrt));
+  /* Get Leading Dimension (LDA) to handle padding/strides correctly */
+  PetscCall(MatDenseGetLDA(Z, &lda_z));
+  PetscCall(MatDenseGetLDA(*S, &lda_s));
 
-    /* Restore column vectors */
-    PetscCall(MatDenseRestoreColumnVecRead(Z, ensemble_idx, &z_column));
-    PetscCall(MatDenseRestoreColumnVecWrite(*S, ensemble_idx, &s_column));
+  /* Compute normalized innovation: S_ij = (Z_ij - y_mean_i) * scale * r_inv_sqrt_i
+     Iterate column-wise (j) then row-wise (i) for optimal cache access with column-major storage */
+  for (j = 0; j < m; j++) {
+    const PetscScalar *z_col = z_array + j * lda_z;
+    PetscScalar       *s_col = s_array + j * lda_s;
+
+    for (i = 0; i < obs_size_local; i++) { s_col[i] = (z_col[i] - y_array[i]) * scale * r_array[i]; }
   }
+
+  /* Restore arrays */
+  PetscCall(VecRestoreArrayRead(r_inv_sqrt, &r_array));
+  PetscCall(VecRestoreArrayRead(y_mean, &y_array));
+  PetscCall(MatDenseRestoreArrayWrite(*S, &s_array));
+  PetscCall(MatDenseRestoreArrayRead(Z, &z_array));
+
+  /* Finalize assembly */
+  PetscCall(MatAssemblyBegin(*S, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(*S, MAT_FINAL_ASSEMBLY));
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -422,6 +435,157 @@ PetscErrorCode PetscDASETKFFinalizePackage(void)
 /* ========================================================================== */
 
 /*
+  PetscDASTFactor_Cholesky - Computes Cholesky factorization of T
+
+  Input Parameters:
++ da   - the PetscDAS context
+- impl - the internal data structure containing T matrix (I_StS)
+*/
+static PetscErrorCode PetscDASTFactor_Cholesky(PetscDAS da, PetscDASETKFData *impl)
+{
+  PetscBLASInt n, lda, info;
+  PetscScalar *a_array;
+  PetscInt     m_T, N_T;
+
+  PetscFunctionBegin;
+  /* Initialize or update L_cholesky matrix */
+  if (!impl->L_cholesky) {
+    PetscCall(MatDuplicate(impl->I_StS, MAT_COPY_VALUES, &impl->L_cholesky));
+  } else {
+    PetscCall(MatCopy(impl->I_StS, impl->L_cholesky, SAME_NONZERO_PATTERN));
+  }
+
+  /* Get matrix dimensions and convert to BLAS int */
+  PetscCall(MatGetSize(impl->L_cholesky, &m_T, &N_T));
+  PetscCheck(m_T == N_T, PetscObjectComm((PetscObject)impl->L_cholesky), PETSC_ERR_ARG_WRONG, "Matrix must be square for Cholesky");
+  PetscCall(PetscBLASIntCast(N_T, &n));
+  lda = n;
+
+  /* Get array from dense matrix */
+  PetscCall(MatDenseGetArray(impl->L_cholesky, &a_array));
+
+  /* Compute Cholesky factorization: A = L * L^T (lower triangular) */
+  LAPACKpotrf_("L", &n, a_array, &lda, &info);
+  PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK Cholesky factorization (xPOTRF): info=%d. Matrix T is not positive definite.", (int)info);
+
+  /* Restore array and finalize matrix */
+  PetscCall(MatDenseRestoreArray(impl->L_cholesky, &a_array));
+  PetscCall(MatAssemblyBegin(impl->L_cholesky, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(impl->L_cholesky, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  PetscDASTFactor_Eigen - Computes Eigendecomposition of T
+
+  Input Parameters:
++ da   - the PetscDAS context
+- impl - the internal data structure containing T matrix (I_StS)
+*/
+static PetscErrorCode PetscDASTFactor_Eigen(PetscDAS da, PetscDASETKFData *impl)
+{
+  PetscBLASInt n, lda, lwork, info;
+  PetscScalar *a_array, *work, *eig_array;
+  PetscInt     m_V, N_V;
+#if defined(PETSC_USE_COMPLEX)
+  PetscReal *rwork = NULL;
+#endif
+
+  PetscFunctionBegin;
+  /* Initialize or update V matrix */
+  if (!impl->V) {
+    PetscCall(MatDuplicate(impl->I_StS, MAT_COPY_VALUES, &impl->V));
+  } else {
+    PetscCall(MatCopy(impl->I_StS, impl->V, SAME_NONZERO_PATTERN));
+  }
+
+  /* Initialize or update eigenvalue vector */
+  if (!impl->sqrt_eigen_vals) { PetscCall(MatCreateVecs(impl->I_StS, &impl->sqrt_eigen_vals, NULL)); }
+
+  /* Get matrix dimensions */
+  PetscCall(MatGetSize(impl->V, &m_V, &N_V));
+  PetscCheck(m_V == N_V, PetscObjectComm((PetscObject)impl->V), PETSC_ERR_ARG_WRONG, "Matrix must be square");
+  PetscCall(PetscBLASIntCast(N_V, &n));
+  lda = n;
+
+  /* Get arrays */
+  PetscCall(MatDenseGetArray(impl->V, &a_array));
+  PetscCall(VecGetArray(impl->sqrt_eigen_vals, &eig_array));
+
+  /* Query optimal workspace size */
+  lwork = -1;
+  PetscCall(PetscMalloc1(1, &work));
+#if defined(PETSC_USE_COMPLEX)
+  PetscCall(PetscMalloc1(PetscMax(1, 3 * n - 2), &rwork));
+  LAPACKsyev_("V", "U", &n, a_array, &lda, (PetscReal *)eig_array, work, &lwork, rwork, &info);
+#else
+  LAPACKsyev_("V", "U", &n, a_array, &lda, eig_array, work, &lwork, &info);
+#endif
+  PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine xSYEV work query: info=%d", (int)info);
+
+  /* Allocate workspace */
+  lwork = (PetscBLASInt)PetscRealPart(work[0]);
+  PetscCall(PetscFree(work));
+  PetscCall(PetscMalloc1(lwork, &work));
+
+  /* Compute eigendecomposition */
+#if defined(PETSC_USE_COMPLEX)
+  LAPACKsyev_("V", "U", &n, a_array, &lda, (PetscReal *)eig_array, work, &lwork, rwork, &info);
+  PetscCall(PetscFree(rwork));
+#else
+  LAPACKsyev_("V", "U", &n, a_array, &lda, eig_array, work, &lwork, &info);
+#endif
+  PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine xSYEV: info=%d", (int)info);
+
+  /* Cleanup */
+  PetscCall(PetscFree(work));
+  PetscCall(VecRestoreArray(impl->sqrt_eigen_vals, &eig_array));
+  PetscCall(MatDenseRestoreArray(impl->V, &a_array));
+
+  PetscCall(MatAssemblyBegin(impl->V, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(impl->V, MAT_FINAL_ASSEMBLY));
+
+  /* Compute sqrt(eigenvalues) */
+  PetscCall(VecSqrtAbs(impl->sqrt_eigen_vals));
+
+  /* Debug verification: Ensure V * D * V^T == T */
+  if (PetscDefined(USE_DEBUG)) {
+    PetscReal norm_T, norm_diff;
+    Mat       V_D, VDVt;
+
+    /* Compute D * V^T by scaling rows */
+    PetscCall(MatDuplicate(impl->V, MAT_COPY_VALUES, &V_D));
+
+    /* Restore D for verification (since sqrt_eigen_vals currently holds sqrt(D)) */
+    PetscCall(VecPointwiseMult(impl->sqrt_eigen_vals, impl->sqrt_eigen_vals, impl->sqrt_eigen_vals));
+
+    PetscCall(MatDiagonalScale(V_D, NULL, impl->sqrt_eigen_vals));
+
+    /* Compute V * D * V^T */
+    PetscCall(MatMatTransposeMult(V_D, impl->V, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &VDVt));
+
+    /* Compute ||V*D*V^T - T|| / ||T|| */
+    PetscCall(MatAXPY(VDVt, -1.0, impl->I_StS, SAME_NONZERO_PATTERN));
+    PetscCall(MatNorm(impl->I_StS, NORM_FROBENIUS, &norm_T));
+    PetscCall(MatNorm(VDVt, NORM_FROBENIUS, &norm_diff));
+
+    if (norm_T > 0) {
+      PetscReal relative_error = norm_diff / norm_T;
+      PetscCheck(relative_error <= 1.e-10, PetscObjectComm((PetscObject)da), PETSC_ERR_PLIB, "Eigendecomposition verification failed: ||V*D*V^T - T||/||T|| = %g > 1e-10", (double)relative_error);
+    }
+
+    /* Restore sqrt(D) back to sqrt_eigen_vals */
+    PetscCall(VecSqrtAbs(impl->sqrt_eigen_vals));
+
+    /* Cleanup debug matrices */
+    PetscCall(MatDestroy(&V_D));
+    PetscCall(MatDestroy(&VDVt));
+  }
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
   PetscDASTFactor - Compute and store factorization of T matrix
 
   Input Parameters:
@@ -437,7 +601,8 @@ PetscErrorCode PetscDASETKFFinalizePackage(void)
 static PetscErrorCode PetscDASTFactor(PetscDAS da, Mat S)
 {
   PetscDASETKFData *impl;
-  PetscInt          s_rows, s_cols;
+  PetscInt          s_rows, s_cols, t_rows, t_cols;
+  MatReuse          scall = MAT_INITIAL_MATRIX;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDAS_CLASSID, 1);
@@ -450,141 +615,36 @@ static PetscErrorCode PetscDASTFactor(PetscDAS da, Mat S)
   PetscCall(MatGetSize(S, &s_rows, &s_cols));
   PetscCheck(s_cols > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Innovation matrix S must have positive columns, got %" PetscInt_FMT, s_cols);
 
-  /* Clean up any previous factorization to avoid memory leaks */
-  PetscCall(MatDestroy(&impl->I_StS));
-  PetscCall(MatDestroy(&impl->V));
-  PetscCall(MatDestroy(&impl->L_cholesky));
-  PetscCall(VecDestroy(&impl->sqrt_eigen_vals));
+  /* Check if we can reuse the T matrix (I_StS) and others */
+  if (impl->I_StS) {
+    PetscCall(MatGetSize(impl->I_StS, &t_rows, &t_cols));
+    /* If ensemble size changed, we must destroy and recreate */
+    if (t_rows != s_cols || t_cols != s_cols) {
+      PetscCall(MatDestroy(&impl->I_StS));
+      PetscCall(MatDestroy(&impl->V));
+      PetscCall(MatDestroy(&impl->L_cholesky));
+      PetscCall(VecDestroy(&impl->sqrt_eigen_vals));
+      scall = MAT_INITIAL_MATRIX;
+    } else {
+      scall = MAT_REUSE_MATRIX;
+    }
+  }
 
   /* Compute T = I + S^T * S */
-  PetscCall(MatTransposeMatMult(S, S, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &impl->I_StS));
+  /* Use MAT_REUSE_MATRIX if dimensions match to avoid allocation overhead */
+  PetscCall(MatTransposeMatMult(S, S, scall, PETSC_DEFAULT, &impl->I_StS));
+
+  /* Add Identity: T = T + I */
   PetscCall(MatShift(impl->I_StS, 1.0));
 
   /* Compute and store factorization based on sqrt_type */
   switch (impl->sqrt_type) {
-  case PETSCDASETKF_SQRT_CHOLESKY: {
-    /* Compute Cholesky factorization: T = L * L^T using LAPACK */
-    PetscBLASInt n, lda, info;
-    PetscScalar *a_array;
-    PetscInt     m_T, N_T;
-
-    PetscCall(MatDuplicate(impl->I_StS, MAT_COPY_VALUES, &impl->L_cholesky));
-
-    /* Get matrix dimensions and convert to BLAS int */
-    PetscCall(MatGetSize(impl->L_cholesky, &m_T, &N_T));
-    PetscCheck(m_T == N_T, PetscObjectComm((PetscObject)impl->L_cholesky), PETSC_ERR_ARG_WRONG, "Matrix must be square for Cholesky");
-    PetscCall(PetscBLASIntCast(N_T, &n));
-    lda = n;
-
-    /* Get array from dense matrix */
-    PetscCall(MatDenseGetArray(impl->L_cholesky, &a_array));
-
-    /* Compute Cholesky factorization: A = L * L^T (lower triangular) */
-    LAPACKpotrf_("L", &n, a_array, &lda, &info);
-    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK Cholesky factorization (xPOTRF): info=%d", (int)info);
-
-    /* Restore array and finalize matrix */
-    PetscCall(MatDenseRestoreArray(impl->L_cholesky, &a_array));
-    PetscCall(MatAssemblyBegin(impl->L_cholesky, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(impl->L_cholesky, MAT_FINAL_ASSEMBLY));
+  case PETSCDASETKF_SQRT_CHOLESKY:
+    PetscCall(PetscDASTFactor_Cholesky(da, impl));
     break;
-  }
-  case PETSCDASETKF_SQRT_EIGEN: {
-    /* Compute eigendecomposition: T = V * D * V^T */
-    Vec          eigen_vals;
-    PetscBLASInt n, lda, lwork, info;
-    PetscScalar *a_array, *work, *eig_array;
-    PetscInt     m_V, N_V;
-#if defined(PETSC_USE_COMPLEX)
-    PetscReal *rwork = NULL;
-#endif
-
-    PetscCall(MatCreateVecs(impl->I_StS, &eigen_vals, NULL));
-    PetscCall(MatDuplicate(impl->I_StS, MAT_COPY_VALUES, &impl->V));
-
-    /* Inline eigendecomposition computation using LAPACK syev */
-    /* Get matrix dimensions */
-    PetscCall(MatGetSize(impl->V, &m_V, &N_V));
-    PetscCheck(m_V == N_V, PetscObjectComm((PetscObject)impl->V), PETSC_ERR_ARG_WRONG, "Matrix must be square");
-
-    /* Convert to BLAS int */
-    PetscCall(PetscBLASIntCast(N_V, &n));
-    lda = n;
-
-    /* Get array from dense matrix */
-    PetscCall(MatDenseGetArray(impl->V, &a_array));
-
-    /* Get array from eigenvalue vector */
-    PetscCall(VecGetArray(eigen_vals, &eig_array));
-
-    /* Query optimal workspace size */
-    lwork = -1;
-    PetscCall(PetscMalloc1(1, &work));
-
-#if defined(PETSC_USE_COMPLEX)
-    PetscCall(PetscMalloc1(PetscMax(1, 3 * n - 2), &rwork));
-    LAPACKsyev_("V", "U", &n, a_array, &lda, (PetscReal *)eig_array, work, &lwork, rwork, &info);
-#else
-    LAPACKsyev_("V", "U", &n, a_array, &lda, eig_array, work, &lwork, &info);
-#endif
-    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine xSYEV work query: info=%d", (int)info);
-
-    /* Allocate workspace */
-    lwork = (PetscBLASInt)PetscRealPart(work[0]);
-    PetscCall(PetscFree(work));
-    PetscCall(PetscMalloc1(lwork, &work));
-
-    /* Compute eigendecomposition */
-#if defined(PETSC_USE_COMPLEX)
-    LAPACKsyev_("V", "U", &n, a_array, &lda, (PetscReal *)eig_array, work, &lwork, rwork, &info);
-    PetscCall(PetscFree(rwork));
-#else
-    LAPACKsyev_("V", "U", &n, a_array, &lda, eig_array, work, &lwork, &info);
-#endif
-    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine xSYEV: info=%d", (int)info);
-
-    /* Cleanup */
-    PetscCall(PetscFree(work));
-    PetscCall(VecRestoreArray(eigen_vals, &eig_array));
-    PetscCall(MatDenseRestoreArray(impl->V, &a_array));
-    PetscCall(MatAssemblyBegin(impl->V, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(impl->V, MAT_FINAL_ASSEMBLY));
-
-    /* Compute and store sqrt(eigenvalues) for later use */
-    PetscCall(VecDuplicate(eigen_vals, &impl->sqrt_eigen_vals));
-    PetscCall(VecCopy(eigen_vals, impl->sqrt_eigen_vals));
-    PetscCall(VecSqrtAbs(impl->sqrt_eigen_vals));
-
-    /* Debug verification: Ensure V * D * V^T == T */
-    if (PetscDefined(USE_DEBUG)) {
-      PetscReal norm_T, norm_diff;
-      Mat       V_D, VDVt;
-
-      /* Compute D * V^T by scaling rows */
-      PetscCall(MatDuplicate(impl->V, MAT_COPY_VALUES, &V_D));
-      PetscCall(MatDiagonalScale(V_D, NULL, eigen_vals));
-
-      /* Compute V * D * V^T */
-      PetscCall(MatMatTransposeMult(V_D, impl->V, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &VDVt));
-
-      /* Compute ||V*D*V^T - T|| / ||T|| */
-      PetscCall(MatAXPY(VDVt, -1.0, impl->I_StS, SAME_NONZERO_PATTERN));
-      PetscCall(MatNorm(impl->I_StS, NORM_FROBENIUS, &norm_T));
-      PetscCall(MatNorm(VDVt, NORM_FROBENIUS, &norm_diff));
-
-      if (norm_T > 0) {
-        PetscReal relative_error = norm_diff / norm_T;
-        PetscCheck(relative_error <= 1.e-10, PetscObjectComm((PetscObject)da), PETSC_ERR_PLIB, "Eigendecomposition verification failed: ||V*D*V^T - T||/||T|| = %g > 1e-10", (double)relative_error);
-      }
-
-      /* Cleanup debug matrices */
-      PetscCall(MatDestroy(&V_D));
-      PetscCall(MatDestroy(&VDVt));
-    }
-
-    PetscCall(VecDestroy(&eigen_vals));
+  case PETSCDASETKF_SQRT_EIGEN:
+    PetscCall(PetscDASTFactor_Eigen(da, impl));
     break;
-  }
   default:
     SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported PetscDASETKF square-root type %" PetscInt_FMT, (PetscInt)impl->sqrt_type);
   }
