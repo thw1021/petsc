@@ -27,12 +27,6 @@ PetscFunctionList PetscDASList              = NULL;
 
 static PetscBool PetscDASPackageInitialized = PETSC_FALSE;
 
-/* Tolerance for matrix square root verification in debug mode */
-#define MATRIX_SQRT_TOLERANCE_FACTOR 100.0
-
-/* Tolerance for eigenvalue negativity check */
-#define EIGENVALUE_TOLERANCE_FACTOR 10.0
-
 /*@C
   PetscDASInitializePackage - This function initializes everything in the `PetscDAS`
   package. called on the first call to `PetscDASCreate()` when using static or shared
