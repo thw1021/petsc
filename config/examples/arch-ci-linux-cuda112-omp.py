@@ -23,11 +23,7 @@ if __name__ == '__main__':
     '--download-hypre',
     '--download-hypre-configure-arguments=--enable-unified-memory',
     '--with-strict-petscerrorcode',
-    # '--download-mpich', # mpich builds with cuda-12.8, but its libmpi.so does not have RPATH to libcudart.so
-    '--download-openmpi',
-    # hwloc is needed by openmpi, but we don't use openmpi's internal hwloc. We build it ourself since petsc disables libxml2 in hwloc.
-    # Otherwise, on systems with old libxml, we would see mpirun warnings like 'program compiled against libxml 213 using older 209'
-    '--download-hwloc',
+    '--download-mpich=1',
     #'--with-coverage',
   ]
 
