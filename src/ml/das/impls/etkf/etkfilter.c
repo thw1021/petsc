@@ -66,7 +66,6 @@ static PetscErrorCode ComputeObservationEnsemble(PetscDAS da, PetscErrorCode (*o
     PetscCall(MatDenseRestoreColumnVecWrite(*Z, ensemble_idx, &observation_out));
     PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, ensemble_idx, &ensemble_member_in));
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -132,7 +131,7 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
     const PetscScalar *z_col = z_array + j * lda_z;
     PetscScalar       *s_col = s_array + j * lda_s;
 
-    for (i = 0; i < obs_size_local; i++) { s_col[i] = (z_col[i] - y_array[i]) * scale * r_array[i]; }
+    for (i = 0; i < obs_size_local; i++) s_col[i] = (z_col[i] - y_array[i]) * scale * r_array[i];
   }
 
   /* Restore arrays */
@@ -144,7 +143,6 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
   /* Finalize assembly */
   PetscCall(MatAssemblyBegin(*S, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*S, MAT_FINAL_ASSEMBLY));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -210,7 +208,7 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat *w_ones)
 
   /* Copy w to each column of w_ones */
   /* Note: MatDense uses column-major storage. We copy the vector w into each column. */
-  for (i = 0; i < m; i++) { PetscCall(PetscArraycpy(mat_array + i * lda, w_array, w_size_local)); }
+  for (i = 0; i < m; i++) PetscCall(PetscArraycpy(mat_array + i * lda, w_array, w_size_local));
 
   /* Restore arrays */
   PetscCall(MatDenseRestoreArrayWrite(*w_ones, &mat_array));
@@ -312,7 +310,7 @@ static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscI
   for (j = 0; j < m; j++) {
     const PetscScalar *xg_col  = xg_array + j * lda_xg;
     PetscScalar       *ens_col = ens_array + j * lda_ens;
-    for (i = 0; i < n_local_ens; i++) { ens_col[i] = xg_col[i] + mean_array[i]; }
+    for (i = 0; i < n_local_ens; i++) ens_col[i] = xg_col[i] + mean_array[i];
   }
 
   /* Restore arrays and finalize assembly */
@@ -500,7 +498,7 @@ static PetscErrorCode PetscDASTFactor_Eigen(PetscDAS da, PetscDASETKFData *impl)
   }
 
   /* Initialize or update eigenvalue vector */
-  if (!impl->sqrt_eigen_vals) { PetscCall(MatCreateVecs(impl->I_StS, &impl->sqrt_eigen_vals, NULL)); }
+  if (!impl->sqrt_eigen_vals) PetscCall(MatCreateVecs(impl->I_StS, &impl->sqrt_eigen_vals, NULL));
 
   /* Get matrix dimensions */
   PetscCall(MatGetSize(impl->V, &m_V, &N_V));
@@ -581,7 +579,6 @@ static PetscErrorCode PetscDASTFactor_Eigen(PetscDAS da, PetscDASETKFData *impl)
     PetscCall(MatDestroy(&V_D));
     PetscCall(MatDestroy(&VDVt));
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
