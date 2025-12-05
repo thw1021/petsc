@@ -1175,7 +1175,6 @@ static PetscErrorCode PetscDASETKFAnalysis(PetscDAS da, Vec observation, PetscEr
 
   /* Cleanup temporary X matrix */
   PetscCall(MatDestroy(&X));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
