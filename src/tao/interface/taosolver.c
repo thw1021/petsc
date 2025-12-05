@@ -3051,7 +3051,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
       PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSUM, &is_sum));
       if (is_sum) PetscCall(TaoTermSumGetNumSubterms(term, &tao->num_terms));         //TODO don't allow adding TAOTERMSUM for NOW
       PetscCall(TaoTermMappingSetData(&tao->objective_term, NULL, scale, term, map)); //TODO what is happening to Hessian?
-      PetscCall(PetscObjectReference((PetscObject)params));
+      if (params) PetscCall(PetscObjectReference((PetscObject)params));
       PetscCall(VecDestroy(&tao->objective_parameters));
       tao->objective_parameters = params;
       tao->term_set             = PETSC_TRUE;
@@ -3059,6 +3059,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     }
   }
   PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
+  // One TaoTerm has been set. Create TAOTERMSUM to store that, and the new one
   if (!is_sum) {
     TaoTerm     old_sum;
     const char *tao_prefix;
@@ -3071,14 +3072,17 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
       PetscLayout cmap, param_layout;
 
       PetscCall(MatGetVecType(tao->objective_term.map, &map_vectype));
+      PetscCall(MatGetLayouts(tao->objective_term.map, NULL, &cmap));
+      //TODO what is term doesnt have param?
       PetscCall(TaoTermGetParametersVecType(old_sum, &param_vectype));
+      PetscCall(TaoTermGetParametersLayout(old_sum, &param_layout)); //TODO do I need this? SUM shoulnd't have parameters vector...
+
       PetscCall(TaoTermSetSolutionVecType(old_sum, map_vectype));
       PetscCall(TaoTermSetParametersVecType(old_sum, param_vectype));
-      PetscCall(MatGetLayouts(tao->objective_term.map, NULL, &cmap));
-      PetscCall(TaoTermGetParametersLayout(old_sum, &param_layout)); //TODO do I need this? SUM shoulnd't have parameters vector...
       PetscCall(TaoTermSetSolutionLayout(old_sum, cmap));
       PetscCall(TaoTermSetParametersLayout(old_sum, param_layout));
     }
+
     PetscCall(TaoTermSetType(old_sum, TAOTERMSUM));
     PetscCall(TaoGetOptionsPrefix(tao, &tao_prefix));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)old_sum, tao_prefix));

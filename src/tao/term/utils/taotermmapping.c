@@ -528,7 +528,9 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
     *H    = mt->_unmapped_H;
     *Hpre = mt->_unmapped_Hpre;
   } else {
+#if 1
     // create _unmapped only if they are empty
+    // TODO this is wrong, as this will make unmapped_H to be m x m, (param size), not sol size n x n....
     PetscCall(TaoTermCreateHessianMatrices(mt->term, (mt->_unmapped_H) ? NULL : &mt->_unmapped_H, (mt->_unmapped_Hpre) ? NULL : &mt->_unmapped_Hpre));
     //TODO for AIJ....
     PetscCall(MatAssemblyBegin(mt->_unmapped_H, MAT_FINAL_ASSEMBLY));
@@ -554,6 +556,34 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
       if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_Hpre));
       *Hpre = mt->_mapped_Hpre;
     }
+#else
+    // create _unmapped only if they are empty
+    PetscCall(TaoTermCreateUnmappedHessianMatrices(mt->term, (mt->_unmapped_H) ? NULL : &mt->_unmapped_H, (mt->_unmapped_Hpre) ? NULL : &mt->_unmapped_Hpre));
+    //TODO for AIJ....
+    PetscCall(MatAssemblyBegin(mt->_unmapped_H, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(mt->_unmapped_H, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatShift(mt->_unmapped_H, 1.));
+    // Create PtAP only if mt->_mapped_H is empty
+    if (mt->_unmapped_H && !mt->_mapped_H) PetscCall(TaoTermMappingCreatePtAP(mt->_unmapped_H, mt->map, &mt->_mapped_H));
+    // Creating expensive work matrix to store AP TODO remove when diag PtAP gets implemented
+    if (!mt->_mapped_H_work) PetscCall(TaoTermMappingCreateAPWorkMatrix(mt->map, mt->_unmapped_H, &mt->_mapped_H_work));
+    if (*H != mt->_mapped_H) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_H));
+    *H = mt->_mapped_H;
+    if (mt->_unmapped_Hpre == mt->_unmapped_H) {
+      // Hpre_is_H true, so mapped_H = mapped_Hpre
+      if (!mt->_mapped_Hpre) {
+        PetscCall(PetscObjectReference((PetscObject)mt->_mapped_H));
+        mt->_mapped_Hpre = mt->_mapped_H;
+      }
+      if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)*H));
+      *Hpre = *H;
+    } else {
+      if (!mt->_mapped_Hpre) PetscCall(TaoTermMappingCreatePtAP(mt->_unmapped_Hpre, mt->map, &mt->_mapped_Hpre));
+      if (!mt->_mapped_Hpre_work) PetscCall(TaoTermMappingCreateAPWorkMatrix(mt->map, mt->_unmapped_H, &mt->_mapped_Hpre_work));
+      if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_Hpre));
+      *Hpre = mt->_mapped_Hpre;
+    }
+#endif
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

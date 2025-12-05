@@ -228,6 +228,26 @@ static PetscErrorCode TaoTermCreateHessianMatrices_L1(TaoTerm term, Mat *H, Mat 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TaoTermCreateUnmappedHessianMatrices_L1(TaoTerm term, Mat *H, Mat *Hpre)
+{
+  PetscBool is_hdiag, is_hprediag;
+
+  PetscFunctionBegin;
+  PetscCall(PetscInfo(term, "Creating TAOTERML1 Hessian Matrices. TAOTERML1 only accepts MATDIAGONAL for MatType, overriding any user-set MatType.\n"));
+  PetscCall(PetscStrcmp(term->H_mattype, MATDIAGONAL, &is_hdiag));
+  PetscCall(PetscStrcmp(term->Hpre_mattype, MATDIAGONAL, &is_hprediag));
+  if (!is_hdiag) {
+    PetscCall(PetscFree(term->H_mattype));
+    PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->H_mattype));
+  }
+  if (!is_hprediag) {
+    PetscCall(PetscFree(term->Hpre_mattype));
+    PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->Hpre_mattype));
+  }
+  PetscCall(TaoTermCreateUnmappedHessianMatricesDefault(term, H, Hpre));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   TaoTermL1SetEpsilon - Set an $\epsilon$ smoothing parameter.
 
@@ -320,11 +340,22 @@ static PetscErrorCode TaoTermView_L1(TaoTerm term, PetscViewer viewer)
 static PetscErrorCode TaoTermSetFromOptions_L1(TaoTerm term, PetscOptionItems PetscOptionsObject)
 {
   TaoTerm_L1 *l1 = (TaoTerm_L1 *)term->data;
+  PetscBool   is_hdiag, is_hprediag;
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "TaoTerm l1 options");
   PetscCall(PetscOptionsBoundedReal("-tao_term_l1_epsilon", "smoothing parameter", "TaoTermL1SetEpsilon", l1->epsilon, &l1->epsilon, NULL, 0.0));
   PetscOptionsHeadEnd();
+  PetscCall(PetscStrcmp(term->H_mattype, MATDIAGONAL, &is_hdiag));
+  PetscCall(PetscStrcmp(term->Hpre_mattype, MATDIAGONAL, &is_hprediag));
+  if (!is_hdiag) {
+    PetscCall(PetscFree(term->H_mattype));
+    PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->H_mattype));
+  }
+  if (!is_hprediag) {
+    PetscCall(PetscFree(term->Hpre_mattype));
+    PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->Hpre_mattype));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -377,15 +408,16 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->H_mattype));
   PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->Hpre_mattype));
 
-  term->ops->destroy                    = TaoTermDestroy_L1;
-  term->ops->view                       = TaoTermView_L1;
-  term->ops->setfromoptions             = TaoTermSetFromOptions_L1;
-  term->ops->objective                  = TaoTermComputeObjective_L1;
-  term->ops->gradient                   = TaoTermComputeGradient_L1;
-  term->ops->objectiveandgradient       = TaoTermComputeObjectiveAndGradient_L1;
-  term->ops->hessian                    = TaoTermComputeHessian_L1;
-  term->ops->createhessianmatrices      = TaoTermCreateHessianMatrices_L1;
-  term->ops->iscomputehessianfdpossible = TaoTermIsComputeHessianFDPossible_L1;
+  term->ops->destroy                       = TaoTermDestroy_L1;
+  term->ops->view                          = TaoTermView_L1;
+  term->ops->setfromoptions                = TaoTermSetFromOptions_L1;
+  term->ops->objective                     = TaoTermComputeObjective_L1;
+  term->ops->gradient                      = TaoTermComputeGradient_L1;
+  term->ops->objectiveandgradient          = TaoTermComputeObjectiveAndGradient_L1;
+  term->ops->hessian                       = TaoTermComputeHessian_L1;
+  term->ops->createhessianmatrices         = TaoTermCreateHessianMatrices_L1;
+  term->ops->createunmappedhessianmatrices = TaoTermCreateUnmappedHessianMatrices_L1;
+  term->ops->iscomputehessianfdpossible    = TaoTermIsComputeHessianFDPossible_L1;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermL1SetEpsilon_C", TaoTermL1SetEpsilon_L1));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermL1GetEpsilon_C", TaoTermL1GetEpsilon_L1));
