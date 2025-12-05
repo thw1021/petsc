@@ -396,7 +396,7 @@ int main(int argc, char **argv)
   PetscCall(PetscDASSetSizes(daas, n, n, ensemble_size));
   PetscCall(PetscDASSetFromOptions(daas));
   PetscCall(PetscDASSetUp(daas));
-  PetscCall(PetscDASViewFromOptions(daas, NULL, "-petscdaas_view"));
+  PetscCall(PetscDASViewFromOptions(daas, NULL, "-das_view"));
   PetscCall(PetscDASSetObsErrorVariance(daas, obs_error_var));
 
   /* Initialize ensemble members */
@@ -497,12 +497,12 @@ int main(int argc, char **argv)
   test:
     requires: !complex
     diff_args: -j
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -petscdaas_view -ensemble_size 30 -das_etkf_sqrt_type eigen
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -das_view -ensemble_size 30 -das_etkf_sqrt_type eigen
 
   test:
     suffix: chol
     diff_args: -j
     requires: !complex
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -petscdaas_view -ensemble_size 30 -das_etkf_sqrt_type cholesky
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -das_view -ensemble_size 30 -das_etkf_sqrt_type cholesky
 
 TEST*/
