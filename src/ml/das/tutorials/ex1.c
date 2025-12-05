@@ -56,6 +56,7 @@ static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
 #define DEFAULT_DT            0.05
 #define DEFAULT_OBS_ERROR_STD 1.0
 #define DEFAULT_ENSEMBLE_SIZE 30
+#define SPINUP_STEPS          100
 
 /* Minimum valid parameter values */
 #define MIN_N              1
@@ -183,7 +184,7 @@ static PetscErrorCode Lorenz96Step(Vec x_in, Vec x_out, void *ctx)
   PetscFunctionBeginUser;
   /* Reset the TS time for each integration (required for proper RK4 stepping) */
   PetscCall(TSSetTime(l95->ts, 0.0));
-  PetscCall(VecCopy(x_in, x_out));
+  if (x_in != x_out) PetscCall(VecCopy(x_in, x_out));
   PetscCall(TSSolve(l95->ts, x_out));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -232,6 +233,7 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *steps, PetscInt 
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency adjusted from %" PetscInt_FMT " to %d\n", *obs_freq, MIN_OBS_FREQ));
     *obs_freq = MIN_OBS_FREQ;
   }
+  if (*obs_freq > *steps && *steps > 0) { PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency (%" PetscInt_FMT ") > total steps (%" PetscInt_FMT "), no observations will be assimilated.\n", *obs_freq, *steps)); }
   if (*burn > *steps) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Burn-in steps (%" PetscInt_FMT ") exceeds total steps (%" PetscInt_FMT "), setting burn = steps\n", *burn, *steps));
     *burn = *steps;
@@ -263,6 +265,7 @@ static PetscErrorCode InitializeEnsemble(PetscDAS daas, Vec x0, PetscInt ensembl
   PetscInt i;
 
   PetscFunctionBeginUser;
+  PetscValidHeaderSpecific(rng, PETSC_RANDOM_CLASSID, 5);
   PetscCall(VecDuplicate(x0, &member));
   PetscCall(VecDuplicate(x0, &spread));
 
@@ -290,18 +293,14 @@ static PetscErrorCode InitializeEnsemble(PetscDAS daas, Vec x0, PetscInt ensembl
   Output Parameter:
 . rmse - Root mean square error
 */
-static PetscErrorCode ComputeRMSE(Vec v1, Vec v2, PetscInt n, PetscReal *rmse)
+static PetscErrorCode ComputeRMSE(Vec v1, Vec v2, Vec work, PetscInt n, PetscReal *rmse)
 {
-  Vec       diff;
   PetscReal norm;
 
   PetscFunctionBeginUser;
-  PetscCall(VecDuplicate(v1, &diff));
-  PetscCall(VecCopy(v1, diff));
-  PetscCall(VecAXPY(diff, -1.0, v2));
-  PetscCall(VecNorm(diff, NORM_2, &norm));
+  PetscCall(VecWAXPY(work, -1.0, v2, v1));
+  PetscCall(VecNorm(work, NORM_2, &norm));
   *rmse = norm / PetscSqrtReal((PetscReal)n);
-  PetscCall(VecDestroy(&diff));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -323,7 +322,7 @@ int main(int argc, char **argv)
   DM           da_state;
   PetscDAS     daas;
   Vec          x0, x_mean, x_forecast;
-  Vec          truth_state, truth_next;
+  Vec          truth_state, rmse_work;
   Vec          observation, obs_noise, obs_error_var;
   PetscRandom  rng;
 
@@ -369,15 +368,12 @@ int main(int argc, char **argv)
 
   /* Initialize truth trajectory */
   PetscCall(VecDuplicate(x0, &truth_state));
-  PetscCall(VecDuplicate(x0, &truth_next));
   PetscCall(VecCopy(x0, truth_state));
+  PetscCall(VecDuplicate(x0, &rmse_work));
 
-  /* Spin up truth for 100 steps to get onto attractor */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for 100 steps...\n"));
-  for (int k = 0; k < 100; k++) {
-    PetscCall(Lorenz96Step(truth_state, truth_next, l95_ctx));
-    PetscCall(VecCopy(truth_next, truth_state));
-  }
+  /* Spin up truth to get onto attractor */
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for %d steps...\n", SPINUP_STEPS));
+  for (int k = 0; k < SPINUP_STEPS; k++) { PetscCall(Lorenz96Step(truth_state, truth_state, l95_ctx)); }
 
   /* Initialize random number generator */
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rng));
@@ -428,7 +424,7 @@ int main(int argc, char **argv)
     /* Forecast step: compute ensemble mean and forecast RMSE */
     PetscCall(PetscDASComputeMean(daas, x_mean));
     PetscCall(VecCopy(x_mean, x_forecast));
-    PetscCall(ComputeRMSE(x_forecast, truth_state, n, &rmse_forecast));
+    PetscCall(ComputeRMSE(x_forecast, truth_state, rmse_work, n, &rmse_forecast));
     rmse_analysis = rmse_forecast; /* Default to forecast RMSE if no analysis */
 
     /* Analysis step: assimilate observations when available */
@@ -442,7 +438,7 @@ int main(int argc, char **argv)
 
       /* Compute analysis RMSE */
       PetscCall(PetscDASComputeMean(daas, x_mean));
-      PetscCall(ComputeRMSE(x_mean, truth_state, n, &rmse_analysis));
+      PetscCall(ComputeRMSE(x_mean, truth_state, rmse_work, n, &rmse_analysis));
       obs_count++;
     }
 
@@ -461,8 +457,7 @@ int main(int argc, char **argv)
     /* Propagate ensemble and truth trajectory */
     if (step < steps) {
       PetscCall(PetscDASApplyModel(daas, Lorenz96Step, l95_ctx));
-      PetscCall(Lorenz96Step(truth_state, truth_next, l95_ctx));
-      PetscCall(VecCopy(truth_next, truth_state));
+      PetscCall(Lorenz96Step(truth_state, truth_state, l95_ctx));
     }
   }
 
@@ -485,7 +480,7 @@ int main(int argc, char **argv)
   PetscCall(VecDestroy(&obs_error_var));
   PetscCall(VecDestroy(&obs_noise));
   PetscCall(VecDestroy(&observation));
-  PetscCall(VecDestroy(&truth_next));
+  PetscCall(VecDestroy(&rmse_work));
   PetscCall(VecDestroy(&truth_state));
   PetscCall(VecDestroy(&x0));
   PetscCall(PetscDASDestroy(&daas));
@@ -501,10 +496,12 @@ int main(int argc, char **argv)
 
   test:
     requires: !complex
+    diff_args: -j
     args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -petscdaas_view -ensemble_size 30 -das_etkf_sqrt_type eigen
 
   test:
     suffix: chol
+    diff_args: -j
     requires: !complex
     args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -petscdaas_view -ensemble_size 30 -das_etkf_sqrt_type cholesky
 
