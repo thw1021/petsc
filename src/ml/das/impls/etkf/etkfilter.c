@@ -813,7 +813,7 @@ static PetscErrorCode PetscDASApplyTInverse(PetscDAS da, Vec sdel, Vec *w)
 
 /*
   ApplySqrtTInverse_Cholesky - Computes Y = L^{-T} * U using forward substitution.
-  
+
   Notes:
   Since T = L * L^T, T^{-1} = L^{-T} * L^{-1}.
   We uses L^{-T} as the non-symmetric "square root" inverse, i.e., T^{-1/2} = L^{-T}.
@@ -861,7 +861,7 @@ static PetscErrorCode ApplySqrtTInverse_Cholesky(PetscDAS da, PetscDASETKFData *
 
 /*
   ApplySqrtTInverse_Eigen - Computes Y = V * D^{-1/2} * V^T * U.
-  
+
   Notes:
   This computes the symmetric square root T^{-1/2} = V * D^{-1/2} * V^T.
   The operation is performed as Y = V * (D^{-1/2} * (V^T * U)) to strictly follow
@@ -911,7 +911,7 @@ static PetscErrorCode ApplySqrtTInverse_Eigen(PetscDAS da, PetscDASETKFData *imp
   Notes:
   This function applies the inverse square root of T = I + S^T * S using the
   stored factorization.
-  
+
   - For CHOLESKY mode: Computes Y = L^{-T} U
   - For EIGEN mode: Computes Y = V D^{-1/2} V^T U
 
