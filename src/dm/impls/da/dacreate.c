@@ -348,8 +348,11 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   PetscInt     gx, gy = 0, gz = 0, gm, gn = 1, gp = 1;
   PetscInt     dim, dof, M, N = 1, P = 1, pm, pn = 1, pp = 1, Nv, gNv;
 
+  DM_DA          *dd = (DM_DA *)dm->data;
+  DMDA_PointBC   *bc = dd->bc;
+
   PetscFunctionBegin;
-  if (!((DM_DA *)dm->data)->useSection) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!dd->useSection) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
@@ -363,41 +366,52 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   PetscCall(PetscSectionSetChart(s, 0, gNv));
   for (PetscInt v = 0; v < gNv; ++v) PetscCall(PetscSectionSetDof(s, v, dof));
 
-  // Set BC Dofs
-  // Temporary - constrain outermost edge in each dimension
-  // TODO: need a nice way of passing this information through
-  for (PetscInt j = gy; j < gy + gn; j++) {
-    for (PetscInt i = gx; i < gx + gm; i++) {
-      // local ghosted id
-      PetscInt localId = (j - gy) * gm + (i - gx);
-      PetscBool isBoundary =
-          (i == 0) || (i == M - 1) ||
-          (j == 0) || (j == N - 1);
+  if (bc) {
+    // Set BC dofs
+    for (PetscInt b = 0; b < bc->numBC; b++) {
+      const PetscInt *pts;
+      PetscInt npts = 0, ncmp = 0;
 
-      if (isBoundary) {
-        PetscCall(PetscSectionSetConstraintDof(s, localId, dof));
+      PetscCall(ISGetLocalSize(bc->bcPoints[b], &npts));
+      PetscCall(ISGetIndices(bc->bcPoints[b], &pts));
+
+      if (bc->bcComps[b]) {
+        PetscCall(ISGetLocalSize(bc->bcComps[b], &ncmp));
+      } else {
+        ncmp = dof;  /* constrain all components/dofs at the point */
       }
+      for (PetscInt i = 0; i < npts; i++) {
+        PetscInt p = pts[i];
+        PetscCall(PetscSectionSetConstraintDof(s, p, ncmp));
+      }
+      PetscCall(ISRestoreIndices(bc->bcPoints[b], &pts));
     }
   }
 
   PetscCall(PetscSectionSetFromOptions(s));
   PetscCall(PetscSectionSetUp(s));
 
-  // Set BC indices
-  // Temporary - constrain outermost edge in each dimension
-  // TODO: need a nice way of passing this information through
-  for (PetscInt j = gy; j < gy + gn; j++) {
-    for (PetscInt i = gx; i < gx + gm; i++) {
-      // local ghosted id
-      PetscInt localId = (j - gy) * gm + (i - gx);
-      PetscBool isBoundary =
-          (i == 0) || (i == M - 1) ||
-          (j == 0) || (j == N - 1);
+  if (bc) {
+    // Set BC indices
+    for (PetscInt b = 0; b < bc->numBC; b++) {
+      const PetscInt *pts, *cmp;
+      PetscInt npts = 0, ncmp = 0;
 
-      if (isBoundary) {
-        const PetscInt idx[1] = {0};
-        PetscCall(PetscSectionSetConstraintIndices(s, localId, idx));
+      PetscCall(ISGetLocalSize(bc->bcPoints[b], &npts));
+      PetscCall(ISGetIndices(bc->bcPoints[b], &pts));
+
+      if (bc->bcComps[b]) {
+        PetscCall(ISGetLocalSize(bc->bcComps[b], &ncmp));
+        PetscCall(ISGetIndices(bc->bcComps[b], &cmp));
+      } else {
+        cmp = NULL;  /* NULL = all components/dofs at the point */
       }
+      for (PetscInt i = 0; i < npts; i++) {
+        PetscInt p = pts[i];
+        PetscCall(PetscSectionSetConstraintIndices(s, p, cmp));
+      }
+      PetscCall(ISRestoreIndices(bc->bcPoints[b], &pts));
+      if (bc->bcComps[b]) PetscCall(ISRestoreIndices(bc->bcComps[b], &cmp));
     }
   }
 
@@ -462,12 +476,36 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   // PetscSynchronizedFlush(comm, NULL);
   PetscCall(PetscSFSetGraph(sf, gNv, Nl, local, PETSC_OWN_POINTER, remote, PETSC_OWN_POINTER));
   PetscCall(DMSetPointSF(dm, sf));
-  DM_DA          *dd = (DM_DA *)dm->data;
   dd->gtol = sf;
   // PetscSFView(sf, NULL);
   PetscCall(PetscSFDestroy(&sf));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PetscErrorCode DMDASetPointBC(DM dm, PetscInt numBC, IS bcPoints[], IS bcComps[])
+{
+  DM_DA *dd = (DM_DA*)dm->data;
+  DMDA_PointBC *bc = NULL;
+
+  PetscFunctionBegin;
+  PetscCall(PetscNew(&bc));
+  bc->numBC = numBC;
+
+  PetscCall(PetscMalloc1(numBC, &bc->bcPoints));
+  PetscCall(PetscMalloc1(numBC, &bc->bcComps));
+
+  for (PetscInt b = 0; b < numBC; b++) {
+    PetscCall(ISDuplicate(bcPoints[b], &bc->bcPoints[b]));
+    if (bcComps && bcComps[b]) {
+      PetscCall(ISDuplicate(bcComps[b], &bc->bcComps[b]));
+    } else {
+      bc->bcComps[b] = NULL; /* NULL = constrain all components */
+    }
+  }
+  dd->bc = bc;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 
 /*MC
    DMDA = "da" - A `DM` object that is used to help solve PDEs on a structured grid (or mesh) in 1, 2, or 3 dimensions.

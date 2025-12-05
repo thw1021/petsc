@@ -38,6 +38,7 @@ PetscErrorCode InsertBoundary(DM da, Vec u, PoissonCtx *user);
 PetscErrorCode JacMult(Mat J, Vec X, Vec Y);
 PetscErrorCode FormFunctionGlobal(SNES snes, Vec X, Vec F, void* dummy);
 PetscErrorCode FormExact(DMDALocalInfo *info, Vec u, PoissonCtx* user);
+PetscErrorCode SetupBCs(DM da);
 
 
 int main(int argc, char **argv)
@@ -53,6 +54,7 @@ int main(int argc, char **argv)
     DMDALocalInfo   info;
     PetscScalar     errinf, normconst2h, err2h;
     char            gridstr[99];
+    PetscInt        N=9;
     PoissonCtx user;
 
     PetscCall(PetscInitialize(&argc,&argv,NULL,help));
@@ -64,12 +66,13 @@ int main(int argc, char **argv)
     user.g_bdry = &u_exact_2D;
     user.f_rhs = &f_rhs_2D;
 
-    PetscCall(DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,9,9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da));
+    PetscCall(DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,N,N,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da));
     PetscCall(DMSetFromOptions(da));
     PetscCall(DMSetUp(da));
     PetscCall(DMDASetUniformCoordinates(da,0.0,user.Lx,0.0,user.Ly,0.0,1.0));
     PetscCall(DMSetMatType(da,MATSHELL));
 
+    PetscCall(SetupBCs(da));
     // create the local section - run with -da_use_section
     PetscCall(DMGetLocalSection(da, &lsection));
     PetscCall(DMGetPointSF(da, &sf));
@@ -108,6 +111,7 @@ int main(int argc, char **argv)
 
     PetscCall(VecAXPY(uglobal,-1.0,u_exact));   // u <- u + (-1.0) uexact
     PetscCall(VecDestroy(&u_exact));      // no longer needed
+    PetscCall(VecDestroy(&u_exact_local));
     PetscCall(VecNorm(uglobal,NORM_INFINITY,&errinf));
     PetscCall(VecNorm(uglobal,NORM_2,&err2h));
     normconst2h = PetscSqrtReal((PetscScalar)(info.mx-1)*(info.my-1));
@@ -118,10 +122,13 @@ int main(int argc, char **argv)
                 "problem on %s grid:\n"
                 "  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e\n",
                 gridstr,errinf,err2h));
-
+    
+    PetscCall(PetscSectionDestroy(&gsection));
     PetscCall(VecDestroy(&uglobal));
     PetscCall(MatDestroy(&J));
     PetscCall(SNESDestroy(&snes));
+    // PetscCall(DMDestroy(&da));
+    PetscCall(PetscFinalize());
 
   return 0;
 }
@@ -137,6 +144,8 @@ PetscErrorCode FormFunctionGlobal(SNES snes, Vec u, Vec F, void *dummy)
     PoissonCtx     *user;
     Vec            u_local, F_local;
 
+    PetscFunctionBeginUser;
+
     PetscCall(DMDAGetLocalInfo(dm, &info));
     PetscCall(DMGetApplicationContext(dm,&user));
     PetscCall(VecSet(F,0.0));
@@ -146,7 +155,7 @@ PetscErrorCode FormFunctionGlobal(SNES snes, Vec u, Vec F, void *dummy)
     PetscCall(DMGlobalToLocalBegin(dm, u, INSERT_VALUES, u_local));
     PetscCall(DMGlobalToLocalEnd(dm, u, INSERT_VALUES, u_local));
 
-    // insert bc values in ghosted local vector
+    // insert bc values in ghosted local vector 
     PetscCall(InsertBoundary(dm, u_local, user));
 
     PetscCall(DMDAVecGetArray(dm, u_local, &au));
@@ -181,6 +190,7 @@ PetscErrorCode FormFunctionGlobal(SNES snes, Vec u, Vec F, void *dummy)
             }
         }
     }
+
     PetscCall(DMDAVecRestoreArray(dm, u_local, &au));
     PetscCall(DMDAVecRestoreArray(dm, F_local, &aF));
 
@@ -190,7 +200,7 @@ PetscErrorCode FormFunctionGlobal(SNES snes, Vec u, Vec F, void *dummy)
     PetscCall(DMRestoreLocalVector(dm, &u_local));
     PetscCall(DMRestoreLocalVector(dm, &F_local));
 
-    return 0;
+    PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 
@@ -256,15 +266,18 @@ PetscErrorCode JacMult(Mat J, Vec X, Vec Y)
     PetscCall(DMRestoreLocalVector(dm,&xloc));
     PetscCall(DMRestoreLocalVector(dm,&yloc));
 
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(PETSC_SUCCESS);
 
 }
 
 PetscErrorCode InsertBoundary(DM da, Vec u, PoissonCtx *user) {
     DMDALocalInfo  info;
-    PetscCall(DMDAGetLocalInfo(da,&info));
     PetscInt   i, j;
     PetscScalar  xymin[2], xymax[2], hx, hy, x, y, **au;
+
+    PetscFunctionBeginUser;
+
+    PetscCall(DMDAGetLocalInfo(da,&info));
     PetscCall(DMDAVecGetArray(da, u, &au));
     PetscCall(DMGetBoundingBox(da,xymin,xymax));
     hx = (xymax[0] - xymin[0]) / (info.mx - 1);
@@ -279,15 +292,17 @@ PetscErrorCode InsertBoundary(DM da, Vec u, PoissonCtx *user) {
             }
         }
     }
-
     PetscCall(DMDAVecRestoreArray(da, u, &au));
-    return 0;
+    PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 
 PetscErrorCode FormExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
     PetscInt   i, j;
     PetscScalar  xymin[2], xymax[2], hx, hy, x, y, **au;
+
+    PetscFunctionBeginUser;
+
     PetscCall(DMGetBoundingBox(info->da,xymin,xymax));
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
@@ -300,5 +315,48 @@ PetscErrorCode FormExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
         }
     }
     PetscCall(DMDAVecRestoreArray(info->da, u, &au));
-    return 0;
+    PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+
+PetscErrorCode SetupBCs(DM da)
+{
+  PetscInt       x, y, m, n, gx, gy, gm, gn, M, N, dim, dof, numBC = 0, *bcPointsArray;
+  IS             bcPointsIS;
+
+  PetscFunctionBeginUser;
+
+  PetscCall(DMDAGetInfo(da, &dim, &M, &N, NULL, NULL, NULL, NULL, &dof, NULL, NULL, NULL, NULL, NULL));
+  PetscCall(DMDAGetCorners(da,&x,&y,NULL,&m,&n,NULL));
+  PetscCall(DMDAGetGhostCorners(da,&gx,&gy,NULL,&gm,&gn,NULL));
+
+  // determine how many points are on physical boundary
+  for (PetscInt j = gy; j < gy + gn; j++) {
+    for (PetscInt i = gx; i < gx + gm; i++) {
+      PetscBool isBoundary = (i == 0) || (i == M - 1) ||
+                             (j == 0) || (j == N - 1);
+      if (isBoundary) {
+        numBC++;
+      }
+    }
+  }
+  // create an array of points to constrain
+  PetscCall(PetscMalloc1(numBC, &bcPointsArray));
+  PetscInt k = 0;
+  for (PetscInt j = gy; j < gy + gn; j++) {
+    for (PetscInt i = gx; i < gx + gm; i++) {
+        PetscBool isBoundary = (i == 0) || (i == M - 1) || (j == 0) || (j == N - 1);
+        if (isBoundary) {
+            bcPointsArray[k++] = (j - gy) * gm + (i - gx);
+      }
+    }
+  }
+  // create an IS of boundary points
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)da), numBC, bcPointsArray, PETSC_OWN_POINTER, &bcPointsIS));
+
+  IS bcPoints[1] = {bcPointsIS};
+  PetscCall(DMDASetPointBC(da, 1, bcPoints, NULL));
+
+  PetscCall(ISDestroy(&bcPointsIS));;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

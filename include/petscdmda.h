@@ -145,6 +145,8 @@ PETSC_EXTERN PetscErrorCode DMDAVecRestoreArrayDOFWrite(DM, Vec, void *);
 
 PETSC_EXTERN PetscErrorCode DMDACreatePatchIS(DM, MatStencil *, MatStencil *, IS *, PetscBool);
 
+PETSC_EXTERN PetscErrorCode DMDASetPointBC(DM, PetscInt, IS[], IS[]);
+
 /*MC
       DMDACoor2d - Structure for holding 2d (x and y) coordinates when working with `DMDA`
 
