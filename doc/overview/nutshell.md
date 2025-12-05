@@ -39,6 +39,8 @@ PETSc/TAO is a tool for writing, analyzing, and optimizing large-scale numerical
 
 - Eigenvalue/Eigenvectors and related algorithms in the package [SLEPc](https://slepc.upv.es).
 
+- {any}`Petsc date assimilation <ch_das>` for data assimilation problems (`PetscDAS`).
+
 ## Model/Discretization Interfaces to Solvers
 
 - Simple structured grids, `DMDA`.
