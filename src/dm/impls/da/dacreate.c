@@ -314,16 +314,14 @@ static PetscErrorCode DMGetNeighbors_DA(DM dm, PetscInt *nranks, const PetscMPII
 
 #include <petscsf.h>
 
-static PetscErrorCode PetscSFAddFace_2D_Private(DM dm, PetscMPIInt nrank, PetscInt xmin, PetscInt xmax, PetscInt ymin, PetscInt ymax, const PetscInt bases[], const PetscInt glxs[], const PetscInt glys[], PetscInt *l, PetscInt local[], PetscSFNode remote[])
+static PetscErrorCode PetscSFAddFace_2D_Private(DM dm, PetscMPIInt nrank, PetscInt xmin, PetscInt xmax, PetscInt ymin, PetscInt ymax, const PetscInt bases[], const PetscInt glx[], const PetscInt glxs[], const PetscInt glys[], PetscInt *l, PetscInt local[], PetscSFNode remote[])
 {
-  const PetscInt *glx;
   PetscInt        pm, dof, x, y, gx, gy, gm;
 
   PetscFunctionBegin;
   PetscCall(DMDAGetInfo(dm, NULL, NULL, NULL, NULL, &pm, NULL, NULL, &dof, NULL, NULL, NULL, NULL, NULL));
   PetscCall(DMDAGetCorners(dm, &x, &y, NULL, NULL, NULL, NULL));
   PetscCall(DMDAGetGhostCorners(dm, &gx, &gy, NULL, &gm, NULL, NULL));
-  PetscCall(DMDAGetGhostOwnershipRanges(dm, &glx, NULL, NULL, NULL, NULL, NULL));
   const PetscInt nrm = nrank % pm; // The x-component of the neighbor rank, in [0, m)
   const PetscInt nrn = nrank / pm; // The y-component of the neighbor rank, in [0, n)
 
@@ -348,8 +346,8 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   PetscInt     gx, gy = 0, gz = 0, gm, gn = 1, gp = 1;
   PetscInt     dim, dof, M, N = 1, P = 1, pm, pn = 1, pp = 1, Nv, gNv;
 
-  DM_DA          *dd = (DM_DA *)dm->data;
-  DMDA_PointBC   *bc = dd->bc;
+  DM_DA        *dd = (DM_DA *)dm->data;
+  DMDA_PointBC *bc = dd->bc;
 
   PetscFunctionBegin;
   if (!dd->useSection) PetscFunctionReturn(PETSC_SUCCESS);
@@ -370,7 +368,7 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
     // Set BC dofs
     for (PetscInt b = 0; b < bc->numBC; b++) {
       const PetscInt *pts;
-      PetscInt npts = 0, ncmp = 0;
+      PetscInt        npts = 0, ncmp = 0;
 
       PetscCall(ISGetLocalSize(bc->bcPoints[b], &npts));
       PetscCall(ISGetIndices(bc->bcPoints[b], &pts));
@@ -378,7 +376,7 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
       if (bc->bcComps[b]) {
         PetscCall(ISGetLocalSize(bc->bcComps[b], &ncmp));
       } else {
-        ncmp = dof;  /* constrain all components/dofs at the point */
+        ncmp = dof; /* constrain all components/dofs at the point */
       }
       for (PetscInt i = 0; i < npts; i++) {
         PetscInt p = pts[i];
@@ -395,7 +393,7 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
     // Set BC indices
     for (PetscInt b = 0; b < bc->numBC; b++) {
       const PetscInt *pts, *cmp;
-      PetscInt npts = 0, ncmp = 0;
+      PetscInt        npts = 0, ncmp = 0;
 
       PetscCall(ISGetLocalSize(bc->bcPoints[b], &npts));
       PetscCall(ISGetIndices(bc->bcPoints[b], &pts));
@@ -404,7 +402,7 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
         PetscCall(ISGetLocalSize(bc->bcComps[b], &ncmp));
         PetscCall(ISGetIndices(bc->bcComps[b], &cmp));
       } else {
-        cmp = NULL;  /* NULL = all components/dofs at the point */
+        cmp = NULL; /* NULL = all components/dofs at the point */
       }
       for (PetscInt i = 0; i < npts; i++) {
         PetscInt p = pts[i];
@@ -451,21 +449,21 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   switch (dim) {
   case 2:
     // Lower left
-    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[0], gx, x, gy, y, bases, glxs, glys, &l, local, remote));
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[0], gx, x, gy, y, bases, glx, glxs, glys, &l, local, remote));
     // Lower middle
-    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[1], x, x + m, gy, y, bases, glxs, glys, &l, local, remote));
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[1], x, x + m, gy, y, bases, glx, glxs, glys, &l, local, remote));
     // Lower right
-    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[2], x + m, gx + gm, gy, y, bases, glxs, glys, &l, local, remote));
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[2], x + m, gx + gm, gy, y, bases, glx, glxs, glys, &l, local, remote));
     // Middle left
-    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[3], gx, x, y, y + n, bases, glxs, glys, &l, local, remote));
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[3], gx, x, y, y + n, bases, glx, glxs, glys, &l, local, remote));
     // Middle right
-    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[5], x + m, gx + gm, y, y + n, bases, glxs, glys, &l, local, remote));
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[5], x + m, gx + gm, y, y + n, bases, glx, glxs, glys, &l, local, remote));
     // Upper left
-    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[6], gx, x, y + n, gy + gn, bases, glxs, glys, &l, local, remote));
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[6], gx, x, y + n, gy + gn, bases, glx, glxs, glys, &l, local, remote));
     // Upper middle
-    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[7], x, x + m, y + n, gy + gn, bases, glxs, glys, &l, local, remote));
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[7], x, x + m, y + n, gy + gn, bases, glx, glxs, glys, &l, local, remote));
     // Upper right
-    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[8], x + m, gx + gm, y + n, gy + gn, bases, glxs, glys, &l, local, remote));
+    PetscCall(PetscSFAddFace_2D_Private(dm, neigh[8], x + m, gx + gm, y + n, gy + gn, bases, glx, glxs, glys, &l, local, remote));
     break;
   default:
     PetscCheck(0, comm, PETSC_ERR_SUP, "No support for dimension %" PetscInt_FMT, dim);
@@ -476,15 +474,13 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   // PetscSynchronizedFlush(comm, NULL);
   PetscCall(PetscSFSetGraph(sf, gNv, Nl, local, PETSC_OWN_POINTER, remote, PETSC_OWN_POINTER));
   PetscCall(DMSetPointSF(dm, sf));
-  dd->gtol = sf;
-  // PetscSFView(sf, NULL);
   PetscCall(PetscSFDestroy(&sf));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMDASetPointBC(DM dm, PetscInt numBC, IS bcPoints[], IS bcComps[])
 {
-  DM_DA *dd = (DM_DA*)dm->data;
+  DM_DA        *dd = (DM_DA *)dm->data;
   DMDA_PointBC *bc = NULL;
 
   PetscFunctionBegin;
@@ -505,7 +501,6 @@ PetscErrorCode DMDASetPointBC(DM dm, PetscInt numBC, IS bcPoints[], IS bcComps[]
   dd->bc = bc;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 /*MC
    DMDA = "da" - A `DM` object that is used to help solve PDEs on a structured grid (or mesh) in 1, 2, or 3 dimensions.

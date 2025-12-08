@@ -50,10 +50,9 @@ PetscErrorCode DMCreateLocalVector_DA(DM da, Vec *g)
   PetscValidHeaderSpecific(da, DM_CLASSID, 1);
   PetscAssertPointer(g, 2);
 
-  if (dd->useSection){
-    PetscCall(DMCreateLocalVector_Section_Private(da,g));
-  }
-  else{
+  if (dd->useSection) {
+    PetscCall(DMCreateLocalVector_Section_Private(da, g));
+  } else {
     PetscCall(VecCreate(PETSC_COMM_SELF, g));
     PetscCall(VecSetSizes(*g, dd->nlocal, PETSC_DETERMINE));
     PetscCall(VecSetBlockSize(*g, dd->w));

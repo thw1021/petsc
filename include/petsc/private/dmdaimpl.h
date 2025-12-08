@@ -7,13 +7,11 @@
 #include <petscdmda.h>
 #include <petsc/private/dmimpl.h>
 
-
 typedef struct {
-  PetscInt  numBC;      /* number of BCs */
-  IS        *bcPoints;  /* Array of size numBC of IS holding the points to which each BC applies */
-  IS        *bcComps;   /* Array of size numBC of IS holding the components/dof number to which each BC applies; NULL = all components */
+  PetscInt numBC;    /* number of BCs */
+  IS      *bcPoints; /* Array of size numBC of IS holding the points to which each BC applies */
+  IS      *bcComps;  /* Array of size numBC of IS holding the components/dof number to which each BC applies; NULL = all components */
 } DMDA_PointBC;
-
 
 typedef struct {
   PetscInt              M, N, P;                /* array dimensions */
@@ -80,10 +78,9 @@ typedef struct {
   PetscBool prealloc_only;
   PetscInt  preallocCenterDim; /* Dimension of the points which connect adjacent points for preallocation */
 
-  PetscBool useSection; // Create a PetscSection for the layout
-  DMDA_PointBC *bc;  // User BC info
+  PetscBool     useSection; // Create a PetscSection for the layout
+  DMDA_PointBC *bc;         // User BC info
 } DM_DA;
-
 
 /*
   Vectors:

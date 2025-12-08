@@ -3,12 +3,11 @@ static char help[] = "Test PetscSection with DMDA\n";
 #include <petscdmda.h>
 #include <petsc.h>
 
-
 int main(int argc, char *argv[])
 {
-  DM              da;
-  PetscInt       Nx = 6;
-  PetscSection    lsection, gsection;
+  DM           da;
+  PetscInt     Nx = 6;
+  PetscSection lsection, gsection;
   PetscSF      sf;
 
   PetscFunctionBeginUser;
@@ -19,15 +18,21 @@ int main(int argc, char *argv[])
   PetscCall(DMSetFromOptions(da));
   PetscCall(DMSetUp(da));
 
+  printf("ptr of da is %p\n", &da);
+
   PetscCall(DMGetLocalSection(da, &lsection));
 
   /* Create the global section */
-  PetscCall(DMGetPointSF(da, &sf));
-  PetscCall(PetscSectionCreateGlobalSection(lsection, sf, PETSC_TRUE, PETSC_FALSE, PETSC_FALSE, &gsection));
-  PetscCall(DMSetGlobalSection(da, gsection));
+  // PetscCall(DMGetPointSF(da, &sf));
+  // PetscCall(PetscSectionCreateGlobalSection(lsection, sf, PETSC_TRUE, PETSC_FALSE, PETSC_FALSE, &gsection));
+  // PetscCall(DMSetGlobalSection(da, gsection));
   /* View the global section */
-  PetscSectionView(gsection, PETSC_VIEWER_STDOUT_WORLD);
+  // PetscSectionView(gsection, PETSC_VIEWER_STDOUT_WORLD);
 
+  // PetscCall(PetscSectionDestroy(&gsection));
+
+  printf("ptr of da is %p\n", &da);
+  PetscCall(DMDestroy(&da));
   PetscCall(PetscFinalize());
   return 0;
 }

@@ -53,7 +53,7 @@ PetscErrorCode DMDestroy_DA(DM da)
   PetscCall(PetscObjectComposeFunction((PetscObject)da, "DMSetUpGLVisViewer_C", NULL));
 
   if (dd->bc) {
-    for (PetscInt b=0; b<dd->bc->numBC; b++) {
+    for (PetscInt b = 0; b < dd->bc->numBC; b++) {
       if (dd->bc->bcPoints[b]) PetscCall(ISDestroy(&dd->bc->bcPoints[b]));
       if (dd->bc->bcComps[b]) PetscCall(ISDestroy(&dd->bc->bcComps[b]));
     }

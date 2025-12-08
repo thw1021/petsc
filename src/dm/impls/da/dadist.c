@@ -12,10 +12,9 @@ PetscErrorCode DMCreateGlobalVector_DA(DM da, Vec *g)
   PetscValidHeaderSpecific(da, DM_CLASSID, 1);
   PetscAssertPointer(g, 2);
 
-  if (dd->useSection){
+  if (dd->useSection) {
     PetscCall(DMCreateGlobalVector_Section_Private(da, g));
-  }
-  else{
+  } else {
     PetscCall(VecCreate(PetscObjectComm((PetscObject)da), g));
     PetscCall(VecSetSizes(*g, dd->Nlocal, PETSC_DETERMINE));
     PetscCall(VecSetBlockSize(*g, dd->w));
@@ -26,7 +25,6 @@ PetscErrorCode DMCreateGlobalVector_DA(DM da, Vec *g)
     }
     PetscCall(VecSetDM(*g, da));
     PetscCall(VecSetLocalToGlobalMapping(*g, da->ltogmap));
-
   }
   PetscCall(VecSetOperation(*g, VECOP_VIEW, (void (*)(void))VecView_MPI_DA));
   PetscCall(VecSetOperation(*g, VECOP_LOAD, (void (*)(void))VecLoad_Default_DA));
