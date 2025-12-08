@@ -21,7 +21,7 @@ static PetscErrorCode TaoSolve_BLMVM(Tao tao)
   PetscCall(VecBoundGradientProjection(blmP->unprojected_gradient, tao->solution, tao->XL, tao->XU, tao->gradient));
 
   PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &gnorm));
-  PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
+  TaoCheckInitialObjectiveAndGradient(tao, f, gnorm);
 
   tao->reason = TAO_CONTINUE_ITERATING;
   PetscCall(TaoLogConvergenceHistory(tao, f, gnorm, 0.0, tao->ksp_its));
@@ -106,7 +106,7 @@ static PetscErrorCode TaoSolve_BLMVM(Tao tao)
     /* Check for converged */
     PetscCall(VecBoundGradientProjection(blmP->unprojected_gradient, tao->solution, tao->XL, tao->XU, tao->gradient));
     PetscCall(TaoGradientNorm(tao, tao->gradient, NORM_2, &gnorm));
-    PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Not-a-Number");
+    TaoCheckObjectiveAndGradient(tao, f, gnorm);
     tao->niter++;
     PetscCall(TaoLogConvergenceHistory(tao, f, gnorm, 0.0, tao->ksp_its));
     PetscCall(TaoMonitor(tao, tao->niter, f, gnorm, 0.0, stepsize));

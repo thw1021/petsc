@@ -156,7 +156,7 @@ PetscErrorCode TaoSolve_BNTR(Tao tao)
 
       /* Compute the actual reduction and update the trust radius */
       PetscCall(TaoComputeObjective(tao, tao->solution, &bnk->f));
-      PetscCheck(!PetscIsInfOrNanReal(bnk->f), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
+      TaoCheckObjective(tao, bnk->f);
       actred   = bnk->fold - bnk->f;
       oldTrust = tao->trust;
       PetscCall(TaoBNKUpdateTrustRadius(tao, prered, actred, bnk->update_type, stepType, &stepAccepted));

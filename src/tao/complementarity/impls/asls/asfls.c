@@ -130,6 +130,7 @@ static PetscErrorCode TaoSolve_ASFLS(Tao tao)
      current iterate */
   PetscCall(TaoLineSearchComputeObjectiveAndGradient(tao->linesearch, tao->solution, &psi, asls->dpsi));
   PetscCall(VecNorm(asls->dpsi, NORM_2, &ndpsi));
+  TaoCheckInitialObjectiveAndGradient(tao, psi, ndpsi);
 
   tao->reason = TAO_CONTINUE_ITERATING;
   while (1) {

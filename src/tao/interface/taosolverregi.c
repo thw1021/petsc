@@ -45,7 +45,7 @@ const char  *TaoConvergedReasons_Shifted[] = {"DIVERGED_USER",
                                               "DIVERGED_NAN",
                                               "",
                                               "DIVERGED_MAXITS",
-                                              "DIVERGED_FUNCTION_DOMAIN",
+                                              "DIVERGED_OBJECTIVE_DOMAIN",
 
                                               "CONTINUE_ITERATING",
 

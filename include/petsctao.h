@@ -244,19 +244,20 @@ PETSC_EXTERN PetscFunctionList TaoList;
     TaoConvergedReason - reason a `Tao` optimizer was said to have converged or diverged
 
    Values:
-+  `TAO_CONVERGED_GATOL`       - $||g(X)|| < gatol$
-.  `TAO_CONVERGED_GRTOL`       - $||g(X)|| / f(X)  < grtol$
-.  `TAO_CONVERGED_GTTOL`       - $||g(X)|| / ||g(X0)|| < gttol$
-.  `TAO_CONVERGED_STEPTOL`     - step size smaller than tolerance
-.  `TAO_CONVERGED_MINF`        - $F < F_min$
-.  `TAO_CONVERGED_USER`        - the user indicates the optimization has succeeded
-.  `TAO_DIVERGED_MAXITS`       - the maximum number of iterations allowed has been achieved
-.  `TAO_DIVERGED_NAN`          - not a number appeared in the computations
-.  `TAO_DIVERGED_MAXFCN`       - the maximum number of function evaluations has been computed
-.  `TAO_DIVERGED_LS_FAILURE`   - a linesearch failed
-.  `TAO_DIVERGED_TR_REDUCTION` - trust region failure
-.  `TAO_DIVERGED_USER`         - the user has indicated the optimization has failed
--  `TAO_CONTINUE_ITERATING`    - the optimization is still running, `TaoSolve()`
++  `TAO_CONVERGED_GATOL`           - $||g(X)|| < gatol$
+.  `TAO_CONVERGED_GRTOL`           - $||g(X)|| / f(X)  < grtol$
+.  `TAO_CONVERGED_GTTOL`           - $||g(X)|| / ||g(X0)|| < gttol$
+.  `TAO_CONVERGED_STEPTOL`         - step size smaller than tolerance
+.  `TAO_CONVERGED_MINF`            - $F < F_min$
+.  `TAO_CONVERGED_USER`            - the user indicates the optimization has succeeded
+.  `TAO_DIVERGED_MAXITS`           - the maximum number of iterations allowed has been achieved
+.  `TAO_DIVERGED_NAN`              - not a number appeared in the computations
+.  `TAO_DIVERGED_MAXFCN`           - the maximum number of function evaluations has been computed
+.  `TAO_DIVERGED_LS_FAILURE`       - a linesearch failed
+.  `TAO_DIVERGED_TR_REDUCTION`     - trust region failure
+.  `TAO_DIVERGED_USER`             - the user has indicated the optimization has failed
+.  `TAO_DIVERGED_OBJECTIVE_DOMAIN` - a proposed solution was not in the objective functions domain
+-  `TAO_CONTINUE_ITERATING`        - the optimization is still running, `TaoSolve()`
 
    where
 +  X            - current solution
@@ -288,12 +289,13 @@ typedef enum {               /* converged */
   TAO_CONVERGED_MINF    = 7, /* F < F_min */
   TAO_CONVERGED_USER    = 8, /* User defined */
   /* diverged */
-  TAO_DIVERGED_MAXITS       = -2,
-  TAO_DIVERGED_NAN          = -4,
-  TAO_DIVERGED_MAXFCN       = -5,
-  TAO_DIVERGED_LS_FAILURE   = -6,
-  TAO_DIVERGED_TR_REDUCTION = -7,
-  TAO_DIVERGED_USER         = -8, /* User defined */
+  TAO_DIVERGED_OBJECTIVE_DOMAIN = -1,
+  TAO_DIVERGED_MAXITS           = -2,
+  TAO_DIVERGED_NAN              = -4,
+  TAO_DIVERGED_MAXFCN           = -5,
+  TAO_DIVERGED_LS_FAILURE       = -6,
+  TAO_DIVERGED_TR_REDUCTION     = -7,
+  TAO_DIVERGED_USER             = -8,
   /* keep going */
   TAO_CONTINUE_ITERATING = 0
 } TaoConvergedReason;
@@ -335,6 +337,10 @@ PETSC_EXTERN PetscErrorCode TaoSetObjectiveAndGradient(Tao, Vec, PetscErrorCode 
 PETSC_EXTERN PetscErrorCode TaoGetObjectiveAndGradient(Tao, Vec *, PetscErrorCode (**)(Tao, Vec, PetscReal *, Vec, void *), void **);
 PETSC_EXTERN PetscErrorCode TaoSetHessian(Tao, Mat, Mat, PetscErrorCode (*)(Tao, Vec, Mat, Mat, void *), void *);
 PETSC_EXTERN PetscErrorCode TaoGetHessian(Tao, Mat *, Mat *, PetscErrorCode (**)(Tao, Vec, Mat, Mat, void *), void **);
+
+PETSC_EXTERN PetscErrorCode TaoSetErrorIfNotConverged(Tao tao, PetscBool);
+PETSC_EXTERN PetscErrorCode TaoGetErrorIfNotConverged(Tao tao, PetscBool *);
+PETSC_EXTERN PetscErrorCode TaoSetObjectiveDomainError(Tao);
 
 PETSC_EXTERN PetscErrorCode TaoSetGradientNorm(Tao, Mat);
 PETSC_EXTERN PetscErrorCode TaoGetGradientNorm(Tao, Mat *);

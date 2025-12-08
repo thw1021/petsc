@@ -99,6 +99,10 @@
 ```{rubric} TAO:
 ```
 
+- Add `TaoSetErrorIfNotConverged()` and `TaoGetErrorIfNotConverged()`
+- Add `TaoSetObjectiveDomainError()`
+- Add `TaoCheckInitialObjectiveAndGradient()`
+
 ```{rubric} PetscRegressor:
 ```
 

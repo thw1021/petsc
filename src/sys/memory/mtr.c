@@ -1043,17 +1043,20 @@ PetscErrorCode PetscMallocLogRequestedSizeGet(PetscBool *flg)
 PetscErrorCode PetscRealGetNaN(PetscReal *r)
 {
   PetscFunctionBegin;
-  #if defined(PETSC_USE_REAL_SINGLE)
+#if defined(PETSC_USE_REAL_SINGLE)
   int nas = 0x7F800002;
-  #elif defined(PETSC_USE_REAL_DOUBLE)
+#elif defined(PETSC_USE_REAL_DOUBLE)
   PetscInt64 nas = 0x7FF0000000000002;
-  #elif defined(PETSC_USE_REAL___FLOAT128)
-  struct {PetscInt64 a; PetscInt64 b;} nas;
+#elif defined(PETSC_USE_REAL___FLOAT128)
+  struct {
+    PetscInt64 a;
+    PetscInt64 b;
+  } nas;
   nas.b = 0XFFFFFFFFFFFFFFFF;
   nas.a = 0X7FFFFFFFFFFFFFFF;
-  #else
+#else
   short nas = 0x7e00;
-  #endif
+#endif
   memcpy(r, &nas, sizeof(PetscReal));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

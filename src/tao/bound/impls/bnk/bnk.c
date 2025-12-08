@@ -152,7 +152,7 @@ PetscErrorCode TaoBNKInitialize(Tao tao, PetscInt initType, PetscBool *needH)
           PetscCall(VecAXPY(bnk->W, -1.0, bnk->Xold));
           /* Compute the objective at the trial */
           PetscCall(TaoComputeObjective(tao, tao->solution, &ftrial));
-          PetscCheck(!PetscIsInfOrNanReal(bnk->f), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
+          TaoCheckObjective(tao, bnk->f);
           PetscCall(VecCopy(bnk->Xold, tao->solution));
           if (PetscIsInfOrNanReal(ftrial)) {
             tau = bnk->gamma1_i;

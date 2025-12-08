@@ -54,6 +54,7 @@ static PetscErrorCode TaoSolve_SSILS(Tao tao)
      current iterate */
   PetscCall(TaoLineSearchComputeObjectiveAndGradient(tao->linesearch, tao->solution, &psi, ssls->dpsi));
   PetscCall(VecNorm(ssls->dpsi, NORM_2, &ndpsi));
+  TaoCheckInitialObjectiveAndGradient(tao, psi, ndpsi);
 
   tao->reason = TAO_CONTINUE_ITERATING;
   while (PETSC_TRUE) {

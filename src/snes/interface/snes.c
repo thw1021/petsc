@@ -929,7 +929,8 @@ PetscErrorCode SNESEWSetFromOptions_Private(SNESKSPEW *kctx, PetscBool print_api
 . -snes_max_funcs <max_funcs>                                                  - maximum number of function evaluations
 . -snes_force_iteration <force>                                                - force `SNESSolve()` to take at least one iteration
 . -snes_max_fail <max_fail>                                                    - maximum number of line search failures allowed before stopping, default is none
-. -snes_max_linear_solve_fail                                                  - number of linear solver failures before SNESSolve() stops
+. -snes_max_linear_solve_fail                                                  - number of linear solver failures before `SNESSolve()` stops
+. -snes_error_if_not_converged <flag>                                          - generate an error (stops the program immediately) if solver does not converge
 . -snes_lag_preconditioner <lag>                                               - how often preconditioner is rebuilt (use -1 to never rebuild)
 . -snes_lag_preconditioner_persists <true,false>                               - retains the -snes_lag_preconditioner information across multiple SNESSolve()
 . -snes_lag_jacobian <lag>                                                     - how often Jacobian is rebuilt (use -1 to never rebuild)
