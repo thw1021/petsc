@@ -393,7 +393,7 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
     // Set BC indices
     for (PetscInt b = 0; b < bc->numBC; b++) {
       const PetscInt *pts, *cmp;
-      PetscInt        npts = 0, ncmp = 0;
+      PetscInt       npts = 0, ncmp = 0;
 
       PetscCall(ISGetLocalSize(bc->bcPoints[b], &npts));
       PetscCall(ISGetIndices(bc->bcPoints[b], &pts));
@@ -402,7 +402,7 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
         PetscCall(ISGetLocalSize(bc->bcComps[b], &ncmp));
         PetscCall(ISGetIndices(bc->bcComps[b], &cmp));
       } else {
-        cmp = NULL; /* NULL = all components/dofs at the point */
+        cmp = NULL;
       }
       for (PetscInt i = 0; i < npts; i++) {
         PetscInt p = pts[i];
@@ -441,7 +441,6 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   for (PetscInt i = 1; i <= size; i++) bases[i] = ldims[i - 1];
   for (PetscInt i = 1; i <= size; i++) bases[i] += bases[i - 1];
   // Compute local and remote points for each leaf
-  //   NEED DMDAGetOwnershipRanges
   PetscCall(DMDAGetGhostOwnershipRanges(dm, &glx, &glxs, &gly, &glys, &glz, &glzs));
   PetscCall(PetscMalloc2(Nl, &local, Nl, &remote));
   // for (PetscInt i = 0; i < pm; ++i) PetscSynchronizedPrintf(comm, "[%d]glx %d\n", rank, glx[i]);
@@ -495,7 +494,7 @@ PetscErrorCode DMDASetPointBC(DM dm, PetscInt numBC, IS bcPoints[], IS bcComps[]
     if (bcComps && bcComps[b]) {
       PetscCall(ISDuplicate(bcComps[b], &bc->bcComps[b]));
     } else {
-      bc->bcComps[b] = NULL; /* NULL = constrain all components */
+      bc->bcComps[b] = NULL; /* constrain all components */
     }
   }
   dd->bc = bc;
