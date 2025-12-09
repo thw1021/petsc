@@ -316,7 +316,7 @@ static PetscErrorCode DMGetNeighbors_DA(DM dm, PetscInt *nranks, const PetscMPII
 
 static PetscErrorCode PetscSFAddFace_2D_Private(DM dm, PetscMPIInt nrank, PetscInt xmin, PetscInt xmax, PetscInt ymin, PetscInt ymax, const PetscInt bases[], const PetscInt glx[], const PetscInt glxs[], const PetscInt glys[], PetscInt *l, PetscInt local[], PetscSFNode remote[])
 {
-  PetscInt        pm, dof, x, y, gx, gy, gm;
+  PetscInt pm, dof, x, y, gx, gy, gm;
 
   PetscFunctionBegin;
   PetscCall(DMDAGetInfo(dm, NULL, NULL, NULL, NULL, &pm, NULL, NULL, &dof, NULL, NULL, NULL, NULL, NULL));
@@ -393,7 +393,7 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
     // Set BC indices
     for (PetscInt b = 0; b < bc->numBC; b++) {
       const PetscInt *pts, *cmp;
-      PetscInt       npts = 0, ncmp = 0;
+      PetscInt        npts = 0, ncmp = 0;
 
       PetscCall(ISGetLocalSize(bc->bcPoints[b], &npts));
       PetscCall(ISGetIndices(bc->bcPoints[b], &pts));

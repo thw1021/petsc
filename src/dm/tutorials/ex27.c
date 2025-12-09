@@ -69,6 +69,7 @@ int main(int argc, char **argv)
   PetscCall(DMSetUp(da));
   PetscCall(DMDASetUniformCoordinates(da, 0.0, user.Lx, 0.0, user.Ly, 0.0, 1.0));
   PetscCall(DMSetMatType(da, MATSHELL));
+
   PetscCall(SetupBCs(da));
   // create the local section - run with -da_use_section
   PetscCall(DMGetLocalSection(da, &lsection));
