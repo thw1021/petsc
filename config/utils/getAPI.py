@@ -19,6 +19,10 @@ import pathlib
 import subprocess
 from subprocess import check_output
 
+def mansecpath(mansec):
+  '''Given a manual section, returns the path where it is located (it differs in some SLEPc classes)'''
+  return os.path.join('sys','classes',mansec) if mansec in ['bv','ds','fn','rg','st'] else mansec
+
 verbose = False
 
 def verbosePrint(text):
