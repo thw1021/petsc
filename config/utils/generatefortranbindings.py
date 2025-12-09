@@ -41,6 +41,10 @@ def verbosePrint(text):
   '''Prints the text if run with verbose option'''
   if verbose: print(text)
 
+def mansecpath(mansec):
+  '''Given a manual section, returns the path where it is located (it differs in some SLEPc classes)'''
+  return os.path.join('sys','classes',mansec) if mansec in ['bv','ds','fn','rg','st'] else mansec
+
 def cross(L):
   '''Given a list of the form 'aaOOaO' generates a list of lists where the lists are all combinations of the original list with O replaced with a'''
   A = L[0]
@@ -102,8 +106,7 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
   if not mansec: mansec = fun.submansec
   file = fun.includefile + '90'
   if not file.startswith(pkgname): file = pkgname + file
-  mansecpath = (os.path.join('sys','classes',mansec) if mansec in ['bv','ds','fn','rg','st'] else mansec)
-  with open(os.path.join(petscarch,'ftn', mansecpath,file),"a") as fd:
+  with open(os.path.join(petscarch,'ftn', mansecpath(mansec),file),"a") as fd:
     # Currently not used because it takes too long to build the Fortran modules
     #opts = crossCreate(fun)
     if False: # len(opts) > 1:
@@ -632,15 +635,13 @@ def main(petscdir,slepcdir,petscarch):
       if os.path.isdir(dir): shutil.rmtree(dir)
       os.makedirs(dir)
     elif i!='sys':
-      mansecpath = (os.path.join('sys','classes',i) if i in ['bv','ds','fn','rg','st'] else i)
-      dir = os.path.join(petscarch,'ftn', mansecpath)
+      dir = os.path.join(petscarch,'ftn', mansecpath(i))
       if os.path.isdir(dir): shutil.rmtree(dir)
       os.makedirs(dir)
 
   for i in classes.keys():
     if i in ['PetscIntStack', 'PetscTabulation']: continue
-    mansecpath = (os.path.join('sys','classes',classes[i].mansec) if classes[i].mansec in ['bv','ds','fn','rg','st'] else classes[i].mansec)
-    with open(os.path.join(petscarch,'ftn', mansecpath,classes[i].includefile),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', mansecpath(classes[i].mansec),classes[i].includefile),"a") as fd:
       if not classes[i].petscobject:
         fd.write('  type t' + i + '\n')
         fd.write('    PetscFortranAddr:: v = PETSC_FORTRAN_TYPE_INITIALIZE\n')
@@ -661,8 +662,7 @@ def main(petscdir,slepcdir,petscarch):
 
   for i in enums.keys():
     if i in ['PetscBool', 'PetscEnum']: continue
-    mansecpath = (os.path.join('sys','classes',enums[i].mansec) if enums[i].mansec in ['bv','ds','fn','rg','st'] else enums[i].mansec)
-    with open(os.path.join(petscarch,'ftn', mansecpath,enums[i].includefile),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', mansecpath(enums[i].mansec),enums[i].includefile),"a") as fd:
       fd.write('  type e' + i + '\n')
       fd.write('    PetscEnum:: v = PETSC_FORTRAN_TYPE_INITIALIZE\n')
       fd.write('  end type e' + i + '\n\n')
@@ -697,8 +697,7 @@ def main(petscdir,slepcdir,petscarch):
       fd.write('\n')
 
   for i in senums.keys():
-    mansecpath = (os.path.join('sys','classes',senums[i].mansec) if senums[i].mansec in ['bv','ds','fn','rg','st'] else senums[i].mansec)
-    with open(os.path.join(petscarch,'ftn', mansecpath,senums[i].includefile),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', mansecpath(senums[i].mansec),senums[i].includefile),"a") as fd:
       for j in senums[i].values:
         fd.write('  CHARACTER(LEN=*), PARAMETER :: ' + j + ' = \'' + senums[i].values[j].replace('"','') + '\'\n')
       fd.write('\n')
@@ -711,8 +710,7 @@ def main(petscdir,slepcdir,petscarch):
 
   for i in structs.keys():
     if structs[i].opaque: continue
-    mansecpath = (os.path.join('sys','classes',structs[i].mansec) if structs[i].mansec in ['bv','ds','fn','rg','st'] else structs[i].mansec)
-    with open(os.path.join(petscarch,'ftn', mansecpath,structs[i].includefile),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', mansecpath(structs[i].mansec),structs[i].includefile),"a") as fd:
       fd.write('  type s' + i + '\n')
       for j in structs[i].records:
         fd.write('    ' + j.type.replace('[','(').replace(']',')') + '\n')
@@ -730,8 +728,7 @@ def main(petscdir,slepcdir,petscarch):
     if i in ['PetscObject', 'PetscTabulation','SlepcConvMon']: continue
     file = classes[i].includefile + '90'
     if not file.startswith(pkgname): file = pkgname + file
-    mansecpath = (os.path.join('sys','classes',classes[i].mansec) if classes[i].mansec in ['bv','ds','fn','rg','st'] else classes[i].mansec)
-    with open(os.path.join(petscarch,'ftn', mansecpath,file),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', mansecpath(classes[i].mansec),file),"a") as fd:
       fd.write('  interface operator(.ne.)\n')
       fd.write('    module procedure ' + i + 'notequals\n')
       fd.write('  end interface operator (.ne.)\n')
@@ -741,8 +738,7 @@ def main(petscdir,slepcdir,petscarch):
 
     # generate interface definitions for PetscObject methods for each PetscObject subclass (KSP etc)
     if not classes[i].petscobject: continue
-    mansecpath = (os.path.join('sys','classes',classes[i].mansec) if classes[i].mansec in ['bv','ds','fn','rg','st'] else classes[i].mansec)
-    with open(os.path.join(petscarch,'ftn', mansecpath,file),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', mansecpath(classes[i].mansec),file),"a") as fd:
       ii = i.replace('Petsc','')
       fd.write('  interface PetscObjectCast\n')
       fd.write('    module procedure PetscObjectCast' + ii + '\n')
@@ -782,8 +778,7 @@ def main(petscdir,slepcdir,petscarch):
     if i in ['PetscEnum', 'PetscBool3']: continue
     file = enums[i].includefile + '90'
     if not file.startswith(pkgname): file = pkgname + file
-    mansecpath = (os.path.join('sys','classes',enums[i].mansec) if enums[i].mansec in ['bv','ds','fn','rg','st'] else enums[i].mansec)
-    with open(os.path.join(petscarch,'ftn',mansecpath,file),"a") as fd:
+    with open(os.path.join(petscarch,'ftn',mansecpath(enums[i].mansec),file),"a") as fd:
       fd.write('  interface operator(.ne.)\n')
       fd.write('    module procedure ' + i + 'notequals\n')
       fd.write('  end interface operator (.ne.)\n')
@@ -795,8 +790,7 @@ def main(petscdir,slepcdir,petscarch):
 
   for i in classes.keys():
     if i in ['PetscObject', 'PetscIntStack', 'PetscTabulation','SlepcConvMon']: continue
-    mansecpath = (os.path.join('sys','classes',classes[i].mansec) if classes[i].mansec in ['bv','ds','fn','rg','st'] else classes[i].mansec)
-    with open(os.path.join(petscarch,'ftn', mansecpath,classes[i].includefile + 'f90'),"a") as fd:
+    with open(os.path.join(petscarch,'ftn', mansecpath(classes[i].mansec),classes[i].includefile + 'f90'),"a") as fd:
 
       fd.write('#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)\n')
       fd.write('!DEC$ ATTRIBUTES DLLEXPORT:: ' + i + 'notequals\n')
@@ -896,8 +890,7 @@ def main(petscdir,slepcdir,petscarch):
       mansec = classes[i].mansec
       file = classes[i].functions[j].includefile + 'f90'
       if not file.startswith(pkgname): file = pkgname + file
-      mansecpath = (os.path.join('sys','classes',mansec) if mansec in ['bv','ds','fn','rg','st'] else mansec)
-      with open(os.path.join(petscarch,'ftn', mansecpath,file),'a') as fd:
+      with open(os.path.join(petscarch,'ftn', mansecpath(mansec),file),'a') as fd:
         generateFortranStub(senums, j, classes[i].functions[j], fd, opts)
 
   # generate all the polymorphic Fortran subroutines needed for class-less routines with optional arguments
@@ -909,15 +902,13 @@ def main(petscdir,slepcdir,petscarch):
     mansec = funcs[j].mansec
     file = funcs[j].includefile + 'f90'
     if not file.startswith(pkgname): file = pkgname + file
-    mansecpath = (os.path.join('sys','classes',mansec) if mansec in ['bv','ds','fn','rg','st'] else mansec)
-    with open(os.path.join(petscarch,'ftn', mansecpath,file),'a') as fd:
+    with open(os.path.join(petscarch,'ftn', mansecpath(mansec),file),'a') as fd:
       generateFortranStub(senums,funcs[j].name,funcs[j], fd, opts)
 
   # generate .eq. and .neq. for enums
   for i in enums.keys():
     if i in ['PetscEnum', 'PetscBool3']: continue
-    mansecpath = (os.path.join('sys','classes',enums[i].mansec) if enums[i].mansec in ['bv','ds','fn','rg','st'] else enums[i].mansec)
-    with open(os.path.join(petscarch,'ftn',mansecpath,enums[i].includefile + 'f90'),"a") as fd:
+    with open(os.path.join(petscarch,'ftn',mansecpath(enums[i].mansec),enums[i].includefile + 'f90'),"a") as fd:
 
       fd.write('#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)\n')
       fd.write('!DEC$ ATTRIBUTES DLLEXPORT:: ' + i + 'notequals\n')
@@ -968,9 +959,8 @@ def main(petscdir,slepcdir,petscarch):
   # these are used by src/MANSEC/ftn-mod/petscMANSECmod.F to generate the module for C petscMANSEC.h
   # src/MANSEC/ftn-mod/petscMANSECmod.F may also define additional modules that use petscMANSEC
   for i in mansecs.keys():
-    mansecpath = (os.path.join('sys','classes',i) if i in ['bv','ds','fn','rg','st'] else i)
-    d = os.path.join(petscarch,'ftn', mansecpath)
-    dd = os.path.join('../','ftn', mansecpath)
+    d = os.path.join(petscarch,'ftn', mansecpath(i))
+    dd = os.path.join('../','ftn', mansecpath(i))
     args = [os.path.join(d,i) for i in os.listdir(d) if i.endswith('.h')]
     for j in args:
       if not os.path.getsize(j): os.path.remove(j)
