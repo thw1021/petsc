@@ -478,10 +478,10 @@ def main(petscdir,slepcdir,petscarch):
 
     petscobjectfunctions = petscclasses['PetscObject'].functions
     classes, enums, senums, typedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI(slepcdir,'slepc')
-    classesext = classes | petscclasses
-    structsext = structs | petscstructs
-    enumsext   = enums | petscenums
-    senumsext  = senums | petscsenums
+    classesext = classes.copy(); classesext.update(petscclasses)
+    structsext = structs.copy(); structsext.update(petscstructs)
+    enumsext = enums.copy(); enumsext.update(petscenums)
+    senumsext = senums.copy(); senumsext.update(petscsenums)
 
 ##########  $PETSC_ARCH/include/petsc/finclude/*.h
 
