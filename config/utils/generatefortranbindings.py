@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#    Generates Fortran function stubs and module interface definitions for PETSc
+#    Generates Fortran function stubs and module interface definitions for PETSc and SLEPc
 #
 #    Note 1:
 #      const char *title[] gets mapped to character(*) title and the string gets copied into the space provided by the caller
@@ -8,12 +8,12 @@
 #    This tool looks for the values MANSEC and [BFORT]SUBMANSEC (where BFORTSUBMANSEC has priority over SUBMANSEC)
 #    defined in the makefile
 #
-#    The F90 generated interface files are stored in $PETSC_ARCH/ftn/MANSEC/petsc[BFORT]SUBMANSEC.*
-#    The Fortran stub files are stored in $PETSC_ARCH/ftn/MANSEC/**/ where ** is the directory under MANSEC of the original source
+#    The generated interface files are stored in $PETSC_ARCH/ftn/MANSEC/petsc[BFORT]SUBMANSEC.*
+#    These are then included by the src/MANSEC/ftn-mod/MANSECmod.F90 files to create the Fortran module files
+#
+#    The generated C stub files are stored in $PETSC_ARCH/ftn/MANSEC/**/ where ** is the directory under MANSEC of the original source
 #
 #    Stubs/interfaces generated from include can only involve sys files
-#
-#    These are then included by the src/MANSEC/ftn-mod/MANSECmod.F90 files to create the Fortran module files
 #
 #    SUBMANSEC (but not BFORTSUBMANSEC) is also used (in the documentation generating part of PETSc) to determine what
 #    directory in doc/manualpages/ the manual pages are deposited.
@@ -31,7 +31,6 @@ import subprocess
 from subprocess import check_output
 sys.path.insert(0,os.path.realpath(os.path.dirname(__file__)))
 import getAPI
-
 
 CToFortranTypes = {'int':'integer4', 'ptrdiff_t':'PetscInt64', 'float':'PetscFortranFloat', 'int32_t':'integer4',
                    'double':'PetscFortranDouble', 'short':None, 'size_t':'PetscSizeT', 'rocblas_status':None, 'PetscBT':None,
@@ -456,14 +455,6 @@ def main(petscdir,slepcdir,petscarch):
 
   if not slepcdir:
     classes, enums, senums, typedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI(petscdir,'petsc')
-    typedefs['PetscBool'] = getAPI.Typedef('PetscBool','sys','petscsys.h','PetscBool')
-    classes['PetscNull'] = getAPI.Class('PetscNull')
-    classes['PetscNull'].includefile = 'petscsys.h'
-    classes['PetscNull'].mansec = 'sys'
-    classes['PetscNull'].submansec = 'sys'
-    classes['PetscNull'].petscobject = False
-    classes['PetscObject'].petscobject = False
-    classes['PetscObject'].includefile = 'petscsys.h'
 
     with open(os.path.join(petscdir,petscarch,'lib','petsc','conf','classes.data'),'wb') as file:
       pickle.dump(classes,file)
