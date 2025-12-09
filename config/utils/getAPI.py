@@ -696,6 +696,16 @@ def getAPI(directory,pkgname = 'petsc'):
     getFunctions(mansec.lower(), functiontoinclude, i)
 
   if pkgname == 'petsc':
+    # a few special cases that must be handled manually
+    typedefs['PetscBool'] = Typedef('PetscBool','sys','petscsys.h','PetscBool')
+    classes['PetscNull'] = Class('PetscNull')
+    classes['PetscNull'].includefile = 'petscsys.h'
+    classes['PetscNull'].mansec = 'sys'
+    classes['PetscNull'].submansec = 'sys'
+    classes['PetscNull'].petscobject = False
+    classes['PetscObject'].petscobject = False
+    classes['PetscObject'].includefile = 'petscsys.h'
+
     # these functions are funky macros in C and cannot be parsed directly
     funcs['PetscOptionsBegin']             = Function('PetscOptionsBegin')
     funcs['PetscOptionsBegin'].mansec      = 'sys'
