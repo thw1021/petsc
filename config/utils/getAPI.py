@@ -627,7 +627,7 @@ def getFunctions(mansec, functiontoinclude, filename):
 
 ForbiddenDirectories = ['tests', 'tutorials', 'doc', 'output', 'ftn-custom', 'ftn-auto', 'ftn-mod', 'binding', 'binding', 'config', 'lib', '.git', 'share', 'systems']
 
-def getAPI(directory,pkgname = 'PETSC'):
+def getAPI(directory,pkgname = 'petsc'):
   global typedefs
   args = [os.path.join('include',i) for i in os.listdir(os.path.join(directory,'include')) if i.endswith('.h') and not i.endswith('deprecated.h')]
   for i in args:
@@ -691,7 +691,7 @@ def getAPI(directory,pkgname = 'PETSC'):
     if not mansec: raise RuntimeError(i + ' does not have a MANSEC or SUBMANSEC')
     getFunctions(mansec.lower(), functiontoinclude, i)
 
-  if pkgname == 'PETSC':
+  if pkgname == 'petsc':
     # these functions are funky macros in C and cannot be parsed directly
     funcs['PetscOptionsBegin']             = Function('PetscOptionsBegin')
     funcs['PetscOptionsBegin'].mansec      = 'sys'
