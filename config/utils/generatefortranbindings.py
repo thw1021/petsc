@@ -44,41 +44,6 @@ def verbosePrint(text):
   '''Prints the text if run with verbose option'''
   if verbose: print(text)
 
-def cross(L):
-  '''Given a list of the form 'aaOOaO' generates a list of lists where the lists are all combinations of the original list with O replaced with a'''
-  A = L[0]
-  L = L[1:]
-  if not L:
-    if A == 'O':
-      return [['a'],['O']]
-    else:
-      return [['a']]
-  nL = []
-  sL = cross(L)
-  if A == 'O':
-    for l in sL:
-      k = l.copy()
-      q = l.copy()
-      k.insert(0,'a')
-      q.insert(0,'O')
-      nL.append(k)
-      nL.append(q)
-  else:
-    for l in sL:
-      l.insert(0, 'a')
-      nL.append(l)
-  return nL
-
-def crossCreate(L):
-  '''Given a list of arguments to a function, generates a list of combinations of the form 'aaOOaO' indicating potential optional arguments'''
-  '''Currently not used because it takes too long to build the Fortran modules'''
-  opts = []
-  if len(L.arguments) == 0: return ['']
-  for i in L.arguments:
-    if i.optional: opts.append('O')
-    else: opts.append('a')
-  return cross(opts)
-
 def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums, funname, fun):
   '''Generates the interface definition for a function'''
   '''This is used both by class functions and standalone functions'''
@@ -106,87 +71,68 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
   file = fun.includefile + '90'
   if not file.startswith(pkgname): file = pkgname + file
   with open(os.path.join(petscarch,'ftn', getAPI.mansecpath(mansec),file),"a") as fd:
-    # Currently not used because it takes too long to build the Fortran modules
-    #opts = crossCreate(fun)
-    if False: # len(opts) > 1:
-      for k in fun.arguments:
-        if k.array and k.stars and not k.typename == 'char': return
-        if k.stars and k.typename == 'MPI_Fint': return   # TODO add support for returning MPI_Fint
-        if k.stars == 2 and k.typename == 'void': return
-
-      # there are multiple interfaces for the function, they are generated in $PETSC_ARCH/ftn/MANSEC/*.hf90
-      fd.write('  interface ' + funname + '\n')
-      fd.write('  module procedure ' + funname)
+    if funname in ['PetscObjectQuery', 'PetscObjectCompose']:
+      # for macro polymorphism the objects are passed directly as obj%d
+      fun.arguments[0].typename = 'PetscFortranAddr'
+      fun.arguments[2].typename = 'PetscFortranAddr'
+      funname = funname + 'Raw'
+    fd.write('  interface ' + funname + '\n')
+    fi = fun
+    func = ''
+    dims = ['']
+    # if ((funname).startswith('MatDenseGetArray') or (funname).startswith('MatDenseRestoreArray')) and fi[-1].endswith('[]'): dims = ['1d','2d']
+    for dim in dims:
+      fd.write('  subroutine ' + funname + func + dim + '(')
+      simportset = set()
+      simport = ''
       cnt = 0
-      for fi in opts:
-        if cnt > 0: fd.write(',' + funname)
-        fd.write(''.join(fi))
-        cnt = cnt + 1
-      fd.write('\n')
-    # generate the single needed interface for the function
-    else:
-      if funname in ['PetscObjectQuery', 'PetscObjectCompose']:
-        # for macro polymorphism the objects are passed directly as obj%d
-        fun.arguments[0].typename = 'PetscFortranAddr'
-        fun.arguments[2].typename = 'PetscFortranAddr'
-        funname = funname + 'Raw'
-      fd.write('  interface ' + funname + '\n')
-      fi = fun
-      func = ''
-      dims = ['']
-      # if ((funname).startswith('MatDenseGetArray') or (funname).startswith('MatDenseRestoreArray')) and fi[-1].endswith('[]'): dims = ['1d','2d']
-      for dim in dims:
-        fd.write('  subroutine ' + funname + func + dim + '(')
-        simportset = set()
-        simport = ''
-        cnt = 0
-        for k in fi.arguments:
-          if k.stringlen: continue
-          ktypename = k.typename
-          if cnt: fd.write(',')
-          fd.write(Letters[cnt])
-          if not ktypename in simportset:
-            if ktypename in classes or ktypename == 'VecScatter':
-              if simport: simport = simport + ','
-              simport = simport + 't' + ktypename
-            if ktypename in enums:
-              if simport: simport = simport + ','
-              simport = simport + 'e' + ktypename
-            if ktypename in structs and not structs[ktypename].opaque:
-              if simport: simport = simport + ','
-              simport = simport + 's' + ktypename
-          simportset.add(ktypename)
-          cnt = cnt + 1
+      for k in fi.arguments:
+        if k.stringlen: continue
+        ktypename = k.typename
         if cnt: fd.write(',')
-        fd.write(' z)\n')
-        fd.write('  use, intrinsic :: ISO_C_binding\n')
-        if simport: fd.write('  import ' + simport + '\n')
+        fd.write(Letters[cnt])
+        if not ktypename in simportset:
+          if ktypename in classes or ktypename == 'VecScatter':
+            if simport: simport = simport + ','
+            simport = simport + 't' + ktypename
+          if ktypename in enums:
+            if simport: simport = simport + ','
+            simport = simport + 'e' + ktypename
+          if ktypename in structs and not structs[ktypename].opaque:
+            if simport: simport = simport + ','
+            simport = simport + 's' + ktypename
+        simportset.add(ktypename)
+        cnt = cnt + 1
+      if cnt: fd.write(',')
+      fd.write(' z)\n')
+      fd.write('  use, intrinsic :: ISO_C_binding\n')
+      if simport: fd.write('  import ' + simport + '\n')
 
-        cnt = 0
-        for k in fun.arguments:
-          if k.stringlen: continue
-          ktypename = k.typename
-          if ktypename in CToFortranTypes:
-            ktypename =CToFortranTypes[ktypename]
-          if ktypename == 'char':
-            if getattr(k, 'char_type', None) == 'single':
-              fd.write('  character :: ' + Letters[cnt] + '\n')
-            else:
-              fd.write('  character(*) :: ' + Letters[cnt] + '\n')
-          elif ktypename in senums:
-            fd.write('  character(*) :: ' + Letters[cnt] + '\n')
-          elif k.array and k.stars:
-            if not dim or dim == '1d': fd.write('  ' + ktypename + ', pointer :: ' +  Letters[cnt]  + '(:)\n')
-            else: fd.write('  ' + ktypename + ', pointer :: ' +  Letters[cnt]  + '(:,:)\n')
-          elif k.array:
-            fd.write('  ' + ktypename + ' :: ' +  Letters[cnt]  + '(*)\n')
-          elif k.isfunction:
-            fd.write('  ' + 'external ' + Letters[cnt]  + '\n')
+      cnt = 0
+      for k in fun.arguments:
+        if k.stringlen: continue
+        ktypename = k.typename
+        if ktypename in CToFortranTypes:
+          ktypename =CToFortranTypes[ktypename]
+        if ktypename == 'char':
+          if getattr(k, 'char_type', None) == 'single':
+            fd.write('  character :: ' + Letters[cnt] + '\n')
           else:
-            fd.write('  ' + ktypename + ' :: ' + Letters[cnt] + '\n')
-          cnt = cnt + 1
-        fd.write('  PetscErrorCode z\n')
-        fd.write('  end subroutine\n')
+            fd.write('  character(*) :: ' + Letters[cnt] + '\n')
+        elif ktypename in senums:
+          fd.write('  character(*) :: ' + Letters[cnt] + '\n')
+        elif k.array and k.stars:
+          if not dim or dim == '1d': fd.write('  ' + ktypename + ', pointer :: ' +  Letters[cnt]  + '(:)\n')
+          else: fd.write('  ' + ktypename + ', pointer :: ' +  Letters[cnt]  + '(:,:)\n')
+        elif k.array:
+          fd.write('  ' + ktypename + ' :: ' +  Letters[cnt]  + '(*)\n')
+        elif k.isfunction:
+          fd.write('  ' + 'external ' + Letters[cnt]  + '\n')
+        else:
+          fd.write('  ' + ktypename + ' :: ' + Letters[cnt] + '\n')
+        cnt = cnt + 1
+      fd.write('  PetscErrorCode z\n')
+      fd.write('  end subroutine\n')
     fd.write('  end interface\n')
     fd.write('#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)\n')
     fd.write('!DEC$ ATTRIBUTES DLLEXPORT::' + funname + func + dim  + '\n')
@@ -874,33 +820,6 @@ def main(petscdir,slepcdir,petscarch):
           fd.write('  end subroutine \n')
           if funname.startswith('PetscObjectSAWs') or funname == 'PetscObjectViewSAWs':
             fd.write('#endif\n')
-
-  # generate all the polymorphic Fortran subroutines needed for class methods with optional arguments
-  # not used because it takes too long to build the Fortran modules
-  for i in []: #classes.keys():
-    if i in ['PetscIntStack']: continue
-    for j in classes[i].functions: # loop over functions in class
-      # check for functions for which we cannot build interfaces
-      if classes[i].functions[j].opaque: continue
-      opts = crossCreate(classes[i].functions[j])
-      if len(opts) == 1: continue
-      mansec = classes[i].mansec
-      file = classes[i].functions[j].includefile + 'f90'
-      if not file.startswith(pkgname): file = pkgname + file
-      with open(os.path.join(petscarch,'ftn', getAPI.mansecpath(mansec),file),'a') as fd:
-        generateFortranStub(senums, j, classes[i].functions[j], fd, opts)
-
-  # generate all the polymorphic Fortran subroutines needed for class-less routines with optional arguments
-  # not used because it takes too long to build the Fortran modules
-  for j in []: # funcs.keys():
-    if funcs[j].opaque: continue
-    opts = crossCreate(funcs[j])
-    if len(opts) == 1: continue
-    mansec = funcs[j].mansec
-    file = funcs[j].includefile + 'f90'
-    if not file.startswith(pkgname): file = pkgname + file
-    with open(os.path.join(petscarch,'ftn', getAPI.mansecpath(mansec),file),'a') as fd:
-      generateFortranStub(senums,funcs[j].name,funcs[j], fd, opts)
 
   # generate .eq. and .neq. for enums
   for i in enums.keys():
