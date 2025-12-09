@@ -7,7 +7,7 @@ class Configure(config.package.CMakePackage):
     self.minversion       = '6.3.0'
     self.version          = '9.2.0'
     self.versionname      = 'SUPERLU_DIST_MAJOR_VERSION.SUPERLU_DIST_MINOR_VERSION.SUPERLU_DIST_PATCH_VERSION'
-    self.gitcommit        = 'bce5318a9141cff5840071665b6ffccfc5bbba82' # v9.2.0+, i.e.: master Nov 27, 2025
+    self.gitcommit        = 'ffbbfd4c30e33e2b7ca881dfc9d47e60f9af39c8' # v9.2.0+, i.e.: master Dec 7, 2025
     self.download         = ['git://https://github.com/xiaoyeli/superlu_dist','https://github.com/xiaoyeli/superlu_dist/archive/'+self.gitcommit+'.tar.gz']
     self.functions        = ['set_default_options_dist']
     self.includes         = ['superlu_ddefs.h']
