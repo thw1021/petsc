@@ -503,294 +503,51 @@ def main(petscdir,slepcdir,petscarch):
   '''Generates all the Fortran include and C stub files needed for the Fortran API'''
   sys.path.insert(0,os.path.realpath(os.path.dirname(__file__)))
   import getAPI
+  import pickle
   del sys.path[0]
 
-  classes, enums, senums, typedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI()
+  pkgname = 'slepc' if slepcdir else 'petsc'
 
   if not slepcdir:
-    # PETSc-specific part
+    classes, enums, senums, typedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI(petscdir,'petsc')
     typedefs['PetscBool'] = getAPI.Typedef('PetscBool','sys','petscsys.h','PetscBool')
-
     classes['PetscNull'] = getAPI.Class('PetscNull')
     classes['PetscNull'].includefile = 'petscsys.h'
     classes['PetscNull'].mansec = 'sys'
     classes['PetscNull'].submansec = 'sys'
     classes['PetscNull'].petscobject = False
-
     classes['PetscObject'].petscobject = False
     classes['PetscObject'].includefile = 'petscsys.h'
 
+    with open(os.path.join(petscdir,petscarch,'lib','petsc','conf','classes.data'),'wb') as file:
+      pickle.dump(classes,file)
+      pickle.dump(enums,file)
+      pickle.dump(senums,file)
+      pickle.dump(structs,file)
+      pickle.dump(typedefs,file)
+
+    petscobjectfunctions = classes['PetscObject'].functions
+    classesext = classes.copy()
+    structsext = structs.copy()
+    enumsext   = enums.copy()
+    senumsext  = senums.copy()
   else:
-    # SLEPc-specific part
+    with open(os.path.join(petscdir,petscarch,'lib','petsc','conf','classes.data'),'rb') as file:
+      petscclasses  = pickle.load(file)
+      petscenums    = pickle.load(file)
+      petscsenums   = pickle.load(file)
+      petscstructs  = pickle.load(file)
+      petsctypedefs = pickle.load(file)
 
-    # hardwired PetscObject functions
-    petscobjectfunctions = {}
-
-    argpetscobj = getAPI.Argument()
-    argpetscobj.typename = 'PetscObject'
-    argpetscobjstar = getAPI.Argument()
-    argpetscobjstar.typename = 'PetscObject'
-    argpetscobjstar.stars = 1
-    argpetscobjid = getAPI.Argument()
-    argpetscobjid.typename = 'PetscObjectId'
-    argpetscobjidstar = getAPI.Argument()
-    argpetscobjidstar.typename = 'PetscObjectId'
-    argpetscobjidstar.stars = 1
-    argpetscclassidstar = getAPI.Argument()
-    argpetscclassidstar.typename = 'PetscClassId'
-    argpetscclassidstar.stars = 1
-    argpetscviewer = getAPI.Argument()
-    argpetscviewer.typename = 'PetscViewer'
-    argpetscoptions = getAPI.Argument()
-    argpetscoptions.typename = 'PetscOptions'
-    argpetscoptionsstar = getAPI.Argument()
-    argpetscoptionsstar.typename = 'PetscOptions'
-    argpetscoptionsstar.stars = 1
-    argpetscoptitem = getAPI.Argument()
-    argpetscoptitem.typename = 'PetscOptionItems'
-    argstring = getAPI.Argument()
-    argstring.typename = 'char'
-    argstring.array = True
-    argstringstar = getAPI.Argument()
-    argstringstar.typename = 'char'
-    argstringstar.array = True
-    argstringstar.stars = 1
-    argint = getAPI.Argument()
-    argint.typename = 'PetscInt'
-    argintstar = getAPI.Argument()
-    argintstar.typename = 'PetscInt'
-    argintstar.stars = 1
-    argmpiintstar = getAPI.Argument()
-    argmpiintstar.typename = 'PetscMPIInt'
-    argmpiintstar.stars = 1
-    argboolstar = getAPI.Argument()
-    argboolstar.typename = 'PetscBool'
-    argboolstar.stars = 1
-    argcommstar = getAPI.Argument()
-    argcommstar.typename = 'MPI_Comm'
-    argcommstar.stars = 1
-
-    fname = 'PetscObjectGetType'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argstringstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectSetPrintedOptions'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectInheritPrintedOptions'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argpetscobj]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectProcessOptionsHandlers'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argpetscoptitem]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectDestroyOptionsHandlers'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectReference'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectGetReference'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj,argintstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectDereference'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectRemoveReference'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argstring]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectHasFunction'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argstring, argboolstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectSetFromOptions'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectSetUp'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectGetName'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argstringstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectDestroy'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobjstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectView'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argpetscviewer]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectViewFromOptions'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argpetscobj, argstring]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectTypeCompare'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argstring, argboolstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectObjectTypeCompare'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argpetscobj, argboolstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectBaseTypeCompare'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argstring, argboolstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectRegisterDestroy'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectGetId'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argpetscobjidstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectCompareId'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argpetscobjid, argboolstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectGetOptions'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argpetscoptionsstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectSetOptions'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argpetscoptions]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectSetOptionsPrefix'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argstring]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectAppendOptionsPrefix'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argstring]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectGetOptionsPrefix'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argstringstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectPrependOptionsPrefix'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argstring]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectGetComm'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argcommstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectGetTabLevel'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argintstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectSetTabLevel'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argint]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectIncrementTabLevel'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argpetscobj, argint]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectGetNewTag'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argmpiintstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectGetClassId'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argpetscclassidstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectGetClassName'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argstringstar]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectSetName'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argstring]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectPrintClassNamePrefixType'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argpetscviewer]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectName'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj]
-    petscobjectfunctions[fname] = fun
-
-    fname = 'PetscObjectChangeTypeName'
-    fun = getAPI.Function(fname)
-    fun.arguments = [argpetscobj, argstring]
-    petscobjectfunctions[fname] = fun
-
-  classesext = classes.copy()
-  structsext = structs.copy()
-  enumsext   = enums.copy()
-  senumsext  = senums.copy()
-  if slepcdir:
-    # PETSc classes, structs, enums and string enums used in SLEPc API
-    classesext['PetscObject'] = getAPI.Class('PetscObject')
-    classesext['PetscViewer'] = getAPI.Class('PetscViewer')
-    classesext['PetscRandom'] = getAPI.Class('PetscRandom')
-    classesext['PetscSubcomm'] = getAPI.Class('PetscSubcomm')
-    classesext['IS'] = getAPI.Class('IS')
-    classesext['Vec'] = getAPI.Class('Vec')
-    classesext['Mat'] = getAPI.Class('Mat')
-    classesext['KSP'] = getAPI.Class('KSP')
-    classesext['PC'] = getAPI.Class('PC')
-    classesext['SNES'] = getAPI.Class('SNES')
-    structsext['PetscViewerAndFormat'] = getAPI.Struct('PetscViewerAndFormat','sys','petscviewer.h',True,'')
-    enumsext['NormType'] = getAPI.Enum('NormType','','','')
-    enumsext['MatStructure'] = getAPI.Enum('MatStructure','','','')
-    enumsext['PetscViewerFormat'] = getAPI.Enum('PetscViewerFormat','','','')
-    senumsext['VecType'] = getAPI.Senum('VecType','vec','petscvec.h','')
-    senumsext['PetscViewerType'] = getAPI.Senum('PetscViewerType','sys','petscviewer.h','')
+    petscobjectfunctions = petscclasses['PetscObject'].functions
+    classes, enums, senums, typedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI(slepcdir,'slepc')
+    classesext = classes | petscclasses
+    structsext = structs | petscstructs
+    enumsext   = enums | petscenums
+    senumsext  = senums | petscsenums
 
 ##########  $PETSC_ARCH/include/petsc/finclude/*.h
 
-  pkgname = 'slepc' if slepcdir else 'petsc'
   dir     = os.path.join(petscarch,'include', pkgname, 'finclude')
   skipinc = [pkgname + 'version.h']
   if os.path.isdir(dir): shutil.rmtree(dir)
@@ -994,10 +751,9 @@ def main(petscdir,slepcdir,petscarch):
       fd.write('  module procedure PetscBarrier' + ii + '\n')
       fd.write('  end interface\n')
 
-      functions = petscobjectfunctions if slepcdir else classes['PetscObject'].functions
-      for funname in functions:
+      for funname in petscobjectfunctions:
         if funname in ['PetscObjectCompose', 'PetscObjectQuery']: continue
-        fi = petscobjectfunctions[funname] if slepcdir else classes['PetscObject'].functions[funname]
+        fi = petscobjectfunctions[funname]
 
         # the subclassing only works for PetscObjectXXX(PetscObject xxx,...) class methods
         if not fi.arguments or not fi.arguments[0].typename == 'PetscObject': continue
@@ -1071,10 +827,9 @@ def main(petscdir,slepcdir,petscarch):
         fd.write('    call PetscBarrier(PetscObjectCast(a),z)\n')
         fd.write('  end subroutine \n')
 
-        functions = petscobjectfunctions if slepcdir else classes['PetscObject'].functions
-        for funname in functions:
+        for funname in petscobjectfunctions:
           if funname in ['PetscObjectCompose', 'PetscObjectQuery']: continue
-          fi = petscobjectfunctions[funname] if slepcdir else classes['PetscObject'].functions[funname]
+          fi = petscobjectfunctions[funname]
           if not fi.arguments or not fi.arguments[0].typename == 'PetscObject': continue
 
           # cannot generate Fortran functions if any argument is void or PeCtx
