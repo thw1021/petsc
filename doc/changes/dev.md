@@ -114,7 +114,7 @@
 ```{rubric} ML/DAS:
 ```
 
-- Add data assimilation (PetscDAS) base class with implementation of ETKF: [](ch_das)
+- Add data assimilation (PetscDA) base class with implementation of ETKF: [](ch_da)
 
 ```{rubric} DM/DA:
 ```
