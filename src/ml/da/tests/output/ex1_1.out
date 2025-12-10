@@ -1,9 +1,9 @@
 Forecast error norm: 1.59405
 Analysis error norm: 1.05873
-PetscDAS Object: 1 MPI process
+PetscDA Object: 1 MPI process
   State size: 10
   Observation size: 10
   Ensemble size: 20
   Assembled: true
-PetscDASETKF Object:
+PetscDAETKF Object:
   Square root type: eigen
