@@ -14,7 +14,7 @@ static PetscErrorCode IdentityObservationOperator(Vec x, Vec y, void *ctx)
 
 int main(int argc, char **argv)
 {
-  PetscDA    da;
+  PetscDA     da;
   Vec         x_true, y_obs, obs_error_var;
   Vec         x_mean_forecast, x_mean_analysis;
   PetscInt    state_size = 10, obs_size = 10, ensemble_size = 20;
