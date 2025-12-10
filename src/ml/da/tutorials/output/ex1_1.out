@@ -1,4 +1,4 @@
-Spinning up truth for 100 steps...
+Spinning up truth for 2000 steps...
 PetscDA Object: 1 MPI process
   State size: 40
   Observation size: 40
@@ -18,21 +18,21 @@ Lorenz-96 ETKF Example
   Observation noise std : 1.000
   Random seed           : 12345
 
-Step    0, time  0.000  RMSE_forecast 0.16153  RMSE_analysis 0.16153 [burn-in]
-Step   12, time  0.600  RMSE_forecast 0.21874  RMSE_analysis 0.20030
-Step   24, time  1.200  RMSE_forecast 0.18439  RMSE_analysis 0.18216
-Step   36, time  1.800  RMSE_forecast 0.15927  RMSE_analysis 0.14737
-Step   48, time  2.400  RMSE_forecast 0.13677  RMSE_analysis 0.13599
-Step   60, time  3.000  RMSE_forecast 0.13940  RMSE_analysis 0.13999
-Step   72, time  3.600  RMSE_forecast 0.13120  RMSE_analysis 0.13247
-Step   84, time  4.200  RMSE_forecast 0.13270  RMSE_analysis 0.13307
-Step   96, time  4.800  RMSE_forecast 0.13181  RMSE_analysis 0.13071
-Step  108, time  5.400  RMSE_forecast 0.12828  RMSE_analysis 0.12862
-Step  120, time  6.000  RMSE_forecast 0.12556  RMSE_analysis 0.12440
+Step    0, time  0.000  RMSE_forecast 0.39362  RMSE_analysis 0.39362 [burn-in]
+Step   12, time  0.600  RMSE_forecast 0.25244  RMSE_analysis 0.24733
+Step   24, time  1.200  RMSE_forecast 0.21423  RMSE_analysis 0.21906
+Step   36, time  1.800  RMSE_forecast 0.17982  RMSE_analysis 0.17635
+Step   48, time  2.400  RMSE_forecast 0.16495  RMSE_analysis 0.16404
+Step   60, time  3.000  RMSE_forecast 0.16911  RMSE_analysis 0.16826
+Step   72, time  3.600  RMSE_forecast 0.16284  RMSE_analysis 0.16400
+Step   84, time  4.200  RMSE_forecast 0.16270  RMSE_analysis 0.16215
+Step   96, time  4.800  RMSE_forecast 0.16001  RMSE_analysis 0.15999
+Step  108, time  5.400  RMSE_forecast 0.15721  RMSE_analysis 0.15659
+Step  120, time  6.000  RMSE_forecast 0.15337  RMSE_analysis 0.15312
 
 Statistics (111 post-burn-in steps):
 ==================================================
-  Mean RMSE (forecast) : 0.145486
-  Mean RMSE (analysis) : 0.144441
+  Mean RMSE (forecast) : 0.175901
+  Mean RMSE (analysis) : 0.174665
   Observations used    : 120
 
