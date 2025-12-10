@@ -4,10 +4,10 @@
 
 typedef struct {
   PetscDAETKFSqrtType sqrt_type;
-  Mat                  V;               /* Eigen vectors (LAPACK column-major storage) */
-  Mat                  L_cholesky;      /* Lower triangular Cholesky factor */
-  Vec                  sqrt_eigen_vals; /* Square root of eigen values */
-  Mat                  I_StS;           /* T = I + S^T * S matrix */
+  Mat                 V;               /* Eigen vectors (LAPACK column-major storage) */
+  Mat                 L_cholesky;      /* Lower triangular Cholesky factor */
+  Vec                 sqrt_eigen_vals; /* Square root of eigen values */
+  Mat                 I_StS;           /* T = I + S^T * S matrix */
 
   /* Persistent work vectors and matrices to avoid repeated allocation */
   Vec mean;
@@ -382,10 +382,10 @@ static PetscErrorCode PetscDAETKFDestroy(PetscDA da)
 static PetscErrorCode PetscDASetFromOptions_DASETKF(PetscDA da, PetscOptionItems *PetscOptions)
 {
   PetscDAETKFData *impl;
-  PetscOptionItems  PetscOptionsObject;
-  const char       *defaultType;
-  char              typeName[256];
-  PetscBool         set              = PETSC_FALSE;
+  PetscOptionItems PetscOptionsObject;
+  const char      *defaultType;
+  char             typeName[256];
+  PetscBool        set              = PETSC_FALSE;
   PetscErrorCode (*setter)(PetscDA) = NULL;
 
   PetscFunctionBegin;
@@ -617,9 +617,9 @@ static PetscErrorCode PetscDATFactor_Eigen(PetscDA da, PetscDAETKFData *impl)
 static PetscErrorCode PetscDATFactor(PetscDA da, Mat S)
 {
   PetscDAETKFData *impl;
-  PetscInt          m, s_rows, s_cols;
-  MatReuse          scall      = MAT_INITIAL_MATRIX;
-  PetscBool         reallocate = PETSC_FALSE;
+  PetscInt         m, s_rows, s_cols;
+  MatReuse         scall      = MAT_INITIAL_MATRIX;
+  PetscBool        reallocate = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
@@ -1019,10 +1019,10 @@ static PetscErrorCode PetscDAApplySqrtTInverse(PetscDA da, Mat U, Mat Y)
 static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
 {
   PetscDAETKFData *impl;
-  Mat               X;
-  PetscInt          m;
-  PetscScalar       inv_m, scale, sqrt_m_minus_1;
-  PetscBool         reallocate = PETSC_FALSE;
+  Mat              X;
+  PetscInt         m;
+  PetscScalar      inv_m, scale, sqrt_m_minus_1;
+  PetscBool        reallocate = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
@@ -1300,7 +1300,7 @@ PetscErrorCode PetscDAETKFGetSqrtType(PetscDA da, PetscDAETKFSqrtType *type)
 */
 static PetscErrorCode PetscDAETKFView(PetscDA da, PetscViewer viewer)
 {
-  PetscBool         iascii;
+  PetscBool        iascii;
   PetscDAETKFData *impl;
 
   PetscFunctionBegin;
