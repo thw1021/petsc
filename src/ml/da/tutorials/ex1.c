@@ -1,5 +1,5 @@
-/* Data assimilation framework header (provides PetscDAS) */
-#include "petscdas.h"
+/* Data assimilation framework header (provides PetscDA) */
+#include "petscda.h"
 /* PETSc DMDA header (provides DM, DMDA functionality) */
 #include <petscdmda.h>
 #include <petscts.h>
@@ -10,7 +10,7 @@ static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
                      "Asch, Bocquet, and Nodet (2016) \"Data Assimilation\" "
                      "(SIAM, doi:10.1137/1.9781611974546).\n\n"
                      "Example usage:\n"
-                     "  ./ex1 -steps 105000 -burn 5000 -obs_freq 1 -obs_error 1 -petscda_view -ensemble_size 30\n"
+                     "  ./ex1 -steps 105000 -burn 5000 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30\n"
                      "  Expected result: Mean RMSE (analysis): ~0.09593\n\n";
 
 /* \begin{algorithm}
@@ -56,7 +56,7 @@ static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
 #define DEFAULT_DT            0.05
 #define DEFAULT_OBS_ERROR_STD 1.0
 #define DEFAULT_ENSEMBLE_SIZE 30
-#define SPINUP_STEPS          100
+#define SPINUP_STEPS          2000
 
 /* Minimum valid parameter values */
 #define MIN_N              1
@@ -247,42 +247,6 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *steps, PetscInt 
 }
 
 /*
-  InitializeEnsemble - Initialize ensemble members with Gaussian perturbations
-
-  Input Parameters:
-+ daas          - PetscDAS context
-. x0            - Background state
-. ensemble_size - Number of ensemble members
-. obs_error_std - Standard deviation for perturbations
-- rng           - Random number generator
-
-  Notes:
-  Each ensemble member is initialized as x0 + Gaussian(0, obs_error_std)
-*/
-static PetscErrorCode InitializeEnsemble(PetscDAS daas, Vec x0, PetscInt ensemble_size, PetscReal obs_error_std, PetscRandom rng)
-{
-  Vec      member, spread;
-  PetscInt i;
-
-  PetscFunctionBeginUser;
-  PetscValidHeaderSpecific(rng, PETSC_RANDOM_CLASSID, 5);
-  PetscCall(VecDuplicate(x0, &member));
-  PetscCall(VecDuplicate(x0, &spread));
-
-  /* Populate the ensemble by perturbing the background state with Gaussian draws */
-  for (i = 0; i < ensemble_size; i++) {
-    PetscCall(VecCopy(x0, member));
-    PetscCall(VecSetRandomGaussian(spread, rng, 0.0, obs_error_std));
-    PetscCall(VecAXPY(member, 1.0, spread));
-    PetscCall(PetscDASSetEnsembleMember(daas, i, member));
-  }
-
-  PetscCall(VecDestroy(&member));
-  PetscCall(VecDestroy(&spread));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
   ComputeRMSE - Compute root mean square error between two vectors
 
   Input Parameters:
@@ -320,7 +284,7 @@ int main(int argc, char **argv)
   /* PETSc objects */
   Lorenz96Ctx *l95_ctx = NULL;
   DM           da_state;
-  PetscDAS     daas;
+  PetscDA      daas;
   Vec          x0, x_mean, x_forecast;
   Vec          truth_state, rmse_work;
   Vec          observation, obs_noise, obs_error_var;
@@ -362,9 +326,17 @@ int main(int argc, char **argv)
   /* Create Lorenz96 context with reusable TS object */
   PetscCall(Lorenz96ContextCreate(da_state, n, F, dt, &l95_ctx));
 
+  /* Initialize random number generator */
+  PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rng));
+  PetscCall(PetscRandomSetSeed(rng, (unsigned long)random_seed));
+  PetscCall(PetscRandomSetFromOptions(rng));
+  PetscCall(PetscRandomSeed(rng));
+
   /* Initialize state vectors */
   PetscCall(DMCreateGlobalVector(da_state, &x0));
-  PetscCall(VecSet(x0, F)); /* Begin from climatological equilibrium state */
+  PetscCall(PetscRandomSetInterval(rng, -.1 * F, .1 * F)); // perterb about 0
+  PetscCall(VecSetRandom(x0, rng));
+  PetscCall(PetscRandomSetInterval(rng, 0, 1)); // rest are for Gaussain RNG
 
   /* Initialize truth trajectory */
   PetscCall(VecDuplicate(x0, &truth_state));
@@ -374,12 +346,6 @@ int main(int argc, char **argv)
   /* Spin up truth to get onto attractor */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for %d steps...\n", SPINUP_STEPS));
   for (int k = 0; k < SPINUP_STEPS; k++) PetscCall(Lorenz96Step(truth_state, truth_state, l95_ctx));
-
-  /* Initialize random number generator */
-  PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rng));
-  PetscCall(PetscRandomSetSeed(rng, (unsigned long)random_seed));
-  PetscCall(PetscRandomSetFromOptions(rng));
-  PetscCall(PetscRandomSeed(rng));
 
   /* Initialize observation vectors */
   PetscCall(VecDuplicate(x0, &observation));
@@ -391,13 +357,13 @@ int main(int argc, char **argv)
   PetscCall(VecDuplicate(x0, &x_mean));
   PetscCall(VecDuplicate(x0, &x_forecast));
 
-  /* Create and configure PetscDAS for ensemble data assimilation */
-  PetscCall(PetscDASCreate(PETSC_COMM_WORLD, &daas));
-  PetscCall(PetscDASSetSizes(daas, n, n, ensemble_size));
-  PetscCall(PetscDASSetFromOptions(daas));
-  PetscCall(PetscDASSetUp(daas));
-  PetscCall(PetscDASViewFromOptions(daas, NULL, "-das_view"));
-  PetscCall(PetscDASSetObsErrorVariance(daas, obs_error_var));
+  /* Create and configure PetscDA for ensemble data assimilation */
+  PetscCall(PetscDACreate(PETSC_COMM_WORLD, &daas));
+  PetscCall(PetscDASetSizes(daas, n, n, ensemble_size));
+  PetscCall(PetscDASetFromOptions(daas));
+  PetscCall(PetscDASetUp(daas));
+  PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
+  PetscCall(PetscDASetObsErrorVariance(daas, obs_error_var));
 
   /* Initialize ensemble members */
   PetscCall(InitializeEnsemble(daas, x0, ensemble_size, obs_error_std, rng));
@@ -422,7 +388,7 @@ int main(int argc, char **argv)
     PetscReal time = step * dt;
 
     /* Forecast step: compute ensemble mean and forecast RMSE */
-    PetscCall(PetscDASComputeMean(daas, x_mean));
+    PetscCall(PetscDAComputeMean(daas, x_mean));
     PetscCall(VecCopy(x_mean, x_forecast));
     PetscCall(ComputeRMSE(x_forecast, truth_state, rmse_work, n, &rmse_forecast));
     rmse_analysis = rmse_forecast; /* Default to forecast RMSE if no analysis */
@@ -434,10 +400,10 @@ int main(int argc, char **argv)
       PetscCall(VecWAXPY(observation, 1.0, obs_noise, truth_state));
 
       /* Perform ETKF analysis */
-      PetscCall(PetscDASAnalysis(daas, observation, Lorenz96ObsIdentity, NULL));
+      PetscCall(PetscDAAnalysis(daas, observation, Lorenz96ObsIdentity, NULL));
 
       /* Compute analysis RMSE */
-      PetscCall(PetscDASComputeMean(daas, x_mean));
+      PetscCall(PetscDAComputeMean(daas, x_mean));
       PetscCall(ComputeRMSE(x_mean, truth_state, rmse_work, n, &rmse_analysis));
       obs_count++;
     }
@@ -456,7 +422,7 @@ int main(int argc, char **argv)
 
     /* Propagate ensemble and truth trajectory */
     if (step < steps) {
-      PetscCall(PetscDASApplyModel(daas, Lorenz96Step, l95_ctx));
+      PetscCall(PetscDAApplyModel(daas, Lorenz96Step, l95_ctx));
       PetscCall(Lorenz96Step(truth_state, truth_state, l95_ctx));
     }
   }
@@ -483,7 +449,7 @@ int main(int argc, char **argv)
   PetscCall(VecDestroy(&rmse_work));
   PetscCall(VecDestroy(&truth_state));
   PetscCall(VecDestroy(&x0));
-  PetscCall(PetscDASDestroy(&daas));
+  PetscCall(PetscDADestroy(&daas));
   PetscCall(DMDestroy(&da_state));
   PetscCall(Lorenz96ContextDestroy(&l95_ctx));
   PetscCall(PetscRandomDestroy(&rng));
@@ -497,12 +463,12 @@ int main(int argc, char **argv)
   test:
     requires: !complex
     diff_args: -j
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -das_view -ensemble_size 30 -das_etkf_sqrt_type eigen
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30 -das_etkf_sqrt_type eigen
 
   test:
     suffix: chol
     diff_args: -j
     requires: !complex
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -das_view -ensemble_size 30 -das_etkf_sqrt_type cholesky
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -da_view -ensemble_size 30 -das_etkf_sqrt_type cholesky
 
 TEST*/

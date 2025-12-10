@@ -3,4 +3,4 @@
 /* MANSEC = ML */
 
 #include <petscregressor.h>
-#include <petscdas.h>
+#include <petscda.h>
