@@ -374,9 +374,9 @@ PetscErrorCode TSAdaptSetMonitor(TSAdapt adapt, PetscBool flg)
   Level: advanced
 
   Note:
-  If `TSAdaptSetAlwaysCheckStage()` is set to true, the `accept` parameter passed to the callback will be the result of the default checks in `TSAdaptCheckStage()`.
+  If `TSAdaptSetAlwaysCheckStage()` is set to true, the `accept` parameter passed to `func` will be the result of the default checks in `TSAdaptCheckStage()`.
   For example, if the nonlinear solve fails or the fails `TSFunctionDomainError()`, `accept = PETSC_FALSE`.
-  Thus, it is recommended that the callback function only reset `accept` if `accept == PETSC_TRUE`.
+  Thus, it is recommended that `func` only reset `accept` if `accept == PETSC_TRUE`.
 
 .seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSAdaptSetAlwaysCheckStage()`, `TSGetAdapt()`, `TSAdaptChoose()`
 @*/
@@ -389,18 +389,18 @@ PetscErrorCode TSAdaptSetCheckStage(TSAdapt adapt, PetscErrorCode (*func)(TSAdap
 }
 
 /*@
-  TSAdaptSetAlwaysCheckStage - Set whether the callback from `TSAdaptSetCheckStage()` should always be called or not
+  TSAdaptSetAlwaysCheckStage - Set whether the callback from `TSAdaptSetCheckStage()` should always be called
 
   Logically Collective
 
   Input Parameters:
-+ adapt - time step adaptivity context, usually gotten with `TSGetAdapt()`
++ adapt - time step adaptivity context, usually obtained with `TSGetAdapt()`
 - flag  - whether to always run the callback function
 
   Level: intermediate
 
   Notes:
-  By default, the callback set by `TSAdaptSetCheckStage()` is only called if other default checks accept the step (e.g. nonlinear solve succeeded or stage vector passes `TSFunctionDomainError()`).
+  By default, the callback set by `TSAdaptSetCheckStage()` is only called if other default checks accept the step (e.g. nonlinear solve succeeded or the stage vector passes `TSFunctionDomainError()`).
   Setting `flag = PETSC_TRUE` will force the callback to be called even if other checks reject the step.
 
   The `accept` parameter passed to the callback (see `TSAdaptSetCheckStage()`) will be the result of the default checks in `TSAdaptCheckStage()` (e.g. if the nonlinear solve fails, `accept = PETSC_FALSE`).
