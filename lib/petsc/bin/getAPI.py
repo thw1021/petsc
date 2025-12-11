@@ -225,7 +225,7 @@ def findmansec(line,mansec,submansec):
     mansecs[mansec].add(submansec)
   return mansec,submansec
 
-def getIncludeFiles(filename):
+def getIncludeFiles(filename,pkgname):
   import re
 
   file = os.path.basename(filename)
@@ -241,7 +241,7 @@ def getIncludeFiles(filename):
       line = regcomment.sub("",line)
       line = regcomment2.sub("",line)
       line = line.replace('#include <','').replace('>','').strip()
-      if not line == file and os.path.isfile(os.path.join('include',line)):
+      if not line == file and os.path.isfile(os.path.join('include',line)) or (pkgname == 'slepc' and line.startswith('petsc')):
         included.append(line)
     line = f.readline()
   includefiles[file] = IncludeFile(mansec,file,included)
@@ -635,7 +635,7 @@ def getAPI(directory,pkgname = 'petsc'):
   global typedefs
   args = [os.path.join('include',i) for i in os.listdir(os.path.join(directory,'include')) if i.endswith('.h') and not i.endswith('deprecated.h')]
   for i in args:
-    getIncludeFiles(i)
+    getIncludeFiles(i,pkgname)
   verbosePrint('Include files -------------------------------------')
   for i in includefiles.keys():
     verbosePrint(includefiles[i])
