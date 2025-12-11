@@ -374,11 +374,11 @@ PetscErrorCode TSAdaptSetMonitor(TSAdapt adapt, PetscBool flg)
   Level: advanced
 
   Note:
-  If `TSAdaptSetAlwaysCheckStage()` is set to true, the `accept` parameter passed to `func` will be the result of the default checks in `TSAdaptCheckStage()`.
+  If `TSAdaptSetCheckStageAlways()` is set to true, the `accept` parameter passed to `func` will be the result of the default checks in `TSAdaptCheckStage()`.
   For example, if the nonlinear solve fails or the fails `TSFunctionDomainError()`, `accept = PETSC_FALSE`.
   Thus, it is recommended that `func` only reset `accept` if `accept == PETSC_TRUE`.
 
-.seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSAdaptSetAlwaysCheckStage()`, `TSGetAdapt()`, `TSAdaptChoose()`
+.seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSAdaptSetCheckStageAlways()`, `TSGetAdapt()`, `TSAdaptChoose()`
 @*/
 PetscErrorCode TSAdaptSetCheckStage(TSAdapt adapt, PetscErrorCode (*func)(TSAdapt adapt, TS ts, PetscReal t, Vec Y, PetscBool *accept))
 {
@@ -389,7 +389,7 @@ PetscErrorCode TSAdaptSetCheckStage(TSAdapt adapt, PetscErrorCode (*func)(TSAdap
 }
 
 /*@
-  TSAdaptSetAlwaysCheckStage - Set whether the callback from `TSAdaptSetCheckStage()` should always be called
+  TSAdaptSetCheckStageAlways - Set whether the callback from `TSAdaptSetCheckStage()` should always be called
 
   Logically Collective
 
@@ -406,9 +406,9 @@ PetscErrorCode TSAdaptSetCheckStage(TSAdapt adapt, PetscErrorCode (*func)(TSAdap
   The `accept` parameter passed to the callback (see `TSAdaptSetCheckStage()`) will be the result of the default checks in `TSAdaptCheckStage()` (e.g. if the nonlinear solve fails, `accept = PETSC_FALSE`).
   Thus, it is recommended that the callback function only reset `accept` if `accept == PETSC_TRUE`.
 
-.seealso: [](ch_ts), `TSAdapt`, `TSAdaptSetCheckStage()`, `TSGetAdapt()`, `TSAdaptChoose()`
+.seealso: [](ch_ts), [](sec_ts_error_control),`TSAdapt`, `TSAdaptSetCheckStage()`, `TSGetAdapt()`, `TSAdaptChoose()`
 @*/
-PetscErrorCode TSAdaptSetAlwaysCheckStage(TSAdapt adapt, PetscBool flag)
+PetscErrorCode TSAdaptSetCheckStageAlways(TSAdapt adapt, PetscBool flag)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
