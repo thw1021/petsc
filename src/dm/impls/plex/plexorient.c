@@ -803,7 +803,7 @@ PetscErrorCode DMPlexOrientCells_Internal(DM dm, IS cellIS, IS faceIS)
   viewer = PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)dm));
   if (viewSync) PetscCall(PetscViewerASCIIPushSynchronized(viewer));
   PetscCall(PetscViewerGetSubViewer(viewer, PETSC_COMM_SELF, &selfviewer));
-  if (faceIsVertex) {
+  if (faceIsVertex && lpoints) {
     // Need to first flip cells which hit parallel boundary on wrong face
     for (PetscInt c = cStart; c < cEnd; ++c) {
       const PetscInt *cone;
