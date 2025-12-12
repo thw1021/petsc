@@ -469,7 +469,7 @@ def main(petscdir,slepcdir,petscarch):
     enumsext   = enums.copy()
     senumsext  = senums.copy()
   else:
-    with open(os.path.join(petscdir,petscarch,'lib','petsc','conf','classes.data'),'rb') as file:
+    with open(os.path.join(petscdir,'' if petscarch.startswith('installed-') else petscarch,'lib','petsc','conf','classes.data'),'rb') as file:
       petscclasses  = pickle.load(file)
       petscenums    = pickle.load(file)
       petscsenums   = pickle.load(file)
