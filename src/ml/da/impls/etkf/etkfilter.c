@@ -3,11 +3,11 @@
 #include <petscblaslapack.h>
 
 typedef struct {
-  PetscDAETKFSqrtType sqrt_type;
-  Mat                 V;               /* Eigen vectors (LAPACK column-major storage) */
-  Mat                 L_cholesky;      /* Lower triangular Cholesky factor */
-  Vec                 sqrt_eigen_vals; /* Square root of eigen values */
-  Mat                 I_StS;           /* T = I + S^T * S matrix */
+  PetscDASqrtType sqrt_type;
+  Mat             V;               /* Eigen vectors (LAPACK column-major storage) */
+  Mat             L_cholesky;      /* Lower triangular Cholesky factor */
+  Vec             sqrt_eigen_vals; /* Square root of eigen values */
+  Mat             I_StS;           /* T = I + S^T * S matrix */
 
   /* Persistent work vectors and matrices to avoid repeated allocation */
   Vec mean;
@@ -335,14 +335,14 @@ static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscI
 static PetscErrorCode PetscDAETKFSetSqrt_Cholesky(PetscDA da)
 {
   PetscFunctionBegin;
-  PetscCall(PetscDAETKFSetSqrtType(da, PETSCDAETKF_SQRT_CHOLESKY));
+  PetscCall(PetscDAETKFSetSqrtType(da, PETSCDA_SQRT_CHOLESKY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscDAETKFSetSqrt_Eigen(PetscDA da)
 {
   PetscFunctionBegin;
-  PetscCall(PetscDAETKFSetSqrtType(da, PETSCDAETKF_SQRT_EIGEN));
+  PetscCall(PetscDAETKFSetSqrtType(da, PETSCDA_SQRT_EIGEN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -395,9 +395,9 @@ static PetscErrorCode PetscDASetFromOptions_DASETKF(PetscDA da, PetscOptionItems
   impl               = (PetscDAETKFData *)da->data;
   PetscOptionsObject = PetscOptions ? *PetscOptions : NULL;
 
-  defaultType = (impl->sqrt_type == PETSCDAETKF_SQRT_EIGEN) ? "eigen" : "cholesky";
+  defaultType = (impl->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky";
   PetscCall(PetscStrncpy(typeName, defaultType, sizeof(typeName)));
-  PetscCall(PetscOptionsFList("-das_etkf_sqrt_type", "Matrix square root factorization", "PetscDAETKFSetSqrtType", PetscDAETKFSqrtList, defaultType, typeName, sizeof(typeName), &set));
+  PetscCall(PetscOptionsFList("-da_etkf_sqrt_type", "Matrix square root factorization", "PetscDAETKFSetSqrtType", PetscDAETKFSqrtList, defaultType, typeName, sizeof(typeName), &set));
   if (set) {
     PetscCall(PetscFunctionListFind(PetscDAETKFSqrtList, typeName, &setter));
     PetscCheck(setter, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDAETKF square-root type \"%s\"", typeName);
@@ -563,7 +563,7 @@ static PetscErrorCode PetscDATFactor_Eigen(PetscDA da, PetscDAETKFData *impl)
 
   /* Debug verification: Ensure V * D * V^T == T */
   if (PetscDefined(USE_DEBUG)) {
-    PetscReal norm_T, norm_diff;
+    PetscReal norm_T, norm_diff, relative_error;
     Mat       V_D, VDVt;
 
     /* Compute D * V^T by scaling rows */
@@ -582,10 +582,9 @@ static PetscErrorCode PetscDATFactor_Eigen(PetscDA da, PetscDAETKFData *impl)
     PetscCall(MatNorm(impl->I_StS, NORM_FROBENIUS, &norm_T));
     PetscCall(MatNorm(VDVt, NORM_FROBENIUS, &norm_diff));
 
-    if (norm_T > 0) {
-      PetscReal relative_error = norm_diff / norm_T;
-      PetscCheck(relative_error < MATRIX_SQRT_TOLERANCE_FACTOR, PetscObjectComm((PetscObject)da), PETSC_ERR_PLIB, "Eigendecomposition verification failed: ||V*D*V^T - T||/||T|| = %g", (double)relative_error);
-    }
+    PetscCheck(norm_T > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_PLIB, "T = 0");
+    relative_error = norm_diff / norm_T;
+    PetscCheck(relative_error < MATRIX_SQRT_TOLERANCE_FACTOR, PetscObjectComm((PetscObject)da), PETSC_ERR_PLIB, "Eigendecomposition verification failed: ||V*D*V^T - T||/||T|| = %g", (double)relative_error);
 
     /* Restore sqrt(D) back to sqrt_eigen_vals */
     PetscCall(VecSqrtAbs(impl->sqrt_eigen_vals));
@@ -665,15 +664,15 @@ static PetscErrorCode PetscDATFactor(PetscDA da, Mat S)
   */
   PetscCall(MatTransposeMatMult(S, S, scall, PETSC_DEFAULT, &impl->I_StS));
 
-  /* Add Identity: T = T + I */
-  PetscCall(MatShift(impl->I_StS, 1.0));
+  /* Add Identity: T = T + (1/rho)*I */
+  PetscCall(MatShift(impl->I_StS, 1.0 / da->inflation));
 
   /* 4. Compute Factorization based on strategy */
   switch (impl->sqrt_type) {
-  case PETSCDAETKF_SQRT_CHOLESKY:
+  case PETSCDA_SQRT_CHOLESKY:
     PetscCall(PetscDATFactor_Cholesky(da, impl));
     break;
-  case PETSCDAETKF_SQRT_EIGEN:
+  case PETSCDA_SQRT_EIGEN:
     PetscCall(PetscDATFactor_Eigen(da, impl));
     break;
   default:
@@ -808,10 +807,10 @@ static PetscErrorCode PetscDAApplyTInverse(PetscDA da, Vec sdel, Vec w)
   PetscCheck(impl->I_StS, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "T matrix not factored. Call PetscDATFactor first");
 
   switch (impl->sqrt_type) {
-  case PETSCDAETKF_SQRT_CHOLESKY:
+  case PETSCDA_SQRT_CHOLESKY:
     PetscCall(ApplyTInverse_Cholesky(da, impl, sdel, w));
     break;
-  case PETSCDAETKF_SQRT_EIGEN:
+  case PETSCDA_SQRT_EIGEN:
     PetscCall(ApplyTInverse_Eigen(da, impl, sdel, w));
     break;
   default:
@@ -950,10 +949,10 @@ static PetscErrorCode PetscDAApplySqrtTInverse(PetscDA da, Mat U, Mat Y)
   PetscCheck(impl->I_StS, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "I_StS matrix not created. Call PetscDATFactor first");
 
   switch (impl->sqrt_type) {
-  case PETSCDAETKF_SQRT_CHOLESKY:
+  case PETSCDA_SQRT_CHOLESKY:
     PetscCall(ApplySqrtTInverse_Cholesky(da, impl, U, Y));
     break;
-  case PETSCDAETKF_SQRT_EIGEN:
+  case PETSCDA_SQRT_EIGEN:
     PetscCall(ApplySqrtTInverse_Eigen(da, impl, U, Y));
     break;
   default:
@@ -1035,7 +1034,7 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
   inv_m          = 1.0 / ((PetscScalar)m);
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
-  PetscCall(PetscInfo(da, "squaroot type %s, %d ensembles\n", (impl->sqrt_type == PETSCDAETKF_SQRT_EIGEN) ? "eigen" : "cholesky", (int)m));
+  PetscCall(PetscInfo(da, "squaroot type %s, %d ensembles\n", (impl->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky", (int)m));
 
   /* Check for reallocation needs */
   if (impl->mean) {
@@ -1133,6 +1132,8 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
   /* ===================================================================== */
   /* Alg 6.4 line 7: Factor T = (I + S^T S) and store factorization (T is not inverted here but solved later) */
   /* ===================================================================== */
+  /* Apply inflation: T = (1/rho) * I + S^T S */
+  /* Note: Inflation is handled inside PetscDATFactor by shifting the diagonal of T */
   PetscCall(PetscDATFactor(da, impl->S));
 
   /* ===================================================================== */
@@ -1238,20 +1239,20 @@ static PetscErrorCode PetscDAETKFApplyModel(PetscDA da, PetscErrorCode (*model)(
 
   Input Parameters:
 + da   - the `PetscDA` object
-- type - either `PETSCDAETKF_SQRT_CHOLESKY` or `PETSCDAETKF_SQRT_EIGEN`
+- type - either `PETSCDA_SQRT_CHOLESKY` or `PETSCDA_SQRT_EIGEN`
 
   Level: advanced
 
 .seealso: [](ch_da), `PetscDA`, `PetscDAETKFGetSqrtType()`, `PetscDAETKFAnalysis()`
 @*/
-PetscErrorCode PetscDAETKFSetSqrtType(PetscDA da, PetscDAETKFSqrtType type)
+PetscErrorCode PetscDAETKFSetSqrtType(PetscDA da, PetscDASqrtType type)
 {
   PetscDAETKFData *impl;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscCheck(da->data, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDA data structure not initialized");
-  PetscCheck(type == PETSCDAETKF_SQRT_CHOLESKY || type == PETSCDAETKF_SQRT_EIGEN, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Invalid PetscDAETKF square-root type %" PetscInt_FMT, (PetscInt)type);
+  PetscCheck(type == PETSCDA_SQRT_CHOLESKY || type == PETSCDA_SQRT_EIGEN, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Invalid PetscDA square-root type %" PetscInt_FMT, (PetscInt)type);
 
   impl            = (PetscDAETKFData *)da->data;
   impl->sqrt_type = type;
@@ -1267,13 +1268,13 @@ PetscErrorCode PetscDAETKFSetSqrtType(PetscDA da, PetscDAETKFSqrtType type)
 . da - the `PetscDA` object
 
   Output Parameter:
-. type - on output, the configured `PetscDAETKFSqrtType`
+. type - on output, the configured `PetscDASqrtType`
 
   Level: advanced
 
 .seealso: [](ch_da), `PetscDA`, `PetscDAETKFSetSqrtType()`
 @*/
-PetscErrorCode PetscDAETKFGetSqrtType(PetscDA da, PetscDAETKFSqrtType *type)
+PetscErrorCode PetscDAETKFGetSqrtType(PetscDA da, PetscDASqrtType *type)
 {
   PetscDAETKFData *impl;
 
@@ -1312,7 +1313,7 @@ static PetscErrorCode PetscDAETKFView(PetscDA da, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "PetscDAETKF Object:\n"));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Square root type: %s\n", (impl->sqrt_type == PETSCDAETKF_SQRT_EIGEN) ? "eigen" : "cholesky"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Square root type: %s\n", (impl->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky"));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1339,7 +1340,7 @@ static PetscErrorCode PetscDAETKFInitialize(PetscDA da)
   impl->L_cholesky      = NULL;
   impl->sqrt_eigen_vals = NULL;
   impl->I_StS           = NULL;
-  impl->sqrt_type       = PETSCDAETKF_SQRT_EIGEN;
+  impl->sqrt_type       = PETSCDA_SQRT_EIGEN;
 
   da->data                  = impl;
   da->ops->analysis         = PetscDAETKFAnalysis;

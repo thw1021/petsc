@@ -10,12 +10,15 @@
 typedef struct _p_PetscDA *PetscDA;
 
 typedef enum {
-  PETSCDAETKF_SQRT_CHOLESKY = 0,
-  PETSCDAETKF_SQRT_EIGEN    = 1
-} PetscDAETKFSqrtType;
+  PETSCDA_SQRT_CHOLESKY = 0,
+  PETSCDA_SQRT_EIGEN    = 1
+} PetscDASqrtType;
 
 typedef const char *PetscDAType;
 #define PETSCDAETKF "etkf"
+#define PETSCDALETKF "letkf"
+
+#define NUM_OBSERVATIONS_VERTEX 40
 
 PETSC_EXTERN PetscErrorCode PetscDAInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDAFinalizePackage(void);
@@ -37,6 +40,9 @@ PETSC_EXTERN PetscErrorCode PetscDASetUp(PetscDA);
 
 PETSC_EXTERN PetscErrorCode PetscDASetObsErrorVariance(PetscDA, Vec);
 PETSC_EXTERN PetscErrorCode PetscDAGetObsErrorVariance(PetscDA, Vec *);
+
+PETSC_EXTERN PetscErrorCode PetscDASetInflation(PetscDA, PetscReal);
+PETSC_EXTERN PetscErrorCode PetscDAGetInflation(PetscDA, PetscReal *);
 
 PETSC_EXTERN PetscErrorCode PetscDASetOrthogonalTransform(PetscDA, Mat);
 PETSC_EXTERN PetscErrorCode PetscDAGetOrthogonalTransform(PetscDA, Mat *);
@@ -60,5 +66,12 @@ PETSC_EXTERN PetscErrorCode VecSetRandomGaussian(Vec, PetscRandom, PetscReal, Pe
 PETSC_EXTERN PetscErrorCode PetscDAETKFRegister(void);
 PETSC_EXTERN PetscErrorCode PetscDAETKFInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDAETKFFinalizePackage(void);
-PETSC_EXTERN PetscErrorCode PetscDAETKFSetSqrtType(PetscDA, PetscDAETKFSqrtType);
-PETSC_EXTERN PetscErrorCode PetscDAETKFGetSqrtType(PetscDA, PetscDAETKFSqrtType *);
+PETSC_EXTERN PetscErrorCode PetscDAETKFSetSqrtType(PetscDA, PetscDASqrtType);
+PETSC_EXTERN PetscErrorCode PetscDAETKFGetSqrtType(PetscDA, PetscDASqrtType *);
+
+PETSC_EXTERN PetscErrorCode PetscDALETKFRegister(void);
+PETSC_EXTERN PetscErrorCode PetscDALETKFInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscDALETKFFinalizePackage(void);
+PETSC_EXTERN PetscErrorCode PetscDALETKFSetLocalization(PetscDA, Mat);
+PETSC_EXTERN PetscErrorCode PetscDALETKFSetSqrtType(PetscDA, PetscDASqrtType);
+PETSC_EXTERN PetscErrorCode PetscDALETKFGetSqrtType(PetscDA, PetscDASqrtType *);

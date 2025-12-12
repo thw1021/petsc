@@ -96,7 +96,7 @@ The operator can call into PETSc time integrators ({any}`ch_ts`), nonlinear solv
 The default implementation is the ensemble transform Kalman filter indicated by the type string `PETSCDAETKF` (which resolves to `"etkf"`). Alternative PetscDA types can be registered with `PetscDARegister()` and selected at runtime:
 
 - `-petscda_type etkf` chooses the built-in square-root ETKF.
-- `-das_etkf_sqrt_type {cholesky,eigen}` (or, programmatically, `PetscDAETKFSetSqrtType()`) toggles between Cholesky and eigenvalue-based square-root updates. The default is `cholesky`, which is computationally more efficient (O(n³/3) vs O(n³)) and preferred when the reduced-space matrix is known to be positive definite. The `eigen` method is more robust for semi-definite matrices as it handles small negative eigenvalues arising from numerical round-off.
+- `-da_etkf_sqrt_type {cholesky,eigen}` (or, programmatically, `PetscDAETKFSetSqrtType()`) toggles between Cholesky and eigenvalue-based square-root updates. The default is `cholesky`, which is computationally more efficient (O(n³/3) vs O(n³)) and preferred when the reduced-space matrix is known to be positive definite. The `eigen` method is more robust for semi-definite matrices as it handles small negative eigenvalues arising from numerical round-off.
 
 Custom PetscDA types should implement the `PetscDASetType()` registration hook, populate virtual methods for analysis and forecast orchestration, and take advantage of the anomaly computations provided by the base class.
 

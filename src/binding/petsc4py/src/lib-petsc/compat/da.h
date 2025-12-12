@@ -1,5 +1,5 @@
-#ifndef PETSC4PY_COMPAT_DAS_H
-#define PETSC4PY_COMPAT_DAS_H
+#ifndef PETSC4PY_COMPAT_DA_H
+#define PETSC4PY_COMPAT_DA_H
 
 #include <petscda.h>
 
@@ -15,4 +15,4 @@ PetscErrorCode PetscDAETKFGetSqrtType(PETSC_UNUSED PetscDA da,PETSC_UNUSED Petsc
 #undef PetscDAError
 
 #endif/*PETSC_USE_COMPLEX*/
-#endif/*PETSC4PY_COMPAT_DAS_H*/
+#endif/*PETSC4PY_COMPAT_DA_H*/
