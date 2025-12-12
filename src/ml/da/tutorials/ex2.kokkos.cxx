@@ -5,46 +5,12 @@
 #include <petscts.h>
 #include <petscvec.h>
 
-static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
-                     "Algorithm 6.4 of \n"
-                     "Asch, Bocquet, and Nodet (2016) \"Data Assimilation\" "
-                     "(SIAM, doi:10.1137/1.9781611974546).\n\n"
+static char help[] = "Deterministic LETKF example for the Lorenz-96 model.\n"
+                     "This is based on the ETKF example (ex1.c) but uses LETKF with full localization.\n"
+                     "All observations are used for each vertex with weight 1.0.\n\n"
                      "Example usage:\n"
-                     "  ./ex1 -steps 105000 -burn 5000 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30\n"
-                     "  Expected result: Mean RMSE (analysis): ~0.13107\n\n";
-
-/* \begin{algorithm}
-\caption{Ensemble Transform Kalman Filter (ETKF) - Deterministic}
-\begin{algorithmic}[1]
-\State \textbf{Initialize:} Ensemble $\mathbf{E}_0 = [\mathbf{x}_0^{(1)}, \ldots, \mathbf{x}_0^{(m)}]$ \Comment{$\mathbf{E}_0 \in \mathbb{R}^{n \times m}$}
-\For{$k = 1, 2, \ldots, K$}
-    \State \textbf{// Forecast Step}
-    \For{$i = 1$ to $m$}
-        \State $\mathbf{x}_k^{f,(i)} = \mathcal{M}_{k-1}(\mathbf{x}_{k-1}^{a,(i)})$ \Comment{$\mathbf{x}_k^{f,(i)} \in \mathbb{R}^{n}$}
-    \EndFor
-    \State Assemble forecast matrix: $\mathbf{E}_k^f = [\mathbf{x}_k^{f,(1)}, \ldots, \mathbf{x}_k^{f,(m)}]$ \Comment{$\mathbf{E}_k^f \in \mathbb{R}^{n \times m}$}
-    \State
-    \State \textbf{// Analysis Step (if observation available)}
-    \If{observation $\mathbf{y}_k$ available}
-        \State Compute ensemble mean: $\overline{\mathbf{x}}_k^f = \frac{1}{m}\sum_{i=1}^m \mathbf{x}_k^{f,(i)}$ \Comment{$\overline{\mathbf{x}}_k^f \in \mathbb{R}^{n}$}
-        \State Compute anomalies: $\mathbf{X}_k = \frac{1}{\sqrt{m-1}}(\mathbf{E}_k^f - \overline{\mathbf{x}}_k^f \mathbf{1}^T)$ \Comment{$\mathbf{X}_k \in \mathbb{R}^{n \times m}$}
-        \State Apply observation operator: $\mathbf{Z}_k = \mathcal{H}(\mathbf{E}_k^f)$ \Comment{$\mathbf{Z}_k \in \mathbb{R}^{b \times m}$}
-        \State Compute obs ensemble mean: $\overline{\mathbf{y}}_k = \frac{1}{m}\sum_{i=1}^m \mathcal{H}(\mathbf{x}_k^{f,(i)})$ \Comment{$\overline{\mathbf{y}}_k \in \mathbb{R}^{b}$}
-        \State Compute obs anomalies: $\mathbf{S}_k = \frac{1}{\sqrt{m-1}}\mathbf{R}^{-1/2}(\mathbf{Z}_k - \overline{\mathbf{y}}_k\mathbf{1}^T)$ \Comment{$\mathbf{S}_k \in \mathbb{R}^{b \times m}$}
-        \State Compute raw innovation: $\boldsymbol{\delta}_k = \mathbf{y}_k - \overline{\mathbf{y}}_k$ \Comment{$\boldsymbol{\delta}_k \in \mathbb{R}^{b}$}
-        \State Whiten innovation: $\tilde{\boldsymbol{\delta}}_k = \mathbf{R}^{-1/2}\boldsymbol{\delta}_k$ \Comment{$\tilde{\boldsymbol{\delta}}_k \in \mathbb{R}^{b}$}
-        \State Compute transform matrix: $\mathbf{T}_k = (\mathbf{I}_m + \mathbf{S}_k^T\mathbf{S}_k)^{-1}$ \Comment{$\mathbf{T}_k \in \mathbb{R}^{m \times m}$}
-        \State Compute weight vector: $\mathbf{w}_k = \mathbf{T}_k \mathbf{S}_k^T \tilde{\boldsymbol{\delta}}_k$ \Comment{$\mathbf{w}_k \in \mathbb{R}^{m}$}
-        \State Form deterministic map: $\mathbf{G}_k = \mathbf{w}_k\mathbf{1}^T + \sqrt{m-1}\,\mathbf{T}_k^{1/2}\mathbf{U}$ \Comment{$\mathbf{G}_k \in \mathbb{R}^{m \times m}$}
-        \State Update ensemble: $\mathbf{E}_k^a = \overline{\mathbf{x}}_k^f\mathbf{1}^T + \mathbf{X}_k \mathbf{G}_k$ \Comment{$\mathbf{E}_k^a \in \mathbb{R}^{n \times m}$}
-        \State where $\mathbf{U}$ is orthogonal with $\mathbf{U}\mathbf{1} = \mathbf{1}$ (the PETSc implementation stores it as \texttt{da->U} and defaults to $\mathbf{I}_m$)
-    \Else
-        \State $\mathbf{E}_k^a = \mathbf{E}_k^f$ \Comment{$\mathbf{E}_k^a \in \mathbb{R}^{n \times m}$}
-    \EndIf
-\EndFor
-\end{algorithmic}
-\end{algorithm}
- */
+                     "  ./ex2.kokkos -steps 105000 -burn 5000 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30\n"
+                     "  Expected result: Mean RMSE (analysis): ~0.09593 (same as ex1)\n\n";
 
 /* Default parameter values */
 #define DEFAULT_N             40
@@ -250,8 +216,7 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *steps, PetscInt 
   ComputeRMSE - Compute root mean square error between two vectors
 
   Input Parameters:
-+ v1 - First vector
-. v2 - Second vector
++ v1 - First vector. v2 - Second vector
 - n  - Vector dimension (for normalization)
 
   Output Parameter:
@@ -265,6 +230,51 @@ static PetscErrorCode ComputeRMSE(Vec v1, Vec v2, Vec work, PetscInt n, PetscRea
   PetscCall(VecWAXPY(work, -1.0, v2, v1));
   PetscCall(VecNorm(work, NORM_2, &norm));
   *rmse = norm / PetscSqrtReal((PetscReal)n);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  SetupLocalization - Setup localization matrix Q with all observations for each vertex
+
+  Input Parameters:
++ n - State dimension
+. p - Observation dimension
+- daas - PetscDA object
+
+  Notes:
+  The LETKF implementation expects a sparse AIJ matrix with exactly NUM_OBSERVATIONS_VERTEX
+*/
+static PetscErrorCode SetupLocalization(PetscInt n, PetscInt p, PetscDA daas)
+{
+  Mat         Q;
+  PetscInt    i, j;
+  PetscScalar val = 1.0;
+
+  PetscFunctionBeginUser;
+  /* Verify that observation dimension matches NUM_OBSERVATIONS_VERTEX */
+  PetscCheck(p == NUM_OBSERVATIONS_VERTEX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP,
+             "Observation dimension %" PetscInt_FMT " must equal NUM_OBSERVATIONS_VERTEX %d for full localization",
+             p, NUM_OBSERVATIONS_VERTEX);
+
+  /* Create sparse localization matrix Q (N x P) with NUM_OBSERVATIONS_VERTEX non-zeros per row */
+  PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, n, p, NUM_OBSERVATIONS_VERTEX, NULL, &Q));
+  PetscCall(MatSetUp(Q));
+
+  /* Fill with all 1.0 values: replace with a method from the DM that has geometry require to do real localization */
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < p; j++) {
+      PetscCall(MatSetValue(Q, i, j, val, INSERT_VALUES));
+    }
+  }
+
+  PetscCall(MatAssemblyBegin(Q, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(Q, MAT_FINAL_ASSEMBLY));
+
+  /* Set the localization matrix in the LETKF filter */
+  PetscCall(PetscDALETKFSetLocalization(daas, Q));
+
+  /* Cleanup - Q is now owned by daas */
+  PetscCall(MatDestroy(&Q));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -300,7 +310,7 @@ int main(int argc, char **argv)
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
 
   /* Parse command-line options */
-  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Lorenz-96 ETKF Quick Example", NULL);
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Lorenz-96 LETKF Example", NULL);
   PetscCall(PetscOptionsInt("-n", "State dimension", "", n, &n, NULL));
   PetscCall(PetscOptionsInt("-steps", "Number of time steps", "", steps, &steps, NULL));
   PetscCall(PetscOptionsInt("-burn", "Burn-in steps excluded from statistics", "", burn, &burn, NULL));
@@ -334,9 +344,9 @@ int main(int argc, char **argv)
 
   /* Initialize state vectors */
   PetscCall(DMCreateGlobalVector(da_state, &x0));
-  PetscCall(PetscRandomSetInterval(rng, -.1 * F, .1 * F)); // perterb about 0
+  PetscCall(PetscRandomSetInterval(rng, -.1 * F, .1 * F)); // perturb about 0
   PetscCall(VecSetRandom(x0, rng));
-  PetscCall(PetscRandomSetInterval(rng, 0, 1)); // rest are for Gaussain RNG
+  PetscCall(PetscRandomSetInterval(rng, 0, 1)); // rest are for Gaussian RNG
 
   /* Initialize truth trajectory */
   PetscCall(VecDuplicate(x0, &truth_state));
@@ -357,20 +367,24 @@ int main(int argc, char **argv)
   PetscCall(VecDuplicate(x0, &x_mean));
   PetscCall(VecDuplicate(x0, &x_forecast));
 
-  /* Create and configure PetscDA for ensemble data assimilation */
+  /* Create and configure PetscDA for ensemble data assimilation with LETKF */
   PetscCall(PetscDACreate(PETSC_COMM_WORLD, &daas));
+  PetscCall(PetscDASetType(daas, PETSCDALETKF));
   PetscCall(PetscDASetSizes(daas, n, n, ensemble_size));
   PetscCall(PetscDASetFromOptions(daas));
   PetscCall(PetscDASetUp(daas));
   PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
   PetscCall(PetscDASetObsErrorVariance(daas, obs_error_var));
 
+  /* Setup full localization: all observations for each vertex with weight 1.0 */
+  PetscCall(SetupLocalization(n, n, daas));
+
   /* Initialize ensemble members */
   PetscCall(InitializeEnsemble(daas, x0, ensemble_size, obs_error_std, rng));
 
   /* Print configuration summary */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-96 ETKF Example\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "======================\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-96 LETKF Example\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "=======================\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                         "  State dimension       : %" PetscInt_FMT "\n"
                         "  Ensemble size         : %" PetscInt_FMT "\n"
@@ -380,7 +394,8 @@ int main(int argc, char **argv)
                         "  Burn-in steps         : %" PetscInt_FMT "\n"
                         "  Observation frequency : %" PetscInt_FMT "\n"
                         "  Observation noise std : %.3f\n"
-                        "  Random seed           : %" PetscInt_FMT "\n\n",
+                        "  Random seed           : %" PetscInt_FMT "\n"
+                        "  Localization          : Full (all obs, weight 1.0)\n\n",
                         n, ensemble_size, (double)F, (double)dt, steps, burn, obs_freq, (double)obs_error_std, random_seed));
 
   /* Main assimilation cycle: forecast and analysis steps */
@@ -399,7 +414,7 @@ int main(int argc, char **argv)
       PetscCall(VecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
       PetscCall(VecWAXPY(observation, 1.0, obs_noise, truth_state));
 
-      /* Perform ETKF analysis */
+      /* Perform LETKF analysis */
       PetscCall(PetscDAAnalysis(daas, observation, Lorenz96ObsIdentity, NULL));
 
       /* Compute analysis RMSE */
@@ -463,12 +478,12 @@ int main(int argc, char **argv)
   test:
     requires: !complex
     diff_args: -j
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30 -da_etkf_sqrt_type eigen
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30 -da_letkf_sqrt_type eigen
 
   test:
     suffix: chol
     diff_args: -j
     requires: !complex
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -da_view -ensemble_size 30 -da_etkf_sqrt_type cholesky
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -da_view -ensemble_size 30 -da_letkf_sqrt_type cholesky
 
 TEST*/
