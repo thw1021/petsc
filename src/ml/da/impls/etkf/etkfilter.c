@@ -428,7 +428,6 @@ PetscErrorCode PetscDAETKFFinalizePackage(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-
 /* ========================================================================== */
 /*                    ETKF Analysis Algorithm (Algorithm 6.4)                */
 /* ========================================================================== */
