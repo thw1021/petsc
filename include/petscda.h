@@ -15,7 +15,7 @@ typedef enum {
 } PetscDASqrtType;
 
 typedef const char *PetscDAType;
-#define PETSCDAETKF "etkf"
+#define PETSCDAETKF  "etkf"
 #define PETSCDALETKF "letkf"
 
 #define NUM_OBSERVATIONS_VERTEX 40
