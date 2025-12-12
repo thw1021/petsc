@@ -115,7 +115,7 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, PetscErr
 {
   PetscDALETKFData  *impl = (PetscDALETKFData *)da->data;
   Mat                X, Z, Y;
-  Vec                mean, y_mean, y_obs;
+  Vec                mean, y_mean;
   PetscInt           m, n, p;
   PetscReal          scale;
   const PetscScalar *X_arr, *Y_arr, *y_obs_arr, *y_mean_arr, *R_arr;
@@ -136,10 +136,10 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, PetscErr
   PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &mean));
   PetscCall(VecSetSizes(mean, PETSC_DECIDE, n));
   PetscCall(VecSetFromOptions(mean));
-  PetscCall(PetscDAComputeMean(da, mean));
+  PetscCall(PetscDAComputeEnsembleMean(da, mean));
 
   // Alg 6.4 line 2: Compute anomalies X = (E - mean) / sqrt(m-1)
-  PetscCall(PetscDAComputeAnomalies(da, &X));
+  PetscCall(PetscDAComputeAnomalies(da, mean, &X));
 
   // Alg 6.4 line 3-4: Compute observation ensemble Z = H(E)
   PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, p, m, NULL, &Z));
@@ -186,7 +186,7 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, PetscErr
   // Allocate workspace for local analysis
   PetscScalar  *S_local, *T_local, *w_local, *delta_local, *work;
   PetscBLASInt *piv;
-  PetscBLASInt  lwork, info, m_blas, ncols_blas, one = 1;
+  PetscBLASInt  info, m_blas, ncols_blas, one = 1;
 
   // Additional workspace for Eigen
   PetscScalar *work_syev  = NULL;
@@ -216,7 +216,6 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, PetscErr
   // Use fixed size for local arrays based on NUM_OBSERVATIONS_VERTEX
   PetscCall(PetscMalloc5(NUM_OBSERVATIONS_VERTEX * m, &S_local, m * m, &T_local, m, &w_local, NUM_OBSERVATIONS_VERTEX, &delta_local, m, &piv));
   PetscCall(PetscMalloc1(m * m, &work)); // Workspace for inversion or T^{-1/2}
-  lwork = m * m;
 
   // Access Q data directly assuming SeqAIJ
   for (PetscInt i = Istart; i < Iend; i++) {
