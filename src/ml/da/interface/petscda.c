@@ -180,7 +180,7 @@ static PetscErrorCode PetscDAComputeEnsembleMean_Default(PetscDA da, Vec mean)
 {
   Vec         member;
   PetscScalar inv_m;
-  PetscInt    m, j;
+  PetscInt    m;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
@@ -190,13 +190,9 @@ static PetscErrorCode PetscDAComputeEnsembleMean_Default(PetscDA da, Vec mean)
 
   m     = da->ensemble_size;
   inv_m = 1.0 / (PetscScalar)m;
-
-  PetscCall(VecSet(mean, 0.0));
-  for (j = 0; j < m; ++j) {
-    PetscCall(MatDenseGetColumnVecRead(da->ensemble, j, &member));
-    PetscCall(VecAXPY(mean, inv_m, member));
-    PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, j, &member));
-  }
+  /* Compute observation mean y_mean = (1/m) * sum(Z_i) */
+  PetscCall(MatGetRowSum(da->ensemble, mean));
+  PetscCall(VecScale(mean, inv_m));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1321,8 +1317,8 @@ static PetscErrorCode PetscDATFactor_Eigen(PetscDA da)
 @*/
 PetscErrorCode PetscDATFactor(PetscDA da, Mat S)
 {
-  PetscInt m, s_rows, s_cols;
-  MatReuse scall      = MAT_INITIAL_MATRIX;
+  PetscInt  m, s_rows, s_cols;
+  MatReuse  scall      = MAT_INITIAL_MATRIX;
   PetscBool reallocate = PETSC_FALSE;
 
   PetscFunctionBegin;
@@ -1636,7 +1632,7 @@ PetscErrorCode PetscDAApplySqrtTInverse(PetscDA da, Mat U, Mat Y)
     PetscReal norm_ref, norm_diff;
 
     /* Compute LHS: Y^T * T * Y */
-    PetscCall(MatMatMult(da->I_StS, Y, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T_Y));   /* T * Y */
+    PetscCall(MatMatMult(da->I_StS, Y, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &T_Y));     /* T * Y */
     PetscCall(MatTransposeMatMult(Y, T_Y, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &YtTY)); /* Y^T * (T * Y) */
 
     /* Compute RHS: U^T * U */
