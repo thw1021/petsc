@@ -252,9 +252,7 @@ static PetscErrorCode SetupLocalization(PetscInt n, PetscInt p, PetscDA daas)
 
   PetscFunctionBeginUser;
   /* Verify that observation dimension matches NUM_OBSERVATIONS_VERTEX */
-  PetscCheck(p == NUM_OBSERVATIONS_VERTEX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP,
-             "Observation dimension %" PetscInt_FMT " must equal NUM_OBSERVATIONS_VERTEX %d for full localization",
-             p, NUM_OBSERVATIONS_VERTEX);
+  PetscCheck(p == NUM_OBSERVATIONS_VERTEX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Observation dimension %" PetscInt_FMT " must equal NUM_OBSERVATIONS_VERTEX %d for full localization", p, NUM_OBSERVATIONS_VERTEX);
 
   /* Create sparse localization matrix Q (N x P) with NUM_OBSERVATIONS_VERTEX non-zeros per row */
   PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, n, p, NUM_OBSERVATIONS_VERTEX, NULL, &Q));
@@ -262,9 +260,7 @@ static PetscErrorCode SetupLocalization(PetscInt n, PetscInt p, PetscDA daas)
 
   /* Fill with all 1.0 values: replace with a method from the DM that has geometry require to do real localization */
   for (i = 0; i < n; i++) {
-    for (j = 0; j < p; j++) {
-      PetscCall(MatSetValue(Q, i, j, val, INSERT_VALUES));
-    }
+    for (j = 0; j < p; j++) { PetscCall(MatSetValue(Q, i, j, val, INSERT_VALUES)); }
   }
 
   PetscCall(MatAssemblyBegin(Q, MAT_FINAL_ASSEMBLY));
