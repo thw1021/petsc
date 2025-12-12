@@ -51,8 +51,8 @@ PETSC_EXTERN PetscErrorCode PetscDAGetEnsembleMember(PetscDA, PetscInt, Vec *);
 PETSC_EXTERN PetscErrorCode PetscDARestoreEnsembleMember(PetscDA, PetscInt, Vec *);
 PETSC_EXTERN PetscErrorCode PetscDASetEnsembleMember(PetscDA, PetscInt, Vec);
 
-PETSC_EXTERN PetscErrorCode PetscDAComputeMean(PetscDA, Vec);
-PETSC_EXTERN PetscErrorCode PetscDAComputeAnomalies(PetscDA, Mat *);
+PETSC_EXTERN PetscErrorCode PetscDAComputeEnsembleMean(PetscDA, Vec);
+PETSC_EXTERN PetscErrorCode PetscDAComputeAnomalies(PetscDA, Vec, Mat *);
 PETSC_EXTERN PetscErrorCode PetscDAAnalysis(PetscDA, Vec, PetscErrorCode (*)(Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode PetscDAApplyModel(PetscDA, PetscErrorCode (*)(Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode InitializeEnsemble(PetscDA, Vec, PetscInt, PetscReal, PetscRandom);
@@ -62,6 +62,13 @@ PETSC_EXTERN PetscErrorCode PetscDAAppendOptionsPrefix(PetscDA, const char[]);
 PETSC_EXTERN PetscErrorCode PetscDAGetOptionsPrefix(PetscDA, const char *[]);
 
 PETSC_EXTERN PetscErrorCode VecSetRandomGaussian(Vec, PetscRandom, PetscReal, PetscReal);
+
+/* T-matrix factorization functions (base class) */
+PETSC_EXTERN PetscErrorCode PetscDASetSqrtType(PetscDA, PetscDASqrtType);
+PETSC_EXTERN PetscErrorCode PetscDAGetSqrtType(PetscDA, PetscDASqrtType *);
+PETSC_EXTERN PetscErrorCode PetscDATFactor(PetscDA, Mat);
+PETSC_EXTERN PetscErrorCode PetscDAApplyTInverse(PetscDA, Vec, Vec);
+PETSC_EXTERN PetscErrorCode PetscDAApplySqrtTInverse(PetscDA, Mat, Mat);
 
 PETSC_EXTERN PetscErrorCode PetscDAETKFRegister(void);
 PETSC_EXTERN PetscErrorCode PetscDAETKFInitializePackage(void);
