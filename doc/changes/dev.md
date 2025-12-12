@@ -120,7 +120,7 @@
 ```{rubric} PetscRegressor:
 ```
 
-```{rubric} ML/DAS:
+```{rubric} ML/DA:
 ```
 
 - Add data assimilation (PetscDA) base class with implementation of ETKF: [](ch_da)

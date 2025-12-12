@@ -66,6 +66,7 @@ PetscErrorCode PetscDAFinalizePackage(void)
 }
 
 PETSC_EXTERN PetscErrorCode PetscDAETKFRegister(void);
+PETSC_EXTERN PetscErrorCode PetscDALETKFRegister(void);
 
 /*@C
   PetscDARegister - Registers a constructor for a `PetscDA` implementation with the
@@ -104,6 +105,7 @@ PetscErrorCode PetscDARegisterAll(void)
   if (PetscDARegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscDARegisterAllCalled = PETSC_TRUE;
   PetscCall(PetscDAETKFRegister()); // add new methods here
+  PetscCall(PetscDALETKFRegister());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@
@@ -198,6 +200,7 @@ static PetscErrorCode PetscDAComputeMean_Default(PetscDA da, Vec mean)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Alg 6.4 line 2: Compute anomalies X = (E - mean) / sqrt(m-1)
 static PetscErrorCode PetscDAComputeAnomalies_Default(PetscDA da, Mat *anomalies_out)
 {
   Vec       mean;
@@ -291,7 +294,7 @@ PetscErrorCode PetscDACreate(MPI_Comm comm, PetscDA *da_out)
 
   PetscCall(PetscDAInitializePackage());
 
-  PetscCall(PetscHeaderCreate(da, PETSCDA_CLASSID, "PetscDA", "Data Assimilation", "DAS", comm, PetscDADestroy, PetscDAView));
+  PetscCall(PetscHeaderCreate(da, PETSCDA_CLASSID, "PetscDA", "Data Assimilation", "DA", comm, PetscDADestroy, PetscDAView));
   PetscCall(PetscMemzero(da->ops, sizeof(*da->ops)));
   da->ops->computemean      = PetscDAComputeMean_Default;
   da->ops->computeanomalies = PetscDAComputeAnomalies_Default;
@@ -305,6 +308,7 @@ PetscErrorCode PetscDACreate(MPI_Comm comm, PetscDA *da_out)
   da->U             = NULL;
   da->assembled     = PETSC_FALSE;
   da->data          = NULL;
+  da->inflation     = 1.0;
 
   *da_out = da;
 
@@ -434,6 +438,8 @@ PetscErrorCode PetscDASetFromOptions(PetscDA da)
   /* Allow runtime selection of data assimilation type */
   PetscCall(PetscOptionsFList("-petscda_type", "Data assimilation method", "PetscDASetType", PetscDAList, ((PetscObject)da)->type_name, type_name, sizeof(type_name), &type_set));
   if (type_set) PetscCall(PetscDASetType(da, type_name));
+
+  PetscCall(PetscOptionsReal("-petscda_inflation", "Inflation factor", "PetscDASetInflation", da->inflation, &da->inflation, NULL));
 
   if (da->ops->setfromoptions) PetscCall((*da->ops->setfromoptions)(da, &PetscOptionsObject));
   PetscOptionsEnd();
@@ -583,6 +589,7 @@ PetscErrorCode PetscDAView(PetscDA da, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Observation size: %" PetscInt_FMT "\n", da->obs_size));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Ensemble size: %" PetscInt_FMT "\n", da->ensemble_size));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Assembled: %s\n", da->assembled ? "true" : "false"));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Inflation: %g\n", (double)da->inflation));
   }
 
   if (da->ops->view) PetscCall((*da->ops->view)(da, viewer));
@@ -656,6 +663,53 @@ PetscErrorCode PetscDAGetObsErrorVariance(PetscDA da, Vec *obs_error_var)
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscAssertPointer(obs_error_var, 2);
   *obs_error_var = da->obs_error_var;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscDASetInflation - Sets the inflation factor for the data assimilation method.
+
+  Logically Collective
+
+  Input Parameters:
++ da        - the `PetscDA` context
+- inflation - the inflation factor (must be >= 1.0)
+
+  Level: intermediate
+
+.seealso: [](ch_da), `PetscDAGetInflation()`
+@*/
+PetscErrorCode PetscDASetInflation(PetscDA da, PetscReal inflation)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidLogicalCollectiveReal(da, inflation, 2);
+  PetscCheck(inflation >= 1.0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Inflation factor must be >= 1.0, got %g", (double)inflation);
+  da->inflation = inflation;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscDAGetInflation - Gets the inflation factor for the data assimilation method.
+
+  Not Collective
+
+  Input Parameter:
+. da - the `PetscDA` context
+
+  Output Parameter:
+. inflation - the inflation factor
+
+  Level: intermediate
+
+.seealso: [](ch_da), `PetscDASetInflation()`
+@*/
+PetscErrorCode PetscDAGetInflation(PetscDA da, PetscReal *inflation)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscAssertPointer(inflation, 2);
+  *inflation = da->inflation;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1024,5 +1078,27 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
   }
 
   PetscCall(VecRestoreArray(v, &array));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscDALETKFSetLocalization - Sets the localization matrix for the LETKF algorithm.
+
+  Collective
+
+  Input Parameters:
++ da - the `PetscDA` context
+- Q  - the localization matrix (N x P)
+
+  Level: advanced
+
+.seealso: [](ch_da), `PetscDA`
+@*/
+PetscErrorCode PetscDALETKFSetLocalization(PetscDA da, Mat Q)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(Q, MAT_CLASSID, 2);
+  PetscTryMethod(da, "PetscDALETKFSetLocalization_C", (PetscDA, Mat), (da, Q));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
