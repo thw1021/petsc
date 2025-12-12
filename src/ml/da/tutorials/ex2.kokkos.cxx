@@ -403,7 +403,7 @@ int main(int argc, char **argv)
     PetscReal time = step * dt;
 
     /* Forecast step: compute ensemble mean and forecast RMSE */
-    PetscCall(PetscDAComputeMean(daas, x_mean));
+    PetscCall(PetscDAComputeEnsembleMean(daas, x_mean));
     PetscCall(VecCopy(x_mean, x_forecast));
     PetscCall(ComputeRMSE(x_forecast, truth_state, rmse_work, n, &rmse_forecast));
     rmse_analysis = rmse_forecast; /* Default to forecast RMSE if no analysis */
@@ -418,7 +418,7 @@ int main(int argc, char **argv)
       PetscCall(PetscDAAnalysis(daas, observation, Lorenz96ObsIdentity, NULL));
 
       /* Compute analysis RMSE */
-      PetscCall(PetscDAComputeMean(daas, x_mean));
+      PetscCall(PetscDAComputeEnsembleMean(daas, x_mean));
       PetscCall(ComputeRMSE(x_mean, truth_state, rmse_work, n, &rmse_analysis));
       obs_count++;
     }
