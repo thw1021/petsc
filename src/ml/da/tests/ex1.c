@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 
   /* Compute forecast mean before analysis */
   PetscCall(VecDuplicate(x_true, &x_mean_forecast));
-  PetscCall(PetscDAComputeMean(da, x_mean_forecast));
+  PetscCall(PetscDAComputeEnsembleMean(da, x_mean_forecast));
 
   /* Check forecast error */
   PetscCall(VecAXPY(x_mean_forecast, -1.0, x_true));
@@ -74,7 +74,7 @@ int main(int argc, char **argv)
 
   /* Compute analysis mean */
   PetscCall(VecDuplicate(x_true, &x_mean_analysis));
-  PetscCall(PetscDAComputeMean(da, x_mean_analysis));
+  PetscCall(PetscDAComputeEnsembleMean(da, x_mean_analysis));
 
   /* Check analysis error */
   PetscCall(VecAXPY(x_mean_analysis, -1.0, x_true));
