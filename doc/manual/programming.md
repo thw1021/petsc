@@ -12,5 +12,5 @@ snes
 ts
 tao
 regressor
-das
+da
 ```
