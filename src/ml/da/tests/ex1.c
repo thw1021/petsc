@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
 
-  /* Create the DAS object */
+  /* Create the DA object */
   PetscCall(PetscDACreate(PETSC_COMM_WORLD, &da));
   PetscCall(PetscDASetType(da, PETSCDAETKF));
   PetscCall(PetscDASetSizes(da, state_size, obs_size, ensemble_size));
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
   /* The analysis should move the ensemble closer to the observation (truth) */
   /* Since observation error is small (0.1) and prior spread is ~0.08, it should pull towards observation */
 
-  PetscCall(PetscDAViewFromOptions(da, NULL, "-das_view"));
+  PetscCall(PetscDAViewFromOptions(da, NULL, "-da_view"));
 
   /* Cleanup */
   PetscCall(VecDestroy(&x_true));
@@ -104,12 +104,12 @@ int main(int argc, char **argv)
   test:
     suffix: 1
     requires: !complex
-    args: -das_view
+    args: -da_view
     requires: !complex
 
   test:
     suffix: chol
     requires: !complex
-    args: -das_view -das_etkf_sqrt_type cholesky
+    args: -da_view -da_etkf_sqrt_type cholesky
 
 TEST*/
