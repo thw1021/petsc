@@ -48,7 +48,6 @@ static PetscErrorCode ComputeObservationEnsemble(PetscDA da, PetscErrorCode (*ob
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(Z, MAT_CLASSID, 4);
   PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Ensemble matrix not initialized");
-
   /* Extract and validate ensemble size */
   ensemble_size = da->ensemble_size;
   PetscCheck(ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be positive, got %" PetscInt_FMT, ensemble_size);
@@ -58,14 +57,10 @@ static PetscErrorCode ComputeObservationEnsemble(PetscDA da, PetscErrorCode (*ob
   for (ensemble_idx = 0; ensemble_idx < ensemble_size; ensemble_idx++) {
     /* Get read-only access to ensemble member */
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, ensemble_idx, &ensemble_member_in));
-
-    /* Get write access to the corresponding column in Z.
-       Directly writing to Z avoids allocating a temporary vector and performing a copy. */
+    /* Get write access to the corresponding column in Z. */
     PetscCall(MatDenseGetColumnVecWrite(Z, ensemble_idx, &observation_out));
-
     /* Apply observation operator: observation_out = H(ensemble_member_in) */
     PetscCall(observation_operator(ensemble_member_in, observation_out, obs_ctx));
-
     /* Restore vectors */
     PetscCall(MatDenseRestoreColumnVecWrite(Z, ensemble_idx, &observation_out));
     PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, ensemble_idx, &ensemble_member_in));
@@ -554,7 +549,7 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
   PetscCall(VecScale(impl->y_mean, inv_m));
 
   /* ===================================================================== */
-  /* Alg 6.4 line 5-6: Build normalized innovation statistics            */
+  /* Alg 6.4 line 5-6: Build normalized innovation statistics - start localization for LETKF (mskr local: Z, y, y_mean, r_inv_sqrt) */
   /* ===================================================================== */
   /* Compute R^{-1/2} (assumes diagonal R) */
   PetscCall(VecCopy(da->obs_error_var, impl->r_inv_sqrt));
