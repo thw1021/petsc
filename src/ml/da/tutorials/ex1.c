@@ -470,7 +470,7 @@ int main(int argc, char **argv)
       PetscCall(VecGetArray(test_vec, &array));
 
       /* Compute sample mean */
-      for (i = 0; i < test_size; i++) { sample_mean += PetscRealPart(array[i]); }
+      for (i = 0; i < test_size; i++) sample_mean += PetscRealPart(array[i]);
       sample_mean /= test_size;
 
       /* Compute sample variance and higher moments */
