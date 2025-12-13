@@ -1106,10 +1106,22 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
   PetscValidHeaderSpecific(ts, TS_CLASSID, 2);
   PetscAssertPointer(accept, 5);
 
+  if (adapt->checkstage && adapt->always_checkstage) {
+    PetscCall((*adapt->checkstage)(adapt, ts, t, Y, accept));
+    if (!*accept) {
+      PetscCall(PetscInfo(ts, "Step=%" PetscInt_FMT ", solution rejected by TSAdaptSetCheckStage\n", ts->steps));
+      if (adapt->monitor) {
+        PetscCall(PetscViewerASCIIAddTab(adapt->monitor, ((PetscObject)adapt)->tablevel));
+        PetscCall(PetscViewerASCIIPrintf(adapt->monitor, "    TSAdapt %s step %3" PetscInt_FMT " stage rejected by TSAdaptSetCheckStage\n", ((PetscObject)adapt)->type_name, ts->steps));
+        PetscCall(PetscViewerASCIISubtractTab(adapt->monitor, ((PetscObject)adapt)->tablevel));
+      }
+    }
+  }
+
   PetscCall(TSFunctionDomainError(ts, t, Y, &func_accept));
   if (ts->snes) PetscCall(SNESGetConvergedReason(ts->snes, &snesreason));
   snes_div_func = (PetscBool)(snesreason == SNES_DIVERGED_FUNCTION_DOMAIN);
-  if (func_accept && snesreason < 0 && !snes_div_func) {
+  if (*accept && func_accept && snesreason < 0 && !snes_div_func) {
     *accept = PETSC_FALSE;
     PetscCall(PetscInfo(ts, "Step=%" PetscInt_FMT ", nonlinear solve failure: %s\n", ts->steps, SNESConvergedReasons[snesreason]));
     if (++ts->num_snes_failures >= ts->max_snes_failures && ts->max_snes_failures != PETSC_UNLIMITED) {
@@ -1122,7 +1134,7 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
         PetscCall(PetscViewerASCIISubtractTab(adapt->monitor, ((PetscObject)adapt)->tablevel));
       }
     }
-  } else {
+  } else if (*accept) {
     *accept = (PetscBool)(func_accept && !snes_div_func);
     if (*accept && adapt->checkstage && !adapt->always_checkstage) PetscCall((*adapt->checkstage)(adapt, ts, t, Y, accept));
     if (!*accept) {
@@ -1137,7 +1149,6 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
       }
     }
   }
-  if (adapt->checkstage && adapt->always_checkstage) PetscCall((*adapt->checkstage)(adapt, ts, t, Y, accept));
 
   if (!*accept && !ts->reason) {
     PetscReal dt, new_dt;
