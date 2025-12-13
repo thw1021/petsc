@@ -1155,6 +1155,7 @@ PETSC_EXTERN PetscErrorCode TSAdaptGetScaleSolveFailed(TSAdapt, PetscReal *);
 PETSC_EXTERN PetscErrorCode TSAdaptSetStepLimits(TSAdapt, PetscReal, PetscReal);
 PETSC_EXTERN PetscErrorCode TSAdaptGetStepLimits(TSAdapt, PetscReal *, PetscReal *);
 PETSC_EXTERN PetscErrorCode TSAdaptSetCheckStage(TSAdapt, PetscErrorCode (*)(TSAdapt, TS, PetscReal, Vec, PetscBool *));
+PETSC_EXTERN PetscErrorCode TSAdaptSetCheckStageAlways(TSAdapt, PetscBool);
 PETSC_EXTERN PetscErrorCode TSAdaptHistorySetHistory(TSAdapt, PetscInt, PetscReal[], PetscBool);
 PETSC_EXTERN PetscErrorCode TSAdaptHistorySetTrajectory(TSAdapt, TSTrajectory, PetscBool);
 PETSC_EXTERN PetscErrorCode TSAdaptHistoryGetStep(TSAdapt, PetscInt, PetscReal *, PetscReal *);
