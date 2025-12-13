@@ -178,7 +178,6 @@ PetscErrorCode PetscDAGetOptionsPrefix(PetscDA das, const char *p[])
 /* Compute mean of ensemble */
 static PetscErrorCode PetscDAComputeEnsembleMean_Default(PetscDA da, Vec mean)
 {
-  Vec         member;
   PetscScalar inv_m;
   PetscInt    m;
 
@@ -190,7 +189,7 @@ static PetscErrorCode PetscDAComputeEnsembleMean_Default(PetscDA da, Vec mean)
 
   m     = da->ensemble_size;
   inv_m = 1.0 / (PetscScalar)m;
-  /* Compute observation mean y_mean = (1/m) * sum(Z_i) */
+  /* Compute observation mean mean = (1/m) * sum(E_i) */
   PetscCall(MatGetRowSum(da->ensemble, mean));
   PetscCall(VecScale(mean, inv_m));
   PetscFunctionReturn(PETSC_SUCCESS);

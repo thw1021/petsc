@@ -18,7 +18,7 @@ typedef const char *PetscDAType;
 #define PETSCDAETKF  "etkf"
 #define PETSCDALETKF "letkf"
 
-#define NUM_OBSERVATIONS_VERTEX 40
+#define Q_NUM_OBSERVATIONS_MAX 40
 
 PETSC_EXTERN PetscErrorCode PetscDAInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDAFinalizePackage(void);
