@@ -1483,7 +1483,6 @@ PetscErrorCode PetscDAApplyTInverse(PetscDA da, Vec sdel, Vec w)
   default:
     SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported PetscDA square-root type %" PetscInt_FMT, (PetscInt)da->sqrt_type);
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
