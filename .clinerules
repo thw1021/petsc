@@ -5,7 +5,7 @@ This is the PETSc repository and it uses git for version control.
 #At the start of every session, please read the following file to understand the project context:
 - /Users/markadams/Papers/DataAssimilation/Hunt2007-etkf.pdf
 - /Users/markadams/Papers/DataAssimilation/DA.ch6.pdf
-- /Users/markadams/Papers/letkf.pdf
+- /Users/markadams/Papers/DataAssimilation/letkf.pdf
 
 # PETSc initialization
 export PETSC_DIR=$PWD
