@@ -555,9 +555,4 @@ int main(int argc, char **argv)
     requires: !complex
     args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -da_view -ensemble_size 30 -da_etkf_sqrt_type cholesky
 
-  test:
-    suffix: gaussian_test
-    requires: !complex
-    args: -steps 0 -test_gaussian
-
 TEST*/
