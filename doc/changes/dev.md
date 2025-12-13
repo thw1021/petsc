@@ -91,6 +91,7 @@
 -  Add `TSPseudoComputeFunction()` to get nonlinear residual while avoiding recalculation if possible
 -  Remove unused `TSPseudoVerifyTimeStepDefault()`
 -  Remove `TSPseudoComputeTimeStep()` and `TSPseudoVerifyTimeStep()`
+-  Add `TSAdaptSetCheckStageAlways()` to allow user-set check stage to always run (default is for it to run only if other checks have passed)
 
 ```{rubric} TAO:
 ```
