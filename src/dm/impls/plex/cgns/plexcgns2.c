@@ -1072,6 +1072,58 @@ static PetscErrorCode DMPlexCreateNodeNumbering(DM dm, PetscInt *num_local_nodes
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/**
+   @brief Creates an array of all the values set for a `DMLabel`
+
+   Because `DMLabelGetValueIS` returns the local label values, not the global set.
+
+   Collective across MPI processes.
+
+   @param[in]  label       `DMLabel` to get values of
+   @param[out] num_values  Total number of values
+   @param[out] value_array Array of label values, must be freed by user
+**/
+PetscErrorCode DMLabelCreateGlobalValueArray(MPI_Comm comm, DMLabel label, PetscBool use_nonempty, PetscInt *num_values, PetscInt **value_array)
+{
+  PetscInt        num_values_local, minmax_values[2], minmax_values_loc[2] = {PETSC_INT_MAX, PETSC_INT_MIN};
+  IS              is_values;
+  const PetscInt *values_local = NULL;
+
+  PetscFunctionBegin;
+  if (use_nonempty) PetscCall(DMLabelGetNonEmptyStratumValuesIS(label, &is_values));
+  else PetscCall(DMLabelGetValueIS(label, &is_values));
+  PetscCall(ISGetIndices(is_values, &values_local));
+  PetscCall(ISGetLocalSize(is_values, &num_values_local));
+  for (PetscInt i = 0; i < num_values_local; i++) {
+    minmax_values_loc[0] = PetscMin(minmax_values_loc[0], values_local[i]);
+    minmax_values_loc[1] = PetscMax(minmax_values_loc[1], values_local[i]);
+  }
+
+  PetscCall(PetscGlobalMinMaxInt(comm, minmax_values_loc, minmax_values));
+  PetscInt value_range = minmax_values[1] - minmax_values[0] + 1;
+  PetscBT  local_values_bt, global_values_bt;
+
+  PetscCall(PetscBTCreate(value_range, &local_values_bt));
+  PetscCall(PetscBTCreate(value_range, &global_values_bt));
+  for (PetscInt i = 0; i < num_values_local; i++) PetscCall(PetscBTSet(local_values_bt, values_local[i] - minmax_values[0]));
+  PetscCallMPI(MPIU_Allreduce(local_values_bt, global_values_bt, PetscBTLength(value_range), MPI_CHAR, MPI_BOR, comm));
+  PetscCall(PetscBTDestroy(&local_values_bt));
+  *num_values = PetscBTCountSet(global_values_bt, value_range);
+
+  PetscCall(PetscMalloc1(*num_values, value_array));
+  for (PetscInt i = 0, a = 0; i < value_range; i++) {
+    if (PetscBTLookup(global_values_bt, i)) {
+      (*value_array)[a] = i + minmax_values[0];
+      a++;
+    }
+  }
+
+  PetscCall(PetscBTDestroy(&global_values_bt));
+  PetscCall(ISRestoreIndices(is_values, &values_local));
+  PetscCall(ISDestroy(&is_values));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
 {
   PetscViewer_CGNS *cgv = (PetscViewer_CGNS *)viewer->data;
