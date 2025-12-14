@@ -373,13 +373,39 @@ PetscErrorCode TSAdaptSetMonitor(TSAdapt adapt, PetscBool flg)
 
   Level: advanced
 
-.seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSGetAdapt()`, `TSAdaptChoose()`
+.seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSAdaptSetCheckStageAlways()`, `TSGetAdapt()`, `TSAdaptChoose()`
 @*/
 PetscErrorCode TSAdaptSetCheckStage(TSAdapt adapt, PetscErrorCode (*func)(TSAdapt adapt, TS ts, PetscReal t, Vec Y, PetscBool *accept))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
   adapt->checkstage = func;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TSAdaptSetCheckStageAlways - Set whether the callback from `TSAdaptSetCheckStage()` should always be called
+
+  Logically Collective
+
+  Input Parameters:
++ adapt - time step adaptivity context, usually obtained with `TSGetAdapt()`
+- flag  - whether to always run the callback function
+
+  Level: intermediate
+
+  Notes:
+  By default, the callback set by `TSAdaptSetCheckStage()` is only called if other default checks accept the step (e.g. nonlinear solve succeeded or the stage vector passes `TSFunctionDomainError()`).
+  Setting `flag = PETSC_TRUE` will force the callback to be called before the default checks are performed.
+
+.seealso: [](ch_ts), [](sec_ts_error_control),`TSAdapt`, `TSAdaptSetCheckStage()`, `TSGetAdapt()`, `TSAdaptChoose()`
+@*/
+PetscErrorCode TSAdaptSetCheckStageAlways(TSAdapt adapt, PetscBool flag)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(adapt, flag, 2);
+  adapt->always_checkstage = flag;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1074,6 +1100,15 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
   PetscAssertPointer(accept, 5);
   *accept = PETSC_TRUE;
 
+  if (adapt->checkstage && adapt->always_checkstage) {
+    PetscCall((*adapt->checkstage)(adapt, ts, t, Y, accept));
+    if (!*accept) {
+      PetscCall(PetscInfo(ts, "Step=%" PetscInt_FMT ", solution rejected by TSAdaptSetCheckStage\n", ts->steps));
+      PetscCall(PetscSNPrintf(reject_stage_message, sizeof reject_stage_message, "    TSAdapt %s step %3" PetscInt_FMT " stage rejected by TSAdaptSetCheckStage\n", ((PetscObject)adapt)->type_name, ts->steps));
+      goto reject_stage;
+    }
+  }
+
   PetscCall(TSFunctionDomainError(ts, t, Y, &func_accept));
   if (!func_accept) {
     PetscCall(PetscInfo(ts, "Step=%" PetscInt_FMT ", solution rejected by TSSetFunctionDomainError()\n", ts->steps));
@@ -1097,7 +1132,7 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
     goto reject_stage;
   }
 
-  if (adapt->checkstage) {
+  if (adapt->checkstage && !adapt->always_checkstage) {
     PetscCall((*adapt->checkstage)(adapt, ts, t, Y, accept));
     if (!*accept) {
       PetscCall(PetscInfo(ts, "Step=%" PetscInt_FMT ", solution rejected by TSAdaptSetCheckStage\n", ts->steps));
