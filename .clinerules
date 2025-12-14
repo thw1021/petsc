@@ -1,11 +1,15 @@
 # Project Context
-This is the PETSc repository and it uses git for version control.
+This is the PETSc repository.
 
 # Session Initialization
-#At the start of every session, please read the following file to understand the project context:
+At the start of every session, please read the following file to understand the project context:
 - /Users/markadams/Papers/DataAssimilation/Hunt2007-etkf.pdf
 - /Users/markadams/Papers/DataAssimilation/DA.ch6.pdf
 - /Users/markadams/Papers/DataAssimilation/letkf.pdf
 
 # PETSc initialization
 export PETSC_DIR=$PWD
+
+Do not use braces for single line scope such as: if (foo) { printf("no braces here please!!!"); }
+
+Do not worry about backward compatability

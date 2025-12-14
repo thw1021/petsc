@@ -36,6 +36,8 @@ PETSC_EXTERN PetscErrorCode PetscDASetFromOptions(PetscDA);
 
 PETSC_EXTERN PetscErrorCode PetscDASetSizes(PetscDA, PetscInt, PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscDAGetSizes(PetscDA, PetscInt *, PetscInt *, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscDASetNDOF(PetscDA, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscDAGetNDOF(PetscDA, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscDASetUp(PetscDA);
 
 PETSC_EXTERN PetscErrorCode PetscDASetObsErrorVariance(PetscDA, Vec);
@@ -53,7 +55,7 @@ PETSC_EXTERN PetscErrorCode PetscDASetEnsembleMember(PetscDA, PetscInt, Vec);
 
 PETSC_EXTERN PetscErrorCode PetscDAComputeEnsembleMean(PetscDA, Vec);
 PETSC_EXTERN PetscErrorCode PetscDAComputeAnomalies(PetscDA, Vec, Mat *);
-PETSC_EXTERN PetscErrorCode PetscDAAnalysis(PetscDA, Vec, PetscErrorCode (*)(Vec, Vec, void *), void *);
+PETSC_EXTERN PetscErrorCode PetscDAAnalysis(PetscDA, Vec, Mat);
 PETSC_EXTERN PetscErrorCode PetscDAApplyModel(PetscDA, PetscErrorCode (*)(Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode InitializeEnsemble(PetscDA, Vec, PetscInt, PetscReal, PetscRandom);
 
