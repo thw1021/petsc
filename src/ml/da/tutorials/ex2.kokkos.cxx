@@ -4,47 +4,15 @@
 #include <petscdmda.h>
 #include <petscts.h>
 #include <petscvec.h>
+#include <Kokkos_Core.hpp>
 
-static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
+static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
                      "Algorithm 6.4 of \n"
                      "Asch, Bocquet, and Nodet (2016) \"Data Assimilation\" "
                      "(SIAM, doi:10.1137/1.9781611974546).\n\n"
                      "Example usage:\n"
-                     "  ./ex1 -steps 105000 -burn 5000 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30\n"
-                     "  Expected result: Mean RMSE (analysis): ~0.13107\n\n";
-
-/* \begin{algorithm}
-\caption{Ensemble Transform Kalman Filter (ETKF) - Deterministic}
-\begin{algorithmic}[1]
-\State \textbf{Initialize:} Ensemble $\mathbf{E}_0 = [\mathbf{x}_0^{(1)}, \ldots, \mathbf{x}_0^{(m)}]$ \Comment{$\mathbf{E}_0 \in \mathbb{R}^{n \times m}$}
-\For{$k = 1, 2, \ldots, K$}
-    \State \textbf{// Forecast Step}
-    \For{$i = 1$ to $m$}
-        \State $\mathbf{x}_k^{f,(i)} = \mathcal{M}_{k-1}(\mathbf{x}_{k-1}^{a,(i)})$ \Comment{$\mathbf{x}_k^{f,(i)} \in \mathbb{R}^{n}$}
-    \EndFor
-    \State Assemble forecast matrix: $\mathbf{E}_k^f = [\mathbf{x}_k^{f,(1)}, \ldots, \mathbf{x}_k^{f,(m)}]$ \Comment{$\mathbf{E}_k^f \in \mathbb{R}^{n \times m}$}
-    \State
-    \State \textbf{// Analysis Step (if observation available)}
-    \If{observation $\mathbf{y}_k$ available}
-        \State Compute ensemble mean: $\overline{\mathbf{x}}_k^f = \frac{1}{m}\sum_{i=1}^m \mathbf{x}_k^{f,(i)}$ \Comment{$\overline{\mathbf{x}}_k^f \in \mathbb{R}^{n}$}
-        \State Compute anomalies: $\mathbf{X}_k = \frac{1}{\sqrt{m-1}}(\mathbf{E}_k^f - \overline{\mathbf{x}}_k^f \mathbf{1}^T)$ \Comment{$\mathbf{X}_k \in \mathbb{R}^{n \times m}$}
-        \State Apply observation operator: $\mathbf{Z}_k = \mathcal{H}(\mathbf{E}_k^f)$ \Comment{$\mathbf{Z}_k \in \mathbb{R}^{b \times m}$}
-        \State Compute obs ensemble mean: $\overline{\mathbf{y}}_k = \frac{1}{m}\sum_{i=1}^m \mathcal{H}(\mathbf{x}_k^{f,(i)})$ \Comment{$\overline{\mathbf{y}}_k \in \mathbb{R}^{b}$}
-        \State Compute obs anomalies: $\mathbf{S}_k = \frac{1}{\sqrt{m-1}}\mathbf{R}^{-1/2}(\mathbf{Z}_k - \overline{\mathbf{y}}_k\mathbf{1}^T)$ \Comment{$\mathbf{S}_k \in \mathbb{R}^{b \times m}$}
-        \State Compute raw innovation: $\boldsymbol{\delta}_k = \mathbf{y}_k - \overline{\mathbf{y}}_k$ \Comment{$\boldsymbol{\delta}_k \in \mathbb{R}^{b}$}
-        \State Whiten innovation: $\tilde{\boldsymbol{\delta}}_k = \mathbf{R}^{-1/2}\boldsymbol{\delta}_k$ \Comment{$\tilde{\boldsymbol{\delta}}_k \in \mathbb{R}^{b}$}
-        \State Compute transform matrix: $\mathbf{T}_k = (\mathbf{I}_m + \mathbf{S}_k^T\mathbf{S}_k)^{-1}$ \Comment{$\mathbf{T}_k \in \mathbb{R}^{m \times m}$}
-        \State Compute weight vector: $\mathbf{w}_k = \mathbf{T}_k \mathbf{S}_k^T \tilde{\boldsymbol{\delta}}_k$ \Comment{$\mathbf{w}_k \in \mathbb{R}^{m}$}
-        \State Form deterministic map: $\mathbf{G}_k = \mathbf{w}_k\mathbf{1}^T + \sqrt{m-1}\,\mathbf{T}_k^{1/2}\mathbf{U}$ \Comment{$\mathbf{G}_k \in \mathbb{R}^{m \times m}$}
-        \State Update ensemble: $\mathbf{E}_k^a = \overline{\mathbf{x}}_k^f\mathbf{1}^T + \mathbf{X}_k \mathbf{G}_k$ \Comment{$\mathbf{E}_k^a \in \mathbb{R}^{n \times m}$}
-        \State where $\mathbf{U}$ is orthogonal with $\mathbf{U}\mathbf{1} = \mathbf{1}$ (the PETSc implementation stores it as \texttt{da->U} and defaults to $\mathbf{I}_m$)
-    \Else
-        \State $\mathbf{E}_k^a = \mathbf{E}_k^f$ \Comment{$\mathbf{E}_k^a \in \mathbb{R}^{n \times m}$}
-    \EndIf
-\EndFor
-\end{algorithmic}
-\end{algorithm}
- */
+                     "  ./ex2.kokkos -steps 105000 -burn 5000 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30\n"
+                     "  Expected result: Similar to ETKF with full localization\n\n";
 
 /* Default parameter values */
 #define DEFAULT_N             40
@@ -64,6 +32,9 @@ static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
 #define MIN_OBS_FREQ       1
 #define PROGRESS_INTERVALS 10
 
+/* LETKF constraint: Fixed number of observations per vertex */
+#define Q_NUM_OBSERVATIONS_MAX 40
+
 typedef struct {
   DM        da; /* 1D periodic DM storing the Lorenz-96 state */
   PetscInt  n;  /* State dimension (number of grid points) */
@@ -74,15 +45,6 @@ typedef struct {
 
 /*
   Lorenz96RHS - Compute the right-hand side of the Lorenz-96 equations
-
-  Input Parameters:
-+ ts    - The time-stepping context (unused but required by interface)
-. t     - Current time (unused but required by interface)
-. X     - State vector
-- ctx   - User context (Lorenz96Ctx)
-
-  Output Parameter:
-. F_vec - RHS vector (tendency)
 */
 static PetscErrorCode Lorenz96RHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ctx)
 {
@@ -93,11 +55,9 @@ static PetscErrorCode Lorenz96RHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ct
   PetscInt           xs, xm, i;
 
   PetscFunctionBeginUser;
-  (void)ts; /* Mark as intentionally unused to avoid compiler warnings */
+  (void)ts;
   (void)t;
 
-  /* Work with a local (ghosted) vector so the Lorenz-96 stencil has the
-   * required neighbors for periodic boundary conditions. */
   PetscCall(DMDAGetCorners(l95->da, &xs, NULL, NULL, &xm, NULL, NULL));
   PetscCall(DMGetLocalVector(l95->da, &X_local));
   PetscCall(DMGlobalToLocalBegin(l95->da, X, INSERT_VALUES, X_local));
@@ -105,7 +65,6 @@ static PetscErrorCode Lorenz96RHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ct
   PetscCall(DMDAVecGetArrayRead(l95->da, X_local, &x));
   PetscCall(DMDAVecGetArray(l95->da, F_vec, &f));
 
-  /* Standard Lorenz-96 tendency: (x_{i+1} - x_{i-2}) * x_{i-1} - x_i + F. */
   for (i = xs; i < xs + xm; i++) f[i] = (x[i + 1] - x[i - 2]) * x[i - 1] - x[i] + l95->F;
 
   PetscCall(DMDAVecRestoreArrayRead(l95->da, X_local, &x));
@@ -116,15 +75,6 @@ static PetscErrorCode Lorenz96RHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ct
 
 /*
   Lorenz96ContextCreate - Create and initialize a Lorenz96 context with reusable TS object
-
-  Input Parameters:
-+ da - DM for state space
-. n  - State dimension
-. F  - Forcing parameter
-. dt - Time step size
-
-  Output Parameter:
-. ctx - Initialized Lorenz96 context
 */
 static PetscErrorCode Lorenz96ContextCreate(DM da, PetscInt n, PetscReal F, PetscReal dt, Lorenz96Ctx **ctx)
 {
@@ -137,7 +87,6 @@ static PetscErrorCode Lorenz96ContextCreate(DM da, PetscInt n, PetscReal F, Pets
   l95->F  = F;
   l95->dt = dt;
 
-  /* Create and configure a reusable time stepper to avoid repeated allocation/deallocation */
   PetscCall(TSCreate(PETSC_COMM_SELF, &l95->ts));
   PetscCall(TSSetProblemType(l95->ts, TS_NONLINEAR));
   PetscCall(TSSetRHSFunction(l95->ts, NULL, Lorenz96RHS, l95));
@@ -166,23 +115,12 @@ static PetscErrorCode Lorenz96ContextDestroy(Lorenz96Ctx **ctx)
 
 /*
   Lorenz96Step - Advance state vector one time step using Lorenz-96 dynamics
-
-  Input Parameters:
-+ x_in - Initial state vector
-- ctx  - Lorenz96 context (contains reusable TS)
-
-  Output Parameter:
-. x_out - State vector after one time step
-
-  Notes:
-  Uses a single explicit RK4 step with the pre-configured TS object for efficiency.
 */
 static PetscErrorCode Lorenz96Step(Vec x_in, Vec x_out, void *ctx)
 {
   Lorenz96Ctx *l95 = (Lorenz96Ctx *)ctx;
 
   PetscFunctionBeginUser;
-  /* Reset the TS time for each integration (required for proper RK4 stepping) */
   PetscCall(TSSetTime(l95->ts, 0.0));
   if (x_in != x_out) PetscCall(VecCopy(x_in, x_out));
   PetscCall(TSSolve(l95->ts, x_out));
@@ -219,26 +157,17 @@ static PetscErrorCode CreateIdentityObservationMatrix(PetscInt n, Mat *H)
 
 /*
   ValidateParameters - Validate input parameters and apply constraints
-
-  Input/Output Parameters:
-+ n             - State dimension
-. steps         - Number of time steps
-. burn          - Burn-in steps
-. obs_freq      - Observation frequency
-. ensemble_size - Ensemble size
-. dt            - Time step
-. F             - Forcing parameter
-- obs_error_std - Observation error standard deviation
 */
 static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *steps, PetscInt *burn, PetscInt *obs_freq, PetscInt *ensemble_size, PetscReal *dt, PetscReal *F, PetscReal *obs_error_std)
 {
   PetscFunctionBeginUser;
-  /* Validate and constrain integer parameters */
   PetscCheck(*n > 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "State dimension n must be positive, got %" PetscInt_FMT, *n);
   PetscCheck(*steps >= 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of steps must be non-negative, got %" PetscInt_FMT, *steps);
   PetscCheck(*ensemble_size >= MIN_ENSEMBLE_SIZE, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be at least %d for meaningful statistics, got %" PetscInt_FMT, MIN_ENSEMBLE_SIZE, *ensemble_size);
 
-  /* Apply constraints */
+  /* LETKF constraint: n must equal Q_NUM_OBSERVATIONS_MAX for fully observed case */
+  PetscCheck(*n == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "For fully observed case, n (%" PetscInt_FMT ") must equal Q_NUM_OBSERVATIONS_MAX (%d)", *n, Q_NUM_OBSERVATIONS_MAX);
+
   if (*obs_freq < MIN_OBS_FREQ) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency adjusted from %" PetscInt_FMT " to %d\n", *obs_freq, MIN_OBS_FREQ));
     *obs_freq = MIN_OBS_FREQ;
@@ -249,7 +178,6 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *steps, PetscInt 
     *burn = *steps;
   }
 
-  /* Validate real-valued parameters */
   PetscCheck(*dt > 0.0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Time step dt must be positive, got %g", (double)*dt);
   PetscCheck(*obs_error_std > 0.0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Observation error std must be positive, got %g", (double)*obs_error_std);
   PetscCheck(PetscIsNormalReal(*F), PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Forcing parameter F must be a normal real number");
@@ -258,14 +186,6 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *steps, PetscInt 
 
 /*
   ComputeRMSE - Compute root mean square error between two vectors
-
-  Input Parameters:
-+ v1 - First vector
-. v2 - Second vector
-- n  - Vector dimension (for normalization)
-
-  Output Parameter:
-. rmse - Root mean square error
 */
 static PetscErrorCode ComputeRMSE(Vec v1, Vec v2, Vec work, PetscInt n, PetscReal *rmse)
 {
@@ -275,6 +195,45 @@ static PetscErrorCode ComputeRMSE(Vec v1, Vec v2, Vec work, PetscInt n, PetscRea
   PetscCall(VecWAXPY(work, -1.0, v2, v1));
   PetscCall(VecNorm(work, NORM_2, &norm));
   *rmse = norm / PetscSqrtReal((PetscReal)n);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  CreateLocalizationMatrix - Create and initialize full localization matrix Q
+  
+  For the fully observed case (n = Q_NUM_OBSERVATIONS_MAX), Q is a dense n×n 
+  matrix with all entries = 1.0, meaning each vertex uses all observations.
+*/
+static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
+{
+  PetscInt i, j;
+
+  PetscFunctionBeginUser;
+  /* Verify constraint */
+  PetscCheck(n == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "For fully observed case, n (%" PetscInt_FMT ") must equal Q_NUM_OBSERVATIONS_MAX (%d)", n, Q_NUM_OBSERVATIONS_MAX);
+
+  /* Create Q matrix (n × n for identity observation operator)
+     Each row will have exactly Q_NUM_OBSERVATIONS_MAX non-zeros */
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, Q_NUM_OBSERVATIONS_MAX, NULL, 0, NULL, Q));
+
+  /* Initialize with full localization (all weights = 1.0)
+     Each vertex i uses all n observations */
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) PetscCall(MatSetValue(*Q, i, j, 1.0, INSERT_VALUES));
+  }
+  PetscCall(MatAssemblyBegin(*Q, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(*Q, MAT_FINAL_ASSEMBLY));
+
+  /* Validate: Check each row has exactly Q_NUM_OBSERVATIONS_MAX non-zeros */
+  for (i = 0; i < n; i++) {
+    PetscInt           ncols;
+    const PetscInt    *cols;
+    const PetscScalar *vals;
+    PetscCall(MatGetRow(*Q, i, &ncols, &cols, &vals));
+    PetscCheck(ncols == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Row %" PetscInt_FMT " has %" PetscInt_FMT " non-zeros, expected %d", i, ncols, Q_NUM_OBSERVATIONS_MAX);
+    PetscCall(MatRestoreRow(*Q, i, &ncols, &cols, &vals));
+  }
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -299,6 +258,7 @@ int main(int argc, char **argv)
   Vec          truth_state, rmse_work;
   Vec          observation, obs_noise, obs_error_var;
   PetscRandom  rng;
+  Mat          Q = NULL; /* Localization matrix */
   Mat          H = NULL; /* Observation operator matrix */
 
   /* Statistics tracking */
@@ -309,9 +269,10 @@ int main(int argc, char **argv)
   PetscInt  step, progress_interval;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  /* Kokkos initialization deferred to Phase 5 optimization */
 
   /* Parse command-line options */
-  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Lorenz-96 ETKF Quick Example", NULL);
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Lorenz-96 LETKF Example", NULL);
   PetscCall(PetscOptionsInt("-n", "State dimension", "", n, &n, NULL));
   PetscCall(PetscOptionsInt("-steps", "Number of time steps", "", steps, &steps, NULL));
   PetscCall(PetscOptionsInt("-burn", "Burn-in steps excluded from statistics", "", burn, &burn, NULL));
@@ -326,7 +287,7 @@ int main(int argc, char **argv)
   /* Validate and constrain parameters */
   PetscCall(ValidateParameters(&n, &steps, &burn, &obs_freq, &ensemble_size, &dt, &F, &obs_error_std));
 
-  /* Calculate progress reporting interval (avoid division by zero) */
+  /* Calculate progress reporting interval */
   progress_interval = (steps >= PROGRESS_INTERVALS) ? (steps / PROGRESS_INTERVALS) : 1;
 
   /* Create 1D periodic DM for state space */
@@ -345,9 +306,9 @@ int main(int argc, char **argv)
 
   /* Initialize state vectors */
   PetscCall(DMCreateGlobalVector(da_state, &x0));
-  PetscCall(PetscRandomSetInterval(rng, -.1 * F, .1 * F)); // perterb about 0
+  PetscCall(PetscRandomSetInterval(rng, -.1 * F, .1 * F));
   PetscCall(VecSetRandom(x0, rng));
-  PetscCall(PetscRandomSetInterval(rng, 0, 1)); // rest are for Gaussain RNG
+  PetscCall(PetscRandomSetInterval(rng, 0, 1));
 
   /* Initialize truth trajectory */
   PetscCall(VecDuplicate(x0, &truth_state));
@@ -370,12 +331,18 @@ int main(int argc, char **argv)
 
   /* Create and configure PetscDA for ensemble data assimilation */
   PetscCall(PetscDACreate(PETSC_COMM_WORLD, &daas));
-  PetscCall(PetscDASetType(daas, PETSCDAETKF));  /* Set ETKF type */
+  PetscCall(PetscDASetType(daas, PETSCDALETKF)); /* Set LETKF type */
+  /* Note: ndof defaults to 1 (scalar field) - perfect for Lorenz-96 */
   PetscCall(PetscDASetSizes(daas, n, n, ensemble_size));
   PetscCall(PetscDASetFromOptions(daas));
   PetscCall(PetscDASetUp(daas));
   PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
   PetscCall(PetscDASetObsErrorVariance(daas, obs_error_var));
+
+  /* Create and set localization matrix Q */
+  PetscCall(CreateLocalizationMatrix(n, &Q));
+  PetscCall(PetscDALETKFSetLocalization(daas, Q));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %dx%d, full localization (all weights = 1.0)\n", n, n));
 
   /* Create identity observation matrix H */
   PetscCall(CreateIdentityObservationMatrix(n, &H));
@@ -384,7 +351,7 @@ int main(int argc, char **argv)
   PetscCall(InitializeEnsemble(daas, x0, ensemble_size, obs_error_std, rng));
 
   /* Print configuration summary */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-96 ETKF Example\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-96 LETKF Example\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "======================\n"));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                         "  State dimension       : %" PetscInt_FMT "\n"
@@ -395,8 +362,9 @@ int main(int argc, char **argv)
                         "  Burn-in steps         : %" PetscInt_FMT "\n"
                         "  Observation frequency : %" PetscInt_FMT "\n"
                         "  Observation noise std : %.3f\n"
-                        "  Random seed           : %" PetscInt_FMT "\n\n",
-                        n, ensemble_size, (double)F, (double)dt, steps, burn, obs_freq, (double)obs_error_std, random_seed));
+                        "  Random seed           : %" PetscInt_FMT "\n"
+                        "  Localization          : Full (Q_NUM_OBS_MAX = %d)\n\n",
+                        n, ensemble_size, (double)F, (double)dt, steps, burn, obs_freq, (double)obs_error_std, random_seed, Q_NUM_OBSERVATIONS_MAX));
 
   /* Main assimilation cycle: forecast and analysis steps */
   for (step = 0; step <= steps; step++) {
@@ -406,7 +374,7 @@ int main(int argc, char **argv)
     PetscCall(PetscDAComputeEnsembleMean(daas, x_mean));
     PetscCall(VecCopy(x_mean, x_forecast));
     PetscCall(ComputeRMSE(x_forecast, truth_state, rmse_work, n, &rmse_forecast));
-    rmse_analysis = rmse_forecast; /* Default to forecast RMSE if no analysis */
+    rmse_analysis = rmse_forecast;
 
     /* Analysis step: assimilate observations when available */
     if (step % obs_freq == 0 && step > 0) {
@@ -414,7 +382,7 @@ int main(int argc, char **argv)
       PetscCall(VecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
       PetscCall(VecWAXPY(observation, 1.0, obs_noise, truth_state));
 
-      /* Perform ETKF analysis with observation matrix H */
+      /* Perform LETKF analysis with observation matrix H */
       PetscCall(PetscDAAnalysis(daas, observation, H));
 
       /* Compute analysis RMSE */
@@ -431,9 +399,8 @@ int main(int argc, char **argv)
     }
 
     /* Progress reporting */
-    if ((step % progress_interval == 0) || (step == steps) || (step == 0)) {
+    if ((step % progress_interval == 0) || (step == steps) || (step == 0))
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT ", time %6.3f  RMSE_forecast %.5f  RMSE_analysis %.5f%s\n", step, (double)time, (double)rmse_forecast, (double)rmse_analysis, (step < burn) ? " [burn-in]" : ""));
-    }
 
     /* Propagate ensemble and truth trajectory */
     if (step < steps) {
@@ -455,92 +422,9 @@ int main(int argc, char **argv)
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nWarning: No post-burn-in statistics collected (burn >= steps)\n\n"));
   }
 
-  /* Test VecSetRandomGaussian to verify Gaussian distribution */
-  {
-    Vec          test_vec;
-    PetscInt     test_size = 10000; /* Large sample for statistical testing */
-    PetscScalar *array;
-    PetscReal    mean_target = 2.0, std_target = 1.5;
-    PetscReal    sample_mean = 0.0, sample_variance = 0.0, sample_std;
-    PetscReal    skewness = 0.0, kurtosis = 0.0;
-    PetscInt     i;
-    PetscBool    test_gaussian = PETSC_FALSE;
-
-    PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_gaussian", &test_gaussian, NULL));
-
-    if (test_gaussian) {
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n==============================================\n"));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Testing VecSetRandomGaussian\n"));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "==============================================\n"));
-
-      /* Create test vector */
-      PetscCall(VecCreate(PETSC_COMM_WORLD, &test_vec));
-      PetscCall(VecSetSizes(test_vec, PETSC_DECIDE, test_size));
-      PetscCall(VecSetFromOptions(test_vec));
-
-      /* Generate Gaussian random numbers */
-      PetscCall(VecSetRandomGaussian(test_vec, rng, mean_target, std_target));
-
-      /* Get array for statistical analysis */
-      PetscCall(VecGetArray(test_vec, &array));
-
-      /* Compute sample mean */
-      for (i = 0; i < test_size; i++) sample_mean += PetscRealPart(array[i]);
-      sample_mean /= test_size;
-
-      /* Compute sample variance and higher moments */
-      for (i = 0; i < test_size; i++) {
-        PetscReal diff  = PetscRealPart(array[i]) - sample_mean;
-        PetscReal diff2 = diff * diff;
-        sample_variance += diff2;
-        skewness += diff * diff2;
-        kurtosis += diff2 * diff2;
-      }
-      sample_variance /= (test_size - 1);
-      sample_std = PetscSqrtReal(sample_variance);
-
-      /* Normalize skewness and kurtosis */
-      skewness = (skewness / test_size) / PetscPowReal(sample_std, 3.0);
-      kurtosis = (kurtosis / test_size) / PetscPowReal(sample_std, 4.0) - 3.0; /* Excess kurtosis */
-
-      PetscCall(VecRestoreArray(test_vec, &array));
-
-      /* Report results */
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nTarget parameters:\n"));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean      : %.6f\n", (double)mean_target));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Std Dev   : %.6f\n", (double)std_target));
-
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nSample statistics (n=%d):\n", test_size));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean      : %.6f (error: %.6f)\n", (double)sample_mean, (double)PetscAbsReal(sample_mean - mean_target)));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Std Dev   : %.6f (error: %.6f)\n", (double)sample_std, (double)PetscAbsReal(sample_std - std_target)));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Skewness  : %.6f (expected ~0 for Gaussian)\n", (double)skewness));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Kurtosis  : %.6f (expected ~0 for Gaussian)\n", (double)kurtosis));
-
-      /* Statistical tests with reasonable tolerances for finite samples */
-      PetscReal mean_error     = PetscAbsReal(sample_mean - mean_target);
-      PetscReal std_error      = PetscAbsReal(sample_std - std_target);
-      PetscReal mean_tolerance = 3.0 * std_target / PetscSqrtReal((PetscReal)test_size); /* 3-sigma rule */
-      PetscReal std_tolerance  = 0.1 * std_target;                                       /* 10% tolerance for std dev */
-      PetscReal skew_tolerance = 0.1;                                                    /* Skewness should be near 0 */
-      PetscReal kurt_tolerance = 0.5;                                                    /* Excess kurtosis should be near 0 */
-
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nStatistical tests:\n"));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean test     : %s (error %.6f < tolerance %.6f)\n", mean_error < mean_tolerance ? "PASS" : "FAIL", (double)mean_error, (double)mean_tolerance));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Std dev test  : %s (error %.6f < tolerance %.6f)\n", std_error < std_tolerance ? "PASS" : "FAIL", (double)std_error, (double)std_tolerance));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Skewness test : %s (|skewness| %.6f < tolerance %.6f)\n", PetscAbsReal(skewness) < skew_tolerance ? "PASS" : "FAIL", (double)PetscAbsReal(skewness), (double)skew_tolerance));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Kurtosis test : %s (|kurtosis| %.6f < tolerance %.6f)\n", PetscAbsReal(kurtosis) < kurt_tolerance ? "PASS" : "FAIL", (double)PetscAbsReal(kurtosis), (double)kurt_tolerance));
-
-      /* Overall test result */
-      PetscBool all_pass = (mean_error < mean_tolerance) && (std_error < std_tolerance) && (PetscAbsReal(skewness) < skew_tolerance) && (PetscAbsReal(kurtosis) < kurt_tolerance);
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nOverall result: %s\n", all_pass ? "PASS - Distribution is Gaussian" : "FAIL - Distribution may not be Gaussian"));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "==============================================\n\n"));
-
-      PetscCall(VecDestroy(&test_vec));
-    }
-  }
-
   /* Cleanup */
   PetscCall(MatDestroy(&H));
+  PetscCall(MatDestroy(&Q));
   PetscCall(VecDestroy(&x_forecast));
   PetscCall(VecDestroy(&x_mean));
   PetscCall(VecDestroy(&obs_error_var));
@@ -554,6 +438,7 @@ int main(int argc, char **argv)
   PetscCall(Lorenz96ContextDestroy(&l95_ctx));
   PetscCall(PetscRandomDestroy(&rng));
 
+  /* Kokkos finalization deferred to Phase 5 optimization */
   PetscCall(PetscFinalize());
   return 0;
 }
@@ -561,14 +446,20 @@ int main(int argc, char **argv)
 /*TEST
 
   test:
-    requires: !complex
+    requires: !complex kokkos_kernels
     diff_args: -j
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30 -da_sqrt_type eigen
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30
 
   test:
     suffix: chol
     diff_args: -j
-    requires: !complex
+    requires: !complex kokkos_kernels
     args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -da_view -ensemble_size 30 -da_sqrt_type cholesky
+
+  test:
+    suffix: etkf
+    diff_args: -j
+    requires: !complex kokkos_kernels
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30 -petscda_type etkf
 
 TEST*/

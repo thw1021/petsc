@@ -26,49 +26,6 @@ static PetscBool         PetscDAETKFPackageInitialized = PETSC_FALSE;
 /* ========================================================================== */
 
 /*
-  ComputeObservationEnsemble - Applies observation operator H to each ensemble member (Alg 6.4 line 3-4)
-
-  Input Parameters:
-+ da                   - the PetscDA context
-. observation_operator - user-supplied routine H(x, y; ctx)
-- obs_ctx              - optional context for observation_operator
-
-  Output Parameter:
-. Z - observation ensemble matrix (obs_size x ensemble_size)
-*/
-static PetscErrorCode ComputeObservationEnsemble(PetscDA da, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx, Mat Z)
-{
-  /* Ensemble and observation-related vectors */
-  Vec ensemble_member_in, observation_out;
-  /* Loop counter and ensemble size */
-  PetscInt ensemble_idx, ensemble_size;
-
-  PetscFunctionBegin;
-  /* Validate input parameters */
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscValidHeaderSpecific(Z, MAT_CLASSID, 4);
-  PetscCheck(da->ensemble, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Ensemble matrix not initialized");
-  /* Extract and validate ensemble size */
-  ensemble_size = da->ensemble_size;
-  PetscCheck(ensemble_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be positive, got %" PetscInt_FMT, ensemble_size);
-  PetscCheck(da->obs_size > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Observation size must be positive, got %" PetscInt_FMT, da->obs_size);
-
-  /* Apply observation operator H to each ensemble member: Z_i = H(E_i) */
-  for (ensemble_idx = 0; ensemble_idx < ensemble_size; ensemble_idx++) {
-    /* Get read-only access to ensemble member */
-    PetscCall(MatDenseGetColumnVecRead(da->ensemble, ensemble_idx, &ensemble_member_in));
-    /* Get write access to the corresponding column in Z. */
-    PetscCall(MatDenseGetColumnVecWrite(Z, ensemble_idx, &observation_out));
-    /* Apply observation operator: observation_out = H(ensemble_member_in) */
-    PetscCall(observation_operator(ensemble_member_in, observation_out, obs_ctx));
-    /* Restore vectors */
-    PetscCall(MatDenseRestoreColumnVecWrite(Z, ensemble_idx, &observation_out));
-    PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, ensemble_idx, &ensemble_member_in));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
   ComputeNormalizedInnovationMatrix - Computes S = R^{-1/2}(Z - y_mean * 1')/sqrt(m-1) [Alg 6.4 line 5]
 
   Input Parameters:
@@ -377,7 +334,7 @@ static PetscErrorCode PetscDASetFromOptions_DASETKF(PetscDA da, PetscOptionItems
 
   defaultType = (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky";
   PetscCall(PetscStrncpy(typeName, defaultType, sizeof(typeName)));
-  PetscCall(PetscOptionsFList("-da_etkf_sqrt_type", "Matrix square root factorization", "PetscDAETKFSetSqrtType", PetscDAETKFSqrtList, defaultType, typeName, sizeof(typeName), &set));
+  PetscCall(PetscOptionsFList("-da_sqrt_type", "Matrix square root factorization", "PetscDAETKFSetSqrtType", PetscDAETKFSqrtList, defaultType, typeName, sizeof(typeName), &set));
   if (set) {
     PetscCall(PetscFunctionListFind(PetscDAETKFSqrtList, typeName, &setter));
     PetscCheck(setter, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDAETKF square-root type \"%s\"", typeName);
@@ -433,28 +390,29 @@ PetscErrorCode PetscDAETKFFinalizePackage(void)
   Collective
 
   Input Parameters:
-+ da                   - the `PetscDA` context owning the forecast ensemble and buffers
-. observation          - observation vector `y`
-. observation_operator - user-supplied routine `H(x, y; ctx)` that maps a state to observation space
-- obs_ctx              - optional context for `observation_operator`
++ da          - the `PetscDA` context owning the forecast ensemble and buffers
+. observation - observation vector `y` ∈ ℝ^P
+- H           - observation operator matrix (P × N), sparse AIJ format
 
   Notes:
   The implementation follows the book's deterministic ETKF steps\:
   Step 1 computes the state mean, Step 2 the state anomalies, Steps 3-4 build the normalized innovation statistics,
   Step 5 assembles the reduced-space inverse, Step 6 forms the analysis weights, Steps 7-9 construct the square-root
   transform, and Step 10 applies the transform to refresh every ensemble member.
+  
+  The observation matrix H maps state to observations: y = H*x + noise
 
   Level: advanced
 
 .seealso: [](ch_da), `PetscDA`, `PetscDAETKFApplyModel()`, `PetscDAComputeMean()`,
 `PetscDAComputeAnomalies()`
 */
-static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
+static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
 {
   PetscDAETKFData *impl;
   Mat              X;
   PetscInt         m;
-  PetscScalar      inv_m, scale, sqrt_m_minus_1;
+  PetscScalar      scale, sqrt_m_minus_1;
   PetscBool        reallocate = PETSC_FALSE;
 
   PetscFunctionBegin;
@@ -465,7 +423,6 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
   PetscCheck(m > 1, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be > 1, got %" PetscInt_FMT, m);
 
   impl           = (PetscDAETKFData *)da->data;
-  inv_m          = 1.0 / ((PetscScalar)m);
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
   PetscCall(PetscInfo(da, "squaroot type %s, %d ensembles\n", (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky", (int)m));
@@ -480,6 +437,11 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
     PetscInt z_rows, z_cols;
     PetscCall(MatGetSize(impl->Z, &z_rows, &z_cols));
     if (z_rows != da->obs_size || z_cols != m) reallocate = PETSC_TRUE;
+  }
+  if (impl->w) {
+    PetscInt w_size;
+    PetscCall(VecGetSize(impl->w, &w_size));
+    if (w_size != m) reallocate = PETSC_TRUE;
   }
 
   /* Initialize or reallocate persistent work objects */
@@ -504,6 +466,11 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
 
     PetscCall(VecDuplicate(impl->y_mean, &impl->delta_scaled));
     PetscCall(VecDuplicate(da->obs_error_var, &impl->r_inv_sqrt));
+
+    /* Create w vector (size m) for analysis weights */
+    PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &impl->w));
+    PetscCall(VecSetSizes(impl->w, PETSC_DECIDE, m));
+    PetscCall(VecSetFromOptions(impl->w));
 
     /* Create Z matrix (obs_size x m) */
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &impl->Z));
@@ -540,13 +507,25 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
   PetscCall(PetscDAComputeAnomalies(da, impl->mean, &X));
 
   /* ===================================================================== */
-  /* Alg 6.4 line 3-4: Compute observation ensemble Z = H(x_i^f)         */
+  /* Alg 6.4 line 3-4: Compute observation ensemble Z = H * E            */
   /* ===================================================================== */
-  PetscCall(ComputeObservationEnsemble(da, observation_operator, obs_ctx, impl->Z));
+  /* Z = H * E using matrix-matrix multiplication (obs_size x ensemble_size) */
+  {
+    MatReuse scall = MAT_INITIAL_MATRIX;
+    if (impl->Z) {
+      PetscInt z_rows, z_cols;
+      PetscCall(MatGetSize(impl->Z, &z_rows, &z_cols));
+      if (z_rows == da->obs_size && z_cols == m) scall = MAT_REUSE_MATRIX;
+      else {
+        PetscCall(MatDestroy(&impl->Z));
+        scall = MAT_INITIAL_MATRIX;
+      }
+    }
+    PetscCall(MatMatMult(H, da->ensemble, scall, PETSC_DEFAULT, &impl->Z));
+  }
 
-  /* Compute observation mean y_mean = (1/m) * sum(Z_i) */
-  PetscCall(MatGetRowSum(impl->Z, impl->y_mean));
-  PetscCall(VecScale(impl->y_mean, inv_m));
+  /* Compute observation mean y_mean = H * x_mean */
+  PetscCall(MatMult(H, impl->mean, impl->y_mean));
 
   /* ===================================================================== */
   /* Alg 6.4 line 5-6: Build normalized innovation statistics - start localization for LETKF (mskr local: Z, y, y_mean, r_inv_sqrt) */
@@ -580,9 +559,6 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
     PetscCall(VecSetFromOptions(s_transpose_delta));
     PetscCall(MatMultTranspose(impl->S, impl->delta_scaled, s_transpose_delta));
 
-    /* w is created/reused inside if not passed? No, we need to handle w */
-    if (!impl->w) PetscCall(VecDuplicate(s_transpose_delta, &impl->w));
-
     PetscCall(PetscDAApplyTInverse(da, s_transpose_delta, impl->w));
     PetscCall(VecDestroy(&s_transpose_delta));
   }
@@ -595,15 +571,19 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, PetscErro
   /* ===================================================================== */
   /* Alg 6.4 line 9: Form transform G = w * 1' + sqrt(m - 1) * T^{1/2} * U */
   /* ===================================================================== */
+  /* Create a temporary copy of T_sqrt for scaling to avoid modifying the persistent buffer */
+  Mat T_sqrt_scaled;
+  PetscCall(MatDuplicate(impl->T_sqrt, MAT_COPY_VALUES, &T_sqrt_scaled));
+  PetscCall(MatScale(T_sqrt_scaled, sqrt_m_minus_1));
+
   /* w_ones = w * 1' (broadcast weight vector to all columns) */
   PetscCall(BroadcastWeightVector(impl->w, m, impl->w_ones));
 
-  /* sqrt(m-1) T^{1/2} * U */
-  PetscCall(MatScale(impl->T_sqrt, sqrt_m_minus_1));
+  /* G = w_ones + sqrt(m-1)*T_sqrt
+     Accumulate the scaled T_sqrt into w_ones to form the transform matrix G */
+  PetscCall(MatAXPY(impl->w_ones, 1.0, T_sqrt_scaled, SAME_NONZERO_PATTERN));
 
-  /* G = w_ones + T_sqrt_U */
-  /* We can accumulate into w_ones to act as G */
-  PetscCall(MatAXPY(impl->w_ones, 1.0, impl->T_sqrt, SAME_NONZERO_PATTERN));
+  PetscCall(MatDestroy(&T_sqrt_scaled));
 
   /* ===================================================================== */
   /* Alg 6.4 line 9: Update ensemble E = x_mean * 1' + X * G             */
@@ -761,6 +741,17 @@ static PetscErrorCode PetscDAETKFInitialize(PetscDA da)
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
 
   PetscCall(PetscNew(&impl));
+
+  /* Explicitly initialize all pointers to NULL for safety */
+  impl->mean         = NULL;
+  impl->y_mean       = NULL;
+  impl->delta_scaled = NULL;
+  impl->w            = NULL;
+  impl->r_inv_sqrt   = NULL;
+  impl->Z            = NULL;
+  impl->S            = NULL;
+  impl->T_sqrt       = NULL;
+  impl->w_ones       = NULL;
 
   da->data                  = impl;
   da->ops->analysis         = PetscDAETKFAnalysis;

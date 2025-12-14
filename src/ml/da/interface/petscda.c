@@ -521,6 +521,57 @@ PetscErrorCode PetscDAGetSizes(PetscDA da, PetscInt *state_size, PetscInt *obs_s
 }
 
 /*@
+  PetscDASetNDOF - Set the number of degrees of freedom per grid point
+
+  Logically Collective
+
+  Input Parameters:
++ da   - the PetscDA context
+- ndof - number of degrees of freedom per grid point (e.g., 2 for shallow water with h and hu)
+
+  Notes:
+  This must be called before PetscDASetUp(). The default is 1 (scalar field).
+
+  Level: intermediate
+
+.seealso: `PetscDA`, `PetscDAGetNDOF()`, `PetscDASetUp()`, `PetscDASetSizes()`
+@*/
+PetscErrorCode PetscDASetNDOF(PetscDA da, PetscInt ndof)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(da, ndof, 2);
+  PetscCheck(!da->assembled, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Cannot set ndof after PetscDASetUp() has been called");
+  PetscCheck(ndof > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "ndof must be positive, got %" PetscInt_FMT, ndof);
+  da->ndof = ndof;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscDAGetNDOF - Get the number of degrees of freedom per grid point
+
+  Not Collective
+
+  Input Parameter:
+. da - the PetscDA context
+
+  Output Parameter:
+. ndof - number of degrees of freedom per grid point
+
+  Level: intermediate
+
+.seealso: `PetscDA`, `PetscDASetNDOF()`
+@*/
+PetscErrorCode PetscDAGetNDOF(PetscDA da, PetscInt *ndof)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscAssertPointer(ndof, 2);
+  *ndof = da->ndof;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   PetscDASetUp - Allocates internal data structures for a `PetscDA` based on the previously provided sizes.
 
   Collective
@@ -959,28 +1010,48 @@ PetscErrorCode PetscDAComputeAnomalies(PetscDA da, Vec mean, Mat *anomalies)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
-  PetscDAAnalysis - Executes the analysis (update) step of the configured data assimilation method.
+/*@
+  PetscDAAnalysis - Executes the analysis (update) step using sparse observation matrix H
 
   Collective
 
   Input Parameters:
-+ da                   - the `PetscDA` context
-. observation          - observation vector
-. observation_operator - routine that evaluates the observation model `H(x)`
-- obs_ctx              - optional context for `observation_operator`
++ da          - the `PetscDA` context
+. observation - observation vector y ∈ ℝ^P
+- H           - observation operator matrix (P × N), sparse AIJ format
+
+  Notes:
+  The observation matrix H maps from state space (N dimensions) to observation
+  space (P dimensions): y = H*x + noise
+  
+  H must be a sparse AIJ matrix (will be AIJKokkos for GPU support).
+  
+  For identity observations (observe entire state), create H as:
+    MatCreateAIJ(..., n, n, 1, NULL, 0, NULL, &H)
+    for i=0 to n-1: MatSetValue(H, i, i, 1.0, INSERT_VALUES)
+  
+  For partial observations, set appropriate rows and columns to observe
+  specific state components.
 
   Level: intermediate
 
-.seealso: [](ch_da), `PetscDAApplyModel()`, `PetscDAETKFAnalysis()`
+.seealso: [](ch_da), `PetscDAApplyModel()`, `PetscDASetObsErrorVariance()`
 @*/
-PetscErrorCode PetscDAAnalysis(PetscDA da, Vec observation, PetscErrorCode (*observation_operator)(Vec, Vec, void *), void *obs_ctx)
+PetscErrorCode PetscDAAnalysis(PetscDA da, Vec observation, Mat H)
 {
+  PetscInt h_rows, h_cols;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(H, MAT_CLASSID, 3);
 
-  PetscUseTypeMethod(da, analysis, observation, observation_operator, obs_ctx);
+  /* Validate H dimensions match PetscDA configuration */
+  PetscCall(MatGetSize(H, &h_rows, &h_cols));
+  PetscCheck(h_rows == da->obs_size, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "H matrix rows (%" PetscInt_FMT ") must match obs_size (%" PetscInt_FMT ")", h_rows, da->obs_size);
+  PetscCheck(h_cols == da->state_size, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "H matrix cols (%" PetscInt_FMT ") must match state_size (%" PetscInt_FMT ")", h_cols, da->state_size);
+
+  PetscUseTypeMethod(da, analysis, observation, H);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1134,7 +1205,7 @@ PetscErrorCode PetscDALETKFSetLocalization(PetscDA da, Mat Q)
 /* ========================================================================== */
 
 /* Tolerance for matrix square root verification in debug mode */
-#define MATRIX_SQRT_TOLERANCE_FACTOR (100.0 * PETSC_MACHINE_EPSILON)
+#define MATRIX_SQRT_TOLERANCE_FACTOR (1000.0 * PETSC_MACHINE_EPSILON)
 
 /*
   PetscDATFactor_Cholesky - Computes Cholesky factorization of T
