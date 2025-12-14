@@ -9,7 +9,7 @@ PETSC_EXTERN PetscClassId PETSCDA_CLASSID;
 /* Operator table for PetscDA implementations */
 typedef struct _PetscDAOps *PetscDAOps;
 struct _PetscDAOps {
-  PetscErrorCode (*analysis)(PetscDA, Vec, PetscErrorCode (*)(Vec, Vec, void *), void *);
+  PetscErrorCode (*analysis)(PetscDA, Vec, Mat);
   PetscErrorCode (*applymodel)(PetscDA, PetscErrorCode (*)(Vec, Vec, void *), void *);
   PetscErrorCode (*computemean)(PetscDA, Vec);
   PetscErrorCode (*computeanomalies)(PetscDA, Vec, Mat *);
