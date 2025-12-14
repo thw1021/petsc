@@ -1332,49 +1332,55 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
 
     PetscInt        fs, fsSize, fsSizeMax = -1;
     const PetscInt *fsIdx;
-    IS              fsIS, stratumIS;
+    IS              fsIS, stratumIS, fsISTotal;
     int             section;
     CGNS_ENUMT(ElementType_t) element_type = CGNS_ENUMV(ElementTypeNull);
     const int *perm;
     cgsize_t   f_owned = 0, f_global, f_start;
-    PetscInt  *elem_list, *elem_ind, *side_list;
-    PetscInt   c = 0;
 
     PetscCall(DMGetLabel(dm, "Face Sets", &fsLabel));
-    PetscCall(DMLabelGetValueIS(fsLabel, &fsIS));
+    PetscCall(DMLabelGetNonEmptyStratumValuesIS(fsLabel, &fsIS));
     PetscCall(DMGetLabelSize(dm, "Face Sets", &num_fs));
     PetscCall(ISGetIndices(fsIS, &fsIdx));
-    for (fs = 0; fs < num_fs; ++fs) {
-      PetscCall(DMLabelGetStratumIS(fsLabel, fsIdx[fs], &stratumIS));
-      PetscCall(ISGetSize(stratumIS, &fsSize));
-      f_owned += fsSize;
-      fsSizeMax = PetscMax(fsSizeMax, fsSize);
-      PetscCall(ISDestroy(&stratumIS));
-    }
-    PetscCall(PetscMalloc3(num_fs, &elem_ind, f_owned, &elem_list, f_owned, &side_list));
-    for (fs = 0; fs < num_fs; ++fs) {
-      const PetscInt *fs_pnts;
+    { // Get single IS without duplicates of the local face IDs in the FaceSets
+      IS *fsISs;
 
-      PetscCall(DMLabelGetStratumIS(fsLabel, fsIdx[fs], &stratumIS));
-      PetscCall(ISGetSize(stratumIS, &fsSize));
-      PetscCall(ISGetIndices(stratumIS, &fs_pnts));
-      {
-        DMPolytopeType cell_type;
-
-        if (fsSize) PetscCall(DMPlexGetCellType(dm, fs_pnts[0], &cell_type));
-        for (PetscInt fs_idx = 0; fs_idx < fsSize; fs_idx++) {
-          PetscInt       closure_dof, *closure_indices, elem_size;
-          const PetscInt fs_pnt = fs_pnts[fs_idx];
-
-          PetscCall(DMPlexGetClosureIndices(cdm, cdm->localSection, cdm->localSection, fs_pnt, PETSC_FALSE, &closure_dof, &closure_indices, NULL, NULL));
-          elem_size = closure_dof / coord_dim;
-          if (!conn) PetscCall(PetscMalloc1(f_owned * elem_size, &conn));
-          PetscCall(DMPlexCGNSGetPermutation_Internal(cell_type, closure_dof / coord_dim, &element_type, &perm));
-          for (PetscInt j = 0; j < elem_size; j++) conn[c++] = node_l2g[closure_indices[perm[j] * coord_dim] / coord_dim] + 1;
-          PetscCall(DMPlexRestoreClosureIndices(cdm, cdm->localSection, cdm->localSection, fs_pnt, PETSC_FALSE, &closure_dof, &closure_indices, NULL, NULL));
-        }
+      PetscCall(PetscMalloc1(num_fs, &fsISs));
+      for (fs = 0; fs < num_fs; ++fs) {
+        PetscCall(DMLabelGetStratumIS(fsLabel, fsIdx[fs], &fsISs[fs]));
+        PetscCall(ISGetSize(fsISs[fs], &fsSize));
+        fsSizeMax = PetscMax(fsSizeMax, fsSize);
       }
-      PetscCall(ISDestroy(&stratumIS));
+      PetscCall(ISConcatenate(PetscObjectComm((PetscObject)fsISs[0]), num_fs, fsISs, &fsISTotal));
+      PetscCall(ISSortRemoveDups(fsISTotal));
+      PetscCall(ISGetSize(fsISTotal, &f_owned));
+      for (fs = 0; fs < num_fs; ++fs) PetscCall(ISDestroy(&fsISs[fs]));
+      PetscCall(PetscFree(fsISs));
+    }
+    {
+      const PetscInt *faces;
+      DMPolytopeType  cell_type, cell_type_f;
+      PetscInt        closure_dof, closure_dof_f;
+
+      PetscCall(ISGetIndices(fsISTotal, &faces));
+      if (fsSize) PetscCall(DMPlexGetCellType(dm, faces[0], &cell_type));
+      for (PetscInt f = 0, c = 0; f < fsSize; f++) {
+        PetscInt      *closure_indices, elem_size;
+        const PetscInt face = faces[f];
+
+        PetscCall(DMPlexGetClosureIndices(cdm, cdm->localSection, cdm->localSection, face, PETSC_FALSE, &closure_dof_f, &closure_indices, NULL, NULL));
+        elem_size = closure_dof_f / coord_dim;
+        if (!conn) {
+          PetscCall(PetscMalloc1(f_owned * elem_size, &conn));
+          closure_dof = closure_dof_f;
+        }
+        PetscCall(DMPlexGetCellType(dm, face, &cell_type_f));
+        PetscCheck(cell_type_f == cell_type, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Only mono-topology face sets are supported currently. Face %" PetscInt_FMT " is %s, which is different than the previous type %s", face, DMPolytopeTypes[cell_type_f], DMPolytopeTypes[cell_type]);
+        PetscCheck(closure_dof_f == closure_dof, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Closure of face %" PetscInt_FMT " has %" PetscInt_FMT " dofs instead of the previously written %" PetscInt_FMT " dofs. Only mono-topology face sets are supported currently", face, closure_dof_f, closure_dof);
+        PetscCall(DMPlexCGNSGetPermutation_Internal(cell_type, elem_size, &element_type, &perm));
+        for (PetscInt j = 0; j < elem_size; j++) conn[c++] = node_l2g[closure_indices[perm[j] * coord_dim] / coord_dim] + 1;
+        PetscCall(DMPlexRestoreClosureIndices(cdm, cdm->localSection, cdm->localSection, face, PETSC_FALSE, &closure_dof_f, &closure_indices, NULL, NULL));
+      }
     }
 
     { // Write connectivity for face sets
@@ -1392,17 +1398,19 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       f_start += elem_offset;
       PetscCallCGNSWrite(cgp_section_write(cgv->file_num, base, zone, "Faces", element_type, 1, f_global, 0, &section), dm, viewer);
       PetscCallCGNSWriteData(cgp_elements_write_data(cgv->file_num, base, zone, section, f_start + 1, f_start + f_owned, conn), dm, viewer);
-      elem_offset += f_global;
       PetscCall(PetscFree(conn));
     }
 
     // Write  BC_t for every face set value.
-    for (fs = 0; fs < num_fs; ++fs) {
-      int BC;
+    PetscInt num_fs_global, *fsIdxGlobal;
+    PetscCall(DMLabelCreateGlobalValueArray(fsLabel, &num_fs_global, &fsIdxGlobal));
+    for (fs = 0; fs < num_fs_global; ++fs) {
+      int             BC;
       const PetscInt *fs_pnts;
-      char bc_name[33];
-      PetscInt fsID = fsIdx[fs];
-      cgsize_t fs_start, fs_owned, fs_global;
+      char            bc_name[33];
+      PetscInt        fsID = fsIdxGlobal[fs];
+      cgsize_t        fs_start, fs_owned, fs_global;
+      cgsize_t       *fs_pnts_cg;
 
       PetscCall(DMLabelGetStratumIS(fsLabel, fsID, &stratumIS));
       PetscCall(ISGetSize(stratumIS, &fs_owned));
@@ -1412,24 +1420,32 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
 
       PetscCall(PetscSNPrintf(bc_name, sizeof bc_name, "FaceSet%" PetscInt_FMT, fsID));
       PetscCallCGNSWrite(cg_boco_write(cgv->file_num, base, zone, bc_name, CGNS_ENUMV(BCTypeNull), CGNS_ENUMV(PointList), fs_global, NULL, &BC), dm, viewer);
-      {
-        DMPolytopeType cell_type;
 
-        if (fsSize) PetscCall(DMPlexGetCellType(dm, fs_pnts[0], &cell_type));
-        for (PetscInt fs_idx = 0; fs_idx < fsSize; fs_idx++) {
-          PetscInt       closure_dof, *closure_indices, elem_size;
-          const PetscInt fs_pnt = fs_pnts[fs_idx];
+      PetscCall(PetscMalloc1(fs_owned, &fs_pnts_cg));
+      for (PetscInt i = 0; i < fs_owned; i++) {
+        PetscInt is_idx;
 
-          PetscCall(DMPlexGetClosureIndices(cdm, cdm->localSection, cdm->localSection, fs_pnt, PETSC_FALSE, &closure_dof, &closure_indices, NULL, NULL));
-          elem_size = closure_dof / coord_dim;
-          if (!conn) PetscCall(PetscMalloc1(f_owned * elem_size, &conn));
-          PetscCall(DMPlexCGNSGetPermutation_Internal(cell_type, closure_dof / coord_dim, &element_type, &perm));
-          for (PetscInt j = 0; j < elem_size; j++) conn[c++] = node_l2g[closure_indices[perm[j] * coord_dim] / coord_dim] + 1;
-          PetscCall(DMPlexRestoreClosureIndices(cdm, cdm->localSection, cdm->localSection, fs_pnt, PETSC_FALSE, &closure_dof, &closure_indices, NULL, NULL));
-        }
+        PetscCall(ISLocate(fsISTotal, fs_pnts[i], &is_idx));
+        fs_pnts_cg[i] = is_idx + elem_offset + 1;
       }
+
+      { // TODO: Verify that this is the correct way to do this. Particularly the magic numbers "1" and "0"
+        const int   depth     = 4;
+        const char *labels[]  = {"Zone_t", "ZoneBC_t", "BC_t", "PointList"};
+        int         indices[] = {zone, 1, BC, 0};
+        PetscCallCGNSWrite(cg_golist(cgv->file_num, base, depth, (char **)labels, indices), dm, viewer);
+      }
+      PetscCallCGNSWriteData(cgp_ptlist_write_data(cgv->file_num, fs_start + 1, fs_start + fs_owned, fs_pnts_cg), dm, viewer);
+
+      CGNS_ENUMT(GridLocation_t) grid_loc;
+      if (topo_dim == 3) grid_loc = CGNS_ENUMV(FaceCenter);
+      else if (topo_dim == 2) grid_loc = CGNS_ENUMV(EdgeCenter);
+      else if (topo_dim == 1) grid_loc = CGNS_ENUMV(Vertex);
+      PetscCallCGNSWriteData(cg_boco_gridlocation_write(cgv->file_num, base, zone, BC, grid_loc), dm, viewer);
+
       PetscCall(ISDestroy(&stratumIS));
     }
+    elem_offset += f_global;
   }
 
   PetscCall(DMDestroy(&colloc_dm));
