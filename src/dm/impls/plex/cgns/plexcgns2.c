@@ -1136,7 +1136,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
   PetscMPIInt       size;
   const char       *dm_name;
   int               base, zone;
-  cgsize_t          isize[3];
+  cgsize_t          isize[3], elem_offset = 0;
 
   PetscFunctionBegin;
   if (!cgv->file_num) {
@@ -1280,8 +1280,10 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     PetscCheck(e_global == num_global_elems, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected number of elements %" PRIdCGSIZE " vs %" PetscInt_FMT, e_global, num_global_elems);
     e_start = 0;
     PetscCallMPI(MPI_Exscan(&e_owned, &e_start, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
+    e_start += elem_offset;
     PetscCallCGNSWrite(cgp_section_write(cgv->file_num, base, zone, "Elem", element_type, 1, e_global, 0, &section), dm, viewer);
     PetscCallCGNSWriteData(cgp_elements_write_data(cgv->file_num, base, zone, section, e_start + 1, e_start + e_owned, conn), dm, viewer);
+    elem_offset = e_global;
     PetscCall(PetscFree(conn));
 
     cgv->base            = base;
@@ -1317,23 +1319,26 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       PetscCall(PetscFree(efield));
     }
   }
-  PetscCall(DMDestroy(&colloc_dm));
 
   PetscBool hasLabel;
 
   PetscCall(DMHasLabel(dm, "Face Sets", &hasLabel));
   if (hasLabel) {
-    DMLabel  fsLabel;
-    PetscInt num_fs;
+    DMLabel   fsLabel;
+    PetscInt  num_fs;
+    cgsize_t *conn = NULL;
 
     PetscCall(DMGetLabel(dm, "Face Sets", &fsLabel));
 
-    PetscInt        i, j, fs, fsSize;
-    const PetscInt *fsIdx, *faces;
+    PetscInt        fs, fsSize, fsSizeMax = -1;
+    const PetscInt *fsIdx;
     IS              fsIS, stratumIS;
-    PetscInt        numPoints, *points;
-    PetscInt        elem_list_size = 0;
-    PetscInt       *elem_list, *elem_ind, *side_list;
+    int             section;
+    CGNS_ENUMT(ElementType_t) element_type = CGNS_ENUMV(ElementTypeNull);
+    const int *perm;
+    cgsize_t   f_owned = 0, f_global, f_start;
+    PetscInt  *elem_list, *elem_ind, *side_list;
+    PetscInt   c = 0;
 
     PetscCall(DMGetLabel(dm, "Face Sets", &fsLabel));
     PetscCall(DMLabelGetValueIS(fsLabel, &fsIS));
@@ -1342,99 +1347,92 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     for (fs = 0; fs < num_fs; ++fs) {
       PetscCall(DMLabelGetStratumIS(fsLabel, fsIdx[fs], &stratumIS));
       PetscCall(ISGetSize(stratumIS, &fsSize));
-      elem_list_size += fsSize;
+      f_owned += fsSize;
+      fsSizeMax = PetscMax(fsSizeMax, fsSize);
       PetscCall(ISDestroy(&stratumIS));
     }
-    if (num_fs) {
-      PetscCall(PetscMalloc3(num_fs, &elem_ind, elem_list_size, &elem_list, elem_list_size, &side_list));
+    PetscCall(PetscMalloc3(num_fs, &elem_ind, f_owned, &elem_list, f_owned, &side_list));
+    for (fs = 0; fs < num_fs; ++fs) {
+      const PetscInt *fs_pnts;
+
+      PetscCall(DMLabelGetStratumIS(fsLabel, fsIdx[fs], &stratumIS));
+      PetscCall(ISGetSize(stratumIS, &fsSize));
+      PetscCall(ISGetIndices(stratumIS, &fs_pnts));
       {
         DMPolytopeType cell_type;
 
-        PetscCall(DMPlexGetCellType(dm, cStart, &cell_type));
-        for (PetscInt i = cStart, c = 0; i < cEnd; i++) {
-          PetscInt closure_dof, *closure_indices, elem_size;
+        if (fsSize) PetscCall(DMPlexGetCellType(dm, fs_pnts[0], &cell_type));
+        for (PetscInt fs_idx = 0; fs_idx < fsSize; fs_idx++) {
+          PetscInt       closure_dof, *closure_indices, elem_size;
+          const PetscInt fs_pnt = fs_pnts[fs_idx];
 
-          PetscCall(DMPlexGetClosureIndices(cdm, cdm->localSection, cdm->localSection, i, PETSC_FALSE, &closure_dof, &closure_indices, NULL, NULL));
+          PetscCall(DMPlexGetClosureIndices(cdm, cdm->localSection, cdm->localSection, fs_pnt, PETSC_FALSE, &closure_dof, &closure_indices, NULL, NULL));
           elem_size = closure_dof / coord_dim;
-          if (!conn) PetscCall(PetscMalloc1(e_owned * elem_size, &conn));
+          if (!conn) PetscCall(PetscMalloc1(f_owned * elem_size, &conn));
           PetscCall(DMPlexCGNSGetPermutation_Internal(cell_type, closure_dof / coord_dim, &element_type, &perm));
           for (PetscInt j = 0; j < elem_size; j++) conn[c++] = node_l2g[closure_indices[perm[j] * coord_dim] / coord_dim] + 1;
-          PetscCall(DMPlexRestoreClosureIndices(cdm, cdm->localSection, cdm->localSection, i, PETSC_FALSE, &closure_dof, &closure_indices, NULL, NULL));
+          PetscCall(DMPlexRestoreClosureIndices(cdm, cdm->localSection, cdm->localSection, fs_pnt, PETSC_FALSE, &closure_dof, &closure_indices, NULL, NULL));
         }
       }
+      PetscCall(ISDestroy(&stratumIS));
+    }
 
-      { // Get global element_type (for ranks that do not have owned elements)
+    { // Write connectivity for face sets
+      {
         PetscInt local_element_type, global_element_type;
 
-        local_element_type = e_owned > 0 ? element_type : -1;
+        local_element_type = f_owned > 0 ? element_type : -1;
         PetscCallMPI(MPIU_Allreduce(&local_element_type, &global_element_type, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)viewer)));
         if (local_element_type != -1) PetscCheck(local_element_type == global_element_type, PETSC_COMM_SELF, PETSC_ERR_SUP, "Ranks with different element types not supported");
         element_type = (CGNS_ENUMT(ElementType_t))global_element_type;
       }
-      PetscCallMPI(MPIU_Allreduce(&e_owned, &e_global, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
-      PetscCheck(e_global == num_global_elems, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected number of elements %" PRIdCGSIZE " vs %" PetscInt_FMT, e_global, num_global_elems);
-      e_start = 0;
-      PetscCallMPI(MPI_Exscan(&e_owned, &e_start, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
-      PetscCallCGNSWrite(cgp_section_write(cgv->file_num, base, zone, "Elem", element_type, 1, e_global, 0, &section), dm, viewer);
-      PetscCallCGNSWriteData(cgp_elements_write_data(cgv->file_num, base, zone, section, e_start + 1, e_start + e_owned, conn), dm, viewer);
+      PetscCallMPI(MPIU_Allreduce(&f_owned, &f_global, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
+      f_start = 0;
+      PetscCallMPI(MPI_Exscan(&f_owned, &f_start, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
+      f_start += elem_offset;
+      PetscCallCGNSWrite(cgp_section_write(cgv->file_num, base, zone, "Faces", element_type, 1, f_global, 0, &section), dm, viewer);
+      PetscCallCGNSWriteData(cgp_elements_write_data(cgv->file_num, base, zone, section, f_start + 1, f_start + f_owned, conn), dm, viewer);
+      elem_offset += f_global;
       PetscCall(PetscFree(conn));
-      for (fs = 0; fs < num_fs; ++fs) {
-        PetscCall(DMLabelGetStratumIS(fsLabel, fsIdx[fs], &stratumIS));
-        PetscCall(ISGetIndices(stratumIS, &faces));
-        PetscCall(ISGetSize(stratumIS, &fsSize));
-        /* Set Parameters */
-        // PetscCallExternal(ex_put_set_param, exo->exoid, EX_SIDE_SET, fsIdx[fs], fsSize, 0);
-        /* Indices */
-        if (fs < num_fs - 1) elem_ind[fs + 1] = elem_ind[fs] + fsSize;
+    }
 
-        for (i = 0; i < fsSize; ++i) {
-          /* Element List */
-          points = NULL;
-          PetscCall(DMPlexGetTransitiveClosure(dm, faces[i], PETSC_FALSE, &numPoints, &points));
-          elem_list[elem_ind[fs] + i] = points[2] + 1;
-          PetscCall(DMPlexRestoreTransitiveClosure(dm, faces[i], PETSC_FALSE, &numPoints, &points));
+    // Write  BC_t for every face set value.
+    for (fs = 0; fs < num_fs; ++fs) {
+      int BC;
+      const PetscInt *fs_pnts;
+      char bc_name[33];
+      PetscInt fsID = fsIdx[fs];
+      cgsize_t fs_start, fs_owned, fs_global;
 
-          /* Side List */
-          points = NULL;
-          PetscCall(DMPlexGetTransitiveClosure(dm, elem_list[elem_ind[fs] + i] - 1, PETSC_TRUE, &numPoints, &points));
-          for (j = 1; j < numPoints; ++j) {
-            if (points[j * 2] == faces[i]) break;
-          }
-          /* Convert HEX sides */
-          if (numPoints == 27) {
-            if (j == 1) {
-              j = 5;
-            } else if (j == 2) {
-              j = 6;
-            } else if (j == 3) {
-              j = 1;
-            } else if (j == 4) {
-              j = 3;
-            } else if (j == 5) {
-              j = 2;
-            } else if (j == 6) {
-              j = 4;
-            }
-          }
-          /* Convert TET sides */
-          if (numPoints == 15) {
-            --j;
-            if (j == 0) j = 4;
-          }
-          side_list[elem_ind[fs] + i] = j;
-          PetscCall(DMPlexRestoreTransitiveClosure(dm, elem_list[elem_ind[fs] + i] - 1, PETSC_TRUE, &numPoints, &points));
+      PetscCall(DMLabelGetStratumIS(fsLabel, fsID, &stratumIS));
+      PetscCall(ISGetSize(stratumIS, &fs_owned));
+      PetscCall(ISGetIndices(stratumIS, &fs_pnts));
+      PetscCallMPI(MPIU_Allreduce(&fs_owned, &fs_global, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
+      PetscCallMPI(MPI_Exscan(&fs_owned, &fs_start, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
+
+      PetscCall(PetscSNPrintf(bc_name, sizeof bc_name, "FaceSet%" PetscInt_FMT, fsID));
+      PetscCallCGNSWrite(cg_boco_write(cgv->file_num, base, zone, bc_name, CGNS_ENUMV(BCTypeNull), CGNS_ENUMV(PointList), fs_global, NULL, &BC), dm, viewer);
+      {
+        DMPolytopeType cell_type;
+
+        if (fsSize) PetscCall(DMPlexGetCellType(dm, fs_pnts[0], &cell_type));
+        for (PetscInt fs_idx = 0; fs_idx < fsSize; fs_idx++) {
+          PetscInt       closure_dof, *closure_indices, elem_size;
+          const PetscInt fs_pnt = fs_pnts[fs_idx];
+
+          PetscCall(DMPlexGetClosureIndices(cdm, cdm->localSection, cdm->localSection, fs_pnt, PETSC_FALSE, &closure_dof, &closure_indices, NULL, NULL));
+          elem_size = closure_dof / coord_dim;
+          if (!conn) PetscCall(PetscMalloc1(f_owned * elem_size, &conn));
+          PetscCall(DMPlexCGNSGetPermutation_Internal(cell_type, closure_dof / coord_dim, &element_type, &perm));
+          for (PetscInt j = 0; j < elem_size; j++) conn[c++] = node_l2g[closure_indices[perm[j] * coord_dim] / coord_dim] + 1;
+          PetscCall(DMPlexRestoreClosureIndices(cdm, cdm->localSection, cdm->localSection, fs_pnt, PETSC_FALSE, &closure_dof, &closure_indices, NULL, NULL));
         }
-        PetscCall(ISRestoreIndices(stratumIS, &faces));
-        PetscCall(ISDestroy(&stratumIS));
       }
-      PetscCall(ISRestoreIndices(fsIS, &fsIdx));
-      PetscCall(ISDestroy(&fsIS));
-
-      /* Put side sets */
-      // for (fs = 0; fs < num_fs; ++fs) PetscCallExternal(ex_put_set, exo->exoid, EX_SIDE_SET, fsIdx[fs], &elem_list[elem_ind[fs]], &side_list[elem_ind[fs]]);
-      PetscCall(PetscFree3(elem_ind, elem_list, side_list));
+      PetscCall(ISDestroy(&stratumIS));
     }
   }
+
+  PetscCall(DMDestroy(&colloc_dm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
