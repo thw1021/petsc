@@ -23,9 +23,6 @@ typedef struct {
 static PetscFunctionList PetscDALETKFSqrtList           = NULL;
 static PetscBool         PetscDALETKFPackageInitialized = PETSC_FALSE;
 
-/* Tolerance for matrix square root verification in debug mode */
-#define MATRIX_SQRT_TOLERANCE_FACTOR (100.0 * PETSC_MACHINE_EPSILON)
-
 /* Maximum number of observations per vertex for LETKF localization */
 #define Q_NUM_OBSERVATIONS_MAX 40
 

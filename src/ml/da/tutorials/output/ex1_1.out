@@ -4,6 +4,7 @@ PetscDA Object: 1 MPI process
   Observation size: 40
   Ensemble size: 30
   Assembled: true
+  Inflation: 1.
 PetscDAETKF Object:
   Square root type: eigen
 Lorenz-96 ETKF Example
@@ -32,7 +33,7 @@ Step  120, time  6.000  RMSE_forecast 0.15337  RMSE_analysis 0.15312
 
 Statistics (111 post-burn-in steps):
 ==================================================
-  Mean RMSE (forecast) : 0.175901
-  Mean RMSE (analysis) : 0.174665
+  Mean RMSE (forecast) : 0.17590
+  Mean RMSE (analysis) : 0.17466
   Observations used    : 120
 
