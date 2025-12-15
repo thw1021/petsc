@@ -80,9 +80,11 @@ static PetscErrorCode DMPlexCGNSGetPermutation_Internal(DMPolytopeType cell_type
     case 2:
       element_type_tmp = CGNS_ENUMV(BAR_2);
       *perm            = bar_2;
+      break;
     case 3:
       element_type_tmp = CGNS_ENUMV(BAR_3);
       *perm            = bar_3;
+      break;
     case 4:
       element_type_tmp = CGNS_ENUMV(BAR_4);
       *perm            = bar_4;
@@ -836,6 +838,8 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
 
   if (interpolate) PetscCall(DMPlexInterpolateInPlace_Internal(*dm));
 
+  // TODO: Read the BCs in here, but only if interpolate is done (otherwise there are no Plex faces to create a DMLabel against)
+
   // -- Create SF for naive nodal-data read to elements
   PetscSF plex_to_cgns_sf;
   {
@@ -1320,17 +1324,17 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     }
   }
 
-  PetscBool hasLabel;
+  PetscInt  num_fs;
 
-  PetscCall(DMHasLabel(dm, "Face Sets", &hasLabel));
-  if (hasLabel) {
+  PetscCall(DMGetLabelSize(dm, "Face Sets", &num_fs));
+  // TODO: Verify compatiblity with higher-order geometries. (Probably don't , but possibly need to do a "corners only" connectivity or something)
+  if (num_fs > 0) {
     DMLabel   fsLabel;
-    PetscInt  num_fs;
     cgsize_t *conn = NULL;
 
     PetscCall(DMGetLabel(dm, "Face Sets", &fsLabel));
 
-    PetscInt        fs, fsSize, fsSizeMax = -1;
+    PetscInt        fs, fsSizeMax = -1;
     const PetscInt *fsIdx;
     IS              fsIS, stratumIS, fsISTotal;
     int             section;
@@ -1343,6 +1347,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     PetscCall(DMGetLabelSize(dm, "Face Sets", &num_fs));
     PetscCall(ISGetIndices(fsIS, &fsIdx));
     { // Get single IS without duplicates of the local face IDs in the FaceSets
+      PetscInt fsSize;
       IS *fsISs;
 
       PetscCall(PetscMalloc1(num_fs, &fsISs));
@@ -1353,7 +1358,11 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       }
       PetscCall(ISConcatenate(PetscObjectComm((PetscObject)fsISs[0]), num_fs, fsISs, &fsISTotal));
       PetscCall(ISSortRemoveDups(fsISTotal));
-      PetscCall(ISGetSize(fsISTotal, &f_owned));
+      {
+        PetscInt f_owned_int;
+        PetscCall(ISGetSize(fsISTotal, &f_owned_int));
+        f_owned = f_owned_int;
+      }
       for (fs = 0; fs < num_fs; ++fs) PetscCall(ISDestroy(&fsISs[fs]));
       PetscCall(PetscFree(fsISs));
     }
@@ -1363,8 +1372,8 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       PetscInt        closure_dof, closure_dof_f;
 
       PetscCall(ISGetIndices(fsISTotal, &faces));
-      if (fsSize) PetscCall(DMPlexGetCellType(dm, faces[0], &cell_type));
-      for (PetscInt f = 0, c = 0; f < fsSize; f++) {
+      if (f_owned) PetscCall(DMPlexGetCellType(dm, faces[0], &cell_type));
+      for (PetscInt f = 0, c = 0; f < f_owned; f++) {
         PetscInt      *closure_indices, elem_size;
         const PetscInt face = faces[f];
 
@@ -1396,7 +1405,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       f_start = 0;
       PetscCallMPI(MPI_Exscan(&f_owned, &f_start, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
       f_start += elem_offset;
-      PetscCallCGNSWrite(cgp_section_write(cgv->file_num, base, zone, "Faces", element_type, 1, f_global, 0, &section), dm, viewer);
+      PetscCallCGNSWrite(cgp_section_write(cgv->file_num, base, zone, "Faces", element_type, elem_offset + 1, elem_offset + f_global, 0, &section), dm, viewer);
       PetscCallCGNSWriteData(cgp_elements_write_data(cgv->file_num, base, zone, section, f_start + 1, f_start + f_owned, conn), dm, viewer);
       PetscCall(PetscFree(conn));
     }
@@ -1413,7 +1422,11 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       cgsize_t       *fs_pnts_cg;
 
       PetscCall(DMLabelGetStratumIS(fsLabel, fsID, &stratumIS));
-      PetscCall(ISGetSize(stratumIS, &fs_owned));
+      {
+        PetscInt fs_owned_int;
+        PetscCall(ISGetSize(stratumIS, &fs_owned_int));
+        fs_owned = fs_owned_int;
+      }
       PetscCall(ISGetIndices(stratumIS, &fs_pnts));
       PetscCallMPI(MPIU_Allreduce(&fs_owned, &fs_global, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
       PetscCallMPI(MPI_Exscan(&fs_owned, &fs_start, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
