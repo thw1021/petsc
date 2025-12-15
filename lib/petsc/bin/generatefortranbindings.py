@@ -455,7 +455,7 @@ def main(petscdir,slepcdir,petscarch,mpi_f08 = 'Unknown'):
   del sys.path[0]
 
   if mpi_f08 == 'Unknown':
-    with open(os.path.join(petscdir,petscarch,'include','petscconf.h')) as fd:
+    with open(os.path.join(petscdir,'' if slepcdir and petscarch.startswith('installed-') else petscarch,'include','petscconf.h')) as fd:
       mpi_f08 = fd.read().find('mpi_f08') > -1
 
   pkgname = 'slepc' if slepcdir else 'petsc'

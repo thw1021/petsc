@@ -11,7 +11,7 @@ program SchoolDay
 
   ! Settings:
   integer, parameter        :: verbose = 0               ! 0: silent, >=1 : increasing amount of debugging output
-  integer4, parameter        :: msgLen = 30             ! number of reals which is sent with MPI_Isend
+  integer4, parameter       :: msgLen = 30             ! number of reals which is sent with MPI_Isend
   PetscReal, parameter      :: second = 0.1             ! time is sped up by a factor 10
 
   ! Codes

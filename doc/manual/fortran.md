@@ -47,7 +47,7 @@ Since Fortran compilers do not automatically change the length of numerical cons
    ! Fortran () automatically sets the complex KIND to correspond to the KIND of constant arguments
    call SampleSubroutine(real = 1.0_PETSC_REAL_KIND, complex = (0.1_PETSC_REAL_KIND, 0.0_PETSC_REAL_KIND), integer = 1_PETSC_INT_KIND, MPIinteger = 1_PETSC_MPIINT_KIND)
    ! For variable arguments one must set the complex kind explicitly or it defaults to single precision
-   PetscReal : a = 0.1, b = 0.0
+   PetscReal a = 0.1, b = 0.0
    call SampleSubroutine(real = 1.0_PETSC_REAL_KIND, complex = cmplx(a, b, PETSC_REAL_KIND), integer = 1_PETSC_INT_KIND, MPIinteger = 1_PETSC_MPIINT_KIND)
 ```
 
