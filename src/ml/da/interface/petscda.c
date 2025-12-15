@@ -393,10 +393,12 @@ PetscErrorCode PetscDASetType(PetscDA da, PetscDAType type)
   PetscCall(PetscFunctionListFind(PetscDAList, type, &r));
   PetscCheck(r, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDA type: %s", type);
 
-  if (da->ops->destroy) PetscCall((*da->ops->destroy)(da));
+  PetscTryTypeMethod(da, destroy);
+  da->ops->destroy = NULL;
+  da->data         = NULL;
 
-  PetscCall(PetscObjectChangeTypeName((PetscObject)da, type));
   PetscCall((*r)(da));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)da, type));
 
   if (!da->ops->computemean) da->ops->computemean = PetscDAComputeEnsembleMean_Default;
   if (!da->ops->computeanomalies) da->ops->computeanomalies = PetscDAComputeAnomalies_Default;
@@ -1205,7 +1207,7 @@ PetscErrorCode PetscDALETKFSetLocalization(PetscDA da, Mat Q)
 /* ========================================================================== */
 
 /* Tolerance for matrix square root verification in debug mode */
-#define MATRIX_SQRT_TOLERANCE_FACTOR (1000.0 * PETSC_MACHINE_EPSILON)
+#define MATRIX_SQRT_TOLERANCE_FACTOR PETSC_SQRT_MACHINE_EPSILON
 
 /*
   PetscDATFactor_Cholesky - Computes Cholesky factorization of T

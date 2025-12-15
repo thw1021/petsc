@@ -6,10 +6,11 @@
 #include <petscvec.h>
 #include <Kokkos_Core.hpp>
 
-static char help[] = "Shallow water dam-break test case with LETKF data assimilation.\n"
+static char help[] = "Shallow water test cases with LETKF data assimilation.\n"
                      "Implements 1D shallow water equations with 2 DOF per grid point (h, hu).\n\n"
                      "Example usage:\n"
-                     "  ./ex3.kokkos -steps 1000 -burn 100 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30\n\n";
+                     "  ./ex3.kokkos -steps 1000 -burn 100 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30\n"
+                     "  ./ex3.kokkos -ex3_test wave -steps 500\n\n";
 
 /* Default parameter values */
 #define DEFAULT_N             (2 * Q_NUM_OBSERVATIONS_MAX) /* 80 grid points */
@@ -21,7 +22,7 @@ static char help[] = "Shallow water dam-break test case with LETKF data assimila
 #define DEFAULT_DT            0.01
 #define DEFAULT_OBS_ERROR_STD 0.1
 #define DEFAULT_ENSEMBLE_SIZE 30
-#define SPINUP_STEPS          0 /* No spinup for dam-break */
+#define SPINUP_STEPS          500 /* Spinup for wave test to stabilize numerical solution */
 
 /* Minimum valid parameter values */
 #define MIN_N              1
@@ -29,19 +30,29 @@ static char help[] = "Shallow water dam-break test case with LETKF data assimila
 #define MIN_OBS_FREQ       1
 #define PROGRESS_INTERVALS 10
 
+/* Test case types */
+typedef enum {
+  EX3_TEST_DAM,
+  EX3_TEST_WAVE
+} Ex3TestType;
+
+static PetscFunctionList Ex3TestList               = NULL;
+static PetscBool         Ex3TestPackageInitialized = PETSC_FALSE;
+
 typedef struct {
-  DM        da; /* 1D periodic DM storing the shallow water state */
-  PetscInt  n;  /* State dimension (number of grid points) */
-  PetscReal g;  /* Gravitational constant */
-  PetscReal dx; /* Grid spacing */
-  PetscReal dt; /* Integration time step size */
-  TS        ts; /* Reusable time stepper for efficiency */
+  DM          da;        /* 1D periodic DM storing the shallow water state */
+  PetscInt    n;         /* State dimension (number of grid points) */
+  PetscReal   g;         /* Gravitational constant */
+  PetscReal   dx;        /* Grid spacing */
+  PetscReal   dt;        /* Integration time step size */
+  TS          ts;        /* Reusable time stepper for efficiency */
+  Ex3TestType test_type; /* Test case type */
 } ShallowWaterCtx;
 
 /*
   ShallowWaterRHS - Compute the right-hand side of the shallow water equations
   
-  Uses a simple upwind scheme for flux calculation.
+  Uses the Rusanov (Local Lax-Friedrichs) flux for better stability and accuracy.
 */
 static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ctx)
 {
@@ -63,7 +74,7 @@ static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, void
   PetscCall(VecGetArrayRead(X_local, &x));
   PetscCall(VecGetArray(F_vec, &f));
 
-  /* Compute fluxes using a simple upwind scheme */
+  /* Compute fluxes using Rusanov (Local Lax-Friedrichs) scheme */
   for (i = xs; i < xs + xm; i++) {
     /* Extract state variables - DMDA handles periodic boundaries through DMGlobalToLocal */
     PetscReal h  = x[i * ndof];
@@ -79,14 +90,32 @@ static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, void
     PetscReal hu_ip1 = x[(i + 1) * ndof + 1];
     PetscReal u_ip1  = (h_ip1 > 1e-10) ? (hu_ip1 / h_ip1) : 0.0;
 
-    /* Compute fluxes */
-    PetscReal flux_h_left  = (u_im1 > 0) ? hu_im1 : hu;
-    PetscReal flux_h_right = (u > 0) ? hu : hu_ip1;
+    /* Compute physical fluxes at cell centers */
+    PetscReal F_h_i    = hu;
+    PetscReal F_hu_i   = hu * u + 0.5 * sw->g * h * h;
+    PetscReal F_h_im1  = hu_im1;
+    PetscReal F_hu_im1 = hu_im1 * u_im1 + 0.5 * sw->g * h_im1 * h_im1;
+    PetscReal F_h_ip1  = hu_ip1;
+    PetscReal F_hu_ip1 = hu_ip1 * u_ip1 + 0.5 * sw->g * h_ip1 * h_ip1;
 
-    PetscReal flux_hu_left  = (u_im1 > 0) ? (hu_im1 * u_im1 + 0.5 * sw->g * h_im1 * h_im1) : (hu * u + 0.5 * sw->g * h * h);
-    PetscReal flux_hu_right = (u > 0) ? (hu * u + 0.5 * sw->g * h * h) : (hu_ip1 * u_ip1 + 0.5 * sw->g * h_ip1 * h_ip1);
+    /* Compute maximum wave speeds for Rusanov flux */
+    PetscReal lambda_im1 = PetscAbsReal(u_im1) + PetscSqrtReal(sw->g * PetscMax(h_im1, 1e-10));
+    PetscReal lambda_i   = PetscAbsReal(u) + PetscSqrtReal(sw->g * PetscMax(h, 1e-10));
+    PetscReal lambda_ip1 = PetscAbsReal(u_ip1) + PetscSqrtReal(sw->g * PetscMax(h_ip1, 1e-10));
 
-    /* Update RHS */
+    /* Maximum wave speeds at interfaces */
+    PetscReal alpha_left  = PetscMax(lambda_im1, lambda_i);
+    PetscReal alpha_right = PetscMax(lambda_i, lambda_ip1);
+
+    /* Rusanov numerical flux at left interface (i-1/2) */
+    PetscReal flux_h_left  = 0.5 * (F_h_im1 + F_h_i - alpha_left * (h - h_im1));
+    PetscReal flux_hu_left = 0.5 * (F_hu_im1 + F_hu_i - alpha_left * (hu - hu_im1));
+
+    /* Rusanov numerical flux at right interface (i+1/2) */
+    PetscReal flux_h_right  = 0.5 * (F_h_i + F_h_ip1 - alpha_right * (h_ip1 - h));
+    PetscReal flux_hu_right = 0.5 * (F_hu_i + F_hu_ip1 - alpha_right * (hu_ip1 - hu));
+
+    /* Update RHS using finite volume method */
     f[i * ndof]     = -(flux_h_right - flux_h_left) / sw->dx;
     f[i * ndof + 1] = -(flux_hu_right - flux_hu_left) / sw->dx;
   }
@@ -100,17 +129,18 @@ static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, void
 /*
   ShallowWaterContextCreate - Create and initialize a shallow water context with reusable TS object
 */
-static PetscErrorCode ShallowWaterContextCreate(DM da, PetscInt n, PetscReal g, PetscReal dt, ShallowWaterCtx **ctx)
+static PetscErrorCode ShallowWaterContextCreate(DM da, PetscInt n, PetscReal g, PetscReal dt, Ex3TestType test_type, ShallowWaterCtx **ctx)
 {
   ShallowWaterCtx *sw;
 
   PetscFunctionBeginUser;
   PetscCall(PetscNew(&sw));
-  sw->da = da;
-  sw->n  = n;
-  sw->g  = g;
-  sw->dx = 1.0 / n; /* Domain is [0, 1] */
-  sw->dt = dt;
+  sw->da        = da;
+  sw->n         = n;
+  sw->g         = g;
+  sw->dx        = 1.0 / n; /* Domain is [0, 1] */
+  sw->dt        = dt;
+  sw->test_type = test_type;
 
   PetscCall(TSCreate(PETSC_COMM_SELF, &sw->ts));
   PetscCall(TSSetProblemType(sw->ts, TS_NONLINEAR));
@@ -153,11 +183,11 @@ static PetscErrorCode ShallowWaterStep(Vec x_in, Vec x_out, void *ctx)
 }
 
 /*
-  ShallowWaterSolution - Dam-break initial condition
+  ShallowWaterSolution_Dam - Dam-break initial condition
   
   Sets initial condition with discontinuity in water height at x=0.5
 */
-static PetscErrorCode ShallowWaterSolution(PetscReal x, PetscReal *h, PetscReal *hu)
+static PetscErrorCode ShallowWaterSolution_Dam(PetscReal x, PetscReal *h, PetscReal *hu)
 {
   PetscFunctionBeginUser;
   /* Dam-break initial condition */
@@ -167,6 +197,45 @@ static PetscErrorCode ShallowWaterSolution(PetscReal x, PetscReal *h, PetscReal 
     *h = 1.0; /* Water height (h) - lower on right side */
   }
   *hu = 0.0; /* Momentum (hu) - initially zero */
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  ShallowWaterSolution_Wave - Traveling wave initial condition
+  
+  Sets smooth traveling wave with sinusoidal perturbation
+*/
+static PetscErrorCode ShallowWaterSolution_Wave(PetscReal x, PetscReal *h, PetscReal *hu)
+{
+  const PetscReal h_mean = 1.5;            /* Mean water height */
+  const PetscReal h_amp  = 0.3;            /* Wave amplitude */
+  const PetscReal u0     = 0.5;            /* Base velocity */
+  const PetscReal k      = 2.0 * PETSC_PI; /* Wave number (one wavelength over domain) */
+
+  PetscFunctionBeginUser;
+  /* Traveling wave: h = h_mean + h_amp * sin(k*x) */
+  *h = h_mean + h_amp * PetscSinReal(k * x);
+  /* Momentum with constant velocity: hu = h * u0 */
+  *hu = (*h) * u0;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  ShallowWaterSolution - Dispatch to appropriate initial condition based on test type
+*/
+static PetscErrorCode ShallowWaterSolution(Ex3TestType test_type, PetscReal x, PetscReal *h, PetscReal *hu)
+{
+  PetscFunctionBeginUser;
+  switch (test_type) {
+  case EX3_TEST_DAM:
+    PetscCall(ShallowWaterSolution_Dam(x, h, hu));
+    break;
+  case EX3_TEST_WAVE:
+    PetscCall(ShallowWaterSolution_Wave(x, h, hu));
+    break;
+  default:
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Unknown test type");
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -266,6 +335,44 @@ static PetscErrorCode ComputeRMSE(Vec v1, Vec v2, Vec work, PetscInt n, PetscRea
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Forward declaration */
+static PetscErrorCode Ex3TestFinalizePackage(void);
+
+/* Test type setters */
+static PetscErrorCode Ex3SetTest_Dam(Ex3TestType *test_type)
+{
+  PetscFunctionBeginUser;
+  *test_type = EX3_TEST_DAM;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode Ex3SetTest_Wave(Ex3TestType *test_type)
+{
+  PetscFunctionBeginUser;
+  *test_type = EX3_TEST_WAVE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Package initialization */
+static PetscErrorCode Ex3TestInitializePackage(void)
+{
+  PetscFunctionBeginUser;
+  if (Ex3TestPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
+  Ex3TestPackageInitialized = PETSC_TRUE;
+  PetscCall(PetscFunctionListAdd(&Ex3TestList, "dam", Ex3SetTest_Dam));
+  PetscCall(PetscFunctionListAdd(&Ex3TestList, "wave", Ex3SetTest_Wave));
+  PetscCall(PetscRegisterFinalize(Ex3TestFinalizePackage));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode Ex3TestFinalizePackage(void)
+{
+  PetscFunctionBeginUser;
+  Ex3TestPackageInitialized = PETSC_FALSE;
+  PetscCall(PetscFunctionListDestroy(&Ex3TestList));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   /* Configuration parameters */
@@ -276,9 +383,11 @@ int main(int argc, char **argv)
   PetscInt       obs_freq      = DEFAULT_OBS_FREQ;
   PetscInt       random_seed   = DEFAULT_RANDOM_SEED;
   PetscInt       ensemble_size = DEFAULT_ENSEMBLE_SIZE;
+  PetscInt       n_spin        = SPINUP_STEPS;
   PetscReal      g             = DEFAULT_G;
   PetscReal      dt            = DEFAULT_DT;
   PetscReal      obs_error_std = DEFAULT_OBS_ERROR_STD;
+  Ex3TestType    test_type     = EX3_TEST_DAM; /* Default to dam-break */
 
   /* PETSc objects */
   ShallowWaterCtx *sw_ctx = NULL;
@@ -301,6 +410,9 @@ int main(int argc, char **argv)
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   /* Kokkos initialization deferred to Phase 5 optimization */
 
+  /* Initialize test type package */
+  PetscCall(Ex3TestInitializePackage());
+
   /* Parse command-line options */
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Shallow Water LETKF Example", NULL);
   PetscCall(PetscOptionsInt("-n", "Number of grid points", "", n, &n, NULL));
@@ -312,6 +424,23 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsReal("-obs_error", "Observation error standard deviation", "", obs_error_std, &obs_error_std, NULL));
   PetscCall(PetscOptionsInt("-ensemble_size", "Number of ensemble members", "", ensemble_size, &ensemble_size, NULL));
   PetscCall(PetscOptionsInt("-random_seed", "Random seed for ensemble perturbations", "", random_seed, &random_seed, NULL));
+
+  /* Parse test type option */
+  {
+    char        testTypeName[256];
+    const char *defaultType                 = "dam";
+    PetscBool   set                         = PETSC_FALSE;
+    PetscErrorCode (*setter)(Ex3TestType *) = NULL;
+
+    PetscCall(PetscStrncpy(testTypeName, defaultType, sizeof(testTypeName)));
+    PetscCall(PetscOptionsFList("-ex3_test", "Test case type", "Ex3SetTest", Ex3TestList, defaultType, testTypeName, sizeof(testTypeName), &set));
+    if (set) {
+      PetscCall(PetscFunctionListFind(Ex3TestList, testTypeName, &setter));
+      PetscCheck(setter, PETSC_COMM_WORLD, PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown test type \"%s\"", testTypeName);
+      PetscCall((*setter)(&test_type));
+    }
+  }
+  n_spin = (test_type == EX3_TEST_DAM) ? 0 : 500; /* Only spinup for wave test */
   PetscOptionsEnd();
 
   /* LETKF constraint: nobs = Q_NUM_OBSERVATIONS_MAX, observe every other point */
@@ -329,7 +458,7 @@ int main(int argc, char **argv)
   PetscCall(DMSetUp(da_state));
 
   /* Create shallow water context with reusable TS object */
-  PetscCall(ShallowWaterContextCreate(da_state, n, g, dt, &sw_ctx));
+  PetscCall(ShallowWaterContextCreate(da_state, n, g, dt, test_type, &sw_ctx));
 
   /* Initialize random number generator */
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rng));
@@ -340,7 +469,7 @@ int main(int argc, char **argv)
   /* Initialize state vectors */
   PetscCall(DMCreateGlobalVector(da_state, &x0));
 
-  /* Set dam-break initial condition */
+  /* Set initial condition based on test type */
   {
     PetscScalar *x_array;
     PetscInt     xs, xm, i;
@@ -349,7 +478,7 @@ int main(int argc, char **argv)
     for (i = xs; i < xs + xm; i++) {
       PetscReal x = ((PetscReal)i + 0.5) / n;
       PetscReal h, hu;
-      PetscCall(ShallowWaterSolution(x, &h, &hu));
+      PetscCall(ShallowWaterSolution(test_type, x, &h, &hu));
       x_array[i * ndof]     = h;
       x_array[i * ndof + 1] = hu;
     }
@@ -361,10 +490,21 @@ int main(int argc, char **argv)
   PetscCall(VecCopy(x0, truth_state));
   PetscCall(VecDuplicate(x0, &rmse_work));
 
-  /* No spinup for dam-break problem - start from discontinuous IC */
-  if (SPINUP_STEPS > 0) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for %d steps...\n", SPINUP_STEPS));
-    for (int k = 0; k < SPINUP_STEPS; k++) PetscCall(ShallowWaterStep(truth_state, truth_state, sw_ctx));
+  /* Spinup if needed (primarily for wave test to stabilize numerical solution) */
+  if (n_spin > 0) {
+    PetscInt spinup_progress_interval = (n_spin >= 10) ? (n_spin / 10) : 1;
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth trajectory for %" PetscInt_FMT " steps...\n", n_spin));
+
+    for (PetscInt k = 0; k < n_spin; k++) {
+      PetscCall(ShallowWaterStep(truth_state, truth_state, sw_ctx));
+
+      /* Progress reporting for long spinups */
+      if ((k + 1) % spinup_progress_interval == 0 || (k + 1) == n_spin) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Spinup progress: %" PetscInt_FMT "/%" PetscInt_FMT " (%.0f%%)\n", k + 1, n_spin, 100.0 * (k + 1) / n_spin));
+    }
+
+    /* Update x0 to match spun-up state for consistent ensemble initialization */
+    PetscCall(VecCopy(truth_state, x0));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinup complete. Ensemble will be initialized from spun-up state.\n\n"));
   }
 
   /* Initialize observation vectors */
@@ -401,21 +541,25 @@ int main(int argc, char **argv)
   PetscCall(InitializeEnsemble(daas, x0, ensemble_size, obs_error_std, rng));
 
   /* Print configuration summary */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Shallow Water LETKF Example\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "============================\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,
-                        "  State dimension       : %" PetscInt_FMT " (%" PetscInt_FMT " grid points × %d DOF)\n"
-                        "  Observation dimension : %" PetscInt_FMT "\n"
-                        "  Ensemble size         : %" PetscInt_FMT "\n"
-                        "  Gravitational const   : %.4f\n"
-                        "  Time step (dt)        : %.4f\n"
-                        "  Total steps           : %" PetscInt_FMT "\n"
-                        "  Burn-in steps         : %" PetscInt_FMT "\n"
-                        "  Observation frequency : %" PetscInt_FMT "\n"
-                        "  Observation noise std : %.3f\n"
-                        "  Random seed           : %" PetscInt_FMT "\n"
-                        "  Localization          : Full (40 obs per vertex)\n\n",
-                        n * ndof, n, ndof, nobs, ensemble_size, (double)g, (double)dt, steps, burn, obs_freq, (double)obs_error_std, random_seed));
+  {
+    const char *test_name = (test_type == EX3_TEST_DAM) ? "Dam-break" : "Traveling wave";
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Shallow Water LETKF Example\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "============================\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+                          "  Test case             : %s\n"
+                          "  State dimension       : %" PetscInt_FMT " (%" PetscInt_FMT " grid points × %d DOF)\n"
+                          "  Observation dimension : %" PetscInt_FMT "\n"
+                          "  Ensemble size         : %" PetscInt_FMT "\n"
+                          "  Gravitational const   : %.4f\n"
+                          "  Time step (dt)        : %.4f\n"
+                          "  Total steps           : %" PetscInt_FMT "\n"
+                          "  Burn-in steps         : %" PetscInt_FMT "\n"
+                          "  Observation frequency : %" PetscInt_FMT "\n"
+                          "  Observation noise std : %.3f\n"
+                          "  Random seed           : %" PetscInt_FMT "\n"
+                          "  Localization          : Full (40 obs per vertex)\n\n",
+                          test_name, n * ndof, n, ndof, nobs, ensemble_size, (double)g, (double)dt, steps, burn, obs_freq, (double)obs_error_std, random_seed));
+  }
 
   /* Main assimilation cycle: forecast and analysis steps */
   for (step = 0; step <= steps; step++) {
@@ -511,12 +655,18 @@ int main(int argc, char **argv)
   test:
     requires: !complex kokkos_kernels
     diff_args: -j
-    args: -steps 100 -burn 10 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30 -da_sqrt_type cholesky
+    args: -steps 100 -burn 10 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30 -da_sqrt_type cholesky -ex3_test dam
 
   test:
     suffix: eigen
     diff_args: -j
     requires: !complex kokkos_kernels
-    args: -steps 100 -burn 10 -obs_freq 5 -obs_error 0.1 -ensemble_size 30 -da_sqrt_type eigen
+    args: -steps 100 -burn 10 -obs_freq 5 -obs_error 0.1 -ensemble_size 30 -da_sqrt_type eigen -ex3_test dam
+
+  test:
+    suffix: wave
+    diff_args: -j
+    requires: !complex kokkos_kernels
+    args: -steps 100 -burn 10 -obs_freq 5 -obs_error 0.1 -ensemble_size 30 -ex3_test wave
 
 TEST*/
