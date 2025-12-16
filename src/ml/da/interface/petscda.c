@@ -951,17 +951,25 @@ PetscErrorCode PetscDAComputeEnsembleMean(PetscDA da, Vec mean)
 */
 PetscErrorCode InitializeEnsemble(PetscDA daas, Vec x0, PetscInt ensemble_size, PetscReal obs_error_std, PetscRandom rng)
 {
-  Vec      member, col, x_mean;
-  PetscInt i;
+  Vec       member, col, x_mean;
+  PetscInt  i;
+  PetscReal scale;
 
   PetscFunctionBeginUser;
   PetscValidHeaderSpecific(rng, PETSC_RANDOM_CLASSID, 5);
   PetscCall(VecDuplicate(x0, &member));
   PetscCall(VecDuplicate(x0, &x_mean));
 
-  /* Populate the Gaussian draws */
+  /* Scale factor to maintain consistent ensemble spread across different ensemble sizes.
+     After removing the sample mean, the ensemble variance is approximately:
+       Var_final ≈ Var_initial * (m-1)/m
+     To maintain consistent initial spread regardless of m, we scale by sqrt(m/(m-1)).
+     This ensures the final ensemble spread is approximately obs_error_std^2. */
+  scale = PetscSqrtReal((PetscReal)ensemble_size / (PetscReal)(ensemble_size - 1));
+
+  /* Populate the Gaussian draws with scaled standard deviation */
   for (i = 0; i < ensemble_size; i++) {
-    PetscCall(VecSetRandomGaussian(member, rng, 0.0, obs_error_std));
+    PetscCall(VecSetRandomGaussian(member, rng, 0.0, obs_error_std * scale));
     PetscCall(PetscDASetEnsembleMember(daas, i, member));
   }
   /* get mean of perturbations */
