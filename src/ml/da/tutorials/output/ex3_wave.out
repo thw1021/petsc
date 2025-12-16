@@ -1,0 +1,57 @@
+Spinning up truth trajectory for 500 steps...
+  Spinup progress: 50/500 (10%)
+  Spinup progress: 100/500 (20%)
+  Spinup progress: 150/500 (30%)
+  Spinup progress: 200/500 (40%)
+  Spinup progress: 250/500 (50%)
+  Spinup progress: 300/500 (60%)
+  Spinup progress: 350/500 (70%)
+  Spinup progress: 400/500 (80%)
+  Spinup progress: 450/500 (90%)
+  Spinup progress: 500/500 (100%)
+Spinup complete. Ensemble will be initialized from spun-up state.
+
+PetscDA Object: 1 MPI process
+  State size: 160
+  Observation size: 40
+  Ensemble size: 30
+  Assembled: true
+  Inflation: 1.
+PetscDALETKF Object:
+  Square root type: eigen
+  Local observations per vertex: 40
+  Localization matrix: not set
+Localization matrix Q created: 160x40, no localization/global (all weights = 1.0)
+Shallow Water LETKF Example
+============================
+  Test case             : Traveling wave
+  State dimension       : 160 (80 grid points x 2 DOF)
+  Observation dimension : 40
+  Ensemble size         : 30
+  Gravitational const   : 9.8100
+  Time step (dt)        : 0.0100
+  Total steps           : 100
+  Burn-in steps         : 10
+  Observation frequency : 5
+  Observation noise std : 0.100
+  Random seed           : 12345
+  Localization          : None/Global (40 obs per vertex)
+
+Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [burn-in]
+Step   10, time  0.100  RMSE_forecast 0.04303  RMSE_analysis 0.04499
+Step   20, time  0.200  RMSE_forecast 0.04842  RMSE_analysis 0.04757
+Step   30, time  0.300  RMSE_forecast 0.04717  RMSE_analysis 0.03902
+Step   40, time  0.400  RMSE_forecast 0.03135  RMSE_analysis 0.02946
+Step   50, time  0.500  RMSE_forecast 0.02779  RMSE_analysis 0.02442
+Step   60, time  0.600  RMSE_forecast 0.02315  RMSE_analysis 0.02412
+Step   70, time  0.700  RMSE_forecast 0.02390  RMSE_analysis 0.02327
+Step   80, time  0.800  RMSE_forecast 0.02347  RMSE_analysis 0.02410
+Step   90, time  0.900  RMSE_forecast 0.02345  RMSE_analysis 0.02495
+Step  100, time  1.000  RMSE_forecast 0.02348  RMSE_analysis 0.02178
+
+Statistics (91 post-burn-in steps):
+==================================================
+  Mean RMSE (forecast) : 0.03091
+  Mean RMSE (analysis) : 0.03068
+  Observations used    : 20
+
