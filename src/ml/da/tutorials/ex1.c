@@ -65,9 +65,9 @@ static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
 #define PROGRESS_INTERVALS 10
 
 typedef struct {
-  DM        da; /* 1D periodic DM storing the Lorenz-96 state */
-  PetscInt  n;  /* State dimension (number of grid points) */
-  PetscReal F;  /* Constant forcing term in the Lorenz-96 equations */
+  DM        da;   /* 1D periodic DM storing the Lorenz-96 state */
+  PetscInt  n;    /* State dimension (number of grid points) */
+  PetscReal F;    /* Constant forcing term in the Lorenz-96 equations */
   PetscReal dt;   /* Integration time step size */
   TS        ts;   /* Reusable time stepper for efficiency */
   PetscReal time; /* Current simulation time */
@@ -134,8 +134,8 @@ static PetscErrorCode Lorenz96ContextCreate(DM da, PetscInt n, PetscReal F, Pets
 
   PetscFunctionBeginUser;
   PetscCall(PetscNew(&l95));
-  l95->da = da;
-  l95->n  = n;
+  l95->da   = da;
+  l95->n    = n;
   l95->F    = F;
   l95->dt   = dt;
   l95->time = 0.0;
