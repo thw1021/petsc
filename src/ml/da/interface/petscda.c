@@ -101,7 +101,9 @@ PetscErrorCode PetscDARegisterAll(void)
   PetscFunctionBegin;
   if (PetscDARegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscDARegisterAllCalled = PETSC_TRUE;
+#if defined(PETSC_HAVE_KOKKOS)
   PetscCall(PetscDARegister(PETSCDALETKF, PetscDALETKFInitialize));
+#endif
   PetscCall(PetscDARegister(PETSCDAETKF, PetscDAETKFInitialize));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1182,28 +1184,6 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
   }
 
   PetscCall(VecRestoreArray(v, &array));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  PetscDALETKFSetLocalization - Sets the localization matrix for the LETKF algorithm.
-
-  Collective
-
-  Input Parameters:
-+ da - the `PetscDA` context
-- Q  - the localization matrix (N x P)
-
-  Level: advanced
-
-.seealso: [](ch_da), `PetscDA`
-@*/
-PetscErrorCode PetscDALETKFSetLocalization(PetscDA da, Mat Q)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscValidHeaderSpecific(Q, MAT_CLASSID, 2);
-  PetscTryMethod(da, "PetscDALETKFSetLocalization_C", (PetscDA, Mat), (da, Q));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
