@@ -65,9 +65,6 @@ PetscErrorCode PetscDAFinalizePackage(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode PetscDAETKFRegister(void);
-PETSC_EXTERN PetscErrorCode PetscDALETKFRegister(void);
-
 /*@C
   PetscDARegister - Registers a constructor for a `PetscDA` implementation with the
   dispatcher.
@@ -104,8 +101,8 @@ PetscErrorCode PetscDARegisterAll(void)
   PetscFunctionBegin;
   if (PetscDARegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscDARegisterAllCalled = PETSC_TRUE;
-  PetscCall(PetscDAETKFRegister()); // add new methods here
-  PetscCall(PetscDALETKFRegister());
+  PetscCall(PetscDARegister(PETSCDALETKF, PetscDALETKFInitialize));
+  PetscCall(PetscDARegister(PETSCDAETKF, PetscDAETKFInitialize));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*@
