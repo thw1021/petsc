@@ -848,9 +848,9 @@ static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
 
   Level: internal
 
-.seealso: [](ch_da), `PetscDA`, `PetscDALETKFRegister()`, `PetscDALETKFAnalysis()`
+.seealso: [](ch_da), `PetscDA`, `PetscDARegister()`, `PetscDALETKFAnalysis()`
 */
-static PetscErrorCode PetscDALETKFInitialize(PetscDA da)
+PetscErrorCode PetscDALETKFInitialize(PetscDA da)
 {
   PetscDALETKFData *impl;
 
@@ -874,13 +874,5 @@ static PetscErrorCode PetscDALETKFInitialize(PetscDA da)
 
   /* Register the method for setting localization */
   PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetLocalization_C", PetscDALETKFSetLocalization_LETKF));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode PetscDALETKFRegister(void)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscDARegister(PETSCDALETKF, PetscDALETKFInitialize));
-  PetscCall(PetscDALETKFInitializePackage());
   PetscFunctionReturn(PETSC_SUCCESS);
 }

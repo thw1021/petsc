@@ -72,13 +72,13 @@ PETSC_EXTERN PetscErrorCode PetscDATFactor(PetscDA, Mat);
 PETSC_EXTERN PetscErrorCode PetscDAApplyTInverse(PetscDA, Vec, Vec);
 PETSC_EXTERN PetscErrorCode PetscDAApplySqrtTInverse(PetscDA, Mat, Mat);
 
-PETSC_EXTERN PetscErrorCode PetscDAETKFRegister(void);
+PETSC_EXTERN PetscErrorCode PetscDAETKFInitialize(PetscDA);
 PETSC_EXTERN PetscErrorCode PetscDAETKFInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDAETKFFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDAETKFSetSqrtType(PetscDA, PetscDASqrtType);
 PETSC_EXTERN PetscErrorCode PetscDAETKFGetSqrtType(PetscDA, PetscDASqrtType *);
 
-PETSC_EXTERN PetscErrorCode PetscDALETKFRegister(void);
+PETSC_EXTERN PetscErrorCode PetscDALETKFInitialize(PetscDA);
 PETSC_EXTERN PetscErrorCode PetscDALETKFInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDALETKFFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDALETKFSetLocalization(PetscDA, Mat);
