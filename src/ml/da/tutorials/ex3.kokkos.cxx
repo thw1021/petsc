@@ -333,7 +333,7 @@ static PetscErrorCode ShallowWaterSolution_Wave(PetscReal x, PetscReal *h, Petsc
   *h               = h_mean + h_pert;
 
   /* Velocity for rightward-traveling wave: u = c * (h'/h_mean)
-     Using linearized shallow water: u ≈ (c/h_mean) * h_pert */
+     Using linearized shallow water: u ~= (c/h_mean) * h_pert */
   PetscReal u = (c / h_mean) * h_pert;
   *hu         = (*h) * u;
   PetscFunctionReturn(PETSC_SUCCESS);

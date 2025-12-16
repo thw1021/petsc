@@ -962,7 +962,7 @@ PetscErrorCode InitializeEnsemble(PetscDA daas, Vec x0, PetscInt ensemble_size, 
 
   /* Scale factor to maintain consistent ensemble spread across different ensemble sizes.
      After removing the sample mean, the ensemble variance is approximately:
-       Var_final ≈ Var_initial * (m-1)/m
+       Var_final ~= Var_initial * (m-1)/m
      To maintain consistent initial spread regardless of m, we scale by sqrt(m/(m-1)).
      This ensures the final ensemble spread is approximately obs_error_std^2. */
   scale = PetscSqrtReal((PetscReal)ensemble_size / (PetscReal)(ensemble_size - 1));
