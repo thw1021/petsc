@@ -29,14 +29,14 @@ static PetscBool         PetscDALETKFPackageInitialized = PETSC_FALSE;
 
 /*
   ComputeNormalizedInnovationMatrix - Computes S = R^{-1/2}(Z - y_mean * 1')/sqrt(m-1)
-  
+
   Input Parameters:
 + Z          - observation ensemble matrix
 . y_mean     - mean of observations
 . r_inv_sqrt - R^{-1/2}
 . m          - ensemble size
 - scale      - 1/sqrt(m-1)
-  
+
   Output Parameter:
 . S - normalized innovation matrix
 */
@@ -102,11 +102,11 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
 
 /*
   BroadcastWeightVector - Creates matrix with weight vector replicated across all columns
-  
+
   Input Parameters:
 + w - weight vector of size m (analysis weights from LETKF update)
 - m - ensemble size (number of columns to replicate, must equal vector size)
-  
+
   Output Parameter:
 . w_ones - m x m dense matrix where each column is a copy of w (i.e., w * 1^T)
 */
@@ -234,9 +234,9 @@ static PetscErrorCode PetscDASetFromOptions_DASLETKF(PetscDA da, PetscOptionItem
 
 /*@C
   PetscDALETKFInitializePackage - This function initializes everything in the `PetscDALETKF` package. It is called from `TSInitializePackage()`.
-  
+
   Level: developer
-  
+
 .seealso: [](ch_ts), `PetscInitialize()`, `PetscDALETKFFinalizePackage()`
 @*/
 PetscErrorCode PetscDALETKFInitializePackage(void)
@@ -252,9 +252,9 @@ PetscErrorCode PetscDALETKFInitializePackage(void)
 
 /*@C
   PetscDALETKFFinalizePackage - This function destroys everything in the `PetscDALETKF` package. It is called from `PetscFinalize()`.
-  
+
   Level: developer
-  
+
 .seealso: [](ch_ts), `PetscFinalize()`, `PetscDALETKFInitializePackage()`
 @*/
 PetscErrorCode PetscDALETKFFinalizePackage(void)
@@ -271,11 +271,11 @@ PetscErrorCode PetscDALETKFFinalizePackage(void)
 
 /*
   ComputeEnsembleMean - Direct implementation of ensemble mean computation
-  
+
   Input Parameters:
 + ensemble - ensemble matrix (state_size x ensemble_size)
 . ensemble_size - number of ensemble members
-  
+
   Output Parameter:
 . mean - ensemble mean vector
 */
@@ -303,12 +303,12 @@ static PetscErrorCode ComputeEnsembleMean(Mat ensemble, PetscInt ensemble_size, 
 
 /*
   ComputeAnomalies - Direct implementation of anomaly computation
-  
+
   Input Parameters:
 + ensemble - ensemble matrix (state_size x ensemble_size)
 . mean - ensemble mean vector
 . ensemble_size - number of ensemble members
-  
+
   Output Parameter:
 . X - anomaly matrix (state_size x ensemble_size)
 */
@@ -339,7 +339,7 @@ static PetscErrorCode ComputeAnomalies(Mat ensemble, Vec mean, PetscInt ensemble
 
 /*
   ExtractLocalObservations - Extracts local observations for a vertex using localization matrix Q
-  
+
   Input Parameters:
 + Q          - localization matrix (state_size x obs_size), each row has Q_NUM_OBSERVATIONS_MAX non-zeros
 . vertex_idx - index of the vertex (row of Q)
@@ -348,7 +348,7 @@ static PetscErrorCode ComputeAnomalies(Mat ensemble, Vec mean, PetscInt ensemble
 . y_mean_global - global observation mean (size obs_size)
 . r_inv_sqrt_global - global R^{-1/2} (size obs_size)
 . m          - ensemble size
-  
+
   Output Parameters:
 . Z_local    - local observation ensemble (p_local x m), pre-allocated
 . y_local    - local observation vector (size p_local), pre-allocated
@@ -424,14 +424,14 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
 
 /*
   PetscDALETKFAnalysis - Performs the local ensemble transform Kalman filter (LETKF) analysis
-  
+
   Collective
-  
+
   Input Parameters:
 + da          - the `PetscDA` context owning the forecast ensemble and buffers
 . observation - observation vector `y` in R^P
 - H           - observation operator matrix (P x N), sparse AIJ format
-  
+
   Notes:
   The observation matrix H maps state to observations: Z = H * E
 */
@@ -685,9 +685,9 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
 /*
   PetscDALETKFApplyModel - Advances each ensemble member through the user-supplied
   nonlinear model.
-  
+
   Collective
-  
+
   Input Parameters:
 + da        - the `PetscDA` context that stores the ensemble
 . model     - routine that evaluates the model `f(x, xnew; ctx)`
@@ -725,15 +725,15 @@ static PetscErrorCode PetscDALETKFApplyModel(PetscDA da, PetscErrorCode (*model)
 
 /*@
   PetscDALETKFSetSqrtType - Selects the reduced-space square-root algorithm used during the LETKF analysis.
-  
+
   Logically Collective
-  
+
   Input Parameters:
 + da   - the `PetscDA` object
 - type - either `PETSCDA_SQRT_CHOLESKY` or `PETSCDA_SQRT_EIGEN`
-  
+
   Level: advanced
-  
+
 .seealso: [](ch_da), `PetscDA`, `PetscDALETKFGetSqrtType()`, `PetscDALETKFAnalysis()`
 @*/
 PetscErrorCode PetscDALETKFSetSqrtType(PetscDA da, PetscDASqrtType type)
@@ -748,17 +748,17 @@ PetscErrorCode PetscDALETKFSetSqrtType(PetscDA da, PetscDASqrtType type)
 
 /*@
   PetscDALETKFGetSqrtType - Retrieves the current square-root implementation configured for the LETKF analysis.
-  
+
   Not Collective
-  
+
   Input Parameters:
 . da - the `PetscDA` object
-  
+
   Output Parameter:
 . type - on output, the configured `PetscDASqrtType`
-  
+
   Level: advanced
-  
+
 .seealso: [](ch_da), `PetscDA`, `PetscDALETKFSetSqrtType()`
 @*/
 PetscErrorCode PetscDALETKFGetSqrtType(PetscDA da, PetscDASqrtType *type)
@@ -806,13 +806,13 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q)
 
 /*
   PetscDALETKFView - Views a `PetscDALETKF` and its implementation-specific data structure.
-  
+
   Input Parameters:
 + da     - the `PetscDA` context
 - viewer - the `PetscViewer` to use (or `NULL` for standard output)
-  
+
   Level: internal
-  
+
 .seealso: [](ch_da), `PetscDAViewFromOptions()`
 */
 static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
@@ -842,12 +842,12 @@ static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
 
 /*
   PetscDALETKFInitialize - Installs the LETKF-specific operations on a newly created `PetscDA` object.
-  
+
   Input Parameter:
 . da - the `PetscDA` object to configure
-  
+
   Level: internal
-  
+
 .seealso: [](ch_da), `PetscDA`, `PetscDALETKFRegister()`, `PetscDALETKFAnalysis()`
 */
 static PetscErrorCode PetscDALETKFInitialize(PetscDA da)
