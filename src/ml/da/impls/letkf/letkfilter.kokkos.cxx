@@ -14,7 +14,7 @@ typedef struct {
   Mat S;
   Mat T_sqrt;
   Mat w_ones;
-  Mat Q;            // NEW: Localization matrix (n_grid × n_observations_total)
+  Mat Q;            // NEW: Localization matrix (n_grid x n_observations_total)
                     //      Each row has exactly Q_NUM_OBSERVATIONS_MAX non-zeros
   PetscInt p_local; // = Q_NUM_OBSERVATIONS_MAX (number of local observations per grid point)
   PetscInt n_grid;  // Number of grid points (n_grid = state_size / da->ndof)
@@ -200,7 +200,10 @@ static PetscErrorCode PetscDALETKFDestroy(PetscDA da)
     PetscCall(MatDestroy(&impl->Q)); // Destroy localization matrix
 
     PetscCall(PetscFree(da->data));
+    da->data = NULL;
   }
+  /* Clear the composed function */
+  PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetLocalization_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -370,7 +373,7 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
   PetscFunctionBegin;
   /* Get the row of Q corresponding to this vertex */
   PetscCall(MatGetRow(Q, vertex_idx, &ncols, &cols, &vals));
-  PetscCheck(ncols == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Vertex %" PetscInt_FMT " has %" PetscInt_FMT " local observations, expected %d", vertex_idx, ncols, Q_NUM_OBSERVATIONS_MAX);
+  PetscCheck(ncols == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Vertex %" PetscInt_FMT " has %" PetscInt_FMT " local observations, expected %" PetscInt_FMT, vertex_idx, ncols, (PetscInt)Q_NUM_OBSERVATIONS_MAX);
 
   /* Store indices */
   for (k = 0; k < ncols; k++) local_obs_indices[k] = cols[k];
@@ -432,12 +435,11 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
   
   Input Parameters:
 + da          - the `PetscDA` context owning the forecast ensemble and buffers
-. observation - observation vector `y` ∈ ℝ^P
-- H           - observation operator matrix (P × N), sparse AIJ format
+. observation - observation vector `y` in R^P
+- H           - observation operator matrix (P x N), sparse AIJ format
   
   Notes:
-  The observation matrix H maps state to observations: y = H*x + noise
-  This implements Algorithm 2 from Hunt et al. (2007) LETKF paper
+  The observation matrix H maps state to observations: Z = H * E
 */
 static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
 {
@@ -464,7 +466,7 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   impl           = (PetscDALETKFData *)da->data;
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
-  PetscCall(PetscInfo(da, "squaroot type %s, %d ensembles, LETKF localization with p_local=%d\n", (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky", (int)m, impl->p_local));
+  PetscCall(PetscInfo(da, "squaroot type %s, %" PetscInt_FMT " ensembles, LETKF localization with p_local=%" PetscInt_FMT "\n", (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky", m, impl->p_local));
 
   /* Check if localization matrix Q is set */
   PetscCheck(impl->Q, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Localization matrix Q not set. Call PetscDALETKFSetLocalization() first.");
@@ -612,16 +614,16 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
     PetscCall(BroadcastWeightVector(w_local, m, w_ones_local));
     PetscCall(MatCopy(T_sqrt_local, G_local, SAME_NONZERO_PATTERN));
     PetscCall(MatScale(G_local, sqrt_m_minus_1));
-    PetscCall(MatAXPY(w_ones_local, 1.0, G_local, SAME_NONZERO_PATTERN));
+    PetscCall(MatAXPY(G_local, 1.0, w_ones_local, SAME_NONZERO_PATTERN));
 
     /* LETKF Algorithm 2, Line 7: Update ensemble at grid point i_vertex
-       E_a[i,:] = x̄_f[i] + X_f[i,:] * G_local
-       
+       E_a[i,:] = x_bar_f[i] + X_f[i,:] * G_local
+ 
        Where:
-       - x̄_f[i] is the forecast mean at grid point i_vertex (from global mean vector)
+       - x_bar_f[i] is the forecast mean at grid point i_vertex (from global mean vector)
        - X_f[i,:] is the forecast anomaly row at grid point i_vertex (from global anomaly matrix X)
-       - G_local = w_local * 1' + sqrt(m-1) * T_local^{1/2} * U (computed above in w_ones_local)
-    */
+       - G_local = w_local * 1' + sqrt(m-1) * T_local^{1/2} * U (computed above in G_local)
+     */
     {
       Vec                X_row, E_analysis_row;
       const PetscScalar *x_array, *mean_array;
@@ -640,9 +642,9 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
       PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &E_analysis_row));
 
       /* Apply local transform: E_analysis_row = X_row * G_local^T */
-      PetscCall(MatMultTranspose(w_ones_local, X_row, E_analysis_row));
+      PetscCall(MatMultTranspose(G_local, X_row, E_analysis_row));
 
-      /* Add local mean: E_a[i_vertex, :] = x̄_f[i_vertex] + X_f[i_vertex, :] * G_local */
+      /* Add local mean: E_a[i_vertex, :] = x_bar_f[i_vertex] + X_f[i_vertex, :] * G_local */
       PetscCall(VecGetArrayRead(impl->mean, &mean_array));
       PetscCall(VecShift(E_analysis_row, mean_array[i_vertex]));
       PetscCall(VecRestoreArrayRead(impl->mean, &mean_array));
@@ -797,7 +799,7 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q)
     const PetscInt    *cols;
     const PetscScalar *vals;
     PetscCall(MatGetRow(Q, i, &nnz, &cols, &vals));
-    PetscCheck(nnz == Q_NUM_OBSERVATIONS_MAX, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Row %" PetscInt_FMT " has %" PetscInt_FMT " non-zeros, expected %d", i, nnz, Q_NUM_OBSERVATIONS_MAX);
+    PetscCheck(nnz == Q_NUM_OBSERVATIONS_MAX, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Row %" PetscInt_FMT " has %" PetscInt_FMT " non-zeros, expected %" PetscInt_FMT, i, nnz, (PetscInt)Q_NUM_OBSERVATIONS_MAX);
     PetscCall(MatRestoreRow(Q, i, &nnz, &cols, &vals));
   }
 
