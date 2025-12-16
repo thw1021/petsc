@@ -298,7 +298,6 @@ static PetscErrorCode ComputeEnsembleMean(Mat ensemble, PetscInt ensemble_size, 
     PetscCall(VecAXPY(mean, inv_m, col));
     PetscCall(MatDenseRestoreColumnVecRead(ensemble, i, &col));
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -335,7 +334,6 @@ static PetscErrorCode ComputeAnomalies(Mat ensemble, Vec mean, PetscInt ensemble
     PetscCall(MatDenseRestoreColumnVecWrite(X, i, &col_out));
     PetscCall(MatDenseRestoreColumnVecRead(ensemble, i, &col_in));
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -421,7 +419,6 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
   /* Assemble local matrices/vectors */
   PetscCall(MatAssemblyBegin(Z_local, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(Z_local, MAT_FINAL_ASSEMBLY));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -804,7 +801,6 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q)
   PetscCall(MatDestroy(&impl->Q));
   PetscCall(MatDuplicate(Q, MAT_COPY_VALUES, &impl->Q));
   impl->p_local = Q_NUM_OBSERVATIONS_MAX;
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -878,7 +874,6 @@ static PetscErrorCode PetscDALETKFInitialize(PetscDA da)
 
   /* Register the method for setting localization */
   PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetLocalization_C", PetscDALETKFSetLocalization_LETKF));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
