@@ -95,10 +95,10 @@ PetscErrorCode DMPlexCopy_Internal(DM dmin, PetscBool copyPeriodicity, PetscBool
   }
   PetscCall(DMPlexDistributeGetDefault(dmin, &dist));
   PetscCall(DMPlexDistributeSetDefault(dmout, dist));
-  PetscCall(DMPlexReorderGetDefault(dmin, &reorder));
-  PetscCall(DMPlexReorderSetDefault(dmout, reorder));
   PetscCall(DMGetSparseLocalize(dmin, &sparseLocalize));
   PetscCall(DMSetSparseLocalize(dmout, sparseLocalize));
+  PetscCall(DMReorderSectionGetDefault(dmin, &reorder));
+  PetscCall(DMReorderSectionSetDefault(dmout, reorder));
   PetscCall(DMReorderSectionGetType(dmin, &otype));
   PetscCall(DMReorderSectionSetType(dmout, otype));
   PetscCall(DMPlexGetUseCeed(dmin, &useCeed));
