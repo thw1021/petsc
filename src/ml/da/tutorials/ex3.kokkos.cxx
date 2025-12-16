@@ -283,7 +283,6 @@ static PetscErrorCode ShallowWaterStep(Vec x_in, Vec x_out, void *ctx)
 
   /* Solve one time step: advances x_out from t=0 to t=dt */
   PetscCall(TSSolve(sw->ts, x_out));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -310,7 +309,6 @@ static PetscErrorCode ShallowWaterSolution_Dam(PetscReal x, PetscReal *h, PetscR
   *h = h_mean + h_amp * PetscExpReal(-dx * dx / (2.0 * sigma * sigma));
   /* Initially at rest */
   *hu = 0.0;
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -338,7 +336,6 @@ static PetscErrorCode ShallowWaterSolution_Wave(PetscReal x, PetscReal *h, Petsc
      Using linearized shallow water: u ≈ (c/h_mean) * h_pert */
   PetscReal u = (c / h_mean) * h_pert;
   *hu         = (*h) * u;
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
