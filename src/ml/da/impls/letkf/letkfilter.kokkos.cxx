@@ -876,3 +876,25 @@ PetscErrorCode PetscDALETKFInitialize(PetscDA da)
   PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetLocalization_C", PetscDALETKFSetLocalization_LETKF));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*@
+  PetscDALETKFSetLocalization - Sets the localization matrix for the LETKF algorithm.
+
+  Collective
+
+  Input Parameters:
++ da - the `PetscDA` context
+- Q  - the localization matrix (N x P)
+
+  Level: advanced
+
+.seealso: [](ch_da), `PetscDA`
+@*/
+PetscErrorCode PetscDALETKFSetLocalization(PetscDA da, Mat Q)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidHeaderSpecific(Q, MAT_CLASSID, 2);
+  PetscTryMethod(da, "PetscDALETKFSetLocalization_C", (PetscDA, Mat), (da, Q));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
