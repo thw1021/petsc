@@ -209,7 +209,7 @@ static PetscErrorCode ComputeRMSE(Vec v1, Vec v2, Vec work, PetscInt n, PetscRea
 
 /*
   CreateLocalizationMatrix - Create and initialize full localization matrix Q
-  
+
   For the fully observed case (n = Q_NUM_OBSERVATIONS_MAX), Q is a dense nxn
   matrix with all entries = 1.0, meaning each vertex uses all observations.
 */
