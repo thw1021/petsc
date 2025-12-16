@@ -528,7 +528,7 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
   PetscCall(MatMult(H, impl->mean, impl->y_mean));
 
   /* ===================================================================== */
-  /* Alg 6.4 line 5-6: Build normalized innovation statistics - start localization for LETKF (mskr local: Z, y, y_mean, r_inv_sqrt) */
+  /* Alg 6.4 line 5-6: Build normalized innovation statistics              */
   /* ===================================================================== */
   /* Compute R^{-1/2} (assumes diagonal R) */
   PetscCall(VecCopy(da->obs_error_var, impl->r_inv_sqrt));
