@@ -281,7 +281,7 @@ int main(int argc, char **argv)
   /* Kokkos initialization deferred to Phase 5 optimization */
 
   /* Parse command-line options */
-  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Lorenz-96 LETKF Example", NULL);
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Lorenz-96 Example", NULL);
   PetscCall(PetscOptionsInt("-n", "State dimension", "", n, &n, NULL));
   PetscCall(PetscOptionsInt("-steps", "Number of time steps", "", steps, &steps, NULL));
   PetscCall(PetscOptionsInt("-burn", "Burn-in steps excluded from statistics", "", burn, &burn, NULL));
@@ -356,8 +356,8 @@ int main(int argc, char **argv)
   /* Create identity observation matrix H */
   PetscCall(CreateIdentityObservationMatrix(n, &H));
 
-  /* Initialize ensemble members */
-  PetscCall(InitializeEnsemble(daas, x0, ensemble_size, obs_error_std, rng));
+  /* Initialize ensemble members from spun-up truth state */
+  PetscCall(InitializeEnsemble(daas, truth_state, ensemble_size, obs_error_std, rng));
 
   /* Print configuration summary */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-96 LETKF Example\n"));

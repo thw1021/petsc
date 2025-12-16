@@ -23,9 +23,6 @@ typedef struct {
 static PetscFunctionList PetscDALETKFSqrtList           = NULL;
 static PetscBool         PetscDALETKFPackageInitialized = PETSC_FALSE;
 
-/* Maximum number of observations per vertex for LETKF localization */
-#define Q_NUM_OBSERVATIONS_MAX 40
-
 /* ========================================================================== */
 /*                    Helper Functions for LETKF Analysis                     */
 /* ========================================================================== */
@@ -394,18 +391,18 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
   PetscCall(MatDenseGetLDA(Z_global, &lda_z_global));
   PetscCall(MatDenseGetLDA(Z_local, &lda_z_local));
 
-  /* Extract and weight local observations */
+  /* Extract local observations WITHOUT weighting
+     Note: Localization weights affect covariances, not observation values */
   for (k = 0; k < ncols; k++) {
-    PetscInt    obs_idx = cols[k];
-    PetscScalar weight  = vals[k];
+    PetscInt obs_idx = cols[k];
 
-    /* Extract from vectors with weighting */
-    y_local_array[k]          = y_global_array[obs_idx] * weight;
-    y_mean_local_array[k]     = y_mean_global_array[obs_idx] * weight;
-    r_inv_sqrt_local_array[k] = r_inv_sqrt_global_array[obs_idx] * weight;
+    /* Extract from vectors */
+    y_local_array[k]          = y_global_array[obs_idx];
+    y_mean_local_array[k]     = y_mean_global_array[obs_idx];
+    r_inv_sqrt_local_array[k] = r_inv_sqrt_global_array[obs_idx] * PetscSqrtScalar(vals[k]);
 
-    /* Extract from Z matrix (column-major) with weighting */
-    for (j = 0; j < m; j++) { z_local_array[k + j * lda_z_local] = z_global_array[obs_idx + j * lda_z_global] * weight; }
+    /* Extract from Z matrix (column-major) WITHOUT weighting */
+    for (j = 0; j < m; j++) z_local_array[k + j * lda_z_local] = z_global_array[obs_idx + j * lda_z_global];
   }
 
   /* Restore arrays */

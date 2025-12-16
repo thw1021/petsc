@@ -6,7 +6,7 @@
 #include <petscvec.h>
 #include <Kokkos_Core.hpp>
 
-static char help[] = "Shallow water test cases with LETKF data assimilation.\n"
+static char help[] = "Shallow water test cases with data assimilation.\n"
                      "Implements 1D shallow water equations with 2 DOF per grid point (h, hu).\n\n"
                      "Example usage:\n"
                      "  ./ex3.kokkos -steps 1000 -burn 100 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30\n"
