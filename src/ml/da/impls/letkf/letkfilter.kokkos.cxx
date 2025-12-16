@@ -612,7 +612,7 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
 
     /* LETKF Algorithm 2, Line 7: Update ensemble at grid point i_vertex
        E_a[i,:] = x_bar_f[i] + X_f[i,:] * G_local
- 
+
        Where:
        - x_bar_f[i] is the forecast mean at grid point i_vertex (from global mean vector)
        - X_f[i,:] is the forecast anomaly row at grid point i_vertex (from global anomaly matrix X)
