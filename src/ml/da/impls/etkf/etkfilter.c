@@ -731,9 +731,9 @@ static PetscErrorCode PetscDAETKFView(PetscDA da, PetscViewer viewer)
 
   Level: internal
 
-.seealso: [](ch_da), `PetscDA`, `PetscDAETKFRegister()`, `PetscDAETKFAnalysis()`
+.seealso: [](ch_da), `PetscDA`, `PetscDARegister()`, `PetscDAETKFAnalysis()`
 */
-static PetscErrorCode PetscDAETKFInitialize(PetscDA da)
+PetscErrorCode PetscDAETKFInitialize(PetscDA da)
 {
   PetscDAETKFData *impl;
 
@@ -761,13 +761,5 @@ static PetscErrorCode PetscDAETKFInitialize(PetscDA da)
   da->ops->destroy          = PetscDAETKFDestroy;
   da->ops->view             = PetscDAETKFView;
   da->ops->setfromoptions   = PetscDASetFromOptions_DASETKF;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode PetscDAETKFRegister(void)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscDARegister(PETSCDAETKF, PetscDAETKFInitialize));
-  PetscCall(PetscDAETKFInitializePackage());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
