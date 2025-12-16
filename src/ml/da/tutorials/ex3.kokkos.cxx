@@ -39,6 +39,13 @@ typedef enum {
 static PetscFunctionList Ex3TestList               = NULL;
 static PetscBool         Ex3TestPackageInitialized = PETSC_FALSE;
 
+typedef enum {
+  EX3_FLUX_RUSANOV,
+  EX3_FLUX_MC
+} Ex3FluxType;
+
+static const char *const Ex3FluxTypes[] = {"rusanov", "mc", "Ex3FluxType", "EX3_FLUX_", NULL};
+
 typedef struct {
   DM          da;        /* 1D periodic DM storing the shallow water state */
   PetscInt    n;         /* State dimension (number of grid points) */
@@ -47,14 +54,44 @@ typedef struct {
   PetscReal   dt;        /* Integration time step size */
   TS          ts;        /* Reusable time stepper for efficiency */
   Ex3TestType test_type; /* Test case type */
+  Ex3FluxType flux_type; /* Flux scheme */
   PetscReal   time;      /* Current simulation time */
   PetscInt    step;      /* Current simulation step */
 } ShallowWaterCtx;
 
 /*
+  Limit - MC (Monotonized Central) limiter
+*/
+static PetscReal Limit(PetscReal a, PetscReal b)
+{
+  PetscReal c = 0.5 * (a + b);
+  if (a * b <= 0.0) return 0.0;
+  if (c > 0) return PetscMin(2.0 * a, PetscMin(2.0 * b, c));
+  else return PetscMax(2.0 * a, PetscMax(2.0 * b, c));
+}
+
+/*
+  ComputeFlux - Compute physical flux and wave speed for shallow water
+*/
+static void ComputeFlux(PetscReal g, PetscReal h, PetscReal hu, PetscReal *F_h, PetscReal *F_hu, PetscReal *u, PetscReal *c)
+{
+  if (h > 1e-10) {
+    *u    = hu / h;
+    *c    = PetscSqrtReal(g * h);
+    *F_h  = hu;
+    *F_hu = hu * *u + 0.5 * g * h * h;
+  } else {
+    *u    = 0.0;
+    *c    = 0.0;
+    *F_h  = 0.0;
+    *F_hu = 0.0;
+  }
+}
+
+/*
   ShallowWaterRHS - Compute the right-hand side of the shallow water equations
   
-  Uses the Rusanov (Local Lax-Friedrichs) flux for better stability and accuracy.
+  Dispatches to appropriate flux scheme implementation.
 */
 static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ctx)
 {
@@ -76,50 +113,100 @@ static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, void
   PetscCall(DMDAVecGetArrayRead(sw->da, X_local, &x));
   PetscCall(DMDAVecGetArray(sw->da, F_vec, &f));
 
-  /* Compute fluxes using Rusanov (Local Lax-Friedrichs) scheme */
-  for (i = xs; i < xs + xm; i++) {
-    /* Extract state variables - DMDA handles periodic boundaries through DMGlobalToLocal */
-    PetscReal h  = x[i * ndof];
-    PetscReal hu = x[i * ndof + 1];
-    PetscReal u  = (h > 1e-10) ? (hu / h) : 0.0;
+  if (sw->flux_type == EX3_FLUX_RUSANOV) {
+    /* First-order Rusanov (Local Lax-Friedrichs) scheme */
+    for (i = xs; i < xs + xm; i++) {
+      PetscReal h  = x[i * ndof];
+      PetscReal hu = x[i * ndof + 1];
 
-    /* Access neighboring points - DMDA with periodic boundaries already sets correct halo values */
-    PetscReal h_im1  = x[(i - 1) * ndof];
-    PetscReal hu_im1 = x[(i - 1) * ndof + 1];
-    PetscReal u_im1  = (h_im1 > 1e-10) ? (hu_im1 / h_im1) : 0.0;
+      PetscReal h_im1  = x[(i - 1) * ndof];
+      PetscReal hu_im1 = x[(i - 1) * ndof + 1];
 
-    PetscReal h_ip1  = x[(i + 1) * ndof];
-    PetscReal hu_ip1 = x[(i + 1) * ndof + 1];
-    PetscReal u_ip1  = (h_ip1 > 1e-10) ? (hu_ip1 / h_ip1) : 0.0;
+      PetscReal h_ip1  = x[(i + 1) * ndof];
+      PetscReal hu_ip1 = x[(i + 1) * ndof + 1];
 
-    /* Compute physical fluxes at cell centers */
-    PetscReal F_h_i    = hu;
-    PetscReal F_hu_i   = hu * u + 0.5 * sw->g * h * h;
-    PetscReal F_h_im1  = hu_im1;
-    PetscReal F_hu_im1 = hu_im1 * u_im1 + 0.5 * sw->g * h_im1 * h_im1;
-    PetscReal F_h_ip1  = hu_ip1;
-    PetscReal F_hu_ip1 = hu_ip1 * u_ip1 + 0.5 * sw->g * h_ip1 * h_ip1;
+      PetscReal F_h_i, F_hu_i, u, c;
+      PetscReal F_h_im1, F_hu_im1, u_im1, c_im1;
+      PetscReal F_h_ip1, F_hu_ip1, u_ip1, c_ip1;
 
-    /* Compute maximum wave speeds for Rusanov flux */
-    PetscReal lambda_im1 = PetscAbsReal(u_im1) + PetscSqrtReal(sw->g * PetscMax(h_im1, 1e-10));
-    PetscReal lambda_i   = PetscAbsReal(u) + PetscSqrtReal(sw->g * PetscMax(h, 1e-10));
-    PetscReal lambda_ip1 = PetscAbsReal(u_ip1) + PetscSqrtReal(sw->g * PetscMax(h_ip1, 1e-10));
+      ComputeFlux(sw->g, h, hu, &F_h_i, &F_hu_i, &u, &c);
+      ComputeFlux(sw->g, h_im1, hu_im1, &F_h_im1, &F_hu_im1, &u_im1, &c_im1);
+      ComputeFlux(sw->g, h_ip1, hu_ip1, &F_h_ip1, &F_hu_ip1, &u_ip1, &c_ip1);
 
-    /* Maximum wave speeds at interfaces */
-    PetscReal alpha_left  = PetscMax(lambda_im1, lambda_i);
-    PetscReal alpha_right = PetscMax(lambda_i, lambda_ip1);
+      PetscReal alpha_left  = PetscMax(PetscAbsReal(u_im1) + c_im1, PetscAbsReal(u) + c);
+      PetscReal alpha_right = PetscMax(PetscAbsReal(u) + c, PetscAbsReal(u_ip1) + c_ip1);
 
-    /* Rusanov numerical flux at left interface (i-1/2) */
-    PetscReal flux_h_left  = 0.5 * (F_h_im1 + F_h_i - alpha_left * (h - h_im1));
-    PetscReal flux_hu_left = 0.5 * (F_hu_im1 + F_hu_i - alpha_left * (hu - hu_im1));
+      PetscReal flux_h_left  = 0.5 * (F_h_im1 + F_h_i - alpha_left * (h - h_im1));
+      PetscReal flux_hu_left = 0.5 * (F_hu_im1 + F_hu_i - alpha_left * (hu - hu_im1));
 
-    /* Rusanov numerical flux at right interface (i+1/2) */
-    PetscReal flux_h_right  = 0.5 * (F_h_i + F_h_ip1 - alpha_right * (h_ip1 - h));
-    PetscReal flux_hu_right = 0.5 * (F_hu_i + F_hu_ip1 - alpha_right * (hu_ip1 - hu));
+      PetscReal flux_h_right  = 0.5 * (F_h_i + F_h_ip1 - alpha_right * (h_ip1 - h));
+      PetscReal flux_hu_right = 0.5 * (F_hu_i + F_hu_ip1 - alpha_right * (hu_ip1 - hu));
 
-    /* Update RHS using finite volume method */
-    f[i * ndof]     = -(flux_h_right - flux_h_left) / sw->dx;
-    f[i * ndof + 1] = -(flux_hu_right - flux_hu_left) / sw->dx;
+      f[i * ndof]     = -(flux_h_right - flux_h_left) / sw->dx;
+      f[i * ndof + 1] = -(flux_hu_right - flux_hu_left) / sw->dx;
+    }
+  } else {
+    /* Second-order MC (Monotonized Central) scheme */
+    for (i = xs; i < xs + xm; i++) {
+      /* Read state */
+      PetscReal h_im2 = x[(i - 2) * ndof];
+      PetscReal h_im1 = x[(i - 1) * ndof];
+      PetscReal h_i   = x[i * ndof];
+      PetscReal h_ip1 = x[(i + 1) * ndof];
+      PetscReal h_ip2 = x[(i + 2) * ndof];
+
+      PetscReal hu_im2 = x[(i - 2) * ndof + 1];
+      PetscReal hu_im1 = x[(i - 1) * ndof + 1];
+      PetscReal hu_i   = x[i * ndof + 1];
+      PetscReal hu_ip1 = x[(i + 1) * ndof + 1];
+      PetscReal hu_ip2 = x[(i + 2) * ndof + 1];
+
+      /* Compute slopes (MC limiter) */
+      PetscReal s_h_im1 = Limit(h_im1 - h_im2, h_i - h_im1);
+      PetscReal s_h_i   = Limit(h_i - h_im1, h_ip1 - h_i);
+      PetscReal s_h_ip1 = Limit(h_ip1 - h_i, h_ip2 - h_ip1);
+
+      PetscReal s_hu_im1 = Limit(hu_im1 - hu_im2, hu_i - hu_im1);
+      PetscReal s_hu_i   = Limit(hu_i - hu_im1, hu_ip1 - hu_i);
+      PetscReal s_hu_ip1 = Limit(hu_ip1 - hu_i, hu_ip2 - hu_ip1);
+
+      /* Reconstruct states at interfaces */
+      /* Left interface (i-1/2) */
+      PetscReal h_L_left  = h_im1 + 0.5 * s_h_im1;
+      PetscReal hu_L_left = hu_im1 + 0.5 * s_hu_im1;
+      PetscReal h_R_left  = h_i - 0.5 * s_h_i;
+      PetscReal hu_R_left = hu_i - 0.5 * s_hu_i;
+
+      /* Right interface (i+1/2) */
+      PetscReal h_L_right  = h_i + 0.5 * s_h_i;
+      PetscReal hu_L_right = hu_i + 0.5 * s_hu_i;
+      PetscReal h_R_right  = h_ip1 - 0.5 * s_h_ip1;
+      PetscReal hu_R_right = hu_ip1 - 0.5 * s_hu_ip1;
+
+      /* Compute fluxes */
+      PetscReal F_h_LL, F_hu_LL, u_LL, c_LL;
+      PetscReal F_h_RL, F_hu_RL, u_RL, c_RL;
+      PetscReal F_h_LR, F_hu_LR, u_LR, c_LR;
+      PetscReal F_h_RR, F_hu_RR, u_RR, c_RR;
+
+      ComputeFlux(sw->g, h_L_left, hu_L_left, &F_h_LL, &F_hu_LL, &u_LL, &c_LL);
+      ComputeFlux(sw->g, h_R_left, hu_R_left, &F_h_RL, &F_hu_RL, &u_RL, &c_RL);
+      ComputeFlux(sw->g, h_L_right, hu_L_right, &F_h_LR, &F_hu_LR, &u_LR, &c_LR);
+      ComputeFlux(sw->g, h_R_right, hu_R_right, &F_h_RR, &F_hu_RR, &u_RR, &c_RR);
+
+      /* Rusanov flux */
+      PetscReal speed_left   = PetscMax(PetscAbsReal(u_LL) + c_LL, PetscAbsReal(u_RL) + c_RL);
+      PetscReal flux_h_left  = 0.5 * (F_h_LL + F_h_RL - speed_left * (h_R_left - h_L_left));
+      PetscReal flux_hu_left = 0.5 * (F_hu_LL + F_hu_RL - speed_left * (hu_R_left - hu_L_left));
+
+      PetscReal speed_right   = PetscMax(PetscAbsReal(u_LR) + c_LR, PetscAbsReal(u_RR) + c_RR);
+      PetscReal flux_h_right  = 0.5 * (F_h_LR + F_h_RR - speed_right * (h_R_right - h_L_right));
+      PetscReal flux_hu_right = 0.5 * (F_hu_LR + F_hu_RR - speed_right * (hu_R_right - hu_L_right));
+
+      /* Update RHS using finite volume method */
+      f[i * ndof]     = -(flux_h_right - flux_h_left) / sw->dx;
+      f[i * ndof + 1] = -(flux_hu_right - flux_hu_left) / sw->dx;
+    }
   }
 
   PetscCall(DMDAVecRestoreArrayRead(sw->da, X_local, &x));
@@ -131,7 +218,7 @@ static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, void
 /*
   ShallowWaterContextCreate - Create and initialize a shallow water context with reusable TS object
 */
-static PetscErrorCode ShallowWaterContextCreate(DM da, PetscInt n, PetscReal g, PetscReal dt, Ex3TestType test_type, ShallowWaterCtx **ctx)
+static PetscErrorCode ShallowWaterContextCreate(DM da, PetscInt n, PetscReal g, PetscReal dt, Ex3TestType test_type, Ex3FluxType flux_type, ShallowWaterCtx **ctx)
 {
   ShallowWaterCtx *sw;
 
@@ -143,6 +230,7 @@ static PetscErrorCode ShallowWaterContextCreate(DM da, PetscInt n, PetscReal g, 
   sw->dx        = 1.0 / n; /* Domain is [0, 1] */
   sw->dt        = dt;
   sw->test_type = test_type;
+  sw->flux_type = flux_type;
   sw->time      = 0.0;
   sw->step      = 0;
 
@@ -405,7 +493,8 @@ int main(int argc, char **argv)
   PetscReal      g             = DEFAULT_G;
   PetscReal      dt            = DEFAULT_DT;
   PetscReal      obs_error_std = DEFAULT_OBS_ERROR_STD;
-  Ex3TestType    test_type     = EX3_TEST_DAM; /* Default to dam-break */
+  Ex3TestType    test_type     = EX3_TEST_DAM;     /* Default to dam-break */
+  Ex3FluxType    flux_type     = EX3_FLUX_RUSANOV; /* Default to first-order Rusanov */
   char           output_file[PETSC_MAX_PATH_LEN];
   PetscBool      output_enabled = PETSC_FALSE;
   FILE          *fp             = NULL;
@@ -463,6 +552,9 @@ int main(int argc, char **argv)
       PetscCall((*setter)(&test_type));
     }
   }
+
+  /* Parse flux type option */
+  PetscCall(PetscOptionsEnum("-ex3_flux", "Flux scheme (rusanov/mc)", "", Ex3FluxTypes, (PetscEnum)flux_type, (PetscEnum *)&flux_type, NULL));
   n_spin = 0; /* No spinup needed for either test - dam evolves naturally, wave is already smooth */
   PetscOptionsEnd();
 
@@ -484,7 +576,7 @@ int main(int argc, char **argv)
   PetscCall(DMSetUp(da_state));
 
   /* Create shallow water context with reusable TS object */
-  PetscCall(ShallowWaterContextCreate(da_state, n, g, dt, test_type, &sw_ctx));
+  PetscCall(ShallowWaterContextCreate(da_state, n, g, dt, test_type, flux_type, &sw_ctx));
 
   /* Initialize random number generator */
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rng));
@@ -572,10 +664,12 @@ int main(int argc, char **argv)
   /* Print configuration summary */
   {
     const char *test_name = (test_type == EX3_TEST_DAM) ? "Dam-break" : "Traveling wave";
+    const char *flux_name = (flux_type == EX3_FLUX_RUSANOV) ? "Rusanov (1st order)" : "MC (2nd order)";
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Shallow Water LETKF Example\n"));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "============================\n"));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                           "  Test case             : %s\n"
+                          "  Flux scheme           : %s\n"
                           "  State dimension       : %" PetscInt_FMT " (%" PetscInt_FMT " grid points x %d DOF)\n"
                           "  Observation dimension : %" PetscInt_FMT "\n"
                           "  Ensemble size         : %" PetscInt_FMT "\n"
@@ -587,7 +681,7 @@ int main(int argc, char **argv)
                           "  Observation noise std : %.3f\n"
                           "  Random seed           : %" PetscInt_FMT "\n"
                           "  Localization          : None/Global (40 obs per vertex)\n\n",
-                          test_name, n * ndof, n, ndof, nobs, ensemble_size, (double)g, (double)dt, steps, burn, obs_freq, (double)obs_error_std, random_seed));
+                          test_name, flux_name, n * ndof, n, ndof, nobs, ensemble_size, (double)g, (double)dt, steps, burn, obs_freq, (double)obs_error_std, random_seed));
   }
 
   /* Open output file if requested */
@@ -790,5 +884,9 @@ int main(int argc, char **argv)
     test:
       suffix: wave
       args: -ex3_test wave
+
+    test:
+      suffix: wave_mc
+      args: -ex3_test wave -ex3_flux mc
 
 TEST*/
