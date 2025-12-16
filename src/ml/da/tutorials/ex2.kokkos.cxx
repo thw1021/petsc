@@ -39,8 +39,10 @@ typedef struct {
   DM        da; /* 1D periodic DM storing the Lorenz-96 state */
   PetscInt  n;  /* State dimension (number of grid points) */
   PetscReal F;  /* Constant forcing term in the Lorenz-96 equations */
-  PetscReal dt; /* Integration time step size */
-  TS        ts; /* Reusable time stepper for efficiency */
+  PetscReal dt;   /* Integration time step size */
+  TS        ts;   /* Reusable time stepper for efficiency */
+  PetscReal time; /* Current simulation time */
+  PetscInt  step; /* Current simulation step */
 } Lorenz96Ctx;
 
 /*
@@ -84,10 +86,12 @@ static PetscErrorCode Lorenz96ContextCreate(DM da, PetscInt n, PetscReal F, Pets
   PetscCall(PetscNew(&l95));
   l95->da = da;
   l95->n  = n;
-  l95->F  = F;
-  l95->dt = dt;
+  l95->F    = F;
+  l95->dt   = dt;
+  l95->time = 0.0;
+  l95->step = 0;
 
-  PetscCall(TSCreate(PETSC_COMM_SELF, &l95->ts));
+  PetscCall(TSCreate(PetscObjectComm((PetscObject)da), &l95->ts));
   PetscCall(TSSetProblemType(l95->ts, TS_NONLINEAR));
   PetscCall(TSSetRHSFunction(l95->ts, NULL, Lorenz96RHS, l95));
   PetscCall(TSSetType(l95->ts, TSRK));
@@ -121,7 +125,12 @@ static PetscErrorCode Lorenz96Step(Vec x_in, Vec x_out, void *ctx)
   Lorenz96Ctx *l95 = (Lorenz96Ctx *)ctx;
 
   PetscFunctionBeginUser;
-  PetscCall(TSSetTime(l95->ts, 0.0));
+  PetscCall(TSSetTime(l95->ts, l95->time));
+  PetscCall(TSSetMaxSteps(l95->ts, l95->step + 1));
+  PetscCall(TSSetStepNumber(l95->ts, l95->step));
+  PetscCall(TSSetTimeStep(l95->ts, l95->dt));
+  PetscCall(TSSetMaxTime(l95->ts, l95->time + l95->dt));
+
   if (x_in != x_out) PetscCall(VecCopy(x_in, x_out));
   PetscCall(TSSolve(l95->ts, x_out));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -130,21 +139,21 @@ static PetscErrorCode Lorenz96Step(Vec x_in, Vec x_out, void *ctx)
 /*
   CreateIdentityObservationMatrix - Create identity observation matrix H for Lorenz-96
 
-  For the fully observed case, H is an n×n identity matrix representing y = H*x where
+  For the fully observed case, H is an nxn identity matrix representing y = H*x where
   each observation corresponds directly to a state variable.
 
   Input Parameter:
 . n - State dimension (number of grid points)
 
   Output Parameter:
-. H - Identity observation matrix (n × n), sparse AIJ format
+. H - Identity observation matrix (n x n), sparse AIJ format
 */
 static PetscErrorCode CreateIdentityObservationMatrix(PetscInt n, Mat *H)
 {
   PetscInt i;
 
   PetscFunctionBeginUser;
-  /* Create identity observation matrix H (n × n) */
+  /* Create identity observation matrix H (n x n) */
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, 1, NULL, 0, NULL, H));
 
   /* Set diagonal entries to 1.0 for identity mapping */
@@ -163,13 +172,13 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *steps, PetscInt 
   PetscFunctionBeginUser;
   PetscCheck(*n > 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "State dimension n must be positive, got %" PetscInt_FMT, *n);
   PetscCheck(*steps >= 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of steps must be non-negative, got %" PetscInt_FMT, *steps);
-  PetscCheck(*ensemble_size >= MIN_ENSEMBLE_SIZE, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be at least %d for meaningful statistics, got %" PetscInt_FMT, MIN_ENSEMBLE_SIZE, *ensemble_size);
+  PetscCheck(*ensemble_size >= MIN_ENSEMBLE_SIZE, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be at least %" PetscInt_FMT " for meaningful statistics, got %" PetscInt_FMT, (PetscInt)MIN_ENSEMBLE_SIZE, *ensemble_size);
 
   /* LETKF constraint: n must equal Q_NUM_OBSERVATIONS_MAX for fully observed case */
-  PetscCheck(*n == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "For fully observed case, n (%" PetscInt_FMT ") must equal Q_NUM_OBSERVATIONS_MAX (%d)", *n, Q_NUM_OBSERVATIONS_MAX);
+  PetscCheck(*n == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "For fully observed case, n (%" PetscInt_FMT ") must equal Q_NUM_OBSERVATIONS_MAX (%" PetscInt_FMT ")", *n, (PetscInt)Q_NUM_OBSERVATIONS_MAX);
 
   if (*obs_freq < MIN_OBS_FREQ) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency adjusted from %" PetscInt_FMT " to %d\n", *obs_freq, MIN_OBS_FREQ));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency adjusted from %" PetscInt_FMT " to %" PetscInt_FMT "\n", *obs_freq, (PetscInt)MIN_OBS_FREQ));
     *obs_freq = MIN_OBS_FREQ;
   }
   if (*obs_freq > *steps && *steps > 0) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency (%" PetscInt_FMT ") > total steps (%" PetscInt_FMT "), no observations will be assimilated.\n", *obs_freq, *steps));
@@ -201,7 +210,7 @@ static PetscErrorCode ComputeRMSE(Vec v1, Vec v2, Vec work, PetscInt n, PetscRea
 /*
   CreateLocalizationMatrix - Create and initialize full localization matrix Q
   
-  For the fully observed case (n = Q_NUM_OBSERVATIONS_MAX), Q is a dense n×n 
+  For the fully observed case (n = Q_NUM_OBSERVATIONS_MAX), Q is a dense nxn
   matrix with all entries = 1.0, meaning each vertex uses all observations.
 */
 static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
@@ -210,9 +219,9 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
 
   PetscFunctionBeginUser;
   /* Verify constraint */
-  PetscCheck(n == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "For fully observed case, n (%" PetscInt_FMT ") must equal Q_NUM_OBSERVATIONS_MAX (%d)", n, Q_NUM_OBSERVATIONS_MAX);
+  PetscCheck(n == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "For fully observed case, n (%" PetscInt_FMT ") must equal Q_NUM_OBSERVATIONS_MAX (%" PetscInt_FMT ")", n, (PetscInt)Q_NUM_OBSERVATIONS_MAX);
 
-  /* Create Q matrix (n × n for identity observation operator)
+  /* Create Q matrix (n x n for identity observation operator)
      Each row will have exactly Q_NUM_OBSERVATIONS_MAX non-zeros */
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, Q_NUM_OBSERVATIONS_MAX, NULL, 0, NULL, Q));
 
@@ -230,7 +239,7 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
     const PetscInt    *cols;
     const PetscScalar *vals;
     PetscCall(MatGetRow(*Q, i, &ncols, &cols, &vals));
-    PetscCheck(ncols == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Row %" PetscInt_FMT " has %" PetscInt_FMT " non-zeros, expected %d", i, ncols, Q_NUM_OBSERVATIONS_MAX);
+    PetscCheck(ncols == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Row %" PetscInt_FMT " has %" PetscInt_FMT " non-zeros, expected %" PetscInt_FMT, i, ncols, (PetscInt)Q_NUM_OBSERVATIONS_MAX);
     PetscCall(MatRestoreRow(*Q, i, &ncols, &cols, &vals));
   }
 
@@ -316,7 +325,7 @@ int main(int argc, char **argv)
   PetscCall(VecDuplicate(x0, &rmse_work));
 
   /* Spin up truth to get onto attractor */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for %d steps...\n", SPINUP_STEPS));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for %" PetscInt_FMT " steps...\n", (PetscInt)SPINUP_STEPS));
   for (int k = 0; k < SPINUP_STEPS; k++) PetscCall(Lorenz96Step(truth_state, truth_state, l95_ctx));
 
   /* Initialize observation vectors */
@@ -342,7 +351,7 @@ int main(int argc, char **argv)
   /* Create and set localization matrix Q */
   PetscCall(CreateLocalizationMatrix(n, &Q));
   PetscCall(PetscDALETKFSetLocalization(daas, Q));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %dx%d, full localization (all weights = 1.0)\n", n, n));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %" PetscInt_FMT " x %" PetscInt_FMT ", full localization (all weights = 1.0)\n", n, n));
 
   /* Create identity observation matrix H */
   PetscCall(CreateIdentityObservationMatrix(n, &H));
@@ -363,8 +372,8 @@ int main(int argc, char **argv)
                         "  Observation frequency : %" PetscInt_FMT "\n"
                         "  Observation noise std : %.3f\n"
                         "  Random seed           : %" PetscInt_FMT "\n"
-                        "  Localization          : Full (Q_NUM_OBS_MAX = %d)\n\n",
-                        n, ensemble_size, (double)F, (double)dt, steps, burn, obs_freq, (double)obs_error_std, random_seed, Q_NUM_OBSERVATIONS_MAX));
+                        "  Localization          : Full (Q_NUM_OBS_MAX = %" PetscInt_FMT ")\n\n",
+                        n, ensemble_size, (double)F, (double)dt, steps, burn, obs_freq, (double)obs_error_std, random_seed, (PetscInt)Q_NUM_OBSERVATIONS_MAX));
 
   /* Main assimilation cycle: forecast and analysis steps */
   for (step = 0; step <= steps; step++) {
@@ -404,6 +413,8 @@ int main(int argc, char **argv)
 
     /* Propagate ensemble and truth trajectory */
     if (step < steps) {
+      l95_ctx->time = step * dt;
+      l95_ctx->step = step;
       PetscCall(PetscDAApplyModel(daas, Lorenz96Step, l95_ctx));
       PetscCall(Lorenz96Step(truth_state, truth_state, l95_ctx));
     }
