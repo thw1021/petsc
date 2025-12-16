@@ -288,40 +288,57 @@ static PetscErrorCode ShallowWaterStep(Vec x_in, Vec x_out, void *ctx)
 }
 
 /*
-  ShallowWaterSolution_Dam - Dam-break initial condition
+  ShallowWaterSolution_Dam - Smooth periodic "dam-like" initial condition
   
-  Sets initial condition with discontinuity in water height at x=0.5
+  Creates a smooth Gaussian bump compatible with periodic boundaries.
+  This avoids boundary artifacts while maintaining dam-like evolution.
 */
 static PetscErrorCode ShallowWaterSolution_Dam(PetscReal x, PetscReal *h, PetscReal *hu)
 {
+  const PetscReal h_mean = 1.5;  /* Mean water height */
+  const PetscReal h_amp  = 0.4;  /* Bump amplitude */
+  const PetscReal x_c    = 0.25; /* Bump center */
+  const PetscReal sigma  = 0.1;  /* Gaussian width */
+
   PetscFunctionBeginUser;
-  /* Dam-break initial condition */
-  if (x < 0.5) {
-    *h = 2.0; /* Water height (h) - higher on left side */
-  } else {
-    *h = 1.0; /* Water height (h) - lower on right side */
-  }
-  *hu = 0.0; /* Momentum (hu) - initially zero */
+  /* Smooth Gaussian bump: h = h_mean + h_amp * exp(-(x-x_c)^2/(2*sigma^2)) */
+  PetscReal dx = x - x_c;
+  /* Handle periodicity: use minimum distance on periodic domain */
+  if (dx > 0.5) dx -= 1.0;
+  if (dx < -0.5) dx += 1.0;
+
+  *h = h_mean + h_amp * PetscExpReal(-dx * dx / (2.0 * sigma * sigma));
+  /* Initially at rest */
+  *hu = 0.0;
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
   ShallowWaterSolution_Wave - Traveling wave initial condition
   
-  Sets smooth traveling wave with sinusoidal perturbation
+  Sets smooth traveling wave with sinusoidal perturbation.
+  For shallow water, a rightward-traveling wave requires velocity perturbation
+  coupled to height: u' = c * (h'/h_mean) where c = sqrt(g*h_mean).
 */
 static PetscErrorCode ShallowWaterSolution_Wave(PetscReal x, PetscReal *h, PetscReal *hu)
 {
-  const PetscReal h_mean = 1.5;            /* Mean water height */
-  const PetscReal h_amp  = 0.3;            /* Wave amplitude */
-  const PetscReal u0     = 0.5;            /* Base velocity */
-  const PetscReal k      = 2.0 * PETSC_PI; /* Wave number (one wavelength over domain) */
+  const PetscReal h_mean = 1.5;                       /* Mean water height */
+  const PetscReal h_amp  = 0.3;                       /* Wave amplitude */
+  const PetscReal g      = DEFAULT_G;                 /* Gravitational constant */
+  const PetscReal k      = 2.0 * PETSC_PI;            /* Wave number (one wavelength over domain) */
+  const PetscReal c      = PetscSqrtReal(g * h_mean); /* Wave speed */
 
   PetscFunctionBeginUser;
-  /* Traveling wave: h = h_mean + h_amp * sin(k*x) */
-  *h = h_mean + h_amp * PetscSinReal(k * x);
-  /* Momentum with constant velocity: hu = h * u0 */
-  *hu = (*h) * u0;
+  /* Height field: h = h_mean + h_amp * sin(k*x) */
+  PetscReal h_pert = h_amp * PetscSinReal(k * x);
+  *h               = h_mean + h_pert;
+
+  /* Velocity for rightward-traveling wave: u = c * (h'/h_mean)
+     Using linearized shallow water: u ≈ (c/h_mean) * h_pert */
+  PetscReal u = (c / h_mean) * h_pert;
+  *hu         = (*h) * u;
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -734,6 +751,12 @@ int main(int argc, char **argv)
   for (step = 1; step <= steps; step++) {
     PetscReal time = step * dt;
 
+    /* Propagate ensemble and truth trajectory from t_{k-1} to t_k */
+    sw_ctx->time = (PetscReal)(step - 1) * dt;
+    sw_ctx->step = step - 1;
+    PetscCall(PetscDAApplyModel(daas, ShallowWaterStep, sw_ctx));
+    PetscCall(ShallowWaterStep(truth_state, truth_state, sw_ctx));
+
     /* Forecast step: compute ensemble mean and forecast RMSE */
     PetscCall(PetscDAComputeEnsembleMean(daas, x_mean));
     PetscCall(VecCopy(x_mean, x_forecast));
@@ -815,14 +838,6 @@ int main(int argc, char **argv)
       /* Print every progress_freq steps, plus first and last */
       if ((step % progress_freq == 0) || (step == steps))
         PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT ", time %6.3f  RMSE_forecast %.5f  RMSE_analysis %.5f%s\n", step, (double)time, (double)rmse_forecast, (double)rmse_analysis, (step < burn) ? " [burn-in]" : ""));
-    }
-
-    /* Propagate ensemble and truth trajectory */
-    if (step < steps) {
-      sw_ctx->time = (PetscReal)(step - 1) * dt;
-      sw_ctx->step = step - 1;
-      PetscCall(PetscDAApplyModel(daas, ShallowWaterStep, sw_ctx));
-      PetscCall(ShallowWaterStep(truth_state, truth_state, sw_ctx));
     }
   }
 
