@@ -242,7 +242,6 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
     PetscCheck(ncols == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Row %" PetscInt_FMT " has %" PetscInt_FMT " non-zeros, expected %" PetscInt_FMT, i, ncols, (PetscInt)Q_NUM_OBSERVATIONS_MAX);
     PetscCall(MatRestoreRow(*Q, i, &ncols, &cols, &vals));
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
