@@ -389,8 +389,8 @@ int main(int argc, char **argv)
   /* Create identity observation matrix H */
   PetscCall(CreateIdentityObservationMatrix(n, &H));
 
-  /* Initialize ensemble members */
-  PetscCall(InitializeEnsemble(daas, x0, ensemble_size, obs_error_std, rng));
+  /* Initialize ensemble members from spun-up truth state */
+  PetscCall(InitializeEnsemble(daas, truth_state, ensemble_size, obs_error_std, rng));
 
   /* Print configuration summary */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-96 ETKF Example\n"));

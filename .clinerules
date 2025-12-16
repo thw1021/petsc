@@ -10,6 +10,6 @@ At the start of every session, please read the following file to understand the 
 # PETSc initialization
 export PETSC_DIR=$PWD
 
-Do not use braces for single line scope such as: if (foo) { printf("no braces here please!!!"); }
+Do not use braces for single line scope (if and for, etc.) such as: if (foo) { printf("no braces here please!!!"); }
 
 Do not worry about backward compatability

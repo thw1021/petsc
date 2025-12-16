@@ -23,21 +23,21 @@ Lorenz-96 LETKF Example
   Random seed           : 12345
   Localization          : Full (Q_NUM_OBS_MAX = 40)
 
-Step    0, time  0.000  RMSE_forecast 0.39362  RMSE_analysis 0.39362 [burn-in]
-Step   12, time  0.600  RMSE_forecast 0.18712  RMSE_analysis 0.18454
-Step   24, time  1.200  RMSE_forecast 0.16377  RMSE_analysis 0.16490
-Step   36, time  1.800  RMSE_forecast 0.14976  RMSE_analysis 0.14842
-Step   48, time  2.400  RMSE_forecast 0.14338  RMSE_analysis 0.14271
-Step   60, time  3.000  RMSE_forecast 0.14446  RMSE_analysis 0.14416
-Step   72, time  3.600  RMSE_forecast 0.14226  RMSE_analysis 0.14255
-Step   84, time  4.200  RMSE_forecast 0.14175  RMSE_analysis 0.14146
-Step   96, time  4.800  RMSE_forecast 0.14051  RMSE_analysis 0.14049
-Step  108, time  5.400  RMSE_forecast 0.13931  RMSE_analysis 0.13911
-Step  120, time  6.000  RMSE_forecast 0.13805  RMSE_analysis 0.13787
+Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [burn-in]
+Step   12, time  0.600  RMSE_forecast 0.12022  RMSE_analysis 0.10665
+Step   24, time  1.200  RMSE_forecast 0.09192  RMSE_analysis 0.08499
+Step   36, time  1.800  RMSE_forecast 0.06274  RMSE_analysis 0.06395
+Step   48, time  2.400  RMSE_forecast 0.10243  RMSE_analysis 0.08760
+Step   60, time  3.000  RMSE_forecast 0.09070  RMSE_analysis 0.08175
+Step   72, time  3.600  RMSE_forecast 0.07568  RMSE_analysis 0.07408
+Step   84, time  4.200  RMSE_forecast 0.06978  RMSE_analysis 0.04443
+Step   96, time  4.800  RMSE_forecast 0.06724  RMSE_analysis 0.06635
+Step  108, time  5.400  RMSE_forecast 0.06930  RMSE_analysis 0.06626
+Step  120, time  6.000  RMSE_forecast 0.12091  RMSE_analysis 0.11587
 
 Statistics (111 post-burn-in steps):
 ==================================================
-  Mean RMSE (forecast) : 0.14811
-  Mean RMSE (analysis) : 0.14750
+  Mean RMSE (forecast) : 0.09027
+  Mean RMSE (analysis) : 0.08268
   Observations used    : 120
 
