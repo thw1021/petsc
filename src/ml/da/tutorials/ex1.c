@@ -68,8 +68,10 @@ typedef struct {
   DM        da; /* 1D periodic DM storing the Lorenz-96 state */
   PetscInt  n;  /* State dimension (number of grid points) */
   PetscReal F;  /* Constant forcing term in the Lorenz-96 equations */
-  PetscReal dt; /* Integration time step size */
-  TS        ts; /* Reusable time stepper for efficiency */
+  PetscReal dt;   /* Integration time step size */
+  TS        ts;   /* Reusable time stepper for efficiency */
+  PetscReal time; /* Current simulation time */
+  PetscInt  step; /* Current simulation step */
 } Lorenz96Ctx;
 
 /*
@@ -134,11 +136,13 @@ static PetscErrorCode Lorenz96ContextCreate(DM da, PetscInt n, PetscReal F, Pets
   PetscCall(PetscNew(&l95));
   l95->da = da;
   l95->n  = n;
-  l95->F  = F;
-  l95->dt = dt;
+  l95->F    = F;
+  l95->dt   = dt;
+  l95->time = 0.0;
+  l95->step = 0;
 
   /* Create and configure a reusable time stepper to avoid repeated allocation/deallocation */
-  PetscCall(TSCreate(PETSC_COMM_SELF, &l95->ts));
+  PetscCall(TSCreate(PetscObjectComm((PetscObject)da), &l95->ts));
   PetscCall(TSSetProblemType(l95->ts, TS_NONLINEAR));
   PetscCall(TSSetRHSFunction(l95->ts, NULL, Lorenz96RHS, l95));
   PetscCall(TSSetType(l95->ts, TSRK));
@@ -183,7 +187,12 @@ static PetscErrorCode Lorenz96Step(Vec x_in, Vec x_out, void *ctx)
 
   PetscFunctionBeginUser;
   /* Reset the TS time for each integration (required for proper RK4 stepping) */
-  PetscCall(TSSetTime(l95->ts, 0.0));
+  PetscCall(TSSetTime(l95->ts, l95->time));
+  PetscCall(TSSetMaxSteps(l95->ts, l95->step + 1));
+  PetscCall(TSSetStepNumber(l95->ts, l95->step));
+  PetscCall(TSSetTimeStep(l95->ts, l95->dt));
+  PetscCall(TSSetMaxTime(l95->ts, l95->time + l95->dt));
+
   if (x_in != x_out) PetscCall(VecCopy(x_in, x_out));
   PetscCall(TSSolve(l95->ts, x_out));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -192,21 +201,21 @@ static PetscErrorCode Lorenz96Step(Vec x_in, Vec x_out, void *ctx)
 /*
   CreateIdentityObservationMatrix - Create identity observation matrix H for Lorenz-96
 
-  For the fully observed case, H is an n×n identity matrix representing y = H*x where
+  For the fully observed case, H is an nxn identity matrix representing y = H*x where
   each observation corresponds directly to a state variable.
 
   Input Parameter:
 . n - State dimension (number of grid points)
 
   Output Parameter:
-. H - Identity observation matrix (n × n), sparse AIJ format
+. H - Identity observation matrix (n x n), sparse AIJ format
 */
 static PetscErrorCode CreateIdentityObservationMatrix(PetscInt n, Mat *H)
 {
   PetscInt i;
 
   PetscFunctionBeginUser;
-  /* Create identity observation matrix H (n × n) */
+  /* Create identity observation matrix H (n x n) */
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, 1, NULL, 0, NULL, H));
 
   /* Set diagonal entries to 1.0 for identity mapping */
@@ -236,11 +245,11 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *steps, PetscInt 
   /* Validate and constrain integer parameters */
   PetscCheck(*n > 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "State dimension n must be positive, got %" PetscInt_FMT, *n);
   PetscCheck(*steps >= 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of steps must be non-negative, got %" PetscInt_FMT, *steps);
-  PetscCheck(*ensemble_size >= MIN_ENSEMBLE_SIZE, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be at least %d for meaningful statistics, got %" PetscInt_FMT, MIN_ENSEMBLE_SIZE, *ensemble_size);
+  PetscCheck(*ensemble_size >= MIN_ENSEMBLE_SIZE, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be at least %" PetscInt_FMT " for meaningful statistics, got %" PetscInt_FMT, (PetscInt)MIN_ENSEMBLE_SIZE, *ensemble_size);
 
   /* Apply constraints */
   if (*obs_freq < MIN_OBS_FREQ) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency adjusted from %" PetscInt_FMT " to %d\n", *obs_freq, MIN_OBS_FREQ));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency adjusted from %" PetscInt_FMT " to %" PetscInt_FMT "\n", *obs_freq, (PetscInt)MIN_OBS_FREQ));
     *obs_freq = MIN_OBS_FREQ;
   }
   if (*obs_freq > *steps && *steps > 0) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency (%" PetscInt_FMT ") > total steps (%" PetscInt_FMT "), no observations will be assimilated.\n", *obs_freq, *steps));
@@ -355,7 +364,7 @@ int main(int argc, char **argv)
   PetscCall(VecDuplicate(x0, &rmse_work));
 
   /* Spin up truth to get onto attractor */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for %d steps...\n", SPINUP_STEPS));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for %" PetscInt_FMT " steps...\n", (PetscInt)SPINUP_STEPS));
   for (int k = 0; k < SPINUP_STEPS; k++) PetscCall(Lorenz96Step(truth_state, truth_state, l95_ctx));
 
   /* Initialize observation vectors */
@@ -370,7 +379,7 @@ int main(int argc, char **argv)
 
   /* Create and configure PetscDA for ensemble data assimilation */
   PetscCall(PetscDACreate(PETSC_COMM_WORLD, &daas));
-  PetscCall(PetscDASetType(daas, PETSCDAETKF));  /* Set ETKF type */
+  PetscCall(PetscDASetType(daas, PETSCDAETKF)); /* Set ETKF type */
   PetscCall(PetscDASetSizes(daas, n, n, ensemble_size));
   PetscCall(PetscDASetFromOptions(daas));
   PetscCall(PetscDASetUp(daas));
@@ -437,6 +446,8 @@ int main(int argc, char **argv)
 
     /* Propagate ensemble and truth trajectory */
     if (step < steps) {
+      l95_ctx->time = step * dt;
+      l95_ctx->step = step;
       PetscCall(PetscDAApplyModel(daas, Lorenz96Step, l95_ctx));
       PetscCall(Lorenz96Step(truth_state, truth_state, l95_ctx));
     }
@@ -510,7 +521,7 @@ int main(int argc, char **argv)
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean      : %.6f\n", (double)mean_target));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Std Dev   : %.6f\n", (double)std_target));
 
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nSample statistics (n=%d):\n", test_size));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nSample statistics (n=%" PetscInt_FMT "):\n", (PetscInt)test_size));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean      : %.6f (error: %.6f)\n", (double)sample_mean, (double)PetscAbsReal(sample_mean - mean_target)));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Std Dev   : %.6f (error: %.6f)\n", (double)sample_std, (double)PetscAbsReal(sample_std - std_target)));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Skewness  : %.6f (expected ~0 for Gaussian)\n", (double)skewness));

@@ -9,7 +9,7 @@ PetscDALETKF Object:
   Square root type: cholesky
   Local observations per vertex: 40
   Localization matrix: not set
-Localization matrix Q created: 40x40, full localization (all weights = 1.0)
+Localization matrix Q created: 40 x 40, full localization (all weights = 1.0)
 Lorenz-96 LETKF Example
 ======================
   State dimension       : 40
@@ -41,4 +41,3 @@ Statistics (111 post-burn-in steps):
   Mean RMSE (analysis) : 0.14750
   Observations used    : 120
 
-[0] function name: PetscDALETKFSetLocalization_C
