@@ -1033,13 +1033,13 @@ PetscErrorCode PetscDAComputeAnomalies(PetscDA da, Vec mean, Mat *anomalies)
   Notes:
   The observation matrix H maps from state space (N dimensions) to observation
   space (P dimensions): y = H*x + noise
-  
+
   H must be a sparse AIJ matrix (will be AIJKokkos for GPU support).
-  
+
   For identity observations (observe entire state), create H as:
     MatCreateAIJ(..., n, n, 1, NULL, 0, NULL, &H)
     for i=0 to n-1: MatSetValue(H, i, i, 1.0, INSERT_VALUES)
-  
+
   For partial observations, set appropriate rows and columns to observe
   specific state components.
 

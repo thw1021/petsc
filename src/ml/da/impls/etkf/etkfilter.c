@@ -399,7 +399,7 @@ PetscErrorCode PetscDAETKFFinalizePackage(void)
   Step 1 computes the state mean, Step 2 the state anomalies, Steps 3-4 build the normalized innovation statistics,
   Step 5 assembles the reduced-space inverse, Step 6 forms the analysis weights, Steps 7-9 construct the square-root
   transform, and Step 10 applies the transform to refresh every ensemble member.
-  
+
   The observation matrix H maps state to observations: y = H*x + noise
 
   Level: advanced
