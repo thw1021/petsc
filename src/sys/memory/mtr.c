@@ -208,13 +208,9 @@ static PetscErrorCode PetscTrMallocDefault(size_t a, PetscBool clear, int lineno
   #if defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE)
   if (!clear && TRdebugIinitializenan) {
     size_t     n = a / sizeof(PetscReal);
-    PetscReal *s = (PetscReal *)inew;
-      /* from https://www.doc.ic.ac.uk/~eedwards/compsys/float/nan.html */
-    #if defined(PETSC_USE_REAL_SINGLE)
-    int nas = 0x7F800002;
-    #else
-    PetscInt64 nas = 0x7FF0000000000002;
-    #endif
+    PetscReal *s = (PetscReal *)inew, nas;
+
+    PetscCall(PetscRealGetNaN(&nas));
     for (size_t i = 0; i < n; i++) memcpy(s + i, &nas, sizeof(PetscReal));
   }
   #endif
@@ -1025,5 +1021,39 @@ PetscErrorCode PetscMallocLogRequestedSizeGet(PetscBool *flg)
 {
   PetscFunctionBegin;
   *flg = TRrequestedSize;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+#include <inttypes.h>
+/*@
+  PetscRealGetNaN - fills a `PetscReal` with a NaN
+
+  Output Parameter:
+. r - filled with NaN
+
+  Level: developer
+
+  Notes:
+  From https://www.doc.ic.ac.uk/~eedwards/compsys/float/nan.html
+
+  This avoids the need to change the signal handler which is required if one computes the value of NaN by dividing 0 by 0.
+
+.seealso: `PETSC_INFINITY`
+@*/
+PetscErrorCode PetscRealGetNaN(PetscReal *r)
+{
+  PetscFunctionBegin;
+  #if defined(PETSC_USE_REAL_SINGLE)
+  int nas = 0x7F800002;
+  #elif defined(PETSC_USE_REAL_DOUBLE)
+  PetscInt64 nas = 0x7FF0000000000002;
+  #elif defined(PETSC_USE_REAL___FLOAT128)
+  struct {PetscInt64 a; PetscInt64 b;} nas;
+  nas.b = 0XFFFFFFFFFFFFFFFF;
+  nas.a = 0X7FFFFFFFFFFFFFFF;
+  #else
+  short nas = 0x7e00;
+  #endif
+  memcpy(r, &nas, sizeof(PetscReal));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

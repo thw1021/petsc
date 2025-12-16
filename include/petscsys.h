@@ -2951,3 +2951,5 @@ PETSC_EXTERN PetscErrorCode PetscStackView(FILE *);
 #else
   #define PetscStackView(file) PETSC_SUCCESS
 #endif
+
+PETSC_EXTERN PetscErrorCode PetscRealGetNaN(PetscReal *r);
