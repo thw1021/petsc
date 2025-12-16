@@ -77,10 +77,11 @@ PETSC_EXTERN PetscErrorCode PetscDAETKFInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDAETKFFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDAETKFSetSqrtType(PetscDA, PetscDASqrtType);
 PETSC_EXTERN PetscErrorCode PetscDAETKFGetSqrtType(PetscDA, PetscDASqrtType *);
-
+#if defined(PETSC_HAVE_KOKKOS)
 PETSC_EXTERN PetscErrorCode PetscDALETKFInitialize(PetscDA);
 PETSC_EXTERN PetscErrorCode PetscDALETKFInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDALETKFFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDALETKFSetLocalization(PetscDA, Mat);
 PETSC_EXTERN PetscErrorCode PetscDALETKFSetSqrtType(PetscDA, PetscDASqrtType);
 PETSC_EXTERN PetscErrorCode PetscDALETKFGetSqrtType(PetscDA, PetscDASqrtType *);
+#endif
