@@ -90,7 +90,7 @@ static void ComputeFlux(PetscReal g, PetscReal h, PetscReal hu, PetscReal *F_h, 
 
 /*
   ShallowWaterRHS - Compute the right-hand side of the shallow water equations
-  
+
   Dispatches to appropriate flux scheme implementation.
 */
 static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ctx)
@@ -288,7 +288,7 @@ static PetscErrorCode ShallowWaterStep(Vec x_in, Vec x_out, void *ctx)
 
 /*
   ShallowWaterSolution_Dam - Smooth periodic "dam-like" initial condition
-  
+
   Creates a smooth Gaussian bump compatible with periodic boundaries.
   This avoids boundary artifacts while maintaining dam-like evolution.
 */
@@ -314,7 +314,7 @@ static PetscErrorCode ShallowWaterSolution_Dam(PetscReal x, PetscReal *h, PetscR
 
 /*
   ShallowWaterSolution_Wave - Traveling wave initial condition
-  
+
   Sets smooth traveling wave with sinusoidal perturbation.
   For shallow water, a rightward-traveling wave requires velocity perturbation
   coupled to height: u' = c * (h'/h_mean) where c = sqrt(g*h_mean).
@@ -360,7 +360,7 @@ static PetscErrorCode ShallowWaterSolution(Ex3TestType test_type, PetscReal x, P
 
 /*
   CreateObservationMatrix - Create observation matrix H for shallow water
-  
+
   Observes water height (h) at every other grid point.
   This creates a sparse matrix mapping from full state (n*ndof) to observations.
   For n=80 grid points, we observe at points 0, 2, 4, ..., 78 giving nobs=40 observations.
@@ -389,7 +389,7 @@ static PetscErrorCode CreateObservationMatrix(PetscInt n, PetscInt ndof, PetscIn
 
 /*
   CreateLocalizationMatrix - Create and initialize localization matrix Q for shallow water
-  
+
   Q is a (state_size x obs_size) matrix that specifies which observations affect each state variable.
   For no localization (global assimilation), each state variable uses all observations.
 */
