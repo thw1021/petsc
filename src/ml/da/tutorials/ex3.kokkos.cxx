@@ -408,7 +408,6 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt state_size, PetscInt obs
   }
   PetscCall(MatAssemblyBegin(*Q, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*Q, MAT_FINAL_ASSEMBLY));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
