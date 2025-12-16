@@ -391,8 +391,8 @@ PetscErrorCode PetscDAETKFFinalizePackage(void)
 
   Input Parameters:
 + da          - the `PetscDA` context owning the forecast ensemble and buffers
-. observation - observation vector `y` ∈ ℝ^P
-- H           - observation operator matrix (P × N), sparse AIJ format
+. observation - observation vector `y` in R^P
+- H           - observation operator matrix (P x N), sparse AIJ format
 
   Notes:
   The implementation follows the book's deterministic ETKF steps\:
@@ -425,7 +425,7 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
   impl           = (PetscDAETKFData *)da->data;
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
-  PetscCall(PetscInfo(da, "squaroot type %s, %d ensembles\n", (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky", (int)m));
+  PetscCall(PetscInfo(da, "squaroot type %s, %" PetscInt_FMT " ensembles\n", (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky", m));
 
   /* Check for reallocation needs */
   if (impl->mean) {
