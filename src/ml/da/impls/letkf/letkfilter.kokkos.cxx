@@ -20,8 +20,7 @@ typedef struct {
   PetscInt n_grid;  // Number of grid points (n_grid = state_size / da->ndof)
 } PetscDALETKFData;
 
-static PetscFunctionList PetscDALETKFSqrtList           = NULL;
-static PetscBool         PetscDALETKFPackageInitialized = PETSC_FALSE;
+static PetscBool PetscDALETKFPackageInitialized = PETSC_FALSE;
 
 /* ========================================================================== */
 /*                    Helper Functions for LETKF Analysis                     */
@@ -156,24 +155,6 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat w_ones)
 }
 
 /* ========================================================================== */
-/*                       Square Root Type Setters                            */
-/* ========================================================================== */
-
-static PetscErrorCode PetscDALETKFSetSqrt_Cholesky(PetscDA da)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscDALETKFSetSqrtType(da, PETSCDA_SQRT_CHOLESKY));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode PetscDALETKFSetSqrt_Eigen(PetscDA da)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscDALETKFSetSqrtType(da, PETSCDA_SQRT_EIGEN));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/* ========================================================================== */
 /*                       LETKF Implementation Lifecycle                       */
 /* ========================================================================== */
 
@@ -204,30 +185,6 @@ static PetscErrorCode PetscDALETKFDestroy(PetscDA da)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscDASetFromOptions_DASLETKF(PetscDA da, PetscOptionItems *PetscOptions)
-{
-  PetscOptionItems PetscOptionsObject;
-  const char      *defaultType;
-  char             typeName[256];
-  PetscBool        set              = PETSC_FALSE;
-  PetscErrorCode (*setter)(PetscDA) = NULL;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-
-  PetscOptionsObject = PetscOptions ? *PetscOptions : NULL;
-
-  defaultType = (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky";
-  PetscCall(PetscStrncpy(typeName, defaultType, sizeof(typeName)));
-  PetscCall(PetscOptionsFList("-da_sqrt_type", "Matrix square root factorization", "PetscDALETKFSetSqrtType", PetscDALETKFSqrtList, defaultType, typeName, sizeof(typeName), &set));
-  if (set) {
-    PetscCall(PetscFunctionListFind(PetscDALETKFSqrtList, typeName, &setter));
-    PetscCheck(setter, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDALETKF square-root type \"%s\"", typeName);
-    PetscCall((*setter)(da));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* ========================================================================== */
 /*                          Package Initialization                           */
 /* ========================================================================== */
@@ -244,8 +201,6 @@ PetscErrorCode PetscDALETKFInitializePackage(void)
   PetscFunctionBegin;
   if (PetscDALETKFPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
   PetscDALETKFPackageInitialized = PETSC_TRUE;
-  PetscCall(PetscFunctionListAdd(&PetscDALETKFSqrtList, "cholesky", PetscDALETKFSetSqrt_Cholesky));
-  PetscCall(PetscFunctionListAdd(&PetscDALETKFSqrtList, "eigen", PetscDALETKFSetSqrt_Eigen));
   PetscCall(PetscRegisterFinalize(PetscDALETKFFinalizePackage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -261,7 +216,6 @@ PetscErrorCode PetscDALETKFFinalizePackage(void)
 {
   PetscFunctionBegin;
   PetscDALETKFPackageInitialized = PETSC_FALSE;
-  PetscCall(PetscFunctionListDestroy(&PetscDALETKFSqrtList));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -804,17 +758,17 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
+/*@
   PetscDALETKFView - Views a `PetscDALETKF` and its implementation-specific data structure.
 
   Input Parameters:
 + da     - the `PetscDA` context
 - viewer - the `PetscViewer` to use (or `NULL` for standard output)
 
-  Level: internal
+  Level: beginner
 
 .seealso: [](ch_da), `PetscDAViewFromOptions()`
-*/
+@*/
 static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
 {
   PetscBool         iascii;
@@ -840,16 +794,16 @@ static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
+/*@
   PetscDALETKFInitialize - Installs the LETKF-specific operations on a newly created `PetscDA` object.
 
   Input Parameter:
 . da - the `PetscDA` object to configure
 
-  Level: internal
+  Level: advanced
 
 .seealso: [](ch_da), `PetscDA`, `PetscDARegister()`, `PetscDALETKFAnalysis()`
-*/
+@*/
 PetscErrorCode PetscDALETKFInitialize(PetscDA da)
 {
   PetscDALETKFData *impl;
@@ -866,7 +820,7 @@ PetscErrorCode PetscDALETKFInitialize(PetscDA da)
   da->ops->computeanomalies = NULL; /* We implement this directly in the analysis function */
   da->ops->destroy          = PetscDALETKFDestroy;
   da->ops->view             = PetscDALETKFView;
-  da->ops->setfromoptions   = PetscDASetFromOptions_DASLETKF;
+  da->ops->setfromoptions   = NULL;
 
   /* Initialize default values */
   impl->p_local = Q_NUM_OBSERVATIONS_MAX;
