@@ -464,8 +464,7 @@ PetscErrorCode PetscDASetFromOptions(PetscDA da)
 
   /* Allow runtime selection of square root type */
   sqrt_default = (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky";
-  PetscCall(PetscStrncpy(sqrt_type_name, sqrt_default, sizeof(sqrt_type_name)));
-  PetscCall(PetscOptionsString("-petscda_sqrt_type", "Matrix square root factorization", "PetscDASetSqrtType", sqrt_type_name, sqrt_type_name, sizeof(sqrt_type_name), &sqrt_set));
+  PetscCall(PetscOptionsString("-petscda_sqrt_type", "Matrix square root factorization", "PetscDASetSqrtType", sqrt_default, sqrt_type_name, sizeof(sqrt_type_name), &sqrt_set));
   if (sqrt_set) {
     PetscBool match_cholesky, match_eigen;
     PetscCall(PetscStrcmp(sqrt_type_name, "cholesky", &match_cholesky));
