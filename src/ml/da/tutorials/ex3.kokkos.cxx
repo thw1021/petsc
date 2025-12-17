@@ -886,11 +886,11 @@ int main(int argc, char **argv)
 
     test:
       suffix: etkf_dam
-      args: -da_sqrt_type cholesky -ex3_test dam -petscda_type etkf
+      args: -petscda_sqrt_type cholesky -ex3_test dam -petscda_type etkf
 
     test:
       suffix: letkf_dam
-      args: -da_sqrt_type eigen -ex3_test dam -petscda_type letkf
+      args: -petscda_sqrt_type eigen -ex3_test dam -petscda_type letkf
 
     test:
       suffix: wave
