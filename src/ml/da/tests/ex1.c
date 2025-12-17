@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 
   test:
     suffix: chol
-    requires: !complex !single
-    args: -da_view -da_etkf_sqrt_type cholesky
+    requires: !complex
+    args: -da_view -petscda_sqrt_type cholesky
 
 TEST*/
