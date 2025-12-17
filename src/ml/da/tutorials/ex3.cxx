@@ -4,7 +4,6 @@
 #include <petscdmda.h>
 #include <petscts.h>
 #include <petscvec.h>
-#include <Kokkos_Core.hpp>
 
 static char help[] = "Shallow water test cases with data assimilation.\n"
                      "Implements 1D shallow water equations with 2 DOF per grid point (h, hu).\n\n"
