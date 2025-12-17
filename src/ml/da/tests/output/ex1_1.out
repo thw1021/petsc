@@ -5,5 +5,6 @@ PetscDA Object: 1 MPI process
   Observation size: 10
   Ensemble size: 20
   Assembled: true
+  Inflation: 1.
 PetscDAETKF Object:
   Square root type: eigen
