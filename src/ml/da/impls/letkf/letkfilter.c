@@ -105,7 +105,7 @@ static PetscErrorCode ComputeEnsembleMean(Mat ensemble, PetscInt ensemble_size, 
 }
 
 /*
-  ComputeAnomalies - Direct implementation of anomaly computation, X = (E - x_mean * 1') / sqrt(m - 1) 
+  ComputeAnomalies - Direct implementation of anomaly computation, X = (E - x_mean * 1') / sqrt(m - 1)
 
   Input Parameters:
 + ensemble - ensemble matrix (state_size x ensemble_size)
