@@ -16,13 +16,12 @@
    code (0 on success).  After the copy the PETSc matrix is restored, so the
    function can be called at any point after the matrix has been assembled.
    ---------------------------------------------------------------------- */
-template <class Scalar = double>
 PetscErrorCode PetscDenseToKokkosDevice(Mat                                          A, // PETSc matrix (sequential dense)
-                                        Kokkos::View<Scalar **, Kokkos::LayoutLeft,
+                                        Kokkos::View<PetscScalar **, Kokkos::LayoutLeft,
                                                      Kokkos::DefaultExecutionSpace> &dA) // device view (output)
 {
-  PetscInt m, n;
-  Scalar  *hostPtr = nullptr; // PETSc raw pointer (col-major)
+  PetscInt     m, n;
+  PetscScalar *hostPtr = nullptr; // PETSc raw pointer (col-major)
 
   /* 1) matrix dimensions ------------------------------------------------ */
   PetscCall(MatGetSize(A, &m, &n));
@@ -31,11 +30,11 @@ PetscErrorCode PetscDenseToKokkosDevice(Mat                                     
   PetscCall(MatDenseGetArray(A, &hostPtr));
 
   /* 3) temporary unmanaged host view that aliases the PETSc buffer -------- */
-  using unmanaged_host_view = Kokkos::View<Scalar **, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using unmanaged_host_view = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
   unmanaged_host_view hA(hostPtr, m, n); // zero-copy, read-only
 
   /* 4) allocate the *owned* device view --------------------------------- */
-  using device_view = Kokkos::View<Scalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>;
+  using device_view = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>;
   dA                = device_view("A_device", m, n); // allocated on the device
 
   /* 5) deep copy host -> device ------------------------------------------ */

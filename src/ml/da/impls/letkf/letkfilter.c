@@ -272,7 +272,12 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   /* ===================================================================== */
   /* Perform local analysis for all vertices */
   /* ===================================================================== */
+
+#if defined(PETSC_HAVE_KOKKOS)
   PetscCall(PetscDALETKFLocalAnalysis(da, impl, m, n_vertices, scale, sqrt_m_minus_1, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
+#else
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP_SYS, "KOKKOS require for DALETKF")
+#endif
   PetscCall(MatDestroy(&X));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
