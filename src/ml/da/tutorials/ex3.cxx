@@ -12,7 +12,7 @@ static char help[] = "Shallow water test cases with data assimilation.\n"
                      "  ./ex3.kokkos -ex3_test wave -steps 500\n\n";
 
 /* Default parameter values */
-#define DEFAULT_N             (2 * Q_NUM_OBSERVATIONS_MAX) /* 80 grid points */
+#define DEFAULT_N             (2 * Q_NUM_LOCAL_OBSERVATIONS_MAX) /* 80 grid points */
 #define DEFAULT_STEPS         1000
 #define DEFAULT_BURN          100
 #define DEFAULT_OBS_FREQ      5
@@ -369,8 +369,8 @@ static PetscErrorCode CreateObservationMatrix(PetscInt n, PetscInt ndof, PetscIn
   PetscInt i;
 
   PetscFunctionBeginUser;
-  PetscCheck(nobs == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Number of observations (%" PetscInt_FMT ") must equal Q_NUM_OBSERVATIONS_MAX (%d)", nobs, Q_NUM_OBSERVATIONS_MAX);
-  PetscCheck(n == 2 * Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Number of grid points (%" PetscInt_FMT ") must equal 2*Q_NUM_OBSERVATIONS_MAX (%d)", n, 2 * Q_NUM_OBSERVATIONS_MAX);
+  PetscCheck(nobs == Q_NUM_LOCAL_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Number of observations (%" PetscInt_FMT ") must equal Q_NUM_LOCAL_OBSERVATIONS_MAX (%d)", nobs, Q_NUM_LOCAL_OBSERVATIONS_MAX);
+  PetscCheck(n == 2 * Q_NUM_LOCAL_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Number of grid points (%" PetscInt_FMT ") must equal 2*Q_NUM_LOCAL_OBSERVATIONS_MAX (%d)", n, 2 * Q_NUM_LOCAL_OBSERVATIONS_MAX);
 
   /* Create observation matrix H (nobs x n*ndof) */
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, nobs, n * ndof, 1, NULL, 0, NULL, H));
@@ -417,8 +417,8 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *nobs, PetscInt *
 {
   PetscFunctionBeginUser;
   PetscCheck(*n > 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "State dimension n must be positive, got %" PetscInt_FMT, *n);
-  PetscCheck(*n == 2 * Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "For LETKF, n must be 2*Q_NUM_OBSERVATIONS_MAX (%d), got %" PetscInt_FMT, 2 * Q_NUM_OBSERVATIONS_MAX, *n);
-  PetscCheck(*nobs == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Number of observations must be Q_NUM_OBSERVATIONS_MAX (%d), got %" PetscInt_FMT, Q_NUM_OBSERVATIONS_MAX, *nobs);
+  PetscCheck(*n == 2 * Q_NUM_LOCAL_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "For LETKF, n must be 2*Q_NUM_LOCAL_OBSERVATIONS_MAX (%d), got %" PetscInt_FMT, 2 * Q_NUM_LOCAL_OBSERVATIONS_MAX, *n);
+  PetscCheck(*nobs == Q_NUM_LOCAL_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Number of observations must be Q_NUM_LOCAL_OBSERVATIONS_MAX (%d), got %" PetscInt_FMT, Q_NUM_LOCAL_OBSERVATIONS_MAX, *nobs);
   PetscCheck(*steps >= 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of steps must be non-negative, got %" PetscInt_FMT, *steps);
   PetscCheck(*ensemble_size >= MIN_ENSEMBLE_SIZE, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be at least %d for meaningful statistics, got %" PetscInt_FMT, MIN_ENSEMBLE_SIZE, *ensemble_size);
 
@@ -570,8 +570,8 @@ int main(int argc, char **argv)
   n_spin = 0; /* No spinup needed for either test - dam evolves naturally, wave is already smooth */
   PetscOptionsEnd();
 
-  /* LETKF constraint: nobs = Q_NUM_OBSERVATIONS_MAX, observe every other point */
-  PetscInt nobs = Q_NUM_OBSERVATIONS_MAX;
+  /* LETKF constraint: nobs = Q_NUM_LOCAL_OBSERVATIONS_MAX, observe every other point */
+  PetscInt nobs = Q_NUM_LOCAL_OBSERVATIONS_MAX;
 
   /* Validate and constrain parameters */
   PetscCall(ValidateParameters(&n, &nobs, &steps, &burn, &obs_freq, &ensemble_size, &dt, &g, &obs_error_std));

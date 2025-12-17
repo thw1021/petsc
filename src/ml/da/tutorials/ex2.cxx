@@ -32,7 +32,7 @@ static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
 #define PROGRESS_INTERVALS 10
 
 /* LETKF constraint: Fixed number of observations per vertex */
-#define Q_NUM_OBSERVATIONS_MAX 40
+#define Q_NUM_LOCAL_OBSERVATIONS_MAX 40
 
 typedef struct {
   DM        da;   /* 1D periodic DM storing the Lorenz-96 state */
@@ -173,8 +173,8 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *steps, PetscInt 
   PetscCheck(*steps >= 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of steps must be non-negative, got %" PetscInt_FMT, *steps);
   PetscCheck(*ensemble_size >= MIN_ENSEMBLE_SIZE, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be at least %" PetscInt_FMT " for meaningful statistics, got %" PetscInt_FMT, (PetscInt)MIN_ENSEMBLE_SIZE, *ensemble_size);
 
-  /* LETKF constraint: n must equal Q_NUM_OBSERVATIONS_MAX for fully observed case */
-  PetscCheck(*n == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "For fully observed case, n (%" PetscInt_FMT ") must equal Q_NUM_OBSERVATIONS_MAX (%" PetscInt_FMT ")", *n, (PetscInt)Q_NUM_OBSERVATIONS_MAX);
+  /* LETKF constraint: n must equal Q_NUM_LOCAL_OBSERVATIONS_MAX for fully observed case */
+  PetscCheck(*n == Q_NUM_LOCAL_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "For fully observed case, n (%" PetscInt_FMT ") must equal Q_NUM_LOCAL_OBSERVATIONS_MAX (%" PetscInt_FMT ")", *n, (PetscInt)Q_NUM_LOCAL_OBSERVATIONS_MAX);
 
   if (*obs_freq < MIN_OBS_FREQ) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency adjusted from %" PetscInt_FMT " to %" PetscInt_FMT "\n", *obs_freq, (PetscInt)MIN_OBS_FREQ));
@@ -209,7 +209,7 @@ static PetscErrorCode ComputeRMSE(Vec v1, Vec v2, Vec work, PetscInt n, PetscRea
 /*
   CreateLocalizationMatrix - Create and initialize full localization matrix Q
 
-  For the fully observed case (n = Q_NUM_OBSERVATIONS_MAX), Q is a dense nxn
+  For the fully observed case (n = Q_NUM_LOCAL_OBSERVATIONS_MAX), Q is a dense nxn
   matrix with all entries = 1.0, meaning each vertex uses all observations.
 */
 static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
@@ -218,11 +218,11 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
 
   PetscFunctionBeginUser;
   /* Verify constraint */
-  PetscCheck(n == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "For fully observed case, n (%" PetscInt_FMT ") must equal Q_NUM_OBSERVATIONS_MAX (%" PetscInt_FMT ")", n, (PetscInt)Q_NUM_OBSERVATIONS_MAX);
+  PetscCheck(n == Q_NUM_LOCAL_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "For fully observed case, n (%" PetscInt_FMT ") must equal Q_NUM_LOCAL_OBSERVATIONS_MAX (%" PetscInt_FMT ")", n, (PetscInt)Q_NUM_LOCAL_OBSERVATIONS_MAX);
 
   /* Create Q matrix (n x n for identity observation operator)
-     Each row will have exactly Q_NUM_OBSERVATIONS_MAX non-zeros */
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, Q_NUM_OBSERVATIONS_MAX, NULL, 0, NULL, Q));
+     Each row will have exactly Q_NUM_LOCAL_OBSERVATIONS_MAX non-zeros */
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, Q_NUM_LOCAL_OBSERVATIONS_MAX, NULL, 0, NULL, Q));
 
   /* Initialize with full localization (all weights = 1.0)
      Each vertex i uses all n observations */
@@ -232,13 +232,13 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
   PetscCall(MatAssemblyBegin(*Q, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*Q, MAT_FINAL_ASSEMBLY));
 
-  /* Validate: Check each row has exactly Q_NUM_OBSERVATIONS_MAX non-zeros */
+  /* Validate: Check each row has exactly Q_NUM_LOCAL_OBSERVATIONS_MAX non-zeros */
   for (i = 0; i < n; i++) {
     PetscInt           ncols;
     const PetscInt    *cols;
     const PetscScalar *vals;
     PetscCall(MatGetRow(*Q, i, &ncols, &cols, &vals));
-    PetscCheck(ncols == Q_NUM_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Row %" PetscInt_FMT " has %" PetscInt_FMT " non-zeros, expected %" PetscInt_FMT, i, ncols, (PetscInt)Q_NUM_OBSERVATIONS_MAX);
+    PetscCheck(ncols == Q_NUM_LOCAL_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Row %" PetscInt_FMT " has %" PetscInt_FMT " non-zeros, expected %" PetscInt_FMT, i, ncols, (PetscInt)Q_NUM_LOCAL_OBSERVATIONS_MAX);
     PetscCall(MatRestoreRow(*Q, i, &ncols, &cols, &vals));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -371,7 +371,7 @@ int main(int argc, char **argv)
                         "  Observation noise std : %.3f\n"
                         "  Random seed           : %" PetscInt_FMT "\n"
                         "  Localization          : Full (Q_NUM_OBS_MAX = %" PetscInt_FMT ")\n\n",
-                        n, ensemble_size, (double)F, (double)dt, steps, burn, obs_freq, (double)obs_error_std, random_seed, (PetscInt)Q_NUM_OBSERVATIONS_MAX));
+                        n, ensemble_size, (double)F, (double)dt, steps, burn, obs_freq, (double)obs_error_std, random_seed, (PetscInt)Q_NUM_LOCAL_OBSERVATIONS_MAX));
 
   /* Main assimilation cycle: forecast and analysis steps */
   for (step = 0; step <= steps; step++) {
