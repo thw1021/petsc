@@ -101,6 +101,11 @@
 ```{rubric} PetscRegressor:
 ```
 
+```{rubric} ML/DA:
+```
+
+- Add data assimilation (PetscDA) base class with implementation of ETKF: [](ch_da)
+
 ```{rubric} DM/DA:
 ```
 
@@ -129,3 +134,4 @@
 
 ```{rubric} Fortran:
 ```
+
