@@ -4,7 +4,6 @@
 #include <petscdmda.h>
 #include <petscts.h>
 #include <petscvec.h>
-#include <Kokkos_Core.hpp>
 
 static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
                      "Algorithm 6.4 of \n"
