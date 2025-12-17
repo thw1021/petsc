@@ -444,8 +444,12 @@ PetscErrorCode PetscDAGetType(PetscDA da, PetscDAType *type)
 @*/
 PetscErrorCode PetscDASetFromOptions(PetscDA da)
 {
-  char      type_name[256];
-  PetscBool type_set;
+  char            type_name[256];
+  PetscBool       type_set;
+  char            sqrt_type_name[256];
+  PetscBool       sqrt_set = PETSC_FALSE;
+  const char     *sqrt_default;
+  PetscDASqrtType sqrt_type;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
@@ -457,6 +461,22 @@ PetscErrorCode PetscDASetFromOptions(PetscDA da)
   if (type_set) PetscCall(PetscDASetType(da, type_name));
 
   PetscCall(PetscOptionsReal("-petscda_inflation", "Inflation factor", "PetscDASetInflation", da->inflation, &da->inflation, NULL));
+
+  /* Allow runtime selection of square root type */
+  sqrt_default = (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky";
+  PetscCall(PetscStrncpy(sqrt_type_name, sqrt_default, sizeof(sqrt_type_name)));
+  PetscCall(PetscOptionsString("-petscda_sqrt_type", "Matrix square root factorization", "PetscDASetSqrtType", sqrt_type_name, sqrt_type_name, sizeof(sqrt_type_name), &sqrt_set));
+  if (sqrt_set) {
+    PetscBool match_cholesky, match_eigen;
+    PetscCall(PetscStrcmp(sqrt_type_name, "cholesky", &match_cholesky));
+    PetscCall(PetscStrcmp(sqrt_type_name, "eigen", &match_eigen));
+    if (match_cholesky) {
+      sqrt_type = PETSCDA_SQRT_CHOLESKY;
+    } else if (match_eigen) {
+      sqrt_type = PETSCDA_SQRT_EIGEN;
+    } else SETERRQ(PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PetscDA square-root type \"%s\"", sqrt_type_name);
+    PetscCall(PetscDASetSqrtType(da, sqrt_type));
+  }
 
   if (da->ops->setfromoptions) PetscCall((*da->ops->setfromoptions)(da, &PetscOptionsObject));
   PetscOptionsEnd();
@@ -913,7 +933,7 @@ PetscErrorCode PetscDASetEnsembleMember(PetscDA da, PetscInt member_idx, Vec mem
 }
 
 /*@
-  PetscDAComputeMean - Computes the ensemble mean state for a `PetscDA`.
+  PetscErrorCode PetscDAComputeEnsembleMean(PetscDA da, Vec mean) - Computes ensemble mean for a `PetscDA`
 
   Collective
 
@@ -1033,12 +1053,9 @@ PetscErrorCode PetscDAComputeAnomalies(PetscDA da, Vec mean, Mat *anomalies)
   The observation matrix H maps from state space (N dimensions) to observation
   space (P dimensions): y = H*x + noise
 
-  H must be a sparse AIJ matrix (will be AIJKokkos for GPU support).
+  H must be a sparse AIJ matrix
 
-  For identity observations (observe entire state), create H as:
-    MatCreateAIJ(..., n, n, 1, NULL, 0, NULL, &H)
-    for i=0 to n-1: MatSetValue(H, i, i, 1.0, INSERT_VALUES)
-
+  For identity observations (observe entire state), use an identity matrix for H.
   For partial observations, set appropriate rows and columns to observe
   specific state components.
 
