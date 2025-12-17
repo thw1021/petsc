@@ -7,7 +7,7 @@
    on the *device* (DefaultExecutionSpace).  The conversion is performed by:
 
       1. Getting the matrix size.
-      2. Getting a raw host pointer to the PETSc data (column‑major).
+      2. Getting a raw host pointer to the PETSc data (column-major).
       3. Wrapping that pointer with a temporary unmanaged host view.
       4. Allocating an owned device view.
       5. deep_copy( device_view , unmanaged_host_view ).
@@ -22,7 +22,7 @@ PetscErrorCode PetscDenseToKokkosDevice(Mat                                     
                                                      Kokkos::DefaultExecutionSpace> &dA) // device view (output)
 {
   PetscInt m, n;
-  Scalar  *hostPtr = nullptr; // PETSc raw pointer (col‑major)
+  Scalar  *hostPtr = nullptr; // PETSc raw pointer (col-major)
 
   /* 1) matrix dimensions ------------------------------------------------ */
   PetscCall(MatGetSize(A, &m, &n));
@@ -32,13 +32,13 @@ PetscErrorCode PetscDenseToKokkosDevice(Mat                                     
 
   /* 3) temporary unmanaged host view that aliases the PETSc buffer -------- */
   using unmanaged_host_view = Kokkos::View<Scalar **, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-  unmanaged_host_view hA(hostPtr, m, n); // zero‑copy, read‑only
+  unmanaged_host_view hA(hostPtr, m, n); // zero-copy, read-only
 
   /* 4) allocate the *owned* device view --------------------------------- */
   using device_view = Kokkos::View<Scalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>;
   dA                = device_view("A_device", m, n); // allocated on the device
 
-  /* 5) deep copy host → device ------------------------------------------ */
+  /* 5) deep copy host -> device ------------------------------------------ */
   Kokkos::deep_copy(dA, hA);
 
   /* 6) give PETSc the pointer back -------------------------------------- */
