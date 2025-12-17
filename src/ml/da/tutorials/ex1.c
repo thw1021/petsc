@@ -574,12 +574,12 @@ int main(int argc, char **argv)
   test:
     requires: !complex
     diff_args: -j
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30 -da_sqrt_type eigen
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30 -petscda_sqrt_type eigen
 
   test:
     suffix: chol
     diff_args: -j
     requires: !complex
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -da_view -ensemble_size 30 -da_sqrt_type cholesky
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -da_view -ensemble_size 30 -petscda_sqrt_type cholesky
 
 TEST*/

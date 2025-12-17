@@ -464,7 +464,7 @@ int main(int argc, char **argv)
     suffix: chol
     diff_args: -j
     requires: !complex kokkos_kernels
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -da_view -ensemble_size 30 -da_sqrt_type cholesky
+    args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -da_view -ensemble_size 30 -petscda_sqrt_type cholesky
 
   test:
     suffix: etkf
