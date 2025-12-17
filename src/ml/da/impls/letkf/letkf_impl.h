@@ -19,5 +19,7 @@ typedef struct {
   PetscInt n_grid;  // Number of grid points (n_grid = state_size / da->ndof)
 } PetscDALETKFData;
 
+#if defined(PETSC_HAVE_KOKKOS)
 /* Function declarations */
 PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, PetscInt m, PetscInt n_vertices, PetscScalar scale, PetscScalar sqrt_m_minus_1, Mat X, Vec observation, Mat Z_global, Vec y_mean_global, Vec r_inv_sqrt_global);
+#endif
