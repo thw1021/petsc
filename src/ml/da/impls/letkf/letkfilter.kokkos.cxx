@@ -99,61 +99,6 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  BroadcastWeightVector - Creates matrix with weight vector replicated across all columns
-
-  Input Parameters:
-+ w - weight vector of size m (analysis weights from LETKF update)
-- m - ensemble size (number of columns to replicate, must equal vector size)
-
-  Output Parameter:
-. w_ones - m x m dense matrix where each column is a copy of w (i.e., w * 1^T)
-*/
-static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat w_ones)
-{
-  const PetscScalar *w_array;
-  PetscScalar       *mat_array;
-  PetscInt           w_size, w_size_local, mat_rows_local, mat_cols_local;
-  PetscInt           i, lda;
-
-  PetscFunctionBegin;
-  /* Validate input parameters */
-  PetscValidHeaderSpecific(w, VEC_CLASSID, 1);
-  PetscValidLogicalCollectiveInt(w, m, 2);
-  PetscValidHeaderSpecific(w_ones, MAT_CLASSID, 3);
-  PetscCheck(m > 0, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m must be positive for broadcasting, got %" PetscInt_FMT, m);
-  /* Check for potential overflow in matrix size calculation */
-  PetscCheck(m <= PETSC_MAX_INT / m, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m = %" PetscInt_FMT " too large", m);
-
-  /* Verify dimensions */
-  PetscCall(VecGetSize(w, &w_size));
-  PetscCall(VecGetLocalSize(w, &w_size_local));
-  PetscCheck(w_size == m, PetscObjectComm((PetscObject)w), PETSC_ERR_ARG_INCOMP, "Weight vector global size (%" PetscInt_FMT ") must match ensemble size (%" PetscInt_FMT ")", w_size, m);
-
-  /* Verify consistent parallel layout between vector and matrix */
-  PetscCall(MatGetLocalSize(w_ones, &mat_rows_local, &mat_cols_local));
-  PetscCheck(mat_rows_local == w_size_local, PetscObjectComm((PetscObject)w), PETSC_ERR_PLIB, "Matrix row distribution (%" PetscInt_FMT ") inconsistent with vector distribution (%" PetscInt_FMT ")", mat_rows_local, w_size_local);
-  PetscCheck(mat_cols_local == m, PetscObjectComm((PetscObject)w), PETSC_ERR_PLIB, "Matrix local columns (%" PetscInt_FMT ") must equal global columns m (%" PetscInt_FMT ") for MPIDense", mat_cols_local, m);
-
-  /* Access raw arrays for efficient broadcasting */
-  PetscCall(VecGetArrayRead(w, &w_array));
-  PetscCall(MatDenseGetArrayWrite(w_ones, &mat_array));
-  PetscCall(MatDenseGetLDA(w_ones, &lda));
-
-  /* Copy w to each column of w_ones */
-  /* Note: MatDense uses column-major storage. We copy the vector w into each column. */
-  for (i = 0; i < m; i++) PetscCall(PetscArraycpy(mat_array + i * lda, w_array, w_size_local));
-
-  /* Restore arrays */
-  PetscCall(MatDenseRestoreArrayWrite(w_ones, &mat_array));
-  PetscCall(VecRestoreArrayRead(w, &w_array));
-
-  /* Finalize matrix assembly */
-  PetscCall(MatAssemblyBegin(w_ones, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(w_ones, MAT_FINAL_ASSEMBLY));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* ========================================================================== */
 /*                       LETKF Implementation Lifecycle                       */
 /* ========================================================================== */
@@ -398,7 +343,7 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   PetscBool         reallocate = PETSC_FALSE;
 
   /* Local analysis workspace */
-  Mat       Z_local, S_local, T_sqrt_local, w_ones_local, G_local;
+  Mat       Z_local, S_local, T_sqrt_local, G_local;
   Vec       y_local, y_mean_local, delta_scaled_local, r_inv_sqrt_local;
   Vec       w_local, s_transpose_delta;
   PetscInt *local_obs_indices = NULL;
@@ -520,8 +465,6 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   PetscCall(MatSetUp(S_local));
   PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, m, NULL, &T_sqrt_local));
   PetscCall(MatSetUp(T_sqrt_local));
-  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, m, NULL, &w_ones_local));
-  PetscCall(MatSetUp(w_ones_local));
   PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, m, NULL, &G_local));
   PetscCall(MatSetUp(G_local));
 
@@ -558,11 +501,23 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
     /* Compute local square-root transform: T_sqrt_local = T_local^{-1/2} * U */
     PetscCall(PetscDAApplySqrtTInverse(da, da->U, T_sqrt_local));
 
-    /* Form local transform G_local = w_local * 1' + sqrt(m - 1) * T_sqrt_local * U */
-    PetscCall(BroadcastWeightVector(w_local, m, w_ones_local));
+    /* Form local transform G_local = w_local * 1' + sqrt(m - 1) * T_sqrt_local * U
+       Instead of creating w_ones_local = w_local * 1', we add w_local to each column of G_local */
     PetscCall(MatCopy(T_sqrt_local, G_local, SAME_NONZERO_PATTERN));
     PetscCall(MatScale(G_local, sqrt_m_minus_1));
-    PetscCall(MatAXPY(G_local, 1.0, w_ones_local, SAME_NONZERO_PATTERN));
+    {
+      const PetscScalar *w_array;
+      PetscScalar       *g_array;
+      PetscInt           j, k, lda_g;
+
+      PetscCall(VecGetArrayRead(w_local, &w_array));
+      PetscCall(MatDenseGetArrayWrite(G_local, &g_array));
+      PetscCall(MatDenseGetLDA(G_local, &lda_g));
+      for (j = 0; j < m; j++)
+        for (k = 0; k < m; k++) g_array[k + j * lda_g] += w_array[k];
+      PetscCall(MatDenseRestoreArrayWrite(G_local, &g_array));
+      PetscCall(VecRestoreArrayRead(w_local, &w_array));
+    }
 
     /* LETKF Algorithm 2, Line 7: Update ensemble at grid point i_vertex
        E_a[i,:] = x_bar_f[i] + X_f[i,:] * G_local
@@ -624,7 +579,6 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   PetscCall(VecDestroy(&y_mean_local));
   PetscCall(VecDestroy(&y_local));
   PetscCall(MatDestroy(&G_local));
-  PetscCall(MatDestroy(&w_ones_local));
   PetscCall(MatDestroy(&T_sqrt_local));
   PetscCall(MatDestroy(&S_local));
   PetscCall(MatDestroy(&Z_local));
