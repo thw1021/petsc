@@ -25,7 +25,7 @@ Shallow Water LETKF Example
   Localization          : Full (40 obs per vertex)
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [burn-in]
-Step   10, time  0.100  RMSE_forecast 0.07125  RMSE_analysis 0.08829
+Step   10, time  0.100  RMSE_forecast 0.07125  RMSE_analysis 0.0882
 Step   20, time  0.200  RMSE_forecast 0.11874  RMSE_analysis 0.06989
 Step   30, time  0.300  RMSE_forecast 0.04958  RMSE_analysis 0.04876
 Step   40, time  0.400  RMSE_forecast 0.03662  RMSE_analysis 0.03339
