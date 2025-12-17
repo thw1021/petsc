@@ -650,7 +650,7 @@ PetscErrorCode PetscDAETKFGetSqrtType(PetscDA da, PetscDASqrtType *type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*
   PetscDAETKFView - Views a `PetscDAETKF` and its implementation-specific data structure.
 
   Input Parameters:
@@ -660,7 +660,7 @@ PetscErrorCode PetscDAETKFGetSqrtType(PetscDA da, PetscDASqrtType *type)
   Level: advanced
 
 .seealso: [](ch_da), `PetscDAViewFromOptions()`
-@*/
+*/
 static PetscErrorCode PetscDAETKFView(PetscDA da, PetscViewer viewer)
 {
   PetscBool iascii;
