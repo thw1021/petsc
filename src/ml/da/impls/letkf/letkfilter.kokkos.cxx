@@ -288,8 +288,7 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
   PetscCall(MatDenseGetLDA(Z_global, &lda_z_global));
   PetscCall(MatDenseGetLDA(Z_local, &lda_z_local));
 
-  /* Extract local observations WITHOUT weighting
-     Note: Localization weights affect covariances, not observation values */
+  /* Extract local observations and weight R^{-1/2} */
   for (k = 0; k < ncols; k++) {
     PetscInt obs_idx = cols[k];
 
