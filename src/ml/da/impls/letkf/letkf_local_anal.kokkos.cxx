@@ -94,8 +94,8 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix_Kokkos(Mat Z, Vec y_mean
   PetscCall(VecGetArrayRead(r_inv_sqrt, &r_array));
 
   /* Get Leading Dimension (LDA) to handle padding/strides correctly */
-  PetscCall(MatDenseGetLDA(Z, &lda_z));
-  PetscCall(MatDenseGetLDA(S, &lda_s));
+  PetscCall(MatDenseGetLDA(Z, &lda_z));printf("lda_z=%d\n",lda_z);
+  PetscCall(MatDenseGetLDA(S, &lda_s));printf("lda_s=%d\n",lda_s);
 
   /* Compute normalized innovation: S_ij = (Z_ij - y_mean_i) * scale * r_inv_sqrt_i
      Iterate column-wise (j) then row-wise (i) for optimal cache access with column-major storage */
