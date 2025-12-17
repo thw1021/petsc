@@ -933,7 +933,7 @@ PetscErrorCode PetscDASetEnsembleMember(PetscDA da, PetscInt member_idx, Vec mem
 }
 
 /*@
-  PetscErrorCode PetscDAComputeEnsembleMean(PetscDA da, Vec mean) - Computes ensemble mean for a `PetscDA`
+  PetscDAComputeEnsembleMean - Computes ensemble mean for a `PetscDA`
 
   Collective
 
