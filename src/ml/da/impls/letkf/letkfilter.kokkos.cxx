@@ -758,7 +758,7 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*
   PetscDALETKFView - Views a `PetscDALETKF` and its implementation-specific data structure.
 
   Input Parameters:
@@ -768,7 +768,7 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q)
   Level: beginner
 
 .seealso: [](ch_da), `PetscDAViewFromOptions()`
-@*/
+*/
 static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
 {
   PetscBool         iascii;
