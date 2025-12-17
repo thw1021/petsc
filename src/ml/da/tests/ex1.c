@@ -2,19 +2,10 @@ static char help[] = "Tests basic creation and destruction of PetscDA objects, a
 
 #include "petscda.h"
 
-/*
-  Simple linear observation operator: y = x
-*/
-static PetscErrorCode IdentityObservationOperator(Vec x, Vec y, void *ctx)
-{
-  PetscFunctionBeginUser;
-  PetscCall(VecCopy(x, y));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 int main(int argc, char **argv)
 {
   PetscDA     da;
+  Mat         H;
   Vec         x_true, y_obs, obs_error_var;
   Vec         x_mean_forecast, x_mean_analysis;
   PetscInt    state_size = 10, obs_size = 10, ensemble_size = 20;
@@ -46,6 +37,12 @@ int main(int argc, char **argv)
   PetscCall(VecSet(obs_error_var, 0.1)); /* Observation error variance */
   PetscCall(PetscDASetObsErrorVariance(da, obs_error_var));
 
+  /* Create identity observation matrix H (obs_size x state_size) */
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, obs_size, state_size, 1, NULL, 0, NULL, &H));
+  PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatShift(H, 1.0));
+
   /* Create synthetic observation: y = x_true (identity observation, no noise for this simple test) */
   PetscCall(VecCopy(x_true, y_obs));
 
@@ -70,7 +67,7 @@ int main(int argc, char **argv)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Forecast error norm: %g\n", (double)norm));
 
   /* Perform Analysis Step */
-  PetscCall(PetscDAAnalysis(da, y_obs, IdentityObservationOperator, NULL));
+  PetscCall(PetscDAAnalysis(da, y_obs, H));
 
   /* Compute analysis mean */
   PetscCall(VecDuplicate(x_true, &x_mean_analysis));
@@ -87,6 +84,7 @@ int main(int argc, char **argv)
   PetscCall(PetscDAViewFromOptions(da, NULL, "-da_view"));
 
   /* Cleanup */
+  PetscCall(MatDestroy(&H));
   PetscCall(VecDestroy(&x_true));
   PetscCall(VecDestroy(&y_obs));
   PetscCall(VecDestroy(&obs_error_var));
