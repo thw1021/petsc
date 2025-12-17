@@ -20,20 +20,20 @@ Lorenz-96 ETKF Example
   Random seed           : 12345
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [burn-in]
-Step   12, time  0.600  RMSE_forecast 0.12022  RMSE_analysis 0.10665
-Step   24, time  1.200  RMSE_forecast 0.09192  RMSE_analysis 0.08499
-Step   36, time  1.800  RMSE_forecast 0.06274  RMSE_analysis 0.06395
-Step   48, time  2.400  RMSE_forecast 0.10243  RMSE_analysis 0.08760
-Step   60, time  3.000  RMSE_forecast 0.09070  RMSE_analysis 0.08175
-Step   72, time  3.600  RMSE_forecast 0.07568  RMSE_analysis 0.07408
-Step   84, time  4.200  RMSE_forecast 0.06978  RMSE_analysis 0.04443
-Step   96, time  4.800  RMSE_forecast 0.06724  RMSE_analysis 0.06635
-Step  108, time  5.400  RMSE_forecast 0.06930  RMSE_analysis 0.06626
-Step  120, time  6.000  RMSE_forecast 0.12091  RMSE_analysis 0.11587
+Step   12, time  0.600  RMSE_forecast 0.12048  RMSE_analysis 0.10690
+Step   24, time  1.200  RMSE_forecast 0.09211  RMSE_analysis 0.08527
+Step   36, time  1.800  RMSE_forecast 0.06276  RMSE_analysis 0.06399
+Step   48, time  2.400  RMSE_forecast 0.10246  RMSE_analysis 0.08763
+Step   60, time  3.000  RMSE_forecast 0.09066  RMSE_analysis 0.08173
+Step   72, time  3.600  RMSE_forecast 0.07568  RMSE_analysis 0.07407
+Step   84, time  4.200  RMSE_forecast 0.06986  RMSE_analysis 0.04447
+Step   96, time  4.800  RMSE_forecast 0.06726  RMSE_analysis 0.06636
+Step  108, time  5.400  RMSE_forecast 0.06928  RMSE_analysis 0.06629
+Step  120, time  6.000  RMSE_forecast 0.12103  RMSE_analysis 0.11599
 
 Statistics (111 post-burn-in steps):
 ==================================================
-  Mean RMSE (forecast) : 0.09027
-  Mean RMSE (analysis) : 0.08268
+  Mean RMSE (forecast) : 0.09035
+  Mean RMSE (analysis) : 0.08276
   Observations used    : 120
 
