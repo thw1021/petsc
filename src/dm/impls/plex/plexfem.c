@@ -6662,7 +6662,7 @@ PetscErrorCode DMPlexComputeJacobianHybridByKey(DM dm, PetscFormKey key[], IS ce
   PetscFEGeom    *affineGeomF = NULL, **geomsF = NULL;
   PetscQuadrature affineQuadN = NULL;
   PetscFEGeom    *affineGeomN = NULL;
-  PetscBool       hasBdJac, hasBdPrec;
+  PetscBool       hasBdJac = PETSC_FALSE, hasBdPrec = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscCall(PetscLogEventBegin(DMPLEX_JacobianFEM, dm, 0, 0, 0));
@@ -6971,7 +6971,17 @@ PetscErrorCode DMPlexComputeJacobianHybridByKey(DM dm, PetscFormKey key[], IS ce
   }
   if (dmAux[2]) PetscCall(DMDestroy(&plexA));
   PetscCall(DMDestroy(&plex));
-end:
+end: {
+  PetscBool assOp = hasBdJac && hasBdPrec ? PETSC_TRUE : PETSC_FALSE, gassOp;
+
+  PetscCallMPI(MPIU_Allreduce(&assOp, &gassOp, 1, MPI_C_BOOL, MPI_LOR, PetscObjectComm((PetscObject)dm)));
+  if (gassOp) {
+    PetscCall(MatAssemblyBegin(Jac, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Jac, MAT_FINAL_ASSEMBLY));
+  }
+}
+  PetscCall(MatAssemblyBegin(JacP, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(JacP, MAT_FINAL_ASSEMBLY));
   PetscCall(PetscLogEventEnd(DMPLEX_JacobianFEM, dm, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

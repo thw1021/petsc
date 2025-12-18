@@ -553,6 +553,7 @@ PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP, Pet
     PetscDS      ds;
     IS           cellIS;
     PetscFormKey key;
+    PetscBool    cohesive;
 
     PetscCall(DMGetRegionNumDS(dm, s, &key.label, NULL, &ds, NULL));
     key.value = 0;
@@ -575,7 +576,26 @@ PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP, Pet
       if (hasJac && hasPrec) PetscCall(MatZeroEntries(Jac));
       PetscCall(MatZeroEntries(JacP));
     }
-    PetscCall(DMPlexComputeJacobianByKey(plex, key, cellIS, 0.0, 0.0, X, NULL, Jac, JacP, ctx));
+    PetscCall(PetscDSIsCohesive(ds, &cohesive));
+    if (!cohesive) PetscCall(DMPlexComputeJacobianByKey(plex, key, cellIS, 0.0, 0.0, X, NULL, Jac, JacP, ctx));
+    else {
+      PetscFormKey keys[3];
+      PetscFormKey keyLeft, keyRight;
+
+      key.field = 1;
+      PetscCall(DMGetRegionNumDS(dm, 0, &keyLeft.label, NULL, &ds, NULL));
+      keyLeft.value  = 1;
+      keyLeft.field  = 0;
+      keyLeft.part   = 0;
+      keyRight.label = keyLeft.label;
+      keyRight.value = 2;
+      keyRight.field = 0;
+      keyRight.part  = 0;
+      keys[0] = keyLeft;
+      keys[1] = keyRight;
+      keys[2] = key;
+      PetscCall(DMPlexComputeJacobianHybridByKey(plex, keys, cellIS, 0.0, 0.0, X, NULL, Jac, JacP, ctx));
+    }
     PetscCall(ISDestroy(&cellIS));
   }
   PetscCall(ISDestroy(&allcellIS));
