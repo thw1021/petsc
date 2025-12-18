@@ -88,7 +88,11 @@ static PetscErrorCode DMCreateMatrix_Composite_AIJ(DM dm, Mat *J)
     PetscInt        nc, rstart, *ccols, maxnc;
     const PetscInt *cols, *rstarts;
     PetscMPIInt     proc;
+    MatType         mat_type_old;
 
+    /* force AIJ matrix to allow queries for preallocation */
+    PetscCall(DMGetMatType(next->dm, &mat_type_old));
+    PetscCall(DMSetMatType(next->dm, MATAIJ));
     PetscCall(DMCreateMatrix(next->dm, &Atmp));
     PetscCall(MatGetOwnershipRange(Atmp, &rstart, NULL));
     PetscCall(MatGetOwnershipRanges(Atmp, &rstarts));
@@ -114,6 +118,7 @@ static PetscErrorCode DMCreateMatrix_Composite_AIJ(DM dm, Mat *J)
     }
     PetscCall(PetscFree(ccols));
     PetscCall(MatDestroy(&Atmp));
+    PetscCall(DMSetMatType(next->dm, mat_type_old));
     next = next->next;
   }
   if (com->FormCoupleLocations) PetscCall((*com->FormCoupleLocations)(dm, NULL, dnz, onz, __rstart, __nrows, __start, __end));
@@ -129,7 +134,11 @@ static PetscErrorCode DMCreateMatrix_Composite_AIJ(DM dm, Mat *J)
     const PetscInt    *cols, *rstarts;
     const PetscScalar *values;
     PetscMPIInt        proc;
+    MatType            mat_type_old;
 
+    /* force AIJ matrix to allow queries for zeroing initial matrix */
+    PetscCall(DMGetMatType(next->dm, &mat_type_old));
+    PetscCall(DMSetMatType(next->dm, MATAIJ));
     PetscCall(DMCreateMatrix(next->dm, &Atmp));
     PetscCall(MatGetOwnershipRange(Atmp, &rstart, NULL));
     PetscCall(MatGetOwnershipRanges(Atmp, &rstarts));
@@ -154,6 +163,7 @@ static PetscErrorCode DMCreateMatrix_Composite_AIJ(DM dm, Mat *J)
     }
     PetscCall(PetscFree(ccols));
     PetscCall(MatDestroy(&Atmp));
+    PetscCall(DMSetMatType(next->dm, mat_type_old));
     next = next->next;
   }
   if (com->FormCoupleLocations) {
