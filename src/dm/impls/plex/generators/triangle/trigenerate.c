@@ -70,7 +70,7 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_Triangle(DM boundary, PetscBool inter
   struct triangulateio in;
   struct triangulateio out;
   DMLabel              label, label2;
-  PetscInt             vStart, vEnd, v, eStart, eEnd, e;
+  PetscInt             depth, vStart, vEnd, v, eStart, eEnd, e;
   PetscMPIInt          rank;
   PetscBool            flg;
   char                 opts[64];
@@ -80,6 +80,7 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_Triangle(DM boundary, PetscBool inter
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCall(InitInput_Triangle(&in));
   PetscCall(InitOutput_Triangle(&out));
+  PetscCall(DMPlexGetDepth(boundary, &depth));
   PetscCall(DMPlexGetDepthStratum(boundary, 0, &vStart, &vEnd));
   PetscCall(DMGetLabel(boundary, labelName, &label));
   PetscCall(DMGetLabel(boundary, labelName2, &label2));
@@ -110,7 +111,8 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_Triangle(DM boundary, PetscBool inter
     }
     PetscCall(VecRestoreArray(coordinates, &array));
   }
-  PetscCall(DMPlexGetHeightStratum(boundary, 0, &eStart, &eEnd));
+  if (depth) PetscCall(DMPlexGetHeightStratum(boundary, 0, &eStart, &eEnd));
+  else eStart = eEnd = 0;
   PetscCall(PetscCIntCast(eEnd - eStart, &in.numberofsegments));
   if (in.numberofsegments > 0) {
     PetscCall(PetscMalloc1(in.numberofsegments * 2, &in.segmentlist));

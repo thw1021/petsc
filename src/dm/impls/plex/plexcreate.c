@@ -361,7 +361,7 @@ PetscErrorCode DMPlexCreateCoordinateSpace(DM dm, PetscInt degree, PetscBool loc
     // Inject coordinates into higher dimension
     PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
     PetscCall(VecGetBlockSize(coordinates, &bs));
-    PetscCheck(bs == dim, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "We can only inject simple coordinates into a higher dimension");
+    PetscCheck(bs == dim, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "We can only inject simple coordinates into a higher dimension, bs %" PetscInt_FMT " != %" PetscInt_FMT " dim", bs, dim);
     PetscCall(VecCreate(PetscObjectComm((PetscObject)coordinates), &coordinatesNew));
     PetscCall(VecGetType(coordinates, &vectype));
     PetscCall(VecSetType(coordinatesNew, vectype));
@@ -5376,6 +5376,18 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
       PetscDS      cds;
       PetscObject  obj;
       PetscClassId id;
+#if 0
+    if (cdm->Nds > 0) {
+      PetscCall(DMGetDS(cdm, &cds));
+      if (cds) {
+        PetscCall(PetscDSGetDiscretization(cds, 0, &obj));
+        if (obj) {
+          PetscCall(PetscObjectGetClassId(obj, &id));
+          if (id == PETSCFE_CLASSID) alreadyCreated = PETSC_TRUE;
+        }
+      }
+    }
+#endif
 
       PetscCall(DMGetDS(cdm, &cds));
       PetscCall(PetscDSGetDiscretization(cds, 0, &obj));
@@ -7227,6 +7239,108 @@ static PetscErrorCode DMPlexCreateShapefileFromFile(MPI_Comm comm, const char fi
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  DMPlexCreateSlabGeneratorFromFile - Create a `DMPLEX` mesh from a SlabGenerator slab file.
+
+  Collective
+
++ comm        - The MPI communicator
+. filename    - Name of the .dat file
+- interpolate - Create faces and edges in the mesh
+
+  Output Parameter:
+. dm  - The `DM` object representing the mesh
+
+  Level: beginner
+
+  Note:
+  The mesh is made up of quadrilaterals embedded in 3D, and only coordinates are given. The format is
+.vb
+  x_0 y_0 z
+  x_1 y_0 z
+  ...
+  x_M y_0 z
+  x_0 y_1 z
+  ...
+  x_M y_N z
+.ve
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexCreateFromFile()`, `DMPlexCreateGmsh()`, `DMPlexCreate()`
+*/
+static PetscErrorCode DMPlexCreateSlabGeneratorFromFile(MPI_Comm comm, const char filename[], PetscBool interpolate, DM *dm)
+{
+  DM             pdm, cdm;
+  PetscViewer    viewer;
+  Vec            coordinates, coordinatesNew;
+  PetscScalar   *coords;
+  char           line[PETSC_MAX_PATH_LEN];
+  const PetscInt cdim = 3;
+  PetscMPIInt    rank;
+  int            snum, Nv = 0;
+
+  PetscFunctionBegin;
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  // Discover number of vertices
+  PetscCall(PetscViewerCreate(comm, &viewer));
+  PetscCall(PetscViewerSetType(viewer, PETSCVIEWERASCII));
+  PetscCall(PetscViewerFileSetMode(viewer, FILE_MODE_READ));
+  PetscCall(PetscViewerFileSetName(viewer, filename));
+  if (rank == 0) {
+    double x, y, z;
+
+    for (snum = 3; snum == 3;) {
+      PetscCall(PetscViewerRead(viewer, line, -PETSC_MAX_PATH_LEN, NULL, PETSC_STRING));
+      snum = sscanf(line, "%lg %lg %lg", &x, &y, &z);
+      if (snum == 3) ++Nv;
+    }
+  }
+  PetscCall(PetscViewerDestroy(&viewer));
+
+  PetscCall(DMCreate(comm, &pdm));
+  PetscCall(DMSetType(pdm, DMPLEX));
+  PetscCall(DMPlexSetChart(pdm, 0, Nv));
+  PetscCall(DMSetDimension(pdm, 0));
+  PetscCall(DMSetCoordinateDim(pdm, cdim));
+  PetscCall(DMPlexStratify(pdm));
+  PetscCall(DMPlexCreateCoordinateSpace(pdm, 0, PETSC_FALSE, NULL));
+
+  // Read coordinates
+  PetscCall(DMGetCoordinateDM(pdm, &cdm));
+  PetscCall(PetscViewerCreate(comm, &viewer));
+  PetscCall(PetscViewerSetType(viewer, PETSCVIEWERASCII));
+  PetscCall(PetscViewerFileSetMode(viewer, FILE_MODE_READ));
+  PetscCall(PetscViewerFileSetName(viewer, filename));
+  PetscCall(DMCreateGlobalVector(cdm, &coordinates));
+  PetscCall(VecGetArray(coordinates, &coords));
+  if (rank == 0) {
+    double x[3];
+
+    for (PetscInt v = 0; v < Nv; ++v) {
+      PetscCall(PetscViewerRead(viewer, line, 3, NULL, PETSC_STRING));
+      snum = sscanf(line, "%lg %lg %lg", &x[0], &x[1], &x[2]);
+      PetscCheck(snum == 3, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unable to parse coordinates for vertex %" PetscInt_FMT " from SlabGenerator file %s: %s", v, filename, line);
+      for (PetscInt d = 0; d < cdim; ++d) coords[v * cdim + d] = x[d];
+    }
+  }
+  PetscCall(VecRestoreArray(coordinates, &coords));
+  PetscCall(DMSetCoordinates(pdm, coordinates));
+  PetscCall(VecDestroy(&coordinates));
+  PetscCall(PetscViewerDestroy(&viewer));
+  PetscCall(DMViewFromOptions(pdm, NULL, "-dm_view"));
+
+  PetscCall(DMPlexGenerate(pdm, "triangle", interpolate, dm));
+  PetscCall(DMGetCoordinateDM(*dm, &cdm));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)cdm, "petsc_internal_"));
+  PetscCall(PetscOptionsSetValue(NULL, "-petsc_internal_dm_plex_coordinate_dim", "3"));
+  PetscCall(DMPlexCreateCoordinateSpace(*dm, 1, PETSC_FALSE, NULL));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)cdm, NULL));
+  PetscCall(DMGetCoordinates(pdm, &coordinates));
+  PetscCall(DMGetCoordinates(*dm, &coordinatesNew));
+  PetscCall(VecCopy(coordinates, coordinatesNew));
+  PetscCall(DMDestroy(&pdm));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   DMPlexCreateFromFile - This takes a filename and produces a `DM`
 
@@ -7280,8 +7394,9 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
   const char  extCV[]        = ".dat";
   const char  extSTL[]       = ".stl";
   const char  extSHP[]       = ".shp";
+  const char  extSlabGen[]   = ".slg";
   size_t      len;
-  PetscBool   isGmsh, isGmsh2, isGmsh4, isCGNS, isExodus, isGenesis, isFluent, isHDF5, isPLY, isEGADSlite, isEGADS, isIGES, isIGES2, isSTEP, isSTEP2, isBREP, isCV, isSTL, isSHP, isXDMFHDF5;
+  PetscBool   isGmsh, isGmsh2, isGmsh4, isCGNS, isExodus, isGenesis, isFluent, isHDF5, isPLY, isEGADSlite, isEGADS, isIGES, isIGES2, isSTEP, isSTEP2, isBREP, isCV, isSTL, isSHP, isSlabGen, isXDMFHDF5;
   PetscMPIInt rank;
 
   PetscFunctionBegin;
@@ -7327,6 +7442,7 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
   CheckExtension(extSTL, isSTL);
   CheckExtension(extSHP, isSHP);
   CheckExtension(extXDMFHDF5, isXDMFHDF5);
+  CheckExtension(extSlabGen, isSlabGen);
 
 #undef CheckExtension
 
@@ -7383,6 +7499,8 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
     PetscCall(DMPlexCreateSTLFromFile(comm, filename, interpolate, dm));
   } else if (isSHP) {
     PetscCall(DMPlexCreateShapefileFromFile(comm, filename, dm));
+  } else if (isSlabGen) {
+    PetscCall(DMPlexCreateSlabGeneratorFromFile(comm, filename, interpolate, dm));
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot load file %s: unrecognized extension", filename);
   PetscCall(PetscStrlen(plexname, &len));
   if (len) PetscCall(PetscObjectSetName((PetscObject)*dm, plexname));

@@ -2022,7 +2022,7 @@ static PetscErrorCode PetscFECreate_Internal(MPI_Comm comm, PetscInt dim, PetscI
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)P, prefix));
   PetscCall(PetscSpacePolynomialSetTensor(P, tensor));
   PetscCall(PetscSpaceSetNumComponents(P, Nc));
-  PetscCall(PetscSpaceSetNumVariables(P, dim));
+  PetscCall(PetscSpaceSetNumVariables(P, PetscMax(1, dim)));
   if (degree >= 0) {
     PetscCall(PetscSpaceSetDegree(P, degree, PETSC_DETERMINE));
     if (ct == DM_POLYTOPE_TRI_PRISM || ct == DM_POLYTOPE_TRI_PRISM_TENSOR) {
