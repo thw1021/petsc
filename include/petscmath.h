@@ -915,6 +915,13 @@ M*/
   #define PETSC_MACHINE_EPSILON      .0009765625F
   #define PETSC_SQRT_MACHINE_EPSILON .03125F
   #define PETSC_SMALL                5.e-3F
+#elif defined(PETSC_USE_REAL___BF16)
+  #define PETSC_MAX_REAL             65504.0F
+  #define PETSC_MIN_REAL             (-PETSC_MAX_REAL)
+  #define PETSC_REAL_MIN             .00006103515625F
+  #define PETSC_MACHINE_EPSILON      .0009765625F
+  #define PETSC_SQRT_MACHINE_EPSILON .03125F
+  #define PETSC_SMALL                5.e-3F
 #endif
 
 /*MC

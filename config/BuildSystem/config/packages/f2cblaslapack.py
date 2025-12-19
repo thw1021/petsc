@@ -21,6 +21,7 @@ class Configure(config.package.Package):
     import nargs
     help.addArgument('F2CBLASLAPACK', '-with-f2cblaslapack-float128-bindings', nargs.ArgBool(None, 0, 'Build BLAS/LAPACK with __float128 bindings'))
     help.addArgument('F2CBLASLAPACK', '-with-f2cblaslapack-fp16-bindings', nargs.ArgBool(None, 0, 'Build BLAS/LAPACK with __fp16 bindings'))
+    help.addArgument('F2CBLASLAPACK', '-with-f2cblaslapack-bf16-bindings', nargs.ArgBool(None, 0, 'Build BLAS/LAPACK with __bf16 bindings'))
 
   def configureLibrary(self):
     if self.argDB['with-64-bit-blas-indices']:
@@ -34,6 +35,7 @@ class Configure(config.package.Package):
 
     if self.defaultPrecision == '__float128': make_target = 'blas_qlib lapack_qlib'
     elif self.defaultPrecision == '__fp16': make_target   = 'blas_hlib lapack_hlib'
+    elif self.defaultPrecision == '__bf16': make_target   = 'blas_hlib lapack_hlib'
     elif self.blis.found: make_target = 'blasaux_lib lapack_lib'
     else: make_target = 'blas_lib lapack_lib'
 

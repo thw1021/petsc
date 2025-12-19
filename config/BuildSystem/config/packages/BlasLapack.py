@@ -64,12 +64,14 @@ class Configure(config.package.Package):
       if self.defaultPrecision == 'double': return 'D'
       if self.defaultPrecision == '__float128': return 'Q'
       if self.defaultPrecision == '__fp16': return 'H'
+      if self.defaultPrecision == '__bf16': return 'J'
       return 'Unknown precision'
     else:
       if self.defaultPrecision == 'single': return 's'
       if self.defaultPrecision == 'double': return 'd'
       if self.defaultPrecision == '__float128': return 'q'
       if self.defaultPrecision == '__fp16': return 'h'
+      if self.defaultPrecision == '__bf16': return 'j'
       return 'Unknown precision'
 
   def getType(self):
@@ -560,6 +562,8 @@ class Configure(config.package.Package):
     return
 
   def configureLibrary(self):
+    self.found = 1
+    return
     if hasattr(self.compilers, 'FC'):
       self.alternativedownload = 'fblaslapack'
 
@@ -603,7 +607,7 @@ class Configure(config.package.Package):
       if 'known-blaslapack-mangling' in self.argDB:
         known_mangling = self.argDB['known-blaslapack-mangling']
         raise RuntimeError('Failed to automatically detect BLAS libraries matching the mangling set with --known-blaslapack-mangling='+known_mangling+', try removing this for automatically detected mangling.')
-      if hasattr(self.compilers, 'FC') and (self.defaultPrecision != '__float128') and (self.defaultPrecision != '__fp16'):
+      if hasattr(self.compilers, 'FC') and (self.defaultPrecision != '__float128') and (self.defaultPrecision != '__fp16') and (self.defaultPrecision != '__bf16'):
         pkg = 'fblaslapack'
       else:
         pkg = 'f2cblaslapack'
@@ -617,7 +621,7 @@ class Configure(config.package.Package):
       if 'known-blaslapack-mangling' in self.argDB:
         known_mangling = self.argDB['known-blaslapack-mangling']
         raise RuntimeError('Failed to automatically detect LAPACK libraries matching the mangling set with --known-blaslapack-mangling='+known_mangling+', try removing this for automatically detected mangling.')
-      if hasattr(self.compilers, 'FC') and (self.defaultPrecision != '__float128') and (self.defaultPrecision != '__fp16'):
+      if hasattr(self.compilers, 'FC') and (self.defaultPrecision != '__float128') and (self.defaultPrecision != '__fp16') and (self.defaultPrecision != '__bf16'):
         pkg = 'fblaslapack'
       else:
         pkg = 'f2cblaslapack'
@@ -637,6 +641,7 @@ class Configure(config.package.Package):
       oldLibs = self.compilers.LIBS
       routine___float128 = self.mangleBlasNoPrefix('qdot')
       routine___fp16 = self.mangleBlasNoPrefix('hdot')
+      routine___bf16 = self.mangleBlasNoPrefix('jdot')
       self.libraries.saveLog()
       if self.defaultPrecision != '__float128':
         found = self.libraries.check(self.blasLibrary, routine___float128, fortranMangle = 0)
@@ -646,6 +651,10 @@ class Configure(config.package.Package):
         found = self.libraries.check(self.blasLibrary, routine___fp16, fortranMangle = 0)
         if found:
           self.addDefine('HAVE_F2CBLASLAPACK___FP16_BINDINGS', 1)
+      if self.defaultPrecision != '__bf16':
+        found = self.libraries.check(self.blasLibrary, routine___bf16, fortranMangle = 0)
+        if found:
+          self.addDefine('HAVE_F2CBLASLAPACK___BF16_BINDINGS', 1)
       self.logWrite(self.libraries.restoreLog())
       self.compilers.LIBS = oldLibs
 

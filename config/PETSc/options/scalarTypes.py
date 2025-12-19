@@ -15,14 +15,15 @@ class Configure(config.base.Configure):
     output += '  Precision: ' + self.precision + '\n'
     support = []
     if self.have__fp16 and not self.precision == '__fp16': support.append('__fp16')
+    if self.have__bf16 and not self.precision == '__bf16': support.append('__bf16')
     if self.have__float128 and not self.precision == '__float128': support.append('__float128')
     if not len(support) == 0: output += '  Support for ' + ' and '.join(support) + '\n'
     return output
 
   def setupHelp(self, help):
     import nargs
-    #  Dec 2016, the __fp16 type is only available with GNU compilers on ARM systems
-    help.addArgument('PETSc', '-with-precision=<__fp16,single,double,__float128>', nargs.Arg(None, 'double', 'Specify numerical precision'))
+    #  __fp16 and __bf16 are only available with GNU compilers on ARM systems
+    help.addArgument('PETSc', '-with-precision=<__fp16, __bf16, single, double, __float128>', nargs.Arg(None, 'double', 'Specify numerical precision'))
     help.addArgument('PETSc', '-with-scalar-type=<real or complex>', nargs.Arg(None, 'real', 'Specify real or complex numbers'))
     return
 
@@ -131,8 +132,24 @@ class Configure(config.base.Configure):
       self.have__fp16 = 1
       self.addDefine('HAVE_REAL___FP16', '1')
 
+    self.log.write('Checking C compiler works with __bf16\n')
+    self.have__bf16 = 0
+    if self.libraries.check('','',call='__bf16 f = 1.0, g; g = ret___bf16(f); (void)g',prototype='static __bf16 ret___bf16(__bf16 f) { return f; }'):
+      self.have__bf16 = 1
+      self.addDefine('HAVE_REAL___BF16', '1')
+
     self.precision = self.framework.argDB['with-precision'].lower()
-    if self.precision == '__fp16':  # supported by gcc trunk
+    if self.precision == '__bf16':  # supported by gcc trunk
+      if self.scalartype == 'complex':
+        raise RuntimeError('__bf16 can only be used with real numbers, not complex')
+      if hasattr(self.compilers, 'FC'):
+        raise RuntimeError('__bf16 can only be used with C compiler, not Fortran')
+      if self.have__bf16:
+        self.addDefine('USE_REAL___BF16', '1')
+        self.addMakeMacro('PETSC_SCALAR_SIZE', '16')
+      else:
+        raise RuntimeError('__bf16 support not found, cannot proceed --with-precision=__bf16')
+    elif self.precision == '__fp16':  # supported by gcc trunk
       if self.scalartype == 'complex':
         raise RuntimeError('__fp16 can only be used with real numbers, not complex')
       if hasattr(self.compilers, 'FC'):
@@ -155,7 +172,7 @@ class Configure(config.base.Configure):
       else:
         raise RuntimeError('__float128 support not found. --with-precision=__float128 works with gcc-4.6 and newer compilers.')
     else:
-      raise RuntimeError('--with-precision must be __fp16, single, double, or __float128')
+      raise RuntimeError('--with-precision must be __fp16, __bf16, single, double, or __float128')
     self.logPrint('Precision is '+str(self.precision))
     return
 
@@ -166,5 +183,5 @@ class Configure(config.base.Configure):
     return
 
   def precisionToBytes(self):
-    d = {'__fp16' : 2, 'single' : 4, 'double' : 8, '__float128' : 16}
+    d = {'__fp16' : 2, '__bf16' : 2, 'single' : 4, 'double' : 8, '__float128' : 16}
     return d[self.precision]

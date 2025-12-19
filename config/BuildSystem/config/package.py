@@ -93,7 +93,7 @@ class Package(config.base.Configure):
                                      # during the configuration/installation process such as sowing, make etc should be marked as 0
     self.parallelMake           = 1  # 1 indicates the package supports make -j np option
 
-    self.precisions             = ['__fp16','single','double','__float128']; # Floating point precision package works with
+    self.precisions             = ['__fp16', '__bf16', 'single', 'double', '__float128']; # Floating point precision package works with
     self.complex                = 1  # 0 means cannot use complex
     self.requires32bitint       = 0  # 1 means that the package will not work with 64-bit integers
     self.requires32bitintblas   = 1  # 1 means that the package will not work with 64-bit integer BLAS/LAPACK

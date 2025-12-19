@@ -513,6 +513,8 @@ extern "C" {
 typedef __float128 PetscReal;
 #elif defined(PETSC_USE_REAL___FP16)
 typedef __fp16 PetscReal;
+#elif defined(PETSC_USE_REAL___BF16)
+typedef __bf16 PetscReal;
 #endif /* PETSC_USE_REAL_* */
 
 /*MC
@@ -543,7 +545,7 @@ typedef __fp16 PetscReal;
 M*/
 #if !defined(PETSC_SKIP_COMPLEX)
   #if defined(PETSC_CLANGUAGE_CXX)
-    #if !defined(PETSC_USE_REAL___FP16) && !defined(PETSC_USE_REAL___FLOAT128)
+    #if !defined(PETSC_USE_REAL___FP16) && !defined(PETSC_USE_REAL___BF16) && !defined(PETSC_USE_REAL___FLOAT128)
       #if defined(__cplusplus) && defined(PETSC_HAVE_CXX_COMPLEX) /* enable complex for library code */
         #define PETSC_HAVE_COMPLEX 1
       #elif !defined(__cplusplus) && defined(PETSC_HAVE_C99_COMPLEX) && defined(PETSC_HAVE_CXX_COMPLEX) /* User code only - conditional on library code complex support */
@@ -553,7 +555,7 @@ M*/
       #define PETSC_HAVE_COMPLEX 1
     #endif
   #else /* !PETSC_CLANGUAGE_CXX */
-    #if !defined(PETSC_USE_REAL___FP16)
+    #if !defined(PETSC_USE_REAL___FP16) && !defined(PETSC_USE_REAL___BF16)
       #if !defined(__cplusplus) && defined(PETSC_HAVE_C99_COMPLEX) /* enable complex for library code */
         #define PETSC_HAVE_COMPLEX 1
       #elif defined(__cplusplus) && defined(PETSC_HAVE_C99_COMPLEX) && defined(PETSC_HAVE_CXX_COMPLEX) /* User code only - conditional on library code complex support */
@@ -594,7 +596,7 @@ typedef __complex128 PetscComplex;
     #endif
   #else /* c99 complex support */
     #include <complex.h>
-    #if defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL___FP16)
+    #if defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL___FP16) || defined(PETSC_USE_REAL___BF16)
 typedef float _Complex PetscComplex;
     #elif defined(PETSC_USE_REAL_DOUBLE)
 typedef double _Complex PetscComplex;
@@ -606,8 +608,8 @@ typedef __complex128 PetscComplex;
 
 /*MC
    PetscScalar - PETSc type that represents either a double precision real number, a double precision
-                 complex number, a single precision real number, a __float128 real or complex or a __fp16 real - if the code is configured
-                 with `--with-scalar-type`=real,complex `--with-precision`=single,double,__float128,__fp16
+                 complex number, a single precision real number, a __float128 real or complex or a __fp16 or __bf16 real - if the code is configured
+                 with `--with-scalar-type`=real,complex `--with-precision`=single,double,__float128,__fp16,__bf16
 
    Level: beginner
 
@@ -728,6 +730,7 @@ typedef enum {
   PETSC_INT64            = 17,
   PETSC_COUNT            = 18,
   PETSC_INT32            = 19,
+  PETSC___BF16           = 20,
 } PetscDataType;
 PETSC_EXTERN const char *const PetscDataTypes[];
 
@@ -739,6 +742,8 @@ PETSC_EXTERN const char *const PetscDataTypes[];
   #define PETSC_REAL PETSC___FLOAT128
 #elif defined(PETSC_USE_REAL___FP16)
   #define PETSC_REAL PETSC___FP16
+#elif defined(PETSC_USE_REAL___BF16)
+  #define PETSC_REAL PETSC___BF16
 #else
   #define PETSC_REAL PETSC_DOUBLE
 #endif
