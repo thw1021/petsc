@@ -84,7 +84,7 @@ static PetscErrorCode TaoSolve_NTL(Tao tao)
   /* Check convergence criteria */
   PetscCall(TaoComputeObjectiveAndGradient(tao, tao->solution, &f, tao->gradient));
   PetscCall(VecNorm(tao->gradient, NORM_2, &gnorm));
-  PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
+  TaoCheckInitialObjectiveAndGradient(tao, f, gnorm);
   needH = 1;
 
   tao->reason = TAO_CONTINUE_ITERATING;
@@ -191,11 +191,9 @@ static PetscErrorCode TaoSolve_NTL(Tao tao)
         f = fmin;
         PetscCall(VecAXPY(tao->solution, sigma, tao->gradient));
         PetscCall(TaoComputeGradient(tao, tao->solution, tao->gradient));
-
         PetscCall(VecNorm(tao->gradient, NORM_2, &gnorm));
-        PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
+        TaoCheckObjectiveAndGradient(tao, f, gnorm);
         needH = 1;
-
         PetscCall(TaoLogConvergenceHistory(tao, f, gnorm, 0.0, tao->ksp_its));
         PetscCall(TaoMonitor(tao, tao->niter, f, gnorm, 0.0, step));
         PetscUseTypeMethod(tao, convergencetest, tao->cnvP);
@@ -591,7 +589,7 @@ static PetscErrorCode TaoSolve_NTL(Tao tao)
 
     /* Check for converged */
     PetscCall(VecNorm(tao->gradient, NORM_2, &gnorm));
-    PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Not-a-Number");
+    TaoCheckObjectiveAndGradient(tao, f, gnorm);
     needH = 1;
 
     PetscCall(TaoLogConvergenceHistory(tao, f, gnorm, 0.0, tao->ksp_its));

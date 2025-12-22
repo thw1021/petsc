@@ -1,4 +1,5 @@
 #include <petsc/private/taolinesearchimpl.h>
+#include <petsc/private/taoimpl.h>
 #include <../src/tao/linesearch/impls/morethuente/morethuente.h>
 
 /*
@@ -168,11 +169,10 @@ static PetscErrorCode TaoLineSearchApply_MT(TaoLineSearch ls, Vec x, PetscReal *
     if (i == 0) ls->f_fullstep = *f;
 
     if (PetscIsInfOrNanReal(*f) || PetscIsInfOrNanReal(dg)) {
-      /* User provided compute function generated Not-a-Number, assume
-       domain violation and set function value and directional
-       derivative to infinity. */
-      *f = PETSC_INFINITY;
-      dg = PETSC_INFINITY;
+      if (ls->tao->objectivedomainerror) {
+        *f = PETSC_INFINITY;
+        dg = PETSC_INFINITY;
+      } else PetscCheck(!ls->tao->errorifnotconverged, PetscObjectComm((PetscObject)ls->tao), PETSC_ERR_USER, "Infinity or Nan in objective or gradient but TaoSetObjectiveDomainError() not called");
     }
 
     ftest1 = finit + ls->step * dgtest;

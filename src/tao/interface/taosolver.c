@@ -138,7 +138,7 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
 }
 
 /*@
-  TaoSolve - Solves an optimization problem min F(x) s.t. l <= x <= u
+  TaoSolve - Solves an optimization problem $ \min_x F(x) $ s.t. $ l \le x \le u$
 
   Collective
 
@@ -153,7 +153,8 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
   You should call `TaoGetConvergedReason()` or run with `-tao_converged_reason` to determine if the optimization algorithm actually succeeded or
   why it failed.
 
-.seealso: [](ch_tao), `Tao`, `TaoCreate()`, `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetHessian()`, `TaoGetConvergedReason()`, `TaoSetUp()`
+.seealso: [](ch_tao), `Tao`, `TaoCreate()`, `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetHessian()`, `TaoGetConvergedReason()`, `TaoSetUp()`,
+          `TaoSetErrorIfNotConverged()`
  @*/
 PetscErrorCode TaoSolve(Tao tao)
 {
@@ -348,33 +349,34 @@ PetscErrorCode TaoKSPSetUseEW(Tao tao, PetscBool flag)
 . tao - the `Tao` solver context
 
   Options Database Keys:
-+ -tao_type <type>             - The algorithm that Tao uses (lmvm, nls, etc.)
-. -tao_gatol <gatol>           - absolute error tolerance for ||gradient||
-. -tao_grtol <grtol>           - relative error tolerance for ||gradient||
-. -tao_gttol <gttol>           - reduction of ||gradient|| relative to initial gradient
-. -tao_max_it <max>            - sets maximum number of iterations
-. -tao_max_funcs <max>         - sets maximum number of function evaluations
-. -tao_fmin <fmin>             - stop if function value reaches fmin
-. -tao_steptol <tol>           - stop if trust region radius less than <tol>
-. -tao_trust0 <t>              - initial trust region radius
-. -tao_view_solution           - view the solution at the end of the optimization process
-. -tao_monitor                 - prints function value and residual norm at each iteration
-. -tao_monitor_short           - same as `-tao_monitor`, but truncates very small values
-. -tao_monitor_constraint_norm - prints objective value, gradient, and constraint norm at each iteration
-. -tao_monitor_globalization   - prints information about the globalization at each iteration
-. -tao_monitor_solution        - prints solution vector at each iteration
-. -tao_monitor_ls_residual     - prints least-squares residual vector at each iteration
-. -tao_monitor_step            - prints step vector at each iteration
-. -tao_monitor_gradient        - prints gradient vector at each iteration
-. -tao_monitor_solution_draw   - graphically view solution vector at each iteration
-. -tao_monitor_step_draw       - graphically view step vector at each iteration
-. -tao_monitor_gradient_draw   - graphically view gradient at each iteration
-. -tao_monitor_cancel          - cancels all monitors (except those set with command line)
-. -tao_fd_gradient             - use gradient computed with finite differences
-. -tao_fd_hessian              - use hessian computed with finite differences
-. -tao_mf_hessian              - use matrix-free Hessian computed with finite differences
-. -tao_view                    - prints information about the Tao after solving
-- -tao_converged_reason        - prints the reason Tao stopped iterating
++ -tao_type <type>                  - The algorithm that Tao uses (lmvm, nls, etc.)
+. -tao_gatol <gatol>                - absolute error tolerance for ||gradient||
+. -tao_grtol <grtol>                - relative error tolerance for ||gradient||
+. -tao_gttol <gttol>                - reduction of ||gradient|| relative to initial gradient
+. -tao_max_it <max>                 - sets maximum number of iterations
+. -tao_max_funcs <max>              - sets maximum number of function evaluations
+. -tao_fmin <fmin>                   - stop if function value reaches fmin
+. -tao_steptol <tol>                 - stop if trust region radius less than <tol>
+. -tao_trust0 <t>                    - initial trust region radius
+. -tao_error_if_not_converged <flag> - generate an error (stops the program immediately) if optimizer/solver does not converge
+. -tao_view_solution                 - view the solution at the end of the optimization process
+. -tao_monitor                       - prints the objective function value and residual norm at each iteration
+. -tao_monitor_short                 - same as `-tao_monitor`, but truncates very small values
+. -tao_monitor_constraint_norm       - prints objective value, gradient, and constraint norm at each iteration
+. -tao_monitor_globalization         - prints information about the globalization at each iteration
+. -tao_monitor_solution              - prints solution vector at each iteration
+. -tao_monitor_ls_residual           - prints least-squares residual vector at each iteration
+. -tao_monitor_step                  - prints step vector at each iteration
+. -tao_monitor_gradient              - prints gradient vector at each iteration
+. -tao_monitor_solution_draw         - graphically view solution vector at each iteration
+. -tao_monitor_step_draw             - graphically view step vector at each iteration
+. -tao_monitor_gradient_draw         - graphically view gradient at each iteration
+. -tao_monitor_cancel                - cancels all monitors (except those set with command line)
+. -tao_fd_gradient                   - use gradient computed with finite differences
+. -tao_fd_hessian                    - use hessian computed with finite differences
+. -tao_mf_hessian                    - use matrix-free Hessian computed with finite differences
+. -tao_view                          - prints information about the Tao after solving
+- -tao_converged_reason              - prints the reason Tao stopped iterating
 
   Level: beginner
 
@@ -440,6 +442,8 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   PetscCall(PetscOptionsBoundedReal("-tao_steptol", "Stop if step size or trust region radius less than", "", tao->steptol, &tao->steptol, NULL, 0));
   PetscCall(PetscOptionsReal("-tao_trust0", "Initial trust region radius", "TaoSetInitialTrustRegionRadius", tao->trust0, &tao->trust0, &flg));
   if (flg) PetscCall(TaoSetInitialTrustRegionRadius(tao, tao->trust0));
+
+  PetscCall(PetscOptionsBool("-tao_error_if_not_converged", "Generate error if solver does not converge", "TaoSetErrorIfNotConverged", tao->errorifnotconverged, &tao->errorifnotconverged, NULL));
 
   PetscCall(PetscOptionsDeprecated("-tao_solution_monitor", "-tao_monitor_solution", "3.21", NULL));
   PetscCall(PetscOptionsDeprecated("-tao_gradient_monitor", "-tao_monitor_gradient", "3.21", NULL));
@@ -2850,5 +2854,92 @@ PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
   PetscFunctionBegin;
   PetscCall(PetscViewerDestroy(&(*ictx)->viewer));
   PetscCall(PetscFree(*ictx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoSetErrorIfNotConverged - Causes `TaoSolve()` to generate an error immediately if the optimizer/solver has not converged.
+
+  Logically Collective
+
+  Input Parameters:
++ snes - iterative context obtained from `TaoCreate()`
+- flg  - `PETSC_TRUE` indicates you want the error generated
+
+  Options Database Key:
+. -tao_error_if_not_converged <true,false> - cause an immediate error condition and stop the program if the optimizer/solver does not converge
+
+  Level: intermediate
+
+  Note:
+  Normally PETSc continues if a solver fails to converge, you can call `TaoGetConvergedReason()` after a `TaoSolve()`
+  to determine if it has converged. Otherwise the solution may be inaccurate or wrong
+
+.seealso: [](ch_snes), `Tao`, `SNESSetErrorIfNotConverged()`, `TaoGetErrorIfNotConverged()`
+@*/
+PetscErrorCode TaoSetErrorIfNotConverged(Tao tao, PetscBool flg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(tao, flg, 2);
+  tao->errorifnotconverged = flg;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TAOGetErrorIfNotConverged - Indicates if `TAOSolve()` will generate an error if the solver does not converge?
+
+  Not Collective
+
+  Input Parameter:
+. tao - iterative context obtained from `TAOCreate()`
+
+  Output Parameter:
+. flag - `PETSC_TRUE` if it will generate an error, else `PETSC_FALSE`
+
+  Level: intermediate
+
+.seealso: [](ch_tao), `TAO`, `TAOSolve()`, `TAOSetErrorIfNotConverged()`, `SNESSetErrorIfNotConverged()`
+@*/
+PetscErrorCode TaoGetErrorIfNotConverged(Tao tao, PetscBool *flag)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscAssertPointer(flag, 2);
+  *flag = tao->errorifnotconverged;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoSetObjectiveDomainError - tells `Tao` that the proposed new solution to the objective function provided to `TaoSetObjective()` is not
+  in the function's domain. For example, a step with negative pressure.
+
+  Collective
+
+  Input Parameter:
+. tao - the `Tao` context
+
+  Level: intermediate
+
+  Notes:
+  Certain `Tao` solvers may use this information to continue the iteration by avoiding the proposed solution that is not in the objective function's domain
+
+  Under development, is currently ignored in some cases.
+
+  If the `TaoSolve()` cannot handle the domain error it will stop iterating and return with a `TaoConvergedReason` of `TAO_DIVERGED_OBJECTIVE_DOMAIN`
+
+  You should always call `TaoGetConvergedReason()` after each `TaoSolve()` and verify if the iteration converged (successful result)
+  or diverged (failure result).
+
+  Developer Note:
+  Unlike with `KSP` (and `SNES`) this is collective
+
+.seealso: [](ch_tao), `TaoCreate()`, `TaoSetObjective()`, `TAO_DIVERGED_OBJECTIVE_DOMAIN`, `SNESSetFunctionDomainError()`
+@*/
+PetscErrorCode TaoSetObjectiveDomainError(Tao tao)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  tao->objectivedomainerror = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

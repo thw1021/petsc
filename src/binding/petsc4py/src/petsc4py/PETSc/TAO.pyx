@@ -52,23 +52,24 @@ class TAOConvergedReason:
 
     """
     # iterating
-    CONTINUE_ITERATING    = TAO_CONTINUE_ITERATING    # iterating
-    CONVERGED_ITERATING   = TAO_CONTINUE_ITERATING    # iterating
-    ITERATING             = TAO_CONTINUE_ITERATING    # iterating
+    CONTINUE_ITERATING        = TAO_CONTINUE_ITERATING        # iterating
+    CONVERGED_ITERATING       = TAO_CONTINUE_ITERATING        # iterating
+    ITERATING                 = TAO_CONTINUE_ITERATING        # iterating
     # converged
-    CONVERGED_GATOL       = TAO_CONVERGED_GATOL       # ||g(X)|| < gatol
-    CONVERGED_GRTOL       = TAO_CONVERGED_GRTOL       # ||g(X)||/f(X)  < grtol
-    CONVERGED_GTTOL       = TAO_CONVERGED_GTTOL       # ||g(X)||/||g(X0)|| < gttol
-    CONVERGED_STEPTOL     = TAO_CONVERGED_STEPTOL     # small step size
-    CONVERGED_MINF        = TAO_CONVERGED_MINF        # f(X) < F_min
-    CONVERGED_USER        = TAO_CONVERGED_USER        # user defined
+    CONVERGED_GATOL           = TAO_CONVERGED_GATOL           # ||g(X)|| < gatol
+    CONVERGED_GRTOL           = TAO_CONVERGED_GRTOL           # ||g(X)||/f(X)  < grtol
+    CONVERGED_GTTOL           = TAO_CONVERGED_GTTOL           # ||g(X)||/||g(X0)|| < gttol
+    CONVERGED_STEPTOL         = TAO_CONVERGED_STEPTOL         # small step size
+    CONVERGED_MINF            = TAO_CONVERGED_MINF            # f(X) < F_min
+    CONVERGED_USER            = TAO_CONVERGED_USER            # user defined
     # diverged
-    DIVERGED_MAXITS       = TAO_DIVERGED_MAXITS       #
-    DIVERGED_NAN          = TAO_DIVERGED_NAN          #
-    DIVERGED_MAXFCN       = TAO_DIVERGED_MAXFCN       #
-    DIVERGED_LS_FAILURE   = TAO_DIVERGED_LS_FAILURE   #
-    DIVERGED_TR_REDUCTION = TAO_DIVERGED_TR_REDUCTION #
-    DIVERGED_USER         = TAO_DIVERGED_USER         # user defined
+    DIVERGED_OBJECTIVE_DOMAIN = TAO_DIVERGED_OBJECTIVE_DOMAIN #
+    DIVERGED_MAXITS           = TAO_DIVERGED_MAXITS           #
+    DIVERGED_NAN              = TAO_DIVERGED_NAN              #
+    DIVERGED_MAXFCN           = TAO_DIVERGED_MAXFCN           #
+    DIVERGED_LS_FAILURE       = TAO_DIVERGED_LS_FAILURE       #
+    DIVERGED_TR_REDUCTION     = TAO_DIVERGED_TR_REDUCTION     #
+    DIVERGED_USER             = TAO_DIVERGED_USER             # user defined
 
 
 class TAOBNCGType:
@@ -1261,6 +1262,56 @@ cdef class TAO(Object):
         cdef PetscReal _catol=PETSC_DEFAULT, _crtol=PETSC_DEFAULT
         CHKERR(TaoGetConstraintTolerances(self.tao, &_catol, &_crtol))
         return (toReal(_catol), toReal(_crtol))
+
+    def setObjectiveDomainError(self) -> None:
+        """Tells the Tao object that the proposed solution vector is not in
+        the domain of the objective function.
+
+        Not Collective.
+
+        See Also
+        --------
+         petsc.TaoSetObjectiveDomainError
+        """
+        CHKERR(TaoSetObjectiveDomainError(self.tao))
+
+    def setErrorIfNotConverged(self, flag: bool) -> None:
+        """Tells the Tao object that it should error immediately if the iteration
+        will not converge.
+
+        Not Collective.
+
+        Parameters
+        ----------
+        flag : bool
+            True to error immediately
+
+        See Also
+        --------
+         petsc.TaoSetErrorIfNotConverged, petsc.TaoGetErrorIfNotConverged,
+         petsc.TaoSetObjectiveDomainError
+        """
+        CHKERR(TaoSetErrorIfNotConverged(self.tao, flag))
+
+    def getErrorIfNotConverged(self, flg: bool) -> None:
+        """Checks if the Tao solver will error immediately if the iteration
+        will not converge.
+
+        Not Collective.
+
+        Returns
+        -------
+        flag : bool
+            True if the Tao solver will error immediately
+
+        See Also
+        --------
+         petsc.TaoSetErrorIfNotConverged, petsc.TaoGetErrorIfNotConverged,
+         petsc.TaoSetObjectiveDomainError
+        """
+        cdef PetscBool _flag
+        CHKERR(TaoGetErrorIfNotConverged(self.tao, &_flag))
+        return toBool(_flag)
 
     def setConvergenceTest(self, converged: TAOConvergedFunction | None, args: tuple[Any, ...] | None = None, kargs: dict[str, Any] | None = None) -> None:
         """Set the callback used to test for solver convergence.

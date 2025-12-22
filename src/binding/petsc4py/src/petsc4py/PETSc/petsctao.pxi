@@ -46,6 +46,7 @@ cdef extern from * nogil:
         TAO_CONVERGED_MINF
         TAO_CONVERGED_USER
         # diverged
+        TAO_DIVERGED_OBJECTIVE_DOMAIN
         TAO_DIVERGED_MAXITS
         TAO_DIVERGED_NAN
         TAO_DIVERGED_MAXFCN
@@ -126,6 +127,10 @@ cdef extern from * nogil:
     PetscErrorCode TaoGetInitialTrustRegionRadius(PetscTAO, PetscReal*)
     PetscErrorCode TaoGetTrustRegionRadius(PetscTAO, PetscReal*)
     PetscErrorCode TaoSetTrustRegionRadius(PetscTAO, PetscReal)
+
+    PetscErrorCode TaoSetErrorIfNotConverged(PetscTAO, PetscBool)
+    PetscErrorCode TaoGetErrorIfNotConverged(PetscTAO, PetscBool*)
+    PetscErrorCode TaoSetObjectiveDomainError(PetscTAO)
 
     PetscErrorCode TaoDefaultConvergenceTest(PetscTAO, void*) except PETSC_ERR_PYTHON
     PetscErrorCode TaoSetConvergenceTest(PetscTAO, PetscTaoConvergenceTest*, void*)

@@ -67,6 +67,11 @@ struct _p_Tao {
   PetscInt           numbermonitors;
   void              *cnvP;
   TaoConvergedReason reason;
+  PetscBool          errorifnotconverged;
+
+  PetscBool objectivedomainerror; /* set with TaoSetObjectiveDomainError() */
+  PetscBool gradientdomainerror;  /* set with TaoSetGradientDomainError() */
+  PetscBool hessiandomainerror;   /* set with TaoSetHessianDomainError() */
 
   PetscBool setupcalled;
   void     *data;
@@ -204,3 +209,105 @@ static inline PetscErrorCode TaoLogConvergenceHistory(Tao tao, PetscReal obj, Pe
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*@C
+  TaoCheckInitialObjectiveAndGradient - checks if the initial objective function or gradient norm computed within `TaoSolve()` is infinity or NaN
+
+  Collective
+
+  Input Parameters:
++ tao   - the `Tao` solver object
+. f     - the objective function value
+- gnorm - the norm of the gradient of the objective function
+
+  Options Database Key:
+. -tao_error_if_not_converged - causes `TaoSolve()` to generate an error immediately when it determines the solver cannot converge
+
+  Level: developer
+
+  Notes:
+  If `TaoSetErrorIfNotConverged()` has been set and infinity or NaN is returned as the objective function value or the norm of the gradient
+  then this errors immediately ending the program.
+
+  If infinity or Nan is returned as the objective function value or gradient norm and `TaoSetObjectiveDomainError()` has been set then the `TaoConvergedReason` of
+  `TAO_DIVERGED_OBJECTIVE_DOMAIN` is set, otherwise `TAO_DIVERGED_OBJECTIVE_NAN` is set.
+
+.seealso: [](ch_tao), `Tao`, `TaoCheckObjective()`, `TaoCreate()`, `TaoSetErrorIfNotConverged()`, `TaoGetErrorIfNotConverged()`, `TaoSetObjectiveDomainError()`,
+          `TaoCheckObjectiveAndGradient()`
+@*/
+#define TaoCheckInitialObjectiveAndGradient(tao, f, gnorm) \
+  PetscCheck(!tao->errorifnotconverged || (!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm)), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Initial objective function generated Inf or NaN"); \
+  if (PetscIsInfOrNanReal(f) || PetscIsInfOrNanReal(gnorm)) { \
+    if (tao->objectivedomainerror) { \
+      tao->reason               = TAO_DIVERGED_OBJECTIVE_DOMAIN; \
+      tao->objectivedomainerror = PETSC_FALSE; \
+    } else tao->reason = TAO_DIVERGED_NAN; \
+    PetscFunctionReturn(PETSC_SUCCESS); \
+  }
+
+/*@C
+  TaoCheckObjective - checks if an objective function computed within `TaoSolve()` is infinity or NaN
+
+  Collective
+
+  Input Parameters:
++ tao   - the `Tao` solver object
+- f     - the objective function value
+
+  Options Database Key:
+. -tao_error_if_not_converged - causes `TaoSolve()` to generate an error immediately when it determines the solver cannot converge
+
+  Level: developer
+
+  Notes:
+  If `TaoSetErrorIfNotConverged()` has been set and infinity or NaN is returned as the objective function value this errors immediately ending the program.
+
+  If infinity or Nan is returned as the objective function value and `TaoSetObjectiveDomainError()` has been set then the `TaoConvergedReason` of
+  `TAO_DIVERGED_OBJECTIVE_DOMAIN` is set, otherwise `TAO_DIVERGED_OBJECTIVE_NAN` is set.
+
+.seealso: [](ch_tao), `Tao`, `TaoCheckInitialObjectiveAndGradient()`, `TaoCreate()`, `TaoSetErrorIfNotConverged()`, `TaoGetErrorIfNotConverged()`,
+          `TaoSetObjectiveDomainError()`, `TaoCheckObjectiveAndGradient()`
+@*/
+#define TaoCheckObjective(tao, f) \
+  PetscCheck(!tao->errorifnotconverged || !PetscIsInfOrNanReal(f), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Objective function generated Inf or NaN"); \
+  if (PetscIsInfOrNanReal(f)) { \
+    if (tao->objectivedomainerror) { \
+      tao->reason               = TAO_DIVERGED_OBJECTIVE_DOMAIN; \
+      tao->objectivedomainerror = PETSC_FALSE; \
+    } else tao->reason = TAO_DIVERGED_NAN; \
+    PetscFunctionReturn(PETSC_SUCCESS); \
+  }
+
+/*@C
+  TaoCheckObjectiveAndGradient - checks if an objective function or the norm of the gradient computed within `TaoSolve()` is infinity or NaN
+
+  Collective
+
+  Input Parameters:
++ tao   - the `Tao` solver object
+. f     - the objective function value
+- gnrom - the norm of the gradient
+
+  Options Database Key:
+. -tao_error_if_not_converged - causes `TaoSolve()` to generate an error immediately when it determines the solver cannot converge
+
+  Level: developer
+
+  Notes:
+  If `TaoSetErrorIfNotConverged()` has been set and infinity or NaN is returned as the objective function value or its gradient this errors immediately ending the program.
+
+  If infinity or Nan is returned as the objective function value or the gradient and `TaoSetObjectiveDomainError()` has been set then the `TaoConvergedReason` of
+  `TAO_DIVERGED_OBJECTIVE_DOMAIN` is set, otherwise `TAO_DIVERGED_OBJECTIVE_NAN` is set.
+
+.seealso: [](ch_tao), `Tao`, `TaoCheckInitialObjectiveAndGradient()`, `TaoCreate()`, `TaoSetErrorIfNotConverged()`, `TaoGetErrorIfNotConverged()`,
+          `TaoCheckObjective()`, `TaoSetObjectiveDomainError()`
+@*/
+#define TaoCheckObjectiveAndGradient(tao, f, gnorm) \
+  PetscCheck(!tao->errorifnotconverged || (!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(gnorm)), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "Objective function generated Inf or NaN"); \
+  if (PetscIsInfOrNanReal(f) || PetscIsInfOrNanReal(gnorm)) { \
+    if (tao->objectivedomainerror) { \
+      tao->reason               = TAO_DIVERGED_OBJECTIVE_DOMAIN; \
+      tao->objectivedomainerror = PETSC_FALSE; \
+    } else tao->reason = TAO_DIVERGED_NAN; \
+    PetscFunctionReturn(PETSC_SUCCESS); \
+  }

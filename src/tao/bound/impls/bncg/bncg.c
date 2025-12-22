@@ -73,7 +73,7 @@ static PetscErrorCode TaoSolve_BNCG(Tao tao)
 
   if (nDiff > 0 || !tao->recycle) PetscCall(TaoComputeObjectiveAndGradient(tao, tao->solution, &cg->f, cg->unprojected_gradient));
   PetscCall(VecNorm(cg->unprojected_gradient, NORM_2, &gnorm));
-  PetscCheck(!PetscIsInfOrNanReal(cg->f) && !PetscIsInfOrNanReal(gnorm), PetscObjectComm((PetscObject)tao), PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
+  TaoCheckInitialObjectiveAndGradient(tao, cg->f, gnorm);
 
   /* Estimate the active set and compute the projected gradient */
   PetscCall(TaoBNCGEstimateActiveSet(tao, cg->as_type));

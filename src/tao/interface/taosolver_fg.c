@@ -197,6 +197,7 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
   } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetObjective() has not been called");
   PetscCall(PetscInfo(tao, "TAO Function evaluation: %20.19e\n", (double)(*f)));
   PetscCall(VecLockReadPop(X));
+  if (tao->objectivedomainerror) PetscCall(PetscRealGetNaN(f));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -250,6 +251,7 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
   } else SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "TaoSetObjective() or TaoSetGradient() not set");
   PetscCall(PetscInfo(tao, "TAO Function evaluation: %20.19e\n", (double)(*f)));
   PetscCall(VecLockReadPop(X));
+  if (tao->objectivedomainerror) PetscCall(PetscRealGetNaN(f));
 
   PetscCall(TaoTestGradient(tao, X, G));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -274,7 +276,7 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
 
   Level: beginner
 
-.seealso: [](ch_tao), `TaoSetGradient()`, `TaoSetHessian()`, `TaoSetObjectiveAndGradient()`, `TaoGetObjective()`
+.seealso: [](ch_tao), `TaoSetGradient()`, `TaoSetHessian()`, `TaoSetObjectiveAndGradient()`, `TaoGetObjective()`, `TaoSetObjectiveDomainError()`
 @*/
 PetscErrorCode TaoSetObjective(Tao tao, PetscErrorCode (*func)(Tao tao, Vec x, PetscReal *f, void *ctx), void *ctx)
 {
