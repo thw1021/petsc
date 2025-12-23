@@ -612,14 +612,14 @@ linux-cuda-pkgs:
     MAKE_CUDAFLAGS: --compiler-options -Wall,-Werror
     OMP_PROC_BIND: false
 
-linux-kokkos-cuda:
+linux-cuda-kokkos:
   extends:
     - .stage-3
     - .linux_test
   tags:
     - cuda-stage3
   variables:
-    TEST_ARCH: arch-ci-linux-kokkos-cuda
+    TEST_ARCH: arch-ci-linux-cuda-kokkos
     # run all tests that:
     # 1. require cuda, OR
     # 2. require kokkos[_kernels]
