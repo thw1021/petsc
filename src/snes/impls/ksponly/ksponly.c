@@ -40,8 +40,7 @@ static PetscErrorCode SNESSolve_KSPONLY(SNES snes)
 
   /* Solve J Y = F, where J is Jacobian matrix */
   PetscCall(SNESComputeJacobian(snes, X, snes->jacobian, snes->jacobian_pre));
-
-  SNESCheckJacobianDomainerror(snes);
+  SNESCheckJacobianDomainError(snes);
 
   PetscCall(KSPSetOperators(snes->ksp, snes->jacobian, snes->jacobian_pre));
   if (ksponly->transpose_solve) {

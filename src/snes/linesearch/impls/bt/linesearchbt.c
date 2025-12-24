@@ -145,6 +145,7 @@ static PetscErrorCode SNESLineSearchApply_BT(SNESLineSearch linesearch)
       } else {
         PetscCall(VecNorm(G, NORM_2, &gnorm));
       }
+      SNESLineSearchCheckFunctionNorm(snes, linesearch, fnorm);
       g = 0.5 * PetscSqr(gnorm);
     }
     PetscCall(SNESLineSearchMonitor(linesearch));
@@ -208,6 +209,7 @@ static PetscErrorCode SNESLineSearchApply_BT(SNESLineSearch linesearch)
         } else {
           PetscCall(VecNorm(G, NORM_2, &gnorm));
         }
+        SNESLineSearchCheckFunctionNorm(snes, linesearch, gnorm);
         g = 0.5 * PetscSqr(gnorm);
       }
       if (PetscIsInfOrNanReal(g)) {
@@ -285,12 +287,8 @@ static PetscErrorCode SNESLineSearchApply_BT(SNESLineSearch linesearch)
           } else {
             PetscCall(VecNorm(G, NORM_2, &gnorm));
           }
+          SNESLineSearchCheckFunctionNorm(snes, linesearch, gnorm);
           g = 0.5 * PetscSqr(gnorm);
-        }
-        if (PetscIsInfOrNanReal(g)) {
-          PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_NANORINF));
-          PetscCall(PetscInfo(snes, "Aborted due to Nan or Inf in function evaluation\n"));
-          PetscFunctionReturn(PETSC_SUCCESS);
         }
         if (g <= f + lambda * alpha * initslope) { /* is reduction enough? */
           if (monitor) {
@@ -333,12 +331,8 @@ static PetscErrorCode SNESLineSearchApply_BT(SNESLineSearch linesearch)
     } else {
       PetscCall(VecNorm(G, NORM_2, &gnorm));
     }
+    SNESLineSearchCheckFunctionNorm(snes, linesearch, gnorm);
     PetscCall(VecNorm(Y, NORM_2, &ynorm));
-    if (PetscIsInfOrNanReal(gnorm)) {
-      PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_NANORINF));
-      PetscCall(PetscInfo(snes, "Aborted due to Nan or Inf in function evaluation\n"));
-      PetscFunctionReturn(PETSC_SUCCESS);
-    }
   }
 
   /* copy the solution over */

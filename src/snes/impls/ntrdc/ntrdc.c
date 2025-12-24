@@ -370,7 +370,7 @@ static PetscErrorCode SNESSolve_NEWTONTRDC(SNES snes)
 
     /* dogleg method */
     PetscCall(SNESComputeJacobian(snes, X, snes->jacobian, snes->jacobian_pre));
-    SNESCheckJacobianDomainerror(snes);
+    SNESCheckJacobianDomainError(snes);
     PetscCall(KSPSetOperators(snes->ksp, snes->jacobian, snes->jacobian));
     PetscCall(KSPSolve(snes->ksp, F, YNtmp)); /* Quasi Newton Solution */
     SNESCheckKSPSolve(snes);                  /* this is necessary but old tr.c did not have it*/

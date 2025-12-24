@@ -854,18 +854,20 @@ PETSC_EXTERN PetscErrorCode SNESLineSearchSetOrder(SNESLineSearch, PetscInt);
     SNESLineSearchReason - indication if the line search has succeeded or failed and why
 
   Values:
-+  `SNES_LINESEARCH_SUCCEEDED`       - the line search succeeded
-.  `SNES_LINESEARCH_FAILED_NANORINF` - a not a number of infinity appeared in the computions
-.  `SNES_LINESEARCH_FAILED_DOMAIN`   - the function was evaluated outside of its domain, see `SNESSetFunctionDomainError()` and `SNESSetJacobianDomainError()`
-.  `SNES_LINESEARCH_FAILED_REDUCT`   - the linear search failed to get the requested decrease in its norm or objective
-.  `SNES_LINESEARCH_FAILED_USER`     - used by `SNESLINESEARCHNLEQERR` to indicate the user changed the search direction inappropriately
--  `SNES_LINESEARCH_FAILED_FUNCTION` - indicates the maximum number of function evaluations allowed has been surpassed, `SNESConvergedReason` is also
-                                       set to `SNES_DIVERGED_FUNCTION_COUNT`
++  `SNES_LINESEARCH_SUCCEEDED`              - the line search succeeded
+.  `SNES_LINESEARCH_FAILED_NANORINF`        - a not a number of infinity appeared in the computions
+.  `SNES_LINESEARCH_FAILED_FUNCTION_DOMAIN` - the function was evaluated outside of its domain, see `SNESSetFunctionDomainError()`
+.  `SNES_LINESEARCH_FAILED_JACOBIAN_DOMAIN` - the Jacobian was evaluated outside of its domain, see `SNESSetJacobianDomainError()`
+.  `SNES_LINESEARCH_FAILED_REDUCT`          - the linear search failed to get the requested decrease in its norm or objective
+.  `SNES_LINESEARCH_FAILED_USER`            - used by `SNESLINESEARCHNLEQERR` to indicate the user changed the search direction inappropriately
+-  `SNES_LINESEARCH_FAILED_FUNCTION`        - indicates the maximum number of function evaluations allowed has been surpassed, `SNESConvergedReason` is also
+                                              set to `SNES_DIVERGED_FUNCTION_COUNT`
 
    Level: intermediate
 
    Developer Note:
-   Some of these reasons overlap with values of `SNESConvergedReason`
+   Some of these reasons overlap with values of `SNESConvergedReason`. It is possibly a better design to have `SNESConvergedReaon` alone used also for indicating line
+   search failures.
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESGetConvergedReason()`, `KSPConvergedReason`, `SNESSetConvergenceTest()`,
           `SNESSetFunctionDomainError()` and `SNESSetJacobianDomainError()`
@@ -873,7 +875,8 @@ E*/
 typedef enum {
   SNES_LINESEARCH_SUCCEEDED,
   SNES_LINESEARCH_FAILED_NANORINF,
-  SNES_LINESEARCH_FAILED_DOMAIN,
+  SNES_LINESEARCH_FAILED_FUNCTION_DOMAIN,
+  SNES_LINESEARCH_FAILED_JACOBIAN_DOMAIN,
   SNES_LINESEARCH_FAILED_REDUCT, /* INSUFFICIENT REDUCTION */
   SNES_LINESEARCH_FAILED_USER,
   SNES_LINESEARCH_FAILED_FUNCTION

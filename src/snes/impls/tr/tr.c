@@ -426,7 +426,10 @@ static PetscErrorCode SNESNewtonTRObjective(SNES snes, PetscBool has_objective, 
   PetscCall(SNESComputeFunction(snes, W, G)); /*  F(Xkp1) = G */
   PetscCall(VecNorm(G, NORM_2, gnorm));
   if (has_objective) PetscCall(SNESComputeObjective(snes, W, fkp1));
-  else *fkp1 = 0.5 * PetscSqr(*gnorm);
+  else {
+    SNESCheckFunctionNorm(snes, *gnorm);
+    *fkp1 = 0.5 * PetscSqr(*gnorm);
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -591,6 +594,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       Jp = NULL;
       if (!neP->qnB) {
         PetscCall(SNESComputeJacobian(snes, X, snes->jacobian, snes->jacobian_pre));
+        SNESCheckJacobianDomainError(snes);
         J  = snes->jacobian;
         Jp = snes->jacobian_pre;
       } else { /* QN model */
@@ -598,7 +602,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
         J  = neP->qnB;
         Jp = neP->qnB_pre;
       }
-      SNESCheckJacobianDomainerror(snes);
+      SNESCheckJacobianDomainError(snes);
 
       /* objective function */
       PetscCall(VecNorm(F, NORM_2, &fnorm));

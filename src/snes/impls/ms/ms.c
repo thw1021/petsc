@@ -346,7 +346,7 @@ static PetscErrorCode SNESSolve_MS(SNES snes)
     if (i == 0 && snes->jacobian) {
       /* This method does not require a Jacobian, but it is usually preconditioned by PBJacobi */
       PetscCall(SNESComputeJacobian(snes, snes->vec_sol, snes->jacobian, snes->jacobian_pre));
-      SNESCheckJacobianDomainerror(snes);
+      SNESCheckJacobianDomainError(snes);
       PetscCall(KSPSetOperators(snes->ksp, snes->jacobian, snes->jacobian_pre));
     }
 

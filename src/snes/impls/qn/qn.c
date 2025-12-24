@@ -156,7 +156,7 @@ static PetscErrorCode SNESSolve_QN(SNES snes)
     /* scale the initial update */
     if (qn->scale_type == SNES_QN_SCALE_JACOBIAN && restart) {
       PetscCall(SNESComputeJacobian(snes, X, snes->jacobian, snes->jacobian_pre));
-      SNESCheckJacobianDomainerror(snes);
+      SNESCheckJacobianDomainError(snes);
       PetscCall(KSPSetOperators(snes->ksp, snes->jacobian, snes->jacobian_pre));
       PetscCall(MatLMVMSetJ0KSP(qn->B, snes->ksp));
     }

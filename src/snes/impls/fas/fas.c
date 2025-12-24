@@ -372,7 +372,10 @@ static PetscErrorCode SNESFASDownSmooth_Private(SNES snes, Vec B, Vec X, Vec F, 
   PetscCall(SNESGetAlwaysComputesFinalResidual(smoothd, &flg));
   if (!flg) PetscCall(SNESComputeFunction(smoothd, X, FPC));
   PetscCall(VecCopy(FPC, F));
-  if (fnorm) PetscCall(VecNorm(F, NORM_2, fnorm));
+  if (fnorm) {
+    PetscCall(VecNorm(F, NORM_2, fnorm));
+    SNESCheckFunctionNorm(snes, *fnorm);
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -402,7 +405,10 @@ static PetscErrorCode SNESFASUpSmooth_Private(SNES snes, Vec B, Vec X, Vec F, Pe
   PetscCall(SNESGetAlwaysComputesFinalResidual(smoothu, &flg));
   if (!flg) PetscCall(SNESComputeFunction(smoothu, X, FPC));
   PetscCall(VecCopy(FPC, F));
-  if (fnorm) PetscCall(VecNorm(F, NORM_2, fnorm));
+  if (fnorm) {
+    PetscCall(VecNorm(F, NORM_2, fnorm));
+    SNESCheckFunctionNorm(snes, *fnorm);
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -636,6 +642,7 @@ static PetscErrorCode SNESFASCycle_Additive(SNES snes, Vec X)
     PetscCall(SNESComputeFunction(snes, Xhat, F));
     if (fas->eventresidual) PetscCall(PetscLogEventEnd(fas->eventresidual, snes, 0, 0, 0));
     PetscCall(VecNorm(F, NORM_2, &fnorm));
+    SNESCheckFunctionNorm(snes, fnorm);
     X_c  = next->vec_sol;
     Xo_c = next->work[0];
     F_c  = next->vec_func;
