@@ -262,7 +262,7 @@ PETSC_EXTERN PetscErrorCode SNESGetCheckJacobianDomainError(SNES, PetscBool *);
 .  `SNES_CONVERGED_USER`           - The user has indicated convergence for an arbitrary reason
 .  `SNES_DIVERGED_FUNCTION_COUNT`  - The user provided function has been called more times than the maximum set in `SNESSetTolerances()`
 .  `SNES_DIVERGED_DTOL`            - The norm of the function has increased by a factor of divtol set with `SNESSetDivergenceTolerance()`
-.  `SNES_DIVERGED_FNORM_NAN`       - the 2-norm of the current function evaluation is not-a-number (NaN), this
+.  `SNES_DIVERGED_FUNCTION_NANORINF`       - the 2-norm of the current function evaluation is not-a-number (NaN), this
                                      is usually caused by a division of 0 by 0.
 .  `SNES_DIVERGED_MAX_IT`          - `SNESSolve()` has reached the maximum number of iterations requested
 .  `SNES_DIVERGED_LINE_SEARCH`     - The line search has failed. This only occurs for `SNES` solvers that use a line search
@@ -318,7 +318,7 @@ typedef enum {                       /* converged */
   SNES_DIVERGED_FUNCTION_DOMAIN      = -1, /* the new x location passed the function is not in the domain of F */
   SNES_DIVERGED_FUNCTION_COUNT       = -2,
   SNES_DIVERGED_LINEAR_SOLVE         = -3, /* the linear solve failed */
-  SNES_DIVERGED_FNORM_NAN            = -4,
+  SNES_DIVERGED_FUNCTION_NANORINF    = -4,
   SNES_DIVERGED_MAX_IT               = -5,
   SNES_DIVERGED_LINE_SEARCH          = -6,  /* the line search failed */
   SNES_DIVERGED_INNER                = -7,  /* inner solve failed */
@@ -328,6 +328,8 @@ typedef enum {                       /* converged */
   SNES_DIVERGED_TR_DELTA             = -11,
   SNES_CONVERGED_TR_DELTA_DEPRECATED = -11,
   SNES_DIVERGED_USER                 = -12, /* The user has indicated divergence for an arbitrary reason */
+  SNES_DIVERGED_OBJECTIVE_DOMAIN     = -13,
+  SNES_DIVERGED_OBJECTIVE_NANORINF   = -14,
 
   SNES_CONVERGED_ITERATING = 0
 } SNESConvergedReason;
@@ -379,7 +381,7 @@ M*/
 M*/
 
 /*MC
-   SNES_DIVERGED_FNORM_NAN - the 2-norm of the current function evaluation is not-a-number (NaN), this
+   SNES_DIVERGED_FUNCTION_NANORINF - the 2-norm of the current function evaluation is not-a-number (NaN), this
    is usually caused by a division of 0 by 0.
 
    Level: beginner
@@ -854,18 +856,20 @@ PETSC_EXTERN PetscErrorCode SNESLineSearchSetOrder(SNESLineSearch, PetscInt);
     SNESLineSearchReason - indication if the line search has succeeded or failed and why
 
   Values:
-+  `SNES_LINESEARCH_SUCCEEDED`       - the line search succeeded
-.  `SNES_LINESEARCH_FAILED_NANORINF` - a not a number of infinity appeared in the computions
-.  `SNES_LINESEARCH_FAILED_DOMAIN`   - the function was evaluated outside of its domain, see `SNESSetFunctionDomainError()` and `SNESSetJacobianDomainError()`
-.  `SNES_LINESEARCH_FAILED_REDUCT`   - the linear search failed to get the requested decrease in its norm or objective
-.  `SNES_LINESEARCH_FAILED_USER`     - used by `SNESLINESEARCHNLEQERR` to indicate the user changed the search direction inappropriately
--  `SNES_LINESEARCH_FAILED_FUNCTION` - indicates the maximum number of function evaluations allowed has been surpassed, `SNESConvergedReason` is also
-                                       set to `SNES_DIVERGED_FUNCTION_COUNT`
++  `SNES_LINESEARCH_SUCCEEDED`              - the line search succeeded
+.  `SNES_LINESEARCH_FAILED_NANORINF`        - a not a number of infinity appeared in the computions
+.  `SNES_LINESEARCH_FAILED_FUNCTION_DOMAIN` - the function was evaluated outside of its domain, see `SNESSetFunctionDomainError()`
+.  `SNES_LINESEARCH_FAILED_JACOBIAN_DOMAIN` - the Jacobian was evaluated outside of its domain, see `SNESSetJacobianDomainError()`
+.  `SNES_LINESEARCH_FAILED_REDUCT`          - the linear search failed to get the requested decrease in its norm or objective
+.  `SNES_LINESEARCH_FAILED_USER`            - used by `SNESLINESEARCHNLEQERR` to indicate the user changed the search direction inappropriately
+-  `SNES_LINESEARCH_FAILED_FUNCTION`        - indicates the maximum number of function evaluations allowed has been surpassed, `SNESConvergedReason` is also
+                                              set to `SNES_DIVERGED_FUNCTION_COUNT`
 
    Level: intermediate
 
    Developer Note:
-   Some of these reasons overlap with values of `SNESConvergedReason`
+   Some of these reasons overlap with values of `SNESConvergedReason`. It is possibly a better design to have `SNESConvergedReaon` alone used also for indicating line
+   search failures.
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESGetConvergedReason()`, `KSPConvergedReason`, `SNESSetConvergenceTest()`,
           `SNESSetFunctionDomainError()` and `SNESSetJacobianDomainError()`
@@ -873,7 +877,9 @@ E*/
 typedef enum {
   SNES_LINESEARCH_SUCCEEDED,
   SNES_LINESEARCH_FAILED_NANORINF,
-  SNES_LINESEARCH_FAILED_DOMAIN,
+  SNES_LINESEARCH_FAILED_FUNCTION_DOMAIN,
+  SNES_LINESEARCH_FAILED_OBJECTIVE_DOMAIN,
+  SNES_LINESEARCH_FAILED_JACOBIAN_DOMAIN,
   SNES_LINESEARCH_FAILED_REDUCT, /* INSUFFICIENT REDUCTION */
   SNES_LINESEARCH_FAILED_USER,
   SNES_LINESEARCH_FAILED_FUNCTION

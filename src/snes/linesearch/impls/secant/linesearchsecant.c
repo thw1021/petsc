@@ -1,4 +1,5 @@
 #include <petsc/private/linesearchimpl.h>
+#include <petsc/private/snesimpl.h>
 #include <petscsnes.h>
 
 static PetscErrorCode SNESLineSearchApply_Secant(SNESLineSearch linesearch)
@@ -38,6 +39,7 @@ static PetscErrorCode SNESLineSearchApply_Secant(SNESLineSearch linesearch)
     fnrm_old = gnorm * gnorm;
   } else {
     PetscCall(SNESComputeObjective(snes, X, &fnrm_old));
+    SNESLineSearchCheckObjectiveDomainError(snes, fnrm_old);
   }
   lambda_mid = 0.5 * (lambda + lambda_old);
 
@@ -55,6 +57,7 @@ static PetscErrorCode SNESLineSearchApply_Secant(SNESLineSearch linesearch)
         } else {
           PetscCall(VecNorm(F, NORM_2, &fnrm_mid));
         }
+        SNESLineSearchCheckFunctionDomainError(snes, linesearch, fnrm_mid);
 
         /* compute the norm at the new endpoint */
         PetscCall(VecWAXPY(W, -lambda, Y, X));
@@ -66,15 +69,18 @@ static PetscErrorCode SNESLineSearchApply_Secant(SNESLineSearch linesearch)
         } else {
           PetscCall(VecNorm(F, NORM_2, &fnrm));
         }
+        SNESLineSearchCheckFunctionDomainError(snes, linesearch, fnrm);
         fnrm_mid = fnrm_mid * fnrm_mid;
         fnrm     = fnrm * fnrm;
       } else {
         /* compute the objective at the midpoint */
         PetscCall(SNESComputeObjective(snes, W, &fnrm_mid));
+        SNESLineSearchCheckObjectiveDomainError(snes, fnrm_mid);
 
         /* compute the objective at the new endpoint */
         PetscCall(VecWAXPY(W, -lambda, Y, X));
         PetscCall(SNESComputeObjective(snes, W, &fnrm));
+        SNESLineSearchCheckObjectiveDomainError(snes, fnrm);
       }
 
       /* if new endpoint is viable, exit */
@@ -203,9 +209,9 @@ static PetscErrorCode SNESLineSearchApply_Secant(SNESLineSearch linesearch)
   PetscCall((*linesearch->ops->snesfunc)(snes, X, F));
 
   PetscCall(SNESLineSearchComputeNorms(linesearch));
-
+  PetscCall(SNESLineSearchGetNorms(linesearch, NULL, &gnorm, NULL));
+  SNESLineSearchCheckFunctionDomainError(snes, linesearch, gnorm);
   if (monitor) {
-    PetscCall(SNESLineSearchGetNorms(linesearch, NULL, &gnorm, NULL));
     PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
     PetscCall(PetscViewerASCIIPrintf(monitor, "    Line search terminated: lambda = %g, fnorm = %g\n", (double)lambda, (double)gnorm));
     PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
