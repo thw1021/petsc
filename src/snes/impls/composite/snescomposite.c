@@ -284,6 +284,7 @@ static PetscErrorCode SNESCompositeApply_AdditiveOptimal(SNES snes, Vec X, Vec B
   } else {
     PetscCall(VecNorm(F, NORM_2, fnorm));
   }
+  SNESCheckFunctionNorm(snes, *fnorm);
 
   /* take the minimum-normed candidate if it beats the combination by a factor of rtol or the combination has stagnated */
   min_fnorm = jac->fnorms[0];

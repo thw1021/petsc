@@ -42,6 +42,8 @@ static PetscErrorCode SNESLineSearchApply_NCGLinear(SNESLineSearch linesearch)
    alpha = (r, r) / (p, Ap) = (f, f) / (y, Jy)
    */
   PetscCall(SNESComputeJacobian(snes, X, snes->jacobian, snes->jacobian_pre));
+  SNESLineSearchCheckJacobianDomainError(snes, linesearch);
+
   PetscCall(VecDot(F, F, &alpha));
   PetscCall(MatMult(snes->jacobian, Y, W));
   PetscCall(VecDot(Y, W, &ptAp));
@@ -50,6 +52,7 @@ static PetscErrorCode SNESLineSearchApply_NCGLinear(SNESLineSearch linesearch)
   PetscCall(SNESComputeFunction(snes, X, F));
 
   PetscCall(VecNorm(F, NORM_2, fnorm));
+  SNESLineSearchCheckFunctionNorm(snes, linesearch, *fnorm);
   PetscCall(VecNorm(X, NORM_2, xnorm));
   PetscCall(VecNorm(Y, NORM_2, ynorm));
   PetscFunctionReturn(PETSC_SUCCESS);

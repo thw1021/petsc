@@ -355,7 +355,7 @@ static PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
     /* Call general purpose update function */
     PetscTryTypeMethod(snes, update, snes->iter);
     PetscCall(SNESComputeJacobian(snes, X, snes->jacobian, snes->jacobian_pre));
-    SNESCheckJacobianDomainerror(snes);
+    SNESCheckJacobianDomainError(snes);
 
     /* Create active and inactive index sets */
 
@@ -539,8 +539,9 @@ static PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
     PetscCall(SNESLineSearchGetNorms(snes->linesearch, &xnorm, &gnorm, &ynorm));
     PetscCall(PetscInfo(snes, "fnorm=%18.16e, gnorm=%18.16e, ynorm=%18.16e, lssucceed=%d\n", (double)fnorm, (double)gnorm, (double)ynorm, (int)lssucceed));
     if (snes->reason == SNES_DIVERGED_FUNCTION_COUNT) break;
-    if (snes->domainerror) {
-      snes->reason = SNES_DIVERGED_FUNCTION_DOMAIN;
+    if (snes->functiondomainerror) {
+      snes->reason              = SNES_DIVERGED_FUNCTION_DOMAIN;
+      snes->functiondomainerror = PETSC_FALSE;
       PetscCall(DMDestroyVI(snes->dm));
       PetscFunctionReturn(PETSC_SUCCESS);
     }
