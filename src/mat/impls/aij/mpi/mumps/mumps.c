@@ -59,6 +59,8 @@ EXTERN_C_END
 #define JOB_FACTSYMBOLIC 1
 #define JOB_FACTNUMERIC  2
 #define JOB_SOLVE        3
+#define JOB_SAVE         7
+#define JOB_LOAD         8
 #define JOB_END          -2
 
 /* MUMPS uses MUMPS_INT for nonzero indices such as irn/jcn, irn_loc/jcn_loc and uses int64_t for
@@ -173,6 +175,8 @@ typedef struct {
   /* For out-of-core */
   char *ooc_tmpdir; // fixed size array
   char *ooc_prefix; // fixed size array
+  char *save_dir; // fixed size array
+  char *save_prefix; // fixed size array
 } XMUMPS_STRUC_C;
 
 // Note: fixed-size arrays are allocated by MUMPS; redirect them to the outer struct
@@ -188,6 +192,8 @@ typedef struct {
     outer->rinfog     = inner->rinfog; \
     outer->ooc_tmpdir = inner->ooc_tmpdir; \
     outer->ooc_prefix = inner->ooc_prefix; \
+    outer->save_dir   = inner->save_dir; \
+    outer->save_prefix = inner->save_prefix; \
     /* the three field should never change after init */ \
     inner->comm_fortran = outer->comm_fortran; \
     inner->par          = outer->par; \
@@ -611,6 +617,10 @@ struct Mat_MUMPS {
   PetscMPIInt  tag, omp_comm_size;
   PetscBool    is_omp_master; /* is this rank the master of omp_comm */
   MPI_Request *reqs;
+
+  /* save or load settings */
+  PetscBool save;
+  PetscBool load;
 };
 
 /* Cast a 1-based CSR represented by (nrow, ia, ja) of type PetscInt to a CSR of type PetscMUMPSInt.
@@ -1985,6 +1995,13 @@ static PetscErrorCode MatSolve_MUMPS(Mat A, Vec b, Vec x)
   PetscMUMPS_c(mumps); // reduced solve, put solution in id.redrhs
   PetscCheck(mumps->id.INFOG(1) >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error in solve: INFOG(1)=%d, INFO(2)=%d " MUMPS_MANUALS, mumps->id.INFOG(1), mumps->id.INFO(2));
 
+  /* save phase */
+  if (mumps->save) {
+    PetscCall(PetscStrncpy(mumps->id.ooc_tmpdir, mumps->id.save_dir, 256));
+    mumps->id.job = JOB_SAVE;
+    PetscMUMPS_c(mumps);
+  }
+
   /* handle expansion step of Schur complement (if any) */
   if (second_solve) PetscCall(MatMumpsHandleSchur_Private(A, PETSC_TRUE));
   else if (mumps->id.ICNTL(26) == 1) { // condense the right hand side
@@ -2124,6 +2141,13 @@ static PetscErrorCode MatMatSolve_MUMPS(Mat A, Mat B, Mat X)
     mumps->id.job = JOB_SOLVE;
     PetscMUMPS_c(mumps);
     PetscCheck(mumps->id.INFOG(1) >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error in solve: INFOG(1)=%d, INFO(2)=%d " MUMPS_MANUALS, mumps->id.INFOG(1), mumps->id.INFO(2));
+
+    /* save phase */
+    if (mumps->save) {
+      PetscCall(PetscStrncpy(mumps->id.ooc_tmpdir, mumps->id.save_dir, 256));
+      mumps->id.job = JOB_SAVE;
+      PetscMUMPS_c(mumps);
+    }
 
     /* handle expansion step of Schur complement (if any) */
     if (second_solve) PetscCall(MatMumpsHandleSchur_Private(A, PETSC_TRUE));
@@ -2505,43 +2529,45 @@ static PetscErrorCode MatFactorNumeric_MUMPS(Mat F, Mat A, PETSC_UNUSED const Ma
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PetscCall((*mumps->ConvertToTriples)(A, 1, MAT_REUSE_MATRIX, mumps));
-  PetscCall(MatMumpsGatherNonzerosOnMaster(MAT_REUSE_MATRIX, mumps));
+  if (!mumps->load) {
+    PetscCall((*mumps->ConvertToTriples)(A, 1, MAT_REUSE_MATRIX, mumps));
+    PetscCall(MatMumpsGatherNonzerosOnMaster(MAT_REUSE_MATRIX, mumps));
 
-  /* numerical factorization phase */
-  mumps->id.job = JOB_FACTNUMERIC;
-  if (!mumps->id.ICNTL(18)) { /* A is centralized */
-    if (!mumps->myid) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_len, &mumps->id.a));
-  } else {
-    PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc_len, &mumps->id.a_loc));
-  }
-
-  if (F->schur) {
-    const PetscScalar *array;
-    MUMPS_INT          size = mumps->id.size_schur;
-    PetscCall(MatDenseGetArrayRead(F->schur, &array));
-    PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_FALSE, size * size, array, mumps->id.precision, &mumps->id.schur_len, &mumps->id.schur));
-    PetscCall(MatDenseRestoreArrayRead(F->schur, &array));
-  }
-
-  PetscMUMPS_c(mumps);
-  if (mumps->id.INFOG(1) < 0) {
-    PetscCheck(!A->erroriffailure, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error in numerical factorization: INFOG(1)=%d, INFO(2)=%d " MUMPS_MANUALS, mumps->id.INFOG(1), mumps->id.INFO(2));
-    if (mumps->id.INFOG(1) == -10) {
-      PetscCall(PetscInfo(F, "MUMPS error in numerical factorization: matrix is numerically singular, INFOG(1)=%d, INFO(2)=%d\n", mumps->id.INFOG(1), mumps->id.INFO(2)));
-      F->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
-    } else if (mumps->id.INFOG(1) == -13) {
-      PetscCall(PetscInfo(F, "MUMPS error in numerical factorization: INFOG(1)=%d, cannot allocate required memory %d megabytes\n", mumps->id.INFOG(1), mumps->id.INFO(2)));
-      F->factorerrortype = MAT_FACTOR_OUTMEMORY;
-    } else if (mumps->id.INFOG(1) == -8 || mumps->id.INFOG(1) == -9 || (-16 < mumps->id.INFOG(1) && mumps->id.INFOG(1) < -10)) {
-      PetscCall(PetscInfo(F, "MUMPS error in numerical factorization: INFOG(1)=%d, INFO(2)=%d, problem with work array\n", mumps->id.INFOG(1), mumps->id.INFO(2)));
-      F->factorerrortype = MAT_FACTOR_OUTMEMORY;
+    /* numerical factorization phase */
+    mumps->id.job = JOB_FACTNUMERIC;
+    if (!mumps->id.ICNTL(18)) { /* A is centralized */
+      if (!mumps->myid) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_len, &mumps->id.a));
     } else {
-      PetscCall(PetscInfo(F, "MUMPS error in numerical factorization: INFOG(1)=%d, INFO(2)=%d\n", mumps->id.INFOG(1), mumps->id.INFO(2)));
-      F->factorerrortype = MAT_FACTOR_OTHER;
+      PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc_len, &mumps->id.a_loc));
     }
+
+    if (F->schur) {
+      const PetscScalar *array;
+      MUMPS_INT          size = mumps->id.size_schur;
+      PetscCall(MatDenseGetArrayRead(F->schur, &array));
+      PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_FALSE, size * size, array, mumps->id.precision, &mumps->id.schur_len, &mumps->id.schur));
+      PetscCall(MatDenseRestoreArrayRead(F->schur, &array));
+    }
+
+    PetscMUMPS_c(mumps);
+    if (mumps->id.INFOG(1) < 0) {
+      PetscCheck(!A->erroriffailure, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error in numerical factorization: INFOG(1)=%d, INFO(2)=%d " MUMPS_MANUALS, mumps->id.INFOG(1), mumps->id.INFO(2));
+      if (mumps->id.INFOG(1) == -10) {
+        PetscCall(PetscInfo(F, "MUMPS error in numerical factorization: matrix is numerically singular, INFOG(1)=%d, INFO(2)=%d\n", mumps->id.INFOG(1), mumps->id.INFO(2)));
+        F->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+      } else if (mumps->id.INFOG(1) == -13) {
+        PetscCall(PetscInfo(F, "MUMPS error in numerical factorization: INFOG(1)=%d, cannot allocate required memory %d megabytes\n", mumps->id.INFOG(1), mumps->id.INFO(2)));
+        F->factorerrortype = MAT_FACTOR_OUTMEMORY;
+      } else if (mumps->id.INFOG(1) == -8 || mumps->id.INFOG(1) == -9 || (-16 < mumps->id.INFOG(1) && mumps->id.INFOG(1) < -10)) {
+        PetscCall(PetscInfo(F, "MUMPS error in numerical factorization: INFOG(1)=%d, INFO(2)=%d, problem with work array\n", mumps->id.INFOG(1), mumps->id.INFO(2)));
+        F->factorerrortype = MAT_FACTOR_OUTMEMORY;
+      } else {
+        PetscCall(PetscInfo(F, "MUMPS error in numerical factorization: INFOG(1)=%d, INFO(2)=%d\n", mumps->id.INFOG(1), mumps->id.INFO(2)));
+        F->factorerrortype = MAT_FACTOR_OTHER;
+      }
+    }
+    PetscCheck(mumps->myid || mumps->id.ICNTL(16) <= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error in numerical factorization: ICNTL(16)=%d " MUMPS_MANUALS, mumps->id.INFOG(16));
   }
-  PetscCheck(mumps->myid || mumps->id.ICNTL(16) <= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error in numerical factorization: ICNTL(16)=%d " MUMPS_MANUALS, mumps->id.INFOG(16));
 
   F->assembled = PETSC_TRUE;
 
@@ -2589,7 +2615,8 @@ static PetscErrorCode MatFactorNumeric_MUMPS(Mat F, Mat A, PETSC_UNUSED const Ma
     PetscCall(VecRestoreArray(mumps->x_seq, &array));
     mumps->id.lsol_loc = (PetscMUMPSInt)lsol_loc;
   }
-  PetscCall(PetscLogFlops((double)ID_RINFO_GET(mumps->id, 2)));
+  if (!mumps->load) PetscCall(PetscLogFlops((double)ID_RINFO_GET(mumps->id, 2)));
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2854,6 +2881,10 @@ static PetscErrorCode MatSetFromOptions_MUMPS(Mat F, Mat A)
   if (flg) ID_CNTL_SET(mumps->id, 7, cntl);
 
   PetscCall(PetscOptionsString("-mat_mumps_ooc_tmpdir", "out of core directory", "None", mumps->id.ooc_tmpdir, mumps->id.ooc_tmpdir, sizeof(mumps->id.ooc_tmpdir), NULL));
+  PetscCall(PetscOptionsString("-mat_mumps_save_dir", "Directory to save files in", "None", mumps->id.save_dir, mumps->id.save_dir, sizeof(mumps->id.save_dir), NULL));
+  PetscCall(PetscOptionsString("-mat_mumps_save_prefix", "Name of out of core files", "None", mumps->id.save_prefix, mumps->id.save_prefix, sizeof(mumps->id.save_prefix), NULL));
+  PetscCall(PetscOptionsName("-mat_mumps_save", "True to save factorization", "None", &mumps->save));
+  PetscCall(PetscOptionsName("-mat_mumps_load", "True to load factorization", "None", &mumps->load));
 
   PetscCall(PetscOptionsIntArray("-mat_mumps_view_info", "request INFO local to each processor", "", info, &ninfo, NULL));
   if (ninfo) {
@@ -2904,47 +2935,54 @@ static PetscErrorCode MatLUFactorSymbolic_AIJMUMPS(Mat F, Mat A, IS r, PETSC_UNU
   /* Set MUMPS options from the options database */
   PetscCall(MatSetFromOptions_MUMPS(F, A));
 
-  PetscCall((*mumps->ConvertToTriples)(A, 1, MAT_INITIAL_MATRIX, mumps));
-  PetscCall(MatMumpsGatherNonzerosOnMaster(MAT_INITIAL_MATRIX, mumps));
+  if (mumps->load) {
+    PetscCall(PetscStrncpy(mumps->id.ooc_tmpdir, mumps->id.save_dir, 256));
+    mumps->id.job = JOB_LOAD;
+    PetscMUMPS_c(mumps);
+    PetscCheck(mumps->id.INFOG(1) >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error in load: INFOG(1)=%d INFO(2)=%d " MUMPS_MANUALS, mumps->id.INFOG(1), mumps->id.INFO(2));
+  } else {
+    PetscCall((*mumps->ConvertToTriples)(A, 1, MAT_INITIAL_MATRIX, mumps));
+    PetscCall(MatMumpsGatherNonzerosOnMaster(MAT_INITIAL_MATRIX, mumps));
 
-  /* analysis phase */
-  mumps->id.job = JOB_FACTSYMBOLIC;
-  PetscCall(PetscMUMPSIntCast(M, &mumps->id.n));
-  switch (mumps->id.ICNTL(18)) {
-  case 0: /* centralized assembled matrix input */
-    if (!mumps->myid) {
-      mumps->id.nnz = mumps->nnz;
-      mumps->id.irn = mumps->irn;
-      mumps->id.jcn = mumps->jcn;
-      if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_len, &mumps->id.a));
-      if (r && mumps->id.ICNTL(7) == 7) {
-        mumps->id.ICNTL(7) = 1;
-        if (!mumps->myid) {
-          const PetscInt *idx;
-          PetscInt        i;
+    /* analysis phase */
+    mumps->id.job = JOB_FACTSYMBOLIC;
+    PetscCall(PetscMUMPSIntCast(M, &mumps->id.n));
+    switch (mumps->id.ICNTL(18)) {
+    case 0: /* centralized assembled matrix input */
+      if (!mumps->myid) {
+        mumps->id.nnz = mumps->nnz;
+        mumps->id.irn = mumps->irn;
+        mumps->id.jcn = mumps->jcn;
+        if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_len, &mumps->id.a));
+        if (r && mumps->id.ICNTL(7) == 7) {
+          mumps->id.ICNTL(7) = 1;
+          if (!mumps->myid) {
+            const PetscInt *idx;
+            PetscInt        i;
 
-          PetscCall(PetscMalloc1(M, &mumps->id.perm_in));
-          PetscCall(ISGetIndices(r, &idx));
-          for (i = 0; i < M; i++) PetscCall(PetscMUMPSIntCast(idx[i] + 1, &mumps->id.perm_in[i])); /* perm_in[]: start from 1, not 0! */
-          PetscCall(ISRestoreIndices(r, &idx));
+            PetscCall(PetscMalloc1(M, &mumps->id.perm_in));
+            PetscCall(ISGetIndices(r, &idx));
+            for (i = 0; i < M; i++) PetscCall(PetscMUMPSIntCast(idx[i] + 1, &mumps->id.perm_in[i])); /* perm_in[]: start from 1, not 0! */
+            PetscCall(ISRestoreIndices(r, &idx));
+          }
         }
       }
+      break;
+    case 3: /* distributed assembled matrix input (size>1) */
+      mumps->id.nnz_loc = mumps->nnz;
+      mumps->id.irn_loc = mumps->irn;
+      mumps->id.jcn_loc = mumps->jcn;
+      if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc_len, &mumps->id.a_loc));
+      if (mumps->ICNTL20 == 0) { /* Centralized rhs. Create scatter scat_rhs for repeated use in MatSolve() */
+        PetscCall(MatCreateVecs(A, NULL, &b));
+        PetscCall(VecScatterCreateToZero(b, &mumps->scat_rhs, &mumps->b_seq));
+        PetscCall(VecDestroy(&b));
+      }
+      break;
     }
-    break;
-  case 3: /* distributed assembled matrix input (size>1) */
-    mumps->id.nnz_loc = mumps->nnz;
-    mumps->id.irn_loc = mumps->irn;
-    mumps->id.jcn_loc = mumps->jcn;
-    if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc_len, &mumps->id.a_loc));
-    if (mumps->ICNTL20 == 0) { /* Centralized rhs. Create scatter scat_rhs for repeated use in MatSolve() */
-      PetscCall(MatCreateVecs(A, NULL, &b));
-      PetscCall(VecScatterCreateToZero(b, &mumps->scat_rhs, &mumps->b_seq));
-      PetscCall(VecDestroy(&b));
-    }
-    break;
+    PetscMUMPS_c(mumps);
+    PetscCall(MatFactorSymbolic_MUMPS_ReportIfError(F, A, info, mumps));
   }
-  PetscMUMPS_c(mumps);
-  PetscCall(MatFactorSymbolic_MUMPS_ReportIfError(F, A, info, mumps));
 
   F->ops->lufactornumeric   = MatFactorNumeric_MUMPS;
   F->ops->solve             = MatSolve_MUMPS;
@@ -2973,35 +3011,42 @@ static PetscErrorCode MatLUFactorSymbolic_BAIJMUMPS(Mat F, Mat A, PETSC_UNUSED I
   /* Set MUMPS options from the options database */
   PetscCall(MatSetFromOptions_MUMPS(F, A));
 
-  PetscCall((*mumps->ConvertToTriples)(A, 1, MAT_INITIAL_MATRIX, mumps));
-  PetscCall(MatMumpsGatherNonzerosOnMaster(MAT_INITIAL_MATRIX, mumps));
+  if (mumps->load) {
+    PetscCall(PetscStrncpy(mumps->id.ooc_tmpdir, mumps->id.save_dir, 256));
+    mumps->id.job = JOB_LOAD;
+    PetscMUMPS_c(mumps);
+    PetscCheck(mumps->id.INFOG(1) >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error in load: INFOG(1)=%d INFO(2)=%d " MUMPS_MANUALS, mumps->id.INFOG(1), mumps->id.INFO(2));
+  } else {
+    PetscCall((*mumps->ConvertToTriples)(A, 1, MAT_INITIAL_MATRIX, mumps));
+    PetscCall(MatMumpsGatherNonzerosOnMaster(MAT_INITIAL_MATRIX, mumps));
 
-  /* analysis phase */
-  mumps->id.job = JOB_FACTSYMBOLIC;
-  PetscCall(PetscMUMPSIntCast(M, &mumps->id.n));
-  switch (mumps->id.ICNTL(18)) {
-  case 0: /* centralized assembled matrix input */
-    if (!mumps->myid) {
-      mumps->id.nnz = mumps->nnz;
-      mumps->id.irn = mumps->irn;
-      mumps->id.jcn = mumps->jcn;
-      if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_len, &mumps->id.a));
+    /* analysis phase */
+    mumps->id.job = JOB_FACTSYMBOLIC;
+    PetscCall(PetscMUMPSIntCast(M, &mumps->id.n));
+    switch (mumps->id.ICNTL(18)) {
+    case 0: /* centralized assembled matrix input */
+      if (!mumps->myid) {
+        mumps->id.nnz = mumps->nnz;
+        mumps->id.irn = mumps->irn;
+        mumps->id.jcn = mumps->jcn;
+        if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_len, &mumps->id.a));
+      }
+      break;
+    case 3: /* distributed assembled matrix input (size>1) */
+      mumps->id.nnz_loc = mumps->nnz;
+      mumps->id.irn_loc = mumps->irn;
+      mumps->id.jcn_loc = mumps->jcn;
+      if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc_len, &mumps->id.a_loc));
+      if (mumps->ICNTL20 == 0) { /* Centralized rhs. Create scatter scat_rhs for repeated use in MatSolve() */
+        PetscCall(MatCreateVecs(A, NULL, &b));
+        PetscCall(VecScatterCreateToZero(b, &mumps->scat_rhs, &mumps->b_seq));
+        PetscCall(VecDestroy(&b));
+      }
+      break;
     }
-    break;
-  case 3: /* distributed assembled matrix input (size>1) */
-    mumps->id.nnz_loc = mumps->nnz;
-    mumps->id.irn_loc = mumps->irn;
-    mumps->id.jcn_loc = mumps->jcn;
-    if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc_len, &mumps->id.a_loc));
-    if (mumps->ICNTL20 == 0) { /* Centralized rhs. Create scatter scat_rhs for repeated use in MatSolve() */
-      PetscCall(MatCreateVecs(A, NULL, &b));
-      PetscCall(VecScatterCreateToZero(b, &mumps->scat_rhs, &mumps->b_seq));
-      PetscCall(VecDestroy(&b));
-    }
-    break;
+    PetscMUMPS_c(mumps);
+    PetscCall(MatFactorSymbolic_MUMPS_ReportIfError(F, A, info, mumps));
   }
-  PetscMUMPS_c(mumps);
-  PetscCall(MatFactorSymbolic_MUMPS_ReportIfError(F, A, info, mumps));
 
   F->ops->lufactornumeric   = MatFactorNumeric_MUMPS;
   F->ops->solve             = MatSolve_MUMPS;
@@ -3028,35 +3073,42 @@ static PetscErrorCode MatCholeskyFactorSymbolic_MUMPS(Mat F, Mat A, PETSC_UNUSED
   /* Set MUMPS options from the options database */
   PetscCall(MatSetFromOptions_MUMPS(F, A));
 
-  PetscCall((*mumps->ConvertToTriples)(A, 1, MAT_INITIAL_MATRIX, mumps));
-  PetscCall(MatMumpsGatherNonzerosOnMaster(MAT_INITIAL_MATRIX, mumps));
+  if (mumps->load) {
+    PetscCall(PetscStrncpy(mumps->id.ooc_tmpdir, mumps->id.save_dir, 256));
+    mumps->id.job = JOB_LOAD;
+    PetscMUMPS_c(mumps);
+    PetscCheck(mumps->id.INFOG(1) >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "MUMPS error in load: INFOG(1)=%d INFO(2)=%d " MUMPS_MANUALS, mumps->id.INFOG(1), mumps->id.INFO(2));
+  } else {
+    PetscCall((*mumps->ConvertToTriples)(A, 1, MAT_INITIAL_MATRIX, mumps));
+    PetscCall(MatMumpsGatherNonzerosOnMaster(MAT_INITIAL_MATRIX, mumps));
 
-  /* analysis phase */
-  mumps->id.job = JOB_FACTSYMBOLIC;
-  PetscCall(PetscMUMPSIntCast(M, &mumps->id.n));
-  switch (mumps->id.ICNTL(18)) {
-  case 0: /* centralized assembled matrix input */
-    if (!mumps->myid) {
-      mumps->id.nnz = mumps->nnz;
-      mumps->id.irn = mumps->irn;
-      mumps->id.jcn = mumps->jcn;
-      if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_len, &mumps->id.a));
+    /* analysis phase */
+    mumps->id.job = JOB_FACTSYMBOLIC;
+    PetscCall(PetscMUMPSIntCast(M, &mumps->id.n));
+    switch (mumps->id.ICNTL(18)) {
+    case 0: /* centralized assembled matrix input */
+      if (!mumps->myid) {
+        mumps->id.nnz = mumps->nnz;
+        mumps->id.irn = mumps->irn;
+        mumps->id.jcn = mumps->jcn;
+        if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_len, &mumps->id.a));
+      }
+      break;
+    case 3: /* distributed assembled matrix input (size>1) */
+      mumps->id.nnz_loc = mumps->nnz;
+      mumps->id.irn_loc = mumps->irn;
+      mumps->id.jcn_loc = mumps->jcn;
+      if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc_len, &mumps->id.a_loc));
+      if (mumps->ICNTL20 == 0) { /* Centralized rhs. Create scatter scat_rhs for repeated use in MatSolve() */
+        PetscCall(MatCreateVecs(A, NULL, &b));
+        PetscCall(VecScatterCreateToZero(b, &mumps->scat_rhs, &mumps->b_seq));
+        PetscCall(VecDestroy(&b));
+      }
+      break;
     }
-    break;
-  case 3: /* distributed assembled matrix input (size>1) */
-    mumps->id.nnz_loc = mumps->nnz;
-    mumps->id.irn_loc = mumps->irn;
-    mumps->id.jcn_loc = mumps->jcn;
-    if (1 < mumps->id.ICNTL(6) && mumps->id.ICNTL(6) < 7) PetscCall(MatMumpsMakeMumpsScalarArray(PETSC_TRUE, mumps->nnz, mumps->val, mumps->id.precision, &mumps->id.a_loc_len, &mumps->id.a_loc));
-    if (mumps->ICNTL20 == 0) { /* Centralized rhs. Create scatter scat_rhs for repeated use in MatSolve() */
-      PetscCall(MatCreateVecs(A, NULL, &b));
-      PetscCall(VecScatterCreateToZero(b, &mumps->scat_rhs, &mumps->b_seq));
-      PetscCall(VecDestroy(&b));
-    }
-    break;
+    PetscMUMPS_c(mumps);
+    PetscCall(MatFactorSymbolic_MUMPS_ReportIfError(F, A, info, mumps));
   }
-  PetscMUMPS_c(mumps);
-  PetscCall(MatFactorSymbolic_MUMPS_ReportIfError(F, A, info, mumps));
 
   F->ops->choleskyfactornumeric = MatFactorNumeric_MUMPS;
   F->ops->solve                 = MatSolve_MUMPS;
