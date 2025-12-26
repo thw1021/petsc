@@ -4069,7 +4069,7 @@ PetscErrorCode PetscSectionExtractDofsFromArray(PetscSection origSection, MPI_Da
 + pointSF         - The `PetscSF` describing the communication pattern (roots are original points, leaves are new points)
 . originalSection - The `PetscSection` for existing data layout
 . datatype        - The type of data
-- originalData    - The existing data
+- originalData    - The existing data, may be `NULL` is storage size of `originalSection` is zero
 
   Output Parameters:
 + newSection  - The `PetscSection` describing the new data layout
@@ -4091,7 +4091,12 @@ PetscErrorCode PetscSectionDistributeData(PetscSF pointSF, PetscSection original
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pointSF, PETSCSF_CLASSID, 1);
   PetscValidHeaderSpecific(originalSection, PETSC_SECTION_CLASSID, 2);
-  PetscAssertPointer(originalData, 4);
+  if (originalData) PetscAssertPointer(originalData, 4);
+  else {
+    PetscInt size;
+    PetscCall(PetscSectionGetStorageSize(originalSection, &size));
+    PetscCheck(size == 0, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "originalData may be NULL iff the storage size of originalSection is zero, but is %" PetscInt_FMT, size);
+  }
   PetscValidHeaderSpecific(newSection, PETSC_SECTION_CLASSID, 5);
   if (origToNewSF) PetscAssertPointer(origToNewSF, 6);
   if (newData) PetscAssertPointer(newData, 7);
