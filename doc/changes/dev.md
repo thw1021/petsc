@@ -47,6 +47,8 @@
 ```{rubric} VecScatter / PetscSF:
 ```
 
+- Add `PetscSFCreateByMatchingIndicesInclusive()` as variant of `PetscSFCreateByMatchingIndices()` but does not enforce unique ownership of matching indices
+
 ```{rubric} PF:
 ```
 
