@@ -45,6 +45,8 @@
 ```{rubric} VecScatter / PetscSF:
 ```
 
+- Add `PetscSFCreateByMatchingIndicesInclusive()` as variant of `PetscSFCreateByMatchingIndices()` but does not enforce unique ownership of matching indices
+
 ```{rubric} PF:
 ```
 
@@ -53,6 +55,8 @@
 
 ```{rubric} PetscSection:
 ```
+
+- Add `PetscSectionDistributeData()`, akin to `DMPlexDistributeData()`
 
 ```{rubric} PetscPartitioner:
 ```
