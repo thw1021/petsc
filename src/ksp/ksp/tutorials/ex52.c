@@ -450,13 +450,19 @@ int main(int argc, char **args)
       args: -use_petsc_lu
       output_file: output/ex52_2.out
 
-   test:
+   testset:
       suffix: mumps
       nsize: 3
       requires: mumps
-      args: -use_mumps_lu
       output_file: output/ex52_1.out
+      args: -use_mumps_lu
 
+      test:
+        suffix: mumps
+
+      test:
+        suffix: mumps_ooc
+        args: -mat_mumps_icntl_22 1 -mat_mumps_ooc_tmpdir output
    test:
       suffix: mumps_2
       nsize: 3
