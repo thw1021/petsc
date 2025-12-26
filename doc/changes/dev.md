@@ -54,6 +54,8 @@
 ```{rubric} PetscSection:
 ```
 
+- Add `PetscSectionDistributeData()`, akin to `DMPlexDistributeData()`
+
 ```{rubric} PetscPartitioner:
 ```
 
