@@ -1220,6 +1220,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
   isize[2] = 0;
   PetscCallCGNSWrite(cg_zone_write(cgv->file_num, base, "Zone", isize, CGNS_ENUMV(Unstructured), &zone), dm, viewer);
 
+  cgsize_t   e_owned, e_global, e_start;
   {
     const PetscScalar *X;
     PetscScalar       *x;
@@ -1236,7 +1237,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     }
 
     int        section;
-    cgsize_t   e_owned, e_global, e_start, *conn = NULL;
+    cgsize_t   *conn = NULL;
     const int *perm;
     CGNS_ENUMT(ElementType_t) element_type = CGNS_ENUMV(ElementTypeNull);
     {
@@ -1324,7 +1325,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     }
   }
 
-  PetscInt  num_fs;
+  PetscInt num_fs;
 
   PetscCall(DMGetLabelSize(dm, "Face Sets", &num_fs));
   // TODO: Verify compatiblity with higher-order geometries. (Probably don't , but possibly need to do a "corners only" connectivity or something)
@@ -1340,7 +1341,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     int             section;
     CGNS_ENUMT(ElementType_t) element_type = CGNS_ENUMV(ElementTypeNull);
     const int *perm;
-    cgsize_t   f_owned = 0, f_global, f_start;
+    cgsize_t   f_owned = 0, f_global, f_start, *parents;
 
     PetscCall(DMGetLabel(dm, "Face Sets", &fsLabel));
     PetscCall(DMLabelGetNonEmptyStratumValuesIS(fsLabel, &fsIS));
@@ -1348,7 +1349,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     PetscCall(ISGetIndices(fsIS, &fsIdx));
     { // Get single IS without duplicates of the local face IDs in the FaceSets
       PetscInt fsSize;
-      IS *fsISs;
+      IS      *fsISs;
 
       PetscCall(PetscMalloc1(num_fs, &fsISs));
       for (fs = 0; fs < num_fs; ++fs) {
@@ -1373,9 +1374,17 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
 
       PetscCall(ISGetIndices(fsISTotal, &faces));
       if (f_owned) PetscCall(DMPlexGetCellType(dm, faces[0], &cell_type));
+      PetscCall(PetscCalloc1(f_owned * 2, &parents));
       for (PetscInt f = 0, c = 0; f < f_owned; f++) {
-        PetscInt      *closure_indices, elem_size;
+        PetscInt      *closure_indices, elem_size, support_size;
+        const PetscInt *support;
         const PetscInt face = faces[f];
+
+        PetscCall(DMPlexGetSupportSize(dm, face, &support_size));
+        PetscCall(DMPlexGetSupport(dm, face, &support));
+        PetscCheck(support_size < 2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Face has more than one supporting cell");
+        parents[f * 2 + 0] = support[0] + e_start + 1;
+        if (support_size == 2) parents[f * 2 + 0] = support[0] + e_start + 1;
 
         PetscCall(DMPlexGetClosureIndices(cdm, cdm->localSection, cdm->localSection, face, PETSC_FALSE, &closure_dof_f, &closure_indices, NULL, NULL));
         elem_size = closure_dof_f / coord_dim;
@@ -1408,6 +1417,10 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       PetscCallCGNSWrite(cgp_section_write(cgv->file_num, base, zone, "Faces", element_type, elem_offset + 1, elem_offset + f_global, 0, &section), dm, viewer);
       PetscCallCGNSWriteData(cgp_elements_write_data(cgv->file_num, base, zone, section, f_start + 1, f_start + f_owned, conn), dm, viewer);
       PetscCall(PetscFree(conn));
+
+      // Write ParentElement
+      PetscCallCGNSWriteData(cgp_parentelements_write_data(cgv->file_num, base, zone, section, f_start + 1, f_start + f_owned, parents), dm, viewer);
+      PetscCall(PetscFree(parents));
     }
 
     // Write  BC_t for every face set value.
