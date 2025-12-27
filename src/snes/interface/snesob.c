@@ -19,6 +19,9 @@
 
   This is not used in the `SNESLINESEARCHCP` line search.
 
+  Developer Note:
+  There should be a `SNESSetObjectiveFunctionDomainError()`, currently there is no way to indicate the input vector is not in the functions domain.
+
 .seealso: [](ch_snes), `SNES`, `SNESLineSearch()`, `SNESGetObjective()`, `SNESComputeObjective()`, `SNESSetFunction()`, `SNESSetJacobian()`,
           `SNESObjectiveFn`
 @*/
