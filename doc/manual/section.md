@@ -152,7 +152,7 @@ Their use for each is described below.
 
 `PetscSection` can also be applied to distributed problems as well.
 This is done using the same local/global system described in {any}`sec_localglobal`.
-To do this, we introduce 4 new concepts; a `localSection`, `globalSection`, `pointSF`, and `sectionSF`.
+To do this, we introduce four new concepts; a `localSection`, `globalSection`, `pointSF`, and `sectionSF`.
 
 Assume the mesh points of the "global" mesh are partitioned among processes and that some mesh points are shared between multiple processes (i.e there is an overlap in the partitions).
 The shared mesh points define the ghost/halo points needed in many PDE problems.
@@ -160,10 +160,10 @@ For each shared mesh point, appoint one process to be the owner of that mesh poi
 To describe this parallel mesh point layout, we use a `PetscSF` and call it the `pointSF`.
 The `pointSF` describes which processes "own" which mesh points and which process is the owner of each shared mesh point.
 
-Next, for each process define a `PetscSection` that describes the mapping between that process's partition (including shared mesh points) and the data stored on it and call it the `localSection`.
-The `localSection` describes the layout of the local vector.
+Next, for each process, define the `localSection`, which is a `PetscSection` that describes the data stored on the process's mesh points (including shared mesh points).
+The `localSection` describes the data layout of the local vector. The `globalSection` describes the data layout of the global vector.
 To generate the `globalSection` we use `PetscSectionCreateGlobalSection()`, which takes the `localSection` and `pointSF` as inputs.
-The global section returns $-(dof+1)$ for the number of dofs on an unowned (ghost) point, and traditionally $-(off+1)$ for its offset on the owning process.
+The global section returns $-(dof+1)$ for the number of dofs on an unowned (ghost) point, and by convention $-(off+1)$ for its offset on the owning process.
 This behavior of the offsets is controlled via an argument to `PetscSectionCreateGlobalSection()`.
 The `globalSection` can be used to create global vectors, just as the local section is used to create local vectors.
 
