@@ -751,23 +751,25 @@ typedef struct {
   cgsize_t end;
 } CGRange;
 
-static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscInt cgid, int base, int zone, PetscInt num_sections, PetscInt section_ids[], PetscSection *section, PetscInt *cells, PetscInt *connectivity)
+static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscInt cgid, int base, int zone, PetscInt num_sections, PetscInt section_ids[], PetscSection *section, CGNS_ENUMT(ElementType_t) * cellTypes[], PetscInt *cells[], PetscInt *connectivity[])
 {
   MPI_Comm     comm = PetscObjectComm((PetscObject)dm);
   PetscSection section_;
   char         buffer[CGIO_MAX_NAME_LENGTH + 1];
-  CGNS_ENUMT(ElementType_t) * cellTypes;
-  CGRange     *ranges;
-  PetscLayout *layouts;
-  PetscInt     nglobal_cells = 0, nlocal_cells = 0;
+  CGNS_ENUMT(ElementType_t) * sectionCellTypes;
+  CGRange       *ranges;
+  PetscLayout   *layouts;
+  PetscInt       nglobal_cells = 0, nlocal_cells = 0, global_cell_dim = -1;
+  PetscInt      *cells_;
+  PetscSegBuffer conn_sb;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscMalloc3(num_sections, &ranges, num_sections, &cellTypes, num_sections, &layouts));
+  PetscCall(PetscMalloc3(num_sections, &ranges, num_sections, &sectionCellTypes, num_sections, &layouts));
   for (PetscInt s = 0; s < num_sections; s++) {
     int      nbndry, parentFlag;
     PetscInt local_size;
 
-    PetscCallCGNSRead(cg_section_read(cgid, base, zone, section_ids[s], buffer, &cellTypes[s], &ranges[s].start, &ranges[s].end, &nbndry, &parentFlag), dm, 0);
+    PetscCallCGNSRead(cg_section_read(cgid, base, zone, section_ids[s], buffer, &sectionCellTypes[s], &ranges[s].start, &ranges[s].end, &nbndry, &parentFlag), dm, 0);
     PetscInt num_section_cells = ranges[s].end - ranges[s].start + 1;
     nglobal_cells += num_section_cells;
     PetscCall(PetscLayoutCreateFromSizes(comm, PETSC_DECIDE, num_section_cells, 1, &layouts[s]));
@@ -777,14 +779,53 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
   PetscCall(PetscSectionCreate(comm, &section_));
   PetscCall(PetscSectionSetChart(section_, 0, nlocal_cells));
 
-  for (PetscInt s = 0; s < num_sections; s++) {
+  PetscCall(PetscMalloc1(nlocal_cells, &cells_));
+  PetscCall(PetscMalloc1(nlocal_cells, cellTypes));
+  PetscCall(PetscSegBufferCreate(sizeof(PetscInt), nlocal_cells * 4, &conn_sb)); // TODO: Improve connectivity estimate (factor in dimensionality and corners vs no corners)
+  for (PetscInt s = 0, c = 0; s < num_sections; s++) {
     PetscInt mystart, myend, myowned;
-    cgsize_t *elements;
-    
+
     PetscCall(PetscLayoutGetRange(layouts[s], &mystart, &myend));
     PetscCall(PetscLayoutGetLocalSize(layouts[s], &myowned));
-    PetscCall(PetscMalloc1(myowned * numClosure, &elements));
-    PetscCallCGNSReadData(cgp_elements_read_data(cgid, base, zone, s, ranges[s].start + mystart + 1, ranges[s].start + myend, elements), dm, 0);
+    // TODO: Error if POLY_N or NFACE cell types
+    if (sectionCellTypes[s] == CGNS_ENUMV(MIXED)) {
+      cgsize_t *offsets, *conn_cg;
+
+      PetscCall(PetscMalloc1(myowned + 1, &offsets)); // The last element in the array is the total size of the connectivity for the given [start,end] range
+      PetscCallCGNSRead(cgp_poly_elements_read_data_offsets(cgid, base, zone, s, ranges[s].start + mystart + 1, ranges[s].start + myend, offsets), dm, 0);
+      PetscCall(PetscMalloc1(offsets[myowned + 1], &conn_cg));
+      PetscCallCGNSRead(cgp_poly_elements_read_data_elements(cgid, base, zone, s, ranges[s].start + mystart + 1, ranges[s].start + myend, offsets, conn_cg), dm, 0);
+      for (PetscInt i = 0; i < myowned; i++) {
+        DMPolytopeType dm_cell_type = DM_POLYTOPE_UNKNOWN;
+        PetscInt numCorners, cell_dim, *conn_sb_seg;
+        const int *perm;
+
+        cells_[c] = ranges[s].start + mystart + 1 + i;
+
+        CGNS_ENUMT(ElementType_t) cellType = (CGNS_ENUMT(ElementType_t))conn_cg[offsets[i]];
+        (*cellTypes)[c] = cellType;
+        PetscCall(CGNSElementTypeGetTopologyInfo(cellType, &dm_cell_type, &numCorners, &cell_dim));
+        if (global_cell_dim == -1) global_cell_dim = cell_dim;
+        else PetscCheck(cell_dim == global_cell_dim, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Can only combine cells of the sae dimension. Global cell dimension detected as %" PetscInt_FMT ", but CGNS element %" PetscInt_FMT " is dimension %" PetscInt_FMT, global_cell_dim, cells_[c], cell_dim);
+        PetscCall(PetscSegBufferGet(conn_sb, numCorners, &conn_sb_seg));
+
+        PetscCall(DMPlexCGNSGetPermutation_Internal(dm_cell_type, numCorners, NULL, &perm));
+        for (PetscInt v = 0; v < numCorners; ++v) conn_sb_seg[perm[v]] = conn_cg[offsets[i] + 1 + v];
+        PetscCall(PetscSectionSetDof(section_, c, numCorners));
+      }
+    } else {
+      PetscInt numCorners, cell_dim;
+      //TODO: Update the mono-topology sections to use the PetscSegBuffer stuff
+
+      PetscCall(CGNSElementTypeGetTopologyInfo(sectionCellTypes[s], NULL, &numCorners, &cell_dim));
+        if (global_cell_dim == -1) global_cell_dim = cell_dim;
+        else PetscCheck(cell_dim == global_cell_dim, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Can only combine cells of the sae dimension. Global cell dimension detected as %" PetscInt_FMT ", but CGNS element %" PetscInt_FMT " is dimension %" PetscInt_FMT, global_cell_dim, cells_[c], cell_dim);
+      for (PetscInt i = 0; i < myowned; i++) {
+        cells_[c] = ranges[s].start + mystart + 1 + i;
+        (*cellTypes)[c] = sectionCellTypes[s];
+        PetscCall(PetscSectionSetDof(section_, c, numCorners));
+      }
+    }
   }
 
   PetscFunctionReturn(PETSC_SUCCESS);
