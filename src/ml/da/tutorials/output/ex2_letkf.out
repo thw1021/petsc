@@ -6,7 +6,7 @@ PetscDA Object: 1 MPI process
   Assembled: true
   Inflation: 1.
 PetscDALETKF Object:
-  Square root type: cholesky
+  Square root type: eigen
   Local observations per vertex: 40
   Localization matrix: not set
 Localization matrix Q created: 40 x 40, full localization (all weights = 1.0)
@@ -25,20 +25,20 @@ Lorenz-96 LETKF Example
   Localization          : Full (Q_NUM_OBS_MAX = 40)
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [burn-in]
-Step  112, time  5.600  RMSE_forecast 0.22746  RMSE_analysis 0.21666
-Step  224, time 11.200  RMSE_forecast 0.45944  RMSE_analysis 0.43462
-Step  336, time 16.800  RMSE_forecast 0.92565  RMSE_analysis 0.89853
-Step  448, time 22.400  RMSE_forecast 2.14539  RMSE_analysis 2.07963
-Step  560, time 28.000  RMSE_forecast 4.57237  RMSE_analysis 4.53219
-Step  672, time 33.600  RMSE_forecast 4.94239  RMSE_analysis 4.91130
-Step  784, time 39.200  RMSE_forecast 4.46872  RMSE_analysis 4.38997
-Step  896, time 44.800  RMSE_forecast 4.01760  RMSE_analysis 3.96593
-Step 1008, time 50.400  RMSE_forecast 3.65913  RMSE_analysis 3.56720
-Step 1120, time 56.000  RMSE_forecast 5.11591  RMSE_analysis 5.00224
+Step  112, time  5.600  RMSE_forecast 0.19425  RMSE_analysis 0.17269
+Step  224, time 11.200  RMSE_forecast 0.21415  RMSE_analysis 0.18333
+Step  336, time 16.800  RMSE_forecast 0.11829  RMSE_analysis 0.13612
+Step  448, time 22.400  RMSE_forecast 0.24285  RMSE_analysis 0.18991
+Step  560, time 28.000  RMSE_forecast 0.20219  RMSE_analysis 0.19807
+Step  672, time 33.600  RMSE_forecast 0.21350  RMSE_analysis 0.18559
+Step  784, time 39.200  RMSE_forecast 0.17412  RMSE_analysis 0.17675
+Step  896, time 44.800  RMSE_forecast 0.27352  RMSE_analysis 0.25720
+Step 1008, time 50.400  RMSE_forecast 0.15781  RMSE_analysis 0.17683
+Step 1120, time 56.000  RMSE_forecast 0.26399  RMSE_analysis 0.20972
 
 Statistics (1021 post-burn-in steps):
 ==================================================
-  Mean RMSE (forecast) : 3.11401
-  Mean RMSE (analysis) : 3.05574
+  Mean RMSE (forecast) : 0.20333
+  Mean RMSE (analysis) : 0.18556
   Observations used    : 1120
 

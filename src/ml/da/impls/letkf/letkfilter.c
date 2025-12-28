@@ -157,21 +157,17 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
 {
   PetscDALETKFData *impl;
   Mat               X;
-  PetscInt          m, n_vertices;
-  PetscScalar       scale, sqrt_m_minus_1;
+  PetscInt          m;
   PetscBool         reallocate = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
   /* Validate ensemble size */
-  m          = da->ensemble_size;
-  n_vertices = da->state_size;
+  m = da->ensemble_size;
   PetscCheck(m > 1, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be > 1, got %" PetscInt_FMT, m);
 
-  impl           = (PetscDALETKFData *)da->data;
-  scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
-  sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
+  impl = (PetscDALETKFData *)da->data;
   PetscCall(PetscInfo(da, "squaroot type %s, %" PetscInt_FMT " ensembles, LETKF localization with p_local=%" PetscInt_FMT "\n", (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky", m, impl->p_local));
 
   /* Check if localization matrix Q is set */
@@ -274,9 +270,9 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   /* ===================================================================== */
 
 #if defined(PETSC_HAVE_KOKKOS)
-  PetscCall(PetscDALETKFLocalAnalysis(da, impl, m, n_vertices, scale, sqrt_m_minus_1, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
+  PetscCall(PetscDALETKFLocalAnalysis(da, impl, m, da->state_size, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
 #else
-  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP_SYS, "KOKKOS require for DALETKF")
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP_SYS, "KOKKOS require for DALETKF");
 #endif
   PetscCall(MatDestroy(&X));
   PetscFunctionReturn(PETSC_SUCCESS);

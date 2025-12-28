@@ -1,4 +1,3 @@
-#requirespackage 'PETSC_HAVE_KOKKOS'
 -include ../../../../../petscdir.mk
 
 MANSEC    = ML

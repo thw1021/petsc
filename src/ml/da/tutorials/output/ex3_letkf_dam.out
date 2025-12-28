@@ -26,20 +26,20 @@ Shallow Water LETKF Example
   Localization          : None/Global (40 obs per vertex)
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [initial]
-Step   10, time  0.020  RMSE_forecast 0.02051  RMSE_analysis 0.02015
-Step   20, time  0.040  RMSE_forecast 0.01693  RMSE_analysis 0.01524
-Step   30, time  0.060  RMSE_forecast 0.01819  RMSE_analysis 0.01804
-Step   40, time  0.080  RMSE_forecast 0.01268  RMSE_analysis 0.01059
-Step   50, time  0.100  RMSE_forecast 0.01292  RMSE_analysis 0.01305
-Step   60, time  0.120  RMSE_forecast 0.00958  RMSE_analysis 0.00874
-Step   70, time  0.140  RMSE_forecast 0.00942  RMSE_analysis 0.00998
-Step   80, time  0.160  RMSE_forecast 0.01413  RMSE_analysis 0.01451
-Step   90, time  0.180  RMSE_forecast 0.01596  RMSE_analysis 0.01641
-Step  100, time  0.200  RMSE_forecast 0.01658  RMSE_analysis 0.01563
+Step   10, time  0.020  RMSE_forecast 0.02003  RMSE_analysis 0.01970
+Step   20, time  0.040  RMSE_forecast 0.01658  RMSE_analysis 0.01495
+Step   30, time  0.060  RMSE_forecast 0.01787  RMSE_analysis 0.01771
+Step   40, time  0.080  RMSE_forecast 0.01249  RMSE_analysis 0.01043
+Step   50, time  0.100  RMSE_forecast 0.01272  RMSE_analysis 0.01287
+Step   60, time  0.120  RMSE_forecast 0.00948  RMSE_analysis 0.00865
+Step   70, time  0.140  RMSE_forecast 0.00931  RMSE_analysis 0.00988
+Step   80, time  0.160  RMSE_forecast 0.01403  RMSE_analysis 0.01441
+Step   90, time  0.180  RMSE_forecast 0.01585  RMSE_analysis 0.01631
+Step  100, time  0.200  RMSE_forecast 0.01645  RMSE_analysis 0.01551
 
 Statistics (91 post-burn-in steps):
 ==================================================
-  Mean RMSE (forecast) : 0.01421
-  Mean RMSE (analysis) : 0.01424
+  Mean RMSE (forecast) : 0.01401
+  Mean RMSE (analysis) : 0.01405
   Observations used    : 20
 

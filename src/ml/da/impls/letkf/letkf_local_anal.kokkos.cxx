@@ -210,8 +210,6 @@ static PetscErrorCode ExtractLocalObservations_Kokkos(Mat Q, PetscInt vertex_idx
 . impl           - LETKF implementation data
 . m              - ensemble size
 . n_vertices     - number of grid points
-. scale          - 1/sqrt(m-1)
-. sqrt_m_minus_1 - sqrt(m-1)
 . X              - global anomaly matrix (state_size x m)
 . observation    - observation vector
 . Z_global       - global observation ensemble (obs_size x m)
@@ -225,7 +223,7 @@ static PetscErrorCode ExtractLocalObservations_Kokkos(Mat Q, PetscInt vertex_idx
   This function performs the local analysis loop for LETKF, processing each grid point
   independently using its local observations defined by the localization matrix Q.
 */
-PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, PetscInt m, PetscInt n_vertices, PetscScalar scale, PetscScalar sqrt_m_minus_1, Mat X, Vec observation, Mat Z_global, Vec y_mean_global, Vec r_inv_sqrt_global)
+PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, PetscInt m, PetscInt n_vertices, Mat X, Vec observation, Mat Z_global, Vec y_mean_global, Vec r_inv_sqrt_global)
 {
   /* Local analysis workspace */
   Mat       Z_local, S_local, T_sqrt_local, G_local;
@@ -233,8 +231,11 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, Pet
   Vec       w_local, s_transpose_delta;
   PetscInt *local_obs_indices = NULL;
   PetscInt  i_vertex;
+  PetscReal sqrt_m_minus_1, scale;
 
   PetscFunctionBegin;
+  scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
+  sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
   /* ===================================================================== */
   /* Create local analysis workspace (p_local x m matrices and vectors) */
   /* ===================================================================== */
