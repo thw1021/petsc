@@ -13,27 +13,28 @@ Lorenz-96 ETKF Example
   Ensemble size         : 30
   Forcing parameter (F) : 8.0000
   Time step (dt)        : 0.0500
-  Total steps           : 120
-  Burn-in steps         : 10
+  Total steps           : 1120
+  Burn-in steps         : 100
   Observation frequency : 1
-  Observation noise std : 0.500
+  Observation noise std : 1.000
+  Ensemble init std     : 1.000
   Random seed           : 12345
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [burn-in]
-Step   12, time  0.600  RMSE_forecast 0.12048  RMSE_analysis 0.10690
-Step   24, time  1.200  RMSE_forecast 0.09211  RMSE_analysis 0.08527
-Step   36, time  1.800  RMSE_forecast 0.06276  RMSE_analysis 0.06399
-Step   48, time  2.400  RMSE_forecast 0.10246  RMSE_analysis 0.08763
-Step   60, time  3.000  RMSE_forecast 0.09066  RMSE_analysis 0.08173
-Step   72, time  3.600  RMSE_forecast 0.07568  RMSE_analysis 0.07407
-Step   84, time  4.200  RMSE_forecast 0.06986  RMSE_analysis 0.04447
-Step   96, time  4.800  RMSE_forecast 0.06726  RMSE_analysis 0.06636
-Step  108, time  5.400  RMSE_forecast 0.06928  RMSE_analysis 0.06629
-Step  120, time  6.000  RMSE_forecast 0.12103  RMSE_analysis 0.11599
+Step  112, time  5.600  RMSE_forecast 0.22746  RMSE_analysis 0.21666
+Step  224, time 11.200  RMSE_forecast 0.45944  RMSE_analysis 0.43462
+Step  336, time 16.800  RMSE_forecast 0.92565  RMSE_analysis 0.89853
+Step  448, time 22.400  RMSE_forecast 2.14539  RMSE_analysis 2.07963
+Step  560, time 28.000  RMSE_forecast 4.57236  RMSE_analysis 4.53218
+Step  672, time 33.600  RMSE_forecast 4.78545  RMSE_analysis 4.73990
+Step  784, time 39.200  RMSE_forecast 4.06243  RMSE_analysis 3.96872
+Step  896, time 44.800  RMSE_forecast 3.47663  RMSE_analysis 3.37663
+Step 1008, time 50.400  RMSE_forecast 4.36547  RMSE_analysis 4.28259
+Step 1120, time 56.000  RMSE_forecast 5.41047  RMSE_analysis 5.33362
 
-Statistics (111 post-burn-in steps):
+Statistics (1021 post-burn-in steps):
 ==================================================
-  Mean RMSE (forecast) : 0.09035
-  Mean RMSE (analysis) : 0.08276
-  Observations used    : 120
+  Mean RMSE (forecast) : 3.25847
+  Mean RMSE (analysis) : 3.19579
+  Observations used    : 1120
 

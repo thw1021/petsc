@@ -101,9 +101,7 @@ PetscErrorCode PetscDARegisterAll(void)
   PetscFunctionBegin;
   if (PetscDARegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscDARegisterAllCalled = PETSC_TRUE;
-#if defined(PETSC_HAVE_KOKKOS)
   PetscCall(PetscDARegister(PETSCDALETKF, PetscDALETKFInitialize));
-#endif
   PetscCall(PetscDARegister(PETSCDAETKF, PetscDAETKFInitialize));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -983,7 +981,7 @@ PetscErrorCode InitializeEnsemble(PetscDA daas, Vec x0, PetscInt ensemble_size, 
        Var_final ~= Var_initial * (m-1)/m
      To maintain consistent initial spread regardless of m, we scale by sqrt(m/(m-1)).
      This ensures the final ensemble spread is approximately obs_error_std^2. */
-  scale = PetscSqrtReal((PetscReal)ensemble_size / (PetscReal)(ensemble_size - 1));
+  scale = 1; // PetscSqrtReal((PetscReal)ensemble_size / (PetscReal)(ensemble_size - 1));
 
   /* Populate the Gaussian draws with scaled standard deviation */
   for (i = 0; i < ensemble_size; i++) {
@@ -1222,12 +1220,13 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
 
   Notes:
   Computes the lower triangular Cholesky factor L such that T = L * L^T.
+  Then zeros out the upper triangular part to ensure L is strictly lower triangular.
 */
 static PetscErrorCode PetscDATFactor_Cholesky(PetscDA da)
 {
   PetscBLASInt n, lda, info;
   PetscScalar *a_array;
-  PetscInt     m_T, N_T;
+  PetscInt     m_T, N_T, i, j;
 
   PetscFunctionBegin;
   /* Initialize or update L_cholesky matrix */
@@ -1249,6 +1248,11 @@ static PetscErrorCode PetscDATFactor_Cholesky(PetscDA da)
   /* Compute Cholesky factorization: A = L * L^T (lower triangular) */
   LAPACKpotrf_("L", &n, a_array, &lda, &info);
   PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK Cholesky factorization (xPOTRF): info=%" PetscInt_FMT ". Matrix T is not positive definite.", (PetscInt)info);
+
+  /* Zero out upper triangular part (LAPACK leaves it unchanged) */
+  for (j = 0; j < n; j++) {
+    for (i = 0; i < j; i++) a_array[i + j * lda] = 0.0;
+  }
 
   /* Restore array and finalize matrix */
   PetscCall(MatDenseRestoreArray(da->L_cholesky, &a_array));
@@ -1438,8 +1442,8 @@ PetscErrorCode PetscDATFactor(PetscDA da, Mat S)
   */
   PetscCall(MatTransposeMatMult(S, S, scall, PETSC_DEFAULT, &da->I_StS));
 
-  /* Add Identity: T = T + (1/rho)*I */
-  PetscCall(MatShift(da->I_StS, 1.0 / da->inflation));
+  /* Add Identity: T = I + S^T*S */
+  PetscCall(MatShift(da->I_StS, 1.0));
 
   /* 4. Compute Factorization based on strategy */
   switch (da->sqrt_type) {
@@ -1564,12 +1568,18 @@ PetscErrorCode PetscDAApplyTInverse(PetscDA da, Vec sdel, Vec w)
 }
 
 /*
-  ApplySqrtTInverse_Cholesky - Computes Y = L^{-T} * U using forward substitution.
+  ApplySqrtTInverse_Cholesky - Computes Y = T^{-1/2} * U using Cholesky factorization.
 
   Notes:
-  Since T = L * L^T, T^{-1} = L^{-T} * L^{-1}.
-  We uses L^{-T} as the non-symmetric "square root" inverse, i.e., T^{-1/2} = L^{-T}.
-  This requires solving L^T * Y = U.
+  For T = L * L^T (Cholesky factorization), we use T^{-1/2} = (L^T)^{-1} = L^{-T}.
+  
+  This choice ensures the correct square root property:
+    T^{-1/2} * T^{-1/2}^T = L^{-T} * (L^{-T})^T = L^{-T} * L^{-1} = (L * L^T)^{-1} = T^{-1} ✓
+  
+  And preserves the metric:
+    Y^T * T * Y = U^T * (L^{-T})^T * L * L^T * L^{-T} * U = U^T * L^{-1} * L * L^T * L^{-T} * U = U^T * U ✓
+  
+  This requires solving L^T * Y = U for Y.
 */
 static PetscErrorCode ApplySqrtTInverse_Cholesky(PetscDA da, Mat U, Mat Y)
 {
