@@ -15,9 +15,9 @@ static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
 
 /* Default parameter values */
 #define DEFAULT_N             40
-#define DEFAULT_STEPS         200
-#define DEFAULT_BURN          100
-#define DEFAULT_OBS_FREQ      5
+#define DEFAULT_STEPS         105000
+#define DEFAULT_BURN          5000
+#define DEFAULT_OBS_FREQ      1
 #define DEFAULT_RANDOM_SEED   12345
 #define DEFAULT_F             8.0
 #define DEFAULT_DT            0.05
@@ -35,13 +35,11 @@ static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
 #define Q_NUM_LOCAL_OBSERVATIONS_MAX 40
 
 typedef struct {
-  DM        da;   /* 1D periodic DM storing the Lorenz-96 state */
-  PetscInt  n;    /* State dimension (number of grid points) */
-  PetscReal F;    /* Constant forcing term in the Lorenz-96 equations */
-  PetscReal dt;   /* Integration time step size */
-  TS        ts;   /* Reusable time stepper for efficiency */
-  PetscReal time; /* Current simulation time */
-  PetscInt  step; /* Current simulation step */
+  DM        da; /* 1D periodic DM storing the Lorenz-96 state */
+  PetscInt  n;  /* State dimension (number of grid points) */
+  PetscReal F;  /* Constant forcing term in the Lorenz-96 equations */
+  PetscReal dt; /* Integration time step size */
+  TS        ts; /* Reusable time stepper for efficiency */
 } Lorenz96Ctx;
 
 /*
@@ -83,12 +81,10 @@ static PetscErrorCode Lorenz96ContextCreate(DM da, PetscInt n, PetscReal F, Pets
 
   PetscFunctionBeginUser;
   PetscCall(PetscNew(&l95));
-  l95->da   = da;
-  l95->n    = n;
-  l95->F    = F;
-  l95->dt   = dt;
-  l95->time = 0.0;
-  l95->step = 0;
+  l95->da = da;
+  l95->n  = n;
+  l95->F  = F;
+  l95->dt = dt;
 
   PetscCall(TSCreate(PetscObjectComm((PetscObject)da), &l95->ts));
   PetscCall(TSSetProblemType(l95->ts, TS_NONLINEAR));
@@ -99,6 +95,7 @@ static PetscErrorCode Lorenz96ContextCreate(DM da, PetscInt n, PetscReal F, Pets
   PetscCall(TSSetMaxSteps(l95->ts, 1));
   PetscCall(TSSetMaxTime(l95->ts, dt));
   PetscCall(TSSetExactFinalTime(l95->ts, TS_EXACTFINALTIME_MATCHSTEP));
+  PetscCall(TSSetFromOptions(l95->ts));
 
   *ctx = l95;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -124,12 +121,8 @@ static PetscErrorCode Lorenz96Step(Vec x_in, Vec x_out, void *ctx)
   Lorenz96Ctx *l95 = (Lorenz96Ctx *)ctx;
 
   PetscFunctionBeginUser;
-  PetscCall(TSSetTime(l95->ts, l95->time));
-  PetscCall(TSSetMaxSteps(l95->ts, l95->step + 1));
-  PetscCall(TSSetStepNumber(l95->ts, l95->step));
-  PetscCall(TSSetTimeStep(l95->ts, l95->dt));
-  PetscCall(TSSetMaxTime(l95->ts, l95->time + l95->dt));
-
+  PetscCall(TSSetStepNumber(l95->ts, 0));
+  PetscCall(TSSetTime(l95->ts, 0.0));
   if (x_in != x_out) PetscCall(VecCopy(x_in, x_out));
   PetscCall(TSSolve(l95->ts, x_out));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -247,15 +240,16 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
 int main(int argc, char **argv)
 {
   /* Configuration parameters */
-  PetscInt  n             = DEFAULT_N;
-  PetscInt  steps         = DEFAULT_STEPS;
-  PetscInt  burn          = DEFAULT_BURN;
-  PetscInt  obs_freq      = DEFAULT_OBS_FREQ;
-  PetscInt  random_seed   = DEFAULT_RANDOM_SEED;
-  PetscInt  ensemble_size = DEFAULT_ENSEMBLE_SIZE;
-  PetscReal F             = DEFAULT_F;
-  PetscReal dt            = DEFAULT_DT;
-  PetscReal obs_error_std = DEFAULT_OBS_ERROR_STD;
+  PetscInt  n                 = DEFAULT_N;
+  PetscInt  steps             = DEFAULT_STEPS;
+  PetscInt  burn              = DEFAULT_BURN;
+  PetscInt  obs_freq          = DEFAULT_OBS_FREQ;
+  PetscInt  random_seed       = DEFAULT_RANDOM_SEED;
+  PetscInt  ensemble_size     = DEFAULT_ENSEMBLE_SIZE;
+  PetscReal F                 = DEFAULT_F;
+  PetscReal dt                = DEFAULT_DT;
+  PetscReal obs_error_std     = DEFAULT_OBS_ERROR_STD;
+  PetscReal ensemble_init_std = 1; /* Initial ensemble spread */
 
   /* PETSc objects */
   Lorenz96Ctx *l95_ctx = NULL;
@@ -287,6 +281,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsReal("-F", "Forcing parameter", "", F, &F, NULL));
   PetscCall(PetscOptionsReal("-dt", "Time step size", "", dt, &dt, NULL));
   PetscCall(PetscOptionsReal("-obs_error", "Observation error standard deviation", "", obs_error_std, &obs_error_std, NULL));
+  PetscCall(PetscOptionsReal("-ensemble_init_std", "Initial ensemble spread standard deviation", "", ensemble_init_std, &ensemble_init_std, NULL));
   PetscCall(PetscOptionsInt("-ensemble_size", "Number of ensemble members", "", ensemble_size, &ensemble_size, NULL));
   PetscCall(PetscOptionsInt("-random_seed", "Random seed for ensemble perturbations", "", random_seed, &random_seed, NULL));
   PetscOptionsEnd();
@@ -355,7 +350,7 @@ int main(int argc, char **argv)
   PetscCall(CreateIdentityObservationMatrix(n, &H));
 
   /* Initialize ensemble members from spun-up truth state */
-  PetscCall(InitializeEnsemble(daas, truth_state, ensemble_size, obs_error_std, rng));
+  PetscCall(InitializeEnsemble(daas, truth_state, ensemble_size, ensemble_init_std, rng));
 
   /* Print configuration summary */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-96 LETKF Example\n"));
@@ -369,9 +364,10 @@ int main(int argc, char **argv)
                         "  Burn-in steps         : %" PetscInt_FMT "\n"
                         "  Observation frequency : %" PetscInt_FMT "\n"
                         "  Observation noise std : %.3f\n"
+                        "  Ensemble init std     : %.3f\n"
                         "  Random seed           : %" PetscInt_FMT "\n"
                         "  Localization          : Full (Q_NUM_OBS_MAX = %" PetscInt_FMT ")\n\n",
-                        n, ensemble_size, (double)F, (double)dt, steps, burn, obs_freq, (double)obs_error_std, random_seed, (PetscInt)Q_NUM_LOCAL_OBSERVATIONS_MAX));
+                        n, ensemble_size, (double)F, (double)dt, steps, burn, obs_freq, (double)obs_error_std, (double)ensemble_init_std, random_seed, (PetscInt)Q_NUM_LOCAL_OBSERVATIONS_MAX));
 
   /* Main assimilation cycle: forecast and analysis steps */
   for (step = 0; step <= steps; step++) {
@@ -411,8 +407,6 @@ int main(int argc, char **argv)
 
     /* Propagate ensemble and truth trajectory */
     if (step < steps) {
-      l95_ctx->time = step * dt;
-      l95_ctx->step = step;
       PetscCall(PetscDAApplyModel(daas, Lorenz96Step, l95_ctx));
       PetscCall(Lorenz96Step(truth_state, truth_state, l95_ctx));
     }
@@ -454,21 +448,23 @@ int main(int argc, char **argv)
 
 /*TEST
 
-  test:
-    requires: !complex kokkos_kernels
+  testset:
+    requires: !complex
     diff_args: -j
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30
+    args: -steps 1120 -burn 100 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30
 
-  test:
-    suffix: chol
-    diff_args: -j
-    requires: !complex kokkos_kernels
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error .5 -da_view -ensemble_size 30 -petscda_sqrt_type cholesky
+    test:
+      requires: kokkos
+      suffix: chol
+      args: -petscda_sqrt_type cholesky
 
-  test:
-    suffix: etkf
-    diff_args: -j
-    requires: !complex kokkos_kernels
-    args: -steps 120 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30 -petscda_type etkf
+    test:
+      requires: kokkos
+      suffix: letkf
+      args: -petscda_type letkf
+
+    test:
+      suffix: etkf
+      args: -petscda_type etkf
 
 TEST*/

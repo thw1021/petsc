@@ -8,12 +8,12 @@
 static char help[] = "Shallow water test cases with data assimilation.\n"
                      "Implements 1D shallow water equations with 2 DOF per grid point (h, hu).\n\n"
                      "Example usage:\n"
-                     "  ./ex3.kokkos -steps 1000 -burn 100 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30\n"
-                     "  ./ex3.kokkos -ex3_test wave -steps 500\n\n";
+                     "  ./ex3 -steps 1000 -burn 100 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30\n"
+                     "  ./ex3 -ex3_test wave -steps 500\n\n";
 
 /* Default parameter values */
 #define DEFAULT_N             (2 * Q_NUM_LOCAL_OBSERVATIONS_MAX) /* 80 grid points */
-#define DEFAULT_STEPS         1000
+#define DEFAULT_STEPS         100
 #define DEFAULT_BURN          100
 #define DEFAULT_OBS_FREQ      5
 #define DEFAULT_RANDOM_SEED   12345
@@ -54,8 +54,6 @@ typedef struct {
   TS          ts;        /* Reusable time stepper for efficiency */
   Ex3TestType test_type; /* Test case type */
   Ex3FluxType flux_type; /* Flux scheme */
-  PetscReal   time;      /* Current simulation time */
-  PetscInt    step;      /* Current simulation step */
 } ShallowWaterCtx;
 
 /*
@@ -230,8 +228,6 @@ static PetscErrorCode ShallowWaterContextCreate(DM da, PetscInt n, PetscReal g, 
   sw->dt        = dt;
   sw->test_type = test_type;
   sw->flux_type = flux_type;
-  sw->time      = 0.0;
-  sw->step      = 0;
 
   PetscCall(TSCreate(PetscObjectComm((PetscObject)da), &sw->ts));
   PetscCall(TSSetProblemType(sw->ts, TS_NONLINEAR));
@@ -272,14 +268,10 @@ static PetscErrorCode ShallowWaterStep(Vec x_in, Vec x_out, void *ctx)
   /* Copy input to output if they are different vectors */
   if (x_in != x_out) PetscCall(VecCopy(x_in, x_out));
 
-  /* Set the solution vector and reset time */
-  PetscCall(TSSetSolution(sw->ts, x_out));
-  PetscCall(TSSetTime(sw->ts, sw->time));
-  PetscCall(TSSetMaxSteps(sw->ts, sw->step + 1));
-  PetscCall(TSSetStepNumber(sw->ts, sw->step));
-  PetscCall(TSSetTimeStep(sw->ts, sw->dt));
-  PetscCall(TSSetMaxTime(sw->ts, sw->time + sw->dt));
-
+  /* Reset the TS time for each integration (required for proper RK4 stepping) */
+  PetscCall(TSSetTime(sw->ts, 0.0));
+  PetscCall(TSSetStepNumber(sw->ts, 0));
+  PetscCall(TSSetMaxTime(sw->ts, sw->dt));
   /* Solve one time step: advances x_out from t=0 to t=dt */
   PetscCall(TSSolve(sw->ts, x_out));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -747,8 +739,6 @@ int main(int argc, char **argv)
     PetscReal time = step * dt;
 
     /* Propagate ensemble and truth trajectory from t_{k-1} to t_k */
-    sw_ctx->time = (PetscReal)(step - 1) * dt;
-    sw_ctx->step = step - 1;
     PetscCall(PetscDAApplyModel(daas, ShallowWaterStep, sw_ctx));
     PetscCall(ShallowWaterStep(truth_state, truth_state, sw_ctx));
 
@@ -879,7 +869,7 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
-    requires: !complex kokkos_kernels
+    requires: !complex
     diff_args: -j
     args: -steps 100 -burn 10 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30
 
@@ -888,14 +878,17 @@ int main(int argc, char **argv)
       args: -petscda_sqrt_type cholesky -ex3_test dam -petscda_type etkf
 
     test:
+      requires: kokkos
       suffix: letkf_dam
       args: -petscda_sqrt_type eigen -ex3_test dam -petscda_type letkf
 
     test:
+      requires: kokkos
       suffix: wave
       args: -ex3_test wave
 
     test:
+      requires: kokkos
       suffix: wave_mc
       args: -ex3_test wave -ex3_flux mc
 
