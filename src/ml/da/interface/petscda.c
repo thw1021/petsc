@@ -1574,10 +1574,10 @@ PetscErrorCode PetscDAApplyTInverse(PetscDA da, Vec sdel, Vec w)
   For T = L * L^T (Cholesky factorization), we use T^{-1/2} = (L^T)^{-1} = L^{-T}.
 
   This choice ensures the correct square root property:
-    T^{-1/2} * T^{-1/2}^T = L^{-T} * (L^{-T})^T = L^{-T} * L^{-1} = (L * L^T)^{-1} = T^{-1} ✓
+    T^{-1/2} * T^{-1/2}^T = L^{-T} * (L^{-T})^T = L^{-T} * L^{-1} = (L * L^T)^{-1} = T^{-1}
 
   And preserves the metric:
-    Y^T * T * Y = U^T * (L^{-T})^T * L * L^T * L^{-T} * U = U^T * L^{-1} * L * L^T * L^{-T} * U = U^T * U ✓
+    Y^T * T * Y = U^T * (L^{-T})^T * L * L^T * L^{-T} * U = U^T * L^{-1} * L * L^T * L^{-T} * U = U^T * U
 
   This requires solving L^T * Y = U for Y.
 */
