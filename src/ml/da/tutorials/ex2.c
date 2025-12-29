@@ -9,8 +9,6 @@ static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
                      "Algorithm 6.4 of \n"
                      "Asch, Bocquet, and Nodet (2016) \"Data Assimilation\" "
                      "(SIAM, doi:10.1137/1.9781611974546).\n\n"
-                     "Example usage:\n"
-                     "  ./ex2.kokkos -steps 105000 -burn 5000 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30\n"
                      "  Expected result: Similar to ETKF with full localization\n\n";
 
 /* Default parameter values */
@@ -450,7 +448,6 @@ int main(int argc, char **argv)
 
   testset:
     requires: !complex !single
-    diff_args: -j
     args: -steps 1120 -burn 100 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30
 
     test:
@@ -461,10 +458,12 @@ int main(int argc, char **argv)
     test:
       requires: kokkos
       suffix: letkf
+      diff_args: -j
       args: -petscda_type letkf
 
     test:
       suffix: etkf
+      diff_args: -j
       args: -petscda_type etkf
 
 TEST*/
