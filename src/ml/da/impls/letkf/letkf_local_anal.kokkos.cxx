@@ -204,7 +204,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       PetscScalar UtDelta[40]; // max(min_dim) = min(40, m)
       for (int i = 0; i < min_dim; i++) {
         UtDelta[i] = 0.0;
-        for (int k = 0; k < p_local; k++) { UtDelta[i] += dU_all(i_vertex, k, i) * ddelta_scaled_all(i_vertex, k); }
+        for (int k = 0; k < p_local; k++) UtDelta[i] += dU_all(i_vertex, k, i) * ddelta_scaled_all(i_vertex, k);
       }
 
       /* Step 2: Compute (I + Sigma^2)^{-1} Sigma U^T delta */
@@ -218,7 +218,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       /* Step 3: Compute w = V temp (V is m x m, stored as Vt transposed) */
       for (int j = 0; j < m; j++) {
         dw_all(i_vertex, j) = 0.0;
-        for (int i = 0; i < min_dim; i++) { dw_all(i_vertex, j) += dVt_all(i_vertex, i, j) * temp[i]; }
+        for (int i = 0; i < min_dim; i++) dw_all(i_vertex, j) += dVt_all(i_vertex, i, j) * temp[i];
       }
     });
 
@@ -253,7 +253,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       for (int i = 0; i < min_dim; i++) {
         for (int j = 0; j < m; j++) {
           VtU[i][j] = 0.0;
-          for (int k = 0; k < m; k++) { VtU[i][j] += dVt_all(i_vertex, i, k) * dU_matrix(k + j * lda_u); }
+          for (int k = 0; k < m; k++) VtU[i][j] += dVt_all(i_vertex, i, k) * dU_matrix(k + j * lda_u);
         }
       }
 
@@ -262,14 +262,14 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         PetscScalar sigma    = dSigma_all(i_vertex, i);
         PetscScalar sigma_sq = sigma * sigma;
         PetscScalar scale    = 1.0 / PetscSqrtScalar(1.0 + sigma_sq);
-        for (int j = 0; j < m; j++) { VtU[i][j] *= scale; }
+        for (int j = 0; j < m; j++) VtU[i][j] *= scale;
       }
 
       /* Step 3: Compute T_sqrt = V * scaled_VtU */
       for (int i = 0; i < m; i++) {
         for (int j = 0; j < m; j++) {
           dT_sqrt_all(i_vertex, i, j) = 0.0;
-          for (int k = 0; k < min_dim; k++) { dT_sqrt_all(i_vertex, i, j) += dVt_all(i_vertex, k, i) * VtU[k][j]; }
+          for (int k = 0; k < min_dim; k++) dT_sqrt_all(i_vertex, i, j) += dVt_all(i_vertex, k, i) * VtU[k][j];
         }
       }
     });
@@ -314,7 +314,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   Kokkos::parallel_for(
     "UpdateEnsemble", Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::DefaultExecutionSpace>({0, 0}, {n_vertices, m}), KOKKOS_LAMBDA(const int i_vertex, const int j) {
       PetscScalar sum = 0.0;
-      for (int k = 0; k < m; k++) { sum += dX(i_vertex + k * lda_x) * dG_all(i_vertex, k, j); }
+      for (int k = 0; k < m; k++) sum += dX(i_vertex + k * lda_x) * dG_all(i_vertex, k, j);
       densemble(i_vertex + j * lda_ensemble) = dmean(i_vertex) + sum;
     });
 
