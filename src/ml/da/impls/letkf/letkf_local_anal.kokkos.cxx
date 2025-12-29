@@ -2,49 +2,6 @@
 #include <petscblaslapack.h>
 #include <Kokkos_Core.hpp>
 
-/* ----------------------------------------------------------------------
-   Convert a PETSc sequential dense matrix to a Kokkos dense matrix that lives
-   on the *device* (DefaultExecutionSpace).  The conversion is performed by:
-
-      1. Getting the matrix size.
-      2. Getting a raw host pointer to the PETSc data (column-major).
-      3. Wrapping that pointer with a temporary unmanaged host view.
-      4. Allocating an owned device view.
-      5. deep_copy( device_view , unmanaged_host_view ).
-
-   The routine uses `PetscCall` for error handling and returns the PETSc error
-   code (0 on success).  After the copy the PETSc matrix is restored, so the
-   function can be called at any point after the matrix has been assembled.
-   ---------------------------------------------------------------------- */
-PetscErrorCode PetscDenseToKokkosDevice(Mat                                          A, // PETSc matrix (sequential dense)
-                                        Kokkos::View<PetscScalar **, Kokkos::LayoutLeft,
-                                                     Kokkos::DefaultExecutionSpace> &dA) // device view (output)
-{
-  PetscInt     m, n;
-  PetscScalar *hostPtr = nullptr; // PETSc raw pointer (col-major)
-
-  /* 1) matrix dimensions ------------------------------------------------ */
-  PetscCall(MatGetSize(A, &m, &n));
-
-  /* 2) obtain raw host pointer ------------------------------------------ */
-  PetscCall(MatDenseGetArray(A, &hostPtr));
-
-  /* 3) temporary unmanaged host view that aliases the PETSc buffer -------- */
-  using unmanaged_host_view = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-  unmanaged_host_view hA(hostPtr, m, n); // zero-copy, read-only
-
-  /* 4) allocate the *owned* device view --------------------------------- */
-  using device_view = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>;
-  dA                = device_view("A_device", m, n); // allocated on the device
-
-  /* 5) deep copy host -> device ------------------------------------------ */
-  Kokkos::deep_copy(dA, hA);
-
-  /* 6) give PETSc the pointer back -------------------------------------- */
-  PetscCall(MatDenseRestoreArray(A, &hostPtr));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*
   ComputeNormalizedInnovationMatrix_Kokkos - Computes S = R^{-1/2}(Z - y_mean * 1')/sqrt(m-1)
 
@@ -62,7 +19,7 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix_Kokkos(Mat Z, Vec y_mean
 {
   const PetscScalar *z_array, *y_array, *r_array;
   PetscScalar       *s_array;
-  PetscInt           obs_size, obs_size_local, z_cols, i, j;
+  PetscInt           obs_size, obs_size_local, z_cols;
   PetscInt           y_local_size, r_local_size;
   PetscInt           lda_z, lda_s;
 
@@ -98,13 +55,34 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix_Kokkos(Mat Z, Vec y_mean
   PetscCall(MatDenseGetLDA(S, &lda_s));
 
   /* Compute normalized innovation: S_ij = (Z_ij - y_mean_i) * scale * r_inv_sqrt_i
-     Iterate column-wise (j) then row-wise (i) for optimal cache access with column-major storage */
-  for (j = 0; j < m; j++) {
-    const PetscScalar *z_col = z_array + j * lda_z;
-    PetscScalar       *s_col = s_array + j * lda_s;
+     Using Kokkos parallel_for on device for GPU acceleration */
 
-    for (i = 0; i < obs_size_local; i++) s_col[i] = (z_col[i] - y_array[i]) * scale * r_array[i];
-  }
+  /* Ensure Kokkos is initialized before allocating device views */
+  PetscCall(PetscKokkosInitializeCheck());
+
+  /* Step 1: Create unmanaged host views wrapping PETSc arrays (use 1D views for flexibility) */
+  const Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> hZ(z_array, lda_z * m);
+  const Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>                     hy(y_array, obs_size_local);
+  const Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>                     hr(r_array, obs_size_local);
+
+  /* Step 2: Allocate device views */
+  Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> dZ("Z_device", lda_z * m);
+  Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> dS("S_device", lda_s * m);
+  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace>                     dy("y_device", obs_size_local);
+  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace>                     dr("r_device", obs_size_local);
+
+  /* Step 3: Deep copy host → device */
+  Kokkos::deep_copy(dZ, hZ);
+  Kokkos::deep_copy(dy, hy);
+  Kokkos::deep_copy(dr, hr);
+
+  /* Step 4: Parallel computation on device (column-major indexing with LDA: i + j * lda) */
+  Kokkos::parallel_for(
+    "ComputeNormalizedInnovation", Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::DefaultExecutionSpace>({0, 0}, {obs_size_local, m}), KOKKOS_LAMBDA(const int i, const int j) { dS(i + j * lda_s) = (dZ(i + j * lda_z) - dy(i)) * scale * dr(i); });
+
+  /* Step 5: Deep copy result device → host */
+  const Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> hS(s_array, lda_s * m);
+  Kokkos::deep_copy(hS, dS);
 
   /* Restore arrays */
   PetscCall(VecRestoreArrayRead(r_inv_sqrt, &r_array));
@@ -170,18 +148,66 @@ static PetscErrorCode ExtractLocalObservations_Kokkos(Mat Q, PetscInt vertex_idx
   PetscCall(MatDenseGetLDA(Z_global, &lda_z_global));
   PetscCall(MatDenseGetLDA(Z_local, &lda_z_local));
 
-  /* Extract local observations and weight R^{-1/2} */
-  for (k = 0; k < ncols; k++) {
-    PetscInt obs_idx = cols[k];
+  /* Extract local observations and weight R^{-1/2} using Kokkos */
+  PetscCall(PetscKokkosInitializeCheck());
 
-    /* Extract from vectors */
-    y_local_array[k]          = y_global_array[obs_idx];
-    y_mean_local_array[k]     = y_mean_global_array[obs_idx];
-    r_inv_sqrt_local_array[k] = r_inv_sqrt_global_array[obs_idx] * PetscSqrtScalar(vals[k]);
+  /* Get the size of the global observation arrays - need to know full size for proper indexing */
+  PetscInt obs_size_global;
+  PetscCall(VecGetSize(y_global, &obs_size_global));
 
-    /* Extract from Z matrix (column-major) WITHOUT weighting */
-    for (j = 0; j < m; j++) z_local_array[k + j * lda_z_local] = z_global_array[obs_idx + j * lda_z_global];
-  }
+  /* Step 1: Create unmanaged host views wrapping PETSc arrays */
+  const Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> hZ_global(z_global_array, lda_z_global * m);
+  const Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>                     hy_global(y_global_array, obs_size_global);
+  const Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>                     hy_mean_global(y_mean_global_array, obs_size_global);
+  const Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>                     hr_inv_sqrt_global(r_inv_sqrt_global_array, obs_size_global);
+  const Kokkos::View<const PetscInt *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>                        hcols(cols, ncols);
+  const Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>                     hvals(vals, ncols);
+
+  /* Step 2: Allocate device views */
+  Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> dZ_global("Z_global_device", lda_z_global * m);
+  Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> dZ_local("Z_local_device", lda_z_local * m);
+  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace>                     dy_global("y_global_device", obs_size_global);
+  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace>                     dy_mean_global("y_mean_global_device", obs_size_global);
+  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace>                     dr_inv_sqrt_global("r_inv_sqrt_global_device", obs_size_global);
+  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace>                     dy_local("y_local_device", ncols);
+  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace>                     dy_mean_local("y_mean_local_device", ncols);
+  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace>                     dr_inv_sqrt_local("r_inv_sqrt_local_device", ncols);
+  Kokkos::View<PetscInt *, Kokkos::DefaultExecutionSpace>                        dcols("cols_device", ncols);
+  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace>                     dvals("vals_device", ncols);
+
+  /* Step 3: Deep copy host → device */
+  Kokkos::deep_copy(dZ_global, hZ_global);
+  Kokkos::deep_copy(dy_global, hy_global);
+  Kokkos::deep_copy(dy_mean_global, hy_mean_global);
+  Kokkos::deep_copy(dr_inv_sqrt_global, hr_inv_sqrt_global);
+  Kokkos::deep_copy(dcols, hcols);
+  Kokkos::deep_copy(dvals, hvals);
+
+  /* Step 4: Extract vectors on device */
+  Kokkos::parallel_for(
+    "ExtractLocalVectors", ncols, KOKKOS_LAMBDA(const int k) {
+      PetscInt obs_idx     = dcols(k);
+      dy_local(k)          = dy_global(obs_idx);
+      dy_mean_local(k)     = dy_mean_global(obs_idx);
+      dr_inv_sqrt_local(k) = dr_inv_sqrt_global(obs_idx) * PetscSqrtScalar(dvals(k));
+    });
+
+  /* Step 5: Extract Z matrix on device (column-major) */
+  Kokkos::parallel_for(
+    "ExtractLocalMatrix", Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::DefaultExecutionSpace>({0, 0}, {ncols, m}), KOKKOS_LAMBDA(const int k, const int j) {
+      PetscInt obs_idx              = dcols(k);
+      dZ_local(k + j * lda_z_local) = dZ_global(obs_idx + j * lda_z_global);
+    });
+
+  /* Step 6: Deep copy result device → host */
+  const Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> hZ_local(z_local_array, lda_z_local * m);
+  const Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>                     hy_local(y_local_array, ncols);
+  const Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>                     hy_mean_local(y_mean_local_array, ncols);
+  const Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>                     hr_inv_sqrt_local(r_inv_sqrt_local_array, ncols);
+  Kokkos::deep_copy(hZ_local, dZ_local);
+  Kokkos::deep_copy(hy_local, dy_local);
+  Kokkos::deep_copy(hy_mean_local, dy_mean_local);
+  Kokkos::deep_copy(hr_inv_sqrt_local, dr_inv_sqrt_local);
 
   /* Restore arrays */
   PetscCall(VecRestoreArray(r_inv_sqrt_local, &r_inv_sqrt_local_array));
