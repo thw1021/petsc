@@ -193,8 +193,8 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       PetscInt    max_dim = (p_local > m) ? p_local : m;
       PetscScalar Work_temp[(Q_NUM_LOCAL_OBSERVATIONS_MAX > ENSEMBLE_SIZE_MAX) ? Q_NUM_LOCAL_OBSERVATIONS_MAX : ENSEMBLE_SIZE_MAX];
 
-      /* Create unmanaged contiguous view wrapping Work_temp */
-      Kokkos::View<PetscScalar *, Kokkos::LayoutRight, Kokkos::DefaultExecutionSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> Work_i(Work_temp, max_dim);
+      /* Create unmanaged contiguous view wrapping Work_temp - use default layout to ensure contiguity */
+      Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> Work_i(Work_temp, max_dim);
 
       /* Compute SVD: S = U * Sigma * V^T using Kokkos Kernels batched SVD */
       /* Use SVD_USV_Tag for full SVD with U, Sigma, and V^T */
