@@ -27,7 +27,6 @@
 PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl, PetscInt m, PetscInt n_vertices, Mat X, Vec observation, Mat Z_global, Vec y_mean_global, Vec r_inv_sqrt_global)
 {
   PetscFunctionBegin;
-
   /* Phase 1: Get Q matrix CSR arrays with memory type detection */
   const PetscInt    *Q_i = NULL, *Q_j = NULL; // CSR row pointers and column indices
   const PetscScalar *Q_v = NULL;              // CSR values
@@ -339,6 +338,5 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   /* Finalize ensemble assembly */
   PetscCall(MatAssemblyBegin(da->ensemble, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(da->ensemble, MAT_FINAL_ASSEMBLY));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
