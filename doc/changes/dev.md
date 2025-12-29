@@ -101,6 +101,9 @@
 ```{rubric} PetscRegressor:
 ```
 
+```{rubric} PetscDA:
+```
+
 ```{rubric} DM/DA:
 ```
 
@@ -130,7 +133,16 @@
 ```{rubric} Fortran:
 ```
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> b13d3d31d9c (rebasing)
 - Replace `./configure` option `--with-mpi-f90module-visibility` with `--with-mpi-ftn-module=<mpi or mpi_f08>`
 - Add `PETSC_INT_KIND` and `PETSC_MPIINT_KIND`
 - Fortran code should now use `MPIU_Comm` instead of `MPI_Comm`, and similarly for other MPI types, see section "Fortran and MPI" in the users guide
 
+<<<<<<< HEAD
+=======
+>>>>>>> 065f9a4f670 (Move DA class from src/ml/da to src/da and rename to PetscDA)
+=======
+>>>>>>> b13d3d31d9c (rebasing)
