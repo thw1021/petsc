@@ -314,6 +314,10 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
   This function performs the local analysis loop for LETKF, processing each grid point
   independently using its local observations defined by the localization matrix Q.
   This is the CPU version that does not use Kokkos acceleration.
+
+  All local analysis workspace objects (Z_local, S_local, T_sqrt_local, G_local, y_local,
+  y_mean_local, delta_scaled_local, r_inv_sqrt_local, w_local, s_transpose_delta) are
+  created with PETSC_COMM_SELF because the analysis at each vertex is serial and independent.
 */
 PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, PetscInt m, PetscInt n_vertices, Mat X, Vec observation, Mat Z_global, Vec y_mean_global, Vec r_inv_sqrt_global)
 {
@@ -645,54 +649,6 @@ static PetscErrorCode PetscDALETKFApplyModel(PetscDA da, PetscErrorCode (*model)
 /* ========================================================================== */
 /*                          Public API Functions                             */
 /* ========================================================================== */
-
-/*@
-  PetscDALETKFSetSqrtType - Selects the reduced-space square-root algorithm used during the LETKF analysis.
-
-  Logically Collective
-
-  Input Parameters:
-+ da   - the `PetscDA` object
-- type - either `PETSCDA_SQRT_CHOLESKY` or `PETSCDA_SQRT_EIGEN`
-
-  Level: advanced
-
-.seealso: [](ch_da), `PetscDA`, `PetscDALETKFGetSqrtType()`, `PetscDALETKFAnalysis()`
-@*/
-PetscErrorCode PetscDALETKFSetSqrtType(PetscDA da, PetscDASqrtType type)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscCheck(type == PETSCDA_SQRT_CHOLESKY || type == PETSCDA_SQRT_EIGEN, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Invalid PetscDA square-root type %" PetscInt_FMT, (PetscInt)type);
-
-  PetscCall(PetscDASetSqrtType(da, type));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  PetscDALETKFGetSqrtType - Retrieves the current square-root implementation configured for the LETKF analysis.
-
-  Not Collective
-
-  Input Parameters:
-. da - the `PetscDA` object
-
-  Output Parameter:
-. type - on output, the configured `PetscDASqrtType`
-
-  Level: advanced
-
-.seealso: [](ch_da), `PetscDA`, `PetscDALETKFSetSqrtType()`
-@*/
-PetscErrorCode PetscDALETKFGetSqrtType(PetscDA da, PetscDASqrtType *type)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscAssertPointer(type, 2);
-
-  PetscCall(PetscDAGetSqrtType(da, type));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
 
 static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q)
 {
