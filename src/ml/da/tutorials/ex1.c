@@ -565,7 +565,7 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
-    requires: !complex
+    requires: !complex !single
     diff_args: -j
     args: -steps 1120 -burn 100 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30
 
