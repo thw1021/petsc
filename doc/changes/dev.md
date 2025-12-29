@@ -101,6 +101,9 @@
 ```{rubric} PetscRegressor:
 ```
 
+```{rubric} PetscDA:
+```
+
 ```{rubric} DM/DA:
 ```
 
