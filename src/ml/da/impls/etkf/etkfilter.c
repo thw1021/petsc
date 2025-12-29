@@ -602,54 +602,6 @@ static PetscErrorCode PetscDAETKFApplyModel(PetscDA da, PetscErrorCode (*model)(
 /*                          Public API Functions                             */
 /* ========================================================================== */
 
-/*@
-  PetscDAETKFSetSqrtType - Selects the reduced-space square-root algorithm used during the ETKF analysis.
-
-  Logically Collective
-
-  Input Parameters:
-+ da   - the `PetscDA` object
-- type - either `PETSCDA_SQRT_CHOLESKY` or `PETSCDA_SQRT_EIGEN`
-
-  Level: advanced
-
-.seealso: [](ch_da), `PetscDA`, `PetscDAETKFGetSqrtType()`, `PetscDAETKFAnalysis()`
-@*/
-PetscErrorCode PetscDAETKFSetSqrtType(PetscDA da, PetscDASqrtType type)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscCheck(type == PETSCDA_SQRT_CHOLESKY || type == PETSCDA_SQRT_EIGEN, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Invalid PetscDA square-root type %" PetscInt_FMT, (PetscInt)type);
-
-  PetscCall(PetscDASetSqrtType(da, type));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  PetscDAETKFGetSqrtType - Retrieves the current square-root implementation configured for the ETKF analysis.
-
-  Not Collective
-
-  Input Parameters:
-. da - the `PetscDA` object
-
-  Output Parameter:
-. type - on output, the configured `PetscDASqrtType`
-
-  Level: advanced
-
-.seealso: [](ch_da), `PetscDA`, `PetscDAETKFSetSqrtType()`
-@*/
-PetscErrorCode PetscDAETKFGetSqrtType(PetscDA da, PetscDASqrtType *type)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscAssertPointer(type, 2);
-
-  PetscCall(PetscDAGetSqrtType(da, type));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*
   PetscDAETKFView - Views a `PetscDAETKF` and its implementation-specific data structure.
 
