@@ -23,6 +23,12 @@
 
   Output:
 . da->ensemble - updated with analysis ensemble
+
+  Notes:
+  The local analysis at each vertex is serial and independent. This GPU implementation
+  uses Kokkos device views instead of PETSc objects for the local analysis workspace,
+  avoiding the need for PETSC_COMM_SELF objects. All local computations are performed
+  directly on device memory using Kokkos parallel_for kernels.
 */
 PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl, PetscInt m, PetscInt n_vertices, Mat X, Vec observation, Mat Z_global, Vec y_mean_global, Vec r_inv_sqrt_global)
 {
@@ -169,7 +175,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
          SVD needs row-major: S_temp(i,j) stored contiguously */
       PetscScalar S_temp[40 * 50]; // [p_local x m], max 40x50
       for (int i = 0; i < p_local; i++) {
-        for (int j = 0; j < m; j++) { S_temp[i * m + j] = dS_all(i_vertex, i + j * p_local); }
+        for (int j = 0; j < m; j++) S_temp[i * m + j] = dS_all(i_vertex, i + j * p_local);
       }
 
       /* Create unmanaged view wrapping S_temp with LayoutRight (row-major) */
