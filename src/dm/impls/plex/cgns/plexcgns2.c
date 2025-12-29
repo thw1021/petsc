@@ -1,5 +1,6 @@
 #include <petsc/private/dmpleximpl.h> /*I   "petscdmplex.h"   I*/
 #include <petsc/private/viewercgnsimpl.h>
+#include <petsc/private/hashseti.h>
 
 #include <pcgnslib.h>
 #include <cgns_io.h>
@@ -751,7 +752,7 @@ typedef struct {
   cgsize_t end;
 } CGRange;
 
-static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscInt cgid, int base, int zone, PetscInt num_sections, PetscInt section_ids[], PetscSection *section, CGNS_ENUMT(ElementType_t) * cellTypes[], PetscInt *cells[], PetscInt *connectivity[])
+static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscInt cgid, int base, int zone, PetscInt num_sections, const int section_ids[], PetscSection *section, CGNS_ENUMT(ElementType_t) * cellTypes[], PetscInt *cells[], PetscInt *connectivity[])
 {
   MPI_Comm     comm = PetscObjectComm((PetscObject)dm);
   PetscSection section_;
@@ -759,8 +760,7 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
   CGNS_ENUMT(ElementType_t) * sectionCellTypes;
   CGRange       *ranges;
   PetscLayout   *layouts;
-  PetscInt       nglobal_cells = 0, nlocal_cells = 0, global_cell_dim = -1;
-  PetscInt      *cells_;
+  PetscInt       nlocal_cells = 0, global_cell_dim = -1;
   PetscSegBuffer conn_sb;
 
   PetscFunctionBeginUser;
@@ -770,8 +770,8 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
     PetscInt local_size;
 
     PetscCallCGNSRead(cg_section_read(cgid, base, zone, section_ids[s], buffer, &sectionCellTypes[s], &ranges[s].start, &ranges[s].end, &nbndry, &parentFlag), dm, 0);
+    PetscCheck(sectionCellTypes[s] != CGNS_ENUMV(NGON_n) && sectionCellTypes[s] != CGNS_ENUMV(NFACE_n), comm, PETSC_ERR_SUP, "CGNS reader does not support elements of type NGON_n or NFACE_n");
     PetscInt num_section_cells = ranges[s].end - ranges[s].start + 1;
-    nglobal_cells += num_section_cells;
     PetscCall(PetscLayoutCreateFromSizes(comm, PETSC_DECIDE, num_section_cells, 1, &layouts[s]));
     PetscCall(PetscLayoutGetLocalSize(layouts[s], &local_size));
     nlocal_cells += local_size;
@@ -779,7 +779,7 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
   PetscCall(PetscSectionCreate(comm, &section_));
   PetscCall(PetscSectionSetChart(section_, 0, nlocal_cells));
 
-  PetscCall(PetscMalloc1(nlocal_cells, &cells_));
+  PetscCall(PetscMalloc1(nlocal_cells, cells));
   PetscCall(PetscMalloc1(nlocal_cells, cellTypes));
   PetscCall(PetscSegBufferCreate(sizeof(PetscInt), nlocal_cells * 4, &conn_sb)); // TODO: Improve connectivity estimate (factor in dimensionality and corners vs no corners)
   for (PetscInt s = 0, c = 0; s < num_sections; s++) {
@@ -787,7 +787,6 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
 
     PetscCall(PetscLayoutGetRange(layouts[s], &mystart, &myend));
     PetscCall(PetscLayoutGetLocalSize(layouts[s], &myowned));
-    // TODO: Error if POLY_N or NFACE cell types
     if (sectionCellTypes[s] == CGNS_ENUMV(MIXED)) {
       cgsize_t *offsets, *conn_cg;
 
@@ -795,39 +794,65 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
       PetscCallCGNSRead(cgp_poly_elements_read_data_offsets(cgid, base, zone, s, ranges[s].start + mystart + 1, ranges[s].start + myend, offsets), dm, 0);
       PetscCall(PetscMalloc1(offsets[myowned + 1], &conn_cg));
       PetscCallCGNSRead(cgp_poly_elements_read_data_elements(cgid, base, zone, s, ranges[s].start + mystart + 1, ranges[s].start + myend, offsets, conn_cg), dm, 0);
+      // TODO: For efficiency, we could do a loop through conn_cg to get the total number of corners for the section, then do a single SegBufferGetInts for the entire section, the loop through to get the corner connectivity
       for (PetscInt i = 0; i < myowned; i++) {
         DMPolytopeType dm_cell_type = DM_POLYTOPE_UNKNOWN;
-        PetscInt numCorners, cell_dim, *conn_sb_seg;
-        const int *perm;
+        PetscInt       numCorners, cell_dim, *conn_sb_seg;
+        const int     *perm;
 
-        cells_[c] = ranges[s].start + mystart + 1 + i;
+        (*cells)[c] = ranges[s].start + mystart + 1 + i;
 
         CGNS_ENUMT(ElementType_t) cellType = (CGNS_ENUMT(ElementType_t))conn_cg[offsets[i]];
-        (*cellTypes)[c] = cellType;
+        (*cellTypes)[c]                    = cellType;
         PetscCall(CGNSElementTypeGetTopologyInfo(cellType, &dm_cell_type, &numCorners, &cell_dim));
         if (global_cell_dim == -1) global_cell_dim = cell_dim;
-        else PetscCheck(cell_dim == global_cell_dim, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Can only combine cells of the sae dimension. Global cell dimension detected as %" PetscInt_FMT ", but CGNS element %" PetscInt_FMT " is dimension %" PetscInt_FMT, global_cell_dim, cells_[c], cell_dim);
-        PetscCall(PetscSegBufferGet(conn_sb, numCorners, &conn_sb_seg));
+        else
+          PetscCheck(cell_dim == global_cell_dim, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Can only combine cells of the sae dimension. Global cell dimension detected as %" PetscInt_FMT ", but CGNS element %" PetscInt_FMT " is dimension %" PetscInt_FMT, global_cell_dim, (*cells)[c], cell_dim);
+        PetscCall(PetscSegBufferGetInts(conn_sb, numCorners, &conn_sb_seg));
 
         PetscCall(DMPlexCGNSGetPermutation_Internal(dm_cell_type, numCorners, NULL, &perm));
         for (PetscInt v = 0; v < numCorners; ++v) conn_sb_seg[perm[v]] = conn_cg[offsets[i] + 1 + v];
         PetscCall(PetscSectionSetDof(section_, c, numCorners));
+        c++;
       }
+      PetscCall(PetscFree(offsets));
+      PetscCall(PetscFree(conn_cg));
     } else {
-      PetscInt numCorners, cell_dim;
-      //TODO: Update the mono-topology sections to use the PetscSegBuffer stuff
+      PetscInt       numCorners, cell_dim;
+      PetscInt      *conn_sb_seg;
+      DMPolytopeType dm_cell_type = DM_POLYTOPE_UNKNOWN;
+      int            npe; // nodes per element
+      const int     *perm;
+      cgsize_t      *conn_cg;
 
-      PetscCall(CGNSElementTypeGetTopologyInfo(sectionCellTypes[s], NULL, &numCorners, &cell_dim));
-        if (global_cell_dim == -1) global_cell_dim = cell_dim;
-        else PetscCheck(cell_dim == global_cell_dim, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Can only combine cells of the sae dimension. Global cell dimension detected as %" PetscInt_FMT ", but CGNS element %" PetscInt_FMT " is dimension %" PetscInt_FMT, global_cell_dim, cells_[c], cell_dim);
+      PetscCall(CGNSElementTypeGetTopologyInfo(sectionCellTypes[s], &dm_cell_type, &numCorners, &cell_dim));
+      if (global_cell_dim == -1) global_cell_dim = cell_dim;
+      else
+        PetscCheck(cell_dim == global_cell_dim, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Can only combine cells of the sae dimension. Global cell dimension detected as %" PetscInt_FMT ", but CGNS element %" PetscInt_FMT " is dimension %" PetscInt_FMT, global_cell_dim, (*cells)[c], cell_dim);
+
+      PetscCallCGNSRead(cg_npe(sectionCellTypes[s], &npe), dm, 0);
+      PetscCall(PetscMalloc1(myowned * npe, &conn_cg));
+      PetscCallCGNSRead(cgp_elements_read_data(cgid, base, zone, s, ranges[s].start + mystart + 1, ranges[s].start + myend, conn_cg), dm, 0);
+      PetscCall(DMPlexCGNSGetPermutation_Internal(dm_cell_type, numCorners, NULL, &perm));
+      PetscCall(PetscSegBufferGetInts(conn_sb, numCorners * myowned, &conn_sb_seg));
       for (PetscInt i = 0; i < myowned; i++) {
-        cells_[c] = ranges[s].start + mystart + 1 + i;
+        (*cells)[c]     = ranges[s].start + mystart + 1 + i;
         (*cellTypes)[c] = sectionCellTypes[s];
+        for (PetscInt v = 0; v < numCorners; ++v) conn_sb_seg[i * numCorners + perm[v]] = conn_cg[i * npe + v];
         PetscCall(PetscSectionSetDof(section_, c, numCorners));
+        c++;
       }
+      PetscCall(PetscFree(conn_cg));
     }
   }
 
+  PetscCall(PetscSectionSetUp(section_));
+  *section = section_;
+  PetscCall(PetscSegBufferExtractTo(conn_sb, connectivity));
+  PetscCall(PetscSegBufferDestroy(&conn_sb));
+  PetscCall(PetscFree(layouts));
+  PetscCall(PetscFree(ranges));
+  PetscCall(PetscFree(sectionCellTypes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -884,6 +909,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
   PetscInt       pOrder = 1, numClosure = -1;
   cgsize_t      *elements;
   int           *face_section_ids, num_face_sections = 0;
+  PetscInt      *uniq_verts, nuniq_verts;
   {
     int        nsections;
     PetscInt  *elementsQ1, numCorners = -1;
@@ -922,14 +948,137 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
     }
 
     // Build cell-vertex Plex
-    PetscCall(DMPlexBuildFromCellListParallel(*dm, myownede, myownedv, NVertices, numCorners, elementsQ1, NULL, NULL));
+    PetscCall(DMPlexBuildFromCellListParallel(*dm, myownede, myownedv, NVertices, numCorners, elementsQ1, NULL, &uniq_verts));
     PetscCall(DMViewFromOptions(*dm, NULL, "-corner_dm_view"));
+    {
+      PetscInt pStart, pEnd;
+      PetscCall(DMPlexGetChart(*dm, &pStart, &pEnd));
+      nuniq_verts = (pEnd - pStart) - myownede;
+    }
     PetscCall(PetscFree(elementsQ1));
   }
 
   if (interpolate) PetscCall(DMPlexInterpolateInPlace_Internal(*dm));
 
-  if (num_face_sections != 0) { }
+  if (num_face_sections != 0) {
+    CGNS_ENUMT(ElementType_t) * cellTypes;
+    PetscSection connSection;
+    PetscInt    *cells, *conn;
+    PetscSF      f2mvertSF; // SF of face-vertices to the global mesh vertices
+
+    PetscCall(DMPlexCGNS_CreateCornersConnectivitySection(*dm, cgid, base, zone, num_face_sections, face_section_ids, &connSection, &cellTypes, &cells, &conn));
+
+    PetscInt nuniq_face_verts, *uniq_face_verts;
+    { // Get f2mvertSF, SF mapping local face-vertices to global mesh vertices
+      PetscLayout layout;
+
+      PetscCall(PetscLayoutCreate(PetscObjectComm((PetscObject)dm), &layout));
+      PetscCall(PetscLayoutSetSize(layout, NVertices));
+      PetscCall(PetscLayoutSetLocalSize(layout, myownedv));
+      PetscCall(PetscLayoutSetBlockSize(layout, 1));
+
+      // Count locally unique vertices in the face connectivity
+      {
+        PetscHSetI vhash;
+        PetscInt   off = 0, conn_size;
+
+        PetscCall(PetscHSetICreate(&vhash));
+        PetscCall(PetscSectionGetStorageSize(connSection, &conn_size));
+        for (PetscInt v = 0; v < conn_size; ++v) { PetscCall(PetscHSetIAdd(vhash, conn[v])); }
+        PetscCall(PetscHSetIGetSize(vhash, &nuniq_face_verts));
+        PetscCall(PetscMalloc1(nuniq_face_verts, &uniq_face_verts));
+        PetscCall(PetscHSetIGetElems(vhash, &off, uniq_face_verts));
+        PetscCall(PetscHSetIDestroy(&vhash));
+        PetscCheck(off == nuniq_face_verts, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid number of local vertices %" PetscInt_FMT " should be %" PetscInt_FMT, off, nuniq_face_verts);
+      }
+      PetscCall(PetscSortInt(nuniq_face_verts, uniq_face_verts));
+      PetscCall(PetscSFCreateByMatchingIndicesInclusive(layout, nuniq_verts, uniq_verts, NULL, myownede, nuniq_face_verts, uniq_face_verts, NULL, myownede, NULL, &f2mvertSF));
+    }
+
+    { // Build CGNS-face-to-DMPlex-face SF
+      PetscInt fStart, fEnd;
+
+      PetscSection       f2mvertSection;
+      const PetscSFNode *iremote;
+      PetscBool          free_sf_graph = PETSC_FALSE;
+      { // Build section describing the iremote layout of f2mvertSF.
+        // The points of the section are ilocal and array it indexes into is iremote.
+        // ilocal indexes into uniq_face_verts.
+        PetscInt        nleaves;
+        const PetscInt *ilocal;
+        PetscBool       is_sorted;
+
+        PetscCall(PetscSFGetGraph(f2mvertSF, NULL, &nleaves, &ilocal, &iremote));
+        PetscCall(PetscSortedInt(nleaves, ilocal, &is_sorted));
+        if (!is_sorted) {
+          PetscInt    *ilocal_s;
+          PetscSFNode *iremote_s, sfnode_temp;
+          free_sf_graph = PETSC_TRUE;
+          PetscCall(PetscMalloc1(nleaves, &iremote_s));
+          PetscCall(PetscMalloc1(nleaves, &ilocal_s));
+          PetscCall(PetscArraycpy(ilocal_s, ilocal, nleaves));
+          PetscCall(PetscArraycpy(iremote_s, iremote, nleaves));
+          PetscCall(PetscSortIntWithDataArray(nleaves, ilocal_s, iremote_s, sizeof(PetscSFNode), &sfnode_temp));
+          ilocal  = ilocal_s;
+          iremote = iremote_s;
+        }
+        PetscCall(PetscSectionCreate(PETSC_COMM_SELF, &f2mvertSection));
+        PetscCall(PetscSectionSetChart(f2mvertSection, 0, nuniq_face_verts));
+        for (PetscInt l = 0, s = 0, ndof = 0; l < nleaves; l++) {
+          ndof++;
+          if (l == nleaves - 1 || ilocal[l] != ilocal[l + 1]) {
+            PetscCall(PetscSectionSetDof(f2mvertSection, s, ndof));
+            s++;
+            ndof = 0;
+          } else continue;
+        }
+        PetscCall(PetscSectionSetUp(f2mvertSection));
+
+        if (free_sf_graph) PetscCall(PetscFree(ilocal));
+      }
+      PetscCall(PetscSectionGetChart(connSection, &fStart, &fEnd));
+      {
+        PetscInt max_f2mvert_size, max_conn_size;
+        PetscCall(PetscSectionGetMaxDof(connSection, &max_conn_size));
+        PetscCall(PetscSectionGetMaxDof(f2mvertSection, &max_f2mvert_size));
+      }
+      for (PetscInt f = fStart; f < fEnd; f++) {
+        PetscInt face_rank = -1;
+        PetscInt fndof, foffset, lndof, loffset, idx;
+
+        PetscCall(PetscSectionGetDof(connSection, f, &fndof));
+        PetscCall(PetscSectionGetOffset(connSection, f, &foffset));
+        PetscCall(PetscFindInt(conn[foffset + 0], nuniq_face_verts, uniq_face_verts, &idx));
+        PetscCall(PetscSectionGetDof(f2mvertSection, idx, &lndof));
+        PetscCall(PetscSectionGetOffset(f2mvertSection, idx, &loffset));
+        // Loop over ranks of the first vertex in the face connectivity
+        for (PetscInt l = 0; l < lndof; l++) {
+          PetscInt  rank            = iremote[loffset + l].rank;
+          PetscBool verts_have_rank = PETSC_TRUE;
+
+          // Loop over vertices of face (except for the first) to see if those vertices have the same candidate rank
+          for (PetscInt v = 1; v < fndof; v++) {
+            PetscInt  ldndof, ldoffset, idx;
+            PetscBool vert_has_rank = PETSC_FALSE;
+            PetscCall(PetscFindInt(conn[foffset + v], nuniq_face_verts, uniq_face_verts, &idx));
+            PetscCall(PetscSectionGetDof(f2mvertSection, idx, &ldndof));
+            PetscCall(PetscSectionGetOffset(f2mvertSection, idx, &ldoffset));
+            // Loop over ranks of the vth vertex to see if it has the candidate rank
+            for (PetscInt ld = 0; ld < ldndof; ld++) vert_has_rank = (iremote[ldoffset + ld].rank == rank) || vert_has_rank;
+            if (vert_has_rank) continue; // This vertex has the candidate rank, proceed to the next vertex
+            else {
+              verts_have_rank = PETSC_FALSE; // This vertex does not have the candidate rank, try again with a new candidate vertex
+              break;
+            }
+          }
+          if (verts_have_rank) face_rank = rank;
+        }
+        PetscCheck(face_rank >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Rank that contains face could not be found");
+      }
+
+      if (free_sf_graph) PetscCall(PetscFree(iremote));
+    }
+  }
   // TODO: Read the BCs in here, but only if interpolate is done (otherwise there are no Plex faces to create a DMLabel against)
 
   // -- Create SF for naive nodal-data read to elements
