@@ -41,6 +41,12 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
 
   PetscCall(MatSeqAIJGetCSRAndMemType(impl->Q, &Q_i, &Q_j, (PetscScalar **)&Q_v, &Q_memtype));
 
+  /* Verify that p_local matches Q_NUM_LOCAL_OBSERVATIONS_MAX */
+  PetscCheck(p_local == Q_NUM_LOCAL_OBSERVATIONS_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "p_local (%" PetscInt_FMT ") must equal Q_NUM_LOCAL_OBSERVATIONS_MAX (%d) for stack-allocated arrays", p_local, Q_NUM_LOCAL_OBSERVATIONS_MAX);
+
+  /* Verify that ensemble size does not exceed ENSEMBLE_SIZE_MAX */
+  PetscCheck(m <= ENSEMBLE_SIZE_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m (%" PetscInt_FMT ") exceeds ENSEMBLE_SIZE_MAX (%d)", m, ENSEMBLE_SIZE_MAX);
+
   /* Phase 2: Get dense matrix/vector arrays with memory type detection */
   const PetscScalar *Z_global_array          = NULL;
   const PetscScalar *y_global_array          = NULL;
@@ -161,10 +167,6 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace>  dSigma_all("Sigma_all", n_vertices, min_dim);
   Kokkos::View<PetscScalar ***, Kokkos::DefaultExecutionSpace> dVt_all("Vt_all", n_vertices, m, m);
 
-  /* Allocate workspace for SVD (size depends on algorithm) */
-  PetscInt                                                    work_size = 5 * (p_local + m); // Conservative estimate for workspace
-  Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dWork_all("Work_all", n_vertices, work_size);
-
   /* Compute batched SVD for all vertices in parallel
      PHASE 2 FUSION: Eliminated ReshapeS kernel by creating temporary row-major copy inside SVD kernel
      This eliminates the dS_all_3d intermediate array and associated kernel launch */
@@ -173,7 +175,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       /* Create temporary row-major copy of S matrix for this vertex
          S is stored in dS_all as column-major: S(i,j) = dS_all(i_vertex, i + j*p_local)
          SVD needs row-major: S_temp(i,j) stored contiguously */
-      PetscScalar S_temp[40 * 50]; // [p_local x m], max 40x50
+      PetscScalar S_temp[Q_NUM_LOCAL_OBSERVATIONS_MAX * ENSEMBLE_SIZE_MAX]; // [p_local x m]
       for (int i = 0; i < p_local; i++) {
         for (int j = 0; j < m; j++) S_temp[i * m + j] = dS_all(i_vertex, i + j * p_local);
       }
@@ -185,7 +187,14 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       auto U_i     = Kokkos::subview(dU_all, i_vertex, Kokkos::ALL, Kokkos::ALL);
       auto Sigma_i = Kokkos::subview(dSigma_all, i_vertex, Kokkos::ALL);
       auto Vt_i    = Kokkos::subview(dVt_all, i_vertex, Kokkos::ALL, Kokkos::ALL);
-      auto Work_i  = Kokkos::subview(dWork_all, i_vertex, Kokkos::ALL);
+
+      /* Allocate workspace for SVD on stack (must be contiguous, not LayoutStride)
+         Work size is max(p_local, m) as per Kokkos SVD requirements */
+      PetscInt    max_dim = (p_local > m) ? p_local : m;
+      PetscScalar Work_temp[(Q_NUM_LOCAL_OBSERVATIONS_MAX > ENSEMBLE_SIZE_MAX) ? Q_NUM_LOCAL_OBSERVATIONS_MAX : ENSEMBLE_SIZE_MAX];
+
+      /* Create unmanaged contiguous view wrapping Work_temp */
+      Kokkos::View<PetscScalar *, Kokkos::LayoutRight, Kokkos::DefaultExecutionSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> Work_i(Work_temp, max_dim);
 
       /* Compute SVD: S = U * Sigma * V^T using Kokkos Kernels batched SVD */
       /* Use SVD_USV_Tag for full SVD with U, Sigma, and V^T */
