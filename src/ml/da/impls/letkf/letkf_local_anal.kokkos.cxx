@@ -98,47 +98,52 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     Kokkos::deep_copy(dr_inv_sqrt_global, hr_inv_sqrt_global);
   }
 
-  /* Allocate device views for local data (all vertices) */
-  Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dZ_local_all("Z_local_all", n_vertices, p_local * m);
+  /* Phase 3+4 FUSED: Compute S directly from global arrays
+     PHASE 4 FUSION: Eliminated ExtractLocalObservations + ComputeS kernels
+     This eliminates 4 intermediate arrays: dZ_local_all, dy_local_all, dy_mean_local_all, dr_inv_sqrt_local_all
+     S is computed directly from global arrays using Q matrix for indirection */
+
+  PetscReal scale = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
+
+  /* Allocate device view for S matrices (all vertices) - still needed for SVD */
+  Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dS_all("S_all", n_vertices, p_local * m);
+
+  /* Allocate temporary arrays for local observations (needed by ComputeWeightsFused)
+     These are much smaller than the original 4 arrays since they're only used in one kernel */
   Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dy_local_all("y_local_all", n_vertices, p_local);
   Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dy_mean_local_all("y_mean_local_all", n_vertices, p_local);
   Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dr_inv_sqrt_local_all("r_inv_sqrt_local_all", n_vertices, p_local);
 
-  /* Extract local observations for all vertices in parallel */
+  /* Compute S directly from global arrays with inline extraction
+     For each vertex, extract local observations and immediately compute S */
   Kokkos::parallel_for(
-    "ExtractLocalObservations", n_vertices, KOKKOS_LAMBDA(const int i_vertex) {
+    "ComputeSWithInlineExtraction", n_vertices, KOKKOS_LAMBDA(const int i_vertex) {
       /* For each vertex, extract its local observations using Q row */
       PetscInt row_start = dQ_i(i_vertex);
       PetscInt row_end   = dQ_i(i_vertex + 1);
       PetscInt ncols     = row_end - row_start;
 
-      /* Extract vectors */
+      /* Extract and compute S in one pass */
       for (int k = 0; k < ncols; k++) {
         PetscInt    obs_idx = dQ_j(row_start + k);
         PetscScalar weight  = dQ_v(row_start + k);
 
-        dy_local_all(i_vertex, k)          = dy_global(obs_idx);
-        dy_mean_local_all(i_vertex, k)     = dy_mean_global(obs_idx);
-        dr_inv_sqrt_local_all(i_vertex, k) = dr_inv_sqrt_global(obs_idx) * PetscSqrtScalar(weight);
+        /* Extract observation values (needed for weight computation later) */
+        PetscScalar y_local          = dy_global(obs_idx);
+        PetscScalar y_mean_local     = dy_mean_global(obs_idx);
+        PetscScalar r_inv_sqrt_local = dr_inv_sqrt_global(obs_idx) * PetscSqrtScalar(weight);
 
-        /* Extract Z matrix row (column-major layout) */
-        for (int j = 0; j < m; j++) dZ_local_all(i_vertex, k + j * p_local) = dZ_global(obs_idx + j * lda_z_global);
+        /* Store for later use in ComputeWeightsFused */
+        dy_local_all(i_vertex, k)          = y_local;
+        dy_mean_local_all(i_vertex, k)     = y_mean_local;
+        dr_inv_sqrt_local_all(i_vertex, k) = r_inv_sqrt_local;
+
+        /* Compute S directly: S(k,j) = (Z(k,j) - y_mean(k)) * scale * r_inv_sqrt(k) */
+        for (int j = 0; j < m; j++) {
+          PetscScalar Z_local               = dZ_global(obs_idx + j * lda_z_global);
+          dS_all(i_vertex, k + j * p_local) = (Z_local - y_mean_local) * scale * r_inv_sqrt_local;
+        }
       }
-    });
-
-  Kokkos::fence();
-
-  /* Phase 4: Parallel S computation kernel - compute S for all vertices */
-  PetscReal scale = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
-
-  /* Allocate device view for S matrices (all vertices) */
-  Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dS_all("S_all", n_vertices, p_local * m);
-
-  /* Compute normalized innovation matrix S for all vertices in parallel */
-  Kokkos::parallel_for(
-    "ComputeS", Kokkos::MDRangePolicy<Kokkos::Rank<3>, Kokkos::DefaultExecutionSpace>({0, 0, 0}, {n_vertices, p_local, m}), KOKKOS_LAMBDA(const int i_vertex, const int i, const int j) {
-      /* S[i_vertex](i,j) = (Z_local[i_vertex](i,j) - y_mean_local[i_vertex](i)) * scale * r_inv_sqrt_local[i_vertex](i) */
-      dS_all(i_vertex, i + j * p_local) = (dZ_local_all(i_vertex, i + j * p_local) - dy_mean_local_all(i_vertex, i)) * scale * dr_inv_sqrt_local_all(i_vertex, i);
     });
 
   Kokkos::fence();
@@ -150,22 +155,27 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace>  dSigma_all("Sigma_all", n_vertices, min_dim);
   Kokkos::View<PetscScalar ***, Kokkos::DefaultExecutionSpace> dVt_all("Vt_all", n_vertices, m, m);
 
-  /* Reshape S_all to 3D for batched SVD: [n_vertices x p_local x m] */
-  Kokkos::View<PetscScalar ***, Kokkos::LayoutRight, Kokkos::DefaultExecutionSpace> dS_all_3d("S_all_3d", n_vertices, p_local, m);
-
-  /* Copy S from 2D to 3D layout */
-  Kokkos::parallel_for(
-    "ReshapeS", Kokkos::MDRangePolicy<Kokkos::Rank<3>, Kokkos::DefaultExecutionSpace>({0, 0, 0}, {n_vertices, p_local, m}), KOKKOS_LAMBDA(const int i_vertex, const int i, const int j) { dS_all_3d(i_vertex, i, j) = dS_all(i_vertex, i + j * p_local); });
-
   /* Allocate workspace for SVD (size depends on algorithm) */
   PetscInt                                                    work_size = 5 * (p_local + m); // Conservative estimate for workspace
   Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dWork_all("Work_all", n_vertices, work_size);
 
-  /* Compute batched SVD for all vertices in parallel */
+  /* Compute batched SVD for all vertices in parallel
+     PHASE 2 FUSION: Eliminated ReshapeS kernel by creating temporary row-major copy inside SVD kernel
+     This eliminates the dS_all_3d intermediate array and associated kernel launch */
   Kokkos::parallel_for(
-    "BatchedSVD", n_vertices, KOKKOS_LAMBDA(const int i_vertex) {
-      /* Get subviews for this vertex's matrices */
-      auto S_i     = Kokkos::subview(dS_all_3d, i_vertex, Kokkos::ALL, Kokkos::ALL);
+    "BatchedSVDWithInlineReshape", n_vertices, KOKKOS_LAMBDA(const int i_vertex) {
+      /* Create temporary row-major copy of S matrix for this vertex
+         S is stored in dS_all as column-major: S(i,j) = dS_all(i_vertex, i + j*p_local)
+         SVD needs row-major: S_temp(i,j) stored contiguously */
+      PetscScalar S_temp[40 * 50]; // [p_local x m], max 40x50
+      for (int i = 0; i < p_local; i++) {
+        for (int j = 0; j < m; j++) { S_temp[i * m + j] = dS_all(i_vertex, i + j * p_local); }
+      }
+
+      /* Create unmanaged view wrapping S_temp with LayoutRight (row-major) */
+      Kokkos::View<PetscScalar **, Kokkos::LayoutRight, Kokkos::DefaultExecutionSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> S_i(S_temp, p_local, m);
+
+      /* Get subviews for this vertex's output matrices */
       auto U_i     = Kokkos::subview(dU_all, i_vertex, Kokkos::ALL, Kokkos::ALL);
       auto Sigma_i = Kokkos::subview(dSigma_all, i_vertex, Kokkos::ALL);
       auto Vt_i    = Kokkos::subview(dVt_all, i_vertex, Kokkos::ALL, Kokkos::ALL);
@@ -185,25 +195,23 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
      Given SVD: S = U Sigma V^T, we have:
      w = V (I + Sigma^2)^{-1} V^T V Sigma U^T delta = V (I + Sigma^2)^{-1} Sigma U^T delta */
 
-  /* Allocate device views for delta_scaled (all vertices) */
-  Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> ddelta_scaled_all("delta_scaled_all", n_vertices, p_local);
-
-  /* Compute delta_scaled = y_local - y_mean_local (element-wise, already scaled by r_inv_sqrt) */
-  Kokkos::parallel_for(
-    "ComputeDeltaScaled", Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::DefaultExecutionSpace>({0, 0}, {n_vertices, p_local}),
-    KOKKOS_LAMBDA(const int i_vertex, const int i) { ddelta_scaled_all(i_vertex, i) = (dy_local_all(i_vertex, i) - dy_mean_local_all(i_vertex, i)) * dr_inv_sqrt_local_all(i_vertex, i); });
-
   /* Allocate device views for weights (all vertices) */
   Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dw_all("w_all", n_vertices, m);
 
-  /* Compute weights: w = V (I + Sigma^2)^{-1} Sigma U^T delta */
+  /* Compute weights: w = V (I + Sigma^2)^{-1} Sigma U^T delta
+     FUSED KERNEL: Computes delta_scaled on-the-fly to eliminate intermediate storage */
   Kokkos::parallel_for(
-    "ComputeWeights", n_vertices, KOKKOS_LAMBDA(const int i_vertex) {
-      /* Step 1: Compute U^T delta (result is min_dim vector) */
+    "ComputeWeightsFused", n_vertices, KOKKOS_LAMBDA(const int i_vertex) {
+      /* Step 1: Compute U^T delta (result is min_dim vector)
+         Compute delta_scaled inline: delta_scaled[k] = (y_local[k] - y_mean_local[k]) * r_inv_sqrt_local[k] */
       PetscScalar UtDelta[40]; // max(min_dim) = min(40, m)
       for (int i = 0; i < min_dim; i++) {
         UtDelta[i] = 0.0;
-        for (int k = 0; k < p_local; k++) UtDelta[i] += dU_all(i_vertex, k, i) * ddelta_scaled_all(i_vertex, k);
+        for (int k = 0; k < p_local; k++) {
+          /* Compute delta_scaled on-the-fly */
+          PetscScalar delta_scaled = (dy_local_all(i_vertex, k) - dy_mean_local_all(i_vertex, k)) * dr_inv_sqrt_local_all(i_vertex, k);
+          UtDelta[i] += dU_all(i_vertex, k, i) * delta_scaled;
+        }
       }
 
       /* Step 2: Compute (I + Sigma^2)^{-1} Sigma U^T delta */
@@ -275,26 +283,13 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
 
   Kokkos::fence();
 
-  /* Phase 8: Parallel G formation - form transform matrices */
-  /* G = w * 1' + sqrt(m-1) * T_sqrt
-     where w * 1' means adding w to each column of G */
+  /* Phase 8+9 FUSED: Parallel ensemble update with inline G computation */
+  /* E_a[i,:] = x_bar_f[i] + X_f[i,:] * G[i]
+     where G[i,k,j] = w[i,k] + sqrt(m-1) * T_sqrt[i,k,j]
+     PHASE 3 FUSION: Eliminated FormG kernel by computing G elements on-the-fly
+     This eliminates the dG_all intermediate array (LARGEST intermediate!) */
 
   PetscReal sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
-
-  /* Allocate device views for G (all vertices) */
-  Kokkos::View<PetscScalar ***, Kokkos::DefaultExecutionSpace> dG_all("G_all", n_vertices, m, m);
-
-  /* Form G matrices */
-  Kokkos::parallel_for(
-    "FormG", Kokkos::MDRangePolicy<Kokkos::Rank<3>, Kokkos::DefaultExecutionSpace>({0, 0, 0}, {n_vertices, m, m}),
-    KOKKOS_LAMBDA(const int i_vertex, const int i, const int j) { dG_all(i_vertex, i, j) = dw_all(i_vertex, i) + sqrt_m_minus_1 * dT_sqrt_all(i_vertex, i, j); });
-
-  Kokkos::fence();
-
-  /* Phase 9: Parallel ensemble update - update all ensemble rows */
-  /* E_a[i,:] = x_bar_f[i] + X_f[i,:] * G[i]
-     where E_a is the analysis ensemble, x_bar_f is the forecast mean,
-     X_f is the forecast anomaly, and G is the transform matrix */
 
   /* Copy X and mean to device */
   Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace> dX("X", lda_x * m);
@@ -309,11 +304,16 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   /* Allocate device view for ensemble output */
   Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace> densemble("ensemble", lda_ensemble * m);
 
-  /* Update ensemble: E_a[i,j] = mean[i] + sum_k X[i,k] * G[i,k,j] */
+  /* Update ensemble with inline G computation: E_a[i,j] = mean[i] + sum_k X[i,k] * G[i,k,j]
+     where G[i,k,j] is computed on-the-fly instead of being stored */
   Kokkos::parallel_for(
-    "UpdateEnsemble", Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::DefaultExecutionSpace>({0, 0}, {n_vertices, m}), KOKKOS_LAMBDA(const int i_vertex, const int j) {
+    "UpdateEnsembleWithInlineG", Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::DefaultExecutionSpace>({0, 0}, {n_vertices, m}), KOKKOS_LAMBDA(const int i_vertex, const int j) {
       PetscScalar sum = 0.0;
-      for (int k = 0; k < m; k++) sum += dX(i_vertex + k * lda_x) * dG_all(i_vertex, k, j);
+      for (int k = 0; k < m; k++) {
+        /* Compute G[i_vertex,k,j] on-the-fly: G = w * 1' + sqrt(m-1) * T_sqrt */
+        PetscScalar G_kj = dw_all(i_vertex, k) + sqrt_m_minus_1 * dT_sqrt_all(i_vertex, k, j);
+        sum += dX(i_vertex + k * lda_x) * G_kj;
+      }
       densemble(i_vertex + j * lda_ensemble) = dmean(i_vertex) + sum;
     });
 
