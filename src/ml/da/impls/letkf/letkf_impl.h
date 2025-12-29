@@ -22,4 +22,5 @@ typedef struct {
 #if defined(PETSC_HAVE_KOKKOS)
 /* Function declarations */
 PETSC_EXTERN PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA, PetscDALETKFData *, PetscInt, PetscInt, Mat, Vec, Mat, Vec, Vec);
+PETSC_EXTERN PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA, PetscDALETKFData *, PetscInt, PetscInt, Mat, Vec, Mat, Vec, Vec);
 #endif

@@ -7,6 +7,7 @@ PetscDA Object: 1 MPI process
   Inflation: 1.
 PetscDALETKF Object:
   Square root type: eigen
+  Local analysis: Kokkos
   Local observations per vertex: 40
   Localization matrix: not set
 Localization matrix Q created: 40 x 40, full localization (all weights = 1.0)
