@@ -194,7 +194,7 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
 
   /* Compute normalized innovation: S_ij = (Z_ij - y_mean_i) * scale * r_inv_sqrt_i */
   for (j = 0; j < m; j++) {
-    for (i = 0; i < obs_size_local; i++) { s_array[i + j * lda_s] = (z_array[i + j * lda_z] - y_array[i]) * scale * r_array[i]; }
+    for (i = 0; i < obs_size_local; i++) s_array[i + j * lda_s] = (z_array[i + j * lda_z] - y_array[i]) * scale * r_array[i];
   }
 
   /* Restore arrays */
@@ -271,7 +271,7 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
     r_inv_sqrt_local_array[k] = r_inv_sqrt_global_array[obs_idx] * PetscSqrtScalar(weight);
 
     /* Extract Z matrix row (column-major layout) */
-    for (j = 0; j < m; j++) { z_local_array[k + j * lda_z_local] = z_global_array[obs_idx + j * lda_z_global]; }
+    for (j = 0; j < m; j++) z_local_array[k + j * lda_z_local] = z_global_array[obs_idx + j * lda_z_global];
   }
 
   /* Restore arrays */

@@ -123,7 +123,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         dr_inv_sqrt_local_all(i_vertex, k) = dr_inv_sqrt_global(obs_idx) * PetscSqrtScalar(weight);
 
         /* Extract Z matrix row (column-major layout) */
-        for (int j = 0; j < m; j++) { dZ_local_all(i_vertex, k + j * p_local) = dZ_global(obs_idx + j * lda_z_global); }
+        for (int j = 0; j < m; j++) dZ_local_all(i_vertex, k + j * p_local) = dZ_global(obs_idx + j * lda_z_global);
       }
     });
 
