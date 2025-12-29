@@ -9,10 +9,7 @@ static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
                      "Algorithm 6.4 of \n"
                      "Asch, Bocquet, and Nodet (2016) \"Data Assimilation\" "
                      "(SIAM, doi:10.1137/1.9781611974546).\n\n"
-                     "Example usage:\n"
-                     "  ./ex1 -steps 105000 -burn 5000 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30\n"
-                     "  Expected result: Mean RMSE (analysis): ~0.13107\n"
-                     "  Note: Asch et al. run Lorenz-96 for 100,000 steps to achieve convergence.\n\n";
+                     "  Note: Asch et al. run Lorenz-96 for 100,000 steps, but our ensemble collapses.\n\n";
 
 /* \begin{algorithm}
 \caption{Ensemble Transform Kalman Filter (ETKF) - Deterministic}
@@ -566,11 +563,12 @@ int main(int argc, char **argv)
 
   testset:
     requires: !complex !single
-    diff_args: -j
+    nsize: 1
     args: -steps 1120 -burn 100 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30
 
     test:
       suffix: eigen
+      diff_args: -j
       args: -petscda_sqrt_type eigen
 
     test:
