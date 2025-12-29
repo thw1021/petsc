@@ -190,52 +190,12 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
 
   Kokkos::fence();
 
-  /* Phase 6: Parallel weight computation - compute w using SVD results */
-  /* w = T^{-1} S^T delta where T^{-1} = V (I + Sigma^2)^{-1} V^T
-     Given SVD: S = U Sigma V^T, we have:
-     w = V (I + Sigma^2)^{-1} V^T V Sigma U^T delta = V (I + Sigma^2)^{-1} Sigma U^T delta */
+  /* Phase 6+7 FUSED: Compute weights and T_sqrt in single kernel
+     PHASE 5 FUSION: Fused ComputeWeights + ComputeTSqrt kernels
+     Both kernels consume SVD outputs and can share computation of (I + Sigma^2)^{-1/2}
+     This eliminates 1 synchronization point and improves data locality */
 
-  /* Allocate device views for weights (all vertices) */
-  Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dw_all("w_all", n_vertices, m);
-
-  /* Compute weights: w = V (I + Sigma^2)^{-1} Sigma U^T delta
-     FUSED KERNEL: Computes delta_scaled on-the-fly to eliminate intermediate storage */
-  Kokkos::parallel_for(
-    "ComputeWeightsFused", n_vertices, KOKKOS_LAMBDA(const int i_vertex) {
-      /* Step 1: Compute U^T delta (result is min_dim vector)
-         Compute delta_scaled inline: delta_scaled[k] = (y_local[k] - y_mean_local[k]) * r_inv_sqrt_local[k] */
-      PetscScalar UtDelta[40]; // max(min_dim) = min(40, m)
-      for (int i = 0; i < min_dim; i++) {
-        UtDelta[i] = 0.0;
-        for (int k = 0; k < p_local; k++) {
-          /* Compute delta_scaled on-the-fly */
-          PetscScalar delta_scaled = (dy_local_all(i_vertex, k) - dy_mean_local_all(i_vertex, k)) * dr_inv_sqrt_local_all(i_vertex, k);
-          UtDelta[i] += dU_all(i_vertex, k, i) * delta_scaled;
-        }
-      }
-
-      /* Step 2: Compute (I + Sigma^2)^{-1} Sigma U^T delta */
-      PetscScalar temp[40];
-      for (int i = 0; i < min_dim; i++) {
-        PetscScalar sigma    = dSigma_all(i_vertex, i);
-        PetscScalar sigma_sq = sigma * sigma;
-        temp[i]              = (sigma / (1.0 + sigma_sq)) * UtDelta[i];
-      }
-
-      /* Step 3: Compute w = V temp (V is m x m, stored as Vt transposed) */
-      for (int j = 0; j < m; j++) {
-        dw_all(i_vertex, j) = 0.0;
-        for (int i = 0; i < min_dim; i++) dw_all(i_vertex, j) += dVt_all(i_vertex, i, j) * temp[i];
-      }
-    });
-
-  Kokkos::fence();
-
-  /* Phase 7: Parallel T_sqrt computation - compute T^{-1/2} using SVD */
-  /* T^{-1/2} = V (I + Sigma^2)^{-1/2} V^T
-     We need to apply this to U (the random orthogonal matrix from PetscDA) */
-
-  /* Get U matrix from PetscDA */
+  /* Get U matrix from PetscDA (needed for T_sqrt computation) */
   const PetscScalar *U_array = NULL;
   PetscMemType       U_memtype;
   PetscInt           lda_u;
@@ -249,27 +209,60 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     Kokkos::deep_copy(dU_matrix, hU_matrix);
   }
 
-  /* Allocate device views for T_sqrt (all vertices) */
+  /* Allocate device views for weights and T_sqrt (all vertices) */
+  Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace>  dw_all("w_all", n_vertices, m);
   Kokkos::View<PetscScalar ***, Kokkos::DefaultExecutionSpace> dT_sqrt_all("T_sqrt_all", n_vertices, m, m);
 
-  /* Compute T_sqrt = T^{-1/2} U = V (I + Sigma^2)^{-1/2} V^T U */
+  /* Compute both weights and T_sqrt in single fused kernel
+     w = V (I + Sigma^2)^{-1} Sigma U^T delta
+     T_sqrt = V (I + Sigma^2)^{-1/2} V^T U
+     Both share computation of (I + Sigma^2)^{-1/2} */
   Kokkos::parallel_for(
-    "ComputeTSqrt", n_vertices, KOKKOS_LAMBDA(const int i_vertex) {
+    "ComputeWeightsAndTSqrtFused", n_vertices, KOKKOS_LAMBDA(const int i_vertex) {
+      /* Shared computation: Compute (I + Sigma^2)^{-1/2} once for both w and T_sqrt */
+      PetscScalar inv_sqrt_factor[40]; // max(min_dim) = min(40, m)
+      for (int i = 0; i < min_dim; i++) {
+        PetscScalar sigma    = dSigma_all(i_vertex, i);
+        PetscScalar sigma_sq = sigma * sigma;
+        inv_sqrt_factor[i]   = 1.0 / PetscSqrtScalar(1.0 + sigma_sq);
+      }
+
+      /* ===== Part 1: Compute weights w ===== */
+      /* Step 1: Compute U^T delta (result is min_dim vector)
+         Compute delta_scaled inline: delta_scaled[k] = (y_local[k] - y_mean_local[k]) * r_inv_sqrt_local[k] */
+      PetscScalar UtDelta[40];
+      for (int i = 0; i < min_dim; i++) {
+        UtDelta[i] = 0.0;
+        for (int k = 0; k < p_local; k++) {
+          /* Compute delta_scaled on-the-fly */
+          PetscScalar delta_scaled = (dy_local_all(i_vertex, k) - dy_mean_local_all(i_vertex, k)) * dr_inv_sqrt_local_all(i_vertex, k);
+          UtDelta[i] += dU_all(i_vertex, k, i) * delta_scaled;
+        }
+      }
+
+      /* Step 2: Compute (I + Sigma^2)^{-1} Sigma U^T delta (reuse inv_sqrt_factor) */
+      PetscScalar temp_w[40];
+      for (int i = 0; i < min_dim; i++) {
+        PetscScalar sigma = dSigma_all(i_vertex, i);
+        temp_w[i]         = (sigma * inv_sqrt_factor[i] * inv_sqrt_factor[i]) * UtDelta[i]; // (sigma / (1 + sigma^2)) = sigma * inv_sqrt^2
+      }
+
+      /* Step 3: Compute w = V temp_w (V is m x m, stored as Vt transposed) */
+      for (int j = 0; j < m; j++) {
+        dw_all(i_vertex, j) = 0.0;
+        for (int i = 0; i < min_dim; i++) dw_all(i_vertex, j) += dVt_all(i_vertex, i, j) * temp_w[i];
+      }
+
+      /* ===== Part 2: Compute T_sqrt ===== */
       /* Step 1: Compute V^T U (result is m x m, but only first min_dim rows are non-zero) */
       PetscScalar VtU[40][50]; // [min_dim x m]
       for (int i = 0; i < min_dim; i++) {
         for (int j = 0; j < m; j++) {
           VtU[i][j] = 0.0;
           for (int k = 0; k < m; k++) VtU[i][j] += dVt_all(i_vertex, i, k) * dU_matrix(k + j * lda_u);
+          /* Step 2: Scale by (I + Sigma^2)^{-1/2} (reuse inv_sqrt_factor) */
+          VtU[i][j] *= inv_sqrt_factor[i];
         }
-      }
-
-      /* Step 2: Scale by (I + Sigma^2)^{-1/2} */
-      for (int i = 0; i < min_dim; i++) {
-        PetscScalar sigma    = dSigma_all(i_vertex, i);
-        PetscScalar sigma_sq = sigma * sigma;
-        PetscScalar scale    = 1.0 / PetscSqrtScalar(1.0 + sigma_sq);
-        for (int j = 0; j < m; j++) VtU[i][j] *= scale;
       }
 
       /* Step 3: Compute T_sqrt = V * scaled_VtU */
