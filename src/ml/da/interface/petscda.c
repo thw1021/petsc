@@ -227,6 +227,8 @@ static PetscErrorCode PetscDAComputeAnomalies_Default(PetscDA da, Vec mean_in, M
 
   /* Allocate anomalies matrix (state_size x ensemble_size) */
   PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, da->state_size, ensemble_size, NULL, &anomalies));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)anomalies, "dense_"));
+  PetscCall(MatSetFromOptions(anomalies));
   PetscCall(MatSetUp(anomalies));
 
   /* Use provided mean or create and compute it */
@@ -617,6 +619,8 @@ PetscErrorCode PetscDASetUp(PetscDA da)
 
   if (!da->ensemble) {
     PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, da->state_size, da->ensemble_size, NULL, &da->ensemble));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)da->ensemble, "dense_"));
+    PetscCall(MatSetFromOptions(da->ensemble));
     PetscCall(MatSetUp(da->ensemble));
   }
 
@@ -1559,6 +1563,8 @@ static PetscErrorCode ApplySqrtTInverse_Cholesky(PetscDA da, Mat U, Mat Y)
   if (!U) {
     /* Create identity matrix of size m_L x m_L */
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->L_cholesky), PETSC_DECIDE, PETSC_DECIDE, m_L, m_L, NULL, &U_identity));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)U_identity, "dense_"));
+    PetscCall(MatSetFromOptions(U_identity));
     PetscCall(MatSetUp(U_identity));
     PetscCall(MatShift(U_identity, 1.0)); /* Set diagonal to 1 */
     U = U_identity;
