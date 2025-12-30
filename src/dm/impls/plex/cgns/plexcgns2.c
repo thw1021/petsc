@@ -963,10 +963,10 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
   if (num_face_sections != 0) {
     CGNS_ENUMT(ElementType_t) * cellTypes;
     PetscSection connSection;
-    PetscInt    *cells, *conn;
+    PetscInt    *face_ids, *conn;
     PetscSF      f2mvertSF; // SF of face-vertices to the global mesh vertices
 
-    PetscCall(DMPlexCGNS_CreateCornersConnectivitySection(*dm, cgid, base, zone, num_face_sections, face_section_ids, &connSection, &cellTypes, &cells, &conn));
+    PetscCall(DMPlexCGNS_CreateCornersConnectivitySection(*dm, cgid, base, zone, num_face_sections, face_section_ids, &connSection, &cellTypes, &face_ids, &conn));
 
     PetscInt nuniq_face_verts, *uniq_face_verts;
     { // Get f2mvertSF, SF mapping local face-vertices to global mesh vertices
@@ -1042,7 +1042,14 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
         PetscCall(PetscSectionGetMaxDof(connSection, &max_conn_size));
         PetscCall(PetscSectionGetMaxDof(f2mvertSection, &max_f2mvert_size));
       }
-      for (PetscInt f = fStart; f < fEnd; f++) {
+      PetscSFNode *iremote_c2d;
+      PetscInt    *ilocal_c2d, *local_rank_count, *rank_start, *rank_offset, *global_rank_count;
+      PetscCall(PetscMalloc1(fEnd - fStart, &iremote_c2d));
+      PetscCall(PetscMalloc1(fEnd - fStart, &ilocal_c2d));
+      PetscCall(PetscCalloc3(num_proc, &local_rank_count, num_proc, &rank_start, num_proc, &rank_offset));
+      PetscCall(PetscMalloc1(num_proc, &global_rank_count));
+
+      for (PetscInt f = fStart, f_i = 0; f < fEnd; f++, f_i++) {
         PetscInt face_rank = -1;
         PetscInt fndof, foffset, lndof, loffset, idx;
 
@@ -1074,6 +1081,61 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
           if (verts_have_rank) face_rank = rank;
         }
         PetscCheck(face_rank >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Rank that contains face could not be found");
+        // TODO: Should I allow for multiple ranks to have a reference to the face? This will be true for internal face references
+
+        ilocal_c2d[f_i]       = f_i;
+        iremote_c2d[f_i].rank = rank;
+        local_rank_count[rank]++;
+
+        // To get the index of the rank here, I may need to do an Exscan for every single rank to determine who get's to put what where in the other rank.
+        // So every rank knows how many leaves goes to rank X. We then do an Exscan on that, which gives a range of values that the current rank can use to put it's info into onto rank X.
+        // We then loop through different rank X values to get the total distribution.
+        //
+        // Actually, we can do a single Exscan with an array. The array is size(num_ranks) and the values in the array are the number of leaves in the current rank that go into the X rank. So array[X] = num_leaves_to_rank_X
+      }
+
+      // Note: Can probably replace global_rank_count with rank_start, get the global rank count for the current rank, then use rank_start in the Exscan
+      PetscCallMPI(MPIU_Allreduce(&local_rank_count, &global_rank_count, num_proc, MPIU_INT, MPI_SUM, comm));
+      PetscCallMPI(MPI_Exscan(&local_rank_count, &rank_start, num_proc, MPIU_INT, MPI_SUM, comm));
+
+      for (PetscInt f_i = 0; f_i < fEnd - fStart; f_i++) {
+        PetscInt rank_f_i      = iremote_c2d[f_i].rank;
+        iremote_c2d[f_i].index = rank_start[rank_f_i] + rank_offset[rank_f_i];
+        rank_offset[rank_f_i]++;
+      }
+
+      PetscSF f2rankSF;
+
+      PetscCall(PetscSFCreate(comm, &f2rankSF));
+      PetscCall(PetscSFSetGraph(f2rankSF, global_rank_count[rank], fEnd - fStart, ilocal_c2d, PETSC_OWN_POINTER, iremote_c2d, PETSC_OWN_POINTER));
+      PetscCall(PetscFree3(local_rank_count, rank_start, rank_offset));
+      PetscCall(PetscFree(global_rank_count));
+
+      { // Distribute faces and match CGNS faces with DMPlex faces
+        PetscSection connLocalSection;
+        PetscInt    *connLocal;
+        PetscInt     flocalStart, flocalEnd;
+
+        // Distribute the face connectivity to the rank that has that face
+        PetscCall(PetscSectionCreate(comm, &connLocalSection));
+        PetscCall(PetscSectionDistributeData(f2rankSF, connSection, MPIU_INT, conn, connLocalSection, NULL, (void **)&connLocal));
+        PetscCall(PetscSectionGetChart(connLocalSection, &flocalStart, &flocalEnd));
+
+        for (PetscInt f = flocalStart; f < flocalEnd; f++) {
+          // Now we need to match the local
+          PetscInt ndof, offset;
+
+          PetscCall(PetscSectionGetDof(connLocalSection, f, &ndof));
+          PetscCall(PetscSectionGetOffset(connLocalSection, f, &offset));
+
+          // I think uniq_face_verts should have the CGNS-to-DMPlex mapping for the on-rank vertices
+          // Steps:
+          // - Get a CGNS point for the face
+          // - Get it's corresponding DMPlex point
+          // - Ask for the Transitive cone of the point
+          // - Loop over the faces in the transitive cone of the point
+          // - Find which face matches the CGNS face (again, needing the CGNS-to-DMPlex vertex mapping)
+        }
       }
 
       if (free_sf_graph) PetscCall(PetscFree(iremote));
