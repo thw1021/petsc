@@ -366,6 +366,7 @@ static PetscErrorCode CreateObservationMatrix(PetscInt n, PetscInt ndof, PetscIn
 
   /* Create observation matrix H (nobs x n*ndof) */
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, nobs, n * ndof, 1, NULL, 0, NULL, H));
+  PetscCall(MatSetFromOptions(*H));
 
   /* Observe water height (h) at every other grid point */
   for (i = 0; i < nobs; i++) {
@@ -392,6 +393,7 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt state_size, PetscInt obs
   /* Create Q matrix (state_size x obs_size)
      Each row will have obs_size non-zeros (all observations affect each state variable) */
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, state_size, obs_size, obs_size, NULL, 0, NULL, Q));
+  PetscCall(MatSetFromOptions(*Q));
 
   /* Initialize with no localization (global): each state variable uses all observations */
   for (i = 0; i < state_size; i++) {
@@ -629,6 +631,15 @@ int main(int argc, char **argv)
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinup complete. Ensemble will be initialized from spun-up state.\n\n"));
   }
 
+  /* Create observation matrix H (nobs=40, observing h at every other grid point) */
+  PetscCall(CreateObservationMatrix(n, ndof, nobs, &H));
+
+  /* Initialize observation vectors using MatCreateVecs from H */
+  PetscCall(MatCreateVecs(H, NULL, &observation));
+  PetscCall(VecDuplicate(observation, &obs_noise));
+  PetscCall(VecDuplicate(observation, &obs_error_var));
+  PetscCall(VecSet(obs_error_var, obs_error_std * obs_error_std));
+
   /* Create and configure PetscDA for ensemble data assimilation */
   PetscCall(PetscDACreate(PETSC_COMM_WORLD, &daas));
   PetscCall(PetscDASetType(daas, PETSCDALETKF));                   /* Set LETKF type */
@@ -637,14 +648,6 @@ int main(int argc, char **argv)
   PetscCall(PetscDASetFromOptions(daas));
   PetscCall(PetscDASetUp(daas));
   PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
-
-  /* Initialize observation vectors */
-  PetscCall(VecCreate(PETSC_COMM_WORLD, &observation));
-  PetscCall(VecSetSizes(observation, PETSC_DECIDE, nobs));
-  PetscCall(VecSetFromOptions(observation));
-  PetscCall(VecDuplicate(observation, &obs_noise));
-  PetscCall(VecDuplicate(observation, &obs_error_var));
-  PetscCall(VecSet(obs_error_var, obs_error_std * obs_error_std));
 
   /* Initialize ensemble statistics vectors */
   PetscCall(VecDuplicate(x0, &x_mean));
@@ -657,9 +660,6 @@ int main(int argc, char **argv)
   PetscCall(CreateLocalizationMatrix(n * ndof, nobs, &Q));
   PetscCall(PetscDALETKFSetLocalization(daas, Q));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %dx%d, no localization/global (all weights = 1.0)\n", n * ndof, nobs));
-
-  /* Create observation matrix H (nobs=40, observing h at every other grid point) */
-  PetscCall(CreateObservationMatrix(n, ndof, nobs, &H));
 
   /* Initialize ensemble members with perturbations around spun-up state
      This is critical for convergence - ensemble needs spread even after spinup */
@@ -751,13 +751,14 @@ int main(int argc, char **argv)
     /* Analysis step: assimilate observations when available */
     if (step % obs_freq == 0 && step > 0) {
       /* Generate synthetic noisy observations from truth using observation matrix H */
-      Vec truth_obs;
-      PetscCall(VecCreate(PETSC_COMM_WORLD, &truth_obs));
-      PetscCall(VecSetSizes(truth_obs, PETSC_DECIDE, nobs));
-      PetscCall(VecSetFromOptions(truth_obs));
+      Vec truth_obs, temp_truth;
+      PetscCall(MatCreateVecs(H, NULL, &truth_obs));
+      PetscCall(MatCreateVecs(H, &temp_truth, NULL));
 
-      /* Apply H to get observations: y = H*x_true */
-      PetscCall(MatMult(H, truth_state, truth_obs));
+      /* Apply H to get observations: y = H*x_true
+         Use temporary vector compatible with H's type to avoid Kokkos vector type issues */
+      PetscCall(VecCopy(truth_state, temp_truth));
+      PetscCall(MatMult(H, temp_truth, truth_obs));
 
       /* Add observation noise */
       PetscCall(VecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
@@ -767,6 +768,7 @@ int main(int argc, char **argv)
       PetscCall(PetscDAAnalysis(daas, observation, H));
 
       /* Clean up */
+      PetscCall(VecDestroy(&temp_truth));
       PetscCall(VecDestroy(&truth_obs));
 
       /* Compute analysis RMSE */
@@ -880,7 +882,7 @@ int main(int argc, char **argv)
     test:
       requires: kokkos
       suffix: letkf_dam
-      args: -petscda_sqrt_type eigen -ex3_test dam -petscda_type letkf
+      args: -petscda_sqrt_type eigen -ex3_test dam -petscda_type letkf -mat_type aijkokkos
 
     test:
       requires: kokkos

@@ -225,23 +225,22 @@ static PetscErrorCode PetscDAComputeAnomalies_Default(PetscDA da, Vec mean_in, M
   */
   scale = 1.0 / PetscSqrtReal((PetscReal)(ensemble_size - 1));
 
+  /* Allocate anomalies matrix (state_size x ensemble_size) */
+  PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, da->state_size, ensemble_size, NULL, &anomalies));
+  PetscCall(MatSetUp(anomalies));
+
   /* Use provided mean or create and compute it */
   if (mean_in) {
     mean = mean_in;
   } else {
     /* Create and compute ensemble mean vector */
-    PetscCall(VecCreate(comm, &mean));
-    PetscCall(VecSetSizes(mean, PETSC_DECIDE, da->state_size));
+    PetscCall(MatCreateVecs(anomalies, NULL, &mean));
     PetscCall(VecSetFromOptions(mean));
     mean_created = PETSC_TRUE;
 
     /* Alg 6.4 line 1: \bar{x} = (1/m)\sum_j x^{(j)} */
     PetscCall(PetscDAComputeEnsembleMean(da, mean));
   }
-
-  /* Allocate anomalies matrix (state_size x ensemble_size) */
-  PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, da->state_size, ensemble_size, NULL, &anomalies));
-  PetscCall(MatSetUp(anomalies));
 
   /*
     Form anomalies by subtracting mean from each ensemble member and scaling.
@@ -305,6 +304,7 @@ PetscErrorCode PetscDACreate(MPI_Comm comm, PetscDA *da_out)
   da->ndof          = 1;
   da->ensemble      = NULL;
   da->obs_error_var = NULL;
+  da->R             = NULL;
   da->U             = NULL;
   da->assembled     = PETSC_FALSE;
   da->data          = NULL;
@@ -349,6 +349,7 @@ PetscErrorCode PetscDADestroy(PetscDA *da)
 
   PetscCall(MatDestroy(&(*da)->ensemble));
   PetscCall(VecDestroy(&(*da)->obs_error_var));
+  PetscCall(MatDestroy(&(*da)->R));
   PetscCall(MatDestroy(&(*da)->U));
 
   /* Destroy T-matrix factorization data */
@@ -621,13 +622,6 @@ PetscErrorCode PetscDASetUp(PetscDA da)
     PetscCall(MatSetUp(da->ensemble));
   }
 
-  if (!da->obs_error_var) {
-    PetscCall(VecCreate(comm, &da->obs_error_var));
-    PetscCall(VecSetSizes(da->obs_error_var, PETSC_DECIDE, da->obs_size));
-    PetscCall(VecSetFromOptions(da->obs_error_var));
-    PetscCall(VecSet(da->obs_error_var, 1.0));
-  }
-
   if (!da->U) {
     PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, da->ensemble_size, da->ensemble_size, NULL, &da->U));
     PetscCall(MatSetUp(da->U));
@@ -712,18 +706,46 @@ PetscErrorCode PetscDAViewFromOptions(PetscDA da, PetscObject obj, const char op
 + da            - the `PetscDA` context
 - obs_error_var - vector containing observation error variances (assumes R is a diagonal matrix)
 
+  Notes:
+  This function creates or updates both the observation error variance vector and the
+  observation error covariance matrix R. The matrix R is constructed as a diagonal matrix
+  with the variances on the diagonal.
+
   Level: beginner
 
 .seealso: [](ch_da), `PetscDAGetObsErrorVariance()`
 @*/
 PetscErrorCode PetscDASetObsErrorVariance(PetscDA da, Vec obs_error_var)
 {
+  MPI_Comm comm;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(obs_error_var, VEC_CLASSID, 2);
 
+  comm = PetscObjectComm((PetscObject)da);
+
+  /* Create or update observation error variance vector */
   if (!da->obs_error_var) PetscCall(VecDuplicate(obs_error_var, &da->obs_error_var));
   PetscCall(VecCopy(obs_error_var, da->obs_error_var));
+
+  /* Create or update observation error covariance matrix R (p x p) as AIJ matrix
+     This is currently initialized as a diagonal matrix, but can be used
+     for non-diagonal covariance in the future */
+  if (!da->R) {
+    PetscCall(MatCreate(comm, &da->R));
+    PetscCall(MatSetSizes(da->R, PETSC_DECIDE, PETSC_DECIDE, da->obs_size, da->obs_size));
+    PetscCall(MatSetType(da->R, MATAIJ));
+    PetscCall(MatSetFromOptions(da->R));
+    PetscCall(MatSetUp(da->R));
+  }
+
+  /* Set R as diagonal matrix with variances on diagonal */
+  PetscCall(MatZeroEntries(da->R));
+  PetscCall(MatDiagonalSet(da->R, da->obs_error_var, INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(da->R, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(da->R, MAT_FINAL_ASSEMBLY));
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

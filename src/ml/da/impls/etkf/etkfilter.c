@@ -410,25 +410,20 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
     PetscCall(MatDestroy(&impl->T_sqrt));
     PetscCall(MatDestroy(&impl->w_ones));
 
-    PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &impl->mean));
-    PetscCall(VecSetSizes(impl->mean, PETSC_DECIDE, da->state_size));
-    PetscCall(VecSetFromOptions(impl->mean));
-
-    PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &impl->y_mean));
-    PetscCall(VecSetSizes(impl->y_mean, PETSC_DECIDE, da->obs_size));
-    PetscCall(VecSetFromOptions(impl->y_mean));
-
-    PetscCall(VecDuplicate(impl->y_mean, &impl->delta_scaled));
-    PetscCall(VecDuplicate(da->obs_error_var, &impl->r_inv_sqrt));
-
-    /* Create w vector (size m) for analysis weights */
-    PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &impl->w));
-    PetscCall(VecSetSizes(impl->w, PETSC_DECIDE, m));
-    PetscCall(VecSetFromOptions(impl->w));
+    /* Create mean vector from ensemble matrix (right vector = state space) */
+    PetscCall(MatCreateVecs(da->ensemble, NULL, &impl->mean));
 
     /* Create Z matrix (obs_size x m) */
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &impl->Z));
     PetscCall(MatSetUp(impl->Z));
+
+    /* Create observation space vectors from Z matrix (left vector = observation space) */
+    PetscCall(MatCreateVecs(impl->Z, NULL, &impl->y_mean));
+    PetscCall(VecDuplicate(impl->y_mean, &impl->delta_scaled));
+    PetscCall(VecDuplicate(da->obs_error_var, &impl->r_inv_sqrt));
+
+    /* Create w vector (size m) for analysis weights */
+    PetscCall(MatCreateVecs(impl->Z, &impl->w, NULL));
 
     /* Create S matrix (same layout as Z) */
     PetscCall(MatDuplicate(impl->Z, MAT_DO_NOT_COPY_VALUES, &impl->S));
@@ -508,9 +503,8 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
   /* ===================================================================== */
   {
     Vec s_transpose_delta;
-    PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &s_transpose_delta));
-    PetscCall(VecSetSizes(s_transpose_delta, PETSC_DECIDE, m));
-    PetscCall(VecSetFromOptions(s_transpose_delta));
+    /* Create temporary vector for S^T * delta_scaled */
+    PetscCall(MatCreateVecs(impl->Z, &s_transpose_delta, NULL));
     PetscCall(MatMultTranspose(impl->S, impl->delta_scaled, s_transpose_delta));
 
     PetscCall(PetscDAApplyTInverse(da, s_transpose_delta, impl->w));
@@ -580,9 +574,8 @@ static PetscErrorCode PetscDAETKFApplyModel(PetscDA da, PetscErrorCode (*model)(
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
 
-  PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &temp));
-  PetscCall(VecSetSizes(temp, PETSC_DECIDE, da->state_size));
-  PetscCall(VecSetFromOptions(temp));
+  /* Create temp vector from ensemble matrix (right vector = state space) */
+  PetscCall(MatCreateVecs(da->ensemble, NULL, &temp));
 
   for (i = 0; i < da->ensemble_size; i++) {
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, i, &col_in));

@@ -26,22 +26,20 @@ int main(int argc, char **argv)
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rng));
   PetscCall(PetscRandomSetFromOptions(rng));
 
-  /* Create vectors */
-  PetscCall(VecCreate(PETSC_COMM_WORLD, &x_true));
-  PetscCall(VecSetSizes(x_true, PETSC_DECIDE, state_size));
-  PetscCall(VecSetFromOptions(x_true));
-  PetscCall(VecSet(x_true, 1.0)); /* True state is all 1s */
-
-  PetscCall(VecDuplicate(x_true, &y_obs));
-  PetscCall(VecDuplicate(x_true, &obs_error_var));
-  PetscCall(VecSet(obs_error_var, 0.1)); /* Observation error variance */
-  PetscCall(PetscDASetObsErrorVariance(da, obs_error_var));
-
   /* Create identity observation matrix H (obs_size x state_size) */
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, obs_size, state_size, 1, NULL, 0, NULL, &H));
+  PetscCall(MatSetFromOptions(H));
   PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY));
   PetscCall(MatShift(H, 1.0));
+
+  /* Create vectors using MatCreateVecs from H */
+  PetscCall(MatCreateVecs(H, &x_true, &y_obs));
+  PetscCall(VecSet(x_true, 1.0)); /* True state is all 1s */
+
+  PetscCall(VecDuplicate(y_obs, &obs_error_var));
+  PetscCall(VecSet(obs_error_var, 0.1)); /* Observation error variance */
+  PetscCall(PetscDASetObsErrorVariance(da, obs_error_var));
 
   /* Create synthetic observation: y = x_true (identity observation, no noise for this simple test) */
   PetscCall(VecCopy(x_true, y_obs));

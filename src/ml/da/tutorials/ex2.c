@@ -145,6 +145,7 @@ static PetscErrorCode CreateIdentityObservationMatrix(PetscInt n, Mat *H)
   PetscFunctionBeginUser;
   /* Create identity observation matrix H (n x n) */
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, 1, NULL, 0, NULL, H));
+  PetscCall(MatSetFromOptions(*H));
 
   /* Set diagonal entries to 1.0 for identity mapping */
   for (i = 0; i < n; i++) PetscCall(MatSetValue(*H, i, i, 1.0, INSERT_VALUES));
@@ -214,6 +215,7 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
   /* Create Q matrix (n x n for identity observation operator)
      Each row will have exactly Q_NUM_LOCAL_OBSERVATIONS_MAX non-zeros */
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, Q_NUM_LOCAL_OBSERVATIONS_MAX, NULL, 0, NULL, Q));
+  PetscCall(MatSetFromOptions(*Q));
 
   /* Initialize with full localization (all weights = 1.0)
      Each vertex i uses all n observations */
@@ -329,6 +331,9 @@ int main(int argc, char **argv)
   PetscCall(VecDuplicate(x0, &x_mean));
   PetscCall(VecDuplicate(x0, &x_forecast));
 
+  /* Create identity observation matrix H */
+  PetscCall(CreateIdentityObservationMatrix(n, &H));
+
   /* Create and configure PetscDA for ensemble data assimilation */
   PetscCall(PetscDACreate(PETSC_COMM_WORLD, &daas));
   PetscCall(PetscDASetType(daas, PETSCDALETKF)); /* Set LETKF type */
@@ -343,9 +348,6 @@ int main(int argc, char **argv)
   PetscCall(CreateLocalizationMatrix(n, &Q));
   PetscCall(PetscDALETKFSetLocalization(daas, Q));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %" PetscInt_FMT " x %" PetscInt_FMT ", full localization (all weights = 1.0)\n", n, n));
-
-  /* Create identity observation matrix H */
-  PetscCall(CreateIdentityObservationMatrix(n, &H));
 
   /* Initialize ensemble members from spun-up truth state */
   PetscCall(InitializeEnsemble(daas, truth_state, ensemble_size, ensemble_init_std, rng));
@@ -451,7 +453,6 @@ int main(int argc, char **argv)
     args: -steps 1120 -burn 100 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30
 
     test:
-      requires: kokkos
       suffix: chol
       args: -petscda_sqrt_type cholesky
 
@@ -459,7 +460,7 @@ int main(int argc, char **argv)
       requires: kokkos
       suffix: letkf
       diff_args: -j
-      args: -petscda_type letkf
+      args: -petscda_type letkf -mat_type aijkokkos -petscda_sqrt_type eigen
 
     test:
       suffix: etkf

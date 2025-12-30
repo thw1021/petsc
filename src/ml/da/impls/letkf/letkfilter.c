@@ -344,12 +344,12 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, Pet
   PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, m, NULL, &G_local));
   PetscCall(MatSetUp(G_local));
 
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, impl->p_local, &y_local));
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, impl->p_local, &y_mean_local));
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, impl->p_local, &delta_scaled_local));
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, impl->p_local, &r_inv_sqrt_local));
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &w_local));
-  PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &s_transpose_delta));
+  /* Create vectors using MatCreateVecs from Z_local (p_local x m) */
+  PetscCall(MatCreateVecs(Z_local, &w_local, &y_local));
+  PetscCall(VecDuplicate(y_local, &y_mean_local));
+  PetscCall(VecDuplicate(y_local, &delta_scaled_local));
+  PetscCall(VecDuplicate(y_local, &r_inv_sqrt_local));
+  PetscCall(VecDuplicate(w_local, &s_transpose_delta));
 
   PetscCall(PetscMalloc1(impl->p_local, &local_obs_indices));
 
@@ -406,19 +406,20 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, Pet
     {
       Vec                X_row, E_analysis_row;
       const PetscScalar *x_array, *mean_array;
-      PetscScalar       *e_array, *x_row_vals, *ea_row_vals;
+      PetscScalar       *e_array, *x_row_array, *ea_row_vals;
       PetscInt           j, lda_x, lda_e;
 
-      /* Extract row i_vertex from X: X_f[i_vertex, :] */
-      PetscCall(PetscMalloc1(m, &x_row_vals));
-      PetscCall(MatDenseGetArrayRead(X, &x_array));
-      PetscCall(MatDenseGetLDA(X, &lda_x));
-      for (j = 0; j < m; j++) x_row_vals[j] = x_array[i_vertex + j * lda_x];
-      PetscCall(MatDenseRestoreArrayRead(X, &x_array));
+      /* Create temp vectors for the update from matrix X (right vector = ensemble size m) */
+      PetscCall(MatCreateVecs(X, &X_row, NULL));
+      PetscCall(VecDuplicate(X_row, &E_analysis_row));
 
-      /* Create temp vectors for the update */
-      PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF, 1, m, x_row_vals, &X_row));
-      PetscCall(VecCreateSeq(PETSC_COMM_SELF, m, &E_analysis_row));
+      /* Extract row i_vertex from X: X_f[i_vertex, :] */
+      PetscCall(MatDenseGetArrayRead(X, &x_array));
+      PetscCall(VecGetArray(X_row, &x_row_array));
+      PetscCall(MatDenseGetLDA(X, &lda_x));
+      for (j = 0; j < m; j++) x_row_array[j] = x_array[i_vertex + j * lda_x];
+      PetscCall(VecRestoreArray(X_row, &x_row_array));
+      PetscCall(MatDenseRestoreArrayRead(X, &x_array));
 
       /* Apply local transform: E_analysis_row = X_row * G_local^T */
       PetscCall(MatMultTranspose(G_local, X_row, E_analysis_row));
@@ -438,7 +439,6 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, Pet
 
       PetscCall(VecDestroy(&E_analysis_row));
       PetscCall(VecDestroy(&X_row));
-      PetscCall(PetscFree(x_row_vals));
     }
   }
 
@@ -518,20 +518,17 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
     PetscCall(MatDestroy(&impl->T_sqrt));
     PetscCall(MatDestroy(&impl->w_ones));
 
-    PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &impl->mean));
-    PetscCall(VecSetSizes(impl->mean, PETSC_DECIDE, da->state_size));
-    PetscCall(VecSetFromOptions(impl->mean));
-
-    PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &impl->y_mean));
-    PetscCall(VecSetSizes(impl->y_mean, PETSC_DECIDE, da->obs_size));
-    PetscCall(VecSetFromOptions(impl->y_mean));
-
-    PetscCall(VecDuplicate(impl->y_mean, &impl->delta_scaled));
-    PetscCall(VecDuplicate(da->obs_error_var, &impl->r_inv_sqrt));
+    /* Create mean vector from ensemble matrix (right vector = state space) */
+    PetscCall(MatCreateVecs(da->ensemble, NULL, &impl->mean));
 
     /* Create Z matrix (obs_size x m) */
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &impl->Z));
     PetscCall(MatSetUp(impl->Z));
+
+    /* Create observation space vectors from Z matrix (left vector = observation space) */
+    PetscCall(MatCreateVecs(impl->Z, NULL, &impl->y_mean));
+    PetscCall(VecDuplicate(impl->y_mean, &impl->delta_scaled));
+    PetscCall(VecDuplicate(da->obs_error_var, &impl->r_inv_sqrt));
 
     /* Create S matrix (same layout as Z) */
     PetscCall(MatDuplicate(impl->Z, MAT_DO_NOT_COPY_VALUES, &impl->S));
@@ -562,22 +559,61 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   /* Alg 6.4 line 3-4: Compute GLOBAL observation ensemble Z = H * E     */
   /* ===================================================================== */
   /* Z = H * E using matrix-matrix multiplication (obs_size x ensemble_size) */
+  /* Note: When H is a Kokkos matrix type (e.g., aijkokkos), MatMatMult may fail
+     with non-Kokkos dense matrices. Use column-by-column multiplication with
+     temporary vectors that are compatible with H's type. */
   {
-    MatReuse scall = MAT_INITIAL_MATRIX;
-    if (impl->Z) {
+    Vec      col_in, col_out, temp_in, temp_out;
+    PetscInt j;
+
+    /* Create or reuse Z matrix */
+    if (!impl->Z) {
+      PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &impl->Z));
+      PetscCall(MatSetUp(impl->Z));
+    } else {
       PetscInt z_rows, z_cols;
       PetscCall(MatGetSize(impl->Z, &z_rows, &z_cols));
-      if (z_rows == da->obs_size && z_cols == m) scall = MAT_REUSE_MATRIX;
-      else {
+      if (z_rows != da->obs_size || z_cols != m) {
         PetscCall(MatDestroy(&impl->Z));
-        scall = MAT_INITIAL_MATRIX;
+        PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &impl->Z));
+        PetscCall(MatSetUp(impl->Z));
       }
     }
-    PetscCall(MatMatMult(H, da->ensemble, scall, PETSC_DEFAULT, &impl->Z));
+
+    /* Create temporary vectors compatible with H's type */
+    PetscCall(MatCreateVecs(H, &temp_in, &temp_out));
+
+    /* Compute Z = H * E column by column to avoid Kokkos vector type issues */
+    for (j = 0; j < m; j++) {
+      PetscCall(MatDenseGetColumnVecRead(da->ensemble, j, &col_in));
+      PetscCall(MatDenseGetColumnVecWrite(impl->Z, j, &col_out));
+
+      /* Copy to temp vector, multiply, then copy back */
+      PetscCall(VecCopy(col_in, temp_in));
+      PetscCall(MatMult(H, temp_in, temp_out));
+      PetscCall(VecCopy(temp_out, col_out));
+
+      PetscCall(MatDenseRestoreColumnVecWrite(impl->Z, j, &col_out));
+      PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, j, &col_in));
+    }
+    PetscCall(MatAssemblyBegin(impl->Z, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(impl->Z, MAT_FINAL_ASSEMBLY));
+
+    PetscCall(VecDestroy(&temp_out));
+    PetscCall(VecDestroy(&temp_in));
   }
 
   /* Compute GLOBAL observation mean y_mean = H * x_mean */
-  PetscCall(MatMult(H, impl->mean, impl->y_mean));
+  /* Use temporary vector compatible with H's type */
+  {
+    Vec temp_mean, temp_y_mean;
+    PetscCall(MatCreateVecs(H, &temp_mean, &temp_y_mean));
+    PetscCall(VecCopy(impl->mean, temp_mean));
+    PetscCall(MatMult(H, temp_mean, temp_y_mean));
+    PetscCall(VecCopy(temp_y_mean, impl->y_mean));
+    PetscCall(VecDestroy(&temp_y_mean));
+    PetscCall(VecDestroy(&temp_mean));
+  }
 
   /* ===================================================================== */
   /* Compute GLOBAL R^{-1/2} (assumes diagonal R) */
@@ -628,9 +664,8 @@ static PetscErrorCode PetscDALETKFApplyModel(PetscDA da, PetscErrorCode (*model)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
 
-  PetscCall(VecCreate(PetscObjectComm((PetscObject)da->ensemble), &temp));
-  PetscCall(VecSetSizes(temp, PETSC_DECIDE, da->state_size));
-  PetscCall(VecSetFromOptions(temp));
+  /* Create temp vector from ensemble matrix (right vector = state space) */
+  PetscCall(MatCreateVecs(da->ensemble, NULL, &temp));
 
   for (i = 0; i < da->ensemble_size; i++) {
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, i, &col_in));

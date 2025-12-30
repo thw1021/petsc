@@ -206,6 +206,7 @@ static PetscErrorCode CreateIdentityObservationMatrix(PetscInt n, Mat *H)
   PetscFunctionBeginUser;
   /* Create identity observation matrix H (n x n) */
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, 1, NULL, 0, NULL, H));
+  PetscCall(MatSetFromOptions(*H));
 
   /* Set diagonal entries to 1.0 for identity mapping */
   for (i = 0; i < n; i++) PetscCall(MatSetValue(*H, i, i, 1.0, INSERT_VALUES));
@@ -368,6 +369,9 @@ int main(int argc, char **argv)
   PetscCall(VecDuplicate(x0, &x_mean));
   PetscCall(VecDuplicate(x0, &x_forecast));
 
+  /* Create identity observation matrix H */
+  PetscCall(CreateIdentityObservationMatrix(n, &H));
+
   /* Create and configure PetscDA for ensemble data assimilation */
   PetscCall(PetscDACreate(PETSC_COMM_WORLD, &daas));
   PetscCall(PetscDASetType(daas, PETSCDAETKF)); /* Set ETKF type */
@@ -376,9 +380,6 @@ int main(int argc, char **argv)
   PetscCall(PetscDASetUp(daas));
   PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
   PetscCall(PetscDASetObsErrorVariance(daas, obs_error_var));
-
-  /* Create identity observation matrix H */
-  PetscCall(CreateIdentityObservationMatrix(n, &H));
 
   /* Initialize ensemble members from spun-up truth state with appropriate spread */
   PetscCall(InitializeEnsemble(daas, truth_state, ensemble_size, ensemble_init_std, rng));
