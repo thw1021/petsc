@@ -376,6 +376,7 @@ static PetscErrorCode CreateObservationMatrix(PetscInt n, PetscInt ndof, PetscIn
 
   PetscCall(MatAssemblyBegin(*H, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*H, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatViewFromOptions(*H, NULL, "-H_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
