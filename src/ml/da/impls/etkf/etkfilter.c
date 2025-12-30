@@ -415,6 +415,8 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
 
     /* Create Z matrix (obs_size x m) */
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &impl->Z));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)impl->Z, "dense_"));
+    PetscCall(MatSetFromOptions(impl->Z));
     PetscCall(MatSetUp(impl->Z));
 
     /* Create observation space vectors from Z matrix (left vector = observation space) */
@@ -431,10 +433,14 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
     /* Create T_sqrt matrix (m x m) - usually small */
     /* T_sqrt will hold the result of applying T^{-1/2} to identity matrix */
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &impl->T_sqrt));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)impl->T_sqrt, "dense_"));
+    PetscCall(MatSetFromOptions(impl->T_sqrt));
     PetscCall(MatSetUp(impl->T_sqrt));
 
     /* Create w_ones matrix (m x m) */
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &impl->w_ones));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)impl->w_ones, "dense_"));
+    PetscCall(MatSetFromOptions(impl->w_ones));
     PetscCall(MatSetUp(impl->w_ones));
   }
 
