@@ -745,7 +745,6 @@ PetscErrorCode PetscDASetObsErrorVariance(PetscDA da, Vec obs_error_var)
   PetscCall(MatDiagonalSet(da->R, da->obs_error_var, INSERT_VALUES));
   PetscCall(MatAssemblyBegin(da->R, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(da->R, MAT_FINAL_ASSEMBLY));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
