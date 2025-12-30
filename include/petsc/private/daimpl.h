@@ -31,6 +31,7 @@ struct _p_PetscDA {
   PetscInt  ndof;          /* Number of degrees of freedom per vertex */
   Mat       ensemble;      /* Ensemble matrix (n x m) */
   Vec       obs_error_var; /* Observation error variance (diagonal of R), length p */
+  Mat       R;             /* Observation error covariance matrix (p x p) */
   Mat       U;             /* Orthogonal transformation matrix (m x m) */
   PetscReal inflation;     /* Inflation factor */
 
