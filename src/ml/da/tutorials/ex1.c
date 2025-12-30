@@ -33,9 +33,8 @@ static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
         \State Whiten innovation: $\tilde{\boldsymbol{\delta}}_k = \mathbf{R}^{-1/2}\boldsymbol{\delta}_k$ \Comment{$\tilde{\boldsymbol{\delta}}_k \in \mathbb{R}^{b}$}
         \State Compute transform matrix: $\mathbf{T}_k = (\mathbf{I}_m + \mathbf{S}_k^T\mathbf{S}_k)^{-1}$ \Comment{$\mathbf{T}_k \in \mathbb{R}^{m \times m}$}
         \State Compute weight vector: $\mathbf{w}_k = \mathbf{T}_k \mathbf{S}_k^T \tilde{\boldsymbol{\delta}}_k$ \Comment{$\mathbf{w}_k \in \mathbb{R}^{m}$}
-        \State Form deterministic map: $\mathbf{G}_k = \mathbf{w}_k\mathbf{1}^T + \sqrt{m-1}\,\mathbf{T}_k^{1/2}\mathbf{U}$ \Comment{$\mathbf{G}_k \in \mathbb{R}^{m \times m}$}
+        \State Form deterministic map: $\mathbf{G}_k = \mathbf{w}_k\mathbf{1}^T + \sqrt{m-1}\,\mathbf{T}_k^{1/2}$ \Comment{$\mathbf{G}_k \in \mathbb{R}^{m \times m}$, $\mathbf{U} = \mathbf{I}_m$}
         \State Update ensemble: $\mathbf{E}_k^a = \overline{\mathbf{x}}_k^f\mathbf{1}^T + \mathbf{X}_k \mathbf{G}_k$ \Comment{$\mathbf{E}_k^a \in \mathbb{R}^{n \times m}$}
-        \State where $\mathbf{U}$ is orthogonal with $\mathbf{U}\mathbf{1} = \mathbf{1}$ (the PETSc implementation stores it as \texttt{da->U} and defaults to $\mathbf{I}_m$)
     \Else
         \State $\mathbf{E}_k^a = \mathbf{E}_k^f$ \Comment{$\mathbf{E}_k^a \in \mathbb{R}^{n \times m}$}
     \EndIf
