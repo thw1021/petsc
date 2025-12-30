@@ -744,8 +744,8 @@ class Configure(config.base.Configure):
     '''Returns true if system is processor-type is ARM'''
     global isARM_value
     if isARM_value == -1:
-       (output, error, status) = config.base.Configure.executeShellCommand('uname -p', log = log)
-       if not status and (output.lower().strip() == 'arm'):
+       (output, error, status) = config.base.Configure.executeShellCommand('uname -m', log = log)
+       if not status and (output.lower().strip().startswith('arm') or output.lower().strip().startswith('aarch')):
          if log: log.write('Detected ARM processor\n\n')
          isARM_value = True
        else:
@@ -2119,7 +2119,7 @@ class Configure(config.base.Configure):
     elif config.setCompilers.Configure.isIBM(self.getCompiler(), self.log):
       PICFlags = ['-qPIC']
     else:
-      PICFlags = ['-PIC','-qPIC','-KPIC','-fPIC','-fpic']
+      PICFlags = ['-fPIC','-PIC','-qPIC','-KPIC','-fpic']
     try:
       output = self.executeShellCommand(self.getCompiler() + ' -show', log = self.log)[0]
     except:
@@ -2413,14 +2413,14 @@ class Configure(config.base.Configure):
       yield (self.CC, ['-dynamiclib', '-undefined dynamic_lookup', '-no_compact_unwind'], 'dylib')
     if hasattr(self, 'CXX') and self.mainLanguage == 'Cxx':
       # C++ compiler default
-      yield (self.CXX, ['-qmkshrobj'], 'so')
       yield (self.CXX, ['-shared'], 'so')
       yield (self.CXX, ['-dynamic'], 'so')
+      yield (self.CXX, ['-qmkshrobj'], 'so')
       yield (self.CC, ['-shared'], 'dll')
     # C compiler default
-    yield (self.CC, ['-qmkshrobj'], 'so')
     yield (self.CC, ['-shared'], 'so')
     yield (self.CC, ['-dynamic'], 'so')
+    yield (self.CC, ['-qmkshrobj'], 'so')
     yield (self.CC, ['-shared'], 'dll')
     # Windows default
     if self.CC.find('win32fe') >=0:
