@@ -463,6 +463,12 @@ int main(int argc, char **argv)
       args: -petscda_type letkf -mat_type aijkokkos -petscda_sqrt_type eigen
 
     test:
+      requires: kokkos cuda
+      suffix: cuda
+      diff_args: -j
+      args: -petscda_type letkf -petscda_sqrt_type eigen -mat_type aijkokkos -dense_mat_type seqdensecuda
+
+    test:
       suffix: etkf
       diff_args: -j
       args: -petscda_type etkf
