@@ -305,7 +305,6 @@ PetscErrorCode PetscDACreate(MPI_Comm comm, PetscDA *da_out)
   da->ensemble      = NULL;
   da->obs_error_var = NULL;
   da->R             = NULL;
-  da->U             = NULL;
   da->assembled     = PETSC_FALSE;
   da->data          = NULL;
   da->inflation     = 1.0;
@@ -350,7 +349,6 @@ PetscErrorCode PetscDADestroy(PetscDA *da)
   PetscCall(MatDestroy(&(*da)->ensemble));
   PetscCall(VecDestroy(&(*da)->obs_error_var));
   PetscCall(MatDestroy(&(*da)->R));
-  PetscCall(MatDestroy(&(*da)->U));
 
   /* Destroy T-matrix factorization data */
   PetscCall(MatDestroy(&(*da)->V));
@@ -622,16 +620,6 @@ PetscErrorCode PetscDASetUp(PetscDA da)
     PetscCall(MatSetUp(da->ensemble));
   }
 
-  if (!da->U) {
-    PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, da->ensemble_size, da->ensemble_size, NULL, &da->U));
-    PetscCall(MatSetUp(da->U));
-    /* Initialize U as identity matrix */
-    PetscCall(MatZeroEntries(da->U));
-    PetscCall(MatShift(da->U, 1.0));
-    PetscCall(MatAssemblyBegin(da->U, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(da->U, MAT_FINAL_ASSEMBLY));
-  }
-
   da->assembled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -816,55 +804,6 @@ PetscErrorCode PetscDAGetInflation(PetscDA da, PetscReal *inflation)
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscAssertPointer(inflation, 2);
   *inflation = da->inflation;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  PetscDASetOrthogonalTransform - Installs the ensemble-space orthogonal matrix used in deterministic square-root updates.
-
-  Collective
-
-  Input Parameters:
-+ da - the `PetscDA` context
-- U  - orthogonal matrix to store (referenced internally)
-
-  Level: developer
-
-.seealso: [](ch_da), `PetscDAGetOrthogonalTransform()`, `PetscDAETKFAnalysis()`
-@*/
-PetscErrorCode PetscDASetOrthogonalTransform(PetscDA da, Mat U)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscValidHeaderSpecific(U, MAT_CLASSID, 2);
-
-  if (da->U) PetscCall(MatDestroy(&da->U));
-  PetscCall(PetscObjectReference((PetscObject)U));
-  da->U = U;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  PetscDAGetOrthogonalTransform - Retrieves the orthogonal matrix currently stored in a `PetscDA`.
-
-  Not Collective
-
-  Input Parameter:
-. da - the `PetscDA` context
-
-  Output Parameter:
-. U - pointer that will receive the matrix (may be `NULL`)
-
-  Level: developer
-
-.seealso: [](ch_da), `PetscDASetOrthogonalTransform()`
-@*/
-PetscErrorCode PetscDAGetOrthogonalTransform(PetscDA da, Mat *U)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscAssertPointer(U, 2);
-  *U = da->U;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1608,12 +1547,23 @@ static PetscErrorCode ApplySqrtTInverse_Cholesky(PetscDA da, Mat U, Mat Y)
   const PetscScalar *l_array;
   PetscScalar       *y_array;
   PetscInt           m_L, N_L, m_U, N_U;
+  Mat                U_identity = NULL;
 
   PetscFunctionBegin;
   PetscCheck(da->L_cholesky, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Cholesky factor not computed");
 
   /* Get dimensions and validate compatibility */
   PetscCall(MatGetSize(da->L_cholesky, &m_L, &N_L));
+
+  /* Handle NULL U (identity matrix case) */
+  if (!U) {
+    /* Create identity matrix of size m_L x m_L */
+    PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->L_cholesky), PETSC_DECIDE, PETSC_DECIDE, m_L, m_L, NULL, &U_identity));
+    PetscCall(MatSetUp(U_identity));
+    PetscCall(MatShift(U_identity, 1.0)); /* Set diagonal to 1 */
+    U = U_identity;
+  }
+
   PetscCall(MatGetSize(U, &m_U, &N_U));
   PetscCheck(m_L == m_U, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Cholesky factor rows (%" PetscInt_FMT ") must match U rows (%" PetscInt_FMT ")", m_L, m_U);
 
@@ -1639,6 +1589,10 @@ static PetscErrorCode ApplySqrtTInverse_Cholesky(PetscDA da, Mat U, Mat Y)
 
   PetscCall(MatAssemblyBegin(Y, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(Y, MAT_FINAL_ASSEMBLY));
+
+  /* Cleanup temporary identity matrix if created */
+  if (U_identity) PetscCall(MatDestroy(&U_identity));
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1665,23 +1619,43 @@ static PetscErrorCode ApplySqrtTInverse_Eigen(PetscDA da, Mat U, Mat Y)
   PetscCall(VecCopy(da->sqrt_eigen_vals, diag_inv));
   PetscCall(VecReciprocal(diag_inv)); /* Now diag_inv contains 1/sqrt(D) = D^{-1/2} */
 
-  /* Step 1: Compute W = V^T * U (Project U onto eigenbasis) */
-  PetscCall(MatTransposeMatMult(da->V, U, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &W));
+  if (U) {
+    /* General case: Compute Y = V * D^{-1/2} * V^T * U */
+    /* Step 1: Compute W = V^T * U (Project U onto eigenbasis) */
+    PetscCall(MatTransposeMatMult(da->V, U, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &W));
 
-  /* Step 2: Scale rows of W by D^{-1/2}: W <- D^{-1/2} * W */
-  PetscCall(MatDiagonalScale(W, diag_inv, NULL));
+    /* Step 2: Scale rows of W by D^{-1/2}: W <- D^{-1/2} * W */
+    PetscCall(MatDiagonalScale(W, diag_inv, NULL));
 
-  /* Step 3: Compute Y = V * W (Project back to standard basis)
-     Y = V * (D^{-1/2} * V^T * U) */
-  {
-    Mat Y_temp;
-    PetscCall(MatMatMult(da->V, W, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Y_temp));
-    PetscCall(MatCopy(Y_temp, Y, SAME_NONZERO_PATTERN));
-    PetscCall(MatDestroy(&Y_temp));
+    /* Step 3: Compute Y = V * W (Project back to standard basis)
+       Y = V * (D^{-1/2} * V^T * U) */
+    {
+      Mat Y_temp;
+      PetscCall(MatMatMult(da->V, W, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Y_temp));
+      PetscCall(MatCopy(Y_temp, Y, SAME_NONZERO_PATTERN));
+      PetscCall(MatDestroy(&Y_temp));
+    }
+
+    /* Cleanup */
+    PetscCall(MatDestroy(&W));
+  } else {
+    /* U is NULL (identity): Compute Y = V * D^{-1/2} * V^T directly */
+    /* Step 1: Compute W = V * D^{-1/2} (scale columns of V) */
+    PetscCall(MatDuplicate(da->V, MAT_COPY_VALUES, &W));
+    PetscCall(MatDiagonalScale(W, NULL, diag_inv));
+
+    /* Step 2: Compute Y = W * V^T = V * D^{-1/2} * V^T */
+    {
+      Mat Y_temp;
+      PetscCall(MatMatTransposeMult(W, da->V, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Y_temp));
+      PetscCall(MatCopy(Y_temp, Y, SAME_NONZERO_PATTERN));
+      PetscCall(MatDestroy(&Y_temp));
+    }
+
+    /* Cleanup */
+    PetscCall(MatDestroy(&W));
   }
 
-  /* Cleanup */
-  PetscCall(MatDestroy(&W));
   PetscCall(VecDestroy(&diag_inv));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1715,7 +1689,7 @@ PetscErrorCode PetscDAApplySqrtTInverse(PetscDA da, Mat U, Mat Y)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscValidHeaderSpecific(U, MAT_CLASSID, 2);
+  if (U) PetscValidHeaderSpecific(U, MAT_CLASSID, 2);
   PetscValidHeaderSpecific(Y, MAT_CLASSID, 3);
 
   PetscCheck(da->I_StS, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "I_StS matrix not created. Call PetscDATFactor first");
@@ -1732,8 +1706,8 @@ PetscErrorCode PetscDAApplySqrtTInverse(PetscDA da, Mat U, Mat Y)
   }
 
   /* Debugging verification: Check that metric is preserved
-     Verify that Y^T * T * Y = U^T * U */
-  if (PetscDefined(USE_DEBUG)) {
+     Verify that Y^T * T * Y = U^T * U (or Y^T * T * Y = I if U is NULL) */
+  if (PetscDefined(USE_DEBUG) && U) {
     Mat       YtTY, UtU, T_Y;
     PetscReal norm_ref, norm_diff;
 

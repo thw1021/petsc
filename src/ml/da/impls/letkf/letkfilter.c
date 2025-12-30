@@ -374,8 +374,8 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, Pet
     PetscCall(MatMultTranspose(S_local, delta_scaled_local, s_transpose_delta));
     PetscCall(PetscDAApplyTInverse(da, s_transpose_delta, w_local));
 
-    /* Compute local square-root transform: T_sqrt_local = T_local^{-1/2} * U */
-    PetscCall(PetscDAApplySqrtTInverse(da, da->U, T_sqrt_local));
+    /* Compute local square-root transform: T_sqrt_local = T_local^{-1/2} (U is identity, so pass NULL) */
+    PetscCall(PetscDAApplySqrtTInverse(da, NULL, T_sqrt_local));
 
     /* Form local transform G_local = w_local * 1' + sqrt(m - 1) * T_sqrt_local * U
        Instead of creating w_ones_local = w_local * 1', we add w_local to each column of G_local */
@@ -534,12 +534,9 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
     PetscCall(MatDuplicate(impl->Z, MAT_DO_NOT_COPY_VALUES, &impl->S));
 
     /* Create T_sqrt matrix (m x m) - usually small */
-    if (da->U) {
-      PetscCall(MatDuplicate(da->U, MAT_DO_NOT_COPY_VALUES, &impl->T_sqrt));
-    } else {
-      PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &impl->T_sqrt));
-      PetscCall(MatSetUp(impl->T_sqrt));
-    }
+    /* T_sqrt will hold the result of applying T^{-1/2} to identity matrix */
+    PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &impl->T_sqrt));
+    PetscCall(MatSetUp(impl->T_sqrt));
 
     /* Create w_ones matrix (m x m) */
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &impl->w_ones));

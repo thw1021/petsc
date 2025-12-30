@@ -208,21 +208,10 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   /* Phase 6+7 FUSED: Compute weights and T_sqrt in single kernel
      PHASE 5 FUSION: Fused ComputeWeights + ComputeTSqrt kernels
      Both kernels consume SVD outputs and can share computation of (I + Sigma^2)^{-1/2}
-     This eliminates 1 synchronization point and improves data locality */
+     This eliminates 1 synchronization point and improves data locality
 
-  /* Get U matrix from PetscDA (needed for T_sqrt computation) */
-  const PetscScalar *U_array = NULL;
-  PetscMemType       U_memtype;
-  PetscInt           lda_u;
-  PetscCall(MatDenseGetArrayReadAndMemType(da->U, &U_array, &U_memtype));
-  PetscCall(MatDenseGetLDA(da->U, &lda_u));
-
-  /* Copy U to device */
-  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace> dU_matrix("U_matrix", lda_u * m);
-  {
-    Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> hU_matrix(U_array, lda_u * m);
-    Kokkos::deep_copy(dU_matrix, hU_matrix);
-  }
+     Note: U matrix is always identity, so we simplify:
+     - T_sqrt = V (I + Sigma^2)^{-1/2} V^T (no U multiplication needed) */
 
   /* Allocate device views for weights and T_sqrt (all vertices) */
   Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace>  dw_all("w_all", n_vertices, m);
@@ -230,7 +219,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
 
   /* Compute both weights and T_sqrt in single fused kernel
      w = V (I + Sigma^2)^{-1} Sigma U^T delta
-     T_sqrt = V (I + Sigma^2)^{-1/2} V^T U
+     T_sqrt = V (I + Sigma^2)^{-1/2} V^T (U is identity)
      Both share computation of (I + Sigma^2)^{-1/2} */
   Kokkos::parallel_for(
     "ComputeWeightsAndTSqrtFused", n_vertices, KOKKOS_LAMBDA(const int i_vertex) {
@@ -269,22 +258,15 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       }
 
       /* ===== Part 2: Compute T_sqrt ===== */
-      /* Step 1: Compute V^T U (result is m x m, but only first min_dim rows are non-zero) */
-      PetscScalar VtU[40][50]; // [min_dim x m]
-      for (int i = 0; i < min_dim; i++) {
-        for (int j = 0; j < m; j++) {
-          VtU[i][j] = 0.0;
-          for (int k = 0; k < m; k++) VtU[i][j] += dVt_all(i_vertex, i, k) * dU_matrix(k + j * lda_u);
-          /* Step 2: Scale by (I + Sigma^2)^{-1/2} (reuse inv_sqrt_factor) */
-          VtU[i][j] *= inv_sqrt_factor[i];
-        }
-      }
-
-      /* Step 3: Compute T_sqrt = V * scaled_VtU */
+      /* Since U is identity, T_sqrt = V (I + Sigma^2)^{-1/2} V^T
+         We compute this as: T_sqrt[i,j] = sum_k V[i,k] * inv_sqrt_factor[k] * V[j,k] */
       for (int i = 0; i < m; i++) {
         for (int j = 0; j < m; j++) {
           dT_sqrt_all(i_vertex, i, j) = 0.0;
-          for (int k = 0; k < min_dim; k++) dT_sqrt_all(i_vertex, i, j) += dVt_all(i_vertex, k, i) * VtU[k][j];
+          for (int k = 0; k < min_dim; k++) {
+            /* V[i,k] = Vt[k,i] (transpose), V[j,k] = Vt[k,j] */
+            dT_sqrt_all(i_vertex, i, j) += dVt_all(i_vertex, k, i) * inv_sqrt_factor[k] * dVt_all(i_vertex, k, j);
+          }
         }
       }
     });
@@ -334,7 +316,6 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   }
 
   /* Restore arrays */
-  PetscCall(MatDenseRestoreArrayReadAndMemType(da->U, &U_array));
   PetscCall(MatDenseRestoreArrayWriteAndMemType(da->ensemble, &ensemble_array));
   PetscCall(VecRestoreArrayReadAndMemType(impl->mean, &mean_array));
   PetscCall(MatDenseRestoreArrayReadAndMemType(X, &X_array));

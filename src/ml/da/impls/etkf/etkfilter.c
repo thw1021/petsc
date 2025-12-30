@@ -429,16 +429,9 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
     PetscCall(MatDuplicate(impl->Z, MAT_DO_NOT_COPY_VALUES, &impl->S));
 
     /* Create T_sqrt matrix (m x m) - usually small */
-    /* Note: T_sqrt will hold the result of applying T^{-1/2} to U. Since U is typically Identity, T_sqrt is m x m */
-    /* Wait, da->U is usually identity but could be general. Assuming da->U is m x m. */
-    if (da->U) {
-      PetscCall(MatDuplicate(da->U, MAT_DO_NOT_COPY_VALUES, &impl->T_sqrt));
-    } else {
-      /* Fallback if U is not set yet (though it should be) */
-      /* Assuming U would be compatible with T (m x m) */
-      PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &impl->T_sqrt));
-      PetscCall(MatSetUp(impl->T_sqrt));
-    }
+    /* T_sqrt will hold the result of applying T^{-1/2} to identity matrix */
+    PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &impl->T_sqrt));
+    PetscCall(MatSetUp(impl->T_sqrt));
 
     /* Create w_ones matrix (m x m) */
     PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, m, m, NULL, &impl->w_ones));
@@ -512,9 +505,9 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
   }
 
   /* ===================================================================== */
-  /* Alg 6.4 line 9: Compute square-root transform T^{1/2} U = T^{1/2}     */
+  /* Alg 6.4 line 9: Compute square-root transform T^{-1/2} (U is identity, so pass NULL) */
   /* ===================================================================== */
-  PetscCall(PetscDAApplySqrtTInverse(da, da->U, impl->T_sqrt));
+  PetscCall(PetscDAApplySqrtTInverse(da, NULL, impl->T_sqrt));
 
   /* ===================================================================== */
   /* Alg 6.4 line 9: Form transform G = w * 1' + sqrt(m - 1) * T^{1/2} * U */
