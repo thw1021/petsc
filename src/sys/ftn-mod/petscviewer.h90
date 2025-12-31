@@ -1,4 +1,5 @@
 interface
+
   subroutine PetscFortranPrintToFileUnit(unit, str, ierr)
     use, intrinsic :: ISO_C_binding
     import tPetscViewer
@@ -6,6 +7,7 @@ interface
     character(len=*), intent(in) :: str
     PetscErrorCode, intent(out):: ierr
   end subroutine
+
   subroutine PetscViewerASCIIOpenWithFileUnit(comm, unit, lab, ierr)
     use, intrinsic :: ISO_C_binding
     use petscmpi
@@ -15,6 +17,7 @@ interface
     PetscViewer, intent(out) :: lab
     PetscErrorCode, intent(out):: ierr
   end subroutine
+
   subroutine PetscViewerASCIISetFileUnit(lab, unit, ierr)
     use, intrinsic :: ISO_C_binding
     import tPetscViewer
@@ -22,6 +25,7 @@ interface
     integer, intent(in) :: unit
     PetscErrorCode, intent(out):: ierr
   end subroutine
+
 end interface
 
 interface PetscViewerBinaryWrite
