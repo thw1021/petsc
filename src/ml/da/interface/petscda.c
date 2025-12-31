@@ -1037,6 +1037,8 @@ PetscErrorCode PetscDAAnalysis(PetscDA da, Vec observation, Mat H)
   PetscCall(MatGetSize(H, &h_rows, &h_cols));
   PetscCheck(h_rows == da->obs_size, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "H matrix rows (%" PetscInt_FMT ") must match obs_size (%" PetscInt_FMT ")", h_rows, da->obs_size);
   PetscCheck(h_cols == da->state_size, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "H matrix cols (%" PetscInt_FMT ") must match state_size (%" PetscInt_FMT ")", h_cols, da->state_size);
+  PetscCall(VecGetSize(observation, &h_rows));
+  PetscCheck(h_rows == da->obs_size, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "observation vector size (%" PetscInt_FMT ") must match obs_size (%" PetscInt_FMT ")", h_rows, da->obs_size);
 
   PetscUseTypeMethod(da, analysis, observation, H);
   PetscFunctionReturn(PETSC_SUCCESS);
