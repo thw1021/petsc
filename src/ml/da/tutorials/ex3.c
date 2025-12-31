@@ -532,7 +532,7 @@ int main(int argc, char **argv)
   PetscCall(Ex3TestInitializePackage());
 
   /* Parse command-line options */
-  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Shallow Water LETKF Example", NULL);
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Shallow Water [L]ETKF Example", NULL);
   PetscCall(PetscOptionsInt("-n", "Number of grid points", "", n, &n, NULL));
   PetscCall(PetscOptionsInt("-steps", "Number of time steps", "", steps, &steps, NULL));
   PetscCall(PetscOptionsInt("-burn", "Burn-in steps excluded from statistics", "", burn, &burn, NULL));
@@ -644,12 +644,10 @@ int main(int argc, char **argv)
 
   /* Create and configure PetscDA for ensemble data assimilation */
   PetscCall(PetscDACreate(PETSC_COMM_WORLD, &daas));
-  PetscCall(PetscDASetType(daas, PETSCDALETKF));                   /* Set LETKF type */
   PetscCall(PetscDASetSizes(daas, n * ndof, nobs, ensemble_size)); /* State size includes ndof */
   PetscCall(PetscDASetNDOF(daas, ndof));                           /* Set number of degrees of freedom per grid point */
   PetscCall(PetscDASetFromOptions(daas));
   PetscCall(PetscDASetUp(daas));
-  PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
 
   /* Initialize ensemble statistics vectors */
   PetscCall(VecDuplicate(x0, &x_mean));
@@ -674,7 +672,7 @@ int main(int argc, char **argv)
   {
     const char *test_name = (test_type == EX3_TEST_DAM) ? "Dam-break" : "Traveling wave";
     const char *flux_name = (flux_type == EX3_FLUX_RUSANOV) ? "Rusanov (1st order)" : "MC (2nd order)";
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Shallow Water LETKF Example\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Shallow Water [L]ETKF Example\n"));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "============================\n"));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                           "  Test case             : %s\n"
@@ -696,7 +694,7 @@ int main(int argc, char **argv)
   /* Open output file if requested */
   if (output_enabled) {
     PetscCall(PetscFOpen(PETSC_COMM_WORLD, output_file, "w", &fp));
-    PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "# Shallow Water LETKF Data Assimilation Output\n"));
+    PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "# Shallow Water [L]ETKF Data Assimilation Output\n"));
     PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "# Test case: %s\n", (test_type == EX3_TEST_DAM) ? "Dam-break" : "Traveling wave"));
     PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "# n=%d, ndof=%d, nobs=%d, ensemble_size=%d\n", (int)n, (int)ndof, (int)nobs, (int)ensemble_size));
     PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "# dt=%.6f, g=%.6f, obs_error_std=%.6f\n", (double)dt, (double)g, (double)obs_error_std));
@@ -877,7 +875,7 @@ int main(int argc, char **argv)
   testset:
     requires: !complex
     diff_args: -j
-    args: -steps 100 -burn 10 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30 -da_view
+    args: -steps 100 -burn 10 -obs_freq 5 -obs_error 0.1 -ensemble_size 30 -da_view
 
     test:
       suffix: etkf_dam
@@ -889,13 +887,11 @@ int main(int argc, char **argv)
       args: -petscda_sqrt_type eigen -ex3_test dam -petscda_type letkf -mat_type aijkokkos
 
     test:
-      requires: kokkos
       suffix: wave
-      args: -ex3_test wave
+      args: -ex3_test wave -petscda_type letkf
 
     test:
-      requires: kokkos
       suffix: wave_mc
-      args: -ex3_test wave -ex3_flux mc
+      args: -ex3_test wave -ex3_flux mc -petscda_type etkf
 
 TEST*/
