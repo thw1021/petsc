@@ -383,25 +383,26 @@ static PetscErrorCode CreateObservationMatrix(PetscInt n, PetscInt ndof, PetscIn
 /*
   CreateLocalizationMatrix - Create and initialize localization matrix Q for shallow water
 
-  Q is a (state_size x obs_size) matrix that specifies which observations affect each state variable.
+  Q is a (num_vert x obs_size) matrix that specifies which observations affect each state variable.
   For no localization (global assimilation), each state variable uses all observations.
 */
-static PetscErrorCode CreateLocalizationMatrix(PetscInt state_size, PetscInt obs_size, Mat *Q)
+static PetscErrorCode CreateLocalizationMatrix(PetscInt num_vert, PetscInt obs_size, Mat *Q)
 {
   PetscInt i, j;
 
   PetscFunctionBeginUser;
-  /* Create Q matrix (state_size x obs_size)
+  /* Create Q matrix (num_vert x obs_size)
      Each row will have obs_size non-zeros (all observations affect each state variable) */
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, state_size, obs_size, obs_size, NULL, 0, NULL, Q));
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, num_vert, obs_size, obs_size, NULL, 0, NULL, Q));
   PetscCall(MatSetFromOptions(*Q));
 
   /* Initialize with no localization (global): each state variable uses all observations */
-  for (i = 0; i < state_size; i++) {
+  for (i = 0; i < num_vert; i++) {
     for (j = 0; j < obs_size; j++) PetscCall(MatSetValue(*Q, i, j, 1.0, INSERT_VALUES));
   }
   PetscCall(MatAssemblyBegin(*Q, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*Q, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatViewFromOptions(*Q, NULL, "-Q_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -658,13 +659,16 @@ int main(int argc, char **argv)
   PetscCall(PetscDASetObsErrorVariance(daas, obs_error_var));
 
   /* Create and set localization matrix Q */
-  PetscCall(CreateLocalizationMatrix(n * ndof, nobs, &Q));
+  PetscCall(CreateLocalizationMatrix(n, nobs, &Q));
   PetscCall(PetscDALETKFSetLocalization(daas, Q));
+  PetscCall(MatDestroy(&Q));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %dx%d, no localization/global (all weights = 1.0)\n", n * ndof, nobs));
 
   /* Initialize ensemble members with perturbations around spun-up state
      This is critical for convergence - ensemble needs spread even after spinup */
   PetscCall(InitializeEnsemble(daas, x0, ensemble_size, obs_error_std, rng));
+
+  PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
 
   /* Print configuration summary */
   {
@@ -850,7 +854,6 @@ int main(int argc, char **argv)
 
   /* Cleanup */
   PetscCall(MatDestroy(&H));
-  PetscCall(MatDestroy(&Q));
   PetscCall(VecDestroy(&x_forecast));
   PetscCall(VecDestroy(&x_mean));
   PetscCall(VecDestroy(&obs_error_var));
@@ -874,7 +877,7 @@ int main(int argc, char **argv)
   testset:
     requires: !complex
     diff_args: -j
-    args: -steps 100 -burn 10 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30
+    args: -steps 100 -burn 10 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30 -da_view
 
     test:
       suffix: etkf_dam
