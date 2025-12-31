@@ -659,7 +659,7 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
     PetscBool use_gpu = PETSC_FALSE;
     if (da->sqrt_type == PETSCDA_SQRT_EIGEN) {
       /* Check if H matrix is a Kokkos type */
-      PetscCall(PetscObjectTypeCompareAny((PetscObject)H, &use_gpu, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, MATAIJKOKKOS, ""));
+      PetscCall(PetscObjectTypeCompareAny((PetscObject)da->R, &use_gpu, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, MATAIJKOKKOS, ""));
     }
     
     if (use_gpu) {
@@ -783,17 +783,17 @@ static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
     if (da->sqrt_type == PETSCDA_SQRT_CHOLESKY) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: CPU\n"));
     } else {
-      /* Check if Q matrix is Kokkos type to determine if GPU will be used */
-      if (impl->Q) {
+      /* Check if R matrix is Kokkos type to determine if GPU will be used */
+      if (da->R) {
         PetscBool is_kokkos = PETSC_FALSE;
-        PetscCall(PetscObjectTypeCompareAny((PetscObject)impl->Q, &is_kokkos, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, MATAIJKOKKOS, ""));
+        PetscCall(PetscObjectTypeCompareAny((PetscObject)da->R, &is_kokkos, MATSEQAIJKOKKOS, MATAIJKOKKOS, ""));
         if (is_kokkos) {
           PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: Kokkos\n"));
         } else {
           PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: CPU\n"));
         }
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: CPU or Kokkos (depending on observation matrix type)\n"));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: CPU or Kokkos (depending on covarience matrix type)\n"));
       }
     }
 #else
