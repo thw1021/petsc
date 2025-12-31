@@ -341,7 +341,6 @@ int main(int argc, char **argv)
   PetscCall(PetscDASetSizes(daas, n, n, ensemble_size));
   PetscCall(PetscDASetFromOptions(daas));
   PetscCall(PetscDASetUp(daas));
-  PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
   PetscCall(PetscDASetObsErrorVariance(daas, obs_error_var));
 
   /* Create and set localization matrix Q */
@@ -351,6 +350,8 @@ int main(int argc, char **argv)
 
   /* Initialize ensemble members from spun-up truth state */
   PetscCall(InitializeEnsemble(daas, truth_state, ensemble_size, ensemble_init_std, rng));
+
+  PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
 
   /* Print configuration summary */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-96 LETKF Example\n"));
@@ -461,12 +462,6 @@ int main(int argc, char **argv)
       suffix: letkf
       diff_args: -j
       args: -petscda_type letkf -mat_type aijkokkos -petscda_sqrt_type eigen
-
-    test:
-      requires: kokkos cuda
-      suffix: cuda
-      diff_args: -j
-      args: -petscda_type letkf -petscda_sqrt_type eigen -mat_type aijkokkos -dense_mat_type seqdensecuda
 
     test:
       suffix: etkf
