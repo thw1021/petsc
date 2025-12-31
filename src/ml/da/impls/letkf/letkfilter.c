@@ -213,7 +213,7 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
   ExtractLocalObservations - Extracts local observations for a vertex using localization matrix Q (CPU version)
 
   Input Parameters:
-+ Q          - localization matrix (state_size x obs_size), each row has Q_NUM_LOCAL_OBSERVATIONS_MAX non-zeros
++ Q          - localization matrix (state_size/ndof x obs_size), each row has Q_NUM_LOCAL_OBSERVATIONS_MAX non-zeros
 . vertex_idx - index of the vertex (row of Q)
 . Z_global   - global observation ensemble matrix (obs_size x m)
 . y_global   - global observation vector (size obs_size)
@@ -326,10 +326,12 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, Pet
   Vec       y_local, y_mean_local, delta_scaled_local, r_inv_sqrt_local;
   Vec       w_local, s_transpose_delta;
   PetscInt *local_obs_indices = NULL;
-  PetscInt  i_vertex;
+  PetscInt  i_grid_point;
+  PetscInt  ndof;
   PetscReal sqrt_m_minus_1, scale;
 
   PetscFunctionBegin;
+  ndof           = da->ndof;
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
   /* ===================================================================== */
@@ -362,11 +364,11 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, Pet
   PetscCall(PetscMalloc1(impl->p_local, &local_obs_indices));
 
   /* ===================================================================== */
-  /* LETKF: Loop over all vertices and perform local analysis            */
+  /* LETKF: Loop over all grid points and perform local analysis         */
   /* ===================================================================== */
-  for (i_vertex = 0; i_vertex < n_vertices; i_vertex++) {
-    /* Extract local observations for this vertex using Q[i_vertex,:] */
-    PetscCall(ExtractLocalObservations(impl->Q, i_vertex, Z_global, observation, y_mean_global, r_inv_sqrt_global, m, Z_local, y_local, y_mean_local, r_inv_sqrt_local, local_obs_indices));
+  for (i_grid_point = 0; i_grid_point < n_vertices; i_grid_point++) {
+    /* Extract local observations for this grid point using Q[i_grid_point,:] */
+    PetscCall(ExtractLocalObservations(impl->Q, i_grid_point, Z_global, observation, y_mean_global, r_inv_sqrt_global, m, Z_local, y_local, y_mean_local, r_inv_sqrt_local, local_obs_indices));
 
     /* Compute local normalized innovation matrix: S_local = R_local^{-1/2} * (Z_local - y_mean_local * 1') / sqrt(m - 1) */
     PetscCall(ComputeNormalizedInnovationMatrix(Z_local, y_mean_local, r_inv_sqrt_local, m, scale, S_local));
@@ -403,50 +405,58 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, Pet
       PetscCall(VecRestoreArrayRead(w_local, &w_array));
     }
 
-    /* LETKF Algorithm 2, Line 7: Update ensemble at grid point i_vertex
+    /* LETKF Algorithm 2, Line 13: Update ensemble at grid point i_grid_point
        E_a[i,:] = x_bar_f[i] + X_f[i,:] * G_local
 
        Where:
-       - x_bar_f[i] is the forecast mean at grid point i_vertex (from global mean vector)
-       - X_f[i,:] is the forecast anomaly row at grid point i_vertex (from global anomaly matrix X)
+       - x_bar_f[i] is the forecast mean at grid point i_grid_point (ndof values from global mean vector)
+       - X_f[i,:] is the forecast anomaly rows at grid point i_grid_point (ndof rows from global anomaly matrix X)
        - G_local = w_local * 1' + sqrt(m-1) * T_local^{1/2} * U (computed above in G_local)
      */
     {
-      Vec                X_row, E_analysis_row;
+      Mat                X_rows, E_analysis_rows;
       const PetscScalar *x_array, *mean_array;
-      PetscScalar       *e_array, *x_row_array, *ea_row_vals;
-      PetscInt           j, lda_x, lda_e;
+      PetscScalar       *e_array, *x_rows_array, *ea_rows_array;
+      PetscInt           j, k, lda_x, lda_e;
 
-      /* Create temp vectors for the update from matrix X (right vector = ensemble size m) */
-      PetscCall(MatCreateVecs(X, &X_row, NULL));
-      PetscCall(VecDuplicate(X_row, &E_analysis_row));
+      /* Create temp matrices for the update: ndof x m */
+      PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, ndof, m, NULL, &X_rows));
+      PetscCall(MatDuplicate(X_rows, MAT_DO_NOT_COPY_VALUES, &E_analysis_rows));
 
-      /* Extract row i_vertex from X: X_f[i_vertex, :] */
+      /* Extract ndof rows starting at (i_grid_point * ndof) from X: X_f[i_grid_point*ndof:(i_grid_point+1)*ndof, :] */
       PetscCall(MatDenseGetArrayRead(X, &x_array));
-      PetscCall(VecGetArray(X_row, &x_row_array));
+      PetscCall(MatDenseGetArray(X_rows, &x_rows_array));
       PetscCall(MatDenseGetLDA(X, &lda_x));
-      for (j = 0; j < m; j++) x_row_array[j] = x_array[i_vertex + j * lda_x];
-      PetscCall(VecRestoreArray(X_row, &x_row_array));
+      for (j = 0; j < m; j++) {
+        for (k = 0; k < ndof; k++) { x_rows_array[k + j * ndof] = x_array[(i_grid_point * ndof + k) + j * lda_x]; }
+      }
+      PetscCall(MatDenseRestoreArray(X_rows, &x_rows_array));
       PetscCall(MatDenseRestoreArrayRead(X, &x_array));
 
-      /* Apply local transform: E_analysis_row = X_row * G_local^T */
-      PetscCall(MatMultTranspose(G_local, X_row, E_analysis_row));
+      /* Apply local transform: E_analysis_rows = X_rows * G_local^T */
+      PetscCall(MatMatMult(X_rows, G_local, MAT_REUSE_MATRIX, PETSC_DEFAULT, &E_analysis_rows));
 
-      /* Add local mean: E_a[i_vertex, :] = x_bar_f[i_vertex] + X_f[i_vertex, :] * G_local */
+      /* Add local mean: E_a[i_grid_point*ndof:(i_grid_point+1)*ndof, :] = x_bar_f[i_grid_point*ndof:(i_grid_point+1)*ndof] + X_f[...] * G_local */
       PetscCall(VecGetArrayRead(impl->mean, &mean_array));
-      PetscCall(VecShift(E_analysis_row, mean_array[i_vertex]));
+      PetscCall(MatDenseGetArray(E_analysis_rows, &ea_rows_array));
+      for (j = 0; j < m; j++) {
+        for (k = 0; k < ndof; k++) { ea_rows_array[k + j * ndof] += mean_array[i_grid_point * ndof + k]; }
+      }
+      PetscCall(MatDenseRestoreArray(E_analysis_rows, &ea_rows_array));
       PetscCall(VecRestoreArrayRead(impl->mean, &mean_array));
 
-      /* Store result back in ensemble[i_vertex, :] */
+      /* Store result back in ensemble[i_grid_point*ndof:(i_grid_point+1)*ndof, :] */
       PetscCall(MatDenseGetArrayWrite(da->ensemble, &e_array));
       PetscCall(MatDenseGetLDA(da->ensemble, &lda_e));
-      PetscCall(VecGetArray(E_analysis_row, &ea_row_vals));
-      for (j = 0; j < m; j++) e_array[i_vertex + j * lda_e] = ea_row_vals[j];
-      PetscCall(VecRestoreArray(E_analysis_row, &ea_row_vals));
+      PetscCall(MatDenseGetArrayRead(E_analysis_rows, (const PetscScalar **)&ea_rows_array));
+      for (j = 0; j < m; j++) {
+        for (k = 0; k < ndof; k++) { e_array[(i_grid_point * ndof + k) + j * lda_e] = ea_rows_array[k + j * ndof]; }
+      }
+      PetscCall(MatDenseRestoreArrayRead(E_analysis_rows, (const PetscScalar **)&ea_rows_array));
       PetscCall(MatDenseRestoreArrayWrite(da->ensemble, &e_array));
 
-      PetscCall(VecDestroy(&E_analysis_row));
-      PetscCall(VecDestroy(&X_row));
+      PetscCall(MatDestroy(&E_analysis_rows));
+      PetscCall(MatDestroy(&X_rows));
     }
   }
 
@@ -642,15 +652,25 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   /* ===================================================================== */
 
 #if defined(PETSC_HAVE_KOKKOS)
-  /* Use CPU version for cholesky (GPU version only implements eigen/SVD) */
-  if (da->sqrt_type == PETSCDA_SQRT_CHOLESKY) {
-    PetscCall(PetscDALETKFLocalAnalysis(da, impl, m, da->state_size, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
-  } else {
-    PetscCall(PetscDALETKFLocalAnalysis_GPU(da, impl, m, da->state_size, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
+  /* Use GPU version only if:
+     1. sqrt_type is eigen (GPU version only implements eigen/SVD, not cholesky)
+     2. H matrix is a Kokkos type (aijkokkos) */
+  {
+    PetscBool use_gpu = PETSC_FALSE;
+    if (da->sqrt_type == PETSCDA_SQRT_EIGEN) {
+      /* Check if H matrix is a Kokkos type */
+      PetscCall(PetscObjectTypeCompareAny((PetscObject)H, &use_gpu, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, MATAIJKOKKOS, ""));
+    }
+    
+    if (use_gpu) {
+      PetscCall(PetscDALETKFLocalAnalysis_GPU(da, impl, m, da->state_size / da->ndof, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
+    } else {
+      PetscCall(PetscDALETKFLocalAnalysis(da, impl, m, da->state_size / da->ndof, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
+    }
   }
 #else
   /* Without Kokkos, use CPU version */
-  PetscCall(PetscDALETKFLocalAnalysis(da, impl, m, da->state_size, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
+  PetscCall(PetscDALETKFLocalAnalysis(da, impl, m, da->state_size / da->ndof, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
 #endif
   PetscCall(MatDestroy(&X));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -714,7 +734,7 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q)
   PetscCall(MatGetSize(Q, &nrows, &ncols));
 
   /* Validate matrix dimensions */
-  PetscCheck(nrows == da->state_size, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Localization matrix rows (%" PetscInt_FMT ") must match state size (%" PetscInt_FMT ")", nrows, da->state_size);
+  PetscCheck(nrows == da->state_size / da->ndof, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Localization matrix rows (%" PetscInt_FMT ") must match state size (%" PetscInt_FMT ")", nrows, da->state_size);
   PetscCheck(ncols == da->obs_size, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Localization matrix columns (%" PetscInt_FMT ") must match observation size (%" PetscInt_FMT ")", ncols, da->obs_size);
 
   /* Validate that each row has exactly Q_NUM_LOCAL_OBSERVATIONS_MAX non-zero entries */
@@ -763,7 +783,18 @@ static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
     if (da->sqrt_type == PETSCDA_SQRT_CHOLESKY) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: CPU\n"));
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: Kokkos\n"));
+      /* Check if Q matrix is Kokkos type to determine if GPU will be used */
+      if (impl->Q) {
+        PetscBool is_kokkos = PETSC_FALSE;
+        PetscCall(PetscObjectTypeCompareAny((PetscObject)impl->Q, &is_kokkos, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, MATAIJKOKKOS, ""));
+        if (is_kokkos) {
+          PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: Kokkos\n"));
+        } else {
+          PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: CPU\n"));
+        }
+      } else {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: CPU or Kokkos (depending on observation matrix type)\n"));
+      }
     }
 #else
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: CPU\n"));
