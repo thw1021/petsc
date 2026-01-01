@@ -856,6 +856,19 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static inline PetscErrorCode PetscFindIntUnsorted(PetscInt key, PetscInt size, const PetscInt array[], PetscInt *loc)
+{
+  PetscFunctionBeginUser;
+  *loc = -1;
+  for (PetscInt i = 0; i < size; i++) {
+    if (array[i] == key) {
+      *loc = i;
+      break;
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, PetscBool interpolate, DM *dm)
 {
   PetscMPIInt num_proc, rank;
@@ -995,6 +1008,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
       PetscCall(PetscSFCreateByMatchingIndicesInclusive(layout, nuniq_verts, uniq_verts, NULL, myownede, nuniq_face_verts, uniq_face_verts, NULL, myownede, NULL, &f2mvertSF));
     }
 
+    //TODO: Extract this into a separate function, CGNSFaceToDMPlexFace
     { // Build CGNS-face-to-DMPlex-face SF
       PetscInt fStart, fEnd;
 
@@ -1086,15 +1100,9 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
         ilocal_c2d[f_i]       = f_i;
         iremote_c2d[f_i].rank = rank;
         local_rank_count[rank]++;
-
-        // To get the index of the rank here, I may need to do an Exscan for every single rank to determine who get's to put what where in the other rank.
-        // So every rank knows how many leaves goes to rank X. We then do an Exscan on that, which gives a range of values that the current rank can use to put it's info into onto rank X.
-        // We then loop through different rank X values to get the total distribution.
-        //
-        // Actually, we can do a single Exscan with an array. The array is size(num_ranks) and the values in the array are the number of leaves in the current rank that go into the X rank. So array[X] = num_leaves_to_rank_X
       }
 
-      // Note: Can probably replace global_rank_count with rank_start, get the global rank count for the current rank, then use rank_start in the Exscan
+      // NOTE: Can probably replace global_rank_count with rank_start, get the global rank count for the current rank, then use rank_start in the Exscan
       PetscCallMPI(MPIU_Allreduce(&local_rank_count, &global_rank_count, num_proc, MPIU_INT, MPI_SUM, comm));
       PetscCallMPI(MPI_Exscan(&local_rank_count, &rank_start, num_proc, MPIU_INT, MPI_SUM, comm));
 
@@ -1119,22 +1127,69 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
         // Distribute the face connectivity to the rank that has that face
         PetscCall(PetscSectionCreate(comm, &connLocalSection));
         PetscCall(PetscSectionDistributeData(f2rankSF, connSection, MPIU_INT, conn, connLocalSection, NULL, (void **)&connLocal));
+
+        { // Translate from CGNS vertex numbering to local DMPlex numbering
+          PetscInt *dmplex_verts;
+          PetscInt  connLocalSize;
+
+          PetscCall(DMGetWorkArray(*dm, nuniq_verts, MPIU_INT, &dmplex_verts));
+          // uniq_verts are one-to-one with the DMPlex vertices, just with an offset of myownede
+          for (PetscInt v = 0; v < nuniq_verts; v++) dmplex_verts[v] = v + myownede;
+          PetscCall(PetscSortIntWithArray(nuniq_verts, uniq_verts, dmplex_verts));
+
+          PetscCall(PetscSectionGetStorageSize(connLocalSection, &connLocalSize));
+          for (PetscInt v = 0; v < connLocalSize; v++) {
+            PetscInt idx;
+            PetscCall(PetscFindInt(connLocal[v], nuniq_face_verts, uniq_verts, &idx));
+            PetscCheck(idx >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Could not find CGNS vertex id (from face connectivity) in local plex");
+            connLocal[v] = dmplex_verts[v];
+          }
+          PetscCall(PetscFree(dmplex_verts));
+          PetscCall(DMRestoreWorkArray(*dm, nuniq_verts, MPIU_INT, &dmplex_verts));
+        }
+
+        // For every face in connLocalSection, find the transitive support of a point in that face connectivity.
+        // Loop through the faces of the transitive support and find the matching face
+        PetscInt hStart, hEnd;
+        PetscInt *faceMatches;
+        PetscCall(DMPlexGetHeightStratum(*dm, 1, &hStart, &hEnd));
         PetscCall(PetscSectionGetChart(connLocalSection, &flocalStart, &flocalEnd));
+        PetscCall(PetscMalloc1(flocalEnd - flocalStart, &faceMatches));
+        for (PetscInt i = 0; i < flocalEnd - flocalStart; i++) faceMatches[i] = -1;
 
         for (PetscInt f = flocalStart; f < flocalEnd; f++) {
-          // Now we need to match the local
-          PetscInt ndof, offset;
+          PetscInt  ndof, offset, closure_size;
+          PetscInt *closure;
 
           PetscCall(PetscSectionGetDof(connLocalSection, f, &ndof));
           PetscCall(PetscSectionGetOffset(connLocalSection, f, &offset));
 
-          // I think uniq_face_verts should have the CGNS-to-DMPlex mapping for the on-rank vertices
-          // Steps:
-          // - Get a CGNS point for the face
-          // - Get it's corresponding DMPlex point
-          // - Ask for the Transitive cone of the point
-          // - Loop over the faces in the transitive cone of the point
-          // - Find which face matches the CGNS face (again, needing the CGNS-to-DMPlex vertex mapping)
+          // Get transitive support of a point in the CGNS face connectivity
+          PetscCall(DMPlexGetTransitiveClosure(*dm, conn[offset], PETSC_FALSE, &closure_size, &closure));
+
+          for (PetscInt p = 0; p < closure_size * 2; p++) {
+            PetscInt        point = closure[p * 2]; // closure stores points and orientations, [p_0, o_0, p_1, o_1, ...]
+            PetscInt        cone_size;
+            const PetscInt *cone;
+
+            if (point < hStart && point >= hEnd) continue; // Skip non-face points
+
+            PetscCall(DMPlexGetConeSize(*dm, point, &cone_size));
+            if (cone_size != ndof) goto check_next_face;
+            PetscCall(DMPlexGetCone(*dm, point, &cone));
+            // See if point has same connectivity
+            for (PetscInt c = 0; c < cone_size; c++) {
+              PetscInt conn_has_point;
+              PetscCall(PetscFindIntUnsorted(cone[c], ndof, &conn[offset], &conn_has_point));
+              if (conn_has_point < 0) goto check_next_face;
+            }
+            faceMatches[f - flocalStart] = point;
+            break;
+          check_next_face:
+            continue;
+          }
+          PetscCall(DMPlexRestoreTransitiveClosure(*dm, conn[offset], PETSC_FALSE, &closure_size, &closure));
+          PetscCheck(faceMatches[f - flocalStart] != -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Could not find plex face for the CGNS face");
         }
       }
 
