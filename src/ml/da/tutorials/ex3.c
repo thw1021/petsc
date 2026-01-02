@@ -8,13 +8,12 @@
 static char help[] = "Shallow water test cases with data assimilation.\n"
                      "Implements 1D shallow water equations with 2 DOF per grid point (h, hu).\n\n"
                      "Example usage:\n"
-                     "  ./ex3 -steps 1000 -burn 100 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30\n"
+                     "  ./ex3 -steps 100 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30\n"
                      "  ./ex3 -ex3_test wave -steps 500\n\n";
 
 /* Default parameter values */
 #define DEFAULT_N             (2 * Q_NUM_LOCAL_OBSERVATIONS_MAX) /* 80 grid points */
 #define DEFAULT_STEPS         100
-#define DEFAULT_BURN          100
 #define DEFAULT_OBS_FREQ      5
 #define DEFAULT_RANDOM_SEED   12345
 #define DEFAULT_G             9.81
@@ -409,7 +408,7 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt num_vert, PetscInt obs_s
 /*
   ValidateParameters - Validate input parameters and apply constraints
 */
-static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *nobs, PetscInt *steps, PetscInt *burn, PetscInt *obs_freq, PetscInt *ensemble_size, PetscReal *dt, PetscReal *g, PetscReal *obs_error_std)
+static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *nobs, PetscInt *steps, PetscInt *obs_freq, PetscInt *ensemble_size, PetscReal *dt, PetscReal *g, PetscReal *obs_error_std)
 {
   PetscFunctionBeginUser;
   PetscCheck(*n > 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "State dimension n must be positive, got %" PetscInt_FMT, *n);
@@ -423,10 +422,6 @@ static PetscErrorCode ValidateParameters(PetscInt *n, PetscInt *nobs, PetscInt *
     *obs_freq = MIN_OBS_FREQ;
   }
   if (*obs_freq > *steps && *steps > 0) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Observation frequency (%" PetscInt_FMT ") > total steps (%" PetscInt_FMT "), no observations will be assimilated.\n", *obs_freq, *steps));
-  if (*burn > *steps) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Burn-in steps (%" PetscInt_FMT ") exceeds total steps (%" PetscInt_FMT "), setting burn = steps\n", *burn, *steps));
-    *burn = *steps;
-  }
 
   PetscCheck(*dt > 0.0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Time step dt must be positive, got %g", (double)*dt);
   PetscCheck(*obs_error_std > 0.0, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Observation error std must be positive, got %g", (double)*obs_error_std);
@@ -492,7 +487,6 @@ int main(int argc, char **argv)
   const PetscInt ndof          = 2; /* Degrees of freedom per grid point: h and hu */
   PetscInt       n             = DEFAULT_N;
   PetscInt       steps         = DEFAULT_STEPS;
-  PetscInt       burn          = DEFAULT_BURN;
   PetscInt       obs_freq      = DEFAULT_OBS_FREQ;
   PetscInt       random_seed   = DEFAULT_RANDOM_SEED;
   PetscInt       ensemble_size = DEFAULT_ENSEMBLE_SIZE;
@@ -535,7 +529,6 @@ int main(int argc, char **argv)
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Shallow Water [L]ETKF Example", NULL);
   PetscCall(PetscOptionsInt("-n", "Number of grid points", "", n, &n, NULL));
   PetscCall(PetscOptionsInt("-steps", "Number of time steps", "", steps, &steps, NULL));
-  PetscCall(PetscOptionsInt("-burn", "Burn-in steps excluded from statistics", "", burn, &burn, NULL));
   PetscCall(PetscOptionsInt("-obs_freq", "Observation frequency", "", obs_freq, &obs_freq, NULL));
   PetscCall(PetscOptionsReal("-g", "Gravitational constant", "", g, &g, NULL));
   PetscCall(PetscOptionsReal("-dt", "Time step size", "", dt, &dt, NULL));
@@ -570,7 +563,7 @@ int main(int argc, char **argv)
   PetscInt nobs = Q_NUM_LOCAL_OBSERVATIONS_MAX;
 
   /* Validate and constrain parameters */
-  PetscCall(ValidateParameters(&n, &nobs, &steps, &burn, &obs_freq, &ensemble_size, &dt, &g, &obs_error_std));
+  PetscCall(ValidateParameters(&n, &nobs, &steps, &obs_freq, &ensemble_size, &dt, &g, &obs_error_std));
 
   /* Validate progress frequency */
   if (progress_freq < 0) {
@@ -683,12 +676,11 @@ int main(int argc, char **argv)
                           "  Gravitational const   : %.4f\n"
                           "  Time step (dt)        : %.4f\n"
                           "  Total steps           : %" PetscInt_FMT "\n"
-                          "  Burn-in steps         : %" PetscInt_FMT "\n"
                           "  Observation frequency : %" PetscInt_FMT "\n"
                           "  Observation noise std : %.3f\n"
                           "  Random seed           : %" PetscInt_FMT "\n"
                           "  Localization          : None/Global (40 obs per vertex)\n\n",
-                          test_name, flux_name, n * ndof, n, ndof, nobs, ensemble_size, (double)g, (double)dt, steps, burn, obs_freq, (double)obs_error_std, random_seed));
+                          test_name, flux_name, n * ndof, n, ndof, nobs, ensemble_size, (double)g, (double)dt, steps, obs_freq, (double)obs_error_std, random_seed));
   }
 
   /* Open output file if requested */
@@ -780,12 +772,10 @@ int main(int argc, char **argv)
       obs_count++;
     }
 
-    /* Accumulate statistics after burn-in period */
-    if (step >= burn) {
-      sum_rmse_forecast += rmse_forecast;
-      sum_rmse_analysis += rmse_analysis;
-      n_stat_steps++;
-    }
+    /* Accumulate statistics */
+    sum_rmse_forecast += rmse_forecast;
+    sum_rmse_analysis += rmse_analysis;
+    n_stat_steps++;
 
     /* Write data to output file if enabled */
     if (output_enabled && fp) {
@@ -823,11 +813,11 @@ int main(int argc, char **argv)
     if (progress_freq == 0) {
       /* Only print first and last steps */
       if (step == 0 || step == steps)
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT ", time %6.3f  RMSE_forecast %.5f  RMSE_analysis %.5f%s\n", step, (double)time, (double)rmse_forecast, (double)rmse_analysis, (step < burn) ? " [burn-in]" : ""));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT ", time %6.3f  RMSE_forecast %.5f  RMSE_analysis %.5f\n", step, (double)time, (double)rmse_forecast, (double)rmse_analysis));
     } else {
       /* Print every progress_freq steps, plus first and last */
       if ((step % progress_freq == 0) || (step == steps))
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT ", time %6.3f  RMSE_forecast %.5f  RMSE_analysis %.5f%s\n", step, (double)time, (double)rmse_forecast, (double)rmse_analysis, (step < burn) ? " [burn-in]" : ""));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT ", time %6.3f  RMSE_forecast %.5f  RMSE_analysis %.5f\n", step, (double)time, (double)rmse_forecast, (double)rmse_analysis));
     }
   }
 
@@ -835,13 +825,13 @@ int main(int argc, char **argv)
   if (n_stat_steps > 0) {
     PetscReal avg_rmse_forecast = sum_rmse_forecast / n_stat_steps;
     PetscReal avg_rmse_analysis = sum_rmse_analysis / n_stat_steps;
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nStatistics (%" PetscInt_FMT " post-burn-in steps):\n", n_stat_steps));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nStatistics (%" PetscInt_FMT " steps):\n", n_stat_steps));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "==================================================\n"));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (forecast) : %.5f\n", (double)avg_rmse_forecast));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (analysis) : %.5f\n", (double)avg_rmse_analysis));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Observations used    : %" PetscInt_FMT "\n\n", obs_count));
   } else {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nWarning: No post-burn-in statistics collected (burn >= steps)\n\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nWarning: No statistics collected\n\n"));
   }
 
   /* Close output file if opened */
@@ -875,23 +865,37 @@ int main(int argc, char **argv)
   testset:
     requires: !complex
     diff_args: -j
-    args: -steps 100 -burn 10 -obs_freq 5 -obs_error 0.1 -ensemble_size 30 -da_view
+    args: -ex3_test dam -steps 25 -progress_freq 1 -da_view -ensemble_size 10 -obs_freq 5 -obs_error 0.03
+
+    test:
+      suffix: letkf_dam
+      args: -petscda_type letkf
 
     test:
       suffix: etkf_dam
-      args: -petscda_sqrt_type cholesky -ex3_test dam -petscda_type etkf
+      args: -petscda_sqrt_type cholesky -petscda_type etkf
 
     test:
       requires: kokkos
-      suffix: letkf_dam
-      args: -petscda_sqrt_type eigen -ex3_test dam -petscda_type letkf -mat_type aijkokkos
+      suffix: kokkos_dam
+      args: -petscda_type letkf -mat_type aijkokkos
+
+  testset:
+    requires: !complex
+    diff_args: -j
+    args: -ex3_test wave -steps 100 -da_view -ensemble_size 10 e letkf -obs_error 0.03 
 
     test:
-      suffix: wave
-      args: -ex3_test wave -petscda_type letkf
+      suffix: letkf_wave
+      args: -petscda_type letkf
+
+    test:
+      requires: kokkos
+      suffix: kokkos_wave
+      args: -petscda_type letkf -mat_type aijkokkos
 
     test:
       suffix: wave_mc
-      args: -ex3_test wave -ex3_flux mc -petscda_type etkf
+      args: -ex3_flux mc -petscda_type etkf
 
 TEST*/

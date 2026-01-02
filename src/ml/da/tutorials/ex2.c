@@ -461,7 +461,7 @@ int main(int argc, char **argv)
       requires: kokkos
       suffix: letkf
       diff_args: -j
-      args: -petscda_type letkf -mat_type aijkokkos -petscda_sqrt_type eigen
+      args: -petscda_type letkf -mat_type aijkokkos
 
     test:
       suffix: etkf

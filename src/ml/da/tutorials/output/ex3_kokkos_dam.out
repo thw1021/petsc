@@ -7,7 +7,7 @@ PetscDA Object: 1 MPI process
   Inflation: 1.
 PetscDALETKF Object:
   Square root type: eigen
-  Local analysis: CPU
+  Local analysis: Kokkos
   Local observations per vertex: 40
   Localization matrix: set
 Shallow Water [L]ETKF Example
