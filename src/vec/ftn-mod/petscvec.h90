@@ -1,93 +1,101 @@
-#if defined(PETSC_HAVE_FORTRAN_TYPE_STAR)
-      interface
-        subroutine PetscSFBcastBegin(sf, unit, rarray, larray, op, ierr)
-          use, intrinsic :: ISO_C_binding
+interface
+  subroutine PetscSFBcastBegin(sf, unit, rarray, larray, op, ierr)
+    use, intrinsic :: ISO_C_binding
 #if defined(PETSC_USE_MPI_F08)
-          import tPetscSF, MPI_Datatype, MPI_Op
+    import tPetscSF, MPI_Datatype, MPI_Op
 #else
-          import tPetscSF
+    import tPetscSF
 #endif
-          PetscSF :: sf
-          MPIU_Datatype :: unit
-          MPIU_Op :: op
-          type(*) :: rarray(:)
-          type(*) :: larray(:)
-          PetscErrorCode :: ierr
-        end subroutine PetscSFBcastBegin
+    PetscSF :: sf
+    MPIU_Datatype :: unit
+    MPIU_Op :: op
+    type(*) :: rarray(:)
+    type(*) :: larray(:)
+    PetscErrorCode :: ierr
+  end subroutine PetscSFBcastBegin
+end interface
 
-        subroutine PetscSFBcastEnd(sf, unit, rarray, larray, op, ierr)
-          use, intrinsic :: ISO_C_binding
+interface
+  subroutine PetscSFBcastEnd(sf, unit, rarray, larray, op, ierr)
+    use, intrinsic :: ISO_C_binding
 #if defined(PETSC_USE_MPI_F08)
-          import tPetscSF, MPI_Datatype, MPI_Op
+    import tPetscSF, MPI_Datatype, MPI_Op
 #else
-          import tPetscSF
+    import tPetscSF
 #endif
-          PetscSF :: sf
-          MPIU_Datatype :: unit
-          MPIU_Op :: op
-          type(*) :: rarray(:)
-          type(*) :: larray(:)
-          PetscErrorCode :: ierr
-        end subroutine PetscSFBcastEnd
+    PetscSF :: sf
+    MPIU_Datatype :: unit
+    MPIU_Op :: op
+    type(*) :: rarray(:)
+    type(*) :: larray(:)
+    PetscErrorCode :: ierr
+  end subroutine PetscSFBcastEnd
+end interface
 
-        subroutine PetscSFReduceBegin(sf, unit, larray, rarray, op, ierr)
-          use, intrinsic :: ISO_C_binding
+interface
+  subroutine PetscSFReduceBegin(sf, unit, larray, rarray, op, ierr)
+    use, intrinsic :: ISO_C_binding
 #if defined(PETSC_USE_MPI_F08)
-          import tPetscSF, MPI_Datatype, MPI_Op
+    import tPetscSF, MPI_Datatype, MPI_Op
 #else
-          import tPetscSF
+    import tPetscSF
 #endif
-          PetscSF :: sf
-          MPIU_Datatype :: unit
-          MPIU_Op :: op
-          type(*) :: larray(:)
-          type(*) :: rarray(:)
-          PetscErrorCode :: ierr
-        end subroutine PetscSFReduceBegin
+    PetscSF :: sf
+    MPIU_Datatype :: unit
+    MPIU_Op :: op
+    type(*) :: larray(:)
+    type(*) :: rarray(:)
+    PetscErrorCode :: ierr
+  end subroutine PetscSFReduceBegin
+end interface
 
-        subroutine PetscSFReduceEnd(sf, unit, larray, rarray, op, ierr)
-          use, intrinsic :: ISO_C_binding
+interface
+  subroutine PetscSFReduceEnd(sf, unit, larray, rarray, op, ierr)
+    use, intrinsic :: ISO_C_binding
 #if defined(PETSC_USE_MPI_F08)
-          import tPetscSF, MPI_Datatype, MPI_Op
+    import tPetscSF, MPI_Datatype, MPI_Op
 #else
-          import tPetscSF
+    import tPetscSF
 #endif
-          PetscSF :: sf
-          MPIU_Datatype :: unit
-          MPIU_Op :: op
-          type(*) :: larray(:)
-          type(*) :: rarray(:)
-          PetscErrorCode :: ierr
-        end subroutine PetscSFReduceEnd
-      end interface
-#endif
+    PetscSF :: sf
+    MPIU_Datatype :: unit
+    MPIU_Op :: op
+    type(*) :: larray(:)
+    type(*) :: rarray(:)
+    PetscErrorCode :: ierr
+  end subroutine PetscSFReduceEnd
+end interface
 
-      interface
-        subroutine VecRestoreOwnershipRanges(v, ptr, ierr)
-          use, intrinsic :: ISO_C_binding
-          import tVec
-          Vec :: v
-          PetscInt, pointer :: ptr(:)
-          PetscErrorCode, intent(out) :: ierr
-        end subroutine VecRestoreOwnershipRanges
+interface
+  subroutine VecRestoreOwnershipRanges(v, ptr, ierr)
+    use, intrinsic :: ISO_C_binding
+    import tVec
+    Vec :: v
+    PetscInt, pointer :: ptr(:)
+    PetscErrorCode, intent(out) :: ierr
+  end subroutine VecRestoreOwnershipRanges
+end interface
 
-        subroutine PetscSFRestoreGraph(sf, nroots, nleaves, ilocal, iremote, ierr)
-          use, intrinsic :: ISO_C_binding
-          import tPetscSF, sPetscSFNode
-          PetscSF :: sf
-          PetscInt :: nroots, nleaves
-          PetscInt, pointer :: ilocal(:)
-          type(sPetscSFNode), pointer :: iremote(:)
-          PetscErrorCode :: ierr
-        end subroutine PetscSFRestoreGraph
+interface
+  subroutine PetscSFRestoreGraph(sf, nroots, nleaves, ilocal, iremote, ierr)
+    use, intrinsic :: ISO_C_binding
+    import tPetscSF, sPetscSFNode
+    PetscSF :: sf
+    PetscInt :: nroots, nleaves
+    PetscInt, pointer :: ilocal(:)
+    type(sPetscSFNode), pointer :: iremote(:)
+    PetscErrorCode :: ierr
+  end subroutine PetscSFRestoreGraph
+end interface
 
-        subroutine VecRestoreValuesSection(v, s, p, va, ierr)
-          use, intrinsic :: ISO_C_binding
-          import tVec, tPetscSection
-          PetscScalar, pointer :: va(:)
-          PetscErrorCode ierr
-          Vec v
-          PetscSection s
-          PetscInt p
-        end subroutine
-      end interface
+interface
+  subroutine VecRestoreValuesSection(v, s, p, va, ierr)
+    use, intrinsic :: ISO_C_binding
+    import tVec, tPetscSection
+    PetscScalar, pointer :: va(:)
+    PetscErrorCode ierr
+    Vec v
+    PetscSection s
+    PetscInt p
+  end subroutine
+end interface
