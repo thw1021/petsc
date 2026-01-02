@@ -27,7 +27,7 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
   PetscScalar       *s_array;
   PetscInt           obs_size, obs_size_local, z_cols;
   PetscInt           y_local_size, r_local_size;
-  PetscInt           lda_z, lda_s, i, j;
+  PetscInt           lda_z, lda_s;
 
   PetscFunctionBegin;
   /* Validate input parameters */
@@ -61,8 +61,24 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
   PetscCall(MatDenseGetLDA(S, &lda_s));
 
   /* Compute normalized innovation: S_ij = (Z_ij - y_mean_i) * scale * r_inv_sqrt_i */
-  for (j = 0; j < m; j++) {
-    for (i = 0; i < obs_size_local; i++) s_array[i + j * lda_s] = (z_array[i + j * lda_z] - y_array[i]) * scale * r_array[i];
+  /* Use Kokkos for parallel execution */
+  {
+    using exec_space = Kokkos::DefaultExecutionSpace;
+    using view_2d    = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+    using view_1d    = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+
+    /* Create unmanaged Kokkos views wrapping PETSc arrays (zero-copy) */
+    view_2d z_view(const_cast<PetscScalar *>(z_array), lda_z, m);
+    view_2d s_view(s_array, lda_s, m);
+    view_1d y_view(const_cast<PetscScalar *>(y_array), obs_size_local);
+    view_1d r_view(const_cast<PetscScalar *>(r_array), obs_size_local);
+
+    /* Parallel computation using MDRangePolicy for 2D loop */
+    Kokkos::parallel_for(
+      "ComputeNormalizedInnovation", Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_space>({0, 0}, {obs_size_local, m}), KOKKOS_LAMBDA(const int i, const int j) {
+        s_view(i, j) = (z_view(i, j) - y_view(i)) * scale * r_view(i);
+      });
+    Kokkos::fence();
   }
 
   /* Restore arrays */
@@ -100,7 +116,7 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
 {
   const PetscInt    *cols;
   const PetscScalar *vals;
-  PetscInt           ncols, k, j;
+  PetscInt           ncols, k;
   const PetscScalar *z_global_array, *y_global_array, *y_mean_global_array, *r_inv_sqrt_global_array;
   PetscScalar       *z_local_array, *y_local_array, *y_mean_local_array, *r_inv_sqrt_local_array;
   PetscInt           lda_z_global, lda_z_local;
@@ -130,16 +146,36 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
   PetscCall(MatDenseGetLDA(Z_local, &lda_z_local));
 
   /* Extract local observations and weight R^{-1/2} */
-  for (k = 0; k < ncols; k++) {
-    PetscInt    obs_idx = cols[k];
-    PetscScalar weight  = vals[k];
+  /* Use Kokkos for parallel execution */
+  {
+    using exec_space = Kokkos::DefaultExecutionSpace;
+    using view_2d    = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+    using view_1d    = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
 
-    y_local_array[k]          = y_global_array[obs_idx];
-    y_mean_local_array[k]     = y_mean_global_array[obs_idx];
-    r_inv_sqrt_local_array[k] = r_inv_sqrt_global_array[obs_idx] * PetscSqrtScalar(weight);
+    /* Create unmanaged Kokkos views wrapping arrays (zero-copy) */
+    view_2d z_global_view(const_cast<PetscScalar *>(z_global_array), lda_z_global, m);
+    view_2d z_local_view(z_local_array, lda_z_local, m);
+    view_1d y_global_view(const_cast<PetscScalar *>(y_global_array), lda_z_global); /* Use lda as size estimate */
+    view_1d y_local_view(y_local_array, ncols);
+    view_1d y_mean_global_view(const_cast<PetscScalar *>(y_mean_global_array), lda_z_global);
+    view_1d y_mean_local_view(y_mean_local_array, ncols);
+    view_1d r_inv_sqrt_global_view(const_cast<PetscScalar *>(r_inv_sqrt_global_array), lda_z_global);
+    view_1d r_inv_sqrt_local_view(r_inv_sqrt_local_array, ncols);
 
-    /* Extract Z matrix row (column-major layout) */
-    for (j = 0; j < m; j++) z_local_array[k + j * lda_z_local] = z_global_array[obs_idx + j * lda_z_global];
+    /* Parallel extraction using RangePolicy with nested loop for columns */
+    Kokkos::parallel_for(
+      "ExtractLocalObs", Kokkos::RangePolicy<exec_space>(0, ncols), KOKKOS_LAMBDA(const int k) {
+        PetscInt    obs_idx = cols[k];
+        PetscScalar weight  = vals[k];
+
+        y_local_view(k)          = y_global_view(obs_idx);
+        y_mean_local_view(k)     = y_mean_global_view(obs_idx);
+        r_inv_sqrt_local_view(k) = r_inv_sqrt_global_view(obs_idx) * Kokkos::sqrt(weight);
+
+        /* Extract Z matrix row (column-major layout) */
+        for (int j = 0; j < m; j++) { z_local_view(k, j) = z_global_view(obs_idx, j); }
+      });
+    Kokkos::fence();
   }
 
   /* Restore arrays */
@@ -262,13 +298,30 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     {
       const PetscScalar *w_array;
       PetscScalar       *g_array;
-      PetscInt           j, k, lda_g;
+      PetscInt           lda_g;
 
       PetscCall(VecGetArrayRead(w_local, &w_array));
       PetscCall(MatDenseGetArrayWrite(G_local, &g_array));
       PetscCall(MatDenseGetLDA(G_local, &lda_g));
-      for (j = 0; j < m; j++)
-        for (k = 0; k < m; k++) g_array[k + j * lda_g] += w_array[k];
+
+      /* Use Kokkos for parallel execution */
+      {
+        using exec_space = Kokkos::DefaultExecutionSpace;
+        using view_2d    = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+        using view_1d    = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+
+        /* Create unmanaged Kokkos views wrapping arrays (zero-copy) */
+        view_2d g_view(g_array, lda_g, m);
+        view_1d w_view(const_cast<PetscScalar *>(w_array), m);
+
+        /* Parallel computation: add w to each column of G */
+        Kokkos::parallel_for(
+          "FormGLocal", Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_space>({0, 0}, {m, m}), KOKKOS_LAMBDA(const int k, const int j) {
+            g_view(k, j) += w_view(k);
+          });
+        Kokkos::fence();
+      }
+
       PetscCall(MatDenseRestoreArrayWrite(G_local, &g_array));
       PetscCall(VecRestoreArrayRead(w_local, &w_array));
     }
