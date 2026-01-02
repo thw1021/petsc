@@ -173,7 +173,7 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
         r_inv_sqrt_local_view(k) = r_inv_sqrt_global_view(obs_idx) * Kokkos::sqrt(weight);
 
         /* Extract Z matrix row (column-major layout) */
-        for (int j = 0; j < m; j++) { z_local_view(k, j) = z_global_view(obs_idx, j); }
+        for (int j = 0; j < m; j++) z_local_view(k, j) = z_global_view(obs_idx, j);
       });
     Kokkos::fence();
   }
@@ -348,9 +348,22 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       PetscCall(MatDenseGetArrayRead(X, &x_array));
       PetscCall(MatDenseGetArray(X_rows, &x_rows_array));
       PetscCall(MatDenseGetLDA(X, &lda_x));
-      for (j = 0; j < m; j++) {
-        for (k = 0; k < ndof; k++) { x_rows_array[k + j * ndof] = x_array[(i_grid_point * ndof + k) + j * lda_x]; }
+
+      /* Use Kokkos for parallel extraction */
+      {
+        using exec_space = Kokkos::DefaultExecutionSpace;
+        using view_2d    = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+
+        view_2d x_view(const_cast<PetscScalar *>(x_array), lda_x, m);
+        view_2d x_rows_view(x_rows_array, ndof, m);
+
+        Kokkos::parallel_for(
+          "ExtractXRows", Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_space>({0, 0}, {ndof, m}), KOKKOS_LAMBDA(const int k, const int j) {
+            x_rows_view(k, j) = x_view(i_grid_point * ndof + k, j);
+          });
+        Kokkos::fence();
       }
+
       PetscCall(MatDenseRestoreArray(X_rows, &x_rows_array));
       PetscCall(MatDenseRestoreArrayRead(X, &x_array));
 
@@ -360,9 +373,23 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       /* Add local mean: E_a[i_grid_point*ndof:(i_grid_point+1)*ndof, :] = x_bar_f[i_grid_point*ndof:(i_grid_point+1)*ndof] + X_f[...] * G_local */
       PetscCall(VecGetArrayRead(impl->mean, &mean_array));
       PetscCall(MatDenseGetArray(E_analysis_rows, &ea_rows_array));
-      for (j = 0; j < m; j++) {
-        for (k = 0; k < ndof; k++) { ea_rows_array[k + j * ndof] += mean_array[i_grid_point * ndof + k]; }
+
+      /* Use Kokkos for parallel mean addition */
+      {
+        using exec_space = Kokkos::DefaultExecutionSpace;
+        using view_2d    = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+        using view_1d    = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+
+        view_2d ea_rows_view(ea_rows_array, ndof, m);
+        view_1d mean_view(const_cast<PetscScalar *>(mean_array), lda_x); /* Use lda_x as size estimate */
+
+        Kokkos::parallel_for(
+          "AddMean", Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_space>({0, 0}, {ndof, m}), KOKKOS_LAMBDA(const int k, const int j) {
+            ea_rows_view(k, j) += mean_view(i_grid_point * ndof + k);
+          });
+        Kokkos::fence();
       }
+
       PetscCall(MatDenseRestoreArray(E_analysis_rows, &ea_rows_array));
       PetscCall(VecRestoreArrayRead(impl->mean, &mean_array));
 
@@ -370,9 +397,22 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       PetscCall(MatDenseGetArrayWrite(da->ensemble, &e_array));
       PetscCall(MatDenseGetLDA(da->ensemble, &lda_e));
       PetscCall(MatDenseGetArrayRead(E_analysis_rows, (const PetscScalar **)&ea_rows_array));
-      for (j = 0; j < m; j++) {
-        for (k = 0; k < ndof; k++) { e_array[(i_grid_point * ndof + k) + j * lda_e] = ea_rows_array[k + j * ndof]; }
+
+      /* Use Kokkos for parallel storage */
+      {
+        using exec_space = Kokkos::DefaultExecutionSpace;
+        using view_2d    = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+
+        view_2d e_view(e_array, lda_e, m);
+        view_2d ea_rows_view(const_cast<PetscScalar *>(ea_rows_array), ndof, m);
+
+        Kokkos::parallel_for(
+          "StoreResults", Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_space>({0, 0}, {ndof, m}), KOKKOS_LAMBDA(const int k, const int j) {
+            e_view(i_grid_point * ndof + k, j) = ea_rows_view(k, j);
+          });
+        Kokkos::fence();
       }
+
       PetscCall(MatDenseRestoreArrayRead(E_analysis_rows, (const PetscScalar **)&ea_rows_array));
       PetscCall(MatDenseRestoreArrayWrite(da->ensemble, &e_array));
 
