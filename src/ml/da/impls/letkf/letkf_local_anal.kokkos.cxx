@@ -4,11 +4,165 @@
 #include <KokkosBatched_SVD_Decl.hpp>
 #include <KokkosBatched_SVD_Serial_Impl.hpp>
 
-/*
-  PetscDALETKFLocalAnalysis_GPU - GPU-accelerated local LETKF analysis using Kokkos batched operations
+/* ========================================================================== */
+/*                    LETKF Analysis Algorithm (Kokkos)                       */
+/* ========================================================================== */
 
-  This is a complete GPU implementation that processes all vertices in parallel.
-  Currently implements Phase 1: Getting CSR arrays from Q matrix.
+/*
+  ComputeNormalizedInnovationMatrix - Computes S = R^{-1/2}(Z - y_mean * 1')/sqrt(m-1) (CPU version)
+
+  Input Parameters:
++ Z          - observation ensemble matrix
+. y_mean     - mean of observations
+. r_inv_sqrt - R^{-1/2}
+. m          - ensemble size
+- scale      - 1/sqrt(m-1)
+
+  Output Parameter:
+. S - normalized innovation matrix
+*/
+static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r_inv_sqrt, PetscInt m, PetscScalar scale, Mat S)
+{
+  const PetscScalar *z_array, *y_array, *r_array;
+  PetscScalar       *s_array;
+  PetscInt           obs_size, obs_size_local, z_cols;
+  PetscInt           y_local_size, r_local_size;
+  PetscInt           lda_z, lda_s, i, j;
+
+  PetscFunctionBegin;
+  /* Validate input parameters */
+  PetscValidHeaderSpecific(Z, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(y_mean, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(r_inv_sqrt, VEC_CLASSID, 3);
+  PetscValidLogicalCollectiveInt(Z, m, 4);
+  PetscValidLogicalCollectiveScalar(Z, scale, 5);
+  PetscValidHeaderSpecific(S, MAT_CLASSID, 6);
+  PetscCheck(m > 0, PetscObjectComm((PetscObject)Z), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m must be positive, got %" PetscInt_FMT, m);
+
+  /* Get observation size from input matrix Z and validate dimensions */
+  PetscCall(MatGetSize(Z, &obs_size, &z_cols));
+  PetscCall(MatGetLocalSize(Z, &obs_size_local, NULL));
+  PetscCheck(z_cols == m, PetscObjectComm((PetscObject)Z), PETSC_ERR_ARG_INCOMP, "Matrix Z has %" PetscInt_FMT " columns but ensemble size is %" PetscInt_FMT, z_cols, m);
+
+  /* Verify vector dimensions match observation size (both global and local) */
+  PetscCall(VecGetLocalSize(y_mean, &y_local_size));
+  PetscCall(VecGetLocalSize(r_inv_sqrt, &r_local_size));
+  PetscCheck(y_local_size == obs_size_local, PetscObjectComm((PetscObject)Z), PETSC_ERR_ARG_INCOMP, "Vector y_mean local size %" PetscInt_FMT " does not match matrix local rows %" PetscInt_FMT, y_local_size, obs_size_local);
+  PetscCheck(r_local_size == obs_size_local, PetscObjectComm((PetscObject)Z), PETSC_ERR_ARG_INCOMP, "Vector r_inv_sqrt local size %" PetscInt_FMT " does not match matrix local rows %" PetscInt_FMT, r_local_size, obs_size_local);
+
+  /* Get direct access to arrays for performance */
+  PetscCall(MatDenseGetArrayRead(Z, &z_array));
+  PetscCall(MatDenseGetArrayWrite(S, &s_array));
+  PetscCall(VecGetArrayRead(y_mean, &y_array));
+  PetscCall(VecGetArrayRead(r_inv_sqrt, &r_array));
+
+  /* Get Leading Dimension (LDA) to handle padding/strides correctly */
+  PetscCall(MatDenseGetLDA(Z, &lda_z));
+  PetscCall(MatDenseGetLDA(S, &lda_s));
+
+  /* Compute normalized innovation: S_ij = (Z_ij - y_mean_i) * scale * r_inv_sqrt_i */
+  for (j = 0; j < m; j++) {
+    for (i = 0; i < obs_size_local; i++) s_array[i + j * lda_s] = (z_array[i + j * lda_z] - y_array[i]) * scale * r_array[i];
+  }
+
+  /* Restore arrays */
+  PetscCall(VecRestoreArrayRead(r_inv_sqrt, &r_array));
+  PetscCall(VecRestoreArrayRead(y_mean, &y_array));
+  PetscCall(MatDenseRestoreArrayWrite(S, &s_array));
+  PetscCall(MatDenseRestoreArrayRead(Z, &z_array));
+
+  /* Finalize assembly */
+  PetscCall(MatAssemblyBegin(S, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(S, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  ExtractLocalObservations - Extracts local observations for a vertex using localization matrix Q (CPU version)
+
+  Input Parameters:
++ Q          - localization matrix (state_size/ndof x obs_size), each row has Q_NUM_LOCAL_OBSERVATIONS_MAX non-zeros
+. vertex_idx - index of the vertex (row of Q)
+. Z_global   - global observation ensemble matrix (obs_size x m)
+. y_global   - global observation vector (size obs_size)
+. y_mean_global - global observation mean (size obs_size)
+. r_inv_sqrt_global - global R^{-1/2} (size obs_size)
+. m          - ensemble size
+
+  Output Parameters:
+. Z_local    - local observation ensemble (p_local x m), pre-allocated
+. y_local    - local observation vector (size p_local), pre-allocated
+. y_mean_local - local observation mean (size p_local), pre-allocated
+. r_inv_sqrt_local - local R^{-1/2} (size p_local), pre-allocated
+. local_obs_indices - indices of local observations (size p_local), pre-allocated
+*/
+static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z_global, Vec y_global, Vec y_mean_global, Vec r_inv_sqrt_global, PetscInt m, Mat Z_local, Vec y_local, Vec y_mean_local, Vec r_inv_sqrt_local, PetscInt *local_obs_indices)
+{
+  const PetscInt    *cols;
+  const PetscScalar *vals;
+  PetscInt           ncols, k, j;
+  const PetscScalar *z_global_array, *y_global_array, *y_mean_global_array, *r_inv_sqrt_global_array;
+  PetscScalar       *z_local_array, *y_local_array, *y_mean_local_array, *r_inv_sqrt_local_array;
+  PetscInt           lda_z_global, lda_z_local;
+
+  PetscFunctionBegin;
+  /* Get the row of Q corresponding to this vertex */
+  PetscCall(MatGetRow(Q, vertex_idx, &ncols, &cols, &vals));
+  PetscCheck(ncols == Q_NUM_LOCAL_OBSERVATIONS_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Vertex %" PetscInt_FMT " has %" PetscInt_FMT " local observations, expected %" PetscInt_FMT, vertex_idx, ncols, (PetscInt)Q_NUM_LOCAL_OBSERVATIONS_MAX);
+
+  /* Store indices */
+  for (k = 0; k < ncols; k++) local_obs_indices[k] = cols[k];
+
+  /* Get array access to global data */
+  PetscCall(MatDenseGetArrayRead(Z_global, &z_global_array));
+  PetscCall(VecGetArrayRead(y_global, &y_global_array));
+  PetscCall(VecGetArrayRead(y_mean_global, &y_mean_global_array));
+  PetscCall(VecGetArrayRead(r_inv_sqrt_global, &r_inv_sqrt_global_array));
+
+  /* Get array access to local data */
+  PetscCall(MatDenseGetArrayWrite(Z_local, &z_local_array));
+  PetscCall(VecGetArray(y_local, &y_local_array));
+  PetscCall(VecGetArray(y_mean_local, &y_mean_local_array));
+  PetscCall(VecGetArray(r_inv_sqrt_local, &r_inv_sqrt_local_array));
+
+  /* Get leading dimensions */
+  PetscCall(MatDenseGetLDA(Z_global, &lda_z_global));
+  PetscCall(MatDenseGetLDA(Z_local, &lda_z_local));
+
+  /* Extract local observations and weight R^{-1/2} */
+  for (k = 0; k < ncols; k++) {
+    PetscInt    obs_idx = cols[k];
+    PetscScalar weight  = vals[k];
+
+    y_local_array[k]          = y_global_array[obs_idx];
+    y_mean_local_array[k]     = y_mean_global_array[obs_idx];
+    r_inv_sqrt_local_array[k] = r_inv_sqrt_global_array[obs_idx] * PetscSqrtScalar(weight);
+
+    /* Extract Z matrix row (column-major layout) */
+    for (j = 0; j < m; j++) z_local_array[k + j * lda_z_local] = z_global_array[obs_idx + j * lda_z_global];
+  }
+
+  /* Restore arrays */
+  PetscCall(VecRestoreArray(r_inv_sqrt_local, &r_inv_sqrt_local_array));
+  PetscCall(VecRestoreArray(y_mean_local, &y_mean_local_array));
+  PetscCall(VecRestoreArray(y_local, &y_local_array));
+  PetscCall(MatDenseRestoreArrayWrite(Z_local, &z_local_array));
+  PetscCall(VecRestoreArrayRead(r_inv_sqrt_global, &r_inv_sqrt_global_array));
+  PetscCall(VecRestoreArrayRead(y_mean_global, &y_mean_global_array));
+  PetscCall(VecRestoreArrayRead(y_global, &y_global_array));
+  PetscCall(MatDenseRestoreArrayRead(Z_global, &z_global_array));
+
+  /* Restore Q row */
+  PetscCall(MatRestoreRow(Q, vertex_idx, &ncols, &cols, &vals));
+
+  /* Assemble local matrices/vectors */
+  PetscCall(MatAssemblyBegin(Z_local, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(Z_local, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  PetscDALETKFLocalAnalysis_GPU - Performs local LETKF analysis for all grid points (Kokkos version)
 
   Input Parameters:
 + da             - the PetscDA context
@@ -25,307 +179,171 @@
 . da->ensemble - updated with analysis ensemble
 
   Notes:
-  The local analysis at each vertex is serial and independent. This GPU implementation
-  uses Kokkos device views instead of PETSc objects for the local analysis workspace,
-  avoiding the need for PETSC_COMM_SELF objects. All local computations are performed
-  directly on device memory using Kokkos parallel_for kernels.
+  This function performs the local analysis loop for LETKF, processing each grid point
+  independently using its local observations defined by the localization matrix Q.
+  This is the CPU version that does not use Kokkos acceleration.
+
+  All local analysis workspace objects (Z_local, S_local, T_sqrt_local, G_local, y_local,
+  y_mean_local, delta_scaled_local, r_inv_sqrt_local, w_local, s_transpose_delta) are
+  created with PETSC_COMM_SELF because the analysis at each vertex is serial and independent.
 */
 PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl, PetscInt m, PetscInt n_vertices, Mat X, Vec observation, Mat Z_global, Vec y_mean_global, Vec r_inv_sqrt_global)
 {
+  /* Local analysis workspace */
+  Mat       Z_local, S_local, T_sqrt_local, G_local;
+  Vec       y_local, y_mean_local, delta_scaled_local, r_inv_sqrt_local;
+  Vec       w_local, s_transpose_delta;
+  PetscInt *local_obs_indices = NULL;
+  PetscInt  i_grid_point;
+  PetscInt  ndof;
+  PetscReal sqrt_m_minus_1, scale;
+
   PetscFunctionBegin;
-  /* Phase 1: Get Q matrix CSR arrays with memory type detection */
-  const PetscInt    *Q_i = NULL, *Q_j = NULL; // CSR row pointers and column indices
-  const PetscScalar *Q_v = NULL;              // CSR values
-  PetscMemType       Q_memtype;
-  PetscInt           p_local = impl->p_local; // Q_NUM_LOCAL_OBSERVATIONS_MAX
+  ndof           = da->ndof;
+  scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
+  sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
+  /* ===================================================================== */
+  /* Create local analysis workspace (p_local x m matrices and vectors) */
+  /* ===================================================================== */
+  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, impl->p_local, m, NULL, &Z_local));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)Z_local, "dense_"));
+  PetscCall(MatSetFromOptions(Z_local));
+  PetscCall(MatSetUp(Z_local));
+  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, impl->p_local, m, NULL, &S_local));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)S_local, "dense_"));
+  PetscCall(MatSetFromOptions(S_local));
+  PetscCall(MatSetUp(S_local));
+  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, m, NULL, &T_sqrt_local));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)T_sqrt_local, "dense_"));
+  PetscCall(MatSetFromOptions(T_sqrt_local));
+  PetscCall(MatSetUp(T_sqrt_local));
+  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, m, NULL, &G_local));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject)G_local, "dense_"));
+  PetscCall(MatSetFromOptions(G_local));
+  PetscCall(MatSetUp(G_local));
 
-  PetscCall(MatSeqAIJGetCSRAndMemType(impl->Q, &Q_i, &Q_j, (PetscScalar **)&Q_v, &Q_memtype));
+  /* Create vectors using MatCreateVecs from Z_local (p_local x m) */
+  PetscCall(MatCreateVecs(Z_local, &w_local, &y_local));
+  PetscCall(VecDuplicate(y_local, &y_mean_local));
+  PetscCall(VecDuplicate(y_local, &delta_scaled_local));
+  PetscCall(VecDuplicate(y_local, &r_inv_sqrt_local));
+  PetscCall(VecDuplicate(w_local, &s_transpose_delta));
 
-  /* Verify that p_local matches Q_NUM_LOCAL_OBSERVATIONS_MAX */
-  PetscCheck(p_local == Q_NUM_LOCAL_OBSERVATIONS_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "p_local (%" PetscInt_FMT ") must equal Q_NUM_LOCAL_OBSERVATIONS_MAX (%d) for stack-allocated arrays", p_local, Q_NUM_LOCAL_OBSERVATIONS_MAX);
+  PetscCall(PetscMalloc1(impl->p_local, &local_obs_indices));
 
-  /* Verify that ensemble size does not exceed ENSEMBLE_SIZE_MAX */
-  PetscCheck(m <= ENSEMBLE_SIZE_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size m (%" PetscInt_FMT ") exceeds ENSEMBLE_SIZE_MAX (%d)", m, ENSEMBLE_SIZE_MAX);
+  /* ===================================================================== */
+  /* LETKF: Loop over all grid points and perform local analysis         */
+  /* ===================================================================== */
+  for (i_grid_point = 0; i_grid_point < n_vertices; i_grid_point++) {
+    /* Extract local observations for this grid point using Q[i_grid_point,:] */
+    PetscCall(ExtractLocalObservations(impl->Q, i_grid_point, Z_global, observation, y_mean_global, r_inv_sqrt_global, m, Z_local, y_local, y_mean_local, r_inv_sqrt_local, local_obs_indices));
 
-  /* Phase 2: Get dense matrix/vector arrays with memory type detection */
-  const PetscScalar *Z_global_array          = NULL;
-  const PetscScalar *y_global_array          = NULL;
-  const PetscScalar *y_mean_global_array     = NULL;
-  const PetscScalar *r_inv_sqrt_global_array = NULL;
-  const PetscScalar *X_array                 = NULL;
-  const PetscScalar *mean_array              = NULL;
-  PetscScalar       *ensemble_array          = NULL;
+    /* Compute local normalized innovation matrix: S_local = R_local^{-1/2} * (Z_local - y_mean_local * 1') / sqrt(m - 1) */
+    PetscCall(ComputeNormalizedInnovationMatrix(Z_local, y_mean_local, r_inv_sqrt_local, m, scale, S_local));
 
-  PetscMemType Z_memtype, y_memtype, y_mean_memtype, r_inv_sqrt_memtype;
-  PetscMemType X_memtype, mean_memtype, ensemble_memtype;
+    /* Compute local delta_scaled = R_local^{-1/2} * (y_local - y_mean_local) */
+    PetscCall(VecWAXPY(delta_scaled_local, -1.0, y_mean_local, y_local));
+    PetscCall(VecPointwiseMult(delta_scaled_local, delta_scaled_local, r_inv_sqrt_local));
 
-  PetscInt obs_size_global, lda_z_global, lda_x, lda_ensemble;
+    /* Factor local T = (I + S_local^T * S_local) */
+    PetscCall(PetscDATFactor(da, S_local));
 
-  /* Get array pointers and memory types for all dense matrices and vectors */
-  PetscCall(MatDenseGetArrayReadAndMemType(Z_global, &Z_global_array, &Z_memtype));
-  PetscCall(VecGetArrayReadAndMemType(observation, &y_global_array, &y_memtype));
-  PetscCall(VecGetArrayReadAndMemType(y_mean_global, &y_mean_global_array, &y_mean_memtype));
-  PetscCall(VecGetArrayReadAndMemType(r_inv_sqrt_global, &r_inv_sqrt_global_array, &r_inv_sqrt_memtype));
-  PetscCall(MatDenseGetArrayReadAndMemType(X, &X_array, &X_memtype));
-  PetscCall(VecGetArrayReadAndMemType(impl->mean, &mean_array, &mean_memtype));
-  PetscCall(MatDenseGetArrayWriteAndMemType(da->ensemble, &ensemble_array, &ensemble_memtype));
+    /* Compute local analysis weights: w_local = T_local^{-1} * S_local^T * delta_scaled_local */
+    PetscCall(MatMultTranspose(S_local, delta_scaled_local, s_transpose_delta));
+    PetscCall(PetscDAApplyTInverse(da, s_transpose_delta, w_local));
 
-  /* Get dimensions and leading dimensions */
-  PetscCall(VecGetSize(observation, &obs_size_global));
-  PetscCall(MatDenseGetLDA(Z_global, &lda_z_global));
-  PetscCall(MatDenseGetLDA(X, &lda_x));
-  PetscCall(MatDenseGetLDA(da->ensemble, &lda_ensemble));
+    /* Compute local square-root transform: T_sqrt_local = T_local^{-1/2} (U is identity, so pass NULL) */
+    PetscCall(PetscDAApplySqrtTInverse(da, NULL, T_sqrt_local));
 
-  /* Phase 3: Parallel extraction kernel - extract local obs for all vertices */
-  PetscCall(PetscKokkosInitializeCheck());
+    /* Form local transform G_local = w_local * 1' + sqrt(m - 1) * T_sqrt_local * U
+       Instead of creating w_ones_local = w_local * 1', we add w_local to each column of G_local */
+    PetscCall(MatCopy(T_sqrt_local, G_local, SAME_NONZERO_PATTERN));
+    PetscCall(MatScale(G_local, sqrt_m_minus_1));
+    {
+      const PetscScalar *w_array;
+      PetscScalar       *g_array;
+      PetscInt           j, k, lda_g;
 
-  /* Create device views for global data (copy from host if needed) */
-  Kokkos::View<PetscInt *, Kokkos::DefaultExecutionSpace>    dQ_i("Q_i", n_vertices + 1);
-  Kokkos::View<PetscInt *, Kokkos::DefaultExecutionSpace>    dQ_j("Q_j", n_vertices * p_local);
-  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace> dQ_v("Q_v", n_vertices * p_local);
-  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace> dZ_global("Z_global", lda_z_global * m);
-  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace> dy_global("y_global", obs_size_global);
-  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace> dy_mean_global("y_mean_global", obs_size_global);
-  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace> dr_inv_sqrt_global("r_inv_sqrt_global", obs_size_global);
+      PetscCall(VecGetArrayRead(w_local, &w_array));
+      PetscCall(MatDenseGetArrayWrite(G_local, &g_array));
+      PetscCall(MatDenseGetLDA(G_local, &lda_g));
+      for (j = 0; j < m; j++)
+        for (k = 0; k < m; k++) g_array[k + j * lda_g] += w_array[k];
+      PetscCall(MatDenseRestoreArrayWrite(G_local, &g_array));
+      PetscCall(VecRestoreArrayRead(w_local, &w_array));
+    }
 
-  /* Copy Q CSR arrays to device */
-  {
-    Kokkos::View<const PetscInt *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>    hQ_i(Q_i, n_vertices + 1);
-    Kokkos::View<const PetscInt *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>    hQ_j(Q_j, n_vertices * p_local);
-    Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> hQ_v(Q_v, n_vertices * p_local);
-    Kokkos::deep_copy(dQ_i, hQ_i);
-    Kokkos::deep_copy(dQ_j, hQ_j);
-    Kokkos::deep_copy(dQ_v, hQ_v);
+    /* LETKF Algorithm 2, Line 13: Update ensemble at grid point i_grid_point
+       E_a[i,:] = x_bar_f[i] + X_f[i,:] * G_local
+
+       Where:
+       - x_bar_f[i] is the forecast mean at grid point i_grid_point (ndof values from global mean vector)
+       - X_f[i,:] is the forecast anomaly rows at grid point i_grid_point (ndof rows from global anomaly matrix X)
+       - G_local = w_local * 1' + sqrt(m-1) * T_local^{1/2} * U (computed above in G_local)
+     */
+    {
+      Mat                X_rows, E_analysis_rows;
+      const PetscScalar *x_array, *mean_array;
+      PetscScalar       *e_array, *x_rows_array, *ea_rows_array;
+      PetscInt           j, k, lda_x, lda_e;
+
+      /* Create temp matrices for the update: ndof x m */
+      PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, ndof, m, NULL, &X_rows));
+      PetscCall(MatDuplicate(X_rows, MAT_DO_NOT_COPY_VALUES, &E_analysis_rows));
+
+      /* Extract ndof rows starting at (i_grid_point * ndof) from X: X_f[i_grid_point*ndof:(i_grid_point+1)*ndof, :] */
+      PetscCall(MatDenseGetArrayRead(X, &x_array));
+      PetscCall(MatDenseGetArray(X_rows, &x_rows_array));
+      PetscCall(MatDenseGetLDA(X, &lda_x));
+      for (j = 0; j < m; j++) {
+        for (k = 0; k < ndof; k++) { x_rows_array[k + j * ndof] = x_array[(i_grid_point * ndof + k) + j * lda_x]; }
+      }
+      PetscCall(MatDenseRestoreArray(X_rows, &x_rows_array));
+      PetscCall(MatDenseRestoreArrayRead(X, &x_array));
+
+      /* Apply local transform: E_analysis_rows = X_rows * G_local^T */
+      PetscCall(MatMatMult(X_rows, G_local, MAT_REUSE_MATRIX, PETSC_DEFAULT, &E_analysis_rows));
+
+      /* Add local mean: E_a[i_grid_point*ndof:(i_grid_point+1)*ndof, :] = x_bar_f[i_grid_point*ndof:(i_grid_point+1)*ndof] + X_f[...] * G_local */
+      PetscCall(VecGetArrayRead(impl->mean, &mean_array));
+      PetscCall(MatDenseGetArray(E_analysis_rows, &ea_rows_array));
+      for (j = 0; j < m; j++) {
+        for (k = 0; k < ndof; k++) { ea_rows_array[k + j * ndof] += mean_array[i_grid_point * ndof + k]; }
+      }
+      PetscCall(MatDenseRestoreArray(E_analysis_rows, &ea_rows_array));
+      PetscCall(VecRestoreArrayRead(impl->mean, &mean_array));
+
+      /* Store result back in ensemble[i_grid_point*ndof:(i_grid_point+1)*ndof, :] */
+      PetscCall(MatDenseGetArrayWrite(da->ensemble, &e_array));
+      PetscCall(MatDenseGetLDA(da->ensemble, &lda_e));
+      PetscCall(MatDenseGetArrayRead(E_analysis_rows, (const PetscScalar **)&ea_rows_array));
+      for (j = 0; j < m; j++) {
+        for (k = 0; k < ndof; k++) { e_array[(i_grid_point * ndof + k) + j * lda_e] = ea_rows_array[k + j * ndof]; }
+      }
+      PetscCall(MatDenseRestoreArrayRead(E_analysis_rows, (const PetscScalar **)&ea_rows_array));
+      PetscCall(MatDenseRestoreArrayWrite(da->ensemble, &e_array));
+
+      PetscCall(MatDestroy(&E_analysis_rows));
+      PetscCall(MatDestroy(&X_rows));
+    }
   }
 
-  /* Copy dense arrays to device (or wrap if already on device) */
-  {
-    Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> hZ_global(Z_global_array, lda_z_global * m);
-    Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> hy_global(y_global_array, obs_size_global);
-    Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> hy_mean_global(y_mean_global_array, obs_size_global);
-    Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> hr_inv_sqrt_global(r_inv_sqrt_global_array, obs_size_global);
-    Kokkos::deep_copy(dZ_global, hZ_global);
-    Kokkos::deep_copy(dy_global, hy_global);
-    Kokkos::deep_copy(dy_mean_global, hy_mean_global);
-    Kokkos::deep_copy(dr_inv_sqrt_global, hr_inv_sqrt_global);
-  }
-
-  /* Phase 3+4 FUSED: Compute S directly from global arrays
-     PHASE 4 FUSION: Eliminated ExtractLocalObservations + ComputeS kernels
-     This eliminates 4 intermediate arrays: dZ_local_all, dy_local_all, dy_mean_local_all, dr_inv_sqrt_local_all
-     S is computed directly from global arrays using Q matrix for indirection */
-
-  PetscReal scale = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
-
-  /* Allocate device view for S matrices (all vertices) - still needed for SVD */
-  Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dS_all("S_all", n_vertices, p_local * m);
-
-  /* Allocate temporary arrays for local observations (needed by ComputeWeightsFused)
-     These are much smaller than the original 4 arrays since they're only used in one kernel */
-  Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dy_local_all("y_local_all", n_vertices, p_local);
-  Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dy_mean_local_all("y_mean_local_all", n_vertices, p_local);
-  Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace> dr_inv_sqrt_local_all("r_inv_sqrt_local_all", n_vertices, p_local);
-
-  /* Compute S directly from global arrays with inline extraction
-     For each vertex, extract local observations and immediately compute S */
-  Kokkos::parallel_for(
-    "ComputeSWithInlineExtraction", n_vertices, KOKKOS_LAMBDA(const int i_vertex) {
-      /* For each vertex, extract its local observations using Q row */
-      PetscInt row_start = dQ_i(i_vertex);
-      PetscInt row_end   = dQ_i(i_vertex + 1);
-      PetscInt ncols     = row_end - row_start;
-
-      /* Extract and compute S in one pass */
-      for (int k = 0; k < ncols; k++) {
-        PetscInt    obs_idx = dQ_j(row_start + k);
-        PetscScalar weight  = dQ_v(row_start + k);
-
-        /* Extract observation values (needed for weight computation later) */
-        PetscScalar y_local          = dy_global(obs_idx);
-        PetscScalar y_mean_local     = dy_mean_global(obs_idx);
-        PetscScalar r_inv_sqrt_local = dr_inv_sqrt_global(obs_idx) * PetscSqrtScalar(weight);
-
-        /* Store for later use in ComputeWeightsFused */
-        dy_local_all(i_vertex, k)          = y_local;
-        dy_mean_local_all(i_vertex, k)     = y_mean_local;
-        dr_inv_sqrt_local_all(i_vertex, k) = r_inv_sqrt_local;
-
-        /* Compute S directly: S(k,j) = (Z(k,j) - y_mean(k)) * scale * r_inv_sqrt(k) */
-        for (int j = 0; j < m; j++) {
-          PetscScalar Z_local               = dZ_global(obs_idx + j * lda_z_global);
-          dS_all(i_vertex, k + j * p_local) = (Z_local - y_mean_local) * scale * r_inv_sqrt_local;
-        }
-      }
-    });
-
-  Kokkos::fence();
-
-  /* Phase 5: Batched SVD on GPU - compute SVD of all S matrices */
-  /* Allocate device views for SVD outputs */
-  PetscInt                                                     min_dim = (p_local < m) ? p_local : m;
-  Kokkos::View<PetscScalar ***, Kokkos::DefaultExecutionSpace> dU_all("U_all", n_vertices, p_local, p_local);
-  Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace>  dSigma_all("Sigma_all", n_vertices, min_dim);
-  Kokkos::View<PetscScalar ***, Kokkos::DefaultExecutionSpace> dVt_all("Vt_all", n_vertices, m, m);
-
-  /* Compute batched SVD for all vertices in parallel
-     PHASE 2 FUSION: Eliminated ReshapeS kernel by creating temporary row-major copy inside SVD kernel
-     This eliminates the dS_all_3d intermediate array and associated kernel launch */
-  Kokkos::parallel_for(
-    "BatchedSVDWithInlineReshape", n_vertices, KOKKOS_LAMBDA(const int i_vertex) {
-      /* Create temporary row-major copy of S matrix for this vertex
-         S is stored in dS_all as column-major: S(i,j) = dS_all(i_vertex, i + j*p_local)
-         SVD needs row-major: S_temp(i,j) stored contiguously */
-      PetscScalar S_temp[Q_NUM_LOCAL_OBSERVATIONS_MAX * ENSEMBLE_SIZE_MAX]; // [p_local x m]
-      for (int i = 0; i < p_local; i++) {
-        for (int j = 0; j < m; j++) S_temp[i * m + j] = dS_all(i_vertex, i + j * p_local);
-      }
-
-      /* Create unmanaged view wrapping S_temp with LayoutRight (row-major) */
-      Kokkos::View<PetscScalar **, Kokkos::LayoutRight, Kokkos::DefaultExecutionSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> S_i(S_temp, p_local, m);
-
-      /* Get subviews for this vertex's output matrices */
-      auto U_i     = Kokkos::subview(dU_all, i_vertex, Kokkos::ALL, Kokkos::ALL);
-      auto Sigma_i = Kokkos::subview(dSigma_all, i_vertex, Kokkos::ALL);
-      auto Vt_i    = Kokkos::subview(dVt_all, i_vertex, Kokkos::ALL, Kokkos::ALL);
-
-      /* Allocate workspace for SVD on stack (must be contiguous, not LayoutStride)
-         Work size is max(p_local, m) as per Kokkos SVD requirements */
-      PetscInt    max_dim = (p_local > m) ? p_local : m;
-      PetscScalar Work_temp[(Q_NUM_LOCAL_OBSERVATIONS_MAX > ENSEMBLE_SIZE_MAX) ? Q_NUM_LOCAL_OBSERVATIONS_MAX : ENSEMBLE_SIZE_MAX];
-
-      /* Create unmanaged contiguous view wrapping Work_temp - use default layout to ensure contiguity */
-      Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> Work_i(Work_temp, max_dim);
-
-      /* Compute SVD: S = U * Sigma * V^T using Kokkos Kernels batched SVD */
-      /* Use SVD_USV_Tag for full SVD with U, Sigma, and V^T */
-      PetscScalar tol       = 1.0e-10;
-      int         max_iters = 100;
-      KokkosBatched::SerialSVD::invoke(KokkosBatched::SVD_USV_Tag(), S_i, U_i, Sigma_i, Vt_i, Work_i, tol, max_iters);
-    });
-
-  Kokkos::fence();
-
-  /* Phase 6+7 FUSED: Compute weights and T_sqrt in single kernel
-     PHASE 5 FUSION: Fused ComputeWeights + ComputeTSqrt kernels
-     Both kernels consume SVD outputs and can share computation of (I + Sigma^2)^{-1/2}
-     This eliminates 1 synchronization point and improves data locality
-
-     Note: U matrix is always identity, so we simplify:
-     - T_sqrt = V (I + Sigma^2)^{-1/2} V^T (no U multiplication needed) */
-
-  /* Allocate device views for weights and T_sqrt (all vertices) */
-  Kokkos::View<PetscScalar **, Kokkos::DefaultExecutionSpace>  dw_all("w_all", n_vertices, m);
-  Kokkos::View<PetscScalar ***, Kokkos::DefaultExecutionSpace> dT_sqrt_all("T_sqrt_all", n_vertices, m, m);
-
-  /* Compute both weights and T_sqrt in single fused kernel
-     w = V (I + Sigma^2)^{-1} Sigma U^T delta
-     T_sqrt = V (I + Sigma^2)^{-1/2} V^T (U is identity)
-     Both share computation of (I + Sigma^2)^{-1/2} */
-  Kokkos::parallel_for(
-    "ComputeWeightsAndTSqrtFused", n_vertices, KOKKOS_LAMBDA(const int i_vertex) {
-      /* Shared computation: Compute (I + Sigma^2)^{-1/2} once for both w and T_sqrt */
-      PetscScalar inv_sqrt_factor[40]; // max(min_dim) = min(40, m)
-      for (int i = 0; i < min_dim; i++) {
-        PetscScalar sigma    = dSigma_all(i_vertex, i);
-        PetscScalar sigma_sq = sigma * sigma;
-        inv_sqrt_factor[i]   = 1.0 / PetscSqrtScalar(1.0 + sigma_sq);
-      }
-
-      /* ===== Part 1: Compute weights w ===== */
-      /* Step 1: Compute U^T delta (result is min_dim vector)
-         Compute delta_scaled inline: delta_scaled[k] = (y_local[k] - y_mean_local[k]) * r_inv_sqrt_local[k] */
-      PetscScalar UtDelta[40];
-      for (int i = 0; i < min_dim; i++) {
-        UtDelta[i] = 0.0;
-        for (int k = 0; k < p_local; k++) {
-          /* Compute delta_scaled on-the-fly */
-          PetscScalar delta_scaled = (dy_local_all(i_vertex, k) - dy_mean_local_all(i_vertex, k)) * dr_inv_sqrt_local_all(i_vertex, k);
-          UtDelta[i] += dU_all(i_vertex, k, i) * delta_scaled;
-        }
-      }
-
-      /* Step 2: Compute (I + Sigma^2)^{-1} Sigma U^T delta (reuse inv_sqrt_factor) */
-      PetscScalar temp_w[40];
-      for (int i = 0; i < min_dim; i++) {
-        PetscScalar sigma = dSigma_all(i_vertex, i);
-        temp_w[i]         = (sigma * inv_sqrt_factor[i] * inv_sqrt_factor[i]) * UtDelta[i]; // (sigma / (1 + sigma^2)) = sigma * inv_sqrt^2
-      }
-
-      /* Step 3: Compute w = V temp_w (V is m x m, stored as Vt transposed) */
-      for (int j = 0; j < m; j++) {
-        dw_all(i_vertex, j) = 0.0;
-        for (int i = 0; i < min_dim; i++) dw_all(i_vertex, j) += dVt_all(i_vertex, i, j) * temp_w[i];
-      }
-
-      /* ===== Part 2: Compute T_sqrt ===== */
-      /* Since U is identity, T_sqrt = V (I + Sigma^2)^{-1/2} V^T
-         We compute this as: T_sqrt[i,j] = sum_k V[i,k] * inv_sqrt_factor[k] * V[j,k] */
-      for (int i = 0; i < m; i++) {
-        for (int j = 0; j < m; j++) {
-          dT_sqrt_all(i_vertex, i, j) = 0.0;
-          for (int k = 0; k < min_dim; k++) {
-            /* V[i,k] = Vt[k,i] (transpose), V[j,k] = Vt[k,j] */
-            dT_sqrt_all(i_vertex, i, j) += dVt_all(i_vertex, k, i) * inv_sqrt_factor[k] * dVt_all(i_vertex, k, j);
-          }
-        }
-      }
-    });
-
-  Kokkos::fence();
-
-  /* Phase 8+9 FUSED: Parallel ensemble update with inline G computation */
-  /* E_a[i,:] = x_bar_f[i] + X_f[i,:] * G[i]
-     where G[i,k,j] = w[i,k] + sqrt(m-1) * T_sqrt[i,k,j]
-     PHASE 3 FUSION: Eliminated FormG kernel by computing G elements on-the-fly
-     This eliminates the dG_all intermediate array (LARGEST intermediate!) */
-
-  PetscReal sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
-
-  /* Copy X and mean to device */
-  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace> dX("X", lda_x * m);
-  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace> dmean("mean", n_vertices);
-  {
-    Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> hX(X_array, lda_x * m);
-    Kokkos::View<const PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> hmean(mean_array, n_vertices);
-    Kokkos::deep_copy(dX, hX);
-    Kokkos::deep_copy(dmean, hmean);
-  }
-
-  /* Allocate device view for ensemble output */
-  Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace> densemble("ensemble", lda_ensemble * m);
-
-  /* Update ensemble with inline G computation: E_a[i,j] = mean[i] + sum_k X[i,k] * G[i,k,j]
-     where G[i,k,j] is computed on-the-fly instead of being stored */
-  Kokkos::parallel_for(
-    "UpdateEnsembleWithInlineG", Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::DefaultExecutionSpace>({0, 0}, {n_vertices, m}), KOKKOS_LAMBDA(const int i_vertex, const int j) {
-      PetscScalar sum = 0.0;
-      for (int k = 0; k < m; k++) {
-        /* Compute G[i_vertex,k,j] on-the-fly: G = w * 1' + sqrt(m-1) * T_sqrt */
-        PetscScalar G_kj = dw_all(i_vertex, k) + sqrt_m_minus_1 * dT_sqrt_all(i_vertex, k, j);
-        sum += dX(i_vertex + k * lda_x) * G_kj;
-      }
-      densemble(i_vertex + j * lda_ensemble) = dmean(i_vertex) + sum;
-    });
-
-  Kokkos::fence();
-
-  /* Phase 10: Copy ensemble back to host and restore arrays */
-  {
-    Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> hensemble(ensemble_array, lda_ensemble * m);
-    Kokkos::deep_copy(hensemble, densemble);
-  }
-
-  /* Restore arrays */
-  PetscCall(MatDenseRestoreArrayWriteAndMemType(da->ensemble, &ensemble_array));
-  PetscCall(VecRestoreArrayReadAndMemType(impl->mean, &mean_array));
-  PetscCall(MatDenseRestoreArrayReadAndMemType(X, &X_array));
-  PetscCall(VecRestoreArrayReadAndMemType(r_inv_sqrt_global, &r_inv_sqrt_global_array));
-  PetscCall(VecRestoreArrayReadAndMemType(y_mean_global, &y_mean_global_array));
-  PetscCall(VecRestoreArrayReadAndMemType(observation, &y_global_array));
-  PetscCall(MatDenseRestoreArrayReadAndMemType(Z_global, &Z_global_array));
-
-  /* Finalize ensemble assembly */
+  /* Ensemble has been updated directly in the loop above */
   PetscCall(MatAssemblyBegin(da->ensemble, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(da->ensemble, MAT_FINAL_ASSEMBLY));
+
+  /* Cleanup */
+  PetscCall(PetscFree(local_obs_indices));
+  PetscCall(VecDestroy(&s_transpose_delta));
+  PetscCall(VecDestroy(&w_local));
+  PetscCall(VecDestroy(&r_inv_sqrt_local));
+  PetscCall(VecDestroy(&delta_scaled_local));
+  PetscCall(VecDestroy(&y_mean_local));
+  PetscCall(VecDestroy(&y_local));
+  PetscCall(MatDestroy(&G_local));
+  PetscCall(MatDestroy(&T_sqrt_local));
+  PetscCall(MatDestroy(&S_local));
+  PetscCall(MatDestroy(&Z_local));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
