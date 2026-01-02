@@ -196,7 +196,7 @@ static inline PetscErrorCode CGNSElementTypeGetTopologyInfo(CGNS_ENUMT(ElementTy
 {
   DMPolytopeType _dmcelltype;
 
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   switch (cellType) {
   case CGNS_ENUMV(BAR_2):
   case CGNS_ENUMV(BAR_3):
@@ -291,7 +291,7 @@ static inline PetscErrorCode CGNSElementTypeGetDiscretizationInfo(CGNS_ENUMT(Ele
 {
   PetscInt _numClosure, _pOrder;
 
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   switch (cellType) {
   case CGNS_ENUMV(BAR_2):
     _numClosure = 2;
@@ -752,7 +752,30 @@ typedef struct {
   cgsize_t end;
 } CGRange;
 
-static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscInt cgid, int base, int zone, PetscInt num_sections, const int section_ids[], PetscSection *section, CGNS_ENUMT(ElementType_t) * cellTypes[], PetscInt *cells[], PetscLayouts *layouts[], PetscInt *layout_offsets[], PetscInt *connectivity[])
+// // TODO: Adjust the other uses of PetscLayout in this file to use PetscLayoutCreateFromSizesAndOffset, such that the CGNS range for reading is [mystart, myend - 1].
+// In otherwords, enforce that (consistent with PETSC usage), `mystart` is inclusive, while `myend` is exclusive.
+//
+// Creates a PetscLayout from the given sizes, but adjusts the ranges by the offset. So the first rank ranges will be [offset, offset + local_size) rather than [0, local_size)
+static PetscErrorCode PetscLayoutCreateFromSizesAndOffset(MPI_Comm comm, PetscInt n, PetscInt N, PetscInt bs, PetscInt offset, PetscLayout *map)
+{
+  PetscLayout     init;
+  const PetscInt *ranges;
+  PetscInt       *new_ranges;
+  PetscMPIInt     num_ranks;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLayoutCreateFromSizes(comm, n, N, bs, &init));
+  PetscCall(PetscLayoutGetRanges(init, &ranges));
+  PetscCallMPI(MPI_Comm_size(comm, &num_ranks));
+  PetscCall(PetscMalloc1(num_ranks + 1, &new_ranges));
+  PetscCall(PetscArraycpy(new_ranges, ranges, num_ranks + 1));
+  for (PetscInt r = 0; r < num_ranks + 1; r++) new_ranges[r] += offset;
+  PetscCall(PetscLayoutCreateFromRanges(comm, new_ranges, PETSC_OWN_POINTER, bs, map));
+  PetscCall(PetscLayoutDestroy(&init));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscInt cgid, int base, int zone, PetscInt num_sections, const int section_ids[], PetscSection *section, CGNS_ENUMT(ElementType_t) * cellTypes[], PetscInt *cells[], PetscLayout *layouts[], PetscInt *connectivity[])
 {
   MPI_Comm     comm = PetscObjectComm((PetscObject)dm);
   PetscSection section_;
@@ -762,7 +785,7 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
   PetscInt       nlocal_cells = 0, global_cell_dim = -1;
   PetscSegBuffer conn_sb;
 
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   PetscCall(PetscMalloc3(num_sections, &ranges, num_sections, &sectionCellTypes, num_sections, &layouts));
   for (PetscInt s = 0; s < num_sections; s++) {
     int      nbndry, parentFlag;
@@ -771,7 +794,7 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
     PetscCallCGNSRead(cg_section_read(cgid, base, zone, section_ids[s], buffer, &sectionCellTypes[s], &ranges[s].start, &ranges[s].end, &nbndry, &parentFlag), dm, 0);
     PetscCheck(sectionCellTypes[s] != CGNS_ENUMV(NGON_n) && sectionCellTypes[s] != CGNS_ENUMV(NFACE_n), comm, PETSC_ERR_SUP, "CGNS reader does not support elements of type NGON_n or NFACE_n");
     PetscInt num_section_cells = ranges[s].end - ranges[s].start + 1;
-    PetscCall(PetscLayoutCreateFromSizes(comm, PETSC_DECIDE, num_section_cells, 1, layouts[s]));
+    PetscCall(PetscLayoutCreateFromSizesAndOffset(comm, PETSC_DECIDE, num_section_cells, 1, ranges[s].start + 1, layouts[s]));
     PetscCall(PetscLayoutGetLocalSize((*layouts)[s], &local_size));
     nlocal_cells += local_size;
   }
@@ -790,16 +813,16 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
       cgsize_t *offsets, *conn_cg;
 
       PetscCall(PetscMalloc1(myowned + 1, &offsets)); // The last element in the array is the total size of the connectivity for the given [start,end] range
-      PetscCallCGNSRead(cgp_poly_elements_read_data_offsets(cgid, base, zone, s, ranges[s].start + mystart + 1, ranges[s].start + myend, offsets), dm, 0);
+      PetscCallCGNSRead(cgp_poly_elements_read_data_offsets(cgid, base, zone, s, mystart, myend - 1, offsets), dm, 0);
       PetscCall(PetscMalloc1(offsets[myowned + 1], &conn_cg));
-      PetscCallCGNSRead(cgp_poly_elements_read_data_elements(cgid, base, zone, s, ranges[s].start + mystart + 1, ranges[s].start + myend, offsets, conn_cg), dm, 0);
+      PetscCallCGNSRead(cgp_poly_elements_read_data_elements(cgid, base, zone, s, mystart, myend - 1, offsets, conn_cg), dm, 0);
       // TODO: For efficiency, we could do a loop through conn_cg to get the total number of corners for the section, then do a single SegBufferGetInts for the entire section, the loop through to get the corner connectivity
       for (PetscInt i = 0; i < myowned; i++) {
         DMPolytopeType dm_cell_type = DM_POLYTOPE_UNKNOWN;
         PetscInt       numCorners, cell_dim, *conn_sb_seg;
         const int     *perm;
 
-        (*cells)[c] = ranges[s].start + mystart + 1 + i;
+        (*cells)[c] = mystart + i;
 
         CGNS_ENUMT(ElementType_t) cellType = (CGNS_ENUMT(ElementType_t))conn_cg[offsets[i]];
         (*cellTypes)[c]                    = cellType;
@@ -831,11 +854,11 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
 
       PetscCallCGNSRead(cg_npe(sectionCellTypes[s], &npe), dm, 0);
       PetscCall(PetscMalloc1(myowned * npe, &conn_cg));
-      PetscCallCGNSRead(cgp_elements_read_data(cgid, base, zone, s, ranges[s].start + mystart + 1, ranges[s].start + myend, conn_cg), dm, 0);
+      PetscCallCGNSRead(cgp_elements_read_data(cgid, base, zone, s, mystart, myend - 1, conn_cg), dm, 0);
       PetscCall(DMPlexCGNSGetPermutation_Internal(dm_cell_type, numCorners, NULL, &perm));
       PetscCall(PetscSegBufferGetInts(conn_sb, numCorners * myowned, &conn_sb_seg));
       for (PetscInt i = 0; i < myowned; i++) {
-        (*cells)[c]     = ranges[s].start + mystart + 1 + i;
+        (*cells)[c]     = mystart + i;
         (*cellTypes)[c] = sectionCellTypes[s];
         for (PetscInt v = 0; v < numCorners; ++v) conn_sb_seg[i * numCorners + perm[v]] = conn_cg[i * npe + v];
         PetscCall(PetscSectionSetDof(section_, c, numCorners));
@@ -848,11 +871,8 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
   PetscCall(PetscSectionSetUp(section_));
   *section = section_;
   PetscCall(PetscSegBufferExtractTo(conn_sb, connectivity));
+
   PetscCall(PetscSegBufferDestroy(&conn_sb));
-  {
-    PetscCall(PetscMalloc1(num_sections, layout_offsets));
-    for (PetscInt s = 0; s < num_sections; s++) (*layout_offsets)[s] = ranges[s].start;
-  }
   PetscCall(PetscFree(ranges));
   PetscCall(PetscFree(sectionCellTypes));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -860,7 +880,7 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
 
 static inline PetscErrorCode PetscFindIntUnsorted(PetscInt key, PetscInt size, const PetscInt array[], PetscInt *loc)
 {
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   *loc = -1;
   for (PetscInt i = 0; i < size; i++) {
     if (array[i] == key) {
@@ -871,13 +891,60 @@ static inline PetscErrorCode PetscFindIntUnsorted(PetscInt key, PetscInt size, c
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Same as `PetscLayoutFindOwnerIndex()`, but does not fail if owner not in PetscLayout
+static PetscErrorCode PetscLayoutFindOwnerIndex_Internal(PetscLayout map, PetscInt idx, PetscMPIInt *owner, PetscInt *lidx, PetscBool *found_owner)
+{
+  PetscMPIInt lo = 0, hi, t;
+
+  PetscFunctionBegin;
+  PetscAssert((map->n >= 0) && (map->N >= 0) && (map->range), PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "PetscLayoutSetUp() must be called first");
+  if (owner) *owner = -1;
+  if (lidx) *lidx = -1;
+  if (idx >= 0 && idx <= map->N) {
+    *found_owner = PETSC_FALSE;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  hi = map->size;
+  while (hi - lo > 1) {
+    t = lo + (hi - lo) / 2;
+    if (idx < map->range[t]) hi = t;
+    else lo = t;
+  }
+  if (owner) *owner = lo;
+  if (lidx) *lidx = idx - map->range[lo];
+  if (found_owner) *found_owner = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// This function assumes that there is an array that `maps` describes the layout too. Locally, the range of each map is concatenated onto each other.
+// So [maps[0].start, ..., maps[0].end - 1, maps[1].start, ..., maps[1].end - 1, ...]
+// The returned index is the index into this array
+static PetscErrorCode PetscLayoutFindOwnerIndex_CGNS(PetscLayout maps[], PetscInt nmaps, PetscInt idx, PetscMPIInt *owner, PetscInt *lidx, PetscInt *mapidx)
+{
+  PetscFunctionBegin;
+  for (PetscInt m = 0; m < nmaps; m++) {
+    PetscBool found_owner = PETSC_FALSE;
+    PetscCall(PetscLayoutFindOwnerIndex_Internal(maps[m], idx, owner, lidx, &found_owner));
+    if (found_owner) {
+      // Now loop back through the previous maps to get the local offset for the containing index
+      for (PetscInt mm = m - 1; mm >= 0; mm--) {
+        PetscInt size = maps[mm]->range[*owner + 1] - maps[mm]->range[*owner];
+        *lidx += size;
+      }
+      if (mapidx) *mapidx = m;
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "CGNS id %" PetscInt_FMT " not found in layouts");
+}
+
 PetscErrorCode MatchIndicesFaceConnectivity(DM dm, PetscInt myownede, PetscInt nuniq_verts, const PetscInt uniq_verts[], PetscInt NVertices, PetscSection connSection, const PetscInt conn[], PetscSF *f2rankSF, PetscInt *matchingFaces[])
 {
   MPI_Comm    comm = PetscObjectComm((PetscObject)dm);
   PetscSF     f2mvertSF;
   PetscMPIInt rank, num_proc;
 
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &num_proc));
 
@@ -1108,6 +1175,41 @@ PetscErrorCode MatchIndicesFaceConnectivity(DM dm, PetscInt myownede, PetscInt n
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// Copied from PetscOptionsStringToInt
+static inline PetscErrorCode PetscStrtoInt(const char name[], PetscInt *a)
+{
+  size_t len;
+  char  *endptr;
+  long   strtolval;
+  PetscFunctionBegin;
+
+  PetscCall(PetscStrlen(name, &len));
+  PetscCheck(len, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "character string of length zero has no numerical value");
+
+  strtolval = strtol(name, &endptr, 10);
+  PetscCheck((size_t)(endptr - name) == len, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Input string \"%s\" has no integer value (do not include . in it)", name);
+
+#if defined(PETSC_USE_64BIT_INDICES) && defined(PETSC_HAVE_ATOLL)
+  (void)strtolval;
+  *a = atoll(name);
+#elif defined(PETSC_USE_64BIT_INDICES) && defined(PETSC_HAVE___INT64)
+  (void)strtolval;
+  *a = _atoi64(name);
+#else
+  *a = (PetscInt)strtolval;
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+typedef struct {
+  char     name[CGIO_MAX_NAME_LENGTH + 1];
+  int      normal[3], ndatasets;
+  cgsize_t npoints, nnormals;
+  CGNS_ENUMT(BCType_t) bctype;
+  CGNS_ENUMT(DataType_t) normal_datatype;
+  CGNS_ENUMT(PointSetType_t) pointtype;
+} CGBCInfo;
+
 PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, PetscBool interpolate, DM *dm)
 {
   PetscMPIInt num_proc, rank;
@@ -1217,59 +1319,85 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
   if (num_face_sections != 0 && nbocos != 0) {
     CGNS_ENUMT(ElementType_t) * cellTypes;
     PetscSection connSection;
-    PetscInt    *face_ids, *conn, *matchingFaces, *layout_offsets;
+    PetscInt    *face_ids, *conn, *matchingFaces;
     PetscSF      f2rankSF;
     PetscLayout *layouts;
+    PetscInt     num_connfaces;
 
-    PetscCall(DMPlexCGNS_CreateCornersConnectivitySection(*dm, cgid, base, zone, num_face_sections, face_section_ids, &connSection, &cellTypes, &face_ids, &layouts, &layout_offsets, &conn));
+    PetscCall(DMPlexCGNS_CreateCornersConnectivitySection(*dm, cgid, base, zone, num_face_sections, face_section_ids, &connSection, &cellTypes, &face_ids, &layouts, &conn));
+    {
+      PetscInt start, end;
+      PetscCall(PetscSectionGetChart(connSection, &start, &end));
+      num_connfaces = end - start;
+    }
     PetscCall(MatchIndicesFaceConnectivity(*dm, myownede, nuniq_verts, uniq_verts, NVertices, connSection, conn, &f2rankSF, &matchingFaces));
 
-    for (int BC = 0; BC < nbocos; BC++) {
-      CGNS_ENUMT(BCType_t) bctype;
-      CGNS_ENUMT(DataType_t) normal_datatype;
-      CGNS_ENUMT(PointSetType_t) pointtype;
+    PetscInt *face_values;
+    PetscCall(PetscMalloc1(num_connfaces, &face_values));
+    for (PetscInt BC = 0; BC < nbocos; BC++) {
       cgsize_t *points;
-      char     *bcname = buffer;
-      int       normal[3], ndatasets;
-      cgsize_t  npoints, nnormals;
+      CGBCInfo  bcinfo;
+      PetscBool is_faceset  = PETSC_FALSE;
+      PetscInt  label_value = 1;
 
-      // Ignore the output for normals, datatype, and datasets
-      PetscCallCGNSRead(cg_boco_info(cgid, base, zone, BC, bcname, &bctype, &pointtype, &npoints, normal, &nnormals, &normal_datatype, &ndatasets), *dm, 0);
-      if (npoints < 1) continue;
+      PetscCallCGNSRead(cg_boco_info(cgid, base, zone, BC, bcinfo.name, &bcinfo.bctype, &bcinfo.pointtype, &bcinfo.npoints, bcinfo.normal, &bcinfo.nnormals, &bcinfo.normal_datatype, &bcinfo.ndatasets), *dm, 0);
+
+      PetscCall(PetscStrbeginswith(bcinfo.name, "FaceSet", &is_faceset));
+      if (is_faceset) {
+        size_t faceset_len;
+        PetscCall(PetscStrlen("FaceSet", &faceset_len));
+        PetscCall(PetscStrtoInt(bcinfo.name + faceset_len, &label_value));
+      }
+      const char *label_name = is_faceset ? "Face Sets" : bcinfo.name;
+
+      if (bcinfo.npoints < 1) continue;
 
       PetscLayout bc_layout;
       PetscInt    bcStart, bcEnd, bcSize;
-      PetscCall(PetscLayoutCreateFromSizes(comm, PETSC_DECIDE, npoints, 1, &bc_layout));
+      PetscCall(PetscLayoutCreateFromSizesAndOffset(comm, PETSC_DECIDE, bcinfo.npoints, 1, -1, &bc_layout));
       PetscCall(PetscLayoutGetRange(bc_layout, &bcStart, &bcEnd));
       PetscCall(PetscLayoutGetLocalSize(bc_layout, &bcSize));
       PetscCall(DMGetWorkArray(*dm, bcSize, MPIU_CGSIZE, &points));
 
       const char *labels[] = {"Zone_t", "ZoneBC_t", "BC_t", "PointList"};
       PetscCallCGNSWrite(cg_golist(cgid, base, 4, (char **)labels, (int[]){zone, 1, BC, 0}), dm, 0);
-      PetscCallCGNSReadData(cgp_ptlist_read_data(cgid, bcStart + 1, bcEnd, points), *dm, 0);
+      PetscCallCGNSReadData(cgp_ptlist_read_data(cgid, bcStart, bcEnd - 1, points), *dm, 0);
 
+      PetscInt    *label_values;
+      PetscSFNode *remotes;
+      PetscCall(PetscMalloc1(bcSize, &remotes));
+      PetscCall(PetscMalloc1(bcSize, &label_values));
       for (PetscInt p = 0; p < bcSize; p++) {
-        {
-          PetscInt global_offset = 0, l;
+        PetscMPIInt bcrank;
+        PetscInt    bcidx;
 
-          for (l = 0; l < num_face_sections; l++) {
-            // TODO: Could create layouts via `PetscLayoutCreateFromRanges()` to avoid the layout_offsets shenanigans
-            // Literally create a PetscLayout the normal way, get the Ranges, add the offset to the ranges, then add the extra
-            // Could call it `PetscLayoutCreateFromSizesAndOffset()`
-            PetscInt    point_layout = points[p] - layout_offsets[l], index;
-            PetscMPIInt point_rank;
-            PetscBool   point_in_layout = PETSC_FALSE;
+        PetscCall(PetscLayoutFindOwnerIndex_CGNS(layouts, num_face_sections, points[p], &bcrank, &bcidx, NULL));
+        remotes->rank   = bcrank;
+        remotes->index  = bcidx;
+        label_values[p] = label_value;
+      }
 
-            PetscCall(PetscLayoutFindOwnerIndex(layouts[l], point_layout, &point_rank, &index));
-          }
-          if (point_in_layout) {
-            // Need to sum the local size of the *owning* rank for all the ranks before the last one
-            for (PetscInt ll = l - 1; ll > 0; ll--) { 
-              const PetscInt *ranges;
-              PetscCall(PetscLayoutGetRanges(layouts[ll], &ranges)); 
-              // Then sum together the differences in the ranges for the point_rank rank
-            }
-          }
+      PetscSF f2bcSF, bc2fSF, bc2rankSF;
+      PetscCall(PetscSFCreate(comm, &f2bcSF));
+      PetscCall(PetscSFSetGraph(f2bcSF, num_connfaces, bcSize, NULL, PETSC_COPY_VALUES, remotes, PETSC_USE_POINTER));
+      PetscCall(PetscSFCreateInverseSF(f2bcSF, &bc2fSF));
+      PetscCall(PetscSFCompose(bc2fSF, f2rankSF, &bc2rankSF));
+
+      for (PetscInt i = 0; i < num_connfaces; i++) face_values[i] = -1;
+      PetscCall(PetscSFBcastBegin(bc2rankSF, MPIU_INT, label_values, face_values, MPI_REPLACE));
+      PetscCall(PetscSFBcastEnd(bc2rankSF, MPIU_INT, label_values, face_values, MPI_REPLACE));
+
+      PetscCall(PetscSFDestroy(&f2bcSF));
+      PetscCall(PetscSFDestroy(&bc2fSF));
+      PetscCall(PetscSFDestroy(&bc2rankSF));
+
+      { // Set the label values for the communicated faces
+        DMLabel label;
+
+        PetscCall(DMGetLabel(*dm, label_name, &label));
+        for (PetscInt i = 0; i < num_connfaces; i++) {
+          if (face_values[i] == -1) continue;
+          PetscCall(DMLabelSetValue(label, matchingFaces[i], face_values[i]));
         }
       }
     }
@@ -2052,7 +2180,7 @@ PetscErrorCode VecLoad_Plex_CGNS_Internal(Vec V, PetscViewer viewer)
   int               numComp;
   PetscInt          V_numComps, mystartv, myendv, myownedv;
 
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)V, &comm));
 
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-dm_plex_cgns_parallel", &use_parallel_viewer, NULL));
