@@ -1,102 +1,120 @@
-      interface
-        subroutine PetscPrintf(m, c, ierr)
-          use, intrinsic :: ISO_C_binding
-          use petscmpi
-          MPIU_Comm :: m
-          character(len=*) :: c
-          PetscErrorCode :: ierr
-        end subroutine
+interface
+  subroutine PetscPrintf(m, c, ierr)
+    use, intrinsic :: ISO_C_binding
+    use petscmpi
+    MPIU_Comm :: m
+    character(len=*) :: c
+    PetscErrorCode :: ierr
+  end subroutine
+end interface
 
 #if defined(PETSC_HAVE_FORTRAN_FREE_LINE_LENGTH_NONE)
-        subroutine PetscErrorf(ierr, line, file)
-          use, intrinsic :: ISO_C_binding
-          PetscErrorCode, intent(in) :: ierr
-          integer, intent(in) ::  line
-          character(*) file
-        end subroutine PetscErrorf
+interface
+  subroutine PetscErrorf(ierr, line, file)
+    use, intrinsic :: ISO_C_binding
+    PetscErrorCode, intent(in) :: ierr
+    integer, intent(in) ::  line
+    character(*) file
+  end subroutine PetscErrorf
+end interface
 
-        subroutine PetscErrorMPI(ierr, line, file)
-          use, intrinsic :: ISO_C_binding
-          PetscErrorCode, intent(inout) :: ierr
-          integer, intent(in) ::  line
-          character(*) file
-        end subroutine PetscErrorMPI
+interface
+  subroutine PetscErrorMPI(ierr, line, file)
+    use, intrinsic :: ISO_C_binding
+    PetscErrorCode, intent(inout) :: ierr
+    integer, intent(in) ::  line
+    character(*) file
+  end subroutine PetscErrorMPI
+end interface
+
 #else
-        subroutine PetscErrorf(ierr)
-          use, intrinsic :: ISO_C_binding
-          PetscErrorCode, intent(in) :: ierr
-        end subroutine PetscErrorf
 
-        subroutine PetscErrorMPI(ierr)
-          use, intrinsic :: ISO_C_binding
-          PetscErrorCode, intent(inout) :: ierr
-        end subroutine PetscErrorMPI
+interface
+  subroutine PetscErrorf(ierr)
+    use, intrinsic :: ISO_C_binding
+    PetscErrorCode, intent(in) :: ierr
+  end subroutine PetscErrorf
+end interface
+
+interface
+  subroutine PetscErrorMPI(ierr)
+    use, intrinsic :: ISO_C_binding
+    PetscErrorCode, intent(inout) :: ierr
+  end subroutine PetscErrorMPI
+end interface
 #endif
 
-        subroutine MPIU_abort(comm, ierr)
-          use, intrinsic :: ISO_C_binding
-          use petscmpi
-          MPIU_Comm, intent(in) ::  comm
-          PetscErrorCode, intent(in) ::  ierr
-        end subroutine
+interface
+  subroutine MPIU_abort(comm, ierr)
+    use, intrinsic :: ISO_C_binding
+    use petscmpi
+    MPIU_Comm, intent(in) ::  comm
+    PetscErrorCode, intent(in) ::  ierr
+  end subroutine
+end interface
 
-        subroutine PetscViewerASCIIStdoutSetFileUnit(unit, z)
-          use, intrinsic :: ISO_C_binding
-          integer4 unit
-          PetscErrorCode, intent(out) :: z
-        end subroutine
+interface
+  subroutine PetscViewerASCIIStdoutSetFileUnit(unit, z)
+    use, intrinsic :: ISO_C_binding
+    integer4 unit
+    PetscErrorCode, intent(out) :: z
+  end subroutine
+end interface
 
-        subroutine PetscLogEventBegin(event, ierr)
-          use, intrinsic :: ISO_C_binding
-          PetscLogEvent, intent(in) :: event
-          PetscErrorCode, intent(out) :: ierr
-        end subroutine PetscLogEventBegin
+interface
+  subroutine PetscLogEventBegin(event, ierr)
+    use, intrinsic :: ISO_C_binding
+    PetscLogEvent, intent(in) :: event
+    PetscErrorCode, intent(out) :: ierr
+  end subroutine PetscLogEventBegin
+end interface
 
-        subroutine PetscLogEventEnd(event, ierr)
-          use, intrinsic :: ISO_C_binding
-          PetscLogEvent, intent(in) :: event
-          PetscErrorCode, intent(out) :: ierr
-        end subroutine PetscLogEventEnd
-      end interface
+interface
+  subroutine PetscLogEventEnd(event, ierr)
+    use, intrinsic :: ISO_C_binding
+    PetscLogEvent, intent(in) :: event
+    PetscErrorCode, intent(out) :: ierr
+  end subroutine PetscLogEventEnd
+end interface
 
-      interface
-        subroutine PetscIntArray1dDestroy(a, ierr)
-          use, intrinsic :: ISO_C_binding
-          PetscInt, pointer :: a(:)
-          PetscErrorCode    :: ierr
-        end subroutine
-      end interface
+interface
+  subroutine PetscIntArray1dDestroy(a, ierr)
+    use, intrinsic :: ISO_C_binding
+    PetscInt, pointer :: a(:)
+    PetscErrorCode    :: ierr
+  end subroutine
+end interface
 
-      interface PetscShmgetAllocateArrayScalar
-        subroutine PetscShmgetAllocateArrayScalar(start, len, d1, ierr)
-          use, intrinsic :: ISO_C_binding
-          PetscInt :: start, len
-          PetscScalar, pointer :: d1(:)
-          PetscErrorCode ierr
-        end subroutine
-      end interface
+interface
+  subroutine PetscShmgetAllocateArrayScalar(start, len, d1, ierr)
+    use, intrinsic :: ISO_C_binding
+    PetscInt :: start, len
+    PetscScalar, pointer :: d1(:)
+    PetscErrorCode ierr
+  end subroutine
+end interface
 
-      interface PetscShmgetDeallocateArrayScalar
-        subroutine PetscShmgetDeallocateArrayScalar(d1, ierr)
-          use, intrinsic :: ISO_C_binding
-          PetscScalar, pointer :: d1(:)
-          PetscErrorCode ierr
-        end subroutine
-      end interface
+interface
+  subroutine PetscShmgetDeallocateArrayScalar(d1, ierr)
+    use, intrinsic :: ISO_C_binding
+    PetscScalar, pointer :: d1(:)
+    PetscErrorCode ierr
+  end subroutine
+end interface
 
-      interface PetscShmgetAllocateArrayInt
-        subroutine PetscShmgetAllocateArrayInt(start, len, d1, ierr)
-          use, intrinsic :: ISO_C_binding
-          PetscInt :: start, len
-          PetscInt, pointer :: d1(:)
-          PetscErrorCode ierr
-        end subroutine
-      end interface
+interface
+  subroutine PetscShmgetAllocateArrayInt(start, len, d1, ierr)
+    use, intrinsic :: ISO_C_binding
+    PetscInt :: start, len
+    PetscInt, pointer :: d1(:)
+    PetscErrorCode ierr
+  end subroutine
+end interface
 
-      interface PetscShmgetDeallocateArrayInt
-        subroutine PetscShmgetDeallocateArrayInt(d1, ierr)
-          use, intrinsic :: ISO_C_binding
-          PetscInt, pointer :: d1(:)
-          PetscErrorCode ierr
-        end subroutine
-      end interface
+interface
+  subroutine PetscShmgetDeallocateArrayInt(d1, ierr)
+    use, intrinsic :: ISO_C_binding
+    PetscInt, pointer :: d1(:)
+    PetscErrorCode ierr
+  end subroutine
+end interface
