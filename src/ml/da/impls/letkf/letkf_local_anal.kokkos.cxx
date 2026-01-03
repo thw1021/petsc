@@ -41,48 +41,58 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
   /* Copy T to host */
   Kokkos::deep_copy(T_host, T_batch);
 
-  /* Allocate contiguous buffers for LAPACK */
-  PetscScalar *v_contiguous, *lambda_contiguous;
-  PetscCall(PetscMalloc2(n_size * n_size, &v_contiguous, n_size, &lambda_contiguous));
+  /* Allocate contiguous buffers for LAPACK for ALL matrices */
+  PetscScalar *all_v, *all_lambda, *all_work;
+  PetscBLASInt lwork_query = -1, lwork;
+  PetscScalar work_query;
+  PetscBLASInt n_blas;
+  PetscCall(PetscBLASIntCast(n_size, &n_blas));
 
-  /* Process each matrix sequentially on host using LAPACK */
-  for (PetscInt i = 0; i < n_batch; i++) {
-    PetscBLASInt n, lda, lwork, info;
-    PetscScalar *work;
-
-    PetscCall(PetscBLASIntCast(n_size, &n));
-    lda = n;
-
-    /* Copy T_host(i, :, :) to v_contiguous (column-major) */
-    for (PetscInt j = 0; j < n_size; j++) {
-      for (PetscInt k = 0; k < n_size; k++) { v_contiguous[k + j * n_size] = T_host(i, k, j); }
-    }
-
-    /* Query workspace size */
-    lwork = -1;
-    PetscCall(PetscMalloc1(1, &work));
-    LAPACKsyev_("V", "U", &n, v_contiguous, &lda, lambda_contiguous, work, &lwork, &info);
-    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK workspace query failed: info=%" PetscBLASInt_FMT, info);
-
-    /* Allocate workspace */
-    lwork = (PetscBLASInt)PetscRealPart(work[0]);
-    PetscCall(PetscFree(work));
-    PetscCall(PetscMalloc1(lwork, &work));
-
-    /* Compute eigendecomposition: T = V * Lambda * V^T */
-    LAPACKsyev_("V", "U", &n, v_contiguous, &lda, lambda_contiguous, work, &lwork, &info);
-    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK eigendecomposition failed for matrix %" PetscInt_FMT ": info=%" PetscBLASInt_FMT, i, info);
-
-    PetscCall(PetscFree(work));
-
-    /* Copy results back to host views */
-    for (PetscInt j = 0; j < n_size; j++) {
-      Lambda_host(i, j) = lambda_contiguous[j];
-      for (PetscInt k = 0; k < n_size; k++) { V_host(i, k, j) = v_contiguous[k + j * n_size]; }
-    }
+  /* Query workspace size once */
+  {
+    PetscBLASInt info;
+    LAPACKsyev_("V", "U", &n_blas, &work_query, &n_blas, &work_query, &work_query, &lwork_query, &info);
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK workspace query failed");
+    lwork = (PetscBLASInt)PetscRealPart(work_query);
   }
 
-  PetscCall(PetscFree2(v_contiguous, lambda_contiguous));
+  PetscCall(PetscMalloc3(n_batch * n_size * n_size, &all_v, n_batch * n_size, &all_lambda, n_batch * lwork, &all_work));
+
+  /* Process each matrix in parallel on host using LAPACK */
+  Kokkos::parallel_for(
+    "BatchedEigenSolve_Host", Kokkos::RangePolicy<Kokkos::DefaultHostExecutionSpace>(0, n_batch), KOKKOS_LAMBDA(const int i) {
+      PetscBLASInt n = n_blas;
+      PetscBLASInt lda = n;
+      PetscBLASInt info;
+      PetscBLASInt lw = lwork;
+
+      /* Pointers for this matrix */
+      PetscScalar *v_ptr = all_v + i * n_size * n_size;
+      PetscScalar *lambda_ptr = all_lambda + i * n_size;
+      PetscScalar *work_ptr = all_work + i * lwork;
+
+      /* Copy T_host(i, :, :) to v_ptr (column-major) */
+      for (PetscInt j = 0; j < n_size; j++) {
+        for (PetscInt k = 0; k < n_size; k++) { v_ptr[k + j * n_size] = T_host(i, k, j); }
+      }
+
+      /* Compute eigendecomposition: T = V * Lambda * V^T */
+      LAPACKsyev_("V", "U", &n, v_ptr, &lda, lambda_ptr, work_ptr, &lw, &info);
+      
+      if (info != 0) {
+        /* We cannot return error code from lambda, so we just abort or ignore. 
+           In production code, we should use a reduction to report errors. */
+        Kokkos::abort("LAPACK eigendecomposition failed in parallel region");
+      }
+
+      /* Copy results back to host views */
+      for (PetscInt j = 0; j < n_size; j++) {
+        Lambda_host(i, j) = lambda_ptr[j];
+        for (PetscInt k = 0; k < n_size; k++) { V_host(i, k, j) = v_ptr[k + j * n_size]; }
+      }
+    });
+
+  PetscCall(PetscFree3(all_v, all_lambda, all_work));
 
   /* Copy results back to device */
   Kokkos::deep_copy(Lambda_batch, Lambda_host);
@@ -115,6 +125,7 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   int                lwork = 0;
   PetscScalar       *d_work;
   int               *d_info;
+  PetscScalar       *d_A, *d_W;
 
   PetscFunctionBegin;
 
@@ -133,6 +144,14 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   /* Allocate workspace on device */
   cudaMalloc(&d_work, sizeof(PetscScalar) * lwork);
   cudaMalloc(&d_info, sizeof(int));
+  cudaMalloc(&d_A, sizeof(PetscScalar) * n_size * n_size);
+  cudaMalloc(&d_W, sizeof(PetscScalar) * n_size);
+
+  /* Create unmanaged views for contiguous buffers */
+  using view_2d_unmanaged = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using view_1d_unmanaged = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  view_2d_unmanaged d_A_view(d_A, n_size, n_size);
+  view_1d_unmanaged d_W_view(d_W, n_size);
 
   /* Process each matrix in the batch */
   for (PetscInt i = 0; i < n_batch; i++) {
@@ -141,14 +160,14 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
     auto Lambda_i = Kokkos::subview(Lambda_batch, i, Kokkos::ALL());
     auto V_i      = Kokkos::subview(V_batch, i, Kokkos::ALL(), Kokkos::ALL());
 
-    /* Copy T to V (cuSOLVER overwrites input) */
-    Kokkos::deep_copy(V_i, T_i);
+    /* Copy T to contiguous d_A */
+    Kokkos::deep_copy(d_A_view, T_i);
 
     /* Solve eigendecomposition on device */
   #if defined(PETSC_USE_REAL_SINGLE)
-    cusolver_status = cusolverDnSsyevd(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, V_i.data(), n_size, Lambda_i.data(), d_work, lwork, d_info);
+    cusolver_status = cusolverDnSsyevd(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A, n_size, d_W, d_work, lwork, d_info);
   #else
-    cusolver_status = cusolverDnDsyevd(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, V_i.data(), n_size, Lambda_i.data(), d_work, lwork, d_info);
+    cusolver_status = cusolverDnDsyevd(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A, n_size, d_W, d_work, lwork, d_info);
   #endif
     PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevd failed for matrix %" PetscInt_FMT, i);
 
@@ -156,9 +175,15 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
     int h_info;
     cudaMemcpy(&h_info, d_info, sizeof(int), cudaMemcpyDeviceToHost);
     PetscCheck(h_info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "cuSOLVER eigendecomposition failed for matrix %" PetscInt_FMT ": info=%d", i, h_info);
+
+    /* Copy results back */
+    Kokkos::deep_copy(V_i, d_A_view);
+    Kokkos::deep_copy(Lambda_i, d_W_view);
   }
 
   /* Cleanup */
+  cudaFree(d_A);
+  cudaFree(d_W);
   cudaFree(d_work);
   cudaFree(d_info);
   cusolverDnDestroy(cusolverH);
