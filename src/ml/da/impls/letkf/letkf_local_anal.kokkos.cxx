@@ -47,7 +47,7 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
   /* Allocate contiguous buffers for LAPACK for ALL matrices */
   PetscScalar *all_v, *all_lambda, *all_work;
   PetscBLASInt lwork_query = -1, lwork;
-  PetscScalar work_query;
+  PetscScalar  work_query;
   PetscBLASInt n_blas;
   PetscCall(PetscBLASIntCast(n_size, &n_blas));
 
@@ -64,15 +64,15 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
   /* Process each matrix in parallel on host using LAPACK */
   Kokkos::parallel_for(
     "BatchedEigenSolve_Host", Kokkos::RangePolicy<Kokkos::DefaultHostExecutionSpace>(0, n_batch), KOKKOS_LAMBDA(const int i) {
-      PetscBLASInt n = n_blas;
+      PetscBLASInt n   = n_blas;
       PetscBLASInt lda = n;
       PetscBLASInt info;
       PetscBLASInt lw = lwork;
 
       /* Pointers for this matrix */
-      PetscScalar *v_ptr = all_v + i * n_size * n_size;
+      PetscScalar *v_ptr      = all_v + i * n_size * n_size;
       PetscScalar *lambda_ptr = all_lambda + i * n_size;
-      PetscScalar *work_ptr = all_work + i * lwork;
+      PetscScalar *work_ptr   = all_work + i * lwork;
 
       /* Copy T_host(i, :, :) to v_ptr (column-major) */
       for (PetscInt j = 0; j < n_size; j++) {
@@ -81,7 +81,7 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
 
       /* Compute eigendecomposition: T = V * Lambda * V^T */
       LAPACKsyev_("V", "U", &n, v_ptr, &lda, lambda_ptr, work_ptr, &lw, &info);
-      
+
       if (info != 0) {
         /* We cannot return error code from lambda, so we just abort or ignore. 
            In production code, we should use a reduction to report errors. */
@@ -140,7 +140,7 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   /* Create syevj params */
   cusolver_status = cusolverDnCreateSyevjInfo(&syevj_params);
   PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnCreateSyevjInfo failed");
-  
+
   /* Set default params */
   cusolverDnXsyevjSetTolerance(syevj_params, 1e-7);
   cusolverDnXsyevjSetMaxSweeps(syevj_params, 100);
@@ -155,9 +155,7 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   /* T_batch(i, j, k) -> d_A[i * n*n + k*n + j] (Column-Major) */
   Kokkos::parallel_for(
     "CopyTToContiguous", Kokkos::MDRangePolicy<Kokkos::Rank<3>, Kokkos::DefaultExecutionSpace>({0, 0, 0}, {n_batch, n_size, n_size}),
-    KOKKOS_LAMBDA(const int i, const int j, const int k) {
-      d_A[i * n_size * n_size + k * n_size + j] = T_batch(i, j, k);
-    });
+    KOKKOS_LAMBDA(const int i, const int j, const int k) { d_A[i * n_size * n_size + k * n_size + j] = T_batch(i, j, k); });
   Kokkos::fence();
 
   /* Query workspace size */
@@ -184,9 +182,7 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   PetscCall(PetscMalloc1(n_batch, &h_info));
   cudaMemcpy(h_info, d_info, sizeof(int) * n_batch, cudaMemcpyDeviceToHost);
   for (int i = 0; i < n_batch; i++) {
-      if (h_info[i] != 0) {
-          PetscCheck(h_info[i] == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "cuSOLVER eigendecomposition failed for matrix %" PetscInt_FMT ": info=%d", i, h_info[i]);
-      }
+    if (h_info[i] != 0) { PetscCheck(h_info[i] == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "cuSOLVER eigendecomposition failed for matrix %" PetscInt_FMT ": info=%d", i, h_info[i]); }
   }
   PetscCall(PetscFree(h_info));
 
@@ -194,11 +190,10 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   /* d_A (eigenvectors) -> V_batch */
   /* d_W (eigenvalues) -> Lambda_batch */
   Kokkos::parallel_for(
-    "CopyResultsBack", Kokkos::MDRangePolicy<Kokkos::Rank<3>, Kokkos::DefaultExecutionSpace>({0, 0, 0}, {n_batch, n_size, n_size}),
-    KOKKOS_LAMBDA(const int i, const int j, const int k) {
+    "CopyResultsBack", Kokkos::MDRangePolicy<Kokkos::Rank<3>, Kokkos::DefaultExecutionSpace>({0, 0, 0}, {n_batch, n_size, n_size}), KOKKOS_LAMBDA(const int i, const int j, const int k) {
       V_batch(i, j, k) = d_A[i * n_size * n_size + k * n_size + j];
       if (k == 0) { /* Only need to copy eigenvalues once per row */
-          Lambda_batch(i, j) = d_W[i * n_size + j];
+        Lambda_batch(i, j) = d_W[i * n_size + j];
       }
     });
   Kokkos::fence();
@@ -287,6 +282,21 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   /* ===================================================================== */
   /* Step 2.1.1: Create batched workspace for ALL grid points            */
   /* ===================================================================== */
+  /* 
+     NOTE ON PARALLELISM STRATEGY:
+     We use Kokkos::RangePolicy over grid points (n_vertices) combined with KokkosBatched::Serial kernels.
+     Since the data layout is LayoutLeft (Column-Major) to match PETSc/LAPACK, the index 'i' (grid point)
+     is the fastest varying index (stride 1).
+
+     RangePolicy maps consecutive threads to consecutive 'i', ensuring perfect memory coalescing 
+     when accessing arrays like S_batch(i, p, j).
+
+     Using TeamPolicy/TeamVectorRange to parallelize inner loops (m or p) would assign a team to 'i',
+     causing threads within the team to access S_batch with stride 'n_vertices', which leads to 
+     uncoalesced memory access and poor performance on GPUs.
+
+     Therefore, RangePolicy + SerialGemm is the optimal strategy for this data layout.
+  */
   using exec_space = Kokkos::DefaultExecutionSpace;
   using view_3d    = Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, exec_space>;
   using view_2d    = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, exec_space>;
@@ -304,6 +314,8 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   view_2d y_batch("y_batch", n_vertices, impl->p_local);                   // (n_vertices, p_local)
   view_2d y_mean_batch("y_mean_batch", n_vertices, impl->p_local);         // (n_vertices, p_local)
   view_2d r_inv_sqrt_batch("r_inv_sqrt_batch", n_vertices, impl->p_local); // (n_vertices, p_local)
+  view_2d temp1_batch("temp1_batch", n_vertices, m);                       // (n_vertices, m) - Workspace
+  view_2d temp2_batch("temp2_batch", n_vertices, m);                       // (n_vertices, m) - Workspace
 
   /* ===================================================================== */
   /* Step 2.1.2a: Pre-extract Q matrix CSR data for device access        */
@@ -397,14 +409,11 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
 
       /* Init T_i = (1/ρ)I */
       for (int j = 0; j < m; j++) {
-        for (int k = 0; k < m; k++) {
-          T_i(j, k) = (j == k) ? inflation_inv : 0.0;
-        }
+        for (int k = 0; k < m; k++) { T_i(j, k) = (j == k) ? inflation_inv : 0.0; }
       }
 
       /* T_i += S_i^T * S_i */
-      KokkosBatched::SerialGemm<KokkosBatched::Trans::Transpose, KokkosBatched::Trans::NoTranspose, KokkosBatched::Algo::Gemm::Unblocked>::invoke(
-          1.0, S_i, S_i, 1.0, T_i);
+      KokkosBatched::SerialGemm<KokkosBatched::Trans::Transpose, KokkosBatched::Trans::NoTranspose, KokkosBatched::Algo::Gemm::Unblocked>::invoke(1.0, S_i, S_i, 1.0, T_i);
     });
   Kokkos::fence();
 
@@ -429,31 +438,31 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       auto w_i      = Kokkos::subview(w_batch, i, Kokkos::ALL());
       auto T_sqrt_i = Kokkos::subview(T_sqrt_batch, i, Kokkos::ALL(), Kokkos::ALL());
       auto G_i      = Kokkos::subview(G_batch, i, Kokkos::ALL(), Kokkos::ALL());
+      auto temp1    = Kokkos::subview(temp1_batch, i, Kokkos::ALL());
+      auto temp2    = Kokkos::subview(temp2_batch, i, Kokkos::ALL());
 
       /* 1. Compute w_i = V * L^-1 * V^T * S^T * delta */
       /* temp1 = S^T * delta */
-      PetscScalar temp1[200]; /* Assuming m <= 200 */
       for (int j = 0; j < m; j++) {
         PetscScalar sum = 0.0;
         for (int k = 0; k < impl->p_local; k++) { sum += S_i(k, j) * delta_i(k); }
-        temp1[j] = sum;
+        temp1(j) = sum;
       }
 
       /* temp2 = V^T * temp1 */
-      PetscScalar temp2[200];
       for (int j = 0; j < m; j++) {
         PetscScalar sum = 0.0;
-        for (int k = 0; k < m; k++) { sum += V_i(k, j) * temp1[k]; }
-        temp2[j] = sum;
+        for (int k = 0; k < m; k++) { sum += V_i(k, j) * temp1(k); }
+        temp2(j) = sum;
       }
 
       /* temp2 = temp2 / Lambda */
-      for (int j = 0; j < m; j++) { temp2[j] /= Lambda_i(j); }
+      for (int j = 0; j < m; j++) { temp2(j) /= Lambda_i(j); }
 
       /* w = V * temp2 */
       for (int j = 0; j < m; j++) {
         PetscScalar sum = 0.0;
-        for (int k = 0; k < m; k++) { sum += V_i(j, k) * temp2[k]; }
+        for (int k = 0; k < m; k++) { sum += V_i(j, k) * temp2(k); }
         w_i(j) = sum;
       }
 
@@ -498,22 +507,19 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   Kokkos::parallel_for(
     "BatchedEnsembleUpdate", Kokkos::RangePolicy<exec_space>(0, n_vertices), KOKKOS_LAMBDA(const int i) {
       /* For each grid point i, compute E_i = mean_i + X_i * G_i */
-      auto X_i = Kokkos::subview(X_view, Kokkos::make_pair(i * ndof, (i + 1) * ndof), Kokkos::ALL());
-      auto E_i = Kokkos::subview(E_view, Kokkos::make_pair(i * ndof, (i + 1) * ndof), Kokkos::ALL());
-      auto G_i = Kokkos::subview(G_batch, i, Kokkos::ALL(), Kokkos::ALL());
+      auto X_i    = Kokkos::subview(X_view, Kokkos::make_pair(i * ndof, (i + 1) * ndof), Kokkos::ALL());
+      auto E_i    = Kokkos::subview(E_view, Kokkos::make_pair(i * ndof, (i + 1) * ndof), Kokkos::ALL());
+      auto G_i    = Kokkos::subview(G_batch, i, Kokkos::ALL(), Kokkos::ALL());
       auto mean_i = Kokkos::subview(mean_view, Kokkos::make_pair(i * ndof, (i + 1) * ndof));
 
       /* Init E_i with mean */
       for (int row = 0; row < ndof; row++) {
         PetscScalar m_val = mean_i(row);
-        for (int col = 0; col < m; col++) {
-          E_i(row, col) = m_val;
-        }
+        for (int col = 0; col < m; col++) { E_i(row, col) = m_val; }
       }
 
       /* E_i += X_i * G_i */
-      KokkosBatched::SerialGemm<KokkosBatched::Trans::NoTranspose, KokkosBatched::Trans::NoTranspose, KokkosBatched::Algo::Gemm::Unblocked>::invoke(
-          1.0, X_i, G_i, 1.0, E_i);
+      KokkosBatched::SerialGemm<KokkosBatched::Trans::NoTranspose, KokkosBatched::Trans::NoTranspose, KokkosBatched::Algo::Gemm::Unblocked>::invoke(1.0, X_i, G_i, 1.0, E_i);
     });
   Kokkos::fence();
 
