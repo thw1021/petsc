@@ -1586,7 +1586,7 @@ PetscErrorCode TaoTermCreateUnmappedHessianMatrices(TaoTerm term, Mat *H, Mat *H
   if (term->ops->createunmappedhessianmatrices) PetscUseTypeMethod(term, createunmappedhessianmatrices, H, Hpre);
   else {
     PetscCall(PetscInfo(term, "TaoTermCreateUnmappedHessianMatrices unknown. Trying default implementation\n"));
-    PetscCall(TaoTermCreateUnmappedHessianMatrices(term, H, Hpre));
+    PetscCall(TaoTermCreateUnmappedHessianMatricesDefault(term, H, Hpre));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

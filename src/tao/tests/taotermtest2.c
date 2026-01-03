@@ -99,7 +99,7 @@ int main(int argc, char **argv)
   PetscCall(TaoTermCreateShell(comm, (void *)ctx, CtxDestroy, &objective));
 
   /* Set solution and parameter sizes to match the mapped space (m) */
-  PetscCall(TaoTermSetSolutionSizes(objective, PETSC_DECIDE, n, 1));
+  PetscCall(TaoTermSetSolutionSizes(objective, PETSC_DECIDE, m, 1));
   PetscCall(TaoTermSetParametersSizes(objective, PETSC_DECIDE, m, 1));
 
   PetscCall(TaoTermShellSetObjectiveAndGradient(objective, FormFunctionGradient));
@@ -130,11 +130,10 @@ int main(int argc, char **argv)
   cb_ctx->p = target;
 
   /* Create work vectors */
-  PetscCall(MatCreateVecs(A, &cb_ctx->Ax, NULL));
+  PetscCall(MatCreateVecs(A, NULL, &cb_ctx->Ax));
   PetscCall(VecDuplicate(target, &cb_ctx->Ax_p));
 
-  /* Create solution vector for callback version (size n, not m) - initialize to zero like tao */
-  PetscCall(MatCreateVecs(A, NULL, &x2));
+  PetscCall(MatCreateVecs(A, &x2, NULL));
   PetscCall(VecZeroEntries(x2));
 
   /* Create Hessian matrix A^T * A */

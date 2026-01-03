@@ -272,8 +272,8 @@ static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec 
   /* Create TaoTerm, set prefix, and configure from options */
   PetscCall(TaoTermCreate(comm, term));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*term, term_prefix));
-//  PetscCall(TaoTermSetSolutionSizes(*term, PETSC_DECIDE, has_A ? ctx->map_row_size : ctx->user->n, 1));
-  PetscCall(TaoTermSetSolutionSizes(*term, PETSC_DECIDE, ctx->user->n, 1));
+  PetscCall(TaoTermSetSolutionSizes(*term, PETSC_DECIDE, has_A ? ctx->map_row_size : ctx->user->n, 1));
+  //PetscCall(TaoTermSetSolutionSizes(*term, PETSC_DECIDE, ctx->user->n, 1));
   PetscCall(TaoTermSetFromOptions(*term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

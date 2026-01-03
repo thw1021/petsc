@@ -558,6 +558,7 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
     }
 #else
     // create _unmapped only if they are empty
+    // TODO this is wrong, as this will make unmapped_H to be m x m, (param size), not sol size n x n....
     PetscCall(TaoTermCreateUnmappedHessianMatrices(mt->term, (mt->_unmapped_H) ? NULL : &mt->_unmapped_H, (mt->_unmapped_Hpre) ? NULL : &mt->_unmapped_Hpre));
     //TODO for AIJ....
     PetscCall(MatAssemblyBegin(mt->_unmapped_H, MAT_FINAL_ASSEMBLY));
