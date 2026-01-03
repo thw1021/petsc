@@ -936,7 +936,7 @@ static PetscErrorCode PetscLayoutFindOwnerIndex_CGNSSectionLayouts(PetscLayout m
       PetscFunctionReturn(PETSC_SUCCESS);
     }
   }
-  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "CGNS id %" PetscInt_FMT " not found in layouts");
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "CGNS id %" PetscInt_FMT " not found in layouts", idx);
 }
 
 // cg2plexSF is a mapping from the owned CGNS faces to the rank whose local Plex has that face.
@@ -1515,6 +1515,8 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
       }
     }
   }
+  PetscCall(PetscFree(uniq_verts));
+  PetscCall(PetscFree(face_section_ids));
 
   // -- Create SF for naive nodal-data read to elements
   PetscSF plex_to_cgns_sf;
@@ -2043,6 +2045,8 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       for (fs = 0; fs < num_fs; ++fs) PetscCall(ISDestroy(&fsISs[fs]));
       PetscCall(PetscFree(fsISs));
     }
+    PetscCall(ISDestroy(&fsIS));
+
     {
       const PetscInt *faces;
       DMPolytopeType  cell_type, cell_type_f;
@@ -2145,8 +2149,11 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       else if (topo_dim == 1) grid_loc = CGNS_ENUMV(Vertex);
       PetscCallCGNSWriteData(cg_boco_gridlocation_write(cgv->file_num, base, zone, BC, grid_loc), dm, viewer);
 
+      PetscCall(PetscFree(fs_pnts_cg));
       PetscCall(ISDestroy(&stratumIS));
     }
+    PetscCall(ISDestroy(&fsISTotal));
+    PetscCall(PetscFree(fsIdxGlobal));
     elem_offset += f_global;
   }
 
