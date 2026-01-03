@@ -17,6 +17,7 @@ typedef struct {
   Mat      Q;       // Localization matrix (n_grid x n_observations_total) Each row has exactly Q_NUM_LOCAL_OBSERVATIONS_MAX non-zeros
   PetscInt p_local; // = Q_NUM_LOCAL_OBSERVATIONS_MAX (number of local observations per grid point)
   PetscInt n_grid;  // Number of grid points (n_grid = state_size / da->ndof)
+  PetscInt batch_size; // Batch size for GPU processing
 } PetscDALETKFData;
 
 #if defined(PETSC_HAVE_KOKKOS)

@@ -878,7 +878,7 @@ int main(int argc, char **argv)
     test:
       requires: kokkos
       suffix: kokkos_dam
-      args: -petscda_type letkf -mat_type aijkokkos -da_letkf_chunk_size 13
+      args: -petscda_type letkf -mat_type aijkokkos -petscda_letkf_batch_size 13
 
   testset:
     requires: !complex
@@ -892,7 +892,7 @@ int main(int argc, char **argv)
     test:
       requires: kokkos
       suffix: kokkos_wave
-      args: -petscda_type letkf -mat_type aijkokkos -da_letkf_chunk_size 13
+      args: -petscda_type letkf -mat_type aijkokkos -petscda_letkf_batch_size 13
 
     test:
       suffix: wave_mc
