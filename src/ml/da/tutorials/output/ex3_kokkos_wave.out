@@ -9,6 +9,7 @@ PetscDALETKF Object:
   Square root type: eigen
   Local analysis: Kokkos
   Local observations per vertex: 40
+  GPU batch size: 13
   Localization matrix: set
 Shallow Water [L]ETKF Example
 ============================
