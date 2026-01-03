@@ -800,12 +800,29 @@ static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: CPU\n"));
 #endif
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Local observations per vertex: %" PetscInt_FMT "\n", impl->p_local));
+    if (impl->batch_size > 0) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  GPU batch size: %" PetscInt_FMT "\n", impl->batch_size));
+    } else {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  GPU batch size: auto\n"));
+    }
     if (impl->Q) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Localization matrix: set\n"));
     } else {
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Localization matrix: not set\n"));
     }
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *PetscOptionsObjectPtr)
+{
+  PetscDALETKFData *impl = (PetscDALETKFData *)da->data;
+  PetscOptionItems  PetscOptionsObject = *PetscOptionsObjectPtr;
+
+  PetscFunctionBegin;
+  PetscOptionsHeadBegin(PetscOptionsObject, "PetscDA LETKF Options");
+  PetscCall(PetscOptionsInt("-petscda_letkf_batch_size", "Batch size for GPU processing", "", impl->batch_size, &impl->batch_size, NULL));
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -835,11 +852,12 @@ PetscErrorCode PetscDALETKFInitialize(PetscDA da)
   da->ops->computeanomalies = NULL; /* We implement this directly in the analysis function */
   da->ops->destroy          = PetscDALETKFDestroy;
   da->ops->view             = PetscDALETKFView;
-  da->ops->setfromoptions   = NULL;
+  da->ops->setfromoptions   = PetscDASetFromOptions_LETKF;
 
   /* Initialize default values */
   impl->p_local = Q_NUM_LOCAL_OBSERVATIONS_MAX;
   impl->Q       = NULL;
+  impl->batch_size = 0;
 
   /* Register the method for setting localization */
   PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetLocalization_C", PetscDALETKFSetLocalization_LETKF));

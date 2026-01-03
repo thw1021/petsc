@@ -356,13 +356,17 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   view_2d_unmanaged_write E_view(e_array, lda_e, m);
 
   /* Determine chunk size to avoid OOM on large grids */
-  /* Target ~2GB workspace. Approx memory per point: m*m*8 (T) + p*m*8 (Z) */
-  /* With reuse: m*m*8 + p*m*8 */
-  PetscInt mem_per_point = sizeof(PetscScalar) * (m * m + impl->p_local * m);
-  PetscInt chunk_size    = (PetscInt)(2.0 * 1024 * 1024 * 1024 / mem_per_point);
-
-  /* Allow override via command line */
-  PetscCall(PetscOptionsGetInt(NULL, NULL, "-da_letkf_chunk_size", &chunk_size, NULL));
+  PetscInt chunk_size;
+  if (impl->batch_size > 0) {
+    chunk_size = impl->batch_size;
+  } else {
+    /* Target ~2GB workspace. Approx memory per point: m*m*8 (T) + p*m*8 (Z) */
+    /* With reuse: m*m*8 + p*m*8 */
+    PetscInt mem_per_point = sizeof(PetscScalar) * (m * m + impl->p_local * m);
+    chunk_size             = (PetscInt)(2.0 * 1024 * 1024 * 1024 / mem_per_point);
+    /* Clamp to reasonable max to avoid huge allocations even if memory allows */
+    if (chunk_size > 32768) chunk_size = 32768;
+  }
 
   if (chunk_size < 1) chunk_size = 1;
   if (chunk_size > n_vertices) chunk_size = n_vertices;
