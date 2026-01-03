@@ -10,6 +10,7 @@ PetscDALETKF Object:
   Square root type: cholesky
   Local analysis: CPU
   Local observations per vertex: 40
+  GPU batch size: auto
   Localization matrix: set
 Lorenz-96 LETKF Example
 ======================
