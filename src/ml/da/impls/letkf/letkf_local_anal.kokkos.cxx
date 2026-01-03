@@ -618,16 +618,17 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       }
     });
   Kokkos::fence();
+
+  /* ===================================================================== */
+  /* Step 3.1.5: Parallelize ensemble update for all grid points         */
+  /* ===================================================================== */
+  /* Compute E[i,:] = mean[i] + X[i,:] * G_i for all grid points */
+  /* Get access to global X matrix and mean vector */
   if (0) {
-    /* ===================================================================== */
-    /* Step 3.1.5: Parallelize ensemble update for all grid points         */
-    /* ===================================================================== */
-    /* Compute E[i,:] = mean[i] + X[i,:] * G_i for all grid points */
-    /* Get access to global X matrix and mean vector */
     const PetscScalar *x_array, *mean_array;
     PetscScalar       *e_array;
     PetscInt           lda_x, lda_e;
-
+printf("Using Kokkos LETKF ensemble update, ndfo = %d\n", ndof);
     PetscCall(MatDenseGetArrayRead(X, &x_array));
     PetscCall(VecGetArrayRead(impl->mean, &mean_array));
     PetscCall(MatDenseGetArrayWrite(da->ensemble, &e_array));
@@ -680,6 +681,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     /* OLD CODE BELOW - KEPT FOR REFERENCE BUT NOT EXECUTED                */
     /* ===================================================================== */
   } else {
+printf("\t\tUsing CPU (OLD) LETKF ensemble update in Kokkos, ndof = %d\n", ndof);
     /* Local analysis workspace */
     Mat       Z_local, S_local, T_sqrt_local, G_local;
     Vec       y_local, y_mean_local, delta_scaled_local, r_inv_sqrt_local;
@@ -784,7 +786,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         Mat                X_rows, E_analysis_rows;
         const PetscScalar *x_array, *mean_array;
         PetscScalar       *e_array, *x_rows_array, *ea_rows_array;
-        PetscInt           j, k, lda_x, lda_e;
+        PetscInt           lda_x, lda_e;
 
         /* Create temp matrices for the update: ndof x m */
         PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, ndof, m, NULL, &X_rows));
