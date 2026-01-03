@@ -415,76 +415,61 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   PetscCall(BatchedEigenSolve(T_batch, Lambda_batch, V_batch, n_vertices, m));
 
   /* ===================================================================== */
-  /* Step 3.1.2: Batched T^{-1} application for all grid points          */
+  /* Step 3.1.2: Batched G matrix formation (Fused)                      */
   /* ===================================================================== */
-  /* Compute w_i = T_i^{-1} * (S_i^T * delta_i) for all grid points */
-  /* Using efficient factorization: w_i = V_i * (Lambda_i^{-1} * (V_i^T * S_i^T * delta_i)) */
+  /* Compute w_i = T_i^{-1} * (S_i^T * delta_i) */
+  /* Compute T_sqrt_i = T_i^{-1/2} */
+  /* Compute G_i = w_i * 1^T + sqrt(m-1) * T_sqrt_i */
   Kokkos::parallel_for(
-    "BatchedApplyTInverse", Kokkos::RangePolicy<exec_space>(0, n_vertices), KOKKOS_LAMBDA(const int i) {
-      /* Step 1: Compute S_i^T * delta_i -> temp1 */
+    "ComputeGMatrices", Kokkos::RangePolicy<exec_space>(0, n_vertices), KOKKOS_LAMBDA(const int i) {
+      auto S_i      = Kokkos::subview(S_batch, i, Kokkos::ALL(), Kokkos::ALL());
+      auto V_i      = Kokkos::subview(V_batch, i, Kokkos::ALL(), Kokkos::ALL());
+      auto Lambda_i = Kokkos::subview(Lambda_batch, i, Kokkos::ALL());
+      auto delta_i  = Kokkos::subview(delta_batch, i, Kokkos::ALL());
+      auto w_i      = Kokkos::subview(w_batch, i, Kokkos::ALL());
+      auto T_sqrt_i = Kokkos::subview(T_sqrt_batch, i, Kokkos::ALL(), Kokkos::ALL());
+      auto G_i      = Kokkos::subview(G_batch, i, Kokkos::ALL(), Kokkos::ALL());
+
+      /* 1. Compute w_i = V * L^-1 * V^T * S^T * delta */
+      /* temp1 = S^T * delta */
       PetscScalar temp1[200]; /* Assuming m <= 200 */
       for (int j = 0; j < m; j++) {
-        temp1[j] = 0.0;
-        for (int k = 0; k < impl->p_local; k++) { temp1[j] += S_batch(i, k, j) * delta_batch(i, k); }
+        PetscScalar sum = 0.0;
+        for (int k = 0; k < impl->p_local; k++) { sum += S_i(k, j) * delta_i(k); }
+        temp1[j] = sum;
       }
 
-      /* Step 2: Compute V_i^T * temp1 -> temp2 */
+      /* temp2 = V^T * temp1 */
       PetscScalar temp2[200];
       for (int j = 0; j < m; j++) {
-        temp2[j] = 0.0;
-        for (int k = 0; k < m; k++) { temp2[j] += V_batch(i, k, j) * temp1[k]; }
+        PetscScalar sum = 0.0;
+        for (int k = 0; k < m; k++) { sum += V_i(k, j) * temp1[k]; }
+        temp2[j] = sum;
       }
 
-      /* Step 3: Scale by Lambda_i^{-1} */
-      for (int j = 0; j < m; j++) { temp2[j] /= Lambda_batch(i, j); }
+      /* temp2 = temp2 / Lambda */
+      for (int j = 0; j < m; j++) { temp2[j] /= Lambda_i(j); }
 
-      /* Step 4: Compute V_i * temp2 -> w_i */
+      /* w = V * temp2 */
       for (int j = 0; j < m; j++) {
-        w_batch(i, j) = 0.0;
-        for (int k = 0; k < m; k++) { w_batch(i, j) += V_batch(i, j, k) * temp2[k]; }
-      }
-    });
-  Kokkos::fence();
-
-  /* ===================================================================== */
-  /* Step 3.1.3: Batched T^{-1/2} application for all grid points        */
-  /* ===================================================================== */
-  /* Compute T_sqrt_i = V_i * Lambda_i^{-1/2} * V_i^T for all grid points */
-  Kokkos::parallel_for(
-    "BatchedApplySqrtTInverse", Kokkos::RangePolicy<exec_space>(0, n_vertices), KOKKOS_LAMBDA(const int i) {
-      /* Step 1: Compute V_i * Lambda_i^{-1/2} -> V_scaled */
-      PetscScalar V_scaled[200][200]; /* Assuming m <= 200 */
-      for (int j = 0; j < m; j++) {
-        PetscScalar scale = 1.0 / Kokkos::sqrt(Lambda_batch(i, j));
-        for (int k = 0; k < m; k++) { V_scaled[k][j] = V_batch(i, k, j) * scale; }
+        PetscScalar sum = 0.0;
+        for (int k = 0; k < m; k++) { sum += V_i(j, k) * temp2[k]; }
+        w_i(j) = sum;
       }
 
-      /* Step 2: Compute (V_i * Lambda_i^{-1/2}) * V_i^T -> T_sqrt_i */
+      /* 2. Compute T_sqrt = V * L^-1/2 * V^T */
+      /* T_sqrt(j, k) = sum_p V(j, p) * V(k, p) / sqrt(Lambda(p)) */
       for (int j = 0; j < m; j++) {
         for (int k = 0; k < m; k++) {
           PetscScalar sum = 0.0;
-          for (int p = 0; p < m; p++) { sum += V_scaled[j][p] * V_batch(i, k, p); }
-          T_sqrt_batch(i, j, k) = sum;
+          for (int p = 0; p < m; p++) { sum += V_i(j, p) * V_i(k, p) / Kokkos::sqrt(Lambda_i(p)); }
+          T_sqrt_i(j, k) = sum;
         }
       }
-    });
-  Kokkos::fence();
 
-  /* ===================================================================== */
-  /* Step 3.1.4: Parallelize G matrix formation for all grid points      */
-  /* ===================================================================== */
-  /* Compute G_i = w_i * 1^T + sqrt(m-1) * T_sqrt_i for all grid points */
-  Kokkos::parallel_for(
-    "BatchedFormGMatrices", Kokkos::RangePolicy<exec_space>(0, n_vertices), KOKKOS_LAMBDA(const int i) {
-      /* G_i = sqrt(m-1) * T_sqrt_i + w_i * 1^T */
-      /* w_i * 1^T means: row j gets w_i(j) added to all columns */
-      /* In column-major storage: G(j,k) is at position [j + k*m] */
+      /* 3. Compute G = w * 1^T + sqrt(m-1) * T_sqrt */
       for (int j = 0; j < m; j++) {
-        for (int k = 0; k < m; k++) {
-          /* G_i(j,k) = sqrt(m-1) * T_sqrt_i(j,k) + w_i(j) */
-          /* Note: w_i(j) is added to row j (all columns k in row j get w_i(j)) */
-          G_batch(i, j, k) = sqrt_m_minus_1 * T_sqrt_batch(i, j, k) + w_batch(i, j);
-        }
+        for (int k = 0; k < m; k++) { G_i(j, k) = sqrt_m_minus_1 * T_sqrt_i(j, k) + w_i(j); }
       }
     });
   Kokkos::fence();
