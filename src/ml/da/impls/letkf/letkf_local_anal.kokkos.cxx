@@ -4,6 +4,11 @@
 #include <KokkosBatched_SVD_Decl.hpp>
 #include <KokkosBatched_SVD_Serial_Impl.hpp>
 
+#if defined(KOKKOS_ENABLE_CUDA)
+  #include <cusolverDn.h>
+  #include <cuda_runtime.h>
+#endif
+
 /* ========================================================================== */
 /*                    LETKF Analysis Algorithm (Kokkos)                       */
 /* ========================================================================== */
@@ -197,6 +202,189 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* ========================================================================== */
+/*                    Batched Eigendecomposition for LETKF                    */
+/* ========================================================================== */
+
+/*
+  BatchedEigenSolve_Host - Compute eigendecomposition for a batch of symmetric matrices (CPU version)
+
+  Input Parameters:
++ T_batch      - batch of symmetric matrices (n_batch x n_size x n_size)
+. n_batch      - number of matrices in the batch
+- n_size       - size of each matrix (m x m)
+
+  Output Parameters:
++ Lambda_batch - eigenvalues for each matrix (n_batch x n_size)
+- V_batch      - eigenvectors for each matrix (n_batch x n_size x n_size)
+
+  Notes:
+  Uses LAPACK's syev routine to compute eigendecomposition sequentially on host.
+*/
+#if !defined(KOKKOS_ENABLE_CUDA)
+static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size)
+{
+  PetscFunctionBegin;
+
+  /* Create host mirrors */
+  auto T_host      = Kokkos::create_mirror_view(T_batch);
+  auto Lambda_host = Kokkos::create_mirror_view(Lambda_batch);
+  auto V_host      = Kokkos::create_mirror_view(V_batch);
+
+  /* Copy T to host */
+  Kokkos::deep_copy(T_host, T_batch);
+
+  /* Process each matrix sequentially on host using LAPACK */
+  for (PetscInt i = 0; i < n_batch; i++) {
+    PetscBLASInt n, lda, lwork, info;
+    PetscScalar *work;
+
+    PetscCall(PetscBLASIntCast(n_size, &n));
+    lda = n;
+
+    /* Get pointers to this matrix's data */
+    PetscScalar *T_i      = &T_host(i, 0, 0);
+    PetscScalar *Lambda_i = &Lambda_host(i, 0);
+    PetscScalar *V_i      = &V_host(i, 0, 0);
+
+    /* Copy T to V (LAPACK overwrites input) */
+    for (PetscInt j = 0; j < n_size; j++) {
+      for (PetscInt k = 0; k < n_size; k++) { V_i[k + j * n_size] = T_i[k + j * n_size]; }
+    }
+
+    /* Query workspace size */
+    lwork = -1;
+    PetscCall(PetscMalloc1(1, &work));
+    LAPACKsyev_("V", "U", &n, V_i, &lda, Lambda_i, work, &lwork, &info);
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK workspace query failed: info=%" PetscBLASInt_FMT, info);
+
+    /* Allocate workspace */
+    lwork = (PetscBLASInt)PetscRealPart(work[0]);
+    PetscCall(PetscFree(work));
+    PetscCall(PetscMalloc1(lwork, &work));
+
+    /* Compute eigendecomposition: T = V * Lambda * V^T */
+    LAPACKsyev_("V", "U", &n, V_i, &lda, Lambda_i, work, &lwork, &info);
+    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK eigendecomposition failed for matrix %" PetscInt_FMT ": info=%" PetscBLASInt_FMT, i, info);
+
+    PetscCall(PetscFree(work));
+  }
+
+  /* Copy results back to device */
+  Kokkos::deep_copy(Lambda_batch, Lambda_host);
+  Kokkos::deep_copy(V_batch, V_host);
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif
+
+/*
+  BatchedEigenSolve_CUDA - Compute eigendecomposition for a batch of symmetric matrices (GPU version)
+
+  Input Parameters:
++ T_batch      - batch of symmetric matrices (n_batch x n_size x n_size)
+. n_batch      - number of matrices in the batch
+- n_size       - size of each matrix (m x m)
+
+  Output Parameters:
++ Lambda_batch - eigenvalues for each matrix (n_batch x n_size)
+- V_batch      - eigenvectors for each matrix (n_batch x n_size x n_size)
+
+  Notes:
+  Uses cuSOLVER's syevd routine to compute eigendecomposition on GPU.
+*/
+#if defined(KOKKOS_ENABLE_CUDA)
+static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size)
+{
+  cusolverDnHandle_t cusolverH;
+  cusolverStatus_t   cusolver_status;
+  int                lwork = 0;
+  PetscScalar       *d_work;
+  int               *d_info;
+
+  PetscFunctionBegin;
+
+  /* Create cuSOLVER handle */
+  cusolver_status = cusolverDnCreate(&cusolverH);
+  PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnCreate failed");
+
+  /* Query workspace size */
+  #if defined(PETSC_USE_REAL_SINGLE)
+  cusolver_status = cusolverDnSsyevd_bufferSize(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, NULL, n_size, NULL, &lwork);
+  #else
+  cusolver_status = cusolverDnDsyevd_bufferSize(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, NULL, n_size, NULL, &lwork);
+  #endif
+  PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevd_bufferSize failed");
+
+  /* Allocate workspace on device */
+  cudaMalloc(&d_work, sizeof(PetscScalar) * lwork);
+  cudaMalloc(&d_info, sizeof(int));
+
+  /* Process each matrix in the batch */
+  for (PetscInt i = 0; i < n_batch; i++) {
+    /* Get subviews for this matrix */
+    auto T_i      = Kokkos::subview(T_batch, i, Kokkos::ALL(), Kokkos::ALL());
+    auto Lambda_i = Kokkos::subview(Lambda_batch, i, Kokkos::ALL());
+    auto V_i      = Kokkos::subview(V_batch, i, Kokkos::ALL(), Kokkos::ALL());
+
+    /* Copy T to V (cuSOLVER overwrites input) */
+    Kokkos::deep_copy(V_i, T_i);
+
+    /* Solve eigendecomposition on device */
+  #if defined(PETSC_USE_REAL_SINGLE)
+    cusolver_status = cusolverDnSsyevd(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, V_i.data(), n_size, Lambda_i.data(), d_work, lwork, d_info);
+  #else
+    cusolver_status = cusolverDnDsyevd(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, V_i.data(), n_size, Lambda_i.data(), d_work, lwork, d_info);
+  #endif
+    PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevd failed for matrix %" PetscInt_FMT, i);
+
+    /* Check for errors (copy d_info to host) */
+    int h_info;
+    cudaMemcpy(&h_info, d_info, sizeof(int), cudaMemcpyDeviceToHost);
+    PetscCheck(h_info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "cuSOLVER eigendecomposition failed for matrix %" PetscInt_FMT ": info=%d", i, h_info);
+  }
+
+  /* Cleanup */
+  cudaFree(d_work);
+  cudaFree(d_info);
+  cusolverDnDestroy(cusolverH);
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif
+
+/*
+  BatchedEigenSolve - Compute eigendecomposition for a batch of symmetric matrices
+
+  Input Parameters:
++ T_batch      - batch of symmetric matrices (n_batch x n_size x n_size)
+. n_batch      - number of matrices in the batch
+- n_size       - size of each matrix (m x m)
+
+  Output Parameters:
++ Lambda_batch - eigenvalues for each matrix (n_batch x n_size)
+- V_batch      - eigenvectors for each matrix (n_batch x n_size x n_size)
+
+  Notes:
+  Dispatcher function that calls the appropriate backend (CPU or GPU).
+*/
+static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size)
+{
+  PetscFunctionBegin;
+
+#if defined(KOKKOS_ENABLE_CUDA)
+  PetscCall(BatchedEigenSolve_CUDA(T_batch, Lambda_batch, V_batch, n_batch, n_size));
+#else
+  PetscCall(BatchedEigenSolve_Host(T_batch, Lambda_batch, V_batch, n_batch, n_size));
+#endif
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* ========================================================================== */
+/*                    LETKF Local Analysis (Main Function)                    */
+/* ========================================================================== */
+
 /*
   PetscDALETKFLocalAnalysis_GPU - Performs local LETKF analysis for all grid points (Kokkos version)
 
@@ -225,12 +413,6 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
 */
 PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl, PetscInt m, PetscInt n_vertices, Mat X, Vec observation, Mat Z_global, Vec y_mean_global, Vec r_inv_sqrt_global)
 {
-  /* Local analysis workspace */
-  Mat       Z_local, S_local, T_sqrt_local, G_local;
-  Vec       y_local, y_mean_local, delta_scaled_local, r_inv_sqrt_local;
-  Vec       w_local, s_transpose_delta;
-  PetscInt *local_obs_indices = NULL;
-  PetscInt  i_grid_point;
   PetscInt  ndof;
   PetscReal sqrt_m_minus_1, scale;
 
@@ -238,6 +420,75 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   ndof           = da->ndof;
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
+
+  /* ===================================================================== */
+  /* Step 2.1.1: Create batched workspace for ALL grid points            */
+  /* ===================================================================== */
+  using exec_space = Kokkos::DefaultExecutionSpace;
+  using view_3d    = Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, exec_space>;
+  using view_2d    = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, exec_space>;
+
+  /* Batched workspace for ALL grid points (device memory) */
+  view_3d Z_batch("Z_batch", n_vertices, impl->p_local, m);           // (n_vertices, p_local, m)
+  view_3d S_batch("S_batch", n_vertices, impl->p_local, m);           // (n_vertices, p_local, m)
+  view_3d T_batch("T_batch", n_vertices, m, m);                       // (n_vertices, m, m)
+  view_3d V_batch("V_batch", n_vertices, m, m);                       // (n_vertices, m, m)
+  view_2d Lambda_batch("Lambda_batch", n_vertices, m);                // (n_vertices, m)
+  view_3d T_sqrt_batch("T_sqrt_batch", n_vertices, m, m);             // (n_vertices, m, m)
+  view_3d G_batch("G_batch", n_vertices, m, m);                       // (n_vertices, m, m)
+  view_2d w_batch("w_batch", n_vertices, m);                          // (n_vertices, m)
+  view_2d delta_batch("delta_batch", n_vertices, impl->p_local);      // (n_vertices, p_local)
+  view_2d y_batch("y_batch", n_vertices, impl->p_local);              // (n_vertices, p_local)
+  view_2d y_mean_batch("y_mean_batch", n_vertices, impl->p_local);    // (n_vertices, p_local)
+  view_2d r_inv_sqrt_batch("r_inv_sqrt_batch", n_vertices, impl->p_local); // (n_vertices, p_local)
+
+  /* ===================================================================== */
+  /* Step 2.1.2a: Pre-extract Q matrix CSR data for device access        */
+  /* ===================================================================== */
+  /* Get direct access to Q's CSR arrays (zero-copy) */
+  const PetscInt *Q_i, *Q_j;
+  PetscScalar    *Q_a;
+  PetscMemType    Q_memtype;
+
+  PetscCall(MatSeqAIJGetCSRAndMemType(impl->Q, &Q_i, &Q_j, &Q_a, &Q_memtype));
+
+  /* Create unmanaged Kokkos views wrapping the CSR arrays */
+  using view_1d_int_const    = Kokkos::View<const PetscInt *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using view_1d_scalar_const = Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+
+  view_1d_int_const Q_i_view(Q_i, n_vertices + 1);
+  view_1d_int_const Q_j_view(Q_j, n_vertices * Q_NUM_LOCAL_OBSERVATIONS_MAX);
+  view_1d_scalar_const Q_a_view(Q_a, n_vertices * Q_NUM_LOCAL_OBSERVATIONS_MAX);
+
+  /* Get global observation data arrays */
+  const PetscScalar *z_global_array, *y_global_array, *y_mean_global_array, *r_inv_sqrt_global_array;
+  PetscInt           lda_z_global;
+
+  PetscCall(MatDenseGetArrayRead(Z_global, &z_global_array));
+  PetscCall(VecGetArrayRead(observation, &y_global_array));
+  PetscCall(VecGetArrayRead(y_mean_global, &y_mean_global_array));
+  PetscCall(VecGetArrayRead(r_inv_sqrt_global, &r_inv_sqrt_global_array));
+  PetscCall(MatDenseGetLDA(Z_global, &lda_z_global));
+
+  /* Create unmanaged Kokkos views for global observation data */
+  using view_2d_unmanaged = Kokkos::View<const PetscScalar **, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using view_1d_unmanaged = Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+
+  view_2d_unmanaged Z_global_view(z_global_array, lda_z_global, m);
+  view_1d_unmanaged y_global_view(y_global_array, lda_z_global);
+  view_1d_unmanaged y_mean_global_view(y_mean_global_array, lda_z_global);
+  view_1d_unmanaged r_inv_sqrt_global_view(r_inv_sqrt_global_array, lda_z_global);
+
+  /* ===================================================================== */
+  /* TEMPORARY: Keep old sequential loop for now (will be replaced)      */
+  /* ===================================================================== */
+  /* Local analysis workspace */
+  Mat       Z_local, S_local, T_sqrt_local, G_local;
+  Vec       y_local, y_mean_local, delta_scaled_local, r_inv_sqrt_local;
+  Vec       w_local, s_transpose_delta;
+  PetscInt *local_obs_indices = NULL;
+  PetscInt  i_grid_point;
+
   /* ===================================================================== */
   /* Create local analysis workspace (p_local x m matrices and vectors) */
   /* ===================================================================== */
