@@ -3,6 +3,9 @@
 #include <Kokkos_Core.hpp>
 #include <KokkosBatched_SVD_Decl.hpp>
 #include <KokkosBatched_SVD_Serial_Impl.hpp>
+#include <KokkosBatched_Gemm_Decl.hpp>
+#include <KokkosBatched_Gemm_Serial_Impl.hpp>
+#include <KokkosBatched_Util.hpp>
 
 #if defined(KOKKOS_ENABLE_CUDA)
   #include <cusolverDn.h>
@@ -388,15 +391,19 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   /* This is the Gram matrix C = S^T * S plus scaled identity */
   Kokkos::parallel_for(
     "ComputeAllTMatrices", Kokkos::RangePolicy<exec_space>(0, n_vertices), KOKKOS_LAMBDA(const int i) {
-      /* For grid point i, compute T_i = (1/ρ)I + S_i^T * S_i */
-      /* T_i(j,k) = (1/ρ)*delta_{jk} + sum_p S_i(p,j) * S_i(p,k) */
+      auto S_i = Kokkos::subview(S_batch, i, Kokkos::ALL(), Kokkos::ALL());
+      auto T_i = Kokkos::subview(T_batch, i, Kokkos::ALL(), Kokkos::ALL());
+
+      /* Init T_i = (1/ρ)I */
       for (int j = 0; j < m; j++) {
         for (int k = 0; k < m; k++) {
-          PetscScalar sum = (j == k) ? inflation_inv : 0.0; /* Add scaled identity: (1/ρ)*I_{jk} */
-          for (int p = 0; p < impl->p_local; p++) { sum += S_batch(i, p, j) * S_batch(i, p, k); }
-          T_batch(i, j, k) = sum;
+          T_i(j, k) = (j == k) ? inflation_inv : 0.0;
         }
       }
+
+      /* T_i += S_i^T * S_i */
+      KokkosBatched::SerialGemm<KokkosBatched::Trans::Transpose, KokkosBatched::Trans::NoTranspose, KokkosBatched::Algo::Gemm::Unblocked>::invoke(
+          1.0, S_i, S_i, 1.0, T_i);
     });
   Kokkos::fence();
 
@@ -505,18 +512,22 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   Kokkos::parallel_for(
     "BatchedEnsembleUpdate", Kokkos::RangePolicy<exec_space>(0, n_vertices), KOKKOS_LAMBDA(const int i) {
       /* For each grid point i, compute E_i = mean_i + X_i * G_i */
-      /* E_i is ndof x m, X_i is ndof x m, G_i is m x m */
+      auto X_i = Kokkos::subview(X_view, Kokkos::make_pair(i * ndof, (i + 1) * ndof), Kokkos::ALL());
+      auto E_i = Kokkos::subview(E_view, Kokkos::make_pair(i * ndof, (i + 1) * ndof), Kokkos::ALL());
+      auto G_i = Kokkos::subview(G_batch, i, Kokkos::ALL(), Kokkos::ALL());
+      auto mean_i = Kokkos::subview(mean_view, Kokkos::make_pair(i * ndof, (i + 1) * ndof));
 
-      /* Compute X_i * G_i -> E_i using matrix multiplication */
+      /* Init E_i with mean */
       for (int row = 0; row < ndof; row++) {
+        PetscScalar m_val = mean_i(row);
         for (int col = 0; col < m; col++) {
-          PetscScalar sum = 0.0;
-          /* Matrix multiply: E_i(row, col) = sum_k X_i(row, k) * G_i(k, col) */
-          for (int k = 0; k < m; k++) { sum += X_view(i * ndof + row, k) * G_batch(i, k, col); }
-          /* Add mean and store: E[i*ndof + row, col] = mean[i*ndof + row] + sum */
-          E_view(i * ndof + row, col) = mean_view(i * ndof + row) + sum;
+          E_i(row, col) = m_val;
         }
       }
+
+      /* E_i += X_i * G_i */
+      KokkosBatched::SerialGemm<KokkosBatched::Trans::NoTranspose, KokkosBatched::Trans::NoTranspose, KokkosBatched::Algo::Gemm::Unblocked>::invoke(
+          1.0, X_i, G_i, 1.0, E_i);
     });
   Kokkos::fence();
 
