@@ -661,7 +661,7 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
       /* Check if H matrix is a Kokkos type */
       PetscCall(PetscObjectTypeCompareAny((PetscObject)da->R, &use_gpu, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, MATAIJKOKKOS, ""));
     }
-    
+
     if (use_gpu) {
       PetscCall(PetscDALETKFLocalAnalysis_GPU(da, impl, m, da->state_size / da->ndof, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
     } else {
