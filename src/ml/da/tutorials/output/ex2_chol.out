@@ -1,4 +1,5 @@
 Spinning up truth for 2000 steps...
+Localization matrix Q created: 40 x 40, full localization (all weights = 1.0)
 PetscDA Object: 1 MPI process
   State size: 40
   Observation size: 40
@@ -9,8 +10,7 @@ PetscDALETKF Object:
   Square root type: cholesky
   Local analysis: CPU
   Local observations per vertex: 40
-  Localization matrix: not set
-Localization matrix Q created: 40 x 40, full localization (all weights = 1.0)
+  Localization matrix: set
 Lorenz-96 LETKF Example
 ======================
   State dimension       : 40
