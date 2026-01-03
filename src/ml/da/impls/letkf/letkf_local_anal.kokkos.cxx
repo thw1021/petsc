@@ -122,10 +122,11 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
 {
   cusolverDnHandle_t cusolverH;
   cusolverStatus_t   cusolver_status;
-  int                lwork = 0;
+  syevjInfo_t        syevj_params = NULL;
   PetscScalar       *d_work;
   int               *d_info;
   PetscScalar       *d_A, *d_W;
+  int                lwork = 0;
 
   PetscFunctionBegin;
 
@@ -133,59 +134,78 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   cusolver_status = cusolverDnCreate(&cusolverH);
   PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnCreate failed");
 
+  /* Create syevj params */
+  cusolver_status = cusolverDnCreateSyevjInfo(&syevj_params);
+  PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnCreateSyevjInfo failed");
+  
+  /* Set default params */
+  cusolverDnXsyevjSetTolerance(syevj_params, 1e-7);
+  cusolverDnXsyevjSetMaxSweeps(syevj_params, 100);
+  cusolverDnXsyevjSetSortEig(syevj_params, 1); /* Sort eigenvalues */
+
+  /* Allocate device memory for ALL matrices */
+  cudaMalloc(&d_A, sizeof(PetscScalar) * n_batch * n_size * n_size);
+  cudaMalloc(&d_W, sizeof(PetscScalar) * n_batch * n_size);
+  cudaMalloc(&d_info, sizeof(int) * n_batch);
+
+  /* Copy T_batch (interleaved) to d_A (contiguous) */
+  /* T_batch(i, j, k) -> d_A[i * n*n + k*n + j] (Column-Major) */
+  Kokkos::parallel_for(
+    "CopyTToContiguous", Kokkos::MDRangePolicy<Kokkos::Rank<3>, Kokkos::DefaultExecutionSpace>({0, 0, 0}, {n_batch, n_size, n_size}),
+    KOKKOS_LAMBDA(const int i, const int j, const int k) {
+      d_A[i * n_size * n_size + k * n_size + j] = T_batch(i, j, k);
+    });
+  Kokkos::fence();
+
   /* Query workspace size */
   #if defined(PETSC_USE_REAL_SINGLE)
-  cusolver_status = cusolverDnSsyevd_bufferSize(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, NULL, n_size, NULL, &lwork);
+  cusolver_status = cusolverDnSsyevjBatched_bufferSize(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A, n_size, d_W, &lwork, syevj_params, n_batch);
   #else
-  cusolver_status = cusolverDnDsyevd_bufferSize(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, NULL, n_size, NULL, &lwork);
+  cusolver_status = cusolverDnDsyevjBatched_bufferSize(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A, n_size, d_W, &lwork, syevj_params, n_batch);
   #endif
-  PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevd_bufferSize failed");
+  PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevjBatched_bufferSize failed");
 
-  /* Allocate workspace on device */
+  /* Allocate workspace */
   cudaMalloc(&d_work, sizeof(PetscScalar) * lwork);
-  cudaMalloc(&d_info, sizeof(int));
-  cudaMalloc(&d_A, sizeof(PetscScalar) * n_size * n_size);
-  cudaMalloc(&d_W, sizeof(PetscScalar) * n_size);
 
-  /* Create unmanaged views for contiguous buffers */
-  using view_2d_unmanaged = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-  using view_1d_unmanaged = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-  view_2d_unmanaged d_A_view(d_A, n_size, n_size);
-  view_1d_unmanaged d_W_view(d_W, n_size);
-
-  /* Process each matrix in the batch */
-  for (PetscInt i = 0; i < n_batch; i++) {
-    /* Get subviews for this matrix */
-    auto T_i      = Kokkos::subview(T_batch, i, Kokkos::ALL(), Kokkos::ALL());
-    auto Lambda_i = Kokkos::subview(Lambda_batch, i, Kokkos::ALL());
-    auto V_i      = Kokkos::subview(V_batch, i, Kokkos::ALL(), Kokkos::ALL());
-
-    /* Copy T to contiguous d_A */
-    Kokkos::deep_copy(d_A_view, T_i);
-
-    /* Solve eigendecomposition on device */
+  /* Solve batched eigendecomposition */
   #if defined(PETSC_USE_REAL_SINGLE)
-    cusolver_status = cusolverDnSsyevd(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A, n_size, d_W, d_work, lwork, d_info);
+  cusolver_status = cusolverDnSsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A, n_size, d_W, d_work, lwork, d_info, syevj_params, n_batch);
   #else
-    cusolver_status = cusolverDnDsyevd(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A, n_size, d_W, d_work, lwork, d_info);
+  cusolver_status = cusolverDnDsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A, n_size, d_W, d_work, lwork, d_info, syevj_params, n_batch);
   #endif
-    PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevd failed for matrix %" PetscInt_FMT, i);
+  PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevjBatched failed");
 
-    /* Check for errors (copy d_info to host) */
-    int h_info;
-    cudaMemcpy(&h_info, d_info, sizeof(int), cudaMemcpyDeviceToHost);
-    PetscCheck(h_info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "cuSOLVER eigendecomposition failed for matrix %" PetscInt_FMT ": info=%d", i, h_info);
-
-    /* Copy results back */
-    Kokkos::deep_copy(V_i, d_A_view);
-    Kokkos::deep_copy(Lambda_i, d_W_view);
+  /* Check info */
+  int *h_info;
+  PetscCall(PetscMalloc1(n_batch, &h_info));
+  cudaMemcpy(h_info, d_info, sizeof(int) * n_batch, cudaMemcpyDeviceToHost);
+  for (int i = 0; i < n_batch; i++) {
+      if (h_info[i] != 0) {
+          PetscCheck(h_info[i] == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "cuSOLVER eigendecomposition failed for matrix %" PetscInt_FMT ": info=%d", i, h_info[i]);
+      }
   }
+  PetscCall(PetscFree(h_info));
+
+  /* Copy results back */
+  /* d_A (eigenvectors) -> V_batch */
+  /* d_W (eigenvalues) -> Lambda_batch */
+  Kokkos::parallel_for(
+    "CopyResultsBack", Kokkos::MDRangePolicy<Kokkos::Rank<3>, Kokkos::DefaultExecutionSpace>({0, 0, 0}, {n_batch, n_size, n_size}),
+    KOKKOS_LAMBDA(const int i, const int j, const int k) {
+      V_batch(i, j, k) = d_A[i * n_size * n_size + k * n_size + j];
+      if (k == 0) { /* Only need to copy eigenvalues once per row */
+          Lambda_batch(i, j) = d_W[i * n_size + j];
+      }
+    });
+  Kokkos::fence();
 
   /* Cleanup */
   cudaFree(d_A);
   cudaFree(d_W);
   cudaFree(d_work);
   cudaFree(d_info);
+  cusolverDnDestroySyevjInfo(syevj_params);
   cusolverDnDestroy(cusolverH);
 
   PetscFunctionReturn(PETSC_SUCCESS);
