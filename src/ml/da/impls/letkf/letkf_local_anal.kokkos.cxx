@@ -10,6 +10,7 @@
 #if defined(KOKKOS_ENABLE_CUDA)
   #include <cusolverDn.h>
   #include <cuda_runtime.h>
+  #include <petscdevice_cuda.h>
 #endif
 
 /* ========================================================================== */
@@ -147,9 +148,9 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   cusolverDnXsyevjSetSortEig(syevj_params, 1); /* Sort eigenvalues */
 
   /* Allocate device memory for ALL matrices */
-  cudaMalloc(&d_A, sizeof(PetscScalar) * n_batch * n_size * n_size);
-  cudaMalloc(&d_W, sizeof(PetscScalar) * n_batch * n_size);
-  cudaMalloc(&d_info, sizeof(int) * n_batch);
+  PetscCallCUDA(cudaMalloc(&d_A, sizeof(PetscScalar) * n_batch * n_size * n_size));
+  PetscCallCUDA(cudaMalloc(&d_W, sizeof(PetscScalar) * n_batch * n_size));
+  PetscCallCUDA(cudaMalloc(&d_info, sizeof(int) * n_batch));
 
   /* Copy T_batch (interleaved) to d_A (contiguous) */
   /* T_batch(i, j, k) -> d_A[i * n*n + k*n + j] (Column-Major) */
@@ -180,7 +181,7 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   /* Check info */
   int *h_info;
   PetscCall(PetscMalloc1(n_batch, &h_info));
-  cudaMemcpy(h_info, d_info, sizeof(int) * n_batch, cudaMemcpyDeviceToHost);
+  PetscCallCUDA(cudaMemcpy(h_info, d_info, sizeof(int) * n_batch, cudaMemcpyDeviceToHost));
   for (int i = 0; i < n_batch; i++) {
     if (h_info[i] != 0) { PetscCheck(h_info[i] == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "cuSOLVER eigendecomposition failed for matrix %" PetscInt_FMT ": info=%d", i, h_info[i]); }
   }
@@ -199,10 +200,10 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   Kokkos::fence();
 
   /* Cleanup */
-  cudaFree(d_A);
-  cudaFree(d_W);
-  cudaFree(d_work);
-  cudaFree(d_info);
+  PetscCallCUDA(cudaFree(d_A));
+  PetscCallCUDA(cudaFree(d_W));
+  PetscCallCUDA(cudaFree(d_work));
+  PetscCallCUDA(cudaFree(d_info));
   cusolverDnDestroySyevjInfo(syevj_params);
   cusolverDnDestroy(cusolverH);
 
@@ -303,9 +304,9 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
 
   /* Batched workspace for ALL grid points (device memory) */
   view_3d Z_batch("Z_batch", n_vertices, impl->p_local, m);                // (n_vertices, p_local, m)
-  view_3d S_batch("S_batch", n_vertices, impl->p_local, m);                // (n_vertices, p_local, m)
+  view_3d S_batch = Z_batch;                                               // Reuse Z memory for S
   view_3d T_batch("T_batch", n_vertices, m, m);                            // (n_vertices, m, m)
-  view_3d V_batch("V_batch", n_vertices, m, m);                            // (n_vertices, m, m)
+  view_3d V_batch = T_batch;                                               // Reuse T memory for V
   view_2d Lambda_batch("Lambda_batch", n_vertices, m);                     // (n_vertices, m)
   view_3d T_sqrt_batch("T_sqrt_batch", n_vertices, m, m);                  // (n_vertices, m, m)
   view_3d G_batch("G_batch", n_vertices, m, m);                            // (n_vertices, m, m)
@@ -411,7 +412,8 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
 
       /* Init T_i = (1/ρ)I */
       for (int j = 0; j < m; j++) {
-        for (int k = 0; k < m; k++) { T_i(j, k) = (j == k) ? inflation_inv : 0.0; }
+        for (int k = 0; k < m; k++) T_i(j, k) = 0.0;
+        T_i(j, j) = inflation_inv;
       }
 
       /* T_i += S_i^T * S_i */
