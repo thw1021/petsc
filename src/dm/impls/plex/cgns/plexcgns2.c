@@ -919,7 +919,7 @@ static PetscErrorCode PetscLayoutFindOwnerIndex_Internal(PetscLayout map, PetscI
 // This function assumes that there is an array that `maps` describes the layout too. Locally, the range of each map is concatenated onto each other.
 // So [maps[0].start, ..., maps[0].end - 1, maps[1].start, ..., maps[1].end - 1, ...]
 // The returned index is the index into this array
-static PetscErrorCode PetscLayoutFindOwnerIndex_CGNS(PetscLayout maps[], PetscInt nmaps, PetscInt idx, PetscMPIInt *owner, PetscInt *lidx, PetscInt *mapidx)
+static PetscErrorCode PetscLayoutFindOwnerIndex_CGNSSectionLayouts(PetscLayout maps[], PetscInt nmaps, PetscInt idx, PetscMPIInt *owner, PetscInt *lidx, PetscInt *mapidx)
 {
   PetscFunctionBegin;
   for (PetscInt m = 0; m < nmaps; m++) {
@@ -938,18 +938,37 @@ static PetscErrorCode PetscLayoutFindOwnerIndex_CGNS(PetscLayout maps[], PetscIn
   SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "CGNS id %" PetscInt_FMT " not found in layouts");
 }
 
-PetscErrorCode MatchIndicesFaceConnectivity(DM dm, PetscInt myownede, PetscInt nuniq_verts, const PetscInt uniq_verts[], PetscInt NVertices, PetscSection connSection, const PetscInt conn[], PetscSF *f2rankSF, PetscInt *matchingFaces[])
+// cg2plexSF is a mapping from the owned CGNS faces to the rank whose local Plex has that face.
+// plexFaces holds the actual mesh point in the local Plex that corresponds to the owned CGNS face (which is the root)
+//
+//       cg2plexSF
+// __________|__________
+// |                   |
+//
+// [F0_11] -----> [P0_0]  [38]
+// [F0_12] --                        Rank 0
+// ~~~~~~~~~ \ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//            --> [P1_0]  [59]       Rank 1
+// [F1_13] -----> [P1_1]  [98]
+//    |              |     |
+//    |              |     + plexFaces, maps the leaves of cg2plexSF to local Plex face mesh points
+//    |              + Leaves of cg2plexSF. P(rank)_(root_index)
+//    + Roots of cg2plexSF, F(rank)_(CGNS face ID)
+//
+// Note that, unlike a pointSF, the leaves of cg2plexSF do not map onto chart of the local Plex, but just onto an array.
+// The plexFaces array is then what maps the leaves to the actual local Plex mesh points.
+PetscErrorCode MatchIndicesFaceConnectivity(DM dm, PetscInt myownede, PetscInt nuniq_verts, const PetscInt uniq_verts[], PetscInt NVertices, PetscSection connSection, const PetscInt conn[], PetscSF *cg2plexSF, PetscInt *plexFaces[])
 {
   MPI_Comm    comm = PetscObjectComm((PetscObject)dm);
-  PetscSF     f2mvertSF;
-  PetscMPIInt rank, num_proc;
+  PetscSF     fvert2mvertSF;
+  PetscMPIInt rank, nranks;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  PetscCallMPI(MPI_Comm_size(comm, &num_proc));
+  PetscCallMPI(MPI_Comm_size(comm, &nranks));
 
   PetscInt nuniq_face_verts, *uniq_face_verts;
-  { // Get f2mvertSF, SF mapping local face-vertices to global mesh vertices
+  { // Get fvert2mvertSF, SF mapping CGNS vertices in the owned-face connectivity to the CGNS vertices in the global mesh
     PetscLayout layout;
 
     PetscCall(PetscLayoutCreateFromSizes(PetscObjectComm((PetscObject)dm), PETSC_DECIDE, NVertices, 1, &layout));
@@ -969,30 +988,30 @@ PetscErrorCode MatchIndicesFaceConnectivity(DM dm, PetscInt myownede, PetscInt n
       PetscCheck(off == nuniq_face_verts, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid number of local vertices %" PetscInt_FMT " should be %" PetscInt_FMT, off, nuniq_face_verts);
     }
     PetscCall(PetscSortInt(nuniq_face_verts, uniq_face_verts));
-    PetscCall(PetscSFCreateByMatchingIndicesInclusive(layout, nuniq_verts, uniq_verts, NULL, myownede, nuniq_face_verts, uniq_face_verts, NULL, myownede, NULL, &f2mvertSF));
+    PetscCall(PetscSFCreateByMatchingIndicesInclusive(layout, nuniq_verts, uniq_verts, NULL, myownede, nuniq_face_verts, uniq_face_verts, NULL, myownede, NULL, &fvert2mvertSF));
 
     PetscCall(PetscLayoutDestroy(&layout));
   }
 
   // Build CGNS-face-to-DMPlex-face SF
-  PetscInt fStart, fEnd;
 
-  PetscSection       f2mvertSection;
+  PetscSection       fvert2mvertSection;
   const PetscSFNode *iremote;
-  PetscBool          free_sf_graph = PETSC_FALSE;
-  { // Build section describing the iremote layout of f2mvertSF.
-    // The points of the section are ilocal and array it indexes into is iremote.
-    // ilocal indexes into uniq_face_verts.
+  PetscBool          free_fvert2mvertsf_graph = PETSC_FALSE;
+  { // Build section describing the iremote layout of fvert2mvertSF.
+    // ilocal may have duplicate values for the vertices that are present on multiple ranks.
+    // The points of the section are the *sorted values* of ilocal and array it indexes into is iremote.
+    // The values of ilocal index into uniq_face_verts.
     PetscInt        nleaves;
     const PetscInt *ilocal;
     PetscBool       is_sorted;
 
-    PetscCall(PetscSFGetGraph(f2mvertSF, NULL, &nleaves, &ilocal, &iremote));
+    PetscCall(PetscSFGetGraph(fvert2mvertSF, NULL, &nleaves, &ilocal, &iremote));
     PetscCall(PetscSortedInt(nleaves, ilocal, &is_sorted));
     if (!is_sorted) {
       PetscInt    *ilocal_s;
       PetscSFNode *iremote_s, sfnode_temp;
-      free_sf_graph = PETSC_TRUE;
+      free_fvert2mvertsf_graph = PETSC_TRUE;
       PetscCall(PetscMalloc1(nleaves, &iremote_s));
       PetscCall(PetscMalloc1(nleaves, &ilocal_s));
       PetscCall(PetscArraycpy(ilocal_s, ilocal, nleaves));
@@ -1001,33 +1020,30 @@ PetscErrorCode MatchIndicesFaceConnectivity(DM dm, PetscInt myownede, PetscInt n
       ilocal  = ilocal_s;
       iremote = iremote_s;
     }
-    PetscCall(PetscSectionCreate(PETSC_COMM_SELF, &f2mvertSection));
-    PetscCall(PetscSectionSetChart(f2mvertSection, 0, nuniq_face_verts));
+    PetscCall(PetscSectionCreate(PETSC_COMM_SELF, &fvert2mvertSection));
+    PetscCall(PetscSectionSetChart(fvert2mvertSection, 0, nuniq_face_verts));
     for (PetscInt l = 0, s = 0, ndof = 0; l < nleaves; l++) {
       ndof++;
       if (l == nleaves - 1 || ilocal[l] != ilocal[l + 1]) {
-        PetscCall(PetscSectionSetDof(f2mvertSection, s, ndof));
+        PetscCall(PetscSectionSetDof(fvert2mvertSection, s, ndof));
         s++;
         ndof = 0;
       } else continue;
     }
-    PetscCall(PetscSectionSetUp(f2mvertSection));
+    PetscCall(PetscSectionSetUp(fvert2mvertSection));
 
-    if (free_sf_graph) PetscCall(PetscFree(ilocal));
+    if (free_fvert2mvertsf_graph) PetscCall(PetscFree(ilocal));
   }
+
+  // Find the rank(s) whose local Plex has the owned CGNS face
+  // We determine ownership by determining which ranks contain all the vertices in a face's connectivity
+  PetscInt     fStart, fEnd;
+  PetscSFNode *iremote_plex2cg;
+  PetscInt    *local_rank_count, *rank_start, *rank_offset, *global_rank_count;
   PetscCall(PetscSectionGetChart(connSection, &fStart, &fEnd));
-  {
-    PetscInt max_f2mvert_size, max_conn_size;
-    PetscCall(PetscSectionGetMaxDof(connSection, &max_conn_size));
-    PetscCall(PetscSectionGetMaxDof(f2mvertSection, &max_f2mvert_size));
-  }
-  PetscSFNode *iremote_c2d;
-  PetscInt    *ilocal_c2d, *local_rank_count, *rank_start, *rank_offset, *global_rank_count;
-  PetscCall(PetscMalloc1(fEnd - fStart, &iremote_c2d));
-  PetscCall(PetscMalloc1(fEnd - fStart, &ilocal_c2d));
-  PetscCall(PetscCalloc3(num_proc, &local_rank_count, num_proc, &rank_start, num_proc, &rank_offset));
-  PetscCall(PetscMalloc1(num_proc, &global_rank_count));
-
+  PetscCall(PetscMalloc1(fEnd - fStart, &iremote_plex2cg));
+  PetscCall(PetscCalloc3(nranks, &local_rank_count, nranks, &rank_start, nranks, &rank_offset));
+  PetscCall(PetscMalloc1(nranks, &global_rank_count));
   for (PetscInt f = fStart, f_i = 0; f < fEnd; f++, f_i++) {
     PetscInt face_rank = -1;
     PetscInt fndof, foffset, lndof, loffset, idx;
@@ -1035,8 +1051,8 @@ PetscErrorCode MatchIndicesFaceConnectivity(DM dm, PetscInt myownede, PetscInt n
     PetscCall(PetscSectionGetDof(connSection, f, &fndof));
     PetscCall(PetscSectionGetOffset(connSection, f, &foffset));
     PetscCall(PetscFindInt(conn[foffset + 0], nuniq_face_verts, uniq_face_verts, &idx));
-    PetscCall(PetscSectionGetDof(f2mvertSection, idx, &lndof));
-    PetscCall(PetscSectionGetOffset(f2mvertSection, idx, &loffset));
+    PetscCall(PetscSectionGetDof(fvert2mvertSection, idx, &lndof));
+    PetscCall(PetscSectionGetOffset(fvert2mvertSection, idx, &loffset));
     // Loop over ranks of the first vertex in the face connectivity
     for (PetscInt l = 0; l < lndof; l++) {
       PetscInt  rank            = iremote[loffset + l].rank;
@@ -1047,8 +1063,8 @@ PetscErrorCode MatchIndicesFaceConnectivity(DM dm, PetscInt myownede, PetscInt n
         PetscInt  ldndof, ldoffset, idx;
         PetscBool vert_has_rank = PETSC_FALSE;
         PetscCall(PetscFindInt(conn[foffset + v], nuniq_face_verts, uniq_face_verts, &idx));
-        PetscCall(PetscSectionGetDof(f2mvertSection, idx, &ldndof));
-        PetscCall(PetscSectionGetOffset(f2mvertSection, idx, &ldoffset));
+        PetscCall(PetscSectionGetDof(fvert2mvertSection, idx, &ldndof));
+        PetscCall(PetscSectionGetOffset(fvert2mvertSection, idx, &ldoffset));
         // Loop over ranks of the vth vertex to see if it has the candidate rank
         for (PetscInt ld = 0; ld < ldndof; ld++) vert_has_rank = (iremote[ldoffset + ld].rank == rank) || vert_has_rank;
         if (vert_has_rank) continue; // This vertex has the candidate rank, proceed to the next vertex
@@ -1063,32 +1079,32 @@ PetscErrorCode MatchIndicesFaceConnectivity(DM dm, PetscInt myownede, PetscInt n
     // TODO: Should I allow for multiple ranks to have a reference to the face? This will be true for internal face references
     // Definitely need to check for it, might as well allow it?
 
-    ilocal_c2d[f_i]       = f_i;
-    iremote_c2d[f_i].rank = rank;
+    iremote_plex2cg[f_i].rank = rank;
     local_rank_count[rank]++;
   }
 
   // NOTE: Can probably replace global_rank_count with rank_start, get the global rank count for the current rank, then use rank_start in the Exscan
-  PetscCallMPI(MPIU_Allreduce(&local_rank_count, &global_rank_count, num_proc, MPIU_INT, MPI_SUM, comm));
-  PetscCallMPI(MPI_Exscan(&local_rank_count, &rank_start, num_proc, MPIU_INT, MPI_SUM, comm));
+  PetscCallMPI(MPIU_Allreduce(&local_rank_count, &global_rank_count, nranks, MPIU_INT, MPI_SUM, comm));
+  PetscCallMPI(MPI_Exscan(&local_rank_count, &rank_start, nranks, MPIU_INT, MPI_SUM, comm));
 
   for (PetscInt f_i = 0; f_i < fEnd - fStart; f_i++) {
-    PetscInt rank_f_i      = iremote_c2d[f_i].rank;
-    iremote_c2d[f_i].index = rank_start[rank_f_i] + rank_offset[rank_f_i];
+    PetscInt rank_f_i          = iremote_plex2cg[f_i].rank;
+    iremote_plex2cg[f_i].index = rank_start[rank_f_i] + rank_offset[rank_f_i];
     rank_offset[rank_f_i]++;
   }
 
-  { // Build rank2fSF
-    // Currently our leaves are the naive-read connectivity data and the roots are the ranks holding the corresponding Plex faces.
-    // We need the reverse of this; for the root -> leaf migration of PetscSectionDistributeData, the roots should be the navie-read connectivity and the leaves should be rank of the corresponding Plex face
-    PetscSF rank2fSF;
-    PetscCall(PetscSFCreate(comm, &rank2fSF));
-    PetscCall(PetscSFSetGraph(rank2fSF, global_rank_count[rank], fEnd - fStart, ilocal_c2d, PETSC_OWN_POINTER, iremote_c2d, PETSC_OWN_POINTER));
-    // By doing this inversion, we effectively guarantee that there are no multi-leaves
-    PetscCall(PetscSFCreateInverseSF(rank2fSF, f2rankSF));
+  { // Build cg2plexSF
+    // Currently our leaves are the owned CGNS faces and the roots are the ranks holding the corresponding Plex faces.
+    // We need the reverse of this; for the root -> leaf migration of PetscSectionDistributeData, the roots should be the owned CGNS faces and the leaves should be rank of the corresponding Plex faces
+    PetscSF plex2cgSF;
+    PetscCall(PetscSFCreate(comm, &plex2cgSF));
+    // May need to set allow_multi_leaves to allow the plex to be created.
+    // Note this isn't a long term problem, as we immediately invert the SF so that the multi-leaves turn into multi-roots
+    PetscCall(PetscSFSetGraph(plex2cgSF, global_rank_count[rank], fEnd - fStart, NULL, PETSC_COPY_VALUES, iremote_plex2cg, PETSC_OWN_POINTER));
+    PetscCall(PetscSFCreateInverseSF(plex2cgSF, cg2plexSF));
     PetscCall(PetscFree3(local_rank_count, rank_start, rank_offset));
     PetscCall(PetscFree(global_rank_count));
-    PetscCall(PetscSFDestroy(&rank2fSF));
+    PetscCall(PetscSFDestroy(&plex2cgSF));
   }
 
   { // Distribute faces and match CGNS faces with DMPlex faces
@@ -1098,7 +1114,7 @@ PetscErrorCode MatchIndicesFaceConnectivity(DM dm, PetscInt myownede, PetscInt n
 
     // Distribute the face connectivity to the rank that has that face
     PetscCall(PetscSectionCreate(comm, &connLocalSection));
-    PetscCall(PetscSectionDistributeData(*f2rankSF, connSection, MPIU_INT, conn, connLocalSection, NULL, (void **)&connLocal));
+    PetscCall(PetscSectionDistributeData(*cg2plexSF, connSection, MPIU_INT, conn, connLocalSection, NULL, (void **)&connLocal));
 
     { // Translate from CGNS vertex numbering to local DMPlex numbering
       PetscInt *dmplex_verts, *uniq_verts_sorted;
@@ -1126,11 +1142,11 @@ PetscErrorCode MatchIndicesFaceConnectivity(DM dm, PetscInt myownede, PetscInt n
     // For every face in connLocalSection, find the transitive support of a point in that face connectivity.
     // Loop through the faces of the transitive support and find the matching face
     PetscInt  hStart, hEnd;
-    PetscInt *matchingFaces_;
+    PetscInt *plexFaces_;
     PetscCall(DMPlexGetHeightStratum(dm, 1, &hStart, &hEnd));
     PetscCall(PetscSectionGetChart(connLocalSection, &flocalStart, &flocalEnd));
-    PetscCall(PetscMalloc1(flocalEnd - flocalStart, &matchingFaces_));
-    for (PetscInt i = 0; i < flocalEnd - flocalStart; i++) matchingFaces_[i] = -1;
+    PetscCall(PetscMalloc1(flocalEnd - flocalStart, &plexFaces_));
+    for (PetscInt i = 0; i < flocalEnd - flocalStart; i++) plexFaces_[i] = -1;
 
     for (PetscInt f = flocalStart; f < flocalEnd; f++) {
       PetscInt  ndof, offset, closure_size;
@@ -1158,19 +1174,19 @@ PetscErrorCode MatchIndicesFaceConnectivity(DM dm, PetscInt myownede, PetscInt n
           PetscCall(PetscFindIntUnsorted(cone[c], ndof, &conn[offset], &conn_has_point));
           if (conn_has_point < 0) goto check_next_face;
         }
-        matchingFaces_[f - flocalStart] = point;
+        plexFaces_[f - flocalStart] = point;
         break;
       check_next_face:
         continue;
       }
       PetscCall(DMPlexRestoreTransitiveClosure(dm, conn[offset], PETSC_FALSE, &closure_size, &closure));
-      PetscCheck(matchingFaces_[f - flocalStart] != -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Could not find plex face for the CGNS face");
+      PetscCheck(plexFaces_[f - flocalStart] != -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Could not find plex face for the CGNS face");
     }
 
-    *matchingFaces = matchingFaces_;
+    *plexFaces = plexFaces_;
   }
 
-  if (free_sf_graph) PetscCall(PetscFree(iremote));
+  if (free_fvert2mvertsf_graph) PetscCall(PetscFree(iremote));
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1316,21 +1332,33 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
 
   int nbocos;
   PetscCallCGNSRead(cg_nbocos(cgid, base, zone, &nbocos), *dm, 0);
+  // In order to extract boundary condition (boco) information into DMLabels, each rank holds:
+  // - The local Plex
+  // - Naively read CGNS face connectivity
+  // - Naively read list of CGNS faces for each boco
+  //
+  // First, we need to build a mapping from the CGNS faces to the (probably off-rank) Plex face.
+  // The CGNS faces that each rank owns is known globally via cgnsLayouts.
+  // The cg2plexSF maps these CGNS face IDs to their (probably off-rank) Plex face.
+  // The plexFaces array maps the (contiguous) leaves of cg2plexSF to the local Plex face point.
+  //
+  // Next, we read the list of CGNS faces for each boco and find the location of that face's owner.
+  // Then, we can communicate the label value
   if (num_face_sections != 0 && nbocos != 0) {
     CGNS_ENUMT(ElementType_t) * cellTypes;
     PetscSection connSection;
-    PetscInt    *face_ids, *conn, *matchingFaces;
-    PetscSF      f2rankSF;
-    PetscLayout *layouts;
+    PetscInt    *face_ids, *conn, *plexFaces;
+    PetscSF      cg2plexSF;
+    PetscLayout *cgnsLayouts;
     PetscInt     num_connfaces;
 
-    PetscCall(DMPlexCGNS_CreateCornersConnectivitySection(*dm, cgid, base, zone, num_face_sections, face_section_ids, &connSection, &cellTypes, &face_ids, &layouts, &conn));
+    PetscCall(DMPlexCGNS_CreateCornersConnectivitySection(*dm, cgid, base, zone, num_face_sections, face_section_ids, &connSection, &cellTypes, &face_ids, &cgnsLayouts, &conn));
     {
       PetscInt start, end;
       PetscCall(PetscSectionGetChart(connSection, &start, &end));
       num_connfaces = end - start;
     }
-    PetscCall(MatchIndicesFaceConnectivity(*dm, myownede, nuniq_verts, uniq_verts, NVertices, connSection, conn, &f2rankSF, &matchingFaces));
+    PetscCall(MatchIndicesFaceConnectivity(*dm, myownede, nuniq_verts, uniq_verts, NVertices, connSection, conn, &cg2plexSF, &plexFaces));
 
     PetscInt *face_values;
     PetscCall(PetscMalloc1(num_connfaces, &face_values));
@@ -1371,25 +1399,28 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
         PetscMPIInt bcrank;
         PetscInt    bcidx;
 
-        PetscCall(PetscLayoutFindOwnerIndex_CGNS(layouts, num_face_sections, points[p], &bcrank, &bcidx, NULL));
+        PetscCall(PetscLayoutFindOwnerIndex_CGNSSectionLayouts(cgnsLayouts, num_face_sections, points[p], &bcrank, &bcidx, NULL));
         remotes->rank   = bcrank;
         remotes->index  = bcidx;
         label_values[p] = label_value;
       }
 
-      PetscSF f2bcSF, bc2fSF, bc2rankSF;
-      PetscCall(PetscSFCreate(comm, &f2bcSF));
-      PetscCall(PetscSFSetGraph(f2bcSF, num_connfaces, bcSize, NULL, PETSC_COPY_VALUES, remotes, PETSC_USE_POINTER));
-      PetscCall(PetscSFCreateInverseSF(f2bcSF, &bc2fSF));
-      PetscCall(PetscSFCompose(bc2fSF, f2rankSF, &bc2rankSF));
+      { // Communicate the BC values to their Plex-face owners
+        // TODO: Instead of the SFInverse and SFCompose shenanigans, might as well just to a straight-up SFReduce -> SFBcast setup
+        PetscSF cg2bcSF, bc2cgSF, bc2plexSF;
+        PetscCall(PetscSFCreate(comm, &cg2bcSF));
+        PetscCall(PetscSFSetGraph(cg2bcSF, num_connfaces, bcSize, NULL, PETSC_COPY_VALUES, remotes, PETSC_USE_POINTER));
+        PetscCall(PetscSFCreateInverseSF(cg2bcSF, &bc2cgSF));
+        PetscCall(PetscSFCompose(bc2cgSF, cg2plexSF, &bc2plexSF));
 
-      for (PetscInt i = 0; i < num_connfaces; i++) face_values[i] = -1;
-      PetscCall(PetscSFBcastBegin(bc2rankSF, MPIU_INT, label_values, face_values, MPI_REPLACE));
-      PetscCall(PetscSFBcastEnd(bc2rankSF, MPIU_INT, label_values, face_values, MPI_REPLACE));
+        for (PetscInt i = 0; i < num_connfaces; i++) face_values[i] = -1;
+        PetscCall(PetscSFBcastBegin(bc2plexSF, MPIU_INT, label_values, face_values, MPI_REPLACE));
+        PetscCall(PetscSFBcastEnd(bc2plexSF, MPIU_INT, label_values, face_values, MPI_REPLACE));
 
-      PetscCall(PetscSFDestroy(&f2bcSF));
-      PetscCall(PetscSFDestroy(&bc2fSF));
-      PetscCall(PetscSFDestroy(&bc2rankSF));
+        PetscCall(PetscSFDestroy(&cg2bcSF));
+        PetscCall(PetscSFDestroy(&bc2cgSF));
+        PetscCall(PetscSFDestroy(&bc2plexSF));
+      }
 
       { // Set the label values for the communicated faces
         DMLabel label;
@@ -1397,7 +1428,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
         PetscCall(DMGetLabel(*dm, label_name, &label));
         for (PetscInt i = 0; i < num_connfaces; i++) {
           if (face_values[i] == -1) continue;
-          PetscCall(DMLabelSetValue(label, matchingFaces[i], face_values[i]));
+          PetscCall(DMLabelSetValue(label, plexFaces[i], face_values[i]));
         }
       }
     }
