@@ -374,14 +374,15 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   /* Compute S = R^{-1/2}(Z - y_mean * 1')/sqrt(m-1) for all grid points */
   /* Also compute delta = R^{-1/2}(y - y_mean) for all grid points */
   Kokkos::parallel_for(
-    "ComputeAllNormalizedInnovations", Kokkos::MDRangePolicy<Kokkos::Rank<3>, exec_space>({0, 0, 0}, {n_vertices, impl->p_local, m}), KOKKOS_LAMBDA(const int i, const int k, const int j) {
-      /* S_batch(i, k, j) = (Z_batch(i, k, j) - y_mean_batch(i, k)) * scale * r_inv_sqrt_batch(i, k) */
-      S_batch(i, k, j) = (Z_batch(i, k, j) - y_mean_batch(i, k)) * scale * r_inv_sqrt_batch(i, k);
-    });
+    "ComputeSAndDelta", Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_space>({0, 0}, {n_vertices, impl->p_local}), KOKKOS_LAMBDA(const int i, const int k) {
+      /* Compute delta */
+      delta_batch(i, k) = (y_batch(i, k) - y_mean_batch(i, k)) * r_inv_sqrt_batch(i, k);
 
-  /* Compute delta = R^{-1/2}(y - y_mean) for all grid points */
-  Kokkos::parallel_for(
-    "ComputeAllDeltas", Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_space>({0, 0}, {n_vertices, impl->p_local}), KOKKOS_LAMBDA(const int i, const int k) { delta_batch(i, k) = (y_batch(i, k) - y_mean_batch(i, k)) * r_inv_sqrt_batch(i, k); });
+      /* Compute S row */
+      PetscScalar scale_factor = scale * r_inv_sqrt_batch(i, k);
+      PetscScalar mean_val     = y_mean_batch(i, k);
+      for (int j = 0; j < m; j++) { S_batch(i, k, j) = (Z_batch(i, k, j) - mean_val) * scale_factor; }
+    });
   Kokkos::fence();
 
   /* ===================================================================== */
