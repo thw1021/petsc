@@ -1162,7 +1162,11 @@ PetscErrorCode DMLabelClearValue(DMLabel label, PetscInt point, PetscInt value)
 
   Level: intermediate
 
-.seealso: `DMLabel`, `DM`, `DMLabelCreate()`, `DMLabelGetValue()`, `DMLabelSetValue()`, `DMLabelClearValue()`
+  Note:
+  This function simply adds these points to the value stratum.
+  To remove all points previously set to `value` before setting the new points, see `DMLabelSetStratumIS().
+
+.seealso: `DMLabel`, `DM`, `DMLabelSetStratumIS()`, `DMLabelCreate()`, `DMLabelGetValue()`, `DMLabelSetValue()`, `DMLabelClearValue()`
 @*/
 PetscErrorCode DMLabelInsertIS(DMLabel label, IS is, PetscInt value)
 {
@@ -1504,7 +1508,11 @@ PetscErrorCode DMLabelGetStratumIS(DMLabel label, PetscInt value, IS *points)
 
   Level: intermediate
 
-.seealso: `DMLabel`, `DM`, `DMLabelCreate()`, `DMLabelGetValue()`, `DMLabelSetValue()`, `DMLabelClearValue()`
+  Note:
+  This function removes all points previously set to `value` before setting the new points.
+  To add new points without removing old points, see `DMLabelInsertIS()`.
+
+.seealso: `DMLabel`, `DM`, `DMLabelInsertIS()`, `DMLabelCreate()`, `DMLabelGetValue()`, `DMLabelSetValue()`, `DMLabelClearValue()`
 @*/
 PetscErrorCode DMLabelSetStratumIS(DMLabel label, PetscInt value, IS is)
 {
