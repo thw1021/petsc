@@ -393,47 +393,43 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     view_2d temp2_batch("temp2_batch", n_batch_current, m);                       // (n_batch_current, m) - Workspace
 
     /* ===================================================================== */
-    /* Step 2.1.2: Parallelize observation extraction for current chunk      */
+    /* Step 2.1.2: Fused observation extraction and S/Delta computation     */
     /* ===================================================================== */
+    /* Extract local observations and immediately compute S and delta       */
+    /* This fusion eliminates one kernel launch and improves cache locality */
     Kokkos::parallel_for(
-      "ExtractAllLocalObservations", Kokkos::RangePolicy<exec_space>(0, n_batch_current), KOKKOS_LAMBDA(const int i_local) {
+      "ExtractAndComputeSAndDelta", Kokkos::RangePolicy<exec_space>(0, n_batch_current), KOKKOS_LAMBDA(const int i_local) {
         PetscInt i_global = chunk_start + i_local;
         /* Get Q row for this grid point using CSR format */
         PetscInt row_start = Q_i_view(i_global);
         PetscInt row_end   = Q_i_view(i_global + 1);
         PetscInt ncols     = row_end - row_start;
 
-        /* Extract observations for this grid point */
+        /* Extract observations and compute S/delta for this grid point */
         for (PetscInt k = 0; k < ncols; k++) {
           PetscInt    obs_idx = Q_j_view(row_start + k);
           PetscScalar weight  = Q_a_view(row_start + k);
 
           /* Extract observation vectors */
-          y_batch(i_local, k)          = y_global_view(obs_idx);
-          y_mean_batch(i_local, k)     = y_mean_global_view(obs_idx);
-          r_inv_sqrt_batch(i_local, k) = r_inv_sqrt_global_view(obs_idx) * Kokkos::sqrt(weight);
+          PetscScalar y_val      = y_global_view(obs_idx);
+          PetscScalar y_mean_val = y_mean_global_view(obs_idx);
+          PetscScalar r_inv_sqrt = r_inv_sqrt_global_view(obs_idx) * Kokkos::sqrt(weight);
 
-          /* Extract Z matrix columns for this observation */
-          for (int j = 0; j < m; j++) { Z_batch(i_local, k, j) = Z_global_view(obs_idx, j); }
-        }
-      });
-    Kokkos::fence();
+          /* Store for later use if needed */
+          y_batch(i_local, k)          = y_val;
+          y_mean_batch(i_local, k)     = y_mean_val;
+          r_inv_sqrt_batch(i_local, k) = r_inv_sqrt;
 
-    /* ===================================================================== */
-    /* Step 2.1.3: Parallelize normalized innovation computation            */
-    /* ===================================================================== */
-    /* Compute S = R^{-1/2}(Z - y_mean * 1')/sqrt(m-1) for current chunk */
-    /* Also compute delta = R^{-1/2}(y - y_mean) for current chunk */
-    Kokkos::parallel_for(
-      "ComputeSAndDelta", Kokkos::RangePolicy<exec_space>(0, n_batch_current), KOKKOS_LAMBDA(const int i) {
-        for (int k = 0; k < impl->p_local; k++) {
-          /* Compute delta */
-          delta_batch(i, k) = (y_batch(i, k) - y_mean_batch(i, k)) * r_inv_sqrt_batch(i, k);
+          /* Compute delta immediately: delta = R^{-1/2}(y - y_mean) */
+          delta_batch(i_local, k) = (y_val - y_mean_val) * r_inv_sqrt;
 
-          /* Compute S row */
-          PetscScalar scale_factor = scale * r_inv_sqrt_batch(i, k);
-          PetscScalar mean_val     = y_mean_batch(i, k);
-          for (int j = 0; j < m; j++) { S_batch(i, k, j) = (Z_batch(i, k, j) - mean_val) * scale_factor; }
+          /* Compute S row: S = R^{-1/2}(Z - y_mean * 1')/sqrt(m-1) */
+          PetscScalar scale_factor = scale * r_inv_sqrt;
+          for (int j = 0; j < m; j++) {
+            PetscScalar z_val      = Z_global_view(obs_idx, j);
+            Z_batch(i_local, k, j) = z_val; /* Store Z for potential later use */
+            S_batch(i_local, k, j) = (z_val - y_mean_val) * scale_factor;
+          }
         }
       });
     Kokkos::fence();
