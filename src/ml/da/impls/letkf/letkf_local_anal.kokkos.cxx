@@ -298,7 +298,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   ndof           = da->ndof;
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
-  inflation_inv  = 1.0 / da->inflation; /* (1/ρ) for T matrix: T = (1/ρ)I + S^T*S */
+  inflation_inv  = 1.0 / da->inflation; /* (1/rho) for T matrix: T = (1/rho)I + S^T*S */
 
   /* ===================================================================== */
   /* Step 2.1.1: Create batched workspace for ALL grid points            */
@@ -467,9 +467,9 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     Kokkos::fence();
 
     /* ===================================================================== */
-    /* Step 2.1.4: Optimized T matrix formation (T = (1/ρ)I + S^T * S)    */
+    /* Step 2.1.4: Optimized T matrix formation (T = (1/rho)I + S^T * S)    */
     /* ===================================================================== */
-    /* Compute T_i = (1/ρ)I + S_i^T * S_i for current chunk */
+    /* Compute T_i = (1/rho)I + S_i^T * S_i for current chunk */
     /* Exploit symmetry: only compute upper triangle, then copy to lower */
     /* This reduces operations by ~50% */
     Kokkos::parallel_for(
@@ -478,11 +478,11 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         auto T_i = Kokkos::subview(T_batch, i, Kokkos::ALL(), Kokkos::ALL());
 
         /* Compute upper triangle of T_i = (1/ρ)I + S_i^T * S_i */
-        /* T_i(j,k) = (1/ρ)*δ_jk + Σ_p S_i(p,j) * S_i(p,k) for j <= k */
+        /* T_i(j,k) = (1/rho)*delta_jk + sum_p S_i(p,j) * S_i(p,k) for j <= k */
         for (int j = 0; j < m; j++) {
           for (int k = j; k < m; k++) {
             PetscScalar sum = (j == k) ? inflation_inv : 0.0;
-            for (int p = 0; p < impl->p_local; p++) sum += S_i(p, j) * S_i(p, k);
+            for (int p = 0; p < p_local_copy; p++) sum += S_i(p, j) * S_i(p, k);
             T_i(j, k) = sum;
           }
         }
