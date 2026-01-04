@@ -568,7 +568,6 @@ int main(int argc, char **argv)
 
     test:
       suffix: eigen
-      diff_args: -j
       args: -petscda_sqrt_type eigen
 
     test:

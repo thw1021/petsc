@@ -462,7 +462,6 @@ int main(int argc, char **argv)
 
     test:
       suffix: etkf
-      diff_args: -j
       args: -petscda_type etkf
 
 TEST*/
