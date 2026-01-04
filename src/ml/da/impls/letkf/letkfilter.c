@@ -428,7 +428,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, Pet
       PetscCall(MatDenseGetArray(X_rows, &x_rows_array));
       PetscCall(MatDenseGetLDA(X, &lda_x));
       for (j = 0; j < m; j++) {
-        for (k = 0; k < ndof; k++) { x_rows_array[k + j * ndof] = x_array[(i_grid_point * ndof + k) + j * lda_x]; }
+        for (k = 0; k < ndof; k++) x_rows_array[k + j * ndof] = x_array[(i_grid_point * ndof + k) + j * lda_x];
       }
       PetscCall(MatDenseRestoreArray(X_rows, &x_rows_array));
       PetscCall(MatDenseRestoreArrayRead(X, &x_array));
@@ -440,7 +440,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, Pet
       PetscCall(VecGetArrayRead(impl->mean, &mean_array));
       PetscCall(MatDenseGetArray(E_analysis_rows, &ea_rows_array));
       for (j = 0; j < m; j++) {
-        for (k = 0; k < ndof; k++) { ea_rows_array[k + j * ndof] += mean_array[i_grid_point * ndof + k]; }
+        for (k = 0; k < ndof; k++) ea_rows_array[k + j * ndof] += mean_array[i_grid_point * ndof + k];
       }
       PetscCall(MatDenseRestoreArray(E_analysis_rows, &ea_rows_array));
       PetscCall(VecRestoreArrayRead(impl->mean, &mean_array));
@@ -450,7 +450,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, Pet
       PetscCall(MatDenseGetLDA(da->ensemble, &lda_e));
       PetscCall(MatDenseGetArrayRead(E_analysis_rows, (const PetscScalar **)&ea_rows_array));
       for (j = 0; j < m; j++) {
-        for (k = 0; k < ndof; k++) { e_array[(i_grid_point * ndof + k) + j * lda_e] = ea_rows_array[k + j * ndof]; }
+        for (k = 0; k < ndof; k++) e_array[(i_grid_point * ndof + k) + j * lda_e] = ea_rows_array[k + j * ndof];
       }
       PetscCall(MatDenseRestoreArrayRead(E_analysis_rows, (const PetscScalar **)&ea_rows_array));
       PetscCall(MatDenseRestoreArrayWrite(da->ensemble, &e_array));
