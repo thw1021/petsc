@@ -1408,8 +1408,8 @@ PetscErrorCode PetscDATFactor(PetscDA da, Mat S)
   */
   PetscCall(MatTransposeMatMult(S, S, scall, PETSC_DEFAULT, &da->I_StS));
 
-  /* Add Identity: T = I + S^T*S */
-  PetscCall(MatShift(da->I_StS, 1.0));
+  /* Add Identity: T = (1/rho)I + S^T*S */
+  PetscCall(MatShift(da->I_StS, 1.0 / da->inflation));
 
   /* 4. Compute Factorization based on strategy */
   switch (da->sqrt_type) {
