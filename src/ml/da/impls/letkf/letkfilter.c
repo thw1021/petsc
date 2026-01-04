@@ -816,7 +816,7 @@ static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
 
 static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *PetscOptionsObjectPtr)
 {
-  PetscDALETKFData *impl = (PetscDALETKFData *)da->data;
+  PetscDALETKFData *impl               = (PetscDALETKFData *)da->data;
   PetscOptionItems  PetscOptionsObject = *PetscOptionsObjectPtr;
 
   PetscFunctionBegin;
@@ -855,8 +855,8 @@ PetscErrorCode PetscDALETKFInitialize(PetscDA da)
   da->ops->setfromoptions   = PetscDASetFromOptions_LETKF;
 
   /* Initialize default values */
-  impl->p_local = Q_NUM_LOCAL_OBSERVATIONS_MAX;
-  impl->Q       = NULL;
+  impl->p_local    = Q_NUM_LOCAL_OBSERVATIONS_MAX;
+  impl->Q          = NULL;
   impl->batch_size = 0;
 
   /* Register the method for setting localization */
