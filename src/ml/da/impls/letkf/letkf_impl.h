@@ -18,10 +18,16 @@ typedef struct {
   PetscInt p_local;    // = Q_NUM_LOCAL_OBSERVATIONS_MAX (number of local observations per grid point)
   PetscInt n_grid;     // Number of grid points (n_grid = state_size / da->ndof)
   PetscInt batch_size; // Batch size for GPU processing
+  /* Device pointers for Q (Kokkos views cast to void*) */
+  void *Q_device_i;
+  void *Q_device_j;
+  void *Q_device_a;
 } PetscDALETKFData;
 
 #if defined(PETSC_HAVE_KOKKOS)
 /* Function declarations */
 PETSC_EXTERN PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA, PetscDALETKFData *, PetscInt, PetscInt, Mat, Vec, Mat, Vec, Vec);
 PETSC_EXTERN PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA, PetscDALETKFData *, PetscInt, PetscInt, Mat, Vec, Mat, Vec, Vec);
+PETSC_EXTERN PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *);
+PETSC_EXTERN PetscErrorCode PetscDALETKFDestroyLocalization_Kokkos(PetscDALETKFData *);
 #endif

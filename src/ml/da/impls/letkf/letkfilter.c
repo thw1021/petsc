@@ -25,6 +25,9 @@ static PetscErrorCode PetscDALETKFDestroy(PetscDA da)
     PetscCall(MatDestroy(&impl->T_sqrt));
     PetscCall(MatDestroy(&impl->w_ones));
     PetscCall(MatDestroy(&impl->Q)); // Destroy localization matrix
+#if defined(PETSC_HAVE_KOKKOS)
+    PetscCall(PetscDALETKFDestroyLocalization_Kokkos(impl));
+#endif
 
     PetscCall(PetscFree(da->data));
     da->data = NULL;
@@ -750,6 +753,9 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q)
   PetscCall(MatDestroy(&impl->Q));
   PetscCall(MatDuplicate(Q, MAT_COPY_VALUES, &impl->Q));
   impl->p_local = Q_NUM_LOCAL_OBSERVATIONS_MAX;
+#if defined(PETSC_HAVE_KOKKOS)
+  PetscCall(PetscDALETKFSetupLocalization_Kokkos(impl));
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

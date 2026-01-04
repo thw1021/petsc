@@ -259,6 +259,87 @@ static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::La
 }
 #endif
 
+/*
+  PetscDALETKFSetupLocalization_Kokkos - Prepares device views for localization matrix Q
+*/
+PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
+{
+  const PetscInt *Q_i, *Q_j;
+  PetscScalar    *Q_a;
+  PetscMemType    Q_memtype;
+  PetscInt        nrows, ncols;
+
+  PetscFunctionBegin;
+  if (!impl->Q) PetscFunctionReturn(PETSC_SUCCESS);
+
+  PetscCall(PetscKokkosInitializeCheck());
+
+  /* Get CSR data */
+  PetscCall(MatSeqAIJGetCSRAndMemType(impl->Q, &Q_i, &Q_j, &Q_a, &Q_memtype));
+  PetscCall(MatGetSize(impl->Q, &nrows, &ncols));
+
+  /* Define View types */
+  using view_1d_int                    = Kokkos::View<PetscInt *, Kokkos::LayoutLeft>;
+  using view_1d_scalar                 = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft>;
+  using view_1d_int_host               = Kokkos::View<const PetscInt *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using view_1d_scalar_host            = Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using view_1d_int_dev_unmanaged      = Kokkos::View<const PetscInt *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using view_1d_scalar_dev_unmanaged   = Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+
+  /* Allocate device views */
+  view_1d_int    *d_Q_i = new view_1d_int("Q_i", nrows + 1);
+  view_1d_int    *d_Q_j = new view_1d_int("Q_j", nrows * impl->p_local);
+  view_1d_scalar *d_Q_a = new view_1d_scalar("Q_a", nrows * impl->p_local);
+
+  if (Q_memtype != PETSC_MEMTYPE_HOST) {
+    /* Data is on device, copy device-to-device */
+    view_1d_int_dev_unmanaged    d_src_i(Q_i, nrows + 1);
+    view_1d_int_dev_unmanaged    d_src_j(Q_j, nrows * impl->p_local);
+    view_1d_scalar_dev_unmanaged d_src_a(Q_a, nrows * impl->p_local);
+
+    Kokkos::deep_copy(*d_Q_i, d_src_i);
+    Kokkos::deep_copy(*d_Q_j, d_src_j);
+    Kokkos::deep_copy(*d_Q_a, d_src_a);
+  } else {
+    /* Data is on host, copy host-to-device */
+    view_1d_int_host    h_Q_i(Q_i, nrows + 1);
+    view_1d_int_host    h_Q_j(Q_j, nrows * impl->p_local);
+    view_1d_scalar_host h_Q_a(Q_a, nrows * impl->p_local);
+
+    Kokkos::deep_copy(*d_Q_i, h_Q_i);
+    Kokkos::deep_copy(*d_Q_j, h_Q_j);
+    Kokkos::deep_copy(*d_Q_a, h_Q_a);
+  }
+
+  /* Store in impl */
+  impl->Q_device_i = static_cast<void *>(d_Q_i);
+  impl->Q_device_j = static_cast<void *>(d_Q_j);
+  impl->Q_device_a = static_cast<void *>(d_Q_a);
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PetscDALETKFDestroyLocalization_Kokkos(PetscDALETKFData *impl)
+{
+  PetscFunctionBegin;
+  if (impl->Q_device_i) {
+    using view_1d_int = Kokkos::View<PetscInt *, Kokkos::LayoutLeft>;
+    delete static_cast<view_1d_int *>(impl->Q_device_i);
+    impl->Q_device_i = NULL;
+  }
+  if (impl->Q_device_j) {
+    using view_1d_int = Kokkos::View<PetscInt *, Kokkos::LayoutLeft>;
+    delete static_cast<view_1d_int *>(impl->Q_device_j);
+    impl->Q_device_j = NULL;
+  }
+  if (impl->Q_device_a) {
+    using view_1d_scalar = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft>;
+    delete static_cast<view_1d_scalar *>(impl->Q_device_a);
+    impl->Q_device_a = NULL;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* ========================================================================== */
 /*                    LETKF Local Analysis (Main Function)                    */
 /* ========================================================================== */
@@ -325,20 +406,36 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   /* ===================================================================== */
   /* Step 2.1.2a: Pre-extract Q matrix CSR data for device access        */
   /* ===================================================================== */
-  /* Get direct access to Q's CSR arrays (zero-copy) */
-  const PetscInt *Q_i, *Q_j;
-  PetscScalar    *Q_a;
-  PetscMemType    Q_memtype;
-
-  PetscCall(MatSeqAIJGetCSRAndMemType(impl->Q, &Q_i, &Q_j, &Q_a, &Q_memtype));
-
-  /* Create unmanaged Kokkos views wrapping the CSR arrays */
   using view_1d_int_const    = Kokkos::View<const PetscInt *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
   using view_1d_scalar_const = Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using view_1d_int          = Kokkos::View<PetscInt *, Kokkos::LayoutLeft>;
+  using view_1d_scalar       = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft>;
 
-  view_1d_int_const    Q_i_view(Q_i, n_vertices + 1);
-  view_1d_int_const    Q_j_view(Q_j, n_vertices * Q_NUM_LOCAL_OBSERVATIONS_MAX);
-  view_1d_scalar_const Q_a_view(Q_a, n_vertices * Q_NUM_LOCAL_OBSERVATIONS_MAX);
+  view_1d_int_const    Q_i_view;
+  view_1d_int_const    Q_j_view;
+  view_1d_scalar_const Q_a_view;
+
+  if (impl->Q_device_i) {
+    /* Use pre-allocated device views */
+    view_1d_int    *d_Q_i = static_cast<view_1d_int *>(impl->Q_device_i);
+    view_1d_int    *d_Q_j = static_cast<view_1d_int *>(impl->Q_device_j);
+    view_1d_scalar *d_Q_a = static_cast<view_1d_scalar *>(impl->Q_device_a);
+
+    Q_i_view = view_1d_int_const(d_Q_i->data(), d_Q_i->extent(0));
+    Q_j_view = view_1d_int_const(d_Q_j->data(), d_Q_j->extent(0));
+    Q_a_view = view_1d_scalar_const(d_Q_a->data(), d_Q_a->extent(0));
+  } else {
+    /* Fallback to host pointers (unsafe if not UVM) */
+    const PetscInt *Q_i, *Q_j;
+    PetscScalar    *Q_a;
+    PetscMemType    Q_memtype;
+
+    PetscCall(MatSeqAIJGetCSRAndMemType(impl->Q, &Q_i, &Q_j, &Q_a, &Q_memtype));
+
+    Q_i_view = view_1d_int_const(Q_i, n_vertices + 1);
+    Q_j_view = view_1d_int_const(Q_j, n_vertices * Q_NUM_LOCAL_OBSERVATIONS_MAX);
+    Q_a_view = view_1d_scalar_const(Q_a, n_vertices * Q_NUM_LOCAL_OBSERVATIONS_MAX);
+  }
 
   /* Get global observation data arrays */
   const PetscScalar *z_global_array, *y_global_array, *y_mean_global_array, *r_inv_sqrt_global_array;
