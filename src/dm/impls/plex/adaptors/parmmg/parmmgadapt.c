@@ -393,7 +393,8 @@ PETSC_EXTERN PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, D
   for (i = 0, numVerticesNewLoc = 0; i < numVerticesNew; ++i) {
     if (owners[i] == rank) numVerticesNewLoc++;
   }
-  PetscCall(PetscMalloc2(numVerticesNewLoc * dim, &verticesNewLoc, numVerticesNew, &verticesNewSorted));
+  // TODO: Do not allocate verticesNewSorted
+  PetscCall(PetscMalloc1(numVerticesNewLoc * dim, &verticesNewLoc));
   for (i = 0, c = 0; i < numVerticesNew; i++) {
     if (owners[i] == rank) {
       for (j = 0; j < dim; ++j) verticesNewLoc[dim * c + j] = verticesNew[dim * i + j];
@@ -406,6 +407,13 @@ PETSC_EXTERN PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, D
 
   /* Create new plex */
   PetscCall(DMPlexCreateFromCellListParallelPetsc(comm, dim, numCellsNew, numVerticesNewLoc, PETSC_DECIDE, numCornersNew, PETSC_TRUE, cellsNew, dim, verticesNewLoc, NULL, &verticesNewSorted, dmNew));
+  {
+    PetscInt pStart, pEnd;
+    PetscCall(DMPlexGetChart(*dm, &pStart, &pEnd));
+    PetscInt numVerticesNewSorted = (pEnd - pStart) - numCellsNew;
+    PetscCheck(numVerticesNewSorted == numVerticesNew, PETSC_COMM_SELF, PETSC_ERR_PLIB, "DM has %" PetscInt_FMT " unique vertices, but ParMMG expected %" PetscInt_FMT);
+  }
+
   PetscCallMMG_NONSTANDARD(PMMG_Free_all, PMMG_ARG_start, PMMG_ARG_ppParMesh, &parmesh, PMMG_ARG_end);
   PetscCall(PetscFree4(verticesNew, verTagsNew, corners, requiredVer));
 
@@ -442,7 +450,7 @@ PETSC_EXTERN PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, D
   }
   PetscCall(PetscFree4(facesNew, faceTagsNew, ridges, requiredFaces));
   PetscCall(PetscFree2(owners, gv_new));
-  PetscCall(PetscFree2(verticesNewLoc, verticesNewSorted));
+  PetscCall(PetscFree1(verticesNewLoc));
   if (flg) PetscCall(DMLabelDestroy(&bdLabel));
 
   /* Rebuild cell labels */
