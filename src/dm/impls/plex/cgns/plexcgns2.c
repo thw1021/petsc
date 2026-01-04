@@ -2006,41 +2006,39 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
   PetscCall(DMGetLabelSize(dm, "Face Sets", &num_fs));
   // TODO: Verify compatiblity with higher-order geometries. (Probably don't , but possibly need to do a "corners only" connectivity or something)
   if (num_fs > 0) {
-    DMLabel   fsLabel;
-    cgsize_t *conn = NULL;
-
-    PetscCall(DMGetLabel(dm, "Face Sets", &fsLabel));
-
-    PetscInt        fs, fsSizeMax = -1;
+    CGNS_ENUMT(ElementType_t) element_type = CGNS_ENUMV(ElementTypeNull);
+    DMLabel         fsLabel;
     const PetscInt *fsIdx;
     IS              fsIS, stratumIS, fsISTotal;
     int             section;
-    CGNS_ENUMT(ElementType_t) element_type = CGNS_ENUMV(ElementTypeNull);
-    const int *perm;
-    cgsize_t   f_owned = 0, f_global, f_start, *parents;
+    const int      *perm;
+    cgsize_t        f_owned = 0, f_global, f_start;
+    cgsize_t       *parents, *conn = NULL;
+    PetscInt        fStart, fEnd;
 
     PetscCall(DMGetLabel(dm, "Face Sets", &fsLabel));
     PetscCall(DMLabelGetNonEmptyStratumValuesIS(fsLabel, &fsIS));
     PetscCall(DMGetLabelSize(dm, "Face Sets", &num_fs));
     PetscCall(ISGetIndices(fsIS, &fsIdx));
+    PetscCall(DMPlexGetHeightStratum(dm, 1, &fStart, &fEnd));
     { // Get single IS without duplicates of the local face IDs in the FaceSets
       PetscInt fsSize;
       IS      *fsISs;
 
       PetscCall(PetscMalloc1(num_fs, &fsISs));
-      for (fs = 0; fs < num_fs; ++fs) {
+      for (PetscInt fs = 0; fs < num_fs; ++fs) {
         PetscCall(DMLabelGetStratumIS(fsLabel, fsIdx[fs], &fsISs[fs]));
         PetscCall(ISGetSize(fsISs[fs], &fsSize));
-        fsSizeMax = PetscMax(fsSizeMax, fsSize);
       }
       PetscCall(ISConcatenate(PetscObjectComm((PetscObject)fsISs[0]), num_fs, fsISs, &fsISTotal));
       PetscCall(ISSortRemoveDups(fsISTotal));
+      PetscCall(ISGeneralFilter(fsISTotal, fStart, fEnd)); // Remove non-face mesh points from the IS
       {
         PetscInt f_owned_int;
         PetscCall(ISGetSize(fsISTotal, &f_owned_int));
         f_owned = f_owned_int;
       }
-      for (fs = 0; fs < num_fs; ++fs) PetscCall(ISDestroy(&fsISs[fs]));
+      for (PetscInt fs = 0; fs < num_fs; ++fs) PetscCall(ISDestroy(&fsISs[fs]));
       PetscCall(PetscFree(fsISs));
     }
     PetscCall(ISDestroy(&fsIS));
@@ -2054,15 +2052,27 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       if (f_owned) PetscCall(DMPlexGetCellType(dm, faces[0], &cell_type));
       PetscCall(PetscCalloc1(f_owned * 2, &parents));
       for (PetscInt f = 0, c = 0; f < f_owned; f++) {
-        PetscInt       *closure_indices, elem_size, support_size;
+        PetscInt       *closure_indices, elem_size, support_size, support_cells[2] = {-1, -1};
         const PetscInt *support;
         const PetscInt  face = faces[f];
 
+        PetscCall(DMPlexGetCellType(dm, face, &cell_type_f));
+        PetscCheck(cell_type_f == cell_type, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Only mono-topology face sets are supported currently. Face %" PetscInt_FMT " is %s, which is different than the previous type %s", face, DMPolytopeTypes[cell_type_f], DMPolytopeTypes[cell_type]);
+
         PetscCall(DMPlexGetSupportSize(dm, face, &support_size));
+        PetscCheck(support_size >= 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Face has no supporting cells");
         PetscCall(DMPlexGetSupport(dm, face, &support));
-        PetscCheck(support_size < 2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Face has more than one supporting cell");
-        parents[f * 2 + 0] = support[0] + e_start + 1;
-        if (support_size == 2) parents[f * 2 + 0] = support[0] + e_start + 1;
+        for (PetscInt s = 0, cell = 0; s < support_size; s++) {
+          DMPolytopeType support_type;
+          PetscCall(DMPlexGetCellType(dm, support[s], &support_type));
+          if (support_type != DM_POLYTOPE_FV_GHOST && support_type != DM_POLYTOPE_INTERIOR_GHOST) {
+            PetscCheck(cell <= 2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Face %" PetscInt_FMT " has more than 1 supporting non-ghost cell", face);
+            support_cells[cell++] = support[s];
+          }
+        }
+
+        parents[f * 2 + 0] = support_cells[0] + e_start + 1;
+        if (support_size == 2) parents[f * 2 + 0] = support_cells[1] + e_start + 1;
 
         PetscCall(DMPlexGetClosureIndices(cdm, cdm->localSection, cdm->localSection, face, PETSC_FALSE, &closure_dof_f, &closure_indices, NULL, NULL));
         elem_size = closure_dof_f / coord_dim;
@@ -2070,8 +2080,6 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
           PetscCall(PetscMalloc1(f_owned * elem_size, &conn));
           closure_dof = closure_dof_f;
         }
-        PetscCall(DMPlexGetCellType(dm, face, &cell_type_f));
-        PetscCheck(cell_type_f == cell_type, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Only mono-topology face sets are supported currently. Face %" PetscInt_FMT " is %s, which is different than the previous type %s", face, DMPolytopeTypes[cell_type_f], DMPolytopeTypes[cell_type]);
         PetscCheck(closure_dof_f == closure_dof, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Closure of face %" PetscInt_FMT " has %" PetscInt_FMT " dofs instead of the previously written %" PetscInt_FMT " dofs. Only mono-topology face sets are supported currently", face, closure_dof_f, closure_dof);
         PetscCall(DMPlexCGNSGetPermutation_Internal(cell_type, elem_size, &element_type, &perm));
         for (PetscInt j = 0; j < elem_size; j++) conn[c++] = node_l2g[closure_indices[perm[j] * coord_dim] / coord_dim] + 1;
@@ -2104,7 +2112,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     // Write  BC_t for every face set value.
     PetscInt num_fs_global, *fsIdxGlobal;
     PetscCall(DMLabelCreateGlobalValueArray(fsLabel, &num_fs_global, &fsIdxGlobal));
-    for (fs = 0; fs < num_fs_global; ++fs) {
+    for (PetscInt fs = 0; fs < num_fs_global; ++fs) {
       int             BC;
       const PetscInt *fs_pnts;
       char            bc_name[33];
