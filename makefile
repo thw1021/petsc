@@ -363,10 +363,10 @@ checkfprettifyformat: checkgitclean fprettify
 
 # Check (more comprehensive) and fix the style/formatting of sh scripts
 checkshellcheck:
-	@shellcheck --format=tty $$(git ls-files | grep "\\.sh") $$(file lib/petsc/bin/* lib/petsc/bin/maint/* | grep "/usr/bin/env sh" | cut -d: -f1)
+	@shellcheck --format=tty $$(git ls-files \*.sh) $$(file lib/petsc/bin/* lib/petsc/bin/maint/* | grep "/usr/bin/env sh" | cut -d: -f1)
 
 shellcheck:
-	@shellcheck --format=diff $$(git ls-files | grep "\\.sh") $$(file lib/petsc/bin/* lib/petsc/bin/maint/* | grep "/usr/bin/env sh" | cut -d: -f1) | patch -p1
+	@shellcheck --format=diff $$(git ls-files \*.sh) $$(file lib/petsc/bin/* lib/petsc/bin/maint/* | grep "/usr/bin/env sh" | cut -d: -f1) | patch -p1
 
 # Compare ABI/API of two versions of PETSc library with the old one defined by PETSC_{DIR,ARCH}_ABI_OLD
 abitest:

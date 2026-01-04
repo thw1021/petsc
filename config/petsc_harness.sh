@@ -99,7 +99,7 @@ do
       ;;
   esac
 done
-shift $(( $OPTIND - 1 ))
+shift $(( OPTIND - 1 ))
 
 # Individual tests can extend the default
 export MPIEXEC_TIMEOUT=$((TIMEOUT*timeoutfactor))
@@ -152,10 +152,10 @@ function petsc_report_tapoutput() {
 
   if test "${output_fmt}" == "err_only"; then
      if test -n "${notornot}"; then
-        printf "${tap_message}\n" | tee -a "${testlogerrfile}"
+        printf "%s\n" "$tap_message" | tee -a "${testlogerrfile}"
      fi
   else
-     printf "${tap_message}\n"
+     printf "%s\n" "$tap_message"
   fi
 }
 
@@ -168,7 +168,7 @@ function printcmd() {
      # Have to expand valgrind/cudamemcheck
      modcmd=$(eval "$modcmd")
   fi
-  printf "${modcmd}\n"
+  printf "%s\n" "$modcmd"
   exit
 }
 
@@ -198,8 +198,8 @@ function petsc_testrun() {
   #  If it is a lack of GPU resources or MPI failure (Intel) then try once more
   #  See: src/sys/error/err.c
   #  Error #134 added to handle problems with the Radeon card for hip testing
-  if [ $cmd_res -eq 96 -o $cmd_res -eq 97 -o $cmd_res -eq 98 -o $cmd_res -eq 134 ]; then
-    printf "# retrying ${tlabel}\n" | tee -a "${testlogerrfile}"
+  if [ $cmd_res -eq 96 ] || [ $cmd_res -eq 97 ] || [ $cmd_res -eq 98 ] ||  [ $cmd_res -eq 134 ]; then
+    printf "# retrying %s \n" "$tlabel" | tee -a "${testlogerrfile}"
     sleep 3
     eval "{ time -p $cmd ; } 2>> timing.out"
     cmd_res=$?
@@ -230,7 +230,7 @@ function petsc_testrun() {
         comment="${cmd}"
      fi
     petsc_report_tapoutput "" "$tlabel" "$comment"
-    let success=$success+1
+    (( success=success+1 ))
   else
     if [ -n "$timed_out" ]; then
       comment="Exceeded timeout limit of $MPIEXEC_TIMEOUT s"
@@ -250,10 +250,10 @@ function petsc_testrun() {
         awk '{print "#\t" $0}' < "$3" | tee -a "${testlogerrfile}"
       fi
     fi
-    let failed=$failed+1
+    (( failed=failed+1 ))
     failures="$failures $tlabel"
   fi
-  let total=$success+$failed
+  (( total=success+failed))
   return $cmd_res
 }
 
@@ -266,19 +266,19 @@ function petsc_testend() {
   if ! test -e "$logfile"; then
     touch "$logfile"
   fi
-  printf "total $total\n" > "$logfile"
+  printf "total %s\n" $total > "$logfile"
   printf "success $success\n" >> "$logfile"
-  printf "failed $failed\n" >> "$logfile"
-  printf "failures $failures\n" >> "$logfile"
+  printf "failed %s\n" $failed >> "$logfile"
+  printf "failures %s\n" "$failures" >> "$logfile"
   if test ${todo} -gt 0; then
-    printf "todo $todo\n" >> "$logfile"
+    printf "todo %s\n" $todo >> "$logfile"
   fi
   if test ${skip} -gt 0; then
-    printf "skip $skip\n" >> "$logfile"
+    printf "skip %s\n" $skip >> "$logfile"
   fi
   ENDTIME=$(date +%s)
   timing=$(touch timing.out && grep -E '(user|sys)' timing.out | awk '{if( sum1 == "" || $2 > sum1 ) { sum1=sprintf("%.2f",$2) } ; sum2 += sprintf("%.2f",$2)} END {printf "%.2f %.2f\n",sum1,sum2}')
-  printf "time $timing\n" >> "$logfile"
+  printf "time %s\n" "$timing" >> "$logfile"
   if $cleanup; then
     echo "Cleaning up"
     /bin/rm -f "$rmfiles"
@@ -331,9 +331,9 @@ function petsc_mpiexec_cudamemcheck() {
   # and
   # ===== ERROR SUMMARY: 0 errors
   if ${printcmd}; then
-    echo ${pre_args[@]} "$@"
+    echo "${pre_args[@]}" "$@"
   else
-    ${pre_args[@]} "$@" \
+    "${pre_args[@]}" "$@" \
       | grep -v 'CUDA-MEMCHECK' \
       | grep -v 'COMPUTE-SANITIZER' \
       | grep -v 'LEAK SUMMARY: 0 bytes leaked in 0 allocations' \
@@ -356,7 +356,7 @@ function petsc_mpiexec_valgrind() {
     shift
   done
   if ${printcmd}; then
-    echo ${pre_args[@]} "$@"
+    echo "${pre_args[@]}" "$@"
   else
     ${pre_args[@]} "$@"
   fi
