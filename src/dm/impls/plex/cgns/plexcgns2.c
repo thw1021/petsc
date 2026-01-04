@@ -1118,7 +1118,7 @@ PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myownede, Pe
 
       PetscCall(PetscSectionSetUp(plexFaceRemotes_section));
 
-      PetscInt  myrank_total_count;
+      PetscInt myrank_total_count;
       // To get the index for plexFaceRemotes, we partition the leaves on each rank (e.g. the array that will hold the local Plex face mesh points) by each rank that has the CGNS owned rank.
       // For r in [0,numranks), local_rank_count[r] holds the number plexFaces that myrank holds.
       // This determines how large a partition the leaves on rank r need to create for myrank.
@@ -1226,7 +1226,7 @@ PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myownede, Pe
 
     // For every face in connDistSection, find the transitive support of a vertex in that face connectivity.
     // Loop through the faces of the transitive support and find the matching face
-    PetscInt  hStart, hEnd;
+    PetscInt hStart, hEnd;
     PetscCall(DMPlexGetHeightStratum(dm, 1, &hStart, &hEnd));
     PetscCall(PetscSectionGetChart(connDistSection, &fdistStart, &fdistEnd));
     PetscCall(PetscMalloc1(fdistEnd - fdistStart, plexFaces));
@@ -1504,14 +1504,12 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
         PetscCall(PetscSFBcastEnd(cg2plexSF, MPIU_INT, cgFaceValues, plexFaceValues, MPI_REPLACE));
         PetscCall(PetscSFDestroy(&cg2bcSF));
 
-
         // Set the label values for the communicated faces
         PetscCall(DMGetLabel(*dm, label_name, &label));
         for (PetscInt i = 0; i < nPlexFaces; i++) {
           if (plexFaceValues[i] == -1) continue;
           PetscCall(DMLabelSetValue(label, plexFaces[i], plexFaceValues[i]));
         }
-
       }
     }
   }
