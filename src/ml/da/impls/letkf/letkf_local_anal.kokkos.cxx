@@ -1,6 +1,7 @@
 #include "letkf_impl.h"
 #include <petscblaslapack.h>
 #include <Kokkos_Core.hpp>
+#include <KokkosBlas.hpp>
 #include <KokkosBatched_SVD_Decl.hpp>
 #include <KokkosBatched_SVD_Serial_Impl.hpp>
 #include <KokkosBatched_Gemm_Decl.hpp>
@@ -486,31 +487,19 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         auto temp2    = Kokkos::subview(temp2_batch, i, Kokkos::ALL());
 
         /* 1. Compute w_i = V * L^-1 * V^T * S^T * delta */
-        /* Step 1a: temp1 = S^T * delta */
-        for (int j = 0; j < m; j++) { temp1(j) = 0.0; }
-        for (int k = 0; k < impl->p_local; k++) {
-          PetscScalar delta_k = delta_i(k);
-          for (int j = 0; j < m; j++) { temp1(j) += S_i(k, j) * delta_k; }
-        }
+        /* Step 1a: temp1 = S^T * delta using KokkosBlas::gemv for better vectorization */
+        KokkosBlas::SerialGemv<KokkosBlas::Trans::Transpose, KokkosBlas::Algo::Gemv::Unblocked>::invoke(1.0, S_i, delta_i, 0.0, temp1);
 
-        /* Step 1b: temp2 = V^T * temp1 */
-        for (int j = 0; j < m; j++) {
-          PetscScalar sum = 0.0;
-          for (int k = 0; k < m; k++) { sum += V_i(k, j) * temp1(k); }
-          temp2(j) = sum;
-        }
+        /* Step 1b: temp2 = V^T * temp1 using KokkosBlas::gemv for better vectorization */
+        KokkosBlas::SerialGemv<KokkosBlas::Trans::Transpose, KokkosBlas::Algo::Gemv::Unblocked>::invoke(1.0, V_i, temp1, 0.0, temp2);
 
         /* Step 1c: temp2 = temp2 / Lambda */
         for (int j = 0; j < m; j++) {
           temp2(j) /= (Lambda_i(j) + 1.0e-14);
         }
 
-        /* Step 1d: w = V * temp2 */
-        for (int j = 0; j < m; j++) {
-          PetscScalar sum = 0.0;
-          for (int k = 0; k < m; k++) { sum += V_i(j, k) * temp2(k); }
-          w_i(j) = sum;
-        }
+        /* Step 1d: w = V * temp2 using KokkosBlas::gemv for better vectorization */
+        KokkosBlas::SerialGemv<KokkosBlas::Trans::NoTranspose, KokkosBlas::Algo::Gemv::Unblocked>::invoke(1.0, V_i, temp2, 0.0, w_i);
 
         /* 2. Precompute 1/sqrt(Lambda) for ensemble update */
         for (int p = 0; p < m; p++) {
