@@ -37,7 +37,6 @@
 static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size)
 {
   PetscFunctionBegin;
-
   /* Create host mirrors */
   auto T_host      = Kokkos::create_mirror_view(T_batch);
   auto Lambda_host = Kokkos::create_mirror_view(Lambda_batch);
@@ -85,7 +84,7 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
       LAPACKsyev_("V", "U", &n, v_ptr, &lda, lambda_ptr, work_ptr, &lw, &info);
 
       if (info != 0) {
-        /* We cannot return error code from lambda, so we just abort or ignore. 
+        /* We cannot return error code from lambda, so we just abort or ignore.
            In production code, we should use a reduction to report errors. */
         Kokkos::abort("LAPACK eigendecomposition failed in parallel region");
       }
@@ -102,7 +101,6 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
   /* Copy results back to device */
   Kokkos::deep_copy(Lambda_batch, Lambda_host);
   Kokkos::deep_copy(V_batch, V_host);
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
@@ -123,22 +121,15 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
   Uses cuSOLVER's syevd routine to compute eigendecomposition on GPU.
 */
 #if defined(KOKKOS_ENABLE_CUDA)
-static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size)
+static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, cusolverDnHandle_t cusolverH)
 {
-  cusolverDnHandle_t cusolverH;
-  cusolverStatus_t   cusolver_status;
-  syevjInfo_t        syevj_params = NULL;
-  PetscScalar       *d_work;
-  int               *d_info;
-  PetscScalar       *d_A, *d_W;
-  int                lwork = 0;
+  cusolverStatus_t cusolver_status;
+  syevjInfo_t      syevj_params = NULL;
+  PetscScalar     *d_work;
+  int             *d_info;
+  int              lwork = 0;
 
   PetscFunctionBegin;
-
-  /* Create cuSOLVER handle */
-  cusolver_status = cusolverDnCreate(&cusolverH);
-  PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnCreate failed");
-
   /* Create syevj params */
   cusolver_status = cusolverDnCreateSyevjInfo(&syevj_params);
   PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnCreateSyevjInfo failed");
@@ -148,19 +139,32 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   cusolverDnXsyevjSetMaxSweeps(syevj_params, 100);
   cusolverDnXsyevjSetSortEig(syevj_params, 1); /* Sort eigenvalues */
 
-  /* Allocate device memory for ALL matrices */
-  PetscCallCUDA(cudaMalloc(&d_A, sizeof(PetscScalar) * n_batch * n_size * n_size));
-  PetscCallCUDA(cudaMalloc(&d_W, sizeof(PetscScalar) * n_batch * n_size));
+  /* Get raw pointers from Kokkos views - zero-copy access */
+  PetscScalar *d_A = T_batch.data();
+  PetscScalar *d_W = Lambda_batch.data();
+
+  /* Allocate device memory for info array */
   PetscCallCUDA(cudaMalloc(&d_info, sizeof(int) * n_batch));
 
-  /* Copy T_batch (interleaved) to d_A (contiguous) */
-  /* T_batch(i, j, k) -> d_A[i * n*n + k*n + j] (Column-Major) */
-  Kokkos::parallel_for(
-    "CopyTToContiguous", Kokkos::MDRangePolicy<Kokkos::Rank<3>, Kokkos::DefaultExecutionSpace>({0, 0, 0}, {n_batch, n_size, n_size}),
-    KOKKOS_LAMBDA(const int i, const int j, const int k) { d_A[i * n_size * n_size + k * n_size + j] = T_batch(i, j, k); });
-  Kokkos::fence();
+  /*
+     OPTIMIZATION: Use strided batched API to avoid memory copies
+     cuSOLVER expects contiguous layout: [matrix0][matrix1]...[matrixN]
+     But T_batch has LayoutLeft with batch index first: T_batch(i,j,k)
 
-  /* Query workspace size */
+     We need to check if the data is already in the right layout.
+     For LayoutLeft with dimensions (n_batch, n_size, n_size):
+     - stride[0] = 1 (batch index varies fastest)
+     - stride[1] = n_batch (row index)
+     - stride[2] = n_batch * n_size (column index)
+
+     cuSOLVER needs: matrix i at offset i*n_size*n_size
+     Our layout: element (i,j,k) at offset i + j*n_batch + k*n_batch*n_size
+
+     These don't match, so we need to use strided access or reorganize.
+     For now, we'll use the batched API with proper stride handling.
+  */
+
+  /* Query workspace size - use first matrix pointer with stride */
   #if defined(PETSC_USE_REAL_SINGLE)
   cusolver_status = cusolverDnSsyevjBatched_bufferSize(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A, n_size, d_W, &lwork, syevj_params, n_batch);
   #else
@@ -169,13 +173,30 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevjBatched_bufferSize failed");
 
   /* Allocate workspace */
-  cudaMalloc(&d_work, sizeof(PetscScalar) * lwork);
+  PetscCallCUDA(cudaMalloc(&d_work, sizeof(PetscScalar) * lwork));
+
+  /*
+     NOTE: cuSOLVER batched API requires contiguous matrices.
+     Since our LayoutLeft has batch index first (stride-1), we need to reorganize.
+     We'll do an in-place transpose-like operation using a temporary buffer.
+  */
+  PetscScalar *d_A_contig;
+  PetscCallCUDA(cudaMalloc(&d_A_contig, sizeof(PetscScalar) * n_batch * n_size * n_size));
+
+  /* Copy T_batch to contiguous layout for cuSOLVER */
+  Kokkos::parallel_for(
+    "ReorganizeForCuSOLVER", Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, n_batch), KOKKOS_LAMBDA(const int i) {
+      for (int j = 0; j < n_size; j++) {
+        for (int k = 0; k < n_size; k++) d_A_contig[i * n_size * n_size + k * n_size + j] = T_batch(i, j, k);
+      }
+    });
+  Kokkos::fence();
 
   /* Solve batched eigendecomposition */
   #if defined(PETSC_USE_REAL_SINGLE)
-  cusolver_status = cusolverDnSsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A, n_size, d_W, d_work, lwork, d_info, syevj_params, n_batch);
+  cusolver_status = cusolverDnSsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A_contig, n_size, d_W, d_work, lwork, d_info, syevj_params, n_batch);
   #else
-  cusolver_status = cusolverDnDsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A, n_size, d_W, d_work, lwork, d_info, syevj_params, n_batch);
+  cusolver_status = cusolverDnDsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A_contig, n_size, d_W, d_work, lwork, d_info, syevj_params, n_batch);
   #endif
   PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevjBatched failed");
 
@@ -184,30 +205,25 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   PetscCall(PetscMalloc1(n_batch, &h_info));
   PetscCallCUDA(cudaMemcpy(h_info, d_info, sizeof(int) * n_batch, cudaMemcpyDeviceToHost));
   for (int i = 0; i < n_batch; i++) {
-    if (h_info[i] != 0) { PetscCheck(h_info[i] == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "cuSOLVER eigendecomposition failed for matrix %" PetscInt_FMT ": info=%d", i, h_info[i]); }
+    if (h_info[i] != 0) PetscCheck(h_info[i] == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "cuSOLVER eigendecomposition failed for matrix %" PetscInt_FMT ": info=%d", i, h_info[i]);
   }
   PetscCall(PetscFree(h_info));
 
-  /* Copy results back */
-  /* d_A (eigenvectors) -> V_batch */
-  /* d_W (eigenvalues) -> Lambda_batch */
+  /* Copy results back from contiguous layout to V_batch */
   Kokkos::parallel_for(
-    "CopyResultsBack", Kokkos::MDRangePolicy<Kokkos::Rank<3>, Kokkos::DefaultExecutionSpace>({0, 0, 0}, {n_batch, n_size, n_size}), KOKKOS_LAMBDA(const int i, const int j, const int k) {
-      V_batch(i, j, k) = d_A[i * n_size * n_size + k * n_size + j];
-      if (k == 0) { /* Only need to copy eigenvalues once per row */
+    "CopyResultsBack", Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, n_batch), KOKKOS_LAMBDA(const int i) {
+      for (int j = 0; j < n_size; j++) {
         Lambda_batch(i, j) = d_W[i * n_size + j];
+        for (int k = 0; k < n_size; k++) V_batch(i, j, k) = d_A_contig[i * n_size * n_size + k * n_size + j];
       }
     });
   Kokkos::fence();
 
   /* Cleanup */
-  PetscCallCUDA(cudaFree(d_A));
-  PetscCallCUDA(cudaFree(d_W));
+  PetscCallCUDA(cudaFree(d_A_contig));
   PetscCallCUDA(cudaFree(d_work));
   PetscCallCUDA(cudaFree(d_info));
   cusolverDnDestroySyevjInfo(syevj_params);
-  cusolverDnDestroy(cusolverH);
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
@@ -227,18 +243,21 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   Notes:
   Dispatcher function that calls the appropriate backend (CPU or GPU).
 */
+#if defined(KOKKOS_ENABLE_CUDA)
+static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, cusolverDnHandle_t cusolverH)
+{
+  PetscFunctionBegin;
+  PetscCall(BatchedEigenSolve_CUDA(T_batch, Lambda_batch, V_batch, n_batch, n_size, cusolverH));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#else
 static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size)
 {
   PetscFunctionBegin;
-
-#if defined(KOKKOS_ENABLE_CUDA)
-  PetscCall(BatchedEigenSolve_CUDA(T_batch, Lambda_batch, V_batch, n_batch, n_size));
-#else
   PetscCall(BatchedEigenSolve_Host(T_batch, Lambda_batch, V_batch, n_batch, n_size));
-#endif
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
 
 /* ========================================================================== */
 /*                    LETKF Local Analysis (Main Function)                    */
@@ -290,11 +309,11 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
      Since the data layout is LayoutLeft (Column-Major) to match PETSc/LAPACK, the index 'i' (grid point)
      is the fastest varying index (stride 1).
 
-     RangePolicy maps consecutive threads to consecutive 'i', ensuring perfect memory coalescing 
+     RangePolicy maps consecutive threads to consecutive 'i', ensuring perfect memory coalescing
      when accessing arrays like S_batch(i, p, j).
 
      Using TeamPolicy/TeamVectorRange to parallelize inner loops (m or p) would assign a team to 'i',
-     causing threads within the team to access S_batch with stride 'n_vertices', which leads to 
+     causing threads within the team to access S_batch with stride 'n_vertices', which leads to
      uncoalesced memory access and poor performance on GPUs.
 
      Therefore, RangePolicy + SerialGemm is the optimal strategy for this data layout.
@@ -371,6 +390,14 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
 
   if (chunk_size < 1) chunk_size = 1;
   if (chunk_size > n_vertices) chunk_size = n_vertices;
+
+  /* OPTIMIZATION: Create cuSOLVER handle once, reuse across chunks */
+#if defined(KOKKOS_ENABLE_CUDA)
+  cusolverDnHandle_t cusolverH = nullptr;
+  cusolverStatus_t   cusolver_status;
+  cusolver_status = cusolverDnCreate(&cusolverH);
+  PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnCreate failed");
+#endif
 
   /* Loop over chunks */
   for (PetscInt chunk_start = 0; chunk_start < n_vertices; chunk_start += chunk_size) {
@@ -471,7 +498,11 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     /* Step 3.1.1: Batched eigendecomposition for current chunk            */
     /* ===================================================================== */
     /* Compute T_i = V_i * Lambda_i * V_i^T for current chunk */
+#if defined(KOKKOS_ENABLE_CUDA)
+    PetscCall(BatchedEigenSolve(T_batch, Lambda_batch, V_batch, n_batch_current, m, cusolverH));
+#else
     PetscCall(BatchedEigenSolve(T_batch, Lambda_batch, V_batch, n_batch_current, m));
+#endif
 
     /* ===================================================================== */
     /* Step 3.1.2: Precompute w and inv_sqrt_lambda for ensemble update    */
@@ -538,7 +569,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         for (int j = 0; j < m; j++) {
           for (int k = j; k < m; k++) {
             PetscScalar sum = 0.0;
-            for (int p = 0; p < m; p++) { sum += V_i(j, p) * V_i(k, p) * inv_sqrt_lambda_i(p); }
+            for (int p = 0; p < m; p++) sum += V_i(j, p) * V_i(k, p) * inv_sqrt_lambda_i(p);
             T_sqrt_i(j, k) = sum;
           }
         }
@@ -564,6 +595,11 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       });
     Kokkos::fence();
   }
+
+  /* OPTIMIZATION: Destroy cuSOLVER handle after all chunks */
+#if defined(KOKKOS_ENABLE_CUDA)
+  if (cusolverH) cusolverDnDestroy(cusolverH);
+#endif
 
   /* Restore arrays */
   PetscCall(MatDenseRestoreArrayWrite(da->ensemble, &e_array));
