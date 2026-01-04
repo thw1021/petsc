@@ -29,9 +29,6 @@ static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
 #define MIN_OBS_FREQ       1
 #define PROGRESS_INTERVALS 10
 
-/* LETKF constraint: Fixed number of observations per vertex */
-#define Q_NUM_LOCAL_OBSERVATIONS_MAX 40
-
 typedef struct {
   DM        da; /* 1D periodic DM storing the Lorenz-96 state */
   PetscInt  n;  /* State dimension (number of grid points) */
