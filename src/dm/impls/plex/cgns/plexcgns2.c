@@ -986,7 +986,7 @@ PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myownede, Pe
 
         PetscCall(PetscHSetICreate(&vhash));
         PetscCall(PetscSectionGetStorageSize(connSection, &conn_size));
-        for (PetscInt v = 0; v < conn_size; ++v) { PetscCall(PetscHSetIAdd(vhash, conn[v])); }
+        for (PetscInt v = 0; v < conn_size; ++v) PetscCall(PetscHSetIAdd(vhash, conn[v]));
         PetscCall(PetscHSetIGetSize(vhash, &nuniq_face_verts));
         PetscCall(PetscMalloc1(nuniq_face_verts, &uniq_face_verts));
         PetscCall(PetscHSetIGetElems(vhash, &off, uniq_face_verts));
@@ -1269,7 +1269,6 @@ PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myownede, Pe
     PetscCall(PetscSectionDestroy(&connDistSection));
     PetscCall(PetscFree(connDist));
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1279,8 +1278,8 @@ static inline PetscErrorCode PetscStrtoInt(const char name[], PetscInt *a)
   size_t len;
   char  *endptr;
   long   strtolval;
-  PetscFunctionBegin;
 
+  PetscFunctionBegin;
   PetscCall(PetscStrlen(name, &len));
   PetscCheck(len, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "character string of length zero has no numerical value");
 
@@ -1806,8 +1805,8 @@ PetscErrorCode DMLabelCreateGlobalValueArray(MPI_Comm comm, DMLabel label, Petsc
 
 PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
 {
-  MPI_Comm comm = PetscObjectComm((PetscObject)dm);
-  PetscViewer_CGNS *cgv = (PetscViewer_CGNS *)viewer->data;
+  MPI_Comm          comm = PetscObjectComm((PetscObject)dm);
+  PetscViewer_CGNS *cgv  = (PetscViewer_CGNS *)viewer->data;
   PetscInt          fvGhostStart;
   PetscInt          topo_dim, coord_dim, num_global_elems;
   PetscInt          cStart, cEnd, num_local_nodes, num_global_nodes, nStart, nEnd, fStart, fEnd;
@@ -1825,7 +1824,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     PetscCall(DMGetOutputSequenceNumber(dm, &time_step, NULL));
     PetscCall(PetscViewerCGNSFileOpen_Internal(viewer, time_step));
   }
-  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)dm), &size));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(DMGetDimension(dm, &topo_dim));
   PetscCall(DMGetCoordinateDim(dm, &coord_dim));
   PetscCall(PetscObjectGetName((PetscObject)dm, &dm_name));
@@ -1875,7 +1874,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
         if (face_sfs) colloc_dm->periodic.setup = DMPeriodicCoordinateSetUp_Internal;
       }
       PetscCall(DMPlexIsSimplex(dm, &is_simplex));
-      PetscCall(PetscFECreateLagrange(PetscObjectComm((PetscObject)dm), topo_dim, coord_dim, is_simplex, field_order, quadrature_order, &fe));
+      PetscCall(PetscFECreateLagrange(comm, topo_dim, coord_dim, is_simplex, field_order, quadrature_order, &fe));
       PetscCall(DMSetCoordinateDisc(colloc_dm, fe, PETSC_FALSE, PETSC_TRUE));
       PetscCall(PetscFEDestroy(&fe));
     } else {
@@ -1891,7 +1890,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
   PetscCall(DMPlexGetCellTypeStratum(dm, DM_POLYTOPE_FV_GHOST, &fvGhostStart, NULL));
   if (fvGhostStart >= 0) cEnd = fvGhostStart;
   num_global_elems = cEnd - cStart;
-  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &num_global_elems, 1, MPIU_INT, MPI_SUM, PetscObjectComm((PetscObject)dm)));
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &num_global_elems, 1, MPIU_INT, MPI_SUM, comm));
   isize[0] = num_global_nodes;
   isize[1] = num_global_elems;
   isize[2] = 0;
@@ -1954,14 +1953,14 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       PetscInt local_element_type, global_element_type;
 
       local_element_type = e_owned > 0 ? element_type : -1;
-      PetscCallMPI(MPIU_Allreduce(&local_element_type, &global_element_type, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)viewer)));
+      PetscCallMPI(MPIU_Allreduce(&local_element_type, &global_element_type, 1, MPIU_INT, MPI_MAX, comm));
       if (local_element_type != -1) PetscCheck(local_element_type == global_element_type, PETSC_COMM_SELF, PETSC_ERR_SUP, "Ranks with different element types not supported");
       element_type = (CGNS_ENUMT(ElementType_t))global_element_type;
     }
-    PetscCallMPI(MPIU_Allreduce(&e_owned, &e_global, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
+    PetscCallMPI(MPIU_Allreduce(&e_owned, &e_global, 1, MPIU_CGSIZE, MPI_SUM, comm));
     PetscCheck(e_global == num_global_elems, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected number of elements %" PRIdCGSIZE " vs %" PetscInt_FMT, e_global, num_global_elems);
     e_start = 0;
-    PetscCallMPI(MPI_Exscan(&e_owned, &e_start, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
+    PetscCallMPI(MPI_Exscan(&e_owned, &e_start, 1, MPIU_CGSIZE, MPI_SUM, comm));
     e_start += elem_offset;
     PetscCallCGNSWrite(cgp_section_write(cgv->file_num, base, zone, "Elem", element_type, 1, e_global, 0, &section), dm, viewer);
     PetscCallCGNSWriteData(cgp_elements_write_data(cgv->file_num, base, zone, section, e_start + 1, e_start + e_owned, conn), dm, viewer);
@@ -1981,7 +1980,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       int        *efield;
       int         sol, field;
       DMLabel     label;
-      PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
+      PetscCallMPI(MPI_Comm_rank(comm, &rank));
       PetscCall(PetscMalloc1(e_owned, &efield));
       for (PetscInt i = 0; i < e_owned; i++) efield[i] = rank;
       PetscCallCGNSWrite(cg_sol_write(cgv->file_num, base, zone, "CellInfo", CGNS_ENUMV(CellCenter), &sol), dm, viewer);
@@ -2005,19 +2004,14 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
   // TODO: Verify compatiblity with higher-order geometries. (Probably don't , but possibly need to do a "corners only" connectivity or something)
 
   DMLabel  fsLabel;
-  PetscInt num_fs_global, *fsIdxGlobal = NULL;
+  PetscInt num_fs_global, *fsValuesGlobal = NULL;
   PetscCall(DMGetLabel(dm, "Face Sets", &fsLabel));
-  if (fsLabel) PetscCall(DMLabelCreateGlobalValueArray(PetscObjectComm((PetscObject)dm), fsLabel, PETSC_TRUE, &num_fs_global, &fsIdxGlobal));
+  if (fsLabel) PetscCall(DMLabelCreateGlobalValueArray(comm, fsLabel, PETSC_TRUE, &num_fs_global, &fsValuesGlobal));
   else num_fs_global = 0;
-
-  // TODO: Remove:
-  PetscMPIInt rank;
-  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
-  // printf("rank %d, num_fs_local: %" PetscInt_FMT "\n", rank, num_fs_local);
 
   if (num_fs_global > 0) {
     CGNS_ENUMT(ElementType_t) element_type = CGNS_ENUMV(ElementTypeNull);
-    const PetscInt *fsIdx;
+    const PetscInt *fsValuesLocal;
     IS              stratumIS, fsISTotal;
     int             section;
     const int      *perm;
@@ -2026,19 +2020,20 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     PetscInt        fStart, fEnd;
 
     PetscInt num_fs_local;
-    IS       fsIS;
+    IS       fsValuesLocalIS;
+
     if (fsLabel) {
-      PetscCall(DMLabelGetNonEmptyStratumValuesIS(fsLabel, &fsIS));
-      PetscCall(ISGetSize(fsIS, &num_fs_local));
+      PetscCall(DMLabelGetNonEmptyStratumValuesIS(fsLabel, &fsValuesLocalIS));
+      PetscCall(ISGetSize(fsValuesLocalIS, &num_fs_local));
+      PetscCall(ISGetIndices(fsValuesLocalIS, &fsValuesLocal));
     } else num_fs_local = 0;
 
-    PetscCall(ISGetIndices(fsIS, &fsIdx));
     PetscCall(DMPlexGetHeightStratum(dm, 1, &fStart, &fEnd));
     { // Get single IS without duplicates of the local face IDs in the FaceSets
       IS *fsISs = NULL;
 
       PetscCall(PetscMalloc1(num_fs_local, &fsISs));
-      for (PetscInt fs = 0; fs < num_fs_local; ++fs) PetscCall(DMLabelGetStratumIS(fsLabel, fsIdx[fs], &fsISs[fs]));
+      for (PetscInt fs = 0; fs < num_fs_local; ++fs) PetscCall(DMLabelGetStratumIS(fsLabel, fsValuesLocal[fs], &fsISs[fs]));
       PetscCall(ISConcatenate(PETSC_COMM_SELF, num_fs_local, fsISs, &fsISTotal));
       PetscCall(ISSortRemoveDups(fsISTotal));
       PetscCall(ISGeneralFilter(fsISTotal, fStart, fEnd)); // Remove non-face mesh points from the IS
@@ -2050,7 +2045,8 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       for (PetscInt fs = 0; fs < num_fs_local; ++fs) PetscCall(ISDestroy(&fsISs[fs]));
       PetscCall(PetscFree(fsISs));
     }
-    PetscCall(ISRestoreIndices(fsIS, &fsIdx));
+    PetscCall(ISRestoreIndices(fsValuesLocalIS, &fsValuesLocal));
+    PetscCall(ISDestroy(&fsValuesLocalIS));
 
     {
       const PetscInt *faces;
@@ -2098,18 +2094,19 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       PetscCall(ISRestoreIndices(fsISTotal, &faces));
     }
 
-    { // Write connectivity for face sets
+    {   // Write connectivity for face sets
       { // Get global element type
         PetscInt local_element_type, global_element_type;
 
         local_element_type = f_owned > 0 ? element_type : -1;
-        PetscCallMPI(MPIU_Allreduce(&local_element_type, &global_element_type, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)viewer)));
-        if (local_element_type != -1) PetscCheck(local_element_type == global_element_type, PETSC_COMM_SELF, PETSC_ERR_SUP, "Ranks with different element types not supported. Local element type is %s, but global is %s", cg_ElementTypeName(local_element_type), cg_ElementTypeName(global_element_type));
+        PetscCallMPI(MPIU_Allreduce(&local_element_type, &global_element_type, 1, MPIU_INT, MPI_MAX, comm));
+        if (local_element_type != -1)
+          PetscCheck(local_element_type == global_element_type, PETSC_COMM_SELF, PETSC_ERR_SUP, "Ranks with different element types not supported. Local element type is %s, but global is %s", cg_ElementTypeName(local_element_type), cg_ElementTypeName(global_element_type));
         element_type = (CGNS_ENUMT(ElementType_t))global_element_type;
       }
-      PetscCallMPI(MPIU_Allreduce(&f_owned, &f_global, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
+      PetscCallMPI(MPIU_Allreduce(&f_owned, &f_global, 1, MPIU_CGSIZE, MPI_SUM, comm));
       f_start = 0;
-      PetscCallMPI(MPI_Exscan(&f_owned, &f_start, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
+      PetscCallMPI(MPI_Exscan(&f_owned, &f_start, 1, MPIU_CGSIZE, MPI_SUM, comm));
       f_start += elem_offset;
       PetscCallCGNSWrite(cgp_section_write(cgv->file_num, base, zone, "Faces", element_type, elem_offset + 1, elem_offset + f_global, 0, &section), dm, viewer);
       PetscCallCGNSWriteData(cgp_elements_write_data(cgv->file_num, base, zone, section, f_start + 1, f_start + f_owned, conn), dm, viewer);
@@ -2120,18 +2117,11 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       PetscCall(PetscFree(parents));
     }
 
-    // // Write  BC_t for every face set value.
-    // PetscInt num_fs_global, *fsIdxGlobal;
-    // PetscCall(DMLabelCreateGlobalValueArray(PetscObjectComm((PetscObject)dm), fsLabel, &num_fs_global, &fsIdxGlobal));
-
-    // TODO: Remove:
-    // printf("rank %d, num_fs_global: %" PetscInt_FMT "\n", rank, num_fs_global);
-
     for (PetscInt fs = 0; fs < num_fs_global; ++fs) {
       int             BC;
       const PetscInt *fs_pnts = NULL;
       char            bc_name[33];
-      PetscInt        fsID = fsIdxGlobal[fs];
+      PetscInt        fsID = fsValuesGlobal[fs];
       cgsize_t        fs_start, fs_owned, fs_global;
       cgsize_t       *fs_pnts_cg;
 
@@ -2142,8 +2132,8 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
         fs_owned = fs_owned_int;
         PetscCall(ISGetIndices(stratumIS, &fs_pnts));
       } else fs_owned = 0;
-      PetscCallMPI(MPIU_Allreduce(&fs_owned, &fs_global, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
-      PetscCallMPI(MPI_Exscan(&fs_owned, &fs_start, 1, MPIU_CGSIZE, MPI_SUM, PetscObjectComm((PetscObject)dm)));
+      PetscCallMPI(MPIU_Allreduce(&fs_owned, &fs_global, 1, MPIU_CGSIZE, MPI_SUM, comm));
+      PetscCallMPI(MPI_Exscan(&fs_owned, &fs_start, 1, MPIU_CGSIZE, MPI_SUM, comm));
 
       PetscCall(PetscSNPrintf(bc_name, sizeof bc_name, "FaceSet%" PetscInt_FMT, fsID));
       PetscCallCGNSWrite(cg_boco_write(cgv->file_num, base, zone, bc_name, CGNS_ENUMV(BCTypeNull), CGNS_ENUMV(PointList), fs_global, NULL, &BC), dm, viewer);
@@ -2177,8 +2167,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       }
     }
     PetscCall(ISDestroy(&fsISTotal));
-    PetscCall(PetscFree(fsIdxGlobal));
-    PetscCall(ISDestroy(&fsIS)); // TODO: Probably move to a more logical location
+    PetscCall(PetscFree(fsValuesGlobal));
     elem_offset += f_global;
   }
 
