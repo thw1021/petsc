@@ -2041,6 +2041,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       for (PetscInt fs = 0; fs < num_fs; ++fs) PetscCall(ISDestroy(&fsISs[fs]));
       PetscCall(PetscFree(fsISs));
     }
+    PetscCall(ISRestoreIndices(fsIS, &fsIdx));
     PetscCall(ISDestroy(&fsIS));
 
     {
@@ -2085,6 +2086,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
         for (PetscInt j = 0; j < elem_size; j++) conn[c++] = node_l2g[closure_indices[perm[j] * coord_dim] / coord_dim] + 1;
         PetscCall(DMPlexRestoreClosureIndices(cdm, cdm->localSection, cdm->localSection, face, PETSC_FALSE, &closure_dof_f, &closure_indices, NULL, NULL));
       }
+      PetscCall(ISRestoreIndices(fsISTotal, &faces));
     }
 
     { // Write connectivity for face sets
@@ -2156,6 +2158,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       PetscCallCGNSWriteData(cg_boco_gridlocation_write(cgv->file_num, base, zone, BC, grid_loc), dm, viewer);
 
       PetscCall(PetscFree(fs_pnts_cg));
+      PetscCall(ISRestoreIndices(stratumIS, &fs_pnts));
       PetscCall(ISDestroy(&stratumIS));
     }
     PetscCall(ISDestroy(&fsISTotal));
