@@ -2002,23 +2002,24 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
   }
 
   PetscInt num_fs;
-
-  PetscCall(DMGetLabelSize(dm, "Face Sets", &num_fs));
+  DMLabel  fsLabel;
+  IS       fsIS;
+  PetscCall(DMGetLabel(dm, "Face Sets", &fsLabel));
+  if (fsLabel) {
+    PetscCall(DMLabelGetNonEmptyStratumValuesIS(fsLabel, &fsIS));
+    PetscCall(ISGetSize(fsIS, &num_fs));
+  } else num_fs = 0;
   // TODO: Verify compatiblity with higher-order geometries. (Probably don't , but possibly need to do a "corners only" connectivity or something)
   if (num_fs > 0) {
     CGNS_ENUMT(ElementType_t) element_type = CGNS_ENUMV(ElementTypeNull);
-    DMLabel         fsLabel;
     const PetscInt *fsIdx;
-    IS              fsIS, stratumIS, fsISTotal;
+    IS              stratumIS, fsISTotal;
     int             section;
     const int      *perm;
     cgsize_t        f_owned = 0, f_global, f_start;
     cgsize_t       *parents, *conn = NULL;
     PetscInt        fStart, fEnd;
 
-    PetscCall(DMGetLabel(dm, "Face Sets", &fsLabel));
-    PetscCall(DMLabelGetNonEmptyStratumValuesIS(fsLabel, &fsIS));
-    PetscCall(DMGetLabelSize(dm, "Face Sets", &num_fs));
     PetscCall(ISGetIndices(fsIS, &fsIdx));
     PetscCall(DMPlexGetHeightStratum(dm, 1, &fStart, &fEnd));
     { // Get single IS without duplicates of the local face IDs in the FaceSets
@@ -2042,7 +2043,6 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       PetscCall(PetscFree(fsISs));
     }
     PetscCall(ISRestoreIndices(fsIS, &fsIdx));
-    PetscCall(ISDestroy(&fsIS));
 
     {
       const PetscInt *faces;
@@ -2165,6 +2165,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     PetscCall(PetscFree(fsIdxGlobal));
     elem_offset += f_global;
   }
+  PetscCall(ISDestroy(&fsIS));
 
   PetscCall(DMDestroy(&colloc_dm));
   PetscFunctionReturn(PETSC_SUCCESS);
