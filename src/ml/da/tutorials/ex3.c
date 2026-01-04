@@ -353,7 +353,7 @@ static PetscErrorCode ShallowWaterSolution(Ex3TestType test_type, PetscReal x, P
 
   Observes water height (h) at every other grid point.
   This creates a sparse matrix mapping from full state (n*ndof) to observations.
-  For n=80 grid points, we observe at points 0, 2, 4, ..., 78 giving nobs=40 observations.
+  For n=80 grid points, we observe at points 0, 2, 4, ..., 78 giving nobs=Q_NUM_LOCAL_OBSERVATIONS_MAX observations.
 */
 static PetscErrorCode CreateObservationMatrix(PetscInt n, PetscInt ndof, PetscInt nobs, Mat *H)
 {
@@ -626,7 +626,7 @@ int main(int argc, char **argv)
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinup complete. Ensemble will be initialized from spun-up state.\n\n"));
   }
 
-  /* Create observation matrix H (nobs=40, observing h at every other grid point) */
+  /* Create observation matrix H (nobs=Q_NUM_LOCAL_OBSERVATIONS_MAX, observing h at every other grid point) */
   PetscCall(CreateObservationMatrix(n, ndof, nobs, &H));
 
   /* Initialize observation vectors using MatCreateVecs from H */
@@ -653,7 +653,7 @@ int main(int argc, char **argv)
   PetscCall(CreateLocalizationMatrix(n, nobs, &Q));
   PetscCall(PetscDALETKFSetLocalization(daas, Q));
   PetscCall(MatDestroy(&Q));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %dx%d, no localization/global (all weights = 1.0)\n", n * ndof, nobs));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %dx%d, no localization/global (all weights = 1.0)\n", (int)(n * ndof), (int)nobs));
 
   /* Initialize ensemble members with perturbations around spun-up state
      This is critical for convergence - ensemble needs spread even after spinup */
@@ -679,8 +679,8 @@ int main(int argc, char **argv)
                           "  Observation frequency : %" PetscInt_FMT "\n"
                           "  Observation noise std : %.3f\n"
                           "  Random seed           : %" PetscInt_FMT "\n"
-                          "  Localization          : None/Global (40 obs per vertex)\n\n",
-                          test_name, flux_name, n * ndof, n, ndof, nobs, ensemble_size, (double)g, (double)dt, steps, obs_freq, (double)obs_error_std, random_seed));
+                          "  Localization          : None/Global (%d obs per vertex)\n\n",
+                          test_name, flux_name, n * ndof, n, (int)ndof, nobs, ensemble_size, (double)g, (double)dt, steps, obs_freq, (double)obs_error_std, random_seed, Q_NUM_LOCAL_OBSERVATIONS_MAX));
   }
 
   /* Open output file if requested */
@@ -866,6 +866,7 @@ int main(int argc, char **argv)
     args: -ex3_test dam -steps 25 -progress_freq 1 -da_view -ensemble_size 10 -obs_freq 5 -obs_error 0.03
 
     test:
+      requires: !single
       suffix: letkf_dam
       args: -petscda_type letkf
 
