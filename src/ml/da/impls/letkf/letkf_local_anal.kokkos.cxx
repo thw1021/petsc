@@ -78,7 +78,7 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
 
       /* Copy T_host(i, :, :) to v_ptr (column-major) */
       for (PetscInt j = 0; j < n_size; j++) {
-        for (PetscInt k = 0; k < n_size; k++) { v_ptr[k + j * n_size] = T_host(i, k, j); }
+        for (PetscInt k = 0; k < n_size; k++) v_ptr[k + j * n_size] = T_host(i, k, j);
       }
 
       /* Compute eigendecomposition: T = V * Lambda * V^T */
@@ -93,7 +93,7 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
       /* Copy results back to host views */
       for (PetscInt j = 0; j < n_size; j++) {
         Lambda_host(i, j) = lambda_ptr[j];
-        for (PetscInt k = 0; k < n_size; k++) { V_host(i, k, j) = v_ptr[k + j * n_size]; }
+        for (PetscInt k = 0; k < n_size; k++) V_host(i, k, j) = v_ptr[k + j * n_size];
       }
     });
 
@@ -377,22 +377,25 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     PetscInt chunk_end       = (chunk_start + chunk_size > n_vertices) ? n_vertices : chunk_start + chunk_size;
     PetscInt n_batch_current = chunk_end - chunk_start;
 
+    /* Copy host variables to local scope to avoid capturing host pointers in device kernels */
+    PetscInt p_local_copy = impl->p_local;
+
     /* Batched workspace for CURRENT chunk (device memory) */
     /* NOTE: G_batch eliminated - computed on-the-fly during ensemble update */
-    view_3d Z_batch("Z_batch", n_batch_current, impl->p_local, m);                // (n_batch_current, p_local, m)
-    view_3d S_batch = Z_batch;                                                    // Reuse Z memory for S
-    view_3d T_batch("T_batch", n_batch_current, m, m);                            // (n_batch_current, m, m)
-    view_3d V_batch = T_batch;                                                    // Reuse T memory for V
-    view_2d Lambda_batch("Lambda_batch", n_batch_current, m);                     // (n_batch_current, m)
-    view_3d T_sqrt_batch("T_sqrt_batch", n_batch_current, m, m);                  // (n_batch_current, m, m)
-    view_2d w_batch("w_batch", n_batch_current, m);                               // (n_batch_current, m)
-    view_2d delta_batch("delta_batch", n_batch_current, impl->p_local);           // (n_batch_current, p_local)
-    view_2d y_batch("y_batch", n_batch_current, impl->p_local);                   // (n_batch_current, p_local)
-    view_2d y_mean_batch("y_mean_batch", n_batch_current, impl->p_local);         // (n_batch_current, p_local)
-    view_2d r_inv_sqrt_batch("r_inv_sqrt_batch", n_batch_current, impl->p_local); // (n_batch_current, p_local)
-    view_2d temp1_batch("temp1_batch", n_batch_current, m);                       // (n_batch_current, m) - Workspace
-    view_2d temp2_batch("temp2_batch", n_batch_current, m);                       // (n_batch_current, m) - Workspace
-    view_2d inv_sqrt_lambda_batch("inv_sqrt_lambda_batch", n_batch_current, m);   // (n_batch_current, m) - Precomputed 1/sqrt(Lambda)
+    view_3d Z_batch("Z_batch", n_batch_current, p_local_copy, m);                // (n_batch_current, p_local, m)
+    view_3d S_batch = Z_batch;                                                   // Reuse Z memory for S
+    view_3d T_batch("T_batch", n_batch_current, m, m);                           // (n_batch_current, m, m)
+    view_3d V_batch = T_batch;                                                   // Reuse T memory for V
+    view_2d Lambda_batch("Lambda_batch", n_batch_current, m);                    // (n_batch_current, m)
+    view_3d T_sqrt_batch("T_sqrt_batch", n_batch_current, m, m);                 // (n_batch_current, m, m)
+    view_2d w_batch("w_batch", n_batch_current, m);                              // (n_batch_current, m)
+    view_2d delta_batch("delta_batch", n_batch_current, p_local_copy);           // (n_batch_current, p_local)
+    view_2d y_batch("y_batch", n_batch_current, p_local_copy);                   // (n_batch_current, p_local)
+    view_2d y_mean_batch("y_mean_batch", n_batch_current, p_local_copy);         // (n_batch_current, p_local)
+    view_2d r_inv_sqrt_batch("r_inv_sqrt_batch", n_batch_current, p_local_copy); // (n_batch_current, p_local)
+    view_2d temp1_batch("temp1_batch", n_batch_current, m);                      // (n_batch_current, m) - Workspace
+    view_2d temp2_batch("temp2_batch", n_batch_current, m);                      // (n_batch_current, m) - Workspace
+    view_2d inv_sqrt_lambda_batch("inv_sqrt_lambda_batch", n_batch_current, m);  // (n_batch_current, m) - Precomputed 1/sqrt(Lambda)
 
     /* ===================================================================== */
     /* Step 2.1.2: Fused observation extraction and S/Delta computation     */
@@ -452,14 +455,14 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         for (int j = 0; j < m; j++) {
           for (int k = j; k < m; k++) {
             PetscScalar sum = (j == k) ? inflation_inv : 0.0;
-            for (int p = 0; p < impl->p_local; p++) { sum += S_i(p, j) * S_i(p, k); }
+            for (int p = 0; p < impl->p_local; p++) sum += S_i(p, j) * S_i(p, k);
             T_i(j, k) = sum;
           }
         }
 
         /* Copy upper triangle to lower triangle (T is symmetric) */
         for (int j = 0; j < m; j++) {
-          for (int k = 0; k < j; k++) { T_i(j, k) = T_i(k, j); }
+          for (int k = 0; k < j; k++) T_i(j, k) = T_i(k, j);
         }
       });
     Kokkos::fence();
@@ -477,14 +480,14 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     /* Precompute 1/sqrt(Lambda) for use in ensemble update */
     Kokkos::parallel_for(
       "ComputeWeightsAndInvSqrtLambda", Kokkos::RangePolicy<exec_space>(0, n_batch_current), KOKKOS_LAMBDA(const int i) {
-        auto S_i      = Kokkos::subview(S_batch, i, Kokkos::ALL(), Kokkos::ALL());
-        auto V_i      = Kokkos::subview(V_batch, i, Kokkos::ALL(), Kokkos::ALL());
-        auto Lambda_i = Kokkos::subview(Lambda_batch, i, Kokkos::ALL());
-        auto delta_i  = Kokkos::subview(delta_batch, i, Kokkos::ALL());
-        auto w_i      = Kokkos::subview(w_batch, i, Kokkos::ALL());
+        auto S_i               = Kokkos::subview(S_batch, i, Kokkos::ALL(), Kokkos::ALL());
+        auto V_i               = Kokkos::subview(V_batch, i, Kokkos::ALL(), Kokkos::ALL());
+        auto Lambda_i          = Kokkos::subview(Lambda_batch, i, Kokkos::ALL());
+        auto delta_i           = Kokkos::subview(delta_batch, i, Kokkos::ALL());
+        auto w_i               = Kokkos::subview(w_batch, i, Kokkos::ALL());
         auto inv_sqrt_lambda_i = Kokkos::subview(inv_sqrt_lambda_batch, i, Kokkos::ALL());
-        auto temp1    = Kokkos::subview(temp1_batch, i, Kokkos::ALL());
-        auto temp2    = Kokkos::subview(temp2_batch, i, Kokkos::ALL());
+        auto temp1             = Kokkos::subview(temp1_batch, i, Kokkos::ALL());
+        auto temp2             = Kokkos::subview(temp2_batch, i, Kokkos::ALL());
 
         /* 1. Compute w_i = V * L^-1 * V^T * S^T * delta */
         /* Step 1a: temp1 = S^T * delta using KokkosBlas::gemv for better vectorization */
@@ -494,17 +497,13 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         KokkosBlas::SerialGemv<KokkosBlas::Trans::Transpose, KokkosBlas::Algo::Gemv::Unblocked>::invoke(1.0, V_i, temp1, 0.0, temp2);
 
         /* Step 1c: temp2 = temp2 / Lambda */
-        for (int j = 0; j < m; j++) {
-          temp2(j) /= (Lambda_i(j) + 1.0e-14);
-        }
+        for (int j = 0; j < m; j++) temp2(j) /= (Lambda_i(j) + 1.0e-14);
 
         /* Step 1d: w = V * temp2 using KokkosBlas::gemv for better vectorization */
         KokkosBlas::SerialGemv<KokkosBlas::Trans::NoTranspose, KokkosBlas::Algo::Gemv::Unblocked>::invoke(1.0, V_i, temp2, 0.0, w_i);
 
         /* 2. Precompute 1/sqrt(Lambda) for ensemble update */
-        for (int p = 0; p < m; p++) {
-          inv_sqrt_lambda_i(p) = 1.0 / Kokkos::sqrt(Lambda_i(p) + 1.0e-14);
-        }
+        for (int p = 0; p < m; p++) inv_sqrt_lambda_i(p) = 1.0 / Kokkos::sqrt(Lambda_i(p) + 1.0e-14);
       });
     Kokkos::fence();
 
@@ -517,20 +516,20 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     Kokkos::parallel_for(
       "FusedGComputeAndEnsembleUpdate", Kokkos::RangePolicy<exec_space>(0, n_batch_current), KOKKOS_LAMBDA(const int i_local) {
         PetscInt i_global = chunk_start + i_local;
-        
+
         auto X_i    = Kokkos::subview(X_view, Kokkos::make_pair(i_global * ndof, (i_global + 1) * ndof), Kokkos::ALL());
         auto E_i    = Kokkos::subview(E_view, Kokkos::make_pair(i_global * ndof, (i_global + 1) * ndof), Kokkos::ALL());
         auto mean_i = Kokkos::subview(mean_view, Kokkos::make_pair(i_global * ndof, (i_global + 1) * ndof));
-        
-        auto V_i      = Kokkos::subview(V_batch, i_local, Kokkos::ALL(), Kokkos::ALL());
-        auto w_i      = Kokkos::subview(w_batch, i_local, Kokkos::ALL());
+
+        auto V_i               = Kokkos::subview(V_batch, i_local, Kokkos::ALL(), Kokkos::ALL());
+        auto w_i               = Kokkos::subview(w_batch, i_local, Kokkos::ALL());
         auto inv_sqrt_lambda_i = Kokkos::subview(inv_sqrt_lambda_batch, i_local, Kokkos::ALL());
-        auto T_sqrt_i = Kokkos::subview(T_sqrt_batch, i_local, Kokkos::ALL(), Kokkos::ALL());
+        auto T_sqrt_i          = Kokkos::subview(T_sqrt_batch, i_local, Kokkos::ALL(), Kokkos::ALL());
 
         /* Initialize E_i with mean */
         for (int row = 0; row < ndof; row++) {
           PetscScalar m_val = mean_i(row);
-          for (int col = 0; col < m; col++) { E_i(row, col) = m_val; }
+          for (int col = 0; col < m; col++) E_i(row, col) = m_val;
         }
 
         /* Compute T_sqrt = V * diag(1/sqrt(Lambda)) * V^T */
@@ -539,17 +538,13 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         for (int j = 0; j < m; j++) {
           for (int k = j; k < m; k++) {
             PetscScalar sum = 0.0;
-            for (int p = 0; p < m; p++) {
-              sum += V_i(j, p) * V_i(k, p) * inv_sqrt_lambda_i(p);
-            }
+            for (int p = 0; p < m; p++) { sum += V_i(j, p) * V_i(k, p) * inv_sqrt_lambda_i(p); }
             T_sqrt_i(j, k) = sum;
           }
         }
         /* Copy upper triangle to lower triangle (T_sqrt is symmetric) */
         for (int j = 0; j < m; j++) {
-          for (int k = 0; k < j; k++) {
-            T_sqrt_i(j, k) = T_sqrt_i(k, j);
-          }
+          for (int k = 0; k < j; k++) T_sqrt_i(j, k) = T_sqrt_i(k, j);
         }
 
         /* Compute E_i += X_i * G_i column-by-column */
