@@ -152,10 +152,10 @@ function petsc_report_tapoutput() {
 
   if test "${output_fmt}" == "err_only"; then
      if test -n "${notornot}"; then
-        printf "%s\n" $tap_message | tee -a "${testlogerrfile}"
+        printf "%s\n" "$tap_message" | tee -a "${testlogerrfile}"
      fi
   else
-     printf "%s\n" $tap_message
+     printf "%s\n" "$tap_message"
   fi
 }
 
@@ -168,7 +168,7 @@ function printcmd() {
      # Have to expand valgrind/cudamemcheck
      modcmd=$(eval "$modcmd")
   fi
-  printf "%s\n" $modcmd
+  printf "%s\n" "$modcmd"
   exit
 }
 
@@ -199,7 +199,7 @@ function petsc_testrun() {
   #  See: src/sys/error/err.c
   #  Error #134 added to handle problems with the Radeon card for hip testing
   if [ $cmd_res -eq 96 ] || [ $cmd_res -eq 97 ] || [ $cmd_res -eq 98 ] ||  [ $cmd_res -eq 134 ]; then
-    printf "# retrying %s \n" $tlabel | tee -a "${testlogerrfile}"
+    printf "# retrying %s \n" "$tlabel" | tee -a "${testlogerrfile}"
     sleep 3
     eval "{ time -p $cmd ; } 2>> timing.out"
     cmd_res=$?
@@ -269,7 +269,7 @@ function petsc_testend() {
   printf "total %s\n" $total > "$logfile"
   printf "success $success\n" >> "$logfile"
   printf "failed %s \n" $failed >> "$logfile"
-  printf "failures %s\n" $failures >> "$logfile"
+  printf "failures %s\n" "$failures" >> "$logfile"
   if test ${todo} -gt 0; then
     printf "todo %s\n" $todo >> "$logfile"
   fi
@@ -278,7 +278,7 @@ function petsc_testend() {
   fi
   ENDTIME=$(date +%s)
   timing=$(touch timing.out && grep -E '(user|sys)' timing.out | awk '{if( sum1 == "" || $2 > sum1 ) { sum1=sprintf("%.2f",$2) } ; sum2 += sprintf("%.2f",$2)} END {printf "%.2f %.2f\n",sum1,sum2}')
-  printf "time %s\n" $timing >> "$logfile"
+  printf "time %s\n" "$timing" >> "$logfile"
   if $cleanup; then
     echo "Cleaning up"
     /bin/rm -f "$rmfiles"

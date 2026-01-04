@@ -8,9 +8,9 @@ fi
 dest=$(lib/petsc/bin/maint/check-merge-branch.sh)
 
 if git diff --exit-code HEAD..."${dest}" -- .gitlab-ci.yml lib/petsc/conf/rules; then
-    printf "Success! Using current CI settings as in gitlab-ci.yml in %s!\n" $dest
+    printf "Success! Using current CI settings as in gitlab-ci.yml in %s!\n" "$dest"
 else
-    printf "ERROR! Using old CI settings in gitlab-ci.yml! Please rebase to %s to use current CI settings.\n" $dest
+    printf "ERROR! Using old CI settings in gitlab-ci.yml! Please rebase to %s to use current CI settings.\n" "$dest"
     exit 1
 fi
 
