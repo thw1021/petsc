@@ -279,12 +279,12 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
   PetscCall(MatGetSize(impl->Q, &nrows, &ncols));
 
   /* Define View types */
-  using view_1d_int                    = Kokkos::View<PetscInt *, Kokkos::LayoutLeft>;
-  using view_1d_scalar                 = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft>;
-  using view_1d_int_host               = Kokkos::View<const PetscInt *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-  using view_1d_scalar_host            = Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-  using view_1d_int_dev_unmanaged      = Kokkos::View<const PetscInt *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-  using view_1d_scalar_dev_unmanaged   = Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using view_1d_int                  = Kokkos::View<PetscInt *, Kokkos::LayoutLeft>;
+  using view_1d_scalar               = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft>;
+  using view_1d_int_host             = Kokkos::View<const PetscInt *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using view_1d_scalar_host          = Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using view_1d_int_dev_unmanaged    = Kokkos::View<const PetscInt *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using view_1d_scalar_dev_unmanaged = Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
 
   /* Allocate device views */
   view_1d_int    *d_Q_i = new view_1d_int("Q_i", nrows + 1);
@@ -315,7 +315,6 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
   impl->Q_device_i = static_cast<void *>(d_Q_i);
   impl->Q_device_j = static_cast<void *>(d_Q_j);
   impl->Q_device_a = static_cast<void *>(d_Q_a);
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -431,6 +430,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     PetscMemType    Q_memtype;
 
     PetscCall(MatSeqAIJGetCSRAndMemType(impl->Q, &Q_i, &Q_j, &Q_a, &Q_memtype));
+    PetscCheck(Q_memtype == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Q matrix must be on host for this fallback path");
 
     Q_i_view = view_1d_int_const(Q_i, n_vertices + 1);
     Q_j_view = view_1d_int_const(Q_j, n_vertices * Q_NUM_LOCAL_OBSERVATIONS_MAX);
