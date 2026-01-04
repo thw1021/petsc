@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #copy ftp and http logs and uncompress
-cd /sandbox/balay/tmp
+cd /sandbox/balay/tmp || exit
 rm -f /sandbox/balay/tmp/*
 cp /mcs/logs/ftp/ftp.mcs.anl.gov/xferlog.2011* .
 cp /mcs/logs/http/ftp.mcs.anl.gov/access_log.2011* .
