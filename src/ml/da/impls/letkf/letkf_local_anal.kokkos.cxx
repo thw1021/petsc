@@ -534,14 +534,21 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         }
 
         /* Compute T_sqrt = V * diag(1/sqrt(Lambda)) * V^T */
-        /* T_sqrt(j,k) = sum_p V(j,p) * V(k,p) / sqrt(Lambda(p)) */
+        /* Optimized: Exploit symmetry - only compute upper triangle, then copy to lower */
+        /* T_sqrt(j,k) = sum_p V(j,p) * V(k,p) / sqrt(Lambda(p)) for j <= k */
         for (int j = 0; j < m; j++) {
-          for (int k = 0; k < m; k++) {
+          for (int k = j; k < m; k++) {
             PetscScalar sum = 0.0;
             for (int p = 0; p < m; p++) {
               sum += V_i(j, p) * V_i(k, p) * inv_sqrt_lambda_i(p);
             }
             T_sqrt_i(j, k) = sum;
+          }
+        }
+        /* Copy upper triangle to lower triangle (T_sqrt is symmetric) */
+        for (int j = 0; j < m; j++) {
+          for (int k = 0; k < j; k++) {
+            T_sqrt_i(j, k) = T_sqrt_i(k, j);
           }
         }
 
