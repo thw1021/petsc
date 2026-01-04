@@ -574,7 +574,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         auto S_i = Kokkos::subview(S_batch, i, Kokkos::ALL(), Kokkos::ALL());
         auto T_i = Kokkos::subview(T_batch, i, Kokkos::ALL(), Kokkos::ALL());
 
-        /* Compute upper triangle of T_i = (1/ρ)I + S_i^T * S_i */
+        /* Compute upper triangle of T_i = (1/rho)I + S_i^T * S_i */
         /* T_i(j,k) = (1/rho)*delta_jk + sum_p S_i(p,j) * S_i(p,k) for j <= k */
         for (int j = 0; j < m; j++) {
           for (int k = j; k < m; k++) {
