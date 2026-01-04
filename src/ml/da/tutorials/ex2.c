@@ -458,7 +458,7 @@ int main(int argc, char **argv)
       args: -petscda_sqrt_type cholesky
 
     test:
-      requires: kokkos
+      requires: kokkos !cuda
       suffix: letkf
       diff_args: -j
       args: -petscda_type letkf -mat_type aijkokkos

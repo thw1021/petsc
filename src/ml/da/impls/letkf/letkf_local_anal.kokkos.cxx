@@ -303,7 +303,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   /* ===================================================================== */
   /* Step 2.1.1: Create batched workspace for ALL grid points            */
   /* ===================================================================== */
-  /* 
+  /*
      NOTE ON PARALLELISM STRATEGY:
      We use Kokkos::RangePolicy over grid points (n_vertices) combined with KokkosBatched::Serial kernels.
      Since the data layout is LayoutLeft (Column-Major) to match PETSc/LAPACK, the index 'i' (grid point)
