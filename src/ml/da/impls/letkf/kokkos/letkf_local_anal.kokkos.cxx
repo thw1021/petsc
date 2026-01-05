@@ -1,4 +1,4 @@
-#include "letkf_impl.h"
+#include "../letkf_impl.h"
 #include <petscblaslapack.h>
 #include <Kokkos_Core.hpp>
 #include <KokkosBlas.hpp>
