@@ -33,7 +33,6 @@ static PetscReal GaspariCohn(PetscReal d, PetscReal R)
     r5     = r4 * r;
     weight = 4.0 - 5.0 * r + (5.0 / 3.0) * r2 + (5.0 / 8.0) * r3 - 0.5 * r4 - (2.0 / 3.0) / r - 2.0;
   }
-
   PetscFunctionReturn(weight);
 }
 
