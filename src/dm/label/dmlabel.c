@@ -1227,11 +1227,13 @@ PetscErrorCode DMLabelGetNumValues(DMLabel label, PetscInt *numValues)
   Level: intermediate
 
   Notes:
-  The output `IS` should be destroyed when no longer needed.
+  The `values` should be destroyed when no longer needed.
+
   Strata which are allocated but empty [`DMLabelGetStratumSize()` yields 0] are counted.
+
   If you need to count only nonempty strata, use `DMLabelGetNonEmptyStratumValuesIS()`.
 
-.seealso: `DMLabel`, `DM`, `DMLabelGetNonEmptyStratumValuesIS()`, `DMLabelCreate()`, `DMLabelGetValue()`, `DMLabelSetValue()`, `DMLabelClearValue()`
+.seealso: `DMLabel`, `DM`, `DMLabelGetNonEmptyStratumValuesIS()`, `DMLabelGetValueISGlobal()`, `DMLabelCreate()`, `DMLabelGetValue()`, `DMLabelSetValue()`, `DMLabelClearValue()`
 @*/
 PetscErrorCode DMLabelGetValueIS(DMLabel label, IS *values)
 {
@@ -1293,10 +1295,11 @@ PetscErrorCode DMLabelGetValueBounds(DMLabel label, PetscInt *minValue, PetscInt
   Level: intermediate
 
   Notes:
-  The output `IS` should be destroyed when no longer needed.
+  The `values` should be destroyed when no longer needed.
+
   This is similar to `DMLabelGetValueIS()` but counts only nonempty strata.
 
-.seealso: `DMLabel`, `DM`, `DMLabelGetValueIS()`, `DMLabelCreate()`, `DMLabelGetValue()`, `DMLabelSetValue()`, `DMLabelClearValue()`
+.seealso: `DMLabel`, `DM`, `DMLabelGetValueIS()`, `DMLabelGetValueISGlobal()`, `DMLabelCreate()`, `DMLabelGetValue()`, `DMLabelSetValue()`, `DMLabelClearValue()`
 @*/
 PetscErrorCode DMLabelGetNonEmptyStratumValuesIS(DMLabel label, IS *values)
 {
@@ -1319,6 +1322,82 @@ PetscErrorCode DMLabelGetNonEmptyStratumValuesIS(DMLabel label, IS *values)
     PetscCall(ISCreateGeneral(PETSC_COMM_SELF, j, valuesArr, PETSC_COPY_VALUES, values));
   }
   PetscCall(PetscFree(valuesArr));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMLabelGetValueISGlobal - Get an `IS` of all values that the `DMlabel` takes across all ranks
+
+  Collective
+
+  Input Parameter:
++ comm         - MPI communicator to collect values
+. label        - the `DMLabel`, may be `NULL` for ranks in `comm` which do not have the corresponding `DMLabel`
+- get_nonempty - Whether to get nonempty stratum values (akin to `DMLabelGetNonEmptyStratumValuesIS()`)
+
+  Output Parameter:
+. values - the value `IS`
+
+  Level: intermediate
+
+  Notes:
+  The `values` should be destroyed when no longer needed.
+
+  This is similar to `DMLabelGetValueIS()` and `DMLabelGetNonEmptyStratumValuesIS()`, but gets the (nonempty) values across all ranks in `comm`.
+
+.seealso: `DMLabel`, `DM`, `DMLabelGetValueIS()`, `DMLabelGetNonEmptyStratumValuesIS()`, `DMLabelCreate()`, `DMLabelGetValue()`, `DMLabelSetValue()`, `DMLabelClearValue()`
+@*/
+PetscErrorCode DMLabelGetValueISGlobal(MPI_Comm comm, DMLabel label, PetscBool get_nonempty, IS *values)
+{
+  PetscInt        num_values_local = 0, num_values_global, minmax_values[2], minmax_values_loc[2] = {PETSC_INT_MAX, PETSC_INT_MIN};
+  IS              is_values;
+  const PetscInt *values_local = NULL;
+  PetscInt       *values_global;
+
+  PetscFunctionBegin;
+  if (label) PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
+  PetscAssertPointer(values, 2);
+
+  if (label) {
+    if (get_nonempty) PetscCall(DMLabelGetNonEmptyStratumValuesIS(label, &is_values));
+    else PetscCall(DMLabelGetValueIS(label, &is_values));
+    PetscCall(ISGetIndices(is_values, &values_local));
+    PetscCall(ISGetLocalSize(is_values, &num_values_local));
+  }
+  for (PetscInt i = 0; i < num_values_local; i++) {
+    minmax_values_loc[0] = PetscMin(minmax_values_loc[0], values_local[i]);
+    minmax_values_loc[1] = PetscMax(minmax_values_loc[1], values_local[i]);
+  }
+
+  PetscCall(PetscGlobalMinMaxInt(comm, minmax_values_loc, minmax_values));
+  PetscInt value_range = minmax_values[1] - minmax_values[0] + 1;
+  PetscBT  local_values_bt, global_values_bt;
+
+  // Create a "ballot" where each rank marks which values they have into the PetscBT.
+  // An Allreduce using bitwise-OR over the ranks then communicates which values are owned by a rank in comm
+  PetscCall(PetscBTCreate(value_range, &local_values_bt));
+  PetscCall(PetscBTCreate(value_range, &global_values_bt));
+  for (PetscInt i = 0; i < num_values_local; i++) PetscCall(PetscBTSet(local_values_bt, values_local[i] - minmax_values[0]));
+  PetscCallMPI(MPIU_Allreduce(local_values_bt, global_values_bt, PetscBTLength(value_range), MPI_CHAR, MPI_BOR, comm));
+  PetscCall(PetscBTDestroy(&local_values_bt));
+  {
+    PetscCount num_values_global_count;
+    num_values_global_count = PetscBTCountSet(global_values_bt, value_range);
+    PetscCall(PetscIntCast(num_values_global_count, &num_values_global));
+  }
+
+  PetscCall(PetscMalloc1(num_values_global, &values_global));
+  for (PetscInt i = 0, a = 0; i < value_range; i++) {
+    if (PetscBTLookup(global_values_bt, i)) {
+      values_global[a] = i + minmax_values[0];
+      a++;
+    }
+  }
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, num_values_global, values_global, PETSC_OWN_POINTER, values));
+
+  PetscCall(PetscBTDestroy(&global_values_bt));
+  PetscCall(ISRestoreIndices(is_values, &values_local));
+  PetscCall(ISDestroy(&is_values));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
