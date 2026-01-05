@@ -624,7 +624,7 @@ PetscErrorCode MatConjugate(Mat mat)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
-  if (PetscDefined(USE_COMPLEX) && mat->hermitian != PETSC_BOOL3_TRUE) {
+  if (PetscDefined(USE_COMPLEX) && !(mat->symmetric == PETSC_BOOL3_TRUE && mat->hermitian == PETSC_BOOL3_TRUE)) {
     PetscUseTypeMethod(mat, conjugate);
     PetscCall(PetscObjectStateIncrease((PetscObject)mat));
   }
@@ -5335,6 +5335,19 @@ PetscErrorCode MatTransposeSetPrecursor(Mat mat, Mat B)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatTranspose_Private(Mat mat, MatReuse reuse, Mat *B)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscValidType(mat, 1);
+  PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
+  PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
+  PetscCheck(reuse != MAT_INPLACE_MATRIX || mat == *B, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "MAT_INPLACE_MATRIX requires last matrix to match first");
+  PetscCheck(reuse != MAT_REUSE_MATRIX || mat != *B, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Perhaps you mean MAT_INPLACE_MATRIX");
+  MatCheckPreallocated(mat, 1);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   MatTranspose - Computes the transpose of a matrix, either in-place or out-of-place.
 
@@ -5373,13 +5386,7 @@ PetscErrorCode MatTranspose(Mat mat, MatReuse reuse, Mat *B)
   MatParentState *rb = NULL;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
-  PetscValidType(mat, 1);
-  PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
-  PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
-  PetscCheck(reuse != MAT_INPLACE_MATRIX || mat == *B, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "MAT_INPLACE_MATRIX requires last matrix to match first");
-  PetscCheck(reuse != MAT_REUSE_MATRIX || mat != *B, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Perhaps you mean MAT_INPLACE_MATRIX");
-  MatCheckPreallocated(mat, 1);
+  PetscCall(MatTranspose_Private(mat, reuse, B));
   if (reuse == MAT_REUSE_MATRIX) {
     PetscCall(PetscObjectQuery((PetscObject)*B, "MatTransposeParent", (PetscObject *)&rB));
     PetscCheck(rB, PetscObjectComm((PetscObject)*B), PETSC_ERR_ARG_WRONG, "Reuse matrix used was not generated from call to MatTranspose(). Suggest MatTransposeSetPrecursor().");
@@ -5520,11 +5527,25 @@ PetscErrorCode MatIsTranspose(Mat A, Mat B, PetscReal tol, PetscBool *flg)
 @*/
 PetscErrorCode MatHermitianTranspose(Mat mat, MatReuse reuse, Mat *B)
 {
+  PetscContainer  rB = NULL;
+  MatParentState *rb = NULL;
+
   PetscFunctionBegin;
-  PetscCall(MatTranspose(mat, reuse, B));
-#if defined(PETSC_USE_COMPLEX)
-  PetscCall(MatConjugate(*B));
-#endif
+  PetscCall(MatTranspose_Private(mat, reuse, B));
+  if (reuse == MAT_REUSE_MATRIX) {
+    PetscCall(PetscObjectQuery((PetscObject)*B, "MatTransposeParent", (PetscObject *)&rB));
+    PetscCall(PetscContainerGetPointer(rB, (void **)&rb));
+    if (rb->state == ((PetscObject)mat)->state) PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  if (reuse != MAT_INPLACE_MATRIX || mat->hermitian != PETSC_BOOL3_TRUE) {
+    PetscCall(MatTranspose(mat, reuse, B));
+    PetscCall(MatConjugate(*B));
+  }
+  if (reuse != MAT_INPLACE_MATRIX) {
+    PetscCall(PetscObjectQuery((PetscObject)*B, "MatTransposeParent", (PetscObject *)&rB));
+    PetscCall(PetscContainerGetPointer(rB, (void **)&rb));
+    rb->state = ((PetscObject)mat)->state; // increased by MatConjugate(), so need to be set after MatTranspose()
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
