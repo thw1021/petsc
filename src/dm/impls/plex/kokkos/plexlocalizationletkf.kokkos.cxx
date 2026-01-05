@@ -126,12 +126,12 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   using MemSpace  = ExecSpace::memory_space;
 
   /* Vertex Coordinates */
-  Kokkos::View<PetscReal**, Kokkos::LayoutRight, MemSpace> vertex_coords_dev("vertex_coords", numVertices, dim);
+  Kokkos::View<PetscReal **, Kokkos::LayoutRight, MemSpace> vertex_coords_dev("vertex_coords", numVertices, dim);
   {
-    Kokkos::View<PetscReal**, Kokkos::LayoutRight, Kokkos::HostSpace> vertex_coords_host("vertex_coords_host", numVertices, dim);
-    Vec          localCoords;
-    PetscScalar *local_coords_array;
-    PetscSection coordSection;
+    Kokkos::View<PetscReal **, Kokkos::LayoutRight, Kokkos::HostSpace> vertex_coords_host("vertex_coords_host", numVertices, dim);
+    Vec                                                                localCoords;
+    PetscScalar                                                       *local_coords_array;
+    PetscSection                                                       coordSection;
     PetscCall(DMGetCoordinatesLocal(plex, &localCoords));
     PetscCall(DMGetCoordinateSection(plex, &coordSection));
     PetscCall(VecGetArray(localCoords, &local_coords_array));
@@ -139,31 +139,27 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
     for (PetscInt v = 0; v < numVertices; ++v) {
       PetscInt off;
       PetscCall(PetscSectionGetOffset(coordSection, vStart + v, &off));
-      for (d = 0; d < dim; ++d) {
-        vertex_coords_host(v, d) = PetscRealPart(local_coords_array[off + d]);
-      }
+      for (d = 0; d < dim; ++d) { vertex_coords_host(v, d) = PetscRealPart(local_coords_array[off + d]); }
     }
     PetscCall(VecRestoreArray(localCoords, &local_coords_array));
     Kokkos::deep_copy(vertex_coords_dev, vertex_coords_host);
   }
 
   /* Observation Coordinates */
-  Kokkos::View<PetscReal**, Kokkos::LayoutRight, MemSpace> obs_coords_dev("obs_coords", numglobalobs, dim);
+  Kokkos::View<PetscReal **, Kokkos::LayoutRight, MemSpace> obs_coords_dev("obs_coords", numglobalobs, dim);
   {
-    Kokkos::View<PetscReal**, Kokkos::LayoutRight, Kokkos::HostSpace> obs_coords_host("obs_coords_host", numglobalobs, dim);
+    Kokkos::View<PetscReal **, Kokkos::LayoutRight, Kokkos::HostSpace> obs_coords_host("obs_coords_host", numglobalobs, dim);
     for (PetscInt j = 0; j < numglobalobs; ++j) {
-      for (d = 0; d < dim; ++d) {
-        obs_coords_host(j, d) = PetscRealPart(obs_coords[d][j]);
-      }
+      for (d = 0; d < dim; ++d) { obs_coords_host(j, d) = PetscRealPart(obs_coords[d][j]); }
     }
     Kokkos::deep_copy(obs_coords_dev, obs_coords_host);
   }
 
   /* Global Rows */
-  Kokkos::View<PetscInt*, MemSpace> global_rows_dev("global_rows", numVertices);
+  Kokkos::View<PetscInt *, MemSpace> global_rows_dev("global_rows", numVertices);
   {
-    Kokkos::View<PetscInt*, Kokkos::HostSpace> global_rows_host("global_rows_host", numVertices);
-    PetscSection globalSection;
+    Kokkos::View<PetscInt *, Kokkos::HostSpace> global_rows_host("global_rows_host", numVertices);
+    PetscSection                                globalSection;
     PetscCall(DMGetGlobalSection(plex, &globalSection));
     for (PetscInt v = 0; v < numVertices; ++v) {
       PetscInt globalRow;
@@ -174,70 +170,71 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   }
 
   /* Output Views */
-  Kokkos::View<PetscInt**, Kokkos::LayoutRight, MemSpace> indices_dev("indices", numVertices, numobservations);
-  Kokkos::View<PetscScalar**, Kokkos::LayoutRight, MemSpace> values_dev("values", numVertices, numobservations);
+  Kokkos::View<PetscInt **, Kokkos::LayoutRight, MemSpace>    indices_dev("indices", numVertices, numobservations);
+  Kokkos::View<PetscScalar **, Kokkos::LayoutRight, MemSpace> values_dev("values", numVertices, numobservations);
 
   /* Temporary storage for top-k per vertex */
-  Kokkos::View<PetscReal**, Kokkos::LayoutRight, MemSpace> best_dists_dev("best_dists", numVertices, numobservations);
-  Kokkos::View<PetscInt**, Kokkos::LayoutRight, MemSpace> best_idxs_dev("best_idxs", numVertices, numobservations);
+  Kokkos::View<PetscReal **, Kokkos::LayoutRight, MemSpace> best_dists_dev("best_dists", numVertices, numobservations);
+  Kokkos::View<PetscInt **, Kokkos::LayoutRight, MemSpace>  best_idxs_dev("best_idxs", numVertices, numobservations);
 
   Kokkos::deep_copy(best_dists_dev, 1.0e30);
 
   /* Main Kernel */
-  Kokkos::parallel_for("ComputeLocalization", Kokkos::RangePolicy<ExecSpace>(0, numVertices), KOKKOS_LAMBDA(const PetscInt i) {
-    PetscReal current_max_dist = 1.0e30;
-    PetscInt count = 0;
+  Kokkos::parallel_for(
+    "ComputeLocalization", Kokkos::RangePolicy<ExecSpace>(0, numVertices), KOKKOS_LAMBDA(const PetscInt i) {
+      PetscReal current_max_dist = 1.0e30;
+      PetscInt  count            = 0;
 
-    // Iterate over all observations
-    for (PetscInt j = 0; j < numglobalobs; ++j) {
-      PetscReal dist2 = 0.0;
-      for (PetscInt d = 0; d < dim; ++d) {
-        PetscReal diff = vertex_coords_dev(i, d) - obs_coords_dev(j, d);
-        dist2 += diff * diff;
+      // Iterate over all observations
+      for (PetscInt j = 0; j < numglobalobs; ++j) {
+        PetscReal dist2 = 0.0;
+        for (PetscInt d = 0; d < dim; ++d) {
+          PetscReal diff = vertex_coords_dev(i, d) - obs_coords_dev(j, d);
+          dist2 += diff * diff;
+        }
+
+        if (count < numobservations) {
+          // Insert sorted
+          PetscInt pos = count;
+          while (pos > 0 && best_dists_dev(i, pos - 1) > dist2) {
+            best_dists_dev(i, pos) = best_dists_dev(i, pos - 1);
+            best_idxs_dev(i, pos)  = best_idxs_dev(i, pos - 1);
+            pos--;
+          }
+          best_dists_dev(i, pos) = dist2;
+          best_idxs_dev(i, pos)  = j;
+          count++;
+          if (count == numobservations) current_max_dist = best_dists_dev(i, numobservations - 1);
+        } else if (dist2 < current_max_dist) {
+          // Insert sorted
+          PetscInt pos = numobservations - 1;
+          while (pos > 0 && best_dists_dev(i, pos - 1) > dist2) {
+            best_dists_dev(i, pos) = best_dists_dev(i, pos - 1);
+            best_idxs_dev(i, pos)  = best_idxs_dev(i, pos - 1);
+            pos--;
+          }
+          best_dists_dev(i, pos) = dist2;
+          best_idxs_dev(i, pos)  = j;
+          current_max_dist       = best_dists_dev(i, numobservations - 1);
+        }
       }
 
-      if (count < numobservations) {
-        // Insert sorted
-        PetscInt pos = count;
-        while (pos > 0 && best_dists_dev(i, pos-1) > dist2) {
-          best_dists_dev(i, pos) = best_dists_dev(i, pos-1);
-          best_idxs_dev(i, pos) = best_idxs_dev(i, pos-1);
-          pos--;
-        }
-        best_dists_dev(i, pos) = dist2;
-        best_idxs_dev(i, pos) = j;
-        count++;
-        if (count == numobservations) current_max_dist = best_dists_dev(i, numobservations-1);
-      } else if (dist2 < current_max_dist) {
-        // Insert sorted
-        PetscInt pos = numobservations - 1;
-        while (pos > 0 && best_dists_dev(i, pos-1) > dist2) {
-          best_dists_dev(i, pos) = best_dists_dev(i, pos-1);
-          best_idxs_dev(i, pos) = best_idxs_dev(i, pos-1);
-          pos--;
-        }
-        best_dists_dev(i, pos) = dist2;
-        best_idxs_dev(i, pos) = j;
-        current_max_dist = best_dists_dev(i, numobservations-1);
+      // Compute weights
+      PetscReal radius2 = best_dists_dev(i, numobservations - 1);
+      PetscReal radius  = std::sqrt(radius2);
+      if (radius == 0.0) radius = 1.0;
+
+      for (PetscInt k = 0; k < numobservations; ++k) {
+        PetscReal dist    = std::sqrt(best_dists_dev(i, k));
+        indices_dev(i, k) = best_idxs_dev(i, k);
+        values_dev(i, k)  = GaspariCohn(dist, radius);
       }
-    }
-
-    // Compute weights
-    PetscReal radius2 = best_dists_dev(i, numobservations - 1);
-    PetscReal radius  = std::sqrt(radius2);
-    if (radius == 0.0) radius = 1.0;
-
-    for (PetscInt k = 0; k < numobservations; ++k) {
-      PetscReal dist = std::sqrt(best_dists_dev(i, k));
-      indices_dev(i, k) = best_idxs_dev(i, k);
-      values_dev(i, k)  = GaspariCohn(dist, radius);
-    }
-  });
+    });
 
   /* Copy back to host and fill matrix */
-  Kokkos::View<PetscInt**, Kokkos::LayoutRight, Kokkos::HostSpace> indices_host = Kokkos::create_mirror_view(indices_dev);
-  Kokkos::View<PetscScalar**, Kokkos::LayoutRight, Kokkos::HostSpace> values_host = Kokkos::create_mirror_view(values_dev);
-  Kokkos::View<PetscInt*, Kokkos::HostSpace> global_rows_host = Kokkos::create_mirror_view(global_rows_dev);
+  Kokkos::View<PetscInt **, Kokkos::LayoutRight, Kokkos::HostSpace>    indices_host     = Kokkos::create_mirror_view(indices_dev);
+  Kokkos::View<PetscScalar **, Kokkos::LayoutRight, Kokkos::HostSpace> values_host      = Kokkos::create_mirror_view(values_dev);
+  Kokkos::View<PetscInt *, Kokkos::HostSpace>                          global_rows_host = Kokkos::create_mirror_view(global_rows_dev);
 
   Kokkos::deep_copy(indices_host, indices_dev);
   Kokkos::deep_copy(values_host, values_dev);
