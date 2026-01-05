@@ -56,25 +56,22 @@ int main(int argc, char **argv)
   PoissonCtx    user;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-
   user.Lx     = 1.0;
   user.Ly     = 1.0;
   user.cx     = 1.0;
   user.cy     = 1.0;
   user.g_bdry = &u_exact_2D;
-  user.f_rhs  = &f_rhs_2D;
 
-  PetscCall(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR, N, N, PETSC_DECIDE, PETSC_DECIDE, 1, 1, NULL, NULL, &da));
+  user.f_rhs  = &f_rhs_2D;
+  PetscCall(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_STAR, N, N, PETSC_DECIDE, PETSC_DECIDE, 1, 2, NULL, NULL, &da));
   PetscCall(DMSetFromOptions(da));
   PetscCall(DMSetUp(da));
   PetscCall(DMDASetUniformCoordinates(da, 0.0, user.Lx, 0.0, user.Ly, 0.0, 1.0));
   PetscCall(DMSetMatType(da, MATSHELL));
-
   PetscCall(SetupBCs(da));
   // create the local section - run with -da_use_section
   PetscCall(DMGetLocalSection(da, &lsection));
   PetscCall(DMGetPointSF(da, &sf));
-
   // create global section
   PetscCall(PetscSectionCreateGlobalSection(lsection, sf, PETSC_TRUE, PETSC_FALSE, PETSC_FALSE, &gsection));
   PetscCall(DMSetGlobalSection(da, gsection));
@@ -86,7 +83,6 @@ int main(int argc, char **argv)
   PetscCall(KSPSetType(ksp, KSPCG));
   PetscCall(KSPGetPC(ksp, &pc));
   PetscCall(PCSetType(pc, PCNONE));
-
   PetscCall(SNESSetDM(snes, da));
   // Since we have constrained the boundaries, the matrix should be size 7^2 x 7^2 not 9^2 x 9^2
   PetscCall(DMCreateMatrix(da, &J));
@@ -97,30 +93,26 @@ int main(int argc, char **argv)
   PetscCall(SNESSetFromOptions(snes));
   PetscCall(MatSetDM(J, da));
   PetscCall(DMSetApplicationContext(da, &user));
-
   PetscCall(DMCreateGlobalVector(da, &uglobal));
   PetscCall(SNESSolve(snes, NULL, uglobal));
-
   PetscCall(DMDAGetLocalInfo(da, &info));
   PetscCall(DMCreateLocalVector(da, &u_exact_local));
   PetscCall(DMCreateGlobalVector(da, &u_exact));
   PetscCall(FormExact(&info, u_exact_local, &user));
   PetscCall(DMLocalToGlobal(da, u_exact_local, INSERT_VALUES, u_exact));
-
   PetscCall(VecAXPY(uglobal, -1.0, u_exact)); // u <- u + (-1.0) uexact
   PetscCall(VecDestroy(&u_exact));            // no longer needed
   PetscCall(VecDestroy(&u_exact_local));
   PetscCall(VecNorm(uglobal, NORM_INFINITY, &errinf));
   PetscCall(VecNorm(uglobal, NORM_2, &err2h));
-
   normconst2h = PetscSqrtReal((PetscScalar)(info.mx - 1) * (info.my - 1));
   snprintf(gridstr, 99, "%d x %d point 2D", info.mx, info.my);
+
   err2h /= normconst2h; // like continuous L2
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                         "problem on %s grid:\n"
                         "  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e\n",
                         gridstr, errinf, err2h));
-
   PetscCall(PetscSectionDestroy(&gsection));
   PetscCall(VecDestroy(&uglobal));
   PetscCall(MatDestroy(&J));
@@ -180,7 +172,6 @@ PetscErrorCode FormFunctionGlobal(SNES snes, Vec u, Vec F, void *dummy)
       }
     }
   }
-
   PetscCall(DMDAVecRestoreArray(dm, u_local, &au));
   PetscCall(DMDAVecRestoreArray(dm, F_local, &aF));
 
@@ -203,7 +194,6 @@ PetscErrorCode JacMult(Mat J, Vec X, Vec Y)
   PetscScalar   ue, uw, un, us;
   PetscScalar **x_u;
   PetscScalar **y_u;
-
   PetscFunctionBeginUser;
   PetscCall(VecSet(Y, 0.0));
   PetscCall(MatGetDM(J, &dm));
@@ -212,14 +202,11 @@ PetscErrorCode JacMult(Mat J, Vec X, Vec Y)
 
   PetscCall(DMGetLocalVector(dm, &xloc));
   PetscCall(DMGetLocalVector(dm, &yloc));
-
   PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, xloc));
   PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, xloc));
   PetscCall(VecSet(yloc, 0.0));
-
   PetscCall(DMDAVecGetArray(dm, yloc, &y_u));
   PetscCall(DMDAVecGetArray(dm, xloc, &x_u));
-
   PetscCall(DMGetBoundingBox(dm, xymin, xymax));
   hx     = (xymax[0] - xymin[0]) / (info.mx - 1);
   hy     = (xymax[1] - xymin[1]) / (info.my - 1);
@@ -305,32 +292,37 @@ PetscErrorCode SetupBCs(DM da)
 {
   PetscInt x, y, m, n, gx, gy, gm, gn, M, N, dim, dof, numBC = 0, *bcPointsArray;
   IS       bcPointsIS;
+  DMDALocalInfo  info;
 
   PetscFunctionBeginUser;
   PetscCall(DMDAGetInfo(da, &dim, &M, &N, NULL, NULL, NULL, NULL, &dof, NULL, NULL, NULL, NULL, NULL));
+
+  PetscCall(DMDAGetLocalInfo(da,&info));
   PetscCall(DMDAGetCorners(da, &x, &y, NULL, &m, &n, NULL));
   PetscCall(DMDAGetGhostCorners(da, &gx, &gy, NULL, &gm, &gn, NULL));
 
-  // determine how many points are on physical boundary
-  for (PetscInt j = gy; j < gy + gn; j++) {
-    for (PetscInt i = gx; i < gx + gm; i++) {
-      PetscBool isBoundary = (i == 0) || (i == M - 1) || (j == 0) || (j == N - 1);
-      if (isBoundary) numBC++;
-    }
+  for (PetscInt j = info.gys; j < info.gys + info.gym; j++) {
+      for (PetscInt i = info.gxs; i < info.gxs + info.gxm; i++) {
+          PetscBool isBoundary = (i==0 || i==info.mx-1 || j==0 || j==info.my-1); 
+          if (isBoundary) numBC++;
+      }
   }
+  // PetscCall(PetscPrintf(PetscObjectComm((PetscObject)da), "Number of boundary points: %d\n", numBC));
   // create an array of points to constrain
   PetscCall(PetscMalloc1(numBC, &bcPointsArray));
   PetscInt k = 0;
-  for (PetscInt j = gy; j < gy + gn; j++) {
-    for (PetscInt i = gx; i < gx + gm; i++) {
-      PetscBool isBoundary = (i == 0) || (i == M - 1) || (j == 0) || (j == N - 1);
-      if (isBoundary) bcPointsArray[k++] = (j - gy) * gm + (i - gx);
-    }
+  for (PetscInt j = info.gys; j < info.gys + info.gym; j++) {
+      for (PetscInt i = info.gxs; i < info.gxs + info.gxm; i++) {
+          PetscBool isBoundary = (i==0 || i==info.mx-1 || j==0 || j==info.my-1); 
+          if (isBoundary) bcPointsArray[k++] = (j - gy) * gm + (i - gx);
+      }
   }
   // create an IS of boundary points
   PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)da), numBC, bcPointsArray, PETSC_OWN_POINTER, &bcPointsIS));
-
+  //view the IS
+  PetscCall(ISView(bcPointsIS,PETSC_VIEWER_STDOUT_WORLD));
   IS bcPoints[1] = {bcPointsIS};
+
   PetscCall(DMDASetPointBC(da, 1, bcPoints, NULL));
 
   PetscCall(ISDestroy(&bcPointsIS));

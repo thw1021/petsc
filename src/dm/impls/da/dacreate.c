@@ -325,6 +325,9 @@ static PetscErrorCode PetscSFAddFace_2D_Private(DM dm, PetscMPIInt nrank, PetscI
   const PetscInt nrm = nrank % pm; // The x-component of the neighbor rank, in [0, m)
   const PetscInt nrn = nrank / pm; // The y-component of the neighbor rank, in [0, n)
 
+
+  // if nrank is -1, skip this function
+  if (nrank < 0) PetscFunctionReturn(PETSC_SUCCESS);
   for (PetscInt j = ymin; j < ymax; ++j) {
     for (PetscInt i = xmin; i < xmax; ++i) {
       local[*l]        = (j - gy) * gm + (i - gx);
@@ -363,6 +366,29 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)dm), &s));
   PetscCall(PetscSectionSetChart(s, 0, gNv));
   for (PetscInt v = 0; v < gNv; ++v) PetscCall(PetscSectionSetDof(s, v, dof));
+
+  // If DM_BOUNDARY_GHOSTED is used, mark the ghosted vertices in this region as "constrained" so that they are not needed in the SF
+  PetscBool ghostX = (dd->bx == DM_BOUNDARY_GHOSTED);
+  PetscBool ghostY = (dd->by == DM_BOUNDARY_GHOSTED);
+
+  if (ghostX || ghostY) {
+      for (PetscInt j = gy; j < gy + gn; j++) {
+        for (PetscInt i = gx; i < gx + gm; i++) {
+
+          PetscBool isGhostedBoundary =
+            (ghostX && (i < 0 || i >= M)) ||
+            (ghostY && (j < 0 || j >= N));
+
+          if (isGhostedBoundary) {
+            PetscInt p =
+              (j - gy) * gm + (i - gx);
+            // print "bc point:", p to screen
+            // PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "bc point: %d\n", p));
+            PetscCall(PetscSectionSetConstraintDof(s, p, dof));
+          }
+        }
+      }
+  }
 
   if (bc) {
     // Set BC dofs
@@ -412,10 +438,35 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
       if (bc->bcComps[b]) PetscCall(ISRestoreIndices(bc->bcComps[b], &cmp));
     }
   }
+  // number of boundary vertices
+  PetscInt Nbv = 0;
+  if (ghostX || ghostY) {
+    PetscInt comps[dof];
+    for (PetscInt c = 0; c < dof; c++) comps[c] = c;
+
+      for (PetscInt j = gy; j < gy + gn; j++) {
+        for (PetscInt i = gx; i < gx + gm; i++) {
+
+          PetscBool isGhostedBoundary =
+            (ghostX && (i < 0 || i >= M)) ||
+            (ghostY && (j < 0 || j >= N));
+
+          if (isGhostedBoundary) {
+            // 
+            Nbv ++;
+            PetscInt p =
+              (j - gy) * gm + (i - gx);
+            // print "bc point:", p to screen
+            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "bc point: %d\n", p));
+            PetscCall(PetscSectionSetConstraintIndices(s, p, comps));
+          }
+        }
+    }
+  }
 
   PetscCall(DMSetLocalSection(dm, s));
   // DMView(dm, NULL);
-  // PetscSectionView(s, NULL);
+  PetscSectionView(s, NULL);
   PetscCall(PetscSectionDestroy(&s));
 
   // Create point SF
@@ -430,10 +481,18 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   const PetscInt    *glxs;   // The first ghosted vertex along x in each of the m procs
   const PetscInt    *glys;   // The first ghosted vertex along y in each of the n procs
   const PetscInt    *glzs;   // The first ghosted vertex along z in each of the p procs
-  PetscInt           Nl, l = 0;
+  PetscInt           Nl=0, l = 0;
   PetscCall(PetscSFCreate(comm, &sf));
   PetscCall(DMDAGetNeighbors(dm, &neigh));
-  Nl = gNv - Nv;
+  Nl = gNv - Nv - Nbv;
+
+
+  // print Nl on each RANK with rank printed too, across all ranks using synchronize
+  PetscCall(PetscSynchronizedPrintf(comm, "[%d] gNv: %d, Nl: %d\n", rank, gNv, Nl));
+  PetscCall(PetscSynchronizedFlush(comm, PETSC_STDOUT));
+
+  //print Nl to screen
+  PetscCall(PetscPrintf(comm, "gNv: %d\n, Nl: %d\n", gNv, Nl));
   // Compute starting point of each process
   PetscCall(PetscMalloc2(size + 1, &bases, size, &ldims));
   PetscCallMPI(MPI_Allgather(&Nv, 1, MPIU_INT, ldims, 1, MPIU_INT, comm));
@@ -469,10 +528,12 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   }
   PetscCall(PetscFree2(bases, ldims));
   PetscCall(DMDARestoreGhostOwnershipRanges(dm, &glx, &glxs, &gly, &glys, &glz, &glzs));
-  // for (PetscInt l = 0; l < Nl; ++l) PetscSynchronizedPrintf(comm, "[%d]local: %d remote %d %d\n", rank, local[l], remote[l].rank, remote[l].index);
-  // PetscSynchronizedFlush(comm, NULL);
+
+  for (PetscInt l = 0; l < Nl; ++l) PetscSynchronizedPrintf(comm, "[%d]local: %d remote %d %d\n", rank, local[l], remote[l].rank, remote[l].index);
+  PetscSynchronizedFlush(comm, NULL);
   PetscCall(PetscSFSetGraph(sf, gNv, Nl, local, PETSC_OWN_POINTER, remote, PETSC_OWN_POINTER));
   PetscCall(DMSetPointSF(dm, sf));
+
   PetscCall(PetscSFDestroy(&sf));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
