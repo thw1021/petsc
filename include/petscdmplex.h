@@ -621,4 +621,3 @@ PETSC_EXTERN PetscErrorCode DMPlexCreateGeomFromFile(MPI_Comm, const char[], DM 
 PETSC_EXTERN PetscErrorCode DMPlexInflateToGeomModel(DM, PetscBool);
 
 PETSC_EXTERN PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM, PetscInt, PetscInt, Mat, Mat *);
-
