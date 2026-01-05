@@ -167,11 +167,13 @@ int main(int argc, char **argv)
 
   test:
     suffix: 1
+    diff_args: -j
     nsize: 1
     args: -dim 1
 
   test:
     suffix: 2
+    diff_args: -j
     nsize: 1
     args: -dim 2
 
