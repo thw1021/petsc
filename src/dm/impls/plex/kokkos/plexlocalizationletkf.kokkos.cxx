@@ -72,7 +72,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   PetscSection                   coordSection;
   const PetscScalar             *coordArray;
   PetscInt                       dim, vStart, vEnd, numVertices, v;
-  PetscInt                       coordSize, offset;
+  PetscInt                       offset;
   Vec                           *V_comp = NULL, *O_comp = NULL;
   PetscScalar                  **global_O_comp = NULL;
   PetscInt                       d, obs;
@@ -140,7 +140,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
 
     PetscCall(VecGetArray(O_comp_global, &o_array));
     PetscCall(PetscMalloc1(numglobslobs, &global_O_comp[d]));
-    for (obs = 0; obs < numglobslobs; obs++) { global_O_comp[d][obs] = o_array[obs]; }
+    for (obs = 0; obs < numglobslobs; obs++) global_O_comp[d][obs] = o_array[obs];
     PetscCall(VecRestoreArray(O_comp_global, &o_array));
 
     PetscCall(VecDestroy(&O_comp_global));
@@ -149,7 +149,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
 
   /* Create localization matrix Q */
   localRows = numVertices;
-  PetscCallMPI(MPI_Allreduce(&localRows, &globalRows, 1, MPIU_INT, MPI_SUM, comm));
+  PetscCallMPI(MPIU_Allreduce(&localRows, &globalRows, 1, MPIU_INT, MPI_SUM, comm));
 
   PetscCall(MatCreate(comm, &Qmat));
   PetscCall(MatSetSizes(Qmat, localRows, PETSC_DECIDE, globalRows, numglobslobs));
@@ -167,7 +167,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
 
     /* Get vertex coordinates */
     PetscCall(PetscSectionGetOffset(coordSection, v, &offset));
-    for (d = 0; d < dim; d++) { vertex_coords[d] = PetscRealPart(coordArray[offset + d]); }
+    for (d = 0; d < dim; d++) vertex_coords[d] = PetscRealPart(coordArray[offset + d]);
 
     /* Compute distances to all observations */
     for (obs = 0; obs < numglobslobs; obs++) {
@@ -193,7 +193,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
       PetscReal weight = GaspariCohn(distances[i].distance, cutoff);
       PetscInt  col    = distances[i].index;
 
-      if (weight > 0.0) { PetscCall(MatSetValue(Qmat, globalRow, col, weight, INSERT_VALUES)); }
+      if (weight > 0.0) PetscCall(MatSetValue(Qmat, globalRow, col, weight, INSERT_VALUES));
     }
   }
 
