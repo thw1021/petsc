@@ -200,9 +200,9 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
         // Insert sorted
         PetscInt pos = count;
         while (pos > 0 && best_dists_dev(i, pos-1) > dist2) {
-            best_dists_dev(i, pos) = best_dists_dev(i, pos-1);
-            best_idxs_dev(i, pos) = best_idxs_dev(i, pos-1);
-            pos--;
+          best_dists_dev(i, pos) = best_dists_dev(i, pos-1);
+          best_idxs_dev(i, pos) = best_idxs_dev(i, pos-1);
+          pos--;
         }
         best_dists_dev(i, pos) = dist2;
         best_idxs_dev(i, pos) = j;
@@ -212,9 +212,9 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
         // Insert sorted
         PetscInt pos = numobservations - 1;
         while (pos > 0 && best_dists_dev(i, pos-1) > dist2) {
-            best_dists_dev(i, pos) = best_dists_dev(i, pos-1);
-            best_idxs_dev(i, pos) = best_idxs_dev(i, pos-1);
-            pos--;
+          best_dists_dev(i, pos) = best_dists_dev(i, pos-1);
+          best_idxs_dev(i, pos) = best_idxs_dev(i, pos-1);
+          pos--;
         }
         best_dists_dev(i, pos) = dist2;
         best_idxs_dev(i, pos) = j;
