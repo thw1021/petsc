@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <vector>
 #include <cmath>
+#include <Kokkos_Core.hpp>
 
 /* Gaspari-Cohn 5th-order piecewise rational function for localization
    Input: distance d, cutoff radius R
@@ -11,12 +12,11 @@
 */
 static PetscReal GaspariCohn(PetscReal d, PetscReal R)
 {
-  PetscFunctionBegin;
-  if (R <= 0.0) PetscFunctionReturn(0.0);
+  if (R <= 0.0) return 0.0;
 
   const PetscReal r = d / R; // Normalized distance
 
-  if (r >= 2.0) PetscFunctionReturn(0.0);
+  if (r >= 2.0) return 0.0;
 
   const PetscReal r2 = r * r;
   const PetscReal r3 = r2 * r;
@@ -24,9 +24,9 @@ static PetscReal GaspariCohn(PetscReal d, PetscReal R)
   const PetscReal r5 = r4 * r;
 
   if (r <= 1.0) {
-    PetscFunctionReturn(1.0 - (5.0 / 3.0) * r2 + (5.0 / 8.0) * r3 + 0.5 * r4 - 0.25 * r5);
+    return 1.0 - (5.0 / 3.0) * r2 + (5.0 / 8.0) * r3 + 0.5 * r4 - 0.25 * r5;
   } else {
-    PetscFunctionReturn(4.0 - 5.0 * r + (5.0 / 3.0) * r2 + (5.0 / 8.0) * r3 - 0.5 * r4 - (2.0 / 3.0) / r - 2.0);
+    return 4.0 - 5.0 * r + (5.0 / 3.0) * r2 + (5.0 / 8.0) * r3 - 0.5 * r4 - (2.0 / 3.0) / r - 2.0;
   }
 }
 
@@ -60,23 +60,23 @@ static bool CompareDistanceIndexPair(const DistanceIndexPair &a, const DistanceI
 @*/
 PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservations, PetscInt numglobslobs, Mat H, Mat *Q)
 {
-  MPI_Comm                       comm;
-  Vec                            coordinates;
-  PetscSection                   coordSection;
-  const PetscScalar             *coordArray;
-  PetscInt                       dim, vStart, vEnd, numVertices;
-  PetscInt                       offset;
-  Vec                           *V_comp = NULL, *O_comp = NULL;
-  PetscScalar                  **global_O_comp = NULL;
-  Mat                            Qmat;
-  PetscInt                       localRows, globalRows;
-  std::vector<DistanceIndexPair> distances;
+  MPI_Comm           comm;
+  Vec                coordinates;
+  PetscSection       coordSection;
+  const PetscScalar *coordArray;
+  PetscInt           dim, vStart, vEnd, numVertices;
+  PetscInt           offset;
+  Vec               *V_comp = NULL, *O_comp = NULL;
+  PetscScalar      **global_O_comp = NULL;
+  Mat                Qmat;
+  PetscInt           localRows, globalRows;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(plex, DM_CLASSID, 1);
   PetscValidHeaderSpecific(H, MAT_CLASSID, 4);
   PetscAssertPointer(Q, 5);
 
+  PetscCall(PetscKokkosInitializeCheck());
   PetscCall(PetscObjectGetComm((PetscObject)plex, &comm));
 
   /* Check that numobservations is valid */
@@ -152,55 +152,74 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   PetscCall(MatMPIAIJSetPreallocation(Qmat, numobservations, NULL, numobservations, NULL));
   PetscCall(MatSetUp(Qmat));
 
-  /* Compute localization weights for each vertex */
-  distances.resize(numglobslobs);
-  std::vector<PetscInt>    col_indices(numobservations);
-  std::vector<PetscScalar> values(numobservations);
+  /* Compute localization weights for each vertex using Kokkos */
+  {
+    /* Prepare data for Kokkos */
+    Kokkos::View<PetscScalar **, Kokkos::HostSpace> global_obs("global_obs", dim, numglobslobs);
+    for (PetscInt d = 0; d < dim; d++) {
+      for (PetscInt i = 0; i < numglobslobs; i++) { global_obs(d, i) = global_O_comp[d][i]; }
+    }
 
-  for (PetscInt v = vStart; v < vEnd; v++) {
-    PetscReal      vertex_coords[3] = {0.0, 0.0, 0.0};
-    PetscReal      cutoff;
-    const PetscInt globalRow = v - vStart; // Convert to 0-based row index
+    Kokkos::View<PetscInt *, Kokkos::HostSpace> vertex_offsets("vertex_offsets", numVertices);
+    for (PetscInt v = vStart; v < vEnd; v++) {
+      PetscInt off;
+      PetscCall(PetscSectionGetOffset(coordSection, v, &off));
+      vertex_offsets(v - vStart) = off;
+    }
 
-    /* Get vertex coordinates */
-    PetscCall(PetscSectionGetOffset(coordSection, v, &offset));
-    for (PetscInt d = 0; d < dim; d++) vertex_coords[d] = PetscRealPart(coordArray[offset + d]);
+    /* Output views */
+    Kokkos::View<PetscInt **, Kokkos::HostSpace>    q_cols("q_cols", numVertices, numobservations);
+    Kokkos::View<PetscScalar **, Kokkos::HostSpace> q_vals("q_vals", numVertices, numobservations);
 
-    /* Compute distances to all observations */
-    for (PetscInt obs = 0; obs < numglobslobs; obs++) {
-      PetscReal dist_sq = 0.0;
-      for (PetscInt d = 0; d < dim; d++) {
-        const PetscReal diff = vertex_coords[d] - PetscRealPart(global_O_comp[d][obs]);
-        dist_sq += diff * diff;
+    /* Parallel loop over vertices */
+    /* We use HostSpace and std::nth_element for efficiency on CPU */
+    using ExecSpace = Kokkos::DefaultHostExecutionSpace;
+
+    Kokkos::parallel_for("ComputeLocalization", Kokkos::RangePolicy<ExecSpace>(0, numVertices), [=](const int i) {
+      PetscReal vertex_coords[3] = {0.0, 0.0, 0.0};
+      PetscInt  off              = vertex_offsets(i);
+
+      /* Get vertex coordinates */
+      for (PetscInt d = 0; d < dim; d++) { vertex_coords[d] = PetscRealPart(coordArray[off + d]); }
+
+      /* Compute distances to all observations */
+      /* Use std::vector for scratch memory on host */
+      std::vector<DistanceIndexPair> my_distances(numglobslobs);
+
+      for (PetscInt obs = 0; obs < numglobslobs; obs++) {
+        PetscReal dist_sq = 0.0;
+        for (PetscInt d = 0; d < dim; d++) {
+          const PetscReal diff = vertex_coords[d] - PetscRealPart(global_obs(d, obs));
+          dist_sq += diff * diff;
+        }
+        my_distances[obs].distance = PetscSqrtReal(dist_sq);
+        my_distances[obs].index    = obs;
       }
-      distances[obs].distance = PetscSqrtReal(dist_sq);
-      distances[obs].index    = obs;
+
+      /* Find k nearest neighbors using sort (for compatibility with original behavior) */
+      /* Note: std::sort is O(N log N). std::nth_element is O(N). */
+      /* We use sort here to attempt to reproduce the reference output which used sort. */
+      std::sort(my_distances.begin(), my_distances.end(), CompareDistanceIndexPair);
+
+      /* Get cutoff radius */
+      PetscReal cutoff = my_distances[numobservations - 1].distance;
+      if (cutoff == 0.0) cutoff = 1.0;
+
+      /* Compute weights */
+      for (PetscInt k = 0; k < numobservations; k++) {
+        q_cols(i, k) = my_distances[k].index;
+        q_vals(i, k) = GaspariCohn(my_distances[k].distance, cutoff);
+      }
+    });
+
+    /* Insert values into matrix */
+    PetscInt rstart, rend;
+    PetscCall(MatGetOwnershipRange(Qmat, &rstart, &rend));
+
+    for (PetscInt i = 0; i < numVertices; i++) {
+      PetscInt globalRow = rstart + i;
+      PetscCall(MatSetValues(Qmat, 1, &globalRow, numobservations, &q_cols(i, 0), &q_vals(i, 0), INSERT_VALUES));
     }
-
-    /* Partially sort to find k nearest neighbors using nth_element */
-    /* This is O(N) instead of O(N log N) since we only need the k smallest (not deterministic, use general‑position) */
-    //#if defined(PETSC_USE_DEBUG)
-    /* In DEBUG mode, use full sort for verification */
-    std::sort(distances.begin(), distances.end(), CompareDistanceIndexPair);
-    //else
-    //std::nth_element(distances.begin(), distances.begin() + numobservations - 1, distances.end(), CompareDistanceIndexPair);
-    /* Sort only the k nearest neighbors for consistent ordering */
-    //std::sort(distances.begin(), distances.begin() + numobservations, CompareDistanceIndexPair);
-    //#endif
-
-    /* Get cutoff radius from k-th nearest observation */
-    cutoff = distances[numobservations - 1].distance;
-    if (cutoff == 0.0) cutoff = 1.0; // Handle edge case where all k neighbors are co-located
-
-    /* Compute weights and insert into matrix */
-    for (PetscInt i = 0; i < numobservations; i++) {
-      const PetscReal weight = GaspariCohn(distances[i].distance, cutoff);
-      col_indices[i]         = distances[i].index;
-      values[i]              = weight;
-    }
-
-    /* Insert all values for this row at once */
-    PetscCall(MatSetValues(Qmat, 1, &globalRow, numobservations, col_indices.data(), values.data(), INSERT_VALUES));
   }
 
   /* Assemble matrix */
