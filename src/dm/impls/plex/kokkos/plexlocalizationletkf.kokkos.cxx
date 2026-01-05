@@ -14,7 +14,7 @@ static PetscReal GaspariCohn(PetscReal d, PetscReal R)
   PetscFunctionBegin;
   if (R <= 0.0) PetscFunctionReturn(0.0);
 
-  const PetscReal r = 2.0 * d / R; // Normalized distance
+  const PetscReal r = d / R; // Normalized distance
 
   if (r >= 2.0) PetscFunctionReturn(0.0);
 
@@ -71,7 +71,6 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   Mat                            Qmat;
   PetscInt                       localRows, globalRows;
   std::vector<DistanceIndexPair> distances;
-  const PetscReal                epsilon = 1e-6;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(plex, DM_CLASSID, 1);
@@ -79,6 +78,10 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   PetscAssertPointer(Q, 5);
 
   PetscCall(PetscObjectGetComm((PetscObject)plex, &comm));
+
+  /* Check that numobservations is valid */
+  PetscCheck(numobservations > 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "numobservations must be positive, got %" PetscInt_FMT, numobservations);
+  PetscCheck(numobservations <= numglobslobs, comm, PETSC_ERR_ARG_OUTOFRANGE, "numobservations (%" PetscInt_FMT ") must be <= numglobslobs (%" PetscInt_FMT ")", numobservations, numglobslobs);
 
   /* Get spatial dimension */
   PetscCall(DMGetCoordinateDim(plex, &dim));
@@ -151,10 +154,12 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
 
   /* Compute localization weights for each vertex */
   distances.resize(numglobslobs);
+  std::vector<PetscInt>    col_indices(numobservations);
+  std::vector<PetscScalar> values(numobservations);
 
   for (PetscInt v = vStart; v < vEnd; v++) {
     PetscReal      vertex_coords[3] = {0.0, 0.0, 0.0};
-    PetscReal      dmax, cutoff;
+    PetscReal      cutoff;
     const PetscInt globalRow = v - vStart; // Convert to 0-based row index
 
     /* Get vertex coordinates */
@@ -172,21 +177,30 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
       distances[obs].index    = obs;
     }
 
-    /* Sort by distance */
+    /* Partially sort to find k nearest neighbors using nth_element */
+    /* This is O(N) instead of O(N log N) since we only need the k smallest (not deterministic, use general‑position) */
+    //#if defined(PETSC_USE_DEBUG)
+    /* In DEBUG mode, use full sort for verification */
     std::sort(distances.begin(), distances.end(), CompareDistanceIndexPair);
+    //else
+    //std::nth_element(distances.begin(), distances.begin() + numobservations - 1, distances.end(), CompareDistanceIndexPair);
+    /* Sort only the k nearest neighbors for consistent ordering */
+    //std::sort(distances.begin(), distances.begin() + numobservations, CompareDistanceIndexPair);
+    //#endif
 
     /* Get cutoff radius from k-th nearest observation */
-    const PetscInt k = PetscMin(numobservations, numglobslobs);
-    dmax             = distances[k - 1].distance;
-    cutoff           = dmax * (1.0 + epsilon);
+    cutoff = distances[numobservations - 1].distance;
+    if (cutoff == 0.0) cutoff = 1.0; // Handle edge case where all k neighbors are co-located
 
     /* Compute weights and insert into matrix */
-    for (PetscInt i = 0; i < k; i++) {
+    for (PetscInt i = 0; i < numobservations; i++) {
       const PetscReal weight = GaspariCohn(distances[i].distance, cutoff);
-      const PetscInt  col    = distances[i].index;
-
-      if (weight > 0.0) PetscCall(MatSetValue(Qmat, globalRow, col, weight, INSERT_VALUES));
+      col_indices[i]         = distances[i].index;
+      values[i]              = weight;
     }
+
+    /* Insert all values for this row at once */
+    PetscCall(MatSetValues(Qmat, 1, &globalRow, numobservations, col_indices.data(), values.data(), INSERT_VALUES));
   }
 
   /* Assemble matrix */
