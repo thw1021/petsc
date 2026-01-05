@@ -46,10 +46,10 @@ static bool CompareDistanceIndexPair(const DistanceIndexPair &a, const DistanceI
   DMPlexGetLETKFLocalizationMatrix - Compute the LETKF localization matrix Q
 
   Input Parameters:
-+ plex - The DMPlex object
++ plex            - The DMPlex object
 . numobservations - Number of closest observations to use per vertex
-. numglobslobs - Total number of global observations
-- H - Observation operator matrix (scalar matrix)
+. numglobslobs    - Total number of global observations
+- H               - Observation operator matrix (scalar matrix)
 
   Output Parameter:
 . Q - The localization matrix (MPIAIJ format)
