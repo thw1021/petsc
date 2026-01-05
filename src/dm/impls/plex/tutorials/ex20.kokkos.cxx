@@ -56,7 +56,7 @@ int main(int argc, char **argv)
   PetscCall(PetscSectionCreate(PETSC_COMM_WORLD, &section));
   PetscCall(PetscSectionSetNumFields(section, 1));
   PetscCall(PetscSectionSetChart(section, pStart, pEnd));
-  for (PetscInt v = vStart; v < vEnd; ++v) { PetscCall(PetscSectionSetDof(section, v, 1)); }
+  for (PetscInt v = vStart; v < vEnd; ++v) PetscCall(PetscSectionSetDof(section, v, 1));
   PetscCall(PetscSectionSetUp(section));
   PetscCall(DMSetLocalSection(dm, section));
   PetscCall(PetscSectionDestroy(&section));

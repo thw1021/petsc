@@ -57,7 +57,7 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
   The output matrix Q has dimensions (numVertices x numglobalobs) where
   numVertices is the number of vertices in the DMPlex. Each row contains
   exactly numobservations non-zero entries corresponding to the nearest
-  observations, weighted by the Gaspari-Cohn fifth-order piecewise 
+  observations, weighted by the Gaspari-Cohn fifth-order piecewise
   rational function.
 
   The observation locations are computed as H * V where V is the vector
@@ -139,7 +139,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
     for (PetscInt v = 0; v < numVertices; ++v) {
       PetscInt off;
       PetscCall(PetscSectionGetOffset(coordSection, vStart + v, &off));
-      for (d = 0; d < dim; ++d) { vertex_coords_host(v, d) = PetscRealPart(local_coords_array[off + d]); }
+      for (d = 0; d < dim; ++d) vertex_coords_host(v, d) = PetscRealPart(local_coords_array[off + d]);
     }
     PetscCall(VecRestoreArray(localCoords, &local_coords_array));
     Kokkos::deep_copy(vertex_coords_dev, vertex_coords_host);
@@ -150,7 +150,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   {
     Kokkos::View<PetscReal **, Kokkos::LayoutRight, Kokkos::HostSpace> obs_coords_host("obs_coords_host", numglobalobs, dim);
     for (PetscInt j = 0; j < numglobalobs; ++j) {
-      for (d = 0; d < dim; ++d) { obs_coords_host(j, d) = PetscRealPart(obs_coords[d][j]); }
+      for (d = 0; d < dim; ++d) obs_coords_host(j, d) = PetscRealPart(obs_coords[d][j]);
     }
     Kokkos::deep_copy(obs_coords_dev, obs_coords_host);
   }
