@@ -2133,6 +2133,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
         PetscCall(ISGetIndices(stratumIS, &fs_pnts));
       } else fs_owned = 0;
       PetscCallMPI(MPIU_Allreduce(&fs_owned, &fs_global, 1, MPIU_CGSIZE, MPI_SUM, comm));
+      fs_start = 0;
       PetscCallMPI(MPI_Exscan(&fs_owned, &fs_start, 1, MPIU_CGSIZE, MPI_SUM, comm));
       PetscCheck(fs_start + fs_owned <= fs_global, PETSC_COMM_SELF, PETSC_ERR_PLIB, "End range of point set (%" PRIdCGSIZE ") greater than global point set size (%" PRIdCGSIZE ")", fs_start + fs_owned, fs_global);
 
