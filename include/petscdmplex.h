@@ -358,6 +358,9 @@ PETSC_EXTERN PetscErrorCode DMPlexComputeGeometryFVM(DM, Vec *, Vec *);
 PETSC_EXTERN PetscErrorCode DMPlexComputeGradientFVM(DM, PetscFV, Vec, Vec, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexGetDataFVM(DM, PetscFV, Vec *, Vec *, DM *);
 
+/* Data Assimilation Support */
+PETSC_EXTERN PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM, PetscInt, PetscInt, Mat, Mat *);
+
 /* FEM Support */
 PETSC_EXTERN PetscErrorCode DMPlexComputeResidualByKey(DM, PetscFormKey, IS, PetscReal, Vec, Vec, PetscReal, Vec, void *);
 PETSC_EXTERN PetscErrorCode DMPlexComputeJacobianByKey(DM, PetscFormKey, IS, PetscReal, PetscReal, Vec, Vec, Mat, Mat, void *);
