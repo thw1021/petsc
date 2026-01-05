@@ -157,7 +157,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
     /* Prepare data for Kokkos */
     Kokkos::View<PetscScalar **, Kokkos::HostSpace> global_obs("global_obs", dim, numglobslobs);
     for (PetscInt d = 0; d < dim; d++) {
-      for (PetscInt i = 0; i < numglobslobs; i++) { global_obs(d, i) = global_O_comp[d][i]; }
+      for (PetscInt i = 0; i < numglobslobs; i++) global_obs(d, i) = global_O_comp[d][i];
     }
 
     Kokkos::View<PetscInt *, Kokkos::HostSpace> vertex_offsets("vertex_offsets", numVertices);
@@ -180,7 +180,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
       PetscInt  off              = vertex_offsets(i);
 
       /* Get vertex coordinates */
-      for (PetscInt d = 0; d < dim; d++) { vertex_coords[d] = PetscRealPart(coordArray[off + d]); }
+      for (PetscInt d = 0; d < dim; d++) vertex_coords[d] = PetscRealPart(coordArray[off + d]);
 
       /* Compute distances to all observations */
       /* Use std::vector for scratch memory on host */
