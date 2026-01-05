@@ -489,10 +489,8 @@ PetscErrorCode ISConcatenate(MPI_Comm comm, PetscInt len, const IS islist[], IS 
 
   PetscFunctionBegin;
   if (len) PetscAssertPointer(islist, 3);
-  if (PetscDefined(USE_DEBUG)) {
-    for (i = 0; i < len; ++i)
-      if (islist[i]) PetscValidHeaderSpecific(islist[i], IS_CLASSID, 3);
-  }
+  for (i = 0; i < len; ++i)
+    if (islist[i]) PetscValidHeaderSpecific(islist[i], IS_CLASSID, 3);
   PetscAssertPointer(isout, 4);
   if (!len) {
     PetscCall(ISCreateGeneral(comm, 0, NULL, PETSC_OWN_POINTER, isout));

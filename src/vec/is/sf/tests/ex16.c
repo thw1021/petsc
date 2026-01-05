@@ -58,6 +58,19 @@ would build the following SF:
   [2] 600 <- (0,100)
   [2] 601 <- (2,300)
 
+testnum 3:
+
+  Throws error because no rank has global index 1, but it it requested.
+
+  rank             : 0            1            2
+  numRootIndices   : 2            1            1
+  rootIndices      : [0 2]        [3]          [3]
+  rootLocalOffset  : 100          200          300
+  layout           : [0 1]        [2]          [3]
+  numLeafIndices   : 1            1            3
+  leafIndices      : [0]          [2]          [0 3 1]
+  leafLocalOffset  : 400          500          600
+
 */
 
 int main(int argc, char **argv)
@@ -68,11 +81,13 @@ int main(int argc, char **argv)
   PetscInt    nA = -1, *A, offsetA = -1;
   PetscInt    nB = -1, *B, offsetB = -1;
   PetscMPIInt size, rank;
-  PetscInt    testnum;
+  PetscInt    testnum       = 0;
+  PetscBool   use_inclusive = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-testnum", &testnum, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_inclusive", &use_inclusive, NULL));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
   PetscCheck(size == 3, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "Must run with 3 MPI processes");
@@ -210,12 +225,62 @@ int main(int argc, char **argv)
       SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "Must run with 3 MPI processes");
     }
     break;
+  case 3:
+    N = 4;
+    n = PETSC_DECIDE;
+    switch (rank) {
+    case 0:
+      nA      = 2;
+      offsetA = 100;
+      nB      = 1;
+      offsetB = 400;
+      break;
+    case 1:
+      nA      = 1;
+      offsetA = 200;
+      nB      = 1;
+      offsetB = 500;
+      break;
+    case 2:
+      nA      = 1;
+      offsetA = 300;
+      nB      = 3;
+      offsetB = 600;
+      break;
+    default:
+      SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "Must run with 3 MPI processes");
+    }
+    PetscCall(PetscMalloc1(nA, &A));
+    PetscCall(PetscMalloc1(nB, &B));
+    switch (rank) {
+    case 0:
+      A[0] = 0;
+      A[1] = 2;
+      B[0] = 0;
+      break;
+    case 1:
+      A[0] = 3;
+      B[0] = 2;
+      break;
+    case 2:
+      A[0] = 3;
+      B[0] = 0;
+      B[1] = 3;
+      B[2] = 1;
+      break;
+    default:
+      SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "Must run with 3 MPI processes");
+    }
+    break;
+  default:
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Invalid testnum, recieved %" PetscInt_FMT, testnum);
   }
   PetscCall(PetscLayoutCreate(PETSC_COMM_WORLD, &layout));
   PetscCall(PetscLayoutSetSize(layout, N));
   PetscCall(PetscLayoutSetLocalSize(layout, n));
   PetscCall(PetscLayoutSetBlockSize(layout, 1));
-  PetscCall(PetscSFCreateByMatchingIndices(layout, nA, A, NULL, offsetA, nB, B, NULL, offsetB, NULL, &sf));
+  if (!use_inclusive) PetscCall(PetscSFCreateByMatchingIndices(layout, nA, A, NULL, offsetA, nB, B, NULL, offsetB, NULL, &sf));
+  else PetscCall(PetscSFCreateByMatchingIndicesInclusive(layout, nA, A, NULL, offsetA, nB, B, NULL, offsetB, NULL, &sf));
   PetscCall(PetscLayoutDestroy(&layout));
   PetscCall(PetscFree(A));
   if (testnum != 1) PetscCall(PetscFree(B));
@@ -243,5 +308,30 @@ int main(int argc, char **argv)
     suffix: 2
     nsize: 3
     args: -testnum 2
+
+ # test:
+ #   suffix: 3
+ #   nsize: 3
+ #   args: -testnum 3 -use_inclusive -petsc_ci_portable_error_output
+
+  test:
+    suffix: 0_inclusive
+    nsize: 3
+    args: -testnum 0 -use_inclusive
+
+  test:
+    suffix: 1_inclusive
+    nsize: 3
+    args: -testnum 1 -use_inclusive
+
+  test:
+    suffix: 2_inclusive
+    nsize: 3
+    args: -testnum 2 -use_inclusive
+
+ # test:
+ #   suffix: 3_inclusive
+ #   nsize: 3
+ #   args: -testnum 3 -use_inclusive -petsc_ci_portable_error_output
 
 TEST*/
