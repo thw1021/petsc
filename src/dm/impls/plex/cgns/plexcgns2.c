@@ -2134,6 +2134,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       } else fs_owned = 0;
       PetscCallMPI(MPIU_Allreduce(&fs_owned, &fs_global, 1, MPIU_CGSIZE, MPI_SUM, comm));
       PetscCallMPI(MPI_Exscan(&fs_owned, &fs_start, 1, MPIU_CGSIZE, MPI_SUM, comm));
+      PetscCheck(fs_start + fs_owned <= fs_global, PETSC_COMM_SELF, PETSC_ERR_PLIB, "End range of point set (%" PRIdCGSIZE ") greater than global point set size (%" PRIdCGSIZE ")", fs_start + fs_owned, fs_global);
 
       PetscCall(PetscSNPrintf(bc_name, sizeof bc_name, "FaceSet%" PetscInt_FMT, fsID));
       PetscCallCGNSWrite(cg_boco_write(cgv->file_num, base, zone, bc_name, CGNS_ENUMV(BCTypeNull), CGNS_ENUMV(PointList), fs_global, NULL, &BC), dm, viewer);
