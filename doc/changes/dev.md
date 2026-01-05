@@ -45,6 +45,8 @@
 ```{rubric} VecScatter / PetscSF:
 ```
 
+- Add `PetscSFCreateByMatchingIndicesInclusive()` as variant of `PetscSFCreateByMatchingIndices()` but does not enforce unique ownership of matching indices
+
 ```{rubric} PF:
 ```
 
@@ -53,6 +55,8 @@
 
 ```{rubric} PetscSection:
 ```
+
+- Add `PetscSectionDistributeData()`, akin to `DMPlexDistributeData()`
 
 ```{rubric} PetscPartitioner:
 ```
@@ -114,6 +118,7 @@
 
 - Add `DMPlexVecGetClosureAtDepth()`
 - Add an extra communicator argument to `DMPlexFilter()` to allow extracting local meshes
+- Change `verticesAdjSaved` parameter in `DMPlexCreateFromCell*Parallel*()` functions to be allocated by function rather than by user
 
 ```{rubric} FE/FV:
 ```
