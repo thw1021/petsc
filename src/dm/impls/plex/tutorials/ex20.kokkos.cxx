@@ -4,14 +4,11 @@ static char help[] = "Test DMPlexGetLETKFLocalizationMatrix\n\n";
 #include <petscmat.h>
 #include <cmath>
 
-/* External function declaration */
-PETSC_EXTERN PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM, PetscInt, PetscInt, Mat, Mat *);
-
 int main(int argc, char **argv)
 {
   DM             dm;
   Mat            H, Q;
-  PetscInt       dim      = 2;
+  PetscInt       dim      = 1;
   PetscInt       faces[3] = {8, 8, 0};
   PetscReal      lower[3] = {0.0, 0.0, 0.0};
   PetscReal      upper[3] = {1.0, 1.0, 0.0};
@@ -26,8 +23,8 @@ int main(int argc, char **argv)
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
   PetscCheck(size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "This test requires exactly 1 MPI process");
 
-  /* Get options */
-  PetscCall(PetscOptionsGetInt(NULL, NULL, "-dim", &dim, NULL));
+  /* Get dimension from options */
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-dm_plex_dim", &dim, NULL));
 
   /* Create a simple box mesh */
   if (dim == 1) {
@@ -169,12 +166,12 @@ int main(int argc, char **argv)
     suffix: 1
     diff_args: -j
     nsize: 1
-    args: -dim 1
+    args: -dm_plex_dim 1
 
   test:
     suffix: 2
     diff_args: -j
     nsize: 1
-    args: -dim 2
+    args: -dm_plex_dim 2
 
 TEST*/
