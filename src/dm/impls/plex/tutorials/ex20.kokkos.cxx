@@ -59,7 +59,7 @@ int main(int argc, char **argv)
   /* Compute number of observations: select every other vertex in each dimension */
   /* For a grid with (faces[d]+1) vertices per dimension, we select (faces[d]+1)/2 observations */
   numGlobalObs = 1;
-  for (PetscInt d = 0; d < dim; d++) { numGlobalObs *= (faces[d] / 2 + 1); }
+  for (PetscInt d = 0; d < dim; d++) numGlobalObs *= (faces[d] / 2 + 1);
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of observations: %" PetscInt_FMT "\n", numGlobalObs));
 
   /* Set number of local observations to use: 3^dim */
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
       PetscBool isObs     = PETSC_TRUE;
 
       PetscCall(PetscSectionGetOffset(coordSection, v, &offset));
-      for (PetscInt d = 0; d < dim; d++) { coords[d] = PetscRealPart(coordArray[offset + d]); }
+      for (PetscInt d = 0; d < dim; d++) coords[d] = PetscRealPart(coordArray[offset + d]);
 
       /* Check if this vertex is at an observation location (every other grid point) */
       for (PetscInt d = 0; d < dim; d++) {
@@ -169,7 +169,7 @@ int main(int argc, char **argv)
     suffix: 1
     nsize: 1
     args: -dim 1
-    
+
   test:
     suffix: 2
     nsize: 1
