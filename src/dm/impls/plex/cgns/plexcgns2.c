@@ -958,7 +958,7 @@ static PetscErrorCode PetscLayoutFindOwnerIndex_CGNSSectionLayouts(PetscLayout m
 //
 // Note that, unlike a pointSF, the leaves of cg2plexSF do not map onto chart of the local Plex, but just onto an array.
 // The plexFaces array is then what maps the leaves to the actual local Plex mesh points.
-PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myownede, PetscInt nuniq_verts, const PetscInt uniq_verts[], PetscInt NVertices, PetscSection connSection, const PetscInt conn[], PetscSF *cg2plexSF, PetscInt *plexFaces[])
+static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myownede, PetscInt nuniq_verts, const PetscInt uniq_verts[], PetscInt NVertices, PetscSection connSection, const PetscInt conn[], PetscSF *cg2plexSF, PetscInt *plexFaces[])
 {
   MPI_Comm    comm = PetscObjectComm((PetscObject)dm);
   PetscMPIInt myrank, nranks;
@@ -1762,7 +1762,7 @@ static PetscErrorCode DMPlexCreateNodeNumbering(DM dm, PetscInt *num_local_nodes
    @param[out] num_values  Total number of values
    @param[out] value_array Array of label values, must be freed by user
 **/
-PetscErrorCode DMLabelCreateGlobalValueArray(MPI_Comm comm, DMLabel label, PetscBool use_nonempty, PetscInt *num_values, PetscInt **value_array)
+static PetscErrorCode DMLabelCreateGlobalValueArray(MPI_Comm comm, DMLabel label, PetscBool use_nonempty, PetscInt *num_values, PetscInt **value_array)
 {
   PetscInt        num_values_local, minmax_values[2], minmax_values_loc[2] = {PETSC_INT_MAX, PETSC_INT_MIN};
   IS              is_values;
@@ -2051,7 +2051,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     {
       const PetscInt *faces;
       DMPolytopeType  cell_type, cell_type_f;
-      PetscInt        closure_dof, closure_dof_f;
+      PetscInt        closure_dof = -1, closure_dof_f;
 
       PetscCall(ISGetIndices(fsISTotal, &faces));
       if (f_owned) PetscCall(DMPlexGetCellType(dm, faces[0], &cell_type));
@@ -2154,7 +2154,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       }
       PetscCallCGNSWriteData(cgp_ptlist_write_data(cgv->file_num, fs_start + 1, fs_start + fs_owned, fs_pnts_cg), dm, viewer);
 
-      CGNS_ENUMT(GridLocation_t) grid_loc;
+      CGNS_ENUMT(GridLocation_t) grid_loc = CGNS_ENUMV(GridLocationNull);
       if (topo_dim == 3) grid_loc = CGNS_ENUMV(FaceCenter);
       else if (topo_dim == 2) grid_loc = CGNS_ENUMV(EdgeCenter);
       else if (topo_dim == 1) grid_loc = CGNS_ENUMV(Vertex);
