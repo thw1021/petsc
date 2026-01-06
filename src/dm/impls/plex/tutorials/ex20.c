@@ -204,14 +204,20 @@ int main(int argc, char **argv)
 /*TEST
 
   test:
-    requires: kokkos !complex
+    requires: kokkos !complex !single
     suffix: 1
     diff_args: -j
     args: -dm_plex_dim 1
 
   test:
-    requires: kokkos !complex
+    requires: kokkos !complex !single
     suffix: 2
+    diff_args: -j
+    args: -dm_plex_dim 2
+
+  test:
+    requires: kokkos !complex
+    suffix: single
     diff_args: -j
     args: -dm_plex_dim 2
 
