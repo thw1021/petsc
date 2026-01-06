@@ -2,7 +2,6 @@ static char help[] = "Test DMPlexGetLETKFLocalizationMatrix\n\n";
 
 #include <petscdmplex.h>
 #include <petscmat.h>
-#include <cmath>
 
 int main(int argc, char **argv)
 {
@@ -122,6 +121,50 @@ int main(int argc, char **argv)
   PetscCall(MatView(H, PETSC_VIEWER_STDOUT_WORLD));
   PetscCall(MatViewFromOptions(H, NULL, "-h_view"));
 
+  /* Perturb interior vertex coordinates */
+  {
+    Vec          coordinates;
+    PetscSection coordSection;
+    PetscScalar *coordArray;
+    PetscRandom  rand;
+
+    PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rand));
+    PetscCall(PetscRandomSetFromOptions(rand));
+    PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
+    PetscCall(DMGetCoordinateSection(dm, &coordSection));
+    PetscCall(VecGetArray(coordinates, &coordArray));
+
+    for (PetscInt v = vStart; v < vEnd; v++) {
+      PetscReal coords[3] = {0.0, 0.0, 0.0};
+      PetscInt  offset;
+      PetscBool isInterior = PETSC_TRUE;
+
+      PetscCall(PetscSectionGetOffset(coordSection, v, &offset));
+      for (PetscInt d = 0; d < dim; d++) coords[d] = PetscRealPart(coordArray[offset + d]);
+
+      /* Check if vertex is on the boundary */
+      for (PetscInt d = 0; d < dim; d++) {
+        PetscReal gridSpacing = upper[d] / faces[d];
+        PetscInt  gridIdx     = (PetscInt)(coords[d] / gridSpacing + 0.5);
+        if (gridIdx == 0 || gridIdx == faces[d]) {
+          isInterior = PETSC_FALSE;
+          break;
+        }
+      }
+
+      if (isInterior) {
+        for (PetscInt d = 0; d < dim; d++) {
+          PetscReal noise, gridSpacing = upper[d] / faces[d];
+
+          PetscCall(PetscRandomGetValueReal(rand, &noise));
+          coordArray[offset + d] += (noise - 0.5) * 0.001 * gridSpacing;
+        }
+      }
+    }
+    PetscCall(VecRestoreArray(coordinates, &coordArray));
+    PetscCall(PetscRandomDestroy(&rand));
+  }
+
   /* Call the LETKF localization function */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nComputing LETKF localization matrix...\n"));
   PetscCall(DMPlexGetLETKFLocalizationMatrix(dm, numObservations, numGlobalObs, H, &Q));
@@ -163,12 +206,14 @@ int main(int argc, char **argv)
 /*TEST
 
   test:
+    requires: kokkos !complex
     suffix: 1
     diff_args: -j
     nsize: 1
     args: -dm_plex_dim 1
 
   test:
+    requires: kokkos !complex
     suffix: 2
     diff_args: -j
     nsize: 1
