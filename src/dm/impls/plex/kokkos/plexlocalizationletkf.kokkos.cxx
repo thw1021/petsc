@@ -1,11 +1,12 @@
 #include <petsc/private/dmpleximpl.h>
 #include <petscdmplex.h>
 #include <petscmat.h>
-#include <petsc_kokkos.hpp>
-#include <cmath>
-#include <cstdlib>
-#include <algorithm>
-#include <Kokkos_Core.hpp>
+#if defined(PETSC_HAVE_KOKKOS)
+  #include <petsc_kokkos.hpp>
+  #include <cmath>
+  #include <cstdlib>
+  #include <algorithm>
+  #include <Kokkos_Core.hpp>
 
 typedef struct {
   PetscReal distance;
@@ -258,3 +259,10 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   PetscCall(MatAssemblyEnd(*Q, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#else
+PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservations, PetscInt numglobalobs, Mat H, Mat *Q)
+{
+  PetscFunctionBegin;
+  SETERRQ(PetscObjectComm((PetscObject)plex), PETSC_ERR_SUP, "DMPlexGetLETKFLocalizationMatrix() requires Kokkos");
+}
+#endif
