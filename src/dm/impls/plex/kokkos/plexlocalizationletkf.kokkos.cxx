@@ -266,10 +266,10 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   Collective
 
   Input Parameters:
-+ plex - The DMPlex object
++ plex            - The DMPlex object
 . numobservations - Number of nearest observations to use per vertex
-. numglobalobs - Total number of observations
-- H - Observation operator matrix
+. numglobalobs    - Total number of observations
+- H               - Observation operator matrix
 
   Output Parameter:
 . Q - Localization weight matrix (sparse, AIJ format)
