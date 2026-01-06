@@ -785,9 +785,12 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
   CGRange       *ranges;
   PetscInt       nlocal_cells = 0, global_cell_dim = -1;
   PetscSegBuffer conn_sb;
+  PetscLayout   *layouts_;
 
   PetscFunctionBegin;
-  PetscCall(PetscMalloc3(num_sections, &ranges, num_sections, &sectionCellTypes, num_sections, &layouts));
+  // PetscCall(PetscMalloc3(num_sections, &ranges, num_sections, &sectionCellTypes, num_sections, &layouts_));
+  PetscCall(PetscMalloc2(num_sections, &ranges, num_sections, &sectionCellTypes));
+  PetscCall(PetscMalloc1(num_sections, &layouts_));
   for (PetscInt s = 0; s < num_sections; s++) {
     int      nbndry, parentFlag;
     PetscInt local_size;
@@ -795,8 +798,8 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
     PetscCallCGNSRead(cg_section_read(cgid, base, zone, section_ids[s], buffer, &sectionCellTypes[s], &ranges[s].start, &ranges[s].end, &nbndry, &parentFlag), dm, 0);
     PetscCheck(sectionCellTypes[s] != CGNS_ENUMV(NGON_n) && sectionCellTypes[s] != CGNS_ENUMV(NFACE_n), comm, PETSC_ERR_SUP, "CGNS reader does not support elements of type NGON_n or NFACE_n");
     PetscInt num_section_cells = ranges[s].end - ranges[s].start + 1;
-    PetscCall(PetscLayoutCreateFromSizesAndOffset(comm, PETSC_DECIDE, num_section_cells, 1, ranges[s].start + 1, layouts[s]));
-    PetscCall(PetscLayoutGetLocalSize((*layouts)[s], &local_size));
+    PetscCall(PetscLayoutCreateFromSizesAndOffset(comm, PETSC_DECIDE, num_section_cells, 1, ranges[s].start, &layouts_[s]));
+    PetscCall(PetscLayoutGetLocalSize(layouts_[s], &local_size));
     nlocal_cells += local_size;
   }
   PetscCall(PetscSectionCreate(comm, &section_));
@@ -808,15 +811,15 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
   for (PetscInt s = 0, c = 0; s < num_sections; s++) {
     PetscInt mystart, myend, myowned;
 
-    PetscCall(PetscLayoutGetRange((*layouts)[s], &mystart, &myend));
-    PetscCall(PetscLayoutGetLocalSize((*layouts)[s], &myowned));
+    PetscCall(PetscLayoutGetRange(layouts_[s], &mystart, &myend));
+    PetscCall(PetscLayoutGetLocalSize(layouts_[s], &myowned));
     if (sectionCellTypes[s] == CGNS_ENUMV(MIXED)) {
       cgsize_t *offsets, *conn_cg;
 
       PetscCall(PetscMalloc1(myowned + 1, &offsets)); // The last element in the array is the total size of the connectivity for the given [start,end] range
-      PetscCallCGNSRead(cgp_poly_elements_read_data_offsets(cgid, base, zone, s, mystart, myend - 1, offsets), dm, 0);
+      PetscCallCGNSRead(cgp_poly_elements_read_data_offsets(cgid, base, zone, section_ids[s], mystart, myend - 1, offsets), dm, 0);
       PetscCall(PetscMalloc1(offsets[myowned + 1], &conn_cg));
-      PetscCallCGNSRead(cgp_poly_elements_read_data_elements(cgid, base, zone, s, mystart, myend - 1, offsets, conn_cg), dm, 0);
+      PetscCallCGNSRead(cgp_poly_elements_read_data_elements(cgid, base, zone, section_ids[s], mystart, myend - 1, offsets, conn_cg), dm, 0);
       // TODO: For efficiency, we could do a loop through conn_cg to get the total number of corners for the section, then do a single SegBufferGetInts for the entire section, the loop through to get the corner connectivity
       for (PetscInt i = 0; i < myowned; i++) {
         DMPolytopeType dm_cell_type = DM_POLYTOPE_UNKNOWN;
@@ -855,7 +858,7 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
 
       PetscCallCGNSRead(cg_npe(sectionCellTypes[s], &npe), dm, 0);
       PetscCall(PetscMalloc1(myowned * npe, &conn_cg));
-      PetscCallCGNSRead(cgp_elements_read_data(cgid, base, zone, s, mystart, myend - 1, conn_cg), dm, 0);
+      PetscCallCGNSRead(cgp_elements_read_data(cgid, base, zone, section_ids[s], mystart, myend - 1, conn_cg), dm, 0);
       PetscCall(DMPlexCGNSGetPermutation_Internal(dm_cell_type, numCorners, NULL, &perm));
       PetscCall(PetscSegBufferGetInts(conn_sb, numCorners * myowned, &conn_sb_seg));
       for (PetscInt i = 0; i < myowned; i++) {
@@ -871,11 +874,14 @@ static PetscErrorCode DMPlexCGNS_CreateCornersConnectivitySection(DM dm, PetscIn
 
   PetscCall(PetscSectionSetUp(section_));
   *section = section_;
-  PetscCall(PetscSegBufferExtractTo(conn_sb, connectivity));
+  PetscCall(PetscSegBufferExtractAlloc(conn_sb, connectivity));
+  PetscInt connSize;
+  PetscCall(PetscSectionGetStorageSize(section_, &connSize));
+  for (PetscInt i = 0; i < connSize; i++) (*connectivity)[i] -= 1; // vertices should be 0-based indexing for consistency with DMPlexBuildFromCellListParallel()
+  *layouts = layouts_;
 
   PetscCall(PetscSegBufferDestroy(&conn_sb));
-  PetscCall(PetscFree(ranges));
-  PetscCall(PetscFree(sectionCellTypes));
+  PetscCall(PetscFree2(ranges, sectionCellTypes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -901,7 +907,7 @@ static PetscErrorCode PetscLayoutFindOwnerIndex_Internal(PetscLayout map, PetscI
   PetscAssert((map->n >= 0) && (map->N >= 0) && (map->range), PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "PetscLayoutSetUp() must be called first");
   if (owner) *owner = -1;
   if (lidx) *lidx = -1;
-  if (idx >= 0 && idx <= map->N) {
+  if (idx < map->range[0] && idx >= map->range[map->size + 1]) {
     *found_owner = PETSC_FALSE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
@@ -1049,14 +1055,11 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myown
       PetscInt       maxRanksPerVert;
       PetscInt      *face_ranks;
       PetscSegBuffer plexFaceRemotes_SB, ownedFaceRemotes_SB;
-      PetscSection   plexFaceRemotes_section;
 
       PetscCall(PetscSegBufferCreate(sizeof(PetscSFNode), fownedSize, &plexFaceRemotes_SB));
       PetscCall(PetscSegBufferCreate(sizeof(PetscSFNode), fownedSize, &ownedFaceRemotes_SB));
       PetscCall(PetscSectionGetMaxDof(fvert2mvertSection, &maxRanksPerVert));
       PetscCall(PetscMalloc1(maxRanksPerVert, &face_ranks));
-      PetscCall(PetscSectionCreate(PETSC_COMM_SELF, &plexFaceRemotes_section));
-      PetscCall(PetscSectionSetChart(plexFaceRemotes_section, fownedStart, fownedEnd));
       for (PetscInt f = fownedStart, f_i = 0; f < fownedEnd; f++, f_i++) {
         PetscInt fndof, foffset, lndof, loffset, idx, nface_ranks = 0;
 
@@ -1109,14 +1112,13 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myown
           ownedFaceRemotes_buffer[n] = (PetscSFNode){.rank = myrank, .index = f_i};
         }
       }
+      PetscCall(PetscFree(face_ranks));
 
       PetscCall(PetscSegBufferGetSize(plexFaceRemotes_SB, &nPlexFaceRemotes));
-      PetscCall(PetscSegBufferExtractTo(plexFaceRemotes_SB, &plexFaceRemotes));
+      PetscCall(PetscSegBufferExtractAlloc(plexFaceRemotes_SB, &plexFaceRemotes));
       PetscCall(PetscSegBufferDestroy(&plexFaceRemotes_SB));
-      PetscCall(PetscSegBufferExtractTo(ownedFaceRemotes_SB, &ownedFaceRemotes));
+      PetscCall(PetscSegBufferExtractAlloc(ownedFaceRemotes_SB, &ownedFaceRemotes));
       PetscCall(PetscSegBufferDestroy(&ownedFaceRemotes_SB));
-
-      PetscCall(PetscSectionSetUp(plexFaceRemotes_section));
 
       PetscInt myrank_total_count;
       // To get the index for plexFaceRemotes, we partition the leaves on each rank (e.g. the array that will hold the local Plex face mesh points) by each rank that has the CGNS owned rank.
@@ -1132,7 +1134,7 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myown
       // myrank_total_count: | 6           4           3
       // rank_start:         | [0, 0, 0]   [3, 2, 0]   [4, 2, 2]
       //                     |
-      // plexFaceRemotes: 0  | (0, 0)      (2, 0)      (2, 2)        <-- (rank, index) tuples
+      // plexFaceRemotes: 0  | (0, 0)      (2, 0)      (2, 2)        <-- (rank, index) tuples (e.g. PetscSFNode)
       //                  1  | (1, 0)      (2, 1)      (0, 4)
       //                  2  | (0, 1)      (0, 3)      (1, 2)
       //                  3  | (0, 2)                  (0, 5)
@@ -1150,9 +1152,10 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myown
         PetscInt *rank_start, *rank_offset;
 
         PetscCall(PetscCalloc2(nranks, &rank_start, nranks, &rank_offset));
-        PetscCallMPI(MPIU_Allreduce(&local_rank_count, &rank_start, nranks, MPIU_INT, MPI_SUM, comm));
+        PetscCallMPI(MPIU_Allreduce(local_rank_count, rank_start, nranks, MPIU_INT, MPI_SUM, comm));
         myrank_total_count = rank_start[myrank];
-        PetscCallMPI(MPI_Exscan(&local_rank_count, &rank_start, nranks, MPIU_INT, MPI_SUM, comm));
+        PetscCall(PetscArrayzero(rank_start, nranks));
+        PetscCallMPI(MPI_Exscan(local_rank_count, rank_start, nranks, MPIU_INT, MPI_SUM, comm));
 
         for (PetscInt r = 0; r < nPlexFaceRemotes; r++) {
           PetscInt rank            = plexFaceRemotes[r].rank;
@@ -1169,6 +1172,7 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myown
         PetscCall(PetscSFCreate(comm, &plexRemotes2ownedRemotesSF));
         PetscCall(PetscSFSetGraph(plexRemotes2ownedRemotesSF, myrank_total_count, nPlexFaceRemotes, NULL, PETSC_COPY_VALUES, plexFaceRemotes, PETSC_OWN_POINTER));
         PetscCall(PetscMalloc1(myrank_total_count, &iremote_cg2plexSF));
+        PetscCall(PetscSFViewFromOptions(plexRemotes2ownedRemotesSF, NULL, "-plex2ownedremotes_sf_view"));
         if (PetscDefined(USE_DEBUG)) {
           for (PetscInt i = 0; i < myrank_total_count; i++) iremote_cg2plexSF[i] = (PetscSFNode){.rank = -1, .index = -1};
         }
@@ -1219,7 +1223,7 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myown
         PetscInt idx;
         PetscCall(PetscFindInt(connDist[v], nuniq_verts, uniq_verts_sorted, &idx));
         PetscCheck(idx >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Could not find CGNS vertex id (from face connectivity) in local plex");
-        connDist[v] = dmplex_verts[v];
+        connDist[v] = dmplex_verts[idx];
       }
       PetscCall(PetscFree2(dmplex_verts, uniq_verts_sorted));
     }
@@ -1240,7 +1244,7 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myown
       PetscCall(PetscSectionGetOffset(connDistSection, f, &offset));
 
       // Loop through transitive support of a vertex in the CGNS face connectivity
-      PetscCall(DMPlexGetTransitiveClosure(dm, conn[offset + 0], PETSC_FALSE, &closure_size, &closure));
+      PetscCall(DMPlexGetTransitiveClosure(dm, connDist[offset + 0], PETSC_FALSE, &closure_size, &closure));
       for (PetscInt p = 0; p < closure_size * 2; p++) {
         PetscInt        point = closure[p * 2]; // closure stores points and orientations, [p_0, o_0, p_1, o_1, ...]
         PetscInt        cone_size;
@@ -1254,7 +1258,7 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myown
         // See if point has same connectivity
         for (PetscInt c = 0; c < cone_size; c++) {
           PetscInt conn_has_point;
-          PetscCall(PetscFindIntUnsorted(cone[c], ndof, &conn[offset], &conn_has_point));
+          PetscCall(PetscFindIntUnsorted(cone[c], ndof, &connDist[offset], &conn_has_point));
           if (conn_has_point < 0) goto check_next_face;
         }
         (*plexFaces)[f_i] = point;
@@ -1262,7 +1266,7 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myown
       check_next_face:
         continue;
       }
-      PetscCall(DMPlexRestoreTransitiveClosure(dm, conn[offset + 0], PETSC_FALSE, &closure_size, &closure));
+      PetscCall(DMPlexRestoreTransitiveClosure(dm, connDist[offset + 0], PETSC_FALSE, &closure_size, &closure));
       PetscCheck((*plexFaces)[f_i] != -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Could not find plex face for the CGNS face");
     }
 
@@ -1358,8 +1362,8 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
   // -- Build Plex in parallel
   DMPolytopeType dm_cell_type = DM_POLYTOPE_UNKNOWN;
   PetscInt       pOrder = 1, numClosure = -1;
-  cgsize_t      *elements;
-  int           *face_section_ids, num_face_sections = 0;
+  cgsize_t      *elements = NULL;
+  int           *face_section_ids, *cell_section_ids, num_face_sections = 0, num_cell_sections = 0;
   PetscInt      *uniq_verts, nuniq_verts;
   {
     int        nsections;
@@ -1368,7 +1372,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
     cgsize_t   start, end; // Throwaway
 
     cg_nsections(cgid, base, zone, &nsections);
-    PetscCall(PetscMalloc1(nsections, &face_section_ids));
+    PetscCall(PetscMalloc2(nsections, &face_section_ids, nsections, &cell_section_ids));
     // Read element connectivity
     for (int index_sect = 1; index_sect <= nsections; index_sect++) {
       int      nbndry, parentFlag;
@@ -1379,23 +1383,33 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
 
       PetscCall(CGNSElementTypeGetTopologyInfo(cellType, &dm_cell_type, &numCorners, &cell_dim));
       // Skip over element that are not max dimension (ie. boundary elements)
-      if (cell_dim == dim - 1) {
+      if (cell_dim == dim) {
+        cell_section_ids[num_cell_sections] = index_sect;
+        num_cell_sections++;
+      } else if (cell_dim == dim - 1) {
         face_section_ids[num_face_sections] = index_sect;
         num_face_sections++;
-        continue;
-      } else if (cell_dim != dim) continue;
+      }
+    }
+
+    PetscCheck(num_cell_sections == 1, comm, PETSC_ERR_SUP, "CGNS Reader does not support more than 1 full-dimension cell section");
+    {
+      int index_sect = cell_section_ids[0], nbndry, parentFlag;
+      CGNS_ENUMT(ElementType_t) cellType;
+
+      PetscCallCGNSRead(cg_section_read(cgid, base, zone, index_sect, buffer, &cellType, &start, &end, &nbndry, &parentFlag), *dm, 0);
       PetscCall(CGNSElementTypeGetDiscretizationInfo(cellType, &numClosure, &pOrder));
       PetscCall(PetscMalloc1(myownede * numClosure, &elements));
       PetscCallCGNSReadData(cgp_elements_read_data(cgid, base, zone, index_sect, mystarte + 1, myende, elements), *dm, 0);
       for (PetscInt v = 0; v < myownede * numClosure; ++v) elements[v] -= 1; // 0 based
-      break;
-    }
 
-    // Create corners-only connectivity
-    PetscCall(PetscMalloc1(myownede * numCorners, &elementsQ1));
-    PetscCall(DMPlexCGNSGetPermutation_Internal(dm_cell_type, numCorners, NULL, &perm));
-    for (PetscInt e = 0; e < myownede; ++e) {
-      for (PetscInt v = 0; v < numCorners; ++v) elementsQ1[e * numCorners + perm[v]] = elements[e * numClosure + v];
+      // Create corners-only connectivity
+      PetscCall(CGNSElementTypeGetTopologyInfo(cellType, &dm_cell_type, &numCorners, NULL));
+      PetscCall(PetscMalloc1(myownede * numCorners, &elementsQ1));
+      PetscCall(DMPlexCGNSGetPermutation_Internal(dm_cell_type, numCorners, NULL, &perm));
+      for (PetscInt e = 0; e < myownede; ++e) {
+        for (PetscInt v = 0; v < numCorners; ++v) elementsQ1[e * numCorners + perm[v]] = elements[e * numClosure + v];
+      }
     }
 
     // Build cell-vertex Plex
@@ -1444,7 +1458,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
 
     PetscInt *plexFaceValues, *cgFaceValues;
     PetscCall(PetscMalloc2(nPlexFaces, &plexFaceValues, nCgFaces, &cgFaceValues));
-    for (PetscInt BC = 0; BC < nbocos; BC++) {
+    for (PetscInt BC = 1; BC <= nbocos; BC++) {
       cgsize_t *points;
       CGBCInfo  bcinfo;
       PetscBool is_faceset  = PETSC_FALSE;
@@ -1464,9 +1478,10 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
 
       PetscLayout bc_layout;
       PetscInt    bcStart, bcEnd, bcSize;
-      PetscCall(PetscLayoutCreateFromSizesAndOffset(comm, PETSC_DECIDE, bcinfo.npoints, 1, -1, &bc_layout));
+      PetscCall(PetscLayoutCreateFromSizesAndOffset(comm, PETSC_DECIDE, bcinfo.npoints, 1, 1, &bc_layout));
       PetscCall(PetscLayoutGetRange(bc_layout, &bcStart, &bcEnd));
       PetscCall(PetscLayoutGetLocalSize(bc_layout, &bcSize));
+      PetscCall(PetscLayoutDestroy(&bc_layout));
       PetscCall(DMGetWorkArray(*dm, bcSize, MPIU_CGSIZE, &points));
 
       const char *labels[] = {"Zone_t", "ZoneBC_t", "BC_t", "PointList"};
@@ -1475,17 +1490,17 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
 
       PetscInt    *label_values;
       PetscSFNode *remotes;
-      PetscCall(PetscMalloc1(bcSize, &remotes));
-      PetscCall(PetscMalloc1(bcSize, &label_values));
+      PetscCall(PetscMalloc2(bcSize, &remotes, bcSize, &label_values));
       for (PetscInt p = 0; p < bcSize; p++) {
         PetscMPIInt bcrank;
         PetscInt    bcidx;
 
         PetscCall(PetscLayoutFindOwnerIndex_CGNSSectionLayouts(cgnsLayouts, num_face_sections, points[p], &bcrank, &bcidx, NULL));
-        remotes->rank   = bcrank;
-        remotes->index  = bcidx;
+        remotes[p].rank   = bcrank;
+        remotes[p].index  = bcidx;
         label_values[p] = label_value;
       }
+      PetscCall(DMRestoreWorkArray(*dm, bcSize, MPIU_CGSIZE, &points));
 
       { // Communicate the BC values to their Plex-face owners
         PetscSF cg2bcSF;
@@ -1502,18 +1517,35 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
         PetscCall(PetscSFBcastBegin(cg2plexSF, MPIU_INT, cgFaceValues, plexFaceValues, MPI_REPLACE));
         PetscCall(PetscSFBcastEnd(cg2plexSF, MPIU_INT, cgFaceValues, plexFaceValues, MPI_REPLACE));
         PetscCall(PetscSFDestroy(&cg2bcSF));
+        PetscCall(PetscFree2(remotes, label_values));
 
         // Set the label values for the communicated faces
         PetscCall(DMGetLabel(*dm, label_name, &label));
+        if (label == NULL) {
+          PetscCall(DMCreateLabel(*dm, label_name));
+          PetscCall(DMGetLabel(*dm, label_name, &label));
+        }
         for (PetscInt i = 0; i < nPlexFaces; i++) {
           if (plexFaceValues[i] == -1) continue;
           PetscCall(DMLabelSetValue(label, plexFaces[i], plexFaceValues[i]));
         }
       }
     }
+    PetscCall(PetscFree2(plexFaceValues, cgFaceValues));
+    PetscCall(PetscFree(plexFaces));
+    PetscCall(PetscSFDestroy(&cg2plexSF));
+    PetscCall(PetscFree(conn));
+    for (PetscInt s = 0; s < num_face_sections; s++) {
+      PetscCall(PetscLayoutDestroy(&cgnsLayouts[s]));
+    }
+    PetscCall(PetscSectionDestroy(&connSection));
+    PetscCall(PetscFree(cgnsLayouts));
+    // TODO: I don't actually use either of these arrays, so probably shouldn't have them?
+    PetscCall(PetscFree(face_ids));
+    PetscCall(PetscFree(cellTypes));
   }
   PetscCall(PetscFree(uniq_verts));
-  PetscCall(PetscFree(face_section_ids));
+  PetscCall(PetscFree2(face_section_ids, cell_section_ids));
 
   // -- Create SF for naive nodal-data read to elements
   PetscSF plex_to_cgns_sf;
