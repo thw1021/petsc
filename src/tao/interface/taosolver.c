@@ -233,16 +233,16 @@ PetscErrorCode TaoSetUp(Tao tao)
   if (tao->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(TaoSetUpEW_Private(tao));
   PetscCall(TaoTermMappingSetUp(&tao->objective_term));
-  if (!tao->solution) PetscCall(TaoTermMappingCreateSolutionVec(&tao->objective_term, &tao->solution)); //TODO is this okay? no values here. not okay!
+  if (!tao->solution) PetscCall(TaoTermMappingCreateSolutionVec(&tao->objective_term, &tao->solution));
   PetscCheck(tao->solution, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoSetSolution()");
   if (tao->uses_gradient && !tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
   if (tao->uses_hessian_matrices) {
     PetscBool is_sum;
 
     PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
-    // TaoSetHessian or TaoSetHessianMatrices has been called, but as terms have been added,
+    // TaoSetHessian has been called, but as terms have been added,
     // subterms' Hessian and PtAP routines, if needed, have to be created
-    // TODO TaoSetHessianMatrices should mean, setting Hessian for SUM.
+    // TODO Fuction to set TAOTERMSUM's Hessian.
     if (!tao->hessian) {
       PetscBool is_defined;
 
@@ -3039,20 +3039,22 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
   // If user is using TaoAddTerm, before setting any terms or callbacks,
   // then tao->objective_term.term is empty callback, which we want to remove.
   PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callback));
+  PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSUM, &is_sum));
+  PetscCheck(!is_sum, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONG, "TaoAddTerm does not support adding TAOTERMSUM");
   if (is_callback) {
     PetscBool is_obj, is_objgrad, is_grad;
 
     PetscCall(TaoTermIsObjectiveDefined(tao->objective_term.term, &is_obj));
     PetscCall(TaoTermIsObjectiveAndGradientDefined(tao->objective_term.term, &is_objgrad));
     PetscCall(TaoTermIsGradientDefined(tao->objective_term.term, &is_grad));
+    //Empty callback term
     if (!(is_obj || is_objgrad || is_grad)) {
-      PetscBool is_sum;
-
-      PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSUM, &is_sum));
-      if (is_sum) PetscCall(TaoTermSumGetNumSubterms(term, &tao->num_terms));         //TODO don't allow adding TAOTERMSUM for NOW
-      PetscCall(TaoTermMappingSetData(&tao->objective_term, NULL, scale, term, map)); //TODO what is happening to Hessian?
+      PetscCall(TaoTermMappingSetData(&tao->objective_term, NULL, scale, term, map));
       if (params) PetscCall(PetscObjectReference((PetscObject)params));
       PetscCall(VecDestroy(&tao->objective_parameters));
+      //Empty callback term. Destroy hessians, as they are not needed
+      PetscCall(MatDestroy(&tao->hessian));
+      PetscCall(MatDestroy(&tao->hessian_pre));
       tao->objective_parameters = params;
       tao->term_set             = PETSC_TRUE;
       PetscFunctionReturn(PETSC_SUCCESS);
@@ -3073,7 +3075,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
 
       PetscCall(MatGetVecType(tao->objective_term.map, &map_vectype));
       PetscCall(MatGetLayouts(tao->objective_term.map, NULL, &cmap));
-      //TODO what is term doesnt have param?
+      //TODO what if term doesnt have param?
       PetscCall(TaoTermGetParametersVecType(old_sum, &param_vectype));
       PetscCall(TaoTermGetParametersLayout(old_sum, &param_layout)); //TODO do I need this? SUM shoulnd't have parameters vector...
 
@@ -3107,7 +3109,6 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(TaoTermDestroy(&old_sum));
     tao->num_terms = 1; //TODO wrong
   }
-  //Note: SUM's Map does not propagate down to its subterms.
   PetscCall(TaoTermSumGetNumSubterms(tao->objective_term.term, &num_old_terms));
   if (tao->objective_parameters || params) { //TODO isn't this duplicate work for first adding to sum?
     PetscCall(PetscCalloc1(num_old_terms + 1, &vec_list));

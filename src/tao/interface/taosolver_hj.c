@@ -82,7 +82,7 @@ PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Ta
   `TaoSetHessian()`, even if the objective function has been changed by
   calling `TaoAddTerm()`.
 
-.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoSetHessianMatrices()`, `TaoGetHessianMatrices()`
+.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessianMatrices()`
 @*/
 PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx), void **ctx)
 {
@@ -90,44 +90,6 @@ PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscCall(TaoGetHessianMatrices(tao, H, Hpre));
   if (func || ctx) PetscCall(TaoTermCallbacksGetHessian(tao->orig_callbacks, func, ctx));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoSetHessianMatrices - Set the matrices to store the Hessian matrix and a possible approximation to the Hessian to use to build the preconditioner
-
-  Collective
-
-  Input Parameters:
-+ tao  - the `Tao` context
-. H    - the Hessian matrix
-- Hpre - an approximation to the Hessian matrix to be used to build a preconditioner (often `H`)
-
-  Level: intermediate
-
-  Note:
-  If you are using `TaoTerm`s to define the objective, you should use this instead of `TaoSetHessian()` to set the matrices.
-
-.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessian()`, `TaoGetHessianMatrices()`,
-@*/
-PetscErrorCode TaoSetHessianMatrices(Tao tao, Mat H, Mat Hpre)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (H) {
-    PetscValidHeaderSpecific(H, MAT_CLASSID, 2);
-    PetscCheckSameComm(tao, 1, H, 2);
-  }
-  if (Hpre) {
-    PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 3);
-    PetscCheckSameComm(tao, 1, Hpre, 3);
-  }
-  PetscCall(PetscObjectReference((PetscObject)H));
-  PetscCall(MatDestroy(&tao->hessian));
-  tao->hessian = H;
-  PetscCall(PetscObjectReference((PetscObject)Hpre));
-  PetscCall(MatDestroy(&tao->hessian_pre));
-  tao->hessian_pre = Hpre;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -148,7 +110,7 @@ PetscErrorCode TaoSetHessianMatrices(Tao tao, Mat H, Mat Hpre)
   Note:
   If you are using `TaoTerm`s to define this objective, you should use this instead of `TaoSetHessian()` to set the matrices.
 
-.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessian()`, `TaoSetHessianMatrices()`,
+.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessian()`
 @*/
 PetscErrorCode TaoGetHessianMatrices(Tao tao, Mat *H, Mat *Hpre)
 {
