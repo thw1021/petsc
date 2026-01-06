@@ -43,7 +43,7 @@ static bool CompareDistanceIndexPair(const DistanceIndexPair &a, const DistanceI
   return a.distance < b.distance;
 }
 
-/*@
+/*@C
   DMPlexGetLETKFLocalizationMatrix - Compute the LETKF localization matrix Q
 
   Input Parameters:
@@ -270,7 +270,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
 
 .seealso: `DMPLEX`, `DMPlexGetDepthStratum()`, `DMGetCoordinatesLocal()`
 @*/
-PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservations, PetscInt numglobslobs, Mat H, Mat *Q)
+PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservations, PetscInt numglobalobs, Mat H, Mat *Q)
 {
   PetscFunctionBegin;
   SETERRQ(PetscObjectComm((PetscObject)plex), PETSC_ERR_SUP, "DMPlexGetLETKFLocalizationMatrix() requires Kokkos");
