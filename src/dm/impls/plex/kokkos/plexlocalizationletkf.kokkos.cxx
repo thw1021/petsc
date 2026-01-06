@@ -1,10 +1,11 @@
 #include <petscdmplex.h>
 #include <petscmat.h>
 #include <petsc/private/dmpleximpl.h>
-#include <algorithm>
-#include <vector>
-#include <cmath>
-#include <Kokkos_Core.hpp>
+#if defined(PETSC_HAVE_KOKKOS)
+  #include <algorithm>
+  #include <vector>
+  #include <cmath>
+  #include <Kokkos_Core.hpp>
 
 /* Gaspari-Cohn 5th-order piecewise rational function for localization
    Input: distance d, cutoff radius R
@@ -239,3 +240,10 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   *Q = Qmat;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#else
+PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservations, PetscInt numglobslobs, Mat H, Mat *Q)
+{
+  PetscFunctionBegin;
+  SETERRQ(PetscObjectComm((PetscObject)plex), PETSC_ERR_SUP, "DMPlexGetLETKFLocalizationMatrix() requires Kokkos");
+}
+#endif
