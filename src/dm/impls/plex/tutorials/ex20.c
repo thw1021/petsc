@@ -123,13 +123,11 @@ int main(int argc, char **argv)
 
   /* Perturb interior vertex coordinates */
   {
-    Vec          coordinates;
-    PetscSection coordSection;
-    PetscScalar *coordArray;
-    PetscRandom  rand;
+    Vec           coordinates;
+    PetscSection  coordSection;
+    PetscScalar  *coordArray;
+    unsigned long seed = 123456789;
 
-    PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rand));
-    PetscCall(PetscRandomSetFromOptions(rand));
     PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
     PetscCall(DMGetCoordinateSection(dm, &coordSection));
     PetscCall(VecGetArray(coordinates, &coordArray));
@@ -156,13 +154,13 @@ int main(int argc, char **argv)
         for (PetscInt d = 0; d < dim; d++) {
           PetscReal noise, gridSpacing = upper[d] / faces[d];
 
-          PetscCall(PetscRandomGetValueReal(rand, &noise));
+          seed  = (1103515245 * seed + 12345) % 2147483648;
+          noise = (PetscReal)seed / 2147483648.0;
           coordArray[offset + d] += (noise - 0.5) * 0.001 * gridSpacing;
         }
       }
     }
     PetscCall(VecRestoreArray(coordinates, &coordArray));
-    PetscCall(PetscRandomDestroy(&rand));
   }
 
   /* Call the LETKF localization function */
