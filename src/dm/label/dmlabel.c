@@ -1355,7 +1355,7 @@ PetscErrorCode DMLabelGetValueISGlobal(MPI_Comm comm, DMLabel label, PetscBool g
   PetscInt       *values_global;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 2);
+  if (label) PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 2);
   if (PetscDefined(USE_DEBUG)) {
     // Shenanigans because PetscValidLogicalCollectiveBool must have a PetscObject to get a MPI_Comm from, but there is no such object in this function (generally, DMLabel is only PETSC_COMM_SELF)
     IS dummy;
