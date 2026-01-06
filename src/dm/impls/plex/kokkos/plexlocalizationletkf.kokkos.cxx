@@ -241,6 +241,35 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #else
+/*@C
+  DMPlexGetLETKFLocalizationMatrix - Compute localization weight matrix for LETKF
+
+  Collective
+
+  Input Parameters:
++ plex            - The DMPlex object
+. numobservations - Number of nearest observations to use per vertex
+. numglobalobs    - Total number of observations
+- H               - Observation operator matrix
+
+  Output Parameter:
+. Q - Localization weight matrix (sparse, AIJ format)
+
+  Notes:
+  The output matrix Q has dimensions (numVertices x numglobalobs) where
+  numVertices is the number of vertices in the DMPlex. Each row contains
+  exactly numobservations non-zero entries corresponding to the nearest
+  observations, weighted by the Gaspari-Cohn fifth-order piecewise
+  rational function.
+
+  The observation locations are computed as H * V where V is the vector
+  of vertex coordinates. The localization weights ensure smooth tapering
+  of observation influence with distance.
+
+  Level: intermediate
+
+.seealso: `DMPLEX`, `DMPlexGetDepthStratum()`, `DMGetCoordinatesLocal()`
+@*/
 PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservations, PetscInt numglobslobs, Mat H, Mat *Q)
 {
   PetscFunctionBegin;
