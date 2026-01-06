@@ -222,4 +222,10 @@ int main(int argc, char **argv)
     diff_args: -j
     args: -dm_plex_dim 2
 
+  test:
+    requires: kokkos !complex
+    suffix: single
+    diff_args: -j
+    args: -dm_plex_dim 2
+
 TEST*/
