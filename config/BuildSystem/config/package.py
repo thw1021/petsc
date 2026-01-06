@@ -558,7 +558,7 @@ Now rerun configure''' % (self.installDirProvider.dir, '--download-'+self.packag
       f = source
     else:
       f = open(source, 'rb')
-    m = checksum_algo(usedforsecurity = False)
+    m = checksum_algo()
     size = chunkSize
     buf  = f.read(size)
     while buf:

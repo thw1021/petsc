@@ -407,7 +407,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
         dependency = depPath
       else:
         dependency = os.path.dirname(dependency.__file__)
-    self.dependencies[dependency] = checksum_algo(pickle.dumps(framework), usedforsecurity = False).hexdigest()
+    self.dependencies[dependency] = checksum_algo( pickle.dumps(framework) ).hexdigest()
     self.logPrint('Added configure dependency from '+dependency+'('+str(self.dependencies[dependency])+')')
     for child in framework.childGraph.vertices:
       child.argDB = self.argDB
@@ -420,7 +420,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
   def updatePackageDependencies(self):
     for dependency, digest in self.dependencies.items():
       framework = self.loadFramework(dependency)
-      if digest == checksum_algo(pickle.dumps(framework), usedforsecurity = False).hexdigest():
+      if digest == checksum_algo( pickle.dumps(framework) ).hexdigest():
         continue
       self.logPrint('Configure dependency from '+dependency+' has changed. Reloading...')
       for child in framework.childGraph.vertices:

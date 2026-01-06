@@ -146,7 +146,7 @@ class SourceDB (dict, logger.Logger):
       f = source
     else:
       f = open(source)
-    m = checksum_algo(usedforsecurity = False)
+    m = checksum_algo()
     size = chunkSize
     buf  = f.read(size)
     while buf:
