@@ -110,29 +110,27 @@ Tao Object: (regular_) 1 MPI process
       out-of-place factorization
       0 levels of fill
       tolerance for zero pivot 2.22045e-14
-      matrix ordering: natural
-      factor fill ratio given 1., needed 1.
+      matrix ordering: external
+      factor fill ratio given 0., needed 0.
         Factored matrix:
           Mat Object: (regular_tao_nls_) 1 MPI process
-            type: seqaij
+            type: seqdense
             rows=10, cols=10
             package used to perform factorization: petsc
-            total: nonzeros=86, allocated nonzeros=86
-              using I-node routines: found 8 nodes, limit used is 5
+            total: nonzeros=100, allocated nonzeros=100
     linear system matrix, which is also used to construct the preconditioner:
     Mat Object: 1 MPI process
-      type: seqaij
+      type: seqdense
       rows=10, cols=10
-      total: nonzeros=86, allocated nonzeros=86
+      total: nonzeros=100, allocated nonzeros=100
       total number of mallocs used during MatSetValues calls=0
-        using I-node routines: found 8 nodes, limit used is 5
-  total KSP iterations: 5
+  total KSP iterations: 1
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=3.27049e-15
-  Objective value=2.10235e-29
+  Residual in Function/Gradient:=1.43502e-14
+  Objective value=1.39328e-28
   total number of iterations=1,                          (max: 50)
   total number of function evaluations=5,                  (max: unlimited)
   total number of function/gradient evaluations=2,      (max: unlimited)
   total number of Hessian evaluations=1
   Solution converged:    ||g(X)|| <= gatol
-Relative difference > 1e-12: 1.3630858179e-12
+Relative difference < 1e-12

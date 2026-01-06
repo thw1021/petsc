@@ -150,9 +150,16 @@ int main(int argc, char **argv)
   } else if (is_cdiag) {
     PetscCall(MatCreateConstantDiagonal(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, diag_val * diag_val, &H2));
   } else {
+    Mat       Htest, Hpretest;
+    PetscBool is_h_dense;
+
     PetscCall(MatTransposeMatMult(A, A, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &H2));
     PetscCall(MatAssemblyBegin(H2, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(H2, MAT_FINAL_ASSEMBLY));
+
+    PetscCall(TaoGetHessianMatrices(tao, &Htest, &Hpretest));
+    PetscCall(PetscObjectBaseTypeCompare((PetscObject)Htest, MATSEQDENSE, &is_h_dense));
+    if (is_h_dense) PetscCall(MatConvert(H2, MATDENSE, MAT_INPLACE_MATRIX, &H2));
   }
   /* Create second TAO solver */
   PetscCall(TaoCreate(comm, &tao2));
