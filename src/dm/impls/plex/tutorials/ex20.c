@@ -21,19 +21,20 @@ int main(int argc, char **argv)
 
   /* Set faces based on dimension */
   if (dim == 1) {
-    faces[0] = 10;
+    faces[0] = 16;
   } else if (dim == 2) {
-    faces[0] = 4;
-    faces[1] = 4;
+    faces[0] = 8;
+    faces[1] = 8;
   } else if (dim == 3) {
-    faces[0] = 4;
-    faces[1] = 4;
-    faces[2] = 4;
+    faces[0] = 6;
+    faces[1] = 6;
+    faces[2] = 6;
   }
 
   /* Create the mesh using DMPlexCreateBoxMesh like ex21 */
   PetscCall(DMPlexCreateBoxMesh(PETSC_COMM_WORLD, dim, PETSC_FALSE, faces, lower, upper, bdt, PETSC_TRUE, 0, PETSC_TRUE, &dm));
   PetscCall(DMSetFromOptions(dm));
+  PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
 
   /* Verify dimension matches */
   PetscInt dmDim;
@@ -104,6 +105,7 @@ int main(int argc, char **argv)
   PetscCall(MatSetType(H, MATAIJ));
   PetscCall(MatSeqAIJSetPreallocation(H, 1, NULL));
   PetscCall(MatMPIAIJSetPreallocation(H, 1, NULL, 0, NULL));
+  PetscCall(PetscObjectSetName((PetscObject)H, "H_observation_operator"));
 
   /* Fill H matrix */
   {
@@ -148,8 +150,51 @@ int main(int argc, char **argv)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Observation Operator H:\n"));
   PetscCall(MatView(H, PETSC_VIEWER_STDOUT_WORLD));
 
+  /* Perturb interior vertex coordinates */
+  {
+    Vec           coordinates;
+    PetscSection  coordSection;
+    PetscScalar  *coordArray;
+    unsigned long seed = 123456789;
+
+    PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
+    PetscCall(DMGetCoordinateSection(dm, &coordSection));
+    PetscCall(VecGetArray(coordinates, &coordArray));
+
+    for (PetscInt v = vStart; v < vEnd; v++) {
+      PetscReal coords[3] = {0.0, 0.0, 0.0};
+      PetscInt  offset;
+      PetscBool isInterior = PETSC_TRUE;
+
+      PetscCall(PetscSectionGetOffset(coordSection, v, &offset));
+      for (PetscInt d = 0; d < dim; d++) coords[d] = PetscRealPart(coordArray[offset + d]);
+
+      /* Check if vertex is on the boundary */
+      for (PetscInt d = 0; d < dim; d++) {
+        PetscReal gridSpacing = upper[d] / faces[d];
+        PetscInt  gridIdx     = (PetscInt)(coords[d] / gridSpacing + 0.5);
+        if (gridIdx == 0 || gridIdx == faces[d]) {
+          isInterior = PETSC_FALSE;
+          break;
+        }
+      }
+
+      if (isInterior) {
+        for (PetscInt d = 0; d < dim; d++) {
+          PetscReal noise, gridSpacing = upper[d] / faces[d];
+
+          seed  = (1103515245 * seed + 12345) % 2147483648;
+          noise = (PetscReal)seed / 2147483648.0;
+          coordArray[offset + d] += (noise - 0.5) * 0.001 * gridSpacing;
+        }
+      }
+    }
+    PetscCall(VecRestoreArray(coordinates, &coordArray));
+  }
+
   /* Call the function */
   PetscCall(DMPlexGetLETKFLocalizationMatrix(dm, numobservations, numlocalobs, H, &Q));
+  PetscCall(PetscObjectSetName((PetscObject)Q, "Q_localization"));
 
   /* View Q */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization Matrix Q:\n"));
