@@ -207,14 +207,12 @@ int main(int argc, char **argv)
     requires: kokkos !complex
     suffix: 1
     diff_args: -j
-    nsize: 1
     args: -dm_plex_dim 1
 
   test:
     requires: kokkos !complex
     suffix: 2
     diff_args: -j
-    nsize: 1
     args: -dm_plex_dim 2
 
 TEST*/
