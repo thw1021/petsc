@@ -40,7 +40,7 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
   return weight;
 }
 
-/*@
+/*@C
   DMPlexGetLETKFLocalizationMatrix - Compute localization weight matrix for LETKF
 
   Collective
