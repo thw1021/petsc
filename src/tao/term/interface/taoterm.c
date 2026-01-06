@@ -273,10 +273,21 @@ PetscErrorCode TaoTermSetFromOptions(TaoTerm term)
   if (term->H_mattype) deft = term->H_mattype;
   PetscCall(PetscOptionsFList("-tao_term_hessian_mat_type", "Hessian mat type", "TaoTermSetCreateHessianMode", MatList, deft, typeName, 256, &opt));
   if (opt) {
-    //TODO Check for MFFD. If so, nuke term->ops->hessian with custom TaoDefaultComputeHessianMFFD, or something like that
-    //but L1, L2, Quad doesnt really makes sense at all! should we send warning? -> ignore. only shell supports MFFD for now. rosenbrock1_taoterm
-    PetscCall(PetscFree(term->H_mattype));
-    PetscCall(PetscStrallocpy(typeName, (char **)&term->H_mattype));
+    PetscBool is_mffd, is_shell, is_callbacks;
+    PetscCall(PetscStrcmp(typeName, MATMFFD, &is_mffd));
+    if (is_mffd) {
+      PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMSHELL, &is_shell));
+      PetscCall(PetscObjectTypeCompare((PetscObject)term, TAOTERMCALLBACKS, &is_callbacks));
+      if (is_shell || is_callbacks) {
+        PetscCall(PetscFree(term->H_mattype));
+        PetscCall(PetscStrallocpy(typeName, (char **)&term->H_mattype));
+      } else {
+        PetscCall(PetscInfo(term, "TaoTerm Hessian MatType MFFD requested but TaoTerm type is neither SHELL nor CALLBACKS. Ignoring.\n"));
+      }
+    } else {
+      PetscCall(PetscFree(term->H_mattype));
+      PetscCall(PetscStrallocpy(typeName, (char **)&term->H_mattype));
+    }
   }
 
   deft = MATAIJ;
@@ -1634,7 +1645,6 @@ PetscErrorCode TaoTermCreateUnmappedHessianMatricesDefault(TaoTerm term, Mat *H,
   if (Hpre && !Hpre_is_H) PetscCall(TaoTermCreateUnmappedHessianMatricesDefault_Hpre_Internal(term, H, Hpre, Hpre_is_H, Hpre_mattype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 /*@
   TaoTermSetCreateHessianMode - Determine the behavior of `TaoTermCreateHessianMatricesDefault()`.

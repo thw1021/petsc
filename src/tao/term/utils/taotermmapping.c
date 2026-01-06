@@ -453,47 +453,36 @@ static PetscErrorCode TaoTermMappingCreatePtAP(Mat unmapped_H, Mat map, Mat *H)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-//TODO what does this function should really do??
-// only if unmapped, it created _unmapped_H. shouldn't it do the same for unmapped case?
-// the ternary is wrong? i dont see a case where H, which is (Mat *) be null?
-//
-// thsi functino should
-// 1. If (map)
-//      H \gets mt->_mapped_H
-// 2. else
-//     H \gets mt->_unmapped_H = mt->_mapped_H (should this just be null?)
-//
-//     BUT TaoTermCreateHessianMatrices does not change internal state. obviously, its calling on TaoTerm which does not store Hessians
-//
-// This is eiher called, if n_terms == 1, and not callback, or if SUM.
-//
-// first case: TODO can't set PtAP mat manually, as there is no TaoTermSumSetSubtermHessianMatrices...?
-//    if (!map)
-//        if (!mt->_unmapped_H)
-//            create
-//        else no-op
-//        H \gets mt->_unmapped
-//        TODO should mt->_mapped_H be mt->_unmappe_H? let's say no for now
-//
-//
-//What are possible inputs? H and Hpre:
-//
-//H&&Hpre: okay
-//!H && Hpre: ??
-//  -> !map
-//    -> just create Hpre?
-//H && !Hpre: ??
-//!H && !Hpre: ?? -> err
+/*
+ * Internal function to create Hessian matrices for TaoTermMapping
+ *
+ * map: m x n
+ *
+ * This function will internally create unmapped, and mapped  H and Hpre,
+ * and return H \ges mt->_mapped_H, and Hpre \gets mt->_mapped_Hpre.
+ *
+ * if (mt->map)
+ *   It also creates internal work matrices to support PtAP with diagonal matrix, which is currently unsupported natively.
+ *   mapped:   n x n
+ *   unmapped: m x m
+ *
+ * else
+ *   mapped:   n x n
+ *   unmapped: n x n
+ *
+ */
 PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *mt, Mat *H, Mat *Hpre)
 {
-  Mat uH, uHpre, mH, mHpre;
+  Mat       uH, uHpre, mH, mHpre;
+  PetscBool is_sum;
 
   PetscFunctionBegin;
   uH    = mt->_unmapped_H;
   uHpre = mt->_unmapped_Hpre;
   mH    = mt->_mapped_H;
   mHpre = mt->_mapped_Hpre;
-  //TODO if sum, there should not be a map.
+  PetscCall(PetscObjectTypeCompare((PetscObject)mt->term, TAOTERMSUM, &is_sum));
+  if (is_sum && mt->map) PetscCall(PetscInfo(mt->term, "TaoTermType is TAOTERMSUM, but Map is given. Ignoring it.\n"));
   PetscCheck(H, PetscObjectComm((PetscObject)mt), PETSC_ERR_SUP, "TaoTermMappingCreateHessianMatrices does not take NULL input for H");
   PetscCheck(Hpre, PetscObjectComm((PetscObject)mt), PETSC_ERR_SUP, "TaoTermMappingCreateHessianMatrices does not take NULL input Hpre");
   if (!mt->map) {
@@ -528,11 +517,9 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
     *H    = mt->_unmapped_H;
     *Hpre = mt->_unmapped_Hpre;
   } else {
-#if 1
     // create _unmapped only if they are empty
-    // TODO this is wrong, as this will make unmapped_H to be m x m, (param size), not sol size n x n....
     PetscCall(TaoTermCreateHessianMatrices(mt->term, (mt->_unmapped_H) ? NULL : &mt->_unmapped_H, (mt->_unmapped_Hpre) ? NULL : &mt->_unmapped_Hpre));
-    //TODO for AIJ....
+    //Hack to support  AIJ.... TODO
     PetscCall(MatAssemblyBegin(mt->_unmapped_H, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(mt->_unmapped_H, MAT_FINAL_ASSEMBLY));
     PetscCall(MatShift(mt->_unmapped_H, 1.));
@@ -556,35 +543,6 @@ PETSC_INTERN PetscErrorCode TaoTermMappingCreateHessianMatrices(TaoTermMapping *
       if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_Hpre));
       *Hpre = mt->_mapped_Hpre;
     }
-#else
-    // create _unmapped only if they are empty
-    // TODO this is wrong, as this will make unmapped_H to be m x m, (param size), not sol size n x n....
-    PetscCall(TaoTermCreateUnmappedHessianMatrices(mt->term, (mt->_unmapped_H) ? NULL : &mt->_unmapped_H, (mt->_unmapped_Hpre) ? NULL : &mt->_unmapped_Hpre));
-    //TODO for AIJ....
-    PetscCall(MatAssemblyBegin(mt->_unmapped_H, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(mt->_unmapped_H, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatShift(mt->_unmapped_H, 1.));
-    // Create PtAP only if mt->_mapped_H is empty
-    if (mt->_unmapped_H && !mt->_mapped_H) PetscCall(TaoTermMappingCreatePtAP(mt->_unmapped_H, mt->map, &mt->_mapped_H));
-    // Creating expensive work matrix to store AP TODO remove when diag PtAP gets implemented
-    if (!mt->_mapped_H_work) PetscCall(TaoTermMappingCreateAPWorkMatrix(mt->map, mt->_unmapped_H, &mt->_mapped_H_work));
-    if (*H != mt->_mapped_H) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_H));
-    *H = mt->_mapped_H;
-    if (mt->_unmapped_Hpre == mt->_unmapped_H) {
-      // Hpre_is_H true, so mapped_H = mapped_Hpre
-      if (!mt->_mapped_Hpre) {
-        PetscCall(PetscObjectReference((PetscObject)mt->_mapped_H));
-        mt->_mapped_Hpre = mt->_mapped_H;
-      }
-      if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)*H));
-      *Hpre = *H;
-    } else {
-      if (!mt->_mapped_Hpre) PetscCall(TaoTermMappingCreatePtAP(mt->_unmapped_Hpre, mt->map, &mt->_mapped_Hpre));
-      if (!mt->_mapped_Hpre_work) PetscCall(TaoTermMappingCreateAPWorkMatrix(mt->map, mt->_unmapped_H, &mt->_mapped_Hpre_work));
-      if (*Hpre != mt->_mapped_Hpre) PetscCall(PetscObjectReference((PetscObject)mt->_mapped_Hpre));
-      *Hpre = mt->_mapped_Hpre;
-    }
-#endif
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

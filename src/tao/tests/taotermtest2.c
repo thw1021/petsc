@@ -327,6 +327,10 @@ static PetscErrorCode FormHessian_Callback(Tao tao, Vec x, Mat H, Mat Hpre, void
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+//Note: For dense variations, relative error may be greater than 1.e-12,
+//but that is okay, as it is a result of KSP, and PC using AIJ matrices
+//instead of dense.
+
 /*TEST
 
    build:
@@ -346,6 +350,11 @@ static PetscErrorCode FormHessian_Callback(Tao tao, Vec x, Mat H, Mat Hpre, void
      suffix: diag_dense
      args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
      args: -tao_term_hessian_mat_type diagonal -mapping_mtype dense
+
+   test:
+     suffix: diag_dense_nsq
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type diagonal -mapping_mtype dense -m 15
 
    test:
      suffix: diag_aij
@@ -368,6 +377,11 @@ static PetscErrorCode FormHessian_Callback(Tao tao, Vec x, Mat H, Mat Hpre, void
      args: -tao_term_hessian_mat_type constantdiagonal -mapping_mtype dense
 
    test:
+     suffix: cdiag_dense_nsq
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type constantdiagonal -mapping_mtype dense -m 15
+
+   test:
      suffix: cdiag_aij
      args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
      args: -tao_term_hessian_mat_type constantdiagonal -mapping_mtype aij
@@ -388,6 +402,11 @@ static PetscErrorCode FormHessian_Callback(Tao tao, Vec x, Mat H, Mat Hpre, void
      args: -tao_term_hessian_mat_type dense -mapping_mtype dense
 
    test:
+     suffix: dense_dense_nsq
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type dense -mapping_mtype dense -m 15
+
+   test:
      suffix: dense_aij
      args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
      args: -tao_term_hessian_mat_type dense -mapping_mtype aij
@@ -406,6 +425,11 @@ static PetscErrorCode FormHessian_Callback(Tao tao, Vec x, Mat H, Mat Hpre, void
      suffix: aij_dense
      args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
      args: -tao_term_hessian_mat_type aij -mapping_mtype dense
+
+   test:
+     suffix: aij_dense_nsq
+     args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
+     args: -tao_term_hessian_mat_type aij -mapping_mtype dense -m 15
 
    test:
      suffix: aij_aij
