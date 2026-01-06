@@ -3075,9 +3075,8 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
 
       PetscCall(MatGetVecType(tao->objective_term.map, &map_vectype));
       PetscCall(MatGetLayouts(tao->objective_term.map, NULL, &cmap));
-      //TODO what if term doesnt have param?
       PetscCall(TaoTermGetParametersVecType(old_sum, &param_vectype));
-      PetscCall(TaoTermGetParametersLayout(old_sum, &param_layout)); //TODO do I need this? SUM shoulnd't have parameters vector...
+      PetscCall(TaoTermGetParametersLayout(old_sum, &param_layout));
 
       PetscCall(TaoTermSetSolutionVecType(old_sum, map_vectype));
       PetscCall(TaoTermSetParametersVecType(old_sum, param_vectype));
@@ -3107,10 +3106,10 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
       PetscCall(VecDestroy(&subvecs[0]));
     }
     PetscCall(TaoTermDestroy(&old_sum));
-    tao->num_terms = 1; //TODO wrong
+    tao->num_terms = 1;
   }
   PetscCall(TaoTermSumGetNumSubterms(tao->objective_term.term, &num_old_terms));
-  if (tao->objective_parameters || params) { //TODO isn't this duplicate work for first adding to sum?
+  if (tao->objective_parameters || params) {
     PetscCall(PetscCalloc1(num_old_terms + 1, &vec_list));
     if (tao->objective_parameters) PetscCall(TaoTermSumParametersUnpack(tao->objective_term.term, &tao->objective_parameters, vec_list));
     PetscCall(PetscObjectReference((PetscObject)params));
