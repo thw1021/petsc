@@ -24,7 +24,7 @@ Tao Object: (shell_) 1 MPI process
       Mat Object: 1 MPI process
         type: constantdiagonal
         rows=10, cols=10
-          Diagonal value: 0.720032
+          Diagonal value: 1.1
   TaoLineSearch Object: (shell_) 1 MPI process
     type: more-thuente
     maximum function evaluations=30
@@ -62,8 +62,8 @@ Tao Object: (shell_) 1 MPI process
         not using I-node routines
   total KSP iterations: 1
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=1.27189e-16
-  Objective value=1.56015e-32
+  Residual in Function/Gradient:=1.37615e-16
+  Objective value=7.8256e-33
   total number of iterations=1,                          (max: 50)
   total number of function evaluations=5,                  (max: unlimited)
   total number of function/gradient evaluations=2,      (max: unlimited)
@@ -118,16 +118,16 @@ Tao Object: (regular_) 1 MPI process
             type: constantdiagonal
             rows=10, cols=10
             package used to perform factorization: petsc
-              Diagonal value: 1.92884
+              Diagonal value: 0.826446
     linear system matrix, which is also used to construct the preconditioner:
     Mat Object: 1 MPI process
       type: constantdiagonal
       rows=10, cols=10
-        Diagonal value: 0.518446
+        Diagonal value: 1.21
   total KSP iterations: 1
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=1.27189e-16
-  Objective value=1.56015e-32
+  Residual in Function/Gradient:=1.37615e-16
+  Objective value=7.8256e-33
   total number of iterations=1,                          (max: 50)
   total number of function evaluations=5,                  (max: unlimited)
   total number of function/gradient evaluations=2,      (max: unlimited)

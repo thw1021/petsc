@@ -64,8 +64,8 @@ Tao Object: (shell_) 1 MPI process
         using I-node routines: found 8 nodes, limit used is 5
   total KSP iterations: 5
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=2.21912e-15
-  Objective value=6.42583e-29
+  Residual in Function/Gradient:=3.27049e-15
+  Objective value=2.10235e-29
   total number of iterations=1,                          (max: 50)
   total number of function evaluations=5,                  (max: unlimited)
   total number of function/gradient evaluations=2,      (max: unlimited)
@@ -130,8 +130,8 @@ Tao Object: (regular_) 1 MPI process
         using I-node routines: found 8 nodes, limit used is 5
   total KSP iterations: 5
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=2.21912e-15
-  Objective value=6.42583e-29
+  Residual in Function/Gradient:=3.27049e-15
+  Objective value=2.10235e-29
   total number of iterations=1,                          (max: 50)
   total number of function evaluations=5,                  (max: unlimited)
   total number of function/gradient evaluations=2,      (max: unlimited)

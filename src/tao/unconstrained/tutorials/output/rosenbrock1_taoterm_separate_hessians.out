@@ -58,7 +58,6 @@ Tao Object: 1 MPI process
             rows=2, cols=2
             package used to perform factorization: petsc
             total: nonzeros=3, allocated nonzeros=3
-                block size is 1
     linear system matrix, followed by the matrix used to construct the preconditioner:
     Mat Object: 1 MPI process
       type: seqaij
@@ -71,7 +70,6 @@ Tao Object: 1 MPI process
       rows=2, cols=2
       total: nonzeros=3, allocated nonzeros=3
       total number of mallocs used during MatSetValues calls=0
-          block size is 1
   total KSP iterations: 12
   convergence tolerances: gatol=0.0001,   grtol=1e-08,   steptol=0.,   gttol=0.
   Residual in Function/Gradient:=3.46652e-06

@@ -61,8 +61,8 @@ Tao Object: (shell_) 1 MPI process
       total number of mallocs used during MatSetValues calls=0
   total KSP iterations: 1
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=4.37462e-15
-  Objective value=2.18221e-28
+  Residual in Function/Gradient:=4.12673e-16
+  Objective value=1.00192e-29
   total number of iterations=1,                          (max: 50)
   total number of function evaluations=5,                  (max: unlimited)
   total number of function/gradient evaluations=2,      (max: unlimited)
@@ -125,8 +125,8 @@ Tao Object: (regular_) 1 MPI process
       total number of mallocs used during MatSetValues calls=0
   total KSP iterations: 1
   convergence tolerances: gatol=1e-08,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=4.37462e-15
-  Objective value=2.18221e-28
+  Residual in Function/Gradient:=4.12673e-16
+  Objective value=1.00192e-29
   total number of iterations=1,                          (max: 50)
   total number of function evaluations=5,                  (max: unlimited)
   total number of function/gradient evaluations=2,      (max: unlimited)
