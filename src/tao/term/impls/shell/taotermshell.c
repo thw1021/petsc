@@ -176,7 +176,6 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateSolutionVec_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateParametersVec_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateHessianMatrices_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateUnmappedHessianMatrices_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -415,45 +414,6 @@ static PetscErrorCode TaoTermShellSetCreateParametersVec_Shell(TaoTerm term, Pet
 }
 
 /*@C
-  TaoTermShellSetCreateUnmappedHessianMatrices - Set the routine that creates unmapped
-  Hessian matrices for a `TaoTerm` of type `TAOTERMSHELL`
-
-  Logically collective
-
-  Input Parameters:
-+ term       - a `TaoTerm` of type `TAOTERMSHELL`
-- createmats - a function with the same signature as `TaoTermCreateHessianMatrices()`
-
-  Calling sequence of `createmats`:
-+ f    - the `TaoTerm`
-. H    - (optional) a matrix of the appropriate type and size for the Hessian of `term`
-- Hpre - (optional) a matrix of the appropriate type and size for preconditioning the Hessian of `term`
-
-  Level: advanced
-
-  Note: When mapping matrix is non-square, mapped Hessian, $A^T H A$, follows layout of solution space,
-  whereas unmapped Hessian, $H$, follows that of parameters vector space. This function allows users to
-  create custom unmapped Hessian matrices, if needed.
-
-.seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellGetContext()`, `TaoTermShellSetContextDestroy()`,
-          `TaoTermShellSetCreateSolutionVec()`, `TaoTermShellSetCreateParametersVec()`, `TaoTermShellSetCreateHessianMatrices()`
-@*/
-PetscErrorCode TaoTermShellSetUnmappedCreateHessianMatrices(TaoTerm term, PetscErrorCode (*createmats)(TaoTerm f, Mat *H, Mat *Hpre))
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscTryMethod(term, "TaoTermShellSetCreateHessianMatrices_C", (TaoTerm, PetscErrorCode (*)(TaoTerm, Mat *, Mat *)), (term, createmats));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode TaoTermShellCreateUnmappedHessianMatrices_Shell(TaoTerm term, PetscErrorCode (*createunmappedhessianmatrices)(TaoTerm, Mat *, Mat *))
-{
-  PetscFunctionBegin;
-  term->ops->createunmappedhessianmatrices = createunmappedhessianmatrices;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
   TaoTermShellSetCreateHessianMatrices - Set the routine that creates Hessian matrices for a `TaoTerm` of type `TAOTERMSHELL`
 
   Logically collective
@@ -470,8 +430,7 @@ static PetscErrorCode TaoTermShellCreateUnmappedHessianMatrices_Shell(TaoTerm te
   Level: intermediate
 
 .seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellGetContext()`, `TaoTermShellSetContextDestroy()`,
-          `TaoTermShellSetCreateSolutionVec()`, `TaoTermShellSetCreateParametersVec()`,
-          `TaoTermShellSetUnmappedCreateHessianMatrices()`
+          `TaoTermShellSetCreateSolutionVec()`, `TaoTermShellSetCreateParametersVec()`
 @*/
 PetscErrorCode TaoTermShellSetCreateHessianMatrices(TaoTerm term, PetscErrorCode (*createmats)(TaoTerm f, Mat *H, Mat *Hpre))
 {
@@ -521,7 +480,6 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateSolutionVec_C", TaoTermShellSetCreateSolutionVec_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateParametersVec_C", TaoTermShellSetCreateParametersVec_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateHessianMatrices_C", TaoTermShellCreateHessianMatrices_Shell));
-  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateUnmappedHessianMatrices_C", TaoTermShellCreateUnmappedHessianMatrices_Shell));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

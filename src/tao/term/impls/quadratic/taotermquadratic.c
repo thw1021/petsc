@@ -273,7 +273,6 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm term)
   term->ops->objectiveandgradient          = TaoTermComputeObjectiveAndGradient_Quadratic;
   term->ops->hessian                       = TaoTermComputeHessian_Quadratic;
   term->ops->createhessianmatrices         = TaoTermCreateHessianMatrices_Quadratic;
-  term->ops->createunmappedhessianmatrices = TaoTermCreateUnmappedHessianMatricesDefault;
   term->ops->iscomputehessianfdpossible    = TaoTermIsComputeHessianFDPossible_Quadratic;
 
   term->Hpre_is_H = PETSC_TRUE;

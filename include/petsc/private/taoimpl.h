@@ -257,13 +257,11 @@ struct _TaoTermOps {
   PetscErrorCode (*isobjectiveandgradientdefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*ishessiandefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*iscreatehessianmatricesdefined)(TaoTerm, PetscBool *);
-  PetscErrorCode (*iscreateunmappedhessianmatricesdefined)(TaoTerm, PetscBool *);
   PetscErrorCode (*iscomputehessianfdpossible)(TaoTerm, PetscBool3 *);
 
   PetscErrorCode (*createsolutionvec)(TaoTerm, Vec *);
   PetscErrorCode (*createparametersvec)(TaoTerm, Vec *);
   PetscErrorCode (*createhessianmatrices)(TaoTerm, Mat *, Mat *);
-  PetscErrorCode (*createunmappedhessianmatrices)(TaoTerm, Mat *, Mat *);
 };
 
 struct _p_TaoTerm {
@@ -321,5 +319,3 @@ PETSC_INTERN PetscErrorCode VecIfNotCongruentGetSameLayoutVec(Vec, Vec *);
 
 PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_H_Internal(TaoTerm, Mat *, Mat *, PetscBool, MatType);
 PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_Hpre_Internal(TaoTerm, Mat *, Mat *, PetscBool, MatType);
-PETSC_INTERN PetscErrorCode TaoTermCreateUnmappedHessianMatricesDefault_H_Internal(TaoTerm, Mat *, Mat *, PetscBool, MatType);
-PETSC_INTERN PetscErrorCode TaoTermCreateUnmappedHessianMatricesDefault_Hpre_Internal(TaoTerm, Mat *, Mat *, PetscBool, MatType);

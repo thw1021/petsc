@@ -141,7 +141,7 @@ PetscErrorCode TaoTermComputeHessianFD(TaoTerm term, Vec x, Vec params, Mat H, M
   PetscCall(PetscInfo(term, "TaoTerm using finite differences w/o coloring to compute Hessian matrix.\n"));
   // Note: same routine as in fdiff.c
   PetscCall(SNESCreate(PetscObjectComm((PetscObject)H), &snes));
-  //TODO memcheck?
+
   t.term   = term;
   t.params = params;
   PetscCall(SNESSetFunction(snes, NULL, SNESFunction_TaoTerm, (void *)&t));

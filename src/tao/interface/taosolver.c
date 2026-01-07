@@ -554,12 +554,11 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     PetscCall(TaoMonitorSet(tao, TaoMonitorGradientDraw, drawctx, (PetscCtxDestroyFn *)TaoMonitorDrawCtxDestroy));
   }
 
-  //TODO tao_fd,mf flags are only for OLD API with just callbacks. For TaoTerm, need to manually set for each individual ones
   flg = PETSC_FALSE;
-  PetscCall(PetscOptionsBool("-tao_fd_gradient", "compute gradient using finite differences", "TaoDefaultComputeGradient", flg, &flg, NULL));
+  PetscCall(PetscOptionsBool("-tao_fd_gradient", "compute gradient using finite differences (only for callback methods)", "TaoDefaultComputeGradient", flg, &flg, NULL));
   if (flg) PetscCall(TaoTermComputeGradientUseFDPush(tao->objective_term.term));
   flg = PETSC_FALSE;
-  PetscCall(PetscOptionsBool("-tao_fd_hessian", "compute Hessian using finite differences", "TaoDefaultComputeHessian", flg, &flg, NULL));
+  PetscCall(PetscOptionsBool("-tao_fd_hessian", "compute Hessian using finite differences (only for callback methods)", "TaoDefaultComputeHessian", flg, &flg, NULL));
   if (flg) {
     Mat H;
 

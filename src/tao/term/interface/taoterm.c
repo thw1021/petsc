@@ -132,7 +132,7 @@ PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
         else if (term->ops->createhessianmatrices == TaoTermCreateHessianMatricesDefault) {
           PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
           if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
-        } else { //TODO if callback, mattype changed, its not reflected on mt...
+        } else {
           PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
           if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
         }
@@ -1497,7 +1497,6 @@ PetscErrorCode TaoTermCreateParametersVec(TaoTerm term, Vec *parameters)
           `TaoTermShellSetCreateHessianMatrices()`,
           `TaoTermCreateSolutionVec()`,
           `TaoTermCreateHessianMatricesDefault()`,
-          `TaoTermCreateUnmappedHessianMatricesDefault()`,
           `TaoTermGetCreateHessianMode()`,
           `TaoTermSetCreateHessianMode()`,
           `TaoTermIsCreateHessianMatricesDefined()`,
@@ -1551,98 +1550,6 @@ PetscErrorCode TaoTermCreateHessianMatricesDefault(TaoTerm term, Mat *H, Mat *Hp
 
   if (H || (Hpre && Hpre_is_H)) PetscCall(TaoTermCreateHessianMatricesDefault_H_Internal(term, H, Hpre, Hpre_is_H, H_mattype));
   if (Hpre && !Hpre_is_H) PetscCall(TaoTermCreateHessianMatricesDefault_Hpre_Internal(term, H, Hpre, Hpre_is_H, Hpre_mattype));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoTermCreateUnmappedHessianMatrices - Create the matrices that can be inputs to `TaoTermComputeHessian()`
-
-  Collective
-
-  Input Parameter:
-. term - a `TaoTerm`
-
-  Output Parameters:
-+ H    - (optional) a matrix that can store the Hessian computed in `TaoTermComputeHessian()`
-- Hpre - (optional) a preconditioner matrix that can be computed in `TaoTermComputeHessian()`
-
-  Level: intermediate
-
-  Note:
-  TODO FIX DOC HERE
-  Before Hessian matrices can be created, the size of the solution vector space
-  must be set (see the ways this can be done in `TaoTermCreateSolutionVec()`).  If the
-  term is a `TAOTERMSHELL`, `TaoTermShellSetCreateHessianMatrices()` must be
-  called.  Most `TaoTerm`s use `TaoTermCreateHessianMatricesDefault()` to create
-  their Hessian matrices: the behavior of that function can be controlled by
-  `TaoTermSetCreateHessianMode()`.
-
-.seealso: [](sec_tao_term),
-          `TaoTerm`,
-          `TaoTermComputeHessian()`,
-          `TaoTermShellSetCreateHessianMatrices()`,
-          `TaoTermCreateSolutionVec()`,
-          `TaoTermCreateHessianMatricesDefault()`,
-          `TaoTermCreateUnmappedHessianMatricesDefault()`,
-          `TaoTermGetCreateHessianMode()`,
-          `TaoTermSetCreateHessianMode()`,
-          `TaoTermIsCreateHessianMatricesDefined()`,
-@*/
-PetscErrorCode TaoTermCreateUnmappedHessianMatrices(TaoTerm term, Mat *H, Mat *Hpre)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  if (H) PetscAssertPointer(H, 2);
-  if (Hpre) PetscAssertPointer(Hpre, 3);
-  if (term->ops->createunmappedhessianmatrices) PetscUseTypeMethod(term, createunmappedhessianmatrices, H, Hpre);
-  else {
-    PetscCall(PetscInfo(term, "TaoTermCreateUnmappedHessianMatrices unknown. Trying default implementation\n"));
-    PetscCall(TaoTermCreateUnmappedHessianMatricesDefault(term, H, Hpre));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  TaoTermCreateUnmappedHessianMatricesDefault - Default routine for creating unmapped hessian matrices
-  that can be used by many `TaoTerm` implementations
-
-  Collective
-
-  Input Parameter:
-. term - a `TaoTerm`
-
-  Output Parameters:
-+ H    - (optional) a matrix that can store the Hessian computed in `TaoTermComputeHessian()`
-- Hpre - (optional) a preconditioner matrix that can be computed in `TaoTermComputeHessian()`
-
-  Level: developer
-
-  Developer Note:
-  TODO FIX DOC
-  The behavior of this routine is determined by `TaoTermSetCreateHessianMode()`.
-  If `Hpre_is_H`, then the same matrix will be returned for `H` and `Hpre`,
-  otherwise they will be separate matrices, with the matrix types `H_mattype` and `Hpre_mattype`.
-  If either type is `MATMFFD`, then it will create a shell matrix with `TaoTermCreateHessianMFFD()`.
-
-.seealso: [](sec_tao_term),
-          `TaoTerm`,
-          `TaoTermComputeHessian()`,
-          `TaoTermCreateHessianMatrices()`,
-          `TaoTermGetCreateHessianMode()`,
-          `TaoTermSetCreateHessianMode()`,
-@*/
-PetscErrorCode TaoTermCreateUnmappedHessianMatricesDefault(TaoTerm term, Mat *H, Mat *Hpre)
-{
-  PetscBool Hpre_is_H;
-  MatType   H_mattype;
-  MatType   Hpre_mattype;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscCall(TaoTermGetCreateHessianMode(term, &Hpre_is_H, &H_mattype, &Hpre_mattype));
-
-  if (H || (Hpre && Hpre_is_H)) PetscCall(TaoTermCreateUnmappedHessianMatricesDefault_H_Internal(term, H, Hpre, Hpre_is_H, H_mattype));
-  if (Hpre && !Hpre_is_H) PetscCall(TaoTermCreateUnmappedHessianMatricesDefault_Hpre_Internal(term, H, Hpre, Hpre_is_H, Hpre_mattype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
