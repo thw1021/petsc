@@ -127,6 +127,8 @@
 - Fix `-ts_ssp_nstages` to `-ts_ssp_num_stages`
 - Change `TSDiscGradIsGonzalez()`, `TSDiscGradUseGonzalez()` to `TSDiscGradSetType()`,`TSDiscGradGetType()`
 - Add `DMTSSetIFunctionPre()`
+- Add argument to `TSDiscGradSetImplicitFormulation()`
+- Expose `TSDiscGradGetX0AndXdot()` and `TSDiscGradRestoreX0AndXdot()`
 
 ```{rubric} TAO:
 ```
