@@ -94,6 +94,7 @@
 - Add `DMSwarmSort` class
 - Add `DMSwarmSortDestroy()` and `DMSwarmSortView()`
 - Allow `DMSwarmCellDMSetSort()` to take in `NULL` and clear the sort
+- Add `DMSwarmPreallocateMassMatrix()` and `DMSwarmFillMassMatrix()`
 
 ## FE/FV
 
