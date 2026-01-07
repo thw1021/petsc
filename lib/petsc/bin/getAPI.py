@@ -590,13 +590,14 @@ def getFunctions(mansec, functiontoinclude, filename):
               if i.find('*') > -1: arg.stars = 1
               if i.find('**') > -1: arg.stars = 2
               argname = re.findall(r' [*]*([a-zA-Z0-9_]*)[\[\]]*',i)
-              if argname:
+              if argname and argname[0]:
                 arg.name = argname[0]
                 if arg.name.lower() in argnames:
                   arg.name = 'M_' + arg.name
                 argnames.append(arg.name.lower())
               else:
-                arg.name = 'noname'
+                arg.name   = 'noname'
+                fun.opaque = True
               i =  regblank.sub('',reg.sub(r'\1\2 ',i).strip()).replace('*','').replace('[]','')
               arg.typename = i
               # fix input character arrays that are written as *variable name
