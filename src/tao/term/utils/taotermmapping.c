@@ -1,4 +1,5 @@
 #include <petsc/private/taoimpl.h>
+#include <petsc/private/matimpl.h>
 
 PETSC_INTERN PetscErrorCode TaoTermMappingSetData(TaoTermMapping *mt, const char *prefix, PetscReal scale, TaoTerm term, Mat map)
 {
@@ -439,12 +440,12 @@ static PetscErrorCode TaoTermMappingCreatePtAP(Mat unmapped_H, Mat map, Mat *H)
   } else if (!is_uH_diag && !is_uH_cdiag && is_map_cdiag) {
     PetscCall(MatTransposeMatMult(unmapped_H, unmapped_H, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
   } else {
-    //PetscCall(MatPtAP(unmapped_H, map, MAT_INITIAL_MATRIX, PETSC_DETERMINE, H));
     PetscCall(MatProductCreate(unmapped_H, map, NULL, H));
     PetscCall(MatProductSetType(*H, MATPRODUCT_PtAP));
     PetscCall(MatProductSetFromOptions(*H));
-    PetscCall(MatProductSymbolic(*H));
-    //TODO need to check mat->ops->ptap ?? and if not ... something...
+    //TODO Some other default fallback?
+    if ((*H)->ops->productsymbolic) PetscCall(MatProductSymbolic(*H));
+    else SETERRQ(PetscObjectComm((PetscObject)map), PETSC_ERR_SUP, "Currently does not support PtAP routines for given pair of matrices");
     PetscCall(MatProductNumeric(*H));
     PetscCall(MatZeroEntries(*H));
     PetscCall(MatAssemblyBegin(*H, MAT_FINAL_ASSEMBLY));
