@@ -708,4 +708,8 @@ int main(int argc, char **argv)
     args: -taylor 0 -soft 1
     output_file: output/empty.out
 
+  test:
+    suffix: soft_view_10
+    args: -taylor 0 -soft 1 -tao_view -tao_max_funcs 10
+
 TEST*/
