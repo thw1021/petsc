@@ -2656,8 +2656,8 @@ PetscErrorCode DMSwarmComputeMoments(DM sw, const char coordinate[], const char 
   PetscCheck(dtw == PETSC_REAL, comm, PETSC_ERR_ARG_WRONG, "Weight field %s must be real, not %s", weight, PetscDataTypes[dtw]);
   PetscCheck(bsw == 1, comm, PETSC_ERR_ARG_WRONG, "Weight field %s must be a scalar, not blocksize %" PetscInt_FMT, weight, bsw);
   PetscCall(DMSwarmGetLocalSize(sw, &Np));
-  PetscCall(DMGetWorkArray(sw, bsc + 2, MPIU_REAL, &mom));
-  PetscCall(PetscArrayzero(mom, bsc + 2));
+  PetscCall(DMGetWorkArray(sw, 2 * bsc + 1, MPIU_REAL, &mom));
+  PetscCall(PetscArrayzero(mom, 2 * bsc + 1));
   for (PetscInt p = 0; p < Np; ++p) {
     const PetscReal *c  = &coords[p * bsc];
     const PetscReal  wp = w[p];
@@ -2670,8 +2670,8 @@ PetscErrorCode DMSwarmComputeMoments(DM sw, const char coordinate[], const char 
   }
   PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **)&coords));
   PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&w));
-  PetscCallMPI(MPIU_Allreduce(mom, moments, bsc + 2, MPIU_REAL, MPI_SUM, PetscObjectComm((PetscObject)sw)));
-  PetscCall(DMRestoreWorkArray(sw, bsc + 2, MPIU_REAL, &mom));
+  PetscCallMPI(MPIU_Allreduce(mom, moments, 2 * bsc + 1, MPIU_REAL, MPI_SUM, PetscObjectComm((PetscObject)sw)));
+  PetscCall(DMRestoreWorkArray(sw, 2 * bsc + 1, MPIU_REAL, &mom));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

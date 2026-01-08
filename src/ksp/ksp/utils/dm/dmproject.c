@@ -1202,11 +1202,12 @@ static PetscErrorCode DMSwarmRemap_PFAK_Internal(DM sw, DM *rsw)
     KSP         ksp;
     Mat         M_f;
     Vec         u_f;
-    PetscReal   mom[4];
+    PetscReal  *mom;
     PetscInt    cdim;
     const char *prefix;
 
     PetscCall(DMGetCoordinateDim(rdm, &cdim));
+    PetscCall(PetscMalloc1(2 * cdim + 1, &mom));
     PetscCall(DMCreateMassMatrix(rdm, rdm, &M_f));
     PetscCall(DMGetGlobalVector(rdm, &u_f));
 
@@ -1240,6 +1241,7 @@ static PetscErrorCode DMSwarmRemap_PFAK_Internal(DM sw, DM *rsw)
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "Mom v: %g\n", (double)mom[1 + 1]));
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "Mom 2: %g\n", (double)mom[1 + cdim]));
     PetscCall(MatDestroy(&M_f));
+    PetscCall(PetscFree(mom));
   }
   // Create Remap particle mass matrix M_p
   PetscInt xcStart, xcEnd, vcStart, vcEnd, cStart, cEnd, r;
@@ -1248,7 +1250,16 @@ static PetscErrorCode DMSwarmRemap_PFAK_Internal(DM sw, DM *rsw)
   PetscCall(DMPlexGetHeightStratum(xdm, 0, &xcStart, &xcEnd));
   PetscCall(DMPlexGetHeightStratum(vdm, 0, &vcStart, &vcEnd));
   PetscCall(DMPlexGetHeightStratum(rdm, 0, &cStart, &cEnd));
-  r = (PetscInt)PetscSqrtReal(((xcEnd - xcStart) * (vcEnd - vcStart)) / (cEnd - cStart));
+  if (cEnd > cStart) {
+    PetscInt  dim;
+    PetscReal ratio;
+
+    PetscCall(DMGetDimension(rdm, &dim));
+    ratio = ((PetscReal)(xcEnd - xcStart) * (PetscReal)(vcEnd - vcStart)) / (PetscReal)(cEnd - cStart);
+    r     = (PetscInt)PetscPowReal(ratio, 1. / dim);
+  } else {
+    r = 0;
+  }
   PetscCall(InitializeParticles_Regular(*rsw, r));
   PetscCall(DMSwarmMigrate(*rsw, PETSC_FALSE)); // Bin particles in remap mesh
   PetscCall(DMCreateMassMatrix(*rsw, rdm, &rM_p));
@@ -1294,17 +1305,19 @@ static PetscErrorCode DMSwarmRemap_PFAK_Internal(DM sw, DM *rsw)
 
 static PetscErrorCode DMSwarmRemapMonitor_Internal(DM sw, DM rsw)
 {
-  PetscReal mom[4], rmom[4];
-  PetscInt  cdim;
+  PetscReal *mom, *rmom;
+  PetscInt   cdim;
 
   PetscFunctionBegin;
   PetscCall(DMGetCoordinateDim(sw, &cdim));
+  PetscCall(PetscMalloc2(2 * cdim + 1, &mom, 2 * cdim + 1, &rmom));
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", mom));
   PetscCall(DMSwarmComputeMoments(rsw, "velocity", "w_q", rmom));
   PetscCall(PetscPrintf(PETSC_COMM_SELF, "========== Remapped ==========\n"));
   PetscCall(PetscPrintf(PETSC_COMM_SELF, "Mom 0: %g --> %g\n", (double)mom[0], (double)rmom[0]));
   PetscCall(PetscPrintf(PETSC_COMM_SELF, "Mom 1: %g --> %g\n", (double)mom[1], (double)rmom[1]));
   PetscCall(PetscPrintf(PETSC_COMM_SELF, "Mom 2: %g --> %g\n", (double)mom[1 + cdim], (double)rmom[1 + cdim]));
+  PetscCall(PetscFree2(mom, rmom));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
