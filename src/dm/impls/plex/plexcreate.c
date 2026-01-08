@@ -1908,31 +1908,166 @@ static PetscErrorCode DMPlexCreateCubeMesh_Internal(DM dm, const PetscReal lower
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode DMPlexCreateBoxMesh_Tensor_General_Internal(DM dm, PetscInt dim, const PetscInt faces[], const PetscReal lower[], const PetscReal upper[], const DMBoundaryType periodicity[])
+{
+  PetscInt     numCells = 1, numVertices = 1;
+  PetscInt    *numCells_d, *numVertices_d;
+  PetscInt    *strides_c, *strides_v;
+  PetscInt    *tuple_c, *tuple_v;
+  PetscScalar *coords;
+  PetscSection coordSection;
+  Vec          coordinates;
+  PetscInt     c, v, d, coordSize;
+  PetscMPIInt  rank;
+
+  PetscFunctionBegin;
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
+  PetscCall(PetscMalloc4(dim, &numCells_d, dim, &numVertices_d, dim, &strides_c, dim, &strides_v));
+  PetscCall(PetscMalloc2(dim, &tuple_c, dim, &tuple_v));
+
+  for (d = 0; d < dim; ++d) {
+    numCells_d[d]    = faces[d];
+    numVertices_d[d] = (periodicity[d] == DM_BOUNDARY_PERIODIC) ? faces[d] : faces[d] + 1;
+    numCells *= numCells_d[d];
+    numVertices *= numVertices_d[d];
+  }
+  strides_c[0] = 1;
+  strides_v[0] = 1;
+  for (d = 1; d < dim; ++d) {
+    strides_c[d] = strides_c[d - 1] * numCells_d[d - 1];
+    strides_v[d] = strides_v[d - 1] * numVertices_d[d - 1];
+  }
+
+  PetscCall(DMPlexSetChart(dm, 0, numCells + numVertices));
+  if (rank == 0) {
+    for (c = 0; c < numCells; ++c) PetscCall(DMPlexSetConeSize(dm, c, 1 << dim));
+  }
+  PetscCall(DMSetUp(dm));
+
+  if (rank == 0) {
+    PetscInt *cone;
+
+    PetscCall(PetscMalloc1(1 << dim, &cone));
+    for (c = 0; c < numCells; ++c) {
+      // Calculate tuple for cell c
+      PetscInt temp = c;
+      for (d = 0; d < dim; ++d) {
+        tuple_c[d] = temp % numCells_d[d];
+        temp /= numCells_d[d];
+      }
+
+      // Build cone
+      for (v = 0; v < (1 << dim); ++v) {
+        PetscInt v_idx = 0;
+        for (d = 0; d < dim; ++d) {
+          PetscInt shift = (v >> d) & 1;
+          PetscInt idx   = tuple_c[d] + shift;
+          if (periodicity[d] == DM_BOUNDARY_PERIODIC) idx %= numVertices_d[d];
+          v_idx += idx * strides_v[d];
+        }
+        cone[v] = numCells + v_idx;
+      }
+      // Reorder cone to match DMPlex convention (if needed) - for now use standard tensor ordering
+      // DMPlex tensor ordering usually matches the bit pattern
+      PetscCall(DMPlexSetCone(dm, c, cone));
+    }
+    PetscCall(PetscFree(cone));
+  }
+
+  PetscCall(DMPlexSymmetrize(dm));
+  PetscCall(DMPlexStratify(dm));
+
+  /* Create celltype label */
+  {
+    DMLabel ctLabel;
+    PetscCall(DMCreateLabel(dm, "celltype"));
+    PetscCall(DMGetLabel(dm, "celltype", &ctLabel));
+    for (v = numCells; v < numCells + numVertices; ++v) PetscCall(DMLabelSetValue(ctLabel, v, DM_POLYTOPE_POINT));
+  }
+
+  // Build coordinates
+  PetscCall(DMSetCoordinateDim(dm, dim));
+  PetscCall(DMGetCoordinateSection(dm, &coordSection));
+  PetscCall(PetscSectionSetNumFields(coordSection, 1));
+  PetscCall(PetscSectionSetFieldComponents(coordSection, 0, dim));
+  PetscCall(PetscSectionSetChart(coordSection, numCells, numCells + numVertices));
+  for (v = numCells; v < numCells + numVertices; ++v) {
+    PetscCall(PetscSectionSetDof(coordSection, v, dim));
+    PetscCall(PetscSectionSetFieldDof(coordSection, v, 0, dim));
+  }
+  PetscCall(PetscSectionSetUp(coordSection));
+  PetscCall(PetscSectionGetStorageSize(coordSection, &coordSize));
+  PetscCall(VecCreate(PETSC_COMM_SELF, &coordinates));
+  PetscCall(PetscObjectSetName((PetscObject)coordinates, "coordinates"));
+  PetscCall(VecSetSizes(coordinates, coordSize, PETSC_DETERMINE));
+  PetscCall(VecSetBlockSize(coordinates, dim));
+  PetscCall(VecSetType(coordinates, VECSTANDARD));
+  PetscCall(VecGetArray(coordinates, &coords));
+
+  if (rank == 0) {
+    for (v = 0; v < numVertices; ++v) {
+      PetscInt temp = v;
+      for (d = 0; d < dim; ++d) {
+        tuple_v[d] = temp % numVertices_d[d];
+        temp /= numVertices_d[d];
+        coords[v * dim + d] = lower[d] + (upper[d] - lower[d]) * tuple_v[d] / faces[d];
+      }
+    }
+  }
+
+  PetscCall(VecRestoreArray(coordinates, &coords));
+  PetscCall(DMSetCoordinatesLocal(dm, coordinates));
+  PetscCall(VecDestroy(&coordinates));
+
+  PetscCall(PetscFree4(numCells_d, numVertices_d, strides_c, strides_v));
+  PetscCall(PetscFree2(tuple_c, tuple_v));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode DMPlexCreateBoxMesh_Tensor_Internal(DM dm, PetscInt dim, const PetscInt faces[], const PetscReal lower[], const PetscReal upper[], const DMBoundaryType periodicity[])
 {
-  DMBoundaryType bdt[3] = {DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
-  PetscInt       fac[3] = {0, 0, 0}, d;
-
   PetscFunctionBegin;
   PetscAssertPointer(dm, 1);
   PetscValidLogicalCollectiveInt(dm, dim, 2);
   PetscCall(DMSetDimension(dm, dim));
-  for (d = 0; d < dim; ++d) {
-    fac[d] = faces[d];
-    bdt[d] = periodicity[d];
+  if (dim <= 3) {
+    DMBoundaryType bdt[3] = {DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
+    PetscInt       fac[3] = {0, 0, 0}, d;
+
+    for (d = 0; d < dim; ++d) {
+      fac[d] = faces[d];
+      bdt[d] = periodicity[d];
+    }
+    PetscCall(DMPlexCreateCubeMesh_Internal(dm, lower, upper, fac, bdt[0], bdt[1], bdt[2]));
+  } else {
+    PetscCall(DMPlexCreateBoxMesh_Tensor_General_Internal(dm, dim, faces, lower, upper, periodicity));
+    if (dim <= 3) PetscCall(DMPlexInterpolateInPlace_Internal(dm));
   }
-  PetscCall(DMPlexCreateCubeMesh_Internal(dm, lower, upper, fac, bdt[0], bdt[1], bdt[2]));
-  if (periodicity[0] == DM_BOUNDARY_PERIODIC || periodicity[0] == DM_BOUNDARY_TWIST || periodicity[1] == DM_BOUNDARY_PERIODIC || periodicity[1] == DM_BOUNDARY_TWIST || (dim > 2 && (periodicity[2] == DM_BOUNDARY_PERIODIC || periodicity[2] == DM_BOUNDARY_TWIST))) {
-    PetscReal L[3]       = {-1., -1., 0.};
-    PetscReal maxCell[3] = {-1., -1., 0.};
+  {
+    PetscReal *L, *maxCell;
+    PetscInt   d;
+    PetscBool  isPeriodic = PETSC_FALSE;
 
     for (d = 0; d < dim; ++d) {
       if (periodicity[d] != DM_BOUNDARY_NONE) {
-        L[d]       = upper[d] - lower[d];
-        maxCell[d] = 1.1 * (L[d] / PetscMax(1, faces[d]));
+        isPeriodic = PETSC_TRUE;
+        break;
       }
     }
-    PetscCall(DMSetPeriodicity(dm, maxCell, lower, L));
+    if (isPeriodic) {
+      PetscCall(PetscMalloc2(dim, &L, dim, &maxCell));
+      for (d = 0; d < dim; ++d) {
+        if (periodicity[d] != DM_BOUNDARY_NONE) {
+          L[d]       = upper[d] - lower[d];
+          maxCell[d] = 1.1 * (L[d] / PetscMax(1, faces[d]));
+        } else {
+          L[d]       = 0.0;
+          maxCell[d] = 0.0;
+        }
+      }
+      PetscCall(DMSetPeriodicity(dm, maxCell, lower, L));
+      PetscCall(PetscFree2(L, maxCell));
+    }
   }
   PetscCall(DMPlexSetRefinementUniform(dm, PETSC_TRUE));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -4833,25 +4968,29 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems PetscOpt
     case DM_SHAPE_BOX:
     case DM_SHAPE_ZBOX:
     case DM_SHAPE_ANNULUS: {
-      PetscInt       faces[3]  = {0, 0, 0};
-      PetscReal      lower[3]  = {0, 0, 0};
-      PetscReal      upper[3]  = {1, 1, 1};
-      DMBoundaryType bdt[3]    = {DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
-      PetscBool      isAnnular = shape == DM_SHAPE_ANNULUS ? PETSC_TRUE : PETSC_FALSE;
-      PetscInt       i, n;
+      PetscInt       *faces;
+      PetscReal      *lower, *upper;
+      DMBoundaryType *bdt;
+      PetscBool       isAnnular = shape == DM_SHAPE_ANNULUS ? PETSC_TRUE : PETSC_FALSE;
+      PetscInt        i, n;
 
+      PetscCall(PetscMalloc4(dim, &faces, dim, &lower, dim, &upper, dim, &bdt));
       n = dim;
-      for (i = 0; i < dim; ++i) faces[i] = (dim == 1 ? 1 : 4 - dim);
+      for (i = 0; i < dim; ++i) faces[i] = (dim == 1 ? 1 : PetscMax(1, 4 - dim));
       PetscCall(PetscOptionsIntArray("-dm_plex_box_faces", "Number of faces along each dimension", "", faces, &n, &flg));
-      n = 3;
+      n = dim;
+      for (i = 0; i < dim; ++i) lower[i] = 0.;
       PetscCall(PetscOptionsRealArray("-dm_plex_box_lower", "Lower left corner of box", "", lower, &n, &flg));
-      PetscCheck(!flg || !(n != dim), comm, PETSC_ERR_ARG_SIZ, "Lower box point had %" PetscInt_FMT " values, should have been %" PetscInt_FMT, n, dim);
-      n = 3;
+      if (flg && n != dim) PetscCall(PetscPrintf(comm, "DEBUG: dim %" PetscInt_FMT " n %" PetscInt_FMT "\n", dim, n));
+      PetscCheck(!flg || n == dim, comm, PETSC_ERR_ARG_SIZ, "Lower box point had %" PetscInt_FMT " values, should have been %" PetscInt_FMT, n, dim);
+      n = dim;
+      for (i = 0; i < dim; ++i) upper[i] = 1.;
       PetscCall(PetscOptionsRealArray("-dm_plex_box_upper", "Upper right corner of box", "", upper, &n, &flg));
-      PetscCheck(!flg || !(n != dim), comm, PETSC_ERR_ARG_SIZ, "Upper box point had %" PetscInt_FMT " values, should have been %" PetscInt_FMT, n, dim);
-      n = 3;
+      PetscCheck(!flg || n == dim, comm, PETSC_ERR_ARG_SIZ, "Upper box point had %" PetscInt_FMT " values, should have been %" PetscInt_FMT, n, dim);
+      n = dim;
+      for (i = 0; i < dim; ++i) bdt[i] = DM_BOUNDARY_NONE;
       PetscCall(PetscOptionsEnumArray("-dm_plex_box_bd", "Boundary type for each dimension", "", DMBoundaryTypes, (PetscEnum *)bdt, &n, &flg));
-      PetscCheck(!flg || !(n != dim), comm, PETSC_ERR_ARG_SIZ, "Box boundary types had %" PetscInt_FMT " values, should have been %" PetscInt_FMT, n, dim);
+      PetscCheck(!flg || n == dim, comm, PETSC_ERR_ARG_SIZ, "Box boundary types had %" PetscInt_FMT " values, should have been %" PetscInt_FMT, n, dim);
 
       PetscCheck(!isAnnular || dim == 2, comm, PETSC_ERR_ARG_OUTOFRANGE, "Only two dimensional annuli have been implemented");
       if (isAnnular)
@@ -4886,23 +5025,27 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems PetscOpt
         PetscCall(PetscDSSetConstants(cds, 2, bounds));
         PetscCall(DMPlexRemapGeometry(dm, 0.0, boxToAnnulus));
       }
+      PetscCall(PetscFree4(faces, lower, upper, bdt));
     } break;
     case DM_SHAPE_BOX_SURFACE: {
-      PetscInt  faces[3] = {0, 0, 0};
-      PetscReal lower[3] = {0, 0, 0};
-      PetscReal upper[3] = {1, 1, 1};
-      PetscInt  i, n;
+      PetscInt  *faces;
+      PetscReal *lower, *upper;
+      PetscInt   i, n;
 
+      PetscCall(PetscMalloc3(dim + 1, &faces, dim + 1, &lower, dim + 1, &upper));
       n = dim + 1;
-      for (i = 0; i < dim + 1; ++i) faces[i] = (dim + 1 == 1 ? 1 : 4 - (dim + 1));
+      for (i = 0; i < dim + 1; ++i) faces[i] = (dim + 1 == 1 ? 1 : PetscMax(1, 4 - (dim + 1)));
       PetscCall(PetscOptionsIntArray("-dm_plex_box_faces", "Number of faces along each dimension", "", faces, &n, &flg));
-      n = 3;
+      n = dim + 1;
+      for (i = 0; i < dim + 1; ++i) lower[i] = 0.;
       PetscCall(PetscOptionsRealArray("-dm_plex_box_lower", "Lower left corner of box", "", lower, &n, &flg));
-      PetscCheck(!flg || !(n != dim + 1), comm, PETSC_ERR_ARG_SIZ, "Lower box point had %" PetscInt_FMT " values, should have been %" PetscInt_FMT, n, dim + 1);
-      n = 3;
+      PetscCheck(!flg || n == dim + 1, comm, PETSC_ERR_ARG_SIZ, "Lower box point had %" PetscInt_FMT " values, should have been %" PetscInt_FMT, n, dim + 1);
+      n = dim + 1;
+      for (i = 0; i < dim + 1; ++i) upper[i] = 1.;
       PetscCall(PetscOptionsRealArray("-dm_plex_box_upper", "Upper right corner of box", "", upper, &n, &flg));
-      PetscCheck(!flg || !(n != dim + 1), comm, PETSC_ERR_ARG_SIZ, "Upper box point had %" PetscInt_FMT " values, should have been %" PetscInt_FMT, n, dim + 1);
+      PetscCheck(!flg || n == dim + 1, comm, PETSC_ERR_ARG_SIZ, "Upper box point had %" PetscInt_FMT " values, should have been %" PetscInt_FMT, n, dim + 1);
       PetscCall(DMPlexCreateBoxSurfaceMesh_Internal(dm, dim + 1, faces, lower, upper, interpolate));
+      PetscCall(PetscFree3(faces, lower, upper));
     } break;
     case DM_SHAPE_SPHERE: {
       PetscReal R = 1.0;
