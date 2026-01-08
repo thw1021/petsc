@@ -877,10 +877,10 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
 
 static PetscErrorCode MonitorMoments(TS ts, PetscInt step, PetscReal t, Vec U, void *ctx)
 {
-  AppCtx   *user = (AppCtx *)ctx;
-  DM        sw;
+  AppCtx    *user = (AppCtx *)ctx;
+  DM         sw;
   PetscReal *pmoments, *fmoments; /* \int f, \int v f, \int v^2 f */
-  PetscInt  dim;
+  PetscInt   dim;
 
   PetscFunctionBeginUser;
   if (step < 0) PetscFunctionReturn(PETSC_SUCCESS);
