@@ -17,39 +17,35 @@ module ex36fmodule
 !  location.)
 !
 contains
-  subroutine Demo1()
+  subroutine Demo1(m,n)
 
+    PetscInt, intent(in) :: m, n
     Mat A
-    PetscInt n, m
-    PetscErrorCode ierr
     PetscScalar, pointer :: aa(:, :)
+    PetscErrorCode ierr
 
-    n = 4
-    m = 5
-
-!  Create matrix
-
+    ! Create matrix
     PetscCall(MatCreate(PETSC_COMM_SELF, A, ierr))
     PetscCall(MatSetSizes(A, m, n, m, n, ierr))
     PetscCall(MatSetType(A, MATSEQDENSE, ierr))
     PetscCall(MatSetUp(A, ierr))
 
-!  Access array storage
+    ! Access array storage
     PetscCall(MatDenseGetArray(A, aa, ierr))
 
-!  Set matrix values directly
+    ! Set matrix values directly
     PetscCall(FillUpMatrix(m, n, aa))
 
     PetscCall(MatDenseRestoreArray(A, aa, ierr))
 
-!  Finalize matrix assembly
+    ! Finalize matrix assembly
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY, ierr))
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY, ierr))
 
-!  View matrix
+    ! View matrix
     PetscCall(MatView(A, PETSC_VIEWER_STDOUT_SELF, ierr))
 
-!  Clean up
+    ! Clean up
     PetscCall(MatDestroy(A, ierr))
   end subroutine Demo1
 
@@ -58,36 +54,38 @@ contains
 !  Demo2 -  This subroutine demonstrates the use of user-allocated dense
 !  matrix storage.
 !
-  subroutine Demo2()
+  subroutine Demo2(m,n)
 
-    PetscInt n, m
-    PetscErrorCode ierr
-    parameter(m=5, n=4)
+    PetscInt, intent(in) :: m, n
     Mat A
-    PetscScalar aa(m, n)
+    PetscScalar, pointer :: aa(:, :)
+    PetscErrorCode ierr
 
-!  Create matrix
+    allocate (aa(m, n))
+
+    ! Create matrix
     PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, n, aa, A, ierr))
 
-!  Set matrix values directly
+    ! Set matrix values directly
     PetscCall(FillUpMatrix(m, n, aa))
 
-!  Finalize matrix assembly
+    ! Finalize matrix assembly
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY, ierr))
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY, ierr))
 
-!  View matrix
+    ! View matrix
     PetscCall(MatView(A, PETSC_VIEWER_STDOUT_SELF, ierr))
 
-!  Clean up
+    ! Clean up
     PetscCall(MatDestroy(A, ierr))
   end subroutine Demo2
 
 ! -----------------------------------------------------------------
 
   subroutine FillUpMatrix(m, n, X)
-    PetscInt m, n, i, j
-    PetscScalar X(m, n)
+    PetscInt, intent(in) :: m, n
+    PetscScalar, intent(out) :: X(m, n)
+    PetscInt i, j
 
     do j = 1, n
       do i = 1, m
@@ -102,14 +100,15 @@ program main
   implicit none
 
   PetscErrorCode ierr
+  PetscInt, parameter :: m = 5, n = 4
 
   PetscCallA(PetscInitialize(ierr))
 
-!  Demo of PETSc-allocated dense matrix storage
-  call Demo1()
+  ! Demo of PETSc-allocated dense matrix storage
+  call Demo1(m,n)
 
-!  Demo of user-allocated dense matrix storage
-  call Demo2()
+  ! Demo of user-allocated dense matrix storage
+  call Demo2(m,n)
 
   PetscCallA(PetscFinalize(ierr))
 end program main
