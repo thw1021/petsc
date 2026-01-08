@@ -750,7 +750,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscScalar intESq;
   PetscReal  *E, *x, *weight;
   PetscReal   Enorm = 0., lgEnorm, lgEmax, sum = 0., Emax = 0., chargesum = 0.;
-  PetscReal   pmoments[4]; /* \int f, \int v f, \int v^2 f */
+  PetscReal  *pmoments; /* \int f, \int v f, \int v^2 f */
   PetscInt   *species, dim, Np, gNp;
   MPI_Comm    comm;
   PetscMPIInt rank;
@@ -761,6 +761,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCall(TSGetDM(ts, &sw));
   PetscCall(DMGetDimension(sw, &dim));
+  PetscCall(PetscMalloc1(2 * dim + 1, &pmoments));
   PetscCall(DMSwarmGetLocalSize(sw, &Np));
   PetscCall(DMSwarmGetSize(sw, &gNp));
   PetscCall(DMSwarmSortGetAccess(sw));
@@ -807,6 +808,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
     PetscCall(PetscPrintf(comm, "E: %f\t%+e\t%e\t%f\t%20.15e\t%f\t%f\t%f\t%20.15e\t%20.15e\t%20.15e\t%" PetscInt_FMT "\t(%" PetscInt_FMT ")\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)PetscSqrtReal(intESq), gNp, step));
     PetscCall(DMViewFromOptions(sw, NULL, "-sw_efield_view"));
   }
+  PetscCall(PetscFree(pmoments));
 
   // Compute decay rate and frequency
   PetscCall(PetscDrawLGGetData(user->drawlgE, NULL, &user->emaxCtx.e, &user->emaxCtx.t, &user->emaxCtx.Emax));
@@ -875,18 +877,22 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
 
 static PetscErrorCode MonitorMoments(TS ts, PetscInt step, PetscReal t, Vec U, void *ctx)
 {
-  AppCtx   *user = (AppCtx *)ctx;
-  DM        sw;
-  PetscReal pmoments[4], fmoments[4]; /* \int f, \int v f, \int v^2 f */
+  AppCtx    *user = (AppCtx *)ctx;
+  DM         sw;
+  PetscReal *pmoments, *fmoments; /* \int f, \int v f, \int v^2 f */
+  PetscInt   dim;
 
   PetscFunctionBeginUser;
   if (step < 0) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(TSGetDM(ts, &sw));
+  PetscCall(DMGetDimension(sw, &dim));
 
+  PetscCall(PetscMalloc2(2 * dim + 1, &pmoments, 2 * dim + 1, &fmoments));
   PetscCall(DMSwarmComputeMoments(sw, "velocity", "w_q", pmoments));
   PetscCall(computeVelocityFEMMoments(sw, fmoments, user));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%f\t%f\t%f\t%f\t%f\t%f\n", (double)t, (double)pmoments[0], (double)pmoments[1], (double)pmoments[3], (double)fmoments[0], (double)fmoments[1], (double)fmoments[2]));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%f\t%f\t%f\t%f\t%f\t%f\n", (double)t, (double)pmoments[0], (double)pmoments[1], (double)pmoments[1 + dim], (double)fmoments[0], (double)fmoments[1], (double)fmoments[1 + dim]));
+  PetscCall(PetscFree2(pmoments, fmoments));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
