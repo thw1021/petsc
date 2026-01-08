@@ -175,8 +175,14 @@ int main(int argc, char **argv)
     test:
       args: -mtype {{host kokkos}}
 
-    test:
-      requires: mpix_stream
-      args: -mtype kokkos -sf_use_stream_aware_mpi 1
+  test:
+    requires: kokkos cuda mpi_gpu_aware mpix_stream
+    suffix: mpix
+    # MPICH doesn't reserve VCI, and per MPICH developers only 1 VCI is needed for GPU
+    env: MPIR_CVAR_CH4_RESERVE_VCIS=1
+    args: -maxn 4 -skipSmall 1 -loopSmall 1 -mtype kokkos -sf_use_stream_aware_mpi 1
+    filter: grep "DOES_NOT_EXIST"
+    output_file: output/empty.out
+    nsize: 2
 
 TEST*/
