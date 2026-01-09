@@ -13,16 +13,3 @@ iter =  10, Function value 7.90635e-06, Residual: 0.0126189
 iter =  11, Function value 6.2536e-09, Residual: 0.00333899
 iter =  12, Function value 8.53723e-16, Residual: < 1.0e-6
 iter =  13, Function value 6.00823e-26, Residual: < 1.0e-11
-[ 0] 16 bytes
-      [0]  PetscTrMallocDefault() at /home/hsuh/code/petsc/src/sys/memory/mtr.c:204
-      [0]  PetscMallocA() at /home/hsuh/code/petsc/src/sys/memory/mal.c:150
-      [0]  PetscStrallocpy() at /home/hsuh/code/petsc/include/petscstring.h:150
-      [0]  TaoTermSetFromOptions() at /home/hsuh/code/petsc/src/tao/term/interface/taoterm.c:312
-      [0]  TaoSetFromOptions() at /home/hsuh/code/petsc/src/tao/interface/taosolver.c:621
-      [0]  main() at /home/hsuh/code/petsc/src/tao/unconstrained/tutorials/rosenbrock1_taoterm.c:66
-[ 0] 16 bytes
-      [0]  PetscTrMallocDefault() at /home/hsuh/code/petsc/src/sys/memory/mtr.c:204
-      [0]  PetscMallocA() at /home/hsuh/code/petsc/src/sys/memory/mal.c:150
-      [0]  PetscStrallocpy() at /home/hsuh/code/petsc/include/petscstring.h:150
-      [0]  TaoTermComputeHessianUseFDPush() at /home/hsuh/code/petsc/src/tao/term/interface/taoterm.c:1913
-      [0]  main() at /home/hsuh/code/petsc/src/tao/unconstrained/tutorials/rosenbrock1_taoterm.c:60

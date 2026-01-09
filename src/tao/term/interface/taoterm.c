@@ -1944,7 +1944,9 @@ PetscErrorCode TaoTermComputeHessianUseFDPop(TaoTerm term)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   term->fd_hess_level--;
+  PetscCall(PetscFree(term->H_mattype));
   PetscCall(PetscStrallocpy(term->H_mattype_pre_fd_push, (char **)&term->H_mattype));
+  PetscCall(PetscFree(term->Hpre_mattype));
   PetscCall(PetscStrallocpy(term->Hpre_mattype_pre_fd_push, (char **)&term->Hpre_mattype));
   PetscCall(PetscFree(term->H_mattype_pre_fd_push));
   PetscCall(PetscFree(term->Hpre_mattype_pre_fd_push));
