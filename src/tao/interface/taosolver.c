@@ -573,13 +573,19 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-tao_mf_hessian", "compute matrix-free Hessian using finite differences", "TaoDefaultComputeHessianMFFD", flg, &flg, NULL));
   if (flg) {
-    Mat H;
+    PetscBool is_callback;
+    Mat       H;
 
-    PetscCall(MatCreate(PetscObjectComm((PetscObject)tao), &H));
-    PetscCall(MatSetOption(H, MAT_SYMMETRIC, PETSC_TRUE));
-    PetscCall(MatSetOption(H, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
-    PetscCall(TaoSetHessian(tao, H, H, TaoDefaultComputeHessianMFFD, NULL));
-    PetscCall(MatDestroy(&H));
+    // Check that tao has only one TaoTerm with type TAOTERMCALLBACK
+    PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callback));
+    if (is_callback) {
+      // Create Hessian via TaoTermCreateHessianMFFD
+      PetscCall(TaoTermCreateHessianMFFD(tao->objective_term.term, &H));
+      PetscCall(TaoSetHessian(tao, H, H, TaoDefaultComputeHessianMFFD, NULL));
+      PetscCall(MatDestroy(&H));
+    } else {
+      PetscCall(PetscInfo(tao, "-tao_mf_hessian only works when Tao has a single TAOTERMCALLBACK term. Ignoring.\n"));
+    }
   }
   PetscCall(PetscOptionsBool("-tao_recycle_history", "enable recycling/re-using information from the previous TaoSolve() call for some algorithms", "TaoSetRecycleHistory", flg, &flg, &found));
   if (found) PetscCall(TaoSetRecycleHistory(tao, flg));
@@ -767,6 +773,19 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
       PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function evaluations=%" PetscInt_FMT ",", tao->nfuncs));
       if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: unlimited)\n"));
       else PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: %" PetscInt_FMT ")\n", tao->max_funcs));
+    }
+    //TODO somehow I need to get number of ngrad_mffd, and print here.
+    //it makes sense to include it in total eval count. how do I do this though?
+    //also would like to print number of mffd grad eval in taotermview.
+    {
+      PetscBool is_callback;
+      PetscInt  ngrad_mffd;
+
+      // Check if tao has only one term and it's a callback
+      PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callback));
+      ngrad_mffd = tao->objective_term.term->ngrad_mffd;
+      if (is_callback) tao->ngrads += ngrad_mffd;
+      if (ngrad_mffd > 0 && format == PETSC_VIEWER_ASCII_INFO_DETAIL) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of MFFD gradient evaluations=%" PetscInt_FMT "\n", ngrad_mffd));
     }
     if (tao->ngrads > 0) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations=%" PetscInt_FMT ",", tao->ngrads));

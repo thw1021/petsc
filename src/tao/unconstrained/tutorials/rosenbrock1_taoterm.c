@@ -24,6 +24,8 @@ int main(int argc, char **argv)
   PetscMPIInt size; /* number of processes running */
   AppCtx      user; /* user-defined application context */
   MPI_Comm    comm;
+  PetscBool   test_gradient_fd_check = PETSC_FALSE; /* test that FD delta is preserved */
+  PetscReal   fd_delta_set           = 1.e-6;
 
   /* Initialize TAO and PETSc */
   PetscFunctionBeginUser;
@@ -33,6 +35,7 @@ int main(int argc, char **argv)
   PetscCheck(size == 1, comm, PETSC_ERR_WRONG_MPI_SIZE, "Incorrect number of processors");
 
   PetscOptionsBegin(comm, "", help, "none");
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_gradient_fd_check", &test_gradient_fd_check, NULL));
   PetscOptionsEnd();
   /* Initialize problem parameters */
   PetscCall(AppCtxInitialize(comm, &user));
@@ -62,8 +65,19 @@ int main(int argc, char **argv)
   /* Check for TAO command line options */
   PetscCall(TaoSetFromOptions(tao));
 
+  /* Set FD delta for testing if requested (after options processing) */
+  if (test_gradient_fd_check) PetscCall(TaoTermSetFDDelta(objective, fd_delta_set));
+
   /* SOLVE THE APPLICATION */
   PetscCall(TaoSolve(tao));
+
+  /* Check that FD delta is preserved if testing */
+  if (test_gradient_fd_check) {
+    PetscReal fd_delta_get;
+
+    PetscCall(TaoTermGetFDDelta(objective, &fd_delta_get));
+    PetscCheck(PetscAbsReal(fd_delta_get - 1.e-6) < 1.e-15, comm, PETSC_ERR_PLIB, "FD delta changed: set %g, got %g", (double)fd_delta_set, (double)fd_delta_get);
+  }
 
   if (user.use_fd) {
     PetscCall(TaoTermComputeGradientUseFDPop(objective));
@@ -171,12 +185,21 @@ static PetscErrorCode CreateSolutionVec(TaoTerm term, Vec *solution)
      args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4 -tao_test_gradient -tao_fd_delta 1.e-6 -n 4 -chained -tao_term_hessian_mat_type aij -alpha 49.0
 
    test:
+     suffix: test_gradient_fd_check
+     args: -tao_monitor_short -tao_type nls -tao_gatol 1.e-4 -tao_test_gradient
+     args: -n 4 -chained -tao_term_hessian_mat_type aij -alpha 49.0 -test_gradient_fd_check 1
+
+   test:
      suffix: fd_grad
      args: -tao_monitor_short -tao_type nls -tao_term_gradient_use_fd
 
    test:
      suffix: fd_hess
      args: -tao_monitor_short -tao_type nls -tao_term_hessian_use_fd
+
+   test:
+     suffix: use_fd
+     args: -tao_monitor_short -tao_type nls -use_fd
 
    test:
      suffix: test_fd_hess

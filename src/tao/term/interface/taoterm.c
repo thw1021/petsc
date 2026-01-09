@@ -117,6 +117,7 @@ PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
       PetscBool3 is_fdpossible;
 
+      //TODO print ngrad_mffd
       PetscCall(TaoTermIsComputeHessianFDPossible(term, &is_fdpossible));
       if (is_fdpossible == PETSC_BOOL3_FALSE) {
         if (term->fd_hess_level > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "Finite differences for Hessian computation was requested, but ignored.\n"));
@@ -133,7 +134,14 @@ PetscErrorCode TaoTermView(TaoTerm term, PetscViewer viewer)
           PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
           if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "default Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
         } else {
+          PetscBool is_h_mffd    = PETSC_FALSE;
+          PetscBool is_hpre_mffd = PETSC_FALSE;
+
+          if (term->H_mattype) PetscCall(PetscStrcmp(term->H_mattype, MATMFFD, &is_h_mffd));
+          if (term->Hpre_mattype) PetscCall(PetscStrcmp(term->H_mattype, MATMFFD, &is_hpre_mffd));
+
           PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian MatType (tao_term_hessian_mat_type): %s\n", term->H_mattype ? term->H_mattype : "(undefined)"));
+          if (is_h_mffd) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations used by MFFD=%" PetscInt_FMT "\n", term->ngrad_mffd));
           if (!term->Hpre_is_H) PetscCall(PetscViewerASCIIPrintf(viewer, "Hessian preconditioning MatType (tao_term_hessian_pre_mat_type): %s\n", term->Hpre_mattype ? term->Hpre_mattype : "(undefined)"));
         }
       }
@@ -444,6 +452,7 @@ PetscErrorCode TaoTermCreate(MPI_Comm comm, TaoTerm *term)
   PetscCall(MatGetLayouts(_term->parameters_factory, &rlayout, &clayout));
   PetscCall(MatSetLayouts(_term->parameters_factory, rlayout, zero_layout));
   PetscCall(PetscLayoutDestroy(&zero_layout));
+  _term->ngrad_mffd               = 0;
   _term->Hpre_is_H                = PETSC_TRUE;
   _term->fd_delta                 = 0.5 * PETSC_SQRT_MACHINE_EPSILON;
   _term->H_mattype                = NULL;

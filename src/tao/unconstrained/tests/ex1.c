@@ -16,6 +16,7 @@ int main(int argc, char **argv)
   Tao         tao;
   PetscInt    i, j;
   PetscReal   val, density = 0.3;
+  PetscBool   test_quad_mat = PETSC_FALSE;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
@@ -23,6 +24,7 @@ int main(int argc, char **argv)
   PetscOptionsBegin(comm, "", help, "none");
   PetscCall(PetscOptionsBoundedInt("-m", "data size", "", m, &m, NULL, 0));
   PetscCall(PetscOptionsBoundedInt("-n", "model size", "", n, &n, NULL, 0));
+  PetscCall(PetscOptionsBool("-test_quad_mat", "Test if quadratic term matrix matches W matrix", "", test_quad_mat, &test_quad_mat, NULL));
   PetscOptionsEnd();
 
   PetscCall(TaoCreate(comm, &tao));
@@ -66,6 +68,28 @@ int main(int argc, char **argv)
   PetscCall(TaoSetFromOptions(tao));
   PetscCall(TaoSolve(tao));
 
+  if (test_quad_mat) {
+    PetscReal   scale;
+    TaoTerm     term;
+    Vec         params;
+    Mat         map;
+    Mat         quad_mat;
+    TaoTermType term_type;
+    PetscBool   is_quad, mat_equal;
+
+    PetscCall(TaoGetTerm(tao, &scale, &term, &params, &map));
+    PetscCall(TaoTermGetType(term, &term_type));
+    PetscCall(PetscStrcmp(term_type, TAOTERMQUADRATIC, &is_quad));
+    PetscCheck(is_quad, comm, PETSC_ERR_ARG_WRONG, "Term from TaoGetTerm is not a quadratic term");
+
+    PetscCall(TaoTermQuadraticGetMat(term, &quad_mat));
+    PetscCheck(quad_mat != NULL, comm, PETSC_ERR_ARG_NULL, "Quadratic term matrix is NULL");
+
+    PetscCall(MatEqual(W, quad_mat, &mat_equal));
+    PetscCheck(mat_equal, comm, PETSC_ERR_PLIB, "Quadratic term matrix does not match W matrix");
+    PetscCall(PetscPrintf(comm, "Test passed: Quadratic term matrix matches W matrix\n"));
+  }
+
   PetscCall(VecDestroy(&b));
   PetscCall(MatDestroy(&W));
   PetscCall(MatDestroy(&A));
@@ -87,5 +111,9 @@ int main(int argc, char **argv)
   test:
     suffix: 1
     args: -tao_view ::ascii_info_detail -tao_type nls
+
+  test:
+    suffix: test_quad_mat
+    args: -test_quad_mat 1
 
 TEST*/

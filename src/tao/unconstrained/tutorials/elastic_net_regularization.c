@@ -23,6 +23,7 @@ int main(int argc, char **argv)
   PetscInt    k          = 10;  // dicionary size
   PetscBool   set_prefix = PETSC_TRUE;
   PetscBool   set_name   = PETSC_FALSE;
+  PetscBool   check_eps  = PETSC_FALSE;
   TaoTerm     data_term;
   TaoTerm     l2_reg_term;
   TaoTerm     l1_reg_term;
@@ -41,6 +42,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsBoundedInt("-k", "dictionary size", "", k, &k, NULL, 0));
   PetscCall(PetscOptionsBool("-set_term_prefix", "Set prefix to subterms", NULL, set_prefix, &set_prefix, NULL));
   PetscCall(PetscOptionsBool("-set_term_name", "Set name to subterms", NULL, set_name, &set_name, NULL));
+  PetscCall(PetscOptionsBool("-check_l1_eps", "Check epsilon of L1 term", NULL, check_eps, &check_eps, NULL));
   PetscOptionsEnd();
 
   PetscCall(TaoCreate(comm, &tao));
@@ -114,6 +116,27 @@ int main(int argc, char **argv)
     PetscCheck(p2 == NULL, PETSC_COMM_SELF, PETSC_ERR_COR, "Second parameter vector is not none");
   }
 
+  if (check_eps) {
+    PetscReal scale_get;
+    TaoTerm   get_term;
+    Vec       get_vec;
+    Mat       get_mat;
+    PetscInt  n_terms;
+    PetscInt  last_index;
+    PetscBool is_l1;
+    TaoTerm   last_subterm;
+    PetscReal epsilon;
+
+    PetscCall(TaoGetTerm(tao, &scale_get, &get_term, &get_vec, &get_mat));
+    PetscCall(TaoTermSumGetNumSubterms(get_term, &n_terms));
+    last_index = n_terms - 1;
+    PetscCall(TaoTermSumGetSubterm(get_term, last_index, NULL, NULL, &last_subterm, NULL));
+    PetscCall(PetscObjectTypeCompare((PetscObject)last_subterm, TAOTERML1, &is_l1));
+    PetscCheck(is_l1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Last term is not L1");
+    PetscCall(TaoTermL1GetEpsilon(last_subterm, &epsilon));
+    PetscCheck(PetscAbsReal(epsilon - 0.1) < PETSC_SMALL, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "L1 epsilon is not 0.1, got: %g", (double)epsilon);
+  }
+
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&y));
   PetscCall(MatDestroy(&D));
@@ -133,7 +156,7 @@ int main(int argc, char **argv)
 
   test:
     suffix: 0
-    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls
+    args: -tao_monitor_short -tao_view -lasso_tao_term_l1_epsilon 0.1 -tao_type nls -check_l1_eps 1
 
   test:
     suffix: 1

@@ -98,6 +98,13 @@ static PetscErrorCode testCallbacks(PetscBool separate)
   }
   PetscCall(TaoSetHessian(tao, H, Hpre, hessian, (void *)&app));
 
+  {
+    PetscBool is_defined;
+
+    PetscCall(TaoTermIsHessianDefined(term, &is_defined));
+    PetscCheck(is_defined == PETSC_TRUE, comm, PETSC_ERR_PLIB, "Hessian should be defined after setting it");
+  }
+
   if (separate) {
     PetscErrorCode (*_objective)(Tao, Vec, PetscReal *, void *);
     PetscErrorCode (*_gradient)(Tao, Vec, Vec, void *);

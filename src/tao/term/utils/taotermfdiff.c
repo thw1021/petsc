@@ -176,7 +176,9 @@ static PetscErrorCode MatMFFDFunction_TaoTermHessianShell(void *ctx, Vec x, Vec 
   PetscFunctionBegin;
   // we expect the solution to move around in a finite difference method, but not the parameters
   // TODO but not checking for it now
+  // TODO  ngrad eval not counted here!
   PetscCall(TaoTermComputeGradient(tp->term, x, tp->params, g));
+  tp->term->ngrad_mffd++;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -203,6 +205,10 @@ static PetscErrorCode TaoTermInitializeHessianMFFD(TaoTerm term, Mat mffd)
   PetscCall(PetscContainerSetCtxDestroy(container, TaoTermWithParametersDestroy));
   PetscCall(PetscObjectCompose((PetscObject)mffd, "__TaoTermWithParameters", (PetscObject)container));
   PetscCall(PetscContainerDestroy(&container));
+  PetscCall(PetscFree(term->Hpre_mattype));
+  PetscCall(PetscFree(term->H_mattype));
+  PetscCall(PetscStrallocpy(MATMFFD, (char **)&term->H_mattype));
+  PetscCall(PetscStrallocpy(MATMFFD, (char **)&term->Hpre_mattype));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
