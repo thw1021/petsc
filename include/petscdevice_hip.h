@@ -105,16 +105,29 @@ PETSC_EXTERN const char *PetscHIPSolverGetErrorName(hipsolverStatus_t); /* PETSC
   #define CHKERRHIPBLAS(...) PetscCallHIPBLAS(__VA_ARGS__)
 
   #if PETSC_PKG_HIP_VERSION_GE(4, 5, 0)
-    /* HIPSPARSE & HIPSOLVER have better functionality with ROCm-4.5 or newer */
-    #define PetscCallHIPSPARSE(...) \
-      do { \
-        const hipsparseStatus_t _p_hipsparse_stat__ = __VA_ARGS__; \
-        if (PetscUnlikely(_p_hipsparse_stat__ != HIPSPARSE_STATUS_SUCCESS)) { \
-          const char *name = PetscHIPSPARSEGetErrorName(_p_hipsparse_stat__); \
-          PetscCheck((_p_hipsparse_stat__ != HIPSPARSE_STATUS_NOT_INITIALIZED) && (_p_hipsparse_stat__ != HIPSPARSE_STATUS_ALLOC_FAILED), PETSC_COMM_SELF, PETSC_ERR_GPU_RESOURCE, "hipSPARSE errorcode %d (%s): Reports not initialized or alloc failed; this indicates the GPU has run out resources", (int)_p_hipsparse_stat__, name); \
-          SETERRQ(PETSC_COMM_SELF, PETSC_ERR_GPU, "hipSPARSE errorcode %d (%s)", (int)_p_hipsparse_stat__, name); \
-        } \
-      } while (0)
+  /* HIPSPARSE & HIPSOLVER have better functionality with ROCm-4.5 or newer */
+    #if PETSC_PKG_HIP_VERSION_GE(6, 0, 0)
+      #define PetscCallHIPSPARSE(...) \
+        do { \
+          const hipsparseStatus_t _p_hipsparse_stat__ = __VA_ARGS__; \
+          if (PetscUnlikely(_p_hipsparse_stat__ != HIPSPARSE_STATUS_SUCCESS)) { \
+            const char *name  = hipsparseGetErrorName(_p_hipsparse_stat__); \
+            const char *descr = hipsparseGetErrorString(_p_hipsparse_stat__); \
+            PetscCheck((_p_hipsparse_stat__ != HIPSPARSE_STATUS_NOT_INITIALIZED) && (_p_hipsparse_stat__ != HIPSPARSE_STATUS_ALLOC_FAILED), PETSC_COMM_SELF, PETSC_ERR_GPU_RESOURCE, "hipSPARSE errorcode %d (%s): %s.; Reports not initialized or alloc failed; this indicates the GPU has run out resources", (int)_p_hipsparse_stat__, name, descr); \
+            SETERRQ(PETSC_COMM_SELF, PETSC_ERR_GPU, "hipSPARSE errorcode %d (%s) : %s", (int)_p_hipsparse_stat__, name, descr); \
+          } \
+        } while (0)
+    #else
+      #define PetscCallHIPSPARSE(...) \
+        do { \
+          const hipsparseStatus_t _p_hipsparse_stat__ = __VA_ARGS__; \
+          if (PetscUnlikely(_p_hipsparse_stat__ != HIPSPARSE_STATUS_SUCCESS)) { \
+            const char *name = PetscHIPSPARSEGetErrorName(_p_hipsparse_stat__); \
+            PetscCheck((_p_hipsparse_stat__ != HIPSPARSE_STATUS_NOT_INITIALIZED) && (_p_hipsparse_stat__ != HIPSPARSE_STATUS_ALLOC_FAILED), PETSC_COMM_SELF, PETSC_ERR_GPU_RESOURCE, "hipSPARSE errorcode %d (%s): Reports not initialized or alloc failed; this indicates the GPU has run out resources", (int)_p_hipsparse_stat__, name); \
+            SETERRQ(PETSC_COMM_SELF, PETSC_ERR_GPU, "hipSPARSE errorcode %d (%s)", (int)_p_hipsparse_stat__, name); \
+          } \
+        } while (0)
+    #endif
     #define CHKERRHIPSPARSE(...) PetscCallHIPSPARSE(__VA_ARGS__)
 
     #define PetscCallHIPSOLVER(...) \
