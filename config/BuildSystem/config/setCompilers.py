@@ -2114,7 +2114,7 @@ class Configure(config.base.Configure):
       yield '-Xcompiler -fPIC'
       yield '-fPIC'
       return
-    if config.setCompilers.Configure.isGNU(self.getCompiler(), self.log) or config.setCompilers.Configure.isClang(self.getCompiler(), self.log):
+    if config.setCompilers.Configure.isGNU(self.getCompiler(), self.log) or config.setCompilers.Configure.isClang(self.getCompiler(), self.log) or config.setCompilers.Configure.isIntel(self.getCompiler(), self.log):
       PICFlags = ['-fPIC']
     elif config.setCompilers.Configure.isIBM(self.getCompiler(), self.log):
       PICFlags = ['-qPIC']
