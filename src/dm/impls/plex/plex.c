@@ -9701,7 +9701,8 @@ PetscErrorCode DMPlexCreateRankField(DM dm, Vec *ranks)
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)rdm, "PETSc___rank_"));
   PetscCall(DMGetDimension(rdm, &dim));
   PetscCall(DMPlexGetHeightStratum(rdm, 0, &cStart, &cEnd));
-  PetscCall(DMPlexGetCellType(rdm, cStart, &ct));
+  if (cEnd > cStart) PetscCall(DMPlexGetCellType(rdm, cStart, &ct));
+  else ct = DM_POLYTOPE_SEGMENT;
   PetscCall(PetscFECreateLagrangeByCell(PETSC_COMM_SELF, dim, 1, ct, 0, -1, &fe));
   PetscCall(PetscObjectSetName((PetscObject)fe, "rank"));
   PetscCall(DMSetField(rdm, 0, NULL, (PetscObject)fe));
