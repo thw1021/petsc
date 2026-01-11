@@ -7,8 +7,8 @@ typedef struct {
   PetscInt *n_per_level;
   Mat       stiff;
   Mat      *ProlongationOps;
-  PetscBT  *CFMarkers;
-  KSP       kspHypre;
+  Vec *CFMarkers;
+  KSP  kspHypre;
 } *DataCompression;
 
 PetscErrorCode Create1dLaplacian(PetscInt, Mat *);
@@ -88,7 +88,7 @@ PetscErrorCode DataCompExportMats(DataCompression data_comp)
 
   for (PetscInt i = 0; i < data_comp->num_levels - 1; i++) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Coarse/Fine splitting - Level %" PetscInt_FMT "\n", i + 1));
-    PetscCall(PetscBTView(data_comp->n_per_level[i + 1], data_comp->CFMarkers[i], PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(VecView(data_comp->CFMarkers[i], PETSC_VIEWER_STDOUT_WORLD));
   }
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Stiffness matrix, sparse format:\n"));
   PetscCall(MatViewFromOptions(data_comp->stiff, NULL, "-mat_view_stiff"));
@@ -104,7 +104,7 @@ PetscErrorCode DataCompDestroy(DataCompression data_comp)
   PetscCall(KSPDestroy(&data_comp->kspHypre));
   for (PetscInt i = 0; i < data_comp->num_levels - 1; i++) {
     PetscCall(MatDestroy(&data_comp->ProlongationOps[i]));
-    PetscCall(PetscBTDestroy(&data_comp->CFMarkers[i]));
+    PetscCall(VecDestroy(&data_comp->CFMarkers[i]));
   }
   PetscCall(PetscFree(data_comp->ProlongationOps));
   PetscCall(PetscFree(data_comp->n_per_level));
