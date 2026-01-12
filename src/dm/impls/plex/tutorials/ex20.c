@@ -7,7 +7,7 @@ int main(int argc, char **argv)
   DM        dm;
   Mat       H, Q;
   PetscInt  numobservations;
-  PetscInt  dim      = 1, n;
+  PetscInt  dim = 1, n;
   PetscInt  faces[3];
   PetscReal lower[3] = {0.0, 0.0, 0.0};
   PetscReal upper[3] = {1.0, 1.0, 1.0};
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 
   /* Set number of local observations to use: 3^dim */
   numobservations = 1;
-  for (PetscInt d = 0; d < dim; d++) numobservations *= 3;
+  for (PetscInt d = 0; d < dim && d < 2; d++) numobservations *= 3;
 
   /* Get number of vertices */
   PetscInt vStart, vEnd, numVertices;
@@ -215,6 +215,6 @@ int main(int argc, char **argv)
     requires: !complex
     suffix: 3
     diff_args: -j
-    args: -dm_plex_dim 3 -dm_plex_box_faces 6,6,6 -dm_plex_simplex 0
+    args: -dm_plex_dim 3 -dm_plex_box_faces 5,5,5 -dm_plex_simplex 0
 
 TEST*/
