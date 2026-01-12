@@ -27,7 +27,7 @@ static PetscReal GaspariCohn(PetscReal d, PetscReal R)
   if (r <= 1.0) {
     return 1.0 - (5.0 / 3.0) * r2 + (5.0 / 8.0) * r3 + 0.5 * r4 - 0.25 * r5;
   } else {
-    return 4.0 - 5.0 * r + (5.0 / 3.0) * r2 + (5.0 / 8.0) * r3 - 0.5 * r4 - (2.0 / 3.0) / r - 2.0;
+    return (1.0 / 12.0) * r5 - 0.5 * r4 + (5.0 / 8.0) * r3 + (5.0 / 3.0) * r2 - 5.0 * r + 4.0 - (2.0 / 3.0) / r;
   }
 }
 
