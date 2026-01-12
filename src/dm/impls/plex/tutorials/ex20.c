@@ -7,32 +7,26 @@ int main(int argc, char **argv)
   DM             dm;
   Mat            H, Q;
   PetscInt       numobservations;
-  PetscInt       dim      = 1;
+  PetscInt       dim      = 1, n;
   PetscInt       faces[3] = {10, 4, 4};
   PetscReal      lower[3] = {0.0, 0.0, 0.0};
   PetscReal      upper[3] = {1.0, 1.0, 1.0};
-  DMBoundaryType bdt[3]   = {DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
 
-  /* Get dimension from options */
+  /* Get dimension and from options. We need the data here and Plex does not have access functions */
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-dm_plex_dim", &dim, NULL));
+  n = 3;
+  PetscCall(PetscOptionsGetIntArray(NULL, NULL, "-dm_plex_box_faces", faces, &n, NULL));
+  n = 3;
+  PetscCall(PetscOptionsGetRealArray(NULL, NULL, "-dm_plex_box_lower", lower, &n, NULL));
+  n = 3;
+  PetscCall(PetscOptionsGetRealArray(NULL, NULL, "-dm_plex_box_upper", upper, &n, NULL));
 
-  /* Set faces based on dimension */
-  if (dim == 1) {
-    faces[0] = 16;
-  } else if (dim == 2) {
-    faces[0] = 8;
-    faces[1] = 8;
-  } else if (dim == 3) {
-    faces[0] = 6;
-    faces[1] = 6;
-    faces[2] = 6;
-  }
-
-  /* Create the mesh using DMPlexCreateBoxMesh like ex21 */
-  PetscCall(DMPlexCreateBoxMesh(PETSC_COMM_WORLD, dim, PETSC_FALSE, faces, lower, upper, bdt, PETSC_TRUE, 0, PETSC_TRUE, &dm));
+  /* Create the mesh using DMPlexCreateBoxMesh (could pass parameters) */
+  PetscCall(DMCreate(PETSC_COMM_WORLD, &dm));
+  PetscCall(DMSetType(dm, DMPLEX));
   PetscCall(DMSetFromOptions(dm));
   PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
 
@@ -87,8 +81,8 @@ int main(int argc, char **argv)
 
       /* Check if this vertex is at an observation location (every other grid point) */
       for (PetscInt d = 0; d < dim; d++) {
-        PetscReal gridSpacing = upper[d] / faces[d];
-        PetscInt  gridIdx     = (PetscInt)(coords[d] / gridSpacing + 0.5);
+        PetscReal gridSpacing = (upper[d] - lower[d]) / faces[d];
+        PetscInt  gridIdx     = (PetscInt)((coords[d] - lower[d]) / gridSpacing + 0.5);
         if (gridIdx % 2 != 0) {
           isObs = PETSC_FALSE;
           break;
@@ -128,8 +122,8 @@ int main(int argc, char **argv)
 
       /* Check if this vertex is at an observation location (every other grid point) */
       for (PetscInt d = 0; d < dim; d++) {
-        PetscReal gridSpacing = upper[d] / faces[d];
-        PetscInt  gridIdx     = (PetscInt)(coords[d] / gridSpacing + 0.5);
+        PetscReal gridSpacing = (upper[d] - lower[d]) / faces[d];
+        PetscInt  gridIdx     = (PetscInt)((coords[d] - lower[d]) / gridSpacing + 0.5);
         if (gridIdx % 2 != 0) {
           isObs = PETSC_FALSE;
           break;
@@ -171,8 +165,8 @@ int main(int argc, char **argv)
 
       /* Check if vertex is on the boundary */
       for (PetscInt d = 0; d < dim; d++) {
-        PetscReal gridSpacing = upper[d] / faces[d];
-        PetscInt  gridIdx     = (PetscInt)(coords[d] / gridSpacing + 0.5);
+        PetscReal gridSpacing = (upper[d] - lower[d]) / faces[d];
+        PetscInt  gridIdx     = (PetscInt)((coords[d] - lower[d]) / gridSpacing + 0.5);
         if (gridIdx == 0 || gridIdx == faces[d]) {
           isInterior = PETSC_FALSE;
           break;
@@ -181,7 +175,7 @@ int main(int argc, char **argv)
 
       if (isInterior) {
         for (PetscInt d = 0; d < dim; d++) {
-          PetscReal noise, gridSpacing = upper[d] / faces[d];
+          PetscReal noise, gridSpacing = (upper[d] - lower[d]) / faces[d];
 
           seed  = (1103515245 * seed + 12345) % 2147483648;
           noise = (PetscReal)seed / 2147483648.0;
@@ -211,21 +205,21 @@ int main(int argc, char **argv)
 /*TEST
 
   test:
-    requires: kokkos !complex
+    requires: !complex
     suffix: 1
     diff_args: -j
-    args: -dm_plex_dim 1
+    args: -dm_plex_dim 1 -dm_plex_box_faces 16 -dm_plex_simplex 0
 
   test:
-    requires: kokkos !complex
+    requires: !complex
     suffix: 2
     diff_args: -j
-    args: -dm_plex_dim 2
+    args: -dm_plex_dim 2 -dm_plex_box_faces 8,8 -dm_plex_simplex 0
 
   test:
-    requires: kokkos !complex
+    requires: !complex
     suffix: single
     diff_args: -j
-    args: -dm_plex_dim 2
+    args: -dm_plex_dim 3 -dm_plex_box_faces 6,6,6 -dm_plex_simplex 0
 
 TEST*/
