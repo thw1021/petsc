@@ -4,13 +4,13 @@ static char help[] = "Test DMPlexGetLETKFLocalizationMatrix.\n\n";
 
 int main(int argc, char **argv)
 {
-  DM             dm;
-  Mat            H, Q;
-  PetscInt       numobservations;
-  PetscInt       dim      = 1, n;
-  PetscInt       faces[3] = {10, 4, 4};
-  PetscReal      lower[3] = {0.0, 0.0, 0.0};
-  PetscReal      upper[3] = {1.0, 1.0, 1.0};
+  DM        dm;
+  Mat       H, Q;
+  PetscInt  numobservations;
+  PetscInt  dim      = 1, n;
+  PetscInt  faces[3];
+  PetscReal lower[3] = {0.0, 0.0, 0.0};
+  PetscReal upper[3] = {1.0, 1.0, 1.0};
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -150,28 +150,23 @@ int main(int argc, char **argv)
     PetscSection  coordSection;
     PetscScalar  *coordArray;
     unsigned long seed = 123456789;
+    DMLabel       label;
 
     PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
     PetscCall(DMGetCoordinateSection(dm, &coordSection));
     PetscCall(VecGetArray(coordinates, &coordArray));
+    PetscCall(DMGetLabel(dm, "marker", &label));
 
     for (PetscInt v = vStart; v < vEnd; v++) {
-      PetscReal coords[3] = {0.0, 0.0, 0.0};
       PetscInt  offset;
       PetscBool isInterior = PETSC_TRUE;
+      PetscInt  val;
 
       PetscCall(PetscSectionGetOffset(coordSection, v, &offset));
-      for (PetscInt d = 0; d < dim; d++) coords[d] = PetscRealPart(coordArray[offset + d]);
 
       /* Check if vertex is on the boundary */
-      for (PetscInt d = 0; d < dim; d++) {
-        PetscReal gridSpacing = (upper[d] - lower[d]) / faces[d];
-        PetscInt  gridIdx     = (PetscInt)((coords[d] - lower[d]) / gridSpacing + 0.5);
-        if (gridIdx == 0 || gridIdx == faces[d]) {
-          isInterior = PETSC_FALSE;
-          break;
-        }
-      }
+      PetscCall(DMLabelGetValue(label, v, &val));
+      if (val != -1) isInterior = PETSC_FALSE;
 
       if (isInterior) {
         for (PetscInt d = 0; d < dim; d++) {
@@ -218,7 +213,7 @@ int main(int argc, char **argv)
 
   test:
     requires: !complex
-    suffix: single
+    suffix: 3
     diff_args: -j
     args: -dm_plex_dim 3 -dm_plex_box_faces 6,6,6 -dm_plex_simplex 0
 
