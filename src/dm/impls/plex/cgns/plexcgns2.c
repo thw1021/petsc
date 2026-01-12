@@ -2177,7 +2177,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
         PetscInt is_idx;
 
         PetscCall(ISLocate(fsISTotal, fs_pnts[i], &is_idx));
-        fs_pnts_cg[i] = is_idx + elem_offset + 1;
+        fs_pnts_cg[i] = is_idx + f_start + 1 ;
       }
 
       { // TODO: Verify that this is the correct way to do this. Particularly the magic numbers "1" and "0"
