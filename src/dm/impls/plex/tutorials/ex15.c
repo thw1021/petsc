@@ -210,20 +210,19 @@ PetscErrorCode VerifyDMLabels(DM dm_serial, DM dm_load, const char label_name[],
   MPI_Comm    comm              = PetscObjectComm((PetscObject)dm_load);
   PetscInt    num_values_serial = 0, dim;
   PetscInt   *values_serial     = NULL;
-  DMLabel     label_serial, label_load;
+  DMLabel     label_serial = NULL, label_load;
 
   PetscFunctionBeginUser;
   PetscCall(DMGetCoordinateDim(dm_load, &dim));
   PetscCall(MPI_Comm_rank(comm, &rank));
-  PetscCall(DMGetLabel(dm_serial, label_name, &label_serial));
   if (dm_serial) { // Communicate valid label values to all ranks
     IS              serialValuesIS;
     const PetscInt *values_serial_is;
 
     PetscCheck(rank == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Rank with serial DM not rank 0");
+    PetscCall(DMGetLabel(dm_serial, label_name, &label_serial));
     PetscCall(DMLabelGetNonEmptyStratumValuesIS(label_serial, &serialValuesIS));
     PetscCall(ISGetLocalSize(serialValuesIS, &num_values_serial));
-    PetscCall(MPI_Bcast(&num_values_serial, 1, MPIU_INT, 0, comm));
 
     PetscCall(PetscMalloc1(num_values_serial, &values_serial));
     PetscCall(ISGetIndices(serialValuesIS, &values_serial_is));
@@ -232,9 +231,10 @@ PetscErrorCode VerifyDMLabels(DM dm_serial, DM dm_load, const char label_name[],
     PetscCall(ISRestoreIndices(serialValuesIS, &values_serial_is));
     PetscCall(ISDestroy(&serialValuesIS));
   }
-  PetscCall(MPI_Bcast(&num_values_serial, 1, MPIU_INT, 0, comm));
+  PetscCallMPI(MPI_Bcast(&num_values_serial, 1, MPIU_INT, 0, comm));
   if (values_serial == NULL) PetscCall(PetscMalloc1(num_values_serial, &values_serial));
-  PetscCall(MPI_Bcast(values_serial, num_values_serial, MPIU_INT, 0, comm));
+  PetscCallMPI(MPI_Bcast(values_serial, num_values_serial, MPIU_INT, 0, comm));
+
 
   IS              loadValuesIS;
   PetscInt        num_values_global;
@@ -251,9 +251,11 @@ PetscErrorCode VerifyDMLabels(DM dm_serial, DM dm_load, const char label_name[],
     are_values_same = PETSC_FALSE;
   }
   PetscCall(PetscPrintf(comm, "DMLabel '%s': serial values:\n", label_name));
-  PetscCall(PetscIntView(num_values_serial, values_serial, NULL));
+  PetscCall(PetscIntView(num_values_serial, values_serial, PETSC_VIEWER_STDOUT_(comm)));
+  // PetscCall(DMLabelView(label_serial, NULL));
   PetscCall(PetscPrintf(comm, "DMLabel '%s': global values:\n", label_name));
-  PetscCall(PetscIntView(num_values_global, values_global, NULL));
+  PetscCall(PetscIntView(num_values_global, values_global, PETSC_VIEWER_STDOUT_(comm)));
+  // PetscCall(DMLabelView(label_load, NULL));
   for (PetscInt i = 0; i < num_values_serial; i++) {
     PetscInt loc;
     PetscCall(PetscFindInt(values_serial[i], num_values_global, values_global, &loc));
@@ -282,12 +284,13 @@ PetscErrorCode VerifyDMLabels(DM dm_serial, DM dm_load, const char label_name[],
 
     PetscCall(PetscSFCreate(comm, &serial2loadPointSF_));
     PetscCall(PetscSFSetGraphFromCoordinates(serial2loadPointSF_, num_points_serial, num_points_load, dim, 100 * PETSC_MACHINE_EPSILON, points_centroid_serial, points_centroid_load));
+    PetscCall(PetscObjectSetName((PetscObject)serial2loadPointSF_, "Serial To Loaded DM Points SF"));
     PetscCall(PetscSFViewFromOptions(serial2loadPointSF_, NULL, "-verify_points_sf_view"));
     PetscCall(PetscFree(points_centroid_load));
     PetscCall(PetscFree(points_centroid_serial));
   }
 
-  PetscSection pointSerialSection;
+  PetscSection pointSerialSection = NULL;
   PetscInt     npointMaskSerial = 0;
   PetscBool   *pointMask, *pointMaskSerial = NULL;
 
@@ -309,7 +312,7 @@ PetscErrorCode VerifyDMLabels(DM dm_serial, DM dm_load, const char label_name[],
     PetscInt value     = values_global[v];
     IS       stratumIS = NULL;
 
-    if (pointMaskSerial) PetscCall(PetscArrayzero(pointMaskSerial, num_points_serial));
+    if (pointMaskSerial) PetscCall(PetscArrayzero(pointMaskSerial, npointMaskSerial));
     PetscCall(PetscArrayzero(pointMask, num_points_load));
     PetscCall(DMLabelGetStratumIS(label_load, value, &stratumIS));
     if (stratumIS) {
@@ -342,10 +345,12 @@ PetscErrorCode VerifyDMLabels(DM dm_serial, DM dm_load, const char label_name[],
           PetscCall(PetscSectionGetDof(pointSerialSection, p, &ndof));
           PetscCall(PetscSectionGetOffset(pointSerialSection, p, &offset));
           PetscCall(PetscFindInt(p, num_points, points, &loc));
-          PetscBool serial_has_point = loc > 0;
+          PetscBool serial_has_point = loc >= 0;
 
           for (PetscInt d = 0; d < ndof; d++) {
-            if (serial_has_point != pointMaskSerial[offset + d]) PetscCall(PetscPrintf(comm, "DMLabel '%s': Serial and global DM disagree on point %" PetscInt_FMT " valid for label value %" PetscInt_FMT "\n", label_name, p, value));
+            if (serial_has_point != pointMaskSerial[offset + d]) {
+              PetscCall(PetscPrintf(comm, "DMLabel '%s': Serial and global DM disagree on point %" PetscInt_FMT " valid for label value %" PetscInt_FMT "\n", label_name, p, value));
+            }
           }
         }
         PetscCall(ISRestoreIndices(stratumIS, &points));
@@ -404,10 +409,10 @@ int main(int argc, char **argv)
       PetscCall(VecLoad(V_serial, viewer));
       PetscCall(PetscViewerDestroy(&viewer));
 
-      // Write out the file so that it has whatever addition DMLabels that were created before
-      PetscCall(PetscViewerCGNSOpen(comm, user.infile, FILE_MODE_WRITE, &viewer));
-      PetscCall(VecView(V_serial, viewer));
-      PetscCall(PetscViewerDestroy(&viewer));
+      // // Write out the file so that it has whatever addition DMLabels that were created before
+      // PetscCall(PetscViewerCGNSOpen(comm, user.infile, FILE_MODE_WRITE, &viewer));
+      // PetscCall(VecView(V_serial, viewer));
+      // PetscCall(PetscViewerDestroy(&viewer));
 
       PetscCallMPI(MPI_Comm_free(&comm));
     }
@@ -467,7 +472,8 @@ int main(int argc, char **argv)
       // Verify loaded solution against serial solution
       PetscCall(VerifyLoadedSolution(dm_serial, V_serial, dm, V, 100 * PETSC_MACHINE_EPSILON));
 
-      if (i != 0) PetscCall(VerifyDMLabels(dm_serial, dm, "Face Sets", NULL));
+      // if (i != 0) PetscCall(VerifyDMLabels(dm_serial, dm, "Face Sets", NULL));
+      PetscCall(VerifyDMLabels(dm_serial, dm, "Face Sets", NULL));
 
       // Write loaded solution to CGNS file
       PetscCall(PetscViewerCGNSOpen(comm, user.outfile, FILE_MODE_WRITE, &viewer));
