@@ -174,7 +174,7 @@ int main(int argc, char **argv)
 
           seed  = (1103515245 * seed + 12345) % 2147483648;
           noise = (PetscReal)seed / 2147483648.0;
-          coordArray[offset + d] += (noise - 0.5) * 0.001 * gridSpacing;
+          coordArray[offset + d] += (noise - 0.5) * 0.05 * gridSpacing;
         }
       }
     }
