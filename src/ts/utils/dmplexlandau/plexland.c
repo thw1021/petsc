@@ -2095,10 +2095,6 @@ PetscErrorCode DMPlexLandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, cons
     if (ctx->use_p4est) {
       DM plex;
       PetscCall(adapt(grid, ctx, &Xsub[grid])); // forest goes in, plex comes out
-      if (grid == 0) {
-        PetscCall(DMViewFromOptions(ctx->plex[grid], NULL, "-dm_landau_amr_dm_view")); // need to differentiate - todo
-        PetscCall(VecViewFromOptions(Xsub[grid], NULL, "-dm_landau_amr_vec_view"));
-      }
       // convert to plex, all done with this level
       PetscCall(DMConvert(ctx->plex[grid], DMPLEX, &plex));
       PetscCall(DMDestroy(&ctx->plex[grid]));
@@ -2106,10 +2102,11 @@ PetscErrorCode DMPlexLandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, cons
     } else if (ctx->sphere && dim == 3) {
       PetscCall(LandauSphereMesh(ctx->plex[grid], ctx->radius[grid]));
       PetscCall(LandauSetInitialCondition(ctx->plex[grid], Xsub[grid], grid, 0, 1, ctx));
-      if (grid == 0) {
-        PetscCall(DMViewFromOptions(ctx->plex[grid], NULL, "-dm_landau_amr_dm_view")); // need to differentiate - todo
-        PetscCall(VecViewFromOptions(Xsub[grid], NULL, "-dm_landau_amr_vec_view"));
-      }
+    }
+    if (grid == 0) {
+      PetscCall(DMViewFromOptions(ctx->plex[grid], NULL, "-dm_landau_amr_dm_view"));
+      PetscCall(VecSetOptionsPrefix(Xsub[grid], prefix));
+      PetscCall(VecViewFromOptions(Xsub[grid], NULL, "-dm_landau_amr_vec_view"));
     }
 #if !defined(LANDAU_SPECIES_MAJOR)
     PetscCall(DMCompositeAddDM(*pack, ctx->plex[grid]));
