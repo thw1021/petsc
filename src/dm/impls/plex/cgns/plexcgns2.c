@@ -1093,16 +1093,16 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myown
 
         // Once we have found the rank(s) whose Plex has the CGNS face `f`, we can begin to build the information for the SF.
         // We want the roots to be the CGNS faces and the leaves to be the corresponding Plex faces, but we have the opposite; for the owned face on myrank, we know the rank that has the corresponding Plex face.
-        // To get the inverse, we store each SF edge with a tuple of PetscSFNodes; one in plexFaceRemotes and the other in ownedFaceRemotes.
+        // To get the inverse, we assign each SF edge with a tuple of PetscSFNodes; one in plexFaceRemotes and the other in ownedFaceRemotes.
         // plexFaceRemotes has the rank and index of the Plex face.
         // ownedFaceRemotes has the rank and index of the owned CGNS face.
-        // Note that ownedFaceRemotes is all on my rank.
+        // Note that ownedFaceRemotes is all on my rank (e.g. rank == myrank).
         //
         // Then, to build the cg2plexSF, we communicate the ownedFaceRemotes to the plexFaceRemotes (via SFReduce).
         // Those ownedFaceRemotes then act as the leaves to the roots on this process.
         //
         // Conceptually, this is the same as calling PetscSFCreateInverseSF on an SF with iremotes = plexFaceRemotes and the ilocal = ownedFaceRemotes[:].index.
-        // However, we cannot use this much simpler way because when there are multiple matching Plex faces on other ranks, PetscSFCreateInverseSF() will be invalid due to ownedFaceRemotes[:].index having repeated values (e.g. multi-leaves)
+        // However, we cannot use this much simpler way because when there are multiple matching Plex faces, PetscSFCreateInverseSF() will be invalid due to ownedFaceRemotes[:].index having repeated values (only root vertices of the SF graph may have multiplicity > 1)
         PetscSFNode *plexFaceRemotes_buffer, *ownedFaceRemotes_buffer;
         PetscCall(PetscSegBufferGet(plexFaceRemotes_SB, nface_ranks, &plexFaceRemotes_buffer));
         PetscCall(PetscSegBufferGet(ownedFaceRemotes_SB, nface_ranks, &ownedFaceRemotes_buffer));
@@ -1228,45 +1228,67 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myown
       PetscCall(PetscFree2(dmplex_verts, uniq_verts_sorted));
     }
 
+    {
+      PetscBool view_connectivity = PETSC_FALSE;
+      PetscCall(PetscOptionsGetBool(NULL, NULL, "-dm_plex_cgns_view_face_connectivity", &view_connectivity, NULL));
+      if (view_connectivity) {
+        PetscCall(PetscPrintf(comm, "Distributed CGNS Face Connectivity (in Plex vertex numbering):\n"));
+        PetscCall(PetscSectionArrayView(connDistSection, connDist, PETSC_INT, NULL));
+      }
+
+      PetscSection conesSection;
+      PetscInt *cones;
+      PetscCall(DMPlexGetCones(dm, &cones));
+      PetscCall(DMPlexGetConeSection(dm, &conesSection));
+      if (view_connectivity) {
+        PetscCall(PetscPrintf(comm, "Plex Cones:\n"));
+        PetscCall(PetscSectionArrayView(conesSection, cones, PETSC_INT, NULL));
+      }
+    }
+
     // For every face in connDistSection, find the transitive support of a vertex in that face connectivity.
     // Loop through the faces of the transitive support and find the matching face
-    PetscInt hStart, hEnd;
-    PetscCall(DMPlexGetHeightStratum(dm, 1, &hStart, &hEnd));
+    // TODO: Figure out why I didn't use fStart/End instead of hStart/End (is fStart used somewhere, or some similar nomenclature?)
+    PetscInt fplexStart, fplexEnd, vplexStart, vplexEnd;
+    PetscCall(DMPlexGetHeightStratum(dm, 1, &fplexStart, &fplexEnd));
+    PetscCall(DMPlexGetDepthStratum(dm, 0, &vplexStart, &vplexEnd));
     PetscCall(PetscSectionGetChart(connDistSection, &fdistStart, &fdistEnd));
     PetscCall(PetscMalloc1(fdistEnd - fdistStart, plexFaces));
     for (PetscInt i = 0; i < fdistEnd - fdistStart; i++) (*plexFaces)[i] = -1;
 
     for (PetscInt f = fdistStart, f_i = 0; f < fdistEnd; f++, f_i++) {
-      PetscInt  ndof, offset, closure_size;
-      PetscInt *closure;
+      PetscInt  ndof, offset, support_size;
+      PetscInt *support;
 
       PetscCall(PetscSectionGetDof(connDistSection, f, &ndof));
       PetscCall(PetscSectionGetOffset(connDistSection, f, &offset));
 
       // Loop through transitive support of a vertex in the CGNS face connectivity
-      PetscCall(DMPlexGetTransitiveClosure(dm, connDist[offset + 0], PETSC_FALSE, &closure_size, &closure));
-      for (PetscInt p = 0; p < closure_size * 2; p++) {
-        PetscInt        point = closure[p * 2]; // closure stores points and orientations, [p_0, o_0, p_1, o_1, ...]
-        PetscInt        cone_size;
-        const PetscInt *cone;
+      PetscCall(DMPlexGetTransitiveClosure(dm, connDist[offset + 0], PETSC_FALSE, &support_size, &support));
+      for (PetscInt p = 0; p < support_size; p++) {
+        PetscInt        face_point = support[p * 2]; // closure stores points and orientations, [p_0, o_0, p_1, o_1, ...]
+        PetscInt        trans_cone_size, *trans_cone;
 
-        if (point < hStart && point >= hEnd) continue; // Skip non-face points
+        if (face_point < fplexStart || face_point >= fplexEnd) continue; // Skip non-face points
 
-        PetscCall(DMPlexGetConeSize(dm, point, &cone_size));
-        if (cone_size != ndof) goto check_next_face;
-        PetscCall(DMPlexGetCone(dm, point, &cone));
+        // TODO This needs to get the Transitive cones and loop through the vertices only
+        PetscCall(DMPlexGetTransitiveClosure(dm, face_point, PETSC_TRUE, &trans_cone_size, &trans_cone));
+
         // See if point has same connectivity
-        for (PetscInt c = 0; c < cone_size; c++) {
-          PetscInt conn_has_point;
-          PetscCall(PetscFindIntUnsorted(cone[c], ndof, &connDist[offset], &conn_has_point));
-          if (conn_has_point < 0) goto check_next_face;
+        for (PetscInt c = 0; c < trans_cone_size; c++) {
+          PetscInt vertex_point = trans_cone[c * 2], conn_has_vertex;
+          if (vertex_point < vplexStart || vertex_point >= vplexEnd) continue; // Skip non-vertex points
+          PetscCall(PetscFindIntUnsorted(vertex_point, ndof, &connDist[offset], &conn_has_vertex));
+          if (conn_has_vertex < 0) goto check_next_face;
         }
-        (*plexFaces)[f_i] = point;
+        (*plexFaces)[f_i] = face_point;
+        PetscCall(DMPlexRestoreTransitiveClosure(dm, face_point, PETSC_TRUE, &trans_cone_size, &trans_cone));
         break;
       check_next_face:
+        PetscCall(DMPlexRestoreTransitiveClosure(dm, face_point, PETSC_TRUE, &trans_cone_size, &trans_cone));
         continue;
       }
-      PetscCall(DMPlexRestoreTransitiveClosure(dm, connDist[offset + 0], PETSC_FALSE, &closure_size, &closure));
+      PetscCall(DMPlexRestoreTransitiveClosure(dm, connDist[offset + 0], PETSC_FALSE, &support_size, &support));
       PetscCheck((*plexFaces)[f_i] != -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Could not find plex face for the CGNS face");
     }
 
@@ -1424,6 +1446,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
   }
 
   if (interpolate) PetscCall(DMPlexInterpolateInPlace_Internal(*dm));
+    PetscCall(DMViewFromOptions(*dm, NULL, "-corner_interpolated_dm_view"));
 
   int nbocos;
   PetscCallCGNSRead(cg_nbocos(cgid, base, zone, &nbocos), *dm, 0);
@@ -1439,7 +1462,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
   //
   // Next, we read the list of CGNS faces for each boco and find the location of that face's owner.
   // Then, we can communicate the label value to the local Plex which corresponds to the CGNS face.
-  if (num_face_sections != 0 && nbocos != 0) {
+  if (interpolate && num_face_sections != 0 && nbocos != 0) {
     CGNS_ENUMT(ElementType_t) * cellTypes;
     PetscSection connSection;
     PetscInt     nCgFaces, nPlexFaces;
@@ -1448,6 +1471,11 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
     PetscLayout *cgnsLayouts;
 
     PetscCall(DMPlexCGNS_CreateCornersConnectivitySection(*dm, cgid, base, zone, num_face_sections, face_section_ids, &connSection, &cellTypes, &face_ids, &cgnsLayouts, &conn));
+    {
+      PetscBool view_connectivity = PETSC_FALSE;
+      PetscCall(PetscOptionsGetBool(NULL, NULL, "-dm_plex_cgns_view_face_connectivity", &view_connectivity, NULL));
+      if (view_connectivity) PetscCall(PetscSectionArrayView(connSection, conn, PETSC_INT, NULL));
+    }
     PetscCall(DMPlexCGNS_MatchCGNSFacesToPlexFaces(*dm, myownede, nuniq_verts, uniq_verts, NVertices, connSection, conn, &cg2plexSF, &plexFaces));
     PetscCall(PetscSFGetGraph(cg2plexSF, NULL, &nPlexFaces, NULL, NULL));
     {
