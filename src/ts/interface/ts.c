@@ -2038,7 +2038,7 @@ PetscErrorCode TSView(TS ts, PetscViewer viewer)
 
 .seealso: [](ch_ts), `TS`, `TSGetApplicationContext()`
 @*/
-PetscErrorCode TSSetApplicationContext(TS ts, PeCtx ctx)
+PetscErrorCode TSSetApplicationContext(TS ts, void *ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
