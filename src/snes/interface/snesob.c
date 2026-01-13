@@ -49,7 +49,7 @@ PetscErrorCode SNESSetObjective(SNES snes, SNESObjectiveFn *obj, void *ctx)
 
 .seealso: [](ch_snes), `SNES`, `SNESSetObjective()`, `SNESGetSolution()`, `SNESObjectiveFn`
 @*/
-PetscErrorCode SNESGetObjective(SNES snes, SNESObjectiveFn **obj, void **ctx)
+PetscErrorCode SNESGetObjective(SNES snes, SNESObjectiveFn **obj, PeCtx ctx)
 {
   DM dm;
 

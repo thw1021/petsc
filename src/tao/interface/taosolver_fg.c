@@ -307,12 +307,12 @@ PetscErrorCode TaoSetObjective(Tao tao, PetscErrorCode (*func)(Tao tao, Vec x, P
 
 .seealso: [](ch_tao), `Tao`, `TaoSetGradient()`, `TaoSetHessian()`, `TaoSetObjective()`
 @*/
-PetscErrorCode TaoGetObjective(Tao tao, PetscErrorCode (**func)(Tao tao, Vec x, PetscReal *f, void *ctx), void **ctx)
+PetscErrorCode TaoGetObjective(Tao tao, PetscErrorCode (**func)(Tao tao, Vec x, PetscReal *f, void *ctx), PeCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (func) *func = tao->ops->computeobjective;
-  if (ctx) *ctx = tao->user_objP;
+  if (ctx) *(void **)ctx = tao->user_objP;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -503,13 +503,13 @@ PetscErrorCode TaoSetGradient(Tao tao, Vec g, PetscErrorCode (*func)(Tao tao, Ve
 
 .seealso: [](ch_tao), `Tao`, `TaoSetObjective()`, `TaoSetHessian()`, `TaoSetObjectiveAndGradient()`, `TaoSetGradient()`
 @*/
-PetscErrorCode TaoGetGradient(Tao tao, Vec *g, PetscErrorCode (**func)(Tao tao, Vec x, Vec g, void *ctx), void **ctx)
+PetscErrorCode TaoGetGradient(Tao tao, Vec *g, PetscErrorCode (**func)(Tao tao, Vec x, Vec g, void *ctx), PeCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (g) *g = tao->gradient;
   if (func) *func = tao->ops->computegradient;
-  if (ctx) *ctx = tao->user_gradP;
+  if (ctx) *(void **)ctx = tao->user_gradP;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -579,13 +579,13 @@ PetscErrorCode TaoSetObjectiveAndGradient(Tao tao, Vec g, PetscErrorCode (*func)
 
 .seealso: [](ch_tao), `Tao`, `TaoSolve()`, `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetHessian()`, `TaoSetObjectiveAndGradient()`
 @*/
-PetscErrorCode TaoGetObjectiveAndGradient(Tao tao, Vec *g, PetscErrorCode (**func)(Tao tao, Vec x, PetscReal *f, Vec g, void *ctx), void **ctx)
+PetscErrorCode TaoGetObjectiveAndGradient(Tao tao, Vec *g, PetscErrorCode (**func)(Tao tao, Vec x, PetscReal *f, Vec g, void *ctx), PeCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (g) *g = tao->gradient;
   if (func) *func = tao->ops->computeobjectiveandgradient;
-  if (ctx) *ctx = tao->user_objgradP;
+  if (ctx) *(void **)ctx = tao->user_objgradP;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

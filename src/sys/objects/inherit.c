@@ -1097,14 +1097,14 @@ PetscErrorCode PetscObjectContainerCompose(PetscObject obj, const char *name, vo
 .seealso: `PetscContainerCreate()`, `PetscContainerDestroy()`, `PetscContainerSetPointer()`, `PetscContainerGetPointer()`, `PetscObjectCompose()`, `PetscObjectQuery()`,
           `PetscContainerSetCtxDestroy()`, `PetscObject`, `PetscObjectContainerCompose()`
 @*/
-PetscErrorCode PetscObjectContainerQuery(PetscObject obj, const char *name, PeCtx pointer)
+PetscErrorCode PetscObjectContainerQuery(PetscObject obj, const char *name, PeCtx ptr)
 {
   PetscContainer container;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectQuery(obj, name, (PetscObject *)&container));
-  if (container) PetscCall(PetscContainerGetPointer(container, pointer));
-  else *(void **)pointer = NULL;
+  if (container) PetscCall(PetscContainerGetPointer(container, ptr));
+  else *(void **)ptr = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
