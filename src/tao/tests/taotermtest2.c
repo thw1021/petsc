@@ -35,7 +35,7 @@ int main(int argc, char **argv)
   Vec          x_term, x_callback, x2, diff;
   Mat          H2;
   PetscReal    norm_diff, diag_val = 1.1;
-  PetscBool    opt, is_diag, is_cdiag, is_aij, is_dense;
+  PetscBool    opt, is_diag, is_cdiag, is_aij, is_dense, fd_notpossible;
   const char  *mtype         = MATAIJ;
   char         typeName[256] = "";
 
@@ -45,7 +45,10 @@ int main(int argc, char **argv)
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCheck(size == 1, comm, PETSC_ERR_WRONG_MPI_SIZE, "Incorrect number of processors");
 
+  fd_notpossible = PETSC_FALSE;
+
   PetscOptionsBegin(comm, "", help, "none");
+  PetscCall(PetscOptionsBool("-fd_notpossible", "Set TaoTermShell ComputeHessianFDPossible as false", "", fd_notpossible, &fd_notpossible, NULL));
   PetscCall(PetscOptionsInt("-n", "Problem size", "", n, &n, NULL));
   PetscCall(PetscOptionsInt("-m", "Mapping matrix row size", "", m, &m, NULL));
   PetscCall(PetscOptionsReal("-diag_val", "Value of constant diagonal matrix", NULL, diag_val, &diag_val, NULL));
@@ -107,6 +110,7 @@ int main(int argc, char **argv)
   PetscCall(TaoTermSetCreateHessianMode(objective, PETSC_TRUE /* H == Hpre */, MATAIJ, NULL));
   PetscCall(TaoTermShellSetHessian(objective, FormHessian));
   PetscCall(TaoTermSetFromOptions(objective));
+  if (fd_notpossible) PetscCall(TaoTermShellSetIsComputeHessianFDPossible(objective, PETSC_BOOL3_FALSE));
 
   PetscCall(TaoTermSetUp(objective));
 
@@ -406,7 +410,7 @@ static PetscErrorCode FormHessian_Callback(Tao tao, Vec x, Mat H, Mat Hpre, void
    test:
      suffix: dense_dense
      args: -shell_tao_type nls -shell_tao_view ::ascii_info_detail -regular_tao_type nls -regular_tao_view ::ascii_info_detail
-     args: -tao_term_hessian_mat_type dense -mapping_mtype dense
+     args: -tao_term_hessian_mat_type dense -mapping_mtype dense -fd_notpossible {{0 1}}
 
    test:
      suffix: dense_dense_nsq

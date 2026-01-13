@@ -198,6 +198,10 @@ static PetscErrorCode CreateSolutionVec(TaoTerm term, Vec *solution)
      args: -tao_monitor_short -tao_type nls -tao_term_hessian_use_fd
 
    test:
+     suffix: fd_hess_diffpre
+     args: -tao_monitor_short -tao_type nls -tao_term_hessian_use_fd -tao_term_hessian_pre_is_hessian 0
+
+   test:
      suffix: use_fd
      args: -tao_monitor_short -tao_type nls -use_fd
 

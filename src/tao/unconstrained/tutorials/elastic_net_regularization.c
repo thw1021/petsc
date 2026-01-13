@@ -84,6 +84,7 @@ int main(int argc, char **argv)
   PetscCall(TaoTermCreateHalfL2Squared(comm, PETSC_DECIDE, n, &l2_reg_term));
   if (set_prefix) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l2_reg_term, "ridge_"));
   if (set_name) PetscCall(PetscObjectSetName((PetscObject)l2_reg_term, "Ridge TaoTerm"));
+  //  PetscCall(TaoAddTerm(tao, "ridge_", lambda_2, l2_reg_term, NULL, NULL)); // Note: no parameter vector, no map matrix needed
   PetscCall(TaoAddTerm(tao, "ridge_", lambda_2, l2_reg_term, NULL, NULL)); // Note: no parameter vector, no map matrix needed
   PetscCall(TaoTermDestroy(&l2_reg_term));
 
@@ -108,11 +109,13 @@ int main(int argc, char **argv)
   {
     PetscReal scale_get;
     TaoTerm   get_term;
-    Vec       get_vec, p2;
+    Vec       get_vec, p2, p1;
     Mat       get_mat;
 
     PetscCall(TaoGetTerm(tao, &scale_get, &get_term, &get_vec, &get_mat));
+    PetscCall(VecNestGetTaoTermSumSubParameters(get_vec, 0, &p1));
     PetscCall(VecNestGetTaoTermSumSubParameters(get_vec, 1, &p2));
+    PetscCheck(p1 == b, PETSC_COMM_SELF, PETSC_ERR_COR, "First parameter vector is not same as what was set");
     PetscCheck(p2 == NULL, PETSC_COMM_SELF, PETSC_ERR_COR, "Second parameter vector is not none");
   }
 

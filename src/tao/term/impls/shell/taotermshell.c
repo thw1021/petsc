@@ -4,6 +4,7 @@ typedef struct _n_TaoTerm_Shell TaoTerm_Shell;
 
 struct _n_TaoTerm_Shell {
   PetscContainer ctxcontainer;
+  PetscBool3     iscomputehessianfdpossible;
 };
 
 /*@C
@@ -172,6 +173,7 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetGradient_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetObjectiveAndGradient_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessian_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetIsComputeHessianFDPossible_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetView_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateSolutionVec_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateParametersVec_C", NULL));
@@ -308,6 +310,51 @@ static PetscErrorCode TaoTermShellSetHessian_Shell(TaoTerm term, TaoTermHessianF
 {
   PetscFunctionBegin;
   term->ops->hessian = hessian;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermIsComputeHessianFDPossible_Shell(TaoTerm term, PetscBool3 *ispossible)
+{
+  TaoTerm_Shell *shell = (TaoTerm_Shell *)term->data;
+
+  PetscFunctionBegin;
+  *ispossible = shell->iscomputehessianfdpossible;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TaoTermShellSetIsComputeHessianFDPossible - Set whether this term can compute Hessian with finite differences for a `TAOTERMSHELL`
+
+  Logically collective
+
+  Input Parameters:
++ term       - a `TaoTerm` of type `TAOTERMSHELL`
+- ispossible - whether Hessian computation with finite differences is possible
+
+  Level: intermediate
+
+.seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellGetContext()`, `TaoTermShellSetContextDestroy()`,
+          `TaoTermShellSetObjective()`,
+          `TaoTermShellSetGradient()`,
+          `TaoTermShellSetObjectiveAndGradient()`,
+          `TaoTermShellSetHessian()`,
+          `TaoTermIsComputeHessianFDPossible()`
+@*/
+PetscErrorCode TaoTermShellSetIsComputeHessianFDPossible(TaoTerm term, PetscBool3 ispossible)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscTryMethod(term, "TaoTermShellSetIsComputeHessianFDPossible_C", (TaoTerm, PetscBool3), (term, ispossible));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TaoTermShellSetIsComputeHessianFDPossible_Shell(TaoTerm term, PetscBool3 ispossible)
+{
+  TaoTerm_Shell *shell = (TaoTerm_Shell *)term->data;
+
+  PetscFunctionBegin;
+  shell->iscomputehessianfdpossible     = ispossible;
+  term->ops->iscomputehessianfdpossible = TaoTermIsComputeHessianFDPossible_Shell;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -466,8 +513,10 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
   PetscCall(PetscNew(&shell));
   term->data = (void *)shell;
 
-  term->ops->destroy = TaoTermDestroy_Shell;
-  term->ops->view    = TaoTermView_Shell;
+  shell->iscomputehessianfdpossible     = PETSC_BOOL3_UNKNOWN;
+  term->ops->iscomputehessianfdpossible = NULL;
+  term->ops->destroy                    = TaoTermDestroy_Shell;
+  term->ops->view                       = TaoTermView_Shell;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetContextDestroy_C", TaoTermShellSetContextDestroy_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetContext_C", TaoTermShellSetContext_Shell));
@@ -476,6 +525,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetGradient_C", TaoTermShellSetGradient_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetObjectiveAndGradient_C", TaoTermShellSetObjectiveAndGradient_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetHessian_C", TaoTermShellSetHessian_Shell));
+  PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetIsComputeHessianFDPossible_C", TaoTermShellSetIsComputeHessianFDPossible_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetView_C", TaoTermShellSetView_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateSolutionVec_C", TaoTermShellSetCreateSolutionVec_Shell));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetCreateParametersVec_C", TaoTermShellSetCreateParametersVec_Shell));

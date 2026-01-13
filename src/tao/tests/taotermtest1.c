@@ -7,6 +7,8 @@ Tests different TaoTerm configurations for L1, andHALFL2SQUARED types with vario
 typedef struct {
   AppCtx    user;  /* Note: AppCtx is a pointer type in rosenbrock4.h */
   AppCtx    user2; /* Second user context for callback version */
+  PetscBool test_print;
+  PetscBool test_print_map;
   PetscBool use_term1;
   PetscBool term1_has_A;
   PetscBool term1_has_params;
@@ -69,6 +71,8 @@ int main(int argc, char **argv)
   /* Add term 1 if requested */
   if (ctx.use_term1) {
     PetscCall(CreateTaoTermWithOptions(&ctx, &term1, &term1_params, &term1_A, "reg1_", "A1_", ctx.term1_has_A, ctx.term1_has_params));
+    if (ctx.test_print) PetscCall(PetscObjectSetName((PetscObject)term1, "Regularizer TaoTerm"));
+    if (ctx.test_print_map) PetscCall(PetscObjectSetName((PetscObject)term1_A, "Regularizer TaoTerm Map"));
     PetscCall(TaoAddTerm(tao_term, "reg1_", ctx.term1_scale, term1, term1_params, term1_A));
     PetscCall(TaoTermDestroy(&term1));
   }
@@ -181,6 +185,8 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
   PetscCall(AppCtxCreate(comm, &ctx->user2));
 
   /* Default configuration */
+  ctx->test_print           = PETSC_FALSE;
+  ctx->test_print_map       = PETSC_FALSE;
   ctx->use_term1            = PETSC_FALSE;
   ctx->use_term2            = PETSC_FALSE;
   ctx->term1_has_A          = PETSC_FALSE;
@@ -195,6 +201,8 @@ static PetscErrorCode TestCtxInitialize(MPI_Comm comm, TestCtx *ctx)
   ctx->map_row_size         = ctx->user->n - 1;
 
   PetscOptionsBegin(comm, "", "TaoTerm Coverage Test Options", "TAO");
+  PetscCall(PetscOptionsBool("-test_print", "Test TaoView of term with name", "", ctx->test_print, &ctx->test_print, NULL));
+  PetscCall(PetscOptionsBool("-test_print_map", "Test TaoView of map of term with name", "", ctx->test_print_map, &ctx->test_print_map, NULL));
   PetscCall(PetscOptionsBool("-use_term1", "Use first additional term", "", ctx->use_term1, &ctx->use_term1, NULL));
   PetscCall(PetscOptionsBool("-use_term2", "Use second additional term", "", ctx->use_term2, &ctx->use_term2, NULL));
   PetscCall(PetscOptionsBool("-term1_has_A", "Term 1 has a map matrix A", "", ctx->term1_has_A, &ctx->term1_has_A, NULL));
@@ -489,6 +497,16 @@ static PetscErrorCode CompareSolutions(Tao tao_term, Tao tao_callback, TestCtx *
 
    build:
       requires: !complex !single !quad !defined(PETSC_USE_64BIT_INDICES) !__float128
+
+   test:
+    suffix: test_print_noparam
+    args: -tao_view -tao_type nls -use_term1 -term1_has_params 0 -term1_has_A
+    args: -reg1_tao_term_type l1 -test_print -test_print_map -reg1_tao_term_parameters_mode none
+
+   test:
+    suffix: test_print_p_req
+    args: -tao_view -tao_type nls -use_term1 -term1_has_params 1 -term1_has_A
+    args: -reg1_tao_term_type l1 -test_print -test_print_map -reg1_tao_term_parameters_mode required
 
 # Single term tests
    # L1 with A
