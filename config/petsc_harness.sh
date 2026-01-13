@@ -1,23 +1,23 @@
-scriptname=`basename $0`
+scriptname=$(basename "$0")
 rundir=${scriptname%.sh}
 TIMEOUT=60
 
-if test "$PWD"!=`dirname $0`; then
-  cd `dirname $0`
+if test "$PWD"!=$(dirname "$0"); then
+  cd $(dirname "$0") || exit
   abspath_scriptdir=$PWD
 fi
 if test -d "${rundir}" && test -n "${rundir}"; then
-  rm -f ${rundir}/*.tmp ${rundir}/*.err ${rundir}/*.out
+  rm -f "${rundir}"/*.tmp "${rundir}"/*.err "${rundir}"/*.out
 fi
-mkdir -p ${rundir}
+mkdir -p "${rundir}"
 if test -n "${runfiles}"; then
   for runfile in ${runfiles}; do
-      subdir=`dirname ${runfile}`
-      mkdir -p ${rundir}/${subdir}
-      cp -r ${runfile} ${rundir}/${subdir}
+      subdir=$(dirname "${runfile}")
+      mkdir -p "${rundir}"/"${subdir}"
+      cp -r "${runfile}" "${rundir}"/"${subdir}"
   done
 fi
-cd ${rundir}
+cd "${rundir}" || exit
 
 #
 # Method to print out general and script specific options
@@ -50,7 +50,7 @@ OPTIONS
 EOF
 
   if declare -f extrausage > /dev/null; then extrausage; fi
-  exit $1
+  exit "$1"
 }
 ###
 ##  Arguments for overriding things
@@ -92,9 +92,9 @@ do
     v ) verbose=true         ;;
     *)  # To take care of any extra args
       if test -n "$OPTARG"; then
-        eval $arg=\"$OPTARG\"
+        eval "$arg"=\""$OPTARG"\"
       else
-        eval $arg=found
+        eval "$arg"=found
       fi
       ;;
   esac
@@ -103,7 +103,7 @@ shift $(( $OPTIND - 1 ))
 
 # Individual tests can extend the default
 export MPIEXEC_TIMEOUT=$((TIMEOUT*timeoutfactor))
-STARTTIME=`date +%s`
+STARTTIME=$(date +%s)
 
 if test -n "$extra_args"; then
   args="$extra_args $args"
@@ -128,10 +128,10 @@ todo=-1; skip=-1
 job_level=0
 
 if $compile; then
-   curexec=`basename ${exec}`
+   curexec=$(basename "${exec}")
    fullexec=${abspath_scriptdir}/${curexec}
-   maketarget=`echo ${fullexec} | sed "s#${petsc_dir}/*##"`
-   (cd $petsc_dir && make -f gmakefile.test ${maketarget})
+   maketarget=$(echo "${fullexec}" | sed "s#${petsc_dir}/*##")
+   (cd "$petsc_dir" && make -f gmakefile.test "${maketarget}")
 fi
 
 ###
@@ -148,11 +148,11 @@ function petsc_report_tapoutput() {
   tap_message="${notornot} ok ${test_label}${comment}"
 
   # Log messages
-  printf "${tap_message}\n" >> ${testlogtapfile}
+  printf "${tap_message}\n" >> "${testlogtapfile}"
 
-  if test ${output_fmt} == "err_only"; then
+  if test "${output_fmt}" == "err_only"; then
      if test -n "${notornot}"; then
-        printf "${tap_message}\n" | tee -a ${testlogerrfile}
+        printf "${tap_message}\n" | tee -a "${testlogerrfile}"
      fi
   else
      printf "${tap_message}\n"
@@ -162,11 +162,11 @@ function petsc_report_tapoutput() {
 function printcmd() {
   # Print command that can be run from PETSC_DIR
   cmd="$1"
-  basedir=`dirname ${PWD} | sed "s#${petsc_dir}/##"`
-  modcmd=`echo ${cmd} | sed -e "s#\.\.#${basedir}#" | sed s#\>.*## | sed s#\%#\%\%#`
+  basedir=$(dirname "${PWD}" | sed "s#${petsc_dir}/##")
+  modcmd=$(echo "${cmd}" | sed -e "s#\.\.#${basedir}#" | sed s#\>.*## | sed s#\%#\%\%#)
   if $mpiexec_function; then
      # Have to expand valgrind/cudamemcheck
-     modcmd=`eval "$modcmd"`
+     modcmd=$(eval "$modcmd")
   fi
   printf "${modcmd}\n"
   exit
@@ -184,7 +184,7 @@ function petsc_testrun() {
   if test -n "$error"; then
     cmd="$1 1> $2  2>&1"
   fi
-  echo "$cmd" > ${tlabel}.sh; chmod 755 ${tlabel}.sh
+  echo "$cmd" > "${tlabel}".sh; chmod 755 "${tlabel}".sh
   if $printcmd; then
      printcmd "$cmd"
   fi
@@ -200,7 +200,7 @@ function petsc_testrun() {
   #  Error #134 added to handle problems with the Radeon card for hip testing
   #  Error #144 added to handle problems with the MPI [ch3:sock] received packet of unknown type (1852472100)
   if [ $cmd_res -eq 96 -o $cmd_res -eq 97 -o $cmd_res -eq 98 -o $cmd_res -eq 134 -o $cmd_res -eq 144 ]; then
-    printf "# retrying ${tlabel}\n" | tee -a ${testlogerrfile}
+    printf "# retrying ${tlabel}\n" | tee -a "${testlogerrfile}"
     sleep 3
     eval "{ time -p $cmd ; } 2>> timing.out"
     cmd_res=$?
@@ -245,10 +245,10 @@ function petsc_testrun() {
       # We've had tests fail but stderr->stdout, as well as having
       # mpi_abort go to stderr which throws this test off.  Show both
       # with stdout first
-      awk '{print "#\t" $0}' < $2 | tee -a ${testlogerrfile}
+      awk '{print "#\t" $0}' < "$2" | tee -a "${testlogerrfile}"
       # if statement is for diff tests
       if test "$2" != "$3"; then
-        awk '{print "#\t" $0}' < $3 | tee -a ${testlogerrfile}
+        awk '{print "#\t" $0}' < "$3" | tee -a "${testlogerrfile}"
       fi
     fi
     let failed=$failed+1
@@ -260,29 +260,29 @@ function petsc_testrun() {
 
 function petsc_testend() {
   logfile=$1/counts/${label}.counts
-  logdir=`dirname $logfile`
+  logdir=$(dirname "$logfile")
   if ! test -d "$logdir"; then
-    mkdir -p $logdir
+    mkdir -p "$logdir"
   fi
   if ! test -e "$logfile"; then
-    touch $logfile
+    touch "$logfile"
   fi
-  printf "total $total\n" > $logfile
-  printf "success $success\n" >> $logfile
-  printf "failed $failed\n" >> $logfile
-  printf "failures $failures\n" >> $logfile
+  printf "total $total\n" > "$logfile"
+  printf "success $success\n" >> "$logfile"
+  printf "failed $failed\n" >> "$logfile"
+  printf "failures $failures\n" >> "$logfile"
   if test ${todo} -gt 0; then
-    printf "todo $todo\n" >> $logfile
+    printf "todo $todo\n" >> "$logfile"
   fi
   if test ${skip} -gt 0; then
-    printf "skip $skip\n" >> $logfile
+    printf "skip $skip\n" >> "$logfile"
   fi
-  ENDTIME=`date +%s`
-  timing=`touch timing.out && grep -E '(user|sys)' timing.out | awk '{if( sum1 == "" || $2 > sum1 ) { sum1=sprintf("%.2f",$2) } ; sum2 += sprintf("%.2f",$2)} END {printf "%.2f %.2f\n",sum1,sum2}'`
-  printf "time $timing\n" >> $logfile
+  ENDTIME=$(date +%s)
+  timing=$(touch timing.out && grep -E '(user|sys)' timing.out | awk '{if( sum1 == "" || $2 > sum1 ) { sum1=sprintf("%.2f",$2) } ; sum2 += sprintf("%.2f",$2)} END {printf "%.2f %.2f\n",sum1,sum2}')
+  printf "time $timing\n" >> "$logfile"
   if $cleanup; then
     echo "Cleaning up"
-    /bin/rm -f $rmfiles
+    /bin/rm -f "$rmfiles"
   fi
 }
 
@@ -303,7 +303,7 @@ function petsc_mpiexec_cudamemcheck() {
     # arguments and check if they can be used
     memcheck_args='--leak-check full --report-api-errors no '
     for option in "${default_args_to_check[@]}"; do
-      ${memcheck_cmd} ${memcheck_args} ${option} &> /dev/null
+      ${memcheck_cmd} "${memcheck_args}" "${option}" &> /dev/null
       if [ $? -eq 0 ]; then
         memcheck_args+="${option} "
       fi
