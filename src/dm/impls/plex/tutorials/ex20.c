@@ -150,32 +150,22 @@ int main(int argc, char **argv)
     PetscSection  coordSection;
     PetscScalar  *coordArray;
     unsigned long seed = 123456789;
-    DMLabel       label;
 
     PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
     PetscCall(DMGetCoordinateSection(dm, &coordSection));
     PetscCall(VecGetArray(coordinates, &coordArray));
-    PetscCall(DMGetLabel(dm, "marker", &label));
 
     for (PetscInt v = vStart; v < vEnd; v++) {
       PetscInt  offset;
-      PetscBool isInterior = PETSC_TRUE;
-      PetscInt  val;
 
       PetscCall(PetscSectionGetOffset(coordSection, v, &offset));
 
-      /* Check if vertex is on the boundary */
-      PetscCall(DMLabelGetValue(label, v, &val));
-      if (val != -1) isInterior = PETSC_FALSE;
+      for (PetscInt d = 0; d < dim; d++) {
+        PetscReal noise, gridSpacing = (upper[d] - lower[d]) / faces[d];
 
-      if (isInterior) {
-        for (PetscInt d = 0; d < dim; d++) {
-          PetscReal noise, gridSpacing = (upper[d] - lower[d]) / faces[d];
-
-          seed  = (1103515245 * seed + 12345) % 2147483648;
-          noise = (PetscReal)seed / 2147483648.0;
-          coordArray[offset + d] += (noise - 0.5) * 0.05 * gridSpacing;
-        }
+        seed  = (1103515245 * seed + 12345) % 2147483648;
+        noise = (PetscReal)seed / 2147483648.0;
+        coordArray[offset + d] += (noise - 0.5) * 0.05 * gridSpacing;
       }
     }
     PetscCall(VecRestoreArray(coordinates, &coordArray));
