@@ -2320,18 +2320,18 @@ PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char ***namelist,
   Level: developer
 
   Note:
-  This is an alternative to the iis and ois arguments in `DMCreateDomainDecomposition()` that allow for the solution
+  This is an alternative to the `iis` and `ois` arguments in `DMCreateDomainDecomposition()` that allow for the solution
   of general nonlinear problems with overlapping subdomain methods.  While merely having index sets that enable subsets
   of the residual equations to be created is fine for linear problems, nonlinear problems require local assembly of
   solution and residual data.
 
   Developer Note:
-  Can the subdms input be anything or are they exactly the `DM` obtained from
+  Can the `subdms` input be anything or are they exactly the `DM` obtained from
   `DMCreateDomainDecomposition()`?
 
 .seealso: [](ch_dmbase), `DM`, `DMCreateDomainDecomposition()`, `DMDestroy()`, `DMView()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMCreateFieldIS()`
 @*/
-PetscErrorCode DMCreateDomainDecompositionScatters(DM dm, PetscInt n, DM *subdms, VecScatter *iscat[], VecScatter *oscat[], VecScatter *gscat[])
+PetscErrorCode DMCreateDomainDecompositionScatters(DM dm, PetscInt n, DM subdms[], VecScatter *iscat[], VecScatter *oscat[], VecScatter *gscat[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -2460,7 +2460,7 @@ PetscErrorCode DMRefineHookAdd(DM coarse, PetscErrorCode (*refinehook)(DM coarse
 
 .seealso: [](ch_dmbase), `DM`, `DMRefineHookAdd()`, `DMCoarsenHookRemove()`, `DMInterpolate()`, `SNESFASGetInterpolation()`, `SNESFASGetInjection()`, `PetscObjectCompose()`, `PetscContainerCreate()`
 @*/
-PetscErrorCode DMRefineHookRemove(DM coarse, PetscErrorCode (*refinehook)(DM, DM, void *), PetscErrorCode (*interphook)(DM, Mat, DM, void *), PetscCtx ctx)
+PetscErrorCode DMRefineHookRemove(DM coarse, PetscErrorCode (*refinehook)(DM coarse, DM fine, PetscCtx ctx), PetscErrorCode (*interphook)(DM coarse, Mat interp, DM fine, PetscCtx ctx), PetscCtx ctx)
 {
   DMRefineHookLink link, *p;
 
@@ -3462,7 +3462,7 @@ PetscErrorCode DMCoarsenHookAdd(DM fine, PetscErrorCode (*coarsenhook)(DM fine, 
 
 .seealso: [](ch_dmbase), `DM`, `DMCoarsenHookAdd()`, `DMRefineHookAdd()`, `SNESFASGetInterpolation()`, `SNESFASGetInjection()`, `PetscObjectCompose()`, `PetscContainerCreate()`
 @*/
-PetscErrorCode DMCoarsenHookRemove(DM fine, PetscErrorCode (*coarsenhook)(DM, DM, void *), PetscErrorCode (*restricthook)(DM, Mat, Vec, Mat, DM, void *), PetscCtx ctx)
+PetscErrorCode DMCoarsenHookRemove(DM fine, PetscErrorCode (*coarsenhook)(DM fine, DM coarse, PetscCtx ctx), PetscErrorCode (*restricthook)(DM fine, Mat rstrict, Vec rscale, Mat inject, DM coarse, PetscCtx ctx), PetscCtx ctx)
 {
   DMCoarsenHookLink link, *p;
 
@@ -3584,7 +3584,7 @@ PetscErrorCode DMSubDomainHookAdd(DM global, PetscErrorCode (*ddhook)(DM global,
 .seealso: [](ch_dmbase), `DM`, `DMSubDomainHookAdd()`, `SNESFASGetInterpolation()`, `SNESFASGetInjection()`, `PetscObjectCompose()`, `PetscContainerCreate()`,
           `DMCreateDomainDecomposition()`
 @*/
-PetscErrorCode DMSubDomainHookRemove(DM global, PetscErrorCode (*ddhook)(DM, DM, void *), PetscErrorCode (*restricthook)(DM, VecScatter, VecScatter, DM, void *), PetscCtx ctx)
+PetscErrorCode DMSubDomainHookRemove(DM global, PetscErrorCode (*ddhook)(DM dm, DM subdm, PetscCtx ctx), PetscErrorCode (*restricthook)(DM dm, VecScatter oscatter, VecScatter gscatter, DM subdm, PetscCtx ctx), PetscCtx ctx)
 {
   DMSubDomainHookLink link, *p;
 
@@ -3856,7 +3856,7 @@ PetscErrorCode DMGetApplicationContext(DM dm, PetscCtxRt ctx)
 .seealso: [](ch_dmbase), `DM`, `DMComputeVariableBounds()`, `DMHasVariableBounds()`, `DMView()`, `DMCreateGlobalVector()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMGetApplicationContext()`,
          `DMSetJacobian()`
 @*/
-PetscErrorCode DMSetVariableBounds(DM dm, PetscErrorCode (*f)(DM, Vec, Vec))
+PetscErrorCode DMSetVariableBounds(DM dm, PetscErrorCode (*f)(DM dim, Vec lower, Vec upper))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -9088,7 +9088,7 @@ PetscErrorCode DMMonitorCancel(DM dm)
           `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`, `DMMonitor()`, `DMMonitorSet()`
 @*/
-PetscErrorCode DMMonitorSetFromOptions(DM dm, const char name[], const char help[], const char manual[], PetscErrorCode (*monitor)(DM, void *), PetscErrorCode (*monitorsetup)(DM, PetscViewerAndFormat *), PetscBool *flg)
+PetscErrorCode DMMonitorSetFromOptions(DM dm, const char name[], const char help[], const char manual[], PetscErrorCode (*monitor)(DM dm, PetscCtx ctx), PetscErrorCode (*monitorsetup)(DM dm, PetscViewerAndFormat *vf), PetscBool *flg)
 {
   PetscViewer       viewer;
   PetscViewerFormat format;

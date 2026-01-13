@@ -66,7 +66,7 @@ PetscErrorCode TSMonitor(TS ts, PetscInt step, PetscReal ptime, Vec u)
           `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`
 @*/
-PetscErrorCode TSMonitorSetFromOptions(TS ts, const char name[], const char help[], const char manual[], PetscErrorCode (*monitor)(TS, PetscInt, PetscReal, Vec, PetscViewerAndFormat *), PetscErrorCode (*monitorsetup)(TS, PetscViewerAndFormat *))
+PetscErrorCode TSMonitorSetFromOptions(TS ts, const char name[], const char help[], const char manual[], PetscErrorCode (*monitor)(TS ts, PetscInt step, PetscReal time, Vec u, PetscViewerAndFormat *vf), PetscErrorCode (*monitorsetup)(TS ts, PetscViewerAndFormat *vf))
 {
   PetscViewer       viewer;
   PetscViewerFormat format;
@@ -1276,7 +1276,7 @@ PetscErrorCode TSMonitorLGSetDisplayVariables(TS ts, const char *const *displayn
 
 .seealso: [](ch_ts), `TSMonitorSet()`, `TSMonitorDefault()`, `VecView()`, `TSMonitorLGSetVariableNames()`, `TSMonitorLGCtxSetTransform()`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode TSMonitorLGSetTransform(TS ts, PetscErrorCode (*transform)(PetscCtx, Vec, Vec *), PetscCtxDestroyFn *destroy, PetscCtx tctx)
+PetscErrorCode TSMonitorLGSetTransform(TS ts, PetscErrorCode (*transform)(PetscCtx ctx, Vec u, Vec *w), PetscCtxDestroyFn *destroy, PetscCtx tctx)
 {
   PetscInt i;
 
@@ -1302,7 +1302,7 @@ PetscErrorCode TSMonitorLGSetTransform(TS ts, PetscErrorCode (*transform)(PetscC
 
 .seealso: [](ch_ts), `TS`, `TSMonitorSet()`, `TSMonitorDefault()`, `VecView()`, `TSMonitorLGSetVariableNames()`, `TSMonitorLGSetTransform()`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode TSMonitorLGCtxSetTransform(TSMonitorLGCtx ctx, PetscErrorCode (*transform)(PetscCtx, Vec, Vec *), PetscCtxDestroyFn *destroy, PetscCtx tctx)
+PetscErrorCode TSMonitorLGCtxSetTransform(TSMonitorLGCtx ctx, PetscErrorCode (*transform)(PetscCtx ctx, Vec u, Vec *w), PetscCtxDestroyFn *destroy, PetscCtx tctx)
 {
   PetscFunctionBegin;
   ctx->transform        = transform;

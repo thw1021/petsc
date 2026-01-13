@@ -56,7 +56,7 @@ PetscErrorCode PetscBenchInitializePackage(void)
 
 .seealso: `PetscBenchInitializePackage()`, `PetscBenchCreate()`, `PetscBench`, `PetscBenchType`, `PetscBenchSetType()`, `PetscBenchGetType()`
 @*/
-PetscErrorCode PetscBenchRegister(const char sname[], PetscErrorCode (*function)(PetscBench))
+PetscErrorCode PetscBenchRegister(const char sname[], PetscErrorCode (*function)(PetscBench bm))
 {
   PetscFunctionBegin;
   PetscCall(PetscBenchInitializePackage());

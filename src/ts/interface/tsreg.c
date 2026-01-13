@@ -118,7 +118,7 @@ PetscErrorCode TSGetType(TS ts, TSType *type)
 
 .seealso: [](ch_ts), `TSSetType()`, `TSType`, `TSRegisterAll()`, `TSRegisterDestroy()`
 @*/
-PetscErrorCode TSRegister(const char sname[], PetscErrorCode (*function)(TS))
+PetscErrorCode TSRegister(const char sname[], PetscErrorCode (*function)(TS ts))
 {
   PetscFunctionBegin;
   PetscCall(TSInitializePackage());
