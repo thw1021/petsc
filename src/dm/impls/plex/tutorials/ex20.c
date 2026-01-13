@@ -156,7 +156,7 @@ int main(int argc, char **argv)
     PetscCall(VecGetArray(coordinates, &coordArray));
 
     for (PetscInt v = vStart; v < vEnd; v++) {
-      PetscInt  offset;
+      PetscInt offset;
 
       PetscCall(PetscSectionGetOffset(coordSection, v, &offset));
 
