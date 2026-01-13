@@ -2384,7 +2384,7 @@ PetscErrorCode SNESSetPicard(SNES snes, Vec r, SNESFunctionFn *bp, Mat Amat, Mat
 
 .seealso: [](ch_snes), `SNESSetFunction()`, `SNESSetPicard()`, `SNESGetFunction()`, `SNESGetJacobian()`, `SNESGetDM()`, `SNESFunctionFn`, `SNESJacobianFn`
 @*/
-PetscErrorCode SNESGetPicard(SNES snes, Vec *r, SNESFunctionFn **f, Mat *Amat, Mat *Pmat, SNESJacobianFn **J, void **ctx)
+PetscErrorCode SNESGetPicard(SNES snes, Vec *r, SNESFunctionFn **f, Mat *Amat, Mat *Pmat, SNESJacobianFn **J, PeCtx ctx)
 {
   DM dm;
 
@@ -3298,7 +3298,7 @@ PetscErrorCode SNESSetJacobian(SNES snes, Mat Amat, Mat Pmat, SNESJacobianFn *J,
 
 .seealso: [](ch_snes), `SNES`, `Mat`, `SNESSetJacobian()`, `SNESComputeJacobian()`, `SNESJacobianFn`, `SNESGetFunction()`
 @*/
-PetscErrorCode SNESGetJacobian(SNES snes, Mat *Amat, Mat *Pmat, SNESJacobianFn **J, void **ctx)
+PetscErrorCode SNESGetJacobian(SNES snes, Mat *Amat, Mat *Pmat, SNESJacobianFn **J, PeCtx ctx)
 {
   DM dm;
 
@@ -5163,7 +5163,7 @@ PetscErrorCode SNESGetSolutionUpdate(SNES snes, Vec *x)
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESSetFunction()`, `SNESGetSolution()`, `SNESFunctionFn`
 @*/
-PetscErrorCode SNESGetFunction(SNES snes, Vec *r, SNESFunctionFn **f, void **ctx)
+PetscErrorCode SNESGetFunction(SNES snes, Vec *r, SNESFunctionFn **f, PeCtx ctx)
 {
   DM dm;
 
@@ -5200,7 +5200,7 @@ PetscErrorCode SNESGetFunction(SNES snes, Vec *r, SNESFunctionFn **f, void **ctx
 
 .seealso: [](ch_snes), `SNESSetNGS()`, `SNESGetFunction()`, `SNESNGSFn`
 @*/
-PetscErrorCode SNESGetNGS(SNES snes, SNESNGSFn **f, void **ctx)
+PetscErrorCode SNESGetNGS(SNES snes, SNESNGSFn **f, PeCtx ctx)
 {
   DM dm;
 
