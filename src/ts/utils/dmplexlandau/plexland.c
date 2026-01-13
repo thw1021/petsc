@@ -708,7 +708,7 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
       }
     } else {
       PetscCheck(dim == 3 && ctx->sphere && !ctx->simplex, ctx->comm, PETSC_ERR_ARG_WRONG, "not: dim == 3 && ctx->sphere && !ctx->simplex");
-      PetscReal      rad = ctx->radius[grid] / 1.732050807568877, inner_rad = rad * ctx->sphere_inner_radius_90degree[grid], outer_rad = rad;
+      PetscReal      rad = ctx->radius[grid], inner_rad = rad * ctx->sphere_inner_radius_90degree[grid], outer_rad = rad;
       const PetscInt numCells = 7, cell_size = 8, numVerts = 16;
       const PetscInt cells[][8] = {
         {0, 3, 2, 1, 4,  5,  6,  7 },
