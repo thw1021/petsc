@@ -482,7 +482,7 @@ static PetscErrorCode MatDestroy_Shell(Mat mat)
 typedef struct {
   PetscErrorCode (*numeric)(Mat, Mat, Mat, void *);
   PetscCtxDestroyFn *destroy;
-  void              *userdata;
+  void              *ctx;
   Mat                B;
   Mat                Bt;
   Mat                axpy;
@@ -493,7 +493,7 @@ static PetscErrorCode MatProductCtxDestroy_MatMatShell(void **data)
   MatProductCtx_MatMatShell *mmdata = *(MatProductCtx_MatMatShell **)data;
 
   PetscFunctionBegin;
-  if (mmdata->destroy) PetscCall((*mmdata->destroy)(&mmdata->userdata));
+  if (mmdata->destroy) PetscCall((*mmdata->destroy)(&mmdata->ctx));
   PetscCall(MatDestroy(&mmdata->B));
   PetscCall(MatDestroy(&mmdata->Bt));
   PetscCall(MatDestroy(&mmdata->axpy));
@@ -571,7 +571,7 @@ static PetscErrorCode MatProductNumeric_Shell_X(Mat D)
   D->ops->productsymbolic = NULL;
   D->ops->productnumeric  = NULL;
 
-  PetscCall((*mdata->numeric)(A, useBmdata ? mdata->B : B, D, mdata->userdata));
+  PetscCall((*mdata->numeric)(A, useBmdata ? mdata->B : B, D, mdata->ctx));
 
   /* clear any leftover user data and restore D pointers */
   PetscCall(MatProductClear(D));
@@ -728,7 +728,7 @@ static PetscErrorCode MatProductSymbolic_Shell_X(Mat D)
   mdata->numeric = matmat->numeric;
   mdata->destroy = matmat->destroy;
   if (matmat->symbolic) {
-    PetscCall((*matmat->symbolic)(A, B, D, &mdata->userdata));
+    PetscCall((*matmat->symbolic)(A, B, D, &mdata->ctx));
   } else { /* call general setup if symbolic operation not provided */
     PetscCall(MatSetUp(D));
   }
