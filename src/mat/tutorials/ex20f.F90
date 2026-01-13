@@ -9,38 +9,10 @@ module ex20fmodule
     PetscReal :: lambda
   end type MatCtx
 
-  interface
-    subroutine MatCreateShell(comm, mloc, nloc, m, n, ctx, mat, ierr)
-      use petscmat
-      import MatCtx
-      implicit none
-      MPIU_Comm :: comm
-      PetscInt :: mloc, nloc, m, n
-      type(MatCtx) :: ctx
-      Mat :: mat
-      PetscErrorCode :: ierr
-    end subroutine MatCreateShell
-
-    subroutine MatShellSetContext(mat, ctx, ierr)
-      use petscmat
-      import MatCtx
-      implicit none
-      Mat :: mat
-      type(MatCtx) :: ctx
-      PetscErrorCode :: ierr
-    end subroutine MatShellSetContext
-
-    subroutine MatShellGetContext(mat, ctx, ierr)
-      use petscmat
-      import MatCtx
-      implicit none
-      Mat :: mat
-      type(MatCtx), pointer :: ctx
-      PetscErrorCode :: ierr
-    end subroutine MatShellGetContext
+  Interface_MatShellGetContext(MatCtx)
   end interface
 
-contains
+  contains
   subroutine MatDuplicate_F(F, opt, M, ierr)
 
     Mat                  :: F, M
@@ -54,7 +26,6 @@ contains
     allocate (ctxM)
     ctxM%lambda = ctxF_pt%lambda
     PetscCall(MatCreateShell(PETSC_COMM_WORLD, ml, nl, PETSC_DETERMINE, PETSC_DETERMINE, ctxM, M, ierr))
-!        PetscCall(MatShellSetOperation(M,MATOP_DUPLICATE,MatDuplicate_F,ierr))
     PetscCall(MatShellSetOperation(M, MATOP_DESTROY, MatDestroy_F, ierr))
   end subroutine MatDuplicate_F
 

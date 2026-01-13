@@ -232,7 +232,7 @@ PetscErrorCode PCGetDM(PC pc, DM *dm)
 
 .seealso: [](ch_ksp), `PC`, `PCGetApplicationContext()`, `KSPSetApplicationContext()`, `KSPGetApplicationContext()`, `PetscObjectCompose()`
 @*/
-PetscErrorCode PCSetApplicationContext(PC pc, void *ctx)
+PetscErrorCode PCSetApplicationContext(PC pc, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -275,7 +275,7 @@ PetscErrorCode PCSetApplicationContext(PC pc, void *ctx)
 
 .seealso: [](ch_ksp), `PC`, `PCSetApplicationContext()`, `KSPSetApplicationContext()`, `KSPGetApplicationContext()`
 @*/
-PetscErrorCode PCGetApplicationContext(PC pc, PeCtx ctx)
+PetscErrorCode PCGetApplicationContext(PC pc, PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
