@@ -86,7 +86,7 @@ solver routine for setting a callback a similar routine exists at the
 `DMXXXSetY(DM,...)`.
 
 ```
-PetscErrorCode KSPSetComputeOperators(KSP ksp, PetscErrorCode (*func)(KSP, Mat, Mat, PetscCtx), PetscCtx ctx)
+PetscErrorCode KSPSetComputeOperators(KSP ksp,PetscErrorCode (*func)(KSP,Mat,Mat,PetscCtx),PetscCtx ctx)
 {
   DM dm;
 
