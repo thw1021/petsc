@@ -61,11 +61,11 @@ PetscErrorCode TSSetRHSJacobianP(TS ts, Mat Amat, TSRHSJacobianPFn *func, void *
 
 .seealso: [](ch_ts), `TSSetRHSJacobianP()`, `TS`, `TSRHSJacobianPFn`
 @*/
-PetscErrorCode TSGetRHSJacobianP(TS ts, Mat *Amat, TSRHSJacobianPFn **func, void **ctx)
+PetscErrorCode TSGetRHSJacobianP(TS ts, Mat *Amat, TSRHSJacobianPFn **func, PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   if (func) *func = ts->rhsjacobianp;
-  if (ctx) *ctx = ts->rhsjacobianpctx;
+  if (ctx) *(void **)ctx = ts->rhsjacobianpctx;
   if (Amat) *Amat = ts->Jacprhs;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -179,13 +179,13 @@ PetscErrorCode TSSetIJacobianP(TS ts, Mat Amat, PetscErrorCode (*func)(TS ts, Pe
 
 .seealso: [](ch_ts), `TSSetRHSJacobianP()`, `TS`, `TSSetIJacobianP()`, `TSGetRHSJacobianP()`
 @*/
-PetscErrorCode TSGetIJacobianP(TS ts, Mat *Amat, PetscErrorCode (**func)(TS ts, PetscReal t, Vec U, Vec Udot, PetscReal shift, Mat A, void *ctx), void **ctx)
+PetscErrorCode TSGetIJacobianP(TS ts, Mat *Amat, PetscErrorCode (**func)(TS ts, PetscReal t, Vec U, Vec Udot, PetscReal shift, Mat A, void *ctx), PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
 
   if (func) *func = ts->ijacobianp;
-  if (ctx) *ctx = ts->ijacobianpctx;
+  if (ctx) *(void **)ctx = ts->ijacobianpctx;
   if (Amat) *Amat = ts->Jacp;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

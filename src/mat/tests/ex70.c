@@ -48,7 +48,7 @@ typedef struct {
   Mat R;
 } proj_data;
 
-PetscErrorCode proj_destroy(void **ctx)
+PetscErrorCode proj_destroy(PetscCtxRt ctx)
 {
   proj_data *userdata = *(proj_data **)ctx;
 

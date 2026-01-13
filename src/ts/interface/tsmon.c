@@ -477,7 +477,7 @@ PetscErrorCode TSMonitorLGTimeStep(TS ts, PetscInt step, PetscReal ptime, Vec v,
 PetscErrorCode TSMonitorLGCtxDestroy(TSMonitorLGCtx *ctx)
 {
   PetscFunctionBegin;
-  if ((*ctx)->transformdestroy) PetscCall(((*ctx)->transformdestroy)((void **)&(*ctx)->transformctx));
+  if ((*ctx)->transformdestroy) PetscCall(((*ctx)->transformdestroy)(&(*ctx)->transformctx));
   PetscCall(PetscDrawLGDestroy(&(*ctx)->lg));
   PetscCall(PetscStrArrayDestroy(&(*ctx)->names));
   PetscCall(PetscStrArrayDestroy(&(*ctx)->displaynames));

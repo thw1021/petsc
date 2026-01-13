@@ -565,7 +565,7 @@ static PetscErrorCode KSPFETIDPSetUpOperators(KSP ksp)
     } else if (c) {
       MatISLocalFields lf;
 
-      PetscCall(PetscContainerGetPointer(c, (void **)&lf));
+      PetscCall(PetscContainerGetPointer(c, &lf));
       PetscCall(PCBDDCSetDofsSplittingLocal(fetidp->innerbddc, lf->nr, lf->rf));
     }
   }

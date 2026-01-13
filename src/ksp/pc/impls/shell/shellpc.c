@@ -47,7 +47,7 @@ typedef struct {
 
 .seealso: [](ch_ksp), `PC`, `PCSHELL`, `PCShellSetContext()`, `PCShellSetApply()`, `PCShellSetDestroy()`
 @*/
-PetscErrorCode PCShellGetContext(PC pc, void *ctx)
+PetscErrorCode PCShellGetContext(PC pc, PetscCtxRt ctx)
 {
   PetscBool flg;
 

@@ -303,7 +303,7 @@ static PetscErrorCode SetupParameters(AppCtx *user)
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
-  PetscCall(PetscBagGetData(user->bag, (void **)&p));
+  PetscCall(PetscBagGetData(user->bag, &p));
   PetscCall(PetscBagSetName(user->bag, "par", "Poiseuille flow parameters"));
   bag = user->bag;
   PetscCall(PetscBagRegisterReal(bag, &p->nu, 1.0, "nu", "Kinematic viscosity"));
@@ -331,7 +331,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     PetscCall(VecGetBlockSize(coordinates, &bs));
     PetscCheck(bs == cdim, comm, PETSC_ERR_ARG_WRONG, "Invalid coordinate blocksize %" PetscInt_FMT " != embedding dimension %" PetscInt_FMT, bs, cdim);
     PetscCall(VecGetArray(coordinates, &coords));
-    PetscCall(PetscBagGetData(user->bag, (void **)&param));
+    PetscCall(PetscBagGetData(user->bag, &param));
     theta = param->theta;
     for (i = 0; i < N; i += cdim) {
       PetscScalar x = coords[i + 0];
@@ -391,7 +391,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
     Parameter  *param;
     PetscScalar constants[3];
 
-    PetscCall(PetscBagGetData(user->bag, (void **)&param));
+    PetscCall(PetscBagGetData(user->bag, &param));
 
     constants[0] = param->nu;
     constants[1] = param->alpha;
@@ -399,7 +399,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
     PetscCall(PetscDSSetConstants(prob, 3, constants));
   }
   /* Setup Boundary Conditions */
-  PetscCall(PetscBagGetData(user->bag, (void **)&ctx));
+  PetscCall(PetscBagGetData(user->bag, &ctx));
   id = 3;
   PetscCall(PetscDSAddBoundary(prob, DM_BC_ESSENTIAL, "top wall velocity", label, 1, &id, 0, 0, NULL, (PetscVoidFn *)exactFuncs[0], NULL, ctx, NULL));
   id = 1;
@@ -455,7 +455,7 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   PetscCall(DMSetField(dm, 2, NULL, (PetscObject)fe[2]));
   PetscCall(DMCreateDS(dm));
   PetscCall(SetupProblem(dm, user));
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   while (cdm) {
     PetscCall(DMCopyDisc(dm, cdm));
     PetscCall(DMPlexCreateBasisRotation(cdm, param->theta, 0.0, 0.0));

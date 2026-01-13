@@ -51,7 +51,7 @@ PetscErrorCode TaoShellSetSolve(Tao tao, PetscErrorCode (*solve)(Tao))
 
 .seealso: `Tao`, `TAOSHELL`, `TaoShellSetContext()`
 @*/
-PetscErrorCode TaoShellGetContext(Tao tao, void *ctx)
+PetscErrorCode TaoShellGetContext(Tao tao, PetscCtxRt ctx)
 {
   PetscBool flg;
 

@@ -208,7 +208,7 @@ PETSC_EXTERN PetscErrorCode DMSetISColoringType(DM, ISColoringType);
 PETSC_EXTERN PetscErrorCode DMGetISColoringType(DM, ISColoringType *);
 PETSC_EXTERN PetscErrorCode DMSetApplicationContext(DM, void *);
 PETSC_EXTERN PetscErrorCode DMSetApplicationContextDestroy(DM, PetscCtxDestroyFn *);
-PETSC_EXTERN PetscErrorCode DMGetApplicationContext(DM, void *);
+PETSC_EXTERN PetscErrorCode DMGetApplicationContext(DM, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode DMSetVariableBounds(DM, PetscErrorCode (*)(DM, Vec, Vec));
 PETSC_EXTERN PetscErrorCode DMHasVariableBounds(DM, PetscBool *);
 PETSC_EXTERN PetscErrorCode DMHasColoring(DM, PetscBool *);

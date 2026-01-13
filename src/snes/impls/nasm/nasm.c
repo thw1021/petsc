@@ -122,8 +122,8 @@ static PetscErrorCode SNESSetUp_NASM(SNES snes)
         PetscCall(SNESAppendOptionsPrefix(nasm->subsnes[i], optionsprefix));
         PetscCall(SNESAppendOptionsPrefix(nasm->subsnes[i], "sub_"));
         PetscCall(SNESSetDM(nasm->subsnes[i], subdms[i]));
-        if (snes->ops->usercompute) {
-          PetscCall(SNESSetComputeApplicationContext(nasm->subsnes[i], snes->ops->usercompute, snes->ops->ctxdestroy));
+        if (snes->ops->ctxcompute) {
+          PetscCall(SNESSetComputeApplicationContext(nasm->subsnes[i], snes->ops->ctxcompute, snes->ops->ctxdestroy));
         } else {
           void *ctx;
 

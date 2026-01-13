@@ -247,7 +247,7 @@ PetscErrorCode DMTSSetBoundaryLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal,
 
 .seealso: [](ch_ts), `DM`, `DMTSSetIFunctionLocal()`, `DMTSSetIFunction()`, `DMTSSetIJacobianLocal()`
 @*/
-PetscErrorCode DMTSGetIFunctionLocal(DM dm, PetscErrorCode (**func)(DM, PetscReal, Vec, Vec, Vec, void *), void **ctx)
+PetscErrorCode DMTSGetIFunctionLocal(DM dm, PetscErrorCode (**func)(DM, PetscReal, Vec, Vec, Vec, void *), PetscCtxRt ctx)
 {
   DMTS        tdm;
   DMTS_Local *dmlocalts;
@@ -262,7 +262,7 @@ PetscErrorCode DMTSGetIFunctionLocal(DM dm, PetscErrorCode (**func)(DM, PetscRea
   }
   if (ctx) {
     PetscAssertPointer(ctx, 3);
-    *ctx = dmlocalts->ifunctionlocalctx;
+    *(void **)ctx = dmlocalts->ifunctionlocalctx;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -319,7 +319,7 @@ PetscErrorCode DMTSSetIFunctionLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal
 
 .seealso: [](ch_ts), `DM`, `DMTSSetIJacobianLocal()`, `DMTSSetIFunctionLocal()`, `DMTSSetIJacobian()`, `DMTSSetIFunction()`
 @*/
-PetscErrorCode DMTSGetIJacobianLocal(DM dm, PetscErrorCode (**func)(DM, PetscReal, Vec, Vec, PetscReal, Mat, Mat, void *), void **ctx)
+PetscErrorCode DMTSGetIJacobianLocal(DM dm, PetscErrorCode (**func)(DM, PetscReal, Vec, Vec, PetscReal, Mat, Mat, void *), PetscCtxRt ctx)
 {
   DMTS        tdm;
   DMTS_Local *dmlocalts;
@@ -334,7 +334,7 @@ PetscErrorCode DMTSGetIJacobianLocal(DM dm, PetscErrorCode (**func)(DM, PetscRea
   }
   if (ctx) {
     PetscAssertPointer(ctx, 3);
-    *ctx = dmlocalts->ijacobianlocalctx;
+    *(void **)ctx = dmlocalts->ijacobianlocalctx;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -388,7 +388,7 @@ PetscErrorCode DMTSSetIJacobianLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal
 
 .seealso: [](ch_ts), `DM`, `DMTSSetRHSFunctionLocal()`, `DMTSSetRHSFunction()`, `DMTSSetIFunction()`, `DMTSSetIJacobianLocal()`
 @*/
-PetscErrorCode DMTSGetRHSFunctionLocal(DM dm, PetscErrorCode (**func)(DM, PetscReal, Vec, Vec, void *), void **ctx)
+PetscErrorCode DMTSGetRHSFunctionLocal(DM dm, PetscErrorCode (**func)(DM, PetscReal, Vec, Vec, void *), PetscCtxRt ctx)
 {
   DMTS        tdm;
   DMTS_Local *dmlocalts;
@@ -403,7 +403,7 @@ PetscErrorCode DMTSGetRHSFunctionLocal(DM dm, PetscErrorCode (**func)(DM, PetscR
   }
   if (ctx) {
     PetscAssertPointer(ctx, 3);
-    *ctx = dmlocalts->rhsfunctionlocalctx;
+    *(void **)ctx = dmlocalts->rhsfunctionlocalctx;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

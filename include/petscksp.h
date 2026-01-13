@@ -245,7 +245,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPMonitorFn(KSP ksp, PetscInt it, P
 PETSC_EXTERN PetscErrorCode KSPMonitor(KSP, PetscInt, PetscReal);
 PETSC_EXTERN PetscErrorCode KSPMonitorSet(KSP, KSPMonitorFn *, void *, PetscCtxDestroyFn *);
 PETSC_EXTERN PetscErrorCode KSPMonitorCancel(KSP);
-PETSC_EXTERN PetscErrorCode KSPGetMonitorContext(KSP, void *);
+PETSC_EXTERN PetscErrorCode KSPGetMonitorContext(KSP, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode KSPGetResidualHistory(KSP, const PetscReal *[], PetscInt *);
 PETSC_EXTERN PetscErrorCode KSPSetResidualHistory(KSP, PetscReal[], PetscCount, PetscBool);
 PETSC_EXTERN PetscErrorCode KSPGetErrorHistory(KSP, const PetscReal *[], PetscInt *);
@@ -597,7 +597,7 @@ PETSC_DEPRECATED_FUNCTION(3, 15, 0, "KSPMonitorTrueResidualMax()", ) static inli
 
 PETSC_EXTERN PetscErrorCode KSPGMRESMonitorKrylov(KSP, PetscInt, PetscReal, void *);
 PETSC_EXTERN PetscErrorCode KSPMonitorDynamicTolerance(KSP, PetscInt, PetscReal, void *);
-PETSC_EXTERN PetscErrorCode KSPMonitorDynamicToleranceDestroy(void **);
+PETSC_EXTERN PetscErrorCode KSPMonitorDynamicToleranceDestroy(PetscCtxRt);
 PETSC_EXTERN PetscErrorCode KSPMonitorDynamicToleranceCreate(void *);
 PETSC_EXTERN PetscErrorCode KSPMonitorDynamicToleranceSetCoefficient(void *, PetscReal);
 PETSC_EXTERN PetscErrorCode KSPMonitorSAWs(KSP, PetscInt, PetscReal, void *);
@@ -958,9 +958,9 @@ S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPConvergenceTestFn(KSP ksp, PetscInt it, PetscReal rnorm, KSPConvergedReason *reason, void *ctx);
 
 PETSC_EXTERN PetscErrorCode       KSPSetConvergenceTest(KSP, KSPConvergenceTestFn *, void *, PetscCtxDestroyFn *);
-PETSC_EXTERN PetscErrorCode       KSPGetConvergenceTest(KSP, KSPConvergenceTestFn **, void **, PetscCtxDestroyFn **);
-PETSC_EXTERN PetscErrorCode       KSPGetAndClearConvergenceTest(KSP, KSPConvergenceTestFn **, void **, PetscCtxDestroyFn **);
-PETSC_EXTERN PetscErrorCode       KSPGetConvergenceContext(KSP, void *);
+PETSC_EXTERN PetscErrorCode       KSPGetConvergenceTest(KSP, KSPConvergenceTestFn **, PetscCtxRt, PetscCtxDestroyFn **);
+PETSC_EXTERN PetscErrorCode       KSPGetAndClearConvergenceTest(KSP, KSPConvergenceTestFn **, PetscCtxRt, PetscCtxDestroyFn **);
+PETSC_EXTERN PetscErrorCode       KSPGetConvergenceContext(KSP, PetscCtxRt);
 PETSC_EXTERN KSPConvergenceTestFn KSPConvergedDefault;
 PETSC_EXTERN KSPConvergenceTestFn KSPLSQRConvergedDefault;
 PETSC_EXTERN PetscCtxDestroyFn    KSPConvergedDefaultDestroy;
@@ -1256,7 +1256,7 @@ PETSC_EXTERN PetscErrorCode KSPSetDM(KSP, DM);
 PETSC_EXTERN PetscErrorCode KSPSetDMActive(KSP, PetscBool);
 PETSC_EXTERN PetscErrorCode KSPGetDM(KSP, DM *);
 PETSC_EXTERN PetscErrorCode KSPSetApplicationContext(KSP, void *);
-PETSC_EXTERN PetscErrorCode KSPGetApplicationContext(KSP, void *);
+PETSC_EXTERN PetscErrorCode KSPGetApplicationContext(KSP, PetscCtxRt);
 
 /*S
   KSPComputeRHSFn - A prototype of a `KSP` evaluation function that would be passed to `KSPSetComputeRHS()`

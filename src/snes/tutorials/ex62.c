@@ -256,7 +256,7 @@ static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
   PetscCall(PetscBagCreate(PETSC_COMM_SELF, sizeof(Parameter), &ctx->bag));
-  PetscCall(PetscBagGetData(ctx->bag, (void **)&p));
+  PetscCall(PetscBagGetData(ctx->bag, &p));
   PetscCall(PetscBagSetName(ctx->bag, "par", "Stokes Parameters"));
   PetscCall(PetscBagRegisterScalar(ctx->bag, &p->mu, 1.0, "mu", "Dynamic Shear Viscosity, Pa s"));
   PetscCall(PetscBagSetFromOptions(ctx->bag));
@@ -318,7 +318,7 @@ static PetscErrorCode SetupEqn(DM dm, AppCtx *user)
     Parameter  *param;
     PetscScalar constants[1];
 
-    PetscCall(PetscBagGetData(user->bag, (void **)&param));
+    PetscCall(PetscBagGetData(user->bag, &param));
     constants[0] = param->mu; /* dynamic shear viscosity, Pa s */
     PetscCall(PetscDSSetConstants(ds, 1, constants));
   }

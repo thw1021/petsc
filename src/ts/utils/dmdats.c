@@ -340,9 +340,9 @@ PetscErrorCode DMDATSSetIJacobianLocal(DM dm, DMDATSIJacobianLocalFn *func, void
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode TSMonitorDMDARayDestroy(void **mctx)
+PetscErrorCode TSMonitorDMDARayDestroy(PetscCtxRt mctx)
 {
-  TSMonitorDMDARayCtx *rayctx = (TSMonitorDMDARayCtx *)*mctx;
+  TSMonitorDMDARayCtx *rayctx = *(TSMonitorDMDARayCtx **)mctx;
 
   PetscFunctionBegin;
   if (rayctx->lgctx) PetscCall(TSMonitorLGCtxDestroy(&rayctx->lgctx));

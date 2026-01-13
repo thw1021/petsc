@@ -509,9 +509,8 @@ PetscErrorCode KSPConvergedReasonView(KSP ksp, PetscViewer viewer)
   Input Parameters:
 + ksp               - the `KSP` context
 . f                 - the `ksp` converged reason view function, see `KSPConvergedReasonViewFn`
-. vctx              - [optional] user-defined context for private data for the
-                      `KSPConvergedReason` view routine (use `NULL` if no context is desired)
-- reasonviewdestroy - [optional] routine that frees `vctx` (may be `NULL`), see `PetscCtxDestroyFn` for the calling sequence
+. ctx               - [optional] context for private data for the `KSPConvergedReason` view routine (use `NULL` if context is not needed)
+- reasonviewdestroy - [optional] routine that frees `ctx` (may be `NULL`), see `PetscCtxDestroyFn` for the calling sequence
 
   Options Database Keys:
 + -ksp_converged_reason             - sets a default `KSPConvergedReasonView()`
@@ -530,20 +529,20 @@ PetscErrorCode KSPConvergedReasonView(KSP ksp, PetscViewer viewer)
 
 .seealso: [](ch_ksp), `KSPConvergedReasonView()`, `KSPConvergedReasonViewFn`, `KSPConvergedReasonViewCancel()`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode KSPConvergedReasonViewSet(KSP ksp, KSPConvergedReasonViewFn *f, void *vctx, PetscCtxDestroyFn *reasonviewdestroy)
+PetscErrorCode KSPConvergedReasonViewSet(KSP ksp, KSPConvergedReasonViewFn *f, void *ctx, PetscCtxDestroyFn *reasonviewdestroy)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   for (PetscInt i = 0; i < ksp->numberreasonviews; i++) {
     PetscBool identical;
 
-    PetscCall(PetscMonitorCompare((PetscErrorCode (*)(void))(PetscVoidFn *)f, vctx, reasonviewdestroy, (PetscErrorCode (*)(void))(PetscVoidFn *)ksp->reasonview[i], ksp->reasonviewcontext[i], ksp->reasonviewdestroy[i], &identical));
+    PetscCall(PetscMonitorCompare((PetscErrorCode (*)(void))(PetscVoidFn *)f, ctx, reasonviewdestroy, (PetscErrorCode (*)(void))(PetscVoidFn *)ksp->reasonview[i], ksp->reasonviewcontext[i], ksp->reasonviewdestroy[i], &identical));
     if (identical) PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCheck(ksp->numberreasonviews < MAXKSPREASONVIEWS, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Too many KSP reasonview set");
   ksp->reasonview[ksp->numberreasonviews]          = f;
   ksp->reasonviewdestroy[ksp->numberreasonviews]   = reasonviewdestroy;
-  ksp->reasonviewcontext[ksp->numberreasonviews++] = vctx;
+  ksp->reasonviewcontext[ksp->numberreasonviews++] = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2384,7 +2383,7 @@ PetscErrorCode KSPMonitorCancel(KSP ksp)
 
 .seealso: [](ch_ksp), `KSPMonitorResidual()`, `KSP`
 @*/
-PetscErrorCode KSPGetMonitorContext(KSP ksp, void *ctx)
+PetscErrorCode KSPGetMonitorContext(KSP ksp, PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -2692,13 +2691,13 @@ PetscErrorCode KSPSetConvergenceTest(KSP ksp, KSPConvergenceTestFn *converge, vo
 
 .seealso: [](ch_ksp), `KSP`, `KSPConvergedDefault()`, `KSPGetConvergenceContext()`, `KSPSetTolerances()`, `KSPSetConvergenceTest()`, `KSPGetAndClearConvergenceTest()`
 @*/
-PetscErrorCode KSPGetConvergenceTest(KSP ksp, KSPConvergenceTestFn **converge, void **ctx, PetscCtxDestroyFn **destroy)
+PetscErrorCode KSPGetConvergenceTest(KSP ksp, KSPConvergenceTestFn **converge, PetscCtxRt ctx, PetscCtxDestroyFn **destroy)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   if (converge) *converge = ksp->converged;
   if (destroy) *destroy = ksp->convergeddestroy;
-  if (ctx) *ctx = ksp->cnvP;
+  if (ctx) *(void **)ctx = ksp->cnvP;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2725,13 +2724,13 @@ PetscErrorCode KSPGetConvergenceTest(KSP ksp, KSPConvergenceTestFn **converge, v
 
 .seealso: [](ch_ksp), `KSP`, `KSPConvergedDefault()`, `KSPGetConvergenceContext()`, `KSPSetTolerances()`, `KSPSetConvergenceTest()`, `KSPGetConvergenceTest()`
 @*/
-PetscErrorCode KSPGetAndClearConvergenceTest(KSP ksp, KSPConvergenceTestFn **converge, void **ctx, PetscCtxDestroyFn **destroy)
+PetscErrorCode KSPGetAndClearConvergenceTest(KSP ksp, KSPConvergenceTestFn **converge, PetscCtxRt ctx, PetscCtxDestroyFn **destroy)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   *converge             = ksp->converged;
   *destroy              = ksp->convergeddestroy;
-  *ctx                  = ksp->cnvP;
+  *(void **)ctx         = ksp->cnvP;
   ksp->converged        = NULL;
   ksp->cnvP             = NULL;
   ksp->convergeddestroy = NULL;
@@ -2753,7 +2752,7 @@ PetscErrorCode KSPGetAndClearConvergenceTest(KSP ksp, KSPConvergenceTestFn **con
 
 .seealso: [](ch_ksp), `KSP`, `KSPConvergedDefault()`, `KSPSetConvergenceTest()`, `KSPGetConvergenceTest()`
 @*/
-PetscErrorCode KSPGetConvergenceContext(KSP ksp, void *ctx)
+PetscErrorCode KSPGetConvergenceContext(KSP ksp, PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);

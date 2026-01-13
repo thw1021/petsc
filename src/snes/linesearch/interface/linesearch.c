@@ -351,12 +351,12 @@ PetscErrorCode SNESLineSearchSetPreCheck(SNESLineSearch linesearch, PetscErrorCo
 
 .seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchPreCheck()`, `SNESLineSearchGetPostCheck()`, `SNESLineSearchSetPreCheck()`, `SNESLineSearchSetPostCheck()`
 @*/
-PetscErrorCode SNESLineSearchGetPreCheck(SNESLineSearch linesearch, PetscErrorCode (**func)(SNESLineSearch, Vec, Vec, PetscBool *, void *), void **ctx)
+PetscErrorCode SNESLineSearchGetPreCheck(SNESLineSearch linesearch, PetscErrorCode (**func)(SNESLineSearch, Vec, Vec, PetscBool *, void *), PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   if (func) *func = linesearch->ops->precheck;
-  if (ctx) *ctx = linesearch->precheckctx;
+  if (ctx) *(void **)ctx = linesearch->precheckctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -414,12 +414,12 @@ PetscErrorCode SNESLineSearchSetPostCheck(SNESLineSearch linesearch, PetscErrorC
 
 .seealso: [](ch_snes), `SNES`, `SNESLineSearch`, `SNESGetLineSearch()`, `SNESLineSearchGetPreCheck()`, `SNESLineSearchSetPostCheck()`, `SNESLineSearchPostCheck()`, `SNESLineSearchSetPreCheck()`
 @*/
-PetscErrorCode SNESLineSearchGetPostCheck(SNESLineSearch linesearch, PetscErrorCode (**func)(SNESLineSearch, Vec, Vec, Vec, PetscBool *, PetscBool *, void *), void **ctx)
+PetscErrorCode SNESLineSearchGetPostCheck(SNESLineSearch linesearch, PetscErrorCode (**func)(SNESLineSearch, Vec, Vec, Vec, PetscBool *, PetscBool *, void *), PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   if (func) *func = linesearch->ops->postcheck;
-  if (ctx) *ctx = linesearch->postcheckctx;
+  if (ctx) *(void **)ctx = linesearch->postcheckctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

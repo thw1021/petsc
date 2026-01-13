@@ -112,7 +112,7 @@ static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
-  PetscCall(PetscBagGetData(ctx->bag, (void **)&p));
+  PetscCall(PetscBagGetData(ctx->bag, &p));
   PetscCall(PetscBagSetName(ctx->bag, "par", "Obstacle Parameters"));
   bag = ctx->bag;
   PetscCall(PetscBagRegisterReal(bag, &p->r_0, 0.9, "r_0", "Ball radius, m"));
@@ -163,7 +163,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(PetscDSGetWeakForm(ds, &wf));
   PetscCall(PetscDSGetSpatialDimension(ds, &dim));
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   switch (user->obsType) {
   case OBSTACLE_BALL:
     PetscCall(PetscDSSetResidual(ds, 0, NULL, f1_u));
@@ -174,7 +174,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   default:
     SETERRQ(PetscObjectComm((PetscObject)ds), PETSC_ERR_ARG_WRONG, "Invalid obstacle type: %s (%d)", obstacleTypes[PetscMin(user->obsType, NUM_OBSTACLE_TYPES)], user->obsType);
   }
-  PetscCall(PetscBagGetData(user->bag, (void **)&ctx));
+  PetscCall(PetscBagGetData(user->bag, &ctx));
   PetscCall(PetscDSSetExactSolution(ds, 0, exact, ctx));
   PetscCall(DMGetLabel(dm, "marker", &label));
   if (label) PetscCall(DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (PetscVoidFn *)exact, NULL, ctx, NULL));

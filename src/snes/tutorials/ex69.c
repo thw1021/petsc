@@ -3010,7 +3010,7 @@ static PetscErrorCode SetUpParameters(AppCtx *user)
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
-  PetscCall(PetscBagGetData(user->bag, (void **)&p));
+  PetscCall(PetscBagGetData(user->bag, &p));
   PetscCall(PetscBagSetName(user->bag, "par", "Problem parameters"));
   bag = user->bag;
   switch (user->solType) {
@@ -3144,7 +3144,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
   {
     Parameter *param;
 
-    PetscCall(PetscBagGetData(user->bag, (void **)&param));
+    PetscCall(PetscBagGetData(user->bag, &param));
     switch (user->solType) {
     case SOLKX: {
       PetscScalar constants[3];

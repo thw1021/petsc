@@ -1224,12 +1224,12 @@ PetscErrorCode SNESResetFromOptions(SNES snes)
 
 .seealso: [](ch_snes), `SNESGetApplicationContext()`, `SNESSetApplicationContext()`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode SNESSetComputeApplicationContext(SNES snes, PetscErrorCode (*compute)(SNES snes, void **ctx), PetscCtxDestroyFn *destroy)
+PetscErrorCode SNESSetComputeApplicationContext(SNES snes, PetscErrorCode (*compute)(SNES snes, PetscCtxRt ctx), PetscCtxDestroyFn *destroy)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  snes->ops->usercompute = compute;
-  snes->ops->ctxdestroy  = destroy;
+  snes->ops->ctxcompute = compute;
+  snes->ops->ctxdestroy = destroy;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1305,7 +1305,7 @@ PetscErrorCode SNESSetApplicationContext(SNES snes, void *ctx)
 
 .seealso: [](ch_snes), `SNESSetApplicationContext()`, `SNESSetComputeApplicationContext()`
 @*/
-PetscErrorCode SNESGetApplicationContext(SNES snes, PeCtx ctx)
+PetscErrorCode SNESGetApplicationContext(SNES snes, PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -2384,7 +2384,7 @@ PetscErrorCode SNESSetPicard(SNES snes, Vec r, SNESFunctionFn *bp, Mat Amat, Mat
 
 .seealso: [](ch_snes), `SNESSetFunction()`, `SNESSetPicard()`, `SNESGetFunction()`, `SNESGetJacobian()`, `SNESGetDM()`, `SNESFunctionFn`, `SNESJacobianFn`
 @*/
-PetscErrorCode SNESGetPicard(SNES snes, Vec *r, SNESFunctionFn **f, Mat *Amat, Mat *Pmat, SNESJacobianFn **J, void **ctx)
+PetscErrorCode SNESGetPicard(SNES snes, Vec *r, SNESFunctionFn **f, Mat *Amat, Mat *Pmat, SNESJacobianFn **J, PetscCtxRt ctx)
 {
   DM dm;
 
@@ -3298,7 +3298,7 @@ PetscErrorCode SNESSetJacobian(SNES snes, Mat Amat, Mat Pmat, SNESJacobianFn *J,
 
 .seealso: [](ch_snes), `SNES`, `Mat`, `SNESSetJacobian()`, `SNESComputeJacobian()`, `SNESJacobianFn`, `SNESGetFunction()`
 @*/
-PetscErrorCode SNESGetJacobian(SNES snes, Mat *Amat, Mat *Pmat, SNESJacobianFn **J, void **ctx)
+PetscErrorCode SNESGetJacobian(SNES snes, Mat *Amat, Mat *Pmat, SNESJacobianFn **J, PetscCtxRt ctx)
 {
   DM dm;
 
@@ -3438,7 +3438,7 @@ PetscErrorCode SNESSetUp(SNES snes)
     }
   }
   if (snes->mf) PetscCall(SNESSetUpMatrixFree_Private(snes, snes->mf_operator, snes->mf_version));
-  if (snes->ops->usercompute && !snes->ctx) PetscCallBack("SNES callback compute application context", (*snes->ops->usercompute)(snes, &snes->ctx));
+  if (snes->ops->ctxcompute && !snes->ctx) PetscCallBack("SNES callback compute application context", (*snes->ops->ctxcompute)(snes, &snes->ctx));
 
   snes->jac_iter = 0;
   snes->pre_iter = 0;
@@ -4357,14 +4357,14 @@ M*/
   Input Parameters:
 + snes                        - the `SNES` context
 . SNESConvergenceTestFunction - routine to test for convergence
-. cctx                        - [optional] context for private data for the convergence routine  (may be `NULL`)
+. ctx                         - [optional] context for private data for the convergence routine  (may be `NULL`)
 - destroy                     - [optional] destructor for the context (may be `NULL`; `PETSC_NULL_FUNCTION` in Fortran)
 
   Level: advanced
 
 .seealso: [](ch_snes), `SNES`, `SNESConvergedDefault()`, `SNESConvergedSkip()`, `SNESConvergenceTestFunction`
 @*/
-PetscErrorCode SNESSetConvergenceTest(SNES snes, PetscErrorCode (*SNESConvergenceTestFunction)(SNES, PetscInt, PetscReal, PetscReal, PetscReal, SNESConvergedReason *, void *), void *cctx, PetscCtxDestroyFn *destroy)
+PetscErrorCode SNESSetConvergenceTest(SNES snes, PetscErrorCode (*SNESConvergenceTestFunction)(SNES, PetscInt, PetscReal, PetscReal, PetscReal, SNESConvergedReason *, void *), void *ctx, PetscCtxDestroyFn *destroy)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -4372,7 +4372,7 @@ PetscErrorCode SNESSetConvergenceTest(SNES snes, PetscErrorCode (*SNESConvergenc
   if (snes->ops->convergeddestroy) PetscCall((*snes->ops->convergeddestroy)(&snes->cnvP));
   snes->ops->converged        = SNESConvergenceTestFunction;
   snes->ops->convergeddestroy = destroy;
-  snes->cnvP                  = cctx;
+  snes->cnvP                  = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -5163,7 +5163,7 @@ PetscErrorCode SNESGetSolutionUpdate(SNES snes, Vec *x)
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESSetFunction()`, `SNESGetSolution()`, `SNESFunctionFn`
 @*/
-PetscErrorCode SNESGetFunction(SNES snes, Vec *r, SNESFunctionFn **f, void **ctx)
+PetscErrorCode SNESGetFunction(SNES snes, Vec *r, SNESFunctionFn **f, PetscCtxRt ctx)
 {
   DM dm;
 
@@ -5200,7 +5200,7 @@ PetscErrorCode SNESGetFunction(SNES snes, Vec *r, SNESFunctionFn **f, void **ctx
 
 .seealso: [](ch_snes), `SNESSetNGS()`, `SNESGetFunction()`, `SNESNGSFn`
 @*/
-PetscErrorCode SNESGetNGS(SNES snes, SNESNGSFn **f, void **ctx)
+PetscErrorCode SNESGetNGS(SNES snes, SNESNGSFn **f, PetscCtxRt ctx)
 {
   DM dm;
 
@@ -5865,8 +5865,8 @@ PetscErrorCode SNESGetNPC(SNES snes, SNES *pc)
     PetscCall(SNESGetOptionsPrefix(snes, &optionsprefix));
     PetscCall(SNESSetOptionsPrefix(snes->npc, optionsprefix));
     PetscCall(SNESAppendOptionsPrefix(snes->npc, "npc_"));
-    if (snes->ops->usercompute) {
-      PetscCall(SNESSetComputeApplicationContext(snes, snes->ops->usercompute, snes->ops->ctxdestroy));
+    if (snes->ops->ctxcompute) {
+      PetscCall(SNESSetComputeApplicationContext(snes, snes->ops->ctxcompute, snes->ops->ctxdestroy));
     } else {
       PetscCall(SNESGetApplicationContext(snes, &ctx));
       PetscCall(SNESSetApplicationContext(snes->npc, ctx));

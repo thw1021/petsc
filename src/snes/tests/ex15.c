@@ -369,7 +369,7 @@ static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
-  PetscCall(PetscBagGetData(ctx->bag, (void **)&p));
+  PetscCall(PetscBagGetData(ctx->bag, &p));
   PetscCall(PetscBagSetName(ctx->bag, "par", "Parameters"));
   bag = ctx->bag;
   PetscCall(PetscBagRegisterScalar(bag, &p->sigma, 1.0, "sigma", "Charge per unit area, C/m^3"));
@@ -410,7 +410,7 @@ static PetscErrorCode InitializeConstants(DM sw, AppCtx *user)
     Parameter *param;
     PetscReal  Area;
 
-    PetscCall(PetscBagGetData(user->bag, (void **)&param));
+    PetscCall(PetscBagGetData(user->bag, &param));
     switch (dim) {
     case 1:
       Area = (gmax[0] - gmin[0]);
@@ -433,7 +433,7 @@ static PetscErrorCode InitializeConstants(DM sw, AppCtx *user)
   {
     PetscDS    ds;
     Parameter *param;
-    PetscCall(PetscBagGetData(user->bag, (void **)&param));
+    PetscCall(PetscBagGetData(user->bag, &param));
     PetscScalar constants[NUM_CONSTANTS];
     constants[SIGMA] = param->sigma;
     PetscCall(DMGetDS(dm, &ds));

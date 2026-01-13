@@ -300,9 +300,9 @@ PetscErrorCode DMShellSetContext(DM dm, void *ctx)
 
 .seealso: `DM`, `DMSHELL`, `DMCreateMatrix()`, `DMShellSetContext()`
 @*/
-PetscErrorCode DMShellGetContext(DM dm, void *ctx)
+PetscErrorCode DMShellGetContext(DM dm, PetscCtxRt ctx)
 {
-  DM_Shell *shell = (DM_Shell *)dm->data;
+  DM_Shell *shell = *(DM_Shell **)dm->data;
   PetscBool isshell;
 
   PetscFunctionBegin;

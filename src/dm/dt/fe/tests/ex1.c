@@ -111,7 +111,7 @@ PetscErrorCode CellRangeGetFEGeom(IS cellIS, DMField coordField, PetscQuadrature
   PetscCall(PetscSNPrintf(composeStr, 32, "CellRangeGetFEGeom_%" PetscInt64_FMT "\n", id));
   PetscCall(PetscObjectQuery((PetscObject)cellIS, composeStr, (PetscObject *)&container));
   if (container) {
-    PetscCall(PetscContainerGetPointer(container, (void **)geom));
+    PetscCall(PetscContainerGetPointer(container, geom));
   } else {
     PetscCall(DMFieldCreateFEGeom(coordField, cellIS, quad, mode, geom));
     PetscCall(PetscObjectContainerCompose((PetscObject)cellIS, composeStr, *geom, PetscFEGeomDestroy_Void));

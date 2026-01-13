@@ -2684,7 +2684,7 @@ PetscErrorCode TaoSetApplicationContext(Tao tao, void *ctx)
 
 .seealso: [](ch_tao), `Tao`, `TaoSetApplicationContext()`
 @*/
-PetscErrorCode TaoGetApplicationContext(Tao tao, PeCtx ctx)
+PetscErrorCode TaoGetApplicationContext(Tao tao, PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);

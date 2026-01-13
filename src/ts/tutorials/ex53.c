@@ -375,7 +375,7 @@ static PetscErrorCode terzaghi_drainage_pressure(PetscInt dim, PetscReal time, c
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time <= 0.0) {
     PetscScalar alpha = param->alpha;                                        /* -  */
     PetscScalar K_u   = param->K_u;                                          /* Pa */
@@ -398,7 +398,7 @@ static PetscErrorCode terzaghi_initial_u(PetscInt dim, PetscReal time, const Pet
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   {
     PetscScalar K_u   = param->K_u;                                      /* Pa */
     PetscScalar G     = param->mu;                                       /* Pa */
@@ -418,7 +418,7 @@ static PetscErrorCode terzaghi_initial_eps(PetscInt dim, PetscReal time, const P
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   {
     PetscScalar K_u  = param->K_u;                                      /* Pa */
     PetscScalar G    = param->mu;                                       /* Pa */
@@ -435,7 +435,7 @@ static PetscErrorCode terzaghi_2d_u(PetscInt dim, PetscReal time, const PetscRea
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time < 0.0) {
     PetscCall(terzaghi_initial_u(dim, time, x, Nc, u, ctx));
   } else {
@@ -472,7 +472,7 @@ static PetscErrorCode terzaghi_2d_eps(PetscInt dim, PetscReal time, const PetscR
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time < 0.0) {
     PetscCall(terzaghi_initial_eps(dim, time, x, Nc, u, ctx));
   } else {
@@ -509,7 +509,7 @@ static PetscErrorCode terzaghi_2d_p(PetscInt dim, PetscReal time, const PetscRea
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time <= 0.0) {
     PetscCall(terzaghi_drainage_pressure(dim, time, x, Nc, u, ctx));
   } else {
@@ -546,7 +546,7 @@ static PetscErrorCode terzaghi_2d_u_t(PetscInt dim, PetscReal time, const PetscR
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time <= 0.0) {
     u[0] = 0.0;
     u[1] = 0.0;
@@ -584,7 +584,7 @@ static PetscErrorCode terzaghi_2d_eps_t(PetscInt dim, PetscReal time, const Pets
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time <= 0.0) {
     u[0] = 0.0;
   } else {
@@ -620,7 +620,7 @@ static PetscErrorCode terzaghi_2d_p_t(PetscInt dim, PetscReal time, const PetscR
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time <= 0.0) {
     PetscScalar alpha = param->alpha;                  /* -  */
     PetscScalar K_u   = param->K_u;                    /* Pa */
@@ -671,7 +671,7 @@ static PetscErrorCode mandel_drainage_pressure(PetscInt dim, PetscReal time, con
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time <= 0.0) {
     PetscScalar alpha = param->alpha;                          /* -  */
     PetscScalar K_u   = param->K_u;                            /* Pa */
@@ -709,7 +709,7 @@ static PetscErrorCode mandel_initial_u(PetscInt dim, PetscReal time, const Petsc
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   {
     PetscScalar alpha = param->alpha;                          /* -  */
     PetscScalar K_u   = param->K_u;                            /* Pa */
@@ -744,7 +744,7 @@ static PetscErrorCode mandel_initial_eps(PetscInt dim, PetscReal time, const Pet
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   {
     PetscScalar alpha = param->alpha;                          /* -  */
     PetscScalar K_u   = param->K_u;                            /* Pa */
@@ -784,7 +784,7 @@ static PetscErrorCode mandel_2d_u(PetscInt dim, PetscReal time, const PetscReal 
 
   AppCtx *user = (AppCtx *)ctx;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time <= 0.0) {
     PetscCall(mandel_initial_u(dim, time, x, Nc, u, ctx));
   } else {
@@ -827,7 +827,7 @@ static PetscErrorCode mandel_2d_eps(PetscInt dim, PetscReal time, const PetscRea
 
   AppCtx *user = (AppCtx *)ctx;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time <= 0.0) {
     PetscCall(mandel_initial_eps(dim, time, x, Nc, u, ctx));
   } else {
@@ -877,7 +877,7 @@ static PetscErrorCode mandel_2d_p(PetscInt dim, PetscReal time, const PetscReal 
 
   AppCtx *user = (AppCtx *)ctx;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time <= 0.0) {
     PetscCall(mandel_drainage_pressure(dim, time, x, Nc, u, ctx));
   } else {
@@ -921,7 +921,7 @@ static PetscErrorCode mandel_2d_u_t(PetscInt dim, PetscReal time, const PetscRea
 
   AppCtx *user = (AppCtx *)ctx;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
 
   PetscInt    NITER = user->niter;
   PetscScalar alpha = param->alpha;
@@ -961,7 +961,7 @@ static PetscErrorCode mandel_2d_eps_t(PetscInt dim, PetscReal time, const PetscR
 
   AppCtx *user = (AppCtx *)ctx;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
 
   PetscInt    NITER = user->niter;
   PetscScalar alpha = param->alpha;
@@ -1006,7 +1006,7 @@ static PetscErrorCode mandel_2d_p_t(PetscInt dim, PetscReal time, const PetscRea
 
   AppCtx *user = (AppCtx *)ctx;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
 
   PetscScalar alpha = param->alpha;
   PetscScalar K_u   = param->K_u;
@@ -1033,7 +1033,7 @@ static PetscErrorCode cryer_drainage_pressure(PetscInt dim, PetscReal time, cons
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time <= 0.0) {
     PetscScalar alpha = param->alpha;    /* -  */
     PetscScalar K_u   = param->K_u;      /* Pa */
@@ -1053,7 +1053,7 @@ static PetscErrorCode cryer_initial_u(PetscInt dim, PetscReal time, const PetscR
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   {
     PetscScalar K_u  = param->K_u;                                      /* Pa */
     PetscScalar G    = param->mu;                                       /* Pa */
@@ -1076,7 +1076,7 @@ static PetscErrorCode cryer_initial_eps(PetscInt dim, PetscReal time, const Pets
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   {
     PetscScalar K_u  = param->K_u;                                      /* Pa */
     PetscScalar G    = param->mu;                                       /* Pa */
@@ -1101,7 +1101,7 @@ static PetscErrorCode cryer_3d_u(PetscInt dim, PetscReal time, const PetscReal x
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time <= 0.0) {
     PetscCall(cryer_initial_u(dim, time, x, Nc, u, ctx));
   } else {
@@ -1151,7 +1151,7 @@ static PetscErrorCode cryer_3d_eps(PetscInt dim, PetscReal time, const PetscReal
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time <= 0.0) {
     PetscCall(cryer_initial_eps(dim, time, x, Nc, u, ctx));
   } else {
@@ -1203,7 +1203,7 @@ static PetscErrorCode cryer_3d_p(PetscInt dim, PetscReal time, const PetscReal x
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   if (time <= 0.0) {
     PetscCall(cryer_drainage_pressure(dim, time, x, Nc, u, ctx));
   } else {
@@ -1516,7 +1516,7 @@ static PetscErrorCode mandelZeros(MPI_Comm comm, AppCtx *ctx, Parameter *param)
   PetscReal y1, y2, ym;
 
   PetscFunctionBeginUser;
-  //PetscCall(PetscBagGetData(ctx->bag, (void **) &param));
+  //PetscCall(PetscBagGetData(ctx->bag,  &param));
   PetscInt  NITER = ctx->niter;
   PetscReal EPS   = ctx->eps;
   //const PetscScalar YMAX = param->ymax;
@@ -1611,7 +1611,7 @@ static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
-  PetscCall(PetscBagGetData(ctx->bag, (void **)&p));
+  PetscCall(PetscBagGetData(ctx->bag, &p));
   PetscCall(PetscBagSetName(ctx->bag, "par", "Poroelastic Parameters"));
   bag = ctx->bag;
   if (ctx->solType == SOL_TERZAGHI) {
@@ -1724,7 +1724,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   PetscCall(DMGetLabel(dm, "marker", &label));
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(PetscDSGetSpatialDimension(ds, &dim));
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   exact_t[0] = exact_t[1] = exact_t[2] = zero;
 
   /* Setup Problem Formulation and Boundary Conditions */

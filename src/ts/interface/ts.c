@@ -1230,7 +1230,7 @@ PetscErrorCode TSSetIFunction(TS ts, Vec r, TSIFunctionFn *f, void *ctx)
 
 .seealso: [](ch_ts), `TS`, `TSSetIFunction()`, `SNESGetFunction()`
 @*/
-PetscErrorCode TSGetIFunction(TS ts, Vec *r, TSIFunctionFn **func, void **ctx)
+PetscErrorCode TSGetIFunction(TS ts, Vec *r, TSIFunctionFn **func, PetscCtxRt ctx)
 {
   SNES snes;
   DM   dm;
@@ -1261,7 +1261,7 @@ PetscErrorCode TSGetIFunction(TS ts, Vec *r, TSIFunctionFn **func, void **ctx)
 
 .seealso: [](ch_ts), `TS`, `TSSetRHSFunction()`, `SNESGetFunction()`
 @*/
-PetscErrorCode TSGetRHSFunction(TS ts, Vec *r, TSRHSFunctionFn **func, void **ctx)
+PetscErrorCode TSGetRHSFunction(TS ts, Vec *r, TSRHSFunctionFn **func, PetscCtxRt ctx)
 {
   SNES snes;
   DM   dm;
@@ -1406,7 +1406,7 @@ PetscErrorCode TSSetI2Function(TS ts, Vec F, TSI2FunctionFn *fun, void *ctx)
 
 .seealso: [](ch_ts), `TS`, `TSSetIFunction()`, `SNESGetFunction()`, `TSCreate()`
 @*/
-PetscErrorCode TSGetI2Function(TS ts, Vec *r, TSI2FunctionFn **fun, void **ctx)
+PetscErrorCode TSGetI2Function(TS ts, Vec *r, TSI2FunctionFn **fun, PetscCtxRt ctx)
 {
   SNES snes;
   DM   dm;
@@ -1480,7 +1480,7 @@ PetscErrorCode TSSetI2Jacobian(TS ts, Mat J, Mat P, TSI2JacobianFn *jac, void *c
 
 .seealso: [](ch_ts), `TS`, `TSGetTimeStep()`, `TSGetMatrices()`, `TSGetTime()`, `TSGetStepNumber()`, `TSSetI2Jacobian()`, `TSGetI2Function()`, `TSCreate()`
 @*/
-PetscErrorCode TSGetI2Jacobian(TS ts, Mat *J, Mat *P, TSI2JacobianFn **jac, void **ctx)
+PetscErrorCode TSGetI2Jacobian(TS ts, Mat *J, Mat *P, TSI2JacobianFn **jac, PetscCtxRt ctx)
 {
   SNES snes;
   DM   dm;
@@ -2038,7 +2038,7 @@ PetscErrorCode TSView(TS ts, PetscViewer viewer)
 
 .seealso: [](ch_ts), `TS`, `TSGetApplicationContext()`
 @*/
-PetscErrorCode TSSetApplicationContext(TS ts, PeCtx ctx)
+PetscErrorCode TSSetApplicationContext(TS ts, void *ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
@@ -2082,7 +2082,7 @@ PetscErrorCode TSSetApplicationContext(TS ts, PeCtx ctx)
 
 .seealso: [](ch_ts), `TS`, `TSSetApplicationContext()`
 @*/
-PetscErrorCode TSGetApplicationContext(TS ts, void *ctx)
+PetscErrorCode TSGetApplicationContext(TS ts, PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
@@ -4439,7 +4439,7 @@ PetscErrorCode TSGetOptionsPrefix(TS ts, const char *prefix[])
 .seealso: [](ch_ts), `TS`, `TSGetTimeStep()`, `TSGetMatrices()`, `TSGetTime()`, `TSGetStepNumber()`
 
 @*/
-PetscErrorCode TSGetRHSJacobian(TS ts, Mat *Amat, Mat *Pmat, TSRHSJacobianFn **func, void **ctx)
+PetscErrorCode TSGetRHSJacobian(TS ts, Mat *Amat, Mat *Pmat, TSRHSJacobianFn **func, PetscCtxRt ctx)
 {
   DM dm;
 
@@ -4476,7 +4476,7 @@ PetscErrorCode TSGetRHSJacobian(TS ts, Mat *Amat, Mat *Pmat, TSRHSJacobianFn **f
 
 .seealso: [](ch_ts), `TS`, `TSGetTimeStep()`, `TSGetRHSJacobian()`, `TSGetMatrices()`, `TSGetTime()`, `TSGetStepNumber()`
 @*/
-PetscErrorCode TSGetIJacobian(TS ts, Mat *Amat, Mat *Pmat, TSIJacobianFn **f, void **ctx)
+PetscErrorCode TSGetIJacobian(TS ts, Mat *Amat, Mat *Pmat, TSIJacobianFn **f, PetscCtxRt ctx)
 {
   DM dm;
 

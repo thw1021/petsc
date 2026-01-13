@@ -78,7 +78,7 @@ int main(int argc, char **argv)
   return 0;
 }
 
-static PetscErrorCode DestroyCtx(void **ctx)
+static PetscErrorCode DestroyCtx(PetscCtxRt ctx)
 {
   PetscFunctionBeginUser;
   PetscCall(DMDestroy((DM *)ctx));

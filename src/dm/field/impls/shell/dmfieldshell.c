@@ -5,7 +5,7 @@ typedef struct _n_DMField_Shell {
   PetscErrorCode (*destroy)(DMField);
 } DMField_Shell;
 
-PetscErrorCode DMFieldShellGetContext(DMField field, void *ctx)
+PetscErrorCode DMFieldShellGetContext(DMField field, PetscCtxRt ctx)
 {
   PetscBool flg;
 

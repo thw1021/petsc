@@ -1147,7 +1147,7 @@ static PetscErrorCode SetupParameters(DM dm, AppCtx *user)
   PetscCall(DMGetDimension(dm, &dim));
   dir = (PetscReal)(dim - 1);
   /* setup PETSc parameter bag */
-  PetscCall(PetscBagGetData(user->bag, (void **)&p));
+  PetscCall(PetscBagGetData(user->bag, &p));
   PetscCall(PetscBagSetName(user->bag, "par", "Low Mach flow parameters"));
   bag = user->bag;
   PetscCall(PetscBagRegisterReal(bag, &p->Strouhal, 1.0, "S", "Strouhal number"));
@@ -1328,7 +1328,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
       exactFuncs_t[PRES] = pipe_p_t;
       exactFuncs_t[TEMP] = pipe_T_t;
 
-      PetscCall(PetscBagGetData(user->bag, (void **)&ctx));
+      PetscCall(PetscBagGetData(user->bag, &ctx));
       id = 2;
       PetscCall(DMAddBoundary(dm, DM_BC_NATURAL, "right wall", label, 1, &id, 0, 0, NULL, NULL, NULL, ctx, &bd));
       PetscCall(PetscDSGetBoundary(ds, bd, &wf, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL));
@@ -1359,7 +1359,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
       exactFuncs_t[PRES] = pipe_wiggly_p_t;
       exactFuncs_t[TEMP] = pipe_wiggly_T_t;
 
-      PetscCall(PetscBagGetData(user->bag, (void **)&ctx));
+      PetscCall(PetscBagGetData(user->bag, &ctx));
       id = 2;
       PetscCall(DMAddBoundary(dm, DM_BC_NATURAL, "right wall", label, 1, &id, 0, 0, NULL, NULL, NULL, ctx, &bd));
       PetscCall(PetscDSGetBoundary(ds, bd, &wf, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL));
@@ -1389,7 +1389,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
     Parameter  *param;
     PetscScalar constants[13];
 
-    PetscCall(PetscBagGetData(user->bag, (void **)&param));
+    PetscCall(PetscBagGetData(user->bag, &param));
 
     constants[STROUHAL] = param->Strouhal;
     constants[FROUDE]   = param->Froude;
@@ -1407,7 +1407,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
     PetscCall(PetscDSSetConstants(ds, 13, constants));
   }
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&ctx));
+  PetscCall(PetscBagGetData(user->bag, &ctx));
   PetscCall(PetscDSSetExactSolution(ds, VEL, exactFuncs[VEL], ctx));
   PetscCall(PetscDSSetExactSolution(ds, PRES, exactFuncs[PRES], ctx));
   PetscCall(PetscDSSetExactSolution(ds, TEMP, exactFuncs[TEMP], ctx));
@@ -1487,7 +1487,7 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   PetscCall(DMSetField(dm, TEMP, NULL, (PetscObject)fe[TEMP]));
   PetscCall(DMCreateDS(dm));
   PetscCall(SetupProblem(dm, user));
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   while (cdm) {
     PetscCall(DMCopyDisc(dm, cdm));
     PetscCall(DMGetCoarseDM(cdm, &cdm));

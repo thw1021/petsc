@@ -98,7 +98,7 @@ extern PetscErrorCode RHSAdvection(TS, PetscReal, Vec, Mat, Mat, void *);
 extern PetscErrorCode InitialConditions(Vec, AppCtx *);
 extern PetscErrorCode ComputeReference(TS, PetscReal, Vec, AppCtx *);
 extern PetscErrorCode MonitorError(Tao, void *);
-extern PetscErrorCode MonitorDestroy(void **);
+extern PetscErrorCode MonitorDestroy(PetscCtxRt);
 extern PetscErrorCode ComputeSolutionCoefficients(AppCtx *);
 extern PetscErrorCode RHSFunction(TS, PetscReal, Vec, Vec, void *);
 extern PetscErrorCode RHSJacobian(TS, PetscReal, Vec, Mat, Mat, void *);
@@ -639,7 +639,7 @@ PetscErrorCode MonitorError(Tao tao, void *ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MonitorDestroy(void **ctx)
+PetscErrorCode MonitorDestroy(PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "];\n"));

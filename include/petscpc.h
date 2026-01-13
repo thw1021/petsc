@@ -146,7 +146,7 @@ PETSC_EXTERN PetscErrorCode PCGetCoarseOperators(PC, PetscInt *, Mat *[]);
 PETSC_EXTERN PetscErrorCode PCSetCoordinates(PC, PetscInt, PetscInt, PetscReal[]);
 
 PETSC_EXTERN PetscErrorCode PCSetApplicationContext(PC, void *);
-PETSC_EXTERN PetscErrorCode PCGetApplicationContext(PC, void *);
+PETSC_EXTERN PetscErrorCode PCGetApplicationContext(PC, PetscCtxRt);
 
 /* ------------- options specific to particular preconditioners --------- */
 
@@ -188,7 +188,7 @@ PETSC_EXTERN PetscErrorCode PCShellSetApplyRichardson(PC, PetscErrorCode (*)(PC,
 PETSC_EXTERN PetscErrorCode PCShellSetView(PC, PetscErrorCode (*)(PC, PetscViewer));
 PETSC_EXTERN PetscErrorCode PCShellSetDestroy(PC, PetscErrorCode (*)(PC));
 PETSC_EXTERN PetscErrorCode PCShellSetContext(PC, void *);
-PETSC_EXTERN PetscErrorCode PCShellGetContext(PC, void *);
+PETSC_EXTERN PetscErrorCode PCShellGetContext(PC, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode PCShellSetName(PC, const char[]);
 PETSC_EXTERN PetscErrorCode PCShellGetName(PC, const char *[]);
 

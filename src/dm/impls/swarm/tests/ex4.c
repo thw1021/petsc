@@ -312,7 +312,7 @@ static PetscErrorCode SetProblem(TS ts)
 
   PetscFunctionBegin;
   PetscCall(TSGetDM(ts, &sw));
-  PetscCall(DMGetApplicationContext(sw, (void **)&user));
+  PetscCall(DMGetApplicationContext(sw, &user));
   // Define unified system for (X, V)
   {
     Mat      J;

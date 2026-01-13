@@ -130,9 +130,9 @@ static PetscErrorCode ourrhsjacobianp(TS ts, PetscReal d, Vec x, Mat m, void *ct
   PetscObjectUseFortranCallback(ts, _cb.rhsjacobianp, (TS *, PetscReal *, Vec *, Mat *, void *, PetscErrorCode * /* PETSC_F90_2PTR_PROTO_NOVAR */), (&ts, &d, &x, &m, _ctx, &ierr /* PETSC_F90_2PTR_PARAM(ptr) */));
 }
 
-static PetscErrorCode ourmonitordestroy(void **ctx)
+static PetscErrorCode ourmonitordestroy(PetscCtxRt ctx)
 {
-  TS ts = (TS)*ctx;
+  TS ts = *(TS *)ctx;
   PetscObjectUseFortranCallback(ts, _cb.mondestroy, (void *, PetscErrorCode *), (_ctx, &ierr));
 }
 

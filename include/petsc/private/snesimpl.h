@@ -22,7 +22,7 @@ struct _SNESOps {
   PetscErrorCode (*setfromoptions)(SNES, PetscOptionItems); /* sets options from database */
   PetscErrorCode (*destroy)(SNES);
   PetscErrorCode (*reset)(SNES);
-  PetscErrorCode (*usercompute)(SNES, void **);
+  PetscErrorCode (*ctxcompute)(SNES, PetscCtxRt);
   PetscCtxDestroyFn *ctxdestroy;
   PetscErrorCode (*computevariablebounds)(SNES, Vec, Vec); /* user provided routine to set box constrained variable bounds */
   PetscErrorCode (*computepfunction)(SNES, Vec, Vec, void *);

@@ -210,7 +210,7 @@ static PetscErrorCode axial_disp_u(PetscInt dim, PetscReal time, const PetscReal
   AppCtx    *user = (AppCtx *)ctx;
   Parameter *param;
 
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   {
     const PetscReal mu     = PetscRealPart(param->mu);
     const PetscReal lambda = PetscRealPart(param->lambda);
@@ -370,7 +370,7 @@ static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
-  PetscCall(PetscBagGetData(ctx->bag, (void **)&p));
+  PetscCall(PetscBagGetData(ctx->bag, &p));
   PetscCall(PetscBagSetName(ctx->bag, "par", "Elastic Parameters"));
   bag = ctx->bag;
   PetscCall(PetscBagRegisterScalar(bag, &p->mu, 1.0, "mu", "Shear Modulus, Pa"));
@@ -462,7 +462,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(PetscDSGetWeakForm(ds, &wf));
   PetscCall(PetscDSGetSpatialDimension(ds, &dim));
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   switch (user->solType) {
   case SOL_MASS_QUADRATIC:
     PetscCall(PetscDSSetResidual(ds, 0, f0_mass_u, NULL));

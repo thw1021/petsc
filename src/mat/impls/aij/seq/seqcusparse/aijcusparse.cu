@@ -4397,7 +4397,7 @@ static PetscErrorCode MatSetPreallocationCOO_SeqAIJCUSPARSE(Mat mat, PetscCount 
 
   // Copy the COO struct to device
   PetscCall(PetscObjectQuery((PetscObject)mat, "__PETSc_MatCOOStruct_Host", (PetscObject *)&container_h));
-  PetscCall(PetscContainerGetPointer(container_h, (void **)&coo_h));
+  PetscCall(PetscContainerGetPointer(container_h, &coo_h));
   PetscCall(PetscMalloc1(1, &coo_d));
   *coo_d = *coo_h; // do a shallow copy and then amend some fields that need to be different
   PetscCallCUDA(cudaMalloc((void **)&coo_d->jmap, (coo_h->nz + 1) * sizeof(PetscCount)));
@@ -4436,7 +4436,7 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJCUSPARSE(Mat A, const PetscScalar v[
   if (!dev->mat) PetscCall(MatSeqAIJCUSPARSECopyToGPU(A));
 
   PetscCall(PetscObjectQuery((PetscObject)A, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container));
-  PetscCall(PetscContainerGetPointer(container, (void **)&coo));
+  PetscCall(PetscContainerGetPointer(container, &coo));
 
   PetscCall(PetscGetMemType(v, &memtype));
   if (PetscMemTypeHost(memtype)) { /* If user gave v[] in host, we might need to copy it to device if any */

@@ -52,7 +52,7 @@ static PetscErrorCode SNESDestroy_Shell(SNES snes)
 
 .seealso: [](ch_snes), `SNES`, `SNESSHELL`, `SNESCreateShell()`, `SNESShellSetContext()`
 @*/
-PetscErrorCode SNESShellGetContext(SNES snes, void *ctx)
+PetscErrorCode SNESShellGetContext(SNES snes, PetscCtxRt ctx)
 {
   PetscBool flg;
 

@@ -3830,7 +3830,7 @@ PetscErrorCode DMSetApplicationContext(DM dm, void *ctx)
 
 .seealso: [](ch_dmbase), `DM`, `DMView()`, `DMCreateGlobalVector()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`
 @*/
-PetscErrorCode DMGetApplicationContext(DM dm, PeCtx ctx)
+PetscErrorCode DMGetApplicationContext(DM dm, PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);

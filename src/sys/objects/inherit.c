@@ -901,7 +901,7 @@ struct _p_PetscContainer {
 .seealso: `PetscContainerCreate()`, `PetscContainerDestroy()`, `PetscObject`,
           `PetscContainerSetPointer()`, `PetscObjectContainerCompose()`, `PetscObjectContainerQuery()`
 @*/
-PetscErrorCode PetscContainerGetPointer(PetscContainer obj, PeCtx ptr)
+PetscErrorCode PetscContainerGetPointer(PetscContainer obj, PetscCtxRt ptr)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(obj, PETSC_CONTAINER_CLASSID, 1);
@@ -1090,21 +1090,21 @@ PetscErrorCode PetscObjectContainerCompose(PetscObject obj, const char *name, vo
 - name - the name for the composed container
 
   Output Parameter:
-. pointer - the pointer to the data
+. ptr - the pointer to the data
 
   Level: advanced
 
 .seealso: `PetscContainerCreate()`, `PetscContainerDestroy()`, `PetscContainerSetPointer()`, `PetscContainerGetPointer()`, `PetscObjectCompose()`, `PetscObjectQuery()`,
           `PetscContainerSetCtxDestroy()`, `PetscObject`, `PetscObjectContainerCompose()`
 @*/
-PetscErrorCode PetscObjectContainerQuery(PetscObject obj, const char *name, PeCtx pointer)
+PetscErrorCode PetscObjectContainerQuery(PetscObject obj, const char *name, PetscCtxRt ptr)
 {
   PetscContainer container;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectQuery(obj, name, (PetscObject *)&container));
-  if (container) PetscCall(PetscContainerGetPointer(container, pointer));
-  else *(void **)pointer = NULL;
+  if (container) PetscCall(PetscContainerGetPointer(container, ptr));
+  else *(void **)ptr = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

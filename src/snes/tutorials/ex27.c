@@ -354,7 +354,7 @@ static PetscErrorCode SetupParameters(PetscBag bag, AppCtx *user)
   Parameter *param;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscBagGetData(bag, (void **)&param));
+  PetscCall(PetscBagGetData(bag, &param));
   PetscCall(PetscBagSetName(bag, "par", "Poisson parameters"));
   PetscCall(PetscBagRegisterReal(bag, &param->k, 1.0, "k", "Thermal conductivity"));
   PetscCall(PetscBagSetFromOptions(bag));
@@ -456,7 +456,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
 
   /* Setup constants */
   {
-    PetscCall(PetscBagGetData(user->param, (void **)&param));
+    PetscCall(PetscBagGetData(user->param, &param));
     PetscScalar constants[1];
 
     constants[0] = param->k;
@@ -589,7 +589,7 @@ static PetscErrorCode SetupMixedProblem(DM dm, AppCtx *user)
 
   /* Setup constants */
   {
-    PetscCall(PetscBagGetData(user->param, (void **)&param));
+    PetscCall(PetscBagGetData(user->param, &param));
     PetscScalar constants[1];
 
     constants[0] = param->k;
@@ -640,7 +640,7 @@ PetscErrorCode SetupMixed(DMAdaptor adaptor, DM mdm)
   AppCtx *ctx;
 
   PetscFunctionBeginUser;
-  PetscCall(DMGetApplicationContext(mdm, (void **)&ctx));
+  PetscCall(DMGetApplicationContext(mdm, &ctx));
   PetscCall(SetupMixedDiscretization(mdm, ctx));
   PetscCall(SetupMixedProblem(mdm, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -123,9 +123,9 @@ static PetscErrorCode ourtaomonitor(Tao tao, void *ctx)
   PetscObjectUseFortranCallback(tao, _cb.mon, (Tao *, void *, PetscErrorCode *), (&tao, _ctx, &ierr));
 }
 
-static PetscErrorCode ourtaomondestroy(void **ctx)
+static PetscErrorCode ourtaomondestroy(PetscCtxRt ctx)
 {
-  Tao tao = (Tao)*ctx;
+  Tao tao = *(Tao *)ctx;
   PetscObjectUseFortranCallback(tao, _cb.mondestroy, (void *, PetscErrorCode *), (_ctx, &ierr));
 }
 static PetscErrorCode ourtaoconvergencetest(Tao tao, void *ctx)

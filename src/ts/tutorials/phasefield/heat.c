@@ -31,7 +31,7 @@ to generate InitialSolution.heat
 /*
    User-defined routines
 */
-extern PetscErrorCode FormFunction(TS, PetscReal, Vec, Vec, void *), FormInitialSolution(DM, Vec), MyMonitor(TS, PetscInt, PetscReal, Vec, void *), MyDestroy(void **);
+extern PetscErrorCode FormFunction(TS, PetscReal, Vec, Vec, void *), FormInitialSolution(DM, Vec), MyMonitor(TS, PetscInt, PetscReal, Vec, void *), MyDestroy;
 typedef struct {
   PetscReal           kappa;
   PetscBool           allencahn;

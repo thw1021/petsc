@@ -118,8 +118,8 @@ int main(int argc, char **argv)
 
     { // Force isoperiodic point SF to be created to update sfNatural.
       // Needs to be done before removing the field corresponding to sfNatural
-      PetscSection dummy_section;
-      PetscCall(DMGetGlobalSection(dm_read, &dummy_section));
+      PetscSection unused_section;
+      PetscCall(DMGetGlobalSection(dm_read, &unused_section));
     }
     PetscCall(CreateFEField(dm_read, PETSC_TRUE, num_comps));
 

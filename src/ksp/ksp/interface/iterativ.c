@@ -1231,10 +1231,10 @@ PetscErrorCode KSPMonitorDynamicTolerance(KSP ksp, PetscInt its, PetscReal fnorm
 
 .seealso: [](ch_ksp), `KSP`, `KSPMonitorDynamicTolerance()`, `KSPMonitorSet()`, `KSPMonitorDynamicToleranceCreate()`
 @*/
-PetscErrorCode KSPMonitorDynamicToleranceDestroy(void **ctx)
+PetscErrorCode KSPMonitorDynamicToleranceDestroy(PetscCtxRt ctx)
 {
   PetscFunctionBegin;
-  PetscCall(PetscFree(*ctx));
+  PetscCall(PetscFree(*(void **)ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1625,9 +1625,9 @@ PetscErrorCode KSPConvergedDefault(KSP ksp, PetscInt n, PetscReal rnorm, KSPConv
 .seealso: [](ch_ksp), `KSP`, `KSPConvergedDefault()`, `KSPConvergedDefaultCreate()`, `KSPSetConvergenceTest()`, `KSPSetTolerances()`, `KSPConvergedSkip()`,
           `KSPConvergedReason`, `KSPGetConvergedReason()`, `KSPConvergedDefaultSetUIRNorm()`, `KSPConvergedDefaultSetUMIRNorm()`
 @*/
-PetscErrorCode KSPConvergedDefaultDestroy(void **ctx)
+PetscErrorCode KSPConvergedDefaultDestroy(PetscCtxRt ctx)
 {
-  KSPConvergedDefaultCtx *cctx = (KSPConvergedDefaultCtx *)*ctx;
+  KSPConvergedDefaultCtx *cctx = *(KSPConvergedDefaultCtx **)ctx;
 
   PetscFunctionBegin;
   PetscCall(VecDestroy(&cctx->work));
@@ -2108,7 +2108,7 @@ PetscErrorCode KSPSetApplicationContext(KSP ksp, void *ctx)
 
 .seealso: [](ch_ksp), `KSP`, `KSPSetApplicationContext()`
 @*/
-PetscErrorCode KSPGetApplicationContext(KSP ksp, PeCtx ctx)
+PetscErrorCode KSPGetApplicationContext(KSP ksp, PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);

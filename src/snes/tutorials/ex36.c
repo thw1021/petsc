@@ -130,7 +130,7 @@ static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *user)
 
   PetscFunctionBeginUser;
   PetscCall(PetscBagCreate(comm, sizeof(Parameter), &user->bag));
-  PetscCall(PetscBagGetData(user->bag, (void **)&p));
+  PetscCall(PetscBagGetData(user->bag, &p));
   PetscCall(PetscBagSetName(user->bag, "par", "Homogenization parameters"));
   bag = user->bag;
   PetscCall(PetscBagRegisterReal(bag, &p->epsilon, 1.0, "epsilon", "Wavelength of fine scale oscillation"));
@@ -183,7 +183,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
     Parameter  *param;
     PetscScalar constants[NUM_CONSTANTS];
 
-    PetscCall(PetscBagGetData(user->bag, (void **)&param));
+    PetscCall(PetscBagGetData(user->bag, &param));
 
     constants[EPSILON] = param->epsilon;
     PetscCall(PetscDSSetConstants(ds, NUM_CONSTANTS, constants));
@@ -270,7 +270,7 @@ static PetscErrorCode DestroyCoarseProjection(Mat Pi)
   ProjStruct *ctx;
 
   PetscFunctionBegin;
-  PetscCall(MatShellGetContext(Pi, (void **)&ctx));
+  PetscCall(MatShellGetContext(Pi, &ctx));
   PetscCall(MatDestroy(&ctx->Mcoarse));
   PetscCall(MatDestroy(&ctx->Mfine));
   PetscCall(MatDestroy(&ctx->Ifine));
@@ -288,7 +288,7 @@ static PetscErrorCode CoarseProjection(Mat Pi, Vec x, Vec y)
   ProjStruct *ctx;
 
   PetscFunctionBegin;
-  PetscCall(MatShellGetContext(Pi, (void **)&ctx));
+  PetscCall(MatShellGetContext(Pi, &ctx));
   PetscCall(MatMult(ctx->Mfine, x, ctx->tmpfine));
   PetscCall(PetscObjectSetName((PetscObject)ctx->tmpfine, "Fine DG RHS"));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)ctx->tmpfine, "fine_dg_"));
@@ -341,7 +341,7 @@ static PetscErrorCode DestroyQuasiInterpolator(Mat P)
   QuasiInterp *ctx;
 
   PetscFunctionBegin;
-  PetscCall(MatShellGetContext(P, (void **)&ctx));
+  PetscCall(MatShellGetContext(P, &ctx));
   PetscCall(MatDestroy(&ctx->Ifdg));
   PetscCall(MatDestroy(&ctx->Pi));
   PetscCall(VecDestroy(&ctx->tmpc));
@@ -358,7 +358,7 @@ static PetscErrorCode QuasiInterpolate(Mat P, Vec x, Vec y)
   Vec          ly;
 
   PetscFunctionBegin;
-  PetscCall(MatShellGetContext(P, (void **)&ctx));
+  PetscCall(MatShellGetContext(P, &ctx));
   PetscCall(MatMult(ctx->Ifdg, x, ctx->tmpf));
 
   PetscCall(PetscObjectSetName((PetscObject)ctx->tmpf, "Fine DG Potential"));

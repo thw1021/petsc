@@ -76,13 +76,13 @@ PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Ta
 
 .seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`
 @*/
-PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx), void **ctx)
+PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx), PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (H) *H = tao->hessian;
   if (Hpre) *Hpre = tao->hessian_pre;
-  if (ctx) *ctx = tao->user_hessP;
+  if (ctx) *(void **)ctx = tao->user_hessP;
   if (func) *func = tao->ops->computehessian;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -811,14 +811,14 @@ PetscErrorCode TaoSetJacobianEqualityRoutine(Tao tao, Mat J, Mat Jpre, PetscErro
 
 .seealso: [](ch_tao), `Tao`, `TaoComputeJacobianEquality()`, `TaoSetJacobianEqualityRoutine()`
 @*/
-PetscErrorCode TaoGetJacobianEqualityRoutine(Tao tao, Mat *J, Mat *Jpre, PetscErrorCode (**func)(Tao tao, Vec x, Mat J, Mat Jpre, void *ctx), void **ctx)
+PetscErrorCode TaoGetJacobianEqualityRoutine(Tao tao, Mat *J, Mat *Jpre, PetscErrorCode (**func)(Tao tao, Vec x, Mat J, Mat Jpre, void *ctx), PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (J) *J = tao->jacobian_equality;
   if (Jpre) *Jpre = tao->jacobian_equality_pre;
   if (func) *func = tao->ops->computejacobianequality;
-  if (ctx) *ctx = tao->user_jac_equalityP;
+  if (ctx) *(void **)ctx = tao->user_jac_equalityP;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -900,13 +900,13 @@ PetscErrorCode TaoSetJacobianInequalityRoutine(Tao tao, Mat J, Mat Jpre, PetscEr
 
 .seealso: [](ch_tao), `Tao`, `TaoComputeJacobianInequality()`, `TaoSetJacobianInequalityRoutine()`
 @*/
-PetscErrorCode TaoGetJacobianInequalityRoutine(Tao tao, Mat *J, Mat *Jpre, PetscErrorCode (**func)(Tao tao, Vec x, Mat J, Mat Jpre, void *ctx), void **ctx)
+PetscErrorCode TaoGetJacobianInequalityRoutine(Tao tao, Mat *J, Mat *Jpre, PetscErrorCode (**func)(Tao tao, Vec x, Mat J, Mat Jpre, void *ctx), PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (J) *J = tao->jacobian_inequality;
   if (Jpre) *Jpre = tao->jacobian_inequality_pre;
   if (func) *func = tao->ops->computejacobianinequality;
-  if (ctx) *ctx = tao->user_jac_inequalityP;
+  if (ctx) *(void **)ctx = tao->user_jac_inequalityP;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

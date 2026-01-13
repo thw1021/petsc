@@ -5381,12 +5381,12 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
       PetscCall(PetscDSGetDiscretization(cds, 0, &obj));
       PetscCall(PetscObjectGetClassId(obj, &id));
       if (id == PETSCFE_CLASSID) {
-        PetscContainer dummy;
+        PetscContainer unused;
 
-        PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &dummy));
-        PetscCall(PetscObjectSetName((PetscObject)dummy, "coordinates"));
-        PetscCall(DMSetField(cdm, 0, NULL, (PetscObject)dummy));
-        PetscCall(PetscContainerDestroy(&dummy));
+        PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &unused));
+        PetscCall(PetscObjectSetName((PetscObject)unused, "coordinates"));
+        PetscCall(DMSetField(cdm, 0, NULL, (PetscObject)unused));
+        PetscCall(PetscContainerDestroy(&unused));
         PetscCall(DMClearDS(cdm));
       }
       PetscCall(DMPlexSetCoordinateMap(dm, NULL));
@@ -6936,12 +6936,12 @@ static PetscErrorCode DMPlexCreateSTLFromFile(MPI_Comm comm, const char filename
     PetscCall(PetscMalloc1(Nc * 9, &trialCoords));
     for (PetscInt c = 0; c < Nc; ++c) {
       double    normal[3];
-      short int dummy;
+      short int unused;
 
       PetscCall(PetscViewerRead(viewer, normal, 3, NULL, PETSC_FLOAT));
       PetscCall(PetscViewerRead(viewer, &trialCoords[c * 9 + 0], 9, NULL, PETSC_FLOAT));
       PetscCall(PetscByteSwap(&trialCoords[c * 9 + 0], PETSC_FLOAT, 9));
-      PetscCall(PetscViewerRead(viewer, &dummy, 1, NULL, PETSC_SHORT));
+      PetscCall(PetscViewerRead(viewer, &unused, 1, NULL, PETSC_SHORT));
     }
     PetscCall(PetscMalloc1(Nc * 3, &cells));
     // Find unique vertices

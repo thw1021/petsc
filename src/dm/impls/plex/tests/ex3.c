@@ -502,7 +502,7 @@ static PetscErrorCode SetupSection(DM dm, AppCtx *user)
        * that we construct will apply the constraints during construction */
 
       PetscCall(DMCreateMatrix(dm, &mass));
-      /* get a dummy local variable to serve as the solution */
+      /* get a local variable to serve as the solution */
       PetscCall(DMGetLocalVector(dm, &local));
       PetscCall(DMGetDS(dm, &ds));
       /* set the jacobian to be the mass matrix */

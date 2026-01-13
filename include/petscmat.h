@@ -1366,7 +1366,7 @@ M*/
 #define MatPreallocateFinalize(...) PETSC_DEPRECATED_MACRO(3, 18, 0, "MatPreallocateEnd()", ) MatPreallocateEnd(__VA_ARGS__)
 
 /* Routines unique to particular data structures */
-PETSC_EXTERN PetscErrorCode MatShellGetContext(Mat, void *);
+PETSC_EXTERN PetscErrorCode MatShellGetContext(Mat, PetscCtxRt);
 
 PETSC_EXTERN PetscErrorCode MatInodeAdjustForInodes(Mat, IS *, IS *);
 PETSC_EXTERN PetscErrorCode MatInodeGetInodeSizes(Mat, PetscInt *, PetscInt *[], PetscInt *);

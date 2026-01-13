@@ -68,9 +68,9 @@ static PetscErrorCode ourmonitor(KSP ksp, PetscInt i, PetscReal d, void *ctx)
   PetscObjectUseFortranCallback(ksp, _cb.monitor, (KSP *, PetscInt *, PetscReal *, void *, PetscErrorCode *), (&ksp, &i, &d, _ctx, &ierr));
 }
 
-static PetscErrorCode ourdestroy(void **ctx)
+static PetscErrorCode ourdestroy(PetscCtxRt ctx)
 {
-  KSP ksp = (KSP)*ctx;
+  KSP ksp = *(KSP *)ctx;
   PetscObjectUseFortranCallback(ksp, _cb.monitordestroy, (void *, PetscErrorCode *), (_ctx, &ierr));
 }
 
@@ -80,9 +80,9 @@ static PetscErrorCode ourtest(KSP ksp, PetscInt i, PetscReal d, KSPConvergedReas
   PetscObjectUseFortranCallback(ksp, _cb.test, (KSP *, PetscInt *, PetscReal *, KSPConvergedReason *, void *, PetscErrorCode *), (&ksp, &i, &d, reason, _ctx, &ierr));
 }
 
-static PetscErrorCode ourtestdestroy(void **ctx)
+static PetscErrorCode ourtestdestroy(PetscCtxRt ctx)
 {
-  KSP ksp = (KSP)*ctx;
+  KSP ksp = *(KSP *)ctx;
   PetscObjectUseFortranCallback(ksp, _cb.testdestroy, (void **, PetscErrorCode *), (&_ctx, &ierr));
 }
 
@@ -112,10 +112,7 @@ PETSC_EXTERN void kspmonitorset_(KSP *ksp, void (*monitor)(KSP *, PetscInt *, Pe
   }
 }
 
-PETSC_EXTERN void kspconvergeddefaultdestroy_(void **ctx, PetscErrorCode *ierr)
-{
-  *ierr = KSPConvergedDefaultDestroy(ctx);
-}
+PETSC_EXTERN void kspconvergeddefaultdestroy_(void **, PetscErrorCode *);
 
 PETSC_EXTERN void kspsetconvergencetest_(KSP *ksp, void (*converge)(KSP *, PetscInt *, PetscReal *, KSPConvergedReason *, void *, PetscErrorCode *), void **cctx, void (*destroy)(void **, PetscErrorCode *), PetscErrorCode *ierr)
 {

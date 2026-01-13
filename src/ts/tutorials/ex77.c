@@ -322,7 +322,7 @@ static PetscErrorCode SetupParameters(AppCtx *user)
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
-  PetscCall(PetscBagGetData(user->bag, (void **)&p));
+  PetscCall(PetscBagGetData(user->bag, &p));
   PetscCall(PetscBagSetName(user->bag, "par", "Low Mach flow parameters"));
   bag = user->bag;
   PetscCall(PetscBagRegisterReal(bag, &p->nu, 1.0, "nu", "Kinematic viscosity"));
@@ -382,7 +382,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
     Parameter  *param;
     PetscScalar constants[4];
 
-    PetscCall(PetscBagGetData(user->bag, (void **)&param));
+    PetscCall(PetscBagGetData(user->bag, &param));
 
     constants[0] = param->nu;
     constants[1] = param->alpha;
@@ -391,7 +391,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
     PetscCall(PetscDSSetConstants(prob, 4, constants));
   }
   /* Setup Boundary Conditions */
-  PetscCall(PetscBagGetData(user->bag, (void **)&ctx));
+  PetscCall(PetscBagGetData(user->bag, &ctx));
   id = 3;
   PetscCall(PetscDSAddBoundary(prob, DM_BC_ESSENTIAL, "top wall velocity", label, 1, &id, 0, 0, NULL, (PetscVoidFn *)exactFuncs[0], (PetscVoidFn *)exactFuncs_t[0], ctx, NULL));
   id = 1;
@@ -577,7 +577,7 @@ static PetscErrorCode SetupDiscretization(DM dm, DM sdm, AppCtx *user)
   PetscCall(DMSetField(dm, 2, NULL, (PetscObject)fe[2]));
   PetscCall(DMCreateDS(dm));
   PetscCall(SetupProblem(dm, user));
-  PetscCall(PetscBagGetData(user->bag, (void **)&param));
+  PetscCall(PetscBagGetData(user->bag, &param));
   while (cdm) {
     PetscCall(DMCopyDisc(dm, cdm));
     PetscCall(DMGetCoarseDM(cdm, &cdm));
@@ -606,7 +606,7 @@ static PetscErrorCode SetupDiscretization(DM dm, DM sdm, AppCtx *user)
   case PART_LAYOUT_CELL:
     PetscCall(DMSwarmSetLocalSizes(sdm, (cEnd - cStart) * user->Npc, 0));
     PetscCall(DMSetFromOptions(sdm));
-    PetscCall(DMSwarmGetField(sdm, cellid, NULL, NULL, (void **)&swarm_cellid));
+    PetscCall(DMSwarmGetField(sdm, cellid, NULL, NULL, &swarm_cellid));
     for (c = cStart; c < cEnd; ++c) {
       for (p = 0; p < user->Npc; ++p) {
         const PetscInt n = c * user->Npc + p;
@@ -771,7 +771,7 @@ static PetscErrorCode ComputeParticleError(TS ts, Vec u, Vec e)
   PetscFunctionBeginUser;
   PetscCall(TSGetTime(ts, &time));
   PetscCall(TSGetApplicationContext(ts, &adv));
-  PetscCall(PetscBagGetData(adv->ctx->bag, (void **)&param));
+  PetscCall(PetscBagGetData(adv->ctx->bag, &param));
   PetscCall(PetscObjectGetComm((PetscObject)ts, &comm));
   PetscCall(TSGetDM(ts, &sdm));
   PetscCall(DMGetDimension(sdm, &dim));
@@ -805,7 +805,7 @@ static PetscErrorCode MonitorParticleError(TS ts, PetscInt step, PetscReal time,
   MPI_Comm           comm;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscBagGetData(adv->ctx->bag, (void **)&param));
+  PetscCall(PetscBagGetData(adv->ctx->bag, &param));
   PetscCall(PetscObjectGetComm((PetscObject)ts, &comm));
   PetscCall(TSGetDM(ts, &sdm));
   PetscCall(DMGetDimension(sdm, &dim));
@@ -844,7 +844,7 @@ static PetscErrorCode AdvectParticles(TS ts)
   PetscFunctionBeginUser;
   PetscCall(PetscObjectQuery((PetscObject)ts, "_SwarmTS", (PetscObject *)&sts));
   PetscCall(TSGetDM(sts, &sdm));
-  PetscCall(TSGetRHSFunction(sts, NULL, NULL, (void **)&adv));
+  PetscCall(TSGetRHSFunction(sts, NULL, NULL, &adv));
   PetscCall(DMGetDimension(sdm, &dim));
   PetscCall(DMSwarmGetSize(sdm, &N));
   PetscCall(DMSwarmGetLocalSize(sdm, &n));

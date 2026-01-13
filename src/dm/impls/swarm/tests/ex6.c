@@ -806,7 +806,7 @@ static PetscErrorCode SetProblem(TS ts)
 
   PetscFunctionBegin;
   PetscCall(TSGetDM(ts, &sw));
-  PetscCall(DMGetApplicationContext(sw, (void **)&user));
+  PetscCall(DMGetApplicationContext(sw, &user));
   // Define unified system for (X, V)
   {
     Mat      J;
@@ -858,14 +858,14 @@ static PetscErrorCode SetProblem(TS ts)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode circleSingleX(PetscInt dim, PetscReal time, const PetscReal dummy[], PetscInt p, PetscScalar x[], void *ctx)
+PetscErrorCode circleSingleX(PetscInt dim, PetscReal time, const PetscReal unused[], PetscInt p, PetscScalar x[], void *ctx)
 {
   x[0] = p + 1.;
   x[1] = 0.;
   return PETSC_SUCCESS;
 }
 
-PetscErrorCode circleSingleV(PetscInt dim, PetscReal time, const PetscReal dummy[], PetscInt p, PetscScalar v[], void *ctx)
+PetscErrorCode circleSingleV(PetscInt dim, PetscReal time, const PetscReal unused[], PetscInt p, PetscScalar v[], void *ctx)
 {
   v[0] = 0.;
   v[1] = PetscSqrtReal(1000. / (p + 1.));
@@ -873,7 +873,7 @@ PetscErrorCode circleSingleV(PetscInt dim, PetscReal time, const PetscReal dummy
 }
 
 /* Put 5 particles into each circle */
-PetscErrorCode circleMultipleX(PetscInt dim, PetscReal time, const PetscReal dummy[], PetscInt p, PetscScalar x[], void *ctx)
+PetscErrorCode circleMultipleX(PetscInt dim, PetscReal time, const PetscReal unused[], PetscInt p, PetscScalar x[], void *ctx)
 {
   const PetscInt  n   = 5;
   const PetscReal r0  = (p / n) + 1.;
@@ -885,7 +885,7 @@ PetscErrorCode circleMultipleX(PetscInt dim, PetscReal time, const PetscReal dum
 }
 
 /* Put 5 particles into each circle */
-PetscErrorCode circleMultipleV(PetscInt dim, PetscReal time, const PetscReal dummy[], PetscInt p, PetscScalar v[], void *ctx)
+PetscErrorCode circleMultipleV(PetscInt dim, PetscReal time, const PetscReal unused[], PetscInt p, PetscScalar v[], void *ctx)
 {
   const PetscInt  n     = 5;
   const PetscReal r0    = (p / n) + 1.;

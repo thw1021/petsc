@@ -278,10 +278,10 @@ PETSC_EXTERN PetscErrorCode TSGetTimeError(TS, PetscInt, Vec *);
 PETSC_EXTERN PetscErrorCode TSSetTimeError(TS, Vec);
 
 PETSC_EXTERN PetscErrorCode TSSetRHSJacobianP(TS, Mat, PetscErrorCode (*)(TS, PetscReal, Vec, Mat, void *), void *);
-PETSC_EXTERN PetscErrorCode TSGetRHSJacobianP(TS, Mat *, PetscErrorCode (**)(TS, PetscReal, Vec, Mat, void *), void **);
+PETSC_EXTERN PetscErrorCode TSGetRHSJacobianP(TS, Mat *, PetscErrorCode (**)(TS, PetscReal, Vec, Mat, void *), PetscCtxRt);
 PETSC_EXTERN PetscErrorCode TSComputeRHSJacobianP(TS, PetscReal, Vec, Mat);
 PETSC_EXTERN PetscErrorCode TSSetIJacobianP(TS, Mat, PetscErrorCode (*)(TS, PetscReal, Vec, Vec, PetscReal, Mat, void *), void *);
-PETSC_EXTERN PetscErrorCode TSGetIJacobianP(TS, Mat *, PetscErrorCode (**)(TS, PetscReal, Vec, Vec, PetscReal, Mat, void *), void **);
+PETSC_EXTERN PetscErrorCode TSGetIJacobianP(TS, Mat *, PetscErrorCode (**)(TS, PetscReal, Vec, Vec, PetscReal, Mat, void *), PetscCtxRt);
 PETSC_EXTERN PetscErrorCode TSComputeIJacobianP(TS, PetscReal, Vec, Vec, PetscReal, Mat, PetscBool);
 PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 5, 0, "TSGetQuadratureTS() then TSComputeRHSJacobianP()", ) PetscErrorCode TSComputeDRDPFunction(TS, PetscReal, Vec, Vec *);
 PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 5, 0, "TSGetQuadratureTS() then TSComputeRHSJacobian()", ) PetscErrorCode TSComputeDRDUFunction(TS, PetscReal, Vec, Vec *);
@@ -606,9 +606,9 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSRHSJacobianPFn(TS ts, PetscReal t,
 PETSC_EXTERN_TYPEDEF typedef TSRHSJacobianPFn *TSRHSJacobianP;
 
 PETSC_EXTERN PetscErrorCode TSSetRHSFunction(TS, Vec, TSRHSFunctionFn *, void *);
-PETSC_EXTERN PetscErrorCode TSGetRHSFunction(TS, Vec *, TSRHSFunctionFn **, void **);
+PETSC_EXTERN PetscErrorCode TSGetRHSFunction(TS, Vec *, TSRHSFunctionFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode TSSetRHSJacobian(TS, Mat, Mat, TSRHSJacobianFn *, void *);
-PETSC_EXTERN PetscErrorCode TSGetRHSJacobian(TS, Mat *, Mat *, TSRHSJacobianFn **, void **);
+PETSC_EXTERN PetscErrorCode TSGetRHSJacobian(TS, Mat *, Mat *, TSRHSJacobianFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode TSRHSJacobianSetReuse(TS, PetscBool);
 
 /*S
@@ -702,9 +702,9 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSIJacobianFn(TS ts, PetscReal t, Ve
 PETSC_EXTERN_TYPEDEF typedef TSIJacobianFn *TSIJacobian;
 
 PETSC_EXTERN PetscErrorCode TSSetIFunction(TS, Vec, TSIFunctionFn *, void *);
-PETSC_EXTERN PetscErrorCode TSGetIFunction(TS, Vec *, TSIFunctionFn **, void **);
+PETSC_EXTERN PetscErrorCode TSGetIFunction(TS, Vec *, TSIFunctionFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode TSSetIJacobian(TS, Mat, Mat, TSIJacobianFn *, void *);
-PETSC_EXTERN PetscErrorCode TSGetIJacobian(TS, Mat *, Mat *, TSIJacobianFn **, void **);
+PETSC_EXTERN PetscErrorCode TSGetIJacobian(TS, Mat *, Mat *, TSIJacobianFn **, PetscCtxRt);
 
 /*S
   TSI2FunctionFn - A prototype of a `TS` implicit function evaluation function for 2nd order systems that would be passed to `TSSetI2Function()`
@@ -756,9 +756,9 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSI2JacobianFn(TS ts, PetscReal t, V
 PETSC_EXTERN_TYPEDEF typedef TSI2JacobianFn *TSI2Jacobian;
 
 PETSC_EXTERN PetscErrorCode TSSetI2Function(TS, Vec, TSI2FunctionFn *, void *);
-PETSC_EXTERN PetscErrorCode TSGetI2Function(TS, Vec *, TSI2FunctionFn **, void **);
+PETSC_EXTERN PetscErrorCode TSGetI2Function(TS, Vec *, TSI2FunctionFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode TSSetI2Jacobian(TS, Mat, Mat, TSI2JacobianFn *, void *);
-PETSC_EXTERN PetscErrorCode TSGetI2Jacobian(TS, Mat *, Mat *, TSI2JacobianFn **, void **);
+PETSC_EXTERN PetscErrorCode TSGetI2Jacobian(TS, Mat *, Mat *, TSI2JacobianFn **, PetscCtxRt);
 
 PETSC_EXTERN PetscErrorCode TSRHSSplitSetIS(TS, const char[], IS);
 PETSC_EXTERN PetscErrorCode TSRHSSplitGetIS(TS, const char[], IS *);
@@ -830,22 +830,22 @@ PETSC_EXTERN PetscErrorCode TSVISetVariableBounds(TS, Vec, Vec);
 
 PETSC_EXTERN PetscErrorCode DMTSSetBoundaryLocal(DM, PetscErrorCode (*)(DM, PetscReal, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode DMTSSetRHSFunction(DM, TSRHSFunctionFn *, void *);
-PETSC_EXTERN PetscErrorCode DMTSGetRHSFunction(DM, TSRHSFunctionFn **, void **);
+PETSC_EXTERN PetscErrorCode DMTSGetRHSFunction(DM, TSRHSFunctionFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode DMTSSetRHSFunctionContextDestroy(DM, PetscCtxDestroyFn *);
 PETSC_EXTERN PetscErrorCode DMTSSetRHSJacobian(DM, TSRHSJacobianFn *, void *);
-PETSC_EXTERN PetscErrorCode DMTSGetRHSJacobian(DM, TSRHSJacobianFn **, void **);
+PETSC_EXTERN PetscErrorCode DMTSGetRHSJacobian(DM, TSRHSJacobianFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode DMTSSetRHSJacobianContextDestroy(DM, PetscCtxDestroyFn *);
 PETSC_EXTERN PetscErrorCode DMTSSetIFunction(DM, TSIFunctionFn *, void *);
-PETSC_EXTERN PetscErrorCode DMTSGetIFunction(DM, TSIFunctionFn **, void **);
+PETSC_EXTERN PetscErrorCode DMTSGetIFunction(DM, TSIFunctionFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode DMTSSetIFunctionContextDestroy(DM, PetscCtxDestroyFn *);
 PETSC_EXTERN PetscErrorCode DMTSSetIJacobian(DM, TSIJacobianFn *, void *);
-PETSC_EXTERN PetscErrorCode DMTSGetIJacobian(DM, TSIJacobianFn **, void **);
+PETSC_EXTERN PetscErrorCode DMTSGetIJacobian(DM, TSIJacobianFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode DMTSSetIJacobianContextDestroy(DM, PetscCtxDestroyFn *);
 PETSC_EXTERN PetscErrorCode DMTSSetI2Function(DM, TSI2FunctionFn *, void *);
-PETSC_EXTERN PetscErrorCode DMTSGetI2Function(DM, TSI2FunctionFn **, void **);
+PETSC_EXTERN PetscErrorCode DMTSGetI2Function(DM, TSI2FunctionFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode DMTSSetI2FunctionContextDestroy(DM, PetscCtxDestroyFn *);
 PETSC_EXTERN PetscErrorCode DMTSSetI2Jacobian(DM, TSI2JacobianFn *, void *);
-PETSC_EXTERN PetscErrorCode DMTSGetI2Jacobian(DM, TSI2JacobianFn **, void **);
+PETSC_EXTERN PetscErrorCode DMTSGetI2Jacobian(DM, TSI2JacobianFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode DMTSSetI2JacobianContextDestroy(DM, PetscCtxDestroyFn *);
 
 /*S
@@ -875,18 +875,18 @@ PETSC_EXTERN PetscErrorCode TSComputeTransientVariable(TS, Vec, Vec);
 PETSC_EXTERN PetscErrorCode TSHasTransientVariable(TS, PetscBool *);
 
 PETSC_EXTERN PetscErrorCode DMTSSetSolutionFunction(DM, TSSolutionFn *, void *);
-PETSC_EXTERN PetscErrorCode DMTSGetSolutionFunction(DM, TSSolutionFn **, void **);
+PETSC_EXTERN PetscErrorCode DMTSGetSolutionFunction(DM, TSSolutionFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode DMTSSetForcingFunction(DM, TSForcingFn *, void *);
-PETSC_EXTERN PetscErrorCode DMTSGetForcingFunction(DM, TSForcingFn **, void **);
+PETSC_EXTERN PetscErrorCode DMTSGetForcingFunction(DM, TSForcingFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode DMTSCheckResidual(TS, DM, PetscReal, Vec, Vec, PetscReal, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMTSCheckJacobian(TS, DM, PetscReal, Vec, Vec, PetscReal, PetscBool *, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMTSCheckFromOptions(TS, Vec);
 
-PETSC_EXTERN PetscErrorCode DMTSGetIFunctionLocal(DM, PetscErrorCode (**)(DM, PetscReal, Vec, Vec, Vec, void *), void **);
+PETSC_EXTERN PetscErrorCode DMTSGetIFunctionLocal(DM, PetscErrorCode (**)(DM, PetscReal, Vec, Vec, Vec, void *), PetscCtxRt);
 PETSC_EXTERN PetscErrorCode DMTSSetIFunctionLocal(DM, PetscErrorCode (*)(DM, PetscReal, Vec, Vec, Vec, void *), void *);
-PETSC_EXTERN PetscErrorCode DMTSGetIJacobianLocal(DM, PetscErrorCode (**)(DM, PetscReal, Vec, Vec, PetscReal, Mat, Mat, void *), void **);
+PETSC_EXTERN PetscErrorCode DMTSGetIJacobianLocal(DM, PetscErrorCode (**)(DM, PetscReal, Vec, Vec, PetscReal, Mat, Mat, void *), PetscCtxRt);
 PETSC_EXTERN PetscErrorCode DMTSSetIJacobianLocal(DM, PetscErrorCode (*)(DM, PetscReal, Vec, Vec, PetscReal, Mat, Mat, void *), void *);
-PETSC_EXTERN PetscErrorCode DMTSGetRHSFunctionLocal(DM, PetscErrorCode (**)(DM, PetscReal, Vec, Vec, void *), void **);
+PETSC_EXTERN PetscErrorCode DMTSGetRHSFunctionLocal(DM, PetscErrorCode (**)(DM, PetscReal, Vec, Vec, void *), PetscCtxRt);
 PETSC_EXTERN PetscErrorCode DMTSSetRHSFunctionLocal(DM, PetscErrorCode (*)(DM, PetscReal, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode DMTSCreateRHSMassMatrix(DM);
 PETSC_EXTERN PetscErrorCode DMTSCreateRHSMassMatrixLumped(DM);
@@ -996,7 +996,7 @@ typedef struct {
   PetscViewer    viewer;
   TSMonitorLGCtx lgctx;
 } TSMonitorDMDARayCtx;
-PETSC_EXTERN PetscErrorCode TSMonitorDMDARayDestroy(void **);
+PETSC_EXTERN PetscErrorCode TSMonitorDMDARayDestroy(PetscCtxRt);
 PETSC_EXTERN PetscErrorCode TSMonitorDMDARay(TS, PetscInt, PetscReal, Vec, void *);
 PETSC_EXTERN PetscErrorCode TSMonitorLGDMDARay(TS, PetscInt, PetscReal, Vec, void *);
 
@@ -1018,7 +1018,7 @@ PETSC_EXTERN PetscErrorCode TSTrajectoryViewFromOptions(TSTrajectory, PetscObjec
 #define TS_FILE_CLASSID 1211225
 
 PETSC_EXTERN PetscErrorCode TSSetApplicationContext(TS, void *);
-PETSC_EXTERN PetscErrorCode TSGetApplicationContext(TS, void *);
+PETSC_EXTERN PetscErrorCode TSGetApplicationContext(TS, PetscCtxRt);
 
 PETSC_EXTERN PetscErrorCode TSMonitorLGCtxCreate(MPI_Comm, const char[], const char[], int, int, int, int, PetscInt, TSMonitorLGCtx *);
 PETSC_EXTERN PetscErrorCode TSMonitorLGCtxDestroy(TSMonitorLGCtx *);

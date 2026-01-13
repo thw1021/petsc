@@ -363,13 +363,13 @@ PetscErrorCode TaoSetEqualityConstraintsRoutine(Tao tao, Vec ce, PetscErrorCode 
 
 .seealso: [](ch_tao), `Tao`, `TaoSolve()`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetHessian()`, `TaoGetObjectiveAndGradient()`, `TaoGetInequalityConstraintsRoutine()`
 @*/
-PetscErrorCode TaoGetEqualityConstraintsRoutine(Tao tao, Vec *ci, PetscErrorCode (**func)(Tao tao, Vec x, Vec ci, void *ctx), void **ctx)
+PetscErrorCode TaoGetEqualityConstraintsRoutine(Tao tao, Vec *ci, PetscErrorCode (**func)(Tao tao, Vec x, Vec ci, void *ctx), PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (ci) *ci = tao->constraints_equality;
   if (func) *func = tao->ops->computeequalityconstraints;
-  if (ctx) *ctx = tao->user_con_equalityP;
+  if (ctx) *(void **)ctx = tao->user_con_equalityP;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -431,13 +431,13 @@ PetscErrorCode TaoSetInequalityConstraintsRoutine(Tao tao, Vec ci, PetscErrorCod
 
 .seealso: [](ch_tao), `Tao`, `TaoSolve()`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetHessian()`, `TaoGetObjectiveAndGradient()`, `TaoGetEqualityConstraintsRoutine()`
 @*/
-PetscErrorCode TaoGetInequalityConstraintsRoutine(Tao tao, Vec *ci, PetscErrorCode (**func)(Tao tao, Vec x, Vec ci, void *ctx), void **ctx)
+PetscErrorCode TaoGetInequalityConstraintsRoutine(Tao tao, Vec *ci, PetscErrorCode (**func)(Tao tao, Vec x, Vec ci, void *ctx), PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (ci) *ci = tao->constraints_inequality;
   if (func) *func = tao->ops->computeinequalityconstraints;
-  if (ctx) *ctx = tao->user_con_inequalityP;
+  if (ctx) *(void **)ctx = tao->user_con_inequalityP;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
