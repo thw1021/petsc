@@ -1328,8 +1328,6 @@ PETSC_EXTERN_TYPEDEF typedef PetscVoidFn **PetscVoidStarFunction;
 S*/
 PETSC_EXTERN_TYPEDEF typedef void PetscErrorCodeFn(void);
 
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCodeFn *PetscErrorCodeFunction;
-
 /*
     Defines PETSc error handling.
 */
@@ -1559,7 +1557,7 @@ typedef void *PetscCtxRt;
 
 .seealso: `PetscObject`, `PetscCtxDestroyDefault()`, `PetscObjectDestroy()`, `DMSetApplicationContextDestroy()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscCtxDestroyFn(PetscCtxRt);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscCtxDestroyFn(PetscCtxRt ctx);
 
 PETSC_EXTERN PetscCtxDestroyFn PetscCtxDestroyDefault;
 PETSC_DEPRECATED_FUNCTION(3, 23, 0, "PetscCtxDestroyDefault()", ) static inline PetscErrorCode PetscContainerCtxDestroyDefault(PetscCtxRt a)
