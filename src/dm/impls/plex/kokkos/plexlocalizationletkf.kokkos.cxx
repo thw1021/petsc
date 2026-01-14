@@ -1,12 +1,11 @@
 #include <petsc/private/dmpleximpl.h>
 #include <petscdmplex.h>
 #include <petscmat.h>
-#if defined(PETSC_HAVE_KOKKOS)
-  #include <petsc_kokkos.hpp>
-  #include <cmath>
-  #include <cstdlib>
-  #include <algorithm>
-  #include <Kokkos_Core.hpp>
+#include <petsc_kokkos.hpp>
+#include <cmath>
+#include <cstdlib>
+#include <algorithm>
+#include <Kokkos_Core.hpp>
 
 typedef struct {
   PetscReal distance;
@@ -64,6 +63,8 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
   The observation locations are computed as H * V where V is the vector
   of vertex coordinates. The localization weights ensure smooth tapering
   of observation influence with distance.
+
+  Kokkos is required for this routine. LETKF has a lot of fine grain parallelism and is not useful without threads or GPUs.
 
   Level: intermediate
 
@@ -259,39 +260,3 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   PetscCall(MatAssemblyEnd(*Q, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-#else
-/*@C
-  DMPlexGetLETKFLocalizationMatrix - Compute localization weight matrix for LETKF
-
-  Collective
-
-  Input Parameters:
-+ plex            - The DMPlex object
-. numobservations - Number of nearest observations to use per vertex
-. numglobalobs    - Total number of observations
-- H               - Observation operator matrix
-
-  Output Parameter:
-. Q - Localization weight matrix (sparse, AIJ format)
-
-  Notes:
-  The output matrix Q has dimensions (numVertices x numglobalobs) where
-  numVertices is the number of vertices in the DMPlex. Each row contains
-  exactly numobservations non-zero entries corresponding to the nearest
-  observations, weighted by the Gaspari-Cohn fifth-order piecewise
-  rational function.
-
-  The observation locations are computed as H * V where V is the vector
-  of vertex coordinates. The localization weights ensure smooth tapering
-  of observation influence with distance.
-
-  Level: intermediate
-
-.seealso: `DMPLEX`, `DMPlexGetDepthStratum()`, `DMGetCoordinatesLocal()`
-@*/
-PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservations, PetscInt numglobalobs, Mat H, Mat *Q)
-{
-  PetscFunctionBegin;
-  SETERRQ(PetscObjectComm((PetscObject)plex), PETSC_ERR_SUP, "DMPlexGetLETKFLocalizationMatrix() requires Kokkos");
-}
-#endif
