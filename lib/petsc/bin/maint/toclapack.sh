@@ -32,26 +32,26 @@ FBLASLAPACK=f2cblaslapack-3.8.0.q2
 
 if [ $# -lt 2 ]
 then
-  echo Usage: toclapack.sh [blas-src-dir] [lapack-src-dir]
-  echo The result is put into the tarball ${FBLASLAPACK}
+  echo "Usage: toclapack.sh <blas-src-dir> <lapack-src-dir>"
+  echo "The result is put into the tarball ${FBLASLAPACK}"
   exit
 fi
 
 # Path tools and temp directory
 F2C=f2c
 CC=cc
-AWK=awk
+AWK="awk"
 TMP=${PWD}/toclapack.$$
 OS=$(uname)
 if [ "${OS}" == "Darwin" ]; then
   LEX=/usr/local/opt/flex/bin/flex
   LEXFLAGS=" -L/usr/local/opt/flex/lib -lfl"
 else
-  LEX=lex
+  LEX="lex"
   LEXFLAGS=-lfl
 fi
-SED=sed
-TAR=tar
+SED="sed"
+TAR="tar"
 
 # Some vars
 BIN=${TMP}/bin
@@ -64,7 +64,7 @@ ORIG="$PWD"
 MAXPROCS="16"
 TESTING="0"   # 0: don't include second, dsecnd and qsecnd
 
-if [ $(uname) = Darwin ]
+if [ "$(uname)" = Darwin ]
 then
   SED=gsed
 fi
@@ -248,24 +248,24 @@ ZXLASRC = zgesvxx.o zgerfsx.o zla_gerfsx_extended.o zla_geamv.o		\
 EOF
 
 QL=${TMP}/ql.sed
-echo "
+printf '
 	s/doublereal/quadreal/g;
 	s/doublecomplex/quadcomplex/g;
 	s/([^a-zA-Z_]+)real/\\1doublereal/g;
 	s/([^a-zA-Z_1-9]+)dlamch_([^a-zA-Z_1-9]+)/\\1qlamch_\\2/g;
 	s/([^a-zA-Z_1-9]+)dlamc1_([^a-zA-Z_1-9]+)/\\1qlamc1_\\2/g;
 	s/([^a-zA-Z_1-9]+)dlamc2_([^a-zA-Z_1-9]+)/\\1qlamc2_\\2/g;
-	s/([^a-zA-Z_1-9]+)dlamc3_([^a-zA-Z_1-9]+)/\\1qlamc3_\\2/g;" > "$QL"
+	s/([^a-zA-Z_1-9]+)dlamc3_([^a-zA-Z_1-9]+)/\\1qlamc3_\\2/g;\n' > "$QL"
 
 HL=${TMP}/hl.sed
-echo "
+printf '
 	s/doublereal/halfreal/g;
 	s/doublecomplex/halfcomplex/g;
 	s/([^a-zA-Z_]+)real/\\1doublereal/g;
 	s/([^a-zA-Z_1-9]+)dlamch_([^a-zA-Z_1-9]+)/\\1hlamch_\\2/g;
 	s/([^a-zA-Z_1-9]+)dlamc1_([^a-zA-Z_1-9]+)/\\1hlamc1_\\2/g;
 	s/([^a-zA-Z_1-9]+)dlamc2_([^a-zA-Z_1-9]+)/\\1hlamc2_\\2/g;
-	s/([^a-zA-Z_1-9]+)dlamc3_([^a-zA-Z_1-9]+)/\\1hlamc3_\\2/g;" > "$HL"
+	s/([^a-zA-Z_1-9]+)dlamc3_([^a-zA-Z_1-9]+)/\\1hlamc3_\\2/g;\n' > "$HL"
 
 for p in blas qblas hblas lapack qlapack hlapack; do
 	case $p in
@@ -280,7 +280,7 @@ for p in blas qblas hblas lapack qlapack hlapack; do
 		echo $'pow_si\nsmaxloc\nsf__cabs' >> "${TMP}"/AUX.list
 		echo $'pow_di\ndmaxloc\ndf__cabs' >> "${TMP}"/AUX.list
 		cd "$SRC" || exit
-		files="$(ls *.f)"
+		files="$(ls -- *.f)"
 		cd - || exit
 		;;
 	qblas) 
@@ -314,7 +314,7 @@ for p in blas qblas hblas lapack qlapack hlapack; do
 		rm "${TMP}"/ql.list
 		rm "${TMP}"/hl.list
 		cd "$SRC" || exit
-		files="$(ls *.f)"
+		files="$(ls -- *.f)"
 		cd - || exit
 		;;
 	qlapack)
@@ -417,7 +417,7 @@ for p in blas qblas hblas lapack qlapack hlapack; do
 			s/myexit_\\(void\\)/mecago_()/g;
 			s/char subnam\\[([0-9]+)\\]/char subnam[\\1] = {0}/g;
 			$( for i in sqrt sin cos log exp; do
-				echo "s/([^a-zA-Z_1-9]+)${i}([^a-zA-Z_1-9]+)/\\1M(${i})\\2/g;"
+				printf 's/([^a-zA-Z_1-9]+)%s([^a-zA-Z_1-9]+)/\\1M(%s)\\2/g;\n' "$i" "$i"
 			done )
 			s/([^a-zA-Z_1-9]+)max([^a-zA-Z_1-9]+)/\\1f2cmax\\2/g;
 			s/([^a-zA-Z_1-9]+)min([^a-zA-Z_1-9]+)/\\1f2cmin\\2/g;" |
@@ -457,10 +457,10 @@ for p in blas qblas hblas lapack qlapack hlapack; do
 				/^i?z[^d]/ { s/z/w/ }
 				s/^sdsdot/dqddot/
 				/^ila[dz]l[rc]/ { y/dz/qw/; }' )";
-			echo "s/([^a-zA-Z_1-9]+)${base}_([^a-zA-Z_1-9]+)/\\1${qbase}_\\2/g;" >> "$QL"
+			printf 's/([^a-zA-Z_1-9]+)%s_([^a-zA-Z_1-9]+)/\\1%s_\\2/g;\n' "${base}" "${qbase}" >> "$QL"
                         if [ "$base" = "dladiv" ]; then  # special routine that has auxiliary functions
-                           echo "s/([^a-zA-Z_1-9]+)${base}1_([^a-zA-Z_1-9]+)/\\1${qbase}1_\\2/g;" >> "$QL";
-                           echo "s/([^a-zA-Z_1-9]+)${base}2_([^a-zA-Z_1-9]+)/\\1${qbase}2_\\2/g;" >> "$QL";
+                           printf 's/([^a-zA-Z_1-9]+)%s1_([^a-zA-Z_1-9]+)/\\1%s1_\\2/g;\n' "${base}" "${qbase}" >> "$QL";
+                           printf 's/([^a-zA-Z_1-9]+)%s2_([^a-zA-Z_1-9]+)/\\1%s2_\\2/g;\n' "${base}" "${qbase}" >> "$QL";
                         fi;
 			cp "$base".f "${TMP}"/"${qbase}".f
 			echo "${qbase}".f >> "${TMP}"/ql.list
@@ -477,10 +477,10 @@ for p in blas qblas hblas lapack qlapack hlapack; do
 				/^i?z[^d]/ { s/z/k/ }
 				s/^sdsdot/dhddot/
 				/^ila[dz]l[rc]/ { y/dz/hk/; }' )";
-			echo "s/([^a-zA-Z_1-9]+)${base}_([^a-zA-Z_1-9]+)/\\1${hbase}_\\2/g;" >> "$HL"
+			printf 's/([^a-zA-Z_1-9]+)%s_([^a-zA-Z_1-9]+)/\\1%s_\\2/g;\n' "${base}" "${hbase}" >> "$HL"
                         if [ "$base" = "dladiv" ]; then  # special routine that has auxiliary functions
-                           echo "s/([^a-zA-Z_1-9]+)${base}1_([^a-zA-Z_1-9]+)/\\1${hbase}1_\\2/g;" >> "$HL";
-                           echo "s/([^a-zA-Z_1-9]+)${base}2_([^a-zA-Z_1-9]+)/\\1${hbase}2_\\2/g;" >> "$HL";
+                           printf 's/([^a-zA-Z_1-9]+)%s1_([^a-zA-Z_1-9]+)/\\1%s1_\\2/g;\n' "${base}" "${hbase}" >> "$HL";
+                           printf 's/([^a-zA-Z_1-9]+)%s2_([^a-zA-Z_1-9]+)/\\1%s2_\\2/g;\n' "${base}" "${hbase}" >> "$HL";
                         fi;
 			cp "$base".f "${TMP}"/"${hbase}".f
 			echo "${hbase}".f >> "${TMP}"/hl.list
