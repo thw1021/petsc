@@ -356,7 +356,7 @@ PetscErrorCode SNESLineSearchGetPreCheck(SNESLineSearch linesearch, PetscErrorCo
   PetscFunctionBegin;
   PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   if (func) *func = linesearch->ops->precheck;
-  if (ctx) *(void**)ctx = linesearch->precheckctx;
+  if (ctx) *(void **)ctx = linesearch->precheckctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -419,7 +419,7 @@ PetscErrorCode SNESLineSearchGetPostCheck(SNESLineSearch linesearch, PetscErrorC
   PetscFunctionBegin;
   PetscValidHeaderSpecific(linesearch, SNESLINESEARCH_CLASSID, 1);
   if (func) *func = linesearch->ops->postcheck;
-  if (ctx) *(void**)ctx = linesearch->postcheckctx;
+  if (ctx) *(void **)ctx = linesearch->postcheckctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -857,7 +857,7 @@ PetscErrorCode DMTSGetSolutionFunction(DM dm, TSSolutionFn **func, PeCtx ctx)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetDMTS(dm, &tsdm));
   if (func) *func = tsdm->ops->solution;
-  if (ctx) *(void**)ctx = tsdm->solutionctx;
+  if (ctx) *(void **)ctx = tsdm->solutionctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -952,7 +952,7 @@ PetscErrorCode DMTSGetForcingFunction(DM dm, TSForcingFn **f, PeCtx ctx)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetDMTSWrite(dm, &tsdm));
   if (f) *f = tsdm->ops->forcing;
-  if (ctx) *(void**)ctx = tsdm->forcingctx;
+  if (ctx) *(void **)ctx = tsdm->forcingctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -986,7 +986,7 @@ PetscErrorCode DMTSGetRHSFunction(DM dm, TSRHSFunctionFn **func, PeCtx ctx)
   if (func) *func = tsdm->ops->rhsfunction;
   if (ctx) {
     if (tsdm->rhsfunctionctxcontainer) PetscCall(PetscContainerGetPointer(tsdm->rhsfunctionctxcontainer, ctx));
-    else *(void**)ctx = NULL;
+    else *(void **)ctx = NULL;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1103,7 +1103,7 @@ PetscErrorCode DMTSGetIJacobian(DM dm, TSIJacobianFn **func, PeCtx ctx)
   if (func) *func = tsdm->ops->ijacobian;
   if (ctx) {
     if (tsdm->ijacobianctxcontainer) PetscCall(PetscContainerGetPointer(tsdm->ijacobianctxcontainer, ctx));
-    else *(void**)ctx = NULL;
+    else *(void **)ctx = NULL;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

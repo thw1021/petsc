@@ -2697,7 +2697,7 @@ PetscErrorCode KSPGetConvergenceTest(KSP ksp, KSPConvergenceTestFn **converge, P
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   if (converge) *converge = ksp->converged;
   if (destroy) *destroy = ksp->convergeddestroy;
-  if (ctx) *(void**)ctx = ksp->cnvP;
+  if (ctx) *(void **)ctx = ksp->cnvP;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2730,7 +2730,7 @@ PetscErrorCode KSPGetAndClearConvergenceTest(KSP ksp, KSPConvergenceTestFn **con
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   *converge             = ksp->converged;
   *destroy              = ksp->convergeddestroy;
-  *(void**)ctx          = ksp->cnvP;
+  *(void **)ctx         = ksp->cnvP;
   ksp->converged        = NULL;
   ksp->cnvP             = NULL;
   ksp->convergeddestroy = NULL;

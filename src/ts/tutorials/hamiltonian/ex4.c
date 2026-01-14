@@ -2568,7 +2568,7 @@ static PetscErrorCode RHSFunctionX(TS ts, PetscReal t, Vec V, Vec Xres, void *Ct
 static PetscErrorCode RHSFunctionV(TS ts, PetscReal t, Vec X, Vec Vres, void *Ctx)
 {
   DM                 sw;
-  AppCtx            *ctx = (AppCtx *)Ctx;
+  AppCtx            *ctx  = (AppCtx *)Ctx;
   SNES               snes = ((AppCtx *)ctx)->snes;
   const PetscScalar *x;
   PetscScalar       *vres;
