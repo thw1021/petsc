@@ -10,26 +10,6 @@ module ex20fmodule
   end type MatCtx
 
   interface
-    subroutine MatCreateShell(comm, mloc, nloc, m, n, ctx, mat, ierr)
-      use petscmat
-      import MatCtx
-      implicit none
-      MPIU_Comm :: comm
-      PetscInt :: mloc, nloc, m, n
-      type(MatCtx) :: ctx
-      Mat :: mat
-      PetscErrorCode :: ierr
-    end subroutine MatCreateShell
-
-    subroutine MatShellSetContext(mat, ctx, ierr)
-      use petscmat
-      import MatCtx
-      implicit none
-      Mat :: mat
-      type(MatCtx) :: ctx
-      PetscErrorCode :: ierr
-    end subroutine MatShellSetContext
-
     subroutine MatShellGetContext(mat, ctx, ierr)
       use petscmat
       import MatCtx

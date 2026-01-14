@@ -235,7 +235,7 @@ static PetscErrorCode MatShellGetContext_Shell(Mat mat, void *ctx)
 
 .seealso: [](ch_matrices), `Mat`, `MATSHELL`, `MatCreateShell()`, `MatShellSetOperation()`, `MatShellSetContext()`
 @*/
-PetscErrorCode MatShellGetContext(Mat mat, void *ctx)
+PetscErrorCode MatShellGetContext(Mat mat, PeCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);

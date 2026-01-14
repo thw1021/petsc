@@ -45,13 +45,6 @@ module ex5f90tmodule
   end type userctx
 
   interface
-    subroutine SNESSetApplicationContext(snesIn, ctx, ierr)
-      use petscsnes
-      import userctx
-      type(tSNES) snesIn
-      type(userctx) ctx
-      PetscErrorCode ierr
-    end subroutine
     subroutine SNESGetApplicationContext(snesIn, ctx, ierr)
       use petscsnes
       import userctx

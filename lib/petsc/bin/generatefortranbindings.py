@@ -61,7 +61,9 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
       # these function typedef are soon to be eliminated and so can this check
       fun.opaque = True
       return
-    if (ktypename == 'void' and not k.isfunction) or ktypename == 'PeCtx':
+    if ktypename == 'void' and not (k.isfunction or (k.name == 'ctx' and k.stars == 1)):
+      return
+    if ktypename == 'PeCtx':
       return
 
   mansec = fun.mansec
@@ -130,6 +132,8 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
           fd.write('  ' + ktypename + ' :: ' +  k.name  + '(*)\n')
         elif k.isfunction:
           fd.write('  ' + 'external ' + k.name  + '\n')
+        elif ktypename == 'void' and k.stars == 1 and k.name == 'ctx':
+          fd.write('  type(*)  :: ' + k.name + '\n')
         else:
           fd.write('  ' + ktypename + ' :: ' + k.name + '\n')
         cnt = cnt + 1
