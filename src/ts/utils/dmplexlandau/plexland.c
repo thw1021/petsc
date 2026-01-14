@@ -1998,7 +1998,7 @@ static PetscErrorCode LandauCreateJacobianMatrix(MPI_Comm comm, Vec X, IS grid_b
 
 static void LandauSphereMapping(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[])
 {
-  PetscReal u_max = 0, u_norm = 0, scale;
+  PetscReal u_max = 0, u_norm = 0, scale, square_inner_radius = PetscRealPart(constants[0]), square_radius = PetscRealPart(constants[1]);
   PetscInt  d;
 
   for (d = 0; d < dim; ++d) {
@@ -2008,37 +2008,37 @@ static void LandauSphereMapping(PetscInt dim, PetscInt Nf, PetscInt NfAux, const
   }
   u_norm = PetscSqrtReal(u_norm);
 
-  if (u_norm < 1e-10) {
+  if (u_norm < 1e-10 || u_max < inner_radius) {
     for (d = 0; d < dim; ++d) f[d] = u[d];
     return;
   }
 
   /*
-    u_1 is the intersection of the ray with the cube face.
-    The cube has corners at |u| = R_max.
-    So the face is at L = R_max / sqrt(3).
-    u_1 = u * (L / u_max).
-    |u_1| = u_norm * (L / u_max).
-    We want to map u to f such that |f| = |u| * (R_max / |u_1|).
-    f = u * (R_max / |u_1|) = u * (R_max / (u_norm * L / u_max))
-      = u * (R_max / L) * (u_max / u_norm)
-      = u * sqrt(3) * (u_max / u_norm).
+    A outer cube has corners at |u| = square_radius.
+    u_1 is the intersection of the ray with the outer cube face.
+    R_max = square_radius * sqrt(3) is radius of sphere we want points on outer cube mapped to.
+    u_0 is the intersection of the ray with the inner cube face.
+    The cube has corners at |u| = square_inner_radius.
+    (add a debug print statement here to check when it finds a inner and outer intersection, we check for eight of each)
+    (check that the point is between the inner and outer faces, and print error if not)
+    scale to point linearly between u_0 and u_1 so that a point on the inner face does not move, and a point on the outer face moves to the sphere.
   */
   scale = PetscSqrtReal((PetscReal)dim) * u_max / u_norm;
   for (d = 0; d < dim; ++d) f[d] = u[d] * scale;
 }
 
-static PetscErrorCode LandauSphereMesh(DM dm, PetscReal radius)
+static PetscErrorCode LandauSphereMesh(DM dm, PetscReal inner, PetscReal radius)
 {
   DM          cdm;
   PetscDS     cds;
-  PetscScalar consts[1];
+  PetscScalar consts[2];
 
   PetscFunctionBegin;
-  consts[0] = radius;
+  consts[0] = inner;
+  consts[1] = radius;
   PetscCall(DMGetCoordinateDM(dm, &cdm));
   PetscCall(DMGetDS(cdm, &cds));
-  PetscCall(PetscDSSetConstants(cds, 1, consts));
+  PetscCall(PetscDSSetConstants(cds, 2, consts));
   PetscCall(DMPlexRemapGeometry(dm, 0.0, LandauSphereMapping));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2100,7 +2100,7 @@ PetscErrorCode DMPlexLandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, cons
       PetscCall(DMDestroy(&ctx->plex[grid]));
       ctx->plex[grid] = plex;
     } else if (ctx->sphere && dim == 3) {
-      PetscCall(LandauSphereMesh(ctx->plex[grid], ctx->radius[grid]));
+      PetscCall(LandauSphereMesh(ctx->plex[grid], ctx->radius[grid] * ctx->sphere_inner_radius_90degree[grid]));
       PetscCall(LandauSetInitialCondition(ctx->plex[grid], Xsub[grid], grid, 0, 1, ctx));
     }
     if (grid == 0) {
