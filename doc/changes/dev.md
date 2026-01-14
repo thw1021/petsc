@@ -53,6 +53,9 @@
 ```{rubric} Vec:
 ```
 
+- Add `VecNestGetSubVecsRead()` and `VecNestRestoreSubVecsRead()` for read-only access to subvectors
+- Add `VecPointwiseSign()` and `VecSignMode`
+
 ```{rubric} PetscSection:
 ```
 
@@ -105,6 +108,25 @@
 
 ```{rubric} TAO:
 ```
+
+- Add ``TaoBRGNSetRegularizationType()``, ``TaoBRGNGetRegularizationType()``
+- Add `TaoGetInequalityConstraintsRoutine()`, `TaoGetEqualityConstraintsRoutine()`, `TaoGetJacobianInequalityRoutine()` and `TaoGetJacobianEqualityRoutine()`
+- Add new `TaoTerm` object to manipulate objective function terms with many methods
+- Add `TaoGetTerm()`, and `TaoAddTerm()` for manipulating the objective, gradient, and Hessian evaluation of a `Tao` using `TaoTerm`
+- Add `TaoBRGNGetRegularizationType()`, `TaoBRGNSetReguarizationType()`, `TaoBRGNGetRegularizerTerm()` and `TaoBRGNSetRegularizerTerm()` for finer control of `TAOBRGN`
+- Remove `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` and `TaoBRGNSetRegularizerHessianRoutine()`, use `TaoBRGNSetRegulizerTerm()` instead
+- Remove `setBRGNRegularizerObjectiveGradient()`, and `setBRGNRegularizerHessian()` Python routines. Use `setBRGNRegularizerTerm()` instead
+
+```{rubric} TaoTerm:
+```
+
+- Add `TAOTERMCALLBACKS` implementation of `TaoTerm` constructed from the callbacks passed to a `Tao` object
+- Add `TAOTERMSHELL` implementation of `TaoTerm` for user-defined callbacks
+- Add `TAOTERMSUM` implementation of `TaoTerm` for scaled, mapped sums of terms
+- Add `TAOTERMHALFL2SQUARED` implementation of `TaoTerm` for a typical squared-norm penalty function
+- Add `TAOTERML1` implementation of `TaoTerm` for a typical 1-norm penalty function
+- Add `TAOTERMQUADRATIC` implementation of `TaoTerm` for a quadratic penalty function
+- Add Python routines for `TaoTerm`
 
 ```{rubric} PetscRegressor:
 ```

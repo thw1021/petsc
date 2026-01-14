@@ -183,7 +183,7 @@ def try_to_find_libclang_dir() -> Optional[Path]:
         except FileNotFoundError:
           # FileNotFoundError: [Errno 2] No such file or directory: 'xcode-select'
           pass
-  if not llvm_lib_dir:
+  if (not llvm_lib_dir) or (not Path(llvm_lib_dir).is_absolute()):
     return None
   return Path(llvm_lib_dir).resolve(strict=True)
 
