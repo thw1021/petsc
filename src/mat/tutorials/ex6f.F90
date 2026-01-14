@@ -11,21 +11,6 @@ module solver_context_ex6f
     PetscReal :: lambda, kappa
     PetscReal :: h
   end type MatCtx
-
-! ----------------------------------------------------
-  interface
-! ----------------------------------------------------
-    subroutine MatShellGetContext(mat, ctx, ierr)
-      use petscmat
-      import MatCtx
-      implicit none
-      MPIU_Comm :: comm
-      Mat :: mat
-      type(MatCtx), pointer :: ctx
-      PetscErrorCode :: ierr
-    end subroutine MatShellGetContext
-  end interface
-
 end module solver_context_ex6f
 
 ! ----------------------------------------------------
@@ -35,6 +20,9 @@ program main
   use petscmat
   use solver_context_ex6f
   implicit none
+
+  Interface_MatShellGetContext(MatCtx)
+
   Mat :: F
   type(MatCtx) :: ctxF
   type(MatCtx), pointer :: ctxF_pt

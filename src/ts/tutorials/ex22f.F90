@@ -17,13 +17,13 @@
 #include <petsc/finclude/petscts.h>
 #include <petsc/finclude/petscdmda.h>
 
-  module ex22f_modctx
-    use petscts
-    type AppCtx
-      PetscReal a(2),k(2),s(2)
-    end type AppCtx
+module ex22f_modctx
+  use petscts
+  type AppCtx
+    PetscReal a(2), k(2), s(2)
+  end type AppCtx
 
-  end module ex22f_modctx
+end module ex22f_modctx
 program main
   use ex22f_modctx
   implicit none
@@ -76,7 +76,7 @@ program main
   PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-a1', ctx%a(2), flg, ierr))
   ctx%k(1) = 1000000.0
   PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-k0', ctx%k(1), flg, ierr))
-  ctx%k(2) = 2 * ctx%k(1)
+  ctx%k(2) = 2*ctx%k(1)
   PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-k1', ctx%k(2), flg, ierr))
   ctx%s(1) = 0.0
   PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-s0', ctx%s(1), flg, ierr))

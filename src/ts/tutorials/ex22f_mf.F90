@@ -15,10 +15,10 @@
 !
 #include <petsc/finclude/petscts.h>
 
- module ex22f_mfmodule
+module ex22f_mfmodule
   use petscts
   type AppCtx
-    PetscReal a(2),k(2),s(2)
+    PetscReal a(2), k(2), s(2)
   end type AppCtx
 
   PetscScalar::PETSC_SHIFT
@@ -82,7 +82,7 @@ program main
   PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-a1', ctx%a(2), flg, ierr))
   ctx%k(1) = 1000000.0
   PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-k0', ctx%k(1), flg, ierr))
-  ctx%k(2) = 2 * ctx%k(1)
+  ctx%k(2) = 2*ctx%k(1)
   PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-k1', ctx%k(2), flg, ierr))
   ctx%s(1) = 0.0
   PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-s0', ctx%s(1), flg, ierr))

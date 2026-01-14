@@ -9,16 +9,7 @@ module ex20fmodule
     PetscReal :: lambda
   end type MatCtx
 
-  interface
-    subroutine MatShellGetContext(mat, ctx, ierr)
-      use petscmat
-      import MatCtx
-      implicit none
-      Mat :: mat
-      type(MatCtx), pointer :: ctx
-      PetscErrorCode :: ierr
-    end subroutine MatShellGetContext
-  end interface
+  Interface_MatShellGetContext(MatCtx)
 
 contains
   subroutine MatDuplicate_F(F, opt, M, ierr)

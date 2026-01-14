@@ -272,11 +272,6 @@ PETSC_EXTERN void snessetpicardnointerface_(SNES *snes, Vec *r, void (*func)(SNE
   snessetpicard_(snes, r, func, A, B, J, ctx, ierr PETSC_F90_2PTR_PARAM(ptr));
 }
 
-/*
-   These are not usually called from Fortran but allow Fortran users
-   to transparently set these monitors from .F code
-*/
-
 PETSC_EXTERN void snessetfunction_(SNES *snes, Vec *r, void (*func)(SNES, Vec, Vec, void *, PetscErrorCode *), void *ctx, PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptr))
 {
   *ierr = PetscObjectSetFortranCallback((PetscObject)*snes, PETSC_FORTRAN_CALLBACK_CLASS, &_cb.function, (PetscFortranCallbackFn *)func, ctx);

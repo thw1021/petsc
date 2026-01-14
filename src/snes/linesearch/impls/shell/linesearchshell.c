@@ -89,7 +89,7 @@ PetscErrorCode SNESLineSearchShellGetApply(SNESLineSearch linesearch, SNESLineSe
   PetscCall(PetscObjectTypeCompare((PetscObject)linesearch, SNESLINESEARCHSHELL, &flg));
   if (flg) {
     if (func) *func = shell->func;
-    if (ctx) *(void**)ctx = shell->ctx;
+    if (ctx) *(void **)ctx = shell->ctx;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

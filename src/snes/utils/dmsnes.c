@@ -412,7 +412,7 @@ PetscErrorCode DMSNESGetFunction(DM dm, SNESFunctionFn **f, PeCtx ctx)
   if (f) *f = sdm->ops->computefunction;
   if (ctx) {
     if (sdm->functionctxcontainer) PetscCall(PetscContainerGetPointer(sdm->functionctxcontainer, ctx));
-    else *(void**)ctx = NULL;
+    else *(void **)ctx = NULL;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -471,7 +471,7 @@ PetscErrorCode DMSNESGetObjective(DM dm, SNESObjectiveFn **obj, PeCtx ctx)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetDMSNES(dm, &sdm));
   if (obj) *obj = sdm->ops->computeobjective;
-  if (ctx) *(void**)ctx = sdm->objectivectx;
+  if (ctx) *(void **)ctx = sdm->objectivectx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -541,7 +541,7 @@ PetscErrorCode DMSNESGetNGS(DM dm, PetscErrorCode (**f)(SNES, Vec, Vec, void *),
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetDMSNES(dm, &sdm));
   if (f) *f = sdm->ops->computegs;
-  if (ctx) *(void**)ctx = sdm->gsctx;
+  if (ctx) *(void **)ctx = sdm->gsctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -655,7 +655,7 @@ PetscErrorCode DMSNESGetJacobian(DM dm, SNESJacobianFn **J, PeCtx ctx)
   if (J) *J = sdm->ops->computejacobian;
   if (ctx) {
     if (sdm->jacobianctxcontainer) PetscCall(PetscContainerGetPointer(sdm->jacobianctxcontainer, ctx));
-    else *(void**)ctx = NULL;
+    else *(void **)ctx = NULL;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -714,6 +714,6 @@ PetscErrorCode DMSNESGetPicard(DM dm, SNESFunctionFn **b, SNESJacobianFn **J, Pe
   PetscCall(DMGetDMSNES(dm, &sdm));
   if (b) *b = sdm->ops->computepfunction;
   if (J) *J = sdm->ops->computepjacobian;
-  if (ctx) *(void**)ctx = sdm->pctx;
+  if (ctx) *(void **)ctx = sdm->pctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

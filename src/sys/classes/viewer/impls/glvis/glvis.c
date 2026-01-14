@@ -24,7 +24,7 @@ struct _n_PetscViewerGLVis {
   PetscInt          *spacedim;                                              /* geometrical space dimension (just used to initialize the scene) */
   PetscObject       *Ufield;                                                /* work vectors for visualization */
   PetscInt           snapid;                                                /* snapshot id, use PetscViewerGLVisSetSnapId to change this value*/
-  void              *ctx;                                               /* User context, used by g2lfield */
+  void              *ctx;                                                   /* User context, used by g2lfield */
   PetscCtxDestroyFn *destroyctx;                                            /* destroy routine for ctx */
   char              *fmt;                                                   /* format string for FP values */
 };
@@ -164,7 +164,7 @@ static PetscErrorCode PetscViewerGLVisSetFields_GLVis(PetscViewer viewer, PetscI
   PetscCheck(nfields == socket->nwindow, PetscObjectComm((PetscObject)viewer), PETSC_ERR_SUP, "Cannot visualize %" PetscInt_FMT " fields using %" PetscInt_FMT " socket windows", nfields, socket->nwindow);
   socket->g2lfield = g2l;
   if (socket->destroyctx && socket->ctx) PetscCall((*socket->destroyctx)(&socket->ctx));
-  socket->ctx    = ctx;
+  socket->ctx        = ctx;
   socket->destroyctx = destroyctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

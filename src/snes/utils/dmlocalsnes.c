@@ -360,7 +360,7 @@ PetscErrorCode DMSNESGetObjectiveLocal(DM dm, PetscErrorCode (**func)(DM, Vec, P
   PetscCall(DMGetDMSNES(dm, &sdm));
   PetscCall(DMLocalSNESGetContext(dm, sdm, &dmlocalsnes));
   if (func) *func = dmlocalsnes->objectivelocal;
-  if (ctx) *(void**)ctx = dmlocalsnes->objectivelocalctx;
+  if (ctx) *(void **)ctx = dmlocalsnes->objectivelocalctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -390,7 +390,7 @@ PetscErrorCode DMSNESGetFunctionLocal(DM dm, PetscErrorCode (**func)(DM, Vec, Ve
   PetscCall(DMGetDMSNES(dm, &sdm));
   PetscCall(DMLocalSNESGetContext(dm, sdm, &dmlocalsnes));
   if (func) *func = dmlocalsnes->residuallocal;
-  if (ctx) *(void**)ctx = dmlocalsnes->residuallocalctx;
+  if (ctx) *(void **)ctx = dmlocalsnes->residuallocalctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -420,7 +420,7 @@ PetscErrorCode DMSNESGetBoundaryLocal(DM dm, PetscErrorCode (**func)(DM, Vec, vo
   PetscCall(DMGetDMSNES(dm, &sdm));
   PetscCall(DMLocalSNESGetContext(dm, sdm, &dmlocalsnes));
   if (func) *func = dmlocalsnes->boundarylocal;
-  if (ctx) *(void**)ctx = dmlocalsnes->boundarylocalctx;
+  if (ctx) *(void **)ctx = dmlocalsnes->boundarylocalctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -450,6 +450,6 @@ PetscErrorCode DMSNESGetJacobianLocal(DM dm, PetscErrorCode (**func)(DM, Vec, Ma
   PetscCall(DMGetDMSNES(dm, &sdm));
   PetscCall(DMLocalSNESGetContext(dm, sdm, &dmlocalsnes));
   if (func) *func = dmlocalsnes->jacobianlocal;
-  if (ctx) *(void**)ctx = dmlocalsnes->jacobianlocalctx;
+  if (ctx) *(void **)ctx = dmlocalsnes->jacobianlocalctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
