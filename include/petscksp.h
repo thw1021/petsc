@@ -958,8 +958,8 @@ S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPConvergenceTestFn(KSP ksp, PetscInt it, PetscReal rnorm, KSPConvergedReason *reason, void *ctx);
 
 PETSC_EXTERN PetscErrorCode       KSPSetConvergenceTest(KSP, KSPConvergenceTestFn *, void *, PetscCtxDestroyFn *);
-PETSC_EXTERN PetscErrorCode       KSPGetConvergenceTest(KSP, KSPConvergenceTestFn **, void **, PetscCtxDestroyFn **);
-PETSC_EXTERN PetscErrorCode       KSPGetAndClearConvergenceTest(KSP, KSPConvergenceTestFn **, void **, PetscCtxDestroyFn **);
+PETSC_EXTERN PetscErrorCode       KSPGetConvergenceTest(KSP, KSPConvergenceTestFn **, PeCtx, PetscCtxDestroyFn **);
+PETSC_EXTERN PetscErrorCode       KSPGetAndClearConvergenceTest(KSP, KSPConvergenceTestFn **, PeCtx, PetscCtxDestroyFn **);
 PETSC_EXTERN PetscErrorCode       KSPGetConvergenceContext(KSP, void *);
 PETSC_EXTERN KSPConvergenceTestFn KSPConvergedDefault;
 PETSC_EXTERN KSPConvergenceTestFn KSPLSQRConvergedDefault;
