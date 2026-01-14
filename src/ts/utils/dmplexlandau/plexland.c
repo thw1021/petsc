@@ -2021,7 +2021,7 @@ static void LandauSphereMapping(PetscInt dim, PetscInt Nf, PetscInt NfAux, const
     The cube has corners at |u| = square_inner_radius.
     scale to point linearly between u_0 and u_1 so that a point on the inner face does not move, and a point on the outer face moves to the sphere.
   */
-  if (u_max > square_radius + 1e-5) { (void)PetscPrintf(PETSC_COMM_SELF, "Error: Point outside outer radius: u_max %g > %g\n", (double)u_max, (double)square_radius); }
+  if (u_max > square_radius + 1e-5) (void)PetscPrintf(PETSC_COMM_SELF, "Error: Point outside outer radius: u_max %g > %g\n", (double)u_max, (double)square_radius);
   /* if (PetscAbsReal(u_max - square_inner_radius) < 1e-5 || PetscAbsReal(u_max - square_radius) < 1e-5) {
     (void)PetscPrintf(PETSC_COMM_SELF, "Warning: Point near corner of inner and outer cube: u_max %g, inner %g, outer %g\n", (double)u_max, (double)square_inner_radius, (double)square_radius);
   } */
