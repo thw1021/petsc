@@ -2008,7 +2008,7 @@ static void LandauSphereMapping(PetscInt dim, PetscInt Nf, PetscInt NfAux, const
   }
   u_norm = PetscSqrtReal(u_norm);
 
-  if (u_norm < 1e-10 || u_max < inner_radius) {
+  if (u_max < square_inner_radius) {
     for (d = 0; d < dim; ++d) f[d] = u[d];
     return;
   }
@@ -2019,11 +2019,19 @@ static void LandauSphereMapping(PetscInt dim, PetscInt Nf, PetscInt NfAux, const
     R_max = square_radius * sqrt(3) is radius of sphere we want points on outer cube mapped to.
     u_0 is the intersection of the ray with the inner cube face.
     The cube has corners at |u| = square_inner_radius.
-    (add a debug print statement here to check when it finds a inner and outer intersection, we check for eight of each)
-    (check that the point is between the inner and outer faces, and print error if not)
     scale to point linearly between u_0 and u_1 so that a point on the inner face does not move, and a point on the outer face moves to the sphere.
   */
-  scale = PetscSqrtReal((PetscReal)dim) * u_max / u_norm;
+  if (u_max > square_radius + 1e-5) { (void)PetscPrintf(PETSC_COMM_SELF, "Error: Point outside outer radius: u_max %g > %g\n", (double)u_max, (double)square_radius); }
+  /* if (PetscAbsReal(u_max - square_inner_radius) < 1e-5 || PetscAbsReal(u_max - square_radius) < 1e-5) {
+    (void)PetscPrintf(PETSC_COMM_SELF, "Warning: Point near corner of inner and outer cube: u_max %g, inner %g, outer %g\n", (double)u_max, (double)square_inner_radius, (double)square_radius);
+  } */
+  {
+    PetscReal u_0_norm  = u_norm * square_inner_radius / u_max;
+    PetscReal R_max     = square_radius * PetscSqrtReal((PetscReal)dim);
+    PetscReal t         = (u_max - square_inner_radius) / (square_radius - square_inner_radius);
+    PetscReal rho_prime = (1.0 - t) * u_0_norm + t * R_max;
+    scale               = rho_prime / u_norm;
+  }
   for (d = 0; d < dim; ++d) f[d] = u[d] * scale;
 }
 
@@ -2100,7 +2108,7 @@ PetscErrorCode DMPlexLandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, cons
       PetscCall(DMDestroy(&ctx->plex[grid]));
       ctx->plex[grid] = plex;
     } else if (ctx->sphere && dim == 3) {
-      PetscCall(LandauSphereMesh(ctx->plex[grid], ctx->radius[grid] * ctx->sphere_inner_radius_90degree[grid]));
+      PetscCall(LandauSphereMesh(ctx->plex[grid], ctx->radius[grid] * ctx->sphere_inner_radius_90degree[grid], ctx->radius[grid]));
       PetscCall(LandauSetInitialCondition(ctx->plex[grid], Xsub[grid], grid, 0, 1, ctx));
     }
     if (grid == 0) {
