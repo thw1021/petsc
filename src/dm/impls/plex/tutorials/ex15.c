@@ -28,7 +28,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsString("-outfile", "The output CGNS file", EX, options->outfile, options->outfile, sizeof(options->outfile), &flg));
   PetscCall(PetscOptionsBool("-heterogeneous", "Test save on N / load on M", EX, options->heterogeneous, &options->heterogeneous, NULL));
   PetscCall(PetscOptionsInt("-ntimes", "How many times do the cycle", EX, options->ntimes, &options->ntimes, NULL));
-  PetscCall(PetscOptionsBool("-skip_init_label_check", "Skip the label check on the first run cycle", EX, options->heterogeneous, &options->heterogeneous, NULL));
+  PetscCall(PetscOptionsBool("-skip_init_label_check", "Skip the label check on the first run cycle", EX, options->skip_init_label_check, &options->skip_init_label_check, NULL));
   PetscOptionsEnd();
   PetscCheck(flg, comm, PETSC_ERR_USER_INPUT, "-infile needs to be specified");
   PetscCheck(flg, comm, PETSC_ERR_USER_INPUT, "-outfile needs to be specified");
@@ -429,7 +429,7 @@ int main(int argc, char **argv)
     }
 
     if (user.heterogeneous) {
-      mycolor = (PetscMPIInt)(grank > user.ntimes - i);
+      mycolor = (PetscMPIInt)(grank < (gsize - i) ? 0 : 1);
     } else {
       mycolor = (PetscMPIInt)0;
     }
