@@ -80,7 +80,7 @@ def signature(obj):
 
 def visit_constant(constant):
     name, value = constant
-    return f'{name}: Final[{type(value).__name__}] = ...'
+    return f'{name}: Final[{type(value).__name__}] = ... # novermin'
 
 
 def visit_function(function):
@@ -88,9 +88,22 @@ def visit_function(function):
     return f'def {sig}: ...'
 
 
-def visit_method(method):
+method_ignores = [
+    'DM.create',
+    'DMDA.create',
+    'DMStag.create',
+    'DMSwarm.getField',
+    'DMSwarm.setType',
+    'ViewerHDF5.create',
+    'SF.compose'
+]
+def visit_method(method, clas_name=None):
     sig = signature(method)
-    return f'def {sig}: ...'
+    stub = f'def {sig}: ...'
+    if f'{clas_name}.{method.__name__}' in method_ignores:
+        stub += ' # type: ignore'
+
+    return stub
 
 
 def visit_datadescr(datadescr):
@@ -115,6 +128,9 @@ def visit_constructor(cls, name='__init__', args=None):
     arglist = f'{selfarg}, {initarg}'
     sig = f'{name}({arglist}) -> {rettype}'
     return f'def {sig}: ...'
+
+
+visited_classes = set()
 
 
 def visit_class(cls, outer=None, done=None):
@@ -153,6 +169,11 @@ def visit_class(cls, outer=None, done=None):
         cls_name = cls_name[len(outer) :]
         qualname = f'{outer}.{cls_name}'
 
+    if qualname in visited_classes:
+        return ''
+
+    visited_classes.add(qualname)
+
     override = OVERRIDE.get(qualname, {})
     done = set() if done is None else done
     lines = Lines()
@@ -176,6 +197,8 @@ def visit_class(cls, outer=None, done=None):
     start = len(lines)
 
     for name in constructor:
+        if name in override:
+            continue
         if name in cls.__dict__:
             done.add(name)
 
@@ -230,7 +253,7 @@ def visit_class(cls, outer=None, done=None):
                     lines.add = '@classmethod'
                 elif is_staticmethod(obj):
                     lines.add = '@staticmethod'
-                lines.add = visit_method(attr)
+                lines.add = visit_method(attr, qualname)
             elif True:
                 lines.add = f'{name} = {attr.__name__}'
             continue
@@ -255,7 +278,7 @@ def visit_class(cls, outer=None, done=None):
         raise RuntimeError(f'leftovers: {leftovers}')
 
     if len(lines) == start:
-        lines.add = 'pass'
+        lines.add = '...'
     lines.level -= 1
     return lines
 
@@ -351,7 +374,7 @@ def visit_module(module, done=None):
 
 
 IMPORTS = """
-from __future__ import annotations
+from __future__ import annotations # novermin
 import sys
 from threading import Lock
 from typing import (
@@ -362,7 +385,7 @@ from typing import (
     overload,
 )
 if sys.version_info >= (3, 8):
-    from typing import (
+    from typing import ( # novermin
         final,
         Final,
         Literal,
@@ -392,12 +415,93 @@ else:
         Mapping,
     )
 if sys.version_info >= (3, 11):
-    from typing import Self
+    from typing import Self # novermin
 else:
     from typing_extensions import Self
 from os import PathLike
 
 import numpy
+
+from numpy import (
+    dtype,
+    ndarray,
+)
+
+from mpi4py.MPI import (
+    Datatype,
+    Intracomm,
+    Op,
+)
+
+from petsc4py.typing import (
+    Scalar,
+    ArrayBool,
+    ArrayComplex,
+    ArrayInt,
+    ArrayReal,
+    ArrayScalar,
+    CSRIndicesSpec,
+    CSRSpec,
+    DMCoarsenHookFunction,
+    DMRestrictHookFunction,
+    DimsSpec,
+    KSPConvergenceTestFunction,
+    KSPMonitorFunction,
+    KSPOperatorsFunction,
+    KSPPostSolveFunction,
+    KSPPreSolveFunction,
+    KSPRHSFunction,
+    LayoutSizeSpec,
+    MatAssemblySpec,
+    MatBlockSizeSpec,
+    MatNullFunction,
+    MatSizeSpec,
+    NNZSpec,
+    NormTypeSpec,
+    PetscOptionsHandlerFunction,
+    ScatterModeSpec,
+    SNESMonitorFunction,
+    SNESObjFunction,
+    SNESFunction,
+    SNESJacobianFunction,
+    SNESGuessFunction,
+    SNESUpdateFunction,
+    SNESLSPreFunction,
+    SNESNGSFunction,
+    SNESConvergedFunction,
+    TAOConstraintsFunction,
+    TAOConstraintsJacobianFunction,
+    TAOConvergedFunction,
+    TAOGradientFunction,
+    TAOHessianFunction,
+    TAOJacobianFunction,
+    TAOJacobianResidualFunction,
+    TAOMonitorFunction,
+    TAOObjectiveFunction,
+    TAOObjectiveGradientFunction,
+    TAOResidualFunction,
+    TAOUpdateFunction,
+    TAOVariableBoundsFunction,
+    TAOLSGradientFunction,
+    TAOLSObjectiveFunction,
+    TAOLSObjectiveGradientFunction,
+    TSI2Function,
+    TSI2Jacobian,
+    TSI2JacobianP,
+    TSIFunction,
+    TSIJacobian,
+    TSIJacobianP,
+    TSIndicatorFunction,
+    TSMonitorFunction,
+    TSPostEventFunction,
+    TSPostStepFunction,
+    TSPreStepFunction,
+    TSRHSFunction,
+    TSRHSJacobian,
+    TSRHSJacobianP,
+    AccessModeSpec,
+    InsertModeSpec,
+)
 
 IntType: numpy.dtype = ...
 RealType: numpy.dtype = ...
@@ -406,9 +510,14 @@ ScalarType: numpy.dtype = ...
 """
 
 OVERRIDE = {
-    'Error': {},
-    '__pyx_capi__': '__pyx_capi__: Final[Dict[str, Any]] = ...',
-    '__type_registry__': '__type_registry__: Final[Dict[int, type[Object]]] = ...',
+    'Error': {
+        '__init__': 'def __init__(self, ierr: int = 0) -> None: ...',
+    },
+    'Options': {
+        '__init__': 'def __init__(self, prefix: str | None = None) -> None: ...',
+    },
+    '__pyx_capi__': '__pyx_capi__: Final[dict[str, Any]] = ... # novermin',
+    '__type_registry__': '__type_registry__: Final[dict[int, type[Object]]] = ... # novermin',
 }
 
 TYPING = """
