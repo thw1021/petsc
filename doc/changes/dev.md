@@ -131,6 +131,7 @@
 - Add `TaoGetTerm()` and `TaoAddTerm()` for manipulating the objective, gradient, and Hessian evaluation of a `Tao` using `TaoTerm`
 - Add `TaoGetHessianMatrices()` to get the Hessian and preconditioner matrices from a `Tao`
 - Fix `TAOBRGN` such that `TAOBRGN` subsolver properly appends `TAOBRGN`'s prefix
+- Add `petsc4py` support for `Tao` to use `TaoTerm`: `addTerm()`, `getTerm()`
 
 ```{rubric} TaoTerm:
 ```
@@ -141,6 +142,7 @@
 - Add `TAOTERMHALFL2SQUARED` implementation of `TaoTerm` for a squared-norm penalty function
 - Add `TAOTERML1` implementation of `TaoTerm` for a 1-norm penalty function
 - Add `TAOTERMQUADRATIC` implementation of `TaoTerm` for a quadratic penalty function
+- Add `petsc4py` support for `TaoTerm`: `TAOTerm` class with `create()`, `destroy()`, `view()`, `setType()`, `getType()`, `setFromOptions()`, `setUp()`, `setSolutionTemplate()`; `TAOTermType` enum; `TAO.getTerm()` and `TAO.addTerm()` methods
 
 ```{rubric} PetscRegressor:
 ```
