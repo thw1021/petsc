@@ -87,8 +87,8 @@ TaoSolve(Tao tao);
 TaoDestroy(Tao tao);
 ```
 TAO supports constructing an objective function by summing several distinct functions (called terms) via the `TaoTerm` object.
-With `TaoTerm`, the user can define one or more objective function ‘terms’ —for example,
-a data‑misfit term and a regularization term—each providing objective, gradient, and optional Hessian routines.
+With `TaoTerm`, the user can define one or more objective function ‘terms’. For an example, consider
+a data‑misfit term and a regularization term, each providing objective, gradient, and optional Hessian routines.
 TAO automatically composes (sums) the terms to form the overall objective and its derivatives at runtime.
 This approach promotes code reuse, makes it easy to modify scaling parameters,
 and simplifies complex problems that are naturally expressed as sums of contributions.
@@ -547,7 +547,6 @@ Ridge Regression), can be formulated as $f(x) + \beta ||x||_2^2$.
 This can be viewed as the summation of two terms, $f(x) + g(x)$, where
 $g(x) = \beta ||x||_2^2$.
 
-
 Each `TaoTerm` encapsulates the routines needed to
 evaluate its own contribution, and `Tao` automatically manages aggregating the value, gradient,
 and/or Hessian across all `TaoTerm` objects in the `Tao` object. This lets users modify
@@ -560,10 +559,24 @@ $\nabla_x f(x; p)$ (`TaoTermComputeGradient()` and
 `TaoTermComputeObjectiveAndGradient()`), and $\nabla_x^2 f(x; p)$
 (`TaoTermComputeHessian()`).
 
+#### Mapping matrix in TaoTerm
+
+When a `TaoTerm` is added to a `Tao` object using `TaoAddTerm()`, a mapping matrix $A$ can be optionally provided.
+This allows the term to evaluate the function $f(Ax; p)$ instead of $f(x; p)$.
+
+For a mapped term $f(Ax; p)$, TAO automatically handles the transformation of gradients and optionally Hessians:
+
+* Mapped gradients: When computing the gradient with respect to $x$, TAO applies the chain rule to obtain $A^T \nabla f(x; p)$
+
+* Mapped Hessians: Similarly, the Hessian with respect to $x$ is computed as $A^T \nabla^2 f(x; p) A$
+
+For an example of using mapping matrices with `TaoTerm`, see {any}`the elastic net regularization example <tao_example2>`, which demonstrates the use of `TAOTERMHALFL2SQUARED` with a mapping matrix to represent a data misfit term.
+
 #### Built-in TaoTerm implementations
 
 TAO comes with several built-in implementations for `TaoTerm`:
 
+* `TAOTERMCALLBACKS`: wraps the callbacks set via `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetObjectiveAndGradient()`, and `TaoSetHessian()`. This type is automatically created internally when using the traditional callback interface. It does not accept parameters and always has `TAOTERM_PARAMETERS_NONE`.
 * `TAOTERMHALFL2SQUARED`: $f(x;p) = \tfrac{1}{2} \|x - p\|_2^2$ (See `TaoTermCreateHalfL2Squared()`.)
 * `TAOTERML1`: $f(x;p) = \|x - p\|_1$ (See `TaoTermCreateL1()`.)
 * `TAOTERMQUADRATIC`: $f(x;p) = \tfrac{1}{2}(x - p)^T A (x - p)$ for matrix $A$ (See `TaoTermCreateQuadratic()`.)
@@ -586,7 +599,8 @@ the parametric behavior of a `TaoTerm` is determined by `TaoTermSetParametersMod
 #### Using a TaoTerm in a Tao solver
 
 A `TaoTerm` can be set to an empty `Tao` object or added to an existing
-`Tao` using `TaoAddTerm()`.
+`Tao` using `TaoAddTerm()`. The entire objective function of a `Tao` object can be retrieved as a single `TaoTerm` using `TaoGetTerm()`, which returns the term along with its scale, parameters, and mapping matrix (if any).
+
 For example: if you have specified an objective function $f(x)$ using
 `TaoSetObjectiveAndGradient()`, and a regularizer $g(x;p)$ is specified by a `TaoTerm`,
 you can create the objective function $f(x) + \alpha g(Ax; p)$ using:
@@ -625,18 +639,17 @@ $\frac{0.4}{2} \|x\|_2^2 + 0.7 \|x\|_1$ can be added with the following options:
 -tao_add_terms ridge_,lasso_
 -ridge_tao_term_type halfl2squared
 -lasso_tao_term_type l1
--objective_tao_term_sum_ridge_scale 0.4
--objective_tao_term_sum_lasso_scale 0.7
+-tao_term_sum_ridge_scale 0.4
+-tao_term_sum_lasso_scale 0.7
 ```
 
 In the above, `ridge_`, and `lasso_` are PETSc option prefixes and could be any unique strings for each term to be added.
 
 When an objective function is specified using `TaoSetObjective()`,
-it is stored in special `TaoTerm` of the type `TAOTERMCALLBACK` inside `Tao`, with `callback_` prefix.
+it is stored in special `TaoTerm` of the type `TAOTERMCALLBACKS` inside `Tao`, with `callbacks_` prefix.
 
 When more than one `TaoTerm` object is set to `Tao` (or both `TaoSetObjective()` and `TaoAddTerm()` are used),
-a `TaoTerm` with type `TAOTERMSUM` gets created internally,
-with `objective_` prefix, and all the subsequently added `TaoTerm` objects gets stored in it.
+a `TaoTerm` with type `TAOTERMSUM` gets created internally, and all the subsequently added `TaoTerm` objects gets stored in it.
 With this structure in mind, users can gradually control each terms, with following command line options:
 
 ```
@@ -647,11 +660,8 @@ With this structure in mind, users can gradually control each terms, with follow
 -ridge_tao_term_{hessian_mat_type, ...}
 -lasso_tao_term_{hessian_mat_type, ...}
 
-// If you want to control the whole objective
--objective_tao_term_{hessian_mat_type, ...}
-
 // If you want to control scaling of each parts
--objective_tao_term_sum_{callback, ridge, lasso}_scale {number}
+-tao_term_sum_{callback, ridge, lasso}_scale {number}
 ```
 
 (sec_tao_term_shell)=
@@ -687,7 +697,7 @@ Masking can also be done from the command line. For instance, for the elastic ne
 the user can mask gradient and Hessian evaluation of `TAOTERML1` with the following options:
 
 ```
--objective_tao_term_sum_lasso_mask gradient,hessian
+-tao_term_sum_lasso_mask gradient,hessian
 ```
 
 ### Solving
@@ -2607,7 +2617,13 @@ The regularization selection can be made using the command line option
 `-tao_brgn_regularization_type <l2pure, l2prox, l1dict, user>` where the `user` option allows
 the user to define a custom $\mathcal{C}2$-continuous
 regularization term. This custom term can be defined by using the
-`TaoBRGNSetRegularizerTerm()` functions.
+interface functions:
+
+- `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` - Provide
+  user-call back for evaluating the function value and gradient
+  evaluation for the regularization term.
+- `TaoBRGNSetRegularizerHessianRoutine()` - Provide user call-back
+  for evaluating the Hessian of the regularization term.
 
 #### POUNDERS
 

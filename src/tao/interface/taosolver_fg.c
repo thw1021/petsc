@@ -166,13 +166,6 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscCall(TaoTermMappingComputeObjective(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, f));
-  if (tao->num_terms) {
-    const PetscReal *sum_values;
-
-    PetscCall(TaoTermSumGetLastSubtermObjectives(tao->objective_term.term, &sum_values));
-    if (!tao->objective_values) PetscCall(PetscMalloc1(tao->num_terms, &tao->objective_values));
-    PetscCall(PetscArraycpy(tao->objective_values, sum_values, tao->num_terms));
-  }
   tao->nfuncs++;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -203,13 +196,6 @@ PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscCall(TaoTermMappingComputeObjectiveAndGradient(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, f, G));
-  if (tao->num_terms) {
-    const PetscReal *sum_values;
-
-    PetscCall(TaoTermSumGetLastSubtermObjectives(tao->objective_term.term, &sum_values));
-    if (!tao->objective_values) PetscCall(PetscMalloc1(tao->num_terms, &tao->objective_values));
-    PetscCall(PetscArraycpy(tao->objective_values, sum_values, tao->num_terms));
-  }
   tao->nfuncgrads++;
   PetscCall(TaoTestGradient(tao, X, G));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -582,13 +568,13 @@ PetscErrorCode TaoGetObjectiveAndGradient(Tao tao, Vec *g, PetscErrorCode (**fun
 . tao - the `Tao` context
 
   Output Parameter:
-. flg - `PETSC_TRUE` if the objective `TaoTerm` has this routine `PETSC_FALSE` otherwise
+. flg - `PETSC_TRUE` if the `Tao` has this routine `PETSC_FALSE` otherwise
 
   Level: developer
 
   Note:
-  Where the objective function `TaoTerm` is different from the one defined by the user callbacks,
-  this describes the former, not the latter.
+  If the objective of `Tao`has been altered via `TaoAddTerm()`, it will
+  return whether the summantion of all terms has this routine.
 
 .seealso: [](ch_tao), `Tao`, `TaoSetObjective()`, `TaoIsGradientDefined()`, `TaoIsObjectiveAndGradientDefined()`
 @*/
@@ -604,7 +590,7 @@ PetscErrorCode TaoIsObjectiveDefined(Tao tao, PetscBool *flg)
   TaoIsGradientDefined - Checks to see if the user has
   declared a gradient-only routine.  Useful for determining when
   it is appropriate to call `TaoComputeGradient()` or
-  `TaoComputeGradientAndGradient()`
+  `TaoComputeObjectiveAndGradient()`
 
   Not Collective
 
@@ -617,8 +603,8 @@ PetscErrorCode TaoIsObjectiveDefined(Tao tao, PetscBool *flg)
   Level: developer
 
   Note:
-  Where the objective function `TaoTerm` is different from the one defined by the user callbacks,
-  this describes the former, not the latter.
+  If the objective of `Tao`has been altered via `TaoAddTerm()`, it will
+  return whether the summantion of all terms has this routine.
 
 .seealso: [](ch_tao), `TaoSetGradient()`, `TaoIsObjectiveDefined()`, `TaoIsObjectiveAndGradientDefined()`
 @*/
@@ -633,8 +619,7 @@ PetscErrorCode TaoIsGradientDefined(Tao tao, PetscBool *flg)
 /*@
   TaoIsObjectiveAndGradientDefined - Checks to see if the user has
   declared a joint objective/gradient routine.  Useful for determining when
-  it is appropriate to call `TaoComputeObjective()` or
-  `TaoComputeObjectiveAndGradient()`
+  it is appropriate to call `TaoComputeObjectiveAndGradient()`
 
   Not Collective
 
@@ -647,8 +632,8 @@ PetscErrorCode TaoIsGradientDefined(Tao tao, PetscBool *flg)
   Level: developer
 
   Note:
-  Where the objective function `TaoTerm` is different from the one defined by the user callbacks,
-  this describes the former, not the latter.
+  If the objective of `Tao`has been altered via `TaoAddTerm()`, it will
+  return whether the summantion of all terms has this routine.
 
 .seealso: [](ch_tao), `TaoSetObjectiveAndGradient()`, `TaoIsObjectiveDefined()`, `TaoIsGradientDefined()`
 @*/

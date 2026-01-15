@@ -470,7 +470,9 @@ PETSC_EXTERN PetscErrorCode          TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx 
   Level: advanced
 
   Notes:
-  If `TAOBRGN_REGULARIZATION_USER`, the regularizer can be set by calling `TaoBRGNSetRegularizerTerm()`.
+  If `TAOBRGN_REGULARIZATION_USER`, the regularizer is set either by calling
+  `TaoBRGNSetRegularizerObjectiveAndGradientRoutine()` and
+  `TaoBRGNSetRegulazerHessianRoutine()`
 
   If `TAOBRGN_REGULARIZATION_L1DICT`, the dictionary matrix is set with `TaoBRGNSetDictionaryMatrix()` and the smoothing parameter of the
   approximate $\ell_1$ norm is set with `TaoBRGNSetL1SmoothEpsilon()`.

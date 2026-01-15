@@ -230,11 +230,7 @@ static PetscErrorCode TaoTermMappingMatPtAP(Mat unmapped_H, Mat map, Mat mapped_
     PetscCall(MatConstantDiagonalGetConstant(unmapped_H, &cc));
     PetscCall(MatTransposeMatMult(map, map, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped_H));
     PetscCall(MatScale(mapped_H, cc));
-  } else {
-    //PetscCall(TaoTermMappingMatPtAP_Internal(unmapped_H, map, mapped_H));
-
-    PetscCall(MatPtAP(unmapped_H, map, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped_H));
-  }
+  } else PetscCall(MatPtAP(unmapped_H, map, MAT_REUSE_MATRIX, PETSC_DETERMINE, &mapped_H));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

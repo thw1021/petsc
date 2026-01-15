@@ -202,7 +202,6 @@ struct _p_Tao {
   Vec            objective_parameters;
   PetscInt       num_terms;
   PetscBool      term_set;
-  PetscReal     *objective_values;
 
   TaoTerm   orig_callbacks; /* TAOTERMCALLBACKS for the original callbacks */
   PetscBool uses_hessian_matrices;

@@ -282,7 +282,6 @@ PetscErrorCode TaoDestroy(Tao *tao)
   PetscTryTypeMethod(*tao, destroy);
   PetscCall(TaoTermMappingReset(&(*tao)->objective_term));
   PetscCall(VecDestroy(&(*tao)->objective_parameters));
-  PetscCall(PetscFree((*tao)->objective_values));
   PetscCall(TaoTermDestroy(&(*tao)->orig_callbacks));
   PetscCall(KSPDestroy(&(*tao)->ksp));
   PetscCall(SNESDestroy(&(*tao)->snes_ewdummy));
@@ -555,10 +554,10 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   }
 
   flg = PETSC_FALSE;
-  PetscCall(PetscOptionsBool("-tao_fd_gradient", "compute gradient using finite differences (only for callback methods)", "TaoDefaultComputeGradient", flg, &flg, NULL));
+  PetscCall(PetscOptionsBool("-tao_fd_gradient", "compute gradient using finite differences", "TaoDefaultComputeGradient", flg, &flg, NULL));
   if (flg) PetscCall(TaoTermComputeGradientUseFDPush(tao->objective_term.term));
   flg = PETSC_FALSE;
-  PetscCall(PetscOptionsBool("-tao_fd_hessian", "compute Hessian using finite differences (only for callback methods)", "TaoDefaultComputeHessian", flg, &flg, NULL));
+  PetscCall(PetscOptionsBool("-tao_fd_hessian", "compute Hessian using finite differences", "TaoDefaultComputeHessian", flg, &flg, NULL));
   if (flg) {
     Mat H;
 
@@ -774,9 +773,6 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
       if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: unlimited)\n"));
       else PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: %" PetscInt_FMT ")\n", tao->max_funcs));
     }
-    //TODO somehow I need to get number of ngrad_mffd, and print here.
-    //it makes sense to include it in total eval count. how do I do this though?
-    //also would like to print number of mffd grad eval in taotermview.
     {
       PetscBool is_callback;
       PetscInt  ngrad_mffd;
