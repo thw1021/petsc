@@ -1265,16 +1265,13 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt myown
 
       // Loop through transitive support of a vertex in the CGNS face connectivity
       PetscCall(DMPlexGetTransitiveClosure(dm, connDist[offset + 0], PETSC_FALSE, &support_size, &support));
-      for (PetscInt p = 0; p < support_size; p++) {
-        PetscInt        face_point = support[p * 2]; // closure stores points and orientations, [p_0, o_0, p_1, o_1, ...]
+      for (PetscInt s = 0; s < support_size; s++) {
+        PetscInt        face_point = support[s * 2]; // closure stores points and orientations, [p_0, o_0, p_1, o_1, ...]
         PetscInt        trans_cone_size, *trans_cone;
 
         if (face_point < fplexStart || face_point >= fplexEnd) continue; // Skip non-face points
-
-        // TODO This needs to get the Transitive cones and loop through the vertices only
+        // See if face_point has the same vertices
         PetscCall(DMPlexGetTransitiveClosure(dm, face_point, PETSC_TRUE, &trans_cone_size, &trans_cone));
-
-        // See if point has same connectivity
         for (PetscInt c = 0; c < trans_cone_size; c++) {
           PetscInt vertex_point = trans_cone[c * 2], conn_has_vertex;
           if (vertex_point < vplexStart || vertex_point >= vplexEnd) continue; // Skip non-vertex points
@@ -2072,7 +2069,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
   if (num_fs_global > 0) {
     CGNS_ENUMT(ElementType_t) element_type = CGNS_ENUMV(ElementTypeNull);
     const PetscInt *fsValuesLocal;
-    IS              stratumIS, fsISTotal;
+    IS              stratumIS, fsFacesAll;
     int             section;
     const int      *perm;
     cgsize_t        f_owned = 0, f_global, f_start;
@@ -2090,20 +2087,20 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
 
     PetscCall(DMPlexGetHeightStratum(dm, 1, &fStart, &fEnd));
     { // Get single IS without duplicates of the local face IDs in the FaceSets
-      IS *fsISs = NULL;
+      IS *fsPoints = NULL;
 
-      PetscCall(PetscMalloc1(num_fs_local, &fsISs));
-      for (PetscInt fs = 0; fs < num_fs_local; ++fs) PetscCall(DMLabelGetStratumIS(fsLabel, fsValuesLocal[fs], &fsISs[fs]));
-      PetscCall(ISConcatenate(PETSC_COMM_SELF, num_fs_local, fsISs, &fsISTotal));
-      PetscCall(ISSortRemoveDups(fsISTotal));
-      PetscCall(ISGeneralFilter(fsISTotal, fStart, fEnd)); // Remove non-face mesh points from the IS
+      PetscCall(PetscMalloc1(num_fs_local, &fsPoints));
+      for (PetscInt fs = 0; fs < num_fs_local; ++fs) PetscCall(DMLabelGetStratumIS(fsLabel, fsValuesLocal[fs], &fsPoints[fs]));
+      PetscCall(ISConcatenate(PETSC_COMM_SELF, num_fs_local, fsPoints, &fsFacesAll));
+      PetscCall(ISSortRemoveDups(fsFacesAll));
+      PetscCall(ISGeneralFilter(fsFacesAll, fStart, fEnd)); // Remove non-face mesh points from the IS
       {
         PetscInt f_owned_int;
-        PetscCall(ISGetSize(fsISTotal, &f_owned_int));
+        PetscCall(ISGetSize(fsFacesAll, &f_owned_int));
         f_owned = f_owned_int;
       }
-      for (PetscInt fs = 0; fs < num_fs_local; ++fs) PetscCall(ISDestroy(&fsISs[fs]));
-      PetscCall(PetscFree(fsISs));
+      for (PetscInt fs = 0; fs < num_fs_local; ++fs) PetscCall(ISDestroy(&fsPoints[fs]));
+      PetscCall(PetscFree(fsPoints));
     }
     PetscCall(ISRestoreIndices(fsValuesLocalIS, &fsValuesLocal));
     PetscCall(ISDestroy(&fsValuesLocalIS));
@@ -2113,7 +2110,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       DMPolytopeType  cell_type, cell_type_f;
       PetscInt        closure_dof = -1, closure_dof_f;
 
-      PetscCall(ISGetIndices(fsISTotal, &faces));
+      PetscCall(ISGetIndices(fsFacesAll, &faces));
       if (f_owned) PetscCall(DMPlexGetCellType(dm, faces[0], &cell_type));
       PetscCall(PetscCalloc1(f_owned * 2, &parents));
       for (PetscInt f = 0, c = 0; f < f_owned; f++) {
@@ -2137,7 +2134,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
           }
         }
         parents[f * 2 + 0] = support_cells[0] + e_start + 1;
-        if (support_size == 2) parents[f * 2 + 0] = support_cells[1] + e_start + 1;
+        if (support_size == 2) parents[f * 2 + 1] = support_cells[1] + e_start + 1;
 
         // Get connectivity of the face
         PetscCall(DMPlexGetClosureIndices(cdm, cdm->localSection, cdm->localSection, face, PETSC_FALSE, &closure_dof_f, &closure_indices, NULL, NULL));
@@ -2151,7 +2148,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
         for (PetscInt j = 0; j < elem_size; j++) conn[c++] = node_l2g[closure_indices[perm[j] * coord_dim] / coord_dim] + 1;
         PetscCall(DMPlexRestoreClosureIndices(cdm, cdm->localSection, cdm->localSection, face, PETSC_FALSE, &closure_dof_f, &closure_indices, NULL, NULL));
       }
-      PetscCall(ISRestoreIndices(fsISTotal, &faces));
+      PetscCall(ISRestoreIndices(fsFacesAll, &faces));
     }
 
     {   // Write connectivity for face sets
@@ -2204,7 +2201,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       for (PetscInt i = 0; i < fs_owned; i++) {
         PetscInt is_idx;
 
-        PetscCall(ISLocate(fsISTotal, fs_pnts[i], &is_idx));
+        PetscCall(ISLocate(fsFacesAll, fs_pnts[i], &is_idx));
         fs_pnts_cg[i] = is_idx + f_start + 1 ;
       }
 
@@ -2228,7 +2225,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
         PetscCall(ISDestroy(&stratumIS));
       }
     }
-    PetscCall(ISDestroy(&fsISTotal));
+    PetscCall(ISDestroy(&fsFacesAll));
     PetscCall(PetscFree(fsValuesGlobal));
     elem_offset += f_global;
   }
