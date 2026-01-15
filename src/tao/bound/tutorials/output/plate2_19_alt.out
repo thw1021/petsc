@@ -4,8 +4,8 @@ mx:8, my:6, bmx:3, bmy:3, height:0.2
 iter =   0, Function value 1.67039, Residual: 0.47529
 iter =   0, Function value 1.57687, Residual: 0.447462
 iter =   1, Function value 1.52082, Residual: 0.221251
-iter =   2, Function value 1.50587, Residual: 0.0266265
-iter =   3, Function value 1.50566, Residual: 0.000666715
+iter =   2, Function value 1.50587, Residual: 0.0266266
+iter =   3, Function value 1.50566, Residual: 0.000666716
 iter =   4, Function value 1.50566, Residual: < 1.0e-6
 Tao Object: 1 MPI process
   type: bntr
@@ -83,19 +83,16 @@ Tao Object: 1 MPI process
         Rescale convex factor: theta=0.125
     linear system matrix, which is also used to construct the preconditioner:
     Mat Object: 1 MPI process
-      type: seqaij
+      type: submatrix
       rows=40, cols=40
-      total: nonzeros=228, allocated nonzeros=228
-      total number of mallocs used during MatSetValues calls=0
-        not using I-node routines
   total KSP iterations: 61
   Active Set subset type: subvec
   convergence tolerances: gatol=1e-05,   grtol=1e-08,   steptol=0.,   gttol=0.
-  Residual in Function/Gradient:=7.77402e-07
+  Residual in Function/Gradient:=7.77431e-07
   Objective value=1.50566
   total number of iterations=4,                          (max: 50)
   total number of function evaluations=9,                  (max: unlimited)
-  total number of gradient evaluations=5,                  (max: unlimited)
+  total number of gradient evaluations=80,                  (max: unlimited)
   total number of function/gradient evaluations=1,      (max: unlimited)
   total number of Hessian evaluations=5
   Solution converged:    ||g(X)|| <= gatol
