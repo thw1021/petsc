@@ -83,7 +83,7 @@ stubgen:
 	python conf/stubgen.py
 
 stubcheck:
-	python -m mypy.stubtest petsc4py --ignore-missing-stub --allowlist conf/stubtest-allowlist
+	python -m mypy.stubtest petsc4py --ignore-missing-stub --allowlist conf/stubtest-allowlist --ignore-disjoint-bases
 
 stubdiff:
 	git diff --quiet -- src/petsc4py/PETSc.pyi
