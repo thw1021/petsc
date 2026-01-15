@@ -170,6 +170,7 @@ PetscErrorCode DMPlexTransformCreate(MPI_Comm comm, DMPlexTransform *tr)
 
   PetscCall(PetscHeaderCreate(t, DMPLEXTRANSFORM_CLASSID, "DMPlexTransform", "Mesh Transform", "DMPlexTransform", comm, DMPlexTransformDestroy, DMPlexTransformView));
   t->setupcalled = PETSC_FALSE;
+  t->redFactor   = 2.0;
   PetscCall(PetscCalloc2(DM_NUM_POLYTOPES, &t->coordFE, DM_NUM_POLYTOPES, &t->refGeom));
   *tr = t;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1026,7 +1027,7 @@ PetscErrorCode DMPlexTransformGetTargetPoint(DMPlexTransform tr, DMPolytopeType 
   for (n = 0; n < Nct; ++n) {
     if (rct[n] == ctNew) {
       if (rsize[n] && r >= rsize[n])
-        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Replica number %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ") for subcell type %s in cell type %s", r, rsize[n], DMPolytopeTypes[rct[n]], DMPolytopeTypes[ct]);
+        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Replica number %" PetscInt_FMT " for point %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ") for subcell type %s in cell type %s", r, p, rsize[n], DMPolytopeTypes[rct[n]], DMPolytopeTypes[ct]);
       newp += rp * rsize[n] + r;
       break;
     }
@@ -2193,7 +2194,7 @@ static PetscErrorCode DMPlexTransformSetCoordinates(DMPlexTransform tr, DM rdm)
   if (maxCell) {
     PetscReal maxCellNew[3];
 
-    for (d = 0; d < dEo; ++d) maxCellNew[d] = maxCell[d] / 2.0;
+    for (d = 0; d < dEo; ++d) maxCellNew[d] = maxCell[d] / tr->redFactor;
     PetscCall(DMSetPeriodicity(rdm, maxCellNew, Lstart, L));
   }
   PetscCall(DMGetCoordinateDim(rdm, &dE));

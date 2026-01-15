@@ -431,17 +431,21 @@ PetscErrorCode DMLocalizeCoordinates(DM dm)
       if (!cdof) continue;
       PetscCall(DMPlexVecGetClosure(cplex, cs, coordinates, c, &dof, &cellCoords));
       PetscCall(PetscSectionGetOffset(csDG, c, &offDG));
-      // TODO The coordinates are set in closure order, which might not be the tensor order
+      // Loop over the coordinates of each vertex
+      //   TODO The coordinates are set in closure order, which might not be the tensor order
       for (q = 0; q < dof / Nc; ++q) {
-        // Select a trial anchor
+        // Select vertex q as a trial anchor
         for (d = 0; d < Nc; ++d) anchor[d] = cellCoords[q * Nc + d];
+        // Loop over other vertices p
         for (p = 0; p < dof / Nc; ++p) {
+          // Get coordinates of vertex p, relative to vertex q
           PetscCall(DMLocalizeCoordinate_Internal(dm, Nc, anchor, &cellCoords[p * Nc], &coordsDG[offDG + p * Nc]));
           // We need the cell to fit into the torus [lower, lower+L)
           for (d = 0; d < Nc; ++d)
             if (L[d] > 0. && ((PetscRealPart(coordsDG[offDG + p * Nc + d]) < (Lstart ? Lstart[d] : 0.)) || (PetscRealPart(coordsDG[offDG + p * Nc + d]) > (Lstart ? Lstart[d] : 0.) + L[d]))) break;
           if (d < Nc) break;
         }
+        // If we did not break the p loop, all vertices are on the same sheet
         if (p == dof / Nc) break;
       }
       PetscCheck(p == dof / Nc, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cell %" PetscInt_FMT " does not fit into the torus %s[0, L]", c, Lstart ? "Lstart + " : "");
