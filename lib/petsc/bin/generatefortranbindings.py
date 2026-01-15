@@ -78,7 +78,7 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
       NL    = ';\\\n'
       PeCtx = True
       ofile = os.path.join(petscarch, 'include', 'petsc', 'finclude', file.replace('.h90', '.h'))
-      break;
+      break
 
   with open(ofile,"a") as fd:
     if funname in ['PetscObjectQuery', 'PetscObjectCompose']:
@@ -150,9 +150,9 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
         elif k.isfunction:
           fd.write('  ' + 'external ' + k.name  + NL)
         elif ktypename == 'void' and k.stars == 1 and k.name == 'ctx':
-          fd.write('  class(*)  :: ' + k.name + NL)
+          fd.write('  type(*) :: ' + k.name + NL)
         elif ktypename == 'PeCtx':
-          fd.write('  type(ttype), pointer  :: ' + k.name + NL)
+          fd.write('  type(ttype), pointer :: ' + k.name + NL)
         else:
           fd.write('  ' + ktypename + ' :: ' + k.name + NL)
         cnt = cnt + 1

@@ -144,5 +144,5 @@
 - Fortran interface definitions are now automatically generated for all functions that take context variable arguments, represented in the C source code as `void *ctx`, allowing the use
   of any Fortran derived type as the context
 - For all PETSc functions `XXXGetYYY()` that return a context variable as an argument, represented in the C source code as `PeCtx ctx`, a macro is generated named `Interface_XXXGetYYY()` which
-  can be used to tell the Fortran compiler the a pointer to that derived type is returned from the Fortran version of `XXXGetYYY()`. See src/snes/tutorials/ex5f90.F90`
+  can be used to tell the Fortran compiler that a pointer to that derived type is returned from the Fortran version of `XXXGetYYY()`. See src/snes/tutorials/ex5f90.F90`
 

@@ -399,7 +399,7 @@ Interface_SNESGetApplicationContext(AppCtx)
 
 One must insert this line into the Fortran source code where one inserts interface definitions, see, for example,
 <a href="PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/snes/tutorials/ex5f90.F90.html">src/snes/tests/ex590.F90</a>. For those interested
-the source code of these macros maybe found in the generated Fortran include files located at `$PETSC_DIR/$PETSC_ARCH/include/petsc/finclude/*.h`.
+the source code of these macros may be found in the generated Fortran include files located at `$PETSC_DIR/$PETSC_ARCH/include/petsc/finclude/*.h`.
 
 
 When a function pointer (declared as external in Fortran) is passed as an argument to a PETSc function,
