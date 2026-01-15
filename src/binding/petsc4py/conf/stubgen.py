@@ -80,7 +80,7 @@ def signature(obj):
 
 def visit_constant(constant):
     name, value = constant
-    return f'{name}: Final[{type(value).__name__}] = ... # novermin'
+    return f'{name}: Final[{type(value).__name__}] = ...'
 
 
 def visit_function(function):
@@ -374,7 +374,7 @@ def visit_module(module, done=None):
 
 
 IMPORTS = """
-from __future__ import annotations # novermin
+from __future__ import annotations
 import sys
 from threading import Lock
 from typing import (
@@ -385,7 +385,7 @@ from typing import (
     overload,
 )
 if sys.version_info >= (3, 8):
-    from typing import ( # novermin
+    from typing import (
         final,
         Final,
         Literal,
@@ -415,7 +415,7 @@ else:
         Mapping,
     )
 if sys.version_info >= (3, 11):
-    from typing import Self # novermin
+    from typing import Self
 else:
     from typing_extensions import Self
 from os import PathLike
@@ -516,8 +516,8 @@ OVERRIDE = {
     'Options': {
         '__init__': 'def __init__(self, prefix: str | None = None) -> None: ...',
     },
-    '__pyx_capi__': '__pyx_capi__: Final[dict[str, Any]] = ... # novermin',
-    '__type_registry__': '__type_registry__: Final[dict[int, type[Object]]] = ... # novermin',
+    '__pyx_capi__': '__pyx_capi__: Final[dict[str, Any]] = ...',
+    '__type_registry__': '__type_registry__: Final[dict[int, type[Object]]] = ...',
 }
 
 TYPING = """
