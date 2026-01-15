@@ -683,7 +683,7 @@ class build_ext(_build_ext):
 
         env['PYTHONPATH'] = python_path
 
-        subprocess.check_call([sys.executable, Path(__file__).parent / 'stubgen.py'], env=env)
+        subprocess.check_call([sys.executable, Path(__file__).parent / 'stubgen.py'], env=env) # noqa S603
         self.copy_file(
             Path(__file__).parent.parent / 'src' / 'petsc4py' / 'PETSc.pyi',
             os.path.join(self.build_lib, "petsc4py", "PETSc.pyi"),
