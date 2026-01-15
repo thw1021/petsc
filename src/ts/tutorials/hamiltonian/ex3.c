@@ -1710,9 +1710,9 @@ int main(int argc, char **argv)
    testset:
      nsize: 3
      args: -cosine_coefficients 0.01 -charges -1. -total_weight 1. -xdm_plex_hash_location -vpetscspace_degree 2 -petscspace_degree 1 -em_snes_atol 1.e-12 \
-     -em_snes_error_if_not_converged -em_ksp_error_if_not_converged -em_ksp_type cg -em_pc_type gamg -em_mg_coarse_ksp_type preonly -em_mg_coarse_pc_type svd -em_proj_ksp_type cg\
-     -em_proj_pc_type gamg \addtogroup-em_proj_mg_coarse_ksp_type preonly -em_proj_mg_coarse_pc_type svd -ts_time_step 0.03 -xdm_plex_simplex 0 \
-     -ts_max_time 100 -output_step 1 -ts_type basicsymplectic -ts_basicsymplectic_type 1 -check_weights -ts_max_steps 60 -sw_view
+     -em_snes_error_if_not_converged -em_ksp_error_if_not_converged -em_ksp_type cg -em_pc_type gamg -em_mg_coarse_ksp_type preonly -em_mg_coarse_pc_type svd -em_proj_ksp_type cg \
+     -em_proj_pc_type gamg -em_proj_mg_coarse_ksp_type preonly -em_proj_mg_coarse_pc_type svd -ts_time_step 0.03 -xdm_plex_simplex 0 \
+     -ts_max_time 100 -output_step 1 -ts_type basicsymplectic -ts_basicsymplectic_type 1 -check_weights -ts_max_steps 60
 
      test:
        suffix: landau_damping_1d
@@ -1735,6 +1735,6 @@ int main(int argc, char **argv)
        nsize: 1
        args: -use_landau_velocity_space -xdm_plex_dim 3 -vdm_landau_thermal_temps 1 -vdm_landau_device_type cpu -xdm_plex_box_faces 6,3,3 -xdm_plex_box_lower 0.,-1,-1 \
        -xdm_plex_box_upper 12.5664,1,1 -xdm_plex_box_bd periodic,periodic,periodic -vdm_landau_verbose 2 -vdm_landau_sphere -vdm_landau_map_sphere \
-       -vdm_landau_domain_radius 6,6,6 -vdm_landau_sphere_inner_radius_90degree_scale .35 -vdm_refine 1 #-vdm_view hdf5:my.hdf5:hdf5_viz
+       -vdm_landau_domain_radius 6,6,6 -vdm_landau_sphere_inner_radius_90degree_scale .35 -vdm_refine 1
 
 TEST*/
