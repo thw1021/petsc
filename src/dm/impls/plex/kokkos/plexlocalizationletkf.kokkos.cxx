@@ -44,6 +44,7 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
 . n_obs_local - Number of local observations
 . n_dof - Number of degrees of freedom
 . Vecxyz - Array of vectors containing the coordinates
+
 - H - Observation operator matrix
 
   Output Parameter:
