@@ -326,9 +326,9 @@ static PetscErrorCode MonitorParticles(TS ts, PetscInt step, PetscReal t, Vec U,
   PetscCall(DMSwarmGetField(sw, "E_field", NULL, NULL, (void **)&E));
 
   if (user->particle_monitor_prefix[0]) {
-    PetscCall(PetscSNPrintf(filename, sizeof(filename), "%s_step_%d.bin", user->particle_monitor_prefix, step));
+    PetscCall(PetscSNPrintf(filename, sizeof(filename), "%s_step_%d.bin", user->particle_monitor_prefix, (int)step));
   } else {
-    PetscCall(PetscSNPrintf(filename, sizeof(filename), "particles_step_%d.bin", step));
+    PetscCall(PetscSNPrintf(filename, sizeof(filename), "particles_step_%d.bin", (int)step));
   }
   PetscCall(PetscViewerBinaryOpen(comm, filename, FILE_MODE_WRITE, &viewer));
 
@@ -1072,6 +1072,7 @@ static PetscErrorCode ComputeFieldAtParticles_Primal(SNES snes, DM sw, Mat M_p, 
     maxNcp = PetscMax(maxNcp, Ncp);
   }
   PetscCall(DMGetWorkArray(dm, maxNcp * dim, MPIU_REAL, &refcoord));
+  PetscCall(PetscArrayzero(refcoord, maxNcp * dim));
   PetscCall(DMGetWorkArray(dm, maxNcp * dim, MPIU_REAL, &pcoord));
   PetscCall(PetscFECreateTabulation(fe, 1, maxNcp, refcoord, 1, &tab));
   for (PetscInt c = cStart; c < cEnd; ++c) {
