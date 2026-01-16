@@ -670,6 +670,12 @@ class build_ext(_build_ext):
             self.run_command('build_src')
 
     def build_stubs(self):
+
+        petsc_arch = self.petsc_arch or [self.get_config_arch(None)["PETSC_ARCH"]]
+        if petsc_arch == ["arch-python"]:
+            # wheel build - do not regenerate stubs
+            return
+
         env = os.environ.copy()
 
         python_path = env.get('PYTHONPATH', "")
