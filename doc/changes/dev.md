@@ -47,6 +47,8 @@
 ```{rubric} VecScatter / PetscSF:
 ```
 
+- Add `PetscSFCreateByMatchingIndicesInclusive()` as variant of `PetscSFCreateByMatchingIndices()` but does not enforce unique ownership of matching indices
+
 ```{rubric} PF:
 ```
 
@@ -55,6 +57,8 @@
 
 ```{rubric} PetscSection:
 ```
+
+- Add `PetscSectionDistributeData()`, akin to `DMPlexDistributeData()`
 
 ```{rubric} PetscPartitioner:
 ```
@@ -112,7 +116,8 @@
 ```{rubric} DM/DA:
 ```
 
--  Change the final argument of `DMShellSetDestroyContext()` to `PetscCtxDestroyFn *`. This means the destroy function must dereference the argument before operating on it
+- Change the final argument of `DMShellSetDestroyContext()` to `PetscCtxDestroyFn *`. This means the destroy function must dereference the argument before operating on it
+- Add `DMLabelGetValueISGlobal()` to get globally consistent `IS` of values in a `DMLabel`
 
 ```{rubric} DMSwarm:
 ```
@@ -123,6 +128,7 @@
 - Add `DMPlexVecGetClosureAtDepth()`
 - Add an extra communicator argument to `DMPlexFilter()` to allow extracting local meshes
 - Add `DMPlexGetLETKFLocalizationMatrix` to compute localization weight matrix for LETKF
+- Change `verticesAdjSaved` parameter in `DMPlexCreateFromCell*Parallel*()` functions to be allocated by function rather than by user
 
 ```{rubric} FE/FV:
 ```
