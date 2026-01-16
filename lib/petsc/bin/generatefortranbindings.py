@@ -77,7 +77,7 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
     if k.typename == 'PeCtx':
       NL    = ';\\\n'
       PeCtx = True
-      ofile = os.path.join(petscarch, 'include', 'petsc', 'finclude', file.replace('.h90', '.h'))
+      ofile = os.path.join(petscarch, 'include', pkgname, 'finclude', file.replace('.h90', '.h'))
       break
 
   with open(ofile,"a") as fd:
