@@ -1708,7 +1708,7 @@ int main(int argc, char **argv)
     requires: !complex double
 
    testset:
-     nsize: 3
+     nsize: 2
      args: -cosine_coefficients 0.01 -charges -1. -total_weight 1. -xdm_plex_hash_location -vpetscspace_degree 2 -petscspace_degree 1 -em_snes_atol 1.e-12 \
      -em_snes_error_if_not_converged -em_ksp_error_if_not_converged -em_ksp_type cg -em_pc_type gamg -em_mg_coarse_ksp_type preonly -em_mg_coarse_pc_type svd -em_proj_ksp_type cg \
      -em_proj_pc_type gamg -em_proj_mg_coarse_ksp_type preonly -em_proj_mg_coarse_pc_type svd -ts_time_step 0.03 -xdm_plex_simplex 0 \
@@ -1717,17 +1717,17 @@ int main(int argc, char **argv)
      test:
        suffix: landau_damping_1d
        args: -xdm_plex_dim 1 -xdm_plex_box_faces 60 -xdm_plex_box_lower 0. -xdm_plex_box_upper 12.5664 -xdm_plex_box_bd periodic -vdm_plex_dim 1 -vdm_plex_box_faces 60 \
-       -vdm_plex_box_lower -6 -vdm_plex_box_upper 6 -vdm_plex_hash_location -vdm_plex_simplex 0
+       -vdm_plex_box_lower -6 -vdm_plex_box_upper 6 -vdm_plex_hash_location -vdm_plex_simplex 0 -vdm_plex_box_bd none
 
      test:
        suffix: landau_damping_2d
        args: -xdm_plex_dim 2 -xdm_plex_box_bd periodic,periodic -vdm_plex_dim 2 -xdm_plex_box_lower 0.,-.5 -vdm_plex_box_lower -6,-6 -vdm_plex_box_upper 6,6 -xdm_plex_box_faces 6,3 \
-       -xdm_plex_box_upper 12.5664,.5 -vdm_plex_box_faces 15,15 -vdm_plex_box_bd periodic,periodic -vdm_plex_hash_location -vdm_plex_simplex 0
+       -xdm_plex_box_upper 12.5664,.5 -vdm_plex_box_faces 15,15 -vdm_plex_box_bd none,none -vdm_plex_hash_location -vdm_plex_simplex 0
 
      test:
        suffix: landau_damping_3d
        args: -xdm_plex_dim 3 -xdm_plex_box_faces 6,3,3 -xdm_plex_box_lower 0.,-1,-1 -xdm_plex_box_upper 12.5664,1,1 -xdm_plex_box_bd periodic,periodic,periodic -vdm_plex_dim 3 -vdm_plex_box_faces 4,4,4 \
-       -vdm_plex_box_lower -6,-6,-6 -vdm_plex_box_upper 6,6,6 -vdm_plex_hash_location -vdm_plex_simplex 0
+       -vdm_plex_box_lower -6,-6,-6 -vdm_plex_box_upper 6,6,6 -vdm_plex_hash_location -vdm_plex_simplex 0 -vdm_plex_box_bd none,none,none
 
      test:
        requires: !defined(PETSC_USE_DMLANDAU_2D)
