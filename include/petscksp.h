@@ -245,7 +245,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPMonitorFn(KSP ksp, PetscInt it, P
 PETSC_EXTERN PetscErrorCode KSPMonitor(KSP, PetscInt, PetscReal);
 PETSC_EXTERN PetscErrorCode KSPMonitorSet(KSP, KSPMonitorFn *, void *, PetscCtxDestroyFn *);
 PETSC_EXTERN PetscErrorCode KSPMonitorCancel(KSP);
-PETSC_EXTERN PetscErrorCode KSPGetMonitorContext(KSP, void *);
+PETSC_EXTERN PetscErrorCode KSPGetMonitorContext(KSP, PeCtx);
 PETSC_EXTERN PetscErrorCode KSPGetResidualHistory(KSP, const PetscReal *[], PetscInt *);
 PETSC_EXTERN PetscErrorCode KSPSetResidualHistory(KSP, PetscReal[], PetscCount, PetscBool);
 PETSC_EXTERN PetscErrorCode KSPGetErrorHistory(KSP, const PetscReal *[], PetscInt *);
