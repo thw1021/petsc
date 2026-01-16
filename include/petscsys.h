@@ -1687,7 +1687,7 @@ PETSC_EXTERN PetscErrorCode PetscStartMatlab(MPI_Comm, const char[], const char[
 PETSC_EXTERN PetscErrorCode PetscGetPetscDir(const char *[]);
 
 /*MC
-   PeCtx - indicates an argument that returns a pointer to a user defined C struct (or Fortran derived type)
+   PeCtx - indicates an argument that returns a pointer to a C struct (or Fortran derived type) which is generally an application context
 
    Level: developer
 
@@ -1700,14 +1700,22 @@ PETSC_EXTERN PetscErrorCode PetscGetPetscDir(const char *[]);
    For pointers to arrays of unknown type and for functions that return PETSc internal objects that are opaque to users, such
    as `KSPMonitorDynamicToleranceCreate()` a `void **` should be used.
 
-   Fortran Note:
-   Should only be used with user defined Fortran datatypes
+   Fortran Notes:
+   A Fortran code that calls a function with a `PeCtx` argument must declare the variable `ctx` with
 .vb
-   type(tUserType), pointer :: ctx
+   type(UserType), pointer :: ctx
 .ve
+   where `UserType` is a Fortran derived type. They also need to add to their code the line
+.vb
+   Interface_XXXGet(userctx)
+.ve
+   where `XXXGet()` is the name of the function they plan to call. See [](sec_fortran_context) for a full example.
+
+   This complicated construct is because Fortran compilers must know the exact type of anything a pointer points to at compile time.
 
    Developer Note:
-   Put this in function declaration for the argument type instead of `void *`, or `void **`.
+   Put this in function declaration for the argument type instead of `void *`, or `void **` that return a void pointer. For example,
+   `DMGetApplicationContext()`
 
    C compilers generate a warning or error if one passes a pointer to a pointer to a specific type (instead of `void`), for example,
 .vb
@@ -1722,7 +1730,7 @@ PETSC_EXTERN PetscErrorCode PetscGetPetscDir(const char *[]);
    the warning message is averted. `PeCtx` is used in PETSc source code so that the getAPI() code processor knows the argument is
    actually handled internally as `void **` so it can generate correct bindings for other languages.
 
-.seealso: `PeOp`, `PeNS`, `PetscInitialize()`
+.seealso: [](sec_fortran_context), `PeOp`, `PeNS`, `PetscInitialize()`, `DMGetApplicationContext()`
 M*/
 typedef void *PeCtx;
 

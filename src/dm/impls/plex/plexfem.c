@@ -903,7 +903,7 @@ PetscErrorCode DMPlexCreateBasisRotation(DM dm, PetscReal alpha, PetscReal beta,
 . numids - The number of `DMLabel` ids for constrained points
 . ids    - An array of ids for constrained points
 . func   - A pointwise function giving boundary values
-- ctx    - An optional user context for bcFunc
+- ctx    - An optional application context for `bcFunc`
 
   Output Parameter:
 . locX - A local vector to receives the boundary values
@@ -942,7 +942,7 @@ PetscErrorCode DMPlexInsertBoundaryValuesEssential(DM dm, PetscReal time, PetscI
 . numids - The number of `DMLabel` ids for constrained points
 . ids    - An array of ids for constrained points
 . func   - A pointwise function giving boundary values
-- ctx    - An optional user context for bcFunc
+- ctx    - An optional application context for `bcFunc`
 
   Output Parameter:
 . locX - A local vector to receives the boundary values
@@ -983,7 +983,7 @@ PetscErrorCode DMPlexInsertBoundaryValuesEssentialField(DM dm, PetscReal time, V
 . numids - The number of `DMLabel` ids for constrained points
 . ids    - An array of ids for constrained points
 . func   - A pointwise function giving boundary values, the calling sequence is given in `DMProjectBdFieldLabelLocal()`
-- ctx    - An optional user context for `func`
+- ctx    - An optional application context for `func`
 
   Output Parameter:
 . locX - A local vector to receive the boundary values
@@ -1024,7 +1024,7 @@ PetscErrorCode DMPlexInsertBoundaryValuesEssentialBdField(DM dm, PetscReal time,
 . numids       - The number of `DMLabel` ids for constrained points
 . ids          - An array of ids for constrained points
 . func         - A pointwise function giving boundary values
-- ctx          - An optional user context for bcFunc
+- ctx          - An optional application context for bcFunc
 
   Output Parameter:
 . locX - A local vector to receives the boundary values
@@ -2398,7 +2398,7 @@ PetscErrorCode DMPlexComputeGradientClementInterpolant(DM dm, Vec locX, Vec locC
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexComputeIntegral_Internal(DM dm, Vec locX, PetscInt cStart, PetscInt cEnd, PetscScalar *cintegral, void *user)
+PetscErrorCode DMPlexComputeIntegral_Internal(DM dm, Vec locX, PetscInt cStart, PetscInt cEnd, PetscScalar *cintegral, void *ctx)
 {
   DM           dmAux = NULL, plexA = NULL;
   PetscDS      prob, probAux       = NULL;
@@ -2586,9 +2586,9 @@ PetscErrorCode DMPlexComputeIntegral_Internal(DM dm, Vec locX, PetscInt cStart, 
   DMPlexComputeIntegralFEM - Form the integral over the domain from the global input X using pointwise functions specified by the user
 
   Input Parameters:
-+ dm   - The mesh
-. X    - Global input vector
-- user - The user context
++ dm  - The mesh
+. X   - Global input vector
+- ctx - The application context
 
   Output Parameter:
 . integral - Integral for each field
@@ -2597,7 +2597,7 @@ PetscErrorCode DMPlexComputeIntegral_Internal(DM dm, Vec locX, PetscInt cStart, 
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexSNESComputeResidualFEM()`
 @*/
-PetscErrorCode DMPlexComputeIntegralFEM(DM dm, Vec X, PetscScalar *integral, void *user)
+PetscErrorCode DMPlexComputeIntegralFEM(DM dm, Vec X, PetscScalar *integral, void *ctx)
 {
   PetscInt     printFEM;
   PetscScalar *cintegral, *lintegral;
@@ -2620,7 +2620,7 @@ PetscErrorCode DMPlexComputeIntegralFEM(DM dm, Vec X, PetscScalar *integral, voi
   PetscCall(DMPlexInsertBoundaryValues(dm, PETSC_TRUE, locX, 0.0, NULL, NULL, NULL));
   PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, locX));
   PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, locX));
-  PetscCall(DMPlexComputeIntegral_Internal(dm, locX, cStart, cEnd, cintegral, user));
+  PetscCall(DMPlexComputeIntegral_Internal(dm, locX, cStart, cEnd, cintegral, ctx));
   PetscCall(DMRestoreLocalVector(dm, &locX));
   printFEM = ((DM_Plex *)dm->data)->printFEM;
   /* Sum up values */
@@ -2648,7 +2648,7 @@ PetscErrorCode DMPlexComputeIntegralFEM(DM dm, Vec X, PetscScalar *integral, voi
   Input Parameters:
 + dm   - The mesh
 . X    - Global input vector
-- user - The user context
+- ctx - The application context
 
   Output Parameter:
 . F - Cellwise integrals for each field
@@ -2657,7 +2657,7 @@ PetscErrorCode DMPlexComputeIntegralFEM(DM dm, Vec X, PetscScalar *integral, voi
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexSNESComputeResidualFEM()`
 @*/
-PetscErrorCode DMPlexComputeCellwiseIntegralFEM(DM dm, Vec X, Vec F, void *user)
+PetscErrorCode DMPlexComputeCellwiseIntegralFEM(DM dm, Vec X, Vec F, void *ctx)
 {
   PetscInt     printFEM;
   DM           dmF;
@@ -2682,7 +2682,7 @@ PetscErrorCode DMPlexComputeCellwiseIntegralFEM(DM dm, Vec X, Vec F, void *user)
   PetscCall(DMPlexInsertBoundaryValues(dm, PETSC_TRUE, locX, 0.0, NULL, NULL, NULL));
   PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, locX));
   PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, locX));
-  PetscCall(DMPlexComputeIntegral_Internal(dm, locX, cStart, cEnd, cintegral, user));
+  PetscCall(DMPlexComputeIntegral_Internal(dm, locX, cStart, cEnd, cintegral, ctx));
   PetscCall(DMRestoreLocalVector(dm, &locX));
   /* Put values in F */
   PetscCall(VecGetArray(F, &af));
@@ -2710,7 +2710,7 @@ PetscErrorCode DMPlexComputeCellwiseIntegralFEM(DM dm, Vec X, Vec F, void *user)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMPlexComputeBdIntegral_Internal(DM dm, Vec locX, IS pointIS, void (**funcs)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]), PetscScalar *fintegral, void *user)
+static PetscErrorCode DMPlexComputeBdIntegral_Internal(DM dm, Vec locX, IS pointIS, void (**funcs)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]), PetscScalar *fintegral, void *ctx)
 {
   DM                 plex = NULL, plexA = NULL;
   DMEnclosureType    encAux;
@@ -2847,7 +2847,7 @@ static PetscErrorCode DMPlexComputeBdIntegral_Internal(DM dm, Vec locX, IS point
 . numVals - The number of label values to use, or `PETSC_DETERMINE` for all values
 . vals    - The label values to use, or NULL for all values
 . funcs   - The functions to integrate along the boundary for each field
-- user    - The user context
+- ctx     - The application context
 
   Output Parameter:
 . integral - Integral for each field
@@ -2856,7 +2856,7 @@ static PetscErrorCode DMPlexComputeBdIntegral_Internal(DM dm, Vec locX, IS point
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexComputeIntegralFEM()`, `DMPlexComputeBdResidualFEM()`
 @*/
-PetscErrorCode DMPlexComputeBdIntegral(DM dm, Vec X, DMLabel label, PetscInt numVals, const PetscInt vals[], void (**funcs)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]), PetscScalar *integral, void *user)
+PetscErrorCode DMPlexComputeBdIntegral(DM dm, Vec X, DMLabel label, PetscInt numVals, const PetscInt vals[], void (**funcs)(PetscInt, PetscInt, PetscInt, const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[], PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]), PetscScalar *integral, void *ctx)
 {
   Vec          locX;
   PetscSection section;
@@ -2900,7 +2900,7 @@ PetscErrorCode DMPlexComputeBdIntegral(DM dm, Vec X, DMLabel label, PetscInt num
     }
     PetscCall(ISGetLocalSize(pointIS, &numFaces));
     PetscCall(PetscCalloc1(numFaces * Nf, &fintegral));
-    PetscCall(DMPlexComputeBdIntegral_Internal(dm, locX, pointIS, funcs, fintegral, user));
+    PetscCall(DMPlexComputeBdIntegral_Internal(dm, locX, pointIS, funcs, fintegral, ctx));
     /* Sum point contributions into integral */
     for (f = 0; f < Nf; ++f)
       for (face = 0; face < numFaces; ++face) integral[f] += fintegral[face * Nf + f];
@@ -2920,7 +2920,7 @@ PetscErrorCode DMPlexComputeBdIntegral(DM dm, Vec X, DMLabel label, PetscInt num
 + dmc       - The coarse mesh
 . dmf       - The fine mesh
 . isRefined - Flag indicating regular refinement, rather than the same topology
-- user      - The user context
+- ctx       - The application context
 
   Output Parameter:
 . In - The interpolation matrix
@@ -2929,7 +2929,7 @@ PetscErrorCode DMPlexComputeBdIntegral(DM dm, Vec X, DMLabel label, PetscInt num
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexComputeInterpolatorGeneral()`
 @*/
-PetscErrorCode DMPlexComputeInterpolatorNested(DM dmc, DM dmf, PetscBool isRefined, Mat In, void *user)
+PetscErrorCode DMPlexComputeInterpolatorNested(DM dmc, DM dmf, PetscBool isRefined, Mat In, void *ctx)
 {
   DM_Plex     *mesh = (DM_Plex *)dmc->data;
   const char  *name = "Interpolator";
@@ -3148,7 +3148,7 @@ PetscErrorCode DMPlexComputeInterpolatorNested(DM dmc, DM dmf, PetscBool isRefin
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexComputeMassMatrixNested(DM dmc, DM dmf, Mat mass, void *user)
+PetscErrorCode DMPlexComputeMassMatrixNested(DM dmc, DM dmf, Mat mass, void *ctx)
 {
   SETERRQ(PetscObjectComm((PetscObject)dmc), PETSC_ERR_SUP, "Laziness");
 }
@@ -3159,7 +3159,7 @@ PetscErrorCode DMPlexComputeMassMatrixNested(DM dmc, DM dmf, Mat mass, void *use
   Input Parameters:
 + dmf  - The fine mesh
 . dmc  - The coarse mesh
-- user - The user context
+- ctx  - The application context
 
   Output Parameter:
 . In - The interpolation matrix
@@ -3168,7 +3168,7 @@ PetscErrorCode DMPlexComputeMassMatrixNested(DM dmc, DM dmf, Mat mass, void *use
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexComputeInterpolatorNested()`
 @*/
-PetscErrorCode DMPlexComputeInterpolatorGeneral(DM dmc, DM dmf, Mat In, void *user)
+PetscErrorCode DMPlexComputeInterpolatorGeneral(DM dmc, DM dmf, Mat In, void *ctx)
 {
   DM_Plex     *mesh = (DM_Plex *)dmf->data;
   const char  *name = "Interpolator";
@@ -3331,7 +3331,7 @@ PetscErrorCode DMPlexComputeInterpolatorGeneral(DM dmc, DM dmf, Mat In, void *us
   Input Parameters:
 + dmf  - The fine mesh
 . dmc  - The coarse mesh
-- user - The user context
+- ctx  - The application context
 
   Output Parameter:
 . mass - The mass matrix
@@ -3340,7 +3340,7 @@ PetscErrorCode DMPlexComputeInterpolatorGeneral(DM dmc, DM dmf, Mat In, void *us
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexComputeMassMatrixNested()`, `DMPlexComputeInterpolatorNested()`, `DMPlexComputeInterpolatorGeneral()`
 @*/
-PetscErrorCode DMPlexComputeMassMatrixGeneral(DM dmc, DM dmf, Mat mass, void *user)
+PetscErrorCode DMPlexComputeMassMatrixGeneral(DM dmc, DM dmf, Mat mass, void *ctx)
 {
   DM_Plex     *mesh = (DM_Plex *)dmf->data;
   const char  *name = "Mass Matrix";
@@ -3564,9 +3564,9 @@ PetscErrorCode DMPlexComputeMassMatrixGeneral(DM dmc, DM dmf, Mat mass, void *us
   DMPlexComputeInjectorFEM - Compute a mapping from coarse unknowns to fine unknowns
 
   Input Parameters:
-+ dmc  - The coarse mesh
-. dmf  - The fine mesh
-- user - The user context
++ dmc - The coarse mesh
+. dmf - The fine mesh
+- ctx - The application context
 
   Output Parameter:
 . sc - The mapping
@@ -3575,7 +3575,7 @@ PetscErrorCode DMPlexComputeMassMatrixGeneral(DM dmc, DM dmf, Mat mass, void *us
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexComputeInterpolatorNested()`
 @*/
-PetscErrorCode DMPlexComputeInjectorFEM(DM dmc, DM dmf, VecScatter *sc, void *user)
+PetscErrorCode DMPlexComputeInjectorFEM(DM dmc, DM dmf, VecScatter *sc, void *ctx)
 {
   PetscDS      prob;
   PetscFE     *feRef;
@@ -4386,7 +4386,7 @@ PetscErrorCode DMSNESRestoreFEGeom(DMField coordField, IS pointIS, PetscQuadratu
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexComputeResidual_Patch_Internal(DM dm, PetscSection section, IS cellIS, PetscReal t, Vec locX, Vec locX_t, Vec locF, void *user)
+PetscErrorCode DMPlexComputeResidual_Patch_Internal(DM dm, PetscSection section, IS cellIS, PetscReal t, Vec locX, Vec locX_t, Vec locF, void *ctx)
 {
   DM_Plex        *mesh       = (DM_Plex *)dm->data;
   const char     *name       = "Residual";
@@ -5099,7 +5099,7 @@ PetscErrorCode DMPlexComputeBdResidualSingle(DM dm, PetscWeakForm wf, PetscFormK
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMPlexComputeBdResidual_Internal(DM dm, Vec locX, Vec locX_t, PetscReal t, Vec locF, void *user)
+static PetscErrorCode DMPlexComputeBdResidual_Internal(DM dm, Vec locX, Vec locX_t, PetscReal t, Vec locF, void *ctx)
 {
   PetscDS  prob;
   PetscInt numBd, bd;
@@ -5163,7 +5163,7 @@ static PetscErrorCode DMPlexComputeBdResidual_Internal(DM dm, Vec locX, Vec locX
 . locX   - The local solution
 . locX_t - The time derivative of the local solution, or `NULL` for time-independent problems
 . t      - The time
-- user   - An optional user context, passed to the pointwise functions
+- ctx    - An optional application context, passed to the pointwise functions
 
   Output Parameter:
 . locF - The local residual
@@ -5172,7 +5172,7 @@ static PetscErrorCode DMPlexComputeBdResidual_Internal(DM dm, Vec locX, Vec locX
 
 .seealso: `DMPlexComputeJacobianByKey()`, `DMPlexComputeResidualHybridByKey()`, `DMPlexComputeJacobianHybridByKey()`, `PetscFormKey`
 @*/
-PetscErrorCode DMPlexComputeResidualByKey(DM dm, PetscFormKey key, IS cellIS, PetscReal time, Vec locX, Vec locX_t, PetscReal t, Vec locF, void *user)
+PetscErrorCode DMPlexComputeResidualByKey(DM dm, PetscFormKey key, IS cellIS, PetscReal time, Vec locX, Vec locX_t, PetscReal t, Vec locF, void *ctx)
 {
   DM_Plex        *mesh       = (DM_Plex *)dm->data;
   const char     *name       = "Residual";
@@ -5461,7 +5461,7 @@ PetscErrorCode DMPlexComputeResidualByKey(DM dm, PetscFormKey key, IS cellIS, Pe
   PetscCall(ISRestorePointRange(cellIS, &cStart, &cEnd, &cells));
 
   if (useFEM) {
-    PetscCall(DMPlexComputeBdResidual_Internal(dm, locX, locX_t, t, locF, user));
+    PetscCall(DMPlexComputeBdResidual_Internal(dm, locX, locX_t, t, locF, ctx));
 
     if (maxDegree <= 1) {
       PetscCall(DMSNESRestoreFEGeom(coordField, cellIS, affineQuad, PETSC_FALSE, &affineGeom));
@@ -5543,7 +5543,7 @@ end:
 . locX   - The local solution
 . locX_t - The time derivative of the local solution, or `NULL` for time-independent problems
 . t      - The time
-- user   - An optional user context, passed to the pointwise functions
+- ctx    - An optional application context, passed to the pointwise functions
 
   Output Parameter:
 . locF - The local residual
@@ -5552,7 +5552,7 @@ end:
 
 .seealso: `DMPlexComputeResidualByKey()`, `DMPlexComputeJacobianByKey()`, `DMPlexComputeJacobianHybridByKey()`, `PetscFormKey`
 @*/
-PetscErrorCode DMPlexComputeResidualHybridByKey(DM dm, PetscFormKey key[], IS cellIS, PetscReal time, Vec locX, Vec locX_t, PetscReal t, Vec locF, void *user)
+PetscErrorCode DMPlexComputeResidualHybridByKey(DM dm, PetscFormKey key[], IS cellIS, PetscReal time, Vec locX, Vec locX_t, PetscReal t, Vec locF, void *ctx)
 {
   DM_Plex        *mesh       = (DM_Plex *)dm->data;
   const char     *name       = "Hybrid Residual";
@@ -6111,7 +6111,7 @@ PetscErrorCode DMPlexComputeBdJacobianSingle(DM dm, PetscWeakForm wf, DMLabel la
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMPlexComputeBdJacobian_Internal(DM dm, Vec locX, Vec locX_t, PetscReal t, PetscReal X_tShift, Mat Jac, Mat JacP, void *user)
+static PetscErrorCode DMPlexComputeBdJacobian_Internal(DM dm, Vec locX, Vec locX_t, PetscReal t, PetscReal X_tShift, Mat Jac, Mat JacP, void *ctx)
 {
   PetscDS  prob;
   PetscInt dim, numBd, bd;
@@ -6159,7 +6159,7 @@ static PetscErrorCode DMPlexComputeBdJacobian_Internal(DM dm, Vec locX, Vec locX
 . X_tShift - The multiplier for the Jacobian with respect to $X_t$
 . locX     - The local solution
 . locX_t   - The time derivative of the local solution, or `NULL` for time-independent problems
-- user     - An optional user context, passed to the pointwise functions
+- ctx      - An optional application context, passed to the pointwise functions
 
   Output Parameters:
 + Jac  - The local Jacobian
@@ -6169,7 +6169,7 @@ static PetscErrorCode DMPlexComputeBdJacobian_Internal(DM dm, Vec locX, Vec locX
 
 .seealso: `DMPlexComputeResidualByKey()`, `DMPlexComputeResidualHybridByKey()`, `DMPlexComputeJacobianHybridByKey()`, `PetscFormKey`
 @*/
-PetscErrorCode DMPlexComputeJacobianByKey(DM dm, PetscFormKey key, IS cellIS, PetscReal t, PetscReal X_tShift, Vec locX, Vec locX_t, Mat Jac, Mat JacP, void *user)
+PetscErrorCode DMPlexComputeJacobianByKey(DM dm, PetscFormKey key, IS cellIS, PetscReal t, PetscReal X_tShift, Vec locX, Vec locX_t, Mat Jac, Mat JacP, void *ctx)
 {
   DM_Plex        *mesh  = (DM_Plex *)dm->data;
   const char     *name  = "Jacobian";
@@ -6364,7 +6364,7 @@ PetscErrorCode DMPlexComputeJacobianByKey(DM dm, PetscFormKey key, IS cellIS, Pe
   PetscCall(PetscFree5(u, u_t, elemMat, elemMatP, elemMatD));
   if (dmAux) PetscCall(PetscFree(a));
   /* Compute boundary integrals */
-  PetscCall(DMPlexComputeBdJacobian_Internal(dm, locX, locX_t, t, X_tShift, Jac, JacP, user));
+  PetscCall(DMPlexComputeBdJacobian_Internal(dm, locX, locX_t, t, X_tShift, Jac, JacP, ctx));
   /* Assemble matrix */
 end: {
   PetscBool assOp = hasJac && hasPrec ? PETSC_TRUE : PETSC_FALSE, gassOp;
@@ -6382,7 +6382,7 @@ end: {
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMPlexComputeJacobianByKeyGeneral(DM dmr, DM dmc, PetscFormKey key, IS cellIS, PetscReal t, PetscReal X_tShift, Vec locX, Vec locX_t, Mat Jac, Mat JacP, void *user)
+PetscErrorCode DMPlexComputeJacobianByKeyGeneral(DM dmr, DM dmc, PetscFormKey key, IS cellIS, PetscReal t, PetscReal X_tShift, Vec locX, Vec locX_t, Mat Jac, Mat JacP, void *ctx)
 {
   DM_Plex        *mesh     = (DM_Plex *)dmr->data;
   const char     *name     = "Jacobian";
@@ -6587,7 +6587,7 @@ PetscErrorCode DMPlexComputeJacobianByKeyGeneral(DM dmr, DM dmc, PetscFormKey ke
   PetscCall(PetscFree5(u, u_t, elemMat, elemMatP, elemMatD));
   if (dmAux) PetscCall(PetscFree(a));
   /* Compute boundary integrals */
-  PetscCall(DMPlexComputeBdJacobian_Internal(dmr, locX, locX_t, t, X_tShift, Jac, JacP, user));
+  PetscCall(DMPlexComputeBdJacobian_Internal(dmr, locX, locX_t, t, X_tShift, Jac, JacP, ctx));
   /* Assemble matrix */
 end: {
   PetscBool assOp = hasJac && hasPrec ? PETSC_TRUE : PETSC_FALSE, gassOp;
@@ -6618,7 +6618,7 @@ end: {
 . X_tShift - The multiplier for the Jacobian with respect to $X_t$
 . locX     - The local solution
 . locX_t   - The time derivative of the local solution, or `NULL` for time-independent problems
-- user     - An optional user context, passed to the pointwise functions
+- ctx      - An optional application context, passed to the pointwise functions
 
   Output Parameters:
 + Jac  - The local Jacobian
@@ -6628,7 +6628,7 @@ end: {
 
 .seealso: `DMPlexComputeResidualByKey()`, `DMPlexComputeJacobianByKey()`, `DMPlexComputeResidualHybridByKey()`, `PetscFormKey`
 @*/
-PetscErrorCode DMPlexComputeJacobianHybridByKey(DM dm, PetscFormKey key[], IS cellIS, PetscReal t, PetscReal X_tShift, Vec locX, Vec locX_t, Mat Jac, Mat JacP, void *user)
+PetscErrorCode DMPlexComputeJacobianHybridByKey(DM dm, PetscFormKey key[], IS cellIS, PetscReal t, PetscReal X_tShift, Vec locX, Vec locX_t, Mat Jac, Mat JacP, void *ctx)
 {
   DM_Plex        *mesh          = (DM_Plex *)dm->data;
   const char     *name          = "Hybrid Jacobian";
@@ -6990,7 +6990,7 @@ end:
 . locX     - The local solution
 . locX_t   - The time derivative of the local solution, or `NULL` for time-independent problems
 . locY     - The local vector acted on by J
-- user     - An optional user context, passed to the pointwise functions
+- ctx      - An optional application context, passed to the pointwise functions
 
   Output Parameter:
 . locF - The local residual F = J(X) Y
@@ -6999,7 +6999,7 @@ end:
 
 .seealso: `DMPlexComputeResidualByKey()`, `DMPlexComputeJacobianByKey()`, `DMPlexComputeResidualHybridByKey()`, `DMPlexComputeJacobianHybridByKey()`, `PetscFormKey`
 @*/
-PetscErrorCode DMPlexComputeJacobianActionByKey(DM dm, PetscFormKey key, IS cellIS, PetscReal t, PetscReal X_tShift, Vec locX, Vec locX_t, Vec locY, Vec locF, void *user)
+PetscErrorCode DMPlexComputeJacobianActionByKey(DM dm, PetscFormKey key, IS cellIS, PetscReal t, PetscReal X_tShift, Vec locX, Vec locX_t, Vec locY, Vec locF, void *ctx)
 {
   DM_Plex        *mesh  = (DM_Plex *)dm->data;
   const char     *name  = "Jacobian";
@@ -7190,28 +7190,28 @@ PetscErrorCode DMPlexComputeMoments(DM dm, Vec u, PetscReal moments[])
   const PetscScalar *oldConstants;
   PetscInt           cdim, Nf, field = 0, Ncon;
   MPI_Comm           comm;
-  void              *user;
+  void              *ctx;
 
   PetscFunctionBeginUser;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCall(DMGetCoordinateDim(dm, &cdim));
-  PetscCall(DMGetApplicationContext(dm, &user));
+  PetscCall(DMGetApplicationContext(dm, &ctx));
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(PetscDSGetNumFields(ds, &Nf));
   PetscCall(PetscDSGetConstants(ds, &Ncon, &oldConstants));
   PetscCheck(Nf == 1, comm, PETSC_ERR_ARG_WRONG, "We currently only support 1 field, not %" PetscInt_FMT, Nf);
   PetscCall(PetscDSSetObjective(ds, field, &f0_1));
-  PetscCall(DMPlexComputeIntegralFEM(dm, u, &mom, user));
+  PetscCall(DMPlexComputeIntegralFEM(dm, u, &mom, ctx));
   moments[0] = PetscRealPart(mom);
   for (PetscInt c = 0; c < cdim; ++c) {
     constants[0] = c;
     PetscCall(PetscDSSetConstants(ds, 1, constants));
     PetscCall(PetscDSSetObjective(ds, field, &f0_x));
-    PetscCall(DMPlexComputeIntegralFEM(dm, u, &mom, user));
+    PetscCall(DMPlexComputeIntegralFEM(dm, u, &mom, ctx));
     moments[c + 1] = PetscRealPart(mom);
   }
   PetscCall(PetscDSSetObjective(ds, field, &f0_x2));
-  PetscCall(DMPlexComputeIntegralFEM(dm, u, &mom, user));
+  PetscCall(DMPlexComputeIntegralFEM(dm, u, &mom, ctx));
   moments[cdim + 1] = PetscRealPart(mom);
   PetscCall(PetscDSSetConstants(ds, Ncon, (PetscScalar *)oldConstants));
   PetscFunctionReturn(PETSC_SUCCESS);

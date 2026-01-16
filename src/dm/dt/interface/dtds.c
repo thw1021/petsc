@@ -1933,7 +1933,7 @@ PetscErrorCode PetscDSSetUpdate(PetscDS ds, PetscInt f, PetscPointFn *update)
 
 .seealso: `PetscDS`, `PetscPointFn`, `PetscDSSetContext()`
 @*/
-PetscErrorCode PetscDSGetContext(PetscDS ds, PetscInt f, void *ctx)
+PetscErrorCode PetscDSGetContext(PetscDS ds, PetscInt f, PeCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);

@@ -149,14 +149,14 @@ PetscErrorCode SNESNewtonTRDCSetPreCheck(SNES snes, PetscErrorCode (*func)(SNES,
 
 .seealso: [](ch_snes), `SNES`, `SNESNEWTONTRDC`, `SNESNewtonTRDCSetPreCheck()`, `SNESNewtonTRDCPreCheck()`
 @*/
-PetscErrorCode SNESNewtonTRDCGetPreCheck(SNES snes, PetscErrorCode (**func)(SNES, Vec, Vec, PetscBool *, void *), void **ctx)
+PetscErrorCode SNESNewtonTRDCGetPreCheck(SNES snes, PetscErrorCode (**func)(SNES, Vec, Vec, PetscBool *, void *), PeCtx ctx)
 {
   SNES_NEWTONTRDC *tr = (SNES_NEWTONTRDC *)snes->data;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   if (func) *func = tr->precheck;
-  if (ctx) *ctx = tr->precheckctx;
+  if (ctx) *(void **)ctx = tr->precheckctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -206,14 +206,14 @@ PetscErrorCode SNESNewtonTRDCSetPostCheck(SNES snes, PetscErrorCode (*func)(SNES
 
 .seealso: [](ch_snes), `SNES`, `SNESNEWTONTRDC`, `SNESNewtonTRDCSetPostCheck()`, `SNESNewtonTRDCPostCheck()`, `SNESNewtonTRDCSetPreCheck()`, `SNESNewtonTRDCGetPreCheck()`
 @*/
-PetscErrorCode SNESNewtonTRDCGetPostCheck(SNES snes, PetscErrorCode (**func)(SNES, Vec, Vec, Vec, PetscBool *, PetscBool *, void *), void **ctx)
+PetscErrorCode SNESNewtonTRDCGetPostCheck(SNES snes, PetscErrorCode (**func)(SNES, Vec, Vec, Vec, PetscBool *, PetscBool *, void *), PeCtx ctx)
 {
   SNES_NEWTONTRDC *tr = (SNES_NEWTONTRDC *)snes->data;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   if (func) *func = tr->postcheck;
-  if (ctx) *ctx = tr->postcheckctx;
+  if (ctx) *(void **)ctx = tr->postcheckctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
