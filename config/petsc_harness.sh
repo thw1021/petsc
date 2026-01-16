@@ -369,7 +369,7 @@ function petsc_mpiexec_valgrind() {
   if ${printcmd}; then
     echo "${pre_args[@]}" "$@"
   else
-    ${pre_args[@]} "$@"
+    ${pre_args[@]} $@
   fi
 }
 export LC_ALL=C
