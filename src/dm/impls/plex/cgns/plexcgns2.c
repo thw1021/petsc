@@ -967,7 +967,7 @@ static PetscErrorCode PetscLayoutFindOwnerIndex_CGNSSectionLayouts(PetscLayout m
          cg2plexSF
    __________|__________
    |                   |
-  
+
    [F0_11] -----> [P0_0]  [38]
    [F0_12] --                        Rank 0
    ~~~~~~~~~ \ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1313,7 +1313,6 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt plex_
       // PetscCheck((*plexFaces)[f_i] != -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Could not find plex face for the CGNS face");
     }
 
-
     // Some distributed CGNS faces did not find a matching plex face
     // This can happen if a partition has all the faces surrounding a distributed CGNS face, but does not have the face itself (it's parent element is owned by a different partition).
     // Thus, the partition has the vertices associated with the CGNS face, but doesn't actually have the face itself.
@@ -1330,7 +1329,7 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt plex_
     // To address this, we remove the leaves associated with these missing faces from cg2plexSF and then verify that all owned faces did find a matching plex face (e.g. root degree > 1)
     PetscCount num_plex_faces_found = PetscBTCountSet(plex_face_found, numfdist);
     PetscBool  some_faces_not_found = num_plex_faces_found < numfdist;
-    PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &some_faces_not_found, 1, MPI_C_BOOL, MPI_LOR, comm));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &some_faces_not_found, 1, MPI_C_BOOL, MPI_LOR, comm));
     if (some_faces_not_found) {
       PetscSFNode    *iremote_cg2plex_new;
       const PetscInt *root_degree;
@@ -1360,14 +1359,14 @@ static PetscErrorCode DMPlexCGNS_MatchCGNSFacesToPlexFaces(DM dm, PetscInt plex_
       for (PetscInt r = 0; r < num_roots; r++) PetscCheck(root_degree[r] > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Could not find plex face for the CGNS face %" PetscInt_FMT, face_ids[r]);
 
       if (PetscDefined(USE_DEBUG)) {
-        for (PetscInt i = 0; i < num_plex_faces_found; i++) PetscCheck(plexFacesNew[i] >= fplexStart && plexFacesNew[i] < fplexEnd, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Plex face ID %" PetscInt_FMT "outside of face stratum [%" PetscInt_FMT ", %" PetscInt_FMT ")", plexFacesNew[i], fplexStart, fplexEnd);
+        for (PetscInt i = 0; i < num_plex_faces_found; i++)
+          PetscCheck(plexFacesNew[i] >= fplexStart && plexFacesNew[i] < fplexEnd, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Plex face ID %" PetscInt_FMT "outside of face stratum [%" PetscInt_FMT ", %" PetscInt_FMT ")", plexFacesNew[i], fplexStart, fplexEnd);
       }
 
       PetscCall(PetscFree(*plexFaces));
       *plexFaces = plexFacesNew;
     }
     PetscCall(PetscBTDestroy(&plex_face_found));
-
 
     PetscCall(PetscSectionDestroy(&connDistSection));
     PetscCall(PetscFree(connDist));
@@ -1790,7 +1789,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
     PetscCall(PetscFree(plexFaces));
     PetscCall(PetscSFDestroy(&cg2plexSF));
     PetscCall(PetscFree(conn));
-    for (PetscInt s = 0; s < num_face_sections; s++) { PetscCall(PetscLayoutDestroy(&cgnsLayouts[s])); }
+    for (PetscInt s = 0; s < num_face_sections; s++) PetscCall(PetscLayoutDestroy(&cgnsLayouts[s]));
     PetscCall(PetscSectionDestroy(&connSection));
     PetscCall(PetscFree(cgnsLayouts));
     // TODO: I don't actually use either of these arrays, so probably shouldn't have them?

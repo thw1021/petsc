@@ -214,7 +214,7 @@ PetscErrorCode VerifyDMLabels(DM dm_serial, DM dm_load, const char label_name[],
 
   PetscFunctionBeginUser;
   PetscCall(DMGetCoordinateDim(dm_load, &dim));
-  PetscCall(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
   if (dm_serial) { // Communicate valid label values to all ranks
     IS              serialValuesIS;
     const PetscInt *values_serial_is;
@@ -234,7 +234,6 @@ PetscErrorCode VerifyDMLabels(DM dm_serial, DM dm_load, const char label_name[],
   PetscCallMPI(MPI_Bcast(&num_values_serial, 1, MPIU_INT, 0, comm));
   if (values_serial == NULL) PetscCall(PetscMalloc1(num_values_serial, &values_serial));
   PetscCallMPI(MPI_Bcast(values_serial, num_values_serial, MPIU_INT, 0, comm));
-
 
   IS              loadValuesIS;
   PetscInt        num_values_global;
@@ -348,9 +347,7 @@ PetscErrorCode VerifyDMLabels(DM dm_serial, DM dm_load, const char label_name[],
           PetscBool serial_has_point = loc >= 0;
 
           for (PetscInt d = 0; d < ndof; d++) {
-            if (serial_has_point != pointMaskSerial[offset + d]) {
-              PetscCall(PetscPrintf(comm, "DMLabel '%s': Serial and global DM disagree on point %" PetscInt_FMT " valid for label value %" PetscInt_FMT "\n", label_name, p, value));
-            }
+            if (serial_has_point != pointMaskSerial[offset + d]) PetscCall(PetscPrintf(comm, "DMLabel '%s': Serial and global DM disagree on point %" PetscInt_FMT " valid for label value %" PetscInt_FMT "\n", label_name, p, value));
           }
         }
         PetscCall(ISRestoreIndices(stratumIS, &points));
