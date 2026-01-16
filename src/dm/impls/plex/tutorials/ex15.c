@@ -210,7 +210,7 @@ PetscErrorCode VerifyDMLabels(DM dm_serial, DM dm_load, const char label_name[],
   MPI_Comm    comm              = PetscObjectComm((PetscObject)dm_load);
   PetscInt    num_values_serial = 0, dim;
   PetscInt   *values_serial     = NULL;
-  DMLabel     label_serial = NULL, label_load;
+  DMLabel     label_serial      = NULL, label_load;
 
   PetscFunctionBeginUser;
   PetscCall(DMGetCoordinateDim(dm_load, &dim));
@@ -290,7 +290,7 @@ PetscErrorCode VerifyDMLabels(DM dm_serial, DM dm_load, const char label_name[],
   }
 
   PetscSection pointSerialSection = NULL;
-  PetscInt     npointMaskSerial = 0;
+  PetscInt     npointMaskSerial   = 0;
   PetscBool   *pointMask, *pointMaskSerial = NULL;
 
   if (rank == 0) {
