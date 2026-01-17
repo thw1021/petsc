@@ -85,7 +85,7 @@ static PetscErrorCode SNESDestroy_NASM(SNES snes)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMGlobalToLocalSubDomainDirichletHook_Private(DM dm, Vec g, InsertMode mode, Vec l, void *ctx)
+static PetscErrorCode DMGlobalToLocalSubDomainDirichletHook_Private(DM dm, Vec g, InsertMode mode, Vec l, PetscCtx ctx)
 {
   Vec bcs = (Vec)ctx;
 
@@ -125,7 +125,7 @@ static PetscErrorCode SNESSetUp_NASM(SNES snes)
         if (snes->ops->ctxcompute) {
           PetscCall(SNESSetComputeApplicationContext(nasm->subsnes[i], snes->ops->ctxcompute, snes->ops->ctxdestroy));
         } else {
-          void *ctx;
+          PetscCtx ctx;
 
           PetscCall(SNESGetApplicationContext(snes, &ctx));
           PetscCall(SNESSetApplicationContext(nasm->subsnes[i], ctx));

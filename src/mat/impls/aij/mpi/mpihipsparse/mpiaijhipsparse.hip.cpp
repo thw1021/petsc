@@ -18,9 +18,9 @@ struct VecHIPEquals {
   }
 };
 
-static PetscErrorCode MatCOOStructDestroy_MPIAIJHIPSPARSE(void **data)
+static PetscErrorCode MatCOOStructDestroy_MPIAIJHIPSPARSE(PetscCtxRt data)
 {
-  MatCOOStruct_MPIAIJ *coo = (MatCOOStruct_MPIAIJ *)*data;
+  MatCOOStruct_MPIAIJ *coo = *(MatCOOStruct_MPIAIJ **)data;
 
   PetscFunctionBegin;
   PetscCall(PetscSFDestroy(&coo->sf));

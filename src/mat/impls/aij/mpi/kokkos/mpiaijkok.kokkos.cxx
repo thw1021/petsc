@@ -171,7 +171,7 @@ struct MatProductCtx_MPIAIJKokkos {
   }
 };
 
-static PetscErrorCode MatProductCtxDestroy_MPIAIJKokkos(void **data)
+static PetscErrorCode MatProductCtxDestroy_MPIAIJKokkos(PetscCtxRt data)
 {
   PetscFunctionBegin;
   PetscCallCXX(delete *reinterpret_cast<MatProductCtx_MPIAIJKokkos **>(data));
@@ -1540,10 +1540,10 @@ struct MatCOOStruct_MPIAIJKokkos {
   ~MatCOOStruct_MPIAIJKokkos() { PetscCallVoid(PetscSFDestroy(&sf)); }
 };
 
-static PetscErrorCode MatCOOStructDestroy_MPIAIJKokkos(void **data)
+static PetscErrorCode MatCOOStructDestroy_MPIAIJKokkos(PetscCtxRt *data)
 {
   PetscFunctionBegin;
-  PetscCallCXX(delete static_cast<MatCOOStruct_MPIAIJKokkos *>(*data));
+  PetscCallCXX(delete *static_cast<MatCOOStruct_MPIAIJKokkos **>(data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

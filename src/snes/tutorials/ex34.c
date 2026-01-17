@@ -51,7 +51,7 @@ typedef struct {
   PetscBag     bag;     // Problem parameters
 } AppCtx;
 
-static PetscErrorCode obstacle_ball(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode obstacle_ball(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   Parameter      *par    = (Parameter *)ctx;
   const PetscReal r_0    = par->r_0;
@@ -66,7 +66,7 @@ static PetscErrorCode obstacle_ball(PetscInt dim, PetscReal time, const PetscRea
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode exactSol_ball(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode exactSol_ball(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   Parameter      *par    = (Parameter *)ctx;
   const PetscReal r_free = par->r_free;
@@ -191,7 +191,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode SetupFE(DM dm, const char name[], PetscErrorCode (*setup)(DM, AppCtx *), void *ctx)
+PetscErrorCode SetupFE(DM dm, const char name[], PetscErrorCode (*setup)(DM, AppCtx *), PetscCtx ctx)
 {
   AppCtx        *user = (AppCtx *)ctx;
   DM             cdm  = dm;

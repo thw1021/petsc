@@ -61,7 +61,7 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
       # these function typedef are soon to be eliminated and so can this check
       fun.opaque = True
       return
-    if ktypename == 'void' and not (k.isfunction or (k.name == 'ctx' and k.stars == 1)):
+    if ktypename == 'void' and not k.isfunction:
       return
 
   mansec = fun.mansec
@@ -149,7 +149,7 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
           fd.write('  ' + ktypename + ' :: ' +  k.name  + '(*)' + NL)
         elif k.isfunction:
           fd.write('  ' + 'external ' + k.name  + NL)
-        elif ktypename == 'void' and k.stars == 1 and k.name == 'ctx':
+        elif ktypename == 'PetscCtx':
           fd.write('  type(*) :: ' + k.name + NL)
         elif ktypename == 'PetscCtxRt':
           fd.write('  type(ttype), pointer :: ' + k.name + NL)
@@ -264,7 +264,7 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
           fd.write(' ')
       if k.typename in structs.keys() and structs[k.typename].opaque:
         fd.write('*')
-      if not (k.typename == 'char' or k.typename in senums or k.array or k.typename == 'PetscCtxRt'):
+      if not (k.typename == 'char' or k.typename in senums or k.array or k.typename == 'PetscCtxRt' or k.typename == 'PetscCtx'):
         fd.write('*')
       fd.write(k.name)
       if (k.typename == 'char' and getattr(k, 'char_type', None) != 'single') or (not k.stars and k.array): fd.write('[]')
@@ -365,7 +365,7 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
           fd.write('c_')
         elif k.typename == 'MPI_Fint':
           fd.write('MPI_Comm_f2c(*(')
-        elif not k.stars and not k.array and not k.stringlen and not k.typename == 'PetscViewer' and not k.typename == 'PetscCtxRt':
+        elif not k.stars and not k.array and not k.stringlen and not k.typename == 'PetscViewer' and not k.typename == 'PetscCtxRt' and not k.typename == 'PetscCtx':
           fd.write('*')
 #        if k.typename == 'void' and k.stars == 2:
 #          fd.write('&')
@@ -449,6 +449,8 @@ def generateFortranStub(senums, funname, fun, fd, opts):
         fd.write('  ' + ktypename + ', pointer :: ' +  k.name + '(:)\n')
       elif k.array:
         fd.write('  ' + ktypename + ' :: '+ k.name + '(*)\n')
+      elif ktypename == 'PetscCtx':
+        fd.write('  type(*) :: ' + k.name + '\n')
       else:
         fd.write('  '+ ktypename + ' :: ' + k.name + '\n')
       cnt = cnt + 1
@@ -826,6 +828,8 @@ def main(petscdir,slepcdir,petscarch,mpi_f08 = 'Unknown'):
               fd.write('  ' + ktypename + ', pointer :: ' +  k.name  + '(:)\n')
             elif k.array:
               fd.write('  ' + ktypename + ' :: ' +  k.name  + '(*)\n')
+            elif ktypename == 'PetscCtx':
+              fd.write('  type(*) :: ' + k.name + '\n')
             else:
               fd.write('  ' + ktypename + ' :: ' + k.name + '\n')
             cnt = cnt + 1

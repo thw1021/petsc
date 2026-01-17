@@ -890,7 +890,7 @@ static PetscErrorCode MonitorMoments(TS ts, PetscInt step, PetscReal t, Vec U, v
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   u[0] = 0.0;
   return PETSC_SUCCESS;
@@ -2473,7 +2473,7 @@ static PetscErrorCode ComputeFieldAtParticles(SNES snes, DM sw)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
+static PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec U, Vec G, PetscCtx ctx)
 {
   DM                 sw;
   SNES               snes = ((AppCtx *)ctx)->snes;
@@ -2510,7 +2510,7 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
    TODO Now there is another term with w^2 from the electric field. I think we will need to invert the operator.
         Perhaps we can approximate the Jacobian using only the cellwise P-P gradient from Coulomb
 */
-static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U, Mat J, Mat P, void *ctx)
+static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U, Mat J, Mat P, PetscCtx ctx)
 {
   DM               sw;
   const PetscReal *coords, *vel;
@@ -2617,7 +2617,7 @@ static PetscErrorCode RHSFunctionV(TS ts, PetscReal t, Vec X, Vec Vres, void *Ct
 }
 
 /* Discrete Gradients Formulation: S, F, gradF (G) */
-PetscErrorCode RHSJacobianS(TS ts, PetscReal t, Vec U, Mat S, void *ctx)
+PetscErrorCode RHSJacobianS(TS ts, PetscReal t, Vec U, Mat S, PetscCtx ctx)
 {
   PetscScalar vals[4] = {0., 1., -1., 0.};
   DM          sw;
@@ -2686,7 +2686,7 @@ PetscErrorCode RHSObjectiveF(TS ts, PetscReal t, Vec U, PetscScalar *F, void *Ct
 }
 
 /* dF/dx = q E   dF/dv = v */
-PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
+PetscErrorCode RHSFunctionG(TS ts, PetscReal t, Vec U, Vec G, PetscCtx ctx)
 {
   DM                 sw;
   SNES               snes = ((AppCtx *)ctx)->snes;

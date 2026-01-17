@@ -844,27 +844,27 @@ PetscErrorCode DMPlexGeomPrintModel_Internal(ego model, PetscBool islite)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMPlexEGADSDestroy_Private(void **context)
+static PetscErrorCode DMPlexEGADSDestroy_Private(PetscCtxRt context)
 {
-  if (*context) EG_deleteObject((ego)*context);
+  if (*context) EG_deleteObject((ego) * (void **)context);
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode DMPlexEGADSClose_Private(void **context)
+static PetscErrorCode DMPlexEGADSClose_Private(PetscCtxRt ontext)
 {
-  if (*context) EG_close((ego)*context);
+  if (*context) EG_close((ego) * (void **)context);
   return PETSC_SUCCESS;
 }
 
-PetscErrorCode DMPlexEGADSliteDestroy_Private(void **context)
+PetscErrorCode DMPlexEGADSliteDestroy_Private(PetscCtxRt context)
 {
-  if (*context) EGlite_deleteObject((ego)*context);
+  if (*context) EGlite_deleteObject((ego) * (void **)context);
   return PETSC_SUCCESS;
 }
 
-PetscErrorCode DMPlexEGADSliteClose_Private(void **context)
+PetscErrorCode DMPlexEGADSliteClose_Private(PetscCtxRt context)
 {
-  if (*context) EGlite_close((ego)*context);
+  if (*context) EGlite_close((ego) * (void **)context);
   return PETSC_SUCCESS;
 }
 
@@ -2342,10 +2342,10 @@ PetscErrorCode DMPlexCreateGeom_Tess_Internal(MPI_Comm comm, ego context, ego mo
     PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &modelObj));
     PetscCall(PetscContainerSetPointer(modelObj, model));
     if (islite) {
-      PetscCall(PetscContainerSetCtxDestroy(modelObj, (PetscCtxDestroyFn *)DMPlexEGADSliteDestroy_Private));
+      PetscCall(PetscContainerSetCtxDestroy(modelObj, DMPlexEGADSliteDestroy_Private));
       PetscCall(PetscObjectCompose((PetscObject)dm, "EGADSlite Model", (PetscObject)modelObj));
     } else {
-      PetscCall(PetscContainerSetCtxDestroy(modelObj, (PetscCtxDestroyFn *)DMPlexEGADSDestroy_Private));
+      PetscCall(PetscContainerSetCtxDestroy(modelObj, DMPlexEGADSDestroy_Private));
       PetscCall(PetscObjectCompose((PetscObject)dm, "EGADS Model", (PetscObject)modelObj));
     }
     PetscCall(PetscContainerDestroy(&modelObj));
@@ -2354,10 +2354,10 @@ PetscErrorCode DMPlexCreateGeom_Tess_Internal(MPI_Comm comm, ego context, ego mo
     PetscCall(PetscContainerSetPointer(contextObj, context));
 
     if (islite) {
-      PetscCall(PetscContainerSetCtxDestroy(contextObj, (PetscCtxDestroyFn *)DMPlexEGADSliteClose_Private));
+      PetscCall(PetscContainerSetCtxDestroy(contextObj, DMPlexEGADSliteClose_Private));
       PetscCall(PetscObjectCompose((PetscObject)dm, "EGADSlite Context", (PetscObject)contextObj));
     } else {
-      PetscCall(PetscContainerSetCtxDestroy(contextObj, (PetscCtxDestroyFn *)DMPlexEGADSClose_Private));
+      PetscCall(PetscContainerSetCtxDestroy(contextObj, DMPlexEGADSClose_Private));
       PetscCall(PetscObjectCompose((PetscObject)dm, "EGADS Context", (PetscObject)contextObj));
     }
     PetscCall(PetscContainerDestroy(&contextObj));

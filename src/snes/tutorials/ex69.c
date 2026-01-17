@@ -42,14 +42,14 @@ typedef struct {
   PetscBag     bag;     /* Holds problem parameters */
 } AppCtx;
 
-static PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal coords[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal coords[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   PetscInt c;
   for (c = 0; c < Nc; ++c) u[c] = 0.0;
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode one(PetscInt dim, PetscReal time, const PetscReal coords[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode one(PetscInt dim, PetscReal time, const PetscReal coords[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   PetscInt c;
   for (c = 0; c < Nc; ++c) u[c] = 1.0;
@@ -666,7 +666,7 @@ static PetscErrorCode SolKxSolution(const PetscReal pos[], PetscReal m, PetscInt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode SolKxSolutionVelocity(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar v[], void *ctx)
+static PetscErrorCode SolKxSolutionVelocity(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar v[], PetscCtx ctx)
 {
   Parameter *s = (Parameter *)ctx;
 
@@ -675,7 +675,7 @@ static PetscErrorCode SolKxSolutionVelocity(PetscInt dim, PetscReal time, const 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode SolKxSolutionPressure(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar p[], void *ctx)
+static PetscErrorCode SolKxSolutionPressure(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar p[], PetscCtx ctx)
 {
   Parameter *s = (Parameter *)ctx;
 
@@ -2971,7 +2971,7 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode SolCxSolutionVelocity(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar v[], void *ctx)
+static PetscErrorCode SolCxSolutionVelocity(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar v[], PetscCtx ctx)
 {
   Parameter *s = (Parameter *)ctx;
 
@@ -2980,7 +2980,7 @@ static PetscErrorCode SolCxSolutionVelocity(PetscInt dim, PetscReal time, const 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode SolCxSolutionPressure(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar p[], void *ctx)
+static PetscErrorCode SolCxSolutionPressure(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar p[], PetscCtx ctx)
 {
   Parameter *s = (Parameter *)ctx;
 
@@ -3075,7 +3075,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 
 static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
 {
-  PetscErrorCode (*exactFunc)(PetscInt dim, PetscReal t, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
+  PetscErrorCode (*exactFunc)(PetscInt dim, PetscReal t, const PetscReal x[], PetscInt Nf, PetscScalar *u, PetscCtx ctx);
   PetscDS        prob;
   DMLabel        label;
   const PetscInt id = 1;
@@ -3196,7 +3196,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
 static PetscErrorCode CreatePressureNullSpace(DM dm, PetscInt origField, PetscInt field, MatNullSpace *nullspace)
 {
   Vec vec;
-  PetscErrorCode (*funcs[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx) = {zero, one};
+  PetscErrorCode (*funcs[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, PetscCtx ctx) = {zero, one};
 
   PetscFunctionBeginUser;
   PetscCheck(origField == 1, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Field %" PetscInt_FMT " should be 1 for pressure", origField);
@@ -3298,7 +3298,7 @@ static PetscErrorCode CorrectDiscretePressure(DM dm, MatNullSpace nullspace, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode SNESConvergenceCorrectPressure(SNES snes, PetscInt it, PetscReal xnorm, PetscReal gnorm, PetscReal f, SNESConvergedReason *reason, void *ctx)
+static PetscErrorCode SNESConvergenceCorrectPressure(SNES snes, PetscInt it, PetscReal xnorm, PetscReal gnorm, PetscReal f, SNESConvergedReason *reason, PetscCtx ctx)
 {
   AppCtx *user = (AppCtx *)ctx;
 
@@ -3328,7 +3328,7 @@ int main(int argc, char **argv)
   Mat          J, M;             /* Jacobian and preconditiong matrix */
   MatNullSpace nullSpace = NULL; /* May be necessary for pressure */
   AppCtx       user;             /* user-defined work context */
-  PetscErrorCode (*initialGuess[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx) = {zero, zero};
+  PetscErrorCode (*initialGuess[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, PetscCtx ctx) = {zero, zero};
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -3372,7 +3372,7 @@ int main(int argc, char **argv)
   PetscCall(PetscObjectSetName((PetscObject)u, "Solution"));
   PetscCall(SNESSolve(snes, NULL, u));
   {
-    PetscErrorCode (*exacts[2])(PetscInt dim, PetscReal t, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
+    PetscErrorCode (*exacts[2])(PetscInt dim, PetscReal t, const PetscReal x[], PetscInt Nf, PetscScalar *u, PetscCtx ctx);
     void   *ectxs[2];
     PetscDS ds;
     Vec     e;

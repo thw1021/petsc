@@ -9,7 +9,7 @@ typedef struct {
   VecScatter         gtol;
   VecScatter         ltog;
   VecScatter         ltol;
-  void              *ctx;
+  PetscCtx           ctx;
   PetscCtxDestroyFn *destroyctx;
 } DM_Shell;
 
@@ -272,7 +272,7 @@ PetscErrorCode DMShellSetDestroyContext(DM dm, PetscCtxDestroyFn *destroyctx)
 
 .seealso: `DM`, `DMSHELL`, `DMCreateMatrix()`, `DMShellGetContext()`
 @*/
-PetscErrorCode DMShellSetContext(DM dm, void *ctx)
+PetscErrorCode DMShellSetContext(DM dm, PetscCtx ctx)
 {
   DM_Shell *shell = (DM_Shell *)dm->data;
   PetscBool isshell;
@@ -302,7 +302,7 @@ PetscErrorCode DMShellSetContext(DM dm, void *ctx)
 @*/
 PetscErrorCode DMShellGetContext(DM dm, PetscCtxRt ctx)
 {
-  DM_Shell *shell = *(DM_Shell **)dm->data;
+  DM_Shell *shell = (DM_Shell *)dm->data;
   PetscBool isshell;
 
   PetscFunctionBegin;
