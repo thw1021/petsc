@@ -75,7 +75,7 @@ PetscErrorCode KSPMonitorSAWsDestroy(void **ctx)
 
 .seealso: [](ch_ksp), `KSP`, `KSPMonitorSet()`, `KSPMonitorSAWsCreate()`, `KSPMonitorSAWsDestroy()`, `KSPMonitorSingularValue()`, `KSPComputeExtremeSingularValues()`, `PetscViewerSAWsOpen()`
 @*/
-PetscErrorCode KSPMonitorSAWs(KSP ksp, PetscInt n, PetscReal rnorm, void *ctx)
+PetscErrorCode KSPMonitorSAWs(KSP ksp, PetscInt n, PetscReal rnorm, PetscCtx ctx)
 {
   KSPMonitor_SAWs *mon = (KSPMonitor_SAWs *)ctx;
   PetscReal        emax, emin;

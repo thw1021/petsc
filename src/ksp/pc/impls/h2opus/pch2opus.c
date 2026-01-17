@@ -406,7 +406,7 @@ static PetscErrorCode MatMatMultKernel_Hyper(Mat M, Mat X, Mat Y, PetscBool t)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMatMultNumeric_Hyper(Mat M, Mat X, Mat Y, void *ctx)
+static PetscErrorCode MatMatMultNumeric_Hyper(Mat M, Mat X, Mat Y, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscCall(MatMatMultKernel_Hyper(M, X, Y, PETSC_FALSE));
@@ -490,7 +490,7 @@ static PetscErrorCode MatMatMultKernel_NS(Mat M, Mat X, Mat Y, PetscBool t)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMatMultNumeric_NS(Mat M, Mat X, Mat Y, void *ctx)
+static PetscErrorCode MatMatMultNumeric_NS(Mat M, Mat X, Mat Y, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscCall(MatMatMultKernel_NS(M, X, Y, PETSC_FALSE));

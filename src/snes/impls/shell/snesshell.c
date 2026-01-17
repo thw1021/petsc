@@ -2,7 +2,7 @@
 
 typedef struct {
   PetscErrorCode (*solve)(SNES, Vec);
-  void *ctx;
+  PetscCtx ctx;
 } SNES_Shell;
 
 /*@C
@@ -78,7 +78,7 @@ PetscErrorCode SNESShellGetContext(SNES snes, PetscCtxRt ctx)
 
 .seealso: [](ch_snes), `SNES`, `SNESSHELL`, `SNESCreateShell()`, `SNESShellGetContext()`
 @*/
-PetscErrorCode SNESShellSetContext(SNES snes, void *ctx)
+PetscErrorCode SNESShellSetContext(SNES snes, PetscCtx ctx)
 {
   SNES_Shell *shell = (SNES_Shell *)snes->data;
   PetscBool   flg;

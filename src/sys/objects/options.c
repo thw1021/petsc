@@ -2060,7 +2060,7 @@ PetscErrorCode PetscOptionsLeftRestore(PetscOptions options, PetscInt *N, char *
 
 .seealso: `PetscOptionsMonitorSet()`
 @*/
-PetscErrorCode PetscOptionsMonitorDefault(const char name[], const char value[], PetscOptionSource source, void *ctx)
+PetscErrorCode PetscOptionsMonitorDefault(const char name[], const char value[], PetscOptionSource source, PetscCtx ctx)
 {
   PetscFunctionBegin;
   if (PetscCIOption(name)) PetscFunctionReturn(PETSC_SUCCESS);

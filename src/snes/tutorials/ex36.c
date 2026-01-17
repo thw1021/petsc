@@ -45,7 +45,7 @@ typedef struct {
   ModType  modType; /* Model type */
 } AppCtx;
 
-static PetscErrorCode trig_homogeneous_u(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode trig_homogeneous_u(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   PetscInt d;
   *u = 1.0;
@@ -53,7 +53,7 @@ static PetscErrorCode trig_homogeneous_u(PetscInt dim, PetscReal time, const Pet
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode oscillatory_u(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode oscillatory_u(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   Parameter      *param = (Parameter *)ctx;
   const PetscReal eps   = param->epsilon;

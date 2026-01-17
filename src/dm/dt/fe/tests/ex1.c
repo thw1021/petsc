@@ -28,7 +28,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode trig_u(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode trig_u(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   PetscInt d;
   *u = 0.0;
@@ -95,7 +95,7 @@ static PetscErrorCode SetupDiscretization(DM dm, const char name[], PetscErrorCo
 }
 
 /* PetscObjectContainerCompose() compose requires void ** signature on destructor */
-static PetscErrorCode PetscFEGeomDestroy_Void(void **ctx)
+static PetscErrorCode PetscFEGeomDestroy_Void(PetscCtxRt ctx)
 {
   return PetscFEGeomDestroy((PetscFEGeom **)ctx);
 }
