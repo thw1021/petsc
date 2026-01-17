@@ -4059,3 +4059,60 @@ PetscErrorCode PetscSectionExtractDofsFromArray(PetscSection origSection, MPI_Da
   PetscCall(ISRestoreIndices(points, &points_));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*@
+  PetscSectionDistributeData - Distribute data to match a given `PetscSF`, usually the `PetscSF` from mesh distribution
+
+  Collective
+
+  Input Parameters:
++ pointSF         - The `PetscSF` describing the communication pattern (roots are original points, leaves are new points)
+. originalSection - The `PetscSection` for existing data layout
+. datatype        - The type of data
+- originalData    - The existing data, may be `NULL` is storage size of `originalSection` is zero
+
+  Output Parameters:
++ newSection  - The `PetscSection` describing the new data layout
+. origToNewSF - `PetscSF` describing the communication of original data to the new data, may be `NULL`
+- newData     - The new data, may be `NULL` if no data transfer is desired
+
+  This function combines `PetscSFDistributeSection()`, `PetscSFCreateSectionSF()`, and `PetscSFBcastBegin()`/`PetscSFBcastEnd()` into a single call.
+
+  Level: advanced
+
+.seealso: `PetscSection`, `PetscSFDistributeSection()`, `PetscSFCreateSectionSF()`, `DMPlexDistributeData()`
+@*/
+PetscErrorCode PetscSectionDistributeData(PetscSF pointSF, PetscSection originalSection, MPI_Datatype datatype, const void *originalData, PetscSection newSection, PetscSF *origToNewSF, void *newData[])
+{
+  PetscSF     fieldSF;
+  PetscInt   *remoteOffsets, fieldSize;
+  PetscMPIInt dataSize;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pointSF, PETSCSF_CLASSID, 1);
+  PetscValidHeaderSpecific(originalSection, PETSC_SECTION_CLASSID, 2);
+  if (originalData) PetscAssertPointer(originalData, 4);
+  else {
+    PetscInt size;
+    PetscCall(PetscSectionGetStorageSize(originalSection, &size));
+    PetscCheck(size == 0, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "originalData may be NULL iff the storage size of originalSection is zero, but is %" PetscInt_FMT, size);
+  }
+  PetscValidHeaderSpecific(newSection, PETSC_SECTION_CLASSID, 5);
+  if (origToNewSF) PetscAssertPointer(origToNewSF, 6);
+  if (newData) PetscAssertPointer(newData, 7);
+
+  PetscCall(PetscSFDistributeSection(pointSF, originalSection, &remoteOffsets, newSection));
+  if (newData || origToNewSF) PetscCall(PetscSFCreateSectionSF(pointSF, originalSection, remoteOffsets, newSection, &fieldSF));
+  PetscCall(PetscFree(remoteOffsets));
+
+  if (newData) {
+    PetscCall(PetscSectionGetStorageSize(newSection, &fieldSize));
+    PetscCallMPI(MPI_Type_size(datatype, &dataSize));
+    PetscCall(PetscMalloc(fieldSize * dataSize, newData));
+    PetscCall(PetscSFBcastBegin(fieldSF, datatype, originalData, *newData, MPI_REPLACE));
+    PetscCall(PetscSFBcastEnd(fieldSF, datatype, originalData, *newData, MPI_REPLACE));
+  }
+  if (origToNewSF) *origToNewSF = fieldSF;
+  else PetscCall(PetscSFDestroy(&fieldSF));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
