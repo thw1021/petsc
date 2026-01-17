@@ -1504,7 +1504,7 @@ static struct _MatOps MatOps_Values = {NULL,
                                        NULL,
                                        NULL};
 
-static PetscErrorCode MatShellSetContext_Shell(Mat mat, void *ctx)
+static PetscErrorCode MatShellSetContext_Shell(Mat mat, PetscCtx ctx)
 {
   Mat_Shell *shell = (Mat_Shell *)mat->data;
 
@@ -1532,7 +1532,7 @@ static PetscErrorCode MatShellSetContextDestroy_Shell(Mat mat, PetscCtxDestroyFn
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatShellSetContext_Immutable(Mat mat, void *ctx)
+PetscErrorCode MatShellSetContext_Immutable(Mat mat, PetscCtx ctx)
 {
   PetscFunctionBegin;
   SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Cannot call MatShellSetContext() for a %s, it is used internally by the structure", ((PetscObject)mat)->type_name);
@@ -1869,7 +1869,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_Shell(Mat A)
 
 .seealso: [](ch_matrices), `Mat`, `MATSHELL`, `MatShellSetOperation()`, `MatHasOperation()`, `MatShellGetContext()`, `MatShellSetContext()`, `MatShellSetManageScalingShifts()`, `MatShellSetMatProductOperation()`
 @*/
-PetscErrorCode MatCreateShell(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt M, PetscInt N, void *ctx, Mat *A)
+PetscErrorCode MatCreateShell(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscCtx ctx, Mat *A)
 {
   PetscFunctionBegin;
   PetscCall(MatCreate(comm, A));
@@ -1901,7 +1901,7 @@ PetscErrorCode MatCreateShell(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt M,
 
 .seealso: [](ch_matrices), `Mat`, `MATSHELL`, `MatCreateShell()`, `MatShellGetContext()`, `MatShellGetOperation()`
 @*/
-PetscErrorCode MatShellSetContext(Mat mat, void *ctx)
+PetscErrorCode MatShellSetContext(Mat mat, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
@@ -2035,7 +2035,7 @@ PetscErrorCode MatShellGetScalingShifts(Mat A, PetscScalar *vshift, PetscScalar 
 
 .seealso: [](ch_matrices), `Mat`, `MATSHELL`, `MatCreateShell()`, `MatShellGetContext()`, `MatShellGetOperation()`, `MatShellTestMultTranspose()`
 @*/
-PetscErrorCode MatShellTestMult(Mat mat, PetscErrorCode (*f)(void *, Vec, Vec), Vec base, void *ctx, PetscBool *flg)
+PetscErrorCode MatShellTestMult(Mat mat, PetscErrorCode (*f)(void *, Vec, Vec), Vec base, PetscCtx ctx, PetscBool *flg)
 {
   PetscInt  m, n;
   Mat       mf, Dmf, Dmat, Ddiff;
@@ -2097,7 +2097,7 @@ PetscErrorCode MatShellTestMult(Mat mat, PetscErrorCode (*f)(void *, Vec, Vec), 
 
 .seealso: [](ch_matrices), `Mat`, `MATSHELL`, `MatCreateShell()`, `MatShellGetContext()`, `MatShellGetOperation()`, `MatShellTestMult()`
 @*/
-PetscErrorCode MatShellTestMultTranspose(Mat mat, PetscErrorCode (*f)(void *, Vec, Vec), Vec base, void *ctx, PetscBool *flg)
+PetscErrorCode MatShellTestMultTranspose(Mat mat, PetscErrorCode (*f)(void *, Vec, Vec), Vec base, PetscCtx ctx, PetscBool *flg)
 {
   Vec       x, y, z;
   PetscInt  m, n, M, N;

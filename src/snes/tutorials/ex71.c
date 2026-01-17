@@ -65,7 +65,7 @@ typedef struct {
 
   Note that these functions use coordinates X in the global (rotated) frame
 */
-PetscErrorCode quadratic_u(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *u, void *ctx)
+PetscErrorCode quadratic_u(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *u, PetscCtx ctx)
 {
   Parameter *param = (Parameter *)ctx;
   PetscReal  Delta = param->Delta;
@@ -80,7 +80,7 @@ PetscErrorCode quadratic_u(PetscInt dim, PetscReal time, const PetscReal X[], Pe
   return PETSC_SUCCESS;
 }
 
-PetscErrorCode linear_p(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *p, void *ctx)
+PetscErrorCode linear_p(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *p, PetscCtx ctx)
 {
   Parameter *param = (Parameter *)ctx;
   PetscReal  Delta = param->Delta;
@@ -89,7 +89,7 @@ PetscErrorCode linear_p(PetscInt dim, PetscReal time, const PetscReal X[], Petsc
   return PETSC_SUCCESS;
 }
 
-PetscErrorCode wall_velocity(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *u, void *ctx)
+PetscErrorCode wall_velocity(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *u, PetscCtx ctx)
 {
   Parameter *param = (Parameter *)ctx;
   PetscReal  u_0   = param->u_0;

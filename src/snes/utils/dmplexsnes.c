@@ -37,7 +37,7 @@ static void pressure_Private(PetscInt dim, PetscInt Nf, PetscInt NfAux, const Pe
 
 .seealso: [](ch_snes), `SNESConvergedCorrectPressure()`
 */
-static PetscErrorCode SNESCorrectDiscretePressure_Private(SNES snes, PetscInt pfield, MatNullSpace nullspace, Vec u, void *ctx)
+static PetscErrorCode SNESCorrectDiscretePressure_Private(SNES snes, PetscInt pfield, MatNullSpace nullspace, Vec u, PetscCtx ctx)
 {
   DM          dm;
   PetscDS     ds;
@@ -104,7 +104,7 @@ static PetscErrorCode SNESCorrectDiscretePressure_Private(SNES snes, PetscInt pf
 
 .seealso: [](ch_snes), `SNES`, `DM`, `SNESConvergedDefault()`, `SNESSetConvergenceTest()`, `DMSetNullSpaceConstructor()`
 @*/
-PetscErrorCode SNESConvergedCorrectPressure(SNES snes, PetscInt it, PetscReal xnorm, PetscReal gnorm, PetscReal f, SNESConvergedReason *reason, void *ctx)
+PetscErrorCode SNESConvergedCorrectPressure(SNES snes, PetscInt it, PetscReal xnorm, PetscReal gnorm, PetscReal f, SNESConvergedReason *reason, PetscCtx ctx)
 {
   PetscBool monitorIntegral = PETSC_FALSE;
 
@@ -242,7 +242,7 @@ PetscErrorCode SNESMonitorFields(SNES snes, PetscInt its, PetscReal fgnorm, Pets
 
 .seealso: `DM`, `DMPlexSNESComputeResidualFEM()`
 @*/
-PetscErrorCode DMPlexSNESComputeObjectiveFEM(DM dm, Vec X, PetscReal *obj, void *ctx)
+PetscErrorCode DMPlexSNESComputeObjectiveFEM(DM dm, Vec X, PetscReal *obj, PetscCtx ctx)
 {
   PetscInt     Nf, cellHeight, cStart, cEnd;
   PetscScalar *cintegral;
@@ -281,7 +281,7 @@ PetscErrorCode DMPlexSNESComputeObjectiveFEM(DM dm, Vec X, PetscReal *obj, void 
 
 .seealso: [](ch_snes), `DM`, `DMPLEX`, `DMSNESComputeJacobianAction()`
 @*/
-PetscErrorCode DMPlexSNESComputeResidualFEM(DM dm, Vec X, Vec F, void *ctx)
+PetscErrorCode DMPlexSNESComputeResidualFEM(DM dm, Vec X, Vec F, PetscCtx ctx)
 {
   DM       plex;
   IS       allcellIS;
@@ -337,7 +337,7 @@ PetscErrorCode DMPlexSNESComputeResidualFEM(DM dm, Vec X, Vec F, void *ctx)
 
 .seealso: [](ch_snes), `DM`, `DMPLEX`, `DMPlexComputeJacobianAction()`
 @*/
-PetscErrorCode DMPlexSNESComputeResidualDS(DM dm, Vec X, Vec F, void *ctx)
+PetscErrorCode DMPlexSNESComputeResidualDS(DM dm, Vec X, Vec F, PetscCtx ctx)
 {
   DM       plex;
   IS       allcellIS;
@@ -417,7 +417,7 @@ PetscErrorCode DMPlexSNESComputeResidualDS(DM dm, Vec X, Vec F, void *ctx)
 
 .seealso: [](ch_snes), `DM`, `DMPLEX`, `DMPlexComputeJacobianAction()`
 @*/
-PetscErrorCode DMPlexSNESComputeBoundaryFEM(DM dm, Vec X, void *ctx)
+PetscErrorCode DMPlexSNESComputeBoundaryFEM(DM dm, Vec X, PetscCtx ctx)
 {
   DM plex;
 
@@ -452,7 +452,7 @@ PetscErrorCode DMPlexSNESComputeBoundaryFEM(DM dm, Vec X, void *ctx)
 
 .seealso: [](ch_snes), `DM`, `DMSNESCreateJacobianMF()`, `DMPlexSNESComputeResidualFEM()`
 @*/
-PetscErrorCode DMSNESComputeJacobianAction(DM dm, Vec X, Vec Y, Vec F, void *ctx)
+PetscErrorCode DMSNESComputeJacobianAction(DM dm, Vec X, Vec Y, Vec F, PetscCtx ctx)
 {
   DM       plex;
   IS       allcellIS;
@@ -538,7 +538,7 @@ PetscErrorCode DMSNESComputeJacobianAction(DM dm, Vec X, Vec Y, Vec F, void *ctx
 
 .seealso: [](ch_snes), `DMPLEX`, `Mat`
 @*/
-PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP, void *ctx)
+PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP, PetscCtx ctx)
 {
   DM        plex;
   IS        allcellIS;
@@ -584,9 +584,9 @@ PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP, voi
 }
 
 struct _DMSNESJacobianMFCtx {
-  DM    dm;
-  Vec   X;
-  void *ctx;
+  DM       dm;
+  Vec      X;
+  PetscCtx ctx;
 };
 
 static PetscErrorCode DMSNESJacobianMF_Destroy_Private(Mat A)
@@ -634,7 +634,7 @@ static PetscErrorCode DMSNESJacobianMF_Mult_Private(Mat A, Vec Y, Vec Z)
 
 .seealso: [](ch_snes), `DM`, `SNES`, `DMSNESComputeJacobianAction()`
 @*/
-PetscErrorCode DMSNESCreateJacobianMF(DM dm, Vec X, void *ctx, Mat *J)
+PetscErrorCode DMSNESCreateJacobianMF(DM dm, Vec X, PetscCtx ctx, Mat *J)
 {
   struct _DMSNESJacobianMFCtx *ictx;
   PetscInt                     n, N;
@@ -657,7 +657,7 @@ PetscErrorCode DMSNESCreateJacobianMF(DM dm, Vec X, void *ctx, Mat *J)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatComputeNeumannOverlap_Plex(Mat J, PetscReal t, Vec X, Vec X_t, PetscReal s, IS ovl, void *ctx)
+static PetscErrorCode MatComputeNeumannOverlap_Plex(Mat J, PetscReal t, Vec X, Vec X_t, PetscReal s, IS ovl, PetscCtx ctx)
 {
   SNES   snes;
   Mat    pJ;
@@ -687,7 +687,7 @@ static PetscErrorCode MatComputeNeumannOverlap_Plex(Mat J, PetscReal t, Vec X, V
   PetscCall(DMGetDMSNES(ovldm, &sdm));
   PetscCall(VecLockReadPush(X));
   {
-    void *ctx;
+    PetscCtx ctx;
     PetscErrorCode (*J)(SNES, Vec, Mat, Mat, void *);
     PetscCall(DMSNESGetJacobian(ovldm, &J, &ctx));
     PetscCallBack("SNES callback Jacobian", (*J)(snes, X, pJ, pJ, ctx));
@@ -715,7 +715,7 @@ static PetscErrorCode MatComputeNeumannOverlap_Plex(Mat J, PetscReal t, Vec X, V
 
 .seealso: [](ch_snes),`DMPLEX`, `SNES`, `PetscDSAddBoundary()`, `PetscDSSetObjective()`, `PetscDSSetResidual()`, `PetscDSSetJacobian()`
 @*/
-PetscErrorCode DMPlexSetSNESLocalFEM(DM dm, PetscBool use_obj, void *ctx)
+PetscErrorCode DMPlexSetSNESLocalFEM(DM dm, PetscBool use_obj, PetscCtx ctx)
 {
   PetscBool useCeed;
 
@@ -760,7 +760,7 @@ PetscErrorCode DMPlexSetSNESLocalFEM(DM dm, PetscBool use_obj, void *ctx)
 @*/
 PetscErrorCode DMSNESCheckDiscretization(SNES snes, DM dm, PetscReal t, Vec u, PetscReal tol, PetscReal error[])
 {
-  PetscErrorCode (**exacts)(PetscInt, PetscReal, const PetscReal x[], PetscInt, PetscScalar *u, void *ctx);
+  PetscErrorCode (**exacts)(PetscInt, PetscReal, const PetscReal x[], PetscInt, PetscScalar *u, PetscCtx ctx);
   void     **ectxs;
   PetscReal *err;
   MPI_Comm   comm;

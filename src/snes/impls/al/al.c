@@ -95,7 +95,7 @@ PetscErrorCode SNESNewtonALSetCorrectionType(SNES snes, SNESNewtonALCorrectionTy
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode SNESNewtonALSetFunction_NEWTONAL(SNES snes, SNESFunctionFn *func, void *ctx)
+static PetscErrorCode SNESNewtonALSetFunction_NEWTONAL(SNES snes, SNESFunctionFn *func, PetscCtx ctx)
 {
   SNES_NEWTONAL *al = (SNES_NEWTONAL *)snes->data;
 
@@ -126,7 +126,7 @@ static PetscErrorCode SNESNewtonALSetFunction_NEWTONAL(SNES snes, SNESFunctionFn
 
 .seealso: [](ch_snes), `SNES`, `SNESNEWTONAL`, `SNESNewtonALGetFunction()`, `SNESNewtonALGetLoadParameter()`
 @*/
-PetscErrorCode SNESNewtonALSetFunction(SNES snes, SNESFunctionFn *func, void *ctx)
+PetscErrorCode SNESNewtonALSetFunction(SNES snes, SNESFunctionFn *func, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);

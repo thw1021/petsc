@@ -1813,7 +1813,7 @@ PetscErrorCode PCBDDCAddPrimalVerticesLocalIS(PC pc, IS primalv)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode func_coords_private(PetscInt dim, PetscReal t, const PetscReal X[], PetscInt Nf, PetscScalar *out, void *ctx)
+static PetscErrorCode func_coords_private(PetscInt dim, PetscReal t, const PetscReal X[], PetscInt Nf, PetscScalar *out, PetscCtx ctx)
 {
   PetscInt f, *comp = (PetscInt *)ctx;
 

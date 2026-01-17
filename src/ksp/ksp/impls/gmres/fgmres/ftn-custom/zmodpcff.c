@@ -16,7 +16,7 @@ static struct {
   PetscFortranCallbackId destroy;
 } _cb;
 
-static PetscErrorCode ourmodify(KSP ksp, PetscInt i, PetscInt i2, PetscReal d, void *ctx)
+static PetscErrorCode ourmodify(KSP ksp, PetscInt i, PetscInt i2, PetscReal d, PetscCtx ctx)
 {
   PetscObjectUseFortranCallbackSubType(ksp, _cb.modify, (KSP *, PetscInt *, PetscInt *, PetscReal *, void *, PetscErrorCode *), (&ksp, &i, &i2, &d, _ctx, &ierr));
 }
@@ -30,7 +30,7 @@ static PetscErrorCode ourmoddestroy(PetscCtxRt ctx)
 PETSC_EXTERN void kspfgmresmodifypcnochange_(KSP *, PetscInt *, PetscInt *, PetscReal *, void *, PetscErrorCode *);
 PETSC_EXTERN void kspfgmresmodifypcksp_(KSP *, PetscInt *, PetscInt *, PetscReal *, void *, PetscErrorCode *);
 
-PETSC_EXTERN void kspfgmressetmodifypc_(KSP *ksp, void (*fcn)(KSP *, PetscInt *, PetscInt *, PetscReal *, void *, PetscErrorCode *), void *ctx, void (*d)(void *, PetscErrorCode *), PetscErrorCode *ierr)
+PETSC_EXTERN void kspfgmressetmodifypc_(KSP *ksp, void (*fcn)(KSP *, PetscInt *, PetscInt *, PetscReal *, void *, PetscErrorCode *), PetscCtx ctx, void (*d)(void *, PetscErrorCode *), PetscErrorCode *ierr)
 {
   CHKFORTRANNULLFUNCTION(d);
   if (fcn == kspfgmresmodifypcksp_) {

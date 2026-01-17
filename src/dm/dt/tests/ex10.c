@@ -14,7 +14,7 @@ static char help[] = "Tests implementation of PetscSpace_Sum by solving the Pois
    \vec{u} = \vec{x};
    p = -0.5*(\vec{x} \cdot \vec{x});
    */
-static PetscErrorCode linear_u(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode linear_u(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   PetscInt c;
 
@@ -22,7 +22,7 @@ static PetscErrorCode linear_u(PetscInt dim, PetscReal time, const PetscReal x[]
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode linear_p(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode linear_p(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   PetscInt d;
 
@@ -31,7 +31,7 @@ static PetscErrorCode linear_p(PetscInt dim, PetscReal time, const PetscReal x[]
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode linear_divu(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode linear_divu(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   u[0] = dim;
   return PETSC_SUCCESS;
