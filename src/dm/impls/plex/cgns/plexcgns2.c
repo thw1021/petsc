@@ -1739,7 +1739,7 @@ PetscErrorCode DMPlexCreateCGNS_Internal_Parallel(MPI_Comm comm, PetscInt cgid, 
       PetscCall(DMGetWorkArray(*dm, bcSize, MPIU_CGSIZE, &points));
 
       const char *labels[] = {"Zone_t", "ZoneBC_t", "BC_t", "PointList"};
-      PetscCallCGNSWrite(cg_golist(cgid, base, 4, (char **)labels, (int[]){zone, 1, BC, 0}), dm, 0);
+      PetscCallCGNSRead(cg_golist(cgid, base, 4, (char **)labels, (int[]){zone, 1, BC, 0}), *dm, 0);
       PetscCallCGNSReadData(cgp_ptlist_read_data(cgid, bcStart, bcEnd - 1, points), *dm, 0);
 
       PetscInt    *label_values;
