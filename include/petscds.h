@@ -162,7 +162,7 @@ PETSC_EXTERN PetscErrorCode PetscDSSetRiemannSolver(PetscDS, PetscInt, PetscRiem
 PETSC_EXTERN PetscErrorCode PetscDSGetUpdate(PetscDS, PetscInt, PetscPointFn **);
 PETSC_EXTERN PetscErrorCode PetscDSSetUpdate(PetscDS, PetscInt, PetscPointFn *);
 PETSC_EXTERN PetscErrorCode PetscDSGetContext(PetscDS, PetscInt, PetscCtxRt);
-PETSC_EXTERN PetscErrorCode PetscDSSetContext(PetscDS, PetscInt, void *);
+PETSC_EXTERN PetscErrorCode PetscDSSetContext(PetscDS, PetscInt, PetscCtx);
 PETSC_EXTERN PetscErrorCode PetscDSGetBdResidual(PetscDS, PetscInt, PetscBdPointFn **, PetscBdPointFn **);
 PETSC_EXTERN PetscErrorCode PetscDSSetBdResidual(PetscDS, PetscInt, PetscBdPointFn *, PetscBdPointFn *);
 PETSC_EXTERN PetscErrorCode PetscDSHasBdJacobian(PetscDS, PetscBool *);

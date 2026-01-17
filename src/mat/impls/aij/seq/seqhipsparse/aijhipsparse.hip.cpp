@@ -2189,7 +2189,7 @@ struct MatProductCtx_MatMatHipsparse {
   hipsparseSpGEMMDescr_t spgemmDesc;
 };
 
-static PetscErrorCode MatProductCtxDestroy_MatMatHipsparse(void **data)
+static PetscErrorCode MatProductCtxDestroy_MatMatHipsparse(PetscCtxRt data)
 {
   MatProductCtx_MatMatHipsparse *mmdata = *(MatProductCtx_MatMatHipsparse **)data;
 
@@ -2207,7 +2207,7 @@ static PetscErrorCode MatProductCtxDestroy_MatMatHipsparse(void **data)
   if (mmdata->mmBuffer) PetscCallHIP(hipFree(mmdata->mmBuffer));
   if (mmdata->mmBuffer2) PetscCallHIP(hipFree(mmdata->mmBuffer2));
   PetscCall(MatDestroy(&mmdata->X));
-  PetscCall(PetscFree(*data));
+  PetscCall(PetscFree(*(void **)data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3714,9 +3714,9 @@ static PetscErrorCode MatSeqAIJHIPSPARSEInvalidateTranspose(Mat A, PetscBool des
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatCOOStructDestroy_SeqAIJHIPSPARSE(void **data)
+static PetscErrorCode MatCOOStructDestroy_SeqAIJHIPSPARSE(PetscCtxRt data)
 {
-  MatCOOStruct_SeqAIJ *coo = (MatCOOStruct_SeqAIJ *)*data;
+  MatCOOStruct_SeqAIJ *coo = *(MatCOOStruct_SeqAIJ **)data;
 
   PetscFunctionBegin;
   PetscCallHIP(hipFree(coo->perm));

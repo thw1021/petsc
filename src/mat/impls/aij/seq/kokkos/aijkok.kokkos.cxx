@@ -791,7 +791,7 @@ PetscErrorCode MatSeqAIJKokkosMergeMats(Mat A, Mat B, MatReuse reuse, Mat *C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatProductCtxDestroy_SeqAIJKokkos(void **pdata)
+static PetscErrorCode MatProductCtxDestroy_SeqAIJKokkos(PetscCtxRt pdata)
 {
   PetscFunctionBegin;
   delete *reinterpret_cast<MatProductCtx_SeqAIJKokkos **>(pdata);
@@ -1357,10 +1357,10 @@ struct MatCOOStruct_SeqAIJKokkos {
   }
 };
 
-static PetscErrorCode MatCOOStructDestroy_SeqAIJKokkos(void **data)
+static PetscErrorCode MatCOOStructDestroy_SeqAIJKokkos(PetscCtxRt data)
 {
   PetscFunctionBegin;
-  PetscCallCXX(delete static_cast<MatCOOStruct_SeqAIJKokkos *>(*data));
+  PetscCallCXX(delete *static_cast<MatCOOStruct_SeqAIJKokkos **>(data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

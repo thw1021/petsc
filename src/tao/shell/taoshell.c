@@ -4,7 +4,7 @@ typedef struct _n_TaoShell Tao_Shell;
 
 struct _n_TaoShell {
   PetscErrorCode (*solve)(Tao);
-  void *ctx;
+  PetscCtx ctx;
 };
 
 /*@C
@@ -77,7 +77,7 @@ PetscErrorCode TaoShellGetContext(Tao tao, PetscCtxRt ctx)
 
 .seealso: `Tao`, `TAOSHELL`, `TaoShellGetContext()`
 @*/
-PetscErrorCode TaoShellSetContext(Tao tao, void *ctx)
+PetscErrorCode TaoShellSetContext(Tao tao, PetscCtx ctx)
 {
   Tao_Shell *shell = (Tao_Shell *)tao->data;
   PetscBool  flg;

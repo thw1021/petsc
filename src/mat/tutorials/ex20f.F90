@@ -25,7 +25,6 @@ contains
     allocate (ctxM)
     ctxM%lambda = ctxF_pt%lambda
     PetscCall(MatCreateShell(PETSC_COMM_WORLD, ml, nl, PETSC_DETERMINE, PETSC_DETERMINE, ctxM, M, ierr))
-!        PetscCall(MatShellSetOperation(M,MATOP_DUPLICATE,MatDuplicate_F,ierr))
     PetscCall(MatShellSetOperation(M, MATOP_DESTROY, MatDestroy_F, ierr))
   end subroutine MatDuplicate_F
 
