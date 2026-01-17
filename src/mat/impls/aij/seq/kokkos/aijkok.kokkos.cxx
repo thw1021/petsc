@@ -1382,7 +1382,7 @@ static PetscErrorCode MatSetPreallocationCOO_SeqAIJKokkos(Mat mat, PetscCount co
 
   // Copy the COO struct to device
   PetscCall(PetscObjectQuery((PetscObject)mat, "__PETSc_MatCOOStruct_Host", (PetscObject *)&container_h));
-  PetscCall(PetscContainerGetPointer(container_h, (void **)&coo_h));
+  PetscCall(PetscContainerGetPointer(container_h, &coo_h));
   PetscCallCXX(coo_d = new MatCOOStruct_SeqAIJKokkos(coo_h));
 
   // Put the COO struct in a container and then attach that to the matrix
@@ -1400,7 +1400,7 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJKokkos(Mat A, const PetscScalar v[],
 
   PetscFunctionBegin;
   PetscCall(PetscObjectQuery((PetscObject)A, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container));
-  PetscCall(PetscContainerGetPointer(container, (void **)&coo));
+  PetscCall(PetscContainerGetPointer(container, &coo));
 
   const auto &n    = coo->n;
   const auto &Annz = coo->nz;
