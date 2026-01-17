@@ -18,36 +18,34 @@ interface
     PetscErrorCode, intent(out) :: ierr
   end subroutine
 
-  subroutine SNESSetFunction(a, b, c, d, z)
+  subroutine SNESSetFunction(snes, r, f, ctx, ierr)
     use, intrinsic :: ISO_C_binding
     import tSNES, tVec
-    SNES a
-    Vec b
-    external c
-    type(*) d
-    PetscErrorCode z
+    SNES snes
+    Vec r
+    external f
+    type(*) ctx
+    PetscErrorCode, intent(out) :: ierr
   end subroutine
 
-  subroutine SNESSetJacobian(a, b, c, d, e, z)
+  subroutine SNESSetJacobian(snes, Amat, Pmat, J, ctx, ierr)
     use, intrinsic :: ISO_C_binding
     import tSNES, tMat
-    SNES a
-    Mat b
-    Mat c
-    external d
-    type(*) e
-    PetscErrorCode z
+    SNES snes
+    Mat Amat, Pmat
+    external J
+    type(*) ctx
+    PetscErrorCode, intent(out) :: ierr
   end subroutine
 
-  subroutine SNESGetJacobian(a, b, c, d, e, z)
+  subroutine SNESGetJacobian(snes, Amat, Pmat, J, ctx, ierr)
     use, intrinsic :: ISO_C_binding
     import tSNES, tMat
-    SNES a
-    Mat b
-    Mat c
-    external d
-    type(*) e
-    PetscErrorCode z
+    SNES snes
+    Mat Amat, PMat
+    external J
+    type(*) ctx
+    PetscErrorCode, intent(out) :: ierr
   end subroutine
 
   subroutine DMSNESSetJacobianLocal(dm, func, ctx, ierr)
@@ -69,12 +67,12 @@ interface
     PetscErrorCode, intent(out) :: ierr
   end subroutine
 
-  subroutine SNESRestoreConvergenceHistory(snes, r, its, na, ierr)
+  subroutine SNESRestoreConvergenceHistory(snes, a, its, na, ierr)
     use, intrinsic :: ISO_C_binding
     import tSNES
     SNES snes
     PetscInt na
-    PetscReal, pointer :: r(:)
+    PetscReal, pointer :: a(:)
     PetscInt, pointer :: its(:)
     PetscErrorCode, intent(out) :: ierr
   end subroutine
