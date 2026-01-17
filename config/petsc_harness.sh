@@ -355,7 +355,7 @@ function petsc_mpiexec_cudamemcheck() {
 }
 
 function petsc_mpiexec_valgrind() {
-  valgrind_cmd='valgrind -q --tool=memcheck --leak-check=yes --num-callers=20 --track-origins=yes --keep-debuginfo=yes --suppressions=${PETSC_DIR}/share/petsc/suppressions/valgrind --error-exitcode=10'
+  valgrind_cmd="valgrind -q --tool=memcheck --leak-check=yes --num-callers=20 --track-origins=yes --keep-debuginfo=yes --suppressions=${PETSC_DIR}/share/petsc/suppressions/valgrind --error-exitcode=10"
   pre_args=()
   re="${executable}"
   for i in "$@"; do
