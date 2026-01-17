@@ -253,7 +253,7 @@ PetscErrorCode KSPMonitorResidualDrawLG(KSP ksp, PetscInt n, PetscReal rnorm, Pe
 .seealso: [](ch_ksp), `KSP`, `PETSCVIEWERDRAW`, `KSPMonitorSet()`, `KSPMonitorTrueResidual()`, `KSPMonitorResidualDrawLG()`,
           `PetscViewerFormat`, `PetscViewer`, `PetscViewerAndFormat`
 @*/
-PetscErrorCode KSPMonitorResidualDrawLGCreate(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf)
+PetscErrorCode KSPMonitorResidualDrawLGCreate(PetscViewer viewer, PetscViewerFormat format, PetscCtx ctx, PetscViewerAndFormat **vf)
 {
   PetscFunctionBegin;
   PetscCall(PetscViewerAndFormatCreate(viewer, format, vf));
@@ -537,7 +537,7 @@ PetscErrorCode KSPMonitorTrueResidualDrawLG(KSP ksp, PetscInt n, PetscReal rnorm
 
 .seealso: [](ch_ksp), `PETSCVIEWERDRAW`, `KSP`, `KSPMonitorSet()`, `KSPMonitorTrueResidual()`, `PetscViewerAndFormat`
 @*/
-PetscErrorCode KSPMonitorTrueResidualDrawLGCreate(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf)
+PetscErrorCode KSPMonitorTrueResidualDrawLGCreate(PetscViewer viewer, PetscViewerFormat format, PetscCtx ctx, PetscViewerAndFormat **vf)
 {
   const char *names[] = {"preconditioned", "true"};
 
@@ -791,7 +791,7 @@ PetscErrorCode KSPMonitorErrorDrawLG(KSP ksp, PetscInt n, PetscReal rnorm, Petsc
 
 .seealso: [](ch_ksp), `PETSCVIEWERDRAW`, `KSP`, `KSPMonitorSet()`, `KSPMonitorTrueResidual()`, `KSPMonitorErrorDrawLG()`
 @*/
-PetscErrorCode KSPMonitorErrorDrawLGCreate(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf)
+PetscErrorCode KSPMonitorErrorDrawLGCreate(PetscViewer viewer, PetscViewerFormat format, PetscCtx ctx, PetscViewerAndFormat **vf)
 {
   KSP      ksp = (KSP)ctx;
   DM       dm;
@@ -982,7 +982,7 @@ PetscErrorCode KSPMonitorSolutionDrawLG(KSP ksp, PetscInt n, PetscReal rnorm, Pe
 
 .seealso: [](ch_ksp), `KSPMonitorSet()`, `KSPMonitorTrueResidual()`
 @*/
-PetscErrorCode KSPMonitorSolutionDrawLGCreate(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf)
+PetscErrorCode KSPMonitorSolutionDrawLGCreate(PetscViewer viewer, PetscViewerFormat format, PetscCtx ctx, PetscViewerAndFormat **vf)
 {
   PetscFunctionBegin;
   PetscCall(PetscViewerAndFormatCreate(viewer, format, vf));
@@ -1063,7 +1063,7 @@ PetscErrorCode KSPMonitorSingularValue(KSP ksp, PetscInt n, PetscReal rnorm, Pet
 
 .seealso: [](ch_ksp), `KSP`, `KSPMonitorSet()`, `KSPMonitorSingularValue()`, `PetscViewer`
 @*/
-PetscErrorCode KSPMonitorSingularValueCreate(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf)
+PetscErrorCode KSPMonitorSingularValueCreate(PetscViewer viewer, PetscViewerFormat format, PetscCtx ctx, PetscViewerAndFormat **vf)
 {
   KSP ksp = (KSP)ctx;
 
@@ -1094,7 +1094,7 @@ PetscErrorCode KSPMonitorSingularValueCreate(PetscViewer viewer, PetscViewerForm
 
 .seealso: [](sec_flexibleksp), `KSP`, `KSPMonitorDynamicTolerance()`, `KSPMonitorDynamicToleranceDestroy()`, `KSPMonitorDynamicToleranceSetCoefficient()`
 @*/
-PetscErrorCode KSPMonitorDynamicToleranceCreate(void *ctx)
+PetscErrorCode KSPMonitorDynamicToleranceCreate(PetscCtx ctx)
 {
   KSPDynTolCtx *scale;
 
@@ -1125,7 +1125,7 @@ PetscErrorCode KSPMonitorDynamicToleranceCreate(void *ctx)
 
 .seealso: [](sec_flexibleksp), `KSP`, `KSPMonitorDynamicTolerance()`, `KSPMonitorDynamicToleranceDestroy()`, `KSPMonitorDynamicToleranceCreate()`
 @*/
-PetscErrorCode KSPMonitorDynamicToleranceSetCoefficient(void *ctx, PetscReal coeff)
+PetscErrorCode KSPMonitorDynamicToleranceSetCoefficient(PetscCtx ctx, PetscReal coeff)
 {
   KSPDynTolCtx *scale = (KSPDynTolCtx *)ctx;
 
@@ -1166,7 +1166,7 @@ PetscErrorCode KSPMonitorDynamicToleranceSetCoefficient(void *ctx, PetscReal coe
 
 .seealso: [](sec_flexibleksp), `KSP`, `KSPMonitorDynamicToleranceCreate()`, `KSPMonitorDynamicToleranceDestroy()`, `KSPMonitorDynamicToleranceSetCoefficient()`
 @*/
-PetscErrorCode KSPMonitorDynamicTolerance(KSP ksp, PetscInt its, PetscReal fnorm, void *ctx)
+PetscErrorCode KSPMonitorDynamicTolerance(KSP ksp, PetscInt its, PetscReal fnorm, PetscCtx ctx)
 {
   PC            pc;
   PetscReal     outer_rtol, outer_abstol, outer_dtol, inner_rtol;
@@ -1516,7 +1516,7 @@ PetscErrorCode KSPConvergedDefaultSetConvergedMaxits(KSP ksp, PetscBool flg)
           `KSPSetMinimumIterations()`, `KSPConvergenceTestFn`,
           `KSPConvergedDefaultSetUIRNorm()`, `KSPConvergedDefaultSetUMIRNorm()`, `KSPConvergedDefaultSetConvergedMaxits()`, `KSPConvergedDefaultCreate()`, `KSPConvergedDefaultDestroy()`
 @*/
-PetscErrorCode KSPConvergedDefault(KSP ksp, PetscInt n, PetscReal rnorm, KSPConvergedReason *reason, void *ctx)
+PetscErrorCode KSPConvergedDefault(KSP ksp, PetscInt n, PetscReal rnorm, KSPConvergedReason *reason, PetscCtx ctx)
 {
   KSPConvergedDefaultCtx *cctx = (KSPConvergedDefaultCtx *)ctx;
   KSPNormType             normtype;
@@ -2061,7 +2061,7 @@ PetscErrorCode KSPGetDM(KSP ksp, DM *dm)
 
 .seealso: [](ch_ksp), `KSP`, `KSPGetApplicationContext()`
 @*/
-PetscErrorCode KSPSetApplicationContext(KSP ksp, void *ctx)
+PetscErrorCode KSPSetApplicationContext(KSP ksp, PetscCtx ctx)
 {
   PC pc;
 

@@ -1461,13 +1461,41 @@ M*/
 #define PetscObjectParameterDeclarePtr(type, NAME) type *NAME, *default_##NAME
 
 /*MC
+   PetscCtx - indicates an argument that can be a pointer to any C struct (or Fortran derived type).
+
+   Level: developer
+
+   Notes:
+   This should not be used for arrays of unknown type.
+
+   Fortran Notes:
+   A Fortran code that calls a function with a `PetscCtx` argument would declare the variable `ctx` with
+.vb
+   type(AppType) :: ctx
+.ve
+   where `AppType` is a Fortran derived type.
+
+   Developer Note:
+   `PetscCtx` is used instead of `void *` in PETSc code to enhance the clarity of the PETSc source code since `void *` serves so many different roles.
+   The getAPI() code processor also uses the variable type to generate correct bindings for other languages.
+
+.seealso: [](sec_fortran_context), `PetscCtxRt`, PetscCtxDestroyFn()`, `PeOp`, `PeNS`, `PetscInitialize()`, `DMGetApplicationContext()`,
+          `DMSetApplicationContextDestroy()`
+M*/
+typedef void *PetscCtx;
+
+/*MC
    PetscCtxRt - indicates an argument that returns a pointer to a C struct (or Fortran derived type) which is generally an application context
 
    Level: developer
 
    Notes:
-   This should not be used for functions that return PETSc objects, or pointers to arrays of unknown type. Thus it is used for, for example,
+   A PETSc object (in C or Fortran) can be used as a PETSc context
+
+   This should not be used for functions that return pointers to arrays of unknown type. Thus it is used for, for example,
    `KSPGetApplicationContext()` but not used for `DMNetworkGetComponent()`
+
+   A PETSc object (in C or Fortran) can be used as a PETSc context
 
    It is also used for functions that destroy an application context. For example, the destroy function passed to `DMSetApplicationContextDestroy()`
    which has a prototype of `PetscCtxDestroyFn()`
@@ -1491,11 +1519,8 @@ M*/
    This macro construct is needed because Fortran compilers must know the exact type of what a pointer points to at compile time,
    so the seemingly natural construct `type(*), pointer :: ctx` as an argument to `KSPGetApplicationContext()` is not allowed by the compiler.
 
-   Developer Note:
-   Put this in function declaration for the argument type instead of `void *`, or `void **` that return a void pointer. For example,
-   `DMGetApplicationContext()`
-
-   C compilers generate a warning or error if one passes a pointer to a pointer to a specific type (instead of `void`), for example,
+   Developer Notes:
+   C++ compilers generate a warning or error if one passes a pointer to a pointer to a specific type (instead of `void`), for example,
 .vb
    extern calledfunction(void **);
    SomeCtx *ctx;
@@ -1505,10 +1530,12 @@ M*/
 .vb
    extern calledfunction(void *);
 .ve
-   the warning message is averted. `PetscCtxRt` is used in PETSc source code so that the getAPI() code processor knows the argument is
-   actually handled internally as `void **` so it can generate correct bindings for other languages.
+   the warning message is averted.
 
-.seealso: [](sec_fortran_context), `PetscCtxDestroyFn()`, `PeOp`, `PeNS`, `PetscInitialize()`, `DMGetApplicationContext()`,
+   `PetscCtxRt` is used instead of `void *` in PETSc code to enhance the clarity of the PETSc source code since `void *` serves so many different roles.
+   The getAPI() code processor also uses the variable type to generate correct bindings for other languages.
+
+.seealso: [](sec_fortran_context), `PetscCtx`, `PetscCtxDestroyFn()`, `PeOp`, `PeNS`, `PetscInitialize()`, `DMGetApplicationContext()`,
           `DMSetApplicationContextDestroy()`
 M*/
 typedef void *PetscCtxRt;
@@ -2516,8 +2543,8 @@ PETSC_EXTERN PetscErrorCode PetscGatherMessageLengths2(MPI_Comm, PetscMPIInt, Pe
 PETSC_EXTERN PetscErrorCode PetscPostIrecvInt(MPI_Comm, PetscMPIInt, PetscMPIInt, const PetscMPIInt[], const PetscMPIInt[], PetscInt ***, MPI_Request **);
 PETSC_EXTERN PetscErrorCode PetscPostIrecvScalar(MPI_Comm, PetscMPIInt, PetscMPIInt, const PetscMPIInt[], const PetscMPIInt[], PetscScalar ***, MPI_Request **);
 PETSC_EXTERN PetscErrorCode PetscCommBuildTwoSided(MPI_Comm, PetscMPIInt, MPI_Datatype, PetscMPIInt, const PetscMPIInt[], const void *, PetscMPIInt *, PetscMPIInt *[], void *) PETSC_ATTRIBUTE_MPI_POINTER_WITH_TYPE(6, 3);
-PETSC_EXTERN PetscErrorCode PetscCommBuildTwoSidedF(MPI_Comm, PetscMPIInt, MPI_Datatype, PetscMPIInt, const PetscMPIInt[], const void *, PetscMPIInt *, PetscMPIInt **, void *, PetscMPIInt, PetscErrorCode (*send)(MPI_Comm, const PetscMPIInt[], PetscMPIInt, PetscMPIInt, void *, MPI_Request[], void *), PetscErrorCode (*recv)(MPI_Comm, const PetscMPIInt[], PetscMPIInt, void *, MPI_Request[], void *), void *ctx) PETSC_ATTRIBUTE_MPI_POINTER_WITH_TYPE(6, 3);
-PETSC_EXTERN PetscErrorCode PetscCommBuildTwoSidedFReq(MPI_Comm, PetscMPIInt, MPI_Datatype, PetscMPIInt, const PetscMPIInt[], const void *, PetscMPIInt *, PetscMPIInt **, void *, PetscMPIInt, MPI_Request **, MPI_Request **, PetscErrorCode (*send)(MPI_Comm, const PetscMPIInt[], PetscMPIInt, PetscMPIInt, void *, MPI_Request[], void *), PetscErrorCode (*recv)(MPI_Comm, const PetscMPIInt[], PetscMPIInt, void *, MPI_Request[], void *), void *ctx) PETSC_ATTRIBUTE_MPI_POINTER_WITH_TYPE(6, 3);
+PETSC_EXTERN PetscErrorCode PetscCommBuildTwoSidedF(MPI_Comm, PetscMPIInt, MPI_Datatype, PetscMPIInt, const PetscMPIInt[], const void *, PetscMPIInt *, PetscMPIInt **, void *, PetscMPIInt, PetscErrorCode (*send)(MPI_Comm, const PetscMPIInt[], PetscMPIInt, PetscMPIInt, void *, MPI_Request[], void *), PetscErrorCode (*recv)(MPI_Comm, const PetscMPIInt[], PetscMPIInt, void *, MPI_Request[], void *), void *) PETSC_ATTRIBUTE_MPI_POINTER_WITH_TYPE(6, 3);
+PETSC_EXTERN PetscErrorCode PetscCommBuildTwoSidedFReq(MPI_Comm, PetscMPIInt, MPI_Datatype, PetscMPIInt, const PetscMPIInt[], const void *, PetscMPIInt *, PetscMPIInt **, void *, PetscMPIInt, MPI_Request **, MPI_Request **, PetscErrorCode (*send)(MPI_Comm, const PetscMPIInt[], PetscMPIInt, PetscMPIInt, void *, MPI_Request[], void *), PetscErrorCode (*recv)(MPI_Comm, const PetscMPIInt[], PetscMPIInt, void *, MPI_Request[], void *), PetscCtx ctx) PETSC_ATTRIBUTE_MPI_POINTER_WITH_TYPE(6, 3);
 
 PETSC_EXTERN PetscErrorCode PetscCommBuildTwoSidedSetType(MPI_Comm, PetscBuildTwoSidedType);
 PETSC_EXTERN PetscErrorCode PetscCommBuildTwoSidedGetType(MPI_Comm, PetscBuildTwoSidedType *);

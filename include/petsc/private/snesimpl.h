@@ -45,7 +45,7 @@ struct _p_SNES {
   PetscBool usesnpc; /* type can use a nonlinear preconditioner */
 
   /*  ------------------------ User-provided stuff -------------------------------*/
-  void *ctx; /* user-defined context */
+  PetscCtx ctx; /* user-defined context */
 
   Vec vec_rhs; /* If non-null, solve F(x) = rhs */
   Vec vec_sol; /* pointer to solution */

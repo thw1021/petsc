@@ -261,7 +261,7 @@ PetscErrorCode PetscObjectCopyFortranFunctionPointers(PetscObject src, PetscObje
 
 .seealso: `PetscObjectGetFortranCallback()`, `PetscFortranCallbackRegister()`, `PetscFortranCallbackGetSizes()`
 @*/
-PetscErrorCode PetscObjectSetFortranCallback(PetscObject obj, PetscFortranCallbackType cbtype, PetscFortranCallbackId *cid, PetscFortranCallbackFn *func, void *ctx)
+PetscErrorCode PetscObjectSetFortranCallback(PetscObject obj, PetscFortranCallbackType cbtype, PetscFortranCallbackId *cid, PetscFortranCallbackFn *func, PetscCtx ctx)
 {
   const char *subtype = NULL;
 
@@ -535,7 +535,7 @@ PetscErrorCode PetscObjectInheritPrintedOptions(PetscObject pobj, PetscObject ob
 .seealso: `KSPSetFromOptions()`, `PCSetFromOptions()`, `SNESSetFromOptions()`, `PetscObjectProcessOptionsHandlers()`, `PetscObjectDestroyOptionsHandlers()`,
           `PetscObject`
 @*/
-PetscErrorCode PetscObjectAddOptionsHandler(PetscObject obj, PetscErrorCode (*handle)(PetscObject obj, PetscOptionItems PetscOptionsObject, void *ctx), PetscErrorCode (*destroy)(PetscObject obj, void *ctx), void *ctx)
+PetscErrorCode PetscObjectAddOptionsHandler(PetscObject obj, PetscErrorCode (*handle)(PetscObject obj, PetscOptionItems PetscOptionsObject, PetscCtx ctx), PetscErrorCode (*destroy)(PetscObject obj, PetscCtxRt ctx), PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeader(obj, 1);

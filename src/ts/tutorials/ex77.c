@@ -72,14 +72,14 @@ typedef struct {
   AppCtx *ctx; /* Context for exact solution */
 } AdvCtx;
 
-static PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   PetscInt d;
   for (d = 0; d < Nc; ++d) u[d] = 0.0;
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode constant(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode constant(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   PetscInt d;
   for (d = 0; d < Nc; ++d) u[d] = 1.0;
@@ -113,7 +113,7 @@ static PetscErrorCode constant(PetscInt dim, PetscReal time, const PetscReal x[]
     = 1 + <u, v> . <1, 1> - \alpha 0
     = 1 + u + v
 */
-static PetscErrorCode trig_trig_x(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *x, void *ctx)
+static PetscErrorCode trig_trig_x(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *x, PetscCtx ctx)
 {
   const PetscReal x0     = X[0];
   const PetscReal y0     = X[1];
@@ -125,7 +125,7 @@ static PetscErrorCode trig_trig_x(PetscInt dim, PetscReal time, const PetscReal 
   x[1] = R0 * PetscSinReal(p->omega * time + theta0);
   return PETSC_SUCCESS;
 }
-static PetscErrorCode trig_trig_u(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *u, void *ctx)
+static PetscErrorCode trig_trig_u(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *u, PetscCtx ctx)
 {
   Parameter *p = (Parameter *)ctx;
 
@@ -133,25 +133,25 @@ static PetscErrorCode trig_trig_u(PetscInt dim, PetscReal time, const PetscReal 
   u[1] = p->omega * X[0];
   return PETSC_SUCCESS;
 }
-static PetscErrorCode trig_trig_u_t(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *u, void *ctx)
+static PetscErrorCode trig_trig_u_t(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *u, PetscCtx ctx)
 {
   u[0] = 0.0;
   u[1] = 0.0;
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode trig_trig_p(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *p, void *ctx)
+static PetscErrorCode trig_trig_p(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *p, PetscCtx ctx)
 {
   p[0] = X[0] + X[1] - 1.0;
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode trig_trig_T(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *T, void *ctx)
+static PetscErrorCode trig_trig_T(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *T, PetscCtx ctx)
 {
   T[0] = time + X[0] + X[1];
   return PETSC_SUCCESS;
 }
-static PetscErrorCode trig_trig_T_t(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *T, void *ctx)
+static PetscErrorCode trig_trig_T_t(PetscInt dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *T, PetscCtx ctx)
 {
   T[0] = 1.0;
   return PETSC_SUCCESS;
@@ -344,8 +344,8 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 
 static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
 {
-  PetscErrorCode (*exactFuncs[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
-  PetscErrorCode (*exactFuncs_t[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
+  PetscErrorCode (*exactFuncs[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, PetscCtx ctx);
+  PetscErrorCode (*exactFuncs_t[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, PetscCtx ctx);
   PetscDS    prob;
   DMLabel    label;
   Parameter *ctx;
@@ -425,7 +425,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
    t_n to t_{n+1}. If we use both of these fields, we could use Crank-Nicholson or
    the method of characteristics.
 */
-static PetscErrorCode FreeStreaming(TS ts, PetscReal t, Vec X, Vec F, void *ctx)
+static PetscErrorCode FreeStreaming(TS ts, PetscReal t, Vec X, Vec F, PetscCtx ctx)
 {
   AdvCtx             *adv = (AdvCtx *)ctx;
   Vec                 u   = adv->ui;
@@ -723,9 +723,9 @@ static PetscErrorCode SetInitialConditions(TS ts, Vec u)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MonitorError(TS ts, PetscInt step, PetscReal crtime, Vec u, void *ctx)
+static PetscErrorCode MonitorError(TS ts, PetscInt step, PetscReal crtime, Vec u, PetscCtx ctx)
 {
-  PetscErrorCode (*exactFuncs[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
+  PetscErrorCode (*exactFuncs[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, PetscCtx ctx);
   void     *ctxs[3];
   DM        dm;
   PetscDS   ds;
@@ -794,7 +794,7 @@ static PetscErrorCode ComputeParticleError(TS ts, Vec u, Vec e)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MonitorParticleError(TS ts, PetscInt step, PetscReal time, Vec u, void *ctx)
+static PetscErrorCode MonitorParticleError(TS ts, PetscInt step, PetscReal time, Vec u, PetscCtx ctx)
 {
   AdvCtx            *adv = (AdvCtx *)ctx;
   DM                 sdm;

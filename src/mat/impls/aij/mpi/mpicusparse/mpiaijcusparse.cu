@@ -18,9 +18,9 @@ struct VecCUDAEquals {
   }
 };
 
-static PetscErrorCode MatCOOStructDestroy_MPIAIJCUSPARSE(void **data)
+static PetscErrorCode MatCOOStructDestroy_MPIAIJCUSPARSE(PetscCtxRt data)
 {
-  MatCOOStruct_MPIAIJ *coo = (MatCOOStruct_MPIAIJ *)*data;
+  MatCOOStruct_MPIAIJ *coo = *(MatCOOStruct_MPIAIJ **)data;
 
   PetscFunctionBegin;
   PetscCall(PetscSFDestroy(&coo->sf));

@@ -604,7 +604,7 @@ static PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
 
 .seealso: [](ch_snes), `SNES`, `SNESVINEWTONRSLS`, `SNESVIGetInactiveSet()`, `DMSetVI()`
  @*/
-PetscErrorCode SNESVISetRedundancyCheck(SNES snes, PetscErrorCode (*func)(SNES, IS, IS *, void *), void *ctx)
+PetscErrorCode SNESVISetRedundancyCheck(SNES snes, PetscErrorCode (*func)(SNES, IS, IS *, void *), PetscCtx ctx)
 {
   SNES_VINEWTONRSLS *vi = (SNES_VINEWTONRSLS *)snes->data;
 
@@ -623,7 +623,7 @@ typedef struct {
   mxArray *ctx;
 } SNESMatlabContext;
 
-PetscErrorCode SNESVIRedundancyCheck_Matlab(SNES snes, IS is_act, IS *is_redact, void *ctx)
+PetscErrorCode SNESVIRedundancyCheck_Matlab(SNES snes, IS is_act, IS *is_redact, PetscCtx ctx)
 {
   SNESMatlabContext *sctx = (SNESMatlabContext *)ctx;
   int                nlhs = 1, nrhs = 5;

@@ -801,7 +801,7 @@ static PetscErrorCode MatConvert_Htool_Dense(Mat A, MatType, MatReuse reuse, Mat
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GenEntriesTranspose(PetscInt sdim, PetscInt M, PetscInt N, const PetscInt *rows, const PetscInt *cols, PetscScalar *ptr, void *ctx)
+static PetscErrorCode GenEntriesTranspose(PetscInt sdim, PetscInt M, PetscInt N, const PetscInt *rows, const PetscInt *cols, PetscScalar *ptr, PetscCtx ctx)
 {
   MatHtoolKernelTranspose *generator = (MatHtoolKernelTranspose *)ctx;
   PetscScalar             *tmp;

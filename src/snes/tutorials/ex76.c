@@ -44,14 +44,14 @@ typedef struct {
   SolType   solType;
 } AppCtx;
 
-static PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   PetscInt d;
   for (d = 0; d < Nc; ++d) u[d] = 0.0;
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode constant(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode constant(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, PetscCtx ctx)
 {
   PetscInt d;
   for (d = 0; d < Nc; ++d) u[d] = 1.0;
@@ -79,20 +79,20 @@ static PetscErrorCode constant(PetscInt dim, PetscReal time, const PetscReal x[]
 (3) u \cdot \nabla T - \alpha \Delta T - Q = 3x^2 + y^2 - 2xy - \alpha*0 - 3x^2 - y^2 + 2xy = 0
 */
 
-static PetscErrorCode quadratic_u(PetscInt Dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *u, void *ctx)
+static PetscErrorCode quadratic_u(PetscInt Dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *u, PetscCtx ctx)
 {
   u[0] = X[0] * X[0] + X[1] * X[1];
   u[1] = 2.0 * X[0] * X[0] - 2.0 * X[0] * X[1];
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode linear_p(PetscInt Dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *p, void *ctx)
+static PetscErrorCode linear_p(PetscInt Dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *p, PetscCtx ctx)
 {
   p[0] = X[0] + X[1] - 1.0;
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode linear_T(PetscInt Dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *T, void *ctx)
+static PetscErrorCode linear_T(PetscInt Dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *T, PetscCtx ctx)
 {
   T[0] = X[0] + X[1];
   return PETSC_SUCCESS;
@@ -139,20 +139,20 @@ static void f0_quadratic_w(PetscInt dim, PetscInt Nf, PetscInt NfAux, const Pets
   u \cdot \nabla T - \alpha\Delta T - Q = (x^3 + y^3) x + (2x^3 - 3x^2y) y - 2*\alpha - (x^4 + xy^3 + 2x^3y - 3x^2y^2 - 2)   = 0
 */
 
-static PetscErrorCode cubic_u(PetscInt Dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *u, void *ctx)
+static PetscErrorCode cubic_u(PetscInt Dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *u, PetscCtx ctx)
 {
   u[0] = X[0] * X[0] * X[0] + X[1] * X[1] * X[1];
   u[1] = 2.0 * X[0] * X[0] * X[0] - 3.0 * X[0] * X[0] * X[1];
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode quadratic_p(PetscInt Dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *p, void *ctx)
+static PetscErrorCode quadratic_p(PetscInt Dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *p, PetscCtx ctx)
 {
   p[0] = 3.0 * X[0] * X[0] / 2.0 + 3.0 * X[1] * X[1] / 2.0 - 1.0;
   return PETSC_SUCCESS;
 }
 
-static PetscErrorCode quadratic_T(PetscInt Dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *T, void *ctx)
+static PetscErrorCode quadratic_T(PetscInt Dim, PetscReal time, const PetscReal X[], PetscInt Nf, PetscScalar *T, PetscCtx ctx)
 {
   T[0] = X[0] * X[0] / 2.0 + X[1] * X[1] / 2.0;
   return PETSC_SUCCESS;
@@ -349,7 +349,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 
 static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
 {
-  PetscErrorCode (*exactFuncs[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
+  PetscErrorCode (*exactFuncs[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, PetscCtx ctx);
   PetscDS    prob;
   DMLabel    label;
   Parameter *ctx;
@@ -515,8 +515,8 @@ int main(int argc, char **argv)
   PetscCall(SNESSetFromOptions(snes));
   {
     PetscDS ds;
-    PetscErrorCode (*exactFuncs[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
-    void *ctxs[3];
+    PetscErrorCode (*exactFuncs[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, PetscCtx ctx);
+    PetscCtx ctxs[3];
 
     PetscCall(DMGetDS(dm, &ds));
     PetscCall(PetscDSGetExactSolution(ds, 0, &exactFuncs[0], &ctxs[0]));
@@ -533,8 +533,8 @@ int main(int argc, char **argv)
   if (user.showError) {
     PetscDS ds;
     Vec     r;
-    PetscErrorCode (*exactFuncs[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
-    void *ctxs[3];
+    PetscErrorCode (*exactFuncs[3])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, PetscCtx ctx);
+    PetscCtx ctxs[3];
 
     PetscCall(DMGetDS(dm, &ds));
     PetscCall(PetscDSGetExactSolution(ds, 0, &exactFuncs[0], &ctxs[0]));

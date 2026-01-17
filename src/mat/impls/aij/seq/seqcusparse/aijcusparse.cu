@@ -2618,7 +2618,7 @@ struct MatProductCtx_MatMatCusparse {
 #endif
 };
 
-static PetscErrorCode MatProductCtxDestroy_MatMatCusparse(void **data)
+static PetscErrorCode MatProductCtxDestroy_MatMatCusparse(PetscCtxRt data)
 {
   MatProductCtx_MatMatCusparse *mmdata = *(MatProductCtx_MatMatCusparse **)data;
 
@@ -2638,7 +2638,7 @@ static PetscErrorCode MatProductCtxDestroy_MatMatCusparse(void **data)
   if (mmdata->mmBuffer2) PetscCallCUDA(cudaFree(mmdata->mmBuffer2));
 #endif
   PetscCall(MatDestroy(&mmdata->X));
-  PetscCall(PetscFree(*data));
+  PetscCall(PetscFree(mmdata));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4358,9 +4358,9 @@ static PetscErrorCode MatSeqAIJCUSPARSEInvalidateTranspose(Mat A, PetscBool dest
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatCOOStructDestroy_SeqAIJCUSPARSE(void **data)
+static PetscErrorCode MatCOOStructDestroy_SeqAIJCUSPARSE(PetscCtxRt ctx)
 {
-  MatCOOStruct_SeqAIJ *coo = (MatCOOStruct_SeqAIJ *)*data;
+  MatCOOStruct_SeqAIJ *coo = *(MatCOOStruct_SeqAIJ **)ctx;
 
   PetscFunctionBegin;
   PetscCallCUDA(cudaFree(coo->perm));

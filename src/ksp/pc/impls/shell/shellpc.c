@@ -6,7 +6,7 @@
 #include <petsc/private/pcimpl.h> /*I "petscpc.h" I*/
 
 typedef struct {
-  void *ctx; /* user provided contexts for preconditioner */
+  PetscCtx ctx; /* user provided contexts for preconditioner */
 
   PetscErrorCode (*destroy)(PC);
   PetscErrorCode (*setup)(PC);
@@ -82,7 +82,7 @@ PetscErrorCode PCShellGetContext(PC pc, PetscCtxRt ctx)
 
 .seealso: [](ch_ksp), `PC`, `PCShellGetContext()`, `PCSHELL`, `PCShellSetApply()`, `PCShellSetDestroy()`
 @*/
-PetscErrorCode PCShellSetContext(PC pc, void *ctx)
+PetscErrorCode PCShellSetContext(PC pc, PetscCtx ctx)
 {
   PC_Shell *shell = (PC_Shell *)pc->data;
   PetscBool flg;
