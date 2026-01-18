@@ -75,7 +75,6 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
 {
   PetscInt      dim = 0, n_vert_local, d, N, n_obs_global, n_state_local;
   Vec          *obs_vecs;
-  PetscScalar **obs_coords;
   MPI_Comm      comm;
   PetscInt      n_state_global;
 
@@ -105,13 +104,11 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
 
   /* Allocate storage for observation locations */
   PetscCall(PetscMalloc1(dim, &obs_vecs));
-  PetscCall(PetscMalloc1(dim, &obs_coords));
 
   /* Compute observation locations per dimension */
   for (d = 0; d < dim; ++d) {
     PetscCall(MatCreateVecs(H, NULL, &obs_vecs[d]));
     PetscCall(MatMult(H, Vecxyz[d], obs_vecs[d]));
-    PetscCall(VecGetArray(obs_vecs[d], &obs_coords[d]));
   }
 
   /* Create output matrix Q in N/n_dof x P */
@@ -144,13 +141,32 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
   }
 
   /* Observation Coordinates */
-  Kokkos::View<PetscReal **, Kokkos::LayoutRight, MemSpace> obs_coords_dev("obs_coords", n_obs_local, dim);
+  Kokkos::View<PetscReal **, Kokkos::LayoutRight, MemSpace> obs_coords_dev("obs_coords", n_obs_global, dim);
   {
-    Kokkos::View<PetscReal **, Kokkos::LayoutRight, Kokkos::HostSpace> obs_coords_host("obs_coords_host", n_obs_local, dim);
-    for (PetscInt j = 0; j < n_obs_local; ++j) {
-      for (d = 0; d < dim; ++d) obs_coords_host(j, d) = PetscRealPart(obs_coords[d][j]);
+    PetscReal *raw_obs_coords;
+    PetscCall(PetscMalloc1(n_obs_global * dim, &raw_obs_coords));
+
+    for (d = 0; d < dim; ++d) {
+      VecScatter ctx;
+      Vec        seq_vec;
+      const PetscScalar *array;
+
+      PetscCall(VecScatterCreateToAll(obs_vecs[d], &ctx, &seq_vec));
+      PetscCall(VecScatterBegin(ctx, obs_vecs[d], seq_vec, INSERT_VALUES, SCATTER_FORWARD));
+      PetscCall(VecScatterEnd(ctx, obs_vecs[d], seq_vec, INSERT_VALUES, SCATTER_FORWARD));
+
+      PetscCall(VecGetArrayRead(seq_vec, &array));
+      for (PetscInt j = 0; j < n_obs_global; ++j) {
+        raw_obs_coords[j * dim + d] = PetscRealPart(array[j]);
+      }
+      PetscCall(VecRestoreArrayRead(seq_vec, &array));
+      PetscCall(VecScatterDestroy(&ctx));
+      PetscCall(VecDestroy(&seq_vec));
     }
+
+    Kokkos::View<PetscReal **, Kokkos::LayoutRight, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> obs_coords_host(raw_obs_coords, n_obs_global, dim);
     Kokkos::deep_copy(obs_coords_dev, obs_coords_host);
+    PetscCall(PetscFree(raw_obs_coords));
   }
 
   PetscInt rstart;
@@ -167,14 +183,9 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
   Kokkos::deep_copy(best_dists_dev, 1.0e30);
 
   /* Global Observation Indices */
-  Kokkos::View<PetscInt *, MemSpace> global_obs_indices_dev("global_obs_indices", n_obs_local);
-  {
-    Kokkos::View<PetscInt *, Kokkos::HostSpace> global_obs_indices_host("global_obs_indices_host", n_obs_local);
-    PetscInt                                    rstart;
-    PetscCall(MatGetOwnershipRange(H, &rstart, NULL));
-    for (PetscInt j = 0; j < n_obs_local; ++j) { global_obs_indices_host(j) = rstart + j; }
-    Kokkos::deep_copy(global_obs_indices_dev, global_obs_indices_host);
-  }
+  Kokkos::View<PetscInt *, MemSpace> global_obs_indices_dev("global_obs_indices", n_obs_global);
+  Kokkos::parallel_for(
+    "InitGlobalObsIndices", Kokkos::RangePolicy<ExecSpace>(0, n_obs_global), KOKKOS_LAMBDA(const PetscInt j) { global_obs_indices_dev(j) = j; });
 
   /* Main Kernel */
   Kokkos::parallel_for(
@@ -183,7 +194,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
       PetscInt  count            = 0;
 
       // Iterate over all observations
-      for (PetscInt j = 0; j < n_obs_local; ++j) {
+      for (PetscInt j = 0; j < n_obs_global; ++j) {
         PetscReal dist2 = 0.0;
         for (PetscInt d = 0; d < dim; ++d) {
           PetscReal diff = PetscRealPart(vertex_coords_dev(i, d)) - obs_coords_dev(j, d);
@@ -241,11 +252,9 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
 
   /* Cleanup Phase 2 storage */
   for (d = 0; d < dim; ++d) {
-    PetscCall(VecRestoreArray(obs_vecs[d], &obs_coords[d]));
     PetscCall(VecDestroy(&obs_vecs[d]));
   }
   PetscCall(PetscFree(obs_vecs));
-  PetscCall(PetscFree(obs_coords));
 
   /* Assemble matrix */
   PetscCall(MatAssemblyBegin(*Q, MAT_FINAL_ASSEMBLY));
