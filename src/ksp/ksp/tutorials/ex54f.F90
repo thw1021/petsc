@@ -26,16 +26,18 @@ program main
   PetscErrorCode ierr
   PetscViewer viewer
   PetscInt qj, qi, ne, M, Istart, Iend, geq
-  PetscInt ki, kj, nel, ll, j1, i1, ndf, f4
-  PetscInt f2, f9, f6, one
+  PetscInt ki, kj, ll, j1, i1
+  PetscInt, parameter :: ndf = 1
+  PetscInt, parameter :: nel = 4 ! nodes per element (quad)
   PetscInt :: idx(4)
   PetscBool flg, out_matlab
   PetscMPIInt size, rank
-  PetscScalar::ss(4, 4), val
-  PetscReal::shp(3, 9), sg(3, 9)
-  PetscReal::thk, a1, a2
-  PetscReal::theta, eps, h, x, y, xsj
-  PetscReal::coord(2, 4), dd(2, 2), ev(3), blb(2)
+  PetscScalar :: ss(4, 4), val
+  PetscReal :: shp(3, 9), sg(3, 9)
+  PetscReal :: thk = 1.0              ! thickness
+  PetscReal :: theta, eps, h, x, y, xsj, a1, a2
+  PetscReal :: coord(2, 4), dd(2, 2), ev(3), blb(2)
+  PetscReal, parameter :: rad2deg = 57.2957795
 
   common/ex54_theta/theta
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -44,22 +46,17 @@ program main
   PetscCallA(PetscInitialize(ierr))
   PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD, size, ierr))
   PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD, rank, ierr))
-  one = 1
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                 set parameters
-!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  f4 = 4
-  f2 = 2
-  f9 = 9
-  f6 = 6
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   ne = 9
   PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-ne', ne, flg, ierr))
   h = 2.0/real(ne)
   M = (ne + 1)*(ne + 1)
   theta = 90.0
-!     theta is input in degrees
+! theta is input in degrees
   PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-theta', theta, flg, ierr))
-  theta = theta/57.2957795
+  theta = theta/rad2deg
   eps = 1.0
   PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-epsilon', eps, flg, ierr))
   ki = 2
@@ -75,12 +72,12 @@ program main
 
   ev(1) = 1.0
   ev(2) = eps*ev(1)
-!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!     Compute the matrix and right-hand-side vector that define
-!     the linear system, Ax = b.
-!     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!  Create matrix.  When using MatCreate(), the matrix format can
-!  be specified at runtime.
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+!    Compute the matrix and right-hand-side vector that define
+!    the linear system, Ax = b.
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+! Create matrix.  When using MatCreate(), the matrix format can
+! be specified at runtime.
   PetscCallA(MatCreate(PETSC_COMM_WORLD, Amat, ierr))
   PetscCallA(MatSetSizes(Amat, PETSC_DECIDE, PETSC_DECIDE, M, M, ierr))
   PetscCallA(MatSetType(Amat, MATAIJ, ierr))
@@ -91,7 +88,7 @@ program main
   else
     PetscCallA(MatSetType(Amat, MATMPIAIJ, ierr))
   end if
-  PetscCallA(MatMPIAIJSetPreallocation(Amat, f9, PETSC_NULL_INTEGER_ARRAY, f6, PETSC_NULL_INTEGER_ARRAY, ierr))
+  PetscCallA(MatMPIAIJSetPreallocation(Amat, 9_PETSC_INT_KIND, PETSC_NULL_INTEGER_ARRAY, 6_PETSC_INT_KIND, PETSC_NULL_INTEGER_ARRAY, ierr))
   PetscCallA(MatSetFromOptions(Amat, ierr))
   PetscCallA(MatSetUp(Amat, ierr))
   PetscCallA(MatGetOwnershipRange(Amat, Istart, Iend, ierr))
@@ -101,13 +98,10 @@ program main
   PetscCallA(VecSetFromOptions(xvec, ierr))
   PetscCallA(VecDuplicate(xvec, bvec, ierr))
   PetscCallA(VecDuplicate(xvec, uvec, ierr))
-!  Assemble matrix.
-!   - Note that MatSetValues() uses 0-based row and column numbers
-!     in Fortran as well as in C (as set here in the array "col").
-  thk = 1.0              ! thickness
-  nel = 4                   ! nodes per element (quad)
-  ndf = 1
-  call int2d(f2, sg)
+! Assemble matrix.
+!  - Note that MatSetValues() uses 0-based row and column numbers
+!    in Fortran as well as in C (as set here in the array "col").
+  call int2d(2_PETSC_INT_KIND, sg)
   do geq = Istart, Iend - 1, 1
     qj = geq/(ne + 1); qi = mod(geq, (ne + 1))
     x = h*qi - 1.0; y = h*qj - 1.0 ! lower left corner (-1,-1)
@@ -119,9 +113,9 @@ program main
 ! form stiff
       ss = 0.0
       do ll = 1, 4
-        call shp2dquad(sg(1, ll), sg(2, ll), coord, shp, xsj, f2)
+        call shp2dquad(sg(1, ll), sg(2, ll), coord, shp, xsj, 2_PETSC_INT_KIND)
         xsj = xsj*sg(3, ll)*thk
-        call thfx2d(ev, coord, shp, dd, f2, f2, f4, ex54_psi)
+        call thfx2d(ev, coord, shp, dd, 2_PETSC_INT_KIND, 4_PETSC_INT_KIND, ex54_psi)
         j1 = 1
         do kj = 1, nel
           a1 = (dd(1, 1)*shp(1, kj) + dd(1, 2)*shp(2, kj))*xsj
@@ -141,7 +135,7 @@ program main
       idx(1) = geq; idx(2) = geq + 1; idx(3) = geq + (ne + 1) + 1
       idx(4) = geq + (ne + 1)
       if (qj > 0) then
-        PetscCallA(MatSetValues(Amat, f4, idx, f4, idx, reshape(ss, [f4*f4]), ADD_VALUES, ierr))
+        PetscCallA(MatSetValues(Amat, 4_PETSC_INT_KIND, idx, 4_PETSC_INT_KIND, idx, reshape(ss, [4_PETSC_INT_KIND**2]), ADD_VALUES, ierr))
       else                !     a BC
         do ki = 1, 4, 1
           do kj = 1, 4, 1
@@ -154,12 +148,12 @@ program main
             end if
           end do
         end do
-        PetscCallA(MatSetValues(Amat, f4, idx, f4, idx, reshape(ss, [f4*f4]), ADD_VALUES, ierr))
+        PetscCallA(MatSetValues(Amat, 4_PETSC_INT_KIND, idx, 4_PETSC_INT_KIND, idx, reshape(ss, [4_PETSC_INT_KIND**2]), ADD_VALUES, ierr))
       end if               ! BC
     end if                  ! add element
     if (qj > 0) then      ! set rhs
       val = h*h*exp(-100*((x + h/2) - blb(1))**2)*exp(-100*((y + h/2) - blb(2))**2)
-      PetscCallA(VecSetValues(bvec, one, [geq], [val], INSERT_VALUES, ierr))
+      PetscCallA(VecSetValues(bvec, 1_PETSC_INT_KIND, [geq], [val], INSERT_VALUES, ierr))
     end if
   end do
   PetscCallA(MatAssemblyBegin(Amat, MAT_FINAL_ASSEMBLY, ierr))
@@ -256,9 +250,9 @@ contains
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !     Compute thermal gradient and flux
 
-  subroutine thfx2d(ev, xl, shp, dd, ndm, ndf, nel, dir)
+  subroutine thfx2d(ev, xl, shp, dd, ndm, nel, dir)
 
-    PetscInt ndm, ndf, nel, i
+    PetscInt ndm, nel, i
     PetscReal ev(2), xl(ndm, nel), shp(3, *), dir
     PetscReal xx, yy, psi, cs, sn, c2, s2, dd(2, 2)
 
@@ -269,7 +263,7 @@ contains
       yy = yy + shp(3, i)*xl(2, i)
     end do
     psi = dir(xx, yy)
-!     Compute thermal flux
+!   Compute thermal flux
     cs = cos(psi)
     sn = sin(psi)
     c2 = cs*cs
@@ -311,7 +305,7 @@ contains
     PetscReal s, t, xsj, xsj1, sh, th, sp, tp, sm
     PetscReal tm, xl(ndm, 4), shp(3, 4)
 
-!     Set up interpolations
+!   Set up interpolations
 
     sh = 0.5*s
     th = 0.5*t
@@ -324,7 +318,7 @@ contains
     shp(3, 3) = sp*tp
     shp(3, 4) = sm*tp
 
-!     Set up natural coordinate functions (times 4)
+!   Set up natural coordinate functions (times 4)
 
     xo = xl(1, 1) - xl(1, 2) + xl(1, 3) - xl(1, 4)
     xs = -xl(1, 1) + xl(1, 2) + xl(1, 3) - xl(1, 4) + xo*t
@@ -333,11 +327,11 @@ contains
     ys = -xl(2, 1) + xl(2, 2) + xl(2, 3) - xl(2, 4) + yo*t
     yt = -xl(2, 1) - xl(2, 2) + xl(2, 3) + xl(2, 4) + yo*s
 
-!     Compute jacobian (times 16)
+!   Compute jacobian (times 16)
 
     xsj1 = xs*yt - xt*ys
 
-!     Divide jacobian by 16 (multiply by .0625)
+!   Divide jacobian by 16 (multiply by .0625)
 
     xsj = 0.0625*xsj1
     if (xsj1 == 0.0) then
@@ -346,14 +340,14 @@ contains
       xsj1 = 1.0/xsj1
     end if
 
-!     Divide functions by jacobian
+!   Divide functions by jacobian
 
     xs = (xs + xs)*xsj1
     xt = (xt + xt)*xsj1
     ys = (ys + ys)*xsj1
     yt = (yt + yt)*xsj1
 
-!     Multiply by interpolations
+!   Multiply by interpolations
 
     ytm = yt*tm
     ysm = ys*sm
@@ -364,7 +358,7 @@ contains
     xtp = xt*tp
     xsp = xs*sp
 
-!     Compute shape functions
+!   Compute shape functions
 
     shp(1, 1) = -ytm + ysm
     shp(1, 2) = ytm + ysp

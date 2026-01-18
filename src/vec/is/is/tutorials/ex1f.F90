@@ -2,15 +2,13 @@
 !  Description: Creates an index set based on a set of integers. Views that index set
 !  and then destroys it.
 !
-!
-!
 #include <petsc/finclude/petscis.h>
 program main
   use petscis
   implicit none
 
   PetscErrorCode ierr
-  PetscInt n, indices(5), index1, index5
+  PetscInt n, indices(5), index1, index5, i
   PetscMPIInt rank
   IS is
   PetscInt, pointer :: indices2(:)
@@ -21,34 +19,27 @@ program main
 !  Create an index set with 5 entries. Each processor creates
 !  its own index set with its own list of integers.
 
-  indices(1) = rank + 1
-  indices(2) = rank + 2
-  indices(3) = rank + 3
-  indices(4) = rank + 4
-  indices(5) = rank + 5
-
-!     if using 64-bit integers cannot pass 5 into routine expecting an integer*8
   n = 5
+  do i = 1, n
+    indices(i) = rank + i
+  end do
+
   PetscCallA(ISCreateGeneral(PETSC_COMM_SELF, n, indices, PETSC_COPY_VALUES, is, ierr))
 
-!  Print the index set to stdout
+! Print the index set to stdout
 
   PetscCallA(ISView(is, PETSC_VIEWER_STDOUT_SELF, ierr))
 
-!  Get the number of indices in the set
+! Get the number of indices in the set
 
   PetscCallA(ISGetLocalSize(is, n, ierr))
 
-!   Get the indices in the index set
+!  Get the indices in the index set
 
   PetscCallA(ISGetIndices(is, indices2, ierr))
 
-!   Now any code that needs access to the list of integers
-!   has access to it here
-
-!
-!      Bug in IRIX64-F90 libraries - write/format cannot handle integer(integer*8 + integer)
-!
+! Now any code that needs access to the list of integers
+! has access to it here
 
   index1 = indices(1)
   index5 = indices(5)
