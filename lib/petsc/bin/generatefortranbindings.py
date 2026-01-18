@@ -133,7 +133,7 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
         else:
           fd.write('  ' + ktypename + ' :: ' + k.name + '\n')
         cnt = cnt + 1
-      fd.write('  PetscErrorCode :: ierr\n')
+      fd.write('  PetscErrorCode, intent(out) :: ierr\n')
       fd.write('  end subroutine\n')
     fd.write('  end interface\n')
     fd.write('#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)\n')
