@@ -4,17 +4,14 @@ program newnonzero
   implicit none
 
   Mat :: A
-  PetscInt :: n, m, idxm(1), idxn(1), nl1, nl2, zero, one, i
+  PetscInt, parameter :: zero = 0, one = 1, n = 3, m = n
+  PetscInt :: idxm(1), idxn(1), nl1, nl2, i
   PetscScalar :: v(1), value(1), values(2)
   PetscErrorCode :: ierr
   IS :: is
   ISLocalToGlobalMapping :: ismap
 
   PetscCallA(PetscInitialize(ierr))
-  zero = 0
-  one = 1
-  n = 3
-  m = n
   PetscCallA(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, m, one, PETSC_NULL_INTEGER_ARRAY, zero, PETSC_NULL_INTEGER_ARRAY, A, ierr))
 
   PetscCallA(MatGetOwnershipRange(A, nl1, nl2, ierr))

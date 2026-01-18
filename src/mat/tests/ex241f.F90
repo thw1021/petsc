@@ -9,16 +9,14 @@ program test_assembly
   PetscInt, parameter :: wp = real64, n = 10
   PetscScalar, parameter :: zero = 0.0, one = 1.0
   Mat      :: L
-  PetscInt :: istart, iend, row, i1, i0
+  PetscInt :: istart, iend, row
+  PetscInt, parameter :: i0 = 1, i1 = 1
   PetscErrorCode :: ierr
 
   PetscInt cols(1), rows(1)
   PetscScalar vals(1)
 
   PetscCallA(PetscInitialize(ierr))
-
-  i0 = 0
-  i1 = 1
 
   PetscCallA(MatCreate(PETSC_COMM_WORLD, L, ierr))
   PetscCallA(MatSetType(L, MATAIJ, ierr))
@@ -34,10 +32,8 @@ program test_assembly
 
   ! assembling a diagonal matrix
   do row = istart, iend - 1
-
     cols = [row]; vals = [one]; rows = [row]
     PetscCallA(MatSetValues(L, i1, rows, i1, cols, vals, ADD_VALUES, ierr))
-
   end do
 
   PetscCallA(MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY, ierr))

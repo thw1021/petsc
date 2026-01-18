@@ -11,11 +11,6 @@ program main
   PetscInt localvert(4), nlocal
   PetscMPIInt rank
   IS is
-  PetscInt one, zero
-
-!  Needed to work with 64-bit integers from Fortran
-  one = 1
-  zero = 0
 
   PetscCallA(PetscInitialize(ierr))
   PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD, rank, ierr))
@@ -23,10 +18,7 @@ program main
   nlocal = 0
   if (rank == 0) then
     nlocal = 4
-    localvert(1) = 0
-    localvert(2) = 1
-    localvert(3) = 2
-    localvert(4) = 3
+    localvert = [0, 1, 2, 3]
   end if
 
 !     Test AOCreateBasic()
@@ -38,7 +30,7 @@ program main
   PetscCallA(AODestroy(ao, ierr))
 
   PetscCallA(AOCreate(PETSC_COMM_WORLD, ao, ierr))
-  PetscCallA(ISCreateStride(PETSC_COMM_WORLD, one, zero, one, is, ierr))
+  PetscCallA(ISCreateStride(PETSC_COMM_WORLD, 1_PETSC_INT_KIND, 0_PETSC_INT_KIND, 1_PETSC_INT_KIND, is, ierr))
   PetscCallA(AOSetIS(ao, is, is, ierr))
   PetscCallA(AOSetType(ao, AOMEMORYSCALABLE, ierr))
   PetscCallA(ISDestroy(is, ierr))
