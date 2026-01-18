@@ -126,18 +126,21 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
   using ExecSpace = Kokkos::DefaultExecutionSpace;
   using MemSpace  = ExecSpace::memory_space;
 
-  /* Vertex Coordinates -- put coords in vertex_coords_host directly, use Layout::Left with unmanaged memory */
-  Kokkos::View<PetscReal **, Kokkos::LayoutRight, MemSpace> vertex_coords_dev("vertex_coords", n_vert_local, dim);
+  /* Vertex Coordinates */
+  Kokkos::View<PetscScalar **, Kokkos::LayoutRight, MemSpace> vertex_coords_dev("vertex_coords", n_vert_local, dim);
   {
-    Kokkos::View<PetscReal **, Kokkos::LayoutRight, Kokkos::HostSpace> vertex_coords_host("vertex_coords_host", n_vert_local, dim);
-    PetscScalar                                                       *local_coords_array;
+    PetscScalar *raw_coords;
 
+    PetscCall(PetscMalloc1(n_vert_local * dim, &raw_coords));
     for (d = 0; d < dim; ++d) {
+      PetscScalar *local_coords_array;
       PetscCall(VecGetArray(Vecxyz[d], &local_coords_array));
-      for (PetscInt v = 0; v < n_vert_local; ++v) vertex_coords_host(v, d) = PetscRealPart(local_coords_array[v]);
+      PetscCall(PetscMemcpy(&raw_coords[d * n_vert_local], local_coords_array, n_vert_local * sizeof(PetscScalar)));
       PetscCall(VecRestoreArray(Vecxyz[d], &local_coords_array));
     }
+    Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> vertex_coords_host(raw_coords, n_vert_local, dim);
     Kokkos::deep_copy(vertex_coords_dev, vertex_coords_host);
+    PetscCall(PetscFree(raw_coords));
   }
 
   /* Observation Coordinates */
@@ -190,7 +193,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
       for (PetscInt j = 0; j < n_obs_local; ++j) {
         PetscReal dist2 = 0.0;
         for (PetscInt d = 0; d < dim; ++d) {
-          PetscReal diff = vertex_coords_dev(i, d) - obs_coords_dev(j, d);
+          PetscReal diff = PetscRealPart(vertex_coords_dev(i, d)) - obs_coords_dev(j, d);
           dist2 += diff * diff;
         }
 
