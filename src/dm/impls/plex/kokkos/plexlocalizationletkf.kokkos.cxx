@@ -156,7 +156,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
       PetscCall(VecScatterEnd(ctx, obs_vecs[d], seq_vec, INSERT_VALUES, SCATTER_FORWARD));
 
       PetscCall(VecGetArrayRead(seq_vec, &array));
-      for (PetscInt j = 0; j < n_obs_global; ++j) { raw_obs_coords[j * dim + d] = PetscRealPart(array[j]); }
+      for (PetscInt j = 0; j < n_obs_global; ++j) raw_obs_coords[j * dim + d] = PetscRealPart(array[j]);
       PetscCall(VecRestoreArrayRead(seq_vec, &array));
       PetscCall(VecScatterDestroy(&ctx));
       PetscCall(VecDestroy(&seq_vec));
@@ -244,7 +244,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
   }
 
   /* Cleanup Phase 2 storage */
-  for (d = 0; d < dim; ++d) { PetscCall(VecDestroy(&obs_vecs[d])); }
+  for (d = 0; d < dim; ++d) PetscCall(VecDestroy(&obs_vecs[d]));
   PetscCall(PetscFree(obs_vecs));
 
   /* Assemble matrix */
