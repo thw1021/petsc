@@ -9,25 +9,22 @@ program main
   implicit none
 
   PetscErrorCode ierr
-  PetscInt indices(5), n
-  PetscInt five
+  PetscInt, parameter :: n = 5
+  PetscInt indices(n), i
   PetscMPIInt rank
   PetscInt, pointer :: idx(:)
   IS is
 
-  five = 5
   PetscCallA(PetscInitialize(ierr))
   PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD, rank, ierr))
 
 !  Create an index set with 5 entries. Each processor creates
 !  its own index set with its own list of integers.
 
-  indices(1) = rank + 1
-  indices(2) = rank + 2
-  indices(3) = rank + 3
-  indices(4) = rank + 4
-  indices(5) = rank + 5
-  PetscCallA(ISCreateGeneral(PETSC_COMM_SELF, five, indices, PETSC_COPY_VALUES, is, ierr))
+  do i = 1, n
+    indices(1) = rank + i
+  end do
+  PetscCallA(ISCreateGeneral(PETSC_COMM_SELF, n, indices, PETSC_COPY_VALUES, is, ierr))
 
 !  Print the index set to stdout
 

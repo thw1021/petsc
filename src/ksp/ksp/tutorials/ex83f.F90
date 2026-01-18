@@ -41,9 +41,7 @@ program main
   allocate (ia(n + 1), ja(nz), a(nz))
   allocate (rows(nz), cols(nz))
 
-  do i = 1, n
-    b(i) = 1.0
-  end do
+  b(1:n) = 1.0
 
 !     PETSc ia() and ja() values begin at 0, not 1, you may need to shift the indices used in your code
   ia(1) = 0
@@ -89,7 +87,7 @@ program main
 
   PetscCallA(KSPCreate(PETSC_COMM_SELF, ksp, ierr))
   PetscCallA(KSPSetErrorIfNotConverged(ksp, PETSC_TRUE, ierr))
-!     Default to a direct sparse LU solver for robustness
+! Default to a direct sparse LU solver for robustness
   PetscCallA(KSPGetPC(ksp, pc, ierr))
   PetscCallA(PCSetType(pc, PCLU, ierr))
   PetscCallA(KSPSetFromOptions(ksp, ierr))
@@ -97,7 +95,7 @@ program main
 
   PetscCallA(KSPSolve(ksp, rhs, solution, ierr))
 
-!     Keep the same size and nonzero structure of the matrix but change its numerical entries
+! Keep the same size and nonzero structure of the matrix but change its numerical entries
   do i = 2, n - 1
     a(2 + 3*(i - 2) + 1) = 4.0
   end do

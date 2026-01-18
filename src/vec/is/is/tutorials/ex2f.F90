@@ -11,25 +11,23 @@ program main
   implicit none
 
   PetscErrorCode ierr
-  PetscInt i, n, first, step, val
+  PetscInt i, val
+  PetscInt, parameter :: n = 10, first = 3, step = 2
   IS set
   PetscInt, pointer :: index(:)
 
   PetscCallA(PetscInitialize(ierr))
-  n = 10
-  first = 3
-  step = 2
 
-!     Create stride index set, starting at 3 with a stride of 2 Note
-!     each processor is generating its own index set (in this case they
-!     are all identical)
+! Create stride index set, starting at 3 with a stride of 2 Note
+! each processor is generating its own index set (in this case they
+! are all identical)
 
   PetscCallA(ISCreateStride(PETSC_COMM_SELF, n, first, step, set, ierr))
   PetscCallA(ISView(set, PETSC_VIEWER_STDOUT_SELF, ierr))
 
-!     Extract the indices values from the set. Demonstrates how a Fortran
-!     code can directly access the array storing a PETSc index set with
-!     ISGetIndices().
+! Extract the indices values from the set. Demonstrates how a Fortran
+! code can directly access the array storing a PETSc index set with
+! ISGetIndices().
 
   PetscCallA(ISGetIndices(set, index, ierr))
   write (6, 20)
@@ -44,9 +42,7 @@ program main
 !     Determine information on stride
 
   PetscCallA(ISStrideGetInfo(set, first, step, ierr))
-  if (first /= 3 .or. step /= 2) then
-    print *, 'Stride info not correct!'
-  end if
+  if (first /= 3 .or. step /= 2) print *, 'Stride info not correct!'
 
   PetscCallA(ISDestroy(set, ierr))
   PetscCallA(PetscFinalize(ierr))
