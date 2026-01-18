@@ -46,7 +46,7 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
 
   Input Parameters:
 + plex - The DMPlex object
-. numobservations - Number of nearest observations to use per vertex
+. nlocobs - Number of nearest observations to use per vertex (MAX_Q_NUM_LOCAL_OBSERVATIONS)
 . numglobalobs - Total number of observations
 - H - Observation operator matrix
 
@@ -56,7 +56,7 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
   Notes:
   The output matrix Q has dimensions (numVertices x numglobalobs) where
   numVertices is the number of vertices in the DMPlex. Each row contains
-  exactly numobservations non-zero entries corresponding to the nearest
+  exactly nlocobs non-zero entries corresponding to the nearest
   observations, weighted by the Gaspari-Cohn fifth-order piecewise
   rational function.
 
@@ -70,7 +70,7 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
 
 .seealso: `DMPLEX`, `DMPlexGetDepthStratum()`, `DMGetCoordinatesLocal()`
 @*/
-PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservations, PetscInt numglobalobs, Mat H, Mat *Q)
+PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt nlocobs, PetscInt numglobalobs, Mat H, Mat *Q)
 {
   PetscInt      dim, vStart, vEnd, numVertices, d;
   PetscInt      M, N;
@@ -120,7 +120,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   PetscCall(MatCreate(comm, Q));
   PetscCall(MatSetSizes(*Q, localRows, PETSC_DECIDE, globalRows, numglobalobs));
   PetscCall(MatSetType(*Q, MATMPIAIJ));
-  PetscCall(MatMPIAIJSetPreallocation(*Q, numobservations, NULL, numobservations, NULL));
+  PetscCall(MatMPIAIJSetPreallocation(*Q, nlocobs, NULL, nlocobs, NULL));
   PetscCall(MatSetUp(*Q));
 
   /* Prepare Kokkos Views */
@@ -172,12 +172,12 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
   }
 
   /* Output Views */
-  Kokkos::View<PetscInt **, Kokkos::LayoutRight, MemSpace>    indices_dev("indices", numVertices, numobservations);
-  Kokkos::View<PetscScalar **, Kokkos::LayoutRight, MemSpace> values_dev("values", numVertices, numobservations);
+  Kokkos::View<PetscInt **, Kokkos::LayoutRight, MemSpace>    indices_dev("indices", numVertices, nlocobs);
+  Kokkos::View<PetscScalar **, Kokkos::LayoutRight, MemSpace> values_dev("values", numVertices, nlocobs);
 
   /* Temporary storage for top-k per vertex */
-  Kokkos::View<PetscReal **, Kokkos::LayoutRight, MemSpace> best_dists_dev("best_dists", numVertices, numobservations);
-  Kokkos::View<PetscInt **, Kokkos::LayoutRight, MemSpace>  best_idxs_dev("best_idxs", numVertices, numobservations);
+  Kokkos::View<PetscReal **, Kokkos::LayoutRight, MemSpace> best_dists_dev("best_dists", numVertices, nlocobs);
+  Kokkos::View<PetscInt **, Kokkos::LayoutRight, MemSpace>  best_idxs_dev("best_idxs", numVertices, nlocobs);
 
   Kokkos::deep_copy(best_dists_dev, 1.0e30);
 
@@ -195,7 +195,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
           dist2 += diff * diff;
         }
 
-        if (count < numobservations) {
+        if (count < nlocobs) {
           // Insert sorted
           PetscInt pos = count;
           while (pos > 0 && best_dists_dev(i, pos - 1) > dist2) {
@@ -206,10 +206,10 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
           best_dists_dev(i, pos) = dist2;
           best_idxs_dev(i, pos)  = j;
           count++;
-          if (count == numobservations) current_max_dist = best_dists_dev(i, numobservations - 1);
+          if (count == nlocobs) current_max_dist = best_dists_dev(i, nlocobs - 1);
         } else if (dist2 < current_max_dist) {
           // Insert sorted
-          PetscInt pos = numobservations - 1;
+          PetscInt pos = nlocobs - 1;
           while (pos > 0 && best_dists_dev(i, pos - 1) > dist2) {
             best_dists_dev(i, pos) = best_dists_dev(i, pos - 1);
             best_idxs_dev(i, pos)  = best_idxs_dev(i, pos - 1);
@@ -217,16 +217,16 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
           }
           best_dists_dev(i, pos) = dist2;
           best_idxs_dev(i, pos)  = j;
-          current_max_dist       = best_dists_dev(i, numobservations - 1);
+          current_max_dist       = best_dists_dev(i, nlocobs - 1);
         }
       }
 
       // Compute weights
-      PetscReal radius2 = best_dists_dev(i, numobservations - 1);
+      PetscReal radius2 = best_dists_dev(i, nlocobs - 1);
       PetscReal radius  = std::sqrt(radius2);
       if (radius == 0.0) radius = 1.0;
 
-      for (PetscInt k = 0; k < numobservations; ++k) {
+      for (PetscInt k = 0; k < nlocobs; ++k) {
         PetscReal dist    = std::sqrt(best_dists_dev(i, k));
         indices_dev(i, k) = best_idxs_dev(i, k);
         values_dev(i, k)  = GaspariCohn(dist, radius);
@@ -244,7 +244,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(DM plex, PetscInt numobservation
 
   for (PetscInt i = 0; i < numVertices; ++i) {
     PetscInt globalRow = global_rows_host(i);
-    PetscCall(MatSetValues(*Q, 1, &globalRow, numobservations, &indices_host(i, 0), &values_host(i, 0), INSERT_VALUES));
+    PetscCall(MatSetValues(*Q, 1, &globalRow, nlocobs, &indices_host(i, 0), &values_host(i, 0), INSERT_VALUES));
   }
 
   /* Cleanup Phase 2 storage */
