@@ -670,24 +670,30 @@ class build_ext(_build_ext):
             self.run_command('build_src')
 
     def build_stubs(self):
-        env = os.environ.copy()
+        pkgname,  modname = 'petsc4py', 'PETSc'
+        srcdir = Path(__file__).parent.parent / 'src' / pkgname
+        blddir = Path(self.build_lib) / pkgname
 
+        alldeps = glob.glob(str(blddir / 'lib' / '*' / f'{modname}.*'))
+        target =  srcdir / f'{modname}.pyi'
+        if not (self.force or modified.newer_group(alldeps, target)):
+            log.debug("skipping '%s' -> '%s' (up-to-date)", f'{modname}.*.so', target)
+            return
+
+        env = os.environ.copy()
         python_path = env.get('PYTHONPATH', "")
         if python_path != "":
             python_path += ":"
-
-        if self.inplace:
-            python_path += os.path.abspath(self.distribution.package_dir.get("", "."))
-        else:
-            python_path += self.build_lib
-
+        python_path += self.build_lib
         env['PYTHONPATH'] = python_path
+        env.pop('PETSC_ARCH', None)
 
-        subprocess.check_call([sys.executable, Path(__file__).parent / 'stubgen.py'], env=env) # noqa S603
+        stubgen = Path(__file__).parent / 'stubgen.py'
+        subprocess.check_call([sys.executable, stubgen], env=env) # noqa S603
         self.copy_file(
-            Path(__file__).parent.parent / 'src' / 'petsc4py' / 'PETSc.pyi',
-            os.path.join(self.build_lib, "petsc4py", "PETSc.pyi"),
-            level=self.verbose
+            srcdir / f'{modname}.pyi',
+            blddir / f'{modname}.pyi',
+            level=self.verbose,
         )
 
     def build_extensions(self, *args, **kargs):
