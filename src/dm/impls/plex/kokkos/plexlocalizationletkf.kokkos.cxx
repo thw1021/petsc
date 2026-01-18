@@ -73,10 +73,10 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
 @*/
 PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt n_obs_local, PetscInt n_dof, Vec Vecxyz[3], Mat H, Mat *Q)
 {
-  PetscInt      dim = 0, n_vert_local, d, N, n_obs_global, n_state_local;
-  Vec          *obs_vecs;
-  MPI_Comm      comm;
-  PetscInt      n_state_global;
+  PetscInt dim = 0, n_vert_local, d, N, n_obs_global, n_state_local;
+  Vec     *obs_vecs;
+  MPI_Comm comm;
+  PetscInt n_state_global;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(H, MAT_CLASSID, 5);
@@ -147,8 +147,8 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
     PetscCall(PetscMalloc1(n_obs_global * dim, &raw_obs_coords));
 
     for (d = 0; d < dim; ++d) {
-      VecScatter ctx;
-      Vec        seq_vec;
+      VecScatter         ctx;
+      Vec                seq_vec;
       const PetscScalar *array;
 
       PetscCall(VecScatterCreateToAll(obs_vecs[d], &ctx, &seq_vec));
@@ -156,9 +156,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
       PetscCall(VecScatterEnd(ctx, obs_vecs[d], seq_vec, INSERT_VALUES, SCATTER_FORWARD));
 
       PetscCall(VecGetArrayRead(seq_vec, &array));
-      for (PetscInt j = 0; j < n_obs_global; ++j) {
-        raw_obs_coords[j * dim + d] = PetscRealPart(array[j]);
-      }
+      for (PetscInt j = 0; j < n_obs_global; ++j) { raw_obs_coords[j * dim + d] = PetscRealPart(array[j]); }
       PetscCall(VecRestoreArrayRead(seq_vec, &array));
       PetscCall(VecScatterDestroy(&ctx));
       PetscCall(VecDestroy(&seq_vec));
@@ -235,8 +233,8 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
     });
 
   /* Copy back to host and fill matrix */
-  Kokkos::View<PetscInt **, Kokkos::LayoutRight, Kokkos::HostSpace>    indices_host     = Kokkos::create_mirror_view(indices_dev);
-  Kokkos::View<PetscScalar **, Kokkos::LayoutRight, Kokkos::HostSpace> values_host      = Kokkos::create_mirror_view(values_dev);
+  Kokkos::View<PetscInt **, Kokkos::LayoutRight, Kokkos::HostSpace>    indices_host = Kokkos::create_mirror_view(indices_dev);
+  Kokkos::View<PetscScalar **, Kokkos::LayoutRight, Kokkos::HostSpace> values_host  = Kokkos::create_mirror_view(values_dev);
   Kokkos::deep_copy(indices_host, indices_dev);
   Kokkos::deep_copy(values_host, values_dev);
 
@@ -246,9 +244,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
   }
 
   /* Cleanup Phase 2 storage */
-  for (d = 0; d < dim; ++d) {
-    PetscCall(VecDestroy(&obs_vecs[d]));
-  }
+  for (d = 0; d < dim; ++d) { PetscCall(VecDestroy(&obs_vecs[d])); }
   PetscCall(PetscFree(obs_vecs));
 
   /* Assemble matrix */
