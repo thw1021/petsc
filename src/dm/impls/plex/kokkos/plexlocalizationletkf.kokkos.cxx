@@ -153,15 +153,8 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
     Kokkos::deep_copy(obs_coords_dev, obs_coords_host);
   }
 
-  /* Global Rows -- remove and use state_row_start*/
-  Kokkos::View<PetscInt *, MemSpace> global_rows_dev("global_rows", n_vert_local);
-  {
-    Kokkos::View<PetscInt *, Kokkos::HostSpace> global_rows_host("global_rows_host", n_vert_local);
-    PetscInt                                    rstart;
-    PetscCall(VecGetOwnershipRange(Vecxyz[0], &rstart, NULL));
-    for (PetscInt v = 0; v < n_vert_local; ++v) { global_rows_host(v) = rstart + v; }
-    Kokkos::deep_copy(global_rows_dev, global_rows_host);
-  }
+  PetscInt rstart;
+  PetscCall(VecGetOwnershipRange(Vecxyz[0], &rstart, NULL));
 
   /* Output Views */
   Kokkos::View<PetscInt **, Kokkos::LayoutRight, MemSpace>    indices_dev("indices", n_vert_local, n_obs_vertex);
@@ -238,14 +231,11 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
   /* Copy back to host and fill matrix */
   Kokkos::View<PetscInt **, Kokkos::LayoutRight, Kokkos::HostSpace>    indices_host     = Kokkos::create_mirror_view(indices_dev);
   Kokkos::View<PetscScalar **, Kokkos::LayoutRight, Kokkos::HostSpace> values_host      = Kokkos::create_mirror_view(values_dev);
-  Kokkos::View<PetscInt *, Kokkos::HostSpace>                          global_rows_host = Kokkos::create_mirror_view(global_rows_dev);
-
   Kokkos::deep_copy(indices_host, indices_dev);
   Kokkos::deep_copy(values_host, values_dev);
-  Kokkos::deep_copy(global_rows_host, global_rows_dev);
 
   for (PetscInt i = 0; i < n_vert_local; ++i) {
-    PetscInt globalRow = global_rows_host(i);
+    PetscInt globalRow = rstart + i;
     PetscCall(MatSetValues(*Q, 1, &globalRow, n_obs_vertex, &indices_host(i, 0), &values_host(i, 0), INSERT_VALUES));
   }
 
