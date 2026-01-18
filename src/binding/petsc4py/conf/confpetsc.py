@@ -675,13 +675,10 @@ class build_ext(_build_ext):
         python_path = env.get('PYTHONPATH', "")
         if python_path != "":
             python_path += ":"
-
-        if self.inplace:
-            python_path += os.path.abspath(self.distribution.package_dir.get("", "."))
-        else:
-            python_path += self.build_lib
+        python_path += self.build_lib
 
         env['PYTHONPATH'] = python_path
+        env.pop('PETSC_ARCH')
 
         subprocess.check_call([sys.executable, Path(__file__).parent / 'stubgen.py'], env=env) # noqa S603
         self.copy_file(
