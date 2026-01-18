@@ -66,7 +66,7 @@ PetscErrorCode SNESMonitorSAWsDestroy(void **ctx)
 
 .seealso: [](ch_snes), `PetscViewerSAWsOpen()`, `SNESMonitorSAWsDestroy()`, `SNESMonitorSAWsCreate()`
 @*/
-PetscErrorCode SNESMonitorSAWs(SNES snes, PetscInt n, PetscReal rnorm, void *ctx)
+PetscErrorCode SNESMonitorSAWs(SNES snes, PetscInt n, PetscReal rnorm, PetscCtx ctx)
 {
   PetscMPIInt rank;
 
