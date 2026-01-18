@@ -1,7 +1,9 @@
 # --------------------------------------------------------------------
 
+from pathlib import Path
 import re
 import os
+import subprocess
 import sys
 import glob
 import copy
@@ -661,10 +663,29 @@ class build_ext(_build_ext):
     def run(self):
         self.build_sources()
         _build_ext.run(self)
+        self.build_stubs()
 
     def build_sources(self):
         if 'build_src' in self.distribution.cmdclass:
             self.run_command('build_src')
+
+    def build_stubs(self):
+        env = os.environ.copy()
+
+        python_path = env.get('PYTHONPATH', "")
+        if python_path != "":
+            python_path += ":"
+        python_path += self.build_lib
+
+        env['PYTHONPATH'] = python_path
+        env.pop('PETSC_ARCH')
+
+        subprocess.check_call([sys.executable, Path(__file__).parent / 'stubgen.py'], env=env) # noqa S603
+        self.copy_file(
+            Path(__file__).parent.parent / 'src' / 'petsc4py' / 'PETSc.pyi',
+            os.path.join(self.build_lib, "petsc4py", "PETSc.pyi"),
+            level=self.verbose
+        )
 
     def build_extensions(self, *args, **kargs):
         self.PETSC_ARCH_LIST = []
@@ -751,6 +772,8 @@ class build_ext(_build_ext):
             else:
                 outfile = os.path.join(self.build_lib, filename)
                 outputs.append(outfile)
+
+        outputs.append(os.path.join(self.build_lib, self.distribution.get_name(), "PETSc.pyi"))
         return list(set(outputs))
 
     def get_source_files(self):
