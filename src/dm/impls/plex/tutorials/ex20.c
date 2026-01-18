@@ -7,13 +7,13 @@ int main(int argc, char **argv)
 {
   DM        dm;
   Mat       H, Q             = NULL;
-  PetscInt  nvertexobs, ndof = 1, numVertices, n_state_global;
+  PetscInt  nvertexobs, ndof = 1, n_state_global;
   PetscInt  dim       = 1, n, vStart, vEnd;
   PetscInt  faces[3]  = {1, 1, 1};
   PetscReal lower[3]  = {0.0, 0.0, 0.0};
   PetscReal upper[3]  = {1.0, 1.0, 1.0};
   Vec       Vecxyz[3] = {NULL, NULL, NULL};
-  PetscBool isda, isplex;
+  PetscBool isda, isplex, print = PETSC_FALSE;
   char      type[256] = DMPLEX;
 
   PetscFunctionBeginUser;
@@ -24,6 +24,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsFList("-dm_type", "DM implementation on which to define field", "ex20.c", DMList, type, type, 256, NULL));
   PetscCall(PetscStrncmp(type, DMPLEX, 256, &isplex));
   PetscCall(PetscStrncmp(type, DMDA, 256, &isda));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-ex20_print", &print, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-dm_plex_dim", &dim, NULL));
   PetscCheck(dim <= 3 && dim >= 1, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "dm_plex_dim = %" PetscInt_FMT, dim);
   n = 3;
@@ -84,12 +85,11 @@ int main(int argc, char **argv)
 
         PetscCall(DMLocalToGlobal(dm, loc_vec, INSERT_VALUES, Vecxyz[d]));
         PetscCall(DMRestoreLocalVector(dm, &loc_vec));
-        PetscCall(VecGetSize(Vecxyz[d], &numVertices));
-        n_state_global = numVertices;
+        PetscCall(VecGetSize(Vecxyz[d], &n_state_global));
       }
     }
 
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Created DMPlex in %" PetscInt_FMT "D with faces (%" PetscInt_FMT ", %" PetscInt_FMT ", %" PetscInt_FMT "), global vector size %" PetscInt_FMT "\n", dim, faces[0], faces[1], faces[2], numVertices));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Created DMPlex in %" PetscInt_FMT "D with faces (%" PetscInt_FMT ", %" PetscInt_FMT ", %" PetscInt_FMT "), global vector size %" PetscInt_FMT "\n", dim, faces[0], faces[1], faces[2], n_state_global));
   } else if (isda) {
     switch (dim) {
     case 1:
@@ -111,19 +111,17 @@ int main(int argc, char **argv)
         PetscCall(DMCreateGlobalVector(dm, &Vecxyz[d]));
         PetscCall(PetscObjectSetName((PetscObject)Vecxyz[d], d == 0 ? "x_coordinate" : (d == 1 ? "y_coordinate" : "z_coordinate")));
         PetscCall(VecStrideGather(coord, d, Vecxyz[d], INSERT_VALUES));
-        PetscCall(VecGetSize(Vecxyz[d], &numVertices));
-        n_state_global = numVertices;
+        PetscCall(VecGetSize(Vecxyz[d], &n_state_global));
       }
     }
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Created DMDA of type %s in %" PetscInt_FMT "D with faces (%" PetscInt_FMT ", %" PetscInt_FMT ", %" PetscInt_FMT "), global vector size %" PetscInt_FMT "\n", type, dim, faces[0], faces[1], faces[2], numVertices));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Created DMDA of type %s in %" PetscInt_FMT "D with faces (%" PetscInt_FMT ", %" PetscInt_FMT ", %" PetscInt_FMT "), global vector size %" PetscInt_FMT "\n", type, dim, faces[0], faces[1], faces[2], n_state_global));
   } else SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP, "This test does not run for DM type %s", type);
-  numVertices /= ndof;
   PetscCall(DMViewFromOptions(dm, NULL, "-ex20_dm_view")); // PetscSleep(10);
 
   /* Set number of local observations to use: 3^dim */
   nvertexobs = 1;
   for (PetscInt d = 0; d < dim && d < 2; d++) nvertexobs *= 3;
-  PetscCheck(numVertices > 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "numVertices %" PetscInt_FMT " must be > 0 locally for now", numVertices);
+  PetscCheck(nvertexobs > 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "nvertexobs %" PetscInt_FMT " must be > 0 locally for now", nvertexobs);
 
   /* Count observations (every other vertex in each dimension) */
   PetscInt   nobs_local = 0;
@@ -136,7 +134,7 @@ int main(int argc, char **argv)
     const PetscScalar *coords[3];
     PetscReal          gridSpacing[3];
     for (PetscInt d = 0; d < dim; d++) PetscCall(VecGetArrayRead(Vecxyz[d], &coords[d]));
-    for (PetscInt d = 0; d < dim; d++) gridSpacing[d] = (upper[d] - lower[d]) / faces[d]; printf("Grid spacing dimension %" PetscInt_FMT " : %g\n", 0, (double)gridSpacing[0]);
+    for (PetscInt d = 0; d < dim; d++) gridSpacing[d] = (upper[d] - lower[d]) / faces[d];
 
     for (PetscInt v = 0; v < nloc; v++) {
       PetscReal c[3] = {0.0, 0.0, 0.0};
@@ -146,17 +144,14 @@ int main(int argc, char **argv)
       /* Check if this vertex is at an observation location (every other grid point) */
       for (PetscInt d = 0; d < dim; d++) {
         PetscReal relCoord = c[d] - lower[d];
-        PetscInt  gridIdx  = (PetscInt)PetscFloorReal(relCoord / gridSpacing[d] + 0.5); // printf("Vertex %" PetscInt_FMT " dim %" PetscInt_FMT " coord %g relCoord %g gridIdx %" PetscInt_FMT "\n", v, d, (double)c[d], (double)relCoord, gridIdx);
+        PetscInt  gridIdx  = (PetscInt)PetscFloorReal(relCoord / gridSpacing[d] + 0.5);
         PetscCheck(PetscAbsReal(relCoord - gridIdx * gridSpacing[d]) < PETSC_SMALL, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Error vertex v %" PetscInt_FMT " (dim %" PetscInt_FMT "): %g not on grid (h= %g, distance to grid %g)", v, d, (double)c[d], (double)gridSpacing[d], (double)PetscAbsReal(relCoord - gridIdx * gridSpacing[d]));
         if (gridIdx % 2 != 0) {
           isObs[v] = PETSC_FALSE;
           break;
         }
       }
-      if (isObs[v]) {
-        nobs_local++;
-        printf("Vertex %" PetscInt_FMT " is an observation point, x = %g %g %g\n", v, (double)c[0], (double)c[1], (double)c[2]);
-      }
+      if (isObs[v]) nobs_local++;
     }
     for (PetscInt d = 0; d < dim; d++) PetscCall(VecRestoreArrayRead(Vecxyz[d], &coords[d]));
   }
@@ -186,7 +181,7 @@ int main(int argc, char **argv)
 
   /* View H */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Observation Operator H:\n"));
-  PetscCall(MatView(H, PETSC_VIEWER_STDOUT_WORLD));
+  if (print) PetscCall(MatView(H, PETSC_VIEWER_STDOUT_WORLD));
 
   /* Perturb interior vertex coordinates */
   {
@@ -203,19 +198,19 @@ int main(int argc, char **argv)
 
         seed  = (1103515245 * seed + 12345) % 2147483648;
         noise = (PetscReal)seed / 2147483648.0;
-        coords[d][v] += (noise - 0.5) * 0.01 * gridSpacing;
+        coords[d][v] += (noise - 0.5) * 0.001 * gridSpacing;
       }
     }
     for (PetscInt d = 0; d < dim; d++) PetscCall(VecRestoreArray(Vecxyz[d], &coords[d]));
   }
 
   /* Call the function */
-  /*  PetscCall(DMPlexGetLETKFLocalizationMatrix(dm, nvertexobs, nvertexobs, H, &Q));
+  PetscCall(DMPlexGetLETKFLocalizationMatrix(nvertexobs, nobs_local, ndof, Vecxyz, H, &Q));
   PetscCall(PetscObjectSetName((PetscObject)Q, "Q_localization"));
 
   // View Q
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization Matrix Q:\n"));
-  PetscCall(MatView(Q, PETSC_VIEWER_STDOUT_WORLD)); */
+  if (print) PetscCall(MatView(Q, PETSC_VIEWER_STDOUT_WORLD));
 
   /* Cleanup */
   for (PetscInt d = 0; d < dim; d++) PetscCall(VecDestroy(&Vecxyz[d]));
@@ -232,24 +227,24 @@ int main(int argc, char **argv)
     requires: kokkos
     suffix: 1
     diff_args: -j
-    args: -dm_plex_dim 1 -dm_plex_box_faces 16 -dm_plex_simplex 0 -dm_plex_box_bd periodic -dm_plex_box_upper 5
+    args: -dm_plex_dim 1 -dm_plex_box_faces 16 -dm_plex_simplex 0 -dm_plex_box_bd periodic -dm_plex_box_upper 5 -ex20_print -ex20_dm_view
 
   test:
     requires: kokkos
     suffix: 2
     diff_args: -j
-    args: -dm_plex_dim 2 -dm_plex_box_faces 7,7 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none -dm_plex_box_upper 5,5
+    args: -dm_plex_dim 2 -dm_plex_box_faces 7,7 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none -dm_plex_box_upper 5,5 -ex20_print -ex20_dm_view
 
   test:
     requires: kokkos
     suffix: da2
     diff_args: -j
-    args: -dm_type da -dm_plex_dim 2 -dm_plex_box_faces 8,8 -dm_plex_box_upper 5,5
+    args: -dm_type da -dm_plex_dim 2 -dm_plex_box_faces 7,7 -dm_plex_box_upper 5,5 -ex20_print -ex20_dm_view
 
   test:
     requires: kokkos
     suffix: 3
     diff_args: -j
-    args: -dm_plex_dim 3 -dm_plex_box_faces 5,5,5 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none,none -dm_plex_box_upper 5,5,5
+    args: -dm_plex_dim 3 -dm_plex_box_faces 5,5,5 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none,none -dm_plex_box_upper 5,5,5 -ex20_print -ex20_dm_view
 
 TEST*/
