@@ -182,11 +182,6 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
 
   Kokkos::deep_copy(best_dists_dev, 1.0e30);
 
-  /* Global Observation Indices */
-  Kokkos::View<PetscInt *, MemSpace> global_obs_indices_dev("global_obs_indices", n_obs_global);
-  Kokkos::parallel_for(
-    "InitGlobalObsIndices", Kokkos::RangePolicy<ExecSpace>(0, n_obs_global), KOKKOS_LAMBDA(const PetscInt j) { global_obs_indices_dev(j) = j; });
-
   /* Main Kernel */
   Kokkos::parallel_for(
     "ComputeLocalization", Kokkos::RangePolicy<ExecSpace>(0, n_vert_local), KOKKOS_LAMBDA(const PetscInt i) {
@@ -210,7 +205,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
             pos--;
           }
           best_dists_dev(i, pos) = dist2;
-          best_idxs_dev(i, pos)  = global_obs_indices_dev(j);
+          best_idxs_dev(i, pos)  = j;
           count++;
           if (count == n_obs_vertex) current_max_dist = best_dists_dev(i, n_obs_vertex - 1);
         } else if (dist2 < current_max_dist) {
@@ -222,7 +217,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(PetscInt n_obs_vertex, PetscInt 
             pos--;
           }
           best_dists_dev(i, pos) = dist2;
-          best_idxs_dev(i, pos)  = global_obs_indices_dev(j);
+          best_idxs_dev(i, pos)  = j;
           current_max_dist       = best_dists_dev(i, n_obs_vertex - 1);
         }
       }
