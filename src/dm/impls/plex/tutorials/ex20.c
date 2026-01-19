@@ -243,7 +243,6 @@ int main(int argc, char **argv)
     diff_args: -j
     args: -dm_type da -dm_plex_dim 2 -dm_plex_box_faces 7,7 -dm_plex_box_upper 5,5 -ex20_print -ex20_dm_view -ex20_dm_view -mat_type aijkokkos -vec_type kokkos
 
-
   test:
     requires: kokkos
     suffix: 3
