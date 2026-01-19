@@ -134,7 +134,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, con
       const PetscScalar *local_coords_array;
       PetscCall(VecGetArrayRead(Vecxyz[d], &local_coords_array));
       // Copy data. Since vertex_coords_host is LayoutLeft, &vertex_coords_host(0, d) is the start of column d.
-      for (PetscInt i = 0; i < n_vert_local; ++i) { vertex_coords_host(i, d) = local_coords_array[i]; }
+      for (PetscInt i = 0; i < n_vert_local; ++i) vertex_coords_host(i, d) = local_coords_array[i];
       PetscCall(VecRestoreArrayRead(Vecxyz[d], &local_coords_array));
     }
     Kokkos::deep_copy(vertex_coords_dev, vertex_coords_host);
@@ -154,7 +154,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, con
       PetscCall(VecScatterEnd(ctx, obs_vecs[d], seq_vec, INSERT_VALUES, SCATTER_FORWARD));
 
       PetscCall(VecGetArrayRead(seq_vec, &array));
-      for (PetscInt j = 0; j < n_obs_global; ++j) { obs_coords_host(j, d) = PetscRealPart(array[j]); }
+      for (PetscInt j = 0; j < n_obs_global; ++j) obs_coords_host(j, d) = PetscRealPart(array[j]);
       PetscCall(VecRestoreArrayRead(seq_vec, &array));
       PetscCall(VecScatterDestroy(&ctx));
       PetscCall(VecDestroy(&seq_vec));
@@ -186,7 +186,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, con
       // Cache vertex coordinates in registers to avoid repeated global memory access
       // dim is small (<= 3), so this fits easily in registers
       PetscReal v_coords[3] = {0.0, 0.0, 0.0};
-      for (PetscInt d = 0; d < dim; ++d) { v_coords[d] = PetscRealPart(vertex_coords_dev(i, d)); }
+      for (PetscInt d = 0; d < dim; ++d) v_coords[d] = PetscRealPart(vertex_coords_dev(i, d));
 
       // Initialize with infinity
       for (PetscInt k = 0; k < n_obs_vertex; ++k) {
