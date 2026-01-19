@@ -109,6 +109,7 @@ int main(int argc, char **argv)
       PetscCall(DMGetCoordinates(dm, &coord));
       for (PetscInt d = 0; d < dim; d++) {
         PetscCall(DMCreateGlobalVector(dm, &Vecxyz[d]));
+        PetscCall(VecSetFromOptions(Vecxyz[d]));
         PetscCall(PetscObjectSetName((PetscObject)Vecxyz[d], d == 0 ? "x_coordinate" : (d == 1 ? "y_coordinate" : "z_coordinate")));
         PetscCall(VecStrideGather(coord, d, Vecxyz[d], INSERT_VALUES));
         PetscCall(VecGetSize(Vecxyz[d], &n_state_global));
@@ -164,6 +165,7 @@ int main(int argc, char **argv)
   PetscCall(MatSeqAIJSetPreallocation(H, 1, NULL));
   PetscCall(MatMPIAIJSetPreallocation(H, 1, NULL, 1, NULL)); // assumes boolean observation operator, could use interpolation
   PetscCall(PetscObjectSetName((PetscObject)H, "H_observation_operator"));
+  PetscCall(MatSetFromOptions(H));
 
   /* Fill H matrix */
   PetscInt globalRowIdx, globalColIdx, obsIdx = 0;
@@ -227,24 +229,26 @@ int main(int argc, char **argv)
     requires: kokkos
     suffix: 1
     diff_args: -j
-    args: -dm_plex_dim 1 -dm_plex_box_faces 16 -dm_plex_simplex 0 -dm_plex_box_bd periodic -dm_plex_box_upper 5 -ex20_print -ex20_dm_view
+    args: -dm_plex_dim 1 -dm_plex_box_faces 16 -dm_plex_simplex 0 -dm_plex_box_bd periodic -dm_plex_box_upper 5 -ex20_print -ex20_dm_view -ex20_dm_view -mat_type aijkokkos -dm_vec_type kokkos
 
   test:
     requires: kokkos
     suffix: 2
     diff_args: -j
-    args: -dm_plex_dim 2 -dm_plex_box_faces 7,7 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none -dm_plex_box_upper 5,5 -ex20_print -ex20_dm_view
+    args: -dm_plex_dim 2 -dm_plex_box_faces 7,7 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none -dm_plex_box_upper 5,5 -ex20_print -ex20_dm_view -ex20_dm_view -mat_type aijkokkos -dm_vec_type kokkos
+
 
   test:
     requires: kokkos
     suffix: da2
     diff_args: -j
-    args: -dm_type da -dm_plex_dim 2 -dm_plex_box_faces 7,7 -dm_plex_box_upper 5,5 -ex20_print -ex20_dm_view
+    args: -dm_type da -dm_plex_dim 2 -dm_plex_box_faces 7,7 -dm_plex_box_upper 5,5 -ex20_print -ex20_dm_view -ex20_dm_view -mat_type aijkokkos -vec_type kokkos
+
 
   test:
     requires: kokkos
     suffix: 3
     diff_args: -j
-    args: -dm_plex_dim 3 -dm_plex_box_faces 5,5,5 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none,none -dm_plex_box_upper 5,5,5 -ex20_print -ex20_dm_view
+    args: -dm_plex_dim 3 -dm_plex_box_faces 5,5,5 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none,none -dm_plex_box_upper 5,5,5 -ex20_print -ex20_dm_view -mat_type aijkokkos -dm_vec_type kokkos
 
 TEST*/

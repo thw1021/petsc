@@ -14,7 +14,7 @@ Field Field_0:
   adjacency FEM
 Observation Operator H:
 Mat Object: H_observation_operator 1 MPI process
-  type: seqaij
+  type: seqaijkokkos
 row 0: (0, 1.) 
 row 1: (2, 1.) 
 row 2: (4, 1.) 
@@ -25,7 +25,7 @@ row 6: (12, 1.)
 row 7: (14, 1.) 
 Localization Matrix Q:
 Mat Object: Q_localization 1 MPI process
-  type: seqaij
+  type: seqaijkokkos
 row 0: (0, 1.)  (1, 0.684797)  (2, 0.208333) 
 row 1: (0, 0.843012)  (1, 0.843046)  (2, 0.208333) 
 row 2: (0, 0.208333)  (1, 1.)  (2, 0.208605) 

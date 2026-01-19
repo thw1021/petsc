@@ -5,7 +5,7 @@ Processor [0] M 7 N 8 m 1 n 1 w 1 s 1
 X range of indices: 0 7, Y range of indices: 0 8
 Observation Operator H:
 Mat Object: H_observation_operator 1 MPI process
-  type: seqaij
+  type: seqaijkokkos
 row 0: (0, 1.) 
 row 1: (2, 1.) 
 row 2: (4, 1.) 
@@ -24,7 +24,7 @@ row 14: (46, 1.)
 row 15: (48, 1.) 
 Localization Matrix Q:
 Mat Object: Q_localization 1 MPI process
-  type: seqaij
+  type: seqaijkokkos
 row 0: (0, 1.)  (1, 0.825631)  (2, 0.468332)  (4, 0.825729)  (5, 0.684872)  (6, 0.38524)  (8, 0.468429)  (9, 0.385256)  (10, 0.208333) 
 row 1: (0, 0.938966)  (1, 0.939055)  (2, 0.580316)  (3, 0.208333)  (4, 0.738039)  (5, 0.738078)  (6, 0.454174)  (8, 0.352904)  (9, 0.352934) 
 row 2: (0, 0.737939)  (1, 1.)  (2, 0.738056)  (3, 0.290784)  (4, 0.546085)  (5, 0.738025)  (6, 0.546181)  (7, 0.208333)  (9, 0.290664) 
