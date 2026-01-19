@@ -1086,19 +1086,26 @@ PetscErrorCode DMPlexConstructGhostCells(DM dm, const char labelName[], PetscInt
 
 static PetscErrorCode DivideCells_Private(DM dm, DMLabel label, DMPlexPointQueue queue)
 {
-  PetscInt dim, d, shift = 100, *pStart, *pEnd;
+  const PetscInt debug = ((DM_Plex *)dm->data)->printCohesive;
+  PetscInt       dim, d, shift = 100, *pStart, *pEnd;
+  MPI_Comm       comm;
+  PetscMPIInt    rank;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(PetscMalloc2(dim, &pStart, dim, &pEnd));
   for (d = 0; d < dim; ++d) PetscCall(DMPlexGetDepthStratum(dm, d, &pStart[d], &pEnd[d]));
   while (!DMPlexPointQueueEmpty(queue)) {
     PetscInt  cell    = -1;
     PetscInt *closure = NULL;
-    PetscInt  closureSize, cl, cval;
+    PetscInt  closureSize, cl, cval, depth;
 
     PetscCall(DMPlexPointQueueDequeue(queue, &cell));
     PetscCall(DMLabelGetValue(label, cell, &cval));
+    PetscCall(DMPlexGetPointDepth(dm, cell, &depth));
+    if (debug) PetscCall(PetscSynchronizedPrintf(comm, "[%d]Dequeued fault cell %d depth %d\n", rank, cell, depth));
     PetscCall(DMPlexGetTransitiveClosure(dm, cell, PETSC_TRUE, &closureSize, &closure));
     /* Mark points in the cell closure that touch the fault */
     for (d = 0; d < dim; ++d) {
@@ -1125,6 +1132,7 @@ static PetscErrorCode DivideCells_Private(DM dm, DMLabel label, DMPlexPointQueue
               PetscCall(DMPlexGetPointDepth(dm, clp, &dep));
               clval = cval < 0 ? -(shift + dep) : shift + dep;
               PetscCall(DMLabelSetValue(label, clp, clval));
+              if (debug) PetscCall(PetscSynchronizedPrintf(comm, "[%d]Labeled point %d with value %d\n", rank, clp, clval));
               break;
             }
           }
@@ -1141,6 +1149,10 @@ static PetscErrorCode DivideCells_Private(DM dm, DMLabel label, DMPlexPointQueue
             if (nval == -1) {
               PetscCall(DMLabelSetValue(label, support[s], clval < 0 ? clval - 1 : clval + 1));
               PetscCall(DMPlexPointQueueEnqueue(queue, support[s]));
+              if (debug) {
+                PetscCall(PetscSynchronizedPrintf(comm, "[%d]Neighbor: Labeled point %d with value %d (%d)\n", rank, support[s], clval < 0 ? clval - 1 : clval + 1, clval));
+                PetscCall(PetscSynchronizedPrintf(comm, "[%d]Enqueued point %d\n", rank, support[s]));
+              }
             }
           }
         }
@@ -1159,17 +1171,25 @@ typedef struct {
 
 static PetscErrorCode divideCell(DMLabel label, PetscInt p, PetscInt val, PetscCtx ctx)
 {
-  PointDivision  *div  = (PointDivision *)ctx;
-  PetscInt        cval = val < 0 ? val - 1 : val + 1;
+  PointDivision  *div   = (PointDivision *)ctx;
+  PetscInt        cval  = val < 0 ? val - 1 : val + 1;
+  const PetscInt  debug = ((DM_Plex *)div->dm->data)->printCohesive;
   const PetscInt *support;
   PetscInt        supportSize, s;
+  PetscMPIInt     rank;
 
   PetscFunctionBegin;
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)div->dm), &rank));
+  if (cval < 100) {
+    if (debug) PetscCall(PetscSynchronizedPrintf(PetscObjectComm((PetscObject)div->dm), "[%d]DivideCell: Ignored fault point %d with value %d\n", rank, p, cval));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   PetscCall(DMPlexGetSupport(div->dm, p, &support));
   PetscCall(DMPlexGetSupportSize(div->dm, p, &supportSize));
   for (s = 0; s < supportSize; ++s) {
     PetscCall(DMLabelSetValue(label, support[s], cval));
     PetscCall(DMPlexPointQueueEnqueue(div->queue, support[s]));
+    if (debug) PetscCall(PetscSynchronizedPrintf(PetscObjectComm((PetscObject)div->dm), "[%d]DivideCell: Enqueued point %d from parent %d with value %d\n", rank, support[s], p, cval));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1177,6 +1197,7 @@ static PetscErrorCode divideCell(DMLabel label, PetscInt p, PetscInt val, PetscC
 /* Mark cells by label propagation */
 static PetscErrorCode DMPlexLabelFaultHalo(DM dm, DMLabel faultLabel)
 {
+  const PetscInt   debug = ((DM_Plex *)dm->data)->printCohesive;
   DMPlexPointQueue queue = NULL;
   PointDivision    div;
   PetscSF          pointSF;
@@ -1184,8 +1205,10 @@ static PetscErrorCode DMPlexLabelFaultHalo(DM dm, DMLabel faultLabel)
   const PetscInt  *points;
   PetscBool        empty;
   PetscInt         dim, shift = 100, n, i;
+  PetscMPIInt      rank;
 
   PetscFunctionBegin;
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMPlexPointQueueCreate(1024, &queue));
   div.dm    = dm;
@@ -1195,7 +1218,10 @@ static PetscErrorCode DMPlexLabelFaultHalo(DM dm, DMLabel faultLabel)
   if (pointIS) {
     PetscCall(ISGetLocalSize(pointIS, &n));
     PetscCall(ISGetIndices(pointIS, &points));
-    for (i = 0; i < n; ++i) PetscCall(DMPlexPointQueueEnqueue(queue, points[i]));
+    for (i = 0; i < n; ++i) {
+      PetscCall(DMPlexPointQueueEnqueue(queue, points[i]));
+      if (debug) PetscCall(PetscSynchronizedPrintf(PetscObjectComm((PetscObject)dm), "[%d]Init: Enqueued point %d with value %d\n", rank, points[i], shift + dim));
+    }
     PetscCall(ISRestoreIndices(pointIS, &points));
     PetscCall(ISDestroy(&pointIS));
   }
@@ -1203,10 +1229,14 @@ static PetscErrorCode DMPlexLabelFaultHalo(DM dm, DMLabel faultLabel)
   if (pointIS) {
     PetscCall(ISGetLocalSize(pointIS, &n));
     PetscCall(ISGetIndices(pointIS, &points));
-    for (i = 0; i < n; ++i) PetscCall(DMPlexPointQueueEnqueue(queue, points[i]));
+    for (i = 0; i < n; ++i) {
+      PetscCall(DMPlexPointQueueEnqueue(queue, points[i]));
+      if (debug) PetscCall(PetscSynchronizedPrintf(PetscObjectComm((PetscObject)dm), "[%d]Init: Enqueued point %d with value %d\n", rank, points[i], -(shift + dim)));
+    }
     PetscCall(ISRestoreIndices(pointIS, &points));
     PetscCall(ISDestroy(&pointIS));
   }
+  if (debug) PetscCall(PetscSynchronizedFlush(PetscObjectComm((PetscObject)dm), NULL));
 
   PetscCall(DMGetPointSF(dm, &pointSF));
   PetscCall(DMLabelPropagateBegin(faultLabel, pointSF));
@@ -1216,9 +1246,11 @@ static PetscErrorCode DMPlexLabelFaultHalo(DM dm, DMLabel faultLabel)
     PetscCall(DivideCells_Private(dm, faultLabel, queue));
     PetscCall(DMLabelPropagatePush(faultLabel, pointSF, divideCell, &div));
     PetscCall(DMPlexPointQueueEmptyCollective((PetscObject)dm, queue, &empty));
+    if (debug) PetscCall(PetscSynchronizedFlush(PetscObjectComm((PetscObject)dm), NULL));
   }
   PetscCall(DMLabelPropagateEnd(faultLabel, pointSF));
   PetscCall(DMPlexPointQueueDestroy(&queue));
+  if (debug) PetscCall(PetscSynchronizedFlush(PetscObjectComm((PetscObject)dm), NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1967,6 +1999,17 @@ PetscErrorCode DMPlexConstructCohesiveCells(DM dm, DMLabel label, DMLabel splitL
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode ViewCohesiveLabel_Static(MPI_Comm comm, DMLabel label)
+{
+  PetscViewer viewer;
+
+  PetscFunctionBegin;
+  PetscCall(PetscViewerGetSubViewer(PETSC_VIEWER_STDOUT_(comm), PETSC_COMM_SELF, &viewer));
+  PetscCall(DMLabelView(label, viewer));
+  PetscCall(PetscViewerRestoreSubViewer(PETSC_VIEWER_STDOUT_(comm), PETSC_COMM_SELF, &viewer));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* Returns the side of the surface for a given cell with a face on the surface */
 static PetscErrorCode GetSurfaceSide_Static(DM dm, DM subdm, PetscInt numSubpoints, const PetscInt *subpoints, PetscInt cell, PetscInt face, PetscBool *pos)
 {
@@ -2148,13 +2191,17 @@ static PetscErrorCode CheckFaultEdge_Private(DM dm, DMLabel label, PetscBool spl
 @*/
 PetscErrorCode DMPlexLabelCohesiveComplete(DM dm, DMLabel label, DMLabel blabel, PetscInt bvalue, PetscBool flip, PetscBool split, DM subdm)
 {
+  const PetscInt  debug = ((DM_Plex *)dm->data)->printCohesive;
   DMLabel         depthLabel;
   IS              dimIS, subpointIS = NULL;
   const PetscInt *points, *subpoints;
   const PetscInt  rev   = flip ? -1 : 1;
   PetscInt        shift = 100, shift2 = 200, shift3 = split ? 300 : 0, dim, depth, numPoints, numSubpoints, p, val;
+  MPI_Comm        comm;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  if (debug) PetscCall(ViewCohesiveLabel_Static(comm, label));
   PetscCall(DMPlexGetDepth(dm, &depth));
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMPlexGetDepthLabel(dm, &depthLabel));
@@ -2324,8 +2371,10 @@ PetscErrorCode DMPlexLabelCohesiveComplete(DM dm, DMLabel label, DMLabel blabel,
   }
 divide:
   if (subpointIS) PetscCall(ISRestoreIndices(subpointIS, &subpoints));
+  if (debug) PetscCall(ViewCohesiveLabel_Static(comm, label));
   PetscCall(DMPlexLabelFaultHalo(dm, label));
   PetscCall(CheckFaultEdge_Private(dm, label, split));
+  if (debug) PetscCall(ViewCohesiveLabel_Static(comm, label));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

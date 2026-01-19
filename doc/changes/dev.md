@@ -95,6 +95,9 @@
 
 - Add `DMPlexSetClosurePermutationLexicographic()`
 - Add `DMPlexDrawCell()`
+- Add `DMPlexVecGetClosureAtDepth()`
+- Add an extra communicator argument to `DMPlexFilter()` to allow extracting local meshes
+- Add `DMPlexCopyFlags()`
 
 ## FE/FV
 
