@@ -242,8 +242,17 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, con
   Kokkos::View<PetscScalar **, Kokkos::LayoutRight, Kokkos::HostSpace> values_host("values_host", n_vert_local, n_obs_vertex);
 
   // Deep copy will handle layout conversion (transpose) if device views are LayoutLeft
-  Kokkos::deep_copy(indices_host, indices_dev);
-  Kokkos::deep_copy(values_host, values_dev);
+  // Note: Kokkos::deep_copy cannot copy between different layouts if the memory spaces are different (e.g. GPU to Host).
+  // We need an intermediate mirror view on the host with the same layout as the device view.
+  Kokkos::View<PetscInt **, Kokkos::LayoutLeft, Kokkos::HostSpace>    indices_host_left = Kokkos::create_mirror_view(indices_dev);
+  Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::HostSpace> values_host_left  = Kokkos::create_mirror_view(values_dev);
+
+  Kokkos::deep_copy(indices_host_left, indices_dev);
+  Kokkos::deep_copy(values_host_left, values_dev);
+
+  // Now copy from LayoutLeft host view to LayoutRight host view
+  Kokkos::deep_copy(indices_host, indices_host_left);
+  Kokkos::deep_copy(values_host, values_host_left);
 
   for (PetscInt i = 0; i < n_vert_local; ++i) {
     PetscInt globalRow = rstart + i;
