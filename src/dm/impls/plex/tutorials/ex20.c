@@ -226,25 +226,25 @@ int main(int argc, char **argv)
 /*TEST
 
   test:
-    requires: kokkos
+    requires: kokkos_kernels
     suffix: 1
     diff_args: -j
     args: -dm_plex_dim 1 -dm_plex_box_faces 16 -dm_plex_simplex 0 -dm_plex_box_bd periodic -dm_plex_box_upper 5 -ex20_print -ex20_dm_view -ex20_dm_view -mat_type aijkokkos -dm_vec_type kokkos
 
   test:
-    requires: kokkos
+    requires: kokkos_kernels
     suffix: 2
     diff_args: -j
     args: -dm_plex_dim 2 -dm_plex_box_faces 7,7 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none -dm_plex_box_upper 5,5 -ex20_print -ex20_dm_view -ex20_dm_view -mat_type aijkokkos -dm_vec_type kokkos
 
   test:
-    requires: kokkos
+    requires: kokkos_kernels
     suffix: da2
     diff_args: -j
     args: -dm_type da -dm_plex_dim 2 -dm_plex_box_faces 7,7 -dm_plex_box_upper 5,5 -ex20_print -ex20_dm_view -ex20_dm_view -mat_type aijkokkos -vec_type kokkos
 
   test:
-    requires: kokkos
+    requires: kokkos_kernels
     suffix: 3
     diff_args: -j
     args: -dm_plex_dim 3 -dm_plex_box_faces 5,5,5 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none,none -dm_plex_box_upper 5,5,5 -ex20_print -ex20_dm_view -mat_type aijkokkos -dm_vec_type kokkos
