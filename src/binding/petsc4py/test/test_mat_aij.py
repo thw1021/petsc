@@ -1307,6 +1307,145 @@ class TestMatIS_G89(TestMatIS):
     GRID = 8, 9
 
 
+class TestMatStencil(unittest.TestCase):
+    def setUp(self):
+        self.da = PETSc.DMDA().create(
+            sizes=(4, 5), # nx = 4, ny = 5
+            comm=PETSc.COMM_SELF,
+        )
+        self.mat = self.da.createMatrix()
+        self.mat.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
+
+    def tearDown(self):
+        self.mat.destroy()
+        self.da.destroy()
+
+    def testSetValueStencil(self):
+        self.mat.zeroEntries()
+        row = PETSc.Mat.Stencil()
+        row.i = 0
+        row.j = 1
+        col = PETSc.Mat.Stencil()
+        col.i = 2
+        col.j = 3
+        val = 1.0
+        self.mat.setValueStencil(row, col, val)
+        self.mat.assemble()
+        # row index = j * nx + i = 1 * 4 + 0 = 4
+        # col index = j * nx + i = 3 * 4 + 2 = 14
+        self.assertEqual(self.mat.getValue(4, 14), 1.0)
+
+    def testSetValuesStencil(self):
+        rows = []
+        for i, j in [(0, 1), (1, 2)]:
+            s = PETSc.Mat.Stencil(i=i, j=j)
+            rows.append(s)
+        cols = []
+        for i, j in [(0, 3), (2, 3)]:
+            s = PETSc.Mat.Stencil(i=i, j=j)
+            cols.append(s)
+        vals = [[1.0, 2.0], [3.0, 4.0]]
+        vals = np.asarray(vals, dtype=PETSc.ScalarType)
+
+        rows_np_int = np.asarray([(s.k, s.j, s.i, s.c) for s in rows], dtype=PETSc.IntType)
+        cols_np_int = np.asarray([(s.k, s.j, s.i, s.c) for s in cols], dtype=PETSc.IntType)
+
+        def _check(rows, cols, vals):
+            self.mat.zeroEntries()
+            self.mat.setValuesStencil(rows, cols, vals)
+            self.mat.assemble()
+            # index = j * nx + i
+            # (0,1) -> 1 * 4 + 0 = 4
+            # (1,2) -> 2 * 4 + 1 = 9
+            # (0,3) -> 3 * 4 + 0 = 12
+            # (2,3) -> 3 * 4 + 2 = 14
+            # row indices: (0,1) -> 4, (1,2) -> 9
+            # col indices: (0,3) -> 12, (2,3) -> 14
+            self.assertEqual(self.mat.getValue(4, 12), 1.0)
+            self.assertEqual(self.mat.getValue(4, 14), 2.0)
+            self.assertEqual(self.mat.getValue(9, 12), 3.0)
+            self.assertEqual(self.mat.getValue(9, 14), 4.0)
+
+        for (r, c) in [
+            (rows, cols),                               # list[MatStencil]
+            (rows_np_int, cols_np_int),                 # numpy array: (N, 4)
+            (rows_np_int.ravel(), cols_np_int.ravel()), # numpy array: (N*4, )
+        ]:
+            _check(r, c, vals)
+
+
+class TestMatStencilBlocked(unittest.TestCase):
+    def setUp(self):
+        self.da = PETSc.DMDA().create(
+            sizes=(4, 5), # nx = 4, ny = 5
+            dof=3,
+            comm=PETSc.COMM_SELF,
+        )
+        self.mat = self.da.createMatrix()
+        self.mat.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
+
+    def tearDown(self):
+        self.mat.destroy()
+        self.da.destroy()
+
+    def testSetValueBlockedStencil(self):
+        self.mat.zeroEntries()
+        row = PETSc.Mat.Stencil()
+        row.i = 0
+        row.j = 1
+        col = PETSc.Mat.Stencil()
+        col.i = 2
+        col.j = 3
+        # block is 3*3
+        val = np.arange(9, dtype=PETSc.ScalarType).reshape(3, 3)
+        self.mat.setValueBlockedStencil(row, col, val)
+        self.mat.assemble()
+        # row index = (j * nx + i) * dof = 4 * 3 = 12
+        # col index = (j * nx + i) * dof = 14 * 3 = 42
+        for r in range(3):
+            for c in range(3):
+                self.assertEqual(self.mat.getValue(12 + r, 42 + c), float(r * 3 + c))
+
+    def testSetValuesBlockedStencil(self):
+        rows = []
+        for i, j in [(0, 1), (1, 2)]:
+            s = PETSc.Mat.Stencil(i=i, j=j)
+            rows.append(s)
+        cols = []
+        for i, j in [(0, 3), (2, 3)]:
+            s = PETSc.Mat.Stencil(i=i, j=j)
+            cols.append(s)
+        # 2 row blocks, 2 col blocks, each block 3x3 -> 36 elements
+        # Memory layout: values[ni][rbs][nj][cbs]
+        vals = np.arange(36, dtype=PETSc.ScalarType).reshape(2, 3, 2, 3)
+        vals = np.asarray(vals, dtype=PETSc.ScalarType)
+
+        rows_np_int = np.asarray([(s.k, s.j, s.i, s.c) for s in rows], dtype=PETSc.IntType)
+        cols_np_int = np.asarray([(s.k, s.j, s.i, s.c) for s in cols], dtype=PETSc.IntType)
+
+        def _check(rows, cols, vals):
+            self.mat.zeroEntries()
+            self.mat.setValuesBlockedStencil(rows, cols, vals)
+            self.mat.assemble()
+            # row indices: (0,1) -> 12, (1,2) -> 27
+            # col indices: (0,3) -> 36, (2,3) -> 42
+            row_bases = [12, 27]
+            col_bases = [36, 42]
+            vals_np = np.asarray(vals, dtype=PETSc.ScalarType).reshape(2, 3, 2, 3)
+            for ni in range(2):
+                for rbs in range(3):
+                    for nj in range(2):
+                        for cbs in range(3):
+                            val = float(vals_np[ni, rbs, nj, cbs])
+                            self.assertEqual(self.mat.getValue(row_bases[ni] + rbs, col_bases[nj] + cbs), val)
+
+        for (r, c) in [
+            (rows, cols),                               # list[MatStencil]
+            (rows_np_int, cols_np_int),                 # numpy array: (N, 4)
+            (rows_np_int.ravel(), cols_np_int.ravel()), # numpy array: (N*4, )
+        ]:
+            _check(r, c, vals)
+
 # -----
 
 
