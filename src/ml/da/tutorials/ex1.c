@@ -53,7 +53,7 @@ static char help[] = "Deterministic ETKF example for the Lorenz-96 model. See "
 #define DEFAULT_DT            0.05
 #define DEFAULT_OBS_ERROR_STD 1.0
 #define DEFAULT_ENSEMBLE_SIZE 30
-#define SPINUP_STEPS          2000
+#define SPINUP_STEPS          0
 
 /* Minimum valid parameter values */
 #define MIN_N              1
@@ -291,7 +291,7 @@ int main(int argc, char **argv)
   PetscReal ensemble_init_std = 1; /* Initial ensemble spread */
 
   /* PETSc objects */
-  Lorenz96Ctx *l95_ctx = NULL;
+  Lorenz96Ctx *l95_ctx = NULL, *truth_ctx = NULL;
   DM           da_state;
   PetscDA      daas;
   Vec          x0, x_mean, x_forecast;
@@ -333,9 +333,11 @@ int main(int argc, char **argv)
   PetscCall(DMDACreate1d(PETSC_COMM_WORLD, DM_BOUNDARY_PERIODIC, n, 1, 2, NULL, &da_state));
   PetscCall(DMSetFromOptions(da_state));
   PetscCall(DMSetUp(da_state));
+  PetscCall(DMDASetUniformCoordinates(da_state, 0.0, (PetscReal)n, 0.0, 0.0, 0.0, 0.0));
 
   /* Create Lorenz96 context with reusable TS object */
   PetscCall(Lorenz96ContextCreate(da_state, n, F, dt, &l95_ctx));
+  PetscCall(Lorenz96ContextCreate(da_state, n, F, dt, &truth_ctx));
 
   /* Initialize random number generator */
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rng));
@@ -356,7 +358,7 @@ int main(int argc, char **argv)
 
   /* Spin up truth to get onto attractor */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Spinning up truth for %" PetscInt_FMT " steps...\n", (PetscInt)SPINUP_STEPS));
-  for (int k = 0; k < SPINUP_STEPS; k++) PetscCall(Lorenz96Step(truth_state, truth_state, l95_ctx));
+  for (int k = 0; k < SPINUP_STEPS; k++) PetscCall(Lorenz96Step(truth_state, truth_state, truth_ctx));
 
   /* Initialize observation vectors */
   PetscCall(VecDuplicate(x0, &observation));
@@ -439,7 +441,7 @@ int main(int argc, char **argv)
     /* Propagate ensemble and truth trajectory */
     if (step < steps) {
       PetscCall(PetscDAApplyModel(daas, Lorenz96Step, l95_ctx));
-      PetscCall(Lorenz96Step(truth_state, truth_state, l95_ctx));
+      PetscCall(Lorenz96Step(truth_state, truth_state, truth_ctx));
     }
   }
 
@@ -553,6 +555,7 @@ int main(int argc, char **argv)
   PetscCall(PetscDADestroy(&daas));
   PetscCall(DMDestroy(&da_state));
   PetscCall(Lorenz96ContextDestroy(&l95_ctx));
+  PetscCall(Lorenz96ContextDestroy(&truth_ctx));
   PetscCall(PetscRandomDestroy(&rng));
 
   PetscCall(PetscFinalize());
@@ -562,7 +565,6 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
-    requires: !complex !single
     nsize: 1
     args: -steps 1120 -burn 100 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30
 
