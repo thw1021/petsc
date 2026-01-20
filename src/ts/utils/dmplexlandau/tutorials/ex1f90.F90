@@ -11,7 +11,7 @@ program DMPlexTestLandauInterface
   external DMPlexLandauIFunction
   external DMPlexLandauIJacobian
   DM dm
-  PetscInt dim
+  PetscInt, parameter :: dim = 2
   PetscInt ii
   PetscErrorCode ierr
   TS ts
@@ -21,7 +21,6 @@ program DMPlexTestLandauInterface
   KSP ksp
   PC pc
   SNESLineSearch linesearch
-  PetscReal mone
   PetscScalar scalar
 
   PetscCallA(PetscInitialize(ierr))
@@ -29,7 +28,6 @@ program DMPlexTestLandauInterface
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   !  Create mesh (DM), read in parameters, create and add f_0 (X)
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  dim = 2
   PetscCallA(DMPlexLandauCreateVelocitySpace(PETSC_COMM_WORLD, dim, '', X, J, dm, ierr))
   PetscCallA(DMSetUp(dm, ierr))
   PetscCallA(VecDuplicate(X, X_0, ierr))
@@ -39,8 +37,7 @@ program DMPlexTestLandauInterface
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   ii = 0
   PetscCallA(DMPlexLandauPrintNorms(X, ii, ierr))
-  mone = 0
-  PetscCallA(DMSetOutputSequenceNumber(dm, ii, mone, ierr))
+  PetscCallA(DMSetOutputSequenceNumber(dm, ii, 0.0_PETSC_REAL_KIND, ierr))
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   !    Create timestepping solver context
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -68,8 +65,8 @@ program DMPlexTestLandauInterface
   PetscCallA(TSSolve(ts, X, ierr))
   ii = 1
   PetscCallA(DMPlexLandauPrintNorms(X, ii, ierr))
-  PetscCallA(TSGetTime(ts, mone, ierr))
-  PetscCallA(DMSetOutputSequenceNumber(dm, ii, mone, ierr))
+  PetscCallA(TSGetTime(ts, 0.0_PETSC_REAL_KIND, ierr))
+  PetscCallA(DMSetOutputSequenceNumber(dm, ii, 0.0_PETSC_REAL_KIND, ierr))
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   !  remove f_0
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

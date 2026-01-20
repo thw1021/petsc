@@ -12,20 +12,18 @@
         use petscdraw
         implicit none
 
-        PetscReal zero, one, value, max
+        PetscReal value
+        PetscReal, parameter :: max = 256.0
         PetscDraw draw
         integer dummy
-        PetscErrorCode ierr
-
+        PetscErrorCode, intent(out) :: ierr
         PetscInt32 i
 
-        zero = 0
-        one = 1
-        max = 256.0
         do i = 0, 255
-          value = i/max
-          PetscCall(PetscDrawLine(draw, zero, value, one, value, i, ierr))
+          value = real(i, PETSC_REAL_KIND)/max
+          PetscCall(PetscDrawLine(draw, 0.0_PETSC_REAL_KIND, value, 1.0_PETSC_REAL_KIND, value, i, ierr))
         end do
+        ierr = 0
       end
 
       program main
@@ -35,12 +33,8 @@
 
         PetscDraw draw
         PetscErrorCode ierr
-        integer4 x, y, width, height
+        integer4, parameter :: x = 0, y = 0, width = 256, height = 256
         external zoomfunction
-        x = 0
-        y = 0
-        width = 256
-        height = 256
 
         PetscCallA(PetscInitialize(ierr))
         PetscCallA(PetscDrawCreate(PETSC_COMM_WORLD, PETSC_NULL_CHARACTER, 'Title', x, y, width, height, draw, ierr))
