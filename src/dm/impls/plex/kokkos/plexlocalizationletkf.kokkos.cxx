@@ -67,39 +67,34 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
 
 .seealso:
 @*/
-PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, const PetscInt n_obs_local, const PetscInt n_dof, Vec Vecxyz[3], Mat H, Mat *Q)
+PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, const PetscInt n_dof, Vec Vecxyz[3], Mat H, Mat *Q)
 {
-  PetscInt dim = 0, n_vert_local, d, N, n_obs_global, n_state_local;
+  PetscInt dim = 0, n_vert_local, d, N, n_obs_global, n_state_local, n_obs_local, n_state_global;
   Vec     *obs_vecs;
   MPI_Comm comm;
-  PetscInt n_state_global;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(H, MAT_CLASSID, 5);
   PetscAssertPointer(Q, 6);
 
   PetscCall(PetscKokkosInitializeCheck());
-
   PetscCall(PetscObjectGetComm((PetscObject)H, &comm));
-
+  PetscCall(MatGetLocalSize(H, &n_obs_local, NULL));
+  PetscCall(VecGetSize(Vecxyz[0], &n_state_global));
+  PetscCall(VecGetLocalSize(Vecxyz[0], &n_state_local));
+  n_vert_local = n_state_local / n_dof;
   /* Infer dim from the number of vectors in Vecxyz */
   for (d = 0; d < 3; ++d) {
     if (Vecxyz[d]) dim++;
     else break;
   }
-
-  PetscCheck(dim > 0, comm, PETSC_ERR_ARG_WRONG, "Dim must be > 0");
-  PetscCheck(n_obs_vertex > 0, comm, PETSC_ERR_ARG_WRONG, "n_obs_vertex must be > 0");
-
-  PetscCall(VecGetSize(Vecxyz[0], &n_state_global));
-  PetscCall(VecGetLocalSize(Vecxyz[0], &n_state_local));
-  n_vert_local = n_state_local / n_dof;
-
   /* Check H dimensions */
   PetscCall(MatGetSize(H, &n_obs_global, &N));
   PetscCheck(N == n_state_global, comm, PETSC_ERR_ARG_SIZ, "H number of columns %" PetscInt_FMT " != global state size %" PetscInt_FMT, N, n_state_global);
-  // If n_obs_global < n_obs_vertex, we will pad with -1 indices and 0.0 weights.
+  // If n_obs_global < n_obs_vertex, we will pad with -1 indices and 0.0 weights. ???
   // This is not an error condition, but rather a case where we have fewer observations than requested neighbors.
+  PetscCheck(dim > 0, comm, PETSC_ERR_ARG_WRONG, "Dim must be > 0");
+  PetscCheck(n_obs_vertex > 0 && n_obs_vertex <= n_obs_global, comm, PETSC_ERR_ARG_WRONG, "n_obs_vertex must be > 0 and <= n_obs_global");
 
   /* Allocate storage for observation locations */
   PetscCall(PetscMalloc1(dim, &obs_vecs));
@@ -119,7 +114,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, con
   PetscCall(MatSetFromOptions(*Q));
   PetscCall(MatSetUp(*Q));
 
-  PetscCall(PetscInfo((PetscObject)*Q, "Computing LETKF localization matrix: %" PetscInt_FMT " vertices, %" PetscInt_FMT " observations, %" PetscInt_FMT " neighbors\n", n_vert_local, n_obs_global, n_obs_vertex));
+  PetscCall(PetscInfo((PetscObject)*Q, "Computing LETKF localization matrix: %" PetscInt_FMT " vertices, %" PetscInt_FMT " observations, %" PetscInt_FMT " observations per vertex\n", n_vert_local, n_obs_global, n_obs_vertex));
 
   /* Prepare Kokkos Views */
   using ExecSpace = Kokkos::DefaultExecutionSpace;
@@ -223,6 +218,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, con
       // Compute weights
       PetscReal radius2 = best_dists_dev(i, n_obs_vertex - 1);
       PetscReal radius  = std::sqrt(radius2);
+      radius *= 0.5;
       if (radius == 0.0) radius = 1.0;
 
       for (PetscInt k = 0; k < n_obs_vertex; ++k) {
@@ -258,6 +254,37 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, con
   for (PetscInt i = 0; i < n_vert_local; ++i) {
     PetscInt globalRow = rstart + i;
     PetscCall(MatSetValues(*Q, 1, &globalRow, n_obs_vertex, &indices_host(i, 0), &values_host(i, 0), INSERT_VALUES));
+  }
+
+  {
+    double r_sum = 0.0;
+    Kokkos::parallel_reduce(
+      "ComputeRadiusSum", Kokkos::RangePolicy<ExecSpace>(0, n_vert_local),
+      KOKKOS_LAMBDA(const PetscInt i, double &lsum) {
+        PetscReal r2 = best_dists_dev(i, n_obs_vertex - 1);
+        PetscReal r  = std::sqrt(r2);
+        if (r == 0.0) r = 1.0;
+        lsum += r;
+      },
+      r_sum);
+
+    double r_sq_sum = 0.0;
+    Kokkos::parallel_reduce(
+      "ComputeRadiusSqSum", Kokkos::RangePolicy<ExecSpace>(0, n_vert_local),
+      KOKKOS_LAMBDA(const PetscInt i, double &lsum_sq) {
+        PetscReal r2 = best_dists_dev(i, n_obs_vertex - 1);
+        PetscReal r  = std::sqrt(r2);
+        if (r == 0.0) r = 1.0;
+        lsum_sq += r * r;
+      },
+      r_sq_sum);
+
+    if (n_vert_local > 0) {
+      double mean   = r_sum / n_vert_local;
+      double var    = (r_sq_sum / n_vert_local) - (mean * mean);
+      double stddev = (var > 0.0) ? std::sqrt(var) : 0.0;
+      PetscCall(PetscInfo((PetscObject)obs_vecs[0], "LETKF localization radius: mean %g, std dev %g\n", mean, stddev));
+    }
   }
 
   /* Cleanup Phase 2 storage */
