@@ -293,6 +293,20 @@ cdef class MatStencil:
 
     cdef PetscMatStencil stencil
 
+    def __getbuffer__(self, Py_buffer *view, int flags):
+        PyPetscBuffer_FillInfo(view,
+                               <void*>&self.stencil, 4, c'i', # `k, j, i, c`
+                               0, flags)
+
+    def __releasebuffer__(self, Py_buffer *view):
+        PyPetscBuffer_Release(view)
+
+    def __cinit__(self, i=0, j=0, k=0, c=0):
+        self.stencil.i = asInt(i)
+        self.stencil.j = asInt(j)
+        self.stencil.k = asInt(k)
+        self.stencil.c = asInt(c)
+
     property i:
         "First logical grid coordinate."
         def __get__(self) -> int:
