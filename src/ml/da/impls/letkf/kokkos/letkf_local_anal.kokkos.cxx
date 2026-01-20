@@ -288,14 +288,14 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
 
   /* Allocate device views */
   view_1d_int    *d_Q_i = new view_1d_int("Q_i", nrows + 1);
-  view_1d_int    *d_Q_j = new view_1d_int("Q_j", nrows * impl->p_local);
-  view_1d_scalar *d_Q_a = new view_1d_scalar("Q_a", nrows * impl->p_local);
+  view_1d_int    *d_Q_j = new view_1d_int("Q_j", nrows * impl->n_obs_vertex);
+  view_1d_scalar *d_Q_a = new view_1d_scalar("Q_a", nrows * impl->n_obs_vertex);
 
   if (Q_memtype != PETSC_MEMTYPE_HOST) {
     /* Data is on device, copy device-to-device */
     view_1d_int_dev_unmanaged    d_src_i(Q_i, nrows + 1);
-    view_1d_int_dev_unmanaged    d_src_j(Q_j, nrows * impl->p_local);
-    view_1d_scalar_dev_unmanaged d_src_a(Q_a, nrows * impl->p_local);
+    view_1d_int_dev_unmanaged    d_src_j(Q_j, nrows * impl->n_obs_vertex);
+    view_1d_scalar_dev_unmanaged d_src_a(Q_a, nrows * impl->n_obs_vertex);
 
     Kokkos::deep_copy(*d_Q_i, d_src_i);
     Kokkos::deep_copy(*d_Q_j, d_src_j);
@@ -303,8 +303,8 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
   } else {
     /* Data is on host, copy host-to-device */
     view_1d_int_host    h_Q_i(Q_i, nrows + 1);
-    view_1d_int_host    h_Q_j(Q_j, nrows * impl->p_local);
-    view_1d_scalar_host h_Q_a(Q_a, nrows * impl->p_local);
+    view_1d_int_host    h_Q_j(Q_j, nrows * impl->n_obs_vertex);
+    view_1d_scalar_host h_Q_a(Q_a, nrows * impl->n_obs_vertex);
 
     Kokkos::deep_copy(*d_Q_i, h_Q_i);
     Kokkos::deep_copy(*d_Q_j, h_Q_j);
@@ -433,8 +433,8 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     PetscCheck(Q_memtype == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Q matrix must be on host for this fallback path");
 
     Q_i_view = view_1d_int_const(Q_i, n_vertices + 1);
-    Q_j_view = view_1d_int_const(Q_j, n_vertices * Q_NUM_LOCAL_OBSERVATIONS_MAX);
-    Q_a_view = view_1d_scalar_const(Q_a, n_vertices * Q_NUM_LOCAL_OBSERVATIONS_MAX);
+    Q_j_view = view_1d_int_const(Q_j, n_vertices * impl->n_obs_vertex);
+    Q_a_view = view_1d_scalar_const(Q_a, n_vertices * impl->n_obs_vertex);
   }
 
   /* Get global observation data arrays */
@@ -479,7 +479,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   } else {
     /* Target ~2GB workspace. Approx memory per point: m*m*8 (T) + p*m*8 (Z) */
     /* With reuse: m*m*8 + p*m*8 */
-    PetscInt mem_per_point = sizeof(PetscScalar) * (m * m + impl->p_local * m);
+    PetscInt mem_per_point = sizeof(PetscScalar) * (m * m + impl->n_obs_vertex * m);
     chunk_size             = (PetscInt)(2.0 * 1024 * 1024 * 1024 / mem_per_point);
     /* Clamp to reasonable max to avoid huge allocations even if memory allows */
     if (chunk_size > 32768) chunk_size = 32768;
@@ -502,24 +502,24 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     PetscInt n_batch_current = chunk_end - chunk_start;
 
     /* Copy host variables to local scope to avoid capturing host pointers in device kernels */
-    PetscInt p_local_copy = impl->p_local;
+    PetscInt n_obs_vertex_copy = impl->n_obs_vertex;
 
     /* Batched workspace for CURRENT chunk (device memory) */
     /* NOTE: G_batch eliminated - computed on-the-fly during ensemble update */
-    view_3d Z_batch("Z_batch", n_batch_current, p_local_copy, m);                // (n_batch_current, p_local, m)
-    view_3d S_batch = Z_batch;                                                   // Reuse Z memory for S
-    view_3d T_batch("T_batch", n_batch_current, m, m);                           // (n_batch_current, m, m)
-    view_3d V_batch = T_batch;                                                   // Reuse T memory for V
-    view_2d Lambda_batch("Lambda_batch", n_batch_current, m);                    // (n_batch_current, m)
-    view_3d T_sqrt_batch("T_sqrt_batch", n_batch_current, m, m);                 // (n_batch_current, m, m)
-    view_2d w_batch("w_batch", n_batch_current, m);                              // (n_batch_current, m)
-    view_2d delta_batch("delta_batch", n_batch_current, p_local_copy);           // (n_batch_current, p_local)
-    view_2d y_batch("y_batch", n_batch_current, p_local_copy);                   // (n_batch_current, p_local)
-    view_2d y_mean_batch("y_mean_batch", n_batch_current, p_local_copy);         // (n_batch_current, p_local)
-    view_2d r_inv_sqrt_batch("r_inv_sqrt_batch", n_batch_current, p_local_copy); // (n_batch_current, p_local)
-    view_2d temp1_batch("temp1_batch", n_batch_current, m);                      // (n_batch_current, m) - Workspace
-    view_2d temp2_batch("temp2_batch", n_batch_current, m);                      // (n_batch_current, m) - Workspace
-    view_2d inv_sqrt_lambda_batch("inv_sqrt_lambda_batch", n_batch_current, m);  // (n_batch_current, m) - Precomputed 1/sqrt(Lambda)
+    view_3d Z_batch("Z_batch", n_batch_current, n_obs_vertex_copy, m);                // (n_batch_current, n_obs_vertex, m)
+    view_3d S_batch = Z_batch;                                                        // Reuse Z memory for S
+    view_3d T_batch("T_batch", n_batch_current, m, m);                                // (n_batch_current, m, m)
+    view_3d V_batch = T_batch;                                                        // Reuse T memory for V
+    view_2d Lambda_batch("Lambda_batch", n_batch_current, m);                         // (n_batch_current, m)
+    view_3d T_sqrt_batch("T_sqrt_batch", n_batch_current, m, m);                      // (n_batch_current, m, m)
+    view_2d w_batch("w_batch", n_batch_current, m);                                   // (n_batch_current, m)
+    view_2d delta_batch("delta_batch", n_batch_current, n_obs_vertex_copy);           // (n_batch_current, n_obs_vertex)
+    view_2d y_batch("y_batch", n_batch_current, n_obs_vertex_copy);                   // (n_batch_current, n_obs_vertex)
+    view_2d y_mean_batch("y_mean_batch", n_batch_current, n_obs_vertex_copy);         // (n_batch_current, n_obs_vertex)
+    view_2d r_inv_sqrt_batch("r_inv_sqrt_batch", n_batch_current, n_obs_vertex_copy); // (n_batch_current, n_obs_vertex)
+    view_2d temp1_batch("temp1_batch", n_batch_current, m);                           // (n_batch_current, m) - Workspace
+    view_2d temp2_batch("temp2_batch", n_batch_current, m);                           // (n_batch_current, m) - Workspace
+    view_2d inv_sqrt_lambda_batch("inv_sqrt_lambda_batch", n_batch_current, m);       // (n_batch_current, m) - Precomputed 1/sqrt(Lambda)
 
     /* ===================================================================== */
     /* Step 2.1.2: Fused observation extraction and S/Delta computation     */
@@ -579,7 +579,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         for (int j = 0; j < m; j++) {
           for (int k = j; k < m; k++) {
             PetscScalar sum = (j == k) ? inflation_inv : 0.0;
-            for (int p = 0; p < p_local_copy; p++) sum += S_i(p, j) * S_i(p, k);
+            for (int p = 0; p < n_obs_vertex_copy; p++) sum += S_i(p, j) * S_i(p, k);
             T_i(j, k) = sum;
           }
         }
