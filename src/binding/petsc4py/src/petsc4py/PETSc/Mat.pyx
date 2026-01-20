@@ -3215,6 +3215,35 @@ cdef class Mat(Object):
         cdef PetscInsertMode im = insertmode(addv)
         matsetvaluestencil(self.mat, r, c, value, im, 0)
 
+    def setValuesStencil(
+        self,
+        rows: Sequence[Stencil] | Sequence[int] | ArrayInt,
+        cols: Sequence[Stencil] | Sequence[int] | ArrayInt,
+        values: Sequence[Scalar] | ArrayScalar,
+        addv: InsertModeSpec = None) -> None:
+        """Set a block of values using row and col stencils.
+
+        Not collective.
+
+        Parameters
+        ----------
+        rows
+            Row stencils.
+        cols
+            Column stencils.
+        values
+            The scalar values.
+        addv
+            Insertion mode.
+
+        See Also
+        --------
+        petsc.MatSetValuesStencil
+
+        """
+        cdef PetscInsertMode im = insertmode(addv)
+        matsetvaluesstencil(self.mat, rows, cols, values, im, 0)
+
     def setValueStagStencil(self, row, col, value, addv=None) -> None:
         """Not implemented."""
         raise NotImplementedError
@@ -3248,6 +3277,35 @@ cdef class Mat(Object):
         cdef MatStencil r = row, c = col
         cdef PetscInsertMode im = insertmode(addv)
         matsetvaluestencil(self.mat, r, c, value, im, 1)
+
+    def setValuesBlockedStencil(
+        self,
+        rows: Sequence[Stencil] | Sequence[int] | ArrayInt,
+        cols: Sequence[Stencil] | Sequence[int] | ArrayInt,
+        values: Sequence[Scalar] | ArrayScalar,
+        addv: InsertModeSpec = None) -> None:
+        """Set blocks of values using row and col stencils.
+
+        Not collective.
+
+        Parameters
+        ----------
+        rows
+            Row stencils.
+        cols
+            Column stencils.
+        values
+            The scalar values.
+        addv
+            Insertion mode.
+
+        See Also
+        --------
+        petsc.MatSetValuesBlockedStencil
+
+        """
+        cdef PetscInsertMode im = insertmode(addv)
+        matsetvaluesstencil(self.mat, rows, cols, values, im, 1)
 
     def setValueBlockedStagStencil(self, row, col, value, addv=None) -> None:
         """Not implemented."""
