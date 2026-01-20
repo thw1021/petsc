@@ -207,7 +207,7 @@ int main(int argc, char **argv)
   }
 
   /* Call the function */
-  PetscCall(DMPlexGetLETKFLocalizationMatrix(nvertexobs, nobs_local, ndof, Vecxyz, H, &Q));
+  PetscCall(DMPlexGetLETKFLocalizationMatrix(nvertexobs, ndof, Vecxyz, H, &Q));
   PetscCall(PetscObjectSetName((PetscObject)Q, "Q_localization"));
 
   // View Q
