@@ -447,7 +447,14 @@ int main(int argc, char **argv)
       // Verify loaded solution against serial solution
       PetscCall(VerifyLoadedSolution(dm_serial, V_serial, dm, V, 100 * PETSC_MACHINE_EPSILON));
 
+      // Verify DMLabel values against the serial DM
       PetscCall(VerifyDMLabels(dm_serial, dm, "Face Sets", NULL));
+
+      { // Complete the label so that the writer must sort through non-face points
+        DMLabel label;
+        PetscCall(DMGetLabel(dm, "Face Sets", &label));
+        PetscCall(DMPlexLabelComplete(dm, label));
+      }
 
       // Write loaded solution to CGNS file
       PetscCall(PetscViewerCGNSOpen(comm, user.outfile, FILE_MODE_WRITE, &viewer));

@@ -2253,20 +2253,38 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
     }
 
     for (PetscInt fs = 0; fs < num_fs_global; ++fs) {
-      int             BC;
-      const PetscInt *fs_pnts = NULL;
-      char            bc_name[33];
-      PetscInt        fsID = fsValuesGlobal[fs];
-      cgsize_t        fs_start, fs_owned, fs_global;
-      cgsize_t       *fs_pnts_cg;
+      int            BC;
+      const PetscInt fsID    = fsValuesGlobal[fs];
+      PetscInt      *fs_pnts = NULL;
+      char           bc_name[33];
+      cgsize_t       fs_start, fs_owned, fs_global;
+      cgsize_t      *fs_pnts_cg;
 
       PetscCall(DMLabelGetStratumIS(fsLabel, fsID, &stratumIS));
-      if (stratumIS) {
-        PetscInt fs_owned_int;
-        PetscCall(ISGetSize(stratumIS, &fs_owned_int));
-        fs_owned = fs_owned_int;
-        PetscCall(ISGetIndices(stratumIS, &fs_pnts));
+      if (stratumIS) { // Get list of only face points
+        PetscSegBuffer  fs_pntsSB;
+        PetscCount      fs_owned_count;
+        PetscInt        nstratumPnts;
+        const PetscInt *stratumPnts;
+
+        PetscCall(PetscSegBufferCreate(sizeof(PetscInt), 16, &fs_pntsSB));
+        PetscCall(ISGetIndices(stratumIS, &stratumPnts));
+        PetscCall(ISGetSize(stratumIS, &nstratumPnts));
+        for (PetscInt i = 0; i < nstratumPnts; i++) {
+          PetscInt *fs_pnts_buffer, stratumPnt = stratumPnts[i];
+          if (stratumPnt < fStart || stratumPnt >= fEnd) continue; // Skip non-face points
+          PetscCall(PetscSegBufferGetInts(fs_pntsSB, 1, &fs_pnts_buffer));
+          *fs_pnts_buffer = stratumPnt;
+        }
+        PetscCall(PetscSegBufferGetSize(fs_pntsSB, &fs_owned_count));
+        fs_owned = fs_owned_count;
+        PetscCall(PetscSegBufferExtractAlloc(fs_pntsSB, &fs_pnts));
+
+        PetscCall(PetscSegBufferDestroy(&fs_pntsSB));
+        PetscCall(ISRestoreIndices(stratumIS, &stratumPnts));
+        PetscCall(ISDestroy(&stratumIS));
       } else fs_owned = 0;
+
       PetscCallMPI(MPIU_Allreduce(&fs_owned, &fs_global, 1, MPIU_CGSIZE, MPI_SUM, comm));
       fs_start = 0;
       PetscCallMPI(MPI_Exscan(&fs_owned, &fs_start, 1, MPIU_CGSIZE, MPI_SUM, comm));
@@ -2280,6 +2298,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
         PetscInt is_idx;
 
         PetscCall(ISLocate(fsFacesAll, fs_pnts[i], &is_idx));
+        PetscCheck(is_idx >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Could not find face %" PetscInt_FMT " in list of all local face points", fs_pnts[i]);
         fs_pnts_cg[i] = is_idx + f_start + 1;
       }
 
@@ -2298,10 +2317,7 @@ PetscErrorCode DMView_PlexCGNS(DM dm, PetscViewer viewer)
       PetscCallCGNSWriteData(cg_boco_gridlocation_write(cgv->file_num, base, zone, BC, grid_loc), dm, viewer);
 
       PetscCall(PetscFree(fs_pnts_cg));
-      if (stratumIS) {
-        PetscCall(ISRestoreIndices(stratumIS, &fs_pnts));
-        PetscCall(ISDestroy(&stratumIS));
-      }
+      PetscCall(PetscFree(fs_pnts));
     }
     PetscCall(ISDestroy(&fsFacesAll));
     PetscCall(PetscFree(fsValuesGlobal));
