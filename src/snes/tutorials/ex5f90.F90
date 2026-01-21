@@ -44,9 +44,6 @@ module ex5module
     PetscReal lambda
   end type AppCtx
 
-  ! See the PETSc users manual section in the Fortran chapter called Setting Routines and Contexts
-  Interface_SNESGetApplicationContext(AppCtx)
-  end interface
 
   contains
 ! ---------------------------------------------------------------------
@@ -143,14 +140,17 @@ module ex5module
     type(AppCtx), pointer:: ctx
     Vec X
     PetscErrorCode ierr
-    DM da
+      DM da
+      type(c_ptr) Cctx
 
 !  Declarations for use with local arrays:
     PetscScalar, pointer :: lx_v(:)
 
     ierr = 0
     PetscCallA(SNESGetDM(snes, da, ierr))
-    PetscCallA(SNESGetApplicationContext(snes, ctx, ierr))
+      PetscCallA(SNESGetApplicationContext(snes, Cctx, ierr))
+      call c_f_pointer(Cctx, ctx)
+      print*, ctx
 !  Get a pointer to vector data.
 !    - For default PETSc vectors, VecGetArray() returns a pointer to
 !      the data array. Otherwise, the routine is implementation dependent.
@@ -552,7 +552,8 @@ program main
   ctx%gye = ctx%gys + ctx%gym - 1
   ctx%gxe = ctx%gxs + ctx%gxm - 1
 
-  PetscCallA(SNESSetApplicationContext(snes, ctx, ierr))
+      PetscCallA(SNESSetApplicationContext(snes, ctx, ierr))
+      print*,ctx
 
 !  Set function evaluation routine and vector
   PetscCallA(SNESSetFunction(snes, r, FormFunction, ctx, ierr))

@@ -73,12 +73,12 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
   # Do we need to generate instead an Interface_Funname() macro?
   PetscCtxRt = False
   NL    = '\n'
-  for k in fun.arguments:
-    if k.typename == 'PetscCtxRt':
-      NL    = ';\\\n'
-      PetscCtxRt = True
-      ofile = os.path.join(petscarch, 'include', pkgname, 'finclude', file.replace('.h90', '.h'))
-      break
+  #for k in fun.arguments:
+  #  if k.typename == 'PetscCtxRt':
+  #    NL    = ';\\\n'
+  #    PetscCtxRt = True
+  #    ofile = os.path.join(petscarch, 'include', pkgname, 'finclude', file.replace('.h90', '.h'))
+  #    break
 
   with open(ofile,"a") as fd:
     if funname in ['PetscObjectQuery', 'PetscObjectCompose']:
@@ -152,7 +152,7 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
         elif ktypename == 'PetscCtx':
           fd.write('  type(*) :: ' + k.name + NL)
         elif ktypename == 'PetscCtxRt':
-          fd.write('  type(ttype), pointer :: ' + k.name + NL)
+          fd.write('  type(c_ptr) :: ' + k.name + NL)
         else:
           fd.write('  ' + ktypename + ' :: ' + k.name + NL)
         cnt = cnt + 1
