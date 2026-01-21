@@ -1,0 +1,48 @@
+Spinning up truth for 0 steps...
+[0] <vec:seqkokkos> PetscDAGetLETKFLocalizationMatrix(): LETKF localization radius: mean 2.2, std dev 0.
+Localization matrix Q created: 40 x 5
+PetscDA Object: 1 MPI process
+  State size: 40
+  Observation size: 40
+  Ensemble size: 5
+  Assembled: true
+  Inflation: 1.
+PetscDALETKF Object:
+  Square root type: eigen
+  Local analysis: Kokkos
+  Local observations per vertex: 5
+  GPU batch size: auto
+  Localization matrix: set
+Lorenz-96 LETKF Example
+======================
+  State dimension        : 40
+  Ensemble size          : 5
+  Forcing parameter (F)  : 8.0000
+  Time step (dt)         : 0.0500
+  Total steps            : 1120
+  Burn-in steps          : 100
+  Spin-up steps          : 0
+  Observation frequency  : 1
+  Observation noise std  : 1.000
+  Ensemble init std      : 1.000
+  Random seed            : 12345
+  Localization (obs/vert): 5 
+
+Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [burn-in]
+Step  112, time  5.600  RMSE_forecast 0.35332  RMSE_analysis 0.35298
+Step  224, time 11.200  RMSE_forecast 0.31609  RMSE_analysis 0.31710
+Step  336, time 16.800  RMSE_forecast 0.46154  RMSE_analysis 0.44252
+Step  448, time 22.400  RMSE_forecast 0.49946  RMSE_analysis 0.38015
+Step  560, time 28.000  RMSE_forecast 0.55097  RMSE_analysis 0.50196
+Step  672, time 33.600  RMSE_forecast 0.31756  RMSE_analysis 0.28642
+Step  784, time 39.200  RMSE_forecast 0.55086  RMSE_analysis 0.51148
+Step  896, time 44.800  RMSE_forecast 0.32497  RMSE_analysis 0.29308
+Step 1008, time 50.400  RMSE_forecast 0.35715  RMSE_analysis 0.34580
+Step 1120, time 56.000  RMSE_forecast 0.47909  RMSE_analysis 0.43069
+
+Statistics (1021 post-burn-in steps):
+==================================================
+  Mean RMSE (forecast) : 0.45857
+  Mean RMSE (analysis) : 0.41845
+  Observations used    : 1120
+
