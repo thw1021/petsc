@@ -739,7 +739,7 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q)
   PetscCheck(nrows == da->state_size / da->ndof, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Localization matrix rows (%" PetscInt_FMT ") must match state size (%" PetscInt_FMT ")", nrows, da->state_size);
   PetscCheck(ncols == da->obs_size, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Localization matrix columns (%" PetscInt_FMT ") must match observation size (%" PetscInt_FMT ")", ncols, da->obs_size);
 
-  /* Validate that each row has exactly Q_NUM_LOCAL_OBSERVATIONS_MAX non-zero entries */
+  /* Validate that each row has const non-zero entries */
   for (i = 0; i < nrows; i++) {
     const PetscInt    *cols;
     const PetscScalar *vals;

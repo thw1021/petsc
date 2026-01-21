@@ -21,7 +21,7 @@ static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
 #define DEFAULT_DT            0.05
 #define DEFAULT_OBS_ERROR_STD 1.0
 #define DEFAULT_ENSEMBLE_SIZE 30
-#define SPINUP_STEPS          0
+#define SPINUP_STEPS          0 /* No spinup needed */
 
 /* Minimum valid parameter values */
 #define MIN_N              1
@@ -195,7 +195,7 @@ static PetscErrorCode ComputeRMSE(Vec v1, Vec v2, Vec work, PetscInt n, PetscRea
 /*
   CreateLocalizationMatrix - Create and initialize full localization matrix Q
 
-  For the fully observed case (n = Q_NUM_LOCAL_OBSERVATIONS_MAX), Q is a dense nxn
+  For the fully observed case, Q is a dense nxn
   matrix with all entries = 1.0, meaning each vertex uses all observations.
 */
 static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
@@ -205,8 +205,8 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
   PetscFunctionBeginUser;
 
   /* Create Q matrix (n x n for identity observation operator)
-     Each row will have exactly Q_NUM_LOCAL_OBSERVATIONS_MAX non-zeros */
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, Q_NUM_LOCAL_OBSERVATIONS_MAX, NULL, 0, NULL, Q));
+     Each row will have exactly const non-zeros -- this can be relaxed */
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, n, NULL, 0, NULL, Q));
   PetscCall(MatSetFromOptions(*Q));
 
   /* Initialize with full localization (all weights = 1.0)
@@ -217,15 +217,6 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
   PetscCall(MatAssemblyBegin(*Q, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*Q, MAT_FINAL_ASSEMBLY));
 
-  /* Validate: Check each row has exactly Q_NUM_LOCAL_OBSERVATIONS_MAX non-zeros */
-  for (i = 0; i < n; i++) {
-    PetscInt           ncols;
-    const PetscInt    *cols;
-    const PetscScalar *vals;
-    PetscCall(MatGetRow(*Q, i, &ncols, &cols, &vals));
-    PetscCheck(ncols == Q_NUM_LOCAL_OBSERVATIONS_MAX, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Row %" PetscInt_FMT " has %" PetscInt_FMT " non-zeros, expected %" PetscInt_FMT, i, ncols, (PetscInt)Q_NUM_LOCAL_OBSERVATIONS_MAX);
-    PetscCall(MatRestoreRow(*Q, i, &ncols, &cols, &vals));
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -237,7 +228,7 @@ int main(int argc, char **argv)
   PetscInt  burn          = DEFAULT_BURN;
   PetscInt  obs_freq      = DEFAULT_OBS_FREQ;
   PetscInt  random_seed   = DEFAULT_RANDOM_SEED;
-  PetscInt  ensemble_size = DEFAULT_ENSEMBLE_SIZE, num_observations_vertex = Q_NUM_LOCAL_OBSERVATIONS_MAX;
+  PetscInt  ensemble_size = DEFAULT_ENSEMBLE_SIZE, num_observations_vertex = 40;
   PetscReal F                     = DEFAULT_F;
   PetscReal dt                    = DEFAULT_DT;
   PetscReal obs_error_std         = DEFAULT_OBS_ERROR_STD;
@@ -362,7 +353,7 @@ int main(int argc, char **argv)
     PetscCall(CreateLocalizationMatrix(n, &Q));
   }
   PetscCall(PetscDALETKFSetLocalization(daas, Q));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %" PetscInt_FMT " x %" PetscInt_FMT ", full localization (all weights = 1.0)\n", n, n));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %" PetscInt_FMT " x %" PetscInt_FMT "\n", n, num_observations_vertex));
 
   /* Initialize ensemble members from spun-up truth state */
   PetscCall(InitializeEnsemble(daas, truth_state, ensemble_size, ensemble_init_std, rng));
@@ -379,12 +370,13 @@ int main(int argc, char **argv)
                         "  Time step (dt)         : %.4f\n"
                         "  Total steps            : %" PetscInt_FMT "\n"
                         "  Burn-in steps          : %" PetscInt_FMT "\n"
+                        "  Spin-up steps          : %" PetscInt_FMT "\n"
                         "  Observation frequency  : %" PetscInt_FMT "\n"
                         "  Observation noise std  : %.3f\n"
                         "  Ensemble init std      : %.3f\n"
                         "  Random seed            : %" PetscInt_FMT "\n"
                         "  Localization (obs/vert): %" PetscInt_FMT " \n\n",
-                        n, ensemble_size, (double)F, (double)dt, steps, burn, obs_freq, (double)obs_error_std, (double)ensemble_init_std, random_seed, num_observations_vertex));
+                        n, ensemble_size, (double)F, (double)dt, steps, burn, SPINUP_STEPS, obs_freq, (double)obs_error_std, (double)ensemble_init_std, random_seed, num_observations_vertex));
 
   /* Main assimilation cycle: forecast and analysis steps */
   for (step = 0; step <= steps; step++) {
