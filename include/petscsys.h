@@ -1330,6 +1330,23 @@ PETSC_EXTERN_TYPEDEF typedef void PetscErrorCodeFn(void);
 
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCodeFn *PetscErrorCodeFunction;
 
+/*S
+  PetscCtxDestroyFn - A prototype of a `PetscErrorCode (*)(void **)` function that is used to free user contexts
+
+  Level: intermediate
+
+  Notes:
+  Used in the prototype of functions such as `DMSetApplicationContextDestroy()`
+
+  The function argument is a `void **` meaning that this function is called with a pointer to the application context (which is itself a pointer)
+  thus the destroy implementation must first reference the context via, for example, `*(AppCtx **)arg`
+
+.seealso: `PetscObject`, `PetscCtxDestroyDefault()`, `PetscObjectDestroy()`, `DMSetApplicationContextDestroy()`
+S*/
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscCtxDestroyFn(void **ctx);
+
+PETSC_EXTERN PetscCtxDestroyFn PetscCtxDestroyDefault;
+
 /*
     Defines PETSc error handling.
 */

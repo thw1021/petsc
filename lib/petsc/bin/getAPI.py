@@ -33,6 +33,7 @@ allfuncs = set()     # both class and standalone functions, used to prevent dupl
 enums = {}
 senums = {}          # like enums except strings instead of integer values for enumvalue
 typedefs = {}
+functiontypedefs = {}  # for example SNESFunctionFn
 aliases = {}
 structs = {}
 includefiles = {}
@@ -81,6 +82,26 @@ class Function:
         mstr += '  ' + displayFile(self)
         if self.opaque:   mstr += '    opaque binding\n'
         elif self.opaque: mstr += '    opaque stub\n'
+        if self.arguments:
+          mstr += '    Arguments\n'
+          for i in self.arguments:
+            mstr += '  ' + str(i)
+        return mstr
+
+class FunctionTypedef:
+    '''Represents a function typedef such as SNESFunctionFn'''
+    def __init__(self, name, *args, **kwargs):
+        self.name        = name
+        self.mansec      = None
+        self.file        = None
+        self.includefile = None
+        self.dir         = None
+        self.arguments   = []
+
+    def __str__(self):
+        mstr = '  ' + str(self.name) + '()\n'
+        mstr += '  ' + displayIncludeMansec(self)
+        mstr += '  ' + displayFile(self)
         if self.arguments:
           mstr += '    Arguments\n'
           for i in self.arguments:
@@ -333,6 +354,26 @@ def getTypedefs(filename):
     line = f.readline()
   f.close()
 
+def getFunctionTypedefs(filename):
+  import re
+  file = os.path.basename(filename).replace('types.h','.h')
+  regdefine   = re.compile(r'PETSC_EXTERN_TYPEDEF typedef PetscErrorCode ([a-zA-Z]*\([ *()A-Za-z0-9_,]*\));')
+  submansec = None
+  mansec = None
+  f = open(filename)
+  line = f.readline()
+  while line:
+    mansec,submansec = findmansec(line,mansec,submansec)
+    fl = regdefine.search(line)
+    if fl:
+      fun             = parseFunction(regdefine.sub(r'\1',line))
+      fun.mansec      = mansec
+      fun.submansec   = submansec
+      fun.includefile = os.path.basename(filename)
+      functiontypedefs[fun.name] = fun
+    line = f.readline()
+  f.close()
+
 def getStructs(filename):
   import re
   file = os.path.basename(filename).replace('types.h','.h')
@@ -452,6 +493,104 @@ def getpossiblefunctions(pkgname):
      file = i[0][i[0].find('/') + 1:i[0].find('.') + 2]
      functiontoinclude[i[2]] = file.replace('types','')
    return functiontoinclude
+
+def parseFunction(line):
+  '''Parses a function declaration such as SNESFunctionFn(SNES snes, Vec u, Vec F, void *ctx)'''
+  import re
+  regfun      = re.compile(r'^[static inline]*PetscErrorCode ')
+  regarg      = re.compile(r'\([A-Za-z0-9*_\[\]]*[,\) ]')
+  regerror    = re.compile(r'PetscErrorCode')
+  reg         = re.compile(r' ([*])*[a-zA-Z0-9_]*([\[\]]*)')
+  regname     = re.compile(r' [*]*([a-zA-Z0-9_]*)[\[\]]*')
+
+  # for finding xxx (*yyy)([const] zzz, ...)
+  regfncntnptrname  = re.compile(r'[A-Za-z0-9]* \(\*([A-Za-z0-9]*)\)\([_a-zA-Z0-9, *\[\]]*\)')
+  regfncntnptr      = re.compile(r'[A-Za-z0-9]* \(\*[A-Za-z0-9]*\)\([_a-zA-Z0-9, *\[\]]*\)')
+  regfncntnptrtype  = re.compile(r'([A-Za-z0-9]*) \(\*[A-Za-z0-9]*\)\([_a-zA-Z0-9, *\[\]]*\)')
+
+  # for rejecting (**func), (*indices)[3], (*monitor[X]), and xxx (*)(yyy)
+  regfncntnptrptr   = re.compile(r'\([*]*\*\*[ A-Za-z0-9]*\)')
+  regfncntnptrarray = re.compile(r'\(\*[A-Za-z0-9]*\)\[[A-Za-z0-9_]*\]')
+  regfncntnptrarrays = re.compile(r'\(\*[A-Za-z0-9]*\[[A-Za-z0-9]*\]\)')
+  regfncntnptrnoname = re.compile(r'\(\*\)')
+
+  rejects     = ['PetscErrorCode','...','<','(*)','(**)','off_t','MPI_Datatype','va_list','PetscStack','Ceed']
+  #
+  # search through list BACKWARDS to get the longest match
+  #
+  classlist = classes.keys()
+  classlist = sorted(classlist)
+  classlist.reverse()
+  line = line.replace('PETSC_UNUSED ','')
+  line = line.replace('PETSC_RESTRICT ','')
+  line = line.strip()
+  line = regfun.sub("",line)
+  line = regcomment.sub("",line)
+  line = line.strip()
+  name = line[:line.find("(")]
+
+  # find arguments that return a function pointer (**xxx)
+  fnctnptrptrs = regfncntnptrptr.findall(line)
+  # find arguments such as PetscInt (*indices)[3])
+  fnctnptrarrays = regfncntnptrarray.findall(line)
+  # find arguments such as PetscInt (*indices[XXX])
+  fnctnptrarrays = regfncntnptrarrays.findall(line)
+  # find arguments that are unnamed function pointers (*)
+  fnctnptrnoname = regfncntnptrnoname.findall(line)
+  # find all function pointers in the arguments xxx (*yyy)(zzz) and convert them to external yyy
+  fnctnptrs     = regfncntnptr.findall(line)
+  fnctnptrnames = regfncntnptrname.findall(line)
+  for i in range(0,len(fnctnptrs)):
+    line = line.replace(fnctnptrs[i], 'external ' + fnctnptrnames[i])
+
+  fl = regarg.search(line)
+  fun = Function(name)
+
+  arg = fl.group(0)
+  arg = arg[1:-1]
+  reject = 0
+  for i in rejects:
+    if line.find(i) > -1:
+      reject = 1
+  if  not reject:
+    args = line[line.find("(") + 1:line.find(")")]
+    if args != 'void':
+      args = args.split(",")
+      argnames = []
+      for i in args:
+        arg = Argument()
+        if i.count("const "): arg.const = True
+        i = i.replace("const ","")
+        i = i.strip()
+        if re.match(r'[a-zA-Z 0-9_]*\[[0-9]*\]$',i.replace('*','')):
+          arg.array = True
+          i = i[:i.find('[')]
+        if i.find('*') > -1: arg.stars = 1
+        if i.find('**') > -1: arg.stars = 2
+        argname = re.findall(r' [*]*([a-zA-Z0-9_]*)[\[\]]*',i)
+        if argname and argname[0]:
+          arg.name = argname[0]
+          if arg.name.lower() in argnames:
+            arg.name = 'M_' + arg.name
+          argnames.append(arg.name.lower())
+        else:
+          arg.name   = 'noname'
+        i =  regblank.sub('',reg.sub(r'\1\2 ',i).strip()).replace('*','').replace('[]','')
+        arg.typename = i
+        # fix input character arrays that are written as *variable name
+        if arg.typename == 'char' and not arg.array and arg.stars == 1:
+          arg.array = 1
+          arg.stars = 0
+        if arg.typename == 'char' and not arg.array and arg.stars == 0:
+          arg.char_type = 'single'
+        if arg.typename.endswith('Fn'):
+          arg.isfunction = True
+        if arg.typename == 'external':
+          arg.fnctnptr   = fnctnptrs[fnctnptrnames.index(arg.name)]
+        if fun.arguments and not fun.arguments[-1].const and fun.arguments[-1].typename == 'char' and arg.typename == 'size_t':
+          arg.stringlen = True
+        fun.arguments.append(arg)
+      return fun
 
 def getFunctions(mansec, functiontoinclude, filename):
   '''Appends the functions found in filename to their associated class classes[i], or funcs[] if they are classless'''
@@ -674,6 +813,9 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
     verbosePrint(verbose, typedefs[i])
 
   for i in args:
+    getFunctionTypedefs(i)
+
+  for i in args:
     getClasses(i)
 
   functiontoinclude = getpossiblefunctions(pkgname)
@@ -845,6 +987,10 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
   verbosePrint(verbose, 'Standalone functions  --------------------------------')
   for i in funcs.keys():
     verbosePrint(verbose, funcs[i])
+
+  verbosePrint(verbose, 'Function typedefs  --------------------------------')
+  for i in functiontypedefs.keys():
+    verbosePrint(True, functiontypedefs[i])
 
   #file = open('classes.data','wb')
   #pickle.dump(enums,file)
