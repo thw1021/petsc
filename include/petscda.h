@@ -80,3 +80,7 @@ PETSC_EXTERN PetscErrorCode PetscDALETKFInitialize(PetscDA);
 PETSC_EXTERN PetscErrorCode PetscDALETKFInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDALETKFFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDALETKFSetLocalization(PetscDA, Mat);
+
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+PETSC_EXTERN PetscErrorCode PetscDAGetLETKFLocalizationMatrix(const PetscInt, const PetscInt, Vec[3], PetscReal[3], Mat, Mat *);
+#endif

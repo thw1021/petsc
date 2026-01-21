@@ -114,6 +114,9 @@
 ```{rubric} PetscDA:
 ```
 
+- Add data assimilation object with ETKF and LETKF impls and Lornez-95, travels wave and dam break tutorials
+
+
 ```{rubric} DM/DA:
 ```
 
@@ -127,7 +130,6 @@
 
 - Add `DMPlexVecGetClosureAtDepth()`
 - Add an extra communicator argument to `DMPlexFilter()` to allow extracting local meshes
-- Add `DMPlexGetLETKFLocalizationMatrix` to compute localization weight matrix for LETKF
 
 ```{rubric} FE/FV:
 ```
@@ -144,16 +146,7 @@
 ```{rubric} Fortran:
 ```
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> b13d3d31d9c (rebasing)
 - Replace `./configure` option `--with-mpi-f90module-visibility` with `--with-mpi-ftn-module=<mpi or mpi_f08>`
 - Add `PETSC_INT_KIND` and `PETSC_MPIINT_KIND`
 - Fortran code should now use `MPIU_Comm` instead of `MPI_Comm`, and similarly for other MPI types, see section "Fortran and MPI" in the users guide
 
-<<<<<<< HEAD
-=======
->>>>>>> 065f9a4f670 (Move DA class from src/ml/da to src/da and rename to PetscDA)
-=======
->>>>>>> b13d3d31d9c (rebasing)
