@@ -1,4 +1,5 @@
-Spinning up truth for 2000 steps...
+Spinning up truth for 0 steps...
+[0] <vec:seqkokkos> DMPlexGetLETKFLocalizationMatrix(): LETKF localization radius: mean 2., std dev 0.
 Localization matrix Q created: 40 x 40, full localization (all weights = 1.0)
 PetscDA Object: 1 MPI process
   State size: 40
@@ -9,38 +10,38 @@ PetscDA Object: 1 MPI process
 PetscDALETKF Object:
   Square root type: eigen
   Local analysis: Kokkos
-  Local observations per vertex: 40
+  Local observations per vertex: 5
   GPU batch size: auto
   Localization matrix: set
 Lorenz-96 LETKF Example
 ======================
-  State dimension       : 40
-  Ensemble size         : 30
-  Forcing parameter (F) : 8.0000
-  Time step (dt)        : 0.0500
-  Total steps           : 1120
-  Burn-in steps         : 100
-  Observation frequency : 1
-  Observation noise std : 1.000
-  Ensemble init std     : 1.000
-  Random seed           : 12345
-  Localization          : Full (Q_NUM_OBS_MAX = 40)
+  State dimension        : 40
+  Ensemble size          : 30
+  Forcing parameter (F)  : 8.0000
+  Time step (dt)         : 0.0500
+  Total steps            : 1120
+  Burn-in steps          : 100
+  Observation frequency  : 1
+  Observation noise std  : 1.000
+  Ensemble init std      : 1.000
+  Random seed            : 12345
+  Localization (obs/vert): 5 
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [burn-in]
-Step  112, time  5.600  RMSE_forecast 0.19425  RMSE_analysis 0.17269
-Step  224, time 11.200  RMSE_forecast 0.21415  RMSE_analysis 0.18333
-Step  336, time 16.800  RMSE_forecast 0.11829  RMSE_analysis 0.13612
-Step  448, time 22.400  RMSE_forecast 0.24285  RMSE_analysis 0.18991
-Step  560, time 28.000  RMSE_forecast 0.20219  RMSE_analysis 0.19807
-Step  672, time 33.600  RMSE_forecast 0.21350  RMSE_analysis 0.18559
-Step  784, time 39.200  RMSE_forecast 0.17412  RMSE_analysis 0.17675
-Step  896, time 44.800  RMSE_forecast 0.27352  RMSE_analysis 0.25720
-Step 1008, time 50.400  RMSE_forecast 0.15781  RMSE_analysis 0.17683
-Step 1120, time 56.000  RMSE_forecast 0.26399  RMSE_analysis 0.20972
+Step  112, time  5.600  RMSE_forecast 0.35293  RMSE_analysis 0.32574
+Step  224, time 11.200  RMSE_forecast 0.32191  RMSE_analysis 0.27672
+Step  336, time 16.800  RMSE_forecast 0.39249  RMSE_analysis 0.31726
+Step  448, time 22.400  RMSE_forecast 0.58036  RMSE_analysis 0.47203
+Step  560, time 28.000  RMSE_forecast 0.40467  RMSE_analysis 0.36757
+Step  672, time 33.600  RMSE_forecast 0.49126  RMSE_analysis 0.46527
+Step  784, time 39.200  RMSE_forecast 0.44758  RMSE_analysis 0.41836
+Step  896, time 44.800  RMSE_forecast 0.30168  RMSE_analysis 0.27910
+Step 1008, time 50.400  RMSE_forecast 0.28035  RMSE_analysis 0.26373
+Step 1120, time 56.000  RMSE_forecast 0.32482  RMSE_analysis 0.24512
 
 Statistics (1021 post-burn-in steps):
 ==================================================
-  Mean RMSE (forecast) : 0.20333
-  Mean RMSE (analysis) : 0.18556
+  Mean RMSE (forecast) : 0.39391
+  Mean RMSE (analysis) : 0.36096
   Observations used    : 1120
 
