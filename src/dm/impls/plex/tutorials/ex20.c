@@ -38,6 +38,8 @@ int main(int argc, char **argv)
   PetscCheck(n == 0 || n == dim, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "dm_plex_box_upper dimension %" PetscInt_FMT " does not match requested dimension %" PetscInt_FMT, n, dim);
   PetscOptionsEnd();
 
+  PetscCall(PetscOptionsGetRealArray(NULL, NULL, "-dm_plex_box_upper", upper, &n, NULL));
+  PetscReal bd[3] = {upper[0] - lower[0], 0, 0};
   if (isplex) {
     PetscCall(DMCreate(PETSC_COMM_WORLD, &dm));
     PetscCall(DMSetType(dm, DMPLEX));
@@ -122,7 +124,7 @@ int main(int argc, char **argv)
   /* Set number of local observations to use: 3^dim */
   nvertexobs = 1;
   for (PetscInt d = 0; d < dim && d < 2; d++) nvertexobs *= 3;
-  PetscCheck(nvertexobs > 0, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "nvertexobs %" PetscInt_FMT " must be > 0 locally for now", nvertexobs);
+  // nvertexobs += 2 * dim;
 
   /* Count observations (every other vertex in each dimension) */
   PetscInt   nobs_local = 0;
@@ -207,7 +209,7 @@ int main(int argc, char **argv)
   }
 
   /* Call the function */
-  PetscCall(DMPlexGetLETKFLocalizationMatrix(nvertexobs, ndof, Vecxyz, H, &Q));
+  PetscCall(DMPlexGetLETKFLocalizationMatrix(nvertexobs, ndof, Vecxyz, bd, H, &Q));
   PetscCall(PetscObjectSetName((PetscObject)Q, "Q_localization"));
 
   // View Q
@@ -235,18 +237,18 @@ int main(int argc, char **argv)
     requires: kokkos_kernels
     suffix: 2
     diff_args: -j
-    args: -dm_plex_dim 2 -dm_plex_box_faces 7,7 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none -dm_plex_box_upper 5,5 -ex20_print -ex20_dm_view -ex20_dm_view -mat_type aijkokkos -dm_vec_type kokkos
+    args: -dm_plex_dim 2 -dm_plex_box_faces 8,4 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none -dm_plex_box_upper 5,5 -ex20_print -ex20_dm_view -ex20_dm_view -mat_type aijkokkos -dm_vec_type kokkos
 
   test:
     requires: kokkos_kernels
     suffix: da2
     diff_args: -j
-    args: -dm_type da -dm_plex_dim 2 -dm_plex_box_faces 7,7 -dm_plex_box_upper 5,5 -ex20_print -ex20_dm_view -ex20_dm_view -mat_type aijkokkos -vec_type kokkos
+    args: -dm_type da -dm_plex_dim 2 -dm_plex_box_faces 8,4 -dm_plex_box_upper 5,5 -ex20_print -ex20_dm_view -ex20_dm_view -mat_type aijkokkos -vec_type kokkos
 
   test:
     requires: kokkos_kernels
     suffix: 3
     diff_args: -j
-    args: -dm_plex_dim 3 -dm_plex_box_faces 5,5,5 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none,none -dm_plex_box_upper 5,5,5 -ex20_print -ex20_dm_view -mat_type aijkokkos -dm_vec_type kokkos
+    args: -dm_plex_dim 3 -dm_plex_box_faces 6,4,4 -dm_plex_simplex 0 -dm_plex_box_bd periodic,none,none -dm_plex_box_upper 5,5,5 -ex20_print -ex20_dm_view -mat_type aijkokkos -dm_vec_type kokkos
 
 TEST*/

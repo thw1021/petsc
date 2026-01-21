@@ -243,6 +243,7 @@ int main(int argc, char **argv)
   PetscReal obs_error_std         = DEFAULT_OBS_ERROR_STD;
   PetscReal ensemble_init_std     = 1; /* Initial ensemble spread */
   PetscBool use_fake_localization = PETSC_FALSE, isletkf;
+  PetscReal bd[3]                 = {40, 0, 0};
 
   /* PETSc objects */
   Lorenz96Ctx *l95_ctx = NULL, *truth_ctx = NULL;
@@ -354,8 +355,8 @@ int main(int argc, char **argv)
       PetscCall(VecStrideGather(coord, d, Vecxyz[d], INSERT_VALUES));
     }
 
-    PetscCall(DMPlexGetLETKFLocalizationMatrix(num_observations_vertex, 1, Vecxyz, H, &Q));
-PetscCall(MatView(Q, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(DMPlexGetLETKFLocalizationMatrix(num_observations_vertex, 1, Vecxyz, bd, H, &Q));
+    // PetscCall(MatView(Q, PETSC_VIEWER_STDOUT_WORLD));
     for (d = 0; d < 1; d++) PetscCall(VecDestroy(&Vecxyz[d]));
   } else {
     PetscCall(CreateLocalizationMatrix(n, &Q));
@@ -477,7 +478,7 @@ PetscCall(MatView(Q, PETSC_VIEWER_STDOUT_WORLD));
       requires: kokkos !cuda
       suffix: letkf
       diff_args: -j
-      args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec
+      args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec -num_observations_vertex 5
 
     test:
       suffix: etkf
