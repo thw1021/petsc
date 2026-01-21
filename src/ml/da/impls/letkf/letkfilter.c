@@ -1,8 +1,6 @@
 #include "letkf_impl.h"
 #include <petscblaslapack.h>
 
-static PetscBool PetscDALETKFPackageInitialized = PETSC_FALSE;
-
 /* ========================================================================== */
 /*                       LETKF Implementation Lifecycle                       */
 /* ========================================================================== */
@@ -34,40 +32,6 @@ static PetscErrorCode PetscDALETKFDestroy(PetscDA da)
   }
   /* Clear the composed function */
   PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetLocalization_C", NULL));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/* ========================================================================== */
-/*                          Package Initialization                           */
-/* ========================================================================== */
-
-/*@C
-  PetscDALETKFInitializePackage - This function initializes everything in the `PetscDALETKF` package. It is called from `TSInitializePackage()`.
-
-  Level: developer
-
-.seealso: [](ch_ts), `PetscInitialize()`, `PetscDALETKFFinalizePackage()`
-@*/
-PetscErrorCode PetscDALETKFInitializePackage(void)
-{
-  PetscFunctionBegin;
-  if (PetscDALETKFPackageInitialized) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscDALETKFPackageInitialized = PETSC_TRUE;
-  PetscCall(PetscRegisterFinalize(PetscDALETKFFinalizePackage));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-  PetscDALETKFFinalizePackage - This function destroys everything in the `PetscDALETKF` package. It is called from `PetscFinalize()`.
-
-  Level: developer
-
-.seealso: [](ch_ts), `PetscFinalize()`, `PetscDALETKFInitializePackage()`
-@*/
-PetscErrorCode PetscDALETKFFinalizePackage(void)
-{
-  PetscFunctionBegin;
-  PetscDALETKFPackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
