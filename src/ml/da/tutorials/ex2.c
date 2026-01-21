@@ -203,7 +203,6 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
   PetscInt i, j;
 
   PetscFunctionBeginUser;
-
   /* Create Q matrix (n x n for identity observation operator)
      Each row will have exactly const non-zeros -- this can be relaxed */
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, n, NULL, 0, NULL, Q));
@@ -216,7 +215,6 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt n, Mat *Q)
   }
   PetscCall(MatAssemblyBegin(*Q, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*Q, MAT_FINAL_ASSEMBLY));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
