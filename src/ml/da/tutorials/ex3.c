@@ -18,7 +18,7 @@ static char help[] = "Shallow water test cases with data assimilation.\n"
 #define DEFAULT_OBS_FREQ      5
 #define DEFAULT_RANDOM_SEED   12345
 #define DEFAULT_G             9.81
-#define DEFAULT_DT            0.002
+#define DEFAULT_DT            0.02
 #define DEFAULT_OBS_ERROR_STD 0.01
 #define DEFAULT_ENSEMBLE_SIZE 30
 #define SPINUP_STEPS          0 /* No spinup needed - wave test has smooth analytical initial condition */
@@ -48,6 +48,7 @@ static const char *const Ex3FluxTypes[] = {"rusanov", "mc", "Ex3FluxType", "EX3_
 typedef struct {
   DM          da;        /* 1D periodic DM storing the shallow water state */
   PetscInt    n_vert;    /* State dimension (number of grid points) */
+  PetscReal   L;         /* Domain length */
   PetscReal   g;         /* Gravitational constant */
   PetscReal   dx;        /* Grid spacing */
   PetscReal   dt;        /* Integration time step size */
@@ -215,7 +216,7 @@ static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, void
 /*
   ShallowWaterContextCreate - Create and initialize a shallow water context with reusable TS object
 */
-static PetscErrorCode ShallowWaterContextCreate(DM da, PetscInt n_vert, PetscReal g, PetscReal dt, Ex3TestType test_type, Ex3FluxType flux_type, ShallowWaterCtx **ctx)
+static PetscErrorCode ShallowWaterContextCreate(DM da, PetscInt n_vert, PetscReal L, PetscReal g, PetscReal dt, Ex3TestType test_type, Ex3FluxType flux_type, ShallowWaterCtx **ctx)
 {
   ShallowWaterCtx *sw;
 
@@ -223,8 +224,9 @@ static PetscErrorCode ShallowWaterContextCreate(DM da, PetscInt n_vert, PetscRea
   PetscCall(PetscNew(&sw));
   sw->da        = da;
   sw->n_vert    = n_vert;
+  sw->L         = L;
   sw->g         = g;
-  sw->dx        = 1.0 / n_vert; /* Domain is [0, 1] */
+  sw->dx        = L / n_vert; /* Domain is [0, L] */
   sw->dt        = dt;
   sw->test_type = test_type;
   sw->flux_type = flux_type;
@@ -283,19 +285,19 @@ static PetscErrorCode ShallowWaterStep(Vec x_in, Vec x_out, void *ctx)
   Creates a smooth Gaussian bump compatible with periodic boundaries.
   This avoids boundary artifacts while maintaining dam-like evolution.
 */
-static PetscErrorCode ShallowWaterSolution_Dam(PetscReal x, PetscReal *h, PetscReal *hu)
+static PetscErrorCode ShallowWaterSolution_Dam(PetscReal L, PetscReal x, PetscReal *h, PetscReal *hu)
 {
-  const PetscReal h_mean = 1.5;  /* Mean water height */
-  const PetscReal h_amp  = 0.4;  /* Bump amplitude */
-  const PetscReal x_c    = 0.25; /* Bump center */
-  const PetscReal sigma  = 0.1;  /* Gaussian width */
+  const PetscReal h_mean = 1.5;      /* Mean water height */
+  const PetscReal h_amp  = 0.4;      /* Bump amplitude */
+  const PetscReal x_c    = 0.25 * L; /* Bump center */
+  const PetscReal sigma  = 0.1 * L;  /* Gaussian width */
 
   PetscFunctionBeginUser;
   /* Smooth Gaussian bump: h = h_mean + h_amp * exp(-(x-x_c)^2/(2*sigma^2)) */
   PetscReal dx = x - x_c;
   /* Handle periodicity: use minimum distance on periodic domain */
-  if (dx > 0.5) dx -= 1.0;
-  if (dx < -0.5) dx += 1.0;
+  if (dx > 0.5 * L) dx -= L;
+  if (dx < -0.5 * L) dx += L;
 
   *h = h_mean + h_amp * PetscExpReal(-dx * dx / (2.0 * sigma * sigma));
   /* Initially at rest */
@@ -310,12 +312,12 @@ static PetscErrorCode ShallowWaterSolution_Dam(PetscReal x, PetscReal *h, PetscR
   For shallow water, a rightward-traveling wave requires velocity perturbation
   coupled to height: u' = c * (h'/h_mean) where c = sqrt(g*h_mean).
 */
-static PetscErrorCode ShallowWaterSolution_Wave(PetscReal x, PetscReal *h, PetscReal *hu)
+static PetscErrorCode ShallowWaterSolution_Wave(PetscReal L, PetscReal x, PetscReal *h, PetscReal *hu)
 {
   const PetscReal h_mean = 1.5;                       /* Mean water height */
   const PetscReal h_amp  = 0.3;                       /* Wave amplitude */
   const PetscReal g      = DEFAULT_G;                 /* Gravitational constant */
-  const PetscReal k      = 2.0 * PETSC_PI;            /* Wave number (one wavelength over domain) */
+  const PetscReal k      = 2.0 * PETSC_PI / L;        /* Wave number (one wavelength over domain) */
   const PetscReal c      = PetscSqrtReal(g * h_mean); /* Wave speed */
 
   PetscFunctionBeginUser;
@@ -333,15 +335,15 @@ static PetscErrorCode ShallowWaterSolution_Wave(PetscReal x, PetscReal *h, Petsc
 /*
   ShallowWaterSolution - Dispatch to appropriate initial condition based on test type
 */
-static PetscErrorCode ShallowWaterSolution(Ex3TestType test_type, PetscReal x, PetscReal *h, PetscReal *hu)
+static PetscErrorCode ShallowWaterSolution(Ex3TestType test_type, PetscReal L, PetscReal x, PetscReal *h, PetscReal *hu)
 {
   PetscFunctionBeginUser;
   switch (test_type) {
   case EX3_TEST_DAM:
-    PetscCall(ShallowWaterSolution_Dam(x, h, hu));
+    PetscCall(ShallowWaterSolution_Dam(L, x, h, hu));
     break;
   case EX3_TEST_WAVE:
-    PetscCall(ShallowWaterSolution_Wave(x, h, hu));
+    PetscCall(ShallowWaterSolution_Wave(L, x, h, hu));
     break;
   default:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Unknown test type");
@@ -350,13 +352,13 @@ static PetscErrorCode ShallowWaterSolution(Ex3TestType test_type, PetscReal x, P
 }
 
 /*
-  CreateObservationMatrix - Create observation matrix H for shallow water
+  CreateObservationMatrix - Create observation matrix H for shallow water, and H1 as scalar version
 
   Observes water height (h) at every other grid point.
   This creates a sparse matrix mapping from full state (n_vert*ndof) to observations.
   For n_vert=80 grid points, we observe at points 0, 2, 4, ..., 78
 */
-static PetscErrorCode CreateObservationMatrix(PetscInt n_vert, PetscInt ndof, PetscInt nobs, Mat *H)
+static PetscErrorCode CreateObservationMatrix(PetscInt n_vert, PetscInt ndof, PetscInt nobs, Mat *H, Mat *H1)
 {
   PetscInt i;
 
@@ -367,15 +369,23 @@ static PetscErrorCode CreateObservationMatrix(PetscInt n_vert, PetscInt ndof, Pe
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, nobs, n_vert * ndof, 1, NULL, 0, NULL, H));
   PetscCall(MatSetFromOptions(*H));
 
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, nobs, n_vert, 1, NULL, 0, NULL, H1));
+  PetscCall(MatSetFromOptions(*H1));
+
   /* Observe water height (h) at every other grid point */
   for (i = 0; i < nobs; i++) {
-    PetscInt grid_point = 2 * i; /* Observe at points 0, 2, 4, ..., 78 */
+    PetscInt grid_point = 2 * i; /* Observe at points 0, 2, 4, ... */
+    PetscCall(MatSetValue(*H1, i, grid_point, 1.0, INSERT_VALUES));
+    /* pick out the h component (first DOF) at that grid point */
     PetscCall(MatSetValue(*H, i, grid_point * ndof, 1.0, INSERT_VALUES));
   }
 
   PetscCall(MatAssemblyBegin(*H, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*H, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatViewFromOptions(*H, NULL, "-H_view"));
+  PetscCall(MatAssemblyBegin(*H1, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(*H1, MAT_FINAL_ASSEMBLY));
+
+  PetscCall(MatViewFromOptions(*H1, NULL, "-H_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -401,7 +411,6 @@ static PetscErrorCode CreateLocalizationMatrix(PetscInt num_vert, PetscInt obs_s
   }
   PetscCall(MatAssemblyBegin(*Q, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*Q, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatViewFromOptions(*Q, NULL, "-Q_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -495,6 +504,7 @@ int main(int argc, char **argv)
   PetscReal      obs_error_std           = DEFAULT_OBS_ERROR_STD;
   PetscBool      use_fake_localization   = PETSC_FALSE;
   PetscInt       num_observations_vertex = 40;
+  PetscReal      L                       = (PetscReal)DEFAULT_N; /* Domain length */
   PetscReal      bd[3]                   = {1.0, 0, 0};
   Ex3TestType    test_type               = EX3_TEST_DAM;     /* Default to dam-break */
   Ex3FluxType    flux_type               = EX3_FLUX_RUSANOV; /* Default to first-order Rusanov */
@@ -510,8 +520,8 @@ int main(int argc, char **argv)
   Vec              truth_state, rmse_work;
   Vec              observation, obs_noise, obs_error_var;
   PetscRandom      rng;
-  Mat              Q = NULL; /* Localization matrix */
-  Mat              H = NULL; /* Observation operator matrix */
+  Mat              Q = NULL;            /* Localization matrix */
+  Mat              H = NULL, H1 = NULL; /* Observation operator matrix (h at every other grid point) and scalar version */
 
   /* Statistics tracking */
   PetscReal rmse_forecast = 0.0, rmse_analysis = 0.0;
@@ -534,6 +544,8 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsReal("-g", "Gravitational constant", "", g, &g, NULL));
   PetscCall(PetscOptionsReal("-dt", "Time step size", "", dt, &dt, NULL));
   PetscCall(PetscOptionsReal("-obs_error", "Observation error standard deviation", "", obs_error_std, &obs_error_std, NULL));
+  PetscCall(PetscOptionsReal("-L", "Domain length", "", L, &L, NULL));
+  bd[0] = L;
   PetscCall(PetscOptionsInt("-ensemble_size", "Number of ensemble members", "", ensemble_size, &ensemble_size, NULL));
   PetscCall(PetscOptionsInt("-random_seed", "Random seed for ensemble perturbations", "", random_seed, &random_seed, NULL));
   PetscCall(PetscOptionsInt("-progress_freq", "Print progress every N steps (0 = only first/last)", "", progress_freq, &progress_freq, NULL));
@@ -580,7 +592,7 @@ int main(int argc, char **argv)
   PetscCall(DMSetUp(da_state));
 
   /* Create shallow water context with reusable TS object */
-  PetscCall(ShallowWaterContextCreate(da_state, n_vert, g, dt, test_type, flux_type, &sw_ctx));
+  PetscCall(ShallowWaterContextCreate(da_state, n_vert, L, g, dt, test_type, flux_type, &sw_ctx));
 
   /* Initialize random number generator */
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rng));
@@ -598,9 +610,9 @@ int main(int argc, char **argv)
     PetscCall(DMDAGetCorners(da_state, &xs, NULL, NULL, &xm, NULL, NULL));
     PetscCall(DMDAVecGetArray(da_state, x0, &x_array));
     for (i = xs; i < xs + xm; i++) {
-      PetscReal x = ((PetscReal)i + 0.5) / n_vert;
+      PetscReal x = ((PetscReal)i + 0.5) * L / n_vert;
       PetscReal h, hu;
-      PetscCall(ShallowWaterSolution(test_type, x, &h, &hu));
+      PetscCall(ShallowWaterSolution(test_type, L, x, &h, &hu));
       x_array[i * ndof]     = h;
       x_array[i * ndof + 1] = hu;
     }
@@ -630,9 +642,9 @@ int main(int argc, char **argv)
   }
 
   /* Create observation matrix H, observing h at every other grid point) */
-  PetscCall(CreateObservationMatrix(n_vert, ndof, nobs, &H));
+  PetscCall(CreateObservationMatrix(n_vert, ndof, nobs, &H, &H1));
 
-  /* Initialize observation vectors using MatCreateVecs from H */
+  /* Initialize observation vectors using MatCreateVecs from H (same as H1) */
   PetscCall(MatCreateVecs(H, NULL, &observation));
   PetscCall(VecDuplicate(observation, &obs_noise));
   PetscCall(VecDuplicate(observation, &obs_error_var));
@@ -665,32 +677,31 @@ int main(int argc, char **argv)
       PetscInt     xs, xm, i;
 
       /* Ensure coordinates are set */
-      PetscCall(DMDASetUniformCoordinates(da_state, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0));
+      PetscCall(DMDASetUniformCoordinates(da_state, 0.0, L, 0.0, 0.0, 0.0, 0.0));
       /* Update coordinates to match cell centers as used in initial condition */
       PetscCall(DMGetCoordinateDM(da_state, &cda));
       PetscCall(DMGetCoordinates(da_state, &coord));
       PetscCall(DMDAGetCorners(cda, &xs, NULL, NULL, &xm, NULL, NULL));
       PetscCall(DMDAVecGetArray(cda, coord, &x_coord));
-      for (i = xs; i < xs + xm; i++) { x_coord[i] = ((PetscReal)i + 0.5) / n_vert; }
+      for (i = xs; i < xs + xm; i++) { x_coord[i] = ((PetscReal)i + 0.5) * L / n_vert; }
       PetscCall(DMDAVecRestoreArray(cda, coord, &x_coord));
 
       /* Create Vecxyz[0] */
       PetscCall(DMCreateGlobalVector(cda, &Vecxyz[0]));
+      PetscCall(VecSetFromOptions(Vecxyz[0]));
       PetscCall(PetscObjectSetName((PetscObject)Vecxyz[0], "x_coordinate"));
       PetscCall(VecCopy(coord, Vecxyz[0]));
 
-      PetscCall(DMPlexGetLETKFLocalizationMatrix(num_observations_vertex, 1, Vecxyz, bd, H, &Q));
+      PetscCall(PetscDAGetLETKFLocalizationMatrix(num_observations_vertex, 1, Vecxyz, bd, H1, &Q));
       PetscCall(VecDestroy(&Vecxyz[0]));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created using DMPlexGetLETKFLocalizationMatrix\n"));
     } else {
       PetscCall(CreateLocalizationMatrix(n_vert, nobs, &Q));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %dx%d, no localization/global (all weights = 1.0)\n", (int)n_vert, (int)nobs));
     }
     PetscCall(PetscDALETKFSetLocalization(daas, Q));
+    PetscCall(MatViewFromOptions(Q, NULL, "-Q_view"));
     PetscCall(MatDestroy(&Q));
-    if (use_fake_localization || !isletkf) {
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %dx%d, no localization/global (all weights = 1.0)\n", (int)n_vert, (int)nobs));
-    } else {
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created using DMPlexGetLETKFLocalizationMatrix\n"));
-    }
   }
 
   /* Initialize ensemble members with perturbations around spun-up state
@@ -711,6 +722,7 @@ int main(int argc, char **argv)
                           "  State dimension       : %" PetscInt_FMT " (%" PetscInt_FMT " grid points x %d DOF)\n"
                           "  Observation dimension : %" PetscInt_FMT "\n"
                           "  Ensemble size         : %" PetscInt_FMT "\n"
+                          "  Domain length (L)     : %.4f\n"
                           "  Gravitational const   : %.4f\n"
                           "  Time step (dt)        : %.4f\n"
                           "  Total steps           : %" PetscInt_FMT "\n"
@@ -718,7 +730,7 @@ int main(int argc, char **argv)
                           "  Observation noise std : %.3f\n"
                           "  Random seed           : %" PetscInt_FMT "\n"
                           "  Localization          : None/Global (%d obs per vertex)\n\n",
-                          test_name, flux_name, n_vert * ndof, n_vert, (int)ndof, nobs, ensemble_size, (double)g, (double)dt, steps, obs_freq, (double)obs_error_std, random_seed, num_observations_vertex));
+                          test_name, flux_name, n_vert * ndof, n_vert, (int)ndof, nobs, ensemble_size, (double)L, (double)g, (double)dt, steps, obs_freq, (double)obs_error_std, random_seed, num_observations_vertex));
   }
 
   /* Open output file if requested */
@@ -878,6 +890,7 @@ int main(int argc, char **argv)
 
   /* Cleanup */
   PetscCall(MatDestroy(&H));
+  PetscCall(MatDestroy(&H1));
   PetscCall(VecDestroy(&x_forecast));
   PetscCall(VecDestroy(&x_mean));
   PetscCall(VecDestroy(&obs_error_var));
@@ -891,7 +904,6 @@ int main(int argc, char **argv)
   PetscCall(ShallowWaterContextDestroy(&sw_ctx));
   PetscCall(PetscRandomDestroy(&rng));
 
-  /* Kokkos finalization deferred to Phase 5 optimization */
   PetscCall(PetscFinalize());
   return 0;
 }
@@ -899,12 +911,10 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
-    requires: !complex
     diff_args: -j
     args: -ex3_test dam -steps 25 -progress_freq 1 -da_view -ensemble_size 10 -obs_freq 5 -obs_error 0.03
 
     test:
-      requires: !single
       suffix: letkf_dam
       args: -petscda_type letkf
 
@@ -913,12 +923,11 @@ int main(int argc, char **argv)
       args: -petscda_sqrt_type cholesky -petscda_type etkf
 
     test:
-      requires: kokkos !cuda
+      requires: kokkos
       suffix: kokkos_dam
-      args: -petscda_type letkf -mat_type aijkokkos -petscda_letkf_batch_size 13
+      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -num_observations_vertex 5
 
   testset:
-    requires: !complex
     diff_args: -j
     args: -ex3_test wave -steps 100 -da_view -ensemble_size 10 e letkf -obs_error 0.03
 
@@ -927,9 +936,9 @@ int main(int argc, char **argv)
       args: -petscda_type letkf
 
     test:
-      requires: kokkos !cuda
+      requires: kokkos
       suffix: kokkos_wave
-      args: -petscda_type letkf -mat_type aijkokkos -petscda_letkf_batch_size 13
+      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos  -petscda_letkf_batch_size 13 -info :vec -num_observations_vertex 5
 
     test:
       suffix: wave_mc
