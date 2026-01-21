@@ -736,5 +736,37 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   /* Ensemble has been updated in batched form above */
   PetscCall(MatAssemblyBegin(da->ensemble, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(da->ensemble, MAT_FINAL_ASSEMBLY));
+
+  {
+    MatInfo   info;
+    PetscReal flops = 0.0;
+    PetscReal n_obs_total;
+
+    if (impl->Q) {
+      PetscCall(MatGetInfo(impl->Q, MAT_LOCAL, &info));
+      n_obs_total = info.nz_used;
+    } else {
+      n_obs_total = 0.0;
+    }
+
+    /* Step 2.1.2: Fused observation extraction and S/Delta computation */
+    flops += n_obs_total * (2.0 + 2.0 * m);
+
+    /* Step 2.1.4: Optimized T matrix formation */
+    flops += (PetscReal)n_vertices * m * (m + 1) * impl->n_obs_vertex;
+
+    /* Step 3.1.2: Precompute w and inv_sqrt_lambda */
+    flops += (PetscReal)n_vertices * (2.0 * m * impl->n_obs_vertex + 4.0 * m * m + 3.0 * m);
+
+    /* Step 3.1.3: Fused G computation and ensemble update */
+    /* T_sqrt: 1.5*m^3 + 1.5*m^2 */
+    flops += (PetscReal)n_vertices * (1.5 * m * m * m + 1.5 * m * m);
+    /* E update: ndof * m * (4*m + 1) */
+    /* Note: G_jk computation (2 flops) is inside the inner loop, so it's 2*m*ndof*m */
+    /* Matrix product X*G (2 flops) is also 2*m*ndof*m */
+    flops += (PetscReal)n_vertices * ndof * m * (4.0 * m + 1.0);
+
+    PetscCall(PetscLogGpuFlops(flops));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
