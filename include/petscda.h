@@ -18,7 +18,7 @@ typedef const char *PetscDAType;
 #define PETSCDAETKF  "etkf"
 #define PETSCDALETKF "letkf"
 
-#define ENSEMBLE_SIZE_MAX            50
+#define ENSEMBLE_SIZE_MAX 50
 
 PETSC_EXTERN PetscErrorCode PetscDAInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDAFinalizePackage(void);
