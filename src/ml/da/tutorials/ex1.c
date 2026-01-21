@@ -569,6 +569,7 @@ int main(int argc, char **argv)
     args: -steps 1120 -burn 100 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30
 
     test:
+      requires: !complex
       suffix: eigen
       args: -petscda_sqrt_type eigen
 
