@@ -7,46 +7,30 @@ program main
   DM dm
   PetscInt, target, dimension(3) :: EC
   PetscInt, target, dimension(2) :: VE
-  PetscInt, pointer :: pEC(:), pVE(:)
-  PetscInt, pointer :: nClosure(:)
-  PetscInt, pointer :: nJoin(:)
-  PetscInt, pointer :: nMeet(:)
-  PetscInt dim, cell, size, nC
-  PetscInt i0, i1, i2, i3, i6, i7
-  PetscInt i8, i9, i10, i11
+  PetscInt, pointer, dimension(:) :: pEC, pVE, nClosure, nJoin, nMeet
+  PetscInt, parameter :: dim = 2
+  PetscInt cell, size, nC
   PetscErrorCode ierr
-
-  i0 = 0
-  i1 = 1
-  i2 = 2
-  i3 = 3
-  i6 = 6
-  i7 = 7
-  i8 = 8
-  i9 = 9
-  i10 = 10
-  i11 = 11
 
   PetscCallA(PetscInitialize(ierr))
 
   PetscCallA(DMPlexCreate(PETSC_COMM_WORLD, dm, ierr))
   PetscCallA(PetscObjectSetName(dm, 'Mesh', ierr))
-  dim = 2
   PetscCallA(DMSetDimension(dm, dim, ierr))
 
 ! Make Doublet Mesh from Fig 2 of Flexible Representation of Computational Meshes,
 ! except indexing is from 0 instead of 1 and we obey the new restrictions on
 ! numbering: cells, vertices, faces, edges
-  PetscCallA(DMPlexSetChart(dm, i0, i11, ierr))
+  PetscCallA(DMPlexSetChart(dm, 0_PETSC_INT_KIND, 11_PETSC_INT_KIND, ierr))
 !     cells
-  PetscCallA(DMPlexSetConeSize(dm, i0, i3, ierr))
-  PetscCallA(DMPlexSetConeSize(dm, i1, i3, ierr))
+  PetscCallA(DMPlexSetConeSize(dm, 0_PETSC_INT_KIND, 3_PETSC_INT_KIND, ierr))
+  PetscCallA(DMPlexSetConeSize(dm, 1_PETSC_INT_KIND, 3_PETSC_INT_KIND, ierr))
 !     edges
-  PetscCallA(DMPlexSetConeSize(dm, i6, i2, ierr))
-  PetscCallA(DMPlexSetConeSize(dm, i7, i2, ierr))
-  PetscCallA(DMPlexSetConeSize(dm, i8, i2, ierr))
-  PetscCallA(DMPlexSetConeSize(dm, i9, i2, ierr))
-  PetscCallA(DMPlexSetConeSize(dm, i10, i2, ierr))
+  PetscCallA(DMPlexSetConeSize(dm, 6_PETSC_INT_KIND, 2_PETSC_INT_KIND, ierr))
+  PetscCallA(DMPlexSetConeSize(dm, 7_PETSC_INT_KIND, 2_PETSC_INT_KIND, ierr))
+  PetscCallA(DMPlexSetConeSize(dm, 8_PETSC_INT_KIND, 2_PETSC_INT_KIND, ierr))
+  PetscCallA(DMPlexSetConeSize(dm, 9_PETSC_INT_KIND, 2_PETSC_INT_KIND, ierr))
+  PetscCallA(DMPlexSetConeSize(dm, 10_PETSC_INT_KIND, 2_PETSC_INT_KIND, ierr))
 
   PetscCallA(DMSetUp(dm, ierr))
 
@@ -54,50 +38,50 @@ program main
   EC(2) = 7
   EC(3) = 8
   pEC => EC
-  PetscCallA(DMPlexSetCone(dm, i0, pEC, ierr))
+  PetscCallA(DMPlexSetCone(dm, 0_PETSC_INT_KIND, pEC, ierr))
   EC(1) = 7
   EC(2) = 9
   EC(3) = 10
   pEC => EC
-  PetscCallA(DMPlexSetCone(dm, i1, pEC, ierr))
+  PetscCallA(DMPlexSetCone(dm, 1_PETSC_INT_KIND, pEC, ierr))
 
   VE(1) = 2
   VE(2) = 3
   pVE => VE
-  PetscCallA(DMPlexSetCone(dm, i6, pVE, ierr))
+  PetscCallA(DMPlexSetCone(dm, 6_PETSC_INT_KIND, pVE, ierr))
   VE(1) = 3
   VE(2) = 4
   pVE => VE
-  PetscCallA(DMPlexSetCone(dm, i7, pVE, ierr))
+  PetscCallA(DMPlexSetCone(dm, 7_PETSC_INT_KIND, pVE, ierr))
   VE(1) = 4
   VE(2) = 2
   pVE => VE
-  PetscCallA(DMPlexSetCone(dm, i8, pVE, ierr))
+  PetscCallA(DMPlexSetCone(dm, 8_PETSC_INT_KIND, pVE, ierr))
   VE(1) = 3
   VE(2) = 5
   pVE => VE
-  PetscCallA(DMPlexSetCone(dm, i9, pVE, ierr))
+  PetscCallA(DMPlexSetCone(dm, 9_PETSC_INT_KIND, pVE, ierr))
   VE(1) = 5
   VE(2) = 4
   pVE => VE
-  PetscCallA(DMPlexSetCone(dm, i10, pVE, ierr))
+  PetscCallA(DMPlexSetCone(dm, 10_PETSC_INT_KIND, pVE, ierr))
 
   PetscCallA(DMPlexSymmetrize(dm, ierr))
   PetscCallA(DMPlexStratify(dm, ierr))
   PetscCallA(DMView(dm, PETSC_VIEWER_STDOUT_WORLD, ierr))
 
-!     Test Closure
+! Test Closure
   do cell = 0, 1
     PetscCallA(DMPlexGetTransitiveClosure(dm, cell, PETSC_TRUE, nC, nClosure, ierr))
-!     Different Fortran compilers print a different number of columns
-!     per row producing different outputs in the test runs hence
-!     do not print the nClosure
+!   Different Fortran compilers print a different number of columns
+!   per row producing different outputs in the test runs hence
+!   do not print the nClosure
     write (*, 1000) 'nClosure ', nClosure
 1000 format(a, 30i4)
     PetscCallA(DMPlexRestoreTransitiveClosure(dm, cell, PETSC_TRUE, nC, nClosure, ierr))
   end do
 
-!     Test Join
+! Test Join
   size = 2
   VE(1) = 6
   VE(2) = 7
@@ -116,7 +100,7 @@ program main
   write (*, 1002) '  is', nJoin
 1002 format(a, 10i5)
   PetscCallA(DMPlexRestoreJoin(dm, size, pVE, PETSC_NULL_INTEGER, nJoin, ierr))
-!     Test Full Join
+! Test Full Join
   size = 3
   EC(1) = 3
   EC(2) = 4
@@ -126,7 +110,7 @@ program main
   write (*, 1001) 'Full Join of', pEC
   write (*, 1002) '  is', nJoin
   PetscCallA(DMPlexRestoreJoin(dm, size, pEC, PETSC_NULL_INTEGER, nJoin, ierr))
-!     Test Meet
+! Test Meet
   size = 2
   VE(1) = 0
   VE(2) = 1

@@ -9,21 +9,18 @@ program main
 
   Vec x, b, u
   Mat A, fact
-  PetscInt i, j, II, JJ, m
+  PetscInt i, j, II, JJ
   PetscInt Istart, Iend
-  PetscInt ione, ifive
+  PetscInt, parameter :: ione = 1, ifive = 5, m = 10
   PetscBool wmumps
   PetscBool flg
-  PetscScalar one, v
+  PetscScalar, parameter :: one = 1.0
+  PetscScalar v
   IS perm, iperm
   PetscErrorCode ierr
   MatFactorInfo info
 
   PetscCallA(PetscInitialize(PETSC_NULL_CHARACTER, ierr))
-  m = 10
-  one = 1.0
-  ione = 1
-  ifive = 5
 
   wmumps = PETSC_FALSE
 

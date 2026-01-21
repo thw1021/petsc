@@ -11,7 +11,7 @@ program main
   PetscErrorCode :: ierr
   PetscMPIInt :: rank, size
   PetscInt   ::  rstart, rend, i, k, N
-  PetscInt, parameter   ::   numPoints = 1000000
+  PetscInt, parameter ::numPoints = 1000000
   PetscScalar  ::  dummy
   PetscScalar, parameter  :: h = 1.0/numPoints
   PetscScalar, pointer, dimension(:)  :: xarray
@@ -64,8 +64,7 @@ program main
   PetscCallA(VecGetArray(x, xarray, ierr))
   k = 1
   do i = rstart, rend - 1
-    xarray(k) = real(i)*h
-    xarray(k) = func(xarray(k))
+    xarray(k) = func(real(i)*h)
     k = k + 1
   end do
   PetscCallA(VecRestoreArray(x, xarray, ierr))
@@ -96,9 +95,9 @@ contains
 
     implicit none
     PetscScalar :: func
-    PetscScalar, intent(IN) :: a
+    PetscScalar, intent(in) :: a
 
-    func = 2.0*a/(1.0 + a*a)
+    func = 2.0*a/(1.0 + a**2)
 
   end function func
 
