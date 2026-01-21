@@ -46,7 +46,11 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
   Kokkos::deep_copy(T_host, T_batch);
 
   /* Allocate contiguous buffers for LAPACK for ALL matrices */
-  PetscScalar *all_v, *all_lambda, *all_work;
+  PetscScalar *all_v, *all_work;
+  PetscReal   *all_lambda;
+#if defined(PETSC_USE_COMPLEX)
+  PetscReal   *all_rwork;
+#endif
   PetscBLASInt lwork_query = -1, lwork;
   PetscScalar  work_query;
   PetscBLASInt n_blas;
@@ -55,12 +59,21 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
   /* Query workspace size once */
   {
     PetscBLASInt info;
+#if defined(PETSC_USE_COMPLEX)
+    PetscReal rwork_query;
+    LAPACKsyev_("V", "U", &n_blas, &work_query, &n_blas, &rwork_query, &work_query, &lwork_query, &rwork_query, &info);
+#else
     LAPACKsyev_("V", "U", &n_blas, &work_query, &n_blas, &work_query, &work_query, &lwork_query, &info);
+#endif
     PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK workspace query failed");
     lwork = (PetscBLASInt)PetscRealPart(work_query);
   }
 
+#if defined(PETSC_USE_COMPLEX)
+  PetscCall(PetscMalloc4(n_batch * n_size * n_size, &all_v, n_batch * n_size, &all_lambda, n_batch * lwork, &all_work, n_batch * (3 * n_size - 2), &all_rwork));
+#else
   PetscCall(PetscMalloc3(n_batch * n_size * n_size, &all_v, n_batch * n_size, &all_lambda, n_batch * lwork, &all_work));
+#endif
 
   /* Process each matrix in parallel on host using LAPACK */
   Kokkos::parallel_for(
@@ -72,8 +85,11 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
 
       /* Pointers for this matrix */
       PetscScalar *v_ptr      = all_v + i * n_size * n_size;
-      PetscScalar *lambda_ptr = all_lambda + i * n_size;
+      PetscReal   *lambda_ptr = all_lambda + i * n_size;
       PetscScalar *work_ptr   = all_work + i * lwork;
+#if defined(PETSC_USE_COMPLEX)
+      PetscReal   *rwork_ptr  = all_rwork + i * (3 * n_size - 2);
+#endif
 
       /* Copy T_host(i, :, :) to v_ptr (column-major) */
       for (PetscInt j = 0; j < n_size; j++) {
@@ -81,7 +97,11 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
       }
 
       /* Compute eigendecomposition: T = V * Lambda * V^T */
+#if defined(PETSC_USE_COMPLEX)
+      LAPACKsyev_("V", "U", &n, v_ptr, &lda, lambda_ptr, work_ptr, &lw, rwork_ptr, &info);
+#else
       LAPACKsyev_("V", "U", &n, v_ptr, &lda, lambda_ptr, work_ptr, &lw, &info);
+#endif
 
       if (info != 0) {
         /* We cannot return error code from lambda, so we just abort or ignore.
@@ -91,12 +111,16 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
 
       /* Copy results back to host views */
       for (PetscInt j = 0; j < n_size; j++) {
-        Lambda_host(i, j) = lambda_ptr[j];
+        Lambda_host(i, j) = (PetscScalar)lambda_ptr[j];
         for (PetscInt k = 0; k < n_size; k++) V_host(i, k, j) = v_ptr[k + j * n_size];
       }
     });
 
+#if defined(PETSC_USE_COMPLEX)
+  PetscCall(PetscFree4(all_v, all_lambda, all_work, all_rwork));
+#else
   PetscCall(PetscFree3(all_v, all_lambda, all_work));
+#endif
 
   /* Copy results back to device */
   Kokkos::deep_copy(Lambda_batch, Lambda_host);
@@ -542,7 +566,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
           /* Extract observation vectors */
           PetscScalar y_val      = y_global_view(obs_idx);
           PetscScalar y_mean_val = y_mean_global_view(obs_idx);
-          PetscScalar r_inv_sqrt = r_inv_sqrt_global_view(obs_idx) * Kokkos::sqrt(weight);
+          PetscScalar r_inv_sqrt = r_inv_sqrt_global_view(obs_idx) * Kokkos::sqrt(PetscRealPart(weight));
 
           /* Store for later use if needed */
           y_batch(i_local, k)          = y_val;
@@ -631,7 +655,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         KokkosBlas::SerialGemv<KokkosBlas::Trans::NoTranspose, KokkosBlas::Algo::Gemv::Unblocked>::invoke(1.0, V_i, temp2, 0.0, w_i);
 
         /* 2. Precompute 1/sqrt(Lambda) for ensemble update */
-        for (int p = 0; p < m; p++) inv_sqrt_lambda_i(p) = 1.0 / Kokkos::sqrt(Lambda_i(p) + 1.0e-14);
+        for (int p = 0; p < m; p++) inv_sqrt_lambda_i(p) = 1.0 / Kokkos::sqrt(PetscRealPart(Lambda_i(p)) + 1.0e-14);
       });
     Kokkos::fence();
 

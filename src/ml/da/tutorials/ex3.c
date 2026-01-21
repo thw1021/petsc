@@ -916,6 +916,7 @@ int main(int argc, char **argv)
     args: -ex3_test dam -steps 25 -progress_freq 1 -da_view -ensemble_size 10 -obs_freq 5 -obs_error 0.03
 
     test:
+      requires: !complex
       suffix: letkf_dam
       args: -petscda_type letkf
 
@@ -933,6 +934,7 @@ int main(int argc, char **argv)
     args: -ex3_test wave -steps 100 -da_view -ensemble_size 10 e letkf -obs_error 0.03
 
     test:
+      requires: !complex
       suffix: letkf_wave
       args: -petscda_type letkf
 
@@ -941,6 +943,7 @@ int main(int argc, char **argv)
       args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -num_observations_vertex 5
 
     test:
+      requires: !complex
       suffix: wave_mc
       args: -ex3_flux mc -petscda_type etkf
 
