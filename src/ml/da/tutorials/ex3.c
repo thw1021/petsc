@@ -683,7 +683,7 @@ int main(int argc, char **argv)
       PetscCall(DMGetCoordinates(da_state, &coord));
       PetscCall(DMDAGetCorners(cda, &xs, NULL, NULL, &xm, NULL, NULL));
       PetscCall(DMDAVecGetArray(cda, coord, &x_coord));
-      for (i = xs; i < xs + xm; i++) { x_coord[i] = ((PetscReal)i + 0.5) * L / n_vert; }
+      for (i = xs; i < xs + xm; i++) x_coord[i] = ((PetscReal)i + 0.5) * L / n_vert;
       PetscCall(DMDAVecRestoreArray(cda, coord, &x_coord));
 
       /* Create Vecxyz[0] */
@@ -938,7 +938,7 @@ int main(int argc, char **argv)
     test:
       requires: kokkos
       suffix: kokkos_wave
-      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos  -petscda_letkf_batch_size 13 -info :vec -num_observations_vertex 5
+      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -num_observations_vertex 5
 
     test:
       suffix: wave_mc
