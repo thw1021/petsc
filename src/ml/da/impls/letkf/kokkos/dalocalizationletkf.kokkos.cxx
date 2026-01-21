@@ -1,5 +1,4 @@
-#include <petsc/private/dmpleximpl.h>
-#include <petscdmplex.h>
+#include <petsc.h>
 #include <petscmat.h>
 #include <petsc_kokkos.hpp>
 #include <cmath>
@@ -35,7 +34,7 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
 }
 
 /*@
-  DMPlexGetLETKFLocalizationMatrix - Compute localization weight matrix for LETKF [move to ml/da/interface]
+  PetscDAGetLETKFLocalizationMatrix - Compute localization weight matrix for LETKF [move to ml/da/interface]
 
   Collective
 
@@ -67,7 +66,7 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
 
 .seealso:
 @*/
-PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, const PetscInt n_dof, Vec Vecxyz[3], PetscReal bd[3], Mat H, Mat *Q)
+PetscErrorCode PetscDAGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, const PetscInt n_dof, Vec Vecxyz[3], PetscReal bd[3], Mat H, Mat *Q)
 {
   PetscInt dim = 0, n_vert_local, d, n_obs_global, n_obs_local;
   Vec     *obs_vecs;
@@ -193,7 +192,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, con
         PetscReal dist2 = 0.0;
         for (PetscInt d = 0; d < dim; ++d) {
           PetscReal diff = v_coords[d] - obs_coords_dev(j, d);
-          if (v_coords[d] - obs_coords_dev(j, d) && bd[d] != 0) { // Periodic boundary
+          if (bd[d] != 0) { // Periodic boundary
             PetscReal domain_size = bd[d];
             if (diff > 0.5 * domain_size) diff -= domain_size;
             else if (diff < -0.5 * domain_size) diff += domain_size;
@@ -221,14 +220,14 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, con
       // Compute weights
       PetscReal radius2 = best_dists_dev(i, n_obs_vertex - 1);
       PetscReal radius  = std::sqrt(radius2);
-      radius *= 0.5 * RADIUS_FACTOR;
+      radius *= RADIUS_FACTOR;
       if (radius == 0.0) radius = 1.0;
 
       for (PetscInt k = 0; k < n_obs_vertex; ++k) {
         if (best_idxs_dev(i, k) != -1) {
           PetscReal dist    = std::sqrt(best_dists_dev(i, k));
           indices_dev(i, k) = best_idxs_dev(i, k);
-          values_dev(i, k)  = GaspariCohn(dist, radius);
+          values_dev(i, k)  = GaspariCohn(dist, 0.5 * radius); // Note: LETKF uses half-radius in GC to get a smoothe decay
         } else {
           indices_dev(i, k) = -1; // Ignore this entry
           values_dev(i, k)  = 0.0;

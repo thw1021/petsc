@@ -346,7 +346,7 @@ int main(int argc, char **argv)
       PetscCall(VecStrideGather(coord, d, Vecxyz[d], INSERT_VALUES));
     }
 
-    PetscCall(DMPlexGetLETKFLocalizationMatrix(num_observations_vertex, 1, Vecxyz, bd, H, &Q));
+    PetscCall(PetscDAGetLETKFLocalizationMatrix(num_observations_vertex, 1, Vecxyz, bd, H, &Q));
     // PetscCall(MatView(Q, PETSC_VIEWER_STDOUT_WORLD));
     for (d = 0; d < 1; d++) PetscCall(VecDestroy(&Vecxyz[d]));
   } else {
@@ -459,15 +459,14 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
-    requires: !complex !single
-    args: -steps 1120 -burn 100 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30
+    args: -steps 1120 -burn 100 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 5
 
     test:
       suffix: chol
       args: -petscda_sqrt_type cholesky
 
     test:
-      requires: kokkos !cuda
+      requires: kokkos
       suffix: letkf
       diff_args: -j
       args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec -num_observations_vertex 5

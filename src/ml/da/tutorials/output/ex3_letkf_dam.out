@@ -1,4 +1,4 @@
-Localization matrix Q created: 160x40, no localization/global (all weights = 1.0)
+Localization matrix Q created using DMPlexGetLETKFLocalizationMatrix
 PetscDA Object: 1 MPI process
   State size: 160
   Observation size: 40
@@ -18,8 +18,9 @@ Shallow Water [L]ETKF Example
   State dimension       : 160 (80 grid points x 2 DOF)
   Observation dimension : 40
   Ensemble size         : 10
+  Domain length (L)     : 80.0000
   Gravitational const   : 9.8100
-  Time step (dt)        : 0.0020
+  Time step (dt)        : 0.0200
   Total steps           : 25
   Observation frequency : 5
   Observation noise std : 0.030
@@ -27,35 +28,35 @@ Shallow Water [L]ETKF Example
   Localization          : None/Global (40 obs per vertex)
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [initial]
-Step    1, time  0.002  RMSE_forecast 0.00006  RMSE_analysis 0.00006
-Step    2, time  0.004  RMSE_forecast 0.00006  RMSE_analysis 0.00006
-Step    3, time  0.006  RMSE_forecast 0.00007  RMSE_analysis 0.00007
-Step    4, time  0.008  RMSE_forecast 0.00006  RMSE_analysis 0.00006
-Step    5, time  0.010  RMSE_forecast 0.00006  RMSE_analysis 0.00725
-Step    6, time  0.012  RMSE_forecast 0.00645  RMSE_analysis 0.00645
-Step    7, time  0.014  RMSE_forecast 0.00605  RMSE_analysis 0.00605
-Step    8, time  0.016  RMSE_forecast 0.00597  RMSE_analysis 0.00597
-Step    9, time  0.018  RMSE_forecast 0.00602  RMSE_analysis 0.00602
-Step   10, time  0.020  RMSE_forecast 0.00611  RMSE_analysis 0.00767
-Step   11, time  0.022  RMSE_forecast 0.00793  RMSE_analysis 0.00793
-Step   12, time  0.024  RMSE_forecast 0.00808  RMSE_analysis 0.00808
-Step   13, time  0.026  RMSE_forecast 0.00806  RMSE_analysis 0.00806
-Step   14, time  0.028  RMSE_forecast 0.00789  RMSE_analysis 0.00789
-Step   15, time  0.030  RMSE_forecast 0.00763  RMSE_analysis 0.00865
-Step   16, time  0.032  RMSE_forecast 0.00829  RMSE_analysis 0.00829
-Step   17, time  0.034  RMSE_forecast 0.00796  RMSE_analysis 0.00796
-Step   18, time  0.036  RMSE_forecast 0.00766  RMSE_analysis 0.00766
-Step   19, time  0.038  RMSE_forecast 0.00738  RMSE_analysis 0.00738
-Step   20, time  0.040  RMSE_forecast 0.00710  RMSE_analysis 0.00785
-Step   21, time  0.042  RMSE_forecast 0.00748  RMSE_analysis 0.00748
-Step   22, time  0.044  RMSE_forecast 0.00714  RMSE_analysis 0.00714
-Step   23, time  0.046  RMSE_forecast 0.00685  RMSE_analysis 0.00685
-Step   24, time  0.048  RMSE_forecast 0.00659  RMSE_analysis 0.00659
-Step   25, time  0.050  RMSE_forecast 0.00638  RMSE_analysis 0.00554
+Step    1, time  0.020  RMSE_forecast 0.00002  RMSE_analysis 0.00002
+Step    2, time  0.040  RMSE_forecast 0.00003  RMSE_analysis 0.00003
+Step    3, time  0.060  RMSE_forecast 0.00004  RMSE_analysis 0.00004
+Step    4, time  0.080  RMSE_forecast 0.00005  RMSE_analysis 0.00005
+Step    5, time  0.100  RMSE_forecast 0.00006  RMSE_analysis 0.01412
+Step    6, time  0.120  RMSE_forecast 0.01444  RMSE_analysis 0.01444
+Step    7, time  0.140  RMSE_forecast 0.01476  RMSE_analysis 0.01476
+Step    8, time  0.160  RMSE_forecast 0.01505  RMSE_analysis 0.01505
+Step    9, time  0.180  RMSE_forecast 0.01531  RMSE_analysis 0.01531
+Step   10, time  0.200  RMSE_forecast 0.01553  RMSE_analysis 0.01436
+Step   11, time  0.220  RMSE_forecast 0.01446  RMSE_analysis 0.01446
+Step   12, time  0.240  RMSE_forecast 0.01452  RMSE_analysis 0.01452
+Step   13, time  0.260  RMSE_forecast 0.01454  RMSE_analysis 0.01454
+Step   14, time  0.280  RMSE_forecast 0.01453  RMSE_analysis 0.01453
+Step   15, time  0.300  RMSE_forecast 0.01448  RMSE_analysis 0.01118
+Step   16, time  0.320  RMSE_forecast 0.01106  RMSE_analysis 0.01106
+Step   17, time  0.340  RMSE_forecast 0.01093  RMSE_analysis 0.01093
+Step   18, time  0.360  RMSE_forecast 0.01078  RMSE_analysis 0.01078
+Step   19, time  0.380  RMSE_forecast 0.01063  RMSE_analysis 0.01063
+Step   20, time  0.400  RMSE_forecast 0.01047  RMSE_analysis 0.01026
+Step   21, time  0.420  RMSE_forecast 0.01009  RMSE_analysis 0.01009
+Step   22, time  0.440  RMSE_forecast 0.00992  RMSE_analysis 0.00992
+Step   23, time  0.460  RMSE_forecast 0.00976  RMSE_analysis 0.00976
+Step   24, time  0.480  RMSE_forecast 0.00961  RMSE_analysis 0.00961
+Step   25, time  0.500  RMSE_forecast 0.00946  RMSE_analysis 0.01094
 
 Statistics (25 steps):
 ==================================================
-  Mean RMSE (forecast) : 0.00573
-  Mean RMSE (analysis) : 0.00612
+  Mean RMSE (forecast) : 0.01002
+  Mean RMSE (analysis) : 0.01046
   Observations used    : 5
 

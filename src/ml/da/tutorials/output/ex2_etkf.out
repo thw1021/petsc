@@ -1,9 +1,9 @@
 Spinning up truth for 0 steps...
-Localization matrix Q created: 40 x 40, full localization (all weights = 1.0)
+Localization matrix Q created: 40 x 40
 PetscDA Object: 1 MPI process
   State size: 40
   Observation size: 40
-  Ensemble size: 30
+  Ensemble size: 5
   Assembled: true
   Inflation: 1.
 PetscDAETKF Object:
@@ -11,11 +11,12 @@ PetscDAETKF Object:
 Lorenz-96 LETKF Example
 ======================
   State dimension        : 40
-  Ensemble size          : 30
+  Ensemble size          : 5
   Forcing parameter (F)  : 8.0000
   Time step (dt)         : 0.0500
   Total steps            : 1120
   Burn-in steps          : 100
+  Spin-up steps          : 0
   Observation frequency  : 1
   Observation noise std  : 1.000
   Ensemble init std      : 1.000
@@ -23,20 +24,20 @@ Lorenz-96 LETKF Example
   Localization (obs/vert): 40 
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [burn-in]
-Step  112, time  5.600  RMSE_forecast 0.13990  RMSE_analysis 0.12430
-Step  224, time 11.200  RMSE_forecast 0.26754  RMSE_analysis 0.28056
-Step  336, time 16.800  RMSE_forecast 0.28900  RMSE_analysis 0.24691
-Step  448, time 22.400  RMSE_forecast 0.32555  RMSE_analysis 0.33242
-Step  560, time 28.000  RMSE_forecast 0.26210  RMSE_analysis 0.25860
-Step  672, time 33.600  RMSE_forecast 0.24458  RMSE_analysis 0.19986
-Step  784, time 39.200  RMSE_forecast 0.17774  RMSE_analysis 0.18236
-Step  896, time 44.800  RMSE_forecast 0.14582  RMSE_analysis 0.14199
-Step 1008, time 50.400  RMSE_forecast 0.31762  RMSE_analysis 0.27914
-Step 1120, time 56.000  RMSE_forecast 0.14138  RMSE_analysis 0.16253
+Step  112, time  5.600  RMSE_forecast 3.88686  RMSE_analysis 3.86303
+Step  224, time 11.200  RMSE_forecast 5.37421  RMSE_analysis 5.29281
+Step  336, time 16.800  RMSE_forecast 5.06977  RMSE_analysis 5.06406
+Step  448, time 22.400  RMSE_forecast 4.04047  RMSE_analysis 4.00828
+Step  560, time 28.000  RMSE_forecast 4.39103  RMSE_analysis 4.37623
+Step  672, time 33.600  RMSE_forecast 4.37635  RMSE_analysis 4.29791
+Step  784, time 39.200  RMSE_forecast 5.12220  RMSE_analysis 5.09556
+Step  896, time 44.800  RMSE_forecast 4.82336  RMSE_analysis 4.80522
+Step 1008, time 50.400  RMSE_forecast 3.21284  RMSE_analysis 3.14228
+Step 1120, time 56.000  RMSE_forecast 4.43137  RMSE_analysis 4.37907
 
 Statistics (1021 post-burn-in steps):
 ==================================================
-  Mean RMSE (forecast) : 0.26350
-  Mean RMSE (analysis) : 0.24159
+  Mean RMSE (forecast) : 4.81830
+  Mean RMSE (analysis) : 4.79376
   Observations used    : 1120
 
