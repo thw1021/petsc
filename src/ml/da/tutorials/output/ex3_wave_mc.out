@@ -1,0 +1,43 @@
+Localization matrix Q created: 80x40, no localization/global (all weights = 1.0)
+PetscDA Object: 1 MPI process
+  State size: 160
+  Observation size: 40
+  Ensemble size: 10
+  Assembled: true
+  Inflation: 1.
+PetscDAETKF Object:
+  Square root type: eigen
+Shallow Water [L]ETKF Example
+============================
+  Test case             : Traveling wave
+  Flux scheme           : MC (2nd order)
+  State dimension       : 160 (80 grid points x 2 DOF)
+  Observation dimension : 40
+  Ensemble size         : 10
+  Domain length (L)     : 80.0000
+  Gravitational const   : 9.8100
+  Time step (dt)        : 0.0200
+  Total steps           : 100
+  Observation frequency : 5
+  Observation noise std : 0.030
+  Random seed           : 12345
+  Localization          : None/Global (40 obs per vertex)
+
+Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [initial]
+Step   10, time  0.200  RMSE_forecast 0.02423  RMSE_analysis 0.02006
+Step   20, time  0.400  RMSE_forecast 0.01364  RMSE_analysis 0.01250
+Step   30, time  0.600  RMSE_forecast 0.01208  RMSE_analysis 0.01204
+Step   40, time  0.800  RMSE_forecast 0.00972  RMSE_analysis 0.00976
+Step   50, time  1.000  RMSE_forecast 0.00904  RMSE_analysis 0.00982
+Step   60, time  1.200  RMSE_forecast 0.00978  RMSE_analysis 0.00802
+Step   70, time  1.400  RMSE_forecast 0.00782  RMSE_analysis 0.00783
+Step   80, time  1.600  RMSE_forecast 0.00837  RMSE_analysis 0.00911
+Step   90, time  1.800  RMSE_forecast 0.00877  RMSE_analysis 0.00900
+Step  100, time  2.000  RMSE_forecast 0.00957  RMSE_analysis 0.00833
+
+Statistics (100 steps):
+==================================================
+  Mean RMSE (forecast) : 0.01056
+  Mean RMSE (analysis) : 0.01063
+  Observations used    : 20
+
