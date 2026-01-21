@@ -22,6 +22,7 @@
 #include <petscblaslapack.h>
 
 PetscClassId      PETSCDA_CLASSID          = 0;
+PetscLogEvent     PetscDA_Analysis         = 0;
 PetscBool         PetscDARegisterAllCalled = PETSC_FALSE;
 PetscFunctionList PetscDAList              = NULL;
 
@@ -45,6 +46,7 @@ PetscErrorCode PetscDAInitializePackage(void)
   PetscCall(PetscClassIdRegister("Data Assimilation", &PETSCDA_CLASSID));
   PetscCall(PetscDARegisterAll());
   PetscCall(PetscRegisterFinalize(PetscDAFinalizePackage));
+  PetscCall(PetscLogEventRegister("PetscDAAnalysis", PETSCDA_CLASSID, &PetscDA_Analysis));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1040,7 +1042,9 @@ PetscErrorCode PetscDAAnalysis(PetscDA da, Vec observation, Mat H)
   PetscCall(VecGetSize(observation, &h_rows));
   PetscCheck(h_rows == da->obs_size, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "observation vector size (%" PetscInt_FMT ") must match obs_size (%" PetscInt_FMT ")", h_rows, da->obs_size);
 
+  PetscCall(PetscLogEventBegin(PetscDA_Analysis, (PetscObject)da, 0, 0, 0));
   PetscUseTypeMethod(da, analysis, observation, H);
+  PetscCall(PetscLogEventEnd(PetscDA_Analysis, (PetscObject)da, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
