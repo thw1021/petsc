@@ -64,7 +64,7 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
 
   Level: intermediate
 
-.seealso:
+.seealso: [](ch_da), `PetscDALETKFSetLocalization()`
 @*/
 PetscErrorCode PetscDAGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, const PetscInt n_dof, Vec Vecxyz[3], PetscReal bd[3], Mat H, Mat *Q)
 {
