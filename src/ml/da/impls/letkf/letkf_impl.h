@@ -17,7 +17,7 @@ typedef struct {
   Mat      Q;            // Localization matrix (n_grid x n_observations_total) Each row has exactly n_obs_vertex non-zeros
   PetscInt n_obs_vertex; // = number of local observations per grid point (const now)
   PetscInt n_grid;       // Number of grid points (n_grid = state_size / da->ndof)
-  PetscInt batch_size; // Batch size for GPU processing
+  PetscInt batch_size;   // Batch size for GPU processing
   /* Device pointers for Q (Kokkos views cast to void*) */
   void *Q_device_i;
   void *Q_device_j;
