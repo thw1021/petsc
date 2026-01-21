@@ -1,4 +1,4 @@
-Spinning up truth for 2000 steps...
+Spinning up truth for 0 steps...
 PetscDA Object: 1 MPI process
   State size: 40
   Observation size: 40
@@ -21,20 +21,20 @@ Lorenz-96 ETKF Example
   Random seed           : 12345
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [burn-in]
-Step  112, time  5.600  RMSE_forecast 0.22746  RMSE_analysis 0.21666
-Step  224, time 11.200  RMSE_forecast 0.45944  RMSE_analysis 0.43462
-Step  336, time 16.800  RMSE_forecast 0.92565  RMSE_analysis 0.89853
-Step  448, time 22.400  RMSE_forecast 2.14539  RMSE_analysis 2.07963
-Step  560, time 28.000  RMSE_forecast 4.57236  RMSE_analysis 4.53218
-Step  672, time 33.600  RMSE_forecast 4.78545  RMSE_analysis 4.73990
-Step  784, time 39.200  RMSE_forecast 4.06243  RMSE_analysis 3.96872
-Step  896, time 44.800  RMSE_forecast 3.47663  RMSE_analysis 3.37663
-Step 1008, time 50.400  RMSE_forecast 4.36547  RMSE_analysis 4.28259
-Step 1120, time 56.000  RMSE_forecast 5.41047  RMSE_analysis 5.33362
+Step  112, time  5.600  RMSE_forecast 0.17743  RMSE_analysis 0.16039
+Step  224, time 11.200  RMSE_forecast 0.17985  RMSE_analysis 0.20748
+Step  336, time 16.800  RMSE_forecast 0.57705  RMSE_analysis 0.53757
+Step  448, time 22.400  RMSE_forecast 4.09218  RMSE_analysis 4.03445
+Step  560, time 28.000  RMSE_forecast 5.23945  RMSE_analysis 5.15637
+Step  672, time 33.600  RMSE_forecast 3.05442  RMSE_analysis 3.03507
+Step  784, time 39.200  RMSE_forecast 3.16294  RMSE_analysis 3.07735
+Step  896, time 44.800  RMSE_forecast 4.26726  RMSE_analysis 4.19833
+Step 1008, time 50.400  RMSE_forecast 4.05521  RMSE_analysis 4.00622
+Step 1120, time 56.000  RMSE_forecast 3.70516  RMSE_analysis 3.64776
 
 Statistics (1021 post-burn-in steps):
 ==================================================
-  Mean RMSE (forecast) : 3.25847
-  Mean RMSE (analysis) : 3.19579
+  Mean RMSE (forecast) : 3.19278
+  Mean RMSE (analysis) : 3.13215
   Observations used    : 1120
 
