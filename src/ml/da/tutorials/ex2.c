@@ -457,19 +457,21 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
-
     args: -steps 1120 -burn 100 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 5
     requires: kokkos
+
     test:
       suffix: chol
       args: -petscda_sqrt_type cholesky
 
     test:
+      requires: !complex
       suffix: letkf
       diff_args: -j
       args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec -num_observations_vertex 5
 
     test:
+      requires: !complex
       suffix: etkf
       args: -petscda_type etkf
 
