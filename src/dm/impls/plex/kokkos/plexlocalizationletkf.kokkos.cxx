@@ -67,7 +67,7 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
 
 .seealso:
 @*/
-PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, const PetscInt n_dof, Vec Vecxyz[3], Mat H, Mat *Q)
+PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, const PetscInt n_dof, Vec Vecxyz[3], PetscReal bd[3], Mat H, Mat *Q)
 {
   PetscInt dim = 0, n_vert_local, d, N, n_obs_global, n_state_local, n_obs_local, n_state_global;
   Vec     *obs_vecs;
@@ -195,6 +195,13 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, con
         PetscReal dist2 = 0.0;
         for (PetscInt d = 0; d < dim; ++d) {
           PetscReal diff = v_coords[d] - obs_coords_dev(j, d);
+          if (v_coords[d] - obs_coords_dev(j, d) && bd[d] != 0) { // Periodic boundary
+            PetscReal domain_size = bd[d];
+            if (diff > 0.5 * domain_size)
+              diff -= domain_size;
+            else if (diff < -0.5 * domain_size)
+              diff += domain_size;
+          }
           dist2 += diff * diff;
         }
 
@@ -218,7 +225,7 @@ PetscErrorCode DMPlexGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, con
       // Compute weights
       PetscReal radius2 = best_dists_dev(i, n_obs_vertex - 1);
       PetscReal radius  = std::sqrt(radius2);
-      radius *= 0.5;
+      radius *= 0.55;
       if (radius == 0.0) radius = 1.0;
 
       for (PetscInt k = 0; k < n_obs_vertex; ++k) {
