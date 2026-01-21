@@ -230,7 +230,7 @@ int main(int argc, char **argv)
   PetscReal F                     = DEFAULT_F;
   PetscReal dt                    = DEFAULT_DT;
   PetscReal obs_error_std         = DEFAULT_OBS_ERROR_STD;
-  PetscReal ensemble_init_std     = 1; /* Initial ensemble spread */
+  PetscReal ensemble_init_std     = -1; /* Initial ensemble spread */
   PetscBool use_fake_localization = PETSC_FALSE, isletkf;
   PetscReal bd[3]                 = {40, 0, 0};
 
@@ -270,6 +270,8 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsBool("-use_fake_localization", "Use fake localization matrix", "", use_fake_localization, &use_fake_localization, NULL));
   if (!use_fake_localization) PetscCall(PetscOptionsInt("-num_observations_vertex", "Number of observations per vertex", "", num_observations_vertex, &num_observations_vertex, NULL));
   PetscOptionsEnd();
+
+  if (ensemble_init_std < 0) ensemble_init_std = obs_error_std;
 
   /* Validate and constrain parameters */
   PetscCall(ValidateParameters(&n, &steps, &burn, &obs_freq, &ensemble_size, &dt, &F, &obs_error_std));
@@ -425,8 +427,8 @@ int main(int argc, char **argv)
     PetscReal avg_rmse_analysis = sum_rmse_analysis / n_stat_steps;
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nStatistics (%" PetscInt_FMT " post-burn-in steps):\n", n_stat_steps));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "==================================================\n"));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (forecast) : %.5f\n", (double)avg_rmse_forecast));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (analysis) : %.5f\n", (double)avg_rmse_analysis));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (forecast) : %.15f\n", (double)avg_rmse_forecast));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (analysis) : %.15f\n", (double)avg_rmse_analysis));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Observations used    : %" PetscInt_FMT "\n\n", obs_count));
   } else {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nWarning: No post-burn-in statistics collected (burn >= steps)\n\n"));
