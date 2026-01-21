@@ -48,9 +48,9 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
   /* Allocate contiguous buffers for LAPACK for ALL matrices */
   PetscScalar *all_v, *all_work;
   PetscReal   *all_lambda;
-#if defined(PETSC_USE_COMPLEX)
-  PetscReal   *all_rwork;
-#endif
+  #if defined(PETSC_USE_COMPLEX)
+  PetscReal *all_rwork;
+  #endif
   PetscBLASInt lwork_query = -1, lwork;
   PetscScalar  work_query;
   PetscBLASInt n_blas;
@@ -59,21 +59,21 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
   /* Query workspace size once */
   {
     PetscBLASInt info;
-#if defined(PETSC_USE_COMPLEX)
+  #if defined(PETSC_USE_COMPLEX)
     PetscReal rwork_query;
     LAPACKsyev_("V", "U", &n_blas, &work_query, &n_blas, &rwork_query, &work_query, &lwork_query, &rwork_query, &info);
-#else
+  #else
     LAPACKsyev_("V", "U", &n_blas, &work_query, &n_blas, &work_query, &work_query, &lwork_query, &info);
-#endif
+  #endif
     PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK workspace query failed");
     lwork = (PetscBLASInt)PetscRealPart(work_query);
   }
 
-#if defined(PETSC_USE_COMPLEX)
+  #if defined(PETSC_USE_COMPLEX)
   PetscCall(PetscMalloc4(n_batch * n_size * n_size, &all_v, n_batch * n_size, &all_lambda, n_batch * lwork, &all_work, n_batch * (3 * n_size - 2), &all_rwork));
-#else
+  #else
   PetscCall(PetscMalloc3(n_batch * n_size * n_size, &all_v, n_batch * n_size, &all_lambda, n_batch * lwork, &all_work));
-#endif
+  #endif
 
   /* Process each matrix in parallel on host using LAPACK */
   Kokkos::parallel_for(
@@ -87,21 +87,21 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
       PetscScalar *v_ptr      = all_v + i * n_size * n_size;
       PetscReal   *lambda_ptr = all_lambda + i * n_size;
       PetscScalar *work_ptr   = all_work + i * lwork;
-#if defined(PETSC_USE_COMPLEX)
-      PetscReal   *rwork_ptr  = all_rwork + i * (3 * n_size - 2);
-#endif
+  #if defined(PETSC_USE_COMPLEX)
+      PetscReal *rwork_ptr = all_rwork + i * (3 * n_size - 2);
+  #endif
 
       /* Copy T_host(i, :, :) to v_ptr (column-major) */
       for (PetscInt j = 0; j < n_size; j++) {
         for (PetscInt k = 0; k < n_size; k++) v_ptr[k + j * n_size] = T_host(i, k, j);
       }
 
-      /* Compute eigendecomposition: T = V * Lambda * V^T */
-#if defined(PETSC_USE_COMPLEX)
+    /* Compute eigendecomposition: T = V * Lambda * V^T */
+  #if defined(PETSC_USE_COMPLEX)
       LAPACKsyev_("V", "U", &n, v_ptr, &lda, lambda_ptr, work_ptr, &lw, rwork_ptr, &info);
-#else
+  #else
       LAPACKsyev_("V", "U", &n, v_ptr, &lda, lambda_ptr, work_ptr, &lw, &info);
-#endif
+  #endif
 
       if (info != 0) {
         /* We cannot return error code from lambda, so we just abort or ignore.
@@ -116,11 +116,11 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
       }
     });
 
-#if defined(PETSC_USE_COMPLEX)
+  #if defined(PETSC_USE_COMPLEX)
   PetscCall(PetscFree4(all_v, all_lambda, all_work, all_rwork));
-#else
+  #else
   PetscCall(PetscFree3(all_v, all_lambda, all_work));
-#endif
+  #endif
 
   /* Copy results back to device */
   Kokkos::deep_copy(Lambda_batch, Lambda_host);
