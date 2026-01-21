@@ -73,12 +73,11 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
   # Do we need to generate instead an Interface_Funname() macro?
   PetscCtxRt = False
   NL    = '\n'
-  #for k in fun.arguments:
-  #  if k.typename == 'PetscCtxRt':
-  #    NL    = ';\\\n'
-  #    PetscCtxRt = True
+  for k in fun.arguments:
+    if k.typename == 'PetscCtxRt':
+      PetscCtxRt = True
   #    ofile = os.path.join(petscarch, 'include', pkgname, 'finclude', file.replace('.h90', '.h'))
-  #    break
+      break
 
   with open(ofile,"a") as fd:
     if funname in ['PetscObjectQuery', 'PetscObjectCompose']:
@@ -88,12 +87,11 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
       funname = funname + 'Raw'
 
 
-    if PetscCtxRt:
-      fd.write('#define Interface_' + funname + '(ttype)\\\n')
     if funname.startswith('PetscObject') or funname == 'PetscBarrier': fd.write('  interface ' + funname + NL)
     else: fd.write('  interface' + NL)
     fi = fun
     func = ''
+    #if PetscCtxRt: func = 'Ptr';
     dims = ['']
     # if ((funname).startswith('MatDenseGetArray') or (funname).startswith('MatDenseRestoreArray')) and fi[-1].endswith('[]'): dims = ['1d','2d']
     for dim in dims:
@@ -237,6 +235,11 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
     #    suffix = 'raw'
     if funname in ['PetscObjectQuery', 'PetscObjectCompose']:
       suffix = 'raw'
+
+    #for k in fun.arguments:
+    #  if k.typename == 'PetscCtxRt':
+    #    suffix  = 'ptr'
+    #  break
 
     fd.write('#if defined(PETSC_HAVE_FORTRAN_CAPS)\n')
     fd.write('  #define ' + (funname + suffix).lower() + '_ ' + (funname + suffix).upper() + '\n')
