@@ -784,7 +784,7 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q, Mat H
 #if defined(PETSC_HAVE_KOKKOS)
   PetscCall(PetscDALETKFSetupLocalization_Kokkos(impl, H));
 #else
-  #error "Kokkos support required ???"
+  PetscPrintf(PETSC_COMM_SELF, "Warning: PETSc not configured with Kokkos support, LETKF localization will run on CPU.\n");
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
