@@ -15,7 +15,7 @@ static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
 #define DEFAULT_N             40
 #define DEFAULT_STEPS         105000
 #define DEFAULT_BURN          5000
-#define DEFAULT_OBS_FREQ      1
+#define DEFAULT_OBS_FREQ      5
 #define DEFAULT_RANDOM_SEED   12345
 #define DEFAULT_F             8.0
 #define DEFAULT_DT            0.05
@@ -352,7 +352,7 @@ int main(int argc, char **argv)
   } else {
     PetscCall(CreateLocalizationMatrix(n, &Q));
   }
-  PetscCall(PetscDALETKFSetLocalization(daas, Q));
+  PetscCall(PetscDALETKFSetLocalization(daas, Q, H));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %" PetscInt_FMT " x %" PetscInt_FMT "\n", n, num_observations_vertex));
 
   /* Initialize ensemble members from spun-up truth state */

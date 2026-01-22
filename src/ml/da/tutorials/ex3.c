@@ -699,7 +699,7 @@ int main(int argc, char **argv)
       PetscCall(CreateLocalizationMatrix(n_vert, nobs, &Q));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %dx%d, no localization/global (all weights = 1.0)\n", (int)n_vert, (int)nobs));
     }
-    PetscCall(PetscDALETKFSetLocalization(daas, Q));
+    PetscCall(PetscDALETKFSetLocalization(daas, Q, H));
     PetscCall(MatViewFromOptions(Q, NULL, "-Q_view"));
     PetscCall(MatDestroy(&Q));
   }
