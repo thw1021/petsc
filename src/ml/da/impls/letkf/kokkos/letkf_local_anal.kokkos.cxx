@@ -193,7 +193,6 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
       }
     });
   Kokkos::fence();
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
