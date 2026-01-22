@@ -73,15 +73,14 @@ struct RadiusStatsFunctor {
   Collective
 
   Input Parameters:
-+ n_obs_vertex - Number of nearest observations to use per vertex (eg, MAX_Q_NUM_LOCAL_OBSERVATIONS in LETKF)
-. n_obs_local - Number of local observations
-. n_dof - Number of degrees of freedom
-. Vecxyz - Array of vectors containing the coordinates
-
-- H - Observation operator matrix
++ n_obs_vertex - Number of observations to localize to per vertex
+. n_dof        - Number of degrees of freedom
+. Vecxyz       - Array of vectors containing the vertex coordinates
+. bd           - Array of boundary extents per dimension (used for periodicity)
+- H            - Observation operator matrix
 
   Output Parameter:
-. Q - Localization weight matrix (sparse, AIJ format)
+. Q            - Localization weight matrix (sparse, AIJ format)
 
   Notes:
   The output matrix Q has dimensions (n_vert_global x n_obs_global) where
