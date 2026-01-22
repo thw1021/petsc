@@ -286,7 +286,7 @@ static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::La
 /*
   PetscDALETKFSetupLocalization_Kokkos - Prepares device views for localization matrix Q
 */
-PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
+PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl, Mat H)
 {
   PetscInt nrows;
 
@@ -299,6 +299,70 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
   PetscInt rstart, rend, i, nnz;
   PetscCall(MatGetOwnershipRange(impl->Q, &rstart, &rend));
   nrows = rend - rstart;
+
+  /* Create IS for local observations needed by this process */
+  /* We need to find all unique column indices in the local rows of Q */
+  {
+    PetscInt     *obs_indices;
+    PetscInt      n_obs_local_total = 0;
+    PetscInt      max_obs           = nrows * impl->n_obs_vertex;
+    PetscInt      count             = 0;
+    PetscHMapI    ht;
+    PetscHashIter iter;
+    PetscBool     missing;
+
+    PetscCall(PetscHMapICreate(&ht));
+    PetscCall(PetscMalloc1(max_obs, &obs_indices));
+
+    for (i = 0; i < nrows; i++) {
+      const PetscInt    *cols;
+      const PetscScalar *vals;
+      PetscCall(MatGetRow(impl->Q, rstart + i, &nnz, &cols, &vals));
+      for (PetscInt k = 0; k < nnz; k++) {
+        PetscCall(PetscHMapIPut(ht, cols[k], &iter, &missing));
+        if (missing) {
+          obs_indices[count] = cols[k];
+          count++;
+        }
+      }
+      PetscCall(MatRestoreRow(impl->Q, rstart + i, &nnz, &cols, &vals));
+    }
+    n_obs_local_total = count;
+
+    /* Sort indices for consistent ordering */
+    PetscCall(PetscSortInt(n_obs_local_total, obs_indices));
+
+    /* Create IS and VecScatter */
+    PetscCall(ISCreateGeneral(PETSC_COMM_SELF, n_obs_local_total, obs_indices, PETSC_COPY_VALUES, &impl->obs_is_local));
+
+    /* Create global-to-local map for observations */
+    PetscCall(PetscHMapICreate(&impl->obs_g2l));
+    for (i = 0; i < n_obs_local_total; i++) {
+      PetscCall(PetscHMapIPut(impl->obs_g2l, obs_indices[i], &iter, &missing));
+      PetscCall(PetscHMapIIterSet(impl->obs_g2l, iter, i));
+    }
+
+    PetscCall(PetscFree(obs_indices));
+    PetscCall(PetscHMapIDestroy(&ht));
+  }
+
+  /* Create work vectors and scatter context */
+  {
+    PetscInt n_obs_local_total;
+    PetscCall(ISGetLocalSize(impl->obs_is_local, &n_obs_local_total));
+
+    PetscCall(VecCreateSeq(PETSC_COMM_SELF, n_obs_local_total, &impl->obs_work));
+    PetscCall(VecCreateSeq(PETSC_COMM_SELF, n_obs_local_total, &impl->y_mean_work));
+    PetscCall(VecCreateSeq(PETSC_COMM_SELF, n_obs_local_total, &impl->r_inv_sqrt_work));
+
+    Vec gvec;
+    IS  is_to;
+    PetscCall(MatCreateVecs(H, NULL, &gvec)); /* Create template global vector (left vector = rows = observations) */
+    PetscCall(ISCreateStride(PETSC_COMM_SELF, n_obs_local_total, 0, 1, &is_to));
+    PetscCall(VecScatterCreate(gvec, impl->obs_is_local, impl->obs_work, is_to, &impl->obs_scat));
+    PetscCall(VecDestroy(&gvec));
+    PetscCall(ISDestroy(&is_to));
+  }
 
   /* Define View types */
   using view_1d_int    = Kokkos::View<PetscInt *, Kokkos::LayoutLeft>;
@@ -314,7 +378,7 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
   auto h_Q_j = Kokkos::create_mirror_view(*d_Q_j);
   auto h_Q_a = Kokkos::create_mirror_view(*d_Q_a);
 
-  /* Fill host mirrors */
+  /* Fill host mirrors with LOCAL indices into obs_work */
   h_Q_i(0) = 0;
   for (i = 0; i < nrows; i++) {
     const PetscInt    *cols;
@@ -322,7 +386,10 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
     PetscCall(MatGetRow(impl->Q, rstart + i, &nnz, &cols, &vals));
     h_Q_i(i + 1) = h_Q_i(i) + nnz;
     for (PetscInt k = 0; k < nnz; k++) {
-      h_Q_j(h_Q_i(i) + k) = cols[k];
+      PetscInt local_idx;
+      PetscCall(ISLocate(impl->obs_is_local, cols[k], &local_idx));
+      PetscCheck(local_idx >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Observation index %" PetscInt_FMT " not found in local IS", cols[k]);
+      h_Q_j(h_Q_i(i) + k) = local_idx;
       h_Q_a(h_Q_i(i) + k) = vals[k];
     }
     PetscCall(MatRestoreRow(impl->Q, rstart + i, &nnz, &cols, &vals));
@@ -344,6 +411,12 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
 PetscErrorCode PetscDALETKFDestroyLocalization_Kokkos(PetscDALETKFData *impl)
 {
   PetscFunctionBegin;
+  PetscCall(VecDestroy(&impl->obs_work));
+  PetscCall(VecDestroy(&impl->y_mean_work));
+  PetscCall(VecDestroy(&impl->r_inv_sqrt_work));
+  PetscCall(VecScatterDestroy(&impl->obs_scat));
+  PetscCall(MatDestroy(&impl->Z_work));
+  PetscCall(PetscHMapIDestroy(&impl->obs_g2l));
   if (impl->Q_device_i) {
     using view_1d_int = Kokkos::View<PetscInt *, Kokkos::LayoutLeft>;
     delete static_cast<view_1d_int *>(impl->Q_device_i);
