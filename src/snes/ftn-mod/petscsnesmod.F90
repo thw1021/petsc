@@ -19,9 +19,6 @@ module petscsnes
 !
   external MATMFFDCOMPUTEJACOBIAN
 
-  external SNESCONVERGEDDEFAULT
-  external SNESCONVERGEDSKIP
-
 contains
 
 #include <../ftn/snes/petscall.hf90>
