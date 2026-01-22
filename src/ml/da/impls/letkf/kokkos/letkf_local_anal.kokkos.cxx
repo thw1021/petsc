@@ -74,9 +74,9 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
   PetscScalar *all_work   = work->all_work;
   PetscBLASInt lwork      = work->lwork;
   PetscBLASInt n_blas     = work->n_blas;
-#if defined(PETSC_USE_COMPLEX)
+  #if defined(PETSC_USE_COMPLEX)
   PetscReal *all_rwork = work->all_rwork;
-#endif
+  #endif
 
   /* Process each matrix in parallel on host using LAPACK */
   Kokkos::parallel_for(
@@ -90,9 +90,9 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
       PetscScalar *v_ptr      = all_v + i * n_size * n_size;
       PetscReal   *lambda_ptr = all_lambda + i * n_size;
       PetscScalar *work_ptr   = all_work + i * lwork;
-#if defined(PETSC_USE_COMPLEX)
+  #if defined(PETSC_USE_COMPLEX)
       PetscReal *rwork_ptr = all_rwork + i * (3 * n_size - 2);
-#endif
+  #endif
 
       /* Copy T_host(i, :, :) to v_ptr (column-major) */
       for (PetscInt j = 0; j < n_size; j++) {
@@ -100,11 +100,11 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
       }
 
     /* Compute eigendecomposition: T = V * Lambda * V^T */
-#if defined(PETSC_USE_COMPLEX)
+  #if defined(PETSC_USE_COMPLEX)
       LAPACKsyev_("V", "U", &n, v_ptr, &lda, lambda_ptr, work_ptr, &lw, rwork_ptr, &info);
-#else
+  #else
       LAPACKsyev_("V", "U", &n, v_ptr, &lda, lambda_ptr, work_ptr, &lw, &info);
-#endif
+  #endif
 
       if (info != 0) {
         /* We cannot return error code from lambda, so we just abort or ignore.
@@ -168,11 +168,11 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   Kokkos::fence();
 
   /* Solve batched eigendecomposition */
-#if defined(PETSC_USE_REAL_SINGLE)
+  #if defined(PETSC_USE_REAL_SINGLE)
   cusolver_status = cusolverDnSsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A_contig, n_size, d_W, d_work, lwork, d_info, syevj_params, n_batch);
-#else
+  #else
   cusolver_status = cusolverDnDsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A_contig, n_size, d_W, d_work, lwork, d_info, syevj_params, n_batch);
-#endif
+  #endif
   PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevjBatched failed");
 
   /* Check info */
