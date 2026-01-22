@@ -49,6 +49,12 @@ PetscErrorCode TaoShellSetSolve(Tao tao, PetscErrorCode (*solve)(Tao))
   Note:
   This routine is intended for use within various shell routines
 
+  Fortran Note:
+  This only works when the context is a Fortran derived type or a `PetscObject`. Define `ctx` with
+.vb
+  type(tUsertype), pointer :: ctx
+.ve
+
 .seealso: `Tao`, `TAOSHELL`, `TaoShellSetContext()`
 @*/
 PetscErrorCode TaoShellGetContext(Tao tao, PetscCtxRt ctx)

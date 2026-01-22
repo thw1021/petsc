@@ -1279,26 +1279,12 @@ PetscErrorCode SNESSetApplicationContext(SNES snes, PetscCtx ctx)
 . snes - `SNES` context
 
   Output Parameter:
-. ctx - user context
+. ctx - the application context
 
   Level: intermediate
 
   Fortran Notes:
-  This only works when the context is a Fortran derived type (it cannot be a `PetscObject`) and you **must** write a Fortran interface definition for this
-  function that tells the Fortran compiler the derived data type that is returned as the `ctx` argument. For example,
-.vb
-  Interface SNESGetApplicationContext
-    Subroutine SNESGetApplicationContext(snes,ctx,ierr)
-  #include <petsc/finclude/petscsnes.h>
-      use petscsnes
-      SNES snes
-      type(tUsertype), pointer :: ctx
-      PetscErrorCode ierr
-    End Subroutine
-  End Interface SNESGetApplicationContext
-.ve
-
-  The prototype for `ctx` must be
+  This only works when the context is a Fortran derived type or a `PetscObject`. Declare `ctx` with
 .vb
   type(tUsertype), pointer :: ctx
 .ve

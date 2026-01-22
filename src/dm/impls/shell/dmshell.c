@@ -298,6 +298,12 @@ PetscErrorCode DMShellSetContext(DM dm, PetscCtx ctx)
 
   Level: advanced
 
+  Fortran Notes:
+  This only works when the context is a Fortran derived type or a `PetscObject`. Declare `ctx` with
+.vb
+  type(tUsertype), pointer :: ctx
+.ve
+
 .seealso: `DM`, `DMSHELL`, `DMCreateMatrix()`, `DMShellSetContext()`
 @*/
 PetscErrorCode DMShellGetContext(DM dm, PetscCtxRt ctx)

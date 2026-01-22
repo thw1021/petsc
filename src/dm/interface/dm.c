@@ -3777,10 +3777,11 @@ PetscErrorCode DMSetApplicationContextDestroy(DM dm, PetscCtxDestroyFn *destroy)
   In a multilevel solver, the user context is shared by all the `DM` in the hierarchy; it is thus not advisable
   to store objects that represent discretized quantities inside the context.
 
-  Fortran Note:
-  This only works when `ctx` is a Fortran derived type (it cannot be a `PetscObject`), we recommend writing a Fortran interface definition for this
-  function that tells the Fortran compiler the derived data type that is passed in as the `ctx` argument. See `DMGetApplicationContext()` for
-  an example.
+  Fortran Notes:
+  This only works when the context is a Fortran derived type or a `PetscObject`. Declare `ctx` with
+.vb
+  type(tUsertype), pointer :: ctx
+.ve
 
 .seealso: [](ch_dmbase), `DM`, `DMGetApplicationContext()`, `DMView()`, `DMCreateGlobalVector()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`
 @*/

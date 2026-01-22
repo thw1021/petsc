@@ -50,6 +50,12 @@ static PetscErrorCode SNESDestroy_Shell(SNES snes)
 
   Level: advanced
 
+  Fortran Notes:
+  This only works when the context is a Fortran derived type or a `PetscObject`. Declare `ctx` with
+.vb
+  type(tUsertype), pointer :: ctx
+.ve
+
 .seealso: [](ch_snes), `SNES`, `SNESSHELL`, `SNESCreateShell()`, `SNESShellSetContext()`
 @*/
 PetscErrorCode SNESShellGetContext(SNES snes, PetscCtxRt ctx)

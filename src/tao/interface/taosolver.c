@@ -2662,22 +2662,8 @@ PetscErrorCode TaoSetApplicationContext(Tao tao, PetscCtx ctx)
 
   Level: intermediate
 
-  Fortran Notes:
-  This only works when the context is a Fortran derived type (it cannot be a `PetscObject`) and you **must** write a Fortran interface definition for this
-  function that tells the Fortran compiler the derived data type that is returned as the `ctx` argument. For example,
-.vb
-  Interface TaoGetApplicationContext
-    Subroutine TaoGetApplicationContext(tao,ctx,ierr)
-  #include <petsc/finclude/petsctao.h>
-      use petsctao
-      Tao tao
-      type(tUsertype), pointer :: ctx
-      PetscErrorCode ierr
-    End Subroutine
-  End Interface TaoGetApplicationContext
-.ve
-
-  The prototype for `ctx` must be
+  Fortran Note:
+  This only works when the context is a Fortran derived type or a `PetscObject`. Define `ctx` with
 .vb
   type(tUsertype), pointer :: ctx
 .ve

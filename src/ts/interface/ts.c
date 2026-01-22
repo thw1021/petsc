@@ -2061,21 +2061,7 @@ PetscErrorCode TSSetApplicationContext(TS ts, PetscCtx ctx)
   Level: intermediate
 
   Fortran Notes:
-  This only works when the context is a Fortran derived type (it cannot be a `PetscObject`) and you **must** write a Fortran interface definition for this
-  function that tells the Fortran compiler the derived data type that is returned as the `ctx` argument. For example,
-.vb
-  Interface TSGetApplicationContext
-    Subroutine TSGetApplicationContext(ts,ctx,ierr)
-  #include <petsc/finclude/petscts.h>
-      use petscts
-      TS ts
-      type(tUsertype), pointer :: ctx
-      PetscErrorCode ierr
-    End Subroutine
-  End Interface TSGetApplicationContext
-.ve
-
-  The prototype for `ctx` must be
+  This only works when the context is a Fortran derived type or a `PetscObject`. Declare `ctx` with
 .vb
   type(tUsertype), pointer :: ctx
 .ve

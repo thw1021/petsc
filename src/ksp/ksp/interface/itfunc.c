@@ -2750,6 +2750,12 @@ PetscErrorCode KSPGetAndClearConvergenceTest(KSP ksp, KSPConvergenceTestFn **con
 
   Level: advanced
 
+  Fortran Note:
+  This only works when the context is a Fortran derived type or a `PetscObject`. Declare `ctx` with
+.vb
+  type(tUsertype), pointer :: ctx
+.ve
+
 .seealso: [](ch_ksp), `KSP`, `KSPConvergedDefault()`, `KSPSetConvergenceTest()`, `KSPGetConvergenceTest()`
 @*/
 PetscErrorCode KSPGetConvergenceContext(KSP ksp, PetscCtxRt ctx)

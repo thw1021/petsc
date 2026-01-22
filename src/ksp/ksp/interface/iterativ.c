@@ -2082,26 +2082,12 @@ PetscErrorCode KSPSetApplicationContext(KSP ksp, PetscCtx ctx)
 . ksp - `KSP` context
 
   Output Parameter:
-. ctx - a pointer to the user context
+. ctx - a pointer to the application context
 
   Level: intermediate
 
   Fortran Notes:
-  This only works when the context is a Fortran derived type (it cannot be a `PetscObject`) and you **must** write a Fortran interface definition for this
-  function that tells the Fortran compiler the derived data type that is returned as the `ctx` argument. For example,
-.vb
-  Interface KSPGetApplicationContext
-    Subroutine KSPGetApplicationContext(ksp,ctx,ierr)
-  #include <petsc/finclude/petscksp.h>
-      use petscksp
-      KSP ksp
-      type(tUsertype), pointer :: ctx
-      PetscErrorCode ierr
-    End Subroutine
-  End Interface KSPGetApplicationContext
-.ve
-
-  The prototype for `ctx` must be
+  This only works when the context is a Fortran derived type or a `PetscObject`. Define `ctx` with
 .vb
   type(tUsertype), pointer :: ctx
 .ve

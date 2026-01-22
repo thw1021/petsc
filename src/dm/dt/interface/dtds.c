@@ -1931,6 +1931,12 @@ PetscErrorCode PetscDSSetUpdate(PetscDS ds, PetscInt f, PetscPointFn *update)
 
   Level: intermediate
 
+  Fortran Notes:
+  This only works when the context is a Fortran derived type or a `PetscObject`. Define `ctx` with
+.vb
+  type(tUsertype), pointer :: ctx
+.ve
+
 .seealso: `PetscDS`, `PetscPointFn`, `PetscDSSetContext()`
 @*/
 PetscErrorCode PetscDSGetContext(PetscDS ds, PetscInt f, PetscCtxRt ctx)
