@@ -629,7 +629,9 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
     }
 
     if (use_gpu) {
-      PetscCall(PetscDALETKFLocalAnalysis_GPU(da, impl, m, da->state_size / da->ndof, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
+      PetscInt n_local;
+      PetscCall(MatGetLocalSize(impl->Q, &n_local, NULL));
+      PetscCall(PetscDALETKFLocalAnalysis_GPU(da, impl, m, n_local, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
     } else {
       PetscCall(PetscDALETKFLocalAnalysis(da, impl, m, da->state_size / da->ndof, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
     }
@@ -689,7 +691,7 @@ static PetscErrorCode PetscDALETKFApplyModel(PetscDA da, PetscErrorCode (*model)
 static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q)
 {
   PetscDALETKFData *impl;
-  PetscInt          i, nrows, ncols, nnz;
+  PetscInt          i, nrows, ncols, nnz, rstart, rend;
 
   PetscFunctionBegin;
   /* Get implementation data */
@@ -704,7 +706,8 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q)
   PetscCheck(ncols == da->obs_size, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Localization matrix columns (%" PetscInt_FMT ") must match observation size (%" PetscInt_FMT ")", ncols, da->obs_size);
 
   /* Validate that each row has const non-zero entries */
-  for (i = 0; i < nrows; i++) {
+  PetscCall(MatGetOwnershipRange(Q, &rstart, &rend));
+  for (i = rstart; i < rend; i++) {
     const PetscInt    *cols;
     const PetscScalar *vals;
     PetscCall(MatGetRow(Q, i, &nnz, &cols, &vals));
@@ -714,9 +717,12 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q)
 
   /* Store the localization matrix */
   PetscCall(MatDestroy(&impl->Q));
-  PetscCall(MatDuplicate(Q, MAT_COPY_VALUES, &impl->Q));
+  PetscCall(PetscObjectReference((PetscObject)Q));
+  impl->Q = Q;
 #if defined(PETSC_HAVE_KOKKOS)
   PetscCall(PetscDALETKFSetupLocalization_Kokkos(impl));
+#else
+  #error "Kokkos support required ???"
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }

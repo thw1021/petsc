@@ -22,27 +22,18 @@ Shallow Water [L]ETKF Example
   Domain length (L)     : 80.0000
   Gravitational const   : 9.8100
   Time step (dt)        : 0.0200
-  Total steps           : 100
-  Observation frequency : 5
+  Total steps           : 10
+  Observation frequency : 2
   Observation noise std : 0.030
   Random seed           : 12345
   Localization          : None/Global (5 obs per vertex)
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [initial]
-Step   10, time  0.200  RMSE_forecast 0.01132  RMSE_analysis 0.01009
-Step   20, time  0.400  RMSE_forecast 0.00886  RMSE_analysis 0.00877
-Step   30, time  0.600  RMSE_forecast 0.00880  RMSE_analysis 0.00884
-Step   40, time  0.800  RMSE_forecast 0.00852  RMSE_analysis 0.00881
-Step   50, time  1.000  RMSE_forecast 0.00838  RMSE_analysis 0.00850
-Step   60, time  1.200  RMSE_forecast 0.00793  RMSE_analysis 0.00754
-Step   70, time  1.400  RMSE_forecast 0.00732  RMSE_analysis 0.00723
-Step   80, time  1.600  RMSE_forecast 0.00692  RMSE_analysis 0.00684
-Step   90, time  1.800  RMSE_forecast 0.00644  RMSE_analysis 0.00632
-Step  100, time  2.000  RMSE_forecast 0.00624  RMSE_analysis 0.00603
+Step   10, time  0.200  RMSE_forecast 0.00732  RMSE_analysis 0.00729
 
-Statistics (100 steps):
+Statistics (10 steps):
 ==================================================
-  Mean RMSE (forecast) : 0.00766
-  Mean RMSE (analysis) : 0.00774
-  Observations used    : 20
+  Mean RMSE (forecast) : 0.00669
+  Mean RMSE (analysis) : 0.00736
+  Observations used    : 5
 
