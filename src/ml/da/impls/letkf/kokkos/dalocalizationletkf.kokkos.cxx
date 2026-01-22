@@ -80,7 +80,7 @@ struct RadiusStatsFunctor {
 - H            - Observation operator matrix
 
   Output Parameter:
-. Q            - Localization weight matrix (sparse, AIJ format)
+. Q - Localization weight matrix (sparse, AIJ format)
 
   Notes:
   The output matrix Q has dimensions (n_vert_global x n_obs_global) where
