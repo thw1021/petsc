@@ -44,7 +44,7 @@ module ex5f90tmodule
     PetscReal lambda
   end type AppCtx
 
-  contains
+contains
 ! ---------------------------------------------------------------------
 !
 !  FormFunction - Evaluates nonlinear function, F(x).

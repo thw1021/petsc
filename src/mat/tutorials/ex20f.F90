@@ -9,7 +9,7 @@ module ex20fmodule
     PetscReal :: lambda
   end type MatCtx
 
-  contains
+contains
   subroutine MatDuplicate_F(F, opt, M, ierr)
 
     Mat                  :: F, M

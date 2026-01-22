@@ -44,7 +44,7 @@ module ex5module
     PetscReal lambda
   end type AppCtx
 
-  contains
+contains
 ! ---------------------------------------------------------------------
 !
 !  FormFunction - Evaluates nonlinear function, F(x).
@@ -147,7 +147,7 @@ module ex5module
     ierr = 0
     PetscCallA(SNESGetDM(snes, da, ierr))
     PetscCallA(SNESGetApplicationContext(snes, ctx, ierr))
-      print*, ctx
+    print *, ctx
 !  Get a pointer to vector data.
 !    - For default PETSc vectors, VecGetArray() returns a pointer to
 !      the data array. Otherwise, the routine is implementation dependent.
@@ -549,8 +549,8 @@ program main
   ctx%gye = ctx%gys + ctx%gym - 1
   ctx%gxe = ctx%gxs + ctx%gxm - 1
 
-      PetscCallA(SNESSetApplicationContext(snes, ctx, ierr))
-      print*,ctx
+  PetscCallA(SNESSetApplicationContext(snes, ctx, ierr))
+  print *, ctx
 
 !  Set function evaluation routine and vector
   PetscCallA(SNESSetFunction(snes, r, FormFunction, ctx, ierr))

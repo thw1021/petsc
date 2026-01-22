@@ -57,7 +57,7 @@ module ex73f90tmodule
     IS::isPhi, isLambda
   end type ex73f90tmodule_type
 
-  contains
+contains
   subroutine MyObjective(snes, x, result, ctx, ierr)
     PetscInt ctx
     Vec x, f
