@@ -1473,7 +1473,7 @@ M*/
 .vb
    type(AppType) :: ctx
 .ve
-   where `AppType` is a Fortran derived type.
+   where `AppType` is a Fortran derived type. Or the argument can be a `PetscObject`.
 
    Developer Note:
    `PetscCtx` is used instead of `void *` in PETSc code to enhance the clarity of the PETSc source code since `void *` serves so many different roles.
@@ -1510,14 +1510,7 @@ typedef void *PetscCtx;
 .vb
    type(AppType), pointer :: ctx
 .ve
-   where `AppType` is a Fortran derived type. They also need to add to their code (where one adds Fortran interface definitions) the line
-.vb
-   Interface_XXXGet(AppType)
-.ve
-   where `XXXGet()` is the name of the function they plan to call. See [](sec_fortran_context) for a full example.
-
-   This macro construct is needed because Fortran compilers must know the exact type of what a pointer points to at compile time,
-   so the seemingly natural construct `type(*), pointer :: ctx` as an argument to `KSPGetApplicationContext()` is not allowed by the compiler.
+   where `AppType` is a Fortran derived type.
 
    Developer Notes:
    C++ compilers generate a warning or error if one passes a pointer to a pointer to a specific type (instead of `void`), for example,

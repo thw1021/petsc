@@ -253,7 +253,7 @@ PetscErrorCode PCSetApplicationContext(PC pc, PetscCtx ctx)
 
   Level: intermediate
 
-  Fortran Notes:
+  Fortran Note:
   This only works when the context is a Fortran derived type or a `PetscObject`. Define `ctx` with
 .vb
   type(tUsertype), pointer :: ctx

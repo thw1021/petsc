@@ -26,7 +26,7 @@ PetscErrorCode KSPFGMRESSetModifyPC(KSP ksp, KSPFlexibleModifyPCFn *fcn, PetscCt
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
-  PetscTryMethod(ksp, "KSPFGMRESSetModifyPC_C", (KSP, KSPFlexibleModifyPCFn *, void *, PetscCtxDestroyFn *), (ksp, fcn, ctx, destroy));
+  PetscTryMethod(ksp, "KSPFGMRESSetModifyPC_C", (KSP, KSPFlexibleModifyPCFn *, PetscCtx, PetscCtxDestroyFn *), (ksp, fcn, ctx, destroy));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -52,7 +52,7 @@ PetscErrorCode KSPFlexibleSetModifyPC(KSP ksp, KSPFlexibleModifyPCFn *fcn, Petsc
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
-  PetscTryMethod(ksp, "KSPFlexibleSetModifyPC_C", (KSP, KSPFlexibleModifyPCFn *, void *, PetscCtxDestroyFn *), (ksp, fcn, ctx, destroy));
+  PetscTryMethod(ksp, "KSPFlexibleSetModifyPC_C", (KSP, KSPFlexibleModifyPCFn *, PetscCtx, PetscCtxDestroyFn *), (ksp, fcn, ctx, destroy));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

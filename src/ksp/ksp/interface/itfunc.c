@@ -2381,6 +2381,12 @@ PetscErrorCode KSPMonitorCancel(KSP ksp)
 
   Level: intermediate
 
+  Fortran Notes:
+  This only works when the context is a Fortran derived type or a `PetscObject`. Declare `ctx` with
+.vb
+  type(tUsertype), pointer :: ctx
+.ve
+
 .seealso: [](ch_ksp), `KSPMonitorResidual()`, `KSP`
 @*/
 PetscErrorCode KSPGetMonitorContext(KSP ksp, PetscCtxRt ctx)

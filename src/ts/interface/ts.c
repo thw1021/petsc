@@ -341,7 +341,7 @@ PetscErrorCode TSSetFromOptions(TS ts)
 
     PetscCall(TSMonitorSolutionVTKCtxCreate(monfilename, &ctx));
     PetscCall(PetscOptionsInt("-ts_monitor_solution_vtk_interval", "Save every interval time step (-1 for last step only)", NULL, ctx->interval, &ctx->interval, NULL));
-    PetscCall(TSMonitorSet(ts, (PetscErrorCode (*)(TS, PetscInt, PetscReal, Vec, void *))TSMonitorSolutionVTK, ctx, (PetscCtxDestroyFn *)TSMonitorSolutionVTKDestroy));
+    PetscCall(TSMonitorSet(ts, (PetscErrorCode (*)(TS, PetscInt, PetscReal, Vec, PetscCtx))TSMonitorSolutionVTK, ctx, (PetscCtxDestroyFn *)TSMonitorSolutionVTKDestroy));
   }
 
   PetscCall(PetscOptionsString("-ts_monitor_dmda_ray", "Display a ray of the solution", "None", "y=0", dir, sizeof(dir), &flg));
