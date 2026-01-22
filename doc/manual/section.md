@@ -19,71 +19,41 @@ This section will explain the basic concepts of a `PetscSection` that are genera
 
 ## General concept
 
-At it's core, a `PetscSection` provides a way of indexing into a 2D array, where each row may have a variable number of columns, including zero columns.
-The rows of the 2D array are referred to as **points**.
-The points for a `PetscSection` must be contiguously numbered and are defined to be in some range $[\mathrm{pStart}, \mathrm{pEnd})$, which is called a **chart**.
+Specific entries (or collections of entries) in a `Vec` (or a simple array) can be associated with a "location" on a mesh (or other types of data structure) using the `PetscSection` object.
+A **point** is a `PetscInt` that serves as an abstract "index" into arrays from iterable sets, such as k-cells in a mesh.
+Other iterable set examples can be as simple as the points of a finite difference grid, or cells of a finite volume grid, or as complex as the topological entities of an unstructured mesh (cells, faces, edges, and vertices).
 
-To index into the 2D array, every point is mapped to a tuple `(ndof, offset)`, where
-- `ndof` is the number of values stored at that index
-- `offset` is the location in the array of that data.
-The `ndof` associates a set of **degrees-of-freedom (dof)**, (a small space $\{e_k\}\ \forall 0 < k < ndof$ for a point $e$), with every point.
-So given the tuple for a point, its data can be accessed by `array[offset + d]`, where `d` in `[0, ndof)` is the dof to access.
+At it's most basic, a `PetscSection` is a mapping between the mesh points and a tuple `(ndof, offset)`, where `ndof` is the number of values stored at that mesh point and `offset` is the location in the array of that data.
+So given the tuple for a mesh point, its data can be accessed by `array[offset + d]`, where `d` in `[0, ndof)` is the dof to access.
 
+### Charts: Defining mesh points
 
-For example, given the following mapping:
+The mesh points for a `PetscSection` must be contiguously numbered and are defined to be in some range $[\mathrm{pStart}, \mathrm{pEnd})$, which is called a **chart**.
+The chart of a `PetscSection` is set via `PetscSectionSetChart()`.
+Note that even though the mesh points must be contiguously numbered, the indexes into the array (defined by each `(ndof, offset)` tuple) associated with the `PetscSection` need not be.
+In other words, there may be elements in the array that are not associated with any mesh points, though this is not often the case.
 
-```
-0 -> (2, 0)
-1 -> (0, 2)
-2 -> (3, 2)
-```
-the data in the array is
+### Defining the (ndof, offset) tuple
 
-$$
-[0_0, 0_1, 2_0, 2_1, 2_2]
-$$
+Defining the `(ndof, offset)` tuple for each mesh point generally first starts with setting the `ndof` for each point, which is done using `PetscSectionSetDof()`.
+This associates a set of degrees of freedom (dof), (a small space $\{e_k\}\ 0 < k < ndof$), with every point.
+If `ndof` is not set for a mesh point, it is assumed to be 0.
 
-where $e_j$ represents the $j$th dof of the $e$th point.
-
-Note that even though the points must be contiguously numbered, the indexes into the array (defined by each `(ndof, offset)` tuple) associated with the `PetscSection` need not be.
-In other words, there may be elements in the array that are not associated with any points, though this is not often the case.
-For example, given the mapping:
-
-```
-0 -> (2, 0)
-1 -> (2, 3)
-```
-the array
-
-$$
-[0_0, 0_1, \box, 1_0, 1_1]
-$$
-
-where the $\box$ entry of the array isn't referenced by any points.
-
-### Creating a `PetscSection`
-
-The sequence for constructing a basic `PetscSection` is the following:
-
-1. Create the section with `PetscSectionCreate()`.
-2. Specify the chart (range of points), with `PetscSectionSetChart()`.
-3. Specify the number of dofs for a point with `PetscSectionSetDof()`. Any points that are not set are assumed to have 0 dofs.
-4. (Optional and often not needed, see below) Specify the offset `PetscSectionSetOffset()` for every point.
-5. Set up the `PetscSection` with `PetscSectionSetUp()`.
-
-Step 4 is normally not needed, as the offset for each point is usually set automatically by `PetscSectionSetUp()`.
-This will concatenate each point's dofs together in the order of the points.
+The offset for each mesh point is usually set automatically by `PetscSectionSetUp()`.
+This will concatenate each mesh point's dofs together in the order of the mesh points.
 This concatenation can be done in a different order by setting a permutation, which is described in {any}`sec_petscsection_permutation`.
-Alternatively, the offset for each point can be set manually by `PetscSectionSetOffset()`; this is not commonly needed.
+
+Alternatively, the offset for each mesh point can be set manually by `PetscSectionSetOffset()`, though this is not commonly needed.
 
 Once the tuples are created, the `PetscSection` is ready to use.
 
-## Connecting `PetscSection` to Grids
+### Basic Setup Example
 
-Specific entries (or collections of entries) in a `Vec` (or a simple array) can be associated with a "location" on a mesh (or other types of data structure) using the `PetscSection` object.
-The points of the `PetscSection` can serve as an abstract "index" into arrays from iterable sets, such as k-cells in a mesh.
-Other iterable set examples can be as simple as the points of a finite difference grid, or cells of a finite volume grid, or as complex as the topological entities of an unstructured mesh (cells, faces, edges, and vertices).
-We can assign a variable number of dofs to each "point" in a grid, store the data in an array, and, using a `PetscSection`, access the data in that array.
+To summarize, the sequence for constructing a basic `PetscSection` is the following:
+
+1. Specify the range of points, or chart, with `PetscSectionSetChart()`.
+2. Specify the number of dofs per point with `PetscSectionSetDof()`. Any values not set will be zero.
+3. Set up the `PetscSection` with `PetscSectionSetUp()`.
 
 ## Multiple Fields
 
