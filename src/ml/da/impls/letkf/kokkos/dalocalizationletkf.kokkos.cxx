@@ -304,7 +304,7 @@ PetscErrorCode PetscDAGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, co
     }
   }
 
-  /* Cleanup Phase 2 storage */
+  /* Cleanup storage */
   for (d = 0; d < dim; ++d) PetscCall(VecDestroy(&obs_vecs[d]));
   PetscCall(PetscFree(obs_vecs));
 
