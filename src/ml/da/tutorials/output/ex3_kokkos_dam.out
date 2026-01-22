@@ -1,0 +1,43 @@
+[0] <vec:seqkokkos> PetscDAGetLETKFLocalizationMatrix(): LETKF localization radius: mean 4.95, std dev 0.55
+Localization matrix Q created using DMPlexGetLETKFLocalizationMatrix
+PetscDA Object: 1 MPI process
+  State size: 160
+  Observation size: 40
+  Ensemble size: 10
+  Assembled: true
+  Inflation: 1.
+PetscDALETKF Object:
+  Square root type: eigen
+  Local analysis: Kokkos
+  Local observations per vertex: 5
+  GPU batch size: 13
+  Localization matrix: set
+Shallow Water [L]ETKF Example
+============================
+  Test case             : Dam-break
+  Flux scheme           : Rusanov (1st order)
+  State dimension       : 160 (80 grid points x 2 DOF)
+  Observation dimension : 40
+  Ensemble size         : 10
+  Domain length (L)     : 80.0000
+  Gravitational const   : 9.8100
+  Time step (dt)        : 0.0200
+  Total steps           : 5
+  Observation frequency : 2
+  Observation noise std : 0.030
+  Random seed           : 12345
+  Localization          : None/Global (5 obs per vertex)
+
+Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [initial]
+Step    1, time  0.020  RMSE_forecast 0.00002  RMSE_analysis 0.00002
+Step    2, time  0.040  RMSE_forecast 0.00003  RMSE_analysis 0.01040
+Step    3, time  0.060  RMSE_forecast 0.01052  RMSE_analysis 0.01052
+Step    4, time  0.080  RMSE_forecast 0.01083  RMSE_analysis 0.00892
+Step    5, time  0.100  RMSE_forecast 0.00913  RMSE_analysis 0.00913
+
+Statistics (5 steps):
+==================================================
+  Mean RMSE (forecast) : 0.00611
+  Mean RMSE (analysis) : 0.00780
+  Observations used    : 2
+
