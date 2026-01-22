@@ -5,7 +5,7 @@ petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
 
 oadirf='"/cygdrive/c/Program Files (x86)/Intel/oneAPI"'
 oadir=os.popen('cygpath -u '+os.popen('cygpath -ms '+oadirf).read()).read().strip()
-oamkldir=oadir+'/mkl/2022.1.0/lib/intel64'
+oamkldir=oadir+'/mkl/2022.1.0/lib'
 oampidir=oadir+'/mpi/2021.6.0'
 
 if __name__ == '__main__':
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     '--with-cxx=cl',
     '--with-fc=ifort',
     '--with-mpi-include='+oampidir+'/include',
-    '--with-mpi-lib='+oampidir+'/lib/release/impi.lib',
+    '--with-mpi-lib='+oampidir+'/lib/impi.lib',
     '--with-mpiexec='+oampidir+'/bin/mpiexec -localonly',
     '--download-metis',
     '--download-parmetis',
