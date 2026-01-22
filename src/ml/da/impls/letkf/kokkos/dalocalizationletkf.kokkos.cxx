@@ -204,6 +204,14 @@ PetscErrorCode PetscDAGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, co
   Kokkos::View<PetscReal **, Kokkos::LayoutLeft, MemSpace> best_dists_dev("best_dists", n_vert_local, n_obs_vertex);
   Kokkos::View<PetscInt **, Kokkos::LayoutLeft, MemSpace>  best_idxs_dev("best_idxs", n_vert_local, n_obs_vertex);
 
+  /* Copy boundary data to device */
+  Kokkos::View<PetscReal *, MemSpace> bd_dev("bd_dev", dim);
+  {
+    Kokkos::View<PetscReal *, Kokkos::HostSpace> bd_host("bd_host", dim);
+    for (PetscInt d = 0; d < dim; ++d) bd_host(d) = bd[d];
+    Kokkos::deep_copy(bd_dev, bd_host);
+  }
+
   /* Main Kernel */
   Kokkos::parallel_for(
     "ComputeLocalization", Kokkos::RangePolicy<ExecSpace>(0, n_vert_local), KOKKOS_LAMBDA(const PetscInt i) {
@@ -225,8 +233,8 @@ PetscErrorCode PetscDAGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, co
         PetscReal dist2 = 0.0;
         for (PetscInt d = 0; d < dim; ++d) {
           PetscReal diff = v_coords[d] - obs_coords_dev(j, d);
-          if (bd[d] != 0) { // Periodic boundary
-            PetscReal domain_size = bd[d];
+          if (bd_dev(d) != 0) { // Periodic boundary
+            PetscReal domain_size = bd_dev(d);
             if (diff > 0.5 * domain_size) diff -= domain_size;
             else if (diff < -0.5 * domain_size) diff += domain_size;
           }
