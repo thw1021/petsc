@@ -288,10 +288,7 @@ static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::La
 */
 PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
 {
-  const PetscInt *Q_i, *Q_j;
-  PetscScalar    *Q_a;
-  PetscMemType    Q_memtype;
-  PetscInt        nrows, ncols;
+  PetscInt        nrows;
 
   PetscFunctionBegin;
   if (!impl->Q) PetscFunctionReturn(PETSC_SUCCESS);
@@ -299,41 +296,42 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
   PetscCall(PetscKokkosInitializeCheck());
 
   /* Get CSR data */
-  PetscCall(MatSeqAIJGetCSRAndMemType(impl->Q, &Q_i, &Q_j, &Q_a, &Q_memtype));
-  PetscCall(MatGetSize(impl->Q, &nrows, &ncols));
+  PetscInt rstart, rend, i, nnz;
+  PetscCall(MatGetOwnershipRange(impl->Q, &rstart, &rend));
+  nrows = rend - rstart;
 
   /* Define View types */
-  using view_1d_int                  = Kokkos::View<PetscInt *, Kokkos::LayoutLeft>;
-  using view_1d_scalar               = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft>;
-  using view_1d_int_host             = Kokkos::View<const PetscInt *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-  using view_1d_scalar_host          = Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-  using view_1d_int_dev_unmanaged    = Kokkos::View<const PetscInt *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-  using view_1d_scalar_dev_unmanaged = Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using view_1d_int    = Kokkos::View<PetscInt *, Kokkos::LayoutLeft>;
+  using view_1d_scalar = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft>;
 
   /* Allocate device views */
   view_1d_int    *d_Q_i = new view_1d_int("Q_i", nrows + 1);
   view_1d_int    *d_Q_j = new view_1d_int("Q_j", nrows * impl->n_obs_vertex);
   view_1d_scalar *d_Q_a = new view_1d_scalar("Q_a", nrows * impl->n_obs_vertex);
 
-  if (Q_memtype != PETSC_MEMTYPE_HOST) {
-    /* Data is on device, copy device-to-device */
-    view_1d_int_dev_unmanaged    d_src_i(Q_i, nrows + 1);
-    view_1d_int_dev_unmanaged    d_src_j(Q_j, nrows * impl->n_obs_vertex);
-    view_1d_scalar_dev_unmanaged d_src_a(Q_a, nrows * impl->n_obs_vertex);
+  /* Create host mirrors */
+  auto h_Q_i = Kokkos::create_mirror_view(*d_Q_i);
+  auto h_Q_j = Kokkos::create_mirror_view(*d_Q_j);
+  auto h_Q_a = Kokkos::create_mirror_view(*d_Q_a);
 
-    Kokkos::deep_copy(*d_Q_i, d_src_i);
-    Kokkos::deep_copy(*d_Q_j, d_src_j);
-    Kokkos::deep_copy(*d_Q_a, d_src_a);
-  } else {
-    /* Data is on host, copy host-to-device */
-    view_1d_int_host    h_Q_i(Q_i, nrows + 1);
-    view_1d_int_host    h_Q_j(Q_j, nrows * impl->n_obs_vertex);
-    view_1d_scalar_host h_Q_a(Q_a, nrows * impl->n_obs_vertex);
-
-    Kokkos::deep_copy(*d_Q_i, h_Q_i);
-    Kokkos::deep_copy(*d_Q_j, h_Q_j);
-    Kokkos::deep_copy(*d_Q_a, h_Q_a);
+  /* Fill host mirrors */
+  h_Q_i(0) = 0;
+  for (i = 0; i < nrows; i++) {
+    const PetscInt    *cols;
+    const PetscScalar *vals;
+    PetscCall(MatGetRow(impl->Q, rstart + i, &nnz, &cols, &vals));
+    h_Q_i(i + 1) = h_Q_i(i) + nnz;
+    for (PetscInt k = 0; k < nnz; k++) {
+      h_Q_j(h_Q_i(i) + k) = cols[k];
+      h_Q_a(h_Q_i(i) + k) = vals[k];
+    }
+    PetscCall(MatRestoreRow(impl->Q, rstart + i, &nnz, &cols, &vals));
   }
+
+  /* Copy to device */
+  Kokkos::deep_copy(*d_Q_i, h_Q_i);
+  Kokkos::deep_copy(*d_Q_j, h_Q_j);
+  Kokkos::deep_copy(*d_Q_a, h_Q_a);
 
   /* Store in impl */
   impl->Q_device_i = static_cast<void *>(d_Q_i);
@@ -449,16 +447,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     Q_a_view = view_1d_scalar_const(d_Q_a->data(), d_Q_a->extent(0));
   } else {
     /* Fallback to host pointers (unsafe if not UVM) */
-    const PetscInt *Q_i, *Q_j;
-    PetscScalar    *Q_a;
-    PetscMemType    Q_memtype;
-
-    PetscCall(MatSeqAIJGetCSRAndMemType(impl->Q, &Q_i, &Q_j, &Q_a, &Q_memtype));
-    PetscCheck(Q_memtype == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Q matrix must be on host for this fallback path");
-
-    Q_i_view = view_1d_int_const(Q_i, n_vertices + 1);
-    Q_j_view = view_1d_int_const(Q_j, n_vertices * impl->n_obs_vertex);
-    Q_a_view = view_1d_scalar_const(Q_a, n_vertices * impl->n_obs_vertex);
+    PetscCheck(PETSC_FALSE, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Q matrix must be setup with PetscDALETKFSetupLocalization_Kokkos");
   }
 
   /* Get global observation data arrays */
