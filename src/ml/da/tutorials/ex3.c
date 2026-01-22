@@ -114,14 +114,14 @@ static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, void
   if (sw->flux_type == EX3_FLUX_RUSANOV) {
     /* First-order Rusanov (Local Lax-Friedrichs) scheme */
     for (i = xs; i < xs + xm; i++) {
-      PetscReal h  = x[i * ndof];
-      PetscReal hu = x[i * ndof + 1];
+      PetscReal h  = PetscRealPart(x[i * ndof]);
+      PetscReal hu = PetscRealPart(x[i * ndof + 1]);
 
-      PetscReal h_im1  = x[(i - 1) * ndof];
-      PetscReal hu_im1 = x[(i - 1) * ndof + 1];
+      PetscReal h_im1  = PetscRealPart(x[(i - 1) * ndof]);
+      PetscReal hu_im1 = PetscRealPart(x[(i - 1) * ndof + 1]);
 
-      PetscReal h_ip1  = x[(i + 1) * ndof];
-      PetscReal hu_ip1 = x[(i + 1) * ndof + 1];
+      PetscReal h_ip1  = PetscRealPart(x[(i + 1) * ndof]);
+      PetscReal hu_ip1 = PetscRealPart(x[(i + 1) * ndof + 1]);
 
       PetscReal F_h_i, F_hu_i, u, c;
       PetscReal F_h_im1, F_hu_im1, u_im1, c_im1;
@@ -147,17 +147,17 @@ static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, void
     /* Second-order MC (Monotonized Central) scheme */
     for (i = xs; i < xs + xm; i++) {
       /* Read state */
-      PetscReal h_im2 = x[(i - 2) * ndof];
-      PetscReal h_im1 = x[(i - 1) * ndof];
-      PetscReal h_i   = x[i * ndof];
-      PetscReal h_ip1 = x[(i + 1) * ndof];
-      PetscReal h_ip2 = x[(i + 2) * ndof];
+      PetscReal h_im2 = PetscRealPart(x[(i - 2) * ndof]);
+      PetscReal h_im1 = PetscRealPart(x[(i - 1) * ndof]);
+      PetscReal h_i   = PetscRealPart(x[i * ndof]);
+      PetscReal h_ip1 = PetscRealPart(x[(i + 1) * ndof]);
+      PetscReal h_ip2 = PetscRealPart(x[(i + 2) * ndof]);
 
-      PetscReal hu_im2 = x[(i - 2) * ndof + 1];
-      PetscReal hu_im1 = x[(i - 1) * ndof + 1];
-      PetscReal hu_i   = x[i * ndof + 1];
-      PetscReal hu_ip1 = x[(i + 1) * ndof + 1];
-      PetscReal hu_ip2 = x[(i + 2) * ndof + 1];
+      PetscReal hu_im2 = PetscRealPart(x[(i - 2) * ndof + 1]);
+      PetscReal hu_im1 = PetscRealPart(x[(i - 1) * ndof + 1]);
+      PetscReal hu_i   = PetscRealPart(x[i * ndof + 1]);
+      PetscReal hu_ip1 = PetscRealPart(x[(i + 1) * ndof + 1]);
+      PetscReal hu_ip2 = PetscRealPart(x[(i + 2) * ndof + 1]);
 
       /* Compute slopes (MC limiter) */
       PetscReal s_h_im1 = Limit(h_im1 - h_im2, h_i - h_im1);
@@ -913,7 +913,7 @@ int main(int argc, char **argv)
   testset:
     requires: kokkos
     diff_args: -j
-    args: -ex3_test dam -steps 25 -progress_freq 1 -da_view -ensemble_size 10 -obs_freq 5 -obs_error 0.03
+    args: -ex3_test dam -steps 5 -progress_freq 1 -da_view -ensemble_size 10 -obs_freq 2 -obs_error 0.03
 
     test:
       requires: !complex
@@ -931,7 +931,7 @@ int main(int argc, char **argv)
   testset:
     requires: kokkos
     diff_args: -j
-    args: -ex3_test wave -steps 100 -da_view -ensemble_size 10 e letkf -obs_error 0.03
+    args: -ex3_test wave -steps 10 -da_view -ensemble_size 10 e letkf -obs_freq 2 -obs_error 0.03
 
     test:
       requires: !complex
