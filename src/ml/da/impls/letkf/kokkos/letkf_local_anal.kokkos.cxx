@@ -288,11 +288,11 @@ static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::La
 */
 PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
 {
-  PetscInt        nrows;
+  PetscInt nrows;
 
   PetscFunctionBegin;
-  if (!impl->Q) PetscFunctionReturn(PETSC_SUCCESS);
-
+  //if (!impl->Q) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCheck(impl->Q, PETSC_COMM_SELF, PETSC_ERR_LIB, "impl->Q = 0");
   PetscCall(PetscKokkosInitializeCheck());
 
   /* Get CSR data */
@@ -334,6 +334,7 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl)
   Kokkos::deep_copy(*d_Q_a, h_Q_a);
 
   /* Store in impl */
+  PetscCheck(!impl->Q_device_i, PETSC_COMM_SELF, PETSC_ERR_LIB, "impl->Q = 0");
   impl->Q_device_i = static_cast<void *>(d_Q_i);
   impl->Q_device_j = static_cast<void *>(d_Q_j);
   impl->Q_device_a = static_cast<void *>(d_Q_a);
