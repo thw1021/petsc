@@ -33,6 +33,40 @@ static PetscReal GaspariCohn(PetscReal distance, PetscReal radius)
   }
 }
 
+#define RADIUS_FACTOR 1.1
+
+template <class ViewType>
+struct RadiusStatsFunctor {
+  ViewType best_dists;
+  PetscInt n_obs_vertex;
+
+  struct value_type {
+    double sum, sq_sum;
+  };
+
+  KOKKOS_INLINE_FUNCTION void operator()(const PetscInt i, value_type &update) const
+  {
+    PetscReal r2 = best_dists(i, n_obs_vertex - 1);
+    PetscReal r  = std::sqrt(r2);
+    r *= RADIUS_FACTOR;
+    if (r == 0.0) r = 1.0;
+    update.sum += r;
+    update.sq_sum += r * r;
+  }
+
+  KOKKOS_INLINE_FUNCTION void init(value_type &update) const
+  {
+    update.sum    = 0.0;
+    update.sq_sum = 0.0;
+  }
+
+  KOKKOS_INLINE_FUNCTION void join(value_type &dest, const value_type &src) const
+  {
+    dest.sum += src.sum;
+    dest.sq_sum += src.sq_sum;
+  }
+};
+
 /*@
   PetscDAGetLETKFLocalizationMatrix - Compute localization weight matrix for LETKF [move to ml/da/interface]
 
@@ -216,7 +250,6 @@ PetscErrorCode PetscDAGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, co
           current_max_dist = best_dists_dev(i, n_obs_vertex - 1);
         }
       }
-#define RADIUS_FACTOR 1.1
       // Compute weights
       PetscReal radius2 = best_dists_dev(i, n_obs_vertex - 1);
       PetscReal radius  = std::sqrt(radius2);
@@ -260,40 +293,9 @@ PetscErrorCode PetscDAGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, co
 
   /* Compute mean and std dev of localization radius */
   {
-    struct RadiusStatsFunctor {
-      using ViewType = decltype(best_dists_dev);
-      ViewType best_dists;
-      PetscInt n_obs_vertex;
-
-      struct value_type {
-        double sum, sq_sum;
-      };
-
-      KOKKOS_INLINE_FUNCTION void operator()(const PetscInt i, value_type &update) const
-      {
-        PetscReal r2 = best_dists(i, n_obs_vertex - 1);
-        PetscReal r  = std::sqrt(r2);
-        r *= RADIUS_FACTOR;
-        if (r == 0.0) r = 1.0;
-        update.sum += r;
-        update.sq_sum += r * r;
-      }
-
-      KOKKOS_INLINE_FUNCTION void init(value_type &update) const
-      {
-        update.sum    = 0.0;
-        update.sq_sum = 0.0;
-      }
-
-      KOKKOS_INLINE_FUNCTION void join(value_type &dest, const value_type &src) const
-      {
-        dest.sum += src.sum;
-        dest.sq_sum += src.sq_sum;
-      }
-    };
-
-    RadiusStatsFunctor::value_type result;
-    Kokkos::parallel_reduce("ComputeRadiusStats", Kokkos::RangePolicy<ExecSpace>(0, n_vert_local), RadiusStatsFunctor{best_dists_dev, n_obs_vertex}, result);
+    using FunctorType = RadiusStatsFunctor<decltype(best_dists_dev)>;
+    typename FunctorType::value_type result;
+    Kokkos::parallel_reduce("ComputeRadiusStats", Kokkos::RangePolicy<ExecSpace>(0, n_vert_local), FunctorType{best_dists_dev, n_obs_vertex}, result);
 
     if (n_vert_local > 0) {
       double mean   = result.sum / n_vert_local;
