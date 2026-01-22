@@ -473,12 +473,21 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   /* Get global observation data arrays */
   const PetscScalar *z_global_array, *y_global_array, *y_mean_global_array, *r_inv_sqrt_global_array;
   PetscInt           lda_z_global;
+  PetscMemType       z_mem_type, y_mem_type, y_mean_mem_type, r_inv_sqrt_mem_type;
 
-  PetscCall(MatDenseGetArrayRead(Z_global, &z_global_array));
-  PetscCall(VecGetArrayRead(observation, &y_global_array));
-  PetscCall(VecGetArrayRead(y_mean_global, &y_mean_global_array));
-  PetscCall(VecGetArrayRead(r_inv_sqrt_global, &r_inv_sqrt_global_array));
+  PetscCall(MatDenseGetArrayReadAndMemType(Z_global, &z_global_array, &z_mem_type));
+  PetscCall(VecGetArrayReadAndMemType(observation, &y_global_array, &y_mem_type));
+  PetscCall(VecGetArrayReadAndMemType(y_mean_global, &y_mean_global_array, &y_mean_mem_type));
+  PetscCall(VecGetArrayReadAndMemType(r_inv_sqrt_global, &r_inv_sqrt_global_array, &r_inv_sqrt_mem_type));
   PetscCall(MatDenseGetLDA(Z_global, &lda_z_global));
+
+  /* Verify all observation data is on device for GPU execution */
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
+  PetscCheck(z_mem_type == PETSC_MEMTYPE_DEVICE || z_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Z_global must be on device for GPU execution");
+  PetscCheck(y_mem_type == PETSC_MEMTYPE_DEVICE || y_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "observation must be on device for GPU execution");
+  PetscCheck(y_mean_mem_type == PETSC_MEMTYPE_DEVICE || y_mean_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "y_mean_global must be on device for GPU execution");
+  PetscCheck(r_inv_sqrt_mem_type == PETSC_MEMTYPE_DEVICE || r_inv_sqrt_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "r_inv_sqrt_global must be on device for GPU execution");
+#endif
 
   /* Create unmanaged Kokkos views for global observation data */
   using view_2d_unmanaged = Kokkos::View<const PetscScalar **, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
@@ -493,11 +502,20 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   const PetscScalar *x_array, *mean_array;
   PetscScalar       *e_array;
   PetscInt           lda_x, lda_e;
-  PetscCall(MatDenseGetArrayRead(X, &x_array));
-  PetscCall(VecGetArrayRead(impl->mean, &mean_array));
-  PetscCall(MatDenseGetArrayWrite(da->ensemble, &e_array));
+  PetscMemType       x_mem_type, mean_mem_type, e_mem_type;
+
+  PetscCall(MatDenseGetArrayReadAndMemType(X, &x_array, &x_mem_type));
+  PetscCall(VecGetArrayReadAndMemType(impl->mean, &mean_array, &mean_mem_type));
+  PetscCall(MatDenseGetArrayWriteAndMemType(da->ensemble, &e_array, &e_mem_type));
   PetscCall(MatDenseGetLDA(X, &lda_x));
   PetscCall(MatDenseGetLDA(da->ensemble, &lda_e));
+
+  /* Verify all state data is on device for GPU execution */
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
+  PetscCheck(x_mem_type == PETSC_MEMTYPE_DEVICE || x_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "X matrix must be on device for GPU execution");
+  PetscCheck(mean_mem_type == PETSC_MEMTYPE_DEVICE || mean_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "mean vector must be on device for GPU execution");
+  PetscCheck(e_mem_type == PETSC_MEMTYPE_DEVICE || e_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "ensemble matrix must be on device for GPU execution");
+#endif
 
   /* Create unmanaged Kokkos views for global data */
   using view_2d_unmanaged_write = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
@@ -819,15 +837,15 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
 #endif
 
   /* Restore arrays */
-  PetscCall(MatDenseRestoreArrayWrite(da->ensemble, &e_array));
-  PetscCall(VecRestoreArrayRead(impl->mean, &mean_array));
-  PetscCall(MatDenseRestoreArrayRead(X, &x_array));
+  PetscCall(MatDenseRestoreArrayWriteAndMemType(da->ensemble, &e_array));
+  PetscCall(VecRestoreArrayReadAndMemType(impl->mean, &mean_array));
+  PetscCall(MatDenseRestoreArrayReadAndMemType(X, &x_array));
 
   /* Restore global observation arrays */
-  PetscCall(VecRestoreArrayRead(r_inv_sqrt_global, &r_inv_sqrt_global_array));
-  PetscCall(VecRestoreArrayRead(y_mean_global, &y_mean_global_array));
-  PetscCall(VecRestoreArrayRead(observation, &y_global_array));
-  PetscCall(MatDenseRestoreArrayRead(Z_global, &z_global_array));
+  PetscCall(VecRestoreArrayReadAndMemType(r_inv_sqrt_global, &r_inv_sqrt_global_array));
+  PetscCall(VecRestoreArrayReadAndMemType(y_mean_global, &y_mean_global_array));
+  PetscCall(VecRestoreArrayReadAndMemType(observation, &y_global_array));
+  PetscCall(MatDenseRestoreArrayReadAndMemType(Z_global, &z_global_array));
 
   /* Ensemble has been updated in batched form above */
   PetscCall(MatAssemblyBegin(da->ensemble, MAT_FINAL_ASSEMBLY));
