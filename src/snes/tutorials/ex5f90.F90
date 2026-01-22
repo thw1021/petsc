@@ -44,7 +44,6 @@ module ex5module
     PetscReal lambda
   end type AppCtx
 
-
   contains
 ! ---------------------------------------------------------------------
 !
