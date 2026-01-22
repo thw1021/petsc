@@ -9,9 +9,6 @@ module ex20fmodule
     PetscReal :: lambda
   end type MatCtx
 
-  Interface_MatShellGetContext(MatCtx)
-  end interface
-
   contains
   subroutine MatDuplicate_F(F, opt, M, ierr)
 

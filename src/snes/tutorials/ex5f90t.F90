@@ -44,9 +44,6 @@ module ex5f90tmodule
     PetscReal lambda
   end type AppCtx
 
-  Interface_SNESGetApplicationContext(AppCtx)
-  end interface
-
   contains
 ! ---------------------------------------------------------------------
 !

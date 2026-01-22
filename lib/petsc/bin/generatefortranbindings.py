@@ -76,8 +76,26 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
   for k in fun.arguments:
     if k.typename == 'PetscCtxRt':
       PetscCtxRt = True
-  #    ofile = os.path.join(petscarch, 'include', pkgname, 'finclude', file.replace('.h90', '.h'))
-      break
+
+  if PetscCtxRt:
+    with open(os.path.join(petscarch, 'include', pkgname, 'finclude', file.replace('.h90', '.h')),'a') as fd:
+      fd.write('#define ' + funname + '(')
+      cnt = 0
+      for k in fun.arguments:
+        if cnt > 0: fd.write(', ')
+        fd.write(k.name)
+        cnt = cnt + 1
+      fd.write(', ierr) ' + funname + 'Cptr(')
+      cnt = 0
+      for k in fun.arguments:
+        if cnt > 0: fd.write(', ')
+        if k.typename == 'PetscCtxRt':
+          name = k.name
+          fd.write('petscFtnCtx')
+        else:
+          fd.write(k.name)
+        cnt = cnt + 1
+      fd.write(', ierr); call c_f_pointer(petscFtnCtx, ' + name + ')\n')
 
   with open(ofile,"a") as fd:
     if funname in ['PetscObjectQuery', 'PetscObjectCompose']:
@@ -91,16 +109,13 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
     else: fd.write('  interface' + NL)
     fi = fun
     func = ''
-    #if PetscCtxRt: func = 'Ptr';
+    if PetscCtxRt: func = 'cptr';
     dims = ['']
     # if ((funname).startswith('MatDenseGetArray') or (funname).startswith('MatDenseRestoreArray')) and fi[-1].endswith('[]'): dims = ['1d','2d']
     for dim in dims:
       fd.write('  subroutine ' + funname + func + dim + '(')
       simportset = set()
-      if PetscCtxRt:
-        simport = 'ttype'
-      else:
-        simport = ''
+      simport = ''
       cnt = 0
       for k in fi.arguments:
         if k.stringlen: continue
@@ -157,12 +172,10 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
       fd.write('  PetscErrorCode :: ierr' + NL)
       # some Fortran compilers require the end to be on its own line
       fd.write('  end subroutine\n')
-      if not PetscCtxRt:
-        fd.write('  end interface\n')
-    if not PetscCtxRt:
-      fd.write('#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)\n')
-      fd.write('!DEC$ ATTRIBUTES DLLEXPORT::' + funname + func + dim  + NL)
-      fd.write('#endif\n')
+      fd.write('  end interface\n')
+    fd.write('#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)\n')
+    fd.write('!DEC$ ATTRIBUTES DLLEXPORT::' + funname + func + dim  + NL)
+    fd.write('#endif\n')
 
     if fun.name in ['PetscObjectQuery', 'PetscObjectCompose']:
       # under change above
@@ -236,10 +249,10 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
     if funname in ['PetscObjectQuery', 'PetscObjectCompose']:
       suffix = 'raw'
 
-    #for k in fun.arguments:
-    #  if k.typename == 'PetscCtxRt':
-    #    suffix  = 'ptr'
-    #  break
+    for k in fun.arguments:
+      if k.typename == 'PetscCtxRt':
+        suffix  = 'cptr'
+        break
 
     fd.write('#if defined(PETSC_HAVE_FORTRAN_CAPS)\n')
     fd.write('  #define ' + (funname + suffix).lower() + '_ ' + (funname + suffix).upper() + '\n')

@@ -140,16 +140,14 @@ module ex5module
     type(AppCtx), pointer:: ctx
     Vec X
     PetscErrorCode ierr
-      DM da
-      type(c_ptr) Cctx
+    DM da
 
 !  Declarations for use with local arrays:
     PetscScalar, pointer :: lx_v(:)
 
     ierr = 0
     PetscCallA(SNESGetDM(snes, da, ierr))
-      PetscCallA(SNESGetApplicationContext(snes, Cctx, ierr))
-      call c_f_pointer(Cctx, ctx)
+    PetscCallA(SNESGetApplicationContext(snes, ctx, ierr))
       print*, ctx
 !  Get a pointer to vector data.
 !    - For default PETSc vectors, VecGetArray() returns a pointer to

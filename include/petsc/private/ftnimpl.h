@@ -1,4 +1,4 @@
-pragma once
+#pragma once
 
 #include <petsc/private/petscimpl.h>
 PETSC_INTERN PetscErrorCode PETScParseFortranArgs_Private(int *, char ***);

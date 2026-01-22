@@ -21,9 +21,6 @@ program main
   use solver_context_ex6f
   implicit none
 
-  Interface_MatShellGetContext(MatCtx)
-  end interface
-
   Mat :: F
   type(MatCtx) :: ctxF
   type(MatCtx), pointer :: ctxF_pt

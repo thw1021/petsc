@@ -57,9 +57,6 @@ module ex73f90tmodule
     IS::isPhi, isLambda
   end type ex73f90tmodule_type
 
-  Interface_SNESGetApplicationContext(ex73f90tmodule_type)
-  end interface
-
   contains
   subroutine MyObjective(snes, x, result, ctx, ierr)
     PetscInt ctx

@@ -112,9 +112,9 @@ PETSC_EXTERN void kspmonitorset_(KSP *ksp, void (*monitor)(KSP *, PetscInt *, Pe
   }
 }
 
-PETSC_EXTERN void kspconvergeddefaultdestroy_(void **, PetscErrorCode *);
+PETSC_EXTERN void kspconvergeddefaultdestroycptr_(PetscCtxRt, PetscErrorCode *);
 
-PETSC_EXTERN void kspsetconvergencetest_(KSP *ksp, void (*converge)(KSP *, PetscInt *, PetscReal *, KSPConvergedReason *, void *, PetscErrorCode *), void **cctx, void (*destroy)(void **, PetscErrorCode *), PetscErrorCode *ierr)
+PETSC_EXTERN void kspsetconvergencetest_(KSP *ksp, void (*converge)(KSP *, PetscInt *, PetscReal *, KSPConvergedReason *, void *, PetscErrorCode *), void **cctx, void (*destroy)(PetscCtxRt, PetscErrorCode *), PetscErrorCode *ierr)
 {
   CHKFORTRANNULLFUNCTION(destroy);
 
@@ -123,7 +123,7 @@ PETSC_EXTERN void kspsetconvergencetest_(KSP *ksp, void (*converge)(KSP *, Petsc
   } else if (converge == kspconvergedskip_) {
     *ierr = KSPSetConvergenceTest(*ksp, KSPConvergedSkip, NULL, NULL);
   } else {
-    if (destroy == kspconvergeddefaultdestroy_) cctx = *(void ***)cctx;
+    if (destroy == kspconvergeddefaultdestroycptr_) cctx = *(void ***)cctx;
     *ierr = PetscObjectSetFortranCallback((PetscObject)*ksp, PETSC_FORTRAN_CALLBACK_CLASS, &_cb.test, (PetscFortranCallbackFn *)converge, cctx);
     if (*ierr) return;
     *ierr = PetscObjectSetFortranCallback((PetscObject)*ksp, PETSC_FORTRAN_CALLBACK_CLASS, &_cb.testdestroy, (PetscFortranCallbackFn *)destroy, cctx);
