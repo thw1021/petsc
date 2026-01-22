@@ -1034,7 +1034,6 @@ PetscErrorCode PetscDAAnalysis(PetscDA da, Vec observation, Mat H)
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
   PetscValidHeaderSpecific(H, MAT_CLASSID, 3);
-  PetscCall(PetscInfo(da, "start PetscDAAnalysis\n"));
 
   /* Validate H dimensions match PetscDA configuration */
   PetscCall(MatGetSize(H, &h_rows, &h_cols));

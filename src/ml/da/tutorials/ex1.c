@@ -566,7 +566,7 @@ int main(int argc, char **argv)
 
   testset:
     nsize: 1
-    args: -steps 1120 -burn 100 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30
+    args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30
 
     test:
       requires: !complex

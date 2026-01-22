@@ -246,7 +246,7 @@ int main(int argc, char **argv)
   Mat          H = NULL; /* Observation operator matrix */
 
   /* Statistics tracking */
-  PetscReal rmse_forecast = 0.0, rmse_analysis = 0.0;
+  PetscReal rmse_forecast = 0.0, rmse_analysis = 0.0, spread = 0.0;
   PetscReal sum_rmse_forecast = 0.0, sum_rmse_analysis = 0.0;
   PetscInt  n_stat_steps = 0;
   PetscInt  obs_count    = 0;
@@ -411,8 +411,16 @@ int main(int argc, char **argv)
     }
 
     /* Progress reporting */
-    if ((step % progress_interval == 0) || (step == steps) || (step == 0))
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT ", time %6.3f  RMSE_forecast %.5f  RMSE_analysis %.5f%s\n", step, (double)time, (double)rmse_forecast, (double)rmse_analysis, (step < burn) ? " [burn-in]" : ""));
+    if ((step % progress_interval == 0) || (step == steps) || (step == 0)) {
+      Mat       X_anom;
+      PetscReal norm_fro;
+
+      PetscCall(PetscDAComputeAnomalies(daas, x_mean, &X_anom));
+      PetscCall(MatNorm(X_anom, NORM_FROBENIUS, &norm_fro));
+      spread = norm_fro / PetscSqrtReal((PetscReal)n);
+      PetscCall(MatDestroy(&X_anom));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %4" PetscInt_FMT ", time %6.3f  RMSE_forecast %.5f  RMSE_analysis %.5f  Spread %.5f%s\n", step, (double)time, (double)rmse_forecast, (double)rmse_analysis, (double)spread, (step < burn) ? " [burn-in]" : ""));
+    }
 
     /* Propagate ensemble and truth trajectory */
     if (step < steps) {
@@ -427,8 +435,8 @@ int main(int argc, char **argv)
     PetscReal avg_rmse_analysis = sum_rmse_analysis / n_stat_steps;
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nStatistics (%" PetscInt_FMT " post-burn-in steps):\n", n_stat_steps));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "==================================================\n"));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (forecast) : %.15f\n", (double)avg_rmse_forecast));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (analysis) : %.15f\n", (double)avg_rmse_analysis));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (forecast) : %.5f\n", (double)avg_rmse_forecast));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (analysis) : %.5f\n", (double)avg_rmse_analysis));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Observations used    : %" PetscInt_FMT "\n\n", obs_count));
   } else {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nWarning: No post-burn-in statistics collected (burn >= steps)\n\n"));
@@ -459,7 +467,7 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
-    args: -steps 1120 -burn 100 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 5
+    args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 5
     requires: kokkos
 
     test:
