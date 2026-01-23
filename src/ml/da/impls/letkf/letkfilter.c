@@ -23,7 +23,7 @@ static PetscErrorCode PetscDALETKFDestroy(PetscDA da)
     PetscCall(MatDestroy(&impl->T_sqrt));
     PetscCall(MatDestroy(&impl->w_ones));
     PetscCall(MatDestroy(&impl->Q)); // Destroy localization matrix
-#if defined(PETSC_HAVE_KOKKOS)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
     PetscCall(PetscDALETKFDestroyLocalization_Kokkos(impl));
 #endif
     PetscCall(ISDestroy(&impl->obs_is_local));
@@ -635,7 +635,7 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   /* Perform local analysis for all vertices */
   /* ===================================================================== */
 
-#if defined(PETSC_HAVE_KOKKOS)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
   /* Use GPU version only if:
      1. sqrt_type is eigen (GPU version only implements eigen/SVD, not cholesky)
      2. H matrix is a Kokkos type (aijkokkos) */
@@ -781,7 +781,7 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q, Mat H
   PetscCall(MatDestroy(&impl->Q));
   PetscCall(PetscObjectReference((PetscObject)Q));
   impl->Q = Q;
-#if defined(PETSC_HAVE_KOKKOS)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
   PetscCall(PetscDALETKFSetupLocalization_Kokkos(impl, H));
 #else
   (void)PetscPrintf(PETSC_COMM_SELF, "Warning: PETSc not configured with Kokkos support, LETKF localization will run on CPU.\n");
@@ -815,7 +815,7 @@ static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "PetscDALETKF Object:\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Square root type: %s\n", (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky"));
-#if defined(PETSC_HAVE_KOKKOS)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
     if (da->sqrt_type == PETSCDA_SQRT_CHOLESKY) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: CPU\n"));
     } else {
