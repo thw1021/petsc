@@ -80,6 +80,7 @@ struct EigenWorkspace {
 static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, EigenWorkspace *work)
 {
   PetscFunctionBegin;
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "DEBUG: BatchedEigenSolve_Host Execution Space: %s\n", Kokkos::DefaultHostExecutionSpace::name()));
   /* Create host mirrors and copy data in one operation */
   /* This is required for HIP+complex where create_mirror_view + deep_copy fails */
   auto T_host      = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), T_batch);
