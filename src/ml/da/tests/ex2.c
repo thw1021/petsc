@@ -1,4 +1,4 @@
-static char help[] = "Test PetscDAGetLETKFLocalizationMatrix.\n\n";
+static char help[] = "Test PetscDALETKFGetLocalizationMatrix.\n\n";
 
 #include <petscdmplex.h>
 #include <petscdmda.h>
@@ -210,7 +210,7 @@ int main(int argc, char **argv)
   }
 
   /* Call the function */
-  PetscCall(PetscDAGetLETKFLocalizationMatrix(nvertexobs, ndof, Vecxyz, bd, H, &Q));
+  PetscCall(PetscDALETKFGetLocalizationMatrix(nvertexobs, ndof, Vecxyz, bd, H, &Q));
   PetscCall(PetscObjectSetName((PetscObject)Q, "Q_localization"));
 
   // View Q

@@ -38,6 +38,8 @@ static PetscErrorCode PetscDALETKFDestroy(PetscDA da)
   }
   /* Clear the composed function */
   PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetLocalization_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetObsPerVertex_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFGetObsPerVertex_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -752,6 +754,28 @@ static PetscErrorCode PetscDALETKFApplyModel(PetscDA da, PetscErrorCode (*model)
 /*                          Public API Functions                             */
 /* ========================================================================== */
 
+static PetscErrorCode PetscDALETKFSetObsPerVertex_LETKF(PetscDA da, PetscInt n_obs_vertex)
+{
+  PetscDALETKFData *impl;
+
+  PetscFunctionBegin;
+  impl = (PetscDALETKFData *)da->data;
+  PetscCheck(impl, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDA not properly initialized for LETKF");
+  impl->n_obs_vertex = n_obs_vertex;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscDALETKFGetObsPerVertex_LETKF(PetscDA da, PetscInt *n_obs_vertex)
+{
+  PetscDALETKFData *impl;
+
+  PetscFunctionBegin;
+  impl = (PetscDALETKFData *)da->data;
+  PetscCheck(impl, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDA not properly initialized for LETKF");
+  *n_obs_vertex = impl->n_obs_vertex;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q, Mat H)
 {
   PetscDALETKFData *impl;
@@ -894,12 +918,60 @@ PetscErrorCode PetscDALETKFInitialize(PetscDA da)
   da->ops->setfromoptions   = PetscDASetFromOptions_LETKF;
 
   /* Initialize default values */
-  impl->n_obs_vertex = 40;
+  impl->n_obs_vertex = 9;
   impl->Q            = NULL;
   impl->batch_size   = 0;
 
   /* Register the method for setting localization */
   PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetLocalization_C", PetscDALETKFSetLocalization_LETKF));
+  PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetObsPerVertex_C", PetscDALETKFSetObsPerVertex_LETKF));
+  PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFGetObsPerVertex_C", PetscDALETKFGetObsPerVertex_LETKF));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscDALETKFSetObsPerVertex - Sets the number of local observations per vertex for the LETKF algorithm.
+
+  Logically Collective
+
+  Input Parameters:
++ da - the `PetscDA` context
+- n_obs_vertex - number of observations per vertex
+
+  Level: advanced
+
+.seealso: [](ch_da), `PetscDA`, `PetscDALETKFSetLocalization()`
+@*/
+PetscErrorCode PetscDALETKFSetObsPerVertex(PetscDA da, PetscInt n_obs_vertex)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(da, n_obs_vertex, 2);
+  PetscTryMethod(da, "PetscDALETKFSetObsPerVertex_C", (PetscDA, PetscInt), (da, n_obs_vertex));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscDALETKFGetObsPerVertex - Gets the number of local observations per vertex for the LETKF algorithm.
+
+  Not Collective
+
+  Input Parameter:
+. da - the `PetscDA` context
+
+  Output Parameter:
+. n_obs_vertex - number of observations per vertex
+
+  Level: advanced
+
+.seealso: [](ch_da), `PetscDA`, `PetscDALETKFSetObsPerVertex()`
+@*/
+PetscErrorCode PetscDALETKFGetObsPerVertex(PetscDA da, PetscInt *n_obs_vertex)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+  PetscAssertPointer(n_obs_vertex, 2);
+  PetscUseMethod(da, "PetscDALETKFGetObsPerVertex_C", (PetscDA, PetscInt *), (da, n_obs_vertex));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

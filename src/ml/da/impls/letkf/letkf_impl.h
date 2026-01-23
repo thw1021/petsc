@@ -32,6 +32,10 @@ typedef struct {
   void *Q_device_i;
   void *Q_device_j; // Holds LOCAL indices into obs_work, not global indices
   void *Q_device_a;
+
+  /* Persistent solver handles and workspace */
+  void *solver_handle; // cusolverDnHandle_t / rocblas_handle / sycl::queue*
+  void *eigen_work;    // EigenWorkspace*
 } PetscDALETKFData;
 
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)

@@ -8,7 +8,7 @@ PetscDA Object: 1 MPI process
 PetscDALETKF Object:
   Square root type: eigen
   Local analysis: CPU
-  Local observations per vertex: 40
+  Local observations per vertex: 7
   GPU batch size: auto
   Localization matrix: set
 Shallow Water [L]ETKF Example
@@ -25,14 +25,14 @@ Shallow Water [L]ETKF Example
   Observation frequency : 2
   Observation noise std : 0.030
   Random seed           : 12345
-  Localization          : None/Global (40 obs per vertex)
+  Localization          : None/Global (7 obs per vertex)
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [initial]
-Step   10, time  0.200  RMSE_forecast 0.00806  RMSE_analysis 0.00883
+Step   10, time  0.200  RMSE_forecast 0.00759  RMSE_analysis 0.00767
 
 Statistics (10 steps):
 ==================================================
-  Mean RMSE (forecast) : 0.00824
-  Mean RMSE (analysis) : 0.00916
+  Mean RMSE (forecast) : 0.00691
+  Mean RMSE (analysis) : 0.00763
   Observations used    : 5
 
