@@ -580,6 +580,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   PetscReal sqrt_m_minus_1, scale, inflation_inv;
 
   PetscFunctionBegin;
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "DEBUG: PetscDALETKFLocalAnalysis_GPU called\n"));
   ndof           = da->ndof;
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
@@ -955,6 +956,22 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       });
     Kokkos::fence();
 
+    /* DEBUG: Check S for NaNs */
+    {
+      PetscInt nan_count = 0;
+      Kokkos::parallel_reduce(
+        "CheckS", Kokkos::RangePolicy<exec_space>(0, n_batch_current),
+        KOKKOS_LAMBDA(const int i, int &l_count) {
+          for (int j = 0; j < n_obs_vertex_copy; j++) {
+            for (int k = 0; k < m; k++) {
+              if (S_batch(i, j, k) != S_batch(i, j, k)) { l_count++; }
+            }
+          }
+        },
+        nan_count);
+      if (nan_count > 0) printf("DEBUG: Found %d NaNs in S_batch at chunk_start %d\n", (int)nan_count, (int)chunk_start);
+    }
+
     /* ===================================================================== */
     /* Step 2.1.4: Optimized T matrix formation (T = (1/rho)I + S^T * S)    */
     /* ===================================================================== */
@@ -983,6 +1000,22 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       });
     Kokkos::fence();
 
+    /* DEBUG: Check T for NaNs */
+    {
+      PetscInt nan_count = 0;
+      Kokkos::parallel_reduce(
+        "CheckT", Kokkos::RangePolicy<exec_space>(0, n_batch_current),
+        KOKKOS_LAMBDA(const int i, int &l_count) {
+          for (int j = 0; j < m; j++) {
+            for (int k = 0; k < m; k++) {
+              if (T_batch(i, j, k) != T_batch(i, j, k)) { l_count++; }
+            }
+          }
+        },
+        nan_count);
+      if (nan_count > 0) printf("DEBUG: Found %d NaNs in T_batch at chunk_start %d\n", (int)nan_count, (int)chunk_start);
+    }
+
     /* ===================================================================== */
     /* Step 3.1.1: Batched eigendecomposition for current chunk            */
     /* ===================================================================== */
@@ -992,6 +1025,23 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
 #else
     PetscCall(BatchedEigenSolve(T_batch, Lambda_batch, V_batch, n_batch_current, m, &eigen_work));
 #endif
+
+    /* DEBUG: Check Lambda for NaNs or negative values */
+    {
+      PetscInt bad_lambda = 0;
+      Kokkos::parallel_reduce(
+        "CheckLambda", Kokkos::RangePolicy<exec_space>(0, n_batch_current),
+        KOKKOS_LAMBDA(const int i, int &l_count) {
+          for (int k = 0; k < m; k++) {
+            if (Lambda_batch(i, k) != Lambda_batch(i, k) || PetscRealPart(Lambda_batch(i, k)) < -1e-8) {
+              l_count++;
+              // printf("DEBUG: Bad Lambda: %g at batch %d\n", (double)PetscRealPart(Lambda_batch(i, k)), i);
+            }
+          }
+        },
+        bad_lambda);
+      if (bad_lambda > 0) printf("DEBUG: Found %d bad Lambdas at chunk_start %d\n", (int)bad_lambda, (int)chunk_start);
+    }
 
     /* ===================================================================== */
     /* Step 3.1.2: Precompute w and inv_sqrt_lambda for ensemble update    */
