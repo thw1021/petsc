@@ -28,6 +28,31 @@
 
 /* Structure to hold reusable workspace for eigensolvers */
 struct EigenWorkspace {
+  /* Tracking for reuse */
+  PetscInt max_chunk_size;
+  PetscInt m;
+  PetscInt n_obs_vertex;
+
+  /* Persistent Kokkos Views */
+  using exec_space = Kokkos::DefaultExecutionSpace;
+  using view_3d    = Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, exec_space>;
+  using view_2d    = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, exec_space>;
+
+  view_3d Z_batch;
+  view_3d S_batch;
+  view_3d T_batch;
+  view_3d V_batch;
+  view_2d Lambda_batch;
+  view_3d T_sqrt_batch;
+  view_2d w_batch;
+  view_2d delta_batch;
+  view_2d y_batch;
+  view_2d y_mean_batch;
+  view_2d r_inv_sqrt_batch;
+  view_2d temp1_batch;
+  view_2d temp2_batch;
+  view_2d inv_sqrt_lambda_batch;
+
   /* Host workspace */
   PetscScalar *all_v;
   PetscReal   *all_lambda;
@@ -61,6 +86,25 @@ struct EigenWorkspace {
   int          lwork_device;
   #endif
 #endif
+
+  EigenWorkspace() : max_chunk_size(0), m(0), n_obs_vertex(0), all_v(nullptr), all_lambda(nullptr), all_work(nullptr)
+  {
+#if defined(PETSC_USE_COMPLEX)
+    all_rwork = nullptr;
+#endif
+#if defined(KOKKOS_ENABLE_CUDA)
+    d_work       = nullptr;
+    d_info       = nullptr;
+    d_A_contig   = nullptr;
+    d_W_contig   = nullptr;
+    syevj_params = nullptr;
+#elif defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
+    d_work     = nullptr;
+    d_info     = nullptr;
+    d_A_contig = nullptr;
+    d_W_contig = nullptr;
+#endif
+  }
 };
 
 /*
@@ -538,6 +582,55 @@ PetscErrorCode PetscDALETKFDestroyLocalization_Kokkos(PetscDALETKFData *impl)
     delete static_cast<view_1d_scalar *>(impl->Q_device_a);
     impl->Q_device_a = NULL;
   }
+
+  /* Destroy solver handle and workspace */
+  if (impl->eigen_work) {
+    EigenWorkspace *work = static_cast<EigenWorkspace *>(impl->eigen_work);
+
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
+  #if defined(KOKKOS_ENABLE_CUDA)
+    if (work->d_A_contig) PetscCallCUDA(cudaFree(work->d_A_contig));
+    if (work->d_W_contig) PetscCallCUDA(cudaFree(work->d_W_contig));
+    if (work->d_work) PetscCallCUDA(cudaFree(work->d_work));
+    if (work->d_info) PetscCallCUDA(cudaFree(work->d_info));
+    if (work->syevj_params) cusolverDnDestroySyevjInfo(work->syevj_params);
+  #elif defined(KOKKOS_ENABLE_HIP)
+    if (work->d_A_contig) PetscCallHIP(hipFree(work->d_A_contig));
+    if (work->d_W_contig) PetscCallHIP(hipFree(work->d_W_contig));
+    if (work->d_work) PetscCallHIP(hipFree(work->d_work));
+    if (work->d_info) PetscCallHIP(hipFree(work->d_info));
+  #elif defined(KOKKOS_ENABLE_SYCL)
+    if (impl->solver_handle) {
+      sycl::queue *q = static_cast<sycl::queue *>(impl->solver_handle);
+      if (work->d_A_contig) sycl::free(work->d_A_contig, *q);
+      if (work->d_W_contig) sycl::free(work->d_W_contig, *q);
+      if (work->d_work) sycl::free(work->d_work, *q);
+      if (work->d_info) sycl::free(work->d_info, *q);
+    }
+  #endif
+#else
+  #if defined(PETSC_USE_COMPLEX)
+    PetscCall(PetscFree4(work->all_v, work->all_lambda, work->all_work, work->all_rwork));
+  #else
+    PetscCall(PetscFree3(work->all_v, work->all_lambda, work->all_work));
+  #endif
+#endif
+
+    delete work;
+    impl->eigen_work = NULL;
+  }
+
+  if (impl->solver_handle) {
+#if defined(KOKKOS_ENABLE_CUDA)
+    cusolverDnDestroy(static_cast<cusolverDnHandle_t>(impl->solver_handle));
+#elif defined(KOKKOS_ENABLE_HIP)
+    rocblas_destroy_handle(static_cast<rocblas_handle>(impl->solver_handle));
+#elif defined(KOKKOS_ENABLE_SYCL)
+    delete static_cast<sycl::queue *>(impl->solver_handle);
+#endif
+    impl->solver_handle = NULL;
+  }
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -755,15 +848,31 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   #if defined(KOKKOS_ENABLE_CUDA)
   cusolverDnHandle_t device_handle = nullptr;
   cusolverStatus_t   cusolver_status;
-  cusolver_status = cusolverDnCreate(&device_handle);
-  PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnCreate failed");
+  if (impl->solver_handle) {
+    device_handle = static_cast<cusolverDnHandle_t>(impl->solver_handle);
+  } else {
+    cusolver_status = cusolverDnCreate(&device_handle);
+    PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnCreate failed");
+    impl->solver_handle = static_cast<void *>(device_handle);
+  }
   #elif defined(KOKKOS_ENABLE_HIP)
   rocblas_handle device_handle = nullptr;
   rocblas_status hip_status;
-  hip_status = rocblas_create_handle(&device_handle);
-  PetscCheck(hip_status == rocblas_status_success, PETSC_COMM_SELF, PETSC_ERR_LIB, "rocblas_create_handle failed");
+  if (impl->solver_handle) {
+    device_handle = static_cast<rocblas_handle>(impl->solver_handle);
+  } else {
+    hip_status = rocblas_create_handle(&device_handle);
+    PetscCheck(hip_status == rocblas_status_success, PETSC_COMM_SELF, PETSC_ERR_LIB, "rocblas_create_handle failed");
+    impl->solver_handle = static_cast<void *>(device_handle);
+  }
   #elif defined(KOKKOS_ENABLE_SYCL)
-  sycl::queue *device_handle = new sycl::queue(sycl::gpu_selector_v);
+  sycl::queue *device_handle = nullptr;
+  if (impl->solver_handle) {
+    device_handle = static_cast<sycl::queue *>(impl->solver_handle);
+  } else {
+    device_handle       = new sycl::queue(sycl::gpu_selector_v);
+    impl->solver_handle = static_cast<void *>(device_handle);
+  }
   #endif
 #endif
 
@@ -773,124 +882,180 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   /* Allocate Kokkos Views once for the maximum chunk size */
   PetscInt n_obs_vertex_copy = impl->n_obs_vertex;
 
-  /* Batched workspace (device memory) */
-  /* NOTE: G_batch eliminated - computed on-the-fly during ensemble update */
-  view_3d Z_batch_alloc("Z_batch", chunk_size, n_obs_vertex_copy, m);                // (chunk_size, n_obs_vertex, m)
-  view_3d S_batch_alloc = Z_batch_alloc;                                             // Reuse Z memory for S
-  view_3d T_batch_alloc("T_batch", chunk_size, m, m);                                // (chunk_size, m, m)
-  view_3d V_batch_alloc = T_batch_alloc;                                             // Reuse T memory for V
-  view_2d Lambda_batch_alloc("Lambda_batch", chunk_size, m);                         // (chunk_size, m)
-  view_3d T_sqrt_batch_alloc("T_sqrt_batch", chunk_size, m, m);                      // (chunk_size, m, m)
-  view_2d w_batch_alloc("w_batch", chunk_size, m);                                   // (chunk_size, m)
-  view_2d delta_batch_alloc("delta_batch", chunk_size, n_obs_vertex_copy);           // (chunk_size, n_obs_vertex)
-  view_2d y_batch_alloc("y_batch", chunk_size, n_obs_vertex_copy);                   // (chunk_size, n_obs_vertex)
-  view_2d y_mean_batch_alloc("y_mean_batch", chunk_size, n_obs_vertex_copy);         // (chunk_size, n_obs_vertex)
-  view_2d r_inv_sqrt_batch_alloc("r_inv_sqrt_batch", chunk_size, n_obs_vertex_copy); // (chunk_size, n_obs_vertex)
-  view_2d temp1_batch_alloc("temp1_batch", chunk_size, m);                           // (chunk_size, m) - Workspace
-  view_2d temp2_batch_alloc("temp2_batch", chunk_size, m);                           // (chunk_size, m) - Workspace
-  view_2d inv_sqrt_lambda_batch_alloc("inv_sqrt_lambda_batch", chunk_size, m);       // (chunk_size, m) - Precomputed 1/sqrt(Lambda)
+  EigenWorkspace *eigen_work = static_cast<EigenWorkspace *>(impl->eigen_work);
+  if (!eigen_work) {
+    eigen_work       = new EigenWorkspace();
+    impl->eigen_work = static_cast<void *>(eigen_work);
+  }
 
-  /* Initialize EigenWorkspace once */
-  EigenWorkspace eigen_work;
+  /* Check if reallocation is needed */
+  if (eigen_work->max_chunk_size < chunk_size || eigen_work->m != m || eigen_work->n_obs_vertex != n_obs_vertex_copy) {
+    /* Free old device workspace if exists */
+#if defined(KOKKOS_ENABLE_CUDA)
+    if (eigen_work->d_work) PetscCallCUDA(cudaFree(eigen_work->d_work));
+    if (eigen_work->d_info) PetscCallCUDA(cudaFree(eigen_work->d_info));
+    if (eigen_work->d_A_contig) PetscCallCUDA(cudaFree(eigen_work->d_A_contig));
+    if (eigen_work->d_W_contig) PetscCallCUDA(cudaFree(eigen_work->d_W_contig));
+    if (eigen_work->syevj_params) cusolverDnDestroySyevjInfo(eigen_work->syevj_params);
+    eigen_work->syevj_params = nullptr;
+#elif defined(KOKKOS_ENABLE_HIP)
+    if (eigen_work->d_work) PetscCallHIP(hipFree(eigen_work->d_work));
+    if (eigen_work->d_info) PetscCallHIP(hipFree(eigen_work->d_info));
+    if (eigen_work->d_A_contig) PetscCallHIP(hipFree(eigen_work->d_A_contig));
+    if (eigen_work->d_W_contig) PetscCallHIP(hipFree(eigen_work->d_W_contig));
+#elif defined(KOKKOS_ENABLE_SYCL)
+    if (eigen_work->d_work) sycl::free(eigen_work->d_work, *device_handle);
+    if (eigen_work->d_info) sycl::free(eigen_work->d_info, *device_handle);
+    if (eigen_work->d_A_contig) sycl::free(eigen_work->d_A_contig, *device_handle);
+    if (eigen_work->d_W_contig) sycl::free(eigen_work->d_W_contig, *device_handle);
+#endif
+
+#if !defined(KOKKOS_ENABLE_CUDA) && !defined(KOKKOS_ENABLE_HIP) && !defined(KOKKOS_ENABLE_SYCL)
+  #if defined(PETSC_USE_COMPLEX)
+    if (eigen_work->all_v) PetscCall(PetscFree4(eigen_work->all_v, eigen_work->all_lambda, eigen_work->all_work, eigen_work->all_rwork));
+  #else
+    if (eigen_work->all_v) PetscCall(PetscFree3(eigen_work->all_v, eigen_work->all_lambda, eigen_work->all_work));
+  #endif
+#endif
+
+    /* Update dimensions */
+    eigen_work->max_chunk_size = chunk_size;
+    eigen_work->m              = m;
+    eigen_work->n_obs_vertex   = n_obs_vertex_copy;
+
+    /* Allocate Kokkos Views */
+    eigen_work->Z_batch               = view_3d("Z_batch", chunk_size, n_obs_vertex_copy, m);
+    eigen_work->S_batch               = eigen_work->Z_batch;
+    eigen_work->T_batch               = view_3d("T_batch", chunk_size, m, m);
+    eigen_work->V_batch               = eigen_work->T_batch;
+    eigen_work->Lambda_batch          = view_2d("Lambda_batch", chunk_size, m);
+    eigen_work->T_sqrt_batch          = view_3d("T_sqrt_batch", chunk_size, m, m);
+    eigen_work->w_batch               = view_2d("w_batch", chunk_size, m);
+    eigen_work->delta_batch           = view_2d("delta_batch", chunk_size, n_obs_vertex_copy);
+    eigen_work->y_batch               = view_2d("y_batch", chunk_size, n_obs_vertex_copy);
+    eigen_work->y_mean_batch          = view_2d("y_mean_batch", chunk_size, n_obs_vertex_copy);
+    eigen_work->r_inv_sqrt_batch      = view_2d("r_inv_sqrt_batch", chunk_size, n_obs_vertex_copy);
+    eigen_work->temp1_batch           = view_2d("temp1_batch", chunk_size, m);
+    eigen_work->temp2_batch           = view_2d("temp2_batch", chunk_size, m);
+    eigen_work->inv_sqrt_lambda_batch = view_2d("inv_sqrt_lambda_batch", chunk_size, m);
+
+    /* Allocate solver workspace */
 #if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
   #if defined(KOKKOS_ENABLE_CUDA)
-  {
-    /* Create syevj params */
-    cusolver_status = cusolverDnCreateSyevjInfo(&eigen_work.syevj_params);
-    PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnCreateSyevjInfo failed");
+    {
+      /* Create syevj params */
+      cusolver_status = cusolverDnCreateSyevjInfo(&eigen_work->syevj_params);
+      PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnCreateSyevjInfo failed");
 
-    /* Set default params */
-    cusolverDnXsyevjSetTolerance(eigen_work.syevj_params, 1e-7);
-    cusolverDnXsyevjSetMaxSweeps(eigen_work.syevj_params, 100);
-    cusolverDnXsyevjSetSortEig(eigen_work.syevj_params, 1); /* Sort eigenvalues */
+      /* Set default params */
+      cusolverDnXsyevjSetTolerance(eigen_work->syevj_params, 1e-7);
+      cusolverDnXsyevjSetMaxSweeps(eigen_work->syevj_params, 100);
+      cusolverDnXsyevjSetSortEig(eigen_work->syevj_params, 1); /* Sort eigenvalues */
 
-    /* Query workspace size */
-    PetscScalar *d_A = T_batch_alloc.data();
-    PetscScalar *d_W = Lambda_batch_alloc.data();
-    int          lwork;
+      /* Query workspace size */
+      PetscScalar *d_A = eigen_work->T_batch.data();
+      PetscScalar *d_W = eigen_work->Lambda_batch.data();
+      int          lwork;
     #if defined(PETSC_USE_REAL_SINGLE)
-    cusolver_status = cusolverDnSsyevjBatched_bufferSize(device_handle, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, m, d_A, m, d_W, &lwork, eigen_work.syevj_params, chunk_size);
+      cusolver_status = cusolverDnSsyevjBatched_bufferSize(device_handle, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, m, d_A, m, d_W, &lwork, eigen_work->syevj_params, chunk_size);
     #else
-    cusolver_status = cusolverDnDsyevjBatched_bufferSize(device_handle, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, m, d_A, m, d_W, &lwork, eigen_work.syevj_params, chunk_size);
+      cusolver_status = cusolverDnDsyevjBatched_bufferSize(device_handle, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, m, d_A, m, d_W, &lwork, eigen_work->syevj_params, chunk_size);
     #endif
-    PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevjBatched_bufferSize failed");
-    eigen_work.lwork_device = lwork;
+      PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevjBatched_bufferSize failed");
+      eigen_work->lwork_device = lwork;
 
-    /* Allocate workspace */
-    PetscCallCUDA(cudaMalloc(&eigen_work.d_work, sizeof(PetscScalar) * lwork));
-    PetscCallCUDA(cudaMalloc(&eigen_work.d_info, sizeof(int) * chunk_size));
-    PetscCallCUDA(cudaMalloc(&eigen_work.d_A_contig, sizeof(PetscScalar) * chunk_size * m * m));
-    PetscCallCUDA(cudaMalloc(&eigen_work.d_W_contig, sizeof(PetscScalar) * chunk_size * m));
-  }
-  #elif defined(KOKKOS_ENABLE_HIP)
-  {
-    /* rocsolver_dsyevd does not support size query via -1.
-       We use a safe upper bound estimate based on LAPACK dsyevd requirements.
-    */
-    #if defined(PETSC_USE_COMPLEX)
-    int lwork = 0; /* Complex not supported on device */
-    #else
-    int lwork = 1 + 6 * m + 2 * m * m;
-    #endif
-    eigen_work.lwork_device = lwork;
-
-    /* Allocate workspace */
-    if (lwork > 0) {
-      PetscCallHIP(hipMalloc(&eigen_work.d_work, sizeof(PetscScalar) * lwork));
-      PetscCallHIP(hipMalloc(&eigen_work.d_info, sizeof(int) * chunk_size));
-      PetscCallHIP(hipMalloc(&eigen_work.d_A_contig, sizeof(PetscScalar) * chunk_size * m * m));
-      PetscCallHIP(hipMalloc(&eigen_work.d_W_contig, sizeof(PetscScalar) * chunk_size * m));
+      /* Allocate workspace */
+      PetscCallCUDA(cudaMalloc(&eigen_work->d_work, sizeof(PetscScalar) * lwork));
+      PetscCallCUDA(cudaMalloc(&eigen_work->d_info, sizeof(int) * chunk_size));
+      PetscCallCUDA(cudaMalloc(&eigen_work->d_A_contig, sizeof(PetscScalar) * chunk_size * m * m));
+      PetscCallCUDA(cudaMalloc(&eigen_work->d_W_contig, sizeof(PetscScalar) * chunk_size * m));
     }
-  }
-  #elif defined(KOKKOS_ENABLE_SYCL)
-  {
-    /* Query workspace size for oneapi::mkl::lapack::syevd */
-    /* For syevd, workspace size is typically: */
-    /* lwork >= 1 + 6*n + 2*n*n for real, or */
-    /* lwork >= 2*n + n*n for complex */
-    int lwork;
+  #elif defined(KOKKOS_ENABLE_HIP)
+    {
+        /* rocsolver_dsyevd does not support size query via -1.
+         We use a safe upper bound estimate based on LAPACK dsyevd requirements.
+      */
     #if defined(PETSC_USE_COMPLEX)
-    lwork = 2 * m + m * m;
+      int lwork = 0; /* Complex not supported on device */
     #else
-    lwork = 1 + 6 * m + 2 * m * m;
+      int lwork = 1 + 6 * m + 2 * m * m;
     #endif
-    eigen_work.lwork_device = lwork;
+      eigen_work->lwork_device = lwork;
 
-    /* Allocate workspace using SYCL malloc_device */
-    eigen_work.d_work     = sycl::malloc_device<PetscScalar>(lwork, *device_handle);
-    eigen_work.d_info     = sycl::malloc_device<int>(chunk_size, *device_handle);
-    eigen_work.d_A_contig = sycl::malloc_device<PetscScalar>(chunk_size * m * m, *device_handle);
-    eigen_work.d_W_contig = sycl::malloc_device<PetscScalar>(chunk_size * m, *device_handle);
-    PetscCheck(eigen_work.d_work && eigen_work.d_info && eigen_work.d_A_contig && eigen_work.d_W_contig, PETSC_COMM_SELF, PETSC_ERR_MEM, "SYCL memory allocation failed");
-  }
+      /* Allocate workspace */
+      if (lwork > 0) {
+        PetscCallHIP(hipMalloc(&eigen_work->d_work, sizeof(PetscScalar) * lwork));
+        PetscCallHIP(hipMalloc(&eigen_work->d_info, sizeof(int) * chunk_size));
+        PetscCallHIP(hipMalloc(&eigen_work.d_A_contig, sizeof(PetscScalar) * chunk_size * m * m));
+        PetscCallHIP(hipMalloc(&eigen_work.d_W_contig, sizeof(PetscScalar) * chunk_size * m));
+      }
+    }
+  #elif defined(KOKKOS_ENABLE_SYCL)
+    {
+      /* Query workspace size for oneapi::mkl::lapack::syevd */
+      /* For syevd, workspace size is typically: */
+      /* lwork >= 1 + 6*n + 2*n*n for real, or */
+      /* lwork >= 2*n + n*n for complex */
+      int lwork;
+    #if defined(PETSC_USE_COMPLEX)
+      lwork = 2 * m + m * m;
+    #else
+      lwork = 1 + 6 * m + 2 * m * m;
+    #endif
+      eigen_work->lwork_device = lwork;
+
+      /* Allocate workspace using SYCL malloc_device */
+      eigen_work->d_work     = sycl::malloc_device<PetscScalar>(lwork, *device_handle);
+      eigen_work->d_info     = sycl::malloc_device<int>(chunk_size, *device_handle);
+      eigen_work->d_A_contig = sycl::malloc_device<PetscScalar>(chunk_size * m * m, *device_handle);
+      eigen_work->d_W_contig = sycl::malloc_device<PetscScalar>(chunk_size * m, *device_handle);
+      PetscCheck(eigen_work->d_work && eigen_work.d_info && eigen_work.d_A_contig && eigen_work.d_W_contig, PETSC_COMM_SELF, PETSC_ERR_MEM, "SYCL memory allocation failed");
+    }
   #endif
 #else
-  {
-    PetscBLASInt n_blas;
-    PetscCall(PetscBLASIntCast(m, &n_blas));
-    eigen_work.n_blas = n_blas;
+    {
+      PetscBLASInt n_blas;
+      PetscCall(PetscBLASIntCast(m, &n_blas));
+      eigen_work->n_blas = n_blas;
 
-    /* Query workspace size */
-    PetscBLASInt lwork_query = -1;
-    PetscScalar  work_query;
-    PetscBLASInt info;
+      /* Query workspace size */
+      PetscBLASInt lwork_query = -1;
+      PetscScalar  work_query;
+      PetscBLASInt info;
   #if defined(PETSC_USE_COMPLEX)
-    PetscReal rwork_query;
-    LAPACKsyev_("V", "U", &n_blas, &work_query, &n_blas, &rwork_query, &work_query, &lwork_query, &rwork_query, &info);
+      PetscReal rwork_query;
+      LAPACKsyev_("V", "U", &n_blas, &work_query, &n_blas, &rwork_query, &work_query, &lwork_query, &rwork_query, &info);
   #else
-    LAPACKsyev_("V", "U", &n_blas, &work_query, &n_blas, &work_query, &work_query, &lwork_query, &info);
+      LAPACKsyev_("V", "U", &n_blas, &work_query, &n_blas, &work_query, &work_query, &lwork_query, &info);
   #endif
-    PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK workspace query failed");
-    eigen_work.lwork = (PetscBLASInt)PetscRealPart(work_query);
+      PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "LAPACK workspace query failed");
+      eigen_work->lwork = (PetscBLASInt)PetscRealPart(work_query);
 
-    /* Allocate workspace */
+      /* Allocate workspace */
   #if defined(PETSC_USE_COMPLEX)
-    PetscCall(PetscMalloc4(chunk_size * m * m, &eigen_work.all_v, chunk_size * m, &eigen_work.all_lambda, chunk_size * eigen_work.lwork, &eigen_work.all_work, chunk_size * (3 * m - 2), &eigen_work.all_rwork));
+      PetscCall(PetscMalloc4(chunk_size * m * m, &eigen_work->all_v, chunk_size * m, &eigen_work->all_lambda, chunk_size * eigen_work->lwork, &eigen_work->all_work, chunk_size * (3 * m - 2), &eigen_work->all_rwork));
   #else
-    PetscCall(PetscMalloc3(chunk_size * m * m, &eigen_work.all_v, chunk_size * m, &eigen_work.all_lambda, chunk_size * eigen_work.lwork, &eigen_work.all_work));
+      PetscCall(PetscMalloc3(chunk_size * m * m, &eigen_work->all_v, chunk_size * m, &eigen_work->all_lambda, chunk_size * eigen_work->lwork, &eigen_work->all_work));
   #endif
-  }
+    }
 #endif
+  }
+
+  /* Create aliases for current function use */
+  view_3d Z_batch_alloc               = eigen_work->Z_batch;
+  view_3d S_batch_alloc               = eigen_work->S_batch;
+  view_3d T_batch_alloc               = eigen_work->T_batch;
+  view_3d V_batch_alloc               = eigen_work->V_batch;
+  view_2d Lambda_batch_alloc          = eigen_work->Lambda_batch;
+  view_3d T_sqrt_batch_alloc          = eigen_work->T_sqrt_batch;
+  view_2d w_batch_alloc               = eigen_work->w_batch;
+  view_2d delta_batch_alloc           = eigen_work->delta_batch;
+  view_2d y_batch_alloc               = eigen_work->y_batch;
+  view_2d y_mean_batch_alloc          = eigen_work->y_mean_batch;
+  view_2d r_inv_sqrt_batch_alloc      = eigen_work->r_inv_sqrt_batch;
+  view_2d temp1_batch_alloc           = eigen_work->temp1_batch;
+  view_2d temp2_batch_alloc           = eigen_work->temp2_batch;
+  view_2d inv_sqrt_lambda_batch_alloc = eigen_work->inv_sqrt_lambda_batch;
 
   /* Loop over chunks */
   for (PetscInt chunk_start = 0; chunk_start < n_vertices; chunk_start += chunk_size) {
@@ -1020,9 +1185,9 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     /* ===================================================================== */
     /* Compute T_i = V_i * Lambda_i * V_i^T for current chunk */
 #if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
-    PetscCall(BatchedEigenSolve(T_batch, Lambda_batch, V_batch, n_batch_current, m, device_handle, &eigen_work));
+    PetscCall(BatchedEigenSolve(T_batch, Lambda_batch, V_batch, n_batch_current, m, device_handle, eigen_work));
 #else
-    PetscCall(BatchedEigenSolve(T_batch, Lambda_batch, V_batch, n_batch_current, m, &eigen_work));
+    PetscCall(BatchedEigenSolve(T_batch, Lambda_batch, V_batch, n_batch_current, m, eigen_work));
 #endif
 
     /* DEBUG: Check Lambda for NaNs or negative values */
@@ -1135,36 +1300,8 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   }
 
   /* Cleanup workspace */
-#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
-  #if defined(KOKKOS_ENABLE_CUDA)
-  PetscCallCUDA(cudaFree(eigen_work.d_A_contig));
-  PetscCallCUDA(cudaFree(eigen_work.d_W_contig));
-  PetscCallCUDA(cudaFree(eigen_work.d_work));
-  PetscCallCUDA(cudaFree(eigen_work.d_info));
-  cusolverDnDestroySyevjInfo(eigen_work.syevj_params);
-  if (device_handle) cusolverDnDestroy(device_handle);
-  #elif defined(KOKKOS_ENABLE_HIP)
-  if (eigen_work.lwork_device > 0) {
-    PetscCallHIP(hipFree(eigen_work.d_A_contig));
-    PetscCallHIP(hipFree(eigen_work.d_W_contig));
-    PetscCallHIP(hipFree(eigen_work.d_work));
-    PetscCallHIP(hipFree(eigen_work.d_info));
-  }
-  if (device_handle) rocblas_destroy_handle(device_handle);
-  #elif defined(KOKKOS_ENABLE_SYCL)
-  sycl::free(eigen_work.d_A_contig, *device_handle);
-  sycl::free(eigen_work.d_W_contig, *device_handle);
-  sycl::free(eigen_work.d_work, *device_handle);
-  sycl::free(eigen_work.d_info, *device_handle);
-  if (device_handle) delete device_handle;
-  #endif
-#else
-  #if defined(PETSC_USE_COMPLEX)
-  PetscCall(PetscFree4(eigen_work.all_v, eigen_work.all_lambda, eigen_work.all_work, eigen_work.all_rwork));
-  #else
-  PetscCall(PetscFree3(eigen_work.all_v, eigen_work.all_lambda, eigen_work.all_work));
-  #endif
-#endif
+  /* NOTE: Workspace is now persistent in impl->eigen_work and impl->solver_handle */
+  /* It will be destroyed in PetscDALETKFDestroyLocalization_Kokkos */
 
   /* Copy back updated ensemble if needed */
   if (e_is_copy) {

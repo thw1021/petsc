@@ -1,5 +1,5 @@
 Spinning up truth for 0 steps...
-[0] <vec:mpikokkos> PetscDAGetLETKFLocalizationMatrix(): LETKF localization radius: mean 2.2, std dev 0.
+[0] <vec:mpikokkos> PetscDALETKFGetLocalizationMatrix(): LETKF localization radius: mean 2.2, std dev 0.
 Localization matrix Q created: 40 x 5
 PetscDA Object: 3 MPI processes
   State size: 40

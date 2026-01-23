@@ -1,5 +1,4 @@
 Spinning up truth for 0 steps...
-Localization matrix Q created: 40 x 40
 PetscDA Object: 1 MPI process
   State size: 40
   Observation size: 40
@@ -21,7 +20,7 @@ Lorenz-96 LETKF Example
   Observation noise std  : 1.000
   Ensemble init std      : 1.000
   Random seed            : 12345
-  Localization (obs/vert): 40 
+  Localization (obs/vert): 7 
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000  Spread 1.09085 [burn-in]
 Step   11, time  0.550  RMSE_forecast 0.17115  RMSE_analysis 0.14225  Spread 0.10864
