@@ -1,3 +1,9 @@
+static char help[] = "Shallow water test cases with data assimilation.\n"
+                     "Implements 1D shallow water equations with 2 DOF per grid point (h, hu).\n\n"
+                     "Example usage:\n"
+                     "  ./ex3 -steps 100 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30\n"
+                     "  ./ex3 -ex3_test wave -steps 500\n\n";
+
 /* Data assimilation framework header (provides PetscDA) */
 #include "petscda.h"
 /* PETSc DMDA header (provides DM, DMDA functionality) */
@@ -5,12 +11,6 @@
 #include <petscdmplex.h>
 #include <petscts.h>
 #include <petscvec.h>
-
-static char help[] = "Shallow water test cases with data assimilation.\n"
-                     "Implements 1D shallow water equations with 2 DOF per grid point (h, hu).\n\n"
-                     "Example usage:\n"
-                     "  ./ex3 -steps 100 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30\n"
-                     "  ./ex3 -ex3_test wave -steps 500\n\n";
 
 /* Default parameter values */
 #define DEFAULT_N             80 /* 80 grid points */
