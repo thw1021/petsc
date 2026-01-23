@@ -4,11 +4,8 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.version          = '5.0.0rc2'
-    self.download         = ['https://github.com/pmodels/mpich/releases/download/v'+self.version+'/mpich-'+self.version+'.tar.gz',
-                             'https://www.mpich.org/static/downloads/'+self.version+'/mpich-'+self.version+'.tar.gz', # does not always work from Python? So add in web.cels URL below
-                             'https://web.cels.anl.gov/projects/petsc/download/externalpackages'+'/mpich-'+self.version+'.tar.gz']
-    self.download_git     = ['git://https://github.com/pmodels/mpich.git']
+    self.gitcommit        = '1b00844d62c2c1ef5bbe21be48891e9e6643f459' # 5.0.0rc2 + a bug fix
+    self.download          = ['git://https://github.com/pmodels/mpich.git', 'https://github.com/pmodels/mpich/archive/'+self.gitcommit+'.tar.gz']
     self.versionname      = 'MPICH_NUMVERSION'
     self.includes         = ['mpi.h']
     self.gitsubmodules    = ['.']
