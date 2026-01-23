@@ -485,14 +485,12 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl, Mat 
   auto h_Q_a = Kokkos::create_mirror_view(*d_Q_a);
 
   /* Fill host mirrors with LOCAL indices into obs_work */
-  h_Q_i(0)           = 0;
-  PetscInt total_nnz = 0;
+  h_Q_i(0) = 0;
   for (i = 0; i < nrows; i++) {
     const PetscInt    *cols;
     const PetscScalar *vals;
     PetscCall(MatGetRow(impl->Q, rstart + i, &nnz, &cols, &vals));
     h_Q_i(i + 1) = h_Q_i(i) + nnz;
-    total_nnz += nnz;
     for (PetscInt k = 0; k < nnz; k++) {
       PetscInt local_idx;
       PetscCall(ISLocate(impl->obs_is_local, cols[k], &local_idx));
