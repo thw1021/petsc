@@ -471,7 +471,7 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
-    requires: kokkos
+    requires: kokkos_kernels
     args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 5
 
     test:
