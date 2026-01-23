@@ -471,6 +471,7 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
+    requires: kokkos
     args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 5
 
     test:
@@ -478,7 +479,6 @@ int main(int argc, char **argv)
       args: -petscda_type letkf -petscda_sqrt_type cholesky
 
     test:
-      requires: kokkos
       nsize: 3
       suffix: letkf
       diff_args: -j
