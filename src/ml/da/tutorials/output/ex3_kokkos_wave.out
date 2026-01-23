@@ -1,4 +1,4 @@
-[0] <vec:mpikokkos> PetscDAGetLETKFLocalizationMatrix(): LETKF localization radius: mean 4.92963, std dev 0.549623
+[0] <vec:mpikokkos> PetscDALETKFGetLocalizationMatrix(): LETKF localization radius: mean 4.92963, std dev 0.549623
 Localization matrix Q created using DMPlexGetLETKFLocalizationMatrix
 PetscDA Object: 3 MPI processes
   State size: 160

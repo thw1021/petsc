@@ -68,7 +68,7 @@ struct RadiusStatsFunctor {
 };
 
 /*@
-  PetscDAGetLETKFLocalizationMatrix - Compute localization weight matrix for LETKF [move to ml/da/interface]
+  PetscDALETKFGetLocalizationMatrix - Compute localization weight matrix for LETKF [move to ml/da/interface]
 
   Collective
 
@@ -99,7 +99,7 @@ struct RadiusStatsFunctor {
 
 .seealso: [](ch_da), `PetscDALETKFSetLocalization()`
 @*/
-PetscErrorCode PetscDAGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, const PetscInt n_dof, Vec Vecxyz[3], PetscReal bd[3], Mat H, Mat *Q)
+PetscErrorCode PetscDALETKFGetLocalizationMatrix(const PetscInt n_obs_vertex, const PetscInt n_dof, Vec Vecxyz[3], PetscReal bd[3], Mat H, Mat *Q)
 {
   PetscInt dim = 0, n_vert_local, d, n_obs_global, n_obs_local;
   Vec     *obs_vecs;
