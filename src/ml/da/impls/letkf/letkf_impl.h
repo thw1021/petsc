@@ -34,7 +34,7 @@ typedef struct {
   void *Q_device_a;
 } PetscDALETKFData;
 
-#if defined(PETSC_HAVE_KOKKOS)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
 /* Function declarations */
 PETSC_EXTERN PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA, PetscDALETKFData *, PetscInt, PetscInt, Mat, Vec, Mat, Vec, Vec);
 PETSC_EXTERN PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA, PetscDALETKFData *, PetscInt, PetscInt, Mat, Vec, Mat, Vec, Vec);
