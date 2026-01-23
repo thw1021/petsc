@@ -481,22 +481,50 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   PetscCall(VecGetArrayReadAndMemType(r_inv_sqrt_global, &r_inv_sqrt_global_array, &r_inv_sqrt_mem_type));
   PetscCall(MatDenseGetLDA(Z_global, &lda_z_global));
 
-  /* Verify all observation data is on device for GPU execution */
-#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
-  PetscCheck(z_mem_type == PETSC_MEMTYPE_DEVICE || z_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Z_global must be on device for GPU execution");
-  PetscCheck(y_mem_type == PETSC_MEMTYPE_DEVICE || y_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "observation must be on device for GPU execution");
-  PetscCheck(y_mean_mem_type == PETSC_MEMTYPE_DEVICE || y_mean_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "y_mean_global must be on device for GPU execution");
-  PetscCheck(r_inv_sqrt_mem_type == PETSC_MEMTYPE_DEVICE || r_inv_sqrt_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "r_inv_sqrt_global must be on device for GPU execution");
-#endif
+  /* Handle memory mirroring for observation data */
+  Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, exec_space> z_managed;
+  Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, exec_space>  y_managed;
+  Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, exec_space>  y_mean_managed;
+  Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, exec_space>  r_inv_sqrt_managed;
+
+  const PetscScalar *z_ptr          = z_global_array;
+  const PetscScalar *y_ptr          = y_global_array;
+  const PetscScalar *y_mean_ptr     = y_mean_global_array;
+  const PetscScalar *r_inv_sqrt_ptr = r_inv_sqrt_global_array;
+
+  if (z_mem_type == PETSC_MEMTYPE_HOST) {
+    z_managed = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, exec_space>("z_managed", lda_z_global, m);
+    Kokkos::View<const PetscScalar **, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> src(z_global_array, lda_z_global, m);
+    Kokkos::deep_copy(z_managed, src);
+    z_ptr = z_managed.data();
+  }
+  if (y_mem_type == PETSC_MEMTYPE_HOST) {
+    y_managed = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, exec_space>("y_managed", lda_z_global);
+    Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> src(y_global_array, lda_z_global);
+    Kokkos::deep_copy(y_managed, src);
+    y_ptr = y_managed.data();
+  }
+  if (y_mean_mem_type == PETSC_MEMTYPE_HOST) {
+    y_mean_managed = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, exec_space>("y_mean_managed", lda_z_global);
+    Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> src(y_mean_global_array, lda_z_global);
+    Kokkos::deep_copy(y_mean_managed, src);
+    y_mean_ptr = y_mean_managed.data();
+  }
+  if (r_inv_sqrt_mem_type == PETSC_MEMTYPE_HOST) {
+    r_inv_sqrt_managed = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, exec_space>("r_inv_sqrt_managed", lda_z_global);
+    Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> src(r_inv_sqrt_global_array, lda_z_global);
+    Kokkos::deep_copy(r_inv_sqrt_managed, src);
+    r_inv_sqrt_ptr = r_inv_sqrt_managed.data();
+  }
 
   /* Create unmanaged Kokkos views for global observation data */
   using view_2d_unmanaged = Kokkos::View<const PetscScalar **, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
   using view_1d_unmanaged = Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
 
-  view_2d_unmanaged Z_global_view(z_global_array, lda_z_global, m);
-  view_1d_unmanaged y_global_view(y_global_array, lda_z_global);
-  view_1d_unmanaged y_mean_global_view(y_mean_global_array, lda_z_global);
-  view_1d_unmanaged r_inv_sqrt_global_view(r_inv_sqrt_global_array, lda_z_global);
+  view_2d_unmanaged Z_global_view(z_ptr, lda_z_global, m);
+  view_1d_unmanaged y_global_view(y_ptr, lda_z_global);
+  view_1d_unmanaged y_mean_global_view(y_mean_ptr, lda_z_global);
+  view_1d_unmanaged r_inv_sqrt_global_view(r_inv_sqrt_ptr, lda_z_global);
 
   /* Get access to global X matrix and mean vector */
   const PetscScalar *x_array, *mean_array;
@@ -510,18 +538,41 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   PetscCall(MatDenseGetLDA(X, &lda_x));
   PetscCall(MatDenseGetLDA(da->ensemble, &lda_e));
 
-  /* Verify all state data is on device for GPU execution */
-#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
-  PetscCheck(x_mem_type == PETSC_MEMTYPE_DEVICE || x_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "X matrix must be on device for GPU execution");
-  PetscCheck(mean_mem_type == PETSC_MEMTYPE_DEVICE || mean_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "mean vector must be on device for GPU execution");
-  PetscCheck(e_mem_type == PETSC_MEMTYPE_DEVICE || e_mem_type == PETSC_MEMTYPE_HOST, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "ensemble matrix must be on device for GPU execution");
-#endif
+  /* Handle memory mirroring for state data */
+  Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, exec_space> x_managed;
+  Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, exec_space>  mean_managed;
+  Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, exec_space> e_managed;
+
+  const PetscScalar *x_ptr     = x_array;
+  const PetscScalar *mean_ptr  = mean_array;
+  PetscScalar       *e_ptr     = e_array;
+  bool               e_is_copy = false;
+
+  if (x_mem_type == PETSC_MEMTYPE_HOST) {
+    x_managed = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, exec_space>("x_managed", lda_x, m);
+    Kokkos::View<const PetscScalar **, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> src(x_array, lda_x, m);
+    Kokkos::deep_copy(x_managed, src);
+    x_ptr = x_managed.data();
+  }
+  if (mean_mem_type == PETSC_MEMTYPE_HOST) {
+    mean_managed = Kokkos::View<PetscScalar *, Kokkos::LayoutLeft, exec_space>("mean_managed", lda_x);
+    Kokkos::View<const PetscScalar *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> src(mean_array, lda_x);
+    Kokkos::deep_copy(mean_managed, src);
+    mean_ptr = mean_managed.data();
+  }
+  if (e_mem_type == PETSC_MEMTYPE_HOST) {
+    e_managed = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, exec_space>("e_managed", lda_e, m);
+    Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> src(e_array, lda_e, m);
+    Kokkos::deep_copy(e_managed, src);
+    e_ptr     = e_managed.data();
+    e_is_copy = true;
+  }
 
   /* Create unmanaged Kokkos views for global data */
   using view_2d_unmanaged_write = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-  view_2d_unmanaged       X_view(const_cast<PetscScalar *>(x_array), lda_x, m);
-  view_1d_unmanaged       mean_view(mean_array, lda_x);
-  view_2d_unmanaged_write E_view(e_array, lda_e, m);
+  view_2d_unmanaged       X_view(const_cast<PetscScalar *>(x_ptr), lda_x, m);
+  view_1d_unmanaged       mean_view(mean_ptr, lda_x);
+  view_2d_unmanaged_write E_view(e_ptr, lda_e, m);
 
   /* Determine chunk size to avoid OOM on large grids */
   PetscInt chunk_size;
@@ -835,6 +886,12 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   PetscCall(PetscFree3(eigen_work.all_v, eigen_work.all_lambda, eigen_work.all_work));
   #endif
 #endif
+
+  /* Copy back updated ensemble if needed */
+  if (e_is_copy) {
+    Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> dst(e_array, lda_e, m);
+    Kokkos::deep_copy(dst, e_managed);
+  }
 
   /* Restore arrays */
   PetscCall(MatDenseRestoreArrayWriteAndMemType(da->ensemble, &e_array));
