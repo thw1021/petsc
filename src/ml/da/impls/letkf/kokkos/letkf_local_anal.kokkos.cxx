@@ -964,7 +964,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         KOKKOS_LAMBDA(const int i, int &l_count) {
           for (int j = 0; j < n_obs_vertex_copy; j++) {
             for (int k = 0; k < m; k++) {
-              if (S_batch(i, j, k) != S_batch(i, j, k)) { l_count++; }
+              if (S_batch(i, j, k) != S_batch(i, j, k)) l_count++;
             }
           }
         },
@@ -1008,7 +1008,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
         KOKKOS_LAMBDA(const int i, int &l_count) {
           for (int j = 0; j < m; j++) {
             for (int k = 0; k < m; k++) {
-              if (T_batch(i, j, k) != T_batch(i, j, k)) { l_count++; }
+              if (T_batch(i, j, k) != T_batch(i, j, k)) l_count++;
             }
           }
         },
