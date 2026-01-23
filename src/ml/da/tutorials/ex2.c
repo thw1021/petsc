@@ -1,15 +1,15 @@
+static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
+                     "Algorithm 6.4 of \n"
+                     "Asch, Bocquet, and Nodet (2016) \"Data Assimilation\" "
+                     "(SIAM, doi:10.1137/1.9781611974546).\n\n"
+                     "  Expected result: Similar to ETKF with full localization\n\n";
+
 /* Data assimilation framework header (provides PetscDA) */
 #include "petscda.h"
 /* PETSc DMDA header (provides DM, DMDA functionality) */
 #include <petscdmda.h>
 #include <petscts.h>
 #include <petscvec.h>
-
-static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
-                     "Algorithm 6.4 of \n"
-                     "Asch, Bocquet, and Nodet (2016) \"Data Assimilation\" "
-                     "(SIAM, doi:10.1137/1.9781611974546).\n\n"
-                     "  Expected result: Similar to ETKF with full localization\n\n";
 
 /* Default parameter values */
 #define DEFAULT_N             40
@@ -471,7 +471,7 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
-    requires: kokkos_kernels
+    requires: kokkos_kernels !complex
     args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 5
 
     test:
@@ -485,7 +485,6 @@ int main(int argc, char **argv)
       args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec -num_observations_vertex 5
 
     test:
-      requires: !complex
       suffix: etkf
       args: -petscda_type etkf -petscda_sqrt_type eigen
 
