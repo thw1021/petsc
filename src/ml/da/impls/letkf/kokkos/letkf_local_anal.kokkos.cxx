@@ -45,16 +45,19 @@ struct EigenWorkspace {
   PetscScalar *d_work;
   int         *d_info;
   PetscScalar *d_A_contig;
+  PetscScalar *d_W_contig;
   int          lwork_device;
   #elif defined(KOKKOS_ENABLE_HIP)
   PetscScalar *d_work;
   int         *d_info;
   PetscScalar *d_A_contig;
+  PetscScalar *d_W_contig;
   int          lwork_device;
   #elif defined(KOKKOS_ENABLE_SYCL)
   PetscScalar *d_work;
   int         *d_info;
   PetscScalar *d_A_contig;
+  PetscScalar *d_W_contig;
   int          lwork_device;
   #endif
 #endif
@@ -80,7 +83,6 @@ struct EigenWorkspace {
 static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, EigenWorkspace *work)
 {
   PetscFunctionBegin;
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "DEBUG: BatchedEigenSolve_Host Execution Space: %s\n", Kokkos::DefaultHostExecutionSpace::name()));
   /* Create host mirrors and copy data in one operation */
   /* This is required for HIP+complex where create_mirror_view + deep_copy fails */
   auto T_host      = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), T_batch);
@@ -177,10 +179,8 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
   PetscScalar *d_work       = work->d_work;
   int         *d_info       = work->d_info;
   PetscScalar *d_A_contig   = work->d_A_contig;
+  PetscScalar *d_W_contig   = work->d_W_contig;
   int          lwork        = work->lwork_device;
-
-  /* Get raw pointers from Kokkos views - zero-copy access */
-  PetscScalar *d_W = Lambda_batch.data();
 
   /* Copy T_batch to contiguous layout for cuSOLVER */
   Kokkos::parallel_for(
@@ -193,9 +193,9 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
 
     /* Solve batched eigendecomposition */
     #if defined(PETSC_USE_REAL_SINGLE)
-  cusolver_status = cusolverDnSsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A_contig, n_size, d_W, d_work, lwork, d_info, syevj_params, n_batch);
+  cusolver_status = cusolverDnSsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A_contig, n_size, d_W_contig, d_work, lwork, d_info, syevj_params, n_batch);
     #else
-  cusolver_status = cusolverDnDsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A_contig, n_size, d_W, d_work, lwork, d_info, syevj_params, n_batch);
+  cusolver_status = cusolverDnDsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A_contig, n_size, d_W_contig, d_work, lwork, d_info, syevj_params, n_batch);
     #endif
   PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevjBatched failed");
 
@@ -212,7 +212,7 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
   Kokkos::parallel_for(
     "CopyResultsBack", Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, n_batch), KOKKOS_LAMBDA(const int i) {
       for (int j = 0; j < n_size; j++) {
-        Lambda_batch(i, j) = d_W[i * n_size + j];
+        Lambda_batch(i, j) = d_W_contig[i * n_size + j];
         for (int k = 0; k < n_size; k++) V_batch(i, j, k) = d_A_contig[i * n_size * n_size + k * n_size + j];
       }
     });
@@ -229,9 +229,7 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
   PetscScalar *d_work     = work->d_work;
   int         *d_info     = work->d_info;
   PetscScalar *d_A_contig = work->d_A_contig;
-
-  /* Get raw pointers from Kokkos views - zero-copy access */
-  PetscScalar *d_W = Lambda_batch.data();
+  PetscScalar *d_W_contig = work->d_W_contig;
 
   /* Copy T_batch to contiguous layout for rocSOLVER */
   Kokkos::parallel_for(
@@ -249,7 +247,7 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
     #else
   for (int i = 0; i < n_batch; i++) {
     PetscScalar *A_ptr    = d_A_contig + i * n_size * n_size;
-    PetscScalar *W_ptr    = d_W + i * n_size;
+    PetscScalar *W_ptr    = d_W_contig + i * n_size;
     int         *info_ptr = d_info + i;
 
       #if defined(PETSC_USE_REAL_SINGLE)
@@ -274,7 +272,7 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
   Kokkos::parallel_for(
     "CopyResultsBack", Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, n_batch), KOKKOS_LAMBDA(const int i) {
       for (int j = 0; j < n_size; j++) {
-        Lambda_batch(i, j) = d_W[i * n_size + j];
+        Lambda_batch(i, j) = d_W_contig[i * n_size + j];
         for (int k = 0; k < n_size; k++) V_batch(i, j, k) = d_A_contig[i * n_size * n_size + k * n_size + j];
       }
     });
@@ -289,9 +287,7 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
   PetscScalar *d_work     = work->d_work;
   int         *d_info     = work->d_info;
   PetscScalar *d_A_contig = work->d_A_contig;
-
-  /* Get raw pointers from Kokkos views - zero-copy access */
-  PetscScalar *d_W = Lambda_batch.data();
+  PetscScalar *d_W_contig = work->d_W_contig;
 
   /* Copy T_batch to contiguous layout for oneMKL */
   Kokkos::parallel_for(
@@ -306,7 +302,7 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
   /* Use oneapi::mkl::lapack::syevd which computes eigenvalues and eigenvectors */
   for (int i = 0; i < n_batch; i++) {
     PetscScalar *A_ptr    = d_A_contig + i * n_size * n_size;
-    PetscScalar *W_ptr    = d_W + i * n_size;
+    PetscScalar *W_ptr    = d_W_contig + i * n_size;
     int         *info_ptr = d_info + i;
 
     try {
@@ -334,7 +330,7 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
   Kokkos::parallel_for(
     "CopyResultsBack", Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, n_batch), KOKKOS_LAMBDA(const int i) {
       for (int j = 0; j < n_size; j++) {
-        Lambda_batch(i, j) = d_W[i * n_size + j];
+        Lambda_batch(i, j) = d_W_contig[i * n_size + j];
         for (int k = 0; k < n_size; k++) V_batch(i, j, k) = d_A_contig[i * n_size * n_size + k * n_size + j];
       }
     });
@@ -489,12 +485,14 @@ PetscErrorCode PetscDALETKFSetupLocalization_Kokkos(PetscDALETKFData *impl, Mat 
   auto h_Q_a = Kokkos::create_mirror_view(*d_Q_a);
 
   /* Fill host mirrors with LOCAL indices into obs_work */
-  h_Q_i(0) = 0;
+  h_Q_i(0)           = 0;
+  PetscInt total_nnz = 0;
   for (i = 0; i < nrows; i++) {
     const PetscInt    *cols;
     const PetscScalar *vals;
     PetscCall(MatGetRow(impl->Q, rstart + i, &nnz, &cols, &vals));
     h_Q_i(i + 1) = h_Q_i(i) + nnz;
+    total_nnz += nnz;
     for (PetscInt k = 0; k < nnz; k++) {
       PetscInt local_idx;
       PetscCall(ISLocate(impl->obs_is_local, cols[k], &local_idx));
@@ -581,7 +579,6 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   PetscReal sqrt_m_minus_1, scale, inflation_inv;
 
   PetscFunctionBegin;
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "DEBUG: PetscDALETKFLocalAnalysis_GPU called\n"));
   ndof           = da->ndof;
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
@@ -825,6 +822,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     PetscCallCUDA(cudaMalloc(&eigen_work.d_work, sizeof(PetscScalar) * lwork));
     PetscCallCUDA(cudaMalloc(&eigen_work.d_info, sizeof(int) * chunk_size));
     PetscCallCUDA(cudaMalloc(&eigen_work.d_A_contig, sizeof(PetscScalar) * chunk_size * m * m));
+    PetscCallCUDA(cudaMalloc(&eigen_work.d_W_contig, sizeof(PetscScalar) * chunk_size * m));
   }
   #elif defined(KOKKOS_ENABLE_HIP)
   {
@@ -843,6 +841,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       PetscCallHIP(hipMalloc(&eigen_work.d_work, sizeof(PetscScalar) * lwork));
       PetscCallHIP(hipMalloc(&eigen_work.d_info, sizeof(int) * chunk_size));
       PetscCallHIP(hipMalloc(&eigen_work.d_A_contig, sizeof(PetscScalar) * chunk_size * m * m));
+      PetscCallHIP(hipMalloc(&eigen_work.d_W_contig, sizeof(PetscScalar) * chunk_size * m));
     }
   }
   #elif defined(KOKKOS_ENABLE_SYCL)
@@ -863,7 +862,8 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     eigen_work.d_work     = sycl::malloc_device<PetscScalar>(lwork, *device_handle);
     eigen_work.d_info     = sycl::malloc_device<int>(chunk_size, *device_handle);
     eigen_work.d_A_contig = sycl::malloc_device<PetscScalar>(chunk_size * m * m, *device_handle);
-    PetscCheck(eigen_work.d_work && eigen_work.d_info && eigen_work.d_A_contig, PETSC_COMM_SELF, PETSC_ERR_MEM, "SYCL memory allocation failed");
+    eigen_work.d_W_contig = sycl::malloc_device<PetscScalar>(chunk_size * m, *device_handle);
+    PetscCheck(eigen_work.d_work && eigen_work.d_info && eigen_work.d_A_contig && eigen_work.d_W_contig, PETSC_COMM_SELF, PETSC_ERR_MEM, "SYCL memory allocation failed");
   }
   #endif
 #else
@@ -1140,6 +1140,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
 #if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
   #if defined(KOKKOS_ENABLE_CUDA)
   PetscCallCUDA(cudaFree(eigen_work.d_A_contig));
+  PetscCallCUDA(cudaFree(eigen_work.d_W_contig));
   PetscCallCUDA(cudaFree(eigen_work.d_work));
   PetscCallCUDA(cudaFree(eigen_work.d_info));
   cusolverDnDestroySyevjInfo(eigen_work.syevj_params);
@@ -1147,12 +1148,14 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   #elif defined(KOKKOS_ENABLE_HIP)
   if (eigen_work.lwork_device > 0) {
     PetscCallHIP(hipFree(eigen_work.d_A_contig));
+    PetscCallHIP(hipFree(eigen_work.d_W_contig));
     PetscCallHIP(hipFree(eigen_work.d_work));
     PetscCallHIP(hipFree(eigen_work.d_info));
   }
   if (device_handle) rocblas_destroy_handle(device_handle);
   #elif defined(KOKKOS_ENABLE_SYCL)
   sycl::free(eigen_work.d_A_contig, *device_handle);
+  sycl::free(eigen_work.d_W_contig, *device_handle);
   sycl::free(eigen_work.d_work, *device_handle);
   sycl::free(eigen_work.d_info, *device_handle);
   if (device_handle) delete device_handle;
