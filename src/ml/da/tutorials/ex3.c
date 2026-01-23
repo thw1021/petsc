@@ -942,7 +942,7 @@ int main(int argc, char **argv)
       args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -num_observations_vertex 5
 
   testset:
-    requires: kokkos  !complex
+    requires: kokkos !complex
     diff_args: -j
     args: -ex3_test wave -steps 10 -da_view -ensemble_size 10 e letkf -obs_freq 2 -obs_error 0.03
 
