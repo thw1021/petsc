@@ -241,20 +241,24 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
     });
   Kokkos::fence();
 
-  /* rocSOLVER doesn't have a native batched syevj, so we loop over batch */
-  /* Use rocsolver_dsyevd which is more efficient than calling syev in a loop */
+    /* rocSOLVER doesn't have a native batched syevj, so we loop over batch */
+    /* Use rocsolver_dsyevd which is more efficient than calling syev in a loop */
+    #if defined(PETSC_USE_COMPLEX)
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Complex numbers not supported on HIP backend for LETKF");
+    #else
   for (int i = 0; i < n_batch; i++) {
     PetscScalar *A_ptr    = d_A_contig + i * n_size * n_size;
     PetscScalar *W_ptr    = d_W + i * n_size;
     int         *info_ptr = d_info + i;
 
-    #if defined(PETSC_USE_REAL_SINGLE)
+      #if defined(PETSC_USE_REAL_SINGLE)
     hip_status = rocsolver_ssyevd(rocblasH, rocblas_evect_original, rocblas_fill_upper, n_size, A_ptr, n_size, W_ptr, d_work, info_ptr);
-    #else
+      #else
     hip_status = rocsolver_dsyevd(rocblasH, rocblas_evect_original, rocblas_fill_upper, n_size, A_ptr, n_size, W_ptr, d_work, info_ptr);
-    #endif
+      #endif
     PetscCheck(hip_status == rocblas_status_success, PETSC_COMM_SELF, PETSC_ERR_LIB, "rocsolver_*syevd failed for batch %" PetscInt_FMT, i);
   }
+    #endif
 
   /* Check info */
   int *h_info;
@@ -823,15 +827,21 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   #elif defined(KOKKOS_ENABLE_HIP)
   {
     /* rocsolver_dsyevd does not support size query via -1.
-       We use a safe upper bound estimate based on LAPACK dsyevd requirements (1 + 6*N + 2*N*N).
+       We use a safe upper bound estimate based on LAPACK dsyevd requirements.
     */
-    int lwork               = 2 * m * m + 6 * m + 1;
+    #if defined(PETSC_USE_COMPLEX)
+    int lwork = 0; /* Complex not supported on device */
+    #else
+    int lwork = 1 + 6 * m + 2 * m * m;
+    #endif
     eigen_work.lwork_device = lwork;
 
     /* Allocate workspace */
-    PetscCallHIP(hipMalloc(&eigen_work.d_work, sizeof(PetscScalar) * lwork));
-    PetscCallHIP(hipMalloc(&eigen_work.d_info, sizeof(int) * chunk_size));
-    PetscCallHIP(hipMalloc(&eigen_work.d_A_contig, sizeof(PetscScalar) * chunk_size * m * m));
+    if (lwork > 0) {
+      PetscCallHIP(hipMalloc(&eigen_work.d_work, sizeof(PetscScalar) * lwork));
+      PetscCallHIP(hipMalloc(&eigen_work.d_info, sizeof(int) * chunk_size));
+      PetscCallHIP(hipMalloc(&eigen_work.d_A_contig, sizeof(PetscScalar) * chunk_size * m * m));
+    }
   }
   #elif defined(KOKKOS_ENABLE_SYCL)
   {
@@ -1084,9 +1094,11 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   cusolverDnDestroySyevjInfo(eigen_work.syevj_params);
   if (device_handle) cusolverDnDestroy(device_handle);
   #elif defined(KOKKOS_ENABLE_HIP)
-  PetscCallHIP(hipFree(eigen_work.d_A_contig));
-  PetscCallHIP(hipFree(eigen_work.d_work));
-  PetscCallHIP(hipFree(eigen_work.d_info));
+  if (eigen_work.lwork_device > 0) {
+    PetscCallHIP(hipFree(eigen_work.d_A_contig));
+    PetscCallHIP(hipFree(eigen_work.d_work));
+    PetscCallHIP(hipFree(eigen_work.d_info));
+  }
   if (device_handle) rocblas_destroy_handle(device_handle);
   #elif defined(KOKKOS_ENABLE_SYCL)
   sycl::free(eigen_work.d_A_contig, *device_handle);
