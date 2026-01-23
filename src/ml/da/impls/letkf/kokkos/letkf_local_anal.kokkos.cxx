@@ -630,7 +630,6 @@ PetscErrorCode PetscDALETKFDestroyLocalization_Kokkos(PetscDALETKFData *impl)
 #endif
     impl->solver_handle = NULL;
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
