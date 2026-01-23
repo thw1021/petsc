@@ -822,7 +822,7 @@ static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
       /* Check if R matrix is Kokkos type to determine if GPU will be used */
       if (da->R) {
         PetscBool is_kokkos = PETSC_FALSE;
-        PetscCall(PetscObjectTypeCompareAny((PetscObject)da->R, &is_kokkos, MATSEQAIJKOKKOS, MATAIJKOKKOS, ""));
+        PetscCall(PetscObjectTypeCompareAny((PetscObject)da->R, &is_kokkos, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, MATAIJKOKKOS, ""));
         if (is_kokkos) {
           PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: Kokkos\n"));
         } else {
