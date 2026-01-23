@@ -6,7 +6,6 @@ from subprocess import check_output
 #  runjobs.py [-f] [job1 job2 ... jobN]
 #
 #  Sets a list of jobs to run upon the next push of the branch that is in a merge request.
-#  If no jobs are listed then all jobs in the pipeline are run but without a need to un-pause the pipeline on the GitLab site.
 #
 #  -f: when commits in the local "branch" are not in sync with "origin/branch" - runjobs.py will not create a new local CI commit
 #      for the specified "jobs list". Use '-f' to force the creation of this commit [and then use 'git push -f' to update this
@@ -16,8 +15,11 @@ from subprocess import check_output
 #  Example usages:
 #      runjobs.py -f linux-cuda-pkgs
 #      runjobs.py -f freebsd-cxx-pkgs-opt linux-clang-avx linux-clang-ubsan
-#      runjobs.py
 #      runjobs.py -f $(grep -l download-mpich config/examples/arch-ci-*.py | cut -d '/' -f 3 | sed -e 's/arch-ci-//' |sed -e 's/.py$//')
+#
+#  Note: If no jobs are listed, then all jobs in the pipeline are run but without a need to un-pause the pipeline on the GitLab site.
+#  i.e., usage:
+#      runjobs.py
 #
 force = (len(sys.argv) > 1 and sys.argv[1] == '-f')
 if force:
