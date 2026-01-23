@@ -687,13 +687,11 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
 
     if (use_gpu) {
       PetscInt n_local;
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "DEBUG: Calling PetscDALETKFLocalAnalysis_GPU\n"));
       PetscCall(MatGetLocalSize(impl->Q, &n_local, NULL));
       /* Use local work vectors for GPU analysis */
       PetscCall(PetscDALETKFLocalAnalysis_GPU(da, impl, m, n_local, X, impl->obs_work, impl->Z_work, impl->y_mean_work, impl->r_inv_sqrt_work));
     } else {
       PetscInt n_local;
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "DEBUG: Calling PetscDALETKFLocalAnalysis (CPU)\n"));
       PetscCall(MatGetLocalSize(impl->Q, &n_local, NULL));
       if (impl->obs_scat) {
         PetscCall(PetscDALETKFLocalAnalysis(da, impl, m, n_local, X, impl->obs_work, impl->Z_work, impl->y_mean_work, impl->r_inv_sqrt_work));
