@@ -1,6 +1,6 @@
-[0] <vec:seqkokkos> PetscDAGetLETKFLocalizationMatrix(): LETKF localization radius: mean 4.95, std dev 0.55
+[0] <vec:mpikokkos> PetscDAGetLETKFLocalizationMatrix(): LETKF localization radius: mean 4.92963, std dev 0.549623
 Localization matrix Q created using DMPlexGetLETKFLocalizationMatrix
-PetscDA Object: 1 MPI process
+PetscDA Object: 3 MPI processes
   State size: 160
   Observation size: 40
   Ensemble size: 10
@@ -22,7 +22,7 @@ Shallow Water [L]ETKF Example
   Domain length (L)     : 80.0000
   Gravitational const   : 9.8100
   Time step (dt)        : 0.0200
-  Total steps           : 5
+  Total steps           : 10
   Observation frequency : 2
   Observation noise std : 0.030
   Random seed           : 12345
@@ -30,14 +30,19 @@ Shallow Water [L]ETKF Example
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [initial]
 Step    1, time  0.020  RMSE_forecast 0.00002  RMSE_analysis 0.00002
-Step    2, time  0.040  RMSE_forecast 0.00003  RMSE_analysis 0.01040
-Step    3, time  0.060  RMSE_forecast 0.01052  RMSE_analysis 0.01052
-Step    4, time  0.080  RMSE_forecast 0.01083  RMSE_analysis 0.00892
-Step    5, time  0.100  RMSE_forecast 0.00913  RMSE_analysis 0.00913
+Step    2, time  0.040  RMSE_forecast 0.00003  RMSE_analysis 0.00821
+Step    3, time  0.060  RMSE_forecast 0.00836  RMSE_analysis 0.00836
+Step    4, time  0.080  RMSE_forecast 0.00867  RMSE_analysis 0.00939
+Step    5, time  0.100  RMSE_forecast 0.00973  RMSE_analysis 0.00973
+Step    6, time  0.120  RMSE_forecast 0.01010  RMSE_analysis 0.00971
+Step    7, time  0.140  RMSE_forecast 0.01005  RMSE_analysis 0.01005
+Step    8, time  0.160  RMSE_forecast 0.01036  RMSE_analysis 0.00919
+Step    9, time  0.180  RMSE_forecast 0.00940  RMSE_analysis 0.00940
+Step   10, time  0.200  RMSE_forecast 0.00957  RMSE_analysis 0.00998
 
-Statistics (5 steps):
+Statistics (10 steps):
 ==================================================
-  Mean RMSE (forecast) : 0.00611
-  Mean RMSE (analysis) : 0.00780
-  Observations used    : 2
+  Mean RMSE (forecast) : 0.00763
+  Mean RMSE (analysis) : 0.00840
+  Observations used    : 5
 

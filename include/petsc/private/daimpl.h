@@ -25,14 +25,16 @@ struct _p_PetscDA {
   PETSCHEADER(struct _PetscDAOps);
 
   /* Core PetscDA data */
-  PetscInt  ensemble_size; /* Number of ensemble members (m) */
-  PetscInt  state_size;    /* State vector dimension (n) */
-  PetscInt  obs_size;      /* Observation vector dimension (p) */
-  PetscInt  ndof;          /* Number of degrees of freedom per vertex */
-  Mat       ensemble;      /* Ensemble matrix (n x m) */
-  Vec       obs_error_var; /* Observation error variance (diagonal of R), length p */
-  Mat       R;             /* Observation error covariance matrix (p x p) */
-  PetscReal inflation;     /* Inflation factor */
+  PetscInt  ensemble_size;    /* Number of ensemble members (m) */
+  PetscInt  state_size;       /* State vector dimension (n) */
+  PetscInt  local_state_size; /* Local state vector dimension */
+  PetscInt  obs_size;         /* Observation vector dimension (p) */
+  PetscInt  local_obs_size;   /* Local observation vector dimension */
+  PetscInt  ndof;             /* Number of degrees of freedom per vertex */
+  Mat       ensemble;         /* Ensemble matrix (n x m) */
+  Vec       obs_error_var;    /* Observation error variance (diagonal of R), length p */
+  Mat       R;                /* Observation error covariance matrix (p x p) */
+  PetscReal inflation;        /* Inflation factor */
 
   /* Algorithm state */
   PetscBool assembled; /* Is the PetscDA object assembled/ready */
