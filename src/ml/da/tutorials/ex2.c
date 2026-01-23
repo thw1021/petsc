@@ -226,13 +226,13 @@ int main(int argc, char **argv)
   PetscInt  burn          = DEFAULT_BURN;
   PetscInt  obs_freq      = DEFAULT_OBS_FREQ;
   PetscInt  random_seed   = DEFAULT_RANDOM_SEED;
-  PetscInt  ensemble_size = DEFAULT_ENSEMBLE_SIZE, num_observations_vertex = 40;
+  PetscInt  ensemble_size = DEFAULT_ENSEMBLE_SIZE, num_observations_vertex = 7;
   PetscReal F                     = DEFAULT_F;
   PetscReal dt                    = DEFAULT_DT;
   PetscReal obs_error_std         = DEFAULT_OBS_ERROR_STD;
   PetscReal ensemble_init_std     = -1; /* Initial ensemble spread */
   PetscBool use_fake_localization = PETSC_FALSE, isletkf;
-  PetscReal bd[3]                 = {40, 0, 0};
+  PetscReal bd[3]                 = {DEFAULT_N, 0, 0};
 
   /* PETSc objects */
   Lorenz96Ctx *l95_ctx = NULL, *truth_ctx = NULL;
@@ -258,6 +258,7 @@ int main(int argc, char **argv)
   /* Parse command-line options */
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Lorenz-96 Example", NULL);
   PetscCall(PetscOptionsInt("-n", "State dimension", "", n, &n, NULL));
+  bd[0] = (PetscReal)n;
   PetscCall(PetscOptionsInt("-steps", "Number of time steps", "", steps, &steps, NULL));
   PetscCall(PetscOptionsInt("-burn", "Burn-in steps excluded from statistics", "", burn, &burn, NULL));
   PetscCall(PetscOptionsInt("-obs_freq", "Observation frequency", "", obs_freq, &obs_freq, NULL));
@@ -269,6 +270,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsInt("-random_seed", "Random seed for ensemble perturbations", "", random_seed, &random_seed, NULL));
   PetscCall(PetscOptionsBool("-use_fake_localization", "Use fake localization matrix", "", use_fake_localization, &use_fake_localization, NULL));
   if (!use_fake_localization) PetscCall(PetscOptionsInt("-num_observations_vertex", "Number of observations per vertex", "", num_observations_vertex, &num_observations_vertex, NULL));
+  else num_observations_vertex = n; /* fully observed */
   PetscOptionsEnd();
 
   if (ensemble_init_std < 0) ensemble_init_std = obs_error_std;
@@ -349,15 +351,22 @@ int main(int argc, char **argv)
       PetscCall(PetscObjectSetName((PetscObject)Vecxyz[d], "x_coordinate"));
       PetscCall(VecStrideGather(coord, d, Vecxyz[d], INSERT_VALUES));
     }
-
-    PetscCall(PetscDAGetLETKFLocalizationMatrix(num_observations_vertex, 1, Vecxyz, bd, H, &Q));
+    PetscCall(PetscDALETKFGetLocalizationMatrix(num_observations_vertex, 1, Vecxyz, bd, H, &Q));
+    PetscCall(PetscDALETKFSetObsPerVertex(daas, num_observations_vertex));
     // PetscCall(MatView(Q, PETSC_VIEWER_STDOUT_WORLD));
-    for (d = 0; d < 1; d++) PetscCall(VecDestroy(&Vecxyz[d]));
+    PetscCall(VecDestroy(&Vecxyz[0]));
   } else {
     PetscCall(CreateLocalizationMatrix(n, &Q));
+    if (isletkf) {
+      PetscCall(PetscDALETKFSetObsPerVertex(daas, num_observations_vertex)); // fully observed
+    }
   }
   PetscCall(PetscDALETKFSetLocalization(daas, Q, H));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %" PetscInt_FMT " x %" PetscInt_FMT "\n", n, num_observations_vertex));
+  if (isletkf) {
+    PetscInt n_obs_vertex;
+    PetscCall(PetscDALETKFGetObsPerVertex(daas, &n_obs_vertex));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %" PetscInt_FMT " x %" PetscInt_FMT "\n", n, n_obs_vertex));
+  }
 
   /* Initialize ensemble members from spun-up truth state */
   PetscCall(InitializeEnsemble(daas, truth_state, ensemble_size, ensemble_init_std, rng));
@@ -472,6 +481,7 @@ int main(int argc, char **argv)
 
   testset:
     requires: kokkos_kernels !complex
+    diff_args: -j
     args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 5
 
     test:
@@ -481,7 +491,6 @@ int main(int argc, char **argv)
     test:
       nsize: 3
       suffix: letkf
-      diff_args: -j
       args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec -num_observations_vertex 5
 
     test:
