@@ -12,6 +12,14 @@
   #include <cusolverDn.h>
   #include <cuda_runtime.h>
   #include <petscdevice_cuda.h>
+#elif defined(KOKKOS_ENABLE_HIP)
+  #include <rocsolver/rocsolver.h>
+  #include <hip/hip_runtime.h>
+  #include <petscdevice_hip.h>
+#elif defined(KOKKOS_ENABLE_SYCL)
+  #include <oneapi/mkl.hpp>
+  #include <sycl/sycl.hpp>
+  #include <petscdevice_sycl.h>
 #endif
 
 /* ========================================================================== */
@@ -30,13 +38,25 @@ struct EigenWorkspace {
   PetscBLASInt lwork;
   PetscBLASInt n_blas;
 
-  /* Device workspace (CUDA) */
-#if defined(KOKKOS_ENABLE_CUDA)
+  /* Device workspace */
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
+  #if defined(KOKKOS_ENABLE_CUDA)
   syevjInfo_t  syevj_params;
   PetscScalar *d_work;
   int         *d_info;
   PetscScalar *d_A_contig;
-  int          lwork_cuda;
+  int          lwork_device;
+  #elif defined(KOKKOS_ENABLE_HIP)
+  PetscScalar *d_work;
+  int         *d_info;
+  PetscScalar *d_A_contig;
+  int          lwork_device;
+  #elif defined(KOKKOS_ENABLE_SYCL)
+  PetscScalar *d_work;
+  int         *d_info;
+  PetscScalar *d_A_contig;
+  int          lwork_device;
+  #endif
 #endif
 };
 
@@ -56,7 +76,7 @@ struct EigenWorkspace {
   Notes:
   Uses LAPACK's syev routine to compute eigendecomposition sequentially on host.
 */
-#if !defined(KOKKOS_ENABLE_CUDA)
+#if !defined(KOKKOS_ENABLE_CUDA) && !defined(KOKKOS_ENABLE_HIP) && !defined(KOKKOS_ENABLE_SYCL)
 static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, EigenWorkspace *work)
 {
   PetscFunctionBegin;
@@ -125,12 +145,13 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
 #endif
 
 /*
-  BatchedEigenSolve_CUDA - Compute eigendecomposition for a batch of symmetric matrices (GPU version)
+  BatchedEigenSolve_Device - Compute eigendecomposition for a batch of symmetric matrices (Device version)
 
   Input Parameters:
 + T_batch      - batch of symmetric matrices (n_batch x n_size x n_size)
 . n_batch      - number of matrices in the batch
 - n_size       - size of each matrix (m x m)
+- device_handle - device-specific solver handle (cusolverDnHandle_t, rocblas_handle, or sycl::queue*)
 - work         - reusable workspace structure
 
   Output Parameters:
@@ -138,10 +159,14 @@ static PetscErrorCode BatchedEigenSolve_Host(Kokkos::View<PetscScalar ***, Kokko
 - V_batch      - eigenvectors for each matrix (n_batch x n_size x n_size)
 
   Notes:
-  Uses cuSOLVER's syevd routine to compute eigendecomposition on GPU.
+  Uses vendor-specific batched symmetric eigensolvers:
+  - CUDA: cuSOLVER's syevjBatched
+  - HIP: rocSOLVER's rocsolver_dsyevj_batched
+  - SYCL: oneMKL's syevd_batch
 */
-#if defined(KOKKOS_ENABLE_CUDA)
-static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, cusolverDnHandle_t cusolverH, EigenWorkspace *work)
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
+  #if defined(KOKKOS_ENABLE_CUDA)
+static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, cusolverDnHandle_t cusolverH, EigenWorkspace *work)
 {
   cusolverStatus_t cusolver_status;
 
@@ -151,7 +176,7 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   PetscScalar *d_work       = work->d_work;
   int         *d_info       = work->d_info;
   PetscScalar *d_A_contig   = work->d_A_contig;
-  int          lwork        = work->lwork_cuda;
+  int          lwork        = work->lwork_device;
 
   /* Get raw pointers from Kokkos views - zero-copy access */
   PetscScalar *d_W = Lambda_batch.data();
@@ -165,12 +190,12 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
     });
   Kokkos::fence();
 
-  /* Solve batched eigendecomposition */
-  #if defined(PETSC_USE_REAL_SINGLE)
+    /* Solve batched eigendecomposition */
+    #if defined(PETSC_USE_REAL_SINGLE)
   cusolver_status = cusolverDnSsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A_contig, n_size, d_W, d_work, lwork, d_info, syevj_params, n_batch);
-  #else
+    #else
   cusolver_status = cusolverDnDsyevjBatched(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, n_size, d_A_contig, n_size, d_W, d_work, lwork, d_info, syevj_params, n_batch);
-  #endif
+    #endif
   PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevjBatched failed");
 
   /* Check info */
@@ -193,6 +218,125 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
   Kokkos::fence();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+  #elif defined(KOKKOS_ENABLE_HIP)
+static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, rocblas_handle rocblasH, EigenWorkspace *work)
+{
+  rocblas_status hip_status;
+
+  PetscFunctionBegin;
+  /* Use pre-allocated workspace */
+  PetscScalar *d_work     = work->d_work;
+  int         *d_info     = work->d_info;
+  PetscScalar *d_A_contig = work->d_A_contig;
+
+  /* Get raw pointers from Kokkos views - zero-copy access */
+  PetscScalar *d_W = Lambda_batch.data();
+
+  /* Copy T_batch to contiguous layout for rocSOLVER */
+  Kokkos::parallel_for(
+    "ReorganizeForRocSOLVER", Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, n_batch), KOKKOS_LAMBDA(const int i) {
+      for (int j = 0; j < n_size; j++) {
+        for (int k = 0; k < n_size; k++) d_A_contig[i * n_size * n_size + k * n_size + j] = T_batch(i, j, k);
+      }
+    });
+  Kokkos::fence();
+
+  /* rocSOLVER doesn't have a native batched syevj, so we loop over batch */
+  /* Use rocsolver_dsyevd which is more efficient than calling syev in a loop */
+  for (int i = 0; i < n_batch; i++) {
+    PetscScalar *A_ptr    = d_A_contig + i * n_size * n_size;
+    PetscScalar *W_ptr    = d_W + i * n_size;
+    int         *info_ptr = d_info + i;
+
+    #if defined(PETSC_USE_REAL_SINGLE)
+    hip_status = rocsolver_ssyevd(rocblasH, rocblas_evect_original, rocblas_fill_upper, n_size, A_ptr, n_size, W_ptr, d_work, work->lwork_device, info_ptr);
+    #else
+    hip_status = rocsolver_dsyevd(rocblasH, rocblas_evect_original, rocblas_fill_upper, n_size, A_ptr, n_size, W_ptr, d_work, work->lwork_device, info_ptr);
+    #endif
+    PetscCheck(hip_status == rocblas_status_success, PETSC_COMM_SELF, PETSC_ERR_LIB, "rocsolver_*syevd failed for batch %" PetscInt_FMT, i);
+  }
+
+  /* Check info */
+  int *h_info;
+  PetscCall(PetscMalloc1(n_batch, &h_info));
+  PetscCallHIP(hipMemcpy(h_info, d_info, sizeof(int) * n_batch, hipMemcpyDeviceToHost));
+  for (int i = 0; i < n_batch; i++) {
+    if (h_info[i] != 0) PetscCheck(h_info[i] == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "rocSOLVER eigendecomposition failed for matrix %" PetscInt_FMT ": info=%d", i, h_info[i]);
+  }
+  PetscCall(PetscFree(h_info));
+
+  /* Copy results back from contiguous layout to V_batch */
+  Kokkos::parallel_for(
+    "CopyResultsBack", Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, n_batch), KOKKOS_LAMBDA(const int i) {
+      for (int j = 0; j < n_size; j++) {
+        Lambda_batch(i, j) = d_W[i * n_size + j];
+        for (int k = 0; k < n_size; k++) V_batch(i, j, k) = d_A_contig[i * n_size * n_size + k * n_size + j];
+      }
+    });
+  Kokkos::fence();
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+  #elif defined(KOKKOS_ENABLE_SYCL)
+static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, sycl::queue *q, EigenWorkspace *work)
+{
+  PetscFunctionBegin;
+  /* Use pre-allocated workspace */
+  PetscScalar *d_work     = work->d_work;
+  int         *d_info     = work->d_info;
+  PetscScalar *d_A_contig = work->d_A_contig;
+
+  /* Get raw pointers from Kokkos views - zero-copy access */
+  PetscScalar *d_W = Lambda_batch.data();
+
+  /* Copy T_batch to contiguous layout for oneMKL */
+  Kokkos::parallel_for(
+    "ReorganizeForOneMKL", Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, n_batch), KOKKOS_LAMBDA(const int i) {
+      for (int j = 0; j < n_size; j++) {
+        for (int k = 0; k < n_size; k++) d_A_contig[i * n_size * n_size + k * n_size + j] = T_batch(i, j, k);
+      }
+    });
+  Kokkos::fence();
+
+  /* oneMKL doesn't have a native batched syevd, so we loop over batch */
+  /* Use oneapi::mkl::lapack::syevd which computes eigenvalues and eigenvectors */
+  for (int i = 0; i < n_batch; i++) {
+    PetscScalar *A_ptr    = d_A_contig + i * n_size * n_size;
+    PetscScalar *W_ptr    = d_W + i * n_size;
+    int         *info_ptr = d_info + i;
+
+    try {
+    #if defined(PETSC_USE_REAL_SINGLE)
+      oneapi::mkl::lapack::syevd(*q, oneapi::mkl::job::vec, oneapi::mkl::uplo::upper, n_size, A_ptr, n_size, W_ptr, d_work, work->lwork_device, info_ptr);
+    #else
+      oneapi::mkl::lapack::syevd(*q, oneapi::mkl::job::vec, oneapi::mkl::uplo::upper, n_size, A_ptr, n_size, W_ptr, d_work, work->lwork_device, info_ptr);
+    #endif
+      q->wait();
+    } catch (sycl::exception const &e) {
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "oneMKL syevd failed for batch %d: %s", i, e.what());
+    }
+  }
+
+  /* Check info */
+  int *h_info;
+  PetscCall(PetscMalloc1(n_batch, &h_info));
+  q->memcpy(h_info, d_info, sizeof(int) * n_batch).wait();
+  for (int i = 0; i < n_batch; i++) {
+    if (h_info[i] != 0) PetscCheck(h_info[i] == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "oneMKL eigendecomposition failed for matrix %" PetscInt_FMT ": info=%d", i, h_info[i]);
+  }
+  PetscCall(PetscFree(h_info));
+
+  /* Copy results back from contiguous layout to V_batch */
+  Kokkos::parallel_for(
+    "CopyResultsBack", Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, n_batch), KOKKOS_LAMBDA(const int i) {
+      for (int j = 0; j < n_size; j++) {
+        Lambda_batch(i, j) = d_W[i * n_size + j];
+        for (int k = 0; k < n_size; k++) V_batch(i, j, k) = d_A_contig[i * n_size * n_size + k * n_size + j];
+      }
+    });
+  Kokkos::fence();
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+  #endif
 #endif
 
 /*
@@ -202,6 +346,7 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
 + T_batch      - batch of symmetric matrices (n_batch x n_size x n_size)
 . n_batch      - number of matrices in the batch
 - n_size       - size of each matrix (m x m)
+- device_handle - device-specific solver handle (only for device builds)
 - work         - reusable workspace structure
 
   Output Parameters:
@@ -209,15 +354,31 @@ static PetscErrorCode BatchedEigenSolve_CUDA(Kokkos::View<PetscScalar ***, Kokko
 - V_batch      - eigenvectors for each matrix (n_batch x n_size x n_size)
 
   Notes:
-  Dispatcher function that calls the appropriate backend (CPU or GPU).
+  Dispatcher function that calls the appropriate backend (Device or Host).
 */
-#if defined(KOKKOS_ENABLE_CUDA)
-static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, cusolverDnHandle_t cusolverH, EigenWorkspace *work)
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
+  #if defined(KOKKOS_ENABLE_CUDA)
+static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, cusolverDnHandle_t device_handle, EigenWorkspace *work)
 {
   PetscFunctionBegin;
-  PetscCall(BatchedEigenSolve_CUDA(T_batch, Lambda_batch, V_batch, n_batch, n_size, cusolverH, work));
+  PetscCall(BatchedEigenSolve_Device(T_batch, Lambda_batch, V_batch, n_batch, n_size, device_handle, work));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+  #elif defined(KOKKOS_ENABLE_HIP)
+static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, rocblas_handle device_handle, EigenWorkspace *work)
+{
+  PetscFunctionBegin;
+  PetscCall(BatchedEigenSolve_Device(T_batch, Lambda_batch, V_batch, n_batch, n_size, device_handle, work));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+  #elif defined(KOKKOS_ENABLE_SYCL)
+static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, sycl::queue *device_handle, EigenWorkspace *work)
+{
+  PetscFunctionBegin;
+  PetscCall(BatchedEigenSolve_Device(T_batch, Lambda_batch, V_batch, n_batch, n_size, device_handle, work));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+  #endif
 #else
 static PetscErrorCode BatchedEigenSolve(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, EigenWorkspace *work)
 {
@@ -588,12 +749,21 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   if (chunk_size < 1) chunk_size = 1;
   if (chunk_size > n_vertices) chunk_size = n_vertices;
 
-  /* OPTIMIZATION: Create cuSOLVER handle once, reuse across chunks */
-#if defined(KOKKOS_ENABLE_CUDA)
-  cusolverDnHandle_t cusolverH = nullptr;
+  /* OPTIMIZATION: Create device solver handle once, reuse across chunks */
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
+  #if defined(KOKKOS_ENABLE_CUDA)
+  cusolverDnHandle_t device_handle = nullptr;
   cusolverStatus_t   cusolver_status;
-  cusolver_status = cusolverDnCreate(&cusolverH);
+  cusolver_status = cusolverDnCreate(&device_handle);
   PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnCreate failed");
+  #elif defined(KOKKOS_ENABLE_HIP)
+  rocblas_handle device_handle = nullptr;
+  rocblas_status hip_status;
+  hip_status = rocblas_create_handle(&device_handle);
+  PetscCheck(hip_status == rocblas_status_success, PETSC_COMM_SELF, PETSC_ERR_LIB, "rocblas_create_handle failed");
+  #elif defined(KOKKOS_ENABLE_SYCL)
+  sycl::queue *device_handle = new sycl::queue(sycl::gpu_selector_v);
+  #endif
 #endif
 
   /* ===================================================================== */
@@ -621,7 +791,8 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
 
   /* Initialize EigenWorkspace once */
   EigenWorkspace eigen_work;
-#if defined(KOKKOS_ENABLE_CUDA)
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
+  #if defined(KOKKOS_ENABLE_CUDA)
   {
     /* Create syevj params */
     cusolver_status = cusolverDnCreateSyevjInfo(&eigen_work.syevj_params);
@@ -636,19 +807,63 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     PetscScalar *d_A = T_batch_alloc.data();
     PetscScalar *d_W = Lambda_batch_alloc.data();
     int          lwork;
-  #if defined(PETSC_USE_REAL_SINGLE)
-    cusolver_status = cusolverDnSsyevjBatched_bufferSize(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, m, d_A, m, d_W, &lwork, eigen_work.syevj_params, chunk_size);
-  #else
-    cusolver_status = cusolverDnDsyevjBatched_bufferSize(cusolverH, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, m, d_A, m, d_W, &lwork, eigen_work.syevj_params, chunk_size);
-  #endif
+    #if defined(PETSC_USE_REAL_SINGLE)
+    cusolver_status = cusolverDnSsyevjBatched_bufferSize(device_handle, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, m, d_A, m, d_W, &lwork, eigen_work.syevj_params, chunk_size);
+    #else
+    cusolver_status = cusolverDnDsyevjBatched_bufferSize(device_handle, CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, m, d_A, m, d_W, &lwork, eigen_work.syevj_params, chunk_size);
+    #endif
     PetscCheck(cusolver_status == CUSOLVER_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDn*syevjBatched_bufferSize failed");
-    eigen_work.lwork_cuda = lwork;
+    eigen_work.lwork_device = lwork;
 
     /* Allocate workspace */
     PetscCallCUDA(cudaMalloc(&eigen_work.d_work, sizeof(PetscScalar) * lwork));
     PetscCallCUDA(cudaMalloc(&eigen_work.d_info, sizeof(int) * chunk_size));
     PetscCallCUDA(cudaMalloc(&eigen_work.d_A_contig, sizeof(PetscScalar) * chunk_size * m * m));
   }
+  #elif defined(KOKKOS_ENABLE_HIP)
+  {
+    /* Query workspace size for rocsolver_dsyevd */
+    PetscScalar *d_A = T_batch_alloc.data();
+    PetscScalar *d_W = Lambda_batch_alloc.data();
+    int          lwork;
+
+    #if defined(PETSC_USE_REAL_SINGLE)
+    hip_status = rocsolver_ssyevd(device_handle, rocblas_evect_original, rocblas_fill_upper, m, d_A, m, d_W, nullptr, -1, nullptr);
+    #else
+    hip_status = rocsolver_dsyevd(device_handle, rocblas_evect_original, rocblas_fill_upper, m, d_A, m, d_W, nullptr, -1, nullptr);
+    #endif
+    PetscCheck(hip_status == rocblas_status_success, PETSC_COMM_SELF, PETSC_ERR_LIB, "rocsolver_*syevd workspace query failed");
+
+    /* For rocSOLVER, workspace size is typically (n-1) * max(n, 1) */
+    lwork                   = (m - 1) * PetscMax(m, 1);
+    eigen_work.lwork_device = lwork;
+
+    /* Allocate workspace */
+    PetscCallHIP(hipMalloc(&eigen_work.d_work, sizeof(PetscScalar) * lwork));
+    PetscCallHIP(hipMalloc(&eigen_work.d_info, sizeof(int) * chunk_size));
+    PetscCallHIP(hipMalloc(&eigen_work.d_A_contig, sizeof(PetscScalar) * chunk_size * m * m));
+  }
+  #elif defined(KOKKOS_ENABLE_SYCL)
+  {
+    /* Query workspace size for oneapi::mkl::lapack::syevd */
+    /* For syevd, workspace size is typically: */
+    /* lwork >= 1 + 6*n + 2*n*n for real, or */
+    /* lwork >= 2*n + n*n for complex */
+    int lwork;
+    #if defined(PETSC_USE_COMPLEX)
+    lwork = 2 * m + m * m;
+    #else
+    lwork = 1 + 6 * m + 2 * m * m;
+    #endif
+    eigen_work.lwork_device = lwork;
+
+    /* Allocate workspace using SYCL malloc_device */
+    eigen_work.d_work     = sycl::malloc_device<PetscScalar>(lwork, *device_handle);
+    eigen_work.d_info     = sycl::malloc_device<int>(chunk_size, *device_handle);
+    eigen_work.d_A_contig = sycl::malloc_device<PetscScalar>(chunk_size * m * m, *device_handle);
+    PetscCheck(eigen_work.d_work && eigen_work.d_info && eigen_work.d_A_contig, PETSC_COMM_SELF, PETSC_ERR_MEM, "SYCL memory allocation failed");
+  }
+  #endif
 #else
   {
     PetscBLASInt n_blas;
@@ -772,8 +987,8 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     /* Step 3.1.1: Batched eigendecomposition for current chunk            */
     /* ===================================================================== */
     /* Compute T_i = V_i * Lambda_i * V_i^T for current chunk */
-#if defined(KOKKOS_ENABLE_CUDA)
-    PetscCall(BatchedEigenSolve(T_batch, Lambda_batch, V_batch, n_batch_current, m, cusolverH, &eigen_work));
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
+    PetscCall(BatchedEigenSolve(T_batch, Lambda_batch, V_batch, n_batch_current, m, device_handle, &eigen_work));
 #else
     PetscCall(BatchedEigenSolve(T_batch, Lambda_batch, V_batch, n_batch_current, m, &eigen_work));
 #endif
@@ -871,12 +1086,24 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   }
 
   /* Cleanup workspace */
-#if defined(KOKKOS_ENABLE_CUDA)
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
+  #if defined(KOKKOS_ENABLE_CUDA)
   PetscCallCUDA(cudaFree(eigen_work.d_A_contig));
   PetscCallCUDA(cudaFree(eigen_work.d_work));
   PetscCallCUDA(cudaFree(eigen_work.d_info));
   cusolverDnDestroySyevjInfo(eigen_work.syevj_params);
-  if (cusolverH) cusolverDnDestroy(cusolverH);
+  if (device_handle) cusolverDnDestroy(device_handle);
+  #elif defined(KOKKOS_ENABLE_HIP)
+  PetscCallHIP(hipFree(eigen_work.d_A_contig));
+  PetscCallHIP(hipFree(eigen_work.d_work));
+  PetscCallHIP(hipFree(eigen_work.d_info));
+  if (device_handle) rocblas_destroy_handle(device_handle);
+  #elif defined(KOKKOS_ENABLE_SYCL)
+  sycl::free(eigen_work.d_A_contig, *device_handle);
+  sycl::free(eigen_work.d_work, *device_handle);
+  sycl::free(eigen_work.d_info, *device_handle);
+  if (device_handle) delete device_handle;
+  #endif
 #else
   #if defined(PETSC_USE_COMPLEX)
   PetscCall(PetscFree4(eigen_work.all_v, eigen_work.all_lambda, eigen_work.all_work, eigen_work.all_rwork));
