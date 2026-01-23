@@ -358,18 +358,20 @@ static PetscErrorCode ShallowWaterSolution(Ex3TestType test_type, PetscReal L, P
   This creates a sparse matrix mapping from full state (n_vert*ndof) to observations.
   For n_vert=80 grid points, we observe at points 0, 2, 4, ..., 78
 */
-static PetscErrorCode CreateObservationMatrix(PetscInt n_vert, PetscInt ndof, PetscInt nobs, Mat *H, Mat *H1)
+static PetscErrorCode CreateObservationMatrix(PetscInt n_vert, PetscInt ndof, PetscInt nobs, Vec state, Mat *H, Mat *H1)
 {
-  PetscInt i;
+  PetscInt i, local_state_size;
 
   PetscFunctionBeginUser;
   PetscCheck(n_vert == 2 * nobs, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Number of grid points (%" PetscInt_FMT ") must equal 2*nobs (%d)", n_vert, 2 * nobs);
 
+  PetscCall(VecGetLocalSize(state, &local_state_size));
+
   /* Create observation matrix H (nobs x n_vert*ndof) */
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, nobs, n_vert * ndof, 1, NULL, 0, NULL, H));
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, local_state_size, nobs, n_vert * ndof, 1, NULL, 0, NULL, H));
   PetscCall(MatSetFromOptions(*H));
 
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, nobs, n_vert, 1, NULL, 0, NULL, H1));
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, local_state_size / ndof, nobs, n_vert, 1, NULL, 0, NULL, H1));
   PetscCall(MatSetFromOptions(*H1));
 
   /* Observe water height (h) at every other grid point */
@@ -596,7 +598,11 @@ int main(int argc, char **argv)
 
   /* Initialize random number generator */
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rng));
-  PetscCall(PetscRandomSetSeed(rng, (unsigned long)random_seed));
+  {
+    PetscMPIInt rank;
+    PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+    PetscCall(PetscRandomSetSeed(rng, (unsigned long)(random_seed + rank)));
+  }
   PetscCall(PetscRandomSetFromOptions(rng));
   PetscCall(PetscRandomSeed(rng));
 
@@ -642,7 +648,7 @@ int main(int argc, char **argv)
   }
 
   /* Create observation matrix H, observing h at every other grid point) */
-  PetscCall(CreateObservationMatrix(n_vert, ndof, nobs, &H, &H1));
+  PetscCall(CreateObservationMatrix(n_vert, ndof, nobs, x0, &H, &H1));
 
   /* Initialize observation vectors using MatCreateVecs from H (same as H1) */
   PetscCall(MatCreateVecs(H, NULL, &observation));
@@ -653,7 +659,13 @@ int main(int argc, char **argv)
   /* Create and configure PetscDA for ensemble data assimilation */
   PetscCall(PetscDACreate(PETSC_COMM_WORLD, &daas));
   PetscCall(PetscDASetSizes(daas, n_vert * ndof, nobs, ensemble_size)); /* State size includes ndof */
-  PetscCall(PetscDASetNDOF(daas, ndof));                                /* Set number of degrees of freedom per grid point */
+  {
+    PetscInt local_state_size, local_obs_size;
+    PetscCall(VecGetLocalSize(x0, &local_state_size));
+    PetscCall(VecGetLocalSize(observation, &local_obs_size));
+    PetscCall(PetscDASetLocalSizes(daas, local_state_size, local_obs_size));
+  }
+  PetscCall(PetscDASetNDOF(daas, ndof)); /* Set number of degrees of freedom per grid point */
   PetscCall(PetscDASetFromOptions(daas));
   PetscCall(PetscDASetUp(daas));
 
@@ -757,10 +769,10 @@ int main(int argc, char **argv)
     PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "0 0.000000"));
 
     /* Write truth state (h, hu for each grid point) */
-    for (i = 0; i < n_vert * ndof; i++) PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, " %.8e", (double)truth_array[i]));
+    for (i = 0; i < n_vert * ndof; i++) PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, " %.8e", (double)PetscRealPart(truth_array[i])));
 
     /* Write ensemble mean (h, hu for each grid point) */
-    for (i = 0; i < n_vert * ndof; i++) PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, " %.8e", (double)mean_array[i]));
+    for (i = 0; i < n_vert * ndof; i++) PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, " %.8e", (double)PetscRealPart(mean_array[i])));
 
     /* Write nan for observations (no observations at step 0) */
     for (i = 0; i < nobs; i++) PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, " nan"));
@@ -839,15 +851,15 @@ int main(int argc, char **argv)
       PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "%d %.6f", (int)step, (double)time));
 
       /* Write truth state (h, hu for each grid point) */
-      for (i = 0; i < n_vert * ndof; i++) PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, " %.8e", (double)truth_array[i]));
+      for (i = 0; i < n_vert * ndof; i++) PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, " %.8e", (double)PetscRealPart(truth_array[i])));
 
       /* Write ensemble mean (h, hu for each grid point) */
-      for (i = 0; i < n_vert * ndof; i++) PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, " %.8e", (double)mean_array[i]));
+      for (i = 0; i < n_vert * ndof; i++) PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, " %.8e", (double)PetscRealPart(mean_array[i])));
 
       /* Write observations (or nan if no observation at this step) */
       if (step % obs_freq == 0 && step > 0) {
         PetscCall(VecGetArrayRead(observation, &obs_array));
-        for (i = 0; i < nobs; i++) PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, " %.8e", (double)obs_array[i]));
+        for (i = 0; i < nobs; i++) PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, " %.8e", (double)PetscRealPart(obs_array[i])));
         PetscCall(VecRestoreArrayRead(observation, &obs_array));
       } else {
         for (i = 0; i < nobs; i++) PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, " nan"));
@@ -911,9 +923,8 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
-    requires: kokkos
     diff_args: -j
-    args: -ex3_test dam -steps 5 -progress_freq 1 -da_view -ensemble_size 10 -obs_freq 2 -obs_error 0.03
+    args: -ex3_test dam -steps 10 -progress_freq 1 -da_view -ensemble_size 10 -obs_freq 2 -obs_error 0.03
 
     test:
       requires: !complex
@@ -925,11 +936,12 @@ int main(int argc, char **argv)
       args: -petscda_sqrt_type cholesky -petscda_type etkf
 
     test:
+      requires: kokkos
+      nsize: 3
       suffix: kokkos_dam
       args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -num_observations_vertex 5
 
   testset:
-    requires: kokkos
     diff_args: -j
     args: -ex3_test wave -steps 10 -da_view -ensemble_size 10 e letkf -obs_freq 2 -obs_error 0.03
 
@@ -939,6 +951,8 @@ int main(int argc, char **argv)
       args: -petscda_type letkf
 
     test:
+      nsize: 3
+      requires: kokkos
       suffix: kokkos_wave
       args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -num_observations_vertex 5
 

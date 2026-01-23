@@ -302,16 +302,18 @@ PetscErrorCode PetscDACreate(MPI_Comm comm, PetscDA *da_out)
   da->ops->computemean      = PetscDAComputeEnsembleMean_Default;
   da->ops->computeanomalies = PetscDAComputeAnomalies_Default;
 
-  da->ensemble_size = 0;
-  da->state_size    = 0;
-  da->obs_size      = 0;
-  da->ndof          = 1;
-  da->ensemble      = NULL;
-  da->obs_error_var = NULL;
-  da->R             = NULL;
-  da->assembled     = PETSC_FALSE;
-  da->data          = NULL;
-  da->inflation     = 1.0;
+  da->ensemble_size    = 0;
+  da->state_size       = 0;
+  da->local_state_size = PETSC_DECIDE;
+  da->obs_size         = 0;
+  da->local_obs_size   = PETSC_DECIDE;
+  da->ndof             = 1;
+  da->ensemble         = NULL;
+  da->obs_error_var    = NULL;
+  da->R                = NULL;
+  da->assembled        = PETSC_FALSE;
+  da->data             = NULL;
+  da->inflation        = 1.0;
 
   /* Initialize T-matrix factorization fields */
   da->sqrt_type       = PETSCDA_SQRT_EIGEN;
@@ -515,6 +517,32 @@ PetscErrorCode PetscDASetSizes(PetscDA da, PetscInt state_size, PetscInt obs_siz
 }
 
 /*@
+  PetscDASetLocalSizes - Sets the local state and observation dimensions used by a `PetscDA`.
+
+  Collective
+
+  Input Parameters:
++ da               - the `PetscDA` context
+. local_state_size - number of local state components (or PETSC_DECIDE)
+- local_obs_size   - number of local observation components (or PETSC_DECIDE)
+
+  Level: beginner
+
+.seealso: [](ch_da), `PetscDASetSizes()`, `PetscDASetUp()`
+@*/
+PetscErrorCode PetscDASetLocalSizes(PetscDA da, PetscInt local_state_size, PetscInt local_obs_size)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
+
+  PetscCheck(!da->assembled, PetscObjectComm((PetscObject)da), PETSC_ERR_ORDER, "Cannot change sizes after PetscDASetUp() has been called");
+
+  da->local_state_size = local_state_size;
+  da->local_obs_size   = local_obs_size;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   PetscDAGetSizes - Retrieves the dimension settings associated with a `PetscDA`.
 
   Not Collective
@@ -620,7 +648,7 @@ PetscErrorCode PetscDASetUp(PetscDA da)
   comm = PetscObjectComm((PetscObject)da);
 
   if (!da->ensemble) {
-    PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, da->state_size, da->ensemble_size, NULL, &da->ensemble));
+    PetscCall(MatCreateDense(comm, da->local_state_size, PETSC_DECIDE, da->state_size, da->ensemble_size, NULL, &da->ensemble));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)da->ensemble, "dense_"));
     PetscCall(MatSetFromOptions(da->ensemble));
     PetscCall(MatSetUp(da->ensemble));
@@ -728,7 +756,7 @@ PetscErrorCode PetscDASetObsErrorVariance(PetscDA da, Vec obs_error_var)
      for non-diagonal covariance in the future */
   if (!da->R) {
     PetscCall(MatCreate(comm, &da->R));
-    PetscCall(MatSetSizes(da->R, PETSC_DECIDE, PETSC_DECIDE, da->obs_size, da->obs_size));
+    PetscCall(MatSetSizes(da->R, da->local_obs_size, da->local_obs_size, da->obs_size, da->obs_size));
     PetscCall(MatSetType(da->R, MATAIJ));
     PetscCall(MatSetFromOptions(da->R));
     PetscCall(MatSetUp(da->R));

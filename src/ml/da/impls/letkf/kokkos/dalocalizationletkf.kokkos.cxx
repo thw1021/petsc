@@ -307,7 +307,7 @@ PetscErrorCode PetscDAGetLETKFLocalizationMatrix(const PetscInt n_obs_vertex, co
     if (n_vert_local > 0) {
       double mean   = result.sum / n_vert_local;
       double var    = (result.sq_sum / n_vert_local) - (mean * mean);
-      double stddev = (var > 0.0) ? std::sqrt(var) : 0.0;
+      double stddev = (var > 1e-1 * PETSC_SQRT_MACHINE_EPSILON) ? std::sqrt(var) : 0.0;
       PetscCall(PetscInfo((PetscObject)obs_vecs[0], "LETKF localization radius: mean %g, std dev %g\n", mean, stddev));
     }
   }

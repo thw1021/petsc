@@ -35,6 +35,7 @@ PETSC_EXTERN PetscErrorCode PetscDAViewFromOptions(PetscDA, PetscObject, const c
 PETSC_EXTERN PetscErrorCode PetscDASetFromOptions(PetscDA);
 
 PETSC_EXTERN PetscErrorCode PetscDASetSizes(PetscDA, PetscInt, PetscInt, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscDASetLocalSizes(PetscDA, PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscDAGetSizes(PetscDA, PetscInt *, PetscInt *, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscDASetNDOF(PetscDA, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscDAGetNDOF(PetscDA, PetscInt *);

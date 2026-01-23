@@ -291,7 +291,11 @@ int main(int argc, char **argv)
 
   /* Initialize random number generator */
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rng));
-  PetscCall(PetscRandomSetSeed(rng, (unsigned long)random_seed));
+  {
+    PetscMPIInt rank;
+    PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+    PetscCall(PetscRandomSetSeed(rng, (unsigned long)(random_seed + rank)));
+  }
   PetscCall(PetscRandomSetFromOptions(rng));
   PetscCall(PetscRandomSeed(rng));
 
@@ -468,14 +472,14 @@ int main(int argc, char **argv)
 
   testset:
     args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 5
-    requires: kokkos
 
     test:
       suffix: chol
-      args: -petscda_sqrt_type cholesky
+      args: -petscda_type letkf -petscda_sqrt_type cholesky
 
     test:
-      requires: !complex
+      requires: kokkos
+      nsize: 3
       suffix: letkf
       diff_args: -j
       args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec -num_observations_vertex 5
@@ -483,6 +487,6 @@ int main(int argc, char **argv)
     test:
       requires: !complex
       suffix: etkf
-      args: -petscda_type etkf
+      args: -petscda_type etkf -petscda_sqrt_type eigen
 
 TEST*/
