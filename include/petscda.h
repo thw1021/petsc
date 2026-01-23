@@ -81,7 +81,9 @@ PETSC_EXTERN PetscErrorCode PetscDALETKFInitialize(PetscDA);
 PETSC_EXTERN PetscErrorCode PetscDALETKFInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDALETKFFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDALETKFSetLocalization(PetscDA, Mat, Mat);
+PETSC_EXTERN PetscErrorCode PetscDALETKFSetObsPerVertex(PetscDA, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscDALETKFGetObsPerVertex(PetscDA, PetscInt *);
 
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-PETSC_EXTERN PetscErrorCode PetscDAGetLETKFLocalizationMatrix(const PetscInt, const PetscInt, Vec[3], PetscReal[3], Mat, Mat *);
+PETSC_EXTERN PetscErrorCode PetscDALETKFGetLocalizationMatrix(const PetscInt, const PetscInt, Vec[3], PetscReal[3], Mat, Mat *);
 #endif

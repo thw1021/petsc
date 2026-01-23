@@ -505,9 +505,9 @@ int main(int argc, char **argv)
   PetscReal      dt                      = DEFAULT_DT;
   PetscReal      obs_error_std           = DEFAULT_OBS_ERROR_STD;
   PetscBool      use_fake_localization   = PETSC_FALSE;
-  PetscInt       num_observations_vertex = 40;
+  PetscInt       num_observations_vertex = 7;
   PetscReal      L                       = (PetscReal)DEFAULT_N; /* Domain length */
-  PetscReal      bd[3]                   = {1.0, 0, 0};
+  PetscReal      bd[3]                   = {L, 0, 0};
   Ex3TestType    test_type               = EX3_TEST_DAM;     /* Default to dam-break */
   Ex3FluxType    flux_type               = EX3_FLUX_RUSANOV; /* Default to first-order Rusanov */
   char           output_file[PETSC_MAX_PATH_LEN];
@@ -554,7 +554,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsString("-output_file", "Output file for visualization data", "", "", output_file, sizeof(output_file), &output_enabled));
   PetscCall(PetscOptionsBool("-use_fake_localization", "Use fake localization matrix", "", use_fake_localization, &use_fake_localization, NULL));
   if (!use_fake_localization) PetscCall(PetscOptionsInt("-num_observations_vertex", "Number of observations per vertex", "", num_observations_vertex, &num_observations_vertex, NULL));
-
+  else num_observations_vertex = n_vert;
   /* Parse test type option */
   {
     char        testTypeName[256];
@@ -704,12 +704,16 @@ int main(int argc, char **argv)
       PetscCall(PetscObjectSetName((PetscObject)Vecxyz[0], "x_coordinate"));
       PetscCall(VecCopy(coord, Vecxyz[0]));
 
-      PetscCall(PetscDAGetLETKFLocalizationMatrix(num_observations_vertex, 1, Vecxyz, bd, H1, &Q));
+      PetscCall(PetscDALETKFGetLocalizationMatrix(num_observations_vertex, 1, Vecxyz, bd, H1, &Q));
       PetscCall(VecDestroy(&Vecxyz[0]));
+      PetscCall(PetscDALETKFSetObsPerVertex(daas, num_observations_vertex));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created using DMPlexGetLETKFLocalizationMatrix\n"));
     } else {
       PetscCall(CreateLocalizationMatrix(n_vert, nobs, &Q));
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %dx%d, no localization/global (all weights = 1.0)\n", (int)n_vert, (int)nobs));
+      if (isletkf) {
+        PetscCall(PetscDALETKFSetObsPerVertex(daas, num_observations_vertex)); // fully observed
+      }
     }
     PetscCall(PetscDALETKFSetLocalization(daas, Q, H));
     PetscCall(MatViewFromOptions(Q, NULL, "-Q_view"));
