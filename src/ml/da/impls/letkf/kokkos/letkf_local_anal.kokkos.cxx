@@ -249,9 +249,9 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
     int         *info_ptr = d_info + i;
 
     #if defined(PETSC_USE_REAL_SINGLE)
-    hip_status = rocsolver_ssyevd(rocblasH, rocblas_evect_original, rocblas_fill_upper, n_size, A_ptr, n_size, W_ptr, d_work, work->lwork_device, info_ptr);
+    hip_status = rocsolver_ssyevd(rocblasH, rocblas_evect_original, rocblas_fill_upper, n_size, A_ptr, n_size, W_ptr, d_work, info_ptr);
     #else
-    hip_status = rocsolver_dsyevd(rocblasH, rocblas_evect_original, rocblas_fill_upper, n_size, A_ptr, n_size, W_ptr, d_work, work->lwork_device, info_ptr);
+    hip_status = rocsolver_dsyevd(rocblasH, rocblas_evect_original, rocblas_fill_upper, n_size, A_ptr, n_size, W_ptr, d_work, info_ptr);
     #endif
     PetscCheck(hip_status == rocblas_status_success, PETSC_COMM_SELF, PETSC_ERR_LIB, "rocsolver_*syevd failed for batch %" PetscInt_FMT, i);
   }
@@ -822,20 +822,10 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   }
   #elif defined(KOKKOS_ENABLE_HIP)
   {
-    /* Query workspace size for rocsolver_dsyevd */
-    PetscScalar *d_A = T_batch_alloc.data();
-    PetscScalar *d_W = Lambda_batch_alloc.data();
-    int          lwork;
-
-    #if defined(PETSC_USE_REAL_SINGLE)
-    hip_status = rocsolver_ssyevd(device_handle, rocblas_evect_original, rocblas_fill_upper, m, d_A, m, d_W, nullptr, -1, nullptr);
-    #else
-    hip_status = rocsolver_dsyevd(device_handle, rocblas_evect_original, rocblas_fill_upper, m, d_A, m, d_W, nullptr, -1, nullptr);
-    #endif
-    PetscCheck(hip_status == rocblas_status_success, PETSC_COMM_SELF, PETSC_ERR_LIB, "rocsolver_*syevd workspace query failed");
-
-    /* For rocSOLVER, workspace size is typically (n-1) * max(n, 1) */
-    lwork                   = (m - 1) * PetscMax(m, 1);
+    /* rocsolver_dsyevd does not support size query via -1.
+       We use a safe upper bound estimate based on LAPACK dsyevd requirements (1 + 6*N + 2*N*N).
+    */
+    int lwork               = 2 * m * m + 6 * m + 1;
     eigen_work.lwork_device = lwork;
 
     /* Allocate workspace */
