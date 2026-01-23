@@ -642,8 +642,10 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   {
     PetscBool use_gpu = PETSC_FALSE;
     if (da->sqrt_type == PETSCDA_SQRT_EIGEN) {
+  #if !defined(PETSC_USE_COMPLEX)
       /* Check if H matrix is a Kokkos type */
       PetscCall(PetscObjectTypeCompareAny((PetscObject)da->R, &use_gpu, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, MATAIJKOKKOS, ""));
+  #endif
     }
 
     /* Scatter global vectors to local work vectors if available */
