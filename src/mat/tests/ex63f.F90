@@ -11,7 +11,7 @@ program main
   implicit none
 
   PetscErrorCode ierr
-  PetscInt row, col, ten
+  PetscInt row, col
   PetscMPIInt rank
   PetscScalar v
   Mat A
@@ -21,11 +21,10 @@ program main
 
   PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD, rank, ierr))
 !
-!     Proc-0 Create a seq-dense matrix and write it to a file
+! Proc-0 Create a seq-dense matrix and write it to a file
 !
   if (rank == 0) then
-    ten = 10
-    PetscCallA(MatCreateSeqDense(PETSC_COMM_SELF, ten, ten, PETSC_NULL_SCALAR_ARRAY, A, ierr))
+    PetscCallA(MatCreateSeqDense(PETSC_COMM_SELF, 10_PETSC_INT_KIND, 10_PETSC_INT_KIND, PETSC_NULL_SCALAR_ARRAY, A, ierr))
     v = 1.0
     do row = 0, 9
       do col = 0, 9
@@ -40,14 +39,14 @@ program main
     PetscCallA(PetscObjectSetName(A, 'Original Matrix', ierr))
     PetscCallA(MatView(A, PETSC_VIEWER_STDOUT_SELF, ierr))
 !
-!        Now Write this matrix to a binary file
+!   Now Write this matrix to a binary file
 !
     PetscCallA(PetscViewerBinaryOpen(PETSC_COMM_SELF, 'dense.mat', FILE_MODE_WRITE, view, ierr))
     PetscCallA(MatView(A, view, ierr))
     PetscCallA(PetscViewerDestroy(view, ierr))
     PetscCallA(MatDestroy(A, ierr))
 !
-!        Read this matrix into a SeqDense matrix
+!   Read this matrix into a SeqDense matrix
 
     PetscCallA(PetscViewerBinaryOpen(PETSC_COMM_SELF, 'dense.mat', FILE_MODE_READ, view, ierr))
     PetscCallA(MatCreate(PETSC_COMM_SELF, A, ierr))
@@ -61,8 +60,8 @@ program main
   end if
 
 !
-!     Use a barrier, so that the procs do not try opening the file before
-!     it is created.
+! Use a barrier, so that the procs do not try opening the file before
+! it is created.
 !
   PetscCallMPIA(MPI_Barrier(PETSC_COMM_WORLD, ierr))
 
