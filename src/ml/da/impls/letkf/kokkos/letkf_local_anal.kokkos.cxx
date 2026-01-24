@@ -268,7 +268,7 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
 {
   PetscFunctionBegin;
   /* Use pre-allocated workspace */
-  PetscScalar *d_work     = work->d_work;
+  PetscScalar *d_work = work->d_work;
   (void)d_work;
   int         *d_info     = work->d_info;
   PetscScalar *d_A_contig = work->d_A_contig;
@@ -289,9 +289,9 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
   SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Complex numbers not supported on HIP backend for LETKF");
     #else
   for (int i = 0; i < n_batch; i++) {
-    PetscScalar *A_ptr    = d_A_contig + i * n_size * n_size;
-    PetscScalar *W_ptr    = d_W_contig + i * n_size;
-    int         *info_ptr = d_info + i;
+    PetscScalar   *A_ptr    = d_A_contig + i * n_size * n_size;
+    PetscScalar   *W_ptr    = d_W_contig + i * n_size;
+    int           *info_ptr = d_info + i;
     rocblas_status hip_status;
 
       #if defined(PETSC_USE_REAL_SINGLE)
