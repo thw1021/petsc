@@ -935,7 +935,7 @@ PetscErrorCode PetscDALETKFInitialize(PetscDA da)
   Logically Collective
 
   Input Parameters:
-+ da - the `PetscDA` context
++ da           - the `PetscDA` context
 - n_obs_vertex - number of observations per vertex
 
   Level: advanced
