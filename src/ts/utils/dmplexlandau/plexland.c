@@ -542,7 +542,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
             for (PetscInt f = 0; f < totDim; ++f) PetscCall(PetscPrintf(ctx->comm, " %12.5e", (double)PetscRealPart(elemMat[d * totDim + f])));
             PetscCall(PetscPrintf(ctx->comm, "\n"));
           }
-          SETERRQ(ctx->comm, PETSC_ERR_ARG_WRONG, "Debug element matrix requested, aborting\n");
+          PetscCheck(PETSC_FALSE, PetscObjectComm((PetscObject)JacP), PETSC_ERR_ARG_WRONG, "Debug element matrix requested, aborting\n");
         }
         PetscCall(PetscFree(elemMat));
       } /* grid */
@@ -681,7 +681,7 @@ static PetscErrorCode LandauCubedSphereJacobian(PetscInt dim, const PetscReal ab
 
     // J_ij = delta_ij * scale + u_i * dscale_du_j
     for (int i = 0; i < dim; ++i) {
-      for (int j = 0; j < dim; ++j) { J[i * dim + j] = (i == j ? scale : 0.0) + abc[i] * dscale_du[j]; }
+      for (int j = 0; j < dim; ++j) J[i * dim + j] = (i == j ? scale : 0.0) + abc[i] * dscale_du[j];
     }
 
     // Sherman-Morrison for inverse: (A + uv^T)^-1 = A^-1 - (A^-1 u v^T A^-1) / (1 + v^T A^-1 u)
@@ -698,7 +698,7 @@ static PetscErrorCode LandauCubedSphereJacobian(PetscInt dim, const PetscReal ab
     PetscReal factor = 1.0 / (scale * (scale + dot));
 
     for (int i = 0; i < dim; ++i) {
-      for (int j = 0; j < dim; ++j) { invJ[i * dim + j] = (i == j ? 1.0 / scale : 0.0) - abc[i] * dscale_du[j] * factor; }
+      for (int j = 0; j < dim; ++j) invJ[i * dim + j] = (i == j ? 1.0 / scale : 0.0) - abc[i] * dscale_du[j] * factor;
     }
 
     // det(I + uv^T) = 1 + u.v
@@ -1959,7 +1959,6 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
           }
           if (ctx->sphere && dim == 3 && !ctx->use_p4est && ctx->use_cubed_sphere) {
             PetscReal abc[3], xyz[3];
-            PetscInt  d;
 
             abc[0] = xx[gidx];
             abc[1] = yy[gidx];
@@ -1977,6 +1976,38 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
         PetscCall(DMDestroy(&dmEnergy));
       }
     } /* grid */
+    {
+      PetscBool print_points = PETSC_FALSE;
+      PetscCall(PetscOptionsGetBool(NULL, NULL, "-dm_landau_print_points", &print_points, NULL));
+      if (print_points && dim == 3) {
+        PetscMPIInt rank;
+        PetscCallMPI(MPI_Comm_rank(ctx->comm, &rank));
+        if (rank == 0) {
+          FILE *fp = fopen("cubed_spere_point.py", "w");
+          if (fp) {
+            PetscInt i;
+            fprintf(fp, "import matplotlib.pyplot as plt\n");
+            fprintf(fp, "from mpl_toolkits.mplot3d import Axes3D\n");
+            fprintf(fp, "fig = plt.figure()\n");
+            fprintf(fp, "ax = fig.add_subplot(111, projection='3d')\n");
+            fprintf(fp, "xs = [");
+            for (i = 0; i < nip_glb; i++) fprintf(fp, "%g,", (double)xx[i]);
+            fprintf(fp, "]\n");
+            fprintf(fp, "ys = [");
+            for (i = 0; i < nip_glb; i++) fprintf(fp, "%g,", (double)yy[i]);
+            fprintf(fp, "]\n");
+            fprintf(fp, "zs = [");
+            for (i = 0; i < nip_glb; i++) fprintf(fp, "%g,", (double)zz[i]);
+            fprintf(fp, "]\n");
+            fprintf(fp, "ax.scatter(xs, ys, zs, s=1)\n");
+            fprintf(fp, "ax.view_init(elev=88, azim=-90)\n");
+            fprintf(fp, "plt.savefig('cubed_sphere_points.png')\n");
+            fprintf(fp, "plt.show()\n");
+            fclose(fp);
+          }
+        }
+      }
+    }
     if (ctx->use_energy_tensor_trick) PetscCall(PetscFEDestroy(&fe));
     /* cache static data */
     if (ctx->deviceType == LANDAU_KOKKOS) {
