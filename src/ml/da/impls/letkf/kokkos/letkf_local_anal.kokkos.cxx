@@ -266,11 +266,10 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
   #elif defined(KOKKOS_ENABLE_HIP)
 static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> T_batch, Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> Lambda_batch, Kokkos::View<PetscScalar ***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> V_batch, PetscInt n_batch, PetscInt n_size, rocblas_handle rocblasH, EigenWorkspace *work)
 {
-  rocblas_status hip_status;
-
   PetscFunctionBegin;
   /* Use pre-allocated workspace */
   PetscScalar *d_work     = work->d_work;
+  (void)d_work;
   int         *d_info     = work->d_info;
   PetscScalar *d_A_contig = work->d_A_contig;
   PetscScalar *d_W_contig = work->d_W_contig;
@@ -293,6 +292,7 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
     PetscScalar *A_ptr    = d_A_contig + i * n_size * n_size;
     PetscScalar *W_ptr    = d_W_contig + i * n_size;
     int         *info_ptr = d_info + i;
+    rocblas_status hip_status;
 
       #if defined(PETSC_USE_REAL_SINGLE)
     hip_status = rocsolver_ssyevd(rocblasH, rocblas_evect_original, rocblas_fill_upper, n_size, A_ptr, n_size, W_ptr, d_work, info_ptr);
@@ -856,11 +856,10 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
   }
   #elif defined(KOKKOS_ENABLE_HIP)
   rocblas_handle device_handle = nullptr;
-  rocblas_status hip_status;
   if (impl->solver_handle) {
     device_handle = static_cast<rocblas_handle>(impl->solver_handle);
   } else {
-    hip_status = rocblas_create_handle(&device_handle);
+    rocblas_status hip_status = rocblas_create_handle(&device_handle);
     PetscCheck(hip_status == rocblas_status_success, PETSC_COMM_SELF, PETSC_ERR_LIB, "rocblas_create_handle failed");
     impl->solver_handle = static_cast<void *>(device_handle);
   }
@@ -985,8 +984,8 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       if (lwork > 0) {
         PetscCallHIP(hipMalloc(&eigen_work->d_work, sizeof(PetscScalar) * lwork));
         PetscCallHIP(hipMalloc(&eigen_work->d_info, sizeof(int) * chunk_size));
-        PetscCallHIP(hipMalloc(&eigen_work.d_A_contig, sizeof(PetscScalar) * chunk_size * m * m));
-        PetscCallHIP(hipMalloc(&eigen_work.d_W_contig, sizeof(PetscScalar) * chunk_size * m));
+        PetscCallHIP(hipMalloc(&eigen_work->d_A_contig, sizeof(PetscScalar) * chunk_size * m * m));
+        PetscCallHIP(hipMalloc(&eigen_work->d_W_contig, sizeof(PetscScalar) * chunk_size * m));
       }
     }
   #elif defined(KOKKOS_ENABLE_SYCL)
@@ -1008,7 +1007,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
       eigen_work->d_info     = sycl::malloc_device<int>(chunk_size, *device_handle);
       eigen_work->d_A_contig = sycl::malloc_device<PetscScalar>(chunk_size * m * m, *device_handle);
       eigen_work->d_W_contig = sycl::malloc_device<PetscScalar>(chunk_size * m, *device_handle);
-      PetscCheck(eigen_work->d_work && eigen_work.d_info && eigen_work.d_A_contig && eigen_work.d_W_contig, PETSC_COMM_SELF, PETSC_ERR_MEM, "SYCL memory allocation failed");
+      PetscCheck(eigen_work->d_work && eigen_work->d_info && eigen_work->d_A_contig && eigen_work->d_W_contig, PETSC_COMM_SELF, PETSC_ERR_MEM, "SYCL memory allocation failed");
     }
   #endif
 #else
