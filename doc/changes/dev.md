@@ -111,6 +111,12 @@
 ```{rubric} PetscRegressor:
 ```
 
+```{rubric} PetscDA:
+```
+
+- Add data assimilation object with ETKF and LETKF impls and Lornez-95, travels wave and dam break tutorials
+
+
 ```{rubric} DM/DA:
 ```
 
@@ -124,7 +130,6 @@
 
 - Add `DMPlexVecGetClosureAtDepth()`
 - Add an extra communicator argument to `DMPlexFilter()` to allow extracting local meshes
-- Add `DMPlexGetLETKFLocalizationMatrix` to compute localization weight matrix for LETKF
 
 ```{rubric} FE/FV:
 ```
