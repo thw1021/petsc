@@ -142,8 +142,7 @@ program main
 !  also serves as the matrix from which the preconditioner is constructed.
 
   PetscCallA(KSPConvergedDefaultCreate(defaultctx, ierr))
-  ! use KSPConvergedDefaultDestroyCptr() since there is a Fortran interface definition for this while
-  ! KSPConvergedDefaultDestroy() is a macro to call the function correctly from Fortran
+  ! use KSPConvergedDefaultDestroyCptr() since it has that is the Fortran interface definition
   PetscCallA(KSPSetConvergenceTest(ksp, MyKSPConverged, defaultctx, KSPConvergedDefaultDestroyCptr, ierr))
   PetscCallA(KSPSetOperators(ksp, A, A, ierr))
 
