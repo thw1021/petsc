@@ -132,6 +132,7 @@ typedef struct {
   PetscInt  cells0[3];
   /* AMR */
   PetscBool use_p4est;
+  PetscBool use_cubed_sphere;
   PetscInt  numRERefine;                     /* RE: refinement along v_perp=0, z > 0 */
   PetscInt  nZRefine1;                       /* RE: origin refinement after v_perp=0 refinement */
   PetscInt  nZRefine2;                       /* RE: origin refinement after origin AMR refinement */

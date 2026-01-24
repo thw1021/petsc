@@ -41,6 +41,7 @@ static PetscErrorCode LandauGPUMapsDestroy(void **ptr)
   PetscCall(PetscFree(maps));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 static PetscErrorCode energy_f(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf_dummy, PetscScalar *u, void *actx)
 {
   PetscReal v2 = 0;
@@ -541,12 +542,12 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
             for (PetscInt f = 0; f < totDim; ++f) PetscCall(PetscPrintf(ctx->comm, " %12.5e", (double)PetscRealPart(elemMat[d * totDim + f])));
             PetscCall(PetscPrintf(ctx->comm, "\n"));
           }
-          exit(12);
+          SETERRQ(ctx->comm, PETSC_ERR_ARG_WRONG, "Debug element matrix requested, aborting\n");
         }
         PetscCall(PetscFree(elemMat));
       } /* grid */
     } /* outer element & batch loop */
-    if (shift == 0.0) { // mass
+    if (shift == 0.0) { // mass matrix cleanup
       PetscCall(PetscFree4(ff, dudx, dudy, dudz));
     }
     if (!container) {                                         // 'CPU' assembly move nest matrix to global JacP
@@ -587,27 +588,123 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
 
 static PetscErrorCode GeometryDMLandau(DM base, PetscInt point, PetscInt dim, const PetscReal abc[], PetscReal xyz[], void *a_ctx)
 {
-  PetscReal  r = abc[0], z = abc[1];
   LandauCtx *ctx = (LandauCtx *)a_ctx;
 
   PetscFunctionBegin;
-  if (ctx->sphere && dim == 3) { // make sphere: works for one AMR and Q2
-    PetscInt nzero = 0, idx = 0;
-    xyz[0] = r;
-    xyz[1] = z;
-    xyz[2] = abc[2];
-    for (PetscInt i = 0; i < 3; i++) {
-      if (PetscAbs(xyz[i]) < PETSC_SQRT_MACHINE_EPSILON) nzero++;
-      else idx = i;
+  if (ctx->sphere && dim == 3) { // project cubed sphere
+    PetscReal u_max = 0, u_norm = 0, scale, square_inner_radius = ctx->radius[0] * ctx->sphere_inner_radius_90degree[0], square_radius = ctx->radius[0];
+    PetscInt  d;
+
+    for (d = 0; d < dim; ++d) {
+      PetscReal val = PetscAbsReal(PetscRealPart(abc[d]));
+      if (val > u_max) u_max = val;
+      u_norm += PetscRealPart(abc[d]) * PetscRealPart(abc[d]);
     }
-    if (nzero == 2) xyz[idx] *= 1.732050807568877; // sqrt(3)
-    else if (nzero == 1) {
-      for (PetscInt i = 0; i < 3; i++) xyz[i] *= 1.224744871391589; // sqrt(3/2)
+    u_norm = PetscSqrtReal(u_norm);
+
+    if (u_max < square_inner_radius) {
+      for (d = 0; d < dim; ++d) xyz[d] = abc[d];
+    } else {
+      /*
+        A outer cube has corners at |abc| = square_radius.
+        u_1 is the intersection of the ray with the outer cube face.
+        R_max = square_radius * sqrt(3) is radius of sphere we want points on outer cube mapped to.
+        u_0 is the intersection of the ray with the inner cube face.
+        scale to point linearly between u_0 and u_1 so that a point on the inner face does not move, and a point on the outer face moves to the sphere.
+      */
+      if (u_max > square_radius + 1e-5) (void)PetscPrintf(PETSC_COMM_SELF, "Error: Point outside outer radius: u_max %g > %g\n", (double)u_max, (double)square_radius);
+      {
+        PetscReal u_0_norm  = u_norm * square_inner_radius / u_max;
+        PetscReal R_max     = square_radius * PetscSqrtReal((PetscReal)dim);
+        PetscReal t         = (u_max - square_inner_radius) / (square_radius - square_inner_radius);
+        PetscReal rho_prime = (1.0 - t) * u_0_norm + t * R_max;
+        scale               = rho_prime / u_norm;
+      }
+      for (d = 0; d < dim; ++d) xyz[d] = abc[d] * scale;
+      //printf("abc = %g %g %g --> %g %g %g, scale %g\n", (double)abc[0], (double)abc[1], (double)abc[2], (double)xyz[0], (double)xyz[1], (double)xyz[2], (double)scale);
     }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode LandauCubedSphereJacobian(PetscInt dim, const PetscReal abc[], PetscReal J[], PetscReal invJ[], PetscReal *detJ, LandauCtx *ctx)
+{
+  PetscReal u_max = 0, u_norm = 0, square_inner_radius = ctx->radius[0] * ctx->sphere_inner_radius_90degree[0], square_radius = ctx->radius[0];
+  PetscInt  d, d_max = -1;
+
+  PetscFunctionBegin;
+  for (d = 0; d < dim; ++d) {
+    PetscReal val = PetscAbsReal(PetscRealPart(abc[d]));
+    if (val > u_max) {
+      u_max = val;
+      d_max = d;
+    }
+    u_norm += PetscRealPart(abc[d]) * PetscRealPart(abc[d]);
+  }
+  u_norm = PetscSqrtReal(u_norm);
+
+  if (u_max < square_inner_radius) {
+    *detJ = 1.0;
+    for (d = 0; d < dim * dim; ++d) J[d] = invJ[d] = (d % (dim + 1)) ? 0.0 : 1.0;
   } else {
-    xyz[0] = r;
-    xyz[1] = z;
-    if (dim == 3) xyz[2] = abc[2];
+    PetscReal u_0_norm  = u_norm * square_inner_radius / u_max;
+    PetscReal R_max     = square_radius * PetscSqrtReal((PetscReal)dim);
+    PetscReal t         = (u_max - square_inner_radius) / (square_radius - square_inner_radius);
+    PetscReal rho_prime = (1.0 - t) * u_0_norm + t * R_max;
+    PetscReal scale     = rho_prime / u_norm;
+    PetscReal dscale_du[3];
+
+    // derivatives
+    // scale = ((1-t)*u_0_norm + t*R_max) / u_norm
+    // dscale_du_i = (d/du_i ( (1-t)*u_0_norm + t*R_max ) * u_norm - ((1-t)*u_0_norm + t*R_max) * d/du_i(u_norm)) / u_norm^2
+    //             = (d/du_i ( (1-t)*u_0_norm + t*R_max ) - scale * d/du_i(u_norm)) / u_norm
+    // d/du_i(u_norm) = u_i / u_norm
+    // d/du_i(u_max) = sgn(u_i) * delta(i, d_max)
+    // dt/du_i = d/du_i(u_max) / (square_radius - square_inner_radius)
+    // d/du_i(u_0_norm) = d/du_i(u_norm * square_inner_radius / u_max)
+    //                  = square_inner_radius * ( (u_i/u_norm)/u_max - u_norm/u_max^2 * d/du_i(u_max) )
+    //                  = square_inner_radius / u_max * ( u_i/u_norm - u_norm/u_max * d/du_i(u_max) )
+    // d/du_i ( (1-t)*u_0_norm + t*R_max ) = -dt/du_i * u_0_norm + (1-t) * d/du_i(u_0_norm) + dt/du_i * R_max
+    //                                     = dt/du_i * (R_max - u_0_norm) + (1-t) * d/du_i(u_0_norm)
+
+    PetscReal du_norm_du[3], du_max_du[3], dt_du[3], du_0_norm_du[3], dnum_du[3];
+    PetscReal denom = square_radius - square_inner_radius;
+
+    for (d = 0; d < dim; ++d) {
+      du_norm_du[d]   = abc[d] / u_norm;
+      du_max_du[d]    = (d == d_max) ? (abc[d] > 0 ? 1.0 : -1.0) : 0.0;
+      dt_du[d]        = du_max_du[d] / denom;
+      du_0_norm_du[d] = square_inner_radius / u_max * (du_norm_du[d] - u_norm / u_max * du_max_du[d]);
+      dnum_du[d]      = dt_du[d] * (R_max - u_0_norm) + (1.0 - t) * du_0_norm_du[d];
+      dscale_du[d]    = (dnum_du[d] - scale * du_norm_du[d]) / u_norm;
+    }
+
+    // J_ij = delta_ij * scale + u_i * dscale_du_j
+    for (int i = 0; i < dim; ++i) {
+      for (int j = 0; j < dim; ++j) { J[i * dim + j] = (i == j ? scale : 0.0) + abc[i] * dscale_du[j]; }
+    }
+
+    // Sherman-Morrison for inverse: (A + uv^T)^-1 = A^-1 - (A^-1 u v^T A^-1) / (1 + v^T A^-1 u)
+    // Here A = scale * I, u = abc, v = dscale_du
+    // A^-1 = 1/scale * I
+    // A^-1 u = abc / scale
+    // v^T A^-1 = dscale_du^T / scale
+    // v^T A^-1 u = (dscale_du . abc) / scale
+    // invJ = 1/scale * I - (abc . dscale_du^T) / scale^2 / (1 + (dscale_du . abc) / scale)
+    //      = 1/scale * ( I - (abc . dscale_du^T) / (scale + dscale_du . abc) )
+
+    PetscReal dot = 0;
+    for (d = 0; d < dim; ++d) dot += dscale_du[d] * abc[d];
+    PetscReal factor = 1.0 / (scale * (scale + dot));
+
+    for (int i = 0; i < dim; ++i) {
+      for (int j = 0; j < dim; ++j) { invJ[i * dim + j] = (i == j ? 1.0 / scale : 0.0) - abc[i] * dscale_du[j] * factor; }
+    }
+
+    // det(I + uv^T) = 1 + u.v
+    // det(J) = det(scale * I + abc . dscale_du^T) = det(scale * I) * det(I + abc/scale . dscale_du^T)
+    //        = scale^3 * (1 + abc . dscale_du / scale) = scale^2 * (scale + abc . dscale_du)
+    *detJ = scale * scale * (scale + dot);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1118,9 +1215,10 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->M              = NULL;
   ctx->J              = NULL;
   /* geometry and grids */
-  ctx->sphere    = PETSC_FALSE;
-  ctx->use_p4est = PETSC_FALSE;
-  ctx->simplex   = PETSC_FALSE;
+  ctx->sphere           = PETSC_FALSE;
+  ctx->use_p4est        = PETSC_FALSE;
+  ctx->use_cubed_sphere = PETSC_FALSE;
+  ctx->simplex          = PETSC_FALSE;
   for (PetscInt grid = 0; grid < LANDAU_MAX_GRIDS; grid++) {
     ctx->radius[grid]             = 5.; /* thermal radius (velocity) */
     ctx->radius_perp[grid]        = 5.; /* thermal radius (velocity) */
@@ -1197,6 +1295,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscCall(PetscOptionsBool("-dm_landau_use_relativistic_corrections", "Use relativistic corrections", "plexland.c", ctx->use_relativistic_corrections, &ctx->use_relativistic_corrections, NULL));
   PetscCall(PetscOptionsBool("-dm_landau_simplex", "Use simplex elements", "plexland.c", ctx->simplex, &ctx->simplex, NULL));
   PetscCall(PetscOptionsBool("-dm_landau_sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, NULL));
+  if (ctx->sphere) PetscCall(PetscOptionsBool("-dm_landau_use_cubed_sphere", "use sphere projection of cubed sphere", "plexland.c", ctx->use_cubed_sphere, &ctx->use_cubed_sphere, NULL));
   if (LANDAU_DIM == 2 && ctx->use_relativistic_corrections) ctx->use_relativistic_corrections = PETSC_FALSE; // should warn
   PetscCall(PetscOptionsBool("-dm_landau_use_energy_tensor_trick", "Use Eero's trick of using grad(v^2/2) instead of v as args to Landau tensor to conserve energy with relativistic corrections and Q1 elements", "plexland.c", ctx->use_energy_tensor_trick,
                              &ctx->use_energy_tensor_trick, NULL));
@@ -1423,6 +1522,21 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
       PetscCall(PetscOptionsClearValue(NULL, "-info"));
     }
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+typedef struct {
+  PetscCount coo_size;
+  PetscInt  *oor, *ooc;
+} LandauCOO;
+
+static PetscErrorCode LandauCOODestroy(void **ptr)
+{
+  LandauCOO *coo = (LandauCOO *)*ptr;
+
+  PetscFunctionBegin;
+  PetscCall(PetscFree2(coo->oor, coo->ooc));
+  PetscCall(PetscFree(coo));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1709,15 +1823,31 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
           } // cell
         } // grid
       } // batch
+      // copy oor and ooc for use in mass matrix too
+      PetscInt *oor2, *ooc2;
+      PetscCall(PetscMalloc2(ctx->SData_d.coo_size, &oor2, ctx->SData_d.coo_size, &ooc2));
+      for (PetscInt i = 0; i < ctx->SData_d.coo_size; i++) {
+        oor2[i] = oor[i];
+        ooc2[i] = ooc[i];
+      }
       PetscCall(MatSetPreallocationCOO(ctx->J, ctx->SData_d.coo_size, oor, ooc));
+      PetscCall(MatSetPreallocationCOO(ctx->M, ctx->SData_d.coo_size, oor2, ooc2));
       PetscCall(PetscFree2(oor, ooc));
+      PetscCall(PetscFree2(oor2, ooc2));
     }
     PetscCall(PetscFree(pointMaps));
     PetscCall(PetscFree(elemMatrix));
+    // store maps in container J
     PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &container));
     PetscCall(PetscContainerSetPointer(container, (void *)maps));
     PetscCall(PetscContainerSetCtxDestroy(container, LandauGPUMapsDestroy));
     PetscCall(PetscObjectCompose((PetscObject)ctx->J, "assembly_maps", (PetscObject)container));
+    PetscCall(PetscContainerDestroy(&container));
+    // store maps in container M
+    PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &container));
+    PetscCall(PetscContainerSetPointer(container, (void *)maps));
+    PetscCall(PetscContainerSetCtxDestroy(container, NULL)); // do not free full maps again
+    PetscCall(PetscObjectCompose((PetscObject)ctx->M, "assembly_maps", (PetscObject)container));
     PetscCall(PetscContainerDestroy(&container));
     PetscCall(PetscLogEventEnd(ctx->events[2], 0, 0, 0, 0));
   } // end GPU assembly
@@ -1827,6 +1957,18 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
             yy[gidx] = vj[qj * dim + 1];
             if (dim == 3) zz[gidx] = vj[qj * dim + 2];
           }
+          if (ctx->sphere && dim == 3 && !ctx->use_p4est && ctx->use_cubed_sphere) {
+            PetscReal abc[3], xyz[3];
+            PetscInt  d;
+
+            abc[0] = xx[gidx];
+            abc[1] = yy[gidx];
+            abc[2] = zz[gidx];
+            PetscCall(GeometryDMLandau(ctx->plex[grid], 0, dim, abc, xyz, ctx));
+            xx[gidx] = xyz[0];
+            yy[gidx] = xyz[1];
+            zz[gidx] = xyz[2];
+          }
         } /* q */
         if (ctx->use_energy_tensor_trick) PetscCall(DMPlexVecRestoreClosure(dmEnergy, e_section, v2_2, ej + cStart, NULL, &coefs));
       } /* ej */
@@ -1893,11 +2035,10 @@ static void g0_r(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[
 }
 
 /*
- LandauCreateJacobianMatrix - creates ctx->J with without real data. Hard to keep sparse.
-  - Like DMPlexLandauCreateMassMatrix. Should remove one and combine
+ LandauCreateJacobianAndMassMatrix - creates ctx->J and ctx->M with without real data
   - has old support for field major ordering
  */
-static PetscErrorCode LandauCreateJacobianMatrix(MPI_Comm comm, Vec X, IS grid_batch_is_inv[LANDAU_MAX_GRIDS], LandauCtx *ctx)
+static PetscErrorCode LandauCreateJacobianAndMassMatrix(MPI_Comm comm, Vec X, IS grid_batch_is_inv[LANDAU_MAX_GRIDS], LandauCtx *ctx)
 {
   PetscInt *idxs = NULL;
   Mat       subM[LANDAU_MAX_GRIDS];
@@ -1919,7 +2060,7 @@ static PetscErrorCode LandauCreateJacobianMatrix(MPI_Comm comm, Vec X, IS grid_b
     PetscCall(DMCopyFields(ctx->plex[grid], PETSC_DETERMINE, PETSC_DETERMINE, massDM));
     PetscCall(DMCreateDS(massDM));
     PetscCall(DMGetDS(massDM, &prob));
-    for (PetscInt ix = 0, ii = ctx->species_offset[grid]; ii < ctx->species_offset[grid + 1]; ii++, ix++) PetscCall(PetscDSSetJacobian(prob, ix, ix, g0_fake, NULL, NULL, NULL));
+    for (PetscInt ix = 0, ii = ctx->species_offset[grid]; ii < ctx->species_offset[grid + 1]; ii++, ix++) PetscCall(PetscDSSetJacobian(prob, ix, ix, g0_1, NULL, NULL, NULL));
     PetscCall(PetscOptionsInsertString(NULL, "-dm_preallocate_only")); // this trick is need to both sparsify the matrix and avoid runtime error
     PetscCall(DMCreateMatrix(massDM, &gMat));
     PetscCall(PetscOptionsInsertString(NULL, "-dm_preallocate_only false"));
@@ -1993,10 +2134,18 @@ static PetscErrorCode LandauCreateJacobianMatrix(MPI_Comm comm, Vec X, IS grid_b
     PetscCall(VecScatterCreate(X, ctx->batch_is, X, NULL, &ctx->plex_batch));
     PetscCall(VecDuplicate(X, &ctx->work_vec));
   }
+
+  // create the mass matrix too
+  PetscCall(PetscLogEventBegin(ctx->events[14], 0, 0, 0, 0));
+  PetscCall(MatDuplicate(ctx->J, MAT_DO_NOT_COPY_VALUES, &ctx->M));
+  PetscCall(MatZeroEntries(ctx->M));
+  PetscCall(PetscObjectSetName((PetscObject)ctx->M, "mass"));
+  PetscCall(MatViewFromOptions(ctx->M, NULL, "-dm_landau_mass_view"));
+  PetscCall(PetscLogEventEnd(ctx->events[14], 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static void LandauSphereMapping(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[])
+/* static void LandauSphereMapping(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[])
 {
   PetscReal u_max = 0, u_norm = 0, scale, square_inner_radius = PetscRealPart(constants[0]), square_radius = PetscRealPart(constants[1]);
   PetscInt  d;
@@ -2013,29 +2162,28 @@ static void LandauSphereMapping(PetscInt dim, PetscInt Nf, PetscInt NfAux, const
     return;
   }
 
-  /*
-    A outer cube has corners at |u| = square_radius.
-    u_1 is the intersection of the ray with the outer cube face.
-    R_max = square_radius * sqrt(3) is radius of sphere we want points on outer cube mapped to.
-    u_0 is the intersection of the ray with the inner cube face.
-    The cube has corners at |u| = square_inner_radius.
-    scale to point linearly between u_0 and u_1 so that a point on the inner face does not move, and a point on the outer face moves to the sphere.
-  */
-  if (u_max > square_radius + 1e-5) (void)PetscPrintf(PETSC_COMM_SELF, "Error: Point outside outer radius: u_max %g > %g\n", (double)u_max, (double)square_radius);
-  /* if (PetscAbsReal(u_max - square_inner_radius) < 1e-5 || PetscAbsReal(u_max - square_radius) < 1e-5) {
-    (void)PetscPrintf(PETSC_COMM_SELF, "Warning: Point near corner of inner and outer cube: u_max %g, inner %g, outer %g\n", (double)u_max, (double)square_inner_radius, (double)square_radius);
-  } */
-  {
-    PetscReal u_0_norm  = u_norm * square_inner_radius / u_max;
-    PetscReal R_max     = square_radius * PetscSqrtReal((PetscReal)dim);
-    PetscReal t         = (u_max - square_inner_radius) / (square_radius - square_inner_radius);
-    PetscReal rho_prime = (1.0 - t) * u_0_norm + t * R_max;
-    scale               = rho_prime / u_norm;
-  }
-  for (d = 0; d < dim; ++d) f[d] = u[d] * scale;
+  //
+  //  A outer cube has corners at |u| = square_radius.
+  //  u_1 is the intersection of the ray with the outer cube face.
+  //  R_max = square_radius * sqrt(3) is radius of sphere we want points on outer cube mapped to.
+  //  u_0 is the intersection of the ray with the inner cube face.
+  //  scale to point linearly between u_0 and u_1 so that a point on the inner face does not move, and a point on the outer face moves to the sphere.
+if (u_max > square_radius + 1e-5) (void)PetscPrintf(PETSC_COMM_SELF, "Error: Point outside outer radius: u_max %g > %g\n", (double)u_max, (double)square_radius);
+{
+  PetscReal u_0_norm  = u_norm * square_inner_radius / u_max;
+  PetscReal R_max     = square_radius * PetscSqrtReal((PetscReal)dim);
+  PetscReal t         = (u_max - square_inner_radius) / (square_radius - square_inner_radius);
+  PetscReal rho_prime = (1.0 - t) * u_0_norm + t * R_max;
+  scale               = rho_prime / u_norm;
 }
+if (fabs(scale - 1.) > 1e-3) printf("u = %g %g %g --> ", (double)u[0], (double)u[1], (double)u[2]);
+for (d = 0; d < dim; ++d) f[d] = u[d] * scale;
+if (fabs(scale - 1.) > 1e-3) printf("u = %g %g %g. scale = %g\n", (double)f[0], (double)f[1], (double)f[2], (double)scale);
+else printf("*\n");
+}
+*/
 
-static PetscErrorCode LandauSphereMesh(DM dm, PetscReal inner, PetscReal radius)
+/* static PetscErrorCode LandauSphereMesh(DM dm, PetscReal inner, PetscReal radius)
 {
   DM          cdm;
   PetscDS     cds;
@@ -2047,11 +2195,12 @@ static PetscErrorCode LandauSphereMesh(DM dm, PetscReal inner, PetscReal radius)
   PetscCall(DMGetCoordinateDM(dm, &cdm));
   PetscCall(DMGetDS(cdm, &cds));
   PetscCall(PetscDSSetConstants(cds, 2, consts));
+  printf("Mapping mesh to sphere with inner radius %g and outer radius %g\n", (double)inner, (double)radius);
   PetscCall(DMPlexRemapGeometry(dm, 0.0, LandauSphereMapping));
   PetscFunctionReturn(PETSC_SUCCESS);
-}
+} */
 
-PetscErrorCode DMPlexLandauCreateMassMatrix(DM pack, Mat *Amat);
+// PetscErrorCode DMPlexLandauCreateMassMatrix(DM pack, Mat *Amat);
 
 /*@C
   DMPlexLandauCreateVelocitySpace - Create a `DMPLEX` velocity space mesh
@@ -2107,10 +2256,10 @@ PetscErrorCode DMPlexLandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, cons
       PetscCall(DMConvert(ctx->plex[grid], DMPLEX, &plex));
       PetscCall(DMDestroy(&ctx->plex[grid]));
       ctx->plex[grid] = plex;
-    } else if (ctx->sphere && dim == 3) {
+    } /* else if (ctx->sphere && dim == 3) {
       PetscCall(LandauSphereMesh(ctx->plex[grid], ctx->radius[grid] * ctx->sphere_inner_radius_90degree[grid], ctx->radius[grid]));
       PetscCall(LandauSetInitialCondition(ctx->plex[grid], Xsub[grid], grid, 0, 1, ctx));
-    }
+    } */
     if (grid == 0) {
       PetscCall(DMViewFromOptions(ctx->plex[grid], NULL, "-dm_landau_amr_dm_view"));
       PetscCall(VecSetOptionsPrefix(Xsub[grid], prefix));
@@ -2182,16 +2331,14 @@ PetscErrorCode DMPlexLandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, cons
   ctx->batch_is   = NULL;
   for (PetscInt i = 0; i < LANDAU_MAX_GRIDS; i++) grid_batch_is_inv[i] = NULL;
   PetscCall(PetscLogEventBegin(ctx->events[12], 0, 0, 0, 0));
-  PetscCall(LandauCreateJacobianMatrix(comm, *X, grid_batch_is_inv, ctx));
+  //create Jacobian and mass matrix
+  PetscCall(LandauCreateJacobianAndMassMatrix(comm, *X, grid_batch_is_inv, ctx));
   PetscCall(PetscLogEventEnd(ctx->events[12], 0, 0, 0, 0));
-
   // create AMR GPU assembly maps and static GPU data
   PetscCall(CreateStaticData(dim, grid_batch_is_inv, prefix, ctx));
-
+  // Set mass matrix
+  PetscCall(LandauFormJacobian_Internal(*X, ctx->M, dim, 1.0, (void *)ctx));
   PetscCall(PetscLogEventEnd(ctx->events[13], 0, 0, 0, 0));
-
-  // create mass matrix
-  PetscCall(DMPlexLandauCreateMassMatrix(*pack, NULL));
 
   if (J) *J = ctx->J;
 
@@ -2580,13 +2727,12 @@ PetscErrorCode DMPlexLandauPrintNorms(Vec X, PetscInt stepi)
 
 .seealso: `DMPlexLandauCreateVelocitySpace()`
  @*/
-PetscErrorCode DMPlexLandauCreateMassMatrix(DM pack, Mat *Amat)
+/* etscErrorCode DMPlexLandauCreateMassMatrix(DM pack, Mat *Amat)
 {
-  DM         mass_pack, massDM[LANDAU_MAX_GRIDS];
-  PetscDS    prob;
-  PetscInt   ii, dim, N1 = 1, N2;
+  PetscInt   dim;
   LandauCtx *ctx;
-  Mat        packM, subM[LANDAU_MAX_GRIDS];
+  Mat        packM;
+  Vec        X;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pack, DM_CLASSID, 1);
@@ -2595,89 +2741,40 @@ PetscErrorCode DMPlexLandauCreateMassMatrix(DM pack, Mat *Amat)
   PetscCheck(ctx, PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   PetscCall(PetscLogEventBegin(ctx->events[14], 0, 0, 0, 0));
   PetscCall(DMGetDimension(pack, &dim));
-  PetscCall(DMCompositeCreate(PetscObjectComm((PetscObject)pack), &mass_pack));
-  /* create pack mass matrix */
-  for (PetscInt grid = 0, ix = 0; grid < ctx->num_grids; grid++) {
-    PetscCall(DMClone(ctx->plex[grid], &massDM[grid]));
-    PetscCall(DMCopyFields(ctx->plex[grid], PETSC_DETERMINE, PETSC_DETERMINE, massDM[grid]));
-    PetscCall(DMCreateDS(massDM[grid]));
-    PetscCall(DMGetDS(massDM[grid], &prob));
-    for (ix = 0, ii = ctx->species_offset[grid]; ii < ctx->species_offset[grid + 1]; ii++, ix++) {
-      if (dim == 3) PetscCall(PetscDSSetJacobian(prob, ix, ix, g0_1, NULL, NULL, NULL));
-      else PetscCall(PetscDSSetJacobian(prob, ix, ix, g0_r, NULL, NULL, NULL));
-    }
-#if !defined(LANDAU_SPECIES_MAJOR)
-    PetscCall(DMCompositeAddDM(mass_pack, massDM[grid]));
-#else
-    for (PetscInt b_id = 0; b_id < ctx->batch_sz; b_id++) { // add batch size DMs for this species grid
-      PetscCall(DMCompositeAddDM(mass_pack, massDM[grid]));
-    }
-#endif
-    PetscCall(DMCreateMatrix(massDM[grid], &subM[grid]));
+
+  if (ctx->gpu_assembly) {
+    PetscContainer container;
+    // Use MatDuplicate to properly copy the COO structure including spptr
+    PetscCall(MatDuplicate(ctx->J, MAT_DO_NOT_COPY_VALUES, &packM));
+    // Copy COO containers which MatDuplicate doesn't do
+    PetscCall(PetscObjectQuery((PetscObject)ctx->J, "__PETSc_MatCOOStruct_Host", (PetscObject *)&container));
+    if (container) PetscCall(PetscObjectCompose((PetscObject)packM, "__PETSc_MatCOOStruct_Host", (PetscObject)container));
+    PetscCall(PetscObjectQuery((PetscObject)ctx->J, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container));
+    if (container) PetscCall(PetscObjectCompose((PetscObject)packM, "__PETSc_MatCOOStruct_Device", (PetscObject)container));
+    PetscCall(PetscObjectQuery((PetscObject)ctx->J, "assembly_maps", (PetscObject *)&container));
+    if (container) PetscCall(PetscObjectCompose((PetscObject)packM, "assembly_maps", (PetscObject)container));
+  } else {
+    PetscCall(PetscOptionsInsertString(NULL, "-dm_preallocate_only"));
+    PetscCall(DMCreateMatrix(pack, &packM));
+    PetscCall(PetscOptionsInsertString(NULL, "-dm_preallocate_only false"));
   }
-#if !defined(LANDAU_SPECIES_MAJOR)
-  // stack the batched DMs
-  for (PetscInt b_id = 1; b_id < ctx->batch_sz; b_id++) {
-    for (PetscInt grid = 0; grid < ctx->num_grids; grid++) PetscCall(DMCompositeAddDM(mass_pack, massDM[grid]));
-  }
-#endif
-  PetscCall(PetscOptionsInsertString(NULL, "-dm_preallocate_only"));
-  PetscCall(DMCreateMatrix(mass_pack, &packM));
-  PetscCall(PetscOptionsInsertString(NULL, "-dm_preallocate_only false"));
   PetscCall(MatSetOption(packM, MAT_STRUCTURALLY_SYMMETRIC, PETSC_TRUE));
   PetscCall(MatSetOption(packM, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE));
-  PetscCall(DMDestroy(&mass_pack));
-  /* make mass matrix for each block */
-  for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
-    Vec locX;
-    DM  plex = massDM[grid];
-    PetscCall(DMGetLocalVector(plex, &locX));
-    /* Mass matrix is independent of the input, so no need to fill locX */
-    PetscCall(DMPlexSNESComputeJacobianFEM(plex, locX, subM[grid], subM[grid], ctx));
-    PetscCall(DMRestoreLocalVector(plex, &locX));
-    PetscCall(DMDestroy(&massDM[grid]));
-  }
-  PetscCall(MatGetSize(ctx->J, &N1, NULL));
-  PetscCall(MatGetSize(packM, &N2, NULL));
-  PetscCheck(N1 == N2, PetscObjectComm((PetscObject)pack), PETSC_ERR_PLIB, "Incorrect matrix sizes: |Jacobian| = %" PetscInt_FMT ", |Mass|=%" PetscInt_FMT, N1, N2);
-  /* assemble block diagonals */
-  for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
-    Mat      B = subM[grid];
-    PetscInt nloc, nzl, *colbuf, COL_BF_SIZE = 1024, row;
-    PetscCall(PetscMalloc(sizeof(*colbuf) * COL_BF_SIZE, &colbuf));
-    PetscCall(MatGetSize(B, &nloc, NULL));
-    for (PetscInt b_id = 0; b_id < ctx->batch_sz; b_id++) {
-      const PetscInt     moffset = LAND_MOFFSET(b_id, grid, ctx->batch_sz, ctx->num_grids, ctx->mat_offset);
-      const PetscInt    *cols;
-      const PetscScalar *vals;
-      for (PetscInt i = 0; i < nloc; i++) {
-        PetscCall(MatGetRow(B, i, &nzl, NULL, NULL));
-        if (nzl > COL_BF_SIZE) {
-          PetscCall(PetscFree(colbuf));
-          PetscCall(PetscInfo(pack, "Realloc buffer %" PetscInt_FMT " to %" PetscInt_FMT " (row size %" PetscInt_FMT ") \n", COL_BF_SIZE, 2 * COL_BF_SIZE, nzl));
-          COL_BF_SIZE = nzl;
-          PetscCall(PetscMalloc(sizeof(*colbuf) * COL_BF_SIZE, &colbuf));
-        }
-        PetscCall(MatGetRow(B, i, &nzl, &cols, &vals));
-        for (PetscInt j = 0; j < nzl; j++) colbuf[j] = cols[j] + moffset;
-        row = i + moffset;
-        PetscCall(MatSetValues(packM, 1, &row, nzl, colbuf, vals, INSERT_VALUES));
-        PetscCall(MatRestoreRow(B, i, &nzl, &cols, &vals));
-      }
-    }
-    PetscCall(PetscFree(colbuf));
-  }
-  // cleanup
-  for (PetscInt grid = 0; grid < ctx->num_grids; grid++) PetscCall(MatDestroy(&subM[grid]));
-  PetscCall(MatAssemblyBegin(packM, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(packM, MAT_FINAL_ASSEMBLY));
+  // For MatDuplicatedmatrices, ensure spptr is initialized by calling MatZeroEntries before MatSetValuesCOO
+  if (ctx->gpu_assembly) PetscCall(MatZeroEntries(packM));
+
+  PetscCall(DMCreateGlobalVector(pack, &X));
+  PetscCall(MatZeroEntries(packM));
+  PetscCall(LandauFormJacobian_Internal(X, packM, dim, 1.0, (void *)ctx));
+  PetscCall(VecDestroy(&X));
+
   PetscCall(PetscObjectSetName((PetscObject)packM, "mass"));
   PetscCall(MatViewFromOptions(packM, NULL, "-dm_landau_mass_view"));
   ctx->M = packM;
   if (Amat) *Amat = packM;
   PetscCall(PetscLogEventEnd(ctx->events[14], 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
-}
+} */
 
 /*@
   DMPlexLandauIFunction - `TS` residual calculation, confusingly this computes the Jacobian w/o mass

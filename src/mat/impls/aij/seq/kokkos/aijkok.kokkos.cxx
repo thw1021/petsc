@@ -1397,8 +1397,10 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJKokkos(Mat A, const PetscScalar v[],
   PetscMemType               memtype;
   PetscContainer             container;
   MatCOOStruct_SeqAIJKokkos *coo;
+  Mat_SeqAIJKokkos          *aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
 
   PetscFunctionBegin;
+  PetscCheck(aijkok, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing Mat_SeqAIJKokkos; must call MatSetPreallocationCOO first");
   PetscCall(PetscObjectQuery((PetscObject)A, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container));
   PetscCall(PetscContainerGetPointer(container, (void **)&coo));
 
