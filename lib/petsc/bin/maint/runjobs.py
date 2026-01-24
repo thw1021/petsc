@@ -21,7 +21,7 @@ from subprocess import check_output
 #
 #  Note: If no jobs are listed, then all jobs in the pipeline are run but without a need to un-pause the pipeline on the GitLab site.
 #  i.e., usage:
-#      runjobs.py
+#      lib/petsc/bin/maint/runjobs.py
 #
 force = (len(sys.argv) > 1 and sys.argv[1] == '-f')
 if force:
