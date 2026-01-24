@@ -1512,6 +1512,9 @@ typedef void *PetscCtx;
 .ve
    where `AppType` is a Fortran derived type.
 
+   If one passes a PETSc function with a `PetscCtxRt` argument as an argument in Fortran one must use the function named suffixed with `Cptr`,
+   for example `KSPConvergedDefaultDestroyCptr`, see src/ksp/ksp/tutorials/ex1f.F90.
+
    Developer Notes:
    C++ compilers generate a warning or error if one passes a pointer to a pointer to a specific type (instead of `void`), for example,
 .vb
@@ -1527,6 +1530,11 @@ typedef void *PetscCtx;
 
    `PetscCtxRt` is used instead of `void *` in PETSc code to enhance the clarity of the PETSc source code since `void *` serves so many different roles.
    The getAPI() code processor also uses the variable type to generate correct bindings for other languages.
+
+   The Fortran C stub and Fortran interface definition generated for functions with a `PetscCtxRt` argument are the C function name suffixed with
+   `Cptr`, for example `KSPConvergedDefaultDestroyCptr`. The Fortran user API is a macro with the original C funtion name, for example,
+   `KSPConvergedDefaultDestroy` that calls the  `KSPConvergedDefaultDestroyCptr` version and then calls `c_f_pointer()` to handle the equivalent of a `void**` cast
+   to the users Fortran derived type argument.
 
 .seealso: [](sec_fortran_context), `PetscCtx`, `PetscCtxDestroyFn()`, `PeOp`, `PeNS`, `PetscInitialize()`, `DMGetApplicationContext()`,
           `DMSetApplicationContextDestroy()`
