@@ -293,6 +293,20 @@ cdef class MatStencil:
 
     cdef PetscMatStencil stencil
 
+    def __getbuffer__(self, Py_buffer *view, int flags):
+        PyPetscBuffer_FillInfo(view,
+                               <void*>&self.stencil, 4, c'i', # `k, j, i, c`
+                               0, flags)
+
+    def __releasebuffer__(self, Py_buffer *view):
+        PyPetscBuffer_Release(view)
+
+    def __cinit__(self, i=0, j=0, k=0, c=0):
+        self.stencil.i = asInt(i)
+        self.stencil.j = asInt(j)
+        self.stencil.k = asInt(k)
+        self.stencil.c = asInt(c)
+
     property i:
         "First logical grid coordinate."
         def __get__(self) -> int:
@@ -3201,6 +3215,35 @@ cdef class Mat(Object):
         cdef PetscInsertMode im = insertmode(addv)
         matsetvaluestencil(self.mat, r, c, value, im, 0)
 
+    def setValuesStencil(
+        self,
+        rows: Sequence[Stencil] | Sequence[int] | ArrayInt,
+        cols: Sequence[Stencil] | Sequence[int] | ArrayInt,
+        values: Sequence[Scalar] | ArrayScalar,
+        addv: InsertModeSpec = None) -> None:
+        """Set a block of values using row and col stencils.
+
+        Not collective.
+
+        Parameters
+        ----------
+        rows
+            Row stencils.
+        cols
+            Column stencils.
+        values
+            The scalar values.
+        addv
+            Insertion mode.
+
+        See Also
+        --------
+        petsc.MatSetValuesStencil
+
+        """
+        cdef PetscInsertMode im = insertmode(addv)
+        matsetvaluesstencil(self.mat, rows, cols, values, im, 0)
+
     def setValueStagStencil(self, row, col, value, addv=None) -> None:
         """Not implemented."""
         raise NotImplementedError
@@ -3234,6 +3277,35 @@ cdef class Mat(Object):
         cdef MatStencil r = row, c = col
         cdef PetscInsertMode im = insertmode(addv)
         matsetvaluestencil(self.mat, r, c, value, im, 1)
+
+    def setValuesBlockedStencil(
+        self,
+        rows: Sequence[Stencil] | Sequence[int] | ArrayInt,
+        cols: Sequence[Stencil] | Sequence[int] | ArrayInt,
+        values: Sequence[Scalar] | ArrayScalar,
+        addv: InsertModeSpec = None) -> None:
+        """Set blocks of values using row and col stencils.
+
+        Not collective.
+
+        Parameters
+        ----------
+        rows
+            Row stencils.
+        cols
+            Column stencils.
+        values
+            The scalar values.
+        addv
+            Insertion mode.
+
+        See Also
+        --------
+        petsc.MatSetValuesBlockedStencil
+
+        """
+        cdef PetscInsertMode im = insertmode(addv)
+        matsetvaluesstencil(self.mat, rows, cols, values, im, 1)
 
     def setValueBlockedStagStencil(self, row, col, value, addv=None) -> None:
         """Not implemented."""

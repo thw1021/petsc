@@ -1220,6 +1220,56 @@ cdef matsetvaluestencil(PetscMat A,
                                    v, im))
     return 0
 
+cdef matsetvaluesstencil(PetscMat A,
+                         object orows, object ocols, object ovalues,
+                         PetscInsertMode im, int blocked):
+    cdef PetscInt nr=0, nc=0
+    cdef PetscInt ni=0, nj=0, nv=0
+    cdef PetscMatStencil *crows=NULL, *ccols=NULL
+    cdef PetscScalar *cvalues=NULL
+
+    # The shapes of `orows` and `ocols` should be similar to `(N, 4)`,
+    #   with type `PetscInt`, where `N` represents the number of stencils
+    #   and `4` represents the components of `PetscMatStencil`,
+    #   namely `PetscInt k, j, i, c`. They should be stored in a contiguous layout,
+    #   such as `[k0, j0, i0, c0, k1, j1, i1, c1, ...]` in memory.
+
+    # rows and columns
+    orows = iarray_i(orows, &nr, <PetscInt**>&crows)
+    ocols = iarray_i(ocols, &nc, <PetscInt**>&ccols)
+    if nr % 4 != 0: raise ValueError(
+        "rows array size must be multiple of 4, got %d" % (toInt(nr), ))
+    if nc % 4 != 0: raise ValueError(
+        "cols array size must be multiple of 4, got %d" % (toInt(nc), ))
+    ni = <PetscInt>(nr // 4)
+    nj = <PetscInt>(nc // 4)
+    # values
+    ovalues = iarray_s(ovalues, &nv, &cvalues)
+
+    # block size
+    cdef PetscInt rbs=1, cbs=1
+    if blocked:
+        CHKERR(MatGetBlockSizes(A, &rbs, &cbs))
+        if rbs < 1: rbs = 1
+        if cbs < 1: cbs = 1
+        if ni*nj*rbs*cbs != nv: raise ValueError(
+            "incompatible array sizes: ni=%d, nj=%d, nv=%d, rbs=%d, cbs=%d" % (toInt(ni), toInt(nj), toInt(nv), toInt(rbs), toInt(cbs)))
+    else:
+        if ni*nj != nv: raise ValueError(
+            "incompatible array sizes: ni=%d, nj=%d, nv=%d" % (toInt(ni), toInt(nj), toInt(nv)))
+
+    if blocked:
+        CHKERR(MatSetValuesBlockedStencil(A,
+                                          ni, crows,
+                                          nj, ccols,
+                                          cvalues, im))
+    else:
+        CHKERR(MatSetValuesStencil(A,
+                                   ni, crows,
+                                   nj, ccols,
+                                   cvalues, im))
+    return 0
+
 cdef mat_get_dlpack_ctx(Mat self):
     if 'dense' not in self.getType():
         raise NotImplementedError("Not for type {}".format(self.getType()))
