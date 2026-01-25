@@ -541,7 +541,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
           for (PetscInt d = 0; d < totDim; ++d) {
             for (PetscInt f = 0; f < totDim; ++f) PetscCall(PetscPrintf(ctx->comm, " %12.5e", (double)PetscRealPart(elemMat[d * totDim + f])));
             PetscCall(PetscPrintf(ctx->comm, "\n"));
-          } 
+          }
           PetscCheck(PETSC_FALSE, PetscObjectComm((PetscObject)JacP), PETSC_ERR_ARG_WRONG, "Debug element matrix requested, aborting");
         }
         PetscCall(PetscFree(elemMat));
