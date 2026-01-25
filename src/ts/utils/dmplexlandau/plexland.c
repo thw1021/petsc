@@ -541,8 +541,8 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
           for (PetscInt d = 0; d < totDim; ++d) {
             for (PetscInt f = 0; f < totDim; ++f) PetscCall(PetscPrintf(ctx->comm, " %12.5e", (double)PetscRealPart(elemMat[d * totDim + f])));
             PetscCall(PetscPrintf(ctx->comm, "\n"));
-          }
-          PetscCheck(PETSC_FALSE, PetscObjectComm((PetscObject)JacP), PETSC_ERR_ARG_WRONG, "Debug element matrix requested, aborting\n");
+          } 
+          PetscCheck(PETSC_FALSE, PetscObjectComm((PetscObject)JacP), PETSC_ERR_ARG_WRONG, "Debug element matrix requested, aborting");
         }
         PetscCall(PetscFree(elemMat));
       } /* grid */
@@ -1990,6 +1990,7 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
             fprintf(fp, "from mpl_toolkits.mplot3d import Axes3D\n");
             fprintf(fp, "fig = plt.figure()\n");
             fprintf(fp, "ax = fig.add_subplot(111, projection='3d')\n");
+            fprintf(fp, "ax.set_proj_type('ortho')\n");
             fprintf(fp, "xs = [");
             for (i = 0; i < nip_glb; i++) fprintf(fp, "%g,", (double)xx[i]);
             fprintf(fp, "]\n");
@@ -2000,7 +2001,7 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
             for (i = 0; i < nip_glb; i++) fprintf(fp, "%g,", (double)zz[i]);
             fprintf(fp, "]\n");
             fprintf(fp, "ax.scatter(xs, ys, zs, s=1)\n");
-            fprintf(fp, "ax.view_init(elev=88, azim=-90)\n");
+            fprintf(fp, "ax.view_init(elev=90, azim=-90)\n");
             fprintf(fp, "plt.savefig('cubed_sphere_points.png')\n");
             fprintf(fp, "plt.show()\n");
             fclose(fp);
