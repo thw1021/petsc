@@ -296,6 +296,7 @@ static PetscErrorCode CreateObservationMatrix2D(PetscInt nx, PetscInt ny, PetscI
 {
   PetscInt i, j, obs_idx, local_state_size;
   PetscInt nobs_x, nobs_y, nobs;
+  PetscInt rstart, rend;
 
   PetscFunctionBeginUser;
   /* Calculate number of observations */
@@ -306,22 +307,27 @@ static PetscErrorCode CreateObservationMatrix2D(PetscInt nx, PetscInt ny, PetscI
   PetscCall(VecGetLocalSize(state, &local_state_size));
 
   /* Create observation matrix H (nobs x nx*ny*ndof) */
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, local_state_size, nobs, nx * ny * ndof, 1, NULL, 0, NULL, H));
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, local_state_size, nobs, nx * ny * ndof, 1, NULL, 1, NULL, H));
   PetscCall(MatSetFromOptions(*H));
 
   /* Create H1 for scalar field (nobs x nx*ny) */
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, local_state_size / ndof, nobs, nx * ny, 1, NULL, 0, NULL, H1));
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, PETSC_DECIDE, local_state_size / ndof, nobs, nx * ny, 1, NULL, 1, NULL, H1));
   PetscCall(MatSetFromOptions(*H1));
 
-  /* Observe water height (h) at sparse grid locations */
+  /* Get row ownership range for local process */
+  PetscCall(MatGetOwnershipRange(*H, &rstart, &rend));
+
+  /* Observe water height (h) at sparse grid locations - only set local rows */
   obs_idx = 0;
   for (j = 0; j < ny; j += obs_stride) {
     for (i = 0; i < nx; i += obs_stride) {
-      PetscInt grid_idx = j * nx + i;
-      /* H1: select grid point */
-      PetscCall(MatSetValue(*H1, obs_idx, grid_idx, 1.0, INSERT_VALUES));
-      /* H: select h component (first DOF) at that grid point */
-      PetscCall(MatSetValue(*H, obs_idx, grid_idx * ndof, 1.0, INSERT_VALUES));
+      if (obs_idx >= rstart && obs_idx < rend) {
+        PetscInt grid_idx = j * nx + i;
+        /* H1: select grid point */
+        PetscCall(MatSetValue(*H1, obs_idx, grid_idx, 1.0, INSERT_VALUES));
+        /* H: select h component (first DOF) at that grid point */
+        PetscCall(MatSetValue(*H, obs_idx, grid_idx * ndof, 1.0, INSERT_VALUES));
+      }
       obs_idx++;
     }
   }
@@ -668,14 +674,23 @@ int main(int argc, char **argv)
                           flux_name, nx, ny, nx * ny * ndof, nx * ny, (int)ndof, nobs, obs_stride, ensemble_size, (double)Lx, (double)Ly, (double)dx, (double)dy, (double)h0, (double)Ax, (double)Ay, (double)g, (double)c, (double)dt, (double)cfl, steps, obs_freq, (double)obs_error_std, random_seed));
   }
 
-  /* Open output file if requested */
+  /* Open output file if requested - only in serial mode */
   if (output_enabled) {
-    PetscCall(PetscFOpen(PETSC_COMM_WORLD, output_file, "w", &fp));
-    PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "# 2D Shallow Water LETKF Output\n"));
-    PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "# nx=%d, ny=%d, ndof=%d, nobs=%d, ensemble_size=%d\n", (int)nx, (int)ny, (int)ndof, (int)nobs, (int)ensemble_size));
-    PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "# dt=%.6f, g=%.6f, obs_error_std=%.6f\n", (double)dt, (double)g, (double)obs_error_std));
-    PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "# Format: step time [truth]x(nx*ny*ndof) [mean]x(nx*ny*ndof) [obs]x(nobs) rmse_forecast rmse_analysis\n"));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Writing output to: %s\n\n", output_file));
+    PetscMPIInt size;
+    PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
+    if (size > 1) {
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Warning: Output file generation is only supported in serial mode (currently running with %d processes)\n", (int)size));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "         Disabling output file. Run with single process to enable.\n\n"));
+      output_enabled = PETSC_FALSE;
+      fp             = NULL;
+    } else {
+      PetscCall(PetscFOpen(PETSC_COMM_WORLD, output_file, "w", &fp));
+      PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "# 2D Shallow Water LETKF Output\n"));
+      PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "# nx=%d, ny=%d, ndof=%d, nobs=%d, ensemble_size=%d\n", (int)nx, (int)ny, (int)ndof, (int)nobs, (int)ensemble_size));
+      PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "# dt=%.6f, g=%.6f, obs_error_std=%.6f\n", (double)dt, (double)g, (double)obs_error_std));
+      PetscCall(PetscFPrintf(PETSC_COMM_WORLD, fp, "# Format: step time [truth]x(nx*ny*ndof) [mean]x(nx*ny*ndof) [obs]x(nobs) rmse_forecast rmse_analysis\n"));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Writing output to: %s\n\n", output_file));
+    }
   }
 
   /* Print initial condition */
