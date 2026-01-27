@@ -1,7 +1,7 @@
 static char help[] = "2D Shallow water equations with LETKF data assimilation.\n"
                      "Implements 2D shallow water equations with 3 DOF per grid point (h, hu, hv).\n\n"
                      "Example usage:\n"
-                     "  ./ex4 -steps 100 -nx 40 -ny 40 -petscda_type letkf -ensemble_size 30\n"
+                     "  ./ex4 -steps 100 -nx 41 -ny 41 -petscda_type letkf -ensemble_size 30\n"
                      "  ./ex4 -steps 500 -output_file output.txt -obs_freq 5\n\n";
 
 #include "petscda.h"
@@ -52,17 +52,6 @@ typedef struct {
   PetscReal   Ax, Ay;    /* Wave amplitudes */
   Ex4FluxType flux_type; /* Flux scheme */
 } ShallowWater2DCtx;
-
-/*
-  Limit - MC (Monotonized Central) limiter
-*/
-static PetscReal Limit(PetscReal a, PetscReal b)
-{
-  PetscReal c = 0.5 * (a + b);
-  if (a * b <= 0.0) return 0.0;
-  if (c > 0) return PetscMin(2.0 * a, PetscMin(2.0 * b, c));
-  else return PetscMax(2.0 * a, PetscMax(2.0 * b, c));
-}
 
 /*
   ComputeFluxX - Compute physical flux in x-direction for shallow water
@@ -295,45 +284,6 @@ static PetscErrorCode ShallowWaterSolution_Wave2D(PetscReal Lx, PetscReal Ly, Pe
 
   *hu = (*h) * u;
   *hv = (*h) * v;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-  ComputeL2Error - Compute L2 error against analytic solution
-*/
-static PetscErrorCode ComputeL2Error(Vec numerical, ShallowWater2DCtx *sw, PetscReal time, PetscReal *error)
-{
-  const PetscScalar ***x_array;
-  PetscInt             xs, ys, xm, ym, i, j;
-  PetscReal            local_sum = 0.0, global_sum;
-
-  PetscFunctionBeginUser;
-  PetscCall(DMDAGetCorners(sw->da, &xs, &ys, NULL, &xm, &ym, NULL));
-  PetscCall(DMDAVecGetArrayDOFRead(sw->da, numerical, (void *)&x_array));
-
-  for (j = ys; j < ys + ym; j++) {
-    for (i = xs; i < xs + xm; i++) {
-      PetscReal x = ((PetscReal)i + 0.5) * sw->dx;
-      PetscReal y = ((PetscReal)j + 0.5) * sw->dy;
-
-      PetscReal h_num  = PetscRealPart(x_array[j][i][0]);
-      PetscReal hu_num = PetscRealPart(x_array[j][i][1]);
-      PetscReal hv_num = PetscRealPart(x_array[j][i][2]);
-
-      PetscReal h_exact, hu_exact, hv_exact;
-      PetscCall(ShallowWaterSolution_Wave2D(sw->Lx, sw->Ly, x, y, time, sw->g, sw->h0, sw->Ax, sw->Ay, &h_exact, &hu_exact, &hv_exact));
-
-      PetscReal diff_h  = h_num - h_exact;
-      PetscReal diff_hu = hu_num - hu_exact;
-      PetscReal diff_hv = hv_num - hv_exact;
-
-      local_sum += diff_h * diff_h + diff_hu * diff_hu + diff_hv * diff_hv;
-    }
-  }
-
-  PetscCall(DMDAVecRestoreArrayDOFRead(sw->da, numerical, (void *)&x_array));
-  PetscCall(MPIU_Allreduce(&local_sum, &global_sum, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)sw->da)));
-  *error = PetscSqrtReal(global_sum / (sw->nx * sw->ny * 3));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -634,26 +584,29 @@ int main(int argc, char **argv)
 
       /* Extract x and y coordinates into separate vectors for each grid point */
       /* Need vectors sized for nx*ny points (not nx*ny*ndof)  */
+      PetscInt xs, ys, xm, ym;
+      PetscCall(DMDAGetCorners(da_state, &xs, &ys, NULL, &xm, &ym, NULL));
+
       for (PetscInt d = 0; d < 2; d++) {
         PetscScalar ***x_coord_3d;
         PetscScalar   *vec_array;
-        PetscInt       xs, ys, xm, ym, i, j, idx;
+        PetscInt       i, j, idx;
+        PetscInt       local_grid_points = xm * ym;
 
         /* Create vector for this coordinate component - size should be nx*ny */
         PetscCall(VecCreate(PETSC_COMM_WORLD, &Vecxyz[d]));
-        PetscCall(VecSetSizes(Vecxyz[d], PETSC_DECIDE, nx * ny));
+        PetscCall(VecSetSizes(Vecxyz[d], local_grid_points, nx * ny));
         PetscCall(VecSetFromOptions(Vecxyz[d]));
         PetscCall(PetscObjectSetName((PetscObject)Vecxyz[d], d == 0 ? "x_coordinate" : "y_coordinate"));
 
         /* Get coordinate array - it's structured as [x,y] pairs */
-        PetscCall(DMDAGetCorners(da_state, &xs, &ys, NULL, &xm, &ym, NULL));
         PetscCall(DMDAVecGetArrayDOFRead(cda, coord, (void *)&x_coord_3d));
         PetscCall(VecGetArray(Vecxyz[d], &vec_array));
 
         /* Copy coordinates from 2D array */
         idx = 0;
         for (j = ys; j < ys + ym; j++) {
-          for (i = xs; i < xs + xm; i++) { vec_array[idx++] = x_coord_3d[j][i][d]; }
+          for (i = xs; i < xs + xm; i++) vec_array[idx++] = x_coord_3d[j][i][d];
         }
 
         PetscCall(VecRestoreArray(Vecxyz[d], &vec_array));
@@ -864,14 +817,14 @@ int main(int argc, char **argv)
   testset:
     requires: kokkos_kernels !complex
     diff_args: -j
-    args: -steps 10 -progress_freq 1 -da_view -ensemble_size 10 -obs_freq 2 -obs_error 0.03 -nx 20 -ny 20
+    args: -steps 10 -progress_freq 1 -da_view -ensemble_size 10 -obs_freq 2 -obs_error 0.03 -nx 21 -ny 21
 
     test:
       suffix: letkf_wave2d
       args: -petscda_type letkf
 
     test:
-      nsize: 2
+      nsize: 3
       suffix: kokkos_wave2d
       args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -num_observations_vertex 5
 
