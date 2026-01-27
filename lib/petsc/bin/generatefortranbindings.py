@@ -36,6 +36,8 @@ CToFortranTypes = {'int':'integer4', 'ptrdiff_t':'PetscInt64', 'float':'PetscFor
                    'double':'PetscFortranDouble', 'short':None, 'size_t':'PetscSizeT', 'rocblas_status':None, 'PetscBT':None,
                    'PetscEnum':None, 'PetscDLHandle':None}
 
+BasicTypes = ['PetscInt', 'PetscScalar', 'PetscReal', 'PetscBool']
+
 verbose = False
 
 def verbosePrint(text):
@@ -182,7 +184,12 @@ def generateFortranInterface(pkgname, petscarch, classes, enums, structs, senums
       fun.arguments[0].typename = 'PetscObject'
       fun.arguments[2].typename = 'PetscObject'
 
-def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funname,fun):
+def verboseSkipCStub(fun, reason = ''):
+  '''Prints the reason a C stub is not being generated'''
+  #print('Skipping ' + fun.name + ' ' + reason)
+  pass
+
+def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,functiontypedefs,funname,fun):
   '''Generates the C stub that is callable from Fortran for a function'''
   #
   #
@@ -198,30 +205,48 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
   #     - const        - indicates the string argument is an input, not an output
   #     - stars == 1   - indicates the string is (in C) returned by a pointer to a string array
   #
-  if fun.penss: return
+  if fun.penss: return verboseSkipCStub(fun, 'penss')
 
   skipbody = False
   if fun.opaque or fun.opaquestub: skipbody = True
+  ctxname = 'NULL'
+  for k in fun.arguments:
+    if k.isfunction or k.typename == 'external':
+      for j in fun.arguments:
+        if j.typename == 'PetscCtx':
+          ctxname = j.name
+
   for k in fun.arguments:
     if k.array and k.stars and not k.typename == 'char': skipbody = True
     if k.stars and k.typename == 'MPI_Fint': skipbody = True
     if k.stars == 2 and k.typename == 'void': skipbody = True
-    if k.isfunction: skipbody = True
-  if skipbody and fun.name.lower() in manualstubsfound: return
+
+    if k.isfunction:
+      if not fun.arguments[0].typename in classes: return verboseSkipCStub(fun, 'function is not class method')
+      if not functiontypedefs[k.typename].arguments: return verboseSkipCStub(fun, 'argument function has no arguments')
+      if not functiontypedefs[k.typename].arguments[0].typename in classes and not functiontypedefs[k.typename].arguments[0].typename == 'PetscCtxRt': return verboseSkipCStub(fun, 'argument function 1st argument not class or PetscCtxRt')
+      if not fun.arguments[0].typename == functiontypedefs[k.typename].arguments[0].typename and not functiontypedefs[k.typename].arguments[0].typename == 'PetscCtxRt': return verboseSkipCStub(fun, 'argument function first argument does not match class or PetscCtxRt')
+      if functiontypedefs[k.typename].arguments[0].typename == 'PetscCtxRt' and ctxname == 'NULL': return verboseSkipCStub(fun, 'PetscCtxRt argument but no PetscCtx argument')
+    if k.typename == 'external':
+      if not fun.arguments[0].typename in classes: return verboseSkipCStub(fun, 'function is not class method')
+      if not k.fun.arguments: return verboseSkipCStub(fun, 'argument function has no arguments')
+      if not k.fun.arguments[0].typename in classes and not k.fun.arguments[0].typename == 'PetscCtxRt': return verboseSkipCStub(fun, 'argument function 1st argument not class or PetscCtxRt')
+      if not fun.arguments[0].typename == k.fun.arguments[0].typename and not k.fun.arguments[0].typename == 'PetscCtxRt': return verboseSkipCStub(fun, 'argument function first argument does not match class or PetscCtxRt')
+      if k.fun.arguments[0].typename == 'PetscCtxRt' and ctxname == 'NULL': return verboseSkipCStub(fun, 'PetscCtxRt argument but no PetscCtx argument')
+  if skipbody and fun.name.lower() in manualstubsfound: return verboseSkipCStub(fun, 'skip and manual stub found')
 
   for k in fun.arguments:
-    # no automatic stub if function returns an array, except if it is a string
-    if not skipbody and k.array and k.stars and not k.typename == 'char': return
-    if k.stars and k.typename == 'MPI_Fint': return   # TODO add support for returning MPI_Fint
-    if k.stars == 2 and k.typename == 'void': return
+    # no automatic stub if function return verboseSkipCStub(fun)s an array, except if it is a string
+    if not skipbody and k.array and k.stars and not k.typename == 'char': return verboseSkipCStub(fun, 'array and stars and not char')
+    if k.stars and k.typename == 'MPI_Fint': return verboseSkipCStub(fun, 'MPI_Fint')   # TODO add support for returning MPI_Fint
+    if k.stars == 2 and k.typename == 'void': return verboseSkipCStub(fun, 'multiple stars')
 
     # no manual stub if dealing with multidimensional arrays, voids, etc
     if skipbody:
-      if k.stars > 1: return
-      if k.typename == 'void': return
-      if k.typename == 'char' and not k.array: return
-      return
-
+      if k.stars > 1: return verboseSkipCStub(fun, 'multiple stars')
+      if k.typename == 'void': return verboseSkipCStub(fun, 'void argument')
+      if k.typename == 'char' and not k.array: return verboseSkipCStub(fun, 'char and not array')
+      return verboseSkipCStub(fun, 'skipbody')
   if not skipbody:
     if fun.file.endswith('.h'):
       dir = os.path.join(petscarch,'ftn',fun.mansec.lower(),'stubs')
@@ -260,6 +285,57 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
     fd.write('  #define ' + (funname + suffix).lower() + '_ ' + (funname + suffix).lower() + '\n')
     fd.write('#endif\n')
 
+    # generate the C functions that call each of the arguments that are functions being set
+    for k in fun.arguments:
+      isfunction = False
+      if k.typename == 'external' and k.fun.arguments:
+        arguments  = k.fun.arguments
+        isfunction = True
+        for j in arguments:
+          if j.name == 'noname': return verboseSkipCStub(fun, 'noname')
+      if k.isfunction and functiontypedefs[k.typename].arguments:
+        arguments  = functiontypedefs[k.typename].arguments
+        isfunction = True
+      if isfunction:
+        fd.write('\nstatic PetscFortranCallbackId ' + fun.name + '_' + k.name + '_ID = 0;')
+        fd.write('\nstatic PetscErrorCode ' + fun.name + '_' + k.name + '(')
+        cnt = 0
+        for j in arguments:
+          if cnt: fd.write(', ')
+          cnt = cnt + 1
+          if j.const: fd.write('const ')
+          fd.write(j.typename + ' ')
+          if j.stars == 1: fd.write('*')
+          fd.write(j.name)
+          if j.array: fd.write('[]')
+        fd.write(')\n{\n')
+        fd.write('  PetscObjectUseFortranCallback(')
+        if arguments[0].typename == 'PetscCtxRt': fd.write('*(PetscObject*) ')
+        fd.write(arguments[0].name + ', ' + fun.name + '_' + k.name + '_ID, (')
+        cnt = 0
+        for j in arguments:
+          if cnt: fd.write(', ')
+          cnt = cnt + 1
+          if j.const: fd.write('const ')
+          fd.write(j.typename)
+          if j.stars == 1:
+            fd.write(' *')
+          else:
+            if j.typename in classes or j.typename in BasicTypes: fd.write(' *')
+          if j.array: fd.write('[]')
+        fd.write(', PetscErrorCode *), (')
+        cnt = 0
+        for j in arguments:
+          if cnt: fd.write(', ')
+          cnt = cnt + 1
+          if not j.stars:
+            if j.typename in classes or j.typename in BasicTypes:
+              fd.write('&')
+          if j.typename == 'PetscCtxRt' or (j.typename == 'PetscCtx' and not ctxname == 'NULL'): fd.write('_ctx')
+          else: fd.write(j.name)
+        fd.write(', &ierr));\n')
+        fd.write('}\n')
+
     # output function declaration prototype
     fd.write(pkgname.upper() + '_EXTERN void ' + (funname + suffix).lower() + '_(')
     cnt = 0
@@ -278,7 +354,10 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
         if k.stars == 1 and k.array and not ktypename == 'char':
           fd.write('F90Array1d *')
         else:
-          fd.write(ktypename)
+          if ktypename.endswith('Fn') or ktypename == 'external':
+            fd.write('PetscFortranCallbackFn')
+          else:
+            fd.write(ktypename)
           fd.write(' ')
       if k.typename in structs.keys() and structs[k.typename].opaque:
         fd.write('*')
@@ -367,6 +446,13 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
             fd.write('  CHKFORTRANNULLBOOL(' + k.name + ');\n')
         cnt = cnt + 1
 
+      # Register each of the function callbacks
+      for k in fun.arguments:
+        if k.isfunction or k.typename == 'external':
+          fd.write('*ierr = PetscObjectSetFortranCallback((PetscObject)*' + fun.arguments[0].name + ', PETSC_FORTRAN_CALLBACK_CLASS, &' + fun.name + '_' + k.name + '_ID, ' + k.name + ', ')
+          fd.write(ctxname)
+          fd.write(');\n  if (*ierr) return;\n')
+
       # call C function
       fd.write('  *ierr = ' + funname + '(')
       cnt = 0
@@ -383,7 +469,7 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
           fd.write('c_')
         elif k.typename == 'MPI_Fint':
           fd.write('MPI_Comm_f2c(*(')
-        elif not k.stars and not k.array and not k.stringlen and not k.typename == 'PetscViewer' and not k.typename == 'PetscCtxRt' and not k.typename == 'PetscCtx':
+        elif not k.stars and not k.array and not k.stringlen and not k.typename == 'PetscViewer' and not k.typename == 'PetscCtxRt' and not k.typename == 'PetscCtx' and not k.typename == 'external':
           fd.write('*')
 #        if k.typename == 'void' and k.stars == 2:
 #          fd.write('&')
@@ -394,7 +480,12 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
           fd.write('v_')
         if k.typename in structs.keys() and structs[k.typename].opaque:
           fd.write('*')
-        fd.write(k.name)
+        if k.isfunction or k.typename == 'external':
+          fd.write(fun.name + '_')
+        if k.name == ctxname:
+          fd.write('*' + fun.arguments[0].name)
+        else:
+          fd.write(k.name)
         if k.typename == 'PetscBool' and not k.stars and not k.array:
           # handle bool argument fixes (-1 needs to be corrected to 1 for Intel compilers)
           fd.write(' ? PETSC_TRUE : PETSC_FALSE')
@@ -505,7 +596,7 @@ def main(petscdir,slepcdir,petscarch,mpi_f08 = 'Unknown'):
   pkgname = 'slepc' if slepcdir else 'petsc'
 
   if not slepcdir:
-    classes, enums, senums, typedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI(petscdir,'petsc')
+    classes, enums, senums, typedefs, functiontypedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI(petscdir,'petsc')
 
     with open(os.path.join(petscdir,petscarch,'lib','petsc','conf','classes.data'),'wb') as file:
       pickle.dump(classes,file)
@@ -528,7 +619,7 @@ def main(petscdir,slepcdir,petscarch,mpi_f08 = 'Unknown'):
       petsctypedefs = pickle.load(file)
 
     petscobjectfunctions = petscclasses['PetscObject'].functions
-    classes, enums, senums, typedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI(slepcdir,'slepc')
+    classes, enums, senums, typedefs, functiontypedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI(slepcdir,'slepc')
     classesext = classes.copy(); classesext.update(petscclasses)
     structsext = structs.copy(); structsext.update(petscstructs)
     enumsext = enums.copy(); enumsext.update(petscenums)
@@ -907,11 +998,11 @@ def main(petscdir,slepcdir,petscarch,mpi_f08 = 'Unknown'):
   for i in classes.keys():
     if i in ['PetscIntStack']: continue
     for j in classes[i].functions: # loop over functions in class
-      generateCStub(pkgname,petscarch,manualstubsfound,senumsext,classes,structsext,j,classes[i].functions[j])
+      generateCStub(pkgname,petscarch,manualstubsfound,senumsext,classes,structsext,functiontypedefs,j,classes[i].functions[j])
 
   for j in funcs.keys():
     if funcs[j].name in ['SlepcDebugViewMatrix']: continue
-    generateCStub(pkgname,petscarch,manualstubsfound,senumsext,classes,structsext,funcs[j].name,funcs[j])
+    generateCStub(pkgname,petscarch,manualstubsfound,senumsext,classes,structsext,functiontypedefs,funcs[j].name,funcs[j])
 
 ##########  $PETSC_ARCH/ftn/MANSEC/petscall.*
 

@@ -45,10 +45,10 @@ regcomment2  = re.compile(r'// [-A-Za-z _(),<>|^\*/0-9.:=\[\]\.;]*')
 regblank     = re.compile(r' [ ]*')
 
 def displayIncludeMansec(obj):
-    return '  ' + str(obj.includefile)+' (' + str(obj.mansec) + ')\n'
+    return '  include file: ' + str(obj.includefile)+'\n  manual page section (mansec): ' + str(obj.mansec) + '\n'
 
 def displayFile(obj):
-    return '  ' + str(obj.dir) + '/' + str(obj.file) + '\n'
+    return str(obj.dir) + '/' + str(obj.file) + '\n'
 
 class Typedef:
     '''Represents typedef oldtype newtype'''
@@ -78,12 +78,11 @@ class Function:
 
     def __str__(self):
         mstr = '  ' + str(self.name) + '()\n'
-        mstr += '  ' + displayIncludeMansec(self)
-        mstr += '  ' + displayFile(self)
+        mstr += '    source code location: ' + displayFile(self)
         if self.opaque:   mstr += '    opaque binding\n'
         elif self.opaque: mstr += '    opaque stub\n'
         if self.arguments:
-          mstr += '    Arguments\n'
+          mstr += '    arguments:\n'
           for i in self.arguments:
             mstr += '  ' + str(i)
         return mstr
@@ -100,10 +99,9 @@ class FunctionTypedef:
 
     def __str__(self):
         mstr = '  ' + str(self.name) + '()\n'
-        mstr += '  ' + displayIncludeMansec(self)
-        mstr += '  ' + displayFile(self)
+        mstr += displayIncludeMansec(self)
         if self.arguments:
-          mstr += '    Arguments\n'
+          mstr += '    arguments:\n'
           for i in self.arguments:
             mstr += '  ' + str(i)
         return mstr
@@ -177,8 +175,9 @@ class Enum:
     def __str__(self):
         mstr = str(self.name) + '\n'
         mstr += displayIncludeMansec(self)
+        mstr += '  values:\n'
         for i in self.values:
-          mstr += '  ' + str(i) + '\n'
+          mstr += '    ' + str(i) + '\n'
         return mstr
 
 class Senum:
@@ -192,8 +191,9 @@ class Senum:
     def __str__(self):
         mstr = str(self.name) + '\n'
         mstr += displayIncludeMansec(self)
+        mstr += '  values:\n'
         for i in self.values.keys():
-          mstr += '  ' + i + ' ' + self.values[i] + '\n'
+          mstr += '    ' + i + ' ' + self.values[i] + '\n'
         return mstr
 
 class IncludeFile:
@@ -204,9 +204,11 @@ class IncludeFile:
         self.included    = included # include files it includes
 
     def __str__(self):
-        mstr = str(self.mansec) + ' ' + str(self.includefile) + '\n'
+        mstr = str(self.includefile) + '\n'
+        mstr += '  manual page section (mansec): ' + str(self.mansec) + '\n'
+        mstr += '  included files:\n'
         for i in self.included:
-          mstr += '  ' + str(i) + '\n'
+          mstr += '    ' + str(i) + '\n'
         return mstr
 
 class Class:
@@ -221,7 +223,8 @@ class Class:
     def __str__(self):
         mstr = str(self.name) + '\n'
         mstr += displayIncludeMansec(self)
-        mstr += '  PetscObject <' + str(self.petscobject) + '>\n\n'
+        mstr += '  Subclass of PetscObject <' + str(self.petscobject) + '>\n\n'
+        mstr += '  Methods:\n'
         for i in self.functions.keys():
           mstr += '  ' + str(self.functions[i]) + '\n'
         return mstr
@@ -357,7 +360,7 @@ def getTypedefs(filename):
 def getFunctionTypedefs(filename):
   import re
   file = os.path.basename(filename).replace('types.h','.h')
-  regdefine   = re.compile(r'PETSC_EXTERN_TYPEDEF typedef PetscErrorCode ([a-zA-Z]*\([ *()A-Za-z0-9_,]*\));')
+  regdefine   = re.compile(r'PETSC_EXTERN_TYPEDEF typedef [a-zA-Z ]* ([a-zA-Z0-9]*\([ \[\]*()A-Za-z0-9_,]*\));')
   submansec = None
   mansec = None
   f = open(filename)
@@ -498,6 +501,7 @@ def parseFunction(line):
   '''Parses a function declaration such as SNESFunctionFn(SNES snes, Vec u, Vec F, void *ctx)'''
   import re
   regfun      = re.compile(r'^[static inline]*PetscErrorCode ')
+  regfunvoid  = re.compile(r'^[static inline]*void ')
   regarg      = re.compile(r'\([A-Za-z0-9*_\[\]]*[,\) ]')
   regerror    = re.compile(r'PetscErrorCode')
   reg         = re.compile(r' ([*])*[a-zA-Z0-9_]*([\[\]]*)')
@@ -525,6 +529,7 @@ def parseFunction(line):
   line = line.replace('PETSC_RESTRICT ','')
   line = line.strip()
   line = regfun.sub("",line)
+  line = regfunvoid.sub("",line)
   line = regcomment.sub("",line)
   line = line.strip()
   name = line[:line.find("(")]
@@ -544,8 +549,7 @@ def parseFunction(line):
     line = line.replace(fnctnptrs[i], 'external ' + fnctnptrnames[i])
 
   fl = regarg.search(line)
-  fun = Function(name)
-
+  fun = FunctionTypedef(name)
   arg = fl.group(0)
   arg = arg[1:-1]
   reject = 0
@@ -590,7 +594,7 @@ def parseFunction(line):
         if fun.arguments and not fun.arguments[-1].const and fun.arguments[-1].typename == 'char' and arg.typename == 'size_t':
           arg.stringlen = True
         fun.arguments.append(arg)
-      return fun
+  return fun
 
 def getFunctions(mansec, functiontoinclude, filename):
   '''Appends the functions found in filename to their associated class classes[i], or funcs[] if they are classless'''
@@ -751,7 +755,8 @@ def getFunctions(mansec, functiontoinclude, filename):
                 arg.isfunction = True
               if arg.typename == 'external':
                 arg.fnctnptr   = fnctnptrs[fnctnptrnames.index(arg.name)]
-                fun.opaquestub = True
+                arg.fun        = parseFunction(re.sub(r'\(\*([A-Za-z0-9]*)\)',r'\1',arg.fnctnptr))
+                arg.name       = arg.fun.name
               if arg.typename.count('_') and not arg.typename in ['MPI_Comm', 'size_t']:
                 fun.opaque = True
               if fun.arguments and not fun.arguments[-1].const and fun.arguments[-1].typename == 'char' and arg.typename == 'size_t':
@@ -780,25 +785,25 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
   args = [os.path.join('include',i) for i in os.listdir(os.path.join(directory,'include')) if i.endswith('.h') and not i.endswith('deprecated.h')]
   for i in args:
     getIncludeFiles(i,pkgname)
-  verbosePrint(verbose, 'Include files -------------------------------------')
+  verbosePrint(verbose, '# PETSc include files')
   for i in includefiles.keys():
     verbosePrint(verbose, includefiles[i])
 
   for i in args:
     getEnums(i)
-  verbosePrint(verbose, 'Enums ---------------------------------------------')
+  verbosePrint(verbose, '# PETSc integer represented enum types')
   for i in enums.keys():
     verbosePrint(verbose, enums[i])
 
   for i in args:
     getSenums(i)
-  verbosePrint(verbose, 'String enums ---------------------------------------------')
+  verbosePrint(verbose, '# PETSc string represented enum types')
   for i in senums.keys():
     verbosePrint(verbose, senums[i])
 
   for i in args:
     getStructs(i)
-  verbosePrint(verbose, 'Structs ---------------------------------------------')
+  verbosePrint(verbose, '# PETSc structs')
   for i in structs.keys():
     verbosePrint(verbose, structs[i])
 
@@ -808,7 +813,7 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
   for i in typedefs.keys():
     if typedefs[i].name: cp[i] = typedefs[i] # delete ones marked as having multiple definitions
   typedefs = cp
-  verbosePrint(verbose, 'Typedefs ---------------------------------------------')
+  verbosePrint(verbose, '# PETSc typedefs')
   for i in typedefs.keys():
     verbosePrint(verbose, typedefs[i])
 
@@ -825,7 +830,9 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
     if not os.path.isfile(os.path.join(dirpath,'makefile')): continue
     mansec, submansec = findlmansec(dirpath)
     for i in os.listdir(dirpath):
-      if i.endswith('.c') or i.endswith('.cxx'): getFunctions(mansec, functiontoinclude, os.path.join(dirpath,i))
+      if i.startswith('.'): continue
+      if i.endswith('.c') or i.endswith('.cxx'):
+        getFunctions(mansec, functiontoinclude, os.path.join(dirpath,i))
   for i in args:
     mansec = None
     with open(i) as fd:
@@ -980,17 +987,17 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
                                                   Argument('n',             'PetscInt',    stars = 1),
                                                   Argument('set',           'PetscBool',   stars = 1)]
 
-  verbosePrint(verbose, 'Classes  ---------------------------------------------')
+  verbosePrint(verbose, '# PETSc classes')
   for i in classes.keys():
     verbosePrint(verbose, classes[i])
 
-  verbosePrint(verbose, 'Standalone functions  --------------------------------')
+  verbosePrint(verbose, '# PETSc standalone functions')
   for i in funcs.keys():
     verbosePrint(verbose, funcs[i])
 
-  verbosePrint(verbose, 'Function typedefs  --------------------------------')
+  verbosePrint(verbose, '# PETSc typedefs for function prototypes')
   for i in functiontypedefs.keys():
-    verbosePrint(True, functiontypedefs[i])
+    verbosePrint(verbose, functiontypedefs[i])
 
   #file = open('classes.data','wb')
   #pickle.dump(enums,file)
@@ -1000,7 +1007,7 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
   #pickle.dump(classes,file)
   #pickle.dump(typedefs,file)
 
-  return classes, enums, senums, typedefs, structs, funcs, includefiles, mansecs, submansecs
+  return classes, enums, senums, typedefs, functiontypedefs, structs, funcs, includefiles, mansecs, submansecs
 
 #
 if __name__ ==  '__main__':

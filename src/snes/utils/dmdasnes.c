@@ -21,8 +21,8 @@ typedef struct {
   InsertMode residuallocalimode;
 
   /*   For Picard iteration defined locally */
-  PetscErrorCode (*rhsplocal)(DMDALocalInfo *, void *, void *, void *);
-  PetscErrorCode (*jacobianplocal)(DMDALocalInfo *, void *, Mat, Mat, void *);
+  PetscErrorCode (*rhsplocal)(DMDALocalInfo *, void *, void *, PetscCtx);
+  PetscErrorCode (*jacobianplocal)(DMDALocalInfo *, void *, Mat, Mat, PetscCtx);
   void *picardlocalctx;
 } DMSNES_DA;
 
@@ -354,7 +354,7 @@ PetscErrorCode DMDASNESSetJacobianLocal(DM dm, PetscErrorCode (*func)(DMDALocalI
 
 .seealso: [](ch_snes), `DMDA`, `DMDASNESSetJacobianLocal()`, `DMDASNESSetFunctionLocalVec()`, `DMSNESSetJacobian()`, `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`
 @*/
-PetscErrorCode DMDASNESSetJacobianLocalVec(DM dm, PetscErrorCode (*func)(DMDALocalInfo *info, Vec x, Mat J, Mat M, void *), PetscCtx ctx)
+PetscErrorCode DMDASNESSetJacobianLocalVec(DM dm, PetscErrorCode (*func)(DMDALocalInfo *info, Vec x, Mat J, Mat M, PetscCtx ctx), PetscCtx ctx)
 {
   DMSNES     sdm;
   DMSNES_DA *dmdasnes;
@@ -391,7 +391,7 @@ PetscErrorCode DMDASNESSetJacobianLocalVec(DM dm, PetscErrorCode (*func)(DMDALoc
 
 .seealso: [](ch_snes), `DMDA`, `DMSNESSetFunction()`, `DMDASNESSetJacobianLocal()`, `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `DMDASNESObjectiveFn`
 @*/
-PetscErrorCode DMDASNESSetObjectiveLocal(DM dm, PetscErrorCode (*func)(DMDALocalInfo *info, void *x, PetscReal *obj, void *), PetscCtx ctx)
+PetscErrorCode DMDASNESSetObjectiveLocal(DM dm, PetscErrorCode (*func)(DMDALocalInfo *info, void *x, PetscReal *obj, PetscCtx ctx), PetscCtx ctx)
 {
   DMSNES     sdm;
   DMSNES_DA *dmdasnes;
@@ -428,7 +428,7 @@ PetscErrorCode DMDASNESSetObjectiveLocal(DM dm, PetscErrorCode (*func)(DMDALocal
 
 .seealso: [](ch_snes), `DMDA`, `DMDASNESSetObjectiveLocal()`, `DMSNESSetFunction()`, `DMDASNESSetJacobianLocalVec()`, `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `DMDASNESObjectiveVecFn`
 @*/
-PetscErrorCode DMDASNESSetObjectiveLocalVec(DM dm, PetscErrorCode (*func)(DMDALocalInfo *info, Vec x, PetscReal *obj, void *), PetscCtx ctx)
+PetscErrorCode DMDASNESSetObjectiveLocalVec(DM dm, PetscErrorCode (*func)(DMDALocalInfo *info, Vec x, PetscReal *obj, PetscCtx ctx), PetscCtx ctx)
 {
   DMSNES     sdm;
   DMSNES_DA *dmdasnes;
