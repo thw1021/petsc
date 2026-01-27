@@ -1017,12 +1017,12 @@ int main(int argc, char **argv)
 
   test:
     suffix: verification
-    requires: !complex
+    requires: !complex kokkos_kernels
     args: -verification_mode -steps 50 -nx 40 -ny 40 -verification_freq 10
 
   test:
     suffix: verification_parallel
-    requires: !complex
+    requires: !complex kokkos_kernels
     nsize: 2
     args: -verification_mode -steps 20 -nx 30 -ny 30 -verification_freq 5
 
