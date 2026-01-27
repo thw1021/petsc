@@ -289,7 +289,7 @@ static PetscErrorCode ShallowWaterSolution_Wave2D(PetscReal Lx, PetscReal Ly, Pe
 
 /*
   CreateObservationMatrix2D - Create observation matrix H for 2D shallow water
-  
+
   Observes water height (h) at every obs_stride-th grid point in both x and y directions.
 */
 static PetscErrorCode CreateObservationMatrix2D(PetscInt nx, PetscInt ny, PetscInt ndof, PetscInt obs_stride, Vec state, Mat *H, Mat *H1, PetscInt *nobs_out)
