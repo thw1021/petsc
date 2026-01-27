@@ -336,13 +336,12 @@ static PetscErrorCode ComputeAnalyticError(Vec numerical, DM da, PetscReal time,
   PetscCall(DMDAVecRestoreArrayDOFRead(da, numerical, (void *)&x_num));
 
   /* Global reduction for L1 and L2 norms */
-  PetscCall(MPIU_Allreduce(&L1_local, L1_error, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)da)));
-  PetscCall(MPIU_Allreduce(&L2_local, L2_error, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)da)));
+  PetscCallMPI(MPIU_Allreduce(&L1_local, L1_error, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)da)));
+  PetscCallMPI(MPIU_Allreduce(&L2_local, L2_error, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)da)));
   *L2_error = PetscSqrtReal(*L2_error);
 
   /* Global reduction for Linf norm */
-  PetscCall(MPIU_Allreduce(&Linf_local, Linf_error, 1, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)da)));
-
+  PetscCallMPI(MPIU_Allreduce(&Linf_local, Linf_error, 1, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)da)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
