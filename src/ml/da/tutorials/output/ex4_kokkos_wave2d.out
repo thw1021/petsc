@@ -13,6 +13,7 @@ PetscDALETKF Object:
   Localization matrix: set
 2D Shallow Water LETKF Example
 ==============================
+  Mode                  : Data Assimilation
   Flux scheme           : Rusanov (1st order)
   Grid dimensions       : 21 x 21
   State dimension       : 1323 (441 grid points x 3 DOF)
