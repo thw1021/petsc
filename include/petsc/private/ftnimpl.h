@@ -374,7 +374,7 @@ static inline PetscViewer PetscPatchDefaultViewers(PetscViewer *v)
     void(*func) types, *_ctx; \
     PetscFunctionBegin; \
     PetscCall(PetscObjectGetFortranCallback((PetscObject)(obj), (cbclass), (cid), (PetscFortranCallbackFn **)&func, &_ctx)); \
-    if (func) PetscCallFortranVoidFunction((*func)args); \
+    if (func && (PetscFortranCallbackFn *)func != (PetscFortranCallbackFn *)PETSC_NULL_FUNCTION_Fortran) PetscCallFortranVoidFunction((*func)args); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } while (0)
 #define PetscObjectUseFortranCallback(obj, cid, types, args)        PetscObjectUseFortranCallback_Private(obj, cid, types, args, PETSC_FORTRAN_CALLBACK_CLASS)

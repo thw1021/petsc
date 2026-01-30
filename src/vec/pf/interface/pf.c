@@ -24,7 +24,7 @@ PetscBool         PFRegisterAllCalled = PETSC_FALSE;
 
 .seealso: `PF`, `PFCreate()`, `PFDestroy()`, `PFSetType()`, `PFApply()`, `PFApplyVec()`
 @*/
-PetscErrorCode PFSet(PF pf, PetscErrorCode (*apply)(void *, PetscInt, const PetscScalar *, PetscScalar *), PetscErrorCode (*applyvec)(void *, Vec, Vec), PetscErrorCode (*view)(void *, PetscViewer), PetscErrorCode (*destroy)(void *), void *ctx)
+PetscErrorCode PFSet(PF pf, PetscErrorCode (*apply)(PetscCtx, PetscInt, const PetscScalar *, PetscScalar *), PetscErrorCode (*applyvec)(PetscCtx, Vec, Vec), PetscErrorCode (*view)(PetscCtx, PetscViewer), PetscErrorCode (*destroy)(PetscCtxRt), PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pf, PF_CLASSID, 1);
@@ -303,7 +303,7 @@ PetscErrorCode PFView(PF pf, PetscViewer viewer)
 
 .seealso: `PF`, `PFRegisterAll()`, `PFRegisterDestroy()`
 @*/
-PetscErrorCode PFRegister(const char sname[], PetscErrorCode (*function)(PF, void *))
+PetscErrorCode PFRegister(const char sname[], PetscErrorCode (*function)(PF, PetscCtx))
 {
   PetscFunctionBegin;
   PetscCall(PFInitializePackage());
@@ -356,10 +356,10 @@ PetscErrorCode PFGetType(PF pf, PFType *type)
 
 .seealso: `PF`, `PFSet()`, `PFRegister()`, `PFCreate()`, `DMDACreatePF()`
 @*/
-PetscErrorCode PFSetType(PF pf, PFType type, void *ctx)
+PetscErrorCode PFSetType(PF pf, PFType type, PetscCtx ctx)
 {
   PetscBool match;
-  PetscErrorCode (*r)(PF, void *);
+  PetscErrorCode (*r)(PF, PetscCtx);
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pf, PF_CLASSID, 1);

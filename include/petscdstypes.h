@@ -124,7 +124,7 @@ PETSC_EXTERN const char *const PetscWeakFormKinds[];
 .seealso: `PetscPointFn`, `PetscDSSetObjective()`, `PetscDSGetObjective()`, PetscDSGetResidual()`, `PetscDSSetResidual()`,
           `PetscDSGetRHSResidual()`, `PetscDSGetRHSResidual()`, `PetscDSSetUpdate()`, `PetscDSGetUpdate()`, `DMPlexSetCoordinateMap()`
 S*/
-typedef void PetscPointFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal X[], PetscInt numConstants, const PetscScalar constants[], PetscScalar result[]);
+PETSC_EXTERN_TYPEDEF typedef void PetscPointFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal X[], PetscInt numConstants, const PetscScalar constants[], PetscScalar result[]);
 
 /*S
   PetscPointJacFn - A prototype of a pointwise function that can be passed to, for example, `PetscDSSetJacobian()` for computing Jacobians
@@ -155,7 +155,7 @@ typedef void PetscPointFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const Petsc
 .seealso: `PetscPointFn`, `PetscDSSetJacobian()`, `PetscDSGetJacobian()`, PetscDSSetJacobianPreconditioner()`, `PetscDSGetJacobianPreconditioner()`,
           `PetscDSSetDynamicJacobian()`, `PetscDSGetDynamicJacobian()`
 S*/
-typedef void PetscPointJacFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g[]);
+PETSC_EXTERN_TYPEDEF typedef void PetscPointJacFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g[]);
 
 /*S
   PetscBdPointFn - A prototype of a pointwise boundary function that can be passed to, for example, `PetscDSSetBdResidual()`
@@ -187,7 +187,7 @@ typedef void PetscPointJacFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const Pe
           `PetscDSGetRHSResidual()`, `PetscDSGetRHSResidual()`, `PetscDSSetUpdate()`, `PetscDSGetUpdate()`, `DMPlexSetCoordinateMap()`,
           `PetscDSSetResidual()`, `PetscPointJacFn`
 S*/
-typedef void PetscBdPointFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[]);
+PETSC_EXTERN_TYPEDEF typedef void PetscBdPointFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f[]);
 
 /*S
   PetscBdPointJacFn - A prototype of a pointwise boundary function that can be passed to, for example, `PetscDSSetBdJacobian()`
@@ -221,7 +221,7 @@ typedef void PetscBdPointFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const Pet
           `PetscDSGetRHSResidual()`, `PetscDSGetRHSResidual()`, `PetscDSSetUpdate()`, `PetscDSGetUpdate()`, `DMPlexSetCoordinateMap()`,
           `PetscDSSetResidual()`, `PetscPointJacFn`
 S*/
-typedef void PetscBdPointJacFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[]);
+PETSC_EXTERN_TYPEDEF typedef void PetscBdPointJacFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[]);
 
 /*S
   PetscPointExactSolutionFn - A prototype of a pointwise function that computes the exact solution to a PDE. Used with, for example,
@@ -239,7 +239,7 @@ typedef void PetscBdPointJacFn(PetscInt dim, PetscInt Nf, PetscInt NfAux, const 
 
 .seealso: `PetscPointFn`, `PetscDSSetExactSolution()`, `PetscDSGetExactSolution()`, `PetscDSSetExactSolutionTimeDerivative()`, `PetscDSGetExactSolutionTimeDerivative()`
 S*/
-typedef PetscErrorCode PetscPointExactSolutionFn(PetscInt dim, PetscReal t, const PetscReal x[], PetscInt Nc, PetscScalar u[], void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscPointExactSolutionFn(PetscInt dim, PetscReal t, const PetscReal x[], PetscInt Nc, PetscScalar u[], PetscCtx ctx);
 
 /*S
   PetscRiemannFn - A prototype of a pointwise function that can be passed to, for example, `PetscDSSetRiemannSolver()`
@@ -260,7 +260,7 @@ typedef PetscErrorCode PetscPointExactSolutionFn(PetscInt dim, PetscReal t, cons
 
 .seealso: `PetscPointFn`, `PetscDSSetRiemannSolver()`, `PetscDSGetRiemannSolver()`
 S*/
-typedef void PetscRiemannFn(PetscInt dim, PetscInt Nf, const PetscReal x[], const PetscReal n[], const PetscScalar uL[], const PetscScalar uR[], PetscInt numConstants, const PetscScalar constants[], PetscScalar flux[], void *ctx);
+PETSC_EXTERN_TYPEDEF typedef void PetscRiemannFn(PetscInt dim, PetscInt Nf, const PetscReal x[], const PetscReal n[], const PetscScalar uL[], const PetscScalar uR[], PetscInt numConstants, const PetscScalar constants[], PetscScalar flux[], PetscCtx ctx);
 
 /*S
   PetscSimplePointFn - A prototype of a simple pointwise function that can be passed to, for example, `DMPlexTransformExtrudeSetNormalFunction()`
@@ -280,7 +280,7 @@ typedef void PetscRiemannFn(PetscInt dim, PetscInt Nf, const PetscReal x[], cons
 
 .seealso: `PetscPointFn`, `DMPlexTransformExtrudeSetNormalFunction()`, `DMSwarmSetCoordinateFunction()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscSimplePointFn(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt r, PetscScalar u[], void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscSimplePointFn(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt r, PetscScalar u[], PetscCtx ctx);
 
 PETSC_EXTERN_TYPEDEF typedef PetscSimplePointFn *PetscSimplePointFunc PETSC_DEPRECATED_TYPEDEF(3, 24, 0, "PetscSimplePointFn*", );
 PETSC_EXTERN_TYPEDEF typedef PetscPointFn       *PetscPointFunc PETSC_DEPRECATED_TYPEDEF(3, 24, 0, "PetscPointFn*", );
@@ -304,4 +304,4 @@ PETSC_EXTERN_TYPEDEF typedef PetscRiemannFn     *PetscRiemannFunc PETSC_DEPRECAT
 
 .seealso: `PetscPointFn`, `PetscDSSetLowerBound()`, `PetscDSSetUpperBound()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscPointBoundFn(PetscInt dim, PetscReal t, const PetscReal x[], PetscInt Nc, PetscScalar u[], void *ctx);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscPointBoundFn(PetscInt dim, PetscReal t, const PetscReal x[], PetscInt Nc, PetscScalar u[], PetscCtx ctx);
