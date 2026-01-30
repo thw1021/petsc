@@ -1,5 +1,6 @@
 #include <petsc/private/pcimpl.h>  /*I "petscpc.h" I*/
 #include <petsc/private/kspimpl.h> /*  This is needed to provide the appropriate PETSC_EXTERN for KSP_Solve_FS ....*/
+#include <petsc/private/matimpl.h> /* MatScatterDense_Private() for PCMatApply() */
 #include <petscdm.h>
 #include <petscdevice.h>
 #if PetscDefined(HAVE_CUDA)
@@ -18,6 +19,7 @@ typedef struct _PC_FieldSplitLink *PC_FieldSplitLink;
 struct _PC_FieldSplitLink {
   KSP               ksp;
   Vec               x, y, z;
+  Mat               x_mat, y_mat; // no z_mat until SCHUR mode
   char             *splitname;
   PetscInt          nfields;
   PetscInt         *fields, *fields_col;
@@ -1452,6 +1454,53 @@ static PetscErrorCode PCApplyTranspose_FieldSplit_Schur(PC pc, Vec x, Vec y)
                     KSPSolve(ilink->ksp, ilink->x, ilink->y) || KSPCheckSolve(ilink->ksp, pc, ilink->y) || PetscLogEventEnd(ilink->event, ilink->ksp, ilink->x, ilink->y, NULL) || VecScatterBegin(ilink->sctx, ilink->y, yy, ADD_VALUES, SCATTER_REVERSE) || \
                     VecScatterEnd(ilink->sctx, ilink->y, yy, ADD_VALUES, SCATTER_REVERSE)))
 
+/*
+  PCFieldSplitCreateWorkMats_Private - Allocate per-field dense work matrices for multi-RHS
+
+  Input Parameters:
++ pc - the PC context
+- N  - number of columns (right-hand sides)
+
+  Notes:
+  Allocates ilink->x_mat and ilink->y_mat for each field.
+  If matrices already exist with correct column count, they are reused.
+  If column count changed, old matrices are destroyed and new ones created.
+*/
+static PetscErrorCode PCFieldSplitCreateWorkMats_Private(PC pc, PetscInt N)
+{
+  PC_FieldSplit    *jac   = (PC_FieldSplit *)pc->data;
+  PC_FieldSplitLink ilink = jac->head;
+  PetscInt          mx, Mx, my, My, N_existing;
+
+  PetscFunctionBegin;
+  while (ilink) {
+    /* check if reallocation needed (previous allocation with wrong number of columns) */
+    if (ilink->x_mat) {
+      PetscCall(MatGetSize(ilink->x_mat, NULL, &N_existing));
+      if (N_existing != N) {
+        PetscCall(MatDestroy(&ilink->x_mat));
+        PetscCall(MatDestroy(&ilink->y_mat));
+      }
+    }
+    /* allocate if needed */
+    if (!ilink->x_mat) {
+      VecType xtype, ytype;
+
+      PetscCall(VecGetType(ilink->x, &xtype));
+      PetscCall(VecGetType(ilink->y, &ytype));
+      PetscCall(VecGetLocalSize(ilink->x, &mx));
+      PetscCall(VecGetSize(ilink->x, &Mx));
+      PetscCall(VecGetLocalSize(ilink->y, &my));
+      PetscCall(VecGetSize(ilink->y, &My));
+      /* use default lda */
+      PetscCall(MatCreateDenseFromVecType(PetscObjectComm((PetscObject)pc), xtype, mx, N, Mx, PETSC_DECIDE, -1, NULL, &ilink->x_mat));
+      PetscCall(MatCreateDenseFromVecType(PetscObjectComm((PetscObject)pc), ytype, my, N, My, PETSC_DECIDE, -1, NULL, &ilink->y_mat));
+    }
+    ilink = ilink->next;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PCApply_FieldSplit(PC pc, Vec x, Vec y)
 {
   PC_FieldSplit    *jac   = (PC_FieldSplit *)pc->data;
@@ -1550,6 +1599,89 @@ static PetscErrorCode PCApply_FieldSplit(PC pc, Vec x, Vec y)
       }
     }
   } else SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Unsupported or unknown composition %d", (int)jac->type);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCMatApply_FieldSplit(PC pc, Mat X, Mat Y)
+{
+  PC_FieldSplit    *jac   = (PC_FieldSplit *)pc->data;
+  PC_FieldSplitLink ilink = jac->head;
+  PetscInt          cnt;
+  PetscInt          ncolLocal;
+
+  PetscFunctionBegin;
+  PetscCall(MatGetLocalSize(X, NULL, &ncolLocal));
+
+  /* allocate working matrices, with the correct number of columns */
+  PetscCall(PCFieldSplitCreateWorkMats_Private(pc, ncolLocal));
+
+  if (jac->type == PC_COMPOSITE_ADDITIVE) {
+    PetscCall(MatZeroEntries(Y));
+    while (ilink) {
+      PetscCall(MatDenseScatter_Private(ilink->sctx, X, ilink->x_mat, INSERT_VALUES, SCATTER_FORWARD));
+      PetscCall(PetscLogEventBegin(ilink->event, ilink->ksp, ilink->x_mat, ilink->y_mat, NULL));
+      PetscCall(KSPMatSolve(ilink->ksp, ilink->x_mat, ilink->y_mat));
+      PetscCall(PetscLogEventEnd(ilink->event, ilink->ksp, ilink->x_mat, ilink->y_mat, NULL));
+      PetscCall(MatDenseScatter_Private(ilink->sctx, ilink->y_mat, Y, ADD_VALUES, SCATTER_REVERSE));
+      ilink = ilink->next;
+    }
+  } else if (jac->type == PC_COMPOSITE_MULTIPLICATIVE && jac->nsplits == 2) {
+    PetscCall(MatZeroEntries(Y));
+    PetscCall(MatDenseScatter_Private(ilink->sctx, X, ilink->x_mat, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(PetscLogEventBegin(ilink->event, ilink->ksp, ilink->x_mat, ilink->y_mat, NULL));
+    PetscCall(KSPMatSolve(ilink->ksp, ilink->x_mat, ilink->y_mat));
+    PetscCall(PetscLogEventEnd(ilink->event, ilink->ksp, ilink->x_mat, ilink->y_mat, NULL));
+    PetscCall(MatDenseScatter_Private(ilink->sctx, ilink->y_mat, Y, ADD_VALUES, SCATTER_REVERSE));
+
+    /* compute the residual only onto second block variables using first block variables */
+    PetscCall(MatMatMult(jac->Afield[1], ilink->y_mat, MAT_REUSE_MATRIX, PETSC_DETERMINE, &ilink->next->x_mat));
+    ilink = ilink->next;
+    PetscCall(MatScale(ilink->x_mat, -1.0));
+    PetscCall(MatDenseScatter_Private(ilink->sctx, X, ilink->x_mat, ADD_VALUES, SCATTER_FORWARD));
+
+    /* solve on second block variables */
+    PetscCall(PetscLogEventBegin(ilink->event, ilink->ksp, ilink->x_mat, ilink->y_mat, NULL));
+    PetscCall(KSPMatSolve(ilink->ksp, ilink->x_mat, ilink->y_mat));
+    PetscCall(PetscLogEventEnd(ilink->event, ilink->ksp, ilink->x_mat, ilink->y_mat, NULL));
+    PetscCall(MatDenseScatter_Private(ilink->sctx, ilink->y_mat, Y, ADD_VALUES, SCATTER_REVERSE));
+  } else if (jac->type == PC_COMPOSITE_MULTIPLICATIVE || jac->type == PC_COMPOSITE_SYMMETRIC_MULTIPLICATIVE) {
+    /* general multiplicative with any number of splits */
+    PetscCall(MatZeroEntries(Y));
+    /* first split */
+    PetscCall(MatDenseScatter_Private(ilink->sctx, X, ilink->x_mat, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(PetscLogEventBegin(ilink->event, ilink->ksp, ilink->x_mat, ilink->y_mat, NULL));
+    PetscCall(KSPMatSolve(ilink->ksp, ilink->x_mat, ilink->y_mat));
+    PetscCall(PetscLogEventEnd(ilink->event, ilink->ksp, ilink->x_mat, ilink->y_mat, NULL));
+    PetscCall(MatDenseScatter_Private(ilink->sctx, ilink->y_mat, Y, ADD_VALUES, SCATTER_REVERSE));
+    cnt = 1;
+    /* forward sweep */
+    while (ilink->next) {
+      ilink = ilink->next;
+      /* compute the residual only over the part of the vector needed */
+      PetscCall(MatMatMult(jac->Afield[cnt++], Y, MAT_REUSE_MATRIX, PETSC_DETERMINE, &ilink->x_mat));
+      PetscCall(MatScale(ilink->x_mat, -1.0));
+      PetscCall(MatDenseScatter_Private(ilink->sctx, X, ilink->x_mat, ADD_VALUES, SCATTER_FORWARD));
+      PetscCall(PetscLogEventBegin(ilink->event, ilink->ksp, ilink->x_mat, ilink->y_mat, NULL));
+      PetscCall(KSPMatSolve(ilink->ksp, ilink->x_mat, ilink->y_mat));
+      PetscCall(PetscLogEventEnd(ilink->event, ilink->ksp, ilink->x_mat, ilink->y_mat, NULL));
+      PetscCall(MatDenseScatter_Private(ilink->sctx, ilink->y_mat, Y, ADD_VALUES, SCATTER_REVERSE));
+    }
+    /* backward sweep for symmetric multiplicative */
+    if (jac->type == PC_COMPOSITE_SYMMETRIC_MULTIPLICATIVE) {
+      cnt -= 2;
+      while (ilink->previous) {
+        ilink = ilink->previous;
+        /* compute the residual only over the part of the vector needed */
+        PetscCall(MatMatMult(jac->Afield[cnt--], Y, MAT_REUSE_MATRIX, PETSC_DETERMINE, &ilink->x_mat));
+        PetscCall(MatScale(ilink->x_mat, -1.0));
+        PetscCall(MatDenseScatter_Private(ilink->sctx, X, ilink->x_mat, ADD_VALUES, SCATTER_FORWARD));
+        PetscCall(PetscLogEventBegin(ilink->event, ilink->ksp, ilink->x_mat, ilink->y_mat, NULL));
+        PetscCall(KSPMatSolve(ilink->ksp, ilink->x_mat, ilink->y_mat));
+        PetscCall(PetscLogEventEnd(ilink->event, ilink->ksp, ilink->x_mat, ilink->y_mat, NULL));
+        PetscCall(MatDenseScatter_Private(ilink->sctx, ilink->y_mat, Y, ADD_VALUES, SCATTER_REVERSE));
+      }
+    }
+  } else SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "PCMatApply() not implemented for this fieldsplit type");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1760,6 +1892,8 @@ static PetscErrorCode PCReset_FieldSplit(PC pc)
     PetscCall(VecDestroy(&ilink->x));
     PetscCall(VecDestroy(&ilink->y));
     PetscCall(VecDestroy(&ilink->z));
+    PetscCall(MatDestroy(&ilink->x_mat));
+    PetscCall(MatDestroy(&ilink->y_mat));
     PetscCall(VecScatterDestroy(&ilink->sctx));
     PetscCall(ISDestroy(&ilink->is));
     PetscCall(ISDestroy(&ilink->is_col));
@@ -3013,6 +3147,7 @@ static PetscErrorCode PCFieldSplitSetType_FieldSplit(PC pc, PCCompositeType type
   if (type == PC_COMPOSITE_SCHUR) {
     pc->ops->apply          = PCApply_FieldSplit_Schur;
     pc->ops->applytranspose = PCApplyTranspose_FieldSplit_Schur;
+    pc->ops->matapply       = NULL;
     pc->ops->view           = PCView_FieldSplit_Schur;
     pc->ops->setuponblocks  = PCSetUpOnBlocks_FieldSplit_Schur;
 
@@ -3024,6 +3159,7 @@ static PetscErrorCode PCFieldSplitSetType_FieldSplit(PC pc, PCCompositeType type
   } else if (type == PC_COMPOSITE_GKB) {
     pc->ops->apply          = PCApply_FieldSplit_GKB;
     pc->ops->applytranspose = NULL;
+    pc->ops->matapply       = NULL;
     pc->ops->view           = PCView_FieldSplit_GKB;
     pc->ops->setuponblocks  = PCSetUpOnBlocks_FieldSplit_GKB;
 
@@ -3035,6 +3171,7 @@ static PetscErrorCode PCFieldSplitSetType_FieldSplit(PC pc, PCCompositeType type
   } else {
     pc->ops->apply          = PCApply_FieldSplit;
     pc->ops->applytranspose = PCApplyTranspose_FieldSplit;
+    pc->ops->matapply       = PCMatApply_FieldSplit;
     pc->ops->view           = PCView_FieldSplit;
     pc->ops->setuponblocks  = PCSetUpOnBlocks_FieldSplit;
 
