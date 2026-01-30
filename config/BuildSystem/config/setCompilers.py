@@ -844,8 +844,8 @@ class Configure(config.base.Configure):
       0: disable CxxDialect check and use compiler default
 
     On return this function sets the following values:
-    - if needed, appends the relevant CXX dialect flag to <lang> compiler flags
-    - self.cxxDialectRange = (minSupportedDialect,maxSupportedDialect) (e.g. ('c++11','c++14'))
+    - if needed, appends the relevant CXX dialect flag to <lang> compiler and preprocessor flags
+    - self.cxxDialectRange = {language, (minSupportedDialect,maxSupportedDialect)} (e.g. ('c++11','c++14'))
     - self.addDefine('HAVE_{LANG}_DIALECT_CXX{DIALECT_NUM}',1) for every supported dialect
     - self.lang+'dialect' = 'c++'+maxDialectNumber (e.g. 'c++14') but ONLY if the user
       specifically requests a dialect version, otherwise this is not set
@@ -1255,6 +1255,8 @@ class Configure(config.base.Configure):
           if useFlag:
             # needs compilerOnly = True as we need to keep the flag out of the linker flags
             self.addCompilerFlag(flag,includes=dlct.includes,body=dlct.body,compilerOnly=True)
+            # C++ dialect flag is always needed by preprocessor. It is good to insert it directly as we just checked it above.
+            self.insertPreprocessorFlag(flag)
           elif not self.checkCompile(includes=dlct.includes,body=dlct.body):
             raise RuntimeError # to mimic addCompilerFlag
         except RuntimeError:
@@ -2061,7 +2063,7 @@ class Configure(config.base.Configure):
     if not flag: return
     flagsArg = self.getCompilerFlagsArg(compilerOnly)
     setattr(self, flagsArg, getattr(self, flagsArg)+' '+flag)
-    self.log.write('Added '+self.language[-1]+' compiler flag '+flag+'\n')
+    self.log.write('Added to '+self.language[-1]+' compiler flag '+flagsArg+': '+flag+'\n')
     return
 
   def addCompilerFlag(self, flag, includes = '', body = '', extraflags = '', compilerOnly = 0):
@@ -2070,6 +2072,14 @@ class Configure(config.base.Configure):
       self.insertCompilerFlag(flag, compilerOnly)
       return
     raise RuntimeError('Bad compiler flag: '+flag)
+
+  def insertPreprocessorFlag(self, flag):
+    '''DANGEROUS: Put in the preprocessor flag without checking'''
+    if not flag: return
+    flagsArg = self.getPreprocessorFlagsArg()
+    setattr(self, flagsArg, getattr(self, flagsArg)+' '+flag)
+    self.log.write('Added to '+self.language[-1]+' preprocessor flag '+flagsArg+': '+flag+'\n')
+    return
 
   @contextlib.contextmanager
   def extraCompilerFlags(self, extraFlags, lang = None, **kwargs):
