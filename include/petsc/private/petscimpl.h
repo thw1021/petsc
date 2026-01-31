@@ -29,29 +29,31 @@ PETSC_INTERN PetscErrorCode PetscStackPrint(PetscStack *, FILE *);
 PETSC_EXTERN PetscErrorCode PetscVFPrintfDefault(FILE *, const char[], va_list);
 
 /*
-   All major PETSc data structures have a common core; this is defined
-   below by PETSCHEADER.
+   All major PETSc data structures have a common core; this is defined below by PETSCHEADER.
 
    PetscHeaderCreate() should be used whenever creating a PETSc structure.
 */
 
 /*
-   PetscOps: structure of core operations that all PETSc objects support.
+   PetscOps: structure of operations that all PETSc objects support.
 
-      view()            - Is the routine for viewing the entire PETSc object; for
-                          example, MatView() is the general matrix viewing routine.
-                          This is used by PetscObjectView((PetscObject)obj) to allow
-                          viewing any PETSc object.
-      destroy()         - Is the routine for destroying the entire PETSc object;
-                          for example,MatDestroy() is the general matrix
-                          destruction routine.
-                          This is used by PetscObjectDestroy((PetscObject*)&obj) to allow
-                          destroying any PETSc object.
+      view()              - The routine for viewing the entire PETSc object; for
+                            example, MatView() is the general matrix viewing routine.
+                            This is used by PetscObjectView((PetscObject)obj) to allow
+                            viewing any PETSc object.
+      destroy()           - The routine for destroying the entire PETSc object;
+                            for example, MatDestroy() is the general matrix
+                            destruction routine.
+                            This is used by PetscObjectDestroy((PetscObject*)&obj) to allow
+                            destroying any PETSc object.
+      getcallbackholder() - Gets the object to which certain function pointers and contexts are attached
+                            For handling Fortran functions with DMKSP, DMSNES, and DMTS
 */
 
 typedef struct {
   PetscErrorCode (*view)(PetscObject, PetscViewer);
   PetscErrorCode (*destroy)(PetscObject *);
+  PetscErrorCode (*getcallbackholder)(PetscObject, PetscObject *);
 } PetscOps;
 
 /*E
@@ -59,12 +61,13 @@ typedef struct {
 
   Values:
 + `PETSC_FORTRAN_CALLBACK_CLASS`   - the callback is associated with the class
-- `PETSC_FORTRAN_CALLBACK_SUBTYPE` - the callback is associated with the current particular subtype
+. `PETSC_FORTRAN_CALLBACK_SUBTYPE` - the callback is associated with the current particular subtype
+- `PETSC_FORTRAN_CALLBACK_HOLDER   - the Fortran function and context are stored in a `DMKSP`, `DMSNES` or `DMTS` object attached to the input object
 
   Level: developer
 
   Developer Note:
-  The two sets of callbacks are stored in different arrays in the `PetscObject` because the `PETSC_FORTRAN_CALLBACK_SUBTYPE` callbacks must
+  The first two sets of callbacks are stored in different arrays in the `PetscObject` because the `PETSC_FORTRAN_CALLBACK_SUBTYPE` callbacks must
   be removed whenever the type of the object is changed (because they are not appropriate for other types). The removal is done in
   `PetscObjectChangeTypeName()`.
 
@@ -73,7 +76,8 @@ E*/
 typedef enum {
   PETSC_FORTRAN_CALLBACK_CLASS,
   PETSC_FORTRAN_CALLBACK_SUBTYPE,
-  PETSC_FORTRAN_CALLBACK_MAXTYPE
+  PETSC_FORTRAN_CALLBACK_MAXTYPE,
+  PETSC_FORTRAN_CALLBACK_HOLDER
 } PetscFortranCallbackType;
 
 typedef size_t PetscFortranCallbackId;

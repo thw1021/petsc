@@ -243,13 +243,13 @@ PetscErrorCode PetscObjectCopyFortranFunctionPointers(PetscObject src, PetscObje
 }
 
 /*@C
-  PetscObjectSetFortranCallback - set Fortran callback function pointer and context
+  PetscObjectSetFortranCallback - set Fortran callback function pointer and context into a `PetscObject`
 
   Logically Collective, No Fortran Support
 
   Input Parameters:
 + obj    - object on which to set callback
-. cbtype - callback type (class or subtype)
+. cbtype - callback type
 . cid    - address of callback Id, updated if not yet initialized (zero)
 . func   - Fortran function
 - ctx    - Fortran context
@@ -259,7 +259,8 @@ PetscErrorCode PetscObjectCopyFortranFunctionPointers(PetscObject src, PetscObje
   Note:
   This is used to help manage user callback functions that were provided in Fortran
 
-.seealso: `PetscObjectGetFortranCallback()`, `PetscFortranCallbackRegister()`, `PetscFortranCallbackGetSizes()`
+.seealso: `PetscObjectGetFortranCallback()`, `PetscFortranCallbackRegister()`, `PetscFortranCallbackGetSizes()`, `PetscFortranCallbackType`, `PetscFortranCallbackId`,
+          `PetscFortranCallbackFn`, `PetscCtx`
 @*/
 PetscErrorCode PetscObjectSetFortranCallback(PetscObject obj, PetscFortranCallbackType cbtype, PetscFortranCallbackId *cid, PetscFortranCallbackFn *func, PetscCtx ctx)
 {
@@ -267,6 +268,10 @@ PetscErrorCode PetscObjectSetFortranCallback(PetscObject obj, PetscFortranCallba
 
   PetscFunctionBegin;
   PetscValidHeader(obj, 1);
+  if (cbtype == PETSC_FORTRAN_CALLBACK_HOLDER) {
+    PetscCall((*obj->bops->getcallbackholder)(obj, &obj));
+    cbtype = PETSC_FORTRAN_CALLBACK_CLASS;
+  }
   if (cbtype == PETSC_FORTRAN_CALLBACK_SUBTYPE) subtype = obj->type_name;
   if (!*cid) PetscCall(PetscFortranCallbackRegister(obj->classid, subtype, cid));
   if (*cid >= PETSC_SMALLEST_FORTRAN_CALLBACK + obj->num_fortrancallback[cbtype]) {
@@ -286,14 +291,14 @@ PetscErrorCode PetscObjectSetFortranCallback(PetscObject obj, PetscFortranCallba
 }
 
 /*@C
-  PetscObjectGetFortranCallback - get Fortran callback function pointer and context
+  PetscObjectGetFortranCallback - get Fortran callback function pointer and context from a `PetscObject`
 
   Logically Collective, No Fortran Support
 
   Input Parameters:
 + obj    - object on which to get callback
 . cbtype - callback type
-- cid    - address of callback Id
+- cid    - callback Id
 
   Output Parameters:
 + func - Fortran function (or `NULL` if not needed)
@@ -304,7 +309,7 @@ PetscErrorCode PetscObjectSetFortranCallback(PetscObject obj, PetscFortranCallba
   Note:
   This is used to help manage user callback functions that were provided in Fortran
 
-.seealso: `PetscObjectSetFortranCallback()`, `PetscFortranCallbackRegister()`, `PetscFortranCallbackGetSizes()`
+.seealso: `PetscObjectSetFortranCallback()`, `PetscFortranCallbackRegister()`, `PetscFortranCallbackGetSizes()`, `PetscFortranCallbackType`, `PetscFortranCallbackId`,
 @*/
 PetscErrorCode PetscObjectGetFortranCallback(PetscObject obj, PetscFortranCallbackType cbtype, PetscFortranCallbackId cid, PetscFortranCallbackFn **func, void **ctx)
 {
@@ -312,6 +317,10 @@ PetscErrorCode PetscObjectGetFortranCallback(PetscObject obj, PetscFortranCallba
 
   PetscFunctionBegin;
   PetscValidHeader(obj, 1);
+  if (cbtype == PETSC_FORTRAN_CALLBACK_HOLDER) {
+    PetscCall((*obj->bops->getcallbackholder)(obj, &obj));
+    cbtype = PETSC_FORTRAN_CALLBACK_CLASS;
+  }
   PetscCheck(cid >= PETSC_SMALLEST_FORTRAN_CALLBACK, obj->comm, PETSC_ERR_ARG_CORRUPT, "Fortran callback Id invalid");
   PetscCheck(cid < PETSC_SMALLEST_FORTRAN_CALLBACK + obj->num_fortrancallback[cbtype], obj->comm, PETSC_ERR_ARG_CORRUPT, "Fortran callback not set on this object");
   cb = &obj->fortrancallback[cbtype][cid - PETSC_SMALLEST_FORTRAN_CALLBACK];

@@ -715,6 +715,17 @@ PetscErrorCode KSPGetNestLevel(KSP ksp, PetscInt *level)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*  see PetscObjectSetFortranCallback() and PETSC_FORTRAN_CALLBACK_HOLDER */
+static PetscErrorCode KSPGetCallbackHolder(PetscObject ksp, PetscObject *holder)
+{
+  DM dm;
+
+  PetscFunctionBegin;
+  PetscCall(KSPGetDM((KSP)ksp, &dm));
+  PetscCall(DMGetDMKSP(dm, (DMKSP *)holder));
+  PetscFunctionReturn(0);
+}
+
 /*@
   KSPCreate - Creates the `KSP` context. This `KSP` context is used in PETSc to solve linear systems with `KSPSolve()`
 
@@ -787,6 +798,8 @@ PetscErrorCode KSPCreate(MPI_Comm comm, KSP *inksp)
   ksp->setupstage = KSP_SETUP_NEW;
 
   PetscCall(KSPNormSupportTableReset_Private(ksp));
+
+  ((PetscObject)ksp)->bops->getcallbackholder = KSPGetCallbackHolder;
 
   *inksp = ksp;
   PetscFunctionReturn(PETSC_SUCCESS);

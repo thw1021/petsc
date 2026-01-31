@@ -48,7 +48,8 @@ static PetscErrorCode PetscFortranCallbackFinalize(void)
 
   Level: developer
 
-.seealso: `PetscFortranCallbackGetSizes()`, `PetscObjectCopyFortranFunctionPointers()`, `PetscObjectSetFortranCallback()`, `PetscObjectGetFortranCallback()`
+.seealso: `PetscFortranCallbackGetSizes()`, `PetscObjectCopyFortranFunctionPointers()`, `PetscObjectSetFortranCallback()`, `PetscObjectGetFortranCallback()`,
+          `PetscFortranCallbackId`
 @*/
 PetscErrorCode PetscFortranCallbackRegister(PetscClassId classid, const char *subtype, PetscFortranCallbackId *id)
 {

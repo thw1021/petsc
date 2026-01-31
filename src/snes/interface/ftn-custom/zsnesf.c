@@ -79,7 +79,7 @@ static PetscErrorCode oursnesfunction(SNES snes, Vec x, Vec f, PetscCtx ctx)
   void *ptr;
   PetscCall(PetscObjectGetFortranCallback((PetscObject)snes, PETSC_FORTRAN_CALLBACK_CLASS, _cb.function_pgiptr, NULL, &ptr));
 #endif
-  PetscObjectUseFortranCallback(snes, _cb.function, (SNES *, Vec *, Vec *, void *, PetscErrorCode *PETSC_F90_2PTR_PROTO_NOVAR), (&snes, &x, &f, _ctx, &ierr PETSC_F90_2PTR_PARAM(ptr)));
+  PetscObjectUseFortranCallback(snes, PETSC_FORTRAN_CALLBACK_CLASS, _cb.function, (SNES *, Vec *, Vec *, void *, PetscErrorCode *PETSC_F90_2PTR_PROTO_NOVAR), (&snes, &x, &f, _ctx, &ierr PETSC_F90_2PTR_PARAM(ptr)));
 }
 
 static PetscErrorCode oursnesobjective(SNES snes, Vec x, PetscReal *v, PetscCtx ctx)
@@ -88,12 +88,12 @@ static PetscErrorCode oursnesobjective(SNES snes, Vec x, PetscReal *v, PetscCtx 
   void *ptr;
   PetscCall(PetscObjectGetFortranCallback((PetscObject)snes, PETSC_FORTRAN_CALLBACK_CLASS, _cb.objective_pgiptr, NULL, &ptr));
 #endif
-  PetscObjectUseFortranCallback(snes, _cb.objective, (SNES *, Vec *, PetscReal *, void *, PetscErrorCode *PETSC_F90_2PTR_PROTO_NOVAR), (&snes, &x, v, _ctx, &ierr PETSC_F90_2PTR_PARAM(ptr)));
+  PetscObjectUseFortranCallback(snes, PETSC_FORTRAN_CALLBACK_CLASS, _cb.objective, (SNES *, Vec *, PetscReal *, void *, PetscErrorCode *PETSC_F90_2PTR_PROTO_NOVAR), (&snes, &x, v, _ctx, &ierr PETSC_F90_2PTR_PARAM(ptr)));
 }
 
 static PetscErrorCode oursnesjacobian(SNES snes, Vec x, Mat m, Mat p, PetscCtx ctx)
 {
-  PetscObjectUseFortranCallback(snes, _cb.jacobian, (SNES *, Vec *, Mat *, Mat *, void *, PetscErrorCode *), (&snes, &x, &m, &p, _ctx, &ierr));
+  PetscObjectUseFortranCallback(snes, PETSC_FORTRAN_CALLBACK_CLASS, _cb.jacobian, (SNES *, Vec *, Mat *, Mat *, void *, PetscErrorCode *), (&snes, &x, &m, &p, _ctx, &ierr));
 }
 
 PETSC_EXTERN void snescomputejacobiandefault_(SNES *, Vec *, Mat *, Mat *, void *, PetscErrorCode *);

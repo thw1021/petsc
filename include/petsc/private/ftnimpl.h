@@ -368,8 +368,27 @@ static inline PetscViewer PetscPatchDefaultViewers(PetscViewer *v)
     PetscCall(ierr); \
   } while (0)
 
-/* Entire function body, _ctx is a "special" variable that can be passed along */
-#define PetscObjectUseFortranCallback_Private(obj, cid, types, args, cbclass) \
+/*@C
+  PetscObjectUseFortranCallback - call a Fortran callback function that was provided with `PetscObjectSetFortranCallback()`
+
+  Logically Collective, No Fortran Support
+
+  Input Parameters:
++ obj    - object that contains the attached Fortran callback functions (or see `PETSC_FORTRAN_CALLBACK_HOLDER`)
+. cbtype - callback type
+. cid    - address of callback Id
+. types  - the types of the calling sequence of the Fortran routine
+- args   - the arguments of the calling sequence of the Fortran routine
+
+  Level: developer
+
+  Note:
+  `_ctx` is the argument of type `PetscCtx` if it exists
+
+.seealso: `PetscObjectGetFortranCallback()`, `PetscFortranCallbackRegister()`, `PetscFortranCallbackGetSizes()`, `PetscFortranCallbackType`, `PetscFortranCallbackId`,
+          `PetscFortranCallbackFn`, `PetscCtx`
+@*/
+#define PetscObjectUseFortranCallback(obj, cbclass, cid, types, args) \
   do { \
     void(*func) types, *_ctx; \
     PetscFunctionBegin; \
@@ -377,8 +396,6 @@ static inline PetscViewer PetscPatchDefaultViewers(PetscViewer *v)
     if (func && (PetscFortranCallbackFn *)func != (PetscFortranCallbackFn *)PETSC_NULL_FUNCTION_Fortran) PetscCallFortranVoidFunction((*func)args); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } while (0)
-#define PetscObjectUseFortranCallback(obj, cid, types, args)        PetscObjectUseFortranCallback_Private(obj, cid, types, args, PETSC_FORTRAN_CALLBACK_CLASS)
-#define PetscObjectUseFortranCallbackSubType(obj, cid, types, args) PetscObjectUseFortranCallback_Private(obj, cid, types, args, PETSC_FORTRAN_CALLBACK_SUBTYPE)
 
 /* Disable deprecation warnings while building Fortran wrappers */
 #undef PETSC_DEPRECATED_OBJECT

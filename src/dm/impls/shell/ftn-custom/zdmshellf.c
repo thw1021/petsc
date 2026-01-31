@@ -18,7 +18,7 @@ static struct {
 
 static PetscErrorCode ourcreatefielddecomposition(DM dm, PetscInt *nfields, char ***names, IS **is, DM **subdms)
 {
-  PetscObjectUseFortranCallbackSubType(dm, _cb.createfielddecomposition, (DM *, PetscInt *, char ***, IS **, DM **, PetscErrorCode *), (&dm, nfields, names, is, subdms, &ierr));
+  PetscObjectUseFortranCallback(dm, PETSC_FORTRAN_CALLBACK_SUBTYPE, _cb.createfielddecomposition, (DM *, PetscInt *, char ***, IS **, DM **, PetscErrorCode *), (&dm, nfields, names, is, subdms, &ierr));
 }
 
 PETSC_EXTERN void dmshellsetcreatefielddecomposition_(DM *dm, void (*func)(DM *, PetscInt *, char ***, IS **, DM **, PetscErrorCode *), PetscErrorCode *ierr)

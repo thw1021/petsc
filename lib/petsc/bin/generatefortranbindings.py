@@ -311,7 +311,7 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,func
         fd.write(')\n{\n')
         fd.write('  PetscObjectUseFortranCallback(')
         if arguments[0].typename == 'PetscCtxRt': fd.write('*(PetscObject*) ')
-        fd.write(arguments[0].name + ', ' + fun.name + '_' + k.name + '_ID, (')
+        fd.write(arguments[0].name + ', PETSC_FORTRAN_CALLBACK_CLASS, ' + fun.name + '_' + k.name + '_ID, (')
         cnt = 0
         for j in arguments:
           if cnt: fd.write(', ')

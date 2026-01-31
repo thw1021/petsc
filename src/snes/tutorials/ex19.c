@@ -100,6 +100,7 @@ int main(int argc, char **argv)
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
   PetscCall(SNESCreate(comm, &snes));
+  PetscCall(SNESSetFromOptions(snes));
 
   /*
       Create distributed array object to manage parallel grid and vectors
