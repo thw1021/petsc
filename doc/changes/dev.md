@@ -85,6 +85,7 @@
 ```{rubric} KSP:
 ```
 
+- Change `KSPSetDMActive()` to take a `KSPDMActive` argument
 - Remove `KSPHPDDMPrecision` in favor of `PetscPrecision`
 
 ```{rubric} SNES:
