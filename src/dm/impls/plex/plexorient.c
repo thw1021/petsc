@@ -806,17 +806,18 @@ PetscErrorCode DMPlexOrientCells_Internal(DM dm, IS cellIS, IS faceIS)
   if (faceIsVertex && lpoints) {
     // Need to first flip cells which hit parallel boundary on wrong face
     for (PetscInt c = cStart; c < cEnd; ++c) {
+      const PetscInt  cell = cells ? cells[c] : c;
       const PetscInt *cone;
       PetscInt        cS, ls, le;
 
-      PetscCall(DMPlexGetCone(dm, c, &cone));
-      PetscCall(DMPlexGetConeSize(dm, c, &cS));
-      PetscCheck(cS == 2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Size of cone for edge %" PetscInt_FMT " must be 2, not %" PetscInt_FMT, c, cS);
+      PetscCall(DMPlexGetCone(dm, cell, &cone));
+      PetscCall(DMPlexGetConeSize(dm, cell, &cS));
+      PetscCheck(cS == 2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Size of cone for edge %" PetscInt_FMT " must be 2, not %" PetscInt_FMT, cell, cS);
       PetscCall(PetscFindInt(cone[0], numLeaves, lpoints, &ls));
       PetscCall(PetscFindInt(cone[1], numLeaves, lpoints, &le));
       if (ls >= 0 && le < 0) {
         PetscCall(PetscBTSet(flippedCells, c - cStart));
-        if (view) PetscCall(PetscViewerASCIIPrintf(selfviewer, "[%d]: Flipped cell %" PetscInt_FMT " to meet parallel boundary on shared face %" PetscInt_FMT "\n", rank, c, cone[0]));
+        if (view) PetscCall(PetscViewerASCIIPrintf(selfviewer, "[%d]: Flipped cell %" PetscInt_FMT " to meet parallel boundary on shared face %" PetscInt_FMT "\n", rank, cell, cone[0]));
       }
     }
   }
@@ -935,10 +936,14 @@ PetscErrorCode DMPlexOrientCells_Internal(DM dm, IS cellIS, IS faceIS)
       const PetscInt face = lpoints[neighbors[comp][n]];
       const PetscInt o    = rorntComp[face].rank * lorntComp[face].rank;
 
-      if (o < 0) match[off] = PETSC_TRUE;
-      else if (o > 0) match[off] = PETSC_FALSE;
-      else
-        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid face %" PetscInt_FMT " (%" PetscInt_FMT ", %" PetscInt_FMT ") neighbor: %" PetscInt_FMT " comp: %" PetscInt_FMT, face, rorntComp[face].rank, lorntComp[face].rank, neighbors[comp][n], comp);
+      if (faceIsVertex) {
+        match[off] = rorntComp[face].rank != lorntComp[face].rank ? PETSC_TRUE : PETSC_FALSE;
+      } else {
+        if (o < 0) match[off] = PETSC_TRUE;
+        else if (o > 0) match[off] = PETSC_FALSE;
+        else
+          SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid face %" PetscInt_FMT " (%" PetscInt_FMT ", %" PetscInt_FMT ") neighbor: %" PetscInt_FMT " comp: %" PetscInt_FMT, face, rorntComp[face].rank, lorntComp[face].rank, neighbors[comp][n], comp);
+      }
       nrankComp[off].rank  = rpoints[neighbors[comp][n]].rank;
       nrankComp[off].index = lorntComp[lpoints[neighbors[comp][n]]].index;
     }
@@ -995,6 +1000,8 @@ PetscErrorCode DMPlexOrientCells_Internal(DM dm, IS cellIS, IS faceIS)
             const PetscInt    q = Noff[adj[off].rank] + adj[off].index;
             const PetscScalar o = val[off] ? 1.0 : 0.0;
 
+            // Do not set values for processes that have no face to orient
+            if (!Nc[adj[off].rank]) continue;
             PetscCall(MatSetValues(G, 1, &r, 1, &q, &o, INSERT_VALUES));
             PetscCall(MatSetValues(G, 1, &q, 1, &r, &o, INSERT_VALUES));
           }
