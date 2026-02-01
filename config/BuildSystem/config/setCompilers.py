@@ -1253,10 +1253,9 @@ class Configure(config.base.Configure):
         # test with flag
         try:
           if useFlag:
+            # C++ dialect flag is needed by preprocessor and compiler. When we compile, we will add preprocessor flags.
             # needs compilerOnly = True as we need to keep the flag out of the linker flags
-            self.addCompilerFlag(flag,includes=dlct.includes,body=dlct.body,compilerOnly=True)
-            # C++ dialect flag is always needed by preprocessor. It is good to insert it directly as we just checked it above.
-            self.insertPreprocessorFlag(flag)
+            self.addPreprocessorFlag(flag,includes=dlct.includes,body=dlct.body,compilerOnly=True)
           elif not self.checkCompile(includes=dlct.includes,body=dlct.body):
             raise RuntimeError # to mimic addCompilerFlag
         except RuntimeError:
@@ -2072,6 +2071,13 @@ class Configure(config.base.Configure):
       self.insertCompilerFlag(flag, compilerOnly)
       return
     raise RuntimeError('Bad compiler flag: '+flag)
+
+  def addPreprocessorFlag(self, flag, includes = '', body = '', extraflags = '', compilerOnly = 0):
+    '''Determine whether the preprcessor accepts the given flag, and add it if valid, otherwise throw an exception'''
+    if self.checkCompilerFlag(flag+' '+extraflags, includes, body, compilerOnly):
+      self.insertPreprocessorFlag(flag)
+      return
+    raise RuntimeError('Bad Preprcessor flag: '+flag)
 
   def insertPreprocessorFlag(self, flag):
     '''DANGEROUS: Put in the preprocessor flag without checking'''
