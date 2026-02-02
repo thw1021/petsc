@@ -146,13 +146,13 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
     ts->snes_its += nits;
     ts->ksp_its += lits;
     PetscCall(TSPostStage(ts, ts->ptime + ts->time_step, 0, &pseudo->update));
-    PetscCall(TSAdaptCheckStage(ts->adapt, ts, ts->ptime + ts->time_step, pseudo->update, &stepok));
+    pseudo->fnorm = -1; /* The current norm is no longer valid */
+    PetscCall(TSPseudoVerifyTimeStep(ts, pseudo->update, &next_time_step, &stepok));
     if (!stepok) {
       next_time_step = ts->time_step;
       continue;
     }
-    pseudo->fnorm = -1; /* The current norm is no longer valid */
-    PetscCall(TSPseudoVerifyTimeStep(ts, pseudo->update, &next_time_step, &stepok));
+    PetscCall(TSAdaptCheckStage(ts->adapt, ts, ts->ptime + ts->time_step, pseudo->update, &stepok));
     if (stepok) break;
   }
   if (reject >= ts->max_reject) {
