@@ -693,7 +693,7 @@ cdef class KSP(Object):
         If this is used then the `KSP` will attempt to use the `DM` to
         create the matrix and use the routine set with
         `DM.setKSPComputeOperators`. Use
-        ``setDMActive(KSP_DMACTIVE_OPERATOR, False)``
+        ``setDMActive(KSP.DMActive.OPERATOR, False)``
         to instead use the matrix you have provided with
         `setOperators`.
 
@@ -725,7 +725,7 @@ cdef class KSP(Object):
         Notes
         -----
         By default `setDM` sets the `DM` as active, call
-        ``setDMActive(KSP_DMACTIVE_ALL, False)`` after ``setDM(dm)`` to not
+        ``setDMActive(KSP.DMactive.ALL, False)`` after ``setDM(dm)`` to not
         have the `KSP` object use the `DM` to generate the matrices.
 
         See Also

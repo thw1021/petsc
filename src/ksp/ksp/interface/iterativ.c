@@ -1952,7 +1952,7 @@ PetscErrorCode KSPGetConvergedReasonString(KSP ksp, const char *strreason[])
 
   Notes:
   If this is used then the `KSP` will attempt to use the `DM` to create the matrix and use the routine set with
-  `DMKSPSetComputeOperators()`. Use `KSPSetDMActive`(ksp, KSP_DMACTIVE_OPERATOR, `PETSC_FALSE`) to instead use the matrix you've provided with
+  `DMKSPSetComputeOperators()`. Use `KSPSetDMActive`(ksp, `KSP_DMACTIVE_OPERATOR`, `PETSC_FALSE`) to instead use the matrix you've provided with
   `KSPSetOperators()`.
 
   A `DM` can only be used for solving one problem at a time because information about the problem is stored on the `DM`,
