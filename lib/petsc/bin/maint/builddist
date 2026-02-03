@@ -26,7 +26,11 @@ set -e
 # If version specified on the commandline, set the version
 echo "Starting date: `date +'%a, %d %b %Y %H:%M:%S %z'`"
 
-if [ $# = 3 ]; then
+# ignore command line options in CI mode - and build tarball from current state setup by CI
+if [ ! -z "${CI_PIPELINE_ID+x}" ]; then
+  petscrepo=`pwd -P`
+  version=${CI_COMMIT_SHORT_SHA}
+elif [ $# = 3 ]; then
   petscrepo=$1
   branch=$2
   version=-$3
@@ -53,28 +57,28 @@ if [ ! -d $petscrepo/.git ]; then
 fi
 
 # Initialize vars
+ODIR=`pwd -P`
 PETSC_ARCH=arch-docs; export PETSC_ARCH
 PETSC_DIR=`cd $petscrepo;pwd -P`; export PETSC_DIR
 
-# Clean and Update the git repository and check for branch
-cd $PETSC_DIR
-/bin/rm -rf $PETSC_DIR/$PETSC_ARCH
-git clean -q -f -d -x
-git fetch -q origin
-git checkout -f origin/$branch
-if [ "$?" != "0" ]; then
-  echo 'Error: branch: $branch does not exist in $PETSC_DIR'
-  exit
+
+# Clean and Update the git repository and check for branch [when not in CI]
+if [ -z "${CI_PIPELINE_ID+x}" ]; then
+  cd $PETSC_DIR
+  /bin/rm -rf $PETSC_DIR/$PETSC_ARCH
+  git clean -q -f -d -x
+  git fetch -q origin $branch
+  if [ "$?" != "0" ]; then
+    echo 'Error: branch: $branch does not exist in $PETSC_DIR'
+    exit
+  fi
+  git checkout -f FETCH_HEAD
 fi
 
 pdir=`basename $PETSC_DIR`
 
 # Create a tmp dir
-if [ ! -d /tmp ]; then
-  echo 'Error: /tmp does not exist!'
-  exit
-fi
-tmpdir=/tmp/petsc-dist-tmp.$USER.$$
+tmpdir=$(mktemp -d -t petsc-dist.$USER.XXXXXX)
 if [ -d $tmpdir ]; then
   /bin/rm -rf $tmpdir
 fi
@@ -104,7 +108,7 @@ if [ ${version}foo = foo ]; then
     exit
   fi
 fi
-echo "Building ~/petsc$version.tar.gz and ~/petsc-with-docs$version.tar.gz"
+echo "Building $ODIR/petsc$version.tar.gz, $ODIR/petsc-with-docs$version.tar.gz, and $ODIR/petsc4py$version.tar.gz"
 
 # build PETSc docs (and include petsc4py docs within).
 VENV=$PETSC_DIR/venv-petsc-docs
@@ -121,7 +125,7 @@ cd $PETSC_DIR/src/binding/petsc4py
   rm -rf petsc-doc-env # remove python2 env created when building petsc+petsc4py docs
   make srcclean docsclean
   make sdist PYTHON=python3 SHELL=/bin/bash
-  cp dist/*.gz ~/
+  cp dist/petsc4py-*.tar.gz $tmpdir/
   make srcclean docsclean
 
 # Cleanup
@@ -183,7 +187,7 @@ find petsc$version -type d -name "*" -exec chmod a+x {} \;
 
 # Now create the tar files
 cd $tmpdir
-/bin/tar -czf ~/petsc-with-docs$version.tar.gz petsc$version
+/bin/tar -czf $ODIR/petsc-with-docs$version.tar.gz petsc$version
 
 # create lite version
 /bin/rm -rf $tmpdir/petsc$version/docs $tmpdir/petsc$version/zope $tmpdir/petsc$version/config/BuildSystem/docs $tmpdir/petsc$version/config/examples/old
@@ -194,7 +198,18 @@ cd $tmpdir/petsc$version; ${PETSC_DIR}/lib/petsc/bin/maint/generateetags.py
 cd $tmpdir/petsc$version && python setup.py egg_info && /bin/cp petsc.egg-info/PKG-INFO . && /bin/rm -rf petsc.egg-info config/pypi
 
 cd $tmpdir
-/bin/tar -czf ~/petsc$version.tar.gz petsc$version
+/bin/tar -czf $ODIR/petsc$version.tar.gz petsc$version
+
+# process petsc4py tarball
+if [ -f petsc4py$version.tar.gz ]; then
+  cp petsc4py$version.tar.gz $ODIR/
+else
+  echo "Renaming petsc4py tarball to match petsc!"
+  dname=$(tar -tzf petsc4py-*.tar.gz | head -1)
+  /bin/tar -xzf petsc4py-*.tar.gz
+  /bin/mv $dname petsc4py$version
+  /bin/tar -czf $ODIR/petsc4py$version.tar.gz petsc4py$version
+fi
 
 #cleanup
 /bin/rm -rf $tmpdir

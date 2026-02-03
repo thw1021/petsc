@@ -20,9 +20,9 @@ RELEASE=${version_major}.${version_minor}
 VERSION=${version_major}.${version_minor}.${version_subminor}
 
 #Now copy the generated tarfiles over to the website
-scp ~/petsc-${VERSION}.tar.gz svcpetsc@compute-01.cels.anl.gov:/nfs/pub_html/gce/projects/petsc/download/release-snapshots/
-scp ~/petsc4py-${VERSION}.tar.gz svcpetsc@compute-01.cels.anl.gov:/nfs/pub_html/gce/projects/petsc/download/release-snapshots/
-scp ~/petsc-with-docs-${VERSION}.tar.gz svcpetsc@compute-01.cels.anl.gov:/nfs/pub_html/gce/projects/petsc/download/release-snapshots/
+scp petsc-${VERSION}.tar.gz svcpetsc@compute-01.cels.anl.gov:/nfs/pub_html/gce/projects/petsc/download/release-snapshots/
+scp petsc4py-${VERSION}.tar.gz svcpetsc@compute-01.cels.anl.gov:/nfs/pub_html/gce/projects/petsc/download/release-snapshots/
+scp petsc-with-docs-${VERSION}.tar.gz svcpetsc@compute-01.cels.anl.gov:/nfs/pub_html/gce/projects/petsc/download/release-snapshots/
 ssh svcpetsc@compute-01.cels.anl.gov "cd /nfs/pub_html/gce/projects/petsc/download/release-snapshots; ln -s petsc-${VERSION}.tar.gz petsc-lite-${VERSION}.tar.gz"
 
 # petsc.tar.gz/petsc-lite.tar.gz links are done manually
@@ -35,4 +35,4 @@ ssh svcpetsc@compute-01.cels.anl.gov " \
   /bin/ln -s petsc-lite-${VERSION}.tar.gz petsc-lite-${RELEASE}.tar.gz"
 
 # upload to pypi.org - using auth in ~/.pypirc
-python3 -m twine upload ~/petsc-${VERSION}.tar.gz ~/petsc4py-${VERSION}.tar.gz
+python3 -m twine upload petsc-${VERSION}.tar.gz petsc4py-${VERSION}.tar.gz
