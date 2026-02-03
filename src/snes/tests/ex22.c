@@ -2,7 +2,6 @@ static char help[] = "MRE for SNESVIInactiveSet.\n\n";
 
 #include "petscsnes.h"
 #include "petscsys.h"
-#include </opt/HPC/src/petsc-main/src/snes/impls/vi/rs/virsimpl.h>
 PetscErrorCode computeFunction(SNES snes, Vec X, Vec F, void *ctx)
 {
   PetscInt         n;
