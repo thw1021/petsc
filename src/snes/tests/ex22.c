@@ -1,14 +1,14 @@
 static char help[] = "MRE for SNESVIInactiveSet.\n\n";
 
 #include "petscsnes.h"
-#include "petscsys.h"   
+#include "petscsys.h"
 #include </opt/HPC/src/petsc-main/src/snes/impls/vi/rs/virsimpl.h>
 PetscErrorCode computeFunction(SNES snes, Vec X, Vec F, void *ctx){
     PetscInt n;
     PetscReal *f;
     const PetscReal *x;
 
-    PetscCall(VecGetSize(X, &n)); 
+    PetscCall(VecGetSize(X, &n));
     PetscCall(VecGetArrayRead(X, &x));
     PetscCall(VecGetArray(F, &f));
     for (int i = 0; i < n; i++) {
@@ -22,7 +22,7 @@ PetscErrorCode computeFunction(SNES snes, Vec X, Vec F, void *ctx){
 PetscErrorCode computeJacobian(SNES snes, Vec X, Mat J, Mat P, void *ctx) {
     PetscInt n;
 
-    PetscCall(MatGetSize(J, &n, NULL)); 
+    PetscCall(MatGetSize(J, &n, NULL));
     for (int i = 0; i < n; i++) {
         PetscCall(MatSetValue(J, i, i, 1., INSERT_VALUES));
     }
@@ -40,9 +40,9 @@ int main(int argc, char **argv) {
     IS iA;
 
     PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-    PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &n, NULL)); 
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-lb", &lb, NULL)); 
-    PetscCall(PetscOptionsGetReal(NULL, NULL, "-ub", &ub, NULL)); 
+    PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &n, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-lb", &lb, NULL));
+    PetscCall(PetscOptionsGetReal(NULL, NULL, "-ub", &ub, NULL));
 
     PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
     PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, n, n));
@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
     PetscCall(VecDuplicate(X, &Xu));
     PetscCall(VecSet(Xl, lb));
     PetscCall(VecSet(Xu, ub));
-    PetscCall(SNESVISetVariableBounds(snes, Xl, Xu));   
+    PetscCall(SNESVISetVariableBounds(snes, Xl, Xu));
 
     PetscCall(SNESComputeFunction(snes, X, F));
     PetscCall(VecView(F, PETSC_VIEWER_STDOUT_WORLD));
