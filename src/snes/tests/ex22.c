@@ -1,7 +1,6 @@
 static char help[] = "MRE for SNESVIInactiveSet.\n\n";
 
 #include "petscsnes.h"
-#include "petscsys.h"
 PetscErrorCode computeFunction(SNES snes, Vec X, Vec F, void *ctx)
 {
   PetscInt         n;
@@ -10,9 +9,9 @@ PetscErrorCode computeFunction(SNES snes, Vec X, Vec F, void *ctx)
 
   PetscCall(VecGetSize(X, &n));
   PetscCall(VecGetArrayRead(X, &x));
-  PetscCall(VecGetArray(F, &f));
+  PetscCall(VecGetArrayWrite(F, &f));
   for (int i = 0; i < n; i++) f[i] = x[i] - i;
-  PetscCall(VecRestoreArray(F, &f));
+  PetscCall(VecRestoreArrayWrite(F, &f));
   PetscCall(VecRestoreArrayRead(X, &x));
   return 0;
 }
