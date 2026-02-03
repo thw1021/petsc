@@ -11,13 +11,11 @@ program main
   Mat A, B
   Mat C, SC
   MatNullSpace sp, sp1
-  PetscInt one, zero, rend
-  PetscScalar sone
+  PetscInt, parameter :: one = 1, zero = 0
+  PetscInt rend
+  PetscScalar, parameter :: sone = 1.0
   Vec x, y
 
-  zero = 0
-  one = 1
-  sone = 1
   PetscCallA(PetscInitialize(ierr))
 
   PetscCallA(MatCreate(PETSC_COMM_WORLD, A, ierr))
