@@ -362,7 +362,7 @@ static PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
     /*original
     PetscCall(SNESVICreateIndexSets_RS(snes,X,F,&IS_act,&vi->IS_inact));
      */
-    PetscCall(SNESVIGetActiveSetIS(snes, X, F, &IS_act));
+    PetscCall(SNESVICreateActiveSetIS(snes, X, F, &IS_act));
 
     if (vi->checkredundancy) {
       PetscCall((*vi->checkredundancy)(snes, IS_act, &IS_redact, vi->ctxP));
