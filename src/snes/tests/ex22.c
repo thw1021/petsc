@@ -1,4 +1,4 @@
-static char help[] = "MRE for SNESVIInactiveSet.\n\n";
+static char help[] = "Test of SNESVICreateActiveSetIS and SNESVIGetInactiveSetIS.\n\n";
 
 #include "petscsnes.h"
 PetscErrorCode computeFunction(SNES snes, Vec X, Vec F, void *ctx)
@@ -30,26 +30,32 @@ PetscErrorCode computeJacobian(SNES snes, Vec X, Mat J, Mat P, void *ctx)
 int main(int argc, char **argv)
 {
   SNES      snes;
-  Vec       X, F, Xl, Xu;
-  Mat       A;
-  PetscReal lb = -1, ub = 6;
-  PetscInt  n = 5;
-  IS        iA;
+  Vec         X, F, Xl, Xu;
+  Mat         A;
+  PetscReal   lb = -1, ub = 6;
+  PetscInt    n = 5;
+  IS          iA;
+  PetscMPIInt size;
 
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+
+  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
+  PetscCheck(size == 1, PETSC_COMM_WORLD, PETSC_ERR_WRONG_MPI_SIZE, "Example is only for sequential runs");
+
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &n, NULL));
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-lb", &lb, NULL));
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-ub", &ub, NULL));
 
   PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
   PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, n, n));
-  PetscCall(MatSetType(A, MATAIJ));
+  PetscCall(MatSetType(A, MATSEQAIJ));
   PetscCall(MatSetUp(A));
   PetscCall(MatSetFromOptions(A));
 
   PetscCall(VecCreate(PETSC_COMM_WORLD, &X));
   PetscCall(VecSetSizes(X, PETSC_DECIDE, n));
-  PetscCall(VecSetType(X, VECMPI));
+  PetscCall(VecSetType(X, VECSEQ));
   PetscCall(VecSet(X, 0.));
   PetscCall(PetscObjectSetName((PetscObject)X, "X"));
   PetscCall(VecDuplicate(X, &F));
@@ -66,12 +72,6 @@ int main(int argc, char **argv)
   PetscCall(VecSet(Xu, ub));
   PetscCall(SNESVISetVariableBounds(snes, Xl, Xu));
 
-  PetscCall(SNESComputeFunction(snes, X, F));
-  PetscCall(VecView(F, PETSC_VIEWER_STDOUT_WORLD));
-
-  PetscCall(SNESComputeJacobian(snes, X, A, A));
-  PetscCall(MatView(A, PETSC_VIEWER_STDOUT_WORLD));
-
   PetscCall(SNESSolve(snes, NULL, X));
   PetscCall(VecView(X, PETSC_VIEWER_STDOUT_WORLD));
 
@@ -81,7 +81,6 @@ int main(int argc, char **argv)
 
   PetscCall(SNESVIGetInactiveSet(snes, &iA));
   PetscCall(ISView(iA, PETSC_VIEWER_STDOUT_SELF));
-  // PetscCall(ISDestroy(&iA));
 
   PetscCall(SNESDestroy(&snes));
   PetscCall(VecDestroy(&Xl));

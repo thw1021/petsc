@@ -1,5 +1,6 @@
 Vec Object: X 1 MPI process
-  type: seq
+  type: mpi
+Process [0]
 2.5
 2.5
 2.5
