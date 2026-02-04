@@ -75,13 +75,13 @@ int main(int argc, char **argv)
   PetscCall(SNESSolve(snes, NULL, X));
   PetscCall(VecView(X, PETSC_VIEWER_STDOUT_WORLD));
 
-  PetscCall(SNESVIGetActiveSetIS(snes, X, F, &iA));
+  PetscCall(SNESVICreateActiveSetIS(snes, X, F, &iA));
   PetscCall(ISView(iA, PETSC_VIEWER_STDOUT_SELF));
   PetscCall(ISDestroy(&iA));
 
   PetscCall(SNESVIGetInactiveSet(snes, &iA));
   PetscCall(ISView(iA, PETSC_VIEWER_STDOUT_SELF));
-  PetscCall(ISDestroy(&iA));
+  // PetscCall(ISDestroy(&iA));
 
   PetscCall(SNESDestroy(&snes));
   PetscCall(VecDestroy(&Xl));
