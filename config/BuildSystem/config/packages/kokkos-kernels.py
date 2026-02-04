@@ -14,6 +14,7 @@ class Configure(config.package.CMakePackage):
     # Even libkokkoskernels exists, we really don't know which KK components are enabled and which functions/symbols are there
     self.functionsCxx     = [1,'#include <iostream>','std::cout << "Assume Kokkos-Kernels is header only and skip the function test";']
     self.buildLanguages   = ['Cxx']
+    self.minCxxVersion    = 'c++20'
     self.hastests         = 1
     self.requiresrpath    = 1
     self.minCmakeVersion  = (3,10,0)
