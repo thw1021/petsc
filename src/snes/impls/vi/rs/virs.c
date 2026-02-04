@@ -21,7 +21,7 @@ PetscErrorCode SNESVIGetInactiveSet(SNES snes, IS *inact)
   SNES_VINEWTONRSLS *vi = (SNES_VINEWTONRSLS *)snes->data;
 
   PetscFunctionBegin;
-  *inact = vi->IS_inact;
+  *inact = vi->IS_inact_prev;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -503,6 +503,7 @@ static PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
       PetscCall(ISDestroy(&vi->IS_inact_prev));
       PetscCall(ISDuplicate(vi->IS_inact, &vi->IS_inact_prev));
     }
+    PetscCall(ISDestroy(&vi->IS_inact));
     PetscCall(MatDestroy(&jac_inact_inact));
     if (snes->jacobian != snes->jacobian_pre) PetscCall(MatDestroy(&prejac_inact_inact));
 
