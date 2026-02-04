@@ -58,7 +58,7 @@ program main
   allocate (vals(1:3))
   do i = rstart, rend - 1
 
-    cols = (/mod((i + N - 1), N), i, mod((i + 1), N)/)
+    cols = [mod(i + N - 1, N), i, mod(i + 1, N)]
     vals = [1.0, 1.0, 1.0]
     PetscCallA(MatSetValues(A, one, [i], three, cols, vals, INSERT_VALUES, ierr))
   end do
