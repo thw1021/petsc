@@ -29,7 +29,7 @@ PetscErrorCode computeJacobian(SNES snes, Vec X, Mat J, Mat P, void *ctx)
 
 int main(int argc, char **argv)
 {
-  SNES      snes;
+  SNES        snes;
   Vec         X, F, Xl, Xu;
   Mat         A;
   PetscReal   lb = -1, ub = 6;
