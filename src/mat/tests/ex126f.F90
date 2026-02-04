@@ -9,21 +9,18 @@ program main
 
   Vec x, b, u
   Mat A, fact
-  PetscInt i, j, II, JJ, m
+  PetscInt i, j, II, JJ
   PetscInt Istart, Iend
-  PetscInt ione, ifive
+  PetscInt, parameter :: ione = 1, m = 10
   PetscBool wmumps
   PetscBool flg
-  PetscScalar one, v
+  PetscScalar, parameter :: one = 1.0
+  PetscScalar v
   IS perm, iperm
   PetscErrorCode ierr
   MatFactorInfo info
 
   PetscCallA(PetscInitialize(PETSC_NULL_CHARACTER, ierr))
-  m = 10
-  one = 1.0
-  ione = 1
-  ifive = 5
 
   wmumps = PETSC_FALSE
 
@@ -34,8 +31,8 @@ program main
   PetscCallA(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, m*m, m*m, ierr))
   PetscCallA(MatSetType(A, MATAIJ, ierr))
   PetscCallA(MatSetFromOptions(A, ierr))
-  PetscCallA(MatSeqAIJSetPreallocation(A, ifive, PETSC_NULL_INTEGER_ARRAY, ierr))
-  PetscCallA(MatMPIAIJSetPreallocation(A, ifive, PETSC_NULL_INTEGER_ARRAY, ifive, PETSC_NULL_INTEGER_ARRAY, ierr))
+  PetscCallA(MatSeqAIJSetPreallocation(A, 5_PETSC_INT_KIND, PETSC_NULL_INTEGER_ARRAY, ierr))
+  PetscCallA(MatMPIAIJSetPreallocation(A, 5_PETSC_INT_KIND, PETSC_NULL_INTEGER_ARRAY, 5_PETSC_INT_KIND, PETSC_NULL_INTEGER_ARRAY, ierr))
 
   PetscCallA(MatGetOwnershipRange(A, Istart, Iend, ierr))
 
