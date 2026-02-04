@@ -17,7 +17,7 @@ contains
     PetscCall(VecGetSize(X, n, ierr))
     PetscCall(VecGetArrayRead(X, XX, ierr))
     PetscCall(VecGetArrayWrite(F, FF, ierr))
-    FF = XX - [(i, i=0, n-1)]
+    FF = XX - [(i, i=0, n - 1)]
     PetscCall(VecRestoreArrayWrite(F, FF, ierr))
     PetscCall(VecRestoreArrayRead(X, XX, ierr))
   end subroutine computeFunction
@@ -33,7 +33,7 @@ contains
     PetscReal      :: one = 1.0
 
     PetscCall(MatGetSize(J, n, PETSC_NULL_INTEGER, ierr))
-    do i = 0, n-1
+    do i = 0, n - 1
       PetscCall(MatSetValue(J, i, i, one, INSERT_VALUES, ierr))
     end do
     PetscCall(MatAssemblyBegin(J, MAT_FINAL_ASSEMBLY, ierr))
@@ -53,7 +53,6 @@ program ex22f
   IS             :: iA
   PetscReal      :: zero = 0.0
   PetscErrorCode :: ierr
-
 
   PetscCallA(PetscInitialize(ierr))
   PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-n', N, PETSC_NULL_BOOL, ierr))
@@ -95,7 +94,6 @@ program ex22f
   PetscCallA(SNESVIGetInactiveSet(snes, iA, ierr))
   PetscCallA(ISView(iA, PETSC_VIEWER_STDOUT_SELF, ierr))
 
-
   PetscCallA(VecDestroy(Xu, ierr))
   PetscCallA(VecDestroy(Xl, ierr))
   PetscCallA(SNESDestroy(snes, ierr))
@@ -105,9 +103,9 @@ program ex22f
   PetscCallA(PetscFinalize(ierr))
 end program ex22f
 
-/*TEST
-
-   test:
-      args: -lb 2.5
-
-TEST*/
+!/*TEST
+!
+!test:
+!  args:-lb 2.5
+!
+!TEST*/
