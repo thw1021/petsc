@@ -59,11 +59,11 @@ program ex22f
   PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-lb', lb, PETSC_NULL_BOOL, ierr))
   PetscCallA(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-ub', ub, PETSC_NULL_BOOL, ierr))
 
-  PetscCall(MatCreate(PETSC_COMM_WORLD, A, ierr))
-  PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, n, n, ierr))
-  PetscCall(MatSetType(A, MATAIJ, ierr))
-  PetscCall(MatSetUp(A, ierr))
-  PetscCall(MatSetFromOptions(A, ierr))
+  PetscCallA(MatCreate(PETSC_COMM_WORLD, A, ierr))
+  PetscCallA(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, n, n, ierr))
+  PetscCallA(MatSetType(A, MATAIJ, ierr))
+  PetscCallA(MatSetUp(A, ierr))
+  PetscCallA(MatSetFromOptions(A, ierr))
 
   PetscCallA(VecCreate(PETSC_COMM_WORLD, X, ierr))
   PetscCallA(VecSetSizes(X, PETSC_DECIDE, n, ierr))

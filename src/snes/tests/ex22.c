@@ -7,24 +7,26 @@ PetscErrorCode computeFunction(SNES snes, Vec X, Vec F, void *ctx)
   PetscReal       *f;
   const PetscReal *x;
 
+  PetscFunctionBeginUser;
   PetscCall(VecGetSize(X, &n));
   PetscCall(VecGetArrayRead(X, &x));
   PetscCall(VecGetArrayWrite(F, &f));
   for (int i = 0; i < n; i++) f[i] = x[i] - i;
   PetscCall(VecRestoreArrayWrite(F, &f));
   PetscCall(VecRestoreArrayRead(X, &x));
-  return 0;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode computeJacobian(SNES snes, Vec X, Mat J, Mat P, void *ctx)
 {
   PetscInt n;
 
+  PetscFunctionBeginUser;
   PetscCall(MatGetSize(J, &n, NULL));
   for (int i = 0; i < n; i++) PetscCall(MatSetValue(J, i, i, 1., INSERT_VALUES));
   PetscCall(MatAssemblyBegin(J, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(J, MAT_FINAL_ASSEMBLY));
-  return 0;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 int main(int argc, char **argv)
