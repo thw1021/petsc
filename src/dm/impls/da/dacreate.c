@@ -367,7 +367,8 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   PetscCall(PetscSectionSetChart(s, 0, gNv));
   for (PetscInt v = 0; v < gNv; ++v) PetscCall(PetscSectionSetDof(s, v, dof));
 
-  // If DM_BOUNDARY_GHOSTED is used, mark the ghosted vertices in this region as "constrained" so that they are not needed in the SF
+  // If DM_BOUNDARY_GHOSTED is used, mark ghosted vertices in this region as
+  // "constrained" so they are excluded from the SF
   PetscBool ghostX = (dd->bx == DM_BOUNDARY_GHOSTED);
   PetscBool ghostY = (dd->by == DM_BOUNDARY_GHOSTED);
 
@@ -382,8 +383,6 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
           if (isGhostedBoundary) {
             PetscInt p =
               (j - gy) * gm + (i - gx);
-            // print "bc point:", p to screen
-            // PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "bc point: %d\n", p));
             PetscCall(PetscSectionSetConstraintDof(s, p, dof));
           }
         }
@@ -451,22 +450,18 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
             (ghostX && (i < 0 || i >= M)) ||
             (ghostY && (j < 0 || j >= N));
 
-          if (isGhostedBoundary) {
-            // 
+          if (isGhostedBoundary) { 
             Nbv ++;
             PetscInt p =
               (j - gy) * gm + (i - gx);
-            // print "bc point:", p to screen
-            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "bc point: %d\n", p));
             PetscCall(PetscSectionSetConstraintIndices(s, p, comps));
           }
         }
     }
   }
-
   PetscCall(DMSetLocalSection(dm, s));
   // DMView(dm, NULL);
-  PetscSectionView(s, NULL);
+  // PetscSectionView(s, NULL);
   PetscCall(PetscSectionDestroy(&s));
 
   // Create point SF
@@ -486,13 +481,6 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   PetscCall(DMDAGetNeighbors(dm, &neigh));
   Nl = gNv - Nv - Nbv;
 
-
-  // print Nl on each RANK with rank printed too, across all ranks using synchronize
-  PetscCall(PetscSynchronizedPrintf(comm, "[%d] gNv: %d, Nl: %d\n", rank, gNv, Nl));
-  PetscCall(PetscSynchronizedFlush(comm, PETSC_STDOUT));
-
-  //print Nl to screen
-  PetscCall(PetscPrintf(comm, "gNv: %d\n, Nl: %d\n", gNv, Nl));
   // Compute starting point of each process
   PetscCall(PetscMalloc2(size + 1, &bases, size, &ldims));
   PetscCallMPI(MPI_Allgather(&Nv, 1, MPIU_INT, ldims, 1, MPIU_INT, comm));
@@ -529,9 +517,11 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   PetscCall(PetscFree2(bases, ldims));
   PetscCall(DMDARestoreGhostOwnershipRanges(dm, &glx, &glxs, &gly, &glys, &glz, &glzs));
 
-  for (PetscInt l = 0; l < Nl; ++l) PetscSynchronizedPrintf(comm, "[%d]local: %d remote %d %d\n", rank, local[l], remote[l].rank, remote[l].index);
-  PetscSynchronizedFlush(comm, NULL);
+  // for (PetscInt l = 0; l < Nl; ++l) PetscSynchronizedPrintf(comm, "[%d]local: %d remote %d %d\n", rank, local[l], remote[l].rank, remote[l].index);
+  // PetscSynchronizedFlush(comm, NULL);
   PetscCall(PetscSFSetGraph(sf, gNv, Nl, local, PETSC_OWN_POINTER, remote, PETSC_OWN_POINTER));
+  // view the SF
+  // PetscCall(PetscSFView(sf, NULL));
   PetscCall(DMSetPointSF(dm, sf));
 
   PetscCall(PetscSFDestroy(&sf));
