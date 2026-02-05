@@ -93,8 +93,8 @@ int main(int argc, char **argv)
 }
 
 /*TEST
-
-   test:
-      args: -lb 2.5
-
+  build:
+    requires: !complex
+  test:
+    args: -lb 2.5
 TEST*/
