@@ -90,6 +90,7 @@ PetscErrorCode TaoParametersInitialize(Tao tao)
 {
   PetscObjectParameterSetDefault(tao, max_it, 10000);
   PetscObjectParameterSetDefault(tao, max_funcs, PETSC_UNLIMITED);
+  PetscObjectParameterSetDefault(tao, lr, 1.0);
   PetscObjectParameterSetDefault(tao, gatol, PetscDefined(USE_REAL_SINGLE) ? 1e-5 : 1e-8);
   PetscObjectParameterSetDefault(tao, grtol, PetscDefined(USE_REAL_SINGLE) ? 1e-5 : 1e-8);
   PetscObjectParameterSetDefault(tao, crtol, PetscDefined(USE_REAL_SINGLE) ? 1e-5 : 1e-8);
@@ -349,6 +350,7 @@ PetscErrorCode TaoKSPSetUseEW(Tao tao, PetscBool flag)
 
   Options Database Keys:
 + -tao_type <type>             - The algorithm that Tao uses (lmvm, nls, etc.)
+. -tao_lr <lr>                 - learning rate (used by some optimizers such as lmvm for ML tasks)
 . -tao_gatol <gatol>           - absolute error tolerance for ||gradient||
 . -tao_grtol <grtol>           - relative error tolerance for ||gradient||
 . -tao_gttol <gttol>           - reduction of ||gradient|| relative to initial gradient
@@ -391,7 +393,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   PetscViewer monviewer;
   PetscBool   flg, found;
   MPI_Comm    comm;
-  PetscReal   catol, crtol, gatol, grtol, gttol;
+  PetscReal   lr, catol, crtol, gatol, grtol, gttol;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -421,6 +423,9 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   PetscCall(PetscOptionsReal("-tao_catol", "Stop if constraints violations within", "TaoSetConstraintTolerances", tao->catol, &catol, NULL));
   PetscCall(PetscOptionsReal("-tao_crtol", "Stop if relative constraint violations within", "TaoSetConstraintTolerances", tao->crtol, &crtol, NULL));
   PetscCall(TaoSetConstraintTolerances(tao, catol, crtol));
+
+  lr = tao->lr;
+  PetscCall(PetscOptionsReal("-tao_lr", "Learning Rate", "TaoSetLR", tao->lr, &lr, NULL));
 
   gatol = tao->gatol;
   grtol = tao->grtol;
@@ -806,6 +811,56 @@ PetscErrorCode TaoGetRecycleHistory(Tao tao, PetscBool *recycle)
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscAssertPointer(recycle, 2);
   *recycle = tao->recycle;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoSetLR - Sets the learning rate
+
+  Logically Collective
+
+  Input Parameters:
++ tao  - the `Tao` context
+- lr   - learning rate
+
+  Options Databse Keys
+. -tao_lr <lr> - Sets lr
+
+  Level: intermediate
+
+  Notes:
+  The learning rate is used by some optimizers such as LMVM to mimic the optimizers used for machine learning.
+.seealso: [](ch_tao), `Tao`, `TaoGetLR()`
+@*/
+PetscErrorCode TaoSetLR(Tao tao, PetscReal lr)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidLogicalCollectiveReal(tao, lr, 2);
+  tao->lr = lr;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TaoGetLR - Gets the learning rate
+
+  Logically Collective
+
+  Input Parameters:
++ tao  - the `Tao` context
+- lr   - learning rate
+
+  Level: intermediate
+
+  Notes:
+  The learning rate is used by some optimizers such as LMVM to mimic the optimizers used for machine learning.
+.seealso: [](ch_tao), `Tao`, `TaoSetLR()`
+@*/
+PetscErrorCode TaoGetLR(Tao tao, PetscReal *lr)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  if (lr) *lr = tao->lr;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

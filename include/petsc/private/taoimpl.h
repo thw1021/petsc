@@ -143,6 +143,7 @@ struct _p_Tao {
   PetscBool ksp_ewconv;
   SNES      snes_ewdummy;
 
+  PetscObjectParameterDeclare(PetscReal, lr);
   PetscObjectParameterDeclare(PetscReal, gatol);
   PetscObjectParameterDeclare(PetscReal, grtol);
   PetscObjectParameterDeclare(PetscReal, gttol);

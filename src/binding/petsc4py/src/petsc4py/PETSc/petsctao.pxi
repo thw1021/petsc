@@ -108,6 +108,9 @@ cdef extern from * nogil:
     PetscErrorCode TaoSetUp(PetscTAO)
     PetscErrorCode TaoSolve(PetscTAO)
 
+    PetscErrorCode TaoSetLR(PetscTAO, PetscReal)
+    PetscErrorCode TaoGetLR(PetscTAO, PetscReal*)
+
     PetscErrorCode TaoSetTolerances(PetscTAO, PetscReal, PetscReal, PetscReal)
     PetscErrorCode TaoParametersInitialize(PetscTAO)
     PetscErrorCode TaoGetTolerances(PetscTAO, PetscReal*, PetscReal*, PetscReal*)

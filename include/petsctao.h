@@ -405,6 +405,8 @@ PETSC_EXTERN PetscErrorCode TaoGetInequalityBounds(Tao, Vec *, Vec *);
 PETSC_EXTERN PetscErrorCode TaoSetVariableBoundsRoutine(Tao, PetscErrorCode (*)(Tao, Vec, Vec, PetscCtx), PetscCtx);
 PETSC_EXTERN PetscErrorCode TaoComputeVariableBounds(Tao);
 
+PETSC_EXTERN PetscErrorCode TaoSetLR(Tao, PetscReal);
+PETSC_EXTERN PetscErrorCode TaoGetLR(Tao, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoGetTolerances(Tao, PetscReal *, PetscReal *, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoSetTolerances(Tao, PetscReal, PetscReal, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoGetConstraintTolerances(Tao, PetscReal *, PetscReal *);
