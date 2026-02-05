@@ -29,7 +29,7 @@ program main
   PetscMPIInt :: rank, size
   PetscInt   ::  rstart, rend, i, k, N
   PetscInt, parameter ::numPoints = 1000000
-  PetscScalar  ::  dummy
+  PetscScalar :: dummy
   PetscScalar, parameter  :: h = 1.0/numPoints
   PetscScalar, pointer, dimension(:)  :: xarray
   PetscScalar :: myResult = 0

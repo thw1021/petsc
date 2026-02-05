@@ -52,8 +52,7 @@ contains
 !  Input Parameters:
 !  snes - the SNES context
 !  X - input vector
-!  dummy - optional user-defined context, as set by SNESSetFunction()
-!          (not used here)
+!  ctx - optional user-defined context, as set by SNESSetFunction()
 !
 !  Output Parameter:
 !  F - function vector
@@ -259,10 +258,9 @@ contains
 !  FormJacobian - Evaluates Jacobian matrix.
 !
 !  Input Parameters:
-!  snes     - the SNES context
-!  x        - input vector
-!  dummy    - optional user-defined context, as set by SNESSetJacobian()
-!             (not used here)
+!  snes   - the SNES context
+!  x      - input vector
+!  ctx    - optional user-defined context, as set by SNESSetJacobian()
 !
 !  Output Parameters:
 !  jac      - Jacobian matrix

@@ -141,7 +141,7 @@ contains
 !  Input Parameters:
 !  snes  - the SNES context
 !  X     - input vector
-!  dummy - optional user-defined context, as set by SNESSetFunction()
+!  ctx_unused - optional user-defined context, as set by SNESSetFunction()
 !          (not used here)
 !
 !  Output Parameter:
@@ -247,7 +247,7 @@ contains
 !  Input Parameters:
 !  snes    - the SNES context
 !  x       - input vector
-!  dummy   - optional user-defined context, as set by SNESSetJacobian()
+!  ctx_unused   - optional user-defined context, as set by SNESSetJacobian()
 !            (not used here)
 !
 !  Output Parameters:
@@ -262,13 +262,13 @@ contains
 !  This routine merely accesses the local vector data via
 !  VecGetArray() and VecRestoreArray().
 !
-  subroutine FormJacobian(snes, X, jac, jac_prec, dummy, ierr)
+  subroutine FormJacobian(snes, X, jac, jac_prec, ctx_unused, ierr)
 !   Input/output variables:
     SNES snes
     Vec X
     Mat jac, jac_prec
     PetscErrorCode, intent(out) :: ierr
-    integer dummy
+    integer ctx_unused
 !   Declarations for use with local array:
     PetscScalar, pointer :: lx_v(:)
 

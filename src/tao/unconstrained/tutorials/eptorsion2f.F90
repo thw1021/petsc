@@ -29,7 +29,7 @@ module eptorsion2fmodule
   use petsctao
   implicit none
 
-  type(tVec) localX
+  type(tVec) x_local
   type(tDM) dm
   PetscReal param
   PetscInt mx, my
@@ -46,9 +46,9 @@ contains
 !   X    - vector
 !   ierr - error code
 !
-  subroutine FormInitialGuess(X, ierr)
+  subroutine FormInitialGuess(x, ierr)
 !  Input/output variables:
-    Vec X
+    Vec x
     PetscErrorCode, intent(out) :: ierr
 
 !  Local variables:
@@ -72,11 +72,11 @@ contains
       do i = xs, xe - 1
         k = (j - gys)*gxm + i - gxs
         val = min((min(i + 1, mx - i))*hx, temp)
-        PetscCall(VecSetValuesLocal(X, 1_PETSC_INT_KIND, [k], [val], ADD_VALUES, ierr))
+        PetscCall(VecSetValuesLocal(x, 1_PETSC_INT_KIND, [k], [val], ADD_VALUES, ierr))
       end do
     end do
-    PetscCall(VecAssemblyBegin(X, ierr))
-    PetscCall(VecAssemblyEnd(X, ierr))
+    PetscCall(VecAssemblyBegin(x, ierr))
+    PetscCall(VecAssemblyEnd(x, ierr))
   end
 
 ! ---------------------------------------------------------------------
@@ -86,7 +86,7 @@ contains
 !  Input Parameters:
 !  tao   - the Tao context
 !  X     - input vector
-!  dummy - optional user-defined context (not used here)
+!  ctx_unused - optional user-defined context (not used here)
 !
 !  Output Parameters:
 !  f     - the function value at X
@@ -99,13 +99,13 @@ contains
 !  done using the standard Fortran style of treating the local
 !  input vector data as an array over the local mesh.
 !
-  subroutine FormFunctionGradient(ta, X, f, G, dummy, ierr)
+  subroutine FormFunctionGradient(tao_unused, X, f, G, ctx_unused, ierr)
 !  Input/output variables:
-    type(tTao) ta
+    type(tTao) tao_unused
     type(tVec) X, G
     PetscReal f
     PetscErrorCode, intent(out) :: ierr
-    PetscInt dummy
+    PetscInt ctx_unused
 
 !  Declarations for use with local array:
 
@@ -249,12 +249,12 @@ contains
     PetscCall(PetscLogFlops(20.0d0*(ye - ysm)*(xe - xsm) + 16.0d0*(xep - xs)*(yep - ys), ierr))
   end
 
-  subroutine ComputeHessian(ta, X, H, Hpre, dummy, ierr)
-    type(tTao) ta
-    type(tVec) X
+  subroutine ComputeHessian(tao_unused, x, H, Hpre, ctx_unused, ierr)
+    type(tTao) tao_unused
+    type(tVec) x
     type(tMat) H, Hpre
     PetscErrorCode, intent(out) :: ierr
-    PetscInt dummy
+    PetscInt ctx_unused
 
     PetscInt i, j, k
     PetscInt col(0:4), row
@@ -318,16 +318,16 @@ contains
     ierr = 0
   end
 
-  subroutine Monitor(ta, dummy, ierr)
-    type(tTao) ta
-    PetscInt dummy
+  subroutine Monitor(tao, ctx_unused, ierr)
+    type(tTao) tao
+    PetscInt ctx_unused
     PetscErrorCode, intent(out) :: ierr
 
     PetscInt its
     PetscReal f, gnorm, cnorm, xdiff
     TaoConvergedReason reason
 
-    PetscCall(TaoGetSolutionStatus(ta, its, f, gnorm, cnorm, xdiff, reason, ierr))
+    PetscCall(TaoGetSolutionStatus(tao, its, f, gnorm, cnorm, xdiff, reason, ierr))
     if (mod(its, 5) /= 0) then
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, 'iteration multiple of 5\n', ierr))
     end if
@@ -336,18 +336,18 @@ contains
 
   end
 
-  subroutine ConvergenceTest(ta, dummy, ierr)
-    type(tTao) ta
-    PetscInt dummy
+  subroutine ConvergenceTest(tao, ctx_unused, ierr)
+    type(tTao) tao
+    PetscInt ctx_unused
     PetscErrorCode, intent(out) :: ierr
 
     PetscInt its
     PetscReal f, gnorm, cnorm, xdiff
     TaoConvergedReason reason
 
-    PetscCall(TaoGetSolutionStatus(ta, its, f, gnorm, cnorm, xdiff, reason, ierr))
+    PetscCall(TaoGetSolutionStatus(tao, its, f, gnorm, cnorm, xdiff, reason, ierr))
     if (its == 7) then
-      PetscCall(TaoSetConvergedReason(ta, TAO_DIVERGED_MAXITS, ierr))
+      PetscCall(TaoSetConvergedReason(tao, TAO_DIVERGED_MAXITS, ierr))
     end if
 
     ierr = 0
@@ -370,7 +370,7 @@ program eptorsion2f
   PetscInt Nx, Ny         ! number of processes in x- and y- directions
   type(tTao) ta            ! Tao solver context
   PetscBool flg
-  PetscInt dummy
+  PetscInt ctx_unused
 
 ! Initialize TAO, PETSc  contexts
   PetscCallA(PetscInitialize(ierr))
@@ -415,12 +415,12 @@ program eptorsion2f
 
   PetscCallA(PetscOptionsHasName(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-testmonitor', flg, ierr))
   if (flg) then
-    PetscCallA(TaoMonitorSet(ta, Monitor, dummy, PETSC_NULL_FUNCTION, ierr))
+    PetscCallA(TaoMonitorSet(ta, Monitor, ctx_unused, PETSC_NULL_FUNCTION, ierr))
   end if
 
   PetscCallA(PetscOptionsHasName(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-testconvergence', flg, ierr))
   if (flg) then
-    PetscCallA(TaoSetConvergenceTest(ta, ConvergenceTest, dummy, ierr))
+    PetscCallA(TaoSetConvergenceTest(ta, ConvergenceTest, ctx_unused, ierr))
   end if
 
 ! Check for any TAO command line options

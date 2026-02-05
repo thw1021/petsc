@@ -19,7 +19,7 @@ module plate2fmodule
   use petsctao
 
   implicit none
-  Vec localX, localV
+  Vec x_local, v_local
   Vec Top, Left
   Vec Right, Bottom
   DM dm
@@ -42,25 +42,24 @@ contains
 !  FormFunctionGradient - Evaluates function f(X).
 !
 !  Input Parameters:
-!  tao   - the Tao context
-!  X     - the input vector
-!  dummy - optional user-defined context, as set by TaoSetFunction()
-!          (not used here)
+!  tao        - the Tao context
+!  x          - the input vector
+!  ctx_unused - optional user-defined context, as set by TaoSetFunction()
+!               (not used here)
 !
 !  Output Parameters:
-!  fcn     - the newly evaluated function
-!  G       - the gradient vector
-!  info  - error code
+!  f    - the newly evaluated function
+!  g    - the gradient vector
+!  ierr - error code
 !
 
-  subroutine FormFunctionGradient(ta, X, fcn, G, dummy, ierr)
+  subroutine FormFunctionGradient(tao_unused, x, f, g, ctx_unused, ierr)
 ! Input/output variables
-
-    Tao ta
-    PetscReal fcn
-    Vec X, G
+    Tao tao_unused
+    PetscReal f
+    Vec x, g
     PetscErrorCode, intent(out) :: ierr
-    PetscInt dummy
+    PetscInt ctx_unused
 
     PetscInt i, j, row
     PetscInt xs, xm
@@ -92,15 +91,15 @@ contains
     PetscCall(DMDAGetGhostCorners(dm, gxs, gys, PETSC_NULL_INTEGER, gxm, gym, PETSC_NULL_INTEGER, ierr))
 
 ! Scatter ghost points to local vector
-    PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, localX, ierr))
-    PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, localX, ierr))
+    PetscCall(DMGlobalToLocalBegin(dm, x, INSERT_VALUES, x_local, ierr))
+    PetscCall(DMGlobalToLocalEnd(dm, x, INSERT_VALUES, x_local, ierr))
 
 ! Initialize the vector to zero
-    PetscCall(VecSet(localV, 0.0_PETSC_REAL_KIND, ierr))
+    PetscCall(VecSet(v_local, 0.0_PETSC_REAL_KIND, ierr))
 
 ! Get arrays to vector data (See note above about using VecGetArray in Fortran)
-    PetscCall(VecGetArray(localX, x_v, ierr))
-    PetscCall(VecGetArray(localV, g_v, ierr))
+    PetscCall(VecGetArray(x_local, x_v, ierr))
+    PetscCall(VecGetArray(v_local, g_v, ierr))
     PetscCall(VecGetArray(Top, top_v, ierr))
     PetscCall(VecGetArray(Bottom, bottom_v, ierr))
     PetscCall(VecGetArray(Left, left_v, ierr))
@@ -246,23 +245,23 @@ contains
     end if
 
     ft = ft*area
-    PetscCallMPI(MPI_Allreduce(ft, fcn, 1, MPIU_REAL, MPIU_SUM, PETSC_COMM_WORLD, ierr))
+    PetscCallMPI(MPI_Allreduce(ft, f, 1, MPIU_REAL, MPIU_SUM, PETSC_COMM_WORLD, ierr))
 
 ! Restore vectors
-    PetscCall(VecRestoreArray(localX, x_v, ierr))
-    PetscCall(VecRestoreArray(localV, g_v, ierr))
+    PetscCall(VecRestoreArray(x_local, x_v, ierr))
+    PetscCall(VecRestoreArray(v_local, g_v, ierr))
     PetscCall(VecRestoreArray(Left, left_v, ierr))
     PetscCall(VecRestoreArray(Top, top_v, ierr))
     PetscCall(VecRestoreArray(Bottom, bottom_v, ierr))
     PetscCall(VecRestoreArray(Right, right_v, ierr))
 
 ! Scatter values to global vector
-    PetscCall(DMLocalToGlobalBegin(dm, localV, INSERT_VALUES, G, ierr))
-    PetscCall(DMLocalToGlobalEnd(dm, localV, INSERT_VALUES, G, ierr))
+    PetscCall(DMLocalToGlobalBegin(dm, v_local, INSERT_VALUES, g, ierr))
+    PetscCall(DMLocalToGlobalEnd(dm, v_local, INSERT_VALUES, g, ierr))
 
     PetscCall(PetscLogFlops(70.0_C_DOUBLE*xm*ym, ierr))
 
-  end  !FormFunctionGradient
+  end function FormFunctionGradient
 
 ! ----------------------------------------------------------------------------
 !
@@ -270,13 +269,13 @@ contains
 !   FormHessian - Evaluates Hessian matrix.
 !
 !   Input Parameters:
-!.  tao  - the Tao context
-!.  X    - input vector
-!.  dummy  - not used
+!.  tao_unused - the Tao context
+!.  x          - input vector
+!.  ctx_unused - not used
 !
 !   Output Parameters:
-!.  Hessian    - Hessian matrix
-!.  Hpc    - optionally different matrix used to construct the preconditioner
+!.  H    - Hessian matrix
+!.  Hpre - optionally different matrix used to construct the preconditioner
 !
 !   Notes:
 !   Due to mesh point reordering with DMs, we must always work
@@ -289,12 +288,12 @@ contains
 !         - Then set matrix entries using the local ordering
 !           by calling MatSetValuesLocal()
 
-  subroutine FormHessian(ta, X, Hessian, Hpc, dummy, ierr)
+  subroutine FormHessian(tao_unused, x, H, Hpre_unused, ctx_unused, ierr)
 
-    Tao ta
-    Vec X
-    Mat Hessian, Hpc
-    PetscInt dummy
+    Tao tao_unused
+    Vec x
+    Mat H, Hpre_unused
+    PetscInt ctx_unused
     PetscErrorCode, intent(out) :: ierr
 
     PetscInt i, j, k, row
@@ -314,26 +313,26 @@ contains
     PetscBool assembled
 
 ! Set various matrix options
-    PetscCall(MatSetOption(Hessian, MAT_IGNORE_OFF_PROC_ENTRIES, PETSC_TRUE, ierr))
+    PetscCall(MatSetOption(H, MAT_IGNORE_OFF_PROC_ENTRIES, PETSC_TRUE, ierr))
 
 ! Get local mesh boundaries
     PetscCall(DMDAGetCorners(dm, xs, ys, PETSC_NULL_INTEGER, xm, ym, PETSC_NULL_INTEGER, ierr))
     PetscCall(DMDAGetGhostCorners(dm, gxs, gys, PETSC_NULL_INTEGER, gxm, gym, PETSC_NULL_INTEGER, ierr))
 
 ! Scatter ghost points to local vectors
-    PetscCall(DMGlobalToLocalBegin(dm, X, INSERT_VALUES, localX, ierr))
-    PetscCall(DMGlobalToLocalEnd(dm, X, INSERT_VALUES, localX, ierr))
+    PetscCall(DMGlobalToLocalBegin(dm, x, INSERT_VALUES, x_local, ierr))
+    PetscCall(DMGlobalToLocalEnd(dm, x, INSERT_VALUES, x_local, ierr))
 
 ! Get pointers to vector data (see note on Fortran arrays above)
-    PetscCall(VecGetArray(localX, x_v, ierr))
+    PetscCall(VecGetArray(x_local, x_v, ierr))
     PetscCall(VecGetArray(Top, top_v, ierr))
     PetscCall(VecGetArray(Bottom, bottom_v, ierr))
     PetscCall(VecGetArray(Left, left_v, ierr))
     PetscCall(VecGetArray(Right, right_v, ierr))
 
 ! Initialize matrix entries to zero
-    PetscCall(MatAssembled(Hessian, assembled, ierr))
-    if (assembled .eqv. PETSC_TRUE) PetscCall(MatZeroEntries(Hessian, ierr))
+    PetscCall(MatAssembled(H, assembled, ierr))
+    if (assembled) PetscCall(MatZeroEntries(H, ierr))
 
     rhx = real(mx) + 1.0
     rhy = real(my) + 1.0
@@ -473,21 +472,21 @@ contains
         end if
 
 ! Set matrix values using local numbering, defined earlier in main routine
-        PetscCall(MatSetValuesLocal(Hessian, 1_PETSC_INT_KIND, [row], k, col, v, INSERT_VALUES, ierr))
+        PetscCall(MatSetValuesLocal(H, 1_PETSC_INT_KIND, [row], k, col, v, INSERT_VALUES, ierr))
 
       end do
     end do
 
 ! restore vectors
-    PetscCall(VecRestoreArray(localX, x_v, ierr))
+    PetscCall(VecRestoreArray(x_local, x_v, ierr))
     PetscCall(VecRestoreArray(Left, left_v, ierr))
     PetscCall(VecRestoreArray(Right, right_v, ierr))
     PetscCall(VecRestoreArray(Top, top_v, ierr))
     PetscCall(VecRestoreArray(Bottom, bottom_v, ierr))
 
 ! Assemble the matrix
-    PetscCall(MatAssemblyBegin(Hessian, MAT_FINAL_ASSEMBLY, ierr))
-    PetscCall(MatAssemblyEnd(Hessian, MAT_FINAL_ASSEMBLY, ierr))
+    PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY, ierr))
+    PetscCall(MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY, ierr))
 
     PetscCall(PetscLogFlops(199.0_C_DOUBLE*xm*ym, ierr))
 
@@ -576,14 +575,14 @@ contains
         exitloop = .false.
         do while (k < maxits .and. (.not. exitloop))
 
-          nf1 = u1 + u1*u2*u2 - u1*u1*u1/3.0_PETSC_REAL_KIND - xt
-          nf2 = -u2 - u1*u1*u2 + u2*u2*u2/3.0_PETSC_REAL_KIND - yt
+          nf1 = u1 + u1*u2**2 - u1**3/3.0_PETSC_REAL_KIND - xt
+          nf2 = -u2 - u1**2*u2 + u2**3/3.0_PETSC_REAL_KIND - yt
           fnorm = sqrt(nf1*nf1 + nf2*nf2)
           if (fnorm > tol) then
-            njac11 = 1.0_PETSC_REAL_KIND + u2*u2 - u1*u1
+            njac11 = 1.0_PETSC_REAL_KIND + u2**2 - u1**2
             njac12 = 2.0_PETSC_REAL_KIND*u1*u2
             njac21 = -2.0_PETSC_REAL_KIND*u1*u2
-            njac22 = -1.0_PETSC_REAL_KIND - u1*u1 + u2*u2
+            njac22 = -1.0_PETSC_REAL_KIND - u1**2 + u2**2
             det = njac11*njac22 - njac21*njac12
             u1 = u1 - (njac22*nf1 - njac12*nf2)/det
             u2 = u2 - (njac11*nf2 - njac21*nf1)/det
@@ -593,7 +592,7 @@ contains
           k = k + 1
         end do
 
-        boundary_v(1 + i) = u1*u1 - u2*u2
+        boundary_v(1 + i) = u1**2 - u2**2
         if ((j == 0) .or. (j == 1)) then
           xt = xt + hx
         else
@@ -616,22 +615,22 @@ contains
 
 ! Scale the boundary if desired
     PetscCall(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-bottom', scl, flg, ierr))
-    if (flg .eqv. PETSC_TRUE) then
+    if (flg) then
       PetscCall(VecScale(Bottom, scl, ierr))
     end if
 
     PetscCall(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-top', scl, flg, ierr))
-    if (flg .eqv. PETSC_TRUE) then
+    if (flg) then
       PetscCall(VecScale(Top, scl, ierr))
     end if
 
     PetscCall(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-right', scl, flg, ierr))
-    if (flg .eqv. PETSC_TRUE) then
+    if (flg) then
       PetscCall(VecScale(Right, scl, ierr))
     end if
 
     PetscCall(PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-left', scl, flg, ierr))
-    if (flg .eqv. PETSC_TRUE) then
+    if (flg) then
       PetscCall(VecScale(Left, scl, ierr))
     end if
 
@@ -648,15 +647,15 @@ contains
 !
 !*/
 
-  subroutine MSA_Plate(ta, xl, xu, dummy, ierr)
+  subroutine MSA_Plate(tao_unused, xl, xu, ctx_unused, ierr)
 
-    Tao ta
+    Tao tao_unused
     Vec xl, xu
     PetscErrorCode, intent(out) :: ierr
     PetscInt i, j, row
     PetscInt xs, xm, ys, ym
     PetscReal lb, ub
-    PetscInt dummy
+    PetscInt ctx_unused
     PetscReal, pointer :: xl_v(:)
 
     lb = PETSC_NINFINITY
@@ -703,15 +702,14 @@ contains
 !
 !*/
 
-  subroutine MSA_InitialPoint(X, ierr)
+  subroutine MSA_InitialPoint(x, ierr)
 
-    Vec X
+    Vec x
     PetscErrorCode, intent(out) :: ierr
     PetscInt start, i, j
     PetscInt row
     PetscInt xs, xm, gxs, gxm
     PetscInt ys, ym, gys, gym
-    PetscReal zero, np5
 
     PetscReal, pointer :: left_v(:), right_v(:)
     PetscReal, pointer :: bottom_v(:), top_v(:)
@@ -719,22 +717,20 @@ contains
     PetscBool flg
     PetscRandom rctx
 
-    zero = 0.0
-    np5 = -0.5
 
     PetscCall(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-start', start, flg, ierr))
 
-    if ((flg .eqv. PETSC_TRUE) .and. (start == 0)) then  ! the zero vector is reasonable
-      PetscCall(VecSet(X, zero, ierr))
+    if (flg .and. (start == 0)) then  ! the zero vector is reasonable
+      PetscCall(VecSet(x 0.0_PETSC_REAL_KIND, ierr))
 
-    elseif ((flg .eqv. PETSC_TRUE) .and. (start > 0)) then  ! random start -0.5 < xi < 0.5
+    elseif (flg .and. (start > 0)) then  ! random start -0.5 < xi < 0.5
       PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, rctx, ierr))
       do i = 0, start - 1
-        PetscCall(VecSetRandom(X, rctx, ierr))
+        PetscCall(VecSetRandom(x rctx, ierr))
       end do
 
       PetscCall(PetscRandomDestroy(rctx, ierr))
-      PetscCall(VecShift(X, np5, ierr))
+      PetscCall(VecShift(x -.5_PETSC_REAL_KIND, ierr))
 
     else   ! average of boundary conditions
 
@@ -748,7 +744,7 @@ contains
       PetscCall(VecGetArray(Left, left_v, ierr))
       PetscCall(VecGetArray(Right, right_v, ierr))
 
-      PetscCall(VecGetArray(localX, x_v, ierr))
+      PetscCall(VecGetArray(x_local, x_v, ierr))
 
 !        Perform local computations
       do j = ys, ys + ym - 1
@@ -760,15 +756,15 @@ contains
       end do
 
 !        Restore vectors
-      PetscCall(VecRestoreArray(localX, x_v, ierr))
+      PetscCall(VecRestoreArray(x_local, x_v, ierr))
 
       PetscCall(VecRestoreArray(Left, left_v, ierr))
       PetscCall(VecRestoreArray(Top, top_v, ierr))
       PetscCall(VecRestoreArray(Bottom, bottom_v, ierr))
       PetscCall(VecRestoreArray(Right, right_v, ierr))
 
-      PetscCall(DMLocalToGlobalBegin(dm, localX, INSERT_VALUES, X, ierr))
-      PetscCall(DMLocalToGlobalEnd(dm, localX, INSERT_VALUES, X, ierr))
+      PetscCall(DMLocalToGlobalBegin(dm, x_local, INSERT_VALUES, x ierr))
+      PetscCall(DMLocalToGlobalEnd(dm, x_local, INSERT_VALUES, x ierr))
 
     end if
 
@@ -780,11 +776,11 @@ program plate2f
   use plate2fmodule
   implicit none
 
-  PetscErrorCode ierr          ! used to check for functions returning nonzeros
-  Vec x             ! solution vector
-  PetscInt m             ! number of local elements in vector
-  Tao ta           ! Tao solver context
-  Mat H             ! Hessian matrix
+  PetscErrorCode ierr            ! used to check for functions returning nonzeros
+  Vec x                          ! solution vector
+  PetscInt m                     ! number of local elements in vector
+  Tao ta                         ! Tao solver context
+  Mat H                          ! Hessian matrix
   ISLocalToGlobalMapping isltog  ! local to global mapping object
   PetscBool flg
 
@@ -825,8 +821,8 @@ program plate2f
 ! the same types.
 
   PetscCallA(DMCreateGlobalVector(dm, x, ierr))
-  PetscCallA(DMCreateLocalVector(dm, localX, ierr))
-  PetscCallA(VecDuplicate(localX, localV, ierr))
+  PetscCallA(DMCreateLocalVector(dm, x_local, ierr))
+  PetscCallA(VecDuplicate(x_local, v_local, ierr))
 
 ! Create a matrix data structure to store the Hessian.
 ! Here we (optionally) also associate the local numbering scheme
@@ -878,8 +874,8 @@ program plate2f
   PetscCallA(VecDestroy(Left, ierr))
   PetscCallA(VecDestroy(Right, ierr))
   PetscCallA(MatDestroy(H, ierr))
-  PetscCallA(VecDestroy(localX, ierr))
-  PetscCallA(VecDestroy(localV, ierr))
+  PetscCallA(VecDestroy(x_local, ierr))
+  PetscCallA(VecDestroy(v_local, ierr))
   PetscCallA(DMDestroy(dm, ierr))
 
 ! Finalize TAO

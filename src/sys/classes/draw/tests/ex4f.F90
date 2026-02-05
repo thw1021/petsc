@@ -12,13 +12,13 @@ module ex4fmodule
   use petscdraw
   implicit none
 contains
-  subroutine zoomfunction(draw, dummy, ierr)
+  subroutine zoomfunction(draw, unused, ierr)
+    PetscDraw :: draw
+    integer :: unused
+    PetscErrorCode, intent(out) :: ierr
 
     PetscReal val
     PetscInt, parameter :: max = 256
-    PetscDraw draw
-    integer dummy
-    PetscErrorCode, intent(out) :: ierr
     PetscInt32 i
 
     do i = 0, max - 1

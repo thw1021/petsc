@@ -18,16 +18,16 @@ contains
 !  Input Parameters:
 !  snes - the SNES context
 !  x - input vector
-!  dummy - optional user-defined context (not used here)
+!  ctx_unused - optional user-defined context (not used here)
 !
 !  Output Parameter:
 !  f - function vector
 !
-  subroutine FormFunction(snes, x, f, dummy, ierr)
+  subroutine FormFunction(snes, x, f, ctx_unused, ierr)
     SNES snes
     Vec x, f
     PetscErrorCode, intent(out) :: ierr
-    integer dummy(*)
+    integer ctx_unused(*)
 
 !  Declarations for use with local arrays
     PetscScalar, pointer :: lx_v(:), lf_v(:)
@@ -59,13 +59,13 @@ contains
 !  Input Parameters:
 !  snes - the SNES context
 !  x - input vector
-!  dummy - optional user-defined context (not used here)
+!  ctx_unused - optional user-defined context (not used here)
 !
 !  Output Parameters:
 !  A - Jacobian matrix
 !  B - optionally different matrix used to construct the preconditioner
 !
-  subroutine FormJacobian(snes, X, jac, B, dummy, ierr)
+  subroutine FormJacobian(snes, X, jac, B, ctx_unused, ierr)
 
     SNES snes
     Vec X
@@ -73,7 +73,7 @@ contains
     PetscScalar A(4)
     PetscErrorCode, intent(out) :: ierr
     PetscInt idx(2)
-    integer dummy(*)
+    integer ctx_unused(*)
 
 !  Declarations for use with local arrays
 

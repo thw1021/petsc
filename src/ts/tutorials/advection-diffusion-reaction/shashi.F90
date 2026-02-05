@@ -41,21 +41,19 @@ contains
 !
 !  Input Parameters:
 !  snes - the SNES context
-!  x - input vector
-!  dummy - optional user-defined context (not used here)
+!  u - input vector
+!  ctx_unused - optional user-defined context (not used here)
 !
 !  Output Parameter:
-!  f - function vector
+!  F - function vector
 !
-  subroutine FormFunction(snes, x, f, dummy, ierr)
+  subroutine FormFunction(snes, u, F, ctx_unused, ierr)
     SNES snes
-    Vec x, f
+    Vec u, F
     PetscErrorCode, intent(out) :: ierr
-    integer dummy(*)
-
+    integer ctx_unused(*)
 !  Declarations for use with local arrays
-
-    PetscScalar, pointer ::lx_v(:), lf_v(:)
+    PetscScalar, pointer :: u_v(:), F_v(:)
 
 !  Get pointers to vector data.
 !    - For default PETSc vectors, VecGetArray() returns a pointer to
@@ -65,11 +63,11 @@ contains
 !    - Note that the Fortran interface to VecGetArray() differs from the
 !      C version.  See the Fortran chapter of the users manual for details.
 
-    PetscCall(VecGetArrayRead(x, lx_v, ierr))
-    PetscCall(VecGetArray(f, lf_v, ierr))
-    PetscCall(ShashiFormFunction(lx_v, lf_v))
-    PetscCall(VecRestoreArrayRead(x, lx_v, ierr))
-    PetscCall(VecRestoreArray(f, lf_v, ierr))
+    PetscCall(VecGetArrayRead(u, u_v, ierr))
+    PetscCall(VecGetArray(F, F_v, ierr))
+    PetscCall(ShashiFormFunction(u_v, F_v))
+    PetscCall(VecRestoreArrayRead(u, u_v, ierr))
+    PetscCall(VecRestoreArray(F, F_v, ierr))
   end
 
 ! ---------------------------------------------------------------------
@@ -78,35 +76,34 @@ contains
 !
 !  Input Parameters:
 !  snes - the SNES context
-!  x - input vector
-!  dummy - optional user-defined context (not used here)
+!  u - input vector
+!  ctx_unused - optional user-defined context (not used here)
 !
 !  Output Parameters:
-!  A - Jacobian matrix
-!  B - optionally different matrix used to construct the preconditioner
+!  Amat - (approximate) Jacobian matrix (not used here)
+!  Pmat - matrix used to construct the preconditioner, often the same as Amat
 !
-  subroutine FormJacobian(snes, X, jac, B, dummy, ierr)
+  subroutine FormJacobian(snes, u, Amat, Pmat, ctx_unused, ierr)
     SNES snes
-    Vec X
-    Mat jac, B
+    Vec u
+    Mat Amat, Pmat
     PetscErrorCode, intent(out) :: ierr
-    integer dummy(*)
-
+    integer ctx_unused(*)
 !  Declarations for use with local arrays
-    PetscScalar, pointer ::lx_v(:), lf_v(:, :)
+    PetscScalar, pointer :: u_v(:), Pmat_v(:, :)
 
 !  Get pointer to vector data
 
-    PetscCall(VecGetArrayRead(x, lx_v, ierr))
-    PetscCall(MatDenseGetArray(B, lf_v, ierr))
-    PetscCall(ShashiFormJacobian(lx_v, lf_v))
-    PetscCall(MatDenseRestoreArray(B, lf_v, ierr))
-    PetscCall(VecRestoreArrayRead(x, lx_v, ierr))
+    PetscCall(VecGetArrayRead(u, u_v, ierr))
+    PetscCall(MatDenseGetArray(Pmat, Pmat_v, ierr))
+    PetscCall(ShashiFormJacobian(u_v, Pmat_v))
+    PetscCall(MatDenseRestoreArray(Pmat, Pmat_v, ierr))
+    PetscCall(VecRestoreArrayRead(u, u_v, ierr))
 
 !  Assemble matrix
 
-    PetscCall(MatAssemblyBegin(jac, MAT_FINAL_ASSEMBLY, ierr))
-    PetscCall(MatAssemblyEnd(jac, MAT_FINAL_ASSEMBLY, ierr))
+    PetscCall(MatAssemblyBegin(Amat, MAT_FINAL_ASSEMBLY, ierr))
+    PetscCall(MatAssemblyEnd(Amat, MAT_FINAL_ASSEMBLY, ierr))
 
   end
 
@@ -163,7 +160,6 @@ contains
       atom_h_init = 2.0, &
       atom_o_init = 1.0, &
       atom_n_init = 3.76
-    PetscScalar an_r(26), f_eq(26)
     PetscScalar part_p(26), idiff
     PetscInt i_cc, i_hh, i_h2o
     PetscScalar an_t
@@ -542,23 +538,24 @@ contains
 
   end
 
-  subroutine ShashiPostCheck(ls, X, Y, W, c_Y, c_W, dummy)
+  subroutine ShashiPostCheck(ls, x_unused, y_unused, d, changed_d_unused, changed_w, ctx_unused)
     SNESLineSearch ls
     PetscErrorCode ierr
-    Vec X, Y, W
-    PetscObject dummy
-    PetscBool c_Y, c_W
-    PetscScalar, pointer :: xx(:)
+    Vec x_unused, y_unused, d
+    PetscObject ctx_unused
+    PetscBool changed_d_unused, changed_w
+    PetscScalar, pointer :: d_v(:)
     PetscInt i
-    PetscCall(VecGetArray(W, xx, ierr))
+
+    PetscCall(VecGetArray(d, d_v, ierr))
     do i = 1, 26
-      if (xx(i) < 0.0) then
-        xx(i) = 0.0
-        c_W = PETSC_TRUE
+      if (d_v(i) < 0.0) then
+        d_v(i) = 0.0
+        changed_w = PETSC_TRUE
       end if
-      if (xx(i) > 3.0) xx(i) = 3.0
+      if (d_v(i) > 3.0) d_v(i) = 3.0
     end do
-    PetscCall(VecRestoreArray(W, xx, ierr))
+    PetscCall(VecRestoreArray(d, d_v, ierr))
   end
 end module shashimodule
 
@@ -606,11 +603,11 @@ program main
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 ! Create vectors for solution and nonlinear function
-  PetscCallA(VecCreateSeq(PETSC_COMM_SELF, 26_PETSC_INT_KND, x, ierr))
+  PetscCallA(VecCreateSeq(PETSC_COMM_SELF, 26_PETSC_INT_KIND, x, ierr))
   PetscCallA(VecDuplicate(x, r, ierr))
 
 ! Create Jacobian matrix data structure
-  PetscCallA(MatCreateDense(PETSC_COMM_SELF, 26, 26, 26, 26, PETSC_NULL_SCALAR, J, ierr))
+  PetscCallA(MatCreateDense(PETSC_COMM_SELF, 26_PETSC_INT_KIND, 26_PETSC_INT_KIND, 26_PETSC_INT_KIND, 26_PETSC_INT_KIND, PETSC_NULL_SCALAR_ARRAY, J, ierr))
 
 ! Set function evaluation routine and vector
   PetscCallA(SNESSetFunction(snes, r, FormFunction, 0, ierr))
