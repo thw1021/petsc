@@ -57,7 +57,7 @@ static PetscErrorCode SNESVIMonitorResidual(SNES snes, PetscInt its, PetscReal f
   PetscValidHeaderSpecific(vf->viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(SNESGetFunction(snes, &F, NULL, NULL));
   PetscCall(SNESGetSolution(snes, &X));
-  PetscCall(SNESVIGetActiveSetIS(snes, X, F, &isactive));
+  PetscCall(SNESVICreateActiveSetIS(snes, X, F, &isactive));
   PetscCall(VecDuplicate(F, &Finactive));
   PetscCall(PetscObjectCompose((PetscObject)Finactive, "__Vec_bc_zero__", (PetscObject)snes));
   PetscCall(VecCopy(F, Finactive));
@@ -80,7 +80,7 @@ static PetscErrorCode SNESVIMonitorActive(SNES snes, PetscInt its, PetscReal fgn
   PetscValidHeaderSpecific(vf->viewer, PETSC_VIEWER_CLASSID, 4);
   PetscCall(SNESGetFunction(snes, &F, NULL, NULL));
   PetscCall(SNESGetSolution(snes, &X));
-  PetscCall(SNESVIGetActiveSetIS(snes, X, F, &isactive));
+  PetscCall(SNESVICreateActiveSetIS(snes, X, F, &isactive));
   PetscCall(VecDuplicate(F, &A));
   PetscCall(PetscObjectCompose((PetscObject)A, "__Vec_bc_zero__", (PetscObject)snes));
   PetscCall(VecSet(A, 0.));
@@ -255,7 +255,7 @@ PetscErrorCode SNESVIProjectOntoBounds(SNES snes, Vec X)
 }
 
 /*@
-  SNESVIGetActiveSetIS - Gets the global indices for the active set variables
+  SNESVICreateActiveSetIS - Gets the global indices for the active set variables
 
   Input Parameters:
 + snes - the `SNES` context
@@ -269,7 +269,7 @@ PetscErrorCode SNESVIProjectOntoBounds(SNES snes, Vec X)
 
 .seealso: [](ch_snes), `SNES`, `SNESVINEWTONRSLS`, `SNESVINEWTONSSLS`
 @*/
-PetscErrorCode SNESVIGetActiveSetIS(SNES snes, Vec X, Vec F, IS *ISact)
+PetscErrorCode SNESVICreateActiveSetIS(SNES snes, Vec X, Vec F, IS *ISact)
 {
   Vec                Xl = snes->xl, Xu = snes->xu;
   const PetscScalar *x, *f, *xl, *xu;
