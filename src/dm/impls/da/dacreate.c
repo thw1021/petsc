@@ -325,8 +325,6 @@ static PetscErrorCode PetscSFAddFace_2D_Private(DM dm, PetscMPIInt nrank, PetscI
   const PetscInt nrm = nrank % pm; // The x-component of the neighbor rank, in [0, m)
   const PetscInt nrn = nrank / pm; // The y-component of the neighbor rank, in [0, n)
 
-
-  // if nrank is -1, skip this function
   if (nrank < 0) PetscFunctionReturn(PETSC_SUCCESS);
   for (PetscInt j = ymin; j < ymax; ++j) {
     for (PetscInt i = xmin; i < xmax; ++i) {
@@ -339,10 +337,34 @@ static PetscErrorCode PetscSFAddFace_2D_Private(DM dm, PetscMPIInt nrank, PetscI
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+
+static PetscErrorCode PetscSFAddFace_1D_Private(DM dm, PetscMPIInt nrank, PetscInt xmin, PetscInt xmax, const PetscInt bases[], const PetscInt glx[], const PetscInt glxs[], PetscInt *l, PetscInt local[], PetscSFNode remote[])
+{
+  PetscInt dof, x, gx, gm, pm;
+
+  PetscFunctionBegin;
+  if (nrank < 0) PetscFunctionReturn(PETSC_SUCCESS);
+
+  PetscCall(DMDAGetInfo(dm, NULL, NULL, NULL, NULL, &pm, NULL, NULL, &dof, NULL, NULL, NULL, NULL, NULL));
+  PetscCall(DMDAGetCorners(dm, &x, NULL, NULL, NULL, NULL, NULL));
+  PetscCall(DMDAGetGhostCorners(dm, &gx, NULL, NULL, &gm, NULL, NULL));
+
+  const PetscInt nrm = nrank;
+
+  for (PetscInt i = xmin; i < xmax; ++i) {
+    local[*l]        = i - gx;
+    remote[*l].rank  = nrank;
+    remote[*l].index = (i - glxs[nrm]) * dof;
+    ++(*l);
+  }
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode DMCreateLocalSection_DA(DM dm)
 {
   MPI_Comm     comm;
-  PetscMPIInt  size, rank;
+  PetscMPIInt  size, rank, left=-1, right=-1;
   PetscSection s;
   PetscSF      sf;
   PetscInt     x, y = 0, z = 0, m, n = 1, p = 1;
@@ -370,7 +392,7 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   // If DM_BOUNDARY_GHOSTED is used, mark ghosted vertices in this region as
   // "constrained" so they are excluded from the SF
   PetscBool ghostX = (dd->bx == DM_BOUNDARY_GHOSTED);
-  PetscBool ghostY = (dd->by == DM_BOUNDARY_GHOSTED);
+  PetscBool ghostY = (dim > 1 && dd->by == DM_BOUNDARY_GHOSTED);
 
   if (ghostX || ghostY) {
       for (PetscInt j = gy; j < gy + gn; j++) {
@@ -378,7 +400,7 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
 
           PetscBool isGhostedBoundary =
             (ghostX && (i < 0 || i >= M)) ||
-            (ghostY && (j < 0 || j >= N));
+            (ghostY && (dim > 1) && (j < 0 || j >= N));
 
           if (isGhostedBoundary) {
             PetscInt p =
@@ -478,7 +500,6 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   const PetscInt    *glzs;   // The first ghosted vertex along z in each of the p procs
   PetscInt           Nl=0, l = 0;
   PetscCall(PetscSFCreate(comm, &sf));
-  PetscCall(DMDAGetNeighbors(dm, &neigh));
   Nl = gNv - Nv - Nbv;
 
   // Compute starting point of each process
@@ -489,10 +510,25 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   for (PetscInt i = 1; i <= size; i++) bases[i] += bases[i - 1];
   // Compute local and remote points for each leaf
   PetscCall(DMDAGetGhostOwnershipRanges(dm, &glx, &glxs, &gly, &glys, &glz, &glzs));
+
+
+  if (dim == 1) {
+      if (rank > 0) left  = rank - 1;
+      if (rank < size-1) right = rank + 1;
+  } else {
+      PetscCall(DMDAGetNeighbors(dm, &neigh));
+  }
+
   PetscCall(PetscMalloc2(Nl, &local, Nl, &remote));
   // for (PetscInt i = 0; i < pm; ++i) PetscSynchronizedPrintf(comm, "[%d]glx %d\n", rank, glx[i]);
   // for (PetscInt i = 0; i < pn; ++i) PetscSynchronizedPrintf(comm, "[%d]gly %d\n", rank, gly[i]);
   switch (dim) {
+  case 1:
+    // Left
+    PetscCall(PetscSFAddFace_1D_Private(dm, left, gx, x, bases, glx, glxs, &l, local, remote));
+    // Right
+    PetscCall(PetscSFAddFace_1D_Private(dm, right, x + m, gx + gm, bases, glx, glxs, &l, local, remote));
+    break;
   case 2:
     // Lower left
     PetscCall(PetscSFAddFace_2D_Private(dm, neigh[0], gx, x, gy, y, bases, glx, glxs, glys, &l, local, remote));
