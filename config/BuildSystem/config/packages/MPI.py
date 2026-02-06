@@ -453,6 +453,7 @@ Unable to run hostname to check the network')
 
   def configureMPI3(self):
     '''Check for functions added to the interface in MPI-3'''
+    import re
     oldFlags = self.compilers.CPPFLAGS
     oldLibs  = self.compilers.LIBS
     self.compilers.CPPFLAGS += ' '+self.headers.toString(self.include)
@@ -500,18 +501,24 @@ Unable to run hostname to check the network')
                        if (MPI_Neighbor_alltoallv(0,0,0,MPI_INT,0,0,0,MPI_INT,distcomm)) { }\n\
                        if (MPI_Ineighbor_alltoallv(0,0,0,MPI_INT,0,0,0,MPI_INT,distcomm,&req)) { }\n'):
       self.addDefine('HAVE_MPI_NEIGHBORHOOD_COLLECTIVES',1)
-    cuda_aware = 0
+
+    gpu_aware = 0
     if hasattr(self, 'ompi_major_version'):
-      openmpi_cuda_test = '#include<mpi.h>\n #include <mpi-ext.h>\n #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT\n #else\n #error This Open MPI is not CUDA-aware\n #endif\n'
-      if self.checkCompile(openmpi_cuda_test):
-        cuda_aware = 1
+      # https://docs.open-mpi.org/en/main/tuning-apps/accelerators/rocm.html#checking-that-open-mpi-has-been-built-with-rocm-support
+      # Check if ompi_info prints lines like "MPI extensions: affinity, cuda, ftmpi, rocm"
+      (ompi_info, err, status) = config.base.Configure.executeShellCommand('which ompi_info')
+      if not status and not err:
+        (out, err, ret) = Configure.executeShellCommand(ompi_info, timeout = 60, log = self.log, threads = 1)
+        if not status and not err:
+          pattern = re.compile(r'^.*MPI extensions:.*\b(cuda|rocm)\b.*$', re.MULTILINE)
+          if pattern.search(out): gpu_aware = 1
     elif hasattr(self, 'mpich_numversion'):
-      if self.libraries.check(self.dlib, "yaksuri_cudai_unpack_wchar_t"):
-        cuda_aware = 1
-    if cuda_aware:
+      if self.libraries.check(self.dlib, ['yaksuri_cudai_unpack_wchar_t', 'yaksuri_hipi_unpack_wchar_t']): gpu_aware = 1
+    if gpu_aware:
       self.addDefine('HAVE_MPI_GPU_AWARE', 1)
     else:
       self.testoptions = '-use_gpu_aware_mpi 0'
+
     if self.checkLink('#include <mpi.h>\n', 'int ptr[1] = {0}; MPI_Win win = 0; if (MPI_Get_accumulate(ptr,1,MPI_INT,ptr,1,MPI_INT,0,0,1,MPI_INT,MPI_SUM,win)) { }\n'):
       self.addDefine('HAVE_MPI_GET_ACCUMULATE', 1)
     if self.checkLink('#include <mpi.h>\n', 'int ptr[1]; MPI_Win win = 0; MPI_Request req; if (MPI_Rget(ptr,1,MPI_INT,0,1,1,MPI_INT,win,&req)) { }\n'):
