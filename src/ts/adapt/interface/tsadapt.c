@@ -1074,6 +1074,14 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
   PetscAssertPointer(accept, 5);
   *accept = PETSC_TRUE;
 
+  if (adapt->checkstage) {
+    PetscCallBack("TSAdapt callback check stage", (*adapt->checkstage)(adapt, ts, t, Y, accept));
+    if (!*accept) {
+      PetscCall(PetscStrncpy(reject_stage_message, "rejected by TSAdaptSetCheckStage", sizeof reject_stage_message));
+      goto reject_stage;
+    }
+  }
+
   PetscCall(TSFunctionDomainError(ts, t, Y, &func_accept));
   if (!func_accept) {
     PetscCall(PetscStrncpy(reject_stage_message, "rejected by TSSetFunctionDomainError()", sizeof reject_stage_message));
@@ -1092,14 +1100,6 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
       PetscCall(PetscSNPrintf(reject_stage_message, sizeof reject_stage_message, "SNES solve failure %s", SNESConvergedReasons[snesreason]));
     }
     goto reject_stage;
-  }
-
-  if (adapt->checkstage) {
-    PetscCallBack("TSAdapt callback check stage", (*adapt->checkstage)(adapt, ts, t, Y, accept));
-    if (!*accept) {
-      PetscCall(PetscStrncpy(reject_stage_message, "rejected by TSAdaptSetCheckStage", sizeof reject_stage_message));
-      goto reject_stage;
-    }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 
