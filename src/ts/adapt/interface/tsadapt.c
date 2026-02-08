@@ -1098,7 +1098,7 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
   }
 
   if (adapt->checkstage) {
-    PetscCall((*adapt->checkstage)(adapt, ts, t, Y, accept));
+    PetscCallBack("TSAdapt callback check stage", (*adapt->checkstage)(adapt, ts, t, Y, accept));
     if (!*accept) {
       PetscCall(PetscInfo(ts, "Step=%" PetscInt_FMT ", solution rejected by TSAdaptSetCheckStage\n", ts->steps));
       PetscCall(PetscSNPrintf(reject_stage_message, sizeof reject_stage_message, "    TSAdapt %s step %3" PetscInt_FMT " stage rejected by TSAdaptSetCheckStage\n", ((PetscObject)adapt)->type_name, ts->steps));
