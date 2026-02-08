@@ -365,17 +365,18 @@ PetscErrorCode TSAdaptSetMonitor(TSAdapt adapt, PetscBool flg)
 - func  - stage check function
 
   Calling sequence:
-+ adapt  - adaptive controller context
-. ts     - time stepping context
-. t      - current time
-. Y      - current solution vector
-- accept - pending choice of whether to accept, can be modified by this routine
++ adapt   - adaptive controller context
+. ts      - time stepping context
+. t       - current time
+. Y       - current solution vector
+. message - message to be sent to monitor, will be freed by `PetscFree()` if set
+- accept  - pending choice of whether to accept, can be modified by this routine
 
   Level: advanced
 
 .seealso: [](ch_ts), [](sec_ts_error_control), `TSAdapt`, `TSGetAdapt()`, `TSAdaptChoose()`
 @*/
-PetscErrorCode TSAdaptSetCheckStage(TSAdapt adapt, PetscErrorCode (*func)(TSAdapt adapt, TS ts, PetscReal t, Vec Y, PetscBool *accept))
+PetscErrorCode TSAdaptSetCheckStage(TSAdapt adapt, PetscErrorCode (*func)(TSAdapt adapt, TS ts, PetscReal t, Vec Y, char **message, PetscBool *accept))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
@@ -1066,7 +1067,7 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
 {
   SNESConvergedReason snesreason = SNES_CONVERGED_ITERATING;
   PetscBool           func_accept;
-  char                reject_stage_message[128];
+  char                reject_stage_message[128] = "";
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt, TSADAPT_CLASSID, 1);
@@ -1075,11 +1076,14 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec Y, Petsc
   *accept = PETSC_TRUE;
 
   if (adapt->checkstage) {
-    PetscCallBack("TSAdapt callback check stage", (*adapt->checkstage)(adapt, ts, t, Y, accept));
+    char *message = NULL;
+    PetscCallBack("TSAdapt callback check stage", (*adapt->checkstage)(adapt, ts, t, Y, &message, accept));
     if (!*accept) {
-      PetscCall(PetscStrncpy(reject_stage_message, "rejected by TSAdaptSetCheckStage", sizeof reject_stage_message));
+      PetscCall(PetscStrncpy(reject_stage_message, message ? message : "rejected by TSAdaptSetCheckStage", sizeof reject_stage_message));
+      PetscCall(PetscFree(message));
       goto reject_stage;
     }
+    PetscCall(PetscFree(message));
   }
 
   PetscCall(TSFunctionDomainError(ts, t, Y, &func_accept));
