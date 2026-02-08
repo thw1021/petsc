@@ -21,13 +21,14 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec X, Vec F, PetscCtx ctx
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode TestCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec X, PetscBool *accept)
+PetscErrorCode TestCheckStage(TSAdapt adapt, TS ts, PetscReal t, Vec X, char **message, PetscBool *accept)
 {
   PetscInt step;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetStepNumber(ts, &step));
   *accept = (step >= 2) ? PETSC_FALSE : PETSC_TRUE;
+  if (!*accept) PetscCall(PetscStrallocpy("Stage failed by user-set function", message));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
