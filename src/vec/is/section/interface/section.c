@@ -624,6 +624,10 @@ PetscErrorCode PetscSectionSetFieldComponents(PetscSection s, PetscInt field, Pe
 
   Level: intermediate
 
+  Note:
+  The chart may be thought of as the bounds on the points (indices) one may use to index into numerical data that is associated with
+  the `PetscSection` data layout.
+
 .seealso: [PetscSection](ch_petscsection), `PetscSection`, `PetscSectionSetChart()`, `PetscSectionCreate()`
 @*/
 PetscErrorCode PetscSectionGetChart(PetscSection s, PetscInt *pStart, PetscInt *pEnd)
