@@ -59,7 +59,9 @@ PetscErrorCode PetscGetHostName(char name[], size_t nlen)
     GetComputerName((LPTSTR)name, (LPDWORD)(&nnlen));
   }
 #elif defined(PETSC_HAVE_UNAME)
-  PetscCheck(!uname(&utname), PETSC_COMM_SELF, PETSC_ERR_SYS, "uname() due to \"%s\"", strerror(errno));
+  // Upon successful completion, uname returns 0 per IEEE Std 1003.1-1988 ("POSIX.1"), and a non-negative
+  // value per IEEE Std 1003.1-2024. However both say "retrun -1 on error".
+  PetscCheck(uname(&utname) != -1, PETSC_COMM_SELF, PETSC_ERR_SYS, "uname() due to \"%s\"", strerror(errno));
   PetscCall(PetscStrncpy(name, utname.nodename, nlen));
 #elif defined(PETSC_HAVE_GETHOSTNAME)
   PetscCheck(!gethostname(name, nlen), PETSC_COMM_SELF, PETSC_ERR_SYS, "gethostname() due to \"%s\"", strerror(errno));
