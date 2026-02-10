@@ -7,6 +7,14 @@ interface
     PetscErrorCode :: ierr
   end subroutine
 
+  subroutine PetscSynchronizedPrintf(m, c, ierr)
+    use, intrinsic :: ISO_C_binding
+    use petscmpi
+    MPIU_Comm :: m
+    character(len=*) :: c
+    PetscErrorCode :: ierr
+  end subroutine
+
 #if defined(PETSC_HAVE_FORTRAN_FREE_LINE_LENGTH_NONE)
   subroutine PetscErrorf(ierr, line, file)
     use, intrinsic :: ISO_C_binding
@@ -93,6 +101,7 @@ end interface
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES)
 !DEC$ ATTRIBUTES DLLEXPORT::PetscPrintf
+!DEC$ ATTRIBUTES DLLEXPORT::PetscSynchronizedPrintf
 !DEC$ ATTRIBUTES DLLEXPORT::PetscErrorf
 !DEC$ ATTRIBUTES DLLEXPORT::PetscErrorMPI
 !DEC$ ATTRIBUTES DLLEXPORT::MPIU_abort
