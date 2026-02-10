@@ -968,6 +968,7 @@ PETSC_EXTERN PetscErrorCode SNESVISetVariableBounds(SNES, Vec, Vec);
 PETSC_EXTERN PetscErrorCode SNESVIGetVariableBounds(SNES, Vec *, Vec *);
 PETSC_EXTERN PetscErrorCode SNESVISetComputeVariableBounds(SNES, PetscErrorCode (*)(SNES, Vec, Vec));
 PETSC_EXTERN PetscErrorCode SNESVIGetInactiveSet(SNES, IS *);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION(3, 25, 0, "SNESVICreateActiveSetIS()", ) PetscErrorCode SNESVIGetActiveSetIS(SNES, Vec, Vec, IS *);
 PETSC_EXTERN PetscErrorCode SNESVICreateActiveSetIS(SNES, Vec, Vec, IS *);
 PETSC_EXTERN PetscErrorCode SNESVIComputeInactiveSetFnorm(SNES, Vec, Vec, PetscReal *);
 PETSC_EXTERN PetscErrorCode SNESVIComputeInactiveSetFtY(SNES, Vec, Vec, Vec, PetscScalar *);
