@@ -728,6 +728,34 @@ PetscErrorCode PCPatchSetComputeOperatorInteriorFacets(PC pc, PetscErrorCode (*f
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  PCPatchSetComputeOperatorExteriorFacets - Set the callback function used to compute exterior facet integrals for patch matrices
+
+  Logically Collective
+
+  Input Parameters:
++ pc   - The `PC`
+. func - The callback function
+- ctx  - The user context
+
+  Calling sequence of `func`:
++ pc               - The `PC`
+. point            - The point
+. x                - The input solution (not used in linear problems)
+. mat              - The patch matrix
+. facetIS          - An array of the facet numbers
+. n                - The size of `dofsArray`
+. dofsArray        - The dofmap for the dofs to be solved for
+. dofsArrayWithAll - The dofmap for all dofs on the patch
+- ctx              - The user context
+
+  Level: advanced
+
+  Note:
+  The matrix entries have been set to zero before the call.
+
+.seealso: [](ch_ksp), `PCPatchSetComputeOperator()`, `PCPatchSetComputeOperatorInteriorFacets()`, `PCPatchSetComputeFunctionExteriorFacets()`, `PCPatchSetDiscretisationInfo()`
+@*/
 PetscErrorCode PCPatchSetComputeOperatorExteriorFacets(PC pc, PetscErrorCode (*func)(PC pc, PetscInt point, Vec x, Mat mat, IS facetIS, PetscInt n, const PetscInt *dofsArray, const PetscInt *dofsArrayWithAll, PetscCtx ctx), PetscCtx ctx)
 {
   PC_PATCH *patch = (PC_PATCH *)pc->data;
@@ -738,6 +766,34 @@ PetscErrorCode PCPatchSetComputeOperatorExteriorFacets(PC pc, PetscErrorCode (*f
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  PCPatchSetComputeFunctionExteriorFacets - Set the callback function used to compute exterior facet integrals for patch residuals
+
+  Logically Collective
+
+  Input Parameters:
++ pc   - The `PC`
+. func - The callback function
+- ctx  - The user context
+
+  Calling sequence of `func`:
++ pc               - The `PC`
+. point            - The point
+. x                - The input solution (not used in linear problems)
+. f                - The patch residual vector
+. facetIS          - An array of the facet numbers
+. n                - The size of `dofsArray`
+. dofsArray        - The dofmap for the dofs to be solved for
+. dofsArrayWithAll - The dofmap for all dofs on the patch
+- ctx              - The user context
+
+  Level: advanced
+
+  Note:
+  The entries of `f` (the output residual vector) have been set to zero before the call.
+
+.seealso: [](ch_ksp), `PCPatchSetComputeFunction()`, `PCPatchSetComputeFunctionInteriorFacets()`, `PCPatchSetComputeOperatorExteriorFacets()`, `PCPatchSetDiscretisationInfo()`
+@*/
 PetscErrorCode PCPatchSetComputeFunctionExteriorFacets(PC pc, PetscErrorCode (*func)(PC pc, PetscInt point, Vec x, Vec f, IS facetIS, PetscInt n, const PetscInt *dofsArray, const PetscInt *dofsArrayWithAll, PetscCtx ctx), PetscCtx ctx)
 {
   PC_PATCH *patch = (PC_PATCH *)pc->data;
@@ -941,7 +997,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
   DM              dm, plex;
   PetscHSetI      ht = NULL, cht = NULL;
   PetscSection    cellCounts, pointCounts, intFacetCounts, extFacetCounts;
-  PetscInt       *cellsArray, *pointsArray, *intFacetsArray, *extFacetsArray, *intFacetsToPatchCell;
+  PetscInt       *cellsArray, *pointsArray, *intFacetsArray, *extFacetsArray, *intFacetsToPatchCell, *extFacetsToPatchCell;
   PetscInt        numCells, numPoints, numIntFacets, numExtFacets;
   const PetscInt *leaves;
   PetscInt        nleaves, pStart, pEnd, cStart, cEnd, vStart, vEnd, fStart, fEnd, v;
@@ -1077,7 +1133,6 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
   PetscCall(PetscMalloc1(numIntFacets, &intFacetsArray));
   PetscCall(PetscMalloc1(numIntFacets * 2, &intFacetsToPatchCell));
   PetscCall(PetscMalloc1(numExtFacets, &extFacetsArray));
-  PetscInt *extFacetsToPatchCell;
   PetscCall(PetscMalloc1(numExtFacets, &extFacetsToPatchCell));
 
   /* Now that we know how much space we need, run through again and actually remember the cells. */
@@ -1892,6 +1947,7 @@ static PetscErrorCode PCPatchCreateMatrix_Private(PC pc, PetscInt point, Mat *ma
           const PetscInt *cell0idx = &dofsArray[(offset + cell0) * patch->totalDofsPerCell];
           PetscCall(MatSetValues(*mat, patch->totalDofsPerCell, cell0idx, patch->totalDofsPerCell, cell0idx, zeroes, INSERT_VALUES));
         }
+        PetscCall(ISRestoreIndices(patch->extFacetsToPatchCell, &extFacetCells));
       }
 
       PetscCall(MatAssemblyBegin(*mat, MAT_FINAL_ASSEMBLY));
@@ -1946,6 +2002,7 @@ static PetscErrorCode PCPatchCreateMatrix_Private(PC pc, PetscInt point, Mat *ma
           const PetscInt *cell0idx = &dofsArray[(offset + cell0) * patch->totalDofsPerCell];
           PetscCall(MatSetValues(preallocator, patch->totalDofsPerCell, cell0idx, patch->totalDofsPerCell, cell0idx, vals, INSERT_VALUES));
         }
+        PetscCall(ISRestoreIndices(patch->extFacetsToPatchCell, &extFacetCells));
       }
 
       PetscCall(PetscFree(vals));
@@ -2040,19 +2097,17 @@ PetscErrorCode PCPatchComputeFunction_Internal(PC pc, Vec x, Vec F, PetscInt poi
     PetscCall(PetscSectionGetDof(patch->extFacetCounts, point, &numExtFacets));
     PetscCall(PetscSectionGetOffset(patch->extFacetCounts, point, &extFacetOffset));
     if (numExtFacets > 0) {
-      PetscInt       *facetDofs = NULL;
-      const PetscInt *extFacetsArray = NULL;
+      PetscInt       *facetDofs     = NULL;
+      const PetscInt *extFacetsArray = NULL, *extFacetCells = NULL;
       PetscInt        idx = 0;
-      PetscInt        i, d;
       IS              facetIS = NULL;
-      const PetscInt *extFacetCells = NULL;
 
       PetscCall(ISGetIndices(patch->extFacetsToPatchCell, &extFacetCells));
       PetscCall(ISGetIndices(patch->extFacets, &extFacetsArray));
       PetscCall(PetscMalloc1(patch->totalDofsPerCell * numExtFacets, &facetDofs));
-      for (i = 0; i < numExtFacets; i++) {
+      for (PetscInt i = 0; i < numExtFacets; i++) {
         const PetscInt cell = extFacetCells[extFacetOffset + i];
-        for (d = 0; d < patch->totalDofsPerCell; d++) {
+        for (PetscInt d = 0; d < patch->totalDofsPerCell; d++) {
           facetDofs[idx] = dofsArray[(offset + cell) * patch->totalDofsPerCell + d];
           idx++;
         }
@@ -2259,20 +2314,18 @@ PetscErrorCode PCPatchComputeOperator_Internal(PC pc, Vec x, Mat mat, PetscInt p
     if (numExtFacets > 0) {
       /* For each exterior facet, grab the one cell (in local numbering, and build dof numbering for that cell) */
       PetscInt       *facetDofs = NULL, *facetDofsWithAll = NULL;
-      const PetscInt *extFacetsArray = NULL;
-      PetscInt        idx            = 0;
-      PetscInt        i, d;
-      IS              facetIS    = NULL;
-      const PetscInt *extFacetCells = NULL;
+      const PetscInt *extFacetsArray = NULL, *extFacetCells = NULL;
+      PetscInt        idx = 0;
+      IS              facetIS = NULL;
 
       PetscCall(ISGetIndices(patch->extFacetsToPatchCell, &extFacetCells));
       PetscCall(ISGetIndices(patch->extFacets, &extFacetsArray));
       /* FIXME: Pull this malloc out. */
       PetscCall(PetscMalloc1(patch->totalDofsPerCell * numExtFacets, &facetDofs));
       if (dofsArrayWithAll) PetscCall(PetscMalloc1(patch->totalDofsPerCell * numExtFacets, &facetDofsWithAll));
-      for (i = 0; i < numExtFacets; i++) {
+      for (PetscInt i = 0; i < numExtFacets; i++) {
         const PetscInt cell = extFacetCells[extFacetOffset + i];
-        for (d = 0; d < patch->totalDofsPerCell; d++) {
+        for (PetscInt d = 0; d < patch->totalDofsPerCell; d++) {
           facetDofs[idx] = dofsArray[(offset + cell) * patch->totalDofsPerCell + d];
           if (dofsArrayWithAll) facetDofsWithAll[idx] = dofsArrayWithAll[(offset + cell) * patch->totalDofsPerCell + d];
           idx++;
