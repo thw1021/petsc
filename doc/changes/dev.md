@@ -98,6 +98,7 @@
 - Add `DMPlexVecGetClosureAtDepth()`
 - Add an extra communicator argument to `DMPlexFilter()` to allow extracting local meshes
 - Add `DMPlexCopyFlags()`
+- Add `DMPlexRebalanceSharedLabelPoints()`
 
 ## FE/FV
 
