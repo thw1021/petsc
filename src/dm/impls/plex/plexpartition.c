@@ -2100,9 +2100,15 @@ PetscErrorCode DMPlexRebalanceSharedLabelPoints(DM dm, DMLabel label, PetscInt N
   const PetscInt *degrees, *leaves;
   PetscInt       *lowner, *gowner, *newPoints, *newOwner;
   PetscInt        Nr, Nl, numNewOwners = 0, tmp = 0;
-  PetscMPIInt     rank;
+  PetscMPIInt     rank, size;
+  MPI_Comm           comm;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  if (size == 1) {
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
   PetscCall(DMConvert(dm, DMPLEX, &plex));
   PetscCall(DMGetPointSF(dm, &sf));
