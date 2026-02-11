@@ -13,7 +13,6 @@ program main
   Vec x, b, u
   Mat A
   KSP ksp
-  PetscScalar, parameter :: one = 1.0, neg_one = -1.0
   PetscScalar v
   PetscReal norm
   PetscReal, parameter :: tol = 1.e-7
@@ -93,7 +92,7 @@ program main
   PetscCallA(VecDuplicate(b, x, ierr))
 
 !  Set exact solution; then compute right-hand-side vector.
-  PetscCallA(VecSet(u, one, ierr))
+  PetscCallA(VecSet(u, 1.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(MatMult(A, u, b, ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -158,7 +157,7 @@ program main
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                     Check solution and clean up
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  PetscCallA(VecAXPY(x, neg_one, u, ierr))
+  PetscCallA(VecAXPY(x, -1.0_PETSC_SCALAR_KIND, u, ierr))
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   PetscCallA(KSPGetIterationNumber(ksp, its, ierr))
 

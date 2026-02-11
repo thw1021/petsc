@@ -30,7 +30,6 @@ program main
   PetscInt, parameter :: m = 10
   PetscErrorCode ierr
   KSP ksp
-  PetscScalar, parameter :: one = 1.0
 
   PetscCallA(PetscInitialize(ierr))
   PetscCallA(KSPCreate(PETSC_COMM_SELF, ksp, ierr))
@@ -40,7 +39,7 @@ program main
 
   PetscCallA(VecCreateSeq(PETSC_COMM_SELF, m, x, ierr))
   PetscCallA(VecDuplicate(x, y, ierr))
-  PetscCallA(VecSet(x, one, ierr))
+  PetscCallA(VecSet(x, 1.0_PETSC_SCALAR_KIND, ierr))
 
   PetscCallA(KSPSetOperators(ksp, A, A, ierr))
   PetscCallA(KSPSetFromOptions(ksp, ierr))

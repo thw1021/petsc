@@ -6,7 +6,6 @@ program main
 
   Mat A
   PetscInt, parameter ::  n = 5, m = 5
-  PetscScalar, parameter ::  two = 2.0, one = 1.0
   PetscInt, pointer, dimension(:) ::  dnnz, onnz
   PetscInt    ::  i, rstart, rend, M1, N1
   PetscErrorCode ierr
@@ -32,8 +31,8 @@ program main
   PetscCallA(MatGetOwnershipRange(A, rstart, rend, ierr))
   PetscCallA(MatGetSize(A, M1, N1, ierr))
   do i = rstart, rend - 1
-    PetscCallA(MatSetValue(A, i, i, two, INSERT_VALUES, ierr))
-    if (rend < N1) PetscCallA(MatSetValue(A, i, rend, one, INSERT_VALUES, ierr))
+    PetscCallA(MatSetValue(A, i, i, 2.0_PETSC_SCALAR_KIND, INSERT_VALUES, ierr))
+    if (rend < N1) PetscCallA(MatSetValue(A, i, rend, 1.0_PETSC_SCALAR_KIND, INSERT_VALUES, ierr))
   end do
   PetscCallA(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY, ierr))
   PetscCallA(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY, ierr))

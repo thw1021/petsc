@@ -40,7 +40,6 @@ program main
   Vec x, b, u
   PetscRandom rctx
   PetscReal norm, h2, sigma1
-  PetscScalar, parameter :: czero = 0.0, none = -1.0, pfive = .5
   PetscScalar sigma2, v
   PetscInt dim, its, n, Istart, Iend
   PetscInt i, j, II, JJ
@@ -96,7 +95,7 @@ program main
     use_random = .true.
     PetscCallA(PetscRandomCreate(PETSC_COMM_WORLD, rctx, ierr))
     PetscCallA(PetscRandomSetFromOptions(rctx, ierr))
-    PetscCallA(PetscRandomSetInterval(rctx, czero, PETSC_i, ierr))
+    PetscCallA(PetscRandomSetInterval(rctx, 0.0_PETSC_SCALAR_KIND, PETSC_i, ierr))
   end if
   h2 = 1.0/real((n + 1)*(n + 1))
 
@@ -153,7 +152,7 @@ program main
     PetscCallA(PetscRandomSetFromOptions(rctx, ierr))
     PetscCallA(VecSetRandom(u, rctx, ierr))
   else
-    PetscCallA(VecSet(u, pfive, ierr))
+    PetscCallA(VecSet(u, .5_PETSC_SCALAR_KIND, ierr))
   end if
   PetscCallA(MatMult(A, u, b, ierr))
 
@@ -187,7 +186,7 @@ program main
 
 !  Check the error
 
-  PetscCallA(VecAXPY(x, none, u, ierr))
+  PetscCallA(VecAXPY(x, -1.0_PETSC_SCALAR_KIND, u, ierr))
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   PetscCallA(KSPGetIterationNumber(ksp, its, ierr))
   if (rank == 0) then

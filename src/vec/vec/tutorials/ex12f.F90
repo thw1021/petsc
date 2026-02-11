@@ -6,7 +6,6 @@ program main
   PetscErrorCode ierr
   Vec v, s
   PetscInt :: n
-  PetscScalar, parameter :: one = 1.0
   PetscBool :: flg
 
   PetscCallA(PetscInitialize(ierr))
@@ -26,7 +25,7 @@ program main
   PetscCallA(VecSetFromOptions(s, ierr))
 
   !Set the vectors to entries to a constant value.
-  PetscCallA(VecSet(v, one, ierr))
+  PetscCallA(VecSet(v, 1.0_PETSC_SCALAR_KIND, ierr))
 
   !Get the first component from the multi-component vector to the single vector
   PetscCallA(VecStrideGather(v, 0_PETSC_INT_KIND, s, INSERT_VALUES, ierr))

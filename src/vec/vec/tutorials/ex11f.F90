@@ -11,7 +11,6 @@ program main
   PetscInt, parameter :: bs = 2 ! block size
   PetscInt n, comp
   PetscErrorCode ierr
-  PetscScalar, parameter :: one = 1.0
 
   PetscCallA(PetscInitialize(ierr))
   PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD, rank, ierr))
@@ -34,7 +33,7 @@ program main
 !
 !     Set the vectors to entries to a constant value.
 !
-  PetscCallA(VecSet(x, one, ierr))
+  PetscCallA(VecSet(x, 1.0_PETSC_SCALAR_KIND, ierr))
 
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   if (rank == 0) then

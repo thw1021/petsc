@@ -41,7 +41,6 @@ module ex5fmodule
   PetscInt mx, my
   PetscMPIInt rank, size
   PetscReal lambda
-  PetscScalar, parameter :: two = 2.0, one = 1.0
 contains
 ! ---------------------------------------------------------------------
 !
@@ -174,8 +173,8 @@ contains
     mx = info%MX
     my = info%MY
 
-    hx = one/(real(mx) - 1)
-    hy = one/(real(my) - 1)
+    hx = 1.0_PETSC_SCALAR_KIND/(real(mx) - 1)
+    hy = 1.0_PETSC_SCALAR_KIND/(real(my) - 1)
     sc = hx*hy*lambda
     hxdhy = hx/hy
     hydhx = hy/hx
@@ -188,8 +187,8 @@ contains
           f(i, j) = x(i, j)
         else
           u = x(i, j)
-          uxx = hydhx*(two*u - x(i - 1, j) - x(i + 1, j))
-          uyy = hxdhy*(two*u - x(i, j - 1) - x(i, j + 1))
+          uxx = hydhx*(2.0_PETSC_SCALAR_KIND*u - x(i - 1, j) - x(i + 1, j))
+          uyy = hxdhy*(2.0_PETSC_SCALAR_KIND*u - x(i, j - 1) - x(i, j + 1))
           f(i, j) = uxx + uyy - sc*exp(u)
         end if
       end do
@@ -252,8 +251,8 @@ contains
     PetscScalar hxdhy, hydhx, sc
 
 !  Set parameters
-    hx = one/(real(mx) - 1)
-    hy = one/(real(my) - 1)
+    hx = 1.0_PETSC_SCALAR_KIND/(real(mx) - 1)
+    hy = 1.0_PETSC_SCALAR_KIND/(real(my) - 1)
     sc = hx*hy
     hxdhy = hx/hy
     hydhx = hy/hx
@@ -281,14 +280,14 @@ contains
         if (i == 1 .or. j == 1 .or. i == mx .or. j == my) then
 !       Some f90 compilers need 4th arg to be of same type in both calls
           col(1) = row
-          v(1) = one
+          v(1) = 1.0_PETSC_SCALAR_KIND
           call MatSetValuesLocal(jac, 1_PETSC_INT_KIND, [row], 1_PETSC_INT_KIND, [col], [v], INSERT_VALUES, ierr)
           CHKERRQ(ierr)
 !           interior grid points
         else
           v(1) = -hxdhy
           v(2) = -hydhx
-          v(3) = two*(hydhx + hxdhy) - sc*lambda*exp(x(i, j))
+          v(3) = 2.0_PETSC_SCALAR_KIND*(hydhx + hxdhy) - sc*lambda*exp(x(i, j))
           v(4) = -hydhx
           v(5) = -hxdhy
           col(1) = row - gxm

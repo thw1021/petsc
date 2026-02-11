@@ -20,7 +20,6 @@ program main
   PetscErrorCode ierr
   PetscInt its
   PetscBool flg
-  PetscScalar, parameter :: none = -1.0, five = 5.0
   PetscReal norm
   Vec x, b, u
   Mat A
@@ -57,7 +56,7 @@ program main
 
 ! Show result
   PetscCallA(MatMult(A, x, u, ierr))
-  PetscCallA(VecAXPY(u, none, b, ierr))
+  PetscCallA(VecAXPY(u, -1.0_PETSC_SCALAR_KIND, b, ierr))
   PetscCallA(VecNorm(u, NORM_2, norm, ierr))
   PetscCallA(KSPGetIterationNumber(ksp1, its, ierr))
 
@@ -66,7 +65,7 @@ program main
 
 ! Create system 2 by striping off some rows of the matrix
   PetscCallA(ISCreateStride(PETSC_COMM_SELF, 5_PETSC_INT_KIND, 0_PETSC_INT_KIND, 1_PETSC_INT_KIND, isrow, ierr))
-  PetscCallA(MatZeroRowsIS(A, isrow, five, PETSC_NULL_VEC, PETSC_NULL_VEC, ierr))
+  PetscCallA(MatZeroRowsIS(A, isrow, 5.0_PETSC_SCALAR_KIND, PETSC_NULL_VEC, PETSC_NULL_VEC, ierr))
 
 ! Solve system-2
   PetscCallA(KSPCreate(PETSC_COMM_WORLD, ksp2, ierr))
@@ -78,7 +77,7 @@ program main
 
 ! Show result
   PetscCallA(MatMult(A, x, u, ierr))
-  PetscCallA(VecAXPY(u, none, b, ierr))
+  PetscCallA(VecAXPY(u, -1.0_PETSC_SCALAR_KIND, b, ierr))
   PetscCallA(VecNorm(u, NORM_2, norm, ierr))
   PetscCallA(KSPGetIterationNumber(ksp2, its, ierr))
   write (6, 100) norm, its

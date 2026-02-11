@@ -20,7 +20,6 @@ program main
   PetscErrorCode ierr
   PetscMPIInt rank
   PetscBool flg
-  PetscScalar, parameter :: one = 1.0, two = 2.0, three = 3.0
   PetscScalar dots(3), dot
   PetscReal, parameter :: tol = 1.e-10_PETSC_REAL_KIND
 
@@ -60,11 +59,11 @@ program main
 
 !  Set the vectors to entries to a constant value.
 
-  PetscCallA(VecSet(x, one, ierr))
-  PetscCallA(VecSet(y, two, ierr))
-  PetscCallA(VecSet(z(1), one, ierr))
-  PetscCallA(VecSet(z(2), two, ierr))
-  PetscCallA(VecSet(z(3), three, ierr))
+  PetscCallA(VecSet(x, 1.0_PETSC_SCALAR_KIND, ierr))
+  PetscCallA(VecSet(y, 2.0_PETSC_SCALAR_KIND, ierr))
+  PetscCallA(VecSet(z(1), 1.0_PETSC_SCALAR_KIND, ierr))
+  PetscCallA(VecSet(z(2), 2.0_PETSC_SCALAR_KIND, ierr))
+  PetscCallA(VecSet(z(3), 3.0_PETSC_SCALAR_KIND, ierr))
 
 !  Demonstrate various basic vector routines.
 
@@ -89,7 +88,7 @@ program main
 110 format('Vector length ', 3(i6))
 120 format('All other values should be near zero')
 
-  PetscCallA(VecScale(x, two, ierr))
+  PetscCallA(VecScale(x, 2.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   v = abs(norm - 2.0*sqrt(nfloat))
   if (v > -tol .and. v < tol) v = 0.0
@@ -103,14 +102,14 @@ program main
   if (rank == 0) write (6, 140) v
 140 format('VecCopy ', 1pe9.2)
 
-  PetscCallA(VecAXPY(y, three, x, ierr))
+  PetscCallA(VecAXPY(y, 3.0_PETSC_SCALAR_KIND, x, ierr))
   PetscCallA(VecNorm(y, NORM_2, norm, ierr))
   v = abs(norm - 8.0*sqrt(nfloat))
   if (v > -tol .and. v < tol) v = 0.0
   if (rank == 0) write (6, 150) v
 150 format('VecAXPY ', 1pe9.2)
 
-  PetscCallA(VecAYPX(y, two, x, ierr))
+  PetscCallA(VecAYPX(y, 2.0_PETSC_SCALAR_KIND, x, ierr))
   PetscCallA(VecNorm(y, NORM_2, norm, ierr))
   v = abs(norm - 18.0*sqrt(nfloat))
   if (v > -tol .and. v < tol) v = 0.0
@@ -130,7 +129,7 @@ program main
   if (rank == 0) write (6, 180) v
 180 format('VecSwap ', 1pe9.2)
 
-  PetscCallA(VecWAXPY(w, two, x, y, ierr))
+  PetscCallA(VecWAXPY(w, 2.0_PETSC_SCALAR_KIND, x, y, ierr))
   PetscCallA(VecNorm(w, NORM_2, norm, ierr))
   v = abs(norm - 38.0*sqrt(nfloat))
   if (v > -tol .and. v < tol) v = 0.0
@@ -151,10 +150,10 @@ program main
   if (rank == 0) write (6, 210) v
 210 format('VecPointwiseDivide ', 1pe9.2)
 
-  dots(1) = one
-  dots(2) = three
-  dots(3) = two
-  PetscCallA(VecSet(x, one, ierr))
+  dots(1) = 1.0_PETSC_SCALAR_KIND
+  dots(2) = 3.0_PETSC_SCALAR_KIND
+  dots(3) = 2.0_PETSC_SCALAR_KIND
+  PetscCallA(VecSet(x, 1.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(VecMAXPY(x, 3_PETSC_INT_KIND, dots, z, ierr))
   PetscCallA(VecNorm(z(1), NORM_2, norm, ierr))
   v = abs(norm - sqrt(nfloat))

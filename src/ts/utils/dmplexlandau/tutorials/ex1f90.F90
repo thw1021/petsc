@@ -21,7 +21,6 @@ program DMPlexTestLandauInterface
   PC pc
   SNESLineSearch linesearch
   PetscReal :: time
-  PetscScalar, parameter :: scalar = -1.0
 
   PetscCallA(PetscInitialize(ierr))
 
@@ -68,7 +67,7 @@ program DMPlexTestLandauInterface
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   !  remove f_0
   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  PetscCallA(VecAXPY(X, scalar, X_0, ierr))
+  PetscCallA(VecAXPY(X, -1.0_PETSC_SCALAR_KIND, X_0, ierr))
   PetscCallA(DMPlexLandauDestroyVelocitySpace(dm, ierr))
   PetscCallA(TSDestroy(ts, ierr))
   PetscCallA(VecDestroy(X, ierr))

@@ -43,7 +43,6 @@ module ex5f90tmodule
     PetscMPIInt rank
     PetscReal lambda
   end type AppCtx
-  PetscScalar, parameter :: one = 1.0, two = 2.0
 
 contains
 ! ---------------------------------------------------------------------
@@ -179,9 +178,9 @@ contains
 
 !  Set parameters
 
-    hx = one/(PetscIntToReal(ctx%mx - 1))
-    hy = one/(PetscIntToReal(ctx%my - 1))
-    temp1 = ctx%lambda/(ctx%lambda + one)
+    hx = 1.0_PETSC_SCALAR_KIND/(PetscIntToReal(ctx%mx - 1))
+    hy = 1.0_PETSC_SCALAR_KIND/(PetscIntToReal(ctx%my - 1))
+    temp1 = ctx%lambda/(ctx%lambda + 1.0_PETSC_SCALAR_KIND)
 
     do j = ctx%ys, ctx%ye
       temp = PetscIntToReal(min(j - 1, ctx%my - j))*hy
@@ -219,8 +218,8 @@ contains
     PetscScalar hx, hy, hxdhy, hydhx, sc, u, uxx, uyy
     PetscInt i, j
 
-    hx = one/PetscIntToReal(ctx%mx - 1)
-    hy = one/PetscIntToReal(ctx%my - 1)
+    hx = 1.0_PETSC_SCALAR_KIND/PetscIntToReal(ctx%mx - 1)
+    hy = 1.0_PETSC_SCALAR_KIND/PetscIntToReal(ctx%my - 1)
     sc = hx*hy*ctx%lambda
     hxdhy = hx/hy
     hydhx = hy/hx
@@ -233,8 +232,8 @@ contains
           f(i, j) = x(i, j)
         else
           u = x(i, j)
-          uxx = hydhx*(two*u - x(i - 1, j) - x(i + 1, j))
-          uyy = hxdhy*(two*u - x(i, j - 1) - x(i, j + 1))
+          uxx = hydhx*(2.0_PETSC_SCALAR_KIND*u - x(i - 1, j) - x(i + 1, j))
+          uyy = hxdhy*(2.0_PETSC_SCALAR_KIND*u - x(i, j - 1) - x(i, j + 1))
           f(i, j) = uxx + uyy - sc*exp(u)
         end if
       end do
@@ -382,8 +381,8 @@ contains
     PetscScalar hx, hy, hxdhy, hydhx, sc, v(5)
 
 !  Set parameters
-    hx = one/PetscIntToReal(ctx%mx - 1)
-    hy = one/PetscIntToReal(ctx%my - 1)
+    hx = 1.0_PETSC_SCALAR_KIND/PetscIntToReal(ctx%mx - 1)
+    hy = 1.0_PETSC_SCALAR_KIND/PetscIntToReal(ctx%my - 1)
     sc = hx*hy
     hxdhy = hx/hy
     hydhx = hy/hx
@@ -413,7 +412,7 @@ contains
         else
           v(1) = -hxdhy
           v(2) = -hydhx
-          v(3) = two*(hydhx + hxdhy) - sc*ctx%lambda*exp(x(i, j))
+          v(3) = 2.0_PETSC_SCALAR_KIND*(hydhx + hxdhy) - sc*ctx%lambda*exp(x(i, j))
           v(4) = -hydhx
           v(5) = -hxdhy
           col(1) = row - ctx%gxm

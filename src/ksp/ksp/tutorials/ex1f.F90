@@ -52,7 +52,6 @@ program main
   PetscInt i, n, col(3), its
   PetscBool flg
   PetscMPIInt size
-  PetscScalar, parameter :: none = -1.0, one = 1.0
   PetscScalar value(3)
   PetscLogStage stages(2)
   PetscFortranAddr defaultctx
@@ -118,7 +117,7 @@ program main
 
 !  Set exact solution; then compute right-hand-side vector.
 
-  PetscCallA(VecSet(u, one, ierr))
+  PetscCallA(VecSet(u, 1.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(MatMult(A, u, b, ierr))
   PetscCallA(PetscLogStagePop(ierr))
   PetscCallA(PetscLogStagePush(stages(2), ierr))
@@ -181,7 +180,7 @@ program main
 
 !  Check the error
 
-  PetscCallA(VecAXPY(x, none, u, ierr))
+  PetscCallA(VecAXPY(x, -1.0_PETSC_SCALAR_KIND, u, ierr))
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   PetscCallA(KSPGetIterationNumber(ksp, its, ierr))
   if (norm > 1.e-12) then

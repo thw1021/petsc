@@ -40,14 +40,13 @@ contains
     PetscBool changed_w, changed_y
     PetscErrorCode ierr
     PetscInt ctx
-    PetscScalar, parameter :: mone = -1.0
     MPIU_Comm comm
 
     character(len=PETSC_MAX_PATH_LEN) :: outputString
 
     PetscCallA(PetscObjectGetComm(snes, comm, ierr))
     PetscCallA(VecDuplicate(x, tmp, ierr))
-    PetscCallA(VecWAXPY(tmp, mone, x, w, ierr))
+    PetscCallA(VecWAXPY(tmp, -1.0_PETSC_SCALAR_KIND, x, w, ierr))
     PetscCallA(VecNorm(tmp, NORM_2, norm, ierr))
     PetscCallA(VecDestroy(tmp, ierr))
     write (outputString, *) norm

@@ -14,7 +14,6 @@ program main
   Vec            :: x, u, b            ! approx solution, RHS, exact solution
   PetscReal      :: norm, bnorm       ! norm of solution residual
   PetscScalar    :: v
-  PetscScalar, parameter :: myNone = -1.0
   PetscInt       :: Ii, JJ, ldim, low, high, iglobal, Istart, Iend
   PetscErrorCode :: ierr
   PetscInt       :: i, j, its, n, m, orthog
@@ -197,7 +196,7 @@ program main
   PetscCallA(KSPSolve(ksp, b, x, ierr))
 
   ! Check the residual
-  PetscCallA(VecAXPY(x, myNone, u, ierr))
+  PetscCallA(VecAXPY(x, -1.0_PETSC_SCALAR_KIND, u, ierr))
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   PetscCallA(VecNorm(b, NORM_2, bnorm, ierr))
 
@@ -332,7 +331,7 @@ program main
   PetscCallA(KSPSolve(ksp, b, x, ierr))
   ! Check the residual
 
-  PetscCallA(VecAXPY(x, myNone, u, ierr))
+  PetscCallA(VecAXPY(x, -1.0_PETSC_SCALAR_KIND, u, ierr))
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   PetscCallA(VecNorm(b, NORM_2, bnorm, ierr))
   PetscCallA(KSPGetIterationNumber(ksp, its, ierr))

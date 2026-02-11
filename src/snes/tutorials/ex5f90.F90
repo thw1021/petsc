@@ -226,13 +226,12 @@ contains
     PetscScalar f(ctx%xs:ctx%xe, ctx%ys:ctx%ye)
     PetscErrorCode, intent(out) :: ierr
 !  Local variables:
-    PetscScalar, parameter :: two = 2.0, one = 1.0
     PetscScalar hx, hy, hxdhy, hydhx, sc
     PetscScalar u, uxx, uyy
     PetscInt i, j
 
-    hx = one/(ctx%mx - 1)
-    hy = one/(ctx%my - 1)
+    hx = 1.0_PETSC_SCALAR_KIND/(ctx%mx - 1)
+    hy = 1.0_PETSC_SCALAR_KIND/(ctx%my - 1)
     sc = hx*hy*ctx%lambda
     hxdhy = hx/hy
     hydhx = hy/hx
@@ -245,8 +244,8 @@ contains
           f(i, j) = x(i, j)
         else
           u = x(i, j)
-          uxx = hydhx*(two*u - x(i - 1, j) - x(i + 1, j))
-          uyy = hxdhy*(two*u - x(i, j - 1) - x(i, j + 1))
+          uxx = hydhx*(2.0_PETSC_SCALAR_KIND*u - x(i - 1, j) - x(i + 1, j))
+          uyy = hxdhy*(2.0_PETSC_SCALAR_KIND*u - x(i, j - 1) - x(i, j + 1))
           f(i, j) = uxx + uyy - sc*exp(u)
         end if
       end do
@@ -391,12 +390,11 @@ contains
 
 !  Local variables:
     PetscInt row, col(5), i, j
-    PetscScalar, parameter :: two = 2.0, one = 1.0
     PetscScalar hx, hy, hxdhy, hydhx, sc, v(5)
 
 !  Set parameters
-    hx = one/(ctx%mx - 1)
-    hy = one/(ctx%my - 1)
+    hx = 1.0_PETSC_SCALAR_KIND/(ctx%mx - 1)
+    hy = 1.0_PETSC_SCALAR_KIND/(ctx%my - 1)
     sc = hx*hy
     hxdhy = hx/hy
     hydhx = hy/hx
@@ -420,13 +418,13 @@ contains
 !           boundary points
         if (i == 1 .or. j == 1 .or. i == ctx%mx .or. j == ctx%my) then
           col(1) = row
-          v(1) = one
+          v(1) = 1.0_PETSC_SCALAR_KIND
           PetscCallA(MatSetValuesLocal(jac_prec, 1_PETSC_INT_KIND, [row], 1_PETSC_INT_KIND, col, v, INSERT_VALUES, ierr))
 !           interior grid points
         else
           v(1) = -hxdhy
           v(2) = -hydhx
-          v(3) = two*(hydhx + hxdhy) - sc*ctx%lambda*exp(x(i, j))
+          v(3) = 2.0_PETSC_SCALAR_KIND*(hydhx + hxdhy) - sc*ctx%lambda*exp(x(i, j))
           v(4) = -hydhx
           v(5) = -hxdhy
           col(1) = row - ctx%gxm

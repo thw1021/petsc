@@ -6,7 +6,6 @@ program main
   PetscInt N
   PetscBool draw, flg
   PetscReal rnorm
-  PetscScalar, parameter :: one = 1.0, mone = -1.0
   Mat A
   Vec b, x, r
   KSP ksp
@@ -31,7 +30,7 @@ program main
   PetscCallA(MatSetUp(A, ierr))
 
   PetscCallA(MatCreateVecs(A, x, b, ierr))
-  PetscCallA(VecSet(b, one, ierr))
+  PetscCallA(VecSet(b, 1.0_PETSC_SCALAR_KIND, ierr))
 
   PetscCallA(KSPCreate(PETSC_COMM_WORLD, ksp, ierr))
   PetscCallA(KSPSetType(ksp, 'python', ierr))
@@ -47,7 +46,7 @@ program main
 
   PetscCallA(VecDuplicate(b, r, ierr))
   PetscCallA(MatMult(A, x, r, ierr))
-  PetscCallA(VecAYPX(r, mone, b, ierr))
+  PetscCallA(VecAYPX(r, -1.0_PETSC_SCALAR_KIND, b, ierr))
   PetscCallA(VecNorm(r, NORM_2, rnorm, ierr))
   print *, 'error norm = ', rnorm
 

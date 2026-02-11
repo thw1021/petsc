@@ -52,7 +52,7 @@ module ex14fmodule
   PetscInt mx, my
   Mat B
   DM da
-  PetscScalar, parameter :: two = 2.0, one = 1.0, mone = -1.0, lambda = 6.0
+  PetscScalar, parameter :: lambda = 6.0
 contains
 ! -------------------------------------------------------------------
 !
@@ -95,9 +95,9 @@ contains
     PetscReal temp1, temp, hx, hy
     PetscScalar, pointer ::xx(:)
 
-    hx = real(one, PETSC_REAL_KIND)/(mx - 1)
-    hy = real(one, PETSC_REAL_KIND)/(my - 1)
-    temp1 = real(lambda/(lambda + one), PETSC_REAL_KIND)
+    hx = real(1.0, PETSC_REAL_KIND)/(mx - 1)
+    hy = real(1.0, PETSC_REAL_KIND)/(my - 1)
+    temp1 = real(lambda/(lambda + 1.0_PETSC_SCALAR_KIND), PETSC_REAL_KIND)
 
 !  Get a pointer to vector data.
 !    - VecGetArray() returns a pointer to the data array.
@@ -151,8 +151,8 @@ contains
     PetscScalar u, uxx, uyy
     PetscScalar, pointer ::xx(:), ff(:)
 
-    hx = real(one, PETSC_REAL_KIND)/(mx - 1)
-    hy = real(one, PETSC_REAL_KIND)/(my - 1)
+    hx = real(1.0, PETSC_REAL_KIND)/(mx - 1)
+    hy = real(1.0, PETSC_REAL_KIND)/(my - 1)
     sc = hx*hy*real(lambda, PETSC_REAL_KIND)
     hxdhy = hx/hy
     hydhx = hy/hx
@@ -189,8 +189,8 @@ contains
           cycle
         end if
         u = xx(row)
-        uxx = (two*u - xx(row - 1) - xx(row + 1))*hydhx
-        uyy = (two*u - xx(row - gxm) - xx(row + gxm))*hxdhy
+        uxx = (2.0_PETSC_SCALAR_KIND*u - xx(row - 1) - xx(row + 1))*hydhx
+        uyy = (2.0_PETSC_SCALAR_KIND*u - xx(row - gxm) - xx(row + gxm))*hxdhy
         ff(rowf) = uxx + uyy - sc*exp(u)
       end do
     end do
@@ -234,8 +234,8 @@ contains
     PetscScalar, pointer ::xx(:)
     PetscInt, pointer ::ltog(:)
 
-    hx = one/(mx - 1)
-    hy = one/(my - 1)
+    hx = 1.0_PETSC_SCALAR_KIND/(mx - 1)
+    hy = 1.0_PETSC_SCALAR_KIND/(my - 1)
     sc = hx*hy
     hxdhy = hx/hy
     hydhx = hy/hx
@@ -279,14 +279,14 @@ contains
         row = row + 1
         grow(1) = ltog(row)
         if (i == 0 .or. j == 0 .or. i == (mx - 1) .or. j == (my - 1)) then
-          PetscCall(MatSetValues(jac, 1_PETSC_INT_KIND, grow, 1_PETSC_INT_KIND, grow, [one], INSERT_VALUES, ierr))
+          PetscCall(MatSetValues(jac, 1_PETSC_INT_KIND, grow, 1_PETSC_INT_KIND, grow, [1.0_PETSC_SCALAR_KIND], INSERT_VALUES, ierr))
           cycle
         end if
         v(1) = -hxdhy
         col(1) = ltog(row - gxm)
         v(2) = -hydhx
         col(2) = ltog(row - 1)
-        v(3) = two*(hydhx + hxdhy) - sc*lambda*exp(xx(row))
+        v(3) = 2.0_PETSC_SCALAR_KIND*(hydhx + hxdhy) - sc*lambda*exp(xx(row))
         col(3) = grow(1)
         v(4) = -hydhx
         col(4) = ltog(row + 1)
@@ -462,7 +462,7 @@ program main
 !   Compute updated iterate
 
     PetscCallA(VecNorm(Y, NORM_2, ynorm, ierr))
-    PetscCallA(VecAYPX(Y, mone, X, ierr))
+    PetscCallA(VecAYPX(Y, -1.0_PETSC_SCALAR_KIND, X, ierr))
     PetscCallA(VecCopy(Y, X, ierr))
     PetscCallA(VecNorm(X, NORM_2, xnorm, ierr))
     PetscCallA(KSPGetIterationNumber(ksp, lin_its, ierr))

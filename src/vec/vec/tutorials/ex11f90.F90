@@ -8,7 +8,6 @@ program main
   PetscMPIInt :: rank
   PetscInt :: n
   PetscErrorCode :: ierr
-  PetscScalar, parameter :: sone = 1.0
   PetscBool :: flg
   character(len=PETSC_MAX_PATH_LEN) :: outputString
 
@@ -46,7 +45,7 @@ program main
 
   !Set the vectors to entries to a constant value.
 
-  PetscCallA(VecSet(x, sone, ierr))
+  PetscCallA(VecSet(x, 1.0_PETSC_SCALAR_KIND, ierr))
 
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   write (outputString, *) norm

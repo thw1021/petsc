@@ -8,7 +8,7 @@ program main
   Mat                   :: mesh, dual
   MatPartitioning       :: part
   IS                    :: is
-  PetscInt, parameter   :: Nvertices = 6, ncells = 2, two = 2
+  PetscInt, parameter   :: Nvertices = 6, ncells = 2
   PetscInt              :: ii(3), jj(6)
   PetscMPIInt           :: sz, rnk
   PetscErrorCode        :: ierr
@@ -26,7 +26,7 @@ program main
   end if
 
   PetscCallA(MatCreateMPIAdj(PETSC_COMM_WORLD, ncells, Nvertices, ii, jj, PETSC_NULL_INTEGER_ARRAY, mesh, ierr))
-  PetscCallA(MatMeshToCellGraph(mesh, two, dual, ierr))
+  PetscCallA(MatMeshToCellGraph(mesh, 2_PETSC_INT_KIND, dual, ierr))
   PetscCallA(MatView(dual, PETSC_VIEWER_STDOUT_WORLD, ierr))
 
   PetscCallA(MatPartitioningCreate(PETSC_COMM_WORLD, part, ierr))

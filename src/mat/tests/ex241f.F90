@@ -1,18 +1,13 @@
 !     Test code contributed by Thibaut Appel <t.appel17@imperial.ac.uk>
 #include <petsc/finclude/petscmat.h>
 program test_assembly
-
   use petscmat
-  use ISO_Fortran_Env, only: real64
 
   implicit none
   PetscInt, parameter :: n = 10
-  PetscScalar, parameter :: zero = 0.0, one = 1.0
   Mat      :: L
   PetscInt :: istart, iend, row
-  PetscInt, parameter :: i0 = 1, i1 = 1
   PetscErrorCode :: ierr
-
   PetscInt cols(1), rows(1)
   PetscScalar vals(1)
 
@@ -22,8 +17,8 @@ program test_assembly
   PetscCallA(MatSetType(L, MATAIJ, ierr))
   PetscCallA(MatSetSizes(L, PETSC_DECIDE, PETSC_DECIDE, n, n, ierr))
 
-  PetscCallA(MatSeqAIJSetPreallocation(L, i1, PETSC_NULL_INTEGER_ARRAY, ierr))
-  PetscCallA(MatMPIAIJSetPreallocation(L, i1, PETSC_NULL_INTEGER_ARRAY, i0, PETSC_NULL_INTEGER_ARRAY, ierr)) ! No allocated non-zero in off-diagonal part
+  PetscCallA(MatSeqAIJSetPreallocation(L, 1_PETSC_INT_KIND, PETSC_NULL_INTEGER_ARRAY, ierr))
+  PetscCallA(MatMPIAIJSetPreallocation(L, 1_PETSC_INT_KIND, PETSC_NULL_INTEGER_ARRAY, 0_PETSC_INT_KIND, PETSC_NULL_INTEGER_ARRAY, ierr)) ! No allocated non-zero in off-diagonal part
   PetscCallA(MatSetOption(L, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE, ierr))
   PetscCallA(MatSetOption(L, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_TRUE, ierr))
   PetscCallA(MatSetOption(L, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE, ierr))
@@ -32,8 +27,8 @@ program test_assembly
 
   ! assembling a diagonal matrix
   do row = istart, iend - 1
-    cols = [row]; vals = [one]; rows = [row]
-    PetscCallA(MatSetValues(L, i1, rows, i1, cols, vals, ADD_VALUES, ierr))
+    cols = [row]; vals = [1.0_PETSC_SCALAR_KIND]; rows = [row]
+    PetscCallA(MatSetValues(L, 1_PETSC_INT_KIND, rows, 1_PETSC_INT_KIND, cols, vals, ADD_VALUES, ierr))
   end do
 
   PetscCallA(MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY, ierr))
@@ -48,12 +43,12 @@ program test_assembly
 
     if (row == 0) then
       cols = [n - 1]
-      vals = [zero]
+      vals = [0.0_PETSC_SCALAR_KIND]
       rows = [row]
-      PetscCallA(MatSetValues(L, i1, rows, i1, cols, vals, ADD_VALUES, ierr))
+      PetscCallA(MatSetValues(L, 1_PETSC_INT_KIND, rows, 1_PETSC_INT_KIND, cols, vals, ADD_VALUES, ierr))
     end if
-    cols = [row]; vals = [one]; rows = [row]
-    PetscCallA(MatSetValues(L, i1, rows, i1, cols, vals, ADD_VALUES, ierr))
+    cols = [row]; vals = [1.0_PETSC_SCALAR_KIND]; rows = [row]
+    PetscCallA(MatSetValues(L, 1_PETSC_INT_KIND, rows, 1_PETSC_INT_KIND, cols, vals, ADD_VALUES, ierr))
 
   end do
 

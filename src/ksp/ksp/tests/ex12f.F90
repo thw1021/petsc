@@ -4,16 +4,12 @@ program main
   use petscksp
   implicit none
 
-!
-!  This example is the Fortran version of ex6.c.  The program reads a PETSc matrix
-!  and vector from a file and solves a linear system.  Input arguments are:
-!        -f <input_file> : file to load.  For example see $PETSC_DIR/share/petsc/datafiles/matrices
-!
-
+! This example is the Fortran version of ex6.c.  The program reads a PETSc matrix
+! and vector from a file and solves a linear system.  Input arguments are:
+!   -f <input_file> : file to load.  For example see $PETSC_DIR/share/petsc/datafiles/matrices
   PetscErrorCode ierr
   PetscInt its, m, n, mlocal, nlocal
   PetscBool flg
-  PetscScalar, parameter :: none = -1.0
   PetscReal norm
   Vec x, b, u
   Mat A
@@ -61,7 +57,7 @@ program main
 
 ! Show result
   PetscCallA(MatMult(A, x, u, ierr))
-  PetscCallA(VecAXPY(u, none, b, ierr))
+  PetscCallA(VecAXPY(u, -1.0_PETSC_SCALAR_KIND, b, ierr))
   PetscCallA(VecNorm(u, NORM_2, norm, ierr))
   PetscCallA(KSPGetIterationNumber(ksp, its, ierr))
   write (6, 101) norm, its

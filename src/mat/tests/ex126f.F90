@@ -11,10 +11,9 @@ program main
   Mat A, fact
   PetscInt i, j, II, JJ
   PetscInt Istart, Iend
-  PetscInt, parameter :: ione = 1, m = 10
+  PetscInt m
   PetscBool wmumps
   PetscBool flg
-  PetscScalar, parameter :: one = 1.0
   PetscScalar v
   IS perm, iperm
   PetscErrorCode ierr
@@ -24,6 +23,7 @@ program main
 
   wmumps = PETSC_FALSE
 
+  m = 10
   PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-m', m, flg, ierr))
   PetscCallA(PetscOptionsGetBool(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-use_mumps', wmumps, flg, ierr))
 
@@ -42,22 +42,22 @@ program main
     j = II - i*m
     if (i > 0) then
       JJ = II - m
-      PetscCallA(MatSetValues(A, ione, [II], ione, [JJ], [v], INSERT_VALUES, ierr))
+      PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [II], 1_PETSC_INT_KIND, [JJ], [v], INSERT_VALUES, ierr))
     end if
     if (i < m - 1) then
       JJ = II + m
-      PetscCallA(MatSetValues(A, ione, [II], ione, [JJ], [v], INSERT_VALUES, ierr))
+      PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [II], 1_PETSC_INT_KIND, [JJ], [v], INSERT_VALUES, ierr))
     end if
     if (j > 0) then
       JJ = II - 1
-      PetscCallA(MatSetValues(A, ione, [II], ione, [JJ], [v], INSERT_VALUES, ierr))
+      PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [II], 1_PETSC_INT_KIND, [JJ], [v], INSERT_VALUES, ierr))
     end if
     if (j < m - 1) then
       JJ = II + 1
-      PetscCallA(MatSetValues(A, ione, [II], ione, [JJ], [v], INSERT_VALUES, ierr))
+      PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [II], 1_PETSC_INT_KIND, [JJ], [v], INSERT_VALUES, ierr))
     end if
     v = 4.0
-    PetscCallA(MatSetValues(A, ione, [II], ione, [II], [v], INSERT_VALUES, ierr))
+    PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [II], 1_PETSC_INT_KIND, [II], [v], INSERT_VALUES, ierr))
   end do
 
   PetscCallA(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY, ierr))
@@ -68,7 +68,7 @@ program main
   PetscCallA(VecSetFromOptions(u, ierr))
   PetscCallA(VecDuplicate(u, b, ierr))
   PetscCallA(VecDuplicate(b, x, ierr))
-  PetscCallA(VecSet(u, one, ierr))
+  PetscCallA(VecSet(u, 1.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(MatMult(A, u, b, ierr))
 
   PetscCallA(MatFactorInfoInitialize(info, ierr))

@@ -26,11 +26,8 @@ program main
   PetscMPIInt     :: rank, size
   PetscInt        :: its, nlocal, first, Istart, Iend
   PetscScalar     :: v
-  PetscScalar, parameter :: &
-    myNone = -1.0, &
-    sone = 1.0
-  PetscBool       :: isbjacobi, flg
-  KSP, pointer      ::   subksp(:) => null()
+  PetscBool :: isbjacobi, flg
+  KSP, pointer :: subksp(:) => null()
   PetscInt :: blks(4)
   character(len=PETSC_MAX_PATH_LEN) :: outputString
 
@@ -96,7 +93,7 @@ program main
 
   ! Set exact solution; then compute right-hand-side vector.
 
-  PetscCallA(Vecset(u, sone, ierr))
+  PetscCallA(Vecset(u, 1.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(MatMult(A, u, b, ierr))
 
   ! Create linear solver context
@@ -215,7 +212,7 @@ program main
 
   !PetscCallA(VecView(x,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
-  PetscCallA(VecAXPY(x, myNone, u, ierr))
+  PetscCallA(VecAXPY(x, -1.0_PETSC_SCALAR_KIND, u, ierr))
 
   !PetscCallA(VecView(x,PETSC_VIEWER_STDOUT_WORLD,ierr))
 

@@ -18,7 +18,6 @@ program main
   PetscInt N, i
   PetscErrorCode ierr
   PetscMPIInt rank
-  PetscScalar, parameter :: one = 1.0
   PetscScalar value(1)
 
   PetscCallA(PetscInitialize(ierr))
@@ -34,7 +33,7 @@ program main
   N = rank + 1
   PetscCallA(VecCreateFromOptions(PETSC_COMM_WORLD, PETSC_NULL_CHARACTER, 1_PETSC_INT_KIND, N, PETSC_DECIDE, x, ierr))
   PetscCallA(VecGetSize(x, N, ierr))
-  PetscCallA(VecSet(x, one, ierr))
+  PetscCallA(VecSet(x, 1.0_PETSC_SCALAR_KIND, ierr))
 
 !  Set the vector elements.
 !   - Note that VecSetValues() uses 0-based row and column numbers
@@ -48,7 +47,7 @@ program main
 !     contributions will be added together.
 
   do i = 0, N - rank - 1
-    PetscCallA(VecSetValues(x, 1_PETSC_INT_KIND, [i], [one], ADD_VALUES, ierr))
+    PetscCallA(VecSetValues(x, 1_PETSC_INT_KIND, [i], [1.0_PETSC_SCALAR_KIND], ADD_VALUES, ierr))
   end do
 
 !  Assemble vector, using the 2-step process:

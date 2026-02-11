@@ -42,7 +42,6 @@ program main
   PetscInt i, j, jj, ii, istart, iend
   PetscErrorCode ierr
   PetscScalar v
-  PetscScalar, parameter :: pfive = 5.0
   KSP ksp
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -124,7 +123,7 @@ program main
 
 !  Set exact solution; then compute right-hand-side vector.
 
-  PetscCallA(VecSet(u, pfive, ierr))
+  PetscCallA(VecSet(u, 5.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(MatMult(A, u, b, ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

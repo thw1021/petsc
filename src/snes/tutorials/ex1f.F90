@@ -158,7 +158,6 @@ program main
   PetscErrorCode ierr
   PetscInt its
   PetscMPIInt size, rank
-  PetscScalar, parameter :: pfive = 0.5
   PetscReal, parameter :: tol = 1.e-4
   PetscBool setls
   PetscReal, pointer :: rhistory(:)
@@ -251,7 +250,7 @@ program main
 !  to employ an initial guess of zero, the user should explicitly set
 !  this vector to zero by calling VecSet().
 
-  PetscCallA(VecSet(x, pfive, ierr))
+  PetscCallA(VecSet(x, 0.5_PETSC_SCALAR_KIND, ierr))
   PetscCallA(SNESSolve(snes, PETSC_NULL_VEC, x, ierr))
 
   PetscCallA(SNESGetConvergenceHistory(snes, rhistory, itshistory, nhistory, ierr))

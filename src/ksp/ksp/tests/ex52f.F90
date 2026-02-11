@@ -13,7 +13,6 @@ program main
   Vec x, b
   Mat A, F
   KSP ksp
-  PetscScalar, parameter :: two = 2.0, zero = 0.0
   KSPConvergedReason reason
   PCFailedReason pcreason
   PC pc
@@ -27,10 +26,10 @@ program main
   PetscCallA(MatSetUp(A, ierr))
   row = 0
   col = 0
-  PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [row], 1_PETSC_INT_KIND, [col], [two], INSERT_VALUES, ierr))
+  PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [row], 1_PETSC_INT_KIND, [col], [2.0_PETSC_SCALAR_KIND], INSERT_VALUES, ierr))
   row = 1
   col = 1
-  PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [row], 1_PETSC_INT_KIND, [col], [zero], INSERT_VALUES, ierr))
+  PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [row], 1_PETSC_INT_KIND, [col], [0.0_PETSC_SCALAR_KIND], INSERT_VALUES, ierr))
   PetscCallA(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY, ierr))
   PetscCallA(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY, ierr))
 

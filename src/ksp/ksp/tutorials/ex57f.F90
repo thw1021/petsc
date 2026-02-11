@@ -117,7 +117,6 @@ program main
   PetscMPIInt rank, size
   PetscBool flg
   PetscScalar v
-  PetscScalar, parameter :: one = 1.0, neg_one = -1.0
   Vec x, b, u
   Mat A
   KSP ksp
@@ -236,7 +235,7 @@ program main
     PetscCallA(VecSetRandom(u, rctx, ierr))
     PetscCallA(PetscRandomDestroy(rctx, ierr))
   else
-    PetscCallA(VecSet(u, one, ierr))
+    PetscCallA(VecSet(u, 1.0_PETSC_SCALAR_KIND, ierr))
   end if
   PetscCallA(MatMult(A, u, b, ierr))
 
@@ -300,7 +299,7 @@ program main
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 !  Check the error
-  PetscCallA(VecAXPY(x, neg_one, u, ierr))
+  PetscCallA(VecAXPY(x, -1.0_PETSC_SCALAR_KIND, u, ierr))
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   PetscCallA(KSPGetIterationNumber(ksp, its, ierr))
   if (rank == 0) then

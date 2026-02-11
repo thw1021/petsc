@@ -24,7 +24,6 @@ program main
   integer, parameter :: imax = 10000
   PetscErrorCode ierr
   PetscLogDouble, parameter :: onefp = 1.0
-  PetscReal, parameter :: onereal = 1.0, tenreal = 10.0
   PetscInt n
 !
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -53,39 +52,39 @@ program main
   PetscCallA(PetscLogEventRegister('Event 9', classid, USER_EVENT9, ierr))
   PetscCallA(PetscLogEventBegin(USER_EVENT1, ierr))
   PetscCallA(PetscLogFlops(imax*onefp, ierr))
-  PetscCallA(PetscSleep(onereal, ierr))
+  PetscCallA(PetscSleep(1.0_PETSC_REAL_KIND, ierr))
   PetscCallA(PetscLogEventEnd(USER_EVENT1, ierr))
   PetscCallA(PetscLogEventBegin(USER_EVENT2, ierr))
   PetscCallA(PetscLogFlops(imax*onefp, ierr))
-  PetscCallA(PetscSleep(onereal, ierr))
+  PetscCallA(PetscSleep(1.0_PETSC_REAL_KIND, ierr))
   PetscCallA(PetscLogEventEnd(USER_EVENT2, ierr))
   PetscCallA(PetscLogEventBegin(USER_EVENT3, ierr))
   PetscCallA(PetscLogFlops(imax*onefp, ierr))
-  PetscCallA(PetscSleep(onereal, ierr))
+  PetscCallA(PetscSleep(1.0_PETSC_REAL_KIND, ierr))
   PetscCallA(PetscLogEventEnd(USER_EVENT3, ierr))
   PetscCallA(PetscLogEventBegin(USER_EVENT4, ierr))
   PetscCallA(PetscLogFlops(imax*onefp, ierr))
-  PetscCallA(PetscSleep(onereal, ierr))
+  PetscCallA(PetscSleep(1.0_PETSC_REAL_KIND, ierr))
   PetscCallA(PetscLogEventEnd(USER_EVENT4, ierr))
   PetscCallA(PetscLogEventBegin(USER_EVENT5, ierr))
   PetscCallA(PetscLogFlops(imax*onefp, ierr))
-  PetscCallA(PetscSleep(onereal, ierr))
+  PetscCallA(PetscSleep(1.0_PETSC_REAL_KIND, ierr))
   PetscCallA(PetscLogEventEnd(USER_EVENT5, ierr))
   PetscCallA(PetscLogEventBegin(USER_EVENT6, ierr))
   PetscCallA(PetscLogFlops(imax*onefp, ierr))
-  PetscCallA(PetscSleep(onereal, ierr))
+  PetscCallA(PetscSleep(1.0_PETSC_REAL_KIND, ierr))
   PetscCallA(PetscLogEventEnd(USER_EVENT6, ierr))
   PetscCallA(PetscLogEventBegin(USER_EVENT7, ierr))
   PetscCallA(PetscLogFlops(imax*onefp, ierr))
-  PetscCallA(PetscSleep(onereal, ierr))
+  PetscCallA(PetscSleep(1.0_PETSC_REAL_KIND, ierr))
   PetscCallA(PetscLogEventEnd(USER_EVENT7, ierr))
   PetscCallA(PetscLogEventBegin(USER_EVENT8, ierr))
   PetscCallA(PetscLogFlops(imax*onefp, ierr))
-  PetscCallA(PetscSleep(onereal, ierr))
+  PetscCallA(PetscSleep(1.0_PETSC_REAL_KIND, ierr))
   PetscCallA(PetscLogEventEnd(USER_EVENT8, ierr))
   PetscCallA(PetscLogEventBegin(USER_EVENT9, ierr))
   PetscCallA(PetscLogFlops(imax*onefp, ierr))
-  PetscCallA(PetscSleep(onereal, ierr))
+  PetscCallA(PetscSleep(1.0_PETSC_REAL_KIND, ierr))
   PetscCallA(PetscLogEventEnd(USER_EVENT9, ierr))
 !
 !    We disable the logging of an event.
@@ -94,14 +93,14 @@ program main
 !
   PetscCallA(PetscLogEventDeactivate(USER_EVENT1, ierr))
   PetscCallA(PetscLogEventBegin(USER_EVENT1, ierr))
-  PetscCallA(PetscSleep(onereal, ierr))
+  PetscCallA(PetscSleep(1.0_PETSC_REAL_KIND, ierr))
   PetscCallA(PetscLogEventEnd(USER_EVENT1, ierr))
 !
 !    We next enable the logging of an event
 !
   PetscCallA(PetscLogEventActivate(USER_EVENT1, ierr))
   PetscCallA(PetscLogEventBegin(USER_EVENT1, ierr))
-  PetscCallA(PetscSleep(onereal, ierr))
+  PetscCallA(PetscSleep(1.0_PETSC_REAL_KIND, ierr))
   PetscCallA(PetscLogEventEnd(USER_EVENT1, ierr))
 
   PetscCallA(PetscInfo('PETSc info message\n'//'Another line\n', ierr))

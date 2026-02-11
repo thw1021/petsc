@@ -13,7 +13,6 @@
       PetscInt iglobal, i
       PetscInt, parameter :: first = 0, stride = 1, n = 5
       PetscScalar value
-      PetscScalar, parameter :: zero = 0.0
       Vec x, y
       IS is1, is2
       VecScatter ctx
@@ -31,7 +30,7 @@
       PetscCallA(VecCreateFromOptions(PETSC_COMM_WORLD, PETSC_NULL_CHARACTER, 1_PETSC_INT_KIND, PETSC_DECIDE, NN, y, ierr))
       PetscCallA(VecCreateFromOptions(PETSC_COMM_SELF, PETSC_NULL_CHARACTER, 1_PETSC_INT_KIND, NN, NN, x, ierr))
 
-      PetscCallA(VecSet(x, zero, ierr))
+      PetscCallA(VecSet(x, 0.0_PETSC_SCALAR_KIND, ierr))
       PetscCallA(VecGetOwnershipRange(y, low, high, ierr))
       do i = 0, n - 1
         iglobal = i + low

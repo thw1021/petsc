@@ -12,7 +12,6 @@ program main
   PetscErrorCode ierr
   PetscBool flg
   PetscScalar dot
-  PetscScalar, parameter :: one = 1.0, two = 2.0, three = 3.0
   PetscReal norm, rdot
   Vec x, y, w
   PetscOptions options
@@ -30,15 +29,15 @@ program main
   PetscCallA(VecDuplicate(x, y, ierr))
   PetscCallA(VecDuplicate(x, w, ierr))
 
-  PetscCallA(VecSet(x, one, ierr))
-  PetscCallA(VecSet(y, two, ierr))
+  PetscCallA(VecSet(x, 1.0_PETSC_SCALAR_KIND, ierr))
+  PetscCallA(VecSet(y, 2.0_PETSC_SCALAR_KIND, ierr))
 
   PetscCallA(VecDot(x, y, dot, ierr))
   rdot = PetscRealPart(dot)
   write (6, 100) rdot
 100 format('Result of inner product ', f10.4)
 
-  PetscCallA(VecScale(x, two, ierr))
+  PetscCallA(VecScale(x, 2.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   write (6, 110) norm
 110 format('Result of scaling ', f10.4)
@@ -48,7 +47,7 @@ program main
   write (6, 120) norm
 120 format('Result of copy ', f10.4)
 
-  PetscCallA(VecAXPY(y, three, x, ierr))
+  PetscCallA(VecAXPY(y, 3.0_PETSC_SCALAR_KIND, x, ierr))
   PetscCallA(VecNorm(y, NORM_2, norm, ierr))
   write (6, 130) norm
 130 format('Result of axpy ', f10.4)

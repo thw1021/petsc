@@ -10,8 +10,7 @@ program main
   KSP ksp
   PC pc
   IS is, sizes
-  PetscScalar, parameter :: one = 1.0
-  PetscInt, pointer ::           idx(:)
+  PetscInt, pointer :: idx(:)
   PetscMPIInt rank, size
   PetscInt m, N
   PetscViewer viewer
@@ -82,7 +81,7 @@ program main
   PetscCallA(MatDestroy(aux, ierr))
   PetscCallA(KSPSetFromOptions(ksp, ierr))
   PetscCallA(MatCreateVecs(A, x, b, ierr))
-  PetscCallA(VecSet(b, one, ierr))
+  PetscCallA(VecSet(b, 1.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(KSPSolve(ksp, b, x, ierr))
   PetscCallA(VecGetLocalSize(x, m, ierr))
   PetscCallA(VecDestroy(x, ierr))

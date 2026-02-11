@@ -35,7 +35,6 @@ program ex40f90
   SNES snes
   PetscErrorCode ierr
   DM da
-  PetscScalar, parameter :: one = 1.0
   Vec x
 
   PetscCallA(PetscInitialize(ierr))
@@ -55,7 +54,7 @@ program ex40f90
 !      Solve the nonlinear system
 !
   PetscCallA(DMCreateGlobalVector(da, x, ierr))
-  PetscCallA(VecSet(x, one, ierr))
+  PetscCallA(VecSet(x, 1.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(SNESSolve(snes, PETSC_NULL_VEC, x, ierr))
 
   PetscCallA(VecDestroy(x, ierr))

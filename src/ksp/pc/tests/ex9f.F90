@@ -16,7 +16,6 @@ program main
   PetscInt :: nksp
   PetscBool flg
   PetscMPIInt size
-  PetscScalar, parameter :: one = 1.0, none = -1.0
   PetscScalar value(3)
   KSP, pointer :: subksp(:)
 
@@ -80,7 +79,7 @@ program main
 
 !  Set exact solution; then compute right-hand-side vector.
 
-  PetscCallA(VecSet(u, one, ierr))
+  PetscCallA(VecSet(u, 1.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(MatMult(A, u, b, ierr))
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -140,7 +139,7 @@ program main
 
 !  Check the error
 
-  PetscCallA(VecAXPY(x, none, u, ierr))
+  PetscCallA(VecAXPY(x, -1.0_PETSC_SCALAR_KIND, u, ierr))
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   PetscCallA(KSPGetIterationNumber(ksp, its, ierr))
   if (norm > 1.e-12) then
