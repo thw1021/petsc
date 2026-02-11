@@ -185,7 +185,7 @@ $(TESTDIR)/%.o : $(EXAMPLESDIR)/%.sycl.cpp | $$(@D)/.DIR
 $(TESTDIR)/%.o : $(EXAMPLESDIR)/%.raja.cxx | $$(@D)/.DIR
 	$(PETSC_COMPILE.raja.cxx) $(abspath $<) -o $@
 
-$(TESTDIR)/%.o : $(EXAMPLESDIR)/%.cxx | $$(@D)/.DIR
+$(TESTDIR)/%.o : $(EXAMPLESDIR)/%.cpp | $$(@D)/.DIR
 	$(PETSC_COMPILE.cpp) $(abspath $<) -o $@
 
 $(TESTDIR)/%.o : $(EXAMPLESDIR)/%.cu | $$(@D)/.DIR
