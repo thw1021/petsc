@@ -904,11 +904,11 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         }
       }
       PetscOptionsBegin(PetscObjectComm((PetscObject)jac->ksp), ((PetscObject)jac->ksp)->prefix, "Options for Kokkos batch solver", "none");
-      PetscCall(PetscOptionsBool("-ksp_converged_reason", "", "bjkokkos.kokkos.cxx.c", jac->reason, &jac->reason, NULL));
-      PetscCall(PetscOptionsBool("-ksp_monitor", "", "bjkokkos.kokkos.cxx.c", jac->monitor, &jac->monitor, NULL));
-      PetscCall(PetscOptionsInt("-ksp_batch_target", "", "bjkokkos.kokkos.cxx.c", jac->batch_target, &jac->batch_target, NULL));
-      PetscCall(PetscOptionsInt("-ksp_rank_target", "", "bjkokkos.kokkos.cxx.c", jac->rank_target, &jac->rank_target, NULL));
-      PetscCall(PetscOptionsInt("-ksp_batch_nsolves_team", "", "bjkokkos.kokkos.cxx.c", jac->nsolves_team, &jac->nsolves_team, NULL));
+      PetscCall(PetscOptionsBool("-ksp_converged_reason", "", "bjkokkos.kokkos.cpp", jac->reason, &jac->reason, NULL));
+      PetscCall(PetscOptionsBool("-ksp_monitor", "", "bjkokkos.kokkos.cpp", jac->monitor, &jac->monitor, NULL));
+      PetscCall(PetscOptionsInt("-ksp_batch_target", "", "bjkokkos.kokkos.cpp", jac->batch_target, &jac->batch_target, NULL));
+      PetscCall(PetscOptionsInt("-ksp_rank_target", "", "bjkokkos.kokkos.cpp", jac->rank_target, &jac->rank_target, NULL));
+      PetscCall(PetscOptionsInt("-ksp_batch_nsolves_team", "", "bjkokkos.kokkos.cpp", jac->nsolves_team, &jac->nsolves_team, NULL));
       PetscCheck(jac->batch_target < jac->num_dms, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "-ksp_batch_target (%" PetscInt_FMT ") >= number of DMs (%" PetscInt_FMT ")", jac->batch_target, jac->num_dms);
       PetscOptionsEnd();
       // get blocks - jac->d_bid_eqOffset_k
