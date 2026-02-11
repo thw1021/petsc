@@ -573,10 +573,10 @@ DMDAVecGetKokkosOffsetView(DM dm, Vec vec, Kokkos::View<const PetscScalar*XX*, M
 where `*XX*` can contain any number of `*`. This allows one to write very natural Kokkos multi-dimensional parallel for kernels
 that act on the local portion of `DMDA` vectors.
 
-:::{admonition} Listing: <a href="PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/snes/tutorials/ex3k.kokkos.cxx.html">SNES Tutorial src/snes/tutorials/ex3k.kokkos.cxx</a>
+:::{admonition} Listing: <a href="PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/snes/tutorials/ex3k.kokkos.cpp.html">SNES Tutorial src/snes/tutorials/ex3k.kokkos.cpp</a>
 :name: snes-ex3-kokkos
 
-```{literalinclude} /../src/snes/tutorials/ex3k.kokkos.cxx
+```{literalinclude} /../src/snes/tutorials/ex3k.kokkos.cpp
 :end-at: PetscFunctionReturn(PETSC_SUCCESS);
 :start-at: PetscErrorCode KokkosFunction(SNES snes, Vec x, Vec r, PetscCtx ctx)
 ```

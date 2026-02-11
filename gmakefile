@@ -87,10 +87,10 @@ ifneq ($(HIPC),)
 langs += hip.cpp
 endif
 ifneq ($(SYCLC),)
-langs += sycl.cxx
+langs += sycl.cpp
 endif
 ifneq ($(KOKKOS_LIB),)
-langs += kokkos.cxx
+langs += kokkos.cpp
 endif
 
 concatlang = $(foreach lang, $(langs), $(srcs-$(1).$(lang):%.$(lang)=$(OBJDIR)/%.o))
@@ -195,8 +195,8 @@ $(call soname_function,%) : $(call libname_function,%)
 
 .PRECIOUS: $(call soname_function,%)
 
-$(OBJDIR)/%.o : %.sycl.cxx | $$(@D)/.DIR
-	$(PETSC_COMPILE.sycl.cxx) $(abspath $<) -o $@
+$(OBJDIR)/%.o : %.sycl.cpp | $$(@D)/.DIR
+	$(PETSC_COMPILE.sycl.cpp) $(abspath $<) -o $@
 
 $(OBJDIR)/src/%.o : src/%.c | $$(@D)/.DIR
 	$(PETSC_COMPILE.c) $(abspath $<) -o $@
@@ -204,14 +204,14 @@ $(OBJDIR)/src/%.o : src/%.c | $$(@D)/.DIR
 $(OBJDIR)/ftn/%.o : $(PETSC_ARCH)/ftn/%.c | $$(@D)/.DIR
 	$(PETSC_COMPILE.c) $(abspath $<) -o $@
 
-$(OBJDIR)/%.o : %.kokkos.cxx | $$(@D)/.DIR
-	$(PETSC_COMPILE.kokkos.cxx) $(abspath $<) -o $@
+$(OBJDIR)/%.o : %.kokkos.cpp | $$(@D)/.DIR
+	$(PETSC_COMPILE.kokkos.cpp) $(abspath $<) -o $@
 
 $(OBJDIR)/src/%.o : src/%.cxx | $$(@D)/.DIR
-	$(PETSC_COMPILE.cxx) $(abspath $<) -o $@
+	$(PETSC_COMPILE.cpp) $(abspath $<) -o $@
 
-$(OBJDIR)/ftn/%.o : $(PETSC_ARCH)/ftn/%.cxx | $$(@D)/.DIR
-	$(PETSC_COMPILE.cxx) $(abspath $<) -o $@
+$(OBJDIR)/ftn/%.o : $(PETSC_ARCH)/ftn/%.cpp | $$(@D)/.DIR
+	$(PETSC_COMPILE.cpp) $(abspath $<) -o $@
 
 $(OBJDIR)/%.o : %.hip.cpp | $$(@D)/.DIR
 	$(PETSC_COMPILE.hip.cpp) $(abspath $<) -o $@

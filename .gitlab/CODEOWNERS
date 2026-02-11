@@ -38,6 +38,6 @@ gmakefile*                @krugers @jedbrown @BarrySmith
 .gitlab*.yml              @sbalay @jedbrown @Jfaibussowitsch
 /lib/petsc                @krugers @sbalay
 
-**/*.kokkos.cxx           @jczhang07 @jedbrown @stefanozampini @markadams4
+**/*.kokkos.cpp           @jczhang07 @jedbrown @stefanozampini @markadams4
 **/*.hip.cpp              @jczhang07 @jedbrown @stefanozampini @markadams4 @krugers
 **/*.cu                   @jczhang07 @stefanozampini @markadams4 @karlrupp

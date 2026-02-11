@@ -12,13 +12,13 @@ import config.setsOrdered as sets
 SYCL is a C++ compiler with extensions to support the SYCL programming model.
 Because of its slowness, and in some ways the extensions make it a new language,
 we have a separate compiler for it.
-We use the extension .sycl.cxx to denote these files similar to what is done
+We use the extension .sycl.cpp to denote these files similar to what is done
 for HIP (which is also C++ and has similar issue).
 '''
 class Preprocessor(config.compile.processor.Processor):
   '''The SYCL preprocessor'''
   def __init__(self, argDB):
-    config.compile.processor.Processor.__init__(self, argDB, 'SYCLPP', 'SYCLPPFLAGS', '.sycl.cxx', '.sycl.cxx')
+    config.compile.processor.Processor.__init__(self, argDB, 'SYCLPP', 'SYCLPPFLAGS', '.sycl.cpp', '.sycl.cpp')
     self.language        = 'SYCL'
     self.includeDirectories = sets.Set()
     return
@@ -26,7 +26,7 @@ class Preprocessor(config.compile.processor.Processor):
 class Compiler(config.compile.processor.Processor):
   '''The SYCL compiler'''
   def __init__(self, argDB, usePreprocessorFlags = True):
-    config.compile.processor.Processor.__init__(self, argDB, 'SYCLC', 'SYCLFLAGS', '.sycl.cxx', '.o')
+    config.compile.processor.Processor.__init__(self, argDB, 'SYCLC', 'SYCLFLAGS', '.sycl.cpp', '.o')
     self.language        = 'SYCL'
     self.requiredFlags[-1]  = '-c'
     self.outputFlag         = '-o'
@@ -40,7 +40,7 @@ class Compiler(config.compile.processor.Processor):
     '''Return the object file name for 'source'; None if 'source' is a header file'''
     import os
 
-    # SYCL files are foo.sycl.cxx
+    # SYCL files are foo.sycl.cpp
     base1, ext1 = os.path.splitext(source)
     base2, ext2 = os.path.splitext(base1)
     if ext1 in ['.h', '.hh', '.hpp']:
