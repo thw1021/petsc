@@ -5,20 +5,19 @@ program main
   implicit none
 
   Mat                   :: A, D, Id, Acopy
-  Mat, dimension(4)      :: mats
+  Mat, dimension(4)     :: mats
   Vec                   :: v, w
   PetscInt              :: i, rstart, rend
-  PetscInt, parameter    :: n = 6, nb = 2
-  PetscScalar, parameter :: one = 1.0, two = 2.0
+  PetscInt, parameter   :: n = 6, nb = 2
   PetscErrorCode        :: ierr
 
   PetscCallA(PetscInitialize(ierr))
 
-  PetscCallA(MatCreateConstantDiagonal(PETSC_COMM_WORLD, PETSC_DETERMINE, PETSC_DETERMINE, n, n, one, Id, ierr))
+  PetscCallA(MatCreateConstantDiagonal(PETSC_COMM_WORLD, PETSC_DETERMINE, PETSC_DETERMINE, n, n, 1.0_PETSC_SCALAR_KIND, Id, ierr))
   PetscCallA(MatCreateVecs(Id, v, w, ierr))
   PetscCallA(VecGetOwnershipRange(v, rstart, rend, ierr))
   do i = rstart, rend - 1
-    PetscCallA(VecSetValue(v, i, two/(i + 1), INSERT_VALUES, ierr))
+    PetscCallA(VecSetValue(v, i, 2.0_PETSC_SCALAR_KIND/(i + 1), INSERT_VALUES, ierr))
   end do
   PetscCallA(VecAssemblyBegin(v, ierr))
   PetscCallA(VecAssemblyEnd(v, ierr))

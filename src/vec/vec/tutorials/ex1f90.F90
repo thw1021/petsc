@@ -15,11 +15,10 @@ program main
   Vec, pointer :: z(:)
   PetscInt, pointer :: ranges(:)
   PetscReal norm, v, v1, v2
-  PetscInt n, ithree
+  PetscInt n
   PetscErrorCode ierr
   PetscMPIInt rank
   PetscBool flg
-  PetscScalar one, two, three
   PetscScalar dots(3), dot
   PetscReal nfloat
 
@@ -28,14 +27,10 @@ program main
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   PetscCallA(PetscInitialize(ierr))
-  one = 1.0
-  two = 2.0
-  three = 3.0
-  n = 20
-  ithree = 3
 
+  n = 20
   PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-n', n, flg, ierr))
-  nfloat = n
+  nfloat = real(n, PETSC_REAL_KIND)
   PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD, rank, ierr))
 
 !  Create a vector, specifying only its global dimension.
@@ -59,20 +54,20 @@ program main
 !  an array of vectors, which is often more convenient than
 !  duplicating individual ones.
 
-  PetscCallA(VecDuplicateVecs(x, ithree, z, ierr))
+  PetscCallA(VecDuplicateVecs(x, 3_PETSC_INT_KIND, z, ierr))
 
 !  Set the vectors to entries to a constant value.
 
-  PetscCallA(VecSet(x, one, ierr))
-  PetscCallA(VecSet(y, two, ierr))
-  PetscCallA(VecSet(z(1), one, ierr))
-  PetscCallA(VecSet(z(2), two, ierr))
-  PetscCallA(VecSet(z(3), three, ierr))
+  PetscCallA(VecSet(x, 1.0_PETSC_SCALAR_KIND, ierr))
+  PetscCallA(VecSet(y, 2.0_PETSC_SCALAR_KIND, ierr))
+  PetscCallA(VecSet(z(1), 1.0_PETSC_SCALAR_KIND, ierr))
+  PetscCallA(VecSet(z(2), 2.0_PETSC_SCALAR_KIND, ierr))
+  PetscCallA(VecSet(z(3), 3.0_PETSC_SCALAR_KIND, ierr))
 
 !  Demonstrate various basic vector routines.
 
   PetscCallA(VecDot(x, x, dot, ierr))
-  PetscCallA(VecMDot(x, ithree, z, dots, ierr))
+  PetscCallA(VecMDot(x, 3_PETSC_INT_KIND, z, dots, ierr))
 
 !  Note: If using a complex numbers version of PETSc, then
 !  PETSC_USE_COMPLEX is defined in the makefiles; otherwise,
@@ -92,7 +87,7 @@ program main
 110 format('Vector length ', 3(i6))
 120 format('All other values should be near zero')
 
-  PetscCallA(VecScale(x, two, ierr))
+  PetscCallA(VecScale(x, 2.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   v = abs(norm - 2.0*sqrt(nfloat))
   if (v > -1.d-10 .and. v < 1.d-10) v = 0.0
@@ -106,14 +101,14 @@ program main
   if (rank == 0) write (6, 140) v
 140 format('VecCopy ', 1pe9.2)
 
-  PetscCallA(VecAXPY(y, three, x, ierr))
+  PetscCallA(VecAXPY(y, 3.0_PETSC_SCALAR_KIND, x, ierr))
   PetscCallA(VecNorm(y, NORM_2, norm, ierr))
   v = abs(norm - 8.0*sqrt(nfloat))
   if (v > -1.d-10 .and. v < 1.d-10) v = 0.0
   if (rank == 0) write (6, 150) v
 150 format('VecAXPY ', 1pe9.2)
 
-  PetscCallA(VecAYPX(y, two, x, ierr))
+  PetscCallA(VecAYPX(y, 2.0_PETSC_SCALAR_KIND, x, ierr))
   PetscCallA(VecNorm(y, NORM_2, norm, ierr))
   v = abs(norm - 18.0*sqrt(nfloat))
   if (v > -1.d-10 .and. v < 1.d-10) v = 0.0
@@ -133,7 +128,7 @@ program main
   if (rank == 0) write (6, 180) v
 180 format('VecSwap ', 1pe9.2)
 
-  PetscCallA(VecWAXPY(w, two, x, y, ierr))
+  PetscCallA(VecWAXPY(w, 2.0_PETSC_SCALAR_KIND, x, y, ierr))
   PetscCallA(VecNorm(w, NORM_2, norm, ierr))
   v = abs(norm - 38.0*sqrt(nfloat))
   if (v > -1.d-10 .and. v < 1.d-10) v = 0.0
@@ -154,11 +149,11 @@ program main
   if (rank == 0) write (6, 210) v
 210 format('VecPointwiseDivide ', 1pe9.2)
 
-  dots(1) = one
-  dots(2) = three
-  dots(3) = two
-  PetscCallA(VecSet(x, one, ierr))
-  PetscCallA(VecMAXPY(x, ithree, dots, z, ierr))
+  dots(1) = 1.0_PETSC_SCALAR_KIND
+  dots(2) = 3.0_PETSC_SCALAR_KIND
+  dots(3) = 2.0_PETSC_SCALAR_KIND
+  PetscCallA(VecSet(x, 1.0_PETSC_SCALAR_KIND, ierr))
+  PetscCallA(VecMAXPY(x, 3_PETSC_INT_KIND, dots, z, ierr))
   PetscCallA(VecNorm(z(1), NORM_2, norm, ierr))
   v = abs(norm - sqrt(nfloat))
   if (v > -1.d-10 .and. v < 1.d-10) v = 0.0
@@ -180,7 +175,7 @@ program main
   PetscCallA(VecDestroy(x, ierr))
   PetscCallA(VecDestroy(y, ierr))
   PetscCallA(VecDestroy(w, ierr))
-  PetscCallA(VecDestroyVecs(ithree, z, ierr))
+  PetscCallA(VecDestroyVecs(3_PETSC_INT_KIND, z, ierr))
   PetscCallA(PetscFinalize(ierr))
 end
 

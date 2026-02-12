@@ -8,15 +8,14 @@ program main
   PetscReal norm
   PetscBool flg
   PetscMPIInt rank
-  PetscInt n, bs, comp
+  PetscInt, parameter :: bs = 2 ! block size
+  PetscInt n, comp
   PetscErrorCode ierr
-  PetscScalar one
 
   PetscCallA(PetscInitialize(ierr))
   PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD, rank, ierr))
 
   n = 20
-  one = 1.0
   PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-n', n, flg, ierr))
 
 !
@@ -28,14 +27,13 @@ program main
 
   PetscCallA(VecCreate(PETSC_COMM_WORLD, x, ierr))
   PetscCallA(VecSetSizes(x, PETSC_DECIDE, n, ierr))
-  bs = 2
   PetscCallA(VecSetBlockSize(x, bs, ierr))
   PetscCallA(VecSetFromOptions(x, ierr))
 
 !
 !     Set the vectors to entries to a constant value.
 !
-  PetscCallA(VecSet(x, one, ierr))
+  PetscCallA(VecSet(x, 1.0_PETSC_SCALAR_KIND, ierr))
 
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   if (rank == 0) then

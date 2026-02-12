@@ -4,25 +4,20 @@ program main
   use petscksp
   implicit none
 
-!
-!  This example is the Fortran version of ex6.c.  The program reads a PETSc matrix
-!  and vector from a file and solves a linear system.  Input arguments are:
-!        -f <input_file> : file to load.  For example see $PETSC_DIR/share/petsc/datafiles/matrices
-!
-
+! This example is the Fortran version of ex6.c.  The program reads a PETSc matrix
+! and vector from a file and solves a linear system.  Input arguments are:
+!   -f <input_file> : file to load.  For example see $PETSC_DIR/share/petsc/datafiles/matrices
   PetscErrorCode ierr
   PetscInt its, m, n, mlocal, nlocal
   PetscBool flg
-  PetscScalar none
   PetscReal norm
   Vec x, b, u
   Mat A
-  character*(128) f
+  character(len=128) f
   PetscViewer fd
   MatInfo info
   KSP ksp
 
-  none = -1.0
   PetscCallA(PetscInitialize(ierr))
 
 ! Read in matrix and RHS
@@ -37,13 +32,13 @@ program main
   PetscCallA(MatGetSize(A, m, n, ierr))
   PetscCallA(MatGetLocalSize(A, mlocal, nlocal, ierr))
   PetscCallA(MatGetInfo(A, MAT_GLOBAL_SUM, info, ierr))
-  write (*, 100) m,                                                   &
- &  n,                                                              &
- &  mlocal, nlocal,                                                  &
- &  info%BLOCK_SIZE, info%NZ_ALLOCATED,          &
- &  info%NZ_USED, info%NZ_UNNEEDED,              &
- &  info%MEMORY, info%ASSEMBLIES,                &
- &  info%MALLOCS
+  write (*, 100) m, &
+    n, &
+    mlocal, nlocal, &
+    info%BLOCK_SIZE, info%NZ_ALLOCATED, &
+    info%NZ_USED, info%NZ_UNNEEDED, &
+    info%MEMORY, info%ASSEMBLIES, &
+    info%MALLOCS
 
 100 format(4(i4, 1x), 7(1pe9.2, 1x))
   PetscCallA(VecCreate(PETSC_COMM_WORLD, b, ierr))
@@ -62,7 +57,7 @@ program main
 
 ! Show result
   PetscCallA(MatMult(A, x, u, ierr))
-  PetscCallA(VecAXPY(u, none, b, ierr))
+  PetscCallA(VecAXPY(u, -1.0_PETSC_SCALAR_KIND, b, ierr))
   PetscCallA(VecNorm(u, NORM_2, norm, ierr))
   PetscCallA(KSPGetIterationNumber(ksp, its, ierr))
   write (6, 101) norm, its

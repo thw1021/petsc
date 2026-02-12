@@ -10,12 +10,11 @@ program main
   KSP ksp
   PC pc
   IS is, sizes
-  PetscScalar one
-  PetscInt, pointer ::           idx(:)
+  PetscInt, pointer :: idx(:)
   PetscMPIInt rank, size
   PetscInt m, N
   PetscViewer viewer
-  character*(PETSC_MAX_PATH_LEN) dir, name
+  character(PETSC_MAX_PATH_LEN) dir, name
   PetscLayout map
   PetscBool flg
   PetscErrorCode ierr
@@ -82,8 +81,7 @@ program main
   PetscCallA(MatDestroy(aux, ierr))
   PetscCallA(KSPSetFromOptions(ksp, ierr))
   PetscCallA(MatCreateVecs(A, x, b, ierr))
-  one = 1.0
-  PetscCallA(VecSet(b, one, ierr))
+  PetscCallA(VecSet(b, 1.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(KSPSolve(ksp, b, x, ierr))
   PetscCallA(VecGetLocalSize(x, m, ierr))
   PetscCallA(VecDestroy(x, ierr))

@@ -5,25 +5,20 @@ program main
 
   PetscInt N
   PetscBool draw, flg
-  PetscReal rnorm, rtwo
-  PetscScalar one, mone
+  PetscReal rnorm
   Mat A
   Vec b, x, r
   KSP ksp
   PC pc
   PetscErrorCode ierr
-  character*80 mattype
-
-  N = 100
-  draw = .false.
-  one = 1.0
-  mone = -1.0
-  rtwo = 2.0
+  character(80) mattype
 
   PetscCallA(PetscInitialize(ierr))
   PetscCallA(PetscPythonInitialize(PETSC_NULL_CHARACTER, PETSC_NULL_CHARACTER, ierr))
 
+  N = 100
   PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-N', N, flg, ierr))
+  draw = .false.
   PetscCallA(PetscOptionsGetBool(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-draw', draw, flg, ierr))
 
   PetscCallA(MatCreate(PETSC_COMM_WORLD, A, ierr))
@@ -35,7 +30,7 @@ program main
   PetscCallA(MatSetUp(A, ierr))
 
   PetscCallA(MatCreateVecs(A, x, b, ierr))
-  PetscCallA(VecSet(b, one, ierr))
+  PetscCallA(VecSet(b, 1.0_PETSC_SCALAR_KIND, ierr))
 
   PetscCallA(KSPCreate(PETSC_COMM_WORLD, ksp, ierr))
   PetscCallA(KSPSetType(ksp, 'python', ierr))
@@ -51,13 +46,13 @@ program main
 
   PetscCallA(VecDuplicate(b, r, ierr))
   PetscCallA(MatMult(A, x, r, ierr))
-  PetscCallA(VecAYPX(r, mone, b, ierr))
+  PetscCallA(VecAYPX(r, -1.0_PETSC_SCALAR_KIND, b, ierr))
   PetscCallA(VecNorm(r, NORM_2, rnorm, ierr))
   print *, 'error norm = ', rnorm
 
   if (draw) then
     PetscCallA(VecView(x, PETSC_VIEWER_DRAW_WORLD, ierr))
-    PetscCallA(PetscSleep(rtwo, ierr))
+    PetscCallA(PetscSleep(2.0_PETSC_REAL_KIND, ierr))
   end if
 
   PetscCallA(VecDestroy(x, ierr))

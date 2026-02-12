@@ -6,17 +6,16 @@ program main
   Vec        ::   x
   PetscReal  :: norm
   PetscMPIInt :: rank
-  PetscInt, parameter :: n = 20
+  PetscInt :: n
   PetscErrorCode :: ierr
-  PetscScalar, parameter :: sone = 1.0
   PetscBool :: flg
   character(len=PETSC_MAX_PATH_LEN) :: outputString
-  PetscInt, parameter :: zero = 0, one = 1, two = 2
 
   PetscCallA(PetscInitialize(ierr))
 
   PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD, rank, ierr))
 
+  n = 20
   PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-n', n, flg, ierr))
 
   !Create a vector, specifying only its global dimension.
@@ -41,12 +40,12 @@ program main
 
   PetscCallA(VecSetSizes(x, PETSC_DECIDE, n, ierr))
   !
-  PetscCallA(VecSetBlockSize(x, two, ierr))
+  PetscCallA(VecSetBlockSize(x, 2_PETSC_INT_KIND, ierr))
   PetscCallA(VecSetFromOptions(x, ierr))
 
   !Set the vectors to entries to a constant value.
 
-  PetscCallA(VecSet(x, sone, ierr))
+  PetscCallA(VecSet(x, 1.0_PETSC_SCALAR_KIND, ierr))
 
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   write (outputString, *) norm
@@ -60,27 +59,27 @@ program main
   write (outputString, *) norm
   PetscCallA(PetscPrintf(PETSC_COMM_WORLD, 'L_inf Norm of entire vector: '//trim(outputString)//'\n', ierr))
 
-  PetscCallA(VecStrideNorm(x, zero, NORM_2, norm, ierr))
+  PetscCallA(VecStrideNorm(x, 0_PETSC_INT_KIND, NORM_2, norm, ierr))
   write (outputString, *) norm
   PetscCallA(PetscPrintf(PETSC_COMM_WORLD, 'L_2 Norm of sub-vector 0: '//trim(outputString)//'\n', ierr))
 
-  PetscCallA(VecStrideNorm(x, zero, NORM_1, norm, ierr))
+  PetscCallA(VecStrideNorm(x, 0_PETSC_INT_KIND, NORM_1, norm, ierr))
   write (outputString, *) norm
   PetscCallA(PetscPrintf(PETSC_COMM_WORLD, 'L_1 Norm of sub-vector 0: '//trim(outputString)//'\n', ierr))
 
-  PetscCallA(VecStrideNorm(x, zero, NORM_INFINITY, norm, ierr))
+  PetscCallA(VecStrideNorm(x, 0_PETSC_INT_KIND, NORM_INFINITY, norm, ierr))
   write (outputString, *) norm
   PetscCallA(PetscPrintf(PETSC_COMM_WORLD, 'L_inf Norm of sub-vector 0: '//trim(outputString)//'\n', ierr))
 
-  PetscCallA(VecStrideNorm(x, one, NORM_2, norm, ierr))
+  PetscCallA(VecStrideNorm(x, 1_PETSC_INT_KIND, NORM_2, norm, ierr))
   write (outputString, *) norm
   PetscCallA(PetscPrintf(PETSC_COMM_WORLD, 'L_2 Norm of sub-vector 1: '//trim(outputString)//'\n', ierr))
 
-  PetscCallA(VecStrideNorm(x, one, NORM_1, norm, ierr))
+  PetscCallA(VecStrideNorm(x, 1_PETSC_INT_KIND, NORM_1, norm, ierr))
   write (outputString, *) norm
   PetscCallA(PetscPrintf(PETSC_COMM_WORLD, 'L_1 Norm of sub-vector 1: '//trim(outputString)//'\n', ierr))
 
-  PetscCallA(VecStrideNorm(x, one, NORM_INFINITY, norm, ierr))
+  PetscCallA(VecStrideNorm(x, 1_PETSC_INT_KIND, NORM_INFINITY, norm, ierr))
   write (outputString, *) norm
   PetscCallA(PetscPrintf(PETSC_COMM_WORLD, 'L_inf Norm of sub-vector 1: '//trim(outputString)//'\n', ierr))
 

@@ -14,11 +14,9 @@ program main
   Vec            :: x, u, b            ! approx solution, RHS, exact solution
   PetscReal      :: norm, bnorm       ! norm of solution residual
   PetscScalar    :: v
-  PetscScalar, parameter :: myNone = -1.0
   PetscInt       :: Ii, JJ, ldim, low, high, iglobal, Istart, Iend
   PetscErrorCode :: ierr
-  PetscInt       :: i, j, its, n
-  PetscInt       :: m = 3, orthog = 0
+  PetscInt       :: i, j, its, n, m, orthog
   PetscMPIInt    :: size, rank
   PetscBool :: &
     testnewC = PETSC_FALSE, &
@@ -28,11 +26,12 @@ program main
   PetscRandom    :: rctx
   PetscLogStage, dimension(0:1) :: stages
   character(len=PETSC_MAX_PATH_LEN) :: outputString
-  PetscInt, parameter :: one = 1
 
   PetscCallA(PetscInitialize(ierr))
 
+  orthog = 0
   PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-orthog', orthog, flg, ierr))
+  m = 3
   PetscCallA(PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, '-m', m, flg, ierr))
   PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD, rank, ierr))
   PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD, size, ierr))
@@ -81,26 +80,26 @@ program main
     v = -1.0; i = Ii/n; j = Ii - i*n
     if (i > 0) then
       JJ = Ii - n
-      PetscCallA(MatSetValues(C, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+      PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
     end if
 
     if (i < m - 1) then
       JJ = Ii + n
-      PetscCallA(MatSetValues(C, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+      PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
     end if
 
     if (j > 0) then
       JJ = Ii - 1
-      PetscCallA(MatSetValues(C, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+      PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
     end if
 
     if (j < n - 1) then
       JJ = Ii + 1
-      PetscCallA(MatSetValues(C, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+      PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
     end if
 
     v = 4.0
-    PetscCallA(MatSetValues(C, one, [Ii], one, [Ii], [v], ADD_VALUES, ierr))
+    PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [Ii], [v], ADD_VALUES, ierr))
   end do intitializeC
 
   ! Make the matrix nonsymmetric if desired
@@ -109,7 +108,7 @@ program main
       v = -1.5; i = Ii/n
       if (i > 1) then
         JJ = Ii - n - 1
-        PetscCallA(MatSetValues(C, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+        PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
       end if
     end do
   else
@@ -152,7 +151,7 @@ program main
   do i = 0, ldim - 1
     iglobal = i + low
     v = real(i + 100*rank)
-    PetscCallA(VecSetValues(u, one, [iglobal], [v], INSERT_VALUES, ierr))
+    PetscCallA(VecSetValues(u, 1_PETSC_INT_KIND, [iglobal], [v], INSERT_VALUES, ierr))
   end do
 
   ! Assemble vector, using the 2-step process:
@@ -197,7 +196,7 @@ program main
   PetscCallA(KSPSolve(ksp, b, x, ierr))
 
   ! Check the residual
-  PetscCallA(VecAXPY(x, myNone, u, ierr))
+  PetscCallA(VecAXPY(x, -1.0_PETSC_SCALAR_KIND, u, ierr))
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   PetscCallA(VecNorm(b, NORM_2, bnorm, ierr))
 
@@ -234,26 +233,26 @@ program main
       v = -1.0; Ii = j + n*i
       if (i > 0) then
         JJ = Ii - n
-        PetscCallA(MatSetValues(C, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+        PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
       end if
 
       if (i < m - 1) then
         JJ = Ii + n
-        PetscCallA(MatSetValues(C, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+        PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
       end if
 
       if (j > 0) then
         JJ = Ii - 1
-        PetscCallA(MatSetValues(C, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+        PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
       end if
 
       if (j < n - 1) then
         JJ = Ii + 1
-        PetscCallA(MatSetValues(C, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+        PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
       end if
 
       v = 6.0
-      PetscCallA(MatSetValues(C, one, [Ii], one, [Ii], [v], ADD_VALUES, ierr))
+      PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [Ii], [v], ADD_VALUES, ierr))
     end do
   end do
 
@@ -264,7 +263,7 @@ program main
       v = -1.5; i = Ii/n
       if (i > 1) then
         JJ = Ii - n - 1
-        PetscCallA(MatSetValues(C, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+        PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
       end if
     end do
   end if
@@ -282,10 +281,10 @@ program main
 
     if (rank /= 0) then
       v = 6.0*0.00001; Ii = 0; JJ = 0
-      PetscCallA(MatSetValues(C, one, [Ii], one, [JJ], [v], INSERT_VALUES, ierr))
+      PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], INSERT_VALUES, ierr))
     elseif (rank == size - 1) then
       v = 6.0*0.00001; Ii = m*n - 1; JJ = m*n - 1
-      PetscCallA(MatSetValues(C, one, [Ii], one, [JJ], [v], INSERT_VALUES, ierr))
+      PetscCallA(MatSetValues(C, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], INSERT_VALUES, ierr))
 
     end if
 
@@ -332,7 +331,7 @@ program main
   PetscCallA(KSPSolve(ksp, b, x, ierr))
   ! Check the residual
 
-  PetscCallA(VecAXPY(x, myNone, u, ierr))
+  PetscCallA(VecAXPY(x, -1.0_PETSC_SCALAR_KIND, u, ierr))
   PetscCallA(VecNorm(x, NORM_2, norm, ierr))
   PetscCallA(VecNorm(b, NORM_2, bnorm, ierr))
   PetscCallA(KSPGetIterationNumber(ksp, its, ierr))

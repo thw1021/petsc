@@ -26,14 +26,10 @@ program main
   PetscMPIInt     :: rank, size
   PetscInt        :: its, nlocal, first, Istart, Iend
   PetscScalar     :: v
-  PetscScalar, parameter :: &
-    myNone = -1.0, &
-    sone = 1.0
-  PetscBool       :: isbjacobi, flg
-  KSP, pointer      ::   subksp(:) => null()
+  PetscBool :: isbjacobi, flg
+  KSP, pointer :: subksp(:) => null()
   PetscInt :: blks(4)
   character(len=PETSC_MAX_PATH_LEN) :: outputString
-  PetscInt, parameter :: one = 1, five = 5
 
   PetscCallA(PetscInitialize(ierr))
   m = 4
@@ -41,10 +37,7 @@ program main
   PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD, rank, ierr))
   PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD, size, ierr))
   n = m + 2
-  blks(1) = n
-  blks(2) = n
-  blks(3) = n
-  blks(4) = n
+  blks = n
 
   !-------------------------------------------------------------------
   ! Compute the matrix and right-hand-side vector that define
@@ -56,34 +49,34 @@ program main
   PetscCallA(MatCreate(PETSC_COMM_WORLD, A, ierr))
   PetscCallA(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, m*n, m*n, ierr))
   PetscCallA(MatSetFromOptions(A, ierr))
-  PetscCallA(MatMPIAIJSetPreallocation(A, five, PETSC_NULL_INTEGER_ARRAY, five, PETSC_NULL_INTEGER_ARRAY, ierr))
-  PetscCallA(MatSeqAIJSetPreallocation(A, five, PETSC_NULL_INTEGER_ARRAY, ierr))
+  PetscCallA(MatMPIAIJSetPreallocation(A, 5_PETSC_INT_KIND, PETSC_NULL_INTEGER_ARRAY, 5_PETSC_INT_KIND, PETSC_NULL_INTEGER_ARRAY, ierr))
+  PetscCallA(MatSeqAIJSetPreallocation(A, 5_PETSC_INT_KIND, PETSC_NULL_INTEGER_ARRAY, ierr))
   PetscCallA(MatGetOwnershipRange(A, Istart, Iend, ierr))
 
   do Ii = Istart, Iend - 1
     v = -1.0; i = Ii/n; j = Ii - i*n
     if (i > 0) then
       JJ = Ii - n
-      PetscCallA(MatSetValues(A, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+      PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
     end if
 
     if (i < m - 1) then
       JJ = Ii + n
-      PetscCallA(MatSetValues(A, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+      PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
     end if
 
     if (j > 0) then
       JJ = Ii - 1
-      PetscCallA(MatSetValues(A, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+      PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
     end if
 
     if (j < n - 1) then
       JJ = Ii + 1
-      PetscCallA(MatSetValues(A, one, [Ii], one, [JJ], [v], ADD_VALUES, ierr))
+      PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [JJ], [v], ADD_VALUES, ierr))
     end if
 
     v = 4.0
-    PetscCallA(MatSetValues(A, one, [Ii], one, [Ii], [v], ADD_VALUES, ierr))
+    PetscCallA(MatSetValues(A, 1_PETSC_INT_KIND, [Ii], 1_PETSC_INT_KIND, [Ii], [v], ADD_VALUES, ierr))
 
   end do
 
@@ -100,7 +93,7 @@ program main
 
   ! Set exact solution; then compute right-hand-side vector.
 
-  PetscCallA(Vecset(u, sone, ierr))
+  PetscCallA(Vecset(u, 1.0_PETSC_SCALAR_KIND, ierr))
   PetscCallA(MatMult(A, u, b, ierr))
 
   ! Create linear solver context
@@ -219,7 +212,7 @@ program main
 
   !PetscCallA(VecView(x,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
-  PetscCallA(VecAXPY(x, myNone, u, ierr))
+  PetscCallA(VecAXPY(x, -1.0_PETSC_SCALAR_KIND, u, ierr))
 
   !PetscCallA(VecView(x,PETSC_VIEWER_STDOUT_WORLD,ierr))
 
