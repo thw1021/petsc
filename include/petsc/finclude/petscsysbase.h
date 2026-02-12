@@ -65,66 +65,40 @@
 #define PetscFortranFloat real(kind=C_FLOAT)
 #define PetscFortranDouble real(kind=C_DOUBLE)
 #define PetscFortranLongDouble real(kind=C_FLOAT128)
+
 #if defined(PETSC_USE_REAL_SINGLE)
-#define PetscComplex complex(kind=C_FLOAT_COMPLEX)
+#define FORTRAN_REAL_KIND C_FLOAT
+#define FORTRAN_CMPLX_KIND C_FLOAT_COMPLEX
 #elif defined(PETSC_USE_REAL_DOUBLE)
-#define PetscComplex complex(kind=C_DOUBLE_COMPLEX)
+#define FORTRAN_REAL_KIND C_DOUBLE
+#define FORTRAN_CMPLX_KIND C_DOUBLE_COMPLEX
 #elif defined(PETSC_USE_REAL___FLOAT128)
-#define PetscComplex complex(kind=C_FLOAT128_COMPLEX)
+#define FORTRAN_REAL_KIND C_FLOAT128
+#define FORTRAN_CMPLX_KIND C_FLOAT128_COMPLEX
 #endif
 
-#if defined(PETSC_USE_COMPLEX)
-#define PETSC_SCALAR PETSC_COMPLEX
-#else
-#if defined(PETSC_USE_REAL_SINGLE)
-#define PETSC_SCALAR PETSC_FLOAT
-#elif defined(PETSC_USE_REAL___FLOAT128)
-#define PETSC_SCALAR PETSC___FLOAT128
-#else
-#define PETSC_SCALAR PETSC_DOUBLE
-#endif
-#endif
-#if defined(PETSC_USE_REAL_SINGLE)
-#define  PETSC_REAL  PETSC_FLOAT
-#define PetscIntToReal(a) real(a)
-#elif defined(PETSC_USE_REAL___FLOAT128)
-#define PETSC_REAL PETSC___FLOAT128
-#define PetscIntToReal(a) dble(a)
-#else
-#define  PETSC_REAL  PETSC_DOUBLE
-#define PetscIntToReal(a) dble(a)
-#endif
+#define PetscReal real(kind=FORTRAN_REAL_KIND)
+#define PetscComplex complex(kind=FORTRAN_CMPLX_KIND)
+#define PetscIntToReal(a) real(a,kind=FORTRAN_REAL_KIND)
+
 !
-!     Macro for templating between real and complex
+! Macros for templating between real and complex
 !
+#define PetscRealPart(a) real(a,kind=FORTRAN_REAL_KIND)
 #if defined(PETSC_USE_COMPLEX)
 #define PetscScalar PetscComplex
-!
-! F90 uses real(), conjg() when KIND parameter is used.
-!
-#define PetscRealPart(a) real(a)
-#define PetscConj(a) conjg(a)
-#define PetscImaginaryPart(a) aimag(a)
+#define PetscConj(a) conjg(cmplx(a,kind=FORTRAN_CMPLX_KIND))
+#define PetscImaginaryPart(a) aimag(cmplx(a,kind=FORTRAN_CMPLX_KIND))
+#define PetscFloatToScalar cmplx(a,kind=FORTRAN_CMPLX_KIND)
 #else
-#if defined (PETSC_USE_REAL_SINGLE)
-#define PetscScalar PetscFortranFloat
-#elif defined(PETSC_USE_REAL___FLOAT128)
-#define PetscScalar PetscFortranLongDouble
-#elif defined(PETSC_USE_REAL_DOUBLE)
-#define PetscScalar PetscFortranDouble
-#endif
-#define PetscRealPart(a) a
-#define PetscConj(a) a
-#define PetscImaginaryPart(a) 0.0
+#define PetscScalar PetscReal
+#define PetscConj(a) real(a,kind=FORTRAN_REAL_KIND)
+#define PetscImaginaryPart(a) real(0.0,kind=FORTRAN_REAL_KIND)
+#define PetscFloatToScalar real(a,kind=FORTRAN_REAL_KIND)
 #endif
 
-#if defined (PETSC_USE_REAL_SINGLE)
-#define PetscReal PetscFortranFloat
-#elif defined(PETSC_USE_REAL___FLOAT128)
-#define PetscReal PetscFortranLongDouble
-#elif defined(PETSC_USE_REAL_DOUBLE)
-#define PetscReal PetscFortranDouble
-#endif
+#undef FORTRAN_REAL_KIND
+#undef FORTRAN_CMPLX_KIND
 
 #define PetscReal2d type(tPetscReal2d)
 

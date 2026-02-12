@@ -86,17 +86,6 @@ module petscsysdef
 #endif
 
   PetscFortranAddr, parameter :: PETSC_STDOUT = 0
-!
-!  PETSc DataTypes
-!
-#if defined(PETSC_USE_REAL_SINGLE)
-#define PETSC_REAL PETSC_FLOAT
-#elif defined(PETSC_USE_REAL___FLOAT128)
-#define PETSC_REAL PETSC___FLOAT128
-#else
-#define PETSC_REAL PETSC_DOUBLE
-#endif
-#define PETSC_FORTRANADDR PETSC_LONG
 
 ! PETSc mathematics include file. Defines certain basic mathematical
 ! constants and functions for working with single and double precision
