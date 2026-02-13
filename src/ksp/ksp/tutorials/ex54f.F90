@@ -164,9 +164,9 @@ contains
     PetscInt, parameter, dimension(9) :: &
       lr = [-1, 1, 1, -1, 0, 1, 0, -1, 0], &
       lz = [-1, -1, 1, 1, -1, 0, 1, 0, 0]
-    PetscReal, parameter ::  third = 0.3333333333333333
+    PetscReal, parameter :: third = 1.0_PETSC_REAL_KIND/3.0_PETSC_REAL_KIND
 
-!     2x2 integration
+!   2x2 integration
     g = sqrt(third)
     do i = 1, 4
       sg(1, i) = g*lr(i)
