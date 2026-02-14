@@ -1,7 +1,4 @@
 #pragma once
-#if defined(__GNUC__) || defined(__clang__)
-  #pragma GCC diagnostic ignored "-Wconversion"
-#endif
 
 /**********************************const.h*************************************
 
@@ -26,6 +23,7 @@ File Description:
 #include <petscsys.h>
 #include <petscblaslapack.h>
 
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN("-Wconversion")
 #define X  0
 #define Y  1
 #define Z  2
@@ -456,3 +454,4 @@ PETSC_INTERN PetscInt       PCTFS_len_bit_mask(PetscInt);
 PETSC_INTERN PetscInt       PCTFS_ct_bits(char *, PetscInt);
 PETSC_INTERN PetscErrorCode PCTFS_bm_to_proc(char *, PetscInt, PetscInt *);
 PETSC_INTERN PetscInt       PCTFS_len_buf(PetscInt, PetscInt);
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END()
