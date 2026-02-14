@@ -1,12 +1,11 @@
 #pragma once
-/* all of the logging files have problems with automatic integer casting so checking is turned off for them here */
-#if defined(__GNUC__) || defined(__clang__)
-  #pragma GCC diagnostic ignored "-Wconversion"
-#endif
 
 #include <petsc/private/petscimpl.h>
 
 #include <petsc/private/logimpldeprecated.h>
+
+/* all of the logging files have problems with automatic integer casting so checking is turned off for them here */
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN("-Wconversion")
 
 /* --- Macros for resizable arrays that show up frequently in the implementation of logging --- */
 
@@ -219,3 +218,4 @@ PETSC_INTERN PetscErrorCode PetscLogTypeBegin(PetscLogHandlerType type);
 #endif
 
 #define PETSC_LOG_VIEW_FROM_OPTIONS_MAX 4
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END()
