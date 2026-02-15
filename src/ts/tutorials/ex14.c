@@ -50,7 +50,7 @@ use compatible domain decomposition relative to the 3D DMDAs.
 #include <ctype.h> /* toupper() */
 #include <petsc/private/petscimpl.h>
 
-#if defined __SSE2__
+#if defined(__SSE2__)
   #include <emmintrin.h>
 #endif
 
@@ -58,7 +58,7 @@ use compatible domain decomposition relative to the 3D DMDAs.
 #define USE_SSE2_KERNELS (!defined NO_SSE2 && !defined PETSC_USE_COMPLEX && !defined PETSC_USE_REAL_SINGLE && defined __SSE2__)
 
 #if !defined __STDC_VERSION__ || __STDC_VERSION__ < 199901L
-  #if defined __cplusplus /* C++ restrict is nonstandard and compilers have inconsistent rules about where it can be used */
+  #if defined(__cplusplus) /* C++ restrict is nonstandard and compilers have inconsistent rules about where it can be used */
     #define restrict
   #else
     #define restrict PETSC_RESTRICT
