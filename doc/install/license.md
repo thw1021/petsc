@@ -66,6 +66,16 @@ understood as an affirmation of the following:
 >    maintained indefinitely and may be redistributed consistent with
 >    this project or the open source license(s) involved.
 
+PETSc contributors are obligated to ensure that any code that is required to be delineated with a copyright label,
+is so delineated (see for example, include/petsc/private/khash/khash.h).
+They are also obligated to not submit copyrighted code that cannot be in the PETSc repository
+(due for example GNU license obligations).
+
+Should a contributor determine at a later time they have inadvertently submitted such copyright
+code they are obligated to inform the PETSc community and submit appropriate MR to resolve
+the issue. For example, by adding the appropriate copyright delineaters or removing code.
+
+
 ______________________________________________________________________
 
 ## Legacy License
