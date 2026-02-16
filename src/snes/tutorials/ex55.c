@@ -738,7 +738,7 @@ int main(int argc, char **argv)
 /*TEST
   build:
     requires: !windows_compilers
-    depends: ex55k.kokkos.cxx
+    depends: ex55k.kokkos.cpp
 
   testset:
     output_file: output/ex55_asm_0.out

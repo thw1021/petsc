@@ -173,7 +173,7 @@ checkbadSource:
 	-@echo "----- Fortran: labeled do loop -------------------------------------" >> checkbadSource.out
 	-@git --no-pager grep -n "[[:space:]]*do[[:space:]]*[0-9]" -- ${GITFSRC} >> checkbadSource.out;true
 	-@echo "----- Duplicate CUDA/Kokkos file names -----------------------------" >> checkbadSource.out
-	-@git ls-files *.cu *.kokkos.cxx | xargs -I{} sh -c 'basename "{}"' | sort | uniq -d  >> checkbadSource.out;true
+	-@git ls-files *.cu *.kokkos.cpp | xargs -I{} sh -c 'basename "{}"' | sort | uniq -d  >> checkbadSource.out;true
 	@a=`cat checkbadSource.out | wc -l`; l=`expr $$a - 40` ;\
          if [ $$l -gt 0 ] ; then \
            echo $$l " files with errors detected in source code formatting" ;\

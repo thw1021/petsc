@@ -566,7 +566,7 @@ M*/
 #if defined(PETSC_HAVE_COMPLEX)
   #if defined(__cplusplus) /* C++ complex support */
     /* Locate a C++ complex template library */
-    #if defined(PETSC_DESIRE_KOKKOS_COMPLEX) /* Defined in petscvec_kokkos.hpp for *.kokkos.cxx files */
+    #if defined(PETSC_DESIRE_KOKKOS_COMPLEX) /* Defined in petscvec_kokkos.hpp for *.kokkos.cpp files */
       #define petsccomplexlib Kokkos
       #include <Kokkos_Complex.hpp>
     #elif (defined(__CUDACC__) && defined(PETSC_HAVE_CUDA)) || (defined(__HIPCC__) && defined(PETSC_HAVE_HIP))
