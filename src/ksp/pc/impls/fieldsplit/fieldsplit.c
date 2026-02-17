@@ -1303,6 +1303,7 @@ static PetscErrorCode PCApply_FieldSplit_Schur(PC pc, Vec x, Vec y)
 
     if (kspUpper == kspA) {
       if (!AinvB) {
+        printf("there %d\n", __LINE__);
         PetscCall(MatMult(jac->B, ilinkD->y, ilinkA->y));
         PetscCall(VecAXPY(ilinkA->x, -1.0, ilinkA->y));
         PetscCall(PetscLogEventBegin(ilinkA->event, kspA, ilinkA->x, ilinkA->y, NULL));
@@ -1311,6 +1312,7 @@ static PetscErrorCode PCApply_FieldSplit_Schur(PC pc, Vec x, Vec y)
         PetscCall(PetscLogEventEnd(ilinkA->event, kspA, ilinkA->x, ilinkA->y, NULL));
       } else PetscCall(MatMultAdd(AinvB, ilinkD->y, ilinkA->y, ilinkA->y));
     } else {
+      printf("here %d\n", __LINE__);
       PetscCall(PetscLogEventBegin(ilinkA->event, kspA, ilinkA->x, ilinkA->y, NULL));
       PetscCall(KSPSolve(kspA, ilinkA->x, ilinkA->y));
       PetscCall(KSPCheckSolve(kspA, pc, ilinkA->y));
