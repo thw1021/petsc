@@ -79,7 +79,7 @@ $(OBJDIR)/%.o : CXXCPPFLAGS+=-Dpetsc_EXPORTS
 $(OBJDIR)/%.o : CUDACPPFLAGS+=-Dpetsc_EXPORTS
 endif
 
-langs := F F90 cxx c
+langs := F F90 cpp c
 ifneq ($(CUDAC),)
 langs += cu
 endif
@@ -207,7 +207,7 @@ $(OBJDIR)/ftn/%.o : $(PETSC_ARCH)/ftn/%.c | $$(@D)/.DIR
 $(OBJDIR)/%.o : %.kokkos.cpp | $$(@D)/.DIR
 	$(PETSC_COMPILE.kokkos.cpp) $(abspath $<) -o $@
 
-$(OBJDIR)/src/%.o : src/%.cxx | $$(@D)/.DIR
+$(OBJDIR)/src/%.o : src/%.cpp | $$(@D)/.DIR
 	$(PETSC_COMPILE.cpp) $(abspath $<) -o $@
 
 $(OBJDIR)/ftn/%.o : $(PETSC_ARCH)/ftn/%.cpp | $$(@D)/.DIR
