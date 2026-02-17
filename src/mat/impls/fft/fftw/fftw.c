@@ -553,8 +553,8 @@ PetscErrorCode MatCreateVecsFFTW_FFTW(Mat A, Vec *fin, Vec *fout, Vec *bout)
     case 2:
   #if !defined(PETSC_USE_COMPLEX) /* Note that N1 is no more the product of individual dimensions */
       alloc_local = fftw_mpi_local_size_2d_transposed(dim[0], dim[1] / 2 + 1, comm, &local_n0, &local_0_start, &local_n1, &local_1_start);
-                  PetscCall(PetscIntCast(2 * dim[0] * (dim[1] / 2 + 1), &N1));
-                  PetscCall(PetscIntCast(2 * local_n0 * (dim[1] / 2 + 1), &n1));
+      PetscCall(PetscIntCast(2 * dim[0] * (dim[1] / 2 + 1), &N1));
+      PetscCall(PetscIntCast(2 * local_n0 * (dim[1] / 2 + 1), &n1));
       if (fin) {
         data_finr = (double *)fftw_malloc(sizeof(double) * alloc_local * 2);
         PetscCall(VecCreateMPIWithArray(comm, 1, (PetscInt)n1, N1, (PetscScalar *)data_finr, fin));
@@ -605,8 +605,8 @@ PetscErrorCode MatCreateVecsFFTW_FFTW(Mat A, Vec *fin, Vec *fout, Vec *bout)
     case 3:
   #if !defined(PETSC_USE_COMPLEX)
       alloc_local = fftw_mpi_local_size_3d_transposed(dim[0], dim[1], dim[2] / 2 + 1, comm, &local_n0, &local_0_start, &local_n1, &local_1_start);
-                  PetscCall(PetscIntCast(2 * dim[0] * dim[1] * (dim[2] / 2 + 1), &N1));
-                  PetscCall(PetscIntCast(2 * local_n0 * dim[1] * (dim[2] / 2 + 1), &n1));
+      PetscCall(PetscIntCast(2 * dim[0] * dim[1] * (dim[2] / 2 + 1), &N1));
+      PetscCall(PetscIntCast(2 * local_n0 * dim[1] * (dim[2] / 2 + 1), &n1));
       if (fin) {
         data_finr = (double *)fftw_malloc(sizeof(double) * alloc_local * 2);
         PetscCall(VecCreateMPIWithArray(comm, 1, (PetscInt)n1, N1, (PetscScalar *)data_finr, fin));
@@ -844,7 +844,7 @@ static PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A, Vec x, Vec y)
         }
       }
 
-                PetscCall(PetscIntCast(local_n0 * dim[1], &n1));
+      PetscCall(PetscIntCast(local_n0 * dim[1], &n1));
       PetscCall(ISCreateGeneral(comm, n1, indx1, PETSC_COPY_VALUES, &list1));
       PetscCall(ISCreateGeneral(comm, n1, indx2, PETSC_COPY_VALUES, &list2));
 
@@ -1089,7 +1089,7 @@ static PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A, Vec x, Vec y)
         }
       }
 
-                PetscCall(PetscIntCast(local_n0 * dim[1], &n1));
+      PetscCall(PetscIntCast(local_n0 * dim[1], &n1));
       PetscCall(ISCreateGeneral(comm, n1, indx1, PETSC_COPY_VALUES, &list1));
       PetscCall(ISCreateGeneral(comm, n1, indx2, PETSC_COPY_VALUES, &list2));
 
@@ -1139,7 +1139,7 @@ static PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A, Vec x, Vec y)
         }
       }
 
-                PetscCall(PetscIntCast(local_n0 * dim[1] * dim[2], &n1));
+      PetscCall(PetscIntCast(local_n0 * dim[1] * dim[2], &n1));
       PetscCall(ISCreateGeneral(comm, n1, indx1, PETSC_COPY_VALUES, &list1));
       PetscCall(ISCreateGeneral(comm, n1, indx2, PETSC_COPY_VALUES, &list2));
 
@@ -1192,7 +1192,7 @@ static PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A, Vec x, Vec y)
         if (k % dim[ndim - 1] == 0) j += NM;
         j++;
       }
-                PetscCall(PetscIntCast(local_n0 * partial_dim, &n1));
+      PetscCall(PetscIntCast(local_n0 * partial_dim, &n1));
       PetscCall(ISCreateGeneral(comm, n1, indx1, PETSC_COPY_VALUES, &list1));
       PetscCall(ISCreateGeneral(comm, n1, indx2, PETSC_COPY_VALUES, &list2));
 
@@ -1324,7 +1324,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
 
       fftw_mpi_local_size_transposed(ndim, pdim, comm, &local_n0, &local_0_start, &local_n1, &local_1_start);
 
-                PetscCall(PetscIntCast(2 * (PetscInt)local_n0 * partial_dim * pdim[ndim - 1] / temp, &fft->n));
+      PetscCall(PetscIntCast(2 * (PetscInt)local_n0 * partial_dim * pdim[ndim - 1] / temp, &fft->n));
       N1 = 2 * fft->N * (PetscInt)pdim[ndim - 1] / ((PetscInt)temp);
 
       pdim[ndim - 1] = temp;
@@ -1382,4 +1382,3 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
