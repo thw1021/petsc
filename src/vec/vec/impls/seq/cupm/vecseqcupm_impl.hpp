@@ -19,6 +19,9 @@
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/inner_product.h>
+#if PETSC_PKG_CUDA_VERSION_GE(12, 9, 0)
+  #include <cuda/std/functional>
+#endif
 
 namespace Petsc
 {
@@ -564,7 +567,11 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::PointwiseMultAsync(Vec wout, Vec xin, Vec yin, PetscDeviceContext dctx) noexcept
 {
   PetscFunctionBegin;
+#if CCCL_VERSION >= 3001000
+  PetscCall(PointwiseBinaryDispatch_(VecPointwiseMult_Seq, cuda::std::multiplies<PetscScalar>{}, wout, xin, yin, dctx));
+#else
   PetscCall(PointwiseBinaryDispatch_(VecPointwiseMult_Seq, thrust::multiplies<PetscScalar>{}, wout, xin, yin, dctx));
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
