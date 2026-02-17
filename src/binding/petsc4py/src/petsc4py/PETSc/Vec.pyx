@@ -860,8 +860,8 @@ cdef class Vec(Object):
 
     def createGhostWithArray(
         self,
-        ghosts: Sequence[int],
-        array: Sequence[Scalar],
+        ghosts: ArrayInt,
+        array: ArrayScalar,
         size: LayoutSizeSpec | None = None,
         bsize: int | None = None,
         comm: Comm | None = None) -> Self:
