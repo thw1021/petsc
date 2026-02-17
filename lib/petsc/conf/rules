@@ -9,8 +9,7 @@
 # The makefile will then compile executables that link against the PETSc libraries
 # See https://petsc.org/release/docs/manual/getting_started/#writing-c-c-or-fortran-applications
 
-# Having .hip.cpp to provide backward compatibility for users who have been using .hip.cpp as the suffix for HIP C++ files. PETSc removed .hip.cpp in favor of .hip.cxx
-.SUFFIXES: .F .F90 .f90 ${SUFFIXES} .PETSc .C .cc .cpp .cxx .r .rm .so .html .ad .m .F95 .f95 .fiat .cu .hip.cxx .hip.cpp .kokkos.cxx .raja.cxx .sycl.cxx
+.SUFFIXES: .F .F90 .f90 ${SUFFIXES} .PETSc .C .cc .cpp .cxx .r .rm .so .html .ad .m .F95 .f95 .fiat .cu .hip.cxx .kokkos.cxx .raja.cxx .sycl.cxx
 
 clean-legacy:
 	@-${RM} ${CLEANFILES} ${TESTS} *.o *.lo *~ \
@@ -43,7 +42,7 @@ clean:: clean-legacy
 .cpp.rm .cxx.rm .cc.rm .C.rm .F.rm .F90.rm .f.rm .c.rm .cu.rm:
 	-@${RM} $* *.o $*.mon.* gmon.out mon.out
 	-@${RM} *.exe *.ilk *.pdb *.tds
-.cu.PETSc .hip.cxx.PETSc .hip.cpp.PETSc .kokkos.cxx.PETSc .c.PETSc .cxx.PETSc:
+.cu.PETSc .hip.cxx.PETSc .kokkos.cxx.PETSc .c.PETSc .cxx.PETSc:
 	-@if [ "$V" = "1" ]; then echo "** Building $* in $${PWD}"; fi
 	-+@${OMAKE}  PETSC_ARCH=${PETSC_ARCH}  $* > trashz 2>&1
 	-@grep -v clog trashz | grep -v "information sections" | \
@@ -159,9 +158,6 @@ clean:: clean-legacy
 .hip.cxx.o:
 	${PETSC_HIPCOMPILE_SINGLE} $<
 
-.hip.cpp.o:
-	${PETSC_HIPCOMPILE_SINGLE} $<
-
 .kokkos.cxx.o:
 	${PETSC_KOKKOSCOMPILE_SINGLE} $<
 
@@ -227,8 +223,6 @@ LDLIBS += $(PRELIBS) $(PETSC_LIB) $(LIBS)
 % : %.cxx
 	$(LINK.cc) $^ $(LOADLIBES) $(LDLIBS) -o $@
 % : %.hip.cxx
-	$(LINK.hip.cxx) $^ $(LOADLIBES) $(LDLIBS) -o $@
-% : %.hip.cpp
 	$(LINK.hip.cxx) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
 # Shall we compile *.c to *.o and then link *.o to executables in two separate steps?
