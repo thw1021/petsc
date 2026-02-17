@@ -7,7 +7,7 @@
 #include <Kokkos_DualView.hpp>
 #include <Kokkos_OffsetView.hpp>
 
-// the pool is defined in veckok.kokkos.cxx as it is currently only used there
+// the pool is defined in veckok.kokkos.cpp as it is currently only used there
 PETSC_SINGLE_LIBRARY_INTERN PetscScalar *PetscScalarPool;
 PETSC_SINGLE_LIBRARY_INTERN PetscInt     PetscScalarPoolSize;
 

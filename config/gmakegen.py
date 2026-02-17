@@ -45,8 +45,8 @@ def parse_makefile(fn, out=None):
     return out
 
 PetscPKGS = 'sys vec mat dm ksp snes ts tao ml'.split()
-# the key is actually the language suffix, it won't work for suffixes such as 'kokkos.cxx' so use an _ and replace the _ as needed with .
-LANGS = dict(kokkos_cxx='KOKKOS', hip_cpp='HIP', sycl_cxx='SYCL', raja_cxx='RAJA', c='C', cxx='CXX', cpp='CPP', cu='CU', F='F', F90='F90')
+# the key is actually the language suffix, it won't work for suffixes such as 'kokkos.cpp' so use an _ and replace the _ as needed with .
+LANGS = dict(kokkos_cpp='KOKKOS', hip_cpp='HIP', sycl_cxx='SYCL', raja_cpp='RAJA', c='C', cxx='CXX', cpp='CPP', cu='CU', F='F', F90='F90')
 
 class debuglogger(object):
     def __init__(self, log):
