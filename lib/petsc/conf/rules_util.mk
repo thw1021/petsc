@@ -61,14 +61,14 @@ clangformat: checkclangformatversion
 	-@git --no-pager ls-files -z ${GITCFSRC} | xargs -0 -P $(MAKE_NP) -L 10 ${PETSCCLANGFORMAT} -i
 
 GITFSRC = '*.[hF]90' '*/finclude/*.h'
-GITSRC = '*.[ch]' '*.hpp' '*.cpp' '*.cxx' '*.cu' ${GITFSRC} ${GITSRCEXCL}
+GITSRC = '*.[ch]' '*.hpp' '*.cxx' '*.cu' ${GITFSRC} ${GITSRCEXCL}
 GITMAKE = '*[Mm]akefile*' 'lib/petsc/conf/*' 'lib/slepc/conf/*'
 GITSRCEXCL = \
 ':!*khash/*' \
 ':!*valgrind/*' \
 ':!*yaml/*' \
 ':!*perfstubs/*'
-GITCFSRC = '*.[ch]' '*.hpp' '*.cpp' '*.cxx' '*.cu' ${GITSRCEXCL} ${GITCFSRCEXCL}
+GITCFSRC = '*.[ch]' '*.hpp' '*.cxx' '*.cu' ${GITSRCEXCL} ${GITCFSRCEXCL}
 GITCFSRCEXCL = \
 ':!*petscversion.h' \
 ':!*mpiunifdef.h' \
@@ -174,7 +174,9 @@ checkbadSource:
 	-@git --no-pager grep -n "[[:space:]]*do[[:space:]]*[0-9]" -- ${GITFSRC} >> checkbadSource.out;true
 	-@echo "----- Duplicate CUDA/Kokkos file names -----------------------------" >> checkbadSource.out
 	-@git ls-files *.cu *.kokkos.cxx | xargs -I{} sh -c 'basename "{}"' | sort | uniq -d  >> checkbadSource.out;true
-	@a=`cat checkbadSource.out | wc -l`; l=`expr $$a - 40` ;\
+	-@echo "----- Use of the .cpp file extension instead of .cxx ---------------" >> checkbadSource.out
+	-@git ls-files *.cpp >> checkbadSource.out;true
+	@a=`cat checkbadSource.out | wc -l`; l=`expr $$a - 41` ;\
          if [ $$l -gt 0 ] ; then \
            echo $$l " files with errors detected in source code formatting" ;\
            cat checkbadSource.out ;\
@@ -256,7 +258,7 @@ test-lint: checkvermin_exist checkmypy_exist
 #    The code recursively follows the permanently moved (301) redirections until it reaches the final URL
 #    For DropBox we need to check the validity of the new URL but do not want to return to user the internal "raw" URL
 checkbadURLS:
-	-@x=`git grep "http[s]*://" -- '*.[chF]' '*.html' '*.cpp' '*.cxx' '*.cu' '*.F90' '*.py' '*.tex' | grep -E -v "(config/packages|HandsOnExercises)" | tr '[[:blank:]]' '\n' | grep 'http[s]*://' | sed 's!.*(\(http[s]*://[-a-zA-Z0-9_./()?=&+%~]*\))!\1!g' | sed 's!.*\(http[s]*://[-a-zA-Z0-9_./()?=&+%~]*\).*!\1!g' | sed 's/\.$$//g' | sort | uniq| awk '{ print length, $$0 }' | sort -r -n -s | cut -d" " -f2` ; \
+	-@x=`git grep "http[s]*://" -- '*.[chF]' '*.html' '*.cxx' '*.cu' '*.F90' '*.py' '*.tex' | grep -E -v "(config/packages|HandsOnExercises)" | tr '[[:blank:]]' '\n' | grep 'http[s]*://' | sed 's!.*(\(http[s]*://[-a-zA-Z0-9_./()?=&+%~]*\))!\1!g' | sed 's!.*\(http[s]*://[-a-zA-Z0-9_./()?=&+%~]*\).*!\1!g' | sed 's/\.$$//g' | sort | uniq| awk '{ print length, $$0 }' | sort -r -n -s | cut -d" " -f2` ; \
         for i in $$x; do \
           url=$$i; \
           msg=''; \
