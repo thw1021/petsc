@@ -1,9 +1,13 @@
-t = 0.000e+00  L2 error = 1.705011e-17  Linf error = 1.110223e-16
-t = 1.000e+00  L2 error = 2.057404e-02  Linf error = 4.655363e-02
-t = 2.000e+00  L2 error = 2.675390e-02  Linf error = 9.230440e-02
-t = 3.000e+00  L2 error = 2.985869e-02  Linf error = 1.142116e-01
-t = 4.000e+00  L2 error = 3.397832e-02  Linf error = 1.519016e-01
-t = 5.000e+00  L2 error = 3.467429e-02  Linf error = 1.494181e-01
-t = 6.000e+00  L2 error = 3.367906e-02  Linf error = 1.319156e-01
-t = 7.000e+00  L2 error = 3.412310e-02  Linf error = 1.128568e-01
-t = 8.000e+00  L2 error = 2.911451e-02  Linf error = 7.986135e-02
+t = 0.000000e+00  L2 = 1.241267e-16  Linf = 1.110223e-16  L2_avg = inf  Linf_avg = inf  t_max = 0.000000e+00  L2_max = 1.241267e-16
+t = 1.000000e+00  L2 = 1.361551e-01  Linf = 3.687384e-02  L2_avg = 1.104114e-01  Linf_avg = 5.099907e-02  t_max = 9.733000e-01  L2_max = 1.747202e-01
+t = 2.000000e+00  L2 = 1.918134e-01  Linf = 1.111719e-01  L2_avg = 1.373659e-01  Linf_avg = 6.110993e-02  t_max = 1.793400e+00  L2_max = 2.027465e-01
+t = 3.000000e+00  L2 = 2.073343e-01  Linf = 1.182531e-01  L2_avg = 1.556972e-01  Linf_avg = 7.265868e-02  t_max = 2.996200e+00  L2_max = 2.229320e-01
+t = 4.000000e+00  L2 = 2.098405e-01  Linf = 1.066039e-01  L2_avg = 1.681306e-01  Linf_avg = 7.980544e-02  t_max = 3.775800e+00  L2_max = 2.307676e-01
+t = 5.000000e+00  L2 = 2.219437e-01  Linf = 1.207774e-01  L2_avg = 1.780406e-01  Linf_avg = 8.629465e-02  t_max = 4.695000e+00  L2_max = 2.378025e-01
+t = 6.000000e+00  L2 = 2.227158e-01  Linf = 1.094961e-01  L2_avg = 1.860224e-01  Linf_avg = 9.138052e-02  t_max = 5.770700e+00  L2_max = 2.442302e-01
+t = 7.000000e+00  L2 = 2.482865e-01  Linf = 1.434342e-01  L2_avg = 1.926699e-01  Linf_avg = 9.587305e-02  t_max = 7.000000e+00  L2_max = 2.482865e-01
+t = 8.000000e+00  L2 = 1.986936e-01  Linf = 7.440222e-02  L2_avg = 1.966376e-01  Linf_avg = 9.801451e-02  t_max = 7.021100e+00  L2_max = 2.498616e-01
+WARNING! There are options you set that were not used!
+WARNING! could be spelling mistake, etc!
+There is one unused database option. It is:
+Option left: name:-snes_fd_no (no value) source: command line

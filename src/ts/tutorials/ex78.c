@@ -37,7 +37,14 @@ typedef struct {
   PetscReal   zmax;
   PetscReal   Tmin;
   PetscReal   Tmax;
+  PetscReal   L2;
+  PetscReal   Linf;
+  PetscReal   L2_max;
+  PetscReal   t_l2_max;
+  PetscReal   L2_sum;
+  PetscReal   Linf_sum;
   PetscDrawLG drawlg;
+  PetscBool   compute_error;
   PetscBool   monitor_temp;
   PetscBool   useFCTLimiter;
   PetscBool   enforce_zero_T;
@@ -62,9 +69,15 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->Tmax               = 1.0;
   options->drawlg             = NULL;
   options->monitor_temp       = PETSC_FALSE;
+  options->compute_error      = PETSC_FALSE;
   options->useFCTLimiter      = PETSC_FALSE;
   options->printData          = PETSC_FALSE;
   options->use_ghost_cells    = PETSC_FALSE;
+  options->L2                 = 0;
+  options->Linf               = 0;
+  options->t_l2_max           = 0;
+  options->L2_sum             = 0;
+  options->Linf_sum           = 0;
   options->num_ghost_cells[0] = 0;
   options->num_ghost_cells[1] = 0;
   options->num_ghost_cells[2] = 0;
@@ -80,12 +93,12 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsReal("-zmax", "Z max", "", options->zmax, &options->zmax, NULL));
   PetscCall(PetscOptionsReal("-Tmin", "T min", "", options->Tmin, &options->Tmin, NULL));
   PetscCall(PetscOptionsReal("-Tmax", "T max", "", options->Tmax, &options->Tmax, NULL));
+  PetscCall(PetscOptionsBool("-compute_error", "Flag to output error at each step", "", options->compute_error, &options->compute_error, NULL));
   PetscCall(PetscOptionsBool("-temp_monitor", "Flag to plot temperature", "", options->monitor_temp, &options->monitor_temp, NULL));
   PetscCall(PetscOptionsBool("-use_fct_limiter", "Flag to use ARMS limiter", "", options->useFCTLimiter, &options->useFCTLimiter, NULL));
   PetscCall(PetscOptionsInt("-output_step", "Number of time steps between output", "", options->ostep, &options->ostep, NULL));
   PetscCall(PetscOptionsBool("-print_data", "Flag to print temperature data in monitor", "", options->printData, &options->printData, NULL));
   PetscCall(PetscOptionsBool("-use_ghost_cells", "Flag to pad real cells with ghost cells in all dimensions", "", options->use_ghost_cells, &options->use_ghost_cells, NULL));
-  // PetscCall(PetscOptionsInt("-num_ghost_cells", "Number of ghost cells on either end of mesh", "", options->num_ghost_cells, &options->num_ghost_cells, NULL));
   PetscCall(PetscOptionsIntArray("-num_ghost_cells", "Number of ghost cells on either end of mesh", "", options->num_ghost_cells, &nGC, NULL));
 
   PetscOptionsEnd();
@@ -148,7 +161,11 @@ PetscErrorCode PlotTemperature(TS ts, PetscInt step, PetscReal t, Vec T, void *c
   if (step % ostep == 0) {
     PetscCall(TSGetDM(ts, &dm));
     PetscCall(VecGetSize(T, &M));
-    PetscCall(VecGetArrayRead(T, &t_array));
+    Vec Tloc;
+    DMGetLocalVector(dm, &Tloc);
+    DMGlobalToLocalBegin(dm, T, INSERT_VALUES, Tloc);
+    DMGlobalToLocalEnd(dm, T, INSERT_VALUES, Tloc);
+    PetscCall(VecGetArrayRead(Tloc, &t_array));
     PetscCall(PetscDrawLGReset(user->drawlg));
     PetscCall(DMDAGetCorners(dm, &xs, &ys, &zs, &xm, &ym, &zm));
     dx = (user->xmax - user->xmin) / (xm - xs - 2 * user->num_ghost_cells[0]);
@@ -156,44 +173,130 @@ PetscErrorCode PlotTemperature(TS ts, PetscInt step, PetscReal t, Vec T, void *c
     dz = (user->zmax - user->zmin) / (zm - zs - 2 * user->num_ghost_cells[2]);
 
     PetscReal err2 = 0.0, errmax = 0.0;
-    for (i = user->num_ghost_cells[0]; i < (xs + xm - user->num_ghost_cells[0]); i++) {
-      PetscReal x = user->xmin + (i - user->num_ghost_cells[0]) * dx + 0.5 * dx;
+    PetscInt  j_center = ys + ym / 2;
+    PetscInt  k_center = zs + zm / 2;
 
-      Tnum = PetscRealPart(t_array[i]);
+    for (PetscInt i = xs + user->num_ghost_cells[0]; i < xs + xm - user->num_ghost_cells[0]; i++) {
+      PetscReal x   = user->xmin + (i - user->num_ghost_cells[0]) * dx + 0.5 * dx;
+      PetscInt  idx = (k_center - zs) * ym * xm + (j_center - ys) * xm + (i - xs);
 
+      PetscReal Tnum = PetscRealPart(t_array[idx]);
+
+      /* exact solution */
       PetscReal Texact;
       PetscReal tscale = PetscPowReal(1.0 + 4.5 * t, 2.0 / 9.0);
       PetscReal front  = (2.0 / PetscSqrtReal(5.0)) * tscale;
+
       if (x <= front) {
         PetscReal denom = 0.8 * PetscPowReal(1.0 + 4.5 * t, 4.0 / 9.0);
         Texact          = PetscPowReal(1.0 + 4.5 * t, -2.0 / 9.0) * PetscPowReal(1.0 - x * x / denom, 0.4);
-      } else {
-        Texact = 0.0;
-      }
+      } else Texact = 0.0;
+
       xvals[0] = x;
       xvals[1] = x;
       vals[0]  = Texact;
       vals[1]  = Tnum;
 
-      if (user->printData) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%f\t%f\t%f\n", t, x, Texact, Tnum));
-
       PetscCall(PetscDrawLGAddPoint(user->drawlg, xvals, vals));
-      PetscReal diff = Tnum - Texact;
-      err2 += diff * diff;
-      errmax = PetscMax(errmax, PetscAbsReal(diff));
     }
-    err2 = PetscSqrtReal(err2 / M);
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t = %.3e  L2 error = %.6e  Linf error = %.6e\n", (double)t, (double)err2, (double)errmax));
 
     PetscCall(PetscDrawLGGetDraw(user->drawlg, &draw));
     PetscCall(PetscSNPrintf(title, sizeof(title), "Zel'dovich Temperature Profile t = %.6e", (double)t));
     PetscCall(PetscDrawSetTitle(draw, title));
     PetscCall(PetscDrawLGGetAxis(user->drawlg, &axis));
-    PetscCall(PetscDrawAxisSetLabels(axis, title, "z", "T(z)"));
+    PetscCall(PetscDrawAxisSetLabels(axis, title, "x", "T(x)"));
 
     PetscCall(PetscDrawLGDraw(user->drawlg));
     PetscCall(PetscDrawSave(draw));
-    PetscCall(VecRestoreArrayRead(T, &t_array));
+    PetscCall(VecRestoreArrayRead(Tloc, &t_array));
+    PetscCall(DMRestoreLocalVector(dm, &Tloc));
+    PetscCall(VecViewFromOptions(T, NULL, "-T_view"));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode ComputeError(TS ts, PetscInt step, PetscReal t, Vec T, void *ctx)
+{
+  AppCtx              *user = (AppCtx *)ctx;
+  DM                   dm;
+  Vec                  Tloc;
+  const PetscScalar ***Tarr;
+  PetscInt             xs, ys, zs, xm, ym, zm;
+  PetscInt             i;
+
+  PetscReal dx, dy, dz;
+  PetscReal err2 = 0.0, errmax = 0.0, err2_RMS = 0.0;
+  PetscReal dt, maxT;
+
+  PetscFunctionBeginUser;
+  PetscCall(TSGetDM(ts, &dm));
+  PetscCall(TSGetTimeStep(ts, &dt));
+  PetscCall(TSGetMaxTime(ts, &maxT));
+
+  /* --- get local vector --- */
+  PetscCall(DMGetLocalVector(dm, &Tloc));
+  PetscCall(DMGlobalToLocalBegin(dm, T, INSERT_VALUES, Tloc));
+  PetscCall(DMGlobalToLocalEnd(dm, T, INSERT_VALUES, Tloc));
+  PetscCall(DMDAVecGetArrayRead(dm, Tloc, &Tarr));
+
+  PetscCall(DMDAGetCorners(dm, &xs, &ys, &zs, &xm, &ym, &zm));
+
+  dx = (user->xmax - user->xmin) / (xm - xs - 2 * user->num_ghost_cells[0]);
+  dy = (user->ymax - user->ymin) / (ym - ys - 2 * user->num_ghost_cells[1]);
+  dz = (user->zmax - user->zmin) / (zm - zs - 2 * user->num_ghost_cells[2]);
+
+  PetscInt Nx = xm - xs - 2 * user->num_ghost_cells[0];
+
+  /* center slice in y,z */
+  PetscInt j_center = ys + ym / 2;
+  PetscInt k_center = zs + zm / 2;
+
+  /* exact solution parameters */
+  PetscReal alpha = 1.0 + 4.5 * t;
+  PetscReal front = (2.0 / PetscSqrtReal(5.0)) * PetscPowReal(alpha, 2.0 / 9.0);
+  PetscReal denom = 0.8 * PetscPowReal(alpha, 4.0 / 9.0);
+
+  /* loop over owned interior x-cells */
+  for (i = xs + user->num_ghost_cells[0]; i < xs + xm - user->num_ghost_cells[0]; i++) {
+    PetscReal x = user->xmin + (i - xs - user->num_ghost_cells[0]) * dx + 0.5 * dx;
+
+    PetscReal Tnum = PetscRealPart(Tarr[k_center][j_center][i]);
+
+    PetscReal Texact = 0.0;
+    if (x <= front) {
+      PetscReal arg = 1.0 - (x * x) / denom;
+      if (arg > 0.0) { Texact = PetscPowReal(alpha, -2.0 / 9.0) * PetscPowReal(arg, 0.4); }
+    }
+
+    PetscReal diff = Tnum - Texact;
+    err2 += diff * diff;
+    errmax = PetscMax(errmax, PetscAbsReal(diff));
+  }
+
+  PetscCall(DMDAVecRestoreArrayRead(dm, Tloc, &Tarr));
+  PetscCall(DMRestoreLocalVector(dm, &Tloc));
+
+  /* reduce across MPI */
+  PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, &err2, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)dm)));
+  PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, &errmax, 1, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)dm)));
+
+  err2 = PetscSqrtReal(err2);
+
+  user->L2   = err2;
+  user->Linf = errmax;
+  user->L2_sum += err2;
+  user->Linf_sum += errmax;
+  if (err2 > user->L2_max) {
+    user->L2_max   = err2;
+    user->t_l2_max = t;
+  }
+
+  PetscReal L2_avg   = user->L2_sum / step;
+  PetscReal Linf_avg = user->Linf_sum / step;
+
+  if (step % user->ostep == 0) {
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t = %.6e  L2 = %.6e  Linf = %.6e  L2_avg = %.6e  Linf_avg = %.6e  t_max = %.6e  L2_max = %.6e\n", (double)t, (double)user->L2, (double)user->Linf, (double)L2_avg, (double)Linf_avg, (double)user->t_l2_max,
+                          (double)user->L2_max));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -203,7 +306,7 @@ PetscReal SignValue(PetscReal a, PetscReal x)
   return (x >= 0.0) ? a : -a;
 }
 
-static PetscErrorCode RHSFunction_1d(TS ts, PetscReal time, Vec T, Vec dTdt, void *ctx)
+static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *ctx)
 {
   AppCtx            *user = (AppCtx *)ctx;
   DM                 dm;
@@ -239,8 +342,10 @@ static PetscErrorCode RHSFunction_1d(TS ts, PetscReal time, Vec T, Vec dTdt, voi
   PetscCall(PetscMalloc1(local_size, &physFlux_z));
   PetscCall(PetscCalloc(local_size * sizeof(PetscReal), &limiter_out));
   PetscCall(PetscCalloc(local_size * sizeof(PetscReal), &limiter_in));
-  /* --- Calculate raw, unlimited flux densities at all interior faces --- */
-  // Note: We calculate the flux at the LEFT, BOTTOM, BACK face of each cell (i,j,k)
+  /*
+    Calculate raw, unlimited flux densities at all interior faces
+    Note: We calculate the flux at the LEFT, BOTTOM, BACK face of each cell (i,j,k)
+  */
   for (PetscInt k = zs; k < zs + zm; k++) {
     for (PetscInt j = ys; j < ys + ym; j++) {
       for (PetscInt i = xs; i < xs + xm; i++) {
@@ -272,7 +377,7 @@ static PetscErrorCode RHSFunction_1d(TS ts, PetscReal time, Vec T, Vec dTdt, voi
           PetscReal TT52 = T_T * T_T * sqrtTT;
 
           PetscReal k_avg_x   = 0.5 * (TB52 + TT52);
-          flux_x[current_idx] = dt * k_avg_x * (T_T - T_B) / dx;
+          flux_y[current_idx] = dt * k_avg_x * (T_T - T_B) / dx;
         }
         if (k > zs) {
           PetscReal T_B = t_arr[((k - 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)];
@@ -285,14 +390,14 @@ static PetscErrorCode RHSFunction_1d(TS ts, PetscReal time, Vec T, Vec dTdt, voi
           PetscReal TF52 = T_F * T_F * sqrtTF;
 
           PetscReal k_avg_x   = 0.5 * (TB52 + TF52);
-          flux_x[current_idx] = dt * k_avg_x * (T_F - T_B) / dx;
+          flux_z[current_idx] = dt * k_avg_x * (T_F - T_B) / dx;
         }
       }
     }
   }
 
   if (user->useFCTLimiter) {
-    /* --- Calculate limiter coefficients for each INTERIOR (non-ghost) CELL --- */
+    /* Calculate limiter coefficients for each INTERIOR (non-ghost) CELL */
     for (PetscInt idx = 0; idx < local_size; ++idx) {
       physFlux_x[idx] = flux_x[idx] * (dy * dz);
       physFlux_y[idx] = flux_y[idx] * (dx * dz);
@@ -343,40 +448,37 @@ static PetscErrorCode RHSFunction_1d(TS ts, PetscReal time, Vec T, Vec dTdt, voi
       }
     }
 
-    /* --- 4. Apply the corrected limiter logic to the flux densities --- */
+    /* Apply the corrected limiter logic to the flux densities */
     for (PetscInt k = zs; k < zs + zm; k++) {
       for (PetscInt j = ys; j < ys + ym; j++) {
         for (PetscInt i = xs; i < xs + xm; i++) {
           PetscReal limiter_factor;
-          // X-flux at face (i), between cell (i-1) and (i)
           if (i > xs) {
             PetscInt  idx_face  = (k - zs) * ym * xm + (j - ys) * xm + (i - xs);
             PetscReal Flux_sign = SignValue(0.5, flux_x[idx_face]);
-            if (flux_x[idx_face] >= 0.0) { // Flow is i-1 -> i
+            if (flux_x[idx_face] >= 0.0) {
               limiter_factor = ((0.5 + Flux_sign) * (PetscMin(limiter_in[idx_face], limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(limiter_out[idx_face], limiter_in[idx_face])));
-            } else { // Flow is i -> i-1
+            } else {
               limiter_factor = ((0.5 + Flux_sign) * (PetscMin(limiter_in[(k - zs) * ym * xm + (j - ys) * xm + ((i - 1) - xs)], limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(limiter_out[(k - zs) * ym * xm + (j - ys) * xm + ((i - 1) - xs)], limiter_in[idx_face])));
             }
             flux_x[idx_face] *= limiter_factor;
           }
-          // Y-flux at face (j), between cell (j-1) and (j)
           if (j > ys) {
             PetscInt  idx_face  = (k - zs) * ym * xm + (j - ys) * xm + (i - xs);
             PetscReal Flux_sign = SignValue(0.5, flux_y[idx_face]);
-            if (flux_y[idx_face] >= 0.0) { // Flow is j-1 -> j
+            if (flux_y[idx_face] >= 0.0) {
               limiter_factor = ((0.5 + Flux_sign) * (PetscMin(limiter_in[idx_face], limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(limiter_out[idx_face], limiter_in[idx_face])));
-            } else { // Flow is j -> j-1
+            } else {
               limiter_factor = ((0.5 + Flux_sign) * (PetscMin(limiter_in[(k - zs) * ym * xm + ((j - 1) - ys) * xm + ((i)-xs)], limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(limiter_out[(k - zs) * ym * xm + ((j - 1) - ys) * xm + (i - xs)], limiter_in[idx_face])));
             }
             flux_y[idx_face] *= limiter_factor;
           }
-          // Z-flux at face (k), between cell (k-1) and (k)
           if (k > zs) {
             PetscInt  idx_face  = (k - zs) * ym * xm + (j - ys) * xm + (i - xs);
             PetscReal Flux_sign = SignValue(0.5, flux_z[idx_face]);
-            if (flux_z[idx_face] >= 0.0) { // Flow is k-1 -> k
+            if (flux_z[idx_face] >= 0.0) {
               limiter_factor = ((0.5 + Flux_sign) * (PetscMin(limiter_in[idx_face], limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(limiter_out[idx_face], limiter_in[idx_face])));
-            } else { // Flow is k -> k-1
+            } else {
               limiter_factor = ((0.5 + Flux_sign) * (PetscMin(limiter_in[((k - 1) - zs) * ym * xm + (j - ys) * xm + ((i)-xs)], limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(limiter_out[((k - 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)], limiter_in[idx_face])));
             }
             flux_z[idx_face] *= limiter_factor;
@@ -385,7 +487,7 @@ static PetscErrorCode RHSFunction_1d(TS ts, PetscReal time, Vec T, Vec dTdt, voi
       }
     }
   }
-  /* --- 5. Calculate the final time derivative (divergence of limited flux) --- */
+  /* Calculate the final time derivative (divergence of limited flux) */
   for (PetscInt k = zs; k < zs + zm; k++) {
     for (PetscInt j = ys; j < ys + ym; j++) {
       for (PetscInt i = xs; i < xs + xm; i++) {
@@ -405,7 +507,7 @@ static PetscErrorCode RHSFunction_1d(TS ts, PetscReal time, Vec T, Vec dTdt, voi
     }
   }
 
-  /* --- 6. Cleanup --- */
+  /* --- Cleanup --- */
   PetscCall(PetscFree(flux_x));
   PetscCall(PetscFree(flux_y));
   PetscCall(PetscFree(flux_z));
@@ -417,6 +519,7 @@ static PetscErrorCode RHSFunction_1d(TS ts, PetscReal time, Vec T, Vec dTdt, voi
 
   PetscCall(VecRestoreArrayRead(T, &t_arr));
   PetscCall(VecRestoreArray(dTdt, &dtdt_arr));
+  PetscCall(VecViewFromOptions(dTdt, NULL, "-rhs_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -425,7 +528,7 @@ PetscErrorCode InitialConditions(TS ts, Vec U)
   AppCtx      *user;
   DM           dm;
   PetscScalar *u_arr;
-  PetscInt     xs, xm, ys, ym, zs, zm; // Local corners and dimensions provided by PETSc
+  PetscInt     xs, xm, ys, ym, zs, zm;
   PetscReal    dx, dy, dz;
   PetscReal    x_coord;
 
@@ -448,9 +551,7 @@ PetscErrorCode InitialConditions(TS ts, Vec U)
 
         if (x_coord <= 2.0 / PetscSqrtReal(5.0)) val = PetscPowReal(1.0 - (5.0 / 4.0) * x_sq, 2.0 / 5.0);
 
-        if (val < 0 || val != val) { // (val != val) is a robust check for NaN
-          val = 0.0;
-        }
+        if (val < 0 || val != val) { val = 0.0; }
         u_arr[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)] = val;
       }
     }
@@ -470,7 +571,7 @@ int main(int argc, char **argv)
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(ProcessOptions(PETSC_COMM_WORLD, &user));
 
-  /*Structured DMDA Grid*/
+  /* Structured DMDA Grid */
   PetscCall(DMDACreate3d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR, 100, 1, 1, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, 1, 1, NULL, NULL, NULL, &dm));
   PetscCall(DMSetFromOptions(dm));
   PetscCall(DMSetUp(dm));
@@ -488,12 +589,13 @@ int main(int argc, char **argv)
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_MATCHSTEP));
 
   if (user.monitor_temp) PetscCall(TSMonitorSet(ts, PlotTemperature, &user, NULL));
+  if (user.compute_error) PetscCall(TSMonitorSet(ts, ComputeError, &user, NULL));
   PetscCall(TSSetFromOptions(ts));
 
   PetscInt Ncell_x, Ncell_y, Ncell_z, Ncells;
   PetscCall(DMDAGetNumCells(dm, &Ncell_x, &Ncell_y, &Ncell_z, &Ncells));
 
-  PetscCall(TSSetRHSFunction(ts, NULL, RHSFunction_1d, &user));
+  PetscCall(TSSetRHSFunction(ts, NULL, RHSFunction, &user));
   SNES snes;
   PetscCall(TSGetSNES(ts, &snes));
   PetscCall(SetupContext(dm, &user));
@@ -524,14 +626,14 @@ int main(int argc, char **argv)
     args: -da_grid_x 56 -da_grid_y 1 -da_grid_z 1 \
           -use_ghost_cells -num_ghost_cells 3,0,0 \
           -xmin 0.0 -xmax 2.0 -ymin -1.0 -ymax 1.0 -zmin -1.0 -zmax 1.0 \
-          -ts_max_steps 80000 -ts_time_step 1e-4 -output_step 10000 \
-          -temp_monitor
+          -ts_time_step 1e-4 -ts_max_steps 80000 -output_step 10000 \
+          -temp_monitor -compute_error
     test:
       suffix: rk2
       args: -ts_type rk -ts_rk_type 2b
     test:
       suffix: beuler
-      args: -ts_type beuler -pc_type none -snes_fd
+      args: -ts_type beuler -pc_type none -snes_fd_no
     test:
       suffix: rkc1
       args: -ts_type rks -ts_rks_type rkc1 -ts_rks_stages 10
