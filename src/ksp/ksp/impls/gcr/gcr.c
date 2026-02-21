@@ -72,7 +72,7 @@ static PetscErrorCode KSPSolve_GCR_cycle(KSP ksp)
     }
 
     if (ksp->its >= ksp->max_it) {
-      ksp->reason = KSP_CONVERGED_ITS;
+      ksp->reason = KSP_DIVERGED_ITS;
       break;
     }
   }
