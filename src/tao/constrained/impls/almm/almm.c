@@ -411,8 +411,6 @@ static PetscErrorCode TaoSetFromOptions_ALMM(Tao tao, PetscOptionItems PetscOpti
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* -------------------------------------------------------- */
-
 /*MC
   TAOALMM - Augmented Lagrangian multiplier method for solving nonlinear optimization problems with general constraints.
 
@@ -726,7 +724,7 @@ static PetscErrorCode TaoALMMComputeAugLagAndGradient_Private(Tao tao)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode TaoALMMSubsolverObjective_Private(Tao tao, Vec P, PetscReal *Lval, void *ctx)
+PetscErrorCode TaoALMMSubsolverObjective_Private(Tao tao, Vec P, PetscReal *Lval, PetscCtx ctx)
 {
   TAO_ALMM *auglag = (TAO_ALMM *)ctx;
 
@@ -737,7 +735,7 @@ PetscErrorCode TaoALMMSubsolverObjective_Private(Tao tao, Vec P, PetscReal *Lval
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode TaoALMMSubsolverObjectiveAndGradient_Private(Tao tao, Vec P, PetscReal *Lval, Vec G, void *ctx)
+PetscErrorCode TaoALMMSubsolverObjectiveAndGradient_Private(Tao tao, Vec P, PetscReal *Lval, Vec G, PetscCtx ctx)
 {
   TAO_ALMM *auglag = (TAO_ALMM *)ctx;
 

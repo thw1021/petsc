@@ -1287,8 +1287,6 @@ static PetscErrorCode TSInterpolate_RosW(TS ts, PetscReal itime, Vec U)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*------------------------------------------------------------*/
-
 static PetscErrorCode TSRosWTableauReset(TS ts)
 {
   TS_RosW    *ros = (TS_RosW *)ts->data;
@@ -1357,13 +1355,13 @@ static PetscErrorCode TSRosWRestoreVecs(TS ts, DM dm, Vec *Ydot, Vec *Zdot, Vec 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMCoarsenHook_TSRosW(DM fine, DM coarse, void *ctx)
+static PetscErrorCode DMCoarsenHook_TSRosW(DM fine, DM coarse, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMRestrictHook_TSRosW(DM fine, Mat restrct, Vec rscale, Mat inject, DM coarse, void *ctx)
+static PetscErrorCode DMRestrictHook_TSRosW(DM fine, Mat restrct, Vec rscale, Mat inject, DM coarse, PetscCtx ctx)
 {
   TS  ts = (TS)ctx;
   Vec Ydot, Zdot, Ystage, Zstage;
@@ -1385,13 +1383,13 @@ static PetscErrorCode DMRestrictHook_TSRosW(DM fine, Mat restrct, Vec rscale, Ma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSubDomainHook_TSRosW(DM fine, DM coarse, void *ctx)
+static PetscErrorCode DMSubDomainHook_TSRosW(DM fine, DM coarse, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSubDomainRestrictHook_TSRosW(DM dm, VecScatter gscat, VecScatter lscat, DM subdm, void *ctx)
+static PetscErrorCode DMSubDomainRestrictHook_TSRosW(DM dm, VecScatter gscat, VecScatter lscat, DM subdm, PetscCtx ctx)
 {
   TS  ts = (TS)ctx;
   Vec Ydot, Zdot, Ystage, Zstage;
@@ -1512,7 +1510,6 @@ static PetscErrorCode TSSetUp_RosW(TS ts)
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-/*------------------------------------------------------------*/
 
 static PetscErrorCode TSSetFromOptions_RosW(TS ts, PetscOptionItems PetscOptionsObject)
 {

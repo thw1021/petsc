@@ -8,8 +8,8 @@
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <petscblaslapack.h>
 #include <petsc/private/vecimpl.h>
-#include <petscdevice.h>
 #include <petsc/private/deviceimpl.h>
+#include <petsc/private/sfimpl.h>
 
 /*@
   MatDenseGetLocalMatrix - For a `MATMPIDENSE` or `MATSEQDENSE` matrix returns the sequential
@@ -727,7 +727,7 @@ static PetscErrorCode MatDestroy_MPIDense(Mat mat)
 #if defined(PETSC_HAVE_ELEMENTAL)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpidense_elemental_C", NULL));
 #endif
-#if defined(PETSC_HAVE_SCALAPACK)
+#if defined(PETSC_HAVE_SCALAPACK) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpidense_scalapack_C", NULL));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatMPIDenseSetPreallocation_C", NULL));
@@ -1211,13 +1211,6 @@ static PetscErrorCode MatSetRandom_MPIDense(Mat x, PetscRandom rctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMissingDiagonal_MPIDense(Mat A, PetscBool *missing, PetscInt *d)
-{
-  PetscFunctionBegin;
-  *missing = PETSC_FALSE;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode MatMatTransposeMultSymbolic_MPIDense_MPIDense(Mat, Mat, PetscReal, Mat);
 static PetscErrorCode MatMatTransposeMultNumeric_MPIDense_MPIDense(Mat, Mat, Mat);
 static PetscErrorCode MatTransposeMatMultSymbolic_MPIDense_MPIDense(Mat, Mat, PetscReal, Mat);
@@ -1330,18 +1323,17 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIDense,
                                        NULL,
                                        NULL,
                                        MatGetColumnVector_MPIDense,
-                                       /*104*/ MatMissingDiagonal_MPIDense,
+                                       /*104*/ NULL,
                                        NULL,
                                        NULL,
                                        NULL,
                                        NULL,
                                        /*109*/ NULL,
                                        NULL,
-                                       NULL,
                                        MatMultHermitianTranspose_MPIDense,
                                        MatMultHermitianTransposeAdd_MPIDense,
-                                       /*114*/ NULL,
                                        NULL,
+                                       /*114*/ NULL,
                                        MatGetColumnReductions_MPIDense,
                                        NULL,
                                        NULL,
@@ -1712,7 +1704,7 @@ static PetscErrorCode MatDenseRestoreSubMatrix_MPIDense(Mat A, Mat *v)
   a->matinuse = 0;
   c           = (Mat_MPIDense *)a->cmat->data;
   PetscCall(MatDenseRestoreSubMatrix(a->A, &c->A));
-  if (v) *v = NULL;
+  *v = NULL;
 #if defined(PETSC_HAVE_DEVICE)
   A->offloadmask = a->A->offloadmask;
 #endif
@@ -1774,7 +1766,7 @@ PetscErrorCode MatCreate_MPIDense(Mat mat)
 #if defined(PETSC_HAVE_ELEMENTAL)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpidense_elemental_C", MatConvert_MPIDense_Elemental));
 #endif
-#if defined(PETSC_HAVE_SCALAPACK)
+#if defined(PETSC_HAVE_SCALAPACK) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpidense_scalapack_C", MatConvert_Dense_ScaLAPACK));
 #endif
 #if defined(PETSC_HAVE_CUDA)
@@ -2050,9 +2042,9 @@ static PetscErrorCode MatEqual_MPIDense(Mat A, Mat B, PetscBool *flag)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDestroy_MatTransMatMult_MPIDense_MPIDense(void *data)
+static PetscErrorCode MatProductCtxDestroy_MatTransMatMult_MPIDense_MPIDense(PetscCtxRt data)
 {
-  Mat_TransMatMultDense *atb = (Mat_TransMatMultDense *)data;
+  MatProductCtx_TransMatMultDense *atb = *(MatProductCtx_TransMatMultDense **)data;
 
   PetscFunctionBegin;
   PetscCall(PetscFree2(atb->sendbuf, atb->recvcounts));
@@ -2061,9 +2053,9 @@ static PetscErrorCode MatDestroy_MatTransMatMult_MPIDense_MPIDense(void *data)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDestroy_MatMatTransMult_MPIDense_MPIDense(void *data)
+static PetscErrorCode MatProductCtxDestroy_MatMatTransMult_MPIDense_MPIDense(PetscCtxRt data)
 {
-  Mat_MatTransMultDense *abt = (Mat_MatTransMultDense *)data;
+  MatProductCtx_MatTransMultDense *abt = *(MatProductCtx_MatTransMultDense **)data;
 
   PetscFunctionBegin;
   PetscCall(PetscFree2(abt->buf[0], abt->buf[1]));
@@ -2074,19 +2066,19 @@ static PetscErrorCode MatDestroy_MatMatTransMult_MPIDense_MPIDense(void *data)
 
 static PetscErrorCode MatTransposeMatMultNumeric_MPIDense_MPIDense(Mat A, Mat B, Mat C)
 {
-  Mat_MPIDense          *a = (Mat_MPIDense *)A->data, *b = (Mat_MPIDense *)B->data, *c = (Mat_MPIDense *)C->data;
-  Mat_TransMatMultDense *atb;
-  MPI_Comm               comm;
-  PetscMPIInt            size, *recvcounts;
-  PetscScalar           *carray, *sendbuf;
-  const PetscScalar     *atbarray;
-  PetscInt               i, cN = C->cmap->N, proc, k, j, lda;
-  const PetscInt        *ranges;
+  Mat_MPIDense                    *a = (Mat_MPIDense *)A->data, *b = (Mat_MPIDense *)B->data, *c = (Mat_MPIDense *)C->data;
+  MatProductCtx_TransMatMultDense *atb;
+  MPI_Comm                         comm;
+  PetscMPIInt                      size, *recvcounts;
+  PetscScalar                     *carray, *sendbuf;
+  const PetscScalar               *atbarray;
+  PetscInt                         i, cN = C->cmap->N, proc, k, j, lda;
+  const PetscInt                  *ranges;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 3);
   PetscCheck(C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data empty");
-  atb        = (Mat_TransMatMultDense *)C->product->data;
+  atb        = (MatProductCtx_TransMatMultDense *)C->product->data;
   recvcounts = atb->recvcounts;
   sendbuf    = atb->sendbuf;
 
@@ -2179,12 +2171,12 @@ static PetscErrorCode MatTransposeMatMultNumeric_MPIDense_MPIDense(Mat A, Mat B,
 
 static PetscErrorCode MatTransposeMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B, PetscReal fill, Mat C)
 {
-  MPI_Comm               comm;
-  PetscMPIInt            size;
-  PetscInt               cm = A->cmap->n, cM, cN = B->cmap->N;
-  Mat_TransMatMultDense *atb;
-  PetscBool              cisdense = PETSC_FALSE;
-  const PetscInt        *ranges;
+  MPI_Comm                         comm;
+  PetscMPIInt                      size;
+  PetscInt                         cm = A->cmap->n, cM, cN = B->cmap->N;
+  MatProductCtx_TransMatMultDense *atb;
+  PetscBool                        cisdense = PETSC_FALSE;
+  const PetscInt                  *ranges;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 4);
@@ -2212,20 +2204,20 @@ static PetscErrorCode MatTransposeMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B
   PetscCall(MatGetOwnershipRanges(C, &ranges));
   for (PetscMPIInt i = 0; i < size; i++) PetscCall(PetscMPIIntCast((ranges[i + 1] - ranges[i]) * cN, &atb->recvcounts[i]));
   C->product->data    = atb;
-  C->product->destroy = MatDestroy_MatTransMatMult_MPIDense_MPIDense;
+  C->product->destroy = MatProductCtxDestroy_MatTransMatMult_MPIDense_MPIDense;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatMatTransposeMultSymbolic_MPIDense_MPIDense(Mat A, Mat B, PetscReal fill, Mat C)
 {
-  MPI_Comm               comm;
-  PetscMPIInt            i, size;
-  PetscInt               maxRows, bufsiz;
-  PetscMPIInt            tag;
-  PetscInt               alg;
-  Mat_MatTransMultDense *abt;
-  Mat_Product           *product = C->product;
-  PetscBool              flg;
+  MPI_Comm                         comm;
+  PetscMPIInt                      i, size;
+  PetscInt                         maxRows, bufsiz;
+  PetscMPIInt                      tag;
+  PetscInt                         alg;
+  MatProductCtx_MatTransMultDense *abt;
+  Mat_Product                     *product = C->product;
+  PetscBool                        flg;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 4);
@@ -2263,29 +2255,29 @@ static PetscErrorCode MatMatTransposeMultSymbolic_MPIDense_MPIDense(Mat A, Mat B
   }
 
   C->product->data                = abt;
-  C->product->destroy             = MatDestroy_MatMatTransMult_MPIDense_MPIDense;
+  C->product->destroy             = MatProductCtxDestroy_MatMatTransMult_MPIDense_MPIDense;
   C->ops->mattransposemultnumeric = MatMatTransposeMultNumeric_MPIDense_MPIDense;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatMatTransposeMultNumeric_MPIDense_MPIDense_Cyclic(Mat A, Mat B, Mat C)
 {
-  Mat_MPIDense          *a = (Mat_MPIDense *)A->data, *b = (Mat_MPIDense *)B->data, *c = (Mat_MPIDense *)C->data;
-  Mat_MatTransMultDense *abt;
-  MPI_Comm               comm;
-  PetscMPIInt            rank, size, sendto, recvfrom, recvisfrom;
-  PetscScalar           *sendbuf, *recvbuf = NULL, *cv;
-  PetscInt               i, cK             = A->cmap->N, sendsiz, recvsiz, k, j, bn;
-  PetscScalar            _DOne = 1.0, _DZero = 0.0;
-  const PetscScalar     *av, *bv;
-  PetscBLASInt           cm, cn, ck, alda, blda = 0, clda;
-  MPI_Request            reqs[2];
-  const PetscInt        *ranges;
+  Mat_MPIDense                    *a = (Mat_MPIDense *)A->data, *b = (Mat_MPIDense *)B->data, *c = (Mat_MPIDense *)C->data;
+  MatProductCtx_MatTransMultDense *abt;
+  MPI_Comm                         comm;
+  PetscMPIInt                      rank, size, sendto, recvfrom, recvisfrom;
+  PetscScalar                     *sendbuf, *recvbuf = NULL, *cv;
+  PetscInt                         i, cK             = A->cmap->N, sendsiz, recvsiz, k, j, bn;
+  PetscScalar                      _DOne = 1.0, _DZero = 0.0;
+  const PetscScalar               *av, *bv;
+  PetscBLASInt                     cm, cn, ck, alda, blda = 0, clda;
+  MPI_Request                      reqs[2];
+  const PetscInt                  *ranges;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 3);
   PetscCheck(C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data empty");
-  abt = (Mat_MatTransMultDense *)C->product->data;
+  abt = (MatProductCtx_MatTransMultDense *)C->product->data;
   PetscCall(PetscObjectGetComm((PetscObject)C, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &size));
@@ -2354,20 +2346,20 @@ static PetscErrorCode MatMatTransposeMultNumeric_MPIDense_MPIDense_Cyclic(Mat A,
 
 static PetscErrorCode MatMatTransposeMultNumeric_MPIDense_MPIDense_Allgatherv(Mat A, Mat B, Mat C)
 {
-  Mat_MPIDense          *a = (Mat_MPIDense *)A->data, *b = (Mat_MPIDense *)B->data, *c = (Mat_MPIDense *)C->data;
-  Mat_MatTransMultDense *abt;
-  MPI_Comm               comm;
-  PetscMPIInt            size, ibn;
-  PetscScalar           *cv, *sendbuf, *recvbuf;
-  const PetscScalar     *av, *bv;
-  PetscInt               blda, i, cK = A->cmap->N, k, j, bn;
-  PetscScalar            _DOne = 1.0, _DZero = 0.0;
-  PetscBLASInt           cm, cn, ck, alda, clda;
+  Mat_MPIDense                    *a = (Mat_MPIDense *)A->data, *b = (Mat_MPIDense *)B->data, *c = (Mat_MPIDense *)C->data;
+  MatProductCtx_MatTransMultDense *abt;
+  MPI_Comm                         comm;
+  PetscMPIInt                      size, ibn;
+  PetscScalar                     *cv, *sendbuf, *recvbuf;
+  const PetscScalar               *av, *bv;
+  PetscInt                         blda, i, cK = A->cmap->N, k, j, bn;
+  PetscScalar                      _DOne = 1.0, _DZero = 0.0;
+  PetscBLASInt                     cm, cn, ck, alda, clda;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 3);
   PetscCheck(C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data empty");
-  abt = (Mat_MatTransMultDense *)C->product->data;
+  abt = (MatProductCtx_MatTransMultDense *)C->product->data;
   PetscCall(PetscObjectGetComm((PetscObject)A, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(MatDenseGetArrayRead(a->A, &av));
@@ -2403,12 +2395,12 @@ static PetscErrorCode MatMatTransposeMultNumeric_MPIDense_MPIDense_Allgatherv(Ma
 
 static PetscErrorCode MatMatTransposeMultNumeric_MPIDense_MPIDense(Mat A, Mat B, Mat C)
 {
-  Mat_MatTransMultDense *abt;
+  MatProductCtx_MatTransMultDense *abt;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 3);
   PetscCheck(C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data empty");
-  abt = (Mat_MatTransMultDense *)C->product->data;
+  abt = (MatProductCtx_MatTransMultDense *)C->product->data;
   switch (abt->alg) {
   case 1:
     PetscCall(MatMatTransposeMultNumeric_MPIDense_MPIDense_Cyclic(A, B, C));
@@ -2420,9 +2412,9 @@ static PetscErrorCode MatMatTransposeMultNumeric_MPIDense_MPIDense(Mat A, Mat B,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDestroy_MatMatMult_MPIDense_MPIDense(void *data)
+static PetscErrorCode MatProductCtxDestroy_MatMatMult_MPIDense_MPIDense(PetscCtxRt data)
 {
-  Mat_MatMultDense *ab = (Mat_MatMultDense *)data;
+  MatProductCtx_MatMultDense *ab = *(MatProductCtx_MatMultDense **)data;
 
   PetscFunctionBegin;
   PetscCall(MatDestroy(&ab->Ce));
@@ -2434,14 +2426,14 @@ static PetscErrorCode MatDestroy_MatMatMult_MPIDense_MPIDense(void *data)
 
 static PetscErrorCode MatMatMultNumeric_MPIDense_MPIDense(Mat A, Mat B, Mat C)
 {
-  Mat_MatMultDense *ab;
-  Mat_MPIDense     *mdn = (Mat_MPIDense *)A->data;
-  Mat_MPIDense     *b   = (Mat_MPIDense *)B->data;
+  MatProductCtx_MatMultDense *ab;
+  Mat_MPIDense               *mdn = (Mat_MPIDense *)A->data;
+  Mat_MPIDense               *b   = (Mat_MPIDense *)B->data;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 3);
   PetscCheck(C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Missing product data");
-  ab = (Mat_MatMultDense *)C->product->data;
+  ab = (MatProductCtx_MatMultDense *)C->product->data;
   if (ab->Ae && ab->Ce) {
 #if PetscDefined(HAVE_ELEMENTAL)
     PetscCall(MatConvert_MPIDense_Elemental(A, MATELEMENTAL, MAT_REUSE_MATRIX, &ab->Ae));
@@ -2527,10 +2519,10 @@ static PetscErrorCode MatMatMultNumeric_MPIDense_MPIDense(Mat A, Mat B, Mat C)
 
 static PetscErrorCode MatMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B, PetscReal fill, Mat C)
 {
-  Mat_Product      *product = C->product;
-  PetscInt          alg;
-  Mat_MatMultDense *ab;
-  PetscBool         flg;
+  Mat_Product                *product = C->product;
+  PetscInt                    alg;
+  MatProductCtx_MatMultDense *ab;
+  PetscBool                   flg;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 4);
@@ -2581,7 +2573,7 @@ static PetscErrorCode MatMatMultSymbolic_MPIDense_MPIDense(Mat A, Mat B, PetscRe
   }
 
   C->product->data       = ab;
-  C->product->destroy    = MatDestroy_MatMatMult_MPIDense_MPIDense;
+  C->product->destroy    = MatProductCtxDestroy_MatMatMult_MPIDense_MPIDense;
   C->ops->matmultnumeric = MatMatMultNumeric_MPIDense_MPIDense;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2671,5 +2663,61 @@ static PetscErrorCode MatProductSetFromOptions_MPIDense(Mat C)
   default:
     break;
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode MatDenseScatter_Private(PetscSF sf, Mat X, Mat Y, InsertMode mode, ScatterMode smode)
+{
+  const PetscScalar *in;
+  PetscScalar       *out;
+  PetscSF            vsf;
+  PetscInt           N, ny, rld, lld;
+  PetscMemType       mtype[2];
+  MPI_Op             op = MPI_OP_NULL;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sf, PETSCSF_CLASSID, 1);
+  PetscValidHeaderSpecific(X, MAT_CLASSID, 2);
+  PetscValidHeaderSpecific(Y, MAT_CLASSID, 3);
+  if (mode == INSERT_VALUES) op = MPI_REPLACE;
+  else if (mode == ADD_VALUES) op = MPIU_SUM;
+  else if (mode == MAX_VALUES) op = MPIU_MAX;
+  else if (mode == MIN_VALUES) op = MPIU_MIN;
+  PetscCheck(op != MPI_OP_NULL, PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "Unsupported InsertMode %d in MatDenseScatter_Private()", mode);
+  PetscCheck(smode == SCATTER_FORWARD || smode == SCATTER_REVERSE, PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "Unsupported ScatterMode %d in MatDenseScatter_Private()", smode);
+  PetscCall(MatGetSize(X, NULL, &N));
+  PetscCall(MatGetSize(Y, NULL, &ny));
+  PetscCheck(N == ny, PetscObjectComm((PetscObject)sf), PETSC_ERR_ARG_SIZ, "Matrix column sizes must match: %" PetscInt_FMT " != %" PetscInt_FMT, N, ny);
+  PetscCall(MatDenseGetLDA(X, &rld));
+  PetscCall(MatDenseGetLDA(Y, &lld));
+  /* get cached or create new strided PetscSF when the number of columns is greater than one */
+  if (N > 1) {
+    PetscCall(PetscObjectQuery((PetscObject)sf, "_MatDenseScatter_StridedSF", (PetscObject *)&vsf));
+    if (vsf) {
+      PetscInt nr[2], nl[2];
+
+      PetscCall(PetscSFGetGraph(sf, nr, nl, NULL, NULL));
+      PetscCall(PetscSFGetGraph(vsf, nr + 1, nl + 1, NULL, NULL));
+      if (N * nr[0] != nr[1] || N * nl[0] != nl[1]) vsf = NULL;
+    }
+    if (!vsf) {
+      PetscCall(PetscSFCreateStridedSF(sf, N, rld, lld, &vsf));
+      PetscCall(PetscObjectCompose((PetscObject)sf, "_MatDenseScatter_StridedSF", (PetscObject)vsf));
+      PetscCall(PetscObjectDereference((PetscObject)vsf));
+    }
+  } else vsf = sf;
+  /* the output array is accessed in read and write mode,
+    but write-only in the INSERT_VALUES case could be worth exploring */
+  PetscCall(MatDenseGetArrayReadAndMemType(X, &in, &mtype[0]));
+  PetscCall(MatDenseGetArrayAndMemType(Y, &out, &mtype[1]));
+  if (smode == SCATTER_FORWARD) {
+    PetscCall(PetscSFBcastWithMemTypeBegin(vsf, vsf->vscat.unit, mtype[0], in, mtype[1], out, op));
+    PetscCall(PetscSFBcastEnd(vsf, vsf->vscat.unit, in, out, op));
+  } else {
+    PetscCall(PetscSFReduceWithMemTypeBegin(vsf, vsf->vscat.unit, mtype[0], in, mtype[1], out, op));
+    PetscCall(PetscSFReduceEnd(vsf, vsf->vscat.unit, in, out, op));
+  }
+  PetscCall(MatDenseRestoreArrayAndMemType(Y, &out));
+  PetscCall(MatDenseRestoreArrayReadAndMemType(X, &in));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -308,7 +308,7 @@ static PetscErrorCode PETSC_UNUSED RDCheckDomain_Private(RD rd, TS ts, Vec X, Pe
     if (!_in) PetscFunctionReturn(PETSC_SUCCESS); \
   } while (0)
 
-static PetscErrorCode RDIFunction_FD(TS ts, PetscReal t, Vec X, Vec Xdot, Vec F, void *ctx)
+static PetscErrorCode RDIFunction_FD(TS ts, PetscReal t, Vec X, Vec Xdot, Vec F, PetscCtx ctx)
 {
   RD            rd = (RD)ctx;
   RDNode       *x, *x0, *xdot, *f;
@@ -376,7 +376,7 @@ static PetscErrorCode RDIFunction_FD(TS ts, PetscReal t, Vec X, Vec Xdot, Vec F,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode RDIJacobian_FD(TS ts, PetscReal t, Vec X, Vec Xdot, PetscReal a, Mat A, Mat B, void *ctx)
+static PetscErrorCode RDIJacobian_FD(TS ts, PetscReal t, Vec X, Vec Xdot, PetscReal a, Mat A, Mat B, PetscCtx ctx)
 {
   RD            rd = (RD)ctx;
   RDNode       *x, *x0, *xdot;
@@ -624,7 +624,7 @@ static PetscErrorCode RDGetQuadrature(RD rd, PetscReal hx, PetscInt *nq, PetscRe
 /*
  Finite element version
 */
-static PetscErrorCode RDIFunction_FE(TS ts, PetscReal t, Vec X, Vec Xdot, Vec F, void *ctx)
+static PetscErrorCode RDIFunction_FE(TS ts, PetscReal t, Vec X, Vec Xdot, Vec F, PetscCtx ctx)
 {
   RD            rd = (RD)ctx;
   RDNode       *x, *x0, *xdot, *f;
@@ -710,7 +710,7 @@ static PetscErrorCode RDIFunction_FE(TS ts, PetscReal t, Vec X, Vec Xdot, Vec F,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode RDIJacobian_FE(TS ts, PetscReal t, Vec X, Vec Xdot, PetscReal a, Mat A, Mat B, void *ctx)
+static PetscErrorCode RDIJacobian_FE(TS ts, PetscReal t, Vec X, Vec Xdot, PetscReal a, Mat A, Mat B, PetscCtx ctx)
 {
   RD            rd = (RD)ctx;
   RDNode       *x, *x0, *xdot;
@@ -1176,18 +1176,18 @@ int main(int argc, char *argv[])
 /*TEST
 
     test:
-      args: -da_grid_x 20 -rd_initial 1 -rd_discretization fd -rd_jacobian fd_coloring -rd_endpoint -ts_max_time 1 -ts_dt 2e-1 -ts_theta_initial_guess_extrapolate 0 -ts_monitor -snes_monitor_short -ksp_monitor_short
+      args: -da_grid_x 20 -rd_initial 1 -rd_discretization fd -rd_jacobian fd_coloring -rd_endpoint -ts_max_time 1 -ts_time_step 2e-1 -ts_theta_initial_guess_extrapolate 0 -ts_monitor -snes_monitor_short -ksp_monitor_short
       requires: !single
 
     test:
       suffix: 2
-      args: -da_grid_x 20 -rd_initial 1 -rd_discretization fe -rd_quadrature lobatto2 -rd_jacobian fd_coloring -rd_endpoint -ts_max_time 1 -ts_dt 2e-1 -ts_theta_initial_guess_extrapolate 0 -ts_monitor -snes_monitor_short -ksp_monitor_short
+      args: -da_grid_x 20 -rd_initial 1 -rd_discretization fe -rd_quadrature lobatto2 -rd_jacobian fd_coloring -rd_endpoint -ts_max_time 1 -ts_time_step 2e-1 -ts_theta_initial_guess_extrapolate 0 -ts_monitor -snes_monitor_short -ksp_monitor_short
       requires: !single
 
     test:
       suffix: 3
       nsize: 2
-      args: -da_grid_x 20 -rd_initial 1 -rd_discretization fd -rd_jacobian analytic -rd_endpoint -ts_max_time 3 -ts_dt 1e-1 -ts_theta_initial_guess_extrapolate 0 -ts_monitor -snes_monitor_short -ksp_monitor_short
+      args: -da_grid_x 20 -rd_initial 1 -rd_discretization fd -rd_jacobian analytic -rd_endpoint -ts_max_time 3 -ts_time_step 1e-1 -ts_theta_initial_guess_extrapolate 0 -ts_monitor -snes_monitor_short -ksp_monitor_short
       requires: !single
 
 TEST*/

@@ -1282,6 +1282,8 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 . -log_view [:filename:format][,[:filename:format]...] - Prints summary of flop and timing information to screen or file, see `PetscLogView()` (up to 4 viewers)
 . -log_view_memory                                     - Includes in the summary from -log_view the memory used in each event, see `PetscLogView()`.
 . -log_view_gpu_time                                   - Includes in the summary from -log_view the time used in each GPU kernel, see `PetscLogView().
+. -log_view_gpu_energy                                 - Includes in the summary from -log_view the energy (estimated with power*gtime) consumed in each GPU kernel, see `PetscLogView()`.
+. -log_view_gpu_energy_meter                           - Includes in the summary from -log_view the energy (readings from meters) consumed in each GPU kernel, see `PetscLogView()`.
 . -log_exclude: <vec,mat,pc,ksp,snes>                  - excludes subset of object classes from logging
 . -log [filename]                                      - Logs profiling information in a dump file, see `PetscLogDump()`.
 . -log_all [filename]                                  - Same as `-log`.
@@ -1420,8 +1422,8 @@ PETSC_EXTERN PetscErrorCode PetscFreeAlign(void *, int, const char[], const char
   Collective on `PETSC_COMM_WORLD`
 
   Options Database Keys:
-+ -options_view                    - Calls `PetscOptionsView()`
-. -options_left                    - Prints unused options that remain in the database
++ -options_view                    - Calls `PetscOptionsView()` to display all options in the database
+. -options_left                    - Prints unused options that remain in the database (default value is `true`)
 . -objects_dump [all]              - Prints list of objects allocated by the user that have not been freed, the option all cause all outstanding objects to be listed
 . -mpidump                         - Calls PetscMPIDump()
 . -malloc_dump <optional filename> - Calls `PetscMallocDump()`, displays all memory allocated that has not been freed
@@ -1582,9 +1584,6 @@ PetscErrorCode PetscFinalize(void)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-options_left", &flg3, &flg1));
   if (!flg1) flg3 = PETSC_TRUE;
   if (flg3) {
-    if (!flg2 && flg1) { /* have not yet printed the options */
-      PetscCall(PetscOptionsView(NULL, PETSC_VIEWER_STDOUT_WORLD));
-    }
     PetscCall(PetscOptionsAllUsed(NULL, &nopt));
     if (nopt) {
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, "WARNING! There are options you set that were not used!\n"));
@@ -1924,9 +1923,9 @@ PetscErrorCode PetscCheckAllreduceSameLineAndCount_Private(MPI_Comm comm, const 
 .seealso: `PetscObject`, `PetscCtxDestroyFn`, `PetscObjectDestroy()`, `DMSetApplicationContextDestroy()`,  `PetscContainerSetDestroy()`,
            `PetscObjectContainterCreate()`
 @*/
-PETSC_EXTERN PetscErrorCode PetscCtxDestroyDefault(void **ctx)
+PETSC_EXTERN PetscErrorCode PetscCtxDestroyDefault(PetscCtxRt ctx)
 {
   PetscFunctionBegin;
-  PetscCall(PetscFree(*ctx));
+  PetscCall(PetscFree(*(void **)ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -346,7 +346,7 @@ static PetscErrorCode MatEqual_MPIAdj(Mat A, Mat B, PetscBool *flg)
   PetscCall(PetscArraycmp(a->i, b->i, A->rmap->n + 1, &flag));
 
   /* if a->j are the same */
-  PetscCall(PetscMemcmp(a->j, b->j, (a->nz) * sizeof(PetscInt), &flag));
+  PetscCall(PetscArraycmp(a->j, b->j, a->nz, &flag));
 
   PetscCallMPI(MPIU_Allreduce(&flag, flg, 1, MPI_C_BOOL, MPI_LAND, PetscObjectComm((PetscObject)A)));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -680,8 +680,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIAdj,
                                        NULL,
                                        NULL,
                                        NULL,
-                                       NULL,
-                                       /*119*/ MatCreateSubMatricesMPI_MPIAdj,
+                                       MatCreateSubMatricesMPI_MPIAdj,
+                                       /*119*/ NULL,
                                        NULL,
                                        NULL,
                                        NULL,
@@ -702,7 +702,6 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIAdj,
                                        NULL,
                                        NULL,
                                        /*139*/ NULL,
-                                       NULL,
                                        NULL,
                                        NULL,
                                        NULL,

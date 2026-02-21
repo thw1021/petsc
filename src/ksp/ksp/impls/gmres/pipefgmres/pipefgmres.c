@@ -490,7 +490,7 @@ static PetscErrorCode KSPView_PIPEFGMRES(KSP ksp, PetscViewer viewer)
 
   if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "  restart=%" PetscInt_FMT "\n", pipefgmres->max_k));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  happy breakdown tolerance %g\n", (double)pipefgmres->haptol));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  happy breakdown tolerance=%g\n", (double)pipefgmres->haptol));
 #if defined(PETSC_USE_COMPLEX)
     PetscCall(PetscViewerASCIIPrintf(viewer, "  shift=%g+%gi\n", (double)PetscRealPart(pipefgmres->shift), (double)PetscImaginaryPart(pipefgmres->shift)));
 #else
@@ -588,7 +588,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_PIPEFGMRES(KSP ksp)
 
   pipefgmres->nextra_vecs    = 1;
   pipefgmres->haptol         = 1.0e-30;
-  pipefgmres->q_preallocate  = 0;
+  pipefgmres->q_preallocate  = PETSC_FALSE;
   pipefgmres->delta_allocate = PIPEFGMRES_DELTA_DIRECTIONS;
   pipefgmres->orthog         = NULL;
   pipefgmres->nrs            = NULL;

@@ -505,37 +505,6 @@ PetscErrorCode MatImaginaryPart(Mat mat)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-  MatMissingDiagonal - Determine if sparse matrix is missing a diagonal entry (or block entry for `MATBAIJ` and `MATSBAIJ` matrices) in the nonzero structure
-
-  Not Collective
-
-  Input Parameter:
-. mat - the matrix
-
-  Output Parameters:
-+ missing - is any diagonal entry missing
-- dd      - first diagonal entry that is missing (optional) on this process
-
-  Level: advanced
-
-  Note:
-  This does not return diagonal entries that are in the nonzero structure but happen to have a zero numerical value
-
-.seealso: [](ch_matrices), `Mat`
-@*/
-PetscErrorCode MatMissingDiagonal(Mat mat, PetscBool *missing, PetscInt *dd)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
-  PetscValidType(mat, 1);
-  PetscAssertPointer(missing, 2);
-  PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix %s", ((PetscObject)mat)->type_name);
-  PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
-  PetscUseTypeMethod(mat, missingdiagonal, missing, dd);
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 // PetscClangLinter pragma disable: -fdoc-section-header-unknown
 /*@C
   MatGetRow - Gets a row of a matrix.  You MUST call `MatRestoreRow()`
@@ -5352,7 +5321,7 @@ static PetscErrorCode MatTranspose_Private(Mat mat, MatReuse reuse, Mat *B, Pets
   if (reuse == MAT_REUSE_MATRIX) {
     PetscCall(PetscObjectQuery((PetscObject)*B, "MatTransposeParent", (PetscObject *)&rB));
     PetscCheck(rB, PetscObjectComm((PetscObject)*B), PETSC_ERR_ARG_WRONG, "Reuse matrix used was not generated from call to MatTranspose(). Suggest MatTransposeSetPrecursor().");
-    PetscCall(PetscContainerGetPointer(rB, (void **)&rb));
+    PetscCall(PetscContainerGetPointer(rB, &rb));
     PetscCheck(rb->id == ((PetscObject)mat)->id, PetscObjectComm((PetscObject)*B), PETSC_ERR_ARG_WRONG, "Reuse matrix used was not generated from input matrix");
     if (rb->state == ((PetscObject)mat)->state) PetscFunctionReturn(PETSC_SUCCESS);
   }
@@ -5374,7 +5343,7 @@ static PetscErrorCode MatTranspose_Private(Mat mat, MatReuse reuse, Mat *B, Pets
   if (reuse == MAT_INITIAL_MATRIX) PetscCall(MatTransposeSetPrecursor(mat, *B));
   if (reuse != MAT_INPLACE_MATRIX) {
     PetscCall(PetscObjectQuery((PetscObject)*B, "MatTransposeParent", (PetscObject *)&rB));
-    PetscCall(PetscContainerGetPointer(rB, (void **)&rb));
+    PetscCall(PetscContainerGetPointer(rB, &rb));
     rb->state        = ((PetscObject)mat)->state;
     rb->nonzerostate = mat->nonzerostate;
   }
@@ -5466,7 +5435,7 @@ PetscErrorCode MatTransposeCheckNonzeroState_Private(Mat A, Mat B)
   PetscCheck(!A->factortype, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
   PetscCall(PetscObjectQuery((PetscObject)B, "MatTransposeParent", (PetscObject *)&rB));
   PetscCheck(rB, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_WRONG, "Reuse matrix used was not generated from call to MatTranspose()");
-  PetscCall(PetscContainerGetPointer(rB, (void **)&rb));
+  PetscCall(PetscContainerGetPointer(rB, &rb));
   PetscCheck(rb->id == ((PetscObject)A)->id, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_WRONG, "Reuse matrix used was not generated from input matrix");
   PetscCheck(rb->nonzerostate == A->nonzerostate, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_WRONGSTATE, "Reuse matrix has changed nonzero structure");
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -5703,6 +5672,8 @@ PetscErrorCode MatEqual(Mat A, Mat B, PetscBool *flg)
 @*/
 PetscErrorCode MatDiagonalScale(Mat mat, Vec l, Vec r)
 {
+  PetscBool flg = PETSC_FALSE;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   PetscValidType(mat, 1);
@@ -5723,7 +5694,36 @@ PetscErrorCode MatDiagonalScale(Mat mat, Vec l, Vec r)
   PetscUseTypeMethod(mat, diagonalscale, l, r);
   PetscCall(PetscLogEventEnd(MAT_Scale, mat, 0, 0, 0));
   PetscCall(PetscObjectStateIncrease((PetscObject)mat));
-  if (l != r) mat->symmetric = PETSC_BOOL3_FALSE;
+  if (l != r && (PetscBool3ToBool(mat->symmetric) || PetscBool3ToBool(mat->hermitian))) {
+    if (!PetscDefined(USE_COMPLEX) || PetscBool3ToBool(mat->symmetric)) {
+      if (l && r) PetscCall(VecEqual(l, r, &flg));
+      if (!flg) {
+        PetscCall(PetscObjectTypeCompareAny((PetscObject)mat, &flg, MATSEQSBAIJ, MATMPISBAIJ, ""));
+        PetscCheck(!flg, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_OUTOFRANGE, "For symmetric format, left and right scaling vectors must be the same");
+        mat->symmetric = mat->spd = PETSC_BOOL3_FALSE;
+        if (!PetscDefined(USE_COMPLEX)) mat->hermitian = PETSC_BOOL3_FALSE;
+        else mat->hermitian = PETSC_BOOL3_UNKNOWN;
+      }
+    }
+    if (PetscDefined(USE_COMPLEX) && PetscBool3ToBool(mat->hermitian)) {
+      flg = PETSC_FALSE;
+      if (l && r) {
+        Vec conjugate;
+
+        PetscCall(VecDuplicate(l, &conjugate));
+        PetscCall(VecCopy(l, conjugate));
+        PetscCall(VecConjugate(conjugate));
+        PetscCall(VecEqual(conjugate, r, &flg));
+        PetscCall(VecDestroy(&conjugate));
+      }
+      if (!flg) {
+        PetscCall(PetscObjectTypeCompareAny((PetscObject)mat, &flg, MATSEQSBAIJ, MATMPISBAIJ, ""));
+        PetscCheck(!flg, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_OUTOFRANGE, "For symmetric format and Hermitian matrix, left and right scaling vectors must be conjugate one of the other");
+        mat->hermitian = PETSC_BOOL3_FALSE;
+        mat->symmetric = mat->spd = PETSC_BOOL3_UNKNOWN;
+      }
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -6103,6 +6103,9 @@ PetscErrorCode MatSetOption(Mat mat, MatOption op, PetscBool flg)
       mat->spd                    = PETSC_BOOL3_TRUE;
       mat->symmetric              = PETSC_BOOL3_TRUE;
       mat->structurally_symmetric = PETSC_BOOL3_TRUE;
+#if !defined(PETSC_USE_COMPLEX)
+      mat->hermitian = PETSC_BOOL3_TRUE;
+#endif
     } else {
       mat->spd = PETSC_BOOL3_FALSE;
     }
@@ -7665,9 +7668,9 @@ typedef struct {
   Mat              C;
 } EnvelopeData;
 
-static PetscErrorCode EnvelopeDataDestroy(void **ptr)
+static PetscErrorCode EnvelopeDataDestroy(PetscCtxRt ptr)
 {
-  EnvelopeData *edata = (EnvelopeData *)*ptr;
+  EnvelopeData *edata = *(EnvelopeData **)ptr;
 
   PetscFunctionBegin;
   for (PetscInt i = 0; i < edata->n; i++) PetscCall(ISDestroy(&edata->is[i]));
@@ -7866,7 +7869,7 @@ PetscErrorCode MatInvertVariableBlockEnvelope(Mat A, MatReuse reuse, Mat *C)
     PetscCall(MatComputeVariableBlockEnvelope(A));
     PetscCall(PetscObjectQuery((PetscObject)A, "EnvelopeData", (PetscObject *)&container));
   }
-  PetscCall(PetscContainerGetPointer(container, (void **)&edata));
+  PetscCall(PetscContainerGetPointer(container, &edata));
   PetscCall(MatGetNonzeroState(A, &nonzerostate));
   PetscCheck(nonzerostate <= edata->nonzerostate, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Cannot handle changes to matrix nonzero structure");
   PetscCheck(reuse != MAT_REUSE_MATRIX || *C == edata->C, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "C matrix must be the same as previously output");
@@ -10099,9 +10102,10 @@ PetscErrorCode MatFactorFactorizeSchurComplement(Mat F)
   Level: intermediate
 
   Notes:
-  C will be created and must be destroyed by the user with `MatDestroy()`.
+  `C` will be created and must be destroyed by the user with `MatDestroy()`.
 
-  An alternative approach to this function is to use `MatProductCreate()` and set the desired options before the computation is done
+  This is a convenience routine that wraps the use of the `MatProductCreate()` with a `MatProductType` of `MATPRODUCT_PtAP`
+  functionality into a single function call. For more involved matrix-matrix operations see `MatProductCreate()`.
 
   The deprecated `PETSC_DEFAULT` in `fill` also means use the current value
 
@@ -10131,8 +10135,10 @@ PetscErrorCode MatPtAP(Mat A, Mat P, MatReuse scall, PetscReal fill, Mat *C)
   }
 
   PetscCall(MatProductNumeric(*C));
-  (*C)->symmetric = A->symmetric;
-  (*C)->spd       = A->spd;
+  if (A->symmetric == PETSC_BOOL3_TRUE) {
+    PetscCall(MatSetOption(*C, MAT_SYMMETRIC, PETSC_TRUE));
+    (*C)->spd = A->spd;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -10156,7 +10162,8 @@ PetscErrorCode MatPtAP(Mat A, Mat P, MatReuse scall, PetscReal fill, Mat *C)
   Notes:
   `C` will be created and must be destroyed by the user with `MatDestroy()`.
 
-  An alternative approach to this function is to use `MatProductCreate()` and set the desired options before the computation is done
+  This is a convenience routine that wraps the use of the `MatProductCreate()` with a `MatProductType` of `MATPRODUCT_RARt`
+  functionality into a single function call. For more involved matrix-matrix operations see `MatProductCreate()`.
 
   This routine is currently only implemented for pairs of `MATAIJ` matrices and classes
   which inherit from `MATAIJ`. Due to PETSc sparse matrix block row distribution among processes,
@@ -10234,7 +10241,7 @@ static PetscErrorCode MatProduct_Private(Mat A, Mat B, MatReuse scall, PetscReal
 }
 
 /*@
-  MatMatMult - Performs matrix-matrix multiplication C=A*B.
+  MatMatMult - Performs matrix-matrix multiplication $ C=A*B $.
 
   Neighbor-wise Collective
 
@@ -10260,6 +10267,9 @@ static PetscErrorCode MatProduct_Private(Mat A, Mat B, MatReuse scall, PetscReal
   rather than first having `MatMatMult()` create it for you. You can NEVER do this if the matrix `C` is sparse.
 
   The deprecated `PETSC_DEFAULT` in `fill` also means use the current value
+
+  This is a convenience routine that wraps the use of the `MatProductCreate()` with a `MatProductType` of `MATPRODUCT_AB`
+  functionality into a single function call. For more involved matrix-matrix operations see `MatProductCreate()`.
 
   Example of Usage:
 .vb
@@ -10316,7 +10326,8 @@ PetscErrorCode MatMatMult(Mat A, Mat B, MatReuse scall, PetscReal fill, Mat *C)
   This routine is currently only implemented for pairs of `MATSEQAIJ` matrices, for the `MATSEQDENSE` class,
   and for pairs of `MATMPIDENSE` matrices.
 
-  This routine is shorthand for using `MatProductCreate()` with the `MatProductType` of `MATPRODUCT_ABt`
+  This is a convenience routine that wraps the use of the `MatProductCreate()` with a `MatProductType` of `MATPRODUCT_ABt`
+  functionality into a single function call. For more involved matrix-matrix operations see `MatProductCreate()`.
 
   The deprecated `PETSC_DEFAULT` in `fill` also means use the current value
 
@@ -10349,9 +10360,10 @@ PetscErrorCode MatMatTransposeMult(Mat A, Mat B, MatReuse scall, PetscReal fill,
   Notes:
   `C` will be created if `MAT_INITIAL_MATRIX` and must be destroyed by the user with `MatDestroy()`.
 
-  `MAT_REUSE_MATRIX` can only be used if the matrices A and B have the same nonzero pattern as in the previous call.
+  `MAT_REUSE_MATRIX` can only be used if `A` and `B` have the same nonzero pattern as in the previous call.
 
-  This routine is shorthand for using `MatProductCreate()` with the `MatProductType` of `MATPRODUCT_AtB`
+  This is a convenience routine that wraps the use of `MatProductCreate()` with a `MatProductType` of `MATPRODUCT_AtB`
+  functionality into a single function call. For more involved matrix-matrix operations see `MatProductCreate()`.
 
   To determine the correct fill value, run with -info and search for the string "Fill ratio" to see the value
   actually needed.
@@ -10393,7 +10405,8 @@ PetscErrorCode MatTransposeMatMult(Mat A, Mat B, MatReuse scall, PetscReal fill,
 
   `MAT_REUSE_MATRIX` can only be used if the matrices `A`, `B`, and `C` have the same nonzero pattern as in the previous call
 
-  This routine is shorthand for using `MatProductCreate()` with the `MatProductType` of `MATPRODUCT_ABC`
+  This is a convenience routine that wraps the use of the `MatProductCreate()` with a `MatProductType` of `MATPRODUCT_ABC`
+  functionality into a single function call. For more involved matrix-matrix operations see `MatProductCreate()`.
 
   To determine the correct fill value, run with `-info` and search for the string "Fill ratio" to see the value
   actually needed.
@@ -10865,8 +10878,10 @@ PetscErrorCode MatInvertBlockDiagonalMat(Mat A, Mat C)
   PetscCall(MatGetOwnershipRange(C, &rstart, &rend));
   PetscCall(MatSetOption(C, MAT_ROW_ORIENTED, PETSC_FALSE));
   for (i = rstart / bs; i < rend / bs; i++) PetscCall(MatSetValuesBlocked(C, 1, &i, 1, &i, &vals[(i - rstart / bs) * bs * bs], INSERT_VALUES));
+  PetscCall(MatSetOption(C, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
   PetscCall(MatAssemblyBegin(C, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(C, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatSetOption(C, MAT_NO_OFF_PROC_ENTRIES, PETSC_FALSE));
   PetscCall(MatSetOption(C, MAT_ROW_ORIENTED, PETSC_TRUE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

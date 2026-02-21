@@ -1,8 +1,6 @@
 ! Tests calling PetscOptionsSetValue() before PetscInitialize(): Fortran Example
-
-program main
 #include <petsc/finclude/petscsys.h>
-  use petscmpi  ! or mpi or mpi_f08
+program main
   use petscsys
 
   implicit none

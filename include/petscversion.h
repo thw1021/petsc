@@ -1,10 +1,10 @@
-#ifndef PETSCVERSION_H
+#if !defined(PETSCVERSION_H)
 #define PETSCVERSION_H
 #include <petscconf.h>
 
 /* MANSEC = Sys */
 
-#define PETSC_VERSION_RELEASE    1
+#define PETSC_VERSION_RELEASE    0
 #define PETSC_VERSION_MAJOR      3
 #define PETSC_VERSION_MINOR      24
 #define PETSC_VERSION_SUBMINOR   4

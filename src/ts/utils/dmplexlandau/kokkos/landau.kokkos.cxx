@@ -456,7 +456,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
     PetscCall(PetscObjectQuery((PetscObject)JacP, "assembly_maps", (PetscObject *)&container));
     PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata in container");
     P4estVertexMaps *h_maps = NULL;
-    PetscCall(PetscContainerGetPointer(container, (void **)&h_maps));
+    PetscCall(PetscContainerGetPointer(container, &h_maps));
     for (PetscInt grid = 0; grid < num_grids; grid++) {
       PetscCheck(h_maps[grid].d_self, PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata in container");
       maps[grid] = h_maps[grid].d_self;
@@ -779,7 +779,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   }
   if (d_coo_vals) {
     PetscCall(MatSetValuesCOO(JacP, d_coo_vals, ADD_VALUES));
-  #ifndef LAND_SUPPORT_CPU_ASS
+  #if !defined(LAND_SUPPORT_CPU_ASS)
     Kokkos::fence(); // for timers
   #endif
   } else if (elem_mat_num_cells_max_grid) { // CPU assembly

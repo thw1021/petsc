@@ -9,7 +9,7 @@ typedef struct { /* used by MatCreateMPIAIJSumSeqAIJ for reusing the merged matr
   PetscMPIInt  nsend, nrecv;
   PetscInt    *bi, *bj;               /* i and j array of the local portion of mpi C (matrix product) - rename to ci, cj! */
   PetscInt    *owners_co, *coi, *coj; /* i and j array of (p->B)^T*A*P - used in the communication */
-} Mat_Merge_SeqsToMPI;
+} MatMergeSeqsToMPI;
 
 typedef struct {                                /* used by MatPtAPXXX_MPIAIJ_MPIAIJ() and MatMatMultXXX_MPIAIJ_MPIAIJ() */
   PetscInt              *startsj_s, *startsj_r; /* used by MatGetBrowsOfAoCols_MPIAIJ */
@@ -27,8 +27,8 @@ typedef struct {                                /* used by MatPtAPXXX_MPIAIJ_MPI
   PetscSF                sf;      /* use it to communicate remote part of C */
   PetscInt              *c_othi, *c_rmti;
 
-  Mat_Merge_SeqsToMPI *merge;
-} Mat_APMPI;
+  MatMergeSeqsToMPI *merge;
+} MatProductCtx_APMPI;
 
 #if defined(PETSC_USE_CTABLE)
   #define PETSCTABLE PetscHMapI
@@ -147,13 +147,13 @@ PETSC_INTERN PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIAIJ_allatonce_merged(Mat, M
 PETSC_INTERN PetscErrorCode MatPtAPSymbolic_AIJ_AIJ_wHYPRE(Mat, Mat, PetscReal, Mat);
 #endif
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIDense(Mat, MatType, MatReuse, Mat *);
-#if defined(PETSC_HAVE_SCALAPACK)
+#if defined(PETSC_HAVE_SCALAPACK) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
 PETSC_INTERN PetscErrorCode MatConvert_AIJ_ScaLAPACK(Mat, MatType, MatReuse, Mat *);
 #endif
 
 PETSC_INTERN PetscErrorCode MatDestroy_MPIAIJ(Mat);
-PETSC_INTERN PetscErrorCode MatDestroy_MPIAIJ_PtAP(void *);
-PETSC_INTERN PetscErrorCode MatDestroy_MPIAIJ_MatMatMult(void *);
+PETSC_INTERN PetscErrorCode MatProductCtxDestroy_MPIAIJ_PtAP(PetscCtxRt);
+PETSC_INTERN PetscErrorCode MatProductCtxDestroy_MPIAIJ_MatMatMult(PetscCtxRt);
 
 PETSC_INTERN PetscErrorCode MatGetBrowsOfAoCols_MPIAIJ(Mat, Mat, MatReuse, PetscInt **, PetscInt **, MatScalar **, Mat *);
 PETSC_INTERN PetscErrorCode MatSetValues_MPIAIJ(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[], const PetscScalar[], InsertMode);

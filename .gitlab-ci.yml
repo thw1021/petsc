@@ -246,13 +246,25 @@ petsc4py-pip:
     - python -m petsc --prefix
     - python -m petsc4py
 
+petsc-dist:
+  extends: .stage-2
+  tags:
+    - gce-u24-stage2
+  script:
+    - bash -x ./lib/petsc/bin/maint/builddist
+  artifacts:
+    paths:
+      - arch-*/lib/petsc/conf/*.log
+      - petsc*.gz
+    expire_in: 4 days
+
 checksource:
   extends: .test-basic
   stage: .pre
   tags:
     - gce-u22-stage1
   script:
-    - python3 ./configure --with-mpi=0 --with-fc=0 --with-cxx=0 --with-x=0 --with-bison=0 --with-cmake=0 --with-pthread=0 --with-regex=0
+    - python3 ./configure --with-mpi=0 --with-fc=0 --with-cxx=0 --with-coverage-exec=0 --with-syclc=0 --with-hipc=0 --with-cudac=0 --with-x=0 --with-bison=0 --with-cmake=0 --with-pthread=0 --with-mkl_sparse_optimize=0 --with-mkl_sparse=0 --with-debugging=0
     - vermin --version
     - make vermin
     - PATH=/nfs/gce/projects/petsc/soft/u22.04/spack-2025-08-26-llvm/opt/spack/linux-x86_64/llvm-21.1.0-yu5atp22wbrkzn6ia3vqu5lsaw57ejnn/bin:$PATH make checkclangformat checkfprettifyformat SHELL=bash
@@ -261,6 +273,7 @@ checksource:
     - make -f gmakefile check_output SHELL=bash
     - make check_petsc4py_rst
     - make -C src/binding/petsc4py lint
+    - PATH=/nfs/gce/projects/petsc/soft/shellcheck-stable:$PATH make checkshellcheck SHELL=bash
   artifacts:
     name: "$CI_JOB_NAME"
     when: always
@@ -600,7 +613,7 @@ linux-cuda-pkgs:
     - cuda-stage3
   variables:
     TEST_ARCH: arch-ci-linux-cuda-pkgs
-    TEST_OPTS: -j3 queryval='cuda,device,hypre,kokkos,kokkos_kernels,vec*' query='requires,requires,requires,requires,requires%OR%name'
+    TEST_OPTS: -j3 queryval='cuda,device,hypre,kokkos,kokkos_kernels' query='requires,requires,requires,requires,requires'
     MAKE_CUDAFLAGS: --compiler-options -Wall,-Werror
     OMP_PROC_BIND: false
 
@@ -662,7 +675,7 @@ linux-cuda-latest:
     - cuda13
   variables:
     TEST_ARCH: arch-ci-linux-cuda-latest
-    TEST_OPTS: -j3 query=requires queryval=cuda
+    TEST_OPTS: -j3 query='requires,requires' queryval='cuda,kokkos_kernels'
     MAKE_CUDAFLAGS: --compiler-options -Wall,-Werror
 
 linux-cuda-single-cxx:

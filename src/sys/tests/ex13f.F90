@@ -1,9 +1,8 @@
 !
 !  Program to test object composition from Fortran
 !
-program main
-
 #include <petsc/finclude/petscsys.h>
+program main
   use petscsys
   implicit none
 
@@ -29,9 +28,6 @@ end
 
 !
 !/*TEST
-!
-!   build:
-!     requires: defined(PETSC_HAVE_FORTRAN_TYPE_STAR)
 !
 !   test:
 !     suffix: 0

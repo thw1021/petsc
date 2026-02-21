@@ -1,5 +1,5 @@
-program ex98f90
 #include "petsc/finclude/petsc.h"
+program ex98f90
   use petsc
   implicit none
 
@@ -19,7 +19,7 @@ program ex98f90
   PetscErrorCode                     :: ierr
   PetscBool                          :: flg
   PetscMPIInt                        :: numProc
-  MPI_Comm                           :: comm
+  MPIU_Comm                          :: comm
 
   PetscCallA(PetscInitialize(ierr))
   PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD, numProc, ierr))

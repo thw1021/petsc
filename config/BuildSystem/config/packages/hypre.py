@@ -4,12 +4,13 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.version         = '3.0.0'
+    self.version         = '3.1.0'
     self.minversion      = '2.14'
     self.versionname     = 'HYPRE_RELEASE_VERSION'
     self.versioninclude  = 'HYPRE_config.h'
     self.requiresversion = 1
-    self.gitcommit       = 'v'+self.version
+    #self.gitcommit       = 'v'+self.version
+    self.gitcommit       = 'b2a805ffd0e321e1d78882c62eade880dd6f3ae7' #v3.1.0 + fixes from https://github.com/hypre-space/hypre/pull/1463
     self.download        = ['git://https://github.com/hypre-space/hypre','https://github.com/hypre-space/hypre/archive/'+self.gitcommit+'.tar.gz']
     self.functions       = ['HYPRE_IJMatrixCreate']
     self.includes        = ['HYPRE.h']
@@ -38,11 +39,12 @@ class Configure(config.package.GNUPackage):
     self.sycl          = framework.require('config.packages.SYCL',self)
     self.umpire        = framework.require('config.packages.Umpire',self)
     self.openmp        = framework.require('config.packages.OpenMP',self)
+    self.caliper       = framework.require('config.packages.Caliper',self)
     self.compilerFlags = framework.require('config.compilerFlags', self)
     self.scalar        = framework.require('PETSc.options.scalarTypes',self)
     self.languages     = framework.require('PETSc.options.languages',self)
     self.deps          = [self.mpi,self.blasLapack,self.cxxlibs,self.mathlib]
-    self.odeps         = [self.cuda,self.hip,self.openmp,self.umpire]
+    self.odeps         = [self.cuda,self.hip,self.openmp,self.umpire,self.caliper]
     if self.setCompilers.isCrayKNL(None,self.log):
       self.installwithbatch = 0
 
@@ -100,6 +102,7 @@ class Configure(config.package.GNUPackage):
       stdflag  = '-std=c++14'
       hipbuild = True
       args.append('ROCM_PATH="{0}"'.format(self.hip.hipDir))
+      args.append('--enable-gpu-aware-mpi') # By default, GPU-aware MPI is off in Hypre configure, see https://hypre.readthedocs.io/en/latest/ch-misc.html#gpu-build-options
       args.append('--with-hip')
       if not hasharch:
         if not 'with-hypre-gpu-arch' in self.framework.clArgDB:
@@ -120,6 +123,7 @@ class Configure(config.package.GNUPackage):
       if not hasattr(self.cuda, 'cudaDir'):
         raise RuntimeError('CUDA directory not detected! Mail configure.log to petsc-maint@mcs.anl.gov.')
       args.append('CUDA_HOME="'+self.cuda.cudaDir+'"')
+      args.append('--enable-gpu-aware-mpi')
       args.append('--with-cuda')
       if not hasharch:
         if not 'with-hypre-gpu-arch' in self.framework.clArgDB:
@@ -137,6 +141,8 @@ class Configure(config.package.GNUPackage):
     elif self.sycl.found:
       syclbuild = True
       args.append('--with-sycl')
+      # TODO: check if Hypre supports GPU-aware MPI with SYCL
+      # args.append('--enable-gpu-aware-mpi')
       if hasattr(self.sycl, 'targets'):
         args.append('--with-sycl-target='+self.sycl.targets)
       if hasattr(self.sycl, 'syclArch'):
@@ -161,6 +167,11 @@ class Configure(config.package.GNUPackage):
         args.append('--with-umpire-lib="'+self.libraries.toString(self.umpire.dlib)+'"')
         args.append('--with-umpire-lib-dirs=')
 
+    if self.caliper.found: # For Hypre profiling
+      args.append('--with-caliper')
+      args.append('--with-caliper-include="'+self.caliper.include[0]+'"')
+      args.append('--with-caliper-lib="'+self.libraries.toString(self.caliper.dlib)+'"')
+
     if self.usesopenmp == 'no':
       if hasattr(self,'openmp') and hasattr(self.openmp,'ompflag'):
         args = self.rmValueArgStartsWith(args,['CC','CXX','FC'],self.openmp.ompflag)
@@ -183,10 +194,8 @@ class Configure(config.package.GNUPackage):
     args.append('--without-superlu')
 
     if self.getDefaultIndexSize() == 64:
-      if cudabuild or hipbuild or syclbuild: # HYPRE 2.23 supports only mixedint configurations with CUDA/HIP/SYCL
-        args.append('--enable-bigint=no --enable-mixedint=yes')
-      else:
-        args.append('--enable-bigint')
+      # --enable-bigint=no is the default; mixedint is the preferred way to support 64-bit
+      args.append('--enable-mixedint=yes')
     if self.scalar.scalartype == 'complex':
       args.append('--enable-complex')
 

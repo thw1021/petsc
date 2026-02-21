@@ -22,7 +22,6 @@ module petscdmdef
   end type tPetscTabulation
 
 end module petscdmdef
-!     ----------------------------------------------
 
 module petscdm
   use, intrinsic :: ISO_C_binding
@@ -108,7 +107,7 @@ contains
 #include <../ftn/dm/petscspace.hf90>
 #include <../ftn/dm/petscdualspace.hf90>
 
-  Subroutine PetscDSGetTabulation(ds, tab, ierr)
+  subroutine PetscDSGetTabulation(ds, tab, ierr)
     PetscErrorCode ierr
     PetscTabulation, pointer :: tab(:)
     PetscDS ds
@@ -125,9 +124,9 @@ contains
       call PetscDSGetTabulationSetPointers(ds, i, tab(i)%ptr%T, ierr)
       CHKMEMQ
     end do
-  End Subroutine PetscDSGetTabulation
+  end subroutine PetscDSGetTabulation
 
-  Subroutine PetscDSRestoreTabulation(ds, tab, ierr)
+  subroutine PetscDSRestoreTabulation(ds, tab, ierr)
     PetscErrorCode ierr
     PetscTabulation, pointer :: tab(:)
     PetscDS ds
@@ -139,9 +138,9 @@ contains
       deallocate (tab(i)%ptr)
     end do
     deallocate (tab)
-  End Subroutine PetscDSRestoreTabulation
+  end subroutine PetscDSRestoreTabulation
 
-  Subroutine DMCreateFieldDecomposition(dm, n, names, iss, dms, ierr)
+  subroutine DMCreateFieldDecomposition(dm, n, names, iss, dms, ierr)
     PetscErrorCode ierr
     character(80), pointer :: names(:)
     IS, pointer            :: iss(:)
@@ -156,9 +155,9 @@ contains
       call DMCreateFieldDecompositionGetName(dm, i, names(i), ierr)
     end do
     call DMCreateFieldDecompositionGetISDM(dm, iss, dms, ierr)
-  End Subroutine DMCreateFieldDecomposition
+  end subroutine DMCreateFieldDecomposition
 
-  Subroutine DMDestroyFieldDecomposition(dm, n, names, iss, dms, ierr)
+  subroutine DMDestroyFieldDecomposition(dm, n, names, iss, dms, ierr)
     PetscErrorCode ierr
     character(80), pointer :: names(:)
     IS, pointer            :: iss(:)
@@ -170,11 +169,9 @@ contains
     deallocate (names)
     if (.false.) n = 0
     call DMCreateFieldDecompositionRestoreISDM(dm, iss, dms, ierr)
-  End Subroutine DMDestroyFieldDecomposition
+  end subroutine DMDestroyFieldDecomposition
 
 end module petscdm
-
-!     ----------------------------------------------
 
 module petscdmdadef
   use, intrinsic :: ISO_C_binding
@@ -199,8 +196,6 @@ contains
 #include <../ftn/dm/petscdmda.hf90>
 end module petscdmda
 
-!     ----------------------------------------------
-
 module petscdmplex
   use, intrinsic :: ISO_C_binding
   use petscdm
@@ -224,8 +219,6 @@ contains
 #include <../ftn/dm/petscdmplextransform.hf90>
 end module petscdmplex
 
-!     ----------------------------------------------
-
 module petscdmstag
   use, intrinsic :: ISO_C_binding
   use petscdmdef
@@ -238,8 +231,6 @@ contains
 
 #include <../ftn/dm/petscdmstag.hf90>
 end module petscdmstag
-
-!     ----------------------------------------------
 
 module petscdmswarm
   use, intrinsic :: ISO_C_binding
@@ -256,8 +247,6 @@ contains
 #include <../ftn/dm/petscdmswarm.hf90>
 end module petscdmswarm
 
-!     ----------------------------------------------
-
 module petscdmcomposite
   use, intrinsic :: ISO_C_binding
   use petscdm
@@ -267,8 +256,6 @@ module petscdmcomposite
 #include <../ftn/dm/petscdmcomposite.h90>
 end module petscdmcomposite
 
-!     ----------------------------------------------
-
 module petscdmforest
   use, intrinsic :: ISO_C_binding
   use petscdm
@@ -276,8 +263,6 @@ module petscdmforest
 #include <../ftn/dm/petscdmforest.h>
 #include <../ftn/dm/petscdmforest.h90>
 end module petscdmforest
-
-!     ----------------------------------------------
 
 module petscdmnetwork
   use, intrinsic :: ISO_C_binding
@@ -291,8 +276,6 @@ contains
 
 #include <../ftn/dm/petscdmnetwork.hf90>
 end module petscdmnetwork
-
-!     ----------------------------------------------
 
 module petscdmadaptor
   use, intrinsic :: ISO_C_binding
@@ -308,8 +291,6 @@ contains
 
 !#include <../ftn/dm/petscdmadaptor.hf90>
 end module petscdmadaptor
-
-!     ----------------------------------------------
 
 module petscdmshell
   use petscdm

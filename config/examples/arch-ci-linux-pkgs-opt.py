@@ -45,7 +45,7 @@ configure_options = [
   '--download-libpng=1',
   '--download-libjpeg=1',
   '--download-slepc=1',
-  '--download-slepc-configure-arguments="--with-slepc4py"',
+  '--with-slepc4py=1',
   '--download-hpddm=1',
   '--download-bamg=1',
   '--download-mmg=1',
@@ -55,6 +55,7 @@ configure_options = [
   '--download-opencascade=1',
   '--with-strict-petscerrorcode',
   '--with-coverage',
+  '--with-devicelanguage=cxx',
   ]
 
 if __name__ == '__main__':

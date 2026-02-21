@@ -584,6 +584,7 @@ PetscErrorCode PetscSFSetGraphWithPattern(PetscSF sf, PetscLayout map, PetscSFPa
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf, PETSCSF_CLASSID, 1);
+  PetscValidLogicalCollectiveEnum(sf, pattern, 3);
   if (pattern != PETSCSF_PATTERN_ALLTOALL) PetscAssertPointer(map, 2);
   PetscCall(PetscObjectGetComm((PetscObject)sf, &comm));
   PetscCheck(pattern >= PETSCSF_PATTERN_ALLGATHER && pattern <= PETSCSF_PATTERN_ALLTOALL, comm, PETSC_ERR_ARG_OUTOFRANGE, "Unsupported PetscSFPattern %d", pattern);
@@ -696,7 +697,8 @@ PetscErrorCode PetscSFCreateInverseSF(PetscSF sf, PetscSF *isf)
   for (i = 0, count = 0; i < nroots; i++)
     if (roots[i].rank >= 0) count++;
   if (count == nroots) newilocal = NULL;
-  else { /* Index for sparse leaves and compact "roots" array (which is to become our leaves). */ PetscCall(PetscMalloc1(count, &newilocal));
+  else { // Index for sparse leaves and compact "roots" array (which is to become our leaves).
+    PetscCall(PetscMalloc1(count, &newilocal));
     for (i = 0, count = 0; i < nroots; i++) {
       if (roots[i].rank >= 0) {
         newilocal[count]   = i;
@@ -1143,6 +1145,7 @@ PetscErrorCode PetscSFGetGroups(PetscSF sf, MPI_Group *incoming, MPI_Group *outg
   MPI_Group group = MPI_GROUP_NULL;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(sf, PETSCSF_CLASSID, 1);
   PetscCheck(sf->nranks >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call PetscSFSetUpRanks() before obtaining groups");
   if (sf->ingroup == MPI_GROUP_NULL) {
     PetscInt        i;
@@ -2348,7 +2351,7 @@ PetscErrorCode PetscSFBcastToZero_Private(PetscSF sf, MPI_Datatype unit, const v
 .vb
   make -C $PETSC_DIR/src/vec/is/sf/tests ex18
   for m in {local,global,shared}; do
-    mpirun -n 2 $PETSC_DIR/src/vec/is/sf/tests/ex18 -nsfs 2 -n 2 -root_mode $m -sf_view
+    mpiexec -n 2 $PETSC_DIR/src/vec/is/sf/tests/ex18 -nsfs 2 -n 2 -root_mode $m -sf_view
   done
 .ve
   we generate two identical `PetscSF`s sf_0 and sf_1,

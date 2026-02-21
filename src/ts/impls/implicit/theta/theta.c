@@ -70,13 +70,13 @@ static PetscErrorCode TSThetaRestoreX0AndXdot(TS ts, DM dm, Vec *X0, Vec *Xdot)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMCoarsenHook_TSTheta(DM fine, DM coarse, void *ctx)
+static PetscErrorCode DMCoarsenHook_TSTheta(DM fine, DM coarse, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMRestrictHook_TSTheta(DM fine, Mat restrct, Vec rscale, Mat inject, DM coarse, void *ctx)
+static PetscErrorCode DMRestrictHook_TSTheta(DM fine, Mat restrct, Vec rscale, Mat inject, DM coarse, PetscCtx ctx)
 {
   TS  ts = (TS)ctx;
   Vec X0, Xdot, X0_c, Xdot_c;
@@ -93,13 +93,13 @@ static PetscErrorCode DMRestrictHook_TSTheta(DM fine, Mat restrct, Vec rscale, M
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSubDomainHook_TSTheta(DM dm, DM subdm, void *ctx)
+static PetscErrorCode DMSubDomainHook_TSTheta(DM dm, DM subdm, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSubDomainRestrictHook_TSTheta(DM dm, VecScatter gscat, VecScatter lscat, DM subdm, void *ctx)
+static PetscErrorCode DMSubDomainRestrictHook_TSTheta(DM dm, VecScatter gscat, VecScatter lscat, DM subdm, PetscCtx ctx)
 {
   TS  ts = (TS)ctx;
   Vec X0, Xdot, X0_sub, Xdot_sub;
@@ -885,7 +885,6 @@ static PetscErrorCode TSForwardGetStages_Theta(TS ts, PetscInt *ns, Mat *stagese
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*------------------------------------------------------------*/
 static PetscErrorCode TSReset_Theta(TS ts)
 {
   TS_Theta *th = (TS_Theta *)ts->data;
@@ -1057,8 +1056,6 @@ static PetscErrorCode TSSetUp_Theta(TS ts)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*------------------------------------------------------------*/
-
 static PetscErrorCode TSAdjointSetUp_Theta(TS ts)
 {
   TS_Theta *th = (TS_Theta *)ts->data;
@@ -1185,7 +1182,6 @@ static PetscErrorCode TSGetStages_Theta(TS ts, PetscInt *ns, Vec *Y[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* ------------------------------------------------------------ */
 /*MC
       TSTHETA - DAE solver using the implicit Theta method
 

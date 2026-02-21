@@ -1,4 +1,4 @@
-#ifndef PETSC4PY_CUSTOM_H
+#if !defined(PETSC4PY_CUSTOM_H)
 #define PETSC4PY_CUSTOM_H
 
 #include <petsc/private/deviceimpl.h>
@@ -228,7 +228,7 @@ PetscErrorCode MatHasPreallocationAIJ(Mat A,PetscBool *aij,PetscBool *baij,Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#ifndef MatNullSpaceFunction
+#if !defined(MatNullSpaceFunction)
 typedef PetscErrorCode MatNullSpaceFunction(MatNullSpace,Vec,void*);
 #endif
 
@@ -368,9 +368,9 @@ PetscErrorCode KSPConvergedNative_Private(KSP ksp, PetscInt n, PetscReal rnorm, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode KSPConvergedNative_Destroy(void **cctx)
+static PetscErrorCode KSPConvergedNative_Destroy(PetscCtxRt cctx)
 {
-  KSPConvergedNativeCtx *ctx = (KSPConvergedNativeCtx *)*cctx;
+  KSPConvergedNativeCtx *ctx = *(KSPConvergedNativeCtx **)cctx;
 
   PetscFunctionBegin;
   PetscCheck(ctx, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing context");
@@ -592,7 +592,7 @@ PetscErrorCode TaoCheckReals(Tao tao, PetscReal f, PetscReal g)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(g),PetscObjectComm((PetscObject)tao),PETSC_ERR_USER,"User provided compute function generated Inf or NaN");
+  PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(g),PetscObjectComm((PetscObject)tao),PETSC_ERR_USER,"User provided compute function generated infinity or NaN");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -149,7 +149,8 @@ PetscErrorCode KSPView(KSP ksp, PetscViewer viewer)
       PetscCall(PetscViewerASCIIPopTab(viewer));
     }
     if (ksp->dscale) PetscCall(PetscViewerASCIIPrintf(viewer, "  diagonally scaled system\n"));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  using %s norm type for convergence test\n", KSPNormTypes[ksp->normtype]));
+    if (ksp->converged == KSPConvergedSkip || ksp->normtype == KSP_NORM_NONE) PetscCall(PetscViewerASCIIPrintf(viewer, "  not checking for convergence\n"));
+    else PetscCall(PetscViewerASCIIPrintf(viewer, "  using %s norm type for convergence test\n", KSPNormTypes[ksp->normtype]));
   } else if (isbinary) {
     PetscInt    classid = KSP_FILE_CLASSID;
     MPI_Comm    comm;
@@ -633,7 +634,7 @@ PetscErrorCode KSPGetOperatorsSet(KSP ksp, PetscBool *mat, PetscBool *pmat)
 
 .seealso: [](ch_ksp), `KSPPSolveFn`, `KSPSetUp()`, `KSPSolve()`, `KSPDestroy()`, `KSP`, `KSPSetPostSolve()`, `PCEISENSTAT`, `PCPreSolve()`, `PCPostSolve()`
 @*/
-PetscErrorCode KSPSetPreSolve(KSP ksp, KSPPSolveFn *presolve, void *ctx)
+PetscErrorCode KSPSetPreSolve(KSP ksp, KSPPSolveFn *presolve, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -656,7 +657,7 @@ PetscErrorCode KSPSetPreSolve(KSP ksp, KSPPSolveFn *presolve, void *ctx)
 
 .seealso: [](ch_ksp), `KSPPSolveFn`, `KSPSetUp()`, `KSPSolve()`, `KSPDestroy()`, `KSP`, `KSPSetPreSolve()`, `PCEISENSTAT`
 @*/
-PetscErrorCode KSPSetPostSolve(KSP ksp, KSPPSolveFn *postsolve, void *ctx)
+PetscErrorCode KSPSetPostSolve(KSP ksp, KSPPSolveFn *postsolve, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -735,8 +736,8 @@ PetscErrorCode KSPGetNestLevel(KSP ksp, PetscInt *level)
 @*/
 PetscErrorCode KSPCreate(MPI_Comm comm, KSP *inksp)
 {
-  KSP   ksp;
-  void *ctx;
+  KSP      ksp;
+  PetscCtx ctx;
 
   PetscFunctionBegin;
   PetscAssertPointer(inksp, 2);

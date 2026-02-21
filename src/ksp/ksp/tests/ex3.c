@@ -244,4 +244,27 @@ int main(int argc, char **args)
       requires: hypre
       args: -pc_type hypre
 
+    test:
+      suffix: caliper
+      nsize: 2
+      requires: hypre caliper
+      env: CALI_CONFIG=runtime-report,max_column_width=200,calc.inclusive,mpi-report,output=stdout
+      args: -pc_type hypre
+      filter: grep "Min time/rank Max time/rank"
+
+    test:
+      suffix: pflare
+      requires: !complex !single pflare
+      args: -pc_type air -ksp_max_it 5 -m 10
+      filter: grep -v .
+      output_file: output/empty.out
+
+    test:
+      suffix: 2_pflare
+      nsize: 2
+      requires: !complex !single pflare
+      args: -pc_type air -ksp_max_it 5 -m 10
+      filter: grep -v .
+      output_file: output/empty.out
+
 TEST*/

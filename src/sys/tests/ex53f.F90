@@ -1,16 +1,15 @@
 !
 !  Program to test PetscSubcomm.
 !
-program main
-
 #include <petsc/finclude/petscsys.h>
+program main
   use petscsys
   implicit none
 
   PetscErrorCode ierr
   PetscSubcomm r
   PetscMPIInt rank, size
-  MPI_Comm scomm
+  MPIU_Comm scomm
 
   PetscCallA(PetscInitialize(ierr))
   PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD, size, ierr))

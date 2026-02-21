@@ -42,9 +42,9 @@ static PetscErrorCode MatSetValuesLocal_IS(Mat, PetscInt, const PetscInt *, Pets
 static PetscErrorCode MatSetValuesBlockedLocal_IS(Mat, PetscInt, const PetscInt *, PetscInt, const PetscInt *, const PetscScalar *, InsertMode);
 static PetscErrorCode MatISSetUpScatters_Private(Mat);
 
-static PetscErrorCode MatISContainerDestroyPtAP_Private(void **ptr)
+static PetscErrorCode MatISContainerDestroyPtAP_Private(PetscCtxRt ptr)
 {
-  MatISPtAP ptap = (MatISPtAP)*ptr;
+  MatISPtAP ptap = *(MatISPtAP *)ptr;
 
   PetscFunctionBegin;
   PetscCall(MatDestroySubMatrices(ptap->ris1 ? 2 : 1, &ptap->lP));
@@ -69,7 +69,7 @@ static PetscErrorCode MatPtAPNumeric_IS_XAIJ(Mat A, Mat P, Mat C)
   PetscFunctionBegin;
   PetscCall(PetscObjectQuery((PetscObject)C, "_MatIS_PtAP", (PetscObject *)&c));
   PetscCheck(c, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Missing PtAP information");
-  PetscCall(PetscContainerGetPointer(c, (void **)&ptap));
+  PetscCall(PetscContainerGetPointer(c, &ptap));
   ris[0] = ptap->ris0;
   ris[1] = ptap->ris1;
   cis[0] = ptap->cis0;
@@ -293,9 +293,9 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_IS_XAIJ(Mat C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatISContainerDestroyFields_Private(void **ptr)
+static PetscErrorCode MatISContainerDestroyFields_Private(PetscCtxRt ptr)
 {
-  MatISLocalFields lf = (MatISLocalFields)*ptr;
+  MatISLocalFields lf = *(MatISLocalFields *)ptr;
   PetscInt         i;
 
   PetscFunctionBegin;
@@ -1523,34 +1523,6 @@ static PetscErrorCode MatCopy_IS(Mat A, Mat B, MatStructure str)
   b = (Mat_IS *)B->data;
   PetscCall(MatCopy(a->A, b->A, str));
   PetscCall(PetscObjectStateIncrease((PetscObject)B));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatMissingDiagonal_IS(Mat A, PetscBool *missing, PetscInt *d)
-{
-  Vec                v;
-  const PetscScalar *array;
-  PetscInt           i, n;
-
-  PetscFunctionBegin;
-  *missing = PETSC_FALSE;
-  PetscCall(MatCreateVecs(A, NULL, &v));
-  PetscCall(MatGetDiagonal(A, v));
-  PetscCall(VecGetLocalSize(v, &n));
-  PetscCall(VecGetArrayRead(v, &array));
-  for (i = 0; i < n; i++)
-    if (array[i] == 0.) break;
-  PetscCall(VecRestoreArrayRead(v, &array));
-  PetscCall(VecDestroy(&v));
-  if (i != n) *missing = PETSC_TRUE;
-  if (d) {
-    *d = -1;
-    if (*missing) {
-      PetscInt rstart;
-      PetscCall(MatGetOwnershipRange(A, &rstart, NULL));
-      *d = i + rstart;
-    }
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3695,7 +3667,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_IS(Mat A)
   A->ops->issymmetric             = MatIsSymmetric_IS;
   A->ops->isstructurallysymmetric = MatIsStructurallySymmetric_IS;
   A->ops->duplicate               = MatDuplicate_IS;
-  A->ops->missingdiagonal         = MatMissingDiagonal_IS;
   A->ops->copy                    = MatCopy_IS;
   A->ops->getlocalsubmatrix       = MatGetLocalSubMatrix_IS;
   A->ops->createsubmatrix         = MatCreateSubMatrix_IS;

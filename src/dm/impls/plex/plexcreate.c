@@ -1,4 +1,3 @@
-#define PETSCDM_DLL
 #include <petsc/private/dmpleximpl.h> /*I   "petscdmplex.h"   I*/
 #include <petsc/private/hashseti.h>
 #include <petscsf.h>
@@ -1074,7 +1073,7 @@ static PetscErrorCode DMPlexSetBoxLabel_Internal(DM dm, const DMBoundaryType per
 
     // Cannot use DMPlexComputeCellGeometryFVM() for high-order geometry, so must calculate normal vectors manually
     // Use the vertices (depth 0) of coordinate DM to calculate normal vector
-    PetscCall(DMPlexVecGetClosureAtDepth_Internal(cdm, csection, coordinates, face, 0, &coords_size, &coords));
+    PetscCall(DMPlexVecGetClosureAtDepth(cdm, csection, coordinates, face, 0, &coords_size, &coords));
     switch (dim) {
     case 2: {
       PetscScalar vec[2];
@@ -1164,7 +1163,7 @@ static PetscErrorCode DMPlexSetBoxLabel_Internal(DM dm, const DMBoundaryType per
       PetscCall(PetscCalloc2(num_donor * centroid_comps, &donor_centroids, num_periodic * centroid_comps, &periodic_centroids));
       for (PetscInt f = 0; f < num_donor; f++) {
         PetscInt face = donor_faces[f], num_coords;
-        PetscCall(DMPlexVecGetClosureAtDepth_Internal(cdm, csection, coordinates, face, 0, &coords_size, &coords));
+        PetscCall(DMPlexVecGetClosureAtDepth(cdm, csection, coordinates, face, 0, &coords_size, &coords));
         num_coords = coords_size / dim;
         for (PetscInt c = 0; c < num_coords; c++) {
           PetscInt comp_index = 0;
@@ -1180,7 +1179,7 @@ static PetscErrorCode DMPlexSetBoxLabel_Internal(DM dm, const DMBoundaryType per
 
       for (PetscInt f = 0; f < num_periodic; f++) {
         PetscInt face = periodic_faces[f], num_coords;
-        PetscCall(DMPlexVecGetClosureAtDepth_Internal(cdm, csection, coordinates, face, 0, &coords_size, &coords));
+        PetscCall(DMPlexVecGetClosureAtDepth(cdm, csection, coordinates, face, 0, &coords_size, &coords));
         num_coords = coords_size / dim;
         for (PetscInt c = 0; c < num_coords; c++) {
           PetscInt comp_index = 0;
@@ -3691,7 +3690,7 @@ static void TPSEvaluate_SchwarzP(const PetscReal y[3], PetscReal *f, PetscReal g
 }
 
 // u[] is a tentative normal on input. Replace with the implicit function gradient in the same direction
-static PetscErrorCode TPSExtrudeNormalFunc_SchwarzP(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt r, PetscScalar u[], void *ctx)
+static PetscErrorCode TPSExtrudeNormalFunc_SchwarzP(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt r, PetscScalar u[], PetscCtx ctx)
 {
   for (PetscInt i = 0; i < 3; i++) u[i] = -PETSC_PI * PetscSinReal(x[i] * PETSC_PI);
   return PETSC_SUCCESS;
@@ -3723,7 +3722,7 @@ static void TPSEvaluate_Gyroid(const PetscReal y[3], PetscReal *f, PetscReal gra
 }
 
 // u[] is a tentative normal on input. Replace with the implicit function gradient in the same direction
-static PetscErrorCode TPSExtrudeNormalFunc_Gyroid(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt r, PetscScalar u[], void *ctx)
+static PetscErrorCode TPSExtrudeNormalFunc_Gyroid(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt r, PetscScalar u[], PetscCtx ctx)
 {
   PetscReal s[3] = {PetscSinReal(PETSC_PI * x[0]), PetscSinReal(PETSC_PI * (x[1] + .5)), PetscSinReal(PETSC_PI * (x[2] + .25))};
   PetscReal c[3] = {PetscCosReal(PETSC_PI * x[0]), PetscCosReal(PETSC_PI * (x[1] + .5)), PetscCosReal(PETSC_PI * (x[2] + .25))};
@@ -5382,12 +5381,12 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
       PetscCall(PetscDSGetDiscretization(cds, 0, &obj));
       PetscCall(PetscObjectGetClassId(obj, &id));
       if (id == PETSCFE_CLASSID) {
-        PetscContainer dummy;
+        PetscContainer unused;
 
-        PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &dummy));
-        PetscCall(PetscObjectSetName((PetscObject)dummy, "coordinates"));
-        PetscCall(DMSetField(cdm, 0, NULL, (PetscObject)dummy));
-        PetscCall(PetscContainerDestroy(&dummy));
+        PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &unused));
+        PetscCall(PetscObjectSetName((PetscObject)unused, "coordinates"));
+        PetscCall(DMSetField(cdm, 0, NULL, (PetscObject)unused));
+        PetscCall(PetscContainerDestroy(&unused));
         PetscCall(DMClearDS(cdm));
       }
       PetscCall(DMPlexSetCoordinateMap(dm, NULL));
@@ -5907,7 +5906,7 @@ PetscErrorCode DMPlexCreate(MPI_Comm comm, DM *mesh)
 
   Output Parameters:
 + vertexSF         - (Optional) `PetscSF` describing complete vertex ownership
-- verticesAdjSaved - (Optional) vertex adjacency array
+- verticesAdjSaved - (Optional) vertex adjacency array, must be freed by user
 
   Level: advanced
 
@@ -5994,8 +5993,7 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
       for (p = 0; p < numCorners; ++p) PetscCall(PetscHSetIAdd(vhash, cells[c * numCorners + p]));
     }
     PetscCall(PetscHSetIGetSize(vhash, &numVerticesAdj));
-    if (!verticesAdjSaved) PetscCall(PetscMalloc1(numVerticesAdj, &verticesAdj));
-    else verticesAdj = *verticesAdjSaved;
+    PetscCall(PetscMalloc1(numVerticesAdj, &verticesAdj));
     PetscCall(PetscHSetIGetElems(vhash, &off, verticesAdj));
     PetscCall(PetscHSetIDestroy(&vhash));
     PetscCheck(off == numVerticesAdj, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid number of local vertices %" PetscInt_FMT " should be %" PetscInt_FMT, off, numVerticesAdj);
@@ -6025,7 +6023,8 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
   PetscCall(PetscLayoutSetBlockSize(layout, 1));
   PetscCall(PetscSFCreateByMatchingIndices(layout, numVerticesAdj, verticesAdj, NULL, numCells, numVerticesAdj, verticesAdj, NULL, numCells, vertexSF, &sfPoint));
   PetscCall(PetscLayoutDestroy(&layout));
-  if (!verticesAdjSaved) PetscCall(PetscFree(verticesAdj));
+  if (verticesAdjSaved) *verticesAdjSaved = verticesAdj;
+  else PetscCall(PetscFree(verticesAdj));
   PetscCall(PetscObjectSetName((PetscObject)sfPoint, "point SF"));
   if (dm->sf) {
     const char *prefix;
@@ -6058,7 +6057,7 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
 
   Output Parameters:
 + vertexSF         - (Optional) `PetscSF` describing complete vertex ownership
-- verticesAdjSaved - (Optional) vertex adjacency array
+- verticesAdjSaved - (Optional) vertex adjacency array, must be freed by user
 
   Level: advanced
 
@@ -6139,8 +6138,7 @@ PetscErrorCode DMPlexBuildFromCellSectionParallel(DM dm, PetscInt numCells, Pets
     PetscCall(PetscHSetICreate(&vhash));
     for (PetscInt i = 0; i < len; i++) PetscCall(PetscHSetIAdd(vhash, cells[i]));
     PetscCall(PetscHSetIGetSize(vhash, &numVerticesAdj));
-    if (!verticesAdjSaved) PetscCall(PetscMalloc1(numVerticesAdj, &verticesAdj));
-    else verticesAdj = *verticesAdjSaved;
+    PetscCall(PetscMalloc1(numVerticesAdj, &verticesAdj));
     PetscCall(PetscHSetIGetElems(vhash, &off, verticesAdj));
     PetscCall(PetscHSetIDestroy(&vhash));
     PetscCheck(off == numVerticesAdj, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid number of local vertices %" PetscInt_FMT " should be %" PetscInt_FMT, off, numVerticesAdj);
@@ -6179,7 +6177,8 @@ PetscErrorCode DMPlexBuildFromCellSectionParallel(DM dm, PetscInt numCells, Pets
   PetscCall(PetscLayoutSetBlockSize(layout, 1));
   PetscCall(PetscSFCreateByMatchingIndices(layout, numVerticesAdj, verticesAdj, NULL, numCells, numVerticesAdj, verticesAdj, NULL, numCells, vertexSF, &sfPoint));
   PetscCall(PetscLayoutDestroy(&layout));
-  if (!verticesAdjSaved) PetscCall(PetscFree(verticesAdj));
+  if (verticesAdjSaved) *verticesAdjSaved = verticesAdj;
+  else PetscCall(PetscFree(verticesAdj));
   PetscCall(PetscObjectSetName((PetscObject)sfPoint, "point SF"));
   if (dm->sf) {
     const char *prefix;
@@ -6293,7 +6292,7 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM dm, PetscInt spaceD
   Output Parameters:
 + dm          - The `DM`
 . vertexSF    - (Optional) `PetscSF` describing complete vertex ownership
-- verticesAdj - (Optional) vertex adjacency array
+- verticesAdj - (Optional) vertex adjacency array, must be freed by user
 
   Level: intermediate
 
@@ -6351,7 +6350,7 @@ PetscErrorCode DMPlexCreateFromCellListParallelPetsc(MPI_Comm comm, PetscInt dim
   Output Parameters:
 + dm          - The `DM`
 . vertexSF    - (Optional) `PetscSF` describing complete vertex ownership
-- verticesAdj - (Optional) vertex adjacency array
+- verticesAdj - (Optional) vertex adjacency array, must be freed by user
 
   Level: intermediate
 
@@ -6937,12 +6936,12 @@ static PetscErrorCode DMPlexCreateSTLFromFile(MPI_Comm comm, const char filename
     PetscCall(PetscMalloc1(Nc * 9, &trialCoords));
     for (PetscInt c = 0; c < Nc; ++c) {
       double    normal[3];
-      short int dummy;
+      short int unused;
 
       PetscCall(PetscViewerRead(viewer, normal, 3, NULL, PETSC_FLOAT));
       PetscCall(PetscViewerRead(viewer, &trialCoords[c * 9 + 0], 9, NULL, PETSC_FLOAT));
       PetscCall(PetscByteSwap(&trialCoords[c * 9 + 0], PETSC_FLOAT, 9));
-      PetscCall(PetscViewerRead(viewer, &dummy, 1, NULL, PETSC_SHORT));
+      PetscCall(PetscViewerRead(viewer, &unused, 1, NULL, PETSC_SHORT));
     }
     PetscCall(PetscMalloc1(Nc * 3, &cells));
     // Find unique vertices

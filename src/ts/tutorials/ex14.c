@@ -50,15 +50,15 @@ use compatible domain decomposition relative to the 3D DMDAs.
 #include <ctype.h> /* toupper() */
 #include <petsc/private/petscimpl.h>
 
-#if defined __SSE2__
+#if defined(__SSE2__)
   #include <emmintrin.h>
 #endif
 
 /* The SSE2 kernels are only for PetscScalar=double on architectures that support it */
 #define USE_SSE2_KERNELS (!defined NO_SSE2 && !defined PETSC_USE_COMPLEX && !defined PETSC_USE_REAL_SINGLE && defined __SSE2__)
 
-#if !defined __STDC_VERSION__ || __STDC_VERSION__ < 199901L
-  #if defined __cplusplus /* C++ restrict is nonstandard and compilers have inconsistent rules about where it can be used */
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L
+  #if defined(__cplusplus) /* C++ restrict is nonstandard and compilers have inconsistent rules about where it can be used */
     #define restrict
   #else
     #define restrict PETSC_RESTRICT
@@ -891,7 +891,7 @@ static PetscErrorCode THIFunctionLocal_2D(DMDALocalInfo *info, const Node ***x, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode THIFunction(TS ts, PetscReal t, Vec X, Vec Xdot, Vec F, void *ctx)
+static PetscErrorCode THIFunction(TS ts, PetscReal t, Vec X, Vec Xdot, Vec F, PetscCtx ctx)
 {
   THI             thi = (THI)ctx;
   DM              pack, da3, da2;
@@ -1198,7 +1198,7 @@ static PetscErrorCode THIJacobianLocal_Momentum(DMDALocalInfo *info, const Node 
           const PetscInt rc3blocked[8]                 = {DMDALocalIndex3D(info, i + 0, j + 0, k + 0), DMDALocalIndex3D(info, i + 1, j + 0, k + 0), DMDALocalIndex3D(info, i + 1, j + 1, k + 0), DMDALocalIndex3D(info, i + 0, j + 1, k + 0),
                                                           DMDALocalIndex3D(info, i + 0, j + 0, k + 1), DMDALocalIndex3D(info, i + 1, j + 0, k + 1), DMDALocalIndex3D(info, i + 1, j + 1, k + 1), DMDALocalIndex3D(info, i + 0, j + 1, k + 1)},
                          col2blocked[PRMNODE_SIZE * 4] = {DMDALocalIndex2D(info, i + 0, j + 0), DMDALocalIndex2D(info, i + 1, j + 0), DMDALocalIndex2D(info, i + 1, j + 1), DMDALocalIndex2D(info, i + 0, j + 1)};
-#if !defined COMPUTE_LOWER_TRIANGULAR /* fill in lower-triangular part, this is really cheap compared to computing the entries */
+#if !defined(COMPUTE_LOWER_TRIANGULAR) /* fill in lower-triangular part, this is really cheap compared to computing the entries */
           for (l = 0; l < 8; l++) {
             for (ll = l + 1; ll < 8; ll++) {
               Ke[ll * 2 + 0][l * 2 + 0] = Ke[l * 2 + 0][ll * 2 + 0];
@@ -1268,7 +1268,7 @@ static PetscErrorCode THIJacobianLocal_2D(DMDALocalInfo *info, const Node ***x3,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode THIJacobian(TS ts, PetscReal t, Vec X, Vec Xdot, PetscReal a, Mat A, Mat B, void *ctx)
+static PetscErrorCode THIJacobian(TS ts, PetscReal t, Vec X, Vec Xdot, PetscReal a, Mat A, Mat B, PetscCtx ctx)
 {
   THI             thi = (THI)ctx;
   DM              pack, da3, da2;
@@ -1470,7 +1470,7 @@ static PetscErrorCode THIDAVecView_VTK_XML(THI thi, DM pack, Vec X, const char f
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode THITSMonitor(TS ts, PetscInt step, PetscReal t, Vec X, void *ctx)
+static PetscErrorCode THITSMonitor(TS ts, PetscInt step, PetscReal t, Vec X, PetscCtx ctx)
 {
   THI  thi = (THI)ctx;
   DM   pack;

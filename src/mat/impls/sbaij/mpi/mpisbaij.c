@@ -49,7 +49,7 @@ static PetscErrorCode MatDestroy_MPISBAIJ(Mat mat)
 #if defined(PETSC_HAVE_ELEMENTAL)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpisbaij_elemental_C", NULL));
 #endif
-#if defined(PETSC_HAVE_SCALAPACK)
+#if defined(PETSC_HAVE_SCALAPACK) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpisbaij_scalapack_C", NULL));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_mpisbaij_mpiaij_C", NULL));
@@ -67,7 +67,7 @@ static PetscErrorCode MatDestroy_MPISBAIJ(Mat mat)
 #if defined(PETSC_HAVE_ELEMENTAL)
 PETSC_INTERN PetscErrorCode MatConvert_MPISBAIJ_Elemental(Mat, MatType, MatReuse, Mat *);
 #endif
-#if defined(PETSC_HAVE_SCALAPACK)
+#if defined(PETSC_HAVE_SCALAPACK) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
 PETSC_INTERN PetscErrorCode MatConvert_SBAIJ_ScaLAPACK(Mat, MatType, MatReuse, Mat *);
 #endif
 
@@ -697,10 +697,10 @@ static PetscErrorCode MatNorm_MPISBAIJ(Mat mat, NormType type, PetscReal *norm)
       PetscCall(PetscMalloc1(2, &lnorm2));
       PetscCall(MatNorm(baij->A, type, lnorm2));
       *lnorm2 = (*lnorm2) * (*lnorm2);
-      lnorm2++; /* squar power of norm(A) */
+      lnorm2++; /* square power of norm(A) */
       PetscCall(MatNorm(baij->B, type, lnorm2));
       *lnorm2 = (*lnorm2) * (*lnorm2);
-      lnorm2--; /* squar power of norm(B) */
+      lnorm2--; /* square power of norm(B) */
       PetscCallMPI(MPIU_Allreduce(lnorm2, sum, 2, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)mat)));
       *norm = PetscSqrtReal(sum[0] + 2 * sum[1]);
       PetscCall(PetscFree(lnorm2));
@@ -712,8 +712,7 @@ static PetscErrorCode MatNorm_MPISBAIJ(Mat mat, NormType type, PetscReal *norm)
       PetscInt      brow, bcol, col, bs = baij->A->rmap->bs, row, grow, gcol, mbs = amat->mbs;
       MatScalar    *v;
 
-      PetscCall(PetscMalloc1(mat->cmap->N, &rsum));
-      PetscCall(PetscArrayzero(rsum, mat->cmap->N));
+      PetscCall(PetscCalloc1(mat->cmap->N, &rsum));
       /* Amat */
       v  = amat->a;
       jj = amat->j;
@@ -910,12 +909,7 @@ static PetscErrorCode MatView_MPISBAIJ_ASCIIorDraworSocket(Mat mat, PetscViewer 
       PetscCall(PetscViewerASCIIPrintf(viewer, "Information on VecScatter used in matrix-vector product: \n"));
       PetscCall(VecScatterView(baij->Mvctx, viewer));
       PetscFunctionReturn(PETSC_SUCCESS);
-    } else if (format == PETSC_VIEWER_ASCII_INFO) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  block size is %" PetscInt_FMT "\n", bs));
-      PetscFunctionReturn(PETSC_SUCCESS);
-    } else if (format == PETSC_VIEWER_ASCII_FACTOR_INFO) {
-      PetscFunctionReturn(PETSC_SUCCESS);
-    }
+    } else if (format == PETSC_VIEWER_ASCII_INFO || format == PETSC_VIEWER_ASCII_FACTOR_INFO) PetscFunctionReturn(PETSC_SUCCESS);
   }
 
   if (isdraw) {
@@ -1290,13 +1284,11 @@ static PetscErrorCode MatRestoreRowUpperTriangular_MPISBAIJ(Mat A)
 
 static PetscErrorCode MatConjugate_MPISBAIJ(Mat mat)
 {
-  PetscFunctionBegin;
-  if (PetscDefined(USE_COMPLEX)) {
-    Mat_MPISBAIJ *a = (Mat_MPISBAIJ *)mat->data;
+  Mat_MPISBAIJ *a = (Mat_MPISBAIJ *)mat->data;
 
-    PetscCall(MatConjugate(a->A));
-    PetscCall(MatConjugate(a->B));
-  }
+  PetscFunctionBegin;
+  PetscCall(MatConjugate(a->A));
+  PetscCall(MatConjugate(a->B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1533,7 +1525,6 @@ static PetscErrorCode MatSetOption_MPISBAIJ(Mat A, MatOption op, PetscBool flg)
       A->ops->multadd          = MatMultAdd_MPISBAIJ_Hermitian;
       A->ops->multtranspose    = NULL;
       A->ops->multtransposeadd = NULL;
-      A->symmetric             = PETSC_BOOL3_FALSE;
     }
 #endif
     break;
@@ -1582,13 +1573,8 @@ static PetscErrorCode MatDiagonalScale_MPISBAIJ(Mat mat, Vec ll, Vec rr)
   Mat_MPISBAIJ *baij = (Mat_MPISBAIJ *)mat->data;
   Mat           a = baij->A, b = baij->B;
   PetscInt      nv, m, n;
-  PetscBool     flg;
 
   PetscFunctionBegin;
-  if (ll != rr) {
-    PetscCall(VecEqual(ll, rr, &flg));
-    PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "For symmetric format, left and right scaling vectors must be same");
-  }
   if (!ll) PetscFunctionReturn(PETSC_SUCCESS);
 
   PetscCall(MatGetLocalSize(mat, &m, &n));
@@ -1743,21 +1729,6 @@ static PetscErrorCode MatShift_MPISBAIJ(Mat Y, PetscScalar a)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMissingDiagonal_MPISBAIJ(Mat A, PetscBool *missing, PetscInt *d)
-{
-  Mat_MPISBAIJ *a = (Mat_MPISBAIJ *)A->data;
-
-  PetscFunctionBegin;
-  PetscCheck(A->rmap->n == A->cmap->n, PETSC_COMM_SELF, PETSC_ERR_SUP, "Only works for square matrices");
-  PetscCall(MatMissingDiagonal(a->A, missing, d));
-  if (d) {
-    PetscInt rstart;
-    PetscCall(MatGetOwnershipRange(A, &rstart, NULL));
-    *d += rstart / A->rmap->bs;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode MatGetDiagonalBlock_MPISBAIJ(Mat A, Mat *a)
 {
   PetscFunctionBegin;
@@ -1883,7 +1854,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPISBAIJ,
                                        NULL,
                                        NULL,
                                        NULL,
-                                       /*104*/ MatMissingDiagonal_MPISBAIJ,
+                                       /*104*/ NULL,
                                        NULL,
                                        NULL,
                                        NULL,
@@ -1905,21 +1876,20 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPISBAIJ,
                                        NULL,
                                        /*124*/ NULL,
                                        NULL,
-                                       NULL,
                                        MatSetBlockSizes_Default,
                                        NULL,
-                                       /*129*/ NULL,
                                        NULL,
+                                       /*129*/ NULL,
                                        MatCreateMPIMatConcatenateSeqMat_MPISBAIJ,
+                                       NULL,
                                        NULL,
                                        NULL,
                                        /*134*/ NULL,
                                        NULL,
-                                       NULL,
                                        MatEliminateZeros_MPISBAIJ,
                                        NULL,
-                                       /*139*/ NULL,
                                        NULL,
+                                       /*139*/ NULL,
                                        NULL,
                                        MatCopyHashToXAIJ_MPI_Hash,
                                        NULL,
@@ -2168,7 +2138,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISBAIJ(Mat B)
 #if defined(PETSC_HAVE_ELEMENTAL)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_mpisbaij_elemental_C", MatConvert_MPISBAIJ_Elemental));
 #endif
-#if defined(PETSC_HAVE_SCALAPACK)
+#if defined(PETSC_HAVE_SCALAPACK) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_mpisbaij_scalapack_C", MatConvert_SBAIJ_ScaLAPACK));
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_mpisbaij_mpiaij_C", MatConvert_MPISBAIJ_Basic));
@@ -2178,9 +2148,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISBAIJ(Mat B)
   B->structurally_symmetric      = PETSC_BOOL3_TRUE;
   B->symmetry_eternal            = PETSC_TRUE;
   B->structural_symmetry_eternal = PETSC_TRUE;
-#if defined(PETSC_USE_COMPLEX)
-  B->hermitian = PETSC_BOOL3_FALSE;
-#else
+#if !defined(PETSC_USE_COMPLEX)
   B->hermitian = PETSC_BOOL3_TRUE;
 #endif
 

@@ -1,7 +1,7 @@
 !
 !
-       subroutine ex7f(vec, comm)
 #include <petsc/finclude/petscvec.h>
+       subroutine ex7f(vec, comm)
          use petscvec
          implicit none
 !
@@ -11,7 +11,7 @@
 
          PetscScalar, parameter ::  two = 2.0
          Vec vec
-         MPI_Comm comm
+         MPIU_Comm comm
          PetscErrorCode ierr
          PetscMPIInt rank
 

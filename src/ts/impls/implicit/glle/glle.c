@@ -57,13 +57,13 @@ static PetscErrorCode TSGLLERestoreVecs(TS ts, DM dm, Vec *Z, Vec *Ydotstage)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMCoarsenHook_TSGLLE(DM fine, DM coarse, void *ctx)
+static PetscErrorCode DMCoarsenHook_TSGLLE(DM fine, DM coarse, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMRestrictHook_TSGLLE(DM fine, Mat restrct, Vec rscale, Mat inject, DM coarse, void *ctx)
+static PetscErrorCode DMRestrictHook_TSGLLE(DM fine, Mat restrct, Vec rscale, Mat inject, DM coarse, PetscCtx ctx)
 {
   TS  ts = (TS)ctx;
   Vec Ydot, Ydot_c;
@@ -78,13 +78,13 @@ static PetscErrorCode DMRestrictHook_TSGLLE(DM fine, Mat restrct, Vec rscale, Ma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSubDomainHook_TSGLLE(DM dm, DM subdm, void *ctx)
+static PetscErrorCode DMSubDomainHook_TSGLLE(DM dm, DM subdm, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSubDomainRestrictHook_TSGLLE(DM dm, VecScatter gscat, VecScatter lscat, DM subdm, void *ctx)
+static PetscErrorCode DMSubDomainRestrictHook_TSGLLE(DM dm, VecScatter gscat, VecScatter lscat, DM subdm, PetscCtx ctx)
 {
   TS  ts = (TS)ctx;
   Vec Ydot, Ydot_s;
@@ -1003,8 +1003,6 @@ static PetscErrorCode TSSolve_GLLE(TS ts)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*------------------------------------------------------------*/
-
 static PetscErrorCode TSReset_GLLE(TS ts)
 {
   TS_GLLE *gl = (TS_GLLE *)ts->data;
@@ -1118,7 +1116,6 @@ static PetscErrorCode TSSetUp_GLLE(TS ts)
   PetscCall(DMSubDomainHookAdd(dm, DMSubDomainHook_TSGLLE, DMSubDomainRestrictHook_TSGLLE, ts));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-/*------------------------------------------------------------*/
 
 static PetscErrorCode TSSetFromOptions_GLLE(TS ts, PetscOptionItems PetscOptionsObject)
 {
@@ -1319,7 +1316,6 @@ PetscErrorCode TSGLLEFinalizePackage(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* ------------------------------------------------------------ */
 /*MC
   TSGLLE - DAE solver using implicit General Linear methods {cite}`butcher_2007` {cite}`butcher2016numerical`
 

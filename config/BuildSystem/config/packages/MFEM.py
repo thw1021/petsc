@@ -8,13 +8,14 @@ class Configure(config.package.Package):
     #self.version                = '4.6'
     #self.versionname            = 'MFEM_VERSION_STRING'
     #self.versioninclude         = 'mfem/config.hpp'
-    self.gitcommit              = '0795d119cfb37a8cbae7ba8c1b189cc88048248b' # stefanozampini/for-petsc3.24-release sep-27-2025 (includes hypre-3.0 https://github.com/mfem/mfem/pull/4975 with https://github.com/mfem/mfem/pull/5036)
+    self.gitcommit              = '9cd8f53dc6183c1421be3b67d07b02325d0eef4b' # https://github.com/mfem/mfem/pull/5215
     self.download               = ['git://https://github.com/mfem/mfem.git','https://github.com/mfem/mfem/archive/'+self.gitcommit+'.tar.gz']
     self.linkedbypetsc          = 0
     self.downloadonWindows      = 1
     self.buildLanguages         = ['Cxx']
     self.minCxxVersion          = 'c++17'
     self.skippackagewithoptions = 1
+    self.useddirectly           = 0
     self.builtafterpetsc        = 1
     self.noMPIUni               = 1
     self.precisions             = ['single', 'double']
@@ -54,16 +55,6 @@ class Configure(config.package.Package):
         g.write('{0}_LIB := $(subst -Wl,-Xlinker=,$({0}_LIB))\n'.format(lib_name_upper))
 
   def Install(self):
-#    return self.installDir
-#
-#  TODO: In order to use postProcess, we need to fix package.py and add these lines
-#  in configureLibrary if builtafterpetsc is true. However, these caused duplicated entries
-#  in the petscconf.h macros. Not sure if PETSC_HAVE_XXX will conflict when building XXX after petsc
-#+        if not hasattr(self.framework, 'packages'):
-#+          self.framework.packages = []
-#+        self.framework.packages.append(self)
-
-#  def postProcess(self):
     import os
     import re
 
@@ -209,8 +200,6 @@ run-config:
 \t$(MAKE) -f {mfile} config MFEM_DIR={mfemdir}
 '''.format(mfile=os.path.join(self.packageDir,'makefile'), mfemdir=self.packageDir))
 
-    self.addDefine('HAVE_MFEM',1)
-    self.addMakeMacro('MFEM','yes')
     self.addPost(buildDir, ['${OMAKE} -f ' + os.path.join(configDir,'petsc.mk') + ' run-config',
                             '${OMAKE} clean',
                             self.make.make_jnp,

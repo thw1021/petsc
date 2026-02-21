@@ -144,8 +144,8 @@ typedef struct _p_PetscObject {
   PetscErrorCode (*python_destroy)(void *);
 
   PetscInt noptionhandler;
-  PetscErrorCode (*optionhandler[PETSC_MAX_OPTIONS_HANDLER])(PetscObject, PetscOptionItems, void *);
-  PetscErrorCode (*optiondestroy[PETSC_MAX_OPTIONS_HANDLER])(PetscObject, void *);
+  PetscErrorCode (*optionhandler[PETSC_MAX_OPTIONS_HANDLER])(PetscObject, PetscOptionItems, PetscCtx);
+  PetscErrorCode (*optiondestroy[PETSC_MAX_OPTIONS_HANDLER])(PetscObject, PetscCtxRt);
   void *optionctx[PETSC_MAX_OPTIONS_HANDLER];
 #if defined(PETSC_HAVE_SAWS)
   PetscBool amsmem;          /* if PETSC_TRUE then this object is registered with SAWs and visible to clients */
@@ -395,7 +395,7 @@ PETSC_EXTERN PetscErrorCode                PetscHeaderDestroy_Private(PetscObjec
 PETSC_INTERN PetscErrorCode                PetscHeaderDestroy_Private_Unlogged(PetscObject, PetscBool);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscHeaderReset_Internal(PetscObject);
 PETSC_EXTERN PetscErrorCode                PetscObjectCopyFortranFunctionPointers(PetscObject, PetscObject);
-PETSC_EXTERN PetscErrorCode                PetscObjectSetFortranCallback(PetscObject, PetscFortranCallbackType, PetscFortranCallbackId *, PetscFortranCallbackFn *, void *ctx);
+PETSC_EXTERN PetscErrorCode                PetscObjectSetFortranCallback(PetscObject, PetscFortranCallbackType, PetscFortranCallbackId *, PetscFortranCallbackFn *, PetscCtx ctx);
 PETSC_EXTERN PetscErrorCode                PetscObjectGetFortranCallback(PetscObject, PetscFortranCallbackType, PetscFortranCallbackId, PetscFortranCallbackFn **, void **ctx);
 
 PETSC_INTERN PetscErrorCode PetscCitationsInitialize(void);
@@ -1640,3 +1640,39 @@ struct _n_PetscObjectList {
   PetscObject     obj;
   PetscObjectList next;
 };
+
+/*E
+    PetscPrecision - Precision of a real number
+
+    Values:
++   `PETSC_PRECISION_INVALID`     - an invalid value
+.   `PETSC_PRECISION_BFLOAT16`    - half precision (Google Brain bfloat16)
+.   `PETSC_PRECISION___FP16`      - half precison (IEEE FP16)
+.   `PETSC_PRECISION_SINGLE`      - single precision
+.   `PETSC_PRECISION_DOUBLE`      - double precision
+-   `PETSC_PRECISION___FLOAT128`  - quadruple precision (__float128)
+
+    Level: intermediate
+E*/
+
+typedef enum {
+  PETSC_PRECISION_INVALID = 0,
+  PETSC_PRECISION_BFLOAT16,
+  PETSC_PRECISION___FP16,
+  PETSC_PRECISION_SINGLE,
+  PETSC_PRECISION_DOUBLE,
+  PETSC_PRECISION___FLOAT128
+} PetscPrecision;
+
+// The precision of PetscScalar and PetscReal
+#if defined(PETSC_USE_REAL___FP16)
+  #define PETSC_SCALAR_PRECISION PETSC_PRECISION___FP16
+#elif defined(PETSC_USE_REAL_SINGLE)
+  #define PETSC_SCALAR_PRECISION PETSC_PRECISION_SINGLE
+#elif defined(PETSC_USE_REAL_DOUBLE)
+  #define PETSC_SCALAR_PRECISION PETSC_PRECISION_DOUBLE
+#elif defined(PETSC_USE_REAL___FLOAT128)
+  #define PETSC_SCALAR_PRECISION PETSC_PRECISION___FLOAT128
+#endif
+
+PETSC_EXTERN const char *const PetscPrecisionTypes[];

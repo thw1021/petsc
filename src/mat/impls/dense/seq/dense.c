@@ -1742,7 +1742,7 @@ PetscErrorCode MatDestroy_SeqDense(Mat mat)
 #if defined(PETSC_HAVE_ELEMENTAL)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_seqdense_elemental_C", NULL));
 #endif
-#if defined(PETSC_HAVE_SCALAPACK)
+#if defined(PETSC_HAVE_SCALAPACK) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatConvert_seqdense_scalapack_C", NULL));
 #endif
 #if defined(PETSC_HAVE_CUDA)
@@ -2658,9 +2658,8 @@ PetscErrorCode MatConjugate_SeqDense(Mat A)
 
   PetscFunctionBegin;
   PetscCall(MatDenseGetArray(A, &aa));
-  for (j = 0; j < A->cmap->n; j++) {
+  for (j = 0; j < A->cmap->n; j++)
     for (i = 0; i < A->rmap->n; i++) aa[i + j * mat->lda] = PetscConj(aa[i + j * mat->lda]);
-  }
   PetscCall(MatDenseRestoreArray(A, &aa));
   if (mat->tau)
     for (i = 0; i < min; i++) mat->tau[i] = PetscConj(mat->tau[i]);
@@ -3048,13 +3047,6 @@ PetscErrorCode MatSetRandom_SeqDense(Mat x, PetscRandom rctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatMissingDiagonal_SeqDense(Mat A, PetscBool *missing, PetscInt *d)
-{
-  PetscFunctionBegin;
-  *missing = PETSC_FALSE;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* vals is not const */
 static PetscErrorCode MatDenseGetColumn_SeqDense(Mat A, PetscInt col, PetscScalar **vals)
 {
@@ -3180,25 +3172,25 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqDense,
                                        NULL,
                                        MatGetRowMin_SeqDense,
                                        MatGetColumnVector_SeqDense,
-                                       /*104*/ MatMissingDiagonal_SeqDense,
+                                       /*104*/ NULL,
                                        NULL,
                                        NULL,
                                        NULL,
                                        NULL,
                                        /*109*/ NULL,
                                        NULL,
-                                       NULL,
                                        MatMultHermitianTranspose_SeqDense,
                                        MatMultHermitianTransposeAdd_SeqDense,
-                                       /*114*/ NULL,
                                        NULL,
+                                       /*114*/ NULL,
                                        MatGetColumnReductions_SeqDense,
+                                       NULL,
                                        NULL,
                                        NULL,
                                        /*119*/ NULL,
                                        NULL,
-                                       NULL,
                                        MatTransposeMatMultNumeric_SeqDense_SeqDense,
+                                       NULL,
                                        NULL,
                                        /*124*/ NULL,
                                        NULL,
@@ -3206,8 +3198,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqDense,
                                        NULL,
                                        NULL,
                                        /*129*/ NULL,
-                                       NULL,
                                        MatCreateMPIMatConcatenateSeqMat_SeqDense,
+                                       NULL,
                                        NULL,
                                        NULL,
                                        /*134*/ NULL,
@@ -3216,7 +3208,6 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqDense,
                                        NULL,
                                        NULL,
                                        /*139*/ NULL,
-                                       NULL,
                                        NULL,
                                        NULL,
                                        NULL,
@@ -3541,7 +3532,7 @@ PetscErrorCode MatDenseRestoreSubMatrix_SeqDense(Mat A, Mat *v)
   PetscCheck(*v == a->cmat, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Not the matrix obtained from MatDenseGetSubMatrix()");
   a->matinuse = 0;
   PetscCall(MatDenseResetArray(a->cmat));
-  if (v) *v = NULL;
+  *v = NULL;
 #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
   A->offloadmask = PETSC_OFFLOAD_CPU;
 #endif
@@ -3589,7 +3580,7 @@ PetscErrorCode MatCreate_SeqDense(Mat B)
 #if defined(PETSC_HAVE_ELEMENTAL)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_seqdense_elemental_C", MatConvert_SeqDense_Elemental));
 #endif
-#if defined(PETSC_HAVE_SCALAPACK)
+#if defined(PETSC_HAVE_SCALAPACK) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_seqdense_scalapack_C", MatConvert_Dense_ScaLAPACK));
 #endif
 #if defined(PETSC_HAVE_CUDA)
@@ -3733,6 +3724,7 @@ PetscErrorCode MatDenseRestoreColumnVec(Mat A, PetscInt col, Vec *v)
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidType(A, 1);
   PetscValidLogicalCollectiveInt(A, col, 2);
+  if (v) PetscValidHeaderSpecific(*v, VEC_CLASSID, 3);
   PetscCheck(A->preallocated, PetscObjectComm((PetscObject)A), PETSC_ERR_ORDER, "Matrix not preallocated");
   PetscCheck(col >= 0 && col < A->cmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Invalid col %" PetscInt_FMT ", should be in [0,%" PetscInt_FMT ")", col, A->cmap->N);
   PetscUseMethod(A, "MatDenseRestoreColumnVec_C", (Mat, PetscInt, Vec *), (A, col, v));
@@ -3795,6 +3787,7 @@ PetscErrorCode MatDenseRestoreColumnVecRead(Mat A, PetscInt col, Vec *v)
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidType(A, 1);
   PetscValidLogicalCollectiveInt(A, col, 2);
+  if (v) PetscValidHeaderSpecific(*v, VEC_CLASSID, 3);
   PetscCheck(A->preallocated, PetscObjectComm((PetscObject)A), PETSC_ERR_ORDER, "Matrix not preallocated");
   PetscCheck(col >= 0 && col < A->cmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Invalid col %" PetscInt_FMT ", should be in [0,%" PetscInt_FMT ")", col, A->cmap->N);
   PetscUseMethod(A, "MatDenseRestoreColumnVecRead_C", (Mat, PetscInt, Vec *), (A, col, v));
@@ -3855,6 +3848,7 @@ PetscErrorCode MatDenseRestoreColumnVecWrite(Mat A, PetscInt col, Vec *v)
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidType(A, 1);
   PetscValidLogicalCollectiveInt(A, col, 2);
+  if (v) PetscValidHeaderSpecific(*v, VEC_CLASSID, 3);
   PetscCheck(A->preallocated, PetscObjectComm((PetscObject)A), PETSC_ERR_ORDER, "Matrix not preallocated");
   PetscCheck(col >= 0 && col < A->cmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Invalid col %" PetscInt_FMT ", should be in [0,%" PetscInt_FMT ")", col, A->cmap->N);
   PetscUseMethod(A, "MatDenseRestoreColumnVecWrite_C", (Mat, PetscInt, Vec *), (A, col, v));
@@ -3915,7 +3909,7 @@ PetscErrorCode MatDenseGetSubMatrix(Mat A, PetscInt rbegin, PetscInt rend, Petsc
 
   Input Parameters:
 + A - the `Mat` object
-- v - the `Mat` object (may be `NULL`)
+- v - the `Mat` object (cannot be `NULL`)
 
   Level: intermediate
 
@@ -3927,6 +3921,7 @@ PetscErrorCode MatDenseRestoreSubMatrix(Mat A, Mat *v)
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidType(A, 1);
   PetscAssertPointer(v, 2);
+  PetscValidHeaderSpecific(*v, MAT_CLASSID, 2);
   PetscUseMethod(A, "MatDenseRestoreSubMatrix_C", (Mat, Mat *), (A, v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

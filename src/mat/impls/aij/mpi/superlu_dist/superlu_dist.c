@@ -445,7 +445,7 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F, Mat A, const MatFac
   Mat                Aloc;
   const PetscScalar *av;
   const PetscInt    *ai = NULL, *aj = NULL;
-  PetscInt           nz, dummy;
+  PetscInt           nz, unused;
   int                sinfo; /* SuperLU_Dist info flag is always an int even with long long indices */
   SuperLUStat_t      stat;
   PetscReal         *berr = 0;
@@ -464,7 +464,7 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F, Mat A, const MatFac
     Aloc = A;
   } else SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "Not for type %s", ((PetscObject)A)->type_name);
 
-  PetscCall(MatGetRowIJ(Aloc, 0, PETSC_FALSE, PETSC_FALSE, &dummy, &ai, &aj, &flg));
+  PetscCall(MatGetRowIJ(Aloc, 0, PETSC_FALSE, PETSC_FALSE, &unused, &ai, &aj, &flg));
   PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_SUP, "GetRowIJ failed");
   PetscCall(MatSeqAIJGetArrayRead(Aloc, &av));
   nz = ai[Aloc->rmap->n];
@@ -526,7 +526,7 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F, Mat A, const MatFac
   else
 #endif
     PetscCall(PetscArraycpy(lu->val, av, nz));
-  PetscCall(MatRestoreRowIJ(Aloc, 0, PETSC_FALSE, PETSC_FALSE, &dummy, &ai, &aj, &flg));
+  PetscCall(MatRestoreRowIJ(Aloc, 0, PETSC_FALSE, PETSC_FALSE, &unused, &ai, &aj, &flg));
   PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_SUP, "RestoreRowIJ failed");
   PetscCall(MatSeqAIJRestoreArrayRead(Aloc, &av));
   PetscCall(MatDestroy(&Aloc));
@@ -904,7 +904,7 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
   PetscMPIInt            size;
   superlu_dist_options_t options;
   PetscBool              flg;
-  char                   string[16];
+  PetscPrecision         precision = PETSC_PRECISION_INVALID;
 
   PetscFunctionBegin;
   /* Create the factorization matrix */
@@ -956,12 +956,13 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
   lu->matsolve_iscalled    = PETSC_FALSE;
   lu->matmatsolve_iscalled = PETSC_FALSE;
 
-  PetscCall(PetscOptionsGetString(NULL, NULL, "-pc_precision", string, sizeof(string), &flg));
+  PetscOptionsBegin(PetscObjectComm((PetscObject)A), ((PetscObject)A)->prefix, "SuperLU_DIST Options", "Mat");
+  PetscCall(PetscOptionsEnum("-pc_precision", "Precision used by SuperLU_DIST", "MATSOLVERSUPERLU_DIST", PetscPrecisionTypes, (PetscEnum)precision, (PetscEnum *)&precision, &flg));
+  PetscOptionsEnd();
   if (flg) {
-    PetscCall(PetscStrcasecmp(string, "single", &flg));
-    PetscCheck(flg, PetscObjectComm((PetscObject)A), PETSC_ERR_USER_INPUT, "-pc_precision only accepts single as option for SuperLU_DIST");
+    PetscCheck(precision == PETSC_PRECISION_SINGLE || precision == PETSC_PRECISION_DOUBLE, PetscObjectComm((PetscObject)A), PETSC_ERR_USER_INPUT, "-pc_precision only accepts single or double as option for SuperLU_DIST");
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
-    lu->singleprecision = PETSC_TRUE;
+    lu->singleprecision = (PetscBool)(precision == PETSC_PRECISION_SINGLE); // It also implies PetscReal is not single; not merely SuperLU_DIST is running in single
 #endif
   }
 
@@ -1008,8 +1009,7 @@ PETSC_INTERN PetscErrorCode MatSolverTypeRegister_SuperLU_DIST(void)
 . -mat_superlu_dist_iterrefine - use iterative refinement
 . -mat_superlu_dist_printstat - print factorization information
 . -mat_superlu_dist_gpuoffload - offload factorization onto the GPUs, requires SuperLU_DIST 8.0.0 or later
-- -pc_precision single - use SuperLU_DIST single precision with PETSc double precision. Currently this does not accept an options prefix, so
-                         regardless of the `PC` prefix you must use no prefix here
+- -pc_precision single - use SuperLU_DIST single precision with PETSc double precision
 
   Level: beginner
 

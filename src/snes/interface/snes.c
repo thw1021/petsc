@@ -1,4 +1,5 @@
-#include <petsc/private/snesimpl.h> /*I "petscsnes.h"  I*/
+#include <petsc/private/snesimpl.h>       /*I "petscsnes.h"  I*/
+#include <petsc/private/linesearchimpl.h> /*I "petscsnes.h"  I*/
 #include <petscdmshell.h>
 #include <petscdraw.h>
 #include <petscds.h>
@@ -115,7 +116,7 @@ PetscErrorCode SNESGetAlwaysComputesFinalResidual(SNES snes, PetscBool *flg)
 
 /*@
   SNESSetFunctionDomainError - tells `SNES` that the input vector, a proposed new solution, to your function you provided to `SNESSetFunction()` is not
-  in the functions domain. For example, a step with negative pressure.
+  in the function's domain. For example, a step with negative pressure.
 
   Not Collective
 
@@ -127,27 +128,67 @@ PetscErrorCode SNESGetAlwaysComputesFinalResidual(SNES snes, PetscBool *flg)
   Notes:
   This does not need to be called by all processes in the `SNES` MPI communicator.
 
-  If this is called the `SNESSolve()` stops iterating and returns with a `SNESConvergedReason` of `SNES_DIVERGED_FUNCTION_DOMAIN`
-
-  You should always call `SNESGetConvergedReason()` after each `SNESSolve()` and verify if the iteration converged (positive result) or diverged (negative result).
+  A few solvers will try to cut the step size to avoid the domain error but for other solvers `SNESSolve()` stops iterating and and
+  returns with a `SNESConvergedReason` of `SNES_DIVERGED_FUNCTION_DOMAIN`
 
   You can direct `SNES` to avoid certain steps by using `SNESVISetVariableBounds()`, `SNESVISetComputeVariableBounds()` or
   `SNESLineSearchSetPreCheck()`, `SNESLineSearchSetPostCheck()`
 
+  You should always call `SNESGetConvergedReason()` after each `SNESSolve()` and verify if the iteration converged (positive result) or diverged (negative result).
+
   You can call `SNESSetJacobianDomainError()` during a Jacobian computation to indicate the proposed solution is not in the domain.
 
   Developer Note:
-  This value is used by `SNESCheckFunctionNorm()` to determine if the `SNESConvergedReason` is set to `SNES_DIVERGED_FUNCTION_DOMAIN`
+  This value is used by `SNESCheckFunctionDomainError()` to determine if the `SNESConvergedReason` is set to `SNES_DIVERGED_FUNCTION_DOMAIN`
 
 .seealso: [](ch_snes), `SNESCreate()`, `SNESSetFunction()`, `SNESFunctionFn`, `SNESSetJacobianDomainError()`, `SNESVISetVariableBounds()`,
           `SNESVISetComputeVariableBounds()`, `SNESLineSearchSetPreCheck()`, `SNESLineSearchSetPostCheck()`, `SNESConvergedReason`, `SNESGetConvergedReason()`,
-          `SNES_DIVERGED_FUNCTION_DOMAIN`
+          `SNES_DIVERGED_FUNCTION_DOMAIN`, `SNESSetObjectiveDomainError()`
 @*/
 PetscErrorCode SNESSetFunctionDomainError(SNES snes)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  snes->domainerror = PETSC_TRUE;
+  snes->functiondomainerror = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESSetObjectiveDomainError - tells `SNES` that the input vector, a proposed new solution, to your function you provided to `SNESSetObjective()` is not
+  in the function's domain. For example, a step with negative pressure.
+
+  Not Collective
+
+  Input Parameter:
+. snes - the `SNES` context
+
+  Level: advanced
+
+  Notes:
+  This does not need to be called by all processes in the `SNES` MPI communicator.
+
+  A few solvers will try to cut the step size to avoid the domain error but for other solvers `SNESSolve()` stops iterating and and
+  returns with a `SNESConvergedReason` of `SNES_DIVERGED_FUNCTION_DOMAIN`
+
+  You can direct `SNES` to avoid certain steps by using `SNESVISetVariableBounds()`, `SNESVISetComputeVariableBounds()` or
+  `SNESLineSearchSetPreCheck()`, `SNESLineSearchSetPostCheck()`
+
+  You should always call `SNESGetConvergedReason()` after each `SNESSolve()` and verify if the iteration converged (positive result) or diverged (negative result).
+
+  You can call `SNESSetJacobianDomainError()` during a Jacobian computation to indicate the proposed solution is not in the domain.
+
+  Developer Note:
+  This value is used by `SNESCheckFunctionDomainError()` to determine if the `SNESConvergedReason` is set to `SNES_DIVERGED_FUNCTION_DOMAIN`
+
+.seealso: [](ch_snes), `SNESCreate()`, `SNESSetFunction()`, `SNESFunctionFn`, `SNESSetJacobianDomainError()`, `SNESVISetVariableBounds()`,
+          `SNESVISetComputeVariableBounds()`, `SNESLineSearchSetPreCheck()`, `SNESLineSearchSetPostCheck()`, `SNESConvergedReason`, `SNESGetConvergedReason()`,
+          `SNES_DIVERGED_FUNCTION_DOMAIN`, `SNESSetFunctionDomainError()`
+@*/
+PetscErrorCode SNESSetObjectiveDomainError(SNES snes)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  snes->objectivedomainerror = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -182,8 +223,8 @@ PetscErrorCode SNESSetJacobianDomainError(SNES snes)
 }
 
 /*@
-  SNESSetCheckJacobianDomainError - tells `SNESSolve()` whether to check if the user called `SNESSetJacobianDomainError()` Jacobian domain error after
-  each Jacobian evaluation. By default, it checks for the Jacobian domain error in the debug mode, and does not check it in the optimized mode.
+  SNESSetCheckJacobianDomainError - tells `SNESSolve()` whether to check if the user called `SNESSetJacobianDomainError()` to indicate a Jacobian domain error after
+  each Jacobian evaluation.
 
   Logically Collective
 
@@ -193,7 +234,9 @@ PetscErrorCode SNESSetJacobianDomainError(SNES snes)
 
   Level: advanced
 
-  Note:
+  Notes:
+  By default, it checks for the Jacobian domain error in the debug mode, and does not check it in the optimized mode.
+
   Checks require one extra parallel synchronization for each Jacobian evaluation
 
 .seealso: [](ch_snes), `SNES`, `SNESConvergedReason`, `SNESCreate()`, `SNESSetFunction()`, `SNESFunctionFn`, `SNESSetFunctionDomainError()`, `SNESGetCheckJacobianDomainError()`
@@ -227,64 +270,6 @@ PetscErrorCode SNESGetCheckJacobianDomainError(SNES snes, PetscBool *flg)
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscAssertPointer(flg, 2);
   *flg = snes->checkjacdomainerror;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  SNESGetFunctionDomainError - Gets the status of the domain error after a call to `SNESComputeFunction()`
-
-  Not Collective, different MPI processes may return different values
-
-  Input Parameter:
-. snes - the `SNES` context
-
-  Output Parameter:
-. domainerror - Set to `PETSC_TRUE` if there's a domain error; `PETSC_FALSE` otherwise.
-
-  Level: developer
-
-  Notes:
-  The value will only be true on those MPI processes that called `SNESSetFunctionDomainError()`
-
-  The value is reset to `PETSC_FALSE` when `SNESCheckFunctionNorm()` is called.
-
-.seealso: [](ch_snes), `SNES`, `SNESSetFunctionDomainError()`, `SNESComputeFunction()`
-@*/
-PetscErrorCode SNESGetFunctionDomainError(SNES snes, PetscBool *domainerror)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscAssertPointer(domainerror, 2);
-  *domainerror = snes->domainerror;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  SNESGetJacobianDomainError - Gets the status of the Jacobian domain error after a call to `SNESComputeJacobian()`
-
-  Not Collective, different MPI processes may return different values
-
-  Input Parameter:
-. snes - the `SNES` context
-
-  Output Parameter:
-. domainerror - Set to `PETSC_TRUE` if there's a Jacobian domain error; `PETSC_FALSE` otherwise.
-
-  Level: advanced
-
-  Notes:
-  The value will only be true on those MPI processes that called `SNESSetJacobianDomainError()`
-
-  The value is reset to `PETSC_FALSE` when `SNESCheckJacobianDomainerror()` is called but only `SNESSetCheckJacobianDomainError()` was called
-
-.seealso: [](ch_snes), `SNES`, `SNESSetFunctionDomainError()`, `SNESComputeFunction()`, `SNESGetFunctionDomainError()`
-@*/
-PetscErrorCode SNESGetJacobianDomainError(SNES snes, PetscBool *domainerror)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscAssertPointer(domainerror, 2);
-  *domainerror = snes->jacobiandomainerror;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -659,7 +644,7 @@ static PetscErrorCode SNESSetUpMatrixFree_Private(SNES snes, PetscBool hasOperat
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMRestrictHook_SNESVecSol(DM dmfine, Mat Restrict, Vec Rscale, Mat Inject, DM dmcoarse, void *ctx)
+static PetscErrorCode DMRestrictHook_SNESVecSol(DM dmfine, Mat Restrict, Vec Rscale, Mat Inject, DM dmcoarse, PetscCtx ctx)
 {
   SNES snes = (SNES)ctx;
   Vec  Xfine, Xfine_named = NULL, Xcoarse;
@@ -690,7 +675,7 @@ static PetscErrorCode DMRestrictHook_SNESVecSol(DM dmfine, Mat Restrict, Vec Rsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMCoarsenHook_SNESVecSol(DM dm, DM dmc, void *ctx)
+static PetscErrorCode DMCoarsenHook_SNESVecSol(DM dm, DM dmc, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscCall(DMCoarsenHookAdd(dmc, DMCoarsenHook_SNESVecSol, DMRestrictHook_SNESVecSol, ctx));
@@ -699,7 +684,7 @@ static PetscErrorCode DMCoarsenHook_SNESVecSol(DM dm, DM dmc, void *ctx)
 
 /* This may be called to rediscretize the operator on levels of linear multigrid. The DM shuffle is so the user can
  * safely call SNESGetDM() in their residual evaluation routine. */
-static PetscErrorCode KSPComputeOperators_SNES(KSP ksp, Mat A, Mat B, void *ctx)
+static PetscErrorCode KSPComputeOperators_SNES(KSP ksp, Mat A, Mat B, PetscCtx ctx)
 {
   SNES            snes = (SNES)ctx;
   DMSNES          sdm;
@@ -741,7 +726,7 @@ static PetscErrorCode KSPComputeOperators_SNES(KSP ksp, Mat A, Mat B, void *ctx)
   }
   /* Make sure KSP DM has the Jacobian computation routine */
   if (!sdm->ops->computejacobian) PetscCall(DMCopyDMSNES(dmsave, snes->dm));
-  PetscCall(SNESComputeJacobian(snes, X, A, B));
+  PetscCall(SNESComputeJacobian(snes, X, A, B)); /* cannot handle previous SNESSetJacobianDomainError() calls */
 
   /* Put the previous context back */
   if (snes->dm != dmsave && jac == SNESComputeJacobianDefaultColor) PetscCall(SNESSetJacobian(snes, NULL, NULL, jac, ctxsave));
@@ -881,7 +866,7 @@ PetscErrorCode SNESMonitorSetFromOptions(SNES snes, const char name[], const cha
     PetscCall(PetscViewerAndFormatCreate(viewer, format, &vf));
     PetscCall(PetscViewerDestroy(&viewer));
     if (monitorsetup) PetscCall((*monitorsetup)(snes, vf));
-    PetscCall(SNESMonitorSet(snes, (PetscErrorCode (*)(SNES, PetscInt, PetscReal, void *))monitor, vf, (PetscCtxDestroyFn *)PetscViewerAndFormatDestroy));
+    PetscCall(SNESMonitorSet(snes, (PetscErrorCode (*)(SNES, PetscInt, PetscReal, PetscCtx))monitor, vf, (PetscCtxDestroyFn *)PetscViewerAndFormatDestroy));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1154,7 +1139,7 @@ PetscErrorCode SNESSetFromOptions(SNES snes)
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-snes_monitor_saws", "Publish SNES progress using SAWs", "SNESMonitorSet", flg, &flg, NULL));
   if (flg) {
-    void *ctx;
+    PetscCtx ctx;
     PetscCall(SNESMonitorSAWsCreate(snes, &ctx));
     PetscCall(SNESMonitorSet(snes, SNESMonitorSAWs, ctx, SNESMonitorSAWsDestroy));
   }
@@ -1239,12 +1224,12 @@ PetscErrorCode SNESResetFromOptions(SNES snes)
 
 .seealso: [](ch_snes), `SNESGetApplicationContext()`, `SNESSetApplicationContext()`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode SNESSetComputeApplicationContext(SNES snes, PetscErrorCode (*compute)(SNES snes, void **ctx), PetscCtxDestroyFn *destroy)
+PetscErrorCode SNESSetComputeApplicationContext(SNES snes, PetscErrorCode (*compute)(SNES snes, PetscCtxRt ctx), PetscCtxDestroyFn *destroy)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  snes->ops->usercompute = compute;
-  snes->ops->ctxdestroy  = destroy;
+  snes->ops->ctxcompute = compute;
+  snes->ops->ctxdestroy = destroy;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1272,7 +1257,7 @@ PetscErrorCode SNESSetComputeApplicationContext(SNES snes, PetscErrorCode (*comp
 
 .seealso: [](ch_snes), `SNES`, `SNESSetComputeApplicationContext()`, `SNESGetApplicationContext()`
 @*/
-PetscErrorCode SNESSetApplicationContext(SNES snes, void *ctx)
+PetscErrorCode SNESSetApplicationContext(SNES snes, PetscCtx ctx)
 {
   KSP ksp;
 
@@ -1294,33 +1279,19 @@ PetscErrorCode SNESSetApplicationContext(SNES snes, void *ctx)
 . snes - `SNES` context
 
   Output Parameter:
-. ctx - user context
+. ctx - the application context
 
   Level: intermediate
 
   Fortran Notes:
-  This only works when the context is a Fortran derived type (it cannot be a `PetscObject`) and you **must** write a Fortran interface definition for this
-  function that tells the Fortran compiler the derived data type that is returned as the `ctx` argument. For example,
-.vb
-  Interface SNESGetApplicationContext
-    Subroutine SNESGetApplicationContext(snes,ctx,ierr)
-  #include <petsc/finclude/petscsnes.h>
-      use petscsnes
-      SNES snes
-      type(tUsertype), pointer :: ctx
-      PetscErrorCode ierr
-    End Subroutine
-  End Interface SNESGetApplicationContext
-.ve
-
-  The prototype for `ctx` must be
+  This only works when the context is a Fortran derived type or a `PetscObject`. Declare `ctx` with
 .vb
   type(tUsertype), pointer :: ctx
 .ve
 
 .seealso: [](ch_snes), `SNESSetApplicationContext()`, `SNESSetComputeApplicationContext()`
 @*/
-PetscErrorCode SNESGetApplicationContext(SNES snes, PeCtx ctx)
+PetscErrorCode SNESGetApplicationContext(SNES snes, PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -1458,7 +1429,7 @@ PetscErrorCode SNESSetIterationNumber(SNES snes, PetscInt iter)
 
 /*@
   SNESGetNonlinearStepFailures - Gets the number of unsuccessful steps
-  attempted by the nonlinear solver in the current or most recent `SNESSolve()` .
+  taken by the nonlinear solver in the current or most recent `SNESSolve()` .
 
   Not Collective
 
@@ -1470,7 +1441,15 @@ PetscErrorCode SNESSetIterationNumber(SNES snes, PetscInt iter)
 
   Level: intermediate
 
-  Note:
+  Notes:
+  A failed step is a step that was generated and taken but did not satisfy the requested step criteria. For example,
+  the `SNESLineSearchApply()` could not generate a sufficient decrease in the function norm (in fact it may have produced an increase).
+
+  Taken steps that produce a infinity or NaN in the function evaluation or generate a `SNESSetFunctionDomainError()`
+  will always immediately terminate the `SNESSolve()` regardless of the value of `maxFails`.
+
+  `SNESSetMaxNonlinearStepFailures()` determines how many unsuccessful steps are allowed before the `SNESSolve()` terminates
+
   This counter is reset to zero for each successive call to `SNESSolve()`.
 
 .seealso: [](ch_snes), `SNES`, `SNESGetMaxLinearSolveFailures()`, `SNESGetLinearSolveIterations()`, `SNESSetMaxLinearSolveFailures()`, `SNESGetLinearSolveFailures()`,
@@ -1500,11 +1479,18 @@ PetscErrorCode SNESGetNonlinearStepFailures(SNES snes, PetscInt *nfails)
 
   Level: intermediate
 
+  Note:
+  A failed step is a step that was generated and taken but did not satisfy the requested criteria. For example,
+  the `SNESLineSearchApply()` could not generate a sufficient decrease in the function norm (in fact it may have produced an increase).
+
+  Taken steps that produce a infinity or NaN in the function evaluation or generate a `SNESSetFunctionDomainError()`
+  will always immediately terminate the `SNESSolve()` regardless of the value of `maxFails`.
+
   Developer Note:
   The options database key is wrong for this function name
 
-.seealso: [](ch_snes), `SNESSetErrorIfNotConverged()`, `SNESGetMaxLinearSolveFailures()`, `SNESGetLinearSolveIterations()`, `SNESSetMaxLinearSolveFailures()`, `SNESGetLinearSolveFailures()`,
-          `SNESGetMaxNonlinearStepFailures()`, `SNESGetNonlinearStepFailures()`
+.seealso: [](ch_snes), `SNESSetErrorIfNotConverged()`, `SNESGetMaxLinearSolveFailures()`, `SNESGetLinearSolveIterations()`, `SNESSetMaxLinearSolveFailures()`,
+          `SNESGetLinearSolveFailures()`, `SNESGetMaxNonlinearStepFailures()`, `SNESGetNonlinearStepFailures()`, `SNESCheckLineSearchFailure()`
 @*/
 PetscErrorCode SNESSetMaxNonlinearStepFailures(SNES snes, PetscInt maxFails)
 {
@@ -1957,7 +1943,7 @@ PetscErrorCode SNESCreate(MPI_Comm comm, SNES *outsnes)
 
 .seealso: [](ch_snes), `SNES`, `SNESGetFunction()`, `SNESComputeFunction()`, `SNESSetJacobian()`, `SNESSetPicard()`, `SNESFunctionFn`
 @*/
-PetscErrorCode SNESSetFunction(SNES snes, Vec r, SNESFunctionFn *f, void *ctx)
+PetscErrorCode SNESSetFunction(SNES snes, Vec r, SNESFunctionFn *f, PetscCtx ctx)
 {
   DM dm;
 
@@ -2234,7 +2220,7 @@ PetscErrorCode SNESGetFunctionType(SNES snes, SNESFunctionType *type)
 
 .seealso: [](ch_snes), `SNESNGS`, `SNESGetNGS()`, `SNESNCG`, `SNESGetFunction()`, `SNESComputeNGS()`, `SNESNGSFn`
 @*/
-PetscErrorCode SNESSetNGS(SNES snes, SNESNGSFn *f, void *ctx)
+PetscErrorCode SNESSetNGS(SNES snes, SNESNGSFn *f, PetscCtx ctx)
 {
   DM dm;
 
@@ -2249,7 +2235,7 @@ PetscErrorCode SNESSetNGS(SNES snes, SNESNGSFn *f, void *ctx)
      This is used for -snes_mf_operator; it uses a duplicate of snes->jacobian_pre because snes->jacobian_pre cannot be
    changed during the KSPSolve()
 */
-PetscErrorCode SNESPicardComputeMFFunction(SNES snes, Vec x, Vec f, void *ctx)
+PetscErrorCode SNESPicardComputeMFFunction(SNES snes, Vec x, Vec f, PetscCtx ctx)
 {
   DM     dm;
   DMSNES sdm;
@@ -2272,7 +2258,7 @@ PetscErrorCode SNESPicardComputeMFFunction(SNES snes, Vec x, Vec f, void *ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode SNESPicardComputeFunction(SNES snes, Vec x, Vec f, void *ctx)
+PetscErrorCode SNESPicardComputeFunction(SNES snes, Vec x, Vec f, PetscCtx ctx)
 {
   DM     dm;
   DMSNES sdm;
@@ -2293,7 +2279,7 @@ PetscErrorCode SNESPicardComputeFunction(SNES snes, Vec x, Vec f, void *ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode SNESPicardComputeJacobian(SNES snes, Vec x1, Mat J, Mat B, void *ctx)
+PetscErrorCode SNESPicardComputeJacobian(SNES snes, Vec x1, Mat J, Mat B, PetscCtx ctx)
 {
   PetscFunctionBegin;
   /* the jacobian matrix should be pre-filled in SNESPicardComputeFunction */
@@ -2350,7 +2336,7 @@ PetscErrorCode SNESPicardComputeJacobian(SNES snes, Vec x1, Mat J, Mat B, void *
 .seealso: [](ch_snes), `SNES`, `SNESGetFunction()`, `SNESSetFunction()`, `SNESComputeFunction()`, `SNESSetJacobian()`, `SNESGetPicard()`, `SNESLineSearchPreCheckPicard()`,
           `SNESFunctionFn`, `SNESJacobianFn`
 @*/
-PetscErrorCode SNESSetPicard(SNES snes, Vec r, SNESFunctionFn *bp, Mat Amat, Mat Pmat, SNESJacobianFn *J, void *ctx)
+PetscErrorCode SNESSetPicard(SNES snes, Vec r, SNESFunctionFn *bp, Mat Amat, Mat Pmat, SNESJacobianFn *J, PetscCtx ctx)
 {
   DM dm;
 
@@ -2384,7 +2370,7 @@ PetscErrorCode SNESSetPicard(SNES snes, Vec r, SNESFunctionFn *bp, Mat Amat, Mat
 
 .seealso: [](ch_snes), `SNESSetFunction()`, `SNESSetPicard()`, `SNESGetFunction()`, `SNESGetJacobian()`, `SNESGetDM()`, `SNESFunctionFn`, `SNESJacobianFn`
 @*/
-PetscErrorCode SNESGetPicard(SNES snes, Vec *r, SNESFunctionFn **f, Mat *Amat, Mat *Pmat, SNESJacobianFn **J, void **ctx)
+PetscErrorCode SNESGetPicard(SNES snes, Vec *r, SNESFunctionFn **f, Mat *Amat, Mat *Pmat, SNESJacobianFn **J, PetscCtxRt ctx)
 {
   DM dm;
 
@@ -2412,7 +2398,7 @@ PetscErrorCode SNESGetPicard(SNES snes, Vec *r, SNESFunctionFn **f, Mat *Amat, M
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESSetFunction()`, `SNESGetFunction()`, `SNESComputeFunction()`, `SNESSetJacobian()`, `SNESInitialGuessFn`
 @*/
-PetscErrorCode SNESSetComputeInitialGuess(SNES snes, SNESInitialGuessFn *func, void *ctx)
+PetscErrorCode SNESSetComputeInitialGuess(SNES snes, SNESInitialGuessFn *func, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -2456,7 +2442,7 @@ PetscErrorCode SNESGetRhs(SNES snes, Vec *rhs)
 - x    - input vector
 
   Output Parameter:
-. y - function vector, as set by `SNESSetFunction()`
+. f - function vector, as set by `SNESSetFunction()`
 
   Level: developer
 
@@ -2464,11 +2450,19 @@ PetscErrorCode SNESGetRhs(SNES snes, Vec *rhs)
   `SNESComputeFunction()` is typically used within nonlinear solvers
   implementations, so users would not generally call this routine themselves.
 
-  When solving for $F(x) = b$, this routine computes $y = F(x) - b$.
+  When solving for $F(x) = b$, this routine computes $f = F(x) - b$.
 
-.seealso: [](ch_snes), `SNES`, `SNESSetFunction()`, `SNESGetFunction()`, `SNESComputeMFFunction()`
+  This function usually appears in the pattern.
+.vb
+  SNESComputeFunction(snes, x, f);
+  VecNorm(f, &fnorm);
+  SNESCheckFunctionDomainError(snes, fnorm); or SNESLineSearchCheckFunctionDomainError(ls, fnorm);
+.ve
+  to collectively handle the use of `SNESSetFunctionDomainError()` in the provided callback function.
+
+.seealso: [](ch_snes), `SNES`, `SNESSetFunction()`, `SNESGetFunction()`, `SNESComputeMFFunction()`, `SNESSetFunctionDomainError()`
 @*/
-PetscErrorCode SNESComputeFunction(SNES snes, Vec x, Vec y)
+PetscErrorCode SNESComputeFunction(SNES snes, Vec x, Vec f)
 {
   DM     dm;
   DMSNES sdm;
@@ -2476,37 +2470,37 @@ PetscErrorCode SNESComputeFunction(SNES snes, Vec x, Vec y)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
-  PetscValidHeaderSpecific(y, VEC_CLASSID, 3);
+  PetscValidHeaderSpecific(f, VEC_CLASSID, 3);
   PetscCheckSameComm(snes, 1, x, 2);
-  PetscCheckSameComm(snes, 1, y, 3);
+  PetscCheckSameComm(snes, 1, f, 3);
   PetscCall(VecValidValues_Internal(x, 2, PETSC_TRUE));
 
   PetscCall(SNESGetDM(snes, &dm));
   PetscCall(DMGetDMSNES(dm, &sdm));
   PetscCheck(sdm->ops->computefunction || snes->vec_rhs, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call SNESSetFunction() or SNESSetDM() before SNESComputeFunction(), likely called from SNESSolve().");
   if (sdm->ops->computefunction) {
-    if (sdm->ops->computefunction != SNESObjectiveComputeFunctionDefaultFD) PetscCall(PetscLogEventBegin(SNES_FunctionEval, snes, x, y, 0));
+    if (sdm->ops->computefunction != SNESObjectiveComputeFunctionDefaultFD) PetscCall(PetscLogEventBegin(SNES_FunctionEval, snes, x, f, 0));
     PetscCall(VecLockReadPush(x));
     /* ensure domainerror is false prior to computefunction evaluation (may not have been reset) */
-    snes->domainerror = PETSC_FALSE;
+    snes->functiondomainerror = PETSC_FALSE;
     {
       void           *ctx;
       SNESFunctionFn *computefunction;
       PetscCall(DMSNESGetFunction(dm, &computefunction, &ctx));
-      PetscCallBack("SNES callback function", (*computefunction)(snes, x, y, ctx));
+      PetscCallBack("SNES callback function", (*computefunction)(snes, x, f, ctx));
     }
     PetscCall(VecLockReadPop(x));
-    if (sdm->ops->computefunction != SNESObjectiveComputeFunctionDefaultFD) PetscCall(PetscLogEventEnd(SNES_FunctionEval, snes, x, y, 0));
+    if (sdm->ops->computefunction != SNESObjectiveComputeFunctionDefaultFD) PetscCall(PetscLogEventEnd(SNES_FunctionEval, snes, x, f, 0));
   } else /* if (snes->vec_rhs) */ {
-    PetscCall(MatMult(snes->jacobian, x, y));
+    PetscCall(MatMult(snes->jacobian, x, f));
   }
-  if (snes->vec_rhs) PetscCall(VecAXPY(y, -1.0, snes->vec_rhs));
+  if (snes->vec_rhs) PetscCall(VecAXPY(f, -1.0, snes->vec_rhs));
   snes->nfuncs++;
   /*
-     domainerror might not be set on all processes; so we tag vector locally with Inf and the next inner product or norm will
+     domainerror might not be set on all processes; so we tag vector locally with infinity and the next inner product or norm will
      propagate the value to all processes
   */
-  PetscCall(VecFlag(y, snes->domainerror));
+  PetscCall(VecFlag(f, snes->functiondomainerror));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2552,16 +2546,16 @@ PetscErrorCode SNESComputeMFFunction(SNES snes, Vec x, Vec y)
   PetscCall(PetscLogEventBegin(SNES_FunctionEval, snes, x, y, 0));
   PetscCall(VecLockReadPush(x));
   /* ensure domainerror is false prior to computefunction evaluation (may not have been reset) */
-  snes->domainerror = PETSC_FALSE;
+  snes->functiondomainerror = PETSC_FALSE;
   PetscCallBack("SNES callback function", (*sdm->ops->computemffunction)(snes, x, y, sdm->mffunctionctx));
   PetscCall(VecLockReadPop(x));
   PetscCall(PetscLogEventEnd(SNES_FunctionEval, snes, x, y, 0));
   snes->nfuncs++;
   /*
-     domainerror might not be set on all processes; so we tag vector locally with Inf and the next inner product or norm will
+     domainerror might not be set on all processes; so we tag vector locally with infinity and the next inner product or norm will
      propagate the value to all processes
   */
-  PetscCall(VecFlag(y, snes->domainerror));
+  PetscCall(VecFlag(y, snes->functiondomainerror));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2703,7 +2697,7 @@ PetscErrorCode SNESTestFunction(SNES snes)
   PetscCall(VecDuplicate(x, &g1));
   PetscCall(VecDuplicate(x, &g2));
   PetscCall(VecDuplicate(x, &g3));
-  PetscCall(SNESComputeFunction(snes, x, g1));
+  PetscCall(SNESComputeFunction(snes, x, g1)); /* does not handle use of SNESSetFunctionDomainError() corrrectly */
   PetscCall(SNESComputeFunction_FD(snes, x, g2));
 
   PetscCall(VecNorm(g2, NORM_2, &fdnorm));
@@ -2954,7 +2948,8 @@ PetscErrorCode SNESTestJacobian(SNES snes, PetscReal *Jnorm, PetscReal *diffNorm
   This has duplicative ways of checking the accuracy of the user provided Jacobian (see the options above). This is for historical reasons, the routine `SNESTestJacobian()` use to used
   with the `SNESType` of test that has been removed.
 
-.seealso: [](ch_snes), `SNESSetJacobian()`, `KSPSetOperators()`, `MatStructure`, `SNESSetLagPreconditioner()`, `SNESSetLagJacobian()`
+.seealso: [](ch_snes), `SNESSetJacobian()`, `KSPSetOperators()`, `MatStructure`, `SNESSetLagPreconditioner()`, `SNESSetLagJacobian()`,
+          `SNESSetJacobianDomainError()`, `SNESCheckJacobianDomainError()`, `SNESSetCheckJacobianDomainError()`
 @*/
 PetscErrorCode SNESComputeJacobian(SNES snes, Vec X, Mat A, Mat B)
 {
@@ -3243,7 +3238,7 @@ PetscErrorCode SNESComputeJacobian(SNES snes, Vec X, Mat A, Mat B)
 .seealso: [](ch_snes), `SNES`, `KSPSetOperators()`, `SNESSetFunction()`, `MatMFFDComputeJacobian()`, `SNESComputeJacobianDefaultColor()`, `MatStructure`,
           `SNESSetPicard()`, `SNESJacobianFn`, `SNESFunctionFn`
 @*/
-PetscErrorCode SNESSetJacobian(SNES snes, Mat Amat, Mat Pmat, SNESJacobianFn *J, void *ctx)
+PetscErrorCode SNESSetJacobian(SNES snes, Mat Amat, Mat Pmat, SNESJacobianFn *J, PetscCtx ctx)
 {
   DM dm;
 
@@ -3289,7 +3284,7 @@ PetscErrorCode SNESSetJacobian(SNES snes, Mat Amat, Mat Pmat, SNESJacobianFn *J,
 
 .seealso: [](ch_snes), `SNES`, `Mat`, `SNESSetJacobian()`, `SNESComputeJacobian()`, `SNESJacobianFn`, `SNESGetFunction()`
 @*/
-PetscErrorCode SNESGetJacobian(SNES snes, Mat *Amat, Mat *Pmat, SNESJacobianFn **J, void **ctx)
+PetscErrorCode SNESGetJacobian(SNES snes, Mat *Amat, Mat *Pmat, SNESJacobianFn **J, PetscCtxRt ctx)
 {
   DM dm;
 
@@ -3429,7 +3424,7 @@ PetscErrorCode SNESSetUp(SNES snes)
     }
   }
   if (snes->mf) PetscCall(SNESSetUpMatrixFree_Private(snes, snes->mf_operator, snes->mf_version));
-  if (snes->ops->usercompute && !snes->ctx) PetscCallBack("SNES callback compute application context", (*snes->ops->usercompute)(snes, &snes->ctx));
+  if (snes->ops->ctxcompute && !snes->ctx) PetscCallBack("SNES callback compute application context", (*snes->ops->ctxcompute)(snes, &snes->ctx));
 
   snes->jac_iter = 0;
   snes->pre_iter = 0;
@@ -3572,7 +3567,7 @@ PetscErrorCode SNESDestroy(SNES *snes)
   PetscCall(SNESLineSearchDestroy(&(*snes)->linesearch));
 
   PetscCall(PetscFree((*snes)->kspconvctx));
-  if ((*snes)->ops->convergeddestroy) PetscCall((*(*snes)->ops->convergeddestroy)((*snes)->cnvP));
+  if ((*snes)->ops->convergeddestroy) PetscCall((*(*snes)->ops->convergeddestroy)(&(*snes)->cnvP));
   if ((*snes)->conv_hist_alloc) PetscCall(PetscFree2((*snes)->conv_hist, (*snes)->conv_hist_its));
   PetscCall(SNESMonitorCancel(*snes));
   PetscCall(SNESConvergedReasonViewCancel(*snes));
@@ -4264,7 +4259,7 @@ M*/
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESMonitorDefault()`, `SNESMonitorCancel()`, `SNESMonitorFunction`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode SNESMonitorSet(SNES snes, PetscErrorCode (*f)(SNES, PetscInt, PetscReal, void *), void *mctx, PetscCtxDestroyFn *monitordestroy)
+PetscErrorCode SNESMonitorSet(SNES snes, PetscErrorCode (*f)(SNES, PetscInt, PetscReal, PetscCtx), PetscCtx mctx, PetscCtxDestroyFn *monitordestroy)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -4348,22 +4343,22 @@ M*/
   Input Parameters:
 + snes                        - the `SNES` context
 . SNESConvergenceTestFunction - routine to test for convergence
-. cctx                        - [optional] context for private data for the convergence routine  (may be `NULL`)
+. ctx                         - [optional] context for private data for the convergence routine  (may be `NULL`)
 - destroy                     - [optional] destructor for the context (may be `NULL`; `PETSC_NULL_FUNCTION` in Fortran)
 
   Level: advanced
 
 .seealso: [](ch_snes), `SNES`, `SNESConvergedDefault()`, `SNESConvergedSkip()`, `SNESConvergenceTestFunction`
 @*/
-PetscErrorCode SNESSetConvergenceTest(SNES snes, PetscErrorCode (*SNESConvergenceTestFunction)(SNES, PetscInt, PetscReal, PetscReal, PetscReal, SNESConvergedReason *, void *), void *cctx, PetscErrorCode (*destroy)(void *))
+PetscErrorCode SNESSetConvergenceTest(SNES snes, PetscErrorCode (*SNESConvergenceTestFunction)(SNES, PetscInt, PetscReal, PetscReal, PetscReal, SNESConvergedReason *, void *), PetscCtx ctx, PetscCtxDestroyFn *destroy)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   if (!SNESConvergenceTestFunction) SNESConvergenceTestFunction = SNESConvergedSkip;
-  if (snes->ops->convergeddestroy) PetscCall((*snes->ops->convergeddestroy)(snes->cnvP));
+  if (snes->ops->convergeddestroy) PetscCall((*snes->ops->convergeddestroy)(&snes->cnvP));
   snes->ops->converged        = SNESConvergenceTestFunction;
   snes->ops->convergeddestroy = destroy;
-  snes->cnvP                  = cctx;
+  snes->cnvP                  = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4905,7 +4900,9 @@ PetscErrorCode SNESSolve(SNES snes, Vec b, Vec x)
     PetscUseTypeMethod(snes, solve);
     PetscCall(PetscLogEventEnd(SNES_Solve, snes, 0, 0, 0));
     PetscCheck(snes->reason, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Internal error, solver %s returned without setting converged reason", ((PetscObject)snes)->type_name);
-    snes->domainerror = PETSC_FALSE; /* clear the flag if it has been set */
+    snes->functiondomainerror  = PETSC_FALSE; /* clear the flag if it has been set */
+    snes->objectivedomainerror = PETSC_FALSE; /* clear the flag if it has been set */
+    snes->jacobiandomainerror  = PETSC_FALSE; /* clear the flag if it has been set */
 
     if (snes->lagjac_persist) snes->jac_iter += snes->iter;
     if (snes->lagpre_persist) snes->pre_iter += snes->iter;
@@ -5152,7 +5149,7 @@ PetscErrorCode SNESGetSolutionUpdate(SNES snes, Vec *x)
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESSetFunction()`, `SNESGetSolution()`, `SNESFunctionFn`
 @*/
-PetscErrorCode SNESGetFunction(SNES snes, Vec *r, SNESFunctionFn **f, void **ctx)
+PetscErrorCode SNESGetFunction(SNES snes, Vec *r, SNESFunctionFn **f, PetscCtxRt ctx)
 {
   DM dm;
 
@@ -5189,7 +5186,7 @@ PetscErrorCode SNESGetFunction(SNES snes, Vec *r, SNESFunctionFn **f, void **ctx
 
 .seealso: [](ch_snes), `SNESSetNGS()`, `SNESGetFunction()`, `SNESNGSFn`
 @*/
-PetscErrorCode SNESGetNGS(SNES snes, SNESNGSFn **f, void **ctx)
+PetscErrorCode SNESGetNGS(SNES snes, SNESNGSFn **f, PetscCtxRt ctx)
 {
   DM dm;
 
@@ -5348,7 +5345,7 @@ PetscErrorCode SNESTestLocalMin(SNES snes)
       value = PetscSign(j) * PetscExpReal(PetscAbs(j) - 10.0);
       PetscCall(VecSetValue(uh, i, value, ADD_VALUES));
       PetscCall(SNESComputeFunction(snes, uh, fh));
-      PetscCall(VecNorm(fh, NORM_2, &norm));
+      PetscCall(VecNorm(fh, NORM_2, &norm)); /* does not handle use of SNESSetFunctionDomainError() correctly */
       PetscCall(PetscPrintf(PetscObjectComm((PetscObject)snes), "       j norm %" PetscInt_FMT " %18.16e\n", j, (double)norm));
       value = -value;
       PetscCall(VecSetValue(uh, i, value, ADD_VALUES));
@@ -5356,6 +5353,44 @@ PetscErrorCode SNESTestLocalMin(SNES snes)
   }
   PetscCall(VecDestroy(&uh));
   PetscCall(VecDestroy(&fh));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  SNESGetLineSearch - Returns the line search associated with the `SNES`.
+
+  Not Collective
+
+  Input Parameter:
+. snes - iterative context obtained from `SNESCreate()`
+
+  Output Parameter:
+. linesearch - linesearch context
+
+  Level: beginner
+
+  Notes:
+  It creates a default line search instance which can be configured as needed in case it has not been already set with `SNESSetLineSearch()`.
+
+  You can also use the options database keys `-snes_linesearch_*` to configure the line search. See `SNESLineSearchSetFromOptions()` for the possible options.
+
+.seealso: [](ch_snes), `SNESLineSearch`, `SNESSetLineSearch()`, `SNESLineSearchCreate()`, `SNESLineSearchSetFromOptions()`
+@*/
+PetscErrorCode SNESGetLineSearch(SNES snes, SNESLineSearch *linesearch)
+{
+  const char *optionsprefix;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscAssertPointer(linesearch, 2);
+  if (!snes->linesearch) {
+    PetscCall(SNESGetOptionsPrefix(snes, &optionsprefix));
+    PetscCall(SNESLineSearchCreate(PetscObjectComm((PetscObject)snes), &snes->linesearch));
+    PetscCall(SNESLineSearchSetSNES(snes->linesearch, snes));
+    PetscCall(SNESLineSearchAppendOptionsPrefix(snes->linesearch, optionsprefix));
+    PetscCall(PetscObjectIncrementTabLevel((PetscObject)snes->linesearch, (PetscObject)snes, 1));
+  }
+  *linesearch = snes->linesearch;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -5527,7 +5562,7 @@ PetscErrorCode SNESKSPGetParametersEW(SNES snes, PetscInt *version, PetscReal *r
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode KSPPreSolve_SNESEW(KSP ksp, Vec b, Vec x, void *ctx)
+PetscErrorCode KSPPreSolve_SNESEW(KSP ksp, Vec b, Vec x, PetscCtx ctx)
 {
   SNES       snes = (SNES)ctx;
   SNESKSPEW *kctx = (SNESKSPEW *)snes->kspconvctx;
@@ -5581,7 +5616,7 @@ PetscErrorCode KSPPreSolve_SNESEW(KSP ksp, Vec b, Vec x, void *ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode KSPPostSolve_SNESEW(KSP ksp, Vec b, Vec x, void *ctx)
+PetscErrorCode KSPPostSolve_SNESEW(KSP ksp, Vec b, Vec x, PetscCtx ctx)
 {
   SNES       snes = (SNES)ctx;
   SNESKSPEW *kctx = (SNESKSPEW *)snes->kspconvctx;
@@ -5809,15 +5844,15 @@ PetscErrorCode SNESGetNPC(SNES snes, SNES *pc)
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscAssertPointer(pc, 2);
   if (!snes->npc) {
-    void *ctx;
+    PetscCtx ctx;
 
     PetscCall(SNESCreate(PetscObjectComm((PetscObject)snes), &snes->npc));
     PetscCall(PetscObjectIncrementTabLevel((PetscObject)snes->npc, (PetscObject)snes, 1));
     PetscCall(SNESGetOptionsPrefix(snes, &optionsprefix));
     PetscCall(SNESSetOptionsPrefix(snes->npc, optionsprefix));
     PetscCall(SNESAppendOptionsPrefix(snes->npc, "npc_"));
-    if (snes->ops->usercompute) {
-      PetscCall(SNESSetComputeApplicationContext(snes, snes->ops->usercompute, snes->ops->ctxdestroy));
+    if (snes->ops->ctxcompute) {
+      PetscCall(SNESSetComputeApplicationContext(snes, snes->ops->ctxcompute, snes->ops->ctxdestroy));
     } else {
       PetscCall(SNESGetApplicationContext(snes, &ctx));
       PetscCall(SNESSetApplicationContext(snes->npc, ctx));
@@ -5943,43 +5978,5 @@ PetscErrorCode SNESSetLineSearch(SNES snes, SNESLineSearch linesearch)
   PetscCall(SNESLineSearchDestroy(&snes->linesearch));
 
   snes->linesearch = linesearch;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  SNESGetLineSearch - Returns the line search associated with the `SNES`.
-
-  Not Collective
-
-  Input Parameter:
-. snes - iterative context obtained from `SNESCreate()`
-
-  Output Parameter:
-. linesearch - linesearch context
-
-  Level: beginner
-
-  Notes:
-  It creates a default line search instance which can be configured as needed in case it has not been already set with `SNESSetLineSearch()`.
-
-  You can also use the options database keys `-snes_linesearch_*` to configure the line search. See `SNESLineSearchSetFromOptions()` for the possible options.
-
-.seealso: [](ch_snes), `SNESLineSearch`, `SNESSetLineSearch()`, `SNESLineSearchCreate()`, `SNESLineSearchSetFromOptions()`
-@*/
-PetscErrorCode SNESGetLineSearch(SNES snes, SNESLineSearch *linesearch)
-{
-  const char *optionsprefix;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscAssertPointer(linesearch, 2);
-  if (!snes->linesearch) {
-    PetscCall(SNESGetOptionsPrefix(snes, &optionsprefix));
-    PetscCall(SNESLineSearchCreate(PetscObjectComm((PetscObject)snes), &snes->linesearch));
-    PetscCall(SNESLineSearchSetSNES(snes->linesearch, snes));
-    PetscCall(SNESLineSearchAppendOptionsPrefix(snes->linesearch, optionsprefix));
-    PetscCall(PetscObjectIncrementTabLevel((PetscObject)snes->linesearch, (PetscObject)snes, 1));
-  }
-  *linesearch = snes->linesearch;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

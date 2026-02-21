@@ -1,5 +1,4 @@
 #include "petscdmswarm.h"
-#define PETSCDM_DLL
 #include <petsc/private/dmswarmimpl.h> /*I   "petscdmswarm.h"   I*/
 #include <petsc/private/hashsetij.h>
 #include <petsc/private/petscfeimpl.h>
@@ -464,7 +463,7 @@ static PetscErrorCode DMSwarmCreateVectorFromFields_Private(DM sw, PetscInt Nf, 
    The way Dave May does particles, they amount to quadratue weights rather than delta functions, so he has |J| is in
    his integral. We allow this with the boolean flag.
 */
-static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass, PetscBool useDeltaFunction, void *ctx)
+static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass, PetscBool useDeltaFunction, PetscCtx ctx)
 {
   const char   *name = "Mass Matrix";
   MPI_Comm      comm;
@@ -687,7 +686,7 @@ static PetscErrorCode DMCreateMassMatrix_Swarm(DM dmCoarse, DM dmFine, Mat *mass
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSwarmComputeMassMatrixSquare_Private(DM dmc, DM dmf, Mat mass, PetscBool useDeltaFunction, void *ctx)
+static PetscErrorCode DMSwarmComputeMassMatrixSquare_Private(DM dmc, DM dmf, Mat mass, PetscBool useDeltaFunction, PetscCtx ctx)
 {
   const char   *name = "Mass Matrix Square";
   MPI_Comm      comm;
@@ -940,7 +939,7 @@ PetscErrorCode DMSwarmCreateMassMatrixSquare(DM dmCoarse, DM dmFine, Mat *mass)
    The way Dave May does particles, they amount to quadratue weights rather than delta functions, so he has |J| is in
    his integral. We allow this with the boolean flag.
 */
-static PetscErrorCode DMSwarmComputeGradientMatrix_Private(DM sw, DM dm, Mat derv, PetscBool useDeltaFunction, void *ctx)
+static PetscErrorCode DMSwarmComputeGradientMatrix_Private(DM sw, DM dm, Mat derv, PetscBool useDeltaFunction, PetscCtx ctx)
 {
   const char   *name = "Derivative Matrix";
   MPI_Comm      comm;
@@ -2571,7 +2570,7 @@ PetscErrorCode DMSwarmGetCellSwarm(DM sw, PetscInt cellID, DM cellswarm)
   PetscCall(DMLabelCreate(PetscObjectComm((PetscObject)sw), "singlecell", &label));
   PetscCall(DMAddLabel(dmc, label));
   PetscCall(DMLabelSetValue(label, cellID, 1));
-  PetscCall(DMPlexFilter(dmc, label, 1, PETSC_FALSE, PETSC_FALSE, NULL, &subdmc));
+  PetscCall(DMPlexFilter(dmc, label, 1, PETSC_FALSE, PETSC_FALSE, PetscObjectComm((PetscObject)dmc), NULL, &subdmc));
   PetscCall(PetscObjectGetName((PetscObject)dmc, &name));
   PetscCall(PetscObjectSetName((PetscObject)subdmc, name));
   PetscCall(DMSwarmSetCellDM(cellswarm, subdmc));

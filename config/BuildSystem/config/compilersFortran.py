@@ -47,7 +47,6 @@ class Configure(config.base.Configure):
     config.base.Configure.__setattr__(self, name, value)
     return
 
-
   def checkFortranTypeSizes(self):
     '''Check whether real*8 is supported and suggest flags which will allow support'''
     self.pushLanguage('FC')
@@ -63,7 +62,6 @@ class Configure(config.base.Configure):
         self.logPrint('Looks like ifc compiler, adding -w90 -w flags to avoid warnings about real*8 etc', 4, 'compilers')
     self.popLanguage()
     return
-
 
   def checkFortranPreprocessor(self):
     '''Determine if Fortran handles preprocessing properly'''
@@ -149,7 +147,12 @@ class Configure(config.base.Configure):
     return
 
   def checkFortranBool(self):
-    '''Determine whether the Fortran compiler has interoperable Bool/logical'''
+    '''
+    Determine whether the Fortran compiler has interoperable Bool/logical
+
+    requires '-fpscomp logicals' or similar for Intel compilers
+    requires '-Munixlogical' for NVIDIA compilers
+    '''
     self.fortranBoolIsInteroperable = 1
     if self.argDB['with-batch']:
       self.logPrint('Using --with-batch, so assume that Fortran Bool is interoperable', 3, 'compilers')
@@ -512,4 +515,3 @@ class Configure(config.base.Configure):
       self.executeTest(self.checkFortran90LineLength)
       self.executeTest(self.checkFortranPointerInit)
     return
-

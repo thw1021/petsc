@@ -1182,12 +1182,12 @@ PetscErrorCode PCSetUpOnBlocks(PC pc)
   `KSPSolve()`.
 
   A routine set by `PCSetModifySubMatrices()` is currently called within
-  the block Jacobi (`PCBJACOBI`) and additive Schwarz (`PCASM`)
-  preconditioners.  All other preconditioners ignore this routine.
+  `PCBJACOBI`, `PCASM`, `PCGASM`, and `PCHPDDM`.
+  All other preconditioners ignore this routine.
 
 .seealso: [](ch_ksp), `PC`, `PCModifySubMatricesFn`, `PCBJACOBI`, `PCASM`, `PCModifySubMatrices()`
 @*/
-PetscErrorCode PCSetModifySubMatrices(PC pc, PCModifySubMatricesFn *func, void *ctx)
+PetscErrorCode PCSetModifySubMatrices(PC pc, PCModifySubMatricesFn *func, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -1225,7 +1225,7 @@ PetscErrorCode PCSetModifySubMatrices(PC pc, PCModifySubMatricesFn *func, void *
 
 .seealso: [](ch_ksp), `PC`, `PCModifySubMatricesFn`, `PCSetModifySubMatrices()`
 @*/
-PetscErrorCode PCModifySubMatrices(PC pc, PetscInt nsub, const IS row[], const IS col[], Mat submat[], void *ctx)
+PetscErrorCode PCModifySubMatrices(PC pc, PetscInt nsub, const IS row[], const IS col[], Mat submat[], PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -1825,13 +1825,13 @@ PetscErrorCode PCView(PC pc, PetscViewer viewer)
         pop = PETSC_TRUE;
       }
       if (pc->pmat == pc->mat) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "  linear system matrix = precond matrix:\n"));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  linear system matrix, which is also used to construct the preconditioner:\n"));
         PetscCall(PetscViewerASCIIPushTab(viewer));
         PetscCall(MatView(pc->mat, viewer));
         PetscCall(PetscViewerASCIIPopTab(viewer));
       } else {
         if (pc->pmat) {
-          PetscCall(PetscViewerASCIIPrintf(viewer, "  linear system matrix followed by preconditioner matrix:\n"));
+          PetscCall(PetscViewerASCIIPrintf(viewer, "  linear system matrix, followed by the matrix used to construct the preconditioner:\n"));
         } else {
           PetscCall(PetscViewerASCIIPrintf(viewer, "  linear system matrix:\n"));
         }

@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-echo "Running \"make fortranbindings\" on previous and curren commit to determine differences"
+echo "Running \"make fortranbindings\" on previous and current commit to determine differences"
 repo_root="$(git rev-parse --show-toplevel)"
 TMPDIR=$(mktemp -d)
 before=$(git rev-parse HEAD~1)
@@ -13,7 +13,7 @@ extract_subroutines() {
 }
 
 for rev in $before $after; do
-  git worktree add -f "$TMPDIR/wt_$rev" $rev
+  git worktree add -f "$TMPDIR/wt_$rev" "$rev"
   (
     cd "$TMPDIR/wt_$rev"
     export PETSC_DIR="$TMPDIR/wt_$rev"

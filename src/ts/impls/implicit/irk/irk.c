@@ -138,7 +138,7 @@ static PetscErrorCode TSIRKCreate_Gauss(TS ts)
     PetscCall(MatAssemblyBegin(A_baij, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A_baij, MAT_FINAL_ASSEMBLY));
     PetscCall(MatInvertBlockDiagonal(A_baij, &A_inv));
-    PetscCall(PetscMemcpy(gauss_A_inv, A_inv, nstages * nstages * sizeof(PetscScalar)));
+    PetscCall(PetscArraycpy(gauss_A_inv, A_inv, nstages * nstages));
     PetscCall(MatDestroy(&A_baij));
   }
 
@@ -520,13 +520,13 @@ static PetscErrorCode SNESTSFormJacobian_IRK(SNES snes, Vec ZC, Mat JC, Mat JCpr
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMCoarsenHook_TSIRK(DM fine, DM coarse, void *ctx)
+static PetscErrorCode DMCoarsenHook_TSIRK(DM fine, DM coarse, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMRestrictHook_TSIRK(DM fine, Mat restrct, Vec rscale, Mat inject, DM coarse, void *ctx)
+static PetscErrorCode DMRestrictHook_TSIRK(DM fine, Mat restrct, Vec rscale, Mat inject, DM coarse, PetscCtx ctx)
 {
   TS  ts = (TS)ctx;
   Vec U, U_c;
@@ -541,13 +541,13 @@ static PetscErrorCode DMRestrictHook_TSIRK(DM fine, Mat restrct, Vec rscale, Mat
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSubDomainHook_TSIRK(DM dm, DM subdm, void *ctx)
+static PetscErrorCode DMSubDomainHook_TSIRK(DM dm, DM subdm, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSubDomainRestrictHook_TSIRK(DM dm, VecScatter gscat, VecScatter lscat, DM subdm, void *ctx)
+static PetscErrorCode DMSubDomainRestrictHook_TSIRK(DM dm, VecScatter gscat, VecScatter lscat, DM subdm, PetscCtx ctx)
 {
   TS  ts = (TS)ctx;
   Vec U, U_c;

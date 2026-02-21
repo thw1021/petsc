@@ -7,7 +7,7 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
   Vec         X, F, Y, W, G;
   SNES        snes;
   PetscReal   ynorm;
-  PetscReal   lambda_left, lambda, lambda_right, lambda_old;
+  PetscReal   lambda_left, lambda, lambda_right, lambda_old, fnorm;
   PetscScalar fty_left, fty, fty_initial;
   PetscViewer monitor;
   PetscReal   rtol, atol, ltol;
@@ -19,6 +19,7 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
   PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
   PetscCall(SNESLineSearchGetTolerances(linesearch, NULL, NULL, &rtol, &atol, &ltol, &max_it));
   PetscCall(SNESLineSearchGetDefaultMonitor(linesearch, &monitor));
+  PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_SUCCEEDED));
 
   /* pre-check */
   PetscCall(SNESLineSearchPreCheck(linesearch, X, Y, &changed_y));
@@ -67,14 +68,18 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
     it         = 0;
 
     while (PETSC_TRUE) {
-      /* check for NaN or Inf */
+      /* check for infinity or NaN */
       if (PetscIsInfOrNanScalar(fty)) {
         if (monitor) {
           PetscCall(PetscViewerASCIIAddTab(monitor, ((PetscObject)linesearch)->tablevel));
-          PetscCall(PetscViewerASCIIPrintf(monitor, "      Line search fty is NaN or Inf!\n"));
+          PetscCall(PetscViewerASCIIPrintf(monitor, "      Line search fty is infinity or NaN!\n"));
           PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
         }
-        PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_NANORINF));
+        PetscCheck(!snes->errorifnotconverged, PetscObjectComm((PetscObject)snes), PETSC_ERR_CONV_FAILED, "infinity or NaN in function evaluation");
+        if (snes->functiondomainerror) {
+          PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_FUNCTION_DOMAIN));
+          snes->functiondomainerror = PETSC_FALSE;
+        } else PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_NANORINF));
         PetscFunctionReturn(PETSC_SUCCESS);
         break;
       }
@@ -107,7 +112,6 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
           PetscCall(PetscViewerASCIISubtractTab(monitor, ((PetscObject)linesearch)->tablevel));
         }
         PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_FAILED_REDUCT));
-        PetscFunctionReturn(PETSC_SUCCESS);
         break;
       }
 
@@ -176,9 +180,8 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
   PetscCall(VecCopy(W, X));
   PetscCall((*linesearch->ops->snesfunc)(snes, X, F));
   PetscCall(SNESLineSearchComputeNorms(linesearch));
-
-  /* finalization */
-  PetscCall(SNESLineSearchSetReason(linesearch, SNES_LINESEARCH_SUCCEEDED));
+  PetscCall(SNESLineSearchGetNorms(linesearch, NULL, &fnorm, NULL));
+  SNESLineSearchCheckFunctionDomainError(snes, linesearch, fnorm);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -192,7 +195,7 @@ static PetscErrorCode SNESLineSearchApply_Bisection(SNESLineSearch linesearch)
 .  -snes_linesearch_damping <1.0> - initial `lambda` on entry to the line search
 .  -snes_linesearch_rtol <1e\-8>  - relative tolerance for the directional derivative
 .  -snes_linesearch_atol <1e\-6>  - absolute tolerance for the directional derivative
--  -snes_linesearch_ltol <1e\-6>  - minimum absolute change in `lambda` allowed
+-  -snes_linesearch_ltol <1e\-6>  - minimum absolute change in `lambda` allowed (this is an alternative to setting a maximum number of iterations)
 
    Level: intermediate
 

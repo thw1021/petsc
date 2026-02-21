@@ -5,8 +5,6 @@ module petsckspdef
 #include <../ftn/ksp/petscall.h>
 end module petsckspdef
 
-!     ----------------------------------------------
-
 module petscksp
   use petscdm
   use petsckspdef
@@ -19,4 +17,3 @@ contains
 #include <../ftn/ksp/petscall.hf90>
 
 end module petscksp
-

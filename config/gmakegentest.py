@@ -17,12 +17,10 @@ sys.path.insert(0,thisscriptdir)
 import testparse
 import example_template
 
-
 """
 
 There are 2 modes of running tests: Normal builds and run from prefix of
 install.  They affect where to find things:
-
 
 Case 1.  Normal builds:
 
@@ -41,7 +39,6 @@ Case 1.  Normal builds:
      +---------------------+----------------------------------+
      | PETSC_GMAKEGENTEST  | PETSC_DIR/config/gmakegentest.py |
      +---------------------+----------------------------------+
-
 
 Case 2.  From install dir:
 
@@ -189,7 +186,7 @@ class generateExamples(Petsc):
     if srcext in ".F".split(): langReq="F"
     if srcext in ".cxx".split(): langReq="cxx"
     if srcext in ".kokkos.cxx".split(): langReq="kokkos_cxx"
-    if srcext in ".hip.cpp".split(): langReq="hip_cpp"
+    if srcext in ".hip.cxx".split(): langReq="hip_cxx"
     if srcext in ".raja.cxx".split(): langReq="raja_cxx"
     if srcext in ".cpp".split(): langReq="cpp"
     if srcext == ".cu": langReq="cu"
@@ -212,7 +209,6 @@ class generateExamples(Petsc):
       if os.path.isfile(fullaf): altlist.append(srcaf)
 
     return altlist
-
 
   def _getLoopVars(self,inDict,testname, isSubtest=False):
     """
@@ -675,8 +671,6 @@ class generateExamples(Petsc):
     if (lang=="F" or lang=="F90"):
       if not self.have_fortran:
         srcDict["SKIP"].append("Fortran required for this test")
-      elif lang=="F90" and 'PETSC_USING_F90FREEFORM' not in self.conf:
-        srcDict["SKIP"].append("Fortran f90freeform required for this test")
     if lang=="cu" and 'PETSC_HAVE_CUDA' not in self.conf:
       srcDict["SKIP"].append("CUDA required for this test")
     if lang=="hip" and 'PETSC_HAVE_HIP' not in self.conf:
@@ -702,7 +696,6 @@ class generateExamples(Petsc):
         return self._isRun(srcDict)
 
     return srcDict['SKIP'] == []
-
 
   def _isRun(self,testDict, debug=False):
     """

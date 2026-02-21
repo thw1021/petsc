@@ -310,12 +310,84 @@ static PetscErrorCode MatHasOperation_Transpose(Mat mat, MatOperation op, PetscB
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+typedef struct {
+  PetscErrorCode (*numeric)(Mat);
+  PetscCtxDestroyFn *destroy;
+  PetscScalar        scale;
+  Mat                D;
+  void              *data;
+} MatProductCtx_Transpose;
+
+static PetscErrorCode MatProductCtxDestroy_Transpose(PetscCtxRt ptr)
+{
+  MatProductCtx_Transpose *data = *(MatProductCtx_Transpose **)ptr;
+  PetscContainer           container;
+
+  PetscFunctionBegin;
+  if (data->data) PetscCall((*data->destroy)(&data->data));
+  PetscCall(PetscObjectQuery((PetscObject)data->D, "MatProductCtx_Transpose", (PetscObject *)&container));
+  PetscCall(PetscContainerDestroy(&container));
+  PetscCall(PetscObjectCompose((PetscObject)data->D, "MatProductCtx_Transpose", NULL));
+  PetscCall(PetscFree(data));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProductNumeric_Transpose(Mat D)
+{
+  Mat_Product             *product;
+  MatProductCtx_Transpose *data;
+  PetscContainer           container;
+
+  PetscFunctionBegin;
+  MatCheckProduct(D, 1);
+  PetscCheck(D->product->data, PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "Product data empty");
+  product = D->product;
+  PetscCall(PetscObjectQuery((PetscObject)D, "MatProductCtx_Transpose", (PetscObject *)&container));
+  PetscCheck(container, PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "MatProductCtx_Transpose missing");
+  PetscCall(PetscContainerGetPointer(container, &data));
+  data          = (MatProductCtx_Transpose *)product->data;
+  product->data = data->data;
+  PetscCall((*data->numeric)(D));
+  PetscCall(MatScale(D, data->scale));
+  product->data = data;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProductSymbolic_Transpose(Mat D)
+{
+  Mat_Product             *product;
+  MatProductCtx_Transpose *data;
+  PetscContainer           container;
+
+  PetscFunctionBegin;
+  MatCheckProduct(D, 1);
+  product = D->product;
+  if (D->ops->productsymbolic == MatProductSymbolic_Transpose) {
+    PetscCheck(!product->data, PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "Product data not empty");
+    PetscCall(PetscObjectQuery((PetscObject)D, "MatProductCtx_Transpose", (PetscObject *)&container));
+    PetscCheck(container, PetscObjectComm((PetscObject)D), PETSC_ERR_PLIB, "MatProductCtx_Transpose missing");
+    PetscCall(PetscContainerGetPointer(container, &data));
+    PetscCall(MatProductSetFromOptions(D));
+    PetscCall(MatProductSymbolic(D));
+    data->numeric          = D->ops->productnumeric;
+    data->destroy          = product->destroy;
+    data->data             = product->data;
+    D->ops->productnumeric = MatProductNumeric_Transpose;
+    product->destroy       = MatProductCtxDestroy_Transpose;
+    product->data          = data;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatProductSetFromOptions_Transpose(Mat D)
 {
-  Mat            A, B, C, Ain, Bin, Cin;
-  PetscBool      Aistrans, Bistrans, Cistrans;
-  PetscInt       Atrans, Btrans, Ctrans;
-  MatProductType ptype;
+  Mat                      A, B, C, Ain, Bin, Cin;
+  PetscScalar              scale = 1.0, vscale;
+  PetscBool                Aistrans, Bistrans, Cistrans;
+  PetscInt                 Atrans, Btrans, Ctrans;
+  PetscContainer           container = NULL;
+  MatProductCtx_Transpose *data;
+  MatProductType           ptype;
 
   PetscFunctionBegin;
   MatCheckProduct(D, 1);
@@ -330,6 +402,8 @@ static PetscErrorCode MatProductSetFromOptions_Transpose(Mat D)
   Ain    = A;
   while (Aistrans) {
     Atrans++;
+    PetscCall(MatShellGetScalingShifts(Ain, (PetscScalar *)MAT_SHELL_NOT_ALLOWED, &vscale, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Mat *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED));
+    scale *= vscale;
     PetscCall(MatTransposeGetMat(Ain, &Ain));
     PetscCall(PetscObjectTypeCompare((PetscObject)Ain, MATTRANSPOSEVIRTUAL, &Aistrans));
   }
@@ -337,6 +411,8 @@ static PetscErrorCode MatProductSetFromOptions_Transpose(Mat D)
   Bin    = B;
   while (Bistrans) {
     Btrans++;
+    PetscCall(MatShellGetScalingShifts(Bin, (PetscScalar *)MAT_SHELL_NOT_ALLOWED, &vscale, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Mat *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED));
+    scale *= vscale;
     PetscCall(MatTransposeGetMat(Bin, &Bin));
     PetscCall(PetscObjectTypeCompare((PetscObject)Bin, MATTRANSPOSEVIRTUAL, &Bistrans));
   }
@@ -344,6 +420,8 @@ static PetscErrorCode MatProductSetFromOptions_Transpose(Mat D)
   Cin    = C;
   while (Cistrans) {
     Ctrans++;
+    PetscCall(MatShellGetScalingShifts(Cin, (PetscScalar *)MAT_SHELL_NOT_ALLOWED, &vscale, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Vec *)MAT_SHELL_NOT_ALLOWED, (Mat *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED, (IS *)MAT_SHELL_NOT_ALLOWED));
+    scale *= vscale;
     PetscCall(MatTransposeGetMat(Cin, &Cin));
     PetscCall(PetscObjectTypeCompare((PetscObject)Cin, MATTRANSPOSEVIRTUAL, &Cistrans));
   }
@@ -356,6 +434,17 @@ static PetscErrorCode MatProductSetFromOptions_Transpose(Mat D)
   if (Cin && Cin->symmetric == PETSC_BOOL3_TRUE) Ctrans = 0;
 
   if (Atrans || Btrans || Ctrans) {
+    if (scale != 1.0) {
+      PetscCall(PetscObjectQuery((PetscObject)D, "MatProductCtx_Transpose", (PetscObject *)&container));
+      if (!container) {
+        PetscCall(PetscContainerCreate(PetscObjectComm((PetscObject)D), &container));
+        PetscCall(PetscNew(&data));
+        PetscCall(PetscContainerSetPointer(container, data));
+        PetscCall(PetscObjectCompose((PetscObject)D, "MatProductCtx_Transpose", (PetscObject)container));
+      } else PetscCall(PetscContainerGetPointer(container, &data));
+      data->scale = scale;
+      data->D     = D;
+    }
     ptype = MATPRODUCT_UNSPECIFIED;
     switch (D->product->type) {
     case MATPRODUCT_AB:
@@ -408,7 +497,8 @@ static PetscErrorCode MatProductSetFromOptions_Transpose(Mat D)
   }
   PetscCall(MatProductReplaceMats(Ain, Bin, Cin, D));
   PetscCall(MatProductSetType(D, ptype));
-  PetscCall(MatProductSetFromOptions(D));
+  if (container) D->ops->productsymbolic = MatProductSymbolic_Transpose;
+  else PetscCall(MatProductSetFromOptions(D));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

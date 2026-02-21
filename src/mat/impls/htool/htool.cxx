@@ -3,17 +3,30 @@
 
 const char *const MatHtoolCompressorTypes[] = {"sympartialACA", "fullACA", "SVD"};
 const char *const MatHtoolClusteringTypes[] = {"PCARegular", "PCAGeometric", "BoundingBox1Regular", "BoundingBox1Geometric"};
-const char        HtoolCitation[]           = "@article{marchand2020two,\n"
-                                              "  Author = {Marchand, Pierre and Claeys, Xavier and Jolivet, Pierre and Nataf, Fr\\'ed\\'eric and Tournier, Pierre-Henri},\n"
-                                              "  Title = {Two-level preconditioning for $h$-version boundary element approximation of hypersingular operator with {GenEO}},\n"
-                                              "  Year = {2020},\n"
-                                              "  Publisher = {Elsevier},\n"
-                                              "  Journal = {Numerische Mathematik},\n"
-                                              "  Volume = {146},\n"
-                                              "  Pages = {597--628},\n"
-                                              "  Url = {https://github.com/htool-ddm/htool}\n"
-                                              "}\n";
-static PetscBool  HtoolCite                 = PETSC_FALSE;
+// clang-format off
+const char       *HtoolCitations[2]         = {"@article{marchand2020two,\n"
+                                               "  Author = {Marchand, Pierre and Claeys, Xavier and Jolivet, Pierre and Nataf, Fr\\'ed\\'eric and Tournier, Pierre-Henri},\n"
+                                               "  Title = {Two-level preconditioning for $h$-version boundary element approximation of hypersingular operator with {GenEO}},\n"
+                                               "  Year = {2020},\n"
+                                               "  Publisher = {Elsevier},\n"
+                                               "  Journal = {Numerische Mathematik},\n"
+                                               "  Volume = {146},\n"
+                                               "  Pages = {597--628},\n"
+                                               "  Url = {https://github.com/htool-ddm/htool}\n"
+                                               "}\n",
+                                               "@article{Marchand2026,\n"
+                                               "  Author = {Marchand, Pierre and Tournier, Pierre-Henri and Jolivet, Pierre},\n"
+                                               "  Title = {{Htool-DDM}: A {C++} library for parallel solvers and compressed linear systems},\n"
+                                               "  Year = {2026},\n"
+                                               "  Publisher = {The Open Journal},\n"
+                                               "  Journal = {Journal of Open Source Software},\n"
+                                               "  Volume = {11},\n"
+                                               "  Number = {118},\n"
+                                               "  Pages = {9279},\n"
+                                               "  Url = {https://doi.org/10.21105/joss.09279}\n"
+                                               "}\n"};
+static PetscBool  HtoolCite[2]              = {PETSC_FALSE, PETSC_FALSE};
+// clang-format on
 
 static PetscErrorCode MatGetDiagonal_Htool(Mat A, Vec v)
 {
@@ -264,7 +277,7 @@ static PetscErrorCode MatDestroy_Htool(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatHtoolUseRecompression_C", nullptr));
   PetscCall(PetscObjectQuery((PetscObject)A, "KernelTranspose", (PetscObject *)&container));
   if (container) { /* created in MatTranspose_Htool() */
-    PetscCall(PetscContainerGetPointer(container, (void **)&kernelt));
+    PetscCall(PetscContainerGetPointer(container, &kernelt));
     PetscCall(MatDestroy(&kernelt->A));
     PetscCall(PetscObjectCompose((PetscObject)A, "KernelTranspose", nullptr));
   }
@@ -405,7 +418,7 @@ static PetscErrorCode MatAssemblyEnd_Htool(Mat A, MatAssemblyType)
   std::shared_ptr<htool::VirtualInternalLowRankGenerator<PetscScalar>> compressor;
 
   PetscFunctionBegin;
-  PetscCall(PetscCitationsRegister(HtoolCitation, &HtoolCite));
+  for (size_t i = 0; i < PETSC_STATIC_ARRAY_LENGTH(HtoolCite); ++i) PetscCall(PetscCitationsRegister(HtoolCitations[i], HtoolCite + i));
   PetscCall(MatShellGetContext(A, &a));
   delete a->wrapper;
   a->target_cluster.reset();
@@ -801,7 +814,7 @@ static PetscErrorCode MatConvert_Htool_Dense(Mat A, MatType, MatReuse reuse, Mat
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GenEntriesTranspose(PetscInt sdim, PetscInt M, PetscInt N, const PetscInt *rows, const PetscInt *cols, PetscScalar *ptr, void *ctx)
+static PetscErrorCode GenEntriesTranspose(PetscInt sdim, PetscInt M, PetscInt N, const PetscInt *rows, const PetscInt *cols, PetscScalar *ptr, PetscCtx ctx)
 {
   MatHtoolKernelTranspose *generator = (MatHtoolKernelTranspose *)ctx;
   PetscScalar             *tmp;
@@ -843,7 +856,7 @@ static PetscErrorCode MatTranspose_Htool(Mat A, MatReuse reuse, Mat *B)
     C = *B;
     PetscCall(PetscObjectQuery((PetscObject)C, "KernelTranspose", (PetscObject *)&container));
     PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call MatTranspose() with MAT_INITIAL_MATRIX first");
-    PetscCall(PetscContainerGetPointer(container, (void **)&kernelt));
+    PetscCall(PetscContainerGetPointer(container, &kernelt));
   }
   PetscCall(MatShellGetContext(C, &c));
   c->dim = a->dim;
@@ -888,7 +901,7 @@ static PetscErrorCode MatDestroy_Factor(Mat F)
   PetscFunctionBegin;
   PetscCall(PetscObjectQuery((PetscObject)F, "HMatrix", (PetscObject *)&container));
   if (container) {
-    PetscCall(PetscContainerGetPointer(container, (void **)&A));
+    PetscCall(PetscContainerGetPointer(container, &A));
     delete A;
     PetscCall(PetscObjectCompose((PetscObject)F, "HMatrix", nullptr));
   }
@@ -913,7 +926,7 @@ static inline PetscErrorCode MatSolve_Private(Mat A, htool::Matrix<PetscScalar> 
   PetscCheck(A->factortype == MAT_FACTOR_LU || A->factortype == MAT_FACTOR_CHOLESKY, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_UNKNOWN_TYPE, "Only MAT_LU_FACTOR and MAT_CHOLESKY_FACTOR are supported");
   PetscCall(PetscObjectQuery((PetscObject)A, "HMatrix", (PetscObject *)&container));
   PetscCheck(container, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call Mat%sFactorNumeric() before Mat%sSolve%s()", A->factortype == MAT_FACTOR_LU ? "LU" : "Cholesky", X.nb_cols() == 1 ? "" : "Mat", trans == 'N' ? "" : "Transpose");
-  PetscCall(PetscContainerGetPointer(container, (void **)&B));
+  PetscCall(PetscContainerGetPointer(container, &B));
   if (A->factortype == MAT_FACTOR_LU) htool::lu_solve(trans, *B, X);
   else htool::cholesky_solve('L', *B, X);
   PetscFunctionReturn(PETSC_SUCCESS);

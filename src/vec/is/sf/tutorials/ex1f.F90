@@ -3,10 +3,8 @@
 !     This example creates a star forest, communicates values using the graph  views the graph, then destroys it.
 !
 !     This is a copy of ex1.c but currently only tests the broadcast operation
-
-program main
 #include <petsc/finclude/petscvec.h>
-  use petscmpi  ! or mpi or mpi_f08
+program main
   use petscvec
   implicit none
 
@@ -138,8 +136,6 @@ program main
 end
 
 !/*TEST
-!  build:
-!    requires: defined(PETSC_HAVE_FORTRAN_TYPE_STAR)
 !
 !  test:
 !    nsize: 3
