@@ -491,7 +491,7 @@ static PetscErrorCode ISGetInfo_Sorted_Private(IS is, ISInfoType type, PetscBool
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)is);
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCallMPI(MPI_Comm_size(comm, &rank));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
   if (type == IS_GLOBAL && is->ops->sortedglobal) {
     PetscUseTypeMethod(is, sortedglobal, flg);
   } else {
@@ -545,7 +545,7 @@ static PetscErrorCode ISGetInfo_Unique_Private(IS is, ISInfoType type, PetscBool
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)is);
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCallMPI(MPI_Comm_size(comm, &rank));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
   if (type == IS_GLOBAL && is->ops->uniqueglobal) {
     PetscUseTypeMethod(is, uniqueglobal, flg);
   } else {
@@ -611,7 +611,7 @@ static PetscErrorCode ISGetInfo_Permutation(IS is, ISInfoType type, PetscBool *f
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)is);
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCallMPI(MPI_Comm_size(comm, &rank));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
   if (type == IS_GLOBAL && is->ops->permglobal) {
     PetscUseTypeMethod(is, permglobal, flg);
   } else if (type == IS_LOCAL && is->ops->permlocal) {
@@ -655,7 +655,7 @@ static PetscErrorCode ISGetInfo_Interval(IS is, ISInfoType type, PetscBool *flg)
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)is);
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCallMPI(MPI_Comm_size(comm, &rank));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
   if (type == IS_GLOBAL && is->ops->intervalglobal) {
     PetscUseTypeMethod(is, intervalglobal, flg);
   } else {
@@ -708,7 +708,7 @@ static PetscErrorCode ISGetInfo_Identity(IS is, ISInfoType type, PetscBool *flg)
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)is);
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCallMPI(MPI_Comm_size(comm, &rank));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
   if (type == IS_GLOBAL && is->ops->intervalglobal) {
     PetscBool isinterval;
 
