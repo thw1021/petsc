@@ -606,12 +606,11 @@ static PetscErrorCode ISGetInfo_Unique_Private(IS is, ISInfoType type, PetscBool
 static PetscErrorCode ISGetInfo_Permutation(IS is, ISInfoType type, PetscBool *flg)
 {
   MPI_Comm    comm;
-  PetscMPIInt size, rank;
+  PetscMPIInt size;
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)is);
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCallMPI(MPI_Comm_rank(comm, &rank));
   if (type == IS_GLOBAL && is->ops->permglobal) {
     PetscUseTypeMethod(is, permglobal, flg);
   } else if (type == IS_LOCAL && is->ops->permlocal) {
@@ -703,12 +702,11 @@ static PetscErrorCode ISGetInfo_Interval(IS is, ISInfoType type, PetscBool *flg)
 static PetscErrorCode ISGetInfo_Identity(IS is, ISInfoType type, PetscBool *flg)
 {
   MPI_Comm    comm;
-  PetscMPIInt size, rank;
+  PetscMPIInt size;
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)is);
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCallMPI(MPI_Comm_rank(comm, &rank));
   if (type == IS_GLOBAL && is->ops->intervalglobal) {
     PetscBool isinterval;
 
