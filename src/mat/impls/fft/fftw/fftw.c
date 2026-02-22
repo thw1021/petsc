@@ -792,6 +792,7 @@ static PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A, Vec x, Vec y)
     case 1:
   #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_1d(dim[0], comm, FFTW_FORWARD, FFTW_ESTIMATE, &local_n0, &local_0_start, &local_n1, &local_1_start);
+
       PetscCall(PetscIntCast(local_n0, &n1));
       PetscCall(PetscIntCast(local_0_start, &nstart));
       PetscCall(PetscIntCast(low, &nlow));
