@@ -14,9 +14,9 @@
   Level: intermediate
 
   Note:
-  Several `fcn` routines are predefined, including `KSPFGMRESModifyPCNoChange()` and `KSPFGMRESModifyPCKSP()`
+  Several `fcn` routines are predefined, including `KSPFlexibleModifyPCNoChange()` and `KSPFlexibleModifyPCKSP()`
 
-.seealso: [](ch_ksp), [](sec_flexibleksp), `KSPFGMRES`, `KSPFGMRESModifyPCNoChange()`, `KSPFGMRESModifyPCKSP()`
+.seealso: [](ch_ksp), [](sec_flexibleksp), `KSPFGMRES`, `KSPFCG`, `KSPPIPEFCG`, `KSPGCR`, `KSPPIPEGCR`, `KSPFlexibleModifyPCFn`, `KSPFlexibleModifyPCNoChange()`, `KSPFlexibleModifyPCKSP()`
 @*/
 PetscErrorCode KSPFlexibleSetModifyPC(KSP ksp, KSPFlexibleModifyPCFn *fcn, PetscCtx ctx, PetscCtxDestroyFn *destroy)
 {
@@ -55,7 +55,7 @@ PetscErrorCode KSPFlexibleModifyPCNoChange(KSP ksp, PetscInt total_its, PetscInt
   Input Parameters:
 + ksp       - the ksp context being used.
 . total_its - the total number of `KSP` iterations that have occurred.
-. loc_its   - the number of `KS` iterations since last restart.
+. loc_its   - the number of `KSP` iterations since last restart.
 . res_norm  - the current residual norm.
 - ctx       - context, unused in this routine
 

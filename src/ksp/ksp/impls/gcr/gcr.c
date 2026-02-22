@@ -170,7 +170,6 @@ static PetscErrorCode KSPDestroy_GCR(KSP ksp)
   PetscCall(KSPDestroyDefault(ksp));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGCRSetRestart_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGCRGetRestart_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPGCRSetModifyPC_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPFlexibleSetModifyPC_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
