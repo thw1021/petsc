@@ -282,7 +282,6 @@ static PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes, Vec X, Mat J, Mat Jpre, v
   PetscInt           proc, nx_all, *nce_all = pdipm->nce_all;
 
   PetscFunctionBegin;
-
   PetscCall(MatGetOwnershipRanges(Jpre, &Jranges));
   PetscCall(MatGetOwnershipRange(Jpre, &Jrstart, NULL));
   PetscCall(MatGetOwnershipRangesColumn(tao->hessian, &rranges));
