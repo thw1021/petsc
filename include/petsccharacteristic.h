@@ -29,7 +29,8 @@ typedef struct _p_Characteristic *Characteristic;
 .seealso: `CharacteristicSetType()`, `Characteristic`
 J*/
 typedef const char *CharacteristicType;
-#define CHARACTERISTICDA "da"
+#define CHARACTERISTICDA   "da"
+#define CHARACTERISTICPLEX "plex"
 
 PETSC_EXTERN PetscErrorCode CharacteristicCreate(MPI_Comm, Characteristic *);
 PETSC_EXTERN PetscErrorCode CharacteristicSetType(Characteristic, CharacteristicType);
