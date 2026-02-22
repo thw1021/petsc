@@ -18,7 +18,7 @@ PetscErrorCode CharacteristicRegisterAll(void)
   if (CharacteristicRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   CharacteristicRegisterAllCalled = PETSC_TRUE;
 
-  PetscCall(CharacteristicRegister(CHARACTERISTICDA,   CharacteristicCreate_DA));
+  PetscCall(CharacteristicRegister(CHARACTERISTICDA, CharacteristicCreate_DA));
   PetscCall(CharacteristicRegister(CHARACTERISTICPLEX, CharacteristicCreate_Plex));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
