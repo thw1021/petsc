@@ -530,7 +530,6 @@ PetscErrorCode MatCreateVecsFFTW_FFTW(Mat A, Vec *fin, Vec *fout, Vec *bout)
       }
       if (fout) {
         data_fout = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * alloc_local);
-
         PetscCall(PetscIntCast(local_n1, &n1));
         PetscCall(PetscIntCast(fft->N, &N1));
         PetscCall(VecCreateMPIWithArray(comm, 1, n1, N1, (const PetscScalar *)data_fout, fout));
