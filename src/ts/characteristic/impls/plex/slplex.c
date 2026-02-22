@@ -36,12 +36,12 @@ typedef struct {
 /* ------------------------------------------------------------------ */
 static PetscErrorCode InterpolateEAt_Plex(Characteristic_Plex *plex, Vec E_local, PetscReal x_real, PetscReal *E_val)
 {
-  PetscReal        h;
-  PetscInt         cel, cStart, cEnd;
-  PetscScalar     *e_cell;
-  PetscInt         nDOF;
-  PetscSection     section;
-  DM               dmPot = plex->dmPot;
+  PetscReal    h;
+  PetscInt     cel, cStart, cEnd;
+  PetscScalar *e_cell;
+  PetscInt     nDOF;
+  PetscSection section;
+  DM           dmPot = plex->dmPot;
 
   PetscFunctionBegin;
   h   = (plex->x_upper - plex->x_lower) / (PetscReal)plex->Nx;
@@ -97,8 +97,8 @@ static PetscErrorCode CharacteristicDestroy_Plex(Characteristic c)
 /* ------------------------------------------------------------------ */
 static PetscErrorCode CharacteristicSetUp_Plex(Characteristic c)
 {
-  Characteristic_Plex *plex    = (Characteristic_Plex *)c->data;
-  DM                   dmPS    = plex->dmPS;
+  Characteristic_Plex *plex = (Characteristic_Plex *)c->data;
+  DM                   dmPS = plex->dmPS;
   DM                   sw;
   PetscFE              fe;
   PetscDS              ds;
@@ -117,10 +117,10 @@ static PetscErrorCode CharacteristicSetUp_Plex(Characteristic c)
   PetscCall(DMSwarmSetType(sw, DMSWARM_PIC));
   PetscCall(DMSwarmSetCellDM(sw, dmPS));
   PetscCall(DMSwarmRegisterPetscDatatypeField(sw, DMSwarmPICField_coor, 2, PETSC_REAL));
-  PetscCall(DMSwarmRegisterPetscDatatypeField(sw, "f_interp",    1, PETSC_REAL));
+  PetscCall(DMSwarmRegisterPetscDatatypeField(sw, "f_interp", 1, PETSC_REAL));
   PetscCall(DMSwarmRegisterPetscDatatypeField(sw, "quad_weight", 1, PETSC_REAL));
-  PetscCall(DMSwarmRegisterPetscDatatypeField(sw, "src_cell",    1, PETSC_INT));
-  PetscCall(DMSwarmRegisterPetscDatatypeField(sw, "src_dof",     1, PETSC_INT));
+  PetscCall(DMSwarmRegisterPetscDatatypeField(sw, "src_cell", 1, PETSC_INT));
+  PetscCall(DMSwarmRegisterPetscDatatypeField(sw, "src_dof", 1, PETSC_INT));
   PetscCall(DMSetFromOptions(sw));
   PetscCall(DMSetUp(sw));
   plex->swFeet = sw;
@@ -148,18 +148,18 @@ static PetscErrorCode CharacteristicSetUp_Plex(Characteristic c)
 /* ------------------------------------------------------------------ */
 static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, Vec solution)
 {
-  Characteristic_Plex *plex     = (Characteristic_Plex *)c->data;
-  DM                   dmPS     = plex->dmPS;
-  DM                   dmPot    = plex->dmPot;
-  DM                   sw       = plex->swFeet;
-  Vec                   E_local, f_local, f_new_local;
-  PetscSection          section;
-  PetscInt              cStart, cEnd, c_cell, Nq, Nb, dim;
-  PetscReal            *feet_coords, *feet_weight;
-  PetscInt             *feet_src_cell, *feet_src_dof;
-  PetscReal            *feet_f_interp;
-  const PetscReal      *xi_q, *w_q;
-  PetscInt              Np, idx, n;
+  Characteristic_Plex *plex  = (Characteristic_Plex *)c->data;
+  DM                   dmPS  = plex->dmPS;
+  DM                   dmPot = plex->dmPot;
+  DM                   sw    = plex->swFeet;
+  Vec                  E_local, f_local, f_new_local;
+  PetscSection         section;
+  PetscInt             cStart, cEnd, c_cell, Nq, Nb, dim;
+  PetscReal           *feet_coords, *feet_weight;
+  PetscInt            *feet_src_cell, *feet_src_dof;
+  PetscReal           *feet_f_interp;
+  const PetscReal     *xi_q, *w_q;
+  PetscInt             Np, idx, n;
 
   PetscFunctionBegin;
 
@@ -175,9 +175,9 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
   PetscCall(DMSwarmSetLocalSizes(sw, Np, 0));
 
   PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&feet_coords));
-  PetscCall(DMSwarmGetField(sw, "quad_weight",        NULL, NULL, (void **)&feet_weight));
-  PetscCall(DMSwarmGetField(sw, "src_cell",           NULL, NULL, (void **)&feet_src_cell));
-  PetscCall(DMSwarmGetField(sw, "src_dof",            NULL, NULL, (void **)&feet_src_dof));
+  PetscCall(DMSwarmGetField(sw, "quad_weight", NULL, NULL, (void **)&feet_weight));
+  PetscCall(DMSwarmGetField(sw, "src_cell", NULL, NULL, (void **)&feet_src_cell));
+  PetscCall(DMSwarmGetField(sw, "src_dof", NULL, NULL, (void **)&feet_src_dof));
 
   /* Scatter E to local ghost vector for InterpolateEAt_Plex */
   PetscCall(DMGetLocalVector(dmPot, &E_local));
@@ -211,14 +211,14 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
       x_foot = x0_pt - dt * v_half;
 
       /* Periodic x wrap */
-      while (x_foot <  plex->x_lower) x_foot += (plex->x_upper - plex->x_lower);
+      while (x_foot < plex->x_lower) x_foot += (plex->x_upper - plex->x_lower);
       while (x_foot >= plex->x_upper) x_foot -= (plex->x_upper - plex->x_lower);
 
       PetscCall(InterpolateEAt_Plex(plex, E_local, x_foot, &E_foot));
       v_foot = v_half - 0.5 * dt * E_foot;
 
       /* v-boundary clamp (Dirichlet f = 0) */
-      if (v_foot >  plex->v_max) v_foot =  plex->v_max;
+      if (v_foot > plex->v_max) v_foot = plex->v_max;
       if (v_foot < -plex->v_max) v_foot = -plex->v_max;
 
       feet_coords[idx * 2]     = x_foot;
@@ -231,9 +231,9 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
   }
 
   PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&feet_coords));
-  PetscCall(DMSwarmRestoreField(sw, "quad_weight",        NULL, NULL, (void **)&feet_weight));
-  PetscCall(DMSwarmRestoreField(sw, "src_cell",           NULL, NULL, (void **)&feet_src_cell));
-  PetscCall(DMSwarmRestoreField(sw, "src_dof",            NULL, NULL, (void **)&feet_src_dof));
+  PetscCall(DMSwarmRestoreField(sw, "quad_weight", NULL, NULL, (void **)&feet_weight));
+  PetscCall(DMSwarmRestoreField(sw, "src_cell", NULL, NULL, (void **)&feet_src_cell));
+  PetscCall(DMSwarmRestoreField(sw, "src_dof", NULL, NULL, (void **)&feet_src_dof));
   PetscCall(DMRestoreLocalVector(dmPot, &E_local));
 
   /* ---------------------------------------------------------------- */
@@ -252,11 +252,11 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
 
   PetscCall(DMSwarmSortGetAccess(sw));
   PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&feet_coords));
-  PetscCall(DMSwarmGetField(sw, "f_interp",           NULL, NULL, (void **)&feet_f_interp));
+  PetscCall(DMSwarmGetField(sw, "f_interp", NULL, NULL, (void **)&feet_f_interp));
 
   for (c_cell = cStart; c_cell < cEnd; c_cell++) {
-    PetscInt    Npc, *pidx;
-    PetscInt    nDOF, p, b;
+    PetscInt     Npc, *pidx;
+    PetscInt     nDOF, p, b;
     PetscScalar *f_cell;
     PetscFEGeom *chunkgeom;
 
@@ -271,8 +271,8 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
     PetscCall(PetscFEGeomGetChunk(plex->fegeomPS, c_cell - cStart, c_cell - cStart + 1, &chunkgeom));
 
     for (p = 0; p < Npc; p++) {
-      PetscReal   ref_coord[2];
-      PetscReal   f_val = 0.0;
+      PetscReal        ref_coord[2];
+      PetscReal        f_val  = 0.0;
       const PetscReal *invJ_p = chunkgeom->invJ;
       const PetscReal *v0_p   = chunkgeom->v;
 
@@ -290,14 +290,17 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
         PetscCall(PetscFECreateTabulation((PetscFE)NULL, 1, 1, ref_coord, 0, &tab_pt));
         /* Fall back: use the cached tab evaluated at the nearest stored quad point */
         /* Find closest quad point index */
-        PetscInt   q_near = 0;
-        PetscReal  dist2  = PETSC_MAX_REAL;
-        PetscInt   q2;
+        PetscInt  q_near = 0;
+        PetscReal dist2  = PETSC_MAX_REAL;
+        PetscInt  q2;
         for (q2 = 0; q2 < Nq; q2++) {
           PetscReal d0 = xi_q[q2 * dim] - ref_coord[0];
           PetscReal d1 = xi_q[q2 * dim + 1] - ref_coord[1];
           PetscReal d2 = d0 * d0 + d1 * d1;
-          if (d2 < dist2) { dist2 = d2; q_near = q2; }
+          if (d2 < dist2) {
+            dist2  = d2;
+            q_near = q2;
+          }
         }
         PetscCall(PetscTabulationDestroy(&tab_pt));
         for (b = 0; b < Nb; b++) f_val += PetscRealPart(f_cell[b]) * plex->tab_PS->T[0][q_near * Nb + b];
@@ -310,7 +313,7 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
     PetscCall(DMSwarmSortRestorePointsPerCell(sw, c_cell, &Npc, &pidx));
   }
 
-  PetscCall(DMSwarmRestoreField(sw, "f_interp",           NULL, NULL, (void **)&feet_f_interp));
+  PetscCall(DMSwarmRestoreField(sw, "f_interp", NULL, NULL, (void **)&feet_f_interp));
   PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&feet_coords));
   PetscCall(DMSwarmSortRestoreAccess(sw));
   PetscCall(DMRestoreLocalVector(dmPS, &f_local));
@@ -323,15 +326,15 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
   PetscCall(VecZeroEntries(f_new_local));
 
   PetscCall(DMSwarmSortGetAccess(sw));
-  PetscCall(DMSwarmGetField(sw, "f_interp",    NULL, NULL, (void **)&feet_f_interp));
+  PetscCall(DMSwarmGetField(sw, "f_interp", NULL, NULL, (void **)&feet_f_interp));
   PetscCall(DMSwarmGetField(sw, "quad_weight", NULL, NULL, (void **)&feet_weight));
   PetscCall(DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&feet_coords));
 
   for (c_cell = cStart; c_cell < cEnd; c_cell++) {
-    PetscInt    Npc, *pidx;
-    PetscInt    p, i, j;
+    PetscInt     Npc, *pidx;
+    PetscInt     p, i, j;
     PetscFEGeom *chunkgeom;
-    PetscReal  *M_c, *rhs_c;
+    PetscReal   *M_c, *rhs_c;
 
     PetscCall(DMSwarmSortGetPointsPerCell(sw, c_cell, &Npc, &pidx));
     if (Npc == 0) {
@@ -343,23 +346,22 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
     PetscCall(PetscFEGeomGetChunk(plex->fegeomPS, c_cell - cStart, c_cell - cStart + 1, &chunkgeom));
 
     PetscCall(PetscCalloc1(Nb * Nb, &M_c));
-    PetscCall(PetscCalloc1(Nb,      &rhs_c));
+    PetscCall(PetscCalloc1(Nb, &rhs_c));
 
     /* Assemble cell-local mass matrix from cached tabulation */
     for (n = 0; n < Nq; n++) {
       PetscReal detJ_q = chunkgeom->detJ[0]; /* uniform mesh: same for all q */
       for (i = 0; i < Nb; i++)
-        for (j = 0; j < Nb; j++)
-          M_c[i * Nb + j] += plex->tab_PS->T[0][n * Nb + i] * plex->tab_PS->T[0][n * Nb + j] * w_q[n] * detJ_q;
+        for (j = 0; j < Nb; j++) M_c[i * Nb + j] += plex->tab_PS->T[0][n * Nb + i] * plex->tab_PS->T[0][n * Nb + j] * w_q[n] * detJ_q;
     }
 
     /* Assemble RHS */
     for (p = 0; p < Npc; p++) {
-      PetscReal   ref_coord[2];
+      PetscReal        ref_coord[2];
       const PetscReal *invJ_p = chunkgeom->invJ;
       const PetscReal *v0_p   = chunkgeom->v;
-      PetscInt d, e, q_near = 0;
-      PetscReal dist2 = PETSC_MAX_REAL;
+      PetscInt         d, e, q_near = 0;
+      PetscReal        dist2 = PETSC_MAX_REAL;
 
       /* Real-to-reference */
       for (d = 0; d < dim; d++) {
@@ -374,17 +376,19 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
           PetscReal d0 = xi_q[q2 * dim] - ref_coord[0];
           PetscReal d1 = xi_q[q2 * dim + 1] - ref_coord[1];
           PetscReal d2 = d0 * d0 + d1 * d1;
-          if (d2 < dist2) { dist2 = d2; q_near = q2; }
+          if (d2 < dist2) {
+            dist2  = d2;
+            q_near = q2;
+          }
         }
       }
 
-      for (i = 0; i < Nb; i++)
-        rhs_c[i] += plex->tab_PS->T[0][q_near * Nb + i] * feet_f_interp[pidx[p]] * feet_weight[pidx[p]];
+      for (i = 0; i < Nb; i++) rhs_c[i] += plex->tab_PS->T[0][q_near * Nb + i] * feet_f_interp[pidx[p]] * feet_weight[pidx[p]];
     }
 
     /* Solve M_c * x = rhs_c (LAPACKgesv, Issue Criterion 3) */
     {
-      PetscBLASInt nb = (PetscBLASInt)Nb, nrhs = 1, info;
+      PetscBLASInt  nb = (PetscBLASInt)Nb, nrhs = 1, info;
       PetscBLASInt *piv;
       PetscCall(PetscMalloc1(Nb, &piv));
       PetscCallBLAS("LAPACKgesv", LAPACKgesv_(&nb, &nrhs, M_c, &nb, piv, rhs_c, &nb, &info));
@@ -407,8 +411,8 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
     PetscCall(DMSwarmSortRestorePointsPerCell(sw, c_cell, &Npc, &pidx));
   }
 
-  PetscCall(DMSwarmRestoreField(sw, "f_interp",           NULL, NULL, (void **)&feet_f_interp));
-  PetscCall(DMSwarmRestoreField(sw, "quad_weight",        NULL, NULL, (void **)&feet_weight));
+  PetscCall(DMSwarmRestoreField(sw, "f_interp", NULL, NULL, (void **)&feet_f_interp));
+  PetscCall(DMSwarmRestoreField(sw, "quad_weight", NULL, NULL, (void **)&feet_weight));
   PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&feet_coords));
   PetscCall(DMSwarmSortRestoreAccess(sw));
 
