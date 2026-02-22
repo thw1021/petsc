@@ -162,7 +162,6 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
   PetscInt             Np, idx, n;
 
   PetscFunctionBegin;
-
   /* ---------------------------------------------------------------- */
   /* Part 1 — Strang-split backward trace (place foot particles)      */
   /* ---------------------------------------------------------------- */
