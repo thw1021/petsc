@@ -496,7 +496,7 @@ PetscErrorCode KSPPIPEFCGGetNprealloc(KSP ksp, PetscInt *nprealloc)
 }
 
 /*@
-  KSPPIPEFCGSetTruncationType - specify how many of its stored previous directions `KSPPIPEFCG` uses during orthoganalization
+  KSPPIPEFCGSetTruncationType - specify how many of its stored previous directions `KSPPIPEFCG` uses during orthogonalization
 
   Logically Collective
 
@@ -579,7 +579,7 @@ static PetscErrorCode KSPSetFromOptions_PIPEFCG(KSP ksp, PetscOptionItems PetscO
   Level: intermediate
 
   Notes:
-  Compare to `KSPFCG`
+  Pipelined version of `KSPFCG` that overlaps communication (global reductions) with computation (preconditioner application and matrix-vector products) to reduce the impact of communication latency on parallel performance.
 
   Supports left preconditioning only.
 

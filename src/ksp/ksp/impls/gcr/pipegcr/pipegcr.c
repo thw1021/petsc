@@ -681,7 +681,7 @@ static PetscErrorCode KSPFlexibleSetModifyPC_PIPEGCR(KSP ksp, KSPFlexibleModifyP
   Level: intermediate
 
   Notes:
-  Compare to `KSPGCR`
+  Pipelined version of `KSPGCR` that overlaps communication (global reductions) with computation (preconditioner application and matrix-vector products) to reduce the impact of communication latency on parallel performance.
 
   The `KSPPIPEGCR` Krylov method supports non-symmetric matrices and permits the use of a preconditioner
   which may vary from one iteration to the next. Users can define a method to vary the
@@ -704,7 +704,7 @@ static PetscErrorCode KSPFlexibleSetModifyPC_PIPEGCR(KSP ksp, KSPFlexibleModifyP
 
 .seealso: [](ch_ksp), [](sec_flexibleksp), [](sec_pipelineksp), [](doc_faq_pipelined), `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`,
           `KSPFlexibleSetModifyPC()`, `KSPPIPEFGMRES`, `KSPPIPECG`, `KSPPIPECR`, `KSPPIPEFCG`, `KSPPIPEGCRSetTruncationType()`, `KSPPIPEGCRSetNprealloc()`, `KSPPIPEGCRSetUnrollW()`, `KSPPIPEGCRSetMmax()`,
-          `KSPPIPEGCRGetTruncationType()`, `KSPPIPEGCRGetNprealloc()`, `KSPPIPEGCRGetMmax()`, `KSPGCR`, `KSPPIPEGCRGetUnrollW()
+          `KSPPIPEGCRGetTruncationType()`, `KSPPIPEGCRGetNprealloc()`, `KSPPIPEGCRGetMmax()`, `KSPGCR`, `KSPPIPEGCRGetUnrollW()`
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPEGCR(KSP ksp)
 {

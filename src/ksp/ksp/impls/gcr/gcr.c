@@ -325,7 +325,7 @@ static PetscErrorCode KSPBuildResidual_GCR(KSP ksp, Vec t, Vec v, Vec *V)
 }
 
 /*MC
-   KSPGCR - Implements the preconditioned flexible Generalized Conjugate Residual (GCR) method {cite}`eisenstat1983variational`. [](sec_flexibleksp),
+   KSPGCR - Implements the preconditioned flexible Generalized Conjugate Residual (GCR) method {cite}`eisenstat1983variational`. [](sec_flexibleksp)
 
    Options Database Key:
 .   -ksp_gcr_restart <restart> - the number of stored vectors to orthogonalize against
@@ -343,20 +343,20 @@ static PetscErrorCode KSPBuildResidual_GCR(KSP ksp, Vec t, Vec v, Vec *V)
     Unlike `KSPGMRES` and `KSPFGMRES`, when using GCR, the solution and residual vector can be directly accessed at any iterate,
     with zero computational cost, via a call to `KSPBuildSolution()` and `KSPBuildResidual()` respectively.
 
-    This implementation of GCR will only apply the stopping condition test whenever `ksp->its > ksp->chknorm`,
-    where `ksp->chknorm` is specified via the command line argument `-ksp_check_norm_iteration` or via
-    the function `KSPSetCheckNormIteration()`. Hence the residual norm reported by the monitor and stored
-    in the residual history will be listed as 0.0 before this iteration. It is actually not 0.0; just not calculated.
+    The stopping condition test is only applied after the iteration count exceeds the value set by
+    `KSPSetCheckNormIteration()` (also available as `-ksp_check_norm_iteration`). The residual norm
+    reported by the monitor and stored in the residual history will be listed as 0.0 before that
+    iteration; the norm is not actually zero, it is simply not computed until then.
 
     The method implemented requires the storage of 2 x restart + 1 vectors, twice as much as `KSPGMRES`.
 
-    Support only for right preconditioning.
+    Supports only right preconditioning.
 
     Contributed by:
     Dave May
 
-.seealso: [](ch_ksp), [](sec_flexibleksp), `KSPFCG`, `KSPPIPEGCR`, `KSPPIPEFCG`, `KSPFGMRES`, `KSPCG`, , `KSPCreate()`, `KSPSetType()`, `KSPType`,
-          `KSP`, `KSPGCRSetRestart()`, `KSPGCRGetRestart()`, `KSPGCRSetRestart()`, `KSPFlexibleSetModifyPC()`, `KSPGCRSetModifyPC()`, `KSPGMRES`, `KSPFGMRES`
+.seealso: [](ch_ksp), [](sec_flexibleksp), `KSPFCG`, `KSPPIPEGCR`, `KSPPIPEFCG`, `KSPFGMRES`, `KSPCG`, `KSPCreate()`, `KSPSetType()`, `KSPType`,
+          `KSP`, `KSPGCRSetRestart()`, `KSPGCRGetRestart()`, `KSPFlexibleSetModifyPC()`, `KSPGCRSetModifyPC()`, `KSPGMRES`
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_GCR(KSP ksp)
 {
