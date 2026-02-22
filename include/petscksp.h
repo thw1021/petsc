@@ -329,15 +329,21 @@ PETSC_EXTERN PetscErrorCode KSPComputeRitz(KSP, PetscBool, PetscBool, PetscInt *
 
 /*E
 
-  KSPFCDTruncationType - Define how stored directions are used to orthogonalize in flexible conjugate directions (FCD) methods
+  KSPFCDTruncationType - Define how stored directions are used to orthogonalize in flexible conjugate gradient/directions methods
 
   Values:
-+ `KSP_FCD_TRUNC_TYPE_STANDARD` - uses all (up to mmax) stored directions
-- `KSP_FCD_TRUNC_TYPE_NOTAY`    - uses the last max(1,mod(i,mmax)) stored directions at iteration i=0,1..
++ `KSP_FCD_TRUNC_TYPE_STANDARD` - uses all (up to `mmax`) stored directions
+- `KSP_FCD_TRUNC_TYPE_NOTAY`    - uses the last `max(1,mod(i,mmax))` stored directions at iteration i = 0, 1, ...
 
    Level: intermediate
 
-.seealso: [](ch_ksp), `KSP`, `KSPFCG`, `KSPPIPEFCG`, `KSPPIPEGCR`, `KSPFCGSetTruncationType()`, `KSPFCGGetTruncationType()`
+  Note:
+  Function such as `KSPFCGSetMmax()`, `KSPPIPEGCRSetNMax(), `, `KSPPIPEGCRSetNMax(), and `KSPPIPEFCGSetNMax() may be
+  used to provide `nmax` or they may be provided with the option database.
+
+.seealso: [](ch_ksp), `KSP`, `KSPFCG`, `KSPPIPEFCG`, `KSPPIPEGCR`, `KSPFCGSetTruncationType()`, `KSPFCGGetTruncationType()`,
+          `KSPPIPEGCRSetTruncationType()`, `KSPPIPEGCRSetTruncationType()`, `KSPPIPEFCGSetTruncationType()`,
+          `KSPFCGSetMmax()`, `KSPPIPEGCRSetNMax(), `, `KSPPIPEGCRSetNMax(), `KSPPIPEFCGSetNMax()
 E*/
 typedef enum {
   KSP_FCD_TRUNC_TYPE_STANDARD,
@@ -385,7 +391,12 @@ S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode KSPFlexibleModifyPCFn(KSP ksp, PetscInt total_its, PetscInt local_its, PetscReal res_norm, PetscCtx ctx);
 
 PETSC_EXTERN PetscErrorCode KSPFlexibleSetModifyPC(KSP, KSPFlexibleModifyPCFn *, PetscCtx, PetscCtxDestroyFn *);
-PETSC_EXTERN PetscErrorCode KSPPIPEGCRSetModifyPC(KSP, KSPFlexibleModifyPCFn *, PetscCtx, PetscCtxDestroyFn *);
+
+PETSC_DEPRECATED_FUNCTION(3, 25, 0, "KSPFlexibleSetModifyPC()", )
+static inline PetscErrorCode KSPPIPEGCRSetModifyPC(KSP ksp, KSPFlexibleModifyPCFn *fun, PetscCtx ctx, PetscCtxDestroyFn *dfun)
+{
+  return KSPFlexibleSetModifyPC(ksp, fun, ctx, dfun);
+}
 
 PETSC_EXTERN PetscErrorCode KSPGMRESSetRestart(KSP, PetscInt);
 PETSC_EXTERN PetscErrorCode KSPGMRESGetRestart(KSP, PetscInt *);

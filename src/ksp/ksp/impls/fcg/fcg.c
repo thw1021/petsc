@@ -338,7 +338,7 @@ static PetscErrorCode KSPView_FCG(KSP ksp, PetscViewer viewer)
   `mmax` + 1 directions are stored (`mmax` previous ones along with a current one)
   and whether all are used in each iteration also depends on the truncation strategy, see `KSPFCGSetTruncationType()`
 
-.seealso: [](ch_ksp), `KSPFCG`, `KSPFCGGetTruncationType()`, `KSPFCGGetNprealloc()`, `KSPFCGetMmax()`
+.seealso: [](ch_ksp), `KSPFCG`, `KSPFCGGetTruncationType()`, `KSPFCDtruncationtype`, `KSPFGSetTruncationType()`, `KSPFCGGetNprealloc()`, `KSPFCGetMmax()`
 @*/
 PetscErrorCode KSPFCGSetMmax(KSP ksp, PetscInt mmax)
 {
@@ -441,8 +441,8 @@ PetscErrorCode KSPFCGGetNprealloc(KSP ksp, PetscInt *nprealloc)
 + ksp        - the Krylov space context
 - truncstrat - the choice of strategy
 .vb
-  KSP_FCD_TRUNC_TYPE_STANDARD uses all (up to mmax) stored directions
-  KSP_FCD_TRUNC_TYPE_NOTAY uses the last max(1,mod(i,mmax)) stored directions at iteration i=0,1,..
+  KSP_FCD_TRUNC_TYPE_STANDARD uses all (up to `mmax`) stored directions
+  KSP_FCD_TRUNC_TYPE_NOTAY uses the last `max(1,mod(i,mmax))` stored directions at iteration i = 0, 1, ...
 .ve
 
   Options Database Key:
@@ -450,7 +450,7 @@ PetscErrorCode KSPFCGGetNprealloc(KSP ksp, PetscInt *nprealloc)
 
   Level: intermediate
 
-.seealso: [](ch_ksp), `KSPFCDTruncationType`, `KSPFCGGetTruncationType()`, `KSPFCGSetNprealloc()`, `KSPFCGSetMmax()`, `KSPFCGGetMmax()`,
+.seealso: [](ch_ksp), `KSPFCG`, `KSPFCDTruncationType`, `KSPFCGGetTruncationType()`, `KSPFCGSetNprealloc()`, `KSPFCGSetMmax()`, `KSPFCGGetMmax()`,
           `KSP_FCD_TRUNC_TYPE_STANDARD`, `KSP_FCD_TRUNC_TYPE_NOTAY`
 @*/
 PetscErrorCode KSPFCGSetTruncationType(KSP ksp, KSPFCDTruncationType truncstrat)
@@ -525,8 +525,8 @@ static PetscErrorCode KSPSetFromOptions_FCG(KSP ksp, PetscOptionItems PetscOptio
   Contributed by:
   Patrick Sanan
 
-.seealso: [](ch_ksp), [](sec_flexibleksp), `KSPGCR`, `KSPFGMRES`, `KSPCG`, `KSPFCGSetMmax()`, `KSPFCGGetMmax()`, `KSPFCGSetNprealloc()`, `KSPFCGGetNprealloc()`, `KSPFCGSetTruncationType()`, `KSPFCGGetTruncationType()`,
-           `KSPFCGGetTruncationType`
+.seealso: [](ch_ksp), [](sec_flexibleksp), `KSPGCR`, `KSPPIPEGCR`, `KSPPIPEGCR`, `KSPFGMRES`, `KSPCG`, `KSPFCGSetMmax()`, `KSPFCGGetMmax()`, `KSPFCGSetNprealloc()`, `KSPFCGGetNprealloc()`,
+          `KSPFCGSetTruncationType()`, `KSPFCGGetTruncationType()`, `KSPFCDtruncationtype`
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_FCG(KSP ksp)
 {
