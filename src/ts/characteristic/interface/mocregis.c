@@ -1,6 +1,7 @@
 #include <petsc/private/characteristicimpl.h> /*I "petsccharacteristic.h" I*/
 
 PETSC_EXTERN PetscErrorCode CharacteristicCreate_DA(Characteristic);
+PETSC_EXTERN PetscErrorCode CharacteristicCreate_Plex(Characteristic);
 
 /*@C
   CharacteristicRegisterAll - Registers all of the methods in the `Characteristic` package.
@@ -17,6 +18,7 @@ PetscErrorCode CharacteristicRegisterAll(void)
   if (CharacteristicRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   CharacteristicRegisterAllCalled = PETSC_TRUE;
 
-  PetscCall(CharacteristicRegister(CHARACTERISTICDA, CharacteristicCreate_DA));
+  PetscCall(CharacteristicRegister(CHARACTERISTICDA,   CharacteristicCreate_DA));
+  PetscCall(CharacteristicRegister(CHARACTERISTICPLEX, CharacteristicCreate_Plex));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
