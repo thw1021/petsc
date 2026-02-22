@@ -474,4 +474,3 @@ static PetscErrorCode CharacteristicSiftDown(Characteristic c, Queue queue, Pets
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
