@@ -7,8 +7,8 @@
 
 typedef struct {
   /* Phase-space and potential DMs (set via CharacteristicSetVelocityInterpolation) */
-  DM dmPS;  /* 2D phase-space DMPlex — hosts f(x,v) */
-  DM dmPot; /* 1D potential DMPlex — hosts E(x) */
+  DM dmPS;  /* 2D phase-space DMPlex -- hosts f(x,v) */
+  DM dmPot; /* 1D potential DMPlex -- hosts E(x) */
 
   /* Foot-particle swarm (built at SetUp time) */
   DM swFeet; /* DMSWARM_PIC swarm; cell DM = dmPS */
@@ -163,7 +163,7 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
 
   PetscFunctionBegin;
   /* ---------------------------------------------------------------- */
-  /* Part 1 — Strang-split backward trace (place foot particles)      */
+  /* Part 1 -- Strang-split backward trace (place foot particles)      */
   /* ---------------------------------------------------------------- */
   PetscCall(DMPlexGetHeightStratum(dmPS, 0, &cStart, &cEnd));
   PetscCall(DMGetDimension(dmPS, &dim));
@@ -236,13 +236,13 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
   PetscCall(DMRestoreLocalVector(dmPot, &E_local));
 
   /* ---------------------------------------------------------------- */
-  /* Exchange 1 — DMSwarmMigrate (replaces CharacteristicSendCoords)  */
+  /* Exchange 1 -- DMSwarmMigrate (replaces CharacteristicSendCoords)  */
   /* Issue 9: single collective, no per-particle DMLocatePoints        */
   /* ---------------------------------------------------------------- */
   PetscCall(DMSwarmMigrate(sw, PETSC_TRUE));
 
   /* ---------------------------------------------------------------- */
-  /* Part 2 — Local field interpolation at feet                       */
+  /* Part 2 -- Local field interpolation at feet                       */
   /* ---------------------------------------------------------------- */
   PetscCall(DMGetLocalSection(dmPS, &section));
   PetscCall(DMGetLocalVector(dmPS, &f_local));
@@ -318,8 +318,8 @@ static PetscErrorCode CharacteristicSolve_Plex(Characteristic c, PetscReal dt, V
   PetscCall(DMRestoreLocalVector(dmPS, &f_local));
 
   /* ---------------------------------------------------------------- */
-  /* Part 3 — Cell-local L2 projection → write solution (= f_new)    */
-  /* Criterion 3: Nq >= 2 → mass matrix non-diagonal, use LAPACKgesv  */
+  /* Part 3 -- Cell-local L2 projection -> write solution (= f_new)    */
+  /* Criterion 3: Nq >= 2 -> mass matrix non-diagonal, use LAPACKgesv  */
   /* ---------------------------------------------------------------- */
   PetscCall(DMGetLocalVector(dmPS, &f_new_local));
   PetscCall(VecZeroEntries(f_new_local));
