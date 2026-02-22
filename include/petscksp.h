@@ -338,7 +338,7 @@ PETSC_EXTERN PetscErrorCode KSPComputeRitz(KSP, PetscBool, PetscBool, PetscInt *
    Level: intermediate
 
   Note:
-  Function such as `KSPFCGSetMmax()`, `KSPPIPEGCRSetNMax(), `, `KSPPIPEGCRSetNMax(), and `KSPPIPEFCGSetNMax() may be
+  Function such as `KSPFCGSetMmax()`, `KSPPIPEGCRSetNMax()`, `KSPPIPEGCRSetNMax()`, and `KSPPIPEFCGSetNMax()` may be
   used to provide `nmax` or they may be provided with the option database.
 
 .seealso: [](ch_ksp), `KSP`, `KSPFCG`, `KSPPIPEFCG`, `KSPPIPEGCR`, `KSPFCGSetTruncationType()`, `KSPFCGGetTruncationType()`,

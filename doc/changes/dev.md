@@ -86,7 +86,7 @@
 ```
 
 - Remove `KSPHPDDMPrecision` in favor of `PetscPrecision`
-- Deprecate `KSPPIPEGCRSetModifyPC()`, `KSPGCRSetModifyPC()`, and `KSPFGRESSetModifyPC()` in favor of `KSPFlexibleSetModifyPC()`
+- Deprecate `KSPPIPEGCRSetModifyPC()`, `KSPGCRSetModifyPC()`, and `KSPFGMRESSetModifyPC()` in favor of `KSPFlexibleSetModifyPC()`
 - Deprecate `KSPFGMRESModifyPCNoChange()`, `KSPFGMRESModifyPCKSP()` in favor of `KSPFlexibleModifyPCNoChange()` and `KSPFlexibleModifyPCKSP()`
 
 ```{rubric} SNES:
