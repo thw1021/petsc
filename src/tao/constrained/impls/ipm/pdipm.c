@@ -286,7 +286,7 @@ static PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes, Vec X, Mat J, Mat Jpre, v
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)snes, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  PetscCallMPI(MPI_Comm_rank(comm, &size));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
 
   PetscCall(MatGetOwnershipRanges(Jpre, &Jranges));
   PetscCall(MatGetOwnershipRange(Jpre, &Jrstart, NULL));
