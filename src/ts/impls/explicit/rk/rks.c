@@ -103,7 +103,9 @@ static inline PetscReal LegendrePrime(PetscInt j, PetscReal x)
   if (j == 1) return 1.0;
   PetscReal Pj   = Legendre(j, x);
   PetscReal Pjm1 = Legendre(j - 1, x);
-  return j * (x * Pj - Pjm1) / (x * x - 1.0);
+  PetscReal denom = x * x - 1.0;
+  PetscCheck(PetscAbsReal(denom) > PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_FP, "LegendrePrime: x=+-1 causes division by zero");
+  return j * (x * Pj - Pjm1) / denom;
 }
 
 static inline PetscReal LegendreDoublePrime(PetscInt j, PetscReal x)
@@ -158,7 +160,7 @@ PetscErrorCode TSRKC1ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
     nu[j]       = -(b[j] / b[j - 2]);
     tilde_mu[j] = 2.0 * w1 * (b[j] / b[j - 1]);
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
@@ -320,7 +322,7 @@ static PetscErrorCode TSStep_RKS(TS ts)
 
   for (PetscInt j = 1; j <= s; ++j) {
     /* F(U^{(j-1)}) */
-    PetscCall(TSComputeRHSFunction(ts, time, rks->Ucurr, rks->Fcurr));
+    if (j > 1) PetscCall(TSComputeRHSFunction(ts, time, rks->Ucurr, rks->Fcurr));
 
     if (j == 1) {
       /* U^{(1)} = U^{(0)} + tilde_mu[1] * dt * F(U^{(0)}) */
@@ -443,7 +445,7 @@ static PetscErrorCode TSView_RKS(TS ts, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "RKS method: %s, stages=%d\n", RKSTypes[rks->type], (int)rks->stages));
     for (PetscInt j = 0; j < rks->stages; ++j) PetscCall(PetscViewerASCIIPrintf(viewer, "s:%d, mu=%f, nu=%f, tilde_mu=%f, tilde_gamma=%f, b=%f\n", j, rks->mu[j], rks->nu[j], rks->tilde_mu[j], rks->tilde_gamma[j], rks->b[j]));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
@@ -481,5 +483,5 @@ PETSC_EXTERN PetscErrorCode TSCreate_RKS(TS ts)
   rks->type    = RKS_RKL1;
   rks->stages  = 10;
   rks->epsilon = 0.05;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

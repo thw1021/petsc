@@ -58,7 +58,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscInt nGC = 3;
 
   PetscFunctionBeginUser;
-  options->ostep              = 1.0;
+  options->ostep              = 1;
   options->xmin               = 0.0;
   options->xmax               = 2.0;
   options->ymin               = -1.0;
@@ -82,7 +82,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->num_ghost_cells[1] = 0;
   options->num_ghost_cells[2] = 0;
 
-  PetscFunctionBeginUser;
   PetscOptionsBegin(comm, "", "Zel'dovich test options", "TS");
   PetscCall(PetscOptionsInt("-output_step", "Number of time steps between output", "", options->ostep, &options->ostep, NULL));
   PetscCall(PetscOptionsReal("-xmin", "X min", "", options->xmin, &options->xmin, NULL));
@@ -96,7 +95,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsBool("-compute_error", "Flag to output error at each step", "", options->compute_error, &options->compute_error, NULL));
   PetscCall(PetscOptionsBool("-temp_monitor", "Flag to plot temperature", "", options->monitor_temp, &options->monitor_temp, NULL));
   PetscCall(PetscOptionsBool("-use_fct_limiter", "Flag to use ARMS limiter", "", options->useFCTLimiter, &options->useFCTLimiter, NULL));
-  PetscCall(PetscOptionsInt("-output_step", "Number of time steps between output", "", options->ostep, &options->ostep, NULL));
   PetscCall(PetscOptionsBool("-print_data", "Flag to print temperature data in monitor", "", options->printData, &options->printData, NULL));
   PetscCall(PetscOptionsBool("-use_ghost_cells", "Flag to pad real cells with ghost cells in all dimensions", "", options->use_ghost_cells, &options->use_ghost_cells, NULL));
   PetscCall(PetscOptionsIntArray("-num_ghost_cells", "Number of ghost cells on either end of mesh", "", options->num_ghost_cells, &nGC, NULL));
@@ -142,7 +140,7 @@ static PetscErrorCode DestroyContext(AppCtx *user)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PlotTemperature(TS ts, PetscInt step, PetscReal t, Vec T, void *ctx)
+static PetscErrorCode PlotTemperature(TS ts, PetscInt step, PetscReal t, Vec T, void *ctx)
 {
   AppCtx            *user  = (AppCtx *)ctx;
   const PetscInt     ostep = user->ostep;
@@ -160,9 +158,9 @@ PetscErrorCode PlotTemperature(TS ts, PetscInt step, PetscReal t, Vec T, void *c
   if (user->printData && step == 0) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t\tz\tT_exact\tT_numerical\n"));
   if (step % ostep == 0) {
     PetscCall(TSGetDM(ts, &dm));
-    PetscCall(VecGetSize(T, &M));
-    Vec Tloc;
-    DMGetLocalVector(dm, &Tloc);
+    PetscCall(DMGetLocalVector(dm, &Tloc));
+    PetscCall(DMGlobalToLocalBegin(dm, T, INSERT_VALUES, Tloc));
+    PetscCall(DMGlobalToLocalEnd(dm, T, INSERT_VALUES, Tloc));
     DMGlobalToLocalBegin(dm, T, INSERT_VALUES, Tloc);
     DMGlobalToLocalEnd(dm, T, INSERT_VALUES, Tloc);
     PetscCall(VecGetArrayRead(Tloc, &t_array));
@@ -290,8 +288,8 @@ PetscErrorCode ComputeError(TS ts, PetscInt step, PetscReal t, Vec T, void *ctx)
     user->L2_max   = err2;
     user->t_l2_max = t;
   }
-
-  PetscReal L2_avg   = user->L2_sum / step;
+  PetscReal L2_avg   = (step > 0) ? user->L2_sum / step : 0.0;
+  PetscReal Linf_avg = (step > 0) ? user->Linf_sum / step : 0.0;
   PetscReal Linf_avg = user->Linf_sum / step;
 
   if (step % user->ostep == 0) {
@@ -301,7 +299,7 @@ PetscErrorCode ComputeError(TS ts, PetscInt step, PetscReal t, Vec T, void *ctx)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscReal SignValue(PetscReal a, PetscReal x)
+static PetscReal SignValue(PetscReal a, PetscReal x)
 {
   return (x >= 0.0) ? a : -a;
 }
@@ -377,7 +375,7 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
           PetscReal TT52 = T_T * T_T * sqrtTT;
 
           PetscReal k_avg_x   = 0.5 * (TB52 + TT52);
-          flux_y[current_idx] = dt * k_avg_x * (T_T - T_B) / dx;
+          flux_y[current_idx] = dt * k_avg_x * (T_T - T_B) / dy;
         }
         if (k > zs) {
           PetscReal T_B = t_arr[((k - 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)];
@@ -390,7 +388,7 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
           PetscReal TF52 = T_F * T_F * sqrtTF;
 
           PetscReal k_avg_x   = 0.5 * (TB52 + TF52);
-          flux_z[current_idx] = dt * k_avg_x * (T_F - T_B) / dx;
+          flux_z[current_idx] = dt * k_avg_x * (T_F - T_B) / dz;
         }
       }
     }
@@ -551,7 +549,7 @@ PetscErrorCode InitialConditions(TS ts, Vec U)
 
         if (x_coord <= 2.0 / PetscSqrtReal(5.0)) val = PetscPowReal(1.0 - (5.0 / 4.0) * x_sq, 2.0 / 5.0);
 
-        if (val < 0 || val != val) val = 0.0;
+        if (val < 0 || PetscIsInfOrNanReal(val)) val = 0.0;
         u_arr[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)] = val;
       }
     }

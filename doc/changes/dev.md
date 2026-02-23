@@ -65,7 +65,7 @@
 - Change `TSAdaptCheckStage()` to call function set by `TSAdaptSetCheckStage()` before other checks
 - Fix `-ts_ssp_nstages` to `-ts_ssp_num_stages`
 - Add TSType ``TSRKS`` which implements Runge-Kutta Super-time-steppers.
-- Within the ``TSRKS`` framework there are 6 subtypes: ``RKS_RKC1``, ``RKS_RKC2``, ``RKS_RKL1``, ``RKS_RKL2``, ``RKS_RKG1``, ``RKS_RKG2``. These represent first- and second-order Runge-Kutta-Chebyshev, -Legnedre and -Gegenbauer methods.
+- Within the ``TSRKS`` framework there are 4 subtypes: ``RKS_RKC1``, ``RKS_RKC2``, ``RKS_RKL1``, ``RKS_RKL2``. These represent first- and second-order Runge-Kutta-Chebyshev and -Legendre methods.
 
 ## KSP
 
