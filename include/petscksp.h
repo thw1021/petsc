@@ -343,7 +343,7 @@ PETSC_EXTERN PetscErrorCode KSPComputeRitz(KSP, PetscBool, PetscBool, PetscInt *
 
 .seealso: [](ch_ksp), `KSP`, `KSPFCG`, `KSPPIPEFCG`, `KSPPIPEGCR`, `KSPFCGSetTruncationType()`, `KSPFCGGetTruncationType()`,
           `KSPPIPEGCRSetTruncationType()`, `KSPPIPEGCRSetTruncationType()`, `KSPPIPEFCGSetTruncationType()`,
-          `KSPFCGSetMmax()`, `KSPPIPEGCRSetNMax(), `, `KSPPIPEGCRSetNMax(), `KSPPIPEFCGSetNMax()
+          `KSPFCGSetMmax()`, `KSPPIPEGCRSetNMax()`, `KSPPIPEGCRSetNMax()`, `KSPPIPEFCGSetNMax()`
 E*/
 typedef enum {
   KSP_FCD_TRUNC_TYPE_STANDARD,
