@@ -71,7 +71,6 @@ static PetscErrorCode CharacteristicSetUp_DA(Characteristic c)
 static PetscErrorCode DMDAGetNeighborsRank(DM da, PetscMPIInt neighbors[])
 {
   DMBoundaryType bx, by;
-  PetscBool      IPeriodic = PETSC_FALSE, JPeriodic = PETSC_FALSE;
   MPI_Comm       comm;
   PetscMPIInt    rank;
   PetscMPIInt  **procs, pi, pj, pim, pip, pjm, pjp, PIi, PJi;
@@ -83,9 +82,6 @@ static PetscErrorCode DMDAGetNeighborsRank(DM da, PetscMPIInt neighbors[])
   PetscCall(DMDAGetInfo(da, NULL, NULL, NULL, NULL, &PI, &PJ, NULL, NULL, NULL, &bx, &by, NULL, NULL));
   PetscCall(PetscMPIIntCast(PI, &PIi));
   PetscCall(PetscMPIIntCast(PJ, &PJi));
-  if (bx == DM_BOUNDARY_PERIODIC) IPeriodic = PETSC_TRUE;
-  if (by == DM_BOUNDARY_PERIODIC) JPeriodic = PETSC_TRUE;
-
   neighbors[0] = rank;
   rank         = 0;
   PetscCall(PetscMalloc1(PJ, &procs));
@@ -115,12 +111,12 @@ static PetscErrorCode DMDAGetNeighborsRank(DM da, PetscMPIInt neighbors[])
   neighbors[7] = procs[pjm][pi];
   neighbors[8] = procs[pjm][pim];
 
-  if (!IPeriodic) {
+  if (bx != DM_BOUNDARY_PERIODIC) {
     if (pi == 0) neighbors[1] = neighbors[2] = neighbors[8] = neighbors[0];
     if (pi == PI - 1) neighbors[4] = neighbors[5] = neighbors[6] = neighbors[0];
   }
 
-  if (!JPeriodic) {
+  if (by != DM_BOUNDARY_PERIODIC) {
     if (pj == 0) neighbors[6] = neighbors[7] = neighbors[8] = neighbors[0];
     if (pj == PJ - 1) neighbors[2] = neighbors[3] = neighbors[4] = neighbors[0];
   }
@@ -200,10 +196,7 @@ static PetscErrorCode CharacteristicSolve_DA(Characteristic c, PetscReal dt, Vec
   js = info.ys;
   je = info.ys + info.ym;
   /* Allocation */
-  PetscCall(PetscMalloc1(dim, &interpIndices));
-  PetscCall(PetscMalloc1(c->numVelocityComp, &velocityValues));
-  PetscCall(PetscMalloc1(c->numVelocityComp, &velocityValuesOld));
-  PetscCall(PetscMalloc1(c->numFieldComp, &fieldValues));
+  PetscCall(PetscMalloc4(dim, &interpIndices, c->numVelocityComp, &velocityValues, c->numVelocityComp, &velocityValuesOld, c->numFieldComp, &fieldValues));
   PetscCall(PetscLogEventBegin(CHARACTERISTIC_Solve, NULL, NULL, NULL, NULL));
 
   /*
@@ -226,7 +219,7 @@ static PetscErrorCode CharacteristicSolve_DA(Characteristic c, PetscReal dt, Vec
     for (Qi.i = is; Qi.i < ie; Qi.i++) {
       interpIndices[0] = Qi.i;
       interpIndices[1] = Qi.j;
-      if (c->velocityInterpLocal) PetscCallBack("Charactoristic callback velocityInterpLocal",(*c->velocityInterpLocal)(velocityArray, interpIndices, c->numVelocityComp, c->velocityComp, velocityValues, c->velocityCtx));
+      if (c->velocityInterpLocal) PetscCallBack("Charactoristic callback velocityInterpLocal", (*c->velocityInterpLocal)(velocityArray, interpIndices, c->numVelocityComp, c->velocityComp, velocityValues, c->velocityCtx));
       else PetscCall(c->velocityInterp(c->velocity, interpIndices, c->numVelocityComp, c->velocityComp, velocityValues, c->velocityCtx));
       Qi.x = Qi.i - velocityValues[0] * dt / 2.0;
       Qi.y = Qi.j - velocityValues[1] * dt / 2.0;
@@ -394,10 +387,7 @@ static PetscErrorCode CharacteristicSolve_DA(Characteristic c, PetscReal dt, Vec
   PetscCall(PetscLogEventEnd(CHARACTERISTIC_Solve, NULL, NULL, NULL, NULL));
 
   /* Cleanup */
-  PetscCall(PetscFree(interpIndices));
-  PetscCall(PetscFree(velocityValues));
-  PetscCall(PetscFree(velocityValuesOld));
-  PetscCall(PetscFree(fieldValues));
+  PetscCall(PetscFree4(interpIndices, velocityValues, velocityValuesOld, fieldValues));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
