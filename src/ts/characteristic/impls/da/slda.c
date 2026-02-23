@@ -226,7 +226,7 @@ static PetscErrorCode CharacteristicSolve_DA(Characteristic c, PetscReal dt, Vec
     for (Qi.i = is; Qi.i < ie; Qi.i++) {
       interpIndices[0] = Qi.i;
       interpIndices[1] = Qi.j;
-      if (c->velocityInterpLocal) PetscCall(c->velocityInterpLocal(velocityArray, interpIndices, c->numVelocityComp, c->velocityComp, velocityValues, c->velocityCtx));
+      if (c->velocityInterpLocal) PetscCallBack("Charactoristic callback velocityInterpLocal",(*c->velocityInterpLocal)(velocityArray, interpIndices, c->numVelocityComp, c->velocityComp, velocityValues, c->velocityCtx));
       else PetscCall(c->velocityInterp(c->velocity, interpIndices, c->numVelocityComp, c->velocityComp, velocityValues, c->velocityCtx));
       Qi.x = Qi.i - velocityValues[0] * dt / 2.0;
       Qi.y = Qi.j - velocityValues[1] * dt / 2.0;
