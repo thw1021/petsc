@@ -1,9 +1,5 @@
 /*
   Code for Timestepping with Runge-Kutta Super-time-steppers (Chebyshev, Legendre).
-
-  The implementations of each polynomial type come from:
-  - Runge-Kutta-Chebyshev: {cite}`VerwerHundsdorferSommeijer1990`
-  - Runge-Kutta-Legendre: {cite}`MeyerDinshawTariq2014`
 */
 #include <petsc/private/tsimpl.h>
 
@@ -118,7 +114,7 @@ static inline PetscReal LegendreDoublePrime(PetscInt j, PetscReal x)
   return (2.0 * x * PjP - j * (j + 1.0) * Pj) / (x * x - 1.0);
 }
 
-/*
+/*@
   TSRKC1ComputeCoefficients - This function calculates the coefficients for the first-order RK-Chebyshev method
 
   Not Collective
@@ -130,12 +126,12 @@ static inline PetscReal LegendreDoublePrime(PetscInt j, PetscReal x)
   Output Parameters:
 + mu       - mu coefficient
 . nu       - nu coefficient
-. tilde_mu - \tilde{mu} coefficient
+. tilde_mu - $\tilde{mu}$ coefficient
 - b        - b vector
 
   Level: developer
 
-.seealso: [](ch_ts), `TSRKS`, `ComputeRKC2coefficients()`
+.seealso: [](ch_ts), `TSRKS`, `TSRKC2ComputeCoefficients()`
 */
 PetscErrorCode TSRKC1ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu, PetscReal *b)
 {
@@ -151,7 +147,7 @@ PetscErrorCode TSRKC1ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   PetscReal Ps, Psprime;
   Ps      = Chebyshev(s, w0);
   Psprime = ChebyshevPrime(s, w0);
-  PetscCheck(isfinite(Psprime) && PetscAbsReal(Psprime) >= PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_FP, "Polynomial derivative nearly zero at w0");
+  PetscCheck(!PetscIsInfOrNanReal(Psprime) && PetscAbsReal(Psprime) >= PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_FP, "Polynomial derivative nearly zero at w0");
   PetscReal w1 = Ps / Psprime;
 
   for (PetscInt j = 0; j <= s; ++j) mu[j] = nu[j] = tilde_mu[j] = 0.0;
@@ -165,7 +161,7 @@ PetscErrorCode TSRKC1ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   PetscFunctionReturn(0);
 }
 
-/*
+/*@
   TSRKC2ComputeCoefficients - This function calculates the coefficients for the second-order RK-Chebyshev method
 
   Not Collective
@@ -177,13 +173,13 @@ PetscErrorCode TSRKC1ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   Output Parameters:
 + mu          - mu coefficient
 . nu          - nu coefficient
-. tilde_mu    - \tilde{mu} coefficient
-. tilde_gamma - \tilde{gamma} coefficient
+. tilde_mu    - $\tilde{mu}$ coefficient
+. tilde_gamma - $\tilde{gamma}$ coefficient
 - b           - b vector
 
   Level: developer
 
-.seealso: [](ch_ts), `TSRKS`, `ComputeRKC1coefficients()`
+.seealso: [](ch_ts), `TSRKS`, `TSRKC1ComputeCoefficients()`
 */
 PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu, PetscReal *tilde_gamma, PetscReal *b)
 {
@@ -203,7 +199,7 @@ PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   PetscReal Psprime, Ps2;
   Psprime = ChebyshevPrime(s, w0);
   Ps2     = ChebyshevDoublePrime(s, w0);
-  PetscCheck(isfinite(Psprime) && isfinite(Ps2) && PetscAbsReal(Ps2) > PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_FP, "Polynomial derivatives nearly zero at w0");
+  PetscCheck(!PetscIsInfOrNanReal(Psprime) && !PetscIsInfOrNanReal(Ps2) && PetscAbsReal(Ps2) > PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_FP, "Polynomial derivatives nearly zero at w0");
   PetscReal w1 = -Psprime / Ps2;
 
   for (PetscInt j = 0; j <= s; ++j) mu[j] = nu[j] = tilde_mu[j] = tilde_gamma[j] = 0.0;
@@ -221,7 +217,7 @@ PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   PetscFunctionReturn(0);
 }
 
-/*
+/*@
   TSRKL1ComputeCoefficients - This function calculates the coefficients for the first-order RK-Legendre method
 
   Not Collective
@@ -232,12 +228,12 @@ PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   Output Parameters:
 + mu       - mu coefficient
 . nu       - nu coefficient
-. tilde_mu - \tilde{mu} coefficient
+. tilde_mu - $\tilde{mu}$ coefficient
 - b        - b vector
 
   Level: developer
 
-.seealso: [](ch_ts), `TSRKS`, `ComputeRKL2coefficients()`
+.seealso: [](ch_ts), `TSRKS`, `TSRKL2ComputeCoefficients()`
 */
 PetscErrorCode TSRKL1ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu, PetscReal *b)
 {
@@ -255,7 +251,7 @@ PetscErrorCode TSRKL1ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *n
   PetscFunctionReturn(0);
 }
 
-/*
+/*@
   TSRKL2ComputeCoefficients - This function calculates the coefficients for the second-order RK-Legendre method
 
   Not Collective
@@ -266,13 +262,13 @@ PetscErrorCode TSRKL1ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *n
   Output Parameters:
 + mu          - mu coefficient
 . nu          - nu coefficient
-. tilde_mu    - \tilde{mu} coefficient
-. tilde_gamma - \tilde{gamma} coefficient
+. tilde_mu    - $\tilde{mu}$ coefficient
+. tilde_gamma - $\tilde{gamma}$ coefficient
 - b           - b vector
 
   Level: developer
 
-.seealso: [](ch_ts), `TSRKS`, `ComputeRKL1coefficients()`
+.seealso: [](ch_ts), `TSRKS`, `TSRKL1ComputeCoefficients()`
 */
 PetscErrorCode TSRKL2ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu, PetscReal *tilde_gamma, PetscReal *b)
 {
@@ -299,13 +295,6 @@ PetscErrorCode TSRKL2ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *n
   PetscFunctionReturn(0);
 }
 
-/*
-  TSRKStep - This function calculates the step for first- and second-order methods
-
-  Level: developer
-
-.seealso: [](ch_ts), `TSRKS`
-*/
 static PetscErrorCode TSStep_RKS(TS ts)
 {
   TS_RKS   *rks = (TS_RKS *)ts->data;
@@ -409,13 +398,11 @@ static PetscErrorCode TSSetUp_RKS(TS ts)
 
 static PetscErrorCode TSSetFromOptions_RKS(TS ts, PetscOptionItems PetscOptionsObject)
 {
-  TS_RKS   *rks  = (TS_RKS *)ts->data;
-  PetscEnum meth = (PetscEnum)rks->type;
+  TS_RKS *rks = (TS_RKS *)ts->data;
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "RKS options");
-  PetscCall(PetscOptionsEnum("-ts_rks_type", "Super-time-stepper type", "", RKSTypes, (PetscEnum)rks->type, (PetscEnum *)&meth, NULL));
-  rks->type = (RKSType)meth;
+  PetscCall(PetscOptionsEnum("-ts_rks_type", "Super-time-stepper type", "", RKSTypes, (PetscEnum)rks->type, (PetscEnum *)&rks->type, NULL));
   PetscCall(PetscOptionsInt("-ts_rks_stages", "Number of stages per macro-step", NULL, rks->stages, &rks->stages, NULL));
   PetscCall(PetscOptionsReal("-ts_rks_epsilon", "RKS epsilon", "", rks->epsilon, &rks->epsilon, NULL));
   PetscOptionsHeadEnd();
@@ -460,15 +447,19 @@ static PetscErrorCode TSView_RKS(TS ts, PetscViewer viewer)
 }
 
 /*MC
-      TSRKS - ODE and DAE solver using Runge-Kutta Supertimestepper (RKS) schemes
+  TSRKS - explicit ODE and DAE solver using Runge-Kutta Supertimestepper (RKS) schemes
+
+  The implementations of each polynomial type come from:
+  - Runge-Kutta-Chebyshev: {cite}`VerwerHundsdorferSommeijer1990`
+  - Runge-Kutta-Legendre: {cite}`MeyerDinshawTariq2014`
 
   The user should provide the right-hand side of the equation
   using `TSSetRHSFunction()`.
 
   Level: beginner
 
-  Notes:
-  The default is `TSRKL1`, it can be changed with -ts_rks_type
+  Note:
+  The default is `TSRKL1`, it can be changed with `-ts_rks_type`
 
 .seealso: [](ch_ts), `TSCreate()`, `TS`, `TSSetType()`, `TSRK`, `TSType`
 M*/

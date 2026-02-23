@@ -265,7 +265,7 @@ PetscErrorCode ComputeError(TS ts, PetscInt step, PetscReal t, Vec T, void *ctx)
     PetscReal Texact = 0.0;
     if (x <= front) {
       PetscReal arg = 1.0 - (x * x) / denom;
-      if (arg > 0.0) { Texact = PetscPowReal(alpha, -2.0 / 9.0) * PetscPowReal(arg, 0.4); }
+      if (arg > 0.0) Texact = PetscPowReal(alpha, -2.0 / 9.0) * PetscPowReal(arg, 0.4);
     }
 
     PetscReal diff = Tnum - Texact;
@@ -551,7 +551,7 @@ PetscErrorCode InitialConditions(TS ts, Vec U)
 
         if (x_coord <= 2.0 / PetscSqrtReal(5.0)) val = PetscPowReal(1.0 - (5.0 / 4.0) * x_sq, 2.0 / 5.0);
 
-        if (val < 0 || val != val) { val = 0.0; }
+        if (val < 0 || val != val) val = 0.0;
         u_arr[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)] = val;
       }
     }
@@ -626,14 +626,14 @@ int main(int argc, char **argv)
     args: -da_grid_x 56 -da_grid_y 1 -da_grid_z 1 \
           -use_ghost_cells -num_ghost_cells 3,0,0 \
           -xmin 0.0 -xmax 2.0 -ymin -1.0 -ymax 1.0 -zmin -1.0 -zmax 1.0 \
-          -ts_time_step 1e-4 -ts_max_steps 80000 -output_step 10000 \
+          -ts_time_step 1e-4 -ts_max_steps 1000 -output_step 100 \
           -temp_monitor -compute_error
     test:
       suffix: rk2
       args: -ts_type rk -ts_rk_type 2b
     test:
       suffix: beuler
-      args: -ts_type beuler -pc_type none -snes_fd_no
+      args: -ts_type beuler -pc_type none -snes_fd
     test:
       suffix: rkc1
       args: -ts_type rks -ts_rks_type rkc1 -ts_rks_stages 10

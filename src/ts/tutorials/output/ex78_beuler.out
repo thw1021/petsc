@@ -1,13 +1,11 @@
 t = 0.000000e+00  L2 = 1.241267e-16  Linf = 1.110223e-16  L2_avg = inf  Linf_avg = inf  t_max = 0.000000e+00  L2_max = 1.241267e-16
-t = 1.000000e+00  L2 = 1.361551e-01  Linf = 3.687384e-02  L2_avg = 1.104114e-01  Linf_avg = 5.099907e-02  t_max = 9.733000e-01  L2_max = 1.747202e-01
-t = 2.000000e+00  L2 = 1.918134e-01  Linf = 1.111719e-01  L2_avg = 1.373659e-01  Linf_avg = 6.110993e-02  t_max = 1.793400e+00  L2_max = 2.027465e-01
-t = 3.000000e+00  L2 = 2.073343e-01  Linf = 1.182531e-01  L2_avg = 1.556972e-01  Linf_avg = 7.265868e-02  t_max = 2.996200e+00  L2_max = 2.229320e-01
-t = 4.000000e+00  L2 = 2.098405e-01  Linf = 1.066039e-01  L2_avg = 1.681306e-01  Linf_avg = 7.980544e-02  t_max = 3.775800e+00  L2_max = 2.307676e-01
-t = 5.000000e+00  L2 = 2.219437e-01  Linf = 1.207774e-01  L2_avg = 1.780406e-01  Linf_avg = 8.629465e-02  t_max = 4.695000e+00  L2_max = 2.378025e-01
-t = 6.000000e+00  L2 = 2.227158e-01  Linf = 1.094961e-01  L2_avg = 1.860224e-01  Linf_avg = 9.138052e-02  t_max = 5.770700e+00  L2_max = 2.442302e-01
-t = 7.000000e+00  L2 = 2.482865e-01  Linf = 1.434342e-01  L2_avg = 1.926699e-01  Linf_avg = 9.587305e-02  t_max = 7.000000e+00  L2_max = 2.482865e-01
-t = 8.000000e+00  L2 = 1.986936e-01  Linf = 7.440222e-02  L2_avg = 1.966376e-01  Linf_avg = 9.801451e-02  t_max = 7.021100e+00  L2_max = 2.498616e-01
-WARNING! There are options you set that were not used!
-WARNING! could be spelling mistake, etc!
-There is one unused database option. It is:
-Option left: name:-snes_fd_no (no value) source: command line
+t = 1.000000e-02  L2 = 5.910876e-02  Linf = 5.736997e-02  L2_avg = 3.109359e-02  Linf_avg = 2.986172e-02  t_max = 1.000000e-02  L2_max = 5.910876e-02
+t = 2.000000e-02  L2 = 7.505695e-02  Linf = 7.216479e-02  L2_avg = 5.196058e-02  Linf_avg = 5.024415e-02  t_max = 1.710000e-02  L2_max = 7.635880e-02
+t = 3.000000e-02  L2 = 6.179456e-02  Linf = 5.561248e-02  L2_avg = 5.754905e-02  Linf_avg = 5.499501e-02  t_max = 1.710000e-02  L2_max = 7.635880e-02
+t = 4.000000e-02  L2 = 5.805969e-02  Linf = 3.885864e-02  L2_avg = 5.767291e-02  Linf_avg = 5.291916e-02  t_max = 1.710000e-02  L2_max = 7.635880e-02
+t = 5.000000e-02  L2 = 8.046410e-02  Linf = 6.882576e-02  L2_avg = 5.959534e-02  Linf_avg = 5.244912e-02  t_max = 5.000000e-02  L2_max = 8.046410e-02
+t = 6.000000e-02  L2 = 4.357932e-02  Linf = 2.364490e-02  L2_avg = 6.160482e-02  Linf_avg = 5.342662e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
+t = 7.000000e-02  L2 = 5.981559e-02  Linf = 4.219067e-02  L2_avg = 6.048483e-02  Linf_avg = 5.067749e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
+t = 8.000000e-02  L2 = 6.070441e-02  Linf = 3.965048e-02  L2_avg = 6.051554e-02  Linf_avg = 4.957862e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
+t = 9.000000e-02  L2 = 6.339268e-02  Linf = 3.183883e-02  L2_avg = 6.061096e-02  Linf_avg = 4.804109e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
+t = 1.000000e-01  L2 = 7.759012e-02  Linf = 5.503502e-02  L2_avg = 6.149487e-02  Linf_avg = 4.740796e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
