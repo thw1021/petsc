@@ -1870,7 +1870,7 @@ M*/
   }
 .ve
 
-.seealso: `PetscFunctionReturn()`, `PetscFunctionBegin`, PetscFunctionBeginUser`
+.seealso: `PetscFunctionReturn()`, `PetscFunctionBegin`, `PetscFunctionBeginUser`
 M*/
   #define PetscFunctionReturnVoid() \
     do { \
