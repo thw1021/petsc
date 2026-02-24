@@ -421,6 +421,26 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexCreateCohesiveSubmesh(self.dm, flag, NULL, cvalue, &subdm.dm))
         return subdm
 
+    def createColoring(self) -> list:
+        """Return graph coloring.
+
+        Collective.
+
+        See Also
+        --------
+        DM, DMPlex, petsc.DMPlexCreateColoring
+
+        """
+        cdef PetscInt ncolors = 0
+        cdef PetscIS *iscolors = NULL
+        cdef ISColoring iscoloring = NULL
+
+        CHKERR(DMPlexCreateColoring(self.dm, IS_COLORING_LOCAL, &iscoloring))
+        CHKERR(ISColoringGetIS(iscoloring, PETSC_USE_POINTER, &ncolors, &iscolors))
+
+        cdef list isets = [ref_IS(iscolors[i]) for i from 0 <= i < ncolors]
+        return isets
+
     def filter(self, label: DMLabel | None = None, value: int | None = None, ignoreHalo: bool = False,
                sanitizeSubMesh: bool = False, comm: Comm | None = None) -> tuple[DMPlex, SF]:
         """Extract a subset of mesh cells defined by a label as a separate mesh.

@@ -2887,165 +2887,6 @@ PetscErrorCode DMDestroy_Plex(DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-   Computes the graph laplacian L of a mesh, stored in the DMPLEX format.
-      L = D - A, with D = degree matrix and A = adjacency matrix
-*/
-PetscErrorCode ComputeGraphLaplacian(DM dm, PetscInt depth, Mat *oL)
-{
-  Mat          L, preall;
-  Vec          x, y;
-  PetscInt    *i, *j, numVertices, rst, maxnnzrow, dim, *numDof, numFields;
-
-  PetscScalar *vals;
-  PetscSection s;
-  PetscFunctionBeginUser;
-  PetscCall(DMGetDimension(dm, &dim));
-  if (depth == dim) {
-    /* FIXME */
-    /* FEM adjacency */
-    PetscCall(DMSetBasicAdjacency(dm, PETSC_FALSE, PETSC_TRUE));
-    /* Access CSR graph of local partition */
-    PetscCall(DMPlexCreatePartitionerGraph(dm, dim - depth, &numVertices, &i, &j, NULL));
-  } else {
-    PetscInt pStart, pEnd;
-    PetscCall(DMPlexGetDepthStratum(dm, depth, &pStart, &pEnd));
-    numVertices = pEnd - pStart;
-    /* FIXME compute or estimate maxnnzrow a-priori */
-    maxnnzrow = numVertices;
-    maxnnzrow = 10;
-    PetscCall(PetscMalloc1(numVertices+1, &i));
-    PetscCall(PetscMalloc1(maxnnzrow*numVertices, &j));
-    i[0] = 0;
-    for (PetscInt p = pStart; p < pEnd; p++) {
-       PetscInt nnzrow = 0;
-       PetscInt nstar;
-       PetscInt *star = NULL;
-       PetscCall(DMPlexGetTransitiveClosure(dm, p, PETSC_FALSE, &nstar, &star));
-       for (PetscInt s = 0; s < nstar*2; s += 2) {
-         PetscInt nclosure;
-         PetscInt *closure = NULL;
-         PetscCall(DMPlexGetTransitiveClosure(dm, star[s], PETSC_TRUE, &nclosure, &closure));
-         for (PetscInt c = 0; c < nclosure*2; c += 2) {
-           if (closure[c] != p && closure[c] >= pStart && closure[c] < pEnd) {
-              PetscBool seen = PETSC_FALSE;
-              for (PetscInt f = 0; f < nnzrow; f++) {
-                 if (j[i[p-pStart] + f] == closure[c] - pStart) { seen = PETSC_TRUE; }
-              }
-              if (!seen) {
-                j[i[p-pStart] + nnzrow] = closure[c] - pStart;
-                nnzrow++;
-              }
-           }
-         }
-         PetscCall(DMPlexRestoreTransitiveClosure(dm, star[s], PETSC_TRUE, &nclosure, &closure));
-       }
-       i[p-pStart + 1] = i[p-pStart] + nnzrow;
-       PetscCall(DMPlexRestoreTransitiveClosure(dm, p, PETSC_FALSE, &nstar, &star));
-    }
-  }
-  /* First create a matrix object */
-  PetscCall(MatCreate(PetscObjectComm((PetscObject)dm), &L));
-  PetscCall(MatSetSizes(L, numVertices, numVertices, PETSC_DECIDE, PETSC_DECIDE));
-  PetscCall(MatSetOptionsPrefix(L, "laplacian_"));
-  PetscCall(MatSetFromOptions(L));
-  /* Preallocation. Here we use an helper class called MATPREALLOCATOR that
-     does it for us. We only need to loop once with our matrix insertion loop and
-     populate the MATPREALLOCATOR */
-  PetscCall(MatCreate(PetscObjectComm((PetscObject)dm), &preall));
-  PetscCall(MatSetSizes(preall, numVertices, numVertices, PETSC_DECIDE, PETSC_DECIDE));
-  PetscCall(MatSetType(preall, MATPREALLOCATOR));
-  PetscCall(MatSetUp(preall));
-  PetscCall(MatGetOwnershipRange(preall, &rst, NULL));
-  maxnnzrow = 0;
-  for (PetscInt k = 0; k < numVertices; k++) {
-    PetscInt  nnzrow = i[k + 1] - i[k];
-    PetscInt  row    = rst + k;
-    PetscInt *col    = j + i[k];
-    maxnnzrow = PetscMax(maxnnzrow, nnzrow);
-    /* Add adjacency connection */
-    PetscCall(MatSetValues(preall, 1, &row, nnzrow, col, NULL, INSERT_VALUES));
-    /* The graph CSR does not represent self-to-self connections, we need them
-       for the graph laplacian */
-    PetscCall(MatSetValues(preall, 1, &row, 1, &row, NULL, INSERT_VALUES));
-  }
-  PetscCall(MatAssemblyBegin(preall, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(preall, MAT_FINAL_ASSEMBLY));
-  /* Preallocate the graph laplacian matrix */
-  PetscCall(MatPreallocatorPreallocate(preall, PETSC_TRUE, L));
-  PetscCall(MatDestroy(&preall));
-  /* Set values. We first set all values to -1.0 to obtain -A,
-     and then use matrix API to modify for our needs and add the diagonal D matrix */
-  PetscCall(PetscMalloc1(maxnnzrow, &vals));
-  for (PetscInt k = 0; k < maxnnzrow; k++) vals[k] = -1.0;
-  for (PetscInt k = 0; k < numVertices; k++) {
-    PetscInt  nnzrow = i[k + 1] - i[k];
-    PetscInt  row    = rst + k;
-    PetscInt *col    = j + i[k];
-    PetscCall(MatSetValues(L, 1, &row, nnzrow, col, vals, INSERT_VALUES));
-  }
-  PetscCall(MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY));
-  /* Add D. Here we use the fact that D = rowsum(A) */
-  PetscCall(MatCreateVecs(L, &x, &y));
-  PetscCall(VecSet(x, -1.0));
-  PetscCall(MatMult(L, x, y));
-  PetscCall(MatDiagonalSet(L, y, INSERT_VALUES));
-  PetscCall(VecDestroy(&x));
-  PetscCall(VecDestroy(&y));
-  /* clean up */
-  PetscCall(PetscFree(vals));
-  PetscCall(PetscFree(i));
-  PetscCall(PetscFree(j));
-  /* Allow command line view via -laplacian_view */
-  PetscCall(MatViewFromOptions(L, NULL, "-view"));
-  /*
-    For visualization purposes, we attach a DM to the matrix.
-    Cloning makes a shallow (pointer) copy of the mesh topology and geometry,
-    and allows us to consider different discretization spaces.
-    In this case, we specify a one-field, cell-centered discretization with a PetscSection object.
-  */
-  PetscCall(DMClone(dm, &dm));
-  numFields = 1;
-  PetscCall(DMSetNumFields(dm, numFields));
-  PetscCall(PetscCalloc1(dim + 1, &numDof));
-  numDof[dim] = 1;
-  PetscCall(DMPlexCreateSection(dm, NULL, &numFields, numDof, 0, NULL, NULL, NULL, NULL, &s));
-  PetscCall(DMSetLocalSection(dm, s));
-  PetscCall(PetscSectionDestroy(&s));
-  PetscCall(PetscFree(numDof));
-  /* Attach the DM to the matrix */
-  PetscCall(MatSetDM(L, dm));
-  /* the matrix holds a reference to the DM, we can decrease reference counting */
-  PetscCall(DMDestroy(&dm));
-  /* Return matrix to caller */
-  *oL = L;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode DMCreateColoring_Plex(DM dm, ISColoringType ctype, ISColoring *iscoloring)
-{
-  Mat L;
-  MatColoring mc;
-  //char[] prefix;
-  PetscFunctionBegin;
-  // TODO new API should have depth as an argument
-  PetscInt depth = 0;
-  PetscCall(ComputeGraphLaplacian(dm, depth, &L));
-  //PetscCall(MatGetOptionsPrefix(L, &prefix));
-  //PetscCall(OptionSetInt(prefix+"mat_coloring_type", ctype));
-
-  PetscCall(MatColoringCreate(L, &mc));
-  PetscCall(MatColoringSetType(mc, MATCOLORINGSL));
-  PetscCall(MatColoringSetDistance(mc, 2));
-  PetscCall(MatColoringSetFromOptions(mc));
-  PetscCall(MatColoringApply(mc, iscoloring));
-  PetscCall(MatColoringDestroy(&mc));
-
-  PetscCall(MatDestroy(&L));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PetscErrorCode DMCreateMatrix_Plex(DM dm, Mat *J)
 {
   PetscSection           sectionGlobal, sectionLocal;
@@ -11166,5 +11007,193 @@ PetscErrorCode DMPlexMonitorThroughput(DM dm, void *unused)
   } else {
     SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Plex Throughput Monitor is not supported if logging is turned off or the default log handler is not running. Reconfigure using --with-log and run with -log_view.");
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+
+/*
+   Computes the graph laplacian L at the given depth.
+      L = D - A, with D = degree matrix and A = adjacency matrix
+*/
+PetscErrorCode DMPlexCreateGraphLaplacian(DM dm, PetscInt depth, Mat *oL)
+{
+  Mat          L, preall;
+  Vec          x, y;
+  PetscInt    *i, *j, numVertices, numEdges, rst, maxnnzrow, dim, *numDof, numFields;
+  PetscScalar *vals;
+  PetscSection s;
+  PetscFunctionBeginUser;
+  PetscCall(DMGetDimension(dm, &dim));
+  if (depth == dim) {
+    /* FIXME this code only works for depth == dim */
+    /* FEM adjacency */
+    PetscCall(DMSetBasicAdjacency(dm, PETSC_FALSE, PETSC_TRUE));
+    /* Access CSR graph of local partition */
+    PetscCall(DMPlexCreatePartitionerGraph(dm, dim - depth, &numVertices, &i, &j, NULL));
+  } else {
+    PetscInt pStart, pEnd;
+    PetscCall(DMPlexGetDepthStratum(dm, depth, &pStart, &pEnd));
+    numVertices = pEnd - pStart;
+
+    numEdges = 0;
+    for (PetscInt p = pStart; p < pEnd; p++) {
+        PetscInt degree;
+        PetscCall(DMPlexGetSupportSize(dm, p, &degree));
+        numEdges += degree;
+    }
+    PetscCall(PetscMalloc1(numVertices+1, &i));
+    PetscCall(PetscMalloc1(numEdges, &j));
+    i[0] = 0;
+    for (PetscInt p = pStart; p < pEnd; p++) {
+       PetscInt nnzrow = 0;
+       PetscInt nstar;
+       PetscInt *star = NULL;
+       PetscCall(DMPlexGetTransitiveClosure(dm, p, PETSC_FALSE, &nstar, &star));
+       for (PetscInt s = 0; s < nstar*2; s += 2) {
+         PetscInt nclosure;
+         PetscInt *closure = NULL;
+         PetscCall(DMPlexGetTransitiveClosure(dm, star[s], PETSC_TRUE, &nclosure, &closure));
+         for (PetscInt c = 0; c < nclosure*2; c += 2) {
+           if (closure[c] != p && closure[c] >= pStart && closure[c] < pEnd) {
+              PetscBool seen = PETSC_FALSE;
+              for (PetscInt f = 0; f < nnzrow; f++) {
+                 if (j[i[p-pStart] + f] == closure[c] - pStart) { seen = PETSC_TRUE; }
+              }
+              if (!seen) {
+                j[i[p-pStart] + nnzrow] = closure[c] - pStart;
+                nnzrow++;
+              }
+           }
+         }
+         PetscCall(DMPlexRestoreTransitiveClosure(dm, star[s], PETSC_TRUE, &nclosure, &closure));
+       }
+       i[p-pStart + 1] = i[p-pStart] + nnzrow;
+       PetscCall(DMPlexRestoreTransitiveClosure(dm, p, PETSC_FALSE, &nstar, &star));
+    }
+  }
+  /* First create a matrix object */
+  PetscCall(MatCreate(PetscObjectComm((PetscObject)dm), &L));
+  PetscCall(MatSetSizes(L, numVertices, numVertices, PETSC_DECIDE, PETSC_DECIDE));
+  PetscCall(MatSetOptionsPrefix(L, "laplacian_"));
+  PetscCall(MatSetFromOptions(L));
+  /* Preallocation. Here we use an helper class called MATPREALLOCATOR that
+     does it for us. We only need to loop once with our matrix insertion loop and
+     populate the MATPREALLOCATOR */
+  PetscCall(MatCreate(PetscObjectComm((PetscObject)dm), &preall));
+  PetscCall(MatSetSizes(preall, numVertices, numVertices, PETSC_DECIDE, PETSC_DECIDE));
+  PetscCall(MatSetType(preall, MATPREALLOCATOR));
+  PetscCall(MatSetUp(preall));
+  PetscCall(MatGetOwnershipRange(preall, &rst, NULL));
+  maxnnzrow = 0;
+  for (PetscInt k = 0; k < numVertices; k++) {
+    PetscInt  nnzrow = i[k + 1] - i[k];
+    PetscInt  row    = rst + k;
+    PetscInt *col    = j + i[k];
+    maxnnzrow = PetscMax(maxnnzrow, nnzrow);
+    /* Add adjacency connection */
+    PetscCall(MatSetValues(preall, 1, &row, nnzrow, col, NULL, INSERT_VALUES));
+    /* The graph CSR does not represent self-to-self connections, we need them
+       for the graph laplacian */
+    PetscCall(MatSetValues(preall, 1, &row, 1, &row, NULL, INSERT_VALUES));
+  }
+  PetscCall(MatAssemblyBegin(preall, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(preall, MAT_FINAL_ASSEMBLY));
+  /* Preallocate the graph laplacian matrix */
+  PetscCall(MatPreallocatorPreallocate(preall, PETSC_TRUE, L));
+  PetscCall(MatDestroy(&preall));
+  /* Set values. We first set all values to -1.0 to obtain -A,
+     and then use matrix API to modify for our needs and add the diagonal D matrix */
+  PetscCall(PetscMalloc1(maxnnzrow, &vals));
+  for (PetscInt k = 0; k < maxnnzrow; k++) vals[k] = -1.0;
+  for (PetscInt k = 0; k < numVertices; k++) {
+    PetscInt  nnzrow = i[k + 1] - i[k];
+    PetscInt  row    = rst + k;
+    PetscInt *col    = j + i[k];
+    PetscCall(MatSetValues(L, 1, &row, nnzrow, col, vals, INSERT_VALUES));
+  }
+  PetscCall(MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY));
+  /* Add D. Here we use the fact that D = rowsum(A) */
+  PetscCall(MatCreateVecs(L, &x, &y));
+  PetscCall(VecSet(x, -1.0));
+  PetscCall(MatMult(L, x, y));
+  PetscCall(MatDiagonalSet(L, y, INSERT_VALUES));
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&y));
+  /* clean up */
+  PetscCall(PetscFree(vals));
+  PetscCall(PetscFree(i));
+  PetscCall(PetscFree(j));
+  /* Allow command line view via -laplacian_view */
+  PetscCall(MatViewFromOptions(L, NULL, "-view"));
+  /*
+    For visualization purposes, we attach a DM to the matrix.
+    Cloning makes a shallow (pointer) copy of the mesh topology and geometry,
+    and allows us to consider different discretization spaces.
+    In this case, we specify a one-field, cell-centered discretization with a PetscSection object.
+  */
+  PetscCall(DMClone(dm, &dm));
+  numFields = 1;
+  PetscCall(DMSetNumFields(dm, numFields));
+  PetscCall(PetscCalloc1(dim + 1, &numDof));
+  numDof[dim] = 1;
+  PetscCall(DMPlexCreateSection(dm, NULL, &numFields, numDof, 0, NULL, NULL, NULL, NULL, &s));
+  PetscCall(DMSetLocalSection(dm, s));
+  PetscCall(PetscSectionDestroy(&s));
+  PetscCall(PetscFree(numDof));
+  /* Attach the DM to the matrix */
+  PetscCall(MatSetDM(L, dm));
+  /* the matrix holds a reference to the DM, we can decrease reference counting */
+  PetscCall(DMDestroy(&dm));
+  /* Return matrix to caller */
+  *oL = L;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMPlexCreateColoring - Gets coloring of a graph associated with the
+  `DMPlex`. Unlike `DMCreateColoring`, this graph does not represent the operator
+  matrix associated with the discretization of a PDE on the `DM`.
+
+  Collective
+
+  Input Parameters:
++ dm    - the `DMPlex` object
+- ctype - `IS_COLORING_LOCAL` or `IS_COLORING_GLOBAL`
+
+  Output Parameter:
+. coloring - the coloring
+
+  Level: developer
+
+  Notes:
+  Coloring of matrices can also be computed directly from the sparse matrix nonzero structure via the `MatColoring` object or from the mesh from which the
+  matrix comes from (what this function provides). In general using the mesh produces a more optimal coloring (fewer colors).
+
+  This produces a coloring with the distance of 1, see `MatSetColoringDistance()` 
+  which can be used for efficiently grouping vertex subdomains into macro subdomains.
+
+.seealso: [](ch_unstructured), `DMPlex`, `ISColoring`, `MatColoring`, `DMCreateColoring()`
+@*/
+PetscErrorCode DMPlexCreateColoring(DM dm, ISColoringType ctype, ISColoring *coloring)
+{
+  Mat L;
+  MatColoring mc;
+  //char[] prefix;
+  PetscFunctionBegin;
+  // TODO new API should have depth as an argument
+  PetscInt depth = 0;
+  PetscCall(DMPlexCreateGraphLaplacian(dm, depth, &L));
+  //PetscCall(MatGetOptionsPrefix(L, &prefix));
+  //PetscCall(OptionSetInt(prefix+"mat_coloring_type", ctype));
+
+  PetscCall(MatColoringCreate(L, &mc));
+  PetscCall(MatColoringSetType(mc, MATCOLORINGGREEDY));
+  PetscCall(MatColoringSetDistance(mc, 1));
+  PetscCall(MatColoringSetFromOptions(mc));
+  PetscCall(MatColoringApply(mc, coloring));
+  PetscCall(MatColoringDestroy(&mc));
+
+  PetscCall(MatDestroy(&L));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -62,7 +62,6 @@ cdef extern from * nogil:
                                                    void*) except PETSC_ERR_PYTHON
 
     PetscErrorCode DMCreate(MPI_Comm, PetscDM*)
-    PetscErrorCode DMCreateColoring(PetscDM,PetscISColoringType,ISColoring*)
     PetscErrorCode DMClone(PetscDM, PetscDM*)
     PetscErrorCode DMDestroy(PetscDM*)
     PetscErrorCode DMView(PetscDM, PetscViewer)
