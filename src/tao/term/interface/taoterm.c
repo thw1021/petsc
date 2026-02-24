@@ -909,9 +909,9 @@ PetscErrorCode TaoTermIsCreateHessianMatricesDefined(TaoTerm term, PetscBool *is
 
   Input Parameters:
 + term - a `TaoTerm`
-. n  - the size of a solution vector on the current MPI process (or `PETSC_DECIDE`)
-. N  - the global size of a solution vector (or `PETSC_DECIDE`)
-- bs - the block size of a solution vector (must be >= 1)
+. n    - the size of a solution vector on the current MPI process (or `PETSC_DECIDE`)
+. N    - the global size of a solution vector (or `PETSC_DECIDE`)
+- bs   - the block size of a solution vector (must be >= 1)
 
   Level: beginner
 
@@ -983,9 +983,9 @@ PetscErrorCode TaoTermGetSolutionSizes(TaoTerm term, PetscInt *n, PetscInt *N, P
 
   Input Parameters:
 + term - a `TaoTerm`
-. k  - the size of a parameter vector on the current MPI process (or `PETSC_DECIDE`)
-. K  - the global size of a parameter vector (or `PETSC_DECIDE`)
-- bs - the block size of a parameter vector (must be >= 1)
+. k    - the size of a parameter vector on the current MPI process (or `PETSC_DECIDE`)
+. K    - the global size of a parameter vector (or `PETSC_DECIDE`)
+- bs   - the block size of a parameter vector (must be >= 1)
 
   Level: beginner
 

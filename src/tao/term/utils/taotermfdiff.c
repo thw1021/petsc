@@ -7,9 +7,9 @@ typedef struct _n_TaoTermWithParameters {
   Vec     params;
 } TaoTermWithParameters;
 
-PETSC_INTERN PetscErrorCode TaoTermWithParametersDestroy(void **ctx)
+PETSC_INTERN PetscErrorCode TaoTermWithParametersDestroy(PetscCtxRt ctx)
 {
-  TaoTermWithParameters *t = (TaoTermWithParameters *)*ctx;
+  TaoTermWithParameters *t = (TaoTermWithParameters *)*(void **)ctx;
 
   PetscFunctionBegin;
   PetscCall(VecDestroy(&t->params));
