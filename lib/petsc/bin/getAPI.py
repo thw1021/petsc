@@ -39,6 +39,7 @@ includefiles = {}
 mansecs = {}         # mansec[mansecname] = set(all submansecnames in mansecname)
 submansecs = set()
 manualpages = {}
+defines = {}         # function-like macros
 
 regcomment   = re.compile(r'/\* [-A-Za-z _(),<>|^\*/0-9.:=\[\]\.;]* \*/')
 regcomment2  = re.compile(r'// [-A-Za-z _(),<>|^\*/0-9.:=\[\]\.;]*')
@@ -49,6 +50,22 @@ def displayIncludeMansec(obj):
 
 def displayFile(obj):
     return '  ' + str(obj.dir) + '/' + str(obj.file) + '\n'
+
+class Define:
+    '''Represents a function-like macro'''
+    def __init__(self, name, mansec, includefile, args):
+        self.name        = name
+        self.mansec      = mansec
+        self.includefile = includefile
+        self.args        = args
+
+    def __str__(self):
+        mstr = str(self.name) + '\n'
+        mstr += displayIncludeMansec(self)
+        mstr += '  Arguments\n'
+        for i in self.args:
+            mstr += '    ' + i + '\n'
+        return mstr
 
 class ManualPage:
     '''Represents a manual page'''
@@ -360,7 +377,6 @@ def processManualPage(name, lines):
   manualpages[name] = ManualPage(name, 'unknown', text, seealsos)
   #print(seealso)
 
-
 def getEnums(filename):
   import re
   regtypedef  = re.compile(r'typedef [ ]*enum')
@@ -434,6 +450,30 @@ def getSenums(filename):
         line = regblank.sub(" ",f.readline().strip())
       senums[senum]             = Senum(senum,mansec,file,d)
       processManualPage(senum, lines)
+      lines = []
+    line = f.readline()
+    lines.insert(0,line)
+  f.close()
+
+def getDefines(filename):
+  import re
+  file = os.path.basename(filename).replace('types.h','.h')
+  regdefine   = re.compile(r'#define [A-Za-z0-9]*\([A-Za-z0-9_, ]*\) ')
+  submansec = None
+  mansec = None
+  f = open(filename)
+  lines = []
+  line = f.readline()
+  lines.insert(0,line)
+  while line:
+    mansec,submansec = findmansec(line,mansec,submansec)
+    fl = regdefine.search(line)
+    if fl:
+      name = fl.group(0).split('(')[0][8:]
+      args = fl.group(0).split('(')[1][:-2]
+      args = args.split(', ')
+      defines[name] = Define(name,mansec,file,args)
+      processManualPage(name, lines)
       lines = []
     line = f.readline()
     lines.insert(0,line)
@@ -803,6 +843,12 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
     verbosePrint(verbose, enums[i])
 
   for i in args:
+    getDefines(i)
+  verbosePrint(verbose, 'Defines ---------------------------------------------')
+  for i in defines.keys():
+    verbosePrint(verbose, defines[i])
+
+  for i in args:
     getSenums(i)
   verbosePrint(verbose, 'String enums ---------------------------------------------')
   for i in senums.keys():
@@ -996,6 +1042,10 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
   verbosePrint(verbose, 'Standalone functions  --------------------------------')
   for i in funcs.keys():
     verbosePrint(verbose, funcs[i])
+
+  verbosePrint(verbose, 'Function-like macros  --------------------------------')
+  for i in defines.keys():
+    verbosePrint(verbose, defines[i])
 
   # check seealso for manual pages
   #for i in manualpages.keys():
