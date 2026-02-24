@@ -1115,7 +1115,7 @@ M*/
 
    Do not malloc or free `dnz` and `onz`, that is handled internally by these routines
 
-.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`
+.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`,
           `MatPreallocateBegin()`, `MatPreallocateSymmetricSetLocalBlock()`, `MatPreallocateSetLocalRemoveDups()`
 M*/
 #define MatPreallocateSetLocal(rmap, nrows, rows, cmap, ncols, cols, dnz, onz) \
@@ -1149,7 +1149,7 @@ M*/
 
    Do not malloc or free `dnz` and `onz`, that is handled internally by these routines
 
-.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`
+.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`,
           `MatPreallocateBegin()`, `MatPreallocateSymmetricSetLocalBlock()`, `MatPreallocateSetLocal()`
 M*/
 #define MatPreallocateSetLocalRemoveDups(rmap, nrows, rows, cmap, ncols, cols, dnz, onz) \
@@ -1183,7 +1183,7 @@ M*/
 
    Do not malloc or free `dnz` and `onz`, that is handled internally by these routines
 
-.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`
+.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`,
           `MatPreallocateBegin()`, `MatPreallocateSymmetricSetLocalBlock()`
 M*/
 #define MatPreallocateSetLocalBlock(rmap, nrows, rows, cmap, ncols, cols, dnz, onz) \
@@ -1216,7 +1216,7 @@ M*/
 
    Do not malloc or free `dnz` and `onz` that is handled internally by these routines
 
-.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`
+.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`,
           `MatPreallocateBegin()`, `MatPreallocateSetLocal()`
 M*/
 #define MatPreallocateSymmetricSetLocalBlock(map, nrows, rows, ncols, cols, dnz, onz) \
@@ -1251,7 +1251,7 @@ M*/
 
    This is a MACRO, not a function, because it uses variables declared in MatPreallocateBegin().
 
-.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`
+.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`,
           `MatPreallocateBegin()`, `MatPreallocateSetLocal()`
 M*/
 #define MatPreallocateSet(row, nc, cols, dnz, onz) \

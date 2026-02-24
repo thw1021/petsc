@@ -1811,7 +1811,7 @@ PETSC_EXTERN PetscErrorCode PetscScalarView(PetscInt, const PetscScalar[], Petsc
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
   #define PetscPrefetchBlock(a, b, c, d)
 #else
-  /*MC
+/*MC
    PetscPrefetchBlock - Prefetches a block of memory
 
    Synopsis:
@@ -1841,6 +1841,7 @@ PETSC_EXTERN PetscErrorCode PetscScalarView(PetscInt, const PetscScalar[], Petsc
    This function does nothing on architectures that do not support prefetch and never errors (even if passed an invalid
    address).
 
+.seealso: `PETSC_PREFETCH_HINT_NTA`, `PETSC_PREFETCH_HINT_T0`, `PETSC_PREFETCH_HINT_T1`, `PETSC_PREFETCH_HINT_T2`
 M*/
   #define PetscPrefetchBlock(a, n, rw, t) \
     do { \
@@ -2986,6 +2987,8 @@ PETSC_EXTERN PetscErrorCode PetscBLASGetNumThreads(PetscInt *);
    Note:
    This is needed to avoid errors with undefined-behavior sanitizers such as
    UBSan, assuming PETSc has been configured with `-fsanitize=undefined` as part of the compiler flags
+
+.seealso: `PetscInitialize()`
 M*/
 #define PetscSafePointerPlusOffset(ptr, offset) ((ptr) ? (ptr) + (offset) : NULL)
 
