@@ -421,14 +421,14 @@ static PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIDense(Mat A, Mat B, PetscReal
   MPI_Datatype     type1, *stype, *rtype;
   const PetscInt  *sindices, *sstarts, *rstarts;
   PetscMPIInt     *disp, nsends, nrecvs, nrows_to, nrows_from;
-  PetscBool        cisdense;
+  PetscBool        flg;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 4);
   PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
   PetscCall(PetscObjectGetComm((PetscObject)A, &comm));
-  PetscCall(PetscObjectBaseTypeCompare((PetscObject)C, MATMPIDENSE, &cisdense));
-  if (!cisdense) PetscCall(MatSetType(C, ((PetscObject)B)->type_name));
+  PetscCall(PetscObjectBaseTypeCompare((PetscObject)C, MATMPIDENSE, &flg));
+  if (!flg) PetscCall(MatSetType(C, ((PetscObject)B)->type_name));
   PetscCall(MatGetLocalSize(C, &m, &n));
   PetscCall(MatGetSize(C, &M, &N));
   if (m == PETSC_DECIDE || n == PETSC_DECIDE || M == PETSC_DECIDE || N == PETSC_DECIDE) PetscCall(MatSetSizes(C, Am, B->cmap->n, A->rmap->N, BN));
@@ -485,7 +485,7 @@ static PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIDense(Mat A, Mat B, PetscReal
   contents->nrecvs = nrecvs;
   contents->blda   = blda;
 
-  PetscCall(PetscMalloc1(Bm + 1, &disp));
+  PetscCall(PetscMalloc1(Bm, &disp));
   for (PetscMPIInt i = 0; i < nsends; i++) {
     PetscCall(PetscMPIIntCast(sstarts[i + 1] - sstarts[i], &nrows_to));
     for (PetscInt j = 0; j < nrows_to; j++) PetscCall(PetscMPIIntCast(sindices[sstarts[i] + j], &disp[j])); /* rowB to be sent */
@@ -511,7 +511,19 @@ static PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIDense(Mat A, Mat B, PetscReal
   PetscCall(MatSetOption(C, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
   PetscCall(MatAssemblyBegin(C, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(C, MAT_FINAL_ASSEMBLY));
-
+  if (PetscDefined(HAVE_CUPM)) { /* if either A or C is a device Mat, call MatMatMult() instead */
+    PetscCall(PetscObjectTypeCompare((PetscObject)C, MATMPIDENSE, &flg));
+    if (flg) PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPIAIJ, &flg));
+  } else flg = PETSC_TRUE;
+  if (flg) {
+    PetscCall(MatProductClear(aij->A));
+    PetscCall(MatProductClear(((Mat_MPIDense *)B->data)->A));
+    PetscCall(MatProductClear(((Mat_MPIDense *)C->data)->A));
+    PetscCall(MatProductCreateWithMat(aij->A, ((Mat_MPIDense *)B->data)->A, NULL, ((Mat_MPIDense *)C->data)->A));
+    PetscCall(MatProductSetType(((Mat_MPIDense *)C->data)->A, MATPRODUCT_AB));
+    PetscCall(MatProductSetFromOptions(((Mat_MPIDense *)C->data)->A));
+    PetscCall(MatProductSymbolic(((Mat_MPIDense *)C->data)->A));
+  }
   C->product->data       = contents;
   C->product->destroy    = MatMPIAIJ_MPIDenseDestroy;
   C->ops->matmultnumeric = MatMatMultNumeric_MPIAIJ_MPIDense;
@@ -590,14 +602,26 @@ static PetscErrorCode MatMatMultNumeric_MPIAIJ_MPIDense(Mat A, Mat B, Mat C)
   Mat_MPIDense    *cdense = (Mat_MPIDense *)C->data;
   Mat              workB;
   MPIAIJ_MPIDense *contents;
+  PetscBool        flg;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 3);
   PetscCheck(C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data empty");
   contents = (MPIAIJ_MPIDense *)C->product->data;
-  /* diagonal block of A times all local rows of B */
-  /* TODO: this calls a symbolic multiplication every time, which could be avoided */
-  PetscCall(MatMatMult(aij->A, bdense->A, MAT_REUSE_MATRIX, PETSC_CURRENT, &cdense->A));
+  /* diagonal block of A times all local rows of B, first make sure that everything is up-to-date */
+  if (PetscDefined(HAVE_CUPM)) {
+    PetscCall(PetscObjectTypeCompare((PetscObject)C, MATMPIDENSE, &flg));
+    if (flg) PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPIAIJ, &flg));
+  } else flg = PETSC_TRUE;
+  if (flg) { /* if either A or C is a device Mat, call MatMatMult() instead */
+    if (!cdense->A->product) {
+      PetscCall(MatProductCreateWithMat(aij->A, bdense->A, NULL, cdense->A));
+      PetscCall(MatProductSetType(cdense->A, MATPRODUCT_AB));
+      PetscCall(MatProductSetFromOptions(cdense->A));
+      PetscCall(MatProductSymbolic(cdense->A));
+    } else PetscCall(MatProductReplaceMats(aij->A, bdense->A, NULL, cdense->A));
+    PetscCall(MatProductNumeric(cdense->A));
+  } else PetscCall(MatMatMult(aij->A, bdense->A, MAT_REUSE_MATRIX, PETSC_CURRENT, &cdense->A));
   if (contents->workB->cmap->n == B->cmap->N) {
     /* get off processor parts of B needed to complete C=A*B */
     PetscCall(MatMPIDenseScatter(A, B, 0, C, &workB));
