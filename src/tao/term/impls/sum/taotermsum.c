@@ -57,9 +57,11 @@ static PetscErrorCode TaoTermSumHessCacheReset(TaoTermSumHessCache *cache)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermSumIsDummyDestroy(void **ctx)
+static PetscErrorCode TaoTermSumIsDummyDestroy(PetscCtxRt ctx)
 {
-  return PetscFree(*ctx);
+  PetscFunctionBegin;
+  PetscCall(PetscFree(*(void **)ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@

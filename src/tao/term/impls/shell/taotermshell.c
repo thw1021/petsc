@@ -52,16 +52,16 @@ static PetscErrorCode TaoTermShellSetContextDestroy_Shell(TaoTerm term, PetscCtx
 
 .seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellSetContext()`, `TaoTermShellSetContextDestroy()`
 @*/
-PetscErrorCode TaoTermShellGetContext(TaoTerm term, void *ctx)
+PetscErrorCode TaoTermShellGetContext(TaoTerm term, PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscAssertPointer(ctx, 2);
-  PetscUseMethod(term, "TaoTermShellGetContext_C", (TaoTerm, void *), (term, ctx));
+  PetscUseMethod(term, "TaoTermShellGetContext_C", (TaoTerm, PetscCtxRt), (term, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermShellGetContext_Shell(TaoTerm term, void *ctx)
+static PetscErrorCode TaoTermShellGetContext_Shell(TaoTerm term, PetscCtxRt ctx)
 {
   TaoTerm_Shell *shell = (TaoTerm_Shell *)term->data;
 
@@ -87,15 +87,15 @@ static PetscErrorCode TaoTermShellGetContext_Shell(TaoTerm term, void *ctx)
 
 .seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellGetContext()`, `TaoTermShellSetContextDestroy()`
 @*/
-PetscErrorCode TaoTermShellSetContext(TaoTerm term, void *ctx)
+PetscErrorCode TaoTermShellSetContext(TaoTerm term, PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  PetscTryMethod(term, "TaoTermShellSetContext_C", (TaoTerm, void *), (term, ctx));
+  PetscTryMethod(term, "TaoTermShellSetContext_C", (TaoTerm, PetscCtx), (term, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TaoTermShellSetContext_Shell(TaoTerm term, void *ctx)
+static PetscErrorCode TaoTermShellSetContext_Shell(TaoTerm term, PetscCtx ctx)
 {
   TaoTerm_Shell *shell = (TaoTerm_Shell *)term->data;
 
@@ -551,7 +551,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
 
 .seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSHELL`
 @*/
-PetscErrorCode TaoTermCreateShell(MPI_Comm comm, void *ctx, PetscCtxDestroyFn *destroy, TaoTerm *term)
+PetscErrorCode TaoTermCreateShell(MPI_Comm comm, PetscCtx ctx, PetscCtxDestroyFn *destroy, TaoTerm *term)
 {
   PetscFunctionBegin;
   PetscCall(TaoTermCreate(comm, term));
