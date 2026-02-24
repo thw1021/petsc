@@ -101,8 +101,8 @@ static inline PetscReal LegendrePrime(PetscInt j, PetscReal x)
 {
   if (j == 0) return 0.0;
   if (j == 1) return 1.0;
-  PetscReal Pj   = Legendre(j, x);
-  PetscReal Pjm1 = Legendre(j - 1, x);
+  PetscReal Pj    = Legendre(j, x);
+  PetscReal Pjm1  = Legendre(j - 1, x);
   PetscReal denom = x * x - 1.0;
   PetscCheck(PetscAbsReal(denom) > PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_FP, "LegendrePrime: x=+-1 causes division by zero");
   return j * (x * Pj - Pjm1) / denom;
@@ -230,14 +230,13 @@ PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   Output Parameters:
 + mu       - mu coefficient
 . nu       - nu coefficient
-. tilde_mu - $\tilde{mu}$ coefficient
-- b        - b vector
+- tilde_mu - $\tilde{mu}$ coefficient
 
   Level: developer
 
 .seealso: [](ch_ts), `TSRKS`, `TSRKL2ComputeCoefficients()`
 */
-PetscErrorCode TSRKL1ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu, PetscReal *b)
+PetscErrorCode TSRKL1ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu)
 {
   PetscReal w1 = 2.0 / ((PetscReal)s * (PetscReal)s + (PetscReal)s);
 
@@ -384,7 +383,7 @@ static PetscErrorCode TSSetUp_RKS(TS ts)
     PetscCall(TSRKC1ComputeCoefficients(rks->stages, rks->epsilon, rks->mu, rks->nu, rks->tilde_mu, rks->b));
     break;
   case RKS_RKL1:
-    PetscCall(TSRKL1ComputeCoefficients(rks->stages, rks->mu, rks->nu, rks->tilde_mu, rks->b));
+    PetscCall(TSRKL1ComputeCoefficients(rks->stages, rks->mu, rks->nu, rks->tilde_mu));
     break;
   case RKS_RKC2:
     PetscCall(TSRKC2ComputeCoefficients(rks->stages, rks->epsilon, rks->mu, rks->nu, rks->tilde_mu, rks->tilde_gamma, rks->b));

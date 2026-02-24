@@ -1,11 +1,22 @@
-t = 0.000000e+00  L2 = 1.241267e-16  Linf = 1.110223e-16  L2_avg = inf  Linf_avg = inf  t_max = 0.000000e+00  L2_max = 1.241267e-16
-t = 1.000000e-02  L2 = 5.910876e-02  Linf = 5.736997e-02  L2_avg = 3.109359e-02  Linf_avg = 2.986172e-02  t_max = 1.000000e-02  L2_max = 5.910876e-02
-t = 2.000000e-02  L2 = 7.505695e-02  Linf = 7.216479e-02  L2_avg = 5.196058e-02  Linf_avg = 5.024415e-02  t_max = 1.710000e-02  L2_max = 7.635880e-02
-t = 3.000000e-02  L2 = 6.179456e-02  Linf = 5.561248e-02  L2_avg = 5.754905e-02  Linf_avg = 5.499501e-02  t_max = 1.710000e-02  L2_max = 7.635880e-02
-t = 4.000000e-02  L2 = 5.805969e-02  Linf = 3.885864e-02  L2_avg = 5.767291e-02  Linf_avg = 5.291916e-02  t_max = 1.710000e-02  L2_max = 7.635880e-02
-t = 5.000000e-02  L2 = 8.046410e-02  Linf = 6.882576e-02  L2_avg = 5.959534e-02  Linf_avg = 5.244912e-02  t_max = 5.000000e-02  L2_max = 8.046410e-02
-t = 6.000000e-02  L2 = 4.357932e-02  Linf = 2.364490e-02  L2_avg = 6.160482e-02  Linf_avg = 5.342662e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
-t = 7.000000e-02  L2 = 5.981559e-02  Linf = 4.219067e-02  L2_avg = 6.048483e-02  Linf_avg = 5.067749e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
-t = 8.000000e-02  L2 = 6.070441e-02  Linf = 3.965048e-02  L2_avg = 6.051554e-02  Linf_avg = 4.957862e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
-t = 9.000000e-02  L2 = 6.339268e-02  Linf = 3.183883e-02  L2_avg = 6.061096e-02  Linf_avg = 4.804109e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
-t = 1.000000e-01  L2 = 7.759012e-02  Linf = 5.503502e-02  L2_avg = 6.149487e-02  Linf_avg = 4.740796e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
+t = 0.000000e+00  L2 = 1.241267e-16  Linf = 1.110223e-16  L2_avg = 0.000000e+00  Linf_avg = 0.000000e+00  t_max = 0.000000e+00  L2_max = 1.241267e-16
+[0]PETSC ERROR: ------------------------------------------------------------------------
+[0]PETSC ERROR: Caught signal number 11 SEGV: Segmentation Violation, probably memory access out of range
+[0]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
+[0]PETSC ERROR: or see https://petsc.org/release/faq/#valgrind and https://petsc.org/release/faq/
+[0]PETSC ERROR: ---------------------  Stack Frames ------------------------------------
+[0]PETSC ERROR: The line numbers in the error traceback may not be exact.
+[0]PETSC ERROR: #1 RHSFunction() at /Users/dannyfinn/petsc/src/ts/tutorials/ex78.c:354
+[0]PETSC ERROR: #2 TS callback right-hand-side
+[0]PETSC ERROR: #3 TSComputeRHSFunction() at /Users/dannyfinn/petsc/src/ts/interface/ts.c:649
+[0]PETSC ERROR: #4 TSComputeIFunction() at /Users/dannyfinn/petsc/src/ts/interface/ts.c:829
+[0]PETSC ERROR: #5 SNESTSFormFunction_Theta() at /Users/dannyfinn/petsc/src/ts/impls/implicit/theta/theta.c:962
+[0]PETSC ERROR: #6 SNESTSFormFunction() at /Users/dannyfinn/petsc/src/ts/interface/ts.c:4583
+[0]PETSC ERROR: #7 SNES callback function
+[0]PETSC ERROR: #8 SNESComputeFunction() at /Users/dannyfinn/petsc/src/snes/interface/snes.c:2490
+[0]PETSC ERROR: #9 SNESSolve_NEWTONLS() at /Users/dannyfinn/petsc/src/snes/impls/ls/ls.c:168
+[0]PETSC ERROR: #10 SNESSolve() at /Users/dannyfinn/petsc/src/snes/interface/snes.c:4900
+[0]PETSC ERROR: #11 TSTheta_SNESSolve() at /Users/dannyfinn/petsc/src/ts/impls/implicit/theta/theta.c:172
+[0]PETSC ERROR: #12 TSStep_Theta() at /Users/dannyfinn/petsc/src/ts/impls/implicit/theta/theta.c:223
+[0]PETSC ERROR: #13 TSStep() at /Users/dannyfinn/petsc/src/ts/interface/ts.c:3521
+[0]PETSC ERROR: #14 TSSolve() at /Users/dannyfinn/petsc/src/ts/interface/ts.c:4184
+[0]PETSC ERROR: #15 main() at /Users/dannyfinn/petsc/src/ts/tutorials/ex78.c:615

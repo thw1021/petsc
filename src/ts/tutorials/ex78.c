@@ -37,6 +37,14 @@ typedef struct {
   PetscReal   zmax;
   PetscReal   Tmin;
   PetscReal   Tmax;
+  PetscReal  *flux_x;
+  PetscReal  *flux_y;
+  PetscReal  *flux_z;
+  PetscReal  *physFlux_x;
+  PetscReal  *physFlux_y;
+  PetscReal  *physFlux_z;
+  PetscReal  *limiter_out;
+  PetscReal  *limiter_in;
   PetscReal   L2;
   PetscReal   Linf;
   PetscReal   L2_max;
@@ -98,7 +106,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsBool("-print_data", "Flag to print temperature data in monitor", "", options->printData, &options->printData, NULL));
   PetscCall(PetscOptionsBool("-use_ghost_cells", "Flag to pad real cells with ghost cells in all dimensions", "", options->use_ghost_cells, &options->use_ghost_cells, NULL));
   PetscCall(PetscOptionsIntArray("-num_ghost_cells", "Number of ghost cells on either end of mesh", "", options->num_ghost_cells, &nGC, NULL));
-
   PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -109,6 +116,19 @@ static PetscErrorCode SetupContext(DM dm, AppCtx *user)
 
   PetscFunctionBeginUser;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+
+  PetscInt xs, ys, zs, xm, ym, zm;
+  PetscCall(DMDAGetCorners(dm, NULL, NULL, NULL, &xm, &ym, &zm));
+  PetscInt local_size = xm * ym * zm;
+  PetscCall(PetscMalloc1(local_size, &user->flux_x));
+  PetscCall(PetscMalloc1(local_size, &user->flux_y));
+  PetscCall(PetscMalloc1(local_size, &user->flux_z));
+  PetscCall(PetscMalloc1(local_size, &user->physFlux_x));
+  PetscCall(PetscMalloc1(local_size, &user->physFlux_y));
+  PetscCall(PetscMalloc1(local_size, &user->physFlux_z));
+  PetscCall(PetscCalloc(local_size * sizeof(PetscReal), &user->limiter_out));
+  PetscCall(PetscCalloc(local_size * sizeof(PetscReal), &user->limiter_in));
+
   if (user->monitor_temp) {
     PetscDraw     draw;
     PetscDrawAxis axis;
@@ -137,6 +157,14 @@ static PetscErrorCode DestroyContext(AppCtx *user)
 {
   PetscFunctionBeginUser;
   PetscCall(PetscDrawLGDestroy(&user->drawlg));
+  PetscCall(PetscFree(user->flux_x));
+  PetscCall(PetscFree(user->flux_y));
+  PetscCall(PetscFree(user->flux_z));
+  PetscCall(PetscFree(user->physFlux_x));
+  PetscCall(PetscFree(user->physFlux_y));
+  PetscCall(PetscFree(user->physFlux_z));
+  PetscCall(PetscFree(user->limiter_out));
+  PetscCall(PetscFree(user->limiter_in));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -146,13 +174,13 @@ static PetscErrorCode PlotTemperature(TS ts, PetscInt step, PetscReal t, Vec T, 
   const PetscInt     ostep = user->ostep;
   DM                 dm;
   const PetscScalar *t_array;
-  PetscInt           i, M, xs, xm, ys, ym, zs, zm;
+  PetscInt           M, xs, xm, ys, ym, zs, zm;
   char               title[PETSC_MAX_PATH_LEN];
   PetscReal          dx, dy, dz;
   PetscReal          xvals[2], vals[2];
-  PetscReal          z, Tnum, Texact, tscale, front, denom;
   PetscDraw          draw;
   PetscDrawAxis      axis;
+  Vec                Tloc;
 
   PetscFunctionBeginUser;
   if (user->printData && step == 0) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t\tz\tT_exact\tT_numerical\n"));
@@ -161,8 +189,6 @@ static PetscErrorCode PlotTemperature(TS ts, PetscInt step, PetscReal t, Vec T, 
     PetscCall(DMGetLocalVector(dm, &Tloc));
     PetscCall(DMGlobalToLocalBegin(dm, T, INSERT_VALUES, Tloc));
     PetscCall(DMGlobalToLocalEnd(dm, T, INSERT_VALUES, Tloc));
-    DMGlobalToLocalBegin(dm, T, INSERT_VALUES, Tloc);
-    DMGlobalToLocalEnd(dm, T, INSERT_VALUES, Tloc);
     PetscCall(VecGetArrayRead(Tloc, &t_array));
     PetscCall(PetscDrawLGReset(user->drawlg));
     PetscCall(DMDAGetCorners(dm, &xs, &ys, &zs, &xm, &ym, &zm));
@@ -221,10 +247,9 @@ PetscErrorCode ComputeError(TS ts, PetscInt step, PetscReal t, Vec T, void *ctx)
   const PetscScalar ***Tarr;
   PetscInt             xs, ys, zs, xm, ym, zm;
   PetscInt             i;
-
-  PetscReal dx, dy, dz;
-  PetscReal err2 = 0.0, errmax = 0.0, err2_RMS = 0.0;
-  PetscReal dt, maxT;
+  PetscReal            dx, dy, dz;
+  PetscReal            err2 = 0.0, errmax = 0.0, err2_RMS = 0.0;
+  PetscReal            dt, maxT;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &dm));
@@ -290,7 +315,6 @@ PetscErrorCode ComputeError(TS ts, PetscInt step, PetscReal t, Vec T, void *ctx)
   }
   PetscReal L2_avg   = (step > 0) ? user->L2_sum / step : 0.0;
   PetscReal Linf_avg = (step > 0) ? user->Linf_sum / step : 0.0;
-  PetscReal Linf_avg = user->Linf_sum / step;
 
   if (step % user->ostep == 0) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "t = %.6e  L2 = %.6e  Linf = %.6e  L2_avg = %.6e  Linf_avg = %.6e  t_max = %.6e  L2_max = %.6e\n", (double)t, (double)user->L2, (double)user->Linf, (double)L2_avg, (double)Linf_avg, (double)user->t_l2_max,
@@ -313,10 +337,7 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
   PetscScalar       *dtdt_arr;
   PetscReal          dx, dy, dz, dt;
   PetscReal          rho = 1.0, cv = 1.0, T_right = 0.0;
-  PetscReal         *flux_x, *flux_y, *flux_z;
-  PetscReal         *physFlux_x, *physFlux_y, *physFlux_z;
-  PetscReal         *limiter_out, *limiter_in;
-  PetscInt           local_size, step;
+  PetscInt           step;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &dm));
@@ -331,15 +352,6 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
   PetscCall(VecGetArrayRead(T, &t_arr));
   PetscCall(VecGetArray(dTdt, &dtdt_arr));
 
-  local_size = xm * ym * zm;
-  PetscCall(PetscMalloc1(local_size, &flux_x));
-  PetscCall(PetscMalloc1(local_size, &flux_y));
-  PetscCall(PetscMalloc1(local_size, &flux_z));
-  PetscCall(PetscMalloc1(local_size, &physFlux_x));
-  PetscCall(PetscMalloc1(local_size, &physFlux_y));
-  PetscCall(PetscMalloc1(local_size, &physFlux_z));
-  PetscCall(PetscCalloc(local_size * sizeof(PetscReal), &limiter_out));
-  PetscCall(PetscCalloc(local_size * sizeof(PetscReal), &limiter_in));
   /*
     Calculate raw, unlimited flux densities at all interior faces
     Note: We calculate the flux at the LEFT, BOTTOM, BACK face of each cell (i,j,k)
@@ -347,10 +359,10 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
   for (PetscInt k = zs; k < zs + zm; k++) {
     for (PetscInt j = ys; j < ys + ym; j++) {
       for (PetscInt i = xs; i < xs + xm; i++) {
-        PetscInt current_idx = (k - zs) * ym * xm + (j - ys) * xm + (i - xs);
-        flux_x[current_idx]  = 0.0;
-        flux_y[current_idx]  = 0.0;
-        flux_z[current_idx]  = 0.0;
+        PetscInt current_idx      = (k - zs) * ym * xm + (j - ys) * xm + (i - xs);
+        user->flux_x[current_idx] = 0.0;
+        user->flux_y[current_idx] = 0.0;
+        user->flux_z[current_idx] = 0.0;
 
         if (i > xs) {
           PetscReal T_L    = t_arr[(k - zs) * ym * xm + (j - ys) * xm + ((i - 1) - xs)];
@@ -361,8 +373,8 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
           PetscReal TL52 = T_L * T_L * sqrtTL;
           PetscReal TR52 = T_R * T_R * sqrtTR;
 
-          PetscReal k_avg_x   = 0.5 * (TL52 + TR52);
-          flux_x[current_idx] = dt * k_avg_x * (T_R - T_L) / dx;
+          PetscReal k_avg_x         = 0.5 * (TL52 + TR52);
+          user->flux_x[current_idx] = k_avg_x * (T_R - T_L) / dx;
         }
         if (j > ys) {
           PetscReal T_B = t_arr[(k - zs) * ym * xm + ((j - 1) - ys) * xm + (i - xs)];
@@ -374,8 +386,8 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
           PetscReal TB52 = T_B * T_B * sqrtTB;
           PetscReal TT52 = T_T * T_T * sqrtTT;
 
-          PetscReal k_avg_x   = 0.5 * (TB52 + TT52);
-          flux_y[current_idx] = dt * k_avg_x * (T_T - T_B) / dy;
+          PetscReal k_avg_x         = 0.5 * (TB52 + TT52);
+          user->flux_y[current_idx] = k_avg_x * (T_T - T_B) / dy;
         }
         if (k > zs) {
           PetscReal T_B = t_arr[((k - 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)];
@@ -387,8 +399,8 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
           PetscReal TB52 = T_B * T_B * sqrtTB;
           PetscReal TF52 = T_F * T_F * sqrtTF;
 
-          PetscReal k_avg_x   = 0.5 * (TB52 + TF52);
-          flux_z[current_idx] = dt * k_avg_x * (T_F - T_B) / dz;
+          PetscReal k_avg_x         = 0.5 * (TB52 + TF52);
+          user->flux_z[current_idx] = k_avg_x * (T_F - T_B) / dz;
         }
       }
     }
@@ -396,10 +408,10 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
 
   if (user->useFCTLimiter) {
     /* Calculate limiter coefficients for each INTERIOR (non-ghost) CELL */
-    for (PetscInt idx = 0; idx < local_size; ++idx) {
-      physFlux_x[idx] = flux_x[idx] * (dy * dz);
-      physFlux_y[idx] = flux_y[idx] * (dx * dz);
-      physFlux_z[idx] = flux_z[idx] * (dx * dy);
+    for (PetscInt idx = 0; idx < xm * ym * zm; ++idx) {
+      user->physFlux_x[idx] = dt * user->flux_x[idx] * (dy * dz);
+      user->physFlux_y[idx] = dt * user->flux_y[idx] * (dx * dz);
+      user->physFlux_z[idx] = dt * user->flux_z[idx] * (dx * dy);
     }
 
     for (PetscInt k = zs; k < zs + zm; k++) {
@@ -423,12 +435,12 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
           PetscReal Q_i_plus    = cell_volume * rho * cv * (Tmax_neighbor - T_center);
           PetscReal Q_i         = cell_volume * rho * cv * Tmax_neighbor;
 
-          PetscReal Fleft  = physFlux_x[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
-          PetscReal Fright = (i < xs + xm - 1) ? physFlux_x[(k - zs) * ym * xm + (j - ys) * xm + ((i + 1) - xs)] : 0.0;
-          PetscReal Fbot   = physFlux_y[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
-          PetscReal Ftop   = (j < ys + ym - 1) ? physFlux_y[(k - zs) * ym * xm + ((j + 1) - ys) * xm + (i - xs)] : 0.0;
-          PetscReal Fback  = physFlux_z[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
-          PetscReal Ffront = (k < zs + zm - 1) ? physFlux_z[((k + 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)] : 0.0;
+          PetscReal Fleft  = user->physFlux_x[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
+          PetscReal Fright = (i < xs + xm - 1) ? user->physFlux_x[(k - zs) * ym * xm + (j - ys) * xm + ((i + 1) - xs)] : 0.0;
+          PetscReal Fbot   = user->physFlux_y[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
+          PetscReal Ftop   = (j < ys + ym - 1) ? user->physFlux_y[(k - zs) * ym * xm + ((j + 1) - ys) * xm + (i - xs)] : 0.0;
+          PetscReal Fback  = user->physFlux_z[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
+          PetscReal Ffront = (k < zs + zm - 1) ? user->physFlux_z[((k + 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)] : 0.0;
 
           PetscReal Ftot = PetscAbs(Fleft) + PetscAbs(Fright) + PetscAbs(Fbot) + PetscAbs(Ftop) + PetscAbs(Fback) + PetscAbs(Ffront);
           PetscReal Fnet = (Fright - Fleft) + (Ftop - Fbot) + (Ffront - Fback);
@@ -440,8 +452,8 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
           PetscReal fracout = Q_i_minus / PetscMax(Fout, denom);
           PetscReal fracin  = Q_i_plus / PetscMax(Fin, denom);
 
-          limiter_out[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)] = PetscMin(1.0, PetscMax(0.0, fracout));
-          limiter_in[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)]  = PetscMin(1.0, PetscMax(0.0, fracin));
+          user->limiter_out[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)] = PetscMin(1.0, PetscMax(0.0, fracout));
+          user->limiter_in[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)]  = PetscMin(1.0, PetscMax(0.0, fracin));
         }
       }
     }
@@ -453,33 +465,36 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
           PetscReal limiter_factor;
           if (i > xs) {
             PetscInt  idx_face  = (k - zs) * ym * xm + (j - ys) * xm + (i - xs);
-            PetscReal Flux_sign = SignValue(0.5, flux_x[idx_face]);
-            if (flux_x[idx_face] >= 0.0) {
-              limiter_factor = ((0.5 + Flux_sign) * (PetscMin(limiter_in[idx_face], limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(limiter_out[idx_face], limiter_in[idx_face])));
+            PetscReal Flux_sign = SignValue(0.5, user->flux_x[idx_face]);
+            if (user->flux_x[idx_face] >= 0.0) {
+              limiter_factor = ((0.5 + Flux_sign) * (PetscMin(user->limiter_in[idx_face], user->limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(user->limiter_out[idx_face], user->limiter_in[idx_face])));
             } else {
-              limiter_factor = ((0.5 + Flux_sign) * (PetscMin(limiter_in[(k - zs) * ym * xm + (j - ys) * xm + ((i - 1) - xs)], limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(limiter_out[(k - zs) * ym * xm + (j - ys) * xm + ((i - 1) - xs)], limiter_in[idx_face])));
+              limiter_factor = ((0.5 + Flux_sign) * (PetscMin(user->limiter_in[(k - zs) * ym * xm + (j - ys) * xm + ((i - 1) - xs)], user->limiter_out[idx_face])) +
+                                (0.5 - Flux_sign) * (PetscMin(user->limiter_out[(k - zs) * ym * xm + (j - ys) * xm + ((i - 1) - xs)], user->limiter_in[idx_face])));
             }
-            flux_x[idx_face] *= limiter_factor;
+            user->flux_x[idx_face] *= limiter_factor;
           }
           if (j > ys) {
             PetscInt  idx_face  = (k - zs) * ym * xm + (j - ys) * xm + (i - xs);
-            PetscReal Flux_sign = SignValue(0.5, flux_y[idx_face]);
-            if (flux_y[idx_face] >= 0.0) {
-              limiter_factor = ((0.5 + Flux_sign) * (PetscMin(limiter_in[idx_face], limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(limiter_out[idx_face], limiter_in[idx_face])));
+            PetscReal Flux_sign = SignValue(0.5, user->flux_y[idx_face]);
+            if (user->flux_y[idx_face] >= 0.0) {
+              limiter_factor = ((0.5 + Flux_sign) * (PetscMin(user->limiter_in[idx_face], user->limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(user->limiter_out[idx_face], user->limiter_in[idx_face])));
             } else {
-              limiter_factor = ((0.5 + Flux_sign) * (PetscMin(limiter_in[(k - zs) * ym * xm + ((j - 1) - ys) * xm + ((i)-xs)], limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(limiter_out[(k - zs) * ym * xm + ((j - 1) - ys) * xm + (i - xs)], limiter_in[idx_face])));
+              limiter_factor = ((0.5 + Flux_sign) * (PetscMin(user->limiter_in[(k - zs) * ym * xm + ((j - 1) - ys) * xm + ((i)-xs)], user->limiter_out[idx_face])) +
+                                (0.5 - Flux_sign) * (PetscMin(user->limiter_out[(k - zs) * ym * xm + ((j - 1) - ys) * xm + (i - xs)], user->limiter_in[idx_face])));
             }
-            flux_y[idx_face] *= limiter_factor;
+            user->flux_y[idx_face] *= limiter_factor;
           }
           if (k > zs) {
             PetscInt  idx_face  = (k - zs) * ym * xm + (j - ys) * xm + (i - xs);
-            PetscReal Flux_sign = SignValue(0.5, flux_z[idx_face]);
-            if (flux_z[idx_face] >= 0.0) {
-              limiter_factor = ((0.5 + Flux_sign) * (PetscMin(limiter_in[idx_face], limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(limiter_out[idx_face], limiter_in[idx_face])));
+            PetscReal Flux_sign = SignValue(0.5, user->flux_z[idx_face]);
+            if (user->flux_z[idx_face] >= 0.0) {
+              limiter_factor = ((0.5 + Flux_sign) * (PetscMin(user->limiter_in[idx_face], user->limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(user->limiter_out[idx_face], user->limiter_in[idx_face])));
             } else {
-              limiter_factor = ((0.5 + Flux_sign) * (PetscMin(limiter_in[((k - 1) - zs) * ym * xm + (j - ys) * xm + ((i)-xs)], limiter_out[idx_face])) + (0.5 - Flux_sign) * (PetscMin(limiter_out[((k - 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)], limiter_in[idx_face])));
+              limiter_factor = ((0.5 + Flux_sign) * (PetscMin(user->limiter_in[((k - 1) - zs) * ym * xm + (j - ys) * xm + ((i)-xs)], user->limiter_out[idx_face])) +
+                                (0.5 - Flux_sign) * (PetscMin(user->limiter_out[((k - 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)], user->limiter_in[idx_face])));
             }
-            flux_z[idx_face] *= limiter_factor;
+            user->flux_z[idx_face] *= limiter_factor;
           }
         }
       }
@@ -489,16 +504,16 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
   for (PetscInt k = zs; k < zs + zm; k++) {
     for (PetscInt j = ys; j < ys + ym; j++) {
       for (PetscInt i = xs; i < xs + xm; i++) {
-        PetscReal right_flux = (i < xs + xm - 1) ? flux_x[(k - zs) * ym * xm + (j - ys) * xm + ((i + 1) - xs)] : flux_x[(k - zs) * ym * xm + (j - ys) * xm + ((i)-xs)];
-        PetscReal left_flux  = flux_x[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
-        PetscReal top_flux   = (j < ys + ym - 1) ? flux_y[(k - zs) * ym * xm + ((j + 1) - ys) * xm + (i - xs)] : flux_y[(k - zs) * ym * xm + ((j)-ys) * xm + (i - xs)];
-        PetscReal bot_flux   = flux_y[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
-        PetscReal front_flux = (k < zs + zm - 1) ? flux_z[((k + 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)] : flux_z[((k)-zs) * ym * xm + (j - ys) * xm + (i - xs)];
-        PetscReal back_flux  = flux_z[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
+        PetscReal right_flux = (i < xs + xm - 1) ? user->flux_x[(k - zs) * ym * xm + (j - ys) * xm + ((i + 1) - xs)] : user->flux_x[(k - zs) * ym * xm + (j - ys) * xm + ((i)-xs)];
+        PetscReal left_flux  = user->flux_x[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
+        PetscReal top_flux   = (j < ys + ym - 1) ? user->flux_y[(k - zs) * ym * xm + ((j + 1) - ys) * xm + (i - xs)] : user->flux_y[(k - zs) * ym * xm + ((j)-ys) * xm + (i - xs)];
+        PetscReal bot_flux   = user->flux_y[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
+        PetscReal front_flux = (k < zs + zm - 1) ? user->flux_z[((k + 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)] : user->flux_z[((k)-zs) * ym * xm + (j - ys) * xm + (i - xs)];
+        PetscReal back_flux  = user->flux_z[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
 
-        PetscReal div_x = (right_flux - left_flux) / (dt * dx);
-        PetscReal div_y = (top_flux - bot_flux) / (dt * dy);
-        PetscReal div_z = (front_flux - back_flux) / (dt * dz);
+        PetscReal div_x = (right_flux - left_flux) / (dx);
+        PetscReal div_y = (top_flux - bot_flux) / (dy);
+        PetscReal div_z = (front_flux - back_flux) / (dz);
 
         dtdt_arr[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)] = div_x + div_y + div_z;
       }
@@ -506,15 +521,6 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
   }
 
   /* --- Cleanup --- */
-  PetscCall(PetscFree(flux_x));
-  PetscCall(PetscFree(flux_y));
-  PetscCall(PetscFree(flux_z));
-  PetscCall(PetscFree(physFlux_x));
-  PetscCall(PetscFree(physFlux_y));
-  PetscCall(PetscFree(physFlux_z));
-  PetscCall(PetscFree(limiter_out));
-  PetscCall(PetscFree(limiter_in));
-
   PetscCall(VecRestoreArrayRead(T, &t_arr));
   PetscCall(VecRestoreArray(dTdt, &dtdt_arr));
   PetscCall(VecViewFromOptions(dTdt, NULL, "-rhs_view"));
@@ -577,6 +583,7 @@ int main(int argc, char **argv)
 
   PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
   PetscCall(DMSetApplicationContext(dm, &user));
+  PetscCall(SetupContext(dm, &user));
 
   PetscCall(TSCreate(PETSC_COMM_WORLD, &ts));
   PetscCall(TSSetProblemType(ts, TS_NONLINEAR));
@@ -596,7 +603,6 @@ int main(int argc, char **argv)
   PetscCall(TSSetRHSFunction(ts, NULL, RHSFunction, &user));
   SNES snes;
   PetscCall(TSGetSNES(ts, &snes));
-  PetscCall(SetupContext(dm, &user));
   PetscCall(TSSetComputeInitialCondition(ts, InitialConditions));
   PetscCall(SNESSetJacobian(snes, NULL, NULL, SNESComputeJacobianDefault, NULL));
 
