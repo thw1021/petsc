@@ -2891,16 +2891,59 @@ PetscErrorCode DMDestroy_Plex(DM dm)
    Computes the graph laplacian L of a mesh, stored in the DMPLEX format.
       L = D - A, with D = degree matrix and A = adjacency matrix
 */
-PetscErrorCode ComputeLaplacian(DM dm, Mat *oL)
+PetscErrorCode ComputeGraphLaplacian(DM dm, PetscInt depth, Mat *oL)
 {
   Mat          L, preall;
   Vec          x, y;
   PetscInt    *i, *j, numVertices, rst, maxnnzrow, dim, *numDof, numFields;
+
   PetscScalar *vals;
   PetscSection s;
   PetscFunctionBeginUser;
-  /* Access CSR graph of local partition */
-  PetscCall(DMPlexCreatePartitionerGraph(dm, 0, &numVertices, &i, &j, NULL));
+  PetscCall(DMGetDimension(dm, &dim));
+  if (depth == dim) {
+    /* FIXME */
+    /* FEM adjacency */
+    PetscCall(DMSetBasicAdjacency(dm, PETSC_FALSE, PETSC_TRUE));
+    /* Access CSR graph of local partition */
+    PetscCall(DMPlexCreatePartitionerGraph(dm, dim - depth, &numVertices, &i, &j, NULL));
+  } else {
+    PetscInt pStart, pEnd;
+    PetscCall(DMPlexGetDepthStratum(dm, depth, &pStart, &pEnd));
+    numVertices = pEnd - pStart;
+    /* FIXME compute or estimate maxnnzrow a-priori */
+    maxnnzrow = numVertices;
+    maxnnzrow = 10;
+    PetscCall(PetscMalloc1(numVertices+1, &i));
+    PetscCall(PetscMalloc1(maxnnzrow*numVertices, &j));
+    i[0] = 0;
+    for (PetscInt p = pStart; p < pEnd; p++) {
+       PetscInt nnzrow = 0;
+       PetscInt nstar;
+       PetscInt *star = NULL;
+       PetscCall(DMPlexGetTransitiveClosure(dm, p, PETSC_FALSE, &nstar, &star));
+       for (PetscInt s = 0; s < nstar*2; s += 2) {
+         PetscInt nclosure;
+         PetscInt *closure = NULL;
+         PetscCall(DMPlexGetTransitiveClosure(dm, star[s], PETSC_TRUE, &nclosure, &closure));
+         for (PetscInt c = 0; c < nclosure*2; c += 2) {
+           if (closure[c] != p && closure[c] >= pStart && closure[c] < pEnd) {
+              PetscBool seen = PETSC_FALSE;
+              for (PetscInt f = 0; f < nnzrow; f++) {
+                 if (j[i[p-pStart] + f] == closure[c] - pStart) { seen = PETSC_TRUE; }
+              }
+              if (!seen) {
+                j[i[p-pStart] + nnzrow] = closure[c] - pStart;
+                nnzrow++;
+              }
+           }
+         }
+         PetscCall(DMPlexRestoreTransitiveClosure(dm, star[s], PETSC_TRUE, &nclosure, &closure));
+       }
+       i[p-pStart + 1] = i[p-pStart] + nnzrow;
+       PetscCall(DMPlexRestoreTransitiveClosure(dm, p, PETSC_FALSE, &nstar, &star));
+    }
+  }
   /* First create a matrix object */
   PetscCall(MatCreate(PetscObjectComm((PetscObject)dm), &L));
   PetscCall(MatSetSizes(L, numVertices, numVertices, PETSC_DECIDE, PETSC_DECIDE));
@@ -2963,7 +3006,6 @@ PetscErrorCode ComputeLaplacian(DM dm, Mat *oL)
     In this case, we specify a one-field, cell-centered discretization with a PetscSection object.
   */
   PetscCall(DMClone(dm, &dm));
-  PetscCall(DMGetDimension(dm, &dim));
   numFields = 1;
   PetscCall(DMSetNumFields(dm, numFields));
   PetscCall(PetscCalloc1(dim + 1, &numDof));
@@ -2981,20 +3023,23 @@ PetscErrorCode ComputeLaplacian(DM dm, Mat *oL)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMCreateColoring_Plex(DM dm, ISColoringType ctype, ISColoring *coloring)
+PetscErrorCode DMCreateColoring_Plex(DM dm, ISColoringType ctype, ISColoring *iscoloring)
 {
   Mat L;
   MatColoring mc;
   //char[] prefix;
   PetscFunctionBegin;
-  PetscCall(ComputeLaplacian(dm, &L));
+  // TODO new API should have depth as an argument
+  PetscInt depth = 0;
+  PetscCall(ComputeGraphLaplacian(dm, depth, &L));
   //PetscCall(MatGetOptionsPrefix(L, &prefix));
   //PetscCall(OptionSetInt(prefix+"mat_coloring_type", ctype));
 
   PetscCall(MatColoringCreate(L, &mc));
   PetscCall(MatColoringSetType(mc, MATCOLORINGSL));
+  PetscCall(MatColoringSetDistance(mc, 2));
   PetscCall(MatColoringSetFromOptions(mc));
-  PetscCall(MatColoringApply(mc, coloring));
+  PetscCall(MatColoringApply(mc, iscoloring));
   PetscCall(MatColoringDestroy(&mc));
 
   PetscCall(MatDestroy(&L));
