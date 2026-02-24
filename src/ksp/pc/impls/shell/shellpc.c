@@ -488,7 +488,7 @@ PetscErrorCode PCShellSetDestroy(PC pc, PetscErrorCode (*destroy)(PC pc))
   Note:
   You can get the `PCSHELL` context set with `PCShellSetContext()` using `PCShellGetContext()` if needed by `setup`.
 
-.seealso: [](ch_ksp), `PCSHELL`, `PCShellSetApplyRichardson()`, `PCShellSetApply()`, `PCShellSetContext()`, , `PCShellGetContext()`
+.seealso: [](ch_ksp), `PCSHELL`, `PCShellSetApplyRichardson()`, `PCShellSetApply()`, `PCShellSetContext()`, `PCShellGetContext()`
 @*/
 PetscErrorCode PCShellSetSetUp(PC pc, PetscErrorCode (*setup)(PC pc))
 {

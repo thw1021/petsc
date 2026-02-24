@@ -574,7 +574,7 @@ PETSC_EXTERN PetscErrorCode MatSetRandom(Mat, PetscRandom);
 
    For staggered grids, see `DMStagStencil`
 
-.seealso: [](ch_matrices), `Mat`, `MatSetValuesStencil()`, `MatSetStencil()`, `MatSetValuesBlockedStencil()`, `DMDAVecGetArray()`
+.seealso: [](ch_matrices), `Mat`, `MatSetValuesStencil()`, `MatSetStencil()`, `MatSetValuesBlockedStencil()`, `DMDAVecGetArray()`,
           `DMStagStencil`
 S*/
 typedef struct {

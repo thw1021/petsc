@@ -1495,12 +1495,12 @@ PETSC_EXTERN PetscErrorCode TSBasicSymplecticFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode TSBasicSymplecticRegisterDestroy(void);
 
 /*J
-  TSDISCGRAD - The Discrete Gradient integrator is a timestepper for Hamiltonian systems designed to conserve the first integral (energy),
+  TSDGType - The Discrete Gradient integrator is a timestepper for Hamiltonian systems designed to conserve the first integral (energy),
   but also has the property for some systems of monotonicity in a functional.
 
   Level: beginner
 
-.seealso: [](ch_ts), `TS`, TSDiscGradSetFormulation()`, `TSDiscGradGetFormulation()`, `TSDiscGradSetType()`, `TSDiscGradGetType()`
+.seealso: [](ch_ts), `TS`, `TSDiscGradSetFormulation()`, `TSDiscGradGetFormulation()`, `TSDiscGradSetType()`, `TSDiscGradGetType()`
 J*/
 typedef enum {
   TS_DG_GONZALEZ,

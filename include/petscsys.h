@@ -2290,7 +2290,6 @@ static inline PetscErrorCode PetscIntMultError(PetscInt a, PetscInt b, PetscInt 
 }
 
 /*@C
-
    PetscIntSumError - Computes the sum of two positive `PetscInt` and generates an error with overflow.
 
    Not Collective; No Fortran Support
@@ -2680,6 +2679,8 @@ PETSC_EXTERN PetscSegBuffer PetscCitationsList;
 .     -citations [filename]   - print out the bibtex entries for the given computation
 
      Level: intermediate
+
+.seealso: `PetscFinalize()`
 @*/
 static inline PetscErrorCode PetscCitationsRegister(const char cit[], PetscBool *set)
 {

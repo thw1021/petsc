@@ -287,7 +287,6 @@ PETSC_EXTERN PetscErrorCode VecCreate_ViennaCL(Vec v)
 
 .seealso: `VecCreateSeqViennaCLWithArray()`, `VecCreateMPIWithArray()`, `VecCreateSeqWithArray()`,
           `VecCreate()`, `VecCreateMPI()`, `VecCreateGhostWithArray()`, `VecViennaCLPlaceArray()`
-
 @*/
 PetscErrorCode VecCreateMPIViennaCLWithArray(MPI_Comm comm, PetscInt bs, PetscInt n, PetscInt N, const ViennaCLVector *array, Vec *vv) PeNS
 {
@@ -331,7 +330,7 @@ PetscErrorCode VecCreateMPIViennaCLWithArray(MPI_Comm comm, PetscInt bs, PetscIn
 
   Level: intermediate
 
-.seealso: `VecCreateSeqViennaCLWithArrays()`, `VecCreateMPIWithArray()`
+.seealso: `VecCreateSeqViennaCLWithArrays()`, `VecCreateMPIWithArray()`,
           `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`, `VecCreateGhost()`,
           `VecCreateMPI()`, `VecCreateGhostWithArray()`, `VecViennaCLPlaceArray()`,
           `VecPlaceArray()`, `VecCreateMPICUDAWithArrays()`,
