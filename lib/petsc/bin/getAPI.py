@@ -38,6 +38,7 @@ structs = {}
 includefiles = {}
 mansecs = {}         # mansec[mansecname] = set(all submansecnames in mansecname)
 submansecs = set()
+manualpages = {}
 
 regcomment   = re.compile(r'/\* [-A-Za-z _(),<>|^\*/0-9.:=\[\]\.;]* \*/')
 regcomment2  = re.compile(r'// [-A-Za-z _(),<>|^\*/0-9.:=\[\]\.;]*')
@@ -48,6 +49,19 @@ def displayIncludeMansec(obj):
 
 def displayFile(obj):
     return '  ' + str(obj.dir) + '/' + str(obj.file) + '\n'
+
+class ManualPage:
+    '''Represents a manual page'''
+    def __init__(self, name, mansec, text, seealsos):
+        self.name        = name
+        self.mansec      = mansec
+        self.text        = text
+        self.seealsos    = seealsos
+
+    def __str__(self):
+        mstr = str(self.name) + '\n'
+        mstr += str(self.seealsos)
+        return mstr
 
 class Typedef:
     '''Represents typedef oldtype newtype'''
@@ -269,6 +283,7 @@ def processManualPage(name, lines):
     return
   lines = lines[lastline:firstline]
   lines.reverse()
+  text = lines
   top = lines[0].strip(' ')
   loc = top.find(name)
   if not loc == 0:
@@ -334,6 +349,15 @@ def processManualPage(name, lines):
     else:
       print('See also for ' + name + ': ' + i + ' is misformed')
       return
+  seealsos = []
+  for i in seealso:
+    if i.startswith('`'):
+      see = i[1:-1]
+      if see in seealsos:
+        print('See also for ' + name + ': ' + see + ' is duplicate')
+        return
+      seealsos.append(see)
+  manualpages[name] = ManualPage(name, 'unknown', text, seealsos)
   #print(seealso)
 
 
@@ -972,6 +996,18 @@ def getAPI(directory,pkgname = 'petsc',verbose = False):
   verbosePrint(verbose, 'Standalone functions  --------------------------------')
   for i in funcs.keys():
     verbosePrint(verbose, funcs[i])
+
+  # check seealso for manual pages
+  #for i in manualpages.keys():
+  #  man = manualpages[i]
+  #  for j in man.seealsos:
+  #    if j.endswith('()'): j = j[:-2]
+  #    if not j in manualpages:
+  #      print('Manual page ' + man.name + ' has incorrect seealso ' + j)
+
+  verbosePrint(verbose, 'Manual pages  --------------------------------')
+  for i in manualpages.keys():
+    verbosePrint(verbose, manualpages[i])
 
   #file = open('classes.data','wb')
   #pickle.dump(enums,file)
