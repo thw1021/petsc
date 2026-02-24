@@ -8,18 +8,18 @@ struct _n_TaoTerm_Callbacks {
   PetscErrorCode (*gradient)(Tao, Vec, Vec, PetscCtx);
   PetscErrorCode (*objectiveandgradient)(Tao, Vec, PetscReal *, Vec, PetscCtx);
   PetscErrorCode (*hessian)(Tao, Vec, Mat, Mat, PetscCtx);
-  void *obj_ctx;
-  void *grad_ctx;
-  void *objgrad_ctx;
-  void *hess_ctx;
-  char *obj_name;
-  char *grad_name;
-  char *objgrad_name;
-  char *hess_name;
-  char *set_obj_name;
-  char *set_grad_name;
-  char *set_objgrad_name;
-  char *set_hess_name;
+  PetscCtx obj_ctx;
+  PetscCtx grad_ctx;
+  PetscCtx objgrad_ctx;
+  PetscCtx hess_ctx;
+  char    *obj_name;
+  char    *grad_name;
+  char    *objgrad_name;
+  char    *hess_name;
+  char    *set_obj_name;
+  char    *set_grad_name;
+  char    *set_objgrad_name;
+  char    *set_hess_name;
 };
 
 #define PetscCheckTaoTermCallbacksValid(term, tt, params) \

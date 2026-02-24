@@ -782,18 +782,19 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
     }
     {
       PetscBool is_callback;
-      PetscInt  ngrad_mffd;
+      PetscInt  ngrad_mffd, ngrads_display;
 
-      // Check if tao has only one term and it's a callback
+      /* Check if tao has only one term and it's a callback */
       PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callback));
       ngrad_mffd = tao->objective_term.term->ngrad_mffd;
-      if (is_callback) tao->ngrads += ngrad_mffd;
       if (ngrad_mffd > 0 && format == PETSC_VIEWER_ASCII_INFO_DETAIL) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of MFFD gradient evaluations=%" PetscInt_FMT "\n", ngrad_mffd));
-    }
-    if (tao->ngrads > 0) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations=%" PetscInt_FMT ",", tao->ngrads));
-      if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: unlimited)\n"));
-      else PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: %" PetscInt_FMT ")\n", tao->max_funcs));
+      ngrads_display = tao->ngrads;
+      if (is_callback) ngrads_display += ngrad_mffd;
+      if (ngrads_display > 0) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations=%" PetscInt_FMT ",", ngrads_display));
+        if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: unlimited)\n"));
+        else PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: %" PetscInt_FMT ")\n", tao->max_funcs));
+      }
     }
     if (tao->nfuncgrads > 0) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function/gradient evaluations=%" PetscInt_FMT ",", tao->nfuncgrads));
