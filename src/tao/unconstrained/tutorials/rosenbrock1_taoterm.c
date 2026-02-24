@@ -11,7 +11,7 @@ static PetscErrorCode FormFunctionGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 static PetscErrorCode FormHessian(TaoTerm, Vec, Vec, Mat, Mat);
 static PetscErrorCode CreateSolutionVec(TaoTerm, Vec *);
 
-PetscErrorCode CtxDestroy(void **ctx)
+PetscErrorCode CtxDestroy(PetscCtxRt ctx)
 {
   PetscFunctionBegin;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -41,7 +41,7 @@ int main(int argc, char **argv)
   PetscCall(AppCtxInitialize(comm, &user));
 
   /* Define the objective function */
-  PetscCall(TaoTermCreateShell(comm, (void *)&user, CtxDestroy, &objective));
+  PetscCall(TaoTermCreateShell(comm, &user, CtxDestroy, &objective));
   PetscCall(TaoTermSetParametersMode(objective, TAOTERM_PARAMETERS_NONE));
   PetscCall(TaoTermShellSetCreateSolutionVec(objective, CreateSolutionVec));
   PetscCall(TaoTermShellSetObjectiveAndGradient(objective, FormFunctionGradient));
