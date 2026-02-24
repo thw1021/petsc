@@ -7,7 +7,7 @@ static PetscErrorCode TaoTermCreateSolutionVec_Test(TaoTerm term, Vec *solution)
   Mat A;
 
   PetscFunctionBegin;
-  PetscCall(TaoTermShellGetContext(term, (void *)&A));
+  PetscCall(TaoTermShellGetContext(term, &A));
   PetscCall(MatCreateVecs(A, NULL, solution));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -17,7 +17,7 @@ static PetscErrorCode TaoTermCreateParametersVec_Test(TaoTerm term, Vec *params)
   Mat A;
 
   PetscFunctionBegin;
-  PetscCall(TaoTermShellGetContext(term, (void *)&A));
+  PetscCall(TaoTermShellGetContext(term, &A));
   PetscCall(MatCreateVecs(A, params, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -35,7 +35,7 @@ static PetscErrorCode TaoTermComputeObjective_Test(TaoTerm term, Vec x, Vec para
   Vec r;
 
   PetscFunctionBegin;
-  PetscCall(TaoTermShellGetContext(term, (void *)&A));
+  PetscCall(TaoTermShellGetContext(term, &A));
   PetscCall(VecDuplicate(x, &r));
   PetscCall(MatMult(A, params, r));
   PetscCall(VecDotRealPart(x, r, value));
@@ -48,7 +48,7 @@ static PetscErrorCode TaoTermComputeGradient_Test(TaoTerm term, Vec x, Vec param
   Mat A;
 
   PetscFunctionBegin;
-  PetscCall(TaoTermShellGetContext(term, (void *)&A));
+  PetscCall(TaoTermShellGetContext(term, &A));
   PetscCall(MatMult(A, params, g));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -58,7 +58,7 @@ static PetscErrorCode TaoTermComputeObjectiveAndGradient_Test(TaoTerm term, Vec 
   Mat A;
 
   PetscFunctionBegin;
-  PetscCall(TaoTermShellGetContext(term, (void *)&A));
+  PetscCall(TaoTermShellGetContext(term, &A));
   PetscCall(MatMult(A, params, g));
   PetscCall(VecDotRealPart(x, g, value));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -82,7 +82,7 @@ static PetscErrorCode testShell(MPI_Comm comm, PetscBool separate)
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
 
-  PetscCall(TaoTermCreateShell(comm, (void *)A, NULL, &term));
+  PetscCall(TaoTermCreateShell(comm, A, NULL, &term));
   PetscCall(TaoTermSetParametersMode(term, TAOTERM_PARAMETERS_REQUIRED));
 
   if (separate) {
