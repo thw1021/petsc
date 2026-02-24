@@ -36,7 +36,7 @@ PETSCCONF_H = ${PETSC_DIR}/${PETSC_ARCH}/include/petscconf.h
 #********* Rules for make all **********************************************************************************************************************************
 
 all:
-	+@${OMAKE_SELF} a change that will cause a conflict PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} chk_upgrade | tee ${PETSC_ARCH}/lib/petsc/conf/make.log
+	+@${OMAKE_SELF} a change that will cause a conflict PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} chk_upgrade | tee ${PETSC_ARCH}/lib/petsc/conf/make.logdssddssd
 	@ln -sf ${PETSC_ARCH}/lib/petsc/conf/make.log make.log
 	+@(${OMAKE_SELF_PRINTDIR} PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR} all-local; echo "$$?" > ${PETSC_ARCH}/lib/petsc/conf/error.log) 2>&1 | tee -a ${PETSC_ARCH}/lib/petsc/conf/make.log
 	+@if [ "`cat ${PETSC_ARCH}/lib/petsc/conf/error.log 2> /dev/null`" != "0" ]; then\
