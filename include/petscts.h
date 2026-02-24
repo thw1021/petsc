@@ -1269,7 +1269,7 @@ PETSC_EXTERN PetscErrorCode TSEIMEXSetOrdAdapt(TS, PetscBool);
 
    Level: beginner
 
-.seealso: [](ch_ts), `TS`, `TSRKSetType()`, `TS`, `TSRK`, `TSRKRegister()`
+.seealso: [](ch_ts), `TS`, `TSRKSetType()`, `TSRK`, `TSRKRegister()`
 J*/
 typedef const char *TSRKType;
 #define TSRK1FE "1fe"
@@ -1494,14 +1494,6 @@ PETSC_EXTERN PetscErrorCode TSBasicSymplecticInitializePackage(void);
 PETSC_EXTERN PetscErrorCode TSBasicSymplecticFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode TSBasicSymplecticRegisterDestroy(void);
 
-/*J
-  TSDISCGRAD - The Discrete Gradient integrator is a timestepper for Hamiltonian systems designed to conserve the first integral (energy),
-  but also has the property for some systems of monotonicity in a functional.
-
-  Level: beginner
-
-.seealso: [](ch_ts), `TS`, TSDiscGradSetFormulation()`, `TSDiscGradGetFormulation()`, `TSDiscGradSetType()`, `TSDiscGradGetType()`
-J*/
 typedef enum {
   TS_DG_GONZALEZ,
   TS_DG_AVERAGE,

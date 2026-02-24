@@ -2694,8 +2694,7 @@ PetscErrorCode PCFieldSplitGetIS(PC pc, const char splitname[], IS *is)
 
   Level: intermediate
 
-.seealso: [](sec_block_matrices), `PC`, `PCFieldSplitGetSubKSP()`, `PCFIELDSPLIT`, `PCFieldSplitGetIS()`, `PCFieldSplitSetIS()`,
-
+.seealso: [](sec_block_matrices), `PC`, `PCFieldSplitGetSubKSP()`, `PCFIELDSPLIT`, `PCFieldSplitGetIS()`, `PCFieldSplitSetIS()`
 @*/
 PetscErrorCode PCFieldSplitGetISByIndex(PC pc, PetscInt index, IS *is)
 {
