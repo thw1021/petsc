@@ -316,7 +316,7 @@ typedef enum {
 
      Level: intermediate
 
-.seealso: [](sec_pc), `PCGAMG`, `PCMG`, `PC`, `PCSetType()`, `PCGAMGSetThreshold()`, `PCGAMGSetThreshold()`, `PCGAMGSetReuseInterpolation()`
+.seealso: [](sec_pc), `PCGAMG`, `PCMG`, `PC`, `PCSetType()`, `PCGAMGSetThreshold()`, `PCGAMGSetReuseInterpolation()`
 J*/
 typedef const char *PCGAMGType;
 #define PCGAMGAGG       "agg"

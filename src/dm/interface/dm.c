@@ -2846,7 +2846,7 @@ static PetscErrorCode DMGlobalToLocalHook_Constraints(DM dm, Vec g, InsertMode m
   `DMGlobalToLocalHookAdd()` may be used to provide additional operations that are performed during the update process.
 
 .seealso: [](ch_dmbase), `DM`, `DMGlobalToLocalHookAdd()`, `DMCoarsen()`, `DMDestroy()`, `DMView()`, `DMCreateGlobalVector()`, `DMCreateInterpolation()`,
-          `DMGlobalToLocalEnd()`, `DMLocalToGlobalBegin()`, `DMLocalToGlobal()`, `DMLocalToGlobalEnd()`,
+          `DMLocalToGlobalBegin()`, `DMLocalToGlobal()`, `DMLocalToGlobalEnd()`,
           `DMGlobalToLocalBegin()`, `DMGlobalToLocalEnd()`
 @*/
 PetscErrorCode DMGlobalToLocal(DM dm, Vec g, InsertMode mode, Vec l)

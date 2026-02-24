@@ -1436,8 +1436,7 @@ PETSC_EXTERN PetscErrorCode MatFindZeroRows(Mat, IS *);
    Developer Note:
    This API should be converted to an API similar to those for `MatColoring` and `MatPartitioning`
 
-.seealso: [](ch_matrices), [](sec_graph), `MatGetFactor()`, `MatGetOrdering()`, `MatColoringType`, `MatPartitioningType`, `MatCoarsenType`, `MatCoarsenType`,
-          `PCFactorSetOrderingType()`
+.seealso: [](ch_matrices), [](sec_graph), `MatGetFactor()`, `MatGetOrdering()`, `MatColoringType`, `MatPartitioningType`, `MatCoarsenType`, `PCFactorSetOrderingType()`
 J*/
 typedef const char *MatOrderingType;
 #define MATORDERINGNATURAL       "natural"
@@ -1772,7 +1771,7 @@ PETSC_EXTERN PetscErrorCode MatTransposeColoringDestroy(MatTransposeColoring *);
    It is an extra maintenance and documentation cost to have two objects with the same functionality. `PetscPartitioner` should be removed
 
 .seealso: [](ch_matrices), [](sec_graph), `Mat`, `MatPartitioningCreate()`, `MatPartitioningType`, `MatColoring`, `MatGetOrdering()`, `MatOrderingType`,
-          `MatCoarsenType`, `MatCoarsenType`
+          `MatCoarsenType`
 S*/
 typedef struct _p_MatPartitioning *MatPartitioning;
 
@@ -1782,7 +1781,7 @@ typedef struct _p_MatPartitioning *MatPartitioning;
    Level: beginner
 dm
 .seealso: [](ch_matrices), [](sec_graph), `Mat`, `MatPartitioningCreate()`, `MatPartitioning`, `MatPartitioningSetType()`, `MatColoringType`, `MatOrderingType`,
-          `MatCoarsenType`, `MatCoarsenType`
+          `MatCoarsenType`
 J*/
 typedef const char *MatPartitioningType;
 #define MATPARTITIONINGCURRENT  "current"

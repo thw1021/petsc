@@ -1269,7 +1269,7 @@ PETSC_EXTERN PetscErrorCode TSEIMEXSetOrdAdapt(TS, PetscBool);
 
    Level: beginner
 
-.seealso: [](ch_ts), `TS`, `TSRKSetType()`, `TS`, `TSRK`, `TSRKRegister()`
+.seealso: [](ch_ts), `TS`, `TSRKSetType()`, `TSRK`, `TSRKRegister()`
 J*/
 typedef const char *TSRKType;
 #define TSRK1FE "1fe"
