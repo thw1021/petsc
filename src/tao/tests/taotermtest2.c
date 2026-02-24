@@ -15,7 +15,7 @@ typedef struct {
 
 static PetscErrorCode FormFunctionGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 static PetscErrorCode FormHessian(TaoTerm, Vec, Vec, Mat, Mat);
-static PetscErrorCode CtxDestroy(void **ctx);
+static PetscErrorCode CtxDestroy(PetscCtxRt ctx);
 
 /* Callback functions for traditional TAO interface */
 static PetscErrorCode FormObjectiveGradient_Callback(Tao, Vec, PetscReal *, Vec, void *);
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
   }
 
   /* Create shell term that computes f(x) = 0.5 ||x||_2^2 */
-  PetscCall(TaoTermCreateShell(comm, (void *)ctx, CtxDestroy, &objective));
+  PetscCall(TaoTermCreateShell(comm, ctx, CtxDestroy, &objective));
 
   /* Set solution and parameter sizes to match the mapped space (m) */
   PetscCall(TaoTermSetSolutionSizes(objective, PETSC_DECIDE, m, 1));
@@ -266,7 +266,7 @@ static PetscErrorCode FormHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hp
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CtxDestroy(void **ctx_ptr)
+static PetscErrorCode CtxDestroy(PetscCtxRt ctx_ptr)
 {
   HalfL2Ctx *ctx = *(HalfL2Ctx **)ctx_ptr;
 
@@ -274,7 +274,7 @@ static PetscErrorCode CtxDestroy(void **ctx_ptr)
   if (ctx) {
     PetscCall(VecDestroy(&ctx->pdiff_work));
     PetscCall(PetscFree(ctx));
-    *ctx_ptr = NULL;
+    *(void **)ctx_ptr = NULL;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
