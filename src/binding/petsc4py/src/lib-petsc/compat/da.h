@@ -1,4 +1,4 @@
-#ifndef PETSC4PY_COMPAT_DA_H
+#if !defined(PETSC4PY_COMPAT_DA_H)
 #define PETSC4PY_COMPAT_DA_H
 
 #include <petscda.h>
