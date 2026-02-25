@@ -1367,7 +1367,9 @@ int main(int argc, char **argv)
         PetscCall(VecNorm(ctx.E_field, NORM_INFINITY, &E_max));
         
         if (step % ctx.ostep == 0) {
-           PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Step %d: Max |E| = %g\n", step, (double)E_max));
+           PetscReal t      = (step + 1) * ctx.dt;
+           PetscReal lgEmax = E_max > 0 ? PetscLog10Real(E_max) : -16.0;
+           PetscCall(PetscPrintf(PETSC_COMM_WORLD, "E: %f\t%20.15e\t%f\t(%" PetscInt_FMT ")\n", (double)t, (double)E_max, (double)lgEmax, step));
         }
         if (ctx.check_landau) {
            E_history[step] = E_max;
@@ -1423,21 +1425,28 @@ int main(int argc, char **argv)
   build:
     requires: !complex double
 
+  # dmPot is cloned from dmX so -x_dm_plex_box_* options are no longer needed.
+  # Only -x_petscspace_degree is required to set the CG FE degree for the potential.
   testset:
-    args: -fx_dm_plex_dim 1 -fv_dm_plex_dim 1 -x_dm_plex_dim 1 \
+    args: -fx_dm_plex_dim 1 -fv_dm_plex_dim 1 \
           -fx_dm_plex_box_faces 32 -fv_dm_plex_box_faces 64 -fx_dm_plex_box_bd periodic -fv_dm_plex_box_bd none \
           -fx_dm_plex_box_upper 12.5664 -fv_dm_plex_box_lower -6.0 -fv_dm_plex_box_upper 6.0 \
           -fx_petscspace_degree 1 -fv_petscspace_degree 1 \
-          -x_dm_plex_box_faces 32 -x_dm_plex_box_bd periodic -x_dm_plex_box_upper 12.5664 -x_petscspace_degree 1 \
+          -x_petscspace_degree 1 \
           -em_snes_type ksponly -em_ksp_type cg -em_pc_type gamg \
           -em_mg_coarse_ksp_type preonly -em_mg_coarse_pc_type svd
 
     test:
       suffix: 0
-      args: -steps 10 -output_step 1 -efield_monitor
+      args: -steps 10 -output_step 1
+
+    test:
+      suffix: mpi
+      nsize: 2
+      args: -steps 10 -output_step 1
 
     test:
       suffix: landau
-      args: -steps 200 -output_step 10 -check_landau -efield_monitor
+      args: -steps 200 -output_step 10 -check_landau
 
 TEST*/
