@@ -11010,6 +11010,10 @@ PetscErrorCode DMPlexMonitorThroughput(DM dm, void *unused)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static inline PetscInt DMPlex_GlobalID(PetscInt point)
+{
+  return point >= 0 ? point : -(point + 1);
+}
 
 /*
    Computes the graph laplacian L at the given depth.
@@ -11019,32 +11023,49 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
 {
   Mat          L, preall;
   Vec          x, y;
+  PetscSF      sfPoint;
+  IS           pointNumbering;
+  const PetscInt *pointNum;
   PetscInt    *i, *j, numVertices, numEdges, rst, maxnnzrow, dim, *numDof, numFields;
+  PetscInt     pStart, pEnd;
+  PetscBool    useCone, useClosure;
   PetscScalar *vals;
   PetscSection s;
   PetscFunctionBeginUser;
-  /* FEM adjacency */
-  PetscCall(DMSetBasicAdjacency(dm, PETSC_FALSE, PETSC_TRUE));
+
   PetscCall(DMGetDimension(dm, &dim));
   if (depth == dim) {
-    /* FIXME this code only works for depth == dim */
+    /* FIXME this code only works for depth == dim and FVM adjacency */
     /* Access CSR graph of local partition */
     PetscCall(DMPlexCreatePartitionerGraph(dm, dim - depth, &numVertices, &i, &j, NULL));
   } else {
-    /* FIXME this code only works in serial */
-    PetscInt pStart, pEnd;
+    /* FEM adjacency */
+    PetscCall(DMGetBasicAdjacency(dm, &useCone, &useClosure));
+    PetscCall(DMSetBasicAdjacency(dm, PETSC_FALSE, PETSC_TRUE));
+    PetscCall(DMGetPointSF(dm, &sfPoint));
     PetscCall(DMPlexGetDepthStratum(dm, depth, &pStart, &pEnd));
-    numVertices = pEnd - pStart;
+    PetscCall(DMPlexCreateNumbering_Plex(dm, pStart, pEnd, 0, NULL, sfPoint, &pointNumbering));
+    PetscCall(ISGetIndices(pointNumbering, &pointNum));
+    /* Determine sizes */
+    numVertices = 0;
+    for (PetscInt p = pStart; p < pEnd; p++) {
+      /* Skip non-owned cells in parallel */
+      if (pointNum[p - pStart] < 0) continue;
+      numVertices++;
+    }
     numEdges = 0;
     for (PetscInt p = pStart; p < pEnd; p++) {
       PetscInt nadj = PETSC_DETERMINE;
       PetscInt *adj = NULL;
+      /* Skip non-owned cells in parallel */
+      if (pointNum[p - pStart] < 0) continue;
       PetscCall(DMPlexGetAdjacency(dm, p, &nadj, &adj));
-      for (PetscInt k = 0; k < nadj; k++)
-        if (adj[k] != p && adj[k] >= pStart && adj[k] < pEnd)
+      for (PetscInt a = 0; a < nadj; a++)
+        if (adj[a] != p && pStart <= adj[a] && adj[a] < pEnd)
           numEdges++;
       PetscCall(PetscFree(adj));
     }
+    /* Determine adjacency */
     PetscCall(PetscMalloc1(numVertices+1, &i));
     PetscCall(PetscMalloc1(numEdges, &j));
     PetscInt iptr = 0;
@@ -11052,13 +11073,20 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
     for (PetscInt p = pStart; p < pEnd; p++) {
       PetscInt nadj = PETSC_DETERMINE;
       PetscInt *adj = NULL;
+      /* Skip non-owned cells in parallel */
+      if (pointNum[p - pStart] < 0) continue;
       PetscCall(DMPlexGetAdjacency(dm, p, &nadj, &adj));
-      for (PetscInt k = 0; k < nadj; k++)
-        if (adj[k] != p && adj[k] >= pStart && adj[k] < pEnd)
-          j[iptr++] = adj[k] - pStart;
+      for (PetscInt a = 0; a < nadj; a++)
+        if (adj[a] != p && pStart <= adj[a] && adj[a] < pEnd)
+          j[iptr++] = DMPlex_GlobalID(pointNum[adj[a] - pStart]);
       PetscCall(PetscFree(adj));
       i[p-pStart + 1] = iptr;
+      /* Sort adjacencies (not strictly necessary) */
+      PetscCall(PetscSortInt(iptr - i[p-pStart], &j[i[p-pStart]]));
     }
+    PetscCall(DMSetBasicAdjacency(dm, useCone, useClosure));
+    PetscCall(ISRestoreIndices(pointNumbering, &pointNum));
+    PetscCall(ISDestroy(&pointNumbering));
   }
   /* First create a matrix object */
   PetscCall(MatCreate(PetscObjectComm((PetscObject)dm), &L));
