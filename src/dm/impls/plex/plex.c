@@ -11015,7 +11015,7 @@ PetscErrorCode DMPlexMonitorThroughput(DM dm, void *unused)
    Computes the graph laplacian L at the given depth.
       L = D - A, with D = degree matrix and A = adjacency matrix
 */
-PetscErrorCode DMPlexCreateGraphLaplacian(DM dm, PetscInt depth, Mat *oL)
+PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL)
 {
   Mat          L, preall;
   Vec          x, y;
@@ -11023,52 +11023,41 @@ PetscErrorCode DMPlexCreateGraphLaplacian(DM dm, PetscInt depth, Mat *oL)
   PetscScalar *vals;
   PetscSection s;
   PetscFunctionBeginUser;
+  /* FEM adjacency */
+  PetscCall(DMSetBasicAdjacency(dm, PETSC_FALSE, PETSC_TRUE));
   PetscCall(DMGetDimension(dm, &dim));
   if (depth == dim) {
     /* FIXME this code only works for depth == dim */
-    /* FEM adjacency */
-    PetscCall(DMSetBasicAdjacency(dm, PETSC_FALSE, PETSC_TRUE));
     /* Access CSR graph of local partition */
     PetscCall(DMPlexCreatePartitionerGraph(dm, dim - depth, &numVertices, &i, &j, NULL));
   } else {
+    /* FIXME this code only works in serial */
     PetscInt pStart, pEnd;
     PetscCall(DMPlexGetDepthStratum(dm, depth, &pStart, &pEnd));
     numVertices = pEnd - pStart;
-
     numEdges = 0;
     for (PetscInt p = pStart; p < pEnd; p++) {
-        PetscInt degree;
-        PetscCall(DMPlexGetSupportSize(dm, p, &degree));
-        numEdges += degree;
+      PetscInt nadj = PETSC_DETERMINE;
+      PetscInt *adj = NULL;
+      PetscCall(DMPlexGetAdjacency(dm, p, &nadj, &adj));
+      for (PetscInt k = 0; k < nadj; k++)
+        if (adj[k] != p && adj[k] >= pStart && adj[k] < pEnd)
+          numEdges++;
+      PetscCall(PetscFree(adj));
     }
     PetscCall(PetscMalloc1(numVertices+1, &i));
     PetscCall(PetscMalloc1(numEdges, &j));
-    i[0] = 0;
+    PetscInt iptr = 0;
+    i[0] = iptr;
     for (PetscInt p = pStart; p < pEnd; p++) {
-       PetscInt nnzrow = 0;
-       PetscInt nstar;
-       PetscInt *star = NULL;
-       PetscCall(DMPlexGetTransitiveClosure(dm, p, PETSC_FALSE, &nstar, &star));
-       for (PetscInt s = 0; s < nstar*2; s += 2) {
-         PetscInt nclosure;
-         PetscInt *closure = NULL;
-         PetscCall(DMPlexGetTransitiveClosure(dm, star[s], PETSC_TRUE, &nclosure, &closure));
-         for (PetscInt c = 0; c < nclosure*2; c += 2) {
-           if (closure[c] != p && closure[c] >= pStart && closure[c] < pEnd) {
-              PetscBool seen = PETSC_FALSE;
-              for (PetscInt f = 0; f < nnzrow; f++) {
-                 if (j[i[p-pStart] + f] == closure[c] - pStart) { seen = PETSC_TRUE; }
-              }
-              if (!seen) {
-                j[i[p-pStart] + nnzrow] = closure[c] - pStart;
-                nnzrow++;
-              }
-           }
-         }
-         PetscCall(DMPlexRestoreTransitiveClosure(dm, star[s], PETSC_TRUE, &nclosure, &closure));
-       }
-       i[p-pStart + 1] = i[p-pStart] + nnzrow;
-       PetscCall(DMPlexRestoreTransitiveClosure(dm, p, PETSC_FALSE, &nstar, &star));
+      PetscInt nadj = PETSC_DETERMINE;
+      PetscInt *adj = NULL;
+      PetscCall(DMPlexGetAdjacency(dm, p, &nadj, &adj));
+      for (PetscInt k = 0; k < nadj; k++)
+        if (adj[k] != p && adj[k] >= pStart && adj[k] < pEnd)
+          j[iptr++] = adj[k] - pStart;
+      PetscCall(PetscFree(adj));
+      i[p-pStart + 1] = iptr;
     }
   }
   /* First create a matrix object */
@@ -11152,13 +11141,16 @@ PetscErrorCode DMPlexCreateGraphLaplacian(DM dm, PetscInt depth, Mat *oL)
 
 /*@
   DMPlexCreateColoring - Gets coloring of a graph associated with the
-  `DMPlex`. Unlike `DMCreateColoring`, this graph does not represent the operator
-  matrix associated with the discretization of a PDE on the `DM`.
+  `DMPlex`. The graph is a subgraph of the Hasse diagram, defining the
+  connectivity of mesh entities at a given depth.  Two entities are
+  considered adjacent if the closure of the star of one entity contains the
+  other entity.
 
   Collective
 
   Input Parameters:
 + dm    - the `DMPlex` object
+- depth - the dimension of the entities in the connectivity graph.
 - ctype - `IS_COLORING_LOCAL` or `IS_COLORING_GLOBAL`
 
   Output Parameter:
@@ -11167,25 +11159,27 @@ PetscErrorCode DMPlexCreateGraphLaplacian(DM dm, PetscInt depth, Mat *oL)
   Level: developer
 
   Notes:
+  Unlike `DMCreateColoring`, this graph does not represent the operator matrix associated with the discretization of a PDE on the `DM`.
+
   Coloring of matrices can also be computed directly from the sparse matrix nonzero structure via the `MatColoring` object or from the mesh from which the
   matrix comes from (what this function provides). In general using the mesh produces a more optimal coloring (fewer colors).
 
-  This produces a coloring with the distance of 1, see `MatSetColoringDistance()` 
-  which can be used for efficiently grouping vertex subdomains into macro subdomains.
+  This produces a coloring with the distance of 1, see `MatSetColoringDistance()`
+  which can be used for efficiently grouping vertex-star patches that do not overlap into multi-patch subdomains.
 
 .seealso: [](ch_unstructured), `DMPlex`, `ISColoring`, `MatColoring`, `DMCreateColoring()`
 @*/
-PetscErrorCode DMPlexCreateColoring(DM dm, ISColoringType ctype, ISColoring *coloring)
+PetscErrorCode DMPlexCreateColoring(DM dm, PetscInt depth, ISColoringType ctype, ISColoring *coloring)
 {
   Mat L;
   MatColoring mc;
   //char[] prefix;
   PetscFunctionBegin;
   // TODO new API should have depth as an argument
-  PetscInt depth = 0;
-  PetscCall(DMPlexCreateGraphLaplacian(dm, depth, &L));
+  PetscCall(DMPlexCreateGraphLaplacian_Private(dm, depth, &L));
   //PetscCall(MatGetOptionsPrefix(L, &prefix));
-  //PetscCall(OptionSetInt(prefix+"mat_coloring_type", ctype));
+  //PetscCall(PetscOptionsSetValue(NULL, "laplacian_mat_coloring_type", ctype));
+  //PetscCall(PetscOptionsSetValue(NULL, "-mat_coloring_jp_local", NULL));
 
   PetscCall(MatColoringCreate(L, &mc));
   PetscCall(MatColoringSetType(mc, MATCOLORINGGREEDY));

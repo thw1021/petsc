@@ -421,22 +421,28 @@ cdef class DMPlex(DM):
         CHKERR(DMPlexCreateCohesiveSubmesh(self.dm, flag, NULL, cvalue, &subdm.dm))
         return subdm
 
-    def createColoring(self) -> list:
-        """Return graph coloring.
+    def createColoring(self, depth: int = 0) -> list:
+        """Return the coloring of the connectivity graph of entities in the DMPlex.
 
         Collective.
+
+        Parameters
+        ----------
+        depth
+            The entity dimension of nodes in the connectivity graph.
 
         See Also
         --------
         DM, DMPlex, petsc.DMPlexCreateColoring
 
         """
+        cdef PetscInt cdepth = asInt(depth)
         cdef PetscInt ncolors = 0
         cdef PetscIS *iscolors = NULL
-        cdef ISColoring iscoloring = NULL
+        cdef ISColoring coloring = NULL
 
-        CHKERR(DMPlexCreateColoring(self.dm, IS_COLORING_LOCAL, &iscoloring))
-        CHKERR(ISColoringGetIS(iscoloring, PETSC_USE_POINTER, &ncolors, &iscolors))
+        CHKERR(DMPlexCreateColoring(self.dm, cdepth, IS_COLORING_LOCAL, &coloring))
+        CHKERR(ISColoringGetIS(coloring, PETSC_USE_POINTER, &ncolors, &iscolors))
 
         cdef list isets = [ref_IS(iscolors[i]) for i from 0 <= i < ncolors]
         return isets
