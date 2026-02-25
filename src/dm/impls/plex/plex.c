@@ -11107,6 +11107,8 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
   PetscCall(VecSet(x, -1.0));
   PetscCall(MatMult(L, x, y));
   PetscCall(MatDiagonalSet(L, y, INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY));
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&y));
   /* clean up */
@@ -11151,7 +11153,7 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
   Input Parameters:
 + dm    - the `DMPlex` object
 - depth - the dimension of the entities in the connectivity graph.
-- ctype - `IS_COLORING_LOCAL` or `IS_COLORING_GLOBAL`
+- distance - the distance of the coloring (either 1 or 2).
 
   Output Parameter:
 . coloring - the coloring
@@ -11169,21 +11171,16 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
 
 .seealso: [](ch_unstructured), `DMPlex`, `ISColoring`, `MatColoring`, `DMCreateColoring()`
 @*/
-PetscErrorCode DMPlexCreateColoring(DM dm, PetscInt depth, ISColoringType ctype, ISColoring *coloring)
+PetscErrorCode DMPlexCreateColoring(DM dm, PetscInt depth, PetscInt distance, ISColoring *coloring)
 {
   Mat L;
   MatColoring mc;
-  //char[] prefix;
   PetscFunctionBegin;
-  // TODO new API should have depth as an argument
   PetscCall(DMPlexCreateGraphLaplacian_Private(dm, depth, &L));
-  //PetscCall(MatGetOptionsPrefix(L, &prefix));
-  //PetscCall(PetscOptionsSetValue(NULL, "laplacian_mat_coloring_type", ctype));
-  //PetscCall(PetscOptionsSetValue(NULL, "-mat_coloring_jp_local", NULL));
 
   PetscCall(MatColoringCreate(L, &mc));
   PetscCall(MatColoringSetType(mc, MATCOLORINGGREEDY));
-  PetscCall(MatColoringSetDistance(mc, 1));
+  PetscCall(MatColoringSetDistance(mc, distance));
   PetscCall(MatColoringSetFromOptions(mc));
   PetscCall(MatColoringApply(mc, coloring));
   PetscCall(MatColoringDestroy(&mc));

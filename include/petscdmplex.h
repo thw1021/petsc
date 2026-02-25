@@ -305,7 +305,7 @@ PETSC_EXTERN PetscErrorCode DMPlexCreateOverlapMigrationSF(DM, PetscSF, PetscSF 
 PETSC_EXTERN PetscErrorCode DMPlexStratifyMigrationSF(DM, PetscSF, PetscSF *);
 
 /* Mesh coloring */
-PETSC_EXTERN PetscErrorCode DMPlexCreateColoring(DM, PetscInt, ISColoringType, ISColoring *);
+PETSC_EXTERN PetscErrorCode DMPlexCreateColoring(DM, PetscInt, PetscInt, ISColoring *);
 
 /* Submesh Support */
 PETSC_EXTERN PetscErrorCode DMPlexCreateSubmesh(DM, DMLabel, PetscInt, PetscBool, DM *);
