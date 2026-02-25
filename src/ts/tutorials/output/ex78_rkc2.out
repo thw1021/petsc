@@ -9,3 +9,26 @@ t = 7.000000e-02  L2 = 5.978269e-02  Linf = 4.221029e-02  L2_avg = 6.041827e-02 
 t = 8.000000e-02  L2 = 6.063016e-02  Linf = 3.961737e-02  L2_avg = 6.045073e-02  Linf_avg = 4.953719e-02  t_max = 5.560000e-02  L2_max = 1.016323e-01
 t = 9.000000e-02  L2 = 6.327943e-02  Linf = 3.176720e-02  L2_avg = 6.054274e-02  Linf_avg = 4.799820e-02  t_max = 5.560000e-02  L2_max = 1.016323e-01
 t = 1.000000e-01  L2 = 7.746715e-02  Linf = 5.494276e-02  L2_avg = 6.142137e-02  Linf_avg = 4.736028e-02  t_max = 5.560000e-02  L2_max = 1.016323e-01
+TS Object: 1 MPI process
+  type: rks
+  RKS method: rkc2, stages=10
+  s:0, mu=0.000000, nu=0.000000, tilde_mu=0.000000, tilde_gamma=0.000000, b=0.249750
+  s:1, mu=0.000000, nu=0.000000, tilde_mu=0.007620, tilde_gamma=0.000000, b=0.249750
+  s:2, mu=2.001000, nu=0.000000, tilde_mu=0.061023, tilde_gamma=-0.045775, b=0.249750
+  s:3, mu=2.368792, nu=-1.183804, tilde_mu=0.072239, tilde_gamma=-0.054162, b=0.295655
+  s:4, mu=2.106989, nu=-1.246508, tilde_mu=0.064255, tilde_gamma=-0.045172, b=0.311316
+  s:5, mu=2.044733, nu=-1.075982, tilde_mu=0.062357, tilde_gamma=-0.042789, b=0.318120
+  s:6, mu=2.021295, nu=-1.032220, tilde_mu=0.061642, tilde_gamma=-0.041787, b=0.321346
+  s:7, mu=2.010083, nu=-1.014728, tilde_mu=0.061300, tilde_gamma=-0.041246, b=0.322805
+  s:8, mu=2.003778, nu=-1.005934, tilde_mu=0.061108, tilde_gamma=-0.040897, b=0.323253
+  s:9, mu=1.999766, nu=-1.000771, tilde_mu=0.060986, tilde_gamma=-0.040638, b=0.323054
+  initial time step=0.0001
+  maximum steps=1000
+  maximum time=8.
+  maximum number of step rejections=10
+  maximum number of SNES failures allowed=1
+  total number of RHS function evaluations=10000
+  total number of rejected steps=0
+  using relative error tolerance of 0.0001, using absolute error tolerance of 0.0001
+  TSAdapt Object: 1 MPI process
+    type: none

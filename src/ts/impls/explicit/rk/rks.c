@@ -142,7 +142,7 @@ PetscErrorCode TSRKC1ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   PetscFunctionBegin;
   for (PetscInt j = 0; j <= s; ++j) {
     PetscReal Pj = Chebyshev(j, w0);
-    PetscCheck(PetscAbsReal(Pj) > PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_FP, "Polynomial nearly zero at j=%d, w0=%g", j, w0);
+    PetscCheck(PetscAbsReal(Pj) > PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_FP, "Polynomial nearly zero at j=%" PetscInt_FMT ", w0=%g", j, w0);
     b[j] = 1.0 / Pj;
   }
 
@@ -192,7 +192,7 @@ PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
     PetscReal Pp, Ppp;
     Pp  = ChebyshevPrime(j, w0);
     Ppp = ChebyshevDoublePrime(j, w0);
-    PetscCheck((PetscAbsReal(Pp) > PETSC_MACHINE_EPSILON), PETSC_COMM_SELF, PETSC_ERR_FP, "Polynomial derivative nearly zero at j=%d, w0=%g", j, w0);
+    PetscCheck((PetscAbsReal(Pp) > PETSC_MACHINE_EPSILON), PETSC_COMM_SELF, PETSC_ERR_FP, "Polynomial derivative nearly zero at j=%" PetscInt_FMT ", w0=%g", j, w0);
     b[j] = -Ppp / (Pp * Pp);
   }
   b[0] = b[2];
@@ -216,7 +216,7 @@ PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
     Pjm1           = Chebyshev(j - 1, w0);
     tilde_gamma[j] = -(1.0 - b[j - 1] * Pjm1) * tilde_mu[j];
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
@@ -249,7 +249,7 @@ PetscErrorCode TSRKL1ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *n
     nu[j]         = ((1.0 - j_r) / j_r);
     tilde_mu[j]   = ((2.0 * j_r - 1.0) / j_r) * w1;
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
@@ -290,10 +290,10 @@ PetscErrorCode TSRKL2ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *n
 
     mu[j]          = ((2.0 * j_r - 1.0) / (j_r)) * (b[j] / b[j - 1]);
     nu[j]          = -((j_r - 1.0) / (j_r)) * (b[j] / b[j - 2]);
-    tilde_mu[j]    = (4.0 * (2.0 * j_r - 1.0) / (j_r * (s_r * s_r + s_r - 2))) * (b[j] / b[j - 1]);
+    tilde_mu[j]    = w1 * ((2.0 * j_r - 1.0) / j_r) * (b[j] / b[j - 1]);
     tilde_gamma[j] = -a_jm1 * tilde_mu[j];
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TSStep_RKS(TS ts)
@@ -360,7 +360,7 @@ static PetscErrorCode TSStep_RKS(TS ts)
   }
   PetscCall(VecCopy(rks->Ucurr, U));
   PetscCall(TSSetTime(ts, time + dt));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TSSetUp_RKS(TS ts)
@@ -394,7 +394,7 @@ static PetscErrorCode TSSetUp_RKS(TS ts)
   default:
     SETERRABORT(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Unknown polynomial type");
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TSSetFromOptions_RKS(TS ts, PetscOptionItems PetscOptionsObject)
@@ -407,7 +407,7 @@ static PetscErrorCode TSSetFromOptions_RKS(TS ts, PetscOptionItems PetscOptionsO
   PetscCall(PetscOptionsInt("-ts_rks_stages", "Number of stages per macro-step", NULL, rks->stages, &rks->stages, NULL));
   PetscCall(PetscOptionsReal("-ts_rks_epsilon", "RKS epsilon", "", rks->epsilon, &rks->epsilon, NULL));
   PetscOptionsHeadEnd();
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TSReset_RKS(TS ts)
@@ -441,8 +441,8 @@ static PetscErrorCode TSView_RKS(TS ts, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "RKS method: %s, stages=%d\n", RKSTypes[rks->type], (int)rks->stages));
-    for (PetscInt j = 0; j < rks->stages; ++j) PetscCall(PetscViewerASCIIPrintf(viewer, "s:%d, mu=%f, nu=%f, tilde_mu=%f, tilde_gamma=%f, b=%f\n", j, rks->mu[j], rks->nu[j], rks->tilde_mu[j], rks->tilde_gamma[j], rks->b[j]));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "RKS method: %s, stages=%" PetscInt_FMT "\n", RKSTypes[rks->type], (int)rks->stages));
+    for (PetscInt j = 0; j < rks->stages; ++j) PetscCall(PetscViewerASCIIPrintf(viewer, "s:%" PetscInt_FMT ", mu=%f, nu=%f, tilde_mu=%f, tilde_gamma=%f, b=%f\n", j, rks->mu[j], rks->nu[j], rks->tilde_mu[j], rks->tilde_gamma[j], rks->b[j]));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
