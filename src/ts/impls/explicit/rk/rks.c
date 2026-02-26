@@ -104,16 +104,8 @@ static inline PetscReal LegendrePrime(PetscInt j, PetscReal x)
   PetscReal Pj    = Legendre(j, x);
   PetscReal Pjm1  = Legendre(j - 1, x);
   PetscReal denom = x * x - 1.0;
-  PetscCheck(PetscAbsReal(denom) > PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_FP, "LegendrePrime: x=+-1 causes division by zero");
+  PetscCheck(denom != 0.0, PETSC_COMM_SELF, PETSC_ERR_FP, "LegendrePrime: x=+-1 causes division by zero");
   return j * (x * Pj - Pjm1) / denom;
-}
-
-static inline PetscReal LegendreDoublePrime(PetscInt j, PetscReal x)
-{
-  if (j < 2) return 0.0;
-  PetscReal Pj  = Legendre(j, x);
-  PetscReal PjP = LegendrePrime(j, x);
-  return (2.0 * x * PjP - j * (j + 1.0) * Pj) / (x * x - 1.0);
 }
 
 /*@
@@ -142,7 +134,6 @@ PetscErrorCode TSRKC1ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   PetscFunctionBegin;
   for (PetscInt j = 0; j <= s; ++j) {
     PetscReal Pj = Chebyshev(j, w0);
-    PetscCheck(PetscAbsReal(Pj) > PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_FP, "Polynomial nearly zero at j=%" PetscInt_FMT ", w0=%g", j, w0);
     b[j] = 1.0 / Pj;
   }
 
@@ -447,7 +438,7 @@ static PetscErrorCode TSView_RKS(TS ts, PetscViewer viewer)
 }
 
 /*MC
-  TSRKS - explicit ODE and DAE solver using Runge-Kutta Supertimestepper (RKS) schemes
+  TSRKS - explicit ODE solver using Runge-Kutta Supertimestepper (RKS) schemes
 
   The implementations of each polynomial type come from:
   - Runge-Kutta-Chebyshev: {cite}`VerwerHundsdorferSommeijer1990`
