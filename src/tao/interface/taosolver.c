@@ -2204,7 +2204,10 @@ PetscErrorCode TaoSetType(Tao tao, TaoType type)
 
   Input Parameters:
 + sname - name of a new user-defined solver
-- func  - routine to Create method context
+- func  - routine to create `TaoType` specific method context
+
+  Calling sequence of `func`:
+. tao - the `Tao` object to be created
 
   Example Usage:
 .vb

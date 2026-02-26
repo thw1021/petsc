@@ -4241,6 +4241,12 @@ M*/
 . mctx           - [optional] user-defined context for private data for the monitor routine (use `NULL` if no context is desired)
 - monitordestroy - [optional] routine that frees monitor context (may be `NULL`), see `PetscCtxDestroyFn` for the calling sequence
 
+  Calling sequence of f:
++ snes  - the `SNES` object
+. it    - the current iteration
+. rnorm - norm of the residual
+- mctx  - the optional monitor context
+
   Options Database Keys:
 + -snes_monitor               - sets `SNESMonitorDefault()`
 . -snes_monitor draw::draw_lg - sets line graph monitor,
@@ -4259,7 +4265,7 @@ M*/
 
 .seealso: [](ch_snes), `SNES`, `SNESSolve()`, `SNESMonitorDefault()`, `SNESMonitorCancel()`, `SNESMonitorFunction`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode SNESMonitorSet(SNES snes, PetscErrorCode (*f)(SNES snes, PetscInt it, PetscReal rnorm, PetscCtx ctx), PetscCtx mctx, PetscCtxDestroyFn *monitordestroy)
+PetscErrorCode SNESMonitorSet(SNES snes, PetscErrorCode (*f)(SNES snes, PetscInt it, PetscReal rnorm, PetscCtx mctx), PetscCtx mctx, PetscCtxDestroyFn *monitordestroy)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -4341,22 +4347,31 @@ M*/
   Logically Collective
 
   Input Parameters:
-+ snes                        - the `SNES` context
-. SNESConvergenceTestFunction - routine to test for convergence
-. ctx                         - [optional] context for private data for the convergence routine  (may be `NULL`)
-- destroy                     - [optional] destructor for the context (may be `NULL`; `PETSC_NULL_FUNCTION` in Fortran)
++ snes    - the `SNES` context
+. func    - routine to test for convergence
+. ctx     - [optional] context for private data for the convergence routine  (may be `NULL`)
+- destroy - [optional] destructor for the context (may be `NULL`; `PETSC_NULL_FUNCTION` in Fortran)
+
+  Calling sequence of func:
++ snes   - the `SNES` context
+. it     - the current iteration number
+. atol   - the absolute tolerance requested
+. rtol   - the relative tolerance requested
+. stol   - the tolerance on the size of the step requested
+. reason - output, the reason convergence or divergence as declared
+- ctx    - the optional convergence test context
 
   Level: advanced
 
 .seealso: [](ch_snes), `SNES`, `SNESConvergedDefault()`, `SNESConvergedSkip()`, `SNESConvergenceTestFunction`
 @*/
-PetscErrorCode SNESSetConvergenceTest(SNES snes, PetscErrorCode (*SNESConvergenceTestFunction)(SNES snes, PetscInt it, PetscReal atol, PetscReal rtol, PetscReal stol, SNESConvergedReason *reason, PetscCtx ctx), PetscCtx ctx, PetscCtxDestroyFn *destroy)
+PetscErrorCode SNESSetConvergenceTest(SNES snes, PetscErrorCode (*func)(SNES snes, PetscInt it, PetscReal atol, PetscReal rtol, PetscReal stol, SNESConvergedReason *reason, PetscCtx ctx), PetscCtx ctx, PetscCtxDestroyFn *destroy)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  if (!SNESConvergenceTestFunction) SNESConvergenceTestFunction = SNESConvergedSkip;
+  if (!func) func = SNESConvergedSkip;
   if (snes->ops->convergeddestroy) PetscCall((*snes->ops->convergeddestroy)(&snes->cnvP));
-  snes->ops->converged        = SNESConvergenceTestFunction;
+  snes->ops->converged        = func;
   snes->ops->convergeddestroy = destroy;
   snes->cnvP                  = ctx;
   PetscFunctionReturn(PETSC_SUCCESS);

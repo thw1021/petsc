@@ -1158,6 +1158,9 @@ PetscErrorCode TaoLineSearchGetStepLength(TaoLineSearch ls, PetscReal *s)
 + sname - name of a new user-defined solver
 - func  - routine to Create method context
 
+  Calling sequence of `func`:
+. ls - the `TaoLineSearch` object to set with the `TaoLineSearchType` specific struture
+
   Example Usage:
 .vb
    TaoLineSearchRegister("my_linesearch", MyLinesearchCreate);

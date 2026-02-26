@@ -1259,6 +1259,21 @@ static PetscErrorCode TSAdjointMonitorSensi(TS ts, PetscInt step, PetscReal ptim
 . monitor      - the monitor function, its context must be a `PetscViewerAndFormat`
 - monitorsetup - a function that is called once ONLY if the user selected this monitor that may set additional features of the `TS` or `PetscViewer` objects
 
+  Calling sequence of `monitor`:
++ ts      - the `TS` context
+. step    - iteration number (after the final time step the monitor routine is called with
+                a step of -1, this is at the final time which may have been interpolated to)
+. time    - current time
+. u       - current iterate
+. numcost - number of cost functionos
+. lambda  - sensitivities to initial conditions
+. mu      - sensitivities to parameters
+- vf      - the `PetscViewer` and format the monitor is using
+
+  Calling sequence of `monitorsetup`:
++ ts - the `TS` object being monitored
+- vf - the `PetscViewer` and format the monitor is using
+
   Level: developer
 
 .seealso: [](ch_ts), `PetscOptionsCreateViewer()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,

@@ -366,6 +366,10 @@ PetscErrorCode DMShellSetMatrix(DM dm, Mat J)
 + dm   - the `DMSHELL`
 - func - the function to create a matrix
 
+  Calling sequence of `func`:
++ dm  - the `DM`
+- mat - the `Mat` to be created
+
   Level: advanced
 
 .seealso: `DM`, `DMSHELL`, `DMCreateMatrix()`, `DMShellSetMatrix()`, `DMShellSetContext()`, `DMShellGetContext()`
@@ -458,6 +462,10 @@ PetscErrorCode DMShellGetGlobalVector(DM dm, Vec *X)
 + dm   - the `DMSHELL`
 - func - the creation routine
 
+  Calling sequence of `func`:
++ dm - the `DM`
+- g  - the global `Vec` to be created
+
   Level: advanced
 
 .seealso: `DM`, `DMSHELL`, `DMShellSetGlobalVector()`, `DMShellSetCreateMatrix()`, `DMShellSetContext()`, `DMShellGetContext()`
@@ -523,6 +531,10 @@ PetscErrorCode DMShellSetLocalVector(DM dm, Vec X)
 + dm   - the `DMSHELL`
 - func - the creation routine
 
+  Calling sequence of `func`:
++ dm - the `DM`
+- l  - the local `Vec` to be created
+
   Level: advanced
 
 .seealso: `DM`, `DMSHELL`, `DMShellSetLocalVector()`, `DMShellSetCreateMatrix()`, `DMShellSetContext()`, `DMShellGetContext()`
@@ -545,6 +557,18 @@ PetscErrorCode DMShellSetCreateLocalVector(DM dm, PetscErrorCode (*func)(DM dm, 
 . begin - the routine that begins the global to local scatter
 - end   - the routine that ends the global to local scatter
 
+  Calling sequence of `begin`:
++ dm     - the `DM`
+. global - the global `Vec` to be communicated
+. mode   - insert mode of the resulting vector
+- local  - the local `Vec` to receive the result
+
+  Calling sequence of `end`:
++ dm     - the `DM`
+. global - the global `Vec` to be communicated
+. mode   - insert mode of the resulting vector
+- local  - the local `Vec` to receive the result
+
   Level: advanced
 
   Note:
@@ -553,7 +577,7 @@ PetscErrorCode DMShellSetCreateLocalVector(DM dm, PetscErrorCode (*func)(DM dm, 
 
 .seealso: `DM`, `DMSHELL`, `DMShellSetLocalToGlobal()`, `DMGlobalToLocalBeginDefaultShell()`, `DMGlobalToLocalEndDefaultShell()`
 @*/
-PetscErrorCode DMShellSetGlobalToLocal(DM dm, PetscErrorCode (*begin)(DM dm, Vec gobal, InsertMode mode, Vec local), PetscErrorCode (*end)(DM dm, Vec global, InsertMode mode, Vec local))
+PetscErrorCode DMShellSetGlobalToLocal(DM dm, PetscErrorCode (*begin)(DM dm, Vec global, InsertMode mode, Vec local), PetscErrorCode (*end)(DM dm, Vec global, InsertMode mode, Vec local))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -572,13 +596,25 @@ PetscErrorCode DMShellSetGlobalToLocal(DM dm, PetscErrorCode (*begin)(DM dm, Vec
 . begin - the routine that begins the local to global scatter
 - end   - the routine that ends the local to global scatter
 
+  Calling sequence of `begin`:
++ dm     - the `DM`
+. local  - the local `Vec` to be communicated
+. mode   - insert mode of the resulting vector
+- global - the global `Vec` to receive the result
+
+  Calling sequence of `end`:
++ dm     - the `DM`
+. local  - the local `Vec` to be communicated
+. mode   - insert mode of the resulting vector
+- global - the global `Vec` to receive the result
+
   Level: advanced
 
   Note:
   If these functions are not provided but `DMShellSetLocalToGlobalVecScatter()` is called then
   `DMLocalToGlobalBeginDefaultShell()`/`DMLocalToGlobalEndDefaultShell()` are used to perform the transfers
 
-.seealso: `DM`, `DMSHELL`, `DMShellSetGlobalToLocal()`, InsertMode`, `VecScatter`, `DMLocalToGlobal()`, `DMGlobalToLocal()`
+.seealso: `DM`, `DMSHELL`, `DMShellSetGlobalToLocal()`, `InsertMode`, `VecScatter`, `DMLocalToGlobal()`, `DMGlobalToLocal()`
 @*/
 PetscErrorCode DMShellSetLocalToGlobal(DM dm, PetscErrorCode (*begin)(DM dm, Vec local, InsertMode mode, Vec global), PetscErrorCode (*end)(DM dm, Vec local, InsertMode mode, Vec global))
 {
@@ -598,6 +634,18 @@ PetscErrorCode DMShellSetLocalToGlobal(DM dm, PetscErrorCode (*begin)(DM dm, Vec
 + dm    - the `DMSHELL`
 . begin - the routine that begins the local to local scatter
 - end   - the routine that ends the local to local scatter
+
+  Calling sequence of `begin`:
++ dm     - the `DM`
+. local  - the local `Vec` to be communicated
+. mode   - insert mode of the resulting vector
+- nlocal - the local `Vec` to receive the result
+
+  Calling sequence of `end`:
++ dm     - the `DM`
+. local  - the local `Vec` to be communicated
+. mode   - insert mode of the resulting vector
+- nlocal - the local `Vec` to receive the result
 
   Level: advanced
 
@@ -703,6 +751,11 @@ PetscErrorCode DMShellSetLocalToLocalVecScatter(DM dm, VecScatter ltol)
 + dm      - the `DMSHELL`
 - coarsen - the routine that coarsens the `DM`
 
+  Calling sequence of `coarsen`:
++ fine   - the `DM` to coarsen
+. comm   - the `MPI_Comm` to share the coarser `DM`
+- coarse - the resulting coarse `DM`
+
   Level: advanced
 
 .seealso: `DM`, `DMSHELL`, `DMShellSetRefine()`, `DMCoarsen()`, `DMShellGetCoarsen()`, `DMShellSetContext()`, `DMShellGetContext()`
@@ -730,6 +783,11 @@ PetscErrorCode DMShellSetCoarsen(DM dm, PetscErrorCode (*coarsen)(DM fine, MPI_C
   Output Parameter:
 . coarsen - the routine that coarsens the `DM`
 
+  Calling sequence of `coarsen`:
++ fine   - the `DM` to coarsen
+. comm   - the `MPI_Comm` to share the coarser `DM`
+- coarse - the resulting coarse `DM`
+
   Level: advanced
 
 .seealso: `DM`, `DMSHELL`, `DMShellSetCoarsen()`, `DMCoarsen()`, `DMShellSetRefine()`, `DMRefine()`
@@ -754,6 +812,11 @@ PetscErrorCode DMShellGetCoarsen(DM dm, PetscErrorCode (**coarsen)(DM fine, MPI_
   Input Parameters:
 + dm     - the `DMSHELL`
 - refine - the routine that refines the `DM`
+
+  Calling sequence of `refine`:
++ coarse - the `DM` to refine
+. comm   - the `MPI_Comm` to share the finer `DM`
+- fine   - the resulting fine `DM`
 
   Level: advanced
 
@@ -782,6 +845,11 @@ PetscErrorCode DMShellSetRefine(DM dm, PetscErrorCode (*refine)(DM coarse, MPI_C
   Output Parameter:
 . refine - the routine that refines the `DM`
 
+  Calling sequence of `refine`:
++ coarse - the `DM` to refine
+. comm   - the `MPI_Comm` to share the finer `DM`
+- fine   - the resulting fine `DM`
+
   Level: advanced
 
 .seealso: `DM`, `DMSHELL`, `DMShellSetCoarsen()`, `DMCoarsen()`, `DMShellSetRefine()`, `DMRefine()`
@@ -806,6 +874,12 @@ PetscErrorCode DMShellGetRefine(DM dm, PetscErrorCode (**refine)(DM coarse, MPI_
   Input Parameters:
 + dm     - the `DMSHELL`
 - interp - the routine to create the interpolation
+
+  Calling sequence of `interp`:
++ coarse - the `DM` to refine to
+. fine   - the fine `DM`
+. interp - the output interpolation `Mat`
+- rscale - an output scaling `Vec`, see `DMCreateInterpolationScale()`
 
   Level: advanced
 
@@ -834,6 +908,12 @@ PetscErrorCode DMShellSetCreateInterpolation(DM dm, PetscErrorCode (*interp)(DM 
   Output Parameter:
 . interp - the routine to create the interpolation
 
+  Calling sequence of `interp`:
++ coarse - the `DM` to refine to
+. fine   - the fine `DM`
+. interp - the output interpolation `Mat`
+- rscale - an output scaling `Vec`, see `DMCreateInterpolationScale()`
+
   Level: advanced
 
 .seealso: `DM`, `DMSHELL`, `DMShellGetCreateInjection()`, `DMCreateInterpolation()`, `DMShellGetCreateRestriction()`, `DMShellSetContext()`, `DMShellGetContext()`
@@ -858,6 +938,11 @@ PetscErrorCode DMShellGetCreateInterpolation(DM dm, PetscErrorCode (**interp)(DM
   Input Parameters:
 + dm          - the `DMSHELL`
 - restriction - the routine to create the restriction
+
+  Calling sequence of `restriction`:
++ fine    - the fine `DM`
+. coarse  - the `DM` to restrict to
+- restrct - the output restriction `Mat`
 
   Level: advanced
 
@@ -886,6 +971,11 @@ PetscErrorCode DMShellSetCreateRestriction(DM dm, PetscErrorCode (*restriction)(
   Output Parameter:
 . restriction - the routine to create the restriction
 
+  Calling sequence of `restriction`:
++ fine    - the fine `DM`
+. coarse  - the `DM` to restrict to
+- restrct - the output restriction `Mat`
+
   Level: advanced
 
 .seealso: `DM`, `DMSHELL`, `DMShellSetCreateInjection()`, `DMCreateInterpolation()`, `DMShellSetContext()`, `DMShellGetContext()`
@@ -910,6 +1000,11 @@ PetscErrorCode DMShellGetCreateRestriction(DM dm, PetscErrorCode (**restriction)
   Input Parameters:
 + dm     - the `DMSHELL`
 - inject - the routine to create the injection
+
+  Calling sequence of `inject`:
++ fine   - the fine `DM`
+. coarse - the `DM` to inject to
+- inject - the output injection `Mat`
 
   Level: advanced
 
@@ -938,6 +1033,11 @@ PetscErrorCode DMShellSetCreateInjection(DM dm, PetscErrorCode (*inject)(DM fine
   Output Parameter:
 . inject - the routine to create the injection
 
+  Calling sequence of `inject`:
++ fine   - the fine `DM`
+. coarse - the `DM` to inject to
+- inject - the output injection `Mat`
+
   Level: advanced
 
 .seealso: `DM`, `DMSHELL`, `DMShellGetCreateInterpolation()`, `DMCreateInjection()`, `DMShellSetContext()`, `DMShellGetContext()`
@@ -963,11 +1063,18 @@ PetscErrorCode DMShellGetCreateInjection(DM dm, PetscErrorCode (**inject)(DM fin
 + dm     - the `DMSHELL`
 - decomp - the routine to create the decomposition
 
+  Calling sequence of `decomp`:
++ dm       - the `DM` to decompose into fields
+. len      - output, the number of fields (or `NULL` if not requested)
+. namelist - output, the name for each field (or `NULL` if not requested)
+. islist   - output, the global indices for each field (or `NULL` if not requested)
+- dmlist   - output, the `DM`s for each field subproblem (or `NULL`, if not requested; if `NULL` is returned, no `DM`s are defined)
+
   Level: advanced
 
 .seealso: `DM`, `DMSHELL`, `DMCreateFieldDecomposition()`, `DMShellSetContext()`, `DMShellGetContext()`
 @*/
-PetscErrorCode DMShellSetCreateFieldDecomposition(DM dm, PetscErrorCode (*decomp)(DM dm, PetscInt *, char ***, IS **, DM **))
+PetscErrorCode DMShellSetCreateFieldDecomposition(DM dm, PetscErrorCode (*decomp)(DM dm, PetscInt *len, char **namelist[], IS *islist[], DM *dmlist[]))
 {
   PetscBool isshell;
 
@@ -988,11 +1095,19 @@ PetscErrorCode DMShellSetCreateFieldDecomposition(DM dm, PetscErrorCode (*decomp
 + dm     - the `DMSHELL`
 - decomp - the routine to create the decomposition
 
+  Calling sequence of `decomp`:
++ dm        - the `DM` to decompose into domains
+. len       - output, the number of domains (or `NULL` if not requested)
+. namelist  - output, the name for each domain (or `NULL` if not requested)
+. innerlist - output, the global indices for each domain's inner region (or `NULL` if not requested)
+. outerlist - output, the global indices for each domain's outer region (or `NULL` if not requested)
+- dmlist    - output, the `DM`s for each field subproblem (or `NULL`, if not requested; if `NULL` is returned, no `DM`s are defined)
+
   Level: advanced
 
 .seealso: `DM`, `DMSHELL`, `DMCreateDomainDecomposition()`, `DMShellSetContext()`, `DMShellGetContext()`
 @*/
-PetscErrorCode DMShellSetCreateDomainDecomposition(DM dm, PetscErrorCode (*decomp)(DM dm, PetscInt *, char ***, IS **, IS **, DM **))
+PetscErrorCode DMShellSetCreateDomainDecomposition(DM dm, PetscErrorCode (*decomp)(DM dm, PetscInt *len, char **namelist[], IS *innerlist[], IS *outerlist[], DM *dmlist[]))
 {
   PetscBool isshell;
 
@@ -1012,6 +1127,14 @@ PetscErrorCode DMShellSetCreateDomainDecomposition(DM dm, PetscErrorCode (*decom
   Input Parameters:
 + dm      - the `DMSHELL`
 - scatter - the routine to create the scatters
+
+  Calling sequence of `scatter`:
++ dm     - the `DM` to decompose into domains
+. n      - number of subdomains
+. subdms - the sub `DM`
+. iscat  - output, the inner scatters for the subdomains
+. oscat  - output, outer scatters for the subdomains
+- gscat  - output, the global scatters for the subdomains
 
   Level: advanced
 
@@ -1038,6 +1161,13 @@ PetscErrorCode DMShellSetCreateDomainDecompositionScatters(DM dm, PetscErrorCode
 + dm    - the `DMSHELL`
 - subdm - the routine to create the decomposition
 
+  Calling sequence of `subdm`:
++ dm        - the original `DM`
+. numFields - the number of fields to create
+. fields    - the fields to create for
+. is        - output, the `IS` defining the sub `DM`
+- subdm     - the sub `DM`
+
   Level: advanced
 
 .seealso: `DM`, `DMSHELL`, `DMCreateSubDM()`, `DMShellGetCreateSubDM()`, `DMShellSetContext()`, `DMShellGetContext()`
@@ -1055,7 +1185,7 @@ PetscErrorCode DMShellSetCreateSubDM(DM dm, PetscErrorCode (*subdm)(DM dm, Petsc
 }
 
 /*@C
-  DMShellGetCreateSubDM - Get the routine used to create a sub DM from the `DMSHELL`
+  DMShellGetCreateSubDM - Get the routine used to create a sub `DM` from the `DMSHELL`
 
   Logically Collective
 
@@ -1064,6 +1194,13 @@ PetscErrorCode DMShellSetCreateSubDM(DM dm, PetscErrorCode (*subdm)(DM dm, Petsc
 
   Output Parameter:
 . subdm - the routine to create the decomposition
+
+  Calling sequence of `subdm`:
++ dm        - the original `DM`
+. numfields - the number of fields to create
+. fields    - the fields to create for
+. is        - output, the `IS` defining the sub `DM`
+- subdm     - the sub `DM`
 
   Level: advanced
 

@@ -1639,6 +1639,10 @@ PetscErrorCode DMAdaptorGetMixedSetupFunction(DMAdaptor adaptor, PetscErrorCode 
 + adaptor   - the `DMAdaptor`
 - setupFunc - the function setting up the mixed problem
 
+  Calling sequence of setupFunc:
++ adaptor - the `DMAdaptor`
+- dm      - the `DM`
+
   Level: advanced
 
 .seealso: `DMAdaptor`, `DMAdaptorGetMixedSetupFunction()`, `DMAdaptorAdapt()`

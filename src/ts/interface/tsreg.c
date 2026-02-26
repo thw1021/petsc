@@ -95,6 +95,9 @@ PetscErrorCode TSGetType(TS ts, TSType *type)
 + sname    - The name of a new user-defined creation routine
 - function - The creation routine itself
 
+  Calling sequence of `function`:
+. ts - the `TS` being setup for the new `TSType` being registered
+
   Level: advanced
 
   Notes:

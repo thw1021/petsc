@@ -41,13 +41,16 @@ PetscErrorCode PetscBenchInitializePackage(void)
 }
 
 /*@C
-  PetscBenchRegister -  Adds a benchmark test, `PetscBenchType`, to the `PetscBench` package
+  PetscBenchRegister - Adds a benchmark test, `PetscBenchType`, to the `PetscBench` package
 
   Not Collective, No Fortran Support
 
   Input Parameters:
 + sname    - name of a new benchmark
 - function - routine to create benchmark
+
+  Calling sequence of function:
+. bm - the `PetscBench` to be created
 
   Level: advanced
 

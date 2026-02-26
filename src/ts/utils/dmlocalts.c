@@ -198,6 +198,13 @@ static PetscErrorCode TSComputeIJacobian_DMLocal(TS ts, PetscReal time, Vec X, V
 . func - local function evaluation
 - ctx  - context for function evaluation
 
+  Calling sequence of `func`:
++ dm  - the `DM`
+. t   - the current time
+. u   - the current solution
+. f   - output, the computed right hand side function
+- ctx - the application context for the function
+
   Level: intermediate
 
   Notes:
@@ -214,7 +221,7 @@ static PetscErrorCode TSComputeIJacobian_DMLocal(TS ts, PetscReal time, Vec X, V
 
 .seealso: [](ch_ts), `DM`, `TS`, `DMTSSetIFunction()`, `DMTSSetIJacobianLocal()`
 @*/
-PetscErrorCode DMTSSetBoundaryLocal(DM dm, PetscErrorCode (*func)(DM dm, PetscReal t, Vec u, Vec udot, PetscCtx ctx), PetscCtx ctx)
+PetscErrorCode DMTSSetBoundaryLocal(DM dm, PetscErrorCode (*func)(DM dm, PetscReal t, Vec u, Vec f, PetscCtx ctx), PetscCtx ctx)
 {
   DMTS        tdm;
   DMTS_Local *dmlocalts;
@@ -242,6 +249,14 @@ PetscErrorCode DMTSSetBoundaryLocal(DM dm, PetscErrorCode (*func)(DM dm, PetscRe
   Output Parameters:
 + func - local function evaluation
 - ctx  - context for function evaluation
+
+  Calling sequence of `func`:
++ dm   - the `DM`
+. t    - the current time
+. u    - the current solution
+. udot - the derivative of `u`
+. F    - output, the computed implicit function
+- ctx  - the application context for the function
 
   Level: beginner
 
@@ -279,6 +294,14 @@ PetscErrorCode DMTSGetIFunctionLocal(DM dm, PetscErrorCode (**func)(DM dm, Petsc
 . func - local function evaluation
 - ctx  - context for function evaluation
 
+  Calling sequence of `func`:
++ dm   - the `DM`
+. t    - the current time
+. u    - the current solution
+. udot - the derivative of `u`
+. F    - output, the computed implicit function
+- ctx  - the application context for the function
+
   Level: beginner
 
 .seealso: [](ch_ts), `DM`, `DMTSGetIFunctionLocal()`, `DMTSSetIFunction()`, `DMTSSetIJacobianLocal()`
@@ -315,6 +338,16 @@ PetscErrorCode DMTSSetIFunctionLocal(DM dm, PetscErrorCode (*func)(DM dm, PetscR
 + func - local Jacobian evaluation
 - ctx  - optional context for local Jacobian evaluation
 
+  Calling sequence of `func`:
++ dm    - the `DM`
+. t     - the current time
+. u     - the current solution
+. udot  - the derivative of `u`
+. shift - the shift factoring arising from the implicit time-step
+. J     - output, the Jacobian
+. Jpre  - output, matrix from which to compute the preconditioner for `J`, often the same as `J`
+- ctx   - the application context for the function
+
   Level: beginner
 
 .seealso: [](ch_ts), `DM`, `DMTSSetIJacobianLocal()`, `DMTSSetIFunctionLocal()`, `DMTSSetIJacobian()`, `DMTSSetIFunction()`
@@ -348,6 +381,16 @@ PetscErrorCode DMTSGetIJacobianLocal(DM dm, PetscErrorCode (**func)(DM dm, Petsc
 + dm   - `DM` to associate callback with
 . func - local Jacobian evaluation
 - ctx  - optional context for local Jacobian evaluation
+
+  Calling sequence of `func`:
++ dm    - the `DM`
+. t     - the current time
+. u     - the current solution
+. udot  - the derivative of `u`
+. shift - the shift factoring arising from the implicit time-step
+. J     - output, the Jacobian
+. Jpre  - output, matrix from which to compute the preconditioner for `J`, often the same as `J`
+- ctx   - the application context for the function
 
   Level: beginner
 
@@ -383,6 +426,13 @@ PetscErrorCode DMTSSetIJacobianLocal(DM dm, PetscErrorCode (*func)(DM dm, PetscR
   Output Parameters:
 + func - local function evaluation
 - ctx  - context for function evaluation
+
+  Calling sequence of `func`:
++ dm   - the `DM`
+. t    - the current time
+. u    - the current solution
+. udot - output, the evaluated right hand side
+- ctx  - the application context for the function
 
   Level: beginner
 
@@ -420,11 +470,18 @@ PetscErrorCode DMTSGetRHSFunctionLocal(DM dm, PetscErrorCode (**func)(DM dm, Pet
 . func - local function evaluation
 - ctx  - context for function evaluation
 
+  Calling sequence of `func`:
++ dm  - the `DM`
+. t   - the current time
+. u   - the current solution
+. f   - output, the evaluated right hand side
+- ctx - the application context for the function
+
   Level: beginner
 
 .seealso: [](ch_ts), `DM`, `DMTSGetRHSFunctionLocal()`, `DMTSSetRHSFunction()`, `DMTSSetIFunction()`, `DMTSSetIJacobianLocal()`
 @*/
-PetscErrorCode DMTSSetRHSFunctionLocal(DM dm, PetscErrorCode (*func)(DM dm, PetscReal t, Vec u, Vec udot, PetscCtx ctx), PetscCtx ctx)
+PetscErrorCode DMTSSetRHSFunctionLocal(DM dm, PetscErrorCode (*func)(DM dm, PetscReal t, Vec u, Vec f, PetscCtx ctx), PetscCtx ctx)
 {
   DMTS        tdm;
   DMTS_Local *dmlocalts;

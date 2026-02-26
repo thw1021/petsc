@@ -2252,7 +2252,7 @@ PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS *is[], DM *superdm)
 .seealso: [](ch_dmbase), `DM`, `DMCreateFieldDecomposition()`, `DMDestroy()`, `DMCreateDomainDecompositionScatters()`, `DMView()`, `DMCreateInterpolation()`,
           `DMSubDomainHookAdd()`, `DMSubDomainHookRemove()`,`DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMRefine()`, `DMCoarsen()`
 @*/
-PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char ***namelist, IS *innerislist[], IS *outerislist[], DM *dmlist[])
+PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char **namelist[], IS *innerislist[], IS *outerislist[], DM *dmlist[])
 {
   DMSubDomainHookLink link;
   PetscInt            i, l;
@@ -2451,7 +2451,18 @@ PetscErrorCode DMRefineHookAdd(DM coarse, PetscErrorCode (*refinehook)(DM coarse
 + coarse     - the `DM` on which to run a hook when restricting to a coarser level
 . refinehook - function to run when setting up a finer level
 . interphook - function to run to update data on finer levels
-- ctx        - [optional] user-defined context for provide data for the hooks (may be `NULL`)
+- ctx        - [optional] application context for provide data for the hooks (may be `NULL`)
+
+  Calling sequence of refinehook:
++ coarse - the coarse `DM`
+. fine   - the fine `DM`
+- ctx    - context for the funcion
+
+  Calling sequence of interphook:
++ coarse - the coarse `DM`
+. interp - the interpolation `Mat` from coarse to fine
+. fine   - the fine `DM`
+- ctx    - context for the funcion
 
   Level: advanced
 
@@ -3395,12 +3406,12 @@ PetscErrorCode DMCoarsen(DM dm, MPI_Comm comm, DM *dmc)
 + fine         - `DM` on which to run a hook when restricting to a coarser level
 . coarsenhook  - function to run when setting up a coarser level
 . restricthook - function to run to update data on coarser levels (called once per `SNESSolve()`)
-- ctx          - [optional] user-defined context for provide data for the hooks (may be `NULL`)
+- ctx          - [optional] application context for provide data for the hooks (may be `NULL`)
 
   Calling sequence of `coarsenhook`:
 + fine   - fine level `DM`
 . coarse - coarse level `DM` to restrict problem to
-- ctx    - optional user-defined function context
+- ctx    - optional application function context
 
   Calling sequence of `restricthook`:
 + fine      - fine level `DM`
@@ -3408,7 +3419,7 @@ PetscErrorCode DMCoarsen(DM dm, MPI_Comm comm, DM *dmc)
 . rscale    - scaling vector for restriction
 . inject    - matrix restricting by injection
 . coarse    - coarse level DM to update
-- ctx       - optional user-defined function context
+- ctx       - optional application function context
 
   Level: advanced
 
@@ -3451,7 +3462,20 @@ PetscErrorCode DMCoarsenHookAdd(DM fine, PetscErrorCode (*coarsenhook)(DM fine, 
 + fine         - `DM` on which to run a hook when restricting to a coarser level
 . coarsenhook  - function to run when setting up a coarser level
 . restricthook - function to run to update data on coarser levels
-- ctx          - [optional] user-defined context for provide data for the hooks (may be `NULL`)
+- ctx          - [optional] application context for provide data for the hooks (may be `NULL`)
+
+  Calling sequence of `coarsenhook`:
++ fine   - fine level `DM`
+. coarse - coarse level `DM` to restrict problem to
+- ctx    - optional application function context
+
+  Calling sequence of `restricthook`:
++ fine    - fine level `DM`
+. rstrict - matrix restricting a fine-level solution to the coarse grid, usually the transpose of the interpolation
+. rscale  - scaling vector for restriction
+. inject  - matrix restricting by injection
+. coarse  - coarse level DM to update
+- ctx     - optional application function context
 
   Level: advanced
 
@@ -3518,19 +3542,19 @@ PetscErrorCode DMRestrict(DM fine, Mat restrct, Vec rscale, Mat inject, DM coars
 + global       - global `DM`
 . ddhook       - function to run to pass data to the decomposition `DM` upon its creation
 . restricthook - function to run to update data on block solve (at the beginning of the block solve)
-- ctx          - [optional] user-defined context for provide data for the hooks (may be `NULL`)
+- ctx          - [optional] application context for provide data for the hooks (may be `NULL`)
 
   Calling sequence of `ddhook`:
 + global - global `DM`
 . block  - subdomain `DM`
-- ctx    - optional user-defined function context
+- ctx    - optional application function context
 
   Calling sequence of `restricthook`:
 + global - global `DM`
 . out    - scatter to the outer (with ghost and overlap points) sub vector
 . in     - scatter to sub vector values only owned locally
 . block  - subdomain `DM`
-- ctx    - optional user-defined function context
+- ctx    - optional application function context
 
   Level: advanced
 
@@ -3574,17 +3598,26 @@ PetscErrorCode DMSubDomainHookAdd(DM global, PetscErrorCode (*ddhook)(DM global,
 + global       - global `DM`
 . ddhook       - function to run to pass data to the decomposition `DM` upon its creation
 . restricthook - function to run to update data on block solve (at the beginning of the block solve)
-- ctx          - [optional] user-defined context for provide data for the hooks (may be `NULL`)
+- ctx          - [optional] application context for provide data for the hooks (may be `NULL`)
+
+  Calling sequence of `ddhook`:
++ dm    - global `DM`
+. block - subdomain `DM`
+- ctx   - optional application function context
+
+  Calling sequence of `restricthook`:
++ dm       - global `DM`
+. oscatter - scatter to the outer (with ghost and overlap points) sub vector
+. gscatter - scatter to sub vector values only owned locally
+. block    - subdomain `DM`
+- ctx      - optional application function context
 
   Level: advanced
-
-  Note:
-  See `DMSubDomainHookAdd()` for the calling sequences of `ddhook` and `restricthook`
 
 .seealso: [](ch_dmbase), `DM`, `DMSubDomainHookAdd()`, `SNESFASGetInterpolation()`, `SNESFASGetInjection()`, `PetscObjectCompose()`, `PetscContainerCreate()`,
           `DMCreateDomainDecomposition()`
 @*/
-PetscErrorCode DMSubDomainHookRemove(DM global, PetscErrorCode (*ddhook)(DM dm, DM subdm, PetscCtx ctx), PetscErrorCode (*restricthook)(DM dm, VecScatter oscatter, VecScatter gscatter, DM subdm, PetscCtx ctx), PetscCtx ctx)
+PetscErrorCode DMSubDomainHookRemove(DM global, PetscErrorCode (*ddhook)(DM dm, DM block, PetscCtx ctx), PetscErrorCode (*restricthook)(DM dm, VecScatter oscatter, VecScatter gscatter, DM block, PetscCtx ctx), PetscCtx ctx)
 {
   DMSubDomainHookLink link, *p;
 
@@ -3845,8 +3878,13 @@ PetscErrorCode DMGetApplicationContext(DM dm, PetscCtxRt ctx)
   Logically Collective
 
   Input Parameters:
-+ dm - the DM object
++ dm - the `DM` object
 - f  - the function that computes variable bounds used by `SNESVI` (use `NULL` to cancel a previous function that was set)
+
+  Calling sequence of f:
++ dm    - the `DM`
+. lower - the vector to hold the lower bounds
+- upper - the vector to hold the upper bounds
 
   Level: intermediate
 
@@ -3856,7 +3894,7 @@ PetscErrorCode DMGetApplicationContext(DM dm, PetscCtxRt ctx)
 .seealso: [](ch_dmbase), `DM`, `DMComputeVariableBounds()`, `DMHasVariableBounds()`, `DMView()`, `DMCreateGlobalVector()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMGetApplicationContext()`,
          `DMSetJacobian()`
 @*/
-PetscErrorCode DMSetVariableBounds(DM dm, PetscErrorCode (*f)(DM dim, Vec lower, Vec upper))
+PetscErrorCode DMSetVariableBounds(DM dm, PetscErrorCode (*f)(DM dm, Vec lower, Vec upper))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -4174,6 +4212,9 @@ PetscErrorCode DMConvert(DM dm, DMType newtype, DM *M)
 + sname    - The name of a new user-defined creation routine
 - function - The creation routine itself
 
+  Calling sequence of function:
+. dm - the new `DM` that is being created
+
   Level: advanced
 
   Note:
@@ -4196,7 +4237,7 @@ PetscErrorCode DMConvert(DM dm, DMType newtype, DM *M)
 
 .seealso: [](ch_dmbase), `DM`, `DMType`, `DMSetType()`, `DMRegisterAll()`, `DMRegisterDestroy()`
 @*/
-PetscErrorCode DMRegister(const char sname[], PetscErrorCode (*function)(DM))
+PetscErrorCode DMRegister(const char sname[], PetscErrorCode (*function)(DM dm))
 {
   PetscFunctionBegin;
   PetscCall(DMInitializePackage());
@@ -9077,6 +9118,14 @@ PetscErrorCode DMMonitorCancel(DM dm)
 
   Output Parameter:
 . flg - Flag set if the monitor was created
+
+  Calling sequence of `monitor`:
++ dm  - the `DM` to be monitored
+- ctx - monitor context
+
+  Calling sequence of `monitorsetup`:
++ dm - the `DM` to be monitored
+- vf - the `PetscViewer` and format to be used by the monitor
 
   Level: developer
 

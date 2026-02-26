@@ -8,7 +8,11 @@
   Input Parameters:
 + draw - the window where the graph will be made.
 . func - users function that draws the graphic
-- ctx  - pointer to any user required data
+- ctx  - pointer to any application required data
+
+  Calling sequence of func:
++ draw - the `PetscDraw` object to zoom on
+- ctx  - the context for the zooming operation
 
   Level: advanced
 

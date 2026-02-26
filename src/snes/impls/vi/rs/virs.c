@@ -596,6 +596,12 @@ static PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
 . func - the function to check of redundancies
 - ctx  - optional context used by the function
 
+  Calling sequence of func:
++ snes      - the `SNES` context
+. is_act    - the set of points in the active sets
+. is_redact - output, the set of points in the non-redundant active set
+- ctx       - optional context
+
   Level: advanced
 
   Note:
