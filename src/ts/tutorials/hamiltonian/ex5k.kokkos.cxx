@@ -44,6 +44,7 @@ typedef struct {
   DM daX;   /* 1D periodic DMDA for x-space, MPI-distributed */
   DM daV;   /* 1D non-periodic DMDA for v-space, PETSC_COMM_SELF */
   DM daPot; /* 1D periodic DMDA for phi/rho/E, clone of daX with dof=1 */
+  DM daF;   /* 1D periodic DMDA for one iv-slice of f: dof=NbX, same stencil as daX */
 
   /* Distribution function */
   Vec f; /* Global Vec, local size NvDOF * NxDOF_local */
@@ -129,6 +130,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *ctx)
   ctx->daX        = NULL;
   ctx->daV        = NULL;
   ctx->daPot      = NULL;
+  ctx->daF        = NULL;
   ctx->f          = NULL;
   ctx->rho        = NULL;
   ctx->phi        = NULL;
@@ -209,6 +211,11 @@ static PetscErrorCode CreateXMesh(MPI_Comm comm, AppCtx *ctx)
   PetscCall(DMSetUp(ctx->daX));
   PetscCall(DMDAGetCorners(ctx->daX, &ctx->xs, NULL, NULL, &ctx->NxLocal, NULL, NULL));
   ctx->NxDOF_local = ctx->NxLocal * ctx->NbX;
+
+  /* daF: same topology as daX, used for per-iv ghost exchange in AdvectX.
+     dof=NbX and stencil width sw are identical to daX. */
+  PetscCall(DMDACreate1d(comm, DM_BOUNDARY_PERIODIC, ctx->Nx, ctx->NbX, sw, NULL, &ctx->daF));
+  PetscCall(DMSetUp(ctx->daF));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -509,7 +516,7 @@ static PetscErrorCode ComputeElectricField(AppCtx *ctx)
 }
 
 /* ========================================================================
-   Phase 8 — AdvectX (SLDG L2 projection with MPI_Allgather for periodic wrap)
+   Phase 8 — AdvectX (SLDG L2 projection with DMDA ghost exchange)
 
    Uses the SLDG overlap-integral approach: for each velocity DOF, compute
    the fractional cell shift s = v*dt/h_x, decompose into integer shift n
@@ -517,6 +524,11 @@ static PetscErrorCode ComputeElectricField(AppCtx *ctx)
    quadrature on the two sub-intervals, then apply:
      f_new[i] = (1/M[i]) * sum_j (A[i,j]*f[src_A,j] + B[i,j]*f[src_B,j])
    where M[i] = x_basis_int[i] is the diagonal GLL mass matrix entry.
+
+   Ghost exchange: instead of MPI_Allgather, we copy each iv-slice into a
+   global Vec on daF, call DMGlobalToLocal, and read ghost cells via
+   DMDAVecGetArrayDOF.  daF has the same periodic topology and stencil width
+   as daX, so ghost cells cover all source cells needed by the SLDG stencil.
    ======================================================================== */
 static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
 {
@@ -542,13 +554,14 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
   PetscCall(PetscMalloc1(NqSLDG, &qb));
   PetscCall(PetscMalloc1(NqSLDG, &wb));
 
-  /* Gather full x-row for each iv using MPI_Allgather.
-     f is a plain Vec (not DMDA Vec), so we use MPI directly.
-     Each rank owns NxDOF_local = NxLocal * NbX DOFs per iv-slice. */
-  PetscInt NxDOF_global = ctx->Nx * ctx->NbX;
-  PetscReal *f_row_local, *f_row_global;
-  PetscCall(PetscMalloc1(ctx->NxDOF_local, &f_row_local));
-  PetscCall(PetscMalloc1(NxDOF_global, &f_row_global));
+  /* Allocate a global Vec on daF for one iv-slice, and a local Vec with ghosts */
+  Vec        f_iv_global, f_iv_local;
+  PetscReal **f_iv_arr; /* ghost-aware 2D array: f_iv_arr[cell][dof] */
+  PetscCall(DMCreateGlobalVector(ctx->daF, &f_iv_global));
+  PetscCall(DMCreateLocalVector(ctx->daF, &f_iv_local));
+
+  DMDALocalInfo info;
+  PetscCall(DMDAGetLocalInfo(ctx->daF, &info));
 
   PetscCall(VecGetArrayRead(f, &f_arr));
   PetscCall(VecGetArray(f_out, &f_out_arr));
@@ -600,27 +613,32 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
       }
     }
 
-    /* Gather full x-row for this iv across all ranks */
-    for (PetscInt ix = 0; ix < ctx->NxDOF_local; ++ix)
-      f_row_local[ix] = PetscRealPart(f_arr[iv * ctx->NxDOF_local + ix]);
+    /* Copy this iv-slice into the global Vec on daF, then ghost-exchange */
+    {
+      PetscScalar *gv_arr;
+      PetscCall(VecGetArray(f_iv_global, &gv_arr));
+      for (PetscInt ix = 0; ix < ctx->NxDOF_local; ++ix)
+        gv_arr[ix] = f_arr[iv * ctx->NxDOF_local + ix];
+      PetscCall(VecRestoreArray(f_iv_global, &gv_arr));
+    }
+    PetscCall(DMGlobalToLocal(ctx->daF, f_iv_global, INSERT_VALUES, f_iv_local));
+    PetscCall(DMDAVecGetArrayDOF(ctx->daF, f_iv_local, &f_iv_arr));
 
-    PetscCallMPI(MPI_Allgather(f_row_local, (int)ctx->NxDOF_local, MPIU_REAL,
-                               f_row_global, (int)ctx->NxDOF_local, MPIU_REAL,
-                               PetscObjectComm((PetscObject)f)));
-
-    /* Apply SLDG update for each local x-cell */
+    /* Apply SLDG update for each local x-cell.
+       f_iv_arr[cell][bx] gives ghost-aware access: cell ranges from
+       info.xs - info.sw to info.xs + info.xm + info.sw - 1. */
     for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
       PetscInt cx_global = ctx->xs + cx_local;
-      /* Source cell for A: (cx_global - n + Nx) % Nx */
-      PetscInt src_A = ((cx_global - n) % ctx->Nx + ctx->Nx) % ctx->Nx;
-      /* Source cell for B: (cx_global - n - 1 + Nx) % Nx */
-      PetscInt src_B = ((cx_global - n - 1) % ctx->Nx + ctx->Nx) % ctx->Nx;
+      /* Source cell for A: cx_global - n (periodic, covered by ghosts) */
+      PetscInt src_A = cx_global - n;
+      /* Source cell for B: cx_global - n - 1 (periodic, covered by ghosts) */
+      PetscInt src_B = cx_global - n - 1;
 
       for (PetscInt i = 0; i < ctx->NbX; ++i) {
         PetscReal val = 0.0;
         for (PetscInt j = 0; j < ctx->NbX; ++j) {
-          val += A[i * ctx->NbX + j] * f_row_global[src_A * ctx->NbX + j];
-          val += B[i * ctx->NbX + j] * f_row_global[src_B * ctx->NbX + j];
+          val += A[i * ctx->NbX + j] * PetscRealPart(f_iv_arr[src_A][j]);
+          val += B[i * ctx->NbX + j] * PetscRealPart(f_iv_arr[src_B][j]);
         }
         /* Apply reference mass matrix inverse: overlap integrals are in
            reference coordinates [-1,1], so divide by GLL weight w_i only
@@ -630,14 +648,16 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
           (PetscScalar)(val / w_i);
       }
     }
+
+    PetscCall(DMDAVecRestoreArrayDOF(ctx->daF, f_iv_local, &f_iv_arr));
   }
 
   PetscCall(PetscFree(qa)); PetscCall(PetscFree(wa));
   PetscCall(PetscFree(qb)); PetscCall(PetscFree(wb));
-  PetscCall(PetscFree(f_row_local));
-  PetscCall(PetscFree(f_row_global));
   PetscCall(VecRestoreArrayRead(f, &f_arr));
   PetscCall(VecRestoreArray(f_out, &f_out_arr));
+  PetscCall(VecDestroy(&f_iv_global));
+  PetscCall(VecDestroy(&f_iv_local));
 
   /* Copy result back if in-place */
   if (inplace) {
@@ -819,6 +839,7 @@ static PetscErrorCode DestroyContext(AppCtx *ctx)
   PetscCall(DMDestroy(&ctx->daX));
   PetscCall(DMDestroy(&ctx->daV));
   PetscCall(DMDestroy(&ctx->daPot));
+  PetscCall(DMDestroy(&ctx->daF));
   PetscCall(PetscFree(ctx->xi_x_nodes));
   PetscCall(PetscFree(ctx->xi_v_nodes));
   PetscCall(PetscFree(ctx->v_dof_coords));
