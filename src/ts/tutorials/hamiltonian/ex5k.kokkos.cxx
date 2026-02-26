@@ -111,13 +111,124 @@ typedef struct {
 /* ========================================================================
    Lagrange basis helper
    ======================================================================== */
-static inline PetscReal EvalLagrangeBasis(PetscInt nb, const PetscReal *nodes, PetscInt b, PetscReal xi)
+#ifndef KOKKOS_INLINE_FUNCTION
+  #define KOKKOS_INLINE_FUNCTION inline
+#endif
+KOKKOS_INLINE_FUNCTION static PetscReal EvalLagrangeBasis(PetscInt nb, const PetscReal *nodes, PetscInt b, PetscReal xi)
 {
   PetscReal val = 1.0;
   for (PetscInt j = 0; j < nb; ++j)
     if (j != b) val *= (xi - nodes[j]) / (nodes[b] - nodes[j]);
   return val;
 }
+
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+/* ========================================================================
+   Device-callable Gauss-Legendre quadrature helpers
+   Ported from src/dm/dt/interface/dt.c (PetscDTGaussJacobiQuadrature_Newton_Internal
+   and helpers).  All functions are KOKKOS_INLINE_FUNCTION so they can be
+   called from device kernels.  No PETSc error codes — pure arithmetic.
+
+   For Gauss-Legendre (alpha=beta=0) the weight prefactor a6 = 2 exactly,
+   so lgamma is not needed.
+   ======================================================================== */
+
+/* Three-term recurrence coefficients for J^{a,b}_n:
+   J^{a,b}_n(x) = (cnm1 + cnm1x*x)*J^{a,b}_{n-1}(x) - cnm2*J^{a,b}_{n-2}(x) */
+KOKKOS_INLINE_FUNCTION static void
+KokkosDTJacobiRecurrence(int n, double a, double b,
+                          double &cnm1, double &cnm1x, double &cnm2)
+{
+  if (n == 1) {
+    cnm1  = (a - b) * 0.5;
+    cnm1x = (a + b + 2.) * 0.5;
+    cnm2  = 0.;
+  } else {
+    double _2n  = n + n;
+    double _d   = _2n * (n + a + b) * (_2n + a + b - 2.);
+    double _n1  = (_2n + a + b - 1.) * (a * a - b * b);
+    double _n1x = (_2n + a + b - 1.) * (_2n + a + b) * (_2n + a + b - 2.);
+    double _n2  = 2. * (n + a - 1.) * (n + b - 1.) * (_2n + a + b);
+    cnm1  = _n1  / _d;
+    cnm1x = _n1x / _d;
+    cnm2  = _n2  / _d;
+  }
+}
+
+/* Evaluate Jacobi polynomial P_n^{a,b}(x) via three-term recurrence */
+KOKKOS_INLINE_FUNCTION static double
+KokkosDTComputeJacobi(double a, double b, int n, double x)
+{
+  if (n == 0) return 1.0;
+  double cnm1, cnm1x, cnm2;
+  KokkosDTJacobiRecurrence(1, a, b, cnm1, cnm1x, cnm2);
+  double pn2 = 1., pn1 = cnm1 + cnm1x * x, P = 0.;
+  if (n == 1) return pn1;
+  for (int k = 2; k <= n; ++k) {
+    KokkosDTJacobiRecurrence(k, a, b, cnm1, cnm1x, cnm2);
+    P   = (cnm1 + cnm1x * x) * pn1 - cnm2 * pn2;
+    pn2 = pn1;
+    pn1 = P;
+  }
+  return P;
+}
+
+/* Evaluate k-th derivative of P_n^{a,b}(x) */
+KOKKOS_INLINE_FUNCTION static double
+KokkosDTComputeJacobiDerivative(double a, double b, int n, double x, int k)
+{
+  if (k > n) return 0.0;
+  double nP = KokkosDTComputeJacobi(a + k, b + k, n - k, x);
+  for (int i = 0; i < k; ++i) nP *= (a + b + n + 1. + i) * 0.5;
+  return nP;
+}
+
+/* Compute npoints Gauss-Legendre quadrature points/weights on [a,b].
+   x[] and w[] must be caller-allocated arrays of length npoints.
+   Uses Newton iteration; for GL alpha=beta=0 so a6=2 exactly.
+   NqSLDG <= 10 for degree_x <= 3, so stack allocation is safe. */
+KOKKOS_INLINE_FUNCTION static void
+KokkosDTGaussQuadrature(int npoints, double a, double b, double *x, double *w)
+{
+  const int    maxIter = 100;
+  /* eps = exp(0.75 * log(machine_epsilon_double)) ≈ 1.2e-11 */
+  const double eps = 1.2e-11;
+  /* For Gauss-Legendre (alpha=beta=0): a6 = 2^1 * Gamma(n+1)^2 / (Gamma(2n+1)*Gamma(1)) = 2 */
+  const double a6 = 2.0;
+
+  for (int k = 0; k < npoints; ++k) {
+    /* Chebyshev initial guess (Karniadakis & Sherwin, alpha=beta=0) */
+    double r = PetscCosReal(PETSC_PI * (1. - (4. * k + 3.) / (4. * npoints + 2.)));
+    if (k > 0) r = 0.5 * (r + x[k - 1]);
+    for (int j = 0; j < maxIter; ++j) {
+      double s = 0.0;
+      for (int i = 0; i < k; ++i) s += 1.0 / (r - x[i]);
+      double f     = KokkosDTComputeJacobi(0., 0., npoints, r);
+      double fp    = KokkosDTComputeJacobiDerivative(0., 0., npoints, r, 1);
+      double delta = f / (fp - f * s);
+      r -= delta;
+      if (PetscAbsReal(delta) < eps) break;
+    }
+    x[k] = r;
+    double dP = KokkosDTComputeJacobiDerivative(0., 0., npoints, x[k], 1);
+    w[k] = a6 / (1.0 - x[k] * x[k]) / (dP * dP);
+  }
+  /* Symmetrize (alpha == beta case) */
+  for (int i = 0; i < (npoints + 1) / 2; ++i) {
+    int    j  = npoints - 1 - i;
+    double xi = x[i], xj = x[j], wi = w[i], wj = w[j];
+    x[i] = (xi - xj) * 0.5;
+    x[j] = (xj - xi) * 0.5;
+    w[i] = w[j] = (wi + wj) * 0.5;
+  }
+  /* Shift from [-1,1] to [a,b] */
+  if (a != -1. || b != 1.)
+    for (int i = 0; i < npoints; ++i) {
+      x[i] = (x[i] + 1.) * ((b - a) * 0.5) + a;
+      w[i] *= (b - a) * 0.5;
+    }
+}
+#endif /* PETSC_HAVE_KOKKOS_KERNELS */
 
 /* ========================================================================
    Phase 1 — ProcessOptions
@@ -316,6 +427,9 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
   PetscReal *gll_wts_x, *gll_wts_v;
 
   PetscFunctionBeginUser;
+#if defined(PETSC_HAVE_KOKKOS)
+  PetscCall(PetscKokkosInitializeCheck());
+#endif
 
   /* Step 1: GLL nodes for x and v DOFs */
   PetscCall(PetscMalloc1(ctx->NbX, &ctx->xi_x_nodes));
@@ -328,11 +442,28 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
 
   /* Step 2: Physical v-DOF coordinates */
   PetscCall(PetscMalloc1(ctx->NvDOF, &ctx->v_dof_coords));
-  // TODO: Kokkos::parallel_for over (cv, bv)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  {
+    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_xi_v(ctx->xi_v_nodes, ctx->NbV);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_vdof(ctx->v_dof_coords, ctx->NvDOF);
+    Kokkos::View<PetscReal *> d_xi_v("d_xi_v", ctx->NbV);
+    Kokkos::View<PetscReal *> d_vdof("d_vdof", ctx->NvDOF);
+    Kokkos::deep_copy(d_xi_v, h_xi_v);
+    const PetscReal v_max = ctx->v_max, h_v = ctx->h_v;
+    const PetscInt  NbV = ctx->NbV, NvDOF = ctx->NvDOF;
+    Kokkos::parallel_for("v_dof_coords", Kokkos::RangePolicy<>(0, NvDOF),
+      KOKKOS_LAMBDA(PetscInt idx) {
+        PetscInt  cv = idx / NbV, bv = idx % NbV;
+        d_vdof(idx) = -v_max + cv * h_v + (d_xi_v(bv) + 1.0) * (h_v * 0.5);
+      });
+    Kokkos::deep_copy(h_vdof, d_vdof);
+  }
+#else
   for (PetscInt cv = 0; cv < ctx->Nv; ++cv)
     for (PetscInt bv = 0; bv < ctx->NbV; ++bv)
       ctx->v_dof_coords[cv * ctx->NbV + bv] =
         -ctx->v_max + cv * ctx->h_v + (ctx->xi_v_nodes[bv] + 1.0) * (ctx->h_v * 0.5);
+#endif
 
   /* Step 3: Gauss quadrature for v-advection (NqV = NbV + 2 points) */
   ctx->NqV = ctx->NbV + 2;
@@ -342,14 +473,55 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
 
   /* Step 4: Tabulate v-basis at quadrature points */
   PetscCall(PetscMalloc1(ctx->NqV * ctx->NbV, &ctx->tabV));
-  // TODO: Kokkos::parallel_for over (q, bv)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  {
+    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_xi_v(ctx->xi_v_nodes, ctx->NbV);
+    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_vq(ctx->vq_pts, ctx->NqV);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_tab(ctx->tabV, ctx->NqV * ctx->NbV);
+    Kokkos::View<PetscReal *> d_xi_v("d_xi_v", ctx->NbV);
+    Kokkos::View<PetscReal *> d_vq("d_vq", ctx->NqV);
+    Kokkos::View<PetscReal *> d_tab("d_tab", ctx->NqV * ctx->NbV);
+    Kokkos::deep_copy(d_xi_v, h_xi_v);
+    Kokkos::deep_copy(d_vq, h_vq);
+    const PetscInt NbV = ctx->NbV, NqV = ctx->NqV;
+    Kokkos::parallel_for("tabV", Kokkos::RangePolicy<>(0, NqV * NbV),
+      KOKKOS_LAMBDA(PetscInt idx) {
+        PetscInt q = idx / NbV, bv = idx % NbV;
+        d_tab(idx) = EvalLagrangeBasis(NbV, d_xi_v.data(), bv, d_vq(q));
+      });
+    Kokkos::deep_copy(h_tab, d_tab);
+  }
+#else
   for (PetscInt q = 0; q < ctx->NqV; ++q)
     for (PetscInt bv = 0; bv < ctx->NbV; ++bv)
       ctx->tabV[q * ctx->NbV + bv] = EvalLagrangeBasis(ctx->NbV, ctx->xi_v_nodes, bv, ctx->vq_pts[q]);
+#endif
 
   /* Step 5: v-basis integrals for charge density computation */
   PetscCall(PetscCalloc1(ctx->NvDOF, &ctx->v_basis_int));
-  // TODO: Kokkos::parallel_for over (cv, bv)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  {
+    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_tab(ctx->tabV, ctx->NqV * ctx->NbV);
+    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_wts(ctx->vq_wts, ctx->NqV);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_vbi(ctx->v_basis_int, ctx->NvDOF);
+    Kokkos::View<PetscReal *> d_tab("d_tab", ctx->NqV * ctx->NbV);
+    Kokkos::View<PetscReal *> d_wts("d_wts", ctx->NqV);
+    Kokkos::View<PetscReal *> d_vbi("d_vbi", ctx->NvDOF);
+    Kokkos::deep_copy(d_tab, h_tab);
+    Kokkos::deep_copy(d_wts, h_wts);
+    const PetscInt  NbV = ctx->NbV, NqV = ctx->NqV, NvDOF = ctx->NvDOF;
+    const PetscReal h_v = ctx->h_v;
+    Kokkos::parallel_for("v_basis_int", Kokkos::RangePolicy<>(0, NvDOF),
+      KOKKOS_LAMBDA(PetscInt idx) {
+        PetscInt  bv  = idx % NbV;
+        PetscReal sum = 0.0;
+        for (PetscInt q = 0; q < NqV; ++q)
+          sum += d_tab(q * NbV + bv) * d_wts(q) * (h_v * 0.5);
+        d_vbi(idx) = sum;
+      });
+    Kokkos::deep_copy(h_vbi, d_vbi);
+  }
+#else
   for (PetscInt cv = 0; cv < ctx->Nv; ++cv) {
     for (PetscInt bv = 0; bv < ctx->NbV; ++bv) {
       PetscReal sum = 0.0;
@@ -358,6 +530,7 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
       ctx->v_basis_int[cv * ctx->NbV + bv] = sum;
     }
   }
+#endif
 
   /* Step 6: x-basis integrals for charge density and moments
      x_basis_int[bx] = gll_wts_x[bx] * h_x/2 (integral of x-basis over cell) */
@@ -367,10 +540,170 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
 
   /* Step 7: v-mass matrix inverse (diagonal, GLL mass matrix is diagonal) */
   PetscCall(PetscMalloc1(ctx->NvDOF, &ctx->MassV_inv));
-  // TODO: Kokkos::parallel_for over (cv, bv)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  {
+    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_wts_v(gll_wts_v, ctx->NbV);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_minv(ctx->MassV_inv, ctx->NvDOF);
+    Kokkos::View<PetscReal *> d_wts_v("d_wts_v", ctx->NbV);
+    Kokkos::View<PetscReal *> d_minv("d_minv", ctx->NvDOF);
+    Kokkos::deep_copy(d_wts_v, h_wts_v);
+    const PetscInt  NbV = ctx->NbV, NvDOF = ctx->NvDOF;
+    const PetscReal h_v = ctx->h_v;
+    Kokkos::parallel_for("MassV_inv", Kokkos::RangePolicy<>(0, NvDOF),
+      KOKKOS_LAMBDA(PetscInt idx) {
+        PetscInt bv = idx % NbV;
+        d_minv(idx) = 1.0 / (d_wts_v(bv) * h_v * 0.5);
+      });
+    Kokkos::deep_copy(h_minv, d_minv);
+  }
+#else
   for (PetscInt cv = 0; cv < ctx->Nv; ++cv)
     for (PetscInt bv = 0; bv < ctx->NbV; ++bv)
       ctx->MassV_inv[cv * ctx->NbV + bv] = 1.0 / (gll_wts_v[bv] * ctx->h_v * 0.5);
+#endif
+
+  /* Step 8: Precompute SLDG overlap matrices A_sldg, B_sldg, and integer shifts n_shift.
+     For each velocity DOF iv, compute the fractional shift s = v_dof_coords[iv]*dt/h_x,
+     decompose into integer n and fractional alp in [0,1), then build the NbX x NbX
+     overlap matrices A and B via Gauss quadrature on [-1, split] and [split, 1].
+     NqSLDG = 2*NbX+2 quadrature points; NbX <= 4 so NqSLDG <= 10 — safe for stack.
+
+     Convention: A_sldg and B_sldg store A[i,j]/w_i and B[i,j]/w_i where
+     w_i = gll_wts_x[i] is the GLL weight (= x_basis_int[i] / (h_x/2)).
+     This way the apply step is simply f_new[i] = sum_j (A[i,j]*f_A[j] + B[i,j]*f_B[j])
+     with no division, and the pure-integer-shift case gives A[i,i]/w_i = w_i/w_i = 1. */
+  PetscCall(PetscMalloc1(ctx->NvDOF * ctx->NbX * ctx->NbX, &ctx->A_sldg));
+  PetscCall(PetscMalloc1(ctx->NvDOF * ctx->NbX * ctx->NbX, &ctx->B_sldg));
+  PetscCall(PetscMalloc1(ctx->NvDOF, &ctx->n_shift));
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  {
+    const PetscInt  NvDOF  = ctx->NvDOF;
+    const PetscInt  NbX    = ctx->NbX;
+    const PetscInt  NqSLDG = 2 * NbX + 2;
+    const PetscReal h_x    = ctx->h_x;
+    const PetscReal dt     = ctx->dt;
+    /* x_basis_int[i] = gll_wts_x[i] * h_x/2; we need gll_wts_x[i] = x_basis_int[i]/(h_x/2) */
+    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_vdc(ctx->v_dof_coords, NvDOF);
+    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_xi_x(ctx->xi_x_nodes, NbX);
+    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_xbi(ctx->x_basis_int, NbX);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_A(ctx->A_sldg, NvDOF * NbX * NbX);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_B(ctx->B_sldg, NvDOF * NbX * NbX);
+    Kokkos::View<PetscInt *,  Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_ns(ctx->n_shift, NvDOF);
+    Kokkos::View<PetscReal *> d_vdc("d_vdc", NvDOF);
+    Kokkos::View<PetscReal *> d_xi_x("d_xi_x", NbX);
+    Kokkos::View<PetscReal *> d_xbi("d_xbi", NbX);
+    Kokkos::View<PetscReal *> d_A("d_A", NvDOF * NbX * NbX);
+    Kokkos::View<PetscReal *> d_B("d_B", NvDOF * NbX * NbX);
+    Kokkos::View<PetscInt *>  d_ns("d_ns", NvDOF);
+    Kokkos::deep_copy(d_vdc,  h_vdc);
+    Kokkos::deep_copy(d_xi_x, h_xi_x);
+    Kokkos::deep_copy(d_xbi,  h_xbi);
+    Kokkos::parallel_for("sldg_precompute", Kokkos::RangePolicy<>(0, NvDOF),
+      KOKKOS_LAMBDA(PetscInt iv) {
+        PetscReal s   = d_vdc(iv) * dt / h_x;
+        PetscInt  n   = (PetscInt)PetscFloorReal(s);
+        PetscReal alp = s - (PetscReal)n;
+        if (alp > 1.0 - 1e-14) { n++; alp = 0.0; }
+        d_ns(iv) = n;
+
+        PetscReal *A = &d_A(iv * NbX * NbX);
+        PetscReal *B = &d_B(iv * NbX * NbX);
+        for (PetscInt k = 0; k < NbX * NbX; ++k) A[k] = B[k] = 0.0;
+
+        if (alp < 1e-14) {
+          /* Pure integer shift: A[i,i] = w_i/w_i = 1, B = 0 */
+          for (PetscInt i = 0; i < NbX; ++i) A[i * NbX + i] = 1.0;
+        } else {
+          PetscReal split = 1.0 - 2.0 * alp;
+          /* Stack-allocate quadrature arrays (NqSLDG <= 10) */
+          PetscReal qa[10], wa[10], qb[10], wb[10];
+          KokkosDTGaussQuadrature(NqSLDG, -1.0, split, qa, wa);
+          KokkosDTGaussQuadrature(NqSLDG, split, 1.0,  qb, wb);
+
+          /* Build raw overlap integrals, then divide each row i by w_i */
+          for (PetscInt q = 0; q < NqSLDG; ++q) {
+            PetscReal xi  = qa[q], xi2 = xi + 2.0 * alp;
+            for (PetscInt i = 0; i < NbX; ++i) {
+              PetscReal phi_i = EvalLagrangeBasis(NbX, d_xi_x.data(), i, xi);
+              for (PetscInt j = 0; j < NbX; ++j)
+                A[i * NbX + j] += phi_i * EvalLagrangeBasis(NbX, d_xi_x.data(), j, xi2) * wa[q];
+            }
+          }
+          for (PetscInt q = 0; q < NqSLDG; ++q) {
+            PetscReal xi  = qb[q], xi2 = xi + 2.0 * alp - 2.0;
+            for (PetscInt i = 0; i < NbX; ++i) {
+              PetscReal phi_i = EvalLagrangeBasis(NbX, d_xi_x.data(), i, xi);
+              for (PetscInt j = 0; j < NbX; ++j)
+                B[i * NbX + j] += phi_i * EvalLagrangeBasis(NbX, d_xi_x.data(), j, xi2) * wb[q];
+            }
+          }
+          /* Divide each row i by w_i = x_basis_int[i] / (h_x/2) */
+          for (PetscInt i = 0; i < NbX; ++i) {
+            PetscReal inv_wi = (h_x * 0.5) / d_xbi(i);
+            for (PetscInt j = 0; j < NbX; ++j) {
+              A[i * NbX + j] *= inv_wi;
+              B[i * NbX + j] *= inv_wi;
+            }
+          }
+        }
+      });
+    Kokkos::deep_copy(h_A,  d_A);
+    Kokkos::deep_copy(h_B,  d_B);
+    Kokkos::deep_copy(h_ns, d_ns);
+  }
+#else
+  {
+    PetscInt  NqSLDG = 2 * ctx->NbX + 2;
+    PetscReal *qa, *wa, *qb, *wb;
+    PetscCall(PetscMalloc1(NqSLDG, &qa));
+    PetscCall(PetscMalloc1(NqSLDG, &wa));
+    PetscCall(PetscMalloc1(NqSLDG, &qb));
+    PetscCall(PetscMalloc1(NqSLDG, &wb));
+    for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
+      PetscReal s   = ctx->v_dof_coords[iv] * ctx->dt / ctx->h_x;
+      PetscInt  n   = (PetscInt)PetscFloorReal(s);
+      PetscReal alp = s - (PetscReal)n;
+      if (alp > 1.0 - 1e-14) { n++; alp = 0.0; }
+      ctx->n_shift[iv] = n;
+      PetscReal *A = &ctx->A_sldg[iv * ctx->NbX * ctx->NbX];
+      PetscReal *B = &ctx->B_sldg[iv * ctx->NbX * ctx->NbX];
+      for (PetscInt k = 0; k < ctx->NbX * ctx->NbX; ++k) A[k] = B[k] = 0.0;
+      if (alp < 1e-14) {
+        for (PetscInt i = 0; i < ctx->NbX; ++i) A[i * ctx->NbX + i] = 1.0;
+      } else {
+        PetscReal split = 1.0 - 2.0 * alp;
+        PetscCall(PetscDTGaussQuadrature(NqSLDG, -1.0, split, qa, wa));
+        PetscCall(PetscDTGaussQuadrature(NqSLDG, split, 1.0,  qb, wb));
+        for (PetscInt q = 0; q < NqSLDG; ++q) {
+          PetscReal xi = qa[q], xi2 = xi + 2.0 * alp;
+          for (PetscInt i = 0; i < ctx->NbX; ++i) {
+            PetscReal phi_i = EvalLagrangeBasis(ctx->NbX, ctx->xi_x_nodes, i, xi);
+            for (PetscInt j = 0; j < ctx->NbX; ++j)
+              A[i * ctx->NbX + j] += phi_i * EvalLagrangeBasis(ctx->NbX, ctx->xi_x_nodes, j, xi2) * wa[q];
+          }
+        }
+        for (PetscInt q = 0; q < NqSLDG; ++q) {
+          PetscReal xi = qb[q], xi2 = xi + 2.0 * alp - 2.0;
+          for (PetscInt i = 0; i < ctx->NbX; ++i) {
+            PetscReal phi_i = EvalLagrangeBasis(ctx->NbX, ctx->xi_x_nodes, i, xi);
+            for (PetscInt j = 0; j < ctx->NbX; ++j)
+              B[i * ctx->NbX + j] += phi_i * EvalLagrangeBasis(ctx->NbX, ctx->xi_x_nodes, j, xi2) * wb[q];
+          }
+        }
+        /* Divide each row i by w_i = x_basis_int[i] / (h_x/2) */
+        for (PetscInt i = 0; i < ctx->NbX; ++i) {
+          PetscReal inv_wi = (ctx->h_x * 0.5) / ctx->x_basis_int[i];
+          for (PetscInt j = 0; j < ctx->NbX; ++j) {
+            A[i * ctx->NbX + j] *= inv_wi;
+            B[i * ctx->NbX + j] *= inv_wi;
+          }
+        }
+      }
+    }
+    PetscCall(PetscFree(qa)); PetscCall(PetscFree(wa));
+    PetscCall(PetscFree(qb)); PetscCall(PetscFree(wb));
+  }
+#endif
 
   PetscCall(PetscFree(gll_wts_x));
   PetscCall(PetscFree(gll_wts_v));
@@ -400,7 +733,39 @@ static PetscErrorCode InitializeF(AppCtx *ctx)
   PetscFunctionBeginUser;
   PetscCall(VecGetArray(ctx->f, &f_arr));
 
-  // TODO: When adding Kokkos, replace with Kokkos::parallel_for over (iv, ix)
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  {
+    const PetscInt  NvDOF     = ctx->NvDOF;
+    const PetscInt  NxDOF_loc = ctx->NxDOF_local;
+    Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>     h_f(f_arr, (size_t)NvDOF * NxDOF_loc);
+    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_vdc(ctx->v_dof_coords, NvDOF);
+    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_xi_x(ctx->xi_x_nodes, ctx->NbX);
+    Kokkos::View<PetscScalar *> d_f("d_f", (size_t)NvDOF * NxDOF_loc);
+    Kokkos::View<PetscReal *>   d_vdc("d_vdc", NvDOF);
+    Kokkos::View<PetscReal *>   d_xi_x("d_xi_x", ctx->NbX);
+    Kokkos::deep_copy(d_vdc, h_vdc);
+    Kokkos::deep_copy(d_xi_x, h_xi_x);
+    const PetscInt  NbX   = ctx->NbX;
+    const PetscInt  xs    = ctx->xs;
+    const PetscReal h_x   = ctx->h_x;
+    const PetscReal alpha = ctx->alpha;
+    const PetscReal kwave = ctx->kwave;
+    Kokkos::parallel_for("InitializeF", Kokkos::RangePolicy<>(0, NvDOF * NxDOF_loc),
+      KOKKOS_LAMBDA(PetscInt idx) {
+        PetscInt  iv          = idx / NxDOF_loc;
+        PetscInt  ix          = idx % NxDOF_loc;
+        PetscReal v           = d_vdc(iv);
+        PetscInt  cx_local    = ix / NbX;
+        PetscInt  bx          = ix % NbX;
+        PetscReal x_cell_left = (xs + cx_local) * h_x;
+        PetscReal x           = x_cell_left + (d_xi_x(bx) + 1.0) * (h_x * 0.5);
+        PetscReal f0          = (1.0 + alpha * PetscCosReal(kwave * x))
+                                / PetscSqrtReal(2.0 * PETSC_PI) * PetscExpReal(-0.5 * v * v);
+        d_f(idx) = (PetscScalar)f0;
+      });
+    Kokkos::deep_copy(h_f, d_f);
+  }
+#else
   for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
     PetscReal v = ctx->v_dof_coords[iv];
     for (PetscInt ix = 0; ix < ctx->NxDOF_local; ++ix) {
@@ -413,6 +778,7 @@ static PetscErrorCode InitializeF(AppCtx *ctx)
       f_arr[iv * ctx->NxDOF_local + ix] = (PetscScalar)f0;
     }
   }
+#endif
 
   PetscCall(VecRestoreArray(ctx->f, &f_arr));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -440,6 +806,39 @@ static PetscErrorCode ComputeChargeDensity(AppCtx *ctx)
   PetscCall(VecGetArrayRead(ctx->f, &f_arr));
   PetscCall(VecGetArray(ctx->rho, &rho_arr));
 
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  {
+    const PetscInt  NxLocal   = ctx->NxLocal;
+    const PetscInt  NvDOF     = ctx->NvDOF;
+    const PetscInt  NbX       = ctx->NbX;
+    const PetscInt  NxDOF_loc = ctx->NxDOF_local;
+    const PetscReal h_x       = ctx->h_x;
+    /* h_f wraps a const PetscScalar* — cast away const for the unmanaged View
+       constructor; the View itself is const so no writes occur through h_f. */
+    const Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_f(const_cast<PetscScalar *>(f_arr), (size_t)NvDOF * NxDOF_loc);
+    const Kokkos::View<PetscReal *,   Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_vbi(ctx->v_basis_int, NvDOF);
+    const Kokkos::View<PetscReal *,   Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_xbi(ctx->x_basis_int, NbX);
+    Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_rho(rho_arr, NxLocal);
+    Kokkos::View<PetscScalar *> d_f("d_f", (size_t)NvDOF * NxDOF_loc);
+    Kokkos::View<PetscReal *>   d_vbi("d_vbi", NvDOF);
+    Kokkos::View<PetscReal *>   d_xbi("d_xbi", NbX);
+    Kokkos::View<PetscScalar *> d_rho("d_rho", NxLocal);
+    Kokkos::deep_copy(d_f, h_f);
+    Kokkos::deep_copy(d_vbi, h_vbi);
+    Kokkos::deep_copy(d_xbi, h_xbi);
+    Kokkos::parallel_for("ComputeChargeDensity", Kokkos::RangePolicy<>(0, NxLocal),
+      KOKKOS_LAMBDA(PetscInt cx_local) {
+        PetscReal rho_val = 0.0;
+        for (PetscInt iv = 0; iv < NvDOF; ++iv) {
+          PetscReal w = d_vbi(iv);
+          for (PetscInt bx = 0; bx < NbX; ++bx)
+            rho_val += PetscRealPart(d_f(iv * NxDOF_loc + cx_local * NbX + bx)) * w * d_xbi(bx);
+        }
+        d_rho(cx_local) = (PetscScalar)(rho_val / h_x);
+      });
+    Kokkos::deep_copy(h_rho, d_rho);
+  }
+#else
   for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
     PetscReal rho_val = 0.0;
     for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
@@ -452,6 +851,7 @@ static PetscErrorCode ComputeChargeDensity(AppCtx *ctx)
     }
     rho_arr[cx_local] = (PetscScalar)(rho_val / ctx->h_x);
   }
+#endif
 
   PetscCall(VecRestoreArrayRead(ctx->f, &f_arr));
   PetscCall(VecRestoreArray(ctx->rho, &rho_arr));
@@ -503,11 +903,40 @@ static PetscErrorCode ComputeElectricField(AppCtx *ctx)
   PetscCall(DMDAVecGetArray(ctx->daPot, phi_local, &phi_arr));
   PetscCall(VecGetArray(ctx->E_field, &E_arr));
 
-  PetscReal inv2hx = 1.0 / (2.0 * ctx->h_x);
-  for (PetscInt i = info.xs; i < info.xs + info.xm; ++i) {
-    PetscInt cx_local = i - info.xs;
-    E_arr[cx_local] = -(PetscScalar)((PetscRealPart(phi_arr[i+1]) - PetscRealPart(phi_arr[i-1])) * inv2hx);
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  {
+    /* phi_arr is indexed by global cell index starting at info.xs - info.sw.
+       The ghost-extended array has length info.xm + 2*info.sw.
+       We wrap it starting from phi_arr[info.xs - info.sw] (pointer already
+       offset by DMDAVecGetArray), so element [sw + cx_local] = phi_arr[info.xs + cx_local]. */
+    const PetscInt  NxLocal = info.xm;
+    const PetscInt  sw      = info.sw;
+    const PetscInt  n_phi   = NxLocal + 2 * sw; /* ghost-extended length */
+    const PetscReal inv2hx  = 1.0 / (2.0 * ctx->h_x);
+    /* phi_arr is offset by DMDAVecGetArray so phi_arr[info.xs] is the first owned cell.
+       The ghost-extended buffer starts at phi_arr[info.xs - sw]. */
+    const Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_phi(phi_arr + (info.xs - sw), n_phi);
+    Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_E(E_arr, NxLocal);
+    Kokkos::View<PetscScalar *> d_phi("d_phi", n_phi);
+    Kokkos::View<PetscScalar *> d_E("d_E", NxLocal);
+    Kokkos::deep_copy(d_phi, h_phi);
+    Kokkos::parallel_for("ComputeElectricField", Kokkos::RangePolicy<>(0, NxLocal),
+      KOKKOS_LAMBDA(PetscInt cx_local) {
+        /* sw + cx_local is the owned cell; sw + cx_local ± 1 are neighbors (ghosts if at boundary) */
+        d_E(cx_local) = -(PetscScalar)((PetscRealPart(d_phi(sw + cx_local + 1))
+                                      - PetscRealPart(d_phi(sw + cx_local - 1))) * inv2hx);
+      });
+    Kokkos::deep_copy(h_E, d_E);
   }
+#else
+  {
+    PetscReal inv2hx = 1.0 / (2.0 * ctx->h_x);
+    for (PetscInt i = info.xs; i < info.xs + info.xm; ++i) {
+      PetscInt cx_local = i - info.xs;
+      E_arr[cx_local] = -(PetscScalar)((PetscRealPart(phi_arr[i+1]) - PetscRealPart(phi_arr[i-1])) * inv2hx);
+    }
+  }
+#endif
 
   PetscCall(DMDAVecRestoreArray(ctx->daPot, phi_local, &phi_arr));
   PetscCall(VecRestoreArray(ctx->E_field, &E_arr));
@@ -547,13 +976,6 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
     f_out = f_tmp;
   }
 
-  PetscInt NqSLDG = 2 * ctx->NbX + 2;
-  PetscReal *qa, *wa, *qb, *wb;
-  PetscCall(PetscMalloc1(NqSLDG, &qa));
-  PetscCall(PetscMalloc1(NqSLDG, &wa));
-  PetscCall(PetscMalloc1(NqSLDG, &qb));
-  PetscCall(PetscMalloc1(NqSLDG, &wb));
-
   /* Allocate a global Vec on daF for one iv-slice, and a local Vec with ghosts */
   Vec        f_iv_global, f_iv_local;
   PetscReal **f_iv_arr; /* ghost-aware 2D array: f_iv_arr[cell][dof] */
@@ -566,52 +988,14 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
   PetscCall(VecGetArrayRead(f, &f_arr));
   PetscCall(VecGetArray(f_out, &f_out_arr));
 
-  /* A and B matrices: max NbX=4 (degree 3), so NbX*NbX <= 16 */
-  PetscReal A[16], B[16];
-
+  /* Use precomputed A_sldg, B_sldg, n_shift from PrecomputeGeometry Step 8.
+     A_sldg[iv*NbX*NbX + i*NbX + j] = overlap_integral[i,j] / w_i (already divided).
+     The outer iv loop stays on CPU because DMGlobalToLocal is an MPI collective.
+     The inner cx_local loop is offloaded to Kokkos. */
   for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
-    PetscReal v   = ctx->v_dof_coords[iv];
-    PetscReal s   = v * dt / ctx->h_x;
-    PetscInt  n   = (PetscInt)PetscFloorReal(s);
-    PetscReal alp = s - (PetscReal)n;  /* in [0,1) */
-
-    /* Snap near-integer shifts: if alp ≈ 1, treat as n+1 with alp=0 */
-    if (alp > 1.0 - 1e-14) { n++; alp = 0.0; }
-
-    PetscReal split = 1.0 - 2.0 * alp; /* split point in [-1,1] */
-
-    /* Compute A and B matrices for this iv and dt */
-    for (PetscInt k = 0; k < ctx->NbX * ctx->NbX; ++k) A[k] = B[k] = 0.0;
-
-    /* Handle degenerate case: alp == 0 (pure integer shift) */
-    if (alp < 1e-14) {
-      /* Pure integer shift: A = lumped reference mass matrix = diag(w_i), B = 0.
-         This ensures f_new = A*f / w_i = f_old (identity). */
-      for (PetscInt i = 0; i < ctx->NbX; ++i)
-        A[i * ctx->NbX + i] = ctx->x_basis_int[i] / (ctx->h_x * 0.5);
-    } else {
-      PetscCall(PetscDTGaussQuadrature(NqSLDG, -1.0, split, qa, wa));
-      PetscCall(PetscDTGaussQuadrature(NqSLDG, split, 1.0, qb, wb));
-
-      /* A[i,j] = integral_{-1}^{split} phi_i(xi) * phi_j(xi + 2*alp) dxi */
-      for (PetscInt q = 0; q < NqSLDG; ++q) {
-        PetscReal xi = qa[q], xi2 = xi + 2.0 * alp;
-        for (PetscInt i = 0; i < ctx->NbX; ++i) {
-          PetscReal phi_i = EvalLagrangeBasis(ctx->NbX, ctx->xi_x_nodes, i, xi);
-          for (PetscInt j = 0; j < ctx->NbX; ++j)
-            A[i * ctx->NbX + j] += phi_i * EvalLagrangeBasis(ctx->NbX, ctx->xi_x_nodes, j, xi2) * wa[q];
-        }
-      }
-      /* B[i,j] = integral_{split}^{1} phi_i(xi) * phi_j(xi + 2*alp - 2) dxi */
-      for (PetscInt q = 0; q < NqSLDG; ++q) {
-        PetscReal xi = qb[q], xi2 = xi + 2.0 * alp - 2.0;
-        for (PetscInt i = 0; i < ctx->NbX; ++i) {
-          PetscReal phi_i = EvalLagrangeBasis(ctx->NbX, ctx->xi_x_nodes, i, xi);
-          for (PetscInt j = 0; j < ctx->NbX; ++j)
-            B[i * ctx->NbX + j] += phi_i * EvalLagrangeBasis(ctx->NbX, ctx->xi_x_nodes, j, xi2) * wb[q];
-        }
-      }
-    }
+    PetscInt        n = ctx->n_shift[iv];
+    const PetscReal *A = &ctx->A_sldg[iv * ctx->NbX * ctx->NbX];
+    const PetscReal *B = &ctx->B_sldg[iv * ctx->NbX * ctx->NbX];
 
     /* Copy this iv-slice into the global Vec on daF, then ghost-exchange */
     {
@@ -626,34 +1010,67 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
 
     /* Apply SLDG update for each local x-cell.
        f_iv_arr[cell][bx] gives ghost-aware access: cell ranges from
-       info.xs - info.sw to info.xs + info.xm + info.sw - 1. */
+       info.xs - info.sw to info.xs + info.xm + info.sw - 1.
+       A_sldg already stores overlap/w_i so no division needed in the apply step. */
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+    {
+      const PetscInt  NxLocal   = ctx->NxLocal;
+      const PetscInt  NbX       = ctx->NbX;
+      const PetscInt  NxDOF_loc = ctx->NxDOF_local;
+      const PetscInt  xs        = ctx->xs;
+      const PetscInt  sw        = info.sw;
+      const PetscInt  n_cells   = NxLocal + 2 * sw;
+      /* f_iv_arr is a 2D ghost array; f_iv_arr[xs-sw] is the first ghost cell.
+         Cast to flat pointer: each cell has NbX PetscReal dofs. */
+      const PetscReal *f_iv_flat = (const PetscReal *)f_iv_arr[xs - sw];
+      const Kokkos::View<const PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_fiv(f_iv_flat, n_cells * NbX);
+      const Kokkos::View<const PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_A(A, NbX * NbX);
+      const Kokkos::View<const PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_B(B, NbX * NbX);
+      Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>           h_fout(f_out_arr + iv * NxDOF_loc, NxDOF_loc);
+      Kokkos::View<PetscReal *>   d_fiv("d_fiv", n_cells * NbX);
+      Kokkos::View<PetscReal *>   d_A("d_A", NbX * NbX);
+      Kokkos::View<PetscReal *>   d_B("d_B", NbX * NbX);
+      Kokkos::View<PetscScalar *> d_fout("d_fout", NxDOF_loc);
+      Kokkos::deep_copy(d_fiv, h_fiv);
+      Kokkos::deep_copy(d_A,   h_A);
+      Kokkos::deep_copy(d_B,   h_B);
+      Kokkos::parallel_for("AdvectX_cx", Kokkos::RangePolicy<>(0, NxLocal),
+        KOKKOS_LAMBDA(PetscInt cx_local) {
+          /* Offset of source cells in the ghost-extended flat buffer.
+             src_A = cx_global - n; offset from start of ghost buffer = src_A - (xs - sw). */
+          PetscInt cx_global = xs + cx_local;
+          PetscInt off_A = (cx_global - n - (xs - sw)) * NbX;
+          PetscInt off_B = (cx_global - n - 1 - (xs - sw)) * NbX;
+          for (PetscInt i = 0; i < NbX; ++i) {
+            PetscReal val = 0.0;
+            for (PetscInt j = 0; j < NbX; ++j) {
+              val += d_A(i * NbX + j) * d_fiv(off_A + j);
+              val += d_B(i * NbX + j) * d_fiv(off_B + j);
+            }
+            d_fout(cx_local * NbX + i) = (PetscScalar)val;
+          }
+        });
+      Kokkos::deep_copy(h_fout, d_fout);
+    }
+#else
     for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
       PetscInt cx_global = ctx->xs + cx_local;
-      /* Source cell for A: cx_global - n (periodic, covered by ghosts) */
       PetscInt src_A = cx_global - n;
-      /* Source cell for B: cx_global - n - 1 (periodic, covered by ghosts) */
       PetscInt src_B = cx_global - n - 1;
-
       for (PetscInt i = 0; i < ctx->NbX; ++i) {
         PetscReal val = 0.0;
         for (PetscInt j = 0; j < ctx->NbX; ++j) {
           val += A[i * ctx->NbX + j] * PetscRealPart(f_iv_arr[src_A][j]);
           val += B[i * ctx->NbX + j] * PetscRealPart(f_iv_arr[src_B][j]);
         }
-        /* Apply reference mass matrix inverse: overlap integrals are in
-           reference coordinates [-1,1], so divide by GLL weight w_i only
-           (not w_i * h_x/2).  x_basis_int[i] = w_i * h_x/2. */
-        PetscReal w_i = ctx->x_basis_int[i] / (ctx->h_x * 0.5);
-        f_out_arr[iv * ctx->NxDOF_local + cx_local * ctx->NbX + i] =
-          (PetscScalar)(val / w_i);
+        f_out_arr[iv * ctx->NxDOF_local + cx_local * ctx->NbX + i] = (PetscScalar)val;
       }
     }
+#endif
 
     PetscCall(DMDAVecRestoreArrayDOF(ctx->daF, f_iv_local, &f_iv_arr));
   }
 
-  PetscCall(PetscFree(qa)); PetscCall(PetscFree(wa));
-  PetscCall(PetscFree(qb)); PetscCall(PetscFree(wb));
   PetscCall(VecRestoreArrayRead(f, &f_arr));
   PetscCall(VecRestoreArray(f_out, &f_out_arr));
   PetscCall(VecDestroy(&f_iv_global));
@@ -699,58 +1116,144 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
   PetscCall(VecGetArrayRead(E_field, &E_arr));
   PetscCall(VecGetArray(f_out, &f_out_arr));
 
-  /* Allocate RHS array: rhs[iv * NxDOF_local + ix] */
-  PetscReal *rhs;
-  PetscCall(PetscCalloc1(ctx->NvDOF * ctx->NxDOF_local, &rhs));
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  {
+    const PetscInt  NxLocal   = ctx->NxLocal;
+    const PetscInt  NxDOF_loc = ctx->NxDOF_local;
+    const PetscInt  NvDOF     = ctx->NvDOF;
+    const PetscInt  Nv        = ctx->Nv;
+    const PetscInt  NbX       = ctx->NbX;
+    const PetscInt  NbV       = ctx->NbV;
+    const PetscInt  NqV       = ctx->NqV;
+    const PetscReal v_max     = ctx->v_max;
+    const PetscReal h_v       = ctx->h_v;
+    const Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_f(const_cast<PetscScalar *>(f_arr), (size_t)NvDOF * NxDOF_loc);
+    const Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_E(const_cast<PetscScalar *>(E_arr), NxLocal);
+    const Kokkos::View<PetscReal *,   Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_xi_v(ctx->xi_v_nodes, NbV);
+    const Kokkos::View<PetscReal *,   Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_tab(ctx->tabV, NqV * NbV);
+    const Kokkos::View<PetscReal *,   Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_vqp(ctx->vq_pts, NqV);
+    const Kokkos::View<PetscReal *,   Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_vqw(ctx->vq_wts, NqV);
+    const Kokkos::View<PetscReal *,   Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_minv(ctx->MassV_inv, NvDOF);
+    Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_fout(f_out_arr, (size_t)NvDOF * NxDOF_loc);
+    Kokkos::View<PetscScalar *> d_f("d_f", (size_t)NvDOF * NxDOF_loc);
+    Kokkos::View<PetscScalar *> d_E("d_E", NxLocal);
+    Kokkos::View<PetscReal *>   d_xi_v("d_xi_v", NbV);
+    Kokkos::View<PetscReal *>   d_tab("d_tab", NqV * NbV);
+    Kokkos::View<PetscReal *>   d_vqp("d_vqp", NqV);
+    Kokkos::View<PetscReal *>   d_vqw("d_vqw", NqV);
+    Kokkos::View<PetscReal *>   d_minv("d_minv", NvDOF);
+    Kokkos::View<PetscScalar *> d_fout("d_fout", (size_t)NvDOF * NxDOF_loc);
+    Kokkos::deep_copy(d_f,    h_f);
+    Kokkos::deep_copy(d_E,    h_E);
+    Kokkos::deep_copy(d_xi_v, h_xi_v);
+    Kokkos::deep_copy(d_tab,  h_tab);
+    Kokkos::deep_copy(d_vqp,  h_vqp);
+    Kokkos::deep_copy(d_vqw,  h_vqw);
+    Kokkos::deep_copy(d_minv, h_minv);
+    /* Parallelize over cx_local.  Each thread owns all iv_dof columns for its x-cell,
+       so there are no write conflicts on d_fout. */
+    Kokkos::parallel_for("AdvectV_cx", Kokkos::RangePolicy<>(0, NxLocal),
+      KOKKOS_LAMBDA(PetscInt cx_local) {
+        PetscReal E = PetscRealPart(d_E(cx_local));
+        /* Zero the rhs slice for this cx_local */
+        for (PetscInt iv = 0; iv < NvDOF; ++iv)
+          for (PetscInt bx = 0; bx < NbX; ++bx)
+            d_fout(iv * NxDOF_loc + cx_local * NbX + bx) = 0.0;
 
-  for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
-    PetscReal E = PetscRealPart(E_arr[cx_local]);
+        for (PetscInt cv = 0; cv < Nv; ++cv) {
+          PetscReal v_cell_left = -v_max + cv * h_v;
+          for (PetscInt q = 0; q < NqV; ++q) {
+            PetscReal xi     = d_vqp(q);
+            PetscReal v_phys = v_cell_left + (xi + 1.0) * (h_v * 0.5);
+            PetscReal v_foot = v_phys - E * dt;
 
-    for (PetscInt cv = 0; cv < ctx->Nv; ++cv) {
-      PetscReal v_cell_left = -ctx->v_max + cv * ctx->h_v;
+            PetscReal v_norm  = (v_foot + v_max) / h_v;
+            PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
+            if (cv_foot < 0) cv_foot = 0;
+            if (cv_foot >= Nv) cv_foot = Nv - 1;
 
-      for (PetscInt q = 0; q < ctx->NqV; ++q) {
-        PetscReal xi     = ctx->vq_pts[q];
-        PetscReal v_phys = v_cell_left + (xi + 1.0) * (ctx->h_v * 0.5);
-        PetscReal v_foot = v_phys - E * dt;
+            PetscReal xi_foot = (v_foot - (-v_max + cv_foot * h_v)) / (h_v * 0.5) - 1.0;
+            if (xi_foot < -1.0) xi_foot = -1.0;
+            if (xi_foot >  1.0) xi_foot =  1.0;
 
-        /* Locate foot cell (clamp to boundary for non-periodic v) */
-        PetscReal v_norm  = (v_foot + ctx->v_max) / ctx->h_v;
-        PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
-        if (cv_foot < 0) cv_foot = 0;
-        if (cv_foot >= ctx->Nv) cv_foot = ctx->Nv - 1;
-
-        PetscReal xi_foot = (v_foot - (-ctx->v_max + cv_foot * ctx->h_v)) / (ctx->h_v * 0.5) - 1.0;
-        if (xi_foot < -1.0) xi_foot = -1.0;
-        if (xi_foot >  1.0) xi_foot =  1.0;
-
-        /* Interpolate f at foot point for each x-DOF in this x-cell */
-        for (PetscInt bx = 0; bx < ctx->NbX; ++bx) {
-          PetscInt ix = cx_local * ctx->NbX + bx;
-          PetscReal f_val = 0.0;
-          for (PetscInt bv = 0; bv < ctx->NbV; ++bv) {
-            PetscInt iv_dof = cv_foot * ctx->NbV + bv;
-            f_val += PetscRealPart(f_arr[iv_dof * ctx->NxDOF_local + ix])
-                   * EvalLagrangeBasis(ctx->NbV, ctx->xi_v_nodes, bv, xi_foot);
+            for (PetscInt bx = 0; bx < NbX; ++bx) {
+              PetscInt  ix    = cx_local * NbX + bx;
+              PetscReal f_val = 0.0;
+              for (PetscInt bv = 0; bv < NbV; ++bv) {
+                PetscInt iv_dof = cv_foot * NbV + bv;
+                f_val += PetscRealPart(d_f(iv_dof * NxDOF_loc + ix))
+                       * EvalLagrangeBasis(NbV, d_xi_v.data(), bv, xi_foot);
+              }
+              PetscReal wq_hv = d_vqw(q) * (h_v * 0.5);
+              for (PetscInt bv = 0; bv < NbV; ++bv) {
+                PetscInt iv_dof = cv * NbV + bv;
+                d_fout(iv_dof * NxDOF_loc + ix) +=
+                  (PetscScalar)(f_val * d_tab(q * NbV + bv) * wq_hv);
+              }
+            }
           }
+        }
+        /* Apply mass matrix inverse */
+        for (PetscInt iv = 0; iv < NvDOF; ++iv)
+          for (PetscInt bx = 0; bx < NbX; ++bx) {
+            PetscInt ix = cx_local * NbX + bx;
+            d_fout(iv * NxDOF_loc + ix) *= (PetscScalar)d_minv(iv);
+          }
+      });
+    Kokkos::deep_copy(h_fout, d_fout);
+  }
+#else
+  {
+    /* Allocate RHS array: rhs[iv * NxDOF_local + ix] */
+    PetscReal *rhs;
+    PetscCall(PetscCalloc1(ctx->NvDOF * ctx->NxDOF_local, &rhs));
 
-          /* Accumulate RHS: rhs[iv_dof, ix] += f_val * phi_bv(xi_q) * wq * h_v/2 */
-          for (PetscInt bv = 0; bv < ctx->NbV; ++bv) {
-            PetscInt iv_dof = cv * ctx->NbV + bv;
-            rhs[iv_dof * ctx->NxDOF_local + ix] +=
-              f_val * ctx->tabV[q * ctx->NbV + bv] * ctx->vq_wts[q] * (ctx->h_v * 0.5);
+    for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
+      PetscReal E = PetscRealPart(E_arr[cx_local]);
+
+      for (PetscInt cv = 0; cv < ctx->Nv; ++cv) {
+        PetscReal v_cell_left = -ctx->v_max + cv * ctx->h_v;
+
+        for (PetscInt q = 0; q < ctx->NqV; ++q) {
+          PetscReal xi     = ctx->vq_pts[q];
+          PetscReal v_phys = v_cell_left + (xi + 1.0) * (ctx->h_v * 0.5);
+          PetscReal v_foot = v_phys - E * dt;
+
+          PetscReal v_norm  = (v_foot + ctx->v_max) / ctx->h_v;
+          PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
+          if (cv_foot < 0) cv_foot = 0;
+          if (cv_foot >= ctx->Nv) cv_foot = ctx->Nv - 1;
+
+          PetscReal xi_foot = (v_foot - (-ctx->v_max + cv_foot * ctx->h_v)) / (ctx->h_v * 0.5) - 1.0;
+          if (xi_foot < -1.0) xi_foot = -1.0;
+          if (xi_foot >  1.0) xi_foot =  1.0;
+
+          for (PetscInt bx = 0; bx < ctx->NbX; ++bx) {
+            PetscInt  ix    = cx_local * ctx->NbX + bx;
+            PetscReal f_val = 0.0;
+            for (PetscInt bv = 0; bv < ctx->NbV; ++bv) {
+              PetscInt iv_dof = cv_foot * ctx->NbV + bv;
+              f_val += PetscRealPart(f_arr[iv_dof * ctx->NxDOF_local + ix])
+                     * EvalLagrangeBasis(ctx->NbV, ctx->xi_v_nodes, bv, xi_foot);
+            }
+            for (PetscInt bv = 0; bv < ctx->NbV; ++bv) {
+              PetscInt iv_dof = cv * ctx->NbV + bv;
+              rhs[iv_dof * ctx->NxDOF_local + ix] +=
+                f_val * ctx->tabV[q * ctx->NbV + bv] * ctx->vq_wts[q] * (ctx->h_v * 0.5);
+            }
           }
         }
       }
     }
+
+    for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv)
+      for (PetscInt ix = 0; ix < ctx->NxDOF_local; ++ix)
+        f_out_arr[iv * ctx->NxDOF_local + ix] = (PetscScalar)(rhs[iv * ctx->NxDOF_local + ix] * ctx->MassV_inv[iv]);
+
+    PetscCall(PetscFree(rhs));
   }
+#endif
 
-  /* Apply mass matrix inverse (diagonal for GLL basis) */
-  for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv)
-    for (PetscInt ix = 0; ix < ctx->NxDOF_local; ++ix)
-      f_out_arr[iv * ctx->NxDOF_local + ix] = (PetscScalar)(rhs[iv * ctx->NxDOF_local + ix] * ctx->MassV_inv[iv]);
-
-  PetscCall(PetscFree(rhs));
   PetscCall(VecRestoreArrayRead(f, &f_arr));
   PetscCall(VecRestoreArrayRead(E_field, &E_arr));
   PetscCall(VecRestoreArray(f_out, &f_out_arr));
@@ -776,6 +1279,83 @@ static PetscErrorCode ComputeMoments(AppCtx *ctx, PetscReal *m0_out, PetscReal *
   PetscFunctionBeginUser;
   PetscCall(VecGetArrayRead(ctx->f, &f_arr));
 
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  {
+    const PetscInt  NvDOF     = ctx->NvDOF;
+    const PetscInt  NbV       = ctx->NbV;
+    const PetscInt  NbX       = ctx->NbX;
+    const PetscInt  NqV       = ctx->NqV;
+    const PetscInt  NxDOF_loc = ctx->NxDOF_local;
+    const PetscReal h_v       = ctx->h_v;
+    const PetscReal v_max     = ctx->v_max;
+    const Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_f(const_cast<PetscScalar *>(f_arr), (size_t)NvDOF * NxDOF_loc);
+    const Kokkos::View<PetscReal *,   Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_vbi(ctx->v_basis_int, NvDOF);
+    const Kokkos::View<PetscReal *,   Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_xbi(ctx->x_basis_int, NbX);
+    const Kokkos::View<PetscReal *,   Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_tab(ctx->tabV, NqV * NbV);
+    const Kokkos::View<PetscReal *,   Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_vqp(ctx->vq_pts, NqV);
+    const Kokkos::View<PetscReal *,   Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_vqw(ctx->vq_wts, NqV);
+    Kokkos::View<PetscScalar *> d_f("d_f", (size_t)NvDOF * NxDOF_loc);
+    Kokkos::View<PetscReal *>   d_vbi("d_vbi", NvDOF);
+    Kokkos::View<PetscReal *>   d_xbi("d_xbi", NbX);
+    Kokkos::View<PetscReal *>   d_tab("d_tab", NqV * NbV);
+    Kokkos::View<PetscReal *>   d_vqp("d_vqp", NqV);
+    Kokkos::View<PetscReal *>   d_vqw("d_vqw", NqV);
+    /* Per-iv moment weights: w0[iv], w1[iv], w2[iv] */
+    Kokkos::View<PetscReal *>   d_w0("d_w0", NvDOF);
+    Kokkos::View<PetscReal *>   d_w1("d_w1", NvDOF);
+    Kokkos::View<PetscReal *>   d_w2("d_w2", NvDOF);
+    Kokkos::deep_copy(d_f,   h_f);
+    Kokkos::deep_copy(d_vbi, h_vbi);
+    Kokkos::deep_copy(d_xbi, h_xbi);
+    Kokkos::deep_copy(d_tab, h_tab);
+    Kokkos::deep_copy(d_vqp, h_vqp);
+    Kokkos::deep_copy(d_vqw, h_vqw);
+    /* Step 1: precompute per-iv weights w0, w1, w2 */
+    Kokkos::parallel_for("moments_weights", Kokkos::RangePolicy<>(0, NvDOF),
+      KOKKOS_LAMBDA(PetscInt iv) {
+        PetscInt  cv          = iv / NbV;
+        PetscInt  bv          = iv % NbV;
+        PetscReal v_cell_left = -v_max + cv * h_v;
+        PetscReal w0 = d_vbi(iv), w1 = 0.0, w2 = 0.0;
+        for (PetscInt q = 0; q < NqV; ++q) {
+          PetscReal v_phys = v_cell_left + (d_vqp(q) + 1.0) * (h_v * 0.5);
+          PetscReal phi_bv = d_tab(q * NbV + bv);
+          PetscReal wq     = d_vqw(q) * (h_v * 0.5);
+          w1 += v_phys * phi_bv * wq;
+          w2 += v_phys * v_phys * phi_bv * wq;
+        }
+        d_w0(iv) = w0;
+        d_w1(iv) = w1;
+        d_w2(iv) = w2;
+      });
+    /* Step 2: three parallel_reduce passes over flat index (iv * NxDOF_loc + ix).
+       Kokkos does not support multi-value reductions in a single lambda without a
+       custom reducer; three separate passes reuse the same kernel body. */
+    PetscReal r0 = 0.0, r1 = 0.0, r2 = 0.0;
+    Kokkos::parallel_reduce("moments_m0", Kokkos::RangePolicy<>(0, NvDOF * NxDOF_loc),
+      KOKKOS_LAMBDA(PetscInt idx, PetscReal &lsum) {
+        PetscInt  iv   = idx / NxDOF_loc;
+        PetscInt  ix   = idx % NxDOF_loc;
+        PetscInt  bx   = ix % NbX;
+        lsum += PetscRealPart(d_f(idx)) * d_w0(iv) * d_xbi(bx);
+      }, r0);
+    Kokkos::parallel_reduce("moments_m1", Kokkos::RangePolicy<>(0, NvDOF * NxDOF_loc),
+      KOKKOS_LAMBDA(PetscInt idx, PetscReal &lsum) {
+        PetscInt  iv   = idx / NxDOF_loc;
+        PetscInt  ix   = idx % NxDOF_loc;
+        PetscInt  bx   = ix % NbX;
+        lsum += PetscRealPart(d_f(idx)) * d_w1(iv) * d_xbi(bx);
+      }, r1);
+    Kokkos::parallel_reduce("moments_m2", Kokkos::RangePolicy<>(0, NvDOF * NxDOF_loc),
+      KOKKOS_LAMBDA(PetscInt idx, PetscReal &lsum) {
+        PetscInt  iv   = idx / NxDOF_loc;
+        PetscInt  ix   = idx % NxDOF_loc;
+        PetscInt  bx   = ix % NbX;
+        lsum += PetscRealPart(d_f(idx)) * d_w2(iv) * d_xbi(bx);
+      }, r2);
+    m0_local = r0; m1_local = r1; m2_local = r2;
+  }
+#else
   for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
     PetscReal w0 = ctx->v_basis_int[iv];
     PetscInt  cv = iv / ctx->NbV;
@@ -801,6 +1381,7 @@ static PetscErrorCode ComputeMoments(AppCtx *ctx, PetscReal *m0_out, PetscReal *
       }
     }
   }
+#endif
   PetscCall(VecRestoreArrayRead(ctx->f, &f_arr));
 
   PetscReal loc[3] = {m0_local, m1_local, m2_local}, glob[3];
