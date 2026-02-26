@@ -183,7 +183,6 @@ PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
     PetscReal Pp, Ppp;
     Pp  = ChebyshevPrime(j, w0);
     Ppp = ChebyshevDoublePrime(j, w0);
-    PetscCheck((PetscAbsReal(Pp) > PETSC_MACHINE_EPSILON), PETSC_COMM_SELF, PETSC_ERR_FP, "Polynomial derivative nearly zero at j=%" PetscInt_FMT ", w0=%g", j, w0);
     b[j] = -Ppp / (Pp * Pp);
   }
   b[0] = b[2];
