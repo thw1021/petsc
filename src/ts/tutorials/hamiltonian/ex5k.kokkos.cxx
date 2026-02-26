@@ -128,7 +128,7 @@ typedef struct {
 /* ========================================================================
    Lagrange basis helper
    ======================================================================== */
-#ifndef KOKKOS_INLINE_FUNCTION
+#if !defined(KOKKOS_INLINE_FUNCTION)
   #define KOKKOS_INLINE_FUNCTION inline
 #endif
 KOKKOS_INLINE_FUNCTION static PetscReal EvalLagrangeBasis(PetscInt nb, const PetscReal *nodes, PetscInt b, PetscReal xi)
@@ -1624,6 +1624,12 @@ int main(int argc, char **argv)
 
   test:
     suffix: landau
-    args: -Nx 64 -Nv 128 -degree_x 1 -degree_v 1 -dt 0.1 -steps 200 -ostep 10 -check_landau
+    args: -Nx 64 -Nv 128 -degree_x 1 -degree_v 1 -dt 0.1 -steps 100 -ostep 5 -check_landau
+
+  test:
+    suffix: landau_kokkos
+    nsize: 4
+    requires: kokkos_kernels
+    args: -Nx 16 -Nv 32 -degree_x 2 -degree_v 2 -dt 0.1 -steps 100 -ostep 5 -check_landau -dm_mat_type aijkokkos -mat_type aijkokkos -dm_vec_type kokkos -vec_type kokkos
 
 TEST*/
