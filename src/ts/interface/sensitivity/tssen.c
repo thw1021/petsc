@@ -466,7 +466,7 @@ PetscErrorCode TSComputeDRDPFunction(TS ts, PetscReal t, Vec U, Vec *DRDP)
 
 .seealso: [](ch_ts), `TS`
 @*/
-PetscErrorCode TSSetIHessianProduct(TS ts, Vec *ihp1, PetscErrorCode (*ihessianproductfunc1)(TS ts, PetscReal t, Vec U, Vec *Vl, Vec Vr, Vec *VHV, PetscCtx ctx), Vec *ihp2, PetscErrorCode (*ihessianproductfunc2)(TS, PetscReal, Vec, Vec *, Vec, Vec *, void *), Vec *ihp3, PetscErrorCode (*ihessianproductfunc3)(TS, PetscReal, Vec, Vec *, Vec, Vec *, void *), Vec *ihp4, PetscErrorCode (*ihessianproductfunc4)(TS, PetscReal, Vec, Vec *, Vec, Vec *, void *), PetscCtx ctx)
+PetscErrorCode TSSetIHessianProduct(TS ts, Vec *ihp1, PetscErrorCode (*ihessianproductfunc1)(TS ts, PetscReal t, Vec U, Vec *Vl, Vec Vr, Vec *VHV, PetscCtx ctx), Vec *ihp2, PetscErrorCode (*ihessianproductfunc2)(TS ts, PetscReal t, Vec U, Vec *vl, Vec Vr, Vec *VHV, PetscCtx ctx), Vec *ihp3, PetscErrorCode (*ihessianproductfunc3)(TS ts, PetscReal t, Vec U, Vec *Vl, Vec Vr, Vec *VHV, PetscCtx ctx), Vec *ihp4, PetscErrorCode (*ihessianproductfunc4)(TS ts, PetscReal t, Vec U, Vec *Vl, Vec Vr, Vec *VHV, PetscCtx ctx), PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
@@ -697,7 +697,7 @@ PetscErrorCode TSComputeIHessianProductFunctionPP(TS ts, PetscReal t, Vec U, Vec
 
 .seealso: `TS`, `TSAdjoint`
 @*/
-PetscErrorCode TSSetRHSHessianProduct(TS ts, Vec rhshp1[], PetscErrorCode (*rhshessianproductfunc1)(TS ts, PetscReal t, Vec U, Vec *Vl, Vec Vr, Vec *VHV, PetscCtx ctx), Vec rhshp2[], PetscErrorCode (*rhshessianproductfunc2)(TS, PetscReal, Vec, Vec *, Vec, Vec *, void *), Vec rhshp3[], PetscErrorCode (*rhshessianproductfunc3)(TS, PetscReal, Vec, Vec *, Vec, Vec *, void *), Vec rhshp4[], PetscErrorCode (*rhshessianproductfunc4)(TS, PetscReal, Vec, Vec *, Vec, Vec *, void *), PetscCtx ctx)
+PetscErrorCode TSSetRHSHessianProduct(TS ts, Vec rhshp1[], PetscErrorCode (*rhshessianproductfunc1)(TS ts, PetscReal t, Vec U, Vec *Vl, Vec Vr, Vec *VHV, PetscCtx ctx), Vec rhshp2[], PetscErrorCode (*rhshessianproductfunc2)(TS ts, PetscReal t, Vec U, Vec *Vl, Vec Vr, Vec *VHV, PetscCtx ctx), Vec rhshp3[], PetscErrorCode (*rhshessianproductfunc3)(TS ts, PetscReal t, Vec U, Vec *Vl, Vec Vr, Vec *VHV, PetscCtx ctx), Vec rhshp4[], PetscErrorCode (*rhshessianproductfunc4)(TS ts, PetscReal t, Vec U, Vec *Vl, Vec Vr, Vec *VHV, PetscCtx ctx), PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
@@ -1269,7 +1269,7 @@ static PetscErrorCode TSAdjointMonitorSensi(TS ts, PetscInt step, PetscReal ptim
           `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`, `PetscViewerAndFormat`
 @*/
-PetscErrorCode TSAdjointMonitorSetFromOptions(TS ts, const char name[], const char help[], const char manual[], PetscErrorCode (*monitor)(TS, PetscInt, PetscReal, Vec, PetscInt, Vec *, Vec *, PetscViewerAndFormat *), PetscErrorCode (*monitorsetup)(TS, PetscViewerAndFormat *))
+PetscErrorCode TSAdjointMonitorSetFromOptions(TS ts, const char name[], const char help[], const char manual[], PetscErrorCode (*monitor)(TS ts, PetscInt step, PetscReal time, Vec u, PetscInt numcost, Vec *lambda, Vec *mu, PetscViewerAndFormat *vf), PetscErrorCode (*monitorsetup)(TS ts, PetscViewerAndFormat *vf))
 {
   PetscViewer       viewer;
   PetscViewerFormat format;

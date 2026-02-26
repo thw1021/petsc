@@ -1228,7 +1228,7 @@ typedef const char *TSGLLEAcceptType;
 .seealso: [](ch_ts), `TS`, `TSSetRHSFunction()`, `DMTSSetRHSFunction()`, `TSIFunctionFn`,
 `TSIJacobianFn`, `TSRHSJacobianFn`, `TSGLLEAcceptRegister()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSGLLEAcceptFn)(TS ts, PetscReal nt, PetscReal h, const PetscReal enorm[], PetscBool *accept);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSGLLEAcceptFn(TS ts, PetscReal nt, PetscReal h, const PetscReal enorm[], PetscBool *accept);
 
 PETSC_EXTERN_TYPEDEF typedef TSGLLEAcceptFn *TSGLLEAcceptFunction;
 

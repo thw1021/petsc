@@ -1179,7 +1179,7 @@ PetscErrorCode TaoLineSearchGetStepLength(TaoLineSearch ls, PetscReal *s)
 
 .seealso: [](ch_tao), `Tao`, `TaoLineSearch`
 @*/
-PetscErrorCode TaoLineSearchRegister(const char sname[], PetscErrorCode (*func)(TaoLineSearch))
+PetscErrorCode TaoLineSearchRegister(const char sname[], PetscErrorCode (*func)(TaoLineSearch ls))
 {
   PetscFunctionBegin;
   PetscCall(TaoLineSearchInitializePackage());

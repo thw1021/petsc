@@ -1003,7 +1003,7 @@ PetscErrorCode TaoADMMGetRegularizerCoefficient(Tao tao, PetscReal *lambda)
 
 .seealso: `TaoADMMSetRegularizerCoefficient()`, `TaoADMMSetRegularizerConstraintJacobian()`, `TAOADMM`
 @*/
-PetscErrorCode TaoADMMSetMisfitConstraintJacobian(Tao tao, Mat J, Mat Jpre, PetscErrorCode (*func)(Tao, Vec, Mat, Mat, void *), PetscCtx ctx)
+PetscErrorCode TaoADMMSetMisfitConstraintJacobian(Tao tao, Mat J, Mat Jpre, PetscErrorCode (*func)(Tao tao, Vec u, Mat J, Mat Jpre, PetscCtx ctx), PetscCtx ctx)
 {
   TAO_ADMM *am = (TAO_ADMM *)tao->data;
 
@@ -1049,7 +1049,7 @@ PetscErrorCode TaoADMMSetMisfitConstraintJacobian(Tao tao, Mat J, Mat Jpre, Pets
 
 .seealso: `TaoADMMSetRegularizerCoefficient()`, `TaoADMMSetMisfitConstraintJacobian()`, `TAOADMM`
 @*/
-PetscErrorCode TaoADMMSetRegularizerConstraintJacobian(Tao tao, Mat J, Mat Jpre, PetscErrorCode (*func)(Tao, Vec, Mat, Mat, void *), PetscCtx ctx)
+PetscErrorCode TaoADMMSetRegularizerConstraintJacobian(Tao tao, Mat J, Mat Jpre, PetscErrorCode (*func)(Tao tao, Vec u, Mat J, Mat Jpre, PetscCtx ctx), PetscCtx ctx)
 {
   TAO_ADMM *am = (TAO_ADMM *)tao->data;
 
@@ -1093,7 +1093,7 @@ PetscErrorCode TaoADMMSetRegularizerConstraintJacobian(Tao tao, Mat J, Mat Jpre,
 
 .seealso: `TAOADMM`
 @*/
-PetscErrorCode TaoADMMSetMisfitObjectiveAndGradientRoutine(Tao tao, PetscErrorCode (*func)(Tao, Vec, PetscReal *, Vec, void *), PetscCtx ctx)
+PetscErrorCode TaoADMMSetMisfitObjectiveAndGradientRoutine(Tao tao, PetscErrorCode (*func)(Tao tao, Vec u, PetscReal *f, Vec g, PetscCtx ctx), PetscCtx ctx)
 {
   TAO_ADMM *am = (TAO_ADMM *)tao->data;
 
@@ -1121,7 +1121,7 @@ PetscErrorCode TaoADMMSetMisfitObjectiveAndGradientRoutine(Tao tao, PetscErrorCo
 
 .seealso: `TAOADMM`
 @*/
-PetscErrorCode TaoADMMSetMisfitHessianRoutine(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Tao, Vec, Mat, Mat, void *), PetscCtx ctx)
+PetscErrorCode TaoADMMSetMisfitHessianRoutine(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Tao tao, Vec u, Mat H, Mat Hpre, PetscCtx ctx), PetscCtx ctx)
 {
   TAO_ADMM *am = (TAO_ADMM *)tao->data;
 
@@ -1164,7 +1164,7 @@ PetscErrorCode TaoADMMSetMisfitHessianRoutine(Tao tao, Mat H, Mat Hpre, PetscErr
 
 .seealso: `TAOADMM`
 @*/
-PetscErrorCode TaoADMMSetRegularizerObjectiveAndGradientRoutine(Tao tao, PetscErrorCode (*func)(Tao, Vec, PetscReal *, Vec, void *), PetscCtx ctx)
+PetscErrorCode TaoADMMSetRegularizerObjectiveAndGradientRoutine(Tao tao, PetscErrorCode (*func)(Tao tao, Vec u, PetscReal *f, Vec g, PetscCtx ctx), PetscCtx ctx)
 {
   TAO_ADMM *am = (TAO_ADMM *)tao->data;
 
@@ -1184,7 +1184,7 @@ PetscErrorCode TaoADMMSetRegularizerObjectiveAndGradientRoutine(Tao tao, PetscEr
   Input Parameters:
 + tao  - the `Tao` context
 . H    - user-created matrix for the Hessian of the regularization term
-. Hpre - user-created matrix for the preconditioner of Hessian of the regularization term
+. Hpre - user-created matrix for building the preconditioner of the Hessian of the regularization term
 . func - function pointer for the regularizer Hessian evaluation
 - ctx  - user context for the regularizer Hessian
 
@@ -1192,7 +1192,7 @@ PetscErrorCode TaoADMMSetRegularizerObjectiveAndGradientRoutine(Tao tao, PetscEr
 
 .seealso: `TAOADMM`
 @*/
-PetscErrorCode TaoADMMSetRegularizerHessianRoutine(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Tao, Vec, Mat, Mat, void *), PetscCtx ctx)
+PetscErrorCode TaoADMMSetRegularizerHessianRoutine(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Tao tao, Vec u, Mat H, Mat Hpre, PetscCtx ctx), PetscCtx ctx)
 {
   TAO_ADMM *am = (TAO_ADMM *)tao->data;
 

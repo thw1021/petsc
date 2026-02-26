@@ -214,7 +214,7 @@ static PetscErrorCode TSComputeIJacobian_DMLocal(TS ts, PetscReal time, Vec X, V
 
 .seealso: [](ch_ts), `DM`, `TS`, `DMTSSetIFunction()`, `DMTSSetIJacobianLocal()`
 @*/
-PetscErrorCode DMTSSetBoundaryLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal, Vec, Vec, void *), PetscCtx ctx)
+PetscErrorCode DMTSSetBoundaryLocal(DM dm, PetscErrorCode (*func)(DM dm, PetscReal t, Vec u, Vec udot, PetscCtx ctx), PetscCtx ctx)
 {
   DMTS        tdm;
   DMTS_Local *dmlocalts;
@@ -247,7 +247,7 @@ PetscErrorCode DMTSSetBoundaryLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal,
 
 .seealso: [](ch_ts), `DM`, `DMTSSetIFunctionLocal()`, `DMTSSetIFunction()`, `DMTSSetIJacobianLocal()`
 @*/
-PetscErrorCode DMTSGetIFunctionLocal(DM dm, PetscErrorCode (**func)(DM, PetscReal, Vec, Vec, Vec, void *), PetscCtxRt ctx)
+PetscErrorCode DMTSGetIFunctionLocal(DM dm, PetscErrorCode (**func)(DM dm, PetscReal t, Vec u, Vec udot, Vec F, PetscCtx ctx), PetscCtxRt ctx)
 {
   DMTS        tdm;
   DMTS_Local *dmlocalts;
@@ -283,7 +283,7 @@ PetscErrorCode DMTSGetIFunctionLocal(DM dm, PetscErrorCode (**func)(DM, PetscRea
 
 .seealso: [](ch_ts), `DM`, `DMTSGetIFunctionLocal()`, `DMTSSetIFunction()`, `DMTSSetIJacobianLocal()`
 @*/
-PetscErrorCode DMTSSetIFunctionLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal, Vec, Vec, Vec, void *), PetscCtx ctx)
+PetscErrorCode DMTSSetIFunctionLocal(DM dm, PetscErrorCode (*func)(DM dm, PetscReal t, Vec u, Vec udot, Vec F, PetscCtx ctx), PetscCtx ctx)
 {
   DMTS        tdm;
   DMTS_Local *dmlocalts;
@@ -319,7 +319,7 @@ PetscErrorCode DMTSSetIFunctionLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal
 
 .seealso: [](ch_ts), `DM`, `DMTSSetIJacobianLocal()`, `DMTSSetIFunctionLocal()`, `DMTSSetIJacobian()`, `DMTSSetIFunction()`
 @*/
-PetscErrorCode DMTSGetIJacobianLocal(DM dm, PetscErrorCode (**func)(DM, PetscReal, Vec, Vec, PetscReal, Mat, Mat, void *), PetscCtxRt ctx)
+PetscErrorCode DMTSGetIJacobianLocal(DM dm, PetscErrorCode (**func)(DM dm, PetscReal t, Vec u, Vec udot, PetscReal shift, Mat J, Mat Jpre, PetscCtx ctx), PetscCtxRt ctx)
 {
   DMTS        tdm;
   DMTS_Local *dmlocalts;
@@ -353,7 +353,7 @@ PetscErrorCode DMTSGetIJacobianLocal(DM dm, PetscErrorCode (**func)(DM, PetscRea
 
 .seealso: [](ch_ts), `DM`, `DMTSGetIJacobianLocal()`, `DMTSSetIFunctionLocal()`, `DMTSSetIJacobian()`, `DMTSSetIFunction()`
 @*/
-PetscErrorCode DMTSSetIJacobianLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal, Vec, Vec, PetscReal, Mat, Mat, void *), PetscCtx ctx)
+PetscErrorCode DMTSSetIJacobianLocal(DM dm, PetscErrorCode (*func)(DM dm, PetscReal t, Vec u, Vec udot, PetscReal shift, Mat J, Mat Jpre, PetscCtx ctx), PetscCtx ctx)
 {
   DMTS        tdm;
   DMTS_Local *dmlocalts;
@@ -388,7 +388,7 @@ PetscErrorCode DMTSSetIJacobianLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal
 
 .seealso: [](ch_ts), `DM`, `DMTSSetRHSFunctionLocal()`, `DMTSSetRHSFunction()`, `DMTSSetIFunction()`, `DMTSSetIJacobianLocal()`
 @*/
-PetscErrorCode DMTSGetRHSFunctionLocal(DM dm, PetscErrorCode (**func)(DM, PetscReal, Vec, Vec, void *), PetscCtxRt ctx)
+PetscErrorCode DMTSGetRHSFunctionLocal(DM dm, PetscErrorCode (**func)(DM dm, PetscReal t, Vec u, Vec udot, PetscCtx ctx), PetscCtxRt ctx)
 {
   DMTS        tdm;
   DMTS_Local *dmlocalts;
@@ -424,7 +424,7 @@ PetscErrorCode DMTSGetRHSFunctionLocal(DM dm, PetscErrorCode (**func)(DM, PetscR
 
 .seealso: [](ch_ts), `DM`, `DMTSGetRHSFunctionLocal()`, `DMTSSetRHSFunction()`, `DMTSSetIFunction()`, `DMTSSetIJacobianLocal()`
 @*/
-PetscErrorCode DMTSSetRHSFunctionLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal, Vec, Vec, void *), PetscCtx ctx)
+PetscErrorCode DMTSSetRHSFunctionLocal(DM dm, PetscErrorCode (*func)(DM dm, PetscReal t, Vec u, Vec udot, PetscCtx ctx), PetscCtx ctx)
 {
   DMTS        tdm;
   DMTS_Local *dmlocalts;
