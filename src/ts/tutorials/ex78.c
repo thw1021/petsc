@@ -83,6 +83,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->use_ghost_cells    = PETSC_FALSE;
   options->L2                 = 0;
   options->Linf               = 0;
+  options->L2_max             = 0;
   options->t_l2_max           = 0;
   options->L2_sum             = 0;
   options->Linf_sum           = 0;
