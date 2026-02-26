@@ -101,11 +101,14 @@ static inline PetscReal LegendrePrime(PetscInt j, PetscReal x)
 {
   if (j == 0) return 0.0;
   if (j == 1) return 1.0;
-  PetscReal Pj    = Legendre(j, x);
-  PetscReal Pjm1  = Legendre(j - 1, x);
-  PetscReal denom = x * x - 1.0;
-  PetscCheck(denom != 0.0, PETSC_COMM_SELF, PETSC_ERR_FP, "LegendrePrime: x=+-1 causes division by zero");
-  return j * (x * Pj - Pjm1) / denom;
+  if (x == 1.0) return j * (j + 1) / 2;
+  else if (x == -1.0) return PetscPowReal(-1.0,j+1) * (j * (j + 1) / 2);
+  else {
+    PetscReal Pj    = Legendre(j, x);
+    PetscReal Pjm1  = Legendre(j - 1, x);
+    PetscReal denom = x * x - 1.0;
+    return j * (x * Pj - Pjm1) / denom;
+  }
 }
 
 /*@
@@ -140,7 +143,6 @@ PetscErrorCode TSRKC1ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   PetscReal Ps, Psprime;
   Ps      = Chebyshev(s, w0);
   Psprime = ChebyshevPrime(s, w0);
-  PetscCheck(!PetscIsInfOrNanReal(Psprime) && PetscAbsReal(Psprime) >= PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_FP, "Polynomial derivative nearly zero at w0");
   PetscReal w1 = Ps / Psprime;
 
   for (PetscInt j = 0; j <= s; ++j) mu[j] = nu[j] = tilde_mu[j] = 0.0;
@@ -191,7 +193,6 @@ PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   PetscReal Psprime, Ps2;
   Psprime = ChebyshevPrime(s, w0);
   Ps2     = ChebyshevDoublePrime(s, w0);
-  PetscCheck(!PetscIsInfOrNanReal(Psprime) && !PetscIsInfOrNanReal(Ps2) && PetscAbsReal(Ps2) > PETSC_MACHINE_EPSILON, PETSC_COMM_SELF, PETSC_ERR_FP, "Polynomial derivatives nearly zero at w0");
   PetscReal w1 = -Psprime / Ps2;
 
   for (PetscInt j = 0; j <= s; ++j) mu[j] = nu[j] = tilde_mu[j] = tilde_gamma[j] = 0.0;
