@@ -9,19 +9,3 @@ t = 7.000000e-02  L2 = 5.978268e-02  Linf = 4.221024e-02  L2_avg = 6.041833e-02 
 t = 8.000000e-02  L2 = 6.063018e-02  Linf = 3.961737e-02  L2_avg = 6.045078e-02  Linf_avg = 4.953723e-02  t_max = 5.560000e-02  L2_max = 1.016324e-01
 t = 9.000000e-02  L2 = 6.327950e-02  Linf = 3.176724e-02  L2_avg = 6.054279e-02  Linf_avg = 4.799824e-02  t_max = 5.560000e-02  L2_max = 1.016324e-01
 t = 1.000000e-01  L2 = 7.746724e-02  Linf = 5.494285e-02  L2_avg = 6.142142e-02  Linf_avg = 4.736032e-02  t_max = 5.560000e-02  L2_max = 1.016324e-01
-TS Object: 1 MPI process
-  type: rk
-    RK type 2b
-    Order: 2
-    FSAL property: no
-    Abscissa c =  0.000000  0.500000 
-  initial time step=0.0001
-  maximum steps=1000
-  maximum time=8.
-  maximum number of step rejections=10
-  maximum number of SNES failures allowed=1
-  total number of RHS function evaluations=2000
-  total number of rejected steps=0
-  using relative error tolerance of 0.0001, using absolute error tolerance of 0.0001
-  TSAdapt Object: 1 MPI process
-    type: none

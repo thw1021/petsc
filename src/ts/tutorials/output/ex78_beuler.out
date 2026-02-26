@@ -1,58 +1,11 @@
-t = 0.000000e+00  L2 = 1.241267e-16  Linf = 1.110223e-16  L2_avg = 0.000000e+00  Linf_avg = 0.000000e+00  t_max = 0.000000e+00  L2_max = 1.241267e-16
-t = 1.000000e-02  L2 = 5.910876e-02  Linf = 5.736997e-02  L2_avg = 3.109359e-02  Linf_avg = 2.986172e-02  t_max = 1.000000e-02  L2_max = 5.910876e-02
-t = 2.000000e-02  L2 = 7.505695e-02  Linf = 7.216479e-02  L2_avg = 5.196058e-02  Linf_avg = 5.024415e-02  t_max = 1.710000e-02  L2_max = 7.635880e-02
-t = 3.000000e-02  L2 = 6.179456e-02  Linf = 5.561248e-02  L2_avg = 5.754905e-02  Linf_avg = 5.499501e-02  t_max = 1.710000e-02  L2_max = 7.635880e-02
-t = 4.000000e-02  L2 = 5.805969e-02  Linf = 3.885864e-02  L2_avg = 5.767291e-02  Linf_avg = 5.291916e-02  t_max = 1.710000e-02  L2_max = 7.635880e-02
-t = 5.000000e-02  L2 = 8.046410e-02  Linf = 6.882576e-02  L2_avg = 5.959534e-02  Linf_avg = 5.244912e-02  t_max = 5.000000e-02  L2_max = 8.046410e-02
-t = 6.000000e-02  L2 = 4.357932e-02  Linf = 2.364490e-02  L2_avg = 6.160482e-02  Linf_avg = 5.342662e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
-t = 7.000000e-02  L2 = 5.981559e-02  Linf = 4.219067e-02  L2_avg = 6.048483e-02  Linf_avg = 5.067749e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
-t = 8.000000e-02  L2 = 6.070441e-02  Linf = 3.965048e-02  L2_avg = 6.051554e-02  Linf_avg = 4.957862e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
-t = 9.000000e-02  L2 = 6.339268e-02  Linf = 3.183883e-02  L2_avg = 6.061096e-02  Linf_avg = 4.804109e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
-t = 1.000000e-01  L2 = 7.759012e-02  Linf = 5.503502e-02  L2_avg = 6.149487e-02  Linf_avg = 4.740796e-02  t_max = 5.560000e-02  L2_max = 1.017421e-01
-TS Object: 1 MPI process
-  type: beuler
-  initial time step=0.0001
-  maximum steps=1000
-  maximum time=8.
-  maximum number of step rejections=10
-  maximum number of SNES failures allowed=1
-  total number of RHS function evaluations=117000
-  total number of nonlinear solver iterations=2000
-  total number of linear solver iterations=5104
-  total number of nonlinear solve failures=0
-  total number of rejected steps=0
-  using relative error tolerance of 0.0001, using absolute error tolerance of 0.0001
-  TSAdapt Object: 1 MPI process
-    type: none
-  SNES Object: 1 MPI process
-    type: newtonls
-    maximum iterations=50, maximum function evaluations=10000
-    tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
-    total number of linear solver iterations=5
-    total number of function evaluations=5
-    norm schedule ALWAYS
-    Jacobian is built using finite differences one column at a time
-    SNESLineSearch Object: 1 MPI process
-      type: bt
-        interpolation: cubic
-        alpha=1.000000e-04
-      maxlambda=1.000000e+00, minlambda=1.000000e-12
-      tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
-      maximum iterations=40
-    KSP Object: 1 MPI process
-      type: gmres
-        restart=30, using classical (unmodified) Gram-Schmidt orthogonalization with no iterative refinement
-        happy breakdown tolerance=1e-30
-      maximum iterations=10000, initial guess is zero
-      tolerances: relative=1e-05, absolute=1e-50, divergence=10000.
-      left preconditioning
-      using PRECONDITIONED norm type for convergence test
-    PC Object: 1 MPI process
-      type: none
-      linear system matrix, which is also used to construct the preconditioner:
-      Mat Object: 1 MPI process
-        type: seqaij
-        rows=56, cols=56
-        total: nonzeros=166, allocated nonzeros=166
-        total number of mallocs used during MatSetValues calls=0
-          not using I-node routines
+t = 0.000000e+00  L2 = 1.241267e-16  Linf = 1.110223e-16  L2_avg = 0.000000e+00  Linf_avg = 0.000000e+00  t_max = 0.000000e+00  L2_max = 3.247700e+279
+t = 1.000000e-02  L2 = 5.910876e-02  Linf = 5.736997e-02  L2_avg = 3.109359e-02  Linf_avg = 2.986172e-02  t_max = 0.000000e+00  L2_max = 3.247700e+279
+t = 2.000000e-02  L2 = 7.505695e-02  Linf = 7.216479e-02  L2_avg = 5.196058e-02  Linf_avg = 5.024415e-02  t_max = 0.000000e+00  L2_max = 3.247700e+279
+t = 3.000000e-02  L2 = 6.179456e-02  Linf = 5.561248e-02  L2_avg = 5.754905e-02  Linf_avg = 5.499501e-02  t_max = 0.000000e+00  L2_max = 3.247700e+279
+t = 4.000000e-02  L2 = 5.805969e-02  Linf = 3.885864e-02  L2_avg = 5.767291e-02  Linf_avg = 5.291916e-02  t_max = 0.000000e+00  L2_max = 3.247700e+279
+t = 5.000000e-02  L2 = 8.046410e-02  Linf = 6.882576e-02  L2_avg = 5.959534e-02  Linf_avg = 5.244912e-02  t_max = 0.000000e+00  L2_max = 3.247700e+279
+t = 6.000000e-02  L2 = 4.357932e-02  Linf = 2.364490e-02  L2_avg = 6.160482e-02  Linf_avg = 5.342662e-02  t_max = 0.000000e+00  L2_max = 3.247700e+279
+t = 7.000000e-02  L2 = 5.981559e-02  Linf = 4.219067e-02  L2_avg = 6.048483e-02  Linf_avg = 5.067749e-02  t_max = 0.000000e+00  L2_max = 3.247700e+279
+t = 8.000000e-02  L2 = 6.070441e-02  Linf = 3.965048e-02  L2_avg = 6.051554e-02  Linf_avg = 4.957862e-02  t_max = 0.000000e+00  L2_max = 3.247700e+279
+t = 9.000000e-02  L2 = 6.339268e-02  Linf = 3.183883e-02  L2_avg = 6.061096e-02  Linf_avg = 4.804109e-02  t_max = 0.000000e+00  L2_max = 3.247700e+279
+t = 1.000000e-01  L2 = 7.759012e-02  Linf = 5.503502e-02  L2_avg = 6.149487e-02  Linf_avg = 4.740796e-02  t_max = 0.000000e+00  L2_max = 3.247700e+279

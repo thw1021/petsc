@@ -284,7 +284,6 @@ PetscErrorCode TSRKL2ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *n
   tilde_mu[1] = 4 / (3 * ((PetscReal)s * (PetscReal)s + (PetscReal)s - 2));
   for (PetscInt j = 2; j <= s; ++j) {
     PetscReal j_r   = (PetscReal)j;
-    PetscReal s_r   = (PetscReal)s;
     b[j]            = (j_r * j_r + j_r - 2) / (2 * j_r * (j_r + 1));
     PetscReal a_jm1 = 1 - b[j - 1];
 
@@ -441,7 +440,7 @@ static PetscErrorCode TSView_RKS(TS ts, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "RKS method: %s, stages=%" PetscInt_FMT "\n", RKSTypes[rks->type], (int)rks->stages));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "RKS method: %s, stages=%" PetscInt_FMT "\n", RKSTypes[rks->type], rks->stages));
     for (PetscInt j = 0; j < rks->stages; ++j) PetscCall(PetscViewerASCIIPrintf(viewer, "s:%" PetscInt_FMT ", mu=%f, nu=%f, tilde_mu=%f, tilde_gamma=%f, b=%f\n", j, rks->mu[j], rks->nu[j], rks->tilde_mu[j], rks->tilde_gamma[j], rks->b[j]));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
