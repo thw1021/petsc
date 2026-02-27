@@ -612,7 +612,7 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
     Kokkos::deep_copy(d_xbi, h_xbi);
     Kokkos::parallel_for(
       "sldg_precompute", Kokkos::RangePolicy<>(0, NvDOF), KOKKOS_LAMBDA(PetscInt iv) {
-        PetscReal s   = d_vdc(iv) * dt / h_x;
+        PetscReal s   = d_vdc(iv) * (dt * 0.5) / h_x;
         PetscInt  n   = (PetscInt)PetscFloorReal(s);
         PetscReal alp = s - (PetscReal)n;
         if (alp > 1.0 - 1e-14) {
@@ -673,7 +673,7 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
     PetscCall(PetscMalloc1(NqSLDG, &qb));
     PetscCall(PetscMalloc1(NqSLDG, &wb));
     for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
-      PetscReal s   = ctx->v_dof_coords[iv] * ctx->dt / ctx->h_x;
+      PetscReal s   = ctx->v_dof_coords[iv] * (ctx->dt * 0.5) / ctx->h_x;
       PetscInt  n   = (PetscInt)PetscFloorReal(s);
       PetscReal alp = s - (PetscReal)n;
       if (alp > 1.0 - 1e-14) {
@@ -690,6 +690,7 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
         PetscReal split = 1.0 - 2.0 * alp;
         PetscCall(PetscDTGaussQuadrature(NqSLDG, -1.0, split, qa, wa));
         PetscCall(PetscDTGaussQuadrature(NqSLDG, split, 1.0, qb, wb));
+
         for (PetscInt q = 0; q < NqSLDG; ++q) {
           PetscReal xi = qa[q], xi2 = xi + 2.0 * alp;
           for (PetscInt i = 0; i < ctx->NbX; ++i) {
@@ -1182,6 +1183,7 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
     const PetscInt  NqV       = ctx->NqV;
     const PetscReal v_max     = ctx->v_max;
     const PetscReal h_v       = ctx->h_v;
+    RealView1D      d_xi_x    = ctx->d_xi_x_nodes;
     PetscCall(VecGetArrayAndMemType(f, &f_ptr, &mtype_f));
     PetscCall(VecGetArrayAndMemType(E_field, &E_ptr, &mtype_E));
     PetscCall(VecGetArrayAndMemType(f_out, &fout_ptr, &mtype_fout));
@@ -1197,7 +1199,7 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
        so there are no write conflicts on d_fout. */
     Kokkos::parallel_for(
       "AdvectV_cx", Kokkos::RangePolicy<>(0, NxLocal), KOKKOS_LAMBDA(PetscInt cx_local) {
-        PetscReal E = PetscRealPart(d_E(cx_local));
+        PetscReal E_cell = PetscRealPart(d_E(cx_local));
         /* Zero the rhs slice for this cx_local */
         for (PetscInt iv = 0; iv < NvDOF; ++iv)
           for (PetscInt bx = 0; bx < NbX; ++bx) d_fout(iv * NxDOF_loc + cx_local * NbX + bx) = 0.0;
@@ -1207,18 +1209,20 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
           for (PetscInt q = 0; q < NqV; ++q) {
             PetscReal xi     = d_vqp(q);
             PetscReal v_phys = v_cell_left + (xi + 1.0) * (h_v * 0.5);
-            PetscReal v_foot = v_phys - E * dt;
-
-            PetscReal v_norm  = (v_foot + v_max) / h_v;
-            PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
-            if (cv_foot < 0) cv_foot = 0;
-            if (cv_foot >= Nv) cv_foot = Nv - 1;
-
-            PetscReal xi_foot = (v_foot - (-v_max + cv_foot * h_v)) / (h_v * 0.5) - 1.0;
-            if (xi_foot < -1.0) xi_foot = -1.0;
-            if (xi_foot > 1.0) xi_foot = 1.0;
 
             for (PetscInt bx = 0; bx < NbX; ++bx) {
+              /* Use cell-center E for all DOFs (approximation; paper requires E at x_{i,bx}) */
+              PetscReal v_foot = v_phys - E_cell * dt;
+
+              PetscReal v_norm  = (v_foot + v_max) / h_v;
+              PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
+              if (cv_foot < 0) cv_foot = 0;
+              if (cv_foot >= Nv) cv_foot = Nv - 1;
+
+              PetscReal xi_foot = (v_foot - (-v_max + cv_foot * h_v)) / (h_v * 0.5) - 1.0;
+              if (xi_foot < -1.0) xi_foot = -1.0;
+              if (xi_foot > 1.0) xi_foot = 1.0;
+
               PetscInt  ix    = cx_local * NbX + bx;
               PetscReal f_val = 0.0;
               for (PetscInt bv = 0; bv < NbV; ++bv) {
