@@ -1157,8 +1157,10 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
    ======================================================================== */
 static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCtx *ctx)
 {
-  Vec       f_tmp = NULL;
-  PetscBool inplace;
+  Vec           f_tmp = NULL;
+  Vec           E_local;
+  DMDALocalInfo info;
+  PetscBool     inplace;
 
   PetscFunctionBeginUser;
   PetscCall(PetscLogEventBegin(ctx->AdvectVEvent, 0, 0, 0, 0));
@@ -1170,10 +1172,16 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
     f_out = f_tmp;
   }
 
+  /* Ghost-exchange E_field so we can interpolate E at each GLL node position.
+     daPot has stencil width sw=1, so E_local has one ghost cell on each side. */
+  PetscCall(DMDAGetLocalInfo(ctx->daPot, &info));
+  PetscCall(DMGetLocalVector(ctx->daPot, &E_local));
+  PetscCall(DMGlobalToLocal(ctx->daPot, E_field, INSERT_VALUES, E_local));
+
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
   {
-    PetscScalar    *f_ptr, *E_ptr, *fout_ptr;
-    PetscMemType    mtype_f, mtype_E, mtype_fout;
+    PetscScalar    *f_ptr, *Eloc_ptr, *fout_ptr;
+    PetscMemType    mtype_f, mtype_Eloc, mtype_fout;
     const PetscInt  NxLocal   = ctx->NxLocal;
     const PetscInt  NxDOF_loc = ctx->NxDOF_local;
     const PetscInt  NvDOF     = ctx->NvDOF;
@@ -1183,12 +1191,14 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
     const PetscInt  NqV       = ctx->NqV;
     const PetscReal v_max     = ctx->v_max;
     const PetscReal h_v       = ctx->h_v;
+    const PetscInt  sw        = info.sw;
+    const PetscInt  n_Eloc    = NxLocal + 2 * sw;
     RealView1D      d_xi_x    = ctx->d_xi_x_nodes;
     PetscCall(VecGetArrayAndMemType(f, &f_ptr, &mtype_f));
-    PetscCall(VecGetArrayAndMemType(E_field, &E_ptr, &mtype_E));
+    PetscCall(VecGetArrayAndMemType(E_local, &Eloc_ptr, &mtype_Eloc));
     PetscCall(VecGetArrayAndMemType(f_out, &fout_ptr, &mtype_fout));
     ScalarView1D d_f(f_ptr, (size_t)NvDOF * NxDOF_loc);
-    ScalarView1D d_E(E_ptr, NxLocal);
+    ScalarView1D d_Eloc(Eloc_ptr, n_Eloc);
     ScalarView1D d_fout(fout_ptr, (size_t)NvDOF * NxDOF_loc);
     RealView1D   d_xi_v = ctx->d_xi_v_nodes;
     RealView1D   d_tab  = ctx->d_tabV;
@@ -1199,7 +1209,11 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
        so there are no write conflicts on d_fout. */
     Kokkos::parallel_for(
       "AdvectV_cx", Kokkos::RangePolicy<>(0, NxLocal), KOKKOS_LAMBDA(PetscInt cx_local) {
-        PetscReal E_cell = PetscRealPart(d_E(cx_local));
+        /* Ghost-extended E: d_Eloc[sw + cx_local] is the owned cell center.
+           d_Eloc[sw + cx_local - 1] and d_Eloc[sw + cx_local + 1] are neighbors. */
+        PetscReal E_c  = PetscRealPart(d_Eloc(sw + cx_local));
+        PetscReal E_lm = PetscRealPart(d_Eloc(sw + cx_local - 1));
+        PetscReal E_rp = PetscRealPart(d_Eloc(sw + cx_local + 1));
         /* Zero the rhs slice for this cx_local */
         for (PetscInt iv = 0; iv < NvDOF; ++iv)
           for (PetscInt bx = 0; bx < NbX; ++bx) d_fout(iv * NxDOF_loc + cx_local * NbX + bx) = 0.0;
@@ -1211,8 +1225,13 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
             PetscReal v_phys = v_cell_left + (xi + 1.0) * (h_v * 0.5);
 
             for (PetscInt bx = 0; bx < NbX; ++bx) {
-              /* Use cell-center E for all DOFs (approximation; paper requires E at x_{i,bx}) */
-              PetscReal v_foot = v_phys - E_cell * dt;
+              /* Linearly interpolate E at GLL node position x_{i,bx}.
+                 xi_x[bx] in [-1,1]: t = xi_x[bx]/2 in [-0.5,0.5].
+                 For t>=0: E_bx = E_c*(1-t) + E_rp*t
+                 For t< 0: E_bx = E_lm*(-t) + E_c*(1+t) */
+              PetscReal t      = d_xi_x(bx) * 0.5;
+              PetscReal E_bx   = (t >= 0.0) ? (E_c * (1.0 - t) + E_rp * t) : (E_lm * (-t) + E_c * (1.0 + t));
+              PetscReal v_foot = v_phys - E_bx * dt;
 
               PetscReal v_norm  = (v_foot + v_max) / h_v;
               PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
@@ -1245,22 +1264,26 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
           }
       });
     PetscCall(VecRestoreArrayAndMemType(f, &f_ptr));
-    PetscCall(VecRestoreArrayAndMemType(E_field, &E_ptr));
+    PetscCall(VecRestoreArrayAndMemType(E_local, &Eloc_ptr));
     PetscCall(VecRestoreArrayAndMemType(f_out, &fout_ptr));
   }
 #else
   {
-    const PetscScalar *f_arr, *E_arr;
+    const PetscScalar *f_arr, *Eloc_arr;
     PetscScalar       *f_out_arr;
     PetscReal         *rhs;
+    const PetscInt     sw = info.sw;
     PetscCall(VecGetArrayRead(f, &f_arr));
-    PetscCall(VecGetArrayRead(E_field, &E_arr));
+    PetscCall(VecGetArrayRead(E_local, &Eloc_arr));
     PetscCall(VecGetArray(f_out, &f_out_arr));
     /* Allocate RHS array: rhs[iv * NxDOF_local + ix] */
     PetscCall(PetscCalloc1(ctx->NvDOF * ctx->NxDOF_local, &rhs));
 
     for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
-      PetscReal E = PetscRealPart(E_arr[cx_local]);
+      /* Ghost-extended E: Eloc_arr[sw + cx_local] is the owned cell center. */
+      PetscReal E_c  = PetscRealPart(Eloc_arr[sw + cx_local]);
+      PetscReal E_lm = PetscRealPart(Eloc_arr[sw + cx_local - 1]);
+      PetscReal E_rp = PetscRealPart(Eloc_arr[sw + cx_local + 1]);
 
       for (PetscInt cv = 0; cv < ctx->Nv; ++cv) {
         PetscReal v_cell_left = -ctx->v_max + cv * ctx->h_v;
@@ -1268,18 +1291,25 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
         for (PetscInt q = 0; q < ctx->NqV; ++q) {
           PetscReal xi     = ctx->vq_pts[q];
           PetscReal v_phys = v_cell_left + (xi + 1.0) * (ctx->h_v * 0.5);
-          PetscReal v_foot = v_phys - E * dt;
-
-          PetscReal v_norm  = (v_foot + ctx->v_max) / ctx->h_v;
-          PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
-          if (cv_foot < 0) cv_foot = 0;
-          if (cv_foot >= ctx->Nv) cv_foot = ctx->Nv - 1;
-
-          PetscReal xi_foot = (v_foot - (-ctx->v_max + cv_foot * ctx->h_v)) / (ctx->h_v * 0.5) - 1.0;
-          if (xi_foot < -1.0) xi_foot = -1.0;
-          if (xi_foot > 1.0) xi_foot = 1.0;
 
           for (PetscInt bx = 0; bx < ctx->NbX; ++bx) {
+            /* Linearly interpolate E at GLL node position x_{i,bx}.
+               t = xi_x[bx]/2 in [-0.5,0.5].
+               For t>=0: E_bx = E_c*(1-t) + E_rp*t
+               For t< 0: E_bx = E_lm*(-t) + E_c*(1+t) */
+            PetscReal t      = ctx->xi_x_nodes[bx] * 0.5;
+            PetscReal E_bx   = (t >= 0.0) ? (E_c * (1.0 - t) + E_rp * t) : (E_lm * (-t) + E_c * (1.0 + t));
+            PetscReal v_foot = v_phys - E_bx * dt;
+
+            PetscReal v_norm  = (v_foot + ctx->v_max) / ctx->h_v;
+            PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
+            if (cv_foot < 0) cv_foot = 0;
+            if (cv_foot >= ctx->Nv) cv_foot = ctx->Nv - 1;
+
+            PetscReal xi_foot = (v_foot - (-ctx->v_max + cv_foot * ctx->h_v)) / (ctx->h_v * 0.5) - 1.0;
+            if (xi_foot < -1.0) xi_foot = -1.0;
+            if (xi_foot > 1.0) xi_foot = 1.0;
+
             PetscInt  ix    = cx_local * ctx->NbX + bx;
             PetscReal f_val = 0.0;
             for (PetscInt bv = 0; bv < ctx->NbV; ++bv) {
@@ -1300,10 +1330,11 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
 
     PetscCall(PetscFree(rhs));
     PetscCall(VecRestoreArrayRead(f, &f_arr));
-    PetscCall(VecRestoreArrayRead(E_field, &E_arr));
+    PetscCall(VecRestoreArrayRead(E_local, &Eloc_arr));
     PetscCall(VecRestoreArray(f_out, &f_out_arr));
   }
 #endif
+  PetscCall(DMRestoreLocalVector(ctx->daPot, &E_local));
 
   /* Copy result back if in-place */
   if (inplace) {
