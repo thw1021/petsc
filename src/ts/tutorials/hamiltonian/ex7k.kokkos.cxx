@@ -36,7 +36,7 @@ using RealView2D   = Kokkos::View<PetscReal **, Kokkos::LayoutRight, DevSpace>;
 #endif
 
 /* ========================================================================
-   AppCtx — all simulation state
+   AppCtx -- all simulation state
    ======================================================================== */
 typedef struct {
   /* Grid DMs */
@@ -144,7 +144,7 @@ KOKKOS_INLINE_FUNCTION static PetscReal EvalLagrangeBasis(PetscInt nb, const Pet
    Device-callable Gauss-Legendre quadrature helpers
    Ported from src/dm/dt/interface/dt.c (PetscDTGaussJacobiQuadrature_Newton_Internal
    and helpers).  All functions are KOKKOS_INLINE_FUNCTION so they can be
-   called from device kernels.  No PETSc error codes — pure arithmetic.
+   called from device kernels.  No PETSc error codes -- pure arithmetic.
 
    For Gauss-Legendre (alpha=beta=0) the weight prefactor a6 = 2 exactly,
    so lgamma is not needed.
@@ -203,7 +203,7 @@ KOKKOS_INLINE_FUNCTION static double KokkosDTComputeJacobiDerivative(double a, d
 KOKKOS_INLINE_FUNCTION static void KokkosDTGaussQuadrature(int npoints, double a, double b, double *x, double *w)
 {
   const int maxIter = 100;
-  /* eps = exp(0.75 * log(machine_epsilon_double)) ≈ 1.2e-11 */
+  /* eps = exp(0.75 * log(machine_epsilon_double)) ~ 1.2e-11 */
   const double eps = 1.2e-11;
   /* For Gauss-Legendre (alpha=beta=0): a6 = 2^1 * Gamma(n+1)^2 / (Gamma(2n+1)*Gamma(1)) = 2 */
   const double a6 = 2.0;
@@ -243,7 +243,7 @@ KOKKOS_INLINE_FUNCTION static void KokkosDTGaussQuadrature(int npoints, double a
 #endif /* PETSC_HAVE_KOKKOS_KERNELS */
 
 /* ========================================================================
-   Phase 1 — ProcessOptions
+   Phase 1 -- ProcessOptions
    ======================================================================== */
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *ctx)
 {
@@ -318,7 +318,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *ctx)
 }
 
 /* ========================================================================
-   Phase 2 — CreateXMesh + CreateVMesh
+   Phase 2 -- CreateXMesh + CreateVMesh
    ======================================================================== */
 static PetscErrorCode CreateXMesh(MPI_Comm comm, AppCtx *ctx)
 {
@@ -357,7 +357,7 @@ static PetscErrorCode CreateVMesh(MPI_Comm comm, AppCtx *ctx)
 }
 
 /* ========================================================================
-   Phase 3 — SetupPoisson
+   Phase 3 -- SetupPoisson
    ======================================================================== */
 static PetscErrorCode SetupPoisson(MPI_Comm comm, AppCtx *ctx)
 {
@@ -399,7 +399,7 @@ static PetscErrorCode SetupPoisson(MPI_Comm comm, AppCtx *ctx)
       row.c = 0;
 
       /* For periodic DMDA, MatSetValuesStencil handles wrap-around automatically.
-         Use i-1 and i+1 directly — no manual modular arithmetic needed. */
+         Use i-1 and i+1 directly -- no manual modular arithmetic needed. */
       col[0].i = i;
       col[0].c = 0;
       col[1].i = i - 1;
@@ -440,7 +440,7 @@ static PetscErrorCode SetupPoisson(MPI_Comm comm, AppCtx *ctx)
 }
 
 /* ========================================================================
-   Phase 4 — PrecomputeGeometry
+   Phase 4 -- PrecomputeGeometry
    ======================================================================== */
 static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
 {
@@ -578,7 +578,7 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
      For each velocity DOF iv, compute the fractional shift s = v_dof_coords[iv]*dt/h_x,
      decompose into integer n and fractional alp in [0,1), then build the NbX x NbX
      overlap matrices A and B via Gauss quadrature on [-1, split] and [split, 1].
-     NqSLDG = 2*NbX+2 quadrature points; NbX <= 4 so NqSLDG <= 10 — safe for stack.
+     NqSLDG = 2*NbX+2 quadrature points; NbX <= 4 so NqSLDG <= 10 -- safe for stack.
 
      Convention: A_sldg and B_sldg store A[i,j]/w_i and B[i,j]/w_i where
      w_i = gll_wts_x[i] is the GLL weight (= x_basis_int[i] / (h_x/2)).
@@ -725,7 +725,7 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
   PetscCall(PetscFree(gll_wts_v));
 
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-  /* Upload all geometry to device — done once, persists for all time steps */
+  /* Upload all geometry to device -- done once, persists for all time steps */
   ctx->d_xi_v_nodes   = RealView1D("d_xi_v_nodes", ctx->NbV);
   ctx->d_xi_x_nodes   = RealView1D("d_xi_x_nodes", ctx->NbX);
   ctx->d_v_dof_coords = RealView1D("d_v_dof_coords", ctx->NvDOF);
@@ -760,7 +760,7 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
 }
 
 /* ========================================================================
-   Phase 5 — AllocateF + InitializeF
+   Phase 5 -- AllocateF + InitializeF
    ======================================================================== */
 static PetscErrorCode AllocateF(AppCtx *ctx)
 {
@@ -827,7 +827,7 @@ static PetscErrorCode InitializeF(AppCtx *ctx)
 }
 
 /* ========================================================================
-   Phase 6 — ComputeChargeDensity
+   Phase 6 -- ComputeChargeDensity
    ======================================================================== */
 static PetscErrorCode ComputeChargeDensity(AppCtx *ctx)
 {
@@ -897,7 +897,7 @@ static PetscErrorCode ComputeChargeDensity(AppCtx *ctx)
 }
 
 /* ========================================================================
-   Phase 7 — SolvePoisson + ComputeElectricField
+   Phase 7 -- SolvePoisson + ComputeElectricField
    ======================================================================== */
 static PetscErrorCode SolvePoisson(AppCtx *ctx)
 {
@@ -973,7 +973,7 @@ static PetscErrorCode ComputeElectricField(AppCtx *ctx)
 }
 
 /* ========================================================================
-   Phase 8 — AdvectX (SLDG L2 projection with DMDA ghost exchange)
+   Phase 8 -- AdvectX (SLDG L2 projection with DMDA ghost exchange)
 
    Uses the SLDG overlap-integral approach: for each velocity DOF, compute
    the fractional cell shift s = v*dt/h_x, decompose into integer shift n
@@ -1032,7 +1032,7 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
     ScalarView1D d_fout(fout_ptr, (size_t)ctx->NvDOF * NxDOF_loc);
 
     for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
-      PetscInt n = ctx->n_shift[iv]; /* host read — small array, OK */
+      PetscInt n = ctx->n_shift[iv]; /* host read -- small array, OK */
 
       /* Copy this iv-slice from device f into device f_iv_global, then ghost-exchange */
       {
@@ -1060,7 +1060,7 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
         PetscCall(VecRestoreArrayAndMemType(f_iv_local, &local_ptr));
       }
 
-      /* Subview into persistent d_A_sldg, d_B_sldg — zero-copy */
+      /* Subview into persistent d_A_sldg, d_B_sldg -- zero-copy */
       auto d_A = Kokkos::subview(ctx->d_A_sldg, Kokkos::make_pair(iv * NbX * NbX, (iv + 1) * NbX * NbX));
       auto d_B = Kokkos::subview(ctx->d_B_sldg, Kokkos::make_pair(iv * NbX * NbX, (iv + 1) * NbX * NbX));
       /* Subview into d_fout for this iv-slice */
@@ -1146,7 +1146,7 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
 }
 
 /* ========================================================================
-   Phase 9 — AdvectV (semi-Lagrangian DG L2 projection in velocity)
+   Phase 9 -- AdvectV (semi-Lagrangian DG L2 projection in velocity)
 
    L2 projection of f(v - E*dt, x) onto the DG basis using Gauss quadrature.
    For each quadrature point in the output v-cell, trace the characteristic
@@ -1312,7 +1312,7 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
 }
 
 /* ========================================================================
-   Phase 10 — ComputeMoments
+   Phase 10 -- ComputeMoments
    ======================================================================== */
 static PetscErrorCode ComputeMoments(AppCtx *ctx, PetscReal *m0_out, PetscReal *m1_out, PetscReal *m2_out)
 {
@@ -1437,7 +1437,7 @@ static PetscErrorCode ComputeMoments(AppCtx *ctx, PetscReal *m0_out, PetscReal *
 }
 
 /* ========================================================================
-   Phase 10 — BSLStep_Strang (Strang splitting: X/2, V, X/2)
+   Phase 10 -- BSLStep_Strang (Strang splitting: X/2, V, X/2)
    ======================================================================== */
 static PetscErrorCode BSLStep_Strang(AppCtx *ctx, PetscReal dt)
 {
@@ -1452,7 +1452,7 @@ static PetscErrorCode BSLStep_Strang(AppCtx *ctx, PetscReal dt)
 }
 
 /* ========================================================================
-   Phase 10 — DestroyContext
+   Phase 10 -- DestroyContext
    ======================================================================== */
 static PetscErrorCode DestroyContext(AppCtx *ctx)
 {
@@ -1501,7 +1501,7 @@ static PetscErrorCode DestroyContext(AppCtx *ctx)
 }
 
 /* ========================================================================
-   main — full time loop
+   main -- full time loop
    ======================================================================== */
 int main(int argc, char **argv)
 {
