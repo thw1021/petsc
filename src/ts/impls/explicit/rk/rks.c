@@ -102,7 +102,7 @@ static inline PetscReal LegendrePrime(PetscInt j, PetscReal x)
   if (j == 0) return 0.0;
   if (j == 1) return 1.0;
   if (x == 1.0) return j * (j + 1) / 2;
-  else if (x == -1.0) return PetscPowReal(-1.0,j+1) * (j * (j + 1) / 2);
+  else if (x == -1.0) return PetscPowReal(-1.0, j + 1) * (j * (j + 1) / 2);
   else {
     PetscReal Pj    = Legendre(j, x);
     PetscReal Pjm1  = Legendre(j - 1, x);
@@ -137,12 +137,12 @@ PetscErrorCode TSRKC1ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   PetscFunctionBegin;
   for (PetscInt j = 0; j <= s; ++j) {
     PetscReal Pj = Chebyshev(j, w0);
-    b[j] = 1.0 / Pj;
+    b[j]         = 1.0 / Pj;
   }
 
   PetscReal Ps, Psprime;
-  Ps      = Chebyshev(s, w0);
-  Psprime = ChebyshevPrime(s, w0);
+  Ps           = Chebyshev(s, w0);
+  Psprime      = ChebyshevPrime(s, w0);
   PetscReal w1 = Ps / Psprime;
 
   for (PetscInt j = 0; j <= s; ++j) mu[j] = nu[j] = tilde_mu[j] = 0.0;
@@ -183,16 +183,16 @@ PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   PetscFunctionBegin;
   for (PetscInt j = 2; j <= s; j++) {
     PetscReal Pp, Ppp;
-    Pp  = ChebyshevPrime(j, w0);
-    Ppp = ChebyshevDoublePrime(j, w0);
+    Pp   = ChebyshevPrime(j, w0);
+    Ppp  = ChebyshevDoublePrime(j, w0);
     b[j] = -Ppp / (Pp * Pp);
   }
   b[0] = b[2];
   b[1] = b[2];
 
   PetscReal Psprime, Ps2;
-  Psprime = ChebyshevPrime(s, w0);
-  Ps2     = ChebyshevDoublePrime(s, w0);
+  Psprime      = ChebyshevPrime(s, w0);
+  Ps2          = ChebyshevDoublePrime(s, w0);
   PetscReal w1 = -Psprime / Ps2;
 
   for (PetscInt j = 0; j <= s; ++j) mu[j] = nu[j] = tilde_mu[j] = tilde_gamma[j] = 0.0;
