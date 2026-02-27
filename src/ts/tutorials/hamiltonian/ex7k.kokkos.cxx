@@ -747,11 +747,13 @@ static PetscErrorCode AllocateF(AppCtx *ctx)
 
 static PetscErrorCode InitializeF(AppCtx *ctx)
 {
+  PetscScalar *f_ptr;
+  PetscMemType mtype;
+
   PetscFunctionBeginUser;
+  PetscCall(VecGetArrayAndMemType(ctx->f, &f_ptr, &mtype));
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-  {
-    PetscScalar    *f_ptr;
-    PetscMemType    mtype;
+  if (mtype == PETSC_MEMTYPE_DEVICE) {
     const PetscInt  NvDOF     = ctx->NvDOF;
     const PetscInt  NxDOF_loc = ctx->NxDOF_local;
     const PetscInt  NbX       = ctx->NbX;
@@ -759,10 +761,9 @@ static PetscErrorCode InitializeF(AppCtx *ctx)
     const PetscReal h_x       = ctx->h_x;
     const PetscReal alpha     = ctx->alpha;
     const PetscReal kwave     = ctx->kwave;
-    PetscCall(VecGetArrayAndMemType(ctx->f, &f_ptr, &mtype));
-    ScalarView1D d_f(f_ptr, (size_t)NvDOF * NxDOF_loc);
-    RealView1D   d_vdc  = ctx->d_v_dof_coords;
-    RealView1D   d_xi_x = ctx->d_xi_x_nodes;
+    ScalarView1D    d_f(f_ptr, (size_t)NvDOF * NxDOF_loc);
+    RealView1D      d_vdc  = ctx->d_v_dof_coords;
+    RealView1D      d_xi_x = ctx->d_xi_x_nodes;
     Kokkos::parallel_for(
       "InitializeF", Kokkos::RangePolicy<>(0, NvDOF * NxDOF_loc), KOKKOS_LAMBDA(PetscInt idx) {
         PetscInt  iv          = idx / NxDOF_loc;
@@ -775,12 +776,9 @@ static PetscErrorCode InitializeF(AppCtx *ctx)
         PetscReal f0          = (1.0 + alpha * PetscCosReal(kwave * x)) / PetscSqrtReal(2.0 * PETSC_PI) * PetscExpReal(-0.5 * v * v);
         d_f(idx)              = (PetscScalar)f0;
       });
-    PetscCall(VecRestoreArrayAndMemType(ctx->f, &f_ptr));
-  }
-#else
+  } else
+#endif
   {
-    PetscScalar *f_arr;
-    PetscCall(VecGetArray(ctx->f, &f_arr));
     for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
       PetscReal v = ctx->v_dof_coords[iv];
       for (PetscInt ix = 0; ix < ctx->NxDOF_local; ++ix) {
@@ -789,12 +787,11 @@ static PetscErrorCode InitializeF(AppCtx *ctx)
         PetscReal x_cell_left             = (ctx->xs + cx_local) * ctx->h_x;
         PetscReal x                       = x_cell_left + (ctx->xi_x_nodes[bx] + 1.0) * (ctx->h_x * 0.5);
         PetscReal f0                      = (1.0 + ctx->alpha * PetscCosReal(ctx->kwave * x)) / PetscSqrtReal(2.0 * PETSC_PI) * PetscExpReal(-0.5 * v * v);
-        f_arr[iv * ctx->NxDOF_local + ix] = (PetscScalar)f0;
+        f_ptr[iv * ctx->NxDOF_local + ix] = (PetscScalar)f0;
       }
     }
-    PetscCall(VecRestoreArray(ctx->f, &f_arr));
   }
-#endif
+  PetscCall(VecRestoreArrayAndMemType(ctx->f, &f_ptr));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -803,6 +800,9 @@ static PetscErrorCode InitializeF(AppCtx *ctx)
    ======================================================================== */
 static PetscErrorCode ComputeChargeDensity(AppCtx *ctx)
 {
+  PetscScalar *f_ptr, *rho_ptr;
+  PetscMemType mtype_f, mtype_rho;
+
   PetscFunctionBeginUser;
   PetscCall(PetscLogEventBegin(ctx->RhoEvent, 0, 0, 0, 0));
 
@@ -814,21 +814,19 @@ static PetscErrorCode ComputeChargeDensity(AppCtx *ctx)
          = sum_{iv} v_basis_int[iv] * sum_{bx} f[iv,bx] * gll_wts_x[bx] * (h_x/2) / h_x
          = sum_{iv} v_basis_int[iv] * sum_{bx} f[iv,bx] * gll_wts_x[bx] / 2 */
 
+  PetscCall(VecGetArrayAndMemType(ctx->f, &f_ptr, &mtype_f));
+  PetscCall(VecGetArrayAndMemType(ctx->rho, &rho_ptr, &mtype_rho));
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-  {
-    PetscScalar    *f_ptr, *rho_ptr;
-    PetscMemType    mtype_f, mtype_rho;
+  if (mtype_f == PETSC_MEMTYPE_DEVICE) {
     const PetscInt  NxLocal   = ctx->NxLocal;
     const PetscInt  NvDOF     = ctx->NvDOF;
     const PetscInt  NbX       = ctx->NbX;
     const PetscInt  NxDOF_loc = ctx->NxDOF_local;
     const PetscReal h_x       = ctx->h_x;
-    PetscCall(VecGetArrayAndMemType(ctx->f, &f_ptr, &mtype_f));
-    PetscCall(VecGetArrayAndMemType(ctx->rho, &rho_ptr, &mtype_rho));
-    ScalarView1D d_f(f_ptr, (size_t)NvDOF * NxDOF_loc);
-    ScalarView1D d_rho(rho_ptr, NxLocal);
-    RealView1D   d_vbi = ctx->d_v_basis_int;
-    RealView1D   d_xbi = ctx->d_x_basis_int;
+    ScalarView1D    d_f(f_ptr, (size_t)NvDOF * NxDOF_loc);
+    ScalarView1D    d_rho(rho_ptr, NxLocal);
+    RealView1D      d_vbi = ctx->d_v_basis_int;
+    RealView1D      d_xbi = ctx->d_x_basis_int;
     Kokkos::parallel_for(
       "ComputeChargeDensity", Kokkos::RangePolicy<>(0, NxLocal), KOKKOS_LAMBDA(PetscInt cx_local) {
         PetscReal rho_val = 0.0;
@@ -838,31 +836,24 @@ static PetscErrorCode ComputeChargeDensity(AppCtx *ctx)
         }
         d_rho(cx_local) = (PetscScalar)(rho_val / h_x);
       });
-    PetscCall(VecRestoreArrayAndMemType(ctx->f, &f_ptr));
-    PetscCall(VecRestoreArrayAndMemType(ctx->rho, &rho_ptr));
-  }
-#else
+  } else
+#endif
   {
-    const PetscScalar *f_arr;
-    PetscScalar       *rho_arr;
-    PetscCall(VecGetArrayRead(ctx->f, &f_arr));
-    PetscCall(VecGetArray(ctx->rho, &rho_arr));
     for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
       PetscReal rho_val = 0.0;
       for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
         PetscReal w = ctx->v_basis_int[iv];
         for (PetscInt bx = 0; bx < ctx->NbX; ++bx) {
-          PetscReal fval = PetscRealPart(f_arr[iv * ctx->NxDOF_local + cx_local * ctx->NbX + bx]);
+          PetscReal fval = PetscRealPart(f_ptr[iv * ctx->NxDOF_local + cx_local * ctx->NbX + bx]);
           /* x_basis_int[bx] = gll_wts_x[bx] * h_x/2, divide by h_x to get cell average */
           rho_val += fval * w * ctx->x_basis_int[bx];
         }
       }
-      rho_arr[cx_local] = (PetscScalar)(rho_val / ctx->h_x);
+      rho_ptr[cx_local] = (PetscScalar)(rho_val / ctx->h_x);
     }
-    PetscCall(VecRestoreArrayRead(ctx->f, &f_arr));
-    PetscCall(VecRestoreArray(ctx->rho, &rho_arr));
   }
-#endif
+  PetscCall(VecRestoreArrayAndMemType(ctx->f, &f_ptr));
+  PetscCall(VecRestoreArrayAndMemType(ctx->rho, &rho_ptr));
 
   PetscCall(PetscLogEventEnd(ctx->RhoEvent, 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -904,38 +895,34 @@ static PetscErrorCode ComputeElectricField(AppCtx *ctx)
   PetscCall(DMGetLocalVector(ctx->daPot, &phi_local));
   PetscCall(DMGlobalToLocal(ctx->daPot, ctx->phi, INSERT_VALUES, phi_local));
 
-#if defined(PETSC_HAVE_KOKKOS_KERNELS)
   {
     PetscScalar    *phi_ptr, *E_ptr;
     PetscMemType    mtype_phi, mtype_E;
     const PetscInt  NxLocal = info.xm;
     const PetscInt  sw      = info.sw;
-    const PetscInt  n_phi   = NxLocal + 2 * sw; /* ghost-extended length */
     const PetscReal inv2hx  = 1.0 / (2.0 * ctx->h_x);
     PetscCall(VecGetArrayAndMemType(phi_local, &phi_ptr, &mtype_phi));
     PetscCall(VecGetArrayAndMemType(ctx->E_field, &E_ptr, &mtype_E));
-    /* phi_local is a local Vec: its flat array is [ghost_left | owned | ghost_right].
-       Length = n_phi = NxLocal + 2*sw.  Element [sw + cx_local] is the owned cell. */
-    ScalarView1D d_phi(phi_ptr, n_phi);
-    ScalarView1D d_E(E_ptr, NxLocal);
-    Kokkos::parallel_for("ComputeElectricField", Kokkos::RangePolicy<>(0, NxLocal), KOKKOS_LAMBDA(PetscInt cx_local) { d_E(cx_local) = -(PetscScalar)((PetscRealPart(d_phi(sw + cx_local + 1)) - PetscRealPart(d_phi(sw + cx_local - 1))) * inv2hx); });
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+    if (mtype_phi == PETSC_MEMTYPE_DEVICE) {
+      /* phi_local is a local Vec: its flat array is [ghost_left | owned | ghost_right].
+         Length = n_phi = NxLocal + 2*sw.  Element [sw + cx_local] is the owned cell. */
+      const PetscInt n_phi = NxLocal + 2 * sw;
+      ScalarView1D   d_phi(phi_ptr, n_phi);
+      ScalarView1D   d_E(E_ptr, NxLocal);
+      Kokkos::parallel_for("ComputeElectricField", Kokkos::RangePolicy<>(0, NxLocal), KOKKOS_LAMBDA(PetscInt cx_local) { d_E(cx_local) = -(PetscScalar)((PetscRealPart(d_phi(sw + cx_local + 1)) - PetscRealPart(d_phi(sw + cx_local - 1))) * inv2hx); });
+    } else
+#endif
+    {
+      for (PetscInt i = info.xs; i < info.xs + info.xm; ++i) {
+        PetscInt cx_local = i - info.xs;
+        /* phi_ptr for a local Vec is offset so that phi_ptr[i] is the global cell i value */
+        E_ptr[cx_local] = -(PetscScalar)((PetscRealPart(phi_ptr[sw + cx_local + 1]) - PetscRealPart(phi_ptr[sw + cx_local - 1])) * inv2hx);
+      }
+    }
     PetscCall(VecRestoreArrayAndMemType(phi_local, &phi_ptr));
     PetscCall(VecRestoreArrayAndMemType(ctx->E_field, &E_ptr));
   }
-#else
-  {
-    PetscScalar *phi_arr, *E_arr;
-    PetscCall(DMDAVecGetArray(ctx->daPot, phi_local, &phi_arr));
-    PetscCall(VecGetArray(ctx->E_field, &E_arr));
-    PetscReal inv2hx = 1.0 / (2.0 * ctx->h_x);
-    for (PetscInt i = info.xs; i < info.xs + info.xm; ++i) {
-      PetscInt cx_local = i - info.xs;
-      E_arr[cx_local]   = -(PetscScalar)((PetscRealPart(phi_arr[i + 1]) - PetscRealPart(phi_arr[i - 1])) * inv2hx);
-    }
-    PetscCall(DMDAVecRestoreArray(ctx->daPot, phi_local, &phi_arr));
-    PetscCall(VecRestoreArray(ctx->E_field, &E_arr));
-  }
-#endif
 
   PetscCall(DMRestoreLocalVector(ctx->daPot, &phi_local));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -979,7 +966,6 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, AppCtx *ctx)
      The outer iv loop stays on CPU because DMGlobalToLocal is an MPI collective.
      The inner cx_local loop is offloaded to Kokkos.
      dt is already baked into n_shift/A_sldg/B_sldg at PrecomputeGeometry time. */
-#if defined(PETSC_HAVE_KOKKOS_KERNELS)
   {
     PetscScalar   *f_ptr, *fout_ptr;
     PetscMemType   mtype_f, mtype_fout;
@@ -991,117 +977,99 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, AppCtx *ctx)
     const PetscInt n_cells   = NxLocal + 2 * sw;
     PetscCall(VecGetArrayAndMemType(f, &f_ptr, &mtype_f));
     PetscCall(VecGetArrayAndMemType(f_out, &fout_ptr, &mtype_fout));
-    ScalarView1D d_f(f_ptr, (size_t)ctx->NvDOF * NxDOF_loc);
-    ScalarView1D d_fout(fout_ptr, (size_t)ctx->NvDOF * NxDOF_loc);
 
     /* TODO: This loop issues NvDOF sequential DMGlobalToLocal (MPI collective) calls.
        For better scalability, pack all iv-slices into a single Vec with
        dof = NvDOF * NbX and do one DMGlobalToLocal per AdvectX call,
        then dispatch all iv kernels in a single 2D Kokkos launch. */
     for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
-      PetscInt n = ctx->n_shift[iv]; /* host read -- small array, OK */
+      PetscInt n = ctx->n_shift[iv];
 
-      /* Copy this iv-slice from device f into device f_iv_global, then ghost-exchange */
+      /* Copy this iv-slice into f_iv_global, then ghost-exchange */
       {
         PetscScalar *gv_ptr;
         PetscMemType mtype_gv;
         PetscCall(VecGetArrayAndMemType(ctx->f_iv_global, &gv_ptr, &mtype_gv));
-        ScalarView1D d_gv(gv_ptr, NxDOF_loc);
-        auto         d_f_iv = Kokkos::subview(d_f, Kokkos::make_pair((size_t)(iv * NxDOF_loc), (size_t)((iv + 1) * NxDOF_loc)));
-        Kokkos::deep_copy(d_gv, d_f_iv);
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+        if (mtype_f == PETSC_MEMTYPE_DEVICE) {
+          ScalarView1D d_f(f_ptr, (size_t)ctx->NvDOF * NxDOF_loc);
+          ScalarView1D d_gv(gv_ptr, NxDOF_loc);
+          auto         d_f_iv = Kokkos::subview(d_f, Kokkos::make_pair((size_t)(iv * NxDOF_loc), (size_t)((iv + 1) * NxDOF_loc)));
+          Kokkos::deep_copy(d_gv, d_f_iv);
+        } else
+#endif
+          for (PetscInt ix = 0; ix < NxDOF_loc; ++ix) gv_ptr[ix] = f_ptr[iv * NxDOF_loc + ix];
         PetscCall(VecRestoreArrayAndMemType(ctx->f_iv_global, &gv_ptr));
       }
       PetscCall(DMGlobalToLocal(ctx->daF, ctx->f_iv_global, INSERT_VALUES, ctx->f_iv_local));
 
-      /* Get device pointer to ghost-extended local Vec */
-      {
-        PetscScalar *local_ptr;
-        PetscMemType mtype_local;
-        PetscCall(VecGetArrayAndMemType(ctx->f_iv_local, &local_ptr, &mtype_local));
-        /* local_ptr points to [ghost_left | owned | ghost_right], length = n_cells * NbX */
-        ScalarView1D d_local(local_ptr, n_cells * NbX);
-        /* Copy into persistent ghost buffer (PetscReal, not PetscScalar).
-           Capture d_fiv_ghost by value (View is a reference-counted handle). */
-        RealView1D d_fiv_ghost_copy = ctx->d_fiv_ghost;
-        Kokkos::parallel_for("AdvectX_copy_ghost", Kokkos::RangePolicy<>(0, n_cells * NbX), KOKKOS_LAMBDA(PetscInt k) { d_fiv_ghost_copy(k) = PetscRealPart(d_local(k)); });
-        PetscCall(VecRestoreArrayAndMemType(ctx->f_iv_local, &local_ptr));
-      }
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+      if (mtype_f == PETSC_MEMTYPE_DEVICE) {
+        ScalarView1D d_f(f_ptr, (size_t)ctx->NvDOF * NxDOF_loc);
+        ScalarView1D d_fout(fout_ptr, (size_t)ctx->NvDOF * NxDOF_loc);
+        /* Get device pointer to ghost-extended local Vec */
+        {
+          PetscScalar *local_ptr;
+          PetscMemType mtype_local;
+          PetscCall(VecGetArrayAndMemType(ctx->f_iv_local, &local_ptr, &mtype_local));
+          /* local_ptr points to [ghost_left | owned | ghost_right], length = n_cells * NbX */
+          ScalarView1D d_local(local_ptr, n_cells * NbX);
+          /* Copy into persistent ghost buffer (PetscReal, not PetscScalar).
+             Capture d_fiv_ghost by value (View is a reference-counted handle). */
+          RealView1D d_fiv_ghost_copy = ctx->d_fiv_ghost;
+          Kokkos::parallel_for("AdvectX_copy_ghost", Kokkos::RangePolicy<>(0, n_cells * NbX), KOKKOS_LAMBDA(PetscInt k) { d_fiv_ghost_copy(k) = PetscRealPart(d_local(k)); });
+          PetscCall(VecRestoreArrayAndMemType(ctx->f_iv_local, &local_ptr));
+        }
 
-      /* Subview into persistent d_A_sldg, d_B_sldg -- zero-copy */
-      auto d_A = Kokkos::subview(ctx->d_A_sldg, Kokkos::make_pair(iv * NbX * NbX, (iv + 1) * NbX * NbX));
-      auto d_B = Kokkos::subview(ctx->d_B_sldg, Kokkos::make_pair(iv * NbX * NbX, (iv + 1) * NbX * NbX));
-      /* Subview into d_fout for this iv-slice */
-      auto       d_fout_iv   = Kokkos::subview(d_fout, Kokkos::make_pair((size_t)(iv * NxDOF_loc), (size_t)((iv + 1) * NxDOF_loc)));
-      RealView1D d_fiv_ghost = ctx->d_fiv_ghost;
+        /* Subview into persistent d_A_sldg, d_B_sldg -- zero-copy */
+        auto d_A = Kokkos::subview(ctx->d_A_sldg, Kokkos::make_pair(iv * NbX * NbX, (iv + 1) * NbX * NbX));
+        auto d_B = Kokkos::subview(ctx->d_B_sldg, Kokkos::make_pair(iv * NbX * NbX, (iv + 1) * NbX * NbX));
+        /* Subview into d_fout for this iv-slice */
+        auto       d_fout_iv   = Kokkos::subview(d_fout, Kokkos::make_pair((size_t)(iv * NxDOF_loc), (size_t)((iv + 1) * NxDOF_loc)));
+        RealView1D d_fiv_ghost = ctx->d_fiv_ghost;
 
-      Kokkos::parallel_for(
-        "AdvectX_cx", Kokkos::RangePolicy<>(0, NxLocal), KOKKOS_LAMBDA(PetscInt cx_local) {
-          PetscInt cx_global = xs + cx_local;
-          PetscInt off_A     = (cx_global - n - (xs - sw)) * NbX;
-          PetscInt off_B     = (cx_global - n - 1 - (xs - sw)) * NbX;
-          for (PetscInt i = 0; i < NbX; ++i) {
-            PetscReal val = 0.0;
-            for (PetscInt j = 0; j < NbX; ++j) {
-              val += d_A(i * NbX + j) * d_fiv_ghost(off_A + j);
-              val += d_B(i * NbX + j) * d_fiv_ghost(off_B + j);
+        Kokkos::parallel_for(
+          "AdvectX_cx", Kokkos::RangePolicy<>(0, NxLocal), KOKKOS_LAMBDA(PetscInt cx_local) {
+            PetscInt cx_global = xs + cx_local;
+            PetscInt off_A     = (cx_global - n - (xs - sw)) * NbX;
+            PetscInt off_B     = (cx_global - n - 1 - (xs - sw)) * NbX;
+            for (PetscInt i = 0; i < NbX; ++i) {
+              PetscReal val = 0.0;
+              for (PetscInt j = 0; j < NbX; ++j) {
+                val += d_A(i * NbX + j) * d_fiv_ghost(off_A + j);
+                val += d_B(i * NbX + j) * d_fiv_ghost(off_B + j);
+              }
+              d_fout_iv(cx_local * NbX + i) = (PetscScalar)val;
             }
-            d_fout_iv(cx_local * NbX + i) = (PetscScalar)val;
+          });
+      } else
+#endif
+      {
+        PetscReal      **f_iv_arr; /* ghost-aware 2D array: f_iv_arr[cell][dof] */
+        const PetscReal *A = &ctx->A_sldg[iv * ctx->NbX * ctx->NbX];
+        const PetscReal *B = &ctx->B_sldg[iv * ctx->NbX * ctx->NbX];
+        PetscCall(DMDAVecGetArrayDOF(ctx->daF, ctx->f_iv_local, &f_iv_arr));
+        /* Apply SLDG update for each local x-cell. */
+        for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
+          PetscInt cx_global = ctx->xs + cx_local;
+          PetscInt src_A     = cx_global - n;
+          PetscInt src_B     = cx_global - n - 1;
+          for (PetscInt i = 0; i < ctx->NbX; ++i) {
+            PetscReal val = 0.0;
+            for (PetscInt j = 0; j < ctx->NbX; ++j) {
+              val += A[i * ctx->NbX + j] * PetscRealPart(f_iv_arr[src_A][j]);
+              val += B[i * ctx->NbX + j] * PetscRealPart(f_iv_arr[src_B][j]);
+            }
+            fout_ptr[iv * ctx->NxDOF_local + cx_local * ctx->NbX + i] = (PetscScalar)val;
           }
-        });
+        }
+        PetscCall(DMDAVecRestoreArrayDOF(ctx->daF, ctx->f_iv_local, &f_iv_arr));
+      }
     }
 
     PetscCall(VecRestoreArrayAndMemType(f, &f_ptr));
     PetscCall(VecRestoreArrayAndMemType(f_out, &fout_ptr));
   }
-#else
-  {
-    const PetscScalar *f_arr;
-    PetscScalar       *f_out_arr;
-    PetscReal        **f_iv_arr; /* ghost-aware 2D array: f_iv_arr[cell][dof] */
-    PetscCall(VecGetArrayRead(f, &f_arr));
-    PetscCall(VecGetArray(f_out, &f_out_arr));
-
-    /* TODO: This loop issues NvDOF sequential DMGlobalToLocal (MPI collective) calls.
-       For better scalability, pack all iv-slices into a single Vec with
-       dof = NvDOF * NbX and do one DMGlobalToLocal per AdvectX call,
-       then dispatch all iv kernels in a single 2D Kokkos launch. */
-    for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
-      PetscInt         n = ctx->n_shift[iv];
-      const PetscReal *A = &ctx->A_sldg[iv * ctx->NbX * ctx->NbX];
-      const PetscReal *B = &ctx->B_sldg[iv * ctx->NbX * ctx->NbX];
-
-      /* Copy this iv-slice into the global Vec on daF, then ghost-exchange */
-      {
-        PetscScalar *gv_arr;
-        PetscCall(VecGetArray(ctx->f_iv_global, &gv_arr));
-        for (PetscInt ix = 0; ix < ctx->NxDOF_local; ++ix) gv_arr[ix] = f_arr[iv * ctx->NxDOF_local + ix];
-        PetscCall(VecRestoreArray(ctx->f_iv_global, &gv_arr));
-      }
-      PetscCall(DMGlobalToLocal(ctx->daF, ctx->f_iv_global, INSERT_VALUES, ctx->f_iv_local));
-      PetscCall(DMDAVecGetArrayDOF(ctx->daF, ctx->f_iv_local, &f_iv_arr));
-
-      /* Apply SLDG update for each local x-cell. */
-      for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
-        PetscInt cx_global = ctx->xs + cx_local;
-        PetscInt src_A     = cx_global - n;
-        PetscInt src_B     = cx_global - n - 1;
-        for (PetscInt i = 0; i < ctx->NbX; ++i) {
-          PetscReal val = 0.0;
-          for (PetscInt j = 0; j < ctx->NbX; ++j) {
-            val += A[i * ctx->NbX + j] * PetscRealPart(f_iv_arr[src_A][j]);
-            val += B[i * ctx->NbX + j] * PetscRealPart(f_iv_arr[src_B][j]);
-          }
-          f_out_arr[iv * ctx->NxDOF_local + cx_local * ctx->NbX + i] = (PetscScalar)val;
-        }
-      }
-
-      PetscCall(DMDAVecRestoreArrayDOF(ctx->daF, ctx->f_iv_local, &f_iv_arr));
-    }
-
-    PetscCall(VecRestoreArrayRead(f, &f_arr));
-    PetscCall(VecRestoreArray(f_out, &f_out_arr));
-  }
-#endif
 
   /* Copy result back if in-place */
   if (inplace) {
@@ -1147,128 +1115,118 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
   PetscCall(DMGetLocalVector(ctx->daPot, &E_local));
   PetscCall(DMGlobalToLocal(ctx->daPot, E_field, INSERT_VALUES, E_local));
 
-#if defined(PETSC_HAVE_KOKKOS_KERNELS)
   {
-    PetscScalar    *f_ptr, *Eloc_ptr, *fout_ptr;
-    PetscMemType    mtype_f, mtype_Eloc, mtype_fout;
-    const PetscInt  NxLocal   = ctx->NxLocal;
-    const PetscInt  NxDOF_loc = ctx->NxDOF_local;
-    const PetscInt  NvDOF     = ctx->NvDOF;
-    const PetscInt  Nv        = ctx->Nv;
-    const PetscInt  NbX       = ctx->NbX;
-    const PetscInt  NbV       = ctx->NbV;
-    const PetscReal v_max     = ctx->v_max;
-    const PetscReal h_v       = ctx->h_v;
-    const PetscInt  sw        = info.sw;
-    const PetscInt  n_Eloc    = NxLocal + 2 * sw;
-    RealView1D      d_xi_x    = ctx->d_xi_x_nodes;
+    PetscScalar   *f_ptr, *Eloc_ptr, *fout_ptr;
+    PetscMemType   mtype_f, mtype_Eloc, mtype_fout;
+    const PetscInt NxLocal   = ctx->NxLocal;
+    const PetscInt NxDOF_loc = ctx->NxDOF_local;
+    const PetscInt NvDOF     = ctx->NvDOF;
+    const PetscInt sw        = info.sw;
+    const PetscInt n_Eloc    = NxLocal + 2 * sw;
     PetscCall(VecGetArrayAndMemType(f, &f_ptr, &mtype_f));
     PetscCall(VecGetArrayAndMemType(E_local, &Eloc_ptr, &mtype_Eloc));
     PetscCall(VecGetArrayAndMemType(f_out, &fout_ptr, &mtype_fout));
-    ScalarView1D d_f(f_ptr, (size_t)NvDOF * NxDOF_loc);
-    ScalarView1D d_Eloc(Eloc_ptr, n_Eloc);
-    ScalarView1D d_fout(fout_ptr, (size_t)NvDOF * NxDOF_loc);
-    RealView1D   d_xi_v = ctx->d_xi_v_nodes;
-    /* Parallelize over (iv, cx_local) pairs -- no write conflicts. */
-    Kokkos::parallel_for(
-      "AdvectV_nodal", Kokkos::RangePolicy<>(0, NvDOF * NxLocal), KOKKOS_LAMBDA(PetscInt idx) {
-        PetscInt iv       = idx / NxLocal;
-        PetscInt cx_local = idx % NxLocal;
-        PetscInt cv       = iv / NbV;
-        PetscInt bv       = iv % NbV;
-        /* Physical v-coordinate of this GLL node */
-        PetscReal v_node = -v_max + cv * h_v + (d_xi_v(bv) + 1.0) * (h_v * 0.5);
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+    if (mtype_f == PETSC_MEMTYPE_DEVICE) {
+      const PetscInt  Nv     = ctx->Nv;
+      const PetscInt  NbX    = ctx->NbX;
+      const PetscInt  NbV    = ctx->NbV;
+      const PetscReal v_max  = ctx->v_max;
+      const PetscReal h_v    = ctx->h_v;
+      RealView1D      d_xi_x = ctx->d_xi_x_nodes;
+      ScalarView1D    d_f(f_ptr, (size_t)NvDOF * NxDOF_loc);
+      ScalarView1D    d_Eloc(Eloc_ptr, n_Eloc);
+      ScalarView1D    d_fout(fout_ptr, (size_t)NvDOF * NxDOF_loc);
+      RealView1D      d_xi_v = ctx->d_xi_v_nodes;
+      /* Parallelize over (iv, cx_local) pairs -- no write conflicts. */
+      Kokkos::parallel_for(
+        "AdvectV_nodal", Kokkos::RangePolicy<>(0, NvDOF * NxLocal), KOKKOS_LAMBDA(PetscInt idx) {
+          PetscInt iv       = idx / NxLocal;
+          PetscInt cx_local = idx % NxLocal;
+          PetscInt cv       = iv / NbV;
+          PetscInt bv       = iv % NbV;
+          /* Physical v-coordinate of this GLL node */
+          PetscReal v_node = -v_max + cv * h_v + (d_xi_v(bv) + 1.0) * (h_v * 0.5);
 
-        /* Ghost-extended E: d_Eloc[sw + cx_local] is the owned cell center. */
-        PetscReal E_c  = PetscRealPart(d_Eloc(sw + cx_local));
-        PetscReal E_lm = PetscRealPart(d_Eloc(sw + cx_local - 1));
-        PetscReal E_rp = PetscRealPart(d_Eloc(sw + cx_local + 1));
+          /* Ghost-extended E: d_Eloc[sw + cx_local] is the owned cell center. */
+          PetscReal E_c  = PetscRealPart(d_Eloc(sw + cx_local));
+          PetscReal E_lm = PetscRealPart(d_Eloc(sw + cx_local - 1));
+          PetscReal E_rp = PetscRealPart(d_Eloc(sw + cx_local + 1));
 
-        for (PetscInt bx = 0; bx < NbX; ++bx) {
-          /* Linearly interpolate E at GLL node position x_{cx,bx}.
-             xi_x[bx] in [-1,1]: t = xi_x[bx]/2 in [-0.5,0.5].
-             For t>=0: E_bx = E_c*(1-t) + E_rp*t
-             For t< 0: E_bx = E_lm*(-t) + E_c*(1+t) */
-          PetscReal t      = d_xi_x(bx) * 0.5;
-          PetscReal E_bx   = (t >= 0.0) ? (E_c * (1.0 - t) + E_rp * t) : (E_lm * (-t) + E_c * (1.0 + t));
-          PetscReal v_foot = v_node - E_bx * dt;
+          for (PetscInt bx = 0; bx < NbX; ++bx) {
+            /* Linearly interpolate E at GLL node position x_{cx,bx}.
+               xi_x[bx] in [-1,1]: t = xi_x[bx]/2 in [-0.5,0.5].
+               For t>=0: E_bx = E_c*(1-t) + E_rp*t
+               For t< 0: E_bx = E_lm*(-t) + E_c*(1+t) */
+            PetscReal t      = d_xi_x(bx) * 0.5;
+            PetscReal E_bx   = (t >= 0.0) ? (E_c * (1.0 - t) + E_rp * t) : (E_lm * (-t) + E_c * (1.0 + t));
+            PetscReal v_foot = v_node - E_bx * dt;
 
-          PetscReal v_norm  = (v_foot + v_max) / h_v;
-          PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
-          if (cv_foot < 0) cv_foot = 0;
-          if (cv_foot >= Nv) cv_foot = Nv - 1;
+            PetscReal v_norm  = (v_foot + v_max) / h_v;
+            PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
+            if (cv_foot < 0) cv_foot = 0;
+            if (cv_foot >= Nv) cv_foot = Nv - 1;
 
-          PetscReal xi_foot = (v_foot - (-v_max + cv_foot * h_v)) / (h_v * 0.5) - 1.0;
-          if (xi_foot < -1.0) xi_foot = -1.0;
-          if (xi_foot > 1.0) xi_foot = 1.0;
+            PetscReal xi_foot = (v_foot - (-v_max + cv_foot * h_v)) / (h_v * 0.5) - 1.0;
+            if (xi_foot < -1.0) xi_foot = -1.0;
+            if (xi_foot > 1.0) xi_foot = 1.0;
 
-          PetscInt  ix    = cx_local * NbX + bx;
-          PetscReal f_val = 0.0;
-          for (PetscInt bv2 = 0; bv2 < NbV; ++bv2) {
-            PetscInt iv_src = cv_foot * NbV + bv2;
-            f_val += PetscRealPart(d_f(iv_src * NxDOF_loc + ix)) * EvalLagrangeBasis(NbV, d_xi_v.data(), bv2, xi_foot);
+            PetscInt  ix    = cx_local * NbX + bx;
+            PetscReal f_val = 0.0;
+            for (PetscInt bv2 = 0; bv2 < NbV; ++bv2) {
+              PetscInt iv_src = cv_foot * NbV + bv2;
+              f_val += PetscRealPart(d_f(iv_src * NxDOF_loc + ix)) * EvalLagrangeBasis(NbV, d_xi_v.data(), bv2, xi_foot);
+            }
+            d_fout(iv * NxDOF_loc + ix) = (PetscScalar)f_val;
           }
-          d_fout(iv * NxDOF_loc + ix) = (PetscScalar)f_val;
+        });
+    } else
+#endif
+    {
+      for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
+        PetscInt  cv     = iv / ctx->NbV;
+        PetscInt  bv     = iv % ctx->NbV;
+        PetscReal v_node = -ctx->v_max + cv * ctx->h_v + (ctx->xi_v_nodes[bv] + 1.0) * (ctx->h_v * 0.5);
+
+        for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
+          /* Ghost-extended E: Eloc_ptr[sw + cx_local] is the owned cell center. */
+          PetscReal E_c  = PetscRealPart(Eloc_ptr[sw + cx_local]);
+          PetscReal E_lm = PetscRealPart(Eloc_ptr[sw + cx_local - 1]);
+          PetscReal E_rp = PetscRealPart(Eloc_ptr[sw + cx_local + 1]);
+
+          for (PetscInt bx = 0; bx < ctx->NbX; ++bx) {
+            /* Linearly interpolate E at GLL node position x_{cx,bx}.
+               t = xi_x[bx]/2 in [-0.5,0.5].
+               For t>=0: E_bx = E_c*(1-t) + E_rp*t
+               For t< 0: E_bx = E_lm*(-t) + E_c*(1+t) */
+            PetscReal t      = ctx->xi_x_nodes[bx] * 0.5;
+            PetscReal E_bx   = (t >= 0.0) ? (E_c * (1.0 - t) + E_rp * t) : (E_lm * (-t) + E_c * (1.0 + t));
+            PetscReal v_foot = v_node - E_bx * dt;
+
+            PetscReal v_norm  = (v_foot + ctx->v_max) / ctx->h_v;
+            PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
+            if (cv_foot < 0) cv_foot = 0;
+            if (cv_foot >= ctx->Nv) cv_foot = ctx->Nv - 1;
+
+            PetscReal xi_foot = (v_foot - (-ctx->v_max + cv_foot * ctx->h_v)) / (ctx->h_v * 0.5) - 1.0;
+            if (xi_foot < -1.0) xi_foot = -1.0;
+            if (xi_foot > 1.0) xi_foot = 1.0;
+
+            PetscInt  ix    = cx_local * ctx->NbX + bx;
+            PetscReal f_val = 0.0;
+            for (PetscInt bv2 = 0; bv2 < ctx->NbV; ++bv2) {
+              PetscInt iv_src = cv_foot * ctx->NbV + bv2;
+              f_val += PetscRealPart(f_ptr[iv_src * ctx->NxDOF_local + ix]) * EvalLagrangeBasis(ctx->NbV, ctx->xi_v_nodes, bv2, xi_foot);
+            }
+            fout_ptr[iv * ctx->NxDOF_local + ix] = (PetscScalar)f_val;
+          }
         }
-      });
+      }
+    }
     PetscCall(VecRestoreArrayAndMemType(f, &f_ptr));
     PetscCall(VecRestoreArrayAndMemType(E_local, &Eloc_ptr));
     PetscCall(VecRestoreArrayAndMemType(f_out, &fout_ptr));
   }
-#else
-  {
-    const PetscScalar *f_arr, *Eloc_arr;
-    PetscScalar       *f_out_arr;
-    const PetscInt     sw = info.sw;
-    PetscCall(VecGetArrayRead(f, &f_arr));
-    PetscCall(VecGetArrayRead(E_local, &Eloc_arr));
-    PetscCall(VecGetArray(f_out, &f_out_arr));
-
-    for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
-      PetscInt  cv     = iv / ctx->NbV;
-      PetscInt  bv     = iv % ctx->NbV;
-      PetscReal v_node = -ctx->v_max + cv * ctx->h_v + (ctx->xi_v_nodes[bv] + 1.0) * (ctx->h_v * 0.5);
-
-      for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
-        /* Ghost-extended E: Eloc_arr[sw + cx_local] is the owned cell center. */
-        PetscReal E_c  = PetscRealPart(Eloc_arr[sw + cx_local]);
-        PetscReal E_lm = PetscRealPart(Eloc_arr[sw + cx_local - 1]);
-        PetscReal E_rp = PetscRealPart(Eloc_arr[sw + cx_local + 1]);
-
-        for (PetscInt bx = 0; bx < ctx->NbX; ++bx) {
-          /* Linearly interpolate E at GLL node position x_{cx,bx}.
-             t = xi_x[bx]/2 in [-0.5,0.5].
-             For t>=0: E_bx = E_c*(1-t) + E_rp*t
-             For t< 0: E_bx = E_lm*(-t) + E_c*(1+t) */
-          PetscReal t      = ctx->xi_x_nodes[bx] * 0.5;
-          PetscReal E_bx   = (t >= 0.0) ? (E_c * (1.0 - t) + E_rp * t) : (E_lm * (-t) + E_c * (1.0 + t));
-          PetscReal v_foot = v_node - E_bx * dt;
-
-          PetscReal v_norm  = (v_foot + ctx->v_max) / ctx->h_v;
-          PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
-          if (cv_foot < 0) cv_foot = 0;
-          if (cv_foot >= ctx->Nv) cv_foot = ctx->Nv - 1;
-
-          PetscReal xi_foot = (v_foot - (-ctx->v_max + cv_foot * ctx->h_v)) / (ctx->h_v * 0.5) - 1.0;
-          if (xi_foot < -1.0) xi_foot = -1.0;
-          if (xi_foot > 1.0) xi_foot = 1.0;
-
-          PetscInt  ix    = cx_local * ctx->NbX + bx;
-          PetscReal f_val = 0.0;
-          for (PetscInt bv2 = 0; bv2 < ctx->NbV; ++bv2) {
-            PetscInt iv_src = cv_foot * ctx->NbV + bv2;
-            f_val += PetscRealPart(f_arr[iv_src * ctx->NxDOF_local + ix]) * EvalLagrangeBasis(ctx->NbV, ctx->xi_v_nodes, bv2, xi_foot);
-          }
-          f_out_arr[iv * ctx->NxDOF_local + ix] = (PetscScalar)f_val;
-        }
-      }
-    }
-
-    PetscCall(VecRestoreArrayRead(f, &f_arr));
-    PetscCall(VecRestoreArrayRead(E_local, &Eloc_arr));
-    PetscCall(VecRestoreArray(f_out, &f_out_arr));
-  }
-#endif
   PetscCall(DMRestoreLocalVector(ctx->daPot, &E_local));
 
   /* Copy result back if in-place */
@@ -1307,13 +1265,14 @@ struct reduction_identity<MomTriple> {
 
 static PetscErrorCode ComputeMoments(AppCtx *ctx, PetscReal *m0_out, PetscReal *m1_out, PetscReal *m2_out)
 {
-  PetscReal m0_local = 0.0, m1_local = 0.0, m2_local = 0.0;
+  PetscReal    m0_local = 0.0, m1_local = 0.0, m2_local = 0.0;
+  PetscScalar *f_ptr;
+  PetscMemType mtype_f;
 
   PetscFunctionBeginUser;
+  PetscCall(VecGetArrayAndMemType(ctx->f, &f_ptr, &mtype_f));
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-  {
-    PetscScalar    *f_ptr;
-    PetscMemType    mtype_f;
+  if (mtype_f == PETSC_MEMTYPE_DEVICE) {
     const PetscInt  NvDOF     = ctx->NvDOF;
     const PetscInt  NbV       = ctx->NbV;
     const PetscInt  NbX       = ctx->NbX;
@@ -1321,13 +1280,12 @@ static PetscErrorCode ComputeMoments(AppCtx *ctx, PetscReal *m0_out, PetscReal *
     const PetscInt  NxDOF_loc = ctx->NxDOF_local;
     const PetscReal h_v       = ctx->h_v;
     const PetscReal v_max     = ctx->v_max;
-    PetscCall(VecGetArrayAndMemType(ctx->f, &f_ptr, &mtype_f));
-    ScalarView1D d_f(f_ptr, (size_t)NvDOF * NxDOF_loc);
-    RealView1D   d_vbi = ctx->d_v_basis_int;
-    RealView1D   d_xbi = ctx->d_x_basis_int;
-    RealView1D   d_tab = ctx->d_tabV;
-    RealView1D   d_vqp = ctx->d_vq_pts;
-    RealView1D   d_vqw = ctx->d_vq_wts;
+    ScalarView1D    d_f(f_ptr, (size_t)NvDOF * NxDOF_loc);
+    RealView1D      d_vbi = ctx->d_v_basis_int;
+    RealView1D      d_xbi = ctx->d_x_basis_int;
+    RealView1D      d_tab = ctx->d_tabV;
+    RealView1D      d_vqp = ctx->d_vq_pts;
+    RealView1D      d_vqw = ctx->d_vq_wts;
     /* Per-iv moment weights: w0[iv], w1[iv], w2[iv] */
     Kokkos::View<PetscReal *, DevSpace> d_w0("d_w0", NvDOF);
     Kokkos::View<PetscReal *, DevSpace> d_w1("d_w1", NvDOF);
@@ -1368,12 +1326,9 @@ static PetscErrorCode ComputeMoments(AppCtx *ctx, PetscReal *m0_out, PetscReal *
     m0_local = result.r0;
     m1_local = result.r1;
     m2_local = result.r2;
-    PetscCall(VecRestoreArrayAndMemType(ctx->f, &f_ptr));
-  }
-#else
+  } else
+#endif
   {
-    const PetscScalar *f_arr;
-    PetscCall(VecGetArrayRead(ctx->f, &f_arr));
     for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
       PetscReal w0          = ctx->v_basis_int[iv];
       PetscInt  cv          = iv / ctx->NbV;
@@ -1390,7 +1345,7 @@ static PetscErrorCode ComputeMoments(AppCtx *ctx, PetscReal *m0_out, PetscReal *
       for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
         for (PetscInt bx = 0; bx < ctx->NbX; ++bx) {
           PetscInt  ix   = cx_local * ctx->NbX + bx;
-          PetscReal fval = PetscRealPart(f_arr[iv * ctx->NxDOF_local + ix]);
+          PetscReal fval = PetscRealPart(f_ptr[iv * ctx->NxDOF_local + ix]);
           /* x_basis_int[bx] = gll_wts_x[bx] * h_x/2 */
           PetscReal dx = ctx->x_basis_int[bx];
           m0_local += fval * w0 * dx;
@@ -1399,9 +1354,8 @@ static PetscErrorCode ComputeMoments(AppCtx *ctx, PetscReal *m0_out, PetscReal *
         }
       }
     }
-    PetscCall(VecRestoreArrayRead(ctx->f, &f_arr));
   }
-#endif
+  PetscCall(VecRestoreArrayAndMemType(ctx->f, &f_ptr));
 
   PetscReal loc[3] = {m0_local, m1_local, m2_local}, glob[3];
   PetscCallMPI(MPIU_Allreduce(loc, glob, 3, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)ctx->f)));
