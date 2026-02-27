@@ -299,8 +299,6 @@ static PetscErrorCode TSStep_RKS(TS ts)
   PetscCall(TSGetTimeStep(ts, &dt));
 
   s = rks->stages;
-  PetscCheck(s >= 2, PETSC_COMM_SELF, PETSC_ERR_FP, "RKS requires s >= 2");
-  PetscCheck(rks->mu && rks->nu && rks->tilde_mu && rks->b, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Coefficients not initialized");
 
   PetscCall(VecCopy(U, rks->Ucurr)); /* Ucurr = U^{(j-1)} */
   PetscCall(VecCopy(U, rks->Uprev)); /* Uprev = U^{(j-2)} */
@@ -367,6 +365,8 @@ static PetscErrorCode TSSetUp_RKS(TS ts)
   PetscCall(VecDuplicate(U, &rks->F0));
   PetscCall(VecDuplicate(U, &rks->Fcurr));
 
+  PetscCheck(rks->stages >= 2, PETSC_COMM_SELF, PETSC_ERR_FP, "RKS requires s >= 2");
+
   PetscCall(PetscCalloc5(rks->stages + 1, &rks->b, rks->stages + 1, &rks->mu, rks->stages + 1, &rks->nu, rks->stages + 1, &rks->tilde_mu, rks->stages + 1, &rks->tilde_gamma));
   switch (rks->type) {
   case RKS_RKC1:
@@ -384,6 +384,7 @@ static PetscErrorCode TSSetUp_RKS(TS ts)
   default:
     SETERRABORT(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Unknown polynomial type");
   }
+  PetscCheck(rks->mu && rks->nu && rks->tilde_mu && rks->b, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Coefficients not initialized");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
