@@ -54,6 +54,9 @@ typedef struct {
   Vec rho;
   Vec phi;
   Vec E_field;
+  Vec f_iv_global; /* per-iv slice global Vec for AdvectX ghost exchange */
+  Vec f_iv_local;  /* per-iv slice local Vec with ghosts for AdvectX */
+  Vec rhs_poisson; /* reusable RHS Vec for Poisson solve */
   KSP kspPoisson;
   Mat Jac;
 
@@ -70,10 +73,9 @@ typedef struct {
   PetscInt  *n_shift; /* [NvDOF] integer cell shift per v-DOF */
 
   /* Quadrature for v-advection */
-  PetscReal *vq_pts;    /* [NqV] Gauss quadrature points in [-1,1] */
-  PetscReal *vq_wts;    /* [NqV] Gauss quadrature weights */
-  PetscReal *tabV;      /* [NqV * NbV] v-basis tabulation at vq_pts */
-  PetscReal *MassV_inv; /* [NvDOF] diagonal mass inverse */
+  PetscReal *vq_pts; /* [NqV] Gauss quadrature points in [-1,1] */
+  PetscReal *vq_wts; /* [NqV] Gauss quadrature weights */
+  PetscReal *tabV;   /* [NqV * NbV] v-basis tabulation at vq_pts */
 
   /* Sizes */
   PetscInt NxLocal;     /* local number of x-cells */
@@ -116,7 +118,6 @@ typedef struct {
   RealView1D d_tabV;         /* [NqV * NbV] */
   RealView1D d_vq_pts;       /* [NqV] */
   RealView1D d_vq_wts;       /* [NqV] */
-  RealView1D d_MassV_inv;    /* [NvDOF] */
   RealView1D d_A_sldg;       /* [NvDOF * NbX * NbX] */
   RealView1D d_B_sldg;       /* [NvDOF * NbX * NbX] */
   IntView1D  d_n_shift;      /* [NvDOF] */
@@ -249,16 +250,19 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *ctx)
 {
   PetscFunctionBeginUser;
   /* Null-initialize all pointers */
-  ctx->daX        = NULL;
-  ctx->daV        = NULL;
-  ctx->daPot      = NULL;
-  ctx->daF        = NULL;
-  ctx->f          = NULL;
-  ctx->rho        = NULL;
-  ctx->phi        = NULL;
-  ctx->E_field    = NULL;
-  ctx->kspPoisson = NULL;
-  ctx->Jac        = NULL;
+  ctx->daX         = NULL;
+  ctx->daV         = NULL;
+  ctx->daPot       = NULL;
+  ctx->daF         = NULL;
+  ctx->f           = NULL;
+  ctx->rho         = NULL;
+  ctx->phi         = NULL;
+  ctx->E_field     = NULL;
+  ctx->f_iv_global = NULL;
+  ctx->f_iv_local  = NULL;
+  ctx->rhs_poisson = NULL;
+  ctx->kspPoisson  = NULL;
+  ctx->Jac         = NULL;
 
   ctx->xi_x_nodes   = NULL;
   ctx->xi_v_nodes   = NULL;
@@ -271,7 +275,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *ctx)
   ctx->vq_pts       = NULL;
   ctx->vq_wts       = NULL;
   ctx->tabV         = NULL;
-  ctx->MassV_inv    = NULL;
 
   /* Defaults */
   ctx->Nx           = 64;
@@ -325,8 +328,9 @@ static PetscErrorCode CreateXMesh(MPI_Comm comm, AppCtx *ctx)
   PetscFunctionBeginUser;
   /* 1D periodic DMDA for x-space.
      dof = NbX: one DG coefficient per basis function per cell.
-     stencil width = ceil(v_max * dt / h_x) + 1 for SLDG ghost cells. */
-  PetscInt sw = (PetscInt)(ctx->v_max * ctx->dt / ctx->h_x) + 2;
+     stencil width = ceil(v_max * (dt/2) / h_x) + 1 for SLDG ghost cells.
+     The maximum shift per half-step is v_max * (dt/2) / h_x. */
+  PetscInt sw = (PetscInt)(ctx->v_max * ctx->dt * 0.5 / ctx->h_x) + 2;
   PetscCall(DMDACreate1d(comm, DM_BOUNDARY_PERIODIC, ctx->Nx, ctx->NbX, sw, NULL, &ctx->daX));
   PetscCall(DMSetFromOptions(ctx->daX));
   PetscCall(DMSetUp(ctx->daX));
@@ -341,6 +345,9 @@ static PetscErrorCode CreateXMesh(MPI_Comm comm, AppCtx *ctx)
   PetscCall(DMSetVecType(ctx->daX, VECKOKKOS));
   PetscCall(DMSetVecType(ctx->daF, VECKOKKOS));
 #endif
+  /* Pre-allocate per-iv slice Vecs for AdvectX ghost exchange (reused every step) */
+  PetscCall(DMCreateGlobalVector(ctx->daF, &ctx->f_iv_global));
+  PetscCall(DMGetLocalVector(ctx->daF, &ctx->f_iv_local));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -382,6 +389,9 @@ static PetscErrorCode SetupPoisson(MPI_Comm comm, AppCtx *ctx)
   PetscCall(PetscObjectSetName((PetscObject)ctx->rho, "rho"));
   PetscCall(PetscObjectSetName((PetscObject)ctx->phi, "phi"));
   PetscCall(PetscObjectSetName((PetscObject)ctx->E_field, "E_field"));
+  /* Pre-allocate reusable RHS Vec for Poisson solve */
+  PetscCall(DMCreateGlobalVector(ctx->daPot, &ctx->rhs_poisson));
+  PetscCall(PetscObjectSetName((PetscObject)ctx->rhs_poisson, "rhs_poisson"));
 
   /* Build the periodic 1D Laplacian matrix: -phi'' = rho
      Using second-order finite differences on cell-centered values.
@@ -450,6 +460,26 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
 #if defined(PETSC_HAVE_KOKKOS)
   PetscCall(PetscKokkosInitializeCheck());
 #endif
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  /* Allocate all persistent device Views up front so computation steps can write
+     directly into them, avoiding a redundant device->host->device round-trip. */
+  ctx->d_xi_v_nodes   = RealView1D("d_xi_v_nodes", ctx->NbV);
+  ctx->d_xi_x_nodes   = RealView1D("d_xi_x_nodes", ctx->NbX);
+  ctx->d_v_dof_coords = RealView1D("d_v_dof_coords", ctx->NvDOF);
+  ctx->d_v_basis_int  = RealView1D("d_v_basis_int", ctx->NvDOF);
+  ctx->d_x_basis_int  = RealView1D("d_x_basis_int", ctx->NbX);
+  ctx->d_tabV         = RealView1D("d_tabV", ctx->NqV > 0 ? ctx->NqV * ctx->NbV : 1);
+  ctx->d_vq_pts       = RealView1D("d_vq_pts", ctx->NqV > 0 ? ctx->NqV : 1);
+  ctx->d_vq_wts       = RealView1D("d_vq_wts", ctx->NqV > 0 ? ctx->NqV : 1);
+  ctx->d_A_sldg       = RealView1D("d_A_sldg", ctx->NvDOF * ctx->NbX * ctx->NbX);
+  ctx->d_B_sldg       = RealView1D("d_B_sldg", ctx->NvDOF * ctx->NbX * ctx->NbX);
+  ctx->d_n_shift      = IntView1D("d_n_shift", ctx->NvDOF);
+  {
+    PetscInt sw;
+    PetscCall(DMDAGetInfo(ctx->daF, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &sw, NULL, NULL, NULL, NULL));
+    ctx->d_fiv_ghost = RealView1D("d_fiv_ghost", (ctx->NxLocal + 2 * sw) * ctx->NbX);
+  }
+#endif
   /* Step 1: GLL nodes for x and v DOFs */
   PetscCall(PetscMalloc1(ctx->NbX, &ctx->xi_x_nodes));
   PetscCall(PetscMalloc1(ctx->NbX, &gll_wts_x));
@@ -463,11 +493,10 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
   PetscCall(PetscMalloc1(ctx->NvDOF, &ctx->v_dof_coords));
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
   {
-    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_xi_v(ctx->xi_v_nodes, ctx->NbV);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_vdof(ctx->v_dof_coords, ctx->NvDOF);
-    Kokkos::View<PetscReal *>                                                                   d_xi_v("d_xi_v", ctx->NbV);
-    Kokkos::View<PetscReal *>                                                                   d_vdof("d_vdof", ctx->NvDOF);
-    Kokkos::deep_copy(d_xi_v, h_xi_v);
+    /* Write directly into persistent ctx->d_v_dof_coords; deep_copy back to host. */
+    Kokkos::deep_copy(ctx->d_xi_v_nodes, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->xi_v_nodes, ctx->NbV));
+    RealView1D      d_xi_v = ctx->d_xi_v_nodes;
+    RealView1D      d_vdof = ctx->d_v_dof_coords;
     const PetscReal v_max = ctx->v_max, h_v = ctx->h_v;
     const PetscInt  NbV = ctx->NbV, NvDOF = ctx->NvDOF;
     Kokkos::parallel_for(
@@ -475,7 +504,7 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
         PetscInt cv = idx / NbV, bv = idx % NbV;
         d_vdof(idx) = -v_max + cv * h_v + (d_xi_v(bv) + 1.0) * (h_v * 0.5);
       });
-    Kokkos::deep_copy(h_vdof, d_vdof);
+    Kokkos::deep_copy(Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->v_dof_coords, ctx->NvDOF), d_vdof);
   }
 #else
   for (PetscInt cv = 0; cv < ctx->Nv; ++cv)
@@ -492,21 +521,24 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
   PetscCall(PetscMalloc1(ctx->NqV * ctx->NbV, &ctx->tabV));
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
   {
-    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_xi_v(ctx->xi_v_nodes, ctx->NbV);
-    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_vq(ctx->vq_pts, ctx->NqV);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_tab(ctx->tabV, ctx->NqV * ctx->NbV);
-    Kokkos::View<PetscReal *>                                                                   d_xi_v("d_xi_v", ctx->NbV);
-    Kokkos::View<PetscReal *>                                                                   d_vq("d_vq", ctx->NqV);
-    Kokkos::View<PetscReal *>                                                                   d_tab("d_tab", ctx->NqV * ctx->NbV);
-    Kokkos::deep_copy(d_xi_v, h_xi_v);
-    Kokkos::deep_copy(d_vq, h_vq);
+    /* Resize persistent Views now that NqV is known (was allocated with NqV>0 guard above). */
+    ctx->d_tabV   = RealView1D("d_tabV", ctx->NqV * ctx->NbV);
+    ctx->d_vq_pts = RealView1D("d_vq_pts", ctx->NqV);
+    ctx->d_vq_wts = RealView1D("d_vq_wts", ctx->NqV);
+    /* Upload vq_pts/vq_wts (host-computed) and xi_v_nodes to device. */
+    Kokkos::deep_copy(ctx->d_vq_pts, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->vq_pts, ctx->NqV));
+    Kokkos::deep_copy(ctx->d_vq_wts, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->vq_wts, ctx->NqV));
+    /* Write directly into persistent ctx->d_tabV; deep_copy back to host. */
+    RealView1D     d_xi_v = ctx->d_xi_v_nodes; /* already uploaded in Step 2 */
+    RealView1D     d_vq   = ctx->d_vq_pts;
+    RealView1D     d_tab  = ctx->d_tabV;
     const PetscInt NbV = ctx->NbV, NqV = ctx->NqV;
     Kokkos::parallel_for(
       "tabV", Kokkos::RangePolicy<>(0, NqV * NbV), KOKKOS_LAMBDA(PetscInt idx) {
         PetscInt q = idx / NbV, bv = idx % NbV;
         d_tab(idx) = EvalLagrangeBasis(NbV, d_xi_v.data(), bv, d_vq(q));
       });
-    Kokkos::deep_copy(h_tab, d_tab);
+    Kokkos::deep_copy(Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->tabV, ctx->NqV * ctx->NbV), d_tab);
   }
 #else
   for (PetscInt q = 0; q < ctx->NqV; ++q)
@@ -517,14 +549,10 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
   PetscCall(PetscCalloc1(ctx->NvDOF, &ctx->v_basis_int));
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
   {
-    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_tab(ctx->tabV, ctx->NqV * ctx->NbV);
-    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_wts(ctx->vq_wts, ctx->NqV);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_vbi(ctx->v_basis_int, ctx->NvDOF);
-    Kokkos::View<PetscReal *>                                                                   d_tab("d_tab", ctx->NqV * ctx->NbV);
-    Kokkos::View<PetscReal *>                                                                   d_wts("d_wts", ctx->NqV);
-    Kokkos::View<PetscReal *>                                                                   d_vbi("d_vbi", ctx->NvDOF);
-    Kokkos::deep_copy(d_tab, h_tab);
-    Kokkos::deep_copy(d_wts, h_wts);
+    /* Use already-on-device ctx->d_tabV and ctx->d_vq_wts; write into ctx->d_v_basis_int. */
+    RealView1D      d_tab = ctx->d_tabV;
+    RealView1D      d_wts = ctx->d_vq_wts;
+    RealView1D      d_vbi = ctx->d_v_basis_int;
     const PetscInt  NbV = ctx->NbV, NqV = ctx->NqV, NvDOF = ctx->NvDOF;
     const PetscReal h_v = ctx->h_v;
     Kokkos::parallel_for(
@@ -534,7 +562,7 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
         for (PetscInt q = 0; q < NqV; ++q) sum += d_tab(q * NbV + bv) * d_wts(q) * (h_v * 0.5);
         d_vbi(idx) = sum;
       });
-    Kokkos::deep_copy(h_vbi, d_vbi);
+    Kokkos::deep_copy(Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->v_basis_int, ctx->NvDOF), d_vbi);
   }
 #else
   for (PetscInt cv = 0; cv < ctx->Nv; ++cv) {
@@ -551,28 +579,8 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
   PetscCall(PetscMalloc1(ctx->NbX, &ctx->x_basis_int));
   for (PetscInt bx = 0; bx < ctx->NbX; ++bx) ctx->x_basis_int[bx] = gll_wts_x[bx] * (ctx->h_x * 0.5);
 
-  /* Step 7: v-mass matrix inverse (diagonal, GLL mass matrix is diagonal) */
-  PetscCall(PetscMalloc1(ctx->NvDOF, &ctx->MassV_inv));
-#if defined(PETSC_HAVE_KOKKOS_KERNELS)
-  {
-    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_wts_v(gll_wts_v, ctx->NbV);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_minv(ctx->MassV_inv, ctx->NvDOF);
-    Kokkos::View<PetscReal *>                                                                   d_wts_v("d_wts_v", ctx->NbV);
-    Kokkos::View<PetscReal *>                                                                   d_minv("d_minv", ctx->NvDOF);
-    Kokkos::deep_copy(d_wts_v, h_wts_v);
-    const PetscInt  NbV = ctx->NbV, NvDOF = ctx->NvDOF;
-    const PetscReal h_v = ctx->h_v;
-    Kokkos::parallel_for(
-      "MassV_inv", Kokkos::RangePolicy<>(0, NvDOF), KOKKOS_LAMBDA(PetscInt idx) {
-        PetscInt bv = idx % NbV;
-        d_minv(idx) = 1.0 / (d_wts_v(bv) * h_v * 0.5);
-      });
-    Kokkos::deep_copy(h_minv, d_minv);
-  }
-#else
-  for (PetscInt cv = 0; cv < ctx->Nv; ++cv)
-    for (PetscInt bv = 0; bv < ctx->NbV; ++bv) ctx->MassV_inv[cv * ctx->NbV + bv] = 1.0 / (gll_wts_v[bv] * ctx->h_v * 0.5);
-#endif
+  /* Step 7 (removed): v-mass matrix inverse was computed here but is never used.
+     The nodal AdvectV update does not require MassV_inv. */
 
   /* Step 8: Precompute SLDG overlap matrices A_sldg, B_sldg, and integer shifts n_shift.
      For each velocity DOF iv, compute the fractional shift s = v_dof_coords[iv]*dt/h_x,
@@ -594,22 +602,16 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
     const PetscInt  NqSLDG = 2 * NbX + 2;
     const PetscReal h_x    = ctx->h_x;
     const PetscReal dt     = ctx->dt;
-    /* x_basis_int[i] = gll_wts_x[i] * h_x/2; we need gll_wts_x[i] = x_basis_int[i]/(h_x/2) */
-    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_vdc(ctx->v_dof_coords, NvDOF);
-    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_xi_x(ctx->xi_x_nodes, NbX);
-    const Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_xbi(ctx->x_basis_int, NbX);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_A(ctx->A_sldg, NvDOF * NbX * NbX);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>       h_B(ctx->B_sldg, NvDOF * NbX * NbX);
-    Kokkos::View<PetscInt *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>        h_ns(ctx->n_shift, NvDOF);
-    Kokkos::View<PetscReal *>                                                                   d_vdc("d_vdc", NvDOF);
-    Kokkos::View<PetscReal *>                                                                   d_xi_x("d_xi_x", NbX);
-    Kokkos::View<PetscReal *>                                                                   d_xbi("d_xbi", NbX);
-    Kokkos::View<PetscReal *>                                                                   d_A("d_A", NvDOF * NbX * NbX);
-    Kokkos::View<PetscReal *>                                                                   d_B("d_B", NvDOF * NbX * NbX);
-    Kokkos::View<PetscInt *>                                                                    d_ns("d_ns", NvDOF);
-    Kokkos::deep_copy(d_vdc, h_vdc);
-    Kokkos::deep_copy(d_xi_x, h_xi_x);
-    Kokkos::deep_copy(d_xbi, h_xbi);
+    /* Upload xi_x_nodes and x_basis_int (host-computed) to device. */
+    Kokkos::deep_copy(ctx->d_xi_x_nodes, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->xi_x_nodes, NbX));
+    Kokkos::deep_copy(ctx->d_x_basis_int, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->x_basis_int, NbX));
+    /* Use already-on-device ctx->d_v_dof_coords; write directly into persistent ctx->d_A/B/n_shift. */
+    RealView1D d_vdc  = ctx->d_v_dof_coords;
+    RealView1D d_xi_x = ctx->d_xi_x_nodes;
+    RealView1D d_xbi  = ctx->d_x_basis_int;
+    RealView1D d_A    = ctx->d_A_sldg;
+    RealView1D d_B    = ctx->d_B_sldg;
+    IntView1D  d_ns   = ctx->d_n_shift;
     Kokkos::parallel_for(
       "sldg_precompute", Kokkos::RangePolicy<>(0, NvDOF), KOKKOS_LAMBDA(PetscInt iv) {
         PetscReal s   = d_vdc(iv) * (dt * 0.5) / h_x;
@@ -660,9 +662,9 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
           }
         }
       });
-    Kokkos::deep_copy(h_A, d_A);
-    Kokkos::deep_copy(h_B, d_B);
-    Kokkos::deep_copy(h_ns, d_ns);
+    Kokkos::deep_copy(Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->A_sldg, NvDOF * NbX * NbX), d_A);
+    Kokkos::deep_copy(Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->B_sldg, NvDOF * NbX * NbX), d_B);
+    Kokkos::deep_copy(Kokkos::View<PetscInt *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->n_shift, NvDOF), d_ns);
   }
 #else
   {
@@ -724,39 +726,8 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
 
   PetscCall(PetscFree(gll_wts_x));
   PetscCall(PetscFree(gll_wts_v));
-
-#if defined(PETSC_HAVE_KOKKOS_KERNELS)
-  /* Upload all geometry to device -- done once, persists for all time steps */
-  ctx->d_xi_v_nodes   = RealView1D("d_xi_v_nodes", ctx->NbV);
-  ctx->d_xi_x_nodes   = RealView1D("d_xi_x_nodes", ctx->NbX);
-  ctx->d_v_dof_coords = RealView1D("d_v_dof_coords", ctx->NvDOF);
-  ctx->d_v_basis_int  = RealView1D("d_v_basis_int", ctx->NvDOF);
-  ctx->d_x_basis_int  = RealView1D("d_x_basis_int", ctx->NbX);
-  ctx->d_tabV         = RealView1D("d_tabV", ctx->NqV * ctx->NbV);
-  ctx->d_vq_pts       = RealView1D("d_vq_pts", ctx->NqV);
-  ctx->d_vq_wts       = RealView1D("d_vq_wts", ctx->NqV);
-  ctx->d_MassV_inv    = RealView1D("d_MassV_inv", ctx->NvDOF);
-  ctx->d_A_sldg       = RealView1D("d_A_sldg", ctx->NvDOF * ctx->NbX * ctx->NbX);
-  ctx->d_B_sldg       = RealView1D("d_B_sldg", ctx->NvDOF * ctx->NbX * ctx->NbX);
-  ctx->d_n_shift      = IntView1D("d_n_shift", ctx->NvDOF);
-  {
-    PetscInt sw;
-    PetscCall(DMDAGetInfo(ctx->daF, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &sw, NULL, NULL, NULL, NULL));
-    ctx->d_fiv_ghost = RealView1D("d_fiv_ghost", (ctx->NxLocal + 2 * sw) * ctx->NbX);
-  }
-  Kokkos::deep_copy(ctx->d_xi_v_nodes, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->xi_v_nodes, ctx->NbV));
-  Kokkos::deep_copy(ctx->d_xi_x_nodes, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->xi_x_nodes, ctx->NbX));
-  Kokkos::deep_copy(ctx->d_v_dof_coords, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->v_dof_coords, ctx->NvDOF));
-  Kokkos::deep_copy(ctx->d_v_basis_int, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->v_basis_int, ctx->NvDOF));
-  Kokkos::deep_copy(ctx->d_x_basis_int, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->x_basis_int, ctx->NbX));
-  Kokkos::deep_copy(ctx->d_tabV, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->tabV, ctx->NqV * ctx->NbV));
-  Kokkos::deep_copy(ctx->d_vq_pts, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->vq_pts, ctx->NqV));
-  Kokkos::deep_copy(ctx->d_vq_wts, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->vq_wts, ctx->NqV));
-  Kokkos::deep_copy(ctx->d_MassV_inv, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->MassV_inv, ctx->NvDOF));
-  Kokkos::deep_copy(ctx->d_A_sldg, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->A_sldg, ctx->NvDOF * ctx->NbX * ctx->NbX));
-  Kokkos::deep_copy(ctx->d_B_sldg, Kokkos::View<PetscReal *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->B_sldg, ctx->NvDOF * ctx->NbX * ctx->NbX));
-  Kokkos::deep_copy(ctx->d_n_shift, Kokkos::View<PetscInt *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>(ctx->n_shift, ctx->NvDOF));
-#endif
+  /* All persistent device Views were allocated and populated in the steps above.
+     No redundant host->device upload needed here. */
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -902,21 +873,18 @@ static PetscErrorCode ComputeChargeDensity(AppCtx *ctx)
    ======================================================================== */
 static PetscErrorCode SolvePoisson(AppCtx *ctx)
 {
-  Vec rhs;
-
   PetscFunctionBeginUser;
   PetscCall(PetscLogEventBegin(ctx->PoissonEvent, 0, 0, 0, 0));
 
   /* Solve -phi'' = rho - sigma
-     RHS = rho - sigma (subtract background ion density). */
-  PetscCall(VecDuplicate(ctx->rho, &rhs));
-  PetscCall(VecCopy(ctx->rho, rhs));
-  PetscCall(VecShift(rhs, -(PetscScalar)ctx->sigma));
+     RHS = rho - sigma (subtract background ion density).
+     Use pre-allocated rhs_poisson to avoid VecDuplicate/VecDestroy each call. */
+  PetscCall(VecCopy(ctx->rho, ctx->rhs_poisson));
+  PetscCall(VecShift(ctx->rhs_poisson, -(PetscScalar)ctx->sigma));
 
   PetscCall(VecZeroEntries(ctx->phi));
-  PetscCall(KSPSolve(ctx->kspPoisson, rhs, ctx->phi));
+  PetscCall(KSPSolve(ctx->kspPoisson, ctx->rhs_poisson, ctx->phi));
 
-  PetscCall(VecDestroy(&rhs));
   PetscCall(PetscLogEventEnd(ctx->PoissonEvent, 0, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -988,7 +956,7 @@ static PetscErrorCode ComputeElectricField(AppCtx *ctx)
    DMDAVecGetArrayDOF.  daF has the same periodic topology and stencil width
    as daX, so ghost cells cover all source cells needed by the SLDG stencil.
    ======================================================================== */
-static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
+static PetscErrorCode AdvectX(Vec f, Vec f_out, AppCtx *ctx)
 {
   Vec       f_tmp = NULL;
   PetscBool inplace;
@@ -1003,11 +971,6 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
     f_out = f_tmp;
   }
 
-  /* Allocate a global Vec on daF for one iv-slice, and a local Vec with ghosts */
-  Vec f_iv_global, f_iv_local;
-  PetscCall(DMCreateGlobalVector(ctx->daF, &f_iv_global));
-  PetscCall(DMCreateLocalVector(ctx->daF, &f_iv_local));
-
   DMDALocalInfo info;
   PetscCall(DMDAGetLocalInfo(ctx->daF, &info));
 
@@ -1016,7 +979,6 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
      The outer iv loop stays on CPU because DMGlobalToLocal is an MPI collective.
      The inner cx_local loop is offloaded to Kokkos.
      dt is already baked into n_shift/A_sldg/B_sldg at PrecomputeGeometry time. */
-  (void)dt;
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
   {
     PetscScalar   *f_ptr, *fout_ptr;
@@ -1032,6 +994,10 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
     ScalarView1D d_f(f_ptr, (size_t)ctx->NvDOF * NxDOF_loc);
     ScalarView1D d_fout(fout_ptr, (size_t)ctx->NvDOF * NxDOF_loc);
 
+    /* TODO: This loop issues NvDOF sequential DMGlobalToLocal (MPI collective) calls.
+       For better scalability, pack all iv-slices into a single Vec with
+       dof = NvDOF * NbX and do one DMGlobalToLocal per AdvectX call,
+       then dispatch all iv kernels in a single 2D Kokkos launch. */
     for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
       PetscInt n = ctx->n_shift[iv]; /* host read -- small array, OK */
 
@@ -1039,26 +1005,26 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
       {
         PetscScalar *gv_ptr;
         PetscMemType mtype_gv;
-        PetscCall(VecGetArrayAndMemType(f_iv_global, &gv_ptr, &mtype_gv));
+        PetscCall(VecGetArrayAndMemType(ctx->f_iv_global, &gv_ptr, &mtype_gv));
         ScalarView1D d_gv(gv_ptr, NxDOF_loc);
         auto         d_f_iv = Kokkos::subview(d_f, Kokkos::make_pair((size_t)(iv * NxDOF_loc), (size_t)((iv + 1) * NxDOF_loc)));
         Kokkos::deep_copy(d_gv, d_f_iv);
-        PetscCall(VecRestoreArrayAndMemType(f_iv_global, &gv_ptr));
+        PetscCall(VecRestoreArrayAndMemType(ctx->f_iv_global, &gv_ptr));
       }
-      PetscCall(DMGlobalToLocal(ctx->daF, f_iv_global, INSERT_VALUES, f_iv_local));
+      PetscCall(DMGlobalToLocal(ctx->daF, ctx->f_iv_global, INSERT_VALUES, ctx->f_iv_local));
 
       /* Get device pointer to ghost-extended local Vec */
       {
         PetscScalar *local_ptr;
         PetscMemType mtype_local;
-        PetscCall(VecGetArrayAndMemType(f_iv_local, &local_ptr, &mtype_local));
+        PetscCall(VecGetArrayAndMemType(ctx->f_iv_local, &local_ptr, &mtype_local));
         /* local_ptr points to [ghost_left | owned | ghost_right], length = n_cells * NbX */
         ScalarView1D d_local(local_ptr, n_cells * NbX);
         /* Copy into persistent ghost buffer (PetscReal, not PetscScalar).
            Capture d_fiv_ghost by value (View is a reference-counted handle). */
         RealView1D d_fiv_ghost_copy = ctx->d_fiv_ghost;
         Kokkos::parallel_for("AdvectX_copy_ghost", Kokkos::RangePolicy<>(0, n_cells * NbX), KOKKOS_LAMBDA(PetscInt k) { d_fiv_ghost_copy(k) = PetscRealPart(d_local(k)); });
-        PetscCall(VecRestoreArrayAndMemType(f_iv_local, &local_ptr));
+        PetscCall(VecRestoreArrayAndMemType(ctx->f_iv_local, &local_ptr));
       }
 
       /* Subview into persistent d_A_sldg, d_B_sldg -- zero-copy */
@@ -1095,6 +1061,10 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
     PetscCall(VecGetArrayRead(f, &f_arr));
     PetscCall(VecGetArray(f_out, &f_out_arr));
 
+    /* TODO: This loop issues NvDOF sequential DMGlobalToLocal (MPI collective) calls.
+       For better scalability, pack all iv-slices into a single Vec with
+       dof = NvDOF * NbX and do one DMGlobalToLocal per AdvectX call,
+       then dispatch all iv kernels in a single 2D Kokkos launch. */
     for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
       PetscInt         n = ctx->n_shift[iv];
       const PetscReal *A = &ctx->A_sldg[iv * ctx->NbX * ctx->NbX];
@@ -1103,12 +1073,12 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
       /* Copy this iv-slice into the global Vec on daF, then ghost-exchange */
       {
         PetscScalar *gv_arr;
-        PetscCall(VecGetArray(f_iv_global, &gv_arr));
+        PetscCall(VecGetArray(ctx->f_iv_global, &gv_arr));
         for (PetscInt ix = 0; ix < ctx->NxDOF_local; ++ix) gv_arr[ix] = f_arr[iv * ctx->NxDOF_local + ix];
-        PetscCall(VecRestoreArray(f_iv_global, &gv_arr));
+        PetscCall(VecRestoreArray(ctx->f_iv_global, &gv_arr));
       }
-      PetscCall(DMGlobalToLocal(ctx->daF, f_iv_global, INSERT_VALUES, f_iv_local));
-      PetscCall(DMDAVecGetArrayDOF(ctx->daF, f_iv_local, &f_iv_arr));
+      PetscCall(DMGlobalToLocal(ctx->daF, ctx->f_iv_global, INSERT_VALUES, ctx->f_iv_local));
+      PetscCall(DMDAVecGetArrayDOF(ctx->daF, ctx->f_iv_local, &f_iv_arr));
 
       /* Apply SLDG update for each local x-cell. */
       for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
@@ -1125,16 +1095,13 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
         }
       }
 
-      PetscCall(DMDAVecRestoreArrayDOF(ctx->daF, f_iv_local, &f_iv_arr));
+      PetscCall(DMDAVecRestoreArrayDOF(ctx->daF, ctx->f_iv_local, &f_iv_arr));
     }
 
     PetscCall(VecRestoreArrayRead(f, &f_arr));
     PetscCall(VecRestoreArray(f_out, &f_out_arr));
   }
 #endif
-
-  PetscCall(VecDestroy(&f_iv_global));
-  PetscCall(VecDestroy(&f_iv_local));
 
   /* Copy result back if in-place */
   if (inplace) {
@@ -1317,6 +1284,27 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
 /* ========================================================================
    Phase 10 -- ComputeMoments
    ======================================================================== */
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+struct MomTriple {
+  PetscReal                   r0, r1, r2;
+  KOKKOS_INLINE_FUNCTION      MomTriple() : r0(0.0), r1(0.0), r2(0.0) { }
+  KOKKOS_INLINE_FUNCTION      MomTriple(const MomTriple &) = default;
+  KOKKOS_INLINE_FUNCTION void operator+=(const MomTriple &rhs)
+  {
+    r0 += rhs.r0;
+    r1 += rhs.r1;
+    r2 += rhs.r2;
+  }
+};
+namespace Kokkos
+{
+template <>
+struct reduction_identity<MomTriple> {
+  KOKKOS_INLINE_FUNCTION static MomTriple sum() { return MomTriple(); }
+};
+} // namespace Kokkos
+#endif
+
 static PetscErrorCode ComputeMoments(AppCtx *ctx, PetscReal *m0_out, PetscReal *m1_out, PetscReal *m2_out)
 {
   PetscReal m0_local = 0.0, m1_local = 0.0, m2_local = 0.0;
@@ -1362,40 +1350,24 @@ static PetscErrorCode ComputeMoments(AppCtx *ctx, PetscReal *m0_out, PetscReal *
         d_w1(iv) = w1;
         d_w2(iv) = w2;
       });
-    /* Step 2: three parallel_reduce passes over flat index (iv * NxDOF_loc + ix).
-       Kokkos does not support multi-value reductions in a single lambda without a
-       custom reducer; three separate passes reuse the same kernel body. */
-    PetscReal r0 = 0.0, r1 = 0.0, r2 = 0.0;
+    /* Step 2: single parallel_reduce pass over flat index using MomTriple reducer.
+       One pass over d_f instead of three, reducing memory traffic by 3x. */
+    MomTriple result;
     Kokkos::parallel_reduce(
-      "moments_m0", Kokkos::RangePolicy<>(0, NvDOF * NxDOF_loc),
-      KOKKOS_LAMBDA(PetscInt idx, PetscReal &lsum) {
-        PetscInt iv = idx / NxDOF_loc;
-        PetscInt ix = idx % NxDOF_loc;
-        PetscInt bx = ix % NbX;
-        lsum += PetscRealPart(d_f(idx)) * d_w0(iv) * d_xbi(bx);
+      "moments_all", Kokkos::RangePolicy<>(0, NvDOF * NxDOF_loc),
+      KOKKOS_LAMBDA(PetscInt idx, MomTriple &lsum) {
+        PetscInt  iv   = idx / NxDOF_loc;
+        PetscInt  ix   = idx % NxDOF_loc;
+        PetscInt  bx   = ix % NbX;
+        PetscReal fval = PetscRealPart(d_f(idx)) * d_xbi(bx);
+        lsum.r0 += fval * d_w0(iv);
+        lsum.r1 += fval * d_w1(iv);
+        lsum.r2 += fval * d_w2(iv);
       },
-      r0);
-    Kokkos::parallel_reduce(
-      "moments_m1", Kokkos::RangePolicy<>(0, NvDOF * NxDOF_loc),
-      KOKKOS_LAMBDA(PetscInt idx, PetscReal &lsum) {
-        PetscInt iv = idx / NxDOF_loc;
-        PetscInt ix = idx % NxDOF_loc;
-        PetscInt bx = ix % NbX;
-        lsum += PetscRealPart(d_f(idx)) * d_w1(iv) * d_xbi(bx);
-      },
-      r1);
-    Kokkos::parallel_reduce(
-      "moments_m2", Kokkos::RangePolicy<>(0, NvDOF * NxDOF_loc),
-      KOKKOS_LAMBDA(PetscInt idx, PetscReal &lsum) {
-        PetscInt iv = idx / NxDOF_loc;
-        PetscInt ix = idx % NxDOF_loc;
-        PetscInt bx = ix % NbX;
-        lsum += PetscRealPart(d_f(idx)) * d_w2(iv) * d_xbi(bx);
-      },
-      r2);
-    m0_local = r0;
-    m1_local = r1;
-    m2_local = r2;
+      result);
+    m0_local = result.r0;
+    m1_local = result.r1;
+    m2_local = result.r2;
     PetscCall(VecRestoreArrayAndMemType(ctx->f, &f_ptr));
   }
 #else
@@ -1445,12 +1417,12 @@ static PetscErrorCode ComputeMoments(AppCtx *ctx, PetscReal *m0_out, PetscReal *
 static PetscErrorCode BSLStep_Strang(AppCtx *ctx, PetscReal dt)
 {
   PetscFunctionBeginUser;
-  PetscCall(AdvectX(ctx->f, ctx->f, dt * 0.5, ctx));
+  PetscCall(AdvectX(ctx->f, ctx->f, ctx));
   PetscCall(ComputeChargeDensity(ctx));
   PetscCall(SolvePoisson(ctx));
   PetscCall(ComputeElectricField(ctx));
   PetscCall(AdvectV(ctx->f, ctx->f, dt, ctx->E_field, ctx));
-  PetscCall(AdvectX(ctx->f, ctx->f, dt * 0.5, ctx));
+  PetscCall(AdvectX(ctx->f, ctx->f, ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1464,6 +1436,10 @@ static PetscErrorCode DestroyContext(AppCtx *ctx)
   PetscCall(VecDestroy(&ctx->rho));
   PetscCall(VecDestroy(&ctx->phi));
   PetscCall(VecDestroy(&ctx->E_field));
+  /* Release pre-allocated AdvectX/Poisson Vecs before destroying daF/daPot */
+  PetscCall(VecDestroy(&ctx->f_iv_global));
+  PetscCall(DMRestoreLocalVector(ctx->daF, &ctx->f_iv_local));
+  PetscCall(VecDestroy(&ctx->rhs_poisson));
   PetscCall(KSPDestroy(&ctx->kspPoisson));
   PetscCall(MatDestroy(&ctx->Jac));
   PetscCall(DMDestroy(&ctx->daX));
@@ -1478,7 +1454,6 @@ static PetscErrorCode DestroyContext(AppCtx *ctx)
   PetscCall(PetscFree(ctx->vq_pts));
   PetscCall(PetscFree(ctx->vq_wts));
   PetscCall(PetscFree(ctx->tabV));
-  PetscCall(PetscFree(ctx->MassV_inv));
   PetscCall(PetscFree(ctx->A_sldg));
   PetscCall(PetscFree(ctx->B_sldg));
   PetscCall(PetscFree(ctx->n_shift));
@@ -1494,7 +1469,6 @@ static PetscErrorCode DestroyContext(AppCtx *ctx)
   ctx->d_tabV         = RealView1D();
   ctx->d_vq_pts       = RealView1D();
   ctx->d_vq_wts       = RealView1D();
-  ctx->d_MassV_inv    = RealView1D();
   ctx->d_A_sldg       = RealView1D();
   ctx->d_B_sldg       = RealView1D();
   ctx->d_n_shift      = IntView1D();
