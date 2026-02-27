@@ -290,6 +290,18 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *ctx)
   ctx->degree_v     = 1;
   ctx->check_landau = PETSC_FALSE;
 
+  /* Derived/deferred integer fields -- zero until set by later phases.
+     AppCtx is stack-allocated (not zero-initialized), so these must be
+     set explicitly here to avoid uninitialized-memory bugs on platforms
+     (e.g. Frontier/HIP) where the stack is not zeroed.  In particular,
+     NqV is read by the PrecomputeGeometry guard at the first d_tabV
+     allocation before NqV is assigned its real value (NbV+2). */
+  ctx->NqV         = 0;
+  ctx->NxLocal     = 0;
+  ctx->NxDOF_local = 0;
+  ctx->NvDOF       = 0;
+  ctx->xs          = 0;
+
   PetscOptionsBegin(comm, "", "SLDG Vlasov-Poisson options", "TS");
   PetscCall(PetscOptionsInt("-Nx", "Number of x cells", __FILE__, ctx->Nx, &ctx->Nx, NULL));
   PetscCall(PetscOptionsInt("-Nv", "Number of v cells", __FILE__, ctx->Nv, &ctx->Nv, NULL));
