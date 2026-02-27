@@ -352,11 +352,8 @@ static PetscErrorCode CreateXMesh(MPI_Comm comm, AppCtx *ctx)
   /* daF: same topology as daX, used for per-iv ghost exchange in AdvectX.
      dof=NbX and stencil width sw are identical to daX. */
   PetscCall(DMDACreate1d(comm, DM_BOUNDARY_PERIODIC, ctx->Nx, ctx->NbX, sw, NULL, &ctx->daF));
+  PetscCall(DMSetFromOptions(ctx->daF));
   PetscCall(DMSetUp(ctx->daF));
-#if defined(PETSC_HAVE_KOKKOS_KERNELS)
-  PetscCall(DMSetVecType(ctx->daX, VECKOKKOS));
-  PetscCall(DMSetVecType(ctx->daF, VECKOKKOS));
-#endif
   /* Pre-allocate per-iv slice Vecs for AdvectX ghost exchange (reused every step) */
   PetscCall(DMCreateGlobalVector(ctx->daF, &ctx->f_iv_global));
   PetscCall(DMGetLocalVector(ctx->daF, &ctx->f_iv_local));
@@ -388,11 +385,8 @@ static PetscErrorCode SetupPoisson(MPI_Comm comm, AppCtx *ctx)
   PetscFunctionBeginUser;
   /* 1D periodic DMDA for potential (dof=1, one value per cell) */
   PetscCall(DMDACreate1d(comm, DM_BOUNDARY_PERIODIC, ctx->Nx, 1, 1, NULL, &ctx->daPot));
+  PetscCall(DMSetFromOptions(ctx->daPot));
   PetscCall(DMSetUp(ctx->daPot));
-
-#if defined(PETSC_HAVE_KOKKOS_KERNELS)
-  PetscCall(DMSetVecType(ctx->daPot, VECKOKKOS));
-#endif
 
   /* Create global Vecs from daPot */
   PetscCall(DMCreateGlobalVector(ctx->daPot, &ctx->rho));
