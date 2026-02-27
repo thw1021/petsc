@@ -1147,13 +1147,15 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, PetscReal dt, AppCtx *ctx)
 }
 
 /* ========================================================================
-   Phase 9 -- AdvectV (semi-Lagrangian DG L2 projection in velocity)
+   Phase 9 -- AdvectV (semi-Lagrangian nodal interpolation in velocity)
 
-   L2 projection of f(v - E*dt, x) onto the DG basis using Gauss quadrature.
-   For each quadrature point in the output v-cell, trace the characteristic
-   back by E*dt, interpolate f at the foot point via Lagrange interpolation
-   in the source v-cell, then accumulate the RHS.  Finally apply the diagonal
-   GLL mass matrix inverse.
+   For each GLL node (cv, bv) in the output v-space, trace the characteristic
+   back by E*dt to find the foot point v_foot = v_node - E*dt, then
+   interpolate f at v_foot using Lagrange interpolation in the source v-cell.
+   This is consistent with the GLL (lumped) mass matrix used in MassV_inv:
+   the nodal update f_new[cv,bv] = f(v_node[cv,bv] - E*dt) avoids the
+   mismatch between an exact-quadrature RHS and a lumped mass inverse that
+   causes poor accuracy for Q1 (degree=1).
    ======================================================================== */
 static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCtx *ctx)
 {
@@ -1188,7 +1190,6 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
     const PetscInt  Nv        = ctx->Nv;
     const PetscInt  NbX       = ctx->NbX;
     const PetscInt  NbV       = ctx->NbV;
-    const PetscInt  NqV       = ctx->NqV;
     const PetscReal v_max     = ctx->v_max;
     const PetscReal h_v       = ctx->h_v;
     const PetscInt  sw        = info.sw;
@@ -1201,67 +1202,47 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
     ScalarView1D d_Eloc(Eloc_ptr, n_Eloc);
     ScalarView1D d_fout(fout_ptr, (size_t)NvDOF * NxDOF_loc);
     RealView1D   d_xi_v = ctx->d_xi_v_nodes;
-    RealView1D   d_tab  = ctx->d_tabV;
-    RealView1D   d_vqp  = ctx->d_vq_pts;
-    RealView1D   d_vqw  = ctx->d_vq_wts;
-    RealView1D   d_minv = ctx->d_MassV_inv;
-    /* Parallelize over cx_local.  Each thread owns all iv_dof columns for its x-cell,
-       so there are no write conflicts on d_fout. */
+    /* Parallelize over (iv, cx_local) pairs -- no write conflicts. */
     Kokkos::parallel_for(
-      "AdvectV_cx", Kokkos::RangePolicy<>(0, NxLocal), KOKKOS_LAMBDA(PetscInt cx_local) {
-        /* Ghost-extended E: d_Eloc[sw + cx_local] is the owned cell center.
-           d_Eloc[sw + cx_local - 1] and d_Eloc[sw + cx_local + 1] are neighbors. */
+      "AdvectV_nodal", Kokkos::RangePolicy<>(0, NvDOF * NxLocal), KOKKOS_LAMBDA(PetscInt idx) {
+        PetscInt iv       = idx / NxLocal;
+        PetscInt cx_local = idx % NxLocal;
+        PetscInt cv       = iv / NbV;
+        PetscInt bv       = iv % NbV;
+        /* Physical v-coordinate of this GLL node */
+        PetscReal v_node = -v_max + cv * h_v + (d_xi_v(bv) + 1.0) * (h_v * 0.5);
+
+        /* Ghost-extended E: d_Eloc[sw + cx_local] is the owned cell center. */
         PetscReal E_c  = PetscRealPart(d_Eloc(sw + cx_local));
         PetscReal E_lm = PetscRealPart(d_Eloc(sw + cx_local - 1));
         PetscReal E_rp = PetscRealPart(d_Eloc(sw + cx_local + 1));
-        /* Zero the rhs slice for this cx_local */
-        for (PetscInt iv = 0; iv < NvDOF; ++iv)
-          for (PetscInt bx = 0; bx < NbX; ++bx) d_fout(iv * NxDOF_loc + cx_local * NbX + bx) = 0.0;
 
-        for (PetscInt cv = 0; cv < Nv; ++cv) {
-          PetscReal v_cell_left = -v_max + cv * h_v;
-          for (PetscInt q = 0; q < NqV; ++q) {
-            PetscReal xi     = d_vqp(q);
-            PetscReal v_phys = v_cell_left + (xi + 1.0) * (h_v * 0.5);
+        for (PetscInt bx = 0; bx < NbX; ++bx) {
+          /* Linearly interpolate E at GLL node position x_{cx,bx}.
+             xi_x[bx] in [-1,1]: t = xi_x[bx]/2 in [-0.5,0.5].
+             For t>=0: E_bx = E_c*(1-t) + E_rp*t
+             For t< 0: E_bx = E_lm*(-t) + E_c*(1+t) */
+          PetscReal t      = d_xi_x(bx) * 0.5;
+          PetscReal E_bx   = (t >= 0.0) ? (E_c * (1.0 - t) + E_rp * t) : (E_lm * (-t) + E_c * (1.0 + t));
+          PetscReal v_foot = v_node - E_bx * dt;
 
-            for (PetscInt bx = 0; bx < NbX; ++bx) {
-              /* Linearly interpolate E at GLL node position x_{i,bx}.
-                 xi_x[bx] in [-1,1]: t = xi_x[bx]/2 in [-0.5,0.5].
-                 For t>=0: E_bx = E_c*(1-t) + E_rp*t
-                 For t< 0: E_bx = E_lm*(-t) + E_c*(1+t) */
-              PetscReal t      = d_xi_x(bx) * 0.5;
-              PetscReal E_bx   = (t >= 0.0) ? (E_c * (1.0 - t) + E_rp * t) : (E_lm * (-t) + E_c * (1.0 + t));
-              PetscReal v_foot = v_phys - E_bx * dt;
+          PetscReal v_norm  = (v_foot + v_max) / h_v;
+          PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
+          if (cv_foot < 0) cv_foot = 0;
+          if (cv_foot >= Nv) cv_foot = Nv - 1;
 
-              PetscReal v_norm  = (v_foot + v_max) / h_v;
-              PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
-              if (cv_foot < 0) cv_foot = 0;
-              if (cv_foot >= Nv) cv_foot = Nv - 1;
+          PetscReal xi_foot = (v_foot - (-v_max + cv_foot * h_v)) / (h_v * 0.5) - 1.0;
+          if (xi_foot < -1.0) xi_foot = -1.0;
+          if (xi_foot > 1.0) xi_foot = 1.0;
 
-              PetscReal xi_foot = (v_foot - (-v_max + cv_foot * h_v)) / (h_v * 0.5) - 1.0;
-              if (xi_foot < -1.0) xi_foot = -1.0;
-              if (xi_foot > 1.0) xi_foot = 1.0;
-
-              PetscInt  ix    = cx_local * NbX + bx;
-              PetscReal f_val = 0.0;
-              for (PetscInt bv = 0; bv < NbV; ++bv) {
-                PetscInt iv_dof = cv_foot * NbV + bv;
-                f_val += PetscRealPart(d_f(iv_dof * NxDOF_loc + ix)) * EvalLagrangeBasis(NbV, d_xi_v.data(), bv, xi_foot);
-              }
-              PetscReal wq_hv = d_vqw(q) * (h_v * 0.5);
-              for (PetscInt bv = 0; bv < NbV; ++bv) {
-                PetscInt iv_dof = cv * NbV + bv;
-                d_fout(iv_dof * NxDOF_loc + ix) += (PetscScalar)(f_val * d_tab(q * NbV + bv) * wq_hv);
-              }
-            }
+          PetscInt  ix    = cx_local * NbX + bx;
+          PetscReal f_val = 0.0;
+          for (PetscInt bv2 = 0; bv2 < NbV; ++bv2) {
+            PetscInt iv_src = cv_foot * NbV + bv2;
+            f_val += PetscRealPart(d_f(iv_src * NxDOF_loc + ix)) * EvalLagrangeBasis(NbV, d_xi_v.data(), bv2, xi_foot);
           }
+          d_fout(iv * NxDOF_loc + ix) = (PetscScalar)f_val;
         }
-        /* Apply mass matrix inverse */
-        for (PetscInt iv = 0; iv < NvDOF; ++iv)
-          for (PetscInt bx = 0; bx < NbX; ++bx) {
-            PetscInt ix = cx_local * NbX + bx;
-            d_fout(iv * NxDOF_loc + ix) *= (PetscScalar)d_minv(iv);
-          }
       });
     PetscCall(VecRestoreArrayAndMemType(f, &f_ptr));
     PetscCall(VecRestoreArrayAndMemType(E_local, &Eloc_ptr));
@@ -1271,64 +1252,51 @@ static PetscErrorCode AdvectV(Vec f, Vec f_out, PetscReal dt, Vec E_field, AppCt
   {
     const PetscScalar *f_arr, *Eloc_arr;
     PetscScalar       *f_out_arr;
-    PetscReal         *rhs;
     const PetscInt     sw = info.sw;
     PetscCall(VecGetArrayRead(f, &f_arr));
     PetscCall(VecGetArrayRead(E_local, &Eloc_arr));
     PetscCall(VecGetArray(f_out, &f_out_arr));
-    /* Allocate RHS array: rhs[iv * NxDOF_local + ix] */
-    PetscCall(PetscCalloc1(ctx->NvDOF * ctx->NxDOF_local, &rhs));
 
-    for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
-      /* Ghost-extended E: Eloc_arr[sw + cx_local] is the owned cell center. */
-      PetscReal E_c  = PetscRealPart(Eloc_arr[sw + cx_local]);
-      PetscReal E_lm = PetscRealPart(Eloc_arr[sw + cx_local - 1]);
-      PetscReal E_rp = PetscRealPart(Eloc_arr[sw + cx_local + 1]);
+    for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
+      PetscInt  cv     = iv / ctx->NbV;
+      PetscInt  bv     = iv % ctx->NbV;
+      PetscReal v_node = -ctx->v_max + cv * ctx->h_v + (ctx->xi_v_nodes[bv] + 1.0) * (ctx->h_v * 0.5);
 
-      for (PetscInt cv = 0; cv < ctx->Nv; ++cv) {
-        PetscReal v_cell_left = -ctx->v_max + cv * ctx->h_v;
+      for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
+        /* Ghost-extended E: Eloc_arr[sw + cx_local] is the owned cell center. */
+        PetscReal E_c  = PetscRealPart(Eloc_arr[sw + cx_local]);
+        PetscReal E_lm = PetscRealPart(Eloc_arr[sw + cx_local - 1]);
+        PetscReal E_rp = PetscRealPart(Eloc_arr[sw + cx_local + 1]);
 
-        for (PetscInt q = 0; q < ctx->NqV; ++q) {
-          PetscReal xi     = ctx->vq_pts[q];
-          PetscReal v_phys = v_cell_left + (xi + 1.0) * (ctx->h_v * 0.5);
+        for (PetscInt bx = 0; bx < ctx->NbX; ++bx) {
+          /* Linearly interpolate E at GLL node position x_{cx,bx}.
+             t = xi_x[bx]/2 in [-0.5,0.5].
+             For t>=0: E_bx = E_c*(1-t) + E_rp*t
+             For t< 0: E_bx = E_lm*(-t) + E_c*(1+t) */
+          PetscReal t      = ctx->xi_x_nodes[bx] * 0.5;
+          PetscReal E_bx   = (t >= 0.0) ? (E_c * (1.0 - t) + E_rp * t) : (E_lm * (-t) + E_c * (1.0 + t));
+          PetscReal v_foot = v_node - E_bx * dt;
 
-          for (PetscInt bx = 0; bx < ctx->NbX; ++bx) {
-            /* Linearly interpolate E at GLL node position x_{i,bx}.
-               t = xi_x[bx]/2 in [-0.5,0.5].
-               For t>=0: E_bx = E_c*(1-t) + E_rp*t
-               For t< 0: E_bx = E_lm*(-t) + E_c*(1+t) */
-            PetscReal t      = ctx->xi_x_nodes[bx] * 0.5;
-            PetscReal E_bx   = (t >= 0.0) ? (E_c * (1.0 - t) + E_rp * t) : (E_lm * (-t) + E_c * (1.0 + t));
-            PetscReal v_foot = v_phys - E_bx * dt;
+          PetscReal v_norm  = (v_foot + ctx->v_max) / ctx->h_v;
+          PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
+          if (cv_foot < 0) cv_foot = 0;
+          if (cv_foot >= ctx->Nv) cv_foot = ctx->Nv - 1;
 
-            PetscReal v_norm  = (v_foot + ctx->v_max) / ctx->h_v;
-            PetscInt  cv_foot = (PetscInt)PetscFloorReal(v_norm);
-            if (cv_foot < 0) cv_foot = 0;
-            if (cv_foot >= ctx->Nv) cv_foot = ctx->Nv - 1;
+          PetscReal xi_foot = (v_foot - (-ctx->v_max + cv_foot * ctx->h_v)) / (ctx->h_v * 0.5) - 1.0;
+          if (xi_foot < -1.0) xi_foot = -1.0;
+          if (xi_foot > 1.0) xi_foot = 1.0;
 
-            PetscReal xi_foot = (v_foot - (-ctx->v_max + cv_foot * ctx->h_v)) / (ctx->h_v * 0.5) - 1.0;
-            if (xi_foot < -1.0) xi_foot = -1.0;
-            if (xi_foot > 1.0) xi_foot = 1.0;
-
-            PetscInt  ix    = cx_local * ctx->NbX + bx;
-            PetscReal f_val = 0.0;
-            for (PetscInt bv = 0; bv < ctx->NbV; ++bv) {
-              PetscInt iv_dof = cv_foot * ctx->NbV + bv;
-              f_val += PetscRealPart(f_arr[iv_dof * ctx->NxDOF_local + ix]) * EvalLagrangeBasis(ctx->NbV, ctx->xi_v_nodes, bv, xi_foot);
-            }
-            for (PetscInt bv = 0; bv < ctx->NbV; ++bv) {
-              PetscInt iv_dof = cv * ctx->NbV + bv;
-              rhs[iv_dof * ctx->NxDOF_local + ix] += f_val * ctx->tabV[q * ctx->NbV + bv] * ctx->vq_wts[q] * (ctx->h_v * 0.5);
-            }
+          PetscInt  ix    = cx_local * ctx->NbX + bx;
+          PetscReal f_val = 0.0;
+          for (PetscInt bv2 = 0; bv2 < ctx->NbV; ++bv2) {
+            PetscInt iv_src = cv_foot * ctx->NbV + bv2;
+            f_val += PetscRealPart(f_arr[iv_src * ctx->NxDOF_local + ix]) * EvalLagrangeBasis(ctx->NbV, ctx->xi_v_nodes, bv2, xi_foot);
           }
+          f_out_arr[iv * ctx->NxDOF_local + ix] = (PetscScalar)f_val;
         }
       }
     }
 
-    for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv)
-      for (PetscInt ix = 0; ix < ctx->NxDOF_local; ++ix) f_out_arr[iv * ctx->NxDOF_local + ix] = (PetscScalar)(rhs[iv * ctx->NxDOF_local + ix] * ctx->MassV_inv[iv]);
-
-    PetscCall(PetscFree(rhs));
     PetscCall(VecRestoreArrayRead(f, &f_arr));
     PetscCall(VecRestoreArrayRead(E_local, &Eloc_arr));
     PetscCall(VecRestoreArray(f_out, &f_out_arr));
