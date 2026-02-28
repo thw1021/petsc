@@ -16,7 +16,6 @@ static char help[] = "SLDG Vlasov-Poisson solver for Landau damping using DMDA a
 #include <petscdm.h>
 #include <petscdmda.h>
 #include <petscksp.h>
-#include <petscsnes.h>
 #include <petscts.h>
 #include <petscmath.h>
 #include <petscdt.h>
@@ -449,7 +448,7 @@ static PetscErrorCode SetupPoisson(MPI_Comm comm, AppCtx *ctx)
   /* Force SVD on the GAMG coarse level to handle the null space robustly */
   PetscCall(PetscOptionsSetValue(NULL, "-poisson_mg_coarse_ksp_type", "preonly"));
   PetscCall(PetscOptionsSetValue(NULL, "-poisson_mg_coarse_pc_type", "svd"));
-  PetscCall(KSPSetTolerances(ctx->kspPoisson, 1e-10, 1e-12, PETSC_DEFAULT, 200));
+  PetscCall(KSPSetTolerances(ctx->kspPoisson, 1e-14, 1e-14, PETSC_DEFAULT, 500));
   PetscCall(KSPSetFromOptions(ctx->kspPoisson));
   PetscCall(KSPSetUp(ctx->kspPoisson));
   PetscFunctionReturn(PETSC_SUCCESS);
