@@ -19,6 +19,7 @@
 - Add the option `--with-devicelanguage` to compile `PetscDevice` code using either a C or C++ compiler
 - Add `Caliper`, an instrumentation and performance profiling library that can be used to profile `Hypre`.
 - Add typing stubs for the Python extension module `petsc4py.PETSc`.
+- Remove `--with-mumps-serial` option, rely on `--with-mpi=0`
 
 ```{rubric} Sys:
 ```
@@ -85,7 +86,10 @@
 ```{rubric} KSP:
 ```
 
+- Change `KSPSetDMActive()` to take a `KSPDMActive` argument
 - Remove `KSPHPDDMPrecision` in favor of `PetscPrecision`
+- Deprecate `KSPPIPEGCRSetModifyPC()`, `KSPGCRSetModifyPC()`, and `KSPFGMRESSetModifyPC()` in favor of `KSPFlexibleSetModifyPC()`
+- Deprecate `KSPFGMRESModifyPCNoChange()` and `KSPFGMRESModifyPCKSP()` in favor of `KSPFlexibleModifyPCNoChange()` and `KSPFlexibleModifyPCKSP()`
 
 ```{rubric} SNES:
 ```
