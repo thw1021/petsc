@@ -1055,6 +1055,7 @@ M*/
 .seealso: `PetscSubcommCreate()`, `PetscSubcommSetNumber()`, `PetscSubcommSetType()`, `PetscSubcommView()`, `PetscSubcommSetFromOptions()`
 S*/
 typedef struct _n_PetscSubcomm *PetscSubcomm;
+
 typedef enum {
   PETSC_SUBCOMM_GENERAL    = 0,
   PETSC_SUBCOMM_CONTIGUOUS = 1,
