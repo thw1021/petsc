@@ -21,10 +21,24 @@ Use the GitLab Discussions API with JSON input to create inline DiffNote comment
 
 For each comment, use this Python pattern:
 ```python
-import json, subprocess
+import json, re, subprocess
+
+body = "<comment body with optional suggestion block>"
+# Guard against patterns that break GitLab suggestion blocks:
+# 1. Trailing backslash merging with closing fence: \``` -> \<newline>```
+# 2. Triple backticks inside suggestion body (e.g., in markdown files)
+suggestion_match = re.search(r'```suggestion[^\n]*\n(.*?)```', body, re.DOTALL)
+if suggestion_match:
+    inner = suggestion_match.group(1)
+    if '```' in inner:
+        # Fall back to plain fenced code block
+        body = re.sub(r'```suggestion[^\n]*\n', '```\n', body)
+    else:
+        # Fix trailing backslash before closing fence
+        body = re.sub(r'\\\n?```', '\\\n```', body)
 
 payload = {
-    "body": "<comment body with optional suggestion block>",
+    "body": body,
     "position": {
         "position_type": "text",
         "base_sha": "<BASE_SHA>",
