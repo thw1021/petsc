@@ -2597,19 +2597,21 @@ PetscErrorCode DMSwarmGetCellSwarm(DM sw, PetscInt cellID, DM cellswarm)
 @*/
 PetscErrorCode DMSwarmRestoreCellSwarm(DM sw, PetscInt cellID, DM cellswarm)
 {
-  DM        dmc;
+  DM        dmc, subdmc;
   PetscInt *pids, particles, p;
 
   PetscFunctionBegin;
   PetscCall(DMSwarmSortGetAccess(sw));
   PetscCall(DMSwarmSortGetPointsPerCell(sw, cellID, &particles, &pids));
   PetscCall(DMSwarmSortRestoreAccess(sw));
-  /* Pointwise copy of each particle based on pid. The parent swarm may not be altered during this process. */
-  for (p = 0; p < particles; ++p) PetscCall(DMSwarmDataBucketCopyPoint(((DM_Swarm *)cellswarm->data)->db, pids[p], ((DM_Swarm *)sw->data)->db, pids[p]));
+  /* Pointwise copy of each particle based on pid. The parent swarm may not be altered during this process. Cellswarm particles are indexed by p, NOT the pid list.*/
+  for (p = 0; p < particles; ++p) PetscCall(DMSwarmDataBucketCopyPoint(((DM_Swarm *)cellswarm->data)->db, p, ((DM_Swarm *)sw->data)->db, pids[p]));
   /* Free memory, destroy cell dm */
-  PetscCall(DMSwarmGetCellDM(cellswarm, &dmc));
-  PetscCall(DMDestroy(&dmc));
+  PetscCall(DMSwarmGetCellDM(cellswarm, &subdmc));
+  PetscCall(DMDestroy(&subdmc));
   PetscCall(DMSwarmSortRestorePointsPerCell(sw, cellID, &particles, &pids));
+  PetscCall(DMSwarmGetCellDM(sw, &dmc));
+  PetscCall(DMRemoveLabel(dmc, "singlecell", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

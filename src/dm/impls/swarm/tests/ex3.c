@@ -56,6 +56,7 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
       const PetscInt n = c * Np + p;
 
       swarm_cellid[n] = c;
+      PetscPrintf(PETSC_COMM_WORLD, "cellid %" PetscInt_FMT "\n", c);
     }
   }
   PetscCall(DMSwarmRestoreField(*sw, cellid, NULL, NULL, (void **)&swarm_cellid));
@@ -67,7 +68,9 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
 int main(int argc, char **argv)
 {
   DM       dm, sw, cellsw; /* Mesh and particle managers */
+  Vec      cellswKinematics, kinematics;
   MPI_Comm comm;
+  PetscInt subsize;
   AppCtx   user;
 
   PetscFunctionBeginUser;
@@ -76,12 +79,25 @@ int main(int argc, char **argv)
   PetscCall(ProcessOptions(comm, &user));
   PetscCall(CreateMesh(comm, &dm, &user));
   PetscCall(CreateParticles(dm, &sw, &user));
+  PetscCall(DMSwarmCreateGlobalVectorFromField(sw, "kinematics", &kinematics));
+  PetscCall(VecSet(kinematics, 1.5));
+  PetscCall(VecViewFromOptions(kinematics, NULL, "-kin_view"));
+  PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, "kinematics", &kinematics));
   PetscCall(DMSetApplicationContext(sw, &user));
   PetscCall(DMCreate(comm, &cellsw));
   PetscCall(PetscObjectSetName((PetscObject)cellsw, "SubParticles"));
-  PetscCall(DMSwarmGetCellSwarm(sw, 1, cellsw));
+  PetscCall(DMSwarmGetCellSwarm(sw, 2, cellsw));
   PetscCall(DMViewFromOptions(cellsw, NULL, "-subswarm_view"));
-  PetscCall(DMSwarmRestoreCellSwarm(sw, 1, cellsw));
+  PetscCall(DMSwarmCreateGlobalVectorFromField(cellsw, "kinematics", &cellswKinematics));
+  PetscCall(VecViewFromOptions(cellswKinematics, NULL, "-cellsw_kin_view"));
+  PetscCall(VecSet(cellswKinematics, 2.0));
+  PetscCall(DMSwarmDestroyGlobalVectorFromField(cellsw, "kinematics", &cellswKinematics));
+  PetscCall(DMSwarmGetSize(cellsw, &subsize));
+  PetscPrintf(comm, "cellswarm size: %" PetscInt_FMT "\n", subsize);
+  PetscCall(DMSwarmRestoreCellSwarm(sw, 2, cellsw));
+  PetscCall(DMSwarmCreateGlobalVectorFromField(sw, "kinematics", &kinematics));
+  PetscCall(VecViewFromOptions(kinematics, NULL, "-kin_view"));
+  PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, "kinematics", &kinematics));
   PetscCall(DMDestroy(&sw));
   PetscCall(DMDestroy(&dm));
   PetscCall(DMDestroy(&cellsw));

@@ -438,7 +438,7 @@ PetscErrorCode DMSwarmDataBucketCreateFromSubset(DMSwarmDataBucket DBIn, const P
   PetscCall(DMSwarmDataBucketGetSizes(DBIn, &L, &buffer, &allocated));
   for (f = 0; f < nfields; ++f) PetscCall(DMSwarmDataBucketRegisterField(*DB, "DMSwarmDataBucketCreateFromSubset", fields[f]->name, fields[f]->atomic_size, NULL));
   PetscCall(DMSwarmDataBucketFinalize(*DB));
-  PetscCall(DMSwarmDataBucketSetSizes(*DB, L, buffer));
+  PetscCall(DMSwarmDataBucketSetSizes(*DB, N, buffer));// This passes in the entirety of the parent data bucket? If we are creating a data bucket from a subset of points, why do we want to do that?
   for (f = 0; f < nfields; ++f) {
     DMSwarmDataField gfield;
 
@@ -447,7 +447,9 @@ PetscErrorCode DMSwarmDataBucketCreateFromSubset(DMSwarmDataBucket DBIn, const P
     gfield->petsc_type = fields[f]->petsc_type;
   }
   /* now copy the desired guys from DBIn => DB */
-  for (p = 0; p < N; ++p) PetscCall(DMSwarmDataBucketCopyPoint(DBIn, list[p], *DB, list[p]));
+  for (p = 0; p < N; ++p) {
+    PetscCall(DMSwarmDataBucketCopyPoint(DBIn, list[p], *DB, p));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
