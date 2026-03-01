@@ -482,7 +482,7 @@ PetscErrorCode TSRKRegister(TSRKType name, PetscInt order, PetscInt s, const Pet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TSRKGetTableau_RK(TS ts, PetscInt *s, const PetscReal **A, const PetscReal **b, const PetscReal **c, const PetscReal **bembed, PetscInt *p, const PetscReal **binterp, PetscBool *FSAL)
+static PetscErrorCode TSRKGetTableau_RK(TS ts, PetscInt *s, const PetscReal *A[], const PetscReal *b[], const PetscReal *c[], const PetscReal *bembed[], PetscInt *p, const PetscReal *binterp[], PetscBool *FSAL)
 {
   TS_RK    *rk  = (TS_RK *)ts->data;
   RKTableau tab = rk->tableau;
@@ -499,7 +499,7 @@ static PetscErrorCode TSRKGetTableau_RK(TS ts, PetscInt *s, const PetscReal **A,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   TSRKGetTableau - Get info on the `TSRK` tableau
 
   Not Collective
