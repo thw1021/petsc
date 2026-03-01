@@ -574,7 +574,7 @@ PETSC_EXTERN PetscErrorCode MatSetRandom(Mat, PetscRandom);
 
    For staggered grids, see `DMStagStencil`
 
-.seealso: [](ch_matrices), `Mat`, `MatSetValuesStencil()`, `MatSetStencil()`, `MatSetValuesBlockedStencil()`, `DMDAVecGetArray()`
+.seealso: [](ch_matrices), `Mat`, `MatSetValuesStencil()`, `MatSetStencil()`, `MatSetValuesBlockedStencil()`, `DMDAVecGetArray()`,
           `DMStagStencil`
 S*/
 typedef struct {
@@ -1115,7 +1115,7 @@ M*/
 
    Do not malloc or free `dnz` and `onz`, that is handled internally by these routines
 
-.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`
+.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`,
           `MatPreallocateBegin()`, `MatPreallocateSymmetricSetLocalBlock()`, `MatPreallocateSetLocalRemoveDups()`
 M*/
 #define MatPreallocateSetLocal(rmap, nrows, rows, cmap, ncols, cols, dnz, onz) \
@@ -1149,7 +1149,7 @@ M*/
 
    Do not malloc or free `dnz` and `onz`, that is handled internally by these routines
 
-.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`
+.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`,
           `MatPreallocateBegin()`, `MatPreallocateSymmetricSetLocalBlock()`, `MatPreallocateSetLocal()`
 M*/
 #define MatPreallocateSetLocalRemoveDups(rmap, nrows, rows, cmap, ncols, cols, dnz, onz) \
@@ -1183,7 +1183,7 @@ M*/
 
    Do not malloc or free `dnz` and `onz`, that is handled internally by these routines
 
-.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`
+.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`,
           `MatPreallocateBegin()`, `MatPreallocateSymmetricSetLocalBlock()`
 M*/
 #define MatPreallocateSetLocalBlock(rmap, nrows, rows, cmap, ncols, cols, dnz, onz) \
@@ -1216,7 +1216,7 @@ M*/
 
    Do not malloc or free `dnz` and `onz` that is handled internally by these routines
 
-.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`
+.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`,
           `MatPreallocateBegin()`, `MatPreallocateSetLocal()`
 M*/
 #define MatPreallocateSymmetricSetLocalBlock(map, nrows, rows, ncols, cols, dnz, onz) \
@@ -1251,7 +1251,7 @@ M*/
 
    This is a MACRO, not a function, because it uses variables declared in MatPreallocateBegin().
 
-.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`
+.seealso: [](ch_matrices), `MatPreallocateEnd()`, `MatPreallocateSet()`, `MatPreallocateSymmetricSetBlock()`,
           `MatPreallocateBegin()`, `MatPreallocateSetLocal()`
 M*/
 #define MatPreallocateSet(row, nc, cols, dnz, onz) \
@@ -1436,8 +1436,7 @@ PETSC_EXTERN PetscErrorCode MatFindZeroRows(Mat, IS *);
    Developer Note:
    This API should be converted to an API similar to those for `MatColoring` and `MatPartitioning`
 
-.seealso: [](ch_matrices), [](sec_graph), `MatGetFactor()`, `MatGetOrdering()`, `MatColoringType`, `MatPartitioningType`, `MatCoarsenType`, `MatCoarsenType`,
-          `PCFactorSetOrderingType()`
+.seealso: [](ch_matrices), [](sec_graph), `MatGetFactor()`, `MatGetOrdering()`, `MatColoringType`, `MatPartitioningType`, `MatCoarsenType`, `PCFactorSetOrderingType()`
 J*/
 typedef const char *MatOrderingType;
 #define MATORDERINGNATURAL       "natural"
@@ -1772,7 +1771,7 @@ PETSC_EXTERN PetscErrorCode MatTransposeColoringDestroy(MatTransposeColoring *);
    It is an extra maintenance and documentation cost to have two objects with the same functionality. `PetscPartitioner` should be removed
 
 .seealso: [](ch_matrices), [](sec_graph), `Mat`, `MatPartitioningCreate()`, `MatPartitioningType`, `MatColoring`, `MatGetOrdering()`, `MatOrderingType`,
-          `MatCoarsenType`, `MatCoarsenType`
+          `MatCoarsenType`
 S*/
 typedef struct _p_MatPartitioning *MatPartitioning;
 
@@ -1782,7 +1781,7 @@ typedef struct _p_MatPartitioning *MatPartitioning;
    Level: beginner
 dm
 .seealso: [](ch_matrices), [](sec_graph), `Mat`, `MatPartitioningCreate()`, `MatPartitioning`, `MatPartitioningSetType()`, `MatColoringType`, `MatOrderingType`,
-          `MatCoarsenType`, `MatCoarsenType`
+          `MatCoarsenType`
 J*/
 typedef const char *MatPartitioningType;
 #define MATPARTITIONINGCURRENT  "current"

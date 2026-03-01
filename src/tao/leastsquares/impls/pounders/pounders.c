@@ -1152,10 +1152,11 @@ static PetscErrorCode TaoView_POUNDERS(Tao tao, PetscViewer viewer)
   Options Database Keys:
 + -tao_pounders_delta - initial step length
 . -tao_pounders_npmax - maximum number of points in model
-- -tao_pounders_gqt - use gqt algorithm for subproblem instead of TRON
+- -tao_pounders_gqt   - use gqt algorithm for subproblem instead of TRON
 
   Level: beginner
 
+.seealso: `Tao`, `TAONTR`, `TAONTL`, `TAONM`, `TaoType`, `TaoCreate()`
 M*/
 
 PETSC_EXTERN PetscErrorCode TaoCreate_POUNDERS(Tao tao)
