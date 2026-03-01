@@ -521,7 +521,7 @@ static PetscErrorCode TSRKGetTableau_RK(TS ts, PetscInt *s, const PetscReal *A[]
 
 .seealso: [](ch_ts), `TSRK`, `TSRKRegister()`, `TSRKSetType()`
 @*/
-PetscErrorCode TSRKGetTableau(TS ts, PetscInt *s, const PetscReal **A, const PetscReal **b, const PetscReal **c, const PetscReal **bembed, PetscInt *p, const PetscReal **binterp, PetscBool *FSAL)
+PetscErrorCode TSRKGetTableau(TS ts, PetscInt *s, const PetscReal *A[], const PetscReal *b[], const PetscReal *c[], const PetscReal *bembed[], PetscInt *p, const PetscReal *binterp[], PetscBool *FSAL)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
