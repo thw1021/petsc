@@ -42,7 +42,7 @@ typedef struct {
   DM daX;   /* 1D periodic DMDA for x-space, MPI-distributed */
   DM daV;   /* 1D non-periodic DMDA for v-space, PETSC_COMM_SELF */
   DM daPot; /* 1D periodic DMDA for phi/rho/E, clone of daX with dof=1 */
-  DM daF;   /* 1D periodic DMDA for one iv-slice of f: dof=NbX, same stencil as daX */
+  DM daF;   /* 1D periodic DMDA for batched AdvectX: dof=NvDOF*NbX, same stencil as daX */
 
   /* Distribution function */
   Vec f; /* Global Vec, local size NvDOF * NxDOF_local */
@@ -53,9 +53,9 @@ typedef struct {
   Vec rho;
   Vec phi;
   Vec E_field;
-  Vec f_iv_global; /* per-iv slice global Vec for AdvectX ghost exchange */
-  Vec f_iv_local;  /* per-iv slice local Vec with ghosts for AdvectX */
-  Vec rhs_poisson; /* reusable RHS Vec for Poisson solve */
+  Vec f_full_global; /* batched global Vec for AdvectX ghost exchange (dof=NvDOF*NbX) */
+  Vec f_full_local;  /* batched local Vec with ghosts for AdvectX */
+  Vec rhs_poisson;   /* reusable RHS Vec for Poisson solve */
   KSP kspPoisson;
   Mat Jac;
 
@@ -120,8 +120,8 @@ typedef struct {
   RealView1D d_A_sldg;       /* [NvDOF * NbX * NbX] */
   RealView1D d_B_sldg;       /* [NvDOF * NbX * NbX] */
   IntView1D  d_n_shift;      /* [NvDOF] */
-  /* Ghost-extended f buffer for AdvectX (allocated once, reused each iv) */
-  RealView1D d_fiv_ghost; /* [(NxLocal + 2*sw) * NbX] */
+  /* Ghost-extended f buffer for batched AdvectX (allocated once, reused each call) */
+  RealView1D d_f_ghost; /* [(NxLocal + 2*sw) * NvDOF * NbX] */
 #endif
 } AppCtx;
 
@@ -249,19 +249,19 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *ctx)
 {
   PetscFunctionBeginUser;
   /* Null-initialize all pointers */
-  ctx->daX         = NULL;
-  ctx->daV         = NULL;
-  ctx->daPot       = NULL;
-  ctx->daF         = NULL;
-  ctx->f           = NULL;
-  ctx->rho         = NULL;
-  ctx->phi         = NULL;
-  ctx->E_field     = NULL;
-  ctx->f_iv_global = NULL;
-  ctx->f_iv_local  = NULL;
-  ctx->rhs_poisson = NULL;
-  ctx->kspPoisson  = NULL;
-  ctx->Jac         = NULL;
+  ctx->daX           = NULL;
+  ctx->daV           = NULL;
+  ctx->daPot         = NULL;
+  ctx->daF           = NULL;
+  ctx->f             = NULL;
+  ctx->rho           = NULL;
+  ctx->phi           = NULL;
+  ctx->E_field       = NULL;
+  ctx->f_full_global = NULL;
+  ctx->f_full_local  = NULL;
+  ctx->rhs_poisson   = NULL;
+  ctx->kspPoisson    = NULL;
+  ctx->Jac           = NULL;
 
   ctx->xi_x_nodes   = NULL;
   ctx->xi_v_nodes   = NULL;
@@ -347,15 +347,29 @@ static PetscErrorCode CreateXMesh(MPI_Comm comm, AppCtx *ctx)
   PetscCall(DMSetUp(ctx->daX));
   PetscCall(DMDAGetCorners(ctx->daX, &ctx->xs, NULL, NULL, &ctx->NxLocal, NULL, NULL));
   ctx->NxDOF_local = ctx->NxLocal * ctx->NbX;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
-  /* daF: same topology as daX, used for per-iv ghost exchange in AdvectX.
-     dof=NbX and stencil width sw are identical to daX. */
-  PetscCall(DMDACreate1d(comm, DM_BOUNDARY_PERIODIC, ctx->Nx, ctx->NbX, sw, NULL, &ctx->daF));
+/* ========================================================================
+   CreateAdvectXDM -- batched ghost-exchange DM for AdvectX
+   Must be called after CreateVMesh (needs NvDOF).
+   ======================================================================== */
+static PetscErrorCode CreateAdvectXDM(MPI_Comm comm, AppCtx *ctx)
+{
+  PetscFunctionBeginUser;
+  /* daF: same periodic topology as daX, but with dof = NvDOF * NbX so that
+     a single DMGlobalToLocal exchanges ghosts for ALL velocity DOFs at once.
+     The f Vec layout is iv-major: f[iv * NxDOF_local + cx_local * NbX + bx].
+     The DMDA Vec layout is cell-major: vec[cell * dof + d] where d = iv * NbX + bx.
+     We transpose when packing/unpacking -- one device kernel, much cheaper
+     than NvDOF sequential MPI collectives. */
+  PetscInt sw = (PetscInt)(ctx->v_max * ctx->dt * 0.5 / ctx->h_x) + 2;
+  PetscCall(DMDACreate1d(comm, DM_BOUNDARY_PERIODIC, ctx->Nx, ctx->NvDOF * ctx->NbX, sw, NULL, &ctx->daF));
   PetscCall(DMSetFromOptions(ctx->daF));
   PetscCall(DMSetUp(ctx->daF));
-  /* Pre-allocate per-iv slice Vecs for AdvectX ghost exchange (reused every step) */
-  PetscCall(DMCreateGlobalVector(ctx->daF, &ctx->f_iv_global));
-  PetscCall(DMGetLocalVector(ctx->daF, &ctx->f_iv_local));
+  /* Pre-allocate batched Vecs for AdvectX ghost exchange (reused every step) */
+  PetscCall(DMCreateGlobalVector(ctx->daF, &ctx->f_full_global));
+  PetscCall(DMCreateLocalVector(ctx->daF, &ctx->f_full_local));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -482,7 +496,7 @@ static PetscErrorCode PrecomputeGeometry(AppCtx *ctx)
   {
     PetscInt sw;
     PetscCall(DMDAGetInfo(ctx->daF, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &sw, NULL, NULL, NULL, NULL));
-    ctx->d_fiv_ghost = RealView1D("d_fiv_ghost", (ctx->NxLocal + 2 * sw) * ctx->NbX);
+    ctx->d_f_ghost = RealView1D("d_f_ghost", (ctx->NxLocal + 2 * sw) * ctx->NvDOF * ctx->NbX);
   }
 #endif
   /* Step 1: GLL nodes for x and v DOFs */
@@ -934,7 +948,7 @@ static PetscErrorCode ComputeElectricField(AppCtx *ctx)
 }
 
 /* ========================================================================
-   Phase 8 -- AdvectX (SLDG L2 projection with DMDA ghost exchange)
+   Phase 8 -- AdvectX (SLDG L2 projection with batched DMDA ghost exchange)
 
    Uses the SLDG overlap-integral approach: for each velocity DOF, compute
    the fractional cell shift s = v*dt/h_x, decompose into integer shift n
@@ -943,10 +957,11 @@ static PetscErrorCode ComputeElectricField(AppCtx *ctx)
      f_new[i] = (1/M[i]) * sum_j (A[i,j]*f[src_A,j] + B[i,j]*f[src_B,j])
    where M[i] = x_basis_int[i] is the diagonal GLL mass matrix entry.
 
-   Ghost exchange: instead of MPI_Allgather, we copy each iv-slice into a
-   global Vec on daF, call DMGlobalToLocal, and read ghost cells via
-   DMDAVecGetArrayDOF.  daF has the same periodic topology and stencil width
-   as daX, so ghost cells cover all source cells needed by the SLDG stencil.
+   Ghost exchange: daF has dof = NvDOF * NbX so that a single
+   DMGlobalToLocal exchanges ghosts for ALL velocity DOFs at once.
+   The f Vec is iv-major but the DMDA Vec is cell-major, so we transpose
+   when packing/unpacking.  One transpose kernel + one MPI collective is
+   much cheaper than NvDOF sequential MPI collectives.
    ======================================================================== */
 static PetscErrorCode AdvectX(Vec f, Vec f_out, AppCtx *ctx)
 {
@@ -968,109 +983,137 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, AppCtx *ctx)
 
   /* Use precomputed A_sldg, B_sldg, n_shift from PrecomputeGeometry Step 8.
      A_sldg[iv*NbX*NbX + i*NbX + j] = overlap_integral[i,j] / w_i (already divided).
-     The outer iv loop stays on CPU because DMGlobalToLocal is an MPI collective.
-     The inner cx_local loop is offloaded to Kokkos.
-     dt is already baked into n_shift/A_sldg/B_sldg at PrecomputeGeometry time. */
+     dt is already baked into n_shift/A_sldg/B_sldg at PrecomputeGeometry time.
+
+     Batched approach:
+     1. Pack f (iv-major) into f_full_global (cell-major) via transpose
+     2. Single DMGlobalToLocal for all iv-slices at once
+     3. Copy ghost-extended local Vec into d_f_ghost (PetscReal)
+     4. Single 2D Kokkos kernel over (iv, cx_local) pairs */
   {
     PetscScalar   *f_ptr, *fout_ptr;
     PetscMemType   mtype_f, mtype_fout;
-    const PetscInt sw = info.sw;
+    const PetscInt sw        = info.sw;
+    const PetscInt NxLocal   = ctx->NxLocal;
+    const PetscInt NbX       = ctx->NbX;
+    const PetscInt NvDOF     = ctx->NvDOF;
+    const PetscInt NxDOF_loc = ctx->NxDOF_local;
+    const PetscInt dof       = NvDOF * NbX; /* DMDA dof count */
     PetscCall(VecGetArrayAndMemType(f, &f_ptr, &mtype_f));
     PetscCall(VecGetArrayAndMemType(f_out, &fout_ptr, &mtype_fout));
 
-    /* TODO: This loop issues NvDOF sequential DMGlobalToLocal (MPI collective) calls.
-       For better scalability, pack all iv-slices into a single Vec with
-       dof = NvDOF * NbX and do one DMGlobalToLocal per AdvectX call,
-       then dispatch all iv kernels in a single 2D Kokkos launch. */
-    for (PetscInt iv = 0; iv < ctx->NvDOF; ++iv) {
-      PetscInt n = ctx->n_shift[iv];
-
-      /* Copy this iv-slice into f_iv_global, then ghost-exchange */
-      {
-        PetscScalar *gv_ptr;
-        PetscMemType mtype_gv;
-        PetscCall(VecGetArrayAndMemType(ctx->f_iv_global, &gv_ptr, &mtype_gv));
-#if defined(PETSC_HAVE_KOKKOS_KERNELS)
-        if (mtype_f == PETSC_MEMTYPE_DEVICE) {
-          const PetscInt NxDOF_loc = ctx->NxDOF_local;
-          ScalarView1D   d_f(f_ptr, (size_t)ctx->NvDOF * NxDOF_loc);
-          ScalarView1D   d_gv(gv_ptr, NxDOF_loc);
-          auto           d_f_iv = Kokkos::subview(d_f, Kokkos::make_pair((size_t)(iv * NxDOF_loc), (size_t)((iv + 1) * NxDOF_loc)));
-          Kokkos::deep_copy(d_gv, d_f_iv);
-        } else
-#endif
-          for (PetscInt ix = 0; ix < ctx->NxDOF_local; ++ix) gv_ptr[ix] = f_ptr[iv * ctx->NxDOF_local + ix];
-        PetscCall(VecRestoreArrayAndMemType(ctx->f_iv_global, &gv_ptr));
-      }
-      PetscCall(DMGlobalToLocal(ctx->daF, ctx->f_iv_global, INSERT_VALUES, ctx->f_iv_local));
-
+    /* Step 1: Pack f (iv-major) into f_full_global (cell-major).
+       f layout:            f[iv * NxDOF_loc + cx_local * NbX + bx]
+       f_full_global layout: g[cx_local * dof + iv * NbX + bx]
+       This is a transpose: (iv, cx_local, bx) -> (cx_local, iv, bx). */
+    {
+      PetscScalar *gv_ptr;
+      PetscMemType mtype_gv;
+      PetscCall(VecGetArrayAndMemType(ctx->f_full_global, &gv_ptr, &mtype_gv));
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
       if (mtype_f == PETSC_MEMTYPE_DEVICE) {
-        const PetscInt NxLocal   = ctx->NxLocal;
-        const PetscInt NbX       = ctx->NbX;
-        const PetscInt NxDOF_loc = ctx->NxDOF_local;
-        const PetscInt xs        = ctx->xs;
-        const PetscInt n_cells   = NxLocal + 2 * sw;
-        ScalarView1D   d_f(f_ptr, (size_t)ctx->NvDOF * NxDOF_loc);
-        ScalarView1D   d_fout(fout_ptr, (size_t)ctx->NvDOF * NxDOF_loc);
-        /* Get device pointer to ghost-extended local Vec */
-        {
-          PetscScalar *local_ptr;
-          PetscMemType mtype_local;
-          PetscCall(VecGetArrayAndMemType(ctx->f_iv_local, &local_ptr, &mtype_local));
-          /* local_ptr points to [ghost_left | owned | ghost_right], length = n_cells * NbX */
-          ScalarView1D d_local(local_ptr, n_cells * NbX);
-          /* Copy into persistent ghost buffer (PetscReal, not PetscScalar).
-             Capture d_fiv_ghost by value (View is a reference-counted handle). */
-          RealView1D d_fiv_ghost_copy = ctx->d_fiv_ghost;
-          Kokkos::parallel_for("AdvectX_copy_ghost", Kokkos::RangePolicy<>(0, n_cells * NbX), KOKKOS_LAMBDA(PetscInt k) { d_fiv_ghost_copy(k) = PetscRealPart(d_local(k)); });
-          PetscCall(VecRestoreArrayAndMemType(ctx->f_iv_local, &local_ptr));
-        }
-
-        /* Subview into persistent d_A_sldg, d_B_sldg -- zero-copy */
-        auto d_A = Kokkos::subview(ctx->d_A_sldg, Kokkos::make_pair(iv * NbX * NbX, (iv + 1) * NbX * NbX));
-        auto d_B = Kokkos::subview(ctx->d_B_sldg, Kokkos::make_pair(iv * NbX * NbX, (iv + 1) * NbX * NbX));
-        /* Subview into d_fout for this iv-slice */
-        auto       d_fout_iv   = Kokkos::subview(d_fout, Kokkos::make_pair((size_t)(iv * NxDOF_loc), (size_t)((iv + 1) * NxDOF_loc)));
-        RealView1D d_fiv_ghost = ctx->d_fiv_ghost;
-
+        ScalarView1D d_f(f_ptr, (size_t)NvDOF * NxDOF_loc);
+        ScalarView1D d_gv(gv_ptr, (size_t)NxLocal * dof);
         Kokkos::parallel_for(
-          "AdvectX_cx", Kokkos::RangePolicy<>(0, NxLocal), KOKKOS_LAMBDA(PetscInt cx_local) {
-            PetscInt cx_global = xs + cx_local;
-            PetscInt off_A     = (cx_global - n - (xs - sw)) * NbX;
-            PetscInt off_B     = (cx_global - n - 1 - (xs - sw)) * NbX;
-            for (PetscInt i = 0; i < NbX; ++i) {
-              PetscReal val = 0.0;
-              for (PetscInt j = 0; j < NbX; ++j) {
-                val += d_A(i * NbX + j) * d_fiv_ghost(off_A + j);
-                val += d_B(i * NbX + j) * d_fiv_ghost(off_B + j);
-              }
-              d_fout_iv(cx_local * NbX + i) = (PetscScalar)val;
-            }
+          "AdvectX_pack", Kokkos::RangePolicy<>(0, NvDOF * NxDOF_loc), KOKKOS_LAMBDA(PetscInt idx) {
+            PetscInt iv                          = idx / NxDOF_loc;
+            PetscInt ix                          = idx % NxDOF_loc;
+            PetscInt cx_local                    = ix / NbX;
+            PetscInt bx                          = ix % NbX;
+            d_gv(cx_local * dof + iv * NbX + bx) = d_f(idx);
           });
       } else
 #endif
       {
-        PetscReal      **f_iv_arr; /* ghost-aware 2D array: f_iv_arr[cell][dof] */
-        const PetscReal *A = &ctx->A_sldg[iv * ctx->NbX * ctx->NbX];
-        const PetscReal *B = &ctx->B_sldg[iv * ctx->NbX * ctx->NbX];
-        PetscCall(DMDAVecGetArrayDOF(ctx->daF, ctx->f_iv_local, &f_iv_arr));
-        /* Apply SLDG update for each local x-cell. */
-        for (PetscInt cx_local = 0; cx_local < ctx->NxLocal; ++cx_local) {
-          PetscInt cx_global = ctx->xs + cx_local;
-          PetscInt src_A     = cx_global - n;
-          PetscInt src_B     = cx_global - n - 1;
-          for (PetscInt i = 0; i < ctx->NbX; ++i) {
+        for (PetscInt iv = 0; iv < NvDOF; ++iv)
+          for (PetscInt cx_local = 0; cx_local < NxLocal; ++cx_local)
+            for (PetscInt bx = 0; bx < NbX; ++bx) gv_ptr[cx_local * dof + iv * NbX + bx] = f_ptr[iv * NxDOF_loc + cx_local * NbX + bx];
+      }
+      PetscCall(VecRestoreArrayAndMemType(ctx->f_full_global, &gv_ptr));
+    }
+
+    /* Step 2: Single batched ghost exchange for all velocity DOFs */
+    PetscCall(DMGlobalToLocal(ctx->daF, ctx->f_full_global, INSERT_VALUES, ctx->f_full_local));
+
+    /* Step 3 & 4: Apply SLDG matrices using ghost-extended data */
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+    if (mtype_f == PETSC_MEMTYPE_DEVICE) {
+      const PetscInt xs      = ctx->xs;
+      const PetscInt n_cells = NxLocal + 2 * sw;
+      ScalarView1D   d_fout(fout_ptr, (size_t)NvDOF * NxDOF_loc);
+
+      /* Copy ghost-extended local Vec into persistent d_f_ghost (PetscReal) */
+      {
+        PetscScalar *local_ptr;
+        PetscMemType mtype_local;
+        PetscCall(VecGetArrayAndMemType(ctx->f_full_local, &local_ptr, &mtype_local));
+        /* local_ptr layout: [cell * dof + iv * NbX + bx] for n_cells cells */
+        ScalarView1D d_local(local_ptr, (size_t)n_cells * dof);
+        RealView1D   d_f_ghost_copy = ctx->d_f_ghost;
+        Kokkos::parallel_for("AdvectX_copy_ghost", Kokkos::RangePolicy<>(0, (PetscInt)(n_cells * dof)), KOKKOS_LAMBDA(PetscInt k) { d_f_ghost_copy(k) = PetscRealPart(d_local(k)); });
+        PetscCall(VecRestoreArrayAndMemType(ctx->f_full_local, &local_ptr));
+      }
+
+      /* Single 2D kernel over (iv, cx_local) pairs.
+         Ghost buffer layout: d_f_ghost[cell * dof + iv * NbX + bx]
+         where cell is in ghost-extended range [0, n_cells).
+         Owned cell cx_local maps to ghost cell index (sw + cx_local).
+         Source cell for A: cx_global - n -> ghost index (sw + cx_local - n + xs - xs) = sw + cx_local
+                            but we need (cx_global - n) which maps to ghost index
+                            (cx_global - n) - (xs - sw) = sw + cx_local - n.
+         Source cell for B: cx_global - n - 1 -> ghost index sw + cx_local - n - 1. */
+      RealView1D d_A_sldg  = ctx->d_A_sldg;
+      RealView1D d_B_sldg  = ctx->d_B_sldg;
+      IntView1D  d_n_shift = ctx->d_n_shift;
+      RealView1D d_f_ghost = ctx->d_f_ghost;
+
+      Kokkos::parallel_for(
+        "AdvectX_batch", Kokkos::RangePolicy<>(0, NvDOF * NxLocal), KOKKOS_LAMBDA(PetscInt idx) {
+          PetscInt iv       = idx / NxLocal;
+          PetscInt cx_local = idx % NxLocal;
+          PetscInt n        = d_n_shift(iv);
+          /* Ghost buffer offsets for source cells */
+          PetscInt cell_A = sw + cx_local - n;
+          PetscInt cell_B = sw + cx_local - n - 1;
+          PetscInt off_A  = cell_A * dof + iv * NbX;
+          PetscInt off_B  = cell_B * dof + iv * NbX;
+          /* SLDG matrix offset for this iv */
+          PetscInt mat_off = iv * NbX * NbX;
+          for (PetscInt i = 0; i < NbX; ++i) {
             PetscReal val = 0.0;
-            for (PetscInt j = 0; j < ctx->NbX; ++j) {
-              val += A[i * ctx->NbX + j] * PetscRealPart(f_iv_arr[src_A][j]);
-              val += B[i * ctx->NbX + j] * PetscRealPart(f_iv_arr[src_B][j]);
+            for (PetscInt j = 0; j < NbX; ++j) {
+              val += d_A_sldg(mat_off + i * NbX + j) * d_f_ghost(off_A + j);
+              val += d_B_sldg(mat_off + i * NbX + j) * d_f_ghost(off_B + j);
             }
-            fout_ptr[iv * ctx->NxDOF_local + cx_local * ctx->NbX + i] = (PetscScalar)val;
+            d_fout(iv * NxDOF_loc + cx_local * NbX + i) = (PetscScalar)val;
+          }
+        });
+    } else
+#endif
+    {
+      /* CPU path: access ghost-extended local Vec via flat array.
+         Local Vec layout: local_ptr[cell * dof + iv * NbX + bx]
+         where cell is in ghost-extended range. */
+      PetscScalar *local_ptr;
+      PetscCall(VecGetArray(ctx->f_full_local, &local_ptr));
+      for (PetscInt iv = 0; iv < NvDOF; ++iv) {
+        PetscInt         n = ctx->n_shift[iv];
+        const PetscReal *A = &ctx->A_sldg[iv * NbX * NbX];
+        const PetscReal *B = &ctx->B_sldg[iv * NbX * NbX];
+        for (PetscInt cx_local = 0; cx_local < NxLocal; ++cx_local) {
+          PetscInt cell_A = sw + cx_local - n;
+          PetscInt cell_B = sw + cx_local - n - 1;
+          for (PetscInt i = 0; i < NbX; ++i) {
+            PetscReal val = 0.0;
+            for (PetscInt j = 0; j < NbX; ++j) {
+              val += A[i * NbX + j] * PetscRealPart(local_ptr[cell_A * dof + iv * NbX + j]);
+              val += B[i * NbX + j] * PetscRealPart(local_ptr[cell_B * dof + iv * NbX + j]);
+            }
+            fout_ptr[iv * NxDOF_loc + cx_local * NbX + i] = (PetscScalar)val;
           }
         }
-        PetscCall(DMDAVecRestoreArrayDOF(ctx->daF, ctx->f_iv_local, &f_iv_arr));
       }
+      PetscCall(VecRestoreArray(ctx->f_full_local, &local_ptr));
     }
 
     PetscCall(VecRestoreArrayAndMemType(f, &f_ptr));
@@ -1397,8 +1440,8 @@ static PetscErrorCode DestroyContext(AppCtx *ctx)
   PetscCall(VecDestroy(&ctx->phi));
   PetscCall(VecDestroy(&ctx->E_field));
   /* Release pre-allocated AdvectX/Poisson Vecs before destroying daF/daPot */
-  PetscCall(VecDestroy(&ctx->f_iv_global));
-  PetscCall(DMRestoreLocalVector(ctx->daF, &ctx->f_iv_local));
+  PetscCall(VecDestroy(&ctx->f_full_global));
+  PetscCall(VecDestroy(&ctx->f_full_local));
   PetscCall(VecDestroy(&ctx->rhs_poisson));
   PetscCall(KSPDestroy(&ctx->kspPoisson));
   PetscCall(MatDestroy(&ctx->Jac));
@@ -1432,7 +1475,7 @@ static PetscErrorCode DestroyContext(AppCtx *ctx)
   ctx->d_A_sldg       = RealView1D();
   ctx->d_B_sldg       = RealView1D();
   ctx->d_n_shift      = IntView1D();
-  ctx->d_fiv_ghost    = RealView1D();
+  ctx->d_f_ghost      = RealView1D();
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1452,6 +1495,7 @@ int main(int argc, char **argv)
   /* Phase 2 */
   PetscCall(CreateXMesh(PETSC_COMM_WORLD, &ctx));
   PetscCall(CreateVMesh(PETSC_COMM_WORLD, &ctx));
+  PetscCall(CreateAdvectXDM(PETSC_COMM_WORLD, &ctx)); /* needs NvDOF from CreateVMesh */
 
   /* Phase 3 */
   PetscCall(SetupPoisson(PETSC_COMM_WORLD, &ctx));
