@@ -97,20 +97,6 @@ static inline PetscReal Legendre(PetscInt j, PetscReal x)
   return Pjm1;
 }
 
-static inline PetscReal LegendrePrime(PetscInt j, PetscReal x)
-{
-  if (j == 0) return 0.0;
-  if (j == 1) return 1.0;
-  if (x == 1.0) return j * (j + 1) / 2;
-  else if (x == -1.0) return PetscPowReal(-1.0, j + 1) * (j * (j + 1) / 2);
-  else {
-    PetscReal Pj    = Legendre(j, x);
-    PetscReal Pjm1  = Legendre(j - 1, x);
-    PetscReal denom = x * x - 1.0;
-    return j * (x * Pj - Pjm1) / denom;
-  }
-}
-
 /*@
   TSRKC1ComputeCoefficients - This function calculates the coefficients for the first-order RK-Chebyshev method
 
