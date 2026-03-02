@@ -123,15 +123,12 @@ static PetscErrorCode PCApply_PATCH_Nonlinear(PC pc, PetscInt i, Vec patchRHS, V
   PetscCall(PCPatch_ScatterLocal_Private(pc, i + pStart, patch->localState, patch->patchStateWithAll, INSERT_VALUES, SCATTER_FORWARD, SCATTER_WITHALL));
 
   PetscCall(MatGetLocalSize(patch->mat[i], NULL, &n));
-  patch->patchState->map->n           = n;
-  patch->patchState->map->N           = n;
-  patch->patchState->map->setupcalled = PETSC_FALSE;
-  patchUpdate->map->n                 = n;
-  patchUpdate->map->N                 = n;
-  patchUpdate->map->setupcalled       = PETSC_FALSE;
-  patchRHS->map->n                    = n;
-  patchRHS->map->N                    = n;
-  patchRHS->map->setupcalled          = PETSC_FALSE;
+  patch->patchState->map->n = n;
+  patch->patchState->map->N = n;
+  patchUpdate->map->n       = n;
+  patchUpdate->map->N       = n;
+  patchRHS->map->n          = n;
+  patchRHS->map->N          = n;
   /* Set initial guess to be current state*/
   PetscCall(VecCopy(patch->patchState, patchUpdate));
   /* Solve for new state */
