@@ -396,7 +396,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   sol = options->sol;
   PetscCall(PetscOptionsEList("-sol", "The MMS solution", "ex62.c", SolTypes, PETSC_STATIC_ARRAY_LENGTH(SolTypes) - 3, SolTypes[options->sol], &sol, NULL));
   options->sol = (SolType)sol;
-  bc = options->bc;
+  bc           = options->bc;
   PetscCall(PetscOptionsEList("-bc", "The boundary condition type", "ex62.c", BCTypes, PETSC_STATIC_ARRAY_LENGTH(BCTypes) - 3, BCTypes[options->bc], &bc, NULL));
   options->bc = (BCType)bc;
   PetscOptionsEnd();
@@ -490,9 +490,9 @@ static PetscErrorCode SetupEqn(DM dm, AppCtx *user)
     PetscCall(DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (PetscVoidFn *)exactFuncs[0], NULL, user, NULL));
     break;
   case BC_NITSCHE: {
-    PetscWeakForm wf;
-    DMLabel        faceSetsLabel;
-    IS             valueIS;
+    PetscWeakForm   wf;
+    DMLabel         faceSetsLabel;
+    IS              valueIS;
     const PetscInt *faceSetValues;
     PetscInt        numValues, bd, i;
 
@@ -545,7 +545,7 @@ static PetscErrorCode SetupEqn(DM dm, AppCtx *user)
       PetscCall(DMGetDimension(dm, &dim));
       PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, NULL));
       PetscCall(DMPlexComputeCellGeometryFVM(dm, cStart, &vol, NULL, NULL));
-      h           = PetscPowReal(vol, 1.0 / dim);
+      h            = PetscPowReal(vol, 1.0 / dim);
       constants[1] = PetscRealPart(param->eta) * PetscRealPart(param->mu) / h;
     }
     PetscCall(PetscDSSetConstants(ds, 2, constants));

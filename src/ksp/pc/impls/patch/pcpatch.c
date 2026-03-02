@@ -1191,7 +1191,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
             }
           }
           extFacetsToPatchCell[efoff + efn] = supportCell;
-          extFacetsArray[efoff + efn++] = point;
+          extFacetsArray[efoff + efn++]     = point;
         }
       }
       PetscCall(PCPatchGetGlobalDofs(pc, patch->dofSection, -1, patch->combined, point, &pdof, NULL));
@@ -2093,13 +2093,13 @@ PetscErrorCode PCPatchComputeFunction_Internal(PC pc, Vec x, Vec F, PetscInt poi
     PetscCall(ISDestroy(&patch->cellIS));
   }
   if (patch->usercomputefextfacet) {
-    PetscInt        numExtFacets, extFacetOffset;
+    PetscInt numExtFacets, extFacetOffset;
     PetscCall(PetscSectionGetDof(patch->extFacetCounts, point, &numExtFacets));
     PetscCall(PetscSectionGetOffset(patch->extFacetCounts, point, &extFacetOffset));
     if (numExtFacets > 0) {
-      PetscInt       *facetDofs     = NULL;
+      PetscInt       *facetDofs      = NULL;
       const PetscInt *extFacetsArray = NULL, *extFacetCells = NULL;
-      PetscInt        idx = 0;
+      PetscInt        idx     = 0;
       IS              facetIS = NULL;
 
       PetscCall(ISGetIndices(patch->extFacetsToPatchCell, &extFacetCells));
@@ -2315,7 +2315,7 @@ PetscErrorCode PCPatchComputeOperator_Internal(PC pc, Vec x, Mat mat, PetscInt p
       /* For each exterior facet, grab the one cell (in local numbering, and build dof numbering for that cell) */
       PetscInt       *facetDofs = NULL, *facetDofsWithAll = NULL;
       const PetscInt *extFacetsArray = NULL, *extFacetCells = NULL;
-      PetscInt        idx = 0;
+      PetscInt        idx     = 0;
       IS              facetIS = NULL;
 
       PetscCall(ISGetIndices(patch->extFacetsToPatchCell, &extFacetCells));
@@ -2916,12 +2916,12 @@ static PetscErrorCode PCApply_PATCH_Linear(PC pc, PetscInt i, Vec x, Vec y)
   /* Disgusting trick to reuse work vectors */
   PetscCall(KSPGetOperators(ksp, &op, NULL));
   PetscCall(MatGetLocalSize(op, &m, &n));
-  x->map->n            = m;
-  y->map->n            = n;
-  x->map->N            = m;
-  y->map->N            = n;
-  x->map->setupcalled  = PETSC_FALSE;
-  y->map->setupcalled  = PETSC_FALSE;
+  x->map->n           = m;
+  y->map->n           = n;
+  x->map->N           = m;
+  y->map->N           = n;
+  x->map->setupcalled = PETSC_FALSE;
+  y->map->setupcalled = PETSC_FALSE;
   PetscCall(KSPSolve(ksp, x, y));
   PetscCall(KSPCheckSolve(ksp, pc, y));
   PetscCall(PetscLogEventEnd(PC_Patch_Solve, pc, 0, 0, 0));
@@ -2959,12 +2959,12 @@ static PetscErrorCode PCUpdateMultiplicative_PATCH_Linear(PC pc, PetscInt i, Pet
   }
   /* Disgusting trick to reuse work vectors */
   PetscCall(MatGetLocalSize(multMat, &m, &n));
-  patch->patchUpdate->map->n                       = n;
-  patch->patchRHSWithArtificial->map->n            = m;
-  patch->patchUpdate->map->N                       = n;
-  patch->patchRHSWithArtificial->map->N            = m;
-  patch->patchUpdate->map->setupcalled             = PETSC_FALSE;
-  patch->patchRHSWithArtificial->map->setupcalled  = PETSC_FALSE;
+  patch->patchUpdate->map->n                      = n;
+  patch->patchRHSWithArtificial->map->n           = m;
+  patch->patchUpdate->map->N                      = n;
+  patch->patchRHSWithArtificial->map->N           = m;
+  patch->patchUpdate->map->setupcalled            = PETSC_FALSE;
+  patch->patchRHSWithArtificial->map->setupcalled = PETSC_FALSE;
   PetscCall(MatMult(multMat, patch->patchUpdate, patch->patchRHSWithArtificial));
   PetscCall(VecScale(patch->patchRHSWithArtificial, -1.0));
   PetscCall(PCPatch_ScatterLocal_Private(pc, i + pStart, patch->patchRHSWithArtificial, patch->localRHS, ADD_VALUES, SCATTER_REVERSE, SCATTER_WITHARTIFICIAL));

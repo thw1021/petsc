@@ -72,13 +72,13 @@ typedef struct {
   void *usercomputeopintfacetctx;
   /* Interior facet integrals: Residual */
   PetscErrorCode (*usercomputefintfacet)(PC, PetscInt, Vec, Vec, IS, PetscInt, const PetscInt *, const PetscInt *, void *);
-  void           *usercomputefintfacetctx;
+  void *usercomputefintfacetctx;
   /* Exterior facet integrals: Jacobian */
   PetscErrorCode (*usercomputeopextfacet)(PC, PetscInt, Vec, Mat, IS, PetscInt, const PetscInt *, const PetscInt *, void *);
   void *usercomputeopextfacetctx;
   /* Exterior facet integrals: Residual */
   PetscErrorCode (*usercomputefextfacet)(PC, PetscInt, Vec, Vec, IS, PetscInt, const PetscInt *, const PetscInt *, void *);
-  void *usercomputefextfacetctx;
+  void           *usercomputefextfacetctx;
   IS              cellIS;                   /* Temporary IS for each cell patch */
   PetscBool       save_operators;           /* Save all operators (or create/destroy one at a time?) */
   PetscBool       precomputeElementTensors; /* Precompute all element tensors (each cell is assembled exactly once)? */
