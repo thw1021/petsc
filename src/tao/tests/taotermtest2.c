@@ -250,7 +250,7 @@ static PetscErrorCode FormFunctionGradient(TaoTerm term, Vec x, Vec params, Pets
 */
 static PetscErrorCode FormHessian(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   if (H) {
     PetscCall(MatZeroEntries(H));
     PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
@@ -270,7 +270,7 @@ static PetscErrorCode CtxDestroy(PetscCtxRt ctx_ptr)
 {
   HalfL2Ctx *ctx = *(HalfL2Ctx **)ctx_ptr;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   if (ctx) {
     PetscCall(VecDestroy(&ctx->pdiff_work));
     PetscCall(PetscFree(ctx));
@@ -338,9 +338,9 @@ static PetscErrorCode FormHessian_Callback(Tao tao, Vec x, Mat H, Mat Hpre, void
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-//Note: For dense variations, relative error may be greater than 1.e-12,
-//but that is okay, as it is a result of KSP, and PC using AIJ matrices
-//instead of dense.
+/* Note: For dense variations, relative error may be greater than 1.e-12, *
+ * but that is okay, as it is a result of KSP, and PC using AIJ matrices  *
+ * instead of dense.                                                      */
 
 /*TEST
 

@@ -237,16 +237,13 @@ PetscErrorCode TaoSetUp(Tao tao)
   PetscCheck(tao->solution, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoSetSolution()");
   if (tao->uses_gradient && !tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
   if (tao->uses_hessian_matrices) {
-    PetscBool is_sum;
-
-    PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
     // TaoSetHessian has been called, but as terms have been added,
     // subterms' Hessian and PtAP routines, if needed, have to be created
     // TODO Function to set TAOTERMSUM's Hessian.
     if (!tao->hessian) {
       PetscBool is_defined;
 
-      //TAOTERMSUM's Hessian will follow layout and type of first term's Hessian
+      // TAOTERMSUM's Hessian will follow layout and type of first term's Hessian
       PetscCall(TaoTermIsCreateHessianMatricesDefined(tao->objective_term.term, &is_defined));
       if (is_defined) PetscCall(TaoTermMappingCreateHessianMatrices(&tao->objective_term, &tao->hessian, &tao->hessian_pre));
     }
@@ -339,7 +336,7 @@ PetscErrorCode TaoDestroy(Tao *tao)
 }
 
 /*@
-  TaoKSPSetUseEW - Sets `SNES` to use Eisenstat-Walker method {cite}`ew96`for computing relative tolerance for linear solvers.
+  TaoKSPSetUseEW - Sets `SNES` to use Eisenstat-Walker method {cite}`ew96` for computing relative tolerance for linear solvers.
 
   Logically Collective
 
@@ -377,7 +374,7 @@ PetscErrorCode TaoKSPSetUseEW(Tao tao, PetscBool flag)
 
   Level: developer
 
-.seealso: [](ch_ts), `Tao`, `TaoMonitorSet()`, `PetscOptionsCreateViewer()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,
+.seealso: [](ch_tao), `Tao`, `TaoMonitorSet()`, `PetscOptionsCreateViewer()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,
           `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`,
           `PetscOptionsInt()`, `PetscOptionsString()`, `PetscOptionsReal()`,
           `PetscOptionsName()`, `PetscOptionsBegin()`, `PetscOptionsEnd()`, `PetscOptionsHeadBegin()`,
@@ -441,16 +438,18 @@ PetscErrorCode TaoMonitorSetFromOptions(Tao tao, const char name[], const char h
 . -tao_monitor_cancel          - cancels all monitors (except those set with command line)
 . -tao_fd_gradient             - use gradient computed with finite differences
 . -tao_fd_hessian              - use hessian computed with finite differences
-. -tao_mf_hessian              - use matrix-free Hessian computed with finite differences
+. -tao_mf_hessian              - use matrix-free Hessian computed with finite differences. No `TaoTerm` support
 . -tao_view                    - prints information about the Tao after solving
 . -tao_converged_reason        - prints the reason Tao stopped iterating
-- -tao_add_terms               - takes a list of options prefixes, a `TaoTerm` will be created for each and added to the objective function
+- -tao_add_terms               - takes a comma-separated list of up to 16 options prefixes, a `TaoTerm` will be created for each and added to the objective function
 
   Level: beginner
 
-  Note:
+  Notes:
   To see all options, run your program with the `-help` option or consult the
-  user's manual. Should be called after `TaoCreate()` but before `TaoSolve()`
+  user's manual. Should be called after `TaoCreate()` but before `TaoSolve()`.
+
+  The `-tao_add_terms` option accepts at most 16 prefixes.
 
 .seealso: [](ch_tao), `Tao`, `TaoCreate()`, `TaoSolve()`
 @*/
@@ -562,7 +561,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
 
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-tao_fd_gradient", "compute gradient using finite differences", "TaoDefaultComputeGradient", flg, &flg, NULL));
-  if (flg) PetscCall(TaoTermComputeGradientUseFDPush(tao->objective_term.term));
+  if (flg) PetscCall(TaoTermComputeGradientSetUseFD(tao->objective_term.term, PETSC_TRUE));
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-tao_fd_hessian", "compute Hessian using finite differences", "TaoDefaultComputeHessian", flg, &flg, NULL));
   if (flg) {
@@ -573,7 +572,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     PetscCall(MatSetOption(H, MAT_SYMMETRIC, PETSC_TRUE));
     PetscCall(MatSetOption(H, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
     PetscCall(TaoSetHessian(tao, H, H, TaoDefaultComputeHessian, NULL));
-    PetscCall(TaoTermComputeHessianUseFDPush(tao->objective_term.term));
+    PetscCall(TaoTermComputeHessianSetUseFD(tao->objective_term.term, PETSC_TRUE));
     PetscCall(MatDestroy(&H));
   }
   flg = PETSC_FALSE;
@@ -605,7 +604,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   PetscCall(TaoTermSetFromOptions(tao->callbacks));
 
   {
-    char    *term_prefixes[8];
+    char    *term_prefixes[16];
     PetscInt n_terms = PETSC_STATIC_ARRAY_LENGTH(term_prefixes);
 
     PetscCall(PetscOptionsStringArray("-tao_add_terms", "a list of prefixes for terms to add to the Tao objective function", "TaoAddTerm", term_prefixes, &n_terms, NULL));
@@ -679,6 +678,9 @@ PetscErrorCode TaoViewFromOptions(Tao A, PetscObject obj, const char name[])
   output where only the first processor opens
   the file.  All other processors send their
   data to the first processor to print.
+
+  To view all the `TaoTerm` inside of `Tao`, use `PETSC_VIEWER_ASCII_INFO_DETAIL`,
+  or pass `-tao_view ::ascii_info_detail` flag
 
 .seealso: [](ch_tao), `Tao`, `PetscViewerASCIIOpen()`
 @*/
@@ -775,34 +777,23 @@ PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, "total number of iterations=%" PetscInt_FMT ",          ", tao->niter));
     PetscCall(PetscViewerASCIIPrintf(viewer, "              (max: %" PetscInt_FMT ")\n", tao->max_it));
 
-    if (tao->nfuncs > 0) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function evaluations=%" PetscInt_FMT ",", tao->nfuncs));
+    if (tao->objective_term.term->nobj > 0) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function evaluations=%" PetscInt_FMT ",", tao->objective_term.term->nobj));
+      if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: unlimited)\n"));
+      else PetscCall(PetscViewerASCIIPrintf(viewer, "               (max: %" PetscInt_FMT ")\n", tao->max_funcs));
+    }
+    if (tao->objective_term.term->ngrad > 0) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations=%" PetscInt_FMT ",", tao->objective_term.term->ngrad));
       if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: unlimited)\n"));
       else PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: %" PetscInt_FMT ")\n", tao->max_funcs));
     }
-    {
-      PetscBool is_callback;
-      PetscInt  ngrad_mffd, ngrads_display;
-
-      /* Check if tao has only one term and it's a callback */
-      PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callback));
-      ngrad_mffd = tao->objective_term.term->ngrad_mffd;
-      if (ngrad_mffd > 0 && format == PETSC_VIEWER_ASCII_INFO_DETAIL) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of MFFD gradient evaluations=%" PetscInt_FMT "\n", ngrad_mffd));
-      ngrads_display = tao->ngrads;
-      if (is_callback) ngrads_display += ngrad_mffd;
-      if (ngrads_display > 0) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "total number of gradient evaluations=%" PetscInt_FMT ",", ngrads_display));
-        if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: unlimited)\n"));
-        else PetscCall(PetscViewerASCIIPrintf(viewer, "                (max: %" PetscInt_FMT ")\n", tao->max_funcs));
-      }
-    }
-    if (tao->nfuncgrads > 0) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function/gradient evaluations=%" PetscInt_FMT ",", tao->nfuncgrads));
+    if (tao->objective_term.term->nobjgrad > 0) {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "total number of function/gradient evaluations=%" PetscInt_FMT ",", tao->objective_term.term->nobjgrad));
       if (tao->max_funcs == PETSC_UNLIMITED) PetscCall(PetscViewerASCIIPrintf(viewer, "    (max: unlimited)\n"));
       else PetscCall(PetscViewerASCIIPrintf(viewer, "    (max: %" PetscInt_FMT ")\n", tao->max_funcs));
     }
     if (tao->nres > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of residual evaluations=%" PetscInt_FMT "\n", tao->nres));
-    if (tao->nhess > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of Hessian evaluations=%" PetscInt_FMT "\n", tao->nhess));
+    if (tao->objective_term.term->nhess > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of Hessian evaluations=%" PetscInt_FMT "\n", tao->objective_term.term->nhess));
     if (tao->nconstraints > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of constraint function evaluations=%" PetscInt_FMT "\n", tao->nconstraints));
     if (tao->njac > 0) PetscCall(PetscViewerASCIIPrintf(viewer, "total number of Jacobian evaluations=%" PetscInt_FMT "\n", tao->njac));
 
@@ -1207,7 +1198,7 @@ PetscErrorCode TaoGetCurrentFunctionEvaluations(Tao tao, PetscInt *nfuncs)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   PetscAssertPointer(nfuncs, 2);
-  *nfuncs = PetscMax(tao->nfuncs, tao->nfuncgrads);
+  *nfuncs = PetscMax(tao->objective_term.term->nobj, tao->objective_term.term->nobjgrad);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1229,7 +1220,7 @@ PetscErrorCode TaoGetCurrentFunctionEvaluations(Tao tao, PetscInt *nfuncs)
   Use `PETSC_DETERMINE` to use the default maximum number of iterations that was set when the object's type was set.
 
   Developer Note:
-  DeprAlso accepts the deprecated negative values to indicate no limit
+  Also accepts the deprecated negative values to indicate no limit
 
 .seealso: [](ch_tao), `Tao`, `TaoSetTolerances()`, `TaoSetMaximumFunctionEvaluations()`
 @*/
@@ -1482,9 +1473,9 @@ PetscErrorCode TaoAddLineSearchCounts(Tao tao)
     PetscCall(TaoLineSearchIsUsingTaoRoutines(tao->linesearch, &flg));
     if (!flg) {
       PetscCall(TaoLineSearchGetNumberFunctionEvaluations(tao->linesearch, &nfeval, &ngeval, &nfgeval));
-      tao->nfuncs += nfeval;
-      tao->ngrads += ngeval;
-      tao->nfuncgrads += nfgeval;
+      tao->objective_term.term->nobj += nfeval;
+      tao->objective_term.term->ngrad += ngeval;
+      tao->objective_term.term->nobjgrad += nfgeval;
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1529,6 +1520,9 @@ PetscErrorCode TaoGetSolution(Tao tao, Vec *X)
 
   Level: developer
 
+  Note:
+  This function does not reset the statistics of internal `TaoTerm`
+
 .seealso: [](ch_tao), `Tao`, `TaoCreate()`, `TaoSolve()`
 @*/
 PetscErrorCode TaoResetStatistics(Tao tao)
@@ -1536,11 +1530,7 @@ PetscErrorCode TaoResetStatistics(Tao tao)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   tao->niter        = 0;
-  tao->nfuncs       = 0;
-  tao->nfuncgrads   = 0;
-  tao->ngrads       = 0;
   tao->nres         = 0;
-  tao->nhess        = 0;
   tao->njac         = 0;
   tao->nconstraints = 0;
   tao->ksp_its      = 0;
@@ -1930,7 +1920,7 @@ PetscErrorCode TaoMonitorSolution(Tao tao, PetscViewerAndFormat *vf)
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (vf->view_interval > 0 && tao->niter % vf->view_interval) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscViewerPushFormat(vf->viewer, vf->format));
-  PetscCall(VecView(tao->gradient, vf->viewer));
+  PetscCall(VecView(tao->solution, vf->viewer));
   PetscCall(PetscViewerPopFormat(vf->viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2124,7 +2114,7 @@ PetscErrorCode TaoMonitorResidual(Tao tao, PetscViewerAndFormat *vf)
 @*/
 PetscErrorCode TaoDefaultConvergenceTest(Tao tao, void *dummy)
 {
-  PetscInt           niter = tao->niter, nfuncs = PetscMax(tao->nfuncs, tao->nfuncgrads);
+  PetscInt           niter     = tao->niter, nfuncs;
   PetscInt           max_funcs = tao->max_funcs;
   PetscReal          gnorm = tao->residual, gnorm0 = tao->gnorm0;
   PetscReal          f = tao->fc, steptol = tao->steptol, trradius = tao->step;
@@ -2137,6 +2127,7 @@ PetscErrorCode TaoDefaultConvergenceTest(Tao tao, void *dummy)
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (reason != TAO_CONTINUE_ITERATING) PetscFunctionReturn(PETSC_SUCCESS);
 
+  PetscCall(TaoGetCurrentFunctionEvaluations(tao, &nfuncs));
   if (PetscIsInfOrNanReal(f)) {
     PetscCall(PetscInfo(tao, "Failed to converged, function value is infinity or NaN\n"));
     reason = TAO_DIVERGED_NAN;
@@ -2287,6 +2278,11 @@ PetscErrorCode TaoGetOptionsPrefix(Tao tao, const char *p[])
 . -tao_type type - Sets the method; see `TaoType`
 
   Level: intermediate
+
+  Note:
+  Calling this function resets the convergence test to `TaoDefaultConvergenceTest()`.
+  If a custom convergence test has been set with `TaoSetConvergenceTest()`, it must
+  be set again after calling `TaoSetType()`.
 
 .seealso: [](ch_tao), `Tao`, `TaoCreate()`, `TaoGetType()`, `TaoType`
 @*/
@@ -3022,6 +3018,10 @@ PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params,
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  if (scale) PetscAssertPointer(scale, 2);
+  if (term) PetscAssertPointer(term, 3);
+  if (params) PetscAssertPointer(params, 4);
+  if (map) PetscAssertPointer(map, 5);
   PetscCall(TaoTermMappingGetData(&tao->objective_term, NULL, scale, term, map));
   if (params) *params = tao->objective_parameters;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3035,17 +3035,33 @@ PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params,
 
   Input Parameters:
 + tao    - a `Tao` solver context
-. prefix - the prefix used for configuring the new term (if NULL, the index of the term will be used as a prefix, e.g. "0_", "1_", etc.)
+. prefix - the prefix used for configuring the new term (if `NULL`, the index of the term will be used as a prefix, e.g. "0_", "1_", etc.)
 . scale  - scaling coefficient for the new term
 . term   - the real-valued function defining the new term
-. params - (optional) parameters for the new term.  It is up to the each implementation of `TaoTerm` to determine how it behaves when parameters are omitted.
+. params - (optional) parameters for the new term.  It is up to each implementation of `TaoTerm` to determine how it behaves when parameters are omitted.
 - map    - (optional) a map from the `tao` solution space to the `term` solution space; if `NULL` the map is assumed to be the identity
 
   Level: beginner
 
   Notes:
-  If the objective function was $f(x)$, it becomes $f(x) + \alpha g(Ax; p)$, where $\alpha$ is
-  the `scale`, $g$ is the `term`, $A$ is the (optional) map, and $p$ are the (optional) parameters of $g$.
+  If the objective function was $f(x)$, after calling `TaoAddTerm()` it becomes
+  $f(x) + \alpha g(Ax; p)$, where $\alpha$ is the `scale`, $g$ is the `term`, $A$ is the
+  (optional) `map`, and $p$ are the (optional) `params` of $g$.
+
+  The `map` $A$ transforms the `Tao` solution vector into the term's solution space.
+  For example, if the `Tao` solution vector is $x \in \mathbb{R}^n$ and the mapping
+  matrix is $A \in \mathbb{R}^{m \times n}$, then the term evaluates $g(Ax; p)$ with
+  $Ax \in \mathbb{R}^m$. The term's solution space is therefore $\mathbb{R}^m$. If the map is
+  `NULL`, the identity is used and the term's solution space must match the `Tao` solution space.
+  `Tao` automatically applies the chain rule for gradients ($A^T \nabla g$) and Hessians
+  ($A^T \nabla^2 g \, A$) with respect to $x$.
+
+  The `params` $p$ are fixed data that are not optimized over. Some `TaoTermType`s
+  require the parameter space to be related to the term's solution space (e.g., the same
+  size); when a mapping matrix $A$ is used, the parameter space may depend on either the row
+  or column space of $A$.  See the documentation for each `TaoTermType`.
+
+  Currently, `TaoAddTerm()` does not support bounded Newton solvers (`TAOBNK`,`TAOBNLS`,`TAOBNTL`,`TAOBNTR`,and `TAOBQNK`)
 
 .seealso: [](ch_tao), `Tao`, `TaoTerm`, `TAOTERMSUM`, `TaoGetTerm()`
 @*/
@@ -3058,8 +3074,17 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (prefix) PetscAssertPointer(prefix, 2);
+  PetscValidLogicalCollectiveReal(tao, scale, 3);
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 4);
   PetscCheckSameComm(tao, 1, term, 4);
+  if (params) {
+    PetscValidHeaderSpecific(params, VEC_CLASSID, 5);
+    PetscCheckSameComm(tao, 1, params, 5);
+  }
+  if (map) {
+    PetscValidHeaderSpecific(map, MAT_CLASSID, 6);
+    PetscCheckSameComm(tao, 1, map, 6);
+  }
   // If user is using TaoAddTerm, before setting any terms or callbacks,
   // then tao->objective_term.term is empty callback, which we want to remove.
   PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callback));
@@ -3071,12 +3096,12 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(TaoTermIsObjectiveDefined(tao->objective_term.term, &is_obj));
     PetscCall(TaoTermIsObjectiveAndGradientDefined(tao->objective_term.term, &is_objgrad));
     PetscCall(TaoTermIsGradientDefined(tao->objective_term.term, &is_grad));
-    //Empty callback term
+    // Empty callback term
     if (!(is_obj || is_objgrad || is_grad)) {
       PetscCall(TaoTermMappingSetData(&tao->objective_term, NULL, scale, term, map));
       if (params) PetscCall(PetscObjectReference((PetscObject)params));
       PetscCall(VecDestroy(&tao->objective_parameters));
-      //Empty callback term. Destroy hessians, as they are not needed
+      // Empty callback term. Destroy hessians, as they are not needed
       PetscCall(MatDestroy(&tao->hessian));
       PetscCall(MatDestroy(&tao->hessian_pre));
       tao->objective_parameters = params;
@@ -3111,11 +3136,10 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(TaoTermSetType(old_sum, TAOTERMSUM));
     PetscCall(TaoGetOptionsPrefix(tao, &tao_prefix));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)old_sum, tao_prefix));
-    PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)old_sum, NULL));
-    PetscCall(TaoTermSumSetNumSubterms(old_sum, 1));
+    PetscCall(TaoTermSumSetNumberTerms(old_sum, 1));
     PetscCall(PetscObjectGetOptionsPrefix((PetscObject)tao->objective_term.term, &term_prefix));
-    PetscCall(TaoTermSumSetSubterm(old_sum, 0, term_prefix, tao->objective_term.scale, tao->objective_term.term, tao->objective_term.map));
-    PetscCall(TaoTermSumSetSubtermHessianMatrices(old_sum, 0, NULL, NULL, tao->hessian, tao->hessian_pre));
+    PetscCall(TaoTermSumSetTerm(old_sum, 0, term_prefix, tao->objective_term.scale, tao->objective_term.term, tao->objective_term.map));
+    PetscCall(TaoTermSumSetTermHessianMatrices(old_sum, 0, NULL, NULL, tao->hessian, tao->hessian_pre));
     PetscCall(MatDestroy(&tao->hessian));
     PetscCall(MatDestroy(&tao->hessian_pre));
     PetscCall(TaoTermMappingReset(&tao->objective_term));
@@ -3132,14 +3156,14 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(TaoTermDestroy(&old_sum));
     tao->num_terms = 1;
   }
-  PetscCall(TaoTermSumGetNumSubterms(tao->objective_term.term, &num_old_terms));
+  PetscCall(TaoTermSumGetNumberTerms(tao->objective_term.term, &num_old_terms));
   if (tao->objective_parameters || params) {
     PetscCall(PetscCalloc1(num_old_terms + 1, &vec_list));
     if (tao->objective_parameters) PetscCall(TaoTermSumParametersUnpack(tao->objective_term.term, &tao->objective_parameters, vec_list));
     PetscCall(PetscObjectReference((PetscObject)params));
     vec_list[num_old_terms] = params;
   }
-  PetscCall(TaoTermSumAddSubterm(tao->objective_term.term, prefix, scale, term, map, NULL));
+  PetscCall(TaoTermSumAddTerm(tao->objective_term.term, prefix, scale, term, map, NULL));
   tao->num_terms++;
   if (vec_list) {
     PetscInt num_terms = num_old_terms + 1;
