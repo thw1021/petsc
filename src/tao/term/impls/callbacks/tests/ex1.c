@@ -13,7 +13,7 @@ static PetscErrorCode objective(Tao tao, Vec x, PetscReal *value, void *ctx)
 {
   AppCtx *app = (AppCtx *)ctx;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   *value = 0.0;
   app->obj_count++;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -23,7 +23,7 @@ static PetscErrorCode gradient(Tao tao, Vec x, Vec g, void *ctx)
 {
   AppCtx *app = (AppCtx *)ctx;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(VecZeroEntries(g));
   app->grad_count++;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -33,7 +33,7 @@ static PetscErrorCode objective_and_gradient(Tao tao, Vec x, PetscReal *value, V
 {
   AppCtx *app = (AppCtx *)ctx;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   *value = 0.0;
   PetscCall(VecZeroEntries(g));
   app->obj_and_grad_count++;
@@ -44,7 +44,7 @@ static PetscErrorCode hessian(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx)
 {
   AppCtx *app = (AppCtx *)ctx;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   if (H) {
     PetscCall(MatZeroEntries(H));
     PetscCall(MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY));
@@ -73,7 +73,7 @@ static PetscErrorCode testCallbacks(PetscBool separate)
   PetscInt  N = 10;
   PetscReal value;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   app.obj_count          = 0;
   app.grad_count         = 0;
   app.obj_and_grad_count = 0;
@@ -150,6 +150,7 @@ static PetscErrorCode testCallbacks(PetscBool separate)
 
 int main(int argc, char **argv)
 {
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(testCallbacks(PETSC_FALSE));
   PetscCall(testCallbacks(PETSC_TRUE));

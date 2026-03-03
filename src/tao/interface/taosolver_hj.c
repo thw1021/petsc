@@ -73,9 +73,9 @@ PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Ta
 
   Level: beginner
 
-  Note:
-  In addition to specifying an objective function using callbacks like
-  `TaoSetObjectiveAndGradient()` and `TaoSetHessian()`, user can specify
+  Notes:
+  In addition to specifying an objective function using callbacks such as
+  `TaoSetObjectiveAndGradient()` and `TaoSetHessian()`, users can specify
   objective functions with `TaoAddTerm()`.
 
   `TaoGetHessian()` will always return the callback specified with
@@ -94,11 +94,11 @@ PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)
 }
 
 /*@
-  TaoGetHessianMatrices - Get the matrices that store the Hessian matrix and its (optional) approximation that is used to compute the preconditioner
+  TaoGetHessianMatrices - Get the matrices that store the Hessian matrix and its (optional) approximation that is used to construct the preconditioner
 
-  Collective
+  Not collective
 
-  Input Parameters:
+  Input Parameter:
 . tao - the `Tao` context
 
   Output Parameters:
@@ -106,9 +106,6 @@ PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)
 - Hpre - approximation to the Hessian matrix used to construct the preconditioner (often `H`)
 
   Level: intermediate
-
-  Note:
-  If you are using `TaoTerm`s to define this objective, you should use this instead of `TaoSetHessian()` to set the matrices.
 
 .seealso: [](ch_tao), `Tao`, `TaoType`, `TaoGetObjective()`, `TaoGetGradient()`, `TaoGetObjectiveAndGradient()`, `TaoSetHessian()`, `TaoGetHessian()`
 @*/
@@ -286,9 +283,10 @@ PetscErrorCode TaoComputeHessian(Tao tao, Vec X, Mat H, Mat Hpre)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  PetscValidHeaderSpecific(X, VEC_CLASSID, 2);
+  PetscCheckSameComm(tao, 1, X, 2);
   PetscCall(TaoTermMappingComputeHessian(&tao->objective_term, X, tao->objective_parameters, INSERT_VALUES, H, Hpre));
   PetscCall(TaoTestHessian(tao));
-  tao->nhess++;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

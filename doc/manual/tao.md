@@ -214,12 +214,12 @@ argument and sets it to the solution vector used in the application.
 
 ### User Defined Callback Routines
 
-A `Tao` must be able to evaluate a function in order to optimized it;
+A `Tao` must be able to evaluate a function in order to optimize it;
 depending on the solver chosen, it may also need to evaluate the
 gradient vector and Hessian matrix.  TAO gives users two ways to specify
 this information: with callback functions for the evaluation operations
 (described in this section) provided directly to the `Tao` object, or with `TaoTerm` objects that
-encapsulates the functions and derivatives (see
+encapsulate the functions and derivatives (see
 {any}`sec_tao_term`).
 
 #### Application Context
@@ -343,7 +343,7 @@ pointer to a user-defined context.
 
 The TAO example problems demonstrate the use of these application
 contexts as well as specific instances of function, gradient, and
-Hessian evaluation routines. All these routines should return `PetscSuccess`
+Hessian evaluation routines. All these routines should return `PETSC_SUCCESS`
 after successful completion and a nonzero integer if
 the function is undefined at that point or an error occurred.
 
@@ -544,7 +544,7 @@ used to form an objective function, equipped with appropriate evaluation routine
 
 For an example, Tikhonov regularization (also known as
 Ridge Regression), can be formulated as $f(x) + \beta ||x||_2^2$.
-This can be viewed as the summation of two terms, $f(x) $ and 
+This can be viewed as the summation of two terms, $f(x) $ and
 $ \beta ||x||_2^2$.
 
 Each `TaoTerm` encapsulates the routines needed to
@@ -559,33 +559,65 @@ $\nabla_x f(x; p)$ (`TaoTermComputeGradient()` and
 `TaoTermComputeObjectiveAndGradient()`), and $\nabla_x^2 f(x; p)$
 (`TaoTermComputeHessian()`).
 
-When a `TaoTerm` is added to a `Tao` object using `TaoAddTerm()`, a scaling
-coefficient $\alpha$ is specified. If the current objective function is
-$f(x)$, then after calling `TaoAddTerm()` with scale $\alpha$ and term $g$,
-the objective becomes
+#### Adding terms, solution space, parameter space, and the mapping matrix
+
+A `TaoTerm` can be added to a `Tao` object by calling the
+
+```
+TaoAddTerm(Tao, const char[], PetscReal, TaoTerm, Vec, Mat);
+```
+
+routine. The first argument is the `Tao` object. The second argument is an optional prefix
+for the `TaoTerm`. The third argument is the scaling coefficient $\alpha$, and the fourth
+argument is the `TaoTerm` to add to the `Tao` object. The fifth and sixth arguments are
+the optional parameters vector and optional mapping matrix, respectively.
+
+If the current objective function of `Tao` is $f(x)$, then after calling `TaoAddTerm()`
+with scale $\alpha$, term $g$, parameter $p$, and map $A$, the objective becomes
 
 $$
-f(x) + \alpha g(x; p).
+f(x) + \alpha g(Ax; p).
 $$
 
-TAO automatically applies the scaling to the objective value, gradient, and
-Hessian contributed by the term
+The mapping matrix $A$ transforms the `Tao` solution vector $x$ into the term's
+solution space before evaluation. For example, if the `Tao` solution vector is
+$x \in \mathbb{R}^n$ and $A \in \mathbb{R}^{m \times n}$, then $Ax \in \mathbb{R}^m$
+and therefore the term's solution space is $\mathbb{R}^m$. If no mapping matrix is provided,
+the identity matrix is assumed and the term's solution space must match the `Tao` solution
+space. When a mapping matrix is used, the parameter space may depend on either the
+row or column space of $A$; see the documentation for each `TaoTermType`.
 
-When a mapping matrix $A$ is also provided, the full
-contribution of the term to the objective is $\alpha g(Ax; p)$, and the
-scaling is applied after the chain-rule transformation of the gradient and
-Hessian.
+`Tao` automatically applies the scaling and the chain-rule transformation of
+gradients and Hessians:
 
-#### Mapping matrix in TaoTerm
+* Mapped gradients: $\alpha A^T \nabla g(Ax; p)$
 
-When a `TaoTerm` is added to a `Tao` object using `TaoAddTerm()`, a mapping matrix $A$ can be optionally provided.
-This allows the term to evaluate the function $f(Ax; p)$ instead of $f(x; p)$.
+* Mapped Hessians: $\alpha A^T \nabla^2 g(Ax; p) A$
 
-For a mapped term $f(Ax; p)$, TAO automatically handles the transformation of gradients and Hessians:
+##### Spaces of TaoTerm
 
-* Mapped gradients: When computing the gradient with respect to $x$, TAO applies the chain rule to obtain $A^T \nabla f(x; p)$
+Every `TaoTerm` has two vector spaces:
 
-* Mapped Hessians: Similarly, the Hessian with respect to $x$ is computed as $A^T \nabla^2 f(x; p) A$
+* **Solution space** — the vector space of the optimization variable $x$ in $f(x; p)$.
+  Its size is set with `TaoTermSetSolutionSizes()`,
+  `TaoTermSetSolutionLayout()`, or `TaoTermSetSolutionTemplate()`, and reported
+  as $N$ in `TaoTermView()`.
+
+  If a mapping matrix $A \in \mathbb{R}^{m \times n}$ is used, then $n$ must match the
+  dimension of the `Tao` solution space, and $m$ must match the solution space of the
+  `TaoTerm`.
+
+* **Parameter space** — the vector space of the parameter vector $p$ in $f(x; p)$.
+  Parameters are fixed data that are *not* optimized over; they are passed to the
+  evaluation routines (e.g., `TaoTermComputeObjective()`).  Its size is set with
+  `TaoTermSetParametersSizes()`, `TaoTermSetParametersLayout()`, or
+  `TaoTermSetParametersTemplate()`, and reported as $K$ in `TaoTermView()`.
+  Whether a term accepts, requires, or ignores parameters is determined by
+  `TaoTermSetParametersMode()`.
+  Some `TaoTermType`s require the solution and parameter spaces to be related
+  (e.g., have the same size); see the documentation for each type.
+  For users, setting parameter space for built-in `TaoTermType`s is generally
+  not needed, except for `TAOTERMSHELL`.
 
 For an example of using mapping matrices with `TaoTerm`, see {any}`the elastic net regularization example <tao_example2>`, which demonstrates the use of `TAOTERMHALFL2SQUARED` with a mapping matrix to represent a data misfit term.
 
@@ -617,6 +649,8 @@ the parametric behavior of a `TaoTerm` is determined by `TaoTermSetParametersMod
 
 A `TaoTerm` can be set to an empty `Tao` object or added to an existing
 `Tao` using `TaoAddTerm()`. The entire objective function of a `Tao` object can be retrieved as a single `TaoTerm` using `TaoGetTerm()`, which returns the term along with its scale, parameters, and mapping matrix (if any).
+
+Currently, `TaoAddTerm()` does not support bounded Newton solvers (`TAOBNK`,`TAOBNLS`,`TAOBNTL`,`TAOBNTR`,and `TAOBQNK`).
 
 For example: if you have specified an objective function $f(x)$ using
 `TaoSetObjectiveAndGradient()`, and a regularizer $g(x;p)$ is specified by a `TaoTerm`,
@@ -663,7 +697,7 @@ $\frac{0.4}{2} \|x\|_2^2 + 0.7 \|x\|_1$ can be added with the following options:
 In the above, `ridge_`, and `lasso_` are PETSc option prefixes and could be any unique strings for each term to be added.
 
 When more than one `TaoTerm` object is set to `Tao` (or both `TaoSetObjective()` and `TaoAddTerm()` are used),
-a `TaoTerm` with type `TAOTERMSUM` gets created internally, and all the subsequently added `TaoTerm` objects gets stored in it.
+a `TaoTerm` with type `TAOTERMSUM` gets created internally, and all the subsequently added `TaoTerm` objects get stored in it.
 With this structure in mind, users can gradually control each term, with the following command line options:
 
 ```
@@ -683,7 +717,7 @@ With this structure in mind, users can gradually control each term, with the fol
 #### User-defined TaoTerm implementations
 
 A user-defined `TaoTerm` can be defined from function callbacks using the
-`TAOTERMSHELL` type.  This interface is very similar to `MATSHELL`:
+`TAOTERMSHELL` type.  This interface is very similar to `TAOSHELL`:
 there is a single user context that is set with `TaoTermShellSetContext()` and obtained with `TaoTermShellGetContext()`,
 and the evaluation routines are set by passing function callbacks with the same signature as routines they implement
 (see for example `TaoTermShellSetObjectiveAndGradient()`).
@@ -703,10 +737,10 @@ in {any}`the example below <tao_example3>` demonstrates the same Rosenbrock exam
 
 #### Masking TaoTerm evaluations
 
-In some cases, for a given `TAOTERMSUM`, the user may only want evaluation of a specific `TaoTerm` (instead of computing all of them and summing the results).
+In some cases, for a given `TAOTERMSUM`, the user may only want some evaluation of a specific `TaoTerm` (instead of computing all of them and summing the results).
 For an example, in a case where `TAOTERMSUM` is composed of `TAOTERMHALFL2SQUARED` and `TAOTERML1`,
  but the user only wants the objective function evaluation of `TAOTERML1`, and not its gradient and Hessian evaluations.
-In this case, user can `mask` desired evaluation operations via `TaoTermSumSetSubtermMask()`.
+In this case, user can `mask` desired evaluation operations via `TaoTermSumSetTermMask()`.
 Masking can also be done from the command line. For instance, for the elastic net regularization example above,
 the user can mask gradient and Hessian evaluation of `TAOTERML1` with the following options:
 

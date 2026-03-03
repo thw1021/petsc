@@ -1,4 +1,4 @@
-const char help[] = "test least-squares problem created from a mapped taoterm quadratic";
+static char help[] = "test least-squares problem created from a mapped taoterm quadratic";
 
 #include <petsctao.h>
 
@@ -18,6 +18,7 @@ int main(int argc, char **argv)
   PetscReal   val, density = 0.3;
   PetscBool   test_quad_mat = PETSC_FALSE;
 
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
 
@@ -34,16 +35,14 @@ int main(int argc, char **argv)
   PetscCall(PetscRandomSetFromOptions(rand));
 
   // create the model data, A, W and b
-  //PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, NULL, &A));
-
   PetscCall(MatCreate(comm, &A));
   PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, m, n));
   PetscCall(MatSetType(A, MATAIJ));
-  PetscCall(MatSetUp(A));
   PetscCall(MatSetFromOptions(A));
+  PetscCall(MatSetUp(A));
   for (i = 0; i < m; i++) {
     for (j = 0; j < n; j++) {
-      PetscCall(PetscRandomGetValue(rand, &val));
+      PetscCall(PetscRandomGetValueReal(rand, &val));
       // Optionally make it sparse: only insert some entries
       if (val < density) PetscCall(MatSetValue(A, i, j, val, INSERT_VALUES));
     }

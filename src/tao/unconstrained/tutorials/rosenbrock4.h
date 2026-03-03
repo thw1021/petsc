@@ -707,7 +707,7 @@ PetscErrorCode TestLMVM(Tao tao)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode RosenbrockMain()
+PetscErrorCode RosenbrockMain(void)
 {
   Vec           x;    /* solution vector */
   Vec           g;    /* gradient vector */

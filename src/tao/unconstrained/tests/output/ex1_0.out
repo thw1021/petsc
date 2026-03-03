@@ -1,5 +1,5 @@
-iter =   0, Function value 76.5209, Residual: 85.0733
-iter =   1, Function value 51.7831, Residual: < 1.0e-11
+iter =   0, Function value 76.5209, Residual: 85.0733 
+iter =   1, Function value 51.7831, Residual: < 1.0e-11 
 Tao Object: 1 MPI process
   type: nls
     Newton steps: 1
@@ -24,6 +24,9 @@ Tao Object: 1 MPI process
           rows=100, cols=100
             Vec Object: 1 MPI process
               type: mpi
+        total number of function evaluations=5
+        total number of function/gradient evaluations=2
+        total number of Hessian evaluations=1
     Map:
       Mat Object: 1 MPI process
         type: seqaij

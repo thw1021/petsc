@@ -11,9 +11,9 @@ static PetscErrorCode TaoTermDestroy_Halfl2squared(TaoTerm term)
   TaoTerm_HalfL2Squared *l2 = (TaoTerm_HalfL2Squared *)term->data;
 
   PetscFunctionBegin;
-  term->data = NULL;
   PetscCall(VecDestroy(&l2->pdiff_work));
   PetscCall(PetscFree(l2));
+  term->data = NULL;
   PetscCall(TaoTermDestroy_ElementwiseDivergence_Internal(term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -25,7 +25,7 @@ static PetscErrorCode TaoTermComputeObjective_Halfl2squared(TaoTerm term, Vec x,
 
   PetscFunctionBegin;
   if (params) {
-    if (!l2->pdiff_work) PetscCall(VecDuplicate(x, &l2->pdiff_work));
+    if (l2->pdiff_work == NULL) PetscCall(VecDuplicate(x, &l2->pdiff_work));
 
     PetscCall(VecCopy(x, l2->pdiff_work));
     PetscCall(VecAXPY(l2->pdiff_work, -1.0, params));
@@ -78,7 +78,7 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Halfl2squared(TaoTerm term, M
   PetscBool is_hdiag, is_hprediag;
 
   PetscFunctionBegin;
-  PetscCall(PetscInfo(term, "Creating TAOTERMHALFL2SQUARED Hessian Matrices. TAOTERMHALFL2SQUARED only accepts MATDIAGONAL for MatType, overriding any user-set MatType.\n"));
+  PetscCall(PetscInfo(term, "%s: Creating TAOTERMHALFL2SQUARED Hessian Matrices. TAOTERMHALFL2SQUARED only accepts MATDIAGONAL for MatType, overriding any user-set MatType.\n", ((PetscObject)term)->prefix));
   PetscCall(PetscStrcmp(term->H_mattype, MATDIAGONAL, &is_hdiag));
   PetscCall(PetscStrcmp(term->Hpre_mattype, MATDIAGONAL, &is_hprediag));
   if (!is_hdiag) {
@@ -119,7 +119,7 @@ static PetscErrorCode TaoTermIsComputeHessianFDPossible_Halfl2squared(TaoTerm te
           `TaoTermType`,
           `TaoTermCreateHalfL2Squared()`,
           `TAOTERML1`,
-          `TAOTERMQUADRATIC`,
+          `TAOTERMQUADRATIC`
 M*/
 PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
 {
@@ -130,8 +130,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
   PetscCall(PetscNew(&l2));
   term->data = (void *)l2;
 
-  term->H_mattype    = NULL;
-  term->Hpre_mattype = NULL;
+  PetscCall(PetscFree(term->H_mattype));
+  PetscCall(PetscFree(term->Hpre_mattype));
 
   PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->H_mattype));
   PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->Hpre_mattype));
@@ -178,13 +178,14 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Halfl2squared(TaoTerm term)
           `TaoTerm`,
           `TAOTERMHALFL2SQUARED`,
           `TaoTermCreateL1()`,
-          `TaoTermCreateQuadratic()`,
+          `TaoTermCreateQuadratic()`
 @*/
 PetscErrorCode TaoTermCreateHalfL2Squared(MPI_Comm comm, PetscInt n, PetscInt N, TaoTerm *term)
 {
   TaoTerm _term;
 
   PetscFunctionBegin;
+  PetscAssertPointer(term, 4);
   PetscCall(TaoTermCreate(comm, &_term));
   PetscCall(TaoTermSetType(_term, TAOTERMHALFL2SQUARED));
   PetscCall(TaoTermSetSolutionSizes(_term, n, N, 1));
