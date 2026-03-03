@@ -1038,7 +1038,6 @@ static PetscErrorCode AdvectX(Vec f, Vec f_out, AppCtx *ctx)
     /* Step 3 & 4: Apply SLDG matrices using ghost-extended data */
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
     if (mtype_f == PETSC_MEMTYPE_DEVICE) {
-      const PetscInt xs      = ctx->xs;
       const PetscInt n_cells = NxLocal + 2 * sw;
       ScalarView1D   d_fout(fout_ptr, (size_t)NvDOF * NxDOF_loc);
 
