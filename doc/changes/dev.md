@@ -124,6 +124,7 @@
 ```
 
 - Add data assimilation object with ETKF and LETKF impls and Lornez-95, travels wave and dam break tutorials
+- Move localization `PetscDALETKFGetLocalizationMatrix()` utility out of DMPlex and into LETKF
 
 
 ```{rubric} DM/DA:
