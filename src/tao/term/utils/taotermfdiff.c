@@ -59,7 +59,7 @@ static PetscErrorCode SNESFunction_TaoTerm(SNES snes, Vec X, Vec G, void *ctx)
           `TaoTermSetFDDelta()`,
           `TaoTermComputeGradientUseFDPush()`,
           `TaoTermComputeGradientUseFDPop()`,
-          `TaoTermComputeHessianFD()`,
+          `TaoTermComputeHessianFD()`
 @*/
 PetscErrorCode TaoTermComputeGradientFD(TaoTerm term, Vec x, Vec params, Vec g)
 {
@@ -67,9 +67,15 @@ PetscErrorCode TaoTermComputeGradientFD(TaoTerm term, Vec x, Vec params, Vec g)
   PetscScalar *_g;
   PetscReal    f, f2;
   PetscInt     low, high, N, i;
-  PetscReal    h = term->fd_delta;
+  PetscReal    h;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  if (params) PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
+  PetscValidHeaderSpecific(g, VEC_CLASSID, 4);
+  h = term->fd_delta;
+
   PetscCall(VecDuplicate(x, &x_perturbed));
   PetscCall(VecCopy(x, x_perturbed));
   PetscCall(VecGetSize(x_perturbed, &N));
@@ -128,7 +134,7 @@ PetscErrorCode TaoTermComputeGradientFD(TaoTerm term, Vec x, Vec params, Vec g)
           `TaoTermGetFDDelta()`,
           `TaoTermSetFDDelta()`,
           `TaoTermComputeHessianUseFDPush()`,
-          `TaoTermComputeHessianUseFDPop()`,
+          `TaoTermComputeHessianUseFDPop()`
 @*/
 PetscErrorCode TaoTermComputeHessianFD(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
@@ -137,10 +143,16 @@ PetscErrorCode TaoTermComputeHessianFD(TaoTerm term, Vec x, Vec params, Mat H, M
   TaoTermWithParameters t;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  if (params) PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
+  if (H) PetscValidHeaderSpecific(H, MAT_CLASSID, 4);
+  if (Hpre) PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 5);
+  PetscCheck(H || Hpre, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_NULL, "At least one of H or Hpre must be non-NULL");
   // Note: Request for FD takes higher precedence over MATMFFD. Ignore MFFD
   PetscCall(PetscInfo(term, "TaoTerm using finite differences w/o coloring to compute Hessian matrix.\n"));
   // Note: same routine as in fdiff.c
-  PetscCall(SNESCreate(PetscObjectComm((PetscObject)H), &snes));
+  PetscCall(SNESCreate(PetscObjectComm((PetscObject)term), &snes));
 
   t.term   = term;
   t.params = params;
@@ -249,7 +261,7 @@ PetscErrorCode TaoTermComputeHessianMFFD(TaoTerm term, Vec x, Vec params, Mat H,
   }
   PetscCall(PetscContainerGetPointer(container, (void **)&tp));
   PetscCheck(tp->term == term, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_INCOMP, "Hessian shell matrix does not come from this TaoTerm");
-  PetscCall(PetscObjectReference((PetscObject)params));
+  if (params) PetscCall(PetscObjectReference((PetscObject)params));
   PetscCall(VecDestroy(&tp->params));
   tp->params = params;
   PetscCall(MatMFFDSetBase(H, x, NULL));

@@ -237,9 +237,6 @@ PetscErrorCode TaoSetUp(Tao tao)
   PetscCheck(tao->solution, PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_WRONGSTATE, "Must call TaoSetSolution()");
   if (tao->uses_gradient && !tao->gradient) PetscCall(VecDuplicate(tao->solution, &tao->gradient));
   if (tao->uses_hessian_matrices) {
-    PetscBool is_sum;
-
-    PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMSUM, &is_sum));
     // TaoSetHessian has been called, but as terms have been added,
     // subterms' Hessian and PtAP routines, if needed, have to be created
     // TODO Function to set TAOTERMSUM's Hessian.
@@ -3034,7 +3031,7 @@ PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params,
 
   Input Parameters:
 + tao    - a `Tao` solver context
-. prefix - the prefix used for configuring the new term (if NULL, the index of the term will be used as a prefix, e.g. "0_", "1_", etc.)
+. prefix - the prefix used for configuring the new term (if `NULL`, the index of the term will be used as a prefix, e.g. "0_", "1_", etc.)
 . scale  - scaling coefficient for the new term
 . term   - the real-valued function defining the new term
 . params - (optional) parameters for the new term.  It is up to the each implementation of `TaoTerm` to determine how it behaves when parameters are omitted.
@@ -3059,6 +3056,14 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
   if (prefix) PetscAssertPointer(prefix, 2);
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 4);
   PetscCheckSameComm(tao, 1, term, 4);
+  if (params) {
+    PetscValidHeaderSpecific(params, VEC_CLASSID, 5);
+    PetscCheckSameComm(tao, 1, params, 5);
+  }
+  if (map) {
+    PetscValidHeaderSpecific(map, MAT_CLASSID, 6);
+    PetscCheckSameComm(tao, 1, map, 6);
+  }
   // If user is using TaoAddTerm, before setting any terms or callbacks,
   // then tao->objective_term.term is empty callback, which we want to remove.
   PetscCall(PetscObjectTypeCompare((PetscObject)tao->objective_term.term, TAOTERMCALLBACKS, &is_callback));
@@ -3111,10 +3116,10 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(TaoGetOptionsPrefix(tao, &tao_prefix));
     PetscCall(PetscObjectSetOptionsPrefix((PetscObject)old_sum, tao_prefix));
     PetscCall(PetscObjectAppendOptionsPrefix((PetscObject)old_sum, NULL));
-    PetscCall(TaoTermSumSetNumSubterms(old_sum, 1));
+    PetscCall(TaoTermSumSetNumberTerms(old_sum, 1));
     PetscCall(PetscObjectGetOptionsPrefix((PetscObject)tao->objective_term.term, &term_prefix));
-    PetscCall(TaoTermSumSetSubterm(old_sum, 0, term_prefix, tao->objective_term.scale, tao->objective_term.term, tao->objective_term.map));
-    PetscCall(TaoTermSumSetSubtermHessianMatrices(old_sum, 0, NULL, NULL, tao->hessian, tao->hessian_pre));
+    PetscCall(TaoTermSumSetTerm(old_sum, 0, term_prefix, tao->objective_term.scale, tao->objective_term.term, tao->objective_term.map));
+    PetscCall(TaoTermSumSetTermHessianMatrices(old_sum, 0, NULL, NULL, tao->hessian, tao->hessian_pre));
     PetscCall(MatDestroy(&tao->hessian));
     PetscCall(MatDestroy(&tao->hessian_pre));
     PetscCall(TaoTermMappingReset(&tao->objective_term));
@@ -3131,14 +3136,14 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(TaoTermDestroy(&old_sum));
     tao->num_terms = 1;
   }
-  PetscCall(TaoTermSumGetNumSubterms(tao->objective_term.term, &num_old_terms));
+  PetscCall(TaoTermSumGetNumberTerms(tao->objective_term.term, &num_old_terms));
   if (tao->objective_parameters || params) {
     PetscCall(PetscCalloc1(num_old_terms + 1, &vec_list));
     if (tao->objective_parameters) PetscCall(TaoTermSumParametersUnpack(tao->objective_term.term, &tao->objective_parameters, vec_list));
     PetscCall(PetscObjectReference((PetscObject)params));
     vec_list[num_old_terms] = params;
   }
-  PetscCall(TaoTermSumAddSubterm(tao->objective_term.term, prefix, scale, term, map, NULL));
+  PetscCall(TaoTermSumAddTerm(tao->objective_term.term, prefix, scale, term, map, NULL));
   tao->num_terms++;
   if (vec_list) {
     PetscInt num_terms = num_old_terms + 1;

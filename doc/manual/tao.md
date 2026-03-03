@@ -706,7 +706,7 @@ in {any}`the example below <tao_example3>` demonstrates the same Rosenbrock exam
 In some cases, for a given `TAOTERMSUM`, the user may only want evaluation of a specific `TaoTerm` (instead of computing all of them and summing the results).
 For an example, in a case where `TAOTERMSUM` is composed of `TAOTERMHALFL2SQUARED` and `TAOTERML1`,
  but the user only wants the objective function evaluation of `TAOTERML1`, and not its gradient and Hessian evaluations.
-In this case, user can `mask` desired evaluation operations via `TaoTermSumSetSubtermMask()`.
+In this case, user can `mask` desired evaluation operations via `TaoTermSumSetTermMask()`.
 Masking can also be done from the command line. For instance, for the elastic net regularization example above,
 the user can mask gradient and Hessian evaluation of `TAOTERML1` with the following options:
 

@@ -100,7 +100,7 @@ PETSC_EXTERN const char *const TaoTermParametersModes[];
 
   Level: advanced
 
-.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermSumSetSubtermMask()`, `TaoTermSumGetSubtermMask()`
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermSumSetTermMask()`, `TaoTermSumGetTermMask()`
 E*/
 typedef enum {
   TAOTERM_MASK_NONE      = 0, /* 0x0 */
@@ -256,19 +256,19 @@ PETSC_EXTERN PetscErrorCode TaoTermShellSetCreateParametersVec(TaoTerm, PetscErr
 PETSC_EXTERN PetscErrorCode TaoTermShellSetCreateHessianMatrices(TaoTerm, PetscErrorCode (*)(TaoTerm, Mat *, Mat *));
 PETSC_EXTERN PetscErrorCode TaoTermShellSetIsComputeHessianFDPossible(TaoTerm, PetscBool3);
 
-PETSC_EXTERN PetscErrorCode TaoTermSumSetNumSubterms(TaoTerm, PetscInt);
-PETSC_EXTERN PetscErrorCode TaoTermSumGetNumSubterms(TaoTerm, PetscInt *);
-PETSC_EXTERN PetscErrorCode TaoTermSumSetSubterm(TaoTerm, PetscInt, const char[], PetscReal, TaoTerm, Mat);
-PETSC_EXTERN PetscErrorCode TaoTermSumGetSubterm(TaoTerm, PetscInt, const char **, PetscReal *, TaoTerm *, Mat *);
-PETSC_EXTERN PetscErrorCode TaoTermSumAddSubterm(TaoTerm, const char[], PetscReal, TaoTerm, Mat, PetscInt *);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetNumberTerms(TaoTerm, PetscInt);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetNumberTerms(TaoTerm, PetscInt *);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetTerm(TaoTerm, PetscInt, const char[], PetscReal, TaoTerm, Mat);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetTerm(TaoTerm, PetscInt, const char **, PetscReal *, TaoTerm *, Mat *);
+PETSC_EXTERN PetscErrorCode TaoTermSumAddTerm(TaoTerm, const char[], PetscReal, TaoTerm, Mat, PetscInt *);
 PETSC_EXTERN PetscErrorCode TaoTermSumParametersPack(TaoTerm, Vec[], Vec *);
 PETSC_EXTERN PetscErrorCode TaoTermSumParametersUnpack(TaoTerm, Vec *, Vec[]);
-PETSC_EXTERN PetscErrorCode VecNestGetTaoTermSumSubParameters(Vec, PetscInt, Vec *);
-PETSC_EXTERN PetscErrorCode TaoTermSumGetSubtermHessianMatrices(TaoTerm, PetscInt, Mat *, Mat *, Mat *, Mat *);
-PETSC_EXTERN PetscErrorCode TaoTermSumSetSubtermHessianMatrices(TaoTerm, PetscInt, Mat, Mat, Mat, Mat);
-PETSC_EXTERN PetscErrorCode TaoTermSumGetSubtermMask(TaoTerm, PetscInt, TaoTermMask *);
-PETSC_EXTERN PetscErrorCode TaoTermSumSetSubtermMask(TaoTerm, PetscInt, TaoTermMask);
-PETSC_EXTERN PetscErrorCode TaoTermSumGetLastSubtermObjectives(TaoTerm, const PetscReal *[]);
+PETSC_EXTERN PetscErrorCode VecNestGetTaoTermSumParameters(Vec, PetscInt, Vec *);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetTermHessianMatrices(TaoTerm, PetscInt, Mat *, Mat *, Mat *, Mat *);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetTermHessianMatrices(TaoTerm, PetscInt, Mat, Mat, Mat, Mat);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetTermMask(TaoTerm, PetscInt, TaoTermMask *);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetTermMask(TaoTerm, PetscInt, TaoTermMask);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetLastTermObjectives(TaoTerm, const PetscReal *[]);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateHalfL2Squared(MPI_Comm, PetscInt, PetscInt, TaoTerm *);
 

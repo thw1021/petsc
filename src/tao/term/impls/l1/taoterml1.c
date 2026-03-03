@@ -22,11 +22,11 @@ static PetscErrorCode TaoTermDestroy_L1(TaoTerm term)
   TaoTerm_L1 *l1 = (TaoTerm_L1 *)term->data;
 
   PetscFunctionBegin;
-  term->data = NULL;
   PetscCall(VecDestroy(&l1->diff));
   PetscCall(VecDestroy(&l1->d));
   PetscCall(VecDestroy(&l1->diag));
   PetscCall(PetscFree(l1));
+  term->data = NULL;
   PetscCall(TaoTermDestroy_ElementwiseDivergence_Internal(term));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermL1SetEpsilon_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermL1GetEpsilon_C", NULL));
@@ -371,7 +371,7 @@ static PetscErrorCode TaoTermIsComputeHessianFDPossible_L1(TaoTerm term, PetscBo
           `TaoTermL1GetEpsilon()`,
           `TaoTermL1SetEpsilon()`,
           `TAOTERMHALFL2SQUARED`,
-          `TAOTERMQUADRATIC`,
+          `TAOTERMQUADRATIC`
 M*/
 PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
 {
@@ -382,8 +382,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   PetscCall(PetscNew(&l1));
   term->data = (void *)l1;
 
-  term->H_mattype    = NULL;
-  term->Hpre_mattype = NULL;
+  PetscCall(PetscFree(term->H_mattype));
+  PetscCall(PetscFree(term->Hpre_mattype));
 
   PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->H_mattype));
   PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->Hpre_mattype));

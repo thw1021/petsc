@@ -23,14 +23,14 @@ int main(int argc, char **argv)
   PetscCall(TaoTermSetParametersMode(sub_a, TAOTERM_PARAMETERS_OPTIONAL));
   PetscCall(TaoTermSetSolutionSizes(sub_a, PETSC_DECIDE, n_a, 1));
   PetscCall(TaoTermSetParametersSizes(sub_a, PETSC_DECIDE, k_a, 1));
-  PetscCall(TaoTermSumAddSubterm(sum, NULL, 2.0, sub_a, NULL, NULL));
+  PetscCall(TaoTermSumAddTerm(sum, NULL, 2.0, sub_a, NULL, NULL));
   PetscCall(TaoTermDestroy(&sub_a));
 
   PetscCall(TaoTermCreateShell(comm, NULL, NULL, &sub_b));
   PetscCall(TaoTermSetParametersMode(sub_b, TAOTERM_PARAMETERS_NONE));
   PetscCall(TaoTermSetSolutionSizes(sub_b, PETSC_DECIDE, n_b, 1));
   PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, n_b, n_a, NULL, &map_b));
-  PetscCall(TaoTermSumAddSubterm(sum, NULL, 3.0, sub_b, map_b, NULL));
+  PetscCall(TaoTermSumAddTerm(sum, NULL, 3.0, sub_b, map_b, NULL));
   PetscCall(MatDestroy(&map_b));
   PetscCall(TaoTermDestroy(&sub_b));
 
@@ -39,7 +39,7 @@ int main(int argc, char **argv)
   PetscCall(TaoTermSetSolutionSizes(sub_c, PETSC_DECIDE, n_c, 1));
   PetscCall(TaoTermSetParametersSizes(sub_c, PETSC_DECIDE, k_c, 1));
   PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, n_c, n_a, NULL, &map_c));
-  PetscCall(TaoTermSumAddSubterm(sum, NULL, 4.0, sub_c, map_c, NULL));
+  PetscCall(TaoTermSumAddTerm(sum, NULL, 4.0, sub_c, map_c, NULL));
   PetscCall(MatDestroy(&map_c));
   PetscCall(TaoTermDestroy(&sub_c));
 

@@ -67,11 +67,11 @@ int main(int argc, char **argv)
 
   test:
     suffix: 2
-    args: -tao_term_type sum -tao_term_sum_num_subterms 2 -subterm_0_tao_term_type halfl2squared -subterm_1_tao_term_type l1 -tao_term_sum_subterm_0_scale 0.5 -tao_term_sum_subterm_0_mask objective,gradient,hessian
+    args: -tao_term_type sum -tao_term_sum_number_terms 2 -term_0_tao_term_type halfl2squared -term_1_tao_term_type l1 -tao_term_sum_term_0_scale 0.5 -tao_term_sum_term_0_mask objective,gradient,hessian
 
   test:
     suffix: 2_ascii
-    args: -tao_term_type sum -tao_term_sum_num_subterms 2 -subterm_0_tao_term_type halfl2squared -subterm_1_tao_term_type l1 -tao_term_sum_subterm_0_scale 0.5 -tao_term_sum_subterm_0_mask objective,gradient,hessian
+    args: -tao_term_type sum -tao_term_sum_number_terms 2 -term_0_tao_term_type halfl2squared -term_1_tao_term_type l1 -tao_term_sum_term_0_scale 0.5 -tao_term_sum_term_0_mask objective,gradient,hessian
     args: -view_detail 0
 
   test:

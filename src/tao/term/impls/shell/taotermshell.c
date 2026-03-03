@@ -8,7 +8,7 @@ struct _n_TaoTerm_Shell {
 };
 
 /*@C
-  TaoTermShellSetContextDestroy - Set a method to destroy the user context resources when a `TAOTERMSHELL` is destroyed
+  TaoTermShellSetContextDestroy - Set a method to destroy the context resources when a `TAOTERMSHELL` is destroyed
 
   Logically collective
 
@@ -38,7 +38,7 @@ static PetscErrorCode TaoTermShellSetContextDestroy_Shell(TaoTerm term, PetscCtx
 }
 
 /*@
-  TaoTermShellGetContext - Get the user-specified context for a `TAOTERMSHELL`
+  TaoTermShellGetContext - Get the context for a `TAOTERMSHELL`
 
   Logically collective
 
@@ -46,7 +46,7 @@ static PetscErrorCode TaoTermShellSetContextDestroy_Shell(TaoTerm term, PetscCtx
 . term - a `TaoTerm` of type `TAOTERMSHELL`
 
   Output Parameter:
-. ctx - a user context
+. ctx - a context
 
   Level: intermediate
 
@@ -72,18 +72,18 @@ static PetscErrorCode TaoTermShellGetContext_Shell(TaoTerm term, PetscCtxRt ctx)
 }
 
 /*@
-  TaoTermShellSetContext - Set a user context for a `TAOTERMSHELL`
+  TaoTermShellSetContext - Set a context for a `TAOTERMSHELL`
 
   Logically collective
 
   Input Parameters:
 + term - a `TaoTerm` of type `TAOTERMSHELL`
-- ctx  - a user context
+- ctx  - a context
 
   Level: intermediate
 
   Note:
-  The user context can be accessed in callbacks using `TaoTermShellGetContext()`
+  The context can be accessed in callbacks using `TaoTermShellGetContext()`
 
 .seealso: [](sec_tao_term), `TaoTerm`, `TAOTERMSHELL`, `TaoTermShellGetContext()`, `TaoTermShellSetContextDestroy()`
 @*/
@@ -124,8 +124,8 @@ static PetscErrorCode TaoTermView_Shell(TaoTerm term, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
     PetscBool any;
-    if (shell->ctxcontainer) PetscCall(PetscViewerASCIIPrintf(viewer, "User context has been set\n"));
-    else PetscCall(PetscViewerASCIIPrintf(viewer, "No user context has been set\n"));
+    if (shell->ctxcontainer) PetscCall(PetscViewerASCIIPrintf(viewer, "Context has been set\n"));
+    else PetscCall(PetscViewerASCIIPrintf(viewer, "No context has been set\n"));
 
     PetscCall(PetscViewerASCIIPrintf(viewer, "The following methods have been set:"));
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
@@ -165,7 +165,7 @@ static PetscErrorCode TaoTermDestroy_Shell(TaoTerm term)
   term->ops->gradient             = NULL;
   term->ops->objectiveandgradient = NULL;
   term->ops->hessian              = NULL;
-  term->ops->view                 = TaoTermView_Shell;
+  term->ops->view                 = NULL;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetContextDestroy_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermShellSetContext_C", NULL));
@@ -378,7 +378,7 @@ static PetscErrorCode TaoTermShellSetIsComputeHessianFDPossible_Shell(TaoTerm te
           `TaoTermShellSetObjective()`,
           `TaoTermShellSetGradient()`,
           `TaoTermShellSetObjectiveAndGradient()`,
-          `TaoTermShellSetHessian()`,
+          `TaoTermShellSetHessian()`
 @*/
 PetscErrorCode TaoTermShellSetView(TaoTerm term, PetscErrorCode (*view)(TaoTerm term, PetscViewer viewer))
 {
@@ -473,7 +473,7 @@ static PetscErrorCode TaoTermShellSetCreateParametersVec_Shell(TaoTerm term, Pet
   Calling sequence of `createmats`:
 + f    - the `TaoTerm`
 . H    - (optional) a matrix of the appropriate type and size for the Hessian of `term`
-- Hpre - (optional) a matrix of the appropriate type and size for preconditioning the Hessian of `term`
+- Hpre - (optional) a matrix of the appropriate type and size for constructing a preconditioner for the Hessian of `term`
 
   Level: intermediate
 
@@ -496,7 +496,7 @@ static PetscErrorCode TaoTermShellSetCreateHessianMatrices_Shell(TaoTerm term, P
 }
 
 /*MC
-  TAOTERMSHELL - A `TaoTerm` that uses user-defined function callbacks for its operations
+  TAOTERMSHELL - A `TaoTerm` that uses user-provided function callbacks for its operations
 
   Level: intermediate
 
@@ -504,7 +504,7 @@ static PetscErrorCode TaoTermShellSetCreateHessianMatrices_Shell(TaoTerm term, P
           `TaoTermShellSetObjective()`,
           `TaoTermShellSetGradient()`,
           `TaoTermShellSetObjectiveAndGradient()`,
-          `TaoTermShellSetHessian()`,
+          `TaoTermShellSetHessian()`
 M*/
 PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
 {
@@ -535,14 +535,14 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
 }
 
 /*@C
-  TaoTermCreateShell - Create a `TaoTerm` of type `TAOTERMSHELL` that is ready to accept user-defined callback operations.
+  TaoTermCreateShell - Create a `TaoTerm` of type `TAOTERMSHELL` that is ready to accept user-provided callback operations.
 
   Collective
 
   Input Parameter:
 + comm    - the MPI communicator for computing the term
-. ctx     - (optional) a user context to be used by routines
-- destroy - (optional) a routine to destroy the user context when `term` is destroyed
+. ctx     - (optional) a context to be used by routines
+- destroy - (optional) a routine to destroy the context when `term` is destroyed
 
   Output Parameter:
 . term - a `TaoTerm` of type `TAOTERMSHELL`

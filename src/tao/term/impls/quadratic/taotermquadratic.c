@@ -149,13 +149,13 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Quadratic(TaoTerm term, Mat *
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TAOTERMQUADRATIC`,
-          `TaoTermQuadraticSetMat()`,
+          `TaoTermQuadraticSetMat()`
 @*/
 PetscErrorCode TaoTermQuadraticGetMat(TaoTerm term, Mat *A)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  if (A) PetscAssertPointer(A, 2);
+  PetscAssertPointer(A, 2);
   *A = NULL;
   PetscTryMethod(term, "TaoTermQuadraticGetMat_C", (TaoTerm, Mat *), (term, A));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -184,7 +184,7 @@ static PetscErrorCode TaoTermQuadraticGetMat_Quadratic(TaoTerm term, Mat *A)
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TAOTERMQUADRATIC`,
-          `TaoTermQuadraticGetMat()`,
+          `TaoTermQuadraticGetMat()`
 @*/
 PetscErrorCode TaoTermQuadraticSetMat(TaoTerm term, Mat A)
 {
@@ -254,7 +254,7 @@ static PetscErrorCode TaoTermIsComputeHessianFDPossible_Quadratic(TaoTerm term, 
           `TaoTermType`,
           `TaoTermCreateQuadratic()`,
           `TAOTERMHALFL2SQUARED`,
-          `TAOTERML1`
+          `TAOTERML1`, `TaoTermQuadraticSetMat()`
 M*/
 PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm term)
 {
@@ -265,8 +265,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm term)
   PetscCall(PetscNew(&quad));
   term->data = (void *)quad;
 
-  term->H_mattype    = NULL;
-  term->Hpre_mattype = NULL;
+  PetscCall(PetscFree(term->H_mattype));
+  PetscCall(PetscFree(term->Hpre_mattype));
 
   term->ops->destroy                    = TaoTermDestroy_Quadratic;
   term->ops->view                       = TaoTermView_Quadratic;
@@ -299,9 +299,10 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm term)
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
+          `TaoTermCreate()`,
           `TAOTERMQUADRATIC`,
           `TaoTermCreateHalfL2Squared()`,
-          `TaoTermCreateL1()`,
+          `TaoTermCreateL1()`, `TaoTermQuadraticSetMat()`
 @*/
 PetscErrorCode TaoTermCreateQuadratic(Mat A, TaoTerm *term)
 {

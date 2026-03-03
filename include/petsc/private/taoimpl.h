@@ -294,12 +294,12 @@ PETSC_INTERN PetscErrorCode TaoTermDestroy_ElementwiseDivergence_Internal(TaoTer
 
 PETSC_INTERN PetscErrorCode TaoTermCallbacksSetObjective(TaoTerm, PetscErrorCode (*)(Tao, Vec, PetscReal *, PetscCtx), PetscCtx);
 PETSC_INTERN PetscErrorCode TaoTermCallbacksSetGradient(TaoTerm, PetscErrorCode (*)(Tao, Vec, Vec, PetscCtx), PetscCtx);
-PETSC_INTERN PetscErrorCode TaoTermCallbacksSetObjAndGrad(TaoTerm, PetscErrorCode (*)(Tao, Vec, PetscReal *, Vec, PetscCtx), PetscCtx);
+PETSC_INTERN PetscErrorCode TaoTermCallbacksSetObjectiveAndGradient(TaoTerm, PetscErrorCode (*)(Tao, Vec, PetscReal *, Vec, PetscCtx), PetscCtx);
 PETSC_INTERN PetscErrorCode TaoTermCallbacksSetHessian(TaoTerm, PetscErrorCode (*)(Tao, Vec, Mat, Mat, PetscCtx), PetscCtx);
 
 PETSC_INTERN PetscErrorCode TaoTermCallbacksGetObjective(TaoTerm, PetscErrorCode (**)(Tao, Vec, PetscReal *, PetscCtx), PetscCtxRt);
 PETSC_INTERN PetscErrorCode TaoTermCallbacksGetGradient(TaoTerm, PetscErrorCode (**)(Tao, Vec, Vec, PetscCtx), PetscCtxRt);
-PETSC_INTERN PetscErrorCode TaoTermCallbacksGetObjAndGrad(TaoTerm, PetscErrorCode (**)(Tao, Vec, PetscReal *, Vec, PetscCtx), PetscCtxRt);
+PETSC_INTERN PetscErrorCode TaoTermCallbacksGetObjectiveAndGradient(TaoTerm, PetscErrorCode (**)(Tao, Vec, PetscReal *, Vec, PetscCtx), PetscCtxRt);
 PETSC_INTERN PetscErrorCode TaoTermCallbacksGetHessian(TaoTerm, PetscErrorCode (**)(Tao, Vec, Mat, Mat, PetscCtx), PetscCtxRt);
 
 PETSC_INTERN PetscErrorCode TaoTermMappingSetData(TaoTermMapping *, const char *, PetscReal, TaoTerm, Mat);
