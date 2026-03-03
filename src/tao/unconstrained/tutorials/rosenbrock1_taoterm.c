@@ -11,9 +11,9 @@ static PetscErrorCode FormFunctionGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 static PetscErrorCode FormHessian(TaoTerm, Vec, Vec, Mat, Mat);
 static PetscErrorCode CreateSolutionVec(TaoTerm, Vec *);
 
-PetscErrorCode CtxDestroy(PetscCtxRt ctx)
+static PetscErrorCode CtxDestroy(PetscCtxRt ctx)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 
   /* Initialize TAO and PETSc */
   PetscFunctionBeginUser;
-  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCheck(size == 1, comm, PETSC_ERR_WRONG_MPI_SIZE, "Incorrect number of processors");
@@ -56,8 +56,8 @@ int main(int argc, char **argv)
 
   if (user.use_fd) {
     PetscCall(TaoTermSetFDDelta(objective, 7.e-9));
-    PetscCall(TaoTermComputeGradientUseFDPush(objective));
-    PetscCall(TaoTermComputeHessianUseFDPush(objective));
+    PetscCall(TaoTermComputeGradientSetUseFD(objective, PETSC_TRUE));
+    PetscCall(TaoTermComputeHessianSetUseFD(objective, PETSC_TRUE));
   }
   /* Set routines for function, gradient, hessian evaluation */
   PetscCall(TaoAddTerm(tao, NULL, 1.0, objective, NULL, NULL));
@@ -79,10 +79,6 @@ int main(int argc, char **argv)
     PetscCheck(PetscAbsReal(fd_delta_get - 1.e-6) < 1.e-15, comm, PETSC_ERR_PLIB, "FD delta changed: set %g, got %g", (double)fd_delta_set, (double)fd_delta_get);
   }
 
-  if (user.use_fd) {
-    PetscCall(TaoTermComputeGradientUseFDPop(objective));
-    PetscCall(TaoTermComputeHessianUseFDPop(objective));
-  }
   /* Clean up */
   PetscCall(AppCtxFinalize(&user, tao));
   PetscCall(TaoDestroy(&tao));
@@ -114,7 +110,7 @@ static PetscErrorCode FormFunctionGradient(TaoTerm term, Vec X, Vec parameters_u
   AppCtx *user;
 
   PetscFunctionBeginUser;
-  PetscCheck(parameters_unused == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "Rosenbrock function does not take a parameter vector");
+  PetscCheck(parameters_unused == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONG, "Rosenbrock function does not take a parameter vector");
   PetscCall(TaoTermShellGetContext(term, &user));
   PetscCall(AppCtxFormFunctionGradient(user, X, f, G));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -140,8 +136,8 @@ static PetscErrorCode FormHessian(TaoTerm term, Vec X, Vec params, Mat H, Mat Hp
 {
   AppCtx *user;
 
-  PetscFunctionBegin;
-  PetscCheck(params == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "Rosenbrock function does not take a parameter vector");
+  PetscFunctionBeginUser;
+  PetscCheck(params == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_WRONG, "Rosenbrock function does not take a parameter vector");
   PetscCall(TaoTermShellGetContext(term, &user));
   if (H) PetscCall(AppCtxFormHessian(user, X, H));
   if (Hpre && Hpre != H) {

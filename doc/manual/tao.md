@@ -214,12 +214,12 @@ argument and sets it to the solution vector used in the application.
 
 ### User Defined Callback Routines
 
-A `Tao` must be able to evaluate a function in order to optimized it;
+A `Tao` must be able to evaluate a function in order to optimize it;
 depending on the solver chosen, it may also need to evaluate the
 gradient vector and Hessian matrix.  TAO gives users two ways to specify
 this information: with callback functions for the evaluation operations
 (described in this section) provided directly to the `Tao` object, or with `TaoTerm` objects that
-encapsulates the functions and derivatives (see
+encapsulate the functions and derivatives (see
 {any}`sec_tao_term`).
 
 #### Application Context
@@ -706,7 +706,7 @@ in {any}`the example below <tao_example3>` demonstrates the same Rosenbrock exam
 In some cases, for a given `TAOTERMSUM`, the user may only want evaluation of a specific `TaoTerm` (instead of computing all of them and summing the results).
 For an example, in a case where `TAOTERMSUM` is composed of `TAOTERMHALFL2SQUARED` and `TAOTERML1`,
  but the user only wants the objective function evaluation of `TAOTERML1`, and not its gradient and Hessian evaluations.
-In this case, user can `mask` desired evaluation operations via `TaoTermSumSetSubtermMask()`.
+In this case, user can `mask` desired evaluation operations via `TaoTermSumSetTermMask()`.
 Masking can also be done from the command line. For instance, for the elastic net regularization example above,
 the user can mask gradient and Hessian evaluation of `TAOTERML1` with the following options:
 

@@ -193,7 +193,7 @@ PetscErrorCode TaoDefaultComputeHessianColor(Tao tao, Vec V, Mat H, Mat B, Petsc
 
   Note:
   This can be passed to `TaoSetHessian()` to use `MATMFFD` for approximate Hessian-vector products.  The matrix `H` can originate from
-  `MatCreateMFFD()` or from `TaoTermCreateHessianMFFD()`
+  `MatCreateMFFD()` or from `TaoTermCreateHessianMFFD()`.
 
 .seealso: `Tao`, `MATMFFD`, `MatCreateMFFD()`, `TaoTermCreateHessianMFFD()`
 @*/

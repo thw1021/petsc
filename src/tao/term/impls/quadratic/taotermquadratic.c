@@ -5,7 +5,7 @@ typedef struct _n_TaoTerm_Quadratic TaoTerm_Quadratic;
 struct _n_TaoTerm_Quadratic {
   Mat A;
   Vec _diff;
-  Vec _Adiff;
+  Vec Adiff;
 };
 
 static PetscErrorCode TaoTermDestroy_Quadratic(TaoTerm term)
@@ -15,9 +15,10 @@ static PetscErrorCode TaoTermDestroy_Quadratic(TaoTerm term)
   PetscFunctionBegin;
   PetscCall(MatDestroy(&quad->A));
   PetscCall(VecDestroy(&quad->_diff));
-  PetscCall(VecDestroy(&quad->_Adiff));
+  PetscCall(VecDestroy(&quad->Adiff));
   PetscCall(PetscFree(quad));
   term->data = NULL;
+  PetscCall(TaoTermDestroy_ElementwiseDivergence_Internal(term));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermQuadraticSetMat_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermQuadraticGetMat_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -55,7 +56,7 @@ static PetscErrorCode TaoTermQuadraticDiff(TaoTerm term, Vec x, Vec params, Vec 
   *diff = x;
   if (params) {
     TaoTerm_Quadratic *quad = (TaoTerm_Quadratic *)term->data;
-    if (!quad->_diff) PetscCall(VecDuplicate(x, &quad->_diff));
+    if (quad->_diff == NULL) PetscCall(VecDuplicate(x, &quad->_diff));
     PetscCall(VecCopy(x, quad->_diff));
     PetscCall(VecAXPY(quad->_diff, -1.0, params));
     *diff = quad->_diff;
@@ -70,10 +71,11 @@ static PetscErrorCode TaoTermComputeObjective_Quadratic(TaoTerm term, Vec x, Vec
   PetscScalar        sval;
 
   PetscFunctionBegin;
+  PetscCheck(quad->A, PetscObjectComm((PetscObject)term), PETSC_ERR_ORDER, "Quadratic matrix not set, call TaoTermQuadraticSetMat() first");
   PetscCall(TaoTermQuadraticDiff(term, x, params, &diff));
-  if (!quad->_Adiff) PetscCall(VecDuplicate(diff, &quad->_Adiff));
-  PetscCall(MatMult(quad->A, diff, quad->_Adiff));
-  PetscCall(VecDot(diff, quad->_Adiff, &sval));
+  if (quad->Adiff == NULL) PetscCall(VecDuplicate(diff, &quad->Adiff));
+  PetscCall(MatMult(quad->A, diff, quad->Adiff));
+  PetscCall(VecDot(diff, quad->Adiff, &sval));
   *value = 0.5 * PetscRealPart(sval);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -84,6 +86,7 @@ static PetscErrorCode TaoTermComputeGradient_Quadratic(TaoTerm term, Vec x, Vec 
   Vec                diff;
 
   PetscFunctionBegin;
+  PetscCheck(quad->A, PetscObjectComm((PetscObject)term), PETSC_ERR_ORDER, "Quadratic matrix not set, call TaoTermQuadraticSetMat() first");
   PetscCall(TaoTermQuadraticDiff(term, x, params, &diff));
   PetscCall(MatMult(quad->A, diff, g));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -96,6 +99,7 @@ static PetscErrorCode TaoTermComputeObjectiveAndGradient_Quadratic(TaoTerm term,
   PetscScalar        sval;
 
   PetscFunctionBegin;
+  PetscCheck(quad->A, PetscObjectComm((PetscObject)term), PETSC_ERR_ORDER, "Quadratic matrix not set, call TaoTermQuadraticSetMat() first");
   PetscCall(TaoTermQuadraticDiff(term, x, params, &diff));
   PetscCall(MatMult(quad->A, diff, g));
   PetscCall(VecDot(diff, g, &sval));
@@ -108,7 +112,8 @@ static PetscErrorCode TaoTermComputeHessian_Quadratic(TaoTerm term, Vec x, Vec p
   TaoTerm_Quadratic *quad = (TaoTerm_Quadratic *)term->data;
 
   PetscFunctionBegin;
-  //TODO caching to avoid unnecessary computation
+  PetscCheck(quad->A, PetscObjectComm((PetscObject)term), PETSC_ERR_ORDER, "Quadratic matrix not set, call TaoTermQuadraticSetMat() first");
+  // TODO caching to avoid unnecessary computation
   if (H) PetscCall(MatCopy(quad->A, H, UNKNOWN_NONZERO_PATTERN));
   if (Hpre && Hpre != H) PetscCall(MatCopy(quad->A, Hpre, UNKNOWN_NONZERO_PATTERN));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -119,7 +124,8 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Quadratic(TaoTerm term, Mat *
   TaoTerm_Quadratic *quad = (TaoTerm_Quadratic *)term->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscInfo(term, "Creating TAOTERMQUADRATIC Hessian Matrices by duplicating quadratic matrix set by TaoTermQuadraticSetMat, overriding custom MatType options.\n"));
+  PetscCheck(quad->A, PetscObjectComm((PetscObject)term), PETSC_ERR_ORDER, "Quadratic matrix not set, call TaoTermQuadraticSetMat() first");
+  PetscCall(PetscInfo(term, "%s: Creating TAOTERMQUADRATIC Hessian Matrices by duplicating quadratic matrix set by TaoTermQuadraticSetMat, overriding custom MatType options.\n", ((PetscObject)term)->prefix));
   if (H) PetscCall(MatDuplicate(quad->A, MAT_DO_NOT_COPY_VALUES, H));
   if (Hpre) {
     if (term->Hpre_is_H && H) {
@@ -149,13 +155,13 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Quadratic(TaoTerm term, Mat *
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TAOTERMQUADRATIC`,
-          `TaoTermQuadraticSetMat()`,
+          `TaoTermQuadraticSetMat()`
 @*/
 PetscErrorCode TaoTermQuadraticGetMat(TaoTerm term, Mat *A)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
-  if (A) PetscAssertPointer(A, 2);
+  PetscAssertPointer(A, 2);
   *A = NULL;
   PetscTryMethod(term, "TaoTermQuadraticGetMat_C", (TaoTerm, Mat *), (term, A));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -184,7 +190,7 @@ static PetscErrorCode TaoTermQuadraticGetMat_Quadratic(TaoTerm term, Mat *A)
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TAOTERMQUADRATIC`,
-          `TaoTermQuadraticGetMat()`,
+          `TaoTermQuadraticGetMat()`
 @*/
 PetscErrorCode TaoTermQuadraticSetMat(TaoTerm term, Mat A)
 {
@@ -212,7 +218,7 @@ static PetscErrorCode TaoTermQuadraticSetMat_Quadratic(TaoTerm term, Mat A)
     PetscCall(PetscObjectReference((PetscObject)A));
     PetscCall(MatDestroy(&quad->A));
     PetscCall(VecDestroy(&quad->_diff));
-    PetscCall(VecDestroy(&quad->_Adiff));
+    PetscCall(VecDestroy(&quad->Adiff));
     quad->A = A;
     PetscCall(MatGetVecType(A, &vec_type));
     PetscCall(TaoTermSetSolutionVecType(term, vec_type));
@@ -254,7 +260,7 @@ static PetscErrorCode TaoTermIsComputeHessianFDPossible_Quadratic(TaoTerm term, 
           `TaoTermType`,
           `TaoTermCreateQuadratic()`,
           `TAOTERMHALFL2SQUARED`,
-          `TAOTERML1`
+          `TAOTERML1`, `TaoTermQuadraticSetMat()`
 M*/
 PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm term)
 {
@@ -265,8 +271,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm term)
   PetscCall(PetscNew(&quad));
   term->data = (void *)quad;
 
-  term->H_mattype    = NULL;
-  term->Hpre_mattype = NULL;
+  PetscCall(PetscFree(term->H_mattype));
+  PetscCall(PetscFree(term->Hpre_mattype));
 
   term->ops->destroy                    = TaoTermDestroy_Quadratic;
   term->ops->view                       = TaoTermView_Quadratic;
@@ -299,9 +305,10 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm term)
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
+          `TaoTermCreate()`,
           `TAOTERMQUADRATIC`,
           `TaoTermCreateHalfL2Squared()`,
-          `TaoTermCreateL1()`,
+          `TaoTermCreateL1()`, `TaoTermQuadraticSetMat()`
 @*/
 PetscErrorCode TaoTermCreateQuadratic(Mat A, TaoTerm *term)
 {
@@ -309,6 +316,7 @@ PetscErrorCode TaoTermCreateQuadratic(Mat A, TaoTerm *term)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscAssertPointer(term, 2);
   PetscCall(TaoTermCreate(PetscObjectComm((PetscObject)A), &_term));
   PetscCall(TaoTermSetType(_term, TAOTERMQUADRATIC));
   PetscCall(TaoTermQuadraticSetMat(_term, A));
