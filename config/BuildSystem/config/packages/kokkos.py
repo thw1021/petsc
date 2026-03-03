@@ -36,6 +36,7 @@ class Configure(config.package.CMakePackage):
     import nargs
     config.package.CMakePackage.setupHelp(self, help)
     help.addArgument('KOKKOS', '-download-kokkos-cxx-std-threads=<bool>',  nargs.ArgBool(None, False, 'Build kokkos for C++ threads'))
+    help.addArgument('KOKKOS', '-download-kokkos-rdc=<bool>',              nargs.ArgBool(None, False, 'Enable/disable Kokkos relocatable device code (RDC)')) # Kokkos default is OFF
     return
 
   def setupDependencies(self, framework):
@@ -183,7 +184,6 @@ class Configure(config.package.CMakePackage):
       # See https://kokkos.org/kokkos-core-wiki/keywords.html#amd-gpus, AMD_GFX is preferred over VEGA
       deviceArchName = 'AMD_' + self.hip.hipArch.upper()
       if self.hip.unifiedMemory: deviceArchName += '_APU'
-      args.append('-DKokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=OFF')
     elif self.sycl.found:
       lang = 'sycl'
       self.system.append('SYCL')
@@ -201,6 +201,10 @@ class Configure(config.package.CMakePackage):
         deviceArchName = 'INTEL_' + self.sycl.syclArch.upper()  # Ex. map xehp to INTEL_XEHP
 
     if deviceArchName: args.append('-DKokkos_ARCH_'+deviceArchName+'=ON')
+
+    if self.argDB['download-kokkos-rdc'] and lang != 'cxx':
+      args.append('-DKokkos_ENABLE_'+lang.upper()+'_RELOCATABLE_DEVICE_CODE:BOOL=ON') # Enable CUDA, HIP or SYCL RDC
+      args.append('-DBUILD_SHARED_LIBS=OFF') # RDC requires static libraries.
 
     langdialect = getattr(self.setCompilers,lang+'dialect',None)
     if langdialect:
