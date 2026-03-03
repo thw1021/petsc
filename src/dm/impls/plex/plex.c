@@ -11023,10 +11023,9 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
 {
   Mat          L, preall;
   Vec          x, y;
-  PetscSF      sfPoint;
   IS           pointNumbering;
   const PetscInt *pointNum;
-  PetscInt    *i, *j, numVertices, numEdges, rst, maxnnzrow, dim, *numDof, numFields;
+  PetscInt    *i, *j, numVertices, numEdges, shift, maxnnzrow, dim, *numDof, numFields;
   PetscInt     pStart, pEnd;
   PetscBool    useCone, useClosure;
   PetscScalar *vals;
@@ -11042,15 +11041,16 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
     /* FEM adjacency */
     PetscCall(DMGetBasicAdjacency(dm, &useCone, &useClosure));
     PetscCall(DMSetBasicAdjacency(dm, PETSC_FALSE, PETSC_TRUE));
-    PetscCall(DMGetPointSF(dm, &sfPoint));
     PetscCall(DMPlexGetDepthStratum(dm, depth, &pStart, &pEnd));
-    PetscCall(DMPlexCreateNumbering_Plex(dm, pStart, pEnd, 0, NULL, sfPoint, &pointNumbering));
+    PetscCall(DMPlexCreatePointNumbering(dm, &pointNumbering));
     PetscCall(ISGetIndices(pointNumbering, &pointNum));
+    shift = DMPlex_GlobalID(pointNum[pStart]);
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &shift, 1, MPIU_INT, MPIU_MIN, PetscObjectComm((PetscObject)dm)));
     /* Determine sizes */
     numVertices = 0;
     for (PetscInt p = pStart; p < pEnd; p++) {
       /* Skip non-owned cells in parallel */
-      if (pointNum[p - pStart] < 0) continue;
+      if (pointNum[p] < 0) continue;
       numVertices++;
     }
     numEdges = 0;
@@ -11058,7 +11058,7 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
       PetscInt nadj = PETSC_DETERMINE;
       PetscInt *adj = NULL;
       /* Skip non-owned cells in parallel */
-      if (pointNum[p - pStart] < 0) continue;
+      if (pointNum[p] < 0) continue;
       PetscCall(DMPlexGetAdjacency(dm, p, &nadj, &adj));
       for (PetscInt a = 0; a < nadj; a++)
         if (adj[a] != p && pStart <= adj[a] && adj[a] < pEnd)
@@ -11074,11 +11074,11 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
       PetscInt nadj = PETSC_DETERMINE;
       PetscInt *adj = NULL;
       /* Skip non-owned cells in parallel */
-      if (pointNum[p - pStart] < 0) continue;
+      if (pointNum[p] < 0) continue;
       PetscCall(DMPlexGetAdjacency(dm, p, &nadj, &adj));
       for (PetscInt a = 0; a < nadj; a++)
         if (adj[a] != p && pStart <= adj[a] && adj[a] < pEnd)
-          j[iptr++] = DMPlex_GlobalID(pointNum[adj[a] - pStart]);
+          j[iptr++] = DMPlex_GlobalID(pointNum[adj[a]]) - shift;
       PetscCall(PetscFree(adj));
       i[p-pStart + 1] = iptr;
       /* Sort adjacencies (not strictly necessary) */
@@ -11100,11 +11100,11 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
   PetscCall(MatSetSizes(preall, numVertices, numVertices, PETSC_DECIDE, PETSC_DECIDE));
   PetscCall(MatSetType(preall, MATPREALLOCATOR));
   PetscCall(MatSetUp(preall));
-  PetscCall(MatGetOwnershipRange(preall, &rst, NULL));
+  PetscCall(MatGetOwnershipRange(preall, &shift, NULL));
   maxnnzrow = 0;
   for (PetscInt k = 0; k < numVertices; k++) {
     PetscInt  nnzrow = i[k + 1] - i[k];
-    PetscInt  row    = rst + k;
+    PetscInt  row    = shift + k;
     PetscInt *col    = j + i[k];
     maxnnzrow = PetscMax(maxnnzrow, nnzrow);
     /* Add adjacency connection */
@@ -11124,7 +11124,7 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
   for (PetscInt k = 0; k < maxnnzrow; k++) vals[k] = -1.0;
   for (PetscInt k = 0; k < numVertices; k++) {
     PetscInt  nnzrow = i[k + 1] - i[k];
-    PetscInt  row    = rst + k;
+    PetscInt  row    = shift + k;
     PetscInt *col    = j + i[k];
     PetscCall(MatSetValues(L, 1, &row, nnzrow, col, vals, INSERT_VALUES));
   }
