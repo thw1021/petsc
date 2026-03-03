@@ -86,7 +86,7 @@ int main(int argc, char **argv)
   PetscCall(TaoSetFromOptions(tao_term));
   PetscCall(TaoSolve(tao_term));
 
-  /* ===================== Setup Tao with traditional callbacks ===================== */
+  /* Setup Tao with traditional callbacks */
   PetscCall(TaoCreate(comm, &tao_callback));
   PetscCall(TaoSetType(tao_callback, TAOLMVM));
 
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
   if (ctx.print_debug) PetscCall(PetscPrintf(comm, "Solving Callback version \n"));
   PetscCall(TaoSolve(tao_callback));
 
-  /* ===================== Compare solutions ===================== */
+  /* Compare solutions */
   PetscCall(CompareSolutions(tao_term, tao_callback, &ctx));
 
   if (ctx.use_term1) {
@@ -281,7 +281,6 @@ static PetscErrorCode CreateTaoTermWithOptions(TestCtx *ctx, TaoTerm *term, Vec 
   PetscCall(TaoTermCreate(comm, term));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*term, term_prefix));
   PetscCall(TaoTermSetSolutionSizes(*term, PETSC_DECIDE, has_A ? ctx->map_row_size : ctx->user->n, 1));
-  //PetscCall(TaoTermSetSolutionSizes(*term, PETSC_DECIDE, ctx->user->n, 1));
   PetscCall(TaoTermSetFromOptions(*term));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
