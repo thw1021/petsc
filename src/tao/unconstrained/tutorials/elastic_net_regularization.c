@@ -33,6 +33,7 @@ int main(int argc, char **argv)
   PetscReal   lambda_2 = 0.1;
   Tao         tao;
 
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
 
@@ -40,8 +41,8 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsBoundedInt("-m", "data size", "", m, &m, NULL, 0));
   PetscCall(PetscOptionsBoundedInt("-n", "model size", "", n, &n, NULL, 0));
   PetscCall(PetscOptionsBoundedInt("-k", "dictionary size", "", k, &k, NULL, 0));
-  PetscCall(PetscOptionsBool("-set_term_prefix", "Set prefix to subterms", NULL, set_prefix, &set_prefix, NULL));
-  PetscCall(PetscOptionsBool("-set_term_name", "Set name to subterms", NULL, set_name, &set_name, NULL));
+  PetscCall(PetscOptionsBool("-set_term_prefix", "Set prefix to terms", NULL, set_prefix, &set_prefix, NULL));
+  PetscCall(PetscOptionsBool("-set_term_name", "Set name to terms", NULL, set_name, &set_name, NULL));
   PetscCall(PetscOptionsBool("-check_l1_eps", "Check epsilon of L1 term", NULL, check_eps, &check_eps, NULL));
   PetscOptionsEnd();
 
@@ -84,7 +85,6 @@ int main(int argc, char **argv)
   PetscCall(TaoTermCreateHalfL2Squared(comm, PETSC_DECIDE, n, &l2_reg_term));
   if (set_prefix) PetscCall(PetscObjectSetOptionsPrefix((PetscObject)l2_reg_term, "ridge_"));
   if (set_name) PetscCall(PetscObjectSetName((PetscObject)l2_reg_term, "Ridge TaoTerm"));
-  //  PetscCall(TaoAddTerm(tao, "ridge_", lambda_2, l2_reg_term, NULL, NULL)); // Note: no parameter vector, no map matrix needed
   PetscCall(TaoAddTerm(tao, "ridge_", lambda_2, l2_reg_term, NULL, NULL)); // Note: no parameter vector, no map matrix needed
   PetscCall(TaoTermDestroy(&l2_reg_term));
 
@@ -113,8 +113,8 @@ int main(int argc, char **argv)
     Mat       get_mat;
 
     PetscCall(TaoGetTerm(tao, &scale_get, &get_term, &get_vec, &get_mat));
-    PetscCall(VecNestGetTaoTermSumSubParameters(get_vec, 0, &p1));
-    PetscCall(VecNestGetTaoTermSumSubParameters(get_vec, 1, &p2));
+    PetscCall(VecNestGetTaoTermSumParameters(get_vec, 0, &p1));
+    PetscCall(VecNestGetTaoTermSumParameters(get_vec, 1, &p2));
     PetscCheck(p1 == b, PETSC_COMM_SELF, PETSC_ERR_COR, "First parameter vector is not same as what was set");
     PetscCheck(p2 == NULL, PETSC_COMM_SELF, PETSC_ERR_COR, "Second parameter vector is not none");
   }
@@ -131,9 +131,9 @@ int main(int argc, char **argv)
     PetscReal epsilon;
 
     PetscCall(TaoGetTerm(tao, &scale_get, &get_term, &get_vec, &get_mat));
-    PetscCall(TaoTermSumGetNumSubterms(get_term, &n_terms));
+    PetscCall(TaoTermSumGetNumberTerms(get_term, &n_terms));
     last_index = n_terms - 1;
-    PetscCall(TaoTermSumGetSubterm(get_term, last_index, NULL, NULL, &last_subterm, NULL));
+    PetscCall(TaoTermSumGetTerm(get_term, last_index, NULL, NULL, &last_subterm, NULL));
     PetscCall(PetscObjectTypeCompare((PetscObject)last_subterm, TAOTERML1, &is_l1));
     PetscCheck(is_l1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Last term is not L1");
     PetscCall(TaoTermL1GetEpsilon(last_subterm, &epsilon));

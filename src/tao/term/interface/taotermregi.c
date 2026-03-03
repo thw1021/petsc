@@ -16,7 +16,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Quadratic(TaoTerm);
   Not Collective, No Fortran Support
 
   Input Parameters:
-+ sname - name of a new user-defined solver
++ sname - name of a new user-defined term
 - func  - routine to create the context for the `TaoTermType`
 
   Example Usage:

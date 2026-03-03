@@ -550,6 +550,6 @@ PETSC_EXTERN PetscErrorCode TaoBoundSolution(Vec, Vec, Vec, PetscReal, PetscInt 
 PETSC_EXTERN PetscErrorCode MatCreateSubMatrixFree(Mat, IS, IS, Mat *);
 
 PETSC_EXTERN PetscErrorCode TaoGetTerm(Tao, PetscReal *, TaoTerm *, Vec *, Mat *);
-PETSC_EXTERN PetscErrorCode TaoAddTerm(Tao, const char *, PetscReal, TaoTerm, Vec, Mat);
+PETSC_EXTERN PetscErrorCode TaoAddTerm(Tao, const char[], PetscReal, TaoTerm, Vec, Mat);
 
 #include <petsctao_deprecations.h>
