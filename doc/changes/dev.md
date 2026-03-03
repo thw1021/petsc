@@ -146,6 +146,7 @@
 - Add `TAOTERML1` implementation of `TaoTerm` for a 1-norm penalty function
 - Add `TAOTERMQUADRATIC` implementation of `TaoTerm` for a quadratic penalty function
 - Add `petsc4py` support for `TaoTerm`: `TAOTerm` class with `create()`, `destroy()`, `view()`, `setType()`, `getType()`, `setFromOptions()`, `setUp()`, `setSolutionTemplate()`; `TAOTermType` enum; `TAO.getTerm()` and `TAO.addTerm()` methods
+- Add finite difference utilities: `TaoTermComputeGradientFD()`, `TaoTermComputeHessianFD()`, `TaoTermCreateHessianMFFD()`, and set/get functions `TaoTermComputeGradientSetUseFD()`/`TaoTermComputeGradientGetUseFD()`, `TaoTermComputeHessianSetUseFD()`/`TaoTermComputeHessianGetUseFD()`
 
 ```{rubric} PetscRegressor:
 ```
