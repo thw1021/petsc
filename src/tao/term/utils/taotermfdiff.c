@@ -50,16 +50,16 @@ static PetscErrorCode SNESFunction_TaoTerm(SNES snes, Vec X, Vec G, void *ctx)
   This routine is slow and expensive, and is not optimized to take advantage of
   sparsity in the problem.  Although not recommended for general use in
   large-scale applications, it can be useful in checking the correctness of a
-  user-provided gradient.  Call `TaoTermComputeGradientUseFDPush()` to start using
+  user-provided gradient.  Call `TaoTermComputeGradientSetUseFD()` to start using
   this routine in `TaoTermComputeGradient()`.
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
           `TaoTermGetFDDelta()`,
           `TaoTermSetFDDelta()`,
-          `TaoTermComputeGradientUseFDPush()`,
-          `TaoTermComputeGradientUseFDPop()`,
-          `TaoTermComputeHessianFD()`,
+          `TaoTermComputeGradientSetUseFD()`,
+          `TaoTermComputeGradientGetUseFD()`,
+          `TaoTermComputeHessianFD()`
 @*/
 PetscErrorCode TaoTermComputeGradientFD(TaoTerm term, Vec x, Vec params, Vec g)
 {
@@ -67,9 +67,15 @@ PetscErrorCode TaoTermComputeGradientFD(TaoTerm term, Vec x, Vec params, Vec g)
   PetscScalar *_g;
   PetscReal    f, f2;
   PetscInt     low, high, N, i;
-  PetscReal    h = term->fd_delta;
+  PetscReal    h;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  if (params) PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
+  PetscValidHeaderSpecific(g, VEC_CLASSID, 4);
+  h = term->fd_delta;
+
   PetscCall(VecDuplicate(x, &x_perturbed));
   PetscCall(VecCopy(x, x_perturbed));
   PetscCall(VecGetSize(x_perturbed, &N));
@@ -105,7 +111,7 @@ PetscErrorCode TaoTermComputeGradientFD(TaoTerm term, Vec x, Vec params, Vec g)
 . x      - a solution vector
 - params - parameters vector (may be `NULL`, see `TaoTermParametersMode()`)
 
-  Output Parameter:
+  Output Parameters:
 + H    - (optional) Hessian matrix
 - Hpre - (optional) Hessian preconditioning matrix
 
@@ -119,7 +125,7 @@ PetscErrorCode TaoTermComputeGradientFD(TaoTerm term, Vec x, Vec params, Vec g)
   This routine is slow and expensive, and is not optimized to take advantage of
   sparsity in the problem.  Although not recommended for general use in
   large-scale applications, it can be useful in checking the correctness of a
-  user-provided Hessian.  Call `TaoTermComputeHessianUseFDPush()` to start using
+  user-provided Hessian.  Call `TaoTermComputeHessianSetUseFD()` to start using
   this routine in `TaoTermComputeHessian()`.
 
 .seealso: [](sec_tao_term),
@@ -127,8 +133,8 @@ PetscErrorCode TaoTermComputeGradientFD(TaoTerm term, Vec x, Vec params, Vec g)
           `TaoTermComputeHessian()`,
           `TaoTermGetFDDelta()`,
           `TaoTermSetFDDelta()`,
-          `TaoTermComputeHessianUseFDPush()`,
-          `TaoTermComputeHessianUseFDPop()`,
+          `TaoTermComputeHessianSetUseFD()`,
+          `TaoTermComputeHessianGetUseFD()`
 @*/
 PetscErrorCode TaoTermComputeHessianFD(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre)
 {
@@ -137,10 +143,16 @@ PetscErrorCode TaoTermComputeHessianFD(TaoTerm term, Vec x, Vec params, Mat H, M
   TaoTermWithParameters t;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  if (params) PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
+  if (H) PetscValidHeaderSpecific(H, MAT_CLASSID, 4);
+  if (Hpre) PetscValidHeaderSpecific(Hpre, MAT_CLASSID, 5);
+  PetscCheck(H || Hpre, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_NULL, "At least one of H or Hpre must be non-NULL");
   // Note: Request for FD takes higher precedence over MATMFFD. Ignore MFFD
-  PetscCall(PetscInfo(term, "TaoTerm using finite differences w/o coloring to compute Hessian matrix.\n"));
+  PetscCall(PetscInfo(term, "%s: TaoTerm using finite differences w/o coloring to compute Hessian matrix.\n", ((PetscObject)term)->prefix));
   // Note: same routine as in fdiff.c
-  PetscCall(SNESCreate(PetscObjectComm((PetscObject)H), &snes));
+  PetscCall(SNESCreate(PetscObjectComm((PetscObject)term), &snes));
 
   t.term   = term;
   t.params = params;
@@ -164,7 +176,7 @@ PetscErrorCode TaoTermComputeHessianFD(TaoTerm term, Vec x, Vec params, Mat H, M
     PetscCall(MatSetSizes(Hpre, n, n, N, N));
     PetscCall(MatSetUp(Hpre));
   }
-  PetscCall(SNESComputeJacobianDefault(snes, x, H, Hpre, NULL));
+  PetscCall(SNESComputeJacobianDefault(snes, x, H ? H : Hpre, Hpre ? Hpre : H, NULL));
   PetscCall(SNESDestroy(&snes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -176,7 +188,6 @@ static PetscErrorCode MatMFFDFunction_TaoTermHessianShell(void *ctx, Vec x, Vec 
   PetscFunctionBegin;
   // we expect the solution to move around in a finite difference method, but not the parameters
   // TODO but not checking for it now
-  // TODO  ngrad eval not counted here!
   PetscCall(TaoTermComputeGradient(tp->term, x, tp->params, g));
   tp->term->ngrad_mffd++;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -230,6 +241,8 @@ static PetscErrorCode TaoTermInitializeHessianMFFD(TaoTerm term, Mat mffd)
 PetscErrorCode TaoTermCreateHessianMFFD(TaoTerm term, Mat *mffd)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(mffd, 2);
   PetscCall(MatCreate(PetscObjectComm((PetscObject)term), mffd));
   PetscCall(TaoTermInitializeHessianMFFD(term, *mffd));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -241,6 +254,11 @@ PetscErrorCode TaoTermComputeHessianMFFD(TaoTerm term, Vec x, Vec params, Mat H,
   TaoTermWithParameters *tp;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  if (params) PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
+  PetscValidHeaderSpecific(H, MAT_CLASSID, 4);
+  if (B) PetscValidHeaderSpecific(B, MAT_CLASSID, 5);
   PetscCall(PetscObjectQuery((PetscObject)H, "__TaoTermWithParameters", (PetscObject *)&container));
   if (!container) {
     PetscCall(TaoTermInitializeHessianMFFD(term, H));
@@ -249,7 +267,7 @@ PetscErrorCode TaoTermComputeHessianMFFD(TaoTerm term, Vec x, Vec params, Mat H,
   }
   PetscCall(PetscContainerGetPointer(container, (void **)&tp));
   PetscCheck(tp->term == term, PetscObjectComm((PetscObject)term), PETSC_ERR_ARG_INCOMP, "Hessian shell matrix does not come from this TaoTerm");
-  PetscCall(PetscObjectReference((PetscObject)params));
+  if (params) PetscCall(PetscObjectReference((PetscObject)params));
   PetscCall(VecDestroy(&tp->params));
   tp->params = params;
   PetscCall(MatMFFDSetBase(H, x, NULL));

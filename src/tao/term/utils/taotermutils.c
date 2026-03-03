@@ -3,7 +3,7 @@
 PETSC_INTERN PetscErrorCode VecIfNotCongruentGetSameLayoutVec(Vec a, Vec *b)
 {
   PetscFunctionBegin;
-  if (!(*b)) {
+  if (*b == NULL) {
     PetscCall(VecDuplicate(a, b));
   } else {
     PetscLayout layout_a, layout_b;
@@ -12,7 +12,7 @@ PETSC_INTERN PetscErrorCode VecIfNotCongruentGetSameLayoutVec(Vec a, Vec *b)
     PetscCall(VecGetLayout(a, &layout_a));
     PetscCall(VecGetLayout(*b, &layout_b));
     PetscCall(PetscLayoutCompare(layout_a, layout_b, &is_same));
-    if (!is_same) {
+    if (is_same == PETSC_FALSE) {
       PetscCall(VecDestroy(b));
       PetscCall(VecDuplicate(a, b));
     }
@@ -22,68 +22,61 @@ PETSC_INTERN PetscErrorCode VecIfNotCongruentGetSameLayoutVec(Vec a, Vec *b)
 
 PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_H_Internal(TaoTerm term, Mat *H, Mat *Hpre, PetscBool Hpre_is_H, MatType H_mattype)
 {
-  Mat       _H;
-  PetscBool is_shell = PETSC_FALSE;
-  PetscBool is_mffd  = PETSC_FALSE;
+  Mat       Htemp;
+  PetscBool is_mffd = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(PetscStrcmp(H_mattype, MATSHELL, &is_shell));
-  if (is_shell) PetscCall(PetscInfo(term, "TaoTerm currently does not support MATSHELL for Hessian matrices. Using default MatCreate routines.\n"));
   PetscCall(PetscStrcmp(H_mattype, MATMFFD, &is_mffd));
   if (is_mffd) {
-    PetscCall(TaoTermCreateHessianMFFD(term, &_H));
+    PetscCall(TaoTermCreateHessianMFFD(term, &Htemp));
   } else {
     PetscLayout sol_layout;
     VecType     sol_vec_type;
 
-    PetscCall(MatCreate(PetscObjectComm((PetscObject)term), &_H));
+    PetscCall(MatCreate(PetscObjectComm((PetscObject)term), &Htemp));
     PetscCall(TaoTermGetSolutionLayout(term, &sol_layout));
-    PetscCall(MatSetLayouts(_H, sol_layout, sol_layout));
+    PetscCall(MatSetLayouts(Htemp, sol_layout, sol_layout));
     PetscCall(TaoTermGetSolutionVecType(term, &sol_vec_type));
-    if (H_mattype) PetscCall(MatSetType(_H, H_mattype));
-    else PetscCall(MatSetVecType(_H, sol_vec_type));
-    PetscCall(MatSetOption(_H, MAT_SYMMETRIC, PETSC_TRUE));
-    PetscCall(MatSetOption(_H, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
+    if (H_mattype) PetscCall(MatSetType(Htemp, H_mattype));
+    else PetscCall(MatSetVecType(Htemp, sol_vec_type));
+    PetscCall(MatSetOption(Htemp, MAT_SYMMETRIC, PETSC_TRUE));
+    PetscCall(MatSetOption(Htemp, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
   }
 
   if (H) {
-    PetscCall(PetscObjectReference((PetscObject)_H));
-    *H = _H;
+    PetscCall(PetscObjectReference((PetscObject)Htemp));
+    *H = Htemp;
   }
   if (Hpre && Hpre_is_H) {
-    PetscCall(PetscObjectReference((PetscObject)_H));
-    *Hpre = _H;
+    PetscCall(PetscObjectReference((PetscObject)Htemp));
+    *Hpre = Htemp;
   }
-  PetscCall(MatDestroy(&_H));
+  PetscCall(MatDestroy(&Htemp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_Hpre_Internal(TaoTerm term, Mat *H, Mat *Hpre, PetscBool Hpre_is_H, MatType Hpre_mattype)
 {
-  Mat       _Hpre;
-  PetscBool is_shell = PETSC_FALSE;
-  PetscBool is_mffd  = PETSC_FALSE;
+  Mat       Hpretemp;
+  PetscBool is_mffd = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(PetscStrcmp(Hpre_mattype, MATSHELL, &is_shell));
-  if (is_shell) PetscCall(PetscInfo(term, "TaoTerm currently does not support MATSHELL for Hessian matrices. Using default MatCreate routines.\n"));
   PetscCall(PetscStrcmp(Hpre_mattype, MATMFFD, &is_mffd));
   if (is_mffd) {
-    PetscCall(TaoTermCreateHessianMFFD(term, &_Hpre));
+    PetscCall(TaoTermCreateHessianMFFD(term, &Hpretemp));
   } else {
     PetscLayout sol_layout;
     VecType     sol_vec_type;
 
-    PetscCall(MatCreate(PetscObjectComm((PetscObject)term), &_Hpre));
+    PetscCall(MatCreate(PetscObjectComm((PetscObject)term), &Hpretemp));
     PetscCall(TaoTermGetSolutionLayout(term, &sol_layout));
-    PetscCall(MatSetLayouts(_Hpre, sol_layout, sol_layout));
+    PetscCall(MatSetLayouts(Hpretemp, sol_layout, sol_layout));
     PetscCall(TaoTermGetSolutionVecType(term, &sol_vec_type));
-    PetscCall(MatSetVecType(_Hpre, sol_vec_type));
-    if (Hpre_mattype) PetscCall(MatSetType(_Hpre, Hpre_mattype));
-    else PetscCall(MatSetVecType(_Hpre, sol_vec_type));
-    PetscCall(MatSetOption(_Hpre, MAT_SYMMETRIC, PETSC_TRUE));
-    PetscCall(MatSetOption(_Hpre, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
+    if (Hpre_mattype) PetscCall(MatSetType(Hpretemp, Hpre_mattype));
+    else PetscCall(MatSetVecType(Hpretemp, sol_vec_type));
+    PetscCall(MatSetOption(Hpretemp, MAT_SYMMETRIC, PETSC_TRUE));
+    PetscCall(MatSetOption(Hpretemp, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
   }
-  *Hpre = _Hpre;
+  *Hpre = Hpretemp;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -35,6 +35,8 @@
 
 - Add two approaches for GPU energy monitoring:  `-log_view_gpu_energy` and `-log_view_gpu_energy_meter`
 - Add API `PetscLogGpuEnergy()`, `PetscLogGpuEnergyMeter()`, `PetscLogGpuEnergyMeterBegin()` and `PetscLogGpuEnergyMeterEnd()` for GPU energy monitoring
+- Remove `TAO_ObjectiveEval`, `TAO_GradientEval`, `TAO_ObjGradEval`, `TAO_HessianEval` log events; objective, gradient, objective-and-gradient, and Hessian evaluations are now logged as `TAOTERM_ObjectiveEval`, `TAOTERM_GradientEval`, `TAOTERM_ObjGradEval`, `TAOTERM_HessianEval` under `TAOTERM_CLASSID`. These log events reflect the actual user callback invoked, not the `TaoCompute*()` function called by the solver; for example, calling `TaoComputeGradient()` when only an objective-and-gradient callback is provided logs `TAOTERM_ObjGradEval`
+- Add `TAO_ResidualEval` log event for `TaoComputeResidual()`; previously `TaoComputeResidual()` reused `TAO_ObjectiveEval`
 
 ```{rubric} PetscViewer:
 ```
@@ -122,7 +124,10 @@
 ```
 
 - Add new `TaoTerm` object to manipulate objective function terms with many methods
-- Add `TaoGetTerm()`, and `TaoAddTerm()` for manipulating the objective, gradient, and Hessian evaluation of a `Tao` using `TaoTerm`
+- Add `TaoGetTerm()` and `TaoAddTerm()` for manipulating the objective, gradient, and Hessian evaluation of a `Tao` using `TaoTerm`
+- Add `TaoGetHessianMatrices()` to get the Hessian and preconditioner matrices from a `Tao`
+- Change `TaoComputeResidual()` to increment a new residual evaluation counter instead of the objective function evaluation counter
+- Change `-tao_view` to report residual evaluations separately and to include matrix-free finite-difference gradient evaluations in the gradient evaluation count
 
 ```{rubric} TaoTerm:
 ```
@@ -133,7 +138,8 @@
 - Add `TAOTERMHALFL2SQUARED` implementation of `TaoTerm` for a squared-norm penalty function
 - Add `TAOTERML1` implementation of `TaoTerm` for a 1-norm penalty function
 - Add `TAOTERMQUADRATIC` implementation of `TaoTerm` for a quadratic penalty function
-- Add Python routines for `TaoTerm`
+- Add finite difference utilities: `TaoTermComputeGradientFD()`, `TaoTermComputeHessianFD()`, `TaoTermCreateHessianMFFD()`, and set/get functions `TaoTermComputeGradientSetUseFD()`/`TaoTermComputeGradientGetUseFD()`, `TaoTermComputeHessianSetUseFD()`/`TaoTermComputeHessianGetUseFD()`
+- Add `petsc4py` support for `TaoTerm`: `TAOTerm` class with `create()`, `destroy()`, `view()`, `setType()`, `getType()`, `setFromOptions()`, `setUp()`, `setSolutionTemplate()`; `TAOTermType` enum; `TAO.getTerm()` and `TAO.addTerm()` methods
 
 ```{rubric} PetscRegressor:
 ```

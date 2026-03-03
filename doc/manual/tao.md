@@ -214,12 +214,12 @@ argument and sets it to the solution vector used in the application.
 
 ### User Defined Callback Routines
 
-A `Tao` must be able to evaluate a function in order to optimized it;
+A `Tao` must be able to evaluate a function in order to optimize it;
 depending on the solver chosen, it may also need to evaluate the
 gradient vector and Hessian matrix.  TAO gives users two ways to specify
 this information: with callback functions for the evaluation operations
 (described in this section) provided directly to the `Tao` object, or with `TaoTerm` objects that
-encapsulates the functions and derivatives (see
+encapsulate the functions and derivatives (see
 {any}`sec_tao_term`).
 
 #### Application Context
@@ -343,7 +343,7 @@ pointer to a user-defined context.
 
 The TAO example problems demonstrate the use of these application
 contexts as well as specific instances of function, gradient, and
-Hessian evaluation routines. All these routines should return `PetscSuccess`
+Hessian evaluation routines. All these routines should return `PETSC_SUCCESS`
 after successful completion and a nonzero integer if
 the function is undefined at that point or an error occurred.
 
@@ -569,7 +569,7 @@ f(x) + \alpha g(x; p).
 $$
 
 TAO automatically applies the scaling to the objective value, gradient, and
-Hessian contributed by the term
+Hessian contributed by the term.
 
 When a mapping matrix $A$ is also provided, the full
 contribution of the term to the objective is $\alpha g(Ax; p)$, and the
@@ -583,9 +583,9 @@ This allows the term to evaluate the function $f(Ax; p)$ instead of $f(x; p)$.
 
 For a mapped term $f(Ax; p)$, TAO automatically handles the transformation of gradients and Hessians:
 
-* Mapped gradients: When computing the gradient with respect to $x$, TAO applies the chain rule to obtain $A^T \nabla f(x; p)$
+* Mapped gradients: When computing the gradient with respect to $x$, TAO applies the chain rule to obtain $A^T \nabla f(Ax; p)$
 
-* Mapped Hessians: Similarly, the Hessian with respect to $x$ is computed as $A^T \nabla^2 f(x; p) A$
+* Mapped Hessians: Similarly, the Hessian with respect to $x$ is computed as $A^T \nabla^2 f(Ax; p) A$
 
 For an example of using mapping matrices with `TaoTerm`, see {any}`the elastic net regularization example <tao_example2>`, which demonstrates the use of `TAOTERMHALFL2SQUARED` with a mapping matrix to represent a data misfit term.
 
@@ -663,7 +663,7 @@ $\frac{0.4}{2} \|x\|_2^2 + 0.7 \|x\|_1$ can be added with the following options:
 In the above, `ridge_`, and `lasso_` are PETSc option prefixes and could be any unique strings for each term to be added.
 
 When more than one `TaoTerm` object is set to `Tao` (or both `TaoSetObjective()` and `TaoAddTerm()` are used),
-a `TaoTerm` with type `TAOTERMSUM` gets created internally, and all the subsequently added `TaoTerm` objects gets stored in it.
+a `TaoTerm` with type `TAOTERMSUM` gets created internally, and all the subsequently added `TaoTerm` objects get stored in it.
 With this structure in mind, users can gradually control each term, with the following command line options:
 
 ```
@@ -706,7 +706,7 @@ in {any}`the example below <tao_example3>` demonstrates the same Rosenbrock exam
 In some cases, for a given `TAOTERMSUM`, the user may only want evaluation of a specific `TaoTerm` (instead of computing all of them and summing the results).
 For an example, in a case where `TAOTERMSUM` is composed of `TAOTERMHALFL2SQUARED` and `TAOTERML1`,
  but the user only wants the objective function evaluation of `TAOTERML1`, and not its gradient and Hessian evaluations.
-In this case, user can `mask` desired evaluation operations via `TaoTermSumSetSubtermMask()`.
+In this case, user can `mask` desired evaluation operations via `TaoTermSumSetTermMask()`.
 Masking can also be done from the command line. For instance, for the elastic net regularization example above,
 the user can mask gradient and Hessian evaluation of `TAOTERML1` with the following options:
 

@@ -100,7 +100,7 @@ PETSC_EXTERN const char *const TaoTermParametersModes[];
 
   Level: advanced
 
-.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermSumSetSubtermMask()`, `TaoTermSumGetSubtermMask()`
+.seealso: [](sec_tao_term), `TaoTerm`, `TaoTermSumSetTermMask()`, `TaoTermSumGetTermMask()`
 E*/
 typedef enum {
   TAOTERM_MASK_NONE      = 0, /* 0x0 */
@@ -125,7 +125,7 @@ PETSC_EXTERN PetscErrorCode TaoTermGetParametersMode(TaoTerm, TaoTermParametersM
 E*/
 typedef enum {
   TAOTERM_DUPLICATE_SIZEONLY,
-  TAOTERM_DUPLICATE_TYPE,
+  TAOTERM_DUPLICATE_TYPE
 } TaoTermDuplicateOption;
 
 PETSC_EXTERN PetscErrorCode TaoTermDuplicate(TaoTerm, TaoTermDuplicateOption, TaoTerm *);
@@ -168,7 +168,7 @@ PETSC_EXTERN PetscErrorCode TaoTermGetCreateHessianMode(TaoTerm, PetscBool *, Ma
           `TaoTermShellSetObjective()`,
           `TaoTermObjectiveAndGradientFn`,
           `TaoTermGradientFn`,
-          `TaoTermHessianFn`,
+          `TaoTermHessianFn`
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermObjectiveFn)(TaoTerm term, Vec x, Vec params, PetscReal *value);
 
@@ -190,7 +190,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermObjectiveFn)(TaoTerm term, Ve
           `TaoTermShellSetObjectiveAndGradient()`,
           `TaoTermObjectiveFn`,
           `TaoTermGradientFn`,
-          `TaoTermHessianFn`,
+          `TaoTermHessianFn`
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermObjectiveAndGradientFn)(TaoTerm term, Vec x, Vec params, PetscReal *value, Vec g);
 
@@ -211,7 +211,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermObjectiveAndGradientFn)(TaoTe
           `TaoTermShellSetGradient()`,
           `TaoTermObjectiveFn`,
           `TaoTermObjectiveAndGradientFn`,
-          `TaoTermHessianFn`,
+          `TaoTermHessianFn`
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermGradientFn)(TaoTerm term, Vec x, Vec params, Vec g);
 
@@ -223,7 +223,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermGradientFn)(TaoTerm term, Vec
 . x      - the solution vector
 . params - the parameters vector (for some `TaoTerm` this may be `NULL`, see `TaoTermGetParametersMode()`)
 . H      - (optional) output, the Hessian of `term`
-- Hpre   - (optional) output, the approximation of `H` from which a preconditioned may be built
+- Hpre   - (optional) output, the approximation of `H` from which a preconditioner may be built
 
   Level: intermediate
 
@@ -233,7 +233,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermGradientFn)(TaoTerm term, Vec
           `TaoTermShellSetHessian()`,
           `TaoTermObjectiveFn`,
           `TaoTermObjectiveAndGradientFn`,
-          `TaoTermGradientFn`,
+          `TaoTermGradientFn`
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermHessianFn)(TaoTerm term, Vec x, Vec params, Mat H, Mat Hpre);
 
@@ -256,19 +256,19 @@ PETSC_EXTERN PetscErrorCode TaoTermShellSetCreateParametersVec(TaoTerm, PetscErr
 PETSC_EXTERN PetscErrorCode TaoTermShellSetCreateHessianMatrices(TaoTerm, PetscErrorCode (*)(TaoTerm, Mat *, Mat *));
 PETSC_EXTERN PetscErrorCode TaoTermShellSetIsComputeHessianFDPossible(TaoTerm, PetscBool3);
 
-PETSC_EXTERN PetscErrorCode TaoTermSumSetNumSubterms(TaoTerm, PetscInt);
-PETSC_EXTERN PetscErrorCode TaoTermSumGetNumSubterms(TaoTerm, PetscInt *);
-PETSC_EXTERN PetscErrorCode TaoTermSumSetSubterm(TaoTerm, PetscInt, const char[], PetscReal, TaoTerm, Mat);
-PETSC_EXTERN PetscErrorCode TaoTermSumGetSubterm(TaoTerm, PetscInt, const char **, PetscReal *, TaoTerm *, Mat *);
-PETSC_EXTERN PetscErrorCode TaoTermSumAddSubterm(TaoTerm, const char[], PetscReal, TaoTerm, Mat, PetscInt *);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetNumberTerms(TaoTerm, PetscInt);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetNumberTerms(TaoTerm, PetscInt *);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetTerm(TaoTerm, PetscInt, const char[], PetscReal, TaoTerm, Mat);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetTerm(TaoTerm, PetscInt, const char **, PetscReal *, TaoTerm *, Mat *);
+PETSC_EXTERN PetscErrorCode TaoTermSumAddTerm(TaoTerm, const char[], PetscReal, TaoTerm, Mat, PetscInt *);
 PETSC_EXTERN PetscErrorCode TaoTermSumParametersPack(TaoTerm, Vec[], Vec *);
 PETSC_EXTERN PetscErrorCode TaoTermSumParametersUnpack(TaoTerm, Vec *, Vec[]);
-PETSC_EXTERN PetscErrorCode VecNestGetTaoTermSumSubParameters(Vec, PetscInt, Vec *);
-PETSC_EXTERN PetscErrorCode TaoTermSumGetSubtermHessianMatrices(TaoTerm, PetscInt, Mat *, Mat *, Mat *, Mat *);
-PETSC_EXTERN PetscErrorCode TaoTermSumSetSubtermHessianMatrices(TaoTerm, PetscInt, Mat, Mat, Mat, Mat);
-PETSC_EXTERN PetscErrorCode TaoTermSumGetSubtermMask(TaoTerm, PetscInt, TaoTermMask *);
-PETSC_EXTERN PetscErrorCode TaoTermSumSetSubtermMask(TaoTerm, PetscInt, TaoTermMask);
-PETSC_EXTERN PetscErrorCode TaoTermSumGetLastSubtermObjectives(TaoTerm, const PetscReal *[]);
+PETSC_EXTERN PetscErrorCode VecNestGetTaoTermSumParameters(Vec, PetscInt, Vec *);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetTermHessianMatrices(TaoTerm, PetscInt, Mat *, Mat *, Mat *, Mat *);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetTermHessianMatrices(TaoTerm, PetscInt, Mat, Mat, Mat, Mat);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetTermMask(TaoTerm, PetscInt, TaoTermMask *);
+PETSC_EXTERN PetscErrorCode TaoTermSumSetTermMask(TaoTerm, PetscInt, TaoTermMask);
+PETSC_EXTERN PetscErrorCode TaoTermSumGetLastTermObjectives(TaoTerm, const PetscReal *[]);
 
 PETSC_EXTERN PetscErrorCode TaoTermCreateHalfL2Squared(MPI_Comm, PetscInt, PetscInt, TaoTerm *);
 
@@ -290,10 +290,10 @@ PETSC_EXTERN PetscErrorCode TaoTermIsComputeHessianFDPossible(TaoTerm, PetscBool
 PETSC_EXTERN PetscErrorCode TaoTermGetFDDelta(TaoTerm, PetscReal *);
 PETSC_EXTERN PetscErrorCode TaoTermSetFDDelta(TaoTerm, PetscReal);
 PETSC_EXTERN PetscErrorCode TaoTermComputeGradientFD(TaoTerm, Vec, Vec, Vec);
-PETSC_EXTERN PetscErrorCode TaoTermComputeGradientUseFDPush(TaoTerm);
-PETSC_EXTERN PetscErrorCode TaoTermComputeGradientUseFDPop(TaoTerm);
+PETSC_EXTERN PetscErrorCode TaoTermComputeGradientSetUseFD(TaoTerm, PetscBool);
+PETSC_EXTERN PetscErrorCode TaoTermComputeGradientGetUseFD(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianFD(TaoTerm, Vec, Vec, Mat, Mat);
-PETSC_EXTERN PetscErrorCode TaoTermComputeHessianUseFDPush(TaoTerm);
-PETSC_EXTERN PetscErrorCode TaoTermComputeHessianUseFDPop(TaoTerm);
+PETSC_EXTERN PetscErrorCode TaoTermComputeHessianSetUseFD(TaoTerm, PetscBool);
+PETSC_EXTERN PetscErrorCode TaoTermComputeHessianGetUseFD(TaoTerm, PetscBool *);
 PETSC_EXTERN PetscErrorCode TaoTermCreateHessianMFFD(TaoTerm, Mat *);
 PETSC_EXTERN PetscErrorCode TaoTermComputeHessianMFFD(TaoTerm, Vec, Vec, Mat, Mat);

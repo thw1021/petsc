@@ -22,11 +22,11 @@ static PetscErrorCode TaoTermDestroy_L1(TaoTerm term)
   TaoTerm_L1 *l1 = (TaoTerm_L1 *)term->data;
 
   PetscFunctionBegin;
-  term->data = NULL;
   PetscCall(VecDestroy(&l1->diff));
   PetscCall(VecDestroy(&l1->d));
   PetscCall(VecDestroy(&l1->diag));
   PetscCall(PetscFree(l1));
+  term->data = NULL;
   PetscCall(TaoTermDestroy_ElementwiseDivergence_Internal(term));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermL1SetEpsilon_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)term, "TaoTermL1GetEpsilon_C", NULL));
@@ -66,6 +66,7 @@ static PetscErrorCode TaoTermL1ComputeData(TaoTerm term, Vec x, Vec params, Vec 
       PetscCall(VecSqrtAbs(l1->d));
     }
   }
+  if (params) diff = l1->diff;
   *_diff = diff;
   *d     = l1->d;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -138,9 +139,9 @@ static PetscErrorCode TaoTermL1DerivativeCheck(TaoTerm term)
   TaoTerm_L1 *l1 = (TaoTerm_L1 *)term->data;
 
   PetscFunctionBegin;
-  if (!l1->epsilon_warning) {
+  if (l1->epsilon_warning == PETSC_FALSE) {
     l1->epsilon_warning = PETSC_TRUE;
-    PetscCall(PetscInfo(term, "Asking for derivatives of l1 norm, which is not smooth.  Consider smoothing the TaoTerm with TaoTermL1SetEpsilon() or using a derivative-free Tao solver\n"));
+    PetscCall(PetscInfo(term, "%s: Asking for derivatives of l1 norm, which is not smooth.  Consider smoothing the TaoTerm with TaoTermL1SetEpsilon() or using a derivative-free Tao solver\n", ((PetscObject)term)->prefix));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -201,7 +202,7 @@ static PetscErrorCode TaoTermComputeHessian_L1(TaoTerm term, Vec x, Vec params, 
   Vec diag = NULL; /* Appease -Wmaybe-uninitialized */
 
   PetscFunctionBegin;
-  if (!H && !Hpre) PetscFunctionReturn(PETSC_SUCCESS);
+  if (H == NULL && Hpre == NULL) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(TaoTermL1ComputeDiag(term, x, params, &diag));
   if (H) PetscCall(TaoTermComputeHessian_L1_Internal(term, diag, H));
   if (Hpre && Hpre != H) PetscCall(TaoTermComputeHessian_L1_Internal(term, diag, Hpre));
@@ -213,7 +214,7 @@ static PetscErrorCode TaoTermCreateHessianMatrices_L1(TaoTerm term, Mat *H, Mat 
   PetscBool is_hdiag, is_hprediag;
 
   PetscFunctionBegin;
-  PetscCall(PetscInfo(term, "Creating TAOTERML1 Hessian Matrices. TAOTERML1 only accepts MATDIAGONAL for MatType, overriding any user-set MatType.\n"));
+  PetscCall(PetscInfo(term, "%s: Creating TAOTERML1 Hessian Matrices. TAOTERML1 only accepts MATDIAGONAL for MatType, overriding any user-set MatType.\n", ((PetscObject)term)->prefix));
   PetscCall(PetscStrcmp(term->H_mattype, MATDIAGONAL, &is_hdiag));
   PetscCall(PetscStrcmp(term->Hpre_mattype, MATDIAGONAL, &is_hprediag));
   if (!is_hdiag) {
@@ -242,9 +243,8 @@ static PetscErrorCode TaoTermCreateHessianMatrices_L1(TaoTerm term, Mat *H, Mat 
 
   Level: advanced
 
-  Note:
   If $\epsilon = 0$ (the default), then `term` computes $\|x - p\|_1$, but if $\epsilon > 0$, then it computes
-  $\sum_{i=0}^n \sqrt{(x_i-p_i)^2 + \epsilon^2} - \epsilon$.
+  $\sum_{i=0}^{n-1} \left(\sqrt{(x_i-p_i)^2 + \epsilon^2} - \epsilon\right)$.
 
 .seealso: [](sec_tao_term),
           `TaoTerm`,
@@ -371,7 +371,7 @@ static PetscErrorCode TaoTermIsComputeHessianFDPossible_L1(TaoTerm term, PetscBo
           `TaoTermL1GetEpsilon()`,
           `TaoTermL1SetEpsilon()`,
           `TAOTERMHALFL2SQUARED`,
-          `TAOTERMQUADRATIC`,
+          `TAOTERMQUADRATIC`
 M*/
 PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
 {
@@ -382,8 +382,8 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_L1(TaoTerm term)
   PetscCall(PetscNew(&l1));
   term->data = (void *)l1;
 
-  term->H_mattype    = NULL;
-  term->Hpre_mattype = NULL;
+  PetscCall(PetscFree(term->H_mattype));
+  PetscCall(PetscFree(term->Hpre_mattype));
 
   PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->H_mattype));
   PetscCall(PetscStrallocpy(MATDIAGONAL, (char **)&term->Hpre_mattype));
@@ -450,7 +450,8 @@ PetscErrorCode TaoTermCreateL1(MPI_Comm comm, PetscInt n, PetscInt N, PetscReal 
   TaoTerm _term;
 
   PetscFunctionBegin;
-  epsilon = PetscMax(0.0, epsilon);
+  PetscAssertPointer(term, 5);
+  PetscCheck(epsilon >= 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "L1 epsilon (%g) cannot be < 0.0", (double)epsilon);
   PetscCall(TaoTermCreate(comm, &_term));
   PetscCall(TaoTermSetType(_term, TAOTERML1));
   PetscCall(TaoTermSetSolutionSizes(_term, n, N, 1));
