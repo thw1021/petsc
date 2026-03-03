@@ -34,6 +34,7 @@ struct _CharacteristicOps {
   PetscErrorCode (*view)(Characteristic, PetscViewer);
   PetscErrorCode (*destroy)(Characteristic);
   PetscErrorCode (*setup)(Characteristic);
+  PetscErrorCode (*solve)(Characteristic, PetscReal, Vec);
 };
 
 struct _p_Characteristic {
