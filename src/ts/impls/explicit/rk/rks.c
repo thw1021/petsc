@@ -84,19 +84,6 @@ static inline PetscReal ChebyshevDoublePrime(PetscInt j, PetscReal x)
   return j * (x * Uj1 - j * Tj) / denom2;
 }
 
-static inline PetscReal Legendre(PetscInt j, PetscReal x)
-{
-  if (j == 0) return 1.0;
-  if (j == 1) return x;
-  PetscReal Pjm2 = 1.0, Pjm1 = x, Pj;
-  for (PetscInt n = 2; n <= j; n++) {
-    Pj   = ((2.0 * n - 1.0) * x * Pjm1 - (n - 1.0) * Pjm2) / n;
-    Pjm2 = Pjm1;
-    Pjm1 = Pj;
-  }
-  return Pjm1;
-}
-
 /*@
   TSRKC1ComputeCoefficients - This function calculates the coefficients for the first-order RK-Chebyshev method
 
