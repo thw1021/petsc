@@ -1614,7 +1614,7 @@ PetscErrorCode TaoMonitorDefault(Tao tao, PetscViewerAndFormat *vf)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (vf->view_interval > 0 && tao->niter % vf->view_interval) PetscFunctionReturn(PETSC_SUCCESS);
+  if (vf->view_interval > 0 && tao->niter % vf->view_interval && !tao->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   PetscCall(PetscViewerPushFormat(viewer, vf->format));
@@ -1668,7 +1668,7 @@ PetscErrorCode TaoMonitorGlobalization(Tao tao, PetscViewerAndFormat *vf)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (vf->view_interval > 0 && tao->niter % vf->view_interval) PetscFunctionReturn(PETSC_SUCCESS);
+  if (vf->view_interval > 0 && tao->niter % vf->view_interval && !tao->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   PetscCall(PetscViewerPushFormat(viewer, vf->format));
@@ -1725,7 +1725,7 @@ PetscErrorCode TaoMonitorDefaultShort(Tao tao, PetscViewerAndFormat *vf)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (vf->view_interval > 0 && tao->niter % vf->view_interval) PetscFunctionReturn(PETSC_SUCCESS);
+  if (vf->view_interval > 0 && tao->niter % vf->view_interval && !tao->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
   gnorm = tao->residual;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
@@ -1775,7 +1775,7 @@ PetscErrorCode TaoMonitorConstraintNorm(Tao tao, PetscViewerAndFormat *vf)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (vf->view_interval > 0 && tao->niter % vf->view_interval) PetscFunctionReturn(PETSC_SUCCESS);
+  if (vf->view_interval > 0 && tao->niter % vf->view_interval && !tao->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   PetscCall(PetscViewerPushFormat(viewer, vf->format));
@@ -1812,7 +1812,7 @@ PetscErrorCode TaoMonitorSolution(Tao tao, PetscViewerAndFormat *vf)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (vf->view_interval > 0 && tao->niter % vf->view_interval) PetscFunctionReturn(PETSC_SUCCESS);
+  if (vf->view_interval > 0 && tao->niter % vf->view_interval && !tao->reason) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscViewerPushFormat(vf->viewer, vf->format));
   PetscCall(VecView(tao->solution, vf->viewer));
   PetscCall(PetscViewerPopFormat(vf->viewer));
@@ -1839,7 +1839,7 @@ PetscErrorCode TaoMonitorGradient(Tao tao, PetscViewerAndFormat *vf)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (vf->view_interval > 0 && tao->niter % vf->view_interval) PetscFunctionReturn(PETSC_SUCCESS);
+  if (vf->view_interval > 0 && tao->niter % vf->view_interval && !tao->reason) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscViewerPushFormat(vf->viewer, vf->format));
   PetscCall(VecView(tao->gradient, vf->viewer));
   PetscCall(PetscViewerPopFormat(vf->viewer));
@@ -1866,7 +1866,7 @@ PetscErrorCode TaoMonitorStep(Tao tao, PetscViewerAndFormat *vf)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (vf->view_interval > 0 && tao->niter % vf->view_interval) PetscFunctionReturn(PETSC_SUCCESS);
+  if (vf->view_interval > 0 && tao->niter % vf->view_interval && !tao->reason) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscViewerPushFormat(vf->viewer, vf->format));
   PetscCall(VecView(tao->stepdirection, vf->viewer));
   PetscCall(PetscViewerPopFormat(vf->viewer));
@@ -1979,7 +1979,7 @@ PetscErrorCode TaoMonitorResidual(Tao tao, PetscViewerAndFormat *vf)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
-  if (vf->view_interval > 0 && tao->niter % vf->view_interval) PetscFunctionReturn(PETSC_SUCCESS);
+  if (vf->view_interval > 0 && tao->niter % vf->view_interval && !tao->reason) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscViewerPushFormat(vf->viewer, vf->format));
   PetscCall(VecView(tao->ls_res, vf->viewer));
   PetscCall(PetscViewerPopFormat(vf->viewer));
