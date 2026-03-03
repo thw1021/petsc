@@ -1011,7 +1011,7 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrateBdJacobian_Basic(PetscDS ds, PetscWe
       }
       PetscCall(PetscDSSetCellParameters(ds, fegeom.detJ[0] * cellScale));
       w = fegeom.detJ[0] * quadWeights[q];
-      if (coefficients) PetscCall(PetscFEEvaluateFieldJets_Internal(ds, Nf, face, qp, T, &cgeom, &coefficients[cOffset], &coefficients_t[cOffset], u, u_x, u_t));
+      if (coefficients) PetscCall(PetscFEEvaluateFieldJets_Internal(ds, Nf, face, qp, T, &cgeom, &coefficients[cOffset], PetscSafePointerPlusOffset(coefficients_t, cOffset), u, u_x, u_t));
       if (dsAux) PetscCall(PetscFEEvaluateFieldJets_Internal(dsAux, NfAux, face, qp, TAux, &cgeom, &coefficientsAux[cOffsetAux], NULL, a, a_x, NULL));
       if (n0) {
         PetscCall(PetscArrayzero(g0, NcI * NcJ));
