@@ -11189,13 +11189,15 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
   Level: developer
 
   Notes:
-  Unlike `DMCreateColoring`, this graph does not represent the operator matrix associated with the discretization of a PDE on the `DM`.
+  Unlike `DMCreateColoring`, the graph used for the coloring does not represent the operator matrix associated with the discretization of a PDE on the `DM`.
 
   Coloring of matrices can also be computed directly from the sparse matrix nonzero structure via the `MatColoring` object or from the mesh from which the
   matrix comes from (what this function provides). In general using the mesh produces a more optimal coloring (fewer colors).
 
-  This produces a coloring with the distance of 1, see `MatSetColoringDistance()`
-  which can be used for efficiently grouping vertex-star patches that do not overlap into multi-patch subdomains.
+  Such colorings are useful for additive and multiplicative Schwarz methods.
+  A coloring of the vertices (depth=0) with distance=1 can be use can be used to group non-overlapping vertex-star patches into multi-patch subdomains.
+  Similarly, a vertex coloring with distance=2 can be used to group non-overlapping Vanka patches into multi-patch subdomains.
+
 
 .seealso: [](ch_unstructured), `DMPlex`, `ISColoring`, `MatColoring`, `DMCreateColoring()`
 @*/
@@ -11204,15 +11206,16 @@ PetscErrorCode DMPlexCreateColoring(DM dm, PetscInt depth, PetscInt distance, IS
   Mat L;
   MatColoring mc;
   PetscFunctionBegin;
+  /* Create a graph Laplacian */
   PetscCall(DMPlexCreateGraphLaplacian_Private(dm, depth, &L));
-
+  /* Obtain ISColoring via MatColoring */
   PetscCall(MatColoringCreate(L, &mc));
   PetscCall(MatColoringSetType(mc, MATCOLORINGGREEDY));
   PetscCall(MatColoringSetDistance(mc, distance));
   PetscCall(MatColoringSetFromOptions(mc));
   PetscCall(MatColoringApply(mc, coloring));
   PetscCall(MatColoringDestroy(&mc));
-
+  /* Destroy the graph Laplacian */
   PetscCall(MatDestroy(&L));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
