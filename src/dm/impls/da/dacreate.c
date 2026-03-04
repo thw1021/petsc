@@ -205,11 +205,13 @@ static PetscErrorCode DMCreateSubDM_DA(DM dm, PetscInt numFields, const PetscInt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Temp modification - fix PetscSection for DMDA's with dof>1 */
 static PetscErrorCode DMCreateFieldDecomposition_DA(DM dm, PetscInt *len, char ***namelist, IS **islist, DM **dmlist)
 {
-  PetscInt i;
-  DM_DA   *dd  = (DM_DA *)dm->data;
-  PetscInt dof = dd->w;
+  PetscInt      i;
+  DM_DA        *dd  = (DM_DA *)dm->data;
+  PetscInt      dof = dd->w;
+  DMDA_PointBC *bc  = dd->bc;
 
   PetscFunctionBegin;
   if (len) *len = dof;
@@ -230,20 +232,51 @@ static PetscErrorCode DMCreateFieldDecomposition_DA(DM dm, PetscInt *len, char *
     for (i = 0; i < dof; i++) PetscCall(PetscStrallocpy(dd->fieldname[i], &(*namelist)[i]));
   }
   if (dmlist) {
+    PetscCall(PetscMalloc1(dof, dmlist));
     DM da;
 
-    PetscCall(DMDACreate(PetscObjectComm((PetscObject)dm), &da));
-    PetscCall(DMSetDimension(da, dm->dim));
-    PetscCall(DMDASetSizes(da, dd->M, dd->N, dd->P));
-    PetscCall(DMDASetNumProcs(da, dd->m, dd->n, dd->p));
-    PetscCall(DMDASetBoundaryType(da, dd->bx, dd->by, dd->bz));
-    PetscCall(DMDASetDof(da, 1));
-    PetscCall(DMDASetStencilType(da, dd->stencil_type));
-    PetscCall(DMDASetStencilWidth(da, dd->s));
-    PetscCall(DMSetUp(da));
-    PetscCall(PetscMalloc1(dof, dmlist));
-    for (i = 0; i < dof - 1; i++) PetscCall(PetscObjectReference((PetscObject)da));
-    for (i = 0; i < dof; i++) (*dmlist)[i] = da;
+    if (!bc) {
+      /* Share one DMDA for all fields */
+      PetscCall(DMDACreate(PetscObjectComm((PetscObject)dm), &da));
+      PetscCall(DMSetDimension(da, dm->dim));
+      PetscCall(DMDASetSizes(da, dd->M, dd->N, dd->P));
+      PetscCall(DMDASetNumProcs(da, dd->m, dd->n, dd->p));
+      PetscCall(DMDASetBoundaryType(da, dd->bx, dd->by, dd->bz));
+      PetscCall(DMDASetDof(da, 1));
+      PetscCall(DMDASetStencilType(da, dd->stencil_type));
+      PetscCall(DMDASetStencilWidth(da, dd->s));
+      PetscCall(DMSetUp(da));
+      for (i = 0; i < dof - 1; i++) PetscCall(PetscObjectReference((PetscObject)da));
+      for (i = 0; i < dof; i++) (*dmlist)[i] = da;
+    } else {
+      /* BC mode: one DMDA per field with its own constrained section */
+      for (i = 0; i < dof; i++) {
+        PetscSection ls, gs;
+        PetscSF      sf;
+
+        PetscCall(DMDACreate(PetscObjectComm((PetscObject)dm), &da));
+        PetscCall(DMSetDimension(da, dm->dim));
+        PetscCall(DMDASetSizes(da, dd->M, dd->N, dd->P));
+        PetscCall(DMDASetNumProcs(da, dd->m, dd->n, dd->p));
+        PetscCall(DMDASetBoundaryType(da, dd->bx, dd->by, dd->bz));
+        PetscCall(DMDASetDof(da, 1));
+        PetscCall(DMDASetStencilType(da, dd->stencil_type));
+        PetscCall(DMDASetStencilWidth(da, dd->s));
+        PetscCall(DMSetUp(da));
+
+        ((DM_DA *)da->data)->useSection = PETSC_TRUE; 
+        /* Set the constrained BC points for this field */
+        PetscCall(DMDASetPointBC(da, 1, &bc->bcPoints[i], NULL));
+        PetscCall(DMGetLocalSection(da, &ls));
+        PetscCall(DMGetPointSF(da, &sf));
+        PetscCall(PetscSectionCreateGlobalSection(ls, sf, PETSC_TRUE, PETSC_FALSE, PETSC_FALSE, &gs));
+        PetscCall(DMSetGlobalSection(da, gs));
+        PetscCall(DMCreateSectionSF(da, ls, gs));
+        PetscCall(PetscSectionDestroy(&gs));
+
+        (*dmlist)[i] = da;
+      }
+    }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -427,7 +460,7 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
       }
       for (PetscInt i = 0; i < npts; i++) {
         PetscInt p = pts[i];
-        PetscCall(PetscSectionSetConstraintDof(s, p, ncmp));
+        PetscCall(PetscSectionAddConstraintDof(s, p, ncmp));
       }
       PetscCall(ISRestoreIndices(bc->bcPoints[b], &pts));
     }
@@ -437,7 +470,11 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
   PetscCall(PetscSectionSetUp(s));
 
   if (bc) {
-    // Set BC indices
+    // Set BC indices: accumulate per-point across all BC groups, then set once.
+    PetscInt *constraintBuf, *constraintOff;
+    PetscCall(PetscCalloc1(gNv * dof, &constraintBuf));
+    PetscCall(PetscCalloc1(gNv, &constraintOff));
+
     for (PetscInt b = 0; b < bc->numBC; b++) {
       const PetscInt *pts, *cmp;
       PetscInt        npts = 0, ncmp = 0;
@@ -449,15 +486,27 @@ static PetscErrorCode DMCreateLocalSection_DA(DM dm)
         PetscCall(ISGetLocalSize(bc->bcComps[b], &ncmp));
         PetscCall(ISGetIndices(bc->bcComps[b], &cmp));
       } else {
-        cmp = NULL;
+        ncmp = dof;
+        cmp  = NULL;
       }
       for (PetscInt i = 0; i < npts; i++) {
-        PetscInt p = pts[i];
-        PetscCall(PetscSectionSetConstraintIndices(s, p, cmp));
+        PetscInt p   = pts[i];
+        PetscInt off = constraintOff[p];
+        if (cmp) {
+          for (PetscInt c = 0; c < ncmp; c++) constraintBuf[p * dof + off + c] = cmp[c];
+        } else {
+          for (PetscInt c = 0; c < dof; c++) constraintBuf[p * dof + off + c] = c;
+        }
+        constraintOff[p] += ncmp;
       }
       PetscCall(ISRestoreIndices(bc->bcPoints[b], &pts));
       if (bc->bcComps[b]) PetscCall(ISRestoreIndices(bc->bcComps[b], &cmp));
     }
+    for (PetscInt p = 0; p < gNv; p++) {
+      if (constraintOff[p] > 0) PetscCall(PetscSectionSetConstraintIndices(s, p, &constraintBuf[p * dof]));
+    }
+    PetscCall(PetscFree(constraintBuf));
+    PetscCall(PetscFree(constraintOff));
   }
   // number of boundary vertices
   PetscInt Nbv = 0;
