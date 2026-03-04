@@ -227,6 +227,7 @@ static PetscErrorCode GNHookFunction(Tao tao, PetscInt iter, PetscCtx ctx)
   gn->parent->nfuncs      = tao->nfuncs;
   gn->parent->ngrads      = tao->ngrads;
   gn->parent->nfuncgrads  = tao->nfuncgrads;
+  gn->parent->nres        = tao->nres;
   gn->parent->nhess       = tao->nhess;
   gn->parent->niter       = tao->niter;
   gn->parent->ksp_its     = tao->ksp_its;
@@ -335,6 +336,7 @@ static PetscErrorCode TaoSolve_BRGN(Tao tao)
   tao->nfuncs      = gn->subsolver->nfuncs;
   tao->ngrads      = gn->subsolver->ngrads;
   tao->nfuncgrads  = gn->subsolver->nfuncgrads;
+  tao->nres        = gn->subsolver->nres;
   tao->nhess       = gn->subsolver->nhess;
   tao->niter       = gn->subsolver->niter;
   tao->ksp_its     = gn->subsolver->ksp_its;
@@ -744,7 +746,8 @@ static PetscErrorCode TaoBRGNSetRegularizerHessianRoutine_BRGN(Tao tao, Mat Hreg
 M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
 {
-  TAO_BRGN *gn;
+  TAO_BRGN   *gn;
+  const char *prefix;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&gn));
@@ -765,9 +768,11 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BRGN(Tao tao)
   gn->uphill_lambda_change   = 1.5;
   gn->parent                 = tao;
 
+  PetscCall(PetscObjectGetOptionsPrefix((PetscObject)tao, &prefix));
   PetscCall(TaoCreate(PetscObjectComm((PetscObject)tao), &gn->subsolver));
   PetscCall(TaoSetType(gn->subsolver, TAOBNLS));
-  PetscCall(TaoSetOptionsPrefix(gn->subsolver, "tao_brgn_subsolver_"));
+  PetscCall(TaoSetOptionsPrefix(gn->subsolver, prefix));
+  PetscCall(TaoAppendOptionsPrefix(gn->subsolver, "tao_brgn_subsolver_"));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetRegularizationType_C", TaoBRGNGetRegularizationType_BRGN));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNSetRegularizationType_C", TaoBRGNSetRegularizationType_BRGN));
   PetscCall(PetscObjectComposeFunction((PetscObject)tao, "TaoBRGNGetDampingVector_C", TaoBRGNGetDampingVector_BRGN));
