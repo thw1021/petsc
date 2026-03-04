@@ -66,6 +66,7 @@ static PetscErrorCode TaoTermL1ComputeData(TaoTerm term, Vec x, Vec params, Vec 
       PetscCall(VecSqrtAbs(l1->d));
     }
   }
+  if (params) diff = l1->diff;
   *_diff = diff;
   *d     = l1->d;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -138,7 +139,7 @@ static PetscErrorCode TaoTermL1DerivativeCheck(TaoTerm term)
   TaoTerm_L1 *l1 = (TaoTerm_L1 *)term->data;
 
   PetscFunctionBegin;
-  if (!l1->epsilon_warning) {
+  if (l1->epsilon_warning == PETSC_FALSE) {
     l1->epsilon_warning = PETSC_TRUE;
     PetscCall(PetscInfo(term, "Asking for derivatives of l1 norm, which is not smooth.  Consider smoothing the TaoTerm with TaoTermL1SetEpsilon() or using a derivative-free Tao solver\n"));
   }
@@ -201,7 +202,7 @@ static PetscErrorCode TaoTermComputeHessian_L1(TaoTerm term, Vec x, Vec params, 
   Vec diag = NULL; /* Appease -Wmaybe-uninitialized */
 
   PetscFunctionBegin;
-  if (!H && !Hpre) PetscFunctionReturn(PETSC_SUCCESS);
+  if (H == NULL && Hpre == NULL) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(TaoTermL1ComputeDiag(term, x, params, &diag));
   if (H) PetscCall(TaoTermComputeHessian_L1_Internal(term, diag, H));
   if (Hpre && Hpre != H) PetscCall(TaoTermComputeHessian_L1_Internal(term, diag, Hpre));
@@ -242,7 +243,6 @@ static PetscErrorCode TaoTermCreateHessianMatrices_L1(TaoTerm term, Mat *H, Mat 
 
   Level: advanced
 
-  Note:
   If $\epsilon = 0$ (the default), then `term` computes $\|x - p\|_1$, but if $\epsilon > 0$, then it computes
   $\sum_{i=0}^n \sqrt{(x_i-p_i)^2 + \epsilon^2} - \epsilon$.
 
@@ -450,7 +450,8 @@ PetscErrorCode TaoTermCreateL1(MPI_Comm comm, PetscInt n, PetscInt N, PetscReal 
   TaoTerm _term;
 
   PetscFunctionBegin;
-  epsilon = PetscMax(0.0, epsilon);
+  PetscAssertPointer(term, 5);
+  PetscCheck(epsilon >= 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "L1 epsilon (%g) cannot be < 0.0", (double)epsilon);
   PetscCall(TaoTermCreate(comm, &_term));
   PetscCall(TaoTermSetType(_term, TAOTERML1));
   PetscCall(TaoTermSetSolutionSizes(_term, n, N, 1));

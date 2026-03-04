@@ -214,7 +214,7 @@ argument and sets it to the solution vector used in the application.
 
 ### User Defined Callback Routines
 
-A `Tao` must be able to evaluate a function in order to optimized it;
+A `Tao` must be able to evaluate a function in order to optimize it;
 depending on the solver chosen, it may also need to evaluate the
 gradient vector and Hessian matrix.  TAO gives users two ways to specify
 this information: with callback functions for the evaluation operations

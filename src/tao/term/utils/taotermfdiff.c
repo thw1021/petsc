@@ -176,7 +176,7 @@ PetscErrorCode TaoTermComputeHessianFD(TaoTerm term, Vec x, Vec params, Mat H, M
     PetscCall(MatSetSizes(Hpre, n, n, N, N));
     PetscCall(MatSetUp(Hpre));
   }
-  PetscCall(SNESComputeJacobianDefault(snes, x, H, Hpre, NULL));
+  PetscCall(SNESComputeJacobianDefault(snes, x, H ? H : Hpre, Hpre ? Hpre : H, NULL));
   PetscCall(SNESDestroy(&snes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -188,7 +188,6 @@ static PetscErrorCode MatMFFDFunction_TaoTermHessianShell(void *ctx, Vec x, Vec 
   PetscFunctionBegin;
   // we expect the solution to move around in a finite difference method, but not the parameters
   // TODO but not checking for it now
-  // TODO  ngrad eval not counted here!
   PetscCall(TaoTermComputeGradient(tp->term, x, tp->params, g));
   tp->term->ngrad_mffd++;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -242,6 +241,8 @@ static PetscErrorCode TaoTermInitializeHessianMFFD(TaoTerm term, Mat mffd)
 PetscErrorCode TaoTermCreateHessianMFFD(TaoTerm term, Mat *mffd)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(mffd, 2);
   PetscCall(MatCreate(PetscObjectComm((PetscObject)term), mffd));
   PetscCall(TaoTermInitializeHessianMFFD(term, *mffd));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -253,6 +254,11 @@ PetscErrorCode TaoTermComputeHessianMFFD(TaoTerm term, Vec x, Vec params, Mat H,
   TaoTermWithParameters *tp;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  if (params) PetscValidHeaderSpecific(params, VEC_CLASSID, 3);
+  PetscValidHeaderSpecific(H, MAT_CLASSID, 4);
+  if (B) PetscValidHeaderSpecific(B, MAT_CLASSID, 5);
   PetscCall(PetscObjectQuery((PetscObject)H, "__TaoTermWithParameters", (PetscObject *)&container));
   if (!container) {
     PetscCall(TaoTermInitializeHessianMFFD(term, H));

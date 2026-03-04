@@ -467,7 +467,7 @@ PetscErrorCode TaoSetGradient(Tao tao, Vec g, PetscErrorCode (*func)(Tao tao, Ve
 
   Notes:
   In addition to specifying an objective function using callbacks such as
-  `TaoSetObjective()` and `TaoSetGradient()`, user can specify
+  `TaoSetObjective()` and `TaoSetGradient()`, users can specify
   objective functions with `TaoAddTerm()`.
 
   `TaoGetGradient()` will always return the callback specified with

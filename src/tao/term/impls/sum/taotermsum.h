@@ -6,4 +6,4 @@
 PETSC_INTERN PetscErrorCode TaoTermSumVecNestGetSubVecsRead(Vec params, PetscInt *n, Vec **subparams, PetscBool **is_dummy);
 PETSC_INTERN PetscErrorCode TaoTermSumVecNestRestoreSubVecsRead(Vec params, PetscInt *n, Vec **subparams, PetscBool **is_dummy);
 PETSC_INTERN PetscErrorCode TaoTermViewSumPrintSubterm(TaoTerm, PetscViewer, Vec, PetscInt, PetscBool, PetscBool, const char[], const char[], const char[], const char[]);
-PETSC_INTERN PetscErrorCode TaoTermViewSumPrintMapName(PetscViewer, Mat, PetscInt i, const char[], PetscBool);
+PETSC_INTERN PetscErrorCode TaoTermViewSumPrintMapName(PetscViewer, Mat, PetscInt, const char[], PetscBool);

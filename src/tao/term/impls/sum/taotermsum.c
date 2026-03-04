@@ -99,6 +99,7 @@ PetscErrorCode TaoTermSumParametersPack(TaoTerm term, Vec p_arr[], Vec *params)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(params, 3);
   PetscCall(TaoTermSumGetNumberTerms(term, &n_terms));
   PetscCall(PetscMalloc1(n_terms, &p));
   PetscCall(PetscMalloc1(n_terms, &is_dummy));
@@ -175,6 +176,7 @@ PetscErrorCode TaoTermSumParametersUnpack(TaoTerm term, Vec *params, Vec p_arr[]
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
   PetscValidHeaderSpecific(*params, VEC_CLASSID, 2);
+  PetscAssertPointer(p_arr, 3);
   PetscCall(TaoTermSumGetNumberTerms(term, &n_terms));
   PetscCall(PetscObjectQuery((PetscObject)*params, "__TaoTermSumParametersPack", (PetscObject *)&is_dummy_container));
   if (is_dummy_container) PetscCall(PetscContainerGetPointer(is_dummy_container, (void **)&is_dummy));
@@ -292,7 +294,7 @@ static PetscErrorCode TaoTermViewSumPrintSubtermName(PetscViewer viewer, TaoTerm
     PetscBool same;
 
     PetscCall(PetscStrncmp(subterm_name, "TaoTerm_", 8, &same));
-    if (!same) {
+    if (same == PETSC_FALSE) {
       PetscBool has_spaces;
 
       PetscCall(TaoTermView_Sum_NameHasSpaces(subterm_name, &has_spaces));
@@ -318,7 +320,7 @@ PETSC_INTERN PetscErrorCode TaoTermViewSumPrintMapName(PetscViewer viewer, Mat m
     PetscBool same;
 
     PetscCall(PetscStrncmp(map_name, "Mat_", 4, &same));
-    if (!same) {
+    if (same == PETSC_FALSE) {
       PetscBool has_spaces;
 
       PetscCall(TaoTermView_Sum_NameHasSpaces(map_name, &has_spaces));
@@ -508,7 +510,7 @@ static PetscErrorCode TaoTermSumSetNumberTerms_Sum(TaoTerm term, PetscInt n_term
   if (n_terms == n_terms_old) PetscFunctionReturn(PETSC_SUCCESS);
   for (PetscInt i = n_terms; i < n_terms_old; i++) PetscCall(TaoTermMappingReset(&sum->terms[i]));
   PetscCall(PetscMalloc1(n_terms, &new_summands));
-  PetscCall(PetscMalloc1(n_terms, &new_values));
+  PetscCall(PetscCalloc1(n_terms, &new_values));
   PetscCall(PetscArraycpy(new_summands, sum->terms, PetscMin(n_terms, n_terms_old)));
   PetscCall(PetscArrayzero(&new_summands[n_terms_old], PetscMax(0, n_terms - n_terms_old)));
   PetscCall(PetscFree(sum->terms));
@@ -663,9 +665,9 @@ static PetscErrorCode TaoTermSumSetTerm_Sum(TaoTerm term, PetscInt index, const 
 + term          - a `TaoTerm` of type `TAOTERMSUM`
 . index         - the index for the term from `TaoTermSumSetTerm()` or `TaoTermSumAddTerm()`
 . unmapped_H    - (optional) unmapped Hessian matrix
-. unmapped_Hpre - (optional) unmapped matrix for constructing the preconditioned of `unmapped_H`
+. unmapped_Hpre - (optional) unmapped matrix for constructing the preconditioner of `unmapped_H`
 . mapped_H      - (optional) Hessian matrix
-- mapped_Hpre   - (optional) matrix for constructing the preconditioned of `mapped_H`
+- mapped_Hpre   - (optional) matrix for constructing the preconditioner of `mapped_H`
 
   Level: developer
 
@@ -684,6 +686,10 @@ PetscErrorCode TaoTermSumSetTermHessianMatrices(TaoTerm term, PetscInt index, Ma
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  if (unmapped_H) PetscValidHeaderSpecific(unmapped_H, MAT_CLASSID, 3);
+  if (unmapped_Hpre) PetscValidHeaderSpecific(unmapped_Hpre, MAT_CLASSID, 4);
+  if (mapped_H) PetscValidHeaderSpecific(mapped_H, MAT_CLASSID, 5);
+  if (mapped_Hpre) PetscValidHeaderSpecific(mapped_Hpre, MAT_CLASSID, 6);
   PetscTryMethod(term, "TaoTermSumSetTermHessianMatrices_C", (TaoTerm, PetscInt, Mat, Mat, Mat, Mat), (term, index, unmapped_H, unmapped_Hpre, mapped_H, mapped_Hpre));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -733,7 +739,7 @@ static PetscErrorCode TaoTermSumSetTermHessianMatrices_Sum(TaoTerm term, PetscIn
 /*@
   TaoTermSumGetTermHessianMatrices - Get Hessian matrices set with `TaoTermSumSetTermHessianMatrices()`.
 
-  Logically collective
+  Not collective
 
   Input Parameters:
 + term  - a `TaoTerm` of type `TAOTERMSUM`
@@ -757,6 +763,10 @@ PetscErrorCode TaoTermSumGetTermHessianMatrices(TaoTerm term, PetscInt index, Ma
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  if (unmapped_H) PetscAssertPointer(unmapped_H, 3);
+  if (unmapped_Hpre) PetscAssertPointer(unmapped_Hpre, 4);
+  if (mapped_H) PetscAssertPointer(mapped_H, 5);
+  if (mapped_Hpre) PetscAssertPointer(mapped_Hpre, 6);
   PetscTryMethod(term, "TaoTermSumGetTermHessianMatrices_C", (TaoTerm, PetscInt, Mat *, Mat *, Mat *, Mat *), (term, index, unmapped_H, unmapped_Hpre, mapped_H, mapped_Hpre));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -800,6 +810,7 @@ PetscErrorCode TaoTermSumGetTermMask(TaoTerm term, PetscInt index, TaoTermMask *
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 1);
+  PetscAssertPointer(mask, 3);
   PetscUseMethod(term, "TaoTermSumGetTermMask_C", (TaoTerm, PetscInt, TaoTermMask *), (term, index, mask));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1068,7 +1079,7 @@ static PetscErrorCode TaoTermComputeHessian_Sum(TaoTerm term, Vec x, Vec params,
   PetscBool   *is_dummy   = NULL;
 
   PetscFunctionBegin;
-  if (!H && !Hpre) PetscFunctionReturn(PETSC_SUCCESS);
+  if (H == NULL && Hpre == NULL) PetscFunctionReturn(PETSC_SUCCESS);
   if (params) PetscCall(TaoTermSumVecNestGetSubVecsRead(params, NULL, &sub_params, &is_dummy));
   // If mattype dense, then after zero entries, H->assembled = true.
   // But for aij, H->assembled is still false.
@@ -1104,7 +1115,7 @@ static PetscErrorCode TaoTermSetUp_Sum(TaoTerm term)
   PetscFunctionBegin;
   PetscCall(PetscCalloc1(sum->n_terms, &mats));
   PetscCall(MatGetLayouts(term->solution_factory, &layout, &clayout));
-  if (!layout->setupcalled) layout = NULL;
+  if (layout->setupcalled == PETSC_FALSE) layout = NULL;
   for (PetscInt i = 0; i < sum->n_terms; i++) {
     TaoTermMapping       *summand = &sum->terms[i];
     TaoTermParametersMode submode;
@@ -1118,7 +1129,7 @@ static PetscErrorCode TaoTermSetUp_Sum(TaoTerm term)
     } else PetscCall(TaoTermGetSolutionLayout(summand->term, &sub_layout));
     if (i == 0 && layout == NULL) layout = sub_layout;
     PetscCall(PetscLayoutCompare(layout, sub_layout, &congruent));
-    if (!congruent) {
+    if (congruent == PETSC_FALSE) {
       PetscInt N, sub_N;
       MPI_Comm comm = PetscObjectComm((PetscObject)term);
 
@@ -1212,7 +1223,7 @@ static PetscErrorCode TaoTermCreateHessianMatrices_Sum(TaoTerm term, Mat *H, Mat
       Mat c_H;
 
       PetscCall(TaoTermSumGetTermHessianMatrices(term, i, NULL, NULL, &c_H, NULL));
-      PetscCheck(c_H, PetscObjectComm((PetscObject)summand->term), PETSC_ERR_USER, "TAOTERMCALLBACK does not have Hessian routines set. Call TaoSetHessian()");
+      PetscCheck(c_H, PetscObjectComm((PetscObject)summand->term), PETSC_ERR_USER, "TAOTERMCALLBACKS does not have Hessian routines set. Call TaoSetHessian()");
     }
     PetscCall(TaoTermMappingCreateHessianMatrices(summand, &summand->_mapped_H, &summand->_mapped_Hpre));
 

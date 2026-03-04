@@ -25,7 +25,7 @@ static PetscErrorCode TaoTermComputeObjective_Halfl2squared(TaoTerm term, Vec x,
 
   PetscFunctionBegin;
   if (params) {
-    if (!l2->pdiff_work) PetscCall(VecDuplicate(x, &l2->pdiff_work));
+    if (l2->pdiff_work == NULL) PetscCall(VecDuplicate(x, &l2->pdiff_work));
 
     PetscCall(VecCopy(x, l2->pdiff_work));
     PetscCall(VecAXPY(l2->pdiff_work, -1.0, params));
@@ -185,6 +185,7 @@ PetscErrorCode TaoTermCreateHalfL2Squared(MPI_Comm comm, PetscInt n, PetscInt N,
   TaoTerm _term;
 
   PetscFunctionBegin;
+  PetscAssertPointer(term, 4);
   PetscCall(TaoTermCreate(comm, &_term));
   PetscCall(TaoTermSetType(_term, TAOTERMHALFL2SQUARED));
   PetscCall(TaoTermSetSolutionSizes(_term, n, N, 1));

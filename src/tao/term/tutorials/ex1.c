@@ -10,6 +10,7 @@ int main(int argc, char **argv)
   PetscBool   dup_type    = PETSC_FALSE;
   PetscBool   flg;
 
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
 
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-view_detail", &view_detail, &flg));

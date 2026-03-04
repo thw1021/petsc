@@ -124,7 +124,7 @@ static PetscErrorCode TaoTermView_Callbacks(TaoTerm term, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
-    if (!tt->tao) {
+    if (tt->tao == NULL) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "not attached to a Tao\n"));
     } else {
       const char *name = "[name omitted]";
@@ -404,7 +404,7 @@ static PetscErrorCode TaoTermCreate_Callbacks_Internal(TaoTerm term, const char 
   A `TAOTERMCALLBACKS` cannot create Hessian matrices, the user needs to pass the
   Hessian matrices used in algorithms in `TaoSetHessian()`.
 
-  Developer Note:
+  Developer Notes:
   Internally each `Tao` has a `TaoTerm` of type `TAOTERMCALLBACKS` that is updated
   by the `Tao` callback routines (`TaoSetObjective()`, `TaoSetGradient()`,
   `TaoSetObjectiveAndGradient()`, and `TaoSetHessian()`).

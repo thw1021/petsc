@@ -1,5 +1,4 @@
 #include <petsc/private/taoimpl.h>
-#include <../src/tao/term/impls/sum/taotermsum.h> // TaoTermSumVecNestGetSubVecsRead(), TaoTermSumVecSetRestoreSubVecsRead()
 
 /*@
   TaoSoftThreshold - Calculates soft thresholding routine with input vector
@@ -33,16 +32,19 @@ PetscErrorCode TaoSoftThreshold(Vec in, PetscReal lb, PetscReal ub, Vec out)
   PetscScalar *inarray, *outarray;
 
   PetscFunctionBegin;
-  PetscCall(VecGetArrayPair(in, out, &inarray, &outarray));
-  PetscCall(VecGetLocalSize(in, &nlocal));
-  PetscCall(VecGetLocalSize(out, &mlocal));
-
-  PetscCheck(nlocal == mlocal, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Input and output vectors need to be of same size.");
+  PetscValidHeaderSpecific(in, VEC_CLASSID, 1);
+  PetscValidHeaderSpecific(out, VEC_CLASSID, 4);
+  PetscCheck(lb <= ub, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Lower bound needs to be lower than upper bound.");
   if (lb == ub) {
-    PetscCall(VecRestoreArrayPair(in, out, &inarray, &outarray));
+    PetscCall(VecCopy(in, out));
+    PetscCall(VecShift(out, -lb));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  PetscCheck(lb <= ub, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Lower bound needs to be lower than upper bound.");
+
+  PetscCall(VecGetLocalSize(in, &nlocal));
+  PetscCall(VecGetLocalSize(out, &mlocal));
+  PetscCheck(nlocal == mlocal, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Input and output vectors need to be of same size.");
+  PetscCall(VecGetArrayPair(in, out, &inarray, &outarray));
 
   for (i = 0; i < nlocal; i++) outarray[i] = PetscMax(0, PetscRealPart(inarray[i]) - ub) + PetscMin(0, PetscRealPart(inarray[i]) - lb);
 

@@ -125,7 +125,7 @@ PETSC_EXTERN PetscErrorCode TaoTermGetParametersMode(TaoTerm, TaoTermParametersM
 E*/
 typedef enum {
   TAOTERM_DUPLICATE_SIZEONLY,
-  TAOTERM_DUPLICATE_TYPE,
+  TAOTERM_DUPLICATE_TYPE
 } TaoTermDuplicateOption;
 
 PETSC_EXTERN PetscErrorCode TaoTermDuplicate(TaoTerm, TaoTermDuplicateOption, TaoTerm *);
@@ -223,7 +223,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TaoTermGradientFn)(TaoTerm term, Vec
 . x      - the solution vector
 . params - the parameters vector (for some `TaoTerm` this may be `NULL`, see `TaoTermGetParametersMode()`)
 . H      - (optional) output, the Hessian of `term`
-- Hpre   - (optional) output, the approximation of `H` from which a preconditioned may be built
+- Hpre   - (optional) output, the approximation of `H` from which a preconditioner may be built
 
   Level: intermediate
 

@@ -40,7 +40,7 @@ static PetscErrorCode TaoTermShellSetContextDestroy_Shell(TaoTerm term, PetscCtx
 /*@
   TaoTermShellGetContext - Get the context for a `TAOTERMSHELL`
 
-  Logically collective
+  Not collective
 
   Input Parameter:
 . term - a `TaoTerm` of type `TAOTERMSHELL`
@@ -146,7 +146,7 @@ static PetscErrorCode TaoTermView_Shell(TaoTerm term, PetscViewer viewer)
       any = PETSC_TRUE;
       PetscCall(PetscViewerASCIIPrintf(viewer, " hessian,"));
     }
-    if (!any) PetscCall(PetscViewerASCIIPrintf(viewer, " (none)"));
+    if (any == PETSC_FALSE) PetscCall(PetscViewerASCIIPrintf(viewer, " (none)"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
   }
@@ -539,7 +539,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
 
   Collective
 
-  Input Parameter:
+  Input Parameters:
 + comm    - the MPI communicator for computing the term
 . ctx     - (optional) a context to be used by routines
 - destroy - (optional) a routine to destroy the context when `term` is destroyed
@@ -554,6 +554,7 @@ PETSC_INTERN PetscErrorCode TaoTermCreate_Shell(TaoTerm term)
 PetscErrorCode TaoTermCreateShell(MPI_Comm comm, PetscCtx ctx, PetscCtxDestroyFn *destroy, TaoTerm *term)
 {
   PetscFunctionBegin;
+  PetscAssertPointer(term, 4);
   PetscCall(TaoTermCreate(comm, term));
   PetscCall(TaoTermSetType(*term, TAOTERMSHELL));
   if (ctx) PetscCall(TaoTermShellSetContext(*term, ctx));

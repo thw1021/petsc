@@ -58,6 +58,7 @@ PETSC_INTERN PetscErrorCode TaoTermMappingGetData(TaoTermMapping *mt, const char
 
 #define TaoTermMappingCheckInsertMode(mt, mode) \
   do { \
+    PetscCheck((mt)->term, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "TaoTermMapping has no TaoTerm set"); \
     PetscCheck((mode) == INSERT_VALUES || (mode) == ADD_VALUES, PetscObjectComm((PetscObject)(mt)->term), PETSC_ERR_ARG_OUTOFRANGE, "insert mode must be INSERT_VALUES or ADD_VALUES"); \
   } while (0)
 
@@ -217,7 +218,7 @@ static PetscErrorCode TaoTermMappingMatPtAP(Mat unmapped_H, Mat map, Mat mapped_
   } else if (is_uH_diag) {
     Vec unmapped_diag;
 
-    //TODO inefficient. Remove when diag PtAP gets implemented
+    // TODO inefficient. Remove when diag PtAP gets implemented
     PetscCall(MatDiagonalGetDiagonal(unmapped_H, &unmapped_diag));
     PetscCall(MatCopy(map, work, SAME_NONZERO_PATTERN));
     PetscCall(MatDiagonalScale(work, unmapped_diag, NULL));
@@ -443,7 +444,7 @@ static PetscErrorCode TaoTermMappingCreatePtAP(Mat unmapped_H, Mat map, Mat *H)
     PetscCall(MatProductCreate(unmapped_H, map, NULL, H));
     PetscCall(MatProductSetType(*H, MATPRODUCT_PtAP));
     PetscCall(MatProductSetFromOptions(*H));
-    //TODO Some other default fallback?
+    // TODO Some other default fallback?
     if ((*H)->ops->productsymbolic) PetscCall(MatProductSymbolic(*H));
     else SETERRQ(PetscObjectComm((PetscObject)map), PETSC_ERR_SUP, "Currently does not support PtAP routines for given pair of matrices");
     PetscCall(MatProductNumeric(*H));

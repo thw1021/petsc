@@ -243,7 +243,7 @@ PetscErrorCode TaoSetUp(Tao tao)
     if (!tao->hessian) {
       PetscBool is_defined;
 
-      //TAOTERMSUM's Hessian will follow layout and type of first term's Hessian
+      // TAOTERMSUM's Hessian will follow layout and type of first term's Hessian
       PetscCall(TaoTermIsCreateHessianMatricesDefined(tao->objective_term.term, &is_defined));
       if (is_defined) PetscCall(TaoTermMappingCreateHessianMatrices(&tao->objective_term, &tao->hessian, &tao->hessian_pre));
     }
@@ -441,13 +441,15 @@ PetscErrorCode TaoMonitorSetFromOptions(Tao tao, const char name[], const char h
 . -tao_mf_hessian              - use matrix-free Hessian computed with finite differences
 . -tao_view                    - prints information about the Tao after solving
 . -tao_converged_reason        - prints the reason Tao stopped iterating
-- -tao_add_terms               - takes a list of options prefixes, a `TaoTerm` will be created for each and added to the objective function
+- -tao_add_terms               - takes a comma-separated list of up to 16 options prefixes, a `TaoTerm` will be created for each and added to the objective function
 
   Level: beginner
 
-  Note:
+  Notes:
   To see all options, run your program with the `-help` option or consult the
-  user's manual. Should be called after `TaoCreate()` but before `TaoSolve()`
+  user's manual. Should be called after `TaoCreate()` but before `TaoSolve()`.
+
+  The `-tao_add_terms` option accepts at most 16 prefixes.
 
 .seealso: [](ch_tao), `Tao`, `TaoCreate()`, `TaoSolve()`
 @*/
@@ -602,7 +604,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
   PetscCall(TaoTermSetFromOptions(tao->callbacks));
 
   {
-    char    *term_prefixes[8];
+    char    *term_prefixes[16];
     PetscInt n_terms = PETSC_STATIC_ARRAY_LENGTH(term_prefixes);
 
     PetscCall(PetscOptionsStringArray("-tao_add_terms", "a list of prefixes for terms to add to the Tao objective function", "TaoAddTerm", term_prefixes, &n_terms, NULL));
@@ -2287,6 +2289,11 @@ PetscErrorCode TaoGetOptionsPrefix(Tao tao, const char *p[])
 
   Level: intermediate
 
+  Note:
+  Calling this function resets the convergence test to `TaoDefaultConvergenceTest()`.
+  If a custom convergence test has been set with `TaoSetConvergenceTest()`, it must
+  be set again after calling `TaoSetType()`.
+
 .seealso: [](ch_tao), `Tao`, `TaoCreate()`, `TaoGetType()`, `TaoType`
 @*/
 PetscErrorCode TaoSetType(Tao tao, TaoType type)
@@ -3018,6 +3025,10 @@ PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params,
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
+  if (scale) PetscAssertPointer(scale, 2);
+  if (term) PetscAssertPointer(term, 3);
+  if (params) PetscAssertPointer(params, 4);
+  if (map) PetscAssertPointer(map, 5);
   PetscCall(TaoTermMappingGetData(&tao->objective_term, NULL, scale, term, map));
   if (params) *params = tao->objective_parameters;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3039,7 +3050,7 @@ PetscErrorCode TaoGetTerm(Tao tao, PetscReal *scale, TaoTerm *term, Vec *params,
 
   Level: beginner
 
-  Notes:
+  Note:
   If the objective function was $f(x)$, it becomes $f(x) + \alpha g(Ax; p)$, where $\alpha$ is
   the `scale`, $g$ is the `term`, $A$ is the (optional) map, and $p$ are the (optional) parameters of $g$.
 
@@ -3054,6 +3065,7 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
   if (prefix) PetscAssertPointer(prefix, 2);
+  PetscValidLogicalCollectiveReal(tao, scale, 3);
   PetscValidHeaderSpecific(term, TAOTERM_CLASSID, 4);
   PetscCheckSameComm(tao, 1, term, 4);
   if (params) {
@@ -3075,12 +3087,12 @@ PetscErrorCode TaoAddTerm(Tao tao, const char prefix[], PetscReal scale, TaoTerm
     PetscCall(TaoTermIsObjectiveDefined(tao->objective_term.term, &is_obj));
     PetscCall(TaoTermIsObjectiveAndGradientDefined(tao->objective_term.term, &is_objgrad));
     PetscCall(TaoTermIsGradientDefined(tao->objective_term.term, &is_grad));
-    //Empty callback term
+    // Empty callback term
     if (!(is_obj || is_objgrad || is_grad)) {
       PetscCall(TaoTermMappingSetData(&tao->objective_term, NULL, scale, term, map));
       if (params) PetscCall(PetscObjectReference((PetscObject)params));
       PetscCall(VecDestroy(&tao->objective_parameters));
-      //Empty callback term. Destroy hessians, as they are not needed
+      // Empty callback term. Destroy hessians, as they are not needed
       PetscCall(MatDestroy(&tao->hessian));
       PetscCall(MatDestroy(&tao->hessian_pre));
       tao->objective_parameters = params;

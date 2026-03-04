@@ -96,9 +96,9 @@ PetscErrorCode TaoGetHessian(Tao tao, Mat *H, Mat *Hpre, PetscErrorCode (**func)
 /*@
   TaoGetHessianMatrices - Get the matrices that store the Hessian matrix and its (optional) approximation that is used to construct the preconditioner
 
-  Collective
+  Not collective
 
-  Input Parameters:
+  Input Parameter:
 . tao - the `Tao` context
 
   Output Parameters:

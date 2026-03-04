@@ -112,13 +112,13 @@ static PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *f, Vec G, 
   Note:  Providing the Hessian may not be necessary.  Only some solvers
   require this matrix.
 */
-PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
+static PetscErrorCode FormHessian(Tao tao, Vec X, Mat H, Mat Hpre, void *ptr)
 {
   AppCtx *user = (AppCtx *)ptr;
 
   PetscFunctionBeginUser;
   PetscCall(AppCtxFormHessian(user, X, H));
-  // Manual Jacobia preconditioner for testing
+  // Manual Jacobi preconditioner for testing
   if (user->jacobi_pc) {
     Vec v;
 

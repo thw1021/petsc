@@ -1,3 +1,4 @@
+#pragma once
 // Common data structures for rosenbrock1.c and rosenbrock1_taoterm.c
 
 #include <petsctao.h>
@@ -26,7 +27,7 @@ static PetscErrorCode AppCtxInitialize(MPI_Comm comm, AppCtx *usr)
 {
   PetscBool flg;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   usr->comm      = comm;
   usr->n         = 2;
   usr->alpha     = 99.0;
@@ -46,7 +47,7 @@ static PetscErrorCode AppCtxInitialize(MPI_Comm comm, AppCtx *usr)
 
 static PetscErrorCode AppCtxFinalize(AppCtx *usr, Tao tao)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   if (usr->test) {
     /* Test the LMVM matrix */
     KSP       ksp;
@@ -84,7 +85,7 @@ static PetscErrorCode AppCtxFinalize(AppCtx *usr, Tao tao)
 
 static PetscErrorCode AppCtxCreateSolution(AppCtx *usr, Vec *solution)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(VecCreateSeq(PETSC_COMM_SELF, usr->n, solution));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -93,7 +94,7 @@ static PETSC_UNUSED PetscErrorCode AppCtxCreateHessianMatrices(AppCtx *usr, Mat 
 {
   Mat hessian;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(MatCreateSeqBAIJ(PETSC_COMM_SELF, 2, usr->n, usr->n, 1, NULL, &hessian));
   if (H) {
     PetscCall(PetscObjectReference((PetscObject)hessian));
@@ -165,12 +166,11 @@ static PetscErrorCode AppCtxFormFunctionGradient(AppCtx *user, Vec X, PetscReal 
   AppCtxFormHessian - Evaluates Hessian matrix.
 
   Input Parameters:
-+ tao   - the Tao context
-- x     - input vector
++ user - the context
+- X    - input vector
 
   Output Parameters:
-+ H     - Hessian matrix
-- Hpre  - Hessian preconditioner
+. H - Hessian matrix
 */
 static PetscErrorCode AppCtxFormHessian(AppCtx *user, Vec X, Mat H)
 {

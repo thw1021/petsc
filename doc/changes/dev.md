@@ -121,7 +121,10 @@
 ```
 
 - Add new `TaoTerm` object to manipulate objective function terms with many methods
-- Add `TaoGetTerm()`, and `TaoAddTerm()` for manipulating the objective, gradient, and Hessian evaluation of a `Tao` using `TaoTerm`
+- Add `TaoGetTerm()` and `TaoAddTerm()` for manipulating the objective, gradient, and Hessian evaluation of a `Tao` using `TaoTerm`
+- Add `TaoGetHessianMatrices()` to get the Hessian and preconditioner matrices from a `Tao`
+- Remove `TAO_ObjectiveEval`, `TAO_GradientEval`, `TAO_ObjGradEval`, `TAO_HessianEval` log events; replaced by `TAOTERM_ObjectiveEval`, `TAOTERM_GradientEval`, `TAOTERM_ObjGradEval`, `TAOTERM_HessianEval`
+- Change evaluation counters reported by `-tao_view` to be true to function signatures; for example, `TaoComputeGradient()` now always increments the gradient evaluation counter, even when internally falling back to a combined objective-and-gradient routine
 
 ```{rubric} TaoTerm:
 ```
@@ -132,6 +135,7 @@
 - Add `TAOTERMHALFL2SQUARED` implementation of `TaoTerm` for a squared-norm penalty function
 - Add `TAOTERML1` implementation of `TaoTerm` for a 1-norm penalty function
 - Add `TAOTERMQUADRATIC` implementation of `TaoTerm` for a quadratic penalty function
+- Add finite difference utilities: `TaoTermComputeGradientFD()`, `TaoTermComputeHessianFD()`, `TaoTermCreateHessianMFFD()`, and push/pop functions `TaoTermComputeGradientUseFDPush()`/`TaoTermComputeGradientUseFDPop()`, `TaoTermComputeHessianUseFDPush()`/`TaoTermComputeHessianUseFDPop()`
 - Add Python routines for `TaoTerm`
 
 ```{rubric} PetscRegressor:

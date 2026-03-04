@@ -6,7 +6,7 @@ static PetscErrorCode TaoTermCreateSolutionVec_Test(TaoTerm term, Vec *solution)
 {
   Mat A;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(TaoTermShellGetContext(term, &A));
   PetscCall(MatCreateVecs(A, NULL, solution));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -16,7 +16,7 @@ static PetscErrorCode TaoTermCreateParametersVec_Test(TaoTerm term, Vec *params)
 {
   Mat A;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(TaoTermShellGetContext(term, &A));
   PetscCall(MatCreateVecs(A, params, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -24,7 +24,7 @@ static PetscErrorCode TaoTermCreateParametersVec_Test(TaoTerm term, Vec *params)
 
 static PetscErrorCode TaoTermView_Test(TaoTerm term, PetscViewer viewer)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(PetscViewerASCIIPrintf(viewer, "TaoTermView_Test()\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -34,7 +34,7 @@ static PetscErrorCode TaoTermComputeObjective_Test(TaoTerm term, Vec x, Vec para
   Mat A;
   Vec r;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(TaoTermShellGetContext(term, &A));
   PetscCall(VecDuplicate(x, &r));
   PetscCall(MatMult(A, params, r));
@@ -47,7 +47,7 @@ static PetscErrorCode TaoTermComputeGradient_Test(TaoTerm term, Vec x, Vec param
 {
   Mat A;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(TaoTermShellGetContext(term, &A));
   PetscCall(MatMult(A, params, g));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -57,7 +57,7 @@ static PetscErrorCode TaoTermComputeObjectiveAndGradient_Test(TaoTerm term, Vec 
 {
   Mat A;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(TaoTermShellGetContext(term, &A));
   PetscCall(MatMult(A, params, g));
   PetscCall(VecDotRealPart(x, g, value));
@@ -74,7 +74,7 @@ static PetscErrorCode testShell(MPI_Comm comm, PetscBool separate)
   PetscInt    test_m, test_n;
   PetscReal   value, g_norm;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(PetscRandomCreate(comm, &rand));
   PetscCall(MatCreateDense(comm, PETSC_DECIDE, PETSC_DECIDE, m, n, NULL, &A));
   PetscCall(MatSetRandom(A, rand));
@@ -134,6 +134,7 @@ static PetscErrorCode testShell(MPI_Comm comm, PetscBool separate)
 
 int main(int argc, char **argv)
 {
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(testShell(PETSC_COMM_WORLD, PETSC_TRUE));
   PetscCall(testShell(PETSC_COMM_WORLD, PETSC_FALSE));

@@ -11,9 +11,9 @@ static PetscErrorCode FormFunctionGradient(TaoTerm, Vec, Vec, PetscReal *, Vec);
 static PetscErrorCode FormHessian(TaoTerm, Vec, Vec, Mat, Mat);
 static PetscErrorCode CreateSolutionVec(TaoTerm, Vec *);
 
-PetscErrorCode CtxDestroy(PetscCtxRt ctx)
+static PetscErrorCode CtxDestroy(PetscCtxRt ctx)
 {
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 
   /* Initialize TAO and PETSc */
   PetscFunctionBeginUser;
-  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCheck(size == 1, comm, PETSC_ERR_WRONG_MPI_SIZE, "Incorrect number of processors");
@@ -140,7 +140,7 @@ static PetscErrorCode FormHessian(TaoTerm term, Vec X, Vec params, Mat H, Mat Hp
 {
   AppCtx *user;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCheck(params == NULL, PetscObjectComm((PetscObject)term), PETSC_ERR_PLIB, "Rosenbrock function does not take a parameter vector");
   PetscCall(TaoTermShellGetContext(term, &user));
   if (H) PetscCall(AppCtxFormHessian(user, X, H));

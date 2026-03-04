@@ -3,7 +3,7 @@
 PETSC_INTERN PetscErrorCode VecIfNotCongruentGetSameLayoutVec(Vec a, Vec *b)
 {
   PetscFunctionBegin;
-  if (!(*b)) {
+  if (*b == NULL) {
     PetscCall(VecDuplicate(a, b));
   } else {
     PetscLayout layout_a, layout_b;
@@ -12,7 +12,7 @@ PETSC_INTERN PetscErrorCode VecIfNotCongruentGetSameLayoutVec(Vec a, Vec *b)
     PetscCall(VecGetLayout(a, &layout_a));
     PetscCall(VecGetLayout(*b, &layout_b));
     PetscCall(PetscLayoutCompare(layout_a, layout_b, &is_same));
-    if (!is_same) {
+    if (is_same == PETSC_FALSE) {
       PetscCall(VecDestroy(b));
       PetscCall(VecDuplicate(a, b));
     }
@@ -23,12 +23,9 @@ PETSC_INTERN PetscErrorCode VecIfNotCongruentGetSameLayoutVec(Vec a, Vec *b)
 PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_H_Internal(TaoTerm term, Mat *H, Mat *Hpre, PetscBool Hpre_is_H, MatType H_mattype)
 {
   Mat       _H;
-  PetscBool is_shell = PETSC_FALSE;
-  PetscBool is_mffd  = PETSC_FALSE;
+  PetscBool is_mffd = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(PetscStrcmp(H_mattype, MATSHELL, &is_shell));
-  if (is_shell) PetscCall(PetscInfo(term, "TaoTerm currently does not support MATSHELL for Hessian matrices. Using default MatCreate routines.\n"));
   PetscCall(PetscStrcmp(H_mattype, MATMFFD, &is_mffd));
   if (is_mffd) {
     PetscCall(TaoTermCreateHessianMFFD(term, &_H));
@@ -61,12 +58,9 @@ PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_H_Internal(TaoTe
 PETSC_INTERN PetscErrorCode TaoTermCreateHessianMatricesDefault_Hpre_Internal(TaoTerm term, Mat *H, Mat *Hpre, PetscBool Hpre_is_H, MatType Hpre_mattype)
 {
   Mat       _Hpre;
-  PetscBool is_shell = PETSC_FALSE;
-  PetscBool is_mffd  = PETSC_FALSE;
+  PetscBool is_mffd = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(PetscStrcmp(Hpre_mattype, MATSHELL, &is_shell));
-  if (is_shell) PetscCall(PetscInfo(term, "TaoTerm currently does not support MATSHELL for Hessian matrices. Using default MatCreate routines.\n"));
   PetscCall(PetscStrcmp(Hpre_mattype, MATMFFD, &is_mffd));
   if (is_mffd) {
     PetscCall(TaoTermCreateHessianMFFD(term, &_Hpre));
