@@ -5138,8 +5138,8 @@ static PetscErrorCode DMPlexComputeBdResidual_Internal(DM dm, Vec locX, Vec locX
      internal boundary natural BCs at partition junctions get double-counted
      because LocalToGlobal with ADD_VALUES sums contributions from all ranks. */
   if (facetIS) {
-    PetscSF  sf;
-    PetscInt nleaves;
+    PetscSF         sf;
+    PetscInt        nleaves;
     const PetscInt *leaves;
 
     PetscCall(DMGetPointSF(dm, &sf));
