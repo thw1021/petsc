@@ -1806,7 +1806,7 @@ static PetscErrorCode MatInvertVariableBlockDiagonal_SeqAIJ(Mat A, PetscInt nblo
 /*
    Negative shift indicates do not generate an error if there is a zero diagonal, just invert it anyways
 */
-static PetscErrorCode MatInvertDiagonalForSOR_SeqAIJ(Mat A, PetscScalar omega, PetscScalar fshift)
+PetscErrorCode MatInvertDiagonalForSOR_SeqAIJ(Mat A, PetscScalar omega, PetscScalar fshift)
 {
   Mat_SeqAIJ      *a = (Mat_SeqAIJ *)A->data;
   PetscInt         i, m = A->rmap->n;

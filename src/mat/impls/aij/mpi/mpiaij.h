@@ -30,6 +30,22 @@ typedef struct {                                /* used by MatPtAPXXX_MPIAIJ_MPI
   MatMergeSeqsToMPI *merge;
 } MatProductCtx_APMPI;
 
+typedef struct {      /* Used in MatSOR for SOR_FORWARD_SWEEP (i.e. true parallel Gauss-Seidel) */
+  PetscInt *proccols; /* Processor coloring that defines the terms 'higher' and 'lower' below (a neighboring node on a processor that has a bigger color value than ourselves is said to be a higher node, similar for lower nodes) */
+
+  /* VecScatter etc. for TOP nodes (nodes that only have lower neighbors) */
+  VecScatter topsct;
+  IS         top;    /* the local ids of the TOP nodes */
+
+  /* VecScatter etc. for BOT nodes (nodes that only have higher neighbors) */
+  VecScatter botsct;
+  IS         bot;    /* the local ids of the BOT nodes */
+
+  PetscInt nmid; /* number of MID nodes (nodes that have both higher and lower neighbors) */
+
+  IS int1, int2; /* partitioning of the interior nodes (i.e. nodes that are not TOP, MID or BOT) */
+} *MatParallelSOR;
+
 #if defined(PETSC_USE_CTABLE)
   #define PETSCTABLE PetscHMapI
 #else
