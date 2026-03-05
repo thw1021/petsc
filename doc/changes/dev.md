@@ -100,6 +100,7 @@
 - Add `SNES_DIVERGED_OBJECTIVE_NANORINF`
 - Add `SNES_DIVERGED_OBJECTIVE_DOMAIN`
 - Add developer functions `SNESCheckFunctionDomainError()`, `SNESLineSearchCheckFunctionDomainError()`, `SNESCheckObjectiveDomainError()`, `SNESLineSearchCheckObjectiveDomainError()`, `SNESCheckJacobianDomainError()`, and `SNESLineSearchCheckJacobianDomainError()`
+- Renamed `SNESVIGetActiveSetIS` `SNESVICreateActiveSetIS` to be consistent with the convention that `XXXGetYYY` returns a pointer to `YYY`, while `XXXCreateYYY` creates the object which later needs to be destroyed.
 
 ```{rubric} SNESLineSearch:
 ```
