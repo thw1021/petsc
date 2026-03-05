@@ -363,7 +363,8 @@ static PetscErrorCode PetscSFAddFace_2D_Private(DM dm, PetscMPIInt nrank, PetscI
     for (PetscInt i = xmin; i < xmax; ++i) {
       local[*l]        = (j - gy) * gm + (i - gx);
       remote[*l].rank  = nrank;
-      remote[*l].index = (j - glys[nrn] * dof) * glx[nrm] * dof + (i - glxs[nrm] * dof);
+      // remote[*l].index = (j - glys[nrn] * dof) * glx[nrm] * dof + (i - glxs[nrm] * dof);
+      remote[*l].index = (j - glys[nrn]) * glx[nrm] + (i - glxs[nrm]);
       ++(*l);
     }
   }
@@ -387,7 +388,8 @@ static PetscErrorCode PetscSFAddFace_1D_Private(DM dm, PetscMPIInt nrank, PetscI
   for (PetscInt i = xmin; i < xmax; ++i) {
     local[*l]        = i - gx;
     remote[*l].rank  = nrank;
-    remote[*l].index = (i - glxs[nrm]) * dof;
+    // remote[*l].index = (i - glxs[nrm]) * dof;
+    remote[*l].index = i - glxs[nrm];
     ++(*l);
   }
 
