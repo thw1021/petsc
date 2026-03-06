@@ -3992,3 +3992,39 @@ PetscErrorCode MatSeqDenseInvert(Mat A)
   PetscCall(MatDenseRestoreArray(A, &values));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*@
+  MatDenseReplaceArrayWithMemType - Allows one to replace the GPU array in a `MATDENSECUDA` or `MATDENSEHIP`matrix
+  with an array provided by the user and a matching `mtype`. This is useful to avoid copying an array into a matrix.
+
+  Not Collective
+
+  Input Parameters:
++ mat   - the matrix
+. mtype - the `PetscMemType` of the array
+- array - the array in column major order
+
+  Level: developer
+
+  Note:
+  Adding `const` to `array` was an oversight, see notes in `VecPlaceArray()`.
+
+  This permanently replaces the GPU array and frees the memory associated with the old GPU
+  array. The memory passed in CANNOT be freed by the user. It will be freed when the matrix is
+  destroyed. The array should respect the matrix leading dimension.
+
+.seealso: `MatDenseReplaceArray()`, `MatDenseCUDARelaceArray()`, `MatDenseHIPRelaceArray()`
+@*/
+PetscErrorCode MatDenseReplaceArrayWithMemType(Mat A, PetscMemType mtype, const PetscScalar array[])
+{
+  const char *type = PetscMemTypeToString(mtype) + 14; /* skip "PETSC_MEMTYPE_" */
+  char        buffer[256];
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscAssertPointer(array, 3);
+
+  PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "MatDense%sReplaceArray_C", PetscMemTypeHost(mtype) ? "" : type));
+  PetscUseMethod(A, buffer, (Mat, const PetscScalar[]), (A, array));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
