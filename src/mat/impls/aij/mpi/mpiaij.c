@@ -1,8 +1,3 @@
-#include "mpiaij.h"
-#include "petscis.h"
-#include "petscmat.h"
-#include "petscsys.h"
-#include "petscsystypes.h"
 #include <../src/mat/impls/aij/mpi/mpiaij.h> /*I "petscmat.h" I*/
 #include <petsc/private/vecimpl.h>
 #include <petsc/private/sfimpl.h>
@@ -1699,6 +1694,7 @@ static PetscErrorCode MatParallelSORPartitionNodes(Mat matin, MatParallelSOR par
         PetscCall(MatGetSize(Ao, NULL, &ncols));
         PetscCall(PetscCalloc1(ncols, &parsor->lvec_to_mid_count));
         PetscCall(PetscHMapICreate(&parsor->global_to_lvec));
+        parsor->n_lvec_cols = ncols;
       }
       for (PetscInt i = 0; i < nmid; ++i) {
         const PetscInt row = midnodes[i];
@@ -1888,6 +1884,8 @@ static PetscErrorCode MatParallelSORSetUp(Mat matin, MatParallelSOR parsor)
   PetscFunctionBegin;
   PetscCall(ColorProcessors(matin, &parsor->proccols));
   PetscCall(MatParallelSORPartitionNodes(matin, parsor));
+  /* proccols is only needed during partitioning, free it now rather than keeping it alive until destroy */
+  PetscCall(PetscFree(parsor->proccols));
   PetscCall(PetscCommGetNewTag(PetscObjectComm((PetscObject)matin), &parsor->tag));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1898,15 +1896,41 @@ static PetscErrorCode MatParallelSORDestroy(PetscCtxRt data)
   PetscInt       nmid;
 
   PetscFunctionBegin;
-  PetscCall(PetscFree(parsor->proccols));
+  /* IS objects */
   PetscCall(ISDestroy(&parsor->top));
   PetscCall(ISDestroy(&parsor->bot));
   PetscCall(ISGetLocalSize(parsor->mid, &nmid));
   PetscCall(ISDestroy(&parsor->mid));
   PetscCall(ISDestroy(&parsor->int1));
   PetscCall(ISDestroy(&parsor->int2));
+  /* VecScatters */
   PetscCall(VecScatterDestroy(&parsor->topsct));
   PetscCall(VecScatterDestroy(&parsor->botsct));
+  /* Per-MID-node arrays */
+  PetscCall(PetscFree(parsor->mid_done));
+  PetscCall(PetscFree(parsor->mid_node_n_deps));
+  PetscCall(PetscFree(parsor->mid_node_n_send_to));
+  for (PetscInt i = 0; i < nmid; ++i) PetscCall(PetscFree(parsor->mid_node_send_to_nb[i]));
+  PetscCall(PetscFree(parsor->mid_node_send_to_nb));
+  PetscCall(PetscFree(parsor->mid_local_dep_count));
+  for (PetscInt i = 0; i < nmid; ++i) PetscCall(PetscFree(parsor->mid_local_deps[i]));
+  PetscCall(PetscFree(parsor->mid_local_deps));
+  /* Receive-side MPI resources */
+  PetscCall(PetscFree(parsor->mid_recv_nbs));
+  PetscCall(PetscFree(parsor->mid_recv_reqs));
+  PetscCall(PetscFree(parsor->mid_recv_buf_size));
+  for (PetscInt i = 0; i < parsor->n_mid_recv_nbs; ++i) PetscCall(PetscFree(parsor->mid_recv_bufs[i]));
+  PetscCall(PetscFree(parsor->mid_recv_bufs));
+  /* Send-side MPI resources (send bufs are indexed by rank, free via the nbs list first) */
+  for (PetscInt p = 0; p < parsor->n_mid_send_nbs; ++p) PetscCall(PetscFree(parsor->mid_send_bufs[parsor->mid_send_nbs[p]]));
+  PetscCall(PetscFree(parsor->mid_send_nbs));
+  PetscCall(PetscFree(parsor->mid_send_reqs));
+  PetscCall(PetscFree(parsor->mid_send_bufs));
+  /* lvec mapping tables */
+  PetscCall(PetscHMapIDestroy(&parsor->global_to_lvec));
+  PetscCall(PetscFree(parsor->lvec_to_mid_count));
+  for (PetscInt j = 0; j < parsor->n_lvec_cols; ++j) PetscCall(PetscFree(parsor->lvec_to_mid_nodes[j]));
+  PetscCall(PetscFree(parsor->lvec_to_mid_nodes));
   PetscCall(PetscFree(parsor));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

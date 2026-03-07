@@ -45,14 +45,11 @@ typedef struct {      /* Used in MatSOR for SOR_FORWARD_SWEEP (i.e. true paralle
 
   PetscBool *mid_done; /* mid_done[i] is true if we have received the values from all the higher neighbors of the i-th mid node and thus can do SOR on that mid node */
 
-  PetscInt n_mid_dep;
-
   IS mid; /* the local ids of the MID nodes (nodes that have both higher and lower neighbors) */
 
   PetscMPIInt *mid_recv_nbs; /* Other ranks with MID nodes that we depend on*/
-  PetscMPIInt *mid_send_nbs; /* Other ranks with MID nodes that we depend on*/
+  PetscMPIInt *mid_send_nbs; /* Other ranks with MID nodes that we need to inform */
 
-  PetscInt     n_mid_nbs;
   PetscInt     n_mid_recv_nbs; /* number of neighbors that we receive from */
   MPI_Request *mid_recv_reqs;
   MPI_Request *mid_send_reqs;
@@ -77,6 +74,7 @@ typedef struct {      /* Used in MatSOR for SOR_FORWARD_SWEEP (i.e. true paralle
   /* When we receive a new message from a remote rank, we first map the global index to a local index using the hash map.
    * Then we check and update all mid nodes that depend on that entry using the other two arrays below. */
   PetscHMapI global_to_lvec;
+  PetscInt   n_lvec_cols;      /* size of the lvec_to_mid_count / lvec_to_mid_nodes arrays (= number of off-diagonal B-block columns) */
   PetscInt  *lvec_to_mid_count;
   PetscInt **lvec_to_mid_nodes;
 
