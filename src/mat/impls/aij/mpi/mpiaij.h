@@ -30,20 +30,57 @@ typedef struct {                                /* used by MatPtAPXXX_MPIAIJ_MPI
   MatMergeSeqsToMPI *merge;
 } MatProductCtx_APMPI;
 
+typedef struct {
+  PetscScalar data;
+  PetscInt    id;
+} MidIDData;
+
 typedef struct {      /* Used in MatSOR for SOR_FORWARD_SWEEP (i.e. true parallel Gauss-Seidel) */
   PetscInt *proccols; /* Processor coloring that defines the terms 'higher' and 'lower' below (a neighboring node on a processor that has a bigger color value than ourselves is said to be a higher node, similar for lower nodes) */
 
-  /* VecScatter etc. for TOP nodes (nodes that only have lower neighbors) */
-  VecScatter topsct;
+  VecScatter topsct; /* VecScatter to get the values needed to do a SOR sweep over the TOP nodes */
+  VecScatter botsct; /* VecScatter to get the values needed to do a SOR sweep over the BOT nodes */
   IS         top;    /* the local ids of the TOP nodes */
-
-  /* VecScatter etc. for BOT nodes (nodes that only have higher neighbors) */
-  VecScatter botsct;
   IS         bot;    /* the local ids of the BOT nodes */
 
-  PetscInt nmid; /* number of MID nodes (nodes that have both higher and lower neighbors) */
+  PetscBool *mid_done; /* mid_done[i] is true if we have received the values from all the higher neighbors of the i-th mid node and thus can do SOR on that mid node */
+
+  PetscInt n_mid_dep;
+
+  IS mid; /* the local ids of the MID nodes (nodes that have both higher and lower neighbors) */
+
+  PetscMPIInt *mid_recv_nbs; /* Other ranks with MID nodes that we depend on*/
+  PetscMPIInt *mid_send_nbs; /* Other ranks with MID nodes that we depend on*/
+
+  PetscInt     n_mid_nbs;
+  PetscInt     n_mid_recv_nbs; /* number of neighbors that we receive from */
+  MPI_Request *mid_recv_reqs;
+  MPI_Request *mid_send_reqs;
+
+  PetscInt     *mid_node_n_deps;     /* mid_node_n_deps[i] is the number of remote AND local higher MID nodes that we depend on */
+  PetscInt     *mid_node_n_send_to;  /* mid_node_n_send_to[i] is the number of ranks that we need to send the updated value of the i-th mid node to */
+  PetscMPIInt **mid_node_send_to_nb; /* mid_node_send_to[i] is the array of ranks that we need to send the updated value of the i-th mid node to */
+  MidIDData   **mid_send_bufs;       /* mid_send_bufs[p] is a buffer that is filled with the updated MID node values that we need to send to rank p */
+
+  /* Local MID-to-MID dependencies (same-proc MID nodes coupled through the A-block).
+   * Even-row MID nodes are "higher" and processed first; odd-row MID nodes are "lower" and wait. */
+  PetscInt  *mid_local_dep_count; /* mid_local_dep_count[m] = number of local MID nodes that depend on MID node m (i.e. m is even, they are odd) */
+  PetscInt **mid_local_deps;      /* mid_local_deps[m][k] = MID index of k-th local dependent of m */
+
+  PetscInt n_mid_send_nbs; /* Total number of neighbors we send data to */
+
+  MidIDData **mid_recv_bufs;
+  PetscInt   *mid_recv_buf_size;
 
   IS int1, int2; /* partitioning of the interior nodes (i.e. nodes that are not TOP, MID or BOT) */
+
+  /* When we receive a new message from a remote rank, we first map the global index to a local index using the hash map.
+   * Then we check and update all mid nodes that depend on that entry using the other two arrays below. */
+  PetscHMapI global_to_lvec;
+  PetscInt  *lvec_to_mid_count;
+  PetscInt **lvec_to_mid_nodes;
+
+  PetscMPIInt tag;
 } *MatParallelSOR;
 
 #if defined(PETSC_USE_CTABLE)
