@@ -564,6 +564,7 @@ def main(petscdir,slepcdir,petscarch,mpi_f08 = 'Unknown'):
   for i in typedefs.keys():
     if not typedefs[i].name: continue
     if i in ['PetscBool', 'PetscSizeT']: continue
+    if typedefs[i].opaque: continue
     value = typedefs[i].value
     if value in CToFortranTypes:
       if not CToFortranTypes[value]: continue
