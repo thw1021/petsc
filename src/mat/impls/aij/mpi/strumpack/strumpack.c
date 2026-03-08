@@ -1010,6 +1010,10 @@ static PetscErrorCode MatLUFactorSymbolic_STRUMPACK(Mat F, Mat A, IS r, IS c, co
   PetscFunctionBegin;
   PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "STRUMPACK Options", "Mat");
 
+  flg = PETSC_FALSE;
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-mat_strumpack_verbose", &flg, NULL));
+  PetscCallExternalVoid("STRUMPACK_set_verbose", STRUMPACK_set_verbose(*S, flg));
+
   /* By default, no compression is done. Compression is enabled when the user enables it with        */
   /*  -mat_strumpack_compression with anything else than NONE, or when selecting ilu                 */
   /* preconditioning, in which case we default to STRUMPACK_BLR compression.                         */
@@ -1224,8 +1228,6 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A, MatFactorType ftype, Mat
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATSEQAIJ, &flg)); /* A might be MATSEQAIJCUSPARSE */
   iface = flg ? STRUMPACK_MT : STRUMPACK_MPI_DIST;
   verb  = PetscLogPrintInfo ? PETSC_TRUE : PETSC_FALSE;
-  /* the next line is nonsense because there is no way to use the correct prefix */
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-mat_strumpack_verbose", &verb, NULL));
   PetscCallExternalVoid("STRUMPACK_init", STRUMPACK_init(S, PetscObjectComm((PetscObject)A), prec, iface, 0, NULL, verb));
   *F = B;
   PetscFunctionReturn(PETSC_SUCCESS);
