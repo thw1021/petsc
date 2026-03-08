@@ -1,3 +1,4 @@
+#include "petscoptions.h"
 #include <../src/mat/impls/aij/seq/aij.h> /*I "petscmat.h" I*/
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <StrumpackSparseSolver.h>
@@ -1011,7 +1012,7 @@ static PetscErrorCode MatLUFactorSymbolic_STRUMPACK(Mat F, Mat A, IS r, IS c, co
   PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "STRUMPACK Options", "Mat");
 
   flg = PETSC_FALSE;
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-mat_strumpack_verbose", &flg, NULL));
+  PetscCall(PetscOptionsBool("-mat_strumpack_verbose", "Whether verbose strumpack", "", flg, &flg, NULL));
   PetscCallExternalVoid("STRUMPACK_set_verbose", STRUMPACK_set_verbose(*S, flg));
 
   /* By default, no compression is done. Compression is enabled when the user enables it with        */
