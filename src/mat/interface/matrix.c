@@ -4778,7 +4778,7 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
 
   Input Parameters:
 + mat   - the matrix
-. type  - name of solver type, for example, `superlu`, `petsc` (to use PETSc's solver if it is available), if this is 'NULL', then the first result that satisfies
+. type  - name of solver type, for example, `superlu_dist`, `petsc` (to use PETSc's solver if it is available), if this is 'NULL', then the first result that satisfies
           the other criteria is returned
 - ftype - factor type, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`
 
@@ -4787,8 +4787,8 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
 
   Options Database Keys:
 + -pc_factor_mat_solver_type <type>    - choose the type at run time. When using `KSP` solvers
-. -pc_factor_mat_factor_on_host <bool> - do mat factorization on host (with device matrices). Default is doing it on device
-- -pc_factor_mat_solve_on_host <bool>  - do mat solve on host (with device matrices). Default is doing it on device
+. -pc_factor_mat_factor_on_host <bool> - do mattrix factorization on host (with device matrices). Default is doing it on device
+- -pc_factor_mat_solve_on_host <bool>  - do matrix solve on host (with device matrices). Default is doing it on device
 
   Level: intermediate
 
@@ -4799,18 +4799,21 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
   Users usually access the factorization solvers via `KSP`
 
   Some PETSc matrix formats have alternative solvers available that are contained in alternative packages
-  such as pastix, superlu, mumps etc. PETSc must have been ./configure to use the external solver, using the option --download-package or --with-package-dir
+  such as PaStiX, SuperLU_DIST, MUMPS etc. PETSc must have been `./configure` to use the external solver, using the option `--download-package` or `--with-package-dir`
 
   When `type` is `NULL` the available results are searched for based on the order of the calls to `MatSolverTypeRegister()` in `MatInitializePackage()`.
   Since different PETSc configurations may have different external solvers, seemingly identical runs with different PETSc configurations may use a different solver.
-  For example if one configuration had --download-mumps while a different one had --download-superlu_dist.
+  For example if one configuration had `--download-mumps` while a different one had `--download-superlu_dist`.
 
-  Some of the packages have options for controlling the factorization, these are in the form -prefix_mat_packagename_packageoption
+  Some of the packages have options for controlling the factorization, these are in the form `-prefix_mat_packagename_packageoption`
   where prefix is normally obtained from the calling `KSP`/`PC`. If `MatGetFactor()` is called directly one can set
   call `MatSetOptionsPrefixFactor()` on the originating matrix or  `MatSetOptionsPrefix()` on the resulting factor matrix.
 
   Developer Note:
   This should actually be called `MatCreateFactor()` since it creates a new factor object
+
+  The `MatGetFactor()` implementations should not be accessing the PETSc options database or making other decisions about solver options,
+  that should be delayed until the later operations. This is to ensure the correct options prefix has been set in the factor matrix.
 
 .seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `KSP`, `MatSolverType`, `MatFactorType`, `MatCopy()`, `MatDuplicate()`,
           `MatGetFactorAvailable()`, `MatFactorGetCanUseOrdering()`, `MatSolverTypeRegister()`, `MatSolverTypeGet()`
