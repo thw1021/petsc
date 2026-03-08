@@ -1303,7 +1303,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::MatMatMult_Numeric_Dispatch(Mat A, M
   PetscCall(PetscCUPMBlasIntCast(C->rmap->n, &m));
   PetscCall(PetscCUPMBlasIntCast(C->cmap->n, &n));
   PetscCall(PetscCUPMBlasIntCast(transpose_A ? A->rmap->n : A->cmap->n, &k));
-  if (!k) {
+  if (!m || !n || !k) {
     if (m && n) PetscCall(ZeroEntries(C));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
