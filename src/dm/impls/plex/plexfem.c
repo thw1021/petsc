@@ -2878,8 +2878,8 @@ PetscErrorCode DMPlexComputeBdIntegral(DM dm, Vec X, DMLabel label, PetscInt num
      counted on one rank. Without this, shared facets at partition boundaries
      are integrated on multiple ranks, causing double-counting after MPI sum. */
   if (facetIS) {
-    PetscSF  sf;
-    PetscInt nleaves;
+    PetscSF         sf;
+    PetscInt        nleaves;
     const PetscInt *leaves;
 
     PetscCall(DMGetPointSF(dm, &sf));
