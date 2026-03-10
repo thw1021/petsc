@@ -11194,7 +11194,8 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
   Coloring of matrices can also be computed directly from the sparse matrix nonzero structure via the `MatColoring` object or from the mesh from which the
   matrix comes from (what this function provides). In general using the mesh produces a more optimal coloring (fewer colors).
 
-  Such colorings are useful for additive and multiplicative Schwarz methods.
+  Mesh colorings are useful for additive and multiplicative Schwarz methods.
+  In particular, they mitigate overhead costs associated with setting up individual KSPs and PCs on many subdomains per process.
   A coloring of the vertices (depth=0) with distance=1 can be use can be used to group non-overlapping vertex-star patches into multi-patch subdomains.
   Similarly, a vertex coloring with distance=2 can be used to group non-overlapping Vanka patches into multi-patch subdomains.
 

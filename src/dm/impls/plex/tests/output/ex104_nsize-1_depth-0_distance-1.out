@@ -1,35 +1,40 @@
 IS Object: 1 MPI process
   type: general
-Number of indices in set 4
+Number of indices in set 6
 0 0
-1 6
-2 13
-3 15
+1 2
+2 4
+3 13
+4 15
+5 23
 IS Object: 1 MPI process
   type: general
 Number of indices in set 6
 0 1
-1 3
-2 8
-3 10
-4 17
-5 19
+1 8
+2 11
+3 19
+4 20
+5 22
 IS Object: 1 MPI process
   type: general
 Number of indices in set 5
-0 2
-1 9
-2 11
+0 5
+1 7
+2 9
 3 16
 4 18
 IS Object: 1 MPI process
   type: general
-Number of indices in set 3
-0 4
-1 12
-2 14
+Number of indices in set 6
+0 3
+1 10
+2 12
+3 14
+4 21
+5 24
 IS Object: 1 MPI process
   type: general
 Number of indices in set 2
-0 5
-1 7
+0 6
+1 17

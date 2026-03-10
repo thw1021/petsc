@@ -1,0 +1,100 @@
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 1
+[0] 0 13
+[1] Number of indices in set 3
+[1] 0 18
+[1] 1 23
+[1] 2 30
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 2
+[0] 0 7
+[0] 1 15
+[1] Number of indices in set 2
+[1] 0 27
+[1] 1 38
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 1
+[0] 0 8
+[1] Number of indices in set 2
+[1] 0 20
+[1] 1 28
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 1
+[0] 0 3
+[1] Number of indices in set 2
+[1] 0 19
+[1] 1 37
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 2
+[0] 0 11
+[0] 1 12
+[1] Number of indices in set 2
+[1] 0 25
+[1] 1 36
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 2
+[0] 0 5
+[0] 1 10
+[1] Number of indices in set 3
+[1] 0 21
+[1] 1 29
+[1] 2 35
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 2
+[0] 0 6
+[0] 1 17
+[1] Number of indices in set 2
+[1] 0 26
+[1] 1 31
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 2
+[0] 0 1
+[0] 1 9
+[1] Number of indices in set 1
+[1] 0 34
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 1
+[0] 0 2
+[1] Number of indices in set 2
+[1] 0 24
+[1] 1 33
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 0
+[1] Number of indices in set 2
+[1] 0 22
+[1] 1 32
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 1
+[0] 0 0
+[1] Number of indices in set 0
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 1
+[0] 0 14
+[1] Number of indices in set 0
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 1
+[0] 0 16
+[1] Number of indices in set 0
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 1
+[0] 0 4
+[1] Number of indices in set 0
+IS Object: 2 MPI processes
+  type: general
+[0] Number of indices in set 0
+[1] Number of indices in set 1
+[1] 0 39

@@ -20,22 +20,50 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
+{
+  DM          pdm             = NULL;
+  PetscInt    overlap         = user->distance;
+  PetscInt    dim;
+  PetscFunctionBegin;
+  PetscCall(DMCreate(comm, dm));
+  PetscCall(DMSetType(*dm, DMPLEX));
+  PetscCall(DMPlexDistributeSetDefault(*dm, PETSC_TRUE));
+  PetscCall(DMSetFromOptions(*dm));
+  PetscCall(DMGetDimension(*dm, &dim));
+  if (user->depth == dim) {
+    PetscCall(DMSetBasicAdjacency(*dm, PETSC_TRUE, PETSC_FALSE));
+  } else {
+    PetscCall(DMSetBasicAdjacency(*dm, PETSC_FALSE, PETSC_TRUE));
+  }
+  {
+    PetscPartitioner part;
+    PetscCall(DMPlexSetOptionsPrefix(*dm, "lb_"));
+    PetscCall(DMPlexGetPartitioner(*dm, &part));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)part, "lb_"));
+    PetscCall(PetscPartitionerSetFromOptions(part));
+  }
+  PetscCall(DMPlexDistribute(*dm, overlap, NULL, &pdm));
+  if (pdm) {
+    PetscCall(DMDestroy(dm));
+    *dm = pdm;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 int main(int argc, char **argv)
 {
   DM             dm;
-  const PetscInt faces[2]       = {4, 4};
-  DMBoundaryType periodicity[2] = {DM_BOUNDARY_PERIODIC, DM_BOUNDARY_NONE};
   AppCtx         user;
   PetscInt ncolors = 0;
   IS *iscolors = NULL;
   ISColoring coloring = NULL;
 
   PetscFunctionBeginUser;
-  /* Create a BoxMesh */
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  /* Create a BoxMesh */
   PetscCall(ProcessOptions(PETSC_COMM_WORLD, &user));
-  PetscCall(DMPlexCreateBoxMesh(PETSC_COMM_WORLD, 2, PETSC_FALSE, faces, NULL, NULL, periodicity, PETSC_TRUE, 0, PETSC_FALSE, &dm));
-  PetscCall(PetscObjectSetName((PetscObject)dm, "ExampleBoxMesh"));
+  PetscCall(CreateMesh(PETSC_COMM_WORLD, &user, &dm));
   /* Color the DMPlex */
   PetscCall(DMPlexCreateColoring(dm, user.depth, user.distance, &coloring));
   PetscCall(ISColoringGetIS(coloring, PETSC_USE_POINTER, &ncolors, &iscolors));
@@ -51,41 +79,8 @@ int main(int argc, char **argv)
 
 /*TEST
 
-  # Serial tests
   test:
-    suffix: depth-0_distance-1
-    args: -depth 0 -distance 1 -iscoloring_view
-  test:
-    suffix: depth-0_distance-2
-    args: -depth 0 -distance 2 -iscoloring_view
-  test:
-    suffix: depth-1_distance-1
-    args: -depth 1 -distance 1 -iscoloring_view
-  test:
-    suffix: depth-1_distance-2
-    args: -depth 1 -distance 2 -iscoloring_view
-  test:
-    suffix: depth-2_distance-1
-    args: -depth 2 -distance 1 -iscoloring_view
-  # Parallel tests
-  test:
-    suffix: parallel-depth-0_distance-1
-    args: -depth 0 -distance 1 -iscoloring_view
-  test:
-    suffix: parallel-depth-0_distance-2
-    nsize: 2
-    args: -depth 0 -distance 2 -iscoloring_view
-  test:
-    suffix: parallel-depth-1_distance-1
-    nsize: 2
-    args: -depth 1 -distance 1 -iscoloring_view
-  test:
-    suffix: parallel-depth-1_distance-2
-    nsize: 2
-    args: -depth 1 -distance 2 -iscoloring_view
-  test:
-    suffix: parallel-depth-2_distance-1
-    nsize: 2
-    args: -depth 2 -distance 1 -iscoloring_view
+    nsize: {{1 2}separate output}
+    args: -depth {{0 1 2}separate output} -distance {{1 2}separate output} -iscoloring_view -dm_coord_space 0 -dm_plex_simplex 0 -dm_plex_box_faces 4,4
 
 TEST*/
