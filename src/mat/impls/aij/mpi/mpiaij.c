@@ -1504,12 +1504,17 @@ static PetscErrorCode ColorProcessors(Mat matin, PetscInt **proccols)
 /* Partition the DOFs into TOP, MID, BOT, INT1 and INT2 nodes as defined in (Adams, 2001) */
 static PetscErrorCode MatParallelSORPartitionNodes(Mat matin, MatParallelSOR parsor)
 {
-  Mat_MPIAIJ     *aij = (Mat_MPIAIJ *)matin->data;
-  PetscLayout     layout;
-  Mat             Ad, Ao;
-  const PetscInt *colmap, *ii, *jj;
-  PetscInt        rank, size, n, ntop = 0, nbot = 0, nmid = 0, nint = 0, intcnt = 0, topcnt = 0, botcnt = 0, midcnt = 0;
-  PetscInt       *nodes, *topnodes, *botnodes, *midnodes, *intnodes;
+  Mat_MPIAIJ        *aij = (Mat_MPIAIJ *)matin->data;
+  Mat_SeqAIJ        *ad;
+  PetscLayout        layout;
+  Mat                Ad, Ao;
+  Vec                xcol;
+  IS                 ix, iy;
+  const PetscInt    *colmap, *ii, *jj, *ai, *aj;
+  PetscInt           rank, size, n, ncols, nrows, cnt = 0, ntop = 0, nbot = 0, nmid = 0, nint = 0, intcnt = 0, topcnt = 0, botcnt = 0, midcnt = 0, intcost = 0, topcost = 0, botcost = 0, tgt_int1_cost, curr_int1_cost = 0, splitidx;
+  PetscInt          *nodes, *topnodes, *botnodes, *midnodes, *intnodes, *from, *to, *n_mid_recv_buf_size, *mid_send_ranks, *cnt_arr, *row_to_mid, *lvec_cursor, *local_cursor;
+  PetscScalar       *xarr;
+  const PetscScalar *larr;
   enum {
     INT,
     TOP,
@@ -1524,6 +1529,8 @@ static PetscErrorCode MatParallelSORPartitionNodes(Mat matin, MatParallelSOR par
   PetscCall(MatMPIAIJGetSeqAIJ(matin, &Ad, &Ao, &colmap));
   PetscCall(MatSeqAIJGetCSRAndMemType(Ao, &ii, &jj, NULL, NULL));
   PetscCall(MatGetSize(Ao, &n, NULL));
+
+  /* Classify each local DOF as TOP, BOT, MID or INT */
   PetscCall(PetscCalloc1(n, &nodes));
   for (PetscInt i = 0; i < n; ++i) {
     PetscBool istop = PETSC_FALSE, isbot = PETSC_FALSE; /* if both are true, then this is a mid node; if neither is true, it's an interior node */
@@ -1573,305 +1580,280 @@ static PetscErrorCode MatParallelSORPartitionNodes(Mat matin, MatParallelSOR par
   }
   PetscCall(PetscFree(nodes));
   PetscCall(PetscInfo(NULL, "MatParallelSOR: Partitioned nodes, have %" PetscInt_FMT " top, %" PetscInt_FMT " bot, %" PetscInt_FMT " mid and %" PetscInt_FMT " int\n", topcnt, botcnt, midcnt, intcnt));
-  {
-    /* Split interior nodes into two parts such that approximately
-            cost(int1) + cost(top) = cost(int2) + cost(bot)
-       which is the same as
-            cost(int1) = (cost(int) + cost(bot) - cost(top)) / 2,
-       where cost(int) is the total cost of all interior nodes.
-       Thus, we compute cost(int), cost(bot), and cost(top) and then decide
-       where to split based on the second formula above.  */
-    PetscInt intcost = 0, topcost = 0, botcost = 0, tgt_int1_cost, curr_int1_cost = 0, splitidx;
-    for (PetscInt i = 0; i < ntop; ++i) topcost += ii[topnodes[i] + 1] - ii[topnodes[i]];
-    for (PetscInt i = 0; i < nbot; ++i) botcost += ii[botnodes[i] + 1] - ii[botnodes[i]];
-    for (PetscInt i = 0; i < nint; ++i) intcost += ii[intnodes[i] + 1] - ii[intnodes[i]];
 
-    tgt_int1_cost = roundf(0.5f * (intcost + botcost - topcost));
-    for (splitidx = 0; splitidx < nint; ++splitidx) {
-      curr_int1_cost += ii[intnodes[splitidx] + 1] - ii[intnodes[splitidx]];
-      if (curr_int1_cost > tgt_int1_cost) break;
-    }
+  /* Split interior nodes into two parts such that approximately
+          cost(int1) + cost(top) = cost(int2) + cost(bot)
+     which is the same as
+          cost(int1) = (cost(int) + cost(bot) - cost(top)) / 2,
+     where cost(int) is the total cost of all interior nodes.
+     Thus, we compute cost(int), cost(bot), and cost(top) and then decide
+     where to split based on the second formula above.  */
+  for (PetscInt i = 0; i < ntop; ++i) topcost += ii[topnodes[i] + 1] - ii[topnodes[i]];
+  for (PetscInt i = 0; i < nbot; ++i) botcost += ii[botnodes[i] + 1] - ii[botnodes[i]];
+  for (PetscInt i = 0; i < nint; ++i) intcost += ii[intnodes[i] + 1] - ii[intnodes[i]];
 
-    PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)matin), splitidx, intnodes, PETSC_COPY_VALUES, &parsor->int1));
-    PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)matin), nint - splitidx, intnodes + splitidx, PETSC_COPY_VALUES, &parsor->int2));
-    PetscCall(ISViewFromOptions(parsor->int1, NULL, "-mat_sor_int1_view"));
-    PetscCall(ISViewFromOptions(parsor->int2, NULL, "-mat_sor_int2_view"));
+  tgt_int1_cost = roundf(0.5f * (intcost + botcost - topcost));
+  for (splitidx = 0; splitidx < nint; ++splitidx) {
+    curr_int1_cost += ii[intnodes[splitidx] + 1] - ii[intnodes[splitidx]];
+    if (curr_int1_cost > tgt_int1_cost) break;
   }
-  /* Create ISes, vectors and VecScatters for TOP and BOT nodes */
+
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)matin), splitidx, intnodes, PETSC_COPY_VALUES, &parsor->int1));
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)matin), nint - splitidx, intnodes + splitidx, PETSC_COPY_VALUES, &parsor->int2));
+  PetscCall(ISViewFromOptions(parsor->int1, NULL, "-mat_sor_int1_view"));
+  PetscCall(ISViewFromOptions(parsor->int2, NULL, "-mat_sor_int2_view"));
+
+  /* Create ISes and VecScatters for TOP and BOT nodes */
   PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)matin), ntop, topnodes, PETSC_COPY_VALUES, &parsor->top));
   PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)matin), nbot, botnodes, PETSC_COPY_VALUES, &parsor->bot));
-  {
-    Vec       xcol;
-    IS        ix, iy;
-    PetscInt *from, *to, cnt;
+  PetscCall(MatCreateVecs(matin, &xcol, NULL));
 
-    PetscCall(MatCreateVecs(matin, &xcol, NULL));
-    /* TOP scatter: gather remote entries needed by top node rows into topvec */
-    cnt = 0;
-    for (PetscInt i = 0; i < ntop; ++i) cnt += ii[topnodes[i] + 1] - ii[topnodes[i]];
-    PetscCall(PetscMalloc1(cnt, &from));
-    PetscCall(PetscMalloc1(cnt, &to));
-    cnt = 0;
-    for (PetscInt i = 0; i < ntop; ++i) {
-      for (PetscInt j = ii[topnodes[i]]; j < ii[topnodes[i] + 1]; ++j) {
-        from[cnt] = colmap[jj[j]]; /* global column index */
-        to[cnt]   = jj[j];         /* local index in lvec */
-        ++cnt;
-      }
+  /* TOP scatter: gather remote entries needed by top node rows */
+  cnt = 0;
+  for (PetscInt i = 0; i < ntop; ++i) cnt += ii[topnodes[i] + 1] - ii[topnodes[i]];
+  PetscCall(PetscMalloc1(cnt, &from));
+  PetscCall(PetscMalloc1(cnt, &to));
+  cnt = 0;
+  for (PetscInt i = 0; i < ntop; ++i) {
+    for (PetscInt j = ii[topnodes[i]]; j < ii[topnodes[i] + 1]; ++j) {
+      from[cnt] = colmap[jj[j]]; /* global column index */
+      to[cnt]   = jj[j];         /* local index in lvec */
+      ++cnt;
     }
-    PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)matin), cnt, from, PETSC_OWN_POINTER, &ix));
-    PetscCall(ISCreateGeneral(PETSC_COMM_SELF, cnt, to, PETSC_OWN_POINTER, &iy));
-    PetscCall(VecScatterCreate(xcol, ix, aij->lvec, iy, &parsor->topsct));
-    PetscCall(ISDestroy(&ix));
-    PetscCall(ISDestroy(&iy));
-    /* BOT scatter: gather remote entries needed by bot *and mid* node rows into botvec */
-    cnt = 0;
-    for (PetscInt i = 0; i < nbot; ++i) cnt += ii[botnodes[i] + 1] - ii[botnodes[i]];
-    for (PetscInt i = 0; i < nmid; ++i) cnt += ii[midnodes[i] + 1] - ii[midnodes[i]];
-    PetscCall(PetscMalloc1(cnt, &from));
-    PetscCall(PetscMalloc1(cnt, &to));
-    cnt = 0;
-    for (PetscInt i = 0; i < nbot; ++i) {
-      for (PetscInt j = ii[botnodes[i]]; j < ii[botnodes[i] + 1]; ++j) {
-        from[cnt] = colmap[jj[j]];
-        to[cnt]   = jj[j];
-        ++cnt;
-      }
-    }
-    for (PetscInt i = 0; i < nmid; ++i) {
-      for (PetscInt j = ii[midnodes[i]]; j < ii[midnodes[i] + 1]; ++j) {
-        from[cnt] = colmap[jj[j]];
-        to[cnt]   = jj[j];
-        ++cnt;
-      }
-    }
-    PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)matin), cnt, from, PETSC_OWN_POINTER, &ix));
-    PetscCall(ISCreateGeneral(PETSC_COMM_SELF, cnt, to, PETSC_OWN_POINTER, &iy));
-    PetscCall(VecScatterCreate(xcol, ix, aij->lvec, iy, &parsor->botsct));
-    PetscCall(ISDestroy(&ix));
-    PetscCall(ISDestroy(&iy));
-    PetscCall(VecDestroy(&xcol));
   }
-  /* Set up MID nodes. We also need to store remote MID node neighbors (we do this by communicating a vector that has 1s at our local MID node indices; this is a bit wasteful but easy) */
-  {
-    PetscInt          *n_mid_recv_buf_size; /* An upper bound for the buffer in the MPI_Irecv for remote MID values */
-    PetscInt          *mid_send_ranks;      /* Array of size `# MPI ranks` that is >0 for ranks that we have to send data to */
-    PetscInt          *cnt_arr;
-    Vec                xcol;
-    PetscScalar       *xarr;
-    const PetscScalar *larr;
-    PetscInt           cnt = 0;
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)matin), cnt, from, PETSC_OWN_POINTER, &ix));
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, cnt, to, PETSC_OWN_POINTER, &iy));
+  PetscCall(VecScatterCreate(xcol, ix, aij->lvec, iy, &parsor->topsct));
+  PetscCall(ISDestroy(&ix));
+  PetscCall(ISDestroy(&iy));
 
-    PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)matin), nmid, midnodes, PETSC_COPY_VALUES, &parsor->mid));
-    PetscCall(PetscCalloc1(nmid, &parsor->mid_done));
-    PetscCall(PetscCalloc1(nmid, &parsor->mid_node_n_send_to));
-    PetscCall(PetscCalloc1(size, &n_mid_recv_buf_size));
-    PetscCall(PetscCalloc1(size, &mid_send_ranks));
-    PetscCall(PetscCalloc1(nmid, &parsor->mid_node_n_deps));
-    PetscCall(PetscCalloc1(nmid, &cnt_arr));
-    {
-      /* Build a vector which is 1 at the entries corresponding to MID nodes. Then scatter that to aij->lvec, so that remote ranks know where our MID nodes are and we know where theirs are */
-      PetscCall(MatCreateVecs(matin, &xcol, NULL));
-      PetscCall(VecZeroEntries(xcol));
-      PetscCall(VecZeroEntries(aij->lvec));
-      PetscCall(VecGetArray(xcol, &xarr));
-      for (PetscInt i = 0; i < nmid; ++i) xarr[midnodes[i]] = 1.0;
-      PetscCall(VecRestoreArray(xcol, &xarr));
-      PetscCall(VecScatterBegin(aij->Mvctx, xcol, aij->lvec, INSERT_VALUES, SCATTER_FORWARD));
-      PetscCall(VecScatterEnd(aij->Mvctx, xcol, aij->lvec, INSERT_VALUES, SCATTER_FORWARD));
-      PetscCall(VecGetArrayRead(aij->lvec, &larr));
-      /* Count for each of our MID nodes how many remote higher MID nodes it depends on.
-     * Also store per MPI neighbor how many MID nodes it has that we depend on (this gives us an upper bound
-     * for the length of the MPI messages that this rank will send us).
-     * We also store for each of our own MID nodes a list of MID nodes on lower processors that depend on our MID node.
-     * This is needed so that we can notify them once we're done processing a MID node.
-     *
-     * TODO: Use PetscCommBuildTwoSided to cover the case when some of our neighbors doesn't know us yet (or vice-versa).
-     */
-      /* First pass: count dependencies to size the lvec_to_mid arrays */
-      {
-        PetscInt ncols;
-        PetscCall(MatGetSize(Ao, NULL, &ncols));
-        PetscCall(PetscCalloc1(ncols, &parsor->lvec_to_mid_count));
-        PetscCall(PetscHMapICreate(&parsor->global_to_lvec));
-        parsor->n_lvec_cols = ncols;
-      }
-      for (PetscInt i = 0; i < nmid; ++i) {
-        const PetscInt row = midnodes[i];
-        for (PetscInt j = ii[row]; j < ii[row + 1]; ++j) {
-          PetscInt    c = colmap[jj[j]];
-          PetscMPIInt owner;
-
-          PetscCall(PetscLayoutFindOwner(layout, c, &owner));
-          if (parsor->proccols[owner] > parsor->proccols[rank] && larr[jj[j]] > 0) { /* higher neighbors */
-            n_mid_recv_buf_size[owner]++;
-            parsor->mid_node_n_deps[i]++;
-            PetscCall(PetscHMapISet(parsor->global_to_lvec, c, jj[j]));
-            parsor->lvec_to_mid_count[jj[j]]++;
-          } else if (parsor->proccols[owner] < parsor->proccols[rank] && larr[jj[j]] > 0) { /* lower neighbors */
-            mid_send_ranks[owner]++;
-            parsor->mid_node_n_send_to[i]++;
-          }
-        }
-      }
-      /* Allocate and fill lvec_to_mid_nodes using a second pass */
-      {
-        PetscInt  ncols;
-        PetscInt *lvec_cursor;
-        PetscCall(MatGetSize(Ao, NULL, &ncols));
-        PetscCall(PetscCalloc1(ncols, &parsor->lvec_to_mid_nodes));
-        PetscCall(PetscCalloc1(ncols, &lvec_cursor));
-        for (PetscInt j = 0; j < ncols; ++j) {
-          if (parsor->lvec_to_mid_count[j] > 0) PetscCall(PetscCalloc1(parsor->lvec_to_mid_count[j], &parsor->lvec_to_mid_nodes[j]));
-        }
-        for (PetscInt i = 0; i < nmid; ++i) {
-          const PetscInt row = midnodes[i];
-          for (PetscInt j = ii[row]; j < ii[row + 1]; ++j) {
-            PetscInt    c = colmap[jj[j]];
-            PetscMPIInt owner;
-
-            PetscCall(PetscLayoutFindOwner(layout, c, &owner));
-            if (parsor->proccols[owner] > parsor->proccols[rank] && larr[jj[j]] > 0) {
-              parsor->lvec_to_mid_nodes[jj[j]][lvec_cursor[jj[j]]++] = i;
-            }
-          }
-        }
-        PetscCall(PetscFree(lvec_cursor));
-      }
-
-      /* Store the ranks that we will receive messages from */
-      parsor->n_mid_recv_nbs = 0;
-      for (PetscMPIInt i = 0; i < size; ++i)
-        if (n_mid_recv_buf_size[i] > 0) parsor->n_mid_recv_nbs++;
-      PetscCall(PetscCalloc1(parsor->n_mid_recv_nbs, &parsor->mid_recv_nbs));
-      for (PetscMPIInt i = 0; i < size; ++i)
-        if (n_mid_recv_buf_size[i] > 0) parsor->mid_recv_nbs[cnt++] = i;
-      /* Allocate the recv buffers, their sizes, and the request array */
-      PetscCall(PetscCalloc1(parsor->n_mid_recv_nbs, &parsor->mid_recv_bufs));
-      PetscCall(PetscCalloc1(parsor->n_mid_recv_nbs, &parsor->mid_recv_buf_size));
-      PetscCall(PetscCalloc1(parsor->n_mid_recv_nbs, &parsor->mid_recv_reqs));
-      for (PetscInt i = 0; i < parsor->n_mid_recv_nbs; ++i) {
-        parsor->mid_recv_buf_size[i] = n_mid_recv_buf_size[parsor->mid_recv_nbs[i]];
-        PetscCall(PetscCalloc1(parsor->mid_recv_buf_size[i], &parsor->mid_recv_bufs[i]));
-      }
-
-      /* For each of our own MID nodes, store the ranks that need to be informed about us processing that MID node */
-      PetscCall(PetscCalloc1(nmid, &parsor->mid_node_send_to_nb));
-      for (PetscInt i = 0; i < nmid; ++i) PetscCall(PetscCalloc1(parsor->mid_node_n_send_to[i], &parsor->mid_node_send_to_nb[i]));
-      for (PetscInt i = 0; i < nmid; ++i) {
-        const PetscInt row = midnodes[i];
-        for (PetscInt j = ii[row]; j < ii[row + 1]; ++j) {
-          PetscInt    c = colmap[jj[j]];
-          PetscMPIInt owner;
-
-          PetscCall(PetscLayoutFindOwner(layout, c, &owner));
-          if (parsor->proccols[owner] < parsor->proccols[rank] && larr[jj[j]] > 0) { /* lower neighbors */
-            /* Add the owner rank to the list of ranks that MID node i needs to inform when it's done (but only if it's not already in that list) */
-            PetscBool rank_already_added = PETSC_FALSE;
-            for (PetscInt k = 0; k < cnt_arr[i]; ++k) {
-              if (parsor->mid_node_send_to_nb[i][k] == owner) {
-                rank_already_added = PETSC_TRUE;
-                break;
-              }
-            }
-            if (!rank_already_added) {
-              parsor->mid_node_send_to_nb[i][cnt_arr[i]] = owner;
-              cnt_arr[i]++;
-            }
-          }
-        }
-      }
-      /* Shrink the array to the actual size */
-      for (PetscInt i = 0; i < nmid; ++i) {
-        parsor->mid_node_n_send_to[i] = cnt_arr[i];
-        PetscCall(PetscRealloc(parsor->mid_node_n_send_to[i] * sizeof(PetscMPIInt), &parsor->mid_node_send_to_nb[i]));
-      }
-
-      /* Allocate the send buffers */
-      /* TODO: For now, we just allocate one send buffer for each rank. We obviously only need one per neighbour. */
-      PetscCall(PetscCalloc1(size, &parsor->mid_send_bufs));
-      for (PetscMPIInt i = 0; i < size; ++i) PetscCall(PetscCalloc1(mid_send_ranks[i], &parsor->mid_send_bufs[i]));
-
-      /* Store the send neighbor ranks and allocate send request array */
-      parsor->n_mid_send_nbs = 0;
-      for (PetscMPIInt i = 0; i < size; ++i)
-        if (mid_send_ranks[i] > 0) parsor->n_mid_send_nbs++;
-      PetscCall(PetscCalloc1(parsor->n_mid_send_nbs, &parsor->mid_send_nbs));
-      PetscCall(PetscCalloc1(parsor->n_mid_send_nbs, &parsor->mid_send_reqs));
-      cnt = 0;
-      for (PetscMPIInt i = 0; i < size; ++i)
-        if (mid_send_ranks[i] > 0) parsor->mid_send_nbs[cnt++] = i;
-
-      PetscCall(VecRestoreArrayRead(aij->lvec, &larr));
-      PetscCall(VecDestroy(&xcol));
+  /* BOT scatter: gather remote entries needed by bot *and mid* node rows */
+  cnt = 0;
+  for (PetscInt i = 0; i < nbot; ++i) cnt += ii[botnodes[i] + 1] - ii[botnodes[i]];
+  for (PetscInt i = 0; i < nmid; ++i) cnt += ii[midnodes[i] + 1] - ii[midnodes[i]];
+  PetscCall(PetscMalloc1(cnt, &from));
+  PetscCall(PetscMalloc1(cnt, &to));
+  cnt = 0;
+  for (PetscInt i = 0; i < nbot; ++i) {
+    for (PetscInt j = ii[botnodes[i]]; j < ii[botnodes[i] + 1]; ++j) {
+      from[cnt] = colmap[jj[j]];
+      to[cnt]   = jj[j];
+      ++cnt;
     }
-
-    /* Compute dependencies between MID nodes that depend on other *local* MID nodes */
-    {
-      Mat_SeqAIJ     *ad = (Mat_SeqAIJ *)Ad->data;
-      const PetscInt *ai = ad->i, *aj = ad->j;
-      PetscInt       *row_to_mid; /* row_to_mid[row] = MID index m, or -1 */
-      PetscInt        nrows;
-
-      PetscCall(MatGetLocalSize(matin, &nrows, NULL));
-      PetscCall(PetscMalloc1(nrows, &row_to_mid));
-      for (PetscInt i = 0; i < nrows; ++i) row_to_mid[i] = -1;
-      for (PetscInt m = 0; m < nmid; ++m) row_to_mid[midnodes[m]] = m;
-
-      /* First pass: count local deps for each MID node */
-      PetscCall(PetscCalloc1(nmid, &parsor->mid_local_dep_count));
-      for (PetscInt m = 0; m < nmid; ++m) {
-        const PetscInt row = midnodes[m];
-        for (PetscInt j = ai[row]; j < ai[row + 1]; ++j) {
-          PetscInt c  = aj[j];
-          PetscInt m2 = row_to_mid[c];
-          if (m2 < 0 || m2 == m) continue; /* not a MID node or self */
-          if (midnodes[m2] < row) {
-            /* neighbor has lower row index, so I depend on neighbor (neighbor is "higher") */
-            parsor->mid_node_n_deps[m]++;
-          } else {
-            /* neighbor has higher row index, so neighbor depends on me, so I need to notify them */
-            parsor->mid_local_dep_count[m]++;
-          }
-        }
-      }
-
-      /* Second pass: allocate and fill local dependent lists */
-      PetscInt *local_cursor;
-      PetscCall(PetscCalloc1(nmid, &local_cursor));
-      PetscCall(PetscCalloc1(nmid, &parsor->mid_local_deps));
-      for (PetscInt m = 0; m < nmid; ++m) {
-        if (parsor->mid_local_dep_count[m] > 0) PetscCall(PetscMalloc1(parsor->mid_local_dep_count[m], &parsor->mid_local_deps[m]));
-      }
-      for (PetscInt m = 0; m < nmid; ++m) {
-        const PetscInt row = midnodes[m];
-        for (PetscInt j = ai[row]; j < ai[row + 1]; ++j) {
-          PetscInt c  = aj[j];
-          PetscInt m2 = row_to_mid[c];
-          if (m2 < 0 || m2 == m) continue;
-          if (midnodes[m2] > row) {
-            /* m2 has higher row index => m2 depends on m => add m2 to m's local dependents */
-            PetscBool already = PETSC_FALSE;
-            for (PetscInt k = 0; k < local_cursor[m]; ++k) {
-              if (parsor->mid_local_deps[m][k] == m2) {
-                already = PETSC_TRUE;
-                break;
-              }
-            }
-            if (!already) parsor->mid_local_deps[m][local_cursor[m]++] = m2;
-          }
-        }
-      }
-      /* Correct the count to the de-duplicated actual size */
-      for (PetscInt m = 0; m < nmid; ++m) parsor->mid_local_dep_count[m] = local_cursor[m];
-      PetscCall(PetscFree(local_cursor));
-      PetscCall(PetscFree(row_to_mid));
+  }
+  for (PetscInt i = 0; i < nmid; ++i) {
+    for (PetscInt j = ii[midnodes[i]]; j < ii[midnodes[i] + 1]; ++j) {
+      from[cnt] = colmap[jj[j]];
+      to[cnt]   = jj[j];
+      ++cnt;
     }
-    PetscCall(PetscFree(n_mid_recv_buf_size));
-    PetscCall(PetscFree(mid_send_ranks));
-    PetscCall(PetscFree(cnt_arr));
-  } /* MID node setup done */
+  }
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)matin), cnt, from, PETSC_OWN_POINTER, &ix));
+  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, cnt, to, PETSC_OWN_POINTER, &iy));
+  PetscCall(VecScatterCreate(xcol, ix, aij->lvec, iy, &parsor->botsct));
+  PetscCall(ISDestroy(&ix));
+  PetscCall(ISDestroy(&iy));
+  PetscCall(VecDestroy(&xcol));
 
+  /* Set up MID nodes. We also need to store remote MID node neighbors (we do this by
+     communicating a vector that has 1s at our local MID node indices; this is a bit wasteful but easy) */
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)matin), nmid, midnodes, PETSC_COPY_VALUES, &parsor->mid));
+  PetscCall(PetscCalloc1(nmid, &parsor->mid_done));
+  PetscCall(PetscCalloc1(nmid, &parsor->mid_node_n_send_to));
+  PetscCall(PetscCalloc1(size, &n_mid_recv_buf_size));
+  PetscCall(PetscCalloc1(size, &mid_send_ranks));
+  PetscCall(PetscCalloc1(nmid, &parsor->mid_node_n_deps));
+  PetscCall(PetscCalloc1(nmid, &cnt_arr));
+
+  /* Build a vector which is 1 at the entries corresponding to MID nodes, then scatter to
+     aij->lvec so that remote ranks know where our MID nodes are and we know where theirs are */
+  PetscCall(MatCreateVecs(matin, &xcol, NULL));
+  PetscCall(VecZeroEntries(xcol));
+  PetscCall(VecZeroEntries(aij->lvec));
+  PetscCall(VecGetArray(xcol, &xarr));
+  for (PetscInt i = 0; i < nmid; ++i) xarr[midnodes[i]] = 1.0;
+  PetscCall(VecRestoreArray(xcol, &xarr));
+  PetscCall(VecScatterBegin(aij->Mvctx, xcol, aij->lvec, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecScatterEnd(aij->Mvctx, xcol, aij->lvec, INSERT_VALUES, SCATTER_FORWARD));
+  PetscCall(VecGetArrayRead(aij->lvec, &larr));
+
+  /* Count for each of our MID nodes how many remote higher MID nodes it depends on.
+     Also store per MPI neighbor how many MID nodes it has that we depend on (this gives us
+     an upper bound for the length of the MPI messages that this rank will send us).
+     We also store for each of our own MID nodes a list of MID nodes on lower processors
+     that depend on our MID node, needed to notify them once we process a MID node.
+     TODO: Use PetscCommBuildTwoSided to cover the case when some of our neighbors doesn't know us yet (or vice-versa). */
+  PetscCall(MatGetSize(Ao, NULL, &ncols));
+  PetscCall(PetscCalloc1(ncols, &parsor->lvec_to_mid_count));
+  PetscCall(PetscHMapICreate(&parsor->global_to_lvec));
+  parsor->n_lvec_cols = ncols;
+  for (PetscInt i = 0; i < nmid; ++i) {
+    const PetscInt row = midnodes[i];
+    for (PetscInt j = ii[row]; j < ii[row + 1]; ++j) {
+      PetscInt    c = colmap[jj[j]];
+      PetscMPIInt owner;
+
+      PetscCall(PetscLayoutFindOwner(layout, c, &owner));
+      if (parsor->proccols[owner] > parsor->proccols[rank] && larr[jj[j]] > 0) { /* higher neighbors */
+        n_mid_recv_buf_size[owner]++;
+        parsor->mid_node_n_deps[i]++;
+        PetscCall(PetscHMapISet(parsor->global_to_lvec, c, jj[j]));
+        parsor->lvec_to_mid_count[jj[j]]++;
+      } else if (parsor->proccols[owner] < parsor->proccols[rank] && larr[jj[j]] > 0) { /* lower neighbors */
+        mid_send_ranks[owner]++;
+        parsor->mid_node_n_send_to[i]++;
+      }
+    }
+  }
+
+  /* Allocate and fill lvec_to_mid_nodes using a second pass */
+  PetscCall(PetscCalloc1(ncols, &parsor->lvec_to_mid_nodes));
+  PetscCall(PetscCalloc1(ncols, &lvec_cursor));
+  for (PetscInt j = 0; j < ncols; ++j) {
+    if (parsor->lvec_to_mid_count[j] > 0) PetscCall(PetscCalloc1(parsor->lvec_to_mid_count[j], &parsor->lvec_to_mid_nodes[j]));
+  }
+  for (PetscInt i = 0; i < nmid; ++i) {
+    const PetscInt row = midnodes[i];
+    for (PetscInt j = ii[row]; j < ii[row + 1]; ++j) {
+      PetscInt    c = colmap[jj[j]];
+      PetscMPIInt owner;
+
+      PetscCall(PetscLayoutFindOwner(layout, c, &owner));
+      if (parsor->proccols[owner] > parsor->proccols[rank] && larr[jj[j]] > 0) {
+        parsor->lvec_to_mid_nodes[jj[j]][lvec_cursor[jj[j]]++] = i;
+      }
+    }
+  }
+  PetscCall(PetscFree(lvec_cursor));
+
+  /* Store the ranks that we will receive messages from */
+  parsor->n_mid_recv_nbs = 0;
+  for (PetscMPIInt i = 0; i < size; ++i)
+    if (n_mid_recv_buf_size[i] > 0) parsor->n_mid_recv_nbs++;
+  PetscCall(PetscCalloc1(parsor->n_mid_recv_nbs, &parsor->mid_recv_nbs));
+  cnt = 0;
+  for (PetscMPIInt i = 0; i < size; ++i)
+    if (n_mid_recv_buf_size[i] > 0) parsor->mid_recv_nbs[cnt++] = i;
+
+  /* Allocate the recv buffers, their sizes, and the request array */
+  PetscCall(PetscCalloc1(parsor->n_mid_recv_nbs, &parsor->mid_recv_bufs));
+  PetscCall(PetscCalloc1(parsor->n_mid_recv_nbs, &parsor->mid_recv_buf_size));
+  PetscCall(PetscCalloc1(parsor->n_mid_recv_nbs, &parsor->mid_recv_reqs));
+  for (PetscInt i = 0; i < parsor->n_mid_recv_nbs; ++i) {
+    parsor->mid_recv_buf_size[i] = n_mid_recv_buf_size[parsor->mid_recv_nbs[i]];
+    PetscCall(PetscCalloc1(parsor->mid_recv_buf_size[i], &parsor->mid_recv_bufs[i]));
+  }
+
+  /* For each of our own MID nodes, store the ranks that need to be informed when we process that MID node */
+  PetscCall(PetscCalloc1(nmid, &parsor->mid_node_send_to_nb));
+  for (PetscInt i = 0; i < nmid; ++i) PetscCall(PetscCalloc1(parsor->mid_node_n_send_to[i], &parsor->mid_node_send_to_nb[i]));
+  for (PetscInt i = 0; i < nmid; ++i) {
+    const PetscInt row = midnodes[i];
+    for (PetscInt j = ii[row]; j < ii[row + 1]; ++j) {
+      PetscInt    c = colmap[jj[j]];
+      PetscMPIInt owner;
+
+      PetscCall(PetscLayoutFindOwner(layout, c, &owner));
+      if (parsor->proccols[owner] < parsor->proccols[rank] && larr[jj[j]] > 0) {
+        /* Add owner to list of ranks that MID node i needs to inform (skip duplicates) */
+        PetscBool rank_already_added = PETSC_FALSE;
+        for (PetscInt k = 0; k < cnt_arr[i]; ++k) {
+          if (parsor->mid_node_send_to_nb[i][k] == owner) {
+            rank_already_added = PETSC_TRUE;
+            break;
+          }
+        }
+        if (!rank_already_added) {
+          parsor->mid_node_send_to_nb[i][cnt_arr[i]] = owner;
+          cnt_arr[i]++;
+        }
+      }
+    }
+  }
+  /* Shrink the array to the actual size */
+  for (PetscInt i = 0; i < nmid; ++i) {
+    parsor->mid_node_n_send_to[i] = cnt_arr[i];
+    PetscCall(PetscRealloc(parsor->mid_node_n_send_to[i] * sizeof(PetscMPIInt), &parsor->mid_node_send_to_nb[i]));
+  }
+
+  /* Allocate the send buffers */
+  /* TODO: For now, we just allocate one send buffer for each rank. We obviously only need one per neighbour. */
+  PetscCall(PetscCalloc1(size, &parsor->mid_send_bufs));
+  for (PetscMPIInt i = 0; i < size; ++i) PetscCall(PetscCalloc1(mid_send_ranks[i], &parsor->mid_send_bufs[i]));
+
+  /* Store the send neighbor ranks and allocate send request array */
+  parsor->n_mid_send_nbs = 0;
+  for (PetscMPIInt i = 0; i < size; ++i)
+    if (mid_send_ranks[i] > 0) parsor->n_mid_send_nbs++;
+  PetscCall(PetscCalloc1(parsor->n_mid_send_nbs, &parsor->mid_send_nbs));
+  PetscCall(PetscCalloc1(parsor->n_mid_send_nbs, &parsor->mid_send_reqs));
+  cnt = 0;
+  for (PetscMPIInt i = 0; i < size; ++i)
+    if (mid_send_ranks[i] > 0) parsor->mid_send_nbs[cnt++] = i;
+
+  PetscCall(VecRestoreArrayRead(aij->lvec, &larr));
+  PetscCall(VecDestroy(&xcol));
+
+  /* Compute dependencies between MID nodes that depend on other *local* MID nodes */
+  ad = (Mat_SeqAIJ *)Ad->data;
+  ai = ad->i;
+  aj = ad->j;
+  PetscCall(MatGetLocalSize(matin, &nrows, NULL));
+  PetscCall(PetscMalloc1(nrows, &row_to_mid));
+  for (PetscInt i = 0; i < nrows; ++i) row_to_mid[i] = -1;
+  for (PetscInt m = 0; m < nmid; ++m) row_to_mid[midnodes[m]] = m;
+
+  /* Count local deps for each MID node */
+  PetscCall(PetscCalloc1(nmid, &parsor->mid_local_dep_count));
+  for (PetscInt m = 0; m < nmid; ++m) {
+    const PetscInt row = midnodes[m];
+    for (PetscInt j = ai[row]; j < ai[row + 1]; ++j) {
+      PetscInt c  = aj[j];
+      PetscInt m2 = row_to_mid[c];
+      if (m2 < 0 || m2 == m) continue; /* not a MID node or self */
+      if (midnodes[m2] < row) {
+        /* neighbor has lower row index => I depend on neighbor */
+        parsor->mid_node_n_deps[m]++;
+      } else {
+        /* neighbor has higher row index => neighbor depends on me */
+        parsor->mid_local_dep_count[m]++;
+      }
+    }
+  }
+
+  /* Allocate and fill local dependent lists */
+  PetscCall(PetscCalloc1(nmid, &local_cursor));
+  PetscCall(PetscCalloc1(nmid, &parsor->mid_local_deps));
+  for (PetscInt m = 0; m < nmid; ++m) {
+    if (parsor->mid_local_dep_count[m] > 0) PetscCall(PetscMalloc1(parsor->mid_local_dep_count[m], &parsor->mid_local_deps[m]));
+  }
+  for (PetscInt m = 0; m < nmid; ++m) {
+    const PetscInt row = midnodes[m];
+    for (PetscInt j = ai[row]; j < ai[row + 1]; ++j) {
+      PetscInt c  = aj[j];
+      PetscInt m2 = row_to_mid[c];
+      if (m2 < 0 || m2 == m) continue;
+      if (midnodes[m2] > row) {
+        /* m2 has higher row index => m2 depends on m => add m2 to m's local dependents */
+        PetscBool already = PETSC_FALSE;
+        for (PetscInt k = 0; k < local_cursor[m]; ++k) {
+          if (parsor->mid_local_deps[m][k] == m2) {
+            already = PETSC_TRUE;
+            break;
+          }
+        }
+        if (!already) parsor->mid_local_deps[m][local_cursor[m]++] = m2;
+      }
+    }
+  }
+  /* Correct the count to the de-duplicated actual size */
+  for (PetscInt m = 0; m < nmid; ++m) parsor->mid_local_dep_count[m] = local_cursor[m];
+  PetscCall(PetscFree(local_cursor));
+  PetscCall(PetscFree(row_to_mid));
+
+  PetscCall(PetscFree(n_mid_recv_buf_size));
+  PetscCall(PetscFree(mid_send_ranks));
+  PetscCall(PetscFree(cnt_arr));
   PetscCall(PetscFree(topnodes));
   PetscCall(PetscFree(botnodes));
   PetscCall(PetscFree(midnodes));
@@ -1884,7 +1866,6 @@ static PetscErrorCode MatParallelSORSetUp(Mat matin, MatParallelSOR parsor)
   PetscFunctionBegin;
   PetscCall(ColorProcessors(matin, &parsor->proccols));
   PetscCall(MatParallelSORPartitionNodes(matin, parsor));
-  /* proccols is only needed during partitioning, free it now rather than keeping it alive until destroy */
   PetscCall(PetscFree(parsor->proccols));
   PetscCall(PetscCommGetNewTag(PetscObjectComm((PetscObject)matin), &parsor->tag));
   PetscFunctionReturn(PETSC_SUCCESS);
