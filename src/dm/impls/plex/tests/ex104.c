@@ -55,8 +55,8 @@ int main(int argc, char **argv)
 {
   DM             dm;
   AppCtx         user;
-  PetscInt ncolors = 0;
-  IS *iscolors = NULL;
+  PetscInt ncolors    = 0;
+  IS *iscolors        = NULL;
   ISColoring coloring = NULL;
 
   PetscFunctionBeginUser;

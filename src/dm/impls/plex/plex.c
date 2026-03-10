@@ -11204,11 +11204,17 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
 @*/
 PetscErrorCode DMPlexCreateColoring(DM dm, PetscInt depth, PetscInt distance, ISColoring *coloring)
 {
-  Mat L;
-  MatColoring mc;
+  Mat L            = NULL;
+  MatColoring mc   = NULL;
+  IS *iscolors     = NULL;
+  PetscInt pStart = 0, offset = 0, ncolors = 0;
   PetscFunctionBegin;
   /* Create a graph Laplacian */
   PetscCall(DMPlexCreateGraphLaplacian_Private(dm, depth, &L));
+  /* Compute offset */
+  PetscCall(MatGetOwnershipRange(L, &offset, NULL));
+  PetscCall(DMPlexGetDepthStratum(dm, depth, &pStart, NULL));
+  offset = pStart - offset;
   /* Obtain ISColoring via MatColoring */
   PetscCall(MatColoringCreate(L, &mc));
   PetscCall(MatColoringSetType(mc, MATCOLORINGGREEDY));
@@ -11218,5 +11224,11 @@ PetscErrorCode DMPlexCreateColoring(DM dm, PetscInt depth, PetscInt distance, IS
   PetscCall(MatColoringDestroy(&mc));
   /* Destroy the graph Laplacian */
   PetscCall(MatDestroy(&L));
+  /* Shift ISColoring to align with the DMPlex numbering */
+  PetscCall(ISColoringGetIS(*coloring, PETSC_USE_POINTER, &ncolors, &iscolors));
+  for (PetscInt c=0; c < ncolors; c++) {
+     PetscCall(ISShift(iscolors[c], offset, iscolors[c]));
+  }
+  PetscCall(ISColoringRestoreIS(*coloring, PETSC_USE_POINTER, &iscolors));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
