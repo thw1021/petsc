@@ -67,6 +67,8 @@ typedef struct {      /* Used in MatSOR for SOR_FORWARD_SWEEP (i.e. true paralle
   PetscInt  *lvec_to_mid_count;
   PetscInt **lvec_to_mid_nodes;
 
+  Vec xx; /* work vector */
+
   PetscMPIInt tag;
 } *MatParallelSOR;
 

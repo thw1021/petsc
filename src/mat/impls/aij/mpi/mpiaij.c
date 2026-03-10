@@ -1912,6 +1912,7 @@ static PetscErrorCode MatParallelSORDestroy(PetscCtxRt data)
   PetscCall(PetscFree(parsor->lvec_to_mid_count));
   for (PetscInt j = 0; j < parsor->n_lvec_cols; ++j) PetscCall(PetscFree(parsor->lvec_to_mid_nodes[j]));
   PetscCall(PetscFree(parsor->lvec_to_mid_nodes));
+  PetscCall(VecDestroy(&parsor->xx));
   PetscCall(PetscFree(parsor));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1967,7 +1968,6 @@ static PetscErrorCode MatParallelSORApply(Mat matin, MatParallelSOR parsor, Vec 
   PetscScalar       *x;
   const PetscScalar *b1;
   const MatScalar   *idiag = NULL, *aa, *ba;
-  Vec                xx1   = NULL;
   const PetscInt    *diag, *colmap, *midnodes;
   PetscBool          first_iter = (flag & SOR_ZERO_INITIAL_GUESS) ? PETSC_TRUE : PETSC_FALSE;
   PetscInt           mid_remaining, size, nmid, cols, rstart, *mid_send_cursor, *mid_dep_left;
@@ -1977,7 +1977,7 @@ static PetscErrorCode MatParallelSORApply(Mat matin, MatParallelSOR parsor, Vec 
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)matin), &size));
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)matin), &rank));
   PetscCheck(flag & SOR_FORWARD_SWEEP, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Only forward sweep in parallel SOR for now");
-  PetscCall(VecDuplicate(xx, &xx1));
+  if (!parsor->xx) PetscCall(VecDuplicate(xx, &parsor->xx));
   PetscCall(MatInvertDiagonalForSOR_SeqAIJ(A, omega, fshift));
   PetscCall(MatGetDiagonalMarkers_SeqAIJ(A, &diag, NULL));
   idiag = ad->idiag;
@@ -2015,14 +2015,14 @@ static PetscErrorCode MatParallelSORApply(Mat matin, MatParallelSOR parsor, Vec 
     }
 
     /* Get values needed for BOT and MID nodes */
-    PetscCall(VecCopy(xx, xx1));
-    PetscCall(VecScatterBegin(parsor->botsct, xx1, mat->lvec, INSERT_VALUES, SCATTER_FORWARD)); /* This also gathers all values needed for MID nodes */
+    PetscCall(VecCopy(xx, parsor->xx));
+    PetscCall(VecScatterBegin(parsor->botsct, parsor->xx, mat->lvec, INSERT_VALUES, SCATTER_FORWARD)); /* This also gathers all values needed for MID nodes */
     PetscCall(VecGetArray(xx, &x));
     PetscCall(VecGetArrayRead(bb, &b1));
     PetscCall(MatSORLocalForwardSweepIS(ad, aa, diag, idiag, omega, parsor->int1, b1, x, NULL, NULL, NULL));
     PetscCall(VecRestoreArrayRead(bb, &b1));
     PetscCall(VecRestoreArray(xx, &x));
-    PetscCall(VecScatterEnd(parsor->botsct, xx1, mat->lvec, INSERT_VALUES, SCATTER_FORWARD));
+    PetscCall(VecScatterEnd(parsor->botsct, parsor->xx, mat->lvec, INSERT_VALUES, SCATTER_FORWARD));
     /* MID nodes */
     {
       const PetscInt *bi = bd->i, *bj = bd->j;
@@ -2188,7 +2188,6 @@ static PetscErrorCode MatParallelSORApply(Mat matin, MatParallelSOR parsor, Vec 
   PetscCall(MatSeqAIJRestoreArrayRead(A, &aa));
   PetscCall(PetscFree(mid_send_cursor));
   PetscCall(PetscFree(mid_dep_left));
-  PetscCall(VecDestroy(&xx1));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
