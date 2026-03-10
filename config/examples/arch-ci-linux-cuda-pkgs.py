@@ -35,6 +35,7 @@ if __name__ == '__main__':
     '--download-p4est',
     '--download-mfem',
     '--with-cuda',
+    '--with-cuda-arch=80,86',
     '--with-openmp',
     '--with-shared-libraries',
     '--download-magma',
