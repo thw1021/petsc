@@ -486,7 +486,6 @@ int main(int argc, char **argv)
 
   testset:
     requires: kokkos_kernels !complex
-    diff_args: -j
     args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 5
 
     test:
@@ -495,11 +494,13 @@ int main(int argc, char **argv)
 
     test:
       nsize: 3
+      diff_args: -j
       suffix: letkf
       args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec -n_obs_vertex 5
 
     test:
       suffix: etkf
+      diff_args: -j
       args: -petscda_type etkf -petscda_sqrt_type eigen
 
 TEST*/
