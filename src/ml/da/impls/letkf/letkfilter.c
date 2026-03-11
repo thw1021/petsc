@@ -292,11 +292,11 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
 PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, PetscInt m, PetscInt n_vertices, Mat X, Vec observation, Mat Z_global, Vec y_mean_global, Vec r_inv_sqrt_global)
 {
   /* Local analysis workspace */
-  Mat      Z_local, S_local, T_sqrt_local, G_local;
-  Vec      y_local, y_mean_local, delta_scaled_local, r_inv_sqrt_local;
-  Vec      w_local, s_transpose_delta;
-  PetscInt i_grid_point;
-  PetscInt ndof;
+  Mat       Z_local, S_local, T_sqrt_local, G_local;
+  Vec       y_local, y_mean_local, delta_scaled_local, r_inv_sqrt_local;
+  Vec       w_local, s_transpose_delta;
+  PetscInt  i_grid_point;
+  PetscInt  ndof;
   PetscReal sqrt_m_minus_1, scale;
 
   PetscFunctionBegin;
@@ -480,8 +480,7 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   /* Warn if Cholesky sqrt type is used with LETKF - it produces an asymmetric
      T^{-1/2} = L^{-T} which is incorrect for the local perturbation update.
      LETKF requires the symmetric square root T^{-1/2} = V * D^{-1/2} * V^T. */
-  if (da->sqrt_type == PETSCDA_SQRT_CHOLESKY)
-    PetscCall(PetscInfo(da, "WARNING: Cholesky sqrt type produces asymmetric T^{-1/2}, which is incorrect for LETKF. Use -petscda_sqrt_type eigen instead.\n"));
+  if (da->sqrt_type == PETSCDA_SQRT_CHOLESKY) PetscCall(PetscInfo(da, "WARNING: Cholesky sqrt type produces asymmetric T^{-1/2}, which is incorrect for LETKF. Use -petscda_sqrt_type eigen instead.\n"));
 
   /* Check for reallocation needs */
   if (impl->mean) {
