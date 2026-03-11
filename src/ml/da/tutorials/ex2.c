@@ -21,7 +21,7 @@ static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
 #define DEFAULT_DT            0.05
 #define DEFAULT_OBS_ERROR_STD 1.0
 #define DEFAULT_ENSEMBLE_SIZE 30
-#define SPINUP_STEPS 1000 /* Spin up truth to Lorenz-96 attractor (~200 steps sufficient, 1000 for safety) */
+#define SPINUP_STEPS          1000 /* Spin up truth to Lorenz-96 attractor (~200 steps sufficient, 1000 for safety) */
 
 /* Minimum valid parameter values */
 #define MIN_N              1
@@ -249,7 +249,7 @@ int main(int argc, char **argv)
   PetscReal rmse_forecast = 0.0, rmse_analysis = 0.0, spread = 0.0;
   PetscReal sum_rmse_forecast = 0.0, sum_rmse_analysis = 0.0;
   PetscInt  n_stat_steps = 0, n_obs_stat_steps = 0;
-  PetscInt  obs_count    = 0;
+  PetscInt  obs_count = 0;
   PetscInt  step, progress_interval;
 
   PetscFunctionBeginUser;
