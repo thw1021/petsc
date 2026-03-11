@@ -935,7 +935,7 @@ PetscErrorCode PetscDASetEnsembleMember(PetscDA da, PetscInt member_idx, Vec mem
   Collective
 
   Input Parameter:
-. da   - the `PetscDA` context
+. da - the `PetscDA` context
 
   Output Parameter:
 . mean - vector that will hold the ensemble mean
