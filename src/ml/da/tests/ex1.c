@@ -1,6 +1,6 @@
 static char help[] = "Tests basic creation and destruction of PetscDA objects, and a simple ETKF analysis step.\n\n";
 
-#include "petscda.h"
+#include <petscda.h>
 
 int main(int argc, char **argv)
 {
@@ -13,6 +13,7 @@ int main(int argc, char **argv)
   PetscInt    i;
   PetscReal   norm;
 
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
 
   /* Create the DA object */
@@ -49,8 +50,6 @@ int main(int argc, char **argv)
     Vec member;
     PetscCall(VecDuplicate(x_true, &member));
     PetscCall(VecSetRandom(member, rng)); /* Uniform random [0, 1] */
-    /* Shift to be centered roughly around 0.5 */
-    //PetscCall(VecShift(member, 0.0));
     PetscCall(PetscDASetEnsembleMember(da, i, member));
     PetscCall(VecDestroy(&member));
   }
@@ -101,7 +100,6 @@ int main(int argc, char **argv)
     suffix: 1
     requires: !complex
     args: -da_view
-    requires: !complex
 
   test:
     suffix: chol

@@ -5,7 +5,7 @@ static char help[] = "Shallow water test cases with data assimilation.\n"
                      "  ./ex3 -ex3_test wave -steps 500\n\n";
 
 /* Data assimilation framework header (provides PetscDA) */
-#include "petscda.h"
+#include <petscda.h>
 /* PETSc DMDA header (provides DM, DMDA functionality) */
 #include <petscdmda.h>
 #include <petscdmplex.h>
@@ -363,7 +363,7 @@ static PetscErrorCode CreateObservationMatrix(PetscInt n_vert, PetscInt ndof, Pe
   PetscInt i, local_state_size;
 
   PetscFunctionBeginUser;
-  PetscCheck(n_vert == 2 * nobs, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Number of grid points (%" PetscInt_FMT ") must equal 2*nobs (%d)", n_vert, 2 * nobs);
+  PetscCheck(n_vert == 2 * nobs, PETSC_COMM_WORLD, PETSC_ERR_ARG_INCOMP, "Number of grid points (%" PetscInt_FMT ") must equal 2*nobs (%" PetscInt_FMT ")", n_vert, 2 * nobs);
 
   PetscCall(VecGetLocalSize(state, &local_state_size));
 
@@ -532,6 +532,7 @@ int main(int argc, char **argv)
   PetscInt  obs_count    = 0;
   PetscInt  step;
 
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   /* Kokkos initialization deferred to Phase 5 optimization */
 
@@ -722,7 +723,7 @@ int main(int argc, char **argv)
 
   /* Initialize ensemble members with perturbations around spun-up state
      This is critical for convergence - ensemble needs spread even after spinup */
-  PetscCall(InitializeEnsemble(daas, x0, ensemble_size, obs_error_std, rng));
+  PetscCall(PetscDAInitializeEnsemble(daas, x0, ensemble_size, obs_error_std, rng));
 
   PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
 
@@ -822,7 +823,7 @@ int main(int argc, char **argv)
       PetscCall(MatMult(H, temp_truth, truth_obs));
 
       /* Add observation noise */
-      PetscCall(VecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
+      PetscCall(PetscDAVecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
       PetscCall(VecWAXPY(observation, 1.0, obs_noise, truth_obs));
 
       /* Perform LETKF analysis with observation matrix H */
@@ -947,7 +948,7 @@ int main(int argc, char **argv)
   testset:
     requires: kokkos_kernels !complex
     diff_args: -j
-    args: -ex3_test wave -steps 10 -da_view -ensemble_size 10 e letkf -obs_freq 2 -obs_error 0.03
+    args: -ex3_test wave -steps 10 -da_view -ensemble_size 10 -petscda_type letkf -obs_freq 2 -obs_error 0.03
 
     test:
       suffix: letkf_wave

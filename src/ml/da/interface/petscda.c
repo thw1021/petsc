@@ -463,7 +463,12 @@ PetscErrorCode PetscDASetFromOptions(PetscDA da)
   PetscCall(PetscOptionsFList("-petscda_type", "Data assimilation method", "PetscDASetType", PetscDAList, ((PetscObject)da)->type_name, type_name, sizeof(type_name), &type_set));
   if (type_set) PetscCall(PetscDASetType(da, type_name));
 
-  PetscCall(PetscOptionsReal("-petscda_inflation", "Inflation factor", "PetscDASetInflation", da->inflation, &da->inflation, NULL));
+  {
+    PetscReal inflation_val = da->inflation;
+    PetscBool inflation_set;
+    PetscCall(PetscOptionsReal("-petscda_inflation", "Inflation factor", "PetscDASetInflation", da->inflation, &inflation_val, &inflation_set));
+    if (inflation_set) PetscCall(PetscDASetInflation(da, inflation_val));
+  }
 
   /* Allow runtime selection of square root type */
   sqrt_default = (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky";
@@ -686,6 +691,7 @@ PetscErrorCode PetscDAView(PetscDA da, PetscViewer viewer)
   if (iascii) {
     PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)da), &size));
     PetscCall(PetscViewerASCIIPrintf(viewer, "PetscDA Object: %" PetscInt_FMT " MPI process%s\n", (PetscInt)size, size > 1 ? "es" : ""));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  type: %s\n", ((PetscObject)da)->type_name ? ((PetscObject)da)->type_name : "not set"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  State size: %" PetscInt_FMT "\n", da->state_size));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Observation size: %" PetscInt_FMT "\n", da->obs_size));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Ensemble size: %" PetscInt_FMT "\n", da->ensemble_size));
@@ -928,9 +934,11 @@ PetscErrorCode PetscDASetEnsembleMember(PetscDA da, PetscInt member_idx, Vec mem
 
   Collective
 
-  Input Parameters:
-+ da   - the `PetscDA` context
-- mean - vector that will hold the ensemble mean
+  Input Parameter:
+. da   - the `PetscDA` context
+
+  Output Parameter:
+. mean - vector that will hold the ensemble mean
 
   Level: intermediate
 
@@ -947,7 +955,7 @@ PetscErrorCode PetscDAComputeEnsembleMean(PetscDA da, Vec mean)
 }
 
 /*
-  InitializeEnsemble - Initialize ensemble members with Gaussian perturbations
+  PetscDAInitializeEnsemble - Initialize ensemble members with Gaussian perturbations
 
   Input Parameters:
 + daas          - PetscDA context
@@ -959,13 +967,13 @@ PetscErrorCode PetscDAComputeEnsembleMean(PetscDA da, Vec mean)
   Notes:
   Each ensemble member is initialized as x0 + Gaussian(0, obs_error_std)
 */
-PetscErrorCode InitializeEnsemble(PetscDA daas, Vec x0, PetscInt ensemble_size, PetscReal obs_error_std, PetscRandom rng)
+PetscErrorCode PetscDAInitializeEnsemble(PetscDA daas, Vec x0, PetscInt ensemble_size, PetscReal obs_error_std, PetscRandom rng)
 {
   Vec       member, col, x_mean;
   PetscInt  i;
   PetscReal scale;
 
-  PetscFunctionBeginUser;
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(rng, PETSC_RANDOM_CLASSID, 5);
   PetscCall(VecDuplicate(x0, &member));
   PetscCall(VecDuplicate(x0, &x_mean));
@@ -975,11 +983,11 @@ PetscErrorCode InitializeEnsemble(PetscDA daas, Vec x0, PetscInt ensemble_size, 
        Var_final ~= Var_initial * (m-1)/m
      To maintain consistent initial spread regardless of m, we scale by sqrt(m/(m-1)).
      This ensures the final ensemble spread is approximately obs_error_std^2. */
-  scale = 1; // PetscSqrtReal((PetscReal)ensemble_size / (PetscReal)(ensemble_size - 1));
+  scale = PetscSqrtReal((PetscReal)ensemble_size / (PetscReal)(ensemble_size - 1));
 
   /* Populate the Gaussian draws with scaled standard deviation */
   for (i = 0; i < ensemble_size; i++) {
-    PetscCall(VecSetRandomGaussian(member, rng, 0.0, obs_error_std * scale));
+    PetscCall(PetscDAVecSetRandomGaussian(member, rng, 0.0, obs_error_std * scale));
     PetscCall(PetscDASetEnsembleMember(daas, i, member));
   }
   /* get mean of perturbations */
@@ -1100,7 +1108,7 @@ PetscErrorCode PetscDAApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, v
 }
 
 /*@
-  VecSetRandomGaussian - Fills a vector with Gaussian random values of the given mean and standard deviation.
+  PetscDAVecSetRandomGaussian - Fills a vector with Gaussian random values of the given mean and standard deviation.
 
   Collective
 
@@ -1119,16 +1127,16 @@ PetscErrorCode PetscDAApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, v
 
 .seealso: [](ch_da), `PetscRandomSetInterval()`, `VecSetRandom()`
 @*/
-PetscErrorCode VecSetRandomGaussian(Vec v, PetscRandom rng, PetscReal mean, PetscReal std_dev)
+PetscErrorCode PetscDAVecSetRandomGaussian(Vec v, PetscRandom rng, PetscReal mean, PetscReal std_dev)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v, VEC_CLASSID, 1);
   PetscValidHeaderSpecific(rng, PETSC_RANDOM_CLASSID, 2);
-  PetscCall(VecSetRandomGaussian_Private(v, rng, mean, std_dev));
+  PetscCall(PetscDAVecSetRandomGaussian_Private(v, rng, mean, std_dev));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal mean, PetscReal std_dev)
+PetscErrorCode PetscDAVecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal mean, PetscReal std_dev)
 {
   PetscInt        n, i;
   PetscScalar    *array;
@@ -1199,9 +1207,7 @@ PetscErrorCode VecSetRandomGaussian_Private(Vec v, PetscRandom rng, PetscReal me
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* ========================================================================== */
-/*         T-Matrix Factorization and Application Methods [Alg 6.4 line 7]    */
-/* ========================================================================== */
+/*  T-Matrix Factorization and Application Methods [Alg 6.4 line 7] */
 
 /* Tolerance for matrix square root verification in debug mode
    Use a more relaxed tolerance to account for accumulated floating-point errors
@@ -1479,7 +1485,7 @@ static PetscErrorCode ApplyTInverse_Cholesky(PetscDA da, Vec sdel, Vec w)
   PetscCall(VecCopy(sdel, w));
 
   /* Get arrays */
-  PetscCall(MatDenseGetArray(da->L_cholesky, &a_array));
+  PetscCall(MatDenseGetArrayRead(da->L_cholesky, (const PetscScalar **)&a_array));
   PetscCall(VecGetArray(w, &b_array));
 
   /* Solve L * L^T * w = sdel using LAPACK's Cholesky solve (xPOTRS) */
@@ -1488,7 +1494,7 @@ static PetscErrorCode ApplyTInverse_Cholesky(PetscDA da, Vec sdel, Vec w)
   PetscCheck(info == 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK Cholesky solve (xPOTRS): info=%" PetscInt_FMT, (PetscInt)info);
 
   /* Restore arrays */
-  PetscCall(MatDenseRestoreArray(da->L_cholesky, &a_array));
+  PetscCall(MatDenseRestoreArrayRead(da->L_cholesky, (const PetscScalar **)&a_array));
   PetscCall(VecRestoreArray(w, &b_array));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1566,16 +1572,19 @@ PetscErrorCode PetscDAApplyTInverse(PetscDA da, Vec sdel, Vec w)
 }
 
 /*
-  ApplySqrtTInverse_Cholesky - Computes Y = T^{-1/2} * U using Cholesky factorization
+  ApplySqrtTInverse_Cholesky - Computes Y = L^{-T} * U using Cholesky factorization
 
   Notes:
-  For T = L * L^T (Cholesky factorization), we use T^{-1/2} = (L^T)^{-1} = L^{-T}.
+  For T = L * L^T (Cholesky factorization), this computes the ASYMMETRIC square root
+  T^{-1/2} = L^{-T} (upper triangular).
 
-  This choice ensures the correct square root property:
-    T^{-1/2} * T^{-1/2}^T = L^{-T} * (L^{-T})^T = L^{-T} * L^{-1} = (L * L^T)^{-1} = T^{-1}
+  This satisfies the product property:
+    T^{-1/2} * (T^{-1/2})^T = L^{-T} * L^{-1} = (L * L^T)^{-1} = T^{-1}
 
-  And preserves the metric:
-    Y^T * T * Y = U^T * (L^{-T})^T * L * L^T * L^{-T} * U = U^T * L^{-1} * L * L^T * L^{-T} * U = U^T * U
+  WARNING: L^{-T} is upper triangular and NOT symmetric. This is valid for ETKF where
+  the global ensemble transform W = X_a * T^{-1/2} does not require symmetry. However,
+  LETKF requires a SYMMETRIC square root T^{-1/2} = V * D^{-1/2} * V^T for the local
+  ensemble perturbation update. Use PETSCDA_SQRT_EIGEN for LETKF.
 
   This requires solving L^T * Y = U for Y.
 */

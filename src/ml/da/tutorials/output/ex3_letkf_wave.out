@@ -1,5 +1,6 @@
 Localization matrix Q created using DMPlexGetLETKFLocalizationMatrix
 PetscDA Object: 1 MPI process
+  type: letkf
   State size: 160
   Observation size: 40
   Ensemble size: 10
@@ -28,11 +29,11 @@ Shallow Water [L]ETKF Example
   Localization          : None/Global (7 obs per vertex)
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [initial]
-Step   10, time  0.200  RMSE_forecast 0.00759  RMSE_analysis 0.00767
+Step   10, time  0.200  RMSE_forecast 0.00847  RMSE_analysis 0.00867
 
 Statistics (10 steps):
 ==================================================
-  Mean RMSE (forecast) : 0.00691
-  Mean RMSE (analysis) : 0.00763
+  Mean RMSE (forecast) : 0.00778
+  Mean RMSE (analysis) : 0.00866
   Observations used    : 5
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "petscda.h"
+#include <petscda.h>
 #include <petsc/private/daimpl.h>
 
 typedef struct {
@@ -14,10 +14,10 @@ typedef struct {
   Mat      S;
   Mat      T_sqrt;
   Mat      w_ones;
-  Mat      Q;            // Localization matrix (n_grid x n_observations_total) Each row has exactly n_obs_vertex non-zeros
-  PetscInt n_obs_vertex; // = number of local observations per grid point (const now)
-  PetscInt n_grid;       // Number of grid points (n_grid = state_size / da->ndof)
-  PetscInt batch_size;   // Batch size for GPU processing
+  Mat      Q;            /* Localization matrix (n_grid x n_observations_total) Each row has exactly n_obs_vertex non-zeros */
+  PetscInt n_obs_vertex; /* number of local observations per grid point (const now) */
+  PetscInt n_grid;       /* Number of grid points (n_grid = state_size / da->ndof) */
+  PetscInt batch_size;   /* Batch size for GPU processing */
 
   /* Localization support for MPI */
   IS         obs_is_local;    // Indices of observations needed by this process

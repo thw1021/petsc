@@ -1,10 +1,6 @@
 #include "letkf_impl.h"
 #include <petscblaslapack.h>
 
-/* ========================================================================== */
-/*                       LETKF Implementation Lifecycle                       */
-/* ========================================================================== */
-
 static PetscErrorCode PetscDALETKFDestroy(PetscDA da)
 {
   PetscDALETKFData *impl;
@@ -42,10 +38,6 @@ static PetscErrorCode PetscDALETKFDestroy(PetscDA da)
   PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFGetObsPerVertex_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/* ========================================================================== */
-/*                    LETKF Analysis Algorithm                               */
-/* ========================================================================== */
 
 /*
   ComputeEnsembleMean - Direct implementation of ensemble mean computation
@@ -201,10 +193,9 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
 . Z_local    - local observation ensemble (p_local x m), pre-allocated
 . y_local    - local observation vector (size p_local), pre-allocated
 . y_mean_local - local observation mean (size p_local), pre-allocated
-. r_inv_sqrt_local - local R^{-1/2} (size p_local), pre-allocated
-. local_obs_indices - indices of local observations (size p_local), pre-allocated
+- r_inv_sqrt_local - local R^{-1/2} (size p_local), pre-allocated
 */
-static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z_global, Vec y_global, Vec y_mean_global, Vec r_inv_sqrt_global, PetscHMapI obs_g2l, PetscInt m, Mat Z_local, Vec y_local, Vec y_mean_local, Vec r_inv_sqrt_local, PetscInt *local_obs_indices)
+static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z_global, Vec y_global, Vec y_mean_global, Vec r_inv_sqrt_global, PetscHMapI obs_g2l, PetscInt m, Mat Z_local, Vec y_local, Vec y_mean_local, Vec r_inv_sqrt_local)
 {
   const PetscInt    *cols;
   const PetscScalar *vals;
@@ -216,9 +207,6 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
   PetscFunctionBegin;
   /* Get the row of Q corresponding to this vertex */
   PetscCall(MatGetRow(Q, vertex_idx, &ncols, &cols, &vals));
-
-  /* Store indices */
-  for (k = 0; k < ncols; k++) local_obs_indices[k] = cols[k];
 
   /* Get array access to global data */
   PetscCall(MatDenseGetArrayRead(Z_global, &z_global_array));
@@ -304,21 +292,18 @@ static PetscErrorCode ExtractLocalObservations(Mat Q, PetscInt vertex_idx, Mat Z
 PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, PetscInt m, PetscInt n_vertices, Mat X, Vec observation, Mat Z_global, Vec y_mean_global, Vec r_inv_sqrt_global)
 {
   /* Local analysis workspace */
-  Mat       Z_local, S_local, T_sqrt_local, G_local;
-  Vec       y_local, y_mean_local, delta_scaled_local, r_inv_sqrt_local;
-  Vec       w_local, s_transpose_delta;
-  PetscInt *local_obs_indices = NULL;
-  PetscInt  i_grid_point;
-  PetscInt  ndof;
+  Mat      Z_local, S_local, T_sqrt_local, G_local;
+  Vec      y_local, y_mean_local, delta_scaled_local, r_inv_sqrt_local;
+  Vec      w_local, s_transpose_delta;
+  PetscInt i_grid_point;
+  PetscInt ndof;
   PetscReal sqrt_m_minus_1, scale;
 
   PetscFunctionBegin;
   ndof           = da->ndof;
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
-  /* ===================================================================== */
   /* Create local analysis workspace (n_obs_vertex x m matrices and vectors) */
-  /* ===================================================================== */
   PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, impl->n_obs_vertex, m, NULL, &Z_local));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)Z_local, "dense_"));
   PetscCall(MatSetFromOptions(Z_local));
@@ -343,18 +328,14 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, Pet
   PetscCall(VecDuplicate(y_local, &r_inv_sqrt_local));
   PetscCall(VecDuplicate(w_local, &s_transpose_delta));
 
-  PetscCall(PetscMalloc1(impl->n_obs_vertex, &local_obs_indices));
-
-  /* ===================================================================== */
-  /* LETKF: Loop over all grid points and perform local analysis         */
-  /* ===================================================================== */
+  /* LETKF: Loop over all grid points and perform local analysis */
   PetscInt rstart;
   PetscCall(MatGetOwnershipRange(impl->Q, &rstart, NULL));
 
   for (i_grid_point = 0; i_grid_point < n_vertices; i_grid_point++) {
     /* Extract local observations for this grid point using Q[i_grid_point,:] */
     /* Note: i_grid_point is local index, but MatGetRow needs global index */
-    PetscCall(ExtractLocalObservations(impl->Q, rstart + i_grid_point, Z_global, observation, y_mean_global, r_inv_sqrt_global, impl->obs_g2l, m, Z_local, y_local, y_mean_local, r_inv_sqrt_local, local_obs_indices));
+    PetscCall(ExtractLocalObservations(impl->Q, rstart + i_grid_point, Z_global, observation, y_mean_global, r_inv_sqrt_global, impl->obs_g2l, m, Z_local, y_local, y_mean_local, r_inv_sqrt_local));
 
     /* Compute local normalized innovation matrix: S_local = R_local^{-1/2} * (Z_local - y_mean_local * 1') / sqrt(m - 1) */
     PetscCall(ComputeNormalizedInnovationMatrix(Z_local, y_mean_local, r_inv_sqrt_local, m, scale, S_local));
@@ -451,7 +432,6 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDALETKFData *impl, Pet
   PetscCall(MatAssemblyEnd(da->ensemble, MAT_FINAL_ASSEMBLY));
 
   /* Cleanup */
-  PetscCall(PetscFree(local_obs_indices));
   PetscCall(VecDestroy(&s_transpose_delta));
   PetscCall(VecDestroy(&w_local));
   PetscCall(VecDestroy(&r_inv_sqrt_local));
@@ -493,10 +473,15 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   PetscCheck(m > 1, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be > 1, got %" PetscInt_FMT, m);
 
   impl = (PetscDALETKFData *)da->data;
-  //PetscCall(PetscInfo(da, "squaroot type %s, %" PetscInt_FMT " ensembles, LETKF localization with p_local=%" PetscInt_FMT "\n", (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky", m, impl->n_obs_vertex));
 
   /* Check if localization matrix Q is set */
   PetscCheck(impl->Q, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "Localization matrix Q not set. Call PetscDALETKFSetLocalization() first.");
+
+  /* Warn if Cholesky sqrt type is used with LETKF - it produces an asymmetric
+     T^{-1/2} = L^{-T} which is incorrect for the local perturbation update.
+     LETKF requires the symmetric square root T^{-1/2} = V * D^{-1/2} * V^T. */
+  if (da->sqrt_type == PETSCDA_SQRT_CHOLESKY)
+    PetscCall(PetscInfo(da, "WARNING: Cholesky sqrt type produces asymmetric T^{-1/2}, which is incorrect for LETKF. Use -petscda_sqrt_type eigen instead.\n"));
 
   /* Check for reallocation needs */
   if (impl->mean) {
@@ -553,43 +538,20 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
     PetscCall(MatSetUp(impl->w_ones));
   }
 
-  /* ===================================================================== */
-  /* Alg 6.4 line 1-2: Compute ensemble mean and scaled anomalies        */
-  /* ===================================================================== */
+  /* Alg 6.4 line 1-2: Compute ensemble mean and scaled anomalies */
   PetscCall(ComputeEnsembleMean(da->ensemble, m, impl->mean));
 
   /* Create anomaly matrix X = (E - x_mean * 1') / sqrt(m - 1) */
   PetscCall(MatDuplicate(da->ensemble, MAT_DO_NOT_COPY_VALUES, &X));
   PetscCall(ComputeAnomalies(da->ensemble, impl->mean, m, X));
 
-  /* ===================================================================== */
-  /* Alg 6.4 line 3-4: Compute GLOBAL observation ensemble Z = H * E     */
-  /* ===================================================================== */
-  /* Z = H * E using matrix-matrix multiplication (obs_size x ensemble_size) */
+  /* Alg 6.4 line 3-4: Compute GLOBAL observation ensemble Z = H * E */
   /* Note: When H is a Kokkos matrix type (e.g., aijkokkos), MatMatMult may fail
      with non-Kokkos dense matrices. Use column-by-column multiplication with
      temporary vectors that are compatible with H's type. */
   {
     Vec      col_in, col_out, temp_in, temp_out;
     PetscInt j;
-
-    /* Create or reuse Z matrix */
-    if (!impl->Z) {
-      PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &impl->Z));
-      PetscCall(PetscObjectSetOptionsPrefix((PetscObject)impl->Z, "dense_"));
-      PetscCall(MatSetFromOptions(impl->Z));
-      PetscCall(MatSetUp(impl->Z));
-    } else {
-      PetscInt z_rows, z_cols;
-      PetscCall(MatGetSize(impl->Z, &z_rows, &z_cols));
-      if (z_rows != da->obs_size || z_cols != m) {
-        PetscCall(MatDestroy(&impl->Z));
-        PetscCall(MatCreateDense(PetscObjectComm((PetscObject)da->ensemble), PETSC_DECIDE, PETSC_DECIDE, da->obs_size, m, NULL, &impl->Z));
-        PetscCall(PetscObjectSetOptionsPrefix((PetscObject)impl->Z, "dense_"));
-        PetscCall(MatSetFromOptions(impl->Z));
-        PetscCall(MatSetUp(impl->Z));
-      }
-    }
 
     /* Create temporary vectors compatible with H's type */
     PetscCall(MatCreateVecs(H, &temp_in, &temp_out));
@@ -626,16 +588,11 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
     PetscCall(VecDestroy(&temp_mean));
   }
 
-  /* ===================================================================== */
   /* Compute GLOBAL R^{-1/2} (assumes diagonal R) */
-  /* ===================================================================== */
   PetscCall(VecCopy(da->obs_error_var, impl->r_inv_sqrt));
   PetscCall(VecSqrtAbs(impl->r_inv_sqrt));
   PetscCall(VecReciprocal(impl->r_inv_sqrt));
-
-  /* ===================================================================== */
   /* Perform local analysis for all vertices */
-  /* ===================================================================== */
 
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
   /* Use GPU version only if:
@@ -704,15 +661,15 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   }
 #else
   /* Without Kokkos, use CPU version */
-  PetscCall(PetscDALETKFLocalAnalysis(da, impl, m, da->state_size / da->ndof, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
+  {
+    PetscInt n_local;
+    PetscCall(MatGetLocalSize(impl->Q, &n_local, NULL));
+    PetscCall(PetscDALETKFLocalAnalysis(da, impl, m, n_local, X, observation, impl->Z, impl->y_mean, impl->r_inv_sqrt));
+  }
 #endif
   PetscCall(MatDestroy(&X));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/* ========================================================================== */
-/*                          Model Propagation                                */
-/* ========================================================================== */
 
 /*
   PetscDALETKFApplyModel - Advances each ensemble member through the user-supplied
@@ -749,10 +706,6 @@ static PetscErrorCode PetscDALETKFApplyModel(PetscDA da, PetscErrorCode (*model)
   PetscCall(VecDestroy(&temp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/* ========================================================================== */
-/*                          Public API Functions                             */
-/* ========================================================================== */
 
 static PetscErrorCode PetscDALETKFSetObsPerVertex_LETKF(PetscDA da, PetscInt n_obs_vertex)
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "petscda.h"
+#include <petscda.h>
 #include <petsc/private/petscimpl.h>
 
 /* PetscDA object cookie */
@@ -51,6 +51,5 @@ struct _p_PetscDA {
 };
 
 /* Internal utility functions shared across PetscDA implementations */
-PETSC_INTERN PetscErrorCode PetscDACholeskySqrt_Private(Mat, Mat *);
-PETSC_INTERN PetscErrorCode PetscDAymmetricEigenSqrt_Private(Mat, Mat *);
-PETSC_INTERN PetscErrorCode VecSetRandomGaussian_Private(Vec, PetscRandom, PetscReal, PetscReal);
+PETSC_INTERN PetscErrorCode PetscDASymmetricEigenSqrt_Private(Mat, Mat *);
+PETSC_INTERN PetscErrorCode PetscDAVecSetRandomGaussian_Private(Vec, PetscRandom, PetscReal, PetscReal);

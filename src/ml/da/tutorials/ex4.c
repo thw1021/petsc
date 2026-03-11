@@ -8,7 +8,7 @@ static char help[] = "2D Shallow water equations with traveling wave verificatio
                      "  3. Combined mode:\n"
                      "     ./ex4 -steps 100 -ensemble_size 20 -petscda_type letkf -enable_verification\n\n";
 
-#include "petscda.h"
+#include <petscda.h>
 #include <petscdmda.h>
 #include <petscts.h>
 #include <petscvec.h>
@@ -506,6 +506,7 @@ int main(int argc, char **argv)
   PetscInt  obs_count    = 0;
   PetscInt  step;
 
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
 
   /* Parse command-line options */
@@ -719,7 +720,7 @@ int main(int argc, char **argv)
     }
 
     /* Initialize ensemble members with perturbations */
-    PetscCall(InitializeEnsemble(daas, x0, ensemble_size, obs_error_std, rng));
+    PetscCall(PetscDAInitializeEnsemble(daas, x0, ensemble_size, obs_error_std, rng));
 
     PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
   }
@@ -897,7 +898,7 @@ int main(int argc, char **argv)
         PetscCall(MatMult(H, temp_truth, truth_obs));
 
         /* Add observation noise */
-        PetscCall(VecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
+        PetscCall(PetscDAVecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
         PetscCall(VecWAXPY(observation, 1.0, obs_noise, truth_obs));
 
         /* Perform LETKF analysis */

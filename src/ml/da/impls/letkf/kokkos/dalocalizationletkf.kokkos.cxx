@@ -267,7 +267,7 @@ PetscErrorCode PetscDALETKFGetLocalizationMatrix(const PetscInt n_obs_vertex, co
         if (best_idxs_dev(i, k) != -1) {
           PetscReal dist    = std::sqrt(best_dists_dev(i, k));
           indices_dev(i, k) = best_idxs_dev(i, k);
-          values_dev(i, k)  = GaspariCohn(dist, 0.5 * radius); // Note: LETKF uses half-radius in GC to get a smoothe decay
+          values_dev(i, k)  = GaspariCohn(dist, radius);
         } else {
           indices_dev(i, k) = -1; // Ignore this entry
           values_dev(i, k)  = 0.0;

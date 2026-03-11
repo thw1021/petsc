@@ -1,5 +1,6 @@
 Localization matrix Q created: 80x40, no localization/global (all weights = 1.0)
 PetscDA Object: 1 MPI process
+  type: etkf
   State size: 160
   Observation size: 40
   Ensemble size: 10
@@ -24,11 +25,11 @@ Shallow Water [L]ETKF Example
   Localization          : None/Global (7 obs per vertex)
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [initial]
-Step   10, time  0.200  RMSE_forecast 0.01052  RMSE_analysis 0.01190
+Step   10, time  0.200  RMSE_forecast 0.01059  RMSE_analysis 0.01199
 
 Statistics (10 steps):
 ==================================================
-  Mean RMSE (forecast) : 0.01095
-  Mean RMSE (analysis) : 0.01159
+  Mean RMSE (forecast) : 0.01110
+  Mean RMSE (analysis) : 0.01174
   Observations used    : 5
 

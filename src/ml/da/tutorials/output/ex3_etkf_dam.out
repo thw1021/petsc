@@ -1,5 +1,6 @@
 Localization matrix Q created: 80x40, no localization/global (all weights = 1.0)
 PetscDA Object: 1 MPI process
+  type: etkf
   State size: 160
   Observation size: 40
   Ensemble size: 10
@@ -25,19 +26,19 @@ Shallow Water [L]ETKF Example
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [initial]
 Step    1, time  0.020  RMSE_forecast 0.00002  RMSE_analysis 0.00002
-Step    2, time  0.040  RMSE_forecast 0.00003  RMSE_analysis 0.01628
-Step    3, time  0.060  RMSE_forecast 0.01627  RMSE_analysis 0.01627
-Step    4, time  0.080  RMSE_forecast 0.01645  RMSE_analysis 0.01195
-Step    5, time  0.100  RMSE_forecast 0.01216  RMSE_analysis 0.01216
-Step    6, time  0.120  RMSE_forecast 0.01239  RMSE_analysis 0.00708
-Step    7, time  0.140  RMSE_forecast 0.00721  RMSE_analysis 0.00721
-Step    8, time  0.160  RMSE_forecast 0.00732  RMSE_analysis 0.00692
-Step    9, time  0.180  RMSE_forecast 0.00697  RMSE_analysis 0.00697
-Step   10, time  0.200  RMSE_forecast 0.00699  RMSE_analysis 0.00794
+Step    2, time  0.040  RMSE_forecast 0.00004  RMSE_analysis 0.01665
+Step    3, time  0.060  RMSE_forecast 0.01664  RMSE_analysis 0.01664
+Step    4, time  0.080  RMSE_forecast 0.01682  RMSE_analysis 0.01212
+Step    5, time  0.100  RMSE_forecast 0.01233  RMSE_analysis 0.01233
+Step    6, time  0.120  RMSE_forecast 0.01255  RMSE_analysis 0.00716
+Step    7, time  0.140  RMSE_forecast 0.00729  RMSE_analysis 0.00729
+Step    8, time  0.160  RMSE_forecast 0.00740  RMSE_analysis 0.00696
+Step    9, time  0.180  RMSE_forecast 0.00701  RMSE_analysis 0.00701
+Step   10, time  0.200  RMSE_forecast 0.00703  RMSE_analysis 0.00799
 
 Statistics (10 steps):
 ==================================================
-  Mean RMSE (forecast) : 0.00858
-  Mean RMSE (analysis) : 0.00928
+  Mean RMSE (forecast) : 0.00871
+  Mean RMSE (analysis) : 0.00942
   Observations used    : 5
 

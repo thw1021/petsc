@@ -1,4 +1,4 @@
-#include "petscda.h"
+#include <petscda.h>
 #include <petsc/private/daimpl.h>
 #include <petscblaslapack.h>
 
@@ -19,10 +19,6 @@ static PetscBool PetscDAETKFPackageInitialized = PETSC_FALSE;
 
 /* Tolerance for matrix square root verification in debug mode */
 #define MATRIX_SQRT_TOLERANCE_FACTOR (100.0 * PETSC_MACHINE_EPSILON)
-
-/* ========================================================================== */
-/*                    Helper Functions for ETKF Analysis                     */
-/* ========================================================================== */
 
 /*
   ComputeNormalizedInnovationMatrix - Computes S = R^{-1/2}(Z - y_mean * 1')/sqrt(m-1) [Alg 6.4 line 5]
@@ -273,10 +269,6 @@ static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscI
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* ========================================================================== */
-/*                       ETKF Implementation Lifecycle                       */
-/* ========================================================================== */
-
 static PetscErrorCode PetscDAETKFDestroy(PetscDA da)
 {
   PetscDAETKFData *impl;
@@ -299,10 +291,6 @@ static PetscErrorCode PetscDAETKFDestroy(PetscDA da)
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/* ========================================================================== */
-/*                          Package Initialization                           */
-/* ========================================================================== */
 
 /*@C
   PetscDAETKFInitializePackage - This function initializes everything in the `PetscDAETKF` package. It is called from `TSInitializePackage()`.
@@ -333,10 +321,6 @@ PetscErrorCode PetscDAETKFFinalizePackage(void)
   PetscDAETKFPackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/* ========================================================================== */
-/*                    ETKF Analysis Algorithm (Algorithm 6.4)                */
-/* ========================================================================== */
 
 /*
   PetscDAETKFAnalysis - Performs the ensemble transform Kalman filter (ETKF) analysis defined by Algorithm 6.4 in Asch, M., Bocquet, M., and Nodet, M.
@@ -372,6 +356,7 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
   PetscValidHeaderSpecific(observation, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(H, MAT_CLASSID, 3);
   /* Validate ensemble size */
   m = da->ensemble_size;
   PetscCheck(m > 1, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Ensemble size must be > 1, got %" PetscInt_FMT, m);
@@ -379,7 +364,7 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
   impl           = (PetscDAETKFData *)da->data;
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
-  PetscCall(PetscInfo(da, "squaroot type %s, %" PetscInt_FMT " ensembles\n", (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky", m));
+  PetscCall(PetscInfo(da, "square root type %s, %" PetscInt_FMT " ensembles\n", (da->sqrt_type == PETSCDA_SQRT_EIGEN) ? "eigen" : "cholesky", m));
 
   /* Check for reallocation needs */
   if (impl->mean) {
@@ -444,9 +429,7 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
     PetscCall(MatSetUp(impl->w_ones));
   }
 
-  /* ===================================================================== */
-  /* Alg 6.4 line 1-2: Compute ensemble mean and scaled anomalies        */
-  /* ===================================================================== */
+  /* Alg 6.4 line 1-2: Compute ensemble mean and scaled anomalies */
   PetscCall(PetscDAComputeEnsembleMean(da, impl->mean));
 
   /* X = (E - x_mean * 1') / sqrt(m - 1) */
@@ -454,10 +437,7 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
      We should probably optimize this too in the future, but for now we follow the API. */
   PetscCall(PetscDAComputeAnomalies(da, impl->mean, &X));
 
-  /* ===================================================================== */
-  /* Alg 6.4 line 3-4: Compute observation ensemble Z = H * E            */
-  /* ===================================================================== */
-  /* Z = H * E using matrix-matrix multiplication (obs_size x ensemble_size) */
+  /* Alg 6.4 line 3-4: Compute observation ensemble Z = H * E */
   {
     MatReuse scall = MAT_INITIAL_MATRIX;
     if (impl->Z) {
@@ -475,10 +455,7 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
   /* Compute observation mean y_mean = H * x_mean */
   PetscCall(MatMult(H, impl->mean, impl->y_mean));
 
-  /* ===================================================================== */
-  /* Alg 6.4 line 5-6: Build normalized innovation statistics              */
-  /* ===================================================================== */
-  /* Compute R^{-1/2} (assumes diagonal R) */
+  /* Alg 6.4 line 5-6: Build normalized innovation statistics */
   PetscCall(VecCopy(da->obs_error_var, impl->r_inv_sqrt));
   PetscCall(VecSqrtAbs(impl->r_inv_sqrt));
   PetscCall(VecReciprocal(impl->r_inv_sqrt));
@@ -490,16 +467,11 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
   PetscCall(VecWAXPY(impl->delta_scaled, -1.0, impl->y_mean, observation));
   PetscCall(VecPointwiseMult(impl->delta_scaled, impl->delta_scaled, impl->r_inv_sqrt));
 
-  /* ===================================================================== */
-  /* Alg 6.4 line 7: Factor T = (I + S^T S) and store factorization (T is not inverted here but solved later) */
-  /* ===================================================================== */
-  /* Apply inflation: T = (1/rho) * I + S^T S */
+  /* Alg 6.4 line 7: Factor T = (I + S^T S) and store factorization */
   /* Note: Inflation is handled inside PetscDATFactor by shifting the diagonal of T */
   PetscCall(PetscDATFactor(da, impl->S));
 
-  /* ===================================================================== */
   /* Alg 6.4 line 8: Compute analysis weights w = T^{-1} * S^T * delta_scaled */
-  /* ===================================================================== */
   {
     Vec s_transpose_delta;
     /* Create temporary vector for S^T * delta_scaled */
@@ -510,41 +482,32 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
     PetscCall(VecDestroy(&s_transpose_delta));
   }
 
-  /* ===================================================================== */
-  /* Alg 6.4 line 9: Compute square-root transform T^{-1/2} (U is identity, so pass NULL) */
-  /* ===================================================================== */
+  /* Alg 6.4 line 9: Compute square-root transform T^{-1/2} */
   PetscCall(PetscDAApplySqrtTInverse(da, NULL, impl->T_sqrt));
 
-  /* ===================================================================== */
   /* Alg 6.4 line 9: Form transform G = w * 1' + sqrt(m - 1) * T^{1/2} * U */
-  /* ===================================================================== */
-  /* Create a temporary copy of T_sqrt for scaling to avoid modifying the persistent buffer */
-  Mat T_sqrt_scaled;
-  PetscCall(MatDuplicate(impl->T_sqrt, MAT_COPY_VALUES, &T_sqrt_scaled));
-  PetscCall(MatScale(T_sqrt_scaled, sqrt_m_minus_1));
+  {
+    Mat T_sqrt_scaled;
+    PetscCall(MatDuplicate(impl->T_sqrt, MAT_COPY_VALUES, &T_sqrt_scaled));
+    PetscCall(MatScale(T_sqrt_scaled, sqrt_m_minus_1));
 
-  /* w_ones = w * 1' (broadcast weight vector to all columns) */
-  PetscCall(BroadcastWeightVector(impl->w, m, impl->w_ones));
+    /* w_ones = w * 1' (broadcast weight vector to all columns) */
+    PetscCall(BroadcastWeightVector(impl->w, m, impl->w_ones));
 
-  /* G = w_ones + sqrt(m-1)*T_sqrt
+    /* G = w_ones + sqrt(m-1)*T_sqrt
      Accumulate the scaled T_sqrt into w_ones to form the transform matrix G */
-  PetscCall(MatAXPY(impl->w_ones, 1.0, T_sqrt_scaled, SAME_NONZERO_PATTERN));
+    PetscCall(MatAXPY(impl->w_ones, 1.0, T_sqrt_scaled, SAME_NONZERO_PATTERN));
 
-  PetscCall(MatDestroy(&T_sqrt_scaled));
+    PetscCall(MatDestroy(&T_sqrt_scaled));
+  }
 
-  /* ===================================================================== */
-  /* Alg 6.4 line 9: Update ensemble E = x_mean * 1' + X * G             */
-  /* ===================================================================== */
+  /* Alg 6.4 line 9: Update ensemble E = x_mean * 1' + X * G */
   PetscCall(UpdateEnsembleWithTransform(impl->mean, X, impl->w_ones, m, da->ensemble));
 
   /* Cleanup temporary X matrix */
   PetscCall(MatDestroy(&X));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/* ========================================================================== */
-/*                          Model Propagation                                */
-/* ========================================================================== */
 
 /*
   PetscDAETKFApplyModel - Advances each ensemble member through the user-supplied
@@ -589,10 +552,6 @@ static PetscErrorCode PetscDAETKFApplyModel(PetscDA da, PetscErrorCode (*model)(
   PetscCall(VecDestroy(&temp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/* ========================================================================== */
-/*                          Public API Functions                             */
-/* ========================================================================== */
 
 /*
   PetscDAETKFView - Views a `PetscDAETKF` and its implementation-specific data structure.
@@ -639,17 +598,6 @@ PetscErrorCode PetscDAETKFInitialize(PetscDA da)
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
 
   PetscCall(PetscNew(&impl));
-
-  /* Explicitly initialize all pointers to NULL for safety */
-  impl->mean         = NULL;
-  impl->y_mean       = NULL;
-  impl->delta_scaled = NULL;
-  impl->w            = NULL;
-  impl->r_inv_sqrt   = NULL;
-  impl->Z            = NULL;
-  impl->S            = NULL;
-  impl->T_sqrt       = NULL;
-  impl->w_ones       = NULL;
 
   da->data                  = impl;
   da->ops->analysis         = PetscDAETKFAnalysis;

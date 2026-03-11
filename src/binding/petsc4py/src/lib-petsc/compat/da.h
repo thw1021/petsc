@@ -1,5 +1,4 @@
-#if !defined(PETSC4PY_COMPAT_DA_H)
-#define PETSC4PY_COMPAT_DA_H
+#pragma once
 
 #include <petscda.h>
 
@@ -12,15 +11,14 @@
       PetscFunctionReturn(PETSC_ERR_SUP); \
     } while (0)
 
-PetscErrorCode PetscDAETKFSetSqrtType(PETSC_UNUSED PetscDA da, PETSC_UNUSED PetscDASqrtType type)
+PetscErrorCode PetscDASetSqrtType(PETSC_UNUSED PetscDA da, PETSC_UNUSED PetscDASqrtType type)
 {
   PetscDAError;
 }
-PetscErrorCode PetscDAETKFGetSqrtType(PETSC_UNUSED PetscDA da, PETSC_UNUSED PetscDASqrtType *type)
+PetscErrorCode PetscDAGetSqrtType(PETSC_UNUSED PetscDA da, PETSC_UNUSED PetscDASqrtType *type)
 {
   PetscDAError;
 }
-#undef PetscDAError
+  #undef PetscDAError
 
 #endif /*PETSC_USE_COMPLEX*/
-#endif /*PETSC4PY_COMPAT_DA_H*/

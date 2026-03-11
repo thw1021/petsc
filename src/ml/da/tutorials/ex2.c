@@ -5,7 +5,7 @@ static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
                      "  Expected result: Similar to ETKF with full localization\n\n";
 
 /* Data assimilation framework header (provides PetscDA) */
-#include "petscda.h"
+#include <petscda.h>
 /* PETSc DMDA header (provides DM, DMDA functionality) */
 #include <petscdmda.h>
 #include <petscts.h>
@@ -21,7 +21,7 @@ static char help[] = "Deterministic LETKF example for the Lorenz-96 model. See "
 #define DEFAULT_DT            0.05
 #define DEFAULT_OBS_ERROR_STD 1.0
 #define DEFAULT_ENSEMBLE_SIZE 30
-#define SPINUP_STEPS          0 /* No spinup needed */
+#define SPINUP_STEPS 1000 /* Spin up truth to Lorenz-96 attractor (~200 steps sufficient, 1000 for safety) */
 
 /* Minimum valid parameter values */
 #define MIN_N              1
@@ -226,7 +226,7 @@ int main(int argc, char **argv)
   PetscInt  burn          = DEFAULT_BURN;
   PetscInt  obs_freq      = DEFAULT_OBS_FREQ;
   PetscInt  random_seed   = DEFAULT_RANDOM_SEED;
-  PetscInt  ensemble_size = DEFAULT_ENSEMBLE_SIZE, num_observations_vertex = 7;
+  PetscInt  ensemble_size = DEFAULT_ENSEMBLE_SIZE, n_obs_vertex = 7;
   PetscReal F                     = DEFAULT_F;
   PetscReal dt                    = DEFAULT_DT;
   PetscReal obs_error_std         = DEFAULT_OBS_ERROR_STD;
@@ -248,10 +248,11 @@ int main(int argc, char **argv)
   /* Statistics tracking */
   PetscReal rmse_forecast = 0.0, rmse_analysis = 0.0, spread = 0.0;
   PetscReal sum_rmse_forecast = 0.0, sum_rmse_analysis = 0.0;
-  PetscInt  n_stat_steps = 0;
+  PetscInt  n_stat_steps = 0, n_obs_stat_steps = 0;
   PetscInt  obs_count    = 0;
   PetscInt  step, progress_interval;
 
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   /* Kokkos initialization deferred to Phase 5 optimization */
 
@@ -269,8 +270,8 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsInt("-ensemble_size", "Number of ensemble members", "", ensemble_size, &ensemble_size, NULL));
   PetscCall(PetscOptionsInt("-random_seed", "Random seed for ensemble perturbations", "", random_seed, &random_seed, NULL));
   PetscCall(PetscOptionsBool("-use_fake_localization", "Use fake localization matrix", "", use_fake_localization, &use_fake_localization, NULL));
-  if (!use_fake_localization) PetscCall(PetscOptionsInt("-num_observations_vertex", "Number of observations per vertex", "", num_observations_vertex, &num_observations_vertex, NULL));
-  else num_observations_vertex = n; /* fully observed */
+  if (!use_fake_localization) PetscCall(PetscOptionsInt("-n_obs_vertex", "Number of observations per vertex", "", n_obs_vertex, &n_obs_vertex, NULL));
+  else n_obs_vertex = n; /* fully observed */
   PetscOptionsEnd();
 
   if (ensemble_init_std < 0) ensemble_init_std = obs_error_std;
@@ -351,25 +352,24 @@ int main(int argc, char **argv)
       PetscCall(PetscObjectSetName((PetscObject)Vecxyz[d], "x_coordinate"));
       PetscCall(VecStrideGather(coord, d, Vecxyz[d], INSERT_VALUES));
     }
-    PetscCall(PetscDALETKFGetLocalizationMatrix(num_observations_vertex, 1, Vecxyz, bd, H, &Q));
-    PetscCall(PetscDALETKFSetObsPerVertex(daas, num_observations_vertex));
-    // PetscCall(MatView(Q, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscDALETKFGetLocalizationMatrix(n_obs_vertex, 1, Vecxyz, bd, H, &Q));
+    PetscCall(PetscDALETKFSetObsPerVertex(daas, n_obs_vertex));
     PetscCall(VecDestroy(&Vecxyz[0]));
   } else {
     PetscCall(CreateLocalizationMatrix(n, &Q));
     if (isletkf) {
-      PetscCall(PetscDALETKFSetObsPerVertex(daas, num_observations_vertex)); // fully observed
+      PetscCall(PetscDALETKFSetObsPerVertex(daas, n_obs_vertex)); // fully observed
     }
   }
   PetscCall(PetscDALETKFSetLocalization(daas, Q, H));
   if (isletkf) {
-    PetscInt n_obs_vertex;
-    PetscCall(PetscDALETKFGetObsPerVertex(daas, &n_obs_vertex));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %" PetscInt_FMT " x %" PetscInt_FMT "\n", n, n_obs_vertex));
+    PetscInt n_obs_vertex_actual;
+    PetscCall(PetscDALETKFGetObsPerVertex(daas, &n_obs_vertex_actual));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Localization matrix Q created: %" PetscInt_FMT " x %" PetscInt_FMT "\n", n, n_obs_vertex_actual));
   }
 
   /* Initialize ensemble members from spun-up truth state */
-  PetscCall(InitializeEnsemble(daas, truth_state, ensemble_size, ensemble_init_std, rng));
+  PetscCall(PetscDAInitializeEnsemble(daas, truth_state, ensemble_size, ensemble_init_std, rng));
 
   PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
 
@@ -389,7 +389,7 @@ int main(int argc, char **argv)
                         "  Ensemble init std      : %.3f\n"
                         "  Random seed            : %" PetscInt_FMT "\n"
                         "  Localization (obs/vert): %" PetscInt_FMT " \n\n",
-                        n, ensemble_size, (double)F, (double)dt, steps, burn, SPINUP_STEPS, obs_freq, (double)obs_error_std, (double)ensemble_init_std, random_seed, num_observations_vertex));
+                        n, ensemble_size, (double)F, (double)dt, steps, burn, SPINUP_STEPS, obs_freq, (double)obs_error_std, (double)ensemble_init_std, random_seed, n_obs_vertex));
 
   /* Main assimilation cycle: forecast and analysis steps */
   for (step = 0; step <= steps; step++) {
@@ -404,7 +404,7 @@ int main(int argc, char **argv)
     /* Analysis step: assimilate observations when available */
     if (step % obs_freq == 0 && step > 0) {
       /* Generate synthetic noisy observations from truth */
-      PetscCall(VecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
+      PetscCall(PetscDAVecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
       PetscCall(VecWAXPY(observation, 1.0, obs_noise, truth_state));
 
       /* Perform LETKF analysis with observation matrix H */
@@ -416,11 +416,16 @@ int main(int argc, char **argv)
       obs_count++;
     }
 
-    /* Accumulate statistics after burn-in period */
+    /* Accumulate statistics after burn-in period.
+       Forecast RMSE is accumulated every step; analysis RMSE only at observation times
+       to avoid conflating forecast and analysis errors. */
     if (step >= burn) {
       sum_rmse_forecast += rmse_forecast;
-      sum_rmse_analysis += rmse_analysis;
       n_stat_steps++;
+      if (step % obs_freq == 0 && step > 0) {
+        sum_rmse_analysis += rmse_analysis;
+        n_obs_stat_steps++;
+      }
     }
 
     /* Progress reporting */
@@ -445,8 +450,8 @@ int main(int argc, char **argv)
   /* Report final statistics */
   if (n_stat_steps > 0) {
     PetscReal avg_rmse_forecast = sum_rmse_forecast / n_stat_steps;
-    PetscReal avg_rmse_analysis = sum_rmse_analysis / n_stat_steps;
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nStatistics (%" PetscInt_FMT " post-burn-in steps):\n", n_stat_steps));
+    PetscReal avg_rmse_analysis = (n_obs_stat_steps > 0) ? sum_rmse_analysis / n_obs_stat_steps : 0.0;
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nStatistics (%" PetscInt_FMT " forecast steps, %" PetscInt_FMT " analysis steps post-burn-in):\n", n_stat_steps, n_obs_stat_steps));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "==================================================\n"));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (forecast) : %.5f\n", (double)avg_rmse_forecast));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Mean RMSE (analysis) : %.5f\n", (double)avg_rmse_analysis));
@@ -491,7 +496,7 @@ int main(int argc, char **argv)
     test:
       nsize: 3
       suffix: letkf
-      args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec -num_observations_vertex 5
+      args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec -n_obs_vertex 5
 
     test:
       suffix: etkf

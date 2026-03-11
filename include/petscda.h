@@ -18,8 +18,6 @@ typedef const char *PetscDAType;
 #define PETSCDAETKF  "etkf"
 #define PETSCDALETKF "letkf"
 
-#define ENSEMBLE_SIZE_MAX 50
-
 PETSC_EXTERN PetscErrorCode PetscDAInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDAFinalizePackage(void);
 
@@ -47,9 +45,6 @@ PETSC_EXTERN PetscErrorCode PetscDAGetObsErrorVariance(PetscDA, Vec *);
 PETSC_EXTERN PetscErrorCode PetscDASetInflation(PetscDA, PetscReal);
 PETSC_EXTERN PetscErrorCode PetscDAGetInflation(PetscDA, PetscReal *);
 
-PETSC_EXTERN PetscErrorCode PetscDASetOrthogonalTransform(PetscDA, Mat);
-PETSC_EXTERN PetscErrorCode PetscDAGetOrthogonalTransform(PetscDA, Mat *);
-
 PETSC_EXTERN PetscErrorCode PetscDAGetEnsembleMember(PetscDA, PetscInt, Vec *);
 PETSC_EXTERN PetscErrorCode PetscDARestoreEnsembleMember(PetscDA, PetscInt, Vec *);
 PETSC_EXTERN PetscErrorCode PetscDASetEnsembleMember(PetscDA, PetscInt, Vec);
@@ -58,13 +53,13 @@ PETSC_EXTERN PetscErrorCode PetscDAComputeEnsembleMean(PetscDA, Vec);
 PETSC_EXTERN PetscErrorCode PetscDAComputeAnomalies(PetscDA, Vec, Mat *);
 PETSC_EXTERN PetscErrorCode PetscDAAnalysis(PetscDA, Vec, Mat);
 PETSC_EXTERN PetscErrorCode PetscDAApplyModel(PetscDA, PetscErrorCode (*)(Vec, Vec, void *), void *);
-PETSC_EXTERN PetscErrorCode InitializeEnsemble(PetscDA, Vec, PetscInt, PetscReal, PetscRandom);
+PETSC_EXTERN PetscErrorCode PetscDAInitializeEnsemble(PetscDA, Vec, PetscInt, PetscReal, PetscRandom);
 
 PETSC_EXTERN PetscErrorCode PetscDASetOptionsPrefix(PetscDA, const char[]);
 PETSC_EXTERN PetscErrorCode PetscDAAppendOptionsPrefix(PetscDA, const char[]);
 PETSC_EXTERN PetscErrorCode PetscDAGetOptionsPrefix(PetscDA, const char *[]);
 
-PETSC_EXTERN PetscErrorCode VecSetRandomGaussian(Vec, PetscRandom, PetscReal, PetscReal);
+PETSC_EXTERN PetscErrorCode PetscDAVecSetRandomGaussian(Vec, PetscRandom, PetscReal, PetscReal);
 
 /* T-matrix factorization functions (base class) */
 PETSC_EXTERN PetscErrorCode PetscDASetSqrtType(PetscDA, PetscDASqrtType);

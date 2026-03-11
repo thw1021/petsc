@@ -1,5 +1,6 @@
 Spinning up truth for 0 steps...
 PetscDA Object: 1 MPI process
+  type: etkf
   State size: 40
   Observation size: 40
   Ensemble size: 30
@@ -21,21 +22,21 @@ Lorenz-96 ETKF Example
   Random seed           : 12345
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [burn-in]
-Step   11, time  0.550  RMSE_forecast 0.18649  RMSE_analysis 0.20954
-Step   22, time  1.100  RMSE_forecast 0.44742  RMSE_analysis 0.37354
-Step   33, time  1.650  RMSE_forecast 0.24617  RMSE_analysis 0.24558
-Step   44, time  2.200  RMSE_forecast 0.18779  RMSE_analysis 0.16202
-Step   55, time  2.750  RMSE_forecast 0.29285  RMSE_analysis 0.28532
-Step   66, time  3.300  RMSE_forecast 0.21047  RMSE_analysis 0.18128
-Step   77, time  3.850  RMSE_forecast 0.12645  RMSE_analysis 0.13732
-Step   88, time  4.400  RMSE_forecast 0.13172  RMSE_analysis 0.11729
-Step   99, time  4.950  RMSE_forecast 0.16209  RMSE_analysis 0.13204
-Step  110, time  5.500  RMSE_forecast 0.12828  RMSE_analysis 0.12701
-Step  112, time  5.600  RMSE_forecast 0.13990  RMSE_analysis 0.12430
+Step   11, time  0.550  RMSE_forecast 0.18692  RMSE_analysis 0.20997
+Step   22, time  1.100  RMSE_forecast 0.44756  RMSE_analysis 0.37365
+Step   33, time  1.650  RMSE_forecast 0.24629  RMSE_analysis 0.24564
+Step   44, time  2.200  RMSE_forecast 0.18772  RMSE_analysis 0.16205
+Step   55, time  2.750  RMSE_forecast 0.29292  RMSE_analysis 0.28537
+Step   66, time  3.300  RMSE_forecast 0.21044  RMSE_analysis 0.18126
+Step   77, time  3.850  RMSE_forecast 0.12640  RMSE_analysis 0.13730
+Step   88, time  4.400  RMSE_forecast 0.13165  RMSE_analysis 0.11724
+Step   99, time  4.950  RMSE_forecast 0.16195  RMSE_analysis 0.13195
+Step  110, time  5.500  RMSE_forecast 0.12826  RMSE_analysis 0.12701
+Step  112, time  5.600  RMSE_forecast 0.13991  RMSE_analysis 0.12429
 
 Statistics (103 post-burn-in steps):
 ==================================================
-  Mean RMSE (forecast) : 0.22964
-  Mean RMSE (analysis) : 0.20817
+  Mean RMSE (forecast) : 0.22970
+  Mean RMSE (analysis) : 0.20821
   Observations used    : 112
 

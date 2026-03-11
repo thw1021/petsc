@@ -1,6 +1,7 @@
-Spinning up truth for 0 steps...
+Spinning up truth for 1000 steps...
 Localization matrix Q created: 40 x 7
 PetscDA Object: 1 MPI process
+  type: letkf
   State size: 40
   Observation size: 40
   Ensemble size: 5
@@ -20,29 +21,29 @@ Lorenz-96 LETKF Example
   Time step (dt)         : 0.0500
   Total steps            : 112
   Burn-in steps          : 10
-  Spin-up steps          : 0
+  Spin-up steps          : 1000
   Observation frequency  : 1
   Observation noise std  : 1.000
   Ensemble init std      : 1.000
   Random seed            : 12345
   Localization (obs/vert): 7 
 
-Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000  Spread 1.09085 [burn-in]
-Step   11, time  0.550  RMSE_forecast 0.30565  RMSE_analysis 0.27489  Spread 0.28316
-Step   22, time  1.100  RMSE_forecast 0.59445  RMSE_analysis 0.48572  Spread 0.46856
-Step   33, time  1.650  RMSE_forecast 0.33058  RMSE_analysis 0.30407  Spread 0.32038
-Step   44, time  2.200  RMSE_forecast 0.44454  RMSE_analysis 0.41509  Spread 0.24122
-Step   55, time  2.750  RMSE_forecast 0.26979  RMSE_analysis 0.25923  Spread 0.24625
-Step   66, time  3.300  RMSE_forecast 0.22089  RMSE_analysis 0.23886  Spread 0.22718
-Step   77, time  3.850  RMSE_forecast 0.39827  RMSE_analysis 0.40371  Spread 0.20415
-Step   88, time  4.400  RMSE_forecast 0.63942  RMSE_analysis 0.61882  Spread 0.17817
-Step   99, time  4.950  RMSE_forecast 2.00810  RMSE_analysis 1.93358  Spread 0.20334
-Step  110, time  5.500  RMSE_forecast 2.52909  RMSE_analysis 2.46280  Spread 0.20880
-Step  112, time  5.600  RMSE_forecast 2.38764  RMSE_analysis 2.25795  Spread 0.21346
+Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000  Spread 1.21961 [burn-in]
+Step   11, time  0.550  RMSE_forecast 0.27580  RMSE_analysis 0.25352  Spread 0.28446
+Step   22, time  1.100  RMSE_forecast 0.32356  RMSE_analysis 0.27266  Spread 0.24359
+Step   33, time  1.650  RMSE_forecast 0.30050  RMSE_analysis 0.29090  Spread 0.22140
+Step   44, time  2.200  RMSE_forecast 0.41020  RMSE_analysis 0.41084  Spread 0.20298
+Step   55, time  2.750  RMSE_forecast 0.41913  RMSE_analysis 0.39296  Spread 0.20365
+Step   66, time  3.300  RMSE_forecast 0.57472  RMSE_analysis 0.52690  Spread 0.19669
+Step   77, time  3.850  RMSE_forecast 0.60454  RMSE_analysis 0.54718  Spread 0.20662
+Step   88, time  4.400  RMSE_forecast 0.52909  RMSE_analysis 0.49020  Spread 0.17248
+Step   99, time  4.950  RMSE_forecast 0.58049  RMSE_analysis 0.53871  Spread 0.19874
+Step  110, time  5.500  RMSE_forecast 0.94969  RMSE_analysis 0.90696  Spread 0.16336
+Step  112, time  5.600  RMSE_forecast 1.03203  RMSE_analysis 0.96780  Spread 0.17859
 
-Statistics (103 post-burn-in steps):
+Statistics (103 forecast steps, 103 analysis steps post-burn-in):
 ==================================================
-  Mean RMSE (forecast) : 0.75073
-  Mean RMSE (analysis) : 0.71473
+  Mean RMSE (forecast) : 0.48328
+  Mean RMSE (analysis) : 0.44530
   Observations used    : 112
 

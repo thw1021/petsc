@@ -1119,7 +1119,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     Kokkos::fence();
 
     /* DEBUG: Check S for NaNs */
-    {
+    if (PetscDefined(USE_DEBUG)) {
       PetscInt nan_count = 0;
       Kokkos::parallel_reduce(
         "CheckS", Kokkos::RangePolicy<exec_space>(0, n_batch_current),
@@ -1131,7 +1131,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
           }
         },
         nan_count);
-      if (nan_count > 0) printf("DEBUG: Found %d NaNs in S_batch at chunk_start %d\n", (int)nan_count, (int)chunk_start);
+      PetscCheck(nan_count == 0, PETSC_COMM_SELF, PETSC_ERR_FP, "Found %" PetscInt_FMT " NaNs in S_batch at chunk_start %" PetscInt_FMT, nan_count, chunk_start);
     }
 
     /* ===================================================================== */
@@ -1163,7 +1163,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
     Kokkos::fence();
 
     /* DEBUG: Check T for NaNs */
-    {
+    if (PetscDefined(USE_DEBUG)) {
       PetscInt nan_count = 0;
       Kokkos::parallel_reduce(
         "CheckT", Kokkos::RangePolicy<exec_space>(0, n_batch_current),
@@ -1175,7 +1175,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
           }
         },
         nan_count);
-      if (nan_count > 0) printf("DEBUG: Found %d NaNs in T_batch at chunk_start %d\n", (int)nan_count, (int)chunk_start);
+      PetscCheck(nan_count == 0, PETSC_COMM_SELF, PETSC_ERR_FP, "Found %" PetscInt_FMT " NaNs in T_batch at chunk_start %" PetscInt_FMT, nan_count, chunk_start);
     }
 
     /* ===================================================================== */
@@ -1189,20 +1189,17 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDALETKFData *impl,
 #endif
 
     /* DEBUG: Check Lambda for NaNs or negative values */
-    {
+    if (PetscDefined(USE_DEBUG)) {
       PetscInt bad_lambda = 0;
       Kokkos::parallel_reduce(
         "CheckLambda", Kokkos::RangePolicy<exec_space>(0, n_batch_current),
         KOKKOS_LAMBDA(const int i, int &l_count) {
           for (int k = 0; k < m; k++) {
-            if (Lambda_batch(i, k) != Lambda_batch(i, k) || PetscRealPart(Lambda_batch(i, k)) < -1e-8) {
-              l_count++;
-              // printf("DEBUG: Bad Lambda: %g at batch %d\n", (double)PetscRealPart(Lambda_batch(i, k)), i);
-            }
+            if (Lambda_batch(i, k) != Lambda_batch(i, k) || PetscRealPart(Lambda_batch(i, k)) < -1e-8) l_count++;
           }
         },
         bad_lambda);
-      if (bad_lambda > 0) printf("DEBUG: Found %d bad Lambdas at chunk_start %d\n", (int)bad_lambda, (int)chunk_start);
+      PetscCheck(bad_lambda == 0, PETSC_COMM_SELF, PETSC_ERR_FP, "Found %" PetscInt_FMT " bad eigenvalues (NaN or negative) at chunk_start %" PetscInt_FMT, bad_lambda, chunk_start);
     }
 
     /* ===================================================================== */

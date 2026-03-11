@@ -1,6 +1,7 @@
 [0] <vec:mpikokkos> PetscDALETKFGetLocalizationMatrix(): LETKF localization radius: mean 4.92963, std dev 0.549623
 Localization matrix Q created using DMPlexGetLETKFLocalizationMatrix
 PetscDA Object: 3 MPI processes
+  type: letkf
   State size: 160
   Observation size: 40
   Ensemble size: 10
@@ -29,11 +30,11 @@ Shallow Water [L]ETKF Example
   Localization          : None/Global (5 obs per vertex)
 
 Step    0, time  0.000  RMSE_forecast 0.00000  RMSE_analysis 0.00000 [initial]
-Step   10, time  0.200  RMSE_forecast 0.00889  RMSE_analysis 0.00933
+Step   10, time  0.200  RMSE_forecast 0.00987  RMSE_analysis 0.01034
 
 Statistics (10 steps):
 ==================================================
-  Mean RMSE (forecast) : 0.00718
-  Mean RMSE (analysis) : 0.00797
+  Mean RMSE (forecast) : 0.00812
+  Mean RMSE (analysis) : 0.00900
   Observations used    : 5
 

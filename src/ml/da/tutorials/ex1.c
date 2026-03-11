@@ -1,5 +1,5 @@
 /* Data assimilation framework header (provides PetscDA) */
-#include "petscda.h"
+#include <petscda.h>
 /* PETSc DMDA header (provides DM, DMDA functionality) */
 #include <petscdmda.h>
 #include <petscts.h>
@@ -307,6 +307,7 @@ int main(int argc, char **argv)
   PetscInt  obs_count    = 0;
   PetscInt  step, progress_interval;
 
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
 
   /* Parse command-line options */
@@ -346,10 +347,10 @@ int main(int argc, char **argv)
   PetscCall(PetscRandomSeed(rng));
 
   /* Initialize state vectors */
-  PetscCall(DMCreateGlobalVector(da_state, &x0));          // x0 not needed
-  PetscCall(PetscRandomSetInterval(rng, -.1 * F, .1 * F)); // perterb about 0
+  PetscCall(DMCreateGlobalVector(da_state, &x0));
+  PetscCall(PetscRandomSetInterval(rng, -.1 * F, .1 * F));
   PetscCall(VecSetRandom(x0, rng));
-  PetscCall(PetscRandomSetInterval(rng, 0, 1)); // rest are for Gaussain RNG - FIX!!!
+  PetscCall(PetscRandomSetInterval(rng, 0, 1));
 
   /* Initialize truth trajectory */
   PetscCall(VecDuplicate(x0, &truth_state));
@@ -383,7 +384,7 @@ int main(int argc, char **argv)
   PetscCall(PetscDASetObsErrorVariance(daas, obs_error_var));
 
   /* Initialize ensemble members from spun-up truth state with appropriate spread */
-  PetscCall(InitializeEnsemble(daas, truth_state, ensemble_size, ensemble_init_std, rng));
+  PetscCall(PetscDAInitializeEnsemble(daas, truth_state, ensemble_size, ensemble_init_std, rng));
 
   /* Print configuration summary */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-96 ETKF Example\n"));
@@ -414,7 +415,7 @@ int main(int argc, char **argv)
     /* Analysis step: assimilate observations when available */
     if (step % obs_freq == 0 && step > 0) {
       /* Generate synthetic noisy observations from truth */
-      PetscCall(VecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
+      PetscCall(PetscDAVecSetRandomGaussian(obs_noise, rng, 0.0, obs_error_std));
       PetscCall(VecWAXPY(observation, 1.0, obs_noise, truth_state));
 
       /* Perform ETKF analysis with observation matrix H */
@@ -482,7 +483,7 @@ int main(int argc, char **argv)
       PetscCall(VecSetFromOptions(test_vec));
 
       /* Generate Gaussian random numbers */
-      PetscCall(VecSetRandomGaussian(test_vec, rng, mean_target, std_target));
+      PetscCall(PetscDAVecSetRandomGaussian(test_vec, rng, mean_target, std_target));
 
       /* Get array for statistical analysis */
       PetscCall(VecGetArray(test_vec, &array));
