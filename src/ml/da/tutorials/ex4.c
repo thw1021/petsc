@@ -1004,7 +1004,6 @@ int main(int argc, char **argv)
 
   testset:
     requires: kokkos_kernels !complex
-    diff_args: -j
     args: -steps 10 -progress_freq 1 -petscda_view -ensemble_size 10 -obs_freq 2 -obs_error 0.03 -nx 21 -ny 21
 
     test:
