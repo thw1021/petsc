@@ -84,6 +84,7 @@ typedef struct {
 } AppCtx;
 
 PetscErrorCode InitialGuess(DM, AppCtx *, Vec);
+PetscErrorCode ArcLengthScaling(DM, AppCtx *, Vec);
 PetscErrorCode FormRHS(DM, AppCtx *, Vec);
 PetscErrorCode FormCoordinates(DM, AppCtx *);
 PetscErrorCode TangentLoad(SNES, Vec, Vec, void *);
@@ -96,7 +97,7 @@ int main(int argc, char **argv)
   SNES      snes;
   DM        da;
   Vec       x, X, b;
-  PetscBool youngflg, poissonflg, muflg, lambdaflg, alflg, view = PETSC_FALSE, viewline = PETSC_FALSE;
+  PetscBool youngflg, poissonflg, muflg, lambdaflg, alflg, view = PETSC_FALSE, viewline = PETSC_FALSE, al_rescale = PETSC_FALSE;
   PetscReal poisson = 0.2, young = 4e4;
   char      filename[PETSC_MAX_PATH_LEN]     = "ex16.vts";
   char      filename_def[PETSC_MAX_PATH_LEN] = "ex16_def.vts";
@@ -139,6 +140,7 @@ int main(int argc, char **argv)
   }
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-view", &view, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-view_line", &viewline, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-rescale", &al_rescale, NULL));
 
   PetscCall(DMDASetFieldName(da, 0, "x_disp"));
   PetscCall(DMDASetFieldName(da, 1, "y_disp"));
@@ -150,7 +152,19 @@ int main(int argc, char **argv)
   PetscCall(SNESSetFromOptions(snes));
   PetscCall(SNESNewtonALSetFunction(snes, TangentLoad, &user));
   PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONAL, &alflg));
-  if (alflg) user.load_factor = 0.0;
+  if (alflg) {
+    user.load_factor = 0.0;
+
+    if (al_rescale) {
+      Vec scaling;
+
+      PetscCall(DMCreateGlobalVector(da, &scaling));
+      PetscCall(ArcLengthScaling(da, &user, scaling));
+      PetscCall(VecPointwiseMult(scaling, scaling, scaling));
+      PetscCall(SNESNewtonALSetDiagonalScaling(snes, scaling));
+      PetscCall(VecDestroy(&scaling));
+    }
+  }
 
   PetscCall(FormCoordinates(da, &user));
 
@@ -927,6 +941,31 @@ PetscErrorCode InitialGuess(DM da, AppCtx *user, Vec X)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode ArcLengthScaling(DM da, AppCtx *user, Vec V)
+{
+  PetscInt  i, j, k, xs, ys, zs, xm, ym, zm;
+  PetscInt  mx, my, mz;
+  Field  ***v;
+  PetscReal rad = user->rad + user->height;
+
+  PetscFunctionBegin;
+  PetscCall(DMDAGetCorners(da, &xs, &ys, &zs, &xm, &ym, &zm));
+  PetscCall(DMDAGetInfo(da, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+  PetscCall(DMDAVecGetArray(da, V, &v));
+
+  for (k = zs; k < zs + zm; k++) {
+    for (j = ys; j < ys + ym; j++) {
+      for (i = xs; i < xs + xm; i++) {
+        v[k][j][i][0] = 2. / rad;
+        v[k][j][i][1] = 2. / rad;
+        v[k][j][i][2] = 2. / user->width;
+      }
+    }
+  }
+  PetscCall(DMDAVecRestoreArray(da, V, &v));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode FormRHS(DM da, AppCtx *user, Vec X)
 {
   PetscInt i, j, k, xs, ys, zs, xm, ym, zm;
@@ -1020,6 +1059,26 @@ PetscErrorCode DisplayLine(SNES snes, Vec X)
    test:
       suffix: 6
       args: -da_refine 2 -pc_type mg -rad 10.0 -young 10. -ploading -0.5 -loading -1 -mg_levels_ksp_max_it 2 -snes_monitor_short -ksp_monitor_short -snes_type newtonal -snes_newtonal_step_size 0.5 -snes_newtonal_max_continuation_steps 3 -snes_newtonal_scale_rhs false -snes_newtonal_lambda_min -0.1 -ksp_rtol 1e-4
+      requires: !single
+
+   test:
+      nsize: {{1 2}}
+      suffix: 7
+      args: -dm_vec_type kokkos -dm_mat_type aijkokkos -da_refine 1 -rad 10.0 -young 10. -ploading -1. -loading -1. -rescale -pc_type mg -mg_levels_ksp_max_it 2 -snes_monitor_short -snes_type newtonal -snes_newtonal_step_size 10 -snes_newtonal_correction_type exact -ksp_rtol 1e-4
+      requires: kokkos !complex !single
+      timeoutfactor: 3
+
+   test:
+      nsize: {{1 2}}
+      suffix: 8
+      args: -dm_vec_type cuda -dm_mat_type aijcusparse -da_refine 1 -rad 10.0 -young 10. -ploading -1. -loading -1. -rescale -pc_type mg -mg_levels_ksp_max_it 2 -snes_monitor_short -snes_type newtonal -snes_newtonal_step_size 10 -snes_newtonal_correction_type exact -ksp_rtol 1e-4
+      requires: cuda !complex !single
+      timeoutfactor: 3
+
+   test:
+      nsize: {{1 2}}
+      suffix: 9
+      args: -da_refine 2 -rad 10.0 -young 10. -ploading -1. -loading -1. -rescale -pc_type mg -mg_levels_ksp_max_it 2 -snes_monitor_short -snes_type newtonal -snes_newtonal_step_size 10 -snes_newtonal_correction_type normal -ksp_rtol 1e-4
       requires: !single
 
 TEST*/
