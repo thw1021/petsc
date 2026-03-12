@@ -48,6 +48,27 @@ PetscErrorCode VecTDot_Seq(Vec xin, Vec yin, PetscScalar *z)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode VecWDot_Seq(Vec xin, Vec yin, Vec win, PetscScalar *z)
+{
+  PetscInt           n = xin->map->n;
+  const PetscScalar *ya, *xa, *wa;
+  PetscScalar        sum = 0;
+
+  PetscFunctionBegin;
+  PetscCall(VecGetArrayRead(xin, &xa));
+  PetscCall(VecGetArrayRead(yin, &ya));
+  PetscCall(VecGetArrayRead(win, &wa));
+  for (PetscInt i = 0; i < n; i++) {
+    sum += PetscConj(ya[i]) * wa[i] * xa[i];
+  }
+  if (n > 0) PetscCall(PetscLogFlops(3.0 * n));
+  PetscCall(VecRestoreArrayRead(xin, &xa));
+  PetscCall(VecRestoreArrayRead(yin, &ya));
+  PetscCall(VecRestoreArrayRead(win, &wa));
+  *z = sum;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode VecScale_Seq(Vec xin, PetscScalar alpha)
 {
   PetscFunctionBegin;

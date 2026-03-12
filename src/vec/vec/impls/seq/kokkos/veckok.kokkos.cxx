@@ -279,6 +279,26 @@ PetscErrorCode VecTDot_SeqKokkos(Vec xin, Vec yin, PetscScalar *z)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* z = y^H diag(w) x */
+PetscErrorCode VecWDot_SeqKokkos(Vec xin, Vec yin, Vec win, PetscScalar *z)
+{
+  ConstPetscScalarKokkosView xv, yv, wv;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogGpuTimeBegin());
+  PetscCall(VecGetKokkosView(xin, &xv));
+  PetscCall(VecGetKokkosView(yin, &yv));
+  PetscCall(VecGetKokkosView(win, &wv));
+  // Kokkos always overwrites z, so no need to init it
+  PetscCallCXX(Kokkos::parallel_reduce("VecWDot", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, xin->map->n), KOKKOS_LAMBDA(const PetscInt &i, PetscScalar &update) { update += PetscConj(yv(i)) * wv(i) * xv(i); }, *z));
+  PetscCall(VecRestoreKokkosView(xin, &xv));
+  PetscCall(VecRestoreKokkosView(yin, &yv));
+  PetscCall(VecRestoreKokkosView(win, &wv));
+  PetscCall(PetscLogGpuTimeEnd());
+  if (xin->map->n > 0) PetscCall(PetscLogGpuFlops(3.0 * xin->map->n));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 struct TransposeDotTag { };
 struct ConjugateDotTag { };
 
@@ -1653,11 +1673,13 @@ static PetscErrorCode VecCreate_SeqKokkos_Common(Vec v)
   v->ops->setrandom       = VecSetRandom_SeqKokkos;
 
   v->ops->dot   = VecDot_SeqKokkos;
+  v->ops->wdot  = VecWDot_SeqKokkos;
   v->ops->tdot  = VecTDot_SeqKokkos;
   v->ops->mdot  = VecMDot_SeqKokkos;
   v->ops->mtdot = VecMTDot_SeqKokkos;
 
   v->ops->dot_local   = VecDot_SeqKokkos;
+  v->ops->wdot_local  = VecWDot_SeqKokkos;
   v->ops->tdot_local  = VecTDot_SeqKokkos;
   v->ops->mdot_local  = VecMDot_SeqKokkos;
   v->ops->mtdot_local = VecMTDot_SeqKokkos;

@@ -167,6 +167,7 @@ static PetscErrorCode VecBindToCPU_MPIViennaCL(Vec vv, PetscBool bind)
     vv->ops->dotnorm2               = NULL;
     vv->ops->waxpy                  = VecWAXPY_Seq;
     vv->ops->dot                    = VecDot_MPI;
+    vv->ops->wdot                   = VecWDot_MPI;
     vv->ops->mdot                   = VecMDot_MPI;
     vv->ops->tdot                   = VecTDot_MPI;
     vv->ops->norm                   = VecNorm_MPI;
@@ -185,6 +186,7 @@ static PetscErrorCode VecBindToCPU_MPIViennaCL(Vec vv, PetscBool bind)
     vv->ops->replacearray           = VecReplaceArray_Seq;
     vv->ops->resetarray             = VecResetArray_Seq;
     vv->ops->dot_local              = VecDot_Seq;
+    vv->ops->wdot_local             = VecWDot_Seq;
     vv->ops->tdot_local             = VecTDot_Seq;
     vv->ops->norm_local             = VecNorm_Seq;
     vv->ops->mdot_local             = VecMDot_Seq;
