@@ -677,11 +677,11 @@ static PetscErrorCode PetscDALETKFAnalysis(PetscDA da, Vec observation, Mat H)
   Collective
 
   Input Parameters:
-+ da        - the `PetscDA` context that stores the ensemble
-. model     - routine that evaluates the model `f(x, xnew; ctx)`
-- model_ctx - optional context for `model`
++ da    - the `PetscDA` context that stores the ensemble
+. model - routine that evaluates the model `f(input, output; ctx)`
+- ctx   - optional context for `model`
 */
-static PetscErrorCode PetscDALETKFApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
+static PetscErrorCode PetscDALETKFApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, PetscCtx), PetscCtx ctx)
 {
   Vec      col_in, col_out, temp;
   PetscInt i;
@@ -694,7 +694,7 @@ static PetscErrorCode PetscDALETKFApplyModel(PetscDA da, PetscErrorCode (*model)
 
   for (i = 0; i < da->ensemble_size; i++) {
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, i, &col_in));
-    PetscCall(model(col_in, temp, model_ctx));
+    PetscCall(model(col_in, temp, ctx));
     PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, i, &col_in));
 
     PetscCall(MatDenseGetColumnVecWrite(da->ensemble, i, &col_out));
@@ -767,20 +767,9 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q, Mat H
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  PetscDALETKFView - Views a `PetscDALETKF` and its implementation-specific data structure.
-
-  Input Parameters:
-+ da     - the `PetscDA` context
-- viewer - the `PetscViewer` to use (or `NULL` for standard output)
-
-  Level: beginner
-
-.seealso: [](ch_da), `PetscDAViewFromOptions()`
-*/
 static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
 {
-  PetscBool         iascii;
+  PetscBool        iascii;
   PetscDALETKFData *impl;
 
   PetscFunctionBegin;
@@ -828,7 +817,7 @@ static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *PetscOptionsObjectPtr)
+static PetscErrorCode PetscDALETKFSetFromOptions(PetscDA da, PetscOptionItems *PetscOptionsObjectPtr)
 {
   PetscDALETKFData *impl               = (PetscDALETKFData *)da->data;
   PetscOptionItems  PetscOptionsObject = *PetscOptionsObjectPtr;
@@ -836,7 +825,7 @@ static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "PetscDA LETKF Options");
   PetscCall(PetscOptionsInt("-petscda_letkf_batch_size", "Batch size for GPU processing", "", impl->batch_size, &impl->batch_size, NULL));
-  PetscCall(PetscOptionsInt("-num_observations_vertex", "Number of local observations per vertex", "", impl->n_obs_vertex, &impl->n_obs_vertex, NULL));
+  PetscCall(PetscOptionsInt("-petscda_letkf_obs_per_vertex", "Number of local observations per vertex", "", impl->n_obs_vertex, &impl->n_obs_vertex, NULL));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -867,7 +856,7 @@ PetscErrorCode PetscDALETKFInitialize(PetscDA da)
   da->ops->computeanomalies = NULL; /* We implement this directly in the analysis function */
   da->ops->destroy          = PetscDALETKFDestroy;
   da->ops->view             = PetscDALETKFView;
-  da->ops->setfromoptions   = PetscDASetFromOptions_LETKF;
+  da->ops->setfromoptions   = PetscDALETKFSetFromOptions;
 
   /* Initialize default values */
   impl->n_obs_vertex = 9;

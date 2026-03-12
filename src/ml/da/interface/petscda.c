@@ -1090,20 +1090,20 @@ PetscErrorCode PetscDAAnalysis(PetscDA da, Vec observation, Mat H)
   Collective
 
   Input Parameters:
-+ da        - the `PetscDA` context
-. model     - routine that evaluates the model map `f(x, xnew; ctx)`
-- model_ctx - optional context for `model`
++ da    - the `PetscDA` context
+. model - routine that evaluates the model map `f(input, output; ctx)`
+- ctx   - optional context for `model`
 
   Level: intermediate
 
 .seealso: [](ch_da), `PetscDAAnalysis()`
 @*/
-PetscErrorCode PetscDAApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
+PetscErrorCode PetscDAApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, PetscCtx), PetscCtx ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
 
-  PetscUseTypeMethod(da, applymodel, model, model_ctx);
+  PetscUseTypeMethod(da, applymodel, model, ctx);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -106,17 +106,17 @@ static PetscErrorCode ComputeNormalizedInnovationMatrix(Mat Z, Vec y_mean, Vec r
   Notes:
   This function constructs the broadcast matrix w * 1^T, where w is the m-dimensional
   weight vector and 1 is an m-dimensional vector of ones. This matrix is a fundamental
-  component in the ETKF transform\: G = w * 1^T + sqrt(m-1) * T^{1/2} * U.
+  component in the ETKF transform: G = w * 1^T + sqrt(m-1) * T^{1/2} * U.
 
   The implementation uses direct array access for performance, avoiding the overhead of
   repeated vector wrapping and copying. This is particularly efficient for dense matrices
   where memory is contiguous column-wise.
 
-  Complexity\: O(m^2) time and memory.
+  Complexity: O(m^2) time and memory.
 
-  Level\: developer
+  Level: developer
 
-.seealso\: [`PetscDAETKFAnalysis()`](etkfilter.c:837), [`MatDenseGetArrayWrite()`](petscmat.h)
+.seealso: [`PetscDAETKFAnalysis()`](etkfilter.c:837), [`MatDenseGetArrayWrite()`](petscmat.h)
 */
 static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat w_ones)
 {
@@ -179,21 +179,21 @@ static PetscErrorCode BroadcastWeightVector(Vec w, PetscInt m, Mat w_ones)
   The operation E^a = mean + X * G is computed using matrix-matrix multiplication followed
   by column-wise addition to efficiently handle large state spaces.
 
-  Error Handling\:
+  Error Handling:
   - Validates all input dimensions for consistency
   - Checks for positive ensemble size
   - Ensures proper matrix/vector initialization
   - Handles parallel assembly correctly
 
-  Performance Considerations\:
-  - Memory\: Creates one temporary matrix X_G of size (state_size x m)
-  - Time complexity\: O(state_size * m^2) for matrix multiply + O(state_size * m) for additions
-  - Optimization\: Uses direct array access for dense matrices to avoid Vec overhead
-  - Parallel\: Fully parallelizable across both matrix multiply and column updates
+  Performance Considerations:
+  - Memory: Creates one temporary matrix X_G of size (state_size x m)
+  - Time complexity: O(state_size * m^2) for matrix multiply + O(state_size * m) for additions
+  - Optimization: Uses direct array access for dense matrices to avoid Vec overhead
+  - Parallel: Fully parallelizable across both matrix multiply and column updates
 
-  Level\: developer
+  Level: developer
 
-.seealso\: [`PetscDAETKFAnalysis()`](etkfilter.c:522), [`ComputeAnalysisWeights()`](etkfilter.c:178),
+.seealso: [`PetscDAETKFAnalysis()`](etkfilter.c:522), [`ComputeAnalysisWeights()`](etkfilter.c:178),
 [`BroadcastWeightVector()`](etkfilter.c:245), [`MatMatMult()`](petscmat.h), [`MatDenseGetArrayRead()`](petscmat.h)
 */
 static PetscErrorCode UpdateEnsembleWithTransform(Vec mean, Mat X, Mat G, PetscInt m, Mat ensemble)
@@ -297,7 +297,7 @@ static PetscErrorCode PetscDAETKFDestroy(PetscDA da)
 
   Level: developer
 
-.seealso: [](ch_ts), `PetscInitialize()`, `PetscDAETKFFinalizePackage()`
+.seealso: [](ch_da), `PetscInitialize()`, `PetscDAETKFFinalizePackage()`
 @*/
 PetscErrorCode PetscDAETKFInitializePackage(void)
 {
@@ -313,7 +313,7 @@ PetscErrorCode PetscDAETKFInitializePackage(void)
 
   Level: developer
 
-.seealso: [](ch_ts), `PetscFinalize()`, `PetscDAETKFInitializePackage()`
+.seealso: [](ch_da), `PetscFinalize()`, `PetscDAETKFInitializePackage()`
 @*/
 PetscErrorCode PetscDAETKFFinalizePackage(void)
 {
@@ -342,7 +342,7 @@ PetscErrorCode PetscDAETKFFinalizePackage(void)
 
   Level: advanced
 
-.seealso: [](ch_da), `PetscDA`, `PetscDAETKFApplyModel()`, `PetscDAComputeMean()`,
+.seealso: [](ch_da), `PetscDA`, `PetscDAETKFApplyModel()`, `PetscDAComputeEnsembleMean()`,
 `PetscDAComputeAnomalies()`
 */
 static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
@@ -516,9 +516,9 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
   Collective
 
   Input Parameters:
-+ da        - the `PetscDA` context that stores the ensemble
-. model     - routine that evaluates the model `f(x, xnew; ctx)`
-- model_ctx - optional context for `model`
++ da    - the `PetscDA` context that stores the ensemble
+. model - routine that evaluates the model `f(input, output; ctx)`
+- ctx   - optional context for `model`
 
   Notes:
   This routine overwrites every ensemble column with the model result supplied by `model`.
@@ -528,7 +528,7 @@ static PetscErrorCode PetscDAETKFAnalysis(PetscDA da, Vec observation, Mat H)
 
 .seealso: [](ch_da), `PetscDA`, `PetscDAETKFAnalysis()`
 */
-static PetscErrorCode PetscDAETKFApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, void *), void *model_ctx)
+static PetscErrorCode PetscDAETKFApplyModel(PetscDA da, PetscErrorCode (*model)(Vec, Vec, PetscCtx), PetscCtx ctx)
 {
   Vec      col_in, col_out, temp;
   PetscInt i;
@@ -541,7 +541,7 @@ static PetscErrorCode PetscDAETKFApplyModel(PetscDA da, PetscErrorCode (*model)(
 
   for (i = 0; i < da->ensemble_size; i++) {
     PetscCall(MatDenseGetColumnVecRead(da->ensemble, i, &col_in));
-    PetscCall(model(col_in, temp, model_ctx));
+    PetscCall(model(col_in, temp, ctx));
     PetscCall(MatDenseRestoreColumnVecRead(da->ensemble, i, &col_in));
 
     PetscCall(MatDenseGetColumnVecWrite(da->ensemble, i, &col_out));

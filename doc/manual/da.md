@@ -172,19 +172,15 @@ PetscDAGetObsErrorVariance(PetscDA da, Vec *obs_error_var);
 
 ## Analysis step
 
-`PetscDAAnalysis()` performs the assimilation step by calling a user-provided observation operator:
+`PetscDAAnalysis()` performs the assimilation step given an observation vector and a linear observation operator matrix:
 
 ```c
-/* Prototype for observation operator H(x) */
-PetscErrorCode ObservationOperator(Vec state, Vec prediction, void *ctx) {
-  /* Map model state -> observation space */
-  return PETSC_SUCCESS;
-}
-
-PetscCall(PetscDAAnalysis(da, observation_vec, ObservationOperator, user_ctx));
+/* observation - Vec of length P (number of observations) */
+/* H           - Mat of size P x N (observation operator mapping state to observation space) */
+PetscCall(PetscDAAnalysis(da, observation, H));
 ```
 
-The callback must fill `prediction` with the modelled observations corresponding to `state`, respecting the layout dictated by `PetscDASetSizes()`. `PetscDAAnalysis()` handles all ensemble reductions, gain computations, and posterior updates.
+`H` is a `Mat` (typically sparse AIJ) that maps the N-dimensional state vector to the P-dimensional observation space: `y ≈ H*x`. `PetscDAAnalysis()` handles all ensemble reductions, gain computations, and posterior updates.
 
 (sec_da_model)=
 
@@ -192,15 +188,21 @@ The callback must fill `prediction` with the modelled observations corresponding
 
 `PetscDAApplyModel()` wraps the forecast step. The user supplies a function that advances a single ensemble member:
 
+Calling sequence for model:
+
+- `input` - the vector to be evolved, forecasted, time-stepped, or otherwise advanced
+- `output` - the forecast, evolved, or time-stepped result
+- `ctx` - the context for the model function
+
 ```c
 /* Prototype for model forecast M(x) */
-PetscErrorCode ModelOperator(Vec x_in, Vec x_out, void *ctx) {
-  /* Advance x_in by dt to produce x_out */
+PetscErrorCode ModelForecast(Vec input, Vec output, PetscCtx ctx) {
+  /* Advance input by dt to produce output */
   /* (e.g., step a TS object) */
   return PETSC_SUCCESS;
 }
 
-PetscCall(PetscDAApplyModel(da, ModelOperator, ts_ctx));
+PetscCall(PetscDAApplyModel(da, ModelForecast, ctx));
 ```
 
 The operator can call into PETSc time integrators ({any}`ch_ts`), nonlinear solvers ({any}`ch_snes`), or bespoke device kernels. The PetscDA layer orchestrates calls across the entire ensemble, issuing them in rank-local loops while ensuring that ownership and recycling semantics remain correct.
@@ -324,7 +326,7 @@ Because `PetscDA` participates in the PETSc object registry, any prefix applied 
 
 ## Compatibility
 
-The PetscDA package provides backward-compatibility headers and shims where feasible, but as a new component, users are encouraged to adopt the `PetscDA` naming convention.
+The PetscDA package provides compatibility headers and shims where feasible, but as a new component, users are encouraged to adopt the `PetscDA` naming convention.
 
 These thin wrappers keep existing applications functional while encouraging new developments to migrate to the canonical `PetscDA*()` routines.
 

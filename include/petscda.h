@@ -52,7 +52,7 @@ PETSC_EXTERN PetscErrorCode PetscDASetEnsembleMember(PetscDA, PetscInt, Vec);
 PETSC_EXTERN PetscErrorCode PetscDAComputeEnsembleMean(PetscDA, Vec);
 PETSC_EXTERN PetscErrorCode PetscDAComputeAnomalies(PetscDA, Vec, Mat *);
 PETSC_EXTERN PetscErrorCode PetscDAAnalysis(PetscDA, Vec, Mat);
-PETSC_EXTERN PetscErrorCode PetscDAApplyModel(PetscDA, PetscErrorCode (*)(Vec, Vec, void *), void *);
+PETSC_EXTERN PetscErrorCode PetscDAApplyModel(PetscDA, PetscErrorCode (*)(Vec, Vec, PetscCtx), PetscCtx);
 PETSC_EXTERN PetscErrorCode PetscDAInitializeEnsemble(PetscDA, Vec, PetscInt, PetscReal, PetscRandom);
 
 PETSC_EXTERN PetscErrorCode PetscDASetOptionsPrefix(PetscDA, const char[]);

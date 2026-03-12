@@ -40,7 +40,7 @@ typedef struct {
 /*
   Lorenz96RHS - Compute the right-hand side of the Lorenz-96 equations
 */
-static PetscErrorCode Lorenz96RHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ctx)
+static PetscErrorCode Lorenz96RHS(TS ts, PetscReal t, Vec X, Vec F_vec, PetscCtx ctx)
 {
   Lorenz96Ctx       *l95 = (Lorenz96Ctx *)ctx;
   Vec                X_local;
@@ -111,15 +111,15 @@ static PetscErrorCode Lorenz96ContextDestroy(Lorenz96Ctx **ctx)
 /*
   Lorenz96Step - Advance state vector one time step using Lorenz-96 dynamics
 */
-static PetscErrorCode Lorenz96Step(Vec x_in, Vec x_out, void *ctx)
+static PetscErrorCode Lorenz96Step(Vec input, Vec output, PetscCtx ctx)
 {
   Lorenz96Ctx *l95 = (Lorenz96Ctx *)ctx;
 
   PetscFunctionBeginUser;
   PetscCall(TSSetStepNumber(l95->ts, 0));
   PetscCall(TSSetTime(l95->ts, 0.0));
-  if (x_in != x_out) PetscCall(VecCopy(x_in, x_out));
-  PetscCall(TSSolve(l95->ts, x_out));
+  if (input != output) PetscCall(VecCopy(input, output));
+  PetscCall(TSSolve(l95->ts, output));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -371,7 +371,7 @@ int main(int argc, char **argv)
   /* Initialize ensemble members from spun-up truth state */
   PetscCall(PetscDAInitializeEnsemble(daas, truth_state, ensemble_size, ensemble_init_std, rng));
 
-  PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
+  PetscCall(PetscDAViewFromOptions(daas, NULL, "-petscda_view"));
 
   /* Print configuration summary */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Lorenz-96 LETKF Example\n"));
@@ -486,7 +486,7 @@ int main(int argc, char **argv)
 
   testset:
     requires: kokkos_kernels !complex
-    args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 5
+    args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -petscda_view -ensemble_size 5
 
     test:
       suffix: chol
@@ -494,13 +494,11 @@ int main(int argc, char **argv)
 
     test:
       nsize: 3
-      diff_args: -j
       suffix: letkf
       args: -petscda_type letkf -mat_type aijkokkos -dm_vec_type kokkos -info :vec -n_obs_vertex 5
 
     test:
       suffix: etkf
-      diff_args: -j
       args: -petscda_type etkf -petscda_sqrt_type eigen
 
 TEST*/

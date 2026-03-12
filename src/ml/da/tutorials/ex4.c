@@ -100,7 +100,7 @@ static void ComputeFluxY(PetscReal g, PetscReal h, PetscReal hu, PetscReal hv, P
 /*
   ShallowWaterRHS2D - Compute the right-hand side of the 2D shallow water equations
 */
-static PetscErrorCode ShallowWaterRHS2D(TS ts, PetscReal t, Vec X, Vec F_vec, void *ctx)
+static PetscErrorCode ShallowWaterRHS2D(TS ts, PetscReal t, Vec X, Vec F_vec, PetscCtx ctx)
 {
   ShallowWater2DCtx   *sw = (ShallowWater2DCtx *)ctx;
   Vec                  X_local;
@@ -248,17 +248,17 @@ static PetscErrorCode ShallowWater2DContextDestroy(ShallowWater2DCtx **ctx)
 /*
   ShallowWaterStep2D - Advance state vector one time step
 */
-static PetscErrorCode ShallowWaterStep2D(Vec x_in, Vec x_out, void *ctx)
+static PetscErrorCode ShallowWaterStep2D(Vec input, Vec output, PetscCtx ctx)
 {
   ShallowWater2DCtx *sw = (ShallowWater2DCtx *)ctx;
 
   PetscFunctionBeginUser;
-  if (x_in != x_out) PetscCall(VecCopy(x_in, x_out));
+  if (input != output) PetscCall(VecCopy(input, output));
 
   PetscCall(TSSetTime(sw->ts, 0.0));
   PetscCall(TSSetStepNumber(sw->ts, 0));
   PetscCall(TSSetMaxTime(sw->ts, sw->dt));
-  PetscCall(TSSolve(sw->ts, x_out));
+  PetscCall(TSSolve(sw->ts, output));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -530,7 +530,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsString("-output_file", "Output file for visualization data", "", "", output_file, sizeof(output_file), &output_enabled));
   PetscCall(PetscOptionsEnum("-ex4_flux", "Flux scheme (rusanov/mc)", "", Ex4FluxTypes, (PetscEnum)flux_type, (PetscEnum *)&flux_type, NULL));
   PetscCall(PetscOptionsBool("-use_fake_localization", "Use fake localization matrix", "", use_fake_localization, &use_fake_localization, NULL));
-  if (!use_fake_localization) PetscCall(PetscOptionsInt("-num_observations_vertex", "Number of observations per vertex", "", num_observations_vertex, &num_observations_vertex, NULL));
+  if (!use_fake_localization) PetscCall(PetscOptionsInt("-petscda_letkf_obs_per_vertex", "Number of observations per vertex", "", num_observations_vertex, &num_observations_vertex, NULL));
   PetscCall(PetscOptionsBool("-verification_mode", "Run in pure verification mode (no DA)", "", verification_mode, &verification_mode, NULL));
   PetscCall(PetscOptionsBool("-enable_verification", "Enable verification alongside DA", "", enable_verification, &enable_verification, NULL));
   PetscCall(PetscOptionsInt("-verification_freq", "Frequency for verification error output", "", verification_freq, &verification_freq, NULL));
@@ -722,7 +722,7 @@ int main(int argc, char **argv)
     /* Initialize ensemble members with perturbations */
     PetscCall(PetscDAInitializeEnsemble(daas, x0, ensemble_size, obs_error_std, rng));
 
-    PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
+    PetscCall(PetscDAViewFromOptions(daas, NULL, "-petscda_view"));
   }
 
   /* Print configuration summary */
@@ -1005,7 +1005,7 @@ int main(int argc, char **argv)
   testset:
     requires: kokkos_kernels !complex
     diff_args: -j
-    args: -steps 10 -progress_freq 1 -da_view -ensemble_size 10 -obs_freq 2 -obs_error 0.03 -nx 21 -ny 21
+    args: -steps 10 -progress_freq 1 -petscda_view -ensemble_size 10 -obs_freq 2 -obs_error 0.03 -nx 21 -ny 21
 
     test:
       suffix: letkf_wave2d
@@ -1014,7 +1014,7 @@ int main(int argc, char **argv)
     test:
       nsize: 3
       suffix: kokkos_wave2d
-      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -num_observations_vertex 5
+      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_obs_per_vertex 5
 
   test:
     suffix: verification

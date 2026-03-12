@@ -10,7 +10,7 @@ PETSC_EXTERN PetscClassId PETSCDA_CLASSID;
 typedef struct _PetscDAOps *PetscDAOps;
 struct _PetscDAOps {
   PetscErrorCode (*analysis)(PetscDA, Vec, Mat);
-  PetscErrorCode (*applymodel)(PetscDA, PetscErrorCode (*)(Vec, Vec, void *), void *);
+  PetscErrorCode (*applymodel)(PetscDA, PetscErrorCode (*)(Vec, Vec, PetscCtx), PetscCtx);
   PetscErrorCode (*computemean)(PetscDA, Vec);
   PetscErrorCode (*computeanomalies)(PetscDA, Vec, Mat *);
   PetscErrorCode (*destroy)(PetscDA);

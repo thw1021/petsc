@@ -81,7 +81,7 @@ typedef struct {
   Output Parameter:
 . F_vec - RHS vector (tendency)
 */
-static PetscErrorCode Lorenz96RHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ctx)
+static PetscErrorCode Lorenz96RHS(TS ts, PetscReal t, Vec X, Vec F_vec, PetscCtx ctx)
 {
   Lorenz96Ctx       *l95 = (Lorenz96Ctx *)ctx;
   Vec                X_local;
@@ -165,24 +165,24 @@ static PetscErrorCode Lorenz96ContextDestroy(Lorenz96Ctx **ctx)
   Lorenz96Step - Advance state vector one time step using Lorenz-96 dynamics
 
   Input Parameters:
-+ x_in - Initial state vector
-- ctx  - Lorenz96 context (contains reusable TS)
++ input - state vector to be advanced
+- ctx   - Lorenz96 context (contains reusable TS)
 
   Output Parameter:
-. x_out - State vector after one time step
+. output - state vector after one time step
 
   Notes:
   Uses a single explicit RK4 step with the pre-configured TS object for efficiency.
 */
-static PetscErrorCode Lorenz96Step(Vec x_in, Vec x_out, void *ctx)
+static PetscErrorCode Lorenz96Step(Vec input, Vec output, PetscCtx ctx)
 {
   Lorenz96Ctx *l95 = (Lorenz96Ctx *)ctx;
 
   PetscFunctionBeginUser;
   /* Reset the TS time for each integration */
   PetscCall(TSSetTime(l95->ts, 0.0));
-  if (x_in != x_out) PetscCall(VecCopy(x_in, x_out));
-  PetscCall(TSSolve(l95->ts, x_out));
+  if (input != output) PetscCall(VecCopy(input, output));
+  PetscCall(TSSolve(l95->ts, output));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -380,7 +380,7 @@ int main(int argc, char **argv)
   PetscCall(PetscDASetSizes(daas, n, n, ensemble_size));
   PetscCall(PetscDASetFromOptions(daas));
   PetscCall(PetscDASetUp(daas));
-  PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
+  PetscCall(PetscDAViewFromOptions(daas, NULL, "-petscda_view"));
   PetscCall(PetscDASetObsErrorVariance(daas, obs_error_var));
 
   /* Initialize ensemble members from spun-up truth state with appropriate spread */
@@ -567,7 +567,7 @@ int main(int argc, char **argv)
 
   testset:
     nsize: 1
-    args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -da_view -ensemble_size 30
+    args: -steps 112 -burn 10 -obs_freq 1 -obs_error 1 -petscda_view -ensemble_size 30
 
     test:
       requires: !complex

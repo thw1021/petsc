@@ -1,7 +1,7 @@
 static char help[] = "Shallow water test cases with data assimilation.\n"
                      "Implements 1D shallow water equations with 2 DOF per grid point (h, hu).\n\n"
                      "Example usage:\n"
-                     "  ./ex3 -steps 100 -obs_freq 5 -obs_error 0.1 -da_view -ensemble_size 30\n"
+                     "  ./ex3 -steps 100 -obs_freq 5 -obs_error 0.1 -petscda_view -ensemble_size 30\n"
                      "  ./ex3 -ex3_test wave -steps 500\n\n";
 
 /* Data assimilation framework header (provides PetscDA) */
@@ -91,7 +91,7 @@ static void ComputeFlux(PetscReal g, PetscReal h, PetscReal hu, PetscReal *F_h, 
 
   Dispatches to appropriate flux scheme implementation.
 */
-static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, void *ctx)
+static PetscErrorCode ShallowWaterRHS(TS ts, PetscReal t, Vec X, Vec F_vec, PetscCtx ctx)
 {
   ShallowWaterCtx   *sw = (ShallowWaterCtx *)ctx;
   Vec                X_local;
@@ -262,20 +262,20 @@ static PetscErrorCode ShallowWaterContextDestroy(ShallowWaterCtx **ctx)
 /*
   ShallowWaterStep - Advance state vector one time step using shallow water dynamics
 */
-static PetscErrorCode ShallowWaterStep(Vec x_in, Vec x_out, void *ctx)
+static PetscErrorCode ShallowWaterStep(Vec input, Vec output, PetscCtx ctx)
 {
   ShallowWaterCtx *sw = (ShallowWaterCtx *)ctx;
 
   PetscFunctionBeginUser;
   /* Copy input to output if they are different vectors */
-  if (x_in != x_out) PetscCall(VecCopy(x_in, x_out));
+  if (input != output) PetscCall(VecCopy(input, output));
 
   /* Reset the TS time for each integration (required for proper RK4 stepping) */
   PetscCall(TSSetTime(sw->ts, 0.0));
   PetscCall(TSSetStepNumber(sw->ts, 0));
   PetscCall(TSSetMaxTime(sw->ts, sw->dt));
-  /* Solve one time step: advances x_out from t=0 to t=dt */
-  PetscCall(TSSolve(sw->ts, x_out));
+  /* Solve one time step: advances output from t=0 to t=dt */
+  PetscCall(TSSolve(sw->ts, output));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -554,7 +554,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsInt("-progress_freq", "Print progress every N steps (0 = only first/last)", "", progress_freq, &progress_freq, NULL));
   PetscCall(PetscOptionsString("-output_file", "Output file for visualization data", "", "", output_file, sizeof(output_file), &output_enabled));
   PetscCall(PetscOptionsBool("-use_fake_localization", "Use fake localization matrix", "", use_fake_localization, &use_fake_localization, NULL));
-  if (!use_fake_localization) PetscCall(PetscOptionsInt("-num_observations_vertex", "Number of observations per vertex", "", num_observations_vertex, &num_observations_vertex, NULL));
+  if (!use_fake_localization) PetscCall(PetscOptionsInt("-petscda_letkf_obs_per_vertex", "Number of observations per vertex", "", num_observations_vertex, &num_observations_vertex, NULL));
   else num_observations_vertex = n_vert;
   /* Parse test type option */
   {
@@ -725,7 +725,7 @@ int main(int argc, char **argv)
      This is critical for convergence - ensemble needs spread even after spinup */
   PetscCall(PetscDAInitializeEnsemble(daas, x0, ensemble_size, obs_error_std, rng));
 
-  PetscCall(PetscDAViewFromOptions(daas, NULL, "-da_view"));
+  PetscCall(PetscDAViewFromOptions(daas, NULL, "-petscda_view"));
 
   /* Print configuration summary */
   {
@@ -930,7 +930,7 @@ int main(int argc, char **argv)
   testset:
     requires: kokkos_kernels !complex
     diff_args: -j
-    args: -ex3_test dam -steps 10 -progress_freq 1 -da_view -ensemble_size 10 -obs_freq 2 -obs_error 0.03
+    args: -ex3_test dam -steps 10 -progress_freq 1 -petscda_view -ensemble_size 10 -obs_freq 2 -obs_error 0.03
 
     test:
       suffix: letkf_dam
@@ -943,12 +943,12 @@ int main(int argc, char **argv)
     test:
       nsize: 3
       suffix: kokkos_dam
-      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -num_observations_vertex 5
+      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -petscda_letkf_obs_per_vertex 5
 
   testset:
     requires: kokkos_kernels !complex
     diff_args: -j
-    args: -ex3_test wave -steps 10 -da_view -ensemble_size 10 -petscda_type letkf -obs_freq 2 -obs_error 0.03
+    args: -ex3_test wave -steps 10 -petscda_view -ensemble_size 10 -petscda_type letkf -obs_freq 2 -obs_error 0.03
 
     test:
       suffix: letkf_wave
@@ -957,7 +957,7 @@ int main(int argc, char **argv)
     test:
       nsize: 3
       suffix: kokkos_wave
-      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -num_observations_vertex 5
+      args: -petscda_type letkf -mat_type aijkokkos -vec_type kokkos -petscda_letkf_batch_size 13 -info :vec -petscda_letkf_obs_per_vertex 5
 
     test:
       suffix: wave_mc
