@@ -151,6 +151,7 @@ PETSC_EXTERN PetscErrorCode VecSetSizes(Vec, PetscInt, PetscInt);
 
 PETSC_EXTERN PetscErrorCode VecDotNorm2(Vec, Vec, PetscScalar *, PetscReal *);
 PETSC_EXTERN PetscErrorCode VecDot(Vec, Vec, PetscScalar *);
+PETSC_EXTERN PetscErrorCode VecWDot(Vec, Vec, Vec, PetscScalar *);
 PETSC_EXTERN PetscErrorCode VecDotRealPart(Vec, Vec, PetscReal *);
 PETSC_EXTERN PetscErrorCode VecTDot(Vec, Vec, PetscScalar *);
 PETSC_EXTERN PetscErrorCode VecMDot(Vec, PetscInt, const Vec[], PetscScalar[]);
@@ -692,11 +693,11 @@ PETSC_DEPRECATED_FUNCTION(3, 11, 0, "VecLockReadPop()", ) static inline PetscErr
 E*/
 typedef enum {
   VECOP_DUPLICATE  = 0,
-  VECOP_SET        = 10,
-  VECOP_VIEW       = 33,
-  VECOP_LOAD       = 41,
-  VECOP_VIEWNATIVE = 68,
-  VECOP_LOADNATIVE = 69
+  VECOP_SET        = 11,
+  VECOP_VIEW       = 34,
+  VECOP_LOAD       = 43,
+  VECOP_VIEWNATIVE = 70,
+  VECOP_LOADNATIVE = 71
 } VecOperation;
 PETSC_EXTERN PetscErrorCode VecSetOperation(Vec, VecOperation, PetscErrorCodeFn *);
 

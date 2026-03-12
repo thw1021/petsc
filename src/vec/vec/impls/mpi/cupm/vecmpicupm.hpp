@@ -43,6 +43,7 @@ public:
   static PetscErrorCode BindToCPU(Vec, PetscBool) noexcept;
   static PetscErrorCode Norm(Vec, NormType, PetscReal *) noexcept;
   static PetscErrorCode Dot(Vec, Vec, PetscScalar *) noexcept;
+  static PetscErrorCode WDot(Vec, Vec, Vec, PetscScalar *) noexcept;
   static PetscErrorCode TDot(Vec, Vec, PetscScalar *) noexcept;
   static PetscErrorCode MDot(Vec, PetscInt, const Vec[], PetscScalar *) noexcept;
   static PetscErrorCode DotNorm2(Vec, Vec, PetscScalar *, PetscScalar *) noexcept;
