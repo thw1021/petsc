@@ -82,6 +82,7 @@ PETSC_INTERN PetscErrorCode VecSetPreallocationCOO_MPI(Vec, PetscCount, const Pe
 PETSC_INTERN PetscErrorCode VecSetValuesCOO_MPI(Vec, const PetscScalar[], InsertMode);
 
 PETSC_INTERN PetscErrorCode VecDot_MPI(Vec, Vec, PetscScalar *);
+PETSC_INTERN PetscErrorCode VecWDot_MPI(Vec, Vec, Vec, PetscScalar *);
 PETSC_INTERN PetscErrorCode VecMDot_MPI(Vec, PetscInt, const Vec[], PetscScalar *);
 PETSC_INTERN PetscErrorCode VecTDot_MPI(Vec, Vec, PetscScalar *);
 PETSC_INTERN PetscErrorCode VecNorm_MPI(Vec, NormType, PetscReal *);
@@ -107,6 +108,14 @@ static inline PetscErrorCode VecXDot_MPI_Default(Vec xin, Vec yin, PetscScalar *
 {
   PetscFunctionBegin;
   PetscCall(VecXDot_SeqFn(xin, yin, z));
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, z, 1, MPIU_SCALAR, MPIU_SUM, PetscObjectComm((PetscObject)xin)));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static inline PetscErrorCode VecWXDot_MPI_Default(Vec xin, Vec yin, Vec win, PetscScalar *z, PetscErrorCode (*VecWXDot_SeqFn)(Vec, Vec, Vec, PetscScalar *))
+{
+  PetscFunctionBegin;
+  PetscCall(VecWXDot_SeqFn(xin, yin, win, z));
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, z, 1, MPIU_SCALAR, MPIU_SUM, PetscObjectComm((PetscObject)xin)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
