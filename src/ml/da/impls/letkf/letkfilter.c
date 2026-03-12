@@ -769,7 +769,7 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q, Mat H
 
 static PetscErrorCode PetscDALETKFView(PetscDA da, PetscViewer viewer)
 {
-  PetscBool        iascii;
+  PetscBool         iascii;
   PetscDALETKFData *impl;
 
   PetscFunctionBegin;
