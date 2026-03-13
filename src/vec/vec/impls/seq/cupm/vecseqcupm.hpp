@@ -102,6 +102,7 @@ public:
   static PetscErrorCode MAXPY(Vec, PetscInt, const PetscScalar[], Vec *) noexcept;
   static PetscErrorCode MAXPYAsync(Vec, PetscInt, const PetscScalar[], Vec *, PetscDeviceContext) noexcept;
   static PetscErrorCode Dot(Vec, Vec, PetscScalar *) noexcept;
+  static PetscErrorCode WDot(Vec, Vec, Vec, PetscScalar *) noexcept;
   static PetscErrorCode MDot(Vec, PetscInt, const Vec[], PetscScalar *) noexcept;
   static PetscErrorCode Set(Vec, PetscScalar) noexcept;
   static PetscErrorCode SetAsync(Vec, PetscScalar, PetscDeviceContext) noexcept;

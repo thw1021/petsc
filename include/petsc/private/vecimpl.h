@@ -20,6 +20,7 @@ struct _VecOps {
   PetscErrorCode (*duplicatevecs)(Vec, PetscInt, Vec **);                           /* get array of vectors */
   PetscErrorCode (*destroyvecs)(PetscInt, Vec[]);                                   /* free array of vectors */
   PetscErrorCode (*dot)(Vec, Vec, PetscScalar *);                                   /* z = x^H * y */
+  PetscErrorCode (*wdot)(Vec, Vec, Vec, PetscScalar *);                             /* z = x^H * diag(w) * y */
   PetscErrorCode (*mdot)(Vec, PetscInt, const Vec[], PetscScalar *);                /* z[j] = x dot y[j] */
   PetscErrorCode (*norm)(Vec, NormType, PetscReal *);                               /* z = sqrt(x^H * x) */
   PetscErrorCode (*tdot)(Vec, Vec, PetscScalar *);                                  /* x'*y */
@@ -53,6 +54,7 @@ struct _VecOps {
   PetscErrorCode (*placearray)(Vec, const PetscScalar *);   /* place data array */
   PetscErrorCode (*replacearray)(Vec, const PetscScalar *); /* replace data array */
   PetscErrorCode (*dot_local)(Vec, Vec, PetscScalar *);
+  PetscErrorCode (*wdot_local)(Vec, Vec, Vec, PetscScalar *);
   PetscErrorCode (*tdot_local)(Vec, Vec, PetscScalar *);
   PetscErrorCode (*norm_local)(Vec, NormType, PetscReal *);
   PetscErrorCode (*mdot_local)(Vec, PetscInt, const Vec[], PetscScalar *);
@@ -178,6 +180,7 @@ PETSC_EXTERN PetscLogEvent VEC_View;
 PETSC_EXTERN PetscLogEvent VEC_Max;
 PETSC_EXTERN PetscLogEvent VEC_Min;
 PETSC_EXTERN PetscLogEvent VEC_Dot;
+PETSC_EXTERN PetscLogEvent VEC_WDot;
 PETSC_EXTERN PetscLogEvent VEC_MDot;
 PETSC_EXTERN PetscLogEvent VEC_TDot;
 PETSC_EXTERN PetscLogEvent VEC_MTDot;
