@@ -135,6 +135,7 @@ PETSC_INTERN PetscErrorCode VecPlaceArray_SeqKokkos(Vec, const PetscScalar *);
 PETSC_INTERN PetscErrorCode VecResetArray_SeqKokkos(Vec);
 PETSC_INTERN PetscErrorCode VecReplaceArray_SeqKokkos(Vec, const PetscScalar *);
 PETSC_INTERN PetscErrorCode VecDot_SeqKokkos(Vec, Vec, PetscScalar *);
+PETSC_INTERN PetscErrorCode VecWDot_SeqKokkos(Vec, Vec, Vec, PetscScalar *);
 PETSC_INTERN PetscErrorCode VecTDot_SeqKokkos(Vec, Vec, PetscScalar *);
 PETSC_INTERN PetscErrorCode VecScale_SeqKokkos(Vec, PetscScalar);
 PETSC_INTERN PetscErrorCode VecCopy_SeqKokkos(Vec, Vec);

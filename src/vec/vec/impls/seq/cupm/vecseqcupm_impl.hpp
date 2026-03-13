@@ -328,6 +328,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::BindToCPU(Vec v, PetscBool usehost) noexce
 
   // REVIEW ME: this absolutely should be some sort of bulk mempcy rather than this mess
   VecSetOp_CUPM(dot, VecDot_Seq, Dot);
+  VecSetOp_CUPM(wdot, VecWDot_Seq, WDot);
   VecSetOp_CUPM(norm, VecNorm_Seq, Norm);
   VecSetOp_CUPM(tdot, VecTDot_Seq, TDot);
   VecSetOp_CUPM(mdot, VecMDot_Seq, MDot);
@@ -2009,6 +2010,47 @@ inline PetscErrorCode VecSeq_CUPM<T>::DotNorm2(Vec s, Vec t, PetscScalar *dp, Pe
         thrust::make_tuple(dpt, nmt),
         detail::dotnorm2_tuple_plus{}, detail::dotnorm2_mult{}
       );
+    );
+    // clang-format on
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+namespace detail
+{
+struct wdot_transform {
+  using argument_type = thrust::tuple<PetscScalar, PetscScalar, PetscScalar>;
+
+  PETSC_NODISCARD PETSC_HOSTDEVICE_INLINE_DECL PetscScalar operator()(const argument_type &tup) const noexcept { return PetscConj(thrust::get<1>(tup)) * thrust::get<2>(tup) * thrust::get<0>(tup); }
+};
+} // namespace detail
+
+// v->ops->wdot
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::WDot(Vec x, Vec y, Vec w, PetscScalar *z) noexcept
+{
+  PetscDeviceContext dctx;
+  cupmStream_t       stream;
+  const PetscInt     n = x->map->n;
+
+  PetscFunctionBegin;
+  PetscCall(GetHandles_(&dctx, &stream));
+  {
+    const auto xdptr = thrust::device_pointer_cast(DeviceArrayRead(dctx, x).data());
+    const auto ydptr = thrust::device_pointer_cast(DeviceArrayRead(dctx, y).data());
+    const auto wdptr = thrust::device_pointer_cast(DeviceArrayRead(dctx, w).data());
+
+    // clang-format off
+    PetscCallThrust(
+      *z = THRUST_CALL(
+        thrust::transform_reduce,
+        stream,
+        thrust::make_zip_iterator(thrust::make_tuple(xdptr, ydptr, wdptr)),
+        thrust::make_zip_iterator(thrust::make_tuple(xdptr + n, ydptr + n, wdptr + n)),
+        detail::wdot_transform{},
+        0.,
+        thrust::plus<PetscScalar>()
+      )
     );
     // clang-format on
   }

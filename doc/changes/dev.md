@@ -59,6 +59,8 @@
 ```{rubric} Vec:
 ```
 
+- Add `VecWDot` for computing weighted dot products between two vectors
+
 ```{rubric} PetscSection:
 ```
 
@@ -102,6 +104,7 @@
 - Add `SNES_DIVERGED_OBJECTIVE_NANORINF`
 - Add `SNES_DIVERGED_OBJECTIVE_DOMAIN`
 - Add developer functions `SNESCheckFunctionDomainError()`, `SNESLineSearchCheckFunctionDomainError()`, `SNESCheckObjectiveDomainError()`, `SNESLineSearchCheckObjectiveDomainError()`, `SNESCheckJacobianDomainError()`, and `SNESLineSearchCheckJacobianDomainError()`
+- Add `SNESNewtonALSetDiagonalScaling` to allow for per-DoF scaling of solution vector when computing arc length
 
 ```{rubric} SNESLineSearch:
 ```
@@ -160,4 +163,3 @@
 - Fortran code should now use `MPIU_Comm` instead of `MPI_Comm`, and similarly for other MPI types, see section "Fortran and MPI" in the users guide
 - Fortran interface definitions are now automatically generated for all functions that take context variable arguments, represented in the C source code with a type of `PetscCtx`, allowing the use of any Fortran derived type (or PETSc object) as the context
 - For all PETSc functions `XXXGetYYY()` that return a context variable as an argument, represented in the C source code with an argument type of `PetscCtxRt`, a macro is generated used with `Interface_XXXGetYYY(AppCtx)` which tells the Fortran compiler that a pointer to that derived type `type(AppCtx)` is returned from the Fortran version of `XXXGetYYY()`. See src/snes/tutorials/ex5f90.F90`
-
