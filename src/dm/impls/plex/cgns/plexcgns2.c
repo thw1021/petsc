@@ -2385,7 +2385,7 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
   PetscViewer_CGNS  *cgv = (PetscViewer_CGNS *)viewer->data;
   DM                 dm;
   PetscSection       section;
-  PetscInt           time_step, num_fields, pStart, pEnd, fvGhostStart;
+  PetscInt           time_step, num_fields, pStart, pEnd, fvGhostStart, ncomp;
   PetscReal          time, *time_slot;
   size_t            *step_slot;
   const PetscScalar *v;
@@ -2416,18 +2416,6 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
     PetscCheck((global_grid_loc == CGNS_ENUMV(CellCenter)) || (global_grid_loc == CGNS_ENUMV(Vertex)), PetscObjectComm((PetscObject)viewer), PETSC_ERR_SUP, "Grid location should only be CellCenter (%d) or Vertex(%d), but have %" PetscInt_FMT, CGNS_ENUMV(CellCenter), CGNS_ENUMV(Vertex), global_grid_loc);
     cgv->grid_loc = (CGNS_ENUMT(GridLocation_t))global_grid_loc;
   }
-  if (!cgv->nodal_field) {
-    switch (cgv->grid_loc) {
-    case CGNS_ENUMV(Vertex): {
-      PetscCall(PetscMalloc1(cgv->nEnd - cgv->nStart, &cgv->nodal_field));
-    } break;
-    case CGNS_ENUMV(CellCenter): {
-      PetscCall(PetscMalloc1(cgv->eEnd - cgv->eStart, &cgv->nodal_field));
-    } break;
-    default:
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Can only write for Vertex and CellCenter grid locations");
-    }
-  }
   if (!cgv->output_times) PetscCall(PetscSegBufferCreate(sizeof(PetscReal), 20, &cgv->output_times));
   if (!cgv->output_steps) PetscCall(PetscSegBufferCreate(sizeof(size_t), 20, &cgv->output_steps));
 
@@ -2448,22 +2436,43 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
   PetscCallCGNSWrite(cg_sol_write(cgv->file_num, cgv->base, cgv->zone, solution_name, cgv->grid_loc, &sol), V, viewer);
   PetscCall(VecGetArrayRead(V, &v));
   PetscCall(PetscSectionGetNumFields(section, &num_fields));
+
+  int *cgfield_ids;
   for (PetscInt field = 0; field < num_fields; field++) {
-    PetscInt    ncomp;
+    PetscCall(PetscSectionGetFieldComponents(section, field, &ncomp));
+    cgv->num_nodal_fields += ncomp;
+  }
+  if (!cgv->nodal_fields) PetscCall(PetscCalloc1(cgv->num_nodal_fields, &cgv->nodal_fields));
+  PetscCall(PetscMalloc1(cgv->num_nodal_fields, &cgfield_ids));
+  for (PetscInt field = 0, nodal_field_idx = 0; field < num_fields; field++) {
     const char *field_name;
+
     PetscCall(PetscSectionGetFieldName(section, field, &field_name));
     PetscCall(PetscSectionGetFieldComponents(section, field, &ncomp));
-    for (PetscInt comp = 0; comp < ncomp; comp++) {
-      int         cgfield;
+    for (PetscInt comp = 0; comp < ncomp; comp++, nodal_field_idx++) {
       const char *comp_name;
       char        cgns_field_name[32]; // CGNS max field name is 32
       CGNS_ENUMT(DataType_t) datatype;
+
       PetscCall(PetscSectionGetComponentName(section, field, comp, &comp_name));
       if (ncomp == 1 && comp_name[0] == '0' && comp_name[1] == '\0' && field_name[0] != '\0') PetscCall(PetscStrncpy(cgns_field_name, field_name, sizeof cgns_field_name));
       else if (field_name[0] == '\0') PetscCall(PetscStrncpy(cgns_field_name, comp_name, sizeof cgns_field_name));
       else PetscCall(PetscSNPrintf(cgns_field_name, sizeof cgns_field_name, "%s.%s", field_name, comp_name));
       PetscCall(PetscCGNSDataType(PETSC_SCALAR, &datatype));
-      PetscCallCGNSWrite(cgp_field_write(cgv->file_num, cgv->base, cgv->zone, sol, datatype, cgns_field_name, &cgfield), V, viewer);
+      PetscCallCGNSWrite(cgp_field_write(cgv->file_num, cgv->base, cgv->zone, sol, datatype, cgns_field_name, &cgfield_ids[nodal_field_idx]), V, viewer);
+
+      if (!cgv->nodal_fields[nodal_field_idx]) {
+        switch (cgv->grid_loc) {
+        case CGNS_ENUMV(Vertex): {
+          PetscCall(PetscMalloc1(cgv->nEnd - cgv->nStart, &cgv->nodal_fields[nodal_field_idx]));
+        } break;
+        case CGNS_ENUMV(CellCenter): {
+          PetscCall(PetscMalloc1(cgv->eEnd - cgv->eStart, &cgv->nodal_fields[nodal_field_idx]));
+        } break;
+        default:
+          SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Can only write for Vertex and CellCenter grid locations");
+        }
+      }
       for (PetscInt p = pStart, n = 0; p < pEnd; p++) {
         PetscInt off, dof;
         PetscCall(PetscSectionGetFieldDof(section, p, field, &dof));
@@ -2474,32 +2483,34 @@ PetscErrorCode VecView_Plex_Local_CGNS(Vec V, PetscViewer viewer)
           case CGNS_ENUMV(Vertex): {
             PetscInt gn = cgv->node_l2g[n];
             if (gn < cgv->nStart || cgv->nEnd <= gn) continue;
-            cgv->nodal_field[gn - cgv->nStart] = v[off + c];
+            cgv->nodal_fields[nodal_field_idx][gn - cgv->nStart] = v[off + c];
           } break;
           case CGNS_ENUMV(CellCenter): {
-            cgv->nodal_field[n] = v[off + c];
+            cgv->nodal_fields[nodal_field_idx][n] = v[off + c];
           } break;
           default:
             SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Can only pack for Vertex and CellCenter grid locations");
           }
         }
       }
-      // CGNS nodes use 1-based indexing
-      cgsize_t start, end;
-      switch (cgv->grid_loc) {
-      case CGNS_ENUMV(Vertex): {
-        start = cgv->nStart + 1;
-        end   = cgv->nEnd;
-      } break;
-      case CGNS_ENUMV(CellCenter): {
-        start = cgv->eStart + 1;
-        end   = cgv->eEnd;
-      } break;
-      default:
-        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Can only write for Vertex and CellCenter grid locations");
-      }
-      PetscCallCGNSWriteData(cgp_field_write_data(cgv->file_num, cgv->base, cgv->zone, sol, cgfield, &start, &end, cgv->nodal_field), V, viewer);
     }
+
+    // CGNS nodes use 1-based indexing
+    cgsize_t start, end;
+    switch (cgv->grid_loc) {
+    case CGNS_ENUMV(Vertex): {
+      start = cgv->nStart + 1;
+      end   = cgv->nEnd;
+    } break;
+    case CGNS_ENUMV(CellCenter): {
+      start = cgv->eStart + 1;
+      end   = cgv->eEnd;
+    } break;
+    default:
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Can only write for Vertex and CellCenter grid locations");
+    }
+    PetscCallCGNSWriteData(cgp_field_multi_write_data(cgv->file_num, cgv->base, cgv->zone, sol, cgfield_ids, &start, &end, cgv->num_nodal_fields, (const void **)cgv->nodal_fields), V, viewer);
+    PetscCall(PetscFree(cgfield_ids));
   }
   PetscCall(VecRestoreArrayRead(V, &v));
   PetscCall(PetscViewerCGNSCheckBatch_Internal(viewer));
