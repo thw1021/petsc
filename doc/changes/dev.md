@@ -87,6 +87,8 @@
 ```{rubric} DMPlex:
 ```
 
+- Change CGNS viewer to use multi-component read/write interface for better performance
+
 ```{rubric} FE/FV:
 ```
 
