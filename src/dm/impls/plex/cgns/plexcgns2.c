@@ -2579,9 +2579,9 @@ PetscErrorCode VecLoad_Plex_CGNS_Internal(Vec V, PetscViewer viewer)
     }
 
     { // Read data into component-major ordering
-      int isol, numSols;
       CGNS_ENUMT(DataType_t) datatype;
-      double *fields_CGNS;
+      int      isol, numSols;
+      double **fields_CGNS;
 
       PetscCallCGNSRead(cg_nsols(cgid, B, z, &numSols), V, viewer);
       PetscCall(PetscViewerCGNSGetSolutionFileIndex_Internal(viewer, &isol));
@@ -2590,17 +2590,23 @@ PetscErrorCode VecLoad_Plex_CGNS_Internal(Vec V, PetscViewer viewer)
 
       cgsize_t range_min[3] = {mystartv + 1, 1, 1};
       cgsize_t range_max[3] = {myendv, 1, 1};
-      PetscCall(PetscMalloc1(myownedv * numComp, &fields_CGNS));
+      int     *field_ids;
+      PetscCall(PetscMalloc2(numComp, &fields_CGNS, numComp, &field_ids));
+      for (PetscInt i = 0; i < numComp; i++) {
+        PetscCall(PetscMalloc1(myownedv, &fields_CGNS[i]));
+        field_ids[i] = i + 1;
+      }
       PetscCall(PetscMalloc1(myownedv * numComp, &fields));
       for (int d = 0; d < numComp; ++d) {
         PetscCallCGNSRead(cg_field_info(cgid, B, z, isol, (d + 1), &datatype, buffer), V, viewer);
         PetscCheck(datatype == CGNS_ENUMV(RealDouble), PETSC_COMM_SELF, PETSC_ERR_ARG_NOTSAMETYPE, "Field %s in file is not of type double", buffer);
-        PetscCallCGNSReadData(cgp_field_read_data(cgid, B, z, isol, (d + 1), range_min, range_max, &fields_CGNS[d * myownedv]), V, viewer);
       }
+      PetscCallCGNSReadData(cgp_field_multi_read_data(cgid, B, z, isol, field_ids, range_min, range_max, numComp, (void **)fields_CGNS), V, viewer);
       for (int d = 0; d < numComp; ++d) {
-        for (PetscInt v = 0; v < myownedv; ++v) fields[v * numComp + d] = fields_CGNS[d * myownedv + v];
+        for (PetscInt v = 0; v < myownedv; ++v) fields[v * numComp + d] = fields_CGNS[d][v];
       }
-      PetscCall(PetscFree(fields_CGNS));
+      for (PetscInt i = 0; i < numComp; i++) PetscCall(PetscFree(fields_CGNS[i]));
+      PetscCall(PetscFree2(fields_CGNS, field_ids));
     }
 
     { // Reduce fields into Vec array
