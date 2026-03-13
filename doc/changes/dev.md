@@ -89,6 +89,7 @@
 ## DMPlex
 
 - Add `DMPlexSetClosurePermutationLexicographic()`
+- Change CGNS viewer to use multi-component read/write interface for better performance
 
 ## FE/FV
 
