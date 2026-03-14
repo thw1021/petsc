@@ -702,7 +702,7 @@ where noted, add a newline after the section headings.
     without said manual pages.
 
 17. Every new API entry such as functions and typedefs must be listed in the `doc/changes/dev.md` file. A merge request cannot be accepted
-    without said entries in the the `doc/changes/dev.md` file.
+    without said entries in the `doc/changes/dev.md` file.
 
 [^footnote-1]: Type also refers to the string name of the subclass.
 
