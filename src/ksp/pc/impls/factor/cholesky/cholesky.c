@@ -304,8 +304,8 @@ PetscErrorCode PCFactorSetReuseOrdering(PC pc, PetscBool flag)
 
 .seealso: [](ch_ksp), `PCCreate()`, `PCSetType()`, `PCType`, `PC`,
           `PCILU`, `PCLU`, `PCICC`, `PCFactorSetReuseOrdering()`, `PCFactorSetReuseFill()`, `PCFactorGetMatrix()`,
-          `PCFactorSetFill()`, `PCFactorSetShiftType()`, `PCFactorSetShiftAmount()`
-          `PCFactorSetUseInPlace()`, `PCFactorGetUseInPlace()`, `PCFactorSetMatOrderingType()`, `PCFactorSetReuseOrdering()`
+          `PCFactorSetFill()`, `PCFactorSetShiftType()`, `PCFactorSetShiftAmount()`,
+          `PCFactorSetUseInPlace()`, `PCFactorGetUseInPlace()`, `PCFactorSetMatOrderingType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Cholesky(PC pc)
