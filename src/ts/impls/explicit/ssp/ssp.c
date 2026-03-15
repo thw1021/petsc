@@ -247,8 +247,8 @@ static PetscErrorCode TSDestroy_SSP(TS ts)
 - ssptype - type of scheme to use
 
   Options Database Keys:
-+ -ts_ssp_type <rks2>               - Type of `TSSSP` method (one of) rks2 rks3 rk104
-- -ts_ssp_nstages<rks2: 5, rks3: 9> - Number of stages
++ -ts_ssp_type rks2               - Type of `TSSSP` method (one of) rks2 rks3 rk104
+- -ts_ssp_nstagesrks2: 5, rks3: 9 - Number of stages
 
   Level: beginner
 
@@ -297,8 +297,8 @@ PetscErrorCode TSSSPGetType(TS ts, TSSSPType *type)
 - nstages - number of stages
 
   Options Database Keys:
-+ -ts_ssp_type <rks2>               - Type of `TSSSP` method (one of) rks2 rks3 rk104
-- -ts_ssp_nstages<rks2: 5, rks3: 9> - Number of stages
++ -ts_ssp_type rks2               - Type of `TSSSP` method (one of) rks2 rks3 rk104
+- -ts_ssp_nstagesrks2: 5, rks3: 9 - Number of stages
 
   Level: beginner
 
