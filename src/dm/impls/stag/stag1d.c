@@ -22,10 +22,10 @@
 . dm - the new `DMSTAG` object
 
   Options Database Keys:
-+ -dm_view                                      - calls `DMViewFromOptions()` at the conclusion of `DMSetUp()`
-. -stag_grid_x <nx>                             - number of elements in the x direction
-. -stag_ghost_stencil_width                     - width of ghost region, in elements
-- -stag_boundary_type_x <none,ghosted,periodic> - `DMBoundaryType` value
++ -dm_view                                        - calls `DMViewFromOptions()` at the conclusion of `DMSetUp()`
+. -stag_grid_x nx                                 - number of elements in the x direction
+. -stag_ghost_stencil_width                       - width of ghost region, in elements
+- -stag_boundary_type_x [none, ghosted, periodic] - `DMBoundaryType` value
 
   Level: beginner
 
