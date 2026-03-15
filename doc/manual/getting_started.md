@@ -149,11 +149,11 @@ running any PETSc program with the option `-help`.
 - `-malloc_debug` - enable memory debugging (by default, this is
   activated for the debugging version of PETSc), see
   {any}`detecting_memory_problems`,
-- `-start_in_debugger` `[noxterm,gdb,lldb]`
+- `-start_in_debugger [noxterm,][(gdb|lldb)]`
   `[-display name]` - start all (or a subset of the) processes in a debugger. See
   {any}`sec_debugging`, for more information on
   debugging PETSc programs.
-- `-on_error_attach_debugger` `[noxterm,gdb,lldb]`
+- `-on_error_attach_debugger` `[noxterm,][(gdb|lldb)]`
   `[-display name]` - start debugger only on encountering an error
 - `-info` - print a great deal of information about what the program
   is doing as it runs
