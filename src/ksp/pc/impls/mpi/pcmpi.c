@@ -909,9 +909,9 @@ static PetscErrorCode PCSetFromOptions_MPI(PC pc, PetscOptionItems PetscOptionsO
      PCMPI - Calls an MPI parallel `KSP` to solve a linear system from user code running on one process
 
    Options Database Keys for the Server:
-+  -mpi_linear_solver_server - causes the PETSc program to start in MPI linear solver server mode where only the first MPI rank runs user code
-.  -mpi_linear_solver_server_view - displays information about all the linear systems solved by the MPI linear solver server
--  -mpi_linear_solver_server_use_shared_memory <true, false> - use shared memory to distribute matrix and right hand side, defaults to true
++  -mpi_linear_solver_server                                 - causes the PETSc program to start in MPI linear solver server mode where only the first MPI rank runs user code
+.  -mpi_linear_solver_server_view                            - displays information about all the linear systems solved by the MPI linear solver server
+-  -mpi_linear_solver_server_use_shared_memory [true, false] - use shared memory to distribute matrix and right hand side, defaults to true
 
    Options Database Keys for a specific `KSP` object
 +  -[any_ksp_prefix]_mpi_linear_solver_server_minimum_count_per_rank - sets the minimum size of the linear system per MPI rank that the solver will strive for

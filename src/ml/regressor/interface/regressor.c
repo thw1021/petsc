@@ -165,7 +165,7 @@ PetscErrorCode PetscRegressorViewFromOptions(PetscRegressor A, PetscObject obj, 
 . regressor - the `PetscRegressor` context
 
   Options Database Keys:
-. -regressor_type <type> - the particular type of regressor to be used; see `PetscRegressorType` for complete list
+. -regressor_type type - the particular type of regressor to be used; see `PetscRegressorType` for complete list
 
   Level: beginner
 
@@ -370,7 +370,7 @@ PetscErrorCode PetscRegressorDestroy(PetscRegressor *regressor)
 - type      - a known regression method
 
   Options Database Key:
-. -regressor_type <type> - Sets the type of regressor; use -help for a list of available types
+. -regressor_type type - Sets the type of regressor; use -help for a list of available types
 
   Level: intermediate
 
