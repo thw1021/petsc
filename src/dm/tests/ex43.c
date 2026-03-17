@@ -4,8 +4,8 @@ static char help[] = "Demonstrates the DMLocalToLocal bug in PETSc 3.6.\n\n";
 Use the options
      -da_grid_x <nx> - number of grid points in x direction, if M < 0
      -da_grid_y <ny> - number of grid points in y direction, if N < 0
-     -da_processors_x <MX> number of processors in x directio
-     -da_processors_y <MY> number of processors in x direction
+     -da_processors_x <MX> - number of processors in x directio
+     -da_processors_y <MY> - number of processors in x direction
 
   Contributed by Constantine Khroulev
 */
