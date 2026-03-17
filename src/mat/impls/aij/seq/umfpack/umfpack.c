@@ -374,7 +374,8 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_umfpack(Mat A, MatSolverType
   Use `-pc_type lu` `-pc_factor_mat_solver_type umfpack` to use this direct solver
 
   Consult UMFPACK documentation for more information about the Control parameters
-  which correspond to the options database keys below.
+  which correspond to the options database keys below. By default, iterative refinement
+  is disabled, unlike UMFPack's default when it is used directly (not through PETSc), which sets `Control[UMFPACK_IRSTEP] = 2`.
 
   Options Database Keys:
 + -mat_umfpack_ordering                - `CHOLMOD`, `AMD`, `GIVEN`, `METIS`, `BEST`, `NONE`
