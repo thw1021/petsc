@@ -666,9 +666,37 @@ where noted, add a newline after the section headings.
     . arg - the integer argument description
     ```
 
-08. If documenting a function that interacts with the options database, a
+08. When documenting a function or object that interacts with the options database, a
     list of options database keys in an `Options Database Key(s):`
     section.
+
+    The standard format is
+
+    ```
+    -objectname_optionname variablename - text explaining the option
+    ```
+
+    When possible `variablename` should match the string used for declaring
+    the variable in the manual pages. The default value may be provided at the end
+    of the text.
+
+    When the option accepts a comma separated list of values this may be indicated
+    with
+
+    ```
+    -objectname_optionname variablename1,variablename2 - text explaining the option
+    ```
+
+    Note there should be no spaces between the commas.
+
+    For options with a small possible set of values one may use, for example,
+
+    ```
+    -objectname_optionname (true|false) - text explaining the option
+    ```
+
+    Note that in this situation a `variablename` is never provided and there
+    should be no spaces around the pipes.
 
 09. `Level:` (no newline) followed by `beginner`,
     `intermediate`, `advanced`, `developer`, or `deprecated`. This

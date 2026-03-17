@@ -195,7 +195,7 @@ PetscErrorCode PetscWaitOnError(void)
 . -display name                            - XDisplay to open xterm in
 . -debugger_ranks m,n                      - Which MPI ranks on which to start the debugger, defaults to all
 . -stop_for_debugger                       - Print a message on how to attach the process with a debugger and then wait for the user to attach
-- -debugger_pause <secs>                   - Wait <secs> before attaching the debugger. This is useful for slow connections
+- -debugger_pause secs                     - Wait secs before attaching the debugger. This is useful for slow connections
                                              that take a long time for the Terminal window or xterm to start up.
 
   Level: advanced
