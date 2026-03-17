@@ -1,0 +1,53 @@
+!
+!   Tests TSRKGetTableau()
+!
+!23456789012345678901234567890123456789012345678901234567890123456789012
+#include <petsc/finclude/petscts.h>
+
+program main
+  use petscts
+  implicit none
+!
+  TS ts
+  PetscInt s, p
+  PetscBool FSAL
+  PetscReal, pointer :: A(:), b(:), c(:), bembed(:), binterp(:)
+  PetscErrorCode ierr
+  Vec x
+
+  PetscCallA(PetscInitialize(ierr))
+  PetscCallA(TSCreate(PETSC_COMM_WORLD, ts, ierr))
+  PetscCallA(TSSetType(ts, TSRK, ierr))
+  PetscCallA(TSSetFromOptions(ts, ierr))
+  PetscCallA(VecCreateSeq(PETSC_COMM_SELF, 1_PETSC_INT_KIND, x, ierr))
+  PetscCallA(TSSetSolution(ts, x, ierr))
+
+  PetscCallA(TSSetUp(ts, ierr))
+  PetscCallA(TSRKGetTableau(ts, s, A, b, c, bembed, p, binterp, FSAL, ierr))
+  PetscCallA(PetscRealView(size(A), A, PETSC_VIEWER_STDOUT_SELF, ierr))
+  PetscCallA(PetscRealView(size(b), b, PETSC_VIEWER_STDOUT_SELF, ierr))
+  PetscCallA(PetscRealView(size(c), c, PETSC_VIEWER_STDOUT_SELF, ierr))
+  PetscCallA(PetscRealView(size(bembed), bembed, PETSC_VIEWER_STDOUT_SELF, ierr))
+  PetscCallA(PetscRealView(size(binterp), binterp, PETSC_VIEWER_STDOUT_SELF, ierr))
+  print *, s, p
+  PetscCallA(TSRKRestoreTableau(ts, s, A, b, c, bembed, p, binterp, FSAL, ierr))
+
+  PetscCallA(TSRKSetType(ts, "5bs", ierr))
+  PetscCallA(TSSetUp(ts, ierr))
+  PetscCallA(TSRKGetTableau(ts, s, A, PETSC_NULL_REAL_POINTER, c, bembed, p, binterp, PETSC_NULL_BOOL, ierr))
+  PetscCallA(PetscRealView(size(A), A, PETSC_VIEWER_STDOUT_SELF, ierr))
+  PetscCallA(PetscRealView(size(c), c, PETSC_VIEWER_STDOUT_SELF, ierr))
+  PetscCallA(PetscRealView(size(bembed), bembed, PETSC_VIEWER_STDOUT_SELF, ierr))
+  PetscCallA(PetscRealView(size(binterp), binterp, PETSC_VIEWER_STDOUT_SELF, ierr))
+  print *, s, p
+  PetscCallA(TSRKRestoreTableau(ts, s, A, PETSC_NULL_REAL_POINTER, c, bembed, p, binterp, PETSC_NULL_BOOL, ierr))
+
+  PetscCallA(VecDestroy(x, ierr))
+  PetscCallA(TSDestroy(ts, ierr))
+  PetscCallA(PetscFinalize(ierr))
+end
+!/*TEST
+!
+!    test:
+!
+!TEST*/
