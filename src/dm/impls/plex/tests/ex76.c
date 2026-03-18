@@ -188,7 +188,7 @@ int main(int argc, char **argv)
       /* Loewner checks */
       PetscBool ge1 = LoewnerGE(Mread, M1mat, 1e-10);
       PetscBool ge2 = LoewnerGE(Mread, M2mat, 1e-10);
-      if (!ge1 || !ge2) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Intersection not >= inputs in Loewner order");
+      PetscCheck(ge1 && ge2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Intersection not >= inputs in Loewner order");
 
       /* Exact match for aligned eigenbasis */
       PetscScalar maxdiff = 0.0;
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
           PetscScalar d = fabs(Mread[i][j] - Mcap_expected[i][j]);
           if (d > maxdiff) maxdiff = d;
         }
-      if (maxdiff > 1e-12) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Aligned-eigenbasis formula failed at vertex (maxdiff=%.3e)", maxdiff);
+      PetscCheck(maxdiff < 1e-12, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Aligned-eigenbasis formula failed at vertex (maxdiff=%.3e)", maxdiff);
     }
   }
   PetscCall(VecRestoreArrayRead(mcap, &arr));
@@ -226,7 +226,7 @@ int main(int argc, char **argv)
 
         PetscBool ge1 = LoewnerGE(Mread, M1mat, 1e-10);
         PetscBool ge2 = LoewnerGE(Mread, M2mat, 1e-10);
-        if (!ge1 || !ge2) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Intersection not >= inputs (misaligned)");
+        PetscCheck(ge1 && ge2, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Intersection not >= inputs (misaligned)");
       }
     }
     PetscCall(VecRestoreArrayRead(mcap, &ar2));
