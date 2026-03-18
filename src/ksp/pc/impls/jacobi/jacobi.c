@@ -493,14 +493,16 @@ static PetscErrorCode PCView_Jacobi(PC pc, PetscViewer viewer)
    Level: beginner
 
   Notes:
-    By using `KSPSetPCSide`(ksp,`PC_SYMMETRIC`) or -ksp_pc_side symmetric
-    can scale each side of the matrix by the square root of the diagonal entries.
+  By using `KSPSetPCSide`(ksp,`PC_SYMMETRIC`) or -ksp_pc_side symmetric
+  can scale each side of the matrix by the square root of the diagonal entries.
 
-    Zero entries along the diagonal are replaced with the value 1.0
+  Zero entries along the diagonal are replaced with the value 1.0
 
-    See `PCPBJACOBI` for fixed-size point block, `PCVPBJACOBI` for variable-sized point block, and `PCBJACOBI` for large size blocks
+  See `PCPBJACOBI` for fixed-size point block, `PCVPBJACOBI` for variable-sized point block, and `PCBJACOBI` for large size blocks
 
-.seealso:  `PCCreate()`, `PCSetType()`, `PCType`, `PC`,
+  `PCJACOBI` can never produce a `PCFailedReason` from `PCGetFailedReason()` that is not `PC_NOERR`.
+
+.seealso:  `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PC_NOERR`
            `PCJacobiSetType()`, `PCJacobiSetUseAbs()`, `PCJacobiGetUseAbs()`, `PCASM`,
            `PCJacobiSetFixDiagonal()`, `PCJacobiGetFixDiagonal()`
            `PCJacobiSetType()`, `PCJacobiSetUseAbs()`, `PCJacobiGetUseAbs()`, `PCPBJACOBI`, `PCBJACOBI`, `PCVPBJACOBI`
@@ -546,6 +548,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_Jacobi(PC pc)
   pc->ops->applyrichardson     = NULL;
   pc->ops->applysymmetricleft  = PCApplySymmetricLeftOrRight_Jacobi;
   pc->ops->applysymmetricright = PCApplySymmetricLeftOrRight_Jacobi;
+
+  pc->failedreasonpossibility = PC_FAILED_REASON_POSSIBILITY_NONE;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiSetType_C", PCJacobiSetType_Jacobi));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCJacobiGetType_C", PCJacobiGetType_Jacobi));

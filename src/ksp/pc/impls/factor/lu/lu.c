@@ -250,6 +250,8 @@ static PetscErrorCode PCMatApplyTranspose_LU(PC pc, Mat X, Mat Y)
    not need a Krylov method (i.e. you can use -ksp_type preonly, or
    `KSPSetType`(ksp,`KSPPREONLY`) for the Krylov method.
 
+   `PCLU will always return the same value for `PCFailedReason` on calls to `PCGetFailedReason()` for all MPI processes in `PC`
+
 .seealso: [](ch_ksp), `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `MatSolverType`, `MatGetFactor()`, `PCQR`, `PCSVD`,
           `PCILU`, `PCCHOLESKY`, `PCICC`, `PCFactorSetReuseOrdering()`, `PCFactorSetReuseFill()`, `PCFactorGetMatrix()`,
           `PCFactorSetFill()`, `PCFactorSetUseInPlace()`, `PCFactorSetMatOrderingType()`, `PCFactorSetColumnPivot()`,

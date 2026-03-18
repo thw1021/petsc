@@ -48,13 +48,17 @@ struct _p_PC {
   PetscBool diagonalscale;
   PetscBool useAmat;                                                                        /* used by several PC that including applying the operator inside the preconditioner */
   PetscErrorCode (*modifysubmatrices)(PC, PetscInt, const IS[], const IS[], Mat[], void *); /* user provided routine */
-  void          *modifysubmatricesP;                                                        /* context for user routine */
-  void          *data;
-  void          *ctx;              /* optional user-defined context */
-  PCFailedReason failedreason;     /* after VecNorm or VecDot contains maximum of all rank failed reasons */
-  PCFailedReason failedreasonrank; /* failed reason on this rank */
-  PetscInt       presolvedone;
+  void *modifysubmatricesP;                                                                 /* context for user routine */
+  void *data;
+  void *ctx; /* optional user-defined context */
   PetscErrorCode (*postsetup)(PC);
+  PCFailedReason            failedreason;            /* after VecNorm or VecDot contains maximum of all rank failed reasons */
+  PCFailedReason            failedreasonrank;        /* failed reason on this rank */
+  PCFailedReasonPossibility failedreasonpossibility; /* what types of failed reasons this PC can return */
+
+  PetscInt presolvedone;
+  PetscErrorCode (*presolve)(PC, KSP);
+
   PetscInt kspnestlevel; /* how many levels of nesting does the KSP have that contains the PC */
 };
 

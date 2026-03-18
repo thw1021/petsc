@@ -701,6 +701,16 @@ PetscErrorCode PCFactorInitialize(PC pc, MatFactorType ftype)
   fact->info.pivotinblocks   = 1.0;
   pc->ops->getfactoredmatrix = PCFactorGetMatrix_Factor;
 
+  /*
+    TODO: For each external direct solver does it always return an error condition on ALL MPI processes, or can it return the error
+    condition on a subset of the MPI processes? If any solvers return the error condition on ALL MPI processes then a system could be
+    constructed where the factor returned with MatGetFactor() could provide this information which could then be used by the PCFactor routines to set the flag
+
+    pc->failedreasonpossibility = PC_FAILED_REASON_POSSIBILITY_COLLECTIVE;
+
+    Currently we assume when a PC is instantiated PC_FAILED_REASON_POSSIBILITY_NONCOLLECTIVE (see PCCreate)
+  */
+
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCFactorSetZeroPivot_C", PCFactorSetZeroPivot_Factor));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCFactorGetZeroPivot_C", PCFactorGetZeroPivot_Factor));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCFactorSetShiftType_C", PCFactorSetShiftType_Factor));

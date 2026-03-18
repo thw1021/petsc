@@ -483,6 +483,8 @@ PetscErrorCode PCCreate(MPI_Comm comm, PC *newpc)
   pc->modifysubmatrices  = NULL;
   pc->modifysubmatricesP = NULL;
 
+  pc->failedreasonpossibility = PC_FAILED_REASON_POSSIBILITY_NONCOLLECTIVE;
+
   *newpc = pc;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -994,7 +996,7 @@ PetscErrorCode PCSetFailedReason(PC pc, PCFailedReason reason)
 }
 
 /*@
-  PCGetFailedReason - Gets the reason a `PCSetUp()` failed or `PC_NOERROR` if it did not fail
+  PCGetFailedReason - Gets the reason a `PCSetUp()` or `PCApply()` failed or `PC_NOERROR` if it did not fail
 
   Not Collective
 
@@ -1002,12 +1004,12 @@ PetscErrorCode PCSetFailedReason(PC pc, PCFailedReason reason)
 . pc - the `PC` preconditioner context
 
   Output Parameter:
-. reason - the reason it failed
+. reason - the reason it failed, see `PCFailedReason`
 
   Level: advanced
 
   Note:
-  After a call to `KSPCheckDot()` or  `KSPCheckNorm()` inside a `KSPSolve()` or a call to `PCReduceFailedReason()`
+  After a call `KSPCheckDot()` or  `KSPCheckNorm()` inside a `KSPSolve()` or a call to `PCReduceFailedReason()`
   this is the maximum reason over all MPI processes in the `PC` communicator and hence logically collective.
   Otherwise it returns the local value.
 
@@ -1022,9 +1024,10 @@ PetscErrorCode PCGetFailedReason(PC pc, PCFailedReason *reason)
 }
 
 /*@
-  PCReduceFailedReason - Reduce the failed reason among the MPI processes that share the `PC`
+  PCReduceFailedReason - Reduce the failed reason among the MPI processes that share the `PC`. After this call
+  all MPI processes that share the `PC` will have a common value returned by `PCGetFailedReason()`.
 
-  Collective
+  Collective if the `PC` has a `PCFailedReasonPossibility` of `PC_FAILED_POSSIBILITY_NONCOLLECTIVE`
 
   Input Parameter:
 . pc - the `PC` preconditioner context
@@ -1035,17 +1038,17 @@ PetscErrorCode PCGetFailedReason(PC pc, PCFailedReason *reason)
   Different MPI processes may have different reasons or no reason, see `PCGetFailedReason()`. This routine
   makes them have a common value (failure if any MPI process had a failure).
 
-.seealso: [](ch_ksp), `PC`, `PCCreate()`, `PCApply()`, `PCDestroy()`, `PCGetFailedReason()`, `PCSetFailedReason()`, `PCFailedReason`
+.seealso: [](ch_ksp), `PC`, `PCCreate()`, `PCApply()`, `PCDestroy()`, `PCGetFailedReason()`, `PCSetFailedReason()`, `PCFailedReason`, `PCFailedReasonPossibility`
 @*/
 PetscErrorCode PCReduceFailedReason(PC pc)
 {
-  PetscInt buf;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  buf = (PetscInt)pc->failedreason;
-  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &buf, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)pc)));
-  pc->failedreason = (PCFailedReason)buf;
+  if (pc->failedreasonpossibility == PC_FAILED_REASON_POSSIBILITY_NONCOLLECTIVE) {
+    PetscInt buf = (PetscInt)pc->failedreason;
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &buf, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)pc)));
+    pc->failedreason = (PCFailedReason)buf;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
