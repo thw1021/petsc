@@ -727,6 +727,7 @@ class Configure(config.base.Configure):
       if not self.argDB['with-cuda']:
         raise RuntimeError('cuda-rdc requires --with-cuda=1 [along with --with-shared-libraries=0]')
       self.CUDAPPFLAGS += ' --device-c'
+      self.framework.addMakeMacro('PETSC_RDC',1)
     # SYCLC_LINKER_FLAGS is init'ed above in the "for language" loop.
     # FIXME: these linker flags are init'ed as a list, while others are init'ed as a string. Need to make them consistent.
     for flagsArg in ['CC_LINKER_FLAGS', 'CXX_LINKER_FLAGS', 'FC_LINKER_FLAGS', 'CUDAC_LINKER_FLAGS', 'HIPC_LINKER_FLAGS', 'sharedLibraryFlags', 'dynamicLibraryFlags']:
