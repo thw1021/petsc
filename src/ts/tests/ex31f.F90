@@ -1,7 +1,6 @@
 !
 !   Tests TSRKGetTableau()
 !
-!23456789012345678901234567890123456789012345678901234567890123456789012
 #include <petsc/finclude/petscts.h>
 
 program main
