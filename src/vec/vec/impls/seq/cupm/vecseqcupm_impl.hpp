@@ -2031,7 +2031,8 @@ inline PetscErrorCode VecSeq_CUPM<T>::WDot(Vec x, Vec y, Vec w, PetscScalar *z) 
 {
   PetscDeviceContext dctx;
   cupmStream_t       stream;
-  const PetscInt     n = x->map->n;
+  PetscScalar        zero = 0.;
+  const PetscInt     n    = x->map->n;
 
   PetscFunctionBegin;
   PetscCall(GetHandles_(&dctx, &stream));
@@ -2048,7 +2049,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::WDot(Vec x, Vec y, Vec w, PetscScalar *z) 
         thrust::make_zip_iterator(thrust::make_tuple(xdptr, ydptr, wdptr)),
         thrust::make_zip_iterator(thrust::make_tuple(xdptr + n, ydptr + n, wdptr + n)),
         detail::wdot_transform{},
-        0.,
+        zero,
         thrust::plus<PetscScalar>()
       )
     );

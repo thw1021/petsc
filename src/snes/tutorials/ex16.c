@@ -1065,7 +1065,7 @@ PetscErrorCode DisplayLine(SNES snes, Vec X)
       nsize: {{1 2}}
       suffix: 7
       args: -dm_vec_type kokkos -dm_mat_type aijkokkos -da_refine 1 -rad 10.0 -young 10. -ploading -1. -loading -1. -rescale -pc_type mg -mg_levels_ksp_max_it 2 -snes_monitor_short -snes_type newtonal -snes_newtonal_step_size 10 -snes_newtonal_correction_type exact -ksp_rtol 1e-4
-      requires: kokkos !complex !single
+      requires: kokkos_kernels !complex !single
       timeoutfactor: 3
 
    test:
