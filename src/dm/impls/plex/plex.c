@@ -11091,7 +11091,7 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
   /* First create a matrix object */
   PetscCall(MatCreate(PetscObjectComm((PetscObject)dm), &L));
   PetscCall(MatSetSizes(L, numVertices, numVertices, PETSC_DECIDE, PETSC_DECIDE));
-  PetscCall(MatSetOptionsPrefix(L, "laplacian_"));
+  PetscCall(MatSetOptionsPrefix(L, "dm_plex_laplacian_"));
   PetscCall(MatSetFromOptions(L));
   /* Preallocation. Here we use an helper class called MATPREALLOCATOR that
      does it for us. We only need to loop once with our matrix insertion loop and
