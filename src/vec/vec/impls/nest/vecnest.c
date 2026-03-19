@@ -113,6 +113,27 @@ static PetscErrorCode VecTDot_Nest(Vec x, Vec y, PetscScalar *val)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode VecWDot_Nest(Vec x, Vec y, Vec w, PetscScalar *val)
+{
+  Vec_Nest   *bx = (Vec_Nest *)x->data;
+  Vec_Nest   *by = (Vec_Nest *)y->data;
+  Vec_Nest   *bw = (Vec_Nest *)w->data;
+  PetscInt    nr;
+  PetscScalar sum = 0.0;
+
+  PetscFunctionBegin;
+  VecNestCheckCompatible3(x, 1, y, 2, w, 3);
+  nr = bx->nb;
+  for (PetscInt i = 0; i < nr; i++) {
+    PetscScalar x_wdot_y;
+
+    PetscCall(VecWDot(bx->v[i], by->v[i], bw->v[i], &x_wdot_y));
+    sum += x_wdot_y;
+  }
+  *val = sum;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode VecDotNorm2_Nest(Vec x, Vec y, PetscScalar *dp, PetscScalar *nm)
 {
   Vec_Nest   *bx = (Vec_Nest *)x->data;
@@ -748,6 +769,7 @@ static PetscErrorCode VecNestSetOps_Private(struct _VecOps *ops)
   ops->duplicatevecs           = VecDuplicateVecs_Default;
   ops->destroyvecs             = VecDestroyVecs_Default;
   ops->dot                     = VecDot_Nest;
+  ops->wdot                    = VecWDot_Nest;
   ops->mdot                    = VecMDot_Nest;
   ops->norm                    = VecNorm_Nest;
   ops->tdot                    = VecTDot_Nest;
@@ -782,6 +804,7 @@ static PetscErrorCode VecNestSetOps_Private(struct _VecOps *ops)
   ops->placearray              = NULL;
   ops->replacearray            = NULL;
   ops->dot_local               = VecDot_Nest;
+  ops->wdot_local              = VecWDot_Nest;
   ops->tdot_local              = VecTDot_Nest;
   ops->norm_local              = VecNorm_Nest;
   ops->mdot_local              = VecMDot_Nest;
