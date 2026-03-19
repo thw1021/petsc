@@ -462,4 +462,27 @@ int main(int argc, char **argv)
       suffix: re
       args: -dm_landau_num_cells 4,4 -dm_landau_amr_levels_max 0,2 -dm_landau_z_radius_pre 2.5 -dm_landau_z_radius_post 3.75 -dm_landau_amr_z_refine_pre 1 -dm_landau_amr_z_refine_post 1 -dm_landau_electron_shift 1.25 -info :vec
 
+  testset:
+    requires: p4est !complex double defined(PETSC_USE_DMLANDAU_2D)
+    output_file: output/ex1_dg_0.out
+    filter: grep -v "DM"
+    args: -dm_landau_fe_type dg -dm_landau_amr_levels_max 0,2 -dm_landau_amr_post_refine 0 -dm_landau_amr_re_levels 2 -dm_landau_domain_radius 6,6 -dm_landau_electron_shift 1.5 -dm_landau_ion_charges 1 -dm_landau_ion_masses 2 -dm_landau_n 1,1 -dm_landau_n_0 1e20 -dm_landau_num_cells 2,4 -dm_landau_num_species_grid 1,1 -dm_landau_re_radius 2 -use_nrl false -print_nrl false -dm_landau_thermal_temps .3,.2 -dm_landau_type p4est -dm_landau_verbose -1 -dm_preallocate_only false -ksp_type preonly -pc_type lu -petscspace_degree 3 -snes_converged_reason -snes_rtol 1.e-14 -snes_stol 1.e-14 -ts_adapt_clip .5,1.5 -ts_adapt_dt_max 5 -ts_adapt_monitor -ts_adapt_scale_solve_failed 0.5 -ts_arkimex_type 1bee -ts_time_step .01 -ts_max_snes_failures unlimited -ts_max_steps 1 -ts_max_time 8 -ts_monitor -ts_rtol 1e-2 -ts_type arkimex
+    test:
+      suffix: dg_cpu
+      args: -dm_landau_device_type cpu
+    test:
+      suffix: dg_kokkos
+      requires: kokkos_kernels !defined(PETSC_HAVE_CUDA_CLANG)
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos
+
+  testset:
+    requires: p4est !complex double !defined(PETSC_USE_DMLANDAU_2D) kokkos_kernels !defined(PETSC_HAVE_CUDA_CLANG)
+    output_file: output/ex1_dg_p8est_3d.out
+    filter: grep -v "^DM"
+    nsize: 1
+    args: -dim 3 -dm_landau_fe_type dg -dm_landau_num_species_grid 1,1 -dm_landau_thermal_temps 1,1 -petscspace_degree 2 -dm_landau_type p8est -snes_rtol 1.e-9 -snes_stol 1.e-14 -ts_type beuler -ts_time_step 1.e-2 -ts_max_steps 1 -dm_landau_verbose 2 -dm_landau_domain_radius 6.,6. -ksp_type bicg -pc_type jacobi -dm_landau_amr_levels_max 1,1 -use_nrl false -print_nrl false
+    test:
+      suffix: dg_p8est_3d
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos
+
 TEST*/
