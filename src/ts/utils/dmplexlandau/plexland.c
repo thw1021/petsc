@@ -760,8 +760,15 @@ static PetscErrorCode SetupDS(DM pack, PetscInt dim, PetscInt grid, const char p
   for (ii = ctx->species_offset[grid], i0 = 0; ii < ctx->species_offset[grid + 1]; ii++, i0++) {
     if (ii == 0) PetscCall(PetscSNPrintf(buf, sizeof(buf), "e"));
     else PetscCall(PetscSNPrintf(buf, sizeof(buf), "i%" PetscInt_FMT, ii));
-    /* Setup Discretization - FEM */
-    PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, ctx->simplex, prefix, PETSC_DECIDE, &ctx->fe[ii]));
+    /* Setup Discretization - FEM (CG or DG) */
+    if (ctx->use_dg) {
+      PetscFE cg_fe;
+      PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, ctx->simplex, prefix, PETSC_DECIDE, &cg_fe));
+      PetscCall(PetscFECreateBrokenElement(cg_fe, &ctx->fe[ii]));
+      PetscCall(PetscFEDestroy(&cg_fe));
+    } else {
+      PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, ctx->simplex, prefix, PETSC_DECIDE, &ctx->fe[ii]));
+    }
     PetscCall(PetscObjectSetName((PetscObject)ctx->fe[ii], buf));
     PetscCall(DMSetField(ctx->plex[grid], i0, NULL, (PetscObject)ctx->fe[ii]));
   }
@@ -1094,6 +1101,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->map_sphere = PETSC_TRUE;
   ctx->use_p4est  = PETSC_FALSE;
   ctx->simplex    = PETSC_FALSE;
+  ctx->use_dg     = PETSC_FALSE;
   for (PetscInt grid = 0; grid < LANDAU_MAX_GRIDS; grid++) {
     ctx->radius[grid]             = 5.; /* thermal radius (velocity) */
     ctx->radius_perp[grid]        = 5.; /* thermal radius (velocity) */
@@ -1169,6 +1177,20 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscCall(PetscOptionsBool("-dm_landau_use_mataxpy_mass", "Use fast but slightly fragile MATAXPY to add mass term", "plexland.c", ctx->use_matrix_mass, &ctx->use_matrix_mass, NULL));
   PetscCall(PetscOptionsBool("-dm_landau_use_relativistic_corrections", "Use relativistic corrections", "plexland.c", ctx->use_relativistic_corrections, &ctx->use_relativistic_corrections, NULL));
   PetscCall(PetscOptionsBool("-dm_landau_simplex", "Use simplex elements", "plexland.c", ctx->simplex, &ctx->simplex, NULL));
+  {
+    char fe_type_str[16] = "cg";
+    PetscCall(PetscOptionsString("-dm_landau_fe_type", "Finite element type: 'cg' (continuous Galerkin) or 'dg' (discontinuous Galerkin)", "plexland.c", fe_type_str, fe_type_str, sizeof(fe_type_str), NULL));
+    PetscBool is_dg;
+    PetscCall(PetscStrcmp("dg", fe_type_str, &is_dg));
+    if (is_dg) {
+      ctx->use_dg = PETSC_TRUE;
+    } else {
+      PetscBool is_cg;
+      PetscCall(PetscStrcmp("cg", fe_type_str, &is_cg));
+      PetscCheck(is_cg, ctx->comm, PETSC_ERR_ARG_WRONG, "-dm_landau_fe_type %s: must be 'cg' or 'dg'", fe_type_str);
+      ctx->use_dg = PETSC_FALSE;
+    }
+  }
   PetscCall(PetscOptionsBool("-dm_landau_sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, NULL));
   PetscCall(PetscOptionsBool("-dm_landau_map_sphere", "Map to sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->map_sphere, &ctx->map_sphere, NULL));
   if (LANDAU_DIM == 2 && ctx->use_relativistic_corrections) ctx->use_relativistic_corrections = PETSC_FALSE; // should warn
@@ -1347,8 +1369,8 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "masses:        e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n", (double)ctx->masses[0], (double)(ctx->masses[1] / pmassunit), (double)(ctx->num_species > 2 ? ctx->masses[2] / pmassunit : 0)));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "charges:       e=%10.3e; charges in elementary units: %10.3e %10.3e\n", (double)ctx->charges[0], (double)(-ctx->charges[1] / ctx->charges[0]), (double)(ctx->num_species > 2 ? -ctx->charges[2] / ctx->charges[0] : 0)));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "n:             e: %10.3e                           i: %10.3e %10.3e\n", (double)ctx->n[0], (double)ctx->n[1], (double)(ctx->num_species > 2 ? ctx->n[2] : 0)));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "thermal T (K): e=%10.3e i=%10.3e %10.3e. Normalization grid %" PetscInt_FMT ": v_0=%10.3e (%10.3ec) n_0=%10.3e t_0=%10.3e %" PetscInt_FMT " batched, view batch %" PetscInt_FMT "\n", (double)ctx->thermal_temps[0],
-                          (double)ctx->thermal_temps[1], (double)((ctx->num_species > 2) ? ctx->thermal_temps[2] : 0), non_dim_grid, (double)ctx->v_0, (double)(ctx->v_0 / SPEED_OF_LIGHT), (double)ctx->n_0, (double)ctx->t_0, ctx->batch_sz, ctx->batch_view_idx));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "thermal T (K): e=%10.3e i=%10.3e %10.3e. Normalization grid %" PetscInt_FMT ": v_0=%10.3e (%10.3ec) n_0=%10.3e t_0=%10.3e %" PetscInt_FMT " batched, view batch %" PetscInt_FMT ", fe type %s\n", (double)ctx->thermal_temps[0],
+                          (double)ctx->thermal_temps[1], (double)((ctx->num_species > 2) ? ctx->thermal_temps[2] : 0), non_dim_grid, (double)ctx->v_0, (double)(ctx->v_0 / SPEED_OF_LIGHT), (double)ctx->n_0, (double)ctx->t_0, ctx->batch_sz, ctx->batch_view_idx, ctx->use_dg ? "dg" : "cg"));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Domain radius (AMR levels) grid %d: par=%10.3e perp=%10.3e (%" PetscInt_FMT ") ", 0, (double)ctx->radius_par[0], (double)ctx->radius_perp[0], ctx->numAMRRefine[0]));
     for (ii = 1; ii < ctx->num_grids; ii++) PetscCall(PetscPrintf(PETSC_COMM_WORLD, ", %" PetscInt_FMT ": par=%10.3e perp=%10.3e (%" PetscInt_FMT ") ", ii, (double)ctx->radius_par[ii], (double)ctx->radius_perp[ii], ctx->numAMRRefine[ii]));
     if (ctx->use_relativistic_corrections) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\nUse relativistic corrections\n"));
@@ -1716,7 +1738,14 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
     PetscCall(PetscMalloc4(nip_glb, &ww, nip_glb, &xx, nip_glb, &yy, nip_glb * dim * dim, &invJ_a));
     if (dim == 3) PetscCall(PetscMalloc1(nip_glb, &zz));
     if (ctx->use_energy_tensor_trick) {
-      PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, ctx->simplex, prefix, PETSC_DECIDE, &fe));
+      if (ctx->use_dg) {
+        PetscFE cg_fe;
+        PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, ctx->simplex, prefix, PETSC_DECIDE, &cg_fe));
+        PetscCall(PetscFECreateBrokenElement(cg_fe, &fe));
+        PetscCall(PetscFEDestroy(&cg_fe));
+      } else {
+        PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, ctx->simplex, prefix, PETSC_DECIDE, &fe));
+      }
       PetscCall(PetscObjectSetName((PetscObject)fe, "energy"));
     }
     /* init each grids static data - no batch */
