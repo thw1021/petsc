@@ -486,4 +486,3 @@ int main(int argc, char **argv)
       args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos
 
 TEST*/
-
