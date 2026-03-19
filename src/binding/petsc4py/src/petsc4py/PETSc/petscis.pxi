@@ -100,10 +100,6 @@ cdef extern from * nogil:
     struct _n_ISColoring
     ctypedef _n_ISColoring* ISColoring "ISColoring"
 
-    ctypedef enum PetscISColoringType:
-        IS_COLORING_LOCAL,
-        IS_COLORING_GLOBAL
-
     PetscErrorCode ISColoringGetIS(ISColoring,PetscCopyMode,PetscInt*,PetscIS*[])
 
 # --------------------------------------------------------------------
