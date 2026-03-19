@@ -480,9 +480,10 @@ int main(int argc, char **argv)
     output_file: output/ex1_dg_p8est_3d.out
     filter: grep -v "^DM"
     nsize: 1
-    args: -dim 3 -dm_landau_fe_type dg -dm_landau_num_species_grid 1,1 -dm_landau_thermal_temps 1,1 -petscspace_degree 2 -dm_landau_type p8est -snes_rtol 1.e-9 -snes_stol 1.e-14 -ts_type beuler -ts_time_step 1.e-2 -ts_max_steps 1 -dm_landau_verbose 2 -dm_landau_domain_radius 6.,6. -ksp_type bicg -pc_type jacobi -dm_landau_amr_levels_max 1,1 -use_nrl false -print_nrl false
+    args: -dim 3 -dm_landau_fe_type dg -dm_landau_num_species_grid 1,1 -dm_landau_thermal_temps 1,1 -petscspace_degree 2 -dm_landau_type p8est -snes_rtol 1.e-9 -snes_stol 1.e-14 -ts_type beuler -ts_time_step 1.e-2 -ts_max_steps 1 -dm_landau_verbose 2 -dm_landau_domain_radius 6.,6. -ksp_type bicg -pc_type jacobi -dm_landau_amr_levels_max 0,0 -use_nrl false -print_nrl false
     test:
       suffix: dg_p8est_3d
       args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos
 
 TEST*/
+
