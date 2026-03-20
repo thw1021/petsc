@@ -207,6 +207,9 @@ struct _MatOps {
   PetscErrorCode (*copyhashtoxaij)(Mat, Mat);
   PetscErrorCode (*getcurrentmemtype)(Mat, PetscMemType *);
   PetscErrorCode (*zerorowscolumnslocal)(Mat, PetscInt, const PetscInt[], PetscScalar, Vec, Vec);
+  /*144*/
+  PetscErrorCode (*adot)(Mat, Vec, Vec, PetscScalar *); /* induced vector inner product */
+  PetscErrorCode (*anorm)(Mat, Vec, PetscReal *);       /* induced vector norm */
 };
 /*
     If you add MatOps entries above also add them to the MATOP enum
@@ -1684,12 +1687,27 @@ typedef struct {
   PetscScalar     *val;
 } Mat_Diagonal;
 
+#if PetscDefined(HAVE_CUDA)
+PETSC_INTERN PetscErrorCode MatDiagonalADot_Seq_CUDA_Private(Mat, Vec, Vec, PetscScalar *);
+PETSC_INTERN PetscErrorCode MatDiagonalANormSq_Seq_CUDA_Private(Mat, Vec, PetscReal *);
+#endif
+#if PetscDefined(HAVE_HIP)
+PETSC_INTERN PetscErrorCode MatDiagonalADot_Seq_HIP_Private(Mat, Vec, Vec, PetscScalar *);
+PETSC_INTERN PetscErrorCode MatDiagonalANormSq_Seq_HIP_Private(Mat, Vec, PetscReal *);
+#endif
+#if PetscDefined(HAVE_KOKKOS_KERNELS)
+PETSC_INTERN PetscErrorCode MatDiagonalADot_Seq_Kokkos_Private(Mat, Vec, Vec, PetscScalar *);
+PETSC_INTERN PetscErrorCode MatDiagonalANormSq_Seq_Kokkos_Private(Mat, Vec, PetscReal *);
+#endif
+
 PETSC_EXTERN PetscLogEvent MAT_Mult;
 PETSC_EXTERN PetscLogEvent MAT_MultAdd;
 PETSC_EXTERN PetscLogEvent MAT_MultTranspose;
 PETSC_EXTERN PetscLogEvent MAT_MultHermitianTranspose;
 PETSC_EXTERN PetscLogEvent MAT_MultTransposeAdd;
 PETSC_EXTERN PetscLogEvent MAT_MultHermitianTransposeAdd;
+PETSC_EXTERN PetscLogEvent MAT_ADot;
+PETSC_EXTERN PetscLogEvent MAT_ANorm;
 PETSC_EXTERN PetscLogEvent MAT_Solve;
 PETSC_EXTERN PetscLogEvent MAT_Solves;
 PETSC_EXTERN PetscLogEvent MAT_SolveAdd;
