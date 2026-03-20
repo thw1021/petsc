@@ -242,8 +242,8 @@ int main(int argc, char **argv)
 }
 
 /*TEST
-   build:
-     requires: !complex
+  build:
+    requires: !complex
   test:
     requires: ctetgen
 
