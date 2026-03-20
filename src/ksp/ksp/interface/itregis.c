@@ -139,6 +139,9 @@ PetscErrorCode KSPMonitorRegisterAll(void)
   PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERHDF5, PETSC_VIEWER_DEFAULT, KSPMonitorResidualView, NULL, NULL));
   PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERDRAW, PETSC_VIEWER_DEFAULT, KSPMonitorResidualView, NULL, NULL));
   PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERDRAW, PETSC_VIEWER_DRAW_LG, KSPMonitorResidualDrawLG, KSPMonitorResidualDrawLGCreate, NULL));
+  PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERVTK, PETSC_VIEWER_VTK_VTS, KSPMonitorResidualView, NULL, NULL));
+  PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERVTK, PETSC_VIEWER_VTK_VTR, KSPMonitorResidualView, NULL, NULL));
+  PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERVTK, PETSC_VIEWER_VTK_VTU, KSPMonitorResidualView, NULL, NULL));
   PetscCall(KSPMonitorRegister("preconditioned_residual_short", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorResidualShort, NULL, NULL));
   PetscCall(KSPMonitorRegister("preconditioned_residual_range", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorResidualRange, NULL, NULL));
   PetscCall(KSPMonitorRegister("true_residual", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorTrueResidual, NULL, NULL));
