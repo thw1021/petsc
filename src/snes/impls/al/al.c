@@ -39,13 +39,13 @@ const char *const SNESNewtonALCorrectionTypes[] = {"EXACT", "NORMAL", "SNESNewto
 
 static PetscErrorCode SNESNewtonALCheckArcLength(SNES snes, Vec XStep, PetscReal lambdaStep, PetscReal stepSize)
 {
-  PetscScalar    arcLengthScalar;
   PetscReal      arcLength, arcLengthError;
   SNES_NEWTONAL *al = (SNES_NEWTONAL *)snes->data;
 
   PetscFunctionBegin;
-  PetscCall(VecWDot(XStep, XStep, al->vec_diag_scaling, &arcLengthScalar));
-  arcLength      = PetscSqrtReal(PetscRealPart(arcLengthScalar) + al->psisq * lambdaStep * lambdaStep);
+  if (al->mat_diag_scaling) PetscCall(MatANorm(al->mat_diag_scaling, XStep, &arcLength));
+  else PetscCall(VecNorm(XStep, NORM_2, &arcLength));
+  arcLength      = PetscSqrtReal(arcLength * arcLength + al->psisq * lambdaStep * lambdaStep);
   arcLengthError = PetscAbsReal(arcLength - stepSize);
 
   if (arcLengthError > PETSC_SQRT_MACHINE_EPSILON) PetscCall(PetscInfo(snes, "Arc length differs from specified step size: computed=%18.16e, expected=%18.16e, error=%18.16e \n", (double)arcLength, (double)stepSize, (double)arcLengthError));
@@ -197,8 +197,11 @@ static PetscErrorCode SNESNewtonALSetDiagonalScaling_NEWTONAL(SNES snes, Vec v)
 
   PetscFunctionBegin;
   if (v) PetscCall(PetscObjectReference((PetscObject)v));
-  PetscCall(VecDestroy(&al->vec_diag_scaling));
-  al->vec_diag_scaling = v;
+  PetscCall(MatDestroy(&al->mat_diag_scaling));
+  if (v) {
+    PetscCall(MatCreateDiagonal(v, &al->mat_diag_scaling));
+    PetscCall(PetscObjectDereference((PetscObject)v));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -321,7 +324,8 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
   SNES_NEWTONAL *data = (SNES_NEWTONAL *)snes->data;
   PetscInt       maxits, maxincs, lits;
   PetscReal      fnorm, xnorm, ynorm, stepSize;
-  Vec            DeltaX, deltaX, X, R, Q, W, deltaX_Q, deltaX_R;
+  Vec            DeltaX, deltaX, X, R, Q, deltaX_Q, deltaX_R;
+  Mat            W;
 
   PetscFunctionBegin;
   PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
@@ -347,7 +351,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
   X        = snes->vec_sol;                /* solution vector */
   R        = snes->vec_func;               /* residual vector */
   Q        = snes->work[0];                /* tangent load vector */
-  W        = data->vec_diag_scaling;       /* diagonal scaling for DoFs */
+  W        = data->mat_diag_scaling;       /* diagonal scaling for DoFs */
   deltaX_Q = snes->work[1];                /* variation of X with respect to lambda */
   deltaX_R = snes->work[2];                /* linearized error correction */
   DeltaX   = snes->work[3];                /* step from equilibrium */
@@ -381,8 +385,7 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
     PetscCall(SNESMonitor(snes, snes->iter, fnorm));
     if (snes->reason) break;
     for (PetscInt j = 0; j < maxits; j++) {
-      PetscScalar normsqX_Q_scalar;
-      PetscReal   normsqX_Q, deltaS = 1;
+      PetscReal normsqX_Q, deltaS = 1;
 
       /* Call general purpose update function */
       PetscTryTypeMethod(snes, update, snes->iter);
@@ -396,14 +399,16 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
       PetscCall(KSPGetIterationNumber(snes->ksp, &lits));
       PetscCall(PetscInfo(snes, "iter=%" PetscInt_FMT ", tangent load linear solve iterations=%" PetscInt_FMT "\n", snes->iter, lits));
       /* Compute load parameter variation */
-      PetscCall(VecWDot(deltaX_Q, deltaX_Q, W, &normsqX_Q_scalar));
-      normsqX_Q = PetscRealPart(normsqX_Q_scalar);
+      if (W) PetscCall(MatANorm(W, deltaX_Q, &normsqX_Q));
+      else PetscCall(VecNorm(deltaX_Q, NORM_2, &normsqX_Q));
+      normsqX_Q *= normsqX_Q;
       /* On first iter, use predictor. This is the same regardless of corrector scheme. */
       if (j == 0) {
         PetscReal sign = 1.0;
         if (i > 0) {
           PetscScalar dot;
-          PetscCall(VecWDot(DeltaX, deltaX_Q, W, &dot));
+          if (W) PetscCall(MatADot(W, DeltaX, deltaX_Q, &dot));
+          else PetscCall(VecDot(DeltaX, deltaX_Q, &dot));
           sign = PetscRealPart(dot) + data->psisq * data->lambda_update;
           sign = sign >= 0 ? 1.0 : -1.0;
         }
@@ -426,9 +431,13 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
             On the bright side, we always have a real and unique solution for deltaLambda.
           */
           PetscScalar coefs[2];
-
-          PetscCall(VecWDot(DeltaX, deltaX_R, W, &coefs[0]));
-          PetscCall(VecWDot(DeltaX, deltaX_Q, W, &coefs[1]));
+          if (W) {
+            PetscCall(MatADot(W, DeltaX, deltaX_R, &coefs[0]));
+            PetscCall(MatADot(W, DeltaX, deltaX_Q, &coefs[1]));
+          } else {
+            PetscCall(VecDot(DeltaX, deltaX_R, &coefs[0]));
+            PetscCall(VecDot(DeltaX, deltaX_Q, &coefs[1]));
+          }
           deltaLambda = -PetscRealPart(coefs[0]) / (PetscRealPart(coefs[1]) + data->psisq * data->lambda_update);
         } else {
           /*
@@ -453,11 +462,19 @@ static PetscErrorCode SNESSolve_NEWTONAL(SNES snes)
           PetscScalar coefs2[2]; /* coefs[0] = deltaX_Q*deltaX_R, coefs[1] = deltaX_R*deltaX_R */
 
           psisqLambdaUpdate = data->psisq * data->lambda_update;
-          PetscCall(VecWDot(DeltaX, deltaX_Q, W, &coefs1[0]));
-          PetscCall(VecWDot(DeltaX, deltaX_R, W, &coefs1[1]));
-          PetscCall(VecWDot(DeltaX, DeltaX, W, &coefs1[2]));
-          PetscCall(VecWDot(deltaX_R, deltaX_Q, W, &coefs2[0]));
-          PetscCall(VecWDot(deltaX_R, deltaX_R, W, &coefs2[1]));
+          if (W) {
+            PetscCall(MatADot(W, DeltaX, deltaX_Q, &coefs1[0]));
+            PetscCall(MatADot(W, DeltaX, deltaX_R, &coefs1[1]));
+            PetscCall(MatADot(W, DeltaX, DeltaX, &coefs1[2]));
+            PetscCall(MatADot(W, deltaX_R, deltaX_Q, &coefs2[0]));
+            PetscCall(MatADot(W, deltaX_R, deltaX_R, &coefs2[1]));
+          } else {
+            PetscCall(VecDot(DeltaX, deltaX_Q, &coefs1[0]));
+            PetscCall(VecDot(DeltaX, deltaX_R, &coefs1[1]));
+            PetscCall(VecDot(DeltaX, DeltaX, &coefs1[2]));
+            PetscCall(VecDot(deltaX_R, deltaX_Q, &coefs2[0]));
+            PetscCall(VecDot(deltaX_R, deltaX_R, &coefs2[1]));
+          }
 
           a0 = normsqX_Q + data->psisq;
           b0 = 2 * (PetscRealPart(coefs1[0]) + psisqLambdaUpdate);
@@ -612,7 +629,7 @@ static PetscErrorCode SNESReset_NEWTONAL(SNES snes)
 
   PetscFunctionBegin;
   PetscCall(VecDestroy(&al->vec_rhs_orig));
-  PetscCall(VecDestroy(&al->vec_diag_scaling));
+  PetscCall(MatDestroy(&al->mat_diag_scaling));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -688,7 +705,7 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONAL(SNES snes)
   arclengthParameters->lambda_max             = 1.0;
   arclengthParameters->scale_rhs              = PETSC_TRUE;
   arclengthParameters->correction_type        = SNES_NEWTONAL_CORRECTION_EXACT;
-  arclengthParameters->vec_diag_scaling       = NULL;
+  arclengthParameters->mat_diag_scaling       = NULL;
   snes->data                                  = (void *)arclengthParameters;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)snes, "SNESNewtonALSetCorrectionType_C", SNESNewtonALSetCorrectionType_NEWTONAL));
