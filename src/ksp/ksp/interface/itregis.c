@@ -137,6 +137,7 @@ PetscErrorCode KSPMonitorRegisterAll(void)
 
   PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERASCII, PETSC_VIEWER_DEFAULT, KSPMonitorResidual, NULL, NULL));
   PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERHDF5, PETSC_VIEWER_DEFAULT, KSPMonitorResidualView, NULL, NULL));
+  PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERHDF5, PETSC_VIEWER_HDF5_VIZ, KSPMonitorResidualView, NULL, NULL));
   PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERDRAW, PETSC_VIEWER_DEFAULT, KSPMonitorResidualView, NULL, NULL));
   PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERDRAW, PETSC_VIEWER_DRAW_LG, KSPMonitorResidualDrawLG, KSPMonitorResidualDrawLGCreate, NULL));
   PetscCall(KSPMonitorRegister("preconditioned_residual", PETSCVIEWERVTK, PETSC_VIEWER_VTK_VTS, KSPMonitorResidualView, NULL, NULL));
