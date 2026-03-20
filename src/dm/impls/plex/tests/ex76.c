@@ -9,7 +9,7 @@ static char help[] = "Test for DMPlexMetricIntersection using two constant 3x3 m
 
 static void RotationZ(PetscScalar a, PetscScalar R[3][3])
 {
-  PetscScalar c = cos(a), s = sin(a);
+  PetscScalar c = PetscCosScalar(a), s = PetscSinScalar(a);
   R[0][0] = c;
   R[0][1] = -s;
   R[0][2] = 0.;
@@ -23,7 +23,7 @@ static void RotationZ(PetscScalar a, PetscScalar R[3][3])
 
 static void RotationX(PetscScalar b, PetscScalar R[3][3])
 {
-  PetscScalar c = cos(b), s = sin(b);
+  PetscScalar c = PetscCosScalar(b), s = PetscSinScalar(b);
   R[0][0] = 1.;
   R[0][1] = 0.;
   R[0][2] = 0.;
@@ -134,7 +134,7 @@ int main(int argc, char **argv)
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-  MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
 
   /* 1) Tiny 3D simplex mesh */
   PetscCall(DMPlexCreateBoxMesh(PETSC_COMM_WORLD, 3, PETSC_TRUE, NULL, NULL, NULL, NULL, PETSC_TRUE, 0, PETSC_FALSE, &dm));
@@ -242,7 +242,8 @@ int main(int argc, char **argv)
 }
 
 /*TEST
-
+   build:
+     requires: !complex
   test:
     requires: ctetgen
 
