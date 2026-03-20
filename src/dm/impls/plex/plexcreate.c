@@ -5573,6 +5573,7 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
     PetscCall(DMPlexReplace_Internal(dm, &gdm));
   }
   /* Handle 1D order */
+  PetscCall(DMGetDimension(dm, &dim));
   if (reorder != DM_REORDER_DEFAULT_FALSE && dim == 1) {
     DM           cdm, rdm;
     PetscDS      cds;
