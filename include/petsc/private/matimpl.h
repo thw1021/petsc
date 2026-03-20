@@ -1674,6 +1674,16 @@ PETSC_EXTERN PetscErrorCode PetscCDGetASMBlocks(const PetscCoarsenData *, const 
 
 PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL PetscErrorCode MatFDColoringApply_AIJ(Mat, MatFDColoring, Vec, void *);
 
+typedef struct {
+  Vec              diag;
+  PetscBool        diag_valid;
+  Vec              inv_diag;
+  PetscBool        inv_diag_valid;
+  PetscObjectState diag_state, inv_diag_state;
+  PetscInt        *col;
+  PetscScalar     *val;
+} Mat_Diagonal;
+
 PETSC_EXTERN PetscLogEvent MAT_Mult;
 PETSC_EXTERN PetscLogEvent MAT_MultAdd;
 PETSC_EXTERN PetscLogEvent MAT_MultTranspose;
