@@ -638,7 +638,7 @@ int main(int argc, char **argv)
       args: -ts_type rk -ts_rk_type 2b
     test:
       suffix: beuler
-      args: -ts_type beuler -pc_type none -snes_fd
+      args: -ts_type beuler -pc_type none -snes_fd -ksp_type cg -pc_type lu
     test:
       suffix: rkc1
       args: -ts_type rks -ts_rks_type rkc1 -ts_rks_stages 10
