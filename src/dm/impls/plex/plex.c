@@ -11021,15 +11021,15 @@ static inline PetscInt DMPlex_GlobalID(PetscInt point)
 */
 PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL)
 {
-  Mat          L, preall;
-  Vec          x, y;
-  IS           pointNumbering;
+  Mat             L, preall;
+  Vec             x, y;
+  IS              pointNumbering;
   const PetscInt *pointNum;
-  PetscInt    *i, *j, numVertices, numEdges, shift, maxnnzrow, dim, *numDof, numFields;
-  PetscInt     pStart, pEnd;
-  PetscBool    useCone, useClosure;
-  PetscScalar *vals;
-  PetscSection s;
+  PetscInt       *i, *j, numVertices, numEdges, shift, maxnnzrow, dim, *numDof, numFields;
+  PetscInt        pStart, pEnd;
+  PetscBool       useCone, useClosure;
+  PetscScalar    *vals;
+  PetscSection    s;
   PetscFunctionBeginUser;
 
   PetscCall(DMGetDimension(dm, &dim));
@@ -11055,34 +11055,32 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
     }
     numEdges = 0;
     for (PetscInt p = pStart; p < pEnd; p++) {
-      PetscInt nadj = PETSC_DETERMINE;
-      PetscInt *adj = NULL;
+      PetscInt  nadj = PETSC_DETERMINE;
+      PetscInt *adj  = NULL;
       /* Skip non-owned cells in parallel */
       if (pointNum[p] < 0) continue;
       PetscCall(DMPlexGetAdjacency(dm, p, &nadj, &adj));
       for (PetscInt a = 0; a < nadj; a++)
-        if (adj[a] != p && pStart <= adj[a] && adj[a] < pEnd)
-          numEdges++;
+        if (adj[a] != p && pStart <= adj[a] && adj[a] < pEnd) numEdges++;
       PetscCall(PetscFree(adj));
     }
     /* Determine adjacency */
-    PetscCall(PetscMalloc1(numVertices+1, &i));
+    PetscCall(PetscMalloc1(numVertices + 1, &i));
     PetscCall(PetscMalloc1(numEdges, &j));
     PetscInt iptr = 0;
-    i[0] = iptr;
+    i[0]          = iptr;
     for (PetscInt p = pStart; p < pEnd; p++) {
-      PetscInt nadj = PETSC_DETERMINE;
-      PetscInt *adj = NULL;
+      PetscInt  nadj = PETSC_DETERMINE;
+      PetscInt *adj  = NULL;
       /* Skip non-owned cells in parallel */
       if (pointNum[p] < 0) continue;
       PetscCall(DMPlexGetAdjacency(dm, p, &nadj, &adj));
       for (PetscInt a = 0; a < nadj; a++)
-        if (adj[a] != p && pStart <= adj[a] && adj[a] < pEnd)
-          j[iptr++] = DMPlex_GlobalID(pointNum[adj[a]]) - shift;
+        if (adj[a] != p && pStart <= adj[a] && adj[a] < pEnd) j[iptr++] = DMPlex_GlobalID(pointNum[adj[a]]) - shift;
       PetscCall(PetscFree(adj));
-      i[p-pStart + 1] = iptr;
+      i[p - pStart + 1] = iptr;
       /* Sort adjacencies (not strictly necessary) */
-      PetscCall(PetscSortInt(iptr - i[p-pStart], &j[i[p-pStart]]));
+      PetscCall(PetscSortInt(iptr - i[p - pStart], &j[i[p - pStart]]));
     }
     PetscCall(DMSetBasicAdjacency(dm, useCone, useClosure));
     PetscCall(ISRestoreIndices(pointNumbering, &pointNum));
@@ -11106,7 +11104,7 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
     PetscInt  nnzrow = i[k + 1] - i[k];
     PetscInt  row    = shift + k;
     PetscInt *col    = j + i[k];
-    maxnnzrow = PetscMax(maxnnzrow, nnzrow);
+    maxnnzrow        = PetscMax(maxnnzrow, nnzrow);
     /* Add adjacency connection */
     PetscCall(MatSetValues(preall, 1, &row, nnzrow, col, NULL, INSERT_VALUES));
     /* The graph CSR does not represent self-to-self connections, we need them
@@ -11204,10 +11202,10 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
 @*/
 PetscErrorCode DMPlexCreateColoring(DM dm, PetscInt depth, PetscInt distance, ISColoring *coloring)
 {
-  Mat L            = NULL;
-  MatColoring mc   = NULL;
-  IS *iscolors     = NULL;
-  PetscInt pStart = 0, offset = 0, ncolors = 0;
+  Mat         L        = NULL;
+  MatColoring mc       = NULL;
+  IS         *iscolors = NULL;
+  PetscInt    pStart = 0, offset = 0, ncolors = 0;
   PetscFunctionBegin;
   /* Create a graph Laplacian */
   PetscCall(DMPlexCreateGraphLaplacian_Private(dm, depth, &L));
@@ -11226,8 +11224,8 @@ PetscErrorCode DMPlexCreateColoring(DM dm, PetscInt depth, PetscInt distance, IS
   PetscCall(MatDestroy(&L));
   /* Shift ISColoring to align with the DMPlex numbering */
   PetscCall(ISColoringGetIS(*coloring, PETSC_USE_POINTER, &ncolors, &iscolors));
-  for (PetscInt c=0; c < ncolors; c++) {
-     PetscCall(ISShift(iscolors[c], offset, iscolors[c]));
+  for (PetscInt c = 0; c < ncolors; c++) {
+    PetscCall(ISShift(iscolors[c], offset, iscolors[c]));
   }
   PetscCall(ISColoringRestoreIS(*coloring, PETSC_USE_POINTER, &iscolors));
   PetscFunctionReturn(PETSC_SUCCESS);

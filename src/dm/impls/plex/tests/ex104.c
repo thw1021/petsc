@@ -7,11 +7,10 @@ typedef struct {
   PetscInt distance;
 } AppCtx;
 
-
 PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscFunctionBegin;
-  options->depth = 0;
+  options->depth    = 0;
   options->distance = 1;
   PetscOptionsBegin(comm, "", "DMPlexCreateColoring() Test Options", "DMPLEX");
   PetscCall(PetscOptionsInt("-depth", "Stratum depth defining the nodes in the connectivity graph", "ex104.c", options->depth, &options->depth, NULL));
@@ -22,9 +21,9 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  DM          pdm             = NULL;
-  PetscInt    overlap         = user->distance;
-  PetscInt    dim;
+  DM       pdm     = NULL;
+  PetscInt overlap = user->distance;
+  PetscInt dim;
   PetscFunctionBegin;
   PetscCall(DMCreate(comm, dm));
   PetscCall(DMSetType(*dm, DMPLEX));
@@ -53,10 +52,10 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 
 int main(int argc, char **argv)
 {
-  DM             dm;
-  AppCtx         user;
-  PetscInt ncolors    = 0;
-  IS *iscolors        = NULL;
+  DM         dm;
+  AppCtx     user;
+  PetscInt   ncolors  = 0;
+  IS        *iscolors = NULL;
   ISColoring coloring = NULL;
 
   PetscFunctionBeginUser;
@@ -67,8 +66,8 @@ int main(int argc, char **argv)
   /* Color the DMPlex */
   PetscCall(DMPlexCreateColoring(dm, user.depth, user.distance, &coloring));
   PetscCall(ISColoringGetIS(coloring, PETSC_USE_POINTER, &ncolors, &iscolors));
-  for (PetscInt c=0; c < ncolors; c++) {
-     PetscCall(ISViewFromOptions(iscolors[c], NULL, "-iscoloring_view"));
+  for (PetscInt c = 0; c < ncolors; c++) {
+    PetscCall(ISViewFromOptions(iscolors[c], NULL, "-iscoloring_view"));
   }
   PetscCall(ISColoringRestoreIS(coloring, PETSC_USE_POINTER, &iscolors));
   PetscCall(ISColoringDestroy(&coloring));
