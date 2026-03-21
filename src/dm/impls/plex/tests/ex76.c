@@ -230,7 +230,7 @@ int main(int argc, char **argv)
       }
     }
     PetscCall(VecRestoreArrayRead(mcap, &ar2));
-    if (!rank) PetscPrintf(PETSC_COMM_SELF, "OK: Intersection passed Loewner checks (misaligned Q).\n");
+    if (!rank) PetscCall(PetscPrintf(PETSC_COMM_SELF, "OK: Intersection passed Loewner checks (misaligned Q).\n"));
   }
 
   PetscCall(VecDestroy(&m1));
