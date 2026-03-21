@@ -210,6 +210,8 @@ struct _MatOps {
   /*144*/
   PetscErrorCode (*adot)(Mat, Vec, Vec, PetscScalar *); /* induced vector inner product */
   PetscErrorCode (*anorm)(Mat, Vec, PetscReal *);       /* induced vector norm */
+  PetscErrorCode (*adot_local)(Mat, Vec, Vec, PetscScalar *);
+  PetscErrorCode (*anorm_local)(Mat, Vec, PetscReal *);
 };
 /*
     If you add MatOps entries above also add them to the MATOP enum
@@ -512,6 +514,7 @@ struct _p_Mat {
   PetscBool            transupdated;            /* whether or not the explicitly generated transpose is up-to-date */
   char                *factorprefix;            /* the prefix to use with factored matrix that is created */
   PetscBool            hash_active;             /* indicates MatSetValues() is being handled by hashing */
+  Vec                  dot_vec;                 /* work vector used by MatADot_Default() */
 };
 
 PETSC_INTERN PetscErrorCode MatAXPY_Basic(Mat, PetscScalar, Mat, MatStructure);
@@ -869,6 +872,9 @@ static inline PetscErrorCode MatPivotCheck(Mat fact, Mat mat, const MatFactorInf
   else PetscCall(MatPivotCheck_none(fact, mat, info, sctx, row));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PETSC_INTERN PetscErrorCode MatADot_Default(Mat, Vec, Vec, PetscScalar *);
+PETSC_INTERN PetscErrorCode MatANorm_Default(Mat, Vec, PetscReal *);
 
 #include <petscbt.h>
 /*
@@ -1688,16 +1694,16 @@ typedef struct {
 } Mat_Diagonal;
 
 #if PetscDefined(HAVE_CUDA)
-PETSC_INTERN PetscErrorCode MatDiagonalADot_Seq_CUDA_Private(Mat, Vec, Vec, PetscScalar *);
-PETSC_INTERN PetscErrorCode MatDiagonalANormSq_Seq_CUDA_Private(Mat, Vec, PetscReal *);
+PETSC_INTERN PetscErrorCode MatADot_Diagonal_Seq_CUDA_Private(Mat, Vec, Vec, PetscScalar *);
+PETSC_INTERN PetscErrorCode MatANormSq_Diagonal_Seq_CUDA_Private(Mat, Vec, PetscReal *);
 #endif
 #if PetscDefined(HAVE_HIP)
-PETSC_INTERN PetscErrorCode MatDiagonalADot_Seq_HIP_Private(Mat, Vec, Vec, PetscScalar *);
-PETSC_INTERN PetscErrorCode MatDiagonalANormSq_Seq_HIP_Private(Mat, Vec, PetscReal *);
+PETSC_INTERN PetscErrorCode MatADot_Diagonal_Seq_HIP_Private(Mat, Vec, Vec, PetscScalar *);
+PETSC_INTERN PetscErrorCode MatANormSq_Diagonal_Seq_HIP_Private(Mat, Vec, PetscReal *);
 #endif
 #if PetscDefined(HAVE_KOKKOS_KERNELS)
-PETSC_INTERN PetscErrorCode MatDiagonalADot_Seq_Kokkos_Private(Mat, Vec, Vec, PetscScalar *);
-PETSC_INTERN PetscErrorCode MatDiagonalANormSq_Seq_Kokkos_Private(Mat, Vec, PetscReal *);
+PETSC_INTERN PetscErrorCode MatADot_Diagonal_Seq_Kokkos_Private(Mat, Vec, Vec, PetscScalar *);
+PETSC_INTERN PetscErrorCode MatANormSq_Diagonal_Seq_Kokkos_Private(Mat, Vec, PetscReal *);
 #endif
 
 PETSC_EXTERN PetscLogEvent MAT_Mult;

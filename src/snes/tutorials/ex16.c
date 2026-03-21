@@ -386,7 +386,7 @@ PetscErrorCode FormElements(void)
   PetscInt  i, j, k, ii, jj, kk;
   PetscReal bx, by, bz, dbx, dby, dbz;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   /* construct the basis function values and derivatives */
   for (k = 0; k < NB; k++) {
     for (j = 0; j < NB; j++) {
@@ -623,7 +623,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, Field ***x, Mat jacpre, Ma
   MatStencil    col[NPB], row[NPB];
   PetscScalar   v[9];
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(DMGetCoordinateDM(info->da, &cda));
   PetscCall(DMGetCoordinatesLocal(info->da, &C));
   PetscCall(DMDAVecGetArray(cda, C, &c));
@@ -729,7 +729,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field ***x, Field ***f, vo
   CoordField ***c;
   Vec           C;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(DMGetCoordinateDM(info->da, &cda));
   PetscCall(DMGetCoordinatesLocal(info->da, &C));
   PetscCall(DMDAVecGetArray(cda, C, &c));
@@ -806,7 +806,7 @@ PetscErrorCode TangentLoad(SNES snes, Vec X, Vec Q, void *ptr)
   CoordField ***c;
   Vec           C;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   /* update user context with current load parameter */
   PetscCall(SNESNewtonALGetLoadParameter(snes, &user->load_factor));
 
@@ -884,7 +884,7 @@ PetscErrorCode FormCoordinates(DM da, AppCtx *user)
   PetscInt      i, j, k, xs, ys, zs, xm, ym, zm;
   CoordField ***x;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(DMGetCoordinateDM(da, &cda));
   PetscCall(DMCreateGlobalVector(cda, &coords));
   PetscCall(DMDAGetInfo(da, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0, 0, 0));
@@ -916,7 +916,7 @@ PetscErrorCode InitialGuess(DM da, AppCtx *user, Vec X)
   PetscInt mx, my, mz;
   Field ***x;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(DMDAGetCorners(da, &xs, &ys, &zs, &xm, &ym, &zm));
   PetscCall(DMDAGetInfo(da, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0, 0, 0));
   PetscCall(DMDAVecGetArray(da, X, &x));
@@ -948,7 +948,7 @@ PetscErrorCode ArcLengthScaling(DM da, AppCtx *user, Vec V)
   Field  ***v;
   PetscReal rad = user->rad + user->height;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(DMDAGetCorners(da, &xs, &ys, &zs, &xm, &ym, &zm));
   PetscCall(DMDAGetInfo(da, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0, 0, 0));
   PetscCall(DMDAVecGetArray(da, V, &v));
@@ -972,7 +972,7 @@ PetscErrorCode FormRHS(DM da, AppCtx *user, Vec X)
   PetscInt mx, my, mz;
   Field ***x;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCall(DMDAGetCorners(da, &xs, &ys, &zs, &xm, &ym, &zm));
   PetscCall(DMDAGetInfo(da, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0, 0, 0));
   PetscCall(DMDAVecGetArray(da, X, &x));
@@ -1000,7 +1000,7 @@ PetscErrorCode DisplayLine(SNES snes, Vec X)
   Vec           C;
   PetscMPIInt   size, rank;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginUser;
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
   PetscCall(SNESGetDM(snes, &da));

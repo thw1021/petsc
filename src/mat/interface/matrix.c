@@ -1472,6 +1472,7 @@ PetscErrorCode MatDestroy(Mat *A)
   PetscCall(MatNullSpaceDestroy(&(*A)->transnullsp));
   PetscCall(MatNullSpaceDestroy(&(*A)->nearnullsp));
   PetscCall(MatDestroy(&(*A)->schur));
+  PetscCall(VecDestroy(&(*A)->dot_vec));
   PetscCall(PetscLayoutDestroy(&(*A)->rmap));
   PetscCall(PetscLayoutDestroy(&(*A)->cmap));
   PetscCall(PetscHeaderDestroy(A));
@@ -2974,30 +2975,52 @@ PetscErrorCode MatMultHermitianTransposeAdd(Mat mat, Vec v1, Vec v2, Vec v3)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode MatADot_Default(Mat mat, Vec x, Vec y, PetscScalar *val)
+{
+  PetscFunctionBegin;
+  if (!mat->dot_vec) PetscCall(MatCreateVecs(mat, &mat->dot_vec, NULL));
+  PetscCall(MatMult(mat, x, mat->dot_vec));
+  PetscCall(VecDot(mat->dot_vec, y, val));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode MatANorm_Default(Mat mat, Vec x, PetscReal *val)
+{
+  PetscScalar sval;
+
+  PetscFunctionBegin;
+  PetscCall(MatADot_Default(mat, x, x, &sval));
+  PetscCheck(PetscRealPart(sval) >= 0.0, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONG, "Matrix argument is not positive definite");
+  PetscCheck(PetscAbsReal(PetscImaginaryPart(sval)) < 100 * PETSC_MACHINE_EPSILON, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONG, "Matrix argument is not Hermitian");
+  *val = PetscSqrtReal(PetscRealPart(sval));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
-  MatADot - Computes the inner product with respect to a a matrix, i.e., $(x, y)_A = y^H A x$.
+  MatADot - Computes the inner product with respect to a matrix, i.e., $(x, y)_A = y^H A x$ where $A$ is symmetric (Hermitian when using complex)
+  positive definite.
 
   Collective
 
   Input Parameters:
-+ A - matrix used to define inner product
-. x - first vector
-- y - second vector
++ mat - matrix used to define the inner product
+. x   - first vector
+- y   - second vector
 
   Output Parameter:
 . val - the dot product with respect to `A`
 
   Level: intermediate
 
-  Notes for Users of Complex Numbers:
+  Note:
   For complex vectors, `MatADot()` computes
-.vb
+$$
   val = (x,y)_A = y^H A x,
-.ve
-  where y^H denotes the conjugate transpose of y. Note that this corresponds to the usual "mathematicians" complex
+$$
+  where $y^H$ denotes the conjugate transpose of `y`. Note that this corresponds to the "mathematicians" complex
   inner product where the SECOND argument gets the complex conjugate.
 
-.seealso: [](ch_matrices), `Mat`, `MatANorm()`, `MatMult()`, `MatMultAdd()`, `MatMultTransposeAdd()`
+.seealso: [](ch_matrices), `Mat`, `MatANorm()`, `VecDot()`, `VecNorm()`, `MatMult()`, `MatMultAdd()`, `MatMultTransposeAdd()`
 @*/
 PetscErrorCode MatADot(Mat mat, Vec x, Vec y, PetscScalar *val)
 {
@@ -3008,9 +3031,9 @@ PetscErrorCode MatADot(Mat mat, Vec x, Vec y, PetscScalar *val)
   VecCheckAssembled(x);
   PetscValidHeaderSpecific(y, VEC_CLASSID, 3);
   VecCheckAssembled(y);
+  PetscValidType(x, 2);
+  PetscValidType(y, 3);
   PetscAssertPointer(val, 4);
-  PetscValidType(x, 1);
-  PetscValidType(y, 2);
   PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
   PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
   PetscCheck(mat->cmap->N == x->map->N, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_SIZ, "Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT, mat->cmap->N, x->map->N);
@@ -3032,21 +3055,28 @@ PetscErrorCode MatADot(Mat mat, Vec x, Vec y, PetscScalar *val)
 }
 
 /*@
-  MatANorm - Computes the norm with respect to a a matrix, i.e., $(x, x)_A^{1/2} = (x^H A x)^{1/2}$.
+  MatANorm - Computes the norm with respect to a matrix, i.e., $(x, x)_A^{1/2} = (x^H A x)^{1/2}$ where $A$ is symmetric (Hermitian when using complex)
+  positive definite.
 
   Collective
 
   Input Parameters:
-+ A - matrix used to define norm
-. x - first vector
-- y - second vector
++ mat - matrix used to define norm
+- x   - the vector to compute the norm of
 
   Output Parameter:
 . val - the norm with respect to `A`
 
   Level: intermediate
 
-.seealso: [](ch_matrices), `Mat`, `MatADot()`, `MatMult()`, `MatMultAdd()`, `MatMultTransposeAdd()`
+  Note:
+  For complex vectors, `MatANorm()` computes
+$$
+  val = (x,x)_A^{1/2} = (x^H A x)^{1/2},
+$$
+  where $x^H$ denotes the conjugate transpose of `x`.
+
+.seealso: [](ch_matrices), `Mat`, `MatADot()`, `VecDot()`, `VecNorm()`, `MatMult()`, `MatMultAdd()`, `MatMultTransposeAdd()`
 @*/
 PetscErrorCode MatANorm(Mat mat, Vec x, PetscReal *val)
 {
@@ -3055,8 +3085,8 @@ PetscErrorCode MatANorm(Mat mat, Vec x, PetscReal *val)
   PetscValidType(mat, 1);
   PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
   VecCheckAssembled(x);
+  PetscValidType(x, 2);
   PetscAssertPointer(val, 3);
-  PetscValidType(x, 1);
   PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
   PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
   PetscCheck(mat->cmap->N == x->map->N, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_SIZ, "Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT, mat->cmap->N, x->map->N);

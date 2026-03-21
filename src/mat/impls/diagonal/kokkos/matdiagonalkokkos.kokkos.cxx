@@ -4,7 +4,7 @@
 #include <petsc/private/vecimpl.h>
 #include <petsc/private/matimpl.h>
 
-PETSC_INTERN PetscErrorCode MatDiagonalADot_Seq_Kokkos_Private(Mat A, Vec x, Vec y, PetscScalar *z)
+PETSC_INTERN PetscErrorCode MatADot_Diagonal_Seq_Kokkos_Private(Mat A, Vec x, Vec y, PetscScalar *z)
 {
   Mat_Diagonal              *ctx = (Mat_Diagonal *)A->data;
   ConstPetscScalarKokkosView xv, yv, wv;
@@ -15,7 +15,7 @@ PETSC_INTERN PetscErrorCode MatDiagonalADot_Seq_Kokkos_Private(Mat A, Vec x, Vec
   PetscCall(VecGetKokkosView(y, &yv));
   PetscCall(VecGetKokkosView(ctx->diag, &wv));
   // Kokkos always overwrites z, so no need to init it
-  PetscCallCXX(Kokkos::parallel_reduce("MatDiagonalADot", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, x->map->n), KOKKOS_LAMBDA(const PetscInt &i, PetscScalar &update) { update += PetscConj(yv(i)) * wv(i) * xv(i); }, *z));
+  PetscCallCXX(Kokkos::parallel_reduce("MatADot_Diagonal", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, x->map->n), KOKKOS_LAMBDA(const PetscInt &i, PetscScalar &update) { update += PetscConj(yv(i)) * wv(i) * xv(i); }, *z));
   PetscCall(VecRestoreKokkosView(x, &xv));
   PetscCall(VecRestoreKokkosView(y, &yv));
   PetscCall(VecRestoreKokkosView(ctx->diag, &wv));
@@ -24,7 +24,7 @@ PETSC_INTERN PetscErrorCode MatDiagonalADot_Seq_Kokkos_Private(Mat A, Vec x, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode MatDiagonalANormSq_Seq_Kokkos_Private(Mat A, Vec x, PetscScalar *z)
+PETSC_INTERN PetscErrorCode MatANormSq_Diagonal_Seq_Kokkos_Private(Mat A, Vec x, PetscReal *z)
 {
   Mat_Diagonal              *ctx = (Mat_Diagonal *)A->data;
   ConstPetscScalarKokkosView xv, wv;
@@ -35,7 +35,7 @@ PETSC_INTERN PetscErrorCode MatDiagonalANormSq_Seq_Kokkos_Private(Mat A, Vec x, 
   PetscCall(VecGetKokkosView(x, &xv));
   PetscCall(VecGetKokkosView(ctx->diag, &wv));
   // Kokkos always overwrites z, so no need to init it
-  PetscCallCXX(Kokkos::parallel_reduce("MatDiagonalANorm", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, x->map->n), KOKKOS_LAMBDA(const PetscInt &i, PetscScalar &update) { update += PetscConj(xv(i)) * wv(i) * xv(i); }, res));
+  PetscCallCXX(Kokkos::parallel_reduce("MatANorm_Diagonal", Kokkos::RangePolicy<>(PetscGetKokkosExecutionSpace(), 0, x->map->n), KOKKOS_LAMBDA(const PetscInt &i, PetscScalar &update) { update += PetscConj(xv(i)) * wv(i) * xv(i); }, res));
   PetscCall(VecRestoreKokkosView(x, &xv));
   PetscCall(VecRestoreKokkosView(ctx->diag, &wv));
   PetscCall(PetscLogGpuTimeEnd());
