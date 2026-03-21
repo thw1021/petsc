@@ -3024,7 +3024,17 @@ PetscErrorCode MatADot(Mat mat, Vec x, Vec y, PetscScalar *val)
   PetscCall(VecLockReadPush(x));
   PetscCall(VecLockReadPush(y));
   PetscCall(PetscLogEventBegin(MAT_ADot, mat, x, y, 0));
-  PetscUseTypeMethod(mat, adot, x, y, val);
+  if (mat->ops->adot) {
+    PetscUseTypeMethod(mat, adot, x, y, val);
+  } else {
+    /* default implementation */
+    Vec v;
+
+    PetscCall(MatCreateVecs(mat, &v, NULL));
+    PetscCall(MatMult(mat, x, v));
+    PetscCall(VecDot(v, y, val));
+    PetscCall(VecDestroy(&v));
+  }
   PetscCall(PetscLogEventEnd(MAT_ADot, mat, x, y, 0));
   PetscCall(VecLockReadPop(y));
   PetscCall(VecLockReadPop(x));
@@ -3068,7 +3078,19 @@ PetscErrorCode MatANorm(Mat mat, Vec x, PetscReal *val)
 
   PetscCall(VecLockReadPush(x));
   PetscCall(PetscLogEventBegin(MAT_ANorm, mat, x, 0, 0));
-  PetscUseTypeMethod(mat, anorm, x, val);
+  if (mat->ops->anorm) {
+    PetscUseTypeMethod(mat, anorm, x, val);
+  } else {
+    /* default implementation */
+    Vec         v;
+    PetscScalar val_scalar;
+
+    PetscCall(MatCreateVecs(mat, &v, NULL));
+    PetscCall(MatMult(mat, x, v));
+    PetscCall(VecDot(v, x, &val_scalar));
+    *val = PetscRealPart(val_scalar);
+    PetscCall(VecDestroy(&v));
+  }
   PetscCall(PetscLogEventEnd(MAT_ANorm, mat, x, 0, 0));
   PetscCall(VecLockReadPop(x));
   PetscFunctionReturn(PETSC_SUCCESS);
