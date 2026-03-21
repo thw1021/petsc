@@ -711,6 +711,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIAdj,
                                        NULL,
                                        NULL,
                                        NULL,
+                                       NULL,
+                                       /*144*/ NULL,
                                        NULL};
 
 static PetscErrorCode MatMPIAdjSetPreallocation_MPIAdj(Mat B, PetscInt *i, PetscInt *j, PetscInt *values)
