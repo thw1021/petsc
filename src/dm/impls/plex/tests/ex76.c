@@ -202,7 +202,7 @@ int main(int argc, char **argv)
   }
   PetscCall(VecRestoreArrayRead(mcap, &arr));
 
-  if (!rank) PetscPrintf(PETSC_COMM_SELF, "OK: Intersection passed (3x3 @ vertices, aligned case).\n");
+  if (!rank) PetscCall(PetscPrintf(PETSC_COMM_SELF, "OK: Intersection passed (3x3 @ vertices, aligned case).\n"));
 
   /* misaligned subtest: change Q of M2 */
   {
