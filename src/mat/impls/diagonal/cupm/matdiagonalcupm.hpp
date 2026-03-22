@@ -89,7 +89,7 @@ struct anorm_transform {
 } // namespace detail
 
 template <Petsc::device::cupm::DeviceType T, typename VecType>
-inline PetscErrorCode MatDiagonal_CUPM<T, VecType>::ANormSq(Mat A, Vec x, PetscScalar *z) noexcept
+inline PetscErrorCode MatDiagonal_CUPM<T, VecType>::ANormSq(Mat A, Vec x, PetscReal *z) noexcept
 {
   PetscDeviceContext dctx;
   cupmStream_t       stream;

@@ -520,6 +520,7 @@ PETSC_EXTERN PetscErrorCode MatSubMatrixVirtualUpdate(Mat, Mat, IS, IS);
 PETSC_EXTERN PetscErrorCode MatCreateLocalRef(Mat, IS, IS, Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateConstantDiagonal(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscScalar, Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateDiagonal(Vec, Mat *);
+PETSC_EXTERN PetscErrorCode MatDiagonalSetDiagonal(Mat, Vec);
 PETSC_EXTERN PetscErrorCode MatDiagonalGetDiagonal(Mat, Vec *);
 PETSC_EXTERN PetscErrorCode MatDiagonalRestoreDiagonal(Mat, Vec *);
 PETSC_EXTERN PetscErrorCode MatDiagonalGetInverseDiagonal(Mat, Vec *);
@@ -2042,7 +2043,9 @@ typedef enum {
   MATOP_GET_CURRENT_MEM_TYPE      = 142,
   MATOP_ZERO_ROWS_COLUMNS_LOCAL   = 143,
   MATOP_ADOT                      = 144,
-  MATOP_ANORM                     = 145
+  MATOP_ANORM                     = 145,
+  MATOP_ADOT_LOCAL                = 146,
+  MATOP_ANORM_LOCAL               = 147
 } MatOperation;
 
 PETSC_EXTERN PetscErrorCode MatSetOperation(Mat, MatOperation, PetscErrorCodeFn *);

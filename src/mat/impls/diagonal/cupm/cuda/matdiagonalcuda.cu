@@ -9,14 +9,14 @@ using Petsc::device::cupm::DeviceType;
 
 static constexpr impl::MatDiagonal_CUPM<DeviceType::CUDA, ::Petsc::vec::cupm::impl::VecSeq_CUPM<DeviceType::CUDA>> cupm_mat{};
 
-PETSC_INTERN PetscErrorCode MatDiagonalADot_Seq_CUDA_Private(Mat A, Vec x, Vec y, PetscScalar *val)
+PETSC_INTERN PetscErrorCode MatADot_Diagonal_Seq_CUDA_Private(Mat A, Vec x, Vec y, PetscScalar *val)
 {
   PetscFunctionBegin;
   PetscCall(cupm_mat.ADot(A, x, y, val));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode MatDiagonalANormSq_Seq_CUDA_Private(Mat A, Vec x, PetscReal *val)
+PETSC_INTERN PetscErrorCode MatANormSq_Diagonal_Seq_CUDA_Private(Mat A, Vec x, PetscReal *val)
 {
   PetscFunctionBegin;
   PetscCall(cupm_mat.ANormSq(A, x, val));
