@@ -2101,7 +2101,8 @@ PetscErrorCode DMPlexRebalanceSharedLabelPoints(DM dm, DMLabel label, PetscInt N
   PetscInt       *lowner, *gowner, *newPoints, *newOwner;
   PetscInt        Nr, Nl, numNewOwners = 0, tmp = 0;
   PetscMPIInt     rank, size;
-  MPI_Comm           comm;
+  MPI_Comm        comm;
+  PetscInt        debug = 0;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -2131,7 +2132,7 @@ PetscErrorCode DMPlexRebalanceSharedLabelPoints(DM dm, DMLabel label, PetscInt N
       if (val == values[v]) {
         lowner[leaf] = -1;
         PetscCall(CheckLabelPoint_Private(plex, label, Nv, values, cellDepth, leaf, &lowner[leaf]));
-        PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d] Marked leaf point %" PetscInt_FMT " as %" PetscInt_FMT "\n", rank, leaf, lowner[leaf]));
+        if (debug) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d] Marked leaf point %" PetscInt_FMT " as %" PetscInt_FMT "\n", rank, leaf, lowner[leaf]));
         break;
       }
     }
@@ -2146,7 +2147,7 @@ PetscErrorCode DMPlexRebalanceSharedLabelPoints(DM dm, DMLabel label, PetscInt N
         if (val == values[v]) {
           gowner[root] = -1;
           PetscCall(CheckLabelPoint_Private(plex, label, Nv, values, cellDepth, root, &gowner[root]));
-          PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d] Marked root point %" PetscInt_FMT " as %" PetscInt_FMT "\n", rank, root, gowner[root]));
+          if (debug) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d] Marked root point %" PetscInt_FMT " as %" PetscInt_FMT "\n", rank, root, gowner[root]));
           break;
         }
       }
@@ -2174,18 +2175,18 @@ PetscErrorCode DMPlexRebalanceSharedLabelPoints(DM dm, DMLabel label, PetscInt N
     if (lowner[leaf] == rank) {
       newPoints[tmp]  = leaf;
       newOwner[tmp++] = rank;
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d] Changed leaf point %" PetscInt_FMT " to owner %" PetscInt_FMT "\n", rank, leaf, rank));
+      if (debug) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d] Changed leaf point %" PetscInt_FMT " to owner %" PetscInt_FMT "\n", rank, leaf, rank));
     }
   }
   for (PetscInt root = 0; root < Nr; ++root) {
     if (degrees[root] > 0 && gowner[root] != -2 && gowner[root] != rank) {
       newPoints[tmp]  = root;
       newOwner[tmp++] = gowner[root];
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d] Changed root point %" PetscInt_FMT " to owner %" PetscInt_FMT "\n", rank, root, gowner[root]));
+      if (debug) PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d] Changed root point %" PetscInt_FMT " to owner %" PetscInt_FMT "\n", rank, root, gowner[root]));
     }
   }
   PetscCheck(tmp == numNewOwners, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid number of new owners %" PetscInt_FMT " != %" PetscInt_FMT, tmp, numNewOwners);
-  {
+  if (debug) {
     PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d] Rewrote %" PetscInt_FMT " points\n", rank, numNewOwners));
     for (PetscInt n = 0; n < numNewOwners; ++n) {
       PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d]   point %" PetscInt_FMT " now owned by %" PetscInt_FMT "\n", rank, newPoints[n], newOwner[n]));
