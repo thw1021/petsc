@@ -302,6 +302,227 @@ PetscErrorCode DMPlexLabelComplete(DM dm, DMLabel label)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscInt label_defval_private = -1;
+static PetscInt label_errval_private = -2;
+static void MPIAPI label_value_check(void *a, void *b, int *len, MPI_Datatype *datatype)
+{
+  const int N = *len;
+
+  if (*datatype == MPIU_INT) {
+    PetscInt *A = (PetscInt *)a;
+    PetscInt *B = (PetscInt *)b;
+
+    for (int i = 0; i < N; i++) {
+      // Propagate errors
+      if (A[i] == label_errval_private || B[i] == label_errval_private) {
+        B[i] = label_errval_private;
+        continue;
+      }
+      // Default values do not propagate
+      if (A[i] == label_defval_private) continue;
+      // Override default values
+      if (B[i] == label_defval_private) {
+        B[i] = A[i];
+        continue;
+      }
+      B[i] = A[i] != B[i] ? label_errval_private : B[i];
+    }
+  }
+}
+
+/*@
+  DMPlexCheckLabel - Check that points matched by the pointSF have the same value in the label
+
+  Input Parameters:
++ dm       - The `DM`
+. reduceop - The MPI reduction operation to use for comparison, or `MPI_OP_NULL` for the default
+- label    - A `DMLabel` marking the points
+
+  Level: advanced
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexLabelCohesiveComplete()`
+@*/
+PetscErrorCode DMPlexCheckLabel(DM dm, MPI_Op reduceop, DMLabel label)
+{
+  PetscSF            sf;
+  IS                 valueIS;
+  MPI_Op             lreduceop = reduceop;
+  const PetscInt    *leaves, *values, *degree;
+  const PetscSFNode *remotes;
+  PetscInt          *rvalues, *lvalues;
+  PetscInt           Nr, Nl, Nv;
+  PetscBool          mismatch = PETSC_FALSE, gmismatch;
+  MPI_Comm           comm;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCall(DMLabelGetDefaultValue(label, &label_defval_private));
+  label_errval_private = label_defval_private - 1;
+
+  PetscCall(DMLabelGetValueIS(label, &valueIS));
+  PetscCall(ISGetLocalSize(valueIS, &Nv));
+  PetscCall(ISGetIndices(valueIS, &values));
+  for (PetscInt v = 0; v < Nv; ++v) {
+    PetscCheck(values[v] != label_errval_private, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label value %" PetscInt_FMT " matches the choice for the error value", values[v]);
+  }
+
+  PetscCall(DMGetPointSF(dm, &sf));
+  PetscCall(PetscSFGetGraph(sf, &Nr, &Nl, &leaves, &remotes));
+  PetscCall(PetscSFComputeDegreeBegin(sf, &degree));
+  PetscCall(PetscSFComputeDegreeEnd(sf, &degree));
+  PetscCall(PetscMalloc2(Nr, &rvalues, Nr, &lvalues));
+  PetscCall(PetscSFView(sf, NULL));
+
+  for (PetscInt l = 0; l < Nl; ++l) PetscCall(DMLabelGetValue(label, leaves[l], &lvalues[leaves[l]]));
+  for (PetscInt r = 0; r < Nr; ++r) rvalues[r] = label_defval_private;
+  if (reduceop == MPI_OP_NULL) PetscCallMPI(MPI_Op_create(label_value_check, PETSC_TRUE, &lreduceop));
+  PetscCall(PetscSFReduceBegin(sf, MPIU_INT, lvalues, rvalues, lreduceop));
+  PetscCall(PetscSFReduceEnd(sf, MPIU_INT, lvalues, rvalues, lreduceop));
+  if (reduceop == MPI_OP_NULL) PetscCallMPI(MPI_Op_free(&lreduceop));
+
+  PetscCall(ISGetIndices(valueIS, &values));
+  for (PetscInt i = 0; i < Nv; ++i) {
+    const PetscInt  val = values[i];
+    IS              stratumIS;
+    const PetscInt *points;
+    PetscInt        Ns;
+
+    PetscCall(DMLabelGetStratumIS(label, val, &stratumIS));
+    PetscCall(ISGetLocalSize(stratumIS, &Ns));
+    PetscCall(ISGetIndices(stratumIS, &points));
+    for (PetscInt s = 0; s < Ns; ++s) {
+      const PetscInt point = points[s];
+      PetscInt       val;
+
+      // Check only shared points
+      if (degree[point]) {
+        PetscCall(DMLabelGetValue(label, point, &val));
+        if (val != rvalues[point]) {
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]Label value mismatch (%" PetscInt_FMT " != %" PetscInt_FMT ") at point %" PetscInt_FMT "\n", PetscGlobalRank, val, rvalues[point], point));
+          mismatch = PETSC_TRUE;
+        }
+      }
+    }
+    PetscCall(ISRestoreIndices(stratumIS, &points));
+    PetscCall(ISDestroy(&stratumIS));
+  }
+  PetscCall(ISRestoreIndices(valueIS, &values));
+  PetscCall(ISDestroy(&valueIS));
+  PetscCall(PetscFree2(rvalues, lvalues));
+  PetscCallMPI(MPIU_Allreduce(&mismatch, &gmismatch, 1, MPI_C_BOOL, MPI_LOR, comm));
+  PetscCheck(!gmismatch, comm, PETSC_ERR_ARG_WRONG, "Label value mismatch detected");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMPlexReconcileLabel - Force points matched by the pointSF to have the same value in the label
+
+  Input Parameters:
++ dm       - The `DM`
+. reduceop - The MPI reduction operation to use for comparison, or `MPI_OP_NULL` to use the root value
+- label    - A `DMLabel` marking the points
+
+  Level: advanced
+
+.seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexLabelCohesiveComplete()`
+@*/
+PetscErrorCode DMPlexReconcileLabel(DM dm, MPI_Op reduceop, DMLabel label)
+{
+  PetscSF            sf;
+  IS                 valueIS;
+  const PetscInt    *leaves, *values, *degree;
+  const PetscSFNode *remotes;
+  PetscInt          *rvalues, *lvalues;
+  PetscInt           Nr, Nl, Nv;
+  MPI_Comm           comm;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCall(DMLabelGetValueIS(label, &valueIS));
+  PetscCall(ISGetLocalSize(valueIS, &Nv));
+  PetscCall(ISGetIndices(valueIS, &values));
+
+  PetscCall(DMGetPointSF(dm, &sf));
+  PetscCall(PetscSFGetGraph(sf, &Nr, &Nl, &leaves, &remotes));
+  PetscCall(PetscSFComputeDegreeBegin(sf, &degree));
+  PetscCall(PetscSFComputeDegreeEnd(sf, &degree));
+  PetscCall(PetscMalloc2(Nr, &rvalues, Nr, &lvalues));
+  // First set root values of shared points
+  PetscCall(ISGetIndices(valueIS, &values));
+  for (PetscInt i = 0; i < Nv; ++i) {
+    const PetscInt  val = values[i];
+    IS              stratumIS;
+    const PetscInt *points;
+    PetscInt        Ns;
+
+    PetscCall(DMLabelGetStratumIS(label, val, &stratumIS));
+    if (!stratumIS) continue;
+    PetscCall(ISGetLocalSize(stratumIS, &Ns));
+    PetscCall(ISGetIndices(stratumIS, &points));
+    // Set shared points
+    for (PetscInt s = 0; s < Ns; ++s) {
+      if (degree[points[s]]) PetscCall(DMLabelGetValue(label, points[s], &rvalues[points[s]]));
+    }
+    PetscCall(ISRestoreIndices(stratumIS, &points));
+    PetscCall(ISDestroy(&stratumIS));
+  }
+  // Reduce in leaf values
+  if (reduceop != MPI_OP_NULL) {
+    for (PetscInt l = 0; l < Nl; ++l) PetscCall(DMLabelGetValue(label, leaves[l], &lvalues[leaves[l]]));
+    PetscCall(PetscSFReduceBegin(sf, MPIU_INT, lvalues, rvalues, reduceop));
+    PetscCall(PetscSFReduceEnd(sf, MPIU_INT, lvalues, rvalues, reduceop));
+    // Update root values
+    for (PetscInt i = 0; i < Nv; ++i) {
+      const PetscInt  val = values[i];
+      IS              stratumIS;
+      const PetscInt *points;
+      PetscInt        Ns;
+
+      PetscCall(DMLabelGetStratumIS(label, val, &stratumIS));
+      if (!stratumIS) continue;
+      PetscCall(ISGetLocalSize(stratumIS, &Ns));
+      PetscCall(ISGetIndices(stratumIS, &points));
+      // Set shared points
+      for (PetscInt s = 0; s < Ns; ++s) {
+        const PetscInt point = points[s];
+
+        if (degree[point]) {
+          PetscInt val;
+
+          PetscCall(DMLabelGetValue(label, point, &val));
+          if (val != rvalues[point]) {
+            PetscCall(DMLabelClearValue(label, point, val));
+            PetscCall(DMLabelSetValue(label, point, rvalues[point]));
+            PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]Updating label value %" PetscInt_FMT " --> %" PetscInt_FMT " for point %" PetscInt_FMT "\n", PetscGlobalRank, val, rvalues[point], point));
+          }
+        }
+      }
+      PetscCall(ISRestoreIndices(stratumIS, &points));
+      PetscCall(ISDestroy(&stratumIS));
+    }
+  }
+  // Broadcast root values to leaves
+  PetscCall(PetscSFBcastBegin(sf, MPIU_INT, rvalues, lvalues, MPI_REPLACE));
+  PetscCall(PetscSFBcastEnd(sf, MPIU_INT, rvalues, lvalues, MPI_REPLACE));
+  // Update leaf values
+  for (PetscInt l = 0; l < Nl; ++l) {
+    const PetscInt point = leaves[l];
+    PetscInt       val;
+
+    PetscCall(DMLabelGetValue(label, point, &val));
+    if (val != lvalues[point]) {
+      PetscCall(DMLabelClearValue(label, point, val));
+      PetscCall(DMLabelSetValue(label, point, lvalues[point]));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]Updating label value %" PetscInt_FMT " --> %" PetscInt_FMT " for point %" PetscInt_FMT "\n", PetscGlobalRank, val, lvalues[point], point));
+    }
+  }
+
+  PetscCall(ISRestoreIndices(valueIS, &values));
+  PetscCall(ISDestroy(&valueIS));
+  PetscCall(PetscFree2(rvalues, lvalues));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   DMPlexLabelAddCells - Starting with a label marking points on a surface, we add a cell for each point
 
@@ -2186,6 +2407,8 @@ static PetscErrorCode CheckFaultEdge_Private(DM dm, DMLabel label, PetscBool spl
 
   Note:
   The vertices in blabel are called "unsplit" in the terminology from hybrid cell creation.
+
+  Points are marked with their dimension, combined with a shift based on the type of interation with the surface. For points on the surface itself, the shift is zero. Mesh points impinging on the surface have a shoft of 100, and then are negated for points on the negative side of the fault. Points on the surface boundary, called unsplit, are shifted by 200. Cells on the surface that are not owned by this process are shifted by 300.
 
 .seealso: [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexConstructCohesiveCells()`, `DMPlexLabelComplete()`
 @*/
