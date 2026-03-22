@@ -2538,7 +2538,9 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIBAIJ,
                                        MatCopyHashToXAIJ_MPI_Hash,
                                        NULL,
                                        NULL,
-                                       /*144*/ NULL,
+                                       /*144*/ MatADot_Default,
+                                       MatANorm_Default,
+                                       NULL,
                                        NULL};
 
 PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPISBAIJ(Mat, MatType, MatReuse, Mat *);

@@ -1,4 +1,3 @@
-#requirespackage 'PETSC_HAVE_KOKKOS_KERNELS'
 -include ../../../../../petscdir.mk
 
 MANSEC        = Mat

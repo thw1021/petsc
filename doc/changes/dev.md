@@ -59,8 +59,6 @@
 ```{rubric} Vec:
 ```
 
-- Add `VecWDot` for computing weighted dot products between two vectors
-
 ```{rubric} PetscSection:
 ```
 
@@ -77,6 +75,8 @@
 - Remove `MatMissingDiagonal()`. Developers should use `MatGetDiagonalMarkers_SeqXXX()` when the functionality is needed
 - Change `MatSetOption(A, MAT_HERMITIAN, PETSC_TRUE)` for `MatSBAIJ` to no longer automatically set the option `MAT_SYMMETRIC` to `PETSC_FALSE`. It is now the duty of the user to call `MatSetOption(A, MAT_SYMMETRIC, PETSC_FALSE)` if a `MatSBAIJ` is Hermitian but not symmetric
 - Deprecate `-matmatmult_Bbn` in favor of `-matproduct_batch_size`
+- Add `MatADot()` and `MatANorm()`
+- Add `-mat_vec_type` option for `MatSetFromOptions()`
 
 ```{rubric} MatCoarsen:
 ```
@@ -105,7 +105,7 @@
 - Add `SNES_DIVERGED_OBJECTIVE_NANORINF`
 - Add `SNES_DIVERGED_OBJECTIVE_DOMAIN`
 - Add developer functions `SNESCheckFunctionDomainError()`, `SNESLineSearchCheckFunctionDomainError()`, `SNESCheckObjectiveDomainError()`, `SNESLineSearchCheckObjectiveDomainError()`, `SNESCheckJacobianDomainError()`, and `SNESLineSearchCheckJacobianDomainError()`
-- Add `SNESNewtonALSetDiagonalScaling` to allow for per-DoF scaling of solution vector when computing arc length
+- Add `SNESNewtonALSetDiagonalScaling()` to allow for per-DoF scaling of solution vector when computing arc length
 
 ```{rubric} SNESLineSearch:
 ```

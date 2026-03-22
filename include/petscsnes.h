@@ -1366,7 +1366,7 @@ PETSC_EXTERN PetscErrorCode SNESNewtonALSetFunction(SNES, SNESFunctionFn *, Pets
 PETSC_EXTERN PetscErrorCode SNESNewtonALGetFunction(SNES, SNESFunctionFn **, PetscCtxRt);
 PETSC_EXTERN PetscErrorCode SNESNewtonALComputeFunction(SNES, Vec, Vec);
 PETSC_EXTERN PetscErrorCode SNESNewtonALGetLoadParameter(SNES, PetscReal *);
-PETSC_EXTERN PetscErrorCode SNESNewtonALSetDiagonalScaling(SNES snes, Vec v);
+PETSC_EXTERN PetscErrorCode SNESNewtonALSetDiagonalScaling(SNES, Vec);
 
 /*MC
    SNESNewtonALCorrectionType - the approach used by `SNESNEWTONAL` to determine
