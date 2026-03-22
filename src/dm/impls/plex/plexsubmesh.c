@@ -493,7 +493,6 @@ PetscErrorCode DMPlexReconcileLabel(DM dm, MPI_Op reduceop, DMLabel label)
           if (val != rvalues[point]) {
             PetscCall(DMLabelClearValue(label, point, val));
             PetscCall(DMLabelSetValue(label, point, rvalues[point]));
-            PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]Updating label value %" PetscInt_FMT " --> %" PetscInt_FMT " for point %" PetscInt_FMT "\n", PetscGlobalRank, val, rvalues[point], point));
           }
         }
       }
@@ -513,7 +512,6 @@ PetscErrorCode DMPlexReconcileLabel(DM dm, MPI_Op reduceop, DMLabel label)
     if (val != lvalues[point]) {
       PetscCall(DMLabelClearValue(label, point, val));
       PetscCall(DMLabelSetValue(label, point, lvalues[point]));
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d]Updating label value %" PetscInt_FMT " --> %" PetscInt_FMT " for point %" PetscInt_FMT "\n", PetscGlobalRank, val, lvalues[point], point));
     }
   }
 
