@@ -102,7 +102,9 @@ static int TSFunction_Sundials(realtype t, N_Vector y, N_Vector ydot, PetscCtx c
   PetscCall(DMGetDMTS(dm, &tsdm));
   PetscCall(DMTSGetIFunction(dm, &ifunction, NULL));
   if (!ifunction) PetscCall(TSComputeRHSFunction(ts, t, yy, yyd));
-  else { /* If rhsfunction is also set, this computes both parts and shifts them to the right */ PetscCall(VecZeroEntries(yydot));
+  else {
+    /* If rhsfunction is also set, this computes both parts and shifts them to the right */
+    PetscCall(VecZeroEntries(yydot));
     PetscCallAbort(comm, TSComputeIFunction(ts, t, yy, yydot, yyd, PETSC_FALSE));
     PetscCall(VecScale(yyd, -1.));
   }

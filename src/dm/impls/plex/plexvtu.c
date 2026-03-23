@@ -718,11 +718,8 @@ PetscErrorCode DMPlexVTKWriteAll_VTU(DM dm, PetscViewer viewer)
                         PetscInt           voff;
                         const PetscScalar *xpoint;
 
-                        if (nfields) {
-                          PetscCall(PetscSectionGetFieldOffset(section, closure[v], field, &voff));
-                        } else {
-                          PetscCall(PetscSectionGetOffset(section, closure[v], &voff));
-                        }
+                        if (nfields) PetscCall(PetscSectionGetFieldOffset(section, closure[v], field, &voff));
+                        else PetscCall(PetscSectionGetOffset(section, closure[v], &voff));
                         xpoint         = &x[voff];
                         y[cnt + off++] = (l ? PetscImaginaryPart(xpoint[i]) : PetscRealPart(xpoint[i]));
                       }
