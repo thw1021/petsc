@@ -737,7 +737,7 @@ static PetscErrorCode SNESReset_VINEWTONRSLS(SNES snes)
    Note:
    Reduced-space (active set methods) work as follows at each iteration\:
    - The algorithm produces an inactive set of variables, that is a list of variables whose values will not be changed in the current iteration, i.e. they
-     are to be constrained to their current values. These are all the variables that are on the lower bound, that is $u_i = L_i$ with also $[F(u)]_i \le 0$ or
+     are to be constrained to their current values. These are all the variables that are on the lower bound, that is $u_i = L_i$ with also $[F(u)]_i \ge 0$ or
      the upper bound $u_i = U_i$ with also $[F(u)]_i \ge 0.$
    - A step direction is obtained by solving the linear system arising from the Jacobian used in Newton's method but with the inactive variables removed
      from both the rows and columns.
