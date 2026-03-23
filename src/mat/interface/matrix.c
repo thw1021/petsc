@@ -15,6 +15,7 @@ PetscClassId MAT_FDCOLORING_CLASSID;
 PetscClassId MAT_TRANSPOSECOLORING_CLASSID;
 
 PetscLogEvent MAT_Mult, MAT_MultAdd, MAT_MultTranspose;
+PetscLogEvent MAT_ADot, MAT_ANorm;
 PetscLogEvent MAT_MultTransposeAdd, MAT_Solve, MAT_Solves, MAT_SolveAdd, MAT_SolveTranspose, MAT_MatSolve, MAT_MatTrSolve;
 PetscLogEvent MAT_SolveTransposeAdd, MAT_SOR, MAT_ForwardSolve, MAT_BackwardSolve, MAT_LUFactor, MAT_LUFactorSymbolic;
 PetscLogEvent MAT_LUFactorNumeric, MAT_CholeskyFactor, MAT_CholeskyFactorSymbolic, MAT_CholeskyFactorNumeric, MAT_ILUFactor;
@@ -2970,6 +2971,106 @@ PetscErrorCode MatMultHermitianTransposeAdd(Mat mat, Vec v1, Vec v2, Vec v3)
   PetscCall(VecLockReadPop(v1));
   PetscCall(PetscLogEventEnd(MAT_MultHermitianTransposeAdd, mat, v1, v2, v3));
   PetscCall(PetscObjectStateIncrease((PetscObject)v3));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatADot - Computes the inner product with respect to a a matrix, i.e., $(x, y)_A = y^H A x$.
+
+  Collective
+
+  Input Parameters:
++ A - matrix used to define inner product
+. x - first vector
+- y - second vector
+
+  Output Parameter:
+. val - the dot product with respect to `A`
+
+  Level: intermediate
+
+  Notes for Users of Complex Numbers:
+  For complex vectors, `MatADot()` computes
+.vb
+  val = (x,y)_A = y^H A x,
+.ve
+  where y^H denotes the conjugate transpose of y. Note that this corresponds to the usual "mathematicians" complex
+  inner product where the SECOND argument gets the complex conjugate.
+
+.seealso: [](ch_matrices), `Mat`, `MatANorm()`, `MatMult()`, `MatMultAdd()`, `MatMultTransposeAdd()`
+@*/
+PetscErrorCode MatADot(Mat mat, Vec x, Vec y, PetscScalar *val)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscValidType(mat, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  VecCheckAssembled(x);
+  PetscValidHeaderSpecific(y, VEC_CLASSID, 3);
+  VecCheckAssembled(y);
+  PetscAssertPointer(val, 4);
+  PetscValidType(x, 1);
+  PetscValidType(y, 2);
+  PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
+  PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
+  PetscCheck(mat->cmap->N == x->map->N, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_SIZ, "Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT, mat->cmap->N, x->map->N);
+  PetscCheck(mat->rmap->N == y->map->N, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_SIZ, "Mat mat,Vec y: global dim %" PetscInt_FMT " %" PetscInt_FMT, mat->rmap->N, y->map->N);
+  PetscCheck(mat->cmap->n == x->map->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat mat,Vec x: local dim %" PetscInt_FMT " %" PetscInt_FMT, mat->cmap->n, x->map->n);
+  PetscCheck(mat->rmap->n == y->map->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat mat,Vec y: local dim %" PetscInt_FMT " %" PetscInt_FMT, mat->rmap->n, y->map->n);
+  if (mat->erroriffailure) PetscCall(VecValidValues_Internal(x, 2, PETSC_TRUE));
+  if (mat->erroriffailure) PetscCall(VecValidValues_Internal(y, 3, PETSC_TRUE));
+  MatCheckPreallocated(mat, 1);
+
+  PetscCall(VecLockReadPush(x));
+  PetscCall(VecLockReadPush(y));
+  PetscCall(PetscLogEventBegin(MAT_ADot, mat, x, y, 0));
+  PetscUseTypeMethod(mat, adot, x, y, val);
+  PetscCall(PetscLogEventEnd(MAT_ADot, mat, x, y, 0));
+  PetscCall(VecLockReadPop(y));
+  PetscCall(VecLockReadPop(x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  MatANorm - Computes the norm with respect to a a matrix, i.e., $(x, x)_A^{1/2} = (x^H A x)^{1/2}$.
+
+  Collective
+
+  Input Parameters:
++ A - matrix used to define norm
+. x - first vector
+- y - second vector
+
+  Output Parameter:
+. val - the norm with respect to `A`
+
+  Level: intermediate
+
+.seealso: [](ch_matrices), `Mat`, `MatADot()`, `MatMult()`, `MatMultAdd()`, `MatMultTransposeAdd()`
+@*/
+PetscErrorCode MatANorm(Mat mat, Vec x, PetscReal *val)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscValidType(mat, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  VecCheckAssembled(x);
+  PetscAssertPointer(val, 3);
+  PetscValidType(x, 1);
+  PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
+  PetscCheck(!mat->factortype, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for factored matrix");
+  PetscCheck(mat->cmap->N == x->map->N, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_SIZ, "Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT, mat->cmap->N, x->map->N);
+  PetscCheck(mat->rmap->N == x->map->N, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_SIZ, "Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT, mat->rmap->N, x->map->N);
+  PetscCheck(mat->cmap->n == x->map->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat mat,Vec x: local dim %" PetscInt_FMT " %" PetscInt_FMT, mat->cmap->n, x->map->n);
+  PetscCheck(mat->rmap->n == x->map->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat mat,Vec x: local dim %" PetscInt_FMT " %" PetscInt_FMT, mat->rmap->n, x->map->n);
+  if (mat->erroriffailure) PetscCall(VecValidValues_Internal(x, 2, PETSC_TRUE));
+  MatCheckPreallocated(mat, 1);
+
+  PetscCall(VecLockReadPush(x));
+  PetscCall(PetscLogEventBegin(MAT_ANorm, mat, x, 0, 0));
+  PetscUseTypeMethod(mat, anorm, x, val);
+  PetscCall(PetscLogEventEnd(MAT_ANorm, mat, x, 0, 0));
+  PetscCall(VecLockReadPop(x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

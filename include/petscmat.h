@@ -720,6 +720,8 @@ PETSC_EXTERN PetscErrorCode MatMultDiagonalBlock(Mat, Vec, Vec);
 PETSC_EXTERN PetscErrorCode MatMultAdd(Mat, Vec, Vec, Vec);
 PETSC_EXTERN PetscErrorCode MatMultTranspose(Mat, Vec, Vec);
 PETSC_EXTERN PetscErrorCode MatMultHermitianTranspose(Mat, Vec, Vec);
+PETSC_EXTERN PetscErrorCode MatADot(Mat, Vec, Vec, PetscScalar *);
+PETSC_EXTERN PetscErrorCode MatANorm(Mat, Vec, PetscReal *);
 PETSC_EXTERN PetscErrorCode MatIsTranspose(Mat, Mat, PetscReal, PetscBool *);
 PETSC_EXTERN PetscErrorCode MatIsHermitianTranspose(Mat, Mat, PetscReal, PetscBool *);
 PETSC_EXTERN PetscErrorCode MatMultTransposeAdd(Mat, Vec, Vec, Vec);
@@ -2038,7 +2040,9 @@ typedef enum {
   MATOP_GET_VBLOCK_DIAGONAL       = 140, /* and need to destroy it after use. */
   MATOP_COPY_HASH_TO_XAIJ         = 141,
   MATOP_GET_CURRENT_MEM_TYPE      = 142,
-  MATOP_ZERO_ROWS_COLUMNS_LOCAL   = 143
+  MATOP_ZERO_ROWS_COLUMNS_LOCAL   = 143,
+  MATOP_ADOT                      = 144,
+  MATOP_ANORM                     = 145
 } MatOperation;
 
 PETSC_EXTERN PetscErrorCode MatSetOperation(Mat, MatOperation, PetscErrorCodeFn *);
