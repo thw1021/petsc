@@ -11091,9 +11091,7 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
   PetscCall(MatSetSizes(L, numVertices, numVertices, PETSC_DECIDE, PETSC_DECIDE));
   PetscCall(MatSetOptionsPrefix(L, "dm_plex_laplacian_"));
   PetscCall(MatSetFromOptions(L));
-  /* Preallocation. Here we use an helper class called MATPREALLOCATOR that
-     does it for us. We only need to loop once with our matrix insertion loop and
-     populate the MATPREALLOCATOR */
+  /* Preallocation */
   PetscCall(MatCreate(PetscObjectComm((PetscObject)dm), &preall));
   PetscCall(MatSetSizes(preall, numVertices, numVertices, PETSC_DECIDE, PETSC_DECIDE));
   PetscCall(MatSetType(preall, MATPREALLOCATOR));
@@ -11137,7 +11135,7 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
   PetscCall(MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY));
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&y));
-  /* clean up */
+  /* Clean up */
   PetscCall(PetscFree(vals));
   PetscCall(PetscFree(i));
   PetscCall(PetscFree(j));
@@ -11147,13 +11145,13 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
     For visualization purposes, we attach a DM to the matrix.
     Cloning makes a shallow (pointer) copy of the mesh topology and geometry,
     and allows us to consider different discretization spaces.
-    In this case, we specify a one-field, cell-centered discretization with a PetscSection object.
+    In this case, we specify a one-field discretization with a PetscSection object.
   */
   PetscCall(DMClone(dm, &dm));
   numFields = 1;
   PetscCall(DMSetNumFields(dm, numFields));
   PetscCall(PetscCalloc1(dim + 1, &numDof));
-  numDof[dim] = 1;
+  numDof[depth] = 1;
   PetscCall(DMPlexCreateSection(dm, NULL, &numFields, numDof, 0, NULL, NULL, NULL, NULL, &s));
   PetscCall(DMSetLocalSection(dm, s));
   PetscCall(PetscSectionDestroy(&s));
