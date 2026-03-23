@@ -378,7 +378,6 @@ static PetscErrorCode MatADot_Diagonal_Local(Mat A, Vec x, Vec y, PetscScalar *v
   PetscFunctionBegin;
   PetscCheckSameTypeAndComm(x, 2, ctx->diag, 1);
   PetscCheckSameTypeAndComm(y, 3, ctx->diag, 1);
-  PetscCall(MatDiagonalSetUpDiagonal(A));
   PetscCall(VecGetArrayRead(x, &xa));
   PetscCall(VecGetArrayRead(y, &ya));
   PetscCall(VecGetArrayRead(ctx->diag, &wa));
@@ -396,6 +395,7 @@ static PetscErrorCode MatADot_Diagonal_Local(Mat A, Vec x, Vec y, PetscScalar *v
 static PetscErrorCode MatADot_Diagonal_MPI(Mat A, Vec x, Vec y, PetscScalar *val)
 {
   PetscFunctionBegin;
+  PetscCall(MatDiagonalSetUpDiagonal(A));
   PetscUseTypeMethod(A, adot_local, x, y, val);
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, val, 1, MPIU_SCALAR, MPIU_SUM, PetscObjectComm((PetscObject)A)));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -410,7 +410,6 @@ static PetscErrorCode MatANorm_Diagonal_Local(Mat A, Vec x, PetscReal *val)
 
   PetscFunctionBegin;
   PetscCheckSameTypeAndComm(x, 2, ctx->diag, 1);
-  PetscCall(MatDiagonalSetUpDiagonal(A));
   PetscCall(VecGetArrayRead(x, &xa));
   PetscCall(VecGetArrayRead(ctx->diag, &wa));
   for (PetscInt i = 0; i < n; i++) {
@@ -427,6 +426,7 @@ static PetscErrorCode MatANorm_Diagonal_Local(Mat A, Vec x, PetscReal *val)
 static PetscErrorCode MatANorm_Diagonal_MPI(Mat A, Vec x, PetscReal *val)
 {
   PetscFunctionBegin;
+  PetscCall(MatDiagonalSetUpDiagonal(A));
   PetscUseTypeMethod(A, anorm_local, x, val);
   PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, val, 1, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject)A)));
   *val = PetscSqrtReal(*val);
@@ -436,6 +436,7 @@ static PetscErrorCode MatANorm_Diagonal_MPI(Mat A, Vec x, PetscReal *val)
 static PetscErrorCode MatANorm_Diagonal_Seq(Mat A, Vec x, PetscReal *val)
 {
   PetscFunctionBegin;
+  PetscCall(MatDiagonalSetUpDiagonal(A));
   PetscUseTypeMethod(A, anorm_local, x, val);
   PetscCheck(*val >= 0.0, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Matrix argument is not positive definite (diagonal has negative entries)");
   *val = PetscSqrtReal(*val);
