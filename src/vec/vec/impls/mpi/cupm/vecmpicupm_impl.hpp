@@ -151,6 +151,7 @@ inline PetscErrorCode VecMPI_CUPM<T>::BindToCPU(Vec v, PetscBool usehost) noexce
   PetscCall(BindToCPU_CUPMBase(v, usehost, dctx));
 
   VecSetOp_CUPM(dot, VecDot_MPI, Dot);
+  VecSetOp_CUPM(wdot, VecWDot_MPI, WDot);
   VecSetOp_CUPM(mdot, VecMDot_MPI, MDot);
   VecSetOp_CUPM(norm, VecNorm_MPI, Norm);
   VecSetOp_CUPM(tdot, VecTDot_MPI, TDot);
@@ -193,6 +194,14 @@ inline PetscErrorCode VecMPI_CUPM<T>::TDot(Vec x, Vec y, PetscScalar *z) noexcep
 {
   PetscFunctionBegin;
   PetscCall(VecXDot_MPI_Default(x, y, z, VecSeq_T::TDot));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecMPI_CUPM<T>::WDot(Vec x, Vec y, Vec w, PetscScalar *z) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(VecWXDot_MPI_Default(x, y, w, z, VecSeq_T::WDot));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

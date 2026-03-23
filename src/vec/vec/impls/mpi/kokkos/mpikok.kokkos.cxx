@@ -47,6 +47,14 @@ static PetscErrorCode VecTDot_MPIKokkos(Vec xin, Vec yin, PetscScalar *z)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* z = y^H diag(w) x */
+static PetscErrorCode VecWDot_MPIKokkos(Vec xin, Vec yin, Vec win, PetscScalar *z)
+{
+  PetscFunctionBegin;
+  PetscCall(VecWXDot_MPI_Default(xin, yin, win, z, VecWDot_SeqKokkos));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode VecMDot_MPIKokkos(Vec xin, PetscInt nv, const Vec y[], PetscScalar *z)
 {
   PetscFunctionBegin;
@@ -232,11 +240,13 @@ static PetscErrorCode VecCreate_MPIKokkos_Common(Vec v)
   v->ops->resetarray      = VecResetArray_SeqKokkos;
 
   v->ops->dot   = VecDot_MPIKokkos;
+  v->ops->wdot  = VecWDot_MPIKokkos;
   v->ops->tdot  = VecTDot_MPIKokkos;
   v->ops->mdot  = VecMDot_MPIKokkos;
   v->ops->mtdot = VecMTDot_MPIKokkos;
 
   v->ops->dot_local   = VecDot_SeqKokkos;
+  v->ops->wdot_local  = VecWDot_SeqKokkos;
   v->ops->tdot_local  = VecTDot_SeqKokkos;
   v->ops->mdot_local  = VecMDot_SeqKokkos;
   v->ops->mtdot_local = VecMTDot_SeqKokkos;
