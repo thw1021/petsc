@@ -180,7 +180,7 @@ M*/
    TS_CONVERGED_PSEUDO_FRTOL - stops when function norm decreased by a set amount, used only for `TSPSEUDO`
 
    Options Database Key:
-.   -ts_pseudo_frtol <rtol> - use specified rtol
+.   -ts_pseudo_frtol rtol - use specified rtol
 
    Level: beginner
 
@@ -191,7 +191,7 @@ M*/
    TS_CONVERGED_PSEUDO_FATOL - stops when function norm decreases below a set amount, used only for `TSPSEUDO`
 
    Options Database Key:
-.   -ts_pseudo_fatol <atol> - use specified atol
+.   -ts_pseudo_fatol atol - use specified atol
 
    Level: beginner
 
@@ -978,7 +978,7 @@ PETSC_EXTERN_TYPEDEF typedef DMDATSIFunctionLocalFn *DMDATSIFunctionLocal;
   Note:
   The deprecated `DMDATSIJacobianLocal` still works as a replacement for `DMDATSIJacobianLocalFn` *.
 
-.seealso: `DMDA` `DMDATSSetIJacobianLocal()`, `TSIJacobianFn`, `DMDATSIFunctionLocalFn`, `DMDATSRHSFunctionLocalFn`,  `DMDATSRHSJacobianlocal()`
+.seealso: `DMDA`, `DMDATSSetIJacobianLocal()`, `TSIJacobianFn`, `DMDATSIFunctionLocalFn`, `DMDATSRHSFunctionLocalFn`, `DMDATSRHSJacobianlocal()`
 S*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode DMDATSIJacobianLocalFn(DMDALocalInfo *info, PetscReal t, void *x, void *xdot, PetscReal shift, Mat J, Mat B, PetscCtx ctx);
 
@@ -1069,6 +1069,18 @@ PETSC_EXTERN PetscErrorCode       TSMonitorHGCtxCreate(MPI_Comm, const char[], c
 PETSC_EXTERN PetscErrorCode       TSMonitorHGSwarmSolution(TS, PetscInt, PetscReal, Vec, void *);
 PETSC_EXTERN PetscErrorCode       TSMonitorHGCtxDestroy(TSMonitorHGCtx *);
 PETSC_EXTERN PetscErrorCode       TSMonitorHGSwarmSolution(TS, PetscInt, PetscReal, Vec, void *);
+
+/*M
+   TSEvent - Abstract object to handle event detection in `TS` time integrator
+
+   Level: intermediate
+
+   Note:
+   See `TSSetEventHandler()` for the management of events.
+
+.seealso: [](sec_ts_event), `TS`, `TSSetEventHandler()`, `TSSetPostEventStep()`, `TSSetPostEventSecondStep()`, `TSSetEventTolerances()`, `TSGetNumEvents()`
+M*/
+typedef struct _n_TSEvent *TSEvent;
 
 PETSC_EXTERN PetscErrorCode TSSetEventHandler(TS, PetscInt, PetscInt[], PetscBool[], PetscErrorCode (*)(TS, PetscReal, Vec, PetscReal[], void *), PetscErrorCode (*)(TS, PetscInt, PetscInt[], PetscReal, Vec, PetscBool, void *), void *);
 PETSC_EXTERN PetscErrorCode TSSetPostEventStep(TS, PetscReal);
@@ -1214,10 +1226,10 @@ typedef const char *TSGLLEAcceptType;
   TSGLLEAcceptFn - A prototype of a `TS` accept function that would be passed to `TSGLLEAcceptRegister()`
 
   Calling Sequence:
-+ ts  - timestep context
-. nt - time to end of solution time
-. h - the proposed step-size
-. enorm - unknown
++ ts     - timestep context
+. nt     - time to end of solution time
+. h      - the proposed step-size
+. enorm  - unknown
 - accept - output, if the proposal is accepted
 
   Level: beginner
@@ -1228,7 +1240,7 @@ typedef const char *TSGLLEAcceptType;
 .seealso: [](ch_ts), `TS`, `TSSetRHSFunction()`, `DMTSSetRHSFunction()`, `TSIFunctionFn`,
 `TSIJacobianFn`, `TSRHSJacobianFn`, `TSGLLEAcceptRegister()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode(TSGLLEAcceptFn)(TS ts, PetscReal nt, PetscReal h, const PetscReal enorm[], PetscBool *accept);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode TSGLLEAcceptFn(TS ts, PetscReal nt, PetscReal h, const PetscReal enorm[], PetscBool *accept);
 
 PETSC_EXTERN_TYPEDEF typedef TSGLLEAcceptFn *TSGLLEAcceptFunction;
 
@@ -1269,7 +1281,7 @@ PETSC_EXTERN PetscErrorCode TSEIMEXSetOrdAdapt(TS, PetscBool);
 
    Level: beginner
 
-.seealso: [](ch_ts), `TS`, `TSRKSetType()`, `TS`, `TSRK`, `TSRKRegister()`
+.seealso: [](ch_ts), `TS`, `TSRKSetType()`, `TSRK`, `TSRKRegister()`
 J*/
 typedef const char *TSRKType;
 #define TSRK1FE "1fe"
@@ -1288,7 +1300,7 @@ typedef const char *TSRKType;
 PETSC_EXTERN PetscErrorCode TSRKGetOrder(TS, PetscInt *);
 PETSC_EXTERN PetscErrorCode TSRKGetType(TS, TSRKType *);
 PETSC_EXTERN PetscErrorCode TSRKSetType(TS, TSRKType);
-PETSC_EXTERN PetscErrorCode TSRKGetTableau(TS, PetscInt *, const PetscReal **, const PetscReal **, const PetscReal **, const PetscReal **, PetscInt *, const PetscReal **, PetscBool *);
+PETSC_EXTERN PetscErrorCode TSRKGetTableau(TS, PetscInt *, const PetscReal *[], const PetscReal *[], const PetscReal *[], const PetscReal *[], PetscInt *, const PetscReal *[], PetscBool *);
 PETSC_EXTERN PetscErrorCode TSRKSetMultirate(TS, PetscBool);
 PETSC_EXTERN PetscErrorCode TSRKGetMultirate(TS, PetscBool *);
 PETSC_EXTERN PetscErrorCode TSRKRegister(TSRKType, PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscReal[], const PetscReal[], PetscInt, const PetscReal[]);
@@ -1494,14 +1506,6 @@ PETSC_EXTERN PetscErrorCode TSBasicSymplecticInitializePackage(void);
 PETSC_EXTERN PetscErrorCode TSBasicSymplecticFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode TSBasicSymplecticRegisterDestroy(void);
 
-/*J
-  TSDISCGRAD - The Discrete Gradient integrator is a timestepper for Hamiltonian systems designed to conserve the first integral (energy),
-  but also has the property for some systems of monotonicity in a functional.
-
-  Level: beginner
-
-.seealso: [](ch_ts), `TS`, TSDiscGradSetFormulation()`, `TSDiscGradGetFormulation()`, `TSDiscGradSetType()`, `TSDiscGradGetType()`
-J*/
 typedef enum {
   TS_DG_GONZALEZ,
   TS_DG_AVERAGE,

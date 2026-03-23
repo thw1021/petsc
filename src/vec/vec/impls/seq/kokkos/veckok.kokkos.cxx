@@ -8,7 +8,9 @@
 #include <petsc/private/petscimpl.h>
 #include <petscmath.h>
 #include <petscviewer.h>
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN("-Wundef")
 #include <KokkosBlas.hpp>
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END()
 #include <Kokkos_Functional.hpp>
 
 #include <../src/vec/vec/impls/dvecimpl.h> /* for VecCreate_Seq_Private */
@@ -30,7 +32,7 @@ static PetscErrorCode VecGetKokkosView_Private(Vec v, PetscScalarKokkosViewType<
 }
 
 template <class MemorySpace>
-static PetscErrorCode VecRestoreKokkosView_Private(Vec v, PetscScalarKokkosViewType<MemorySpace> *kv, PetscBool overwrite)
+static PetscErrorCode VecRestoreKokkosView_Private(Vec v, PetscScalarKokkosViewType<MemorySpace> *, PetscBool overwrite)
 {
   Vec_Kokkos *veckok   = static_cast<Vec_Kokkos *>(v->spptr);
   using ExecutionSpace = typename PetscScalarKokkosViewType<MemorySpace>::traits::device_type;
@@ -1395,7 +1397,7 @@ PetscErrorCode VecGetArray_SeqKokkos(Vec v, PetscScalar **a)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode VecRestoreArray_SeqKokkos(Vec v, PetscScalar **a)
+PetscErrorCode VecRestoreArray_SeqKokkos(Vec v, PetscScalar **)
 {
   Vec_Kokkos *veckok = static_cast<Vec_Kokkos *>(v->spptr);
 
@@ -1427,7 +1429,7 @@ PetscErrorCode VecGetArrayAndMemType_SeqKokkos(Vec v, PetscScalar **a, PetscMemT
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode VecRestoreArrayAndMemType_SeqKokkos(Vec v, PetscScalar **a)
+PetscErrorCode VecRestoreArrayAndMemType_SeqKokkos(Vec v, PetscScalar **)
 {
   Vec_Kokkos *veckok = static_cast<Vec_Kokkos *>(v->spptr);
 
@@ -1521,7 +1523,7 @@ static PetscErrorCode VecGetSubVector_SeqKokkos(Vec x, IS is, Vec *y)
 }
 
 /* Restore subvector y to x */
-PetscErrorCode VecRestoreSubVector_SeqKokkos(Vec x, IS is, Vec *y)
+PetscErrorCode VecRestoreSubVector_SeqKokkos(Vec x, IS, Vec *y)
 {
   VecScatter                    vscat;
   PETSC_UNUSED PetscObjectState dummystate = 0;
@@ -1630,10 +1632,19 @@ static PetscErrorCode VecDestroy_SeqKokkos(Vec v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode VecBindToCPU_SeqKokkos(Vec v, PetscBool flg)
+{
+  PetscFunctionBegin;
+  PetscCheck(v->boundtocpu == flg, PetscObjectComm((PetscObject)v), PETSC_ERR_SUP, "Changing binding of a VECKOKKOS vector is not supported yet");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 // Shared by all VecCreate/Duplicate routines for VecSeqKokkos
 static PetscErrorCode VecCreate_SeqKokkos_Common(Vec v)
 {
   PetscFunctionBegin;
+  v->boundtocpu           = PetscDefined(HAVE_KOKKOS_WITHOUT_GPU) ? PETSC_TRUE : PETSC_FALSE; // VECKOKKOS has yet to support CPU binding. But in this case, we deem it is bound to CPU.
+  v->ops->bindtocpu       = VecBindToCPU_SeqKokkos;
   v->ops->abs             = VecAbs_SeqKokkos;
   v->ops->reciprocal      = VecReciprocal_SeqKokkos;
   v->ops->pointwisemult   = VecPointwiseMult_SeqKokkos;

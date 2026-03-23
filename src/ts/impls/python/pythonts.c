@@ -10,7 +10,7 @@
 -  pyname - full dotted Python name [package].module[.{class|function}]
 
    Options Database Key:
-.  -ts_python_type <pyname> - python class
+.  -ts_python_type pyname - python class
 
    Level: intermediate
 
@@ -48,3 +48,12 @@ PetscErrorCode TSPythonGetType(TS ts, const char *pyname[])
   PetscUseMethod(ts, "TSPythonGetType_C", (TS, const char *[]), (ts, pyname));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*MC
+   TSPYTHON - a `TSType` that is implemented as a Python class using `TSPythonSetType()`
+
+   Level: intermediate
+
+.seealso: [](ch_snes), `TS`, `TSCreate()`, `TSSetType()`, `SNESPYTHON`, `PetscPythonInitialize()`, `TSPythonSetType()`,
+          `TSPythonGetType()`, `TAOPYTHON`
+M*/

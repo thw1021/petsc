@@ -27,6 +27,7 @@
 - Add `PetscCallHYPRE()` to check HYPRE error codes and print error messages on failure
 - Add `PetscBTCountSet()` to count set bits in `PetscBT`
 - Add the option `-hypre_umpire_device_pool_size <n>` to set the Umpire device memory pool size (in MiB), which is used by HYPRE and 4 Gib by default
+- Change `PetscStackCallExternalVoid()` to `PetscCallExternalVoid()`
 
 
 ```{rubric} Event Logging:
@@ -69,6 +70,7 @@
 ```{rubric} Mat:
 ```
 
+- Add `MatCreateDenseWithMemType()` and `MatDenseReplaceArrayWithMemType()`
 - Change the `destroy()` function argument of `MatShellSetMatProductOperation()` to type `PetscCtxDestroyFn *`. This means the destroy function must dereference the argument before operating on it
 - Remove `MatMissingDiagonal()`. Developers should use `MatGetDiagonalMarkers_SeqXXX()` when the functionality is needed
 - Change `MatSetOption(A, MAT_HERMITIAN, PETSC_TRUE)` for `MatSBAIJ` to no longer automatically set the option `MAT_SYMMETRIC` to `PETSC_FALSE`. It is now the duty of the user to call `MatSetOption(A, MAT_SYMMETRIC, PETSC_FALSE)` if a `MatSBAIJ` is Hermitian but not symmetric
@@ -82,6 +84,7 @@
 
 - Add multi-precision support for MUMPS. One could use `-pc_precision <single, double>` to set the precision to be used by MUMPS, which can be different from `PetscScalar`'s precision
 - Add support for MUMPS out-of-core facility with the option `-mat_mumps_ooc_tmpdir <dir>` and new functions `MatMumpsSetOocTmpDir()`, `MatMumpsGetOocTmpDir()`
+- Add `PCPatchSetComputeOperatorExteriorFacets()` and `PCPatchSetComputeFunctionExteriorFacets()` to support exterior (boundary) facet integral callbacks in the patch preconditioner
 
 ```{rubric} KSP:
 ```
@@ -113,6 +116,8 @@
 - Change the `destroy()` function argument of `TSTrajectorySetTransform()` to type `PetscCtxDestroyFn *`. This means the destroy function must dereference the argument before operating on it
 - Correct option `-ts_max_reject` to `-ts_max_step_rejections`
 - Correct option `-ts_dt` to `-ts_time_step`
+- Change `TSAdaptCheckStage()` to call function set by `TSAdaptSetCheckStage()` before other checks
+- Fix `-ts_ssp_nstages` to `-ts_ssp_num_stages`
 
 ```{rubric} TAO:
 ```

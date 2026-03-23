@@ -134,7 +134,7 @@ static PetscErrorCode SNESView_NCG(SNES snes, PetscViewer viewer)
 - btype - update type, see `SNESNCGType`
 
   Options Database Key:
-. -snes_ncg_type <prp,fr,hs,dy,cd> - strategy for selecting algorithm for computing beta
+. -snes_ncg_type (prp|fr|hs|dy|cd) - strategy for selecting algorithm for computing beta
 
   Level: intermediate
 
@@ -356,9 +356,9 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
   Level: beginner
 
   Options Database Keys:
-+   -snes_ncg_type <fr, prp, dy, hs, cd> - Choice of conjugate-gradient update parameter, default is `prp`.
-.   -snes_linesearch_type <cp,l2,basic>  - Line search type.
--   -snes_ncg_monitor                    - Print the beta values nonlinear Conjugate-Gradient used in the  iteration, .
++   -snes_ncg_type (fr|prp|dy|hs|cd)    - Choice of conjugate-gradient update parameter, default is `prp`.
+.   -snes_linesearch_type (cp|l2|basic) - Line search type.
+-   -snes_ncg_monitor                   - Print the beta values nonlinear Conjugate-Gradient used in the  iteration, .
 
    Notes:
    This solves the nonlinear system of equations $ F(x) = 0 $ using the nonlinear generalization of the conjugate
@@ -370,7 +370,7 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
    Default line search is `SNESLINESEARCHCP`, unless a nonlinear preconditioner is used with `-npc_snes_type` <type>, `SNESSetNPC()`, or `SNESGetNPC()` then
    `SNESLINESEARCHSECANT` is used. Also supports the special-purpose line search `SNESLINESEARCHNCGLINEAR`
 
-.seealso: [](ch_snes), `SNES`, `SNESNCG`, `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONLS`, `SNESNEWTONTR`, `SNESNGMRES`, `SNESQN`, `SNESLINESEARCHNCGLINEAR`, `SNESNCGSetType()`, `SNESLineSearchSetType()`
+.seealso: [](ch_snes), `SNES`, `SNESNCG`, `SNESCreate()`, `SNESType`, `SNESSetType()`, `SNESNEWTONLS`, `SNESNEWTONTR`, `SNESNGMRES`, `SNESQN`, `SNESLINESEARCHNCGLINEAR`, `SNESNCGSetType()`, `SNESLineSearchSetType()`
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NCG(SNES snes)
 {

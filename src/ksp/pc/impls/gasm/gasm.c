@@ -899,7 +899,7 @@ static PetscErrorCode PCSetFromOptions_GASM(PC pc, PetscOptionItems PetscOptions
 
   Level: beginner
 
-.seealso: [](ch_ksp), `PCGASM`, `PCGASMSetSubdomains()`, `PCGASMSetOverlap()`
+.seealso: [](ch_ksp), `PCGASM`, `PCGASMSetSubdomains()`, `PCGASMSetOverlap()`,
           `PCGASMCreateSubdomains2D()`
 @*/
 PetscErrorCode PCGASMSetTotalSubdomains(PC pc, PetscInt N)
@@ -1107,7 +1107,7 @@ PetscErrorCode PCGASMSetSubdomains(PC pc, PetscInt n, IS iis[], IS ois[])
 - ovl - the amount of overlap between subdomains (ovl >= 0, default value = 0)
 
   Options Database Key:
-. -pc_gasm_overlap <overlap> - Sets overlap
+. -pc_gasm_overlap overlap - Sets overlap
 
   Level: intermediate
 
@@ -1225,7 +1225,7 @@ PetscErrorCode PCGASMSetSortIndices(PC pc, PetscBool doSort)
   Call `PCGASMRestoreSubKSP()` when the array of `KSP` is no longer needed
 
 .seealso: [](ch_ksp), `PCGASM`, `PCGASMSetSubdomains()`, `PCGASMSetOverlap()`,
-          `PCGASMCreateSubdomains2D()`,
+          `PCGASMCreateSubdomains2D()`
 @*/
 PetscErrorCode PCGASMGetSubKSP(PC pc, PetscInt *n_local, PetscInt *first_local, KSP *ksp[])
 {
@@ -1240,11 +1240,11 @@ PetscErrorCode PCGASMGetSubKSP(PC pc, PetscInt *n_local, PetscInt *first_local, 
            its own `KSP` object on a subset of MPI processes
 
    Options Database Keys:
-+  -pc_gasm_total_subdomains <n>                   - Sets total number of local subdomains to be distributed among the MPI processes
++  -pc_gasm_total_subdomains n                     - Sets total number of local subdomains to be distributed among the MPI processes
 .  -pc_gasm_view_subdomains                        - activates the printing of subdomain indices in `PCView()`, -ksp_view or -snes_view
 .  -pc_gasm_print_subdomains                       - activates the printing of subdomain indices in `PCSetUp()`
-.  -pc_gasm_overlap <ovl>                          - Sets overlap by which to (automatically) extend local subdomains
--  -pc_gasm_type [basic,restrict,interpolate,none] - Sets `PCGASMType`
+.  -pc_gasm_overlap ovl                            - Sets overlap by which to (automatically) extend local subdomains
+-  -pc_gasm_type (basic|restrict|interpolate|none) - Sets `PCGASMType`
 
    Level: beginner
 
@@ -1260,7 +1260,7 @@ PetscErrorCode PCGASMGetSubKSP(PC pc, PetscInt *n_local, PetscInt *first_local, 
 
 .seealso: [](ch_ksp), `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCASM`, `PCGASMType`, `PCGASMSetType()`,
           `PCBJACOBI`, `PCGASMGetSubKSP()`, `PCGASMSetSubdomains()`,
-          `PCSetModifySubMatrices()`, `PCGASMSetOverlap()`, `PCGASMSetType()`
+          `PCSetModifySubMatrices()`, `PCGASMSetOverlap()`, `PCASMSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_GASM(PC pc)
@@ -1873,7 +1873,7 @@ PetscErrorCode PCGASMGetSubmatrices(PC pc, PetscInt *n, Mat *mat[])
   so setting `PCGASMSetSubdomains()` with nontrivial subdomain ISs or any of `PCGASMSetTotalSubdomains()` and `PCGASMSetOverlap()`
   automatically turns the latter off.
 
-.seealso: [](ch_ksp), `PCGASM`, `PCGASMGetUseDMSubdomains()`, `PCGASMSetSubdomains()`, `PCGASMSetOverlap()`
+.seealso: [](ch_ksp), `PCGASM`, `PCGASMGetUseDMSubdomains()`, `PCGASMSetSubdomains()`, `PCGASMSetOverlap()`,
           `PCGASMCreateSubdomains2D()`
 @*/
 PetscErrorCode PCGASMSetUseDMSubdomains(PC pc, PetscBool flg)
@@ -1905,7 +1905,7 @@ PetscErrorCode PCGASMSetUseDMSubdomains(PC pc, PetscBool flg)
 
   Level: intermediate
 
-.seealso: [](ch_ksp), `PCGASM`, `PCGASMSetUseDMSubdomains()`, `PCGASMSetOverlap()`
+.seealso: [](ch_ksp), `PCGASM`, `PCGASMSetUseDMSubdomains()`, `PCGASMSetOverlap()`,
           `PCGASMCreateSubdomains2D()`
 @*/
 PetscErrorCode PCGASMGetUseDMSubdomains(PC pc, PetscBool *flg)

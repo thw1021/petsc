@@ -255,7 +255,7 @@ static PetscErrorCode PCEisenstatGetNoDiagonalScaling_Eisenstat(PC pc, PetscBool
 - omega - relaxation coefficient (0 < omega < 2)
 
   Options Database Key:
-. -pc_eisenstat_omega <omega> - Sets omega
+. -pc_eisenstat_omega omega - Sets omega
 
   Level: intermediate
 
@@ -322,7 +322,7 @@ PetscErrorCode PCEisenstatSetNoDiagonalScaling(PC pc, PetscBool flg)
 . omega - relaxation coefficient (0 < omega < 2)
 
   Options Database Key:
-. -pc_eisenstat_omega <omega> - Sets omega
+. -pc_eisenstat_omega omega - Sets omega
 
   Notes:
   The Eisenstat trick implementation of SSOR requires about 50% of the
@@ -367,7 +367,7 @@ PetscErrorCode PCEisenstatGetOmega(PC pc, PetscReal *omega)
   If you use the KSPSetDiagonalScaling() or -ksp_diagonal_scale option then you will
   likely want to use this routine since it will save you some unneeded flops.
 
-.seealso: , `PCEISENSTAT`, `PCEisenstatGetOmega()`
+.seealso: `PCEISENSTAT`, `PCEisenstatGetOmega()`
 @*/
 PetscErrorCode PCEisenstatGetNoDiagonalScaling(PC pc, PetscBool *flg)
 {
@@ -389,7 +389,7 @@ static PetscErrorCode PCPreSolveChangeRHS_Eisenstat(PC pc, PetscBool *change)
                    preconditioning that incorporates Eisenstat's trick to reduce the amount of computation needed.
 
    Options Database Keys:
-+  -pc_eisenstat_omega <omega> - Sets omega
++  -pc_eisenstat_omega omega         - Sets omega
 -  -pc_eisenstat_no_diagonal_scaling - Activates `PCEisenstatSetNoDiagonalScaling()`
 
    Level: beginner

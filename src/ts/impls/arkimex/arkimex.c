@@ -2181,7 +2181,7 @@ static PetscErrorCode TSLoad_ARKIMEX(TS ts, PetscViewer viewer)
 - arktype - type of `TSARKIMEX` scheme
 
   Options Database Key:
-. -ts_arkimex_type <1bee,a2,l2,ars122,2c,2d,2e,prssp2,3,bpr3,ars443,4,5> - set `TSARKIMEX` scheme type
+. -ts_arkimex_type (1bee|a2|l2|ars122|2c|2d|2e|prssp2|3|bpr3|ars443|4|5) - set `TSARKIMEX` scheme type, see `TSARKIMEXType`
 
   Level: intermediate
 
@@ -2230,7 +2230,7 @@ PetscErrorCode TSARKIMEXGetType(TS ts, TSARKIMEXType *arktype)
 - flg - `PETSC_TRUE` for fully implicit
 
   Options Database Key:
-. -ts_arkimex_fully_implicit <true,false> - Solve both parts of the equation implicitly
+. -ts_arkimex_fully_implicit (true|false) - Solve both parts of the equation implicitly
 
   Level: intermediate
 
@@ -2350,10 +2350,10 @@ static PetscErrorCode TSDestroy_ARKIMEX(TS ts)
   of the equation using `TSSetIFunction()` and the non-stiff part with `TSSetRHSFunction()`.
 
   Options Database Keys:
-+ -ts_arkimex_type <1bee,a2,l2,ars122,2c,2d,2e,prssp2,3,bpr3,ars443,4,5> - Set `TSARKIMEX` scheme type
-. -ts_dirk_type <type>                                                   - Set `TSDIRK` scheme type
-. -ts_arkimex_fully_implicit <true,false>                                - Solve both parts of the equation implicitly
-. -ts_arkimex_fastslowsplit <true,false>                                 - Enables the `TSARKIMEX` solver for a fast-slow system where the RHS is split component-wise,
++ -ts_arkimex_type (1bee|a2|l2|ars122|2c|2d|2e|prssp2|3|bpr3|ars443|4|5) - Set `TSARKIMEX` scheme type
+. -ts_dirk_type type                                                     - Set `TSDIRK` scheme type
+. -ts_arkimex_fully_implicit (true|false)                                - Solve both parts of the equation implicitly
+. -ts_arkimex_fastslowsplit (true|false)                                 - Enables the `TSARKIMEX` solver for a fast-slow system where the RHS is split component-wise,
                                                                            see `TSRHSSplitSetIS()`
 - -ts_arkimex_initial_guess_extrapolate                                  - Extrapolate the initial guess for the stage solution from stage values of the previous time step
 
@@ -2485,16 +2485,16 @@ PetscErrorCode TSDIRKGetType(TS ts, TSDIRKType *dirktype)
   Notes:
   The default is `TSDIRKES213SAL`, it can be changed with `TSDIRKSetType()` or `-ts_dirk_type`.
   The convention used in PETSc to name the DIRK methods is TSDIRK[E][S]PQS[SA][L][A] with:
-+ E - whether the method has an explicit first stage
-. S - whether the method is single diagonal
-. P - order of the advancing method
-. Q - order of the embedded method
-. S - number of stages
++ E  - whether the method has an explicit first stage
+. S  - whether the method is single diagonal
+. P  - order of the advancing method
+. Q  - order of the embedded method
+. S  - number of stages
 . SA - whether the method is stiffly accurate
-. L - whether the method is L-stable
-- A - whether the method is A-stable
+. L  - whether the method is L-stable
+- A  - whether the method is A-stable
 
-.seealso: [](ch_ts), `TSCreate()`, `TS`, `TSSetType()`, `TSDIRKSetType()`, `TSDIRKGetType()`, `TSDIRKRegister()`.
+.seealso: [](ch_ts), `TSCreate()`, `TS`, `TSSetType()`, `TSDIRKSetType()`, `TSDIRKGetType()`, `TSDIRKRegister()`
 M*/
 PETSC_EXTERN PetscErrorCode TSCreate_DIRK(TS ts)
 {
@@ -2516,7 +2516,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_DIRK(TS ts)
 - fastslow - `PETSC_TRUE` enables the `TSARKIMEX` solver for a fast-slow system where the RHS is split component-wise.
 
   Options Database Key:
-. -ts_arkimex_fastslowsplit <true,false> - enables the `TSARKIMEX` solver for a fast-slow system where the RHS is split component-wise
+. -ts_arkimex_fastslowsplit (true|false) - enables the `TSARKIMEX` solver for a fast-slow system where the RHS is split component-wise
 
   Level: intermediate
 

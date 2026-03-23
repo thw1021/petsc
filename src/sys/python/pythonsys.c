@@ -167,7 +167,7 @@ PetscErrorCode PetscPythonFinalize(void)
 -  pylib - full path to the Python dynamic library, or `NULL`.
 
   Options Database Key:
-. -python <exe> - Initializes Python, and optionally takes a Python executable name
+. -python exe - Initializes Python, and optionally takes a Python executable name
 
   Level: intermediate
 
@@ -203,7 +203,7 @@ PetscErrorCode PetscPythonInitialize(const char pyexe[], const char pylib[])
 
     /* initialize Python. Py_InitializeEx() prints an error and EXITS the program if it is not successful! */
     PetscCall(PetscInfo(NULL, "Calling Py_InitializeEx(0)\n"));
-    PetscStackCallExternalVoid("Py_InitializeEx", Py_InitializeEx(0)); /* 0: do not install signal handlers */
+    PetscCallExternalVoid("Py_InitializeEx", Py_InitializeEx(0)); /* 0: do not install signal handlers */
     PetscCall(PetscInfo(NULL, "Py_InitializeEx(0) called successfully\n"));
 
     /* build 'sys.argv' list */
@@ -243,7 +243,7 @@ PetscErrorCode PetscPythonInitialize(const char pyexe[], const char pylib[])
   }
   /* import 'petsc4py.PETSc' module */
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
-  PetscStackCallExternalVoid("PyImport_ImportModule", module = PyImport_ImportModule("petsc4py.PETSc"));
+  PetscCallExternalVoid("PyImport_ImportModule", module = PyImport_ImportModule("petsc4py.PETSc"));
   PetscCall(PetscFPTrapPop());
   if (module) {
     PetscCall(PetscInfo(NULL, "Python: successfully imported module 'petsc4py.PETSc'\n"));

@@ -234,7 +234,7 @@ def generateCStub(pkgname,petscarch,manualstubsfound,senums,classes,structs,funn
     filename = 'z' + fun.file
   if not os.path.isdir(dir): os.makedirs(dir)
 
-  with open(os.path.join(dir,filename.replace('.c','f.c')),'a') as fd:
+  with open(os.path.join(dir,filename.replace('.cu','.c').replace('.c','f.c')),'a') as fd:
     fd.write('#include "petscsys.h"\n')
     fd.write('#include "petscfix.h"\n')
     fd.write('#include "petsc/private/ftnimpl.h"\n')
@@ -505,7 +505,7 @@ def main(petscdir,slepcdir,petscarch,mpi_f08 = 'Unknown'):
   pkgname = 'slepc' if slepcdir else 'petsc'
 
   if not slepcdir:
-    classes, enums, senums, typedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI(petscdir,'petsc')
+    classes, enums, senums, typedefs, functiontypedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI(petscdir,'petsc')
 
     with open(os.path.join(petscdir,petscarch,'lib','petsc','conf','classes.data'),'wb') as file:
       pickle.dump(classes,file)
@@ -528,7 +528,7 @@ def main(petscdir,slepcdir,petscarch,mpi_f08 = 'Unknown'):
       petsctypedefs = pickle.load(file)
 
     petscobjectfunctions = petscclasses['PetscObject'].functions
-    classes, enums, senums, typedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI(slepcdir,'slepc')
+    classes, enums, senums, typedefs, functiontypedefs, structs, funcs, files, mansecs, submansecs = getAPI.getAPI(slepcdir,'slepc')
     classesext = classes.copy(); classesext.update(petscclasses)
     structsext = structs.copy(); structsext.update(petscstructs)
     enumsext = enums.copy(); enumsext.update(petscenums)
@@ -564,6 +564,7 @@ def main(petscdir,slepcdir,petscarch,mpi_f08 = 'Unknown'):
   for i in typedefs.keys():
     if not typedefs[i].name: continue
     if i in ['PetscBool', 'PetscSizeT']: continue
+    if typedefs[i].opaque: continue
     value = typedefs[i].value
     if value in CToFortranTypes:
       if not CToFortranTypes[value]: continue

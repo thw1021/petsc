@@ -530,11 +530,11 @@ PetscErrorCode KSPReset_PIPEFGMRES(KSP ksp)
    KSPPIPEFGMRES - Implements the Pipelined (1-stage) Flexible Generalized Minimal Residual method {cite}`sananschneppmay2016`. [](sec_pipelineksp). [](sec_flexibleksp)
 
    Options Database Keys:
-+   -ksp_gmres_restart <restart> - the number of Krylov directions to orthogonalize against
-.   -ksp_gmres_haptol <tol> - sets the tolerance for "happy ending" (exact convergence)
-.   -ksp_gmres_preallocate - preallocate all the Krylov search directions initially (otherwise groups of vectors are allocated as needed)
-.   -ksp_pipefgmres_shift - the shift to use (defaults to 1. See `KSPPIPEFGMRESSetShift()`
--   -ksp_gmres_krylov_monitor - plot the Krylov space generated
++   -ksp_gmres_restart restart - the number of Krylov directions to orthogonalize against
+.   -ksp_gmres_haptol tol      - sets the tolerance for "happy ending" (exact convergence)
+.   -ksp_gmres_preallocate     - preallocate all the Krylov search directions initially (otherwise groups of vectors are allocated as needed)
+.   -ksp_pipefgmres_shift      - the shift to use (defaults to 1. See `KSPPIPEFGMRESSetShift()`
+-   -ksp_gmres_krylov_monitor  - plot the Krylov space generated
 
    Level: intermediate
 
@@ -556,7 +556,7 @@ PetscErrorCode KSPReset_PIPEFGMRES(KSP ksp)
    Contributed by:
    P. Sanan and S.M. Schnepp
 
-.seealso: [](ch_ksp), [](doc_faq_pipelined), [](sec_pipelineksp), [](sec_flexibleksp), `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPLGMRES`, `KSPPIPECG`, `KSPPIPECR`, `KSPPGMRES`, `KSPFGMRES`
+.seealso: [](ch_ksp), [](doc_faq_pipelined), [](sec_pipelineksp), [](sec_flexibleksp), `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPLGMRES`, `KSPPIPECG`, `KSPPIPECR`, `KSPPGMRES`, `KSPFGMRES`,
           `KSPGMRESSetRestart()`, `KSPGMRESSetHapTol()`, `KSPGMRESSetPreAllocateVectors()`, `KSPGMRESMonitorKrylov()`, `KSPPIPEFGMRESSetShift()`
 M*/
 
@@ -647,7 +647,7 @@ static PetscErrorCode KSPPIPEFGMRESGetNewVectors(KSP ksp, PetscInt it)
 - shift - the shift
 
   Options Database Key:
-. -ksp_pipefgmres_shift <shift> - set the shift parameter
+. -ksp_pipefgmres_shift shift - set the shift parameter
 
   Level: intermediate
 

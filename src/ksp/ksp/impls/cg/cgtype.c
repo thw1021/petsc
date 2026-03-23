@@ -44,7 +44,7 @@ PetscErrorCode KSPCGSetType(KSP ksp, KSPCGType type)
 - flg - turn on or off the single reduction
 
   Options Database Key:
-. -ksp_cg_single_reduction <bool> - Merge inner products into single `MPI_Allreduce()`
+. -ksp_cg_single_reduction (true|false) - Merge inner products into single `MPI_Allreduce()`
 
   Level: intermediate
 
@@ -55,7 +55,7 @@ PetscErrorCode KSPCGSetType(KSP ksp, KSPCGType type)
 
   See also `KSPPIPECG`, `KSPPIPECR`, and `KSPGROPPCG` that use non-blocking reductions. [](sec_pipelineksp),
 
-.seealso: [](ch_ksp), [](sec_pipelineksp), `KSP`, `KSPCG`, `KSPGMRES`, `KSPPIPECG`, `KSPPIPECR`, `and KSPGROPPCG`
+.seealso: [](ch_ksp), [](sec_pipelineksp), `KSP`, `KSPCG`, `KSPGMRES`, `KSPPIPECG`, `KSPPIPECR`, `KSPGROPPCG`
 @*/
 PetscErrorCode KSPCGUseSingleReduction(KSP ksp, PetscBool flg)
 {

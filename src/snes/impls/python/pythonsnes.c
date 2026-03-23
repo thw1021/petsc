@@ -10,7 +10,7 @@
 -  pyname - full dotted Python name [package].module[.{class|function}]
 
    Options Database Key:
-.  -snes_python_type <pyname> - python class
+.  -snes_python_type pyname - python class
 
    Level: intermediate
 
@@ -48,3 +48,12 @@ PetscErrorCode SNESPythonGetType(SNES snes, const char *pyname[])
   PetscUseMethod(snes, "SNESPythonGetType_C", (SNES, const char *[]), (snes, pyname));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*MC
+   SNESPYTHON - a `SNESType` that is implemented as a Python class using `SNESPythonSetType()`
+
+   Level: intermediate
+
+.seealso: [](ch_snes), `SNES`, `SNESCreate()`, `SNESSHELL`, `SNESSetType()`, `PetscPythonInitialize()`, `SNESPythonSetType()`,
+          `SNESPythonGetType()`, `TSPYTHON`, `TAOPYTHON`
+M*/

@@ -61,7 +61,7 @@ important. We use several conventions
 
 11. Use the phrase `infinity or NaN` not `NaN or infinity`.
 
-12. Use the abbreviation NaN for Not-a-Number.
+12. Use the abbreviation `NaN` for Not-a-Number.
 
 (stylepetsccount)=
 
@@ -122,12 +122,19 @@ The `.clang-format` file in the PETSc root directory controls the white space an
 
 Even with the use of `clang-format` there are still many decisions about code formatting that must be constantly made. A subset of these is automatically checked for merge requests with `make checkbadSource`.
 
-01. The prototypes for functions should not include the names of the
-    variables
+01. The prototypes for functions in the include files should not include the names of the
+    function arguments. For example,
 
     ```
     PETSC_EXTERN PetscErrorCode MyFunction(PetscInt); // Correct
-    PETSC_EXTERN PetscErrorCode MyFunction(PetscInt myvalue); // Incorrect
+    PETSC_EXTERN PetscErrorCode MyFunction(PetscInt argumentname); // Incorrect
+    ```
+
+    However the `typedef` declaration of function types must include the names of the function argument. For example,
+
+    ```
+    PETSC_EXTERN_TYPEDEF typedef PetscErrorCode MyFunctionFn(PetscInt); // Incorrect
+    PETSC_EXTERN_TYPEDEF typedef PetscErrorCode MyFunctionFn(PetscInt argumentname); // Correct
     ```
 
 02. All local variables of a particular type (for example, `PetscInt`) should be listed
@@ -317,7 +324,7 @@ Even with the use of `clang-format` there are still many decisions about code fo
 04. Subroutines that would normally have a `void **` argument to return
     a pointer to some data should be prototyped as `void *`.
     This prevents the caller from having to put a `(void **)` cast in
-    each function call. See, for example, `DMDAVecGetArray()`.
+    each function call. See, for example, `DMDAVecGetArray()`. See also 11 of this section.
 
 05. Do not use the `register` directive.
 
@@ -383,6 +390,13 @@ Even with the use of `clang-format` there are still many decisions about code fo
     `__VA_ARGS__`, but MSVC's implementation is not conforming and may need workarounds.
     See `PetscDefined()` for an example of how to work around MSVC's limitations to write
     a macro that is usable in both.
+
+11. Context variables are declared as `PetscCtx` which is a typedef for `void *`. When
+    context variables are returned as function arguments they are declared as `PetscCtxRt`
+    which is also a typedef for `void *`. See also 4 of this section. See, for example, `SNESSetApplicationContext()`
+    and `SNESGetApplicationContext()`. The `PetscCtx` and `PetscCtxRt` are used to
+    provide the Fortran bindings automatically for functions that take contexts. In Fortran,
+    the context must be a Fortran derived type, `type(xxx)`.
 
 (usage_of_petsc_functions_and_macros)=
 
@@ -612,7 +626,7 @@ preceded by and followed by a blank line. For source code, this information is f
 ### Manual Page Format
 
 Each function, typedef, class, macro, enum, and so on in the public API
-should include the following data, correctly formatted (see codes
+must include the following data, correctly formatted (see codes
 section) to generate complete manual pages and (possibly) Fortran interfaces with
 Sowing. All entries below should be separated by blank lines. Except
 where noted, add a newline after the section headings.
@@ -652,9 +666,66 @@ where noted, add a newline after the section headings.
     . arg - the integer argument description
     ```
 
-08. If documenting a function that interacts with the options database, a
+08. When documenting a function or object that interacts with the options database, a
     list of options database keys in an `Options Database Key(s):`
     section.
+
+    The standard format is
+
+    ```
+    -objectname_optionname variablename - text explaining the option
+    ```
+
+    When possible `variablename` should match the string used for declaring
+    the variable in the manual pages. The default value may be provided at the end
+    of the text.
+
+    Optional arguments are indicated with
+
+    ```
+    -objectname_optionname [optionalvariablename] - text explaining the option
+    ```
+
+    When the option accepts a comma separated list of values this may be indicated
+    with
+
+    ```
+    -objectname_optionname variablename1,variablename2 - text explaining the option
+    ```
+
+    Note there should be no spaces between the commas.
+
+    For options with a small set of possible values one may use, for example,
+
+    ```
+    -objectname_optionname (true|false) - text explaining the option
+    ```
+
+    Note that in this situation a `variablename` is never provided and there
+    should be no spaces around the pipes.
+
+    Three periods may be used to indicate any number of additional possibilities, for example,
+
+    ```
+    -objectname_optionname p1,p2,...,pn - text explaining the option
+    ```
+
+    Never use etc to indicate more possibilities.
+
+    Examples of a more complex form:
+
+    ```
+    -start_in_debugger [(noxterm)],[(gdb|lldb|...)]
+    ```
+
+    indicates one may use, for example, `-start_in_debugger`, or `-start_in_debugger noxterm`,
+    or `-start_in_debugger gdb`, or `-start_in_debugger noxterm,gdb`.
+
+    ```
+    -objects_dump [(all)]
+    ```
+
+    indicates one may use either, `-objects_dump` or `-objects_dump all`.
 
 09. `Level:` (no newline) followed by `beginner`,
     `intermediate`, `advanced`, `developer`, or `deprecated`. This
@@ -683,6 +754,12 @@ where noted, add a newline after the section headings.
 15. All PETSc functions that appear in a manual page (except the one in the header at the top) should end with a `()` and be enclosed
     in single back tick marks. All PETSc enum types and macros etc, should also be enclosed in single back tick marks.
     This includes each item listed in the `.seealso:` lines.
+
+16. Every new API entry such as functions and typedefs must have a corresponding manual page. A merge request cannot be accepted
+    without said manual pages.
+
+17. Every new API entry such as functions and typedefs must be listed in the `doc/changes/dev.md` file. A merge request cannot be accepted
+    without said entries in the `doc/changes/dev.md` file.
 
 [^footnote-1]: Type also refers to the string name of the subclass.
 

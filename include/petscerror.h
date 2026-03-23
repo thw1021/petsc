@@ -449,7 +449,7 @@ M*/
   Level: developer
 
   Notes:
-  `PetscUseTypeMethod()` and ` PetscTryTypeMethod()` are the preferred API for this functionality. But when the callback functions are associated with a
+  `PetscUseTypeMethod()` and `PetscTryTypeMethod()` are the preferred API for this functionality. But when the callback functions are associated with a
   `DMSNES` or `DMTS` this API must be used.
 
   Once the error handler is called the calling function is then returned from with the given
@@ -1303,9 +1303,8 @@ __attribute__((analyzer_noreturn))
 PETSC_EXTERN PetscErrorCode PetscError(MPI_Comm, int, const char *, const char *, PetscErrorCode, PetscErrorType, const char *, ...) PETSC_ATTRIBUTE_COLD PETSC_ATTRIBUTE_FORMAT(7, 8);
 
 PETSC_EXTERN PetscErrorCode PetscErrorPrintfInitialize(void);
-PETSC_EXTERN PetscErrorCode PetscErrorMessage(PetscErrorCode, const char *[], char **);
+PETSC_EXTERN PetscErrorCode PetscErrorMessage(PetscErrorCode, const char *[], const char **);
 PETSC_EXTERN PetscErrorCode PetscTraceBackErrorHandler(MPI_Comm, int, const char *, const char *, PetscErrorCode, PetscErrorType, const char *, void *) PETSC_ATTRIBUTE_COLD;
-PETSC_EXTERN PetscErrorCode PetscIgnoreErrorHandler(MPI_Comm, int, const char *, const char *, PetscErrorCode, PetscErrorType, const char *, void *) PETSC_ATTRIBUTE_COLD;
 PETSC_EXTERN PetscErrorCode PetscEmacsClientErrorHandler(MPI_Comm, int, const char *, const char *, PetscErrorCode, PetscErrorType, const char *, void *) PETSC_ATTRIBUTE_COLD;
 PETSC_EXTERN PetscErrorCode PetscMPIAbortErrorHandler(MPI_Comm, int, const char *, const char *, PetscErrorCode, PetscErrorType, const char *, void *) PETSC_ATTRIBUTE_COLD;
 PETSC_EXTERN PetscErrorCode PetscAbortErrorHandler(MPI_Comm, int, const char *, const char *, PetscErrorCode, PetscErrorType, const char *, void *) PETSC_ATTRIBUTE_COLD;
@@ -1634,7 +1633,7 @@ M*/
 
   /*MC
    PetscFunctionBegin - First executable line of each PETSc function,  used for error handling. Final
-   line of PETSc functions should be `PetscFunctionReturn`(0);
+   line of PETSc functions should be `PetscFunctionReturn`(PETSC_SUCCESS);
 
    Synopsis:
    #include <petscsys.h>
@@ -1799,7 +1798,7 @@ M*/
    This routine is a macro, so while it does not "return" anything itself, it does return from
    the function in the literal sense.
 
-   Usually the return value is the integer literal `0` (for example in any function returning
+   Usually the return value is `PETSC_SUCCESS` (for example in any function returning
    `PetscErrorCode`), however it is possible to return any arbitrary type. The arguments of
    this macro are placed before the `return` statement as-is.
 
@@ -1870,7 +1869,7 @@ M*/
   }
 .ve
 
-.seealso: `PetscFunctionReturn()`, `PetscFunctionBegin`, PetscFunctionBeginUser`
+.seealso: `PetscFunctionReturn()`, `PetscFunctionBegin`, `PetscFunctionBeginUser`
 M*/
   #define PetscFunctionReturnVoid() \
     do { \
@@ -1893,23 +1892,24 @@ M*/
 #endif /* PETSC_USE_DEBUG */
 
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
-  #define PetscStackCallExternalVoid(...)
+  #define PetscCallExternalVoid(...)
 template <typename F, typename... Args>
 void PetscCallExternal(F, Args...);
 template <typename F, typename... Args>
 void PetscCallExternalAbort(F, Args...);
 #else
-  /*MC
-    PetscStackCallExternalVoid - Calls an external library routine or user function after pushing the name of the routine on the stack.
+/*MC
+    PetscCallExternalVoid - Calls an external library routine or user function after pushing the name of the routine on the stack.
 
    Input Parameters:
 +   name    - string that gives the name of the function being called
--   routine - actual call to the routine, for example, functionname(a,b)
+-   routine - actual call to the routine, for example, `functionname(a,b)`
 
    Level: developer
 
    Notes:
-   Often one should use `PetscCallExternal()` instead. This routine is intended for external library routines that DO NOT return error codes
+   Often one should use `PetscCallExternal()` instead. This routine is intended for external library routines that DO NOT return error codes.
+   They may return a value or may return `void`.
 
    In debug mode this also checks the memory for corruption at the end of the function call.
 
@@ -1920,7 +1920,7 @@ void PetscCallExternalAbort(F, Args...);
 
 .seealso: `PetscCall()`, `PetscStackPushNoCheck()`, `PetscStackPush()`, `PetscCallExternal()`, `PetscCallBLAS()`
 @*/
-  #define PetscStackCallExternalVoid(name, ...) \
+  #define PetscCallExternalVoid(name, ...) \
     do { \
       PetscStackPushExternal(name); \
       __VA_ARGS__; \
@@ -1937,7 +1937,7 @@ void PetscCallExternalAbort(F, Args...);
    Level: developer
 
    Notes:
-   This is intended for external package routines that return error codes. Use `PetscStackCallExternalVoid()` for those that do not.
+   This is intended for external package routines that return error codes. Use `PetscCallExternalVoid()` for those that do not.
 
    In debug mode this also checks the memory for corruption at the end of the function call.
 
@@ -1946,7 +1946,7 @@ void PetscCallExternalAbort(F, Args...);
    Developer Note:
    This is so that when an external package routine results in a crash or corrupts memory, they get blamed instead of PETSc.
 
-.seealso: `PetscCall()`, `PetscStackPushNoCheck()`, `PetscStackPush()`, `PetscStackCallExternalVoid()`, `PetscCallExternalAbort()`
+.seealso: `PetscCall()`, `PetscStackPushNoCheck()`, `PetscStackPush()`, `PetscCallExternalVoid()`, `PetscCallExternalAbort()`
 M*/
   #define PetscCallExternal(func, ...) \
     do { \
@@ -1966,7 +1966,7 @@ M*/
    Level: developer
 
    Notes:
-   This is intended for external package routines that return error codes. Use `PetscStackCallExternalVoid()` for those that do not.
+   This is intended for external package routines that return error codes. Use `PetscCallExternalVoid()` for those that do not.
 
    In debug mode this also checks the memory for corruption at the end of the function call.
 
@@ -1975,7 +1975,7 @@ M*/
    Developer Note:
    This is so that when an external package routine results in a crash or corrupts memory, they get blamed instead of PETSc.
 
-.seealso: `PetscCall()`, `PetscStackPushNoCheck()`, `PetscStackPush()`, `PetscStackCallExternalVoid()`, `PetscCallExternal()`
+.seealso: `PetscCall()`, `PetscStackPushNoCheck()`, `PetscStackPush()`, `PetscCallExternalVoid()`, `PetscCallExternal()`
 M*/
   #define PetscCallExternalAbort(func, ...) \
     do { \

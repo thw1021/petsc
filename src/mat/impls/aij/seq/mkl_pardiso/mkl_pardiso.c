@@ -53,7 +53,7 @@ void pardiso_64init(void *pt, INT_TYPE *mtype, INT_TYPE iparm[])
   #define MKL_PARDISO_INIT pardisoinit
 #endif
 
-#define PetscCallPardiso(f) PetscStackCallExternalVoid("MKL_PARDISO", f);
+#define PetscCallPardiso(f) PetscCallExternalVoid("MKL_PARDISO", f);
 
 /*
    Internal data structure.
@@ -927,7 +927,7 @@ static PetscErrorCode MatMkl_PardisoSetCntl_MKL_PARDISO(Mat F, PetscInt icntl, P
 - ival  - value of MKL PARDISO parameter
 
   Options Database Key:
-. -mat_mkl_pardiso_<icntl> <ival> - change the option numbered icntl to the value ival
+. -mat_mkl_pardiso_ICNTL ival - change the option numbered ICNTL to the value `ival`
 
   Level: beginner
 

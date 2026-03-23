@@ -229,7 +229,7 @@ PetscErrorCode TaoLineSearchReset(TaoLineSearch ls)
 
   Level: developer
 
-.seealso: `TaoLineSearchCreate()`, `TaoLineSearchSolve()`
+.seealso: `TaoLineSearch`, `TaoLineSearchCreate()`, `TaoLineSearchApple()`
 @*/
 PetscErrorCode TaoLineSearchDestroy(TaoLineSearch *ls)
 {
@@ -264,7 +264,7 @@ PetscErrorCode TaoLineSearchDestroy(TaoLineSearch *ls)
 + x          - On input the current solution, on output `x` contains the new solution determined by the line search
 . f          - On input the objective function value at current solution, on output contains the objective function value at new solution
 . g          - On input the gradient evaluated at `x`, on output contains the gradient at new solution
-. steplength - scalar multiplier of s used ( x = x0 + steplength * x)
+. steplength - scalar multiplier of `s` used ( $x = x_0 + steplength * x)
 - reason     - `TaoLineSearchConvergedReason` reason why the line-search stopped
 
   Level: advanced
@@ -366,7 +366,7 @@ PetscErrorCode TaoLineSearchApply(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, 
 - type - the `TaoLineSearchType` selection
 
   Options Database Key:
-. -tao_ls_type <type> - select which method Tao should use at runtime
+. -tao_ls_type type - select which linesearch method Tao should use at runtime, see `TaoLineSearchType`
 
   Level: beginner
 
@@ -461,15 +461,15 @@ PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f,
 . ls - the `TaoLineSearch` context
 
   Options Database Keys:
-+ -tao_ls_type <type>     - The algorithm that `TaoLineSearch` uses (more-thuente, gpcg, unit)
-. -tao_ls_ftol <tol>      - tolerance for sufficient decrease
-. -tao_ls_gtol <tol>      - tolerance for curvature condition
-. -tao_ls_rtol <tol>      - relative tolerance for acceptable step
-. -tao_ls_stepinit <step> - initial steplength allowed
-. -tao_ls_stepmin <step>  - minimum steplength allowed
-. -tao_ls_stepmax <step>  - maximum steplength allowed
-. -tao_ls_max_funcs <n>   - maximum number of function evaluations allowed
-- -tao_ls_view            - display line-search results to standard output
++ -tao_ls_type type     - The algorithm that `TaoLineSearch` uses (more-thuente, gpcg, unit)
+. -tao_ls_ftol tol      - tolerance for sufficient decrease
+. -tao_ls_gtol tol      - tolerance for curvature condition
+. -tao_ls_rtol tol      - relative tolerance for acceptable step
+. -tao_ls_stepinit step - initial steplength allowed
+. -tao_ls_stepmin step  - minimum steplength allowed
+. -tao_ls_stepmax step  - maximum steplength allowed
+. -tao_ls_max_funcs n   - maximum number of function evaluations allowed
+- -tao_ls_view          - display line-search results to standard output
 
   Level: beginner
 
@@ -1158,6 +1158,9 @@ PetscErrorCode TaoLineSearchGetStepLength(TaoLineSearch ls, PetscReal *s)
 + sname - name of a new user-defined solver
 - func  - routine to Create method context
 
+  Calling sequence of `func`:
+. ls - the `TaoLineSearch` object to set with the `TaoLineSearchType` specific structure
+
   Example Usage:
 .vb
    TaoLineSearchRegister("my_linesearch", MyLinesearchCreate);
@@ -1179,7 +1182,7 @@ PetscErrorCode TaoLineSearchGetStepLength(TaoLineSearch ls, PetscReal *s)
 
 .seealso: [](ch_tao), `Tao`, `TaoLineSearch`
 @*/
-PetscErrorCode TaoLineSearchRegister(const char sname[], PetscErrorCode (*func)(TaoLineSearch))
+PetscErrorCode TaoLineSearchRegister(const char sname[], PetscErrorCode (*func)(TaoLineSearch ls))
 {
   PetscFunctionBegin;
   PetscCall(TaoLineSearchInitializePackage());

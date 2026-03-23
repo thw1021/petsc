@@ -22,7 +22,7 @@
 
   Level: beginner
 
-.seealso: [](ch_tao), `Tao`, `TaoTypes`, `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetObjectiveAndGradient()`, `TaoGetHessian()`
+.seealso: [](ch_tao), `Tao`, `TaoType`, `TaoSetObjective()`, `TaoSetGradient()`, `TaoSetObjectiveAndGradient()`, `TaoGetHessian()`
 @*/
 PetscErrorCode TaoSetHessian(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Tao tao, Vec x, Mat H, Mat Hpre, PetscCtx ctx), PetscCtx ctx)
 {
@@ -228,9 +228,9 @@ PetscErrorCode TaoTestHessian(Tao tao)
 - Hpre - matrix used to construct the preconditioner, usually the same as `H`
 
   Options Database Keys:
-+ -tao_test_hessian                   - compare the user provided Hessian with one compute via finite differences to check for errors
-. -tao_test_hessian <numerical value> - display entries in the difference between the user provided Hessian and finite difference Hessian that are greater than a certain value to help users detect errors
-- -tao_test_hessian_view              - display the user provided Hessian, the finite difference Hessian and the difference between them to help users detect the location of errors in the user provided Hessian
++ -tao_test_hessian                 - compare the user provided Hessian with one compute via finite differences to check for errors
+. -tao_test_hessian numerical value - display entries in the difference between the user provided Hessian and finite difference Hessian that are greater than a certain value to help users detect errors
+- -tao_test_hessian_view            - display the user provided Hessian, the finite difference Hessian and the difference between them to help users detect the location of errors in the user provided Hessian
 
   Level: developer
 

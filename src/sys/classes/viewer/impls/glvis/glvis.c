@@ -125,7 +125,7 @@ static PetscErrorCode PetscViewerGLVisSetSnapId_GLVis(PetscViewer viewer, PetscI
 
 .seealso: [](sec_viewers), `PETSCVIEWERGLVIS`, `PetscViewerGLVisOpen()`, `PetscViewerCreate()`, `PetscViewerSetType()`, `PetscObjectSetName()`
 @*/
-PetscErrorCode PetscViewerGLVisSetFields(PetscViewer viewer, PetscInt nf, const char *fec_type[], PetscInt dim[], PetscErrorCode (*g2l)(PetscObject, PetscInt, PetscObject[], void *), PetscObject Vfield[], PetscCtx ctx, PetscCtxDestroyFn *destroyctx)
+PetscErrorCode PetscViewerGLVisSetFields(PetscViewer viewer, PetscInt nf, const char *fec_type[], PetscInt dim[], PetscErrorCode (*g2l)(PetscObject, PetscInt, PetscObject[], PetscCtx), PetscObject Vfield[], PetscCtx ctx, PetscCtxDestroyFn *destroyctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
@@ -595,12 +595,12 @@ static PetscErrorCode PetscViewerFileSetName_GLVis(PetscViewer viewer, const cha
 . viewer - the `PetscViewer` object
 
   Options Database Keys:
-+ -glvis_precision <precision> - Sets number of digits for floating point values
-. -glvis_size <width,height>   - Sets the window size (in pixels)
-. -glvis_pause <pause>         - Sets time (in seconds) that the program pauses after each visualization
-                                 (0 is default, -1 implies every visualization)
-. -glvis_keys                  - Additional keys to configure visualization
-- -glvis_exec                  - Additional commands to configure visualization
++ -glvis_precision precision - Sets number of digits for floating point values
+. -glvis_size width,height   - Sets the window size (in pixels)
+. -glvis_pause pause         - Sets time (in seconds) that the program pauses after each visualization
+                               (0 is default, -1 implies every visualization)
+. -glvis_keys                - Additional keys to configure visualization
+- -glvis_exec                - Additional commands to configure visualization
 
   Level: beginner
 

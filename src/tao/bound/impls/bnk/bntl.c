@@ -255,7 +255,7 @@ static PetscErrorCode TaoSetFromOptions_BNTL(Tao tao, PetscOptionItems PetscOpti
             minimization with bound constraints.
 
   Options Database Keys:
-  + -tao_bnk_max_cg_its   - maximum number of bounded conjugate-gradient iterations taken in each Newton loop
+  + -tao_bnk_max_cg_its  - maximum number of bounded conjugate-gradient iterations taken in each Newton loop
   . -tao_bnk_init_type   - trust radius initialization method ("constant", "direction", "interpolation")
   . -tao_bnk_update_type - trust radius update method ("step", "direction", "interpolation")
   - -tao_bnk_as_type     - active-set estimation method ("none", "bertsekas")
@@ -263,9 +263,10 @@ static PetscErrorCode TaoSetFromOptions_BNTL(Tao tao, PetscOptionItems PetscOpti
   Level: beginner
 
   Developer Note:
-  One should control the maximum number of cg iterations through the standard pc_max_it option not with a special
+  One should control the maximum number of cg iterations through the standard `-ksp_max_it` option not with a special
   ad hoc option
 
+.seealso: `Tao`, `TAONTR`, `TAONTL`, `TAONM`, `TAOCG`, `TaoType`, `TaoCreate()`
 M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_BNTL(Tao tao)
 {

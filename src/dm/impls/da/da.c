@@ -764,15 +764,15 @@ PetscErrorCode DMDAGetOwnershipRanges(DM da, PeOp const PetscInt *lx[], PeOp con
 
   Input Parameters:
 + da       - the `DMDA` object
-. refine_x - ratio of fine grid to coarse in x direction (2 by default)
-. refine_y - ratio of fine grid to coarse in y direction (2 by default)
-- refine_z - ratio of fine grid to coarse in z direction (2 by default)
+. refine_x - ratio of fine grid to coarse in the x direction (2 by default)
+. refine_y - ratio of fine grid to coarse in the y direction (2 by default)
+- refine_z - ratio of fine grid to coarse in the z direction (2 by default)
 
   Options Database Keys:
-+ -da_refine_x refine_x - refinement ratio in x direction
-. -da_refine_y rafine_y - refinement ratio in y direction
-. -da_refine_z refine_z - refinement ratio in z direction
-- -da_refine <n>        - refine the `DMDA` object n times when it is created.
++ -da_refine_x refine_x - refinement ratio in the x direction
+. -da_refine_y rafine_y - refinement ratio in the y direction
+. -da_refine_z refine_z - refinement ratio in the z direction
+- -da_refine n          - refine the `DMDA` object `n` times when it is created.
 
   Level: intermediate
 
@@ -1385,7 +1385,6 @@ static PetscErrorCode DMDASetGLLCoordinates_1d(DM dm, PetscInt n, PetscReal *nod
 }
 
 /*@
-
   DMDASetGLLCoordinates - Sets the global coordinates from -1 to 1 to the GLL points of as many GLL elements that fit the number of grid points
 
   Collective

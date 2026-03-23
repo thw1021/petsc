@@ -329,7 +329,7 @@ PetscErrorCode PetscObjectGetFortranCallback(PetscObject obj, PetscFortranCallba
 - all - by default only tries to display objects created explicitly by the user, if all is `PETSC_TRUE` then lists all outstanding objects
 
   Options Database Key:
-. -objects_dump <all> - print information about all the objects that exist at the end of the programs run
+. -objects_dump all - print information about all the objects that exist at the end of the programs run
 
   Level: advanced
 
@@ -768,7 +768,7 @@ PetscErrorCode PetscObjectCompose(PetscObject obj, const char name[], PetscObjec
   call PetscObjectQuery(PetscObjectCast(obj), name, ptr, ierr)
 .ve
 
-.seealso: `PetscObjectCompose()`, `PetscObjectComposeFunction()`, `PetscObjectQueryFunction()`, `PetscContainer`
+.seealso: `PetscObjectCompose()`, `PetscObjectComposeFunction()`, `PetscObjectQueryFunction()`, `PetscContainer`,
           `PetscContainerGetPointer()`, `PetscObject`
 @*/
 PetscErrorCode PetscObjectQuery(PetscObject obj, const char name[], PetscObject *ptr)

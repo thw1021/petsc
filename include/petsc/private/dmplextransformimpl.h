@@ -47,6 +47,7 @@ struct _p_DMPlexTransform {
   PetscInt  ****trSubVerts;    /* The indices for vertices of subcell (rct, r) in a cell of each type */
   PetscFE      *coordFE;       /* Finite element for each cell type, used for localized coordinate interpolation */
   PetscFEGeom **refGeom;       /* Geometry of the reference cell for each cell type */
+  PetscReal     redFactor;     // Used to scale maxCell in each direction
   /* Label construction */
   PetscBool labelMatchStrata; /* Flag to restrict labeled points to the same cell type as parents */
   PetscInt  labelReplicaInc;  /* Multiplier to create new label values for replicas v = oldv + r * repInc */
@@ -110,6 +111,10 @@ typedef struct {
 typedef struct {
   PetscInt dummy;
 } DMPlexRefine_ToBox;
+
+typedef struct {
+  PetscBool reflect; /* Flag to reflect the transformation */
+} DMPlexRefine_ToSimplex;
 
 typedef struct {
   PetscInt dummy;

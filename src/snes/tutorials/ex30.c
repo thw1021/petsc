@@ -171,11 +171,11 @@ int main(int argc, char **argv)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Set up the SNES solver with callback functions.
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  PetscCall(DMDASNESSetFunctionLocal(da, INSERT_VALUES, (PetscErrorCode (*)(DMDALocalInfo *, void *, void *, void *))FormFunctionLocal, (void *)user));
+  PetscCall(DMDASNESSetFunctionLocal(da, INSERT_VALUES, (DMDASNESFunctionFn *)FormFunctionLocal, user));
   PetscCall(SNESSetFromOptions(snes));
 
-  PetscCall(SNESSetConvergenceTest(snes, SNESConverged_Interactive, (void *)user, NULL));
-  PetscCall(PetscPushSignalHandler(InteractiveHandler, (void *)user));
+  PetscCall(SNESSetConvergenceTest(snes, SNESConverged_Interactive, user, NULL));
+  PetscCall(PetscPushSignalHandler(InteractiveHandler, user));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Initialize and solve the nonlinear system
@@ -880,10 +880,10 @@ PetscErrorCode SetParams(Parameter *param, GridInfo *grid)
   param->fault_depth  = grid->jfault * grid->dz;                   /* dim'less */
   grid->corner        = grid->jlid + 1;                            /* gridcells */
   param->peclet       = param->V                                   /* m/sec */
-                * param->L * 1000.0                                /* m */
-                / param->kappa;                                    /* m^2/sec */
-  param->z_scale = param->L * alpha_g_on_cp_units_inverse_km;
-  param->skt     = PetscSqrtReal(param->kappa * param->slab_age * SEC_PER_YR);
+                      * param->L * 1000.0                          /* m */
+                      / param->kappa;                              /* m^2/sec */
+  param->z_scale      = param->L * alpha_g_on_cp_units_inverse_km;
+  param->skt          = PetscSqrtReal(param->kappa * param->slab_age * SEC_PER_YR);
   PetscCall(PetscOptionsGetReal(NULL, NULL, "-peclet", &param->peclet, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

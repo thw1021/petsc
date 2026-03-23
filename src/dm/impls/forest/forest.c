@@ -357,7 +357,7 @@ PetscErrorCode DMForestSetBaseCoordinateMapping(DM dm, PetscErrorCode (*func)(DM
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMForestGetBaseCoordinateMapping(DM dm, PetscErrorCode (**func)(DM, PetscInt, PetscInt, const PetscReal[], PetscReal[], void *), PetscCtx ctx)
+PetscErrorCode DMForestGetBaseCoordinateMapping(DM dm, PetscErrorCode (**func)(DM, PetscInt, PetscInt, const PetscReal[], PetscReal[], PetscCtx), PetscCtxRt ctx)
 {
   DM_Forest *forest = (DM_Forest *)dm->data;
 
@@ -1659,8 +1659,7 @@ static PetscErrorCode DMInitialize_Forest(DM dm)
 }
 
 /*MC
-
-     DMFOREST = "forest" - A DM object that encapsulates a hierarchically refined mesh.  Forests usually have a base `DM`
+  DMFOREST = "forest" - A DM object that encapsulates a hierarchically refined mesh.  Forests usually have a base `DM`
   (see `DMForestGetBaseDM()`), from which it is refined.  The refinement and partitioning of forests is considered
   immutable after `DMSetUp()` is called.  To adapt a mesh, one should call `DMForestTemplate()` to create a new mesh that
   will default to being identical to it, specify how that mesh should differ, and then calling `DMSetUp()` on the new

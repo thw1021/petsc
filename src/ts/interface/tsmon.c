@@ -56,17 +56,28 @@ PetscErrorCode TSMonitor(TS ts, PetscInt step, PetscReal ptime, Vec u)
 . monitor      - the monitor function, this must use a `PetscViewerFormat` as its context
 - monitorsetup - a function that is called once ONLY if the user selected this monitor that may set additional features of the `TS` or `PetscViewer` objects
 
+  Calling sequence of `monitor`:
++ ts   - the `TS` to monitor
+. step - the current time-step
+. time - the current time
+. u    - the current solution
+- vf   - the `PetscViewer` and format to monitor with
+
+  Calling sequence of `monitorsetup`:
++ ts - the `TS` to monitor
+- vf - the `PetscViewer` and format to monitor with
+
   Level: developer
 
 .seealso: [](ch_ts), `TS`, `TSMonitorSet()`, `PetscOptionsCreateViewer()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,
-          `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`
+          `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`,
           `PetscOptionsInt()`, `PetscOptionsString()`, `PetscOptionsReal()`,
           `PetscOptionsName()`, `PetscOptionsBegin()`, `PetscOptionsEnd()`, `PetscOptionsHeadBegin()`,
           `PetscOptionsStringArray()`, `PetscOptionsRealArray()`, `PetscOptionsScalar()`,
           `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`
 @*/
-PetscErrorCode TSMonitorSetFromOptions(TS ts, const char name[], const char help[], const char manual[], PetscErrorCode (*monitor)(TS, PetscInt, PetscReal, Vec, PetscViewerAndFormat *), PetscErrorCode (*monitorsetup)(TS, PetscViewerAndFormat *))
+PetscErrorCode TSMonitorSetFromOptions(TS ts, const char name[], const char help[], const char manual[], PetscErrorCode (*monitor)(TS ts, PetscInt step, PetscReal time, Vec u, PetscViewerAndFormat *vf), PetscErrorCode (*monitorsetup)(TS ts, PetscViewerAndFormat *vf))
 {
   PetscViewer       viewer;
   PetscViewerFormat format;
@@ -119,7 +130,7 @@ PetscErrorCode TSMonitorSetFromOptions(TS ts, const char name[], const char help
 
 .seealso: [](ch_ts), `TSMonitorDefault()`, `TSMonitorCancel()`, `TSDMSwarmMonitorMoments()`, `TSMonitorExtreme()`, `TSMonitorDrawSolution()`,
           `TSMonitorDrawSolutionPhase()`, `TSMonitorDrawSolutionFunction()`, `TSMonitorDrawError()`, `TSMonitorSolution()`, `TSMonitorSolutionVTK()`,
-          `TSMonitorLGSolution()`, `TSMonitorLGError()`, `TSMonitorSPSwarmSolution()`, `TSMonitorError()`, `TSMonitorEnvelope()`,  `PetscCtxDestroyFn`
+          `TSMonitorLGSolution()`, `TSMonitorLGError()`, `TSMonitorSPSwarmSolution()`, `TSMonitorError()`, `TSMonitorEnvelope()`, `PetscCtxDestroyFn`
 @*/
 PetscErrorCode TSMonitorSet(TS ts, PetscErrorCode (*monitor)(TS ts, PetscInt steps, PetscReal time, Vec u, PetscCtx ctx), PetscCtx mctx, PetscCtxDestroyFn *mdestroy)
 {
@@ -379,7 +390,7 @@ PetscErrorCode TSMonitorExtreme(TS ts, PetscInt step, PetscReal ptime, Vec v, Pe
 . -ts_monitor_lg_error           - monitor the error
 . -ts_monitor_lg_ksp_iterations  - monitor the number of `KSP` iterations needed for each timestep
 . -ts_monitor_lg_snes_iterations - monitor the number of `SNES` iterations needed for each timestep
-- -lg_use_markers <true,false>   - mark the data points (at each time step) on the plot; default is true
+- -lg_use_markers (true|false)   - mark the data points (at each time step) on the plot; default is true
 
   Level: intermediate
 
@@ -869,7 +880,7 @@ PetscErrorCode TSMonitorSolutionSetup(TS ts, PetscViewerAndFormat *vf)
   This is not called directly by users, rather one calls `TSMonitorSet()`, with this function as an argument, to cause the monitor
   to be used during the `TS` integration.
 
-.seealso: [](ch_ts), `TS`, `TSMonitorSet()`, `TSMonitorDefault()`, `VecView()`, `TSMonitorSolutionSetup()`,
+.seealso: [](ch_ts), `TS`, `TSMonitorSet()`, `TSMonitorDefault()`, `VecView()`, `TSMonitorSolutionSetup()`
 @*/
 PetscErrorCode TSMonitorSolution(TS ts, PetscInt step, PetscReal ptime, Vec u, PetscViewerAndFormat *vf)
 {
@@ -1269,14 +1280,19 @@ PetscErrorCode TSMonitorLGSetDisplayVariables(TS ts, const char *const *displayn
 . destroy   - function to destroy the optional context, see `PetscCtxDestroyFn` for its calling sequence
 - tctx      - optional context used by transform function
 
+  Calling sequence of `transform`:
++ tctx - context used by the transform function
+. u    - the input solution vector
+- w    - the output transformed vector
+
   Level: intermediate
 
   Note:
   If the `TS` object does not have a `TSMonitorLGCtx` associated with it then this function is ignored
 
-.seealso: [](ch_ts), `TSMonitorSet()`, `TSMonitorDefault()`, `VecView()`, `TSMonitorLGSetVariableNames()`, `TSMonitorLGCtxSetTransform()`, `PetscCtxDestroyFn`
+.seealso: [](ch_ts), `TSMonitorSet()`, `TSMonitorLGCtxSetTransform()`, `TSMonitorDefault()`, `VecView()`, `TSMonitorLGSetVariableNames()`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode TSMonitorLGSetTransform(TS ts, PetscErrorCode (*transform)(PetscCtx, Vec, Vec *), PetscCtxDestroyFn *destroy, PetscCtx tctx)
+PetscErrorCode TSMonitorLGSetTransform(TS ts, PetscErrorCode (*transform)(PetscCtx tctx, Vec u, Vec *w), PetscCtxDestroyFn *destroy, PetscCtx tctx)
 {
   PetscInt i;
 
@@ -1298,11 +1314,16 @@ PetscErrorCode TSMonitorLGSetTransform(TS ts, PetscErrorCode (*transform)(PetscC
 . destroy   - function to destroy the optional context, see `PetscCtxDestroyFn` for its calling sequence
 - ctx       - optional context used by transform function
 
+  Calling sequence of `transform`:
++ tctx - context used by the transform function
+. u    - the input solution vector
+- w    - the output transformed vector
+
   Level: intermediate
 
 .seealso: [](ch_ts), `TS`, `TSMonitorSet()`, `TSMonitorDefault()`, `VecView()`, `TSMonitorLGSetVariableNames()`, `TSMonitorLGSetTransform()`, `PetscCtxDestroyFn`
 @*/
-PetscErrorCode TSMonitorLGCtxSetTransform(TSMonitorLGCtx ctx, PetscErrorCode (*transform)(PetscCtx, Vec, Vec *), PetscCtxDestroyFn *destroy, PetscCtx tctx)
+PetscErrorCode TSMonitorLGCtxSetTransform(TSMonitorLGCtx ctx, PetscErrorCode (*transform)(PetscCtx tctx, Vec u, Vec *w), PetscCtxDestroyFn *destroy, PetscCtx tctx)
 {
   PetscFunctionBegin;
   ctx->transform        = transform;
@@ -1392,10 +1413,10 @@ PetscErrorCode TSMonitorLGError(TS ts, PetscInt step, PetscReal ptime, Vec u, Pe
 - dctx  - the `TSMonitorSPCtx` object that contains all the options for the monitoring, this is created with `TSMonitorSPCtxCreate()`
 
   Options Database Keys:
-+ -ts_monitor_sp_swarm <n>                  - Monitor the solution every n steps, or -1 for plotting only the final solution
-. -ts_monitor_sp_swarm_retain <n>           - Retain n old points so we can see the history, or -1 for all points
-. -ts_monitor_sp_swarm_multi_species <bool> - Color each species differently
-- -ts_monitor_sp_swarm_phase <bool>         - Plot in phase space, as opposed to coordinate space
++ -ts_monitor_sp_swarm n                          - Monitor the solution every n steps, or -1 for plotting only the final solution
+. -ts_monitor_sp_swarm_retain n                   - Retain n old points so we can see the history, or -1 for all points
+. -ts_monitor_sp_swarm_multi_species (true|false) - Color each species differently
+- -ts_monitor_sp_swarm_phase (true|false)         - Plot in phase space, as opposed to coordinate space
 
   Level: intermediate
 
@@ -1485,10 +1506,10 @@ PetscErrorCode TSMonitorSPSwarmSolution(TS ts, PetscInt step, PetscReal ptime, V
 - dctx  - the `TSMonitorSPCtx` object that contains all the options for the monitoring, this is created with `TSMonitorHGCtxCreate()`
 
   Options Database Keys:
-+ -ts_monitor_hg_swarm <n>             - Monitor the solution every n steps, or -1 for plotting only the final solution
-. -ts_monitor_hg_swarm_species <num>   - Number of species to histogram
-. -ts_monitor_hg_swarm_bins <num>      - Number of histogram bins
-- -ts_monitor_hg_swarm_velocity <bool> - Plot in velocity space, as opposed to coordinate space
++ -ts_monitor_hg_swarm n                     - Monitor the solution every n steps, or -1 for plotting only the final solution
+. -ts_monitor_hg_swarm_species num           - Number of species to histogram
+. -ts_monitor_hg_swarm_bins num              - Number of histogram bins
+- -ts_monitor_hg_swarm_velocity (true|false) - Plot in velocity space, as opposed to coordinate space
 
   Level: intermediate
 

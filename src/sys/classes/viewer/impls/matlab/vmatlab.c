@@ -225,7 +225,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_Matlab(PetscViewer viewer)
 
   PETSc must be configured with the option `--with-matlab` for this functionality
 
-.seealso: `PETSCVIEWERMATLAB`, `PetscViewerASCIIOpen()`, `PetscViewerPushFormat()`, `PetscViewerDestroy()`, `PETSCVIEWERBINARY`, `PetscViewerBinaryOpen()`
+.seealso: `PETSCVIEWERMATLAB`, `PetscViewerASCIIOpen()`, `PetscViewerPushFormat()`, `PetscViewerDestroy()`, `PETSCVIEWERBINARY`, `PetscViewerBinaryOpen()`,
           `VecView()`, `MatView()`, `VecLoad()`, `MatLoad()`
 @*/
 PetscErrorCode PetscViewerMatlabOpen(MPI_Comm comm, const char name[], PetscFileMode type, PetscViewer *binv)
@@ -250,7 +250,7 @@ static PetscMPIInt Petsc_Viewer_Matlab_keyval = MPI_KEYVAL_INVALID;
 .  comm - the MPI communicator to share the MATLAB `PetscViewer`
 
    Options Database Key:
-.    -viewer_matlab_filename <name> - name of the MATLAB file
+.    -viewer_matlab_filename name - name of the MATLAB file
 
    Environmental variable:
 .  `PETSC_VIEWER_MATLAB_FILENAME` - name of the MATLAB file

@@ -78,7 +78,7 @@ PetscErrorCode DMPlexCopy_Internal(DM dmin, PetscBool copyPeriodicity, PetscBool
   const PetscReal     *maxCell, *Lstart, *L;
   VecType              vecType;
   MatType              matType;
-  PetscBool            dist, useCeed, balance_partition;
+  PetscBool            dist, sparseLocalize, useCeed, balance_partition;
   DMReorderDefaultFlag reorder;
 
   PetscFunctionBegin;
@@ -96,6 +96,8 @@ PetscErrorCode DMPlexCopy_Internal(DM dmin, PetscBool copyPeriodicity, PetscBool
   PetscCall(DMPlexDistributeSetDefault(dmout, dist));
   PetscCall(DMPlexReorderGetDefault(dmin, &reorder));
   PetscCall(DMPlexReorderSetDefault(dmout, reorder));
+  PetscCall(DMGetSparseLocalize(dmin, &sparseLocalize));
+  PetscCall(DMSetSparseLocalize(dmout, sparseLocalize));
   PetscCall(DMPlexGetUseCeed(dmin, &useCeed));
   PetscCall(DMPlexSetUseCeed(dmout, useCeed));
   PetscCall(DMPlexGetPartitionBalance(dmin, &balance_partition));
@@ -1923,8 +1925,8 @@ static PetscErrorCode DMPlexCreateBoxMesh_Tensor_Internal(DM dm, PetscInt dim, c
   }
   PetscCall(DMPlexCreateCubeMesh_Internal(dm, lower, upper, fac, bdt[0], bdt[1], bdt[2]));
   if (periodicity[0] == DM_BOUNDARY_PERIODIC || periodicity[0] == DM_BOUNDARY_TWIST || periodicity[1] == DM_BOUNDARY_PERIODIC || periodicity[1] == DM_BOUNDARY_TWIST || (dim > 2 && (periodicity[2] == DM_BOUNDARY_PERIODIC || periodicity[2] == DM_BOUNDARY_TWIST))) {
-    PetscReal L[3]       = {-1., -1., 0.};
-    PetscReal maxCell[3] = {-1., -1., 0.};
+    PetscReal L[3]       = {-1., -1., -1.};
+    PetscReal maxCell[3] = {-1., -1., -1.};
 
     for (d = 0; d < dim; ++d) {
       if (periodicity[d] != DM_BOUNDARY_NONE) {
@@ -5571,6 +5573,7 @@ static PetscErrorCode DMSetFromOptions_Plex(DM dm, PetscOptionItems PetscOptions
     PetscCall(DMPlexReplace_Internal(dm, &gdm));
   }
   /* Handle 1D order */
+  PetscCall(DMGetDimension(dm, &dim));
   if (reorder != DM_REORDER_DEFAULT_FALSE && dim == 1) {
     DM           cdm, rdm;
     PetscDS      cds;
@@ -5799,30 +5802,30 @@ PETSC_INTERN PetscErrorCode DMClone_Plex(DM dm, DM *newdm)
            ownership of the underlying `DMPLEX` points. This is specified by another `PetscSection` object.
 
   Options Database Keys:
-+ -dm_refine_pre                     - Refine mesh before distribution
-+ -dm_refine_uniform_pre             - Choose uniform or generator-based refinement
-+ -dm_refine_volume_limit_pre        - Cell volume limit after pre-refinement using generator
-. -dm_distribute                     - Distribute mesh across processes
-. -dm_distribute_overlap             - Number of cells to overlap for distribution
-. -dm_refine                         - Refine mesh after distribution
-. -dm_localize <bool>                - Whether to localize coordinates for periodic meshes
-. -dm_sparse_localize <bool>         - Whether to only localize cells on the periodic boundary
-. -dm_plex_hash_location             - Use grid hashing for point location
-. -dm_plex_hash_box_faces <n,m,p>    - The number of divisions in each direction of the grid hash
-. -dm_plex_partition_balance         - Attempt to evenly divide points on partition boundary between processes
-. -dm_plex_remesh_bd                 - Allow changes to the boundary on remeshing
-. -dm_plex_max_projection_height     - Maximum mesh point height used to project locally
-. -dm_plex_regular_refinement        - Use special nested projection algorithm for regular refinement
-. -dm_plex_reorder_section           - Use specialized blocking if available
-. -dm_plex_check_all                 - Perform all checks below
-. -dm_plex_check_symmetry            - Check that the adjacency information in the mesh is symmetric
-. -dm_plex_check_skeleton <celltype> - Check that each cell has the correct number of vertices
-. -dm_plex_check_faces <celltype>    - Check that the faces of each cell give a vertex order this is consistent with what we expect from the cell type
-. -dm_plex_check_geometry            - Check that cells have positive volume
-. -dm_view :mesh.tex:ascii_latex     - View the mesh in LaTeX/TikZ
-. -dm_plex_view_scale <num>          - Scale the TikZ
-. -dm_plex_print_fem <num>           - View FEM assembly information, such as element vectors and matrices
-- -dm_plex_print_fvm <num>           - View FVM assembly information, such as flux updates
++ -dm_refine_pre times                     - Refine mesh before distribution, possibly multiple times
++ -dm_refine_uniform_pre (true|false)      - Choose uniform or generator-based refinement
++ -dm_refine_volume_limit_pre vol          - Cell volume limit after pre-refinement using generator
+. -dm_distribute (true|false)              - Distribute mesh across processes
+. -dm_distribute_overlap num               - Number of cells to overlap for distribution
+. -dm_refine                               - Refine mesh after distribution
+. -dm_localize (true|false)                - Whether to localize coordinates for periodic meshes
+. -dm_sparse_localize (true|false)         - Whether to only localize cells on the periodic boundary
+. -dm_plex_hash_location (true|false)      - Use grid hashing for point location
+. -dm_plex_hash_box_faces n,m,p            - The number of divisions in each direction of the grid hash
+. -dm_plex_partition_balance (true|false)  - Attempt to evenly divide points on partition boundary between processes
+. -dm_plex_remesh_bd (true|false)          - Allow changes to the boundary on remeshing
+. -dm_plex_max_projection_height height    - Maximum mesh point height used to project locally
+. -dm_plex_regular_refinement (true|false) - Use special nested projection algorithm for regular refinement
+. -dm_plex_reorder_section (true|false)    - Use specialized blocking if available
+. -dm_plex_check_all (true|false)          - Perform all checks below
+. -dm_plex_check_symmetry (true|false)     - Check that the adjacency information in the mesh is symmetric
+. -dm_plex_check_skeleton (true|false)     - Check that each cell has the correct number of vertices
+. -dm_plex_check_faces (true|false)        - Check that the faces of each cell give a vertex order this is consistent with what we expect from the cell type
+. -dm_plex_check_geometry (true|false)     - Check that cells have positive volume
+. -dm_view :mesh.tex:ascii_latex           - View the mesh in LaTeX/TikZ
+. -dm_plex_view_scale num                  - Scale the TikZ
+. -dm_plex_print_fem num                   - View FEM assembly information, such as element vectors and matrices
+- -dm_plex_print_fvm num                   - View FVM assembly information, such as flux updates
 
   Level: intermediate
 

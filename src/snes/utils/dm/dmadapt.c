@@ -255,7 +255,7 @@ PetscErrorCode DMAdaptorDestroy(DMAdaptor *adaptor)
 - method  - The name of the adaptor type
 
   Options Database Key:
-. -adaptor_type <type> - Sets the adaptor type; see `DMAdaptorType`
+. -adaptor_type type - Sets the adaptor type; see `DMAdaptorType`
 
   Level: intermediate
 
@@ -476,12 +476,12 @@ PetscErrorCode DMAdaptorSetOptionsPrefix(DMAdaptor adaptor, const char prefix[])
 . adaptor - The `DMAdaptor` object
 
   Options Database Keys:
-+ -adaptor_monitor_size                - Monitor the mesh size
-. -adaptor_monitor_error               - Monitor the solution error
-. -adaptor_sequence_num <num>          - Number of adaptations to generate an optimal grid
-. -adaptor_target_num <num>            - Set the target number of vertices N_adapt, -1 for automatic determination
-. -adaptor_refinement_factor <r>       - Set r such that N_adapt = r^dim N_orig
-- -adaptor_mixed_setup_function <func> - Set the function func that sets up the mixed problem
++ -adaptor_monitor_size              - Monitor the mesh size
+. -adaptor_monitor_error             - Monitor the solution error
+. -adaptor_sequence_num num          - Number of adaptations to generate an optimal grid
+. -adaptor_target_num num            - Set the target number of vertices N_adapt, -1 for automatic determination
+. -adaptor_refinement_factor r       - Set r such that N_adapt = r^dim N_orig
+- -adaptor_mixed_setup_function func - Set the function func that sets up the mixed problem
 
   Level: beginner
 
@@ -676,14 +676,14 @@ PetscErrorCode DMAdaptorSetUp(DMAdaptor adaptor)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMAdaptorGetTransferFunction(DMAdaptor adaptor, PetscErrorCode (**tfunc)(DMAdaptor, DM, Vec, DM, Vec, void *))
+PetscErrorCode DMAdaptorGetTransferFunction(DMAdaptor adaptor, PetscErrorCode (**tfunc)(DMAdaptor adaptor, DM dm, Vec xin, DM newdm, Vec xout, PetscCtx ctx))
 {
   PetscFunctionBegin;
   *tfunc = adaptor->ops->transfersolution;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode DMAdaptorSetTransferFunction(DMAdaptor adaptor, PetscErrorCode (*tfunc)(DMAdaptor, DM, Vec, DM, Vec, void *))
+PetscErrorCode DMAdaptorSetTransferFunction(DMAdaptor adaptor, PetscErrorCode (*tfunc)(DMAdaptor adaptor, DM dm, Vec xin, DM newdm, Vec xout, PetscCtx ctx))
 {
   PetscFunctionBegin;
   adaptor->ops->transfersolution = tfunc;
@@ -1581,10 +1581,10 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
 - ax  - The adapted solution
 
   Options Database Keys:
-+ -snes_adapt <strategy> - initial, sequential, multigrid
-. -adapt_gradient_view   - View the Clement interpolant of the solution gradient
-. -adapt_hessian_view    - View the Clement interpolant of the solution Hessian
-- -adapt_metric_view     - View the metric tensor for adaptive mesh refinement
++ -snes_adapt (initial|sequential|multigrid) - adaption strategy, see `DMAdaptationStrategy`
+. -adapt_gradient_view                       - View the Clement interpolant of the solution gradient
+. -adapt_hessian_view                        - View the Clement interpolant of the solution Hessian
+- -adapt_metric_view                         - View the metric tensor for adaptive mesh refinement
 
   Level: intermediate
 
@@ -1639,11 +1639,15 @@ PetscErrorCode DMAdaptorGetMixedSetupFunction(DMAdaptor adaptor, PetscErrorCode 
 + adaptor   - the `DMAdaptor`
 - setupFunc - the function setting up the mixed problem
 
+  Calling sequence of setupFunc:
++ adaptor - the `DMAdaptor`
+- dm      - the `DM`
+
   Level: advanced
 
 .seealso: `DMAdaptor`, `DMAdaptorGetMixedSetupFunction()`, `DMAdaptorAdapt()`
 @*/
-PetscErrorCode DMAdaptorSetMixedSetupFunction(DMAdaptor adaptor, PetscErrorCode (*setupFunc)(DMAdaptor, DM))
+PetscErrorCode DMAdaptorSetMixedSetupFunction(DMAdaptor adaptor, PetscErrorCode (*setupFunc)(DMAdaptor adaptor, DM dm))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adaptor, DMADAPTOR_CLASSID, 1);

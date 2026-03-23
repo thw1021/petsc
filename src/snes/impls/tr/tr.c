@@ -192,14 +192,21 @@ PetscErrorCode SNESNewtonTRSetFallbackType(SNES snes, SNESNewtonTRFallbackType f
 . func - [optional] function evaluation routine, for the calling sequence see `SNESNewtonTRPreCheck()`
 - ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
+  Calling sequence of `func`:
++ snes    - the nonlinear solver object
+. X       - the current solution value
+. Y       - the tentative update step
+. changed - output, flag indicating `Y` has been changed by the pre-check
+- ctx     - the optional application context
+
   Level: intermediate
 
   Note:
   This function is called BEFORE the function evaluation within the solver.
 
-.seealso: [](ch_snes), `SNESNEWTONTR`, `SNESNewtonTRPreCheck()`, `SNESNewtonTRGetPreCheck()`, `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRGetPostCheck()`,
+.seealso: [](ch_snes), `SNESNEWTONTR`, `SNESNewtonTRPreCheck()`, `SNESNewtonTRGetPreCheck()`, `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRGetPostCheck()`
 @*/
-PetscErrorCode SNESNewtonTRSetPreCheck(SNES snes, PetscErrorCode (*func)(SNES, Vec, Vec, PetscBool *, void *), PetscCtx ctx)
+PetscErrorCode SNESNewtonTRSetPreCheck(SNES snes, PetscErrorCode (*func)(SNES snes, Vec X, Vec Y, PetscBool *changed, PetscCtx ctx), PetscCtx ctx)
 {
   SNES_NEWTONTR *tr = (SNES_NEWTONTR *)snes->data;
   PetscBool      flg;
@@ -226,11 +233,18 @@ PetscErrorCode SNESNewtonTRSetPreCheck(SNES snes, PetscErrorCode (*func)(SNES, V
 + func - [optional] function evaluation routine, for the calling sequence see `SNESNewtonTRPreCheck()`
 - ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
+  Calling sequence of `func`:
++ snes    - the nonlinear solver object
+. X       - the current solution value
+. Y       - the tentative update step
+. changed - output, flag indicating `Y` has been changed by the pre-check
+- ctx     - the optional application context
+
   Level: intermediate
 
 .seealso: [](ch_snes), `SNESNEWTONTR`, `SNESNewtonTRSetPreCheck()`, `SNESNewtonTRPreCheck()`
 @*/
-PetscErrorCode SNESNewtonTRGetPreCheck(SNES snes, PetscErrorCode (**func)(SNES, Vec, Vec, PetscBool *, void *), PetscCtxRt ctx)
+PetscErrorCode SNESNewtonTRGetPreCheck(SNES snes, PetscErrorCode (**func)(SNES snes, Vec X, Vec Y, PetscBool *changed, PetscCtx ctx), PetscCtxRt ctx)
 {
   SNES_NEWTONTR *tr = (SNES_NEWTONTR *)snes->data;
   PetscBool      flg;
@@ -255,6 +269,15 @@ PetscErrorCode SNESNewtonTRGetPreCheck(SNES snes, PetscErrorCode (**func)(SNES, 
 . func - [optional] function evaluation routine, for the calling sequence see `SNESNewtonTRPostCheck()`
 - ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
+  Calling sequence of `func`:
++ snes      - the nonlinear solver object
+. X         - the current solution value
+. Y         - the tentative update step
+. W         - the tentative new solution value
+. changed_Y - output, flag indicated `Y` has been changed by the post-check
+. changed_W - output, flag indicated `W` has been changed by the post-check
+- ctx       - the optional application context
+
   Level: intermediate
 
   Note:
@@ -263,7 +286,7 @@ PetscErrorCode SNESNewtonTRGetPreCheck(SNES snes, PetscErrorCode (**func)(SNES, 
 
 .seealso: [](ch_snes), `SNESNEWTONTR`, `SNESNewtonTRPostCheck()`, `SNESNewtonTRGetPostCheck()`, `SNESNewtonTRSetPreCheck()`, `SNESNewtonTRGetPreCheck()`
 @*/
-PetscErrorCode SNESNewtonTRSetPostCheck(SNES snes, PetscErrorCode (*func)(SNES, Vec, Vec, Vec, PetscBool *, PetscBool *, void *), PetscCtx ctx)
+PetscErrorCode SNESNewtonTRSetPostCheck(SNES snes, PetscErrorCode (*func)(SNES snes, Vec X, Vec Y, Vec W, PetscBool *changed_Y, PetscBool *changed_W, PetscCtx ctx), PetscCtx ctx)
 {
   SNES_NEWTONTR *tr = (SNES_NEWTONTR *)snes->data;
   PetscBool      flg;
@@ -290,11 +313,20 @@ PetscErrorCode SNESNewtonTRSetPostCheck(SNES snes, PetscErrorCode (*func)(SNES, 
 + func - [optional] function evaluation routine, for the calling sequence see `SNESNewtonTRPostCheck()`
 - ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
+  Calling sequence of `func`:
++ snes      - the nonlinear solver object
+. X         - the current solution value
+. Y         - the tentative update step
+. W         - the tentative new solution value
+. changed_Y - output, flag indicated `Y` has been changed by the post-check
+. changed_W - output, flag indicated `W` has been changed by the post-check
+- ctx       - the optional application context
+
   Level: intermediate
 
 .seealso: [](ch_snes), `SNESNEWTONTR`, `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRPostCheck()`
 @*/
-PetscErrorCode SNESNewtonTRGetPostCheck(SNES snes, PetscErrorCode (**func)(SNES, Vec, Vec, Vec, PetscBool *, PetscBool *, void *), PetscCtxRt ctx)
+PetscErrorCode SNESNewtonTRGetPostCheck(SNES snes, PetscErrorCode (**func)(SNES snes, Vec X, Vec Y, Vec W, PetscBool *changed_Y, PetscBool *changed_W, PetscCtx ctx), PetscCtxRt ctx)
 {
   SNES_NEWTONTR *tr = (SNES_NEWTONTR *)snes->data;
   PetscBool      flg;
@@ -414,14 +446,14 @@ static PetscErrorCode SNESNewtonTRQuadraticDelta(SNES snes, Mat J, PetscBool has
    G work vector, on output G = SNESFunction(W) */
 static PetscErrorCode SNESNewtonTRObjective(SNES snes, PetscBool has_objective, Vec X, Vec Y, Vec W, Vec G, PetscReal *gnorm, PetscReal *fkp1)
 {
-  PetscBool changed_y, changed_w;
+  PetscBool changed_Y, changed_W;
 
   PetscFunctionBegin;
   /* TODO: we can add a linesearch here */
-  PetscCall(SNESNewtonTRPreCheck(snes, X, Y, &changed_y));
+  PetscCall(SNESNewtonTRPreCheck(snes, X, Y, &changed_Y));
   PetscCall(VecWAXPY(W, -1.0, Y, X)); /* Xkp1 */
-  PetscCall(SNESNewtonTRPostCheck(snes, X, Y, W, &changed_y, &changed_w));
-  if (changed_y && !changed_w) PetscCall(VecWAXPY(W, -1.0, Y, X));
+  PetscCall(SNESNewtonTRPostCheck(snes, X, Y, W, &changed_Y, &changed_W));
+  if (changed_Y && !changed_W) PetscCall(VecWAXPY(W, -1.0, Y, X));
 
   PetscCall(SNESComputeFunction(snes, W, G)); /*  F(Xkp1) = G */
   PetscCall(VecNorm(G, NORM_2, gnorm));
@@ -920,9 +952,9 @@ PetscErrorCode SNESSetTrustRegionTolerance(SNES snes, PetscReal tol)
 - delta_0   - initial trust region size
 
   Options Database Key:
-+ -snes_tr_deltamin <tol> - Set minimum size
-. -snes_tr_deltamax <tol> - Set maximum size
-- -snes_tr_delta0   <tol> - Set initial size
++ -snes_tr_deltamin tol - Set minimum size
+. -snes_tr_deltamax tol - Set maximum size
+- -snes_tr_delta0   tol - Set initial size
 
   Note:
   Use `PETSC_DETERMINE` to use the default value for the given `SNES`.
@@ -988,11 +1020,11 @@ PetscErrorCode SNESNewtonTRGetTolerances(SNES snes, PetscReal *delta_min, PetscR
 - t2   - enlarge factor
 
   Options Database Key:
-+ -snes_tr_eta1 <tol> - Set `eta1`
-. -snes_tr_eta2 <tol> - Set `eta2`
-. -snes_tr_eta3 <tol> - Set `eta3`
-. -snes_tr_t1   <tol> - Set `t1`
-- -snes_tr_t2   <tol> - Set `t2`
++ -snes_tr_eta1 tol - Set `eta1`
+. -snes_tr_eta2 tol - Set `eta2`
+. -snes_tr_eta3 tol - Set `eta3`
+. -snes_tr_t1   tol - Set `t1`
+- -snes_tr_t2   tol - Set `t2`
 
   Notes:
   Given the ratio $\rho = \frac{f(x_k) - f(x_k+s_k)}{m(0) - m(s_k)}$, with $x_k$ the current iterate,
@@ -1093,16 +1125,17 @@ PetscErrorCode SNESNewtonTRGetUpdateParameters(SNES snes, PetscReal *eta1, Petsc
    SNESNEWTONTR - Newton based nonlinear solver that uses a trust-region strategy
 
    Options Database Keys:
-+  -snes_tr_deltamin <deltamin>                  - trust region parameter, minimum size of trust region
-.  -snes_tr_deltamax <deltamax>                  - trust region parameter, max size of trust region (default: 1e10)
-.  -snes_tr_delta0 <delta0>                      - trust region parameter, initial size of trust region (default: 0.2)
-.  -snes_tr_eta1 <eta1>                          - trust region parameter $eta1 \le eta2$, $rho > eta1$ breaks out of the inner iteration (default: 0.001)
-.  -snes_tr_eta2 <eta2>                          - trust region parameter, $rho \le eta2$ shrinks the trust region (default: 0.25)
-.  -snes_tr_eta3 <eta3>                          - trust region parameter $eta3 > eta2$, $rho \ge eta3$ expands the trust region (default: 0.75)
-.  -snes_tr_t1 <t1>                              - trust region parameter, shrinking factor of trust region (default: 0.25)
-.  -snes_tr_t2 <t2>                              - trust region parameter, expanding factor of trust region (default: 2.0)
-.  -snes_tr_norm_type <1,2,infinity>             - Type of norm for trust region bounds (default: 2)
--  -snes_tr_fallback_type <newton,cauchy,dogleg> - Solution strategy to test reduction when step is outside of trust region. Can use scaled Newton direction, Cauchy point (Steepest Descent direction) or dogleg method.
++  -snes_tr_deltamin deltamin                    - trust region parameter, minimum size of trust region
+.  -snes_tr_deltamax deltamax                    - trust region parameter, max size of trust region (default: 1e10)
+.  -snes_tr_delta0 delta0                        - trust region parameter, initial size of trust region (default: 0.2)
+.  -snes_tr_eta1 eta1                            - trust region parameter $eta1 \le eta2$, $rho > eta1$ breaks out of the inner iteration (default: 0.001)
+.  -snes_tr_eta2 eta2                            - trust region parameter, $rho \le eta2$ shrinks the trust region (default: 0.25)
+.  -snes_tr_eta3 eta3                            - trust region parameter $eta3 > eta2$, $rho \ge eta3$ expands the trust region (default: 0.75)
+.  -snes_tr_t1 t1                                - trust region parameter, shrinking factor of trust region (default: 0.25)
+.  -snes_tr_t2 t2                                - trust region parameter, expanding factor of trust region (default: 2.0)
+.  -snes_tr_norm_type (1|2|infinity)             - Type of norm for trust region bounds (default: 2)
+-  -snes_tr_fallback_type (newton,cauchy,dogleg) - Solution strategy to test reduction when step is outside of trust region.
+                                                   Can use scaled Newton direction, Cauchy point (Steepest Descent direction) or dogleg method.
 
    Level: beginner
 
@@ -1111,12 +1144,12 @@ PetscErrorCode SNESNewtonTRGetUpdateParameters(SNES snes, PetscReal *eta1, Petsc
    Quasi-Newton models are also supported.
 
    Default step computation uses the Newton direction, but a dogleg type update is also supported.
-   The 1- and infinity-norms are also supported when computing the trust region bounds.
+   The 1- and infinity-norms are also supported, via `SNESNewtonTRSetNormType()`, when computing the trust region bounds.
 
 .seealso: [](ch_snes), `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESSetObjective()`,
-          `SNESNewtonTRSetTolerances()`, `SNESNewtonTRSetUpdateParameters()`
-          `SNESNewtonTRSetNormType()`, `SNESNewtonTRSetFallbackType()`, `SNESNewtonTRSetQNType()`
-          `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRSetPreCheck()`,
+          `SNESNewtonTRSetTolerances()`, `SNESNewtonTRSetUpdateParameters()`,
+          `SNESNewtonTRSetNormType()`, `SNESNewtonTRSetFallbackType()`, `SNESNewtonTRSetQNType()`,
+          `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRSetPreCheck()`
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONTR(SNES snes)
 {

@@ -15,7 +15,7 @@
 #if PetscDefined(USE_DEBUG) && !PetscDefined(HAVE_THREADSAFETY)
 PETSC_INTERN PetscErrorCode PetscStackSetCheck(PetscBool);
 PETSC_INTERN PetscErrorCode PetscStackReset(void);
-PETSC_INTERN PetscErrorCode PetscStackCopy(PetscStack *, PetscStack *);
+PETSC_EXTERN PetscErrorCode PetscStackCopy(PetscStack *, PetscStack *);
 PETSC_INTERN PetscErrorCode PetscStackPrint(PetscStack *, FILE *);
 #else
   #define PetscStackSetCheck(check)         PETSC_SUCCESS
@@ -234,9 +234,8 @@ PETSC_EXTERN_TYPEDEF typedef PetscObjectViewFn *PetscObjectViewFunction;
      information.
 
   Example Usage:
-  Existing `PetscObject`s may be easily created as shown. Unless otherwise stated, a particular
-  objects `destroy` and `view` functions are exactly `<OBJECT_TYPE>Destroy()` and
-  `<OBJECT_TYPE>View()`.
+  Existing `PetscObject`s may be easily created as shown. An object of type `Name` has
+  `destroy` and `view` functions named `NameDestroy()` and `NameView()`.
 .vb
   Vec v;
 

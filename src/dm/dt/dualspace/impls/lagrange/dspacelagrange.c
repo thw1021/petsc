@@ -2860,7 +2860,7 @@ PetscErrorCode PetscDualSpaceLagrangeGetContinuity(PetscDualSpace sp, PetscBool 
 - continuous - flag for element continuity
 
   Options Database Key:
-. -petscdualspace_lagrange_continuity <bool> - use a continuous element
+. -petscdualspace_lagrange_continuity (true|false) - use a continuous element
 
   Level: intermediate
 
@@ -3237,7 +3237,7 @@ static PetscErrorCode PetscDualSpaceInitialize_Lagrange(PetscDualSpace sp)
 
 .seealso: `PetscDualSpace`, `PetscDualSpaceType`, `PetscDualSpaceCreate()`, `PetscDualSpaceSetType()`,
           `PetscDualSpaceLagrangeSetMomentOrder()`, `PetscDualSpaceLagrangeGetMomentOrder()`, `PetscDualSpaceLagrangeSetUseMoments()`, `PetscDualSpaceLagrangeGetUseMoments()`,
-          `PetscDualSpaceLagrangeSetNodeType, PetscDualSpaceLagrangeGetNodeType, PetscDualSpaceLagrangeGetContinuity, PetscDualSpaceLagrangeSetContinuity,
+          `PetscDualSpaceLagrangeSetNodeType()`, `PetscDualSpaceLagrangeGetNodeType()`, `PetscDualSpaceLagrangeGetContinuity()`, `PetscDualSpaceLagrangeSetContinuity()`,
           `PetscDualSpaceLagrangeGetTensor()`, `PetscDualSpaceLagrangeSetTensor()`, `PetscDualSpaceLagrangeGetTrimmed()`, `PetscDualSpaceLagrangeSetTrimmed()`
 M*/
 PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Lagrange(PetscDualSpace sp)

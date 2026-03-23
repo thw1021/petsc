@@ -269,9 +269,6 @@ PetscErrorCode MatSchurComplementSetSubMatrices(Mat S, Mat A00, Mat Ap00, Mat A0
   Output Parameter:
 . ksp - the linear solver object
 
-  Options Database Key:
-. -fieldsplit_<splitname_0>_XXX - sets `KSP` and `PC` options for the 0-split solver inside the Schur complement used in `PCFIELDSPLIT`; default <splitname_0> is 0.
-
   Level: intermediate
 
 .seealso: [](ch_ksp), `Mat`, `MatSchurComplementSetKSP()`, `MatCreateSchurComplement()`, `MatCreateNormal()`, `MatMult()`, `MatCreate()`
@@ -515,7 +512,7 @@ PetscErrorCode MatSchurComplementComputeExplicitOperator(Mat A, Mat *S)
     } else PetscCall(MatConvert(B, mtype, MAT_INITIAL_MATRIX, &Bd));
   } else {
     PetscCall(MatGetSize(B, &M, &N));
-    PetscCall(MatCreateDenseFromVecType(PetscObjectComm((PetscObject)A), vtype, m, n, M, N, -1, NULL, &AinvBd));
+    PetscCall(MatCreateDenseFromVecType(PetscObjectComm((PetscObject)A), vtype, m, n, M, N, PETSC_DECIDE, NULL, &AinvBd));
     PetscCall(MatGetType(AinvBd, &mtype));
     PetscCall(MatConvert(B, mtype, MAT_INITIAL_MATRIX, &Bd));
   }
@@ -523,32 +520,12 @@ PetscErrorCode MatSchurComplementComputeExplicitOperator(Mat A, Mat *S)
   if (set && AinvBd->cmap->N > A->cmap->N) {
     Mat          AinvB;
     PetscScalar *v;
-    PetscBool    match;
+    PetscMemType type;
 
-    PetscCall(PetscObjectTypeCompareAny((PetscObject)AinvBd, &match, MATSEQDENSECUDA, MATMPIDENSECUDA, ""));
-    if (match) {
-#if PetscDefined(HAVE_CUDA)
-      PetscCall(MatDenseCUDAGetArrayWrite(AinvBd, &v));
-      PetscCall(MatCreateDenseCUDA(PetscObjectComm((PetscObject)A), AinvBd->rmap->n, A->cmap->n, AinvBd->rmap->N, A->cmap->N, v, &AinvB));
-      PetscCall(MatDenseCUDAReplaceArray(AinvB, v));
-      PetscCall(MatDenseCUDARestoreArrayWrite(AinvBd, &v));
-#endif
-    } else {
-      PetscCall(PetscObjectTypeCompareAny((PetscObject)AinvBd, &match, MATSEQDENSEHIP, MATMPIDENSEHIP, ""));
-      if (match) {
-#if PetscDefined(HAVE_HIP)
-        PetscCall(MatDenseHIPGetArrayWrite(AinvBd, &v));
-        PetscCall(MatCreateDenseHIP(PetscObjectComm((PetscObject)A), AinvBd->rmap->n, A->cmap->n, AinvBd->rmap->N, A->cmap->N, v, &AinvB));
-        PetscCall(MatDenseHIPReplaceArray(AinvB, v));
-        PetscCall(MatDenseHIPRestoreArrayWrite(AinvBd, &v));
-#endif
-      } else {
-        PetscCall(MatDenseGetArrayWrite(AinvBd, &v)); // no easy way to resize a Mat, so create a new one with the same data pointer
-        PetscCall(MatCreateDense(PetscObjectComm((PetscObject)A), AinvBd->rmap->n, A->cmap->n, AinvBd->rmap->N, A->cmap->N, v, &AinvB));
-        PetscCall(MatDenseReplaceArray(AinvB, v)); // let MatDestroy() free the data pointer
-        PetscCall(MatDenseRestoreArrayWrite(AinvBd, &v));
-      }
-    }
+    PetscCall(MatDenseGetArrayWriteAndMemType(AinvBd, &v, &type)); // no easy way to resize a Mat, so create a new one with the same data pointer
+    PetscCall(MatCreateDenseWithMemType(PetscObjectComm((PetscObject)A), type, AinvBd->rmap->n, A->cmap->n, AinvBd->rmap->N, A->cmap->N, PETSC_DECIDE, v, &AinvB));
+    PetscCall(MatDenseReplaceArrayWithMemType(AinvB, type, v)); // let MatDestroy() free the data pointer
+    PetscCall(MatDenseRestoreArrayWriteAndMemType(AinvBd, &v));
     PetscCall(MatHeaderReplace(AinvBd, &AinvB)); // replace the input composed Mat with just A00^-1 A01 (trailing columns are removed)
   }
   PetscCall(MatDestroy(&Bd));
@@ -556,7 +533,7 @@ PetscErrorCode MatSchurComplementComputeExplicitOperator(Mat A, Mat *S)
   if (D && !*S) {
     PetscCall(MatGetLocalSize(D, &m, &n));
     PetscCall(MatGetSize(D, &M, &N));
-    PetscCall(MatCreateDenseFromVecType(PetscObjectComm((PetscObject)A), vtype, m, n, M, N, -1, NULL, S));
+    PetscCall(MatCreateDenseFromVecType(PetscObjectComm((PetscObject)A), vtype, m, n, M, N, PETSC_DECIDE, NULL, S));
   } else if (*S) {
     PetscCall(MatGetType(AinvBd, &mtype));
     PetscCall(MatSetType(*S, mtype));
@@ -729,7 +706,7 @@ PetscErrorCode MatGetSchurComplement(Mat A, IS isrow0, IS iscol0, IS isrow1, IS 
              `MAT_SCHUR_COMPLEMENT_AINV_DIAG`, `MAT_SCHUR_COMPLEMENT_AINV_LUMP`, `MAT_SCHUR_COMPLEMENT_AINV_BLOCK_DIAG`, or `MAT_SCHUR_COMPLEMENT_AINV_FULL`
 
   Options Database Key:
-. -mat_schur_complement_ainv_type diag | lump | blockdiag | full - set schur complement type
+. -mat_schur_complement_ainv_type (diag|lump|blockdiag|full) - set Schur complement type
 
   Level: advanced
 

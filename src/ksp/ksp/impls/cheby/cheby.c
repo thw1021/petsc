@@ -162,7 +162,7 @@ static PetscErrorCode KSPChebyshevGetKind_Chebyshev(KSP ksp, KSPChebyshevKind *k
   the largest eigenvalue of the actual operator (for safety) and greatly overestimate the smallest eigenvalue to
   improve the smoothing properties of Chebyshev iteration on the higher frequencies in the spectrum.
 
-.seealso: [](ch_ksp), `KSPCHEBYSHEV`, `KSPChebyshevEstEigSet()`,
+.seealso: [](ch_ksp), `KSPCHEBYSHEV`, `KSPChebyshevEstEigSet()`
 @*/
 PetscErrorCode KSPChebyshevSetEigenvalues(KSP ksp, PetscReal emax, PetscReal emin)
 {
@@ -231,7 +231,7 @@ PetscErrorCode KSPChebyshevEstEigSet(KSP ksp, PetscReal a, PetscReal b, PetscRea
 - use - `PETSC_TRUE` to use noisy
 
   Options Database Key:
-. -ksp_chebyshev_esteig_noisy <true,false> - Use noisy right-hand side for estimate
+. -ksp_chebyshev_esteig_noisy (true|false) - Use noisy right-hand side for estimate
 
   Level: intermediate
 
@@ -286,7 +286,7 @@ PetscErrorCode KSPChebyshevEstEigGetKSP(KSP ksp, KSP *kspest)
 - kind - The kind of Chebyshev polynomial to use, see `KSPChebyshevKind`, one of `KSP_CHEBYSHEV_FIRST`, `KSP_CHEBYSHEV_FOURTH`, or `KSP_CHEBYSHEV_OPT_FOURTH`
 
   Options Database Key:
-. -ksp_chebyshev_kind <kind> - which kind of Chebyshev polynomial to use
+. -ksp_chebyshev_kind (first|fourth|opt_fourth) - which kind of Chebyshev polynomial to use
 
   Level: intermediate
 
@@ -880,12 +880,12 @@ static PetscErrorCode KSPDestroy_Chebyshev(KSP ksp)
      KSPCHEBYSHEV - The preconditioned Chebyshev iterative method
 
    Options Database Keys:
-+   -ksp_chebyshev_eigenvalues <emin,emax> - set approximations to the smallest and largest eigenvalues
-                                             of the preconditioned operator. If these are accurate you will get much faster convergence.
-.   -ksp_chebyshev_esteig <a,b,c,d>        - estimate eigenvalues using a Krylov method, then use this
-                                             transform for Chebyshev eigenvalue bounds (`KSPChebyshevEstEigSet()`)
-.   -ksp_chebyshev_esteig_steps            - number of eigenvalue estimation steps
--   -ksp_chebyshev_esteig_noisy            - use a noisy random number generator to create right-hand side for eigenvalue estimator
++   -ksp_chebyshev_eigenvalues emin,emax - set approximations to the smallest and largest eigenvalues
+                                           of the preconditioned operator. If these are accurate you will get much faster convergence.
+.   -ksp_chebyshev_esteig a,b,c,d        - estimate eigenvalues using a Krylov method, then use this
+                                           transform for Chebyshev eigenvalue bounds (`KSPChebyshevEstEigSet()`)
+.   -ksp_chebyshev_esteig_steps          - number of eigenvalue estimation steps
+-   -ksp_chebyshev_esteig_noisy          - use a noisy random number generator to create right-hand side for eigenvalue estimator
 
    Level: beginner
 
@@ -901,7 +901,7 @@ static PetscErrorCode KSPDestroy_Chebyshev(KSP ksp)
    See `MatIsSPDKnown()` for how to indicate a `Mat`, matrix is SPD.
 
 .seealso: [](ch_ksp), `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`,
-          `KSPChebyshevSetEigenvalues()`, `KSPChebyshevEstEigSet()`, `KSPChebyshevEstEigSetUseNoisy()`
+          `KSPChebyshevSetEigenvalues()`, `KSPChebyshevEstEigSet()`, `KSPChebyshevEstEigSetUseNoisy()`,
           `KSPRICHARDSON`, `KSPCG`, `PCMG`
 M*/
 

@@ -747,7 +747,7 @@ PetscErrorCode MatSetOptionsPrefix(Mat A, const char prefix[])
   Normally the prefix is automatically passed in from the `PC` calling the factorization. To set
   it directly when not using `KSP`/`PC` use  `MatSetOptionsPrefixFactor()`
 
-.seealso: [](ch_matrices), `Mat`,   [Matrix Factorization](sec_matfactor), `MatGetFactor()`, `MatSetFromOptions()`, `MatSetOptionsPrefix()`, `MatAppendOptionsPrefixFactor()`
+.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatGetFactor()`, `MatSetFromOptions()`, `MatSetOptionsPrefix()`, `MatAppendOptionsPrefixFactor()`
 @*/
 PetscErrorCode MatSetOptionsPrefixFactor(Mat A, const char prefix[])
 {
@@ -1052,18 +1052,18 @@ PetscErrorCode MatViewFromOptions(Mat A, PetscObject obj, const char name[])
 - viewer - visualization context
 
   Options Database Keys:
-+ -mat_view ::ascii_info           - Prints info on matrix at conclusion of `MatAssemblyEnd()`
-. -mat_view ::ascii_info_detail    - Prints more detailed info
-. -mat_view                        - Prints matrix in ASCII format
-. -mat_view ::ascii_matlab         - Prints matrix in MATLAB format
-. -mat_view draw                   - PetscDraws nonzero structure of matrix, using `MatView()` and `PetscDrawOpenX()`.
-. -display <name>                  - Sets display name (default is host)
-. -draw_pause <sec>                - Sets number of seconds to pause after display
-. -mat_view socket                 - Sends matrix to socket, can be accessed from MATLAB (see Users-Manual: ch_matlab for details)
-. -viewer_socket_machine <machine> - -
-. -viewer_socket_port <port>       - -
-. -mat_view binary                 - save matrix to file in binary format
-- -viewer_binary_filename <name>   - -
++ -mat_view ::ascii_info         - Prints info on matrix at conclusion of `MatAssemblyEnd()`
+. -mat_view ::ascii_info_detail  - Prints more detailed info
+. -mat_view                      - Prints matrix in ASCII format
+. -mat_view ::ascii_matlab       - Prints matrix in MATLAB format
+. -mat_view draw                 - PetscDraws nonzero structure of matrix, using `MatView()` and `PetscDrawOpenX()`.
+. -display name                  - Sets display name (default is host)
+. -draw_pause sec                - Sets number of seconds to pause after display
+. -mat_view socket               - Sends matrix to socket, can be accessed from MATLAB (see Users-Manual: ch_matlab for details)
+. -viewer_socket_machine machine - -
+. -viewer_socket_port port       - -
+. -mat_view binary               - save matrix to file in binary format
+- -viewer_binary_filename name   - -
 
   Level: beginner
 
@@ -1266,7 +1266,7 @@ PETSC_UNUSED static int TV_display_type(const struct _p_Mat *mat)
 - viewer - `PETSCVIEWERBINARY`/`PETSCVIEWERHDF5` file viewer
 
   Options Database Key:
-. -matload_block_size <bs> - set block size
+. -matload_block_size bs - set block size
 
   Level: beginner
 
@@ -1782,7 +1782,7 @@ PetscErrorCode MatSetValuesRow(Mat mat, PetscInt row, const PetscScalar v[])
   The routine `MatSetValuesBlockedStencil()` may offer much better efficiency
   for users of block sparse formats (`MATSEQBAIJ` and `MATMPIBAIJ`).
 
-.seealso: [](ch_matrices), `Mat`, `DMDA`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`
+.seealso: [](ch_matrices), `Mat`, `DMDA`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`,
           `MatSetValues()`, `MatSetValuesBlockedStencil()`, `MatSetStencil()`, `DMCreateMatrix()`, `DMDAVecGetArray()`, `MatStencil`
 @*/
 PetscErrorCode MatSetValuesStencil(Mat mat, PetscInt m, const MatStencil idxm[], PetscInt n, const MatStencil idxn[], const PetscScalar v[], InsertMode addv)
@@ -1896,7 +1896,7 @@ PetscErrorCode MatSetValuesStencil(Mat mat, PetscInt m, const MatStencil idxm[],
 
   If `v` is a two-dimensional array use `reshape()` to pass it as a one dimensional array
 
-.seealso: [](ch_matrices), `Mat`, `DMDA`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`
+.seealso: [](ch_matrices), `Mat`, `DMDA`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`,
           `MatSetValues()`, `MatSetValuesStencil()`, `MatSetStencil()`, `DMCreateMatrix()`, `DMDAVecGetArray()`, `MatStencil`,
           `MatSetBlockSize()`, `MatSetLocalToGlobalMapping()`
 @*/
@@ -1969,7 +1969,7 @@ PetscErrorCode MatSetValuesBlockedStencil(Mat mat, PetscInt m, const MatStencil 
   For matrices generated with `DMCreateMatrix()` this routine is automatically called and so not needed by the
   user.
 
-.seealso: [](ch_matrices), `Mat`, `MatStencil`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`
+.seealso: [](ch_matrices), `Mat`, `MatStencil`, `MatSetOption()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `MatSetValuesBlocked()`, `MatSetValuesLocal()`,
           `MatSetValues()`, `MatSetValuesBlockedStencil()`, `MatSetValuesStencil()`
 @*/
 PetscErrorCode MatSetStencil(Mat mat, PetscInt dim, const PetscInt dims[], const PetscInt starts[], PetscInt dof)
@@ -2987,7 +2987,7 @@ PetscErrorCode MatMultHermitianTransposeAdd(Mat mat, Vec v1, Vec v2, Vec v3)
   Level: intermediate
 
 .seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatFactorType`, `MatGetFactor()`, `MatSetFactorType()`, `MAT_FACTOR_NONE`, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ILU`,
-          `MAT_FACTOR_ICC`,`MAT_FACTOR_ILUDT`, `MAT_FACTOR_QR`
+          `MAT_FACTOR_ICC`, `MAT_FACTOR_ILUDT`, `MAT_FACTOR_QR`
 @*/
 PetscErrorCode MatGetFactorType(Mat mat, MatFactorType *t)
 {
@@ -3011,7 +3011,7 @@ PetscErrorCode MatGetFactorType(Mat mat, MatFactorType *t)
   Level: intermediate
 
 .seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatFactorType`, `MatGetFactor()`, `MatGetFactorType()`, `MAT_FACTOR_NONE`, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ILU`,
-          `MAT_FACTOR_ICC`,`MAT_FACTOR_ILUDT`, `MAT_FACTOR_QR`
+          `MAT_FACTOR_ICC`, `MAT_FACTOR_ILUDT`, `MAT_FACTOR_QR`
 @*/
 PetscErrorCode MatSetFactorType(Mat mat, MatFactorType t)
 {
@@ -3334,7 +3334,7 @@ PetscErrorCode MatLUFactorNumeric(Mat fact, Mat mat, const MatFactorInfo *info)
   Fortran Note:
   A valid (non-null) `info` argument must be provided
 
-.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatGetFactor()`, `MatFactorInfo`, `MatLUFactor()`, `MatCholeskyFactorSymbolic()`, `MatCholeskyFactorNumeric()`
+.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatGetFactor()`, `MatFactorInfo`, `MatLUFactor()`, `MatCholeskyFactorSymbolic()`, `MatCholeskyFactorNumeric()`,
           `MatGetOrdering()`
 @*/
 PetscErrorCode MatCholeskyFactor(Mat mat, IS perm, const MatFactorInfo *info)
@@ -3392,7 +3392,7 @@ PetscErrorCode MatCholeskyFactor(Mat mat, IS perm, const MatFactorInfo *info)
   Fortran Note:
   A valid (non-null) `info` argument must be provided
 
-.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatFactorInfo`, `MatGetFactor()`, `MatLUFactorSymbolic()`, `MatCholeskyFactor()`, `MatCholeskyFactorNumeric()`
+.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatFactorInfo`, `MatGetFactor()`, `MatLUFactorSymbolic()`, `MatCholeskyFactor()`, `MatCholeskyFactorNumeric()`,
           `MatGetOrdering()`
 @*/
 PetscErrorCode MatCholeskyFactorSymbolic(Mat fact, Mat mat, IS perm, const MatFactorInfo *info)
@@ -4772,13 +4772,15 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
 }
 
 /*@
-  MatGetFactor - Returns a matrix suitable to calls to MatXXFactorSymbolic,Numeric()
+  MatGetFactor - Returns a matrix suitable to calls to routines such as `MatLUFactorSymbolic()`, `MatCholeskyFactorSymbolic()`, `MatILUFactorSymbolic()`,
+  `MatICCFactorSymbolic()`, `MatLUFactorNumeric()`, `MatCholeskyFactorNumeric()`, `MatILUFactorNumeric()`, and
+  `MatICCFactorNumeric()`
 
   Collective
 
   Input Parameters:
 + mat   - the matrix
-. type  - name of solver type, for example, `superlu`, `petsc` (to use PETSc's solver if it is available), if this is 'NULL', then the first result that satisfies
+. type  - name of solver type, for example, `superlu_dist`, `petsc` (to use PETSc's solver if it is available), if this is 'NULL', then the first result that satisfies
           the other criteria is returned
 - ftype - factor type, `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`
 
@@ -4786,35 +4788,41 @@ PetscErrorCode MatFactorGetPreferredOrdering(Mat mat, MatFactorType ftype, MatOr
 . f - the factor matrix used with MatXXFactorSymbolic,Numeric() calls. Can be `NULL` in some cases, see notes below.
 
   Options Database Keys:
-+ -pc_factor_mat_solver_type <type>    - choose the type at run time. When using `KSP` solvers
-. -pc_factor_mat_factor_on_host <bool> - do mat factorization on host (with device matrices). Default is doing it on device
-- -pc_factor_mat_solve_on_host <bool>  - do mat solve on host (with device matrices). Default is doing it on device
++ -pc_factor_mat_solver_type type            - choose the type at run time. When using `KSP` solvers
+. -pc_factor_mat_factor_on_host (true|false) - do matrix factorization on host (with device matrices). Default is doing it on device
+- -pc_factor_mat_solve_on_host (true|false)  - do matrix solve on host (with device matrices). Default is doing it on device
 
   Level: intermediate
 
   Notes:
-  The return matrix can be `NULL` if the requested factorization is not available, since some combinations of matrix types and factorization
-  types registered with `MatSolverTypeRegister()` cannot be fully tested if not at runtime.
+  Some of the packages, such as MUMPS, have options for controlling the factorization, these are in the form `-prefix_mat_packagename_packageoption`
+  (for example, `-mat_mumps_icntl_6 1`)  where `prefix` is normally set automatically from the calling `KSP`/`PC`. If `MatGetFactor()` is called directly,
+  without using a `PC`, one can set the prefix by
+  calling `MatSetOptionsPrefixFactor()` on the originating matrix or  `MatSetOptionsPrefix()` on the resulting factor matrix.
 
-  Users usually access the factorization solvers via `KSP`
-
-  Some PETSc matrix formats have alternative solvers available that are contained in alternative packages
-  such as pastix, superlu, mumps etc. PETSc must have been ./configure to use the external solver, using the option --download-package or --with-package-dir
+  Some PETSc matrix formats have alternative solvers available that are provided by alternative packages
+  such as PaStiX, SuperLU_DIST, MUMPS etc. PETSc must have been configured to use the external solver,
+  using the corresponding `./configure` option such as `--download-package` or `--with-package-dir`.
 
   When `type` is `NULL` the available results are searched for based on the order of the calls to `MatSolverTypeRegister()` in `MatInitializePackage()`.
   Since different PETSc configurations may have different external solvers, seemingly identical runs with different PETSc configurations may use a different solver.
-  For example if one configuration had --download-mumps while a different one had --download-superlu_dist.
+  For example if one configuration had `--download-mumps` while a different one had `--download-superlu_dist`.
 
-  Some of the packages have options for controlling the factorization, these are in the form -prefix_mat_packagename_packageoption
-  where prefix is normally obtained from the calling `KSP`/`PC`. If `MatGetFactor()` is called directly one can set
-  call `MatSetOptionsPrefixFactor()` on the originating matrix or  `MatSetOptionsPrefix()` on the resulting factor matrix.
+  The return matrix can be `NULL` if the requested factorization is not available, since some combinations of matrix types and factorization
+  types registered with `MatSolverTypeRegister()` cannot be fully tested if not at runtime.
 
   Developer Note:
   This should actually be called `MatCreateFactor()` since it creates a new factor object
 
+  The `MatGetFactor()` implementations should not be accessing the PETSc options database or making other decisions about solver options,
+  that should be delayed until the later operations. This is to ensure the correct options prefix has been set in the factor matrix.
+
 .seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `KSP`, `MatSolverType`, `MatFactorType`, `MatCopy()`, `MatDuplicate()`,
-          `MatGetFactorAvailable()`, `MatFactorGetCanUseOrdering()`, `MatSolverTypeRegister()`, `MatSolverTypeGet()`
-          `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`, `MatInitializePackage()`
+          `MatGetFactorAvailable()`, `MatFactorGetCanUseOrdering()`, `MatSolverTypeRegister()`, `MatSolverTypeGet()`,
+          `MAT_FACTOR_LU`, `MAT_FACTOR_CHOLESKY`, `MAT_FACTOR_ICC`, `MAT_FACTOR_ILU`, `MAT_FACTOR_QR`, `MatInitializePackage()`,
+          `MatLUFactorSymbolic()`, `MatCholeskyFactorSymbolic()`, `MatILUFactorSymbolic()`,
+          `MatICCFactorSymbolic()`, `MatLUFactorNumeric()`, `MatCholeskyFactorNumeric()`, `MatILUFactorNumeric()`,
+          `MatICCFactorNumeric()`
 @*/
 PetscErrorCode MatGetFactor(Mat mat, MatSolverType type, MatFactorType ftype, Mat *f)
 {
@@ -5886,11 +5894,11 @@ PetscErrorCode MatAssembled(Mat mat, PetscBool *assembled)
 . -mat_view                          - Prints matrix in ASCII format
 . -mat_view ::ascii_matlab           - Prints matrix in MATLAB format
 . -mat_view draw                     - draws nonzero structure of matrix, using `MatView()` and `PetscDrawOpenX()`.
-. -display <name>                    - Sets display name (default is host)
-. -draw_pause <sec>                  - Sets number of seconds to pause after display
+. -display name                      - Sets display name (default is host)
+. -draw_pause sec                    - Sets number of seconds to pause after display
 . -mat_view socket                   - Sends matrix to socket, can be accessed from MATLAB (See [Using MATLAB with PETSc](ch_matlab))
-. -viewer_socket_machine <machine>   - Machine to use for socket
-. -viewer_socket_port <port>         - Port number to use for socket
+. -viewer_socket_machine machine     - Machine to use for socket
+. -viewer_socket_port port           - Port number to use for socket
 - -mat_view binary:filename[:append] - Save matrix to file in binary format
 
   Level: beginner
@@ -7126,7 +7134,7 @@ PetscErrorCode MatGetOwnershipIS(Mat A, IS *rows, IS *cols)
   Fortran Note:
   A valid (non-null) `info` argument must be provided
 
-.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatGetFactor()`, `MatLUFactorSymbolic()`, `MatLUFactorNumeric()`, `MatCholeskyFactor()`
+.seealso: [](ch_matrices), `Mat`, [Matrix Factorization](sec_matfactor), `MatGetFactor()`, `MatLUFactorSymbolic()`, `MatLUFactorNumeric()`, `MatCholeskyFactor()`,
           `MatGetOrdering()`, `MatFactorInfo`
 @*/
 PetscErrorCode MatILUFactorSymbolic(Mat fact, Mat mat, IS row, IS col, const MatFactorInfo *info)
@@ -8646,8 +8654,8 @@ PetscErrorCode MatPropagateSymmetryOptions(Mat A, Mat B)
 - bsize - the initial size of the block-stash(if used).
 
   Options Database Keys:
-+ -matstash_initial_size <size> or <size0,size1,...sizep-1>            - set initial size
-- -matstash_block_initial_size <bsize>  or <bsize0,bsize1,...bsizep-1> - set initial block size
++ -matstash_initial_size size or size0,size1,...,sizep-1            - set initial size
+- -matstash_block_initial_size bsize  or bsize0,bsize1,...,bsizep-1 - set initial block size
 
   Level: intermediate
 
@@ -10331,7 +10339,7 @@ PetscErrorCode MatMatMult(Mat A, Mat B, MatReuse scall, PetscReal fill, Mat *C)
 
   The deprecated `PETSC_DEFAULT` in `fill` also means use the current value
 
-.seealso: [](ch_matrices), `Mat`, `MatProductCreate()`, `MATPRODUCT_ABt`, `MatMatMult()`, `MatTransposeMatMult()` `MatPtAP()`, `MatProductAlgorithm`, `MatProductType`
+.seealso: [](ch_matrices), `Mat`, `MatProductCreate()`, `MATPRODUCT_ABt`, `MatMatMult()`, `MatTransposeMatMult()`, `MatPtAP()`, `MatProductAlgorithm`, `MatProductType`
 @*/
 PetscErrorCode MatMatTransposeMult(Mat A, Mat B, MatReuse scall, PetscReal fill, Mat *C)
 {
@@ -11162,7 +11170,7 @@ PetscErrorCode MatSubdomainsCreateCoalesce(Mat A, PetscInt N, PetscInt *n, IS *i
 . A - the Galerkin coarse matrix
 
   Options Database Key:
-. -pc_mg_galerkin <both,pmat,mat,none> - for what matrices the Galerkin process should be used
+. -pc_mg_galerkin (both|pmat|mat|none) - for what matrices the Galerkin process should be used
 
   Level: developer
 

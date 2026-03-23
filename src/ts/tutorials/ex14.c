@@ -100,7 +100,7 @@ static const PetscReal HexQDeriv_Lobatto[8][8][3] = {
   {{0, 0, 0},        {0, M *L, 0},     {P * L, P *L, M}, {M * L, 0, 0},    {0, 0, 0},        {0, M *H, 0},     {P * H, P *H, P}, {M * H, 0, 0}   },
   {{0, M *L, 0},     {0, 0, 0},        {P * L, 0, 0},    {M * L, P *L, M}, {0, M *H, 0},     {0, 0, 0},        {P * H, 0, 0},    {M * H, P *H, P}}
 };
-/* Stanndard Gauss */
+/* Standard Gauss */
 static const PetscReal HexQInterp_Gauss[8][8] = {
   {H * H * H, L * H * H, L * L * H, H * L * H, H * H * L, L * H * L, L * L * L, H * L * L},
   {L * H * H, H * H * H, H * L * H, L * L * H, L * H * L, H * H * L, H * L * L, L * L * L},
@@ -1251,10 +1251,10 @@ static PetscErrorCode THIJacobianLocal_2D(DMDALocalInfo *info, const Node ***x3,
                                     FieldIndex(Node, DMDALocalIndex3D(info, i, j - 1, k), v), FieldIndex(Node, DMDALocalIndex3D(info, i, j, k), v), FieldIndex(Node, DMDALocalIndex3D(info, i, j + 1, k), v)};
         const PetscScalar w = (k && k < zm - 1) ? 0.5 : 0.25, hW = w * (x2[i - 1][j].h + x2[i][j].h) / (zm - 1.), hE = w * (x2[i][j].h + x2[i + 1][j].h) / (zm - 1.), hS = w * (x2[i][j - 1].h + x2[i][j].h) / (zm - 1.),
                           hN = w * (x2[i][j].h + x2[i][j + 1].h) / (zm - 1.);
-        PetscScalar *vals, vals_upwind[] = {((PetscRealPart(x3[i][j][k].u) > 0) ? -hW : 0), (PetscRealPart(x3[i][j][k].u) > 0) ? +hE : -hW, (PetscRealPart(x3[i][j][k].u) > 0) ? 0 : +hE,
-                                            (PetscRealPart(x3[i][j][k].v) > 0) ? -hS : 0,   (PetscRealPart(x3[i][j][k].v) > 0) ? +hN : -hS, ((PetscRealPart(x3[i][j][k].v) > 0) ? 0 : +hN)},
-                           vals_centered[] = {-0.5 * hW, 0.5 * (-hW + hE), 0.5 * hE, -0.5 * hS, 0.5 * (-hS + hN), 0.5 * hN};
-        vals                               = 1 ? vals_upwind : vals_centered;
+        PetscScalar      *vals, vals_upwind[] = {((PetscRealPart(x3[i][j][k].u) > 0) ? -hW : 0), (PetscRealPart(x3[i][j][k].u) > 0) ? +hE : -hW, (PetscRealPart(x3[i][j][k].u) > 0) ? 0 : +hE,
+                                                 (PetscRealPart(x3[i][j][k].v) > 0) ? -hS : 0,   (PetscRealPart(x3[i][j][k].v) > 0) ? +hN : -hS, ((PetscRealPart(x3[i][j][k].v) > 0) ? 0 : +hN)},
+                                vals_centered[] = {-0.5 * hW, 0.5 * (-hW + hE), 0.5 * hE, -0.5 * hS, 0.5 * (-hS + hN), 0.5 * hN};
+        vals                                    = 1 ? vals_upwind : vals_centered;
         if (k == 0) {
           Node derate;
           THIErosion(thi, &x3[i][j][0], NULL, &derate);

@@ -1,7 +1,5 @@
 -include ../../../../../petscdir.mk
-#requirespackage  'PETSC_HAVE_HYPRE'
 
-CFLAGS    = ${HYPRE_INCLUDE}
 MANSEC    = KSP
 SUBMANSEC = PC
 

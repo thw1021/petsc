@@ -129,6 +129,7 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
   MatOrderingType      otype;
   DMReorderDefaultFlag flg;
   PetscInt             dim, cdim, i;
+  PetscBool            sparse;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -187,6 +188,8 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
     PetscCall(DMGetCoordinates(dm, &coords));
     if (coords) PetscCall(DMSetCoordinates(*newdm, coords));
   }
+  PetscCall(DMGetSparseLocalize(dm, &sparse));
+  PetscCall(DMSetSparseLocalize(*newdm, sparse));
   PetscCall(DMGetCellCoordinatesLocal(dm, &coords));
   if (coords) {
     PetscCall(DMSetCellCoordinatesLocal(*newdm, coords));
@@ -326,7 +329,7 @@ PetscErrorCode VecSetDM(Vec v, DM dm)
 - ctype - the matrix type
 
   Options Database Key:
-. -dm_is_coloring_type - global or local
+. -dm_is_coloring_type (global|local) - see `ISColoringType`
 
   Level: intermediate
 
@@ -352,9 +355,6 @@ PetscErrorCode DMSetISColoringType(DM dm, ISColoringType ctype)
   Output Parameter:
 . ctype - the matrix type
 
-  Options Database Key:
-. -dm_is_coloring_type - global or local
-
   Level: intermediate
 
 .seealso: [](ch_dmbase), `DM`, `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMSetMatrixPreallocateOnly()`, `MatType`, `DMGetMatType()`,
@@ -378,7 +378,7 @@ PetscErrorCode DMGetISColoringType(DM dm, ISColoringType *ctype)
 - ctype - the matrix type, for example `MATMPIAIJ`
 
   Options Database Key:
-. -dm_mat_type ctype - the type of the matrix to create, for example mpiaij
+. -dm_mat_type ctype - the type of the matrix to create, see `MatType`
 
   Level: intermediate
 
@@ -612,7 +612,7 @@ PetscErrorCode DMDestroyLabelLinkList_Internal(DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMDestroyCoordinates_Private(DMCoordinates *c)
+PetscErrorCode DMDestroyCoordinates_Internal(DMCoordinates *c)
 {
   PetscFunctionBegin;
   c->dim = PETSC_DEFAULT;
@@ -756,8 +756,8 @@ PetscErrorCode DMDestroy(DM *dm)
   PetscCall(PetscFree((*dm)->L));
   PetscCall(PetscFree((*dm)->maxCell));
   PetscCall(PetscFree2((*dm)->nullspaceConstructors, (*dm)->nearnullspaceConstructors));
-  PetscCall(DMDestroyCoordinates_Private(&(*dm)->coordinates[0]));
-  PetscCall(DMDestroyCoordinates_Private(&(*dm)->coordinates[1]));
+  PetscCall(DMDestroyCoordinates_Internal(&(*dm)->coordinates[0]));
+  PetscCall(DMDestroyCoordinates_Internal(&(*dm)->coordinates[1]));
   if ((*dm)->transformDestroy) PetscCall((*(*dm)->transformDestroy)(*dm, (*dm)->transformCtx));
   PetscCall(DMDestroy(&(*dm)->transformDM));
   PetscCall(VecDestroy(&(*dm)->transform));
@@ -818,61 +818,61 @@ PetscErrorCode DMSetUp(DM dm)
 . dm - the `DM` object to set options for
 
   Options Database Keys:
-+ -dm_preallocate_only                               - Only preallocate the matrix for `DMCreateMatrix()` and `DMCreateMassMatrix()`, but do not fill it with zeros
-. -dm_vec_type <type>                                - type of vector to create inside `DM`
-. -dm_mat_type <type>                                - type of matrix to create inside `DM`
-. -dm_is_coloring_type                               - <global or local>
-. -dm_bind_below <n>                                 - bind (force execution on CPU) for `Vec` and `Mat` objects with local size (number of vector entries or matrix rows) below n; currently only supported for `DMDA`
-. -dm_plex_option_phases <ph0_, ph1_, ...>           - List of prefixes for option processing phases
-. -dm_plex_filename <str>                            - File containing a mesh
-. -dm_plex_boundary_filename <str>                   - File containing a mesh boundary
-. -dm_plex_name <str>                                - Name of the mesh in the file
-. -dm_plex_shape <shape>                             - The domain shape, such as `BOX`, `SPHERE`, etc.
-. -dm_plex_cell <ct>                                 - Cell shape
-. -dm_plex_reference_cell_domain <bool>              - Use a reference cell domain
-. -dm_plex_dim <dim>                                 - Set the topological dimension
-. -dm_plex_simplex <bool>                            - `PETSC_TRUE` for simplex elements, `PETSC_FALSE` for tensor elements
-. -dm_plex_interpolate <bool>                        - `PETSC_TRUE` turns on topological interpolation (creating edges and faces)
-. -dm_plex_orient <bool>                             - `PETSC_TRUE` turns on topological orientation (flipping edges and faces)
-. -dm_plex_scale <sc>                                - Scale factor for mesh coordinates
-. -dm_coord_remap <bool>                             - Map coordinates using a function
-. -dm_plex_coordinate_dim <dim>                      - Change the coordinate dimension of a mesh (usually given with cdm_ prefix)
-. -dm_coord_map <mapname>                            - Select a builtin coordinate map
-. -dm_coord_map_params <p0,p1,p2,...>                - Set coordinate mapping parameters
-. -dm_plex_box_faces <m,n,p>                         - Number of faces along each dimension
-. -dm_plex_box_lower <x,y,z>                         - Specify lower-left-bottom coordinates for the box
-. -dm_plex_box_upper <x,y,z>                         - Specify upper-right-top coordinates for the box
-. -dm_plex_box_bd <bx,by,bz>                         - Specify the `DMBoundaryType` for each direction
-. -dm_plex_sphere_radius <r>                         - The sphere radius
-. -dm_plex_ball_radius <r>                           - Radius of the ball
-. -dm_plex_cylinder_bd <bz>                          - Boundary type in the z direction
-. -dm_plex_cylinder_num_wedges <n>                   - Number of wedges around the cylinder
-. -dm_plex_reorder <order>                           - Reorder the mesh using the specified algorithm
-. -dm_refine_pre <n>                                 - The number of refinements before distribution
-. -dm_refine_uniform_pre <bool>                      - Flag for uniform refinement before distribution
-. -dm_refine_volume_limit_pre <v>                    - The maximum cell volume after refinement before distribution
-. -dm_refine <n>                                     - The number of refinements after distribution
-. -dm_extrude <l>                                    - Activate extrusion and specify the number of layers to extrude
-. -dm_plex_save_transform <bool>                     - Save the `DMPlexTransform` that produced this mesh
-. -dm_plex_transform_extrude_thickness <t>           - The total thickness of extruded layers
-. -dm_plex_transform_extrude_use_tensor <bool>       - Use tensor cells when extruding
-. -dm_plex_transform_extrude_symmetric <bool>        - Extrude layers symmetrically about the surface
-. -dm_plex_transform_extrude_normal <n0,...,nd>      - Specify the extrusion direction
-. -dm_plex_transform_extrude_thicknesses <t0,...,tl> - Specify thickness of each layer
++ -dm_preallocate_only (true|false)                  - Only preallocate the matrix for `DMCreateMatrix()` and `DMCreateMassMatrix()`, but do not fill it with zeros
+. -dm_vec_type type                                  - type of vector to create inside `DM`
+. -dm_mat_type type                                  - type of matrix to create inside `DM`
+. -dm_is_coloring_type (global|local)                - see `ISColoringType`
+. -dm_bind_below n                                   - bind (force execution on CPU) for `Vec` and `Mat` objects with local size (number of vector entries or matrix rows) below n; currently only supported for `DMDA`
+. -dm_plex_option_phases ph0_, ph1_, ...             - List of prefixes for option processing phases
+. -dm_plex_filename str                              - File containing a mesh
+. -dm_plex_boundary_filename str                     - File containing a mesh boundary
+. -dm_plex_name str                                  - Name of the mesh in the file
+. -dm_plex_shape shape                               - The domain shape, such as `BOX`, `SPHERE`, etc.
+. -dm_plex_cell ct                                   - Cell shape
+. -dm_plex_reference_cell_domain (true|false)        - Use a reference cell domain
+. -dm_plex_dim dim                                   - Set the topological dimension
+. -dm_plex_simplex (true|false)                      - `PETSC_TRUE` for simplex elements, `PETSC_FALSE` for tensor elements
+. -dm_plex_interpolate (true|false)                  - `PETSC_TRUE` turns on topological interpolation (creating edges and faces)
+. -dm_plex_orient (true|false)                       - `PETSC_TRUE` turns on topological orientation (flipping edges and faces)
+. -dm_plex_scale sc                                  - Scale factor for mesh coordinates
+. -dm_coord_remap (true|false)                       - Map coordinates using a function
+. -dm_plex_coordinate_dim dim                        - Change the coordinate dimension of a mesh (usually given with cdm_ prefix)
+. -dm_coord_map mapname                              - Select a builtin coordinate map
+. -dm_coord_map_params p0,p1,p2,...                  - Set coordinate mapping parameters
+. -dm_plex_box_faces m,n,p                           - Number of faces along each dimension
+. -dm_plex_box_lower x,y,z                           - Specify lower-left-bottom coordinates for the box
+. -dm_plex_box_upper x,y,z                           - Specify upper-right-top coordinates for the box
+. -dm_plex_box_bd bx,by,bz                           - Specify the `DMBoundaryType` for each direction
+. -dm_plex_sphere_radius r                           - The sphere radius
+. -dm_plex_ball_radius r                             - Radius of the ball
+. -dm_plex_cylinder_bd bz                            - Boundary type in the z direction
+. -dm_plex_cylinder_num_wedges n                     - Number of wedges around the cylinder
+. -dm_plex_reorder order                             - Reorder the mesh using the specified algorithm
+. -dm_refine_pre n                                   - The number of refinements before distribution
+. -dm_refine_uniform_pre (true|false)                - Flag for uniform refinement before distribution
+. -dm_refine_volume_limit_pre v                      - The maximum cell volume after refinement before distribution
+. -dm_refine n                                       - The number of refinements after distribution
+. -dm_extrude l                                      - Activate extrusion and specify the number of layers to extrude
+. -dm_plex_save_transform (true|false)               - Save the `DMPlexTransform` that produced this mesh
+. -dm_plex_transform_extrude_thickness t             - The total thickness of extruded layers
+. -dm_plex_transform_extrude_use_tensor (true|false) - Use tensor cells when extruding
+. -dm_plex_transform_extrude_symmetric (true|false)  - Extrude layers symmetrically about the surface
+. -dm_plex_transform_extrude_normal n0,...,nd        - Specify the extrusion direction
+. -dm_plex_transform_extrude_thicknesses t0,...,tl   - Specify thickness of each layer
 . -dm_plex_create_fv_ghost_cells                     - Flag to create finite volume ghost cells on the boundary
-. -dm_plex_fv_ghost_cells_label <name>               - Label name for ghost cells boundary
-. -dm_distribute <bool>                              - Flag to redistribute a mesh among processes
-. -dm_distribute_overlap <n>                         - The size of the overlap halo
-. -dm_plex_adj_cone <bool>                           - Set adjacency direction
-. -dm_plex_adj_closure <bool>                        - Set adjacency size
-. -dm_plex_use_ceed <bool>                           - Use LibCEED as the FEM backend
-. -dm_plex_check_symmetry                            - Check that the adjacency information in the mesh is symmetric - `DMPlexCheckSymmetry()`
-. -dm_plex_check_skeleton                            - Check that each cell has the correct number of vertices (only for homogeneous simplex or tensor meshes) - `DMPlexCheckSkeleton()`
-. -dm_plex_check_faces                               - Check that the faces of each cell give a vertex order this is consistent with what we expect from the cell type - `DMPlexCheckFaces()`
-. -dm_plex_check_geometry                            - Check that cells have positive volume - `DMPlexCheckGeometry()`
-. -dm_plex_check_pointsf                             - Check some necessary conditions for `PointSF` - `DMPlexCheckPointSF()`
-. -dm_plex_check_interface_cones                     - Check points on inter-partition interfaces have conforming order of cone points - `DMPlexCheckInterfaceCones()`
-- -dm_plex_check_all                                 - Perform all the checks above
+. -dm_plex_fv_ghost_cells_label name                 - Label name for ghost cells boundary
+. -dm_distribute (true|false)                        - Flag to redistribute a mesh among processes
+. -dm_distribute_overlap n                           - The size of the overlap halo
+. -dm_plex_adj_cone (true|false)                     - Set adjacency direction
+. -dm_plex_adj_closure (true|false)                  - Set adjacency size
+. -dm_plex_use_ceed (true|false)                     - Use LibCEED as the FEM backend
+. -dm_plex_check_symmetry (true|false)               - Check that the adjacency information in the mesh is symmetric - `DMPlexCheckSymmetry()`
+. -dm_plex_check_skeleton (true|false)               - Check that each cell has the correct number of vertices (only for homogeneous simplex or tensor meshes) - `DMPlexCheckSkeleton()`
+. -dm_plex_check_faces (true|false)                  - Check that the faces of each cell give a vertex order this is consistent with what we expect from the cell type - `DMPlexCheckFaces()`
+. -dm_plex_check_geometry (true|false)               - Check that cells have positive volume - `DMPlexCheckGeometry()`
+. -dm_plex_check_pointsf (true|false)                - Check some necessary conditions for `PointSF` - `DMPlexCheckPointSF()`
+. -dm_plex_check_interface_cones (true|false)        - Check points on inter-partition interfaces have conforming order of cone points - `DMPlexCheckInterfaceCones()`
+- -dm_plex_check_all (true|false)                    - Perform all the checks above
 
   Level: intermediate
 
@@ -947,11 +947,11 @@ PetscErrorCode DMViewFromOptions(DM dm, PeOp PetscObject obj, const char name[])
 - v  - the viewer
 
   Options Database Keys:
-+ -view_pyvista_warp <f>                 - Warps the mesh by the active scalar with factor f
-. -view_pyvista_clip <xl,xu,yl,yu,zl,zu> - Defines the clipping box
-. -dm_view_draw_line_color <int>         - Specify the X-window color for cell borders
-. -dm_view_draw_cell_color <int>         - Specify the X-window color for cells
-- -dm_view_draw_affine <bool>            - Flag to ignore high-order edges
++ -view_pyvista_warp f                 - Warps the mesh by the active scalar with factor f
+. -view_pyvista_clip xl,xu,yl,yu,zl,zu - Defines the clipping box
+. -dm_view_draw_line_color color       - Specify the X-window color for cell borders
+. -dm_view_draw_cell_color color       - Specify the X-window color for cells
+- -dm_view_draw_affine (true|false)    - Flag to ignore high-order edges
 
   Level: beginner
 
@@ -1062,7 +1062,7 @@ PetscErrorCode DMCreateGlobalVector(DM dm, Vec *vec)
   Note:
   A local vector usually has ghost locations that contain values that are owned by different MPI ranks. A global vector has no ghost locations.
 
-.seealso: [](ch_dmbase), `DM`, `Vec`, `DMCreateGlobalVector()`, `DMGetLocalVector()`, `DMDestroy()`, `DMView()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`
+.seealso: [](ch_dmbase), `DM`, `Vec`, `DMCreateGlobalVector()`, `DMGetLocalVector()`, `DMDestroy()`, `DMView()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`,
          `DMGlobalToLocalBegin()`, `DMGlobalToLocalEnd()`
 @*/
 PetscErrorCode DMCreateLocalVector(DM dm, Vec *vec)
@@ -1647,7 +1647,7 @@ PetscErrorCode DMSetMatrixStructureOnly(DM dm, PetscBool only)
 - btype - block by topological point or field node
 
   Options Database Key:
-. -dm_blocking_type [topological_point, field_node] - use topological point blocking or field node blocking
+. -dm_blocking_type (topological_point|field_node) - use topological point blocking or field node blocking
 
   Level: advanced
 
@@ -2250,9 +2250,9 @@ PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS *is[], DM *superdm)
   The names are inconsistent, the hooks use `DMSubDomainHook` which is nothing like `DMCreateDomainDecomposition()` while `DMRefineHook` is used for `DMRefine()`.
 
 .seealso: [](ch_dmbase), `DM`, `DMCreateFieldDecomposition()`, `DMDestroy()`, `DMCreateDomainDecompositionScatters()`, `DMView()`, `DMCreateInterpolation()`,
-          `DMSubDomainHookAdd()`, `DMSubDomainHookRemove()`,`DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMRefine()`, `DMCoarsen()`
+          `DMSubDomainHookAdd()`, `DMSubDomainHookRemove()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMRefine()`, `DMCoarsen()`
 @*/
-PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char ***namelist, IS *innerislist[], IS *outerislist[], DM *dmlist[])
+PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char **namelist[], IS *innerislist[], IS *outerislist[], DM *dmlist[])
 {
   DMSubDomainHookLink link;
   PetscInt            i, l;
@@ -2320,18 +2320,18 @@ PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *n, char ***namelist,
   Level: developer
 
   Note:
-  This is an alternative to the iis and ois arguments in `DMCreateDomainDecomposition()` that allow for the solution
+  This is an alternative to the `iis` and `ois` arguments in `DMCreateDomainDecomposition()` that allow for the solution
   of general nonlinear problems with overlapping subdomain methods.  While merely having index sets that enable subsets
   of the residual equations to be created is fine for linear problems, nonlinear problems require local assembly of
   solution and residual data.
 
   Developer Note:
-  Can the subdms input be anything or are they exactly the `DM` obtained from
+  Can the `subdms` input be anything or are they exactly the `DM` obtained from
   `DMCreateDomainDecomposition()`?
 
 .seealso: [](ch_dmbase), `DM`, `DMCreateDomainDecomposition()`, `DMDestroy()`, `DMView()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMCreateFieldIS()`
 @*/
-PetscErrorCode DMCreateDomainDecompositionScatters(DM dm, PetscInt n, DM *subdms, VecScatter *iscat[], VecScatter *oscat[], VecScatter *gscat[])
+PetscErrorCode DMCreateDomainDecompositionScatters(DM dm, PetscInt n, DM subdms[], VecScatter *iscat[], VecScatter *oscat[], VecScatter *gscat[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -2353,7 +2353,7 @@ PetscErrorCode DMCreateDomainDecompositionScatters(DM dm, PetscInt n, DM *subdms
 . dmf - the refined `DM`, or `NULL`
 
   Options Database Key:
-. -dm_plex_cell_refiner <strategy> - chooses the refinement strategy, e.g. regular, tohex
+. -dm_plex_cell_refiner strategy - chooses the refinement strategy, e.g. regular, tohex
 
   Level: developer
 
@@ -2398,18 +2398,18 @@ PetscErrorCode DMRefine(DM dm, MPI_Comm comm, DM *dmf)
 + coarse     - `DM` on which to run a hook when interpolating to a finer level
 . refinehook - function to run when setting up the finer level
 . interphook - function to run to update data on finer levels (once per `SNESSolve()`)
-- ctx        - [optional] user-defined context for provide data for the hooks (may be `NULL`)
+- ctx        - [optional] context for provide data for the hooks (may be `NULL`)
 
   Calling sequence of `refinehook`:
 + coarse - coarse level `DM`
 . fine   - fine level `DM` to interpolate problem to
-- ctx    - optional user-defined function context
+- ctx    - optional function context
 
   Calling sequence of `interphook`:
 + coarse - coarse level `DM`
 . interp - matrix interpolating a coarse-level solution to the finer grid
 . fine   - fine level `DM` to update
-- ctx    - optional user-defined function context
+- ctx    - optional function context
 
   Level: advanced
 
@@ -2451,7 +2451,18 @@ PetscErrorCode DMRefineHookAdd(DM coarse, PetscErrorCode (*refinehook)(DM coarse
 + coarse     - the `DM` on which to run a hook when restricting to a coarser level
 . refinehook - function to run when setting up a finer level
 . interphook - function to run to update data on finer levels
-- ctx        - [optional] user-defined context for provide data for the hooks (may be `NULL`)
+- ctx        - [optional] application context for provide data for the hooks (may be `NULL`)
+
+  Calling sequence of refinehook:
++ coarse - the coarse `DM`
+. fine   - the fine `DM`
+- ctx    - context for the function
+
+  Calling sequence of interphook:
++ coarse - the coarse `DM`
+. interp - the interpolation `Mat` from coarse to fine
+. fine   - the fine `DM`
+- ctx    - context for the function
 
   Level: advanced
 
@@ -2460,7 +2471,7 @@ PetscErrorCode DMRefineHookAdd(DM coarse, PetscErrorCode (*refinehook)(DM coarse
 
 .seealso: [](ch_dmbase), `DM`, `DMRefineHookAdd()`, `DMCoarsenHookRemove()`, `DMInterpolate()`, `SNESFASGetInterpolation()`, `SNESFASGetInjection()`, `PetscObjectCompose()`, `PetscContainerCreate()`
 @*/
-PetscErrorCode DMRefineHookRemove(DM coarse, PetscErrorCode (*refinehook)(DM, DM, void *), PetscErrorCode (*interphook)(DM, Mat, DM, void *), PetscCtx ctx)
+PetscErrorCode DMRefineHookRemove(DM coarse, PetscErrorCode (*refinehook)(DM coarse, DM fine, PetscCtx ctx), PetscErrorCode (*interphook)(DM coarse, Mat interp, DM fine, PetscCtx ctx), PetscCtx ctx)
 {
   DMRefineHookLink link, *p;
 
@@ -2752,21 +2763,21 @@ PetscErrorCode DMCopyTransform(DM dm, DM newdm)
 + dm        - the `DM`
 . beginhook - function to run at the beginning of `DMGlobalToLocalBegin()`
 . endhook   - function to run after `DMGlobalToLocalEnd()` has completed
-- ctx       - [optional] user-defined context for provide data for the hooks (may be `NULL`)
+- ctx       - [optional] context for provide data for the hooks (may be `NULL`)
 
   Calling sequence of `beginhook`:
 + dm   - global `DM`
 . g    - global vector
 . mode - mode
 . l    - local vector
-- ctx  - optional user-defined function context
+- ctx  - optional function context
 
   Calling sequence of `endhook`:
 + dm   - global `DM`
 . g    - global vector
 . mode - mode
 . l    - local vector
-- ctx  - optional user-defined function context
+- ctx  - optional function context
 
   Level: advanced
 
@@ -2846,8 +2857,8 @@ static PetscErrorCode DMGlobalToLocalHook_Constraints(DM dm, Vec g, InsertMode m
   `DMGlobalToLocalHookAdd()` may be used to provide additional operations that are performed during the update process.
 
 .seealso: [](ch_dmbase), `DM`, `DMGlobalToLocalHookAdd()`, `DMCoarsen()`, `DMDestroy()`, `DMView()`, `DMCreateGlobalVector()`, `DMCreateInterpolation()`,
-          `DMGlobalToLocalEnd()`, `DMLocalToGlobalBegin()`, `DMLocalToGlobal()`, `DMLocalToGlobalEnd()`,
-          `DMGlobalToLocalBegin()` `DMGlobalToLocalEnd()`
+          `DMLocalToGlobalBegin()`, `DMLocalToGlobal()`, `DMLocalToGlobalEnd()`,
+          `DMGlobalToLocalBegin()`, `DMGlobalToLocalEnd()`
 @*/
 PetscErrorCode DMGlobalToLocal(DM dm, Vec g, InsertMode mode, Vec l)
 {
@@ -2968,21 +2979,21 @@ PetscErrorCode DMGlobalToLocalEnd(DM dm, Vec g, InsertMode mode, Vec l)
 + dm        - the `DM`
 . beginhook - function to run at the beginning of `DMLocalToGlobalBegin()`
 . endhook   - function to run after `DMLocalToGlobalEnd()` has completed
-- ctx       - [optional] user-defined context for provide data for the hooks (may be `NULL`)
+- ctx       - [optional] context for provide data for the hooks (may be `NULL`)
 
   Calling sequence of `beginhook`:
 + global - global `DM`
 . l      - local vector
 . mode   - mode
 . g      - global vector
-- ctx    - optional user-defined function context
+- ctx    - optional function context
 
   Calling sequence of `endhook`:
 + global - global `DM`
 . l      - local vector
 . mode   - mode
 . g      - global vector
-- ctx    - optional user-defined function context
+- ctx    - optional function context
 
   Level: advanced
 
@@ -3395,12 +3406,12 @@ PetscErrorCode DMCoarsen(DM dm, MPI_Comm comm, DM *dmc)
 + fine         - `DM` on which to run a hook when restricting to a coarser level
 . coarsenhook  - function to run when setting up a coarser level
 . restricthook - function to run to update data on coarser levels (called once per `SNESSolve()`)
-- ctx          - [optional] user-defined context for provide data for the hooks (may be `NULL`)
+- ctx          - [optional] application context for provide data for the hooks (may be `NULL`)
 
   Calling sequence of `coarsenhook`:
 + fine   - fine level `DM`
 . coarse - coarse level `DM` to restrict problem to
-- ctx    - optional user-defined function context
+- ctx    - optional application function context
 
   Calling sequence of `restricthook`:
 + fine      - fine level `DM`
@@ -3408,7 +3419,7 @@ PetscErrorCode DMCoarsen(DM dm, MPI_Comm comm, DM *dmc)
 . rscale    - scaling vector for restriction
 . inject    - matrix restricting by injection
 . coarse    - coarse level DM to update
-- ctx       - optional user-defined function context
+- ctx       - optional application function context
 
   Level: advanced
 
@@ -3451,7 +3462,20 @@ PetscErrorCode DMCoarsenHookAdd(DM fine, PetscErrorCode (*coarsenhook)(DM fine, 
 + fine         - `DM` on which to run a hook when restricting to a coarser level
 . coarsenhook  - function to run when setting up a coarser level
 . restricthook - function to run to update data on coarser levels
-- ctx          - [optional] user-defined context for provide data for the hooks (may be `NULL`)
+- ctx          - [optional] application context for provide data for the hooks (may be `NULL`)
+
+  Calling sequence of `coarsenhook`:
++ fine   - fine level `DM`
+. coarse - coarse level `DM` to restrict problem to
+- ctx    - optional application function context
+
+  Calling sequence of `restricthook`:
++ fine    - fine level `DM`
+. rstrict - matrix restricting a fine-level solution to the coarse grid, usually the transpose of the interpolation
+. rscale  - scaling vector for restriction
+. inject  - matrix restricting by injection
+. coarse  - coarse level DM to update
+- ctx     - optional application function context
 
   Level: advanced
 
@@ -3462,7 +3486,7 @@ PetscErrorCode DMCoarsenHookAdd(DM fine, PetscErrorCode (*coarsenhook)(DM fine, 
 
 .seealso: [](ch_dmbase), `DM`, `DMCoarsenHookAdd()`, `DMRefineHookAdd()`, `SNESFASGetInterpolation()`, `SNESFASGetInjection()`, `PetscObjectCompose()`, `PetscContainerCreate()`
 @*/
-PetscErrorCode DMCoarsenHookRemove(DM fine, PetscErrorCode (*coarsenhook)(DM, DM, void *), PetscErrorCode (*restricthook)(DM, Mat, Vec, Mat, DM, void *), PetscCtx ctx)
+PetscErrorCode DMCoarsenHookRemove(DM fine, PetscErrorCode (*coarsenhook)(DM fine, DM coarse, PetscCtx ctx), PetscErrorCode (*restricthook)(DM fine, Mat rstrict, Vec rscale, Mat inject, DM coarse, PetscCtx ctx), PetscCtx ctx)
 {
   DMCoarsenHookLink link, *p;
 
@@ -3518,19 +3542,19 @@ PetscErrorCode DMRestrict(DM fine, Mat restrct, Vec rscale, Mat inject, DM coars
 + global       - global `DM`
 . ddhook       - function to run to pass data to the decomposition `DM` upon its creation
 . restricthook - function to run to update data on block solve (at the beginning of the block solve)
-- ctx          - [optional] user-defined context for provide data for the hooks (may be `NULL`)
+- ctx          - [optional] application context for provide data for the hooks (may be `NULL`)
 
   Calling sequence of `ddhook`:
 + global - global `DM`
 . block  - subdomain `DM`
-- ctx    - optional user-defined function context
+- ctx    - optional application function context
 
   Calling sequence of `restricthook`:
 + global - global `DM`
 . out    - scatter to the outer (with ghost and overlap points) sub vector
 . in     - scatter to sub vector values only owned locally
 . block  - subdomain `DM`
-- ctx    - optional user-defined function context
+- ctx    - optional application function context
 
   Level: advanced
 
@@ -3574,17 +3598,26 @@ PetscErrorCode DMSubDomainHookAdd(DM global, PetscErrorCode (*ddhook)(DM global,
 + global       - global `DM`
 . ddhook       - function to run to pass data to the decomposition `DM` upon its creation
 . restricthook - function to run to update data on block solve (at the beginning of the block solve)
-- ctx          - [optional] user-defined context for provide data for the hooks (may be `NULL`)
+- ctx          - [optional] application context for provide data for the hooks (may be `NULL`)
+
+  Calling sequence of `ddhook`:
++ dm    - global `DM`
+. block - subdomain `DM`
+- ctx   - optional application function context
+
+  Calling sequence of `restricthook`:
++ dm       - global `DM`
+. oscatter - scatter to the outer (with ghost and overlap points) sub vector
+. gscatter - scatter to sub vector values only owned locally
+. block    - subdomain `DM`
+- ctx      - optional application function context
 
   Level: advanced
-
-  Note:
-  See `DMSubDomainHookAdd()` for the calling sequences of `ddhook` and `restricthook`
 
 .seealso: [](ch_dmbase), `DM`, `DMSubDomainHookAdd()`, `SNESFASGetInterpolation()`, `SNESFASGetInjection()`, `PetscObjectCompose()`, `PetscContainerCreate()`,
           `DMCreateDomainDecomposition()`
 @*/
-PetscErrorCode DMSubDomainHookRemove(DM global, PetscErrorCode (*ddhook)(DM, DM, void *), PetscErrorCode (*restricthook)(DM, VecScatter, VecScatter, DM, void *), PetscCtx ctx)
+PetscErrorCode DMSubDomainHookRemove(DM global, PetscErrorCode (*ddhook)(DM dm, DM block, PetscCtx ctx), PetscErrorCode (*restricthook)(DM dm, VecScatter oscatter, VecScatter gscatter, DM block, PetscCtx ctx), PetscCtx ctx)
 {
   DMSubDomainHookLink link, *p;
 
@@ -3845,8 +3878,13 @@ PetscErrorCode DMGetApplicationContext(DM dm, PetscCtxRt ctx)
   Logically Collective
 
   Input Parameters:
-+ dm - the DM object
++ dm - the `DM` object
 - f  - the function that computes variable bounds used by `SNESVI` (use `NULL` to cancel a previous function that was set)
+
+  Calling sequence of f:
++ dm    - the `DM`
+. lower - the vector to hold the lower bounds
+- upper - the vector to hold the upper bounds
 
   Level: intermediate
 
@@ -3856,7 +3894,7 @@ PetscErrorCode DMGetApplicationContext(DM dm, PetscCtxRt ctx)
 .seealso: [](ch_dmbase), `DM`, `DMComputeVariableBounds()`, `DMHasVariableBounds()`, `DMView()`, `DMCreateGlobalVector()`, `DMCreateInterpolation()`, `DMCreateColoring()`, `DMCreateMatrix()`, `DMCreateMassMatrix()`, `DMGetApplicationContext()`,
          `DMSetJacobian()`
 @*/
-PetscErrorCode DMSetVariableBounds(DM dm, PetscErrorCode (*f)(DM, Vec, Vec))
+PetscErrorCode DMSetVariableBounds(DM dm, PetscErrorCode (*f)(DM dm, Vec lower, Vec upper))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -4003,7 +4041,7 @@ PetscBool         DMRegisterAllCalled = PETSC_FALSE;
 - method - The name of the `DMType`, for example `DMDA`, `DMPLEX`
 
   Options Database Key:
-. -dm_type <type> - Sets the `DM` type; use -help for a list of available types
+. -dm_type type - Sets the `DM` type; use -help for a list of available types
 
   Level: intermediate
 
@@ -4174,6 +4212,9 @@ PetscErrorCode DMConvert(DM dm, DMType newtype, DM *M)
 + sname    - The name of a new user-defined creation routine
 - function - The creation routine itself
 
+  Calling sequence of function:
+. dm - the new `DM` that is being created
+
   Level: advanced
 
   Note:
@@ -4196,7 +4237,7 @@ PetscErrorCode DMConvert(DM dm, DMType newtype, DM *M)
 
 .seealso: [](ch_dmbase), `DM`, `DMType`, `DMSetType()`, `DMRegisterAll()`, `DMRegisterDestroy()`
 @*/
-PetscErrorCode DMRegister(const char sname[], PetscErrorCode (*function)(DM))
+PetscErrorCode DMRegister(const char sname[], PetscErrorCode (*function)(DM dm))
 {
   PetscFunctionBegin;
   PetscCall(DMInitializePackage());
@@ -6458,6 +6499,7 @@ PetscErrorCode DMSetDimension(DM dm, PetscInt dim)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidLogicalCollectiveInt(dm, dim, 2);
+  if (dm->dim != dim) PetscCall(DMSetPeriodicity(dm, NULL, NULL, NULL));
   dm->dim = dim;
   if (dm->dim >= 0) {
     PetscCall(DMGetNumDS(dm, &Nds));
@@ -7461,7 +7503,7 @@ PetscErrorCode DMRemoveLabel(DM dm, const char name[], DMLabel *label)
   If the `DM` has an exclusive reference to the label, the label gets destroyed and
   *label nullified.
 
-.seealso: [](ch_dmbase), `DM`, `DMLabel`, `DMCreateLabel()`, `DMHasLabel()`, `DMGetLabel()` `DMGetLabelValue()`, `DMSetLabelValue()`, `DMLabelDestroy()`, `DMRemoveLabel()`
+.seealso: [](ch_dmbase), `DM`, `DMLabel`, `DMCreateLabel()`, `DMHasLabel()`, `DMGetLabel()`, `DMGetLabelValue()`, `DMSetLabelValue()`, `DMLabelDestroy()`, `DMRemoveLabel()`
 @*/
 PetscErrorCode DMRemoveLabelBySelf(DM dm, DMLabel *label, PetscBool failNotFound)
 {
@@ -8036,8 +8078,8 @@ PetscErrorCode DMSetFineDM(DM dm, DM fdm)
 . bd - (Optional) Boundary number
 
   Options Database Keys:
-+ -bc_<boundary name> <num>      - Overrides the boundary ids
-- -bc_<boundary name>_comp <num> - Overrides the boundary components
++ -bc_NAME values     - Overrides the boundary ids for boundary named NAME
+- -bc_NAME_comp comps - Overrides the boundary components for boundary named NAME
 
   Level: intermediate
 
@@ -8246,7 +8288,7 @@ PetscErrorCode DMHasBound(DM dm, PetscBool *hasBound)
 . x    - The coordinates
 . Nc   - The number of components
 . u    - The output field values
-- ctx  - optional user-defined function context
+- ctx  - optional function context
 
   Level: developer
 
@@ -8295,7 +8337,7 @@ PetscErrorCode DMProjectFunction(DM dm, PetscReal time, PetscErrorCode (**funcs)
 . x    - The coordinates
 . Nc   - The number of components
 . u    - The output field values
-- ctx  - optional user-defined function context
+- ctx  - optional function context
 
   Level: developer
 
@@ -8341,7 +8383,7 @@ PetscErrorCode DMProjectFunctionLocal(DM dm, PetscReal time, PetscErrorCode (**f
 . x    - The coordinates
 . Nc   - The number of components
 . u    - The output field values
-- ctx  - optional user-defined function context
+- ctx  - optional function context
 
   Level: developer
 
@@ -8393,7 +8435,7 @@ PetscErrorCode DMProjectFunctionLabel(DM dm, PetscReal time, DMLabel label, Pets
 . x    - The coordinates
 . Nc   - The number of components
 . u    - The output field values
-- ctx  - optional user-defined function context
+- ctx  - optional function context
 
   Level: developer
 
@@ -8990,7 +9032,7 @@ PetscErrorCode DMGetCompatibility(DM dm1, DM dm2, PetscBool *compatible, PetscBo
   Input Parameters:
 + dm             - the `DM`
 . f              - the monitor function
-. mctx           - [optional] user-defined context for private data for the monitor routine (use `NULL` if no context is desired)
+. mctx           - [optional] context for private data for the monitor routine (use `NULL` if no context is desired)
 - monitordestroy - [optional] routine that frees monitor context (may be `NULL`), see `PetscCtxDestroyFn` for the calling sequence
 
   Options Database Key:
@@ -9078,17 +9120,25 @@ PetscErrorCode DMMonitorCancel(DM dm)
   Output Parameter:
 . flg - Flag set if the monitor was created
 
+  Calling sequence of `monitor`:
++ dm  - the `DM` to be monitored
+- ctx - monitor context
+
+  Calling sequence of `monitorsetup`:
++ dm - the `DM` to be monitored
+- vf - the `PetscViewer` and format to be used by the monitor
+
   Level: developer
 
 .seealso: [](ch_dmbase), `DM`, `PetscOptionsCreateViewer()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,
-          `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`
+          `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`,
           `PetscOptionsInt()`, `PetscOptionsString()`, `PetscOptionsReal()`,
           `PetscOptionsName()`, `PetscOptionsBegin()`, `PetscOptionsEnd()`, `PetscOptionsHeadBegin()`,
           `PetscOptionsStringArray()`, `PetscOptionsRealArray()`, `PetscOptionsScalar()`,
           `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
           `PetscOptionsFList()`, `PetscOptionsEList()`, `DMMonitor()`, `DMMonitorSet()`
 @*/
-PetscErrorCode DMMonitorSetFromOptions(DM dm, const char name[], const char help[], const char manual[], PetscErrorCode (*monitor)(DM, void *), PetscErrorCode (*monitorsetup)(DM, PetscViewerAndFormat *), PetscBool *flg)
+PetscErrorCode DMMonitorSetFromOptions(DM dm, const char name[], const char help[], const char manual[], PetscErrorCode (*monitor)(DM dm, PetscCtx ctx), PetscErrorCode (*monitorsetup)(DM dm, PetscViewerAndFormat *vf), PetscBool *flg)
 {
   PetscViewer       viewer;
   PetscViewerFormat format;

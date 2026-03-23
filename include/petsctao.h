@@ -216,6 +216,7 @@ typedef const char *TaoType;
 #define TAOBNLS     "bnls"
 #define TAOBNTR     "bntr"
 #define TAOBNTL     "bntl"
+#define TAOBNK      "bnk"
 #define TAOBQNKLS   "bqnkls"
 #define TAOBQNKTR   "bqnktr"
 #define TAOBQNKTL   "bqnktl"
@@ -441,7 +442,7 @@ PETSC_EXTERN PetscErrorCode TaoGetLineSearch(Tao, TaoLineSearch *);
 PETSC_EXTERN PetscErrorCode TaoSetConvergenceHistory(Tao, PetscReal *, PetscReal *, PetscReal *, PetscInt *, PetscInt, PetscBool);
 PETSC_EXTERN PetscErrorCode TaoGetConvergenceHistory(Tao, PetscReal **, PetscReal **, PetscReal **, PetscInt **, PetscInt *);
 PETSC_EXTERN PetscErrorCode TaoMonitorSet(Tao, PetscErrorCode (*)(Tao, PetscCtx), PetscCtx, PetscCtxDestroyFn *);
-PETSC_EXTERN PetscErrorCode TaoMonitorSetFromOptions(Tao tao, const char name[], const char help[], const char manual[], PetscErrorCode (*monitor)(Tao, PetscViewerAndFormat *));
+PETSC_EXTERN PetscErrorCode TaoMonitorSetFromOptions(Tao, const char[], const char[], const char[], PetscErrorCode (*)(Tao, PetscViewerAndFormat *));
 PETSC_EXTERN PetscErrorCode TaoMonitorCancel(Tao);
 PETSC_EXTERN PetscErrorCode TaoMonitorDefault(Tao, PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode TaoMonitorGlobalization(Tao, PetscViewerAndFormat *);
@@ -476,7 +477,7 @@ PETSC_EXTERN PetscErrorCode          TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx 
 - TAOBRGN_REGULARIZATION_LM     - Levenberg-Marquardt, $\tfrac{1}{2} x^T \mathrm{diag}(J^T J) x$, where $J$ is the Jacobian of the least-squares residual
 
   Options database Key:
-. -tao_brgn_regularization_type <user,l2prox,l2pure,l1dict,lm> - one of the above regularization types
+. -tao_brgn_regularization_type (l2prox|l2pure|l1dict|lm|user) - select one of the regularization types
 
   Level: advanced
 

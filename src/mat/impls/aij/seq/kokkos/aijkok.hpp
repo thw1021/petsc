@@ -4,7 +4,9 @@
 #include <petsc/private/kokkosimpl.hpp>
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <KokkosSparse_CrsMatrix.hpp>
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN("-Wundef")
 #include <KokkosSparse_spiluk.hpp>
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END()
 #include <string>
 
 namespace
@@ -229,3 +231,4 @@ PETSC_INTERN PetscErrorCode MatSeqAIJRestoreKokkosView(Mat, MatScalarKokkosView 
 PETSC_INTERN PetscErrorCode MatSeqAIJGetKokkosViewWrite(Mat, MatScalarKokkosView *);
 PETSC_INTERN PetscErrorCode MatSeqAIJRestoreKokkosViewWrite(Mat, MatScalarKokkosView *);
 PETSC_INTERN PetscErrorCode MatInvertVariableBlockDiagonal_SeqAIJKokkos(Mat, const PetscIntKokkosView &, const PetscIntKokkosView &, const PetscIntKokkosView &, PetscScalarKokkosView &, PetscScalarKokkosView &);
+PETSC_INTERN PetscErrorCode MatBindToCPU_SeqAIJKokkos(Mat, PetscBool);

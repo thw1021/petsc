@@ -1316,8 +1316,6 @@ PETSC_EXTERN_TYPEDEF typedef PetscVoidFn **PetscVoidStarFunction;
 
   `PetscVoidFn` is similar to `PetscErrorCodeFn` but should be used when the function does not return a `PetscErrorCode`.
 
-  The deprecated `PetscErrorCodeFunction` works as a replacement for `PetscErrorCodeFn` *.
-
   Developer Notes:
   This function type is equivalent to `PetscVoidFn`*.
 
@@ -1327,8 +1325,6 @@ PETSC_EXTERN_TYPEDEF typedef PetscVoidFn **PetscVoidStarFunction;
 .seealso: `PetscVoidFn`, `PetscObject`, `PetscObjectDestroy()`, `VecSetOperation()`
 S*/
 PETSC_EXTERN_TYPEDEF typedef void PetscErrorCodeFn(void);
-
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCodeFn *PetscErrorCodeFunction;
 
 /*
     Defines PETSc error handling.
@@ -1559,7 +1555,7 @@ typedef void *PetscCtxRt;
 
 .seealso: `PetscObject`, `PetscCtxDestroyDefault()`, `PetscObjectDestroy()`, `DMSetApplicationContextDestroy()`
 S*/
-PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscCtxDestroyFn(PetscCtxRt);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode PetscCtxDestroyFn(PetscCtxRt ctx);
 
 PETSC_EXTERN PetscCtxDestroyFn PetscCtxDestroyDefault;
 PETSC_DEPRECATED_FUNCTION(3, 23, 0, "PetscCtxDestroyDefault()", ) static inline PetscErrorCode PetscContainerCtxDestroyDefault(PetscCtxRt a)
@@ -1811,7 +1807,7 @@ PETSC_EXTERN PetscErrorCode PetscScalarView(PetscInt, const PetscScalar[], Petsc
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
   #define PetscPrefetchBlock(a, b, c, d)
 #else
-  /*MC
+/*MC
    PetscPrefetchBlock - Prefetches a block of memory
 
    Synopsis:
@@ -1841,6 +1837,7 @@ PETSC_EXTERN PetscErrorCode PetscScalarView(PetscInt, const PetscScalar[], Petsc
    This function does nothing on architectures that do not support prefetch and never errors (even if passed an invalid
    address).
 
+.seealso: `PETSC_PREFETCH_HINT_NTA`, `PETSC_PREFETCH_HINT_T0`, `PETSC_PREFETCH_HINT_T1`, `PETSC_PREFETCH_HINT_T2`
 M*/
   #define PetscPrefetchBlock(a, n, rw, t) \
     do { \
@@ -2290,7 +2287,6 @@ static inline PetscErrorCode PetscIntMultError(PetscInt a, PetscInt b, PetscInt 
 }
 
 /*@C
-
    PetscIntSumError - Computes the sum of two positive `PetscInt` and generates an error with overflow.
 
    Not Collective; No Fortran Support
@@ -2677,9 +2673,11 @@ PETSC_EXTERN PetscSegBuffer PetscCitationsList;
 -    set - a boolean variable initially set to `PETSC_FALSE`; this is used to insure only a single registration of the citation
 
      Options Database Key:
-.     -citations [filename]   - print out the bibtex entries for the given computation
+.    -citations [filename] - print out the bibtex entries for the given computation
 
      Level: intermediate
+
+.seealso: `PetscFinalize()`
 @*/
 static inline PetscErrorCode PetscCitationsRegister(const char cit[], PetscBool *set)
 {
@@ -2985,6 +2983,8 @@ PETSC_EXTERN PetscErrorCode PetscBLASGetNumThreads(PetscInt *);
    Note:
    This is needed to avoid errors with undefined-behavior sanitizers such as
    UBSan, assuming PETSc has been configured with `-fsanitize=undefined` as part of the compiler flags
+
+.seealso: `PetscInitialize()`
 M*/
 #define PetscSafePointerPlusOffset(ptr, offset) ((ptr) ? (ptr) + (offset) : NULL)
 

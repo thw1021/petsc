@@ -123,7 +123,7 @@ static PetscErrorCode MatSuperluDistGetDiagU_SuperLU_DIST(Mat F, PetscScalar *di
   Mat_SuperLU_DIST *lu = (Mat_SuperLU_DIST *)F->data;
 
   PetscFunctionBegin;
-  PetscStackCallExternalVoid("SuperLU_DIST:pGetDiagU", pGetDiagU(F->rmap->N, &lu->LUstruct, &lu->grid, CASTDOUBLECOMPLEX diagU));
+  PetscCallExternalVoid("SuperLU_DIST:pGetDiagU", pGetDiagU(F->rmap->N, &lu->LUstruct, &lu->grid, CASTDOUBLECOMPLEX diagU));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -156,10 +156,10 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_Superlu_dist_keyval_DeleteFn(MPI_Comm comm
   PetscCheckReturnMPI(keyval == Petsc_Superlu_dist_keyval, PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "Unexpected keyval");
 #if PETSC_PKG_SUPERLU_DIST_VERSION_GE(9, 0, 0)
   if (context->use3d) {
-    PetscStackCallExternalVoid("SuperLU_DIST:superlu_gridexit3d", superlu_gridexit3d(&context->grid3d));
+    PetscCallExternalVoid("SuperLU_DIST:superlu_gridexit3d", superlu_gridexit3d(&context->grid3d));
   } else
 #endif
-    PetscStackCallExternalVoid("SuperLU_DIST:superlu_gridexit", superlu_gridexit(&context->grid));
+    PetscCallExternalVoid("SuperLU_DIST:superlu_gridexit", superlu_gridexit(&context->grid));
   PetscCallMPIReturnMPI(MPI_Comm_free(&context->comm));
   PetscCallReturnMPI(PetscFree(context));
   PetscFunctionReturn(MPI_SUCCESS);
@@ -194,52 +194,52 @@ static PetscErrorCode MatDestroy_SuperLU_DIST(Mat A)
 #endif
   if (lu->CleanUpSuperLU_Dist) {
     /* Deallocate SuperLU_DIST storage */
-    PetscStackCallExternalVoid("SuperLU_DIST:Destroy_CompRowLoc_Matrix_dist", Destroy_CompRowLoc_Matrix_dist(&lu->A_sup));
+    PetscCallExternalVoid("SuperLU_DIST:Destroy_CompRowLoc_Matrix_dist", Destroy_CompRowLoc_Matrix_dist(&lu->A_sup));
     if (lu->options.SolveInitialized) {
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
-      if (lu->singleprecision) PetscStackCallExternalVoid("SuperLU_DIST:SolveFinalize", sSolveFinalize(&lu->options, &lu->sSOLVEstruct));
+      if (lu->singleprecision) PetscCallExternalVoid("SuperLU_DIST:SolveFinalize", sSolveFinalize(&lu->options, &lu->sSOLVEstruct));
       else
 #endif
-        PetscStackCallExternalVoid("SuperLU_DIST:SolveFinalize", SolveFinalize(&lu->options, &lu->SOLVEstruct));
+        PetscCallExternalVoid("SuperLU_DIST:SolveFinalize", SolveFinalize(&lu->options, &lu->SOLVEstruct));
     }
 #if PETSC_PKG_SUPERLU_DIST_VERSION_GE(9, 0, 0)
     if (lu->use3d) {
   #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
       if (lu->singleprecision) {
-        PetscStackCallExternalVoid("SuperLU_DIST:Destroy_LU", sDestroy_LU(A->cmap->N, &lu->grid3d.grid2d, &lu->sLUstruct));
-        PetscStackCallExternalVoid("SuperLU_DIST:Destroy_A3d_gathered_on_2d", sDestroy_A3d_gathered_on_2d(&lu->sSOLVEstruct, &lu->grid3d));
-        PetscStackCallExternalVoid("SuperLU_DIST:ScalePermstructFree", sScalePermstructFree(&lu->sScalePermstruct));
-        PetscStackCallExternalVoid("SuperLU_DIST:LUstructFree", sLUstructFree(&lu->sLUstruct));
+        PetscCallExternalVoid("SuperLU_DIST:Destroy_LU", sDestroy_LU(A->cmap->N, &lu->grid3d.grid2d, &lu->sLUstruct));
+        PetscCallExternalVoid("SuperLU_DIST:Destroy_A3d_gathered_on_2d", sDestroy_A3d_gathered_on_2d(&lu->sSOLVEstruct, &lu->grid3d));
+        PetscCallExternalVoid("SuperLU_DIST:ScalePermstructFree", sScalePermstructFree(&lu->sScalePermstruct));
+        PetscCallExternalVoid("SuperLU_DIST:LUstructFree", sLUstructFree(&lu->sLUstruct));
       } else
   #endif
       {
-        PetscStackCallExternalVoid("SuperLU_DIST:Destroy_LU", Destroy_LU(A->cmap->N, &lu->grid3d.grid2d, &lu->LUstruct));
-        PetscStackCallExternalVoid("SuperLU_DIST:Destroy_A3d_gathered_on_2d", Destroy_A3d_gathered_on_2d(&lu->SOLVEstruct, &lu->grid3d));
-        PetscStackCallExternalVoid("SuperLU_DIST:ScalePermstructFree", ScalePermstructFree(&lu->ScalePermstruct));
-        PetscStackCallExternalVoid("SuperLU_DIST:LUstructFree", LUstructFree(&lu->LUstruct));
+        PetscCallExternalVoid("SuperLU_DIST:Destroy_LU", Destroy_LU(A->cmap->N, &lu->grid3d.grid2d, &lu->LUstruct));
+        PetscCallExternalVoid("SuperLU_DIST:Destroy_A3d_gathered_on_2d", Destroy_A3d_gathered_on_2d(&lu->SOLVEstruct, &lu->grid3d));
+        PetscCallExternalVoid("SuperLU_DIST:ScalePermstructFree", ScalePermstructFree(&lu->ScalePermstruct));
+        PetscCallExternalVoid("SuperLU_DIST:LUstructFree", LUstructFree(&lu->LUstruct));
       }
     } else
 #endif
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
       if (lu->singleprecision) {
-      PetscStackCallExternalVoid("SuperLU_DIST:Destroy_LU", sDestroy_LU(A->cmap->N, &lu->grid, &lu->sLUstruct));
-      PetscStackCallExternalVoid("SuperLU_DIST:ScalePermstructFree", sScalePermstructFree(&lu->sScalePermstruct));
-      PetscStackCallExternalVoid("SuperLU_DIST:LUstructFree", sLUstructFree(&lu->sLUstruct));
+      PetscCallExternalVoid("SuperLU_DIST:Destroy_LU", sDestroy_LU(A->cmap->N, &lu->grid, &lu->sLUstruct));
+      PetscCallExternalVoid("SuperLU_DIST:ScalePermstructFree", sScalePermstructFree(&lu->sScalePermstruct));
+      PetscCallExternalVoid("SuperLU_DIST:LUstructFree", sLUstructFree(&lu->sLUstruct));
     } else
 #endif
     {
-      PetscStackCallExternalVoid("SuperLU_DIST:Destroy_LU", Destroy_LU(A->cmap->N, &lu->grid, &lu->LUstruct));
-      PetscStackCallExternalVoid("SuperLU_DIST:ScalePermstructFree", ScalePermstructFree(&lu->ScalePermstruct));
-      PetscStackCallExternalVoid("SuperLU_DIST:LUstructFree", LUstructFree(&lu->LUstruct));
+      PetscCallExternalVoid("SuperLU_DIST:Destroy_LU", Destroy_LU(A->cmap->N, &lu->grid, &lu->LUstruct));
+      PetscCallExternalVoid("SuperLU_DIST:ScalePermstructFree", ScalePermstructFree(&lu->ScalePermstruct));
+      PetscCallExternalVoid("SuperLU_DIST:LUstructFree", LUstructFree(&lu->LUstruct));
     }
     /* Release the SuperLU_DIST process grid only if the matrix has its own copy, that is it is not in the communicator context */
     if (lu->comm_superlu) {
 #if PETSC_PKG_SUPERLU_DIST_VERSION_GE(9, 0, 0)
       if (lu->use3d) {
-        PetscStackCallExternalVoid("SuperLU_DIST:superlu_gridexit3d", superlu_gridexit3d(&lu->grid3d));
+        PetscCallExternalVoid("SuperLU_DIST:superlu_gridexit3d", superlu_gridexit3d(&lu->grid3d));
       } else
 #endif
-        PetscStackCallExternalVoid("SuperLU_DIST:superlu_gridexit", superlu_gridexit(&lu->grid));
+        PetscCallExternalVoid("SuperLU_DIST:superlu_gridexit", superlu_gridexit(&lu->grid));
     }
   }
   /*
@@ -290,10 +290,10 @@ static PetscErrorCode MatSolve_SuperLU_DIST(Mat A, Vec b_mpi, Vec x)
   if (lu->options.SolveInitialized && !lu->matsolve_iscalled) {
     /* see comments in MatMatSolve() */
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
-    if (lu->singleprecision) PetscStackCallExternalVoid("SuperLU_DIST:SolveFinalize", sSolveFinalize(&lu->options, &lu->sSOLVEstruct));
+    if (lu->singleprecision) PetscCallExternalVoid("SuperLU_DIST:SolveFinalize", sSolveFinalize(&lu->options, &lu->sSOLVEstruct));
     else
 #endif
-      PetscStackCallExternalVoid("SuperLU_DIST:SolveFinalize", SolveFinalize(&lu->options, &lu->SOLVEstruct));
+      PetscCallExternalVoid("SuperLU_DIST:SolveFinalize", SolveFinalize(&lu->options, &lu->SOLVEstruct));
     lu->options.SolveInitialized = NO;
   }
   PetscCall(VecCopy(b_mpi, x));
@@ -307,27 +307,27 @@ static PetscErrorCode MatSolve_SuperLU_DIST(Mat A, Vec b_mpi, Vec x)
   }
 #endif
 
-  PetscStackCallExternalVoid("SuperLU_DIST:PStatInit", PStatInit(&stat)); /* Initialize the statistics variables. */
+  PetscCallExternalVoid("SuperLU_DIST:PStatInit", PStatInit(&stat)); /* Initialize the statistics variables. */
 #if PETSC_PKG_SUPERLU_DIST_VERSION_GE(9, 0, 0)
   if (lu->use3d) {
   #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
-    if (lu->singleprecision) PetscStackCallExternalVoid("SuperLU_DIST:pgssvx3d", psgssvx3d(&lu->options, &lu->A_sup, &lu->sScalePermstruct, lu->sbptr, (int)m, 1, &lu->grid3d, &lu->sLUstruct, &lu->sSOLVEstruct, sberr, &stat, &info));
+    if (lu->singleprecision) PetscCallExternalVoid("SuperLU_DIST:pgssvx3d", psgssvx3d(&lu->options, &lu->A_sup, &lu->sScalePermstruct, lu->sbptr, (int)m, 1, &lu->grid3d, &lu->sLUstruct, &lu->sSOLVEstruct, sberr, &stat, &info));
     else
   #endif
-      PetscStackCallExternalVoid("SuperLU_DIST:pgssvx3d", pgssvx3d(&lu->options, &lu->A_sup, &lu->ScalePermstruct, CASTDOUBLECOMPLEX bptr, (int)m, 1, &lu->grid3d, &lu->LUstruct, &lu->SOLVEstruct, berr, &stat, &info));
+      PetscCallExternalVoid("SuperLU_DIST:pgssvx3d", pgssvx3d(&lu->options, &lu->A_sup, &lu->ScalePermstruct, CASTDOUBLECOMPLEX bptr, (int)m, 1, &lu->grid3d, &lu->LUstruct, &lu->SOLVEstruct, berr, &stat, &info));
     PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "pgssvx3d fails, info: %d", info);
   } else
 #endif
   {
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
-    if (lu->singleprecision) PetscStackCallExternalVoid("SuperLU_DIST:pgssvx", psgssvx(&lu->options, &lu->A_sup, &lu->sScalePermstruct, lu->sbptr, (int)m, 1, &lu->grid, &lu->sLUstruct, &lu->sSOLVEstruct, sberr, &stat, &info));
+    if (lu->singleprecision) PetscCallExternalVoid("SuperLU_DIST:pgssvx", psgssvx(&lu->options, &lu->A_sup, &lu->sScalePermstruct, lu->sbptr, (int)m, 1, &lu->grid, &lu->sLUstruct, &lu->sSOLVEstruct, sberr, &stat, &info));
     else
 #endif
-      PetscStackCallExternalVoid("SuperLU_DIST:pgssvx", pgssvx(&lu->options, &lu->A_sup, &lu->ScalePermstruct, CASTDOUBLECOMPLEX bptr, (int)m, 1, &lu->grid, &lu->LUstruct, &lu->SOLVEstruct, berr, &stat, &info));
+      PetscCallExternalVoid("SuperLU_DIST:pgssvx", pgssvx(&lu->options, &lu->A_sup, &lu->ScalePermstruct, CASTDOUBLECOMPLEX bptr, (int)m, 1, &lu->grid, &lu->LUstruct, &lu->SOLVEstruct, berr, &stat, &info));
     PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "pgssvx fails, info: %d", info);
   }
-  if (lu->options.PrintStat) PetscStackCallExternalVoid("SuperLU_DIST:PStatPrint", PStatPrint(&lu->options, &stat, &lu->grid)); /* Print the statistics. */
-  PetscStackCallExternalVoid("SuperLU_DIST:PStatFree", PStatFree(&stat));
+  if (lu->options.PrintStat) PetscCallExternalVoid("SuperLU_DIST:PStatPrint", PStatPrint(&lu->options, &stat, &lu->grid)); /* Print the statistics. */
+  PetscCallExternalVoid("SuperLU_DIST:PStatFree", PStatFree(&stat));
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
   if (lu->singleprecision) {
     PetscInt n;
@@ -368,26 +368,26 @@ static PetscErrorCode MatMatSolve_SuperLU_DIST(Mat A, Mat B_mpi, Mat X)
        thus destroy it and create a new SOLVEstruct.
        Otherwise it may result in memory corruption or incorrect solution
        See src/mat/tests/ex125.c */
-    PetscStackCallExternalVoid("SuperLU_DIST:SolveFinalize", SolveFinalize(&lu->options, &lu->SOLVEstruct));
+    PetscCallExternalVoid("SuperLU_DIST:SolveFinalize", SolveFinalize(&lu->options, &lu->SOLVEstruct));
     lu->options.SolveInitialized = NO;
   }
   if (X != B_mpi) PetscCall(MatCopy(B_mpi, X, SAME_NONZERO_PATTERN));
 
   PetscCall(MatGetSize(B_mpi, NULL, &nrhs));
 
-  PetscStackCallExternalVoid("SuperLU_DIST:PStatInit", PStatInit(&stat)); /* Initialize the statistics variables. */
+  PetscCallExternalVoid("SuperLU_DIST:PStatInit", PStatInit(&stat)); /* Initialize the statistics variables. */
   PetscCall(MatDenseGetArray(X, &bptr));
 
 #if PETSC_PKG_SUPERLU_DIST_VERSION_GE(9, 0, 0)
-  if (lu->use3d) PetscStackCallExternalVoid("SuperLU_DIST:pgssvx3d", pgssvx3d(&lu->options, &lu->A_sup, &lu->ScalePermstruct, CASTDOUBLECOMPLEX bptr, (int)m, (int)nrhs, &lu->grid3d, &lu->LUstruct, &lu->SOLVEstruct, berr, &stat, &info));
+  if (lu->use3d) PetscCallExternalVoid("SuperLU_DIST:pgssvx3d", pgssvx3d(&lu->options, &lu->A_sup, &lu->ScalePermstruct, CASTDOUBLECOMPLEX bptr, (int)m, (int)nrhs, &lu->grid3d, &lu->LUstruct, &lu->SOLVEstruct, berr, &stat, &info));
   else
 #endif
-    PetscStackCallExternalVoid("SuperLU_DIST:pgssvx", pgssvx(&lu->options, &lu->A_sup, &lu->ScalePermstruct, CASTDOUBLECOMPLEX bptr, (int)m, (int)nrhs, &lu->grid, &lu->LUstruct, &lu->SOLVEstruct, berr, &stat, &info));
+    PetscCallExternalVoid("SuperLU_DIST:pgssvx", pgssvx(&lu->options, &lu->A_sup, &lu->ScalePermstruct, CASTDOUBLECOMPLEX bptr, (int)m, (int)nrhs, &lu->grid, &lu->LUstruct, &lu->SOLVEstruct, berr, &stat, &info));
   PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "pdgssvx fails, info: %d", info);
   PetscCall(MatDenseRestoreArray(X, &bptr));
 
-  if (lu->options.PrintStat) PetscStackCallExternalVoid("SuperLU_DIST:PStatPrint", PStatPrint(&lu->options, &stat, &lu->grid)); /* Print the statistics. */
-  PetscStackCallExternalVoid("SuperLU_DIST:PStatFree", PStatFree(&stat));
+  if (lu->options.PrintStat) PetscCallExternalVoid("SuperLU_DIST:PStatPrint", PStatPrint(&lu->options, &stat, &lu->grid)); /* Print the statistics. */
+  PetscCallExternalVoid("SuperLU_DIST:PStatFree", PStatFree(&stat));
   lu->matsolve_iscalled    = PETSC_FALSE;
   lu->matmatsolve_iscalled = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -472,10 +472,10 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F, Mat A, const MatFac
   /* Allocations for A_sup */
   if (lu->options.Fact == DOFACT) { /* first numeric factorization */
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
-    if (lu->singleprecision) PetscStackCallExternalVoid("SuperLU_DIST:allocateA_dist", sallocateA_dist(Aloc->rmap->n, nz, &lu->sval, &lu->col, &lu->row));
+    if (lu->singleprecision) PetscCallExternalVoid("SuperLU_DIST:allocateA_dist", sallocateA_dist(Aloc->rmap->n, nz, &lu->sval, &lu->col, &lu->row));
     else
 #endif
-      PetscStackCallExternalVoid("SuperLU_DIST:allocateA_dist", allocateA_dist(Aloc->rmap->n, nz, CASTDOUBLECOMPLEXSTAR & lu->val, &lu->col, &lu->row));
+      PetscCallExternalVoid("SuperLU_DIST:allocateA_dist", allocateA_dist(Aloc->rmap->n, nz, CASTDOUBLECOMPLEXSTAR & lu->val, &lu->col, &lu->row));
   } else { /* successive numeric factorization, sparsity pattern and perm_c are reused. */
     if (lu->FactPattern == SamePattern_SameRowPerm) {
       lu->options.Fact = SamePattern_SameRowPerm; /* matrix has similar numerical values */
@@ -484,36 +484,36 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F, Mat A, const MatFac
       if (lu->use3d) {
   #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
         if (lu->singleprecision) {
-          PetscStackCallExternalVoid("SuperLU_DIST:Destroy_LU", sDestroy_LU(A->cmap->N, &lu->grid3d.grid2d, &lu->sLUstruct));
-          PetscStackCallExternalVoid("SuperLU_DIST:SolveFinalize", sSolveFinalize(&lu->options, &lu->sSOLVEstruct));
+          PetscCallExternalVoid("SuperLU_DIST:Destroy_LU", sDestroy_LU(A->cmap->N, &lu->grid3d.grid2d, &lu->sLUstruct));
+          PetscCallExternalVoid("SuperLU_DIST:SolveFinalize", sSolveFinalize(&lu->options, &lu->sSOLVEstruct));
         } else
   #endif
         {
-          PetscStackCallExternalVoid("SuperLU_DIST:Destroy_LU", Destroy_LU(A->cmap->N, &lu->grid3d.grid2d, &lu->LUstruct));
-          PetscStackCallExternalVoid("SuperLU_DIST:SolveFinalize", SolveFinalize(&lu->options, &lu->SOLVEstruct));
+          PetscCallExternalVoid("SuperLU_DIST:Destroy_LU", Destroy_LU(A->cmap->N, &lu->grid3d.grid2d, &lu->LUstruct));
+          PetscCallExternalVoid("SuperLU_DIST:SolveFinalize", SolveFinalize(&lu->options, &lu->SOLVEstruct));
         }
       } else
 #endif
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
         if (lu->singleprecision)
-        PetscStackCallExternalVoid("SuperLU_DIST:Destroy_LU", sDestroy_LU(A->rmap->N, &lu->grid, &lu->sLUstruct));
+        PetscCallExternalVoid("SuperLU_DIST:Destroy_LU", sDestroy_LU(A->rmap->N, &lu->grid, &lu->sLUstruct));
       else
 #endif
-        PetscStackCallExternalVoid("SuperLU_DIST:Destroy_LU", Destroy_LU(A->rmap->N, &lu->grid, &lu->LUstruct));
+        PetscCallExternalVoid("SuperLU_DIST:Destroy_LU", Destroy_LU(A->rmap->N, &lu->grid, &lu->LUstruct));
       lu->options.Fact = SamePattern;
     } else if (lu->FactPattern == DOFACT) {
-      PetscStackCallExternalVoid("SuperLU_DIST:Destroy_CompRowLoc_Matrix_dist", Destroy_CompRowLoc_Matrix_dist(&lu->A_sup));
+      PetscCallExternalVoid("SuperLU_DIST:Destroy_CompRowLoc_Matrix_dist", Destroy_CompRowLoc_Matrix_dist(&lu->A_sup));
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
-      if (lu->singleprecision) PetscStackCallExternalVoid("SuperLU_DIST:Destroy_LU", sDestroy_LU(A->rmap->N, &lu->grid, &lu->sLUstruct));
+      if (lu->singleprecision) PetscCallExternalVoid("SuperLU_DIST:Destroy_LU", sDestroy_LU(A->rmap->N, &lu->grid, &lu->sLUstruct));
       else
 #endif
-        PetscStackCallExternalVoid("SuperLU_DIST:Destroy_LU", Destroy_LU(A->rmap->N, &lu->grid, &lu->LUstruct));
+        PetscCallExternalVoid("SuperLU_DIST:Destroy_LU", Destroy_LU(A->rmap->N, &lu->grid, &lu->LUstruct));
       lu->options.Fact = DOFACT;
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
-      if (lu->singleprecision) PetscStackCallExternalVoid("SuperLU_DIST:allocateA_dist", sallocateA_dist(Aloc->rmap->n, nz, &lu->sval, &lu->col, &lu->row));
+      if (lu->singleprecision) PetscCallExternalVoid("SuperLU_DIST:allocateA_dist", sallocateA_dist(Aloc->rmap->n, nz, &lu->sval, &lu->col, &lu->row));
       else
 #endif
-        PetscStackCallExternalVoid("SuperLU_DIST:allocateA_dist", allocateA_dist(Aloc->rmap->n, nz, CASTDOUBLECOMPLEXSTAR & lu->val, &lu->col, &lu->row));
+        PetscCallExternalVoid("SuperLU_DIST:allocateA_dist", allocateA_dist(Aloc->rmap->n, nz, CASTDOUBLECOMPLEXSTAR & lu->val, &lu->col, &lu->row));
     } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "options.Fact must be one of SamePattern SamePattern_SameRowPerm DOFACT");
   }
 
@@ -535,29 +535,29 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F, Mat A, const MatFac
   if (lu->options.Fact == DOFACT) {
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
     if (lu->singleprecision)
-      PetscStackCallExternalVoid("SuperLU_DIST:Create_CompRowLoc_Matrix_dist", sCreate_CompRowLoc_Matrix_dist(&lu->A_sup, A->rmap->N, A->cmap->N, nz, A->rmap->n, A->rmap->rstart, lu->sval, lu->col, lu->row, SLU_NR_loc, SLU_S, SLU_GE));
+      PetscCallExternalVoid("SuperLU_DIST:Create_CompRowLoc_Matrix_dist", sCreate_CompRowLoc_Matrix_dist(&lu->A_sup, A->rmap->N, A->cmap->N, nz, A->rmap->n, A->rmap->rstart, lu->sval, lu->col, lu->row, SLU_NR_loc, SLU_S, SLU_GE));
     else
 #endif
-      PetscStackCallExternalVoid("SuperLU_DIST:Create_CompRowLoc_Matrix_dist", Create_CompRowLoc_Matrix_dist(&lu->A_sup, A->rmap->N, A->cmap->N, nz, A->rmap->n, A->rmap->rstart, CASTDOUBLECOMPLEX lu->val, lu->col, lu->row, SLU_NR_loc, SLU, SLU_GE));
+      PetscCallExternalVoid("SuperLU_DIST:Create_CompRowLoc_Matrix_dist", Create_CompRowLoc_Matrix_dist(&lu->A_sup, A->rmap->N, A->cmap->N, nz, A->rmap->n, A->rmap->rstart, CASTDOUBLECOMPLEX lu->val, lu->col, lu->row, SLU_NR_loc, SLU, SLU_GE));
   }
 
   /* Factor the matrix. */
-  PetscStackCallExternalVoid("SuperLU_DIST:PStatInit", PStatInit(&stat)); /* Initialize the statistics variables. */
+  PetscCallExternalVoid("SuperLU_DIST:PStatInit", PStatInit(&stat)); /* Initialize the statistics variables. */
 #if PETSC_PKG_SUPERLU_DIST_VERSION_GE(9, 0, 0)
   if (lu->use3d) {
   #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
-    if (lu->singleprecision) PetscStackCallExternalVoid("SuperLU_DIST:pgssvx3d", psgssvx3d(&lu->options, &lu->A_sup, &lu->sScalePermstruct, 0, (int)A->rmap->n, 0, &lu->grid3d, &lu->sLUstruct, &lu->sSOLVEstruct, sberr, &stat, &sinfo));
+    if (lu->singleprecision) PetscCallExternalVoid("SuperLU_DIST:pgssvx3d", psgssvx3d(&lu->options, &lu->A_sup, &lu->sScalePermstruct, 0, (int)A->rmap->n, 0, &lu->grid3d, &lu->sLUstruct, &lu->sSOLVEstruct, sberr, &stat, &sinfo));
     else
   #endif
-      PetscStackCallExternalVoid("SuperLU_DIST:pgssvx3d", pgssvx3d(&lu->options, &lu->A_sup, &lu->ScalePermstruct, 0, (int)A->rmap->n, 0, &lu->grid3d, &lu->LUstruct, &lu->SOLVEstruct, berr, &stat, &sinfo));
+      PetscCallExternalVoid("SuperLU_DIST:pgssvx3d", pgssvx3d(&lu->options, &lu->A_sup, &lu->ScalePermstruct, 0, (int)A->rmap->n, 0, &lu->grid3d, &lu->LUstruct, &lu->SOLVEstruct, berr, &stat, &sinfo));
   } else
 #endif
   {
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
-    if (lu->singleprecision) PetscStackCallExternalVoid("SuperLU_DIST:pgssvx", psgssvx(&lu->options, &lu->A_sup, &lu->sScalePermstruct, 0, (int)A->rmap->n, 0, &lu->grid, &lu->sLUstruct, &lu->sSOLVEstruct, sberr, &stat, &sinfo));
+    if (lu->singleprecision) PetscCallExternalVoid("SuperLU_DIST:pgssvx", psgssvx(&lu->options, &lu->A_sup, &lu->sScalePermstruct, 0, (int)A->rmap->n, 0, &lu->grid, &lu->sLUstruct, &lu->sSOLVEstruct, sberr, &stat, &sinfo));
     else
 #endif
-      PetscStackCallExternalVoid("SuperLU_DIST:pgssvx", pgssvx(&lu->options, &lu->A_sup, &lu->ScalePermstruct, 0, (int)A->rmap->n, 0, &lu->grid, &lu->LUstruct, &lu->SOLVEstruct, berr, &stat, &sinfo));
+      PetscCallExternalVoid("SuperLU_DIST:pgssvx", pgssvx(&lu->options, &lu->A_sup, &lu->ScalePermstruct, 0, (int)A->rmap->n, 0, &lu->grid, &lu->LUstruct, &lu->SOLVEstruct, berr, &stat, &sinfo));
   }
   if (sinfo > 0) {
     PetscCheck(!A->erroriffailure, PETSC_COMM_SELF, PETSC_ERR_MAT_LU_ZRPVT, "Zero pivot in row %d", sinfo);
@@ -574,8 +574,8 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F, Mat A, const MatFac
     }
   } else PetscCheck(sinfo >= 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "info = %d, argument in p*gssvx() had an illegal value", sinfo);
 
-  if (lu->options.PrintStat) PetscStackCallExternalVoid("SuperLU_DIST:PStatPrint", PStatPrint(&lu->options, &stat, &lu->grid)); /* Print the statistics. */
-  PetscStackCallExternalVoid("SuperLU_DIST:PStatFree", PStatFree(&stat));
+  if (lu->options.PrintStat) PetscCallExternalVoid("SuperLU_DIST:PStatPrint", PStatPrint(&lu->options, &stat, &lu->grid)); /* Print the statistics. */
+  PetscCallExternalVoid("SuperLU_DIST:PStatFree", PStatFree(&stat));
   F->assembled     = PETSC_TRUE;
   F->preallocated  = PETSC_TRUE;
   lu->options.Fact = FACTORED; /* The factored form of A is supplied. Local option used by this func. only */
@@ -593,7 +593,8 @@ static PetscErrorCode MatLUFactorSymbolic_SuperLU_DIST(Mat F, Mat A, IS r, IS c,
   const char        *rowperm[]     = {"NOROWPERM", "LargeDiag_MC64", "LargeDiag_AWPM", "MY_PERMR"};
   const char        *factPattern[] = {"SamePattern", "SamePattern_SameRowPerm", "DOFACT"};
   MPI_Comm           comm;
-  PetscSuperLU_DIST *context = NULL;
+  PetscSuperLU_DIST *context   = NULL;
+  PetscPrecision     precision = PETSC_PRECISION_INVALID;
 
   PetscFunctionBegin;
   /* Set options to F */
@@ -603,6 +604,14 @@ static PetscErrorCode MatLUFactorSymbolic_SuperLU_DIST(Mat F, Mat A, IS r, IS c,
   PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "SuperLU_Dist Options", "Mat");
   PetscCall(PetscOptionsBool("-mat_superlu_dist_equil", "Equilibrate matrix", "None", lu->options.Equil ? PETSC_TRUE : PETSC_FALSE, &flg, &set));
   if (set && !flg) lu->options.Equil = NO;
+
+  PetscCall(PetscOptionsEnum("-pc_precision", "Precision used by SuperLU_DIST", "MATSOLVERSUPERLU_DIST", PetscPrecisionTypes, (PetscEnum)precision, (PetscEnum *)&precision, &flg));
+  if (flg) {
+    PetscCheck(precision == PETSC_PRECISION_SINGLE || precision == PETSC_PRECISION_DOUBLE, PetscObjectComm((PetscObject)A), PETSC_ERR_USER_INPUT, "-pc_precision only accepts single or double as option for SuperLU_DIST");
+#if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
+    lu->singleprecision = (PetscBool)(precision == PETSC_PRECISION_SINGLE); // It also implies PetscReal is not single; not merely SuperLU_DIST is running in single
+#endif
+  }
 
   PetscCall(PetscOptionsEList("-mat_superlu_dist_rowperm", "Row permutation", "None", rowperm, 4, rowperm[1], &indx, &flg));
   if (flg) {
@@ -745,14 +754,14 @@ static PetscErrorCode MatLUFactorSymbolic_SuperLU_DIST(Mat F, Mat A, IS r, IS c,
 
 #if PETSC_PKG_SUPERLU_DIST_VERSION_GE(9, 0, 0)
     if (lu->use3d) {
-      PetscStackCallExternalVoid("SuperLU_DIST:superlu_gridinit3d", superlu_gridinit3d(context ? context->comm : lu->comm_superlu, (int)lu->nprow, (int)lu->npcol, (int)lu->npdep, &lu->grid3d));
+      PetscCallExternalVoid("SuperLU_DIST:superlu_gridinit3d", superlu_gridinit3d(context ? context->comm : lu->comm_superlu, (int)lu->nprow, (int)lu->npcol, (int)lu->npdep, &lu->grid3d));
       if (context) {
         context->grid3d = lu->grid3d;
         context->use3d  = lu->use3d;
       }
     } else {
 #endif
-      PetscStackCallExternalVoid("SuperLU_DIST:superlu_gridinit", superlu_gridinit(context ? context->comm : lu->comm_superlu, (int)lu->nprow, (int)lu->npcol, &lu->grid));
+      PetscCallExternalVoid("SuperLU_DIST:superlu_gridinit", superlu_gridinit(context ? context->comm : lu->comm_superlu, (int)lu->nprow, (int)lu->npcol, &lu->grid));
       if (context) context->grid = lu->grid;
 #if PETSC_PKG_SUPERLU_DIST_VERSION_GE(9, 0, 0)
     }
@@ -773,13 +782,13 @@ static PetscErrorCode MatLUFactorSymbolic_SuperLU_DIST(Mat F, Mat A, IS r, IS c,
   /* Initialize ScalePermstruct and LUstruct. */
 #if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
   if (lu->singleprecision) {
-    PetscStackCallExternalVoid("SuperLU_DIST:ScalePermstructInit", sScalePermstructInit(M, N, &lu->sScalePermstruct));
-    PetscStackCallExternalVoid("SuperLU_DIST:LUstructInit", sLUstructInit(N, &lu->sLUstruct));
+    PetscCallExternalVoid("SuperLU_DIST:ScalePermstructInit", sScalePermstructInit(M, N, &lu->sScalePermstruct));
+    PetscCallExternalVoid("SuperLU_DIST:LUstructInit", sLUstructInit(N, &lu->sLUstruct));
   } else
 #endif
   {
-    PetscStackCallExternalVoid("SuperLU_DIST:ScalePermstructInit", ScalePermstructInit(M, N, &lu->ScalePermstruct));
-    PetscStackCallExternalVoid("SuperLU_DIST:LUstructInit", LUstructInit(N, &lu->LUstruct));
+    PetscCallExternalVoid("SuperLU_DIST:ScalePermstructInit", ScalePermstructInit(M, N, &lu->ScalePermstruct));
+    PetscCallExternalVoid("SuperLU_DIST:LUstructInit", LUstructInit(N, &lu->LUstruct));
   }
   F->ops->lufactornumeric = MatLUFactorNumeric_SuperLU_DIST;
   F->ops->solve           = MatSolve_SuperLU_DIST;
@@ -903,8 +912,6 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
   PetscInt               M = A->rmap->N, N = A->cmap->N;
   PetscMPIInt            size;
   superlu_dist_options_t options;
-  PetscBool              flg;
-  PetscPrecision         precision = PETSC_PRECISION_INVALID;
 
   PetscFunctionBegin;
   /* Create the factorization matrix */
@@ -956,16 +963,6 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A, MatFactorType ftype, 
   lu->matsolve_iscalled    = PETSC_FALSE;
   lu->matmatsolve_iscalled = PETSC_FALSE;
 
-  PetscOptionsBegin(PetscObjectComm((PetscObject)A), ((PetscObject)A)->prefix, "SuperLU_DIST Options", "Mat");
-  PetscCall(PetscOptionsEnum("-pc_precision", "Precision used by SuperLU_DIST", "MATSOLVERSUPERLU_DIST", PetscPrecisionTypes, (PetscEnum)precision, (PetscEnum *)&precision, &flg));
-  PetscOptionsEnd();
-  if (flg) {
-    PetscCheck(precision == PETSC_PRECISION_SINGLE || precision == PETSC_PRECISION_DOUBLE, PetscObjectComm((PetscObject)A), PETSC_ERR_USER_INPUT, "-pc_precision only accepts single or double as option for SuperLU_DIST");
-#if defined(PETSC_HAVE_SUPERLU_DIST_SINGLE)
-    lu->singleprecision = (PetscBool)(precision == PETSC_PRECISION_SINGLE); // It also implies PetscReal is not single; not merely SuperLU_DIST is running in single
-#endif
-  }
-
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatFactorGetSolverType_C", MatFactorGetSolverType_aij_superlu_dist));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSuperluDistGetDiagU_C", MatSuperluDistGetDiagU_SuperLU_DIST));
 
@@ -997,19 +994,19 @@ PETSC_INTERN PetscErrorCode MatSolverTypeRegister_SuperLU_DIST(void)
    Works with `MATAIJ` matrices
 
   Options Database Keys:
-+ -mat_superlu_dist_r <n> - number of rows in processor partition
-. -mat_superlu_dist_c <n> - number of columns in processor partition
-. -mat_superlu_dist_3d - use 3d partition, requires SuperLU_DIST 7.2 or later
-. -mat_superlu_dist_d <n> - depth in 3d partition (valid only if `-mat_superlu_dist_3d`) is provided
-. -mat_superlu_dist_equil - equilibrate the matrix
-. -mat_superlu_dist_rowperm <NOROWPERM,LargeDiag_MC64,LargeDiag_AWPM,MY_PERMR> - row permutation
++ -mat_superlu_dist_r <n>                                                            - number of rows in processor partition
+. -mat_superlu_dist_c <n>                                                            - number of columns in processor partition
+. -mat_superlu_dist_3d                                                               - use 3d partition, requires SuperLU_DIST 7.2 or later
+. -mat_superlu_dist_d <n>                                                            - depth in 3d partition (valid only if `-mat_superlu_dist_3d`) is provided
+. -mat_superlu_dist_equil                                                            - equilibrate the matrix
+. -mat_superlu_dist_rowperm <NOROWPERM,LargeDiag_MC64,LargeDiag_AWPM,MY_PERMR>       - row permutation
 . -mat_superlu_dist_colperm <NATURAL,MMD_AT_PLUS_A,MMD_ATA,METIS_AT_PLUS_A,PARMETIS> - column permutation
-. -mat_superlu_dist_replacetinypivot - replace tiny pivots
-. -mat_superlu_dist_fact <SamePattern> - (choose one of) `SamePattern`, `SamePattern_SameRowPerm`, `DOFACT`
-. -mat_superlu_dist_iterrefine - use iterative refinement
-. -mat_superlu_dist_printstat - print factorization information
-. -mat_superlu_dist_gpuoffload - offload factorization onto the GPUs, requires SuperLU_DIST 8.0.0 or later
-- -pc_precision single - use SuperLU_DIST single precision with PETSc double precision
+. -mat_superlu_dist_replacetinypivot                                                 - replace tiny pivots
+. -mat_superlu_dist_fact <SamePattern>                                               - (choose one of) `SamePattern`, `SamePattern_SameRowPerm`, `DOFACT`
+. -mat_superlu_dist_iterrefine                                                       - use iterative refinement
+. -mat_superlu_dist_printstat                                                        - print factorization information
+. -mat_superlu_dist_gpuoffload                                                       - offload factorization onto the GPUs, requires SuperLU_DIST 8.0.0 or later
+- -pc_precision single                                                               - use SuperLU_DIST single precision with PETSc double precision
 
   Level: beginner
 

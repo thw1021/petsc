@@ -91,6 +91,7 @@ PetscErrorCode DMPlexTransformRegister(const char name[], PetscErrorCode (*creat
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Filter(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Regular(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_ToBox(DMPlexTransform);
+PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_ToSimplex(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Alfeld(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_SBR(DMPlexTransform);
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_BL(DMPlexTransform);
@@ -116,6 +117,7 @@ PetscErrorCode DMPlexTransformRegisterAll(void)
   PetscCall(DMPlexTransformRegister(DMPLEXTRANSFORMFILTER, DMPlexTransformCreate_Filter));
   PetscCall(DMPlexTransformRegister(DMPLEXREFINEREGULAR, DMPlexTransformCreate_Regular));
   PetscCall(DMPlexTransformRegister(DMPLEXREFINETOBOX, DMPlexTransformCreate_ToBox));
+  PetscCall(DMPlexTransformRegister(DMPLEXREFINETOSIMPLEX, DMPlexTransformCreate_ToSimplex));
   PetscCall(DMPlexTransformRegister(DMPLEXREFINEALFELD, DMPlexTransformCreate_Alfeld));
   PetscCall(DMPlexTransformRegister(DMPLEXREFINEBOUNDARYLAYER, DMPlexTransformCreate_BL));
   PetscCall(DMPlexTransformRegister(DMPLEXREFINESBR, DMPlexTransformCreate_SBR));
@@ -168,6 +170,7 @@ PetscErrorCode DMPlexTransformCreate(MPI_Comm comm, DMPlexTransform *tr)
 
   PetscCall(PetscHeaderCreate(t, DMPLEXTRANSFORM_CLASSID, "DMPlexTransform", "Mesh Transform", "DMPlexTransform", comm, DMPlexTransformDestroy, DMPlexTransformView));
   t->setupcalled = PETSC_FALSE;
+  t->redFactor   = 2.0;
   PetscCall(PetscCalloc2(DM_NUM_POLYTOPES, &t->coordFE, DM_NUM_POLYTOPES, &t->refGeom));
   *tr = t;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -183,7 +186,7 @@ PetscErrorCode DMPlexTransformCreate(MPI_Comm comm, DMPlexTransform *tr)
 - method - The name of the transform type
 
   Options Database Key:
-. -dm_plex_transform_type <type> - Sets the transform type; see `DMPlexTransformType`
+. -dm_plex_transform_type type - Sets the transform type; see `DMPlexTransformType`
 
   Level: intermediate
 
@@ -320,11 +323,11 @@ PetscErrorCode DMPlexTransformView(DMPlexTransform tr, PetscViewer v)
 . tr - the `DMPlexTransform` object to set options for
 
   Options Database Keys:
-+ -dm_plex_transform_type                      - Set the transform type, e.g. refine_regular
-. -dm_plex_transform_label_match_strata        - Only label points of the same stratum as the producing point
-. -dm_plex_transform_label_replica_inc <inc>   - Increment for the label value to be multiplied by the replica number, so that the new label value is oldValue + r * inc
-. -dm_plex_transform_active <name>             - Name for active mesh label
-- -dm_plex_transform_active_values <v0,v1,...> - Values in the active label
++ -dm_plex_transform_type type               - Set the transform type, e.g. refine_regular
+. -dm_plex_transform_label_match_strata      - Only label points of the same stratum as the producing point
+. -dm_plex_transform_label_replica_inc inc   - Increment for the label value to be multiplied by the replica number, so that the new label value is oldValue + r * inc
+. -dm_plex_transform_active name             - Name for active mesh label
+- -dm_plex_transform_active_values v0,v1,... - Values in the active label
 
   Level: intermediate
 
@@ -1024,7 +1027,7 @@ PetscErrorCode DMPlexTransformGetTargetPoint(DMPlexTransform tr, DMPolytopeType 
   for (n = 0; n < Nct; ++n) {
     if (rct[n] == ctNew) {
       if (rsize[n] && r >= rsize[n])
-        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Replica number %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ") for subcell type %s in cell type %s", r, rsize[n], DMPolytopeTypes[rct[n]], DMPolytopeTypes[ct]);
+        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Replica number %" PetscInt_FMT " for point %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ") for subcell type %s in cell type %s", r, p, rsize[n], DMPolytopeTypes[rct[n]], DMPolytopeTypes[ct]);
       newp += rp * rsize[n] + r;
       break;
     }
@@ -2166,7 +2169,7 @@ static PetscErrorCode DMPlexTransformSetCoordinates(DMPlexTransform tr, DM rdm)
   const PetscScalar *coords;
   PetscScalar       *coordsNew;
   const PetscReal   *maxCell, *Lstart, *L;
-  PetscBool          localized, localizeVertices = PETSC_FALSE, localizeCells = PETSC_FALSE;
+  PetscBool          localized, localizeVertices = PETSC_FALSE, localizeCells = PETSC_FALSE, sparseLocalize;
   PetscInt           dE, dEo, d, cStart, cEnd, c, cStartNew, cEndNew, vStartNew, vEndNew, v, pStart, pEnd, p;
 
   PetscFunctionBegin;
@@ -2177,6 +2180,8 @@ static PetscErrorCode DMPlexTransformSetCoordinates(DMPlexTransform tr, DM rdm)
   PetscCall(DMGetCoordinateDM(dm, &cdm));
   PetscCall(DMGetCellCoordinateDM(dm, &cdmCell));
   PetscCall(DMGetCoordinatesLocalized(dm, &localized));
+  PetscCall(DMGetSparseLocalize(dm, &sparseLocalize));
+  PetscCall(DMSetSparseLocalize(rdm, sparseLocalize));
   PetscCall(DMGetPeriodicity(dm, &maxCell, &Lstart, &L));
   if (localized) {
     /* Localize coordinates of new vertices */
@@ -2186,13 +2191,24 @@ static PetscErrorCode DMPlexTransformSetCoordinates(DMPlexTransform tr, DM rdm)
   }
   PetscCall(DMGetCoordinateSection(dm, &coordSection));
   PetscCall(PetscSectionGetFieldComponents(coordSection, 0, &dEo));
-  if (maxCell) {
-    PetscReal maxCellNew[3];
-
-    for (d = 0; d < dEo; ++d) maxCellNew[d] = maxCell[d] / 2.0;
-    PetscCall(DMSetPeriodicity(rdm, maxCellNew, Lstart, L));
-  }
   PetscCall(DMGetCoordinateDim(rdm, &dE));
+  if (maxCell) {
+    PetscReal *LstartNew, *LNew, *maxCellNew;
+
+    PetscCall(PetscMalloc3(dE, &LstartNew, dE, &LNew, dE, &maxCellNew));
+    for (d = 0; d < dEo; ++d) {
+      LstartNew[d]  = Lstart[d];
+      LNew[d]       = L[d];
+      maxCellNew[d] = maxCell[d] / tr->redFactor;
+    }
+    for (d = dEo; d < dE; ++d) {
+      LstartNew[d]  = 0.;
+      LNew[d]       = -1.;
+      maxCellNew[d] = -1.;
+    }
+    PetscCall(DMSetPeriodicity(rdm, maxCellNew, LstartNew, LNew));
+    PetscCall(PetscFree3(LstartNew, LNew, maxCellNew));
+  }
   PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject)rdm), &coordSectionNew));
   PetscCall(PetscSectionSetNumFields(coordSectionNew, 1));
   PetscCall(PetscSectionSetFieldComponents(coordSectionNew, 0, dE));
@@ -2407,9 +2423,9 @@ static PetscErrorCode DMPlexTransformSetCoordinates(DMPlexTransform tr, DM rdm)
   Level: intermediate
 
   Options Database Keys:
-+ -dm_plex_transform_label_match_strata      - Only label points of the same stratum as the producing point
-. -dm_plex_transform_label_replica_inc <num> - Increment for the label value to be multiplied by the replica number
-- -dm_plex_transform_active <name>           - Name for active mesh label
++ -dm_plex_transform_label_match_strata    - Only label points of the same stratum as the producing point
+. -dm_plex_transform_label_replica_inc num - Increment for the label value to be multiplied by the replica number
+- -dm_plex_transform_active name           - Name for active mesh label
 
 .seealso: [](plex_transform_table), [](ch_unstructured), `DM`, `DMPLEX`, `DMPlexTransform`, `DMPlexTransformCreate()`, `DMPlexTransformSetDM()`
 @*/
@@ -2447,7 +2463,8 @@ PetscErrorCode DMPlexTransformApply(DMPlexTransform tr, DM dm, DM *trdm)
   PetscCall(DMPlexTransformCreateLabels(tr, rdm));
   /* Step 7: Set coordinates */
   PetscCall(DMPlexTransformSetCoordinates(tr, rdm));
-  PetscCall(DMPlexCopy_Internal(dm, PETSC_TRUE, PETSC_TRUE, rdm));
+  //   Do not copy periodicity, which was handled in DMPlexTransformSetCoordinates()
+  PetscCall(DMPlexCopy_Internal(dm, PETSC_FALSE, PETSC_TRUE, rdm));
   // If the original DM was configured from options, the transformed DM should be as well
   rdm->setfromoptionscalled = dm->setfromoptionscalled;
   PetscCall(PetscLogEventEnd(DMPLEXTRANSFORM_Apply, tr, dm, 0, 0));

@@ -596,8 +596,11 @@ static PetscErrorCode MatGetValues_SeqAIJ(Mat A, PetscInt m, const PetscInt im[]
   PetscInt        *rp, k, low, high, t, row, nrow, i, col, l, *aj = a->j;
   PetscInt        *ai = a->i, *ailen = a->ilen;
   const MatScalar *ap, *aa;
+  PetscBool        hyprecoo;
 
   PetscFunctionBegin;
+  PetscCall(PetscStrcmp("_internal_COO_mat_for_hypre", ((PetscObject)A)->name, &hyprecoo));
+
   PetscCall(MatSeqAIJGetArrayRead(A, &aa));
   for (k = 0; k < m; k++) { /* loop over rows */
     row = im[k];
@@ -615,9 +618,17 @@ static PetscErrorCode MatGetValues_SeqAIJ(Mat A, PetscInt m, const PetscInt im[]
         continue;
       } /* negative column */
       PetscCheck(in[l] < A->cmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Column too large: col %" PetscInt_FMT " max %" PetscInt_FMT, in[l], A->cmap->n - 1);
-      col  = in[l];
+      col = in[l];
+      /* hypre coo mat stores its diagonal at the front, out of sort */
+      if (hyprecoo) {
+        if (col == rp[0]) {
+          *v++ = ap[0];
+          goto finished;
+        }
+        low = 1;
+      } else low = 0;
       high = nrow;
-      low  = 0; /* assume unsorted */
+      /* assume sorted */
       while (high - low > 5) {
         t = (low + high) / 2;
         if (rp[t] > col) high = t;
@@ -3772,8 +3783,8 @@ PetscErrorCode MatRetrieveValues(Mat mat)
 . A - the matrix
 
   Options Database Keys:
-+ -mat_no_inode            - Do not use inodes
-- -mat_inode_limit <limit> - Sets inode limit (max limit=5)
++ -mat_no_inode          - Do not use inodes
+- -mat_inode_limit limit - Sets inode limit (max limit=5)
 
   Level: intermediate
 
@@ -3823,8 +3834,8 @@ PetscErrorCode MatCreateSeqAIJ(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt n
          (possibly different for each row) or NULL
 
   Options Database Keys:
-+ -mat_no_inode            - Do not use inodes
-- -mat_inode_limit <limit> - Sets inode limit (max limit=5)
++ -mat_no_inode          - Do not use inodes
+- -mat_inode_limit limit - Sets inode limit (max limit=5)
 
   Level: intermediate
 
@@ -4270,24 +4281,6 @@ M*/
    enough exist.
 
 .seealso: [](ch_matrices), `Mat`, `MatCreateAIJ()`, `MatCreateSeqAIJ()`, `MATSEQAIJ`, `MATMPIAIJ`, `MATSELL`, `MATSEQSELL`, `MATMPISELL`
-M*/
-
-/*MC
-   MATAIJCRL - MATAIJCRL = "aijcrl" - A matrix type to be used for sparse matrices.
-
-   Options Database Key:
-. -mat_type aijcrl - sets the matrix type to "aijcrl" during a call to `MatSetFromOptions()`
-
-  Level: beginner
-
-   Note:
-   This matrix type is identical to `MATSEQAIJCRL` when constructed with a single process communicator,
-   and `MATMPIAIJCRL` otherwise.  As a result, for single process communicators,
-   `MatSeqAIJSetPreallocation()` is supported, and similarly `MatMPIAIJSetPreallocation()` is supported
-   for communicators controlling multiple processes.  It is recommended that you call both of
-   the above preallocation routines for simplicity.
-
-.seealso: [](ch_matrices), `Mat`, `MatCreateMPIAIJCRL`, `MATSEQAIJCRL`, `MATMPIAIJCRL`, `MATSEQAIJCRL`, `MATMPIAIJCRL`
 M*/
 
 PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCRL(Mat, MatType, MatReuse, Mat *);
@@ -5363,7 +5356,7 @@ PetscFunctionList MatSeqAIJList = NULL;
 - matype - matrix type
 
   Options Database Key:
-. -mat_seqaij_type  <method> - for example seqaijcrl
+. -mat_seqaij_type  method - for example seqaijcrl
 
   Level: intermediate
 

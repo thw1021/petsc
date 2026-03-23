@@ -671,7 +671,7 @@ static PetscErrorCode MatMPIAIJKokkosReduceBegin(MPI_Comm comm, KokkosCsrMatrix 
 }
 
 // To finish MatMPIAIJKokkosReduce.
-static PetscErrorCode MatMPIAIJKokkosReduceEnd(MPI_Comm comm, KokkosCsrMatrix A, KokkosCsrMatrix B, PetscInt cstart, PetscInt cend, const PetscInt *garray1, PetscSF ownerSF, MatReuse reuse, PetscInt *map, MatMatStruct_AtB *mm)
+static PetscErrorCode MatMPIAIJKokkosReduceEnd(MPI_Comm, KokkosCsrMatrix, KokkosCsrMatrix, PetscInt, PetscInt, const PetscInt *, PetscSF, MatReuse, PetscInt *, MatMatStruct_AtB *mm)
 {
   auto       &leafBuf  = mm->leafBuf;
   auto       &rootBuf  = mm->rootBuf;
@@ -998,7 +998,7 @@ static PetscErrorCode MatMPIAIJKokkosBcastBegin(Mat E, PetscSF ownerSF, MatReuse
 }
 
 // To finish MatMPIAIJKokkosBcast.
-static PetscErrorCode MatMPIAIJKokkosBcastEnd(Mat E, PetscSF ownerSF, MatReuse reuse, PetscInt *map, MatMatStruct_AB *mm)
+static PetscErrorCode MatMPIAIJKokkosBcastEnd(Mat, PetscSF, MatReuse, PetscInt *, MatMatStruct_AB *mm)
 {
   PetscFunctionBegin;
   const auto &Fd  = mm->Fd;
@@ -1047,7 +1047,7 @@ static PetscErrorCode MatMPIAIJKokkosBcastEnd(Mat E, PetscSF ownerSF, MatReuse r
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatProductSymbolic_MPIAIJKokkos_AtB(Mat_Product *product, Mat A, Mat B, MatMatStruct_AtB *mm)
+static PetscErrorCode MatProductSymbolic_MPIAIJKokkos_AtB(Mat_Product *, Mat A, Mat B, MatMatStruct_AtB *mm)
 {
   Mat_MPIAIJ     *ampi = static_cast<Mat_MPIAIJ *>(A->data);
   Mat_MPIAIJ     *bmpi = static_cast<Mat_MPIAIJ *>(B->data);
@@ -1125,7 +1125,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos_AtB(Mat_Product *product, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatProductNumeric_MPIAIJKokkos_AtB(Mat_Product *product, Mat A, Mat B, MatMatStruct_AtB *mm)
+static PetscErrorCode MatProductNumeric_MPIAIJKokkos_AtB(Mat_Product *, Mat A, Mat B, MatMatStruct_AtB *mm)
 {
   Mat_MPIAIJ     *ampi = static_cast<Mat_MPIAIJ *>(A->data);
   Mat_MPIAIJ     *bmpi = static_cast<Mat_MPIAIJ *>(B->data);
@@ -1166,7 +1166,7 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos_AtB(Mat_Product *product, M
 .  B        - an MPIAIJKOKKOS matrix
 -  mm       - a struct used to stash intermediate data when computing AB. Persist from symbolic to numeric operations.
 */
-static PetscErrorCode MatProductSymbolic_MPIAIJKokkos_AB(Mat_Product *product, Mat A, Mat B, MatMatStruct_AB *mm)
+static PetscErrorCode MatProductSymbolic_MPIAIJKokkos_AB(Mat_Product *, Mat A, Mat B, MatMatStruct_AB *mm)
 {
   Mat_MPIAIJ     *ampi = static_cast<Mat_MPIAIJ *>(A->data);
   Mat_MPIAIJ     *bmpi = static_cast<Mat_MPIAIJ *>(B->data);
@@ -1237,7 +1237,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos_AB(Mat_Product *product, M
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatProductNumeric_MPIAIJKokkos_AB(Mat_Product *product, Mat A, Mat B, MatMatStruct_AB *mm)
+static PetscErrorCode MatProductNumeric_MPIAIJKokkos_AB(Mat_Product *, Mat A, Mat B, MatMatStruct_AB *mm)
 {
   Mat_MPIAIJ     *ampi = static_cast<Mat_MPIAIJ *>(A->data);
   Mat_MPIAIJ     *bmpi = static_cast<Mat_MPIAIJ *>(B->data);
@@ -1436,12 +1436,12 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos(Mat C)
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_MPIAIJKokkos(Mat mat)
 {
   Mat_Product *product = mat->product;
-  PetscBool    match   = PETSC_FALSE;
-  PetscBool    usecpu  = PETSC_FALSE;
+  PetscBool    match   = PETSC_FALSE; // Do we multiply two MPIAIJKokkos matrices?
+  PetscBool    usecpu  = PETSC_FALSE; // Use PETSc MATAIJ's native CPU implementation?
 
   PetscFunctionBegin;
   MatCheckProduct(mat, 1);
-  if (!product->A->boundtocpu && !product->B->boundtocpu) PetscCall(PetscObjectTypeCompare((PetscObject)product->B, ((PetscObject)product->A)->type_name, &match));
+  PetscCall(PetscObjectTypeCompare((PetscObject)product->B, ((PetscObject)product->A)->type_name, &match));
   if (match) { /* we can always fallback to the CPU if requested */
     switch (product->type) {
     case MATPRODUCT_AB:
@@ -1698,6 +1698,7 @@ static PetscErrorCode MatShift_MPIAIJKokkos(Mat A, PetscScalar a)
 static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat B)
 {
   PetscFunctionBegin;
+  B->boundtocpu                 = PetscDefined(HAVE_KOKKOS_WITHOUT_GPU) ? PETSC_TRUE : PETSC_FALSE; // MATAIJKOKKOS has yet to support CPU binding. But in this case, we deem it is bound to CPU.
   B->ops->assemblyend           = MatAssemblyEnd_MPIAIJKokkos;
   B->ops->mult                  = MatMult_MPIAIJKokkos;
   B->ops->multadd               = MatMultAdd_MPIAIJKokkos;
@@ -1706,6 +1707,7 @@ static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat B)
   B->ops->destroy               = MatDestroy_MPIAIJKokkos;
   B->ops->shift                 = MatShift_MPIAIJKokkos;
   B->ops->getcurrentmemtype     = MatGetCurrentMemType_MPIAIJ;
+  B->ops->bindtocpu             = MatBindToCPU_SeqAIJKokkos;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIAIJSetPreallocation_C", MatMPIAIJSetPreallocation_MPIAIJKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIAIJGetLocalMatMerge_C", MatMPIAIJGetLocalMatMerge_MPIAIJKokkos));
@@ -1717,7 +1719,7 @@ static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat B)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJKokkos(Mat A, MatType mtype, MatReuse reuse, Mat *newmat)
+PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJKokkos(Mat A, MatType, MatReuse reuse, Mat *newmat)
 {
   Mat         B;
   Mat_MPIAIJ *a;
@@ -1730,7 +1732,6 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJKokkos(Mat A, MatType mtype,
   }
   B = *newmat;
 
-  B->boundtocpu = PETSC_FALSE;
   PetscCall(PetscFree(B->defaultvectype));
   PetscCall(PetscStrallocpy(VECKOKKOS, &B->defaultvectype));
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATMPIAIJKOKKOS));
