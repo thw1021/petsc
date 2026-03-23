@@ -1347,7 +1347,6 @@ static PetscErrorCode DMPlexDistributeLabels(DM dm, PetscSF migrationSF, DM dmPa
       }
       PetscCall(MPI_Allreduce(&defined, &gdefined, 1, MPI_C_BOOL, MPI_LAND, comm));
       PetscCheck(gdefined, comm, PETSC_ERR_PLIB, "Not all points have a valid cell type");
-      PetscCall(PetscPrintf(comm, "All points have a valid cell type\n"));
     }
     // Reset label for fast lookup
     PetscCall(DMLabelMakeAllInvalid_Internal(ctLabel));
