@@ -7,7 +7,7 @@
 
 /* Logging support */
 PetscClassId  VEC_CLASSID;
-PetscLogEvent VEC_View, VEC_Max, VEC_Min, VEC_Dot, VEC_MDot, VEC_TDot;
+PetscLogEvent VEC_View, VEC_Max, VEC_Min, VEC_Dot, VEC_WDot, VEC_MDot, VEC_TDot;
 PetscLogEvent VEC_Norm, VEC_Normalize, VEC_Scale, VEC_Shift, VEC_Copy, VEC_Set, VEC_AXPY, VEC_AYPX, VEC_WAXPY;
 PetscLogEvent VEC_MTDot, VEC_MAXPY, VEC_Swap, VEC_AssemblyBegin, VEC_ScatterBegin, VEC_ScatterEnd;
 PetscLogEvent VEC_AssemblyEnd, VEC_PointwiseMult, VEC_PointwiseDivide, VEC_Reciprocal, VEC_SetValues, VEC_Load, VEC_SetPreallocateCOO, VEC_SetValuesCOO;

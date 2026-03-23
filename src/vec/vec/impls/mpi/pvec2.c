@@ -18,6 +18,13 @@ PetscErrorCode VecTDot_MPI(Vec xin, Vec yin, PetscScalar *z)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode VecWDot_MPI(Vec xin, Vec yin, Vec win, PetscScalar *z)
+{
+  PetscFunctionBegin;
+  PetscCall(VecWXDot_MPI_Default(xin, yin, win, z, VecWDot_Seq));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode VecMDot_MPI(Vec xin, PetscInt nv, const Vec y[], PetscScalar *z)
 {
   PetscFunctionBegin;

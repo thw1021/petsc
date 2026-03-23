@@ -46,6 +46,7 @@ PETSC_INTERN PetscErrorCode VecAXPBYPCZ_Seq(Vec, PetscScalar, PetscScalar, Petsc
 PETSC_INTERN PetscErrorCode VecPlaceArray_Seq(Vec, const PetscScalar *);
 PETSC_INTERN PetscErrorCode VecResetArray_Seq(Vec);
 PETSC_INTERN PetscErrorCode VecDot_Seq(Vec, Vec, PetscScalar *);
+PETSC_INTERN PetscErrorCode VecWDot_Seq(Vec, Vec, Vec, PetscScalar *);
 PETSC_INTERN PetscErrorCode VecTDot_Seq(Vec, Vec, PetscScalar *);
 PETSC_INTERN PetscErrorCode VecScale_Seq(Vec, PetscScalar);
 PETSC_INTERN PetscErrorCode VecAXPBY_Seq(Vec, PetscScalar, PetscScalar, Vec);

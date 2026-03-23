@@ -88,12 +88,12 @@ PetscErrorCode VecMaxPointwiseDivide(Vec x, Vec y, PetscReal *max)
 
   Level: intermediate
 
-  Notes for Users of Complex Numbers:
+  Note:
   For complex vectors, `VecDot()` computes
 .vb
   val = (x,y) = y^H x,
 .ve
-  where y^H denotes the conjugate transpose of y. Note that this corresponds to the usual "mathematicians" complex
+  where $y^H$ denotes the conjugate transpose of `y`. Note that this corresponds to the usual "mathematicians" complex
   inner product where the SECOND argument gets the complex conjugate. Since the `BLASdot()` complex conjugates the first
   first argument we call the `BLASdot()` with the arguments reversed.
 
@@ -101,7 +101,7 @@ PetscErrorCode VecMaxPointwiseDivide(Vec x, Vec y, PetscReal *max)
 .vb
   val = (x,y) = y^T x,
 .ve
-  where y^T denotes the transpose of y.
+  where $y^T$ denotes the transpose of `y`.
 
 .seealso: [](ch_vectors), `Vec`, `VecMDot()`, `VecTDot()`, `VecNorm()`, `VecDotBegin()`, `VecDotEnd()`, `VecDotRealPart()`
 @*/
@@ -125,6 +125,65 @@ PetscErrorCode VecDot(Vec x, Vec y, PetscScalar *val)
   PetscCall(PetscLogEventEnd(VEC_Dot, x, y, 0, 0));
   PetscCall(VecLockReadPop(x));
   PetscCall(VecLockReadPop(y));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  VecWDot - Computes the weighted vector dot product.
+
+  Collective
+
+  Input Parameters:
++ x - first vector
+. y - second vector
+- w - weights vector, should be all real and positive in order to define an inner product
+
+  Output Parameter:
+. val - the weighted dot product
+
+  Level: intermediate
+
+  Notes for Users of Complex Numbers:
+  For complex vectors, `VecWDot()` computes
+.vb
+  val = (x,y)_w = y^H diag(w) x,
+.ve
+  where y^H denotes the conjugate transpose of y. Note that this corresponds to the usual "mathematicians" complex
+  inner product where the SECOND argument gets the complex conjugate.
+
+.seealso: [](ch_vectors), `Vec`, `VecDot()`, `VecNorm()`, `VecDotBegin()`, `VecDotEnd()`, `VecDotRealPart()`
+@*/
+PetscErrorCode VecWDot(Vec x, Vec y, Vec w, PetscScalar *val)
+{
+  PetscFunctionBegin;
+  if (!w) {
+    PetscCall(VecDot(x, y, val));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
+  PetscValidHeaderSpecific(y, VEC_CLASSID, 2);
+  PetscValidHeaderSpecific(w, VEC_CLASSID, 3);
+  PetscAssertPointer(val, 4);
+  PetscValidType(x, 1);
+  PetscValidType(y, 2);
+  PetscValidType(w, 3);
+  PetscCheckSameTypeAndComm(x, 1, y, 2);
+  PetscCheckSameTypeAndComm(x, 1, w, 3);
+  VecCheckSameSize(x, 1, y, 2);
+  VecCheckSameSize(x, 1, w, 3);
+  VecCheckAssembled(x);
+  VecCheckAssembled(y);
+  VecCheckAssembled(w);
+
+  PetscCall(VecLockReadPush(x));
+  PetscCall(VecLockReadPush(y));
+  PetscCall(VecLockReadPush(w));
+  PetscCall(PetscLogEventBegin(VEC_WDot, x, y, w, 0));
+  PetscUseTypeMethod(x, wdot, y, w, val);
+  PetscCall(PetscLogEventEnd(VEC_WDot, x, y, w, 0));
+  PetscCall(VecLockReadPop(x));
+  PetscCall(VecLockReadPop(y));
+  PetscCall(VecLockReadPop(w));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
