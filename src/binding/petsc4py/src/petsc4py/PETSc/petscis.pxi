@@ -100,7 +100,7 @@ cdef extern from * nogil:
     struct _n_ISColoring
     ctypedef _n_ISColoring* ISColoring "ISColoring"
 
-    PetscErrorCode ISColoringGetIS(ISColoring,PetscCopyMode,PetscInt*,PetscIS*[])
+    PetscErrorCode ISColoringGetIS(ISColoring, PetscCopyMode, PetscInt*, PetscIS*[])
 
 # --------------------------------------------------------------------
 

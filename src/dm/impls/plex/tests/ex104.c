@@ -24,6 +24,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   DM       pdm     = NULL;
   PetscInt overlap = user->distance;
   PetscInt dim;
+
   PetscFunctionBegin;
   PetscCall(DMCreate(comm, dm));
   PetscCall(DMSetType(*dm, DMPLEX));

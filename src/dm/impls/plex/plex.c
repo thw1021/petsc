@@ -11030,8 +11030,8 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
   PetscBool       useCone, useClosure;
   PetscScalar    *vals;
   PetscSection    s;
-  PetscFunctionBeginUser;
 
+  PetscFunctionBeginUser;
   PetscCall(DMGetDimension(dm, &dim));
   if (depth == dim) {
     /* FIXME this code only works for depth == dim and FVM adjacency */
@@ -11197,7 +11197,6 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
   A coloring of the vertices (depth=0) with distance=1 can be use can be used to group non-overlapping vertex-star patches into multi-patch subdomains.
   Similarly, a vertex coloring with distance=2 can be used to group non-overlapping Vanka patches into multi-patch subdomains.
 
-
 .seealso: [](ch_unstructured), `DMPlex`, `ISColoring`, `MatColoring`, `DMCreateColoring()`
 @*/
 PetscErrorCode DMPlexCreateColoring(DM dm, PetscInt depth, PetscInt distance, ISColoring *coloring)
@@ -11206,6 +11205,7 @@ PetscErrorCode DMPlexCreateColoring(DM dm, PetscInt depth, PetscInt distance, IS
   MatColoring mc       = NULL;
   IS         *iscolors = NULL;
   PetscInt    pStart = 0, offset = 0, ncolors = 0;
+
   PetscFunctionBegin;
   /* Create a graph Laplacian */
   PetscCall(DMPlexCreateGraphLaplacian_Private(dm, depth, &L));
