@@ -11019,7 +11019,7 @@ static inline PetscInt DMPlex_GlobalID(PetscInt point)
    Computes the graph laplacian L at the given depth.
       L = D - A, with D = degree matrix and A = adjacency matrix
 */
-PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL)
+static PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL)
 {
   Mat             L, preall;
   Vec             x, y;
@@ -11166,17 +11166,15 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
 }
 
 /*@
-  DMPlexCreateColoring - Gets coloring of a graph associated with the
-  `DMPlex`. The graph is a subgraph of the Hasse diagram, defining the
-  connectivity of mesh entities at a given depth.  Two entities are
-  considered adjacent if the closure of the star of one entity contains the
+  DMPlexCreateColoring - Gets coloring of a graph associated with the `DMPlex`. The graph is a subgraph of the Hasse diagram, defining the
+  connectivity of mesh entities at a given depth. Two entities are considered adjacent if the closure of the star of one entity contains the
   other entity.
 
   Collective
 
   Input Parameters:
-+ dm    - the `DMPlex` object
-- depth - the dimension of the entities in the connectivity graph.
++ dm       - the `DMPlex` object
+. depth    - the dimension of the entities in the connectivity graph.
 - distance - the distance of the coloring (either 1 or 2).
 
   Output Parameter:
