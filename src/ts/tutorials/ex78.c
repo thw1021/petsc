@@ -118,7 +118,7 @@ static PetscErrorCode SetupContext(DM dm, AppCtx *user)
   PetscFunctionBeginUser;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
 
-  PetscInt xs, ys, zs, xm, ym, zm;
+  PetscInt xm, ym, zm;
   PetscCall(DMDAGetCorners(dm, NULL, NULL, NULL, &xm, &ym, &zm));
   PetscInt local_size = xm * ym * zm;
   PetscCall(PetscMalloc1(local_size, &user->flux_x));
@@ -175,9 +175,9 @@ static PetscErrorCode PlotTemperature(TS ts, PetscInt step, PetscReal t, Vec T, 
   const PetscInt     ostep = user->ostep;
   DM                 dm;
   const PetscScalar *t_array;
-  PetscInt           M, xs, xm, ys, ym, zs, zm;
+  PetscInt           xs, xm, ys, ym, zs, zm;
   char               title[PETSC_MAX_PATH_LEN];
-  PetscReal          dx, dy, dz;
+  PetscReal          dx;
   PetscReal          xvals[2], vals[2];
   PetscDraw          draw;
   PetscDrawAxis      axis;
@@ -194,10 +194,7 @@ static PetscErrorCode PlotTemperature(TS ts, PetscInt step, PetscReal t, Vec T, 
     PetscCall(PetscDrawLGReset(user->drawlg));
     PetscCall(DMDAGetCorners(dm, &xs, &ys, &zs, &xm, &ym, &zm));
     dx = (user->xmax - user->xmin) / (xm - xs - 2 * user->num_ghost_cells[0]);
-    dy = (user->ymax - user->ymin) / (ym - ys - 2 * user->num_ghost_cells[1]);
-    dz = (user->zmax - user->zmin) / (zm - zs - 2 * user->num_ghost_cells[2]);
 
-    PetscReal err2 = 0.0, errmax = 0.0;
     PetscInt  j_center = ys + ym / 2;
     PetscInt  k_center = zs + zm / 2;
 
@@ -248,8 +245,8 @@ PetscErrorCode ComputeError(TS ts, PetscInt step, PetscReal t, Vec T, void *ctx)
   const PetscScalar ***Tarr;
   PetscInt             xs, ys, zs, xm, ym, zm;
   PetscInt             i;
-  PetscReal            dx, dy, dz;
-  PetscReal            err2 = 0.0, errmax = 0.0, err2_RMS = 0.0;
+  PetscReal            dx;
+  PetscReal            err2 = 0.0, errmax = 0.0;
   PetscReal            dt, maxT;
 
   PetscFunctionBeginUser;
@@ -266,10 +263,6 @@ PetscErrorCode ComputeError(TS ts, PetscInt step, PetscReal t, Vec T, void *ctx)
   PetscCall(DMDAGetCorners(dm, &xs, &ys, &zs, &xm, &ym, &zm));
 
   dx = (user->xmax - user->xmin) / (xm - xs - 2 * user->num_ghost_cells[0]);
-  dy = (user->ymax - user->ymin) / (ym - ys - 2 * user->num_ghost_cells[1]);
-  dz = (user->zmax - user->zmin) / (zm - zs - 2 * user->num_ghost_cells[2]);
-
-  PetscInt Nx = xm - xs - 2 * user->num_ghost_cells[0];
 
   /* center slice in y,z */
   PetscInt j_center = ys + ym / 2;
@@ -418,7 +411,6 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
     for (PetscInt k = zs; k < zs + zm; k++) {
       for (PetscInt j = ys; j < ys + ym; j++) {
         for (PetscInt i = xs; i < xs + xm; i++) {
-          PetscInt current_idx = (k - zs) * ym * xm + (j - ys) * xm + (i - xs);
 
           PetscReal T_center = t_arr[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
           PetscReal T_im1    = (i > xs) ? t_arr[(k - zs) * ym * xm + (j - ys) * xm + ((i - 1) - xs)] : T_center;
@@ -534,7 +526,7 @@ PetscErrorCode InitialConditions(TS ts, Vec U)
   DM           dm;
   PetscScalar *u_arr;
   PetscInt     xs, xm, ys, ym, zs, zm;
-  PetscReal    dx, dy, dz;
+  PetscReal    dx;
   PetscReal    x_coord;
 
   PetscFunctionBeginUser;
@@ -542,8 +534,7 @@ PetscErrorCode InitialConditions(TS ts, Vec U)
   PetscCall(DMGetApplicationContext(dm, &user));
   PetscCall(DMDAGetCorners(dm, &xs, &ys, &zs, &xm, &ym, &zm));
   dx = (user->xmax - user->xmin) / (xm - xs - 2 * user->num_ghost_cells[0]);
-  dy = (user->ymax - user->ymin) / (ym - ys - 2 * user->num_ghost_cells[1]);
-  dz = (user->zmax - user->zmin) / (zm - zs - 2 * user->num_ghost_cells[2]);
+  
   PetscCall(VecGetArrayWrite(U, &u_arr));
   for (PetscInt k = zs; k < zs + zm; k++) {
     for (PetscInt j = ys; j < ys + ym; j++) {
