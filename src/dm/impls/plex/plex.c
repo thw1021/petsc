@@ -11045,7 +11045,7 @@ static PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, 
     PetscCall(DMPlexCreatePointNumbering(dm, &pointNumbering));
     PetscCall(ISGetIndices(pointNumbering, &pointNum));
     shift = DMPlex_GlobalID(pointNum[pStart]);
-    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &shift, 1, MPIU_INT, MPIU_MIN, PetscObjectComm((PetscObject)dm)));
+    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &shift, 1, MPIU_INT, MPI_MIN, PetscObjectComm((PetscObject)dm)));
     /* Determine sizes */
     numVertices = 0;
     for (PetscInt p = pStart; p < pEnd; p++) {
