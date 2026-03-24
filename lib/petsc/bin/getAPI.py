@@ -112,6 +112,7 @@ class Function:
     def __str__(self):
         mstr = '  ' + str(self.name) + '()\n'
         mstr += '    source code location: ' + displayFile(self)
+        if self.mansec: mstr += '    MANSEC: ' + self.mansec + '\n'
         if self.opaque:   mstr += '    opaque binding\n'
         elif self.opaque: mstr += '    opaque stub\n'
         if self.arguments:
