@@ -125,6 +125,8 @@
 ```{rubric} TAO:
 ```
 
+- Fix bug in `TaoMonitorSolution`, to properly display solution vector, instead of gradient vector
+
 ```{rubric} PetscRegressor:
 ```
 
