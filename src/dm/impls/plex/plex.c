@@ -11019,7 +11019,7 @@ static inline PetscInt DMPlex_GlobalID(PetscInt point)
    Computes the graph laplacian L at the given depth.
       L = D - A, with D = degree matrix and A = adjacency matrix
 */
-PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL)
+static PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL)
 {
   Mat             L, preall;
   Vec             x, y;
@@ -11166,17 +11166,13 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
 }
 
 /*@
-  DMPlexCreateColoring - Gets coloring of a graph associated with the
-  `DMPlex`. The graph is a subgraph of the Hasse diagram, defining the
-  connectivity of mesh entities at a given depth.  Two entities are
-  considered adjacent if the closure of the star of one entity contains the
-  other entity.
+  DMPlexCreateColoring - Gets coloring of the connectivity graph of the `DMPlex` points at a given depth.
 
   Collective
 
   Input Parameters:
-+ dm    - the `DMPlex` object
-- depth - the dimension of the entities in the connectivity graph.
++ dm       - the `DMPlex` object
+. depth    - the dimension of the entities in the connectivity graph.
 - distance - the distance of the coloring (either 1 or 2).
 
   Output Parameter:
@@ -11186,14 +11182,15 @@ PetscErrorCode DMPlexCreateGraphLaplacian_Private(DM dm, PetscInt depth, Mat *oL
 
   Notes:
   Unlike `DMCreateColoring`, the graph used for the coloring does not represent the operator matrix associated with the discretization of a PDE on the `DM`.
+  Here the coloring is computed from the connectivity graph of the mesh entities, defined with FEM adjacency if `depth < dim`, and with FVM adjacency if `depth == dim`.
 
   Coloring of matrices can also be computed directly from the sparse matrix nonzero structure via the `MatColoring` object or from the mesh from which the
   matrix comes from (what this function provides). In general using the mesh produces a more optimal coloring (fewer colors).
 
   Mesh colorings are useful for additive and multiplicative Schwarz methods.
   In particular, they mitigate overhead costs associated with setting up individual KSPs and PCs on many subdomains per process.
-  A coloring of the vertices (depth=0) with distance=1 can be use can be used to group non-overlapping vertex-star patches into multi-patch subdomains.
-  Similarly, a vertex coloring with distance=2 can be used to group non-overlapping Vanka patches into multi-patch subdomains.
+  A coloring of the vertices (`depth=0`) with `distance=1` can be use can be used to group non-overlapping vertex-star patches into multi-patch subdomains.
+  Similarly, a vertex coloring with `distance=2` can be used to group non-overlapping Vanka patches into multi-patch subdomains.
 
 .seealso: [](ch_unstructured), `DMPlex`, `ISColoring`, `MatColoring`, `DMCreateColoring()`
 @*/
