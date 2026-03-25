@@ -438,12 +438,13 @@ PetscErrorCode DMPlexReconcileLabel(DM dm, MPI_Op reduceop, DMLabel label)
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCall(DMGetPointSF(dm, &sf));
+  PetscCall(PetscSFGetGraph(sf, &Nr, &Nl, &leaves, &remotes));
+  if (Nr < 0) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(DMLabelGetValueIS(label, &valueIS));
   PetscCall(ISGetLocalSize(valueIS, &Nv));
   PetscCall(ISGetIndices(valueIS, &values));
 
-  PetscCall(DMGetPointSF(dm, &sf));
-  PetscCall(PetscSFGetGraph(sf, &Nr, &Nl, &leaves, &remotes));
   PetscCall(PetscSFComputeDegreeBegin(sf, &degree));
   PetscCall(PetscSFComputeDegreeEnd(sf, &degree));
   PetscCall(PetscMalloc2(Nr, &rvalues, Nr, &lvalues));
