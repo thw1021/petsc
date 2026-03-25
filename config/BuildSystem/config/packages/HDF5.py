@@ -7,7 +7,7 @@ class Configure(config.package.CMakePackage):
     self.minversion       = '1.8'
     self.versionname      = 'H5_VERSION'
     self.version          = '1.14.6'
-    self.download         = ['https://github.com/HDFGroup/hdf5/archive/hdf5_'+self.version+'/hdf5-'+self.version+'.tar.gz',
+    self.download         = ['https://github.com/HDFGroup/hdf5/releases/download/2.1.1/hdf5-2.1.1.tar.gz',
                              'https://web.cels.anl.gov/projects/petsc/download/externalpackages/hdf5-'+self.version+'.tar.gz']
 # David Moulton reports that HDF5 configure can fail on NERSC systems and this can be worked around by removing the
 #   getpwuid from the test for ac_func in gethostname getpwuid getrusage lstat
@@ -40,15 +40,6 @@ class Configure(config.package.CMakePackage):
     self.odeps          = [self.mpi, self.zlib,self.szlib,self.flibs]
     return
 
-  def applyPatches(self):
-    try:
-      with open(self.packageDir+'/config/cmake/HDFMacros.cmake') as f_in:
-        content = f_in.readlines()
-      with open(self.packageDir+'/config/cmake/HDFMacros.cmake','w') as f_out:
-        f_out.writelines(c.replace('(CMAKE_DEBUG_POSTFIX "_debug")','(CMAKE_DEBUG_POSTFIX "")') for c in content)
-    except:
-      self.logPrintWarning("Patching HDF5 failed! Continuing with build")
-
   def versionToStandardForm(self,ver):
     '''HDF5 indicates patches by appending a -patch<n> after the regular part of the version'''
     return ver.replace('-patch','.')
@@ -73,7 +64,7 @@ class Configure(config.package.CMakePackage):
       else:
         raise RuntimeError('Cannot build HDF5 Cxx bindings --with-cxx=0 or with a malfunctioning Cxx compiler.')
 
-    args.append('-DHDF5_ENABLE_Z_LIB_SUPPORT='+('ON' if self.zlib.found else 'OFF'))
+    args.append('-DHDF5_ENABLE_ZLIB_SUPPORT='+('ON' if self.zlib.found else 'OFF'))
     args.append('-DHDF5_ENABLE_SZIP_SUPPORT='+('ON' if self.szlib.found else 'OFF'))
 
     return args
