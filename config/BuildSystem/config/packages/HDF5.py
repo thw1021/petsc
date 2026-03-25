@@ -7,7 +7,7 @@ class Configure(config.package.CMakePackage):
     self.minversion       = '1.8'
     self.versionname      = 'H5_VERSION'
     self.version          = '1.14.6'
-    self.download         = ['https://github.com/HDFGroup/hdf5/archive/hdf5_'+self.version+'/hdf5-'+self.version+'.tar.gz',
+    self.download         = ['https://github.com/HDFGroup/hdf5/releases/download/2.1.1/hdf5-2.1.1.tar.gz',
                              'https://web.cels.anl.gov/projects/petsc/download/externalpackages/hdf5-'+self.version+'.tar.gz']
 # David Moulton reports that HDF5 configure can fail on NERSC systems and this can be worked around by removing the
 #   getpwuid from the test for ac_func in gethostname getpwuid getrusage lstat
