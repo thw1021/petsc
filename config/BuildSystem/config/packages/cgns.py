@@ -21,6 +21,16 @@ class Configure(config.package.CMakePackage):
     self.odeps = [self.mpi]
     return
 
+  def applyPatches(self):
+    '''Needed for HDF5 2.0.0 (is fixed in develop branch)'''
+    try:
+      with open(self.packageDir+'/CMakeLists.txt') as f_in:
+        content = f_in.readlines()
+      with open(self.packageDir+'/CMakeLists.txt','w') as f_out:
+        f_out.writelines(c.replace('OR HDF5_ENABLE_PARALLEL','OR HDF5_ENABLE_PARALLEL OR HDF5_PROVIDES_PARALLEL') for c in content)
+    except:
+      self.logPrintWarning('Patching CGNS failed! Continuing with build')
+
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-DCGNS_BUILD_SHARED:BOOL=ON')
