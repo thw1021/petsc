@@ -2666,6 +2666,34 @@ static PetscErrorCode MatProductSetFromOptions_MPIDense(Mat C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  MatDenseScatter_Private - Scatters entries between two dense matrices using a PetscSF.
+
+  Collective
+
+  Input Parameters:
++ sf    - `PetscSF` defining the communication pattern
+. X     - input `MATDENSE`
+. mode  - see `InsertMode`
+- smode - see `ScatterMode`
+
+  Output Parameter:
+. Y - output `MATDENSE`
+
+  Level: developer
+
+  Notes:
+  This is an internal routine used to transfer data between dense matrices according
+  to the communication pattern described by `sf`.
+
+  The matrices `X` and `Y` must be compatible in layout with the communication graph
+  defined by `sf`. No checks are performed beyond basic consistency.
+
+  This routine assumes that both matrices are of type `MATDENSE` and accesses their
+  underlying arrays directly for performance.
+
+.seealso: `PetscSF`, `PetscSFBcastBegin()`, `PetscSFBcastEnd()`, `PetscSFReduceBegin()`, `PetscSFReduceEnd()`, `MATDENSE`
+@*/
 PetscErrorCode MatDenseScatter_Private(PetscSF sf, Mat X, Mat Y, InsertMode mode, ScatterMode smode)
 {
   const PetscScalar *in;
