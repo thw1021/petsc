@@ -37,7 +37,7 @@ typedef struct {
   /* Whether the analysis phase has been run */
   PetscBool analysisCompleted;
 
-  /* Solver options — use cuDSS enum types directly for cudssConfigSet compatibility */
+  /* Solver options - use cuDSS enum types directly for cudssConfigSet compatibility */
   cudssAlgType_t   reorderAlg;     /* CUDSS_CONFIG_REORDERING_ALG */
   cudssPivotType_t pivotType;      /* CUDSS_CONFIG_PIVOT_TYPE */
   double           pivotThreshold; /* CUDSS_CONFIG_PIVOT_THRESHOLD (always double) */
@@ -204,7 +204,7 @@ static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const 
   lu->n   = n;
   lu->nnz = nnz;
 
-  /* Process options — use PetscInt temporaries then cast to cuDSS enum types */
+  /* Process options - use PetscInt temporaries then cast to cuDSS enum types */
   {
     PetscInt  reorderAlg     = (PetscInt)lu->reorderAlg;
     PetscInt  pivotType      = (PetscInt)lu->pivotType;
@@ -289,7 +289,7 @@ static PetscErrorCode MatCholeskyFactorSymbolic_cuDSS(Mat F, Mat A, IS perm, con
   lu->n   = n;
   lu->nnz = nnz;
 
-  /* Process options — use PetscInt temporaries then cast to cuDSS enum types */
+  /* Process options - use PetscInt temporaries then cast to cuDSS enum types */
   {
     PetscInt  reorderAlg     = (PetscInt)lu->reorderAlg;
     PetscInt  pivotType      = (PetscInt)lu->pivotType;
@@ -376,9 +376,9 @@ static PetscErrorCode MatSolve_cuDSS(Mat F, Vec b, Vec x)
 
 static PetscErrorCode MatLUFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo *info)
 {
-  Mat_cuDSS   *lu = (Mat_cuDSS *)F->data;
-  PetscInt    *d_row, *d_col;
-  PetscScalar *d_val;
+  Mat_cuDSS   *lu    = (Mat_cuDSS *)F->data;
+  PetscInt    *d_row = NULL, *d_col = NULL;
+  PetscScalar *d_val = NULL;
 
   PetscFunctionBegin;
   /* Refresh device CSR values (structure unchanged, values may have changed) */
@@ -398,9 +398,9 @@ static PetscErrorCode MatLUFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo
 
 static PetscErrorCode MatCholeskyFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo *info)
 {
-  Mat_cuDSS   *lu = (Mat_cuDSS *)F->data;
-  PetscInt    *d_row, *d_col;
-  PetscScalar *d_val;
+  Mat_cuDSS   *lu    = (Mat_cuDSS *)F->data;
+  PetscInt    *d_row = NULL, *d_col = NULL;
+  PetscScalar *d_val = NULL;
 
   PetscFunctionBegin;
   PetscCall(MatcuDSSEnsureOnDevice(A, lu, &d_row, &d_col, &d_val));
