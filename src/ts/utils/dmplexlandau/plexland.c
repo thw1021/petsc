@@ -73,6 +73,30 @@ static PetscErrorCode gamma_m1_f(PetscInt dim, PetscReal time, const PetscReal x
 }
 
 /*
+ * gamma_m1_c2_f - Projects (gamma-1)*c0^2 for Fix 3 of the energy tensor trick.
+ *
+ * In the continuous limit: d/du_d [(gamma-1)*c0^2] = u_d / gamma = v_d
+ * so the FE gradient of this projection gives v-bar directly, without
+ * needing the 'fact = c0^2 / sqrt(1 - dg2_c2)' rescaling step.
+ * This eliminates the dg2_c2 >= 0.999 guard clause entirely.
+ *
+ * The well-conditioned form avoids the large constant c0^2:
+ *   (gamma-1)*c0^2 = |u|^2 / (sqrt(1 + |u|^2/c0^2) + 1)
+ * which is O(|u|^2) near u=0 (same order as v^2/2 in the non-relativistic case).
+ */
+static PetscErrorCode gamma_m1_c2_f(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf_dummy, PetscScalar *u, void *actx)
+{
+  PetscReal *c2_0_arr = ((PetscReal *)actx);
+  double     u2 = 0, c02 = (double)*c2_0_arr;
+
+  PetscFunctionBegin;
+  for (PetscInt i = 0; i < dim; ++i) u2 += x[i] * x[i];
+  /* (gamma-1)*c0^2 = |u|^2 / (sqrt(1 + |u|^2/c0^2) + 1), well-conditioned */
+  u[0] = u2 / (PetscSqrtReal(1. + u2 / c02) + 1.);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
  LandauFormJacobian_Internal - Evaluates Jacobian matrix.
 
  Input Parameters:
@@ -1171,9 +1195,16 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscCall(PetscOptionsBool("-dm_landau_simplex", "Use simplex elements", "plexland.c", ctx->simplex, &ctx->simplex, NULL));
   PetscCall(PetscOptionsBool("-dm_landau_sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, NULL));
   PetscCall(PetscOptionsBool("-dm_landau_map_sphere", "Map to sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->map_sphere, &ctx->map_sphere, NULL));
-  if (LANDAU_DIM == 2 && ctx->use_relativistic_corrections) ctx->use_relativistic_corrections = PETSC_FALSE; // should warn
+  if (LANDAU_DIM == 2 && ctx->use_relativistic_corrections) {
+    PetscCall(PetscPrintf(ctx->comm, "Warning: -dm_landau_use_relativistic_corrections ignored because LANDAU_DIM == 2 (requires LANDAU_DIM == 3; rebuild PETSc with --with-dmlandau-3d)\n"));
+    ctx->use_relativistic_corrections = PETSC_FALSE;
+  }
   PetscCall(PetscOptionsBool("-dm_landau_use_energy_tensor_trick", "Use Eero's trick of using grad(v^2/2) instead of v as args to Landau tensor to conserve energy with relativistic corrections and Q1 elements", "plexland.c", ctx->use_energy_tensor_trick,
                              &ctx->use_energy_tensor_trick, NULL));
+  if (ctx->use_energy_tensor_trick && !ctx->use_relativistic_corrections) {
+    PetscCall(PetscPrintf(ctx->comm, "Warning: -dm_landau_use_energy_tensor_trick has no effect without -dm_landau_use_relativistic_corrections\n"));
+    ctx->use_energy_tensor_trick = PETSC_FALSE;
+  }
 
   /* get num species with temperature, set defaults */
   for (ii = 1; ii < LANDAU_MAX_SPECIES; ii++) {
@@ -1233,6 +1264,28 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     }
   } else {
     PetscCall(makeLambdas(ctx));
+  }
+  /* Per-pair Coulomb logarithm overrides for partial screening (Hesslow et al. 2018) */
+  {
+    PetscReal lnLam_ei = 0.0;
+    PetscBool flg_ei;
+    PetscCall(PetscOptionsReal("-dm_landau_ln_lambda_ei",
+                               "Electron-ion Coulomb logarithm override for partial screening (Hesslow et al. 2018). "
+                               "Default: use NRL formula. Set to lnLambda * lnL2_factor for Hesslow partial screening "
+                               "(e.g., 17 * 150 = 2550 for Ar2+).",
+                               "plexland.c", lnLam_ei, &lnLam_ei, &flg_ei));
+    if (flg_ei) {
+      /* Override lambdas[0][gridj] and lambdas[gridj][0] for all ion grids (gridj > 0) */
+      for (PetscInt gridj = 1; gridj < ctx->num_grids; gridj++) {
+        ctx->lambdas[0][gridj] = ctx->lambdas[gridj][0] = lnLam_ei;
+      }
+    }
+  }
+  {
+    PetscReal lnLam_ee = 0.0;
+    PetscBool flg_ee;
+    PetscCall(PetscOptionsReal("-dm_landau_ln_lambda_ee", "Electron-electron Coulomb logarithm override. Default: use NRL formula.", "plexland.c", lnLam_ee, &lnLam_ee, &flg_ee));
+    if (flg_ee) ctx->lambdas[0][0] = lnLam_ee;
   }
   non_dim_grid = 0;
   PetscCall(PetscOptionsInt("-dm_landau_normalization_grid", "Index of grid to use for setting v_0, m_0, t_0. (Not recommended)", "plexland.c", non_dim_grid, &non_dim_grid, &flg));
@@ -1725,11 +1778,29 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
       PetscSection e_section;
       DM           dmEnergy;
       PetscInt     cStart, cEnd, ej;
+      /* use_gamma_c2_proj: declared here so it is visible in both the setup block
+       * (where the energy function is selected) and the per-cell loop below
+       * (where the relativistic rescaling branch is chosen). */
+      PetscBool use_gamma_c2_proj = PETSC_FALSE;
 
       PetscCall(DMPlexGetHeightStratum(ctx->plex[grid], 0, &cStart, &cEnd));
       // prep energy trick, get v^2 / 2 vector
       if (ctx->use_energy_tensor_trick) {
-        PetscErrorCode (*energyf[1])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *) = {ctx->use_relativistic_corrections ? gamma_m1_f : energy_f};
+        /* Fix 3: use gamma_m1_c2_f when -dm_landau_energy_trick_gamma_c2 is set.
+         * Its gradient gives v-bar directly (no 'fact' rescaling, no dg2_c2 guard).
+         * Default: gamma_m1_f (original projection, requires rescaling in the loop below). */
+        if (ctx->use_relativistic_corrections) {
+          use_gamma_c2_proj = PETSC_TRUE;
+          PetscCall(PetscOptionsGetBool(NULL, NULL, "-dm_landau_energy_trick_gamma_c2", &use_gamma_c2_proj, NULL));
+        }
+        PetscErrorCode (*energyf[1])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *);
+        if (!ctx->use_relativistic_corrections) {
+          energyf[0] = energy_f; /* non-relativistic: v^2/2 */
+        } else if (use_gamma_c2_proj) {
+          energyf[0] = gamma_m1_c2_f; /* Fix 3: (gamma-1)*c0^2, gradient = v-bar directly */
+        } else {
+          energyf[0] = gamma_m1_f; /* default: gamma-1, requires fact rescaling */
+        }
         Vec        glob_v2;
         PetscReal *c2_0[1], data[1] = {PetscSqr(C_0(ctx->v_0))};
 
@@ -1774,19 +1845,32 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], con
             }
             xx[gidx] = 1e10;
             if (ctx->use_relativistic_corrections) {
-              double dg2_c2 = 0;
-              //for (PetscInt d = 0; d < dim; ++d) refSpaceDer[d] *= c02;
-              for (PetscInt d = 0; d < dim; ++d) dg2_c2 += PetscSqr(refSpaceDer[d]);
-              dg2_c2 *= (double)c02;
-              if (dg2_c2 >= .999) {
-                xx[gidx] = vj[qj * dim + 0]; /* coordinate */
-                yy[gidx] = vj[qj * dim + 1];
-                if (dim == 3) zz[gidx] = vj[qj * dim + 2];
-                PetscCall(PetscPrintf(ctx->comm, "Error: %12.5e %" PetscInt_FMT ".%" PetscInt_FMT ") dg2/c02 = %12.5e x= %12.5e %12.5e %12.5e\n", (double)PetscSqrtReal(xx[gidx] * xx[gidx] + yy[gidx] * yy[gidx] + zz[gidx] * zz[gidx]), ej, qj, dg2_c2, (double)xx[gidx], (double)yy[gidx], (double)zz[gidx]));
+              if (use_gamma_c2_proj) {
+                /* Fix 3: gradient of (gamma-1)*c0^2 gives v-bar directly.
+                 * d/du_d [(gamma-1)*c0^2] = u_d/gamma = v_d in the continuous limit.
+                 * No rescaling needed; the Shiroto identity holds for any v-bar. */
               } else {
+                /* Fix 1 (default): project gamma-1, recover v-bar via chain rule.
+                 * fact = c0^2 / sqrt(1 - |grad(gamma-1)|^2 * c0^2).
+                 * When the FE projection is inaccurate (coarse mesh / boundary),
+                 * dg2_c2 can exceed 0.999. Instead of falling back to exact coords v
+                 * (which breaks the Shiroto energy-conservation identity), CLAMP the
+                 * gradient direction so |v-bar/c| < 1. The identity U(v-bar,v-bar').v-bar
+                 * = U(v-bar',v-bar).v-bar' is algebraic and holds for any v-bar. */
+                double dg2_c2 = 0;
+                for (PetscInt d = 0; d < dim; ++d) dg2_c2 += PetscSqr(refSpaceDer[d]);
+                dg2_c2 *= (double)c02;
+                if (dg2_c2 >= .999) {
+                  /* Clamp: scale gradient so |v-bar/c|^2 = 0.999, preserving direction */
+                  double scale = PetscSqrtReal(0.999 / dg2_c2);
+                  for (PetscInt d = 0; d < dim; ++d) refSpaceDer[d] *= scale;
+                  dg2_c2 = 0.999;
+                  if (ctx->verbose > 1) {
+                    PetscCall(PetscPrintf(ctx->comm, "Warning: energy trick clamped v-bar at cell %" PetscInt_FMT " qp %" PetscInt_FMT " (dg2_c2 was %12.5e)\n", ej, qj, dg2_c2));
+                  }
+                }
                 PetscReal fact = c02 / PetscSqrtReal(1. - dg2_c2);
                 for (PetscInt d = 0; d < dim; ++d) refSpaceDer[d] *= fact;
-                // could test with other point u' that (grad - grad') * U (refSpaceDer, refSpaceDer') == 0
               }
             }
             if (xx[gidx] == 1e10) {

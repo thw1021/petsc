@@ -15,6 +15,28 @@ PETSC_EXTERN PetscErrorCode DMPlexLandauCreateMassMatrix(DM dm, Mat *Amat);
 PETSC_EXTERN PetscErrorCode DMPlexLandauIFunction(TS, PetscReal, Vec, Vec, Vec, void *);
 PETSC_EXTERN PetscErrorCode DMPlexLandauIJacobian(TS, PetscReal, Vec, Vec, PetscReal, Mat, Mat, void *);
 
+/* Partial screening extensions (Hesslow et al. 2018) -- landau_pitch_angle.c */
+typedef struct {
+  PetscReal lnL2_factor;  /* Hesslow lnL2/lnL enhancement factor (e.g. 150 for Ar2+) */
+  PetscReal lnL_standard; /* standard Coulomb logarithm lnL (e.g. 17) */
+  PetscReal T_e_eV;       /* bulk electron temperature [eV] */
+  PetscReal n_e;          /* electron density [m^-3] */
+  PetscReal Z_eff;        /* effective charge */
+  Mat       Apitch;       /* pre-assembled pitch-angle diffusion matrix (internal) */
+} PitchAngleCtx;
+PETSC_EXTERN PetscErrorCode LandauPitchAngleCreateMatrix(DM pack, PitchAngleCtx *pa_ctx);
+PETSC_EXTERN PetscErrorCode LandauPitchAngleRHS(TS ts, PetscReal t, Vec X, Vec F, void *ctx);
+PETSC_EXTERN PetscErrorCode LandauPitchAngleDestroy(PitchAngleCtx *pa_ctx);
+
+/* Bounce-average extensions -- landau_bounce_average.c */
+typedef struct {
+  PetscReal xi0;      /* trapping boundary xi0 = sqrt(1 - r/R) */
+  PetscReal delta_xi; /* tanh smoothing width at xi0 (default 0.05) */
+  Mat       M_bounce; /* pre-assembled bounce-averaged mass matrix (internal) */
+} BounceAverageCtx;
+PETSC_EXTERN PetscErrorCode LandauBounceAverageCreateMassMatrix(DM pack, BounceAverageCtx *ba_ctx);
+PETSC_EXTERN PetscErrorCode LandauBounceAverageDestroy(BounceAverageCtx *ba_ctx);
+
 typedef PetscInt LandauIdx;
 
 /* the Fokker-Planck-Landau context */
