@@ -587,4 +587,9 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
        suffix: rap_bs_hip
        args: -mat_type aijhipsparse -rap_mg_coarse_pc_type jacobi -rap_mg_levels_pc_type jacobi -rap_mg_levels_ksp_type richardson -rap_mg_levels_pc_jacobi_type rowl1 -rap_mg_levels_pc_jacobi_rowl1_scale .5
 
+   test:
+     requires: cuda
+     suffix: cudss
+     args: -mat_type aijcusparse -ne 40 -mat_type seqaijcusparse -pc_type lu -pc_factor_mat_solver_type cudss -ksp_view 
+
 TEST*/
