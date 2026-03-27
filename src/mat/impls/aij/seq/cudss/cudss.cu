@@ -38,8 +38,8 @@ typedef struct {
   PetscBool analysisCompleted;
 
   /* Solver options — use cuDSS enum types directly for cudssConfigSet compatibility */
-  cudssAlgType_t   reorderAlg;    /* CUDSS_CONFIG_REORDERING_ALG */
-  cudssPivotType_t pivotType;     /* CUDSS_CONFIG_PIVOT_TYPE */
+  cudssAlgType_t   reorderAlg;     /* CUDSS_CONFIG_REORDERING_ALG */
+  cudssPivotType_t pivotType;      /* CUDSS_CONFIG_PIVOT_TYPE */
   double           pivotThreshold; /* CUDSS_CONFIG_PIVOT_THRESHOLD (always double) */
   double           pivotEpsilon;   /* CUDSS_CONFIG_PIVOT_EPSILON (always double) */
   int              useMatching;    /* CUDSS_CONFIG_USE_MATCHING (plain int: 0=false, 1=true) */
@@ -167,12 +167,12 @@ static PetscErrorCode MatcuDSSEnsureOnDevice(Mat A, Mat_cuDSS *lu, PetscInt **d_
     /* Ensure data is current on device */
     PetscCall(MatSeqAIJCUSPARSECopyToGPU(A));
     {
-      Mat_SeqAIJCUSPARSE        *cusparsestruct = (Mat_SeqAIJCUSPARSE *)A->spptr;
-      Mat_SeqAIJCUSPARSEMultStruct *matstruct   = (Mat_SeqAIJCUSPARSEMultStruct *)cusparsestruct->mat;
-      CsrMatrix                 *csr            = (CsrMatrix *)matstruct->mat;
-      *d_row = (PetscInt *)thrust::raw_pointer_cast(csr->row_offsets->data());
-      *d_col = (PetscInt *)thrust::raw_pointer_cast(csr->column_indices->data());
-      *d_val = (PetscScalar *)thrust::raw_pointer_cast(csr->values->data());
+      Mat_SeqAIJCUSPARSE           *cusparsestruct = (Mat_SeqAIJCUSPARSE *)A->spptr;
+      Mat_SeqAIJCUSPARSEMultStruct *matstruct      = (Mat_SeqAIJCUSPARSEMultStruct *)cusparsestruct->mat;
+      CsrMatrix                    *csr            = (CsrMatrix *)matstruct->mat;
+      *d_row                                       = (PetscInt *)thrust::raw_pointer_cast(csr->row_offsets->data());
+      *d_col                                       = (PetscInt *)thrust::raw_pointer_cast(csr->column_indices->data());
+      *d_val                                       = (PetscScalar *)thrust::raw_pointer_cast(csr->values->data());
     }
   } else {
     /* MATSEQAIJ: copy host CSR to device */
@@ -189,12 +189,12 @@ static PetscErrorCode MatcuDSSEnsureOnDevice(Mat A, Mat_cuDSS *lu, PetscInt **d_
 
 static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const MatFactorInfo *info)
 {
-  Mat_cuDSS  *lu = (Mat_cuDSS *)F->data;
-  Mat_SeqAIJ *a  = (Mat_SeqAIJ *)A->data;
-  PetscInt    m, n, nnz;
-  PetscInt   *d_row, *d_col;
+  Mat_cuDSS   *lu = (Mat_cuDSS *)F->data;
+  Mat_SeqAIJ  *a  = (Mat_SeqAIJ *)A->data;
+  PetscInt     m, n, nnz;
+  PetscInt    *d_row, *d_col;
   PetscScalar *d_val;
-  PetscBool   isCUSPARSE;
+  PetscBool    isCUSPARSE;
 
   PetscFunctionBegin;
   m   = A->rmap->n;
@@ -206,11 +206,11 @@ static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const 
 
   /* Process options — use PetscInt temporaries then cast to cuDSS enum types */
   {
-    PetscInt  reorderAlg = (PetscInt)lu->reorderAlg;
-    PetscInt  pivotType  = (PetscInt)lu->pivotType;
+    PetscInt  reorderAlg     = (PetscInt)lu->reorderAlg;
+    PetscInt  pivotType      = (PetscInt)lu->pivotType;
     PetscReal pivotThreshold = (PetscReal)lu->pivotThreshold;
     PetscReal pivotEpsilon   = (PetscReal)lu->pivotEpsilon;
-    PetscInt  irNSteps   = (PetscInt)lu->irNSteps;
+    PetscInt  irNSteps       = (PetscInt)lu->irNSteps;
     PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "cuDSS Options", "Mat");
     PetscCall(PetscOptionsInt("-mat_cudss_reorder_alg", "Reordering algorithm (0=default,1-5)", "None", reorderAlg, &reorderAlg, NULL));
     PetscCall(PetscOptionsInt("-mat_cudss_pivot_type", "Pivot type (0=col,1=row,2=none)", "None", pivotType, &pivotType, NULL));
@@ -223,11 +223,11 @@ static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const 
     }
     PetscCall(PetscOptionsInt("-mat_cudss_ir_n_steps", "Number of iterative refinement steps", "None", irNSteps, &irNSteps, NULL));
     PetscOptionsEnd();
-    lu->reorderAlg    = (cudssAlgType_t)reorderAlg;
-    lu->pivotType     = (cudssPivotType_t)pivotType;
+    lu->reorderAlg     = (cudssAlgType_t)reorderAlg;
+    lu->pivotType      = (cudssPivotType_t)pivotType;
     lu->pivotThreshold = (double)pivotThreshold;
     lu->pivotEpsilon   = (double)pivotEpsilon;
-    lu->irNSteps      = (int)irNSteps;
+    lu->irNSteps       = (int)irNSteps;
   }
 
   /* Initialize cuDSS handle, config, data */
@@ -266,20 +266,20 @@ static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const 
   /* Run analysis (symbolic factorization / reordering) */
   PetscCallcuDSS(cudssExecute, lu->handle, CUDSS_PHASE_ANALYSIS, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
 
-  lu->analysisCompleted  = PETSC_TRUE;
-  lu->CleanUp            = PETSC_TRUE;
+  lu->analysisCompleted   = PETSC_TRUE;
+  lu->CleanUp             = PETSC_TRUE;
   F->ops->lufactornumeric = MatLUFactorNumeric_cuDSS;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatCholeskyFactorSymbolic_cuDSS(Mat F, Mat A, IS perm, const MatFactorInfo *info)
 {
-  Mat_cuDSS  *lu = (Mat_cuDSS *)F->data;
-  Mat_SeqAIJ *a  = (Mat_SeqAIJ *)A->data;
-  PetscInt    m, n, nnz;
-  PetscInt   *d_row, *d_col;
+  Mat_cuDSS   *lu = (Mat_cuDSS *)F->data;
+  Mat_SeqAIJ  *a  = (Mat_SeqAIJ *)A->data;
+  PetscInt     m, n, nnz;
+  PetscInt    *d_row, *d_col;
   PetscScalar *d_val;
-  PetscBool   isCUSPARSE;
+  PetscBool    isCUSPARSE;
 
   PetscFunctionBegin;
   m   = A->rmap->n;
@@ -291,11 +291,11 @@ static PetscErrorCode MatCholeskyFactorSymbolic_cuDSS(Mat F, Mat A, IS perm, con
 
   /* Process options — use PetscInt temporaries then cast to cuDSS enum types */
   {
-    PetscInt  reorderAlg = (PetscInt)lu->reorderAlg;
-    PetscInt  pivotType  = (PetscInt)lu->pivotType;
+    PetscInt  reorderAlg     = (PetscInt)lu->reorderAlg;
+    PetscInt  pivotType      = (PetscInt)lu->pivotType;
     PetscReal pivotThreshold = (PetscReal)lu->pivotThreshold;
     PetscReal pivotEpsilon   = (PetscReal)lu->pivotEpsilon;
-    PetscInt  irNSteps   = (PetscInt)lu->irNSteps;
+    PetscInt  irNSteps       = (PetscInt)lu->irNSteps;
     PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "cuDSS Options", "Mat");
     PetscCall(PetscOptionsInt("-mat_cudss_reorder_alg", "Reordering algorithm (0=default,1-5)", "None", reorderAlg, &reorderAlg, NULL));
     PetscCall(PetscOptionsInt("-mat_cudss_pivot_type", "Pivot type (0=col,1=row,2=none)", "None", pivotType, &pivotType, NULL));
@@ -308,11 +308,11 @@ static PetscErrorCode MatCholeskyFactorSymbolic_cuDSS(Mat F, Mat A, IS perm, con
     }
     PetscCall(PetscOptionsInt("-mat_cudss_ir_n_steps", "Number of iterative refinement steps", "None", irNSteps, &irNSteps, NULL));
     PetscOptionsEnd();
-    lu->reorderAlg    = (cudssAlgType_t)reorderAlg;
-    lu->pivotType     = (cudssPivotType_t)pivotType;
+    lu->reorderAlg     = (cudssAlgType_t)reorderAlg;
+    lu->pivotType      = (cudssPivotType_t)pivotType;
     lu->pivotThreshold = (double)pivotThreshold;
     lu->pivotEpsilon   = (double)pivotEpsilon;
-    lu->irNSteps      = (int)irNSteps;
+    lu->irNSteps       = (int)irNSteps;
   }
 
   /* Initialize cuDSS handle, config, data */
@@ -347,9 +347,9 @@ static PetscErrorCode MatCholeskyFactorSymbolic_cuDSS(Mat F, Mat A, IS perm, con
   /* Run analysis */
   PetscCallcuDSS(cudssExecute, lu->handle, CUDSS_PHASE_ANALYSIS, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
 
-  lu->analysisCompleted          = PETSC_TRUE;
-  lu->CleanUp                    = PETSC_TRUE;
-  F->ops->choleskyfactornumeric  = MatCholeskyFactorNumeric_cuDSS;
+  lu->analysisCompleted         = PETSC_TRUE;
+  lu->CleanUp                   = PETSC_TRUE;
+  F->ops->choleskyfactornumeric = MatCholeskyFactorNumeric_cuDSS;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -376,8 +376,8 @@ static PetscErrorCode MatSolve_cuDSS(Mat F, Vec b, Vec x)
 
 static PetscErrorCode MatLUFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo *info)
 {
-  Mat_cuDSS  *lu = (Mat_cuDSS *)F->data;
-  PetscInt   *d_row, *d_col;
+  Mat_cuDSS   *lu = (Mat_cuDSS *)F->data;
+  PetscInt    *d_row, *d_col;
   PetscScalar *d_val;
 
   PetscFunctionBegin;
@@ -398,8 +398,8 @@ static PetscErrorCode MatLUFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo
 
 static PetscErrorCode MatCholeskyFactorNumeric_cuDSS(Mat F, Mat A, const MatFactorInfo *info)
 {
-  Mat_cuDSS  *lu = (Mat_cuDSS *)F->data;
-  PetscInt   *d_row, *d_col;
+  Mat_cuDSS   *lu = (Mat_cuDSS *)F->data;
+  PetscInt    *d_row, *d_col;
   PetscScalar *d_val;
 
   PetscFunctionBegin;
