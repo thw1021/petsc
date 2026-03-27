@@ -37,7 +37,7 @@ typedef struct {
   /* Whether the analysis phase has been run */
   PetscBool analysisCompleted;
 
-  /* Solver options — use cuDSS enum types directly for cudssConfigSet compatibility */
+  /* Solver options - use cuDSS enum types directly for cudssConfigSet compatibility */
   cudssAlgType_t   reorderAlg;     /* CUDSS_CONFIG_REORDERING_ALG */
   cudssPivotType_t pivotType;      /* CUDSS_CONFIG_PIVOT_TYPE */
   double           pivotThreshold; /* CUDSS_CONFIG_PIVOT_THRESHOLD (always double) */
@@ -204,7 +204,7 @@ static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const 
   lu->n   = n;
   lu->nnz = nnz;
 
-  /* Process options — use PetscInt temporaries then cast to cuDSS enum types */
+  /* Process options - use PetscInt temporaries then cast to cuDSS enum types */
   {
     PetscInt  reorderAlg     = (PetscInt)lu->reorderAlg;
     PetscInt  pivotType      = (PetscInt)lu->pivotType;
@@ -289,7 +289,7 @@ static PetscErrorCode MatCholeskyFactorSymbolic_cuDSS(Mat F, Mat A, IS perm, con
   lu->n   = n;
   lu->nnz = nnz;
 
-  /* Process options — use PetscInt temporaries then cast to cuDSS enum types */
+  /* Process options - use PetscInt temporaries then cast to cuDSS enum types */
   {
     PetscInt  reorderAlg     = (PetscInt)lu->reorderAlg;
     PetscInt  pivotType      = (PetscInt)lu->pivotType;
