@@ -9,7 +9,9 @@
 /* SUBMANSEC = DMMOAB */
 
 #include <string>
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN("-Wnontrivial-memcall")
 #include <moab/Core.hpp> /*I      "moab/Core.hpp"    I*/
+PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END()
 #ifdef MOAB_HAVE_MPI
   #include <moab/ParallelComm.hpp> /*I      "moab/ParallelComm.hpp"    I*/
 #endif
