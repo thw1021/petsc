@@ -12,6 +12,7 @@ class Configure(config.package.Package):
     self.functions        = ['cudssCreate']
     self.includes         = ['cudss.h']
     self.liblist          = [['libcudss.so'], ['libcudss.a']]
+    self.downloaddirnames = ['libcudss']
     self.precisions       = ['single', 'double']
     self.buildLanguages   = ['CUDA']
     self.hastests         = 1
