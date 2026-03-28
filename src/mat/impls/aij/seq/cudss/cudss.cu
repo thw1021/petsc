@@ -424,7 +424,7 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
   MATSOLVERCUDSS = "cudss" - A solver package providing LU and Cholesky factorization for
   sequential sparse matrices via the NVIDIA cuDSS GPU-accelerated sparse direct solver library.
 
-  Use `./configure --with-cudss-dir=<dir>` to have PETSc use cuDSS.
+  Use `./configure --download-cudss` or `./configure --with-cudss-dir=<dir>` to have PETSc use cuDSS.
 
   Use `-pc_type lu -pc_factor_mat_solver_type cudss` to use this direct solver.
   Use `-pc_type cholesky -pc_factor_mat_solver_type cudss` for SPD matrices.
