@@ -115,7 +115,9 @@ check-ci-settings:
 fp16-arm:
   extends: .stage-1
   tags:
-    - linux-arm-stage1
+  tags:
+    - arch:arm
+    - os:linux44
   variables:
     CONFIG_OPTS: --with-precision=__fp16 --with-fc=0 --with-mpi-dir=/software/mpich-4.2.3 --with-blaslapack-dir=/software/f2cblaslapack
     TEST_SEARCH: vec_vec_tests-ex6%
@@ -769,7 +771,7 @@ linux-flang-arm:
     - .coverage-disable
   tags:
     - arch:arm
-    - os:linux
+    - os:linux44
   variables:
     TEST_ARCH: arch-ci-linux-flang-arm
 
@@ -781,7 +783,7 @@ linux-cmplx-single-arm:
     - .coverage-disable
   tags:
     - arch:arm
-    - os:linux
+    - os:linux44
   variables:
     FLEXIBLAS: netlib
     TEST_ARCH: arch-ci-linux-cmplx-single-arm
@@ -1013,7 +1015,7 @@ linux-opt-arm:
     - .coverage-disable
   tags:
     - arch:arm
-    - os:linux
+    - os:linux44
   variables:
     TEST_ARCH: arch-ci-linux-opt-arm
 
