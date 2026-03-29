@@ -273,8 +273,7 @@ PetscErrorCode CkEigenSolutions(PetscInt cklvl, Mat A, PetscInt il, PetscInt iu,
         }
       }
     }
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "    max|(x_j^T*x_i) - delta_ji|: %g\n", (double)dot_max));
-
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "    max|(x_j^T*x_i) - delta_ji|: %g\n", (double)dot_max)); /* fall through */
   case 1:
     norm_max = 0.0;
     for (i = il; i < iu; i++) {
