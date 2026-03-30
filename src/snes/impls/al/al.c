@@ -187,7 +187,7 @@ PetscErrorCode SNESNewtonALSetDiagonalScaling(SNES snes, Vec v)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  if (v) PetscValidHeaderSpecific(vec, VEC_CLASSID, 2);
+  if (v) PetscValidHeaderSpecific(v, VEC_CLASSID, 2);
   PetscTryMethod(snes, "SNESNewtonALSetDiagonalScaling_C", (SNES, Vec), (snes, v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
