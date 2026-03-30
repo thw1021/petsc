@@ -534,7 +534,7 @@ PetscErrorCode InitialConditions(TS ts, Vec U)
   PetscCall(DMGetApplicationContext(dm, &user));
   PetscCall(DMDAGetCorners(dm, &xs, &ys, &zs, &xm, &ym, &zm));
   dx = (user->xmax - user->xmin) / (xm - xs - 2 * user->num_ghost_cells[0]);
-  
+
   PetscCall(VecGetArrayWrite(U, &u_arr));
   for (PetscInt k = zs; k < zs + zm; k++) {
     for (PetscInt j = ys; j < ys + ym; j++) {
