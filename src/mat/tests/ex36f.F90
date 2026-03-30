@@ -17,7 +17,7 @@ module ex36fmodule
 !  location.)
 !
 contains
-  subroutine Demo1(m,n)
+  subroutine Demo1(m, n)
 
     PetscInt, intent(in) :: m, n
     Mat A
@@ -51,10 +51,10 @@ contains
 
 ! -----------------------------------------------------------------
 !
-!  Demo2 -  This subroutine demonstrates the use of user-allocated dense
-!  matrix storage.
+!  Demo2 -  This subroutine demonstrates the use of user-provided dense
+!  matrix storage. Using allocate (typically heap memory)
 !
-  subroutine Demo2(m,n)
+  subroutine Demo2(m, n)
 
     PetscInt, intent(in) :: m, n
     Mat A
@@ -78,7 +78,37 @@ contains
 
     ! Clean up
     PetscCall(MatDestroy(A, ierr))
+    deallocate (aa)
   end subroutine Demo2
+
+! -----------------------------------------------------------------
+!
+!  Demo3 -  This subroutine demonstrates the use of user-provided dense
+!  matrix storage. Using fixed dimensions (typically stack memory)
+!
+  subroutine Demo3(m, n)
+
+    PetscInt, intent(in) :: m, n
+    Mat A
+    PetscScalar, target :: aa(m, n)
+    PetscErrorCode ierr
+
+    ! Create matrix
+    PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, n, aa, A, ierr))
+
+    ! Set matrix values directly
+    PetscCall(FillUpMatrix(m, n, aa))
+
+    ! Finalize matrix assembly
+    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY, ierr))
+    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY, ierr))
+
+    ! View matrix
+    PetscCall(MatView(A, PETSC_VIEWER_STDOUT_SELF, ierr))
+
+    ! Clean up
+    PetscCall(MatDestroy(A, ierr))
+  end subroutine Demo3
 
 ! -----------------------------------------------------------------
 
@@ -105,10 +135,13 @@ program main
   PetscCallA(PetscInitialize(ierr))
 
   ! Demo of PETSc-allocated dense matrix storage
-  call Demo1(m,n)
+  call Demo1(m, n)
 
-  ! Demo of user-allocated dense matrix storage
-  call Demo2(m,n)
+  ! Demo of user-provided dense matrix storage (heap)
+  call Demo2(m, n)
+
+  ! Demo of user-provided dense matrix storage (stack)
+  call Demo3(m, n)
 
   PetscCallA(PetscFinalize(ierr))
 end program main
