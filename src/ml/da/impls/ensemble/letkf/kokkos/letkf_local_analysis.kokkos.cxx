@@ -1,5 +1,4 @@
 #include "../src/ml/da/impls/ensemble/letkf/letkf.h"
-#include <petscblaslapack.h>
 #include <Kokkos_Core.hpp>
 #include <KokkosBlas.hpp>
 #include <KokkosBatched_SVD_Decl.hpp>
@@ -19,7 +18,6 @@
 #elif defined(KOKKOS_ENABLE_SYCL)
   #include <oneapi/mkl.hpp>
   #include <sycl/sycl.hpp>
-  #include <petscdevice_sycl.h>
 #endif
 
 /* ========================================================================== */
@@ -345,15 +343,17 @@ static PetscErrorCode BatchedEigenSolve_Device(Kokkos::View<PetscScalar ***, Kok
   /* oneMKL doesn't have a native batched syevd, so we loop over batch */
   /* Use oneapi::mkl::lapack::syevd which computes eigenvalues and eigenvectors */
   for (int i = 0; i < n_batch; i++) {
-    PetscScalar *A_ptr    = d_A_contig + i * n_size * n_size;
-    PetscScalar *W_ptr    = d_W_contig + i * n_size;
-    int         *info_ptr = d_info + i;
+    PetscScalar *A_ptr = d_A_contig + i * n_size * n_size;
+    PetscScalar *W_ptr = d_W_contig + i * n_size;
+    // int         *info_ptr = d_info + i;
 
     try {
     #if defined(PETSC_USE_REAL_SINGLE)
-      oneapi::mkl::lapack::syevd(*q, oneapi::mkl::job::vec, oneapi::mkl::uplo::upper, n_size, A_ptr, n_size, W_ptr, d_work, work->lwork_device, info_ptr);
+      // oneapi::mkl::lapack::syevd(*q, oneapi::mkl::job::vec, oneapi::mkl::uplo::upper, n_size, A_ptr, n_size, W_ptr, d_work, work->lwork_device, info_ptr);
+      oneapi::mkl::lapack::syevd(*q, oneapi::mkl::job::vec, oneapi::mkl::uplo::upper, n_size, A_ptr, n_size, W_ptr, d_work, work->lwork_device);
     #else
-      oneapi::mkl::lapack::syevd(*q, oneapi::mkl::job::vec, oneapi::mkl::uplo::upper, n_size, A_ptr, n_size, W_ptr, d_work, work->lwork_device, info_ptr);
+      // oneapi::mkl::lapack::syevd(*q, oneapi::mkl::job::vec, oneapi::mkl::uplo::upper, n_size, A_ptr, n_size, W_ptr, d_work, work->lwork_device, info_ptr);
+      oneapi::mkl::lapack::syevd(*q, oneapi::mkl::job::vec, oneapi::mkl::uplo::upper, n_size, A_ptr, n_size, W_ptr, d_work, work->lwork_device);
     #endif
       q->wait();
     } catch (sycl::exception const &e) {
