@@ -1766,7 +1766,7 @@ PetscErrorCode SNESSetKSP(SNES snes, KSP ksp)
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 2);
   PetscCheckSameComm(snes, 1, ksp, 2);
   PetscCall(PetscObjectReference((PetscObject)ksp));
-  if (snes->ksp) PetscCall(PetscObjectDereference((PetscObject)snes->ksp));
+  PetscCall(PetscObjectDereference((PetscObject)snes->ksp));
   snes->ksp = ksp;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -4853,7 +4853,7 @@ PetscErrorCode SNESSolve(SNES snes, Vec b, Vec x)
     PetscCall(SNESGetDM(snes, &dm));
 
     /* set affine vector if provided */
-    if (b) PetscCall(PetscObjectReference((PetscObject)b));
+    PetscCall(PetscObjectReference((PetscObject)b));
     PetscCall(VecDestroy(&snes->vec_rhs));
     snes->vec_rhs = b;
 
