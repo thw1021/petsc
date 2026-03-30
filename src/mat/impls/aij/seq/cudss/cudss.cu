@@ -46,8 +46,6 @@ typedef struct {
   int              useMatching;    /* CUDSS_CONFIG_USE_MATCHING (plain int: 0=false, 1=true) */
   int              irNSteps;       /* CUDSS_CONFIG_IR_N_STEPS (int) */
 
-  /* Flag to clean up cuDSS objects during Destroy */
-  PetscBool CleanUp;
 } Mat_cuDSS;
 
 /* Map PetscScalar to the cuDSS data type */
@@ -68,10 +66,8 @@ typedef struct {
 /* Map PetscInt to the cuDSS index type */
 #if defined(PETSC_USE_64BIT_INDICES)
   #define CUDSS_INDEX_TYPE CUDA_R_64I
-  #define CUDSS_INDEX_BASE CUDSS_BASE_ZERO
 #else
   #define CUDSS_INDEX_TYPE CUDA_R_32I
-  #define CUDSS_INDEX_BASE CUDSS_BASE_ZERO
 #endif
 
 #define PetscCallcuDSS(func, ...) \
@@ -80,9 +76,17 @@ typedef struct {
     PetscCheck(cudss_status_ == CUDSS_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_LIB, "cuDSS error %d in %s", (int)cudss_status_, PetscStringize(func)); \
   } while (0)
 
+/* String names for cudssAlgType_t: CUDSS_ALG_DEFAULT=0, CUDSS_ALG_1..5 */
+static const char *const MatcuDSSReorderAlgs[] = {"default", "alg1", "alg2", "alg3", "alg4", "alg5"};
+
+/* String names for cudssPivotType_t: CUDSS_PIVOT_COL=0, CUDSS_PIVOT_ROW=1, CUDSS_PIVOT_NONE=2 */
+static const char *const MatcuDSSPivotTypes[] = {"col", "row", "none"};
+
 /* Forward declarations */
 static PetscErrorCode MatLUFactorNumeric_cuDSS(Mat, Mat, const MatFactorInfo *);
 static PetscErrorCode MatCholeskyFactorNumeric_cuDSS(Mat, Mat, const MatFactorInfo *);
+static PetscErrorCode MatcuDSSSetFromOptions(Mat);
+static PetscErrorCode MatFactorSymbolic_cuDSS(Mat, Mat, cudssMatrixType_t, cudssMatrixViewType_t);
 
 static PetscErrorCode MatView_Info_cuDSS(Mat A, PetscViewer viewer)
 {
@@ -90,8 +94,8 @@ static PetscErrorCode MatView_Info_cuDSS(Mat A, PetscViewer viewer)
 
   PetscFunctionBegin;
   PetscCall(PetscViewerASCIIPrintf(viewer, "cuDSS run parameters:\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  Reorder algorithm: %d\n", (int)lu->reorderAlg));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  Pivot type: %d\n", (int)lu->pivotType));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  Reorder algorithm: %s\n", MatcuDSSReorderAlgs[lu->reorderAlg]));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  Pivot type: %s\n", MatcuDSSPivotTypes[lu->pivotType]));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Pivot threshold: %g\n", lu->pivotThreshold));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Pivot epsilon: %g\n", lu->pivotEpsilon));
   PetscCall(PetscViewerASCIIPrintf(viewer, "  Use matching: %s\n", lu->useMatching ? "true" : "false"));
@@ -118,22 +122,45 @@ static PetscErrorCode MatDestroy_cuDSS(Mat A)
   Mat_cuDSS *lu = (Mat_cuDSS *)A->data;
 
   PetscFunctionBegin;
-  if (lu->CleanUp) {
-    if (lu->cudss_x) PetscCallcuDSS(cudssMatrixDestroy, lu->cudss_x);
-    if (lu->cudss_b) PetscCallcuDSS(cudssMatrixDestroy, lu->cudss_b);
-    if (lu->cudss_A) PetscCallcuDSS(cudssMatrixDestroy, lu->cudss_A);
-    if (lu->data) PetscCallcuDSS(cudssDataDestroy, lu->handle, lu->data);
-    if (lu->config) PetscCallcuDSS(cudssConfigDestroy, lu->config);
-    if (lu->handle) PetscCallcuDSS(cudssDestroy, lu->handle);
-    if (lu->ownDeviceCSR) {
-      PetscCallCUDA(cudaFree(lu->d_row_offsets));
-      PetscCallCUDA(cudaFree(lu->d_col_indices));
-      PetscCallCUDA(cudaFree(lu->d_values));
-    }
-    if (lu->d_b) PetscCallCUDA(cudaFree(lu->d_b));
-    if (lu->d_x) PetscCallCUDA(cudaFree(lu->d_x));
+  if (lu->cudss_x) PetscCallcuDSS(cudssMatrixDestroy, lu->cudss_x);
+  if (lu->cudss_b) PetscCallcuDSS(cudssMatrixDestroy, lu->cudss_b);
+  if (lu->cudss_A) PetscCallcuDSS(cudssMatrixDestroy, lu->cudss_A);
+  if (lu->data) PetscCallcuDSS(cudssDataDestroy, lu->handle, lu->data);
+  if (lu->config) PetscCallcuDSS(cudssConfigDestroy, lu->config);
+  if (lu->handle) PetscCallcuDSS(cudssDestroy, lu->handle);
+  if (lu->ownDeviceCSR) {
+    PetscCallCUDA(cudaFree(lu->d_row_offsets));
+    PetscCallCUDA(cudaFree(lu->d_col_indices));
+    PetscCallCUDA(cudaFree(lu->d_values));
   }
+  if (lu->d_b) PetscCallCUDA(cudaFree(lu->d_b));
+  if (lu->d_x) PetscCallCUDA(cudaFree(lu->d_x));
   PetscCall(PetscFree(A->data));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatcuDSSSetFromOptions(Mat F)
+{
+  Mat_cuDSS *lu         = (Mat_cuDSS *)F->data;
+  PetscInt   reorderAlg = (PetscInt)lu->reorderAlg, pivotType = (PetscInt)lu->pivotType, irNSteps = (PetscInt)lu->irNSteps;
+  PetscReal  pivotThreshold = (PetscReal)lu->pivotThreshold, pivotEpsilon = (PetscReal)lu->pivotEpsilon;
+  PetscBool  useMatchingBool = (PetscBool)lu->useMatching;
+
+  PetscFunctionBegin;
+  PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "cuDSS Options", "Mat");
+  PetscCall(PetscOptionsEList("-mat_cudss_reorder_alg", "Reordering algorithm", "None", MatcuDSSReorderAlgs, 6, MatcuDSSReorderAlgs[reorderAlg], &reorderAlg, NULL));
+  lu->reorderAlg = (cudssAlgType_t)reorderAlg;
+  PetscCall(PetscOptionsEList("-mat_cudss_pivot_type", "Pivot type", "None", MatcuDSSPivotTypes, 3, MatcuDSSPivotTypes[pivotType], &pivotType, NULL));
+  lu->pivotType = (cudssPivotType_t)pivotType;
+  PetscCall(PetscOptionsReal("-mat_cudss_pivot_threshold", "Pivot threshold", "None", pivotThreshold, &pivotThreshold, NULL));
+  lu->pivotThreshold = (double)pivotThreshold;
+  PetscCall(PetscOptionsReal("-mat_cudss_pivot_epsilon", "Pivot epsilon", "None", pivotEpsilon, &pivotEpsilon, NULL));
+  lu->pivotEpsilon = (double)pivotEpsilon;
+  PetscCall(PetscOptionsBool("-mat_cudss_use_matching", "Enable matching (CUDSS_CONFIG_USE_MATCHING)", "None", useMatchingBool, &useMatchingBool, NULL));
+  lu->useMatching = (int)useMatchingBool;
+  PetscCall(PetscOptionsInt("-mat_cudss_ir_n_steps", "Number of iterative refinement steps", "None", irNSteps, &irNSteps, NULL));
+  lu->irNSteps = (int)irNSteps;
+  PetscOptionsEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -188,7 +215,7 @@ static PetscErrorCode MatcuDSSEnsureOnDevice(Mat A, Mat_cuDSS *lu, PetscInt **d_
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const MatFactorInfo *info)
+static PetscErrorCode MatFactorSymbolic_cuDSS(Mat F, Mat A, cudssMatrixType_t mtype, cudssMatrixViewType_t mview)
 {
   Mat_cuDSS   *lu = (Mat_cuDSS *)F->data;
   Mat_SeqAIJ  *a  = (Mat_SeqAIJ *)A->data;
@@ -196,6 +223,7 @@ static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const 
   PetscInt    *d_row, *d_col;
   PetscScalar *d_val;
   PetscBool    isCUSPARSE;
+  cudaStream_t stream;
 
   PetscFunctionBegin;
   m   = A->rmap->n;
@@ -205,167 +233,56 @@ static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const 
   lu->n   = n;
   lu->nnz = nnz;
 
-  /* Process options - use PetscInt temporaries then cast to cuDSS enum types */
-  {
-    PetscInt  reorderAlg     = (PetscInt)lu->reorderAlg;
-    PetscInt  pivotType      = (PetscInt)lu->pivotType;
-    PetscReal pivotThreshold = (PetscReal)lu->pivotThreshold;
-    PetscReal pivotEpsilon   = (PetscReal)lu->pivotEpsilon;
-    PetscInt  irNSteps       = (PetscInt)lu->irNSteps;
-    PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "cuDSS Options", "Mat");
-    PetscCall(PetscOptionsInt("-mat_cudss_reorder_alg", "Reordering algorithm (0=default,1-5)", "None", reorderAlg, &reorderAlg, NULL));
-    PetscCall(PetscOptionsInt("-mat_cudss_pivot_type", "Pivot type (0=col,1=row,2=none)", "None", pivotType, &pivotType, NULL));
-    PetscCall(PetscOptionsReal("-mat_cudss_pivot_threshold", "Pivot threshold", "None", pivotThreshold, &pivotThreshold, NULL));
-    PetscCall(PetscOptionsReal("-mat_cudss_pivot_epsilon", "Pivot epsilon", "None", pivotEpsilon, &pivotEpsilon, NULL));
-    {
-      PetscBool useMatchingBool = (PetscBool)lu->useMatching;
-      PetscCall(PetscOptionsBool("-mat_cudss_use_matching", "Enable matching (CUDSS_CONFIG_USE_MATCHING)", "None", useMatchingBool, &useMatchingBool, NULL));
-      lu->useMatching = (int)useMatchingBool;
-    }
-    PetscCall(PetscOptionsInt("-mat_cudss_ir_n_steps", "Number of iterative refinement steps", "None", irNSteps, &irNSteps, NULL));
-    PetscOptionsEnd();
-    lu->reorderAlg     = (cudssAlgType_t)reorderAlg;
-    lu->pivotType      = (cudssPivotType_t)pivotType;
-    lu->pivotThreshold = (double)pivotThreshold;
-    lu->pivotEpsilon   = (double)pivotEpsilon;
-    lu->irNSteps       = (int)irNSteps;
-  }
+  PetscCall(MatcuDSSSetFromOptions(F));
 
   /* Initialize cuDSS handle, config, data */
   PetscCallcuDSS(cudssCreate, &lu->handle);
   PetscCallcuDSS(cudssConfigCreate, &lu->config);
   PetscCallcuDSS(cudssDataCreate, lu->handle, &lu->data);
-
-  /* Apply config options */
   PetscCall(MatcuDSSApplyConfig(lu));
 
-  /* Determine if input is CUSPARSE */
+  /* Determine if input is CUSPARSE; allocate device CSR if needed */
   PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQAIJCUSPARSE, &isCUSPARSE));
   lu->ownDeviceCSR = (PetscBool)(!isCUSPARSE);
-
   if (!isCUSPARSE) {
-    /* Allocate device CSR arrays */
     PetscCallCUDA(cudaMalloc((void **)&lu->d_row_offsets, (m + 1) * sizeof(PetscInt)));
     PetscCallCUDA(cudaMalloc((void **)&lu->d_col_indices, nnz * sizeof(PetscInt)));
     PetscCallCUDA(cudaMalloc((void **)&lu->d_values, nnz * sizeof(PetscScalar)));
   }
 
   /* Set PETSc CUDA stream on the cuDSS handle */
-  {
-    cudaStream_t stream;
-    PetscCall(PetscGetCurrentCUDAStream(&stream));
-    PetscCallcuDSS(cudssSetStream, lu->handle, stream);
-  }
+  PetscCall(PetscGetCurrentCUDAStream(&stream));
+  PetscCallcuDSS(cudssSetStream, lu->handle, stream);
 
-  /* Ensure CSR data is on device */
+  /* Ensure CSR data is on device and create sparse matrix descriptor */
   PetscCall(MatcuDSSEnsureOnDevice(A, lu, &d_row, &d_col, &d_val));
+  PetscCallcuDSS(cudssMatrixCreateCsr, &lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, CUDSS_INDEX_TYPE, CUDSS_SCALAR_TYPE, mtype, mview, CUDSS_BASE_ZERO);
 
-  /* Create cuDSS sparse matrix descriptor (general for LU) */
-  PetscCallcuDSS(cudssMatrixCreateCsr, &lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, CUDSS_INDEX_TYPE, CUDSS_SCALAR_TYPE, CUDSS_MTYPE_GENERAL, CUDSS_MVIEW_FULL, CUDSS_BASE_ZERO);
-
-  /* Allocate scratch device buffers so descriptors have a valid initial pointer */
+  /* Allocate scratch device buffers and create dense RHS/solution descriptors */
   PetscCallCUDA(cudaMalloc((void **)&lu->d_b, n * sizeof(PetscScalar)));
   PetscCallCUDA(cudaMalloc((void **)&lu->d_x, n * sizeof(PetscScalar)));
-
-  /* Create dense RHS and solution descriptors; pointer updated per-solve via cudssMatrixSetValues */
   PetscCallcuDSS(cudssMatrixCreateDn, &lu->cudss_b, n, 1, n, lu->d_b, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR);
   PetscCallcuDSS(cudssMatrixCreateDn, &lu->cudss_x, n, 1, n, lu->d_x, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR);
 
   /* Run analysis (symbolic factorization / reordering) */
   PetscCallcuDSS(cudssExecute, lu->handle, CUDSS_PHASE_ANALYSIS, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
 
-  lu->analysisCompleted   = PETSC_TRUE;
-  lu->CleanUp             = PETSC_TRUE;
+  lu->analysisCompleted = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatLUFactorSymbolic_cuDSS(Mat F, Mat A, IS r, IS c, const MatFactorInfo *info)
+{
+  PetscFunctionBegin;
+  PetscCall(MatFactorSymbolic_cuDSS(F, A, CUDSS_MTYPE_GENERAL, CUDSS_MVIEW_FULL));
   F->ops->lufactornumeric = MatLUFactorNumeric_cuDSS;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatCholeskyFactorSymbolic_cuDSS(Mat F, Mat A, IS perm, const MatFactorInfo *info)
 {
-  Mat_cuDSS   *lu = (Mat_cuDSS *)F->data;
-  Mat_SeqAIJ  *a  = (Mat_SeqAIJ *)A->data;
-  PetscInt     m, n, nnz;
-  PetscInt    *d_row, *d_col;
-  PetscScalar *d_val;
-  PetscBool    isCUSPARSE;
-
   PetscFunctionBegin;
-  m   = A->rmap->n;
-  n   = A->cmap->n;
-  nnz = a->nz;
-
-  lu->n   = n;
-  lu->nnz = nnz;
-
-  /* Process options - use PetscInt temporaries then cast to cuDSS enum types */
-  {
-    PetscInt  reorderAlg     = (PetscInt)lu->reorderAlg;
-    PetscInt  pivotType      = (PetscInt)lu->pivotType;
-    PetscReal pivotThreshold = (PetscReal)lu->pivotThreshold;
-    PetscReal pivotEpsilon   = (PetscReal)lu->pivotEpsilon;
-    PetscInt  irNSteps       = (PetscInt)lu->irNSteps;
-    PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "cuDSS Options", "Mat");
-    PetscCall(PetscOptionsInt("-mat_cudss_reorder_alg", "Reordering algorithm (0=default,1-5)", "None", reorderAlg, &reorderAlg, NULL));
-    PetscCall(PetscOptionsInt("-mat_cudss_pivot_type", "Pivot type (0=col,1=row,2=none)", "None", pivotType, &pivotType, NULL));
-    PetscCall(PetscOptionsReal("-mat_cudss_pivot_threshold", "Pivot threshold", "None", pivotThreshold, &pivotThreshold, NULL));
-    PetscCall(PetscOptionsReal("-mat_cudss_pivot_epsilon", "Pivot epsilon", "None", pivotEpsilon, &pivotEpsilon, NULL));
-    {
-      PetscBool useMatchingBool = (PetscBool)lu->useMatching;
-      PetscCall(PetscOptionsBool("-mat_cudss_use_matching", "Enable matching (CUDSS_CONFIG_USE_MATCHING)", "None", useMatchingBool, &useMatchingBool, NULL));
-      lu->useMatching = (int)useMatchingBool;
-    }
-    PetscCall(PetscOptionsInt("-mat_cudss_ir_n_steps", "Number of iterative refinement steps", "None", irNSteps, &irNSteps, NULL));
-    PetscOptionsEnd();
-    lu->reorderAlg     = (cudssAlgType_t)reorderAlg;
-    lu->pivotType      = (cudssPivotType_t)pivotType;
-    lu->pivotThreshold = (double)pivotThreshold;
-    lu->pivotEpsilon   = (double)pivotEpsilon;
-    lu->irNSteps       = (int)irNSteps;
-  }
-
-  /* Initialize cuDSS handle, config, data */
-  PetscCallcuDSS(cudssCreate, &lu->handle);
-  PetscCallcuDSS(cudssConfigCreate, &lu->config);
-  PetscCallcuDSS(cudssDataCreate, lu->handle, &lu->data);
-
-  /* Apply config options */
-  PetscCall(MatcuDSSApplyConfig(lu));
-
-  /* Determine if input is CUSPARSE */
-  PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQAIJCUSPARSE, &isCUSPARSE));
-  lu->ownDeviceCSR = (PetscBool)(!isCUSPARSE);
-
-  if (!isCUSPARSE) {
-    PetscCallCUDA(cudaMalloc((void **)&lu->d_row_offsets, (m + 1) * sizeof(PetscInt)));
-    PetscCallCUDA(cudaMalloc((void **)&lu->d_col_indices, nnz * sizeof(PetscInt)));
-    PetscCallCUDA(cudaMalloc((void **)&lu->d_values, nnz * sizeof(PetscScalar)));
-  }
-
-  /* Set PETSc CUDA stream on the cuDSS handle */
-  {
-    cudaStream_t stream;
-    PetscCall(PetscGetCurrentCUDAStream(&stream));
-    PetscCallcuDSS(cudssSetStream, lu->handle, stream);
-  }
-
-  PetscCall(MatcuDSSEnsureOnDevice(A, lu, &d_row, &d_col, &d_val));
-
-  /* Create cuDSS sparse matrix descriptor (SPD for Cholesky) */
-  PetscCallcuDSS(cudssMatrixCreateCsr, &lu->cudss_A, m, n, nnz, d_row, NULL, d_col, d_val, CUDSS_INDEX_TYPE, CUDSS_SCALAR_TYPE, CUDSS_MTYPE_SPD, CUDSS_MVIEW_UPPER, CUDSS_BASE_ZERO);
-
-  /* Allocate scratch device buffers so descriptors have a valid initial pointer */
-  PetscCallCUDA(cudaMalloc((void **)&lu->d_b, n * sizeof(PetscScalar)));
-  PetscCallCUDA(cudaMalloc((void **)&lu->d_x, n * sizeof(PetscScalar)));
-
-  /* Create dense RHS and solution descriptors; pointer updated per-solve via cudssMatrixSetValues */
-  PetscCallcuDSS(cudssMatrixCreateDn, &lu->cudss_b, n, 1, n, lu->d_b, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR);
-  PetscCallcuDSS(cudssMatrixCreateDn, &lu->cudss_x, n, 1, n, lu->d_x, CUDSS_SCALAR_TYPE, CUDSS_LAYOUT_COL_MAJOR);
-
-  /* Run analysis */
-  PetscCallcuDSS(cudssExecute, lu->handle, CUDSS_PHASE_ANALYSIS, lu->config, lu->data, lu->cudss_A, lu->cudss_x, lu->cudss_b);
-
-  lu->analysisCompleted         = PETSC_TRUE;
-  lu->CleanUp                   = PETSC_TRUE;
+  PetscCall(MatFactorSymbolic_cuDSS(F, A, CUDSS_MTYPE_SPD, CUDSS_MVIEW_UPPER));
   F->ops->choleskyfactornumeric = MatCholeskyFactorNumeric_cuDSS;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -476,18 +393,14 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
   Use `-pc_type cholesky -pc_factor_mat_solver_type cudss` for SPD matrices.
 
   Options Database Keys:
-+ -mat_cudss_reorder_alg <int>      - Reordering algorithm (cudssAlgType_t)
-. -mat_cudss_pivot_type <int>       - Pivot type (0=classic, 1=nopivot)
-. -mat_cudss_pivot_threshold <real> - Pivot threshold
-. -mat_cudss_pivot_epsilon <real>   - Pivot epsilon
-. -mat_cudss_use_matching <bool>    - Enable matching (CUDSS_CONFIG_USE_MATCHING, default: false)
-- -mat_cudss_ir_n_steps <int>       - Number of iterative refinement steps
++ -mat_cudss_reorder_alg default    - (choose one of) `default`, `alg1`, `alg2`, `alg3`, `alg4`, `alg5`
+. -mat_cudss_pivot_type col         - (choose one of) `col`, `row`, `none`
+. -mat_cudss_pivot_threshold 1.0    - Pivot threshold
+. -mat_cudss_pivot_epsilon 0.0      - Pivot epsilon
+. -mat_cudss_use_matching false     - Enable matching
+- -mat_cudss_ir_n_steps 0           - Number of iterative refinement steps
 
   Level: beginner
-
-  Notes:
-  cuDSS is a single-GPU solver. For MPI-parallel applications, use `PCREDUNDANT` or
-  gather the matrix to a single process before factorization.
 
   Registered for both `MATSEQAIJ` (host) and `MATSEQAIJCUSPARSE` (device) matrix types.
   When the input matrix is `MATSEQAIJ`, the CSR data is transparently copied to the GPU.
@@ -533,7 +446,6 @@ static PetscErrorCode MatGetFactor_seqaij_cudss(Mat A, MatFactorType ftype, Mat 
   lu->pivotEpsilon   = 0.0;
   lu->useMatching    = 0; /* CUDSS_CONFIG_USE_MATCHING disabled by default */
   lu->irNSteps       = 0;
-  lu->CleanUp        = PETSC_FALSE;
   B->data            = lu;
 
   *F = B;
