@@ -125,6 +125,10 @@
 - Correct option `-ts_dt` to `-ts_time_step`
 - Change `TSAdaptCheckStage()` to call function set by `TSAdaptSetCheckStage()` before other checks
 - Fix `-ts_ssp_nstages` to `-ts_ssp_num_stages`
+- Change `TSDiscGradIsGonzalez()`, `TSDiscGradUseGonzalez()` to `TSDiscGradSetType()`,`TSDiscGradGetType()`
+- Add `DMTSSetIFunctionPre()`
+- Add argument to `TSDiscGradSetImplicitFormulation()`
+- Expose `TSDiscGradGetX0AndXdot()` and `TSDiscGradRestoreX0AndXdot()`
 
 ```{rubric} TAO:
 ```
@@ -165,6 +169,12 @@
 ```{rubric} DMSwarm:
 ```
 
+- Add `DMSwarmProjectFields()` and `DMSwarmProjectGradientFields()`
+- Add `DMSwarmSort` class
+- Add `DMSwarmSortDestroy()` and `DMSwarmSortView()`
+- Allow `DMSwarmCellDMSetSort()` to take in `NULL` and clear the sort
+- Add `DMSwarmPreallocateMassMatrix()` and `DMSwarmFillMassMatrix()`
+
 ```{rubric} DMPlex:
 ```
 
@@ -172,6 +182,7 @@
 - Add an extra communicator argument to `DMPlexFilter()` to allow extracting local meshes
 - Change `verticesAdjSaved` parameter in `DMPlexCreateFromCell*Parallel*()` functions to be allocated by function rather than by user
 - Add `DMPlexCreateColoring()`
+- Add `DMPlexDrawCell()`
 
 ```{rubric} FE/FV:
 ```

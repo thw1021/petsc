@@ -3378,7 +3378,11 @@ PetscErrorCode DMCoarsen(DM dm, MPI_Comm comm, DM *dmc)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(PetscLogEventBegin(DM_Coarsen, dm, 0, 0, 0));
-  PetscUseTypeMethod(dm, coarsen, comm, dmc);
+  if (!dm->coarseMesh) PetscUseTypeMethod(dm, coarsen, comm, dmc);
+  else {
+    PetscCall(PetscObjectReference((PetscObject)dm->coarseMesh));
+    *dmc = dm->coarseMesh;
+  }
   if (*dmc) {
     (*dmc)->bind_below = dm->bind_below; /* Propagate this from parent DM; otherwise -dm_bind_below will be useless for multigrid cases. */
     PetscCall(DMSetCoarseDM(dm, *dmc));

@@ -413,9 +413,9 @@ static PetscErrorCode TSReset_IRK(TS ts)
 
   PetscFunctionBegin;
   PetscCall(TSIRKTableauReset(ts));
-  if (irk->tableau) PetscCall(PetscFree(irk->tableau));
-  if (irk->method_name) PetscCall(PetscFree(irk->method_name));
-  if (irk->work) PetscCall(PetscFree(irk->work));
+  PetscCall(PetscFree(irk->method_name));
+  PetscCall(PetscStrallocpy(TSIRKGAUSS, &irk->method_name));
+  PetscCall(PetscFree(irk->work));
   PetscCall(VecDestroyVecs(irk->nstages, &irk->Y));
   PetscCall(VecDestroyVecs(irk->nstages, &irk->YdotI));
   PetscCall(VecDestroy(&irk->Ydot));
@@ -608,18 +608,16 @@ static PetscErrorCode TSSetUp_IRK(TS ts)
 
 static PetscErrorCode TSSetFromOptions_IRK(TS ts, PetscOptionItems PetscOptionsObject)
 {
-  TS_IRK *irk        = (TS_IRK *)ts->data;
-  char    tname[256] = TSIRKGAUSS;
+  TS_IRK *irk = (TS_IRK *)ts->data;
+  char    tname[256];
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "IRK ODE solver options");
   {
     PetscBool flg1, flg2;
     PetscCall(PetscOptionsInt("-ts_irk_nstages", "Stages of the IRK method", "TSIRKSetNumStages", irk->nstages, &irk->nstages, &flg1));
-    PetscCall(PetscOptionsFList("-ts_irk_type", "Type of IRK method", "TSIRKSetType", TSIRKList, irk->method_name[0] ? irk->method_name : tname, tname, sizeof(tname), &flg2));
-    if (flg1 || flg2 || !irk->method_name[0]) { /* Create the method tableau after nstages or method is set */
-      PetscCall(TSIRKSetType(ts, tname));
-    }
+    PetscCall(PetscOptionsFList("-ts_irk_type", "Type of IRK method", "TSIRKSetType", TSIRKList, irk->method_name, tname, sizeof(tname), &flg2));
+    if (flg2) PetscCall(TSIRKSetType(ts, tname));
   }
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -773,10 +771,8 @@ static PetscErrorCode TSIRKSetType_IRK(TS ts, TSIRKType irktype)
   PetscErrorCode (*irkcreate)(TS);
 
   PetscFunctionBegin;
-  if (irk->method_name) {
-    PetscCall(PetscFree(irk->method_name));
-    PetscCall(TSIRKTableauReset(ts));
-  }
+  PetscCall(PetscFree(irk->method_name));
+  PetscCall(TSIRKTableauReset(ts));
   PetscCall(PetscFunctionListFind(TSIRKList, irktype, &irkcreate));
   PetscCheck(irkcreate, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown TSIRK type \"%s\" given", irktype);
   PetscCall((*irkcreate)(ts));
