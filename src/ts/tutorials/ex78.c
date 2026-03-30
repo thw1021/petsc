@@ -195,8 +195,8 @@ static PetscErrorCode PlotTemperature(TS ts, PetscInt step, PetscReal t, Vec T, 
     PetscCall(DMDAGetCorners(dm, &xs, &ys, &zs, &xm, &ym, &zm));
     dx = (user->xmax - user->xmin) / (xm - xs - 2 * user->num_ghost_cells[0]);
 
-    PetscInt  j_center = ys + ym / 2;
-    PetscInt  k_center = zs + zm / 2;
+    PetscInt j_center = ys + ym / 2;
+    PetscInt k_center = zs + zm / 2;
 
     for (PetscInt i = xs + user->num_ghost_cells[0]; i < xs + xm - user->num_ghost_cells[0]; i++) {
       PetscReal x   = user->xmin + (i - user->num_ghost_cells[0]) * dx + 0.5 * dx;
@@ -411,7 +411,6 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
     for (PetscInt k = zs; k < zs + zm; k++) {
       for (PetscInt j = ys; j < ys + ym; j++) {
         for (PetscInt i = xs; i < xs + xm; i++) {
-
           PetscReal T_center = t_arr[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
           PetscReal T_im1    = (i > xs) ? t_arr[(k - zs) * ym * xm + (j - ys) * xm + ((i - 1) - xs)] : T_center;
           PetscReal T_ip1    = (i < xs + xm - 1) ? t_arr[(k - zs) * ym * xm + (j - ys) * xm + ((i + 1) - xs)] : T_right;
