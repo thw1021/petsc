@@ -51,7 +51,7 @@ contains
 
 !  Clean up
     PetscCall(MatDestroy(A, ierr))
-  end
+  end subroutine Demo1
 
 ! -----------------------------------------------------------------
 !
@@ -81,7 +81,7 @@ contains
 
 !  Clean up
     PetscCall(MatDestroy(A, ierr))
-  end
+  end subroutine Demo2
 
 ! -----------------------------------------------------------------
 
@@ -94,21 +94,30 @@ contains
         X(i, j) = 1.0/real(i + j - 1)
       end do
     end do
-    end module ex36fmodule
+  end subroutine FillUpMatrix
+end module ex36fmodule
 
-    end program main
-    use ex36fmodule
-    implicit none
+program main
+  use ex36fmodule
+  implicit none
 
-    PetscErrorCode ierr
+  PetscErrorCode ierr
 
-    PetscCallA(PetscInitialize(ierr))
+  PetscCallA(PetscInitialize(ierr))
 
 !  Demo of PETSc-allocated dense matrix storage
-    call Demo1()
+  call Demo1()
 
 !  Demo of user-allocated dense matrix storage
-    call Demo2()
+  call Demo2()
 
-    PetscCallA(PetscFinalize(ierr))
-  end
+  PetscCallA(PetscFinalize(ierr))
+end program main
+
+!/*TEST
+!
+!   test:
+!      nsize: 1
+!      output_file: output/ex36f.out
+!
+!TEST*/
