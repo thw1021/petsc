@@ -1760,7 +1760,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
     }
     {
       char    **labelNames;
-      PetscInt  Nl = numLabels;
+      PetscInt  Nl = PetscMax(numLabels, 1);
       PetscBool flg;
 
       PetscCall(PetscMalloc1(Nl, &labelNames));
@@ -9559,7 +9559,7 @@ PetscErrorCode DMPlexCheckFaces(DM dm, PetscInt cellHeight)
   PetscCall(DMPlexIsInterpolatedCollective(dm, &interpEnum));
   if (interpEnum == DMPLEX_INTERPOLATED_NONE) PetscFunctionReturn(PETSC_SUCCESS);
   if (interpEnum != DMPLEX_INTERPOLATED_FULL) {
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "DMPlexCheckFaces() warning: Mesh is only partially interpolated, this is currently not supported"));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "DMPlexCheckFaces() warning: Mesh is only partially interpolated, this is currently not supported\n"));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 

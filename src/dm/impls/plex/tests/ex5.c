@@ -217,12 +217,23 @@ In parallel,
 
 Test 1:
 Four tets sharing two faces
+*/
+PETSC_EXTERN char tet_2_cv[];
+char              tet_2_cv[] = "\
+3 4 7 4 1\n\
+0 1 2 6\n\
+1 3 2 6\n\
+4 5 1 6\n\
+4 1 0 6\n\
+-1.0  0.0 0.0  1\n\
+ 0.0  1.0 0.0 -1\n\
+ 0.0 -1.0 0.0  1\n\
+ 1.0  0.0 0.0 -1\n\
+-2.0  1.0 0.0  1\n\
+-1.0  2.0 0.0 -1\n\
+ 0.0  1.0 1.0  1";
 
-Cells:    0-3,4-5
-Vertices: 6-15
-Faces:    16-29,30-34
-Edges:    35-52,53-56
-
+/*
 Quadrilateral
 -------------
 Test 0:
@@ -550,7 +561,9 @@ static PetscErrorCode CreateSimplex_3D(MPI_Comm comm, AppCtx *user, DM dm)
       PetscCall(DMSetLabelValue(dm, "material", 0, 1));
       PetscCall(DMSetLabelValue(dm, "material", 1, 2));
     } break;
-    case 1: {
+    case 1:
+#if 0
+    {
       PetscInt    numPoints[4]         = {6, 13, 12, 4};
       PetscInt    coneSize[35]         = {4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
       PetscInt    cones[78]            = {10, 11, 12, 13, 10, 15, 16, 14, 17, 18, 14, 19, 20, 13, 19, 21, 22, 23, 24, 25, 26, 22, 24, 27, 25, 23, 26, 27, 28, 29, 23, 24, 30, 28, 22, 29, 30, 31, 32,
@@ -566,7 +579,9 @@ static PetscErrorCode CreateSimplex_3D(MPI_Comm comm, AppCtx *user, DM dm)
       for (p = 0; p < 4; ++p) PetscCall(DMSetLabelValue(dm, "fault", faultPoints[p], 1));
       PetscCall(DMSetLabelValue(dm, "material", 0, 1));
       PetscCall(DMSetLabelValue(dm, "material", 1, 2));
-    } break;
+    }
+#endif
+      break;
     default:
       SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %" PetscInt_FMT, testNum);
     }
@@ -808,9 +823,9 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(DMCreate(comm, dm));
   PetscCall(DMSetType(*dm, DMPLEX));
-  PetscCall(DMSetDimension(*dm, dim));
   switch (dim) {
   case 2:
+    PetscCall(DMSetDimension(*dm, dim));
     if (cellSimplex) {
       PetscCall(CreateSimplex_2D(comm, user->testNum, dm));
     } else {
@@ -821,6 +836,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     if (cellSimplex) {
       PetscCall(CreateSimplex_3D(comm, user, *dm));
     } else {
+      PetscCall(DMSetDimension(*dm, dim));
       PetscCall(CreateHex_3D(comm, user->testNum, dm));
     }
     break;
@@ -832,7 +848,11 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   PetscCall(DMSetFromOptions(*dm));
   PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
   PetscCall(DMHasLabel(*dm, "fault", &hasFault));
-  if (hasFault) {
+  if (dim == 3 && cellSimplex) {
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*dm, "ext_"));
+    PetscCall(DMSetFromOptions(*dm));
+    PetscCall(PetscObjectSetOptionsPrefix((PetscObject)*dm, NULL));
+  } else if (hasFault) {
     DM      dmHybrid = NULL, dmInterface = NULL;
     DMLabel faultLabel, faultBdLabel, hybridLabel, splitLabel;
 
@@ -1103,13 +1123,13 @@ static void f0_bd_l(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uO
 /* \psi_lambda \cdot (\psi_u^- - \psi_u^+) */
 static void g0_bd_ul_neg(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
 {
-  const PetscInt Nc = dim + 1;
+  const PetscInt Nc = dim;
   for (PetscInt c = 0; c < Nc; ++c) g0[c * Nc + c] = -1.0;
 }
 
 static void g0_bd_ul_pos(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], const PetscReal n[], PetscInt numConstants, const PetscScalar constants[], PetscScalar g0[])
 {
-  const PetscInt Nc = dim + 1;
+  const PetscInt Nc = dim;
   for (PetscInt c = 0; c < Nc; ++c) g0[c * Nc + c] = 1.0;
 }
 
@@ -1313,8 +1333,16 @@ int main(int argc, char **argv)
 
     test:
       suffix: tet_t1_0
-      args: -dim 3 -test_num 1
-      filter: sed -e "s/_start//g" -e "s/f0_bd_u_neg//g" -e "s/f0_bd_u_pos//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul_neg//g" -e "s/g0_bd_ul_pos//g" -e "s/g0_bd_lu//g" -e "s~_ZL.*~~g"
+      args: -dim 3 -test_num 1 -orig_dm_plex_file_contents dat:tet_2_cv -orig_dm_plex_cohesive_label_fault 14,20 \
+            -ext_dm_refine 1 -ext_dm_plex_transform_type cohesive_extrude -ext_dm_plex_transform_active fault \
+              -ext_dm_plex_transform_cohesive_debug 5
+
+    test:
+      suffix: tet_t1_0_perm
+      args: -dim 3 -test_num 1 -dm_reorder_section -dm_reorder_section_type cohesive \
+            -orig_dm_plex_file_contents dat:tet_2_cv -orig_dm_plex_cohesive_label_fault 14,20 \
+            -ext_dm_refine 1 -ext_dm_plex_transform_type cohesive_extrude -ext_dm_plex_transform_active fault \
+              -ext_dm_plex_transform_cohesive_debug 5
 
   testset:
     args: -orig_dm_plex_check_all -dm_plex_check_all \

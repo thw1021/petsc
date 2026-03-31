@@ -19,6 +19,21 @@ char              tri_2_cv[] = "\
 -2.0  1.0 0.0  1\n\
 -1.0  2.0 0.0 -1";
 
+PETSC_EXTERN char tet_2_cv[];
+char              tet_2_cv[] = "\
+3 4 7 4 1\n\
+0 1 2 6\n\
+1 3 2 6\n\
+4 5 1 6\n\
+4 1 0 6\n\
+-1.0  0.0 0.0  1\n\
+ 0.0  1.0 0.0 -1\n\
+ 0.0 -1.0 0.0  1\n\
+ 1.0  0.0 0.0 -1\n\
+-2.0  1.0 0.0  1\n\
+-1.0  2.0 0.0 -1\n\
+ 0.0  1.0 1.0  1";
+
 /* List of test meshes
 
 Test tri_0: triangle
@@ -1098,6 +1113,9 @@ int main(int argc, char **argv)
       suffix: tet_1
       nsize: 2
       args: -petscpartitioner_type simple
+    test:
+      suffix: tet_2
+      args: -dm_plex_file_contents dat:tet_2_cv -dm_plex_cohesive_label_fault 14,20
 
   testset:
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_faces 2,1,1 -dm_plex_box_upper 2,1,1 \
