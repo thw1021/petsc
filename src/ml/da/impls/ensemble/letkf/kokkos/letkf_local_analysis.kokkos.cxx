@@ -1123,7 +1123,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDA_LETKF *impl, Pe
       PetscInt nan_count = 0;
       Kokkos::parallel_reduce(
         "CheckS", Kokkos::RangePolicy<exec_space>(0, n_batch_current),
-        KOKKOS_LAMBDA(const int i, int &l_count) {
+        KOKKOS_LAMBDA(const int i, PetscInt &l_count) {
           for (int j = 0; j < n_obs_vertex_copy; j++) {
             for (int k = 0; k < m; k++) {
               if (S_batch(i, j, k) != S_batch(i, j, k)) l_count++;
@@ -1167,7 +1167,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDA_LETKF *impl, Pe
       PetscInt nan_count = 0;
       Kokkos::parallel_reduce(
         "CheckT", Kokkos::RangePolicy<exec_space>(0, n_batch_current),
-        KOKKOS_LAMBDA(const int i, int &l_count) {
+        KOKKOS_LAMBDA(const int i, PetscInt &l_count) {
           for (int j = 0; j < m; j++) {
             for (int k = 0; k < m; k++) {
               if (T_batch(i, j, k) != T_batch(i, j, k)) l_count++;
@@ -1193,7 +1193,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis_GPU(PetscDA da, PetscDA_LETKF *impl, Pe
       PetscInt bad_lambda = 0;
       Kokkos::parallel_reduce(
         "CheckLambda", Kokkos::RangePolicy<exec_space>(0, n_batch_current),
-        KOKKOS_LAMBDA(const int i, int &l_count) {
+        KOKKOS_LAMBDA(const int i, PetscInt &l_count) {
           for (int k = 0; k < m; k++) {
             if (Lambda_batch(i, k) != Lambda_batch(i, k) || PetscRealPart(Lambda_batch(i, k)) < -1e-8) l_count++;
           }
