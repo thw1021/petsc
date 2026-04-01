@@ -130,8 +130,8 @@ static PetscErrorCode MatDestroy_cuDSS(Mat A)
     PetscCallCUDA(cudaFree(lu->d_col_indices));
     PetscCallCUDA(cudaFree(lu->d_values));
   }
-  if (lu->d_b) PetscCallCUDA(cudaFree(lu->d_b));
-  if (lu->d_x) PetscCallCUDA(cudaFree(lu->d_x));
+  PetscCallCUDA(cudaFree(lu->d_b));
+  PetscCallCUDA(cudaFree(lu->d_x));
   PetscCall(PetscFree(A->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -145,9 +145,9 @@ static PetscErrorCode MatcuDSSSetFromOptions(Mat F)
 
   PetscFunctionBegin;
   PetscOptionsBegin(PetscObjectComm((PetscObject)F), ((PetscObject)F)->prefix, "cuDSS Options", "Mat");
-  PetscCall(PetscOptionsEList("-mat_cudss_reorder_alg", "Reordering algorithm", "None", MatcuDSSReorderAlgs, 6, MatcuDSSReorderAlgs[reorderAlg], &reorderAlg, NULL));
+  PetscCall(PetscOptionsEList("-mat_cudss_reorder_alg", "Reordering algorithm", "None", MatcuDSSReorderAlgs, PETSC_STATIC_ARRAY_LENGTH(MatcuDSSReorderAlgs), MatcuDSSReorderAlgs[reorderAlg], &reorderAlg, NULL));
   lu->reorderAlg = (cudssAlgType_t)reorderAlg;
-  PetscCall(PetscOptionsEList("-mat_cudss_pivot_type", "Pivot type", "None", MatcuDSSPivotTypes, 3, MatcuDSSPivotTypes[pivotType], &pivotType, NULL));
+  PetscCall(PetscOptionsEList("-mat_cudss_pivot_type", "Pivot type", "None", MatcuDSSPivotTypes, PETSC_STATIC_ARRAY_LENGTH(MatcuDSSPivotTypes), MatcuDSSPivotTypes[pivotType], &pivotType, NULL));
   lu->pivotType = (cudssPivotType_t)pivotType;
   PetscCall(PetscOptionsReal("-mat_cudss_pivot_threshold", "Pivot threshold", "None", pivotThreshold, &pivotThreshold, NULL));
   lu->pivotThreshold = (double)pivotThreshold;
@@ -306,13 +306,13 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
   PetscScalar       *xarray;
   PetscInt           n, nrhs, ldb, ldx;
   cudssMatrix_t      cudss_B = NULL, cudss_X = NULL;
-  PetscBool          Bneedconv = PETSC_FALSE, Xneedconv = PETSC_FALSE;
+  PetscBool          BisCUDA = PETSC_FALSE, XisCUDA = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompareAny((PetscObject)B, &Bneedconv, MATSEQDENSECUDA, MATMPIDENSECUDA, ""));
-  PetscCall(PetscObjectTypeCompareAny((PetscObject)X, &Xneedconv, MATSEQDENSECUDA, MATMPIDENSECUDA, ""));
-  if (!Bneedconv) PetscCall(MatConvert(B, MATDENSECUDA, MAT_INPLACE_MATRIX, &B));
-  if (!Xneedconv) PetscCall(MatConvert(X, MATDENSECUDA, MAT_INPLACE_MATRIX, &X));
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)B, &BisCUDA, MATSEQDENSECUDA, MATMPIDENSECUDA, ""));
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)X, &XisCUDA, MATSEQDENSECUDA, MATMPIDENSECUDA, ""));
+  if (!BisCUDA) PetscCall(MatConvert(B, MATDENSECUDA, MAT_INPLACE_MATRIX, &B));
+  if (!XisCUDA) PetscCall(MatConvert(X, MATDENSECUDA, MAT_INPLACE_MATRIX, &X));
   PetscCall(MatGetSize(B, &n, &nrhs));
   PetscCall(MatDenseGetLDA(B, &ldb));
   PetscCall(MatDenseGetLDA(X, &ldx));
@@ -325,8 +325,8 @@ static PetscErrorCode MatMatSolve_cuDSS(Mat F, Mat B, Mat X)
   PetscCallcuDSS(cudssMatrixDestroy, cudss_X);
   PetscCall(MatDenseCUDARestoreArrayRead(B, &barray));
   PetscCall(MatDenseCUDARestoreArrayWrite(X, &xarray));
-  if (!Bneedconv) PetscCall(MatConvert(B, MATDENSE, MAT_INPLACE_MATRIX, &B));
-  if (!Xneedconv) PetscCall(MatConvert(X, MATDENSE, MAT_INPLACE_MATRIX, &X));
+  if (!BisCUDA) PetscCall(MatConvert(B, MATDENSE, MAT_INPLACE_MATRIX, &B));
+  if (!XisCUDA) PetscCall(MatConvert(X, MATDENSE, MAT_INPLACE_MATRIX, &X));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -397,6 +397,9 @@ static PetscErrorCode MatFactorGetSolverType_seqaij_cudss(Mat A, MatSolverType *
 
   Registered for both `MATSEQAIJ` (host) and `MATSEQAIJCUSPARSE` (device) matrix types.
   When the input matrix is `MATSEQAIJ`, the CSR data is transparently copied to the GPU.
+
+  Note:
+    `MatSolveTranspose()` is not supported.
 
 .seealso: [](ch_matrices), `Mat`, `PCLU`, `PCCHOLESKY`, `PCFactorSetMatSolverType()`, `MatSolverType`
 M*/
