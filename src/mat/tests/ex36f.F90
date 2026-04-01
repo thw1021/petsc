@@ -64,7 +64,7 @@ contains
     PetscErrorCode ierr
     parameter(m=5, n=4)
     Mat A
-    PetscScalar aa(m, n)
+    PetscScalar, target :: aa(m, n)
 
 !  Create matrix
     PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, n, aa, A, ierr))
