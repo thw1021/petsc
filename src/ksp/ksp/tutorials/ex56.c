@@ -590,6 +590,6 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
    test:
      requires: cuda cudss
      suffix: cudss
-     args: -mat_type aijcusparse -ne 40 -mat_type seqaijcusparse -pc_type lu -pc_factor_mat_solver_type cudss -ksp_view
+     args: -mat_type seqaijcusparse -ne 40 -pc_type lu -pc_factor_mat_solver_type cudss -ksp_view
 
 TEST*/

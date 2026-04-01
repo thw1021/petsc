@@ -19,8 +19,8 @@ PC Object: 1 MPI process
           package used to perform factorization: cudss
           total: nonzeros=0, allocated nonzeros=0
             cuDSS run parameters:
-              Reorder algorithm: 0
-              Pivot type: 0
+              Reorder algorithm: default
+              Pivot type: col
               Pivot threshold: 1.
               Pivot epsilon: 0.
               Use matching: false
