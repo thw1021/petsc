@@ -325,7 +325,7 @@ int main(int argc, char **args)
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, " cuDSS LU:\n"));
       PetscCall(MatGetFactor(A, MATSOLVERCUDSS, MAT_FACTOR_LU, &F));
     }
-    matsolvexx               = PETSC_FALSE; /* cuDSS has no native MatMatSolve; Basic fallback cannot handle B==X */
+    matsolvexx               = PETSC_FALSE; /* cuDSS MatMatSolve does not support B==X (in-place solve) */
     testMatSolveTranspose    = PETSC_FALSE; /* cuDSS does not support MatSolveTranspose */
     testMatMatSolveTranspose = PETSC_FALSE;
     ipack                    = 6;
