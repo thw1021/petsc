@@ -38,10 +38,6 @@ contains
 
     PetscCall(MatDenseRestoreArray(A, aa, ierr))
 
-    ! Finalize matrix assembly
-    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY, ierr))
-    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY, ierr))
-
     ! View matrix
     PetscCall(MatView(A, PETSC_VIEWER_STDOUT_SELF, ierr))
 
@@ -69,10 +65,6 @@ contains
     ! Set matrix values directly
     PetscCall(FillUpMatrix(m, n, aa))
 
-    ! Finalize matrix assembly
-    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY, ierr))
-    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY, ierr))
-
     ! View matrix
     PetscCall(MatView(A, PETSC_VIEWER_STDOUT_SELF, ierr))
 
@@ -90,7 +82,7 @@ contains
 
     PetscInt, intent(in) :: m, n
     Mat A
-    PetscScalar, target :: aa(m, n)
+    PetscScalar :: aa(m, n)
     PetscErrorCode ierr
 
     ! Create matrix
@@ -99,15 +91,14 @@ contains
     ! Set matrix values directly
     PetscCall(FillUpMatrix(m, n, aa))
 
-    ! Finalize matrix assembly
-    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY, ierr))
-    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY, ierr))
-
     ! View matrix
     PetscCall(MatView(A, PETSC_VIEWER_STDOUT_SELF, ierr))
 
     ! Clean up
     PetscCall(MatDestroy(A, ierr))
+    if (aa(1, 1) == 2.0) then
+      print *, 'Error in a(1,1)'
+    end if
   end subroutine Demo3
 
 ! -----------------------------------------------------------------
