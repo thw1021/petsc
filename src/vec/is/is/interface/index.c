@@ -1592,8 +1592,8 @@ PetscErrorCode ISRestoreNonlocalIS(IS is, IS *complement)
 
   Level: intermediate
 
-  Note:
-  See `PetscObjectViewFromOptions()` for possible `PetscViewer` and `PetscViewerFormat` values
+  Options Database Key:
+. -is_view [viewertype][:...] - option name and values. See `PetscObjectViewFromOptions()` for the possible arguments
 
 .seealso: `IS`, `ISView()`, `PetscObjectViewFromOptions()`, `ISCreate()`
 @*/

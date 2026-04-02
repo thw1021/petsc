@@ -1750,6 +1750,9 @@ PetscErrorCode PCLoad(PC newdm, PetscViewer viewer)
 . obj  - Optional object that provides the options prefix
 - name - command line option name
 
+  Options Database Key:
+. -pc_view [viewertype][:...] - option name and values. See `PetscObjectViewFromOptions()` for the possible arguments
+
   Level: developer
 
 .seealso: [](ch_ksp), `PC`, `PCView`, `PetscObjectViewFromOptions()`, `PCCreate()`

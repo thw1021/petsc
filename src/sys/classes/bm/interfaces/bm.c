@@ -232,10 +232,13 @@ PetscErrorCode PetscBenchView(PetscBench bm, PetscViewer viewer)
 . bobj       - optional other object that provides prefix (if `NULL` then the prefix in `bm` is used)
 - optionname - option to activate viewing
 
+  Options Database Key:
+. -bench_view [viewertype][:...] - option name and values. See `PetscObjectViewFromOptions()` for the possible arguments
+
   Level: advanced
 
 .seealso: `PetscBench`, `PetscBenchSetFromOptions()`, `PetscBenchRun()`, `PetscBenchCreate()`, `PetscBenchDestroy()`, `PetscBenchSetUp()`, `PetscBenchSetType()`,
-          `PetscBenchSetSize()`, `PetscBenchGetSize()`
+          `PetscBenchSetSize()`, `PetscBenchGetSize()`, `PetscObjectViewFromOptions()`
 @*/
 PetscErrorCode PetscBenchViewFromOptions(PetscBench bm, PetscObject bobj, const char optionname[])
 {
