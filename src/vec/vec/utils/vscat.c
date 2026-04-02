@@ -841,9 +841,19 @@ PetscErrorCode VecScatterCreate(Vec x, IS ix, Vec y, IS iy, VecScatter *newsf)
       PetscCall(ISBlockGetLocalSize(ix, &ixsize));
       PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ixsize, indices, PETSC_COPY_VALUES, &ixx));
       PetscCall(ISBlockRestoreIndices(ix, &indices));
-    } else { /* ixid == IS_STRIDE */
+    } else if (ixid == IS_STRIDE) {
       PetscCall(ISGetLocalSize(ix, &ixsize));
       PetscCall(ISCreateStride(PETSC_COMM_SELF, ixsize / bs, ixfirst / bs, 1, &ixx));
+    } else {
+      PetscInt *idx;
+
+      PetscCall(ISGetIndices(ix, &indices));
+      PetscCall(ISGetLocalSize(ix, &ixsize));
+      ixsize /= bs;
+      PetscCall(PetscMalloc1(ixsize, &idx));
+      for (PetscInt i = 0; i < ixsize; ++i) idx[i] = indices[i * bs] / bs;
+      PetscCall(ISCreateGeneral(PETSC_COMM_SELF, ixsize, idx, PETSC_OWN_POINTER, &ixx));
+      PetscCall(ISRestoreIndices(ix, &indices));
     }
 
     /* Shrink y and iy */
