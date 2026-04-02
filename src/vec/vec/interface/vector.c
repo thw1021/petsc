@@ -136,17 +136,13 @@ PetscErrorCode VecAssemblyBegin(Vec vec)
 . vec - the vector
 
   Options Database Keys:
-+ -vec_view                 - Prints vector in `PETSC_VIEWER_DEFAULT` format
-. -vec_view ::ascii_matlab  - Prints vector in `PETSC_VIEWER_ASCII_MATLAB` format to stdout
-. -vec_view matlab:filename - Prints vector in MATLAB .mat file to filename (requires PETSc configured with --with-matlab)
-. -vec_view draw            - Activates vector viewing using drawing tools
-. -display name             - Sets display name (default is host)
-. -draw_pause sec           - Sets number of seconds to pause after display
-- -vec_view socket          - Activates vector viewing using a socket
++ -vec_view [viewertype][:...]      - option name and values. See `VecViewFromOptions()`/`PetscObjectViewFromOptions()` for the possible arguments
+- -vecstash_view [viewertype][:...] - option name and values. See `VecStashViewFromOptions()`/`PetscObjectViewFromOptions()` for the possible arguments
 
   Level: beginner
 
-.seealso: [](ch_vectors), `Vec`, `VecAssemblyBegin()`, `VecSetValues()`
+.seealso: [](ch_vectors), `Vec`, `VecAssemblyBegin()`, `VecSetValues()`, `VecViewFromOptions()`, `VecStashViewFromOptions()`,
+          `PetscObjectViewFromOptions()`
 @*/
 PetscErrorCode VecAssemblyEnd(Vec vec)
 {
@@ -764,6 +760,9 @@ PetscErrorCode VecDestroyVecs(PetscInt m, Vec *vv[])
 + A    - the vector
 . obj  - optional object that provides the options prefix for this viewing, use 'NULL' to use the prefix of `A`
 - name - command line option
+
+  Options Database Key:
+. -vec_view [viewertype][:...] - option name and values. See `PetscObjectViewFromOptions()` for the possible arguments
 
   Level: intermediate
 
@@ -2035,6 +2034,9 @@ PetscErrorCode VecSwap(Vec x, Vec y)
 + obj        - the `Vec` containing a stash
 . bobj       - optional other object that provides the prefix
 - optionname - option to activate viewing
+
+  Options Database Key:
+. -vecstash_view [viewertype][:...] - option name and values. See `PetscObjectViewFromOptions()` for the possible arguments
 
   Level: intermediate
 
