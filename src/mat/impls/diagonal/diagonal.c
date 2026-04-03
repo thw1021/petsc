@@ -921,14 +921,21 @@ static PetscErrorCode MatProductNumeric_PtAP_Diagonal_Diagonal(Mat C)
 
 static PetscErrorCode MatProductSymbolic_PtAP_Diagonal_Diagonal(Mat C)
 {
-  Mat P = C->product->B;
+  Mat           P = C->product->B;
+  Mat_Diagonal *p = (Mat_Diagonal *)P->data;
+  Vec           cdiag;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
   PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
   PetscCall(MatSetSizes(C, P->cmap->n, P->cmap->n, P->cmap->N, P->cmap->N));
   PetscCall(MatSetType(C, MATDIAGONAL));
-  PetscCall(MatSetUp(C));
+  /* Duplicate P's diagonal vec so C inherits the correct vec type (e.g., Kokkos, CUDA, HIP) */
+  PetscCall(MatDiagonalSetUpDiagonal(P));
+  PetscCall(VecDuplicate(p->diag, &cdiag));
+  PetscCall(MatDiagonalSetDiagonal(C, cdiag));
+  PetscCall(VecDestroy(&cdiag));
+  C->assembled           = PETSC_TRUE;
   C->ops->productnumeric = MatProductNumeric_PtAP_Diagonal_Diagonal;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
