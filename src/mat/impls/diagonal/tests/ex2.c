@@ -1,17 +1,19 @@
-const char help[] = "Test MatPtAP with MATDIAGONAL";
+static const char help[] = "Test MatPtAP with MATDIAGONAL\n";
 
 #include <petscmat.h>
 
 int main(int argc, char **argv)
 {
   Mat         A, P, C;
+  MPI_Comm    comm;
   PetscInt    m = 10, n = 8;
   PetscRandom rand;
   PetscBool   flg, pdiag;
   char        atype[64] = MATDIAGONAL, ptype[64] = MATDIAGONAL;
 
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-  MPI_Comm comm = PETSC_COMM_WORLD;
+  comm = PETSC_COMM_WORLD;
 
   PetscCall(PetscOptionsGetString(NULL, NULL, "-atype", atype, sizeof(atype), NULL));
   PetscCall(PetscOptionsGetString(NULL, NULL, "-ptype", ptype, sizeof(ptype), NULL));
@@ -81,7 +83,7 @@ int main(int argc, char **argv)
   PetscCall(MatDestroy(&A));
   PetscCall(PetscRandomDestroy(&rand));
   PetscCall(PetscFinalize());
-  return 0;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*TEST
@@ -139,6 +141,60 @@ int main(int argc, char **argv)
     suffix: mpidense_diag
     nsize: 2
     args: -atype mpidense -ptype diagonal
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_diag_kokkos
+    requires: kokkos_kernels
+    args: -atype diagonal -ptype diagonal -vec_type kokkos
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_seqaijkokkos
+    requires: kokkos_kernels
+    args: -atype diagonal -ptype seqaijkokkos -vec_type kokkos
+    output_file: output/empty.out
+
+  test:
+    suffix: seqaijkokkos_diag
+    requires: kokkos_kernels
+    args: -atype seqaijkokkos -ptype diagonal -vec_type kokkos
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_diag_cuda
+    requires: cuda
+    args: -atype diagonal -ptype diagonal -vec_type cuda
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_seqaijcusparse
+    requires: cuda
+    args: -atype diagonal -ptype seqaijcusparse -vec_type cuda
+    output_file: output/empty.out
+
+  test:
+    suffix: seqaijcusparse_diag
+    requires: cuda
+    args: -atype seqaijcusparse -ptype diagonal -vec_type cuda
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_diag_hip
+    requires: hip
+    args: -atype diagonal -ptype diagonal -vec_type hip
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_seqaijhipsparse
+    requires: hip
+    args: -atype diagonal -ptype seqaijhipsparse -vec_type hip
+    output_file: output/empty.out
+
+  test:
+    suffix: seqaijhipsparse_diag
+    requires: hip
+    args: -atype seqaijhipsparse -ptype diagonal -vec_type hip
     output_file: output/empty.out
 
 TEST*/
