@@ -9,7 +9,6 @@ import sys
 import pathlib
 import subprocess
 import tantivy
-import re
 
 def addSemicolon(line):
   '''Adds semicolon to end of synopsis function prototype lines in PETSc md manual pages'''
