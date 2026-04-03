@@ -834,26 +834,36 @@ static PetscErrorCode MatProductSetFromOptions_Diagonal_Dense(Mat C)
 */
 static PetscErrorCode MatDiagonalCheckVecCompatibility(Mat diag, Mat target)
 {
-  VecType   mvtype;
-  PetscBool target_is_device = PETSC_FALSE;
-  char     *found            = NULL;
+  VecType dvtype, mvtype;
+  char   *found;
 
   PetscFunctionBegin;
+  /* Some GPU MatDiagonalScale implementations (e.g., Kokkos) use device-specific Vec accessors
+     that require the Vec to be the matching device type, rather than using VecGetArrayRead which
+     accepts any type. We verify the MATDIAGONAL's Vec type is compatible with the target matrix.
+     The target's defaultvectype is the base name (e.g., "kokkos"); the Vec's type is the concrete
+     variant (e.g., "seqkokkos"). Compatibility is checked via substring containment, following the
+     PETSc convention where device types share a common base name. CPU type mismatches (e.g., "seq"
+     vs "standard") are harmless since CPU MatDiagonalScale uses VecGetArrayRead. */
   PetscCall(MatGetVecType(target, &mvtype));
-  if (mvtype && mvtype[0]) {
-    PetscCall(PetscStrstr(mvtype, "kokkos", &found));
-    if (!found) PetscCall(PetscStrstr(mvtype, "cuda", &found));
-    if (!found) PetscCall(PetscStrstr(mvtype, "hip", &found));
-    if (found) target_is_device = PETSC_TRUE;
-  }
-  if (target_is_device) {
-    PetscBool ddevice;
-    PetscCall(PetscObjectTypeCompareAny((PetscObject)((Mat_Diagonal *)diag->data)->diag, &ddevice, VECSEQKOKKOS, VECMPIKOKKOS, VECSEQCUDA, VECMPICUDA, VECSEQHIP, VECMPIHIP, ""));
-    if (!ddevice) {
-      VecType dvtype;
-      PetscCall(VecGetType(((Mat_Diagonal *)diag->data)->diag, &dvtype));
-      SETERRQ(PetscObjectComm((PetscObject)target), PETSC_ERR_SUP, "MATDIAGONAL Vec type '%s' is incompatible with device matrix Vec type '%s'. Create the MATDIAGONAL using a device Vec (e.g., -vec_type %s)", dvtype, mvtype, mvtype);
+  if (!mvtype || !mvtype[0]) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(VecGetType(((Mat_Diagonal *)diag->data)->diag, &dvtype));
+  PetscCall(PetscStrstr(dvtype, mvtype, &found));
+  if (!found) PetscCall(PetscStrstr(mvtype, dvtype, &found));
+  if (!found) {
+    /* No substring match. Only error when device types are involved; CPU mismatches are harmless.
+       Uses the same PetscObjectTypeCompareAny pattern as MatDiagonalSetDiagonal (line ~498). */
+    PetscBool diag_is_device;
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)((Mat_Diagonal *)diag->data)->diag, &diag_is_device, VECSEQKOKKOS, VECMPIKOKKOS, VECSEQCUDA, VECMPICUDA, VECSEQHIP, VECMPIHIP, ""));
+    if (!diag_is_device) {
+      PetscBool target_needs_device = PETSC_FALSE;
+      PetscCall(PetscStrstr(mvtype, "kokkos", &found));
+      if (!found) PetscCall(PetscStrstr(mvtype, "cuda", &found));
+      if (!found) PetscCall(PetscStrstr(mvtype, "hip", &found));
+      if (found) target_needs_device = PETSC_TRUE;
+      PetscCheck(!target_needs_device, PetscObjectComm((PetscObject)target), PETSC_ERR_SUP, "MATDIAGONAL Vec type '%s' is incompatible with target matrix Vec type '%s'. Create the MATDIAGONAL using a compatible Vec type (e.g., -vec_type %s)", dvtype, mvtype, mvtype);
     }
+    /* If diagonal is device but target is CPU, no issue — CPU MatDiagonalScale handles it */
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
