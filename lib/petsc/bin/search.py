@@ -19,7 +19,9 @@ def addSemicolon(line):
 def ProcessMarkDown(text):
   '''Remove cruft from markdown files'''
 
-  text = text[0:text.find('[Index of all')]
+  footer = text.find('[Index of all')
+  if footer != -1:
+    text = text[:footer]
   #indices = 'Index of all ' + mansec + ' routines Table of Contents for all manual pages Index of all manual pages'
   indices = ' routines Table of Contents for all manual pages Index of all manual pages'
   bibs    = '{bibliography} :filter: docname in docnames'
