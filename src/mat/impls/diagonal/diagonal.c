@@ -851,8 +851,9 @@ static PetscErrorCode MatDiagonalCheckVecCompatibility(Mat diag, Mat target)
   PetscCall(PetscStrstr(dvtype, mvtype, &found));
   if (!found) PetscCall(PetscStrstr(mvtype, dvtype, &found));
   if (!found) {
-    /* No substring match. Only error when device types are involved; CPU mismatches are harmless.
-       Uses the same PetscObjectTypeCompareAny pattern as MatDiagonalSetDiagonal (line ~498). */
+    /* No substring match. Only error when device types are involved; CPU mismatches are harmless. *
+     *  Uses the same PetscObjectTypeCompareAny pattern as MatDiagonalSetDiagonal (line ~498).     *
+     * If diagonal is device but target is CPU, no issue — CPU MatDiagonalScale handles it         */
     PetscBool diag_is_device;
     PetscCall(PetscObjectTypeCompareAny((PetscObject)((Mat_Diagonal *)diag->data)->diag, &diag_is_device, VECSEQKOKKOS, VECMPIKOKKOS, VECSEQCUDA, VECMPICUDA, VECSEQHIP, VECMPIHIP, ""));
     if (!diag_is_device) {
@@ -863,7 +864,6 @@ static PetscErrorCode MatDiagonalCheckVecCompatibility(Mat diag, Mat target)
       if (found) target_needs_device = PETSC_TRUE;
       PetscCheck(!target_needs_device, PetscObjectComm((PetscObject)target), PETSC_ERR_SUP, "MATDIAGONAL Vec type '%s' is incompatible with target matrix Vec type '%s'. Create the MATDIAGONAL using a compatible Vec type (e.g., -vec_type %s)", dvtype, mvtype, mvtype);
     }
-    /* If diagonal is device but target is CPU, no issue — CPU MatDiagonalScale handles it */
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
