@@ -333,6 +333,14 @@ static PetscErrorCode MatDestroy_Diagonal(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDiagonalRestoreInverseDiagonal_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_diagonal_seqdense_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_diagonal_mpidense_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_diagonal_diagonal_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_diagonal_seqaij_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_diagonal_mpiaij_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqaij_diagonal_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpiaij_diagonal_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_seqdense_diagonal_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_mpidense_diagonal_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatProductSetFromOptions_anytype_C", NULL));
   PetscCall(PetscFree(mat->data));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -799,12 +807,313 @@ static PetscErrorCode MatProductSetFromOptions_Diagonal_Dense_AB(Mat C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatProductSymbolic_PtAP_Diagonal_Any(Mat);
+
 static PetscErrorCode MatProductSetFromOptions_Diagonal_Dense(Mat C)
 {
   Mat_Product *product = C->product;
 
   PetscFunctionBegin;
-  if (product->type == MATPRODUCT_AB || product->type == MATPRODUCT_AtB) PetscCall(MatProductSetFromOptions_Diagonal_Dense_AB(C));
+  if (product->type == MATPRODUCT_AB || product->type == MATPRODUCT_AtB) {
+    PetscCall(MatProductSetFromOptions_Diagonal_Dense_AB(C));
+  } else if (product->type == MATPRODUCT_PtAP) {
+    C->ops->productsymbolic = MatProductSymbolic_PtAP_Diagonal_Any;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+   Check that a MATDIAGONAL's internal Vec type is compatible with a target matrix's Vec type.
+   Kokkos require vectors passed to MatDiagonalScale to match the matrix's device type exactly.
+   VecGetKokkosView errors on non-Kokkos vectors. Rather than silently converting
+   (which hides a per-numeric-call host-to-device copy), we error out so
+   the user creates the MATDIAGONAL with the right Vec type.
+
+   Only device type mismatches are checked; CPU type name differences (e.g., "seq" vs "standard")
+   are harmless since CPU MatDiagonalScale uses VecGetArrayRead which accepts any Vec type.
+*/
+static PetscErrorCode MatDiagonalCheckVecCompatibility(Mat diag, Mat target)
+{
+  VecType dvtype, mvtype;
+  char   *found;
+
+  PetscFunctionBegin;
+  /* Some GPU MatDiagonalScale implementations (e.g., Kokkos) use device-specific Vec accessors
+     that require the Vec to be the matching device type, rather than using VecGetArrayRead which
+     accepts any type. We verify the MATDIAGONAL's Vec type is compatible with the target matrix.
+     The target's defaultvectype is the base name (e.g., "kokkos"); the Vec's type is the concrete
+     variant (e.g., "seqkokkos"). Compatibility is checked via substring containment, following the
+     PETSc convention where device types share a common base name. CPU type mismatches (e.g., "seq"
+     vs "standard") are harmless since CPU MatDiagonalScale uses VecGetArrayRead. */
+  PetscCall(MatGetVecType(target, &mvtype));
+  if (!mvtype || !mvtype[0]) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(VecGetType(((Mat_Diagonal *)diag->data)->diag, &dvtype));
+  PetscCall(PetscStrstr(dvtype, mvtype, &found));
+  if (!found) PetscCall(PetscStrstr(mvtype, dvtype, &found));
+  if (!found) {
+    /* No substring match. Only error when device types are involved; CPU mismatches are harmless. *
+     *  Uses the same PetscObjectTypeCompareAny pattern as MatDiagonalSetDiagonal (line ~498).     */
+    PetscBool diag_is_device;
+    PetscCall(PetscObjectTypeCompareAny((PetscObject)((Mat_Diagonal *)diag->data)->diag, &diag_is_device, VECSEQKOKKOS, VECMPIKOKKOS, VECSEQCUDA, VECMPICUDA, VECSEQHIP, VECMPIHIP, ""));
+    if (!diag_is_device) {
+      PetscBool target_needs_device = PETSC_FALSE;
+      PetscCall(PetscStrstr(mvtype, "kokkos", &found));
+      if (!found) PetscCall(PetscStrstr(mvtype, "cuda", &found));
+      if (!found) PetscCall(PetscStrstr(mvtype, "hip", &found));
+      if (found) target_needs_device = PETSC_TRUE;
+      PetscCheck(!target_needs_device, PetscObjectComm((PetscObject)target), PETSC_ERR_SUP, "MATDIAGONAL Vec type '%s' is incompatible with target matrix Vec type '%s'. Create the MATDIAGONAL using a compatible Vec type (e.g., -vec_type %s)", dvtype, mvtype, mvtype);
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* AB for diagonal * any (non-dense) matrix: C = D * B (row scaling) */
+static PetscErrorCode MatProductNumeric_AB_Diagonal_Any(Mat C)
+{
+  Mat           A = C->product->A, B = C->product->B;
+  Mat_Diagonal *a = (Mat_Diagonal *)A->data;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 1);
+  PetscCall(MatDiagonalSetUpDiagonal(A));
+  PetscCall(MatCopy(B, C, SAME_NONZERO_PATTERN));
+  PetscCall(MatDiagonalScale(C, a->diag, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProductSymbolic_AB_Diagonal_Any(Mat C)
+{
+  Mat          A       = C->product->A;
+  Mat          B       = C->product->B;
+  Mat_Product *product = C->product;
+  Mat          Cwork;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 1);
+  PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
+  PetscCall(MatDiagonalCheckVecCompatibility(A, B));
+  PetscCall(MatDuplicate(B, MAT_DO_NOT_COPY_VALUES, &Cwork));
+  C->product = NULL;
+  PetscCall(MatHeaderReplace(C, &Cwork));
+  C->product             = product;
+  C->ops->productnumeric = MatProductNumeric_AB_Diagonal_Any;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* PtAP for diagonal * diagonal: C_ii = d_A_i * d_P_i^2 */
+static PetscErrorCode MatProductNumeric_PtAP_Diagonal_Diagonal(Mat C)
+{
+  Mat           A = C->product->A, P = C->product->B;
+  Mat_Diagonal *a = (Mat_Diagonal *)A->data, *p = (Mat_Diagonal *)P->data, *c = (Mat_Diagonal *)C->data;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 1);
+  PetscCall(MatDiagonalSetUpDiagonal(A));
+  PetscCall(MatDiagonalSetUpDiagonal(P));
+  PetscCall(VecPointwiseMult(c->diag, a->diag, p->diag));
+  PetscCall(VecPointwiseMult(c->diag, c->diag, p->diag));
+  c->diag_valid     = PETSC_TRUE;
+  c->inv_diag_valid = PETSC_FALSE;
+  PetscCall(PetscLogFlops(2.0 * C->rmap->n));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProductSymbolic_PtAP_Diagonal_Diagonal(Mat C)
+{
+  Mat           P = C->product->B;
+  Mat_Diagonal *p = (Mat_Diagonal *)P->data;
+  Vec           cdiag;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 1);
+  PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
+  PetscCall(MatSetSizes(C, P->cmap->n, P->cmap->n, P->cmap->N, P->cmap->N));
+  PetscCall(MatSetType(C, MATDIAGONAL));
+  /* Duplicate P's diagonal vec so C inherits the correct vec type (e.g., Kokkos, CUDA, HIP) */
+  PetscCall(MatDiagonalSetUpDiagonal(P));
+  PetscCall(VecDuplicate(p->diag, &cdiag));
+  PetscCall(MatDiagonalSetDiagonal(C, cdiag));
+  PetscCall(VecDestroy(&cdiag));
+  C->assembled           = PETSC_TRUE;
+  C->ops->productnumeric = MatProductNumeric_PtAP_Diagonal_Diagonal;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* PtAP for any * diagonal: C = D * A * D (bilateral diagonal scaling) */
+static PetscErrorCode MatProductNumeric_PtAP_Any_Diagonal(Mat C)
+{
+  Mat           A = C->product->A, P = C->product->B;
+  Mat_Diagonal *p = (Mat_Diagonal *)P->data;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 1);
+  PetscCall(MatDiagonalSetUpDiagonal(P));
+  PetscCall(MatCopy(A, C, SAME_NONZERO_PATTERN));
+  PetscCall(MatDiagonalScale(C, p->diag, p->diag));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProductSymbolic_PtAP_Any_Diagonal(Mat C)
+{
+  Mat          A       = C->product->A;
+  Mat          P       = C->product->B;
+  Mat_Product *product = C->product;
+  Mat          Cwork;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 1);
+  PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
+  PetscCall(MatDiagonalCheckVecCompatibility(P, A));
+  PetscCall(MatDuplicate(A, MAT_DO_NOT_COPY_VALUES, &Cwork));
+  C->product = NULL;
+  PetscCall(MatHeaderReplace(C, &Cwork));
+  C->product             = product;
+  C->ops->productnumeric = MatProductNumeric_PtAP_Any_Diagonal;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* PtAP for diagonal A and any non-diagonal P: C = P^T * D * P
+   Decomposed into two separate MatProducts to avoid the Unsafe decomposition
+   (which requires transposematmultnumeric, not set by GPU types) and the
+   ABC_Basic swap pattern (which doesn't propagate old-style symbolic ops). */
+typedef struct {
+  Mat AP;   /* intermediate D*P result */
+  Mat PtAP; /* P^T * AP result */
+} MatProductCtx_PtAP_DiagAny;
+
+static PetscErrorCode MatProductCtxDestroy_PtAP_DiagAny(PetscCtxRt data)
+{
+  MatProductCtx_PtAP_DiagAny *ctx = *(MatProductCtx_PtAP_DiagAny **)data;
+
+  PetscFunctionBegin;
+  PetscCall(MatDestroy(&ctx->AP));
+  PetscCall(MatDestroy(&ctx->PtAP));
+  PetscCall(PetscFree(ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProductNumeric_PtAP_Diagonal_Any(Mat C)
+{
+  Mat_Product                *product = C->product;
+  MatProductCtx_PtAP_DiagAny *ctx     = (MatProductCtx_PtAP_DiagAny *)product->data;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 1);
+  PetscCall(MatProductNumeric(ctx->AP));
+  PetscCall(MatProductNumeric(ctx->PtAP));
+  PetscCall(MatCopy(ctx->PtAP, C, SAME_NONZERO_PATTERN));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatProductSymbolic_PtAP_Diagonal_Any(Mat C)
+{
+  Mat_Product                *product = C->product;
+  Mat                         A = product->A, P = product->B;
+  MatProductCtx_PtAP_DiagAny *ctx;
+  Mat                         Cwork;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C, 1);
+  PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
+  PetscCall(MatDiagonalCheckVecCompatibility(A, P));
+
+  PetscCall(PetscNew(&ctx));
+
+  /* AP = D * P */
+  PetscCall(MatProductCreate(A, P, NULL, &ctx->AP));
+  PetscCall(MatProductSetType(ctx->AP, MATPRODUCT_AB));
+  PetscCall(MatProductSetFill(ctx->AP, product->fill));
+  PetscCall(MatProductSetFromOptions(ctx->AP));
+  PetscCall(MatProductSymbolic(ctx->AP));
+  PetscCall(MatProductNumeric(ctx->AP));
+
+  /* PtAP = P^T * AP */
+  PetscCall(MatProductCreate(P, ctx->AP, NULL, &ctx->PtAP));
+  PetscCall(MatProductSetType(ctx->PtAP, MATPRODUCT_AtB));
+  PetscCall(MatProductSetFill(ctx->PtAP, product->fill));
+  PetscCall(MatProductSetFromOptions(ctx->PtAP));
+  PetscCall(MatProductSymbolic(ctx->PtAP));
+  PetscCall(MatProductNumeric(ctx->PtAP));
+
+  /* Set up C with the same structure as PtAP */
+  PetscCall(MatDuplicate(ctx->PtAP, MAT_COPY_VALUES, &Cwork));
+  C->product = NULL;
+  PetscCall(MatHeaderReplace(C, &Cwork));
+  C->product             = product;
+  product->data          = ctx;
+  product->destroy       = MatProductCtxDestroy_PtAP_DiagAny;
+  C->ops->productnumeric = MatProductNumeric_PtAP_Diagonal_Any;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Dispatchers */
+static PetscErrorCode MatProductSetFromOptions_Diagonal_Diagonal(Mat C)
+{
+  Mat_Product *product = C->product;
+
+  PetscFunctionBegin;
+  if (product->type == MATPRODUCT_AB || product->type == MATPRODUCT_AtB) {
+    C->ops->productsymbolic = MatProductSymbolic_AB_Diagonal_Any;
+  } else if (product->type == MATPRODUCT_PtAP) {
+    C->ops->productsymbolic = MatProductSymbolic_PtAP_Diagonal_Diagonal;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* AB/AtB/PtAP for diagonal*AIJ */
+static PetscErrorCode MatProductSetFromOptions_Diagonal_AIJ(Mat C)
+{
+  Mat_Product *product = C->product;
+
+  PetscFunctionBegin;
+  if (product->type == MATPRODUCT_AB || product->type == MATPRODUCT_AtB) {
+    C->ops->productsymbolic = MatProductSymbolic_AB_Diagonal_Any;
+  } else if (product->type == MATPRODUCT_PtAP) {
+    C->ops->productsymbolic = MatProductSymbolic_PtAP_Diagonal_Any;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* PtAP for any*diagonal: C = D * A * D */
+static PetscErrorCode MatProductSetFromOptions_Any_Diagonal(Mat C)
+{
+  Mat_Product *product = C->product;
+
+  PetscFunctionBegin;
+  if (product->type == MATPRODUCT_PtAP) {
+    C->ops->productsymbolic = MatProductSymbolic_PtAP_Any_Diagonal;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+   Fallback dispatcher for matrix type combinations that have no specific registration
+   (e.g., GPU types like seqaijkokkos). Queried via the "anytype" mechanism in
+   MatProductSetFromOptions_Private after specific type queries fail.
+*/
+static PetscErrorCode MatProductSetFromOptions_Diagonal_Anytype(Mat C)
+{
+  Mat_Product *product = C->product;
+  PetscBool    Adiag, Bdiag;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)product->A, MATDIAGONAL, &Adiag));
+  PetscCall(PetscObjectTypeCompare((PetscObject)product->B, MATDIAGONAL, &Bdiag));
+  if (Adiag && Bdiag) {
+    /* Both diagonal: handled by the specific diagonal_diagonal_C registration */
+  } else if (Adiag) {
+    /* A is diagonal, B is some non-diagonal type */
+    if (product->type == MATPRODUCT_AB || product->type == MATPRODUCT_AtB) {
+      C->ops->productsymbolic = MatProductSymbolic_AB_Diagonal_Any;
+    } else if (product->type == MATPRODUCT_PtAP) {
+      C->ops->productsymbolic = MatProductSymbolic_PtAP_Diagonal_Any;
+    }
+  } else if (Bdiag) {
+    /* B (P) is diagonal, A is some non-diagonal type */
+    if (product->type == MATPRODUCT_PtAP) {
+      C->ops->productsymbolic = MatProductSymbolic_PtAP_Any_Diagonal;
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -872,6 +1181,14 @@ PETSC_INTERN PetscErrorCode MatCreate_Diagonal(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatDiagonalRestoreInverseDiagonal_C", MatDiagonalRestoreInverseDiagonal_Diagonal));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_diagonal_seqdense_C", MatProductSetFromOptions_Diagonal_Dense));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_diagonal_mpidense_C", MatProductSetFromOptions_Diagonal_Dense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_diagonal_diagonal_C", MatProductSetFromOptions_Diagonal_Diagonal));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_diagonal_seqaij_C", MatProductSetFromOptions_Diagonal_AIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_diagonal_mpiaij_C", MatProductSetFromOptions_Diagonal_AIJ));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_seqaij_diagonal_C", MatProductSetFromOptions_Any_Diagonal));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_mpiaij_diagonal_C", MatProductSetFromOptions_Any_Diagonal));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_seqdense_diagonal_C", MatProductSetFromOptions_Any_Diagonal));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_mpidense_diagonal_C", MatProductSetFromOptions_Any_Diagonal));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_anytype_C", MatProductSetFromOptions_Diagonal_Anytype));
   PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATDIAGONAL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
