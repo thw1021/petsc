@@ -18,7 +18,6 @@ def addSemicolon(line):
 # horribly crude but all the available tools are useless
 def ProcessMarkDown(text):
   '''Remove cruft from markdown files'''
-  import re
 
   text = text[0:text.find('[Index of all')]
   #indices = 'Index of all ' + mansec + ' routines Table of Contents for all manual pages Index of all manual pages'
