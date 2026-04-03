@@ -89,46 +89,56 @@ int main(int argc, char **argv)
   test:
     suffix: diag_diag
     args: -atype diagonal -ptype diagonal
+    output_file: output/empty.out
 
   test:
     suffix: diag_seqaij
     args: -atype diagonal -ptype seqaij
+    output_file: output/empty.out
 
   test:
     suffix: seqaij_diag
     args: -atype seqaij -ptype diagonal
+    output_file: output/empty.out
 
   test:
     suffix: diag_seqdense
     args: -atype diagonal -ptype seqdense
+    output_file: output/empty.out
 
   test:
     suffix: seqdense_diag
     args: -atype seqdense -ptype diagonal
+    output_file: output/empty.out
 
   test:
     suffix: diag_diag_par
     nsize: 2
     args: -atype diagonal -ptype diagonal
+    output_file: output/empty.out
 
   test:
     suffix: diag_mpiaij
     nsize: 2
     args: -atype diagonal -ptype mpiaij
+    output_file: output/empty.out
 
   test:
     suffix: mpiaij_diag
     nsize: 2
     args: -atype mpiaij -ptype diagonal
+    output_file: output/empty.out
 
   test:
     suffix: diag_mpidense
     nsize: 2
     args: -atype diagonal -ptype mpidense
+    output_file: output/empty.out
 
   test:
     suffix: mpidense_diag
     nsize: 2
     args: -atype mpidense -ptype diagonal
+    output_file: output/empty.out
 
 TEST*/

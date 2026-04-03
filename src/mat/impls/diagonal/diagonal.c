@@ -827,9 +827,9 @@ static PetscErrorCode MatProductSetFromOptions_Diagonal_Dense(Mat C)
 */
 static PetscErrorCode MatDiagonalCheckVecCompatibility(Mat diag, Mat target)
 {
-  VecType    mvtype;
-  PetscBool  target_is_device = PETSC_FALSE;
-  char      *found            = NULL;
+  VecType   mvtype;
+  PetscBool target_is_device = PETSC_FALSE;
+  char     *found            = NULL;
 
   PetscFunctionBegin;
   PetscCall(MatGetVecType(target, &mvtype));
@@ -876,8 +876,8 @@ static PetscErrorCode MatProductSymbolic_AB_Diagonal_Any(Mat C)
   PetscCall(MatDuplicate(B, MAT_DO_NOT_COPY_VALUES, &Cwork));
   C->product = NULL;
   PetscCall(MatHeaderReplace(C, &Cwork));
-  C->product              = product;
-  C->ops->productnumeric  = MatProductNumeric_AB_Diagonal_Any;
+  C->product             = product;
+  C->ops->productnumeric = MatProductNumeric_AB_Diagonal_Any;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -938,8 +938,8 @@ static PetscErrorCode MatProductSymbolic_PtAP_Any_Diagonal(Mat C)
   PetscCall(MatDuplicate(A, MAT_DO_NOT_COPY_VALUES, &Cwork));
   C->product = NULL;
   PetscCall(MatHeaderReplace(C, &Cwork));
-  C->product              = product;
-  C->ops->productnumeric  = MatProductNumeric_PtAP_Any_Diagonal;
+  C->product             = product;
+  C->ops->productnumeric = MatProductNumeric_PtAP_Any_Diagonal;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
