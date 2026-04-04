@@ -120,7 +120,7 @@ PetscErrorCode PetscObjectView(PetscObject obj, PetscViewer viewer)
 .ve
   that send the data to a Unix socket or publish the object to the Scientific Application Webserver (SAWs) exist.
 
-  This function is usually not called directly but is called by, for example, `MatViewFromOptions()`
+  This function is usually not called directly but is called by, for example, `MatViewFromOptions()`.
 
 .seealso: `PetscObject`, `PetscObjectView()`, `PetscOptionsCreateViewer()`
 @*/

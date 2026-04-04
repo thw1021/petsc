@@ -8,13 +8,13 @@
 /* SUBMANSEC = Viewer */
 
 /*S
-  PetscViewer - Abstract PETSc object for displaying (in ASCII, saving to a binary file, graphically display, etc.)
+  PetscViewer - Abstract PETSc object for displaying in ASCII, saving to a binary file, graphically displaying, etc.
                 PETSc objects and their data
 
   Level: beginner
 
   Notes:
-  Each PETSc class, for example, `Vec` has a viewer method associated with that class, for example `VecView()` that can be used
+  Each PETSc class, for example `Vec`, has a viewer method associated with that class, for example `VecView()`, that can be used
   to view, display, store to a file, etc information about that object. Each class also has a method that can be triggered by
   the options database to view the object, for example `VecViewFromOptions()`.
 
