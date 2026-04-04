@@ -16,7 +16,21 @@ static PetscErrorCode CreateDiagonalMat(MPI_Comm comm, PetscInt m, PetscRandom r
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode CreateGeneralMat(MPI_Comm comm, PetscInt m, PetscInt n, const char type[], PetscRandom rand, Mat *M)
+static PetscErrorCode CreateAIJMat(MPI_Comm comm, PetscInt m, PetscInt n, const char type[], PetscRandom rand, Mat *M)
+{
+  PetscFunctionBeginUser;
+  PetscCall(MatCreate(comm, M));
+  PetscCall(MatSetSizes(*M, PETSC_DECIDE, PETSC_DECIDE, m, n));
+  PetscCall(MatSetType(*M, type));
+  PetscCall(MatSeqAIJSetPreallocation(*M, n, NULL));
+  PetscCall(MatMPIAIJSetPreallocation(*M, n, NULL, n, NULL));
+  PetscCall(MatSetRandom(*M, rand));
+  PetscCall(MatAssemblyBegin(*M, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(*M, MAT_FINAL_ASSEMBLY));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode CreateDenseMat(MPI_Comm comm, PetscInt m, PetscInt n, const char type[], PetscRandom rand, Mat *M)
 {
   PetscFunctionBeginUser;
   PetscCall(MatCreate(comm, M));
@@ -36,6 +50,7 @@ int main(int argc, char **argv)
   PetscInt    m = 10, n = 8;
   PetscRandom rand;
   PetscBool   flg, adiag, pdiag;
+  char       *found;
   char        atype[64] = MATDIAGONAL, ptype[64] = MATDIAGONAL;
 
   PetscFunctionBeginUser;
@@ -57,14 +72,28 @@ int main(int argc, char **argv)
   if (adiag) {
     PetscCall(CreateDiagonalMat(comm, m, rand, &A));
   } else {
-    PetscCall(CreateGeneralMat(comm, m, m, atype, rand, &A));
+    PetscBool isaij;
+    PetscCall(PetscStrstr(atype, "aij", &found));
+    isaij = found ? PETSC_TRUE : PETSC_FALSE;
+    if (isaij) {
+      PetscCall(CreateAIJMat(comm, m, m, atype, rand, &A));
+    } else {
+      PetscCall(CreateDenseMat(comm, m, m, atype, rand, &A));
+    }
   }
 
   /* Create P (m x n) */
   if (pdiag) {
     PetscCall(CreateDiagonalMat(comm, m, rand, &P));
   } else {
-    PetscCall(CreateGeneralMat(comm, m, n, ptype, rand, &P));
+    PetscBool isaij;
+    PetscCall(PetscStrstr(ptype, "aij", &found));
+    isaij = found ? PETSC_TRUE : PETSC_FALSE;
+    if (isaij) {
+      PetscCall(CreateAIJMat(comm, m, n, ptype, rand, &P));
+    } else {
+      PetscCall(CreateDenseMat(comm, m, n, ptype, rand, &P));
+    }
   }
 
   /* Initial PtAP */
@@ -149,7 +178,6 @@ int main(int argc, char **argv)
     args: -atype mpidense -ptype diagonal
     output_file: output/empty.out
 
-#if defined(PETSC_HAVE_KOKKOS_KERNELS)
   test:
     suffix: diag_diag_kokkos
     requires: kokkos_kernels
@@ -167,9 +195,7 @@ int main(int argc, char **argv)
     requires: kokkos_kernels
     args: -atype seqaijkokkos -ptype diagonal -vec_type kokkos
     output_file: output/empty.out
-#endif
 
-#if defined(PETSC_HAVE_CUDA)
   test:
     suffix: diag_diag_cuda
     requires: cuda
@@ -187,9 +213,7 @@ int main(int argc, char **argv)
     requires: cuda
     args: -atype seqaijcusparse -ptype diagonal -vec_type cuda
     output_file: output/empty.out
-#endif
 
-#if defined(PETSC_HAVE_HIP)
   test:
     suffix: diag_diag_hip
     requires: hip
@@ -207,6 +231,5 @@ int main(int argc, char **argv)
     requires: hip
     args: -atype seqaijhipsparse -ptype diagonal -vec_type hip
     output_file: output/empty.out
-#endif
 
 TEST*/
