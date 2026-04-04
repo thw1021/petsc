@@ -1695,6 +1695,32 @@ static PetscErrorCode MatShift_MPIAIJKokkos(Mat A, PetscScalar a)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* GPU-native MatAXPY for MATAIJKOKKOS.
+ *
+ * For SAME_NONZERO_PATTERN and SUBSET_NONZERO_PATTERN, delegate to the diagonal
+ * (A) and off-diagonal (B) SeqAIJKokkos sub-matrices.  Those sub-matrices have
+ * MatAXPY_SeqAIJKokkos registered as ops->axpy, so the operation stays entirely
+ * on the device.
+ *
+ * For DIFFERENT_NONZERO_PATTERN the sparsity structure must change; fall back to
+ * the generic CPU path (MatAXPY_Basic) which handles arbitrary patterns correctly.
+ */
+static PetscErrorCode MatAXPY_MPIAIJKokkos(Mat Y, PetscScalar a, Mat X, MatStructure str)
+{
+  Mat_MPIAIJ *xx = (Mat_MPIAIJ *)X->data, *yy = (Mat_MPIAIJ *)Y->data;
+
+  PetscFunctionBegin;
+  if (str == SAME_NONZERO_PATTERN || str == SUBSET_NONZERO_PATTERN) {
+    /* Delegate to SeqAIJKokkos sub-matrices - dispatches to MatAXPY_SeqAIJKokkos (GPU) */
+    PetscCall(MatAXPY(yy->A, a, xx->A, str));
+    PetscCall(MatAXPY(yy->B, a, xx->B, str));
+  } else {
+    /* DIFFERENT_NONZERO_PATTERN: structural change required, use generic CPU path */
+    PetscCall(MatAXPY_Basic(Y, a, X, str));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat B)
 {
   PetscFunctionBegin;
@@ -1706,6 +1732,7 @@ static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat B)
   B->ops->productsetfromoptions = MatProductSetFromOptions_MPIAIJKokkos;
   B->ops->destroy               = MatDestroy_MPIAIJKokkos;
   B->ops->shift                 = MatShift_MPIAIJKokkos;
+  B->ops->axpy                  = MatAXPY_MPIAIJKokkos;
   B->ops->getcurrentmemtype     = MatGetCurrentMemType_MPIAIJ;
   B->ops->bindtocpu             = MatBindToCPU_SeqAIJKokkos;
 
