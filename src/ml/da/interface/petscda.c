@@ -437,6 +437,9 @@ PetscErrorCode PetscDAView(PetscDA da, PetscViewer viewer)
 . obj    - optional object that provides the prefix for options
 - option - option name to check (may be `NULL`)
 
+  Options Database Key:
+. -da_view [viewertype][:...] - option name and values. See `PetscObjectViewFromOptions()` for the possible arguments
+
   Level: beginner
 
 .seealso: [](ch_da), `PetscDAView()`, `PetscObjectViewFromOptions()`

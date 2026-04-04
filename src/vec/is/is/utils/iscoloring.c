@@ -102,12 +102,15 @@ PetscErrorCode ISColoringDestroy(ISColoring *iscoloring)
 . bobj       - prefix to use for viewing, or `NULL` to use prefix of `mat`
 - optionname - option to activate viewing
 
+  Options Database Key:
+. -iscoloring_view [viewertype][:...] - option name and values. See `PetscObjectViewFromOptions()` for the possible arguments
+
   Level: intermediate
 
-  Developer Notes:
+  Developer Note:
   This cannot use `PetscObjectViewFromOptions()` because `ISColoring` is not a `PetscObject`
 
-.seealso: `ISColoring`, `ISColoringView()`
+.seealso: `ISColoring`, `ISColoringView()`, `PetscObjectViewFromOptions()`
 @*/
 PetscErrorCode ISColoringViewFromOptions(ISColoring obj, PetscObject bobj, const char optionname[])
 {
