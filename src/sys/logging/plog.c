@@ -2077,6 +2077,14 @@ PetscErrorCode PetscLogViewFromOptions(void)
 
   PetscFunctionBegin;
   PetscCall(PetscOptionsCreateViewers(PETSC_COMM_WORLD, NULL, NULL, "-log_view", &n_max, viewers, formats, &flg));
+  if (n_max > 0) {
+    PetscBool logging = PETSC_FALSE;
+
+    for (PetscInt i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+      if (PetscLogHandlers[i].handler) logging = PETSC_TRUE;
+    }
+    PetscCheck(logging, PETSC_COMM_WORLD, PETSC_ERR_ORDER, "-log_view is in the options database when PetscFinalize() is called but was not in the database when PetscInitialize() was called, and no function calls to start logging were made after PetscInitialize(); therefore there is no logging available to view");
+  }
   /*
      PetscLogHandlerView_Default_Info() wants to be sure that the only objects still around are these viewers, so keep track of how many there are
    */
