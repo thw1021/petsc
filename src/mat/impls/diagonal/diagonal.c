@@ -989,9 +989,9 @@ static PetscErrorCode MatProductCtxDestroy_PtAP_DiagAny(PetscCtxRt data)
 static PetscErrorCode MatProductNumeric_PtAP_Diagonal_Any(Mat C)
 {
   Mat_Product                *product = C->product;
-  Mat                         A       = product->A, P = product->B;
-  MatProductCtx_PtAP_DiagAny *ctx     = (MatProductCtx_PtAP_DiagAny *)product->data;
-  Mat_Diagonal               *a       = (Mat_Diagonal *)A->data;
+  Mat                         A = product->A, P = product->B;
+  MatProductCtx_PtAP_DiagAny *ctx = (MatProductCtx_PtAP_DiagAny *)product->data;
+  Mat_Diagonal               *a   = (Mat_Diagonal *)A->data;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
