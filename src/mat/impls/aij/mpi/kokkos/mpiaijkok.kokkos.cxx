@@ -1697,43 +1697,25 @@ static PetscErrorCode MatShift_MPIAIJKokkos(Mat A, PetscScalar a)
 
 /* GPU-native MatAXPY for MATAIJKOKKOS.
  *
- * For SAME_NONZERO_PATTERN and SUBSET_NONZERO_PATTERN, delegate to the diagonal
- * (A) and off-diagonal (B) SeqAIJKokkos sub-matrices.  Those sub-matrices have
- * MatAXPY_SeqAIJKokkos registered as ops->axpy, so the operation stays entirely
- * on the device.
+ * For SAME_NONZERO_PATTERN, delegate to the diagonal (A) and off-diagonal (B)
+ * SeqAIJKokkos sub-matrices.  Those sub-matrices have MatAXPY_SeqAIJKokkos
+ * registered as ops->axpy, so the operation stays entirely on the device.
  *
- * For DIFFERENT_NONZERO_PATTERN the sparsity structure must change; fall back to
- * the generic CPU path (MatAXPY_Basic) which handles arbitrary patterns correctly.
+ * For SUBSET_NONZERO_PATTERN and DIFFERENT_NONZERO_PATTERN the sub-matrix global
+ * column counts may differ (e.g. rectangular matrices with different column layouts
+ * across ranks), so fall back to the generic CPU path (MatAXPY_Basic).
  */
 static PetscErrorCode MatAXPY_MPIAIJKokkos(Mat Y, PetscScalar a, Mat X, MatStructure str)
 {
   Mat_MPIAIJ *xx = (Mat_MPIAIJ *)X->data, *yy = (Mat_MPIAIJ *)Y->data;
 
   PetscFunctionBegin;
-  if (str == SAME_NONZERO_PATTERN || str == SUBSET_NONZERO_PATTERN) {
-    /* Delegate to SeqAIJKokkos sub-matrices — dispatches to MatAXPY_SeqAIJKokkos (GPU).
-     *
-     * Guard: when MatMatMult produces tMat with an empty off-diagonal block (0 columns,
-     * no off-process connections), but Prol's off-diagonal block has >0 columns, the
-     * column counts mismatch and MatAXPY on the B sub-matrices would fail with
-     * "Non conforming matrix add".  Since xx->B has 0 columns, adding a*X contributes
-     * nothing to the off-diagonal of Y — skip it safely. */
+  if (str == SAME_NONZERO_PATTERN) {
+    /* Delegate to SeqAIJKokkos sub-matrices - dispatches to MatAXPY_SeqAIJKokkos (GPU) */
     PetscCall(MatAXPY(yy->A, a, xx->A, str));
-    {
-      PetscInt xBn, yBn;
-      PetscCall(MatGetSize(xx->B, NULL, &xBn));
-      PetscCall(MatGetSize(yy->B, NULL, &yBn));
-      if (xBn == yBn) {
-        PetscCall(MatAXPY(yy->B, a, xx->B, str));
-      } else if (xBn != 0) {
-        /* Non-zero column mismatch that is not the empty-B case: fall back to CPU path */
-        PetscCall(MatAXPY_Basic(Y, a, X, str));
-        PetscFunctionReturn(PETSC_SUCCESS);
-      }
-      /* xBn == 0: xx->B is empty, adding zero to yy->B is a no-op — skip */
-    }
+    PetscCall(MatAXPY(yy->B, a, xx->B, str));
   } else {
-    /* DIFFERENT_NONZERO_PATTERN: structural change required, use generic CPU path */
+    /* SUBSET_NONZERO_PATTERN or DIFFERENT_NONZERO_PATTERN: use generic CPU path */
     PetscCall(MatAXPY_Basic(Y, a, X, str));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
