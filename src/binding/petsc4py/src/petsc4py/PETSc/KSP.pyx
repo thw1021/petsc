@@ -721,7 +721,6 @@ cdef class KSP(Object):
         ----------
         dmactive
             What the `DM` should be used for if `flag` is True
-
         flag
             Whether to use the `DM`.
 
