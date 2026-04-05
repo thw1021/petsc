@@ -1695,27 +1695,19 @@ static PetscErrorCode MatShift_MPIAIJKokkos(Mat A, PetscScalar a)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* GPU-native MatAXPY for MATAIJKOKKOS.
- *
- * For SAME_NONZERO_PATTERN, delegate to the diagonal (A) and off-diagonal (B)
- * SeqAIJKokkos sub-matrices.  Those sub-matrices have MatAXPY_SeqAIJKokkos
- * registered as ops->axpy, so the operation stays entirely on the device.
- *
- * For SUBSET_NONZERO_PATTERN and DIFFERENT_NONZERO_PATTERN the sub-matrix global
- * column counts may differ (e.g. rectangular matrices with different column layouts
- * across ranks), so fall back to the generic CPU path (MatAXPY_Basic).
- */
+/* GPU-native MatAXPY for MATMPIAIJKOKKOS.
+   For SAME_NONZERO_PATTERN delegate to the diagonal (A) and off-diagonal (B)
+   SeqAIJKokkos sub-matrices so the operation stays on the device.
+   All other patterns fall back to the generic CPU path. */
 static PetscErrorCode MatAXPY_MPIAIJKokkos(Mat Y, PetscScalar a, Mat X, MatStructure str)
 {
   Mat_MPIAIJ *xx = (Mat_MPIAIJ *)X->data, *yy = (Mat_MPIAIJ *)Y->data;
 
   PetscFunctionBegin;
   if (str == SAME_NONZERO_PATTERN) {
-    /* Delegate to SeqAIJKokkos sub-matrices - dispatches to MatAXPY_SeqAIJKokkos (GPU) */
     PetscCall(MatAXPY(yy->A, a, xx->A, str));
     PetscCall(MatAXPY(yy->B, a, xx->B, str));
   } else {
-    /* SUBSET_NONZERO_PATTERN or DIFFERENT_NONZERO_PATTERN: use generic CPU path */
     PetscCall(MatAXPY_Basic(Y, a, X, str));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
