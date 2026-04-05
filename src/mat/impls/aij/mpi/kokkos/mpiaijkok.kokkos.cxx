@@ -1697,25 +1697,58 @@ static PetscErrorCode MatShift_MPIAIJKokkos(Mat A, PetscScalar a)
 
 /* GPU-native MatAXPY for MATAIJKOKKOS.
  *
- * For SAME_NONZERO_PATTERN, delegate to the diagonal (A) and off-diagonal (B)
- * SeqAIJKokkos sub-matrices.  Those sub-matrices have MatAXPY_SeqAIJKokkos
- * registered as ops->axpy, so the operation stays entirely on the device.
+ * For SAME_NONZERO_PATTERN and SUBSET_NONZERO_PATTERN, delegate to the diagonal
+ * (A) and off-diagonal (B) SeqAIJKokkos sub-matrices.  Those sub-matrices have
+ * MatAXPY_SeqAIJKokkos registered as ops->axpy, so the operation stays entirely
+ * on the device.
  *
- * For SUBSET_NONZERO_PATTERN and DIFFERENT_NONZERO_PATTERN the sub-matrix global
- * column counts may differ (e.g. rectangular matrices with different column layouts
- * across ranks), so fall back to the generic CPU path (MatAXPY_Basic).
+ * For DIFFERENT_NONZERO_PATTERN the sparsity structure must change; fall back to
+ * the generic CPU path (MatAXPY_Basic) which handles arbitrary patterns correctly.
+ *
+ * IMPORTANT: MatAXPY_Basic calls MatSetOption(MAT_NO_OFF_PROC_ENTRIES) which is
+ * a collective operation - ALL ranks must call it together.  The decision to fall
+ * back must therefore be made collectively via a global reduction before any rank
+ * enters MatAXPY_Basic.
  */
 static PetscErrorCode MatAXPY_MPIAIJKokkos(Mat Y, PetscScalar a, Mat X, MatStructure str)
 {
   Mat_MPIAIJ *xx = (Mat_MPIAIJ *)X->data, *yy = (Mat_MPIAIJ *)Y->data;
 
   PetscFunctionBegin;
-  if (str == SAME_NONZERO_PATTERN) {
-    /* Delegate to SeqAIJKokkos sub-matrices - dispatches to MatAXPY_SeqAIJKokkos (GPU) */
+  if (str == SAME_NONZERO_PATTERN || str == SUBSET_NONZERO_PATTERN) {
+    /* Delegate to SeqAIJKokkos sub-matrices - dispatches to MatAXPY_SeqAIJKokkos (GPU).
+     *
+     * Guard: when MatMatMult produces tMat with an empty off-diagonal block (0 columns,
+     * no off-process connections), but Prol's off-diagonal block has >0 columns, the
+     * column counts mismatch and MatAXPY on the B sub-matrices would fail with
+     * "Non conforming matrix add".  Since xx->B has 0 columns, adding a*X contributes
+     * nothing to the off-diagonal of Y - skip it safely.
+     *
+     * Collective fallback: if ANY rank has a non-trivial column mismatch (xBn != yBn
+     * and xBn != 0), ALL ranks must fall back to MatAXPY_Basic because that function
+     * calls MatSetOption(MAT_NO_OFF_PROC_ENTRIES) which is collective.  Use
+     * MPIU_Allreduce to make the decision globally before entering the fallback. */
+    PetscInt xBn, yBn;
+    PetscCall(MatGetSize(xx->B, NULL, &xBn));
+    PetscCall(MatGetSize(yy->B, NULL, &yBn));
+    {
+      PetscInt local_need_fallback  = (xBn != yBn && xBn != 0) ? 1 : 0;
+      PetscInt global_need_fallback = 0;
+      PetscCallMPI(MPIU_Allreduce(&local_need_fallback, &global_need_fallback, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)Y)));
+      if (global_need_fallback) {
+        /* At least one rank has a non-trivial column mismatch - all ranks fall back */
+        PetscCall(MatAXPY_Basic(Y, a, X, str));
+        PetscFunctionReturn(PETSC_SUCCESS);
+      }
+    }
+    /* All ranks agree: either xBn == yBn (delegate) or xBn == 0 (skip off-diag) */
     PetscCall(MatAXPY(yy->A, a, xx->A, str));
-    PetscCall(MatAXPY(yy->B, a, xx->B, str));
+    if (xBn == yBn) {
+      PetscCall(MatAXPY(yy->B, a, xx->B, str));
+    }
+    /* xBn == 0: xx->B is empty, adding zero to yy->B is a no-op - skip */
   } else {
-    /* SUBSET_NONZERO_PATTERN or DIFFERENT_NONZERO_PATTERN: use generic CPU path */
+    /* DIFFERENT_NONZERO_PATTERN: structural change required, use generic CPU path */
     PetscCall(MatAXPY_Basic(Y, a, X, str));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
