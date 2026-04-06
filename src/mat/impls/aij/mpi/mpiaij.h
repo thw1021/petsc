@@ -173,6 +173,7 @@ PETSC_INTERN PetscErrorCode MatSetFromOptions_MPIAIJ(Mat, PetscOptionItems);
 PETSC_INTERN PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJ(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[]);
 
 PETSC_INTERN PetscErrorCode MatAXPYGetPreallocation_MPIX_private(PetscInt, const PetscInt *, const PetscInt *, const PetscInt *, const PetscInt *, const PetscInt *, const PetscInt *, PetscInt *);
+PETSC_INTERN PetscErrorCode MatAXPY_MPIAIJ(Mat, PetscScalar, Mat, MatStructure);
 
 extern PetscErrorCode MatGetDiagonalBlock_MPIAIJ(Mat, Mat *);
 extern PetscErrorCode MatDiagonalScaleLocal_MPIAIJ(Mat, Vec);
