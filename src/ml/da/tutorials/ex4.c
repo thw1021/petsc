@@ -9,6 +9,8 @@ static char help[] = "2D shallow water LETKF data assimilation example.\n"
 
 #include "ex4.h"
 
+const char *const Ex4FluxTypes[] = {"rusanov", "mc", "Ex4FluxType", "EX4_FLUX_", NULL};
+
 /* Default parameter values */
 #define DEFAULT_NX                  40
 #define DEFAULT_NY                  40
@@ -498,6 +500,8 @@ int main(int argc, char **argv)
       PetscCall(DMGetBlockSize(cda, &cdof));
       PetscCheck(cdof >= 2, PETSC_COMM_WORLD, PETSC_ERR_ARG_SIZ, "Coordinate DM block size must be at least 2 for 2D localization");
 
+      /* Extract per-component coordinate vectors; VecStrideGather works because
+         the coordinate DM and Vecxyz share the same parallel layout (xm*ym local points) */
       for (PetscInt d = 0; d < 2; d++) {
         PetscCall(VecCreate(PETSC_COMM_WORLD, &Vecxyz[d]));
         PetscCall(VecSetSizes(Vecxyz[d], PETSC_DECIDE, nx * ny));
