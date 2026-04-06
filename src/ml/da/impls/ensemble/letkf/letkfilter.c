@@ -326,7 +326,8 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
   /* Check that ensemble size <= minimum observations per vertex (cached from SetLocalization).
      The eigendecomposition of T = I + S^T*S (m x m) requires that each
      vertex has at least m local observations; otherwise T is rank-deficient. */
-  PetscCheck(m <= impl->min_nnz_per_row, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Ensemble size (%" PetscInt_FMT ") must be <= minimum local observations per vertex (%" PetscInt_FMT "). Increase localization radius or decrease ensemble size", m, impl->min_nnz_per_row);
+  PetscCheck(m <= impl->min_nnz_per_row, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Ensemble size (%" PetscInt_FMT ") must be <= minimum local observations per vertex (%" PetscInt_FMT "). Increase localization radius or decrease ensemble size", m,
+             impl->min_nnz_per_row);
 
   /* Check for reallocation needs */
   if (impl->mean) {
@@ -521,6 +522,7 @@ static PetscErrorCode PetscDALETKFSetLocalizationRadius_LETKF(PetscDA da, PetscR
 
   PetscFunctionBegin;
   PetscCheck(impl, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDA not properly initialized for LETKF");
+  PetscCheck(radius > 0, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_OUTOFRANGE, "Localization radius must be positive, got %g", (double)radius);
   impl->localization_radius = radius;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
