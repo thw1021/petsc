@@ -19,12 +19,12 @@ typedef struct {
   PetscReal   dt;
   TS          ts;
   PetscReal   h0;
-  PetscReal   Ax, Ay;
+  PetscReal   Ax, Ay; /* wave amplitudes in x and y */
   PetscBool   verify_mms;
   Ex4FluxType flux_type;
 } ShallowWater2DCtx;
 
-static PetscErrorCode ManufacturedSolution2D(PetscReal Lx, PetscReal Ly, PetscReal x, PetscReal y, PetscReal t, PetscReal h0, PetscReal Ax, PetscReal Ay, PetscReal *h, PetscReal *hu, PetscReal *hv)
+static PetscErrorCode ManufacturedSolution2D(PetscReal Lx, PetscReal Ly, PetscReal x, PetscReal y, PetscReal t, PetscReal h0, PetscReal A, PetscReal *h, PetscReal *hu, PetscReal *hv)
 {
   PetscReal sx, sy, cx, cy;
 
@@ -34,13 +34,13 @@ static PetscErrorCode ManufacturedSolution2D(PetscReal Lx, PetscReal Ly, PetscRe
   cx = PetscCosReal(2.0 * PETSC_PI * x / Lx);
   cy = PetscCosReal(2.0 * PETSC_PI * y / Ly);
 
-  *h  = h0 + Ax * PetscSinReal(t) * sx * sy;
-  *hu = Ay * PetscCosReal(t) * cx * sy;
-  *hv = Ay * PetscSinReal(t) * sx * cy;
+  *h  = h0 + A * PetscSinReal(t) * sx * sy;
+  *hu = A * PetscCosReal(t) * cx * sy;
+  *hv = A * PetscSinReal(t) * sx * cy;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode ManufacturedSource2D(PetscReal Lx, PetscReal Ly, PetscReal x, PetscReal y, PetscReal t, PetscReal g, PetscReal h0, PetscReal Ax, PetscReal Ay, PetscReal *S_h, PetscReal *S_hu, PetscReal *S_hv)
+static PetscErrorCode ManufacturedSource2D(PetscReal Lx, PetscReal Ly, PetscReal x, PetscReal y, PetscReal t, PetscReal g, PetscReal h0, PetscReal A, PetscReal *S_h, PetscReal *S_hu, PetscReal *S_hv)
 {
   PetscReal h, hu, hv;
   PetscReal sx, sy, cx, cy;
@@ -50,7 +50,7 @@ static PetscErrorCode ManufacturedSource2D(PetscReal Lx, PetscReal Ly, PetscReal
   PetscReal hu2_over_h_x, huhv_over_h_y, huhv_over_h_x, hv2_over_h_y;
 
   PetscFunctionBeginUser;
-  PetscCall(ManufacturedSolution2D(Lx, Ly, x, y, t, h0, Ax, Ay, &h, &hu, &hv));
+  PetscCall(ManufacturedSolution2D(Lx, Ly, x, y, t, h0, A, &h, &hu, &hv));
 
   kx = 2.0 * PETSC_PI / Lx;
   ky = 2.0 * PETSC_PI / Ly;
@@ -59,16 +59,16 @@ static PetscErrorCode ManufacturedSource2D(PetscReal Lx, PetscReal Ly, PetscReal
   cx = PetscCosReal(kx * x);
   cy = PetscCosReal(ky * y);
 
-  ht  = Ax * PetscCosReal(t) * sx * sy;
-  hut = -Ay * PetscSinReal(t) * cx * sy;
-  hvt = Ay * PetscCosReal(t) * sx * cy;
+  ht  = A * PetscCosReal(t) * sx * sy;
+  hut = -A * PetscSinReal(t) * cx * sy;
+  hvt = A * PetscCosReal(t) * sx * cy;
 
-  hx  = Ax * PetscSinReal(t) * kx * cx * sy;
-  hy  = Ax * PetscSinReal(t) * ky * sx * cy;
-  hux = -Ay * PetscCosReal(t) * kx * sx * sy;
-  huy = Ay * PetscCosReal(t) * ky * cx * cy;
-  hvx = Ay * PetscSinReal(t) * kx * cx * cy;
-  hvy = -Ay * PetscSinReal(t) * ky * sx * sy;
+  hx  = A * PetscSinReal(t) * kx * cx * sy;
+  hy  = A * PetscSinReal(t) * ky * sx * cy;
+  hux = -A * PetscCosReal(t) * kx * sx * sy;
+  huy = A * PetscCosReal(t) * ky * cx * cy;
+  hvx = A * PetscSinReal(t) * kx * cx * cy;
+  hvy = -A * PetscSinReal(t) * ky * sx * sy;
 
   hu2_over_h_x  = (2.0 * hu * hux * h - hu * hu * hx) / (h * h);
   huhv_over_h_y = ((huy * hv + hu * hvy) * h - hu * hv * hy) / (h * h);
@@ -130,7 +130,7 @@ static PetscErrorCode ShallowWaterRHS2D(TS ts, PetscReal t, Vec X, Vec F_vec, Pe
   PetscCall(DMGlobalToLocalBegin(sw->da, X, INSERT_VALUES, X_local));
   PetscCall(DMGlobalToLocalEnd(sw->da, X, INSERT_VALUES, X_local));
   PetscCall(DMDAVecGetArrayDOFRead(sw->da, X_local, (void *)&x));
-  PetscCall(DMDAVecGetArrayDOF(sw->da, F_vec, &f));
+  PetscCall(DMDAVecGetArrayDOFWrite(sw->da, F_vec, &f));
 
   if (sw->flux_type == EX4_FLUX_RUSANOV) {
     for (j = ys; j < ys + ym; j++) {
@@ -196,19 +196,17 @@ static PetscErrorCode ShallowWaterRHS2D(TS ts, PetscReal t, Vec X, Vec F_vec, Pe
           PetscReal y_coord = ((PetscReal)j + 0.5) * sw->dy;
           PetscReal S_h = 0.0, S_hu = 0.0, S_hv = 0.0;
 
-          PetscCall(ManufacturedSource2D(sw->Lx, sw->Ly, x_coord, y_coord, t, sw->g, sw->h0, sw->Ax, sw->Ay, &S_h, &S_hu, &S_hv));
+          PetscCall(ManufacturedSource2D(sw->Lx, sw->Ly, x_coord, y_coord, t, sw->g, sw->h0, sw->Ax, &S_h, &S_hu, &S_hv));
           f[j][i][0] += S_h;
           f[j][i][1] += S_hu;
           f[j][i][2] += S_hv;
         }
       }
     }
-  } else {
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "MC limiter not yet implemented for 2D");
-  }
+  } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "MC limiter not yet implemented for 2D");
 
   PetscCall(DMDAVecRestoreArrayDOFRead(sw->da, X_local, (void *)&x));
-  PetscCall(DMDAVecRestoreArrayDOF(sw->da, F_vec, &f));
+  PetscCall(DMDAVecRestoreArrayDOFWrite(sw->da, F_vec, &f));
   PetscCall(DMRestoreLocalVector(sw->da, &X_local));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -287,5 +285,48 @@ static PetscErrorCode ShallowWaterSolution_Wave2D(PetscReal Lx, PetscReal Ly, Pe
   *h  = h0 + Ax * PetscSinReal(kx * x - omega_x * t) + Ay * PetscSinReal(ky * y - omega_y * t);
   *hu = (*h) * (c / h0) * Ax * PetscCosReal(kx * x - omega_x * t);
   *hv = (*h) * (c / h0) * Ay * PetscCosReal(ky * y - omega_y * t);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  SetupForwardProblem - Create DM, shallow water context, and solution vector
+*/
+static PetscErrorCode SetupForwardProblem(PetscInt nx, PetscInt ny, PetscReal Lx, PetscReal Ly, PetscReal g, PetscReal dt, PetscReal h0, PetscReal Ax, PetscReal Ay, PetscBool verify_mms, Ex4FluxType flux_type, DM *da_state, ShallowWater2DCtx **sw_ctx, Vec *x)
+{
+  PetscFunctionBeginUser;
+  PetscCall(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC, DMDA_STENCIL_STAR, nx, ny, PETSC_DECIDE, PETSC_DECIDE, 3, 2, NULL, NULL, da_state));
+  PetscCall(DMSetFromOptions(*da_state));
+  PetscCall(DMSetUp(*da_state));
+  PetscCall(ShallowWater2DContextCreate(*da_state, nx, ny, Lx, Ly, g, dt, h0, Ax, Ay, verify_mms, flux_type, sw_ctx));
+  PetscCall(DMCreateGlobalVector(*da_state, x));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  SetInitialCondition - Set initial condition on solution vector from analytic solution
+*/
+static PetscErrorCode SetInitialCondition(DM da_state, Vec x, ShallowWater2DCtx *sw, PetscBool use_mms)
+{
+  PetscScalar ***x_array;
+  PetscInt       xs, ys, xm, ym;
+
+  PetscFunctionBeginUser;
+  PetscCheck(!use_mms || sw->Ax == sw->Ay, PetscObjectComm((PetscObject)da_state), PETSC_ERR_ARG_INCOMP, "MMS requires isotropic amplitude (Ax == Ay); got Ax=%g, Ay=%g", (double)sw->Ax, (double)sw->Ay);
+  PetscCall(DMDAGetCorners(da_state, &xs, &ys, NULL, &xm, &ym, NULL));
+  PetscCall(DMDAVecGetArrayDOFWrite(da_state, x, &x_array));
+  for (PetscInt j = ys; j < ys + ym; j++) {
+    for (PetscInt i = xs; i < xs + xm; i++) {
+      PetscReal xc = ((PetscReal)i + 0.5) * sw->dx;
+      PetscReal yc = ((PetscReal)j + 0.5) * sw->dy;
+      PetscReal h, hu, hv;
+
+      if (use_mms) PetscCall(ManufacturedSolution2D(sw->Lx, sw->Ly, xc, yc, 0.0, sw->h0, sw->Ax, &h, &hu, &hv));
+      else PetscCall(ShallowWaterSolution_Wave2D(sw->Lx, sw->Ly, xc, yc, 0.0, sw->g, sw->h0, sw->Ax, sw->Ay, &h, &hu, &hv));
+      x_array[j][i][0] = h;
+      x_array[j][i][1] = hu;
+      x_array[j][i][2] = hv;
+    }
+  }
+  PetscCall(DMDAVecRestoreArrayDOFWrite(da_state, x, &x_array));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
