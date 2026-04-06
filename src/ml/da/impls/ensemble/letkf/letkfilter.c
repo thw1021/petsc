@@ -31,8 +31,8 @@ static PetscErrorCode PetscDADestroy_LETKF(PetscDA da)
   PetscCall(PetscFree(da->data));
 
   PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetLocalization_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetObsPerVertex_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFGetObsPerVertex_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetLocalizationRadius_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFGetLocalizationRadius_C", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -40,7 +40,7 @@ static PetscErrorCode PetscDADestroy_LETKF(PetscDA da)
   ExtractLocalObservations - Extracts local observations for a vertex using localization matrix Q (CPU version)
 
   Input Parameters:
-+ Q          - localization matrix (state_size/ndof x obs_size), each row has constant non-zeros
++ Q          - localization matrix (state_size/ndof x obs_size), variable nnz per row
 . vertex_idx - index of the vertex (row of Q)
 . Z_global   - global observation ensemble matrix (obs_size x m) OR local work matrix
 . y_global   - global observation vector (size obs_size) OR local work vector
@@ -156,7 +156,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDA_LETKF *impl, PetscI
   Vec               y_local, y_mean_local, delta_scaled_local, r_inv_sqrt_local;
   Vec               w_local, s_transpose_delta;
   PetscInt          i_grid_point;
-  PetscInt          ndof;
+  PetscInt          ndof, max_nnz = 0, nnz_row, rstart_q, rend_q;
   PetscReal         sqrt_m_minus_1, scale;
   PetscInt          rstart;
   Mat               X_rows, E_analysis_rows;
@@ -165,12 +165,21 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDA_LETKF *impl, PetscI
   ndof           = da->ndof;
   scale          = 1.0 / PetscSqrtReal((PetscReal)(m - 1));
   sqrt_m_minus_1 = PetscSqrtReal((PetscReal)(m - 1));
-  /* Create local analysis workspace (n_obs_vertex x m matrices and vectors) */
-  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, impl->n_obs_vertex, m, NULL, &Z_local));
+
+  /* Compute max nnz per row of Q for workspace sizing */
+  PetscCall(MatGetOwnershipRange(impl->Q, &rstart_q, &rend_q));
+  for (PetscInt ii = rstart_q; ii < rend_q; ii++) {
+    PetscCall(MatGetRow(impl->Q, ii, &nnz_row, NULL, NULL));
+    if (nnz_row > max_nnz) max_nnz = nnz_row;
+    PetscCall(MatRestoreRow(impl->Q, ii, &nnz_row, NULL, NULL));
+  }
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &max_nnz, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)da)));
+  /* Create local analysis workspace (max_nnz x m matrices and vectors) */
+  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, max_nnz, m, NULL, &Z_local));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)Z_local, "dense_"));
   PetscCall(MatSetFromOptions(Z_local));
   PetscCall(MatSetUp(Z_local));
-  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, impl->n_obs_vertex, m, NULL, &S_local));
+  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, max_nnz, m, NULL, &S_local));
   PetscCall(PetscObjectSetOptionsPrefix((PetscObject)S_local, "dense_"));
   PetscCall(MatSetFromOptions(S_local));
   PetscCall(MatSetUp(S_local));
@@ -183,7 +192,7 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDA_LETKF *impl, PetscI
   PetscCall(MatSetFromOptions(G_local));
   PetscCall(MatSetUp(G_local));
 
-  /* Create vectors using MatCreateVecs from Z_local (n_obs_vertex x m) */
+  /* Create vectors using MatCreateVecs from Z_local (max_nnz x m) */
   PetscCall(MatCreateVecs(Z_local, &w_local, &y_local));
   PetscCall(VecDuplicate(y_local, &y_mean_local));
   PetscCall(VecDuplicate(y_local, &delta_scaled_local));
@@ -197,6 +206,12 @@ PetscErrorCode PetscDALETKFLocalAnalysis(PetscDA da, PetscDA_LETKF *impl, PetscI
   PetscCall(MatGetOwnershipRange(impl->Q, &rstart, NULL));
 
   for (i_grid_point = 0; i_grid_point < n_vertices; i_grid_point++) {
+    /* Zero workspace before extraction (workspace may be larger than this row's nnz) */
+    PetscCall(MatZeroEntries(Z_local));
+    PetscCall(VecZeroEntries(y_local));
+    PetscCall(VecZeroEntries(y_mean_local));
+    PetscCall(VecZeroEntries(r_inv_sqrt_local));
+
     /* Extract local observations for this grid point using Q[i_grid_point,:] */
     /* Note: i_grid_point is local index, but MatGetRow needs global index */
     PetscCall(ExtractLocalObservations(impl->Q, rstart + i_grid_point, Z_global, observation, y_mean_global, r_inv_sqrt_global, impl->obs_g2l, m, Z_local, y_local, y_mean_local, r_inv_sqrt_local));
@@ -301,7 +316,7 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
 {
   PetscDA_LETKF *impl = (PetscDA_LETKF *)da->data;
   Mat            X;
-  PetscInt       m;
+  PetscInt       m, min_nnz = PETSC_INT_MAX, nnz_row, rstart_q, rend_q;
   PetscBool      reallocate = PETSC_FALSE;
 
   PetscFunctionBegin;
@@ -315,12 +330,17 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
      LETKF requires the symmetric square root T^{-1/2} = V * D^{-1/2} * V^T. */
   PetscCheck(impl->en.sqrt_type != PETSCDA_SQRT_CHOLESKY, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Cholesky sqrt type produces asymmetric T^{-1/2}, which is incorrect for LETKF. Use -petscda_ensemble_sqrt_type eigen or PetscDAEnsembleSetSqrtType(da, PETSCDA_SQRT_EIGEN) instead.");
 
-  /* Check that ensemble size <= number of local observations per vertex.
-     The eigen decomposition of T = I + S^T*S (m x m) requires that the
-     local observation count p >= m; otherwise T is rank-deficient and the
-     decomposition is ill-posed. */
-  PetscCheck(m <= impl->n_obs_vertex, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Ensemble size (%" PetscInt_FMT ") must be <= number of local observations per vertex (%" PetscInt_FMT ") for LETKF eigen decomposition to be well-posed", m,
-             impl->n_obs_vertex);
+  /* Check that ensemble size <= minimum observations per vertex.
+     The eigendecomposition of T = I + S^T*S (m x m) requires that each
+     vertex has at least m local observations; otherwise T is rank-deficient. */
+  PetscCall(MatGetOwnershipRange(impl->Q, &rstart_q, &rend_q));
+  for (PetscInt ii = rstart_q; ii < rend_q; ii++) {
+    PetscCall(MatGetRow(impl->Q, ii, &nnz_row, NULL, NULL));
+    if (nnz_row < min_nnz) min_nnz = nnz_row;
+    PetscCall(MatRestoreRow(impl->Q, ii, &nnz_row, NULL, NULL));
+  }
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &min_nnz, 1, MPIU_INT, MPI_MIN, PetscObjectComm((PetscObject)da)));
+  PetscCheck(m <= min_nnz, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Ensemble size (%" PetscInt_FMT ") must be <= minimum local observations per vertex (%" PetscInt_FMT "). Increase localization radius or decrease ensemble size", m, min_nnz);
 
   /* Check for reallocation needs */
   if (impl->mean) {
@@ -509,30 +529,30 @@ static PetscErrorCode PetscDAEnsembleAnalysis_LETKF(PetscDA da, Vec observation,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscDALETKFSetObsPerVertex_LETKF(PetscDA da, PetscInt n_obs_vertex)
+static PetscErrorCode PetscDALETKFSetLocalizationRadius_LETKF(PetscDA da, PetscReal radius)
 {
   PetscDA_LETKF *impl = (PetscDA_LETKF *)da->data;
 
   PetscFunctionBegin;
   PetscCheck(impl, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDA not properly initialized for LETKF");
-  impl->n_obs_vertex = n_obs_vertex;
+  impl->localization_radius = radius;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscDALETKFGetObsPerVertex_LETKF(PetscDA da, PetscInt *n_obs_vertex)
+static PetscErrorCode PetscDALETKFGetLocalizationRadius_LETKF(PetscDA da, PetscReal *radius)
 {
   PetscDA_LETKF *impl = (PetscDA_LETKF *)da->data;
 
   PetscFunctionBegin;
   PetscCheck(impl, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDA not properly initialized for LETKF");
-  *n_obs_vertex = impl->n_obs_vertex;
+  *radius = impl->localization_radius;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q, Mat H)
 {
   PetscDA_LETKF *impl = (PetscDA_LETKF *)da->data;
-  PetscInt       i, nrows, ncols, nnz, rstart, rend;
+  PetscInt       nrows, ncols;
 
   PetscFunctionBegin;
   PetscCheck(impl, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_WRONGSTATE, "PetscDA not properly initialized for LETKF");
@@ -543,16 +563,6 @@ static PetscErrorCode PetscDALETKFSetLocalization_LETKF(PetscDA da, Mat Q, Mat H
   /* Validate matrix dimensions */
   PetscCheck(nrows == da->state_size / da->ndof, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Localization matrix rows (%" PetscInt_FMT ") must match state size (%" PetscInt_FMT ")", nrows, da->state_size);
   PetscCheck(ncols == da->obs_size, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Localization matrix columns (%" PetscInt_FMT ") must match observation size (%" PetscInt_FMT ")", ncols, da->obs_size);
-
-  /* Validate that each row has const non-zero entries */
-  PetscCall(MatGetOwnershipRange(Q, &rstart, &rend));
-  for (i = rstart; i < rend; i++) {
-    const PetscInt    *cols;
-    const PetscScalar *vals;
-    PetscCall(MatGetRow(Q, i, &nnz, &cols, &vals));
-    PetscCheck(nnz == impl->n_obs_vertex, PetscObjectComm((PetscObject)da), PETSC_ERR_ARG_INCOMP, "Row %" PetscInt_FMT " has %" PetscInt_FMT " non-zeros, expected %" PetscInt_FMT, i, nnz, (PetscInt)impl->n_obs_vertex);
-    PetscCall(MatRestoreRow(Q, i, &nnz, &cols, &vals));
-  }
 
   /* Store the localization matrix */
   PetscCall(MatDestroy(&impl->Q));
@@ -593,7 +603,7 @@ static PetscErrorCode PetscDAView_LETKF(PetscDA da, PetscViewer viewer)
 #else
     PetscCall(PetscViewerASCIIPrintf(viewer, "  Local analysis: CPU\n"));
 #endif
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Local observations per vertex: %" PetscInt_FMT "\n", impl->n_obs_vertex));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Localization radius: %g\n", (double)impl->localization_radius));
     if (impl->batch_size > 0) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "  GPU batch size: %" PetscInt_FMT "\n", impl->batch_size));
     } else {
@@ -617,7 +627,7 @@ static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *
   PetscCall(PetscDASetFromOptions_Ensemble(da, PetscOptionsObjectPtr));
   PetscOptionsHeadBegin(PetscOptionsObject, "PetscDA LETKF Options");
   PetscCall(PetscOptionsInt("-petscda_letkf_batch_size", "Batch size for GPU processing", "", impl->batch_size, &impl->batch_size, NULL));
-  PetscCall(PetscOptionsInt("-petscda_letkf_obs_per_vertex", "Number of local observations per vertex", "", impl->n_obs_vertex, &impl->n_obs_vertex, NULL));
+  PetscCall(PetscOptionsReal("-petscda_letkf_localization_radius", "Gaspari-Cohn localization cutoff radius (must be positive)", "", impl->localization_radius, &impl->localization_radius, NULL));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -631,11 +641,11 @@ static PetscErrorCode PetscDASetFromOptions_LETKF(PetscDA da, PetscOptionItems *
 .  -petscda_ensemble_size <size>                 - number of ensemble members
 .  -petscda_ensemble_sqrt_type <cholesky, eigen> - the square root of the matrix to use
 .  -petscda_letkf_batch_size <batch_size>        - set the batch size for GPU processing
--  -petscda_letkf_obs_per_vertex <n_obs_vertex>  - number of observations per vertex
+-  -petscda_letkf_localization_radius <radius>    - Gaspari-Cohn localization cutoff radius (must be positive)
 
    Level: beginner
 
-.seealso: [](ch_da), `PetscDA`, `PetscDACreate()`, `PETSCDAETKF`, `PetscDALETKFSetObsPerVertex()`, `PetscDALETKFGetObsPerVertex()`,
+.seealso: [](ch_da), `PetscDA`, `PetscDACreate()`, `PETSCDAETKF`, `PetscDALETKFSetLocalizationRadius()`, `PetscDALETKFGetLocalizationRadius()`,
           `PetscDALETKFSetLocalization()`, `PetscDAEnsembleSetSize()`, `PetscDASetSizes()`, `PetscDAEnsembleSetSqrtType()`, `PetscDAEnsembleSetInflation()`,
           `PetscDAEnsembleComputeMean()`, `PetscDAEnsembleComputeAnomalies()`, `PetscDAEnsembleAnalysis()`, `PetscDAEnsembleForecast()`
 M*/
@@ -654,41 +664,41 @@ PETSC_INTERN PetscErrorCode PetscDACreate_LETKF(PetscDA da)
   impl->en.analysis       = PetscDAEnsembleAnalysis_LETKF;
   impl->en.forecast       = PetscDAEnsembleForecast_Ensemble;
 
-  impl->n_obs_vertex = 9;
-  impl->Q            = NULL;
-  impl->batch_size   = 0;
+  impl->localization_radius = 0.0;
+  impl->Q                   = NULL;
+  impl->batch_size          = 0;
 
   /* Register the method for setting localization */
   PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetLocalization_C", PetscDALETKFSetLocalization_LETKF));
-  PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetObsPerVertex_C", PetscDALETKFSetObsPerVertex_LETKF));
-  PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFGetObsPerVertex_C", PetscDALETKFGetObsPerVertex_LETKF));
+  PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFSetLocalizationRadius_C", PetscDALETKFSetLocalizationRadius_LETKF));
+  PetscCall(PetscObjectComposeFunction((PetscObject)da, "PetscDALETKFGetLocalizationRadius_C", PetscDALETKFGetLocalizationRadius_LETKF));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscDALETKFSetObsPerVertex - Sets the number of local observations per vertex for the LETKF algorithm.
+  PetscDALETKFSetLocalizationRadius - Sets the Gaspari-Cohn localization cutoff radius for LETKF.
 
   Logically Collective
 
   Input Parameters:
-+ da           - the `PetscDA` context
-- n_obs_vertex - number of observations per vertex
++ da     - the `PetscDA` context
+- radius - the localization cutoff radius (must be positive; use a large value for effectively no localization)
 
   Level: advanced
 
-.seealso: [](ch_da), `PETSCDALETKF`, `PetscDA`, `PetscDALETKFSetLocalization()`
+.seealso: [](ch_da), `PETSCDALETKF`, `PetscDA`, `PetscDALETKFSetLocalization()`, `PetscDALETKFGetLocalizationRadius()`
 @*/
-PetscErrorCode PetscDALETKFSetObsPerVertex(PetscDA da, PetscInt n_obs_vertex)
+PetscErrorCode PetscDALETKFSetLocalizationRadius(PetscDA da, PetscReal radius)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscValidLogicalCollectiveInt(da, n_obs_vertex, 2);
-  PetscTryMethod(da, "PetscDALETKFSetObsPerVertex_C", (PetscDA, PetscInt), (da, n_obs_vertex));
+  PetscValidLogicalCollectiveReal(da, radius, 2);
+  PetscTryMethod(da, "PetscDALETKFSetLocalizationRadius_C", (PetscDA, PetscReal), (da, radius));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscDALETKFGetObsPerVertex - Gets the number of local observations per vertex for the LETKF algorithm.
+  PetscDALETKFGetLocalizationRadius - Gets the Gaspari-Cohn localization cutoff radius for LETKF.
 
   Not Collective
 
@@ -696,18 +706,18 @@ PetscErrorCode PetscDALETKFSetObsPerVertex(PetscDA da, PetscInt n_obs_vertex)
 . da - the `PetscDA` context
 
   Output Parameter:
-. n_obs_vertex - number of observations per vertex
+. radius - the localization cutoff radius
 
   Level: advanced
 
-.seealso: [](ch_da), `PETSCDALETKF`, `PetscDA`, `PetscDALETKFSetObsPerVertex()`
+.seealso: [](ch_da), `PETSCDALETKF`, `PetscDA`, `PetscDALETKFSetLocalizationRadius()`
 @*/
-PetscErrorCode PetscDALETKFGetObsPerVertex(PetscDA da, PetscInt *n_obs_vertex)
+PetscErrorCode PetscDALETKFGetLocalizationRadius(PetscDA da, PetscReal *radius)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(da, PETSCDA_CLASSID, 1);
-  PetscAssertPointer(n_obs_vertex, 2);
-  PetscUseMethod(da, "PetscDALETKFGetObsPerVertex_C", (PetscDA, PetscInt *), (da, n_obs_vertex));
+  PetscAssertPointer(radius, 2);
+  PetscUseMethod(da, "PetscDALETKFGetLocalizationRadius_C", (PetscDA, PetscReal *), (da, radius));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
