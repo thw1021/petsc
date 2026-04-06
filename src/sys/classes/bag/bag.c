@@ -756,7 +756,7 @@ PetscErrorCode PetscBagView(PetscBag bag, PetscViewer view)
 
   Level: intermediate
 
-.seealso: `PetscBagCreate()`, `PetscBag`, `PetscViewer`, `PetscBagView`, `PetscObjectViewFromOptions()`
+.seealso: `PetscBagCreate()`, `PetscBag`, `PetscViewer`, `PetscBagView()`, `PetscObjectViewFromOptions()`
 @*/
 PetscErrorCode PetscBagViewFromOptions(PetscBag bag, PetscObject bobj, const char name[])
 {
