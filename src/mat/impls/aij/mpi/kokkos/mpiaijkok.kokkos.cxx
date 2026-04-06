@@ -1680,6 +1680,10 @@ static PetscErrorCode MatDestroy_MPIAIJKokkos(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* GPU-native MatAXPY for MATMPIAIJKOKKOS.
+   Delegate to the diagonal (A) and off-diagonal (B) SeqAIJKokkos sub-matrices
+   so the operation stays on the device for all sparsity patterns.
+   MatAXPY_SeqAIJKokkos handles SAME, SUBSET, and DIFFERENT on the GPU. */
 static PetscErrorCode MatShift_MPIAIJKokkos(Mat A, PetscScalar a)
 {
   Mat_MPIAIJ *mpiaij = static_cast<Mat_MPIAIJ *>(A->data);
@@ -1706,6 +1710,7 @@ static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat B)
   B->ops->productsetfromoptions = MatProductSetFromOptions_MPIAIJKokkos;
   B->ops->destroy               = MatDestroy_MPIAIJKokkos;
   B->ops->shift                 = MatShift_MPIAIJKokkos;
+  B->ops->axpy                  = MatAXPY_MPIAIJ;
   B->ops->getcurrentmemtype     = MatGetCurrentMemType_MPIAIJ;
   B->ops->bindtocpu             = MatBindToCPU_SeqAIJKokkos;
 
