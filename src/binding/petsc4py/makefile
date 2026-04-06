@@ -119,12 +119,12 @@ SPHINXOPTS  =
 sphinx: sphinx-html sphinx-pdf sphinx-man sphinx-info
 sphinx-html:
 	mkdir -p build/doctrees docs/html
-	${SPHINXBUILD} -a -b html -d build/doctrees ${SPHINXOPTS} \
+	${SPHINXBUILD} -E -a -b html -d build/doctrees ${SPHINXOPTS} \
 	docs/source docs/html
 	${RM} docs/html/.buildinfo
 sphinx-pdf:
 	mkdir -p build/doctrees build/latex
-	${SPHINXBUILD} -b latex -d build/doctrees ${SPHINXOPTS} \
+	${SPHINXBUILD} -E -b latex -d build/doctrees ${SPHINXOPTS} \
 	docs/source build/latex
 	${MAKE} -C build/latex all-pdf > /dev/null
 	mv build/latex/*.pdf docs/
