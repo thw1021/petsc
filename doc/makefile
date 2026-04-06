@@ -4,6 +4,7 @@
 # from the environment for the first two.
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
+SPHINXDOPTS   = --fresh-env --write-all --show-traceback -j auto
 SOURCEDIR     = .
 BUILDDIR      = _build
 LINKCHECKDIR  = _build/linkcheck
@@ -18,7 +19,7 @@ help:
 .PHONY: help makefile checklinks
 
 checklinks_rule:
-	@$(SPHINXBUILD) -b linkcheck "$(SOURCEDIR)" "$(LINKCHECKDIR)" $(SPHINXOPTS)
+	@$(SPHINXBUILD) --builder linkcheck "$(SOURCEDIR)" "$(LINKCHECKDIR)" $(SPHINXDOPTS) $(SPHINXOPTS)
 	@echo
 	@echo "Check finished. Report is in $(LINKCHECKDIR)."
 
@@ -32,7 +33,7 @@ images:
 	git clone https://gitlab.com/petsc/images.git -b main-2 --depth=1 images
 
 website-deploy: images
-	$(SPHINXBUILD) -b dirhtml "$(SOURCEDIR)" "$(BUILDDIR)"  -T -E -j auto $(SPHINXOPTS)
+	$(SPHINXBUILD) --builder dirhtml "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXDOPTS) $(SPHINXOPTS)
 
 # use this rule to build the documentation on your machine when working on PETSc documentation
 docs:
@@ -43,4 +44,4 @@ docspdf:
 
 # Catch-all target: route all unknown targets to Sphinx using the new "make mode" option.
 %: makefile images
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)"  -j auto $(SPHINXOPTS)
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXDOPTS) $(SPHINXOPTS)
