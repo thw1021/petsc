@@ -18,7 +18,7 @@ help:
 .PHONY: help makefile checklinks
 
 checklinks_rule:
-	@$(SPHINXBUILD) -b linkcheck "$(SOURCEDIR)" "$(LINKCHECKDIR)" $(SPHINXOPTS)
+	@$(SPHINXBUILD) --fresh-env --write-all --show-traceback --builder linkcheck "$(SOURCEDIR)" "$(LINKCHECKDIR)" $(SPHINXOPTS)
 	@echo
 	@echo "Check finished. Report is in $(LINKCHECKDIR)."
 
@@ -32,7 +32,7 @@ images:
 	git clone https://gitlab.com/petsc/images.git -b main-2 --depth=1 images
 
 website-deploy: images
-	$(SPHINXBUILD) -b dirhtml "$(SOURCEDIR)" "$(BUILDDIR)"  -T -E -j auto $(SPHINXOPTS)
+	$(SPHINXBUILD) --fresh-env --write-all --show-traceback --builder dirhtml "$(SOURCEDIR)" "$(BUILDDIR)" -j auto $(SPHINXOPTS)
 
 # use this rule to build the documentation on your machine when working on PETSc documentation
 docs:
