@@ -1695,6 +1695,24 @@ static PetscErrorCode MatShift_MPIAIJKokkos(Mat A, PetscScalar a)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* GPU-native MatAXPY for MATMPIAIJKOKKOS.
+   For SAME_NONZERO_PATTERN delegate to the diagonal (A) and off-diagonal (B)
+   SeqAIJKokkos sub-matrices so the operation stays on the device.
+   All other patterns fall back to the generic CPU path. */
+static PetscErrorCode MatAXPY_MPIAIJKokkos(Mat Y, PetscScalar a, Mat X, MatStructure str)
+{
+  Mat_MPIAIJ *xx = (Mat_MPIAIJ *)X->data, *yy = (Mat_MPIAIJ *)Y->data;
+
+  PetscFunctionBegin;
+  if (str == SAME_NONZERO_PATTERN) {
+    PetscCall(MatAXPY(yy->A, a, xx->A, str));
+    PetscCall(MatAXPY(yy->B, a, xx->B, str));
+  } else {
+    PetscCall(MatAXPY_Basic(Y, a, X, str));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat B)
 {
   PetscFunctionBegin;
@@ -1706,6 +1724,7 @@ static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat B)
   B->ops->productsetfromoptions = MatProductSetFromOptions_MPIAIJKokkos;
   B->ops->destroy               = MatDestroy_MPIAIJKokkos;
   B->ops->shift                 = MatShift_MPIAIJKokkos;
+  B->ops->axpy                  = MatAXPY_MPIAIJKokkos;
   B->ops->getcurrentmemtype     = MatGetCurrentMemType_MPIAIJ;
   B->ops->bindtocpu             = MatBindToCPU_SeqAIJKokkos;
 
