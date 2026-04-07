@@ -62,6 +62,7 @@ static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps
 KOKKOS_INLINE_FUNCTION
 static void f0_poisson(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[])
 {
+  /* assumes dim == 2 */
   /* Cast to PetscScalar for complex-build safety: Kokkos::sin returns PetscReal. */
   f0[0] = (PetscScalar)(-2.0 * PETSC_PI * PETSC_PI * Kokkos::sin(PETSC_PI * x[0]) * Kokkos::sin(PETSC_PI * x[1]));
 }
@@ -86,8 +87,10 @@ static void g3_poisson(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])
    ========================================================================= */
 static PetscErrorCode u_exact(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
+  PetscFunctionBeginUser;
+  PetscCheck(dim == 2, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Only dim==2 supported");
   *u = PetscSinReal(PETSC_PI * x[0]) * PetscSinReal(PETSC_PI * x[1]);
-  return PETSC_SUCCESS;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* =========================================================================
@@ -152,22 +155,23 @@ int main(int argc, char **argv)
   DM                dm;
   SNES              snes;
   Vec               u;
+  Mat               J;
   PetscReal         error;
   PetscFEKokkosMaps kokkos_ctx; /* Step 4: declare the GPU assembly maps */
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
 
-  /* ---- Create mesh ---- */
+  /* Create mesh */
   PetscCall(DMCreate(PETSC_COMM_WORLD, &dm));
   PetscCall(DMSetType(dm, DMPLEX));
   PetscCall(DMSetFromOptions(dm));
   PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
 
-  /* ---- Attach FE discretization ---- */
+  /* Attach FE discretization */
   PetscCall(SetupDiscretization(dm));
 
-  /* ---- Create SNES ---- */
+  /* Create SNES */
   PetscCall(SNESCreate(PETSC_COMM_WORLD, &snes));
   PetscCall(SNESSetDM(snes, dm));
 
@@ -190,7 +194,6 @@ int main(int argc, char **argv)
    * Kokkos::initialize).  Combines the three-call sequence:
    *   PetscFEKokkosCreateMaps + PetscFEKokkosStageMaps + PetscFEKokkosPreallocateCOO
    * into a single library call. */
-  Mat J;
   PetscCall(DMCreateMatrix(dm, &J));
   PetscCall(PetscFEKokkosSetUp(dm, &kokkos_ctx, J));
 
@@ -202,7 +205,7 @@ int main(int argc, char **argv)
   PetscCall(SNESSetJacobian(snes, J, J, DMPlexSNESComputeJacobianFEM_Kokkos<nullptr, nullptr, nullptr, g3_poisson>, &kokkos_ctx));
   PetscCall(MatDestroy(&J));
 
-  /* ---- Solve ---- */
+  /* Solve */
   PetscCall(DMCreateGlobalVector(dm, &u));
   PetscCall(PetscObjectSetName((PetscObject)u, "u"));
   PetscCall(VecSet(u, 0.0));
@@ -219,10 +222,10 @@ int main(int argc, char **argv)
    * Device Kokkos::Views are reference-counted and freed automatically. */
   PetscCall(PetscFEKokkosMapsDestroy(&kokkos_ctx));
 
-  /* ---- Cleanup ---- */
+  /* Cleanup */
   PetscCall(VecDestroy(&u));
   PetscCall(SNESDestroy(&snes));
   PetscCall(DMDestroy(&dm));
   PetscCall(PetscFinalize());
-  return 0;
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
