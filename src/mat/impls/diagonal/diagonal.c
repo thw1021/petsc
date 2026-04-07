@@ -861,39 +861,6 @@ static PetscErrorCode MatDiagonalCheckVecCompatibility(Mat diag, Mat target)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* AB for diagonal * any (non-dense) matrix: C = D * B (row scaling) */
-static PetscErrorCode MatProductNumeric_AB_Diagonal_Any(Mat C)
-{
-  Mat           A = C->product->A, B = C->product->B;
-  Mat_Diagonal *a = (Mat_Diagonal *)A->data;
-
-  PetscFunctionBegin;
-  MatCheckProduct(C, 1);
-  PetscCall(MatDiagonalSetUpDiagonal(A));
-  PetscCall(MatCopy(B, C, SAME_NONZERO_PATTERN));
-  PetscCall(MatDiagonalScale(C, a->diag, NULL));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatProductSymbolic_AB_Diagonal_Any(Mat C)
-{
-  Mat          A       = C->product->A;
-  Mat          B       = C->product->B;
-  Mat_Product *product = C->product;
-  Mat          Cwork;
-
-  PetscFunctionBegin;
-  MatCheckProduct(C, 1);
-  PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
-  PetscCall(MatDiagonalCheckVecCompatibility(A, B));
-  PetscCall(MatDuplicate(B, MAT_DO_NOT_COPY_VALUES, &Cwork));
-  C->product = NULL;
-  PetscCall(MatHeaderReplace(C, &Cwork));
-  C->product             = product;
-  C->ops->productnumeric = MatProductNumeric_AB_Diagonal_Any;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* PtAP for diagonal * diagonal: C_ii = d_A_i * d_P_i^2 */
 static PetscErrorCode MatProductNumeric_PtAP_Diagonal_Diagonal(Mat C)
 {
@@ -921,6 +888,7 @@ static PetscErrorCode MatProductSymbolic_PtAP_Diagonal_Diagonal(Mat C)
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
   PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
+  // can't use MatDuplicate here
   PetscCall(MatSetSizes(C, P->cmap->n, P->cmap->n, P->cmap->N, P->cmap->N));
   PetscCall(MatSetType(C, MATDIAGONAL));
   /* Duplicate P's diagonal vec so C inherits the correct vec type (e.g., Kokkos, CUDA, HIP) */
@@ -944,6 +912,7 @@ static PetscErrorCode MatProductNumeric_PtAP_Any_Diagonal(Mat C)
   PetscCall(MatDiagonalSetUpDiagonal(P));
   PetscCall(MatCopy(A, C, SAME_NONZERO_PATTERN));
   PetscCall(MatDiagonalScale(C, p->diag, p->diag));
+  //TODO log flops or no?
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -966,13 +935,13 @@ static PetscErrorCode MatProductSymbolic_PtAP_Any_Diagonal(Mat C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* PtAP for diagonal A and any non-diagonal P: C = P^T * D * P
-   Computed as P^T * S where S = D*P is a diagonal-scaled copy of P.
+/* PtAP for diagonal A and any non-diagonal P: C = P^T * A * P
+   Computed as P^T * AP where AP = A*P is a diagonal-scaled copy of P.
    The Unsafe decomposition is not used because it requires the old-style
    transposematmultnumeric pointer, which GPU types do not set. */
 typedef struct {
-  Mat S;    /* S = D*P (scaled copy of P) */
-  Mat PtAP; /* P^T * S result via MatProduct AtB */
+  Mat AP;   /* AP = A*P (scaled copy of P) */
+  Mat PtAP; /* P^T * AP result via MatProduct AtB */
 } MatProductCtx_PtAP_DiagAny;
 
 static PetscErrorCode MatProductCtxDestroy_PtAP_DiagAny(PetscCtxRt data)
@@ -980,7 +949,7 @@ static PetscErrorCode MatProductCtxDestroy_PtAP_DiagAny(PetscCtxRt data)
   MatProductCtx_PtAP_DiagAny *ctx = *(MatProductCtx_PtAP_DiagAny **)data;
 
   PetscFunctionBegin;
-  PetscCall(MatDestroy(&ctx->S));
+  PetscCall(MatDestroy(&ctx->AP));
   PetscCall(MatDestroy(&ctx->PtAP));
   PetscCall(PetscFree(ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -995,13 +964,14 @@ static PetscErrorCode MatProductNumeric_PtAP_Diagonal_Any(Mat C)
 
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
-  /* Update S = D * P */
+  /* Update AP = A * P */
   PetscCall(MatDiagonalSetUpDiagonal(A));
-  PetscCall(MatCopy(P, ctx->S, SAME_NONZERO_PATTERN));
-  PetscCall(MatDiagonalScale(ctx->S, a->diag, NULL));
-  /* Recompute P^T * S */
+  PetscCall(MatCopy(P, ctx->AP, SAME_NONZERO_PATTERN));
+  PetscCall(MatDiagonalScale(ctx->AP, a->diag, NULL));
+  /* Recompute P^T * AP */
   PetscCall(MatProductNumeric(ctx->PtAP));
   PetscCall(MatCopy(ctx->PtAP, C, SAME_NONZERO_PATTERN));
+  //TODO after this, how does flushing happen?
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1009,7 +979,6 @@ static PetscErrorCode MatProductSymbolic_PtAP_Diagonal_Any(Mat C)
 {
   Mat_Product                *product = C->product;
   Mat                         A = product->A, P = product->B;
-  Mat_Diagonal               *a = (Mat_Diagonal *)A->data;
   MatProductCtx_PtAP_DiagAny *ctx;
   Mat                         Cwork;
 
@@ -1020,21 +989,18 @@ static PetscErrorCode MatProductSymbolic_PtAP_Diagonal_Any(Mat C)
 
   PetscCall(PetscNew(&ctx));
 
-  /* S = D * P (scaled copy of P) */
-  PetscCall(MatDiagonalSetUpDiagonal(A));
-  PetscCall(MatDuplicate(P, MAT_COPY_VALUES, &ctx->S));
-  PetscCall(MatDiagonalScale(ctx->S, a->diag, NULL));
+  /* AP = A * P (structure only; numeric phase fills values) */
+  PetscCall(MatDuplicate(P, MAT_DO_NOT_COPY_VALUES, &ctx->AP));
 
-  /* PtAP = P^T * S */
-  PetscCall(MatProductCreate(P, ctx->S, NULL, &ctx->PtAP));
+  /* PtAP = P^T * AP (symbolic only: D*P has same sparsity as P) */
+  PetscCall(MatProductCreate(P, ctx->AP, NULL, &ctx->PtAP));
   PetscCall(MatProductSetType(ctx->PtAP, MATPRODUCT_AtB));
   PetscCall(MatProductSetFill(ctx->PtAP, product->fill));
   PetscCall(MatProductSetFromOptions(ctx->PtAP));
   PetscCall(MatProductSymbolic(ctx->PtAP));
-  PetscCall(MatProductNumeric(ctx->PtAP));
 
   /* Set up C with the same structure as PtAP */
-  PetscCall(MatDuplicate(ctx->PtAP, MAT_COPY_VALUES, &Cwork));
+  PetscCall(MatDuplicate(ctx->PtAP, MAT_DO_NOT_COPY_VALUES, &Cwork));
   C->product = NULL;
   PetscCall(MatHeaderReplace(C, &Cwork));
   C->product             = product;
@@ -1044,15 +1010,12 @@ static PetscErrorCode MatProductSymbolic_PtAP_Diagonal_Any(Mat C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Dispatchers */
 static PetscErrorCode MatProductSetFromOptions_Diagonal_Diagonal(Mat C)
 {
   Mat_Product *product = C->product;
 
   PetscFunctionBegin;
-  if (product->type == MATPRODUCT_AB || product->type == MATPRODUCT_AtB) {
-    C->ops->productsymbolic = MatProductSymbolic_AB_Diagonal_Any;
-  } else if (product->type == MATPRODUCT_PtAP) {
+  if (product->type == MATPRODUCT_PtAP) {
     C->ops->productsymbolic = MatProductSymbolic_PtAP_Diagonal_Diagonal;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1073,11 +1036,11 @@ static PetscErrorCode MatProductSetFromOptions_Diagonal_Anytype(Mat C)
   PetscCall(PetscObjectTypeCompare((PetscObject)product->B, MATDIAGONAL, &Bdiag));
   if (Adiag && Bdiag) {
     /* Both diagonal: handled by the specific diagonal_diagonal_C registration */
+    //would this even happen??
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "MatProductSetFromOptions_Diagonal_Anytype, Adiag and Bdiag\n"));
   } else if (Adiag) {
     /* A is diagonal, B is some non-diagonal type */
-    if (product->type == MATPRODUCT_AB || product->type == MATPRODUCT_AtB) {
-      C->ops->productsymbolic = MatProductSymbolic_AB_Diagonal_Any;
-    } else if (product->type == MATPRODUCT_PtAP) {
+    if (product->type == MATPRODUCT_PtAP) {
       C->ops->productsymbolic = MatProductSymbolic_PtAP_Diagonal_Any;
     }
   } else if (Bdiag) {
