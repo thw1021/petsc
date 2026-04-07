@@ -1,5 +1,5 @@
 /*
-  petscfekokkos.h — Header-template kernel API for PETSCFEKOKKOS (Phase 1.B)
+  petscfekokkos.h -- Header-template kernel API for PETSCFEKOKKOS (Phase 1.B)
 
   This header provides the compile-time template kernel for GPU-resident
   PetscFE residual and Jacobian integration.  The key design principle:
@@ -30,9 +30,9 @@
     - Both coexist; the template path is selected by calling
       PetscFEKokkosComputeResidual instead of relying on the ops dispatch.
 
-  Restrictions (Phase 1.B — lifted in later phases):
+  Restrictions (Phase 1.B -- lifted in later phases):
     - Single field (Nf == 1), no auxiliary fields (dsAux == NULL).
-    - Nc ∈ {1,2,3} — scalar and multi-component vector fields supported (Phase 1b.B2 complete).
+    - Nc in {1,2,3} -- scalar and multi-component vector fields supported (Phase 1b.B2 complete).
     - Affine and non-affine elements both supported.
     - No COO assembly (Phase 1.C adds that).
 
@@ -40,7 +40,7 @@
     - Requires C++14 or later (template function pointers, constexpr).
     - Compatible with nvcc_wrapper (CUDA), hipcc (HIP), and host-only Kokkos.
     - No PETSc error-handling macros (PetscCall, PetscFunctionBegin) in device
-      code — those are host-only.  Host convenience functions use them normally.
+      code -- those are host-only.  Host convenience functions use them normally.
 
   Author: pedra-ai Phase 1.B (2026-04-02)
 */
@@ -79,8 +79,8 @@
 /* =========================================================================
    Type aliases for the two callback families.
 
-   PetscFEKokkosPointFn  — residual callbacks (f0, f1)
-   PetscFEKokkosJacFn    — Jacobian callbacks (g0, g1, g2, g3)
+   PetscFEKokkosPointFn  -- residual callbacks (f0, f1)
+   PetscFEKokkosJacFn    -- Jacobian callbacks (g0, g1, g2, g3)
 
    These match the PetscPointFn / PetscPointJacFn signatures exactly so that
    the same function can be registered with PetscDSSetResidual (host path)
@@ -93,47 +93,47 @@ typedef void (*PetscFEKokkosJacFn)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar ou
    PetscFEKokkosIntegrateResidualCell<F0, F1>
 
    Device-callable template function that integrates the residual for a
-   single element e.  Both F0 and F1 are resolved at compile time — no
+   single element e.  Both F0 and F1 are resolved at compile time -- no
    function pointer indirection on device.
 
    Template parameters:
-     F0  — KOKKOS_INLINE_FUNCTION callback for the zeroth-order term
+     F0  -- KOKKOS_INLINE_FUNCTION callback for the zeroth-order term
             (volume source / reaction).  Signature: PetscFEKokkosPointFn.
             Pass nullptr_t (use the nullptr_F0 specialization) to skip.
-     F1  — KOKKOS_INLINE_FUNCTION callback for the first-order term
+     F1  -- KOKKOS_INLINE_FUNCTION callback for the first-order term
             (flux / diffusion).  Signature: PetscFEKokkosPointFn.
             Pass nullptr_t to skip.
 
    Arguments (all flat device-accessible arrays):
-     e          — element index (0-based)
-     Nq         — number of quadrature points
-     Nb         — TOTAL number of DOFs per element = T->Nb = Nb_scalar * Nc
+     e          -- element index (0-based)
+     Nq         -- number of quadrature points
+     Nb         -- TOTAL number of DOFs per element = T->Nb = Nb_scalar * Nc
                   (matches PetscFEEvaluateFieldJets_Internal convention)
-     Nc         — number of field components (1 for scalar)
-     dim        — spatial / reference dimension
-     dE         — embedding dimension (== dim for non-embedded meshes)
-     B[Nq*Nb*Nc]          — basis values
-     D[Nq*Nb*Nc*dim]      — basis reference derivatives
-     w[Nq]                — quadrature weights
-     invJ[Ne*Nq*dE*dE]    — inverse Jacobian (expanded: one per (e,q))
-     detJ[Ne*Nq]          — Jacobian determinant (expanded: one per (e,q))
-     coords[Ne*Nq*dE]     — physical coordinates at each (e,q)
-     coeff[Ne*totDim]     — element coefficients (solution DOFs)
-     totDim               — total DOFs per element across all fields
-     uOff                 — field offset in coeff (scalar: 0)
-     fOff                 — field offset in elemVec
-     t                    — time
-     numConstants         — number of PDE constants
-     constants[numConstants] — PDE constants
-     elemVec[Ne*totDim]   — output element vector (accumulated, not zeroed here)
+     Nc         -- number of field components (1 for scalar)
+     dim        -- spatial / reference dimension
+     dE         -- embedding dimension (== dim for non-embedded meshes)
+     B[Nq*Nb*Nc]          -- basis values
+     D[Nq*Nb*Nc*dim]      -- basis reference derivatives
+     w[Nq]                -- quadrature weights
+     invJ[Ne*Nq*dE*dE]    -- inverse Jacobian (expanded: one per (e,q))
+     detJ[Ne*Nq]          -- Jacobian determinant (expanded: one per (e,q))
+     coords[Ne*Nq*dE]     -- physical coordinates at each (e,q)
+     coeff[Ne*totDim]     -- element coefficients (solution DOFs)
+     totDim               -- total DOFs per element across all fields
+     uOff                 -- field offset in coeff (scalar: 0)
+     fOff                 -- field offset in elemVec
+     t                    -- time
+     numConstants         -- number of PDE constants
+     constants[numConstants] -- PDE constants
+     elemVec[Ne*totDim]   -- output element vector (accumulated, not zeroed here)
 
    Layout conventions (match fekokkos.kokkos.cxx / PetscFEEvaluateFieldJets_Internal):
-     B[q * Nb*Nc + b*Nc + c]          — b = 0..Nb-1 (total DOFs), c = 0..Nc-1
+     B[q * Nb*Nc + b*Nc + c]          -- b = 0..Nb-1 (total DOFs), c = 0..Nc-1
      D[q * Nb*Nc*dim + b*Nc*dim + c*dim + e2]
      invJ[e * Nq*dE*dE + q*dE*dE + i*dE + j]   (expanded, affine replicated)
      detJ[e * Nq + q]                            (expanded)
      coords[e * Nq*dE + q*dE + d]
-     coeff[e * totDim + uOff + b]               — b indexes ALL DOFs (0..Nb-1)
+     coeff[e * totDim + uOff + b]               -- b indexes ALL DOFs (0..Nb-1)
      elemVec[e * totDim + fOff + b*Nc + c]
 
    IMPORTANT: coeff is indexed as coeff[b] (not coeff[b*Nc+c]) because PETSc
@@ -152,25 +152,25 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
                                                                const PetscReal   *detJ,                                                                                                              /* [Ne * Nq]               */
                                                                const PetscReal   *coords,                                                                                                            /* [Ne * Nq * dE]          */
                                                                const PetscScalar *coeff,                                                                                                             /* [Ne * totDim]            */
-                                                               PetscInt totDim, PetscInt uOff, PetscInt fOff, PetscReal t, PetscInt numConstants, const PetscScalar *constants, PetscScalar *elemVec /* [Ne * totDim] — accumulated */
+                                                               PetscInt totDim, PetscInt uOff, PetscInt fOff, PetscReal t, PetscInt numConstants, const PetscScalar *constants, PetscScalar *elemVec /* [Ne * totDim] -- accumulated */
 )
 {
-  /* Per-element scratch — stack-allocated, sized for the call-site Nb/Nc/dE.
+  /* Per-element scratch -- stack-allocated, sized for the call-site Nb/Nc/dE.
      CUDA stack is limited (~16 KB per thread) but for typical FE orders
      (P1-P3, Q1-Q3) these arrays are small:
-       u_loc:  Nc      ≤ 4  scalars  (Nc=1 for Poisson)
-       ux_loc: Nc*dE   ≤ 8  scalars
-       f0_loc: Nc      ≤ 4  scalars
-       f1_loc: Nc*dE   ≤ 8  scalars
-       val:    Nb*Nc   ≤ 36 scalars  (P3 quad: Nb=16, Nc=1)
-     Total ≈ 56 PetscScalar = 448 bytes — well within CUDA stack limits.
+       u_loc:  Nc      <= 4  scalars  (Nc=1 for Poisson)
+       ux_loc: Nc*dE   <= 8  scalars
+       f0_loc: Nc      <= 4  scalars
+       f1_loc: Nc*dE   <= 8  scalars
+       val:    Nb*Nc   <= 36 scalars  (P3 quad: Nb=16, Nc=1)
+     Total ~ 56 PetscScalar = 448 bytes -- well within CUDA stack limits.
 
      For Phase 1b (Nc=dim=2) and higher orders these grow but remain safe.
      If stack pressure becomes an issue, switch to Kokkos scratch memory. */
 
-  /* Maximum sizes for stack arrays — sized for P4 hex 3D with Nc=dim=3.
+  /* Maximum sizes for stack arrays -- sized for P4 hex 3D with Nc=dim=3.
      These are compile-time upper bounds; actual loops use runtime Nb/Nc/dE.
-     NOTE: val[] was removed — write directly to elemVec device buffer to
+     NOTE: val[] was removed -- write directly to elemVec device buffer to
      eliminate 3,000 bytes/thread GPU stack pressure (cudaErrorIllegalAddress
      for P3/P4 hex 3D on A100).  elemVec is pre-allocated and zeroed by the
      caller (FormResidual_COO) before launching this kernel. */
@@ -178,7 +178,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
   constexpr PetscInt PETSCFE_KOKKOS_MAX_DE = 3; /* max embedding dim */
 
   PetscScalar u_loc[PETSCFE_KOKKOS_MAX_NC];                          /* u at one qp */
-  PetscScalar ux_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE]; /* ∇u at one qp */
+  PetscScalar ux_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE]; /* gradu at one qp */
   PetscScalar f0_loc[PETSCFE_KOKKOS_MAX_NC];                         /* f0 output */
   PetscScalar f1_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE]; /* f1 output */
 
@@ -186,13 +186,13 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
   const PetscInt uOff_l[1]   = {0};
   const PetscInt uOff_x_l[1] = {0};
 
-  /* Write directly to elemVec device buffer — no intermediate stack array.
+  /* Write directly to elemVec device buffer -- no intermediate stack array.
      Each element e is processed by exactly one thread (RangePolicy over Ne),
      so no atomics are needed here.  The caller zeroes d_elemVec before launch. */
   PetscScalar *ev_e = &elemVec[e * totDim + fOff];
 
   for (PetscInt q = 0; q < Nq; ++q) {
-    /* Geometry at (e, q) — invJ and detJ are pre-expanded by the host
+    /* Geometry at (e, q) -- invJ and detJ are pre-expanded by the host
        (affine elements: single invJ replicated across all Nq slots). */
     const PetscReal *invJ_eq = &invJ[(e * Nq + q) * dE * dE];
     const PetscReal  detJ_eq = detJ[e * Nq + q];
@@ -230,7 +230,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
       }
     }
 
-    /* Call F0 (zeroth-order / source term) — resolved at compile time */
+    /* Call F0 (zeroth-order / source term) -- resolved at compile time */
     if (F0 != nullptr) {
       for (PetscInt c = 0; c < Nc; ++c) f0_loc[c] = 0.0;
       F0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f0_loc);
@@ -240,7 +240,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
         for (PetscInt c = 0; c < Nc; ++c) ev_e[b] += B_q[b * Nc + c] * f0_loc[c] * wq;
     }
 
-    /* Call F1 (first-order / flux term) — resolved at compile time */
+    /* Call F1 (first-order / flux term) -- resolved at compile time */
     if (F1 != nullptr) {
       for (PetscInt i = 0; i < Nc * dE; ++i) f1_loc[i] = 0.0;
       F1(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f1_loc);
@@ -267,21 +267,21 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
    single element e.  All four Jacobian callbacks are resolved at compile time.
 
    Template parameters (any may be nullptr to skip that term):
-     G0  — g0[fc*Nc+gc]         = ∂f0[fc]/∂u[gc]
-     G1  — g1[fc*Nc*dE+gc*dE+d] = ∂f0[fc]/∂(∇u)[gc,d]
-     G2  — g2[fc*dE*Nc+d*Nc+gc] = ∂f1[fc,d]/∂u[gc]
-     G3  — g3[fc*dE*Nc*dE+d*Nc*dE+gc*dE+e2] = ∂f1[fc,d]/∂(∇u)[gc,e2]
+     G0  -- g0[fc*Nc+gc]         = df0[fc]/du[gc]
+     G1  -- g1[fc*Nc*dE+gc*dE+d] = df0[fc]/d(gradu)[gc,d]
+     G2  -- g2[fc*dE*Nc+d*Nc+gc] = df1[fc,d]/du[gc]
+     G3  -- g3[fc*dE*Nc*dE+d*Nc*dE+gc*dE+e2] = df1[fc,d]/d(gradu)[gc,e2]
 
    Arguments: same geometry/tabulation arrays as the residual kernel, plus:
-     Nb                            — TOTAL DOFs per element (= T->Nb = Nb_scalar * Nc)
-     elemMat[Ne * totDim * totDim] — output element matrix (accumulated)
-     u_tShift                      — time-derivative shift (for implicit TS)
+     Nb                            -- TOTAL DOFs per element (= T->Nb = Nb_scalar * Nc)
+     elemMat[Ne * totDim * totDim] -- output element matrix (accumulated)
+     u_tShift                      -- time-derivative shift (for implicit TS)
 
    Layout of elemMat (matches febasic.c PetscFEUpdateElementMat_Internal):
      elemMat[e * totDim*totDim + (fOff + b) * totDim + (gOff + b2)]
-     where b, b2 = 0..Nb-1 (total DOFs, not scalar basis × component pairs)
+     where b, b2 = 0..Nb-1 (total DOFs, not scalar basis x component pairs)
 
-   Note: For Poisson, only G3 is non-zero (g3[d*dE+e2] = δ_{d,e2}).
+   Note: For Poisson, only G3 is non-zero (g3[d*dE+e2] = delta_{d,e2}).
    ========================================================================= */
 template <void (*G0)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g0[]), void (*G1)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g1[]), void (*G2)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g2[]), void (*G3)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])>
 KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE, const PetscReal *B, /* [Nq * Nb * Nc]          */
@@ -291,7 +291,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, Petsc
                                                                const PetscReal   *detJ,                                                                          /* [Ne * Nq]               */
                                                                const PetscReal   *coords,                                                                        /* [Ne * Nq * dE]          */
                                                                const PetscScalar *coeff,                                                                         /* [Ne * totDim]            */
-                                                               PetscInt totDim, PetscInt uOff, PetscInt fOff, PetscInt gOff, PetscReal t, PetscReal u_tShift, PetscInt numConstants, const PetscScalar *constants, PetscScalar *elemMat /* [Ne * totDim * totDim] — accumulated */
+                                                               PetscInt totDim, PetscInt uOff, PetscInt fOff, PetscInt gOff, PetscReal t, PetscReal u_tShift, PetscInt numConstants, const PetscScalar *constants, PetscScalar *elemMat /* [Ne * totDim * totDim] -- accumulated */
 )
 {
   constexpr PetscInt PETSCFE_KOKKOS_MAX_NC  = 3;
@@ -300,7 +300,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, Petsc
 
   PetscScalar u_loc[PETSCFE_KOKKOS_MAX_NC];
   PetscScalar ux_loc[PETSCFE_KOKKOS_MAX_NCD];
-  /* Jacobian output tensors — g0[Nc*Nc], g1[Nc*Nc*dE], g2[Nc*dE*Nc], g3[Nc*dE*Nc*dE] */
+  /* Jacobian output tensors -- g0[Nc*Nc], g1[Nc*Nc*dE], g2[Nc*dE*Nc], g3[Nc*dE*Nc*dE] */
   PetscScalar g0_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_NC];
   PetscScalar g1_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE];
   PetscScalar g2_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE * PETSCFE_KOKKOS_MAX_NC];
@@ -326,8 +326,8 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, Petsc
     for (PetscInt c = 0; c < Nc; ++c) u_loc[c] = 0.0;
     for (PetscInt i = 0; i < Nc * dE; ++i) ux_loc[i] = 0.0;
 
-    /* Interpolate u and ∇u (same convention as residual kernel and fekokkos.kokkos.cxx):
-       b = 0..Nb-1 (total DOFs), coeff[b] — b already encodes scalar basis + component. */
+    /* Interpolate u and gradu (same convention as residual kernel and fekokkos.kokkos.cxx):
+       b = 0..Nb-1 (total DOFs), coeff[b] -- b already encodes scalar basis + component. */
     for (PetscInt b = 0; b < Nb; ++b)
       for (PetscInt c = 0; c < Nc; ++c) u_loc[c] += B_q[b * Nc + c] * coeff_e[b];
 
@@ -342,7 +342,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, Petsc
       }
     }
 
-    /* Evaluate Jacobian callbacks — each resolved at compile time */
+    /* Evaluate Jacobian callbacks -- each resolved at compile time */
     if (G0 != nullptr) {
       for (PetscInt i = 0; i < Nc * Nc; ++i) g0_loc[i] = 0.0;
       G0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g0_loc);
@@ -433,7 +433,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, Petsc
    Declared here so that PetscFEKokkosComputeResidual / ComputeJacobian
    can call it without duplicating the geometry logic.
 
-   This is a host-only function — it uses PetscCall and PetscFunctionBegin.
+   This is a host-only function -- it uses PetscCall and PetscFunctionBegin.
    ========================================================================= */
 /* Inline reimplementation of CoordinatesRefToReal (from petsc/private/petscfeimpl.h).
    That function is static inline in a private header and not exported from libpetsc,
@@ -448,10 +448,10 @@ static inline void PetscFEKokkosCoordRefToReal(PetscInt dimReal, PetscInt dimRef
   }
 }
 
-static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt Nq, PetscInt dim, PetscInt dE, PetscFEGeom *cgeom, const PetscReal *quadPoints, /* [Nq * dim] — reference quadrature points */
-                                                         PetscReal *h_invJ,                                                                                    /* [Ne * Nq * dE * dE] — output */
-                                                         PetscReal *h_detJ,                                                                                    /* [Ne * Nq]            — output */
-                                                         PetscReal *h_coords                                                                                   /* [Ne * Nq * dE]       — output */
+static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt Nq, PetscInt dim, PetscInt dE, PetscFEGeom *cgeom, const PetscReal *quadPoints, /* [Nq * dim] -- reference quadrature points */
+                                                         PetscReal *h_invJ,                                                                                    /* [Ne * Nq * dE * dE] -- output */
+                                                         PetscReal *h_detJ,                                                                                    /* [Ne * Nq]            -- output */
+                                                         PetscReal *h_coords                                                                                   /* [Ne * Nq * dE]       -- output */
 )
 {
   const PetscInt  Np       = cgeom->numPoints;
@@ -508,7 +508,7 @@ static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt N
    are violated (caller should use the Basic path in that case).
    ========================================================================= */
 template <void (*F0)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[]), void (*F1)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f1[])>
-static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar *coefficients, const PetscScalar *coefficients_t, PetscReal t, PetscScalar *elemVec /* [Ne * totDim] — accumulated */
+static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar *coefficients, const PetscScalar *coefficients_t, PetscReal t, PetscScalar *elemVec /* [Ne * totDim] -- accumulated */
 )
 {
   PetscFE            fe;
@@ -652,12 +652,12 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
    Any of G0-G3 may be nullptr to skip that Jacobian term.
 
    Arguments:
-     ds, key, Ne, cgeom, coefficients — same as ComputeResidual
-     t, u_tShift                      — time and time-derivative shift
-     elemMat[Ne * totDim * totDim]    — output element matrix (accumulated)
+     ds, key, Ne, cgeom, coefficients -- same as ComputeResidual
+     t, u_tShift                      -- time and time-derivative shift
+     elemMat[Ne * totDim * totDim]    -- output element matrix (accumulated)
    ========================================================================= */
 template <void (*G0)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g0[]), void (*G1)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g1[]), void (*G2)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g2[]), void (*G3)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])>
-static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar *coefficients, PetscReal t, PetscReal u_tShift, PetscScalar *elemMat /* [Ne * totDim * totDim] — accumulated */
+static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar *coefficients, PetscReal t, PetscReal u_tShift, PetscScalar *elemMat /* [Ne * totDim * totDim] -- accumulated */
 )
 {
   PetscFE            fe;
@@ -796,7 +796,7 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
    Phase 1.C / 1.D: COO Assembly Infrastructure
    =========================================================================
 
-   PetscFEKokkosMaps — precomputed assembly maps for COO scatter.
+   PetscFEKokkosMaps -- precomputed assembly maps for COO scatter.
 
    Built once at setup time from DMPlex closure indices using the Landau
    probing technique; staged to device so that the Jacobian and residual
@@ -844,7 +844,7 @@ typedef struct {
 
 typedef struct {
   /* --- Phase 1.C fields --- */
-  PetscInt   num_elements; /* Ne — number of owned cells */
+  PetscInt   num_elements; /* Ne -- number of owned cells */
   PetscInt   num_dof;      /* total global DOFs (for bounds checking) */
   PetscInt   local_dof;    /* local DOFs including ghosts (local Vec size) */
   PetscInt   Nb;           /* basis functions per element (single field) */
@@ -911,7 +911,7 @@ typedef struct {
    Build gIdx and constraint maps on the host using the Landau probing
    technique.  For each element and basis function, set a unit element
    matrix and call DMPlexGetClosureIndices(useConstraints=TRUE) to discover
-   whether the DOF is unconstrained (diagonal ≈ 1) or constrained (0 < c < 1).
+   whether the DOF is unconstrained (diagonal ~ 1) or constrained (0 < c < 1).
 
    Call PetscFEKokkosStageMaps afterwards to copy to device.
 
@@ -950,7 +950,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
   PetscCall(DMPlexGetHeightStratum(plex, 0, &cStart, &cEnd));
   Ne = cEnd - cStart;
 
-  /* Get Nb and totDim from the DS (on the original dm — DS lives there) */
+  /* Get Nb and totDim from the DS (on the original dm -- DS lives there) */
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(PetscDSGetDiscretization(ds, 0, (PetscObject *)&fe));
   {
@@ -1028,7 +1028,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
     PetscInt *locIdx = NULL;
     PetscCall(DMPlexGetClosureIndices(plex, section, section, cStart + e, PETSC_FALSE, &numLoc, &locIdx, NULL, NULL));
     /* locIdx has numLoc entries in closure order = totDim entries for no constraints.
-     * Map closure position → basis function index using the same ordering as h_gIdx. */
+     * Map closure position -> basis function index using the same ordering as h_gIdx. */
     for (PetscInt q = 0; q < Nb && q < numLoc; ++q) {
       const PetscInt li        = locIdx[q];
       maps->h_lIdx[e * Nb + q] = (li < 0) ? -1 : li;
@@ -1079,16 +1079,16 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
       /* Scan the returned elMat diagonal for this basis function.
        *
        * After DMPlexGetClosureIndices with useConstraints=TRUE, the element
-       * matrix is expanded to numIndices × numIndices (numIndices >= totDim).
+       * matrix is expanded to numIndices x numIndices (numIndices >= totDim).
        * The probed basis function q produces exactly one non-zero diagonal
        * block in the expanded matrix:
-       *   - Unconstrained DOF: diagonal ≈ 1.0 at one position
+       *   - Unconstrained DOF: diagonal ~ 1.0 at one position
        *   - Constrained DOF:   diagonal entries = c_i^2 at parent positions
        *
        * Classification (matching Landau plexland.c:1531-1585):
-       *   1. diag ≈ 1.0 → unconstrained active DOF
-       *   2. 0 < diag < 1 → hanging-node constrained DOF
-       *   3. No non-zero diagonal found → Dirichlet (fully constrained away)
+       *   1. diag ~ 1.0 -> unconstrained active DOF
+       *   2. 0 < diag < 1 -> hanging-node constrained DOF
+       *   3. No non-zero diagonal found -> Dirichlet (fully constrained away)
        *
        * IMPORTANT: Do NOT use indices[f] < 0 to classify as Dirichlet.
        * A constrained DOF may have its first parent at a Dirichlet index,
@@ -1100,7 +1100,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
         if (PetscAbs(diag) > PETSC_MACHINE_EPSILON) {
           found = PETSC_TRUE;
           if (PetscAbs(diag - 1.0) < PETSC_MACHINE_EPSILON) {
-            /* Unconstrained active DOF: diagonal ≈ 1.0.
+            /* Unconstrained active DOF: diagonal ~ 1.0.
              * indices[f] gives the global index (may be negative for Dirichlet). */
             if (indices[f] < 0) {
               maps->h_gIdx[e * Nb + q] = (PetscFEKokkosIdx)(-1);
@@ -1428,7 +1428,7 @@ static inline PetscErrorCode PetscFEKokkosDestroyMaps(PetscFEKokkosMaps *maps)
 }
 
 /* =========================================================================
-   Phase 1c.E — PETSc-level API for GPU-resident FEM assembly
+   Phase 1c.E -- PETSc-level API for GPU-resident FEM assembly
    =========================================================================
 
    PetscFEKokkosCtx
@@ -1438,16 +1438,16 @@ static inline PetscErrorCode PetscFEKokkosDestroyMaps(PetscFEKokkosMaps *maps)
    and DMPlexSNESComputeJacobianFEM_Kokkos.
 
    Lifecycle:
-     PetscFEKokkosSetUp(dm, &ctx)   — build maps, stage to device, preallocate COO
+     PetscFEKokkosSetUp(dm, &ctx)   -- build maps, stage to device, preallocate COO
      DMPlexSNESComputeResidualFEM_Kokkos<f0,f1>(snes, X, F, &ctx)
      DMPlexSNESComputeJacobianFEM_Kokkos<G0,G1,G2,G3>(snes, X, J, Jp, &ctx)
-     PetscFEKokkosDestroy(&ctx)     — free host arrays (device Views auto-freed)
+     PetscFEKokkosDestroy(&ctx)     -- free host arrays (device Views auto-freed)
 
    Note: PetscFEKokkosSetUp calls PetscKokkosInitializeCheck() internally,
    so it is safe to call before SNESSetFromOptions triggers DMSetUp.
    However, the recommended order is:
-     SNESSetFromOptions(snes)        ← triggers DMSetUp → Kokkos::initialize
-     PetscFEKokkosSetUp(dm, &ctx)   ← Kokkos already initialized
+     SNESSetFromOptions(snes)        <- triggers DMSetUp -> Kokkos::initialize
+     PetscFEKokkosSetUp(dm, &ctx)   <- Kokkos already initialized
    ========================================================================= */
 
 typedef struct {
@@ -1459,10 +1459,10 @@ typedef struct {
    Build assembly maps, stage to device, and preallocate the COO matrix J.
 
    Parameters:
-     dm  — the DM with FE discretization already attached (after DMCreateDS)
-     ctx — output context; caller must pass a pointer to an uninitialised
+     dm  -- the DM with FE discretization already attached (after DMCreateDS)
+     ctx -- output context; caller must pass a pointer to an uninitialised
            PetscFEKokkosCtx (stack or heap).
-     J   — matrix to preallocate via MatSetPreallocationCOO; must already
+     J   -- matrix to preallocate via MatSetPreallocationCOO; must already
            exist (e.g. from DMCreateMatrix).
 
    Calls (in order):
@@ -1500,9 +1500,9 @@ static inline PetscErrorCode PetscFEKokkosDestroy(PetscFEKokkosCtx *ctx)
    DMPlexSNESComputeResidualFEM (the CPU path) when using COO assembly.
 
    Template parameters:
-     f0 — KOKKOS_INLINE_FUNCTION void(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[])
+     f0 -- KOKKOS_INLINE_FUNCTION void(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[])
           source term (zeroth-order residual)
-     f1 — KOKKOS_INLINE_FUNCTION void(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[])
+     f1 -- KOKKOS_INLINE_FUNCTION void(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[])
           flux term (first-order residual)
 
    ctx_ptr must point to a PetscFEKokkosCtx with maps already staged
@@ -1513,9 +1513,9 @@ static inline PetscErrorCode PetscFEKokkosDestroy(PetscFEKokkosCtx *ctx)
      2. Get local solution with BCs applied (host-sync guard for device Vecs).
      3. Get element geometry and coefficients.
      4. Stage tabulation, geometry, coefficients, and DS constants to device.
-     5. Pass 1: PetscFEKokkosIntegrateResidualCell<f0,f1> → d_elemVec.
-     6. Pass 2: scatter d_elemVec → locF via Kokkos::atomic_add (local indices).
-     7. DMLocalToGlobal(locF, ADD_VALUES, F) — MPI reduction for ghost DOFs.
+     5. Pass 1: PetscFEKokkosIntegrateResidualCell<f0,f1> -> d_elemVec.
+     6. Pass 2: scatter d_elemVec -> locF via Kokkos::atomic_add (local indices).
+     7. DMLocalToGlobal(locF, ADD_VALUES, F) -- MPI reduction for ghost DOFs.
    ========================================================================= */
 template <void (*f0)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[]), void (*f1)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[])>
 static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec F, void *ctx_ptr)
@@ -1563,7 +1563,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   /* Get local solution with BCs */
   PetscCall(DMGetLocalVector(dm, &locX));
   PetscCall(DMGlobalToLocal(dm, X, INSERT_VALUES, locX));
-  /* Force device→host sync if locX is a device Vec: DMPlexInsertBoundaryValues
+  /* Force device->host sync if locX is a device Vec: DMPlexInsertBoundaryValues
    * calls VecGetArray(locX) internally which requires host-authoritative data.
    * DMPlex/PetscFE do not support GPU Vecs. */
   {
@@ -1572,7 +1572,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
     PetscCall(VecGetArrayAndMemType(locX, &tmp, &mtype));
     PetscCall(VecRestoreArrayAndMemType(locX, &tmp));
     if (PetscMemTypeDevice(mtype)) {
-      PetscCall(VecGetArray(locX, &tmp));     /* KokkosDualViewSyncHost: device→host */
+      PetscCall(VecGetArray(locX, &tmp));     /* KokkosDualViewSyncHost: device->host */
       PetscCall(VecRestoreArray(locX, &tmp)); /* marks host modified */
     }
   }
@@ -1630,7 +1630,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
     Kokkos::deep_copy(d_coeff, hv_coeff);
   }
 
-  /* Stage DS constants to device (numConstants==0 → no-op) */
+  /* Stage DS constants to device (numConstants==0 -> no-op) */
   Kokkos::View<PetscScalar *> d_constants("res_constants", numConstants > 0 ? numConstants : 1);
   const PetscInt              numConstants_ = numConstants;
   if (numConstants > 0) {
@@ -1732,11 +1732,11 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
    DMPlexSNESComputeJacobianFEM (the CPU path) when using COO assembly.
 
    Template parameters (all four Jacobian callbacks):
-     G0 — KOKKOS_INLINE_FUNCTION void(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[])
-          g0 term (u·v coupling)
-     G1 — g1 term (u·∇v coupling)
-     G2 — g2 term (∇u·v coupling)
-     G3 — g3 term (∇u·∇v coupling, dominant for elliptic problems)
+     G0 -- KOKKOS_INLINE_FUNCTION void(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[])
+          g0 term (u*v coupling)
+     G1 -- g1 term (u*gradv coupling)
+     G2 -- g2 term (gradu*v coupling)
+     G3 -- g3 term (gradu*gradv coupling, dominant for elliptic problems)
 
    Pass nullptr for unused callbacks (e.g. G0=nullptr, G1=nullptr, G2=nullptr
    for a pure Laplacian where only G3 is non-zero).
@@ -1748,8 +1748,8 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
      2. Get element geometry and coefficients.
      3. Stage tabulation, geometry, coefficients, and DS constants to device.
      4. Allocate d_coo_vals[coo_size], zero it.
-     5. Pass 1: PetscFEKokkosIntegrateJacobianCell<G0,G1,G2,G3> → d_elemMat.
-     6. Pass 2: scatter d_elemMat → d_coo_vals (constraint-aware).
+     5. Pass 1: PetscFEKokkosIntegrateJacobianCell<G0,G1,G2,G3> -> d_elemMat.
+     6. Pass 2: scatter d_elemMat -> d_coo_vals (constraint-aware).
      7. MatSetValuesCOO(J, d_coo_vals.data(), INSERT_VALUES).
    ========================================================================= */
 template <void (*G0)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[]), void (*G1)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[]), void (*G2)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[]), void (*G3)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[])>
@@ -1795,7 +1795,7 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   /* Get local solution with BCs */
   PetscCall(DMGetLocalVector(dm, &locX));
   PetscCall(DMGlobalToLocal(dm, X, INSERT_VALUES, locX));
-  /* Force device→host sync if locX is a device Vec */
+  /* Force device->host sync if locX is a device Vec */
   {
     PetscScalar *tmp;
     PetscMemType mtype;
