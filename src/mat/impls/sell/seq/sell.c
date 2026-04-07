@@ -570,6 +570,7 @@ PetscErrorCode MatMultAdd_SeqSELL(Mat A, Vec xx, Vec yy, Vec zz)
   PetscCall(VecGetArrayPair(yy, zz, &y, &z));
 #if defined(PETSC_HAVE_IMMINTRIN_H) && defined(__AVX512F__) && defined(PETSC_USE_REAL_DOUBLE) && !defined(PETSC_USE_COMPLEX) && !defined(PETSC_USE_64BIT_INDICES)
   PetscCheck(a->sliceheight == 8, PETSC_COMM_SELF, PETSC_ERR_SUP, "The kernel requires a slice height of 8, but the input matrix has a slice height of %" PetscInt_FMT, a->sliceheight);
+  vec_y = _mm512_setzero_pd();
   for (i = 0; i < totalslices; i++) { /* loop over slices */
     PetscPrefetchBlock(acolidx, a->sliidx[i + 1] - a->sliidx[i], 0, PETSC_PREFETCH_HINT_T0);
     PetscPrefetchBlock(aval, a->sliidx[i + 1] - a->sliidx[i], 0, PETSC_PREFETCH_HINT_T0);
