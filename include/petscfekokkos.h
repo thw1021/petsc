@@ -51,11 +51,11 @@
 
 #if defined(PETSC_HAVE_KOKKOS)
 
-#include <petscfe.h>
-#include <petscds.h>
-#include <Kokkos_Core.hpp>
+  #include <petscfe.h>
+  #include <petscds.h>
+  #include <Kokkos_Core.hpp>
 
-/* =========================================================================
+  /* =========================================================================
    Macro: PETSCFE_KOKKOS_POINT_ARGS
    Expands to the full PetscPointFn argument list (minus the output array).
    Use this in KOKKOS_INLINE_FUNCTION callback declarations to keep them
@@ -73,12 +73,12 @@
              PetscInt numConstants, const PetscScalar constants[],
              PetscScalar out[])
    ========================================================================= */
-#define PETSCFE_KOKKOS_POINT_ARGS \
-  PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[]
+  #define PETSCFE_KOKKOS_POINT_ARGS \
+    PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[]
 
-/* Jacobian callbacks have an extra u_tShift argument between t and x */
-#define PETSCFE_KOKKOS_JAC_POINT_ARGS \
-  PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[]
+  /* Jacobian callbacks have an extra u_tShift argument between t and x */
+  #define PETSCFE_KOKKOS_JAC_POINT_ARGS \
+    PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[]
 
 /* =========================================================================
    PetscFEKokkosIntegrateResidualCell<F0, F1>
@@ -825,11 +825,11 @@ typedef struct {
   PetscScalar scale; /* interpolation weight */
 } PetscFEKokkosConstraint;
 
-/* Maximum parent DOFs per constrained DOF.
+  /* Maximum parent DOFs per constrained DOF.
  * For Q2 in 2D: 3 DOFs on a face edge.  8 matches LANDAU_MAX_Q_FACE. */
-#if !defined(PETSCFE_KOKKOS_MAX_FACE)
-  #define PETSCFE_KOKKOS_MAX_FACE 8
-#endif
+  #if !defined(PETSCFE_KOKKOS_MAX_FACE)
+    #define PETSCFE_KOKKOS_MAX_FACE 8
+  #endif
 
 typedef struct {
   /* --- Phase 1.C fields --- */

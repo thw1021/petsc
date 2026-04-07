@@ -149,10 +149,10 @@ static PetscErrorCode SetupDiscretization(DM dm)
    ========================================================================= */
 int main(int argc, char **argv)
 {
-  DM               dm;
-  SNES             snes;
-  Vec              u;
-  PetscReal        error;
+  DM                dm;
+  SNES              snes;
+  Vec               u;
+  PetscReal         error;
   PetscFEKokkosMaps kokkos_ctx; /* Step 4: declare the GPU assembly maps */
 
   PetscFunctionBeginUser;
