@@ -1,13 +1,12 @@
 /*
-  ex_kokkos_fe.kokkos.cxx -- Tutorial: GPU-resident FEM assembly with PetscFEKokkosCtx
+  ex_kokkos_fe.kokkos.cxx -- Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps
 
-  Demonstrates the Phase 1c.E API for GPU-resident finite element assembly
-  using the new PETSc-level functions:
+  Demonstrates the GPU-resident finite element assembly API:
 
-    PetscFEKokkosSetUp(dm, &ctx, J)
-    DMPlexSNESComputeResidualFEM_Kokkos<f0, f1>(snes, X, F, &ctx)
-    DMPlexSNESComputeJacobianFEM_Kokkos<G0, G1, G2, G3>(snes, X, J, Jp, &ctx)
-    PetscFEKokkosDestroy(&ctx)
+    PetscFEKokkosSetUp(dm, &maps, J)
+    DMPlexSNESComputeResidualFEM_Kokkos<f0, f1>(snes, X, F, &maps)
+    DMPlexSNESComputeJacobianFEM_Kokkos<G0, G1, G2, G3>(snes, X, J, Jp, &maps)
+    PetscFEKokkosMapsDestroy(&maps)
 
   Problem: 2D Poisson equation  -grad^2u = f  on [0,1]^2
     Manufactured solution:  u_exact(x,y) = sin(pix) sin(piy)
@@ -26,14 +25,14 @@
     L2 error: ~4.9e-04
 
   Build:
-    export PETSC_DIR=/path/to/petsc-ai-services
+    export PETSC_DIR=/path/to/petsc_cld
     export PETSC_ARCH=arch-macosx-gnu-kokkos-g-3d
     make ex_kokkos_fe
 
   Author: pedra-ai Phase 1c.E (2026-04-07)
 */
 
-static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosCtx\n"
+static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps\n"
                      "  Problem: -Laplacian(u) = f on [0,1]^2\n"
                      "  Manufactured solution: u = sin(pi*x)*sin(pi*y)\n"
                      "Options:\n"
@@ -154,7 +153,7 @@ int main(int argc, char **argv)
   SNES             snes;
   Vec              u;
   PetscReal        error;
-  PetscFEKokkosCtx kokkos_ctx; /* Step 4: declare the GPU assembly context */
+  PetscFEKokkosMaps kokkos_ctx; /* Step 4: declare the GPU assembly maps */
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -216,9 +215,9 @@ int main(int argc, char **argv)
   }
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "L2 error: %g\n", (double)error));
 
-  /* Step 8: PetscFEKokkosDestroy -- free host arrays.
+  /* Step 8: PetscFEKokkosMapsDestroy -- free host arrays.
    * Device Kokkos::Views are reference-counted and freed automatically. */
-  PetscCall(PetscFEKokkosDestroy(&kokkos_ctx));
+  PetscCall(PetscFEKokkosMapsDestroy(&kokkos_ctx));
 
   /* ---- Cleanup ---- */
   PetscCall(VecDestroy(&u));
