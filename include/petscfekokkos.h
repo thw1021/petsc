@@ -69,28 +69,12 @@
              PetscInt numConstants, const PetscScalar constants[],
              PetscScalar out[])
    ========================================================================= */
-#define PETSCFE_KOKKOS_POINT_ARGS                                        \
-  PetscInt dim, PetscInt Nf, PetscInt NfAux,                            \
-  const PetscInt uOff[], const PetscInt uOff_x[],                       \
-  const PetscScalar u[], const PetscScalar u_t[],                       \
-  const PetscScalar u_x[],                                              \
-  const PetscInt aOff[], const PetscInt aOff_x[],                       \
-  const PetscScalar a[], const PetscScalar a_t[],                       \
-  const PetscScalar a_x[],                                              \
-  PetscReal t, const PetscReal x[],                                     \
-  PetscInt numConstants, const PetscScalar constants[]
+#define PETSCFE_KOKKOS_POINT_ARGS \
+  PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[]
 
 /* Jacobian callbacks have an extra u_tShift argument between t and x */
-#define PETSCFE_KOKKOS_JAC_POINT_ARGS                                    \
-  PetscInt dim, PetscInt Nf, PetscInt NfAux,                            \
-  const PetscInt uOff[], const PetscInt uOff_x[],                       \
-  const PetscScalar u[], const PetscScalar u_t[],                       \
-  const PetscScalar u_x[],                                              \
-  const PetscInt aOff[], const PetscInt aOff_x[],                       \
-  const PetscScalar a[], const PetscScalar a_t[],                       \
-  const PetscScalar a_x[],                                              \
-  PetscReal t, PetscReal u_tShift, const PetscReal x[],                 \
-  PetscInt numConstants, const PetscScalar constants[]
+#define PETSCFE_KOKKOS_JAC_POINT_ARGS \
+  PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[]
 
 /* =========================================================================
    Type aliases for the two callback families.
@@ -103,7 +87,7 @@
    AND used as a template parameter here (device path).
    ========================================================================= */
 typedef void (*PetscFEKokkosPointFn)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar out[]);
-typedef void (*PetscFEKokkosJacFn)  (PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar out[]);
+typedef void (*PetscFEKokkosJacFn)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar out[]);
 
 /* =========================================================================
    PetscFEKokkosIntegrateResidualCell<F0, F1>
@@ -160,25 +144,15 @@ typedef void (*PetscFEKokkosJacFn)  (PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar 
    Note: elemVec is accumulated (+=), not zeroed.  The caller must zero it
    before the kernel launch (or use Kokkos::deep_copy to zero the device View).
    ========================================================================= */
-template <
-  void (*F0)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[]),
-  void (*F1)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f1[])
->
-KOKKOS_INLINE_FUNCTION
-void PetscFEKokkosIntegrateResidualCell(
-  PetscInt e,
-  PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE,
-  const PetscReal *B,       /* [Nq * Nb * Nc]          */
-  const PetscReal *D,       /* [Nq * Nb * Nc * dim]    */
-  const PetscReal *w,       /* [Nq]                    */
-  const PetscReal *invJ,    /* [Ne * Nq * dE * dE]     */
-  const PetscReal *detJ,    /* [Ne * Nq]               */
-  const PetscReal *coords,  /* [Ne * Nq * dE]          */
-  const PetscScalar *coeff, /* [Ne * totDim]            */
-  PetscInt totDim, PetscInt uOff, PetscInt fOff,
-  PetscReal t,
-  PetscInt numConstants, const PetscScalar *constants,
-  PetscScalar *elemVec      /* [Ne * totDim] — accumulated */
+template <void (*F0)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[]), void (*F1)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f1[])>
+KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE, const PetscReal *B,                                     /* [Nq * Nb * Nc]          */
+                                                               const PetscReal   *D,                                                                                                                 /* [Nq * Nb * Nc * dim]    */
+                                                               const PetscReal   *w,                                                                                                                 /* [Nq]                    */
+                                                               const PetscReal   *invJ,                                                                                                              /* [Ne * Nq * dE * dE]     */
+                                                               const PetscReal   *detJ,                                                                                                              /* [Ne * Nq]               */
+                                                               const PetscReal   *coords,                                                                                                            /* [Ne * Nq * dE]          */
+                                                               const PetscScalar *coeff,                                                                                                             /* [Ne * totDim]            */
+                                                               PetscInt totDim, PetscInt uOff, PetscInt fOff, PetscReal t, PetscInt numConstants, const PetscScalar *constants, PetscScalar *elemVec /* [Ne * totDim] — accumulated */
 )
 {
   /* Per-element scratch — stack-allocated, sized for the call-site Nb/Nc/dE.
@@ -200,12 +174,12 @@ void PetscFEKokkosIntegrateResidualCell(
      eliminate 3,000 bytes/thread GPU stack pressure (cudaErrorIllegalAddress
      for P3/P4 hex 3D on A100).  elemVec is pre-allocated and zeroed by the
      caller (FormResidual_COO) before launching this kernel. */
-  constexpr PetscInt PETSCFE_KOKKOS_MAX_NC  = 3;   /* max components (dim) */
-  constexpr PetscInt PETSCFE_KOKKOS_MAX_DE  = 3;   /* max embedding dim */
+  constexpr PetscInt PETSCFE_KOKKOS_MAX_NC = 3; /* max components (dim) */
+  constexpr PetscInt PETSCFE_KOKKOS_MAX_DE = 3; /* max embedding dim */
 
-  PetscScalar u_loc [PETSCFE_KOKKOS_MAX_NC];               /* u at one qp */
+  PetscScalar u_loc[PETSCFE_KOKKOS_MAX_NC];                          /* u at one qp */
   PetscScalar ux_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE]; /* ∇u at one qp */
-  PetscScalar f0_loc[PETSCFE_KOKKOS_MAX_NC];               /* f0 output */
+  PetscScalar f0_loc[PETSCFE_KOKKOS_MAX_NC];                         /* f0 output */
   PetscScalar f1_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE]; /* f1 output */
 
   /* Constant offset arrays for single-field, no-aux case */
@@ -221,13 +195,13 @@ void PetscFEKokkosIntegrateResidualCell(
     /* Geometry at (e, q) — invJ and detJ are pre-expanded by the host
        (affine elements: single invJ replicated across all Nq slots). */
     const PetscReal *invJ_eq = &invJ[(e * Nq + q) * dE * dE];
-    const PetscReal  detJ_eq =  detJ[ e * Nq + q];
+    const PetscReal  detJ_eq = detJ[e * Nq + q];
     const PetscReal *x_eq    = &coords[(e * Nq + q) * dE];
     const PetscReal  wq      = w[q] * detJ_eq;
 
     /* Basis pointers for this quadrature point */
-    const PetscReal *B_q = &B[q * Nb * Nc];           /* B[q,b,c] */
-    const PetscReal *D_q = &D[q * Nb * Nc * dim];     /* D[q,b,c,e2] */
+    const PetscReal *B_q = &B[q * Nb * Nc];       /* B[q,b,c] */
+    const PetscReal *D_q = &D[q * Nb * Nc * dim]; /* D[q,b,c,e2] */
 
     /* Coefficient pointer for this element */
     const PetscScalar *coeff_e = &coeff[e * totDim + uOff];
@@ -241,8 +215,7 @@ void PetscFEKokkosIntegrateResidualCell(
        For vector FE (Nc>1): b encodes both scalar basis index and component,
        so coeff[b] is the correct single-index DOF access. */
     for (PetscInt b = 0; b < Nb; ++b)
-      for (PetscInt c = 0; c < Nc; ++c)
-        u_loc[c] += B_q[b * Nc + c] * coeff_e[b];
+      for (PetscInt c = 0; c < Nc; ++c) u_loc[c] += B_q[b * Nc + c] * coeff_e[b];
 
     /* Interpolate ux[c,d] = sum_b D[q,b,c,e2] * invJ[e2,d] * coeff[b]
        Physical gradient: ux[c*dE+d] = sum_{b,e2} D[q,b,c,e2] * invJ[e2,d] * coeff[b] */
@@ -251,8 +224,7 @@ void PetscFEKokkosIntegrateResidualCell(
       for (PetscInt c = 0; c < Nc; ++c) {
         for (PetscInt d = 0; d < dE; ++d) {
           PetscReal ref_grad = 0.0;
-          for (PetscInt e2 = 0; e2 < dim; ++e2)
-            ref_grad += D_q[b * Nc * dim + c * dim + e2] * invJ_eq[e2 * dE + d];
+          for (PetscInt e2 = 0; e2 < dim; ++e2) ref_grad += D_q[b * Nc * dim + c * dim + e2] * invJ_eq[e2 * dE + d];
           ux_loc[c * dE + d] += coeff_b * ref_grad;
         }
       }
@@ -261,30 +233,17 @@ void PetscFEKokkosIntegrateResidualCell(
     /* Call F0 (zeroth-order / source term) — resolved at compile time */
     if (F0 != nullptr) {
       for (PetscInt c = 0; c < Nc; ++c) f0_loc[c] = 0.0;
-      F0(dE, 1, 0,
-         uOff_l, uOff_x_l,
-         u_loc, nullptr, ux_loc,
-         nullptr, nullptr, nullptr, nullptr, nullptr,
-         t, x_eq,
-         numConstants, constants,
-         f0_loc);
+      F0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f0_loc);
       /* Accumulate directly into elemVec device buffer: ev_e[b] += B[q,b,c] * f0[c] * w * detJ
          Matches fekokkos.kokkos.cxx Phase 2: val_e[b] += B_q[bc] * f0_s[q*Nc+c] */
       for (PetscInt b = 0; b < Nb; ++b)
-        for (PetscInt c = 0; c < Nc; ++c)
-          ev_e[b] += B_q[b * Nc + c] * f0_loc[c] * wq;
+        for (PetscInt c = 0; c < Nc; ++c) ev_e[b] += B_q[b * Nc + c] * f0_loc[c] * wq;
     }
 
     /* Call F1 (first-order / flux term) — resolved at compile time */
     if (F1 != nullptr) {
       for (PetscInt i = 0; i < Nc * dE; ++i) f1_loc[i] = 0.0;
-      F1(dE, 1, 0,
-         uOff_l, uOff_x_l,
-         u_loc, nullptr, ux_loc,
-         nullptr, nullptr, nullptr, nullptr, nullptr,
-         t, x_eq,
-         numConstants, constants,
-         f1_loc);
+      F1(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f1_loc);
       /* Accumulate directly into elemVec device buffer: ev_e[b] += phys_grad(b,c,d) * f1[c,d] * w * detJ
          phys_grad(b,c,d) = sum_{e2} D[q,b,c,e2] * invJ[e2,d]
          Matches fekokkos.kokkos.cxx Phase 2: val_e[b] += phys_grad * f1_s[(q*Nc+c)*dE+d] */
@@ -292,8 +251,7 @@ void PetscFEKokkosIntegrateResidualCell(
         for (PetscInt c = 0; c < Nc; ++c) {
           for (PetscInt d = 0; d < dE; ++d) {
             PetscReal phys_grad = 0.0;
-            for (PetscInt e2 = 0; e2 < dim; ++e2)
-              phys_grad += D_q[b * Nc * dim + c * dim + e2] * invJ_eq[e2 * dE + d];
+            for (PetscInt e2 = 0; e2 < dim; ++e2) phys_grad += D_q[b * Nc * dim + c * dim + e2] * invJ_eq[e2 * dE + d];
             ev_e[b] += phys_grad * f1_loc[c * dE + d] * wq;
           }
         }
@@ -325,39 +283,27 @@ void PetscFEKokkosIntegrateResidualCell(
 
    Note: For Poisson, only G3 is non-zero (g3[d*dE+e2] = δ_{d,e2}).
    ========================================================================= */
-template <
-  void (*G0)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g0[]),
-  void (*G1)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g1[]),
-  void (*G2)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g2[]),
-  void (*G3)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])
->
-KOKKOS_INLINE_FUNCTION
-void PetscFEKokkosIntegrateJacobianCell(
-  PetscInt e,
-  PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE,
-  const PetscReal *B,       /* [Nq * Nb * Nc]          */
-  const PetscReal *D,       /* [Nq * Nb * Nc * dim]    */
-  const PetscReal *w,       /* [Nq]                    */
-  const PetscReal *invJ,    /* [Ne * Nq * dE * dE]     */
-  const PetscReal *detJ,    /* [Ne * Nq]               */
-  const PetscReal *coords,  /* [Ne * Nq * dE]          */
-  const PetscScalar *coeff, /* [Ne * totDim]            */
-  PetscInt totDim, PetscInt uOff, PetscInt fOff, PetscInt gOff,
-  PetscReal t, PetscReal u_tShift,
-  PetscInt numConstants, const PetscScalar *constants,
-  PetscScalar *elemMat      /* [Ne * totDim * totDim] — accumulated */
+template <void (*G0)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g0[]), void (*G1)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g1[]), void (*G2)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g2[]), void (*G3)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])>
+KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE, const PetscReal *B, /* [Nq * Nb * Nc]          */
+                                                               const PetscReal   *D,                                                                             /* [Nq * Nb * Nc * dim]    */
+                                                               const PetscReal   *w,                                                                             /* [Nq]                    */
+                                                               const PetscReal   *invJ,                                                                          /* [Ne * Nq * dE * dE]     */
+                                                               const PetscReal   *detJ,                                                                          /* [Ne * Nq]               */
+                                                               const PetscReal   *coords,                                                                        /* [Ne * Nq * dE]          */
+                                                               const PetscScalar *coeff,                                                                         /* [Ne * totDim]            */
+                                                               PetscInt totDim, PetscInt uOff, PetscInt fOff, PetscInt gOff, PetscReal t, PetscReal u_tShift, PetscInt numConstants, const PetscScalar *constants, PetscScalar *elemMat /* [Ne * totDim * totDim] — accumulated */
 )
 {
   constexpr PetscInt PETSCFE_KOKKOS_MAX_NC  = 3;
   constexpr PetscInt PETSCFE_KOKKOS_MAX_DE  = 3;
   constexpr PetscInt PETSCFE_KOKKOS_MAX_NCD = PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE;
 
-  PetscScalar u_loc [PETSCFE_KOKKOS_MAX_NC];
+  PetscScalar u_loc[PETSCFE_KOKKOS_MAX_NC];
   PetscScalar ux_loc[PETSCFE_KOKKOS_MAX_NCD];
   /* Jacobian output tensors — g0[Nc*Nc], g1[Nc*Nc*dE], g2[Nc*dE*Nc], g3[Nc*dE*Nc*dE] */
-  PetscScalar g0_loc[PETSCFE_KOKKOS_MAX_NC  * PETSCFE_KOKKOS_MAX_NC];
-  PetscScalar g1_loc[PETSCFE_KOKKOS_MAX_NC  * PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE];
-  PetscScalar g2_loc[PETSCFE_KOKKOS_MAX_NC  * PETSCFE_KOKKOS_MAX_DE * PETSCFE_KOKKOS_MAX_NC];
+  PetscScalar g0_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_NC];
+  PetscScalar g1_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE];
+  PetscScalar g2_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE * PETSCFE_KOKKOS_MAX_NC];
   PetscScalar g3_loc[PETSCFE_KOKKOS_MAX_NCD * PETSCFE_KOKKOS_MAX_NCD];
 
   const PetscInt uOff_l[1]   = {0};
@@ -368,12 +314,12 @@ void PetscFEKokkosIntegrateJacobianCell(
 
   for (PetscInt q = 0; q < Nq; ++q) {
     const PetscReal *invJ_eq = &invJ[(e * Nq + q) * dE * dE];
-    const PetscReal  detJ_eq =  detJ[ e * Nq + q];
+    const PetscReal  detJ_eq = detJ[e * Nq + q];
     const PetscReal *x_eq    = &coords[(e * Nq + q) * dE];
     const PetscReal  wq      = w[q] * detJ_eq;
 
-    const PetscReal *B_q = &B[q * Nb * Nc];
-    const PetscReal *D_q = &D[q * Nb * Nc * dim];
+    const PetscReal   *B_q     = &B[q * Nb * Nc];
+    const PetscReal   *D_q     = &D[q * Nb * Nc * dim];
     const PetscScalar *coeff_e = &coeff[e * totDim + uOff];
 
     /* Zero per-qp scratch */
@@ -383,16 +329,14 @@ void PetscFEKokkosIntegrateJacobianCell(
     /* Interpolate u and ∇u (same convention as residual kernel and fekokkos.kokkos.cxx):
        b = 0..Nb-1 (total DOFs), coeff[b] — b already encodes scalar basis + component. */
     for (PetscInt b = 0; b < Nb; ++b)
-      for (PetscInt c = 0; c < Nc; ++c)
-        u_loc[c] += B_q[b * Nc + c] * coeff_e[b];
+      for (PetscInt c = 0; c < Nc; ++c) u_loc[c] += B_q[b * Nc + c] * coeff_e[b];
 
     for (PetscInt b = 0; b < Nb; ++b) {
       const PetscScalar coeff_b = coeff_e[b];
       for (PetscInt c = 0; c < Nc; ++c) {
         for (PetscInt d = 0; d < dE; ++d) {
           PetscReal ref_grad = 0.0;
-          for (PetscInt e2 = 0; e2 < dim; ++e2)
-            ref_grad += D_q[b * Nc * dim + c * dim + e2] * invJ_eq[e2 * dE + d];
+          for (PetscInt e2 = 0; e2 < dim; ++e2) ref_grad += D_q[b * Nc * dim + c * dim + e2] * invJ_eq[e2 * dE + d];
           ux_loc[c * dE + d] += coeff_b * ref_grad;
         }
       }
@@ -401,27 +345,19 @@ void PetscFEKokkosIntegrateJacobianCell(
     /* Evaluate Jacobian callbacks — each resolved at compile time */
     if (G0 != nullptr) {
       for (PetscInt i = 0; i < Nc * Nc; ++i) g0_loc[i] = 0.0;
-      G0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc,
-         nullptr, nullptr, nullptr, nullptr, nullptr,
-         t, u_tShift, x_eq, numConstants, constants, g0_loc);
+      G0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g0_loc);
     }
     if (G1 != nullptr) {
       for (PetscInt i = 0; i < Nc * Nc * dE; ++i) g1_loc[i] = 0.0;
-      G1(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc,
-         nullptr, nullptr, nullptr, nullptr, nullptr,
-         t, u_tShift, x_eq, numConstants, constants, g1_loc);
+      G1(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g1_loc);
     }
     if (G2 != nullptr) {
       for (PetscInt i = 0; i < Nc * dE * Nc; ++i) g2_loc[i] = 0.0;
-      G2(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc,
-         nullptr, nullptr, nullptr, nullptr, nullptr,
-         t, u_tShift, x_eq, numConstants, constants, g2_loc);
+      G2(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g2_loc);
     }
     if (G3 != nullptr) {
       for (PetscInt i = 0; i < Nc * dE * Nc * dE; ++i) g3_loc[i] = 0.0;
-      G3(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc,
-         nullptr, nullptr, nullptr, nullptr, nullptr,
-         t, u_tShift, x_eq, numConstants, constants, g3_loc);
+      G3(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g3_loc);
     }
 
     /* Assemble element matrix contributions.
@@ -451,8 +387,7 @@ void PetscFEKokkosIntegrateJacobianCell(
           PetscReal phi_grad[PETSCFE_KOKKOS_MAX_DE];
           for (PetscInt d = 0; d < dE; ++d) {
             phi_grad[d] = 0.0;
-            for (PetscInt e2 = 0; e2 < dim; ++e2)
-              phi_grad[d] += D_q[b * Nc * dim + fc * dim + e2] * invJ_eq[e2 * dE + d];
+            for (PetscInt e2 = 0; e2 < dim; ++e2) phi_grad[d] += D_q[b * Nc * dim + fc * dim + e2] * invJ_eq[e2 * dE + d];
           }
 
           for (PetscInt gc = 0; gc < Nc; ++gc) {
@@ -460,31 +395,24 @@ void PetscFEKokkosIntegrateJacobianCell(
             PetscReal psi_grad[PETSCFE_KOKKOS_MAX_DE];
             for (PetscInt d = 0; d < dE; ++d) {
               psi_grad[d] = 0.0;
-              for (PetscInt e2 = 0; e2 < dim; ++e2)
-                psi_grad[d] += D_q[b2 * Nc * dim + gc * dim + e2] * invJ_eq[e2 * dE + d];
+              for (PetscInt e2 = 0; e2 < dim; ++e2) psi_grad[d] += D_q[b2 * Nc * dim + gc * dim + e2] * invJ_eq[e2 * dE + d];
             }
 
             /* G0: B_test * g0[fc,gc] * B_trial */
-            if (G0 != nullptr)
-              entry += B_q[b * Nc + fc] * g0_loc[fc * Nc + gc] * B_q[b2 * Nc + gc];
+            if (G0 != nullptr) entry += B_q[b * Nc + fc] * g0_loc[fc * Nc + gc] * B_q[b2 * Nc + gc];
 
             /* G1: B_test * g1[fc,gc,d] * psi_grad[d] */
             if (G1 != nullptr)
-              for (PetscInt d = 0; d < dE; ++d)
-                entry += B_q[b * Nc + fc] * g1_loc[(fc * Nc + gc) * dE + d] * psi_grad[d];
+              for (PetscInt d = 0; d < dE; ++d) entry += B_q[b * Nc + fc] * g1_loc[(fc * Nc + gc) * dE + d] * psi_grad[d];
 
             /* G2: phi_grad[d] * g2[fc,d,gc] * B_trial */
             if (G2 != nullptr)
-              for (PetscInt d = 0; d < dE; ++d)
-                entry += phi_grad[d] * g2_loc[(fc * dE + d) * Nc + gc] * B_q[b2 * Nc + gc];
+              for (PetscInt d = 0; d < dE; ++d) entry += phi_grad[d] * g2_loc[(fc * dE + d) * Nc + gc] * B_q[b2 * Nc + gc];
 
             /* G3: phi_grad[d] * g3[fc,d,gc,e2] * psi_grad[e2] */
             if (G3 != nullptr)
               for (PetscInt d = 0; d < dE; ++d)
-                for (PetscInt e2 = 0; e2 < dE; ++e2)
-                  entry += phi_grad[d]
-                         * g3_loc[((fc * dE + d) * Nc + gc) * dE + e2]
-                         * psi_grad[e2];
+                for (PetscInt e2 = 0; e2 < dE; ++e2) entry += phi_grad[d] * g3_loc[((fc * dE + d) * Nc + gc) * dE + e2] * psi_grad[e2];
           }
         }
 
@@ -512,10 +440,7 @@ void PetscFEKokkosIntegrateJacobianCell(
    so we cannot link against it.  The formula is:
      x[d] = v0[d] + sum_e J[d*dimReal + e] * (xi[e] - xi0[e])
    where xi0[] is the reference origin stored in cgeom->xi. */
-static inline void PetscFEKokkosCoordRefToReal(
-  PetscInt dimReal, PetscInt dimRef,
-  const PetscReal xi0[], const PetscReal v0[], const PetscReal J[],
-  const PetscReal xi[], PetscReal x[])
+static inline void PetscFEKokkosCoordRefToReal(PetscInt dimReal, PetscInt dimRef, const PetscReal xi0[], const PetscReal v0[], const PetscReal J[], const PetscReal xi[], PetscReal x[])
 {
   for (PetscInt d = 0; d < dimReal; ++d) {
     x[d] = v0[d];
@@ -523,16 +448,13 @@ static inline void PetscFEKokkosCoordRefToReal(
   }
 }
 
-static inline PetscErrorCode PetscFEKokkosExpandGeometry(
-  PetscInt Ne, PetscInt Nq, PetscInt dim, PetscInt dE,
-  PetscFEGeom *cgeom,
-  const PetscReal *quadPoints,  /* [Nq * dim] — reference quadrature points */
-  PetscReal *h_invJ,            /* [Ne * Nq * dE * dE] — output */
-  PetscReal *h_detJ,            /* [Ne * Nq]            — output */
-  PetscReal *h_coords           /* [Ne * Nq * dE]       — output */
+static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt Nq, PetscInt dim, PetscInt dE, PetscFEGeom *cgeom, const PetscReal *quadPoints, /* [Nq * dim] — reference quadrature points */
+                                                         PetscReal *h_invJ,                                                                                    /* [Ne * Nq * dE * dE] — output */
+                                                         PetscReal *h_detJ,                                                                                    /* [Ne * Nq]            — output */
+                                                         PetscReal *h_coords                                                                                   /* [Ne * Nq * dE]       — output */
 )
 {
-  const PetscInt Np       = cgeom->numPoints;
+  const PetscInt  Np       = cgeom->numPoints;
   const PetscBool isAffine = cgeom->isAffine;
 
   PetscFunctionBegin;
@@ -548,20 +470,15 @@ static inline PetscErrorCode PetscFEKokkosExpandGeometry(
 
       if (isAffine) {
         /* Replicate single affine invJ across all Nq slots */
-        for (PetscInt i = 0; i < dE * dE; ++i)
-          h_invJ[eq * dE * dE + i] = invJ_e[i];
+        for (PetscInt i = 0; i < dE * dE; ++i) h_invJ[eq * dE * dE + i] = invJ_e[i];
         h_detJ[eq] = detJ_e[0];
         /* Compute physical coords from reference quadrature point */
-        PetscFEKokkosCoordRefToReal(dE, dim, xi_e, v0_e, J_e,
-                                    &quadPoints[q * dim],
-                                    &h_coords[eq * dE]);
+        PetscFEKokkosCoordRefToReal(dE, dim, xi_e, v0_e, J_e, &quadPoints[q * dim], &h_coords[eq * dE]);
       } else {
         /* Non-affine: geometry stored per quadrature point */
-        for (PetscInt i = 0; i < dE * dE; ++i)
-          h_invJ[eq * dE * dE + i] = invJ_e[q * dE * dE + i];
+        for (PetscInt i = 0; i < dE * dE; ++i) h_invJ[eq * dE * dE + i] = invJ_e[q * dE * dE + i];
         h_detJ[eq] = detJ_e[q];
-        for (PetscInt d = 0; d < dE; ++d)
-          h_coords[eq * dE + d] = cgeom->v[(e * Np + q) * dE + d];
+        for (PetscInt d = 0; d < dE; ++d) h_coords[eq * dE + d] = cgeom->v[(e * Np + q) * dE + d];
       }
     }
   }
@@ -590,28 +507,19 @@ static inline PetscErrorCode PetscFEKokkosExpandGeometry(
    Returns PETSC_SUCCESS on success; falls back gracefully if restrictions
    are violated (caller should use the Basic path in that case).
    ========================================================================= */
-template <
-  void (*F0)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[]),
-  void (*F1)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f1[])
->
-static PetscErrorCode PetscFEKokkosComputeResidual(
-  PetscDS ds, PetscFormKey key, PetscInt Ne,
-  PetscFEGeom *cgeom,
-  const PetscScalar *coefficients,
-  const PetscScalar *coefficients_t,
-  PetscReal t,
-  PetscScalar *elemVec   /* [Ne * totDim] — accumulated */
+template <void (*F0)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[]), void (*F1)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f1[])>
+static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar *coefficients, const PetscScalar *coefficients_t, PetscReal t, PetscScalar *elemVec /* [Ne * totDim] — accumulated */
 )
 {
-  PetscFE          fe;
-  PetscTabulation *T;
-  PetscQuadrature  quad;
-  const PetscReal *quadPoints, *quadWeights;
-  PetscInt         Nf, totDim, fOffset, field;
-  PetscInt        *uOff, *uOff_x;
-  PetscInt         numConstants;
+  PetscFE            fe;
+  PetscTabulation   *T;
+  PetscQuadrature    quad;
+  const PetscReal   *quadPoints, *quadWeights;
+  PetscInt           Nf, totDim, fOffset, field;
+  PetscInt          *uOff, *uOff_x;
+  PetscInt           numConstants;
   const PetscScalar *constants;
-  PetscInt         Nq, Nb, Nc, dim, dE, qdim, qNc;
+  PetscInt           Nq, Nb, Nc, dim, dE, qdim, qNc;
 
   PetscFunctionBegin;
 
@@ -633,9 +541,9 @@ static PetscErrorCode PetscFEKokkosComputeResidual(
      matches PetscFEEvaluateFieldJets_Internal and fekokkos.kokkos.cxx exactly.
      The B/D arrays are also sized [Nq * Nb_total * Nc], so B_q = &B[q*Nb*Nc]
      is correct with Nb = Nb_total. */
-  Nc  = T[field]->Nc;
-  Nb  = T[field]->Nb;   /* total DOFs per element (= Nb_scalar * Nc for vector FE) */
-  dE  = cgeom->dimEmbed;
+  Nc = T[field]->Nc;
+  Nb = T[field]->Nb; /* total DOFs per element (= Nb_scalar * Nc for vector FE) */
+  dE = cgeom->dimEmbed;
 
   /* Flat array sizes */
   const PetscInt nB      = Nq * Nb * Nc;
@@ -663,18 +571,17 @@ static PetscErrorCode PetscFEKokkosComputeResidual(
   /* Host buffers for expanded geometry */
   PetscReal *h_invJ_buf, *h_detJ_buf, *h_coords_buf;
   PetscCall(PetscMalloc3(nInvJ, &h_invJ_buf, nDetJ, &h_detJ_buf, nCoords, &h_coords_buf));
-  PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, cgeom, quadPoints,
-                                         h_invJ_buf, h_detJ_buf, h_coords_buf));
+  PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, cgeom, quadPoints, h_invJ_buf, h_detJ_buf, h_coords_buf));
 
-  Kokkos::View<PetscReal *>   d_invJ  ("fekokkos_tmpl_invJ",   nInvJ);
-  Kokkos::View<PetscReal *>   d_detJ  ("fekokkos_tmpl_detJ",   nDetJ);
-  Kokkos::View<PetscReal *>   d_coords("fekokkos_tmpl_coords", nCoords);
+  Kokkos::View<PetscReal *> d_invJ("fekokkos_tmpl_invJ", nInvJ);
+  Kokkos::View<PetscReal *> d_detJ("fekokkos_tmpl_detJ", nDetJ);
+  Kokkos::View<PetscReal *> d_coords("fekokkos_tmpl_coords", nCoords);
   {
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ  (h_invJ_buf,   nInvJ);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ  (h_detJ_buf,   nDetJ);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_buf, nInvJ);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_buf, nDetJ);
     Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
-    Kokkos::deep_copy(d_invJ,   hv_invJ);
-    Kokkos::deep_copy(d_detJ,   hv_detJ);
+    Kokkos::deep_copy(d_invJ, hv_invJ);
+    Kokkos::deep_copy(d_detJ, hv_detJ);
     Kokkos::deep_copy(d_coords, hv_coords);
   }
   PetscCall(PetscFree3(h_invJ_buf, h_detJ_buf, h_coords_buf));
@@ -682,17 +589,14 @@ static PetscErrorCode PetscFEKokkosComputeResidual(
   /* ---- Stage coefficients ---- */
   Kokkos::View<PetscScalar *> d_coeff("fekokkos_tmpl_coeff", nCoeff);
   {
-    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_coeff(
-      const_cast<PetscScalar *>(coefficients), nCoeff);
+    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_coeff(const_cast<PetscScalar *>(coefficients), nCoeff);
     Kokkos::deep_copy(d_coeff, hv_coeff);
   }
 
   /* ---- Stage constants ---- */
-  Kokkos::View<PetscScalar *> d_constants("fekokkos_tmpl_constants",
-                                           numConstants > 0 ? numConstants : 1);
+  Kokkos::View<PetscScalar *> d_constants("fekokkos_tmpl_constants", numConstants > 0 ? numConstants : 1);
   if (numConstants > 0) {
-    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_const(
-      const_cast<PetscScalar *>(constants), numConstants);
+    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_const(const_cast<PetscScalar *>(constants), numConstants);
     Kokkos::deep_copy(d_constants, hv_const);
   }
 
@@ -701,33 +605,21 @@ static PetscErrorCode PetscFEKokkosComputeResidual(
   Kokkos::deep_copy(d_elemVec, PetscScalar(0.0));
 
   /* ---- Capture scalars for lambda ---- */
-  const PetscInt Nq_      = Nq;
-  const PetscInt Nb_      = Nb;
-  const PetscInt Nc_      = Nc;
-  const PetscInt dim_     = dim;
-  const PetscInt dE_      = dE;
-  const PetscInt totDim_  = totDim;
-  const PetscInt uOff0    = uOff[field];
-  const PetscInt fOff     = fOffset;
+  const PetscInt  Nq_     = Nq;
+  const PetscInt  Nb_     = Nb;
+  const PetscInt  Nc_     = Nc;
+  const PetscInt  dim_    = dim;
+  const PetscInt  dE_     = dE;
+  const PetscInt  totDim_ = totDim;
+  const PetscInt  uOff0   = uOff[field];
+  const PetscInt  fOff    = fOffset;
   const PetscReal t_      = t;
-  const PetscInt nConst_  = numConstants;
+  const PetscInt  nConst_ = numConstants;
 
   /* ---- Launch kernel ---- */
   Kokkos::parallel_for(
-    "PetscFEKokkosComputeResidual",
-    Kokkos::RangePolicy<>(0, Ne),
-    KOKKOS_LAMBDA(const PetscInt e) {
-      PetscFEKokkosIntegrateResidualCell<F0, F1>(
-        e,
-        Nq_, Nb_, Nc_, dim_, dE_,
-        d_B.data(), d_D.data(), d_w.data(),
-        d_invJ.data(), d_detJ.data(), d_coords.data(),
-        d_coeff.data(),
-        totDim_, uOff0, fOff,
-        t_,
-        nConst_, d_constants.data(),
-        d_elemVec.data()
-      );
+    "PetscFEKokkosComputeResidual", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
+      PetscFEKokkosIntegrateResidualCell<F0, F1>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, t_, nConst_, d_constants.data(), d_elemVec.data());
     });
 
   Kokkos::fence();
@@ -740,8 +632,7 @@ static PetscErrorCode PetscFEKokkosComputeResidual(
      PetscLogGpuFlops also increments the total PetscLogFlops counter.
      GPU %F in -log_view = gpu_flops / total_flops * 100.
   ---- */
-  PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nb * Nc *
-    Nq * (2.0 + dE * (dim * 2.0 + 1.0))));
+  PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nb * Nc * Nq * (2.0 + dE * (dim * 2.0 + 1.0))));
 
   /* ---- Copy result back and accumulate into elemVec ---- */
   {
@@ -767,29 +658,19 @@ static PetscErrorCode PetscFEKokkosComputeResidual(
      t, u_tShift                      — time and time-derivative shift
      elemMat[Ne * totDim * totDim]    — output element matrix (accumulated)
    ========================================================================= */
-template <
-  void (*G0)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g0[]),
-  void (*G1)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g1[]),
-  void (*G2)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g2[]),
-  void (*G3)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])
->
-static PetscErrorCode PetscFEKokkosComputeJacobian(
-  PetscDS ds, PetscFormKey key, PetscInt Ne,
-  PetscFEGeom *cgeom,
-  const PetscScalar *coefficients,
-  PetscReal t, PetscReal u_tShift,
-  PetscScalar *elemMat   /* [Ne * totDim * totDim] — accumulated */
+template <void (*G0)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g0[]), void (*G1)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g1[]), void (*G2)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g2[]), void (*G3)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])>
+static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar *coefficients, PetscReal t, PetscReal u_tShift, PetscScalar *elemMat /* [Ne * totDim * totDim] — accumulated */
 )
 {
-  PetscFE          fe;
-  PetscTabulation *T;
-  PetscQuadrature  quad;
-  const PetscReal *quadPoints, *quadWeights;
-  PetscInt         Nf, totDim, fOffset, gOffset, field;
-  PetscInt        *uOff, *uOff_x;
-  PetscInt         numConstants;
+  PetscFE            fe;
+  PetscTabulation   *T;
+  PetscQuadrature    quad;
+  const PetscReal   *quadPoints, *quadWeights;
+  PetscInt           Nf, totDim, fOffset, gOffset, field;
+  PetscInt          *uOff, *uOff_x;
+  PetscInt           numConstants;
   const PetscScalar *constants;
-  PetscInt         Nq, Nb, Nc, dim, dE, qdim, qNc;
+  PetscInt           Nq, Nb, Nc, dim, dE, qdim, qNc;
 
   PetscFunctionBegin;
 
@@ -809,9 +690,9 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(
   PetscCall(PetscQuadratureGetData(quad, &qdim, &qNc, &Nq, &quadPoints, &quadWeights));
   PetscCall(PetscFEGetSpatialDimension(fe, &dim));
 
-  Nb  = T[field]->Nb;
-  Nc  = T[field]->Nc;
-  dE  = cgeom->dimEmbed;
+  Nb = T[field]->Nb;
+  Nc = T[field]->Nc;
+  dE = cgeom->dimEmbed;
 
   const PetscInt nB      = Nq * Nb * Nc;
   const PetscInt nD      = Nq * Nb * Nc * dim;
@@ -837,18 +718,17 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(
   /* Expand and stage geometry */
   PetscReal *h_invJ_buf, *h_detJ_buf, *h_coords_buf;
   PetscCall(PetscMalloc3(nInvJ, &h_invJ_buf, nDetJ, &h_detJ_buf, nCoords, &h_coords_buf));
-  PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, cgeom, quadPoints,
-                                         h_invJ_buf, h_detJ_buf, h_coords_buf));
+  PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, cgeom, quadPoints, h_invJ_buf, h_detJ_buf, h_coords_buf));
 
-  Kokkos::View<PetscReal *> d_invJ  ("fekokkos_jac_invJ",   nInvJ);
-  Kokkos::View<PetscReal *> d_detJ  ("fekokkos_jac_detJ",   nDetJ);
+  Kokkos::View<PetscReal *> d_invJ("fekokkos_jac_invJ", nInvJ);
+  Kokkos::View<PetscReal *> d_detJ("fekokkos_jac_detJ", nDetJ);
   Kokkos::View<PetscReal *> d_coords("fekokkos_jac_coords", nCoords);
   {
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ  (h_invJ_buf,   nInvJ);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ  (h_detJ_buf,   nDetJ);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_buf, nInvJ);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_buf, nDetJ);
     Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
-    Kokkos::deep_copy(d_invJ,   hv_invJ);
-    Kokkos::deep_copy(d_detJ,   hv_detJ);
+    Kokkos::deep_copy(d_invJ, hv_invJ);
+    Kokkos::deep_copy(d_detJ, hv_detJ);
     Kokkos::deep_copy(d_coords, hv_coords);
   }
   PetscCall(PetscFree3(h_invJ_buf, h_detJ_buf, h_coords_buf));
@@ -856,17 +736,14 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(
   /* Stage coefficients */
   Kokkos::View<PetscScalar *> d_coeff("fekokkos_jac_coeff", nCoeff);
   {
-    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_coeff(
-      const_cast<PetscScalar *>(coefficients), nCoeff);
+    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_coeff(const_cast<PetscScalar *>(coefficients), nCoeff);
     Kokkos::deep_copy(d_coeff, hv_coeff);
   }
 
   /* Stage constants */
-  Kokkos::View<PetscScalar *> d_constants("fekokkos_jac_constants",
-                                           numConstants > 0 ? numConstants : 1);
+  Kokkos::View<PetscScalar *> d_constants("fekokkos_jac_constants", numConstants > 0 ? numConstants : 1);
   if (numConstants > 0) {
-    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_const(
-      const_cast<PetscScalar *>(constants), numConstants);
+    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_const(const_cast<PetscScalar *>(constants), numConstants);
     Kokkos::deep_copy(d_constants, hv_const);
   }
 
@@ -875,35 +752,24 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(
   Kokkos::deep_copy(d_elemMat, PetscScalar(0.0));
 
   /* Capture scalars for lambda */
-  const PetscInt Nq_       = Nq;
-  const PetscInt Nb_       = Nb;
-  const PetscInt Nc_       = Nc;
-  const PetscInt dim_      = dim;
-  const PetscInt dE_       = dE;
-  const PetscInt totDim_   = totDim;
-  const PetscInt uOff0     = uOff[field];
-  const PetscInt fOff      = fOffset;
-  const PetscInt gOff      = gOffset;
-  const PetscReal t_       = t;
-  const PetscReal tShift_  = u_tShift;
-  const PetscInt nConst_   = numConstants;
+  const PetscInt  Nq_     = Nq;
+  const PetscInt  Nb_     = Nb;
+  const PetscInt  Nc_     = Nc;
+  const PetscInt  dim_    = dim;
+  const PetscInt  dE_     = dE;
+  const PetscInt  totDim_ = totDim;
+  const PetscInt  uOff0   = uOff[field];
+  const PetscInt  fOff    = fOffset;
+  const PetscInt  gOff    = gOffset;
+  const PetscReal t_      = t;
+  const PetscReal tShift_ = u_tShift;
+  const PetscInt  nConst_ = numConstants;
 
   /* Launch kernel */
   Kokkos::parallel_for(
-    "PetscFEKokkosComputeJacobian",
-    Kokkos::RangePolicy<>(0, Ne),
-    KOKKOS_LAMBDA(const PetscInt e) {
-      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3>(
-        e,
-        Nq_, Nb_, Nc_, dim_, dE_,
-        d_B.data(), d_D.data(), d_w.data(),
-        d_invJ.data(), d_detJ.data(), d_coords.data(),
-        d_coeff.data(),
-        totDim_, uOff0, fOff, gOff,
-        t_, tShift_,
-        nConst_, d_constants.data(),
-        d_elemMat.data()
-      );
+    "PetscFEKokkosComputeJacobian", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
+      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, gOff, t_, tShift_, nConst_, d_constants.data(),
+                                                         d_elemMat.data());
     });
 
   Kokkos::fence();
@@ -917,8 +783,7 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(
      Simplified to the G3-dominant count (matches fekokkos.kokkos.cxx convention):
        Ne * Nq * Nb * Nc * Nb * Nc * 2 * dE * dE
   ---- */
-  PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nq *
-    Nb * Nc * Nb * Nc * 2.0 * dE * dE));
+  PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nq * Nb * Nc * Nb * Nc * 2.0 * dE * dE));
 
   /* Copy result back and accumulate */
   {
@@ -971,78 +836,78 @@ typedef PetscInt PetscFEKokkosIdx;
 /* Constraint map entry: one parent DOF with its interpolation weight.
  * Mirrors the Landau LandauIdx/scale pair in plexland.c. */
 typedef struct {
-  PetscInt    gid;    /* global DOF index of parent face DOF; -1 = unused */
-  PetscScalar scale;  /* interpolation weight */
+  PetscInt    gid;   /* global DOF index of parent face DOF; -1 = unused */
+  PetscScalar scale; /* interpolation weight */
 } PetscFEKokkosConstraint;
 
 /* Maximum parent DOFs per constrained DOF.
  * For Q2 in 2D: 3 DOFs on a face edge.  8 matches LANDAU_MAX_Q_FACE. */
 #ifndef PETSCFE_KOKKOS_MAX_FACE
-#  define PETSCFE_KOKKOS_MAX_FACE 8
+  #define PETSCFE_KOKKOS_MAX_FACE 8
 #endif
 
 typedef struct {
   /* --- Phase 1.C fields --- */
-  PetscInt   num_elements;   /* Ne — number of owned cells */
-  PetscInt   num_dof;        /* total global DOFs (for bounds checking) */
-  PetscInt   local_dof;      /* local DOFs including ghosts (local Vec size) */
-  PetscInt   Nb;             /* basis functions per element (single field) */
-  PetscInt   totDim;         /* total DOFs per element across all fields */
-  PetscCount coo_size;       /* total COO entries */
+  PetscInt   num_elements; /* Ne — number of owned cells */
+  PetscInt   num_dof;      /* total global DOFs (for bounds checking) */
+  PetscInt   local_dof;    /* local DOFs including ghosts (local Vec size) */
+  PetscInt   Nb;           /* basis functions per element (single field) */
+  PetscInt   totDim;       /* total DOFs per element across all fields */
+  PetscCount coo_size;     /* total COO entries */
 
   /* gIdx[e * Nb + b]:
    *   >= 0: unconstrained, value = global DOF index
    *   <  0: constrained (Dirichlet or hanging), idx = -(value) - 1 into c_maps */
-  Kokkos::View<PetscFEKokkosIdx *>  d_gIdx;
-  PetscFEKokkosIdx                 *h_gIdx;   /* host mirror (PetscMalloc'd) */
+  Kokkos::View<PetscFEKokkosIdx *> d_gIdx;
+  PetscFEKokkosIdx                *h_gIdx; /* host mirror (PetscMalloc'd) */
 
   /* lIdx[e * Nb + b]:
    *   >= 0: local DOF index (into local Vec with ghost entries)
    *   == -1: Dirichlet (constrained away)
    * Used by FormResidual_COO to scatter into locF before DMLocalToGlobal.
    * Built from section (not globalSection) so ghost DOFs are always in-bounds. */
-  Kokkos::View<PetscInt *>  d_lIdx;
-  PetscInt                 *h_lIdx;   /* host mirror (PetscMalloc'd) */
+  Kokkos::View<PetscInt *> d_lIdx;
+  PetscInt                *h_lIdx; /* host mirror (PetscMalloc'd) */
 
   /* active_idx[e * Nb + b] = sequential active index for (e,b); -1 if constrained.
    * Used only in Phase 1.C (no-constraint) scatter path. */
-  Kokkos::View<PetscInt *>  d_active_idx;
-  PetscInt                 *h_active_idx;     /* host mirror (PetscMalloc'd) */
+  Kokkos::View<PetscInt *> d_active_idx;
+  PetscInt                *h_active_idx; /* host mirror (PetscMalloc'd) */
 
   /* Nb_active[e] = count of non-Dirichlet bases for element e (Phase 1.C) */
-  Kokkos::View<PetscInt *>  d_Nb_active;
-  PetscInt                 *h_Nb_active;      /* host mirror (PetscMalloc'd) */
+  Kokkos::View<PetscInt *> d_Nb_active;
+  PetscInt                *h_Nb_active; /* host mirror (PetscMalloc'd) */
 
   /* coo_elem_offsets[e] = first COO index for element e; [Ne+1] prefix sum */
-  Kokkos::View<PetscInt *>  d_coo_elem_offsets;
-  PetscInt                 *h_coo_elem_offsets; /* host mirror (PetscMalloc'd) */
+  Kokkos::View<PetscInt *> d_coo_elem_offsets;
+  PetscInt                *h_coo_elem_offsets; /* host mirror (PetscMalloc'd) */
 
   /* --- Phase 1.D fields (constraint / hanging-node support) --- */
 
   /* Number of constrained (hanging) DOFs discovered by probing across all elements */
-  PetscInt   num_reduced;
+  PetscInt num_reduced;
 
   /* Max parent DOFs per constrained DOF (degree+1 for 2D edges) */
-  PetscInt   num_face;
+  PetscInt num_face;
 
   /* c_maps_gid[idx * num_face + q]   = global DOF of q-th parent for constraint idx
    * c_maps_scale[idx * num_face + q] = interpolation weight for that parent
    * Flat layout: num_reduced * num_face entries each. */
-  Kokkos::View<PetscInt *>     d_c_maps_gid;
-  Kokkos::View<PetscScalar *>  d_c_maps_scale;
-  PetscInt                    *h_c_maps_gid;    /* host mirror (PetscMalloc'd) */
-  PetscScalar                 *h_c_maps_scale;  /* host mirror (PetscMalloc'd) */
+  Kokkos::View<PetscInt *>    d_c_maps_gid;
+  Kokkos::View<PetscScalar *> d_c_maps_scale;
+  PetscInt                   *h_c_maps_gid;   /* host mirror (PetscMalloc'd) */
+  PetscScalar                *h_c_maps_scale; /* host mirror (PetscMalloc'd) */
 
   /* coo_elem_point_offsets[e * (Nb+1) + b]:
    * prefix sum of expanded COO rows per basis function within element e.
    * coo_elem_point_offsets[e*(Nb+1) + Nb] = fullNb[e]. */
-  Kokkos::View<PetscInt *>  d_coo_elem_point_offsets;
-  PetscInt                 *h_coo_elem_point_offsets; /* host mirror (PetscMalloc'd) */
+  Kokkos::View<PetscInt *> d_coo_elem_point_offsets;
+  PetscInt                *h_coo_elem_point_offsets; /* host mirror (PetscMalloc'd) */
 
   /* fullNb[e] = total expanded basis count for element e
    * (Nb for no constraints, > Nb when hanging nodes present) */
-  Kokkos::View<PetscInt *>  d_fullNb;
-  PetscInt                 *h_fullNb;  /* host mirror (PetscMalloc'd) */
+  Kokkos::View<PetscInt *> d_fullNb;
+  PetscInt                *h_fullNb; /* host mirror (PetscMalloc'd) */
 } PetscFEKokkosMaps;
 
 /* -------------------------------------------------------------------------
@@ -1058,13 +923,13 @@ typedef struct {
    ------------------------------------------------------------------------- */
 static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
 {
-  PetscSection  section, globalSection;
-  PetscInt      cStart, cEnd, Ne, Nb, totDim;
-  PetscDS       ds;
-  PetscFE       fe;
-  PetscInt      dim;
-  DM            plex;       /* adapted DMPlex view (may == dm for plain DMPlex) */
-  PetscBool     isPlex;
+  PetscSection section, globalSection;
+  PetscInt     cStart, cEnd, Ne, Nb, totDim;
+  PetscDS      ds;
+  PetscFE      fe;
+  PetscInt     dim;
+  DM           plex; /* adapted DMPlex view (may == dm for plain DMPlex) */
+  PetscBool    isPlex;
 
   PetscFunctionBeginUser;
 
@@ -1153,9 +1018,9 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
   PetscCall(PetscMalloc1(Ne * Nb, &maps->h_gIdx));
   PetscCall(PetscMalloc1(Ne * Nb, &maps->h_lIdx));
   PetscCall(PetscMalloc1(Ne * Nb, &maps->h_active_idx));
-  PetscCall(PetscMalloc1(Ne,      &maps->h_Nb_active));
-  PetscCall(PetscMalloc1(Ne + 1,  &maps->h_coo_elem_offsets));
-  PetscCall(PetscMalloc1(Ne,      &maps->h_fullNb));
+  PetscCall(PetscMalloc1(Ne, &maps->h_Nb_active));
+  PetscCall(PetscMalloc1(Ne + 1, &maps->h_coo_elem_offsets));
+  PetscCall(PetscMalloc1(Ne, &maps->h_fullNb));
   PetscCall(PetscMalloc1(Ne * (Nb + 1), &maps->h_coo_elem_point_offsets));
 
   /* Build h_lIdx: local DOF indices from the local section.
@@ -1166,27 +1031,23 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
   for (PetscInt e = 0; e < Ne; ++e) {
     PetscInt  numLoc = 0;
     PetscInt *locIdx = NULL;
-    PetscCall(DMPlexGetClosureIndices(plex, section, section,
-                                      cStart + e, PETSC_FALSE,
-                                      &numLoc, &locIdx, NULL, NULL));
+    PetscCall(DMPlexGetClosureIndices(plex, section, section, cStart + e, PETSC_FALSE, &numLoc, &locIdx, NULL, NULL));
     /* locIdx has numLoc entries in closure order = totDim entries for no constraints.
      * Map closure position → basis function index using the same ordering as h_gIdx. */
     for (PetscInt q = 0; q < Nb && q < numLoc; ++q) {
-      const PetscInt li = locIdx[q];
+      const PetscInt li        = locIdx[q];
       maps->h_lIdx[e * Nb + q] = (li < 0) ? -1 : li;
     }
     /* Fill any remaining slots (shouldn't happen for conforming meshes) */
     for (PetscInt q = numLoc; q < Nb; ++q) maps->h_lIdx[e * Nb + q] = -1;
-    PetscCall(DMPlexRestoreClosureIndices(plex, section, section,
-                                          cStart + e, PETSC_FALSE,
-                                          &numLoc, &locIdx, NULL, NULL));
+    PetscCall(DMPlexRestoreClosureIndices(plex, section, section, cStart + e, PETSC_FALSE, &numLoc, &locIdx, NULL, NULL));
   }
 
   /* Temporary storage for constraint maps (upper bound: Ne*Nb constraints) */
   const PetscInt max_reduced = Ne * Nb;
   const PetscInt num_face    = maps->num_face;
-  PetscInt    *tmp_c_gid;
-  PetscScalar *tmp_c_scale;
+  PetscInt      *tmp_c_gid;
+  PetscScalar   *tmp_c_scale;
   PetscCall(PetscMalloc1(max_reduced * num_face, &tmp_c_gid));
   PetscCall(PetscMalloc1(max_reduced * num_face, &tmp_c_scale));
   /* Initialize to -1 / 0 */
@@ -1218,9 +1079,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
       PetscInt    *indices    = NULL;
       PetscScalar *valuesOrig = elMat;
 
-      PetscCall(DMPlexGetClosureIndices(plex, section, globalSection,
-                                        cStart + e, PETSC_TRUE,
-                                        &numIndices, &indices, NULL, &elMat));
+      PetscCall(DMPlexGetClosureIndices(plex, section, globalSection, cStart + e, PETSC_TRUE, &numIndices, &indices, NULL, &elMat));
 
       /* Scan the returned elMat diagonal for this basis function.
        *
@@ -1258,8 +1117,8 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
             /* Hanging-node constrained DOF: 0 < diagonal < 1.
              * Extract constraint weights by summing rows of the outer product.
              * Reference: plexland.c:1541-1584 */
-            const PetscInt ff  = f;
-            const PetscInt idx = maps->num_reduced;
+            const PetscInt ff        = f;
+            const PetscInt idx       = maps->num_reduced;
             maps->h_gIdx[e * Nb + q] = -(PetscFEKokkosIdx)(idx + 1);
 
             PetscReal sum = 0.0;
@@ -1268,8 +1127,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
               /* Sum row ff of the outer product to recover the weight */
               PetscScalar sc = 0.0;
               for (PetscInt ii = 0; ii < num_face; ++ii) {
-                if (ff + ii < numIndices)
-                  sc += PetscRealPart(elMat[f * numIndices + ff + ii]);
+                if (ff + ii < numIndices) sc += PetscRealPart(elMat[f * numIndices + ff + ii]);
               }
               tmp_c_scale[idx * num_face + jj] = sc;
               sum += PetscRealPart(sc);
@@ -1292,16 +1150,13 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
             /* Diagnostic: constraint weights should sum to 1.0 in 2D */
             if (PetscAbs(sum - 1.0) > 10 * PETSC_MACHINE_EPSILON) {
               PetscCall(PetscPrintf(PETSC_COMM_SELF,
-                "PetscFEKokkosCreateMaps: WARNING elem %d basis %d "
-                "constraint weight sum = %g (expected 1.0)\n",
-                (int)e, (int)q, (double)sum));
+                                    "PetscFEKokkosCreateMaps: WARNING elem %d basis %d "
+                                    "constraint weight sum = %g (expected 1.0)\n",
+                                    (int)e, (int)q, (double)sum));
             }
 
             maps->num_reduced++;
-            PetscCheck(maps->num_reduced <= max_reduced, PETSC_COMM_SELF,
-                       PETSC_ERR_PLIB,
-                       "num_reduced %" PetscInt_FMT " exceeds max %" PetscInt_FMT,
-                       maps->num_reduced, max_reduced);
+            PetscCheck(maps->num_reduced <= max_reduced, PETSC_COMM_SELF, PETSC_ERR_PLIB, "num_reduced %" PetscInt_FMT " exceeds max %" PetscInt_FMT, maps->num_reduced, max_reduced);
           }
         }
       }
@@ -1309,9 +1164,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
       if (!found) maps->h_gIdx[e * Nb + q] = (PetscFEKokkosIdx)(-1);
 
       /* Restore closure indices; check if elMat was reallocated */
-      PetscCall(DMPlexRestoreClosureIndices(plex, section, globalSection,
-                                            cStart + e, PETSC_TRUE,
-                                            &numIndices, &indices, NULL, &elMat));
+      PetscCall(DMPlexRestoreClosureIndices(plex, section, globalSection, cStart + e, PETSC_TRUE, &numIndices, &indices, NULL, &elMat));
       if (elMat != valuesOrig) {
         PetscCall(DMRestoreWorkArray(plex, numIndices * numIndices, MPIU_SCALAR, &elMat));
         /* Re-allocate for next probe */
@@ -1324,7 +1177,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
     /* Build coo_elem_point_offsets[e*(Nb+1)+b]: prefix sum of expanded rows */
     maps->h_coo_elem_point_offsets[e * (Nb + 1) + 0] = 0;
     for (PetscInt b = 0; b < Nb; ++b) {
-      PetscInt nr = 0;
+      PetscInt               nr   = 0;
       const PetscFEKokkosIdx gidx = maps->h_gIdx[e * Nb + b];
       if (gidx >= 0) {
         nr = 1;
@@ -1336,8 +1189,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
         }
       }
       /* gidx == -1 means Dirichlet: nr = 0 */
-      maps->h_coo_elem_point_offsets[e * (Nb + 1) + b + 1] =
-        maps->h_coo_elem_point_offsets[e * (Nb + 1) + b] + nr;
+      maps->h_coo_elem_point_offsets[e * (Nb + 1) + b + 1] = maps->h_coo_elem_point_offsets[e * (Nb + 1) + b] + nr;
     }
   } /* element e */
 
@@ -1373,7 +1225,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
     }
     maps->h_Nb_active[e] = cnt;
     /* COO size uses fullNb (expanded) not Nb_active */
-    const PetscInt fNb = maps->h_fullNb[e];
+    const PetscInt fNb              = maps->h_fullNb[e];
     maps->h_coo_elem_offsets[e + 1] = maps->h_coo_elem_offsets[e] + fNb * fNb;
   }
   maps->coo_size = (PetscCount)maps->h_coo_elem_offsets[Ne];
@@ -1447,16 +1299,14 @@ static inline PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps)
     }
   } else {
     /* No constraints: create empty Views (size 1 to avoid zero-size allocation) */
-    maps->d_c_maps_gid   = Kokkos::View<PetscInt *>("fekokkos_c_maps_gid",   1);
+    maps->d_c_maps_gid   = Kokkos::View<PetscInt *>("fekokkos_c_maps_gid", 1);
     maps->d_c_maps_scale = Kokkos::View<PetscScalar *>("fekokkos_c_maps_scale", 1);
   }
 
   /* coo_elem_point_offsets */
-  maps->d_coo_elem_point_offsets =
-    Kokkos::View<PetscInt *>("fekokkos_coo_pt_offsets", Ne * (Nb + 1));
+  maps->d_coo_elem_point_offsets = Kokkos::View<PetscInt *>("fekokkos_coo_pt_offsets", Ne * (Nb + 1));
   {
-    Kokkos::View<PetscInt *, Kokkos::HostSpace> hv(maps->h_coo_elem_point_offsets,
-                                                    Ne * (Nb + 1));
+    Kokkos::View<PetscInt *, Kokkos::HostSpace> hv(maps->h_coo_elem_point_offsets, Ne * (Nb + 1));
     Kokkos::deep_copy(maps->d_coo_elem_point_offsets, hv);
   }
 
@@ -1503,16 +1353,16 @@ static inline PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps
 
     for (PetscInt b = 0; b < Nb; ++b) {
       /* Expand row b */
-      PetscInt nr = 0;
-      PetscInt rows[PETSCFE_KOKKOS_MAX_FACE];
+      PetscInt               nr = 0;
+      PetscInt               rows[PETSCFE_KOKKOS_MAX_FACE];
       const PetscFEKokkosIdx gidx_b = maps->h_gIdx[e * Nb + b];
       if (gidx_b >= 0) {
-        nr = 1; rows[0] = (PetscInt)gidx_b;
+        nr      = 1;
+        rows[0] = (PetscInt)gidx_b;
       } else if (gidx_b < -1) {
         const PetscInt cidx = -(PetscInt)gidx_b - 1;
         for (PetscInt q = 0; q < num_face; ++q) {
-          if (maps->h_c_maps_gid[cidx * num_face + q] >= 0)
-            rows[nr++] = maps->h_c_maps_gid[cidx * num_face + q];
+          if (maps->h_c_maps_gid[cidx * num_face + q] >= 0) rows[nr++] = maps->h_c_maps_gid[cidx * num_face + q];
         }
       }
       /* gidx_b == -1: Dirichlet, nr = 0, skip */
@@ -1520,16 +1370,16 @@ static inline PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps
 
       for (PetscInt b2 = 0; b2 < Nb; ++b2) {
         /* Expand column b2 */
-        PetscInt nc = 0;
-        PetscInt cols[PETSCFE_KOKKOS_MAX_FACE];
+        PetscInt               nc = 0;
+        PetscInt               cols[PETSCFE_KOKKOS_MAX_FACE];
         const PetscFEKokkosIdx gidx_b2 = maps->h_gIdx[e * Nb + b2];
         if (gidx_b2 >= 0) {
-          nc = 1; cols[0] = (PetscInt)gidx_b2;
+          nc      = 1;
+          cols[0] = (PetscInt)gidx_b2;
         } else if (gidx_b2 < -1) {
           const PetscInt cidx = -(PetscInt)gidx_b2 - 1;
           for (PetscInt q = 0; q < num_face; ++q) {
-            if (maps->h_c_maps_gid[cidx * num_face + q] >= 0)
-              cols[nc++] = maps->h_c_maps_gid[cidx * num_face + q];
+            if (maps->h_c_maps_gid[cidx * num_face + q] >= 0) cols[nc++] = maps->h_c_maps_gid[cidx * num_face + q];
           }
         }
         const PetscInt pt_off_b2 = maps->h_coo_elem_point_offsets[e * (Nb + 1) + b2];
@@ -1677,26 +1527,25 @@ static inline PetscErrorCode PetscFEKokkosDestroy(PetscFEKokkosCtx *ctx)
      6. Pass 2: scatter d_elemVec → locF via Kokkos::atomic_add (local indices).
      7. DMLocalToGlobal(locF, ADD_VALUES, F) — MPI reduction for ghost DOFs.
    ========================================================================= */
-template <void (*f0)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[]),
-          void (*f1)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[])>
+template <void (*f0)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[]), void (*f1)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[])>
 static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec F, void *ctx_ptr)
 {
-  PetscFEKokkosCtx *ctx = (PetscFEKokkosCtx *)ctx_ptr;
-  DM                dm;
-  PetscDS           ds;
-  PetscFE           fe;
-  PetscTabulation  *T;
-  PetscQuadrature   quad;
-  DMField           coordField;
-  IS                cellIS;
-  PetscFEGeom      *fullGeom  = NULL;
-  PetscFEGeom      *chunkGeom = NULL;
-  Vec               locX;
-  PetscScalar      *u_arr = NULL, *u_t_arr = NULL, *a_arr = NULL;
-  PetscInt          depth, cStart, cEnd, totDim;
-  const PetscReal  *quadPoints, *quadWeights;
-  PetscInt          Nq, Nb, Nc, dim, dE, qdim, qNc;
-  PetscInt          numConstants;
+  PetscFEKokkosCtx  *ctx = (PetscFEKokkosCtx *)ctx_ptr;
+  DM                 dm;
+  PetscDS            ds;
+  PetscFE            fe;
+  PetscTabulation   *T;
+  PetscQuadrature    quad;
+  DMField            coordField;
+  IS                 cellIS;
+  PetscFEGeom       *fullGeom  = NULL;
+  PetscFEGeom       *chunkGeom = NULL;
+  Vec                locX;
+  PetscScalar       *u_arr = NULL, *u_t_arr = NULL, *a_arr = NULL;
+  PetscInt           depth, cStart, cEnd, totDim;
+  const PetscReal   *quadPoints, *quadWeights;
+  PetscInt           Nq, Nb, Nc, dim, dE, qdim, qNc;
+  PetscInt           numConstants;
   const PetscScalar *constants;
 
   PetscFunctionBegin;
@@ -1770,36 +1619,32 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
 
   PetscReal *h_invJ_buf, *h_detJ_buf, *h_coords_buf;
   PetscCall(PetscMalloc3(nInvJ, &h_invJ_buf, nDetJ, &h_detJ_buf, nCoords, &h_coords_buf));
-  PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, chunkGeom, quadPoints,
-                                         h_invJ_buf, h_detJ_buf, h_coords_buf));
+  PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, chunkGeom, quadPoints, h_invJ_buf, h_detJ_buf, h_coords_buf));
 
-  Kokkos::View<PetscReal *> d_invJ  ("res_invJ",   nInvJ);
-  Kokkos::View<PetscReal *> d_detJ  ("res_detJ",   nDetJ);
+  Kokkos::View<PetscReal *> d_invJ("res_invJ", nInvJ);
+  Kokkos::View<PetscReal *> d_detJ("res_detJ", nDetJ);
   Kokkos::View<PetscReal *> d_coords("res_coords", nCoords);
   {
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ  (h_invJ_buf,   nInvJ);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ  (h_detJ_buf,   nDetJ);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_buf, nInvJ);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_buf, nDetJ);
     Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
-    Kokkos::deep_copy(d_invJ,   hv_invJ);
-    Kokkos::deep_copy(d_detJ,   hv_detJ);
+    Kokkos::deep_copy(d_invJ, hv_invJ);
+    Kokkos::deep_copy(d_detJ, hv_detJ);
     Kokkos::deep_copy(d_coords, hv_coords);
   }
   PetscCall(PetscFree3(h_invJ_buf, h_detJ_buf, h_coords_buf));
 
   Kokkos::View<PetscScalar *> d_coeff("res_coeff", nCoeff);
   {
-    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_coeff(
-      const_cast<PetscScalar *>(u_arr), nCoeff);
+    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_coeff(const_cast<PetscScalar *>(u_arr), nCoeff);
     Kokkos::deep_copy(d_coeff, hv_coeff);
   }
 
   /* Stage DS constants to device (numConstants==0 → no-op) */
-  Kokkos::View<PetscScalar *> d_constants("res_constants",
-                                           numConstants > 0 ? numConstants : 1);
-  const PetscInt numConstants_ = numConstants;
+  Kokkos::View<PetscScalar *> d_constants("res_constants", numConstants > 0 ? numConstants : 1);
+  const PetscInt              numConstants_ = numConstants;
   if (numConstants > 0) {
-    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_constants(
-      const_cast<PetscScalar *>(constants), numConstants);
+    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_constants(const_cast<PetscScalar *>(constants), numConstants);
     Kokkos::deep_copy(d_constants, hv_constants);
   }
 
@@ -1819,12 +1664,8 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
 
   const PetscInt local_dof_with_ghosts = ctx->maps.local_dof;
 
-  using DeviceUnmanaged = Kokkos::View<PetscScalar *,
-                                       Kokkos::DefaultExecutionSpace::memory_space,
-                                       Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
-  using HostUnmanaged   = Kokkos::View<PetscScalar *,
-                                       Kokkos::HostSpace,
-                                       Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using DeviceUnmanaged = Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using HostUnmanaged   = Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
 
   Kokkos::View<PetscScalar *> d_F;
   DeviceUnmanaged             d_F_unmanaged;
@@ -1834,7 +1675,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
     d_F_unmanaged = DeviceUnmanaged(locF_arr, local_dof_with_ghosts);
   } else {
     h_F_unmanaged = HostUnmanaged(locF_arr, local_dof_with_ghosts);
-    d_F = Kokkos::View<PetscScalar *>("res_F", local_dof_with_ghosts);
+    d_F           = Kokkos::View<PetscScalar *>("res_F", local_dof_with_ghosts);
     Kokkos::deep_copy(d_F, h_F_unmanaged);
   }
 
@@ -1857,32 +1698,16 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
 
   /* Pass 1: integrate residual for all elements into d_elemVec */
   Kokkos::parallel_for(
-    "DMPlexSNESComputeResidualFEM_Kokkos_integrate",
-    Kokkos::RangePolicy<>(0, Ne),
-    KOKKOS_LAMBDA(const PetscInt e) {
-      PetscFEKokkosIntegrateResidualCell<f0, f1>(
-        e,
-        Nq_, Nb_, Nc_, dim_, dE_,
-        d_B.data(), d_D.data(), d_w.data(),
-        d_invJ.data(), d_detJ.data(), d_coords.data(),
-        d_coeff.data(),
-        totDim_, 0, 0,
-        0.0,
-        numConstants_, d_constants.data(),
-        d_elemVec.data()
-      );
+    "DMPlexSNESComputeResidualFEM_Kokkos_integrate", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
+      PetscFEKokkosIntegrateResidualCell<f0, f1>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, 0, 0, 0.0, numConstants_, d_constants.data(), d_elemVec.data());
     });
   Kokkos::fence();
 
   /* Pass 2: scatter d_elemVec to locF via atomic_add using LOCAL indices */
-  PetscScalar *F_dev = (locF_memtype == PETSC_MEMTYPE_DEVICE)
-                         ? d_F_unmanaged.data()
-                         : d_F.data();
+  PetscScalar *F_dev = (locF_memtype == PETSC_MEMTYPE_DEVICE) ? d_F_unmanaged.data() : d_F.data();
 
   Kokkos::parallel_for(
-    "DMPlexSNESComputeResidualFEM_Kokkos_scatter",
-    Kokkos::RangePolicy<>(0, Ne),
-    KOKKOS_LAMBDA(const PetscInt e) {
+    "DMPlexSNESComputeResidualFEM_Kokkos_scatter", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
       for (PetscInt b = 0; b < Nb_; ++b) {
         const PetscInt    lidx = d_lIdx[e * Nb_ + b];
         const PetscScalar val  = d_elemVec[e * totDim_ + b];
@@ -1938,28 +1763,25 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
      6. Pass 2: scatter d_elemMat → d_coo_vals (constraint-aware).
      7. MatSetValuesCOO(J, d_coo_vals.data(), INSERT_VALUES).
    ========================================================================= */
-template <void (*G0)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[]),
-          void (*G1)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[]),
-          void (*G2)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[]),
-          void (*G3)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[])>
+template <void (*G0)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[]), void (*G1)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[]), void (*G2)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[]), void (*G3)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[])>
 static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat J, Mat Jp, void *ctx_ptr)
 {
-  PetscFEKokkosCtx *ctx = (PetscFEKokkosCtx *)ctx_ptr;
-  DM                dm;
-  PetscDS           ds;
-  PetscFE           fe;
-  PetscTabulation  *T;
-  PetscQuadrature   quad;
-  DMField           coordField;
-  IS                cellIS;
-  PetscFEGeom      *fullGeom  = NULL;
-  PetscFEGeom      *chunkGeom = NULL;
-  Vec               locX;
-  PetscScalar      *u_arr = NULL, *u_t_arr = NULL, *a_arr = NULL;
-  PetscInt          depth, cStart, cEnd, totDim;
-  const PetscReal  *quadPoints, *quadWeights;
-  PetscInt          Nq, Nb, Nc, dim, dE, qdim, qNc;
-  PetscInt          numConstants;
+  PetscFEKokkosCtx  *ctx = (PetscFEKokkosCtx *)ctx_ptr;
+  DM                 dm;
+  PetscDS            ds;
+  PetscFE            fe;
+  PetscTabulation   *T;
+  PetscQuadrature    quad;
+  DMField            coordField;
+  IS                 cellIS;
+  PetscFEGeom       *fullGeom  = NULL;
+  PetscFEGeom       *chunkGeom = NULL;
+  Vec                locX;
+  PetscScalar       *u_arr = NULL, *u_t_arr = NULL, *a_arr = NULL;
+  PetscInt           depth, cStart, cEnd, totDim;
+  const PetscReal   *quadPoints, *quadWeights;
+  PetscInt           Nq, Nb, Nc, dim, dE, qdim, qNc;
+  PetscInt           numConstants;
   const PetscScalar *constants;
 
   PetscFunctionBegin;
@@ -2028,41 +1850,37 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
 
   PetscReal *h_invJ_buf, *h_detJ_buf, *h_coords_buf;
   PetscCall(PetscMalloc3(nInvJ, &h_invJ_buf, nDetJ, &h_detJ_buf, nCoords, &h_coords_buf));
-  PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, chunkGeom, quadPoints,
-                                         h_invJ_buf, h_detJ_buf, h_coords_buf));
+  PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, chunkGeom, quadPoints, h_invJ_buf, h_detJ_buf, h_coords_buf));
 
-  Kokkos::View<PetscReal *> d_invJ  ("jac_invJ",   nInvJ);
-  Kokkos::View<PetscReal *> d_detJ  ("jac_detJ",   nDetJ);
+  Kokkos::View<PetscReal *> d_invJ("jac_invJ", nInvJ);
+  Kokkos::View<PetscReal *> d_detJ("jac_detJ", nDetJ);
   Kokkos::View<PetscReal *> d_coords("jac_coords", nCoords);
   {
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ  (h_invJ_buf,   nInvJ);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ  (h_detJ_buf,   nDetJ);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_buf, nInvJ);
+    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_buf, nDetJ);
     Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
-    Kokkos::deep_copy(d_invJ,   hv_invJ);
-    Kokkos::deep_copy(d_detJ,   hv_detJ);
+    Kokkos::deep_copy(d_invJ, hv_invJ);
+    Kokkos::deep_copy(d_detJ, hv_detJ);
     Kokkos::deep_copy(d_coords, hv_coords);
   }
   PetscCall(PetscFree3(h_invJ_buf, h_detJ_buf, h_coords_buf));
 
   Kokkos::View<PetscScalar *> d_coeff("jac_coeff", nCoeff);
   {
-    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_coeff(
-      const_cast<PetscScalar *>(u_arr), nCoeff);
+    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_coeff(const_cast<PetscScalar *>(u_arr), nCoeff);
     Kokkos::deep_copy(d_coeff, hv_coeff);
   }
 
   /* Stage DS constants to device */
-  Kokkos::View<PetscScalar *> d_constants("jac_constants",
-                                           numConstants > 0 ? numConstants : 1);
-  const PetscInt numConstants_ = numConstants;
+  Kokkos::View<PetscScalar *> d_constants("jac_constants", numConstants > 0 ? numConstants : 1);
+  const PetscInt              numConstants_ = numConstants;
   if (numConstants > 0) {
-    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_constants(
-      const_cast<PetscScalar *>(constants), numConstants);
+    Kokkos::View<PetscScalar *, Kokkos::HostSpace> hv_constants(const_cast<PetscScalar *>(constants), numConstants);
     Kokkos::deep_copy(d_constants, hv_constants);
   }
 
   /* Allocate COO values array and zero it */
-  const PetscCount coo_size = ctx->maps.coo_size;
+  const PetscCount            coo_size = ctx->maps.coo_size;
   Kokkos::View<PetscScalar *> d_coo_vals("jac_coo_vals", coo_size);
   Kokkos::deep_copy(d_coo_vals, PetscScalar(0.0));
 
@@ -2071,13 +1889,13 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   Kokkos::deep_copy(d_elemMat, PetscScalar(0.0));
 
   /* Capture maps for lambda */
-  auto d_gIdx                   = ctx->maps.d_gIdx;
-  auto d_coo_elem_offsets       = ctx->maps.d_coo_elem_offsets;
-  auto d_coo_elem_point_offsets = ctx->maps.d_coo_elem_point_offsets;
-  auto d_fullNb                 = ctx->maps.d_fullNb;
-  auto d_c_maps_gid             = ctx->maps.d_c_maps_gid;
-  auto d_c_maps_scale           = ctx->maps.d_c_maps_scale;
-  const PetscInt num_face_      = ctx->maps.num_face;
+  auto           d_gIdx                   = ctx->maps.d_gIdx;
+  auto           d_coo_elem_offsets       = ctx->maps.d_coo_elem_offsets;
+  auto           d_coo_elem_point_offsets = ctx->maps.d_coo_elem_point_offsets;
+  auto           d_fullNb                 = ctx->maps.d_fullNb;
+  auto           d_c_maps_gid             = ctx->maps.d_c_maps_gid;
+  auto           d_c_maps_scale           = ctx->maps.d_c_maps_scale;
+  const PetscInt num_face_                = ctx->maps.num_face;
 
   /* Capture scalars */
   const PetscInt Nq_     = Nq;
@@ -2089,36 +1907,24 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
 
   /* Pass 1: integrate Jacobian for all elements into d_elemMat */
   Kokkos::parallel_for(
-    "DMPlexSNESComputeJacobianFEM_Kokkos_integrate",
-    Kokkos::RangePolicy<>(0, Ne),
-    KOKKOS_LAMBDA(const PetscInt e) {
-      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3>(
-        e,
-        Nq_, Nb_, Nc_, dim_, dE_,
-        d_B.data(), d_D.data(), d_w.data(),
-        d_invJ.data(), d_detJ.data(), d_coords.data(),
-        d_coeff.data(),
-        totDim_, 0, 0, 0,
-        0.0, 0.0,
-        numConstants_, d_constants.data(),
-        d_elemMat.data()
-      );
+    "DMPlexSNESComputeJacobianFEM_Kokkos_integrate", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
+      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, 0, 0, 0, 0.0, 0.0, numConstants_, d_constants.data(),
+                                                         d_elemMat.data());
     });
   Kokkos::fence();
 
   /* Pass 2: scatter d_elemMat to COO values (constraint-aware) */
   Kokkos::parallel_for(
-    "DMPlexSNESComputeJacobianFEM_Kokkos_scatter",
-    Kokkos::RangePolicy<>(0, Ne),
-    KOKKOS_LAMBDA(const PetscInt e) {
+    "DMPlexSNESComputeJacobianFEM_Kokkos_scatter", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
       const PetscInt off    = d_coo_elem_offsets[e];
       const PetscInt fullNb = d_fullNb[e];
       for (PetscInt b = 0; b < Nb_; ++b) {
-        PetscInt    nr = 0;
-        PetscScalar row_scale[PETSCFE_KOKKOS_MAX_FACE];
+        PetscInt               nr = 0;
+        PetscScalar            row_scale[PETSCFE_KOKKOS_MAX_FACE];
         const PetscFEKokkosIdx gidx_b = d_gIdx[e * Nb_ + b];
         if (gidx_b >= 0) {
-          nr = 1; row_scale[0] = 1.0;
+          nr           = 1;
+          row_scale[0] = 1.0;
         } else if (gidx_b < -1) {
           const PetscInt cidx = -(PetscInt)gidx_b - 1;
           for (PetscInt q = 0; q < num_face_; ++q) {
@@ -2130,11 +1936,12 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
         const PetscInt pt_off_b = d_coo_elem_point_offsets[e * (Nb_ + 1) + b];
 
         for (PetscInt b2 = 0; b2 < Nb_; ++b2) {
-          PetscInt    nc = 0;
-          PetscScalar col_scale[PETSCFE_KOKKOS_MAX_FACE];
+          PetscInt               nc = 0;
+          PetscScalar            col_scale[PETSCFE_KOKKOS_MAX_FACE];
           const PetscFEKokkosIdx gidx_b2 = d_gIdx[e * Nb_ + b2];
           if (gidx_b2 >= 0) {
-            nc = 1; col_scale[0] = 1.0;
+            nc           = 1;
+            col_scale[0] = 1.0;
           } else if (gidx_b2 < -1) {
             const PetscInt cidx = -(PetscInt)gidx_b2 - 1;
             for (PetscInt q = 0; q < num_face_; ++q) {
