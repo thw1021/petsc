@@ -240,7 +240,6 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   const PetscInt     field = key.field;
 
   PetscFunctionBegin;
-
   /* Fall back to Basic if auxiliary fields are present */
   if (dsAux) {
     PetscCall(PetscFEIntegrateResidual_Basic(ds, key, Ne, cgeom, coefficients, coefficients_t, dsAux, coefficientsAux, t, elemVec));
@@ -605,7 +604,6 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
     const PetscInt     n   = Ne * totDim;
     for (PetscInt i = 0; i < n; ++i) elemVec[i] += src[i];
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
