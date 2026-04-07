@@ -838,7 +838,7 @@ typedef struct {
 
 /* Maximum parent DOFs per constrained DOF.
  * For Q2 in 2D: 3 DOFs on a face edge.  8 matches LANDAU_MAX_Q_FACE. */
-#ifndef PETSCFE_KOKKOS_MAX_FACE
+#if !defined(PETSCFE_KOKKOS_MAX_FACE)
   #define PETSCFE_KOKKOS_MAX_FACE 8
 #endif
 

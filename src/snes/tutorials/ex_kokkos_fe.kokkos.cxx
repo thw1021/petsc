@@ -48,7 +48,7 @@ static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosCtx\
 #include <Kokkos_Core.hpp>
 #include <petscfekokkos.h>
 
-#ifndef PETSCFEKOKKOS
+#if !defined(PETSCFEKOKKOS)
   #define PETSCFEKOKKOS "kokkos"
 #endif
 
