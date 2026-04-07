@@ -1,5 +1,5 @@
 /*
-  ex_kokkos_fe.kokkos.cxx — Tutorial: GPU-resident FEM assembly with PetscFEKokkosCtx
+  ex_kokkos_fe.kokkos.cxx -- Tutorial: GPU-resident FEM assembly with PetscFEKokkosCtx
 
   Demonstrates the Phase 1c.E API for GPU-resident finite element assembly
   using the new PETSc-level functions:
@@ -9,9 +9,9 @@
     DMPlexSNESComputeJacobianFEM_Kokkos<G0, G1, G2, G3>(snes, X, J, Jp, &ctx)
     PetscFEKokkosDestroy(&ctx)
 
-  Problem: 2D Poisson equation  -∇²u = f  on [0,1]²
-    Manufactured solution:  u_exact(x,y) = sin(πx) sin(πy)
-    Source term:            f(x,y)       = 2π² sin(πx) sin(πy)
+  Problem: 2D Poisson equation  -grad^2u = f  on [0,1]^2
+    Manufactured solution:  u_exact(x,y) = sin(pix) sin(piy)
+    Source term:            f(x,y)       = 2pi^2 sin(pix) sin(piy)
 
   Key design principle:
     CUDA cannot call host function pointers from device kernels.
@@ -22,7 +22,7 @@
     ./ex_kokkos_fe -petscspace_degree 2 -dm_plex_box_faces 8,8 \
                    -ksp_type cg -pc_type gamg
 
-  Expected output (P2, 8×8 mesh):
+  Expected output (P2, 8x8 mesh):
     L2 error: ~4.9e-04
 
   Build:
@@ -58,11 +58,11 @@ static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosCtx\
    These MUST be device-callable (KOKKOS_INLINE_FUNCTION) so that
    nvcc_wrapper can inline them into the GPU kernel at compile time.
 
-   Signature matches PetscPointFn (petscdstypes.h) — use the
+   Signature matches PetscPointFn (petscdstypes.h) -- use the
    PETSCFE_KOKKOS_POINT_ARGS / PETSCFE_KOKKOS_JAC_POINT_ARGS macros.
    ========================================================================= */
 
-/* f0: source term  f0 = -2π² sin(πx) sin(πy)
+/* f0: source term  f0 = -2pi^2 sin(pix) sin(piy)
  * (negative because PETSc convention: F(u) = 0, so f0 = -f_rhs) */
 KOKKOS_INLINE_FUNCTION
 static void f0_poisson(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[])
@@ -70,14 +70,14 @@ static void f0_poisson(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[])
   f0[0] = -2.0 * PETSC_PI * PETSC_PI * Kokkos::sin(PETSC_PI * x[0]) * Kokkos::sin(PETSC_PI * x[1]);
 }
 
-/* f1: flux term  f1[d] = ∂u/∂x_d  (Laplacian weak form) */
+/* f1: flux term  f1[d] = du/dx_d  (Laplacian weak form) */
 KOKKOS_INLINE_FUNCTION
 static void f1_poisson(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f1[])
 {
   for (PetscInt d = 0; d < dim; ++d) f1[d] = u_x[d];
 }
 
-/* g3: Jacobian  g3[i*dim+j] = δ_{ij}  (identity tensor for Laplacian) */
+/* g3: Jacobian  g3[i*dim+j] = delta_{ij}  (identity tensor for Laplacian) */
 KOKKOS_INLINE_FUNCTION
 static void g3_poisson(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])
 {
@@ -85,7 +85,7 @@ static void g3_poisson(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])
 }
 
 /* =========================================================================
-   Step 2: Manufactured solution (HOST callback — not device-callable).
+   Step 2: Manufactured solution (HOST callback -- not device-callable).
    Registered with PetscDSSetExactSolution and DMAddBoundary.
    ========================================================================= */
 static PetscErrorCode u_exact(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
@@ -95,7 +95,7 @@ static PetscErrorCode u_exact(PetscInt dim, PetscReal time, const PetscReal x[],
 }
 
 /* =========================================================================
-   Step 3: SetupDiscretization — attach PETSCFEKOKKOS to DM.
+   Step 3: SetupDiscretization -- attach PETSCFEKOKKOS to DM.
    ========================================================================= */
 static PetscErrorCode SetupDiscretization(DM dm)
 {
@@ -125,7 +125,7 @@ static PetscErrorCode SetupDiscretization(DM dm)
   /* Register host callbacks (used by DMPlexSetSNESLocalFEM fallback path
    * and by DMComputeL2Diff).  The GPU path uses the template callbacks above. */
   PetscCall(DMGetDS(dm, &ds));
-  PetscCall(PetscDSSetResidual(ds, 0, NULL, NULL)); /* GPU path only — no host callbacks needed */
+  PetscCall(PetscDSSetResidual(ds, 0, NULL, NULL)); /* GPU path only -- no host callbacks needed */
   PetscCall(PetscDSSetExactSolution(ds, 0, u_exact, NULL));
 
   /* Dirichlet BC: u = u_exact on all boundary faces */
@@ -184,10 +184,10 @@ int main(int argc, char **argv)
 
   PetscCall(SNESSetFromOptions(snes));
 
-  /* Step 6: PetscFEKokkosSetUp — build assembly maps, stage to device,
+  /* Step 6: PetscFEKokkosSetUp -- build assembly maps, stage to device,
    * preallocate COO matrix.
    *
-   * Must be called AFTER SNESSetFromOptions (which triggers DMSetUp →
+   * Must be called AFTER SNESSetFromOptions (which triggers DMSetUp ->
    * Kokkos::initialize).  Combines the three-call sequence:
    *   PetscFEKokkosCreateMaps + PetscFEKokkosStageMaps + PetscFEKokkosPreallocateCOO
    * into a single library call. */
@@ -216,7 +216,7 @@ int main(int argc, char **argv)
   }
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "L2 error: %g\n", (double)error));
 
-  /* Step 8: PetscFEKokkosDestroy — free host arrays.
+  /* Step 8: PetscFEKokkosDestroy -- free host arrays.
    * Device Kokkos::Views are reference-counted and freed automatically. */
   PetscCall(PetscFEKokkosDestroy(&kokkos_ctx));
 
