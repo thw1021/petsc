@@ -79,19 +79,6 @@
   PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[]
 
 /* =========================================================================
-   Type aliases for the two callback families.
-
-   PetscFEKokkosPointFn  -- residual callbacks (f0, f1)
-   PetscFEKokkosJacFn    -- Jacobian callbacks (g0, g1, g2, g3)
-
-   These match the PetscPointFn / PetscPointJacFn signatures exactly so that
-   the same function can be registered with PetscDSSetResidual (host path)
-   AND used as a template parameter here (device path).
-   ========================================================================= */
-typedef void (*PetscFEKokkosPointFn)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar out[]);
-typedef void (*PetscFEKokkosJacFn)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar out[]);
-
-/* =========================================================================
    PetscFEKokkosIntegrateResidualCell<F0, F1>
 
    Device-callable template function that integrates the residual for a
@@ -100,11 +87,11 @@ typedef void (*PetscFEKokkosJacFn)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar ou
 
    Template parameters:
      F0  -- KOKKOS_INLINE_FUNCTION callback for the zeroth-order term
-            (volume source / reaction).  Signature: PetscFEKokkosPointFn.
-            Pass nullptr_t (use the nullptr_F0 specialization) to skip.
+            (volume source / reaction).  Signature: PetscPointFn.
+            Pass nullptr to skip.
      F1  -- KOKKOS_INLINE_FUNCTION callback for the first-order term
-            (flux / diffusion).  Signature: PetscFEKokkosPointFn.
-            Pass nullptr_t to skip.
+            (flux / diffusion).  Signature: PetscPointFn.
+            Pass nullptr to skip.
 
    Arguments (all flat device-accessible arrays):
      e          -- element index (0-based)
@@ -146,7 +133,7 @@ typedef void (*PetscFEKokkosJacFn)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar ou
    Note: elemVec is accumulated (+=), not zeroed.  The caller must zero it
    before the kernel launch (or use Kokkos::deep_copy to zero the device View).
    ========================================================================= */
-template <void (*F0)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[]), void (*F1)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f1[])>
+template <PetscPointFn *F0, PetscPointFn *F1>
 KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE, const PetscReal *B,                                     /* [Nq * Nb * Nc]          */
                                                                const PetscReal   *D,                                                                                                                 /* [Nq * Nb * Nc * dim]    */
                                                                const PetscReal   *w,                                                                                                                 /* [Nq]                    */
@@ -285,7 +272,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
 
    Note: For Poisson, only G3 is non-zero (g3[d*dE+e2] = delta_{d,e2}).
    ========================================================================= */
-template <void (*G0)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g0[]), void (*G1)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g1[]), void (*G2)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g2[]), void (*G3)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])>
+template <PetscPointJacFn *G0, PetscPointJacFn *G1, PetscPointJacFn *G2, PetscPointJacFn *G3>
 KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE, const PetscReal *B, /* [Nq * Nb * Nc]          */
                                                                const PetscReal   *D,                                                                             /* [Nq * Nb * Nc * dim]    */
                                                                const PetscReal   *w,                                                                             /* [Nq]                    */
@@ -437,10 +424,8 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, Petsc
 
    This is a host-only function -- it uses PetscCall and PetscFunctionBegin.
    ========================================================================= */
-/* Inline reimplementation of CoordinatesRefToReal (from petsc/private/petscfeimpl.h).
-   That function is static inline in a private header and not exported from libpetsc,
-   so we cannot link against it.  The formula is:
-     x[d] = v0[d] + sum_e J[d*dimReal + e] * (xi[e] - xi0[e])
+/* Local helper: map reference coordinates to physical coordinates.
+   Formula: x[d] = v0[d] + sum_e J[d*dimReal + e] * (xi[e] - xi0[e])
    where xi0[] is the reference origin stored in cgeom->xi. */
 static inline void PetscFEKokkosCoordRefToReal(PetscInt dimReal, PetscInt dimRef, const PetscReal xi0[], const PetscReal v0[], const PetscReal J[], const PetscReal xi[], PetscReal x[])
 {
@@ -509,7 +494,7 @@ static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt N
    Returns PETSC_SUCCESS on success; falls back gracefully if restrictions
    are violated (caller should use the Basic path in that case).
    ========================================================================= */
-template <void (*F0)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[]), void (*F1)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f1[])>
+template <PetscPointFn *F0, PetscPointFn *F1>
 static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar *coefficients, const PetscScalar *coefficients_t, PetscReal t, PetscScalar *elemVec /* [Ne * totDim] -- accumulated */
 )
 {
@@ -658,7 +643,7 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
      t, u_tShift                      -- time and time-derivative shift
      elemMat[Ne * totDim * totDim]    -- output element matrix (accumulated)
    ========================================================================= */
-template <void (*G0)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g0[]), void (*G1)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g1[]), void (*G2)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g2[]), void (*G3)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])>
+template <PetscPointJacFn *G0, PetscPointJacFn *G1, PetscPointJacFn *G2, PetscPointJacFn *G3>
 static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar *coefficients, PetscReal t, PetscReal u_tShift, PetscScalar *elemMat /* [Ne * totDim * totDim] -- accumulated */
 )
 {
@@ -795,15 +780,15 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
 }
 
 /* =========================================================================
-   Phase 1.C / 1.D: COO Assembly Infrastructure
+   COO Assembly Infrastructure
    =========================================================================
 
    PetscFEKokkosMaps -- precomputed assembly maps for COO scatter.
 
-   Built once at setup time from DMPlex closure indices using the Landau
-   probing technique; staged to device so that the Jacobian and residual
-   kernels can scatter element contributions directly into the global COO
-   arrays without any host round-trip.
+   Built once at setup time from DMPlex closure indices by probing;
+   staged to device so that the Jacobian and residual kernels can scatter
+   element contributions directly into the global COO arrays without any
+   host round-trip.
 
    Phase 1.C design (no AMR, no hanging nodes):
      gIdx[e * Nb + b]   = global DOF index for element e, basis function b.
@@ -910,19 +895,17 @@ typedef struct {
 
 /* -------------------------------------------------------------------------
    PetscFEKokkosCreateMaps
-   Build gIdx and constraint maps on the host using the Landau probing
-   technique.  For each element and basis function, set a unit element
-   matrix and call DMPlexGetClosureIndices(useConstraints=TRUE) to discover
-   whether the DOF is unconstrained (diagonal ~ 1) or constrained (0 < c < 1).
+   Build gIdx and constraint maps on the host by probing.  For each element
+   and basis function, set a unit element matrix and call
+   DMPlexGetClosureIndices(useConstraints=TRUE) to discover whether the DOF
+   is unconstrained (diagonal ~ 1) or constrained (0 < c < 1).
 
    Call PetscFEKokkosStageMaps afterwards to copy to device.
-
-   Reference: petsc-ai-services/src/ts/utils/dmplexlandau/plexland.c:1516-1601
    ------------------------------------------------------------------------- */
 static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
 {
   PetscSection section, globalSection;
-  PetscInt     cStart, cEnd, Ne, Nb, totDim;
+  PetscInt     cStart, cEnd, Ne, Nb, totDim, num_dof;
   PetscDS      ds;
   PetscFE      fe;
   PetscInt     dim;
@@ -934,15 +917,12 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
   maps->local_dof = 0; /* will be set below */
 
   /* If dm is a DMForest (p4est), convert to the adapted DMPlex so that
-   * DMPlexGetHeightStratum / DMPlexGetClosureIndices work correctly.
-   * Reference: ex12.c SetupDiscretization, plexland.c:1516 */
+   * DMPlexGetHeightStratum / DMPlexGetClosureIndices work correctly. */
   PetscCall(PetscObjectTypeCompare((PetscObject)dm, DMPLEX, &isPlex));
   if (isPlex) {
     plex = dm;
     PetscCall(PetscObjectReference((PetscObject)plex));
-  } else {
-    PetscCall(DMConvert(dm, DMPLEX, &plex));
-  }
+  } else PetscCall(DMConvert(dm, DMPLEX, &plex));
 
   /* Get local and global sections from the adapted plex */
   PetscCall(DMGetLocalSection(plex, &section));
@@ -963,7 +943,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
   PetscCall(PetscDSGetTotalDimension(ds, &totDim));
 
   /* Get total global DOFs for bounds checking */
-  PetscInt num_dof = 0;
+  num_dof = 0;
   {
     Vec gvec;
     PetscCall(DMCreateGlobalVector(dm, &gvec));
@@ -1011,14 +991,8 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
     if (maps->num_face < 1) maps->num_face = 1;
   }
 
-  /* Allocate host arrays */
-  PetscCall(PetscMalloc1(Ne * Nb, &maps->h_gIdx));
-  PetscCall(PetscMalloc1(Ne * Nb, &maps->h_lIdx));
-  PetscCall(PetscMalloc1(Ne * Nb, &maps->h_active_idx));
-  PetscCall(PetscMalloc1(Ne, &maps->h_Nb_active));
-  PetscCall(PetscMalloc1(Ne + 1, &maps->h_coo_elem_offsets));
-  PetscCall(PetscMalloc1(Ne, &maps->h_fullNb));
-  PetscCall(PetscMalloc1(Ne * (Nb + 1), &maps->h_coo_elem_point_offsets));
+  /* Allocate host arrays (all created together -> freed together with PetscFree7) */
+  PetscCall(PetscMalloc7(Ne * Nb, &maps->h_gIdx, Ne * Nb, &maps->h_lIdx, Ne * Nb, &maps->h_active_idx, Ne, &maps->h_Nb_active, Ne + 1, &maps->h_coo_elem_offsets, Ne, &maps->h_fullNb, Ne * (Nb + 1), &maps->h_coo_elem_point_offsets));
 
   /* Build h_lIdx: local DOF indices from the local section.
    * DMPlexGetClosureIndices(section, section) returns local indices that are
@@ -1045,8 +1019,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
   const PetscInt num_face    = maps->num_face;
   PetscInt      *tmp_c_gid;
   PetscScalar   *tmp_c_scale;
-  PetscCall(PetscMalloc1(max_reduced * num_face, &tmp_c_gid));
-  PetscCall(PetscMalloc1(max_reduced * num_face, &tmp_c_scale));
+  PetscCall(PetscMalloc2(max_reduced * num_face, &tmp_c_gid, max_reduced * num_face, &tmp_c_scale));
   /* Initialize to -1 / 0 */
   for (PetscInt i = 0; i < max_reduced * num_face; ++i) {
     tmp_c_gid[i]   = -1;
@@ -1118,8 +1091,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
             const PetscInt idx       = maps->num_reduced;
             maps->h_gIdx[e * Nb + q] = -(PetscFEKokkosIdx)(idx + 1);
 
-            PetscReal sum = 0.0;
-            PetscInt  jj  = 0;
+            PetscInt jj = 0;
             do {
               /* Sum row ff of the outer product to recover the weight */
               PetscScalar sc = 0.0;
@@ -1127,7 +1099,6 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
                 if (ff + ii < numIndices) sc += PetscRealPart(elMat[f * numIndices + ff + ii]);
               }
               tmp_c_scale[idx * num_face + jj] = sc;
-              sum += PetscRealPart(sc);
               if (PetscRealPart(sc) == 0.0 || indices[f] < 0) {
                 tmp_c_gid[idx * num_face + jj] = -1;
               } else {
@@ -1142,14 +1113,6 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
               tmp_c_scale[idx * num_face + jj] = 0.0;
               tmp_c_gid[idx * num_face + jj]   = -1;
               ++jj;
-            }
-
-            /* Diagnostic: constraint weights should sum to 1.0 in 2D */
-            if (PetscAbs(sum - 1.0) > 10 * PETSC_MACHINE_EPSILON) {
-              PetscCall(PetscPrintf(PETSC_COMM_SELF,
-                                    "PetscFEKokkosCreateMaps: WARNING elem %d basis %d "
-                                    "constraint weight sum = %g (expected 1.0)\n",
-                                    (int)e, (int)q, (double)sum));
             }
 
             maps->num_reduced++;
@@ -1192,16 +1155,14 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
 
   PetscCall(PetscFree(elMat));
 
-  /* Copy constraint maps to final host arrays */
-  PetscCall(PetscMalloc1(maps->num_reduced * num_face, &maps->h_c_maps_gid));
-  PetscCall(PetscMalloc1(maps->num_reduced * num_face, &maps->h_c_maps_scale));
+  /* Copy constraint maps to final host arrays (created together -> freed together with PetscFree2) */
+  PetscCall(PetscMalloc2(maps->num_reduced * num_face, &maps->h_c_maps_gid, maps->num_reduced * num_face, &maps->h_c_maps_scale));
   for (PetscInt i = 0; i < maps->num_reduced * num_face; ++i) {
     maps->h_c_maps_gid[i]   = tmp_c_gid[i];
     maps->h_c_maps_scale[i] = tmp_c_scale[i];
   }
 
-  PetscCall(PetscFree(tmp_c_gid));
-  PetscCall(PetscFree(tmp_c_scale));
+  PetscCall(PetscFree2(tmp_c_gid, tmp_c_scale));
 
   /* Build active_idx, Nb_active, and coo_elem_offsets.
    *
@@ -1398,24 +1359,16 @@ static inline PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps
 }
 
 /* -------------------------------------------------------------------------
-   PetscFEKokkosDestroyMaps
+   PetscFEKokkosMapsDestroy
    Free all host-side PetscMalloc'd arrays.  Device Views are reference-
    counted by Kokkos and freed automatically when they go out of scope or
    when the struct is destroyed.
    ------------------------------------------------------------------------- */
-static inline PetscErrorCode PetscFEKokkosDestroyMaps(PetscFEKokkosMaps *maps)
+static inline PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps *maps)
 {
   PetscFunctionBeginUser;
-  PetscCall(PetscFree(maps->h_gIdx));
-  PetscCall(PetscFree(maps->h_lIdx));
-  PetscCall(PetscFree(maps->h_active_idx));
-  PetscCall(PetscFree(maps->h_Nb_active));
-  PetscCall(PetscFree(maps->h_coo_elem_offsets));
-  /* Phase 1.D: free constraint and expanded-basis arrays */
-  PetscCall(PetscFree(maps->h_c_maps_gid));
-  PetscCall(PetscFree(maps->h_c_maps_scale));
-  PetscCall(PetscFree(maps->h_coo_elem_point_offsets));
-  PetscCall(PetscFree(maps->h_fullNb));
+  PetscCall(PetscFree7(maps->h_gIdx, maps->h_lIdx, maps->h_active_idx, maps->h_Nb_active, maps->h_coo_elem_offsets, maps->h_fullNb, maps->h_coo_elem_point_offsets));
+  PetscCall(PetscFree2(maps->h_c_maps_gid, maps->h_c_maps_scale));
   /* Reset device Views to empty (releases Kokkos reference count) */
   maps->d_gIdx                   = Kokkos::View<PetscFEKokkosIdx *>();
   maps->d_lIdx                   = Kokkos::View<PetscInt *>();
@@ -1430,68 +1383,44 @@ static inline PetscErrorCode PetscFEKokkosDestroyMaps(PetscFEKokkosMaps *maps)
 }
 
 /* =========================================================================
-   Phase 1c.E -- PETSc-level API for GPU-resident FEM assembly
+   PETSc-level API for GPU-resident FEM assembly
    =========================================================================
 
-   PetscFEKokkosCtx
-   ----------------
-   Opaque context struct that wraps PetscFEKokkosMaps.  Pass a pointer to
-   this struct as the `ctx` argument to DMPlexSNESComputeResidualFEM_Kokkos
-   and DMPlexSNESComputeJacobianFEM_Kokkos.
-
    Lifecycle:
-     PetscFEKokkosSetUp(dm, &ctx)   -- build maps, stage to device, preallocate COO
-     DMPlexSNESComputeResidualFEM_Kokkos<f0,f1>(snes, X, F, &ctx)
-     DMPlexSNESComputeJacobianFEM_Kokkos<G0,G1,G2,G3>(snes, X, J, Jp, &ctx)
-     PetscFEKokkosDestroy(&ctx)     -- free host arrays (device Views auto-freed)
+     PetscFEKokkosSetUp(dm, maps, J)   -- build maps, stage to device, preallocate COO
+     DMPlexSNESComputeResidualFEM_Kokkos<f0,f1>(snes, X, F, maps)
+     DMPlexSNESComputeJacobianFEM_Kokkos<G0,G1,G2,G3>(snes, X, J, Jp, maps)
+     PetscFEKokkosMapsDestroy(maps)    -- free host arrays (device Views auto-freed)
 
-   Note: PetscFEKokkosSetUp calls PetscKokkosInitializeCheck() internally,
-   so it is safe to call before SNESSetFromOptions triggers DMSetUp.
-   However, the recommended order is:
-     SNESSetFromOptions(snes)        <- triggers DMSetUp -> Kokkos::initialize
-     PetscFEKokkosSetUp(dm, &ctx)   <- Kokkos already initialized
+   Recommended order:
+     SNESSetFromOptions(snes)          -- triggers DMSetUp -> Kokkos::initialize
+     PetscFEKokkosSetUp(dm, maps, J)  -- Kokkos already initialized
    ========================================================================= */
-
-typedef struct {
-  PetscFEKokkosMaps maps; /* precomputed assembly maps (host + device) */
-} PetscFEKokkosCtx;
 
 /* -------------------------------------------------------------------------
    PetscFEKokkosSetUp
    Build assembly maps, stage to device, and preallocate the COO matrix J.
 
    Parameters:
-     dm  -- the DM with FE discretization already attached (after DMCreateDS)
-     ctx -- output context; caller must pass a pointer to an uninitialised
-           PetscFEKokkosCtx (stack or heap).
-     J   -- matrix to preallocate via MatSetPreallocationCOO; must already
-           exist (e.g. from DMCreateMatrix).
+     dm   -- the DM with FE discretization already attached (after DMCreateDS)
+     maps -- output; caller must pass a pointer to an uninitialised
+             PetscFEKokkosMaps (stack or heap).
+     J    -- matrix to preallocate via MatSetPreallocationCOO; must already
+             exist (e.g. from DMCreateMatrix).
 
    Calls (in order):
-     PetscFEKokkosCreateMaps(dm, &ctx->maps)
+     PetscFEKokkosCreateMaps(dm, maps)
      PetscKokkosInitializeCheck()
-     PetscFEKokkosStageMaps(&ctx->maps)
-     PetscFEKokkosPreallocateCOO(&ctx->maps, J)
+     PetscFEKokkosStageMaps(maps)
+     PetscFEKokkosPreallocateCOO(maps, J)
    ------------------------------------------------------------------------- */
-static inline PetscErrorCode PetscFEKokkosSetUp(DM dm, PetscFEKokkosCtx *ctx, Mat J)
+static inline PetscErrorCode PetscFEKokkosSetUp(DM dm, PetscFEKokkosMaps *maps, Mat J)
 {
   PetscFunctionBegin;
-  PetscCall(PetscFEKokkosCreateMaps(dm, &ctx->maps));
+  PetscCall(PetscFEKokkosCreateMaps(dm, maps));
   PetscCall(PetscKokkosInitializeCheck());
-  PetscCall(PetscFEKokkosStageMaps(&ctx->maps));
-  PetscCall(PetscFEKokkosPreallocateCOO(&ctx->maps, J));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/* -------------------------------------------------------------------------
-   PetscFEKokkosDestroy
-   Free all host-side arrays in ctx->maps.  Device Views are reference-
-   counted by Kokkos and freed automatically.
-   ------------------------------------------------------------------------- */
-static inline PetscErrorCode PetscFEKokkosDestroy(PetscFEKokkosCtx *ctx)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscFEKokkosDestroyMaps(&ctx->maps));
+  PetscCall(PetscFEKokkosStageMaps(maps));
+  PetscCall(PetscFEKokkosPreallocateCOO(maps, J));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1507,7 +1436,7 @@ static inline PetscErrorCode PetscFEKokkosDestroy(PetscFEKokkosCtx *ctx)
      f1 -- KOKKOS_INLINE_FUNCTION void(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[])
           flux term (first-order residual)
 
-   ctx_ptr must point to a PetscFEKokkosCtx with maps already staged
+   ctx_ptr must point to a PetscFEKokkosMaps with maps already staged
    (i.e. PetscFEKokkosSetUp has been called).
 
    Algorithm:
@@ -1519,10 +1448,10 @@ static inline PetscErrorCode PetscFEKokkosDestroy(PetscFEKokkosCtx *ctx)
      6. Pass 2: scatter d_elemVec -> locF via Kokkos::atomic_add (local indices).
      7. DMLocalToGlobal(locF, ADD_VALUES, F) -- MPI reduction for ghost DOFs.
    ========================================================================= */
-template <void (*f0)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[]), void (*f1)(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[])>
+template <PetscPointFn *f0, PetscPointFn *f1>
 static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec F, void *ctx_ptr)
 {
-  PetscFEKokkosCtx  *ctx = (PetscFEKokkosCtx *)ctx_ptr;
+  PetscFEKokkosMaps *ctx = (PetscFEKokkosMaps *)ctx_ptr;
   DM                 dm;
   PetscDS            ds;
   PetscFE            fe;
@@ -1654,7 +1583,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   PetscCall(VecZeroEntries(locF));
   PetscCall(VecGetArrayAndMemType(locF, &locF_arr, &locF_memtype));
 
-  const PetscInt local_dof_with_ghosts = ctx->maps.local_dof;
+  const PetscInt local_dof_with_ghosts = ctx->local_dof;
 
   using DeviceUnmanaged = Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
   using HostUnmanaged   = Kokkos::View<PetscScalar *, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
@@ -1672,9 +1601,9 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   }
 
   /* Capture maps for lambda */
-  auto d_lIdx         = ctx->maps.d_lIdx;
-  auto d_c_maps_gid   = ctx->maps.d_c_maps_gid;
-  auto d_c_maps_scale = ctx->maps.d_c_maps_scale;
+  auto d_lIdx         = ctx->d_lIdx;
+  auto d_c_maps_gid   = ctx->d_c_maps_gid;
+  auto d_c_maps_scale = ctx->d_c_maps_scale;
 
   /* Capture scalars */
   const PetscInt Nq_     = Nq;
@@ -1743,7 +1672,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
    Pass nullptr for unused callbacks (e.g. G0=nullptr, G1=nullptr, G2=nullptr
    for a pure Laplacian where only G3 is non-zero).
 
-   ctx_ptr must point to a PetscFEKokkosCtx with maps already staged.
+   ctx_ptr must point to a PetscFEKokkosMaps with maps already staged.
 
    Algorithm:
      1. Get local solution with BCs applied (host-sync guard for device Vecs).
@@ -1754,10 +1683,10 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
      6. Pass 2: scatter d_elemMat -> d_coo_vals (constraint-aware).
      7. MatSetValuesCOO(J, d_coo_vals.data(), INSERT_VALUES).
    ========================================================================= */
-template <void (*G0)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[]), void (*G1)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[]), void (*G2)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[]), void (*G3)(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[])>
+template <PetscPointJacFn *G0, PetscPointJacFn *G1, PetscPointJacFn *G2, PetscPointJacFn *G3>
 static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat J, Mat Jp, void *ctx_ptr)
 {
-  PetscFEKokkosCtx  *ctx = (PetscFEKokkosCtx *)ctx_ptr;
+  PetscFEKokkosMaps *ctx = (PetscFEKokkosMaps *)ctx_ptr;
   DM                 dm;
   PetscDS            ds;
   PetscFE            fe;
@@ -1871,7 +1800,7 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   }
 
   /* Allocate COO values array and zero it */
-  const PetscCount            coo_size = ctx->maps.coo_size;
+  const PetscCount            coo_size = ctx->coo_size;
   Kokkos::View<PetscScalar *> d_coo_vals("jac_coo_vals", coo_size);
   Kokkos::deep_copy(d_coo_vals, PetscScalar(0.0));
 
@@ -1880,13 +1809,13 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   Kokkos::deep_copy(d_elemMat, PetscScalar(0.0));
 
   /* Capture maps for lambda */
-  auto           d_gIdx                   = ctx->maps.d_gIdx;
-  auto           d_coo_elem_offsets       = ctx->maps.d_coo_elem_offsets;
-  auto           d_coo_elem_point_offsets = ctx->maps.d_coo_elem_point_offsets;
-  auto           d_fullNb                 = ctx->maps.d_fullNb;
-  auto           d_c_maps_gid             = ctx->maps.d_c_maps_gid;
-  auto           d_c_maps_scale           = ctx->maps.d_c_maps_scale;
-  const PetscInt num_face_                = ctx->maps.num_face;
+  auto           d_gIdx                   = ctx->d_gIdx;
+  auto           d_coo_elem_offsets       = ctx->d_coo_elem_offsets;
+  auto           d_coo_elem_point_offsets = ctx->d_coo_elem_point_offsets;
+  auto           d_fullNb                 = ctx->d_fullNb;
+  auto           d_c_maps_gid             = ctx->d_c_maps_gid;
+  auto           d_c_maps_scale           = ctx->d_c_maps_scale;
+  const PetscInt num_face_                = ctx->num_face;
 
   /* Capture scalars */
   const PetscInt Nq_     = Nq;
