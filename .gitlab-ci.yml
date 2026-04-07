@@ -1326,8 +1326,8 @@ docs-review:
     - printf "CONFIG_OPTS:${CONFIG_OPTS}\n"
     - printf "EXTRA_OPTIONS_INITIAL:$EXTRA_OPTIONS_INITIAL $BASE_EXTRA_OPTIONS\n"
     - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
-    - (time make html BUILDDIR="../public" SPHINXOPTS="-T -E -W --keep-going -j 2") || (printf "Sphinx build failed (warnings count as errors)\n" && false)
-    - (time make latexpdf SPHINXOPTS="-T -E -W --keep-going -j 2") || (printf "Sphinx build failed (warnings count as errors)\n" && false)
+    - (time make html BUILDDIR="../public" SPHINXOPTS="--fail-on-warning --keep-going -j 2") || (printf "Sphinx build failed (warnings count as errors)\n" && false)
+    - (time make latexpdf SPHINXOPTS="--fail-on-warning --keep-going -j 2") || (printf "Sphinx build failed (warnings count as errors)\n" && false)
     - cp _build/latex/manual.pdf ../public/html/manual/
   environment:
     name: review/$CI_COMMIT_REF_NAME
