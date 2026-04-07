@@ -347,13 +347,27 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, Petsc
       G3(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g3_loc);
     }
 
+    /* Precompute ALL physical gradients for this quadrature point.
+       all_grad[(b * Nc + c) * dE + d] = sum_{e2} D[q,b,c,e2] * invJ[e2,d]
+       This reduces gradient computation from O(Nb^2 * Nc^2 * dE * dim) to
+       O(Nb * Nc * dE * dim) per quadrature point -- a factor of Nb*Nc savings. */
+    constexpr PetscInt PETSCFE_KOKKOS_MAX_NB = 64; /* max total DOFs per element (Q3 hex 3D) */
+    PetscReal          all_grad[PETSCFE_KOKKOS_MAX_NB * PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE];
+    for (PetscInt b = 0; b < Nb; ++b)
+      for (PetscInt c = 0; c < Nc; ++c)
+        for (PetscInt d = 0; d < dE; ++d) {
+          PetscReal g = 0.0;
+          for (PetscInt e2 = 0; e2 < dim; ++e2) g += D_q[b * Nc * dim + c * dim + e2] * invJ_eq[e2 * dE + d];
+          all_grad[(b * Nc + c) * dE + d] = g;
+        }
+
     /* Assemble element matrix contributions.
        Nb = Nb_total (total DOFs per element).  b and b2 each run 0..Nb-1.
        row = fOff + b,  col = gOff + b2  (one index per DOF, matching febasic.c).
 
        For each (b, b2) pair we sum over all component pairs (fc, gc):
-         Test  physical grad: phi_grad[b,fc,d]  = sum_{e2} D[q,b,fc,e2] * invJ[e2,d]
-         Trial physical grad: psi_grad[b2,gc,d] = sum_{e2} D[q,b2,gc,e2] * invJ[e2,d]
+         Test  physical grad: phi_grad[b,fc,d]  = all_grad[(b*Nc+fc)*dE+d]
+         Trial physical grad: psi_grad[b2,gc,d] = all_grad[(b2*Nc+gc)*dE+d]
 
          G0 term: B[q,b,fc] * g0[fc,gc] * B[q,b2,gc] * wq
          G1 term: B[q,b,fc] * g1[fc,gc,d] * psi_grad[b2,gc,d] * wq
@@ -370,20 +384,12 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, Petsc
 
         /* Sum over all component pairs (fc, gc) */
         for (PetscInt fc = 0; fc < Nc; ++fc) {
-          /* Precompute test physical gradient phi_grad[d] for (b, fc) */
-          PetscReal phi_grad[PETSCFE_KOKKOS_MAX_DE];
-          for (PetscInt d = 0; d < dE; ++d) {
-            phi_grad[d] = 0.0;
-            for (PetscInt e2 = 0; e2 < dim; ++e2) phi_grad[d] += D_q[b * Nc * dim + fc * dim + e2] * invJ_eq[e2 * dE + d];
-          }
+          /* Read precomputed test physical gradient */
+          const PetscReal *phi_grad = &all_grad[(b * Nc + fc) * dE];
 
           for (PetscInt gc = 0; gc < Nc; ++gc) {
-            /* Precompute trial physical gradient psi_grad[d] for (b2, gc) */
-            PetscReal psi_grad[PETSCFE_KOKKOS_MAX_DE];
-            for (PetscInt d = 0; d < dE; ++d) {
-              psi_grad[d] = 0.0;
-              for (PetscInt e2 = 0; e2 < dim; ++e2) psi_grad[d] += D_q[b2 * Nc * dim + gc * dim + e2] * invJ_eq[e2 * dE + d];
-            }
+            /* Read precomputed trial physical gradient */
+            const PetscReal *psi_grad = &all_grad[(b2 * Nc + gc) * dE];
 
             /* G0: B_test * g0[fc,gc] * B_trial */
             if (G0 != nullptr) entry += B_q[b * Nc + fc] * g0_loc[fc * Nc + gc] * B_q[b2 * Nc + gc];
@@ -920,6 +926,11 @@ typedef struct {
   PetscInt cached_dE;
   PetscInt cached_totDim;
   PetscInt cached_numConstants;
+
+  /* Affine geometry flag: cached from chunkGeom->isAffine at first call.
+   * When PETSC_TRUE, invJ/detJ are constant per element (not per quad point),
+   * enabling the compact H->D transfer + on-device expansion optimization. */
+  PetscBool isAffine;
 } PetscFEKokkosMaps;
 
 /* PetscFEKokkosCreateMaps
@@ -986,11 +997,11 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
     PetscCall(DMRestoreLocalVector(dm, &lvec));
   }
 
-  maps->num_elements = Ne;
-  maps->num_dof      = num_dof;
-  maps->Nb           = Nb;
-  maps->totDim       = totDim;
-  maps->num_reduced  = 0;
+  maps->num_elements        = Ne;
+  maps->num_dof             = num_dof;
+  maps->Nb                  = Nb;
+  maps->totDim              = totDim;
+  maps->num_reduced         = 0;
   maps->cached_Ne           = -1;
   maps->cached_Nq           = -1;
   maps->cached_Nc           = -1;
@@ -998,6 +1009,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
   maps->cached_dE           = -1;
   maps->cached_totDim       = -1;
   maps->cached_numConstants = -1;
+  maps->isAffine            = PETSC_FALSE;
 
   /* num_face: number of DOFs on a face edge = degree + 1 for 2D quads.
    * Landau computes this as pow(num_face, dim-1) for higher dimensions.
@@ -1363,12 +1375,12 @@ static inline PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *
     const PetscInt nEV     = Ne * totDim;
     const PetscInt nEM     = Ne * totDim * totDim;
 
-    maps->d_invJ    = Kokkos::View<PetscReal *>("fekokkos_cached_invJ", nInvJ);
-    maps->d_detJ    = Kokkos::View<PetscReal *>("fekokkos_cached_detJ", nDetJ);
-    maps->d_coords  = Kokkos::View<PetscReal *>("fekokkos_cached_coords", nCoords);
-    maps->d_coeff   = Kokkos::View<PetscScalar *>("fekokkos_cached_coeff", nCoeff);
-    maps->d_elemVec = Kokkos::View<PetscScalar *>("fekokkos_cached_elemVec", nEV);
-    maps->d_elemMat = Kokkos::View<PetscScalar *>("fekokkos_cached_elemMat", nEM);
+    maps->d_invJ     = Kokkos::View<PetscReal *>("fekokkos_cached_invJ", nInvJ);
+    maps->d_detJ     = Kokkos::View<PetscReal *>("fekokkos_cached_detJ", nDetJ);
+    maps->d_coords   = Kokkos::View<PetscReal *>("fekokkos_cached_coords", nCoords);
+    maps->d_coeff    = Kokkos::View<PetscScalar *>("fekokkos_cached_coeff", nCoeff);
+    maps->d_elemVec  = Kokkos::View<PetscScalar *>("fekokkos_cached_elemVec", nEV);
+    maps->d_elemMat  = Kokkos::View<PetscScalar *>("fekokkos_cached_elemMat", nEM);
     maps->d_coo_vals = Kokkos::View<PetscScalar *>("fekokkos_cached_coo_vals", maps->coo_size > 0 ? maps->coo_size : 1);
 
     maps->cached_Ne     = Ne;
@@ -1376,7 +1388,7 @@ static inline PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *
     maps->cached_totDim = totDim;
   }
   if (numConstants != maps->cached_numConstants) {
-    maps->d_constants = Kokkos::View<PetscScalar *>("fekokkos_cached_constants", numConstants > 0 ? numConstants : 1);
+    maps->d_constants         = Kokkos::View<PetscScalar *>("fekokkos_cached_constants", numConstants > 0 ? numConstants : 1);
     maps->cached_numConstants = numConstants;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1647,19 +1659,77 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   /* Ensure dynamic Views are allocated (realloc only when sizes change) */
   PetscCall(PetscFEKokkosEnsureDynamicViews(ctx, Ne, Nq, dE, totDim, numConstants));
 
-  /* Stage geometry to cached device Views */
-  PetscReal *h_invJ_buf, *h_detJ_buf, *h_coords_buf;
-  PetscCall(PetscMalloc3(nInvJ, &h_invJ_buf, nDetJ, &h_detJ_buf, nCoords, &h_coords_buf));
-  PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, chunkGeom, quadPoints, h_invJ_buf, h_detJ_buf, h_coords_buf));
-  {
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_buf, nInvJ);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_buf, nDetJ);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
-    Kokkos::deep_copy(ctx->d_invJ, hv_invJ);
-    Kokkos::deep_copy(ctx->d_detJ, hv_detJ);
-    Kokkos::deep_copy(ctx->d_coords, hv_coords);
+  /* Stage geometry: affine-optimized path reduces H->D transfer by Nq× */
+  ctx->isAffine              = chunkGeom->isAffine;
+  const PetscBool isAffine_r = ctx->isAffine;
+  if (isAffine_r) {
+    /* Affine: copy compact geometry [Ne * dE * dE] invJ + [Ne] detJ to device,
+     * then expand on-device via a small Kokkos kernel (GPU replication is
+     * much faster than host replication + larger H->D transfer). */
+    const PetscInt nInvJ_compact = Ne * dE * dE;
+    const PetscInt nDetJ_compact = Ne;
+
+    /* Allocate compact host buffers */
+    PetscReal *h_invJ_compact, *h_detJ_compact, *h_coords_buf;
+    PetscCall(PetscMalloc3(nInvJ_compact, &h_invJ_compact, nDetJ_compact, &h_detJ_compact, nCoords, &h_coords_buf));
+
+    /* Fill compact buffers: one invJ and one detJ per element */
+    const PetscInt Np_r = chunkGeom->numPoints;
+    for (PetscInt e = 0; e < Ne; ++e) {
+      for (PetscInt i = 0; i < dE * dE; ++i) h_invJ_compact[e * dE * dE + i] = chunkGeom->invJ[e * Np_r * dE * dE + i];
+      h_detJ_compact[e] = chunkGeom->detJ[e * Np_r];
+    }
+
+    /* Compute physical coords for affine elements */
+    for (PetscInt e = 0; e < Ne; ++e) {
+      const PetscReal *v0_e = &chunkGeom->v[e * Np_r * dE];
+      const PetscReal *J_e  = &chunkGeom->J[e * Np_r * dE * dE];
+      for (PetscInt q = 0; q < Nq; ++q) PetscFEKokkosCoordRefToReal(dE, dim, chunkGeom->xi, v0_e, J_e, &quadPoints[q * dim], &h_coords_buf[(e * Nq + q) * dE]);
+    }
+
+    /* Copy compact invJ/detJ to temporary device Views */
+    Kokkos::View<PetscReal *> d_invJ_compact("res_invJ_compact", nInvJ_compact);
+    Kokkos::View<PetscReal *> d_detJ_compact("res_detJ_compact", nDetJ_compact);
+    {
+      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_compact, nInvJ_compact);
+      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_compact, nDetJ_compact);
+      Kokkos::deep_copy(d_invJ_compact, hv_invJ);
+      Kokkos::deep_copy(d_detJ_compact, hv_detJ);
+    }
+
+    /* Copy coords to cached device View */
+    {
+      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
+      Kokkos::deep_copy(ctx->d_coords, hv_coords);
+    }
+    PetscCall(PetscFree3(h_invJ_compact, h_detJ_compact, h_coords_buf));
+
+    /* Expand on device: replicate single invJ/detJ across all Nq slots */
+    auto ctx_d_invJ_expand = ctx->d_invJ;
+    auto ctx_d_detJ_expand = ctx->d_detJ;
+    Kokkos::parallel_for(
+      "PetscFEKokkos_expand_affine_geom_res", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
+        for (PetscInt q = 0; q < Nq; ++q) {
+          for (PetscInt i = 0; i < dE * dE; ++i) ctx_d_invJ_expand[(e * Nq + q) * dE * dE + i] = d_invJ_compact[e * dE * dE + i];
+          ctx_d_detJ_expand[e * Nq + q] = d_detJ_compact[e];
+        }
+      });
+    Kokkos::fence();
+  } else {
+    /* Non-affine: use PetscFEKokkosExpandGeometry as before */
+    PetscReal *h_invJ_buf, *h_detJ_buf, *h_coords_buf;
+    PetscCall(PetscMalloc3(nInvJ, &h_invJ_buf, nDetJ, &h_detJ_buf, nCoords, &h_coords_buf));
+    PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, chunkGeom, quadPoints, h_invJ_buf, h_detJ_buf, h_coords_buf));
+    {
+      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_buf, nInvJ);
+      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_buf, nDetJ);
+      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
+      Kokkos::deep_copy(ctx->d_invJ, hv_invJ);
+      Kokkos::deep_copy(ctx->d_detJ, hv_detJ);
+      Kokkos::deep_copy(ctx->d_coords, hv_coords);
+    }
+    PetscCall(PetscFree3(h_invJ_buf, h_detJ_buf, h_coords_buf));
   }
-  PetscCall(PetscFree3(h_invJ_buf, h_detJ_buf, h_coords_buf));
 
   /* Stage coefficients to cached device View */
   {
@@ -1728,27 +1798,46 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   const PetscInt dE_     = dE;
   const PetscInt totDim_ = totDim;
 
-  /* Zero cached elemVec */
-  Kokkos::deep_copy(ctx->d_elemVec, PetscScalar(0.0));
+  /* TeamPolicy: one team per element.  On GPU backends, the team size
+   * provides hardware threads that can be used for intra-element parallelism
+   * in future optimizations.  For now, only the team leader (thread 0)
+   * executes the cell integration -- this is functionally equivalent to
+   * RangePolicy but sets up the infrastructure for TeamThreadRange over
+   * quadrature points in a subsequent optimization pass.
+   *
+   * conc trick: Serial/OpenMP have concurrency < 1000, GPU >> 1000.
+   * team_size = Nq_ on GPU (one thread per quadrature point),
+   * team_size = 1   on Serial/OpenMP (avoids Serial team_size > 1 error). */
+  using team_policy_t     = Kokkos::TeamPolicy<>;
+  using member_type       = team_policy_t::member_type;
+  const int res_conc      = Kokkos::DefaultExecutionSpace().concurrency();
+  const int res_on_gpu    = !!(res_conc >= 1000);
+  const int res_team_size = res_on_gpu ? Nq_ : 1;
 
-  /* Pass 1: integrate residual for all elements into d_elemVec */
-  /* TODO: pass actual t for time-dependent problems; currently steady-state only */
-  Kokkos::parallel_for(
-    "DMPlexSNESComputeResidualFEM_Kokkos_integrate", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
-      PetscFEKokkosIntegrateResidualCell<f0, f1>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0.0, numConstants_, ctx_d_constants.data(), ctx_d_elemVec.data());
-    });
-  Kokkos::fence();
-
-  /* Pass 2: scatter d_elemVec to locF via atomic_add using LOCAL indices */
   PetscScalar *F_dev = (locF_memtype == PETSC_MEMTYPE_DEVICE) ? d_F_unmanaged.data() : d_F.data();
 
+  /* Fused kernel: integrate residual + scatter to locF in one pass.
+   * Eliminates one kernel launch, one fence, and the intermediate d_elemVec
+   * read/write.  Each team computes the element residual into a local stack
+   * array, then immediately scatters to F_dev via atomic_add. */
   Kokkos::parallel_for(
-    "DMPlexSNESComputeResidualFEM_Kokkos_scatter", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
-      for (PetscInt b = 0; b < Nb_; ++b) {
-        const PetscInt    lidx = d_lIdx[e * Nb_ + b];
-        const PetscScalar val  = ctx_d_elemVec[e * totDim_ + b];
-        if (lidx >= 0) Kokkos::atomic_add(&F_dev[lidx], val);
-        /* lidx == -1: Dirichlet, skip */
+    "DMPlexSNESComputeResidualFEM_Kokkos_fused", team_policy_t(Ne, res_team_size), KOKKOS_LAMBDA(const member_type &team) {
+      const PetscInt e = team.league_rank();
+      if (team.team_rank() == 0) {
+        /* Compute element residual into the cached d_elemVec buffer.
+         * PetscFEKokkosIntegrateResidualCell accumulates (+=) into elemVec,
+         * so we must zero the element's slice first. */
+        PetscScalar *ev_base = &ctx_d_elemVec[e * totDim_];
+        for (PetscInt i = 0; i < totDim_; ++i) ev_base[i] = 0.0;
+        PetscFEKokkosIntegrateResidualCell<f0, f1>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0.0, numConstants_, ctx_d_constants.data(),
+                                                   ctx_d_elemVec.data());
+
+        /* Scatter to locF via atomic_add using local DOF indices */
+        for (PetscInt b = 0; b < Nb_; ++b) {
+          const PetscInt    lidx = d_lIdx[e * Nb_ + b];
+          const PetscScalar val  = ev_base[b];
+          if (lidx >= 0) Kokkos::atomic_add(&F_dev[lidx], val);
+        }
       }
     });
   Kokkos::fence();
@@ -1879,19 +1968,77 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   /* Ensure dynamic Views are allocated (realloc only when sizes change) */
   PetscCall(PetscFEKokkosEnsureDynamicViews(ctx, Ne, Nq, dE, totDim, numConstants));
 
-  /* Stage geometry to cached device Views */
-  PetscReal *h_invJ_buf, *h_detJ_buf, *h_coords_buf;
-  PetscCall(PetscMalloc3(nInvJ, &h_invJ_buf, nDetJ, &h_detJ_buf, nCoords, &h_coords_buf));
-  PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, chunkGeom, quadPoints, h_invJ_buf, h_detJ_buf, h_coords_buf));
-  {
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_buf, nInvJ);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_buf, nDetJ);
-    Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
-    Kokkos::deep_copy(ctx->d_invJ, hv_invJ);
-    Kokkos::deep_copy(ctx->d_detJ, hv_detJ);
-    Kokkos::deep_copy(ctx->d_coords, hv_coords);
+  /* Stage geometry: affine-optimized path reduces H->D transfer by Nq× */
+  ctx->isAffine              = chunkGeom->isAffine;
+  const PetscBool isAffine_j = ctx->isAffine;
+  if (isAffine_j) {
+    /* Affine: copy compact geometry [Ne * dE * dE] invJ + [Ne] detJ to device,
+     * then expand on-device via a small Kokkos kernel (GPU replication is
+     * much faster than host replication + larger H->D transfer). */
+    const PetscInt nInvJ_compact = Ne * dE * dE;
+    const PetscInt nDetJ_compact = Ne;
+
+    /* Allocate compact host buffers */
+    PetscReal *h_invJ_compact, *h_detJ_compact, *h_coords_buf;
+    PetscCall(PetscMalloc3(nInvJ_compact, &h_invJ_compact, nDetJ_compact, &h_detJ_compact, nCoords, &h_coords_buf));
+
+    /* Fill compact buffers: one invJ and one detJ per element */
+    const PetscInt Np_j = chunkGeom->numPoints;
+    for (PetscInt e = 0; e < Ne; ++e) {
+      for (PetscInt i = 0; i < dE * dE; ++i) h_invJ_compact[e * dE * dE + i] = chunkGeom->invJ[e * Np_j * dE * dE + i];
+      h_detJ_compact[e] = chunkGeom->detJ[e * Np_j];
+    }
+
+    /* Compute physical coords for affine elements */
+    for (PetscInt e = 0; e < Ne; ++e) {
+      const PetscReal *v0_e = &chunkGeom->v[e * Np_j * dE];
+      const PetscReal *J_e  = &chunkGeom->J[e * Np_j * dE * dE];
+      for (PetscInt q = 0; q < Nq; ++q) PetscFEKokkosCoordRefToReal(dE, dim, chunkGeom->xi, v0_e, J_e, &quadPoints[q * dim], &h_coords_buf[(e * Nq + q) * dE]);
+    }
+
+    /* Copy compact invJ/detJ to temporary device Views */
+    Kokkos::View<PetscReal *> d_invJ_compact("jac_invJ_compact", nInvJ_compact);
+    Kokkos::View<PetscReal *> d_detJ_compact("jac_detJ_compact", nDetJ_compact);
+    {
+      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_compact, nInvJ_compact);
+      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_compact, nDetJ_compact);
+      Kokkos::deep_copy(d_invJ_compact, hv_invJ);
+      Kokkos::deep_copy(d_detJ_compact, hv_detJ);
+    }
+
+    /* Copy coords to cached device View */
+    {
+      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
+      Kokkos::deep_copy(ctx->d_coords, hv_coords);
+    }
+    PetscCall(PetscFree3(h_invJ_compact, h_detJ_compact, h_coords_buf));
+
+    /* Expand on device: replicate single invJ/detJ across all Nq slots */
+    auto ctx_d_invJ_expand = ctx->d_invJ;
+    auto ctx_d_detJ_expand = ctx->d_detJ;
+    Kokkos::parallel_for(
+      "PetscFEKokkos_expand_affine_geom_jac", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
+        for (PetscInt q = 0; q < Nq; ++q) {
+          for (PetscInt i = 0; i < dE * dE; ++i) ctx_d_invJ_expand[(e * Nq + q) * dE * dE + i] = d_invJ_compact[e * dE * dE + i];
+          ctx_d_detJ_expand[e * Nq + q] = d_detJ_compact[e];
+        }
+      });
+    Kokkos::fence();
+  } else {
+    /* Non-affine: use PetscFEKokkosExpandGeometry as before */
+    PetscReal *h_invJ_buf, *h_detJ_buf, *h_coords_buf;
+    PetscCall(PetscMalloc3(nInvJ, &h_invJ_buf, nDetJ, &h_detJ_buf, nCoords, &h_coords_buf));
+    PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, chunkGeom, quadPoints, h_invJ_buf, h_detJ_buf, h_coords_buf));
+    {
+      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_buf, nInvJ);
+      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_buf, nDetJ);
+      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
+      Kokkos::deep_copy(ctx->d_invJ, hv_invJ);
+      Kokkos::deep_copy(ctx->d_detJ, hv_detJ);
+      Kokkos::deep_copy(ctx->d_coords, hv_coords);
+    }
+    PetscCall(PetscFree3(h_invJ_buf, h_detJ_buf, h_coords_buf));
   }
-  PetscCall(PetscFree3(h_invJ_buf, h_detJ_buf, h_coords_buf));
 
   /* Stage coefficients to cached device View */
   {
@@ -1936,65 +2083,76 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   const PetscInt dE_     = dE;
   const PetscInt totDim_ = totDim;
 
+  using team_policy_t     = Kokkos::TeamPolicy<>;
+  using member_type       = team_policy_t::member_type;
+  const int jac_conc      = Kokkos::DefaultExecutionSpace().concurrency();
+  const int jac_on_gpu    = !!(jac_conc >= 1000);
+  const int jac_team_size = jac_on_gpu ? Nq_ : 1;
+
   /* Pass 1: integrate Jacobian for all elements into d_elemMat */
   /* TODO: pass actual t and u_tShift for time-dependent problems; currently steady-state only */
   Kokkos::parallel_for(
-    "DMPlexSNESComputeJacobianFEM_Kokkos_integrate", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
-      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0, 0.0, 0.0, numConstants_, ctx_d_constants.data(),
-                                                         ctx_d_elemMat.data());
+    "DMPlexSNESComputeJacobianFEM_Kokkos_integrate", team_policy_t(Ne, jac_team_size), KOKKOS_LAMBDA(const member_type &team) {
+      const PetscInt e = team.league_rank();
+      if (team.team_rank() == 0)
+        PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0, 0.0, 0.0, numConstants_,
+                                                           ctx_d_constants.data(), ctx_d_elemMat.data());
     });
   Kokkos::fence();
 
   /* Pass 2: scatter d_elemMat to COO values (constraint-aware) */
   Kokkos::parallel_for(
-    "DMPlexSNESComputeJacobianFEM_Kokkos_scatter", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
-      const PetscInt off    = d_coo_elem_offsets[e];
-      const PetscInt fullNb = d_fullNb[e];
-      for (PetscInt b = 0; b < Nb_; ++b) {
-        PetscInt               nr = 0;
-        PetscScalar            row_scale[PETSCFE_KOKKOS_MAX_FACE];
-        const PetscFEKokkosIdx gidx_b = d_gIdx[e * Nb_ + b];
-        if (gidx_b >= 0) {
-          nr           = 1;
-          row_scale[0] = 1.0;
-        } else if (gidx_b < -1) {
-          const PetscInt cidx = -(PetscInt)gidx_b - 1;
-          for (PetscInt q = 0; q < num_face_; ++q) {
-            if (d_c_maps_gid[cidx * num_face_ + q] < 0) break;
-            row_scale[nr++] = d_c_maps_scale[cidx * num_face_ + q];
-          }
-        }
-        if (nr == 0) continue;
-        const PetscInt pt_off_b = d_coo_elem_point_offsets[e * (Nb_ + 1) + b];
-
-        for (PetscInt b2 = 0; b2 < Nb_; ++b2) {
-          PetscInt               nc = 0;
-          PetscScalar            col_scale[PETSCFE_KOKKOS_MAX_FACE];
-          const PetscFEKokkosIdx gidx_b2 = d_gIdx[e * Nb_ + b2];
-          if (gidx_b2 >= 0) {
-            nc           = 1;
-            col_scale[0] = 1.0;
-          } else if (gidx_b2 < -1) {
-            const PetscInt cidx = -(PetscInt)gidx_b2 - 1;
+    "DMPlexSNESComputeJacobianFEM_Kokkos_scatter", team_policy_t(Ne, jac_team_size), KOKKOS_LAMBDA(const member_type &team) {
+      const PetscInt e = team.league_rank();
+      if (team.team_rank() == 0) {
+        const PetscInt off    = d_coo_elem_offsets[e];
+        const PetscInt fullNb = d_fullNb[e];
+        for (PetscInt b = 0; b < Nb_; ++b) {
+          PetscInt               nr = 0;
+          PetscScalar            row_scale[PETSCFE_KOKKOS_MAX_FACE];
+          const PetscFEKokkosIdx gidx_b = d_gIdx[e * Nb_ + b];
+          if (gidx_b >= 0) {
+            nr           = 1;
+            row_scale[0] = 1.0;
+          } else if (gidx_b < -1) {
+            const PetscInt cidx = -(PetscInt)gidx_b - 1;
             for (PetscInt q = 0; q < num_face_; ++q) {
               if (d_c_maps_gid[cidx * num_face_ + q] < 0) break;
-              col_scale[nc++] = d_c_maps_scale[cidx * num_face_ + q];
+              row_scale[nr++] = d_c_maps_scale[cidx * num_face_ + q];
             }
           }
-          if (nc == 0) continue;
-          const PetscInt pt_off_b2 = d_coo_elem_point_offsets[e * (Nb_ + 1) + b2];
+          if (nr == 0) continue;
+          const PetscInt pt_off_b = d_coo_elem_point_offsets[e * (Nb_ + 1) + b];
 
-          const PetscInt    idx0 = off + fullNb * pt_off_b + nr * pt_off_b2;
-          const PetscScalar Aij  = ctx_d_elemMat[e * totDim_ * totDim_ + b * totDim_ + b2];
+          for (PetscInt b2 = 0; b2 < Nb_; ++b2) {
+            PetscInt               nc = 0;
+            PetscScalar            col_scale[PETSCFE_KOKKOS_MAX_FACE];
+            const PetscFEKokkosIdx gidx_b2 = d_gIdx[e * Nb_ + b2];
+            if (gidx_b2 >= 0) {
+              nc           = 1;
+              col_scale[0] = 1.0;
+            } else if (gidx_b2 < -1) {
+              const PetscInt cidx = -(PetscInt)gidx_b2 - 1;
+              for (PetscInt q = 0; q < num_face_; ++q) {
+                if (d_c_maps_gid[cidx * num_face_ + q] < 0) break;
+                col_scale[nc++] = d_c_maps_scale[cidx * num_face_ + q];
+              }
+            }
+            if (nc == 0) continue;
+            const PetscInt pt_off_b2 = d_coo_elem_point_offsets[e * (Nb_ + 1) + b2];
 
-          /* Assignment (not atomic_add) is safe here: PetscFEKokkosPreallocateCOO
-           * assigns each (row,col) pair to exactly one COO slot per element, so
-           * no two kernel threads write to the same d_coo_vals index.
-           * If this invariant ever breaks (e.g., shared DOFs across elements in
-           * the same Kokkos team), replace with Kokkos::atomic_add. */
-          for (PetscInt p = 0; p < nr; ++p) {
-            for (PetscInt d = 0; d < nc; ++d) {
-              ctx_d_coo_vals[idx0 + p * nc + d] = row_scale[p] * col_scale[d] * Aij;
+            const PetscInt    idx0 = off + fullNb * pt_off_b + nr * pt_off_b2;
+            const PetscScalar Aij  = ctx_d_elemMat[e * totDim_ * totDim_ + b * totDim_ + b2];
+
+            /* Assignment (not atomic_add) is safe here: PetscFEKokkosPreallocateCOO
+             * assigns each (row,col) pair to exactly one COO slot per element, so
+             * no two kernel threads write to the same d_coo_vals index.
+             * If this invariant ever breaks (e.g., shared DOFs across elements in
+             * the same Kokkos team), replace with Kokkos::atomic_add. */
+            for (PetscInt p = 0; p < nr; ++p) {
+              for (PetscInt d = 0; d < nc; ++d) {
+                ctx_d_coo_vals[idx0 + p * nc + d] = row_scale[p] * col_scale[d] * Aij;
+              }
             }
           }
         }
