@@ -522,7 +522,6 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
   PetscInt           Nq, Nb, Nc, dim, dE, qdim, qNc;
 
   PetscFunctionBegin;
-
   field = key.field;
   PetscCall(PetscDSGetNumFields(ds, &Nf));
   PetscCall(PetscDSGetTotalDimension(ds, &totDim));
@@ -641,7 +640,6 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
     const PetscScalar *src = h_elemVec.data();
     for (PetscInt i = 0; i < nEV; ++i) elemVec[i] += src[i];
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -673,7 +671,6 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
   PetscInt           Nq, Nb, Nc, dim, dE, qdim, qNc;
 
   PetscFunctionBegin;
-
   field = key.field;
   PetscCall(PetscDSGetNumFields(ds, &Nf));
   PetscCall(PetscDSGetTotalDimension(ds, &totDim));
@@ -792,7 +789,6 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
     const PetscScalar *src = h_elemMat.data();
     for (PetscInt i = 0; i < nEM; ++i) elemMat[i] += src[i];
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -932,7 +928,6 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
   PetscBool    isPlex;
 
   PetscFunctionBeginUser;
-
   PetscCall(DMGetDimension(dm, &dim));
   maps->local_dof = 0; /* will be set below */
 
@@ -1232,7 +1227,6 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
 
   /* Release the adapted plex reference */
   PetscCall(DMDestroy(&plex));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1248,7 +1242,6 @@ static inline PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps)
   const PetscInt num_face = maps->num_face;
 
   PetscFunctionBeginUser;
-
   /* gIdx */
   maps->d_gIdx = Kokkos::View<PetscFEKokkosIdx *>("fekokkos_coo_gIdx", Ne * Nb);
   {
@@ -1316,7 +1309,6 @@ static inline PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps)
     Kokkos::View<PetscInt *, Kokkos::HostSpace> hv(maps->h_fullNb, Ne);
     Kokkos::deep_copy(maps->d_fullNb, hv);
   }
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1342,7 +1334,6 @@ static inline PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps
   PetscInt        *coo_i, *coo_j;
 
   PetscFunctionBeginUser;
-
   PetscCall(PetscMalloc2(coo_size, &coo_i, coo_size, &coo_j));
   /* Initialize to -1 (unused slots) */
   for (PetscCount k = 0; k < coo_size; ++k) coo_i[k] = coo_j[k] = -1;
@@ -1401,7 +1392,6 @@ static inline PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps
 
   PetscCall(MatSetPreallocationCOO(J, coo_size, coo_i, coo_j));
   PetscCall(PetscFree2(coo_i, coo_j));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1732,7 +1722,6 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   PetscCall(PetscFEGeomRestoreChunk(fullGeom, cStart, cEnd, &chunkGeom));
   PetscCall(PetscFEGeomDestroy(&fullGeom));
   PetscCall(ISDestroy(&cellIS));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1977,6 +1966,5 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
 
   /* Propagate to preconditioner if different */
   if (J != Jp) PetscCall(MatCopy(J, Jp, SAME_NONZERO_PATTERN));
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
