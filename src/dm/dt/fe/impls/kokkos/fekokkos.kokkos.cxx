@@ -1,5 +1,5 @@
 /*
-  fekokkos.kokkos.cxx — PETSCFEKOKKOS: Kokkos-parallel PetscFE residual integration
+  fekokkos.kokkos.cxx -- PETSCFEKOKKOS: Kokkos-parallel PetscFE residual integration
 
   Implements PetscFEIntegrateResidual_Kokkos(), which replaces the serial cell
   loop in PetscFEIntegrateResidual_Basic (febasic.c) with a Kokkos::parallel_for
@@ -50,7 +50,7 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS, PetscD
 /* =========================================================================
    PetscFEGetDimension_Kokkos: returns the number of basis functions.
    PetscFEGetDimension_Basic is static in febasic.c so we reimplement it
-   here — it is a one-liner that queries the dual space dimension.
+   here -- it is a one-liner that queries the dual space dimension.
    ========================================================================= */
 static PetscErrorCode PetscFEGetDimension_Kokkos(PetscFE fem, PetscInt *dim)
 {
@@ -65,39 +65,39 @@ static PetscErrorCode PetscFEGetDimension_Kokkos(PetscFE fem, PetscInt *dim)
    once during PetscFESetUp and reused across all calls.
    ========================================================================= */
 typedef struct {
-  /* Tabulation device Views — re-staged when Nq changes (DS quadrature may differ from FE quadrature) */
+  /* Tabulation device Views -- re-staged when Nq changes (DS quadrature may differ from FE quadrature) */
   Kokkos::View<PetscReal *> d_B; /* basis values:       [Nq * Nb * Nc]          */
   Kokkos::View<PetscReal *> d_D; /* basis derivatives:  [Nq * Nb * Nc * dim]    */
-  /* Quadrature weights — staged once at setup (from FE quadrature, same Nq as DS for matching rules) */
+  /* Quadrature weights -- staged once at setup (from FE quadrature, same Nq as DS for matching rules) */
   Kokkos::View<PetscReal *> d_w; /* quadrature weights: [Nq]                    */
-  /* Host mirrors of tabulation — updated when Nq changes */
+  /* Host mirrors of tabulation -- updated when Nq changes */
   Kokkos::View<PetscReal *, Kokkos::HostSpace> h_B;
   Kokkos::View<PetscReal *, Kokkos::HostSpace> h_D;
   Kokkos::View<PetscReal *, Kokkos::HostSpace> h_w;
-  /* Cached per-call device Views — reallocated only when Ne or totDim changes */
+  /* Cached per-call device Views -- reallocated only when Ne or totDim changes */
   Kokkos::View<PetscReal *>   d_invJ;    /* [Ne * Nq * dE * dE]  */
   Kokkos::View<PetscScalar *> d_elemVec; /* [Ne * totDim]         */
   Kokkos::View<PetscScalar *> d_f0_scr;  /* [Ne * Nq * Nc]        */
   Kokkos::View<PetscScalar *> d_f1_scr;  /* [Ne * Nq * Nc * dE]   */
-  Kokkos::View<PetscScalar *> d_val;     /* [Ne * Nb] — per-element accumulator (Nb = total DOFs) */
-  /* Host mirror of d_elemVec — cached to avoid per-call mirror alloc */
+  Kokkos::View<PetscScalar *> d_val;     /* [Ne * Nb] -- per-element accumulator (Nb = total DOFs) */
+  /* Host mirror of d_elemVec -- cached to avoid per-call mirror alloc */
   Kokkos::View<PetscScalar *, Kokkos::HostSpace> h_elemVec;
-  /* Host scratch for f0/f1 — single contiguous allocation; h_f1_buf = h_f0_buf + Ne*Nq*Nc.
+  /* Host scratch for f0/f1 -- single contiguous allocation; h_f1_buf = h_f0_buf + Ne*Nq*Nc.
      Packed into one block to reduce allocator overhead and improve cache locality. */
   PetscScalar *h_f0_buf; /* points to start of block: [Ne * Nq * Nc]      */
   PetscScalar *h_f1_buf; /* points into block:        [Ne * Nq * Nc * dE] */
-  /* Expanded invJ buffer [Ne * Nq * dE * dE] — for affine elements the single
+  /* Expanded invJ buffer [Ne * Nq * dE * dE] -- for affine elements the single
      per-element invJ is replicated across all Nq slots so Phase 2 can index
      uniformly as invJ[e * Nq * dE * dE + q * dE * dE].  Cached and reallocated
      only when Ne or Nq changes (same lifetime as h_f0_buf). */
   PetscReal *h_invJ_buf; /* [Ne * Nq * dE * dE] */
-  /* Per-(e,q) interpolation scratch — heap-allocated at setup.
+  /* Per-(e,q) interpolation scratch -- heap-allocated at setup.
      h_u_buf  [Nc]:       field values at one quadrature point (Nc components).
      h_ux_buf [Nc * dim]: field gradients at one quadrature point.
      Note: u_loc[c] and ux_loc[c*dE+d] are indexed by component c only;
      the basis-function loop (b=0..Nb-1) accumulates into these Nc-sized arrays. */
-  PetscScalar *h_u_buf;      /* [Nc]       — field values at one quadrature point  */
-  PetscScalar *h_ux_buf;     /* [Nc * dim] — field gradients at one quadrature point */
+  PetscScalar *h_u_buf;      /* [Nc]       -- field values at one quadrature point  */
+  PetscScalar *h_ux_buf;     /* [Nc * dim] -- field gradients at one quadrature point */
   PetscInt     Ne_alloc;     /* Ne    for which cached Views/bufs were last allocated */
   PetscInt     Nq_alloc;     /* Nq    for which d_B/d_D/d_w/d_f0_scr/d_f1_scr were last staged */
   PetscInt     totDim_alloc; /* totDim for which d_elemVec/h_elemVec were last allocated */
@@ -133,7 +133,7 @@ static PetscErrorCode PetscFESetUp_Kokkos(PetscFE fem)
      runs PetscFESetUp_Basic and allocates fem->invV.  When the user then calls
      PetscFESetType(fe, PETSCFEKOKKOS), PetscFESetType only invokes the
      type-specific destroy (PetscFEDestroy_Basic, which frees fem->data) but
-     does NOT free fem->invV — that is the base class's job in PetscFEDestroy.
+     does NOT free fem->invV -- that is the base class's job in PetscFEDestroy.
      PetscFESetUp_Basic below would then overwrite fem->invV with a fresh
      allocation, leaking the original one.  Free it here before re-running
      Basic setup so the pointer is NULL when PetscFESetUp_Basic assigns it. */
@@ -249,7 +249,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   PetscCall(PetscDSGetDiscretization(ds, field, (PetscObject *)&fe));
   kk = (PetscFE_Kokkos *)fe->data;
 
-  /* Ensure static data is staged — inline check avoids a function call on every
+  /* Ensure static data is staged -- inline check avoids a function call on every
      integration when setup is already done (the common case). */
   if (!kk->setup_done) PetscCall(PetscFESetUp_Kokkos(fe));
 
@@ -272,7 +272,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   /* Nq = number of quadrature points from the FE quadrature rule.
      Np = cgeom->numPoints = geometry stride per element (may differ from Nq
      for affine elements where the Jacobian is constant across quadrature points).
-     Always use feNq (from PetscFEGetQuadrature) as the loop count — this matches
+     Always use feNq (from PetscFEGetQuadrature) as the loop count -- this matches
      the DS tabulation (T[field]->Np == feNq) and the quadrature weights array.
      cgeom->numPoints is only the geometry stride, not the quadrature count. */
   const PetscInt  Nb       = kk->Nb;
@@ -282,7 +282,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   const PetscInt  Np       = cgeom->numPoints; /* geometry stride per element */
   const PetscBool isAffine = cgeom->isAffine;
 
-  /* Get the FE quadrature — Nq and quadPoints/quadWeights come from here.
+  /* Get the FE quadrature -- Nq and quadPoints/quadWeights come from here.
      The DS tabulation T[field]->Np == Nq (they are evaluated at the same points).
      Re-stage B/D/w to device only when Nq changes (e.g., first call or degree change). */
   PetscInt         Nq;
@@ -304,7 +304,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   const PetscInt fOff  = fOffset;
 
   /* -----------------------------------------------------------------------
-     Two-phase Kokkos integration (always used — CPU Serial or GPU CUDA):
+     Two-phase Kokkos integration (always used -- CPU Serial or GPU CUDA):
 
      Phase 1 (host, serial): evaluate u_loc / ux_loc per (cell, qp), call
        f0/f1 host function pointers, fill h_f0_scr / h_f1_scr.
@@ -314,7 +314,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
      Phase 2 (Kokkos::parallel_for): deep_copy scratch to device Views,
        then run basis-function assembly kernel.  On Kokkos::Serial this
        executes on the host; on Kokkos::Cuda it executes on the GPU.
-       No function-pointer calls — pure arithmetic.
+       No function-pointer calls -- pure arithmetic.
 
      Geometry handling (mirrors PetscFEGeomGetPoint / febasic.c):
        Affine elements (isAffine=1): invJ/detJ constant per element, stored
@@ -323,8 +323,8 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
        Non-affine elements: invJ/detJ/v stored at each of the Np==Nq points.
 
      Flop accounting:
-       PetscLogFlops    — Phase 1 host work (interpolation + f0/f1 scaling)
-       PetscLogGpuFlops — Phase 2 Kokkos work (basis assembly).
+       PetscLogFlops    -- Phase 1 host work (interpolation + f0/f1 scaling)
+       PetscLogGpuFlops -- Phase 2 Kokkos work (basis assembly).
          PetscLogGpuFlops also adds to the total PetscLogFlops counter, so
          CPU-only flops = total_flops - gpu_flops.
          On Kokkos::Serial the "GPU" flops are still registered as device
@@ -332,19 +332,19 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
          a physical GPU.
      ----------------------------------------------------------------------- */
 
-  /* d_invJ is sized [Ne * Nq * dE * dE] — for affine elements we replicate
+  /* d_invJ is sized [Ne * Nq * dE * dE] -- for affine elements we replicate
      the single per-element invJ across all Nq slots during Phase 1 so that
      Phase 2 can index uniformly as invJ[e * Nq * dE * dE + q * dE * dE]. */
   const PetscInt nInvJ = Ne * Nq * dE * dE;
 
-  /* Use cached host mirrors of static basis/quadrature data (no per-call D→H copy).
-     Use raw .data() pointers for the Phase 1 serial loop — avoids View accessor
+  /* Use cached host mirrors of static basis/quadrature data (no per-call D->H copy).
+     Use raw .data() pointers for the Phase 1 serial loop -- avoids View accessor
      overhead (bounds checks in debug builds, extra indirection in opt builds). */
   const PetscReal *h_B = kk->h_B.data();
   const PetscReal *h_D = kk->h_D.data();
   const PetscReal *h_w = kk->h_w.data();
 
-  /* Phase 1: host loop — evaluate physics callbacks, fill h_f0/h_f1 scratch.
+  /* Phase 1: host loop -- evaluate physics callbacks, fill h_f0/h_f1 scratch.
      Reuse cached host scratch buffers; reallocate only when Ne or Nq changes.
      h_f0_buf and h_f1_buf share one contiguous block: [Ne*Nq*Nc + Ne*Nq*Nc*dE].
      h_f1_buf is set to h_f0_buf + Ne*Nq*Nc (pointer arithmetic into the block). */
@@ -365,12 +365,12 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   PetscCall(PetscArrayzero(h_f0_scr, Ne * Nq * Nc));
   PetscCall(PetscArrayzero(h_f1_scr, Ne * Nq * Nc * dE));
 
-  /* Hoist single-element offset arrays out of the (e,q) loop — they are
+  /* Hoist single-element offset arrays out of the (e,q) loop -- they are
      constant for the entire call (single-field, no auxiliary fields). */
   PetscInt uOff_l[1]   = {0};
   PetscInt uOff_x_l[1] = {0};
 
-  /* Heap-allocated per-(e,q) scratch — supports any polynomial order */
+  /* Heap-allocated per-(e,q) scratch -- supports any polynomial order */
   PetscScalar *u_loc  = kk->h_u_buf;  /* [Nc]       */
   PetscScalar *ux_loc = kk->h_ux_buf; /* [Nc * dim] */
 
@@ -436,7 +436,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
 
       const PetscReal w = h_w[q];
 
-      /* Zero per-(e,q) scratch — heap buffers are reused across iterations.
+      /* Zero per-(e,q) scratch -- heap buffers are reused across iterations.
          u_loc  [Nc]:       field values at one quadrature point.
          ux_loc [Nc * dE]:  field gradients at one quadrature point.
          The basis-function loop (b=0..Nb-1) accumulates into these Nc-sized arrays,
@@ -507,7 +507,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   }
 
   {
-    /* Use h_invJ_buf (expanded, [Ne*Nq*dE*dE]) — NOT cgeom->invJ which has
+    /* Use h_invJ_buf (expanded, [Ne*Nq*dE*dE]) -- NOT cgeom->invJ which has
        size [Ne*Np*dE*dE] and may differ from Nq for affine elements. */
     Kokkos::View<PetscReal *, Kokkos::HostSpace> h_invJ(h_invJ_buf, nInvJ);
     Kokkos::deep_copy(kk->d_invJ, h_invJ);
@@ -520,7 +520,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
     Kokkos::deep_copy(kk->d_f0_scr, hv_f0);
     Kokkos::deep_copy(kk->d_f1_scr, hv_f1);
   }
-  /* h_f0_scr/h_f1_scr are now owned by kk->h_f0_buf/h_f1_buf — do not free here */
+  /* h_f0_scr/h_f1_scr are now owned by kk->h_f0_buf/h_f1_buf -- do not free here */
 
   auto d_B_       = kk->d_B;
   auto d_D_       = kk->d_D;
@@ -535,9 +535,9 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   Kokkos::deep_copy(d_val_, PetscScalar(0.0));
 
   /* Phase 2 kernel: loop order (q, b, c) for coalesced d_B_ / d_D_ access.
-     d_B_ layout is [q * Nb*Nc + b*Nc + c] — sequential in q for fixed (b,c).
-     Outer q loop → consecutive d_B_ reads per thread → coalesced on GPU.
-     d_val_ [Ne * Nb] — one accumulator per DOF b (not per (b,c) pair).
+     d_B_ layout is [q * Nb*Nc + b*Nc + c] -- sequential in q for fixed (b,c).
+     Outer q loop -> consecutive d_B_ reads per thread -> coalesced on GPU.
+     d_val_ [Ne * Nb] -- one accumulator per DOF b (not per (b,c) pair).
      Matches PetscFEUpdateElementVec_Internal:
        elemVec[b] += B[q,b,c] * f0[q,c]  (b=0..Nb-1, c=0..Nc-1)
      Supporting any polynomial order (P1, P2, P3, ...) without stack overflow. */
@@ -548,9 +548,9 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
       PetscScalar       *val_e = &d_val_(e * Nb); /* row for element e: [Nb] */
 
       for (PetscInt q = 0; q < Nq; ++q) {
-        /* Pointer to the start of B[q, *, *] — layout [Nb * Nc] per q-point */
+        /* Pointer to the start of B[q, *, *] -- layout [Nb * Nc] per q-point */
         const PetscReal *B_q = &d_B_(q * Nb * Nc);
-        /* Pointer to the start of D[q, *, *, *] — layout [Nb * Nc * dim] per q-point */
+        /* Pointer to the start of D[q, *, *, *] -- layout [Nb * Nc * dim] per q-point */
         const PetscReal *D_q = &d_D_(q * Nb * Nc * dim);
         /* Pointer to invJ[e, q, *, *] */
         const PetscReal *invJ_eq = &d_invJ_(e * Nq * dE * dE + q * dE * dE);
@@ -560,13 +560,13 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
              elemVec[b] += tmpBasisDer_phys[b,c,d] * f1[q,c,d]
            PetscDualSpaceTransformGradient applies invJ^T unconditionally (lines 1945-1967
            of dualspace.c), BEFORE the IDENTITY_TRANSFORM break at line 1971.
-           val_e[b] accumulates over all c — one entry per DOF b. */
+           val_e[b] accumulates over all c -- one entry per DOF b. */
         for (PetscInt b = 0; b < Nb; ++b) {
           for (PetscInt c = 0; c < Nc; ++c) {
             const PetscInt bc = b * Nc + c;
-            /* f0 contribution: B[q,b,c] * f0_s[q,c] → val_e[b] */
+            /* f0 contribution: B[q,b,c] * f0_s[q,c] -> val_e[b] */
             val_e[b] += B_q[bc] * f0_s[q * Nc + c];
-            /* f1 contribution: phys_grad[b,c,d] * f1_s[q,c,d] → val_e[b]
+            /* f1 contribution: phys_grad[b,c,d] * f1_s[q,c,d] -> val_e[b]
                phys_grad[b,c,d] = sum_{e2} D[b,c,e2] * invJ[e2,d] */
             for (PetscInt d = 0; d < dE; ++d) {
               PetscReal phys_grad = 0.0;
@@ -577,7 +577,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
         }
       }
 
-      /* Write accumulated values to d_elemVec_ — one pass, no atomics.
+      /* Write accumulated values to d_elemVec_ -- one pass, no atomics.
          Matches PetscFEUpdateElementVec_Internal: elemVec[b] for b=0..Nb-1.
          elemVec layout: [totDim] per element; field f starts at fOff.
          For vector FE: fOff+b for b=0..Nb-1 covers all Nb DOFs of this field. */
@@ -595,7 +595,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   */
   PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nb * Nc * Nq * (2.0 + (PetscLogDouble)dE * (dim * 2.0 + 1.0))));
 
-  /* Copy result back using cached host mirror — no per-call mirror alloc.
+  /* Copy result back using cached host mirror -- no per-call mirror alloc.
      Use a raw pointer loop over the flat Ne*totDim array so the compiler
      can auto-vectorize the += accumulation. */
   Kokkos::deep_copy(kk->h_elemVec, kk->d_elemVec);
