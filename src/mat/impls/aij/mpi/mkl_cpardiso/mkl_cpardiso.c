@@ -27,6 +27,10 @@
 #define IPARM_SIZE 64
 #define INT_TYPE   MKL_INT
 
+/* Force the linker to keep libmkl_blacs by referencing a symbol from it. Otherwise, the library might be removed during linking which can cause runtime errors and might require the user to manually link it. */
+extern void MKLMPI_Init(int *, char ***);
+static void (*volatile _mkl_blacs_ref)(int *, char ***) = MKLMPI_Init;
+
 static const char *Err_MSG_CPardiso(int errNo)
 {
   switch (errNo) {
