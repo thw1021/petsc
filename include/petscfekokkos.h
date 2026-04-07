@@ -49,6 +49,8 @@
 
 #pragma once
 
+#if defined(PETSC_HAVE_KOKKOS)
+
 #include <petscfe.h>
 #include <petscds.h>
 #include <Kokkos_Core.hpp>
@@ -1899,3 +1901,5 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   if (J != Jp) PetscCall(MatCopy(J, Jp, SAME_NONZERO_PATTERN));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+#endif /* PETSC_HAVE_KOKKOS */
