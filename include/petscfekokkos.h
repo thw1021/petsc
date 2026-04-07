@@ -1,3 +1,5 @@
+/* MANSEC = DM */
+/* SUBMANSEC = FE */
 /*
   petscfekokkos.h -- Header-template kernel API for PETSCFEKOKKOS (Phase 1.B)
 
