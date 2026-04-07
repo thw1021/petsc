@@ -94,6 +94,7 @@ typedef const char *PetscFEType;
 #define PETSCFEOPENCL    "opencl"
 #define PETSCFECOMPOSITE "composite"
 #define PETSCFEVECTOR    "vector"
+#define PETSCFEKOKKOS    "kokkos"
 
 PETSC_EXTERN PetscFunctionList PetscFEList;
 PETSC_EXTERN PetscErrorCode    PetscFECreate(MPI_Comm, PetscFE *);
