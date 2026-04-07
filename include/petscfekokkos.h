@@ -903,7 +903,7 @@ typedef struct {
    is unconstrained (diagonal ~ 1) or constrained (0 < c < 1).
 
    Call PetscFEKokkosStageMaps afterwards to copy to device. */
-static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
+static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps) PeNS
 {
   PetscSection section, globalSection;
   PetscInt     cStart, cEnd, Ne, Nb, totDim, num_dof;
@@ -1199,7 +1199,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
 /* PetscFEKokkosStageMaps
    Deep-copy all host arrays to device Kokkos::Views.
    Must be called after PetscFEKokkosCreateMaps and before any kernel launch. */
-static inline PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps)
+static inline PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps) PeNS
 {
   const PetscInt Ne       = maps->num_elements;
   const PetscInt Nb       = maps->Nb;
@@ -1287,7 +1287,7 @@ static inline PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps)
               behavior is identical to the original implementation.
 
    Reference: plexland.c:1650-1688 */
-static inline PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J)
+static inline PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J) PeNS
 {
   const PetscInt   Ne       = maps->num_elements;
   const PetscInt   Nb       = maps->Nb;
@@ -1364,7 +1364,7 @@ static inline PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps
    Free all host-side PetscMalloc'd arrays.  Device Views are reference-
    counted by Kokkos and freed automatically when they go out of scope or
    when the struct is destroyed. */
-static inline PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps *maps)
+static inline PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps *maps) PeNS
 {
   PetscFunctionBegin;
   PetscCall(PetscFree7(maps->h_gIdx, maps->h_lIdx, maps->h_active_idx, maps->h_Nb_active, maps->h_coo_elem_offsets, maps->h_fullNb, maps->h_coo_elem_point_offsets));
@@ -1409,7 +1409,7 @@ static inline PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps *maps)
      PetscKokkosInitializeCheck()
      PetscFEKokkosStageMaps(maps)
      PetscFEKokkosPreallocateCOO(maps, J) */
-static inline PetscErrorCode PetscFEKokkosSetUp(DM dm, PetscFEKokkosMaps *maps, Mat J)
+static inline PetscErrorCode PetscFEKokkosSetUp(DM dm, PetscFEKokkosMaps *maps, Mat J) PeNS
 {
   PetscFunctionBegin;
   PetscCall(PetscFEKokkosCreateMaps(dm, maps));
