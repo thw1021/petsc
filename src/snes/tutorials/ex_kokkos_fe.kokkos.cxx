@@ -33,14 +33,13 @@
   Author: pedra-ai Phase 1c.E (2026-04-07)
 */
 
-static char help[] =
-  "Tutorial: GPU-resident FEM assembly with PetscFEKokkosCtx\n"
-  "  Problem: -Laplacian(u) = f on [0,1]^2\n"
-  "  Manufactured solution: u = sin(pi*x)*sin(pi*y)\n"
-  "Options:\n"
-  "  -petscspace_degree <k>     FE polynomial degree (default: 1)\n"
-  "  -dm_plex_box_faces <Nx,Ny> mesh resolution (default: 4,4)\n"
-  "  -ksp_type cg -pc_type gamg recommended solver\n";
+static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosCtx\n"
+                     "  Problem: -Laplacian(u) = f on [0,1]^2\n"
+                     "  Manufactured solution: u = sin(pi*x)*sin(pi*y)\n"
+                     "Options:\n"
+                     "  -petscspace_degree <k>     FE polynomial degree (default: 1)\n"
+                     "  -dm_plex_box_faces <Nx,Ny> mesh resolution (default: 4,4)\n"
+                     "  -ksp_type cg -pc_type gamg recommended solver\n";
 
 #include <petscdmplex.h>
 #include <petscsnes.h>
@@ -50,7 +49,7 @@ static char help[] =
 #include <petscfekokkos.h>
 
 #ifndef PETSCFEKOKKOS
-#  define PETSCFEKOKKOS "kokkos"
+  #define PETSCFEKOKKOS "kokkos"
 #endif
 
 /* =========================================================================
@@ -68,9 +67,7 @@ static char help[] =
 KOKKOS_INLINE_FUNCTION
 static void f0_poisson(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[])
 {
-  f0[0] = -2.0 * PETSC_PI * PETSC_PI
-          * Kokkos::sin(PETSC_PI * x[0])
-          * Kokkos::sin(PETSC_PI * x[1]);
+  f0[0] = -2.0 * PETSC_PI * PETSC_PI * Kokkos::sin(PETSC_PI * x[0]) * Kokkos::sin(PETSC_PI * x[1]);
 }
 
 /* f1: flux term  f1[d] = ∂u/∂x_d  (Laplacian weak form) */
@@ -91,8 +88,7 @@ static void g3_poisson(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])
    Step 2: Manufactured solution (HOST callback — not device-callable).
    Registered with PetscDSSetExactSolution and DMAddBoundary.
    ========================================================================= */
-static PetscErrorCode u_exact(PetscInt dim, PetscReal time, const PetscReal x[],
-                               PetscInt Nc, PetscScalar *u, void *ctx)
+static PetscErrorCode u_exact(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
   *u = PetscSinReal(PETSC_PI * x[0]) * PetscSinReal(PETSC_PI * x[1]);
   return PETSC_SUCCESS;
@@ -103,12 +99,12 @@ static PetscErrorCode u_exact(PetscInt dim, PetscReal time, const PetscReal x[],
    ========================================================================= */
 static PetscErrorCode SetupDiscretization(DM dm)
 {
-  PetscFE   fe;
-  PetscDS   ds;
-  DMLabel   label;
-  PetscInt  dim;
-  PetscBool simplex;
-  DM        plex;
+  PetscFE        fe;
+  PetscDS        ds;
+  DMLabel        label;
+  PetscInt       dim;
+  PetscBool      simplex;
+  DM             plex;
   const PetscInt id = 1;
 
   PetscFunctionBeginUser;
@@ -136,8 +132,7 @@ static PetscErrorCode SetupDiscretization(DM dm)
   PetscCall(DMCreateLabel(dm, "marker"));
   PetscCall(DMGetLabel(dm, "marker", &label));
   PetscCall(DMPlexMarkBoundaryFaces(dm, 1, label));
-  PetscCall(DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id,
-                          0, 0, NULL, (void (*)(void))u_exact, NULL, NULL, NULL));
+  PetscCall(DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (void (*)(void))u_exact, NULL, NULL, NULL));
 
   /* Propagate discretization to coarse DMs (for GAMG) */
   {
@@ -185,9 +180,7 @@ int main(int argc, char **argv)
    *
    * The context pointer (&kokkos_ctx) is passed as the void* ctx argument.
    * It must be set up via PetscFEKokkosSetUp before the first SNES solve. */
-  PetscCall(SNESSetFunction(snes, NULL,
-    DMPlexSNESComputeResidualFEM_Kokkos<f0_poisson, f1_poisson>,
-    &kokkos_ctx));
+  PetscCall(SNESSetFunction(snes, NULL, DMPlexSNESComputeResidualFEM_Kokkos<f0_poisson, f1_poisson>, &kokkos_ctx));
 
   PetscCall(SNESSetFromOptions(snes));
 
@@ -207,9 +200,7 @@ int main(int argc, char **argv)
    * DMPlexSNESComputeJacobianFEM_Kokkos<G0,G1,G2,G3> takes all four
    * Jacobian callbacks.  Pass nullptr for unused terms (g0, g1, g2 are
    * zero for the Laplacian; only g3 is non-zero). */
-  PetscCall(SNESSetJacobian(snes, J, J,
-    DMPlexSNESComputeJacobianFEM_Kokkos<nullptr, nullptr, nullptr, g3_poisson>,
-    &kokkos_ctx));
+  PetscCall(SNESSetJacobian(snes, J, J, DMPlexSNESComputeJacobianFEM_Kokkos<nullptr, nullptr, nullptr, g3_poisson>, &kokkos_ctx));
   PetscCall(MatDestroy(&J));
 
   /* ---- Solve ---- */
@@ -220,8 +211,7 @@ int main(int argc, char **argv)
 
   /* ---- Compute L2 error ---- */
   {
-    PetscErrorCode (*exactFuncs[1])(PetscInt, PetscReal, const PetscReal[],
-                                    PetscInt, PetscScalar[], void *) = {u_exact};
+    PetscErrorCode (*exactFuncs[1])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *) = {u_exact};
     PetscCall(DMComputeL2Diff(dm, 0.0, exactFuncs, NULL, u, &error));
   }
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "L2 error: %g\n", (double)error));
