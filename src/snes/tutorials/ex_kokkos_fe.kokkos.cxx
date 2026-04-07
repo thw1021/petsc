@@ -29,7 +29,7 @@
     export PETSC_ARCH=arch-macosx-gnu-kokkos-g-3d
     make ex_kokkos_fe
 
-  Author: pedra-ai Phase 1c.E (2026-04-07)
+  See petscfekokkos.h for the full API reference.
 */
 
 static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps\n"
@@ -47,10 +47,6 @@ static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps
 #include <Kokkos_Core.hpp>
 #include <petscfekokkos.h>
 
-#if !defined(PETSCFEKOKKOS)
-  #define PETSCFEKOKKOS "kokkos"
-#endif
-
 /* =========================================================================
    Step 1: Define physics callbacks as KOKKOS_INLINE_FUNCTION.
 
@@ -66,7 +62,8 @@ static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps
 KOKKOS_INLINE_FUNCTION
 static void f0_poisson(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[])
 {
-  f0[0] = -2.0 * PETSC_PI * PETSC_PI * Kokkos::sin(PETSC_PI * x[0]) * Kokkos::sin(PETSC_PI * x[1]);
+  /* Cast to PetscScalar for complex-build safety: Kokkos::sin returns PetscReal. */
+  f0[0] = (PetscScalar)(-2.0 * PETSC_PI * PETSC_PI * Kokkos::sin(PETSC_PI * x[0]) * Kokkos::sin(PETSC_PI * x[1]));
 }
 
 /* f1: flux term  f1[d] = du/dx_d  (Laplacian weak form) */
@@ -121,10 +118,13 @@ static PetscErrorCode SetupDiscretization(DM dm)
   PetscCall(DMCreateDS(dm));
   PetscCall(PetscFEDestroy(&fe));
 
-  /* Register host callbacks (used by DMPlexSetSNESLocalFEM fallback path
-   * and by DMComputeL2Diff).  The GPU path uses the template callbacks above. */
+  /* Register DS metadata (exact solution, BCs).  No host residual callbacks
+   * are needed: the GPU template path (DMPlexSNESComputeResidualFEM_Kokkos)
+   * bypasses the PetscDS callback table entirely.
+   * PetscDSSetResidual(ds, 0, NULL, NULL) is called only to satisfy any
+   * internal PetscDS consistency checks that expect field 0 to be registered. */
   PetscCall(DMGetDS(dm, &ds));
-  PetscCall(PetscDSSetResidual(ds, 0, NULL, NULL)); /* GPU path only -- no host callbacks needed */
+  PetscCall(PetscDSSetResidual(ds, 0, NULL, NULL));
   PetscCall(PetscDSSetExactSolution(ds, 0, u_exact, NULL));
 
   /* Dirichlet BC: u = u_exact on all boundary faces */

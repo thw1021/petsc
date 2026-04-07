@@ -44,7 +44,8 @@
     - No PETSc error-handling macros (PetscCall, PetscFunctionBegin) in device
       code -- those are host-only.  Host convenience functions use them normally.
 
-  Author: pedra-ai Phase 1.B (2026-04-02)
+  Jacobian ops (integratejacobian) fall back to the Basic (CPU) implementation;
+  only integrateresidual is GPU-accelerated via the template path.
 */
 
 #pragma once
@@ -451,7 +452,9 @@ static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt N
     const PetscReal *invJ_e = &cgeom->invJ[e * Np * dE * dE];
     const PetscReal *detJ_e = &cgeom->detJ[e * Np];
     const PetscReal *v0_e   = &cgeom->v[e * Np * dE];
-    const PetscReal *J_e    = &cgeom->J[e * Np * dE * dE];
+    /* cgeom->J is NULL for non-affine elements (geometry stored per quad point).
+     * Guard the pointer here; the affine branch below checks it is non-NULL. */
+    const PetscReal *J_e    = cgeom->J ? &cgeom->J[e * Np * dE * dE] : NULL;
     const PetscReal *xi_e   = cgeom->xi;
 
     for (PetscInt q = 0; q < Nq; ++q) {
@@ -461,7 +464,10 @@ static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt N
         /* Replicate single affine invJ across all Nq slots */
         for (PetscInt i = 0; i < dE * dE; ++i) h_invJ[eq * dE * dE + i] = invJ_e[i];
         h_detJ[eq] = detJ_e[0];
-        /* Compute physical coords from reference quadrature point */
+        /* Compute physical coords from reference quadrature point.
+         * J_e must be non-NULL for affine elements (cgeom->J is always set
+         * when isAffine == PETSC_TRUE by DMFieldCreateFEGeom). */
+        PetscCheck(J_e, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "cgeom->J is NULL for affine element %d -- DMFieldCreateFEGeom must provide J", (int)e);
         PetscFEKokkosCoordRefToReal(dE, dim, xi_e, v0_e, J_e, &quadPoints[q * dim], &h_coords[eq * dE]);
       } else {
         /* Non-affine: geometry stored per quadrature point */
@@ -542,7 +548,13 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
   const PetscInt nCoeff  = Ne * totDim;
   const PetscInt nEV     = Ne * totDim;
 
-  /* ---- Stage static data (B, D, w) ---- */
+  /* ---- Stage static data (B, D, w) ----
+   * PERFORMANCE NOTE: d_B, d_D, d_w are re-allocated and copied on every call.
+   * For production use, cache these Views in PetscFEKokkosMaps (or a similar
+   * persistent context) and copy only when Nq or Nb changes (i.e., after
+   * PetscFEStageTabulation_Kokkos).  The current per-call allocation is
+   * acceptable for correctness testing but adds ~1 cudaMalloc + H->D copy
+   * per residual/Jacobian evaluation. */
   Kokkos::View<PetscReal *> d_B("fekokkos_tmpl_B", nB);
   Kokkos::View<PetscReal *> d_D("fekokkos_tmpl_D", nD);
   Kokkos::View<PetscReal *> d_w("fekokkos_tmpl_w", Nq);
@@ -613,14 +625,17 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
   Kokkos::fence();
 
   /* ---- Log GPU flops for the Kokkos kernel (Phase 2 basis assembly).
-     Formula mirrors fekokkos.kokkos.cxx PetscLogGpuFlops call:
-       Per element, per quad point, per basis function, per component:
+     Formula accounts for both interpolation and contraction:
+       Interpolation (per element, per quad point):
+         u[c]   = sum_b B[q,b,c] * coeff[b]:  Nb*Nc*2 flops
+         u_x[c,d] = sum_b D[q,b,c,d] * coeff[b] * invJ[d,e2]: Nb*Nc*dim*2 flops
+       Contraction (per element, per quad point, per basis, per component):
          f0 term: 2 flops (multiply by detJ*w, add to elemVec)
          f1 term: dE * (dim*2 + 1) flops (physical grad inner product + add)
      PetscLogGpuFlops also increments the total PetscLogFlops counter.
      GPU %F in -log_view = gpu_flops / total_flops * 100.
   ---- */
-  PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nb * Nc * Nq * (2.0 + dE * (dim * 2.0 + 1.0))));
+  PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nq * (Nb * Nc * 2.0 + Nb * Nc * (PetscLogDouble)dim * 2.0) + (PetscLogDouble)Ne * Nb * Nc * Nq * (2.0 + dE * (dim * 2.0 + 1.0))));
 
   /* ---- Copy result back and accumulate into elemVec ---- */
   {
@@ -825,11 +840,11 @@ typedef struct {
   PetscScalar scale; /* interpolation weight */
 } PetscFEKokkosConstraint;
 
-  /* Maximum parent DOFs per constrained DOF.
+/* Maximum parent DOFs per constrained DOF.
  * For Q2 in 2D: 3 DOFs on a face edge.  8 matches LANDAU_MAX_Q_FACE. */
-  #if !defined(PETSCFE_KOKKOS_MAX_FACE)
-    #define PETSCFE_KOKKOS_MAX_FACE 8
-  #endif
+#if !defined(PETSCFE_KOKKOS_MAX_FACE)
+  #define PETSCFE_KOKKOS_MAX_FACE 8
+#endif
 
 typedef struct {
   /* --- Phase 1.C fields --- */
@@ -986,7 +1001,9 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
       for (PetscInt d = 1; d < dim - 1; ++d) face_dofs *= nf;
       maps->num_face = face_dofs;
     } else {
-      maps->num_face = Nb; /* 1D: no hanging nodes */
+      /* dim < 2: no hanging nodes; for simplices num_reduced will be 0
+       * so this value is unused in the COO scatter. */
+      maps->num_face = Nb;
     }
     /* Clamp to PETSCFE_KOKKOS_MAX_FACE */
     if (maps->num_face > PETSCFE_KOKKOS_MAX_FACE) maps->num_face = PETSCFE_KOKKOS_MAX_FACE;
@@ -1300,7 +1317,10 @@ static inline PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps
 
   PetscFunctionBeginUser;
   PetscCall(PetscMalloc2(coo_size, &coo_i, coo_size, &coo_j));
-  /* Initialize to -1 (unused slots) */
+  /* Initialize to -1 (unused slots).
+   * MatSetPreallocationCOO / MatSetValuesCOO silently ignore entries where
+   * either row or column index is -1, so unused slots in the COO arrays are
+   * harmless.  This avoids a separate compaction pass. */
   for (PetscCount k = 0; k < coo_size; ++k) coo_i[k] = coo_j[k] = -1;
 
   for (PetscInt e = 0; e < Ne; ++e) {
@@ -1577,7 +1597,9 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
    *
    *   locF[lIdx] += elemVec[e,b]   (atomic, all DOFs in-bounds incl. ghosts)
    *   DMLocalToGlobal(locF, ADD_VALUES, F)   (MPI reduction for ghost DOFs)
-   */
+   *
+   * Ghost DOFs are included in the local vector (size = local_dof_with_ghosts).
+   * The atomic_add is required because multiple elements may share a DOF. */
   Vec          locF;
   PetscScalar *locF_arr;
   PetscMemType locF_memtype;
@@ -1877,6 +1899,11 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
           const PetscInt    idx0 = off + fullNb * pt_off_b + nr * pt_off_b2;
           const PetscScalar Aij  = d_elemMat[e * totDim_ * totDim_ + b * totDim_ + b2];
 
+          /* Assignment (not atomic_add) is safe here: PetscFEKokkosPreallocateCOO
+           * assigns each (row,col) pair to exactly one COO slot per element, so
+           * no two kernel threads write to the same d_coo_vals index.
+           * If this invariant ever breaks (e.g., shared DOFs across elements in
+           * the same Kokkos team), replace with Kokkos::atomic_add. */
           for (PetscInt p = 0; p < nr; ++p) {
             for (PetscInt d = 0; d < nc; ++d) {
               d_coo_vals[idx0 + p * nc + d] = row_scale[p] * col_scale[d] * Aij;

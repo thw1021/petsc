@@ -24,7 +24,8 @@
   Restriction: No auxiliary fields (dsAux == NULL required). Single field only.
   This covers the baby Poisson problem and cae_eigenmode.
 
-  Author: pedra-ai (2026-04-02)
+  Note: Jacobian integration (integratejacobian) falls back to the Basic (CPU)
+  implementation; only integrateresidual is GPU-accelerated here.
 */
 
 #include <petsc/private/petscfeimpl.h>
@@ -347,7 +348,11 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   /* Phase 1: host loop -- evaluate physics callbacks, fill h_f0/h_f1 scratch.
      Reuse cached host scratch buffers; reallocate only when Ne or Nq changes.
      h_f0_buf and h_f1_buf share one contiguous block: [Ne*Nq*Nc + Ne*Nq*Nc*dE].
-     h_f1_buf is set to h_f0_buf + Ne*Nq*Nc (pointer arithmetic into the block). */
+     h_f1_buf is set to h_f0_buf + Ne*Nq*Nc (pointer arithmetic into the block).
+     FRAGILITY NOTE: Ne_alloc is updated below (after the device View block) and
+     Nq_alloc is updated in PetscFEStageTabulation_Kokkos.  Both must be kept in
+     sync with this reallocation guard.  If either update site is moved or removed,
+     the guard will fail to trigger and stale buffers will be used. */
   if (Ne != kk->Ne_alloc || Nq != kk->Nq_alloc) {
     PetscCall(PetscFree(kk->h_f0_buf));
     PetscCall(PetscMalloc1(Ne * Nq * Nc + Ne * Nq * Nc * dE, &kk->h_f0_buf));
@@ -426,7 +431,10 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
         invJ_eq = invJ_e; /* same for all q */
         detJ_eq = detJ_e[0];
         /* Compute physical coords from reference quadrature point */
-        CoordinatesRefToReal(dE, dim, xi_e, v0_e, J_e, &quadPoints[q * dim], v_affine);
+        /* PetscFEKokkosCoordRefToReal is the header-visible version of the
+         * static CoordinatesRefToReal() in fe.c.  Using the static symbol
+         * directly would cause a link error; use the Kokkos header version. */
+        PetscFEKokkosCoordRefToReal(dE, dim, xi_e, v0_e, J_e, &quadPoints[q * dim], v_affine);
         v_eq = v_affine;
       } else {
         invJ_eq = &invJ_e[q * dE * dE];
@@ -619,7 +627,9 @@ static PetscErrorCode PetscFEDestroy_Kokkos(PetscFE fem)
   PetscCall(PetscFree(kk->h_f0_buf));
   /* Free expanded invJ buffer */
   PetscCall(PetscFree(kk->h_invJ_buf));
-  /* Free per-(e,q) interpolation scratch (h_ux_buf is paired with h_u_buf) */
+  /* Free per-(e,q) interpolation scratch (h_ux_buf is paired with h_u_buf).
+   * PetscFree2(NULL, NULL) is safe -- it is a no-op when both pointers are NULL
+   * (e.g., if PetscFESetUp_Kokkos was never called). */
   PetscCall(PetscFree2(kk->h_u_buf, kk->h_ux_buf));
   /* Use C++ delete so that Kokkos::View destructors run properly.
      PetscFree/free() bypasses destructors and corrupts View ref counts. */
