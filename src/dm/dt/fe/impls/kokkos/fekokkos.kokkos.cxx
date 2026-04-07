@@ -29,8 +29,10 @@
 */
 
 #include <petsc/private/petscfeimpl.h>
+#include <petscfekokkos.h>
 #include <Kokkos_Core.hpp>
 /* PetscKokkosInitializeCheck() is declared in petscsys.h (included via petscfeimpl.h) */
+/* PetscFEKokkosCoordRefToReal() is defined in petscfekokkos.h (static inline host helper) */
 
 /* Scratch memory level: 0 = shared (fast), 1 = global (fallback).
    Matches the convention in src/ts/utils/dmplexlandau/kokkos/landau.kokkos.cxx. */
@@ -48,11 +50,9 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrateJacobian_Basic(PetscDS, PetscDS, Pet
 PETSC_INTERN PetscErrorCode PetscFEIntegrateBdJacobian_Basic(PetscDS, PetscWeakForm, PetscFEJacobianType, PetscFormKey, PetscInt, PetscFEGeom *, const PetscScalar[], const PetscScalar[], PetscDS, const PetscScalar[], PetscReal, PetscReal, PetscScalar[]);
 PETSC_INTERN PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS, PetscDS, PetscFEJacobianType, PetscFormKey, PetscInt, PetscInt, PetscFEGeom *, PetscFEGeom *, const PetscScalar[], const PetscScalar[], PetscDS, const PetscScalar[], PetscReal, PetscReal, PetscScalar[]);
 
-/* =========================================================================
-   PetscFEGetDimension_Kokkos: returns the number of basis functions.
+/* PetscFEGetDimension_Kokkos: returns the number of basis functions.
    PetscFEGetDimension_Basic is static in febasic.c so we reimplement it
-   here -- it is a one-liner that queries the dual space dimension.
-   ========================================================================= */
+   here -- it is a one-liner that queries the dual space dimension. */
 static PetscErrorCode PetscFEGetDimension_Kokkos(PetscFE fem, PetscInt *dim)
 {
   PetscFunctionBegin;
@@ -60,11 +60,9 @@ static PetscErrorCode PetscFEGetDimension_Kokkos(PetscFE fem, PetscInt *dim)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* =========================================================================
-   Private data stored on the PetscFE object for the Kokkos implementation.
+/* Private data stored on the PetscFE object for the Kokkos implementation.
    Static data (basis tabulation, quadrature weights) is staged to device
-   once during PetscFESetUp and reused across all calls.
-   ========================================================================= */
+   once during PetscFESetUp and reused across all calls. */
 typedef struct {
   /* Tabulation device Views -- re-staged when Nq changes (DS quadrature may differ from FE quadrature) */
   Kokkos::View<PetscReal *> d_B; /* basis values:       [Nq * Nb * Nc]          */
@@ -112,10 +110,8 @@ typedef struct {
   PetscBool setup_done;
 } PetscFE_Kokkos;
 
-/* =========================================================================
-   PetscFESetUp_Kokkos: call Basic setup (builds invV, tabulation), then
-   stage static data (B, D, w) to device.
-   ========================================================================= */
+/* PetscFESetUp_Kokkos: call Basic setup (builds invV, tabulation), then
+   stage static data (B, D, w) to device. */
 static PetscErrorCode PetscFESetUp_Kokkos(PetscFE fem)
 {
   PetscFE_Kokkos  *kk = (PetscFE_Kokkos *)fem->data;
@@ -176,11 +172,9 @@ static PetscErrorCode PetscFESetUp_Kokkos(PetscFE fem)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* =========================================================================
-   PetscFEStageTabulation_Kokkos: stage B/D/w to device for a given Nq.
+/* PetscFEStageTabulation_Kokkos: stage B/D/w to device for a given Nq.
    Called at integration time when the DS tabulation Nq differs from the
-   last staged Nq (e.g., P2 uses a richer quadrature than P1).
-   ========================================================================= */
+   last staged Nq (e.g., P2 uses a richer quadrature than P1). */
 static PetscErrorCode PetscFEStageTabulation_Kokkos(PetscFE_Kokkos *kk, PetscTabulation Tab, const PetscReal *quadWeights, PetscInt Nq)
 {
   const PetscInt Nb  = kk->Nb;
@@ -218,15 +212,13 @@ static PetscErrorCode PetscFEStageTabulation_Kokkos(PetscFE_Kokkos *kk, PetscTab
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* =========================================================================
-   PetscFEIntegrateResidual_Kokkos
+/* PetscFEIntegrateResidual_Kokkos
 
    Replaces the serial cell loop in PetscFEIntegrateResidual_Basic with a
    Kokkos::parallel_for using TeamPolicy.
 
    Restriction: dsAux == NULL (no auxiliary fields). Single field (Nf == 1).
-   Falls back to Basic implementation if these constraints are not met.
-   ========================================================================= */
+   Falls back to Basic implementation if these constraints are not met. */
 static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS dsAux, const PetscScalar coefficientsAux[], PetscReal t, PetscScalar elemVec[])
 {
   PetscFE            fe;
@@ -304,8 +296,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   const PetscInt uOff0 = uOff[field];
   const PetscInt fOff  = fOffset;
 
-  /* -----------------------------------------------------------------------
-     Two-phase Kokkos integration (always used -- CPU Serial or GPU CUDA):
+  /* Two-phase Kokkos integration (always used -- CPU Serial or GPU CUDA):
 
      Phase 1 (host, serial): evaluate u_loc / ux_loc per (cell, qp), call
        f0/f1 host function pointers, fill h_f0_scr / h_f1_scr.
@@ -330,8 +321,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
          CPU-only flops = total_flops - gpu_flops.
          On Kokkos::Serial the "GPU" flops are still registered as device
          flops (Kokkos convention), making the split meaningful even without
-         a physical GPU.
-     ----------------------------------------------------------------------- */
+         a physical GPU. */
 
   /* d_invJ is sized [Ne * Nq * dE * dE] -- for affine elements we replicate
      the single per-element invJ across all Nq slots during Phase 1 so that
@@ -615,9 +605,7 @@ static PetscErrorCode PetscFEIntegrateResidual_Kokkos(PetscDS ds, PetscFormKey k
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* =========================================================================
-   PetscFEDestroy_Kokkos
-   ========================================================================= */
+/* PetscFEDestroy_Kokkos */
 static PetscErrorCode PetscFEDestroy_Kokkos(PetscFE fem)
 {
   PetscFE_Kokkos *kk = (PetscFE_Kokkos *)fem->data;
@@ -638,14 +626,12 @@ static PetscErrorCode PetscFEDestroy_Kokkos(PetscFE fem)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* =========================================================================
-   PetscFEInitialize_Kokkos: set ops table.
+/* PetscFEInitialize_Kokkos: set ops table.
 
    We set all ops to the Basic implementations (via PETSC_INTERN forward
    declarations) and then override setup, destroy, and integrateresidual
    with our Kokkos versions.  view and getdimension are left NULL because
-   PetscFEView_Basic and PetscFEGetDimension_Basic are static in febasic.c.
-   ========================================================================= */
+   PetscFEView_Basic and PetscFEGetDimension_Basic are static in febasic.c. */
 static PetscErrorCode PetscFEInitialize_Kokkos(PetscFE fem)
 {
   PetscFunctionBegin;
