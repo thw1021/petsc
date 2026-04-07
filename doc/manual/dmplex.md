@@ -207,6 +207,10 @@ However, their usage and purpose is best understood through `DMPLEX`.
 
 #### Closure:
 
+`DMPlexVecGetClosure()` can extract values associated with the closure of a given point from a local vector, using the layout in the local section, in the closure order. This means the data is ordered first by section field, then by closure point, and finally by dof on that point. The closure order can be directly changed using `PetscSectionSetClosurePermutation()`, but `DMPLEX` has helper functions for common reorderings such as `DMPlexSetClosurePermutationTensor()` and `DMPlexSetClosurePermutationLexicographic()`.
+
+If multiple dofs are associated to a point, we must order them in some way. The local section has a canonical order for these dofs, but if the point has an orientation in the closure, we must reorder those dofs to respect that orientation. See [the next section](### Symmetries) for a discussion of `PetscSectionSym` which implements there transformations.
+
 Closure information can be attached to a `PetscSection` to allow for more efficient closure information queries.
 This information can either be set directly with `DMPlexCreateClosureIndex()` or generated automatically for a `DMPLEX` via `DMPlexCreateClosureIndex()`.
 
@@ -214,6 +218,7 @@ This information can either be set directly with `DMPlexCreateClosureIndex()` or
 
 While mesh point orientation information specifies how one mesh point is oriented with respect to another, it does not describe how the dofs associated with that mesh point should be permuted for that orientation.
 This information is supplied via a `PetscSectionSym` object that is attached to the `PetscSection`.
+It is a map from orientation numbers to permutation indices for the dofs on that point.
 Generally the setup and usage of this information is handled automatically by PETSc during setup of a Plex using `PetscFE`.
 
 #### Closure Permutation:
