@@ -77,8 +77,8 @@ int main(int argc, char **argv)
   PetscOptionsBegin(comm, "", help, "none");
   PetscCall(PetscOptionsFList("-amat_type", "A matrix type", "", MatList, atype_default, atype, 256, &flg));
   PetscCall(PetscOptionsFList("-pmat_type", "P matrix type", "", MatList, ptype_default, ptype, 256, &flg2));
-  PetscCall(PetscOptionsGetInt(NULL, NULL, "-m", &m, NULL));
-  PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &n, NULL));
+  PetscCall(PetscOptionsInt("-m", "m size", "", m, &m, NULL));
+  PetscCall(PetscOptionsInt("-n", "n size", "", n, &n, NULL));
   PetscOptionsEnd();
 
   if (!flg) PetscCall(PetscStrcpy(atype, atype_default));
@@ -125,7 +125,7 @@ int main(int argc, char **argv)
   PetscCall(MatDestroy(&A));
   PetscCall(PetscRandomDestroy(&rand));
   PetscCall(PetscFinalize());
-  PetscFunctionReturn(PETSC_SUCCESS);
+  return 0;
 }
 
 /*TEST
