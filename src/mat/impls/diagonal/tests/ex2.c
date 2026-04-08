@@ -62,8 +62,8 @@ int main(int argc, char **argv)
   PetscBool   flg, flg2, isdiag;
   const char *atype_default = MATDIAGONAL;
   const char *ptype_default = MATDIAGONAL;
-  char        atype[256] = "";
-  char        ptype[256] = "";
+  char        atype[256]    = "";
+  char        ptype[256]    = "";
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
