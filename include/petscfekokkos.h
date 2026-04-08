@@ -275,10 +275,10 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
          phys_grad(b,c,d) = all_grad[(b/Nc)*dE+d]  (nonzero only for c == b%Nc)
          Matches fekokkos.kokkos.cxx Phase 2: val_e[b] += phys_grad * f1_s[(q*Nc+c)*dE+d] */
       for (PetscInt b = 0; b < Nb; ++b) {
-        const PetscInt   b_s      = b / Nc;
-        const PetscInt   c_b      = b % Nc;
-        const PetscReal *pg       = &all_grad[b_s * dE];
-        PetscScalar      contrib  = 0.0;
+        const PetscInt   b_s     = b / Nc;
+        const PetscInt   c_b     = b % Nc;
+        const PetscReal *pg      = &all_grad[b_s * dE];
+        PetscScalar      contrib = 0.0;
         for (PetscInt d = 0; d < dE; ++d) contrib += pg[d] * f1_loc[c_b * dE + d];
         ev_e[b] += contrib * wq;
       }
@@ -834,8 +834,8 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
     /* IsAffine=true: all test cases use affine hex meshes.
        TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
     "PetscFEKokkosComputeJacobian", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
-      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, true, IsLinear>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, gOff, t_, tShift_, nConst_, d_constants.data(),
-                                                                          d_elemMat.data());
+      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, true, IsLinear>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, gOff, t_, tShift_, nConst_,
+                                                                         d_constants.data(), d_elemMat.data());
     });
 
   Kokkos::fence();
@@ -2013,8 +2013,8 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
         for (PetscInt i = 0; i < totDim_; ++i) ev_base[i] = 0.0;
         /* IsAffine=true: all current meshes are affine hex.
            TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
-        PetscFEKokkosIntegrateResidualCell<f0, f1, true>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0.0, numConstants_, ctx_d_constants.data(),
-                                                         ctx_d_elemVec.data());
+        PetscFEKokkosIntegrateResidualCell<f0, f1, true>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0.0, numConstants_,
+                                                         ctx_d_constants.data(), ctx_d_elemVec.data());
 
         /* Scatter to locF via atomic_add using local DOF indices */
         for (PetscInt b = 0; b < Nb_; ++b) {
@@ -2198,7 +2198,7 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
         /* IsAffine=true: all current meshes are affine hex.
            TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
         PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, true, IsLinear>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0, 0.0, 0.0, numConstants_,
-                                                                            ctx_d_constants.data(), ctx_d_elemMat.data());
+                                                                           ctx_d_constants.data(), ctx_d_elemMat.data());
     });
   Kokkos::fence();
 
