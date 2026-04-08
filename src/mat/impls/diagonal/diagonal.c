@@ -816,51 +816,6 @@ static PetscErrorCode MatProductSetFromOptions_Diagonal_Dense(Mat C)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-   Check that a MATDIAGONAL's internal Vec type is compatible with a target matrix's Vec type.
-   Kokkos require vectors passed to MatDiagonalScale to match the matrix's device type exactly.
-   VecGetKokkosView errors on non-Kokkos vectors. Rather than silently converting
-   (which hides a per-numeric-call host-to-device copy), we error out so
-   the user creates the MATDIAGONAL with the right Vec type.
-
-   Only device type mismatches are checked; CPU type name differences (e.g., "seq" vs "standard")
-   are harmless since CPU MatDiagonalScale uses VecGetArrayRead which accepts any Vec type.
-*/
-static PetscErrorCode MatDiagonalCheckVecCompatibility(Mat diag, Mat target)
-{
-  VecType dvtype, mvtype;
-  char   *found;
-
-  PetscFunctionBegin;
-  /* Some GPU MatDiagonalScale implementations (e.g., Kokkos) use device-specific Vec accessors
-     that require the Vec to be the matching device type, rather than using VecGetArrayRead which
-     accepts any type. We verify the MATDIAGONAL's Vec type is compatible with the target matrix.
-     The target's defaultvectype is the base name (e.g., "kokkos"); the Vec's type is the concrete
-     variant (e.g., "seqkokkos"). Compatibility is checked via substring containment, following the
-     PETSc convention where device types share a common base name. CPU type mismatches (e.g., "seq"
-     vs "standard") are harmless since CPU MatDiagonalScale uses VecGetArrayRead. */
-  PetscCall(MatGetVecType(target, &mvtype));
-  if (!mvtype || !mvtype[0]) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(VecGetType(((Mat_Diagonal *)diag->data)->diag, &dvtype));
-  PetscCall(PetscStrstr(dvtype, mvtype, &found));
-  if (!found) PetscCall(PetscStrstr(mvtype, dvtype, &found));
-  if (!found) {
-    /* No substring match. Only error when device types are involved; CPU mismatches are harmless. *
-     *  Uses the same PetscObjectTypeCompareAny pattern as MatDiagonalSetDiagonal (line ~498).     */
-    PetscBool diag_is_device;
-    PetscCall(PetscObjectTypeCompareAny((PetscObject)((Mat_Diagonal *)diag->data)->diag, &diag_is_device, VECSEQKOKKOS, VECMPIKOKKOS, VECSEQCUDA, VECMPICUDA, VECSEQHIP, VECMPIHIP, ""));
-    if (!diag_is_device) {
-      PetscBool target_needs_device = PETSC_FALSE;
-      PetscCall(PetscStrstr(mvtype, "kokkos", &found));
-      if (!found) PetscCall(PetscStrstr(mvtype, "cuda", &found));
-      if (!found) PetscCall(PetscStrstr(mvtype, "hip", &found));
-      if (found) target_needs_device = PETSC_TRUE;
-      PetscCheck(!target_needs_device, PetscObjectComm((PetscObject)target), PETSC_ERR_SUP, "MATDIAGONAL Vec type '%s' is incompatible with target matrix Vec type '%s'. Create the MATDIAGONAL using a compatible Vec type (e.g., -vec_type %s)", dvtype, mvtype, mvtype);
-    }
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* PtAP for diagonal * diagonal: C_ii = d_A_i * d_P_i^2 */
 static PetscErrorCode MatProductNumeric_PtAP_Diagonal_Diagonal(Mat C)
 {
@@ -918,14 +873,12 @@ static PetscErrorCode MatProductNumeric_PtAP_Any_Diagonal(Mat C)
 static PetscErrorCode MatProductSymbolic_PtAP_Any_Diagonal(Mat C)
 {
   Mat          A       = C->product->A;
-  Mat          P       = C->product->B;
   Mat_Product *product = C->product;
   Mat          Cwork;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
   PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
-  PetscCall(MatDiagonalCheckVecCompatibility(P, A));
   PetscCall(MatDuplicate(A, MAT_DO_NOT_COPY_VALUES, &Cwork));
   C->product = NULL;
   PetscCall(MatHeaderReplace(C, &Cwork));
@@ -976,15 +929,13 @@ static PetscErrorCode MatProductNumeric_PtAP_Diagonal_Any(Mat C)
 static PetscErrorCode MatProductSymbolic_PtAP_Diagonal_Any(Mat C)
 {
   Mat_Product                *product = C->product;
-  Mat                         A = product->A, P = product->B;
+  Mat                         P = product->B;
   MatProductCtx_PtAP_DiagAny *ctx;
   Mat                         Cwork;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
   PetscCheck(!C->product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
-  PetscCall(MatDiagonalCheckVecCompatibility(A, P));
-
   PetscCall(PetscNew(&ctx));
 
   /* AP = A * P (structure only; numeric phase fills values) */
