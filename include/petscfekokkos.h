@@ -940,6 +940,19 @@ typedef struct {
    * When PETSC_TRUE, invJ/detJ are constant per element (not per quad point),
    * enabling the compact H->D transfer + on-device expansion optimization. */
   PetscBool isAffine;
+
+  /* Geometry cache: set PETSC_TRUE after the first residual/Jacobian call.
+   * When PETSC_TRUE, DMFieldCreateFEGeom and the H->D geometry copies are
+   * skipped -- d_invJ, d_detJ, d_coords already hold valid device data.
+   * cached_dE_geom stores dimEmbed so dE is available without chunkGeom.
+   * cached_fullGeom and cached_cellIS are kept alive until Destroy so that
+   * PetscFEGeomRestoreChunk / PetscFEGeomDestroy / ISDestroy can be called
+   * exactly once (in PetscFEKokkosMapsDestroy). */
+  PetscBool    geom_cached;
+  PetscInt     cached_dE_geom;
+  PetscFEGeom *cached_fullGeom;
+  PetscFEGeom *cached_chunkGeom;
+  IS           cached_cellIS;
 } PetscFEKokkosMaps;
 
 /* PetscFEKokkosCreateMaps
@@ -1494,6 +1507,13 @@ static inline PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps
 static inline PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps *maps) PeNS
 {
   PetscFunctionBegin;
+  /* Release cached geometry objects (owned since first residual/Jacobian call) */
+  if (maps->geom_cached) {
+    PetscCall(PetscFEGeomRestoreChunk(maps->cached_fullGeom, 0, maps->num_elements, &maps->cached_chunkGeom));
+    PetscCall(PetscFEGeomDestroy(&maps->cached_fullGeom));
+    PetscCall(ISDestroy(&maps->cached_cellIS));
+    maps->geom_cached = PETSC_FALSE;
+  }
   PetscCall(PetscFree7(maps->h_gIdx, maps->h_lIdx, maps->h_active_idx, maps->h_Nb_active, maps->h_coo_elem_offsets, maps->h_fullNb, maps->h_coo_elem_point_offsets));
   PetscCall(PetscFree2(maps->h_c_maps_gid, maps->h_c_maps_scale));
   /* Reset device Views to empty (releases Kokkos reference count) */
@@ -1641,104 +1661,133 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   }
   PetscCall(DMPlexInsertBoundaryValues(dm, PETSC_TRUE, locX, 0.0, NULL, NULL, NULL));
 
-  /* Build geometry */
-  PetscCall(DMGetCoordinateField(dm, &coordField));
-  PetscCall(DMFieldCreateFEGeom(coordField, cellIS, quad, PETSC_FEGEOM_BASIC, &fullGeom));
-  PetscCall(PetscFEGeomGetChunk(fullGeom, cStart, cEnd, &chunkGeom));
-  dE = chunkGeom->dimEmbed;
+  /* Build geometry -- skipped on subsequent calls when mesh is unchanged.
+   * On the first call: compute element geometry on host, upload to device,
+   * and cache fullGeom/chunkGeom/cellIS in ctx for reuse.
+   * On subsequent calls: d_invJ/d_detJ/d_coords already hold valid data. */
+  if (!ctx->geom_cached) {
+    PetscCall(DMGetCoordinateField(dm, &coordField));
+    PetscCall(DMFieldCreateFEGeom(coordField, cellIS, quad, PETSC_FEGEOM_BASIC, &fullGeom));
+    PetscCall(PetscFEGeomGetChunk(fullGeom, cStart, cEnd, &chunkGeom));
+    dE = chunkGeom->dimEmbed;
 
-  /* Runtime bounds check: Nc and dE must fit in the kernel's stack arrays */
-  PetscCheck(Nc <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Nc %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NC 3", (PetscInt)Nc);
-  PetscCheck(dE <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "dE %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_DE 3", (PetscInt)dE);
+    /* Runtime bounds check: Nc and dE must fit in the kernel's stack arrays */
+    PetscCheck(Nc <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Nc %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NC 3", (PetscInt)Nc);
+    PetscCheck(dE <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "dE %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_DE 3", (PetscInt)dE);
 
-  /* Get element coefficients */
-  PetscCall(DMPlexGetCellFields(dm, cellIS, locX, NULL, NULL, &u_arr, &u_t_arr, &a_arr));
+    /* Ensure dynamic Views are allocated (realloc only when sizes change) */
+    PetscCall(PetscFEKokkosEnsureDynamicViews(ctx, Ne, Nq, dE, totDim, numConstants));
+
+    /* Sizes needed for geometry staging */
+    const PetscInt nInvJ_g   = Ne * Nq * dE * dE;
+    const PetscInt nDetJ_g   = Ne * Nq;
+    const PetscInt nCoords_g = Ne * Nq * dE;
+
+    /* Stage geometry: affine-optimized path reduces H->D transfer by Nq* */
+    ctx->isAffine              = chunkGeom->isAffine;
+    const PetscBool isAffine_r = ctx->isAffine;
+    if (isAffine_r) {
+      /* Affine: copy compact geometry [Ne * dE * dE] invJ + [Ne] detJ to device,
+       * then expand on-device via a small Kokkos kernel (GPU replication is
+       * much faster than host replication + larger H->D transfer). */
+      const PetscInt nInvJ_compact = Ne * dE * dE;
+      const PetscInt nDetJ_compact = Ne;
+
+      /* Allocate compact host buffers */
+      PetscReal *h_invJ_compact, *h_detJ_compact, *h_coords_buf;
+      PetscCall(PetscMalloc3(nInvJ_compact, &h_invJ_compact, nDetJ_compact, &h_detJ_compact, nCoords_g, &h_coords_buf));
+
+      /* Fill compact buffers: one invJ and one detJ per element */
+      const PetscInt Np_r = chunkGeom->numPoints;
+      for (PetscInt e = 0; e < Ne; ++e) {
+        for (PetscInt i = 0; i < dE * dE; ++i) h_invJ_compact[e * dE * dE + i] = chunkGeom->invJ[e * Np_r * dE * dE + i];
+        h_detJ_compact[e] = chunkGeom->detJ[e * Np_r];
+      }
+
+      /* Compute physical coords for affine elements */
+      for (PetscInt e = 0; e < Ne; ++e) {
+        const PetscReal *v0_e = &chunkGeom->v[e * Np_r * dE];
+        const PetscReal *J_e  = &chunkGeom->J[e * Np_r * dE * dE];
+        for (PetscInt q = 0; q < Nq; ++q) PetscFEKokkosCoordRefToReal(dE, dim, chunkGeom->xi, v0_e, J_e, &quadPoints[q * dim], &h_coords_buf[(e * Nq + q) * dE]);
+      }
+
+      /* Copy compact invJ/detJ to temporary device Views */
+      Kokkos::View<PetscReal *> d_invJ_compact("res_invJ_compact", nInvJ_compact);
+      Kokkos::View<PetscReal *> d_detJ_compact("res_detJ_compact", nDetJ_compact);
+      {
+        Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_compact, nInvJ_compact);
+        Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_compact, nDetJ_compact);
+        Kokkos::deep_copy(d_invJ_compact, hv_invJ);
+        Kokkos::deep_copy(d_detJ_compact, hv_detJ);
+      }
+
+      /* Copy coords to cached device View */
+      {
+        Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords_g);
+        Kokkos::deep_copy(ctx->d_coords, hv_coords);
+      }
+      PetscCall(PetscFree3(h_invJ_compact, h_detJ_compact, h_coords_buf));
+
+      /* Expand on device: replicate single invJ/detJ across all Nq slots */
+      auto ctx_d_invJ_expand = ctx->d_invJ;
+      auto ctx_d_detJ_expand = ctx->d_detJ;
+      Kokkos::parallel_for(
+        "PetscFEKokkos_expand_affine_geom_res", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
+          for (PetscInt q = 0; q < Nq; ++q) {
+            for (PetscInt i = 0; i < dE * dE; ++i) ctx_d_invJ_expand[(e * Nq + q) * dE * dE + i] = d_invJ_compact[e * dE * dE + i];
+            ctx_d_detJ_expand[e * Nq + q] = d_detJ_compact[e];
+          }
+        });
+      Kokkos::fence();
+    } else {
+      /* Non-affine: use PetscFEKokkosExpandGeometry as before */
+      PetscReal *h_invJ_buf, *h_detJ_buf, *h_coords_buf;
+      PetscCall(PetscMalloc3(nInvJ_g, &h_invJ_buf, nDetJ_g, &h_detJ_buf, nCoords_g, &h_coords_buf));
+      PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, chunkGeom, quadPoints, h_invJ_buf, h_detJ_buf, h_coords_buf));
+      {
+        Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_buf, nInvJ_g);
+        Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_buf, nDetJ_g);
+        Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords_g);
+        Kokkos::deep_copy(ctx->d_invJ, hv_invJ);
+        Kokkos::deep_copy(ctx->d_detJ, hv_detJ);
+        Kokkos::deep_copy(ctx->d_coords, hv_coords);
+      }
+      PetscCall(PetscFree3(h_invJ_buf, h_detJ_buf, h_coords_buf));
+    }
+
+    /* Cache geometry objects and dE for subsequent calls */
+    ctx->cached_dE_geom   = dE;
+    ctx->cached_fullGeom  = fullGeom;
+    ctx->cached_chunkGeom = chunkGeom;
+    ctx->cached_cellIS    = cellIS;
+    ctx->geom_cached      = PETSC_TRUE;
+  } else {
+    /* Geometry already on device -- just retrieve cached dE */
+    dE = ctx->cached_dE_geom;
+
+    /* Runtime bounds check (repeated for safety on cached path) */
+    PetscCheck(Nc <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Nc %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NC 3", (PetscInt)Nc);
+    PetscCheck(dE <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "dE %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_DE 3", (PetscInt)dE);
+
+    /* Ensure dynamic Views are allocated (realloc only when sizes change) */
+    PetscCall(PetscFEKokkosEnsureDynamicViews(ctx, Ne, Nq, dE, totDim, numConstants));
+  }
+
+  /* Get element coefficients (always needed -- solution changes every call).
+   * On the cached path use ctx->cached_cellIS; on the first-call path the
+   * local cellIS was stored into ctx->cached_cellIS above. */
+  const PetscInt nCoeff = Ne * totDim;
+  {
+    IS use_cellIS = ctx->geom_cached ? ctx->cached_cellIS : cellIS;
+    PetscCall(DMPlexGetCellFields(dm, use_cellIS, locX, NULL, NULL, &u_arr, &u_t_arr, &a_arr));
+    /* On the cached path, destroy the locally-obtained cellIS (not needed) */
+    if (ctx->geom_cached && cellIS != ctx->cached_cellIS) PetscCall(ISDestroy(&cellIS));
+  }
 
   /* Use cached B/D/w from maps -- no per-call allocation or copy */
   auto d_B = ctx->d_B;
   auto d_D = ctx->d_D;
   auto d_w = ctx->d_w;
-
-  /* Sizes needed for geometry staging */
-  const PetscInt nInvJ   = Ne * Nq * dE * dE;
-  const PetscInt nDetJ   = Ne * Nq;
-  const PetscInt nCoords = Ne * Nq * dE;
-  const PetscInt nCoeff  = Ne * totDim;
-
-  /* Ensure dynamic Views are allocated (realloc only when sizes change) */
-  PetscCall(PetscFEKokkosEnsureDynamicViews(ctx, Ne, Nq, dE, totDim, numConstants));
-
-  /* Stage geometry: affine-optimized path reduces H->D transfer by Nq* */
-  ctx->isAffine              = chunkGeom->isAffine;
-  const PetscBool isAffine_r = ctx->isAffine;
-  if (isAffine_r) {
-    /* Affine: copy compact geometry [Ne * dE * dE] invJ + [Ne] detJ to device,
-     * then expand on-device via a small Kokkos kernel (GPU replication is
-     * much faster than host replication + larger H->D transfer). */
-    const PetscInt nInvJ_compact = Ne * dE * dE;
-    const PetscInt nDetJ_compact = Ne;
-
-    /* Allocate compact host buffers */
-    PetscReal *h_invJ_compact, *h_detJ_compact, *h_coords_buf;
-    PetscCall(PetscMalloc3(nInvJ_compact, &h_invJ_compact, nDetJ_compact, &h_detJ_compact, nCoords, &h_coords_buf));
-
-    /* Fill compact buffers: one invJ and one detJ per element */
-    const PetscInt Np_r = chunkGeom->numPoints;
-    for (PetscInt e = 0; e < Ne; ++e) {
-      for (PetscInt i = 0; i < dE * dE; ++i) h_invJ_compact[e * dE * dE + i] = chunkGeom->invJ[e * Np_r * dE * dE + i];
-      h_detJ_compact[e] = chunkGeom->detJ[e * Np_r];
-    }
-
-    /* Compute physical coords for affine elements */
-    for (PetscInt e = 0; e < Ne; ++e) {
-      const PetscReal *v0_e = &chunkGeom->v[e * Np_r * dE];
-      const PetscReal *J_e  = &chunkGeom->J[e * Np_r * dE * dE];
-      for (PetscInt q = 0; q < Nq; ++q) PetscFEKokkosCoordRefToReal(dE, dim, chunkGeom->xi, v0_e, J_e, &quadPoints[q * dim], &h_coords_buf[(e * Nq + q) * dE]);
-    }
-
-    /* Copy compact invJ/detJ to temporary device Views */
-    Kokkos::View<PetscReal *> d_invJ_compact("res_invJ_compact", nInvJ_compact);
-    Kokkos::View<PetscReal *> d_detJ_compact("res_detJ_compact", nDetJ_compact);
-    {
-      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_compact, nInvJ_compact);
-      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_compact, nDetJ_compact);
-      Kokkos::deep_copy(d_invJ_compact, hv_invJ);
-      Kokkos::deep_copy(d_detJ_compact, hv_detJ);
-    }
-
-    /* Copy coords to cached device View */
-    {
-      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
-      Kokkos::deep_copy(ctx->d_coords, hv_coords);
-    }
-    PetscCall(PetscFree3(h_invJ_compact, h_detJ_compact, h_coords_buf));
-
-    /* Expand on device: replicate single invJ/detJ across all Nq slots */
-    auto ctx_d_invJ_expand = ctx->d_invJ;
-    auto ctx_d_detJ_expand = ctx->d_detJ;
-    Kokkos::parallel_for(
-      "PetscFEKokkos_expand_affine_geom_res", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
-        for (PetscInt q = 0; q < Nq; ++q) {
-          for (PetscInt i = 0; i < dE * dE; ++i) ctx_d_invJ_expand[(e * Nq + q) * dE * dE + i] = d_invJ_compact[e * dE * dE + i];
-          ctx_d_detJ_expand[e * Nq + q] = d_detJ_compact[e];
-        }
-      });
-    Kokkos::fence();
-  } else {
-    /* Non-affine: use PetscFEKokkosExpandGeometry as before */
-    PetscReal *h_invJ_buf, *h_detJ_buf, *h_coords_buf;
-    PetscCall(PetscMalloc3(nInvJ, &h_invJ_buf, nDetJ, &h_detJ_buf, nCoords, &h_coords_buf));
-    PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, chunkGeom, quadPoints, h_invJ_buf, h_detJ_buf, h_coords_buf));
-    {
-      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_buf, nInvJ);
-      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_buf, nDetJ);
-      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
-      Kokkos::deep_copy(ctx->d_invJ, hv_invJ);
-      Kokkos::deep_copy(ctx->d_detJ, hv_detJ);
-      Kokkos::deep_copy(ctx->d_coords, hv_coords);
-    }
-    PetscCall(PetscFree3(h_invJ_buf, h_detJ_buf, h_coords_buf));
-  }
 
   /* Stage coefficients to cached device View */
   {
@@ -1860,12 +1909,10 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   PetscCall(DMLocalToGlobal(dm, locF, ADD_VALUES, F));
   PetscCall(DMRestoreLocalVector(dm, &locF));
 
-  /* Cleanup */
-  PetscCall(DMPlexRestoreCellFields(dm, cellIS, locX, NULL, NULL, &u_arr, &u_t_arr, &a_arr));
+  /* Cleanup -- geometry objects (fullGeom, chunkGeom, cached_cellIS) are owned
+   * by ctx->cached_* and freed in PetscFEKokkosMapsDestroy, not here. */
+  PetscCall(DMPlexRestoreCellFields(dm, ctx->cached_cellIS, locX, NULL, NULL, &u_arr, &u_t_arr, &a_arr));
   PetscCall(DMRestoreLocalVector(dm, &locX));
-  PetscCall(PetscFEGeomRestoreChunk(fullGeom, cStart, cEnd, &chunkGeom));
-  PetscCall(PetscFEGeomDestroy(&fullGeom));
-  PetscCall(ISDestroy(&cellIS));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1950,104 +1997,135 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   }
   PetscCall(DMPlexInsertBoundaryValues(dm, PETSC_TRUE, locX, 0.0, NULL, NULL, NULL));
 
-  /* Build geometry */
-  PetscCall(DMGetCoordinateField(dm, &coordField));
-  PetscCall(DMFieldCreateFEGeom(coordField, cellIS, quad, PETSC_FEGEOM_BASIC, &fullGeom));
-  PetscCall(PetscFEGeomGetChunk(fullGeom, cStart, cEnd, &chunkGeom));
-  dE = chunkGeom->dimEmbed;
+  /* Build geometry -- skipped on subsequent calls when mesh is unchanged.
+   * On the first call: compute element geometry on host, upload to device,
+   * and cache fullGeom/chunkGeom/cellIS in ctx for reuse.
+   * On subsequent calls: d_invJ/d_detJ/d_coords already hold valid data.
+   * NOTE: the residual function runs first and populates the cache; the
+   * Jacobian function reuses it on the same and all subsequent calls. */
+  if (!ctx->geom_cached) {
+    PetscCall(DMGetCoordinateField(dm, &coordField));
+    PetscCall(DMFieldCreateFEGeom(coordField, cellIS, quad, PETSC_FEGEOM_BASIC, &fullGeom));
+    PetscCall(PetscFEGeomGetChunk(fullGeom, cStart, cEnd, &chunkGeom));
+    dE = chunkGeom->dimEmbed;
 
-  /* Runtime bounds check: Nc and dE must fit in the kernel's stack arrays */
-  PetscCheck(Nc <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Nc %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NC 3", (PetscInt)Nc);
-  PetscCheck(dE <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "dE %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_DE 3", (PetscInt)dE);
+    /* Runtime bounds check: Nc and dE must fit in the kernel's stack arrays */
+    PetscCheck(Nc <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Nc %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NC 3", (PetscInt)Nc);
+    PetscCheck(dE <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "dE %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_DE 3", (PetscInt)dE);
 
-  /* Get element coefficients */
-  PetscCall(DMPlexGetCellFields(dm, cellIS, locX, NULL, NULL, &u_arr, &u_t_arr, &a_arr));
+    /* Ensure dynamic Views are allocated (realloc only when sizes change) */
+    PetscCall(PetscFEKokkosEnsureDynamicViews(ctx, Ne, Nq, dE, totDim, numConstants));
+
+    /* Sizes needed for geometry staging */
+    const PetscInt nInvJ_g   = Ne * Nq * dE * dE;
+    const PetscInt nDetJ_g   = Ne * Nq;
+    const PetscInt nCoords_g = Ne * Nq * dE;
+
+    /* Stage geometry: affine-optimized path reduces H->D transfer by Nq* */
+    ctx->isAffine              = chunkGeom->isAffine;
+    const PetscBool isAffine_j = ctx->isAffine;
+    if (isAffine_j) {
+      /* Affine: copy compact geometry [Ne * dE * dE] invJ + [Ne] detJ to device,
+       * then expand on-device via a small Kokkos kernel (GPU replication is
+       * much faster than host replication + larger H->D transfer). */
+      const PetscInt nInvJ_compact = Ne * dE * dE;
+      const PetscInt nDetJ_compact = Ne;
+
+      /* Allocate compact host buffers */
+      PetscReal *h_invJ_compact, *h_detJ_compact, *h_coords_buf;
+      PetscCall(PetscMalloc3(nInvJ_compact, &h_invJ_compact, nDetJ_compact, &h_detJ_compact, nCoords_g, &h_coords_buf));
+
+      /* Fill compact buffers: one invJ and one detJ per element */
+      const PetscInt Np_j = chunkGeom->numPoints;
+      for (PetscInt e = 0; e < Ne; ++e) {
+        for (PetscInt i = 0; i < dE * dE; ++i) h_invJ_compact[e * dE * dE + i] = chunkGeom->invJ[e * Np_j * dE * dE + i];
+        h_detJ_compact[e] = chunkGeom->detJ[e * Np_j];
+      }
+
+      /* Compute physical coords for affine elements */
+      for (PetscInt e = 0; e < Ne; ++e) {
+        const PetscReal *v0_e = &chunkGeom->v[e * Np_j * dE];
+        const PetscReal *J_e  = &chunkGeom->J[e * Np_j * dE * dE];
+        for (PetscInt q = 0; q < Nq; ++q) PetscFEKokkosCoordRefToReal(dE, dim, chunkGeom->xi, v0_e, J_e, &quadPoints[q * dim], &h_coords_buf[(e * Nq + q) * dE]);
+      }
+
+      /* Copy compact invJ/detJ to temporary device Views */
+      Kokkos::View<PetscReal *> d_invJ_compact("jac_invJ_compact", nInvJ_compact);
+      Kokkos::View<PetscReal *> d_detJ_compact("jac_detJ_compact", nDetJ_compact);
+      {
+        Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_compact, nInvJ_compact);
+        Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_compact, nDetJ_compact);
+        Kokkos::deep_copy(d_invJ_compact, hv_invJ);
+        Kokkos::deep_copy(d_detJ_compact, hv_detJ);
+      }
+
+      /* Copy coords to cached device View */
+      {
+        Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords_g);
+        Kokkos::deep_copy(ctx->d_coords, hv_coords);
+      }
+      PetscCall(PetscFree3(h_invJ_compact, h_detJ_compact, h_coords_buf));
+
+      /* Expand on device: replicate single invJ/detJ across all Nq slots */
+      auto ctx_d_invJ_expand = ctx->d_invJ;
+      auto ctx_d_detJ_expand = ctx->d_detJ;
+      Kokkos::parallel_for(
+        "PetscFEKokkos_expand_affine_geom_jac", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
+          for (PetscInt q = 0; q < Nq; ++q) {
+            for (PetscInt i = 0; i < dE * dE; ++i) ctx_d_invJ_expand[(e * Nq + q) * dE * dE + i] = d_invJ_compact[e * dE * dE + i];
+            ctx_d_detJ_expand[e * Nq + q] = d_detJ_compact[e];
+          }
+        });
+      Kokkos::fence();
+    } else {
+      /* Non-affine: use PetscFEKokkosExpandGeometry as before */
+      PetscReal *h_invJ_buf, *h_detJ_buf, *h_coords_buf;
+      PetscCall(PetscMalloc3(nInvJ_g, &h_invJ_buf, nDetJ_g, &h_detJ_buf, nCoords_g, &h_coords_buf));
+      PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, chunkGeom, quadPoints, h_invJ_buf, h_detJ_buf, h_coords_buf));
+      {
+        Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_buf, nInvJ_g);
+        Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_buf, nDetJ_g);
+        Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords_g);
+        Kokkos::deep_copy(ctx->d_invJ, hv_invJ);
+        Kokkos::deep_copy(ctx->d_detJ, hv_detJ);
+        Kokkos::deep_copy(ctx->d_coords, hv_coords);
+      }
+      PetscCall(PetscFree3(h_invJ_buf, h_detJ_buf, h_coords_buf));
+    }
+
+    /* Cache geometry objects and dE for subsequent calls */
+    ctx->cached_dE_geom   = dE;
+    ctx->cached_fullGeom  = fullGeom;
+    ctx->cached_chunkGeom = chunkGeom;
+    ctx->cached_cellIS    = cellIS;
+    ctx->geom_cached      = PETSC_TRUE;
+  } else {
+    /* Geometry already on device -- just retrieve cached dE */
+    dE = ctx->cached_dE_geom;
+
+    /* Runtime bounds check (repeated for safety on cached path) */
+    PetscCheck(Nc <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Nc %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NC 3", (PetscInt)Nc);
+    PetscCheck(dE <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "dE %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_DE 3", (PetscInt)dE);
+
+    /* Ensure dynamic Views are allocated (realloc only when sizes change) */
+    PetscCall(PetscFEKokkosEnsureDynamicViews(ctx, Ne, Nq, dE, totDim, numConstants));
+  }
+
+  /* Get element coefficients (always needed -- solution changes every call).
+   * On the cached path use ctx->cached_cellIS; on the first-call path the
+   * local cellIS was stored into ctx->cached_cellIS above. */
+  const PetscInt nCoeff = Ne * totDim;
+  {
+    IS use_cellIS = ctx->geom_cached ? ctx->cached_cellIS : cellIS;
+    PetscCall(DMPlexGetCellFields(dm, use_cellIS, locX, NULL, NULL, &u_arr, &u_t_arr, &a_arr));
+    /* On the cached path, destroy the locally-obtained cellIS (not needed) */
+    if (ctx->geom_cached && cellIS != ctx->cached_cellIS) PetscCall(ISDestroy(&cellIS));
+  }
 
   /* Use cached B/D/w from maps -- no per-call allocation or copy */
   auto d_B = ctx->d_B;
   auto d_D = ctx->d_D;
   auto d_w = ctx->d_w;
-
-  /* Sizes needed for geometry staging */
-  const PetscInt nInvJ   = Ne * Nq * dE * dE;
-  const PetscInt nDetJ   = Ne * Nq;
-  const PetscInt nCoords = Ne * Nq * dE;
-  const PetscInt nCoeff  = Ne * totDim;
-
-  /* Ensure dynamic Views are allocated (realloc only when sizes change) */
-  PetscCall(PetscFEKokkosEnsureDynamicViews(ctx, Ne, Nq, dE, totDim, numConstants));
-
-  /* Stage geometry: affine-optimized path reduces H->D transfer by Nq* */
-  ctx->isAffine              = chunkGeom->isAffine;
-  const PetscBool isAffine_j = ctx->isAffine;
-  if (isAffine_j) {
-    /* Affine: copy compact geometry [Ne * dE * dE] invJ + [Ne] detJ to device,
-     * then expand on-device via a small Kokkos kernel (GPU replication is
-     * much faster than host replication + larger H->D transfer). */
-    const PetscInt nInvJ_compact = Ne * dE * dE;
-    const PetscInt nDetJ_compact = Ne;
-
-    /* Allocate compact host buffers */
-    PetscReal *h_invJ_compact, *h_detJ_compact, *h_coords_buf;
-    PetscCall(PetscMalloc3(nInvJ_compact, &h_invJ_compact, nDetJ_compact, &h_detJ_compact, nCoords, &h_coords_buf));
-
-    /* Fill compact buffers: one invJ and one detJ per element */
-    const PetscInt Np_j = chunkGeom->numPoints;
-    for (PetscInt e = 0; e < Ne; ++e) {
-      for (PetscInt i = 0; i < dE * dE; ++i) h_invJ_compact[e * dE * dE + i] = chunkGeom->invJ[e * Np_j * dE * dE + i];
-      h_detJ_compact[e] = chunkGeom->detJ[e * Np_j];
-    }
-
-    /* Compute physical coords for affine elements */
-    for (PetscInt e = 0; e < Ne; ++e) {
-      const PetscReal *v0_e = &chunkGeom->v[e * Np_j * dE];
-      const PetscReal *J_e  = &chunkGeom->J[e * Np_j * dE * dE];
-      for (PetscInt q = 0; q < Nq; ++q) PetscFEKokkosCoordRefToReal(dE, dim, chunkGeom->xi, v0_e, J_e, &quadPoints[q * dim], &h_coords_buf[(e * Nq + q) * dE]);
-    }
-
-    /* Copy compact invJ/detJ to temporary device Views */
-    Kokkos::View<PetscReal *> d_invJ_compact("jac_invJ_compact", nInvJ_compact);
-    Kokkos::View<PetscReal *> d_detJ_compact("jac_detJ_compact", nDetJ_compact);
-    {
-      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_compact, nInvJ_compact);
-      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_compact, nDetJ_compact);
-      Kokkos::deep_copy(d_invJ_compact, hv_invJ);
-      Kokkos::deep_copy(d_detJ_compact, hv_detJ);
-    }
-
-    /* Copy coords to cached device View */
-    {
-      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
-      Kokkos::deep_copy(ctx->d_coords, hv_coords);
-    }
-    PetscCall(PetscFree3(h_invJ_compact, h_detJ_compact, h_coords_buf));
-
-    /* Expand on device: replicate single invJ/detJ across all Nq slots */
-    auto ctx_d_invJ_expand = ctx->d_invJ;
-    auto ctx_d_detJ_expand = ctx->d_detJ;
-    Kokkos::parallel_for(
-      "PetscFEKokkos_expand_affine_geom_jac", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
-        for (PetscInt q = 0; q < Nq; ++q) {
-          for (PetscInt i = 0; i < dE * dE; ++i) ctx_d_invJ_expand[(e * Nq + q) * dE * dE + i] = d_invJ_compact[e * dE * dE + i];
-          ctx_d_detJ_expand[e * Nq + q] = d_detJ_compact[e];
-        }
-      });
-    Kokkos::fence();
-  } else {
-    /* Non-affine: use PetscFEKokkosExpandGeometry as before */
-    PetscReal *h_invJ_buf, *h_detJ_buf, *h_coords_buf;
-    PetscCall(PetscMalloc3(nInvJ, &h_invJ_buf, nDetJ, &h_detJ_buf, nCoords, &h_coords_buf));
-    PetscCall(PetscFEKokkosExpandGeometry(Ne, Nq, dim, dE, chunkGeom, quadPoints, h_invJ_buf, h_detJ_buf, h_coords_buf));
-    {
-      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_invJ(h_invJ_buf, nInvJ);
-      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_detJ(h_detJ_buf, nDetJ);
-      Kokkos::View<PetscReal *, Kokkos::HostSpace> hv_coords(h_coords_buf, nCoords);
-      Kokkos::deep_copy(ctx->d_invJ, hv_invJ);
-      Kokkos::deep_copy(ctx->d_detJ, hv_detJ);
-      Kokkos::deep_copy(ctx->d_coords, hv_coords);
-    }
-    PetscCall(PetscFree3(h_invJ_buf, h_detJ_buf, h_coords_buf));
-  }
 
   /* Stage coefficients to cached device View */
   {
@@ -2173,12 +2251,10 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   /* Requires MATAIJKOKKOS -- ctx_d_coo_vals is a cached device view */
   PetscCall(MatSetValuesCOO(J, ctx_d_coo_vals.data(), INSERT_VALUES));
 
-  /* Cleanup */
-  PetscCall(DMPlexRestoreCellFields(dm, cellIS, locX, NULL, NULL, &u_arr, &u_t_arr, &a_arr));
+  /* Cleanup -- geometry objects (fullGeom, chunkGeom, cached_cellIS) are owned
+   * by ctx->cached_* and freed in PetscFEKokkosMapsDestroy, not here. */
+  PetscCall(DMPlexRestoreCellFields(dm, ctx->cached_cellIS, locX, NULL, NULL, &u_arr, &u_t_arr, &a_arr));
   PetscCall(DMRestoreLocalVector(dm, &locX));
-  PetscCall(PetscFEGeomRestoreChunk(fullGeom, cStart, cEnd, &chunkGeom));
-  PetscCall(PetscFEGeomDestroy(&fullGeom));
-  PetscCall(ISDestroy(&cellIS));
 
   /* Propagate to preconditioner if different */
   if (J != Jp) PetscCall(MatCopy(J, Jp, SAME_NONZERO_PATTERN));
