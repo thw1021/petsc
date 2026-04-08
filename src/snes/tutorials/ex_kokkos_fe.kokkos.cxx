@@ -215,10 +215,11 @@ int main(int argc, char **argv)
 
   /* Step 7: Register GPU-resident Jacobian callback.
    *
-   * DMPlexSNESComputeJacobianFEM_Kokkos<G0,G1,G2,G3> takes all four
+   * DMPlexSNESComputeJacobianFEM_Kokkos<G0,G1,G2,G3,IsLinear> takes all four
    * Jacobian callbacks.  Pass nullptr for unused terms (g0, g1, g2 are
-   * zero for the Laplacian; only g3 is non-zero). */
-  PetscCall(SNESSetJacobian(snes, J, J, DMPlexSNESComputeJacobianFEM_Kokkos<nullptr, nullptr, nullptr, g3_poisson>, &kokkos_ctx));
+   * zero for the Laplacian; only g3 is non-zero).
+   * IsLinear=true: Poisson is linear -- skip u/grad_u interpolation in kernel. */
+  PetscCall(SNESSetJacobian(snes, J, J, (DMPlexSNESComputeJacobianFEM_Kokkos<nullptr, nullptr, nullptr, g3_poisson, true>), &kokkos_ctx));
   PetscCall(MatDestroy(&J));
 
   /* Solve */

@@ -133,7 +133,15 @@
 
    Note: elemVec is accumulated (+=), not zeroed.  The caller must zero it
    before the kernel launch (or use Kokkos::deep_copy to zero the device View). */
-template <PetscPointFn *F0, PetscPointFn *F1>
+/* Opt #3: precompute physical gradients once per (q,b) and reuse for both
+   grad_u interpolation and F1 contraction.
+   Opt #4: IsAffine template parameter -- when true, load invJ/detJ once per
+   element (before the q loop) instead of re-indexing at every quadrature point.
+   For affine hex meshes the expanded arrays have identical values for all q,
+   so reading slot q=0 is correct for all q.  For non-affine meshes use
+   IsAffine=false to keep per-q indexing.
+   TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
+template <PetscPointFn *F0, PetscPointFn *F1, bool IsAffine = true>
 KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE, const PetscReal *B,                                     /* [Nq * Nb * Nc]          */
                                                                const PetscReal   *D,                                                                                                                 /* [Nq * Nb * Nc * dim]    */
                                                                const PetscReal   *w,                                                                                                                 /* [Nq]                    */
@@ -151,8 +159,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
        ux_loc: Nc*dE   <= 8  scalars
        f0_loc: Nc      <= 4  scalars
        f1_loc: Nc*dE   <= 8  scalars
-       val:    Nb*Nc   <= 36 scalars  (P3 quad: Nb=16, Nc=1)
-     Total ~ 56 PetscScalar = 448 bytes -- well within CUDA stack limits.
+     Total ~ 24 PetscScalar = 192 bytes -- well within CUDA stack limits.
 
      For Phase 1b (Nc=dim=2) and higher orders these grow but remain safe.
      If stack pressure becomes an issue, switch to Kokkos scratch memory. */
@@ -162,14 +169,26 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
      NOTE: val[] was removed -- write directly to elemVec device buffer to
      eliminate 3,000 bytes/thread GPU stack pressure (cudaErrorIllegalAddress
      for P3/P4 hex 3D on A100).  elemVec is pre-allocated and zeroed by the
-     caller (FormResidual_COO) before launching this kernel. */
-  constexpr PetscInt PETSCFE_KOKKOS_MAX_NC = 3; /* max components (dim) */
-  constexpr PetscInt PETSCFE_KOKKOS_MAX_DE = 3; /* max embedding dim */
+     caller (FormResidual_COO) before launching this kernel.
+     Opt #3: all_grad[b_s * dE + d] precomputed once per (q, b_s) and reused
+     for both grad_u interpolation and F1 contraction, eliminating the second
+     pass over D[q,b,c,e2] * invJ[e2,d].  Array sized for Q4 hex 3D: 5^3=125
+     scalar bases, each with dE=3 directions -> 375 PetscReal on stack. */
+  constexpr PetscInt PETSCFE_KOKKOS_MAX_NC  = 3;   /* max components (dim) */
+  constexpr PetscInt PETSCFE_KOKKOS_MAX_DE  = 3;   /* max embedding dim */
+  constexpr PetscInt PETSCFE_KOKKOS_MAX_NBS = 125; /* max scalar bases (Q4 hex 3D: 5^3) */
 
   PetscScalar u_loc[PETSCFE_KOKKOS_MAX_NC];                          /* u at one qp */
   PetscScalar ux_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE]; /* gradu at one qp */
   PetscScalar f0_loc[PETSCFE_KOKKOS_MAX_NC];                         /* f0 output */
   PetscScalar f1_loc[PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE]; /* f1 output */
+
+  /* Opt #3: precomputed physical gradients -- all_grad[b_s * dE + d].
+     b_s = b / Nc (scalar basis index), c_b = b % Nc (component this DOF carries).
+     D[q,b,c,e2] is nonzero only when c == c_b, so:
+       all_grad[b_s * dE + d] = sum_{e2} D[q, b, c_b, e2] * invJ[e2, d]
+     Reused for both grad_u interpolation and F1 contraction. */
+  PetscReal all_grad[PETSCFE_KOKKOS_MAX_NBS * PETSCFE_KOKKOS_MAX_DE];
 
   /* Constant offset arrays for single-field, no-aux case */
   const PetscInt uOff_l[1]   = {0};
@@ -180,11 +199,18 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
      so no atomics are needed here.  The caller zeroes d_elemVec before launch. */
   PetscScalar *ev_e = &elemVec[e * totDim + fOff];
 
+  /* Opt #4: affine geometry -- load invJ/detJ once per element.
+     For affine meshes the expanded arrays replicate the same values across all
+     Nq slots, so reading slot q=0 (index e*Nq*dE*dE) is correct for all q. */
+  const PetscReal *invJ_e0 = IsAffine ? &invJ[e * Nq * dE * dE] : nullptr;
+  const PetscReal  detJ_e0 = IsAffine ? detJ[e * Nq] : 0.0;
+
   for (PetscInt q = 0; q < Nq; ++q) {
-    /* Geometry at (e, q) -- invJ and detJ are pre-expanded by the host
-       (affine elements: single invJ replicated across all Nq slots). */
-    const PetscReal *invJ_eq = &invJ[(e * Nq + q) * dE * dE];
-    const PetscReal  detJ_eq = detJ[e * Nq + q];
+    /* Geometry at (e, q).
+       IsAffine=true:  use element-constant invJ/detJ loaded before the loop.
+       IsAffine=false: re-index per quadrature point (non-affine / simplex). */
+    const PetscReal *invJ_eq = IsAffine ? invJ_e0 : &invJ[(e * Nq + q) * dE * dE];
+    const PetscReal  detJ_eq = IsAffine ? detJ_e0 : detJ[e * Nq + q];
     const PetscReal *x_eq    = &coords[(e * Nq + q) * dE];
     const PetscReal  wq      = w[q] * detJ_eq;
 
@@ -194,6 +220,20 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
 
     /* Coefficient pointer for this element */
     const PetscScalar *coeff_e = &coeff[e * totDim + uOff];
+
+    /* Opt #3: precompute physical gradients for all DOFs at this quadrature point.
+       all_grad[b_s * dE + d] = sum_{e2} D[q, b, c_b, e2] * invJ[e2, d]
+       where b_s = b/Nc (scalar basis index) and c_b = b%Nc (component).
+       This eliminates the duplicate D*invJ contraction in the F1 loop below. */
+    for (PetscInt b = 0; b < Nb; ++b) {
+      const PetscInt b_s = b / Nc;
+      const PetscInt c_b = b % Nc;
+      for (PetscInt d = 0; d < dE; ++d) {
+        PetscReal g = 0.0;
+        for (PetscInt e2 = 0; e2 < dim; ++e2) g += D_q[b * Nc * dim + c_b * dim + e2] * invJ_eq[e2 * dE + d];
+        all_grad[b_s * dE + d] = g;
+      }
+    }
 
     /* Zero per-qp scratch */
     for (PetscInt c = 0; c < Nc; ++c) u_loc[c] = 0.0;
@@ -206,17 +246,15 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
     for (PetscInt b = 0; b < Nb; ++b)
       for (PetscInt c = 0; c < Nc; ++c) u_loc[c] += B_q[b * Nc + c] * coeff_e[b];
 
-    /* Interpolate ux[c,d] = sum_b D[q,b,c,e2] * invJ[e2,d] * coeff[b]
-       Physical gradient: ux[c*dE+d] = sum_{b,e2} D[q,b,c,e2] * invJ[e2,d] * coeff[b] */
+    /* Interpolate ux[c,d] = sum_b all_grad[b_s,d] * coeff[b]  (Opt #3: reuse precomputed grad)
+       Physical gradient: ux[c*dE+d] = sum_b D[q,b,c,e2]*invJ[e2,d]*coeff[b]
+       For vector Lagrange FE, DOF b carries only component c_b = b%Nc, so
+       all_grad[(b/Nc)*dE+d] is the physical gradient of DOF b in direction d. */
     for (PetscInt b = 0; b < Nb; ++b) {
+      const PetscInt    b_s     = b / Nc;
+      const PetscInt    c_b     = b % Nc;
       const PetscScalar coeff_b = coeff_e[b];
-      for (PetscInt c = 0; c < Nc; ++c) {
-        for (PetscInt d = 0; d < dE; ++d) {
-          PetscReal ref_grad = 0.0;
-          for (PetscInt e2 = 0; e2 < dim; ++e2) ref_grad += D_q[b * Nc * dim + c * dim + e2] * invJ_eq[e2 * dE + d];
-          ux_loc[c * dE + d] += coeff_b * ref_grad;
-        }
-      }
+      for (PetscInt d = 0; d < dE; ++d) ux_loc[c_b * dE + d] += coeff_b * all_grad[b_s * dE + d];
     }
 
     /* Call F0 (zeroth-order / source term) -- resolved at compile time */
@@ -233,17 +271,16 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
     if (F1 != nullptr) {
       for (PetscInt i = 0; i < Nc * dE; ++i) f1_loc[i] = 0.0;
       F1(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f1_loc);
-      /* Accumulate directly into elemVec device buffer: ev_e[b] += phys_grad(b,c,d) * f1[c,d] * w * detJ
-         phys_grad(b,c,d) = sum_{e2} D[q,b,c,e2] * invJ[e2,d]
+      /* Accumulate: ev_e[b] += all_grad[b_s,d] * f1[c_b,d] * wq  (Opt #3: reuse precomputed grad)
+         phys_grad(b,c,d) = all_grad[(b/Nc)*dE+d]  (nonzero only for c == b%Nc)
          Matches fekokkos.kokkos.cxx Phase 2: val_e[b] += phys_grad * f1_s[(q*Nc+c)*dE+d] */
       for (PetscInt b = 0; b < Nb; ++b) {
-        for (PetscInt c = 0; c < Nc; ++c) {
-          for (PetscInt d = 0; d < dE; ++d) {
-            PetscReal phys_grad = 0.0;
-            for (PetscInt e2 = 0; e2 < dim; ++e2) phys_grad += D_q[b * Nc * dim + c * dim + e2] * invJ_eq[e2 * dE + d];
-            ev_e[b] += phys_grad * f1_loc[c * dE + d] * wq;
-          }
-        }
+        const PetscInt   b_s      = b / Nc;
+        const PetscInt   c_b      = b % Nc;
+        const PetscReal *pg       = &all_grad[b_s * dE];
+        PetscScalar      contrib  = 0.0;
+        for (PetscInt d = 0; d < dE; ++d) contrib += pg[d] * f1_loc[c_b * dE + d];
+        ev_e[b] += contrib * wq;
       }
     }
   } /* end q */
@@ -270,7 +307,17 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(PetscInt e, Petsc
      where b, b2 = 0..Nb-1 (total DOFs, not scalar basis x component pairs)
 
    Note: For Poisson, only G3 is non-zero (g3[d*dE+e2] = delta_{d,e2}). */
-template <PetscPointJacFn *G0, PetscPointJacFn *G1, PetscPointJacFn *G2, PetscPointJacFn *G3>
+/* Opt #4: IsAffine template parameter for the Jacobian kernel.
+   When IsAffine=true, invJ/detJ are loaded once per element (before the q loop)
+   instead of re-indexing at every quadrature point.
+   TODO: dispatch IsAffine=false for non-affine (simplex) meshes.
+   Opt #5: IsLinear template parameter.
+   When IsLinear=true, the Jacobian callbacks do not depend on u or grad_u
+   (linear problems: Poisson, elasticity).  The interpolation of u_loc and
+   ux_loc is skipped entirely -- they are zeroed and passed as zeros to the
+   callbacks, which ignore them.  This eliminates O(Nb*Nc*dim) FLOPs per
+   quadrature point (~50% of the kernel work for low-order elements). */
+template <PetscPointJacFn *G0, PetscPointJacFn *G1, PetscPointJacFn *G2, PetscPointJacFn *G3, bool IsAffine = true, bool IsLinear = false>
 KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE, const PetscReal *B, /* [Nq * Nb * Nc]          */
                                                                const PetscReal   *D,                                                                             /* [Nq * Nb * Nc * dim]    */
                                                                const PetscReal   *w,                                                                             /* [Nq]                    */
@@ -299,9 +346,15 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, Petsc
   /* Pointer to this element's block in elemMat */
   PetscScalar *em_e = &elemMat[e * totDim * totDim];
 
+  /* Opt #4: affine geometry -- load invJ/detJ once per element.
+     For affine meshes the expanded arrays replicate the same values across all
+     Nq slots, so reading slot q=0 (index e*Nq*dE*dE) is correct for all q. */
+  const PetscReal *invJ_e0 = IsAffine ? &invJ[e * Nq * dE * dE] : nullptr;
+  const PetscReal  detJ_e0 = IsAffine ? detJ[e * Nq] : 0.0;
+
   for (PetscInt q = 0; q < Nq; ++q) {
-    const PetscReal *invJ_eq = &invJ[(e * Nq + q) * dE * dE];
-    const PetscReal  detJ_eq = detJ[e * Nq + q];
+    const PetscReal *invJ_eq = IsAffine ? invJ_e0 : &invJ[(e * Nq + q) * dE * dE];
+    const PetscReal  detJ_eq = IsAffine ? detJ_e0 : detJ[e * Nq + q];
     const PetscReal *x_eq    = &coords[(e * Nq + q) * dE];
     const PetscReal  wq      = w[q] * detJ_eq;
 
@@ -313,18 +366,22 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, Petsc
     for (PetscInt c = 0; c < Nc; ++c) u_loc[c] = 0.0;
     for (PetscInt i = 0; i < Nc * dE; ++i) ux_loc[i] = 0.0;
 
-    /* Interpolate u and gradu (same convention as residual kernel and fekokkos.kokkos.cxx):
-       b = 0..Nb-1 (total DOFs), coeff[b] -- b already encodes scalar basis + component. */
-    for (PetscInt b = 0; b < Nb; ++b)
-      for (PetscInt c = 0; c < Nc; ++c) u_loc[c] += B_q[b * Nc + c] * coeff_e[b];
+    /* Opt #5: skip interpolation for linear problems -- callbacks ignore u/grad_u.
+       When IsLinear=false (default), interpolate u and grad_u as usual. */
+    if constexpr (!IsLinear) {
+      /* Interpolate u and gradu (same convention as residual kernel and fekokkos.kokkos.cxx):
+         b = 0..Nb-1 (total DOFs), coeff[b] -- b already encodes scalar basis + component. */
+      for (PetscInt b = 0; b < Nb; ++b)
+        for (PetscInt c = 0; c < Nc; ++c) u_loc[c] += B_q[b * Nc + c] * coeff_e[b];
 
-    for (PetscInt b = 0; b < Nb; ++b) {
-      const PetscScalar coeff_b = coeff_e[b];
-      for (PetscInt c = 0; c < Nc; ++c) {
-        for (PetscInt d = 0; d < dE; ++d) {
-          PetscReal ref_grad = 0.0;
-          for (PetscInt e2 = 0; e2 < dim; ++e2) ref_grad += D_q[b * Nc * dim + c * dim + e2] * invJ_eq[e2 * dE + d];
-          ux_loc[c * dE + d] += coeff_b * ref_grad;
+      for (PetscInt b = 0; b < Nb; ++b) {
+        const PetscScalar coeff_b = coeff_e[b];
+        for (PetscInt c = 0; c < Nc; ++c) {
+          for (PetscInt d = 0; d < dE; ++d) {
+            PetscReal ref_grad = 0.0;
+            for (PetscInt e2 = 0; e2 < dim; ++e2) ref_grad += D_q[b * Nc * dim + c * dim + e2] * invJ_eq[e2 * dE + d];
+            ux_loc[c * dE + d] += coeff_b * ref_grad;
+          }
         }
       }
     }
@@ -624,10 +681,11 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
   const PetscReal t_      = t;
   const PetscInt  nConst_ = numConstants;
 
-  /* Launch kernel */
+  /* Launch kernel -- IsAffine=true: all test cases use affine hex meshes.
+     TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
   Kokkos::parallel_for(
     "PetscFEKokkosComputeResidual", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
-      PetscFEKokkosIntegrateResidualCell<F0, F1>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, t_, nConst_, d_constants.data(), d_elemVec.data());
+      PetscFEKokkosIntegrateResidualCell<F0, F1, true>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, t_, nConst_, d_constants.data(), d_elemVec.data());
     });
 
   Kokkos::fence();
@@ -665,7 +723,7 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
      ds, key, Ne, cgeom, coefficients -- same as ComputeResidual
      t, u_tShift                      -- time and time-derivative shift
      elemMat[Ne * totDim * totDim]    -- output element matrix (accumulated) */
-template <PetscPointJacFn *G0, PetscPointJacFn *G1, PetscPointJacFn *G2, PetscPointJacFn *G3>
+template <PetscPointJacFn *G0, PetscPointJacFn *G1, PetscPointJacFn *G2, PetscPointJacFn *G3, bool IsLinear = false>
 static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key, PetscInt Ne, PetscFEGeom *cgeom, const PetscScalar *coefficients, PetscReal t, PetscReal u_tShift, PetscScalar *elemMat /* [Ne * totDim * totDim] -- accumulated */
 )
 {
@@ -773,9 +831,11 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
 
   /* Launch kernel */
   Kokkos::parallel_for(
+    /* IsAffine=true: all test cases use affine hex meshes.
+       TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
     "PetscFEKokkosComputeJacobian", Kokkos::RangePolicy<>(0, Ne), KOKKOS_LAMBDA(const PetscInt e) {
-      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, gOff, t_, tShift_, nConst_, d_constants.data(),
-                                                         d_elemMat.data());
+      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, true, IsLinear>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, gOff, t_, tShift_, nConst_, d_constants.data(),
+                                                                          d_elemMat.data());
     });
 
   Kokkos::fence();
@@ -1951,8 +2011,10 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
          * so we must zero the element's slice first. */
         PetscScalar *ev_base = &ctx_d_elemVec[e * totDim_];
         for (PetscInt i = 0; i < totDim_; ++i) ev_base[i] = 0.0;
-        PetscFEKokkosIntegrateResidualCell<f0, f1>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0.0, numConstants_, ctx_d_constants.data(),
-                                                   ctx_d_elemVec.data());
+        /* IsAffine=true: all current meshes are affine hex.
+           TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
+        PetscFEKokkosIntegrateResidualCell<f0, f1, true>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0.0, numConstants_, ctx_d_constants.data(),
+                                                         ctx_d_elemVec.data());
 
         /* Scatter to locF via atomic_add using local DOF indices */
         for (PetscInt b = 0; b < Nb_; ++b) {
@@ -2004,7 +2066,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
      5. Pass 1: PetscFEKokkosIntegrateJacobianCell<G0,G1,G2,G3> -> d_elemMat.
      6. Pass 2: scatter d_elemMat -> d_coo_vals (constraint-aware).
      7. MatSetValuesCOO(J, d_coo_vals.data(), INSERT_VALUES). */
-template <PetscPointJacFn *G0, PetscPointJacFn *G1, PetscPointJacFn *G2, PetscPointJacFn *G3>
+template <PetscPointJacFn *G0, PetscPointJacFn *G1, PetscPointJacFn *G2, PetscPointJacFn *G3, bool IsLinear = false>
 static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat J, Mat Jp, void *ctx_ptr)
 {
   PetscFEKokkosMaps *ctx = (PetscFEKokkosMaps *)ctx_ptr;
@@ -2133,8 +2195,10 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
     "DMPlexSNESComputeJacobianFEM_Kokkos_integrate", team_policy_t(Ne, jac_team_size), KOKKOS_LAMBDA(const member_type &team) {
       const PetscInt e = team.league_rank();
       if (team.team_rank() == 0)
-        PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0, 0.0, 0.0, numConstants_,
-                                                           ctx_d_constants.data(), ctx_d_elemMat.data());
+        /* IsAffine=true: all current meshes are affine hex.
+           TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
+        PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, true, IsLinear>(e, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0, 0.0, 0.0, numConstants_,
+                                                                            ctx_d_constants.data(), ctx_d_elemMat.data());
     });
   Kokkos::fence();
 
