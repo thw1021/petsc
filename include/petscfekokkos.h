@@ -222,7 +222,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
     }
 
     /* Call F0 (zeroth-order / source term) -- resolved at compile time */
-    if (F0 != nullptr) {
+    if constexpr (F0 != nullptr) {
       for (PetscInt c = 0; c < Nc; ++c) f0_loc[c] = 0.0;
       F0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f0_loc);
       /* Accumulate into elemVec via atomic_add: multiple threads (one per q)
@@ -233,7 +233,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
     }
 
     /* Call F1 (first-order / flux term) -- resolved at compile time */
-    if (F1 != nullptr) {
+    if constexpr (F1 != nullptr) {
       for (PetscInt i = 0; i < Nc * dE; ++i) f1_loc[i] = 0.0;
       F1(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f1_loc);
       /* Accumulate: ev_e[b] += all_grad[b_s,d] * f1[c_b,d] * wq  (Opt #3: reuse precomputed grad)
@@ -361,19 +361,19 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
     }
 
     /* Evaluate Jacobian callbacks -- each resolved at compile time */
-    if (G0 != nullptr) {
+    if constexpr (G0 != nullptr) {
       for (PetscInt i = 0; i < Nc * Nc; ++i) g0_loc[i] = 0.0;
       G0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g0_loc);
     }
-    if (G1 != nullptr) {
+    if constexpr (G1 != nullptr) {
       for (PetscInt i = 0; i < Nc * Nc * dE; ++i) g1_loc[i] = 0.0;
       G1(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g1_loc);
     }
-    if (G2 != nullptr) {
+    if constexpr (G2 != nullptr) {
       for (PetscInt i = 0; i < Nc * dE * Nc; ++i) g2_loc[i] = 0.0;
       G2(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g2_loc);
     }
-    if (G3 != nullptr) {
+    if constexpr (G3 != nullptr) {
       for (PetscInt i = 0; i < Nc * dE * Nc * dE; ++i) g3_loc[i] = 0.0;
       G3(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g3_loc);
     }
@@ -435,18 +435,18 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
         PetscScalar entry = 0.0;
 
         /* G0: B_test[fc] * g0[fc,gc] * B_trial[gc] */
-        if (G0 != nullptr) entry += B_b_fc * g0_loc[fc * Nc + gc] * B_b2_gc;
+        if constexpr (G0 != nullptr) entry += B_b_fc * g0_loc[fc * Nc + gc] * B_b2_gc;
 
         /* G1: B_test[fc] * g1[fc,gc,d] * psi_grad[d] */
-        if (G1 != nullptr)
+        if constexpr (G1 != nullptr)
           for (PetscInt d = 0; d < dE; ++d) entry += B_b_fc * g1_loc[(fc * Nc + gc) * dE + d] * psi_grad[d];
 
         /* G2: phi_grad[d] * g2[fc,d,gc] * B_trial[gc] */
-        if (G2 != nullptr)
+        if constexpr (G2 != nullptr)
           for (PetscInt d = 0; d < dE; ++d) entry += phi_grad[d] * g2_loc[(fc * dE + d) * Nc + gc] * B_b2_gc;
 
         /* G3: phi_grad[d] * g3[fc,d,gc,e2] * psi_grad[e2] */
-        if (G3 != nullptr)
+        if constexpr (G3 != nullptr)
           for (PetscInt d = 0; d < dE; ++d)
             for (PetscInt e2 = 0; e2 < dE; ++e2) entry += phi_grad[d] * g3_loc[((fc * dE + d) * Nc + gc) * dE + e2] * psi_grad[e2];
 
@@ -2196,63 +2196,61 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
     });
   Kokkos::fence();
 
-  /* Pass 2: scatter d_elemMat to COO values (constraint-aware) */
+  /* Pass 2: scatter d_elemMat to COO values (constraint-aware).
+     TeamThreadRange over Nb distributes rows across team threads. */
+  const int scatter_team_size = jac_on_gpu ? Nb_ : 1;
   Kokkos::parallel_for(
-    "DMPlexSNESComputeJacobianFEM_Kokkos_scatter", team_policy_t(Ne, jac_team_size), KOKKOS_LAMBDA(const member_type &team) {
-      const PetscInt e = team.league_rank();
-      if (team.team_rank() == 0) {
-        const PetscInt off    = d_coo_elem_offsets[e];
-        const PetscInt fullNb = d_fullNb[e];
-        for (PetscInt b = 0; b < Nb_; ++b) {
-          PetscInt               nr = 0;
-          PetscScalar            row_scale[PETSCFE_KOKKOS_MAX_FACE];
-          const PetscFEKokkosIdx gidx_b = d_gIdx[e * Nb_ + b];
-          if (gidx_b >= 0) {
-            nr           = 1;
-            row_scale[0] = 1.0;
-          } else if (gidx_b < -1) {
-            const PetscInt cidx = -(PetscInt)gidx_b - 1;
-            for (PetscInt q = 0; q < num_face_; ++q) {
-              if (d_c_maps_gid[cidx * num_face_ + q] < 0) break;
-              row_scale[nr++] = d_c_maps_scale[cidx * num_face_ + q];
-            }
-          }
-          if (nr == 0) continue;
-          const PetscInt pt_off_b = d_coo_elem_point_offsets[e * (Nb_ + 1) + b];
-
-          for (PetscInt b2 = 0; b2 < Nb_; ++b2) {
-            PetscInt               nc = 0;
-            PetscScalar            col_scale[PETSCFE_KOKKOS_MAX_FACE];
-            const PetscFEKokkosIdx gidx_b2 = d_gIdx[e * Nb_ + b2];
-            if (gidx_b2 >= 0) {
-              nc           = 1;
-              col_scale[0] = 1.0;
-            } else if (gidx_b2 < -1) {
-              const PetscInt cidx = -(PetscInt)gidx_b2 - 1;
-              for (PetscInt q = 0; q < num_face_; ++q) {
-                if (d_c_maps_gid[cidx * num_face_ + q] < 0) break;
-                col_scale[nc++] = d_c_maps_scale[cidx * num_face_ + q];
-              }
-            }
-            if (nc == 0) continue;
-            const PetscInt pt_off_b2 = d_coo_elem_point_offsets[e * (Nb_ + 1) + b2];
-
-            const PetscInt    idx0 = off + fullNb * pt_off_b + nr * pt_off_b2;
-            const PetscScalar Aij  = ctx_d_elemMat[e * totDim_ * totDim_ + b * totDim_ + b2];
-
-            /* Assignment (not atomic_add) is safe here: PetscFEKokkosPreallocateCOO
-             * assigns each (row,col) pair to exactly one COO slot per element, so
-             * no two kernel threads write to the same d_coo_vals index.
-             * If this invariant ever breaks (e.g., shared DOFs across elements in
-             * the same Kokkos team), replace with Kokkos::atomic_add. */
-            for (PetscInt p = 0; p < nr; ++p) {
-              for (PetscInt d = 0; d < nc; ++d) {
-                ctx_d_coo_vals[idx0 + p * nc + d] = row_scale[p] * col_scale[d] * Aij;
-              }
-            }
+    "DMPlexSNESComputeJacobianFEM_Kokkos_scatter", team_policy_t(Ne, scatter_team_size), KOKKOS_LAMBDA(const member_type &team) {
+      const PetscInt e      = team.league_rank();
+      const PetscInt off    = d_coo_elem_offsets[e];
+      const PetscInt fullNb = d_fullNb[e];
+      Kokkos::parallel_for(Kokkos::TeamThreadRange(team, Nb_), [&](const PetscInt b) {
+        PetscInt               nr = 0;
+        PetscScalar            row_scale[PETSCFE_KOKKOS_MAX_FACE];
+        const PetscFEKokkosIdx gidx_b = d_gIdx[e * Nb_ + b];
+        if (gidx_b >= 0) {
+          nr           = 1;
+          row_scale[0] = 1.0;
+        } else if (gidx_b < -1) {
+          const PetscInt cidx = -(PetscInt)gidx_b - 1;
+          for (PetscInt q = 0; q < num_face_; ++q) {
+            if (d_c_maps_gid[cidx * num_face_ + q] < 0) break;
+            row_scale[nr++] = d_c_maps_scale[cidx * num_face_ + q];
           }
         }
-      }
+        if (nr == 0) return;
+        const PetscInt pt_off_b = d_coo_elem_point_offsets[e * (Nb_ + 1) + b];
+
+        for (PetscInt b2 = 0; b2 < Nb_; ++b2) {
+          PetscInt               nc = 0;
+          PetscScalar            col_scale[PETSCFE_KOKKOS_MAX_FACE];
+          const PetscFEKokkosIdx gidx_b2 = d_gIdx[e * Nb_ + b2];
+          if (gidx_b2 >= 0) {
+            nc           = 1;
+            col_scale[0] = 1.0;
+          } else if (gidx_b2 < -1) {
+            const PetscInt cidx = -(PetscInt)gidx_b2 - 1;
+            for (PetscInt q = 0; q < num_face_; ++q) {
+              if (d_c_maps_gid[cidx * num_face_ + q] < 0) break;
+              col_scale[nc++] = d_c_maps_scale[cidx * num_face_ + q];
+            }
+          }
+          if (nc == 0) continue;
+          const PetscInt pt_off_b2 = d_coo_elem_point_offsets[e * (Nb_ + 1) + b2];
+
+          const PetscInt    idx0 = off + fullNb * pt_off_b + nr * pt_off_b2;
+          const PetscScalar Aij  = ctx_d_elemMat[e * totDim_ * totDim_ + b * totDim_ + b2];
+
+          /* Assignment (not atomic_add) is safe here: PetscFEKokkosPreallocateCOO
+           * assigns each (row,col) pair to exactly one COO slot per element, so
+           * no two kernel threads write to the same d_coo_vals index.
+           * If this invariant ever breaks (e.g., shared DOFs across elements in
+           * the same Kokkos team), replace with Kokkos::atomic_add. */
+          for (PetscInt p = 0; p < nr; ++p) {
+            for (PetscInt d = 0; d < nc; ++d) ctx_d_coo_vals[idx0 + p * nc + d] = row_scale[p] * col_scale[d] * Aij;
+          }
+        }
+      }); /* end TeamThreadRange over b */
     });
   Kokkos::fence();
 
