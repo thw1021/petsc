@@ -243,6 +243,11 @@ int main(int argc, char **argv)
 /*TEST
   test:
     suffix: 1
-    args: -petscspace_degree 2 -dm_plex_box_faces 8,8 -ksp_type cg -pc_type gamg
+    requires: triangle
+    args: -dm_plex_simplex 1 -petscspace_degree 2 -dm_plex_box_faces 8,8 -ksp_type cg -pc_type gamg
+    filter: grep "L2 error"
+  test:
+    suffix: 2
+    args: -dm_plex_simplex 0 -petscspace_degree 2 -dm_plex_box_faces 8,8 -ksp_type cg -pc_type gamg
     filter: grep "L2 error"
 TEST*/
