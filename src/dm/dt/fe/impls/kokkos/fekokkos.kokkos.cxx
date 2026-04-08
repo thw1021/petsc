@@ -28,6 +28,49 @@
   implementation; only integrateresidual is GPU-accelerated here.
 */
 
+/*
+  ============================================================
+  LEGACY FALLBACK PATH -- NOT USED BY THE OPTIMIZED ASSEMBLY
+  ============================================================
+
+  This file implements PetscFEIntegrateResidual_Kokkos() and the
+  related ops-table functions (integratejacobian, integratebdresidual,
+  etc.) that are registered on the PETSCFEKOKKOS type.
+
+  These functions are invoked ONLY when the standard PETSc dispatch
+  chain is used:
+
+      DMPlexSetSNESLocalFEM()  -->  DMPlexSNESComputeResidualFEM()
+        -->  PetscFEIntegrateResidual_Kokkos()   (this file)
+
+  THE OPTIMIZED PATH BYPASSES THIS FILE ENTIRELY.
+  The high-performance template kernels live in petscfekokkos.h and
+  are called directly by the application:
+
+      DMPlexSNESComputeResidualFEM_Kokkos<f0, f1>(...)
+      DMPlexSNESComputeJacobianFEM_Kokkos<G0, G1, G2, G3>(...)
+
+  Key differences between the two paths:
+
+    Optimized path (petscfekokkos.h):
+      - Uses Kokkos::TeamPolicy with Kokkos::TeamThreadRange for
+        intra-element parallelism (multiple threads per element).
+      - Fuses geometry, interpolation, and user callbacks into a
+        single kernel launch.
+      - Supports full Jacobian assembly on the GPU.
+
+    This file (legacy fallback):
+      - Uses Kokkos::RangePolicy -- one thread per element.
+      - Only PetscFEIntegrateResidual_Kokkos() is GPU-accelerated.
+      - The Jacobian path (integratejacobian) falls back to the CPU
+        Basic implementation (PetscFEIntegrateJacobian_Basic).
+      - Auxiliary fields are not supported (dsAux == NULL required).
+
+  If you are adding a new solver or benchmark, use the template path
+  in petscfekokkos.h, not the functions in this file.
+  ============================================================
+*/
+
 #include <petsc/private/petscfeimpl.h>
 #include <petscfekokkos.h>
 #include <Kokkos_Core.hpp>
