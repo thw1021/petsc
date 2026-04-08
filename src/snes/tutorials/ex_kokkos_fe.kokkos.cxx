@@ -1,9 +1,10 @@
-/*TEST
-  test:
-    suffix: 1
-    args: -petscspace_degree 2 -dm_plex_box_faces 8,8 -ksp_type cg -pc_type gamg
-    filter: grep "L2 error"
-TEST*/
+static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps\n"
+                     "  Problem: -Laplacian(u) = f on [0,1]^2\n"
+                     "  Manufactured solution: u = sin(pi*x)*sin(pi*y)\n"
+                     "Options:\n"
+                     "  -petscspace_degree <k>     FE polynomial degree (default: 1)\n"
+                     "  -dm_plex_box_faces <Nx,Ny> mesh resolution (default: 4,4)\n"
+                     "  -ksp_type cg -pc_type gamg recommended solver\n";
 
 /*
   ex_kokkos_fe.kokkos.cxx -- Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps
@@ -43,14 +44,6 @@ TEST*/
 
   See petscfekokkos.h for the full API reference.
 */
-
-static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps\n"
-                     "  Problem: -Laplacian(u) = f on [0,1]^2\n"
-                     "  Manufactured solution: u = sin(pi*x)*sin(pi*y)\n"
-                     "Options:\n"
-                     "  -petscspace_degree <k>     FE polynomial degree (default: 1)\n"
-                     "  -dm_plex_box_faces <Nx,Ny> mesh resolution (default: 4,4)\n"
-                     "  -ksp_type cg -pc_type gamg recommended solver\n";
 
 #include <petscdmplex.h>
 #include <petscsnes.h>
@@ -246,3 +239,10 @@ int main(int argc, char **argv)
   PetscCall(PetscFinalize());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*TEST
+  test:
+    suffix: 1
+    args: -petscspace_degree 2 -dm_plex_box_faces 8,8 -ksp_type cg -pc_type gamg
+    filter: grep "L2 error"
+TEST*/
