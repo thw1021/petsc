@@ -1,16 +1,28 @@
+/*TEST
+  test:
+    suffix: 1
+    args: -petscspace_degree 2 -dm_plex_box_faces 8,8 -ksp_type cg -pc_type gamg
+    filter: grep "L2 error"
+TEST*/
+
 /*
   ex_kokkos_fe.kokkos.cxx -- Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps
 
   Demonstrates the GPU-resident finite element assembly API:
 
-    PetscFEKokkosSetUp(dm, &maps, J)
+    PetscFEKokkosSetUp(dm, &maps, J)          -- build maps + geometry once at setup
     DMPlexSNESComputeResidualFEM_Kokkos<f0, f1>(snes, X, F, &maps)
     DMPlexSNESComputeJacobianFEM_Kokkos<G0, G1, G2, G3>(snes, X, J, Jp, &maps)
-    PetscFEKokkosMapsDestroy(&maps)
+    PetscFEKokkosMapsDestroy(&maps)           -- frees maps and cached geometry
+
+  Geometry lifecycle (Landau-style setup/reset pattern):
+    PetscFEKokkosSetUp calls PetscFEKokkosSetUpGeometry internally.
+    For moving meshes or AMR, call PetscFEKokkosResetGeometry + PetscFEKokkosSetUpGeometry
+    explicitly to rebuild device geometry without rebuilding the full maps.
 
   Problem: 2D Poisson equation  -grad^2u = f  on [0,1]^2
-    Manufactured solution:  u_exact(x,y) = sin(pix) sin(piy)
-    Source term:            f(x,y)       = 2pi^2 sin(pix) sin(piy)
+    Manufactured solution:  u_exact(x,y) = sin(pi*x) sin(pi*y)
+    Source term:            f(x,y)       = 2*pi^2 sin(pi*x) sin(pi*y)
 
   Key design principle:
     CUDA cannot call host function pointers from device kernels.
@@ -26,7 +38,7 @@
 
   Build:
     export PETSC_DIR=/path/to/petsc_cld
-    export PETSC_ARCH=arch-macosx-gnu-kokkos-g-3d
+    export PETSC_ARCH=arch-macosx-gnu-kokkos-O-3d
     make ex_kokkos_fe
 
   See petscfekokkos.h for the full API reference.
@@ -188,12 +200,16 @@ int main(int argc, char **argv)
   PetscCall(SNESSetFromOptions(snes));
 
   /* Step 6: PetscFEKokkosSetUp -- build assembly maps, stage to device,
-   * preallocate COO matrix.
+   * preallocate COO matrix, and build element geometry once.
    *
    * Must be called AFTER SNESSetFromOptions (which triggers DMSetUp ->
-   * Kokkos::initialize).  Combines the three-call sequence:
-   *   PetscFEKokkosCreateMaps + PetscFEKokkosStageMaps + PetscFEKokkosPreallocateCOO
-   * into a single library call. */
+   * Kokkos::initialize).  Internally calls:
+   *   PetscFEKokkosCreateMaps + PetscFEKokkosStageMaps
+   *   + PetscFEKokkosPreallocateCOO + PetscFEKokkosSetUpGeometry
+   *
+   * Geometry is built once here and reused across all residual/Jacobian
+   * evaluations.  For moving meshes or AMR, call PetscFEKokkosResetGeometry
+   * + PetscFEKokkosSetUpGeometry explicitly to rebuild without recreating maps. */
   PetscCall(DMCreateMatrix(dm, &J));
   PetscCall(PetscFEKokkosSetUp(dm, &kokkos_ctx, J));
 
