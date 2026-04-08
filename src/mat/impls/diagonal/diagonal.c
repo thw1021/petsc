@@ -929,7 +929,7 @@ static PetscErrorCode MatProductNumeric_PtAP_Diagonal_Any(Mat C)
 static PetscErrorCode MatProductSymbolic_PtAP_Diagonal_Any(Mat C)
 {
   Mat_Product                *product = C->product;
-  Mat                         P = product->B;
+  Mat                         P       = product->B;
   MatProductCtx_PtAP_DiagAny *ctx;
   Mat                         Cwork;
 
