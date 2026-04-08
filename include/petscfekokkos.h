@@ -142,19 +142,14 @@
    IsAffine=false to keep per-q indexing.
    TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
 template <PetscPointFn *F0, PetscPointFn *F1, bool IsAffine = true>
-KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(
-    const Kokkos::TeamPolicy<>::member_type &team,
-    PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE,
-    const PetscReal   *B,      /* [Nq * Nb * Nc]          */
-    const PetscReal   *D,      /* [Nq * Nb * Nc * dim]    */
-    const PetscReal   *w,      /* [Nq]                    */
-    const PetscReal   *invJ,   /* [Ne * Nq * dE * dE]     */
-    const PetscReal   *detJ,   /* [Ne * Nq]               */
-    const PetscReal   *coords, /* [Ne * Nq * dE]          */
-    const PetscScalar *coeff,  /* [Ne * totDim]            */
-    PetscInt totDim, PetscInt uOff, PetscInt fOff,
-    PetscReal t, PetscInt numConstants, const PetscScalar *constants,
-    PetscScalar *elemVec /* [Ne * totDim] -- accumulated */
+KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::TeamPolicy<>::member_type &team, PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE, const PetscReal *B,  /* [Nq * Nb * Nc]          */
+                                                               const PetscReal   *D,                                                                                                                 /* [Nq * Nb * Nc * dim]    */
+                                                               const PetscReal   *w,                                                                                                                 /* [Nq]                    */
+                                                               const PetscReal   *invJ,                                                                                                              /* [Ne * Nq * dE * dE]     */
+                                                               const PetscReal   *detJ,                                                                                                              /* [Ne * Nq]               */
+                                                               const PetscReal   *coords,                                                                                                            /* [Ne * Nq * dE]          */
+                                                               const PetscScalar *coeff,                                                                                                             /* [Ne * totDim]            */
+                                                               PetscInt totDim, PetscInt uOff, PetscInt fOff, PetscReal t, PetscInt numConstants, const PetscScalar *constants, PetscScalar *elemVec /* [Ne * totDim] -- accumulated */
 )
 {
   /* Element index extracted from team league rank */
@@ -313,20 +308,14 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(
    callbacks, which ignore them.  This eliminates O(Nb*Nc*dim) FLOPs per
    quadrature point (~50% of the kernel work for low-order elements). */
 template <PetscPointJacFn *G0, PetscPointJacFn *G1, PetscPointJacFn *G2, PetscPointJacFn *G3, bool IsAffine = true, bool IsLinear = false>
-KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(
-    const Kokkos::TeamPolicy<>::member_type &team,
-    PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE,
-    const PetscReal   *B,      /* [Nq * Nb * Nc]          */
-    const PetscReal   *D,      /* [Nq * Nb * Nc * dim]    */
-    const PetscReal   *w,      /* [Nq]                    */
-    const PetscReal   *invJ,   /* [Ne * Nq * dE * dE]     */
-    const PetscReal   *detJ,   /* [Ne * Nq]               */
-    const PetscReal   *coords, /* [Ne * Nq * dE]          */
-    const PetscScalar *coeff,  /* [Ne * totDim]            */
-    PetscInt totDim, PetscInt uOff, PetscInt fOff, PetscInt gOff,
-    PetscReal t, PetscReal u_tShift,
-    PetscInt numConstants, const PetscScalar *constants,
-    PetscScalar *elemMat /* [Ne * totDim * totDim] -- accumulated */
+KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::TeamPolicy<>::member_type &team, PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE, const PetscReal *B, /* [Nq * Nb * Nc]          */
+                                                               const PetscReal   *D,                                                                                                                /* [Nq * Nb * Nc * dim]    */
+                                                               const PetscReal   *w,                                                                                                                /* [Nq]                    */
+                                                               const PetscReal   *invJ,                                                                                                             /* [Ne * Nq * dE * dE]     */
+                                                               const PetscReal   *detJ,                                                                                                             /* [Ne * Nq]               */
+                                                               const PetscReal   *coords,                                                                                                           /* [Ne * Nq * dE]          */
+                                                               const PetscScalar *coeff,                                                                                                            /* [Ne * totDim]            */
+                                                               PetscInt totDim, PetscInt uOff, PetscInt fOff, PetscInt gOff, PetscReal t, PetscReal u_tShift, PetscInt numConstants, const PetscScalar *constants, PetscScalar *elemMat /* [Ne * totDim * totDim] -- accumulated */
 )
 {
   /* Element index extracted from team league rank */
@@ -704,7 +693,8 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
     const int tmpl_team_size = tmpl_on_gpu ? Nq_ : 1;
     Kokkos::parallel_for(
       "PetscFEKokkosComputeResidual", tmpl_team_policy_t(Ne, tmpl_team_size), KOKKOS_LAMBDA(const tmpl_team_policy_t::member_type &team) {
-        PetscFEKokkosIntegrateResidualCell<F0, F1, true>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, t_, nConst_, d_constants.data(), d_elemVec.data());
+        PetscFEKokkosIntegrateResidualCell<F0, F1, true>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, t_, nConst_, d_constants.data(),
+                                                         d_elemVec.data());
       });
   }
 
@@ -854,7 +844,7 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
      Use TeamPolicy so that PetscFEKokkosIntegrateJacobianCell can use
      TeamThreadRange over quadrature points internally. */
   {
-    using tmpl_jac_policy_t = Kokkos::TeamPolicy<>;
+    using tmpl_jac_policy_t      = Kokkos::TeamPolicy<>;
     const int tmpl_jac_conc      = Kokkos::DefaultExecutionSpace().concurrency();
     const int tmpl_jac_on_gpu    = !!(tmpl_jac_conc >= 1000);
     const int tmpl_jac_team_size = tmpl_jac_on_gpu ? Nq_ : 1;
