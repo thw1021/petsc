@@ -347,67 +347,76 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(PetscInt e, Petsc
       G3(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g3_loc);
     }
 
-    /* Precompute ALL physical gradients for this quadrature point.
-       all_grad[(b * Nc + c) * dE + d] = sum_{e2} D[q,b,c,e2] * invJ[e2,d]
-       This reduces gradient computation from O(Nb^2 * Nc^2 * dE * dim) to
-       O(Nb * Nc * dE * dim) per quadrature point -- a factor of Nb*Nc savings. */
-    constexpr PetscInt PETSCFE_KOKKOS_MAX_NB = 64; /* max total DOFs per element (Q3 hex 3D) */
-    PetscReal          all_grad[PETSCFE_KOKKOS_MAX_NB * PETSCFE_KOKKOS_MAX_NC * PETSCFE_KOKKOS_MAX_DE];
-    for (PetscInt b = 0; b < Nb; ++b)
-      for (PetscInt c = 0; c < Nc; ++c)
-        for (PetscInt d = 0; d < dE; ++d) {
-          PetscReal g = 0.0;
-          for (PetscInt e2 = 0; e2 < dim; ++e2) g += D_q[b * Nc * dim + c * dim + e2] * invJ_eq[e2 * dE + d];
-          all_grad[(b * Nc + c) * dE + d] = g;
-        }
+    /* Precompute physical gradients for this quadrature point.
+       For vector Lagrange FE, DOF b is associated with scalar basis b_s = b/Nc
+       and component c_b = b%Nc.  D[q,b,c,e2] is nonzero only when c == c_b,
+       so the physical gradient of DOF b in direction d is:
+         all_grad[b_s * dE + d] = sum_{e2} D[q, b, c_b, e2] * invJ[e2, d]
+       Array size: PETSCFE_KOKKOS_MAX_NBS * PETSCFE_KOKKOS_MAX_DE
+         where PETSCFE_KOKKOS_MAX_NBS = 125 (Q4 hex 3D scalar basis count: 5^3).
+       This fixes a GPU stack overflow: the old layout used (b*Nc+c)*dE+d with
+       b running over total DOFs (Nb = Nb_scalar*Nc), overflowing the 64*3*3=576
+       entry buffer for Q2+ hex (Nb=81 for Q2 -> max index 734 > 576). */
+    constexpr PetscInt PETSCFE_KOKKOS_MAX_NBS = 125; /* max scalar basis per element (Q4 hex 3D: 5^3) */
+    PetscReal          all_grad[PETSCFE_KOKKOS_MAX_NBS * PETSCFE_KOKKOS_MAX_DE];
+    for (PetscInt b = 0; b < Nb; ++b) {
+      const PetscInt b_s = b / Nc; /* scalar basis index */
+      const PetscInt c_b = b % Nc; /* component this DOF carries */
+      for (PetscInt d = 0; d < dE; ++d) {
+        PetscReal g = 0.0;
+        for (PetscInt e2 = 0; e2 < dim; ++e2) g += D_q[b * Nc * dim + c_b * dim + e2] * invJ_eq[e2 * dE + d];
+        all_grad[b_s * dE + d] = g;
+      }
+    }
 
     /* Assemble element matrix contributions.
        Nb = Nb_total (total DOFs per element).  b and b2 each run 0..Nb-1.
        row = fOff + b,  col = gOff + b2  (one index per DOF, matching febasic.c).
 
-       For each (b, b2) pair we sum over all component pairs (fc, gc):
-         Test  physical grad: phi_grad[b,fc,d]  = all_grad[(b*Nc+fc)*dE+d]
-         Trial physical grad: psi_grad[b2,gc,d] = all_grad[(b2*Nc+gc)*dE+d]
+       For vector Lagrange FE each DOF b carries exactly one component fc = b%Nc.
+       The physical gradient of DOF b in direction d is all_grad[(b/Nc)*dE+d].
+       The basis value B[q,b,fc] is nonzero only when fc == b%Nc.
+
+       For each (b, b2) pair:
+         fc = b % Nc   (test component)
+         gc = b2 % Nc  (trial component)
+         phi_grad[d] = all_grad[(b/Nc)*dE+d]
+         psi_grad[d] = all_grad[(b2/Nc)*dE+d]
 
          G0 term: B[q,b,fc] * g0[fc,gc] * B[q,b2,gc] * wq
-         G1 term: B[q,b,fc] * g1[fc,gc,d] * psi_grad[b2,gc,d] * wq
-         G2 term: phi_grad[b,fc,d] * g2[fc,d,gc] * B[q,b2,gc] * wq
-         G3 term: phi_grad[b,fc,d] * g3[fc,d,gc,e2] * psi_grad[b2,gc,e2] * wq
+         G1 term: B[q,b,fc] * g1[fc,gc,d] * psi_grad[d] * wq
+         G2 term: phi_grad[d] * g2[fc,d,gc] * B[q,b2,gc] * wq
+         G3 term: phi_grad[d] * g3[fc,d,gc,e2] * psi_grad[e2] * wq
     */
     for (PetscInt b = 0; b < Nb; ++b) {
-      const PetscInt row = fOff + b;
+      const PetscInt   row      = fOff + b;
+      const PetscInt   fc       = b % Nc;
+      const PetscReal *phi_grad = &all_grad[(b / Nc) * dE];
+      const PetscReal  B_b_fc   = B_q[b * Nc + fc];
 
       for (PetscInt b2 = 0; b2 < Nb; ++b2) {
-        const PetscInt col = gOff + b2;
+        const PetscInt   col      = gOff + b2;
+        const PetscInt   gc       = b2 % Nc;
+        const PetscReal *psi_grad = &all_grad[(b2 / Nc) * dE];
+        const PetscReal  B_b2_gc  = B_q[b2 * Nc + gc];
 
         PetscScalar entry = 0.0;
 
-        /* Sum over all component pairs (fc, gc) */
-        for (PetscInt fc = 0; fc < Nc; ++fc) {
-          /* Read precomputed test physical gradient */
-          const PetscReal *phi_grad = &all_grad[(b * Nc + fc) * dE];
+        /* G0: B_test[fc] * g0[fc,gc] * B_trial[gc] */
+        if (G0 != nullptr) entry += B_b_fc * g0_loc[fc * Nc + gc] * B_b2_gc;
 
-          for (PetscInt gc = 0; gc < Nc; ++gc) {
-            /* Read precomputed trial physical gradient */
-            const PetscReal *psi_grad = &all_grad[(b2 * Nc + gc) * dE];
+        /* G1: B_test[fc] * g1[fc,gc,d] * psi_grad[d] */
+        if (G1 != nullptr)
+          for (PetscInt d = 0; d < dE; ++d) entry += B_b_fc * g1_loc[(fc * Nc + gc) * dE + d] * psi_grad[d];
 
-            /* G0: B_test * g0[fc,gc] * B_trial */
-            if (G0 != nullptr) entry += B_q[b * Nc + fc] * g0_loc[fc * Nc + gc] * B_q[b2 * Nc + gc];
+        /* G2: phi_grad[d] * g2[fc,d,gc] * B_trial[gc] */
+        if (G2 != nullptr)
+          for (PetscInt d = 0; d < dE; ++d) entry += phi_grad[d] * g2_loc[(fc * dE + d) * Nc + gc] * B_b2_gc;
 
-            /* G1: B_test * g1[fc,gc,d] * psi_grad[d] */
-            if (G1 != nullptr)
-              for (PetscInt d = 0; d < dE; ++d) entry += B_q[b * Nc + fc] * g1_loc[(fc * Nc + gc) * dE + d] * psi_grad[d];
-
-            /* G2: phi_grad[d] * g2[fc,d,gc] * B_trial */
-            if (G2 != nullptr)
-              for (PetscInt d = 0; d < dE; ++d) entry += phi_grad[d] * g2_loc[(fc * dE + d) * Nc + gc] * B_q[b2 * Nc + gc];
-
-            /* G3: phi_grad[d] * g3[fc,d,gc,e2] * psi_grad[e2] */
-            if (G3 != nullptr)
-              for (PetscInt d = 0; d < dE; ++d)
-                for (PetscInt e2 = 0; e2 < dE; ++e2) entry += phi_grad[d] * g3_loc[((fc * dE + d) * Nc + gc) * dE + e2] * psi_grad[e2];
-          }
-        }
+        /* G3: phi_grad[d] * g3[fc,d,gc,e2] * psi_grad[e2] */
+        if (G3 != nullptr)
+          for (PetscInt d = 0; d < dE; ++d)
+            for (PetscInt e2 = 0; e2 < dE; ++e2) entry += phi_grad[d] * g3_loc[((fc * dE + d) * Nc + gc) * dE + e2] * psi_grad[e2];
 
         em_e[row * totDim + col] += entry * wq;
       }
