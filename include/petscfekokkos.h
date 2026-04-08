@@ -1,18 +1,13 @@
 /* MANSEC = DM */
 /* SUBMANSEC = FE */
 /*
-  petscfekokkos.h -- Header-template kernel API for PETSCFEKOKKOS (Phase 1.B)
+  petscfekokkos.h -- Header-template kernel API for PETSCFEKOKKOS
 
-  This header provides the compile-time template kernel for GPU-resident
-  PetscFE residual and Jacobian integration.  The key design principle:
+  Provides compile-time template kernels for GPU-resident PetscFE residual
+  and Jacobian integration. Users write KOKKOS_INLINE_FUNCTION callbacks and
+  pass them as C++ template parameters, enabling device inlining.
 
-    CUDA cannot call host function pointers from device kernels.
-    PetscDSSetResidual() registers host function pointers at runtime.
-    Solution: user writes KOKKOS_INLINE_FUNCTION callbacks and passes them
-    as C++ template parameters.  nvcc_wrapper sees both the kernel body and
-    the callbacks in the same translation unit and inlines them at compile time.
-
-  Usage pattern (in user's .kokkos.cxx file):
+  Usage (in .kokkos.cxx file):
 
     #include <petscfekokkos.h>
 
@@ -22,30 +17,10 @@
     KOKKOS_INLINE_FUNCTION
     static void f1_poisson(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f1[]) { ... }
 
-    // In SetupDiscretization or solve loop:
     PetscCall(PetscFEKokkosComputeResidual<f0_poisson, f1_poisson>(ds, key, Ne, cgeom,
                 coefficients, coefficients_t, t, elemVec));
 
-  Relationship to existing PETSCFEKOKKOS:
-    - fekokkos.kokkos.cxx implements the two-phase host/device path (fallback).
-    - This header provides the opt-in all-device path.
-    - Both coexist; the template path is selected by calling
-      PetscFEKokkosComputeResidual instead of relying on the ops dispatch.
-
-  Restrictions (Phase 1.B -- lifted in later phases):
-    - Single field (Nf == 1), no auxiliary fields (dsAux == NULL).
-    - Nc in {1,2,3} -- scalar and multi-component vector fields supported (Phase 1b.B2 complete).
-    - Affine and non-affine elements both supported.
-    - No COO assembly (Phase 1.C adds that).
-
-  Compatibility:
-    - Requires C++14 or later (template function pointers, constexpr).
-    - Compatible with nvcc_wrapper (CUDA), hipcc (HIP), and host-only Kokkos.
-    - No PETSc error-handling macros (PetscCall, PetscFunctionBegin) in device
-      code -- those are host-only.  Host convenience functions use them normally.
-
-  Jacobian ops (integratejacobian) fall back to the Basic (CPU) implementation;
-  only integrateresidual is GPU-accelerated via the template path.
+  Requires C++14+. Compatible with nvcc_wrapper, hipcc, and host-only Kokkos.
 */
 
 #pragma once
@@ -117,7 +92,7 @@
      constants[numConstants] -- PDE constants
      elemVec[Ne*totDim]   -- output element vector (accumulated, not zeroed here)
 
-   Layout conventions (match fekokkos.kokkos.cxx / PetscFEEvaluateFieldJets_Internal):
+   Layout conventions (match PetscFEEvaluateFieldJets_Internal):
      B[q * Nb*Nc + b*Nc + c]          -- b = 0..Nb-1 (total DOFs), c = 0..Nc-1
      D[q * Nb*Nc*dim + b*Nc*dim + c*dim + e2]
      invJ[e * Nq*dE*dE + q*dE*dE + i*dE + j]   (expanded, affine replicated)
@@ -129,7 +104,7 @@
    IMPORTANT: coeff is indexed as coeff[b] (not coeff[b*Nc+c]) because PETSc
    stores DOFs in the order imposed by PetscDualSpaceGetDimension(), where b
    already encodes both the scalar basis index and the component.  This matches
-   PetscFEEvaluateFieldJets_Internal (fe.c) and fekokkos.kokkos.cxx exactly.
+   PetscFEEvaluateFieldJets_Internal exactly.
 
    Note: elemVec is accumulated (+=), not zeroed.  The caller must zero it
    before the kernel launch (or use Kokkos::deep_copy to zero the device View). */
@@ -252,7 +227,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
       F0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f0_loc);
       /* Accumulate into elemVec via atomic_add: multiple threads (one per q)
          may write to the same ev_e[b] concurrently.
-         Matches fekokkos.kokkos.cxx Phase 2: val_e[b] += B_q[bc] * f0_s[q*Nc+c] */
+         Phase 2: val_e[b] += B_q[bc] * f0_s[q*Nc+c] */
       for (PetscInt b = 0; b < Nb; ++b)
         for (PetscInt c = 0; c < Nc; ++c) Kokkos::atomic_add(&ev_e[b], B_q[b * Nc + c] * f0_loc[c] * wq);
     }
@@ -263,7 +238,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
       F1(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f1_loc);
       /* Accumulate: ev_e[b] += all_grad[b_s,d] * f1[c_b,d] * wq  (Opt #3: reuse precomputed grad)
          phys_grad(b,c,d) = all_grad[(b/Nc)*dE+d]  (nonzero only for c == b%Nc)
-         Matches fekokkos.kokkos.cxx Phase 2: val_e[b] += phys_grad * f1_s[(q*Nc+c)*dE+d] */
+         Phase 2: val_e[b] += phys_grad * f1_s[(q*Nc+c)*dE+d] */
       for (PetscInt b = 0; b < Nb; ++b) {
         const PetscInt   b_s     = b / Nc;
         const PetscInt   c_b     = b % Nc;
@@ -292,7 +267,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
      elemMat[Ne * totDim * totDim] -- output element matrix (accumulated)
      u_tShift                      -- time-derivative shift (for implicit TS)
 
-   Layout of elemMat (matches febasic.c PetscFEUpdateElementMat_Internal):
+   Layout of elemMat (matches PetscFEUpdateElementMat_Internal):
      elemMat[e * totDim*totDim + (fOff + b) * totDim + (gOff + b2)]
      where b, b2 = 0..Nb-1 (total DOFs, not scalar basis x component pairs)
 
@@ -368,7 +343,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
     /* Opt #5: skip interpolation for linear problems -- callbacks ignore u/grad_u.
        When IsLinear=false (default), interpolate u and grad_u as usual. */
     if constexpr (!IsLinear) {
-      /* Interpolate u and gradu (same convention as residual kernel and fekokkos.kokkos.cxx):
+      /* Interpolate u and gradu (same convention as residual kernel):
          b = 0..Nb-1 (total DOFs), coeff[b] -- b already encodes scalar basis + component. */
       for (PetscInt b = 0; b < Nb; ++b)
         for (PetscInt c = 0; c < Nc; ++c) u_loc[c] += B_q[b * Nc + c] * coeff_e[b];
@@ -425,7 +400,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
 
     /* Assemble element matrix contributions.
        Nb = Nb_total (total DOFs per element).  b and b2 each run 0..Nb-1.
-       row = fOff + b,  col = gOff + b2  (one index per DOF, matching febasic.c).
+       row = fOff + b,  col = gOff + b2  (one index per DOF).
 
        For vector Lagrange FE each DOF b carries exactly one component fc = b%Nc.
        The physical gradient of DOF b in direction d is all_grad[(b/Nc)*dE+d].
@@ -556,7 +531,7 @@ static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt N
    This replaces the two-phase path in PetscFEIntegrateResidual_Kokkos for
    users who have written KOKKOS_INLINE_FUNCTION callbacks.
 
-   Signature matches PetscFEIntegrateResidual_Kokkos (fekokkos.kokkos.cxx)
+   Signature matches PetscFEIntegrateResidual_Kokkos
    so it can be called from the same context.
 
    Restrictions (Phase 1.B):
@@ -597,7 +572,7 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
 
   /* T[field]->Nb is the TOTAL number of DOFs per element = Nb_scalar * Nc.
      Pass Nb_total to the kernel so that the loop "b=0..Nb-1" with coeff[b]
-     matches PetscFEEvaluateFieldJets_Internal and fekokkos.kokkos.cxx exactly.
+     matches PetscFEEvaluateFieldJets_Internal exactly.
      The B/D arrays are also sized [Nq * Nb_total * Nc], so B_q = &B[q*Nb*Nc]
      is correct with Nb = Nb_total. */
   Nc = T[field]->Nc;
@@ -863,7 +838,7 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
        G3 term (dominant): 2*dE*dE flops (phi_grad * g3 * psi_grad)
        G0 term:            2 flops (B_test * g0 * B_trial)
        G1/G2 terms:        2*dE flops each (grad-value contractions)
-     Simplified to the G3-dominant count (matches fekokkos.kokkos.cxx convention):
+     Simplified to the G3-dominant count:
        Ne * Nq * Nb * Nc * Nb * Nc * 2 * dE * dE */
   PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nq * Nb * Nc * Nb * Nc * 2.0 * dE * dE));
 
@@ -912,7 +887,7 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
 typedef PetscInt PetscFEKokkosIdx;
 
 /* Constraint map entry: one parent DOF with its interpolation weight.
- * Mirrors the Landau LandauIdx/scale pair in plexland.c. */
+ * Mirrors the Landau LandauIdx/scale pair. */
 typedef struct {
   PetscInt    gid;   /* global DOF index of parent face DOF; -1 = unused */
   PetscScalar scale; /* interpolation weight */
@@ -1181,9 +1156,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
 
   /* Landau probing loop: for each element e and basis function q,
    * set a unit element matrix and call DMPlexGetClosureIndices to discover
-   * whether the DOF is unconstrained or constrained (hanging node).
-   *
-   * Reference: plexland.c:1516-1601 */
+   * whether the DOF is unconstrained or constrained (hanging node). */
   for (PetscInt e = 0; e < Ne; ++e) {
     PetscInt fullNb = 0;
 
@@ -1207,7 +1180,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
        *   - Unconstrained DOF: diagonal ~ 1.0 at one position
        *   - Constrained DOF:   diagonal entries = c_i^2 at parent positions
        *
-       * Classification (matching Landau plexland.c:1531-1585):
+       * Classification (matching Landau convention):
        *   1. diag ~ 1.0 -> unconstrained active DOF
        *   2. 0 < diag < 1 -> hanging-node constrained DOF
        *   3. No non-zero diagonal found -> Dirichlet (fully constrained away)
@@ -1232,8 +1205,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
             }
           } else {
             /* Hanging-node constrained DOF: 0 < diagonal < 1.
-             * Extract constraint weights by summing rows of the outer product.
-             * Reference: plexland.c:1541-1584 */
+             * Extract constraint weights by summing rows of the outer product. */
             const PetscInt ff        = f;
             const PetscInt idx       = maps->num_reduced;
             maps->h_gIdx[e * Nb + q] = -(PetscFEKokkosIdx)(idx + 1);
@@ -1315,9 +1287,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
   /* Build active_idx, Nb_active, and coo_elem_offsets.
    *
    * Phase 1.D: coo_size = sum_e fullNb[e]^2 (accounts for constraint expansion).
-   * Phase 1.C: fullNb[e] == Nb_active[e] when num_reduced == 0.
-   *
-   * Reference: plexland.c:1619-1648 */
+   * Phase 1.C: fullNb[e] == Nb_active[e] when num_reduced == 0. */
   maps->h_coo_elem_offsets[0] = 0;
   for (PetscInt e = 0; e < Ne; ++e) {
     PetscInt cnt = 0;
@@ -1502,9 +1472,7 @@ static inline PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *
 
    Phase 1.D: constrained DOFs expand to num_face rows/columns.
    Phase 1.C: when num_reduced == 0, fullNb[e] == Nb_active[e] and the
-              behavior is identical to the original implementation.
-
-   Reference: plexland.c:1650-1688 */
+              behavior is identical to the original implementation. */
 static inline PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J) PeNS
 {
   const PetscInt   Ne       = maps->num_elements;
@@ -1559,7 +1527,7 @@ static inline PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps
         const PetscInt pt_off_b2 = maps->h_coo_elem_point_offsets[e * (Nb + 1) + b2];
 
         /* COO base offset for this (b, b2) pair.
-         * Formula mirrors plexland.c:1674:
+         * Formula:
          *   idx0 = off + fullNb * pt_off_b + nr * pt_off_b2 */
         const PetscInt idx0 = off + fullNb * pt_off_b + nr * pt_off_b2;
 
