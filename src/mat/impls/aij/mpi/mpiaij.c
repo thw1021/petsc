@@ -2085,7 +2085,7 @@ static PetscErrorCode MatAXPYGetPreallocation_MPIAIJ(Mat Y, const PetscInt *ylto
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatAXPY_MPIAIJ(Mat Y, PetscScalar a, Mat X, MatStructure str)
+PetscErrorCode MatAXPY_MPIAIJ(Mat Y, PetscScalar a, Mat X, MatStructure str)
 {
   Mat_MPIAIJ *xx = (Mat_MPIAIJ *)X->data, *yy = (Mat_MPIAIJ *)Y->data;
 
