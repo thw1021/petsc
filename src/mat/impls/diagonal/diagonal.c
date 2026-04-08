@@ -892,8 +892,9 @@ static PetscErrorCode MatProductSymbolic_PtAP_Any_Diagonal(Mat C)
    The Unsafe decomposition is not used because it requires the old-style
    transposematmultnumeric pointer, which GPU types do not set. */
 typedef struct {
-  Mat AP;   /* AP = A*P (scaled copy of P) */
-  Mat PtAP; /* P^T * AP result via MatProduct AtB */
+  Mat              AP;     /* AP = A*P (scaled copy of P) */
+  Mat              PtAP;   /* P^T * AP result via MatProduct AtB */
+  PetscObjectState pstate; /* P's state when inner product was last built */
 } MatProductCtx_PtAP_DiagAny;
 
 static PetscErrorCode MatProductCtxDestroy_PtAP_DiagAny(PetscCtxRt data)
@@ -913,6 +914,7 @@ static PetscErrorCode MatProductNumeric_PtAP_Diagonal_Any(Mat C)
   Mat                         A = product->A, P = product->B;
   MatProductCtx_PtAP_DiagAny *ctx = (MatProductCtx_PtAP_DiagAny *)product->data;
   Mat_Diagonal               *a   = (Mat_Diagonal *)A->data;
+  PetscObjectState            pstate;
 
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
@@ -920,6 +922,18 @@ static PetscErrorCode MatProductNumeric_PtAP_Diagonal_Any(Mat C)
   PetscCall(MatDiagonalSetUpDiagonal(A));
   PetscCall(MatCopy(P, ctx->AP, SAME_NONZERO_PATTERN));
   PetscCall(MatDiagonalScale(ctx->AP, a->diag, NULL));
+  /* Rebuild inner product if P has changed (some backends, e.g. CUSPARSE,
+     do not properly recompute the transpose of the left operand on reuse) */
+  PetscCall(PetscObjectStateGet((PetscObject)P, &pstate));
+  if (pstate != ctx->pstate) {
+    PetscCall(MatDestroy(&ctx->PtAP));
+    PetscCall(MatProductCreate(P, ctx->AP, NULL, &ctx->PtAP));
+    PetscCall(MatProductSetType(ctx->PtAP, MATPRODUCT_AtB));
+    PetscCall(MatProductSetFill(ctx->PtAP, product->fill));
+    PetscCall(MatProductSetFromOptions(ctx->PtAP));
+    PetscCall(MatProductSymbolic(ctx->PtAP));
+    ctx->pstate = pstate;
+  }
   /* Recompute P^T * AP */
   PetscCall(MatProductNumeric(ctx->PtAP));
   PetscCall(MatCopy(ctx->PtAP, C, SAME_NONZERO_PATTERN));
@@ -947,6 +961,9 @@ static PetscErrorCode MatProductSymbolic_PtAP_Diagonal_Any(Mat C)
   PetscCall(MatProductSetFill(ctx->PtAP, product->fill));
   PetscCall(MatProductSetFromOptions(ctx->PtAP));
   PetscCall(MatProductSymbolic(ctx->PtAP));
+
+  /* Record P's state so numeric phase can detect changes */
+  PetscCall(PetscObjectStateGet((PetscObject)P, &ctx->pstate));
 
   /* Set up C with the same structure as PtAP */
   PetscCall(MatDuplicate(ctx->PtAP, MAT_DO_NOT_COPY_VALUES, &Cwork));

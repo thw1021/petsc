@@ -31,6 +31,8 @@ static PetscErrorCode CreateTestMatrix(MPI_Comm comm, const char type[], const c
     PetscCall(VecSetRandom(d, rand));
     PetscCall(MatCreateDiagonal(d, M));
     PetscCall(VecDestroy(&d));
+    PetscCall(MatAssemblyBegin(*M, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(*M, MAT_FINAL_ASSEMBLY));
   } else if (isaij || isaijkokkos || isaijcusparse || isaijhipsparse) {
     PetscCall(MatCreate(comm, M));
     PetscCall(MatSetSizes(*M, PETSC_DECIDE, PETSC_DECIDE, m, n));
@@ -108,7 +110,7 @@ int main(int argc, char **argv)
   PetscCall(MatPtAPMultEqual(A, P, C, 10, &flg));
   PetscCheck(flg, comm, PETSC_ERR_PLIB, "MAT_REUSE_MATRIX (modified P): MatPtAPMultEqual failed");
 
-  /* Reuse with modified A, second time */
+  /* Reuse with modified A */
   PetscCall(MatScale(A, 1.1));
   PetscCall(MatPtAP(A, P, MAT_REUSE_MATRIX, PETSC_DETERMINE, &C));
   PetscCall(MatPtAPMultEqual(A, P, C, 10, &flg));
@@ -116,6 +118,13 @@ int main(int argc, char **argv)
 
   /* Reuse with modified P */
   PetscCall(MatScale(P, 3.7));
+  PetscCall(MatPtAP(A, P, MAT_REUSE_MATRIX, PETSC_DETERMINE, &C));
+  PetscCall(MatPtAPMultEqual(A, P, C, 10, &flg));
+  PetscCheck(flg, comm, PETSC_ERR_PLIB, "MAT_REUSE_MATRIX (modified P): MatPtAPMultEqual failed");
+
+  /* Modify both A and P */
+  PetscCall(MatScale(A, 0.23));
+  PetscCall(MatScale(P, 1.43));
   PetscCall(MatPtAP(A, P, MAT_REUSE_MATRIX, PETSC_DETERMINE, &C));
   PetscCall(MatPtAPMultEqual(A, P, C, 10, &flg));
   PetscCheck(flg, comm, PETSC_ERR_PLIB, "MAT_REUSE_MATRIX (modified P): MatPtAPMultEqual failed");
