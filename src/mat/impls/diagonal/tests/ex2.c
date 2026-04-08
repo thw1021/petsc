@@ -146,41 +146,23 @@ int main(int argc, char **argv)
     output_file: output/empty.out
 
   test:
-    suffix: diag_aij
+    suffix: diag_cpu
     nsize: {{1 2}}
-    args: -amat_type diagonal -pmat_type aij
+    args: -amat_type diagonal -pmat_type {{aij dense}}
     output_file: output/empty.out
 
   test:
-    suffix: aij_diag
+    suffix: cpu_diag
     nsize: {{1 2}}
-    args: -amat_type aij -pmat_type diagonal
+    args: -amat_type {{aij dense}} -pmat_type diagonal
     output_file: output/empty.out
 
+  # --- Kokkos: diagonal with kokkos matrix/vec types ---
   test:
-    suffix: diag_dense
-    nsize: {{1 2}}
-    args: -amat_type diagonal -pmat_type dense
-    output_file: output/empty.out
-
-  test:
-    suffix: dense_diag
-    nsize: {{1 2}}
-    args: -amat_type dense -pmat_type diagonal
-    output_file: output/empty.out
-
-  test:
-    suffix: diag_diag_kokkos_both
+    suffix: diag_diag_kokkos
     nsize: {{1 2}}
     requires: kokkos_kernels
-    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type kokkos -pdiag_vec_type kokkos
-    output_file: output/empty.out
-
-  test:
-    suffix: diag_kokkos_diag_standard
-    nsize: {{1 2}}
-    requires: kokkos_kernels
-    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type kokkos -pdiag_vec_type standard
+    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type kokkos -pdiag_vec_type {{kokkos standard}}
     output_file: output/empty.out
 
   test:
@@ -205,17 +187,10 @@ int main(int argc, char **argv)
     output_file: output/empty.out
 
   test:
-    suffix: diag_diag_cuda_both
+    suffix: diag_diag_cuda
     nsize: {{1 2}}
     requires: cuda
-    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type cuda -pdiag_vec_type cuda
-    output_file: output/empty.out
-
-  test:
-    suffix: diag_cuda_diag_standard
-    nsize: {{1 2}}
-    requires: cuda
-    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type cuda -pdiag_vec_type standard
+    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type cuda -pdiag_vec_type {{cuda standard}}
     output_file: output/empty.out
 
   test:
@@ -226,73 +201,24 @@ int main(int argc, char **argv)
     output_file: output/empty.out
 
   test:
-    suffix: diag_aijcusparse
+    suffix: diag_cuda_mat
     nsize: {{1 2}}
     requires: cuda
-    args: -amat_type diagonal -pmat_type aijcusparse -adiag_vec_type cuda
+    args: -amat_type diagonal -pmat_type {{aijcusparse densecuda}} -adiag_vec_type {{cuda standard}}
     output_file: output/empty.out
 
   test:
-    suffix: diag_standard_aijcusparse
+    suffix: cuda_mat_diag
     nsize: {{1 2}}
     requires: cuda
-    args: -amat_type diagonal -pmat_type aijcusparse -adiag_vec_type standard
+    args: -amat_type {{aijcusparse densecuda}} -pmat_type diagonal -pdiag_vec_type {{cuda standard}}
     output_file: output/empty.out
 
   test:
-    suffix: aijcusparse_diag
-    nsize: {{1 2}}
-    requires: cuda
-    args: -amat_type aijcusparse -pmat_type diagonal -pdiag_vec_type cuda
-    output_file: output/empty.out
-
-  test:
-    suffix: aijcusparse_diag_standard
-    nsize: {{1 2}}
-    requires: cuda
-    args: -amat_type aijcusparse -pmat_type diagonal -pdiag_vec_type standard
-    output_file: output/empty.out
-
-  test:
-    suffix: diag_densecuda
-    nsize: {{1 2}}
-    requires: cuda
-    args: -amat_type diagonal -pmat_type densecuda -adiag_vec_type cuda
-    output_file: output/empty.out
-
-  test:
-    suffix: diag_standard_densecuda
-    nsize: {{1 2}}
-    requires: cuda
-    args: -amat_type diagonal -pmat_type densecuda -adiag_vec_type standard
-    output_file: output/empty.out
-
-  test:
-    suffix: densecuda_diag
-    nsize: {{1 2}}
-    requires: cuda
-    args: -amat_type densecuda -pmat_type diagonal -pdiag_vec_type cuda
-    output_file: output/empty.out
-
-  test:
-    suffix: densecuda_diag_standard
-    nsize: {{1 2}}
-    requires: cuda
-    args: -amat_type densecuda -pmat_type diagonal -pdiag_vec_type standard
-    output_file: output/empty.out
-
-  test:
-    suffix: diag_diag_hip_both
+    suffix: diag_diag_hip
     nsize: {{1 2}}
     requires: hip
-    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type hip -pdiag_vec_type hip
-    output_file: output/empty.out
-
-  test:
-    suffix: diag_hip_diag_standard
-    nsize: {{1 2}}
-    requires: hip
-    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type hip -pdiag_vec_type standard
+    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type hip -pdiag_vec_type {{hip standard}}
     output_file: output/empty.out
 
   test:
@@ -303,59 +229,17 @@ int main(int argc, char **argv)
     output_file: output/empty.out
 
   test:
-    suffix: diag_aijhipsparse
+    suffix: diag_hip_mat
     nsize: {{1 2}}
     requires: hip
-    args: -amat_type diagonal -pmat_type aijhipsparse -adiag_vec_type hip
+    args: -amat_type diagonal -pmat_type {{aijhipsparse densehip}} -adiag_vec_type {{hip standard}}
     output_file: output/empty.out
 
   test:
-    suffix: diag_standard_aijhipsparse
+    suffix: hip_mat_diag
     nsize: {{1 2}}
     requires: hip
-    args: -amat_type diagonal -pmat_type aijhipsparse -adiag_vec_type standard
-    output_file: output/empty.out
-
-  test:
-    suffix: aijhipsparse_diag
-    nsize: {{1 2}}
-    requires: hip
-    args: -amat_type aijhipsparse -pmat_type diagonal -pdiag_vec_type hip
-    output_file: output/empty.out
-
-  test:
-    suffix: aijhipsparse_diag_standard
-    nsize: {{1 2}}
-    requires: hip
-    args: -amat_type aijhipsparse -pmat_type diagonal -pdiag_vec_type standard
-    output_file: output/empty.out
-
-  test:
-    suffix: diag_densehip
-    nsize: {{1 2}}
-    requires: hip
-    args: -amat_type diagonal -pmat_type densehip -adiag_vec_type hip
-    output_file: output/empty.out
-
-  test:
-    suffix: diag_standard_densehip
-    nsize: {{1 2}}
-    requires: hip
-    args: -amat_type diagonal -pmat_type densehip -adiag_vec_type standard
-    output_file: output/empty.out
-
-  test:
-    suffix: densehip_diag
-    nsize: {{1 2}}
-    requires: hip
-    args: -amat_type densehip -pmat_type diagonal -pdiag_vec_type hip
-    output_file: output/empty.out
-
-  test:
-    suffix: densehip_diag_standard
-    nsize: {{1 2}}
-    requires: hip
-    args: -amat_type densehip -pmat_type diagonal -pdiag_vec_type standard
+    args: -amat_type {{aijhipsparse densehip}} -pmat_type diagonal -pdiag_vec_type {{hip standard}}
     output_file: output/empty.out
 
 TEST*/
