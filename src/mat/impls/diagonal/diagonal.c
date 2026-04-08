@@ -912,7 +912,6 @@ static PetscErrorCode MatProductNumeric_PtAP_Any_Diagonal(Mat C)
   PetscCall(MatDiagonalSetUpDiagonal(P));
   PetscCall(MatCopy(A, C, SAME_NONZERO_PATTERN));
   PetscCall(MatDiagonalScale(C, p->diag, p->diag));
-  //TODO log flops or no?
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -971,7 +970,6 @@ static PetscErrorCode MatProductNumeric_PtAP_Diagonal_Any(Mat C)
   /* Recompute P^T * AP */
   PetscCall(MatProductNumeric(ctx->PtAP));
   PetscCall(MatCopy(ctx->PtAP, C, SAME_NONZERO_PATTERN));
-  //TODO after this, how does flushing happen?
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1037,8 +1035,6 @@ static PetscErrorCode MatProductSetFromOptions_Diagonal_Anytype(Mat C)
   PetscCall(PetscObjectTypeCompare((PetscObject)product->B, MATDIAGONAL, &Bdiag));
   if (Adiag && Bdiag) {
     /* Both diagonal: handled by the specific diagonal_diagonal_C registration */
-    //would this even happen??
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "MatProductSetFromOptions_Diagonal_Anytype, Adiag and Bdiag\n"));
   } else if (Adiag) {
     /* A is diagonal, B is some non-diagonal type */
     if (product->type == MATPRODUCT_PtAP) {

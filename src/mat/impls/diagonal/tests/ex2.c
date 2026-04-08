@@ -227,6 +227,7 @@ int main(int argc, char **argv)
 
   test:
     suffix: aijhipsparse_diag
+    nsize: {{1 2}}
     requires: hip
     args: -amat_type aijhipsparse -pmat_type diagonal -vec_type hip
     output_file: output/empty.out
