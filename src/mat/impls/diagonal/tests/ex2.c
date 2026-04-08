@@ -2,7 +2,11 @@ static const char help[] = "Test MatPtAP with MATDIAGONAL\n";
 
 #include <petscmat.h>
 
-static PetscErrorCode CreateTestMatrix(MPI_Comm comm, const char type[], PetscInt m, PetscInt n, PetscRandom rand, Mat *M)
+/* KOKKOS: Following two cases will fail, as MatDiagonalScale_{Seq,MPI}AIJKOKKOS does *
+ * not support CPU diagonal vector against AIJ KOKKOS.                                *
+ * -amat_type diagonal -pmat_type aijkokkos -adiag_vec_type standard                  *
+ * -amat_type aijkokkos -pmat_type diagonal -pdiag_vec_type standard                  */
+static PetscErrorCode CreateTestMatrix(MPI_Comm comm, const char type[], const char prefix[], PetscInt m, PetscInt n, PetscRandom rand, Mat *M)
 {
   PetscBool isdiag, isaij, isdense;
   PetscBool isaijkokkos, isaijcusparse, isaijhipsparse;
@@ -21,6 +25,7 @@ static PetscErrorCode CreateTestMatrix(MPI_Comm comm, const char type[], PetscIn
     Vec d;
 
     PetscCall(VecCreate(comm, &d));
+    if (prefix) PetscCall(VecSetOptionsPrefix(d, prefix));
     PetscCall(VecSetSizes(d, PETSC_DECIDE, m));
     PetscCall(VecSetFromOptions(d));
     PetscCall(VecSetRandom(d, rand));
@@ -83,8 +88,8 @@ int main(int argc, char **argv)
   if (isdiag) n = m;
 
   PetscCall(PetscRandomCreate(comm, &rand));
-  PetscCall(CreateTestMatrix(comm, atype, m, m, rand, &A));
-  PetscCall(CreateTestMatrix(comm, ptype, m, n, rand, &P));
+  PetscCall(CreateTestMatrix(comm, atype, "adiag_", m, m, rand, &A));
+  PetscCall(CreateTestMatrix(comm, ptype, "pdiag_", m, n, rand, &P));
 
   /* Initial PtAP */
   PetscCall(MatPtAP(A, P, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &C));
@@ -156,94 +161,192 @@ int main(int argc, char **argv)
     output_file: output/empty.out
 
   test:
-    suffix: diag_diag_kokkos
+    suffix: diag_diag_kokkos_both
     nsize: {{1 2}}
     requires: kokkos_kernels
-    args: -amat_type diagonal -pmat_type diagonal -vec_type kokkos
+    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type kokkos -pdiag_vec_type kokkos
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_kokkos_diag_standard
+    nsize: {{1 2}}
+    requires: kokkos_kernels
+    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type kokkos -pdiag_vec_type standard
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_standard_diag_kokkos
+    nsize: {{1 2}}
+    requires: kokkos_kernels
+    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type standard -pdiag_vec_type kokkos
     output_file: output/empty.out
 
   test:
     suffix: diag_aijkokkos
     nsize: {{1 2}}
     requires: kokkos_kernels
-    args: -amat_type diagonal -pmat_type aijkokkos -vec_type kokkos
+    args: -amat_type diagonal -pmat_type aijkokkos -adiag_vec_type kokkos
     output_file: output/empty.out
 
   test:
     suffix: aijkokkos_diag
     nsize: {{1 2}}
     requires: kokkos_kernels
-    args: -amat_type aijkokkos -pmat_type diagonal -vec_type kokkos
+    args: -amat_type aijkokkos -pmat_type diagonal -pdiag_vec_type kokkos
     output_file: output/empty.out
 
   test:
-    suffix: diag_diag_cuda
+    suffix: diag_diag_cuda_both
     nsize: {{1 2}}
     requires: cuda
-    args: -amat_type diagonal -pmat_type diagonal -vec_type cuda
+    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type cuda -pdiag_vec_type cuda
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_cuda_diag_standard
+    nsize: {{1 2}}
+    requires: cuda
+    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type cuda -pdiag_vec_type standard
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_standard_diag_cuda
+    nsize: {{1 2}}
+    requires: cuda
+    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type standard -pdiag_vec_type cuda
     output_file: output/empty.out
 
   test:
     suffix: diag_aijcusparse
     nsize: {{1 2}}
     requires: cuda
-    args: -amat_type diagonal -pmat_type aijcusparse -vec_type cuda
+    args: -amat_type diagonal -pmat_type aijcusparse -adiag_vec_type cuda
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_standard_aijcusparse
+    nsize: {{1 2}}
+    requires: cuda
+    args: -amat_type diagonal -pmat_type aijcusparse -adiag_vec_type standard
     output_file: output/empty.out
 
   test:
     suffix: aijcusparse_diag
     nsize: {{1 2}}
     requires: cuda
-    args: -amat_type aijcusparse -pmat_type diagonal -vec_type cuda
+    args: -amat_type aijcusparse -pmat_type diagonal -pdiag_vec_type cuda
+    output_file: output/empty.out
+
+  test:
+    suffix: aijcusparse_diag_standard
+    nsize: {{1 2}}
+    requires: cuda
+    args: -amat_type aijcusparse -pmat_type diagonal -pdiag_vec_type standard
     output_file: output/empty.out
 
   test:
     suffix: diag_densecuda
     nsize: {{1 2}}
     requires: cuda
-    args: -amat_type diagonal -pmat_type densecuda -vec_type cuda
+    args: -amat_type diagonal -pmat_type densecuda -adiag_vec_type cuda
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_standard_densecuda
+    nsize: {{1 2}}
+    requires: cuda
+    args: -amat_type diagonal -pmat_type densecuda -adiag_vec_type standard
     output_file: output/empty.out
 
   test:
     suffix: densecuda_diag
     nsize: {{1 2}}
     requires: cuda
-    args: -amat_type densecuda -pmat_type diagonal -vec_type cuda
+    args: -amat_type densecuda -pmat_type diagonal -pdiag_vec_type cuda
     output_file: output/empty.out
 
   test:
-    suffix: diag_diag_hip
+    suffix: densecuda_diag_standard
+    nsize: {{1 2}}
+    requires: cuda
+    args: -amat_type densecuda -pmat_type diagonal -pdiag_vec_type standard
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_diag_hip_both
     nsize: {{1 2}}
     requires: hip
-    args: -amat_type diagonal -pmat_type diagonal -vec_type hip
+    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type hip -pdiag_vec_type hip
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_hip_diag_standard
+    nsize: {{1 2}}
+    requires: hip
+    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type hip -pdiag_vec_type standard
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_standard_diag_hip
+    nsize: {{1 2}}
+    requires: hip
+    args: -amat_type diagonal -pmat_type diagonal -adiag_vec_type standard -pdiag_vec_type hip
     output_file: output/empty.out
 
   test:
     suffix: diag_aijhipsparse
     nsize: {{1 2}}
     requires: hip
-    args: -amat_type diagonal -pmat_type aijhipsparse -vec_type hip
+    args: -amat_type diagonal -pmat_type aijhipsparse -adiag_vec_type hip
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_standard_aijhipsparse
+    nsize: {{1 2}}
+    requires: hip
+    args: -amat_type diagonal -pmat_type aijhipsparse -adiag_vec_type standard
     output_file: output/empty.out
 
   test:
     suffix: aijhipsparse_diag
     nsize: {{1 2}}
     requires: hip
-    args: -amat_type aijhipsparse -pmat_type diagonal -vec_type hip
+    args: -amat_type aijhipsparse -pmat_type diagonal -pdiag_vec_type hip
+    output_file: output/empty.out
+
+  test:
+    suffix: aijhipsparse_diag_standard
+    nsize: {{1 2}}
+    requires: hip
+    args: -amat_type aijhipsparse -pmat_type diagonal -pdiag_vec_type standard
     output_file: output/empty.out
 
   test:
     suffix: diag_densehip
     nsize: {{1 2}}
     requires: hip
-    args: -amat_type diagonal -pmat_type densehip -vec_type hip
+    args: -amat_type diagonal -pmat_type densehip -adiag_vec_type hip
+    output_file: output/empty.out
+
+  test:
+    suffix: diag_standard_densehip
+    nsize: {{1 2}}
+    requires: hip
+    args: -amat_type diagonal -pmat_type densehip -adiag_vec_type standard
     output_file: output/empty.out
 
   test:
     suffix: densehip_diag
     nsize: {{1 2}}
     requires: hip
-    args: -amat_type densehip -pmat_type diagonal -vec_type hip
+    args: -amat_type densehip -pmat_type diagonal -pdiag_vec_type hip
+    output_file: output/empty.out
+
+  test:
+    suffix: densehip_diag_standard
+    nsize: {{1 2}}
+    requires: hip
+    args: -amat_type densehip -pmat_type diagonal -pdiag_vec_type standard
     output_file: output/empty.out
 
 TEST*/
