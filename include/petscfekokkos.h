@@ -1659,7 +1659,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   /* Ensure dynamic Views are allocated (realloc only when sizes change) */
   PetscCall(PetscFEKokkosEnsureDynamicViews(ctx, Ne, Nq, dE, totDim, numConstants));
 
-  /* Stage geometry: affine-optimized path reduces H->D transfer by Nq× */
+  /* Stage geometry: affine-optimized path reduces H->D transfer by Nq* */
   ctx->isAffine              = chunkGeom->isAffine;
   const PetscBool isAffine_r = ctx->isAffine;
   if (isAffine_r) {
@@ -1968,7 +1968,7 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   /* Ensure dynamic Views are allocated (realloc only when sizes change) */
   PetscCall(PetscFEKokkosEnsureDynamicViews(ctx, Ne, Nq, dE, totDim, numConstants));
 
-  /* Stage geometry: affine-optimized path reduces H->D transfer by Nq× */
+  /* Stage geometry: affine-optimized path reduces H->D transfer by Nq* */
   ctx->isAffine              = chunkGeom->isAffine;
   const PetscBool isAffine_j = ctx->isAffine;
   if (isAffine_j) {
