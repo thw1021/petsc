@@ -1004,6 +1004,7 @@ static PetscErrorCode MatProductSymbolic_PtAP_Diagonal_Any(Mat C)
   C->product = NULL;
   PetscCall(MatHeaderReplace(C, &Cwork));
   C->product             = product;
+  C->assembled           = PETSC_TRUE;
   product->data          = ctx;
   product->destroy       = MatProductCtxDestroy_PtAP_DiagAny;
   C->ops->productnumeric = MatProductNumeric_PtAP_Diagonal_Any;
