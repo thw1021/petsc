@@ -2038,6 +2038,15 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
     });
   Kokkos::fence();
 
+  /* Log GPU flops for the residual integration kernel.
+     Formula matches PetscFEKokkosComputeResidual (line ~708):
+       f0 term: Nb * Nc * 2 flops per quad point (basis eval + accumulate)
+       f1 term: Nb * Nc * dim * 2 flops (gradient basis eval + accumulate)
+       physics: Nb * Nc * Nq * (2 + dE * (dim*2 + 1)) flops
+     PetscLogGpuFlops also increments the total PetscLogFlops counter.
+     GPU %F in -log_view = gpu_flops / total_flops * 100. */
+  PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nq * (Nb * Nc * 2.0 + Nb * Nc * (PetscLogDouble)dim * 2.0) + (PetscLogDouble)Ne * Nb * Nc * Nq * (2.0 + dE * (dim * 2.0 + 1.0))));
+
   /* CPU path only: copy d_F back to locF_arr */
   if (locF_memtype != PETSC_MEMTYPE_DEVICE) Kokkos::deep_copy(h_F_unmanaged, d_F);
 
@@ -2273,6 +2282,13 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
       }); /* end TeamThreadRange over b */
     });
   Kokkos::fence();
+
+  /* Log GPU flops for the Jacobian integration + scatter kernels.
+     Formula matches PetscFEKokkosComputeJacobian (line ~863):
+       Ne * Nq * Nb * Nc * Nb * Nc * 2 * dE * dE
+     PetscLogGpuFlops also increments the total PetscLogFlops counter.
+     GPU %F in -log_view = gpu_flops / total_flops * 100. */
+  PetscCall(PetscLogGpuFlops((PetscLogDouble)Ne * Nq * Nb * Nc * Nb * Nc * 2.0 * dE * dE));
 
   /* Set COO values into matrix */
   /* Requires MATAIJKOKKOS -- ctx_d_coo_vals is a cached device view */
