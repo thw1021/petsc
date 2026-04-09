@@ -230,7 +230,24 @@ int main(int argc, char **argv)
   PetscCall(VecSet(u, 0.0));
   PetscCall(SNESSolve(snes, NULL, u));
 
-  /* ---- Compute L2 error ---- */
+  /* ---- Compute L2 error (cold solve) ---- */
+  {
+    PetscErrorCode (*exactFuncs[1])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *) = {u_exact};
+    PetscCall(DMComputeL2Diff(dm, 0.0, exactFuncs, NULL, u, &error));
+  }
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "L2 error: %g\n", (double)error));
+
+  /* ---- Warm solve: time a second solve with all caches hot ---- */
+  {
+    PetscLogStage stage;
+    PetscCall(PetscLogStageRegister("warm", &stage));
+    PetscCall(PetscLogStagePush(stage));
+    PetscCall(VecSet(u, 0.0));
+    PetscCall(SNESSolve(snes, NULL, u));
+    PetscCall(PetscLogStagePop());
+  }
+
+  /* ---- Compute L2 error (warm solve) ---- */
   {
     PetscErrorCode (*exactFuncs[1])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *) = {u_exact};
     PetscCall(DMComputeL2Diff(dm, 0.0, exactFuncs, NULL, u, &error));
@@ -250,28 +267,23 @@ int main(int argc, char **argv)
 }
 
 /*TEST
-  test:
-    suffix: 1
-    requires: kokkos_kernels triangle
-    nsize: 4
-    args: -dm_plex_simplex 1 -petscspace_degree 2 -dm_plex_box_faces 8,8 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
-    filter: grep "L2 error"
-  test:
-    suffix: 2
+  testset:
     requires: kokkos_kernels
     nsize: 4
-    args: -dm_plex_simplex 0 -petscspace_degree 2 -dm_plex_box_faces 8,8 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
+    args: -petscspace_degree 2 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
     filter: grep "L2 error"
-  test:
-    suffix: 3
-    requires: kokkos_kernels triangle ctetgen
-    nsize: 4
-    args: -dm_plex_dim 3 -dm_plex_simplex 1 -petscspace_degree 2 -dm_plex_box_faces 2,2,2 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
-    filter: grep "L2 error"
-  test:
-    suffix: 4
-    requires: kokkos_kernels
-    nsize: 4
-    args: -dm_plex_dim 3 -dm_plex_simplex 0 -petscspace_degree 2 -dm_plex_box_faces 2,2,2 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
-    filter: grep "L2 error"
+    test:
+      suffix: 1
+      requires: triangle
+      args: -dm_plex_simplex 1 -dm_plex_box_faces 8,8
+    test:
+      suffix: 2
+      args: -dm_plex_simplex 0 -dm_plex_box_faces 8,8
+    test:
+      suffix: 3
+      requires: triangle ctetgen
+      args: -dm_plex_dim 3 -dm_plex_simplex 1 -dm_plex_box_faces 2,2,2
+    test:
+      suffix: 4
+      args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_faces 2,2,2
 TEST*/
