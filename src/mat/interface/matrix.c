@@ -9747,7 +9747,7 @@ PetscErrorCode MatStashGetInfo(Mat mat, PetscInt *nstash, PetscInt *reallocs, Pe
 - left  - (optional) vector that the matrix vector product can be stored in
 
   Options Database Key:
-. -mat_vec_type type - set the vector type of the created vectors during `MatSetFromOptions()`
+. -mat_vec_type type - set the `VecType` of the created vectors during `MatSetFromOptions()`
 
   Level: advanced
 
