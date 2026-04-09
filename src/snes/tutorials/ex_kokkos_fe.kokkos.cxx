@@ -96,6 +96,7 @@ static void g3_poisson(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])
 static PetscErrorCode u_exact(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
   PetscReal prod = 1.0;
+
   PetscFunctionBeginUser;
   for (PetscInt d = 0; d < dim; ++d) prod *= PetscSinReal(PETSC_PI * x[d]);
   *u = prod;
