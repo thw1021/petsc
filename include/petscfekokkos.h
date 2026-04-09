@@ -185,10 +185,17 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
     /* Coefficient pointer for this element */
     const PetscScalar *coeff_e = &coeff[e * totDim + uOff];
 
-    /* Opt #3: precompute physical gradients for all DOFs at this quadrature point.
+    /* Opt #3: precompute physical gradients for all scalar basis functions.
        all_grad[b_s * dE + d] = sum_{e2} D[q, b, c_b, e2] * invJ[e2, d]
        where b_s = b/Nc (scalar basis index) and c_b = b%Nc (component).
-       This eliminates the duplicate D*invJ contraction in the F1 loop below. */
+       This eliminates the duplicate D*invJ contraction in the F1 loop below.
+
+       NOTE: For vector Lagrange FE (Nc > 1), multiple DOFs b share the same
+       scalar basis index b_s = b/Nc.  The loop overwrites all_grad[b_s,d]
+       for each such b.  This is correct because the PetscFE tabulation D
+       stores D[b, c, e2] = 0 for c != b%Nc (Lagrange identity structure),
+       so all DOFs sharing b_s compute the identical gradient value.  The
+       final write (from b = b_s*Nc + Nc-1) equals the first (from b = b_s*Nc). */
     for (PetscInt b = 0; b < Nb; ++b) {
       const PetscInt b_s = b / Nc;
       const PetscInt c_b = b % Nc;
@@ -398,7 +405,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
       G3(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g3_loc);
     }
 
-    /* Precompute physical gradients for this quadrature point.
+    /* Precompute physical gradients for all scalar basis functions.
        For vector Lagrange FE, DOF b is associated with scalar basis b_s = b/Nc
        and component c_b = b%Nc.  D[q,b,c,e2] is nonzero only when c == c_b,
        so the physical gradient of DOF b in direction d is:
@@ -407,7 +414,12 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
          where PETSCFE_KOKKOS_MAX_NBS = 125 (Q4 hex 3D scalar basis count: 5^3).
        This fixes a GPU stack overflow: the old layout used (b*Nc+c)*dE+d with
        b running over total DOFs (Nb = Nb_scalar*Nc), overflowing the 64*3*3=576
-       entry buffer for Q2+ hex (Nb=81 for Q2 -> max index 734 > 576). */
+       entry buffer for Q2+ hex (Nb=81 for Q2 -> max index 734 > 576).
+
+       NOTE: For Nc > 1, multiple DOFs b share the same b_s and overwrite
+       all_grad[b_s,d].  This is correct because D[b,c,e2] = 0 for c != c_b
+       (Lagrange identity structure), so all DOFs sharing b_s compute the
+       identical gradient value. */
     for (PetscInt b = 0; b < Nb; ++b) {
       const PetscInt b_s = b / Nc; /* scalar basis index */
       const PetscInt c_b = b % Nc; /* component this DOF carries */
@@ -517,7 +529,6 @@ static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt N
      * Guard the pointer here; the affine branch below checks it is non-NULL. */
     const PetscReal *J_e  = cgeom->J ? &cgeom->J[e * Np * dE * dE] : NULL;
     const PetscReal *xi_e = cgeom->xi;
-    PetscCheck(xi_e, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "cgeom->xi is NULL for affine element");
 
     for (PetscInt q = 0; q < Nq; ++q) {
       const PetscInt eq = e * Nq + q;
@@ -527,9 +538,10 @@ static inline PetscErrorCode PetscFEKokkosExpandGeometry(PetscInt Ne, PetscInt N
         for (PetscInt i = 0; i < dE * dE; ++i) h_invJ[eq * dE * dE + i] = invJ_e[i];
         h_detJ[eq] = detJ_e[0];
         /* Compute physical coords from reference quadrature point.
-         * J_e must be non-NULL for affine elements (cgeom->J is always set
-         * when isAffine == PETSC_TRUE by DMFieldCreateFEGeom). */
+         * J_e and xi_e must be non-NULL for affine elements (cgeom->J and
+         * cgeom->xi are always set when isAffine == PETSC_TRUE by DMFieldCreateFEGeom). */
         PetscCheck(J_e, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "cgeom->J is NULL for affine element %d -- DMFieldCreateFEGeom must provide J", (int)e);
+        PetscCheck(xi_e, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "cgeom->xi is NULL for affine element %d -- DMFieldCreateFEGeom must provide xi", (int)e);
         PetscFEKokkosCoordRefToReal(dE, dim, xi_e, v0_e, J_e, &quadPoints[q * dim], &h_coords[eq * dE]);
       } else {
         /* Non-affine: geometry stored per quadrature point */
@@ -688,8 +700,8 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
     const int tmpl_team_size = tmpl_on_gpu ? Nq_ : 1;
     Kokkos::parallel_for(
       "PetscFEKokkosComputeResidual", tmpl_team_policy_t(Ne, tmpl_team_size), KOKKOS_LAMBDA(const tmpl_team_policy_t::member_type &team) {
-        PetscFEKokkosIntegrateResidualCell<F0, F1, true>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, t_, nConst_, d_constants.data(),
-                                                         d_elemVec.data());
+        PetscFEKokkosIntegrateResidualCell<F0, F1, false>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, t_, nConst_, d_constants.data(),
+                                                          d_elemVec.data());
       });
   }
 
@@ -845,8 +857,8 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
     const int tmpl_jac_team_size = tmpl_jac_on_gpu ? Nq_ : 1;
     Kokkos::parallel_for(
       "PetscFEKokkosComputeJacobian", tmpl_jac_policy_t(Ne, tmpl_jac_team_size), KOKKOS_LAMBDA(const tmpl_jac_policy_t::member_type &team) {
-        PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, true, IsLinear>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, gOff, t_, tShift_, nConst_,
-                                                                           d_constants.data(), d_elemMat.data());
+        PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, false, IsLinear>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, gOff, t_, tShift_, nConst_,
+                                                                            d_constants.data(), d_elemMat.data());
       });
   }
 
@@ -2021,10 +2033,10 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
       team.team_barrier();
 
       /* Integrate -- TeamThreadRange over Nq inside the cell kernel.
-         IsAffine=true: all current meshes are affine hex.
-         TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
-      PetscFEKokkosIntegrateResidualCell<f0, f1, true>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, t_, numConstants_,
-                                                       ctx_d_constants.data(), ctx_d_elemVec.data());
+         IsAffine=false: geometry is expanded to per-q-point layout by
+         PetscFEKokkosExpandGeometry, so per-q indexing is always correct. */
+      PetscFEKokkosIntegrateResidualCell<f0, f1, false>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, t_, numConstants_,
+                                                        ctx_d_constants.data(), ctx_d_elemVec.data());
       team.team_barrier();
 
       /* Scatter to locF via atomic_add using local DOF indices.
@@ -2222,10 +2234,10 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
      parallelism; atomic_add handles concurrent writes to em_e[row*totDim+col]. */
   Kokkos::parallel_for(
     "DMPlexSNESComputeJacobianFEM_Kokkos_integrate", team_policy_t(Ne, jac_team_size), KOKKOS_LAMBDA(const member_type &team) {
-      /* IsAffine=true: all current meshes are affine hex.
-         TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
-      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, true, IsLinear>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0, t_, u_tShift_, numConstants_,
-                                                                         ctx_d_constants.data(), ctx_d_elemMat.data());
+      /* IsAffine=false: geometry is expanded to per-q-point layout by
+         PetscFEKokkosExpandGeometry, so per-q indexing is always correct. */
+      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, false, IsLinear>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0, t_, u_tShift_, numConstants_,
+                                                                          ctx_d_constants.data(), ctx_d_elemMat.data());
     });
   Kokkos::fence();
 
