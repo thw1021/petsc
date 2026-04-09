@@ -162,7 +162,7 @@ int main(int argc, char **argv)
   Vec               u;
   Mat               J;
   PetscReal         error;
-  PetscFEKokkosMaps kokkos_ctx; /* Step 4: declare the GPU assembly maps */
+  PetscFEKokkosMaps kokkos_ctx = {}; /* Step 4: declare the GPU assembly maps (zero-init for valgrind) */
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
