@@ -1117,6 +1117,7 @@ static inline PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *m
   maps->cached_totDim       = -1;
   maps->cached_numConstants = -1;
   maps->isAffine            = PETSC_FALSE;
+  maps->geom_cached         = PETSC_FALSE;
 
   /* num_face: number of DOFs on a face edge = degree + 1 for 2D quads.
    * Landau computes this as pow(num_face, dim-1) for higher dimensions.
