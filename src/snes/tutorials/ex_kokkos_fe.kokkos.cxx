@@ -252,21 +252,25 @@ int main(int argc, char **argv)
   test:
     suffix: 1
     requires: kokkos_kernels triangle
+    nsize: 4
     args: -dm_plex_simplex 1 -petscspace_degree 2 -dm_plex_box_faces 8,8 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
     filter: grep "L2 error"
   test:
     suffix: 2
     requires: kokkos_kernels
+    nsize: 4
     args: -dm_plex_simplex 0 -petscspace_degree 2 -dm_plex_box_faces 8,8 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
     filter: grep "L2 error"
   test:
     suffix: 3
     requires: kokkos_kernels triangle ctetgen
+    nsize: 4
     args: -dm_plex_dim 3 -dm_plex_simplex 1 -petscspace_degree 2 -dm_plex_box_faces 2,2,2 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
     filter: grep "L2 error"
   test:
     suffix: 4
     requires: kokkos_kernels
+    nsize: 4
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -petscspace_degree 2 -dm_plex_box_faces 2,2,2 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
     filter: grep "L2 error"
 TEST*/
