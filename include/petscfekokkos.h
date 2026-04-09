@@ -128,8 +128,7 @@ struct PetscPointJacFnNonNull<nullptr> : std::false_type { };
    element (before the q loop) instead of re-indexing at every quadrature point.
    For affine hex meshes the expanded arrays have identical values for all q,
    so reading slot q=0 is correct for all q.  For non-affine meshes use
-   IsAffine=false to keep per-q indexing.
-   TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
+   IsAffine=false to keep per-q indexing. */
 template <PetscPointFn *F0, PetscPointFn *F1, bool IsAffine = true>
 KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::TeamPolicy<>::member_type &team, PetscInt Nq, PetscInt Nb, PetscInt Nc, PetscInt dim, PetscInt dE, const PetscReal *B,  /* [Nq * Nb * Nc]          */
                                                                const PetscReal   *D,                                                                                                                 /* [Nq * Nb * Nc * dim]    */
@@ -298,7 +297,6 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
 /* Opt #4: IsAffine template parameter for the Jacobian kernel.
    When IsAffine=true, invJ/detJ are loaded once per element (before the q loop)
    instead of re-indexing at every quadrature point.
-   TODO: dispatch IsAffine=false for non-affine (simplex) meshes.
    Opt #5: IsLinear template parameter.
    When IsLinear=true, the Jacobian callbacks do not depend on u or grad_u
    (linear problems: Poisson, elasticity).  The interpolation of u_loc and
@@ -688,21 +686,28 @@ static PetscErrorCode PetscFEKokkosComputeResidual(PetscDS ds, PetscFormKey key,
   const PetscReal t_      = t;
   const PetscInt  nConst_ = numConstants;
 
-  /* Launch kernel -- IsAffine=true: all test cases use affine hex meshes.
-     TODO: dispatch IsAffine=false for non-affine (simplex) meshes.
+  /* Launch kernel -- dispatch IsAffine based on cgeom->isAffine.
      Use TeamPolicy so that PetscFEKokkosIntegrateResidualCell can use
      TeamThreadRange over quadrature points internally.
      team_size = Nq_ on GPU (one thread per q-point), 1 on Serial/OpenMP. */
+  const PetscBool isAffine_res = cgeom->isAffine;
   {
     using tmpl_team_policy_t = Kokkos::TeamPolicy<>;
     const int tmpl_conc      = Kokkos::DefaultExecutionSpace().concurrency();
     const int tmpl_on_gpu    = !!(tmpl_conc >= 1000);
     const int tmpl_team_size = tmpl_on_gpu ? Nq_ : 1;
-    Kokkos::parallel_for(
-      "PetscFEKokkosComputeResidual", tmpl_team_policy_t(Ne, tmpl_team_size), KOKKOS_LAMBDA(const tmpl_team_policy_t::member_type &team) {
-        PetscFEKokkosIntegrateResidualCell<F0, F1, false>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, t_, nConst_, d_constants.data(),
-                                                          d_elemVec.data());
-      });
+    if (isAffine_res)
+      Kokkos::parallel_for(
+        "PetscFEKokkosComputeResidual", tmpl_team_policy_t(Ne, tmpl_team_size), KOKKOS_LAMBDA(const tmpl_team_policy_t::member_type &team) {
+          PetscFEKokkosIntegrateResidualCell<F0, F1, true>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, t_, nConst_, d_constants.data(),
+                                                           d_elemVec.data());
+        });
+    else
+      Kokkos::parallel_for(
+        "PetscFEKokkosComputeResidual", tmpl_team_policy_t(Ne, tmpl_team_size), KOKKOS_LAMBDA(const tmpl_team_policy_t::member_type &team) {
+          PetscFEKokkosIntegrateResidualCell<F0, F1, false>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, t_, nConst_, d_constants.data(),
+                                                            d_elemVec.data());
+        });
   }
 
   Kokkos::fence();
@@ -846,20 +851,27 @@ static PetscErrorCode PetscFEKokkosComputeJacobian(PetscDS ds, PetscFormKey key,
   const PetscReal tShift_ = u_tShift;
   const PetscInt  nConst_ = numConstants;
 
-  /* Launch kernel -- IsAffine=true: all test cases use affine hex meshes.
-     TODO: dispatch IsAffine=false for non-affine (simplex) meshes.
+  /* Launch kernel -- dispatch IsAffine based on cgeom->isAffine.
      Use TeamPolicy so that PetscFEKokkosIntegrateJacobianCell can use
      TeamThreadRange over quadrature points internally. */
+  const PetscBool isAffine_jac = cgeom->isAffine;
   {
     using tmpl_jac_policy_t      = Kokkos::TeamPolicy<>;
     const int tmpl_jac_conc      = Kokkos::DefaultExecutionSpace().concurrency();
     const int tmpl_jac_on_gpu    = !!(tmpl_jac_conc >= 1000);
     const int tmpl_jac_team_size = tmpl_jac_on_gpu ? Nq_ : 1;
-    Kokkos::parallel_for(
-      "PetscFEKokkosComputeJacobian", tmpl_jac_policy_t(Ne, tmpl_jac_team_size), KOKKOS_LAMBDA(const tmpl_jac_policy_t::member_type &team) {
-        PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, false, IsLinear>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, gOff, t_, tShift_, nConst_,
-                                                                            d_constants.data(), d_elemMat.data());
-      });
+    if (isAffine_jac)
+      Kokkos::parallel_for(
+        "PetscFEKokkosComputeJacobian", tmpl_jac_policy_t(Ne, tmpl_jac_team_size), KOKKOS_LAMBDA(const tmpl_jac_policy_t::member_type &team) {
+          PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, true, IsLinear>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, gOff, t_, tShift_, nConst_,
+                                                                             d_constants.data(), d_elemMat.data());
+        });
+    else
+      Kokkos::parallel_for(
+        "PetscFEKokkosComputeJacobian", tmpl_jac_policy_t(Ne, tmpl_jac_team_size), KOKKOS_LAMBDA(const tmpl_jac_policy_t::member_type &team) {
+          PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, false, IsLinear>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), d_invJ.data(), d_detJ.data(), d_coords.data(), d_coeff.data(), totDim_, uOff0, fOff, gOff, t_, tShift_, nConst_,
+                                                                              d_constants.data(), d_elemMat.data());
+        });
   }
 
   Kokkos::fence();
@@ -2021,36 +2033,52 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   /* Fused kernel: integrate residual + scatter to locF in one pass.
    * Eliminates one kernel launch, one fence, and the intermediate d_elemVec
    * read/write.  Each team computes the element residual into a local stack
-   * array, then immediately scatters to F_dev via atomic_add. */
-  Kokkos::parallel_for(
-    "DMPlexSNESComputeResidualFEM_Kokkos_fused", team_policy_t(Ne, res_team_size), KOKKOS_LAMBDA(const member_type &team) {
-      const PetscInt e = team.league_rank();
+   * array, then immediately scatters to F_dev via atomic_add.
+   * Dispatch IsAffine based on ctx->isAffine: affine meshes (hex/quad) hoist
+   * invJ/detJ out of the q-loop; non-affine meshes (simplex) re-index per q. */
+  const PetscBool isAffine_fused = ctx->isAffine;
+  if (isAffine_fused)
+    Kokkos::parallel_for(
+      "DMPlexSNESComputeResidualFEM_Kokkos_fused", team_policy_t(Ne, res_team_size), KOKKOS_LAMBDA(const member_type &team) {
+        const PetscInt e = team.league_rank();
 
-      /* Zero element vector -- all threads participate via TeamThreadRange.
-       * PetscFEKokkosIntegrateResidualCell accumulates (+=) into elemVec,
-       * so we must zero the element's slice before integration. */
-      PetscScalar *ev_base = &ctx_d_elemVec[e * totDim_];
-      Kokkos::parallel_for(Kokkos::TeamThreadRange(team, totDim_), [&](const PetscInt i) { ev_base[i] = 0.0; });
-      team.team_barrier();
+        PetscScalar *ev_base = &ctx_d_elemVec[e * totDim_];
+        Kokkos::parallel_for(Kokkos::TeamThreadRange(team, totDim_), [&](const PetscInt i) { ev_base[i] = 0.0; });
+        team.team_barrier();
 
-      /* Integrate -- TeamThreadRange over Nq inside the cell kernel.
-         IsAffine=false: geometry is expanded to per-q-point layout by
-         PetscFEKokkosExpandGeometry, so per-q indexing is always correct. */
-      PetscFEKokkosIntegrateResidualCell<f0, f1, false>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, t_, numConstants_,
-                                                        ctx_d_constants.data(), ctx_d_elemVec.data());
-      team.team_barrier();
+        PetscFEKokkosIntegrateResidualCell<f0, f1, true>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, t_, numConstants_,
+                                                         ctx_d_constants.data(), ctx_d_elemVec.data());
+        team.team_barrier();
 
-      /* Scatter to locF via atomic_add using local DOF indices.
-       * Thread 0 only: scatter is serial over Nb (small), and F_dev atomics
-       * already handle inter-element concurrency. */
-      if (team.team_rank() == 0) {
-        for (PetscInt b = 0; b < Nb_; ++b) {
-          const PetscInt    lidx = d_lIdx[e * Nb_ + b];
-          const PetscScalar val  = ev_base[b];
-          if (lidx >= 0) Kokkos::atomic_add(&F_dev[lidx], val);
+        if (team.team_rank() == 0) {
+          for (PetscInt b = 0; b < Nb_; ++b) {
+            const PetscInt    lidx = d_lIdx[e * Nb_ + b];
+            const PetscScalar val  = ev_base[b];
+            if (lidx >= 0) Kokkos::atomic_add(&F_dev[lidx], val);
+          }
         }
-      }
-    });
+      });
+  else
+    Kokkos::parallel_for(
+      "DMPlexSNESComputeResidualFEM_Kokkos_fused", team_policy_t(Ne, res_team_size), KOKKOS_LAMBDA(const member_type &team) {
+        const PetscInt e = team.league_rank();
+
+        PetscScalar *ev_base = &ctx_d_elemVec[e * totDim_];
+        Kokkos::parallel_for(Kokkos::TeamThreadRange(team, totDim_), [&](const PetscInt i) { ev_base[i] = 0.0; });
+        team.team_barrier();
+
+        PetscFEKokkosIntegrateResidualCell<f0, f1, false>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, t_, numConstants_,
+                                                          ctx_d_constants.data(), ctx_d_elemVec.data());
+        team.team_barrier();
+
+        if (team.team_rank() == 0) {
+          for (PetscInt b = 0; b < Nb_; ++b) {
+            const PetscInt    lidx = d_lIdx[e * Nb_ + b];
+            const PetscScalar val  = ev_base[b];
+            if (lidx >= 0) Kokkos::atomic_add(&F_dev[lidx], val);
+          }
+        }
+      });
   Kokkos::fence();
 
   /* Log GPU flops for the residual integration kernel.
@@ -2228,18 +2256,25 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   const int jac_on_gpu    = !!(jac_conc >= 1000);
   const int jac_team_size = jac_on_gpu ? Nq_ : 1;
 
-  /* Pass 1: integrate Jacobian for all elements into d_elemMat */
   /* Pass 1: integrate Jacobian for all elements into d_elemMat.
      d_elemMat was zeroed above via Kokkos::deep_copy before this kernel.
      TeamThreadRange over Nq inside the cell kernel provides intra-element
-     parallelism; atomic_add handles concurrent writes to em_e[row*totDim+col]. */
-  Kokkos::parallel_for(
-    "DMPlexSNESComputeJacobianFEM_Kokkos_integrate", team_policy_t(Ne, jac_team_size), KOKKOS_LAMBDA(const member_type &team) {
-      /* IsAffine=false: geometry is expanded to per-q-point layout by
-         PetscFEKokkosExpandGeometry, so per-q indexing is always correct. */
-      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, false, IsLinear>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0, t_, u_tShift_, numConstants_,
-                                                                          ctx_d_constants.data(), ctx_d_elemMat.data());
-    });
+     parallelism; atomic_add handles concurrent writes to em_e[row*totDim+col].
+     Dispatch IsAffine based on ctx->isAffine: affine meshes hoist invJ/detJ
+     out of the q-loop; non-affine meshes re-index per quadrature point. */
+  const PetscBool isAffine_jac2 = ctx->isAffine;
+  if (isAffine_jac2)
+    Kokkos::parallel_for(
+      "DMPlexSNESComputeJacobianFEM_Kokkos_integrate", team_policy_t(Ne, jac_team_size), KOKKOS_LAMBDA(const member_type &team) {
+        PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, true, IsLinear>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0, t_, u_tShift_, numConstants_,
+                                                                           ctx_d_constants.data(), ctx_d_elemMat.data());
+      });
+  else
+    Kokkos::parallel_for(
+      "DMPlexSNESComputeJacobianFEM_Kokkos_integrate", team_policy_t(Ne, jac_team_size), KOKKOS_LAMBDA(const member_type &team) {
+        PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, false, IsLinear>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0, t_, u_tShift_, numConstants_,
+                                                                            ctx_d_constants.data(), ctx_d_elemMat.data());
+      });
   Kokkos::fence();
 
   /* Pass 2: scatter d_elemMat to COO values (constraint-aware).
