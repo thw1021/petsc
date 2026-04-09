@@ -1879,9 +1879,10 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
    * d_invJ, d_detJ, d_coords already hold valid device data. */
   dE = ctx->cached_dE_geom;
 
-  /* Runtime bounds check */
+  /* Runtime bounds check -- prevent GPU stack overflow on high-order elements */
   PetscCheck(Nc <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Nc %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NC 3", (PetscInt)Nc);
   PetscCheck(dE <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "dE %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_DE 3", (PetscInt)dE);
+  PetscCheck(Nb / Nc <= 125, PETSC_COMM_SELF, PETSC_ERR_SUP, "Scalar basis count Nb/Nc = %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NBS 125", (PetscInt)(Nb / Nc));
 
   /* Ensure dynamic Views are allocated (realloc only when sizes change) */
   PetscCall(PetscFEKokkosEnsureDynamicViews(ctx, Ne, Nq, dE, totDim, numConstants));
@@ -1978,12 +1979,13 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
   auto ctx_d_elemVec   = ctx->d_elemVec;
 
   /* Capture scalars */
-  const PetscInt Nq_     = Nq;
-  const PetscInt Nb_     = Nb;
-  const PetscInt Nc_     = Nc;
-  const PetscInt dim_    = dim;
-  const PetscInt dE_     = dE;
-  const PetscInt totDim_ = totDim;
+  const PetscInt  Nq_     = Nq;
+  const PetscInt  Nb_     = Nb;
+  const PetscInt  Nc_     = Nc;
+  const PetscInt  dim_    = dim;
+  const PetscInt  dE_     = dE;
+  const PetscInt  totDim_ = totDim;
+  const PetscReal t_      = 0.0; /* SNES is steady-state; TS path would pass actual time */
 
   /* TeamPolicy: one team per element.  On GPU backends, the team size
    * provides hardware threads that can be used for intra-element parallelism
@@ -2021,7 +2023,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
       /* Integrate -- TeamThreadRange over Nq inside the cell kernel.
          IsAffine=true: all current meshes are affine hex.
          TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
-      PetscFEKokkosIntegrateResidualCell<f0, f1, true>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0.0, numConstants_,
+      PetscFEKokkosIntegrateResidualCell<f0, f1, true>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, t_, numConstants_,
                                                        ctx_d_constants.data(), ctx_d_elemVec.data());
       team.team_barrier();
 
@@ -2127,9 +2129,10 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
    * d_invJ, d_detJ, d_coords already hold valid device data. */
   dE = ctx->cached_dE_geom;
 
-  /* Runtime bounds check */
+  /* Runtime bounds check -- prevent GPU stack overflow on high-order elements */
   PetscCheck(Nc <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "Nc %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NC 3", (PetscInt)Nc);
   PetscCheck(dE <= 3, PETSC_COMM_SELF, PETSC_ERR_SUP, "dE %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_DE 3", (PetscInt)dE);
+  PetscCheck(Nb / Nc <= 125, PETSC_COMM_SELF, PETSC_ERR_SUP, "Scalar basis count Nb/Nc = %" PetscInt_FMT " exceeds PETSCFE_KOKKOS_MAX_NBS 125", (PetscInt)(Nb / Nc));
 
   /* Ensure dynamic Views are allocated (realloc only when sizes change) */
   PetscCall(PetscFEKokkosEnsureDynamicViews(ctx, Ne, Nq, dE, totDim, numConstants));
@@ -2197,12 +2200,14 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   auto ctx_d_coo_vals  = ctx->d_coo_vals;
 
   /* Capture scalars */
-  const PetscInt Nq_     = Nq;
-  const PetscInt Nb_     = Nb;
-  const PetscInt Nc_     = Nc;
-  const PetscInt dim_    = dim;
-  const PetscInt dE_     = dE;
-  const PetscInt totDim_ = totDim;
+  const PetscInt  Nq_       = Nq;
+  const PetscInt  Nb_       = Nb;
+  const PetscInt  Nc_       = Nc;
+  const PetscInt  dim_      = dim;
+  const PetscInt  dE_       = dE;
+  const PetscInt  totDim_   = totDim;
+  const PetscReal t_        = 0.0; /* SNES is steady-state; TS path would pass actual time */
+  const PetscReal u_tShift_ = 0.0; /* SNES is steady-state; TS path would pass actual shift */
 
   using team_policy_t     = Kokkos::TeamPolicy<>;
   using member_type       = team_policy_t::member_type;
@@ -2211,7 +2216,6 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
   const int jac_team_size = jac_on_gpu ? Nq_ : 1;
 
   /* Pass 1: integrate Jacobian for all elements into d_elemMat */
-  /* TODO: pass actual t and u_tShift for time-dependent problems; currently steady-state only */
   /* Pass 1: integrate Jacobian for all elements into d_elemMat.
      d_elemMat was zeroed above via Kokkos::deep_copy before this kernel.
      TeamThreadRange over Nq inside the cell kernel provides intra-element
@@ -2220,7 +2224,7 @@ static PetscErrorCode DMPlexSNESComputeJacobianFEM_Kokkos(SNES snes, Vec X, Mat 
     "DMPlexSNESComputeJacobianFEM_Kokkos_integrate", team_policy_t(Ne, jac_team_size), KOKKOS_LAMBDA(const member_type &team) {
       /* IsAffine=true: all current meshes are affine hex.
          TODO: dispatch IsAffine=false for non-affine (simplex) meshes. */
-      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, true, IsLinear>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0, 0.0, 0.0, numConstants_,
+      PetscFEKokkosIntegrateJacobianCell<G0, G1, G2, G3, true, IsLinear>(team, Nq_, Nb_, Nc_, dim_, dE_, d_B.data(), d_D.data(), d_w.data(), ctx_d_invJ.data(), ctx_d_detJ.data(), ctx_d_coords.data(), ctx_d_coeff.data(), totDim_, 0, 0, 0, t_, u_tShift_, numConstants_,
                                                                          ctx_d_constants.data(), ctx_d_elemMat.data());
     });
   Kokkos::fence();
