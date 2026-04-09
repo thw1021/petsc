@@ -37,14 +37,14 @@
    -Wnull-conversion.  Specializations for the concrete PetscPointFn* and
    PetscPointJacFn* types avoid both warnings. */
 template <PetscPointFn *P>
-struct PetscPointFnNonNull : std::true_type {};
+struct PetscPointFnNonNull : std::true_type { };
 template <>
-struct PetscPointFnNonNull<nullptr> : std::false_type {};
+struct PetscPointFnNonNull<nullptr> : std::false_type { };
 
 template <PetscPointJacFn *P>
-struct PetscPointJacFnNonNull : std::true_type {};
+struct PetscPointJacFnNonNull : std::true_type { };
 template <>
-struct PetscPointJacFnNonNull<nullptr> : std::false_type {};
+struct PetscPointJacFnNonNull<nullptr> : std::false_type { };
 
   /* Macro: PETSCFE_KOKKOS_POINT_ARGS
    Expands to the full PetscPointFn argument list (minus the output array).
