@@ -359,8 +359,8 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
         user->flux_z[current_idx] = 0.0;
 
         if (i > xs) {
-          PetscReal T_L    = t_arr[(k - zs) * ym * xm + (j - ys) * xm + ((i - 1) - xs)];
-          PetscReal T_R    = t_arr[current_idx];
+          PetscReal T_L    = PetscRealPart(t_arr[(k - zs) * ym * xm + (j - ys) * xm + ((i - 1) - xs)]);
+          PetscReal T_R    = PetscRealPart(t_arr[current_idx]);
           PetscReal sqrtTL = PetscSqrtReal(T_L);
           PetscReal sqrtTR = PetscSqrtReal(T_R);
 
@@ -371,8 +371,8 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
           user->flux_x[current_idx] = k_avg_x * (T_R - T_L) / dx;
         }
         if (j > ys) {
-          PetscReal T_B = t_arr[(k - zs) * ym * xm + ((j - 1) - ys) * xm + (i - xs)];
-          PetscReal T_T = t_arr[current_idx];
+          PetscReal T_B = PetscRealPart(t_arr[(k - zs) * ym * xm + ((j - 1) - ys) * xm + (i - xs)]);
+          PetscReal T_T = PetscRealPart(t_arr[current_idx]);
 
           PetscReal sqrtTB = PetscSqrtReal(T_B);
           PetscReal sqrtTT = PetscSqrtReal(T_T);
@@ -384,8 +384,8 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
           user->flux_y[current_idx] = k_avg_x * (T_T - T_B) / dy;
         }
         if (k > zs) {
-          PetscReal T_B = t_arr[((k - 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)];
-          PetscReal T_F = t_arr[current_idx];
+          PetscReal T_B = PetscRealPart(t_arr[((k - 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)]);
+          PetscReal T_F = PetscRealPart(t_arr[current_idx]);
 
           PetscReal sqrtTB = PetscSqrtReal(T_B);
           PetscReal sqrtTF = PetscSqrtReal(T_F);
@@ -411,13 +411,13 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal time, Vec T, Vec dTdt, void *
     for (PetscInt k = zs; k < zs + zm; k++) {
       for (PetscInt j = ys; j < ys + ym; j++) {
         for (PetscInt i = xs; i < xs + xm; i++) {
-          PetscReal T_center = t_arr[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)];
-          PetscReal T_im1    = (i > xs) ? t_arr[(k - zs) * ym * xm + (j - ys) * xm + ((i - 1) - xs)] : T_center;
-          PetscReal T_ip1    = (i < xs + xm - 1) ? t_arr[(k - zs) * ym * xm + (j - ys) * xm + ((i + 1) - xs)] : T_right;
-          PetscReal T_jm1    = (j > ys) ? t_arr[(k - zs) * ym * xm + ((j - 1) - ys) * xm + (i - xs)] : T_center;
-          PetscReal T_jp1    = (j < ys + ym - 1) ? t_arr[(k - zs) * ym * xm + ((j + 1) - ys) * xm + (i - xs)] : T_center;
-          PetscReal T_km1    = (k > zs) ? t_arr[((k - 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)] : T_center;
-          PetscReal T_kp1    = (k < zs + zm - 1) ? t_arr[((k + 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)] : T_center;
+          PetscReal T_center = PetscRealPart(t_arr[(k - zs) * ym * xm + (j - ys) * xm + (i - xs)]);
+          PetscReal T_im1    = (i > xs) ? PetscRealPart(t_arr[(k - zs) * ym * xm + (j - ys) * xm + ((i - 1) - xs)]) : T_center;
+          PetscReal T_ip1    = (i < xs + xm - 1) ? PetscRealPart(t_arr[(k - zs) * ym * xm + (j - ys) * xm + ((i + 1) - xs)]) : T_right;
+          PetscReal T_jm1    = (j > ys) ? PetscRealPart(t_arr[(k - zs) * ym * xm + ((j - 1) - ys) * xm + (i - xs)]) : T_center;
+          PetscReal T_jp1    = (j < ys + ym - 1) ? PetscRealPart(t_arr[(k - zs) * ym * xm + ((j + 1) - ys) * xm + (i - xs)]) : T_center;
+          PetscReal T_km1    = (k > zs) ? PetscRealPart(t_arr[((k - 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)]) : T_center;
+          PetscReal T_kp1    = (k < zs + zm - 1) ? PetscRealPart(t_arr[((k + 1) - zs) * ym * xm + (j - ys) * xm + (i - xs)]) : T_center;
 
           PetscReal Tmin_neighbor = PetscMin(T_center, PetscMin(T_im1, PetscMin(T_ip1, PetscMin(T_jm1, PetscMin(T_jp1, PetscMin(T_km1, T_kp1))))));
           PetscReal Tmax_neighbor = PetscMax(T_center, PetscMax(T_im1, PetscMax(T_ip1, PetscMax(T_jm1, PetscMax(T_jp1, PetscMax(T_km1, T_kp1))))));

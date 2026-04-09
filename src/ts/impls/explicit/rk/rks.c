@@ -103,7 +103,7 @@ static inline PetscReal ChebyshevDoublePrime(PetscInt j, PetscReal x)
 
 .seealso: [](ch_ts), `TSRKS`, `TSRKC2ComputeCoefficients()`
 */
-PetscErrorCode TSRKC1ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu, PetscReal *b)
+static PetscErrorCode TSRKC1ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu, PetscReal *b)
 {
   PetscReal w0 = 1.0 + epsilon / ((PetscReal)s * (PetscReal)s);
 
@@ -149,7 +149,7 @@ PetscErrorCode TSRKC1ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
 
 .seealso: [](ch_ts), `TSRKS`, `TSRKC1ComputeCoefficients()`
 */
-PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu, PetscReal *tilde_gamma, PetscReal *b)
+static PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu, PetscReal *tilde_gamma, PetscReal *b)
 {
   PetscReal w0 = 1.0 + epsilon / ((PetscReal)s * (PetscReal)s);
 
@@ -189,7 +189,7 @@ PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
   Not Collective
 
   Input Parameter:
-+ s - number of stages
+. s - number of stages
 
   Output Parameters:
 + mu       - mu coefficient
@@ -200,7 +200,7 @@ PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, PetscRea
 
 .seealso: [](ch_ts), `TSRKS`, `TSRKL2ComputeCoefficients()`
 */
-PetscErrorCode TSRKL1ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu)
+static PetscErrorCode TSRKL1ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu)
 {
   PetscReal w1 = 2.0 / ((PetscReal)s * (PetscReal)s + (PetscReal)s);
 
@@ -222,7 +222,7 @@ PetscErrorCode TSRKL1ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *n
   Not Collective
 
   Input Parameter:
-+ s           - number of stages
+. s - number of stages
 
   Output Parameters:
 + mu          - mu coefficient
@@ -235,7 +235,7 @@ PetscErrorCode TSRKL1ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *n
 
 .seealso: [](ch_ts), `TSRKS`, `TSRKL1ComputeCoefficients()`
 */
-PetscErrorCode TSRKL2ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu, PetscReal *tilde_gamma, PetscReal *b)
+static PetscErrorCode TSRKL2ComputeCoefficients(PetscInt s, PetscReal *mu, PetscReal *nu, PetscReal *tilde_mu, PetscReal *tilde_gamma, PetscReal *b)
 {
   PetscReal w1;
 
