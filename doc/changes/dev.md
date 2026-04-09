@@ -48,6 +48,8 @@
 ```{rubric} Mat:
 ```
 
+- Add `MATPRODUCT_PtAP` support for `MATDIAGONAL`
+
 ```{rubric} MatCoarsen:
 ```
 

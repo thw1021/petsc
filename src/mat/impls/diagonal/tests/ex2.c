@@ -2,10 +2,10 @@ static const char help[] = "Test MatPtAP with MATDIAGONAL\n";
 
 #include <petscmat.h>
 
-/* KOKKOS: Following two cases will fail, as MatDiagonalScale_{Seq,MPI}AIJKOKKOS does *
- * not support CPU diagonal vector against AIJ KOKKOS.                                *
- * -amat_type diagonal -pmat_type aijkokkos -adiag_vec_type standard                  *
- * -amat_type aijkokkos -pmat_type diagonal -pdiag_vec_type standard                  */
+/* KOKKOS: Following two cases will fail, as MatDiagonalScale_{Seq,MPI}AIJKOKKOS does
+   not support CPU diagonal vector against AIJ KOKKOS.
+   -amat_type diagonal -pmat_type aijkokkos -adiag_vec_type standard
+   -amat_type aijkokkos -pmat_type diagonal -pdiag_vec_type standard */
 static PetscErrorCode CreateTestMatrix(MPI_Comm comm, const char type[], const char prefix[], PetscInt m, PetscInt n, PetscRandom rand, Mat *M)
 {
   PetscBool isdiag, isaij, isdense;
