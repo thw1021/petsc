@@ -222,7 +222,8 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
     }
 
     /* Call F0 (zeroth-order / source term) -- resolved at compile time */
-    if constexpr (F0 != nullptr) {
+    constexpr bool has_F0 = (F0 != nullptr);
+    if constexpr (has_F0) {
       for (PetscInt c = 0; c < Nc; ++c) f0_loc[c] = 0.0;
       F0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f0_loc);
       /* Accumulate into elemVec via atomic_add: multiple threads (one per q)
@@ -233,7 +234,8 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
     }
 
     /* Call F1 (first-order / flux term) -- resolved at compile time */
-    if constexpr (F1 != nullptr) {
+    constexpr bool has_F1 = (F1 != nullptr);
+    if constexpr (has_F1) {
       for (PetscInt i = 0; i < Nc * dE; ++i) f1_loc[i] = 0.0;
       F1(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f1_loc);
       /* Accumulate: ev_e[b] += all_grad[b_s,d] * f1[c_b,d] * wq  (Opt #3: reuse precomputed grad)
@@ -361,19 +363,23 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
     }
 
     /* Evaluate Jacobian callbacks -- each resolved at compile time */
-    if constexpr (G0 != nullptr) {
+    constexpr bool has_G0 = (G0 != nullptr);
+    constexpr bool has_G1 = (G1 != nullptr);
+    constexpr bool has_G2 = (G2 != nullptr);
+    constexpr bool has_G3 = (G3 != nullptr);
+    if constexpr (has_G0) {
       for (PetscInt i = 0; i < Nc * Nc; ++i) g0_loc[i] = 0.0;
       G0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g0_loc);
     }
-    if constexpr (G1 != nullptr) {
+    if constexpr (has_G1) {
       for (PetscInt i = 0; i < Nc * Nc * dE; ++i) g1_loc[i] = 0.0;
       G1(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g1_loc);
     }
-    if constexpr (G2 != nullptr) {
+    if constexpr (has_G2) {
       for (PetscInt i = 0; i < Nc * dE * Nc; ++i) g2_loc[i] = 0.0;
       G2(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g2_loc);
     }
-    if constexpr (G3 != nullptr) {
+    if constexpr (has_G3) {
       for (PetscInt i = 0; i < Nc * dE * Nc * dE; ++i) g3_loc[i] = 0.0;
       G3(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g3_loc);
     }
@@ -435,18 +441,18 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
         PetscScalar entry = 0.0;
 
         /* G0: B_test[fc] * g0[fc,gc] * B_trial[gc] */
-        if constexpr (G0 != nullptr) entry += B_b_fc * g0_loc[fc * Nc + gc] * B_b2_gc;
+        if constexpr (has_G0) entry += B_b_fc * g0_loc[fc * Nc + gc] * B_b2_gc;
 
         /* G1: B_test[fc] * g1[fc,gc,d] * psi_grad[d] */
-        if constexpr (G1 != nullptr)
+        if constexpr (has_G1)
           for (PetscInt d = 0; d < dE; ++d) entry += B_b_fc * g1_loc[(fc * Nc + gc) * dE + d] * psi_grad[d];
 
         /* G2: phi_grad[d] * g2[fc,d,gc] * B_trial[gc] */
-        if constexpr (G2 != nullptr)
+        if constexpr (has_G2)
           for (PetscInt d = 0; d < dE; ++d) entry += phi_grad[d] * g2_loc[(fc * dE + d) * Nc + gc] * B_b2_gc;
 
         /* G3: phi_grad[d] * g3[fc,d,gc,e2] * psi_grad[e2] */
-        if constexpr (G3 != nullptr)
+        if constexpr (has_G3)
           for (PetscInt d = 0; d < dE; ++d)
             for (PetscInt e2 = 0; e2 < dE; ++e2) entry += phi_grad[d] * g3_loc[((fc * dE + d) * Nc + gc) * dE + e2] * psi_grad[e2];
 
