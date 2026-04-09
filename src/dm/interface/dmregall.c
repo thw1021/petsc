@@ -133,6 +133,9 @@ PETSC_EXTERN PetscErrorCode PetscFECreate_Composite(PetscFE);
 PETSC_EXTERN PetscErrorCode PetscFECreate_OpenCL(PetscFE);
 #endif
 PETSC_EXTERN PetscErrorCode PetscFECreate_Vector(PetscFE);
+#if defined(PETSC_HAVE_KOKKOS)
+PETSC_EXTERN PetscErrorCode PetscFECreate_Kokkos(PetscFE);
+#endif
 
 /*@C
   PetscFERegisterAll - Registers all of the PetscFE components in the `PetscFE` package.
@@ -155,6 +158,9 @@ PetscErrorCode PetscFERegisterAll(void)
   PetscCall(PetscFERegister(PETSCFEOPENCL, PetscFECreate_OpenCL));
 #endif
   PetscCall(PetscFERegister(PETSCFEVECTOR, PetscFECreate_Vector));
+#if defined(PETSC_HAVE_KOKKOS)
+  PetscCall(PetscFERegister(PETSCFEKOKKOS, PetscFECreate_Kokkos));
+#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #include <petscfv.h> /*I  "petscfv.h"  I*/
