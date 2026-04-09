@@ -32,6 +32,20 @@
   #include <petscsnes.h>
   #include <Kokkos_Core.hpp>
 
+/* Helper: compile-time check whether a function-pointer template parameter is non-null.
+   Using (FnPtr != nullptr) triggers GCC -Waddress; using !!FnPtr triggers clang
+   -Wnull-conversion.  Specializations for the concrete PetscPointFn* and
+   PetscPointJacFn* types avoid both warnings. */
+template <PetscPointFn *P>
+struct PetscPointFnNonNull : std::true_type {};
+template <>
+struct PetscPointFnNonNull<nullptr> : std::false_type {};
+
+template <PetscPointJacFn *P>
+struct PetscPointJacFnNonNull : std::true_type {};
+template <>
+struct PetscPointJacFnNonNull<nullptr> : std::false_type {};
+
   /* Macro: PETSCFE_KOKKOS_POINT_ARGS
    Expands to the full PetscPointFn argument list (minus the output array).
    Use this in KOKKOS_INLINE_FUNCTION callback declarations to keep them
@@ -229,11 +243,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
     }
 
     /* Call F0 (zeroth-order / source term) -- resolved at compile time */
-  #if defined(__GNUC__) && !defined(__clang__)
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Waddress"
-  #endif
-    constexpr bool has_F0 = (F0 != nullptr);
+    constexpr bool has_F0 = PetscPointFnNonNull<F0>::value;
     if constexpr (has_F0) {
       for (PetscInt c = 0; c < Nc; ++c) f0_loc[c] = 0.0;
       F0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f0_loc);
@@ -245,10 +255,7 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateResidualCell(const Kokkos::Tea
     }
 
     /* Call F1 (first-order / flux term) -- resolved at compile time */
-    constexpr bool has_F1 = (F1 != nullptr);
-  #if defined(__GNUC__) && !defined(__clang__)
-    #pragma GCC diagnostic pop
-  #endif
+    constexpr bool has_F1 = PetscPointFnNonNull<F1>::value;
     if constexpr (has_F1) {
       for (PetscInt i = 0; i < Nc * dE; ++i) f1_loc[i] = 0.0;
       F1(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, x_eq, numConstants, constants, f1_loc);
@@ -377,17 +384,10 @@ KOKKOS_INLINE_FUNCTION void PetscFEKokkosIntegrateJacobianCell(const Kokkos::Tea
     }
 
     /* Evaluate Jacobian callbacks -- each resolved at compile time */
-  #if defined(__GNUC__) && !defined(__clang__)
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Waddress"
-  #endif
-    constexpr bool has_G0 = (G0 != nullptr);
-    constexpr bool has_G1 = (G1 != nullptr);
-    constexpr bool has_G2 = (G2 != nullptr);
-    constexpr bool has_G3 = (G3 != nullptr);
-  #if defined(__GNUC__) && !defined(__clang__)
-    #pragma GCC diagnostic pop
-  #endif
+    constexpr bool has_G0 = PetscPointJacFnNonNull<G0>::value;
+    constexpr bool has_G1 = PetscPointJacFnNonNull<G1>::value;
+    constexpr bool has_G2 = PetscPointJacFnNonNull<G2>::value;
+    constexpr bool has_G3 = PetscPointJacFnNonNull<G3>::value;
     if constexpr (has_G0) {
       for (PetscInt i = 0; i < Nc * Nc; ++i) g0_loc[i] = 0.0;
       G0(dE, 1, 0, uOff_l, uOff_x_l, u_loc, nullptr, ux_loc, nullptr, nullptr, nullptr, nullptr, nullptr, t, u_tShift, x_eq, numConstants, constants, g0_loc);
