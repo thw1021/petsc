@@ -67,13 +67,13 @@ class Configure(config.package.GNUPackage):
       args.append('--without-hwloc')
     else:
       args.append('--with-hwloc=embedded')
+
     # make sure MPICH does not build with optimization for debug version of PETSc, so we can debug through MPICH
     if self.compilerFlags.debugging:
       args.append("--enable-fast=no")
       args.append("--enable-error-messages=all")
-      mpich_device = 'ch3:sock'
-    else:
-      mpich_device = 'ch3:nemesis'
+
+    mpich_device = 'ch4'
     if self.cuda.found:
       if not hasattr(self.cuda, 'cudaDir'):
         raise RuntimeError('CUDA directory not detected! Mail configure.log to petsc-maint@mcs.anl.gov.')
@@ -91,6 +91,7 @@ class Configure(config.package.GNUPackage):
     if 'download-mpich-device' in self.argDB:
       mpich_device = self.argDB['download-mpich-device']
     args.append('--with-device='+mpich_device)
+
     # meminit: preinitialize memory associated structures and unions to eliminate access warnings from programs like valgrind
     # dbg: add compiler flag, -g, to all internal compiler flag i.e. MPICHLIB_CFLAGS, MPICHLIB_CXXFLAGS, MPICHLIB_FFLAGS, and MPICHLIB_FCFLAGS, to make debugging easier
     args.append('--enable-g=meminit,dbg')
