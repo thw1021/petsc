@@ -1,10 +1,11 @@
 static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps\n"
-                     "  Problem: -Laplacian(u) = f on [0,1]^2\n"
-                     "  Manufactured solution: u = sin(pi*x)*sin(pi*y)\n"
+                     "  Problem: -Laplacian(u) = f on [0,1]^d, d=2 or 3\n"
+                     "  Manufactured solution: u = prod_{i} sin(pi*x_i)\n"
                      "Options:\n"
-                     "  -petscspace_degree <k>     FE polynomial degree (default: 1)\n"
-                     "  -dm_plex_box_faces <Nx,Ny> mesh resolution (default: 4,4)\n"
-                     "  -ksp_type cg -pc_type gamg recommended solver\n";
+                     "  -petscspace_degree <k>          FE polynomial degree (default: 1)\n"
+                     "  -dm_plex_box_faces <Nx[,Ny,Nz]> mesh resolution (default: 4,4)\n"
+                     "  -dm_plex_dim <d>                spatial dimension (default: 2)\n"
+                     "  -ksp_type cg -pc_type gamg      recommended solver\n";
 
 /*
   ex_kokkos_fe.kokkos.cxx -- Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps
@@ -62,14 +63,16 @@ static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps
    PETSCFE_KOKKOS_POINT_ARGS / PETSCFE_KOKKOS_JAC_POINT_ARGS macros.
    ========================================================================= */
 
-/* f0: source term  f0 = -2pi^2 sin(pix) sin(piy)
- * (negative because PETSc convention: F(u) = 0, so f0 = -f_rhs) */
+/* f0: source term  f0 = -dim * pi^2 * prod_{d=0}^{dim-1} sin(pi*x[d])
+ * Manufactured solution: u = prod sin(pi*x[d])
+ * Laplacian: -grad^2 u = dim * pi^2 * prod sin(pi*x[d])
+ * PETSc convention: F(u) = 0, so f0 = -f_rhs */
 KOKKOS_INLINE_FUNCTION
 static void f0_poisson(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[])
 {
-  /* assumes dim == 2 */
-  /* Cast to PetscScalar for complex-build safety: Kokkos::sin returns PetscReal. */
-  f0[0] = (PetscScalar)(-2.0 * PETSC_PI * PETSC_PI * Kokkos::sin(PETSC_PI * x[0]) * Kokkos::sin(PETSC_PI * x[1]));
+  PetscReal prod = 1.0;
+  for (PetscInt d = 0; d < dim; ++d) prod *= Kokkos::sin(PETSC_PI * x[d]);
+  f0[0] = (PetscScalar)(-(PetscReal)dim * PETSC_PI * PETSC_PI * prod);
 }
 
 /* f1: flux term  f1[d] = du/dx_d  (Laplacian weak form) */
@@ -92,9 +95,10 @@ static void g3_poisson(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])
    ========================================================================= */
 static PetscErrorCode u_exact(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
+  PetscReal prod = 1.0;
   PetscFunctionBeginUser;
-  PetscCheck(dim == 2, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Only dim==2 supported");
-  *u = PetscSinReal(PETSC_PI * x[0]) * PetscSinReal(PETSC_PI * x[1]);
+  for (PetscInt d = 0; d < dim; ++d) prod *= PetscSinReal(PETSC_PI * x[d]);
+  *u = prod;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -202,7 +206,11 @@ int main(int argc, char **argv)
    *
    * Geometry is built once here and reused across all residual/Jacobian
    * evaluations.  For moving meshes or AMR, call PetscFEKokkosResetGeometry
-   * + PetscFEKokkosSetUpGeometry explicitly to rebuild without recreating maps. */
+   * + PetscFEKokkosSetUpGeometry explicitly to rebuild without recreating maps.
+   *
+   * DMPlexSNESComputeJacobianFEM_Kokkos passes a Kokkos device pointer to
+   * MatSetValuesCOO, which requires MATAIJKOKKOS; pass -dm_mat_type aijkokkos
+   * on the command line (see test args below). */
   PetscCall(DMCreateMatrix(dm, &J));
   PetscCall(PetscFEKokkosSetUp(dm, &kokkos_ctx, J));
 
@@ -244,11 +252,21 @@ int main(int argc, char **argv)
   test:
     suffix: 1
     requires: kokkos_kernels triangle
-    args: -dm_plex_simplex 1 -petscspace_degree 2 -dm_plex_box_faces 8,8 -ksp_type cg -pc_type gamg
+    args: -dm_plex_simplex 1 -petscspace_degree 2 -dm_plex_box_faces 8,8 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
     filter: grep "L2 error"
   test:
     suffix: 2
     requires: kokkos_kernels
-    args: -dm_plex_simplex 0 -petscspace_degree 2 -dm_plex_box_faces 8,8 -ksp_type cg -pc_type gamg
+    args: -dm_plex_simplex 0 -petscspace_degree 2 -dm_plex_box_faces 8,8 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
+    filter: grep "L2 error"
+  test:
+    suffix: 3
+    requires: kokkos_kernels triangle ctetgen
+    args: -dm_plex_dim 3 -dm_plex_simplex 1 -petscspace_degree 2 -dm_plex_box_faces 2,2,2 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
+    filter: grep "L2 error"
+  test:
+    suffix: 4
+    requires: kokkos_kernels
+    args: -dm_plex_dim 3 -dm_plex_simplex 0 -petscspace_degree 2 -dm_plex_box_faces 2,2,2 -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type cg -pc_type gamg
     filter: grep "L2 error"
 TEST*/
