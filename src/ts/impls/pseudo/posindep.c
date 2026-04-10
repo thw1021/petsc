@@ -689,7 +689,10 @@ PETSC_EXTERN PetscErrorCode TSCreate_Pseudo(TS ts)
 
   PetscCall(TSGetSNES(ts, &snes));
   PetscCall(SNESGetType(snes, &stype));
-  if (!stype) PetscCall(SNESSetType(snes, SNESKSPONLY));
+  if (!stype) {
+    PetscCall(SNESSetType(snes, SNESKSPONLY));
+    // PetscCall(SNESSetNormSchedule(snes, SNES_NORM_INITIAL_ONLY)); // Final SNES norm is irrelevant to pseudo
+  }
 
   PetscCall(PetscNew(&pseudo));
   ts->data = (void *)pseudo;
