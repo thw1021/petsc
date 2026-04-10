@@ -239,7 +239,7 @@ PetscErrorCode MatGetVecType(Mat mat, VecType *vtype)
 - vtype - vector type
 
   Options Database Key:
-. -mat_vec_type type - set the `VecType` of the created vectors during `MatSetFromOptions()`
+. -mat_vec_type vtype - set the `VecType` of the created vectors during `MatSetFromOptions()`
 
   Level: advanced
 
