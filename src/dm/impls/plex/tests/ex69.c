@@ -999,7 +999,7 @@ int main(int argc, char **argv)
   testset:
     requires: triangle
     args: -dm_refine 1 -dm_plex_transform_type cohesive_extrude \
-            -dm_plex_transform_active fault \
+            -dm_plex_transform_active fault -dm_plex_save_transform \
           -dm_view ::ascii_info_detail -coarse_dm_view ::ascii_info_detail
 
     test:

@@ -149,6 +149,8 @@ PetscErrorCode DMPlexGetTransformType(DM dm, DMPlexTransformType *type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#include <petsc/private/dmplextransformimpl.h>
+
 PetscErrorCode DMPlexSetTransform(DM dm, DMPlexTransform tr)
 {
   DM_Plex *mesh = (DM_Plex *)dm->data;
@@ -158,6 +160,18 @@ PetscErrorCode DMPlexSetTransform(DM dm, DMPlexTransform tr)
   if (tr) PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 2);
   PetscCall(PetscObjectReference((PetscObject)tr));
   PetscCall(DMPlexTransformDestroy(&mesh->transform));
+  {
+  #if 0
+    DM dmOld, dmNew;
+
+    // We have to clone the DM because sometimes we overwrite the old mesh with the transformed one, such as in plexcreate
+    PetscCall(DMPlexTransformGetDM(tr, &dmOld));
+    PetscCall(DMClone(dmOld, &dmNew));
+    PetscCall(DMPlexTransformSetDM(tr, dmNew));
+  #else
+    PetscCall(DMPlexTransformSetDM(tr, NULL));
+  #endif
+  }
   mesh->transform = tr;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
