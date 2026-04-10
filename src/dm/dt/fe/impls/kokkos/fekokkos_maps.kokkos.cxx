@@ -19,6 +19,30 @@
 #include <petscfekokkos.h>
 #include <Kokkos_Core.hpp>
 
+/*@C
+  PetscFEKokkosCreateMaps - Build host-side assembly maps (DOF indices, constraint info, COO offsets) for GPU FEM assembly
+
+  Not Collective
+
+  Input Parameter:
+. dm - the `DM` with `PetscFE` discretization attached (after `DMCreateDS()`)
+
+  Output Parameter:
+. maps - pointer to a zero-initialized `PetscFEKokkosMaps` struct; populated with host arrays
+
+  Level: intermediate
+
+  Notes:
+  This is the first phase of `PetscFEKokkosSetUp()`. It builds the element-to-global DOF index
+  map, identifies constrained DOFs, and computes COO element offsets on the host. The host arrays
+  must be staged to device with `PetscFEKokkosStageMaps()` before any GPU kernel launch.
+
+  For most users, `PetscFEKokkosSetUp()` is the preferred entry point, which calls this function
+  internally.
+
+.seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUp()`, `PetscFEKokkosStageMaps()`, `PetscFEKokkosPreallocateCOO()`,
+          `PetscFEKokkosSetUpGeometry()`, `PetscFEKokkosMapsDestroy()`
+@*/
 PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
 {
   PetscSection section, globalSection;
@@ -316,9 +340,27 @@ PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* PetscFEKokkosStageMaps
-   Deep-copy all host arrays to device Kokkos::Views.
-   Must be called after PetscFEKokkosCreateMaps and before any kernel launch. */
+/*@C
+  PetscFEKokkosStageMaps - Deep-copy host assembly maps to device Kokkos Views
+
+  Not Collective
+
+  Input Parameters:
++ maps - `PetscFEKokkosMaps` struct previously populated by `PetscFEKokkosCreateMaps()`
+- dm   - the `DM` (used to query tabulation data)
+
+  Level: intermediate
+
+  Notes:
+  Must be called after `PetscFEKokkosCreateMaps()` and before any GPU kernel launch.
+  Also stages the basis function tables (B, D) and quadrature weights to device.
+
+  For most users, `PetscFEKokkosSetUp()` is the preferred entry point, which calls this function
+  internally.
+
+.seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUp()`, `PetscFEKokkosCreateMaps()`, `PetscFEKokkosPreallocateCOO()`,
+          `PetscFEKokkosSetUpGeometry()`, `PetscFEKokkosMapsDestroy()`
+@*/
 PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps, DM dm)
 {
   const PetscInt Ne       = maps->num_elements;
@@ -435,10 +477,28 @@ PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps, DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* PetscFEKokkosEnsureDynamicViews
-   Reallocate cached dynamic device Views (invJ, detJ, coords, coeff, elemVec,
-   elemMat, coo_vals, constants) only when sizes change.
-   Called at the start of each residual/Jacobian evaluation. */
+/*@C
+  PetscFEKokkosEnsureDynamicViews - Reallocate cached dynamic device Views only when sizes change
+
+  Not Collective
+
+  Input Parameters:
++ maps         - `PetscFEKokkosMaps` struct
+. Ne           - number of elements
+. Nq           - number of quadrature points per element
+. dE           - embedding dimension
+. totDim       - total DOFs per element
+- numConstants - number of PDE constants
+
+  Level: developer
+
+  Notes:
+  Called internally at the start of each residual/Jacobian evaluation. Reallocates device Views
+  for invJ, detJ, coords, coeff, elemVec, elemMat, coo_vals, and constants only when the
+  corresponding sizes have changed since the last call.
+
+.seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUp()`, `PetscFEKokkosCreateMaps()`, `PetscFEKokkosStageMaps()`
+@*/
 PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *maps, PetscInt Ne, PetscInt Nq, PetscInt dE, PetscInt totDim, PetscInt numConstants)
 {
   PetscFunctionBegin;
@@ -469,15 +529,28 @@ PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *maps, PetscInt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* PetscFEKokkosPreallocateCOO
-   Build COO row/col arrays from h_gIdx (with constraint expansion) and
-   call MatSetPreallocationCOO.
-   Must be called after PetscFEKokkosCreateMaps (host arrays must be valid).
-   The matrix J must already exist (e.g. from DMCreateMatrix).
+/*@C
+  PetscFEKokkosPreallocateCOO - Build COO row/column index arrays and call `MatSetPreallocationCOO()` for GPU Jacobian assembly
 
-   Phase 1.D: constrained DOFs expand to num_face rows/columns.
-   Phase 1.C: when num_reduced == 0, fullNb[e] == Nb_active[e] and the
-              behavior is identical to the original implementation. */
+  Collective
+
+  Input Parameters:
++ maps - `PetscFEKokkosMaps` struct previously populated by `PetscFEKokkosCreateMaps()`
+- J    - matrix to preallocate; must already exist (e.g., from `DMCreateMatrix()`)
+
+  Level: intermediate
+
+  Notes:
+  Builds the COO row/column arrays from the host global index map (with constraint expansion
+  for boundary DOFs) and calls `MatSetPreallocationCOO()`. The matrix must be of type
+  `MATAIJKOKKOS` so that `MatSetValuesCOO()` can accept device pointers during Jacobian assembly.
+
+  For most users, `PetscFEKokkosSetUp()` is the preferred entry point, which calls this function
+  internally.
+
+.seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUp()`, `PetscFEKokkosCreateMaps()`, `PetscFEKokkosStageMaps()`,
+          `PetscFEKokkosMapsDestroy()`, `MatSetPreallocationCOO()`, `MatSetValuesCOO()`
+@*/
 PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J)
 {
   const PetscInt   Ne       = maps->num_elements;
@@ -551,16 +624,27 @@ PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* PetscFEKokkosResetGeometry
-   Release cached element geometry objects (fullGeom, chunkGeom, cellIS) and
-   clear the device geometry Views (d_invJ, d_detJ, d_coords).  Sets
-   geom_cached = PETSC_FALSE so that PetscFEKokkosSetUpGeometry will rebuild
-   on the next call.
+/*@C
+  PetscFEKokkosResetGeometry - Release cached element geometry and invalidate device geometry Views
 
-   Safe to call when geom_cached == PETSC_FALSE (no-op).
-   Called automatically by PetscFEKokkosMapsDestroy.
-   Call explicitly before PetscFEKokkosSetUpGeometry when the mesh changes
-   (e.g. after AMR refinement or mesh motion). */
+  Not Collective
+
+  Input Parameter:
+. maps - `PetscFEKokkosMaps` struct
+
+  Level: intermediate
+
+  Notes:
+  Releases cached element geometry objects (fullGeom, chunkGeom, cellIS) and clears the device
+  geometry Views (d_invJ, d_detJ, d_coords). Sets `geom_cached` to `PETSC_FALSE` so that
+  `PetscFEKokkosSetUpGeometry()` will rebuild on the next call.
+
+  Safe to call when geometry is not cached (no-op). Called automatically by
+  `PetscFEKokkosMapsDestroy()`. Call explicitly before `PetscFEKokkosSetUpGeometry()` when the
+  mesh changes (e.g., after AMR refinement or mesh motion).
+
+.seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUpGeometry()`, `PetscFEKokkosSetUp()`, `PetscFEKokkosMapsDestroy()`
+@*/
 PetscErrorCode PetscFEKokkosResetGeometry(PetscFEKokkosMaps *maps)
 {
   PetscFunctionBegin;
@@ -576,10 +660,26 @@ PetscErrorCode PetscFEKokkosResetGeometry(PetscFEKokkosMaps *maps)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* PetscFEKokkosMapsDestroy
-   Free all host-side PetscMalloc'd arrays.  Device Views are reference-
-   counted by Kokkos and freed automatically when they go out of scope or
-   when the struct is destroyed. */
+/*@C
+  PetscFEKokkosMapsDestroy - Free host arrays and cached geometry in a `PetscFEKokkosMaps` struct
+
+  Not Collective
+
+  Input Parameter:
+. maps - `PetscFEKokkosMaps` struct to destroy
+
+  Level: beginner
+
+  Notes:
+  Frees all host-allocated arrays (global indices, constraint maps, COO offsets) and calls
+  `PetscFEKokkosResetGeometry()` to release cached geometry. Device Kokkos Views are
+  reference-counted and freed automatically when the struct goes out of scope.
+
+  Must be called when the `PetscFEKokkosMaps` is no longer needed, typically after the last
+  `SNESSolve()`.
+
+.seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUp()`, `PetscFEKokkosResetGeometry()`
+@*/
 PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps *maps)
 {
   PetscFunctionBegin;
@@ -612,34 +712,28 @@ PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps *maps)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* PETSc-level API for GPU-resident FEM assembly
+/*@C
+  PetscFEKokkosSetUpGeometry - Build element geometry on host and upload to device
 
-   Lifecycle:
-     PetscFEKokkosSetUp(dm, maps, J)        -- build maps, stage to device, preallocate COO,
-                                               and build element geometry on device (once)
-     DMPlexSNESComputeResidualFEM_Kokkos<f0,f1>(snes, X, F, maps)
-     DMPlexSNESComputeJacobianFEM_Kokkos<G0,G1,G2,G3>(snes, X, J, Jp, maps)
-     PetscFEKokkosMapsDestroy(maps)          -- free host arrays (device Views auto-freed)
+  Not Collective
 
-   For moving meshes or AMR, call PetscFEKokkosResetGeometry + PetscFEKokkosSetUpGeometry
-   explicitly to rebuild the device geometry without rebuilding the full maps.
+  Input Parameters:
++ dm   - the `DM` with `PetscFE` discretization and coordinate field attached
+- maps - `PetscFEKokkosMaps` struct already initialized by `PetscFEKokkosSetUp()`
 
-   Recommended order:
-     SNESSetFromOptions(snes)               -- triggers DMSetUp -> Kokkos::initialize
-     PetscFEKokkosSetUp(dm, maps, J)       -- Kokkos already initialized */
+  Level: intermediate
 
-/* PetscFEKokkosSetUpGeometry
-   Build element geometry on the host (DMFieldCreateFEGeom), upload invJ/detJ/coords
-   to device, and cache the result in maps.  Idempotent: a second call is a no-op
-   unless PetscFEKokkosResetGeometry has been called first.
+  Notes:
+  Builds element geometry on the host via `DMFieldCreateFEGeom()`, uploads invJ, detJ, and
+  physical coordinates to device Kokkos Views, and caches the result. Idempotent: a second
+  call is a no-op unless `PetscFEKokkosResetGeometry()` has been called first.
 
-   Must be called after PetscFEKokkosSetUp (maps and device Views must exist).
-   Called automatically by PetscFEKokkosSetUp for the common static-mesh case.
-   Call explicitly after PetscFEKokkosResetGeometry when the mesh changes.
+  Called automatically by `PetscFEKokkosSetUp()` for the common static-mesh case. Call
+  explicitly after `PetscFEKokkosResetGeometry()` when the mesh changes (e.g., after AMR
+  refinement or mesh motion).
 
-   Parameters:
-     dm   -- the DM with FE discretization and coordinate field attached
-     maps -- maps struct already initialised by PetscFEKokkosSetUp */
+.seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosSetUp()`, `PetscFEKokkosResetGeometry()`, `PetscFEKokkosMapsDestroy()`
+@*/
 PetscErrorCode PetscFEKokkosSetUpGeometry(DM dm, PetscFEKokkosMaps *maps)
 {
   PetscDS            ds;
@@ -774,23 +868,32 @@ PetscErrorCode PetscFEKokkosSetUpGeometry(DM dm, PetscFEKokkosMaps *maps)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* PetscFEKokkosSetUp
-   Build assembly maps, stage to device, preallocate the COO matrix J, and
-   build element geometry on device.
+/*@C
+  PetscFEKokkosSetUp - Build assembly maps, stage to device, preallocate COO matrix, and build element geometry for GPU FEM assembly
 
-   Parameters:
-     dm   -- the DM with FE discretization already attached (after DMCreateDS)
-     maps -- output; caller must pass a pointer to a zero-initialised
-             PetscFEKokkosMaps (stack or heap).
-     J    -- matrix to preallocate via MatSetPreallocationCOO; must already
-             exist (e.g. from DMCreateMatrix).
+  Collective
 
-   Calls (in order):
-     PetscFEKokkosCreateMaps(dm, maps)
-     PetscKokkosInitializeCheck()
-     PetscFEKokkosStageMaps(maps)
-     PetscFEKokkosPreallocateCOO(maps, J)
-     PetscFEKokkosSetUpGeometry(dm, maps) */
+  Input Parameters:
++ dm   - the `DM` with `PetscFE` discretization attached (after `DMCreateDS()`)
+. maps - pointer to a zero-initialized `PetscFEKokkosMaps` struct (stack or heap)
+- J    - matrix to preallocate via `MatSetPreallocationCOO()`; must already exist (e.g., from `DMCreateMatrix()`)
+
+  Level: beginner
+
+  Notes:
+  This is the primary entry point for setting up GPU-resident FEM assembly. Must be called after
+  `SNESSetFromOptions()`, which triggers Kokkos initialization.
+
+  Internally calls (in order)\:
+  `PetscFEKokkosCreateMaps()`, `PetscFEKokkosStageMaps()`, `PetscFEKokkosPreallocateCOO()`,
+  and `PetscFEKokkosSetUpGeometry()`.
+
+  The matrix `J` must be of type `MATAIJKOKKOS` (pass `-dm_mat_type aijkokkos` on the command line).
+
+.seealso: [](ch_fe), `PetscFE`, `PetscFEKokkosMapsDestroy()`, `PetscFEKokkosCreateMaps()`, `PetscFEKokkosStageMaps()`,
+          `PetscFEKokkosPreallocateCOO()`, `PetscFEKokkosSetUpGeometry()`, `PetscFEKokkosResetGeometry()`,
+          `MatSetPreallocationCOO()`, `MatSetValuesCOO()`
+@*/
 PetscErrorCode PetscFEKokkosSetUp(DM dm, PetscFEKokkosMaps *maps, Mat J)
 {
   PetscFunctionBegin;
