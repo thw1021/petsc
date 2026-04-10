@@ -9756,7 +9756,7 @@ PetscErrorCode MatStashGetInfo(Mat mat, PetscInt *nstash, PetscInt *reallocs, Pe
 
   The `VecType` of the created vectors is determined by the `MatType` of `mat`. This can be overridden by using `MatSetVecType()` or the option `-mat_vec_type`.
 
-  These are new vectors which are not owned by the `mat`, they should be destroyed in `VecDestroy()` when no longer needed
+  These are new vectors which are not owned by the `mat`, they should be destroyed with `VecDestroy()` when no longer needed.
 
 .seealso: [](ch_matrices), `Mat`, `Vec`, `VecCreate()`, `VecDestroy()`, `DMCreateGlobalVector()`, `MatSetVecType()`
 @*/
