@@ -10275,7 +10275,7 @@ PetscErrorCode DMPlexCheckPointSF(DM dm, PetscSF pointSF, PetscBool allowExtraRo
     for (PetscInt d = 0; d <= depth; ++d) {
       PetscCall(DMPlexGetDepthStratum(dm, d, &starts[d], NULL));
     }
-    PetscCall(DMPlexGetDepthStratum(dm, depth - 1, NULL, &starts[depth + 1]));
+    PetscCall(DMPlexGetDepthStratum(dm, 1, NULL, &starts[depth + 1]));
     PetscCallMPI(MPI_Allgather(starts, depth + 2, MPIU_INT, gstarts, depth + 2, MPIU_INT, comm));
     for (l = 0; l < nleaves; ++l) {
       const PetscInt point  = locals ? locals[l] : l;
@@ -10290,7 +10290,7 @@ PetscErrorCode DMPlexCheckPointSF(DM dm, PetscSF pointSF, PetscBool allowExtraRo
           break;
         }
       }
-      PetscCheck(rdepth != -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Leaf %" PetscInt_FMT " was not found on remote rank %" PetscInt_FMT, point, rrank);
+      PetscCheck(rdepth != -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Leaf %" PetscInt_FMT " (%" PetscInt_FMT ") was not found on remote rank %" PetscInt_FMT, point, rpoint, rrank);
       PetscCheck(pdepth == rdepth, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Leaf %" PetscInt_FMT " has depth %" PetscInt_FMT " but remote (%" PetscInt_FMT ", %" PetscInt_FMT ") depth is %" PetscInt_FMT, point, pdepth, rpoint, rrank, rdepth);
     }
     PetscCall(PetscFree3(starts, gstarts, depths));
