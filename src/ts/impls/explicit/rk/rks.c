@@ -84,7 +84,7 @@ static inline PetscReal ChebyshevDoublePrime(PetscInt j, PetscReal x)
   return j * (x * Uj1 - j * Tj) / denom2;
 }
 
-/*@
+/*
   TSRKC1ComputeCoefficients - This function calculates the coefficients for the first-order RK-Chebyshev method
 
   Not Collective
@@ -129,7 +129,7 @@ static PetscErrorCode TSRKC1ComputeCoefficients(PetscInt s, PetscReal epsilon, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*
   TSRKC2ComputeCoefficients - This function calculates the coefficients for the second-order RK-Chebyshev method
 
   Not Collective
@@ -183,7 +183,7 @@ static PetscErrorCode TSRKC2ComputeCoefficients(PetscInt s, PetscReal epsilon, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*
   TSRKL1ComputeCoefficients - This function calculates the coefficients for the first-order RK-Legendre method
 
   Not Collective
@@ -216,7 +216,7 @@ static PetscErrorCode TSRKL1ComputeCoefficients(PetscInt s, PetscReal *mu, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*
   TSRKL2ComputeCoefficients - This function calculates the coefficients for the second-order RK-Legendre method
 
   Not Collective
@@ -406,7 +406,7 @@ static PetscErrorCode TSView_RKS(TS ts, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "RKS method: %s, stages=%" PetscInt_FMT "\n", RKSTypes[rks->type], rks->stages));
-    for (PetscInt j = 0; j < rks->stages; ++j) PetscCall(PetscViewerASCIIPrintf(viewer, "s:%" PetscInt_FMT ", mu=%f, nu=%f, tilde_mu=%f, tilde_gamma=%f, b=%f\n", j, rks->mu[j], rks->nu[j], rks->tilde_mu[j], rks->tilde_gamma[j], rks->b[j]));
+    for (PetscInt j = 0; j < rks->stages; ++j) PetscCall(PetscViewerASCIIPrintf(viewer, "s:%" PetscInt_FMT ", mu=%f, nu=%f, tilde_mu=%f, tilde_gamma=%f, b=%f\n", j, (double) rks->mu[j], (double) rks->nu[j], (double) rks->tilde_mu[j], (double) rks->tilde_gamma[j], (double) rks->b[j]));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
