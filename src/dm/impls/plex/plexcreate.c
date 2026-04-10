@@ -94,7 +94,7 @@ PetscErrorCode DMPlexCopy_Internal(DM dmin, PetscBool copyPeriodicity, PetscBool
   VecType              vecType;
   MatType              matType;
   MatOrderingType      otype;
-  PetscBool            dist, useCeed, balance_partition;
+  PetscBool            dist, sparseLocalize, useCeed, balance_partition;
   DMReorderDefaultFlag reorder;
 
   PetscFunctionBegin;
