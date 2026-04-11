@@ -60,7 +60,7 @@ static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps
    nvcc_wrapper can inline them into the GPU kernel at compile time.
 
    Signature matches PetscPointFn (petscdstypes.h) -- use the
-   PETSCFE_KOKKOS_POINT_ARGS / PETSCFE_KOKKOS_JAC_POINT_ARGS macros.
+   PETSC_POINT_ARGS / PETSC_JAC_POINT_ARGS macros.
    ========================================================================= */
 
 /* f0: source term  f0 = -dim * pi^2 * prod_{d=0}^{dim-1} sin(pi*x[d])
@@ -68,7 +68,7 @@ static char help[] = "Tutorial: GPU-resident FEM assembly with PetscFEKokkosMaps
  * Laplacian: -grad^2 u = dim * pi^2 * prod sin(pi*x[d])
  * PETSc convention: F(u) = 0, so f0 = -f_rhs */
 KOKKOS_INLINE_FUNCTION
-static void f0_poisson(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[])
+static void f0_poisson(PETSC_POINT_ARGS, PetscScalar f0[])
 {
   PetscReal prod = 1.0;
   for (PetscInt d = 0; d < dim; ++d) prod *= Kokkos::sin(PETSC_PI * x[d]);
@@ -77,14 +77,14 @@ static void f0_poisson(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[])
 
 /* f1: flux term  f1[d] = du/dx_d  (Laplacian weak form) */
 KOKKOS_INLINE_FUNCTION
-static void f1_poisson(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f1[])
+static void f1_poisson(PETSC_POINT_ARGS, PetscScalar f1[])
 {
   for (PetscInt d = 0; d < dim; ++d) f1[d] = u_x[d];
 }
 
 /* g3: Jacobian  g3[i*dim+j] = delta_{ij}  (identity tensor for Laplacian) */
 KOKKOS_INLINE_FUNCTION
-static void g3_poisson(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar g3[])
+static void g3_poisson(PETSC_JAC_POINT_ARGS, PetscScalar g3[])
 {
   for (PetscInt d = 0; d < dim; ++d) g3[d * dim + d] = 1.0;
 }
@@ -131,11 +131,7 @@ static PetscErrorCode SetupDiscretization(DM dm)
   PetscCall(DMCreateDS(dm));
   PetscCall(PetscFEDestroy(&fe));
 
-  /* Register DS metadata (exact solution, BCs).  No host residual callbacks
-   * are needed: the GPU template path (DMPlexSNESComputeResidualFEM_Kokkos)
-   * bypasses the PetscDS callback table entirely.
-   * PetscDSSetResidual(ds, 0, NULL, NULL) is called only to satisfy any
-   * internal PetscDS consistency checks that expect field 0 to be registered. */
+  /* Register DS metadata (exact solution, BCs) */
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(PetscDSSetResidual(ds, 0, NULL, NULL));
   PetscCall(PetscDSSetExactSolution(ds, 0, u_exact, NULL));
@@ -167,7 +163,7 @@ int main(int argc, char **argv)
   Vec               u;
   Mat               J;
   PetscReal         error;
-  PetscFEKokkosMaps kokkos_ctx; /* Step 4: declare the GPU assembly maps */
+  PetscFEKokkosMaps maps;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -191,9 +187,9 @@ int main(int argc, char **argv)
    * for DMPlexSNESComputeResidualFEM.  The template parameters are the
    * KOKKOS_INLINE_FUNCTION callbacks defined above.
    *
-   * The context pointer (&kokkos_ctx) is passed as the void* ctx argument.
+   * The context pointer (&maps) is passed as the void* ctx argument.
    * It must be set up via PetscFEKokkosSetUp before the first SNES solve. */
-  PetscCall(SNESSetFunction(snes, NULL, DMPlexSNESComputeResidualFEM_Kokkos<f0_poisson, f1_poisson>, &kokkos_ctx));
+  PetscCall(SNESSetFunction(snes, NULL, DMPlexSNESComputeResidualFEM_Kokkos<f0_poisson, f1_poisson>, &maps));
 
   PetscCall(SNESSetFromOptions(snes));
 
@@ -213,7 +209,7 @@ int main(int argc, char **argv)
    * MatSetValuesCOO, which requires MATAIJKOKKOS; pass -dm_mat_type aijkokkos
    * on the command line (see test args below). */
   PetscCall(DMCreateMatrix(dm, &J));
-  PetscCall(PetscFEKokkosSetUp(dm, &kokkos_ctx, J));
+  PetscCall(PetscFEKokkosSetUp(dm, &maps, J));
 
   /* Step 7: Register GPU-resident Jacobian callback.
    *
@@ -221,7 +217,7 @@ int main(int argc, char **argv)
    * Jacobian callbacks.  Pass nullptr for unused terms (g0, g1, g2 are
    * zero for the Laplacian; only g3 is non-zero).
    * IsLinear=true: Poisson is linear -- skip u/grad_u interpolation in kernel. */
-  PetscCall(SNESSetJacobian(snes, J, J, (DMPlexSNESComputeJacobianFEM_Kokkos<nullptr, nullptr, nullptr, g3_poisson, true>), &kokkos_ctx));
+  PetscCall(SNESSetJacobian(snes, J, J, (DMPlexSNESComputeJacobianFEM_Kokkos<nullptr, nullptr, nullptr, g3_poisson, true>), &maps));
   PetscCall(MatDestroy(&J));
 
   /* Solve */
@@ -256,7 +252,7 @@ int main(int argc, char **argv)
 
   /* Step 8: PetscFEKokkosMapsDestroy -- free host arrays.
    * Device Kokkos::Views are reference-counted and freed automatically. */
-  PetscCall(PetscFEKokkosMapsDestroy(&kokkos_ctx));
+  PetscCall(PetscFEKokkosMapsDestroy(&maps));
 
   /* Cleanup */
   PetscCall(VecDestroy(&u));

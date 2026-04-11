@@ -911,9 +911,9 @@ PetscErrorCode PetscFEKokkosSetUp(DM dm, PetscFEKokkosMaps *maps, Mat J)
    DMPlexSNESComputeResidualFEM (the CPU path) when using COO assembly.
 
    Template parameters:
-     f0 -- KOKKOS_INLINE_FUNCTION void(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[])
+     f0 -- KOKKOS_INLINE_FUNCTION void(PETSC_POINT_ARGS, PetscScalar[])
           source term (zeroth-order residual)
-     f1 -- KOKKOS_INLINE_FUNCTION void(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar[])
+     f1 -- KOKKOS_INLINE_FUNCTION void(PETSC_POINT_ARGS, PetscScalar[])
           flux term (first-order residual)
 
    ctx_ptr must point to a PetscFEKokkosMaps with maps already staged

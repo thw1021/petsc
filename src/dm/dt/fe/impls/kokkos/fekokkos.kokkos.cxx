@@ -1,84 +1,18 @@
 /*
-  fekokkos.kokkos.cxx -- PETSCFEKOKKOS: Kokkos-parallel PetscFE residual integration
+  PETSCFEKOKKOS: Kokkos-parallel PetscFE residual integration.
 
-  Implements PetscFEIntegrateResidual_Kokkos(), which replaces the serial cell
-  loop in PetscFEIntegrateResidual_Basic (febasic.c) with a Kokkos::parallel_for
-  using TeamPolicy (one team per cell, one thread per quadrature point).
+  Implements PetscFEIntegrateResidual_Kokkos() using Kokkos::parallel_for.
+  The Jacobian path falls back to PetscFEIntegrateJacobian_Basic (CPU).
+  No auxiliary fields (dsAux == NULL required).
 
-  Design: Option C from plans/phase_1k_gpu_petscfe.md
-    - Plugs into fe->ops->integrateresidual dispatch (no changes to plexfem.c)
-    - Reimplements interpolation/contraction in Kokkos kernels
-    - Static data (B, D, w) staged to device once at setup
-    - Dynamic data (invJ, detJ, v, coeff) staged per call
-    - User callbacks must be KOKKOS_INLINE_FUNCTION (no PetscCall, no MPI)
-
-  Geometry layout (from PetscFEGeom):
-    invJ[c * Nq * dE * dE + q * dE * dE + i * dE + j]
-    detJ[c * Nq + q]
-    v   [c * Nq * dE + q * dE + d]
-
-  Tabulation layout (from PetscTabulation T[field]):
-    T->T[0][q * Nb * Nc + b * Nc + c]   (basis values)
-    T->T[1][q * Nb * Nc * dim + b * Nc * dim + c * dim + d]  (basis derivatives)
-
-  Restriction: No auxiliary fields (dsAux == NULL required). Single field only.
-  This covers the baby Poisson problem and cae_eigenmode.
-
-  Note: Jacobian integration (integratejacobian) falls back to the Basic (CPU)
-  implementation; only integrateresidual is GPU-accelerated here.
-*/
-
-/*
-  ============================================================
-  LEGACY FALLBACK PATH -- NOT USED BY THE OPTIMIZED ASSEMBLY
-  ============================================================
-
-  This file implements PetscFEIntegrateResidual_Kokkos() and the
-  related ops-table functions (integratejacobian, integratebdresidual,
-  etc.) that are registered on the PETSCFEKOKKOS type.
-
-  These functions are invoked ONLY when the standard PETSc dispatch
-  chain is used:
-
-      DMPlexSetSNESLocalFEM()  -->  DMPlexSNESComputeResidualFEM()
-        -->  PetscFEIntegrateResidual_Kokkos()   (this file)
-
-  THE OPTIMIZED PATH BYPASSES THIS FILE ENTIRELY.
-  The high-performance template kernels live in petscfekokkos.h and
-  are called directly by the application:
-
-      DMPlexSNESComputeResidualFEM_Kokkos<f0, f1>(...)
-      DMPlexSNESComputeJacobianFEM_Kokkos<G0, G1, G2, G3>(...)
-
-  Key differences between the two paths:
-
-    Optimized path (petscfekokkos.h):
-      - Uses Kokkos::TeamPolicy with Kokkos::TeamThreadRange for
-        intra-element parallelism (multiple threads per element).
-      - Fuses geometry, interpolation, and user callbacks into a
-        single kernel launch.
-      - Supports full Jacobian assembly on the GPU.
-
-    This file (legacy fallback):
-      - Uses Kokkos::RangePolicy -- one thread per element.
-      - Only PetscFEIntegrateResidual_Kokkos() is GPU-accelerated.
-      - The Jacobian path (integratejacobian) falls back to the CPU
-        Basic implementation (PetscFEIntegrateJacobian_Basic).
-      - Auxiliary fields are not supported (dsAux == NULL required).
-
-  If you are adding a new solver or benchmark, use the template path
-  in petscfekokkos.h, not the functions in this file.
-  ============================================================
+  The high-performance template kernels for GPU-resident assembly live in
+  petscfekokkos.h and are called directly by the application via
+  DMPlexSNESComputeResidualFEM_Kokkos and DMPlexSNESComputeJacobianFEM_Kokkos.
 */
 
 #include <petsc/private/petscfeimpl.h>
 #include <petscfekokkos.h>
 #include <Kokkos_Core.hpp>
-/* PetscKokkosInitializeCheck() is declared in petscsys.h (included via petscfeimpl.h) */
-/* PetscFEKokkosCoordRefToReal() is defined in petscfekokkos.h (static inline host helper) */
-
-/* Scratch memory level: 0 = shared (fast), 1 = global (fallback).
-   Matches the convention in src/ts/utils/dmplexlandau/kokkos/landau.kokkos.cxx. */
 #define KOKKOS_SHARED_LEVEL 0
 
 /* Forward declarations of PETSC_INTERN Basic ops we reuse */
@@ -93,9 +27,6 @@ PETSC_INTERN PetscErrorCode PetscFEIntegrateJacobian_Basic(PetscDS, PetscDS, Pet
 PETSC_INTERN PetscErrorCode PetscFEIntegrateBdJacobian_Basic(PetscDS, PetscWeakForm, PetscFEJacobianType, PetscFormKey, PetscInt, PetscFEGeom *, const PetscScalar[], const PetscScalar[], PetscDS, const PetscScalar[], PetscReal, PetscReal, PetscScalar[]);
 PETSC_INTERN PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS, PetscDS, PetscFEJacobianType, PetscFormKey, PetscInt, PetscInt, PetscFEGeom *, PetscFEGeom *, const PetscScalar[], const PetscScalar[], PetscDS, const PetscScalar[], PetscReal, PetscReal, PetscScalar[]);
 
-/* PetscFEGetDimension_Kokkos: returns the number of basis functions.
-   PetscFEGetDimension_Basic is static in febasic.c so we reimplement it
-   here -- it is a one-liner that queries the dual space dimension. */
 static PetscErrorCode PetscFEGetDimension_Kokkos(PetscFE fem, PetscInt *dim)
 {
   PetscFunctionBegin;
@@ -103,9 +34,6 @@ static PetscErrorCode PetscFEGetDimension_Kokkos(PetscFE fem, PetscInt *dim)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Private data stored on the PetscFE object for the Kokkos implementation.
-   Static data (basis tabulation, quadrature weights) is staged to device
-   once during PetscFESetUp and reused across all calls. */
 typedef struct {
   /* Tabulation device Views -- re-staged when Nq changes (DS quadrature may differ from FE quadrature) */
   Kokkos::View<PetscReal *> d_B; /* basis values:       [Nq * Nb * Nc]          */
