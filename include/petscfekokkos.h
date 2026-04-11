@@ -12,10 +12,10 @@
     #include <petscfekokkos.h>
 
     KOKKOS_INLINE_FUNCTION
-    static void f0_poisson(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f0[]) { ... }
+    static void f0_poisson(PETSC_POINT_ARGS, PetscScalar f0[]) { ... }
 
     KOKKOS_INLINE_FUNCTION
-    static void f1_poisson(PETSCFE_KOKKOS_POINT_ARGS, PetscScalar f1[]) { ... }
+    static void f1_poisson(PETSC_POINT_ARGS, PetscScalar f1[]) { ... }
 
     PetscCall(PetscFEKokkosComputeResidual<f0_poisson, f1_poisson>(ds, key, Ne, cgeom,
                 coefficients, coefficients_t, t, elemVec));
@@ -46,27 +46,15 @@ struct PetscPointJacFnNonNull : std::true_type { };
 template <>
 struct PetscPointJacFnNonNull<nullptr> : std::false_type { };
 
-  /* Macro: PETSCFE_KOKKOS_POINT_ARGS
+  /* Macro: PETSC_POINT_ARGS
    Expands to the full PetscPointFn argument list (minus the output array).
    Use this in KOKKOS_INLINE_FUNCTION callback declarations to keep them
-   consistent with the PetscDS weak-form signature.
-
-   The signature matches PetscPointFn (petscdstypes.h):
-     void fn(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-             const PetscInt uOff[], const PetscInt uOff_x[],
-             const PetscScalar u[], const PetscScalar u_t[],
-             const PetscScalar u_x[],
-             const PetscInt aOff[], const PetscInt aOff_x[],
-             const PetscScalar a[], const PetscScalar a_t[],
-             const PetscScalar a_x[],
-             PetscReal t, const PetscReal x[],
-             PetscInt numConstants, const PetscScalar constants[],
-             PetscScalar out[]) */
-  #define PETSCFE_KOKKOS_POINT_ARGS \
+   consistent with the PetscDS weak-form signature. */
+  #define PETSC_POINT_ARGS \
     PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[]
 
   /* Jacobian callbacks have an extra u_tShift argument between t and x */
-  #define PETSCFE_KOKKOS_JAC_POINT_ARGS \
+  #define PETSC_JAC_POINT_ARGS \
     PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, PetscReal u_tShift, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[]
 
 /* PetscFEKokkosIntegrateResidualCell<F0, F1>
@@ -1052,12 +1040,14 @@ typedef struct {
 
 } PetscFEKokkosMaps;
 
-/* =========================================================================
-   PetscFEKokkosMaps lifecycle function declarations.
-   Placed in include/petsc/private/petscfekokkosmaps_impl.h so the PETSc
-   Fortran binding generator does not scan them (it only greps top-level headers).
-   ========================================================================= */
-  #include <petsc/private/petscfekokkosmaps_impl.h>
+PETSC_EXTERN PetscErrorCode PetscFEKokkosCreateMaps(DM dm, PetscFEKokkosMaps *maps);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosStageMaps(PetscFEKokkosMaps *maps, DM dm);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosEnsureDynamicViews(PetscFEKokkosMaps *maps, PetscInt Ne, PetscInt Nq, PetscInt dE, PetscInt totDim, PetscInt numConstants);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosPreallocateCOO(PetscFEKokkosMaps *maps, Mat J);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosResetGeometry(PetscFEKokkosMaps *maps);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosMapsDestroy(PetscFEKokkosMaps *maps);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosSetUpGeometry(DM dm, PetscFEKokkosMaps *maps);
+PETSC_EXTERN PetscErrorCode PetscFEKokkosSetUp(DM dm, PetscFEKokkosMaps *maps, Mat J);
 
 template <PetscPointFn *f0, PetscPointFn *f1>
 static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec F, void *ctx_ptr)
@@ -1306,7 +1296,7 @@ static PetscErrorCode DMPlexSNESComputeResidualFEM_Kokkos(SNES snes, Vec X, Vec 
    DMPlexSNESComputeJacobianFEM (the CPU path) when using COO assembly.
 
    Template parameters (all four Jacobian callbacks):
-     G0 -- KOKKOS_INLINE_FUNCTION void(PETSCFE_KOKKOS_JAC_POINT_ARGS, PetscScalar[])
+     G0 -- KOKKOS_INLINE_FUNCTION void(PETSC_JAC_POINT_ARGS, PetscScalar[])
           g0 term (u*v coupling)
      G1 -- g1 term (u*gradv coupling)
      G2 -- g2 term (gradu*v coupling)
