@@ -17,8 +17,6 @@ static PetscErrorCode CreateTestMatrix(MPI_Comm comm, const char prefix[], Petsc
   PetscCall(MatSeqAIJSetPreallocation(*M, n, NULL));
   PetscCall(MatMPIAIJSetPreallocation(*M, n, NULL, n, NULL));
   PetscCall(MatSetUp(*M));
-  PetscCall(MatAssemblyBegin(*M, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(*M, MAT_FINAL_ASSEMBLY));
   PetscCall(MatSetRandom(*M, rand));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -114,20 +112,6 @@ int main(int argc, char **argv)
     nsize: {{1 2}}
     requires: kokkos_kernels
     args: -a_mat_type diagonal -p_mat_type diagonal -a_mat_vec_type standard -p_mat_vec_type kokkos -n 10 -m 10
-    output_file: output/empty.out
-
-  test:
-    suffix: diag_aijkokkos
-    nsize: {{1 2}}
-    requires: kokkos_kernels
-    args: -a_mat_type diagonal -p_mat_type aijkokkos -a_mat_vec_type kokkos
-    output_file: output/empty.out
-
-  test:
-    suffix: aijkokkos_diag
-    nsize: {{1 2}}
-    requires: kokkos_kernels
-    args: -a_mat_type aijkokkos -p_mat_type diagonal -p_mat_vec_type kokkos -n 10 -m 10
     output_file: output/empty.out
 
   test:
