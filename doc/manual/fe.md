@@ -146,22 +146,6 @@ For GPUs the `PETSCFEKOKKOS` type and the routines `PetscFEKokkosSetUp()`, `Pets
 
 Standard `PetscDS` residual and Jacobian callbacks are host function pointers that cannot be called from GPU kernels. The `PETSCFEKOKKOS` path replaces them with `KOKKOS_INLINE_FUNCTION` callbacks passed as C++ template parameters, enabling device inlining at compile time. The Jacobian is assembled via `MatSetPreallocationCOO()` and `MatSetValuesCOO()` with device pointers.
 
-The typical call sequence is:
-
-```
-PetscFEKokkosMaps kokkos_ctx;
-
-PetscFEKokkosSetUp(dm, &kokkos_ctx, J);
-SNESSetFunction(snes, NULL, DMPlexSNESComputeResidualFEM_Kokkos<f0, f1>, &kokkos_ctx);
-SNESSetJacobian(snes, J, J, DMPlexSNESComputeJacobianFEM_Kokkos<nullptr, nullptr, nullptr, g3, true>, &kokkos_ctx);
-SNESSolve(snes, NULL, u);
-PetscFEKokkosMapsDestroy(&kokkos_ctx);
-```
-
-where `f0`, `f1`, and `g3` are `KOKKOS_INLINE_FUNCTION` callbacks declared with the `PETSCFE_KOKKOS_POINT_ARGS` and `PETSCFE_KOKKOS_JAC_POINT_ARGS` macros. Pass `nullptr` for unused Jacobian terms. The `IsLinear` template parameter (last parameter of `DMPlexSNESComputeJacobianFEM_Kokkos`) skips solution interpolation for linear problems.
-
-`PetscFEKokkosSetUp()` must be called after `SNESSetFromOptions()` (which triggers Kokkos initialization). It internally calls `PetscFEKokkosCreateMaps()`, `PetscFEKokkosStageMaps()`, `PetscFEKokkosPreallocateCOO()`, and `PetscFEKokkosSetUpGeometry()`. For moving meshes or AMR, call `PetscFEKokkosResetGeometry()` followed by `PetscFEKokkosSetUpGeometry()` to rebuild device geometry without recreating the assembly maps.
-
 Source files must use the `.kokkos.cxx` extension for compilation with `nvcc_wrapper`. The command line must include `-dm_mat_type aijkokkos -dm_vec_type kokkos`.
 
 ### Performance
