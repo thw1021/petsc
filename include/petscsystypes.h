@@ -478,7 +478,7 @@ typedef bool PetscBool;
 PETSC_EXTERN const char *const PetscBools[];
 
 /*E
-   PetscBool3  - Ternary logical variable. Actually an enum in C and a 4 byte integer in Fortran.
+   PetscBool3 - Ternary logical variable. Actually an enum in C and a 4 byte integer in Fortran.
 
    Level: beginner
 
@@ -494,7 +494,40 @@ typedef enum {
 } PetscBool3;
 PETSC_EXTERN const char *const PetscBool3s[];
 
+/*MC
+   PetscBool3ToBool - Convert a `PetscBool3` to a `PetscBool`
+
+   No Fortran Support
+
+   Synopsis:
+   #include <petscsystypes.h>
+   PetscBool PetscBool3ToBool(PetscBool3 a)
+
+   Level: beginner
+
+   Note:
+   Evaluates to `PETSC_TRUE` if `a` is `PETSC_BOOL3_TRUE`, and `PETSC_FALSE` otherwise (including when `a` is `PETSC_BOOL3_UNKNOWN`).
+
+.seealso: `PetscBool`, `PetscBool3`, `PetscBoolToBool3()`
+M*/
 #define PetscBool3ToBool(a) ((a) == PETSC_BOOL3_TRUE ? PETSC_TRUE : PETSC_FALSE)
+
+/*MC
+   PetscBoolToBool3 - Convert a `PetscBool` to a `PetscBool3`
+
+   No Fortran Support
+
+   Synopsis:
+   #include <petscsystypes.h>
+   PetscBool3 PetscBoolToBool3(PetscBool a)
+
+   Level: beginner
+
+   Note:
+   Evaluates to `PETSC_BOOL3_TRUE` if `a` is `PETSC_TRUE`, and `PETSC_BOOL3_FALSE` otherwise.
+
+.seealso: `PetscBool`, `PetscBool3`, `PetscBool3ToBool()`
+M*/
 #define PetscBoolToBool3(a) ((a) == PETSC_TRUE ? PETSC_BOOL3_TRUE : PETSC_BOOL3_FALSE)
 
 /*MC
@@ -699,6 +732,18 @@ M*/
     Level: beginner
 
 .seealso: `PETSC_INT_MIN`, `PetscInt`, `PetscIntCast()`
+M*/
+
+/*MC
+    PETSC_MAX_PATH_LEN - the maximum length of a path (file name including directory)
+
+    Level: beginner
+
+    Note:
+    This value is set at configuration time based on the system's maximum path length (e.g., `MAXPATHLEN`, `MAX_PATH`, or `_MAX_PATH`).
+    It defaults to 4096 if no system value is available.
+
+.seealso: `PetscGetFullPath()`, `PetscGetRealPath()`, `PetscGetHomeDirectory()`
 M*/
 
 /*MC
