@@ -1767,8 +1767,9 @@ static PetscErrorCode MatZeroRowsColumns_MPISBAIJ(Mat A, PetscInt N, const Petsc
   PetscCall(PetscSFReduceEnd(sf, MPIU_INT, (PetscInt *)rows, lrows, MPI_LOR));
   PetscCall(PetscSFDestroy(&sf));
   /* compress and put in row numbers */
-  for (r = 0; r < n; ++r)
+  for (r = 0; r < n; ++r) {
     if (lrows[r] >= 0) lrows[len++] = r;
+  }
   /* zero diagonal part of matrix */
   PetscCall(MatZeroRowsColumns(l->A, len, lrows, diag, x, b));
   /* handle off-diagonal part of matrix */
